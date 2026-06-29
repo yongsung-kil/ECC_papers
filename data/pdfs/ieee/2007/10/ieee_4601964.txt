@@ -1,0 +1,563 @@
+Maximizing the Throughput-Area Efficiency of Fully-Parallel Low-Density Parity-Check Decoding with C-Slow Retiming and Asynchronous Deep Pipelining
+
+Ming Su, Lili Zhou, Student Member, IEEE, and C.-J. Richard Shi, Fellow, IEEE Department of Electrical Engineering, University of Washington {mingsu, cjshi}@u.washington.edu
+
+Abstract
+In this paper, we apply C-slow retiming and asynchronous deep pipelining to maximize the throughput-area efficiency of fully parallel lowdensity-parity-check (LDPC) decoding. Pipelined decoders are implemented in a 0.18 µm FDSOI CMOS process. Experimental results show that our pipelining technique is an efficient approach to maximizing LDPC decoding throughput while minimizing the area consumption. First, pipelined decoders can achieve extraordinary high throughput which non-pipelined design cannot. Second, for the same throughput, pipelined decoders use less area than non-pipelined design. Our approach can improve the throughput of a published implementation by 4 times with only about 80% area overhead. Without using clocks, proposed asynchronous pipelined decoders are more scalable in design complexity and more robust to process-voltagetemperature variations than existing clock-based LDPC decoders.
+1. Introduction
+Since their rediscovery, LDPC codes have attracted growing attention due to their near Shannon-limit error correction capability [1], [2]. LDPC decoding performance has facilitated the advancement of a variety of applications such as next-generation mobile communication, digital video broadcasting and longhaul optical communication systems [3] [4] [5]. The rapid development of very large-scale integrated circuit (VLSI) technology has made possible high-throughput hardware decoding of LDPC codes. Several hardware implementations using fully parallel, partially parallel, and serial architectures have been published for a wide range of applications [6] [7] [8] [9] [10].
+As an important performance measurement of a decoder, throughput is defined as the amount of
+
+information decoded per second. The maximal throughput is achieved by fully parallel implementations. However, even the state-of-art fully parallel architectures cannot meet the throughput requirements for high-speed applications such as nextgeneration communication [4] [5], military and space systems [11] [12].
+Furthermore, the fully parallel implementations of decoding for maximal throughput present several welldescribed design challenges, including large silicon area, congested interconnect, and hard-to-control clock skews. These challenges grow rapidly with the LDPC code-length, and thus jeopardize the efficiency and performance of fully parallel decoders in power, area consumption and design effort [6].
+In this paper, we propose to exploit C-slow retiming and asynchronous deep pipelining to achieve the maximal possible throughputs of LDPC decoding. Deep pipelining is a well-known technique to increase the throughput. It is implemented in this paper using Cslow retiming, observing the iterative decoding nature of LDPC codes. Without using clock, our design is more robust and less sensitive to process-voltagetemperature variation. To the best of our knowledge, this is the first reported asynchronous implementation of LDPC decoders.
+This paper is organized as follows. Section 2 reviews the LDPC codes and fully parallel decoder architecture. Section 3 introduces C-slow retiming. Asynchronous pipelined decoder design is described in Section 4. Section 5 presents the implementation results. Section 6 concludes the paper.
+2. LDPC code and fully-parallel Architecture
+2.1. LDPC Codes and Decoding Algorithm
+
+1-4244-1258-7/07/$25.00 ©2007 IEEE
+
+636
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+An LDPC code is represented by a sparse paritycheck matrix H, which elements are binary numbers. Let c denote a binary vector. If c satisfies that
+
+H ×c = 0
+
+(1)
+
+then c is said to be a valid codeword of H. Here × denotes matrix vector multiplication while multiplication and addition are AND and XOR operations, respectively. Each row of H defines a parity check and the row elements indicate which elements of c are included in the parity check.
+Fig. 1(a) shows the H matrix of a LDPC code and parity equations defined by each row. Fig. 2(b) depicts the corresponding widely used Tanner graph representation of this LDPC code [13]. A Tanner graph is a bipartite graph, and consists of two sets of nodes. One set of nodes is called variable nodes, which map to the columns of the H matrix (also of vector c), while the other set of nodes is called check nodes, which map to the rows of the H matrix. The edge between a variable node and a check node maps to a “1” element in the H matrix. These mappings are illustrated by
+dashed lines. For example, H1,1 being one and the
+edge between check node C1 and variable node V1 indicate that V1 is involved in the parity check defined in C1. In Tanner Graph, variable nodes and check nodes represent hardware units that store intermediate node information and perform algorithmic computations, such as the parity check in check nodes.
+
+1 0 1 1 1 H = 0 1 0 1 0
+1 1 0 0 1 1 0 1 1 0
+
+Fig. 1. An example LDPC code. (a) H matrix and (b) Tanner Graph.
+
+Fig. 2. Message communication LDPC codes.
+
+LDPC codes are widely used in applications where information has to be transmitted through noisy
+
+communication channels, which add noise to the message, e.g., flip certain bits of the message. Message
+
+is encoded and decoded before and after the channel.
+
+In the decoding process, the channel-distorted
+
+codeword is corrected. Fig. 2 shows such a process.
+
+One classic and most popular algorithm for decoding LDPC codes is the iterative soft-decision messagepassing algorithm also known as the Belief
+
+Propagation (BP) algorithm [14]. The algorithm can be
+
+described using the Tanner Graph. The vector to be
+
+decoded (often called input message) is the log-
+
+likelihood ratio (LLR) representation of the message, is
+
+received from the communication channel. The LLR representation of the received bit is defined as:
+
+λ = ln[ P(x = 0 | y) ]
+
+(2)
+
+P(x = 1| y)
+
+where λ is usually quantized to an n-bit binary number and the first bit represents sign and the rest bits
+
+represent magnitude. x is the message bit that is
+
+transmitted through the channel and y is the bit
+
+received by the decoder possibly distorted.
+
+Intermediate message is also in the form of LLR and
+
+either passed from a variable node to a check node
+
+(variable message) or vice versa (check message). Input messages are initially stored in variable nodes and replaced by subsequent intermediate messages.
+
+The main steps of the algorithm are described as
+
+follows [6]:
+
+1) Initialize each variable node and its outgoing
+
+variable message in LLR form;
+
+2) Pass the variable messages from the variable
+
+nodes to the check nodes along the edges of the graph.
+
+3) At check nodes, perform an update of all the
+
+LLRs. First perform a parity check on the sign bits of
+
+the incoming variable messages to form the row parity
+
+check. Then form the sign of each outgoing check
+
+message as the XOR of the sign of the incoming
+
+variable message corresponding to each edge and the
+
+row parity check result. Update the LLR magnitude by
+
+computing intermediate row parity reliability defined
+
+as
+
+∏ λi =
+
+tanh(λi, j / 2) i ∈ I , j ∈ J. (3)
+
+j ,hi , j =1
+
+where I and J are index set of check nodes and variable
+
+nodes, respectively. hi, j = 1 indicates that involved
+
+637 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+variable messages are from variable nodes j incident
+
+with check node i. This computation task can be
+
+simplified in the logarithmic domain, where
+
+multiplication and division are replaced by addition
+
+and subtraction. Eq. (3) becomes:
+
+∑ ln λi = ln[tanh(λi, j / 2)]
+
+(4)
+
+j,hi, j =1
+
+Based on row parity reliability, all outgoing check
+
+message reliabilities are computed as:
+
+
+
+
+
+∏ λ* i, j
+
+= 2a tanh 
+
+tanh(λi, j
+j,hi, j =1, j≠i
+
+/ 2) 
+
+(5)
+
+{ ( )} = 2a tanh exp ln(λi ) − ln tanh(λi, j / 2)
+
+where
+
+λ* i, j
+
+is the reliability of the check message from
+
+check node i to variable node j.
+
+4) Pass the check messages (updated LLRs in Step
+
+3) from the check nodes back to the variable nodes
+
+along the edges of the graph.
+
+5) At the variable nodes, update LLRs. Perform a
+
+summation of the input message (LLR of the received
+
+bit) and all of the incoming check messages (updated
+
+LLRs). The decoded bit is taken to be the sign of the
+
+summation. Each outgoing variable message for the
+
+next decoding iteration is then formed by a summation
+
+of all the incoming check messages except the one
+
+from the destination check node of this outgoing
+
+variable message.
+
+6) Repeat steps 2 through 5 until a termination
+
+condition is met, such as the current messages passed
+
+to the parity check nodes satisfy all of the parity
+
+checks.
+
+2.2. Fully Parallel Decoder
+
+The BP algorithm, described using Tanner graph, can be naturally mapped to a fully parallel decoder architecture, which is implemented for a 1024-bit, rate½ LDPC code in [6] and [7]. The corresponding graph has 1024 variable nodes and 512 check nodes. All variable nodes have same functionality so variable node unit (VNU) is only designed once and reused for every instance of variable node. The same holds for check node unit (CNU). The input message is in a 4-bit binary sign-magnitude notation and converted to the 2’s complement because all arithmetic operations can be performed more efficiently. In addition, all the logarithm and hyperbolic functions are implemented using a table-lookup method. The input number is used to index the table and the approximated function value is retrieved.
+
+Data_in
+
+Packet_start
+
+0 1
+0 1
+0 1
+
+…
+Variable node
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+1 0 Dec_out
+
+Packet_start
+Fig. 3. Three-stage pipelined fully parallel LDPC decoder.
+
+The clock period of the circuit is determined by the
+
+critical path delay depicted in Eq. (6), which is the sum
+
+of variable node delay TVN, flip-flop setup time TSU,
+
+clock-to-Q time TCKQ, check node delay TCN and clock
+
+skew Tskew. TVN and TCN are dominant terms because
+
+both variable node and check node contain many levels
+
+of logic.
+
+T = TVN + TSU + TCKQ + TCN + Tskew
+
+(6)
+
+All instances of variable nodes and check nodes are placed and routed according to the edges in the graph. 1024 variable nodes are partitioned into 16 64-node groups, which work in parallel. Each group is threestage fully pipelined as shown in Fig. 3. The first stage takes 64 cycles to shift in 64 input messages. In the second stage, it takes 64 iterations to decode the message. The last stage also takes 64 cycles to shift out 64 decoded bits. These three stages each takes 64 cycles thus can operate in parallel. The throughput is defined as the number of messages decoded per second and can be expressed analytically as:
+
+Throughput = # group
+
+(7)
+
+# iteration × T
+
+where #group denotes number of variable node group, #iteration denotes number of iterations and T is the clock period.
+
+3. C-slow retiming
+
+Fully parallel decoder can be highly pipelined. However, clock cycle will not decrease because of the presence of feedback loops in LDPC decoder. Proposed by Leiserson et al. [15], C-slow retiming is an approach of accelerating computations that include feedback loops.
+Fig. 4 illustrates how conventional pipelining and C-slow retiming are applied to a circuit containing feedback loop [16]. The circuit was modeled by a directed graph with nodes representing the logic unit
+
+638 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. An example of C-slow Retiming.
+with delay and edges representing pipeline registers. After pipelining, the clock cycle of the circuit in Fig. 4(a) is reduced from 4 to 2 (Fig. 4(b)). However if a feedback path is added as shown in Fig. 4(c), the feedback loop becomes the critical path. The proper functionality requires that every input have to meet with its immediately preceding input at the first logic in the loop. So an input can only be scheduled after its immediately preceding input propagates through the feedback path. Simply inserting registers into the loop will not alter the critical path due this requirement.
+In Fig. 4(d), we apply C-slow retiming, where each loop and I/O register is replaced by 2 consecutive registers. The pipeline can perform two independent computations by taking its input from two independent data streams alternately every clock cycle. This 2slowed pipeline operates correctly because the input and the intermediate results contained in the first registers of the pairs belongs to the same computation task so that a new input will always meet with the feedback of the same stream. Also, the input register needs not to wait for feedback to latch a new input because the pipeline can be fed with input from another independent task. Further retiming can reduce the clock cycle to 2 as shown in Fig. 4(e).
+BP decoding is a well-suited application of C-slow retiming. First, input messages are decoded independently from each other thus each message can be viewed as an independent task. Second, fixed iteration count can be used. Assume that the iteration count is M. We pipeline each VNU and CNU into C/2 stages. Instead of using a great number of registers to buffer the input, we use only one register and schedule appropriately. If M is dividable by C, we schedule an input every M/C iterations, which is equivalent to M clock cycles.
+Initially the C-stage pipeline is empty. Assume that Tload time is needed to load the first C sets of input messages. The interval time between each set of
+
+messages loading into a pipeline is Tint erval . After the first C sets of messages are loaded into the pipeline, the pipeline is fully occupied. Therefore, only when the first message finishes decoding and exits the pipeline, the C+1th set of message enters the pipeline.
+Assume that the completion time for the first message (also for the C+1 message to enter the pipeline) is T1st . Then we have
+
+Tload = (C −1) × M
+
+(8)
+
+T1st = Tload + M
+
+(9)
+
+Tint
+
+(N,
+
+N
+
++ 1)
+
+=
+
+M C
+
+×C
+
+=
+
+M
+
+(10)
+
+The throughput becomes one message per M/C
+
+iteration while its un-pipelined counterpart uses M
+
+iterations to decode one message. Fig. 5 shows how the
+
+above scheduling works on a 4-slowed simplified
+
+decoder. The circuit is pipelined into 4 stages and the
+
+iteration count is 4. Each iteration takes 4 clock cycles
+
+thus the input is scheduled every iteration, which is
+
+equivalent to 4 clock cycles.
+
+After pipelining, the clock cycle becomes:
+
+T ' = Tlog ic + TSU + TCKQ + Tskew
+
+(11)
+
+where Tlogic denotes the logic delay between two pipeline registers, which is approximately the original
+
+combinational path delay divided by the pipeline depth.
+
+TSU, TCKQ and Tskew are constant factors and same as in (1). They are considered as pipeline overhead because
+
+they do not scale with pipeline depth. Optimal pipeline
+
+depth is always determined by trading-off among
+
+speed, area and power consumption [17]. We present
+
+further analysis of this and how it guides our design in
+
+Section 5.
+
+4. Pipelining LDPCs
+
+4.1. Asynchronous Micropipeline
+
+Pipeline can be implemented synchronously and asynchronously. In synchronous pipelines, combinational logics are placed between clocked registers and data are sequenced by one or more globally distributed clocks. Outputs from combinational logics are latched into registers at the same clock edge. As an example, Fig. 6(a) depicts a synchronous pipeline, where R denotes register and CL denotes combinational logic.
+Asynchronous pipelines have similar structure; however, instead of synchronized at same global clock edge, data transfer is localized at each pipeline stage in
+
+639 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+path delay of the corresponding combinational logic to ensure that correct computation results are latched by registers. The clock input for each pipeline register is generated by synchronizing request and acknowledgement signals using C-element. Transistor level circuit and truth table of 2-input C-element are shown in Fig. 7. When both request and acknowledgement are high, indicating that the new input is ready to be latched by the register, the clock signal goes high enabling the latching of the input. The clock signal remains high until both signals become low. Before both signals rise, the clock remains low.
+Fig. 6(c) shows the timing diagram of the transition signaling protocol. In transition signaling, each transition of the C-element output, i.e. the clock input of the register, can trigger the register to latch the input data. First, request Rin goes to high to indicate that new data is available at the stage's input. Assume that Aout is low (the stage is empty), so the input data can be registered. Then, the stage raises Ain acknowledging the previous stage that it no longer needs the input. After the some delay, Rout goes to high indicating to the subsequent stage that it has new input data available. Some time after Rout rises, the subsequent stage will raise Aout to indicate that it has consumed (i.e., registered) the output data. The previous stage
+
+(a)
+
+Fig. 5. Input schedule for a 4-stage 4-iteration 4slowed LDPC decoder. (a), (b) Before and after retiming; (c) Box represents a pipeline stage, the number represents the index of the input message.
+a handshake manner [18], [19]. Micropipeline shown in Fig. 6 (b) is a widely used asynchronous pipeline style [20]. There are two control signals, namely requests and acknowledgements. Request signals travel forward in the pipeline indicating whether the data in current stage is ready to be latched by the subsequent stage. Acknowledgement signals travel backward indicating whether data have been consumed by the subsequent stage. Stage outputs are transferred in bundles with request signal, which usually passes through the matched delay elements (the oval labeled as delay).
+The matched delay must be greater than the critical
+
+(b)
+(c)
+Fig. 6. (a) Synchronous pipeline; (b) transition signaling micropipeline; and (c) its timing diagram.
+
+640 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+can lower Rin indicating that a subsequent data is available and another cycle starts over.
+4.2. Microarchitecture Design
+
+Fig. 8 depicts the architecture of the asynchronously pipelined fully parallel decoder with C-slow retiming. The main part consists of pipelined variable nodes unit (all VNUs), pipelined check nodes unit (all CNUs), and the forward and feedback paths between them. In Step 5 of the decoding algorithm, the original input messages are required in variable node computation. In the original implementation, the input message is stored in a register in variable node. After C-slow retiming, we also need to make C copies of this register in order to accommodate input messages from multiple input streams. These registers are shown separately from variable nodes as message extension registers in Fig. 8 but in actual design they are placed locally in variable nodes. The scheduling control unit is responsible for generating control signal according to the scheduling scheme.
+Fig. 9 shows the logic of a VNU-CNU path with request and acknowledgement signals. REG stores the
+
+(a)
+
+(b)
+
+Fig. 7. C-element. (a) transistor level circuit. (b) truth table.
+
+Input Scheduling Control Unit
+
+parity check
+
+input message
+
+start
+Pipelined Variable Nodes Unit
+
+check message
+
+variable message
+
+Pipelined Check Nodes Unit
+
+decoded bit
+
+Message Extension Registers
+
+Feedback message
+
+Top Level VNU
+
+Fig. 8. Top-level decoder architecture.
+
+Fig. 9. VNU-CNU logic with handshake signals.
+variable message. Its input is multiplexed from input message (decoding algorithm step 1), or subsequently updated variable node computation result (decoding algorithm Step 5). The input MUX/DEMUX takes input data and request from, and steer the acknowledgement to one of the two sources. Two input sources exist for variable node. One is the input message; the other is the temporary check variable. The counter counts the number of transitions of request signal to generate select signal according to C-slow retiming input schedule.
+5. Implementation results
+Proposed techniques cause very small modification on the first and third stage of the entire decoding system. We have implemented the decoding stage in a 0.18 µm 1.8 V FDSOI CMOS process. The unpipelined decoder is first implemented using Verilog HDL, and then synthesized using various clock cycle constraints. On each synthesized un-pipelined design, C-slow retiming with different pipeline depths is employed. The resulting synchronous pipelines are transformed to asynchronous ones. The clock period constraint of the pipelined design is the initial unpipelined design’s clock cycle divided by the pipeline depth. Retiming is performed using Synopsys Design Compiler’s pipeline_retime command, which requires the original un-pipelined design, the pipeline depth and the target clock period. Since the target clock period is required before hand, we use the initial un-pipelined design’s clock cycle divided by the pipeline depth. We omit the pipeline overhead in Eq. (11). This causes
+
+641 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+Design Compiler to insert buffers into the logics to
+
+achieve the target clock.
+
+The performance comparison of pipelined and non-
+
+pipelined designs boils down to compare clock period.
+
+Also note that in area comparison the area overhead of
+
+asynchronous pipelining, including the area of C-
+
+elements and matched delay elements is not included.
+
+For each CNU and VNU, only one C-element and one
+
+matched delay element are shared by the entire
+
+pipeline stage, making this area overhead negligible
+
+(only about 3.8% of CNU and VNU).
+
+Fig. 10 compares the pre-layout areas of both
+
+pipelined and non-pipelined designs. X-axis is clock
+
+period constrains and y-axis is the area. First, we can
+
+see that only pipelined designs (indicated by colored
+
+markers) can achieve a clock period ≤ 3 ns. Second, at
+
+longer period (4 and 5 ns), pipelined designs consume
+
+less area than the non-pipelined design. The
+
+synchronous design in [7] is implemented in the same
+
+process and achieves 2Gbit/s throughput, which is
+
+equivalent to a clock period of 8 ns. Our approach can
+
+improve its throughput by 4 times with only 80% area
+
+overhead (indicated by the circle marker at 2 ns).
+
+To find the most efficient design in terms of speed
+
+and area, we define an absolute cost function (ACF) as
+
+costabs = area × clock _ period
+
+(12)
+
+Fig. 11 plots this cost function with respect to the
+
+initial clock period before pipelining and the pipeline
+
+depth. From Fig. 11, we have the following
+
+observations. First, the minimal cost is attained when
+
+the initial clock period is 8 and pipeline depth is 6.
+
+Second, we can see that designs with same period
+
+before pipelining have similar cost value. Third, the
+
+design with longer period has smaller area. However,
+
+the overall cost for design with long period becomes
+
+even higher for the increase of period outperforms the
+
+decrease of area.
+
+Now we consider the problem of how to derive a
+
+pipelined design including buffer insertion from a
+
+given non-pipelined design to accomplish the maximal
+
+performance improvement with the least area
+
+overhead. For this purpose, we define a relative cost
+
+function (RCF) as:
+
+cost relative
+
+=
+
+delay
+
+area_overh ead _ improvemen t _
+
+factor
+
+(13)
+
+where
+
+area _ overhead =
+
+area of pipelined design
+
+−1 (14)
+
+area of starting unpipelined design
+
+delay _ improvement _ factor = clock cycle of unpipelined design = pipeline depth (15)
+clock cycle of pipelined design
+
+Fig. 10. Area comparison (non-pipelined vs pipelined).
+Fig. 11. 3D surface plot of absolute cost function.
+Fig. 12 3D surface plot of relative cost function. This cost function is plotted in Fig. 12. The shape of
+the RCF is completely different from that of the ACF. When the clock period constraint of the non-pipelined design becomes tighter, the area overhead overweighs the speed improvement. This is for when the pipeline overhead becomes much larger compared to Tlogic, the synthesis tool inserts a great number of buffers to reduce the logic delay to compensate the overhead.
+
+642 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+6. Conclusion
+In this paper, we applied pipelining techniques to maximize the throughput of LDPC decoding. C-slow retiming is used to efficiently pipeline the feedback loops of the iterative decoding. Experimental results show that our pipelining technique is an efficient approach to maximizing LDPC decoding throughput while minimizing the area. First, pipelined decoders can achieve extraordinary high throughput which nonpipelined design cannot. Second, for the same throughput, pipelined decoders consume less area than non-pipelined design. Third, our approach can improve the throughput of a published implementation by 4 times with only about 80% area overhead. In addition, with the use of asynchronous pipelines, we can mitigate several well-known design challenges, including large silicon area, congested interconnect, and hard-to-control clock skews. This is especially attractive for implementing high-throughput digital functionality in three-dimensional integrated circuits, where the process variations across tiers of devices are so high that clocking across tiers is difficult.
+7. Acknowledgement
+The authors thank Professor Carl Ebeling of the Department of Computer Science and Engineering at University of Washington for his suggestions on Cslow retiming. This research was supported by US Defense Advanced Research Projects Agency (DARPA) under Grant Number N66001-05-1-8918, monitored by Navy SPAWAR Systems Center, San Diego, USA.
+8. References
+[1] D. J. C. Mackay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEE Electronics Letters, vol.33, no.6, pp.457- 458, March 1997.
+[2] M. Chiani, A.Conti, and A.Ventura, “Evaluation of lowdensity parity-check codes over block fading channels,” Proceedings of IEEE International Conference on Communications, June 2000, vol. 3, pp. 1183 – 1187.
+[3] IEEE Draft P802.3an/D2.2 -- IEEE Standard for Information technology -- Telecommunications and information exchange between systems -- Local and metropolitan area networks -- Specific requirements.
+[4] I. B. Djordjevic, and B. Vasic, “100-gb/s transmission using orthogonal frequency-division multiplexing”, IEEE Photonics Technology Letters, vol. 18, no. 15, pp. 1576-1578, Aug. 2006.
+[5] I. B. Djordjevic, O. Milenkovic, and B. Vasic, “Generalized low-density parity-check codes for optical
+
+communication systems,” Journal of Lightwave Technology, vol. 23, no. 5, pp. 1939–1946, May 2005.
+[6] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder”, IEEE Journal of Solid-State Circuits, vol. 37, no. 3, pp. 404-412, March 2002.
+[7] L. Zhou, C. Wakayama, N. Jankrajarng, B. Hu and C.-J. R. Shi, “A high-throughput low-power fully parallel 1024-bit 1/2-rate low density parity check code decoder in 3D integrated circuits”, in Proc. Asia and South Pacific Design Automation Conf., Jan. 2006, pp. 92-93.
+[8] E. Yeo, P. Pakzad, B. Nikolić, and V. Anantharam, “High throughput low-density parity-check decoder architectures”, Proceedings of IEEE Global Telecommunications Conference, Nov. 2001, vol. 5, pp. 3019-3024.
+[9] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip”, IEEE Journal of Solid-State Circuits, vol. 41, no. 3, pp. 684698, March 2006.
+[10] L. H. Miles, J. W. Gambles, G. K. Maki, W. E. Ryan and S. R. Whitaker, “An 860-Mb/s (8158, 7136) lowdensity parity-check encoder”, IEEE Journal of Solid State Circuits, vol. 41, no. 8, pp. 1686-1691, Aug. 2006.
+[11] http://ipinspace.gsfc.nasa.gov/
+[12] http://www.grc.nasa.gov/WWW/hrdd/portfolio/bn/nextg enhrchannelcodingschemes%20.htm
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 9, pp. 533 – 547, Sep. 1981.
+[14] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Infomation Theory, vol. 7, pp. 21 – 28, Jan. 1962.
+[15] C. Leiserson, F. Rose, and J. Saxe, “Optimizing synchronous circuitry by retiming,” Proceedings of the 3rd Caltech Conference On VLSI, pp. 87-116, March 1983.
+[16] N. Weaver, Y. Markovskiy, Y. Patel and J. Wawrzynek, “Post placement c-slow retiming for the Xilinx Virtex FPGA,” Proceedings of the 11th ACM Symposium of Field Programmable Gate Arrays, Feb. 2003, pp. 185194.
+[17] M. S. Hrishikesh et al., “The optimal logic depth per pipeline stage is 6 to 8 FO4 inverter delays,” Proc. of the 29th Annual International Symposium on Computer Architecture, pp. 14-24, May 2002
+[18] V. Berkel, M. B. Josephs and S. M. Nowick, “Applications of asynchronous circuits,” Proceedings of the IEEE, vol. 87, no. 2, pp. 223-233, Feb. 1999.
+[19] M. Singh and S.M. Nowick, “High Throughput asynchronous pipelines for fine-grain dynamic datapath”, Proceedings of the 6th International Symposium on Advanced Research in Asynchronous Circuits and Systems, April 2000, pp. 198-209.
+[20] I. E. Sutherland, "Micropipelines", Communications of the ACM, vol. 32, no. 6, pp. 720-738, June 1989.
+
+643 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:38 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,697 @@
+A Memory-Based Architecture for FPGA Implementations of Low-Density Parity-Check Convolutional Decoders
+Stephen Bates and Gary Block Department of Electrical and Computer Engineering
+University of Alberta, Edmonton, Canada. Email: {stephen.bates,gblock}@ece.ualberta.ca
+
+Abstract— Low-density parity-check convolutional codes complement
+
+their popular block-oriented counterparts and may be more suitable in
+
+certain communication applications. These include streaming voice and
+
+video and packet switching networks.
+
+In this paper we introduce these codes and propose a memory-based
+
+decoder architecture that is well suited for implementation on Field-
+
+Programmable Gate Arrays. We present an overview of the architecture
+
+and demonstrate its efficiency over register-based architectures.
+
+We then discuss a realization of this architecture that can trade per-
+
+formance for throughput and can achieve up to 120 Mb/s of information
+
+throughput
+
+and
+
+a BER
+
+as
+
+low
+
+as 2 × 10−6
+
+at an
+
+Eb No
+
+of 3
+
+dB
+
+on
+
+an
+
+Altera Stratix FPGA. For a first-generation implementation this compares
+
+favorable with current block-oriented decoder implementations.
+
+I. INTRODUCTION
+
+Research into the implementation of low-density parity-check
+
+encoders and decoders has, to date, focused exclusively upon block
+
+oriented codes (LDPC-BCs). Implementations of LDPC-BC encoders
+
+and decoders have been reported in industry and academia for both
+
+ASICs and FPGAs (e.g. [1], [2] and [3]). These implementations
+
+can achieve good performance with respect to power and area when
+
+compared with other coding schemes [4].
+
+However Low-Density Parity-Check Convolutional Codes (LDPC-
+
+CCs) [5] may be better suited to certain applications than their block
+
+counterparts. For example LDPC-CCs are able to encode and decode
+
+arbitrary lengths of data without the need to fragment them into fixed-
+
+sized blocks. This may be advantageous for streaming applications
+
+such as streaming video, audio and satellite radio.
+
+Another potential application of LDPC-CCs is packet switching
+
+communication systems such as those based on the Ethernet frame
+
+format [6]. The Ethernet frame can vary in its length and this makes
+
+the integration of a LDPC-BC difficult. Using LDPC-CCs removes
+
+the need to accommodate randomly-sized packets into fixed-sized
+
+blocks.
+
+However, until LDPC-CC encoder and decoder architectures have
+
+been implemented in ASICs and FPGAs, the true benefit of adopting
+
+them is unclear. Architectures suitable for ASIC implementations of
+
+LDPC-CC decoders tend to be register-intensive and as such are not
+
+optimal for FPGA implementations [7]. In this paper we focus on a
+
+LDPC-CC decoder architecture that is more suited to implementation
+
+on modern FPGAs where Logic Elements (LEs) are complemented
+
+by large amounts of on-chip memory [8]. This architecture takes
+
+advantage of the dual-port nature of much of this memory and leads
+
+to a design that balances the utilization of the FPGA’s memory and
+
+LEs.
+
+This architecture was implemented on an Altera Stratix S80 devel-
+
+opment board donated by the Canadian Microelectronics Corporation.
+
+The design achieved an information throughput of up to 120 Mb/s
+
+and a BER as low as 2 × 10−6
+
+at an
+
+Eb No
+
+of 3 dB. It also allows us
+
+to trade throughput for performance in a dynamic fashion.
+
+We introduce LDPC-CCs in Section II. In Section III we present some simulation results to show that LDPC-CCs have the same desirable code properties as their block counterparts. In Section IV we show that register-based LDPC-CC decoder architectures are not well suited to FPGAs. In Section V we present a memory-based architecture for a LDPC-CC decoder that is well suited to most modern FPGA devices. We go on to present synthesis results and performance results for a realization of this architecture and show that it performs as predicted by simulations. We finish in Section VII with conclusions and a discussion of ongoing and future work.
+II. AN OVERVIEW OF LDPC-CCS
+LDPC-CCs were first proposed by Felstro¨m and Zigangarov [5]. They are similar to LDPC-BCs in that they generate code-bits based on parity-check operations [4]. However they differ in that any given code-bit, v(t), is generated using only previous information bits and previously generated code-bits. This implies that the parity-check matrix for LDPC-CCs is inherently lower diagonal and this simplifies the encoding process and reduces encoding latency [4].
+An important parameter of an LDPC-CC is its memory, M . The performance of well designed LDPC-CCs increases with M but so too does the encoder and decoder complexity.
+For example the LDPC-CC code-bit generation equation, for a regular (3,6) rate 1/2 code, at time t = nM + φ can be written as
+
+v(nM + φ)
+
+=
+
+P v((3in=1−u1(n)MM
+
++ φ) + v(nM − δi(u)(φ)).
+
+−
+
+δ(v)(φ))+
+
+(1)
+
+Here, n ≥ 0, φ ∈ {0, 1, 2, · · · , M − 1}, δ(v)(.) and {δi(u)(.)} ∈
+
+{1, 2, · · · , M − 1} and + implies addition in GF(2) (i.e. XOR
+
+operations). Note that v(nM + φ) is always generated as part of
+
+a parity-check with v((n − 1)M + φ). Here u(t) represents the
+
+information bit at time t and the δ terms are a function of the code and
+
+are related to its parity-check matrix. For a discussion on construction
+
+methods for LDPC-CCs see [9].
+
+LDPC-CCs can be decoded using the message passing algorithm
+
+similar to that used for LDPC-BCs [4]. The decoding operation is per-
+
+formed by units termed processors [5]. Each processor is comparable
+
+to an iteration in an LDPC-BC and, as such, performance improves
+
+as we add more processors until some limit is met. However, unlike
+
+an LDPC-BC iteration, each processor is a physically independent
+
+unit consisting of delay elements, a single check node and a single
+
+variable node. Each processor is identical and the outputs of processor
+
+i − 1 are the inputs to processor i. These inputs and outputs are
+
+Log-Likelihood Ratios (LLRs) and for the first processor the inputs
+
+are the channel LLRs. For more information of the structure of the
+
+LDPC-CC decoder see [5].
+
+0-7803-883A4u-t8ho/0riz5e/d$l2ic0e.n0s0ed©us2e0l0im5iteIEd Eto:EY.onsei Univ. Downloaded on J3u3n6e 23,2026 at 11:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+The replication of identical processors suggests that LDPC-CC decoders may be well suited to ASIC and FPGA implementations. The design effort can be spent developing one processor which can then be tiled as many times as required or permitted by die size or FPGA resources.
+III. THE PERFORMANCE OF LDPC-CCS
+In Fig. 1 the performance of a M = 128 LDPC-CC is compared to that of a LDPC-BC with a block-length N = 1024. Both codes have a regular (3,6) structure and were decoded using the message passing algorithm [5] and the tanh-based parity-check operation. The LDPC-CC decoder employed 32 processors and the LDPC decoder used 32 iterations. The performance of uncoded Binary Phase Shift Keying (BPSK) is also plotted for comparison purposes. It can be seen the performance of these two codes is similar.
+
+−0.5
+
+−1
+
+−1.5
+
+−2
+
+log10(BER)
+
+−2.5
+
+−3
+
+−3.5
+
+−4 −4.5
+
+Uncoded BPSK LDPC−CC (M=128) LDPCC (N=1024)
+
+−5
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/No (dB)
+
+Fig. 1. The performance of an M = 128 LDPC-CC versus an N = 1024 LDPC-BC. Both codes have a regular (3,6) structure and were decoded using tanh-based parity nodes and 32 processors and iterations respectively. The performance of uncoded Binary Phase Shift Keying (BPSK) is also plotted for comparison purposes.
+
+Additional simulations have been run using the sign-minimum approximation in the parity-check nodes and with finite precision. A comparable degradation in performance is seen in both decoders.
+IV. REGISTER BASED LDPC-CC DECODERS FOR FPGAS
+LDPC-CC decoders are very register-intensive because they require a delay line of at least length M + 1 per processor [5]. In addition, this delay line must be wide enough to store all the partial LLRs for the information bits and the code-bits. This results in at least 8 × (M + 1) × W registers per processor where W is the wordlength of the LLR.
+If a register based LDPC-CC decoder design, suitable for a highspeed ASIC implementation, is synthesized for an FPGA, the results are disappointing. As summarized in Table I, the utilization of Logic Elements (LEs) on the target device for a single processor is quite high. This is due to the fact that the synthesis tool has no choice but to implement the registers using LEs.
+V. A MEMORY BASED APPROACH TO LDPC-CC DECODERS
+Most modern FPGA devices combine LEs with on-chip memory units to enable a larger variety of designs [8]. Our previous registerbased design required a large number of LEs but no memory. The design introduced in this section addresses this imbalance and in
+
+TABLE I THE FPGA RESOURCE REQUIREMENTS OF THE REGISTER-BASED ARCHITECTURE FOR A SINGLE PROCESSOR IN A M = 128 (3,6) LDPC-CC DECODER. THE WORD-LENGTH OF THE LLRS, W IS 8 BITS. THE FIGURES IN BRACKETS REFER TO THE UTILIZATION OF THAT
+RESOURCE ON THE FPGA TARGETED.
+
+Parameter Device Name Logic Elements Memory (bits) Max Clock Freq.
+
+Value Altera Stratix EP1S80
+13246 (16%) 0 (0%) 42MHz
+
+doing so results in a design much more suited to implementation on modern FPGAs.
+A register-based LDPC-CC decoder must pass LLRs along a FIFO delay line. However, an alternative to doing this is to place the LLRs into a circular buffer whose current position is tracked using a pointer.
+This circular buffer can be implemented using on-chip RAM in an FPGA. In addition most modern devices allow this RAM to be configured to have multiple ports [8]. Therefore multiple memory read and write operations can be performed in a single clock cycle.
+To reduce the number of read and write operations required per memory entity we split the circular buffer into eight columnar RAMs (see Fig. 3). Each RAM is of height P words and of width W bits. In reality FPGA tools constrain us to choose the width to be a multiple of 8. Hence we set the LLR precision to W = 8. The eight columnar RAMs store the four information LLRs and four code LLRs from time t back to time t − P + 1.
+In order to perform the decoding operation we are required to perform a certain number of operations on this circular buffer. These operations are discussed in Sections V-A and V-B
+A. Input and Output LLR Update
+It can be seen from Fig. 2 that each processor requires input LLRs and must generate output LLRs. The input LLRs for processor i come from either the channel (if i = 0) or from processor i − 1. The outputs from processor i either go to the decision device (i = I − 1) or processor i + 1. Here, I represents the total number of processors in the decoder.
+At any given time, t, the address to which the input LLRs must be written can be generated using a modulo P counter. The output LLRs are the oldest LLRs in the buffer which are therefore located at p (t) = (p(t)+1) mod P where mod represents the modulo operator. The pointer can then be updated such that p(t + 1) = p (t). Note that the time between t and t + 1 should be equal to the time taken to receive one codeword. We refer to this time as the baud period.
+The writing (reading) of the input (output) information LLRs is shown in phase (a) of Fig. 3. Note that if the memory is dual-port that we can perform both the read and write operations in a single clock cycle. The LLRs output from the memory are then processed by the variable node before being output to processor i + 1 or the decision device (see Fig. 2).
+B. Parity-Check Node LLR Update
+As shown in Fig. 2 we are required to supply the parity check node with its inputs from the circular buffer. In addition the outputs from the parity-check node must be written back into the circular buffer.
+For the regular (3, 6) code used in this paper we are required to read and write 6 LLRs to and from the parity-check node per baud period. The exact location of these LLRs is more complicated to determine than for the input and output LLRs. This is because the
+
+337 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+Phase Input Log Likelihood Ratios
+
+A
+
+Dual Port RAM
+(Px8x8 bits)
+
+B
+
+C
+
+D
+
+D
+
+D
+Finite State Machine
+E
+
+Modulo P Counter
+
+Parity Check Offset Calc
+
+Single Port ROM
+(Mx4x8 bits)
+
+Parity-Check Node Circuit
+
+Variable Node Circuit
+
+Output Log Likelihood Ratios
+
+TABLE II THE FPGA RESOURCE REQUIREMENTS OF THE MEMORY BASED ARCHITECTURE FOR A SINGLE PROCESSOR IN A M = 128 (3,6) LDPC-CC DECODER. THE WORD-LENGTHS OF THE LLR MAGNITUDES IS W = 6 BITS. THE FIGURES IN BRACKETS REFER TO UTILIZATION OF THAT
+RESOURCE ON THE FPGA TARGETED.
+
+Parameter Device Name Logic Elements Memory (bits) Max Clock Freq. Max ×3 Clock Freq.
+
+Value Altera Stratix EP1S80
+2388 (3.02%) 16384 (RAM) + 8192 (ROM) (0.31%)
+50MHz 128MHz
+
+Fig. 2. An overview of the processor design for the memory-based LDPCCC decoder. Note only one of the memory blocks needs to be configured as a RAM, the other is a ROM. In this design Logic Elements are only required for temporary storage, pipelining and the implementation of logic functions. The grey area contains those sections which are clocked using the ×3 clock.
+
+the input-output LLR operations and parity-check operations are performed every baud period. This Finite State Machine (FSM) is shown in Fig. 2 and is also responsible for generating the select signals for multiplexors A to E.
+
+location is a property of the code and is also relative to the current
+
+pointer location, p(t). Therefore we are required to implement a block
+
+which generates addresses into the circular buffer based on both the
+
+present phase, φ, and the pointer p(t).
+
+The single-port ROM in Fig. 2 produces the 6 offset addresses, {δ1(u)(φ), δ2(u)(φ), δ3(u)(φ), δ1(v)(φ) = 0, δ2(v)(φ), δ3(v)(φ) = M }, for a given phase. Only 4 of these addresses are time vary-
+
+ing, which is to be expected given (1). The parity-check off-
+
+set calculator block (see Fig. 2) generates 6 circular buffer addresses, {µ(1u)(t), µ(2u)(t), µ(3u)(t), µ(1v)(t), µ(2v)(t), µ(3v)(t)}, where t = nT + φ, by subtracting the ROM addresses from p(t) modulo
+
+P , e.g.
+
+µ(1u)(nT + φ) = (p(t) − δ1(u)(φ)) mod P.
+
+(2)
+
+The outputs of the parity-check node should be written back to the same address in the circular buffer that the inputs were read from. Therefore we store the addresses {µu1(t), µu2(t), µu3(t), µv1(t), µv2(t), µv3(t)} in a delay line of length equal to the latency of the the parity-check operation, ∆p, at which point they become the write addresses. That is, the read addresses at time t, are the write addresses at time t + ∆p. The parity-check input read and output write operations are shown in phase (b) of Fig. 3.
+
+C. Over-clocking the Circular Buffer
+The fact that we are required to perform all the memory operations in Sections V-A and V-B in a single baud period implies we require quad-port RAM or a clock to address the circular buffer which is ×2 the speed of the base clock.
+However a further complication exists. As can been seen on the righthand side of Fig. 3, any given parity-check read (write) operation many involve up to two reads (writes) of a given column of RAM. For example, in phase (b) of Fig. 3 memory bank RAM3 is read twice. Therefore the worst case total number of reads (writes) required in a single baud period can be up to three. Hence the clock driving the RAM circuitry is required operate at ×3 the baud period.
+In order to co-ordinate the circular buffer operations some additional multiplexors are required (labeled A to E in Fig. 2). These assist in the transfer of memory addresses and read or write values from one clock domain to another.
+A simple state machine inside the ×3 clock domain tracks the current operation required within the RAM and ensures that both
+
+D. Synthesis Results
+The memory-based architecture was synthesized for the regular (3,6), M = 128 code simulated in Fig. 1. The results are summarized in Table II. It is obvious that the memory-based approach is over 5 times more efficient than the register architecture (Table I) when targeting FPGAs.
+Based on the results in Table II up to 33 processors can be accommodated on a single target device. Note that the throughput of this decoder will be limited by the lesser of the base clock frequency or one third of the ×3 clock frequency.
+
+VI. A MEMORY-BASED LDPC-CC DECODER REALIZATION
+
+As noted in Section V, the memory architecture is quite complex.
+
+In order to validate the simulation and synthesis results presented in
+
+Sections III and V it was important to implement this architecture on
+
+an actual FPGA.
+
+The Canadian Microelectronics Corporation supplied an Altera
+
+Stratix DSP development board which consists of a Stratix EP1S80
+
+FPGA as well as on-board RAM and interfaces. A 10-processor
+
+decoder was implemented on the FPGA along with a test pattern
+
+generator and a pseudo-AWGN (Additive White Gaussian Noise)
+
+generator. The performance of this AWGN generator was validated
+
+via simulation. The Stratix device was provided with a 80 MHz clock
+
+from a crystal and an on-chip PLL was used to generate synchronous
+
+40 MHz and 120 MHz clocks.
+
+The realization was tested in both 2 processor mode and 10
+
+processor
+
+mode
+
+and
+
+the
+
+results for a
+
+range
+
+of
+
+Eb No
+
+were
+
+plotted and
+
+compared against Matlab simulations in Fig. 4. It can be seen that
+
+these results are in good agreement. This validates the memory-
+
+based architecture and the accuracy of the pseudo-AWGN circuit.
+
+The difference between these results and those in Fig. 1 is due to the
+
+sign-minimum approximation in the parity-check node, the reduced
+
+number of processors and finite-precision effects.
+
+The BER performance of the decoder could be improved upon by
+
+increasing the number of processors. The synthesis results in Table II
+
+suggest that up to 33 processors can be placed on the target FPGA.
+
+An alternative is to place several decoders in parallel in order to
+
+increase throughput. For example three I = 11 decoders could be
+
+implemented on the FPGA, These three decoders could then operate
+
+in parallel upon different data streams to achieve a total throughput
+
+of 120 Mb/s. An alternative would be to use all the processors on a
+
+40 Mb/s data stream to enhance performance. In this case simulation
+
+results suggest the 40 Mb/s stream would be decoded with a BER
+
+338 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+RAM 1
+(0)
+l u(t-n)
+
+RAM 2
+(1)
+l u(t-n)
+
+RAM 3
+(2)
+l u(t-n)
+
+RAM 4
+(3)
+l u(t-n)
+
+Dual Port RAM
+(Px4xW bits)
+
+(0)
+l u(t-1)
+(0)
+l u(t)
+(0)
+lu (t-P+1 )
+
+(1)
+l u(t-1)
+(1)
+l u(t)
+(1)
+lu (t-P+1 )
+
+(2)
+l u(t-1)
+(2)
+l u(t)
+(2)
+lu (t-P+1 )
+
+(3)
+l (t-1)
+u
+(3)
+l u(t)
+(3)
+lu (t-P+1 )
+
+p (t) p' (t)
+
+RAM 1
+(0)
+l u(t-n)
+
+RAM 2
+(1)
+l u(t-n)
+
+RAM 3
+(2)
+l u(t-n)
+
+RAM 4
+(3)
+l u(t-n)
+(3)
+l u(t-64)
+
+(2)
+l u(t-17)
+
+(2)
+l u(t-9)
+
+(0)
+l u(t-1)
+(0)
+l u(t)
+(0)
+l u(t-W+1 )
+
+(1)
+l u(t-1)
+(1)
+l u(t)
+(1)
+l u(t-W+1 )
+
+(2)
+l u(t-1)
+(2)
+l u(t)
+(2)
+lu(t-W+1 )
+
+(3)
+l (t-1)
+u
+(3)
+l u(t)
+(3)
+l u( t-W+1 )
+
+{ u (t)} {u (t- p)}
+
+(0)
+lu (t-n-1 )
+
+(1)
+lu (t-n-1 )
+
+(2)
+lu (t-n-1 )
+
+(3)
+lu (t-n-1 )
+
+(0)
+lu (t-n-1 )
+
+(1)
+ul (t-n-1 )
+
+(2)
+l u(t-n-1 )
+
+(3)
+lu (t-n-1 )
+
+(a)
+
+(b)
+
+Fig. 3. An expanded view of the RAM section pertinent to the information Log Likelihood Ratios {lu(0)(.), lu(1)(.)lu(2)(.)lu(3)(.)}. The processor input and output phase (a) and the parity-check input output phase (b) are shown. Shaded ellipses and circles indicate memory write locations and non-shaded indicate
+read locations. Note RAM1 is only written and read during phase (a). An identical structure is required for the code LLRs.
+
+0
+
+−1
+
+−2
+
+−3
+
+log10(BER)
+
+−4
+
+−5
+
+−6
+
+−7
+
+Simulation, I=2
+
+−8
+
+Simulation I=10
+
+FPGA, I=2
+
+FPGA, I=10
+
+−9
+
+−1
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+E /N , dB b0
+
+Fig. 4. The performance of the FPGA realization of the decoder versus that predicted by Matlab. Results are shown for the case of two-processors (I = 2) and ten-processors (I = 10).
+
+VII. CONCLUSIONS AND ONGOING WORK
+
+In this paper we have focused on an implementation of a LDPC-
+
+CC decoder that is well suited to implementation on FPGAs. This
+
+implementation is memory-based and employs a RAM and a ROM in
+
+a co-ordinated fashion to perform both processor input-output LLR
+
+update and parity-check input-output update. We showed how this
+
+can be accommodated by clocking the RAM and its interface at ×3
+
+the frequency of the remaining circuitry. Synthesis results show that
+
+this architecture is over five times more efficient than a register based
+
+approach when targeting FPGAs. We also showed that it achieves a
+
+good balance of logic element and memory utilization on an Altera
+
+Stratix EP1S80.
+
+We presented a realization of this architecture which can achieve
+
+up to 120 Mb/s of throughput and a BER as low as 2 × 10−6 at an
+
+Eb N0
+
+of
+
+3 dB.
+
+An alternative architecture is currently being developed which will
+
+permit the clocking of memory at ×2 the baud rate. This will increase
+
+the throughput of the device. In addition, the application of this
+
+memory-based architecture to more modern FPGAs and to ASICs
+
+is also being considered.
+
+of
+
+2 × 10−6
+
+at
+
+an
+
+Eb N0
+
+=
+
+3
+
+dB.
+
+Both
+
+these
+
+alternates
+
+are
+
+realizable
+
+within the same implementation if a small amount of control logic
+
+is added. Therefore it is possible to develop a decoder that can trade
+
+throughput for performance in a dynamic fashion.
+
+It is difficult to compare the decoder presented in this paper with existing LDPC-BC implementations due to the differing target hardware. In [3] a slower (54 Mb/s) decoder was implemented on a Xilinx Virtex-E FPGA. However its BER performance was better (10−6 at 2 dB). In [1] the decoder throughput was much higher (512 Mb/s) because the design was implemented as an ASIC. The block error rate was about 10−5 at 3 dB. However LDPC-BCs have been the focus of research for several years where as LDPC-CCs are much more recent. To the authors’ knowledge this is the first hardware LDPC-CC decoder to be implemented. Our results are encouraging enough to suggest that further investigation is warranted.
+
+REFERENCES
+[1] C. J. Howland and A. J. Blanksby, “A 690-mW 1-Gb/s 1024-b, rate 1/2 low density parity check decoder,” Solid-State Circuits, IEEE Transactions on, vol. 37, no. 3, pp. 404–412, March 2002.
+[2] Flarion, “Vector-LDPC coding solution data sheet,” 2004, available at www.flarion.com.
+[3] T. Zhang and K. Parhi, “A 54 MBPS (3,6)-regular FPGA LDPC decoder,” in Proceedings of the IEEE Workshop on Signal Processing, 2002.
+[4] C. Schlegel and L. Perez, Trellis and Turbo Coding, 1st ed. IEEE, 2004. [5] A. J. Felstro¨m and K. S. Zigangirov, “Time-varying periodic convolutional
+codes with low-density parity-check matrix,” IEEE Trans. Information Theory, vol. 45, no. 6, September 1999. [6] C. E. Spurgeon, Ethernet: The Definitive Guide. O’Reilly, 2000. [7] R. Swamy and S. Bates, “Architectures for ASIC implementations of lowdesnity parity-check encoders and decoders,” in In Proceedings of the IEEE Symposium on Circuits and Systems (ISCAS), Kobe, Japan, 2005. [8] Stratix Device Handbook, Volume 1, Altera Inc., 2004, available at www.altera.com. [9] A. Sridharan and D. Costello, “A new construction method for low density parity check convolutional codes,” in Proceedings of The IEEE Information Theory Workshop, 2002.
+
+339 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+

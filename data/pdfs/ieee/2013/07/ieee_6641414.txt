@@ -1,0 +1,249 @@
+Parallel decoder for Low Density Parity Check
+Codes: A MPSoC study
+Sudeep Kanur∗, Georgios Georgakarakos†, Antti Siirilä ‡, Jérémie Lagravière §, Kristian Nybom ¶, Sébastien Lafond and Johan Lilius ∗∗ ∗,¶, ,∗∗ Åbo Akademi University, Turku, Finland. Email: firstname.lastname@abo.fi †,‡,§, Turun Yliopisto, Turku, Finland. Email: firstname.lastname@utu.fi
+
+Abstract—The near channel performance of Low Density Parity Check Codes (LDPC) has motivated its wide applications. Iterative decoding of LDPC codes provides significant implementation challenges as the complexity grows with the code size. Recent trends in integrating Multiprocessor System on Chip (MPSoC) with Network on Chip (NoC) gives a modular platform for parallel implementation. This paper presents an implementation platform for decoding LDPC codes based on HeMPS, an open source MPSoC framework based on NoC communication fabric. Reduced minimum sum algorithm is used for decoding LDPC codes and simulations are performed using HeMPS tool. The data rate and speedup factor measured for decoding a rate 1/2 LDPC code characterised by 252 × 504 parity matrix is presented.
+Keywords—Low Density Parity Check codes (LDPC), Minimum sum decoding algorithm, HeMPS, MPSoC, NoC, Message passing interface (MPI)
+I. INTRODUCTION
+Reliable transmission of data over a noisy communication channel is one of the central goals a communication system strives to achieve. Forward Error Correction schemes are used in broadcasting and communication systems to increase the bandwidth and improve the efficiency. Low Density Parity Check (LDPC) codes, introduced by Gallager [1], are forward error correction codes that have been proved to achieve performance close to Shannon’s limit [2]. This performance has motivated its use in application areas ranging from long range satellite transmission to terrestrial broadcasting [3]. Second generation Digital Video Broadcasting (DVB) standards has used LDPC for satellite, cable, mobile and terrestrial broadcasting channels.
+LDPC codes are linear block codes and have the property that the error correction performance increases with increasing code lengths. Moreover, if special care is taken when designing the codes, encoding can be made trivial. However, decoding LDPC codes is a NP-complete problem [4]. Iterative decoding schemes are used in decoding, but they bring significant implementation challenges. On the positive side, iterative decoding schemes provide modularity for parallel implementation which many implementation platforms have exploited for faster throughput.
+
+The work in [5] and [6] presents IP cores for second generation Digital Video Broadcasting for satellite (DVB-S2) standards on an ASIC, while [7] present the same on flexible platforms such as field programmable gate arrays (FPGAs). Software Defined Radio (SDR) and GPU implementations have also been created for the standard [8]. While afore mentioned works have achieved real time throughput rates, they come at the cost of increased design time as the IP cores are hand-coded in the cases of FPGA or increased hardware size as in the case of GPUs and SDR.
+With the advancements in semiconductors and CAD design, Multiprocessor System on Chip (MPSoC) with underlying Network on Chip (NoC) platform is gaining popularity in embedded systems. The platform provides modularity at processor level and can be exploited for the implementation of the iterative decoding of LDPC. HeMPS is an open source framework targeting MPSoC customisation that includes the platform comprising of NoC, processors and DMA, the embedded software comprising of microkernel and applications and a dedicated CAD tool to generate required binaries for implementation on FPGA platforms and perform debugging [9]. Communication between processors is done using the NoC communication structure and is implemented using message passing routines. In addition the platform supports static and dynamic task mapping and C or SystemC simulation models for processors and memories [10].
+Exploitation of the HeMPS modularity coupled with decreased time and the cost of implementation is the main goal of this paper. The decoding of a rate 1/2 LDPC code, defined by a 252 × 504 the parity check matrix with progressive edge growth construction, is used for the study. The work simulates sequential and parallel implementation of the algorithm and measures throughput data rates. In addition, a scale-up factor is presented and data rates are compared with a message passing interface library (MPI) implementation on a desktop machine to get a perspective. The paper is organised as follows. Section II provides details on the decoding algorithm. Section III introduces the MPSoC framework. Section IV presents the experimental setup and details mapping of the algorithm on the framework. Section V presents observations and results while section VI concludes the paper.
+
+978-1-4799-0838-7/13/$31.00 ©2013 IEEE
+
+202
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:42:20 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 1. Parity Check Matrix, H
+Figure 2. Tanner graph representation of parity matrix H
+II. LDPC CODES
+A LDPC code of length n bits consists of k bits of information and n − k bits of redundancy called parity bits. The code rate R = k/n gives the fraction of useful information among the transmitted information. The relationship between information and parity bits is given by linear equations and these linear equations can be represented in a matrix form, known as parity check matrix H. Fig.1 illustrates the parity-check matrix H for a Hamming code with code length n = 7 and information length k = 4. For a valid code word x, the linear equations shown in Fig. 1 are satisfied. The validity of the codeword can be also checked using matrix relation H · xT = 0. Unlike the Hamming code, the parity matrix of LDPC codes is constructed using m × n sparse matrix. A sparse matrix has a large number of zero elements compared with nonzero elements and the number of non-zero entries in H grow linearly as O(n). Tanner graphs can be constructed from parity check matrix H by connecting check nodes, given by the row indices of H with variable nodes, given by the column indices of H and is drawn according to the following rule: a check node i is connected to variable node j whenever the element hij of H is 1, where i and j represent rows and columns of the parity matrix. The Tanner graph shown in Fig. 2, represent the entire LDPC code and can help in understanding decoder algorithms for LDPC codes. Gallager proposed an iterative probabilistic decoding scheme based on message or belief propagation to decode LDPC codes [1]. Several decoding techniques have been proposed since then and all of the effective decoding strategies for LDPC are message passing algorithms. The Minimum Sum algorithm has been proved to provide good performance with the usage of minimal hardware [11]. The reduced scan minimum sum algorithm, a variation of the minimum sum
+
+algorithm, was proposed for systems with memory constraints [12]. This algorithm is a rearrangement of the equations of the minimum sum algorithm and has less memory footprint than the original algorithm. The reduced footprint comes at the cost of reduced performance, and in implementations constrained with memory size, this algorithm can be used.
+
+The reduced minimum sum algorithm (RMSA) works by passing messages or beliefs between the check nodes and variable nodes of the tanner graph. RMSA operates in the logarithm domain and messages passed between nodes known as Log Likelihood Ratios (LLRs) which are defined as,
+
+Λ(xi)
+
+=
+
+log(
+
+P P
+
+(xi (xi
+
+= =
+
+0|yi) 1|yi)
+
+),
+
+−∞ ≤ Λ ≤ ∞ (1)
+
+where i = 1 . . . n, x is the code word, y is the channel
+
+output and P (a|b) is the conditional probability function. For a
+
+decoded message xˆ, LLRs exhibit the property that as Λ → ∞,
+
+P (xˆ = 0) → 1 and Λ → −∞, P (xˆ = 1) → 1. For Λ = 0, xˆ
+
+could be either 0 or 1.
+
+Let us consider the Tanner graph shown in Fig.2. Let C(v) denotes the set of check nodes which connect to variable nodes v. Similarly let V (c) denote the set of variable nodes that connect to check nodes c. Let C(v) \ c represent all members of set C(v) except c, while V (c) \ v represent all members of set V (c) expect v. The RMSA decoding algorithm for j iterations can be summarised in following steps.
+
+1) Initialisation: Each variable node v is assigned an a priori LLR according to
+
+Λv(0) = Λ(0)
+
+Similarly check node messages are initialised to zero,
+
+Λ(c0→) v = 0
+
+2) Check node update: For each check node c and for each v ∈ V (c), compute
+
+Λ(cj→) v = (
+
+sign(Λv(j−1) − Λ(cj→−v1))
+
+v ∈V (c)\v
+
+(2)
+
+×
+v
+
+∈mV i(nc)\v|Λv(j−1)
+
+−
+
+Λc(j→−v1)|
+
+3) Variable node update: For each variable node v, compute
+
+Λv(j) = Λ(0) +
+
+Λc(j→) v
+
+(3)
+
+c∈C (v )
+
+4) Decision: Obtain intermediate xi such that if Λvj ≥ 0, then xˆi = 0. Otherwise xˆi = 1. Check for the condition H · xˆT = 0. If the condition is satisfied xˆ is a valid
+codeword, else go to step 2 and iterate until iteration
+limit is reached or until a valid codeword is found.
+
+A careful observation of the algorithm at step 2 reveals that the check node computation of a given check node is independent of others in a given iteration. Hence, in an ideal case, all the check node computations can run in parallel in a given iteration with messages passing between check nodes and variable nodes.
+
+203
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:42:20 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 4. Sequential programming model for LDPC decoder
+
+Figure 3. HeMPS NOC architecture
+
+III. HEMPS FRAMEWORK
+
+The HeMPS framework provides a MPSoC framework with the network on chip like connectivity. The HERMES NoC architecture is used to connect “Plasma” (MIPS-like) processors in a 2D mesh topology as shown in Fig. 3. The processing elements (PEs) are named Plasma-IP. Each PE in the network contains a plasma processor, a local memory, a DMA controller, and a network interface. The DMA controller is used for fast data transfer of packets between local memory and the PE’s network interface. Among the PEs one ‘master’ (PlasmaIP-MS) is responsible for managing resources while the rest ‘slaves’ (PlasmaIP-SL) are executing the applications.
+During operation, the master reads the distributed application source (split in several tasks) from an external task repository, and allocates tasks to the slaves. Each slave runs a microkernel, which supports multitasking and task communication. The master also runs a microkernel, but does not execute applications tasks. The microkernel segments the memory in pages, which is allocated for itself (first page) and several tasks (subsequent pages). Each Plasma-IP has a task table, with the location of local and remote tasks. The microkernel protects memory pages. All communication between tasks is handled through a custom blocking message passing interface. The messages exchanged between processors are constrained to 128 bytes each. The kernel is described mostly in C and some special functions such as interruption treatment and context saving are described in assembly.
+IV. IMPLEMENTATION
+A. Mapping
+For a parallel scalable implementation of decoding algorithm, the option of assigning each node to a separate processing element is clearly not attractive. Such an implementation introduces high communication overhead between the processing elements. Instead, the approach proposed is to group
+
+Figure 5. Parallel programming model for LDPC decoder
+several check nodes together and to execute each group on separate processing elements in a homogenous MPSOC architecture.The goal is to have scalability and stable performance enhancements in LDPC decoding. In principle, the mapping involves dividing the decoding algorithm between one master processor and several slave processors. The master processor is in charge of scattering and gathering of data and computation of the steps 1, 3 and 4 of the algorithm while slave processors are in charge of unpacking the data and processing the check nodes. The arrangement resembles a star-based network configuration between master and slave processors.
+The check node grouping decision is made by dividing the number of check nodes by the number of slave processors. Since the processing follows a homogeneous concept, each slave processor is assigned the same number of check nodes. Consider the Tanner graph shown in Fig.4. For the sake of convenience, a 4 by 7 parity check matrix is chosen. Fig. 5 gives an example of an implementation of the algorithm executed on three processing elements (P0, P1 and P2). P0 executes all the variable nodes, and communicates with all the check nodes and forms the central process. P1 and P2 are in charge of the execution of two check nodes each. Fig.6 shows the same for a generalised case.
+B. Simulation Setup
+The distributed LDPC decoder application is mapped as described in the previous section and transferred to HeMPS simulation platform for the test and evaluation. For the experimentation, a parity check matrix of size 252 by 504 was chosen
+
+204
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:42:20 UTC from IEEE Xplore. Restrictions apply.
+
+530
+
+Parallel
+
+Sequential 480
+
+Data rate in kb/s
+
+430
+
+380
+
+330
+
+280
+
+230
+
+Figure 6. Generalised parallel programming model for LDPC decoder
+[13]. LDPC codes, being linear codes gives better performance as the size of the code increases. However, the simulator platform restricts the memory size, and due to this restriction this parity matrix was chosen. The restriction on memory size also motivated the use of RMSA algorithm instead of the minimum sum algorithm for decoding LDPC codes. To get a perspective of HeMPS platform, a measurement was carried out on a desktop machine using MPI as the framework. This gave an idea of overheads that HeMPS platform puts on the blocking message passing interface. The desktop machine has the following property: two CPUs Intel(R) Xeon(R) CPU E52620 0 @ 2.00GHz, in total it represents 12 physical cores, and 24 cores (hyperthreading), running Linux Ubuntu 12.04 Kernel 3.2.0-38-generic-pae operating system.
+HeMPS can perform a System-C based simulation for a given MPSoC configuration. HeMPS API allows various mapping options in a configurable NoC based MPSoC environment. Since the mapping approach proposed features a master kernel communicating with several slave kernels, the master kernel is placed at the center of the processing elements array, while the slave kernels are allocated in processing elements (PE) around the central PE. The PEs are configured as Plasma IP cores at a clock speed of 100 MHz and a maximum memory page size of 16KB (program and data). Each LDPC decoder kernel uses 1 memory page size per core. The input of the decoder is the LLR values of a single codeword from the channel receiver. These LLR values are hard coded into the memory page of the master node for the sake of simplicity. Using a system call that measures clock cycles, a performance evaluation of several check node grouping options can be obtained. The measurements performed here are the worst case measurements and are calculated for the maximum iterations of 30. The measurements are taken for increasing number of slave processors until the performance starts to degrade.
+The speed-up of each grouping option is measured with respect to the normal (sequential) LDPC decoding application. The sequential application features the LDPC decoder mapped on a single Plasma IP core.
+
+180 0 1 2 3 4 5 6 7 8 9 10 11 Number of processors
+Figure 7. Throughput rates for sequential and parallel execution of LDPC decoder using MPI framework
+Seven different scenarios have been considered for measurement. All the scenarios run 1 task per PE only. As the number of check nodes needs to be divisible by the processors, certain processor configurations could not be measured. The scenarios considered were:
+1) sequential LDPC decoding application: 1 task, single PE 2) 3-PE allocation (1 master-2 slaves) 3) 4-PE allocation (1 master-3 slaves) 4) 5-PE allocation (1 master-4 slaves) 5) 7-PE allocation (1 master-6 slaves) 6) 8-PE allocation (1 master-7 slaves) 7) 10-PE allocation (1 master-9 slaves)
+V. RESULTS
+The results obtained for the MPI framework run on the desktop machine and HeMPS simulations are summarised in Fig.7, Fig.8, Table I and Table II. The figures and tables give the total number of processors, which includes master processor and slave processors. In our mapping technique, we have chosen to map the check node computations onto slave processors. The master node is in charge of a bulk of processing including variable node computations. The algorithm performs worse initially but the performance increases among the increase of processors compared with the sequential execution. When the number of processors are small, significant processing happens in the slave nodes during which the master has to wait, explaining the initial drop in the performance.
+Considering the scalability limit, the proposed implementation scales up to five processors after which the performance starts to degrade. This decrease in performance can be attributed to the communication cost between the master and slave processors. The communication cost that is significant enough to counterbalance the gain from the parallel operations of
+
+205
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:42:20 UTC from IEEE Xplore. Restrictions apply.
+
+Data rate in kb/s
+
+4.2
+
+Parallel
+
+4.1
+
+Sequential
+
+4
+
+3.9
+
+3.8
+
+3.7
+
+3.6
+
+3.5
+
+3.4
+
+3.3
+
+3.2
+
+3.1
+
+3 0 1 2 3 4 5 6 7 8 9 10 11
+
+Number of processors
+
+VI. CONCLUSION
+This paper presents a viable solution to implement the decoding of Low Density Parity Check Codes in a MPSoC environment. The simulation of the parallel set was performed and the throughput rates and the speedup factor for RMSA decoding algorithm were given. For a given LDPC code, the performance gain was maximal at five processors after which performance degraded. Throughput rates can be improved by increasing the clock speed and/or memory page size in each core. Parallelism can be introduced in the variable node update stage as well to see the impact of performance. In addition, the redesign of the MPI routine in a non-blocking matter would allow a more efficient job scheduling in the master process which would provide significant performance enhancements.
+REFERENCES
+
+Figure 8. Throughput rates for sequential and parallel execution of LDPC decoder on HeMPS platform
+
+TABLE I THROUGHPUT AND SPEED UP FACTOR FOR SIMULATION OF LDPC
+DECODER ON HEMPS
+
+Scenario 1 2 3 4 5 6 7
+
+number of processors 1 3 4 5 7 8 10
+
+Throughput (kbps) 3.222 3.14 3.61 4.03 4.00 4.01 3.93
+
+Speed Up factor -
+0.97 1.12 1.25 1.24 1.24 1.22
+
+the check nodes. Unlike the MPI framework, HeMPS is a NoC based architecture where physical distance and network communication costs add up with parallelisation.
+From the results, for 252 × 504 matrix, we can observe accordance of the practical measurements of HeMPS with theoretical projections of the MPI software model. The variation in the speedup values are caused by the differences between the platforms of measurements: the MPI model is based on a software implementation in a desktop environment thus the results are evaluated in a qualitative approach. However the proposed implementation in HeMPS is suitable for resourcelimited embedded MPSoC platforms.
+
+TABLE II THROUGHPUT AND SPEED UP FACTOR FOR SIMULATION OF LDPC
+DECODER USING MPI FRAMEWORK ON DESKTOP
+
+Scenario 1 2 3 4 5 6 7 8
+
+number of processors 1 2 3 4 5 7 8 10
+
+Throughput (kbps) 221.40 190.93 284.67 385.10 382.51 459.19 462.83 410.90
+
+Speed Up factor -
+0.86 1.28 1.73 1.72 2.07 2.09 1.85
+
+[1] R. Gallager. Low-density parity-check codes. Information Theory, IRE Transactions on, 8(1):21 –28, jan. 1962.
+[2] D.J.C. MacKay. Good error-correcting codes based on very sparse matrices. In Information Theory. 1997. Proceedings., 1997 IEEE International Symposium on, page 113, jun. 1997.
+[3] K.S. Andrews, D. Divsalar, S. Dolinar, J. Hamkins, C.R. Jones, and F. Pollara. The development of turbo and ldpc codes for deep-space applications. Proceedings of the IEEE, 95(11):2142 –2156, nov. 2007.
+[4] E. Berlekamp, R. McEliece, and H. van Tilborg. On the inherent intractability of certain coding problems (corresp.). Information Theory, IEEE Transactions on, 24(3):384 – 386, may 1978.
+[5] John Dielissen, Andries Hekstra, and Vincent Berg. Low cost ldpc decoder for dvb-s2. In Proceedings of the conference on Design, automation and test in Europe: Designers’ forum, DATE ’06, pages 130–135, 3001 Leuven, Belgium, Belgium, 2006. European Design and Automation Association.
+[6] F. Kienle, T. Brack, and N. Wehn. A Synthesizable IP Core for DVBS2 LDPC Code Decoding. In Design, Automation and Test in Europe, pages 100–105. Ieee, 2005.
+[7] M. Gomes, G. Falcao, V. Silva, V. Ferreira, A. Sengo, and M. Falcao. Flexible parallel architecture for dvb-s2 ldpc decoders. In Global Telecommunications Conference, 2007. GLOBECOM ’07. IEEE, pages 3265 –3269, nov. 2007.
+[8] Stefan Grönroos, Kristian Nybom, and Jerker Björkqvist. Complexity analysis of software defined DVB-T2 physical layer. Analog Integrated Circuits and Signal Processing, 69(2-3):131–142, 2011.
+[9] E.W. Wachter, A. Biazi, and F.G. Moraes. Hemps-s: A homogeneous noc-based mpsocs framework prototyped in fpgas. In Reconfigurable Communication-centric Systems-on-Chip (ReCoSoC), 2011 6th International Workshop on, pages 1–8, June 2011.
+[10] E.A. Carara, R.P. de Oliveira, N. L V Calazans, and F.G. Moraes. Hemps - a framework for noc-based mpsoc generation. In Circuits and Systems, 2009. ISCAS 2009. IEEE International Symposium on, pages 1345– 1348, May 2009.
+[11] A. Anastasopoulos. A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution. In Global Telecommunications Conference, 2001. GLOBECOM ’01. IEEE, volume 2, pages 1021 –1025 vol.2, 2001.
+[12] Xiaofei Huang, Suquan Ding, Zhixing Yang, and Youshou Wu. Fast min-sum algorithms for decoding of ldpc over gf(q). In Information Theory Workshop, 2006. ITW ’06 Chengdu. IEEE, pages 96 –99, oct. 2006.
+[13] IBM Zurich research labs Xiao-Yu Hu. Progressive edge growth construction regular code with rate 1/2. http://www.inference.phy.cam. ac.uk/mackay/codes/data.html#l62.
+
+206
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:42:20 UTC from IEEE Xplore. Restrictions apply.
+
+

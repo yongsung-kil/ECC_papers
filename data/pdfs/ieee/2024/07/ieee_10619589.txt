@@ -1,0 +1,689 @@
+Graph Neural Networks for Enhanced Decoding of Quantum LDPC Codes
+Anqi Gong∗, Sebastian Cammerer†, and Joseph M. Renes∗ ∗ETH Zürich, Switzerland, gonga@student.ethz.ch †NVIDIA scammerer@nvidia.com
+
+2024 IEEE International Symposium on Information Theory (ISIT) | 979-8-3503-8284-6/24/$31.00 ©2024 IEEE | DOI: 10.1109/ISIT57864.2024.10619589
+
+Abstract—In this work, we propose a fully differentiable iterative decoder for quantum low-density parity-check (LDPC) codes. The proposed algorithm is composed of classical belief propagation (BP) decoding stages and intermediate graph neural network (GNN) layers. Both components of the decoder are defined over the same sparse decoding graph enabling a seamless integration and scalability to large codes. The core idea is to use the GNN component between consecutive BP runs so that the knowledge from the previous BP run can be leveraged to better initialize the next BP run. This enables the proposed decoder to learn to compensate for sub-optimal BP decoding graphs that result from the design constraints of quantum LDPC codes. Since the entire decoder remains differentiable, gradient descent-based training is possible. We compare the error rate performance of the proposed decoder against various post-processing methods such as random perturbation, enhanced feedback, augmentation, and ordered-statistics decoding (OSD) and show that a carefully designed training process lowers the error-floor significantly. As a result, our proposed decoder outperforms the former three methods using significantly fewer post-processing attempts. The source code of our experiments is available online.
+I. INTRODUCTION
+Quantum low-density parity-check (QLDPC) codes are among the most promising types of error correction codes for fault-tolerant quantum computing. In recent years there have been numerous efforts to design QLDPC codes of high rate and high distance [1], [2]; even linear distance has been investigated in [3], [4]. Recent work from Bravyi et al. [5] shows how certain codes can be mapped to a bilayer hardware architecture, spurring further interest in the community and increasing the practical importance of low-complexity decoders.
+In this work, we focus on decoding medium block-length and high-rate CSS QLDPC codes introduced in [6]. These codes are of particular interest due to their strong errorrate performance under maximum likelihood decoding and its approximations, such as ordered-statistics decoding (OSD). However, their performance is known to be suboptimal under plain belief propagation (BP) decoding, due to short loops and symmetric stabilizer trapping sets [7]–[9] present in the Tanner graph. The authors in [7] proposed to alleviate this issue by adding a small perturbation to the channel prior probabilities given as input to the BP decoder. An improved version is shown in [10], where the perturbation depends on the unsatisfied checks.
+The goal of our work is to learn those perturbations using a GNN. The GNN follows the concept of [11] and acts as an intermediate layer between independent BP runs, as shown in
+
+Λ0
+
+Λpost
+
+Λ′
+
+Λpost
+
+Λ′
+
+Λpost
+
+Λ′
+
+Λpost
+
+64
+
+1 16 1 16 1 16
+
+BP
+
+GNN
+
+BP
+
+GNN
+
+BP
+
+GNN
+
+BP
+
+Fig. 1. Block diagram of the proposed decoder architecture consisting of trainable GNN layers (orange) and classical BP iterations (yellow). The same GNN is sandwiched between blocks of BP runs with iterations (64, 16, 16, 16).
+
+Figure 1. It takes the output log-likelihood ratios (LLRs) Λpost estimated by the previous BP decoding stage, then calculates the reliabilities of checks, and uses both information to provide a refined channel prior Λ′ as initialization of the next BP run. We call this intermediate layer a feedback GNN. The GNN operates on the same decoding graph as the BP decoder, facilitating a seamless integration with the BP decoding stages. Our trained feedback GNN requires significantly fewer attempts than the aforementioned two methods [7], [10] to achieve a lower logical error rate, as shown in Fig. 3(a).
+Typically, machine learning for channel decoding is doomed by the curse of dimensionality, meaning that the training complexity scales exponentially with the codeword length [12]. However, we would like to emphasize that one advantage of the proposed feedback GNN structure is that the graph is explicitly provided and the main decoding task still relies on BP. Thereby, its training complexity is only mildly affected by the codeword length [11].
+The remainder of the paper is organized as follows. Section II contains some background information on the CSS-type LDPC codes, and in Section II-B, we review some existing post-processing methods. Section III reviews the quaternary BP decoding method. With this basis we describe the feedback GNN model architecture and the training method in Section IV. Section V presents the numerical simulation results. We conclude in Section VI. The source code of this project is available online [13].
+II. QUANTUM LOW-DENSITY PARITY-CHECK CODES
+In the following we restrict our attention to the i.i.d. depolarizing channel, in which each qubit independently and identically experiences a random X, Z, or Y = iXZ type of error, each with probability p/3 for some p ∈ [0, 1].
+A. CSS Quantum Codes
+Quantum Calderbank-Shor-Steane (CSS) [14], [15] codes are constructed from two classical codes CX = ker HX and
+
+979-8-3503-A8u2th8o4riz-6ed/2li4ce/n$s3e1d.u0s0e ©lim2ite0d2t4o:IYEoEnsEei Univ. Downloaded on2J7un0e024,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+CZ = ker HZ defined by parity-check matrices HX and HZ under the requirement HX HZT = 0, i.e., CZ⊥ ⊆ CX or equivalently CX⊥ ⊆ CZ . Rows of HX and HZ form the Xand Z-type stabilizer generators, while the X-type and Z-type logical operators are CZ \CX⊥ and CX \CZ⊥, respectively. All parity-check operations are binary operations in GF(2).
+If CX is a blocklength N code, encoding KX information bits (denoted as [N, KX ] code), and CZ is an [N, KZ ] code, then the resulting quantum code is an N, KX + KZ − N code. The quantum minimum distance of this code is d = min{dX , dZ }, where dX = min{wt(x), x ∈ ker HZ \im HXT }, dZ = min{wt(x), x ∈ ker HX \im HZT }. wt(x) is the Hamming weight of the binary vector x.
+An error is specified by N -bit vectors eX and eZ denoting the X and Z components of the error, respectively. A decoder takes the observed syndromes sX = HZ eX and sZ = HX eZ and constructs correction operations eˆX and eˆZ . Importantly, these do not need to precisely match the error for decoding to succeed. Instead, eˆX and eX may differ by an X-stabilizer, and eˆZ and eZ may differ by a Z-stabilizer, as these correction operations will return the system to the codespace without incurring any logical error. The requirement for successful correction can be compactly written as HX⊥(eˆX +eX ) = 0 and HZ⊥(eˆZ + eZ ) = 0, where the rows of HX⊥ and HZ⊥ generate CX and CZ respectively. This is more stringent than only requiring eˆ to have the correct syndrome, i.e., HZ eˆX = HZ eX and HX eˆZ = HX eZ , since the row span of HX is contained in the row span of HZ⊥ for a CSS code.
+In the depolarizing model, the X and Z components of the CSS codes can be separately decoded using classical (binary) syndrome BP decoders. To address the correlation between X and Z errors, a quaternary BP decoder [16] was introduced to directly operate on the Tanner graph involving both the X and Z checks. However, due to the CSS code constraints, this Tanner graph inevitably contains cycles of length 4 [16]. This makes the decoding of QLDPC codes a challenging, yet from a research perspective attractive, task.
+B. Existing Post-Processing Methods
+One difficulty of decoding QLDPC codes using message passing methods is that the correction operator eˆ = (eˆX |eˆZ ) of the decoder is not assured to result in a zero syndrome s = (sX |sZ ) = 0. We call such cases “flagged” events as the decoder is aware of the existence of these types of errors. To overcome such flagged events, several post-processing methods have been proposed. One approach is to take the output of the BP decoder and use it to adjust the inputs to another round of BP decoding, in the hope that that round will lead to an unflagged error. The following is a summary of such methods, which can be applied repeatedly until the parity-checks are satisfied or the maximal number of attempts Na is reached:
+• Random perturbation [7] randomly chooses unsatisfied (“frustrated”) checks and randomly perturbs the input LLRs for all the qubits involved in those checks.
+
+• Enhanced feedback [10] randomly chooses one frustrated parity-check and one of its associated qubits. The channel prior of this qubit is adjusted such that an anticommuting/commuting error is more likely if the ground truth syndrome of the parity-check is 1 and 0, respectively.
+• Matrix augmentation [17] randomly chooses and repeats some of the rows from the parity-check matrix, and uses this augmented matrix to initialize the message passing decoding in the next round.
+
+III. QUATERNARY BELIEF PROPAGATION DECODER
+
+The quaternary BP (BP4) algorithm utilizes the correlation
+
+between X and Z noise by directly working on the quaternary
+
+alphabet {I, X, Y, Z}. Here we discuss the details of the
+
+algorithm, as they will be useful later. As with usual BP
+
+decoding algorithms, BP4 utilizes the Tanner graph of the
+
+code, and proceeds by sending messages back and forth
+
+between variable nodes (VNs) to check nodes (CNs). The goal
+
+is to estimate the marginal probability of error on each qubit,
+
+given the observed syndrome.
+
+Following [18], [19], the input to the BP4 algorithm is
+
+the syndrome pair sX = HZ eX and sZ = HX eZ . Initialize
+
+VNs to Λ ∈ RN×3, where the ith row Λi = (ΛiX , ΛiY , ΛiZ )
+
+is the sequence of LLRs associated with X, Y , and Z,
+
+respectively.
+
+Specifically,
+
+ΛiX
+
+=
+
+log
+
+piI pX i
+
+,
+
+where
+
+pIi
+
+and
+
+piX
+
+are the probabilities of no error or an X error happening
+
+on VN i, respectively. In the case of i.i.d. depolarizing noise
+
+piX = piY = piZ = p/3 for all VN i, meaning the initial VN
+
+LLRs
+
+are
+
+ΛXi
+
+= ΛYi
+
+= ΛiZ
+
+= log
+
+1−p p/3
+
+,
+
+∀i.
+
+The message λi→j sent from VN vi to CN cj is a scalar.
+
+For example, if cj involves an X-type check on vi. Then this
+
+scalar LLR message is
+
+λi→j
+
+=
+
+log
+
+piI pYi
+
++ piX + pZi
+
+1 + e−ΛX i = log e−ΛYi + e−ΛZi
+
+(1)
+
+since either Y or Z error contributes 1 to (anti-commutes with) the check. When cj involves a Y - or a Z-type check the messages are defined similarly, as the LLR of an anticommuting error. This mapping (and thus the BP4 algorithm) can also be applied to non-CSS codes, however, we restrict ourselves to CSS QLDPC codes in this work. Every check node involves either pure X checks or pure Z checks on VNs.
+
+A. Check Node Update
+
+The message ∆j→i from CN cj back to VN vi is the LLR
+
+of whether vi commutes with cj, conditioned on the check
+
+node observations.
+
+Lemma (Gallager [20]). Consider a sequence of m indepen-
+
+dent binary digits (a1, ..., am) in which Pr[ak = 1] = pk.
+
+Then the probability q that a1 ⊕ · · · ⊕ am = 1 (i.e., an odd
+
+number
+
+of
+
+ones
+
+occurring)
+
+is
+
+q
+
+=
+
+1 2
+
+−
+
+1 2
+
+m k=1
+
+(1
+
+−
+
+2pk ),
+
+which
+
+can be rewritten in the log-domain as
+
+log 1 − q = 2 tanh−1
+
+m
+tanh
+
+1 log 1 − pi
+
+.
+
+(2)
+
+q
+
+i=1
+
+2
+
+pi
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on2J7un0e124,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+The right-hand side is usually abbreviated as the boxplus
+
+operation
+
+⊞im=1Λi
+
+for
+
+LLRs
+
+Λi
+
+=
+
+log
+
+1−pi pi
+
+.
+
+Later,
+
+the
+
+loss
+
+function and the feature required by the GNN both rely on
+
+this simple lemma.
+
+The message ∆j→i involves extrinsic information only, and
+
+is given by
+
+∆j→i = (−1)sj · ⊞i′∈N (j)\{i}λi′→j
+
+(3)
+
+where sj ∈ {0, 1} is the syndrome of the check cj, N (j) is the set of neighboring VNs of cj in the Tanner graph.
+
+B. Variable Node Update
+
+The VN update processes the messages coming from the
+
+CNs in its direct neighborhood. Assuming cj involves an X-
+
+type check on vi, the LLR message ∆j→i cannot distinguish
+
+between I and X noise as they both commute with the check.
+
+Similarly, it cannot distinguish Y and Z noise. Therefore, it
+
+is assumed that those posterior probabilities satisfy pIj→i =
+
+pjX→i and
+
+log
+
+. pjI→i
+pjZ→i
+
+pjY→i = pZj→i, Similarly, if cj
+
+and
+
+hence
+
+∆i←j
+
+= log pIj→i+pX j→i
+pjY→i +pZj →i
+
+=
+
+involves a Z-type check on vi, then
+
+∆i←j
+
+=
+
+log
+
+. pjI→i
+pjX→i
+
+The update of the the LLR vector (ΓiX→j, ΓiY→j, ΓZi→j) for
+
+vi is also computed via the extrinsic information rule
+
+ΓiX→j = ΛiX +
+
+∆i←j′
+
+(4)
+
+j′∈MZ (i)\{j}
+
+where MZ(i) are all the Z-type check nodes (CSS code)
+
+involving vi. Note that checks cj from MX (i) make no
+
+contribution
+
+as
+
+log
+
+pjI→i pjX→i
+
+=
+
+0.
+
+The
+
+update
+
+rule
+
+for
+
+ΓiY→j
+
+is
+
+ΓiY→j = ΛYi +
+
+∆i←j′ .
+
+(5)
+
+j′∈MZ (i)∪MX (i)\{j}
+
+Using (1), one can combine messages to send to X and Z-type CNs and continue the BP iterations.
+
+C. Hard Decision
+
+Before a final hard decision, the last decoding iterations calculate the channel posterior Λpost = (ΓX , ΓY , ΓZ ) whose
+individual components read
+
+ΓXi /Z = ΛiX/Z +
+
+∆i←j′
+
+j′∈MZ/X (i)
+
+(6)
+
+ΓiY = ΛiY +
+
+∆i←j′
+
+j′∈MZ (i)∪MX (i)
+
+and ΓIi = 0 and then for each VN choose among {I, X, Y, Z} that leads to the smallest LLR.
+
+IV. FEEDBACK GNN
+The proposed message passing GNN decoder inheriting [11] utilizes the same Tanner graph as the BP decoder, but differs in the representation of the messages and uses trainable CN and VN update functions which are parameterized, for instance by using simple MLP layers. Each variable node or check
+
+Unrolled feedback GNN
+
+Λpost
+
+Eq (7) λX 1 ,Z λ2X,Z λ3X,Z λX 4 ,Z λ5X,Z λ6X,Z λX 7 ,Z
+
+c v Eq (8)
+
+1 f CX →V
+
+1 fV N
+
+c2
+
+v2
+
+c3
+
+v3
+
+v4
+
+c4
+
+Λ′
+
+v5
+
+c5
+
+v6
+
+c6
+
+v7
+
+f CZ →V
+
+Fig. 2. Unrolled feedback GNN operating on the Tanner graph, showing the inside of the orange boxes in Fig. 1. The VN feature is initialized using Λpost from the previous BP run and the CN feature is calculated using Eq (7,8).
+Each edge message is calculated using the features of its two endpoints. After
+that, each VN aggregates the incoming X (red) and Z-type (blue) messages and its own feature to obtain a modified channel prior Λ′ for the next BP
+run. Solid objects indicate trainable operations.
+
+node has an assigned feature vector. The message on an edge is computed using the concatenated features of its two end nodes. Afterward, the state of a node is updated using its previous state and by the aggregated incoming messages from its neighborhood. The aggregation operation used in this work is the mean operation. To keep the decoding complexity low, our feedback GNN eliminates the “iterative” aspect of the decoder, opting for just one VN update iteration. However, the basic concept still follows [11].
+
+A. Architecture
+
+After the BP run, the posterior channel LLR is obtained
+
+using (6) and it becomes the variable node feature hvi = Λpost,i = (ΓiX , ΓYi , ΓiZ ). Using (1), the two LLRs λiX , λZi of
+whether vi commutes with X or Z check are
+
+λiX
+
+=
+
+log
+
+1 + e−ΓX i e−ΓYi + e−ΓiZ
+
+,
+
+λiZ
+
+1 + e−ΓZi = log e−ΓiX + e−ΓiY
+
+.
+
+(7)
+
+Using the Lemma from Gallager, the LLR of whether Xtype check node cj is satisfied is ⊞i′∈N(j)λZi′ . The feature of this check node is
+
+hcj = (−1)sj × ⊞i′∈N(j)λZi′
+
+(8)
+
+which is a scalar, and the more negative it is, the more likely this check tends to be not satisfied.
+Next, for each CN to VN edge, concatenate (denote by ||) the features of its two endpoints and calculate the message
+
+mcj →vi = f CX/Z →V hcj ||hvi , θCX/Z →V .
+
+(9)
+
+X-type CNs share weights θCX→V for the function f CX→V . Z-type CNs share weights θCZ→V for f CZ→V . In our implementation f CX→V and f CZ→V are both multi-layer percep-
+trons (MLPs) with one hidden unit of 40 neurons and tanh
+activation. Both MLPs project the messages to dimension 20
+as output.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on2J7un0e224,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+For each vi, calculate the average of all the incoming messages from X-type and Z-type checks respectively
+
+mvXi
+
+=
+
+1 |MX (i)|
+
+mc′j →vi
+j′∈MX (i)
+
+mZvi
+
+=
+
+1 |MZ (i)|
+
+mcj′ →vi .
+j′∈MZ (i)
+
+(10)
+
+All VNs share weight for f V N , which is another MLP (hidden
+unit 40) that projects the high-dimensional messages back to three dimensions. The resulting output Λ′ ∈ RN×3 is then used to initialize the next BP run.
+
+Λ′i = f V N hvi ||mXvi ||mZvi , θV N .
+
+(11)
+
+This feedback GNN essentially only does one VN update, in contrast to the usual message-passing GNN [11] that does multiple iterations of CN and then VN updates. Moreover, the proposed feedback GNN is lightweight, containing just 3923 trainable parameters in total, irrespective of the code size. However, more iterations are also possible.
+
+Algorithm 1 Sandwiched BP GNN Decoding
+
+Input syndrome (sX , sZ )
+
+1:
+
+Λ0
+
+←
+
+log
+
+1−p p/3
+
+IN ×3
+
+2: (eˆX , eˆZ , Λpost) ← decoders[0](Λ0)
+
+3: if HX eˆZ = sZ and HZ eˆX = sX then
+
+4: return (eˆX , eˆZ )
+
+5: // Begin post-processing
+
+6: for decoder in decoders[1:] do
+
+7: Λ′ ← Feedback-GNN(Λpost) 8: (eˆX , eˆZ , Λpost) ← decoder(Λ′)
+
+9: if HX eˆZ = sZ and HZ eˆX = sX then
+
+10:
+
+return (eˆX , eˆZ )
+
+11: return (eˆX , eˆZ )
+
+12: procedure FEEDBACK-GNN(Λpost)
+
+13: for each VN vi do
+
+14:
+
+hvi ← Λpost,i
+
+15: for each CN cj do
+
+16:
+
+hcj ← . . .
+
+// Eq (7,8)
+
+17: for each edge (cj, vi) do
+
+18:
+
+mcj →vi ← f CX/Z →V (hcj ||hvi )
+
+19: for edge VN vi do
+
+20:
+
+mXvi , mZvi ← . . .
+
+// Eq (10)
+
+21:
+
+Λ′i ← f V N (hvi ||mXvi ||mvZi )
+
+22: return Λ′
+
+B. Boxplus Loss
+In order to train this GNN, we feed its output Λ′ to initialize another BP4 decoding stage, and let it run for 16 iterations. We record (ΓiX , ΓYi , ΓiZ ) as in Eq (6) at the end of iteration 8 to 16 and calculate λXi , λZi for all these iterations as in Eq (7), and for all X/Z-type checks calculate ⊞i′∈N (j)λiZ′/X , respectively.
+
+These are the logits used to calculate a binary cross entropy loss for a given ground truth syndrome sj. This loss is minimized when HX eˆZ = HX eZ and HZ eˆX = HZ eX .
+Note that the proposed boxplus loss is different from the sine loss introduced in [21]. It is also possible to extend this boxplus loss to take degeneracy into account. For CSS codes, no logical error happens if and only if HX⊥eˆX = HX⊥eX and HZ⊥eˆZ = HZ⊥eZ . And the CSS requirement implies HZ ⊂ HX⊥ and HX ⊂ HZ⊥. Therefore, we can simply enlarge the X and Z parity-check matrices into HZ⊥ and HX⊥ when doing the multi-loss calculation. When training the feedback GNN, we do not take degeneracy into account.
+C. Training methods
+• Step 1: Generate an easy dataset by storing the error patterns (eX , eZ ) that a 64-iteration flooding BP4 fails to decode. To target the low physical error region where the perturbationbased post-processing methods show an error floor, cf. Fig. 3(a), we only consider eX ∨ eZ (bit-wise OR) having Hamming weight up to 0.05N . We gather roughly a million such errors in a few hours.
+• Step 2: Train a coarse GNN on the easy dataset by sandwiching it between two BP runs of 16 iterations. The output of iterations 8 to 16 of the latter run is used to calculate a boxplus multi-loss, as described in the last subsection. Training takes roughly ten minutes on a single NVIDIA RTX4090.
+• Step 3: The coarse GNN, when embedded between BP layers, shows a severe error floor during inference, see Fig. 4. Therefore, we gather a hard dataset by storing error patterns that two 64-iteration BP runs sandwiching the coarse GNN fail to decode. We gathered roughly twenty thousand such samples in a few days.
+• Step 4: We repeat the hard dataset by fifty times and mix it with the easy one to balance occurrence. We then train a refined GNN model on this mixed dataset by sandwiching it between two BP runs of 64 and 16 iterations each. Training one model takes roughly half an hour and we train ten such models and select the best one.
+Both the coarse and refined GNN are trained by being embedded between two BP blocks, but during evaluation, it is reused for possibly more than one attempt. Let (64,16,16,16) denote the decoder consisting of 64 BP iterations followed by 3 × 16 BP iterations each with an intermediate GNN layer sharing the same weight. In Figure 4, one can see three attempts (64,16,16,16) are better than one attempt (64,64), though the latter involves more total BP runs but less GNN layers. Hence three attempts are deployed in the final decoder. The coarse GNN obtained in step 2 shows a severe error floor, while the refined GNN trained on the mixed dataset improves the error-floor behavior at low p.
+V. SIMULATION
+The message passing (MP) decoder used in this work is the sum-product (BP) version with flooding scheduling. All the computations are conducted using 32-bit floating-point
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on2J7un0e324,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+Logical error rate PL
+
+1 0.1 0.01 10−3 10−4 10−5 10−6 10−7
+
+Method, Na [7] Pert, 100 [17] Aug, 100 [10] Enh, 100 GNN 0.8, 3 GNN 0.8, 5
+
+[6] NMS+OSD0 [6] Layered NMS [17] Aug, 10 [10] Enh, 10 GNN 1.0, 3 GNN 1.0, 5
+
+Logical error rate PL
+
+1 0.1 0.01 10−3 10−4 10−5 10−6
+
+Method, Na [6] Layered NMS [9] SI, 10 GNN 0.8, 3 GNN 0.8, 5
+
+[6] NMS+OSD0 [22] Layered ro NMS [9] SI, 441 GNN 1.0, 3 GNN 1.0, 5
+
+10−08.02
+
+Physical error rate p 0.1 0.14
+
+10−07.04
+
+Physical error rate p 0.1
+
+0.14
+
+(a) 1270, 28, 16 ≤ d ≤ 46
+
+(b) 882, 24, 18 ≤ d ≤ 24
+
+Fig. 3. Logical error rate of the 1270, 28, ≤ 46 and the 882, 24, ≤ 24 codes using various post-processing methods on the depolarizing channel. Na is the maximum number of attempts. For our feedback GNN, three attempts involve 64 + 16 × 3 = 112 iterations of flooding BP in total. The messages in Eq. (4,5) are multiplied by a normalization factor of either 1.0 or 0.8. This factor is only used in the first BP block run during evaluation. (a) All the curves except the four feedback GNN ones are taken from Fig. 3 of [6], where a 32-iteration layered normalized min-sum (NMS) decoder was used in every attempt. (b) The random order layered binary perturbed NMS [22] method needs 224 steps on Z-noise, converted here to depolarizing noise using the 2/3 rule. While ours needs at most 64 + 16 × 5 = 144 for depolarizing noise. The stabilizer inactivation [9] methods use 50-iteration serial BP2 in every stage.
+
+Logical error rate PL
+
+1 0.01 10−4
+
+BP iterations BP only 64 BP only 128 coarse (64, 16) coarse (64, 64) coarse (64, 16, 16, 16)
+
+10−6 10−08.02
+
+0.1 0.14
+
+refined (64, 16) refined (64, 64) refined (64, 16, 16, 16)
+
+Physical error rate p
+
+Fig. 4. Logical error rate of 1270, 28, ≤ 46 codes using feedback GNNs on a depolarizing channel. Comparison of the performance of the coarse (obtained in step 2), which is only trained on the easy dataset, and the refined GNN trained on the mixed easy and hard samples.
+
+precision. The LLR initialization for the first BP run uses a fixed p = 0.05, independent of the actual physical error rate. The messages from CN to VN in Eq. (4,5) are multiplied by a normalization factor. After each GNN feedback, the BP takes this feedback as the channel LLR initialization, and starts with re-initialized messages. The same GNN weights are used in each round of feedback if there are several.
+In stabilizer inactivation (SI) [9] and randomly-ordered layered decoding [22], the authors considered both sum-product BP and normalized min-sum (NMS) algorithms as messagepassing decoders and various scheduling methods. We chose their best curves as a benchmark in Fig. 3(b). However, this is not intended as a direct comparison; they ignore X and Z correlation when applying their algorithms. In fact, our methods could be used together with theirs, for example by replacing our flooding BP with their layered random order perturbed NMS decoder (though this would require retraining the feedback GNN).
+The authors of [23] also employ a data-driven approach to learn a sequence of BP priors. However, the learned priors
+
+of [23] are input-independent, while in our work the priors are computed from the samples through a learnable function, which conveys more prior information.
+VI. CONCLUSION
+We proposed an iterative decoding scheme for quantum LDPC codes based BP4 and GNN decoding stages. We train the GNN layers such that they learn to refine the channel input LLRs for subsequent BP decoding stages. We demonstrated that our feedback GNN significantly lowers the error floor on two medium blocksize QLDPC codes when carefully trained. The feedback GNN benefits from a computational latency of O(1) when nodes are updated in parallel (and assuming a fixed number of attempts). However, in practice the complexity overhead of the feedback GNN is similar to a 16-iteration BP due to the computationally complex matrix multiplications in the MLPs. Furthermore, we proposed a new loss based on the boxplus operation that calculates a more accurate reliability estimate of the check nodes.
+When applying our approach to other QLDPC codes, a new dataset needs to be gathered every time. While creating an easy dataset and training a coarse GNN model on it only takes a few hours, our solution to the error-floor mitigation involves creating a hard dataset that takes a few days. Data augmentation approaches [23] can be adopted to speed up this process for quasi-cyclic codes. On the training side, the refined GNN trained on the mixed dataset may not be optimal when reused for later feedback attempts. We therefore believe training a different GNN for each feedback attempt, on the samples that the previous attempt fails to decode might alleviate the error floor. Finally, if simply perturbing the prior LLR is not enough, guided decimation-based approaches [24], [25] might be incorporated to further break the symmetry in the decoding problem.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on2J7un0e424,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] N. P. Breuckmann and J. N. Eberhardt, “Balanced product quantum codes,” IEEE Transactions on Information Theory, vol. 67, no. 10, 2021.
+[2] P. Panteleev and G. Kalachev, “Quantum LDPC codes with almost linear minimum distance,” IEEE Transactions on Information Theory, vol. 68, no. 1, 2021.
+[3] ——, “Asymptotically good quantum and locally testable classical LDPC codes,” in Proceedings of the 54th Annual ACM SIGACT Symposium on Theory of Computing, 2022.
+[4] A. Leverrier and G. Zémor, “Quantum Tanner codes,” in IEEE 63rd Annual Symposium on Foundations of Computer Science, 2022.
+[5] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory,” arXiv preprint arXiv:2308.07915, 2023.
+[6] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes With good finite length performance,” Quantum, vol. 5, 2021.
+[7] D. Poulin and Y. Chung, “On the iterative decoding of sparse quantum codes,” Quantum Information and Computation, vol. 8, no. 10, 2008.
+[8] N. Raveendran and B. Vasic´, “Trapping sets of quantum LDPC codes,” Quantum, vol. 5, 2021.
+[9] J. Du Crest, M. Mhalla, and V. Savin, “Stabilizer inactivation for message-passing decoding of quantum LDPC codes,” in IEEE Information Theory Workshop, 2022.
+[10] Y.-J. Wang, B. C. Sanders, B.-M. Bai, and X.-M. Wang, “Enhanced feedback iterative decoding of sparse quantum codes,” IEEE Transactions on Information Theory, vol. 58, no. 2, 2012.
+[11] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” in IEEE Globecom Workshops, 2022.
+[12] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learningbased channel decoding,” in IEEE Conference on Information Sciences and Systems, 2017.
+[13] A. Gong. (2023) Feedback-GNN. [Online]. Available: https://github. com/gongaa/Feedback-GNN
+
+[14] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Physical Review A, vol. 54, no. 2, 1996.
+[15] A. Steane, “Multiple-particle interference and quantum error correction,” Proceedings of the Royal Society A, vol. 452, no. 1954, 1996.
+[16] Z. Babar, P. Botsinis, D. Alanis, S. X. Ng, and L. Hanzo, “Fifteen years of quantum LDPC coding and improved decoding strategies,” IEEE Access, vol. 3, 2015.
+[17] A. Rigby, J. C. Olivier, and P. Jarvis, “Modified belief propagation decoders for quantum low-density parity-check codes,” Physical Review A, vol. 100, no. 1, 2019.
+[18] K.-Y. Kuo and C.-Y. Lai, “Refined belief propagation decoding of sparse-graph quantum codes,” IEEE Journal on Selected Areas in Information Theory, vol. 1, no. 2, 2020.
+[19] C.-Y. Lai and K.-Y. Kuo, “Log-domain decoding of quantum LDPC codes over binary finite fields,” IEEE Transactions on Quantum Engineering, vol. 2, 2021.
+[20] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, 1962.
+[21] Y.-H. Liu and D. Poulin, “Neural belief-propagation decoders for quantum error-correcting codes,” Physical Review Letters, vol. 122, no. 20, 2019.
+[22] J. Du Crest, F. Garcia-Herrero, M. Mhalla, V. Savin, and J. Valls, “Layered decoding of quantum LDPC codes,” in IEEE 12th International Symposium on Topics in Coding, 2023.
+[23] A. K. Pradhan, N. Raveendran, N. Rengaswamy, X. Xiao, and B. Vasic´, “Learning to decode trapping sets in qldpc codes,” in 2023 12th International Symposium on Topics in Coding (ISTC), 2023.
+[24] H. Yao, W. A. Laban, C. Häger, A. G. i Amat, and H. D. Pfister, “Belief propagation decoding of quantum ldpc codes with guided decimation,” arXiv preprint arXiv:2312.10950, 2023.
+[25] A. Gong, S. Cammerer, and J. M. Renes, “Toward low-latency iterative decoding of qldpc codes under circuit-level noise,” arXiv preprint arXiv:2403.18901, 2024.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on2J7un0e524,2026 at 15:44:32 UTC from IEEE Xplore. Restrictions apply.
+
+

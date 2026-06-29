@@ -1,0 +1,262 @@
+JOURNAL OF LIGHTWAVE TECHNOLOGY, VOL. 38, NO. 7, APRIL 1, 2020
+
+1693
+
+Real-Time Verification of Soft-Decision LDPC Coding for Burst Mode Upstream Reception in 50G-PON
+Mingwei Yang , Student Member, IEEE, Linlin Li, Xiang Liu, Fellow, IEEE, Fellow, OSA, and Ivan B. Djordjevic , Fellow, IEEE, Fellow, OSA
+
+Abstract—Forward error correction (FEC) with high coding gain is needed to achieve PR30 (29 dB) link budget in 50G-PON. In particular, the stringent capacity and latency requirements of the 50G PON call for innovations in the design of FEC codes to go against the noise in the channel. In this paper, we propose a generic FPGA design for an adaptive irregular LDPC coding emulator that supports hard-decision, soft-decision, shortening, and puncturing. We evaluate the error-correction performance of the low-density parity-check (LDPC) forward-error correction (FEC) code that is currently under study by ITU-T’s 50G-PON group for burst-mode upstream reception. Through experimental measurements based on a real-time FGPA platform, we found that soft-decision (SD) offers ∼1.3 dB more gross coding gain than hard-decision (HD). The SD LDPC performance is well maintained for non-uniform input bit error distributions where the errors are concentrated at the first 1/8 of each code word, corresponding to ∼44 ns (∼88 ns) for a 50-Gb/s (25-Gb/s) upstream signals. This indicates the suitability of the use of the SD-LDPC for burst-mode upstream reception in 50G-PON.
+Index Terms—50G PON, burst error mode, FPGA, hard decision, irregular code, LDPC, scaled min-sum, soft decision.
+I. INTRODUCTION
+T HE IEEE 100G-EPON started to standardize 25/50/100 Gbps passive optical network (PON) in 2016 to support disruptive applications and services including the 4 k/8 k HD television videos, virtual reality, smart city infrastructure, cloud computing, and storage. Compared to the existing 25G PON technology, 50G PON networks call for higher traffic rates, increasing demand of users, and significantly lower end-to-end latencies and higher reliabilities [1]–[4]. Multiple innovative technologies including FEC, software-defined networking (SDN) [5], and network function virtualization (NFC) can be employed to meet these requirements.
+Manuscript received June 4, 2019; revised September 4, 2019, November 5, 2019, and December 6, 2019; accepted December 10, 2019. Date of publication December 20, 2019; date of current version April 1, 2020. (Corresponding author: Mingwei Yang.)
+M. Yang and I. B. Djordjevic are with the Department of Electrical and Computer Engineering, University of Arizona, Tucson, AZ 85721 USA (e-mail: mingweiyang@email.arizona.edu; ivan@email.arizona.edu).
+L. Li and X. Liu are with the Futurewei Technologies, Bridgewater, NJ 08807 USA (e-mail: lli@futurewei.com; xliu@futurewei.com).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/JLT.2019.2961338
+
+Low-density parity-check (LDPC) codes, one of widely employed FEC solutions, are utilized in the transmission system to provide the performance close to the channel capacity [6]. LDPC codes were introduced by Gallager in the early 60’s [7] and employ iterative message-passing (MP) decoding algorithms. Such a decoding algorithm consists of an exchange of extrinsic information between coded bit nodes and parity-check nodes they participate in. The exchange of messages or the estimation of the received information takes place in several rounds, or iterations. At each iteration, new messages are computed in an extrinsic manner. It means that the message received by a coded bit node from a parity-check node does not depend on the message sent at an early round. Consequently, coded bit nodes collect more and more information within each new decoding iteration, which gradually improves the estimation of the transmitted code-word. There are various approaches to implement the MP algorithm. In this paper, we will focus on one of these approaches, scaled min-sum or normalized min-sum [8].
+Irregular LDPC codes were proposed by Luby et al., who showed that by proper construction irregular LDPC codes will provide better correction performance compared to regular ones [9]. Richardson et al. developed the density evolution theory to analyze and synthesize the optimal degree distributions in asymptotically large random bipartite graphs under a wide range of channel realizations [10]. The LDPC codes can employ different structures, such as the diagonal structure and quasi-cyclic (QC) structure. Generally speaking, the QC-LDPC codes [11] have attracted significant attention since they have lower encoding and decoding complexity [12], [13], more simplistic hardware implementation [14], and better iterative performance [15].
+Burst mode transmission is an intrinsic feature of upstream communication in passive optical networks (PONs). It means that the performance of the transmitted optical signals can vary on a burst-by-burst basis. Such a feature leads to the requirement of improving transmission quality over a noisy channel for FEC. The burst errors on PON upstream links are characterized by several impairment sources. The impairment can cause strongly correlated and localized errors within the burst. These sources consist of the electrical and optical turn-on transients of the transmitter and the distortion potentially introduced by the gain setting of the electrical amplifier in the link [16]. The burst error impact on the FEC solution of RS(248, 216) based on the FPGA
+
+0733-8724 © 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+1694
+
+JOURNAL OF LIGHTWAVE TECHNOLOGY, VOL. 38, NO. 7, APRIL 1, 2020
+
+platform has been studied in [16]. We haven’t observed any analysis of LDPC performance with burst error mode transmission. In this paper, we will discuss the LDPC performance degradation in the burst error mode based on the FPGA platform and analysis of the impact of the bit interleaving codes (BIC) solution under heavier burst errors.
+The rest of this paper is organized as follows. In Section II, we describe our system model, including the iterative layered min-sum decoding algorithm, regular LDPC code structure, and the irregular LDPC code structure. In Section III, we detail our implementation and analysis based on the irregular LDPC code proposed in [1]–[4] and analyze its performance on hard decision, soft decision, and adaptive code rate using shortening and puncturing. Section IV is devoted to the performance analysis of the implemented irregular LDPC code performance under burst error mode without BIC and with BIC. We conduct both theoretical and experimental analyses for different burst error levels. Finally, Section V summarizes and concludes the paper.
+
+II. FPGA BASED LDPC EMULATOR DESIGN AND IMPLEMENTATION
+For the on-off keying (OOK) transmission over additive white Gaussian noise (AWGN) channel, let the prior information of the i-th received symbol yi be represented by the log likelihood ratio (LLR)δi, and it is defined by:
+
+δi = log
+
+Pr (xi = 0 | yi) Pr (xi = 1 | yi)
+
+2 = σ2 yi
+
+(1)
+
+where xi represents the i-th transmitted bit, σ2 represents the noise variance, and Pr(xi = 0 | yi) represents the posterior probability of the i-th transmitted symbol xi given the received symbol yi. For QC-LDPC decoder, let βckv,l and αvkc,l represent the check c to variable v extrinsic message and the variable v to check c at k-th iteration and l-th layer message; where k =
+1, …, Imax and l = 1, …,L. Imax and L indicate the maximum iteration number and layer number, respectively. Therefore, the
+emulation processors can be summarized by Eqs. (1)–(4):
+
+αvk,l = δv +
+
+βckv,l
+
+(2)
+
+l
+
+αvkc,l = δv +
+
+βckv,l
+
+(3)
+
+l =l
+
+βckv,l = s ×
+
+sign
+
+αvk,cl
+
+min
+v =v
+
+αvk,cl
+
+(4)
+
+v =v
+
+where s represents the scaling factor for scaled min-sum algorithm [17]. The variable αvk,l is used for making bit decision in each iteration. The Eq. (1) is used to calculate the bit LLR in
+OOK AWGN channel and Eqs. (2)–(4) correspond to different
+steps in the layered decoding algorithm.
+
+A. Regular and Irregular QC-LDPC Code Permutation Matrix
+
+The parity-check matrix HQC of a (γ, ρ) QC-LDPC code is
+
+given by:
+
+⎡ I (p0,0)
+
+HQC = ⎣⎢⎢⎢⎢
+
+I (p1,0) ...
+
+⎤
+
+I (p0,1) . . . I (p0,ρ−1)
+
+I (p1,1) ...
+
+... ...
+
+I (p1,ρ−1) ...
+
+⎥⎥⎥⎦⎥
+
+I (pγ−1,0) I (pγ−1,1) . . . I (pγ−1,ρ−1) γb×ρb
+
+(5)
+
+The matrix I(p) is either an all-zero matrix, or a circulant permutation matrix over GF(2) of size b × b with the first row obtained by cyclic shifts of pi,j. It means that the connections between variable nodes and check nodes are governed by the cyclilc shifts pi,j in Eq. (5). A regular QC-LDPC code will have a fixed number of permutation matrices in each layer. In our paper, the parity-check matrix HQC for the regular QC-LDPC code, will be composed of all permutation matrices. It means that for given values of row number γ, column number ρ, block size b, the regular code will have the column weight (layer number) of γ, row weight of ρ, the code-word length (variable node number) of ρ ×b, the parity check bits number (check node number) of γ × b, and the code rate of (ρ – γ) / ρ. The decoder will process b rows as one layer, therefore, L = γ and each layer consists of b consecutive rows. The layered regular QC-LDPC decoder will update all the variable nodes within one layer by using smaller memory and less energy compared to the non-layered decoding approach.
+The irregular LDPC codes were proposed in [9], [18] and were further studied in [19], [20]. They perform better than regular LDPC codes since they provide greater protection to some digits and have some of the parity equations to give more reliable information to provide the decoding a jump start but often exhibit an early error floor phenomenon. The irregular LDPC code parity check matrix can be expressed as Eq. (5) as well. Compared to the regular LDPC codes, the irregular LDPC codes have a variable number of 1’s in the rows and the columns. It leads to the condition that given values of row number γ, column number ρ, block size b, the irregular code will have the layer number L = γ, variable column weight of less than γ, variable row weight of less than ρ, the same code-word length (variable node number), the same parity check bits number (check node number), and same the code rate as the regular one. The irregular LDPC code needs to be properly designed to avoid the early error floor. In our paper, we will focus on the LDPC codes whose parity-check matrix have a QC structure.
+
+B. FPGA Architecture
+To study the performance of the irregular LDPC matrix in the field-programmable gate array (FPGA) platform, we design and implement an FPGA based real-time LDPC emulator, whose diagram is illustrated in Fig. 1(a) based on our previous design [22]. The platform consists of the following parts: an LDPC encoder, a modulation symbol mapper, a Gaussian noise generator, a log-likelihood ratio (LLR) calculator, a rate-adaptive
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: REAL-TIME VERIFICATION OF SOFT-DECISION LDPC CODING
+
+1695
+
+Fig. 1. FPGA architecture used for SD-LDPC studies: (a) the architecture of LDPC emulator, (b) the architecture of the LLR min-sum processor.
+
+LDPC decoder based on layered scaled min-sum algorithm, an error counter circuit, and a software configuration interface. The LDPC encoder generates a sequence of binary-coded code-words, which consists of information bits and parity check bits. A modulation mapper is stored in a read-only memory (ROM), which is responsible to generate signed symbols based on input binary code-word and sent to an AWGN channel, which is a good model for ASE noise and thermal noise dominated scenarios. By attenuating the signal values in time order, we can emulate different burst mode cases. Based on the Box-Muller algorithm, the Gaussian noise generator generates samples of the white Gaussian noise by using two linear feedback shift register (LFSR)-based uniform generators. The generated sequence of samples is multiplied with the standard deviation of noise σ to emulate the output signals from the AWGN channel. The emulated output signals are sent to the LLR calculator to generate the bit LLR based on Eq. (1). Then the quantized bit LLR is fed to the LDPC decoder based on Eqs. (2)–(4). Error counters make a bit decision based on δi. In the architecture, a micro-blaze-based software configuration interface includes configuring noise variance, the number of iterations, and the length of shortening. Meanwhile, the BER is obtained by accessing registers storing the number of errors and the number of code-words that have been emulated.
+The architecture of the code rate reconfigurable binary LDPC LLR min-sum processor is shown in Fig. 1(b). There are four modules in the decoder: I. the module of Loop State Controller; II. the module of the variable node processor (VNP)- check node processor (CNP); III. the module of address generator (AddrGenerator); and IV. the module of variable node memory
+
+(Lv) and check nodes memory (Lcv). The module of Loop State Controller is a finite state machine. It controls the min-sum processor to operate between the states of the idle state, reset state, and layer state. The min-sum processor is initialized at idle state and holds the initial value during this state until getting the trigger signal. Once getting the trigger signal which is sent from the LLR calculator, the min-sum processor will start the layer state. During this state, the module of VNP-CNP keeps updating the values of check nodes and variable nodes inside one layer. The reset state is the transient state between each layer. After decoding one code-word, the min-sum processor will go back to the idle state and waiting for the next trigger. The module of the VNP-CNP consists of VNP and CNP. The VNP, based on Eqs. (2)–(3), takes inputs δv and βcv and produces αvk,l and αvkc,l. The scaled min-sum CNP, based on Eq. (4), takes inputs αvkc,l and produces βckv,l. AddrGenerator takes the layer number from the loop state controller and indicates the corresponding variable nodes and check nodes address in each layer to the Lv and Lcv. The module of Lv and Lcv stores the variable nodes value, δi, and the check nodes value, βcv, respectively. The variable node values come from the LLR calculator. The check node values are initialized and updated by the module of VNP-CNP.
+C. Irregular LDPC Code Matrix in Layered Decoder
+The VNP-CNP block is one of the biggest energy consumption components. The power of this block highly depends on the number of nodes it processes. Since HQC can be treated as HQC,ireg when all sub-matrices I(p) are circulant permutation matrixes, all of the variable nodes and check nodes of the regular
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+1696
+
+JOURNAL OF LIGHTWAVE TECHNOLOGY, VOL. 38, NO. 7, APRIL 1, 2020
+
+Fig. 2. Illustration of the mother code parity-check matrix structure of the irregular LDPC being used.
+
+LDPC codes will be updated within the process of each layer. Therefore, in a regular LDPC code, the VNP-CNP module simply updates the same number of variable nodes and check nodes at different layers. Compared to the regular LDPC code, the irregular LDPC code parity check matrix HQC, ireg has variable 1’s at each column and row. The location of 1 indicates which corresponding variable nodes and check nodes are required to be checked and updated during the decoding process. Since not all of the variable nodes and check nodes are required to be updated within the process of each layer, it would be more power efficient to only put required variable nodes and check nodes to the module of VNP-CNP. Therefore, in the input port of the VNP-CNP block, we optimize the power and latency cost by compressing the input αvk,cl into a smaller size after deleting the unnecessary nodes. In this approach, less logic resources are utilized to reduce the power cost due to less variable nodes and check nodes being updated. Meanwhile, less latency is brought from the process of choosing the minimum value and the second minimum value between αvk,cl (Eq. 4) since a smaller number of αvk,cl is being processed.
+Due to the structure of irregular LDPC codes, not all variable nodes can be updated within each layer based on Eq. (2). In order to check all variable nodes’ BERs for every layer in decoding algorithm, the output of the VNP-CNP needs to be extended to full size by adding the original value to the non-updated nodes at the output port of the VNP-CNP block. Additional details can be found in reference [22]. Therefore, the sum module calculates all αvk,l within one layer. We implement an expander module to extend the output of the min module βckv,l into full size to meet this requirement.
+The locations of the unnecessary αvk,cl and non-updated βckv,l are variable on different layers. The information is stored in a ROM inside FPGA. The compress and expander modules are controlled from Loop State Controller by indicating the current layer index.
+III. OUR IMPLEMENTATION AND ANALYSIS
+The mother irregular LDPC code proposed in [2], whose matrix is provided in Fig. 2, is studied in this paper. It has the parameters γ = 12, ρ = 69, and b = 256. Therefore, we would have the code-word length of 256 × 69 bits or 17664 bits, the payload length of 256 × 57 bits or 14592 bits, and the parity-check word length of 12 × 256 bits or 3072 bits. The
+
+corresponding code rate is 57/69 or 0.826. The rate adaptation is achieved by 512 parity bits punctured and 200 payload bits shortened, resulting in a code-word length of 16952 bits, a payload length of 14392 bits, and a rate of 0.849. A previous study analyzed the use of soft-decision (SD) for the same LDPC encoder that has been specified by the Task Force [23]. In this paper, the information bits are assigned to be all zero at the encoder to simplify the implementation. The Gaussian noise is emulated by 32 bits with 25 decimal bits with the input signal power of integer one. The output noisy signal will be quantized by 6 bits with 4 decimal bits. We employ the 8-bit uniform quantization scheme for messages (δi, αvk,l, and βckv,l ) to guarantee that the error floor phenomenon comes from the code-design itself instead of the limited precision issue. It also keeps the encoding complexity reasonably low. The system runs with the clock of 300 MHz. Generating one code-word at encoder costs 17728 clocks. The AWGN channel model has 30 clocks latency. For the decoder part, calculating the LLR and initializing the variable node values costs 263 clocks. Each operation in one layer costs 270 clocks. For 12 layers and 15 iterations, the min-sum operation requires 271 ∗ 12 ∗ 15 = 48600 clocks. Then 155 clocks are used for the system to come back to the initial state. The emulation of one code-word costs 66766 clocks (0.22 ms) in total. The real-time processing speed is about 0.08 Gbps. The limitation of the processing time is highly impacted by the layer number and the maximum row weight. The higher maximum row weight will lead to higher min-sum operation time. In order to achieve an output BER of 10−12, the real-time measurement needs to run for about 30 days with about 200 output errors counted. The maximum iteration number is limited at 15 to meet the requirement of low latency. At output BER of 10−6, each incorrect code-word provides more than 300 error bits on average. At output BER of 10−12, each incorrect code-word provides around 70 error bits on average.
+The experimentally measured BER performance of softdecision (SD) in comparison with hard-decision (HD) is depicted in Fig. 3. The simulated BER performance of the shortened and punctured HD chosen by the IEEE 802.3ca [2] is also plotted here as a reference. This reference HD code employs the same mother code with the same shortening and puncturing configuration. Our shortening and puncturing simulation results show the closed performance compared to this reference. The small difference between our rate 0.849 results and reference can be the result that we are using a different FPGA system.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: REAL-TIME VERIFICATION OF SOFT-DECISION LDPC CODING
+
+1697
+
+Fig. 3. Experimentally measured BER performances of SD, HD with rate 0.826, and HD with rate 0.849, in comparison with that reported in ref. [2].
+Different decoding algorithm, the width of αvk,cl and βckv,l , and iteration number are all possible reasons. For an output BER of 10−12, the r-0.849 reference HD code [2] of rate 0.849, the r-0.826 HD, and the r-0.826 SD require the input BER to be 1.1 × 10−2, 1.25 × 10−2, and 2.4 × 10−2, respectively. At the same code rate of 0.826, the SD decoder is 1.1 dB better than the HD decoder in terms of net coding gain (NCG). This is consistent with the theoretical NCG difference between SD and HD for a rate of around 0.8 [24]. Compared to the reference HD-LDPC with 0.849 code rate [2], the SD with 0.826 code rate provides ∼1.3 dB more gross coding gain at an output BER of 10−12 [22]. This additional coding gain is expected to translate into ∼0.9 dB lower received optical power [25], and thus better link budget.
+IV. BURST ERROR ANALYSIS
+In PON, each upstream burst usually experiences more burst errors at the beginning of the burst. Typically, it is desirable to limit the time duration of the burst-error region to <100 ns. At the upstream receiver, the pre-FEC BER in the burst-error region may be much higher than the total average pre-FEC BER (input BER). This behavior has been verified in a DSP-assisted 25-Gb/s burst-mode detection experiment [26]. Fig. 4(a) shows the sampled time-domain waveforms of a 25-Gb/s upstream signal burst. The received waveform was well-conditioned with a burst settling time of about 100 ns. Offline DSP was performed on the sampled waveforms. Receiver-side burst synchronization based on the cross-correlation between the received signal and a known upstream physical synchronization block (PSBu) pattern inside a preamble was conducted to find the beginning of each burst. At the same time, equalization based on a 32-tap feed-forward equalizer (FFE) was also performed. Fig. 4(b) shows a representative output from the equalizer in the burst-mode receiver with a received optical power (ROP) per burst of −28.8 dBm. The equalizer needs approximately 5,000 bits (or 200 ns) at the beginning of each signal burst to converge. Higher BER is expected at the beginning portion of the payload that follows the preamble. As shown in this figure, after the preamble of 200 ns, the first LDPC code-word still shows slightly larger raw BER than the later LDPC code-words in an upstream signal burst. Also, the preamble duration is
+
+desired to be as short as possible, e.g., shorter than 150 ns or even 100 ns. Thus, it is necessary to achieve better error correction performance at the beginning of the code-word. Additional details can be found in reference [27].
+To emulate the non-uniform burst error behavior, we intentionally introduce more errors in the first 1/8 of each LDPC code-word, which corresponds to about 44 ns for a 50 Gbps upstream signal, or 88 ns for a 25 Gbps upstream signal. To emulate different degrees of bit error non-uniformity, we introduce different SNR degradations for the burst-error region w.r.t. the steady-power region (the following 7/8 region). The LLR calculation will use the variance coming from the steady-power region.
+A. Burst Mode Performance Without BIC
+To generate the SNR degradation in the burst-error region, we reduce the power level. More specifically, we attenuate the power of the first 1/8 of each code-word period by various amounts such as 1 dB, 2 dB, 3 dB, and 4 dB, respectively corresponding to reduced power levels of 0.8, 0.63, 0.5, and 0.4, which are normalized to the steady-state (the following 7/8 region) power level. The time-domain waveform of a representative received signal is shown in Fig. 5. Code-word bit counter output from Xilinx Vivado is also plotted to indicate the location of each code-word. Clearly, the signal power of the first 1/8 of each codeword is reduced and becomes closer to the decision threshold, so more errors are caused at the beginning portion to emulate the burst error condition.
+As depicted in Fig. 5, the code-word bit counter counts the bits of the code-word. Within the first 1/8 of each code-word, the received signal power is attenuated by an attenuation ratio of R. Fig. 6 and 7 show the experimentally measured BER performance and code-word error ratio (CWER) performance respectively of SD-LDPC for different burst error conditions by using soft decision. The results are labeled with LDPC-BER. R values of 1, 0.8, 0.64, 0.5 and 0.4 denote burst power reductions of approximately 0, 1, 2, 3, and 4 dB, respectively.
+For a LDPC output BER of 10−9, LDPC-BE0.4, LDPCBE0.5, LDPC-BE0.64, LDPC-BE0.8, and LDPC-BE1.0 require the input BER to be 2.380 × 10−2 (corresponding to a Q-factor value of 5.94 dB), 2.426 × 10−2 (5.9 dB), 2.472 × 10−2 (5.87 dB), 2.525 × 10−2 (5.83 dB), and 2.575 × 10−2 (5.79 dB), respectively. The above results indicate that the SD-LDPC performances well maintained (within ∼0.15 dB) for non-uniform input bit error distributions where the errors are concentrated at the first 1/8 of each code word due to an SNR (or power) reduction of up to 4 dB. For a steady-state BER of 2 × 10−2, 4-dB degradation in SNR leads to a burst error region BER of 7.3 × 10−2, or ∼3.65 times as high as the steady-state BER.
+B. Burst Mode Performance With BIC
+The BIC assigns beginning burst errors to more code-words to improve the coding performance. In this paper, we test the situation of interleaving two code-words which provides excellent protection already. In this case, two code-words CA (CA1, CA2, CA3, …CAn) and CB (CB1, CB2, CB3, …CBn) are interleaved
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+1698
+
+JOURNAL OF LIGHTWAVE TECHNOLOGY, VOL. 38, NO. 7, APRIL 1, 2020
+
+Fig. 4. (a) Screen capture showing the time domain waveforms of a 25-Gb/s upstream signal burst; (b) A representative output from the equalizer in the burst-mode receiver for a signal burst at a received optical power (ROP) of −28.8 dBm.
+
+Fig. 5. Measured real-time signal waveform showing a burst-mode channel with non-uniform signal levels.
+
+Fig. 6. Input BER vs. output BER without BIC under different burst mode Fig. 7. Input BER vs. output CWER without BIC under different burst mode
+
+channel.
+
+channel.
+
+bit by bit to get CC (CA1, CB2, CA3, …CB1, CA2, …) at the odd/even bits before the first 12.5% code-word bits (6.25% transmitter side. At the receiver side, the CC is deinterleaved code-word bits in total) suffer the burst errors. Therefore, we and sent to the LDPC decoder. For each code-word, only the implement it in our FPGA setup based on the scheme upgrading
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: REAL-TIME VERIFICATION OF SOFT-DECISION LDPC CODING
+
+1699
+
+Fig. 8. Input BER vs. output BER with BIC under different burst mode channel. Fig. 10. Input BER vs. output BER for a regular LDPC code under different burst mode channel.
+
+Fig. 9. Input BER vs. output CWER with BIC under different burst mode channel.
+from the one showing in Fig. 1. Before sending it to the AWGN channel, only the odd/even bits before the first 12.5% each codeword bits are attenuated periodically by various amounts such as 3 dB, and 4 dB, respectively corresponding to reduced power levels of 0.5, and 0.4, which are normalized to the steady-state power level.
+The BER performance and CWER performance of the LDPC codes with BIC under burst errors are depicted in Fig. 8 and 9, respectively. The results are labeled with LDPC-BERi. R values of 0.5 and 0.4 denote burst power reductions of approximately 3 and 4 dB, respectively. The LDPC-BE1.0 from Fig. 6 and 7 are also plot for the references. For an LDPC output BER of 10−9, LDPC-BE0.4i, LDPC-BE0.5i, and LDPC-BE1.0 all require the input BER to be 2.575 × 10−2 (corresponding to a Q-factor value of 5.79 dB). The above results indicate that by using BIC, the SD-LDPC performances stay almost the same (within ∼0.01 dB) for non-uniform input bit error distributions where the errors are concentrated at the first 1/8 of each code word due to an SNR (or power) reduction of up to 4 dB.
+C. Burst Mode Performance of a Regular SD-LDPC Code
+Based on the FPGA system in Fig. 1, we also implemented a regular LDPC code studied in our previous work [28], [29] with the code-word bits of 16935, information bits of 13550, code rate of 0.8 and girth of 8. The errors are concentrated at the first 1/8 of each code-word (due to an SNR degradation of
+
+up to 3 dB), corresponding to ∼44 ns (∼88 ns) for a 50-Gbps (25-Gbps) upstream signals. The purpose is to study the suitability of the regular LDPC code for the burst-mode upstream reception operation in 50G-PON. Using the 8 bits αvk,cl and βckv,l with 2 fraction bits and 1 bit for sign, the performance of the code is depicted in Fig. 10 with the label of RE_o Δ SNR = m dB, where m represents the value of SNR difference (and RE stands for regular). We found that although the performance of the regular LDPC code is slightly improved before the output BER of 10−5, thanks to the lower code rate, under non-uniformly distributed burst mode errors, the performance is much worse and even close to performing like an error floor when we set the output BER threshold of 10−10. For high SNR values, the continuous errors in the first 1/8 variable nodes impact the coding performance heavily.
+D. Discussion
+It is useful to discuss the observed high burst-error tolerance of the LDPC used. The LDPC code is an irregular one (in both variable node and check node) with a QC structure as shown in Fig. 2. This irregular structure with QC helps us to effectively combat the burst error by belief propagation. The measurement results from Fig. 10 also prove this claim. After using BIC, we distribute the error region into two code-words so that each of these two code-words suffers only half the duration of the original burst mode region. Therefore, the 1/8 of affected bits (1/16 of affected bits with BIC) in one code-word can be corrected with very little penalty. However, the employment of BIC will introduce buffering latency at the decoder and encoder parts. Considering the LDPC code performance as a function with the input of pre-FEC BER, and the output of post-FEC BER, under the same input value, although 12.5% (1/8) of the code-word in burst errors channel provide less belief information compared to the whole code-word in burst errors free channel, the other 87.5% code-word in burst errors channel provide more belief information and this helps too.
+Another explanation for the small performance impairment is that the burst error duration is short compared to the whole code-word length. However, longer LDPC code requires more processing time and energy which leads to the tradeoff between cost and performance. The choice of using BIC brings
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+1700
+
+JOURNAL OF LIGHTWAVE TECHNOLOGY, VOL. 38, NO. 7, APRIL 1, 2020
+
+researchers more options on these tradeoffs and flexibilities when designing the transmission systems.
+V. CONCLUDING REMARKS
+In this paper, we have proposed a novel FPGA based reconfigurable rate-adaptive irregular LDPC coding emulation architecture for high-speed optical transmission systems. We have studied the combined use of the mother LDPC code described in [2]–[4] and SD to achieve PR30 (29 dB) link budget with sufficient industry margin for 50G-PON. We also evaluated the error-correction performance of the SD-LDPC that is currently under study by ITU-T’s 50G-PON group for burst-mode upstream reception without BIC and with BIC. Real-time measurements have been done by using the proposed FPGA based emulator.
+Through experimental measurements based on a real-time FPGA platform, we found that this approach offers more than 1.3 dB gross coding gain over that being specified in the IEEE 802.3ca 25G-EPON standards. With this increased SD-LDPC coding performance, it may be sufficient to support PR30 (29 dB) link budget with industry margin.
+It is found that the SD-LDPC performance is well maintained within 0.15 dB without BIC and 0.01 dB with BIC for non-uniform input bit error distributions where the errors are concentrated at the first 1/8 of each code word (due to an SNR degradation of up to 4 dB), corresponding to ∼44 ns (∼88 ns) for a 50-Gb/s (25-Gb/s) upstream signals. This indicates the suitability of the use of the SD-LDPC for burst-mode upstream reception in 50G-PON.
+REFERENCES
+[1] Approved Minutes of the March 2018 Meeting of the IEEE’s 802.3ca 100G-EPON Task Force, 2018. [Online]. Available: http://www.ieee802. org/3/ca/public/meeting_archive/2018/05/minutes_approved_3ca_0318. pdf
+[2] M. Laubach, S. Yang, Y. Han, R. Hirth, and G. Kramer, “LDPC adjustments from motion #6, Chicago,” IEEE P802.3ca Meeting, May 2018. [Online]. Available: http://www.ieee802.org/3/ca/public/meeting_archive/ 2018/05/laubach_3ca_1_0518.pdf
+[3] M. Laubach, Y. Han, S. Yang, R. Hirth, and G. Kramer, “LDPC parity code matrix update for improved alignment (rev. A),” IEEE 802.3 Plenary, Chicago, IL, USA, Mar. 5, 2018. [Online]. Available: http://www.ieee802. org/3/ca/public/meeting_archive/2018/03/laubach_3ca_1a_0318.pdf
+[4] M. Laubach, “Updated draft text for LDPC,” IEEE 802.3 Plenary, Chicago, IL, USA, Mar. 5, 2018. [Online]. Available: http://www.ieee802.org/3/ca/ public/meeting_archive/2018/03/laubach_3ca_2_0318.pdf
+[5] M. Yang, H. Rastegarfar, and I. B. Djordjevic, “SDN-based application driven in-band adaptive coding in data centers,” in Proc. Opt. Fiber Commun. Conf. Expo., San Diego, CA, USA, Mar. 2018, Paper W2A.21.
+[6] M. Yang, H. Rastegarfar, and I. B. DJordjevic, “Physical-layer adaptive resource allocation in software-defined data center networks,” IEEE/OSA J. Opt. Commun. Netw., vol. 10, no. 12, pp. 1015–1026, Dec. 2018.
+[7] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. IT-8, pp. 21–28, Jan. 1962.
+[8] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[9] M. Luby, M. Mitzenmacher, M. A. Shokrollahi, and D. Spielman, “Improved low-density parity-check codes using irregular graphs,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 585–598, Feb. 2001.
+[10] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+
+[11] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[12] Z. Li, L. Chen, L. Zeng, S. Lin, and W. H. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 71–81, Jan. 2006.
+[13] J. Li, K. Liu, S. Lin, and K. Abdel-Ghaffar, “Decoding of quasi-cyclic LDPC codes with section-wise cyclic structure,” in Proc. IEEE Inf. Theory Appl. Workshop, San Diego, CA, USA, 2014, pp. 1–10.
+[14] F. Cai, X. Zhang, D. Declercq, S. K. Planjery, and B. Vasic, “Finite alphabet iterative decoders for LDPC codes: Optimization, architecture and analysis,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 5, pp. 1366–1375, May 2014.
+[15] H. Liu, Q. Huang, G. Deng, and J. Chen, “Quasi-cyclic representation and vector representation of RS-LDPC codes,” IEEE Trans. Commun., vol. 63, no. 4, pp. 1033–1042, Apr. 2015.
+[16] N. Brandonisio et al., “Burst-mode FPGA implementation and error location analysis of forward error correction for passive optical networks,” IEEE/OSA J. Opt. Commun. Netw., vol. 10, no. 4, pp. 298–308, Apr. 2018.
+[17] D. Zou and I. B. Djordjevic, “FPGA-based rate-compatible LDPC codes for the next generation of optical transmission systems,” IEEE Photon. J., vol. 8, no. 5, Oct. 2016, Art. no. 7906008.
+[18] M. Luby, M. Mitzenmacher, A. Shokrollahi, D. Spielman, and V. Stemann, “Practical loss-resilient codes,” in Proc. 29th Annu. ACM Symp. Theory Comput., 1997, pp. 150–159.
+[19] M. Luby, M. Mitzenmacher, A. Shokrollahi, and D. Spielman, “Analysis of low density codes and improved designs using irregular graphs,” in Proc. 30th Annu. ACM Symp. Theory Comput., 1998, pp. 249–258.
+[20] D. MacKay, S. Wilson, and M. Davey, “Comparison of constructions of irregular Gallager codes,” IEEE Trans. Commun., vol. 47, no. 10, pp. 1449– 1454, Oct. 1999.
+[21] X. Sun, D. Zou, Z. Qu, and I. B. Djordjevic, “Run-time reconfigurable adaptive LDPC coding for optical channels,” Opt. Express, vol. 26, no. 22, pp. 29319–29329, Oct. 2018.
+[22] M. Yang, L. Li, X. Liu, and I. B. Djordjevic, “FPGA-based real-time soft-decision LDPC performance verification for 50G-PON,” in Proc. Opt. Fiber Commun. Conf., San Diego, CA, USA, Mar. 2019, Paper W3H.2.
+[23] L. Li, X. Liu and F. Effenberger, “Soft-decision LDPC for 50G-PON,” in Proc. ITU-T Q2 Interim Meeting, Jun. 2018, Paper D75.
+[24] T. Mizuochi, “Recent progress in forward error correction and its interplay with transmission impairments,” IEEE J. Sel. Topics Quantum Electron., vol. 12, no. 4, pp. 544–554, Jul./Aug. 2006.
+[25] L. Zhou and D. Liu, “Symmetric 50G PON using NRZ,” IEEE 802.3 Plenary, Chicago, IL, USA, Mar. 5, 2018. [Online]. Available: http://www.ieee802.org/3/ca/public/meeting_archive/2018/03/ zhou_3ca_1_0318.pdf
+[26] H. Zeng, A. Shen, N. Cheng, N. Chand, X. Liu, and F. Effenberger, “High performance 50G-PON burst-mode upstream transmission with fast burst synchronization and recovery,” in Proc. ITU-T Q2 Plenary Meeting, Jul. 2019.
+[27] H. Zeng, A. Shen, N. Cheng, N. Chand, F. Effenberger, and X. Liu, “Highperformance 50G-PON burst-mode upstream transmission at 25 Gb/s with DSP-assisted fast burst synchronization and recovery,” in Proc. Asia Photon. Commun. Conf., 2019, Paper T1G.3.
+[28] M. Yang, H. Rastegarfar, and I. B. Djordjevic, “Probabilistically coded modulation formats for 5G mobile fronthaul networks,” J. Lightw. Technol., vol. 37, no. 16, pp. 3882–3892, Aug. 2019.
+[29] D. Zou and I. B. Djordjevic, “FPGA-based rate-adaptive LDPC-coded modulation for the next generation of optical communication systems,” Opt. Express, vol. 24, no. 18, pp. 21159–21166, 2016.
+Mingwei Yang received the Ph.D. degree in electrical and computer engineering from the University of Arizona, Tucson, AZ, USA, in 2019. He is currently a Senior Research Principal with the University of Arizona. His research interests include forward error correcting codes and modulation adaptation in optical networks. He is a Student Member of IEEE and IEEE Photonics Society.
+Linlin Li received the Ph.D. degree in electrical engineering from Kanazawa University, Kanazawa, Japan. He is currently with Acacia Communications, Inc., Holmdel, NJ, USA. Before joining Acacia Communications, Inc., he was with GlobeSpan (Conexant and Ikanos), BroadCom, iBiquity, and Futurewei, all in New Jersey. He has authored/coauthored more than 100 technical papers. His research interests include digital signal processing, wireline communications, wireless communications, forward error correction, and optical communications.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: REAL-TIME VERIFICATION OF SOFT-DECISION LDPC CODING
+
+1701
+
+Xiang Liu received the Ph.D. degree in applied physics from Cornell University, Ithaca, NY, USA. He is currently the Senior Director of Optical Access Network Research with Futurewei Technologies, Bridgewater, NJ, USA. Before joining Futurewei Technologies in 2014, he was with Bell Labs working on high-speed optical transmission technologies for 14 years. He has authored/coauthored more than 350 publications and holds more than 95 U.S. patents. He was a General Co-Chair of OFC 2018, and is currently a Deputy Editor for Optics Express. He is a fellow of the OSA and the IEEE.
+
+Ivan B. Djordjevic is a Tenured Professor of electrical and computer engineering and optical sciences with the University of Arizona, Tucson, AZ, USA, Director of the Optical Communications Systems Laboratory and Quantum Communications Lab, and Co-Director of the Signal Processing and Coding Lab. Prior to joining the University of Arizona, he held appointments with the University of the West of England and the University of Bristol in the U.K., Tyco Telecommunications in the USA, National Technical University of Athens in Greece, and the State Telecommunication Co. in Yugoslavia. He is the fellow of IEEE and Optical Society (OSA). He has authored or coauthored seven books and more than 520 journal and conference publications. He is currently a Senior Editor and member of editorial board of the OSA/IEEE JOURNAL OF OPTICAL COMMUNICATIONS AND NETWORKING, IOP Journal of Optics, IEEE COMMUNICATIONS LETTERS, Elsevier Physical Communication Journal or PHYCOM, Optical and Quantum Electronics, and Frequenz. He holds 51 U.S. patents.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:34:32 UTC from IEEE Xplore. Restrictions apply.
+
+

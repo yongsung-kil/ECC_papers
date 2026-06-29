@@ -1,0 +1,811 @@
+Journal of Communications and Information Networks, Vol.6, No.4, Dec. 2021
+
+Research paper
+
+Semi-LDPC Convolutional Codes: Construction and Low-Latency Windowed List Decoding
+Qianfan Wang, Suihua Cai, Li Chen, Xiao Ma
+
+Abstract—This paper presents a new coding scheme called semi-low-density parity-check convolutional code (semi-LDPC-CC), whose parity-check matrix consists of both sparse and dense sub-matrices, a feature distinguished from the conventional LDPC-CCs. We propose sliding-window list (SWL) decoding algorithms with a fixed window size of two, resulting in a low decoding latency but a competitive error-correcting performance. The performance can be predicted by upper bounds derived from the first event error probability and by genie-aided (GA) lower bounds estimated from the underlying LDPC block codes (LDPC-BCs), while the complexity can be reduced by truncating the list with a threshold on the difference between the soft metrics in the serial decoding implementation. Numerical results are presented to validate our analysis and demonstrate the performance advantage of the semi-LDPC-CCs over the conventional LDPC-CCs.
+Keywords—low-density parity-check convolutional codes (LDPC-CCs), spatially coupled LDPC (SC-LDPC) codes, sliding-window list (SWL) decoding
+I. INTRODUCTION
+Low-density parity-check convolutional codes (LDPCCCs), also known as spatially coupled LDPC (SC-LDPC)
+Manuscript received May 31, 2021; revised Sep. 09, 2021; accepted Sep. 28, 2021. This work was supported by the National Key R&D Program of China under Grant 2020YFB1807100, the NSF of China under Grant 61971454 and Grant 62071498 and Guangdong Basic and Applied Basic Research Foundation under Grant 2020A1515010687. The associate editor coordinating the review of this paper and approving it for publication was L. Bai.
+Q. F. Wang. School of Electronics and Communication Engineering, Sun Yat-sen University, Guangzhou 510006, China (e-mail: wangqf6@mail2. sysu.edu.cn).
+S. H. Cai, X. Ma. School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou 510006, China. Guangdong Key Laboratory of Information Security Technology, Sun Yat-sen University, Guangzhou 510006, China (e-mail: caish23@mail.sysu.edu.cn; maxiao@mail.sysu.edu. cn).
+L. Chen. School of Electronics and Information Technology, Sun Yat-sen University, Guangzhou 510006, China (e-mail: chenli55@mail.sysu.edu.cn).
+
+codes, were first introduced in Ref. [1], where the paritycheck matrix of the LDPC-CC is constructed from the paritycheck matrix of the LDPC block code (LDPC-BC) by a matrix-based unwrapping procedure. In Ref. [2], the construction exploits similarities between quasi-cyclic block codes and time-invariant convolutional codes. These aforementioned two constructions were shown to be tightly connected via (proto)graph-cover construction in Ref. [3] and the protograph-based construction was subsequently investigated in Ref. [4], in which L disjoint, or uncoupled LDPCBCs of length n are coupled into a single chain. Recently, several constructions of the LDPC-CCs have been proposed, e.g., a systematic protograph-based construction with a girth of eight[5], the replicate-and-mask construction with improved performance[6], and a “hardware-reusable” construction via partial superposition[7].
+As a result of these careful constructions, there are several remarkable features of LDPC-CCs. One remarkable feature is that the LDPC-CCs have asymptotically capacity-achieving performance over binary memoryless symmetric (BMS) channels under the iterative belief propagation (BP) decoding[8]. This is due to the threshold saturation, discovered numerically in Ref. [9] and established analytically in Ref. [10], where the BP decoding performance of LDPC-CCs can approach the maximum a posteriori (MAP) decoding performance of the underlying LDPC-BCs. However, to obtain the promised good error-correcting performance, one needs sufficiently large length n and coupling length L[11]. This in turn leads to a large decoding latency. Another remarkable feature is that the LDPC-CCs can be decoded by a slidingwindow (SW) decoder[9,11], in which the trade-off between the error-correcting performance and the decoding latency can be achieved with a tunable window size. In this case, to obtain good error-correcting performance, a sufficiently large window size is usually required. In Ref. [11], the authors proved that the window thresholds can approach the BP thresholds if the window size d exceeds some designated window size dmin. This has been experimentally verified in Ref. [12] that near optimal performance can be maintained in the high signal-tonoise ratio (SNR) region as long as d 6(m + 1), where m is the coupling width, also referred to as encoding memory. This large window size usually implies a large decoding latency.
+In some scenarios, such as the ultra-reliable and low-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+412
+
+Journal of Communications and Information Networks
+
+latency communication (URLLC) scenario of 5G, both latency and reliability are the key performance indicators to support new real-time applications, like virtual reality and tactile Internet[13]. In particular, the authors in Ref. [13] mentioned that the LDPC-CC is a potential solution in physical layer to realize the real-time applications. In Ref. [14], a short-length semi-LDPC-CC with the low-latency decoding algorithm was presented for these real-time applications.
+In this paper, inspired by Ref. [14], we present a new construction of the semi-LDPC-CCs. Distinguished from the conventional LDPC-CCs, the parity-check matrices of semiLDPC-CCs contain dense sub-matrices. Because of this special structure, we present sliding-window list (SWL) decoding algorithms, which integrate the ideas of list decoding[15,16] and the conventional SW decoding[9,11]. The SWL algorithm has a fixed window size of two or three and hence results in a low decoding latency. Distinguished from Ref. [14], we have made the following new contributions in this paper.
+• As for construction, we present to use the progressiveedge-growth (PEG) algorithm[17] to construct the sparse submatrices with a systematic structure.
+• As for decoding, we present the low-complexity reencoding list decoding algorithm, which is embedded in the windowed decoding algorithm.
+• As for performance analysis, we present upper and genie-aided (GA) lower bounds. The upper bounds are derived from the performance of the first sub-frame, while the GA lower bounds are estimated from the performance of the underlying LDPC-BCs.
+• To reduce the complexity, we present a serial implementation with early stopping criterion for the proposed SWL decoding algorithms.
+• Numerical results show that semi-LDPC-CCs with the SWL decoding algorithm can yield an extra coding gain of up to 1.4 dB over the conventional LDPC-CCs with the SW decoding algorithm under the same decoding latency. Numerical results also exhibit the effectiveness of the serial implementation and validate our analysis of the performance bounds.
+The rest of this paper is organized as follows. In section II, we present the algebraic description and the encoding algorithm of semi-LDPC-CCs. In section III, we present the decoding algorithms, the performance bounds, the serial implementation, and the complexity analysis. Numerical results are presented in section IV. Section V concludes this paper.
+II. SEMI-LDPC CONVOLUTIONAL CODES
+A. Preliminaries
+In this paper, we use an upper-case letter, say X, to denote a random variable. The realization of the random variable is denoted by the corresponding lower-case letter x ∈ X . We use
+
+PX (x), x ∈ X (or simply P(x)) to denote the probability den-
+sity function (PDF) of a continuous random variable or the
+probability mass function (PMF) of a discrete random vari-
+able. Let F2 = {0, 1} be the binary field. Let u = (u(0), u(1),
+· · · , u(L−1)) be L blocks of information sequences to be transmitted, where u(t) = (u(0t), u1(t), · · · , uk(t−) 1) ∈ Fk2 for 0 t L−1. At time slot t, the encoder takes as input the information sequence u(t) and delivers as output the coded sequence c(t) ∈ Fn2. Assume that c(t) is modulated and transmitted over the additive white Gaussian noise (AWGN) channels, resulting in a received vector y(t). Because of the windowed decoding
+mechanism with window size d, the decoder delivers an estimation uˆ (t) of u(t) upon receiving (y(t), y(t+1), · · · , y(t+d−1)).
+
+B. Algebraic Description of Semi-LDPC-CCs
+A terminated semi-LDPC-CC with encoding memory m = 1 can be treated as a linear block code with dimension kL and length n(L + 1), whose parity-check matrix is a banded block matrix,
+
+
+
+
+
+H0
+
+ 
+
+R
+
+H0
+
+ 
+
+
+
+
+
+Hsemi-LDPC-CC
+
+=
+
+ 
+
+R H0
+
+, 
+
+ 
+
+... ...
+
+ 
+
+
+
+
+
+R H0
+
+where H0 is a sparse matrix of size (n − k) × n and R is a dense matrix of size (n − k) × n. For the sparse sub-matrix, to simplify the encoding process, we consider in this paper only the form of H0 = [P , I]. By optimization with computer search, the row weight of P is wr = 2 and column weight of P is wc = 2 in this paper. This sparse sub-matrix can be constructed by the PEG algorithm[17]. The main difference from the conventional LDPC-CCs lies in the dense sub-matrix R, which can be randomly generated (but fixed) by sampling from a Bernoulli process with success probability 1/2. By this construction, roughly one-half elements of the dense submatrix R are nonzero.
+
+C. Encoding Algorithm
+Given u = (u(0), u(1), · · · , u(L−1)) with u(t) = (u(0t), u(1t), · · · , uk(t−) 1) ∈ Fk2, at time slot t, the encoder takes as input the information sequence u(t) and delivers as output the coded sequence of the form c(t) = (u(t), v(t)) ∈ F2n, where v(t) ∈ Fn2−k denotes the parity-check bits.
+Similar to Ref. [18], the encoding structure of a semi-
+LDPC-CC with m = 1 is shown in Fig. 1, in which the register
+D of length n is initialized to 0. Given the information se-
+quences u as the input, the encoding algorithm has the same
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+Semi-LDPC Convolutional Codes: Construction and Low-Latency Windowed List Decoding
+
+413
+
+Algorithm 1 Encoding of the semi-LDPC-CCs
+1. Initialization: Set c(−1) = 0 ∈ Fn2. 2. Recursion: For t = 0, 1, · · · , L − 1,
+(a) Compute z(t) = u(t)P T ∈ Fn2−k, where P is the sub-matrix of H0 = [P , I].
+(b) Compute s(t−1) = c(t−1)RT ∈ Fn2−k, where R is the dense matrix.
+(c) Compute v(t) = z(t) + s(t−1) ∈ Fn2−k, resulting in c(t) = (u(t), v(t)) ∈ Fn2, which is taken as the tth sub-frame of transmission.
+3. Termination: Set u(L) = 0 ∈ F2k in Step Recursion to obtain the Lth sub-frame c(L) = (0, c(L−1)RT) ∈ Fn2 for transmission.
+
+u(t)
+
+P z(t)
+
+c(t) P/S
+
+v(t) +
+
+s(t−1) R
+
+c(t−1) D
+
+Fig. 1 Encoding structure of a semi-LDPC-CC with m = 1. Here, P is the
+sparse matrix, R is the dense matrix and D is the register. The tth sub-frame is c(t) = (u(t), v(t)), where u(t) is the input information bits at time slot t and v(t) is the parity-check bits calculated by v(t) = u(t)P T + c(t−1)RT
+
+framework as Ref. [14] and is described in Algorithm 1 for
+
+completeness, see Fig. 1 for illustration.
+
+The real code rate1 of the semi-LDPC-CCs with m = 1 is
+
+kL n(L+1)
+
+≈
+
+k/n
+
+for
+
+large
+
+L.
+
+Similar
+
+to
+
+conventional
+
+LDPC-CCs,
+
+semi-LDPC-CCs also inherit streaming properties. That is,
+
+the encoding can be executed in a streaming manner without
+
+waiting for the whole block of data, while the decoding can
+
+be implemented by a sliding-window algorithm. The trade-off
+
+between the performance and the latency can be achieved by
+
+tuning the window size d, corresponding to a decoding latency
+
+dn in terms of bits.
+
+III. DECODING ALGORITHMS AND PERFORMANCE ANALYSIS
+A. Sliding-Window List Decoding Algorithms For simplicity, we assume that c(t) ∈ Fn2 is modulated us-
+ing binary phase-shift keying (BPSK) signaling and transmitted over an AWGN channel, resulting in a received vector y(t) ∈ Rn at the receiver. Owing to the existence of the dense sub-matrix, the conventional SW decoding algorithm is not applicable here. Instead, we propose the SWL decoding al-
+
+1The code length can be reduced to n(L + 1) − k by the simple termination process. Nevertheless, we will treat the code length as n(L + 1) for notational convenience in the rest of this paper.
+
+gorithms for the semi-LDPC-CCs, in which the list decod-
+
+ing algorithms are performed after a BP decoding algorithm
+
+performed over the partial Tanner graph corresponding to the
+
+sparse sub-matrix. The decoding window size is fixed to two
+
+or three to achieve a low-latency decoding. In this subsec-
+
+tion, we focus on the SWL with window size of two for simplicity. That is, for each time slot t, we recover u(t) from (y(t), y(t+1)). The details are presented as follows and can be
+
+adapted to the window size of three.
+
+1) BP Decoding: The log-likelihood ratios (LLRs) Λ(t) associated with c(t) are defined as
+
+(t)
+Λi
+
+=
+
+ln
+
+PY |C(yi(t)|0) , PY |C(yi(t)|1)
+
+for
+
+0
+
+i
+
+n − 1.
+
+(1)
+
+Taking Λ(t) as input, if c(t−1) is known, we can perform an iterative BP algorithm over a partial Tanner graph specified by the constraint as
+
+c(t)H0T = c(t−1)RT,
+
+(2)
+
+to obtain a temporary estimate cˆ(t) and the a posteriori LLRs associated with c(t). This is almost the same as the iterative
+
+BP algorithm, i.e., sum-product algorithm (SPA) of a conven-
+
+tional LDPC-BC except that the constraint is given by (2) instead of c(t)H0T = 0. In practice, c(t−1) of (2) is replaced by its estimate cˆ(t−1).
+
+2) List Decoding: Given cˆ(t) and the a posteriori LLRs
+
+associated with c(t), a list of candidate codewords for c(t),
+
+denoted as cˆ(t, )(1
+
+max) can be obtained, where max
+
+denotes the maximum list size. In this paper, we consider
+
+two different list decoding algorithms with different complex-
+
+ities. The first one is the re-encoding list (REL) algorithm, in which the temporary estimated information bits of cˆ(t) are
+
+flipped and then re-encoded to generate candidate codewords
+
+cˆ(t, ) such that cˆ(t, )H0T = cˆ(t−1)RT, 1
+
+max. The sec-
+
+ond one is the ordered re-encoding list (OREL) algorithm, in
+
+which the temporary estimated coded bits cˆ(t) are ordered ac-
+
+cording to their a posteriori LLRs and the most reliable ba-
+
+sis (MRB) that contains k most reliable and linearly indepen-
+
+dent bits is formed. By flipping the ordered bits in the MRB
+
+and re-encoding using the flipped MRB, we can also gener-
+
+ate candidate codewords cˆ(t, ) such that cˆ(t, )H0T = cˆ(t−1)RT,
+
+1
+
+max. As observed from our simulations, given the
+
+maximum list size max, the order of list matters. Hence, we consider the flipping pattern tree (FPT) algorithm[19], which
+
+arranges the flipping patterns with an ordered rooted tree ac-
+
+cording to their soft weights. The FPT algorithm is embedded
+
+in the flipping procedure of both the REL algorithm and the
+
+OREL algorithm, resulting in the FPT-REL algorithm and the FPT-OREL2 algorithm, respectively.
+
+2The FPT-OREL algorithm is similar to the ordered statistics decoding (OSD) algorithm except that the flipping patterns are ordered by their
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+414
+
+Journal of Communications and Information Networks
+
+Algorithm 2 Sliding-window list decoding of the semi-LDPC-CCs
+1. Initialization: Set cˆ(−1) = 0 ∈ F2n. Suppose that y(0) has been received. Calculate LLRs Λ(0) according to (1).
+2. Sliding-window decoding: For t = 0, 1, · · · , L − 1, after receiving y(t+1) and obtaining the estimate cˆ(t−1) of the (t − 1)th sub-frame, do the following steps.
+(a) BP decoding for cˆ(t): Given Λ(t) and cˆ(t−1), the temporary estimate cˆ(t) and the a posteriori LLRs are obtained by performing the iterative BP algorithm.
+(b) List decoding: Given their a posteriori LLRs, cˆ(t−1) and the temporary estimate cˆ(t), a list of candidate codewords cˆ(t, )(1 max) can be generated by performing the FPT-REL algorithm or the FPT-OREL algorithm.
+(c) BP decoding for cˆ(t+1, ): Calculate LLR Λ(t+1) similar to (1). Given Λ(t+1) and each cˆ(t, ), the corresponding estimate of the (t + 1)th sub-frame can be determined as cˆ(t+1, ) by performing the iterative BP algorithm under the constraint of (3).
+(d) Decision: Select a candidate cˆ(t, ) that maximizes ΓSWL(cˆ(t, )) as (4) from the list of candidate codewords and output the corresponding uˆ (t).
+
+3) Metrics Calculation: Given the list of candidate code-
+
+words cˆ(t, )(1
+
+max), we present two different soft met-
+
+rics, both of which are likelihood metric to choose the output
+
+from the list. Different soft metrics lead to different decod-
+
+ing algorithms. These decoding algorithms can work because
+
+of the effectiveness of the likelihood metric in the list decoding. The first soft metric is calculated from (cˆ(t, ), cˆ(t+1, )), where cˆ(t+1, ) is the output from the BP decoder with the con-
+
+straint as
+
+cˆ(t+1, )H0T = cˆ(t, )RT.
+
+(3)
+
+The soft metric of each candidate codeword cˆ(t, ) can be cal-
+
+culated as
+
+∑ ∑ ΓSWL(cˆ(t,
+
+))
+
+=
+
+n−1 (−1)cˆi(t,
+
+) (t)
+Λi
+
++ n−1 (−1)cˆi(t+1,
+
+)
+
+(t
+Λi
+
++1)
+
+,
+
+(4)
+
+i=0
+
+i=0
+
+where
+
+(t+1)
+Λi
+
+denotes
+
+the
+
+LLR
+
+associated
+
+with
+
+c(i t +1)
+
+and
+
+can
+
+be calculated similar to (1). The first soft metric ΓSWL(cˆ(t, ))
+
+is a likelihood metric and the candidate codeword cˆ(t, ) that
+
+maximizes this soft metric will be selected as the decoded
+
+codeword. Using the soft metric as (4), the SWL decoding
+
+algorithm is described in Algorithm 2. With the soft metric ΓSWL(cˆ(t, )), we need to perform the
+BP decoder for each given cˆ(t, ) to obtain the corresponding cˆ(t+1, ), as described in Algorithm 2. In order to reduce the
+
+decoding complexity, we present a simplified soft metric. Un-
+
+der the constraint as
+
+c(t+1)H0T = c(t)RT = s(t),
+
+(5)
+
+the LLRs λ(t) associated with the syndrome bits s(t) can be
+
+a posteriori LLRs, which is crucial in the case of the limited list size.
+
+Algorithm 3 Simplified sliding-window list decoding of the semi-LDPCCCs
+1. Initialization: Set cˆ(−1) = 0 ∈ Fn2. Suppose that y(0) has been received. Calculate LLR Λ(0) according to (1).
+2. Sliding-window decoding: For t = 0, 1, · · · , L − 1, after receiving y(t+1) and obtaining the estimate cˆ(t−1) of the (t − 1)th sub-frame, do the following steps.
+(a) BP decoding and list decoding: Perform Step BP decoding for cˆ(t) and list decoding in Algorithm 2.
+(b) LLR calculations: Calculate the LLRs λ(t) associated with the syndrome bits according to (6).
+(c) Decision: Select a candidate cˆ(t, ) that maximizes ΓSSWL(cˆ(t, )) as (7) from the list of candidate codewords and output the corresponding uˆ (t).
+
+estimated from c(t+1)H0T and Λ(t+1). That is
+
+(t)
+λi
+
+=
+
+log
+
+PSi(t) PSi(t)
+
+(0) (1)
+
+=
+
+2
+
+tanh−1
+
+∏ tanh
+j:H0(i, j)=1
+
+1 (t+1) 2Λj
+
+,
+
+(6)
+
+for 0 i n − k − 1, where H0(i, j) is the element at the ith
+row and jth column of H0. The simplified soft metric of each candidate codeword cˆ(t, ) can be calculated as
+
+∑ ∑ ΓSSWL(cˆ(t,
+
+))
+
+=
+
+n−1 (−1)cˆ(it,
+
+) (t)
+Λi
+
++
+
+n−k−1 (−1)sˆ(it,
+
+)
+
+(t
+λi
+
+)
+
+,
+
+(7)
+
+i=0
+
+i=0
+
+where sˆi(t, ) is the ith element of sˆ(t, ) = cˆ(t, )RT. The second soft metric ΓSSWL(cˆ(t, )) is a simplified likelihood metric and the candidate codeword cˆ(t, ) that maximizes this soft metric will be selected as the decoded codeword. Using the soft metric as (7), the simplified SWL (SSWL) decoding algorithm is described in Algorithm 3.
+The above SWL and SSWL decoding algorithms are designed with window size of d = 2, which can be extended to the setup of d = 3. To recover u(t) from (y(t), y(t+1), y(t+2)), we need generalize the soft metrics by including one more blocks of LLRs. The details are omitted here.
+
+B. Upper Bound and GA Lower Bound
+Denote by f ERt (0 t L − 1) the probability that the decoding result uˆ (t) is not equal to the information sequence u(t) and by frame error rate (FER) for the probability that the decoding result uˆ is not equal to u. It has been proved in
+Ref. [20] that
+
+L−1
+
+∑ f ER0
+
+max
+t
+
+f
+
+E
+
+Rt
+
+FER
+
+f ERt .
+t=0
+
+(8)
+
+For integrity, we rederive these bounds and present a simple estimated GA lower bound in this subsection. Similar to Refs. [20,21], we define
+
+1 L−1
+
+∑ f ER = L t=0 f ERt ,
+
+(9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+Semi-LDPC Convolutional Codes: Construction and Low-Latency Windowed List Decoding
+
+415
+
+which is used as the performance measure in this paper and can be evaluated in practice by
+
+number of erroneous decoded sub-frames
+
+fER =
+
+. (10)
+
+total number of transmitted sub-frames
+
+The event that the decoding result uˆ (0) is not equal to the transmitted vector u(0) is referred to as the first error event E0. From definition, we have
+
+f ER0 = Pr{E0}.
+
+(11)
+
+Generally, we denote by Et the event that the first error event occurs at time slot t. That is, Et represents uˆ (i) = u(i) for all i < t but uˆ (t) = u(t). The probability that the first error event
+occurs at time t can be bounded by
+
+Pr{Et } f ER0,
+
+(12)
+
+since with uˆ (t−1) being correct, the performance of the tth
+
+sub-frame will not be worse than that of the first sub-frame.
+
+Therefore, the f ERt can be bounded by
+
+t
+∑ f ERt = Pr{Ei}Pr{uˆ (t) = u(t)|Ei} i=0
+
+t
+
+∑ Pr{Ei} (t + 1) f ER0.
+
+(13)
+
+i=0
+
+Therefore, the f ER can be upper bounded by
+
+1 L−1
+
+L+1
+
+f ER
+
+∑ L
+
+(t
+t=0
+
++
+
+1)
+
+f
+
+E R0
+
+=
+
+2 · f ER0.
+
+(14)
+
+The above upper bound can also be understood by noticing
+that the event Et usually causes catastrophic error propagation. Typically, in the case when event Et occurs, a random-like sequence (cˆ(t) − c(t))RT is superimposed onto the syndromes s(t) due to the existence of R, which will lead to occurrence of event {Uˆ (t+1) = U (t+1)}. This fact can also be used to derive
+an approximated lower bound as described below.
+Obviously, the f ER0 can be lower bounded by
+
+f ER0 f ERG0 A,
+
+(15)
+
+where f ERG0 A denotes the error performance of the first subframe with a GA decoder that outputs the transmitted u(0) if it is in the list. In particular, f ERG0 A can be obtained by simulating with a GA decoder for the LDPC-BC specified by the parity-check matrix H0. Given that expected fact of the catastrophic error propagation, we present the estimated
+GA (EGA) lower bound for the semi-LDPC-CCs from the un-
+derlying LDPC-BCs. That is,
+
+f ER
+
+L
+
++ 2
+
+1
+
+·
+
+f
+
+E R0GA .
+
+(16)
+
+Notice that both the upper and the lower bounds can be evaluated from the performance of the first sub-frame of a semi-LDPC-CC by simulating only the first decoding window. This is helpful in constructing good codes by computer search.
+
+C. Serial Implementation
+The presented SWL or SSWL decoding algorithm can be implemented in a serial manner, whereby the complexity can be reduced by introducing an early stopping criterion. Different from Ref. [22], we use a more efficient early stopping criterion in this paper. A minimum list size min is set to guarantee the performance, while a maximum list size max is set to control the worst-case complexity. The early stopping criterion is designed based on the difference between the maximum soft metric and second maximum soft metric of the current candidate list. The basic rule for setting parameters is to control the type I error. That is, in the case when the null hypothesis that the transmitted codeword is not in the list is true, the rejection (early stopping) probability should be small. This is illustrated by the following example.
+Example 1: Consider the sub-frame with n = 64 and k = 32. The matrix H0 = [P , I] is constructed by the PEG algorithm[17], where the sub-matrix P has a column weight wc = 2 and a row weight wr = 2. The matrix R is randomly generated but fixed, where the elements are generated independently according to the Bernoulli distribution with success probability 1/2. We set max = 529 and SNR = 4 dB for simulation.
+By performing the proposed SSWL decoding with FPTOREL algorithm, the rank of the transmitted codeword in the list can be viewed as a random variable and its PMF can be approximated by the histograms shown in Fig. 2. We see that, to guarantee the performance obtained by the original SSWL decoding, say f ER ≈ 4 × 10−3, it is necessary to set a minimum list size min = 25. After generating min candidates, we would like to choose a threshold T such that the probability of “too-early”3 stopping is small in the case when the transmitted codeword is not in the list. To this end, we have estimated by simulation the density distribution of the difference between the maximum soft metric and second maximum soft metric conditional on that the transmitted codeword is not in the list or in the list. The histogram results are shown in Fig. 3, from which we may choose T = 20, for example, to achieve a probability less than 0.04 for too-early stopping. With these two observations, we present the following two-round serial decoding implementation.
+Let min be the number of candidate codewords in the first round and δ be the difference between the maximum soft metric and the second maximum soft metric of cˆ(t, ). Let T be a preset threshold of the soft metric difference. The serial implementation for the proposed decoding algorithms is described in Algorithm 4.
+3The ideal stopping time is the time once when the transmitted codeword is included in the list, which is obviously impractical. We refer a stopping time to as a “too-early” stopping time if at which the probability of the transmitted codeword not in the list is high.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+416
+
+Journal of Communications and Information Networks
+
+Relative frequency
+
+100 10−1 10−2 10−3 10−4
+
+SSWL decoding with FPT-OREL 4×10−3
+
+5 10 15 20 25 30 35 40 45 50 55 60 Rank of transmitted codeword
+Fig. 2 Histograms of the rank of transmitted codeword in the list
+
+100 10−1
+
+Transmitted codeword is in the list Transmitted codeword is not in the list
+
+Relative frequency
+
+10−2
+
+10−3
+
+0.04
+
+10−40
+
+20 40 60 80 100 120 Soft metric difference
+
+Fig. 3 Histograms of the difference between the maximum soft metric and
+
+second maximum soft metric
+
+Algorithm 4 Two-round serial decoding implementation
+
+First round: for = 1, 2, · · · , min do Generate cˆ(t, ) using the proposed list decoding algorithms.
+
+Calculation of soft metric difference: Calculate δ , the difference between
+
+the maximum soft metric and second maximum soft metric in the list.
+
+Second round: while δ < T and ← + 1.
+
+max do
+
+Generate one more candidate codewords, denoted by cˆ(t, ), using the
+
+proposed list decoding algorithms and update δ . Output: Output the candidate that maximizes the soft metric from {cˆ(t,1), cˆ(t,2), · · · , cˆ(t, )}.
+
+D. Complexity Analysis
+In this subsection, taking the conventional (dv, dc)-regular SC-LDPC codes with SW decoding algorithm as the benchmark, we analyze the complexity of the semi-LDPC-CCs under the proposed SSWL decoding algorithm.
+Firstly, owing to the specific decoding process, the Tanner graph used in the SSWL decoding algorithm is small (about half or less) compared with that used in the conventional SW decoding algorithm with decoding window size d 2. Secondly, the degree of the variable nodes is 1 or 2 for the semiLDPC-CCs, while as shown in Ref. [23], for (dv, dc)-regular SC-LDPC codes to have good performance, it is usually re-
+
+quired that dv 3. According to Ref. [24], in each iteration, the total computational load for a variable-node update is 2dv + 1 real additions and the total computational load for a check-node update consists of 3(dc − 2) core operations, where each core operation can be realized using 4 real additions, 1 comparison, and 2 corrections. Because of the smaller Tanner graph and lower degree distribution, the computational load in each iteration of BP decoder for semi-LDPC-CCs is lower compared with that of the iterative decoder for conventional SC-LDPC codes. We need to point out that the maximum iteration number can be small in the proposed decoding algorithms compared with that in the conventional SW decoding algorithm. Considering the whole SSWL decoding algorithm, the main extra computational load is caused by the FPTREL or FPT-OREL algorithm with a preset maximum list size max. Given H0 and R, the complexity of the list decoding is linearly increased with the list size. Indeed, the average list size can be small in the high SNR region of interest by using the two-round serial implementation, as confirmed by the following numerical results.
+IV. NUMERICAL RESULTS
+In this section, we present numerical results of the semiLDPC-CCs. We set the sub-frame with n = 64 and k = 32. In our simulations, H0 = [P , I] is constructed by the PEG algorithm[17], where P has a column weight of wc = 2 and a row weight of wr = 2. R is a randomly generated but fixed matrix whose elements are generated independently according to the Bernoulli distribution with success probability 1/2. In all examples, the encoder terminates every L = 32 sub-frames. Codewords c(t) are transmitted with BPSK modulation over AWGN channels. The SWL, SSWL decoding algorithms and the two-round serial decoding implementation are employed for the decoding. The maximum numbers of iteration for the conventional SC-LDPC codes and the semi-LDPC-CCs are 50 and 5, respectively.
+A. Comparison with the SC-LDPC Code
+The following example is provided to compare the performance of a semi-LDPC-CC and a (3, 6)-regular SC-LDPC code under the equal decoding latency constraint.
+Example 2 [Comparison with the (3, 6)-Regular SC-LDPC Code]: Consider a semi-LDPC-CC with sub-frame of [n, k] = [64, 32] and L = 32. The SWL and SSWL decoding algorithms with FPT-OREL algorithm are employed for the decoding. The decoding window size of the semi-LDPC-CC is d = 2 and hence the decoding latency is 128 bits. For comparison, we choose the (3, 6)-regular SC-LDPC code with an equal coupling width of one and an equal coupling length L = 32. The sub-matrices H0 and H1 of the SC-LDPC code are constructed by lifting the base matrices B0 = [2, 1]
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+Semi-LDPC Convolutional Codes: Construction and Low-Latency Windowed List Decoding
+
+417
+
+100
+
+10−1
+
+10−2
+
+fER
+
+10−3
+
+10−4
+
+SC-LDPC, SW, d=2 semi-LDPC-CC, SSWL, max=33 semi-LDPC-CC, SSWL, max=529 semi-LDPC-CC, SWL, max=33 semi-LDPC-CC, SWL, max=529
+
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0
+
+SNR (dB) (a)
+
+100
+
+10−1
+
+10−2
+
+fER
+
+10−3
+
+10−4
+
+SC-LDPC, SW, d=2 semi-LDPC-CC, SSWL, max=529 semi-LDPC-CC, SSWL, max=5489 semi-LDPC-CC, SWL, max=529 semi-LDPC-CC, SWL, max=5489
+
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0
+
+SNR (dB) (b)
+
+Fig. 4 The fER performance of a semi-LDPC-CC with a real code rate of about 0.4848 and a (3, 6)-regular SC-LDPC code with a real code rate of about 0.4844. The FPT-OREL and FPT-REL algorithms are used in the SWL and SSWL decoding algorithms, respectively: (a) FPT-OREL; (b) FPT-REL
+
+and B1 = [1, 2] with a lifting factor of 32, respectively. For (3, 6)-regular SC-LDPC code, the conventional SW decoding algorithm is employed for decoding, where the decoding window size is d = 2, resulting in an equal decoding latency of 128 bits. The f ER performance comparison is shown in Fig. 4(a), where we observe that the semi-LDPC-CCs under the proposed decoding algorithm with max = 33 exhibits 0.5 dB coding gain at f ER = 10−4 over the (3, 6)-regular SCLDPC code under the same decoding window size, which verifies the effectiveness of the list decoding. As the maximum list size enlarges to max = 529, the coding gain can increase up to about 1.2 dB. We also observe that the semi-LDPC-CCs with the SWL decoding algorithm can outperform the proposed codes with SSWL decoding algorithm.
+We have made similar observations for the SWL and SSWL decoding algorithms with FPT-REL algorithm as shown in Fig. 4(b). Under the simpler FPT-REL algorithm, the coding gain can increase up to about 1.4 dB as the maximum list size enlarges to max = 5 489.
+
+100 10−1 10−2 10−3 10−4
+
+Upper bound d=2 d=3 EGA lower bound
+
+fER
+
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 SNR (dB) (a)
+
+100 10−1
+
+Upper bound d=2 d=3 EGA lower bound
+
+10−2
+
+10−3
+
+10−4
+
+fER
+
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 SNR (dB) (b)
+Fig. 5 The fER performance and the corresponding bounds of the semiLDPC-CC under SSWL decoding algorithm with FPT-OREL and FPT-REL algorithms: (a) SSWL with FPT-OREL, max = 100; (b) SSWL with FPTREL, max = 529
+
+B. Upper Bound and GA Lower Bound
+In this subsection, we present the performance of the semiLDPC-CCs using the proposed decoding algorithms with different window sizes and the corresponding upper and GA lower bounds.
+Example 3 (Performance and Bounds): Consider the semiLDPC-CC that was used in Example 2. The SSWL decoding algorithm with FPT-OREL and FPT-REL algorithms is employed for the decoding, where the decoding window sizes are d = 2 and 3, respectively. The fER performance curve of the semi-LDPC-CC under the SSWL decoding algorithm with FPT-OREL algorithm is depicted in Fig. 5(a). From the figure, we see that the performance of the semi-LDPC-CCs using SSWL decoding algorithm with d = 2 is very close to the upper bound in the high SNR region. We also observe that the performance can be further improved to approach the EGA lower bound by increasing the window size of d = 3. We have made similar observations for the SSWL decoding algorithm with FPT-REL algorithm as shown in Fig. 5(b).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+418
+
+Journal of Communications and Information Networks
+
+100
+
+10−1
+
+10−2
+
+fER
+
+10−3 10−4
+
+Serial SSWL with FPT-REL, min=25, T=20 Serial SSWL with FPT-REL, min=50, T=10 Serial SSWL with FPT-REL, min=50, T=20 Original SSWL with FPT-REL Serial SSWL with FPT-OREL, min=25, T=20 Serial SSWL with FPT-OREL, min=50, T=10 Serial SSWL with FPT-OREL, min=50, T=20 Original SSWL with FPT-OREL
+
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0
+
+SNR (dB)
+
+(a)
+
+Original SSWL with FPT-REL and FPT-OREL Serial SSWL with FPT-REL, min=25, T=20 Serial SSWL with FPT-REL, min=50, T=10 Serial SSWL with FPT-REL, min=50, T=20 Original SSWL with FPT-REL, GA Serial SSWL with FPT-OREL, min=25, T=20 Serial SSWL with FPT-OREL, min=50, T=10 Serial SSWL with FPT-OREL, min=50, T=20 Original SSWL with FPT-OREL, GA
+
+Average list size
+
+500 450 400 350 300 250 200 150 100 50
+0
+1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 SNR (dB) (b)
+Fig. 6 The fER performance and the average list size of the semi-LDPC-CC under SSWL decoding algorithm with FPT-OREL and FPT-REL algorithms. The maximum list size is max = 529: (a) the fER performance; (b) the average list size
+
+C. Serial Implementation of the Proposed Decoding Algorithms
+The following example is provided to show the two-round serial implementation of the proposed decoding algorithms.
+Example 4 (Two-Round Decoding): Consider the semiLDPC-CC that was used in Example 2. The two-round serial implementation of the SSWL decoding algorithm with FPT-OREL and FPT-REL is employed for the decoding. The fER performance is shown in Fig. 6(a), where we observe that the performance of the two-round serial SSWL decoding with proper parameter is very close to that of the original SSWL decoding algorithm. The average list size comparison is shown in Fig. 6(b), where we observe that at the cost of negligible performance loss, the average list size can be significantly
+
+reduced by using the two-round serial SSWL decoding with properly selected parameters. For example, at SNR = 4 dB, the average list size can be reduced more than 10 times.
+V. CONCLUSIONS
+This paper has presented a new construction of LDPC-CCs, whose parity-check matrix contain dense sub-matrices. Based on this special construction, we proposed the SWL and SSWL decoding algorithms with a small window size, resulting in a low decoding latency but a competitive error-correcting performance. For performance analysis, we have presented the upper and GA lower bounds to predict the performance of the semi-LDPC-CCs. Moreover, we have presented the tworound serial implementation of the proposed decoding algorithms for the purpose of reducing complexity. Our numerical results have shown that the semi-LDPC-CCs can obtain a coding gain of up to 1.4 dB over the conventional SC-LDPC codes. They have also shown that the effectiveness of the tworound serial implementation and these performance bounds.
+The proposed semi-LDPC-CCs are constructed for the potential streaming applications, especially in which the latency and reliability are both the key performance indicators. In the construction, a randomly generated but fixed dense sub-matrix is involved, which is not convenient for practical implementations. As a future work, we need to find ways to jointly optimize the sparse and the dense sub-matrices with structures.
+REFERENCES
+[1] FELSTROM A J, ZIGANGIROV K S. Time-varying periodic convolutional codes with low-density parity-check matrix[J]. IEEE Transactions on Information Theory, 1999, 45(6): 2181-2191.
+[2] TANNER R M, SRIDHARA D, SRIDHARAN A, et al. LDPC block and convolutional codes based on circulant matrices[J]. IEEE Transactions on Information Theory, 2004, 50(12): 2966-2984.
+[3] PUSANE A E, SMARANDACHE R, VONTOBEL P O, et al. Deriving good LDPC convolutional codes from LDPC block codes[J]. IEEE Transactions on Information Theory, 2011, 57(2): 835-857.
+[4] MITCHELL D G M, LENTMAIER M, COSTELLO D J. Spatially coupled LDPC codes constructed from protographs[J]. IEEE Transactions on Information Theory, 2015, 61(9): 4866-4889.
+[5] MO S, CHEN L, COSTELLO D J, et al. Designing protograph-based quasi-cyclic spatially coupled LDPC codes with large girth[J]. IEEE Transactions on Communications, 2020, 68(9): 5326-5337.
+[6] LIU K, EL-KHAMY M, LEE J. Finite-length algebraic spatiallycoupled quasi-cyclic LDPC codes[J]. IEEE Journal on Selected Areas in Communications, 2016, 34(2): 329-344.
+[7] WANG Q, CAI S H, LIN W C, et al. Spatially coupled LDPC codes via partial superposition and their application to HARQ[J]. IEEE Transactions on Vehicular Technology, 2021, 70(4): 3493-3504.
+[8] KUDEKAR S, RICHARDSON T, URBANKE R. Spatially coupled ensembles universally achieve capacity under belief propagation[J]. IEEE Transactions on Information Theory, 2013, 59(12): 7761-7813.
+[9] LENTMAIER M, SRIDHARAN A, COSTELLO D J, et al. Iterative decoding threshold analysis for LDPC convolutional codes[J]. IEEE Transactions on Information Theory, 2010, 56(10): 5274-5289.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+Semi-LDPC Convolutional Codes: Construction and Low-Latency Windowed List Decoding
+
+419
+
+[10] KUDEKAR S, RICHARDSON T, URBANKE R. Threshold saturation via spatial coupling: why convolutional LDPC ensembles perform so well over the BEC[J]. IEEE Transactions on Information Theory, 2011, 57(2): 803-834.
+[11] IYENGAR A R, SIEGEL P H, URBANKE R L, et al. Windowed decoding of spatially coupled codes[J]. IEEE Transactions on Information Theory, 2013, 59(4): 2277-2292.
+[12] HUANG K, MITCHELL D G M, WEI L, et al. Performance comparison of LDPC block and spatially coupled codes over GF (q)[J]. IEEE Transactions on Communications, 2015, 63(3): 592-604.
+[13] SIMSEK M, AIJAZ A, DOHLER M, et al. 5G-enabled tactile Internet[J]. IEEE Journal on Selected Areas in Communications, 2016, 34(3): 460-473.
+[14] CHEN Z, CAI S, CHEN L, et al. Semi-LDPC convolutional codes with low-latency decoding algorithm[C]//2020 IEEE International Conference on Computer and Communications. Piscataway: IEEE Press, 2020: 105-109.
+[15] ELIAS P. List decoding for noisy channels[C]//1957 IRE WESCON Convention Record. [S.l.: s.n.], 1957: 94-104.
+[16] WOZENCRAF J M. List decoding[R]. Quarter Progress Report, Cambridge, 1958: 90-95.
+[17] HU X Y, ELEFTHERIOU E, ARNOLD D M. Regular and irregular progressive edge-growth Tanner graphs[J]. IEEE Transactions on Information Theory, 2005, 51(1): 386-398.
+[18] PUSANE A E, FELTSTROM A J, SRIDHARAN A, et al. Implementation aspects of LDPC convolutional codes[J]. IEEE Transactions on Communications, 2008, 56(7): 1060-1069.
+[19] TANG S, MA X. A new Chase-type soft-decision decoding algorithm for Reed-Solomon codes[J]. ArXiv:1309.1555, 2013.
+[20] LIN W, CAI S, WEI B, et al. Successive cancellation list decoding of semi-random unit memory convolutional codes[J]. ArXiv:1905.11392, 2019.
+[21] LI J, CAI S, LIN W, et al. Improved block oriented unit memory convolutional codes[J]. IEEE Transactions on Communications, to be published.
+[22] LIN W, WEI B, MA X. List decoding with statistical check for semirandom block-oriented convolutional code[J]. Electronic Letter, 2019, 55(10): 601-603.
+[23] WEI L, MITCHELL D G M, FUJA T E, et al. Design of spatially coupled LDPC codes over GF (q) for windowed decoding[J]. IEEE Transactions on Information Theory, 2016, 62(9): 4781-4800.
+[24] HU X Y, ELEFTHERIOU E, ARNOLD D M, et al. Efficient implementations of the sum-product algorithm for decoding LDPC codes[C]//2001 IEEE Global Telecommunications Conference. Piscataway: IEEE Press, 2001: 1036-1036E.
+ABOUT THE AUTHORS
+Qianfan Wang received the B.S. degree in Applied Physics from Henan Polytechnic University, Jiaozuo, China, in 2014, and the M.S. degree in Electronics and Communication Engineering from Sun Yat-sen University, Guangzhou, China, in 2017, where he is currently pursuing the Ph.D. degree. His research interests include information theory, channel coding theory, and their applications to communication systems.
+
+Suihua Cai received the B.Sc. degree in Information and Computering Science from China University of Geosciences, Wuhan, China, in 2011. He received the M.S. degree in Fundamental Mathematics in 2016 and the Ph.D. degree in Information and Communication Engineering in 2019, both from Sun Yat-sen University, Guangzhou, China. He is currently a PostDoctoral Fellow with Sun Yat-sen University. His research interests include information theory, channel coding theory, and their applications to communication systems.
+Li Chen received the B.Sc. degree in Applied Physics from Jinan University, China, in 2003, and the M.Sc. degree in Communications and Signal Processing and the Ph.D. degree in Communications Engineering from Newcastle University, U.K., in 2004 and 2008, respectively. From 2007 to 2010, he was a Research Associate with Newcastle University. In 2010, he returned to China as a Lecturer of the School of Information Science and Technology, Sun Yat-sen University, Guangzhou. From 2011 to 2012, he was a Visiting Researcher with the Institute of Network Coding, the Chinese University of Hong Kong, Hong Kong, China. From 2011 and 2016, he was an Associate Professor and a Professor of the university. Since 2013, he has been the Associate Head of the Department of Electronic and Communication Engineering (ECE). From July 2015 to October 2015, he was a Visitor of the Institute of Communications Engineering, Ulm University, Germany. From October 2015 to June 2016, he was a Visiting Associate Professor with the Department of Electrical Engineering, the University of Notre Dame, USA. From 2017 to 2020, he was the Deputy Dean of the School of Electronics and Communication Engineering. His research interests include information theory, error-correction codes, and data communications. He likes reading and photography. He is a Senior Member of the Chinese Institute of Electronics (CIE). He is a member of the IEEE Information Theory Society Board of Governors Conference Committee and External Nomination Committee, the Chair of the IEEE Information Theory Society Guangzhou Chapter, and a Committee Member of the CIE Information Theory Society. He is currently serving as an Associate Editor for IEEE Transactions on Communications. He has been involved in organizing several international conferences, including the 2018 IEEE Information Theory Workshop (ITW) at Guangzhou, for which he was the General Co-Chair.
+Xiao Ma [corresponding author] received the Ph.D. degree in Communication and Information Systems from Xidian University, China, in 2000. He is a Professor of the School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou, China. From 2000 to 2002, he was a Post-Doctoral Fellow with Harvard University, Cambridge, MA. From 2002 to 2004, he was a Research Fellow with the City University of Hong Kong, Hong Kong, China. His research interests include information theory, channel coding theory, and their applications to communication systems and digital recording systems. He is a co-recipient, with A. Kavcˇic´ and N. Varnica, of the 2005 IEEE Best Paper Award in Signal Processing and Coding for Data Storage. Dr. Ma is a member of the IEEE.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:46:57 UTC from IEEE Xplore. Restrictions apply.
+
+

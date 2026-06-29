@@ -1,0 +1,533 @@
+A High Throughput Configurable Partially-Parallel Decoder Architecture for Quasi-Cyclic Low-Density Parity-Check Codes
+Alaa Aldin AL HARIRI, Fabrice MONTEIRO, Loïc SIÉLER, Abbas DANDACHE Université de Lorraine, 7 rue Marconi, 57070 Metz, France
+{alla-aldin.al-hariri, fabrice.monteiro, loic.sieler, abbas.dandache}@univ-lorraine.fr
+
+Abstract—In this paper, we are proposing a new architecture for the fast decoding of Quasi-Cyclic Low-Density Parity Codes (QC-LDPC). QC-LDPC codes are becoming more and more popular in a wide range of applications, including data transmission (WiMAX, DVB-S2) in telecommunication systems, increasing the need for effective decoder architectures. In the present approach, support for a large subset of QC-LDPC codes is provided thanks to the configurability of the architecture at the synthesis level. High levels of parallelism can be reached and hence high throughput achieved, thanks to the modular decoder architecture that takes advantage of the highly regular structure of QC-LDPC parity check matrices. The architectural design has been validated through the implementation of different decoders related to DVB-T2 and DVB-S2 on FPGAs of the Altera Stratix II family. Very high data rates (up to 28.9 GB/s) have been achieved with still acceptable hardware consumption (about 32k logic elements) proving the effectiveness of the approach.
+Index Terms—Error correcting codes, QC-LDPC, parallel and configurable decoder architectures, FPGA implementation.
+I. INTRODUCTION
+Modern communication systems must comply to high performance requirements such as huge volumes of data transmission, fast data transmission, diverse physical media, several transmission standards and many others. Most of the research work has been addressing these issues through classical design improvement techniques such as operational frequency increase, device dimensions reduction and use of additional modules, the counterpart being an increased circuit sensivity towards noise. Evidently, the main design objective is to be able to reach a high level of performance along with high reliability.
+New technological and design constraints (higher sensitivity of circuits to disturbances, low power requirements and other) have shifted the need to much more massively parallel architectures. The most popular error correcting codes in present communication standards are Convolutional Codes (CC), Turbo codes and LDPC codes. The later are currently the most promising coding techniques to achieve the Shannon capacitie. LDPC codes can achieve up to 0.04dB of the Shannon’s limit [1]. LDPC codes are used in Digital Video Broadcasting – Satellite – Second Generation (DVB-S2), in particular to send sound and image from remote mobile units
+
+located world-wide back to their home television stations. LDPC codes are also employed in many mobile wireless standards such as IEEE-802.11n (WiFi) and IEEE802.16e (WiMAX) [2].
+Three main architectural approaches can be choosen to implement LDPC decoders: the first is based on serial or sequential decoding in which only a single word is processed at a time using a single row single column processor. Despite the interesting low hardware requirements, the throughput achieved is too low for practical use in demanding applications [3]. The second approach is based on full-parallel decoding where each node in the Tanner graph as its own dedicated processing unit. Very high throughputs can be achieved this way but the high costs, induced by the large area requirements and the high architectural and routing complexity, limits employability. This approach is generaly restricted to applications with very high throughputs requirements but limited code block lengths [4], [5]. The third approach is based on partial-parallel decoding [6]–[8]. The main objective of this intermediate approach (in the between of serial and full-parallel LDPC decoder architectures) is to allow a tradeoff between data throughput and hardware cost. While still employing multiple processing units, this architecture requires less than in the full-parallel approach. Each processing unit is shared by several rows and/or columns. Shared memories are used in addition to compensate the lower number of processing units. The lower requirements of the partiallyparallel architecture allow larger block sizes to be processed.
+In this paper, we are proposing a new architecture for a reconfigurable partially-parallel decoder, compatible with a wide range of standardized QC-LDPC and different block length. The details of the proposed architecture are discussed in the next section.
+II. SYSTEMATIC LOW-DENSITY PARITY-CHECK CODES
+A. Quasi-cyclic-LDPC
+Low-Density Parity-Check (LDPC) codes are a class of linear block codes. As indicated in the name, they exhibit the property of linearity and are applied to data blocks of the source data. Methods for constructing LDPC codes can be
+
+978-1-4799-5743-9/14/$31.00 c 2014 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+broadly classified into two categories: algebraic methods and
+graph-theoretic based (GTB) methods.
+Using matrix representation, LDPC codes are defined by a
+(n − k) ∗ n binary matrix called the parity check matrix H. The number of columns n defines the code length whereas
+the number of rows n − k defines the number of parity check constraints for the code [9]. The information length is k for
+full-rank matrices. Column weight wc is the number of ones per column and row weight wr is the number of ones per row.
+An H-matrix generated using a semi-random technique
+is built upon two parts (cf. equation 1), H = [HdHp], where respective dimensions of Hd and Hp are (n − k) × k and(n − k) × (n − k) [11], [12]. The systematic codeword V = [DP ] is the concatenation of [D] and [P ], respectively the k information bits and the (n − k) parity bits.
+
+Hd
+
+Hp
+
+ h0,0
+
+
+
+H
+
+=
+
+ 
+
+
+
+h1,0 ...
+
+h0,1
+
+···
+
+h0,k−1 1 0 · · · 0
+
+h1,1 ...
+
+··· ...
+
+h1,k−1 ...
+
+1
+
+1 ...
+
+··· ...
+
+0  0
+
+(1)
+
+hn−k−1,0 hn−k−1,1 · · · hn−k−1,k−1 0 · · · 1 1
+
+The LDPC codes employed in this paper display a H matrix
+in which the Hp part has a simple dual-diagonal structure and the Hd part is built as shown in equation 2, upon a set of circulate matrices Ai,j of size z × z. A circulate matrix M is a square matrix in which each row is the cyclic shift of the
+row above it, and the first row is the cyclic shift of the last
+row.
+
+ A0,0
+
+
+
+Hd
+
+=
+
+ 
+
+
+
+A1,0 ...
+
+A0,1 · · · A0,u−1 
+
+A1,1 ...
+
+··· ...
+
+A1,u−1 ...
+
+  
+
+
+with
+
+Av−1,0 Av−1,1 · · · Av−1,u−1
+
+k = u·z n−k = v·z
+
+(2)
+
+LDPC codes can also be described through a bipartite graph known as Tanner graph [10], an altenate graphical representation of matrix H. In the Tanner graph, each row and each column of H correspond respectively to a check node (C_node) and a variable node (V_node). An edge exists in the graph between a check node Ci and a variable node Vj when and only when the value at coordinates (i, j) in matrix H is hi,j = 1 as shown in figure 1. For instance, row 2 in H corresponds to check node C2 in the Tanner graph. Check node C2 is connected to variable nodes V2, V6, V7 and V8 as denoted by the 1 located in row 2 of H. The total number of edges (connections) between variable and check nodes is n × wc or (n − k) × wr.
+In this paper, we are interested in the GTB approach, as it presents lower error floors and offers the possibility to use iterative message-passing algorithms in the decoding of the LDPC code.
+Due to the very high decoding complexity of LDPC codes in general, it is usual to search for LDPC subfamilies for which more effective algorithms can be devised. The counterpart with this approach however is a possible lower error detection/correction capacity than with true randomly generated LDPC codes (which display the higher capacity). In the following, we present such a subfamilly of LDPC codes,
+
+v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12
+1 0 0 0 1 0 1 0 0 0 0 0 C1 0 1 0 0 0 1 1 1 0 0 0 0 C2 0 0 1 1 0 0 0 1 1 0 0 0 C3 H 0 1 0 0 0 1 0 0 1 1 0 0 C4
+0 0 1 1 0 0 0 0 0 1 1 0 C5
+1 0 0 0 1 0 0 0 0 0 1 1 C6
+
+c1 c2 c3 c4
+
+c5
+
+c6
+
+v1
+
+v2
+
+v3
+
+v4
+
+v5
+
+v6
+
+v7
+
+v8
+
+v9
+
+V 10
+
+V 11
+
+V 12
+
+Fig. 1. Parity check matrix (upper) and Tanner graph (lower) representing a LDPC code with n = 12 columns, n − k = 6 rows, column weight wc = 2, row weight wr = 4 and information length k = 6.
+
+the QC-LDPC family, for which a quasi-cyclic semi-random generation approach is employed.
+III. LDPC DECODING
+A. Two-phase message-passing decoding
+Several algorithms have been proposed for LDPC decoding, most of them deriving from the well-known belief propagation (BP) algorithm [1]. LDPC codes are usually decoded using an iterative message passing algorithm which consists in iteratively applying two sequential operations: row processing (for check node update) and column processing (for variable node update). In row processing, all check nodes receive messages from their neighboring variable nodes before performing parity check operations and then sending back the results to their neighboring variable nodes. Then in colomn pocessing, the variable nodes update the soft information associated with the decoded bits using the information received from the check nodes, sending back the updates to the check nodes. This process continues iteratively until the stop condition is finaly reachedh [13]. This algorithm is also referred to as two-phase message passing (TPMP).
+The basic flow of the TPMP is shown in figure 2. After receiving the possibly corrupted information from an AW GN channel λ, the decoding can begin. First of all, the check node inputs are all initialized to 0. Then, the iterative algorithm starts. First, a check node update step (row processing) is done in which α messages are generated. Then, on reception of the α message by the variable nodes, a variable node update step (column processing) is done to generate β messages which will in turn be send back to the code nodes. This two-step iterative process repeats until all errors are corrected or a limit number of iterations is reached. Sum-Product [14] and MinSum [15] are widely used decoding algorithms. In this paper, we are using MinSum (MS) algorithm which is described in details in the following subsection.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+Channel Initialisation check node processing
+
+Then if
+
+H.vT = O(mod2)
+
+(8)
+
+Vˆ is a valid code word and therefore the iterative process has converged and decodingStops. Otherwise the decoding repeats from step 2 until a valid code word is obtained or the number Of iterations reaches a maximum number (Imax), which terminates the decoding process.
+
+Variable node processing
+No Syndrome Check Yes Output Data
+Fig. 2. Typical flow diagram of iterative message-passing decoding algorithms.
+
+IV. PARTIALLY-PARALLEL LDPC DECODER ARCHITECTURE
+The message passing algorithm is inherently parallel because row processing operations are fully independent with respect to each other, and the same is true for column processing operations. In order to get high performance parallel decoder architecture must be used .the fully parallel decoder architecture is consumes a lot of Hard-ware in order to apply the decoding algorithm, It is relates to block length the number of the variable and check nodes. In addition, the fully parallel
+
+B. MinSum LDPC decoding algorithm
+The MinSum algorithm (MS) is one of the most commonly TPMP algorithm being used. For each i and j, where i is the column processing output, and j is the number of row processing output, there are two message to calculate check node update αij and variable node updateβij. Row processing or check node update: compute αij messages using β messages from all other variable nodes connected to check node Ci, excluding the β information from Vj.
+
+αij =
+
+sign(βij′ ) × min (|βij′ |) (3)
+
+j′,hij′ =1,j′=j
+
+j′,hij′ =1,j′=j
+
+The error rate performance of the Min-Sum algorithm in
+
+equation (1) can be improved by employing check node update
+
+that uses scaling factor S-factor. The normalization factors can
+
+be obtained by simulation, typically 0 < S-factor < 1
+
+αij =
+
+sign(βij′ ) × min (|βij′ |) × S (4)
+
+j ′ ,hi j ′ =1,j ′ =j
+
+j ′ ,hi j ′ =1,j ′ =j
+
+Column processing or variable node update: These mes-
+
+sages as given by equation (3,4) is compute by the sum of the
+
+extrinsic messages sent by the other check nodes Which are
+
+connected to variable node Vj, excepting check node Ci and channel information (λj).
+
+Zj = λj +
+
+αij′
+
+(5)
+
+j ′ ,hi j =1
+
+βij = Zj − αij
+
+(6)
+
+Syndrome check and early termination: When column pro-
+cessing is finished, every bit in column j is updated by adding
+the channel information (λj) and α messages from connected check nodes. From the updated vector, an estimated code vector Vˆ =[Vˆ1, . . . Vˆn] Where
+
+Vˆ =
+
+1 IF Zj ≤ 0 0 IF Zj > 0
+
+(7)
+
+s
+w
+0
+0
+Fig. 3. Partial-parallel decoders used calculation window with multiple processing units
+is not flexible, where it designed to work with a specific LDPC standard with block length, code rate and matrix H fixed, but this type of decoder have a high performance due to calculation of all the node simultaneously Partialparallel decoders contain multiple processing units and shared memories. There are several Partial-parallel decoders has been designed [7,16,17] .In our partially parallel architecture several sub matrix processing at the same time ,as shown if fig (4) this process is done by window calculation ,where this widow can be to stretch a single row and multiple columns or multiple rows and single or multiple columns of sub matrix ,(s, w) are the length and width of this window . In each step we repeat the calculation using the same hardware resources until the overall decoding is completed. This type parallel architecture we used in our decoder architecture and all the details of the proposed architecture are discussed in the next section.
+A. PROPOSED DECODER ARCHITECTURE We are proposing a configurable and flexible LDPC decoder
+architecture, the flexible parameters are: T : the size of the submatrix A, R: the code rate and the block size that must be scalable to fit different LDPC code block sizes. Decoder architecture mainly contains four parts: tow calculation window,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+Add w/r
+
+Rst
+Clk valid code
+
+Control Unit (stat machine)
+Counter
+
+Col,row #
+
+shift entries
+
+Mux
+
+variable node update
+
+Sign Min1 Min2 Index
+
+Absl
+Mux
+SM to 2’s
+
+✟ Scaling
+
+SUMs
+
+Column #
+
+valid code
+Syndrome check
+
+✟
+
+Add_w en_w
+Add_r
+
+Chanel (✟) information
+
+Equl Equl
+
+Add_w en_w
+Add_r
+
+Check node Sum memory
+
+check node update
+
+Min1 Min2 Index
+
+COMPs
+
+Min1 Min2 Index
+Sign
+
+Add_w en_w
+Add_r
+
+out
+Signe of CN to VN( ) memory
+
+Sign Min1 Min2 Index
+
+Absl
+Mux
+SM to 2’s
+
+Scaling
+
+Absl Sgn
+
+Subtract
+
+XORs
+
+i:Column # Fig. 4. A schematic of the proposed decoder architecture
+
+shift
+entries Mux
+
+Add_w en_w
+Add_r
+
+VN comp memory
+
+the memories and controller, as clusters in Fig (5). The first calculation window is Check node processing The length of the window is equal to s (number of sub-matrix horizontal) and the width is w (number of sub-matrix vertical), in the iteration the inputs are initialized to ′′0′′ after that a check node update step (row processing) is done to generate α messages. The number of Comps functions in each window is equal to (txw), and every Comp have s input, thanks to that this window processing (sxw) sub-matrix every clock cycle. It works the comparison between s absolute value of variable to check node massage β and the results of last window, but we need to calculate betaij by subtract αij form Zj as shown en equ (4). in Comps functions there are three value calculated there min1: Overall minimum of the received, min2: Second minimum of the received, index: the index of the connected VNm providing min0, in our model λ quantized to 5 bits, therefor min1and min2 represented by 4 bits for each one and the final result saved in Comp-Memory.
+The second calculation window is Variable node processing: It have the same size of first window (sxw) and the input size of input values for every SUM functions equal w and the number of SUM functions is (txw), the mechanism of this component is accumulates the check to variable node massages α with λ as shown eq (3), but before adding α
+
+we need multiply by scaling factor to improve the error rate performance of the Min-Sum algorithm, the final result saved in SUM-Memory. The there’d parts is memories: there are four single port RAM memories, first memory is the channel information memory, when the quantized bits for λ is flexible the memory size related block length and quantized bits for λ, for example LDPC WiMAX frame size 1152 and submatrix A =48, if λ quantized to 5 bits then the total size of this memory (240 x 24) bits. The second memory is Check node Sum-memory, which is used for retaining the final messages sum generated by adding the channel information (λ j) and α messages from connected check nodes. The third one is the minimum message memory that stores the overall minimum β messages (min1), second overall minimum (min2) , the index of the connected variable node providing min0i (index) and the overall sign (sgn) for every check node Ci messages correspondingly, the final memory is store the sign of C_node to V_node updated massages 1bit derived from different columns of the parity check matrix.
+The fourth is shift registers : used to store the result of each window and rearranged in order to re-used in next cycle .The last part is Control-unit: it is composed of finite state machine, where this unit is the controller of overall architecture. It allows us to vary the rate of coding, size of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+Mag Logic ✂1
+
+100
+
+✂2
+
+| ✂2 | Comp
+
+10−1
+
+✂s–1 Min1
+
+| ✂s–1 | Min1 Comp
+
+Comp
+
+Comp
+
+Min1 Min1 IndexMin1
+
+10−2
+
+✂s
+
+| ✂s |
+
+Comp
+
+10−3
+
+Min2 Min2 Comp
+
+L = log2(s)
+
+10−4
+
+Sign (✂1)
+
+Sign Logic
+
+Sign
+
+10−5
+
+Sign
+
+10−6
+
+NMS WiMAX 5 bits SPA WiMAX
+
+Fig. 5. A schematic of Check Node Processor
+
+10−7
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+sub-matrix A, size of calculation windows and generate read or write address for the all the memories, control the shift registers and Syndrome check for early termination of this iterative decoding algorithms. The counter found in inside the Control-unit will determine the place calculation window that is moving by s sub-matrix horizontal or w sub-matrix vertical when it end the processing of one line, according to the location of this windows memories addresses will be generated, It is not a complicated process and does not consume many Hardware where it only increment previous address.
+In electronics, digital circuits and digital electronics, the propagation delay, or gate delay, is the length of time which starts when the input to a logic gate becomes stable and valid, to the time that the output of that logic gate is stable and valid .In Min-Sum Normalized decoder, the critical path is the path along a partition’s local logic and wire consisting of the longest path through the check node and variable node processors„ as shown in fig(6) In order to minimize the critical path every component of COMP function or SUM function have been built from the structure of a binary tree. the length of critical path for this block regard to size of window s and number of input port for this technology x ,for example : if s = 8 and x = 2,the length of critical path = [log2 8] = 3 as a result, the critical path of this block has three stages of dual input COMP function .
+V. RESULTS
+In order to evaluate the proposed decoder architecture, a VHDL description was synthesized on an Altera Stratix device for a QC-LDPC code with block length of 64800 bits and a code rate of 5/6 and another standard Digital EP3SE50F484C2. The standard DVB-S2 with maximum Video Broadcasting – Second Generation Terrestrial (DVBT2) with maximum block length of 16200 bits and code rates 7/9 was also implemented [2].
+In order to achieve an area optimized of our channel LDPC decoder while preserving the communication system performances in terms of bit error rates(BER), exact simulation analysis of the quantized C-models of this decoder architecture are Imperative. In the objective to achieve the required convergence with acceptable performance degradation in terms of
+
+Fig. 6. BER results for LDPC WiMAX A=48 with code rate of 1/2
+
+bit error rates
+100
+10−1
+
+NMS WIMAX 5 bits SPA WIMAX
+
+10−2
+
+10−3
+
+10−4
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Fig. 7. FER results for LDPC WiMAX A=48 with code rate of 1/2
+
+As shown in Figure () and figure ()the reference curves obtained for the code rate 1/2 of WiMAX LDPC codes with frame sizes of 1152 bits and the quantization levels of input from channel and extrinsic are (5,7) bits respectively achieve BER close to the floating point simulation results with agreeable BER degradation of less than 0.2 dB in Figure () the analysis of scaling factor (S) for the same WiMAX LDPC codes as shown scaling factor Can greatly improve BER curve scaling factors of 0.875 were found suitable for both communication performance and hardware implementation requirements
+VI. CONCLUSION
+A new architecture for a configurable QC-LDPC encoder using a semi-random H-matrix has been presented. This method allowed us to effectively manage HW and memories requirements. To verify our design, a flexible encoder was implemented for the DVB-S2 standard and another for DVBT2. The two designs were synthesized and implemented on Altera StratixII. The FPGA encoder had a throughput up to 29 Gbps for DVB-S2 and up to 19.5 Gbps for the second encoder. A speedup of 3–20 times is provided compared prior designs. The flexibility of the architecture for the block length
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+100 10−1 10−2
+
+CF=1 CF=0.937 CF=0.875 CF=0.75 CF=0.50 CF=0.25
+
+10−3
+
+10−4
+
+10−5
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Fig. 8. Determination of the normalization factors for LDPC WiMAX
+
+TABLE I COMPARISON OF LDCP ENCODERS
+
+Block Length (bits),
+Code Rate Area (logic
+element)
+Memory bits
+Frequency (Mhz)
+FPGA Technology
+
+[3]
+Variable
+-
+19 blocks RAMs
+(from 80 up to 170)
+
+[13] 2304, 1/2 2304, 3/4 576, 5/6 10, 339 12, 727
+4, 295
+-
+(from 140 up to 195)
+
+[4] Variable 11,430 3, 911, 680
+60
+
+present work
+Variable
+8,189
+32,734 Variable (2 block Length) (from 160
+up to 320)
+
+Virtex-II
+
+Stratix
+
+Stratix
+
+Stratix-II
+
+44M @2000 1/2
+33M@2000, 2/3
+
+3, 350 5, 170 6, 280
+
+239M @ 2304, 3/4
+357M @ 2304, 5/6
+
+19,534M@ 162000, 7/9
+28,935M @ 64800, 5/6
+
+and code rate makes our encoder compatible with a wide range of applications and for different standards of LDPC.
+
+REFERENCES
+[1] R. Gallagher, “Low-Density Parity-Check Codes”, M.I.T. Press, Cambridge, MA, 1963.
+[2] IEEE Standard, section 20.3.11.6 “802.11n-2009”, IEEE October 29, 2009, accessed March 21, 2011.
+[3] S. Bates, Z. Chen et al., “A low-cost serial decoder architecture for low-density parity-check convolutional codes,” IEEE Transactions on Circuits and Systems I, 55, 2008, pp. 1967–1976.
+[4] A. Darabiha, A.c. Carusone, F. R. Kschischang, “A 3.3-Gbps bit-serial block-interlaced Min-Sum LDPC decoderin 0.13-um CMOS,” IEEE custom integrated circuits conference (pp. 459–462), 2007.
+[5] B. Belean, INCDTIM. Romania ,S. Nedevschi, M. Borda, “Application specific hardware architecture for high-throughput short-length LDPC decoders ,” IEEE International Conference on Intelligent Computer Communication and Processing (ICCP), 2013, pp. 307–310.
+[6] Y. Dai, N. Chen, Z. Yan, “Memory efficient decoder architectures for quasi-cyclic LDPC codes,” IEEE Transactions on Circuits and Systems I, 55, 2008, pp. 2898–2911.
+[7] Z. Wang, Z. Cui, ” Low-complexity high-speed decoder design for quasi-cyclic LDPC codes,” IEEE Transactionson Very Large Scale Integration (VLSI) Systems, 15, 2007, pp. 104–114,.
+[8] T. Arslan, Z. Khan, S. Macdougall, “A Real Time Programmable Encoder for Low Density Parity Check Code as specified in the IEEE p802.16e/d7 Standard and its Efficient Implementation on a DSP Processor,” in IEEE International SOC Conference, pages 17–20, September 2006.
+[9] L. Ping, W.K. Leung, N. Phamdo, “Low Density Parity Check Codes with Semi-Random Parity Check Matrix,” IEEE Electronics Letters, vol. 35, Jan. 1999, pp. 38-39.
+[10] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533-547, September 1981.
+[11] http://www.ldpc-decoder.com/en/ldpc-decoder applications [12] J. Iang, X. Yan, Y. Lee, M. H. “Semi-Random and Quasi-Cyclic LDPC
+Codes Based on Multiple Parity-Check Codes,” IEEE International Conference on Communications (ICC), May 2010. [13] T. Mohsenin, B. Baas, “A split-decoding message passing algorithm for low density parity check decoders,” Journal of Signal Processing Systems, vol. 61, pp. 329–345, February 2010. [14] D.J MacKay„ “Good error correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, 45, pp. 399–431, 1999. [15] M. Fossorier, M. Mihaljevic, H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation”, IEEE Transactions on Communications, 47, pp. 673–680, 1999 [16] P. Urard, L. Paumier, et al., ”A 360mW 105Mb/sDVB-S2 compliant codec based on 64800b LDPC and BCH codes enabling satellitetransmission portable devices,” in ISSCC, pp. 310–311, 2008. [17] C. Fewer, F. Flanagan, A. Fagan, ”A versatile variable rate LDPC codec architecture,” IEEE Transactions on Circuits and Systems I, 54, pp. 2240–2251, 2007.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:45:29 UTC from IEEE Xplore. Restrictions apply.
+
+

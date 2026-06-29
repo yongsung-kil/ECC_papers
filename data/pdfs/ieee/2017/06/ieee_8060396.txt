@@ -1,0 +1,873 @@
+Reducing LDPC Soft Sensing Latency by Lightweight Data
+Refresh for Flash Read Performance Improvement
+Yajuan Du1,2, Qiao Li3, Liang Shi3, Deqing Zou1,♯, Hai Jin1, Chun Jason Xue2
+1Service Computing Technology and System Lab, Cluster and Grid Computing Lab, Big Data Technology and
+System Lab, School of Computer Science and Technology, Huazhong University of Science and Technology,
+Wuhan, 430074, China
+2Department of Computer Science, City University of Hong Kong, Kowloon, Hong Kong
+3College of Computer Science, Chongqing University, Chongqing, China
+♯Prof. Deqing Zou is corresponding author
+deqingzou@hust.edu.cn,jasonxue@cityu.edu.hk
+ABSTRACT
+In order to relieve reliability problem caused by technology
+scaling, LDPC codes have been widely applied in flash mem-
+ories to provide high error correction capability. However,
+LDPC read performance slowdown along with data retention
+largely weakens the access speed advantage of flash memo-
+ries. This paper considers to apply the concept of refresh,
+that were used for flash lifetime improvement, to optimize
+flash read performance. Exploiting data read characteristics,
+this paper proposes LDR, a lightweight data refresh method,
+that aggressively corrects errors in read-hot pages with long
+read latency and reprograms error-free data into new pages.
+Experimental results show that LDR can achieve 29% read
+performance improvement with only 0.2% extra P/E cycles
+on average, which causes negligible overhead on flash lifetime.
+CCS CONCEPTS
+• Computer systems organization →Reliability; Firmware;
+KEYWORDS
+LDPC Codes, Flash Read Performance, Data Refresh
+ACM Reference format:
+Yajuan Du1,2, Qiao Li3, Liang Shi3, Deqing Zou1,♯, Hai Jin1,
+Chun Jason Xue2. 2017. Reducing LDPC Soft Sensing Latency by
+Lightweight Data Refresh for Flash Read Performance Improve-
+ment. In Proceedings of Design Automation Conference, Austin,
+TX, USA, June 2017 (DAC ’17), 6 pages.
+https://doi.org/10.1145/3061639.3062309
+1
+INTRODUCTION
+With technology scaling, flash-based solid state drives become
+more prone to errors. Retention error, as the main type of
+Permission to make digital or hard copies of all or part of this work
+for personal or classroom use is granted without fee provided that
+copies are not made or distributed for profit or commercial advantage
+and that copies bear this notice and the full citation on the first
+page. Copyrights for components of this work owned by others than
+ACM must be honored. Abstracting with credit is permitted. To copy
+otherwise, or republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee. Request permissions
+from permissions@acm.org.
+DAC ’17, June 2017, Austin, TX, USA
+© 2017 Association for Computing Machinery.
+ISBN 978-1-4503-4927-7/17/06. . . $15.00
+https://doi.org/10.1145/3061639.3062309
+flash errors, is caused by decreased data retention capability
+of flash cells [5]. Longer retention time induces higher raw bit
+error rates (RBERs), which may exceed capability of error
+correction codes (ECC). The popular method to overcome
+increasing RBERs is to apply advanced ECC, low-density
+parity-check (LDPC) codes [12]. Although with much higher
+error correction capability than traditional ECC, such as
+BCH codes, LDPC codes induce large read latency when
+data retention becomes long. This phenomenon has also been
+reported by Samsung [2] that it is much slower to read back
+from old data than fresh data in flash memory. LDPC read
+latency comes from current progressive read-retry sensing
+and decoding steps [16]. For old data with high RBERs, more
+read-retry steps are required for successful LDPC read. This
+induces latency accumulation of each read-retry step and
+worsens flash read performance, especially for read-intensive
+applications for late-lifetime flash.
+In order to improve flash read performance, this paper con-
+siders to apply the concept of refresh on reducing long read
+latency from high RBERs. The prior works about the refresh
+technique, such as flash correct and refresh (FCR) [6], WAR-
+M [11] and process variation (PV) based refresh [7] all utilize
+the refresh mechanism to improve flash lifetime by keeping
+data integrity of long-retention flash blocks. Erroneous data
+are periodically corrected in block level and reprogrammed
+into new blocks to avoid RBERs exceeding error correction
+capability of BCH codes. When applied for LDPC read per-
+formance improvement, refresh can reset high-level sensing
+latency of erroneous pages back to the cheapest hard sensing.
+However, heavy block migration costs are involved in current
+refresh method, which harms flash lifetime, a new refresh
+method has to be designed.
+This paper proposes LDR, a lightweight data refresh method
+by exploiting the access characteristics of read-hot data. The
+lightweight nature of LDR can be reflected in two aspects.
+First, LDR only refreshes read-hot data with soft sensing,
+which induces long read latency. As read-hot data often takes
+up a small portion but frequently accessed [9], potential read
+performance improvement will be high. This paper focuses
+on LDPC read performance optimization without considering
+data integrity problem. Second, the refresh granularity of
+LDR is in page level. As only one or several read-hot pages
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 
+are moved in one refresh operation, heavy block migration
+costs in current refresh methods [6, 7, 11] can be reduced.
+To evaluate and verify the effectiveness of LDR, seventeen
+real workloads are run in the trace-driven simulation plat-
+form, DiskSim [4] with SSD extension. Experimental results
+show that LDR can improve 29% of flash read performance
+with only 0.2% extra P/E cycles on average, which causes
+negligible flash lifetime reduction. As a comparison, current
+refresh method induces 107% extra P/E cycles although with
+35% read performance improvement.
+The following contributions are made in this paper.
+• Studies potential benefits of applying data refresh
+for better LDPC read performance in real workloads
+with a preliminary experiment.
+• Proposes LDR, a lightweight data refresh method to
+reduce read latency with soft sensing. By exploiting
+characteristics of read-hot data, LDR refreshes a
+small portion of data and takes little P/E cycle.
+• Evaluates LDR with seventeen trace-driven work-
+loads and verifies that LDR can largely improve LD-
+PC read performance, especially for read-intensive
+workloads in flash late lifetime stage.
+The remainder of the paper is illustrated as follows. Back-
+ground and motivation are introduced in Section 2. The
+proposed method, LDR, is presented in Section 3. Experi-
+ment setup and results are shown in Section 4. Conclusion of
+this paper is presented in Section 5.
+2
+BACKGROUND AND MOTIVATION
+This section first introduces the problem of LDPC read per-
+formance slowdown along with data retention and existing
+works to solve this problem. Then, related works on refresh
+mechanisms and the opportunity to apply refresh for LDPC
+read performance improvement are presented.
+2.1
+LDPC Read Performance Slowdown
+Flash memory cells store data by keeping amount of electrons.
+For multi-level cell (MLC) flash, flash cells may be in one of
+the four states: the erased state and three programmed states.
+When data are kept for long time, electrons in programmed
+states decrease. Once thresholds between adjacent states are
+crossed, one or two data bits are flipped and retention error
+happens. Weak cells that experienced a lot of P/E cycles are
+more prone to retention errors and have higher RBERs.
+LDPC codes apply multiple read-retry steps to sense and
+decode flash data. When results from the first step, the hard
+sensing step, fail to decode data, extra soft sensing steps are
+progressively tried until the decoding succeeds [16]. Overall
+read latency for the data is the accumulated latency of all
+tried steps. As soft sensing steps take longer latency than the
+hard sensing step, LDPC read performance is largely slowed
+down on old data with long retention, as shown in Figure
+1(a).
+Read performance using LDPC codes is mainly affected
+by RBERs of data that need to be decoded. Comprehensive
+solutions are proposed to reduce RBERs. EC-Cache [10] pro-
+posed to use an error correction cache to store information
+of errors detected in prior reads. The errors are corrected
+before data are decoded in subsequent reads. RBERs are
+lowered down by using extra RAM storage of error informa-
+tion. AGCR [9] exploited cost asymmetry between reads and
+writes and proposed to apply varied programming speeds
+according to workload characteristics. RBERs are reduced
+by applying slower programming speed for read-dominant
+workloads, which makes faster read speed. FlexLevel [8] pro-
+posed to store three instead of four states in multi-level per
+cell flash memory. RBERs are decreased by using wider noise
+margin between cell states.
+2.2
+Applying Data Refresh for Read
+Performance Improvement
+According to above analysis, reducing RBERs of data is an
+effective method to reduce high LDPC latency. This paper
+borrows the idea of refresh to reduce RBERs and improve
+flash read performance. Refresh can reset long LDPC read
+latency with soft sensing back to the cheapest latency with
+hard sensing. As shown in Figure 1(b), when LDPC reaches
+to high read latency, refresh operation is activated to correct
+errors and reprogram error-free data into new blocks, which
+can benefit read performance of subsequent reads.
+Existing works exploited the refresh mechanism to ensure
+data integrity with BCH codes. Cai et.al [6] proposed to
+apply correct and refresh in flash memory to solve the lifetime
+problem caused by ECC expiration. When data are kept for
+long, all valid pages in the block are corrected and moved
+into another block. In order to avoid unnecessary refresh
+operations to write-hot blocks, WARM [11] proposed to only
+correct and refresh write-cold data. Di et. al [7] proposed to
+exploit process variation among blocks to refresh long-kept
+data into strong blocks.
+LDPC Read 
+Latency
+Data Retention
+L0
+(a) LDPC Read Performance S-
+lowdown.
+LDPC Read 
+Latency
+Data Retention
+L0
+Refresh
+Refresh
+(b) Refresh Lowers Down LD-
+PC Read Latency.
+Figure 1: The Concept of Refresh.
+In order to further study the potential benefit of applying
+refresh to improve read performance, a preliminary study
+has been performed with seventeen workloads on Disksim
+with SSD extensions [4]. Read performance and extra P/E
+cycles of basic LDPC reads [16] (Baseline) and the method
+with traditional refresh method [6] (Refresh) are shown in
+Figure 2. Besides, the results of a new method, Selective,
+are also presented, which selectively corrects errors only in
+read-hot pages. Selective is a ideal case just counting benefits
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 
+but not overheads of refresh operations. It can be found
+from the results that Refresh improves 35% of Baseline read
+performance while Selective improves 30%. However, heavy
+P/E overhead, 107% P/E cycles of Baseline, are involved
+in Refresh. In order to minimize the high refresh cost by
+directly applying traditional refresh method for LDPC read
+performance improvement, this paper proposes a lightweight
+data refresh method to approach performance of Selective by
+exploiting access characteristics of workloads.
+0
+0.2
+0.4
+0.6
+0.8
+1
+Read Response Time
+wdev0
+rsrch2
+proxy0prn1prn0 ts0stg1
+rsrch1
+F1
+F2
+websearchhm0hm1proj1proj3proj4web1
+Average
+ 
+ 
+Baseline
+Selective
+Refresh
+(a) Read Response Time Normalized to Baseline.
+0
+0.5
+1
+1.5
+2
+2.5
+3
+3.5 x 10
+5
+P/E Cycles
+wdev0
+rsrch2
+proxy0prn1prn0 ts0stg1
+rsrch1
+F1
+F2
+websearchhm0hm1proj1proj3proj4web1
+Average
+ 
+ 
+Baseline
+Refresh
+(b) Heavy P/E Overhead Caused by Traditional Refresh
+Method.
+Figure 2: Potential Read Performance Benefit and
+Overhead by Refresh Method.
+3
+LIGHTWEIGHT DATA REFRESH
+METHOD
+This section presents details of the proposed LDR method,
+which contains two parts: identifying read-hot data and light-
+weight page-level data refresh. Firstly, based on current work
+[15] that uses grouping-based least recently used (LRU) list
+to identify write-hot data, LDR applies a decision tree to
+identify read-hot data, data pattern one shown in Figure 3.
+Second, LDR refreshes data pattern one by refresh queues
+shown in Figure 5.
+3.1
+Identifying Read-Hot Data
+According to retention time and access density, LDR first
+classifies data into four types, as shown in Figure 3, in which
+arrows represent data reads and vertical lines represent data
+updates. The first two patterns probably induce high RBERs
+because of long retention, which require LDPC soft sensing
+for successful reads, called “soft reads”. The last two patterns
+probably require hard sensing in LDPC reads, called “hard
+reads”, because of short retention. As soft reads takes more
+costs than hard reads, potential read performance improve-
+ment can be achieved by refreshing them. Thus, the first two
+data patterns are candidates to perform refresh operations.
+Furthermore, when comparing read density, data pattern one
+with hot reads can accumulate more performance benefits
+taken by the refresh operation. Thus, it would be more valu-
+able to refresh data pattern one. Details of the lightweight
+refresh technique is presented in the next section.
+Retention
+Retention
+Retention
+Retention
+Hot Reads
+Cold Read
+Hot 
+Reads
+Cold 
+Read
+1
+2
+3
+4
+Figure 3: Patterns of Read Hot/Cold Data with
+Long/Short Retention.
+LDR applies a decision tree to identify the read-hot data
+pattern, as shown in Figure 4. Three decision nodes are in-
+volved in the decision tree. When read data are successfully
+decoded in LDPC decoder, LDPC read latency can be deter-
+mined by the current sensing level. In the first decision node,
+LDR identifies pages with soft sensing levels as refresh candi-
+dates. The second decision node of Figure 4 judges whether
+the read page exists in the LRU list, which keeps logical ad-
+dresses and read counts of N recent read pages. If does, the
+corresponding read counts increments and the page is taken
+as refresh candidate of the next decision node. Otherwise,
+the page is inserted to the LRU list as the first item. In the
+third decision node, if read hotness of candidates from the
+last decision node is larger than T, they are considered as
+read-hot pages and put into refresh queues to wait for refresh
+operations.
+LDPC sensing 
+level is soft?
+Request address 
+exists in LRU?
+No
+Yes
+LDPC read 
+Directly back 
+to host
+No
+Yes
+Put into LRU list 
+with hotness=1
+Hotness > T?
+No
+Yes
+Insert to package 
+refresh queue
+Hotness++
+Figure 4: The Decision Tree for Read-Hot Data I-
+dentification.
+3.2
+Lightweight Data Refresh in Page
+Level
+When hot pages are identified, refresh queue keeps their
+logical address. LDR allocates one refresh queue for each
+flash package to keep logical addresses of hot pages and stores
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 
+the queue in RAM of flash controller, as shown in Figure
+5. There are several cases to deal with the refresh queue.
+The first case is that when new reads come to the package
+with non-empty refresh queue, all elements in the queue
+are first refreshed by reading the data into controller and
+reprogramming error-free data into new pages. The service
+of these reads has to be postponed. The second case is that
+when new writes come to the package. As write performance
+is not affected by the refresh operations, no refreshes would
+be performed regardless that the queue is empty or not. The
+third case is that when reads/writes and refresh operations
+conflict with each other. they have to wait until the refreshes
+of all queue elements are finished. An example is presented
+in Figure 5, in which refresh queue of package 1 has elements
+denoted as LPN𝑖while that of package 2 has no elements.
+When new reads reach package 1, refresh operations are first
+performed on pages in refresh queue. When page refreshes
+are all finished, read requests are served. As each package
+has one refresh queue, the parallelism among packages can
+be exploited to achieve better access performance.
+Flash Package 1
+Lightweight Data Refresh
+Refresh queue 1 has elements
+LPN1
+LPN2
+LPN3
+. . .
+Refresh queue 2 is empty
+Flash Package 2
+NAND Flash
+Host 
+Reads
+First refresh 
+pages LPNi
+Directly read NAND flash
+Hot pages all refreshed,  read again
+...
+...
+Figure 5: The Sub-system to Implement Lightweight
+Read-Hot Data Refresh.
+3.3
+Architecture
+This section presents the whole flash system integrated with
+LDR, as shown in Figure 6. LDR is located in flash controller
+and closely communicates with other components. There are
+mainly three kinds of communications. The first and most
+frequent communication happens between LDPC component
+and LDR. On one hand, in hot data identification of LDR,
+requested pages have to be decoded with LDPC to obtain
+current sensing levels. Only with known sensing levels, LDR
+can identify data with long retention and perform further
+judgement. On the other hand, in lightweight data refresh
+of LDR, reads on pages to refresh are assisted by LDPC
+component. to obtain error-free data. As well, error-free data
+have be re-encoded to new data by LDPC component.
+The second communication happens between flash transla-
+tion layer (FTL) and LDR. This communication is similar
+to that between FTL and access requests from host. FTL
+translates logical page addresses in both LRU list and refresh
+queues to physical page addresses to access flash data. The
+third communication happens between LDR and block clean-
+ing operations, including garbage collection (GC) and wear
+leveling (WL). Three aspects of this communication are con-
+sidered. First, for packages in which GC or WL is happening,
+refresh operations in LDR cannot be performed and have
+to wait until block cleaning finishes. Second, as LDR only
+refresh pages with LDPC soft sensing level, GC and WL can
+reset LDPC latency and naturally reduce potential number
+of refreshes. Third, as extra page writes are involved in LDR,
+the number of block cleaning operations may increase.
+Host
+NAND Flash Array
+Hot Data 
+Identification
+Lightweight 
+Data Refresh
+LDR
+Garbage Collection
+Wear Leveling
+Flash Translation Layer
+LDPC Encoder/Decoder
+Requests
+Requests
+Flash Controller
+Figure 6: The Whole Flash System Integrated with
+LDR.
+3.4
+Overhead Analysis
+LDR Overheads come from extra P/E cycles and storage of
+LRU list and refresh queues. Extra P/E cycles are evaluated
+in Section 4.1. This section analyzes the storage overhead.
+Assume the size of physical addresses is 4 Bytes and LRU
+list contains 1000 items. Assume flash has eight packages
+and the refresh queue for each package has 100 items. The
+overall storage takes 4B ∗(1000 + 100 ∗8) ≈7K For RAM
+with size of 256M, the 7K extra storage from LDR takes little
+proportion and can be ignored.
+4
+EVALUATION
+In order to evaluate the proposed LDR, seventeen workloads
+from MSR and three workloads from UMASS [1, 3] have been
+run in the simulation platform DiskSim with SSD extension-
+s [4]. The statistics of workloads are shown in Table 1, in
+which the read ratio column is computed as the ratio of read
+pages and written pages and the days column represents the
+duration of workloads. The workloads F1 and F2 represent
+workloads financial1 and financial2 in UMASS, respective-
+ly. Disksim configurations are shown in Table 2, in which the
+latencies are based on settings in [16]. The SSD system is
+simulated to use page-level mapping in FTL and the wear
+leveling method proposed in [13]. The read performance and
+overhead results are compared among current LDPC imple-
+mentation [16] (Baseline), the proposed LDR and the case
+not counting refresh overheads (Ideal).
+To simulate flash error characteristics in late lifetime, ini-
+tial retention is set to be one year and P/E cycles are set to
+be 10000, which is a extreme situation of flash late lifetime.
+Given P/E cycle and retention time, raw bit error rates can
+be computed according to the error model in [14]. The results
+of LDR in flash early lifetime stage are also studied by setting
+the same initial retention time and 5000 P/E cycles, as shown
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 
+Table 1: Workloads Statistics
+Workload
+Read
+Write
+Read Ratio
+Days
+wdev0
+5172477
+13153463
+28%
+6
+rsrch2
+1090912
+605720
+64%
+6.6
+proxy0
+545985
+4604603
+11%
+0.5
+prn1
+6966661
+18265525
+28%
+1.3
+prn0
+19136490
+5691238
+77%
+0.7
+ts0
+3976632
+14127647
+22%
+4.7
+stg1
+94361627
+3095200
+96%
+2.2
+rsrch1
+1110
+334365
+3%
+5.7
+F1
+6508016
+130648
+98%
+0.5
+F2
+4312858
+100684
+97%
+0.5
+websearch
+16410267
+26772
+99.8%
+3.45
+hm0
+1167249
+1932058
+37%
+0.4
+hm1
+6444861
+775983
+89%
+4.8
+proj1
+773087
+5594270
+12%
+0.1
+proj3
+3471062
+65402
+98%
+0.6
+proj4
+1301436
+824502
+61%
+3.9
+web1
+7992543
+1422974
+85%
+7
+in Figure 10. The size of LRU list for read hotness identi-
+fication is set to be 1000, which means that 1000 recently
+read pages are stored. 1000 is obtained by approximating
+the average accessed page size of several tens of successive
+requests. The results with other LRU sizes are studied to
+check the sensitivity to this parameter in Section 4.2. The
+hotness threshold to determine hot pages is set to be 2, which
+means that when one page in the LRU has been read more
+than two times, this page is considered to be read-hot. The
+sensitivity of LDR on this parameter is studied by setting two
+extra values, 1 and 3 in Section 4.2. Based on these datasets
+with different parameter settings, experimental results and
+analysis are shown as follows. Considering that read perfor-
+mance results of refresh have been shown in Section 2, Only
+comparisons among baseline, LDR and ideal are presented
+in the following results.
+Table 2: SSD Configurations.
+Flash Page Size
+4KB
+Block Erase
+3.5𝑚𝑠
+Pages Per Block
+64
+Page Write
+900𝜇𝑠
+Blocks Per Plane
+2048
+Hard Read
+85𝜇𝑠
+Planes Per Package
+8
+Extra Soft Read
+24𝜇𝑠
+Packages
+8
+Over-provisioning
+15%
+4.1
+Read Performance Benefit and P/E
+Overhead of LDR
+The read response time results are shown in Figure 8. From
+the results, two observations can be found. Firstly, it can be
+found that performance benefits caused by LDR are greatly
+varied according to workloads. As soft reads cause LDPC
+read performance slowdown and LDR can reduce numbers
+of soft reads, the read performance improvement is closely
+related to two factors: read ratio of workloads shown in Ta-
+ble 1 and soft read ratio shown in Figure 7, which reflects
+the potential benefits from LDR. For workloads with large
+read ratios, such as financial1, financial2, websearch, stg1
+and hm1, read performance improvements are high and in
+proportion to the ratio of reduced soft reads. This can be
+explained that when reads take a large portion, performance
+improvements from soft read ratio reduction are more signif-
+icant. On the contrary, for workloads, such as proxy0, ts0,
+rsrch1 and proj1, with small read ratios, the benefits from
+LDR are greatly reduced, even for workloads with high soft
+read reductions, such as proxy0. In summary, the average
+read performance improvement on all workloads are 29%
+compared with the existing LDPC method.
+The other observation can be found in Figure 8, that the
+performance differences between LDR and the ideal case are
+varied for different workloads. For some workloads, such as
+rsrch2, stg1 and three workloads with high read ratios, F1,
+F2 and websearch, the differences are not obvious. This is
+because that extra writes take a small proportion of overall
+read/write requests. In summary, read performance of LDR
+is 4% slower than that of the ideal case. The results are very
+close and LDR has little effect on system performance, which
+also can be verified from P/E cycle results in Figure 9.
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Soft Read Ratio
+wdev0
+rsrch2
+proxy0
+prn1
+prn0
+ts0
+stg1
+rsrch1
+F1
+F2
+websearch
+hm0
+hm1
+proj1
+proj3
+proj4
+web1
+Average
+ 
+ 
+Baseline
+LDR
+Figure 7: Soft Read Ratios Normalized to Baseline.
+We analyze the overhead of LDR on P/E cycles, as shown
+in Figure 9. Some workloads are read-dominant, in which
+garbage collection does not happen and P/E cycles of them
+are zero. For the workloads with non-zero P/E cycles, LDR
+only increases 0.2% of P/E cycles in baseline on average.
+Because of over-provision space in SSD, it is not surprised that
+few extra P/E cycles are induced. This negligible overhead
+verifies that LDR is lightweight.
+0
+0.5
+1
+1.5
+2
+2.5
+3
+3.5 x 10
+5
+P/E Cycles
+wdev0
+rsrch2
+proxy0prn1prn0 ts0stg1
+rsrch1
+F1
+F2
+websearchhm0hm1proj1proj3proj4web1
+Average
+ 
+ 
+Baseline
+Refresh
+LDR
+Figure 9: Overheads of LDR on P/E Cycles.
+4.2
+Sensitivity Study
+This section studies the sensitivity of LDR on three factors:
+LRU size, read hotness threshold on read hotness identifica-
+tion and flash lifetime stage. The experimental results are
+shown in Figure 10. In the study on LRU size and read
+hotness threshold, with larger LRU size and smaller hot-
+ness threshold, more read-hot pages can be found and better
+read performance can be achieved. However, more storage
+overheads are required. It is a tradeoffbetween read perfor-
+mance improvement and storage overhead. In the study on
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 
+0
+0.2
+0.4
+0.6
+0.8
+1
+Read Response Time
+wdev0
+rsrch2
+proxy0prn1prn0
+ts0 stg1
+rsrch1
+F1
+F2
+websearch hm0 hm1proj1proj3proj4web1
+Average
+ 
+ 
+Baseline
+LDR
+Ideal
+Figure 8: Read Performance Results
+100
+1000 10000
+0
+0.2
+0.4
+0.6
+0.8
+1
+Read Response Time
+ 
+ 
+Baseline
+LDR
+Ideal
+(a) LRU Size.
+T=1
+T=2
+T=3
+0
+0.2
+0.4
+0.6
+0.8
+1
+Read Response Time
+ 
+ 
+Baseline
+LDR
+Ideal
+(b) Hotness Threshold.
+Early
+Late
+0
+0.2
+0.4
+0.6
+0.8
+1
+Read Response Time
+ 
+ 
+Baseline
+LDR
+Ideal
+(c) Flash Lifetime.
+Figure 10: Sensitivity Study on Three Factors. Read Performance is Normalized to Baseline.
+flash lifetime stage, when flash is in early lifetime stage, read
+performance slowdown caused by soft sensing latency is not
+obvious. LDR does not achieve as many read performance
+improvements as that in flash late lifetime stage. Thus, LDR
+will be more effective for flash in late lifetime stage.
+5
+CONCLUSION
+This paper proposes LDR, a lightweight data refresh method
+to reset long read latency with soft-decision sensing and
+decoding back to the cheapest latency with hard-decision
+sensing and decoding. By exploiting access characteristics
+of read-hot data, LDR performs page-level refresh and can
+largely improve LDPC read performance but takes little
+refresh overhead on P/E cycles. Experimental results show
+the effectiveness and the lightweight nature of LDR.
+ACKNOWLEDGEMENT
+This work is supported by National Science Foundation of
+China (NSFC) 61672249 and National 973 Fundamental Basic
+Research Program 2014CB340600 and is partially supported
+by NSFC 61572411 and National 863 Program 2015AA015304.
+REFERENCES
+[1] MSR cambridge traces. http://iotta.snia.org/tracetypes/3. Ac-
+cessed: 2016-11.
+[2] Samsung 750 EVO SSD review 2016. http://www.tomshardware.
+com/reviews/samsung-750-evo-ssd,4467.html. Accessed: 2016-11.
+[3] UMass trace repository. http://traces.cs.umass.edu/index.php/
+Storage/Storage. Accessed: 2016-11.
+[4] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. S.
+Manasse, and R. Panigrahy. Design tradeoffs for SSD performance.
+In USENIX Annual Technical Conference, pages 57–70, 2008.
+[5] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu. Data
+retention in MLC NAND flash memory: Characterization, opti-
+mization, and recovery. In 2015 IEEE 21st International Sym-
+posium on High Performance Computer Architecture (HPCA),
+pages 551–563. IEEE, 2015.
+[6] Y. Cai, G. Yalcin, O. Mutlu, E. F. Haratsch, A. Cristal, O. S. Un-
+sal, and K. Mai. Flash correct-and-refresh: Retention-aware error
+management for increased flash memory lifetime. In Computer
+Design (ICCD), 2012 IEEE 30th International Conference on,
+pages 94–101. IEEE, 2012.
+[7] Y. Di, L. Shi, K. Wu, and C. J. Xue. Exploiting process varia-
+tion for retention induced refresh minimization on flash memory.
+In 2016 Design, Automation & Test in Europe Conference &
+Exhibition (DATE), pages 391–396. IEEE, 2016.
+[8] J. Guo, W. Wen, J. Hu, D. Wang, H. Li, and Y. Chen. Flexlevel
+NAND flash storage system design to reduce LDPC latency. IEEE
+Transactions on Computer-Aided Design of Integrated Circuits
+and Systems, 2016.
+[9] Q. Li, L. Shi, C. J. Xue, K. Wu, C. Ji, Q. Zhuge, and E. H.-M.
+Sha. Access characteristic guided read and write cost regulation
+for performance improvement on flash memory. In Proceedings of
+the 14th Usenix Conference on File and Storage Technologies,
+pages 125–132. USENIX Association, 2016.
+[10] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and
+H.-P. Li. Improving read performance of NAND flash SSDs by
+exploiting error locality.
+IEEE Transactions on Computers,
+65(4):1090–1102, 2016.
+[11] Y. Luo, Y. Cai, S. Ghose, J. Choi, and O. Mutlu.
+WARM:
+Improving NAND flash memory lifetime with write-hotness aware
+retention management. In 2015 31st Symposium on Mass Storage
+Systems and Technologies (MSST), pages 1–14. IEEE, 2015.
+[12] D. J. MacKay. Good error-correcting codes based on very sparse
+matrices. Information Theory, IEEE Transactions on, 45(2):399–
+431, 1999.
+[13] M. Murugan and D. H. Du. Rejuvenator: A static wear leveling
+algorithm for NAND flash memory with minimized overhead.
+In 2011 IEEE 27th Symposium on Mass Storage Systems and
+Technologies (MSST), pages 1–12. IEEE, 2011.
+[14] Y. Pan, G. Dong, Q. Wu, and T. Zhang. Quasi-nonvolatile SSD:
+Trading flash memory nonvolatility to improve storage system
+performance for enterprise applications. In High Performance
+Computer Architecture (HPCA), 2012 IEEE 18th International
+Symposium on, pages 1–10. IEEE, 2012.
+[15] B. Shen, Y. Li, Y. Xu, and Y. Pan.
+A light-weight hot data
+identification scheme via grouping-based LRU lists. In Interna-
+tional Conference on Algorithms and Architectures for Parallel
+Processing, pages 88–103. Springer, 2015.
+[16] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang.
+LDPC-in-SSD: making advanced error correction codes work
+effectively in solid state drives. In Presented as part of the 11th
+USENIX Conference on File and Storage Technologies (FAST
+13), pages 243–256, 2013.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:10:07 UTC from IEEE Xplore.  Restrictions apply. 

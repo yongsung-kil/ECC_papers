@@ -1,0 +1,398 @@
+A Survey on LDPC Codes and Decoders for OFDM-based UWB Systems
+
+Torben Brack, Matthias Alles, Timo Lehnigk-Emden, Frank Kienle, Norbert Wehn
+Microelectronic System Design Research Group, University of Kaiserslautern,
+67663 Kaiserslautern, Germany {brack, alles, lehnigk, kienle, wehn}@eit.uni-kl.de
+
+Friedbert Berens, Andreas Ru¨egg Computer Systems Division - UWB BU,
+STMicroelectronics, 1228 Plan-les-Ouates/Geneva, Switzerland
+friedbert.berens@st.com
+
+Abstract— Current UWB systems apply convolutional codes as their channel coding scheme. For next generation systems LDPC codes are in discussion due to their outstanding communications performance. LDPC codes are already utilized in the new WiMax and WiFi standards. Thus it is reasonable to investigate these codes as candidate LDPC codes for UWB. In this paper the authors present an implementation complexity and performance comparison of LDPC decoders. We will show that it is of great advantage to design new LDPC codes which are tailored to the special latency and throughput constraints of upcoming UWB systems. This new class of LDPC codes is named Ultra-Sparse LDPC codes. Synthesis results of WiMax, WiFi, and U-S LDPC decoders are presented based on an enhanced 65 nm CMOS process. We show that the implementation complexity of the new U-S LDPC decoders is 55% smaller, utilizing only 0.2 mm2 instead of over 0.4 mm2, while the communications performance of all observed LDPC codes are almost identical under all the considered UWB simulation conditions.
+Index Terms— LDPC, WIMEDIA, UWB, 802.16e, 802.11n, channel coding, implementation, 65nm
+I. INTRODUCTION
+The existing WIMEDIA UWB standard [1] for short range devices specifies a data rate of up to 480 Mbit/s within a range of around 2m. The deployed channel coding scheme is based on traditional convolutional code (CC) with a constraint length K = 7 and code rates between 1/3 and 3/4. Especially for the high code rate R = 3/4, the diversity gain is limited and thus the communications performance is poor. To be able to support larger ranges for the high data rate modes of up to 480 Mbit/s and above a more sophisticated channel coding scheme providing an increased coding gain is mandatory as shown in [2]. To support streaming applications with very stringent latency and delay jitter requirements a channel coding scheme with a low packet error ratio (PER) below 10−3 is needed. LDPC codes are promising candidates for very high throughput and low PER channel coding systems. LDPC codes were invented by Gallager in 1963 [3]. They were almost forgotten for nearly 30 years and rediscovered by MacKay in the mid90s and enhanced to irregular LDPC codes by Richardson et. al. in 2001 [4]. Now they are to be used for forward error correction in a vast number of upcoming standards like DVBS2 [5], WiMax (IEEE 802.16e) [6], and WirelessLAN (IEEE 802.11n) [7].
+
+Fig. 1. WIMEDIA UWB simulation chain
+In this paper the superior performance of LDPC codes will be demonstrated through simulations. Furthermore, the implementation complexity of the chosen codes is shown by synthesis results and complexity analysis using a 65 nm ASIC process technology. We will evaluate well-known LDPC codes from the WiMax and the WLAN standard as well as a new class of low complex LDPC codes named Ultra-Sparse LDPC codes.
+The paper is structured as follows: In Section II a short overview over the WIMEDIA UWB system will be given, followed by an introduction to LDPC codes in Section III and the decoding algorithm in Section IV. The code design and selection for the UWB system is presented in Section V. After the presentation of the used LDPC decoder architectures in Section VI, the communications performance and synthesis results are depicted in Section VII.
+II. WIMEDIA UWB SYSTEM MODEL
+The WIMEDIA UWB standard is based on a multiband OFDM air interface with and without frequency hopping. The overall US UWB band ranging from 3.1 GHz to 10.6 GHz is split into 14 subbands using 528 MHz of bandwidth with 128 OFDM subcarriers. The subbands are grouped to form five band groups. Four of them contain three subbands and one consists of two subbands. In this paper we will focus on the first band group ranging from 3.1 GHz to 4.8 GHz. In order to evaluate the communications performance of the WIMEDIA UWB standard a SystemC based simulation chain has been implemented. The basic structure of the simulation chain is depicted in Figure 1.
+The current WIMEDIA system uses standard convolutional coding. For the purpose of this paper an LDPC encoder has been added to the standard chain. After the channel coding
+
+1550-2252A/u$t2ho5r.i0ze0d©lic2e0n0s7edIuEsEe Elimited to: Yonsei Univ. Downloaded on J1u5n4e924,2026 at 01:45:19 UTC from IEEE Xplore. Restrictions apply.
+
+Channel Model
+CM1 CM2 CM3 CM4
+
+Range RMS Average No. Delay of Paths
+
+Transmission Condition
+
+0-4 m 0-4 m 4-10 m 4-10 m
+
+5 ns 8 ns 14 ns 26 ns
+
+21.4 37.2 62.7 122.8
+
+Line-of-Sight (LoS) Non LoS Non LoS
+Extreme Non LoS
+
+TABLE I
+
+IEEE CHANNEL MODELS FOR UWB
+
+Parameter
+
+Value
+
+Data rate Data carriers
+FFT size Symbol Duration Channel Coding
+Carrier Modulation
+
+53 Mbit/s to 480 Mbit/s 100
+128 points 312.5 ns (incl. Guard)
+CC with K = 7 (Here: LDPC Code)
+QPSK, DCM
+
+TABLE II
+
+WIMEDIA PHYSICAL LAYER PARAMETERS
+
+the coded data stream is interleaved and then mapped onto QPSK symbols for the lower data rates and DCM symbols for the higher data rates ranging from 300 Mbit/s to 480 Mbit/s. These symbols are then used in the OFDM modulator to generate the OFDM symbols to be transmitted over the channel. The channel models used correspond to the IEEE 802.15.3a channels CM1 to CM4 [8]. The main characteristics of these models are depicted in Table I. In the receiver the signal is demodulated and equalized deploying ideal channel estimation. The resulting demapped and deinterleaved softinformation is then processed by the channel decoder which is either a Viterbi decoder or an LDPC decoder. The WIMEDIA physical layer parameters are depicted in Table II.
+
+III. LDPC CODES
+LDPC codes are linear block codes defined by a sparse binary matrix H, called the parity check matrix. The set of valid codewords C satisfies
+
+HxT = 0,
+
+∀x ∈ C.
+
+(1)
+
+A column in H is associated to a codeword bit, and each row corresponds to a parity check. A nonzero element in a row means that the corresponding bit contributes to this parity check. The complete code can best be described by a Tanner graph [4], a graphical representation of the associations between code bits and parity checks. Code bits are shown as so called variable nodes (VN) drawn as circles, parity checks as check nodes (CN) represented by squares, with edges connecting them accordingly to the parity check matrix. Figure 2 shows a Tanner graph for a generic irregular LDPC code with N variable and M check nodes with a resulting code rate of R = (N − M )/N .
+The number of edges supplying each node is called the node degree. If the node degree is constant for all CNs and VNs, the corresponding LDPC code is called regular, otherwise it is called irregular. Note that the communications performance of an irregular LDPC code is known to be generally superior to which of regular LDPC codes. The degree distribution of the VNs f[dvmax,...,3,2] gives the fraction of VNs with a
+
+Fig. 2. Tanner graph for an irregular LDPC code
+certain degree, with dm v ax the maximum variable node degree. The degree distribution of the CNs can be expressed as g[dcmax,dm c ax−1] with dcmax the maximum CN degree, meaning that only CNs with two different degrees occur [9].
+To obtain a good communications performance of an LDPC code the degree distribution should be optimized with respect to the codeword size N . The degree distribution can be optimized by density evolution as shown in [9]. Furthermore, the resulting Tanner graph should have cycles as long as possible to ensure that the iterative decoding algorithm works properly. A cycle in the Tanner graph is defined as the shortest path from a VN back to its origin without traveling an edge twice. Especially cycles of length four have to be avoided [4].
+
+IV. DECODING ALGORITHM
+
+LDPC codes can be decoded using the message passing al-
+
+gorithm [3]. It exchanges soft-information iteratively between
+
+variable and check nodes. Updating the nodes can be done
+
+with a canonical, two-phased scheduling: In the first phase
+
+all variable nodes are updated, in the second phase all check
+
+nodes respectively. The processing of individual nodes within
+
+one phase is independent and can thus be parallelized. The
+
+exchanged messages are assumed to be log-likelihood ratios
+
+(LLR). Each variable node of degree dv calculates an update of message k according to:
+dv −1
+
+λk = λch +
+
+λl,
+
+(2)
+
+l=0,l=k
+
+with λch the corresponding channel LLR of the VN and λl the LLRs of the incident edges. The check node LLR update can be done in an either optimal or suboptimal way,
+trading of implementation complexity against communications
+performance.
+
+A. Suboptimal Decoding
+
+The simplest suboptimal check node algorithm is the wellknown Min-Sum algorithm [10], where the incident message with the smallest magnitude determines the output of all other messages:
+
+dc −1
+
+λk =
+
+sign(λl) · l=m0,iln=k(|λl|).
+
+(3)
+
+l=0,l=k
+
+The resulting performance comes close to the optimal SumProduct algorithm only for high rate LDPC codes (R ≥ 3/4) with relatively large CN degree. It can be further optimized by multiplying each outgoing message with a message scaling
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u5n5e024,2026 at 01:45:19 UTC from IEEE Xplore. Restrictions apply.
+
+factor (MSF) of 0.75. For lower code rates the communications performance strongly degrades.
+B. Layered Decoding
+Layered decoding applies a different message schedule than the classical two-phase decoding. It was originally proposed by Mansour [11] and denoted as turbo decoding message passing (TDMP), then it was referred to as layered decoding by Hocevar [12]. The basic idea is to process a subset of CN and to pass the newly calculated messages immediately to the corresponding VN. The VN update their outgoing messages in the same iteration. The next CN subset will thus receive newly updated messages which improves the convergence speed and therefore increases communications performance for a given number of iterations. In Section VI we present a partly-parallel architecture for layered decoding, processing each of these subsets in parallel.
+V. LDPC CODE DESIGN AND SELECTION
+To be compatible with the framing already used for the convolutional code, the codeword size has to be (around) 1200 bit with a code rate of 3/4. To offer a reasonable comparison for our proposed Ultra-Sparse LDPC code, we also analyze different LDPC codes from current communication standards, namely WiMax and WiFi. All selected LDPC codes have to allow for high throughput decoding of at least 480 Mbit/s by providing inherent parallelism in the code structure, and they have to be encodable with linear time complexity. Details about all LDPC codes presented in this paper are summarized in Table III.
+A. Ultra-Sparse LDPC Code Design
+The aim was to design a rate 3/4 code which is capable of layered decoding to enable enhanced throughput while minimizing memory and logic area compared to non-layered implementations (see Section VII). Thus the density of the graph has to be very low, and dm v ax has to be reduced to avoid access conflicts. At the same time, communications performance should be still competitive to normal density codes. A further benefit of such a very sparse graph is the small number of edges which has to be processed in each iteration, allowing for even more throughput or reduced parallelism. This in turn relaxes the constraint on dm v ax, giving more degree of freedom to the actual code design.
+To fulfill these requirements, we designed an Ultra-Sparse LDPC Code for 1200 bit codeword size with f[2,3] = { 1/4, 3/4}, consisting of only 3300 edges. Figure 3 presents the resulting parity check matrix, obtained by the 2V-PEG algorithm presented in [13]. In the following, we use the term Ultra-Sparse LDPC Code for LDPC codes with dm v ax ≤ 3 and overall code density below 1%.
+B. Standardized LDPC Codes
+The new WiMax standard 802.16e [6] provides two different LDPC codes for code rates of 3/4 which differ in their VN degree distribution, resulting in slightly different communications performance. Although the WiMax standard supports
+
+Structured parity check matrix for UWB
+0
+
+60
+
+Check Nodes
+
+120
+
+180
+
+240
+
+300 0
+
+60
+
+120
+
+180
+
+240
+
+300
+
+360
+
+420
+
+480
+
+540
+
+600
+
+660
+
+720
+
+780
+
+840
+
+900
+
+960
+
+1.020
+
+1.080
+
+1.140
+
+1.200
+
+Variable Nodes
+
+Fig. 3. The Ultra-Sparse UWB LDPC Code
+
+layered decoding for the lower code rates 1/2 and 2/3 in both rate 3/4 codes do not allow for layered decoding on an architecture with serial check nodes due to their parity check matrix structure and relatively high dm v ax. The LDPC codes are specified for 19 different codeword sizes ranging from 576
+to 2304 bit with a granularity of 96 bit, therefore the codeword
+size of 1248 bit was chosen for fair comparison.
+The upcoming WLAN standard 802.11n [7] supports the code rate of 3/4 with three different codeword sizes of 648, 1296, and 1944 bit. For our purposes, we selected the code-
+word size of 1296.
+
+VI. DECODER ARCHITECTURES
+To obtain the optimal implementation and throughput results for both, the standardized LDPC codes as well as the proposed Ultra-Sparse LDPC code, two different architectures are used, see Figure 4 and Figure 5. The hardware realization of both architectures is partly parallel, thus only a subset of nodes in the Tanner graph is instantiated as variable node and check node functional units (VFU and CFU). The FUs work in a serial manner what gives the needed flexibility regarding the variable node and check node degrees. However this serial architecture prevents the standardized codes from being decoded with a layered scheduling. The reason is that the CFU introduces a latency of dc clock cycles. Because of the maximal variable node degree of four and six respectively we could not guarantee in a layered architecture that the updated message is computed before it is being needed for another check node. For the proposed Ultra-Sparse LDPC code with the low dm v ax of three this constraint for layered decoding is satisfied.
+There are some fundamental differences between the twophase decoder and the layered decoder architecture. First of all the two-phase decoder contains two sum RAMs that are used to accumulate all incoming messages of a variable node. During one iteration one sum RAM is used to compute λk as shown in Equation 2 by subtracting the corresponding message from the message RAM and adding the channel value of the channel RAM. The second sum RAM is needed to build new sums for the next iteration, hence both RAMs are swapped after each iteration. In contrast the layered decoder stores the 9 bit wide a posteriori information in the channel RAM. This RAM contains the sum of channel value and all incoming messages of a variable node, thus only the corresponding message has to be subtracted in the check node block (CNB) to obtain λk. When the CFU has computed new messages these are stored in the message RAM and added to the bypassed λk .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u5n5e124,2026 at 01:45:19 UTC from IEEE Xplore. Restrictions apply.
+
+MBOA−Chain CM1 R=3/4 100
+U−S LDPC 802.11n 802.16e (A) 802.16e (B) CC
+10−1
+
+PER
+
+10−2
+
+Fig. 4. Two-Phase Decoder Architecture
+
+10−3
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+ES/N0 [dB]
+
+Fig. 6. Communications performance in the CM1 channel
+
+MBOA−Chain CM2 R=3/4 100
+U−S LDPC 802.11n 802.16e (A) 802.16e (B) CC
+10−1
+
+PER
+
+10−2
+
+Fig. 5. Layered Decoder Architecture
+
+10−3
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+ES/N0 [dB]
+
+Fig. 7. Communications performance in the CM2 channel
+
+For the layered architecture it is possible to save a permutation network since newly computed information can be stored in a shifted way. However, we have to store an offset for each address of the channel RAM for the next read access. In both architectures the permutation networks are realized with logarithmic barrel shifters. This is possible since all investigated codes are designed using permuted identity matrices.
+
+all implementations. The check node is realized as a Min-Sum processor employing a message scaling factor (see Section IVA) with only very small decoding loss because of the relatively high code rate used.
+Altogether, the synthesis results show large savings of more than 55% in overall area consumption between our proposal and the implementations of the standardized codes which can be explained by four key factors:
+
+VII. RESULTS
+A. Synthesis Results
+Table III shows synthesis results for decoder implementations for the LDPC codes introduced in Section V. All results are obtained using the current 65 nm technology from STMicroelectronics with the clock frequency constrained to 528 MHz as specified by the overall system design. The first column describes the implementation of our Ultra-Sparse LDPC code based on the layered architecture template from Figure 5, all other implementations have to rely on the twophase architecture from Figure 4 due to their more dense code structure. The throughput specification of at least 480 Mbit/s and a decoding latency not exceeding 2µs have to be kept for
+
+• Only 30 check nodes have to be instantiated to reach the target throughput due to the smaller number of edges which had to be processed in each iteration, the inherent higher throughput of the layered decoding architecture, and the improved convergence speed of the layered decoding schedule.
+• No accumulator memories are needed as for the twophase architecture (Sum RAM 1+2).
+• Message memory size is decreased because of the smaller number of edges.
+• Only a single shifting network is needed with 30 ports of 9 bit each, compared to two 6 bit networks with more than 50 ports.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u5n5e224,2026 at 01:45:19 UTC from IEEE Xplore. Restrictions apply.
+
+LDPC Code Base VN Distribution CN Distribution Codeword Size Code Rate No. of Edges Avg. VN Degree Matrix Density
+Parallelism Quantization Algorithm Decoding Max. Iterations Comm. Perform.
+Logic Memory Overall Area
+Throughput Latency
+
+U-S LDPC f[2,3] = { 1/4, 3/4}
+g[11] = {1} 1200 bit 3/4 3300 2.75 0.92%
+30 6 bit MinSum+MSF Layered
+8
+0.112 0.095 0.207 530 Mbit/s 1.70µs
+
+WiMax 802.16e (A) f[2,3,4] = { 5/24, 1/24, 3/4}
+g[14,15] = { 5/6, 1/6} 1248 bit (+4%) 3/4 4420 (+34%)
+3.54 (+29%)
+1.13% (+23%)
+
+WiMax 802.16e (B) f[2,3,6] = { 5/24, 1/2, 7/24}
+g[14,15] = { 1/3, 2/3} 1248 bit (+4%) 3/4 4576 (+39%)
+3.66 (+33%)
+1.18% (+28%)
+
+52 (+73%)
+
+52 (+73%)
+
+6 bit
+
+6 bit
+
+MinSum+MSF
+
+MinSum+MSF
+
+Two-Phase
+
+Two-Phase
+
+9
+
+9
+
+See Section VII-B
+
+Area[mm2] 65nm@528 MHz
+
+0.222 (+98%)
+
+0.222 (+98%)
+
+0.253 (+166%)
+
+0.253 (+166%)
+
+0.475 (+129%)
+
+0.475 (+129%)
+
+513 Mbit/s 1.76µs
+
+499 Mbit/s 1.87µs
+
+WiFi 802.11n f[2,3,6] = { 5/24, 1/2, 7/24}
+g[14,15] = { 1/3, 2/3} 1296 bit (+8%) 3/4 4752 (+44%) 3.66 (+33%) 1.13% (+23%)
+54 (+80%) 6 bit
+MinSum+MSF Two-Phase 9
+0.225 (+100%) 0.260 (+174%) 0.485 (+134%)
+518 Mbit/s 1.87µs
+
+TABLE III SYNTHESIS RESULTS DIFFERENT LDPC DECODER IMPLEMENTATIONS
+
+B. Communications Performance
+The communications performance of all codes described in Section V is obtained by simulation in a software model of the WIMEDIA UWB chain (see Section II). Because only the CM1 and CM2 channel models are suitable for high throughput transmission of up to 480 Mbit/s, simulations in CM3 and CM4 were omitted. Figure 6 shows the results for the CM1 channel model, Figure 7 for the CM2 channel respectively. Although density evolution based on AWGN shows a possible performance loss of up to 0.5 dB of our UltraSparse degree distribution compared to the other distributions used, the results in a more complex simulation environment are quite remarkable. Down to the required PER of 10−3, all examined codes perform nearly indistinguishable in terms of coding gain, convergence, and error floor behavior. Also the larger codeword sizes, after all 8% for the WiFi code, shows no noticable improvement. Compared to the convolutional code used so far, communications performance is improved by around 3 dB. Nevertheless, preliminary simulations for lower PER as well as theoretical considerations suggest a higher error floor for the Ultra-Sparse LDPC code. For the CM2 channel simulations the same overall observations as for CM1 hold with an even higher performance improvement of about 4 dB compared to CC.
+VIII. CONCLUSION AND FUTURE WORK
+In this paper, we presented a thorough investigation for the future application of LDPC codes in an OFDM-based UWB system. We compared standardized LDPC codes used in WiMax and WiFi with our own LDPC code proposal in terms of synthesis and communications performance results. Although all examined LDPC codes achieved a large performance gain of up to 4 dB compared to the convolutional code currently used, our proposal gains up to 55% in VLSI area needed, using only 0.2 mm2 after synthesis.
+In the future, all code rates 1/3, 1/2, 5/8, and 3/4 defined for the system should be supported by one highly flexible UWB
+
+decoder, complementing or even substituting the currently
+available CC decoder. Our first area estimate for such a de-
+coder, providing the necessary net throughput for all rates and
+reasonable communications performance at the same time, is around 0.4 mm2 using the same 65 nm technology constraints.
+REFERENCES
+[1] Standard ECMA-368, “High Rate Ultra Wideband PHY and MAC Standard.” [Online]. Available: http://www.ecma-international.org
+[2] T. Brack, F. Kienle, T. Lehnigk-Emden, M. Alles, N. Wehn, and F. Berens, “Enhanced Channel Coding for OFDM-based UWB Systems,” in Proc. International Conference on Ultra-Wideband (ICUWB 2006), Waltham, Massachusetts, Sept. 2006.
+[3] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, Massachusetts: M.I.T. Press, 1963.
+[4] T. Richardson and R. Urbanke, “The Renaissance of Gallager’s LowDensity Pariy-Check Codes,” IEEE Communications Magazine, vol. 41, pp. 126–131, Aug. 2003.
+[5] European Telecommunications Standards Institude (ETSI), “Digital Video Broadcasting (DVB) Second generation framing structure for broadband satellite applications; EN 302 307 V1.1.1,” www.dvb.org.
+[6] IEEE 802.16e, “Air Interface for Fixed and Mobile Broadband Wireless Access Systems,” IEEE P802.16e/D12 Draft, oct 2005.
+[7] IEEE 802.11n, “Wireless LAN Medium Access Control and Physical Layer specifications: Enhancements for Higher Throughput,” IEEE P802.16n/D1.0, Mar 2006.
+[8] A. Molisch, J. Foerster, and M. Pendergrass, “Channel Models for Ultrawideband Personal Area Networks,” IEEE WIreless Communications, Dec. 2003.
+[9] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of CapacityApproaching irregular Low-Density Parity-Check Codes,” IEEE Transaction on Information Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[10] F. Guilloud, E. Boutillon, and J. Danger, “λ-Min Decoding Algorithm of Regular and Irregular LDPC Codes,” in Proc. 3nd International Symposium on Turbo Codes & Related Topics, Brest, France, Sept. 2003, pp. 451–454.
+[11] M. Mansour and N. Shanbhag, “High-Throughput LDPC Decoders,” IEEE Transactions on Very Large Scale Integration Systems, vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[12] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS ’04), Austin,USA, Oct. 2004, pp. 107–112.
+[13] F. Kienle, T. Brack, and N. Wehn, “Design of Irregular LDPC Codes for Flexible Encoder and Decoder Hardware Realizations,” in Proc. International Conference on Software, Telecommunications and Computer Networks (SoftCOM 2006), Dubrovnik, Croatia, Oct. 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u5n5e324,2026 at 01:45:19 UTC from IEEE Xplore. Restrictions apply.
+
+

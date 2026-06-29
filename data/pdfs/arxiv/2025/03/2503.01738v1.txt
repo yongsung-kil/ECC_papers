@@ -1,0 +1,316 @@
+Automorphism Ensemble Decoding of Quantum LDPC Codes
+Stergios Koutsioumpas,1, ∗ Hasan Sayginel,1, 2, ∗ Mark Webster,1 and Dan E Browne1 1Department of Physics & Astronomy, University College London, London, WC1E 6BT, United Kingdom
+2National Physical Laboratory, Teddington, TW11 0LW, United Kingdom (Dated: March 4, 2025)
+We introduce AutDEC, a fast and accurate decoder for quantum error-correcting codes with large automorphism groups. Our decoder employs a set of automorphisms of the quantum code and an ensemble of belief propagation (BP) decoders. Each BP decoder is given a syndrome which is transformed by one of the automorphisms, and is run in parallel. For quantum codes, the accuracy of BP decoders is limited because short cycles occur in the Tanner graph and our approach mitigates this effect. We demonstrate decoding accuracy comparable to BP-OSD-0 with a lower time overhead for Quantum Reed-Muller (QRM) codes in the code capacity setting, and Bivariate Bicycle (BB) codes under circuit level noise. We provide a Python repository for use by the community and the results of our simulations.
+
+arXiv:2503.01738v1 [quant-ph] 3 Mar 2025
+
+I. INTRODUCTION
+Quantum low-density parity-check (LDPC) codes have the potential to significantly reduce the resource overhead required for fault-tolerant quantum computation, offering compelling advantages such as high encoding rates, robust distance scaling, and favourable error thresholds [1]. Whilst belief propagation (BP) decoders are efficient for use with classical LDPC codes, the presence of short cycles in the Tanner graphs of quantum LDPC codes mean that BP decoders are not always effective for quantum codes.
+Several approaches have been suggested to facilitate the application of BP decodes to quantum LDPC codes such as Ordered Statistics Decoding (OSD) [2], Symmetry Breaking (SymBreak) [3], Ambiguity Clustering [4], and Localized Statistics Decoding (LSD) [5]. Whilst these approaches improve the accuracy of BP decoding, they involve increased time overhead. For practical applications, the performance of the decoder must match the speed and accuracy requirements of the quantum hardware to avoid backlog problems [6].
+In this work we introduce the AutDEC [7] Automorphism Ensemble decoder for quantum codes. A code automorphism is a permutation of the bits of a code that preserves its span. Our decoder employs a set of automorphisms of the quantum code and an ensemble of BP decoders. Each BP decoder is given a syndrome which is transformed by one of the automorphisms. In general, the corrections calculated for each transformed syndrome are distinct and this usually bypasses issues with short cycles. We choose the highest probability correction from the ensemble for the final correction, improving the accuracy compared to simple BP decoding. Crucially, the BP decoders are run in parallel and so the time overhead is the same as running a single BP decoder.
+Whilst automorphism ensemble decoders have been used for classical codes, this is the first time they have
+∗ These authors contributed equally to this work. Corresponding author: s.koutsioumpas@ucl.ac.uk
+
+been used for quantum error-correcting codes. We demonstrate decoding accuracy comparable to BP-OSD0 with a lower time overhead for Quantum Reed-Muller (QRM) codes in the code capacity setting, and Bivariate Bicycle (BB) codes under circuit level noise.
+We present simulation results that showcase the decoder’s performance and provide an open-source implementation of our methods using the open-source Bliss [8, 9] and igraph [10] packages to calculate automorphisms.
+The structure of the paper is as follows. In Section II we provide background on the motivation for the algorithm. In Section III we give background on stabiliser error-correcting codes, belief propagation decoding, code and check matrix automorphisms. We introduce the automorphism ensemble decoder “AutDEC” in IV, its rationale and a detailed description of the method. Finally, in V we provide simulation results for Quantum Reed Muller Codes on the code capacity depolarising noise model and Bivariate Bicycle Codes under circuitlevel noise.
+II. MOTIVATION
+Classical LDPC decoding has seen remarkable progress, with algorithms such as belief propagation (BP) showing to be highly effective in approximating maximum-likelihood (ML) solutions with low computational cost [11–13]. Translating these successes directly to the quantum domain with QLDPC codes presents significant new challenges. The presence of short cycles in the Tanner graph of quantum codes causes problems for message passing algorithms such as BP [2]. This complicates the decoding task and often necessitates post-processing beyond BP [14]. Techniques like Ordered Statistics Decoding (OSD) [2], Symmetry Breaking (SymBreak) [3], Ambiguity Clustering [4], and Localized Statistics Decoding (LSD) [5] have emerged to solve the problem, but come at the cost of increased time complexity compared to standard BP.
+Despite these algorithmic innovations, achieving the
+
+2
+
+necessary sustained, high-throughput decoding for practical quantum LDPC-based quantum computation remains a significant challenge. Recent experimental demonstrations [15–20] have highlighted the difficulty of the so-called “throughput problem” in error correction. As quantum systems become larger and operate at faster cycle times, they generate error syndromes at increasing rates. The decoder must be capable of processing these syndromes and delivering corrections sufficiently quickly to keep pace with the ongoing quantum computation. If the decoding process is too slow, or if the decoder’s processing rate is insufficient to handle the incoming syndrome data stream, a computational backlog inevitably arises [21].
+Automorphism ensemble decoding for classical ReedMuller codes was introduced by Geiselhart et al in [22]. This work demonstrated that leveraging the analytically known automorphism group of these codes [23] leads to effective decoding using BP. Automorphism ensemble decoding has been found effective when applied to classical LDPC codes [24, 25].
+In the quantum setting, the application of ensemble decoding techniques is emerging as a potential candidate in different forms. Initial investigations have considered surface codes, often in conjunction with matching decoders [26, 27]. Related investigations include joint codedecoder design for Multiple Bases Belief Propagation [28] and methods combining different decoders for enhanced performance [29].
+III. BACKGROUND
+In this section we will briefly outline the theory of quantum stabiliser error-correcting codes and the important subclass of CSS codes. We then introduce belief propagation decoding which we use for each of the decoders in the ensemble approach. Each decoder is given a syndrome to decode which has been deformed by applying a code or check matrix automorphism - we introduce these concepts in the final part of this section.
+A. Stabiliser Codes
+Stabiliser codes are a class of quantum error-correcting codes defined by a set of commuting, multi-qubit Pauli operators called the stabiliser group. This group, denoted S, is a subgroup of the Pauli group on n physical qubits. The code space is the +1 eigenspace of all the stabiliser operators. If the stabiliser group S is generated by a set of r independent stabiliser generators, then the code has k = n − r logical qubits. Errors are detected and corrected by measuring the stabiliser generators. The measurement outcomes, known as the syndrome vector s, are passed to a decoder which aims to calculate a Pauli operator c which corrects back into the codespace. The distance d of a quantum error-correcting
+
+code is defined as the lowest weight of any Pauli operator that commutes with the stabiliser generators but is not in the stabiliser group.
+In this paper, we consider error correction for the Calderbank, Shor, Steane or CSS codes [30, 31]. These are specified using two classical codes which represent stabiliser generators of either X-type or Z-type. An [n, k1, d1] classical code C1 with generator matrix HX and an [n, k2, d2] classical code C2 with generator matrix HZ satisfying HX HZT = 0 define a [[n, k1 + k2 − n, d]] quantum code with d = min(d1, d2). To form the stabiliser generators, we consider row i of HX a stabiliser generator of X-type which applies a Pauli X operator on qubit j if HX [i, j] = 1. The stabiliser generators of Z-type are defined similarly. For a more in-depth review of quantum code automorphisms in the stabiliser formalism, we refer the reader to [32, 33].
+B. Belief Propagation Decoder
+In this section, we outline the BP decoders which we use as components of our ensemble decoder. Belief propagation (BP) is a heuristic decoding algorithm developed by Pearl in [11]. BP iteratively passes the received syndrome data between variable and check nodes of the Tanner graph, until a correction satisfying the syndrome is found or a pre-determined maximum number of iterations is reached. BP is efficient for classical LDPC codes because they have sparse Tanner graphs. Even for large classical LDPC codes, BP is close to optimal and has almost linear runtime on the code’s length [34].
+Different message passing schedules exist for BP, such as the flooding or parallel schedule and the layered or serial schedule [35]. This affects the ordering of the updates of the nodes on the Tanner graph and can have an effect on the number of iterations required or the convergence in different cases. For our results, we used the parallel BP schedule from [36] in order to minimize latency.
+C. Automorphisms of Codes and Check Matrices
+The AutDEC decoder uses a set of automorphisms of the quantum code to transform the syndrome for correction. For CSS codes, automorphisms are qubit permutations A that preserve the stabiliser group:
+SA = S.
+An automorphism may send a stabiliser generator to a product of stabiliser generators, but the transformed generators will still generate the same stabiliser group. In our methods, we consider the automorphisms of the Xchecks HX and the Z-checks HZ of a CSS code separately. Given a permutation automorphism A, we show in Algorithm 1 how to find an r × r binary invertible
+
+3
+
+matrix UA such that:
+
+UAHX = HX A.
+
+(1)
+
+Let s be the syndrome vector which results from measuring the stabiliser generators corresponding to HX . The syndrome vector we would find if measuring the transformed stabiliser generators HX A is given by UA ·s. This transformed syndrome vector will be used as the input to our ensemble of decoders.
+For small codes (n < 360), we can use code automorphisms of the underlying classical codes C1 and C2 (generated by HX and HZ respectively). These can be found by Leon’s algorithm [37] using the method outlined in [33]. For larger codes, we instead consider automorphisms of the check matrices HX and HZ . Check matrix automorphisms are a subgroup of the code automorphism group. This is because a check matrix automorphism maps each stabiliser generator to another, rather than to products of stabiliser generators.
+We consider the automorphisms of HX and HZ separately, and these are calculated by mapping the check matrices to their Tanner graphs. The Tanner graph of a classical code is a bipartite graph consisting of two sets of nodes:
+
+1. the variable nodes V = {vi, i ∈ [1, ..., n]} which correspond to the columns or bits the code and
+
+2. the check nodes C = {ci, i ∈ [1, ..., n − k]} which represent the rows or stabilisers (parity check equations) of the code.
+
+There is an edge between nodes vj and ci if the i-th row of the check matrix has a 1 in the j-th column.
+A graph automorphism A of a graph G is a permutation of the vertices of G which preserves the connectivity of the graph. That is, (vj, ci) is an edge of G if and only if (vjA, UAci) for some permutation UA of the rows of the check matrix. Finding automorphisms of a Tanner graph is very fast in practice even for large codes, and there are publicly-accessible packages for this including Nauty [38] or Bliss [8, 9].
+
+Example 1 The automorphism group of the [[15, 1, 3]] code is of order 20160 and is isomorphic to General Linear group of degree 4 over the field of 2 elements GL(4, 2) [39]. The automorphism group of the HX and HZ check matrices of the code, however is of order 24, and is isomorphic to the Symmetric group of 4 elements S4.
+
+distinct and this usually bypasses issues with short cycles. We choose the highest probability correction from the ensemble for the final correction, improving the accuracy compared to simple BP decoding. Crucially, the BP decoders are run in parallel and so the time overhead is the same as running a single BP decoder. A diagram of the method can be seen in Figure 2.
+
+A. Rationale for AutDEC Decoder
+
+The effectiveness of our decoder relies on each BP decoder giving a different correction based on syndromes which have been transformed by code or check matrix automorphisms. By deforming the syndrome and permuting the nodes of the Tanner graph for the code, the BP decoder is less likely to be adversely affected by short cycles in the Tanner graph. We illustrate this by showing how the decoder acts on the 15-qubit quantum ReedMuller code.
+
+Example 2 Consider a Z-error on the 15-th qubit of the
+
+[[15, 1, 3]] QRM code. As all 4 X-checks have support on
+
+this qubit, a 4 cycle is created, and BP will output the all
+
+1s correction, ie Z⊗15.
+
+Using the code automorphism A
+
+=
+
+(2, 9)(3, 8)(4, 15)(5, 14), exchanges the 4th and 15th
+
+qubits, and thus only one check is satisfied. This yields
+
+the right correction, on the permuted basis, of Z15.
+
+In Figure 1 we show the action of the automorphism
+
+A on the Tanner graph, as well as the output corrections
+
+of BP in the original and permuted graph.
+
+IV. AUTOMORPHISM ENSEMBLE DECODER
+
+The AutDEC decoder employs a set of automorphisms of the quantum code and an ensemble of BP decoders. Each BP decoder is given a syndrome which is transformed by one of the automorphisms. In general, the corrections calculated for each transformed syndrome are
+
+FIG. 1. Left: Original Tanner graph of the X checks of QRM[[15, 1, 3]]. An error on the 15th qubit leads to a logical error that also does not return to the codespace. Right: The permuted Tanner graph. An error on the 15th qubit is now corrected by BP.
+
+AutDEC is a heuristic algorithm and the performance varies depending on the automorphism group or structure of the stabiliser code. A large automorphism group is generally a good indicator for potential performance gains. However, different decoders “absorb” different automorphisms [40–42], or in other words, they provide equivalent corrections on different input syndrome data.
+B. Description of AutDEC Decoder
+There are two components to the decoder:
+1. The offline setup where we prepare the decoder ensemble.
+2. The online phase where we process the received syndrome data and output a correction.
+
+4
+2. For each automorphism A, transform the syndrome vector using the operator of Equation 1 as follows sA = UA · s
+3. Decode the transformed syndromes using the ensemble decoders.
+4. Form a list of candidate corrections based on the outcomes of the ensemble decoders which converge to a valid correction.
+5. Sort the candidate corrections based on a most likelihood metric which depends on the error model used. For the code capacity setting (see II), we select the minimum weight Pauli operator in the correction list. For circuit level noise (see V B), we sort the correction list based on the probability from the pre-computed priors given during the compilation of the detector error model.
+
+1. Offline Setup of Ensemble Decoders
+
+We first outline the offline setup of the Automorphism Ensemble:
+1. Find generators for the automorphism group of the code or of the parity check matrix. For small codes we use the code automorphisms and for large codes, we use the graph automorphisms of the Tanner graph using Bliss [8, 9]. We use a randomly selected set of automorphisms for ensemble decoding. For circuit-level noise, we use automorphisms of the detector error model check matrix (see [43]).
+2. Choose ensemble size. In general a larger automorphism ensemble gives better performance and higher probability of convergence for each of the constituent BP decoders, but this may be limited by the classical hardware’s distributed capabilities.
+3. Find action of automorphism on checks of the code and syndrome vector. For each automorphism A in the set, we calculate the operator UA of Equation 1 which transforms both the parity check matrix and the syndrome vector using algorithm 1.
+4. Initialize a BP decoder for each automorphism in the ensemble based on the transformed parity check matrix.
+
+FIG. 2. Overview of the AutDEC online decoding phase. Upon receiving the syndrome s, k paths are created. In each path, the syndrome is left-multiplied by the r×r binary linear matrix UAi corresponding to the action of the automorphism Ai on the stabiliser generators. The syndromes are then sent to the k constituent decoders DAi , each of which has been pre-compiled with the permuted check matrix HAi. The corrections are gathered in a list, and the most likely correction in the list is then chosen based either on the minimum weight or the priors of the detector error model.
+V. RESULTS
+
+2. Online Ensemble Decoding
+We now describe the operation of the AutDEC decoder for detection and correction of errors in the online phase. The process is described graphically in Figure 2.
+1. Measure the stabiliser generators and find the syndrome vector s.
+
+A. [[15,1,3]] Quantum Reed Muller Code - Code Capacity
+In this section, we apply AutDEC to the [[15, 1, 3]] Quantum Reed-Muller (QRM) code using a code capacity depolarising error model. In the code capacity error model, we assume that errors are distributed on data qubits independently and identically with probability p
+
+5
+
+and that there are no correlated errors. We do not consider the effect of errors which occur during encoding, decoding, the application of gates or measurements. Since the code is relatively small, we calculate the code automorphisms using the AutQEC package of [44].
+We use the LDPC package in [36] for the constituent BP and OSD decoders. We compare the performance of BP, automorphism ensemble BP and BP with OSD0 and OSD-4 [2]. Each decoder uses a maximum of 15 BP iterations. We denote with AutBP-N the ensemble decoder with N BP decoders in the ensemble each using a different automorphism. We provide results for AutBP-5 and compare with BP, BP+OSD-0 and BP+OSD-4 in Figure 3.
+
+coding rates [45]. Here we apply the AutDEC decoder using a more realistic circuit-level noise model. The circuit level noise model takes into account errors occurring during state initializations, application of gates, measurements and idling locations of the circuit. We assign probabilities to each of them occurring on each operation of the syndrome extraction circuit.
+The detector check matrix HDEM tracks the propagation of errors through the syndrome circuit. It maps circuit fault locations to detectors, which are linear combinations of check outcomes.
+The BP decoder can thus be used on the Tanner graph of the parity check matrix HDEM of the “circuit level code” instead. As these matrices are much larger than the parity check matrix of the original codes, finding code automorphisms is computationally expensive. In figure 4, we illustrate the HDEM for the 72-qubit bivariate bicycle code which has 2, 484 vertices and 7, 776 edges. Finding the graph automorphisms of their Tanner graph, however, is feasible and we give processing times for the BB family in Table A 1. An in-depth overview of the detector error matrix construction is given in [43].
+
+FIG. 3. Logical error rate for the code capacity setting of the [[15, 1, 3]] QRM code. We compare BP and BP+OSD-0 with AutBP-5. The black solid line is the y = x break-even point. The shaded regions indicate the Wilson confidence interval of 95%.
+
+We notice that BP does not achieve a threshold for any of the physical error rates, as its performance is limited by the large number of small cycles in the Tanner graph of the code. AutBP on the other hand with just a few automorphisms achieves a threshold and matches BP with OSD.
+A notebook implementing the method available at: https://github.com/hsayginel/autdec/tree/main/ code_capacity.
+B. Bivariate Bicycle Codes - Circuit Level noise
+Bivariate Bicycle Codes are a promising QLDPC code family recently introduced with high thresholds and en-
+
+FIG. 4. Visualisation of Tanner graph of [[72, 12, 6]] |+L⟩ memory detector error model using Gephi [46].
+We use the stabiliser measurement schedule described in [45] implemented on stim [47] in the GitHub repository of [48, 49]. This corresponds to a Z memory experiment where the syndrome is extracted d times for a [[n, k, d]] code. For the simulation, the d rounds are followed by a noiseless round of measurement of the data qubits.
+An interactive notebook is available at: https://github.com/hsayginel/autdec/blob/main/ bivariate_bicycle_codes/circuit_level_noise. ipynb.
+
+6
+
+We first keep the base code fixed, and plot different ensemble sizes for the BP based automorphism ensemble decoder. We compare AutDec to applying a BP decoder on the original Tanner graph, as well as with using the quick ordered statistics decoding OSD-0 described in [2]. We plot the results in Figure 5.
+
+well as to BP followed by OSD with combination sweep of order 10 postprocessing. We denote with AutBPOSD0-N the ensemble decoder with N BP+OSD0 decoders in the ensemble, each guided by a different automorphism. We compare BP+OSD-0, BP+OSD-10 with AutBPOSD0-5 and AutBPOSD0-17.
+We note that with fast OSD-0 constituent decoders, the automorphism ensemble yields similar or increased performance to higher OSD orders using only OSD0.
+
+FIG. 5. Logical error rate for different physical error rates using BP, AutBP-5, AutBP-17, AutBP-36 and BP+OSD-0 for circuit-level noise simulation of the BB [[72,12,6]] code. The BP decoders run a maximum of 1000 iterations on a parallel schedule, with “min-sum” scaling factor of 1. The shaded regions indicate the Wilson confidence interval of 95%.
+We notice that increasing the ensemble size allows for the automorphism ensemble decoder to approach, match or marginally outperform OSD-0 using only BP constituent decoders.
+Furthermore, in Figure 6 we plot the logical error rate performance of the [[72, 12, 6]], [[90, 8, 10]] and [[144, 12, 12]] Bivariate Bicycle codes using only BP on the original Tanner graphs on the left panel, an automorphism ensemble based on BP using the full graph automorphism group of each code in the middle panel as well as using OSD-0 in the right panel.
+We notice that BP gets progressively worse when increasing the code size, as more and more cycles are introduced on the Tanner graph. The automorphism ensemble, however, bypasses that issue by using the Tanner graph automorphisms, approaching or matching the performance of OSD-0, without the cubic postprocessing overhead.
+Finally, in Figure 7 , we plot the logical error rate of the [[144, 12, 12]] Bivariate Bicycle code when using OSD-0 constituent decoders with different automorphism ensemble sizes. We compare it to the base BP with OSD-0, as
+
+FIG. 7. BB-[[144,12,12]]: Logical error rate comparison between BP+OSD-0, BP+OSD-10 and AutBPOSD0 with an automorphism ensemble size of 5 and 17. The BP decoders have a maximum of 10,000 iterations and a “combination sweep” method is used for the OSD postprocessing. The shaded regions indicate the Wilson confidence interval of 95%.
+The results of our simulations can be found at: https://github.com/hsayginel/autdec/blob/main/ bivariate_bicycle_codes/bb_cln_data.csv.
+VI. CONCLUSION AND FUTURE WORK
+In this work, we introduced the AutDEC automorphism ensemble decoder. This approach leverages the inherent symmetries present in quantum error-correcting codes to enhance decoding performance. By employing multiple decoders in parallel, each guided by a distinct automorphism of the code, we improve the likelihood of successful BP decoding without the use of complex postprocessing.
+Our open source GitHub repository [7] implementing AutDEC has been made available for use by the community. This implementation serves as a proof of concept,
+
+7
+
+FIG. 6. Logical error rate comparison between BP, AutBP and BP+OSD0 decoders for varying physical error rates. The BP decoders run a maximum of 10,000 iterations with parallel schedule and minimum sum updates. The minimum-sum scaling factor is 1 and in each case we have d rounds of syndrome extraction in the Detector Error Model. The shaded regions indicate the Wilson confidence interval of 95%.
+
+demonstrating the fundamental principles of the proposed method, as each automorphism-guided decoding path is executed sequentially, rather than concurrently. In future iterations, we would prioritize implementing full parallelization as well as exploration of larger, more diverse ensembles of decoders.
+The potential incorporation of generalized automorphisms and endomorphisms, as recently investigated in [50],[51], is another interesting direction. These more general symmetry mappings may enable the application of this method to codes with limited permutation automorphisms, although they come with an increased search space for relevant operations.
+Finally, a deeper understanding of how code symmetries, as captured by automorphisms, influence decoding performance could potentially inform the design of new codes that are inherently more amenable to ensemblebased decoding techniques. Our work suggests that code automorphisms are tied both to decoding performance and low-overhead logical gate implementations [33], highlighting the fundamental relationship between code structure and error correction capabilities.
+
+the completion of this work. The authors would like to thank Oscar Higgott, Joschka Roffe and Tim Chan for helpful discussions.
+
+ACKNOWLEDGMENTS
+SK and DEB are supported by the Engineering and Physical Sciences Research Council [grant number EP/Y004620/1 and EP/T001062/1]. HS is supported by the Engineering and Physical Sciences Research Council [grant number EP/S021582/1]. HS also acknowledges support from the National Physical Laboratory. MW and DEB are supported by the Engineering and Physical Sciences Research Council [grant number EP/W032635/1 and EP/S005021/1]. The authors acknowledge the use of the UCL Myriad High Performance Computing Facility (Myriad@UCL), and associated support services, in
+
+8
+
+[1] N. P. Breuckmann and J. N. Eberhardt, Quantum LowDensity Parity-Check Codes, PRX Quantum 2, 040101 (2021).
+[2] P. Panteleev and G. Kalachev, Degenerate Quantum LDPC Codes With Good Finite Length Performance, Quantum 5, 585 (2021), publisher: Verein zur Fo¨rderung des Open Access Publizierens in den Quantenwissenschaften.
+[3] K. Yin, X. Fang, J. Ruan, H. Zhang, D. Tullsen, A. Sornborger, C. Liu, A. Li, T. Humble, and Y. Ding, SymBreak: Mitigating Quantum Degeneracy Issues in QLDPC Code Decoders by Breaking Symmetry (2024), arXiv:2412.02885 [quant-ph].
+[4] S. Wolanski and B. Barber, Ambiguity Clustering: an accurate and efficient decoder for qLDPC codes (2025), arXiv:2406.14527 [quant-ph].
+[5] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, Localized statistics decoding: A parallel decoding algorithm for quantum low-density parity-check codes (2024), arXiv:2406.18655 [quant-ph].
+[6] B. M. Terhal, Quantum error correction for quantum memories, Rev. Mod. Phys. 87, 307 (2015).
+[7] H. Sayginel and S. Koutsioumpas, AutDEC (2025). [8] T. Junttila and P. Kaski, Engineering an Efficient Canon-
+ical Labeling Tool for Large and Sparse Graphs, in 2007 Proceedings of the Workshop on Algorithm Engineering and Experiments (ALENEX), Proceedings (Society for Industrial and Applied Mathematics, 2007) pp. 135–149. [9] T. Junttila and P. Kaski, Conflict Propagation and Component Recursion for Canonical Labeling, in Theory and Practice of Algorithms in (Computer) Systems, edited by A. Marchetti-Spaccamela and M. Segal (Springer, Berlin, Heidelberg, 2011) pp. 151–162. [10] G. Csardi and T. Nepusz, The igraph software package for complex network research, InterJournal, Complex Systems , 1695 (2006). [11] J. Pearl, Reverend bayes on inference engines: a distributed hierarchical approach, in Proceedings of the Second AAAI Conference on Artificial Intelligence, AAAI’82 (AAAI Press, Pittsburgh, Pennsylvania, 1982) pp. 133– 136. [12] D. J. C. MacKay and R. M. Neal, Near Shannon limit performance of low density parity check codes, Electronics Letters 32, 1645 (1996). [13] R. McEliece, D. MacKay, and J.-F. Cheng, Turbo decoding as an instance of Pearl’s “belief propagation” algorithm, IEEE Journal on Selected Areas in Communications 16, 140 (1998), conference Name: IEEE Journal on Selected Areas in Communications. [14] J. Roffe, D. R. White, S. Burton, and E. Campbell, Decoding across the quantum low-density parity-check code landscape, Physical Review Research 2, 10.1103/physrevresearch.2.043423 (2020). [15] Y. Zhao, Y. Ye, H.-L. Huang, et al., Realization of an Error-Correcting Surface Code with Superconducting Qubits, Physical Review Letters 129, 030501 (2022). [16] R. Acharya, L. Aghababaie-Beni, I. Aleiner, et al., Quantum error correction below the surface code threshold (2024), arXiv:2408.13687 [quant-ph]. [17] N. Lacroix, A. Bourassa, F. J. H. Heras, et al., Scaling and logic in the color code on a superconducting quantum
+
+processor (2024), arXiv:2412.14256 [quant-ph]. [18] L. Caune, L. Skoric, N. S. Blunt, et al., Demonstrating
+real-time and low-latency quantum error correction with superconducting qubits (2024), arXiv:2410.05202 [quantph] version: 1. [19] P. S. Rodriguez, J. M. Robinson, P. N. Jepsen, et al., Experimental Demonstration of Logical Magic State Distillation (2024), arXiv:2412.15165 [quant-ph]. [20] N. Berthusen, J. Dreiling, C. Foltz, et al., Experiments with the 4D Surface Code on a QCCD Quantum Computer, Physical Review A 110, 062413 (2024), arXiv:2408.08865 [quant-ph]. [21] L. Caune, L. Skoric, N. S. Blunt, A. Ruban, J. McDaniel, J. A. Valery, A. D. Patterson, A. V. Gramolin, J. Majaniemi, K. M. Barnes, T. Bialas, O. Bug˘daycı, O. Crawford, G. P. Geh´er, H. Krovi, E. Matekole, C. Topal, S. Poletto, M. Bryant, K. Snyder, N. I. Gillespie, G. Jones, K. Johar, E. T. Campbell, and A. D. Hill, Demonstrating real-time and low-latency quantum error correction with superconducting qubits (2024), arXiv:2410.05202 [quantph]. [22] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. t. Brink, Automorphism Ensemble Decoding of Reed–Muller Codes, IEEE Transactions on Communications 69, 6424 (2021), conference Name: IEEE Transactions on Communications. [23] E. Abbe, A. Shpilka, and M. Ye, Reed–Muller Codes: Theory and Algorithms, IEEE Transactions on Information Theory 67, 3251 (2021). [24] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. t. Brink, Automorphism ensemble decoding of quasicyclic ldpc codes by breaking graph symmetries, IEEE Communications Letters 26, 1705 (2022). [25] F. Krieg, J. Clausius, M. Geiselhart, and S. t. Brink, A Comparative Study of Ensemble Decoding Methods for Short Length LDPC Codes (2024), arXiv:2410.23980 [cs]. [26] N. Shutty, M. Newman, and B. Villalonga, Efficient nearoptimal decoding of the surface code through ensembling (2024), arXiv:2401.12434 [quant-ph]. [27] C. Jones, Improved accuracy for decoding surface codes with matching synthesis (2024), arXiv:2408.12135 [quant-ph]. [28] S. Miao, J. Mandelbaum, H. Ja¨kel, and L. Schmalen, A Joint Code and Belief Propagation Decoder Design for Quantum LDPC Codes (2024), arXiv:2401.06874 [cs] version: 3. [29] M. Sheth, S. Z. Jafarzadeh, and V. Gheorghiu, Neural ensemble decoding for topological quantum error-correcting codes, Physical Review A 101, 032338 (2020). [30] A. R. Calderbank and P. W. Shor, Good quantum error-correcting codes exist, Physical Review A 54, 1098 (1996). [31] A. Steane, Multiple-particle interference and quantum error correction, Proceedings of the Royal Society of London. Series A: Mathematical, Physical and Engineering Sciences 452, 2551 (1997), publisher: Royal Society. [32] A. Calderbank, E. Rains, P. Shor, and N. Sloane, Quantum error correction via codes over GF(4), in Proceedings of IEEE International Symposium on Information Theory (1997) pp. 292–, https://ieeexplore.ieee.org/ document/613213.
+
+9
+
+[33] H. Sayginel, S. Koutsioumpas, M. Webster, A. Rajput, and D. E. Browne, Fault-Tolerant Logical Clifford Gates from Code Automorphisms (2024), arXiv:2409.18175 [quant-ph].
+[34] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, Factor graphs and the sum-product algorithm, IEEE Trans. Inf. Theor. 47, 498 (2006).
+[35] J. Goldberger and H. Kfir, Serial Schedules for BeliefPropagation: Analysis of Convergence Time, IEEE Transactions on Information Theory 54, 1316 (2008), conference Name: IEEE Transactions on Information Theory.
+[36] J. Roffe, LDPC: Python tools for low density parity check codes (2022).
+[37] J. Leon, Computing automorphism groups of errorcorrecting codes, IEEE Transactions on Information Theory 28, 496 (1982).
+[38] B. D. McKay and A. Piperno, Practical graph isomorphism, II, Journal of Symbolic Computation 60, 94 (2014).
+[39] F. J. MacWilliams and N. J. A. Sloane, The Theory of Error-Correcting Codes, North-Holland Mathematical Library, Vol. 16 (Elsevier, 1977).
+[40] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, On the Automorphism Group of Polar Codes, in 2021 IEEE International Symposium on Information Theory (ISIT) (2021) pp. 1230–1235.
+[41] V. Bioglio, I. Land, and C. Pillet, Group Properties of Polar Codes for Automorphism Ensemble Decoding, IEEE Transactions on Information Theory 69, 3731 (2023), conference Name: IEEE Transactions on Information Theory.
+[42] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. t. Brink, Automorphism Ensemble Decoding of QuasiCyclic LDPC Codes by Breaking Graph Symmetries, IEEE Communications Letters 26, 1705 (2022), conference Name: IEEE Communications Letters.
+[43] P.-J. H. S. Derks, A. Townsend-Teague, A. G. Burchards, and J. Eisert, Designing fault-tolerant circuits using detector error models (2024), arXiv:2407.13826 [quant-ph].
+[44] H. Sayginel, autqec (Logical Clifford Gates from Code Automorphisms) (2024).
+[45] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, High-threshold and lowoverhead fault-tolerant quantum memory, Nature 627, 778 (2024).
+[46] M. Bastian, S. Heymann, and M. Jacomy, Gephi: An Open Source Software for Exploring and Manipulating Networks, Proceedings of the International AAAI Conference on Web and Social Media 3, 361 (2009), number: 1.
+[47] C. Gidney, Stim: a fast stabilizer circuit simulator, Quantum 5, 497 (2021).
+[48] A. Gong, S. Cammerer, and J. M. Renes, Toward Lowlatency Iterative Decoding of QLDPC Codes Under Circuit-Level Noise (2024), arXiv:2403.18901 [quant-ph].
+[49] A. Gong, gongaa/SlidingWindowDecoder (2025). [50] J. Mandelbaum, H. Ja¨kel, and L. Schmalen, Generalized
+Automorphisms of Channel Codes: Properties, Code Design, and a Decoder, in 2023 12th International Symposium on Topics in Coding (ISTC) (2023) pp. 1–5. [51] J. Mandelbaum, S. Miao, H. Jakel, and L. Schmalen, Endomorphisms of linear block codes, in 2024 IEEE International Symposium on Information Theory (ISIT)
+
+(2024) pp. 699–704. [52] K. Kulkarni, pybliss (2025).
+
+10
+
+Appendix A: Determining action of automorphism on parity checks
+
+We provide a more detailed description of our method for determining the action of a code automorphism on the
+X-checks HX of a CSS code. Code automorphisms of CSS codes are qubit permutations A which swap the columns of the check matrix. They induce a linear map UA such that UAHX = HX A. Importantly, UA also transforms syndrome vectors s of the check matrix to syndrome vectors sA = UA · s of the transformed check matrix.
+
+Algorithm 1: stabiliser Map Action Corresponding to Automorphism
+
+Input:
+
+HX : A: a
+
+Original Parity check matrix of size m × n column permutation satisfying ⟨HA⟩ = ⟨HX ⟩.
+
+Output: An invertible m × m binary matrix UA such that HX A = UAHX .
+
+Compute the reduced row echelon form (RREF) of HX modulo 2. Store the pivots P , their indices J and the row transformations matrix R from RREF. Create a matrix M of size m × m. Initialize all elements of M to 0. for each row i in HX A do
+for each index j and corresponding pivot p from the RREF do if HXnew[i, p] = 1 then Set M [i, j] = 1. end
+end
+end Multiply the M matrix by the row transformation matrix (from RREF) modulo 2 to get the final stabiliser map matrix UA = M × R. Return the resulting matrix UA.
+
+Specifically for graph automorphisms, the matrix UA will be a row permutation matrix and can be directly extracted from the output of the graph automorphism.
+
+1. Tanner Graph Automorphism Timings with (Py)Bliss
+
+In Table A 1 we provide an overview of the time required to find the automorphism group of the Tanner graphs associated with each of the detector error models of the bivariate bicycle codes. We use Bliss [8, 9] through the pyBliss [52] wrapper. The reported results are from an Apple M3 8-core chip.
+
+Code
+
+DEM
+
+pcm
+
+shape
+
+Tanner
+
+graph automorphism group order
+
+time
+
+(sec)
+
+[[72, 12, 6]]
+
+(252, 2232)
+
+36
+
+0.002
+
+[[90, 8, 10]]
+
+(495, 4590)
+
+45
+
+0.004
+
+[[108, 8, 10]]
+
+(594, 5508)
+
+54
+
+0.005
+
+[[144, 12, 12]]
+
+(936, 8784)
+
+72
+
+0.009
+
+[[288, 12, 18]]
+
+(2736, 26208)
+
+144
+
+0.024
+
+[[360, 12, <= 24]] (4500, 43560)
+
+180
+
+0.048
+
+[[756, 16, <= 34]] (13230, 129276)
+
+378
+
+0.139
+
+TABLE I. Detector error model parity check matrices, Tanner graph automorphism group orders and time taken to find them using Bliss.
+
+

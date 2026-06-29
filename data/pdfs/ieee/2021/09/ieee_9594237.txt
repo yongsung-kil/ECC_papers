@@ -1,0 +1,571 @@
+2021 11th International Symposium on Topics in Coding
+Energy Efficient FEC Decoders
+Matthias Herrmann, Claus Kestel, Norbert Wehn University of Kaiserslautern, Kaiserslautern, Germany 67663
+Email: {herrmann, kestel, wehn}@eit.uni-kl.de
+
+2021 11th International Symposium on Topics in Coding (ISTC) | 978-1-6654-0943-8/21/$31.00 ©2021 IEEE | DOI: 10.1109/ISTC49272.2021.9594237
+
+Abstract—Channel coding, or Forward Error Correction (FEC), is a crucial technology component in any digital baseband processing. Decoder IPs for advanced coding schemes like Turbo, LDPC, and Polar codes are major sources of power consumption and silicon area in baseband SOCs and largely contribute to the baseband latency and throughput limitations. Although we observe a continuous increase in throughput and lower latency requirements in emerging communication standards, the available power and energy budget does not increase due to, e.g., thermal design power constraints. If we look on the silicon technology progress, the transistor density still follows Moore’s law, but the power improvement largely slows down, that exacerbates the power density problem. Hence, for use cases with high throughput requirements like B5G, power, power density and energy efficiency become a major bottleneck for the successful application of advanced channel coding from a silicon implementation perspective. In this paper we focus especially on LDPC and Polar codes since they are part of many communication standards. Challenges, power and energy optimizations on the different design levels for decoders targeting throughput towards 1Tb/s and various trade-offs are presented.
+Index Terms—Forward Error Correction, Beyond 5G
+
+I. INTRODUCTION
+
+The most important Key Performance Indicator (KPI) for a Forward Error Correction (FEC) decoder Intellectual Property (IP) from a communication point of view is its error correction capability that is defined as the respective Frame Error Rate (FER) or Bit Error Rate (BER) as a function of the Signal-toNoise-Ratio (SNR). Implementation KPIs are information bit throughput Tinf [bit/s], latency [ns], silicon area A [mm2] and power consumption P [W]. From these KPIs further implementation metrics, i. e., area efficiency Aeff, energy efficiency Eeff and power density Pdens can be derived:
+
+Aeff
+
+=
+
+Tinf A
+
+,
+
+[bit/(s mm2)] (1)
+
+Eeff
+
+=
+
+P Tinf
+
+,
+
+[J/bit] (2)
+
+Pdens
+
+=
+
+Eeff
+
+· Aeff
+
+=
+
+P A
+
+.
+
+[W/mm2] (3)
+
+Power consumption and power density for a FEC decoder are typically upper limited by Thermal Design Power (TDP) constraints. From Equation 2 follows that for a fixed power budget, increasing the throughput is equivalent to improving the energy efficiency. Thus, with increasing throughput requirements, e. g., towards 1 Tbit/s for B5G applications, energy efficiency becomes a key challenge in the design of FEC decoders.
+
+The throughput, Tinf, of a FEC decoder depends on various parameters. Let N be the code block size with code rate R and
+
+I denote the number of iterations that a corresponding iterative decoder requires to decode a code block (I = 1 in the case
+
+of a non-iterative decoding algorithm). N , R and I largely
+
+impact the error correction capability. Let π denote the degree of achievable parallelism in a FEC architecture. π is defined
+
+as the ratio of the operations that are performed in one clock
+
+cycle to the total number of operations necessary to perform
+
+one decoding iteration for a complete code block of length
+
+N . Note that “operation” in this context can be a computation
+
+but also a data transfer. Let f be the clock frequency. The
+
+throughput Tinf of a FEC decoder architecture can be estimated
+
+as
+
+Tinf
+
+∼
+
+N
+
+·
+
+R
+
+·
+
+1 I
+
+·
+
+π
+
+·
+
+f
+
+·
+
+(1
+
+−
+
+ω),
+
+(4)
+
+where f is determined by the critical path in the compute kernels of the corresponding decoding algorithms and/or delay
+
+due to interconnect, and is typically upper limited in decoder
+
+IPs to 1 GHz for power and design methodology reasons. ω
+
+is a normalized value between 0 and 1 that represents the
+
+timing overhead due to, e. g., buffering, interconnect, memory
+
+access conflicts, etc. The impact of ω on the throughput can
+
+be considered as an effective reduction of f or decrease in π, if additional clock cycles are mandatory, such as memory
+
+conflicts, that can not be hidden. Thus, for the rest of the paper,
+
+we assume that ω is implicitly considered in f or π.
+
+We can derive the following interdependencies between N ,
+
+R, π, f , I and the aforementioned KPIs (note that the supply voltage, which has a great influence on frequency, power and
+
+energy efficiency, is at this point not yet considered as a design
+
+parameter):
+
+• Tinf depends first order linear on N , R, f and π, and is inversely proportional to I.
+
+• A is first order proportional to N and π. • Aeff depends first order linear on R, f and is inversely
+proportional to I.
+
+• P depends first order linear on f , N and π while it is independent on I and R.
+• Eeff is first order independent of f , N and π, but inversely proportional to R and linear dependent on I.
+
+• Pdens depends first order only on f . • The error correction capability for a given code depends
+
+on R, N and I, i. e., small R, large N and large I in
+
+general improve the error correction capability.
+
+From these interdependencies it can be seen that there is
+
+no optimal parameter setup that meets all KPI requirements.
+
+978-1-6654-0943-8/21/$31.00 ©2021 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:33:51 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+Rather, there are conflicting requirements. Energy efficient FEC decoders require that P , Eeff and Pdens have to be minimized, yielding small values for N , I, π and f . However for given code and decoding algorithm a high error correction capability and high throughput requires the opposite value for these parameters, i. e., large values for N , I, π and f . Beyond that, the code and corresponding decoding algorithm largely impact the error correction capability but also I, π and f . E. g., a sequential and compute intensive decoding algorithm limits the maximum π and f . In a similar way the code structure influences these parameters. E. g., an irregular LDPC code has a negative impact on the maximum π and f . These examples demonstrate that many trade-offs on code design, decoding algorithms, architectures and energy efficient implementation in advanced technology nodes exist.
+Contributions: In this paper, we present new optimization techniques on algorithmic and architecture/technology layer for energy efficient very high throughput LDPC and Polar decoders:
+• For LDPC codes we propose a layered unrolled LDPC decoding architecture and provide a fair comparison with a State-of-the-Art (SOA) unrolled Two-Phase (TP) decoder in a 22 nm FD-SOI technology.
+• For the first time, we apply Iteration Control (IC) techniques to an unrolled LDPC decoder architecture and quantify the trade-off between logic/area overhead and power savings in 22 nm technology.
+• We present the first in-depth investigation on the tradeoff between spatial and functional parallelism (pipelining) for deeply pipelined architectures under consideration of VDD scaling.
+All presented decoders were synthesized and placed and routed using Synopsys Design Compiler and ICCompiler, respectively. Power numbers are calculated with back-annotated wiring data using Synopsys Primetime and Siemens Modelsim.
+II. ENERGY EFFICIENT LDPC DECODERS
+LDPC decoding is based on an iterative exchange of messages between variable and check nodes in the Tanner graph of the code. The inherent parallelism on node level makes LDPC codes well suited for high throughput requirements. Here, we focus on unrolled decoding architectures for highest throughput that combine full parallelism on node level with unrolling and pipelining of decoding iterations, i.e. π = I [1], [2].
+It was already stated that Eeff depends on the number of iterations I just as the power consumption P (π = I for unrolled architectures). So minimizing I is central for energy efficient FEC architectures. There are mainly two approaches in literature for reducing I while retaining the error correction capability of the decoder.
+1) Layered scheduling/decoding. The processing of the Tanner graph is serialized and the nodes partially updated resulting in faster convergence of the decoding and thus a lower number of iterations.
+
+2) Dynamic IC. The number of iterations is adjusted at runtime to the varying SNR of the channel.
+Both approaches are widely applied in various SOA partialparallel (π < 1) and full-parallel (π = 1) decoding architectures, e. g., [3], [4], that achieve throughputs up to 100 Gbit/s for a high SNR. In this paper, we present for the first time how these techniques can be efficiently applied to unrolled architectures (π = I) and thus for throughputs far beyond 100 Gbit/s.
+SOA unrolled decoding architectures, e. g., for Min-Sum (MS) decoding in [1], employ a TP scheduling, i. e., each iteration stage consists of N Variable Node Functional Units (VFUs) and (1 − R) · N Check Node Functional Units (CFUs) to perform the variable, respectively check node operations. VFUs and CFUs are connected via wires representing the connections of the Tanner graph associated with H, i. e., each 1 in H results in Q wires with Q being the bitwidth of the exchanged messages. For I iterations, I VFU/CFU stages and 2 · I interconnecting networks have to be instantiated. Hence, unrolled architectures exhibit large area and power consumption for routing yielding a low cell utilization in the layout and limiting the maximum N that can be processed [5].
+Information bottleneck is a promising approach to reduce Q and thus, the number of wires at the cost of an increased node complexity [2]. Here, we introduce layered decoding for the first time as another concept to reduce the routing complexity of unrolled architectures. Since the routing complexity depends on the node parallelism in one iteration stage, we split the H-Matrix into l horizontal layers, where each layer corresponds to one architecture stage. This stage has a reduced check node parallelism and lower routing complexity. In other words, a stage (= one iteration) of the non-layered unrolled architecture is replaced by l stages, where each stage has a lower routing complexity. This is similar to the fullparallel architecture presented in [4], that, however, has not considered iteration unrolling. Note that the increase in stages only increases the number of registers but does not change the total number of wires and variable node calculations, since the node calculations are now distributed over several stages enabling a continuous update of its values. Since layered decoding decreases the number of necessary iterations I for a fixed error correction capability, less iterations are mandatory yielding a further improvement in the implementation KPIs.
+We demonstrate the advantage of this new unrolled architecture by the example of the (1032, 860) EPIC LDPC code [6] and implemented a SOA unrolled TP decoder and the new unrolled layered decoder in 22 nm FD-SOI technology. The H-matrix of the EPIC code is partitioned into l = 4 layers, each consisting of 43 rows. To achieve the same clock frequency as the unrolled TP decoder, the layer processing stage is partitioned into three pipeline stages. The top-level architecture for one such layered decoding iteration is depicted in Figure 1. Each layer processor operates on a different code block, indicated with different colors. The A Posteriori Probability (APP) Log-Likelihood Ratio (LLR) values are passed directly from one processor to the next whereas the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:33:51 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+TABLE I IMPLEMENTATION RESULTS EPIC DECODERS (Q=4BIT).
+
+Code (N,K) Architecture Throughput [Gbit/s] Iterations Frequency [MHz] Latency [ns] (cycles) Area [mm²] Area Eff. [Gbit/s/mm²] Utilization % Eb/N0 @ FER 10−5 [dB] Power @ 3 dB Eb/N0 [W] Energy Eff. [pJ/bit] Power Den. [W/mm²]
+
+(1032, 860) TP Layered
+
+507 8 491
+53 (26) 3.84 132 44 5.0 3.61 7.13 0.94
+
+474 4 459 109 (50) 3.24 146 53 5.0 2.67 5.64 0.82
+
+extrinsic messages (EXT) have to be stored in a First-In FirstOut (FIFO) memory until the iteration is complete (9 clock cycles). The FIFO in Figure 1 is depicted as shift register for illustrative purpose, whereas the actual implementation uses circular buffers to reduce register toggling rates and thus, the power consumption. To reduce the memory size we use the compressed beta format to represent the exitrinsic messages [4]. We fixed the error correction capability to a FER of 10−5 at 5 dB Eb/N0. At this operating point, the unrolled TP decoder needs 8 iterations, the layered decoder only 4. Table I presents the final results and Figure 2 the layouts of both decoders in the same scale, each color represents one iteration stage. An iteration stage in the layered decoder consumes more area due to the increased number of pipeline stages in one iteration: 3 · 4 = 12 pipeline stages vs. 3 pipeline stages. However this increase is more than counterbalanced by the decrease in the number of iterations yielding a 10% reduction in the overall area. More remarkable is the improvement in the energy efficiency and power consumption by 26% and 21% respectively. Also the cell utilization increases by 10% indicating that the routing complexity largely decreased in the layered architecture.
+
+APP in EXT0 in
+
+Proc. Layer 0
+
+Extrinsic Memory
+
+EXT0 out
+
+EXT1 in
+
+Proc. Layer 1
+
+EXT1 out
+
+EXT2 in
+
+Proc. Layer 2
+
+EXT2 out
+
+EXT3 in
+
+Proc. Layer 3
+
+EXT3 out
+
+APP out
+
+Fig. 1. Architecture for one iteration of the unrolled layered LDPC decoder.
+
+Unrolled decoder architectures suffer on iteration flexibility since the I has to be fixed at design-time. The maximum I is defined by the low SNR region. Thus, an unrolled decoder always performs the maximum number of decoding iterations
+
+(a) Two-Phase Decoder (3.84 mm2)
+
+(b) Layered Decoder (3.24 mm2)
+
+Fig. 2. Layouts of the unrolled EPIC LDPC decoders in 22 nm (same scale).
+
+for every frame, even if it is not necessary. This problem can be mitigated by 1) evaluating a stopping criterion at each iteration stage in the decoding pipeline, 2) use of clock gating to switch-off unnecessary iteration stages for the current frame, and 3) propagating the decoded Hard Decision (HD) through the switched-off iteration stages to the output of the decoder. Figure 3 depicts the necessary architecture modifications for an unrolled TP decoding iteration (highlighted in magenta). As stopping criterion, we use the Parity-Check (PCHK) of the check node stage, which implies only negligible hardware overhead. From the PCHK signal, that is ’0’ if all parity checks are satisfied, we derive the enable signal for the registers and a write signal for the HD bits, that are, if applicable, written to the channel values pipeline. In this way, additional memory for storing the HD is not required. Writing each HD bit to the Least Significant Bit (LSB) position of the respective channel value minimizes residual register toggling in subsequent decoding stages. Gated registers are highlighted in green. Obviously these modifications come along with some area overhead, throughput degradation and power overhead for the low SNR regions, mainly due to the additional multiplexers for writing the HD.
+To quantify these trade-offs, we implemented two 8-iteration unrolled TP decoder with and without IC in 22 nm FD-SOI technology for a 802.11n (648,540) LDPC code. The amount of gated registers in the IC architecture is 80%. Table II shows the final results. On the one hand, we observe 29% increase in area and 8% decrease in the maximum frequency yielding a decrease in the area efficiency. For the most part, this area increase is not a consequence of the logic, but the routing overhead for the HD and the enable signals that result in a lower area utilization (53% vs. 62%). On the other hand, we see a very large improvement in power, energy efficiency and power density with increasing SNR. Fig. 4 shows a detailed analysis on the relationship between FEC performance (top) and power consumption (bottom) of the decoders. To better classify the performance, we included the MaximumLikelihood performance of the code [7]. The power analysis is broken down into iterations. From this we see for example that for an SNR of 8 dB the 8-iteration unrolled decoder with IC consumes only about the same power as 2 iterations of the conventional decoder without IC, which demonstrates the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:33:51 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+large power improvement of this architecture for high SNR values.
+
+TABLE II IMPLEMENTATION RESULTS 802.11N DECODERS (Q=4BIT).
+
+CHV in
+
+Enable in
+
+Extrinsics in
+
+CHV Pipe
+LSB
+LSB 01
+LSB
+
+Iteration Processor
+
+PCHK
+
+VN2CN Network
+
+...
+CFU(1/2)
+...
+...
+CFU(2/2)
+...
+
+...
+CFU(1/2)
+...
+...
+CFU(2/2)
+...
+
+...
+CFU(1/2)
+
+...
+...CFU(1/2)
+
+CFU S.t.a.ge ...
+...
+CFU(2/2)
+
+...
+...
+CFU(2/2)
+
+...
+
+...
+
+CN2VN Network
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+&
+HD
+
+VFU
+
+VFU
+
+... VFUVFU StaVgFUe
+
+'0'
+
+01
+
+Write HD
+
+...
+
+...
+
+...
+
+...
+
+CHV out
+
+Enable out
+
+Extrinsics out
+
+HD out
+Fig. 3. Architecture for one iteration of the unrolled two-phase LDPC decoder with iteration control.
+
+Frame Error Rate
+
+100 10−2
+
+Min-Sum (I=8, Q=4bit) Maximum-Likelihood
+
+10−4
+
+Power Cons. [W]
+
+10−6 4 3 2 1
+
+2.92.7
+
+3.3 3.0
+
+3.7 3.4
+
+3.8 3.5
+
+2.93.1
+
+2.7
+
+2.5
+
+2.4
+
+2.4
+
+1.8
+
+1.2
+
+0.9
+
+0.7
+
+0
+
+0
+
+2
+
+4
+
+6
+
+8
+
+Eb/N0 [dB]
+
+IC: No IC: Yes iter. 1 iter. 2 iter. 3 iter. 4 iter. 5 iter. 6 iter. 7 iter. 8 top
+10
+
+Fig. 4. Performance and power consumption of two 8-iteration unrolled TP decoders for a (648, 540) LDPC code with IC and without IC.
+
+III. ENERGY EFFICIENT POLAR DECODERS Successive Cancellation (SC) [8] and Successive Cancellation List (SCL) [9] are the most prominent decoding algorithms for Polar codes. Very high throughputs can be achieved by unrolling and pipelining the Polar Factor Tree (PFT) traversal [10], [11], in a way similar to the iteration unrolling in LDPC decoding as described above. In contrast to high throughput LDPC decoders in which the routing dominates the implementation efficiency, the energy efficiency of high
+
+Code (N,K) Architecture Throughput [Gbit/s] Frequency [MHz] Latency [ns] (cycles) Area [mm²] Area Eff. [Gbit/s/mm²] Utilization % SNR [dB] Power [W] Energy Eff. [pJ/bit] Power Den. [W/mm²]
+
+(648, 540)
+
+unrolled
+
+unrolled (IC)
+
+542
+
+837
+
+31.2 (26)
+
+1.75
+
+311
+
+62
+
+4
+
+6
+
+8
+
+500
+
+771
+
+33.8 (26)
+
+2.25
+
+222
+
+53
+
+4
+
+6
+
+8
+
+3.13 2.51 2.37 2.95 1.21 0.73 5.77 4.63 4.36 5.91 2.42 1.45 1.79 1.44 1.35 1.31 0.54 0.32
+
+throughput Polar decoders is dominated by the huge amount of
+
+data that has to be processed in the decoding pipeline, which,
+
+in consequence, contains a huge amount of registers. The
+
+dynamic power consumption Pdyn(≈ P ) of a polar decoder is
+
+Pdyn = VD2D · f · Ceff = VD2D · f · (Celoffgic + Cereffg)
+
+(5)
+
+with Celoffgic being the switched capacity of the logic and Cereffg the switched capacity of the registers including the clock tree. Cereffg dominates in deeply pipelined high throughput Polar decoders. Up to 70% of the total power consumption origi-
+
+nates from registers and corresponding clock tree. Replacing
+
+registers by latches combined with clock gating can reduce Cereffg, but it still remains a dominant part [12]. Lowering f reduces Pdyn twofold, since 1) Pdyn linearly depends on f , and 2) lowering f reduces the number of necessary pipeline stages (Cereffg) as the cycle time increases. However, reducing f comes at the cost of a reduced Tinf. To counterbalance this throughput reduction, we can use spatial parallelism and run several
+
+decoder cores in parallel. Further optimization is possible if the
+
+silicon technology enables a reduction of VDD. Lowering VDD is very efficient due to the quadratic dependency on Pdyn, but increases the delay in the critical path and, thus, decreases the
+
+achievable f and throughput that could be counterbalanced by
+
+increased parallelism. This is a well known technique used in
+
+many multi-core architectures today. In pipelined architectures
+
+an increased parallelism can be achieved by increasing the
+
+number of pipeline stages that is state-of-the-art. However
+
+in deeply pipelined architectures, Cereffg dominates. So there
+
+is a trade-off between increase in Cereffg and it
+
+saving is not
+
+due to obvious
+
+a decrease of VDD and if spatial or functional
+
+parallelism is the better solution for this type of architecture.
+
+We therefore implemented three Polar decoders using an SC
+
+decoding algorithm for a (1024,512) Polar code. All decoders
+
+apply deeply pipelined SOA architectures, utilize SOA power
+
+optimization techniques like clock gating, optimal register
+
+insertion etc. The decoders were implemented as virtual silicon
+
+in a 28 nm Fully Depleted Silicon on Insulator (FD-SOI)
+
+technology, that offers two nominal voltages, i. e., 1.0 V and
+
+0.7 V respectively.
+
+The reference decoder (Arch1) is a deeply pipelined de-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:33:51 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+TABLE III RESULTS POLAR DECODERS
+
+Architecture
+Throughput [Gbit/s] Register/Pipeline Stages Frequency [MHz] Latency [ns] Area [mm²] Area Eff. [Gbit/s/mm²] Power [W] Energy Eff. [pJ/bit] Power Den. [W/mm²]
+
+Arch1 1.0 V 800 107 781 137 3.87 206 3.19 3.98 0.82
+
+Arch2 1.0 V 400
+49 391 125 1.85 216 1.23 3.07 0.66
+
+Arch3 0.7 V 400
+87 391 223 2.98 134 0.63 1.59 0.21
+
+Dual-Core 0.7 V 800 87 391 223 5.96 134 1.26 1.59 0.21
+
+(a) 800 Gbit/s 1.0 V 3.87 mm2
+
+(b) 400 Gbit/s 0.7 V 2.98 mm2
+
+Fig. 5. Layouts of Arch1 and Arch3 in 28 nm (same scale).
+
+coder optimized for highest throughput, that achieves a coded throughput of 800 Gbit/s at a frequency of 781 MHz. This throughput/frequency is unfeasible when applying the reduced VDD of 0.7 V. The second decoder (Arch2) was optimized for a frequency f that provides half the throughput of Arch1 (=400 Gbit/s). The third decoder (Arch3) applies a reduced VDD (0.7 V instead of 1.0 V) and was optimized for the same throughput as Arch2. All decoders were fully characterized on the layout level using the same Process, Voltage and Temperature (PVT) constraints. Table III shows the corresponding results and Fig. 5 the layouts of Arch1 and Arch3 in the same scale. The following observations can be made:
+
+• The power consumption of Arch2 in comparison to Arch1 decreases more than the reduction in f due to the fact that Cereffg is also reduced (107 to 49 register stages) as described above. It also exhibits better energy efficiency
+
+and power density.
+
+• Arch3 has a much lower power consumption, better
+
+energy efficiency and Cereffg increases (from
+
+power density than 49 register stages
+
+Arch2 although to 87 register
+
+stages), i. e., the reduction of VDD dominates. The latency
+
+increases compared to Arch2.
+
+For a fair comparison between Arch1 and Arch3 we have to double Arch3 to get the same throughput as Arch1 (dual-core architecture in Table III). This doubling does not affect Aeff, Eeff and Pdens but impacts area and power, which increase by about 2×. Note that we neglected the overhead for data distribution in the dual-core decoder architecture. Obviously the dual-core architecture largely outperforms the single core architecture in power, energy efficiency and power density at the cost of some additional area overhead, which reduces Aeff. A moderate overhead for data distribution does not change this advantage. In conclusion, a combination of spatial and functional parallelism combined with VDD scaling on architectural and technology layer is mandatory to achieve energy efficient FEC decoders for high throughput.
+
+Voltage overscaling is another efficient technique to reduce the power consumption by exploiting the inherent error resilience of channel decoding, e.g. [13]. But due to space limitations a discussion on this technique is out of scope of this paper.
+
+IV. CONCLUSION In this paper we presented various challenges and new optimization techniques for energy efficient high throughput FEC decoders. We discussed the strong interdependencies of error correction and implementation parameters, its impact on KPIs and the various trade-offs.
+ACKNOWLEDGMENT We gratefully acknowledge financial support by the EU (project-ID: 760150-EPIC).
+REFERENCES
+[1] P. Schla¨fer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput LDPC decoding,” in SiPS 2013 Proceedings, Oct. 2013, pp. 153–158.
+[2] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mu¨ller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[3] M. Li, V. Derudder, C. Desset, A. Dewilde, A. Bourdoux, and Y. Huang, “A 100 gbps ldpc decoder for the ieee 802.11ay standard,” 12 2018, pp. 1–5.
+[4] O. Boncalo and A. Amaricai, “Ultra high throughput unrolled layered architecture for qc-ldpc decoders,” in 2017 IEEE Computer Society Annual Symposium on VLSI (ISVLSI), 2017, pp. 225–230.
+[5] C. Kestel, M. Herrmann, and N. Wehn, “When Channel Coding Hits the Implementation Wall,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), Dec. 2018.
+[6] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux, “Highspeed ldpc decoders towards 1 tb/s,” IEEE Transactions on Circuits and Systems I: Regular Papers, pp. 1–10, 2021.
+[7] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, Database of Channel Codes and ML Simulation Results, 2020. [Online]. Available: https://www.uni-kl.de/channel-codes
+[8] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on Information Theory, vol. 55, no. 7, pp. 3051–3073, 2009.
+[9] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Transactions on Information Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[10] A. Alamdar-Yazdi and F. R. Kschischang, “A Simplified SuccessiveCancellation Decoder for Polar Codes,” IEEE Communications Letters, vol. 15, no. 12, pp. 1378–1380, Dec. 2011.
+[11] P. Giard, C. Thibeault, and W. J. Gross, High-Speed Decoders for Polar Codes. Springer, Cham, 2017.
+[12] T. Lehnigk-Emden, M. Alles, C. Kestel, and N. Wehn, “Polar code decoder framework,” in 2019 Design, Automation Test in Europe Conference Exhibition (DATE), 2019, pp. 1208–1209.
+[13] P. Schla¨fer, C. Huang, C. Schoeny, C. Weis, Y. Li, N. Wehn, and L. Dolecek, “Error resilience and energy efficiency: An ldpc decoder design study,” in 2016 Design, Automation Test in Europe Conference Exhibition (DATE), 2016, pp. 588–593.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:33:51 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1272 @@
+Forty-Ninth Annual Allerton Conference Allerton House, UIUC, Illinois, USA September 28 - 30, 2011
+
+Decomposition Methods for Large Scale LP Decoding
+
+Siddharth Barman†
+
+Xishuo Liu‡
+
+Stark Draper
+
+Benjamin Recht§
+
+Abstract— Feldman et al. (IEEE Trans. Inform. Theory, Mar. 2005) showed that linear programming (LP) can be used to decode linear error correcting codes. The bit-error-rate performance of LP decoding is comparable to state-of-theart BP decoders, but has significantly stronger theoretical guarantees. However, LP decoding when implemented with standard LP solvers does not easily scale to the block lengths of modern error correcting codes. In this paper we draw on decomposition methods from optimization theory to develop efficient distributed algorithms for LP decoding. The key enabling technical result is a nearly linear time algorithm for two-norm projection onto the parity polytope. This allows us to use LP decoding, with all its theoretical guarantees, to decode large-scale error correcting codes efficiently.
+I. INTRODUCTION
+Feldman et al. in [4] proposed a novel decoding algorithm for low density parity check (LDPC) codes based on linear programming (LP). They thereby pose the decoding problem in the framework of convex optimization. They show that the bit-error-rate performance of this LP-based decoder is comparable to iterative decoding and can correct a constant number of errors. The performance of this decoding algorithm can accurately be established using pseudo-codewords. Upon success the algorithm provides a certificate of correctness (ML certificate). Standard LP solvers can be employed to solve the underlying decoding program in poly-time but do not immediately have a distributed nature. In contrast, decoding algorithms that follow the belief propagation framework do not have strong theoretical convergence guarantees but do posses a distributed nature. This is a desirable trait as it leads to scalability via parallel implementations. In this work we exploit the rich structure inherent to the LP formulation to develop efficient distributed algorithms for solving the decoding problem. The result is a theoretically strong method for efficiently decoding modern error correcting codes with large block lengths.
+Over the years there has been significant work on decomposition methods and scalable algorithms in the optimization community. One established technique is the alternating direction method of multipliers (ADMM) (see Boyd et al. [1] and the references therein). ADMM is well suited for distributed convex optimization. Strong convergence guarantees have been established for ADMM. ADMM is a robust
+†Department of Computer Sciences, University of Wisconsin - Madison. sid@cs.wisc.edu.
+‡Department of Electrical and Computer Engineering, University of Wisconsin - Madison. xliu94@wisc.edu.
+Department of Electrical and Computer Engineering, University of Wisconsin - Madison. sdraper@ece.wisc.edu.
+§Department of Computer Sciences, University of Wisconsin - Madison. brecht@cs.wisc.edu.
+
+method that has successfully been applied to a number of large-scale problems in machine learning and statistics. In this paper we apply ADMM to develop an efficient decoupled decoding algorithm. The feasible region of the decoding LP is stated using the so-called parity polytope. In the ADMM framework projecting onto the parity polytope is a nontrivial step. We develop a new characterization of the parity polytope and based on that develop a fast – nearly linear time – projection algorithm, which allows us to solve the decoding LP via ADMM.
+
+II. BACKGROUND AND RELATED WORK
+
+In this paper we consider a binary linear LDPC code C
+
+of length N defined by a M × N parity-check matrix H.
+
+Each of M parity checks, indexed by J = {1, 2, . . . , M },
+
+corresponds to a row in the parity check matrix H. Codeword
+
+symbols are indexed by the set I = {1, 2, . . . , N }. The
+
+neighborhood of a check j, denoted by Nc(j), is the set of indices i ∈ I that participate in the jth parity check,
+
+i.e., Nc(j) = {i | Hj,i = 1}. Similarly for a component i ∈ I, Nv(i) = {j | Hj,i = 1}. Given a vector x ∈ {0, 1}N ,
+the jth parity-check is said to be satisfied if i∈Nc(j) xi is even. In other words, the bits assigned to xi for i ∈ Nc(j)
+have even parity. We say that a length-n binary vector x is
+
+a codeword, x ∈ C, if and only if (iff) all parity checks are
+
+satisfied. In a regular LDPC code there is a fixed constant
+
+d, such that for all checks j ∈ J , |Nc(j)| = d. Also for all components i ∈ I, |Nv(i)| is a fixed constant. We focus on
+
+regular LDPC codes but our techniques and results extend to
+
+general LDPC codes. Let Pj be the binary d × N matrix that selects out the d components of x that participate in the jth
+
+check. For example, say the neighborhood of the jth check,
+
+Nc(j) = {i1, i2, . . . id}, where i1 < i2 < . . . < id. Then, for all k ∈ [d] the (k, ik)th entry of Pj is one, the remaining entries are zero. For any codeword x ∈ C, Pjx is an even parity vector of dimension d for all j.
+
+We begin by describing maximum likelihood decoding
+
+and the LP relaxation proposed by Feldman et al. Say
+
+vector x˜ is received over a binary symmetric channel (BSC),
+
+with cross over probability p. Maximum likelihood (ML)
+
+decoding selects a codeword x ∈ C that maximizes p(x˜ | x),
+
+the probability that x˜ was received given that x was sent.
+
+For the channel at hand we have p(x˜ | x) = i∈I p(x˜i |
+
+xi). Equivalently, we select a codeword that maximizes
+
+i∈I log p(x˜i | xi). Let γi be the negative log-likelihood
+
+ratio, γi := log
+
+p(x˜i |0) p(x˜i |1)
+
+. Then, γi = log
+
+p 1−p
+
+if x˜i = 1
+
+and γi = log
+
+1−p p
+
+if x˜i = 0. Since log p(x˜i | xi) =
+
+−γixi + log p(x˜i | 0), ML decoding reduces to determining
+
+978-1-4577-1818-2/11/$26.00 ©2011 IEEE
+
+253
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+an x ∈ C that minimizes i γixi. Thus, ML decoding requires minimizing a linear function over the set of code-
+words.
+The feasible region in the decoding LP is described using the parity polytope, PPd = conv({e ∈ {0, 1}d | e 1 is even}), the convex hull of all d-dimensional binary vectors with an even number of 1s. Note that for all j, Pjx is a vertex of PPd. The relaxation proposed by Feldman et al. enforces that for all checks j ∈ J , Pjx ∈ PPd instead of being a vertex. Putting these ingredients together yields the
+LP:
+
+minimize γT x s.t. Pjx ∈ PPd ∀j ∈ J
+
+(1)
+
+The underlying structure of the formulation was used by Vontobel and Koetter in [10] to develop distributed messagepassing type algorithms to solve the decoding LP. Their algorithms are based on the coordinate-ascent method which, when matched with the appropriate scheduling determined by Burshtein in [2], converge to the optimal solution. In Yedida et al [12] “difference-map BP” is developed, a simple distributed algorithm which seems to recover the performance of LP decoding, but dose not have convergence guarantees.
+In this paper we frame the LP decoding problem in the template of an ADMM problem. ADMM is distributed, has strong convergence guarantees and, in general, is more robust than coordinate ascent. We give the general formulation of ADMM problems and specialize it to the LP decoding problem in Sec. III. When developing the ADMM update steps we find that one of the steps require projecting onto the parity polytope. Thus, in Sec. IV we develop the efficient projection algorithm required. We present numerical results in Sec. V.
+
+III. DECOUPLED RELAXATION AND OPTIMIZATION
+ALGORITHMS
+In this section we present the ADMM formulation of the LP decoding problem and summarize our contributions. In Sec, III-A we introduce the general ADMM template. We specialize the template to our problem in Sec. III-B. We state the algorithm in Sec. III-C.
+
+A. ADMM formulation
+
+To make the LP (1) fit into the ADMM template we relax x to lie in the hypercube, x ∈ [0, 1]N , and add the auxiliary “replica” variables zj ∈ Rd for all j ∈ J . We work with
+the following parameterization of the decoding LP.
+
+minimize γT x
+
+subject to Pjx = zj ∀j ∈ J
+
+zj ∈ PPd ∀j ∈ J
+
+x ∈ [0, 1]N
+
+(2)
+
+The alternating direction method of multiplies works with
+
+an augmented Lagrangian which, for this problem, is
+
+Lµ(x, z, λ) := γT x + λTj (Pjx − zj)
+
+j∈J
+
+µ +
+2
+
+Pj x − zj
+
+2 2
+
+.
+
+j∈J
+
+Here λj ∈ Rd for j ∈ J are the Lagrange multipliers and µ > 0 is a fixed penalty parameter. We use λ and z to succinctly represent the collection of λjs and zjs respectively. Note that the augmented Lagrangian is obtained by
+adding the two norm term of the residual to the Lagrangian. Say X and Z are the feasible regions for variables x and z respectively (induced by [0, 1]N and the PPd), ADMM consists of the following iterations:
+
+xk+1 := argminx∈X Lµ(x, zk, λk) zk+1 := argminz∈Z Lµ(xk+1, z, λk) λkj +1 := λkj + µ Pj xk+1 − zjk+1
+
+The ADMM update steps involve fixing one variable and minimizing the other. In particular, xk and zk are the kth iterate and the updates to the x and z variable are performed in an alternating fashion. We use this framework to solve the LP relaxation proposed by Feldman et al. and hence develop a distributed decoding algorithm.
+
+B. ADMM Update Steps
+
+The x-update corresponds to fixing z and λ (obtained
+from the previous iteration or initialized at the beginning) and minimizing Lµ(x, z, λ) subject to x ∈ [0, 1]N . For the augmented Lagrangian at hand the x-update simplifies to
+
+
+
+
+
+x = Π[0,1]N P −1 ×  PjT
+j
+
+1 zj − µ λj
+
+ 1 − µ γ .
+
+Here P = j PjT Pj and Π[0,1]N (·) corresponds to projecting onto the hypercube [0, 1]N . The latter can easily be
+accomplished by independently projecting the components onto [0, 1]. Note that for any j, PjT Pj is a N × N diagonal binary matrix with non-zero entries at (i, i) iff i ∈ Nc(j). This implies that j PjT Pj is a diagonal matrix with the (i, i)th entry equal to |Nv(i)|. Hence P −1 = ( j PjT Pj)−1 is a diagonal matrix with 1/|Nv(i)| as the ith diagonal entry.
+Component-wise, the update rule corresponds to taking
+the average of the corresponding replica values, zj, adjusted
+by the the scaled dual variable, λj/µ, and taking a step in
+the negative log-likelihood direction. For any j ∈ Nv(i) let zj(i) denote the component of zj that corresponds to the ith component of x, in other words the ith component of PjT zj. Similarly let λj(i) be the ith component of PjT λj. With this notation the update rule for the ith component of x is
+
+
+
+
+
+1
+
+xi
+
+=
+
+Π[0,1]
+
+ |Nv(i)|
+
+
+j∈Nv (i)
+
+zj(i)
+
+−
+
+1 µ
+
+λj(i)
+
+ 1 − µ γi .
+
+Component-wise the x-update reduces to a type of averaging, each of which can be done in parallel.
+
+254
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+The z-update corresponds to fixing x and λ and minimiz-
+
+ing Lµ(x, λ, z) subject to zj ∈ PPd for all j ∈ J . The relevant observation here is that the augmented Lagrangian
+
+is separable with respect to zjs and hence the minimization step splits into |J | separate problems that can each be solved
+
+independently. This decouples the underlying algorithm mak-
+
+ing it scalable.
+
+For each j ∈ J the update is to find the zj that minimizes
+
+µ 2
+
+Pj x − zj
+
+2 2
+
+−
+
+λjT
+
+zj
+
+s.t. zj ∈ PPd.
+
+Since the values of x and λ are fixed so are Pjx and λj/µ.
+Setting v = Pjx + λj/µ and completing the square we get that the desired update zj∗ is
+
+zj∗ = argminz˜∈PPd v − z˜ 22.
+
+Thus, the z-update corresponds to projecting onto the parity
+
+polytope.
+
+Recall that the parity polytope PPd is the the convex hull of all d-dimensional binary vectors with even Hamming
+
+weight. In [6] Jeroslow gives an explicit representation of
+
+the parity polytope. Later, in [11] Yannakakis improves
+
+this to provide a quadratic (in terms of the dimension d)
+
+representation, i.e., the total number of involved constraints
+
+in the decoding LP is quadratic in d (see [4]). While this LP
+
+can be solved with standard solvers in polynomial time, the
+
+quadratic size of the LP might be prohibitive in real-time or
+
+embedded decoding applications.
+
+In Sec. IV we develop a new characterization of the parity
+
+polytope. We show that for all vectors u ∈ PPd there exists an even integer r < d such that u can be expressed
+
+as a convex combination of d-dimensional binary vectors
+
+of Hamming weight r or r + 2. Of course, any vector
+
+in the parity polytope is a convex combination of binary
+
+vectors of even Hamming weight. Our characterization shows
+
+that, in fact, vectors of only two weights are required. We
+
+term the lower weight, r, the “constituent” parity of the
+
+vector. The constituent parity is trivially solved for. Based on
+
+this representation we develop a near-linear time projection
+
+algorithm.
+
+Roughly, our approach is as follows. Given a vector v ∈
+Rd we first compute r, the constituent parity of its projection. Let PPdr (PPrd+2) denote the convex hull of all d-dimensional binary vectors of Hamming weight r (r + 2). Given our
+
+characterization, projecting onto the polytope is equivalent
+
+to determining an α ∈ [0, 1], a vector a ∈ PPrd, and a vector b ∈ PPdr+2 such that the 2 norm of v − αa − (1 − α)b is
+
+minimized. We develop an algorithm in Sec. IV-D) that, for a
+
+fixed
+
+α,
+
+determines
+
+the
+
+optimal
+
+a
+
+∈
+
+r
+PPd
+
+and
+
+b
+
+∈
+
+PPdr+2.
+
+The
+
+function mina∈PPdr , b∈PPrd+2
+
+v − αa − (1 − α)b
+
+2 2
+
+is
+
+convex
+
+in α. Hence we can perform perform a one-dimensional line
+
+search (using, for example, the secant method) to determine
+
+the optimal value for α and thence the desired projection.
+
+The algorithm that, for a given α, solves for the optimal a and b, first projects the given vector onto αPPrd and then projects the residual onto (1 − α)PPdr+2; αPPrd is a scaled version of PPdr. Projection onto αPPdr (cf. Sec. IV-D) can
+
+be performed in O(d log d) time using a type of reverse waterfilling algorithm. Thus, our approach gives an efficient method for projecting onto the parity polytope.
+C. ADMM Decoding Algorithm
+The complete ADMM-based algorithm is specified below. We declare convergence when the replicas differ form the optimal x variable by less than some tolerance > 0.
+
+Algorithm 1 Given a binary N -dimensional vector x˜ ∈ {0, 1}N , parity check matrix H, and parameters µ and ,
+
+solve the decoding LP specified in (2)
+
+1: Construct the negative log-likelihood vector γ based on
+
+received word x˜.
+
+2: Construct the d × N matrix Pj for all j ∈ J .
+
+3: Initialize zj and λj as the all zeros vector for all j ∈ J .
+
+4: repeat
+
+5:
+
+Update xi ←
+
+1 [0,1] |Nv(i)|
+
+j∈Nv(i) zj(i)−µ1 λj(i) −µ1 γi
+
+for all i ∈ I.
+
+6: for all j ∈ J do
+
+7:
+
+Set vj = Pjx + λj/µ.
+
+8:
+
+Update zj ← ΠPPd (vj) where ΠPPd (·) means
+
+project onto the parity polytope.
+
+9:
+
+Update λj ← λj + µ (Pjx − zj).
+
+10: end for
+
+11: until maxj Pjx − zj ∞ < return x.
+
+IV. PROJECTING ONTO THE PARITY POLYTOPE
+
+In this section we develop our efficient projection algo-
+rithm. We set notation in Sec. IV-A. We develop our “two-
+slice” representation of any point in PPd in Sec. IV-B. Given any u ∈ Rd, in Sec. IV-C we connect the weight of the projection of u onto PPd to the (easily computed) constituent parity of the projection of u onto the unit hypercube. Finally,
+in Sec. IV-D we develop the projection algorithm.
+
+A. Notation
+Let Pd = e ∈ {0, 1}d | e 1 is even . The parity polytope PPd = conv(Pd), the convex hull of Pd. Note that v ∈ PPd iff there exist ei ∈ Pd such that v = i αiei where
+i αi = 1 and αi ≥ 0. We denote the set of d-dimensional binary vectors with parity r as Prd = {e ∈ {0, 1}d | e 1 = r} and define PPrd = conv(Prd). Given a ∈ R+ by a even we denote the smallest even integer greater than or equal to a and by a even the largest even integer less than or equal to a. We denote the projection of a vector v onto a convex set Ω by ΠΩ(v).
+
+B. Structural Characterization
+
+Let v and w be d-vectors sorted in decreasing order. The vector w is said to majorize v if
+
+q
+
+q
+
+vk ≤ wk ∀ 1 ≤ q < d,
+
+k=1
+
+k=1
+
+d
+
+d
+
+vk = wk .
+
+k=1
+
+k=1
+
+255
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+We make use of the following Theorem (see [7] and
+
+references therein).
+
+Theorem 1: Suppose v and w are d-vectors sorted in
+
+decreasing order. Then v is in the convex hull of all per-
+
+mutations of w if and only if w majorizes v.
+
+From this theorem we conclude that a sorted vector v ∈
+
+[0, 1]d
+
+is
+
+in
+
+the
+
+s
+PPd
+
+iff
+
+q
+
+vk ≤ min(q, s) ∀ 1 ≤ q < d,
+
+(3)
+
+k=1
+
+d
+
+vk = s.
+
+(4)
+
+k=1
+
+The relations follow by noting the first sum is less than q
+
+and
+
+the
+
+second
+
+sum
+
+must
+
+equal
+
+s
+
+for
+
+v
+
+to
+
+be
+
+in
+
+s
+PPd
+
+.
+
+By definition, any v ∈ PPd can be expressed as a convex
+
+combination of the vertices of PPd. Using e(is) to denote the
+
+ith vertex of parity s and γi(s) the corresponding non-negative
+
+weighting, we write v =
+
+d s even
+
+i γi(s)e(is). Defining µs =
+
+i γi(s) we have
+
+µs = 1, µ ≥ 0.
+
+(5)
+
+s even
+
+Summing the first q coordinates of v and defining ei(,sk) to be the kth component of e(is), we apply (3) to get
+
+q
+
+d
+
+q
+
+vk =
+
+µs
+
+k=1
+
+s even k=1
+
+i
+
+γi(s) µs
+
+e(i,sk)
+
+d
+
+≤
+
+µs min(q, s) ∀ 1 ≤ q < d. (6)
+
+s even
+
+In addition, since the ei(s) are all of weight s, when we sum over all coordinates we get
+
+d
+
+d
+
+vk =
+
+µss.
+
+(7)
+
+k=1
+
+s even
+
+Lemma 1: (“Two-slice” lemma) Suppose v ∈ PPd and r
+
+is the even integer satisfying r ≤
+
+d k=1
+
+vk
+
+≤
+
+r + 2,
+
+then
+
+v can be expressed as a convex combination of vectors of
+
+parity r and r + 2.
+
+Let α, 0 ≤ α ≤ 1 be such that v 1 = αr + (1 − α)(r +
+
+2) = r + 2(1 − α). In the following proof α plays the role
+
+of µr and (1 − α) plays the role of µr+2. To show Lemma 1
+
+what we need to show is that there is a representation of any
+
+v ∈ PPd such that µs = 0 for all s except r and r + 2.
+
+Proof: Given the definition of α and the identifications
+
+µr = α and µr+2 = (1 − α), (6) and (7) simplify to
+
+q
+vk ≤ α min(q, r) + (1 − α) min(q, r + 2)
+k=1
+∀ 1 ≤ q < d, (8)
+
+d
+
+vk = αr + (1 − α)(r + 2).
+
+(9)
+
+k=1
+
+By the definition of α, (9) is satisfied. In (8) the cases q ≤ r
+
+and q ≥ r + 2 are rather straightforward. For any q < r,
+
+since there are only q terms in (8) and vk ≤ 1 for all k then,
+
+e.g., min{q, r} = q and (8) must hold. For any q ≥ r + 2 we
+
+use (9) to write
+
+q k=1
+
+vk
+
+=
+
+αr + (1 − α)(r + 2) −
+
+d q+1
+
+vk
+
+≤
+
+αr + (1 − α)(r + 2) since vk ≥ 0.
+
+So to prove containment in PPd, it remains to verify only
+
+one more inequality in (8). Namely, we need to show that
+
+r+1
+vk ≤ αr + (1 − α)(r + 1) = r + (1 − α).
+k=1
+By assumption, v and µ satisfy (5) and (6). Thus
+
+r+1
+
+vk ≤
+
+µs min(s, r + 1)
+
+(10)
+
+k=1
+
+s even
+
+must hold. We now show that the largest value attainable for the right hand side is precisely r + 1 − α. To see this, consider the linear program
+
+maximize subject to
+
+s even µs min(s, r + 1) s even µss = r + 2(1 − α) s even µs = 1 µs ≥ 0.
+
+The dual program is
+
+minimize (r + 2 − 2α)u1 + u2 subject to u1s + u2 ≥ min(s, r + 1) ∀ s even.
+
+Setting µr = α, µr+2 = (1 − α), u1 = 1/2, u2 = r/2, and all other primal variables to zero satisfies the Karush-KuhnTucker (KKT) conditions for this primal/dual pair of LPs. The associated optimal cost is r + 1 − α. Thus, the right hand side of (10) is at least r + 1 − α, completing the proof.
+
+Another useful consequence of Theorem 1 is the following
+
+corollary. Corollary 1: Let v be a vector in [0, 1]d. If
+even integer then v ∈ PPd.
+
+d i=1
+
+vi
+
+is
+
+an
+
+Proof: Let binary vector of
+
+i vi parity
+
+= s. Since v is majorized s then, by Theorem 1, v ∈
+
+by a sorted PPsd which,
+
+in turn, implies v ∈ PPd.
+
+We call the even integer v 1 even the constituent parity of vector v.
+
+C. Constituent Parity of the Projection
+In this section we prove a useful bound on the 1 norm of the projection of any u ∈ Rd. This will provides us the constituent parity of the projection.
+Lemma 2: For any vector u ∈ Rd, denote by ω the projection of u onto [0, 1]d and denote by π the projection of u onto the parity polytope. The following bound holds:
+
+ω 1 even ≤ π 1 ≤ ω 1 even.
+
+Proof: Let ρU = ω 1 even and ρL = ω 1 even. We
+
+prove the following fact: given any y ∈ PPd with y 1 >
+
+ρU there exits a vector y ∈ [0, 1]d such that y 1 = ρU ,
+
+y ∈ PPd, and
+
+u−y
+
+2 2
+
+<
+
+u−y
+
+22. The implication of
+
+this fact will be that any vector in the parity polytope with
+
+256
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+1 norm strictly greater that ρU cannot be the projection of u. Similarly we can also show that any vector with 1 norm strictly less than ρL cannot be the projection on the parity polytope.
+First we construct the vector y based on y and w. Define
+the set of “high” values to be the coordinates on which yi is greater than wi, i.e., H := {i ∈ [d] | yi > ωi}. Since by assumption y 1 > ρU ≥ ω 1 we know that |H| ≥ 1. Consider the test vector t defined component-wise as
+
+ti =
+
+ωi if i ∈ H yi else
+
+Note that t 1 ≤ ω 1 ≤ ρU < y 1. The vector t differs
+
+from y only in H, thus by changing (reducing) components
+
+of y in the set H we can obtain a vector y such that y 1 =
+
+ρU . In particular there exists a vector y with y 1 = ρU
+
+such that for i ∈ H : yi ≥ yi ≥ ωi and for i ∈/ H : yi = yi. Since the 1 norm of y is even and is in [0, 1]d we have by
+
+Corollary 1 that y ∈ PPd.
+
+We next show that for all i ∈ H, |ui − yi| ≤ |ui − yi|. The
+
+inequality will be strict for at least one i yielding
+
+u−y
+
+2 2
+
+<
+
+u−y
+
+2 2
+
+and
+
+thereby
+
+proving
+
+the
+
+claim.
+
+We start by noting that y ∈ PPd so yi ∈ [0, 1] for all i. Hence, if for some i, ωi < yi we must also have ωi < 1, in which case ui ≤ ωi since ωi is the projection of ui onto
+
+[0, 1]. In summary, ωi < 1 iff ui < 1 and when ωi < 1
+
+then ui ≤ ωi. Combining with the fact that yi ∈ [0, 1] we
+
+have that if yi > ωi then ωi ≥ ui. Thus for all i ∈ H
+
+we get yi ≥ yi ≥ ωi ≥ ui where the first inequality is
+
+strict for at least one i. Since yi = yi for i ∈/ H this means
+
+that |ui − yi| ≤ |ui − yi| for all i where the inequality is
+
+strict for at least one value of i. Overall then,
+
+u−y
+
+2 2
+
+<
+
+u−y
+
+2 2
+
+and
+
+both
+
+y
+
+∈
+
+PPd
+
+(by
+
+construction)
+
+and
+
+y
+
+∈ PPd
+
+(by assumption). Thus, y cannot be the projection of u onto
+
+PPd. Thus the 1 norm of the projection of u, π 1 ≤ ρU . A
+
+similar argument shows that π 1 ≥ ρL and so π 1 must
+
+lie in [ρL, ρU ]
+
+D. Projection Algorithm
+
+In this section we develop the projection algorithm. Given a vector v ∈ Rd denote by ω the projection of v on [0, 1]d and set r = ω 1 even. From Lemma 2 we know that the constituent parity of the projection of v onto PPd is r.
+In order to determine the projection using the representation of Sec. IV-B we need to solve the following quadratic program
+
+min min min
+α∈[0,1] t∈PPdr+2 s∈PPdr
+
+v − αs − (1 − α)t
+
+2 2
+
+= min min min
+α∈[0,1] t∈(1−α)PPrd+2 s∈αPPdr
+
+v − s − t 22,
+
+(11)
+
+where αPPdr = {αy | y ∈ PPrd}. In other words αPPrd is the
+
+convex hull of the set {e ∈ {0, α}d | e 0 = r}.
+
+Projecting
+
+onto
+
+PPrd:
+
+To
+
+develop
+
+our
+
+projection
+
+onto
+
+r
+PPd
+
+we note that, for any α ∈ [0, 1], a vector y ∈ αPPdr if and
+
+only if
+
+d
+
+0 ≤ yi ≤ α ∀ i and
+
+yi = αr.
+
+i=1
+
+The problem of projecting v onto αPPdr is thus:
+
+min
+y
+
+1 2
+
+v−y
+
+2 2
+
+subject to 0 ≤ yi ≤ α ∀ i and yi = αr. (12)
+i
+This problem is equivalent to projecting onto the surface of a 1 ball of radius αr with box constraints. We develop an algorithm similar to the one in [5] to accomplish this task. The key difference between projecting onto αPPdr and the problem considered in [5] is that the 1 norm constraint is enforced as an inequality in [5] whereas we wish to impose an equality, i.e., we need to determine a vector with 1 norm exactly equal to αr. Recalling that ΠΩ(v) denotes the projection of v onto Ω in the following we use ΠαPPrd (·) and Π(1−α)PPrd+2 (·) for conciseness.
+To develop intuition for the quadratic program (12) we write down the KKT conditions. Since the objective function and the inequality constraints are convex and the equality constraint is affine the KKT conditions are not only necessary but are also sufficient.
+We associate dual variables γi, µi and θ with the constraints and write the corresponding Lagrangian as
+
+L(y, µ, γ, θ) =
+
+1 2
+
+(vi
+
+−
+
+yi)2
+
+−
+
+θ
+
+rα −
+
+yi
+
+i
+
+i
+
+− µi (α − yi) − γiyi.
+
+i
+
+i
+
+The KKT conditions state that an optimal solution, y∗ =
+ΠαPPdr (v), satisfies ∇L(yi∗) = 0 which, for the above Lagrangian, implies that for all i
+
+vi − yi∗ = θ∗ + µ∗i − γi∗.
+
+(13)
+
+Furthermore i µi∗(α − yi∗) = 0 and i γi∗yi∗ = 0. Hence for all i such that 0 < yi∗ < α we must have µi∗ = 0 and γi∗ = 0. In other words, for all i such that yi∗ = 0 and yi∗ = α, the difference vi − yi∗ is exactly the same: vi − yi∗ = θ∗.
+We defer the details of the algorithm along with a proof
+of correctness and an analysis of its time complexity to
+the appendix. The algorithm guarantees that the constructed
+vector satisfies the KKT conditions. The sufficiency of KKT
+conditions implies that the constructed vector is optimal. The
+algorithm is a reverse waterfilling type algorithm consisting
+of two passes.
+The algorithm works with three sets: the “clipped” set C := {i | yi∗ = α}, the “active” set A := {i | 0 < yi∗ < α} and the “zero” set Z = {i | yi∗ = 0}. Using the KKT conditions we now argue that the largest components of v belong to C, the smallest to Z and the rest to A. First, consider any i ∈ C and j ∈ A. We show that vi > vj. By the KKT conditions, for any i ∈ C we can express vi as vi = θ∗ + µi∗ + yi∗ = θ∗ + µ∗i + α where γi∗ = 0. In addition,
+
+257
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+for any j ∈ A we have already noted that vj = θ∗ + yj∗. Then, since yj∗ < α because j ∈ A and since µi∗ ≥ 0, we know that vi > vj. Next, for any index k ∈ Z by the KKT conditions we can write vk = θ∗ − γi∗ so, since γi∗ ≥ 0 we see that vj > vk.
+What the above tells us is that we should sort the input
+vector v component-wise in non-increasing order at the
+beginning of the algorithm. If we do this the indices in C
+will be strictly smaller than the indices in A, and the indices
+in A will be strictly smaller that the indices in Z.
+However, we still need to determine the change points
+between sets. To see how to determine these refer to Fig. 1. There is a lower waterfilling level θ∗ and an upper level θ∗ + α. Components of v larger than the upper level are in C
+and components of v smaller than the lower level are in Z.
+The total waterfilling budget is consumed by the |C| terms
+in C and the contribution of the terms in A. This is equal to the total areas of the shaded bars in the figure at levels θ∗ and θ∗ + α. Conceptually, our algorithm starts with θ∗ high and lowers it until the relation α|C| + i∈A(vi − θ∗) = αr is satisfied, which follows from the fact that i yi∗ = αr. Numerically we can test all possible sets of break-points.
+As there are only 2d choices this is a linear search. Once
+the sets have been determined we use the same relation α|C| + i∈A(vi − θ∗) = αr to solve for θ∗. With the index sets and θ∗ at hand we can directly determine individual components of the projection y∗. The algorithmic complexity
+is dominated by the initial sort, hence it is O(d log d).
+
+Clipped set
+yi  
+
+Active set
+yi  vi  
+
+Zero set
+yi  0
+
+
+
+* i
+
+,
+
+i
+
+
+
+C
+
+ 
+
+yi*, i A
+
+
+
+
+
+* i
+
+,
+
+i
+
+
+
+Z
+
+v values (sorted)
+
+...
+
+Fig. 1. Water-filling Algorithm for determining ΠαPPdr (v)
+
+Projecting onto PPd: We now develop an efficient algorithm
+
+to solve the quadratic program in (11), i.e., to project a vector
+
+v ∈ Rd onto PPd. The algorithm executes a binary search
+
+over α, for each first projecting the v onto αPPdr and then
+
+projecting Let Ωα
+
+the =
+
+residual αPPdr +
+
+o(n1to−(α1)−PPαrd)+P2P, rdi+n2.other
+
+words,
+
+Ωα
+
+denotes the following convex set: {w+w | w ∈ αPPrd, w ∈ (1 − α)PPrd+2}. For a given α ∈ [0, 1] let yα = ΠΩα (v), i.e., the program stated in (11) with α fixed. We show
+
+that Algorithm 2, below, determines yα. Finally, ΠPPd (v) =
+
+argmin{yα }α∈[0,1]
+
+v − yα
+
+2 2
+
+gives the desired result.
+
+Algorithm 2 Given v ∈ Rd and α ∈ [0, 1] determine ΠΩα (v)
+1: Set s ← ΠαPPdr (v). 2: Set t ← Π(1−α)PPrd+2 (v − s ). 3: Return s + t .
+
+First we make a comment on the computational com-
+
+plexity of the algorithm. Using the waterfilling approach
+
+the projections in the first two steps of the algorithm can
+
+be performed in O(d log d) time. Since there are only two
+
+projections, Algorithm 2 executes in O(d log d) time.
+
+To prove the correctness of the algorithm we begin by
+
+proving a useful fact about t , where t is determined in the
+
+second step of the algorithm. Lemma 3: For any vector t ∈ (1 − α)PPdr+2 we have
+(v − s − t )T (t − t ) ≤ 0.
+
+Proof: Since t is the projection of v − s on (1 − α)PPdr+2 we get the desired inequality by the projection
+theorem. Next we show that for any s ∈ αPPdr we have (v − s −
+t )T (s − s ) ≤ 0. Combining this with the previous lemma
+we get that (v − s − t )T (s + t − s − t ) ≤ 0 for any s ∈ αPPrd and t ∈ (1 − α)PPdr+2. Hence for any u ∈ Ωα we have (v − s − t )T (u − s − t ) ≤ 0. And again, by the
+
+projection theorem, we get that s + t = ΠΩα (v). Lemma 4: For any vector s ∈ αPPrd we have (v − s −
+t )T (s − s ) ≤ 0.
+
+the
+
+Proof: We projection of
+
+show v−t
+
+that on
+
+s= αPPrd
+
+ΠαPPrd (v − t ), , which in turn
+
+that is s is gives us the
+
+required inequality.
+
+When we project v onto αPPdr we get that, for some θ1,
+
+the following conditions hold:
+
+0  s= α  vi − θ1
+
+if vi ≤ θ1
+
+if vi − α ≥ θ1
+
+. (14)
+
+if vi − α < θ1 < vi
+
+These conditions are derived from the KKT conditions of
+the corresponding quadratic program as in (13) (cf. Section
+4.1 in [5] for a general discussion).
+The relations in (14) imply that the index set {1, 2, . . . , d} is partitioned into three parts: U, M and L. In the first si = α, in the second 0 < si < α, and in the third si = 0. This is diagrammed in Fig. 2. Defining ∆ = v − s , the above conditions imply that ∆i ≥ θ1 for all i ∈ U ; ∆i = θ1 for all i ∈ M and ∆i ≤ θ1 for i ∈ L.
+Note that t = Π(1−α)PPrd+2 (∆). Defining ρ = v − s − t , we have that for all indices i, j ∈ M the following equality holds: ti = tj. Hence, there exists λ ∈ R such that for all i ∈ M ρi = λ. This follows from writing conditions similar to (14) for t and input vector ∆. In particular, for some θ2 we have the following conditions on t .
+
+258
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+v s si = α ∆ = v − s ≥ θ1
+U
+
+si ∈ (0, α)
+= θ1 M
+
+Fig. 2. KKT Conditions
+
+si = 0
+≤ θ1 L
+
+first code is the (155,64) LDPC code designed by Tanner et al [9]. The other code is a (1057,244) LDPC code studied by Yedidia et al. in [12].
+In Fig. 3 we plot the the error performance of ADMM decoding for the (155,64) code. The parameters used in this simulation are: µ = 1.5, = 1e-4, Tmax = 200 and δ = 1e-6. For comparison we plot the WER performance of LP decoding using the simplex method, implemented with “adaptive” LP decoding [8], results drawn from [3]. The performance of the two decoders matches closely.
+
+0  t = 1−α  ∆i − θ2
+
+if ∆i ≤ θ2
+
+if ∆i − (1 − α) ≥ θ2
+
+. (15)
+
+if ∆i − (1 − α) < θ2 < ∆i
+
+A useful consequence is that ρ = ∆ − t is component-wise sorted in the same order as ∆. That is, for ∆1 ≥ ∆2 ≥ . . . ≥ ∆d we have ρ1 ≥ ρ2 ≥ . . . ≥ ρd.
+Finally we prove that s satisfies the KKT condition of the following quadratic program with input vector w = v − t . That is s is the optimal solution of
+
+minimize
+
+1 2
+
+w−y
+
+2 2
+
+subject to 0 ≤ yi ≤ α ∀ i and
+
+yi = αr.
+i
+
+Note that ρ = w − s . For all i ∈ M we have by definition
+
+that si ∈ (0, α) and, as stated above, ρi = λ. Since ρ is sorted component-wise we have that for all i ∈ U, ρi ≥
+λ. Along similar lines, for all i ∈ L, ρi ≤ λ. Hence s
+
+satisfies the KKT conditions for the above quadratic program,
+in particular (13) with θ∗ = λ. Overall this implies that s = ΠαPPdr (w). Hence for all s ∈ αPPdr we have (w − s )T (s − s ) ≤ 0, which proves the lemma.
+
+We establish the correctness of Algorithm 2 in the follow-
+
+ing lemma. Lemma 5: Given vector v ∈ Rd and scalar α ∈ [0, 1] let
+
+s and t be the projections determined by Algorithm 2. Then
+
+s + t = ΠΩα (v).
+
+Proof: By definition for any u ∈ Ωα there exists s ∈ αPPdr and t ∈ (1−α)PPrd+2 such that u = s+t. Applying the previous two lemmas we get that (v−s −t )T (s+t−s −t ) ≤
+
+0 for any s ∈ αPPdr and t ∈ (1 − α)PPdr+2. Therefore for any u ∈ Ωα we have (v − s − t )T (u − s − t ) ≤ 0. Hence
+
+by the projection theorem we get that s + t = ΠΩα (v).
+
+We note that, for a fixed vector v, the function f (α) =
+
+v − ΠΩα (v)
+
+2 2
+
+is convex,
+
+and
+
+hence
+
+we
+
+can
+
+perform binary
+
+search over α ∈ [0, 1] with Algorithm 2 as a subroutine and
+
+in accordance with the level of accuracy determine ΠPPd (v). This implies the following theorem.
+
+Theorem 2: Given vector v ∈ Rd we can deter-
+
+mine ΠPPd (v) with δ ∈ [0, 1] precision in time O(d log d log(1/δ)).
+
+V. NUMERICAL RESULTS
+In this section, we present simulation results for our ADMM decoding algorithm on two different codes. The
+
+word error rate
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5 10−6
+0
+
+LP decoding ADMM decoding
+0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 Cross Over Probability
+
+Fig. 3. Error performance comparison between ADMM decoding and LP decoding for the (155,64) LDPC code. The WER is plotted as a function of crossover probability.
+In Fig. 4 we plot results for the (1057,244) code. We again simulated the binary symmetric channel but, to facilitate comparison with [12], we plot the WER performance as a function of the equivalent signal-to-noise ratio (SNR) γ. This is the SNR of a binary-modulated signal transmitted over the additive white Gaussian noise (AWGN) channel coupled with hard-decision decoding. The relati√onship between crossover probability p and γ is p = Q( 2γ), where Q(·) is the Q-function. The results from [12] are labeled “E-BP-LP”, which is the decoder developed in [12] to get estimates of LP decoding at very low WERs. See [12] for details.
+In this set of simulations we investigated the convergence rate of the algorithm by testing performance under different maximum number of iterations: Tmax = 50, Tmax = 100 and Tmax = 300. The other system parameters are µ = 2, = 1e-4 and δ = 1e-6. We also investigated the error performance under different values of the µ parameter. The error performance when µ = 10 and Tmax = 300 is very close to the performance found in [12]. Note also that in both simulations, we accumulate more than 200 decoding errors for each data point.
+We would like to emphasize two important implementational aspects of our ADMM decoder. First, the one dimensional searching method used to optimize α has a significant impact on the overall efficiency of the decoder. We compared the golden section search with the secant method and results
+
+259
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+10−2
+
+word error rate
+
+10−3
+
+10−4
+
+ADMM decoding, Tmax = 50, µ = 2
+
+10−5
+
+ADMM decoding, Tmax = 100, µ = 2
+
+ADMM decoding, Tmax = 300, µ = 2
+
+ADMM decoding, Tmax = 300, µ = 10
+
+E−BP−LP (achieves WER of LP decoding)
+
+10−6
+
+5
+
+5.2 5.4 5.6 5.8
+
+6
+
+6.2 6.4 6.6
+
+Eb/N0(dB)
+
+Fig. 4. Error performance comparison between ADMM decoding and LP decoding for the (1057,244) LDPC code. The WER is plotted as a function of SNR.
+
+show that the secant method can be three-to-four times faster than the golden section search. This makes the secant method our choice for the simulations. Second, parameters in the algorithm play an important role in the decoder. These parameters include termination precision δ used in the secant method, µ and in Algorithm 1 and the maximum number of iterations Tmax allowed for ADMM. Tuning these parameters can affect both error performance and program efficiency. We have not fully optimized all of these parameters, and our experimental results might be further improved after careful tuning. We defer this tuning and experiments on denser codes for future work.
+VI. CONCLUSION
+In this paper we apply the ADMM template to the LP decoding problem introduced in [4]. A main technical hurdle was the development of an efficient method of projecting a vector onto the parity polytope. We accomplished this in three steps. We first introduced a new representation of points
+
+in the parity polytope. We then used the representation to show that projection can be done in a two-step manner. Finally we showed that each step consists of an efficient waterfilling-type algorithm. We demonstrate the effectiveness of our decoding technique on two codes, on the (155, 64) LDPC code introduced in [9], the second a (1057, 244) LDPC code studied in [12]. In those papers the LP decoding performance of these codes was found using the simplex method as the LP solver. We reproduced those results using our ADMM based method. In contrast to simplex-based methods our ADMM-based method is distributed in nature and scales to larger block lengths.
+REFERENCES
+[1] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein. Distributed optimization and statistical learning via the alternating direction method of multipliers. Machine Learning, 3(1):1–123, 2010.
+[2] D. Burshtein. Iterative approximate linear programming decoding of LDPC codes with linear complexity. Information Theory, IEEE Transactions on, 55(11):4835–4859, 2009.
+[3] S.C. Draper, J.S. Yedidia, and Y. Wang. ML decoding via mixedinteger adaptive linear programming. In Information Theory, 2007. ISIT 2007. IEEE International Symposium on, pages 1656–1660. IEEE, 2007.
+[4] J. Feldman, M.J. Wainwright, and D.R. Karger. Using linear programming to decode binary linear codes. Information Theory, IEEE Transactions on, 51(3):954–972, 2005.
+[5] M.D. Gupta, S. Kumar, and J. Xiao. L1 projections with box constraints. Arxiv preprint arXiv:1010.0141, 2010.
+[6] RG Jeroslow. On defining sets of vertices of the hypercube by linear inequalities. Discrete Mathematics, 11(2):119–124, 1975.
+[7] A.W. Marshall, I. Olkin, and Arnold B.C. Inequalities: theory of majorization and its applications. Springer, 2009.
+[8] M.H.N. Taghavi and P.H. Siegel. Adaptive methods for linear programming decoding. Information Theory, IEEE Transactions on, 54(12):5396–5410, 2008.
+[9] R. M. Tanner, D. Sridhara, and T. Fuja. A class of group-structured LDPC codes. In Proc. ICSTA, Ambleside, UK, 2001.
+[10] P.O. Vontobel and R. Koetter. On low-complexity linear-programming decoding of LDPC codes. European transactions on telecommunications, 18(5):509–517, 2007.
+[11] M. Yannakakis. Expressing combinatorial optimization problems by linear programs. Journal of Computer and System Sciences, 43(3):441–466, 1991.
+[12] J.S. Yedidia, Y. Wang, and S.C. Draper. Divide and concur and difference-map BP decoders for LDPC codes. IEEE Transactions on Information Theory, 57(2):786–802, 2011.
+
+260
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:29 UTC from IEEE Xplore. Restrictions apply.
+
+

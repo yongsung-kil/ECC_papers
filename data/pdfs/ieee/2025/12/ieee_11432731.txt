@@ -1,0 +1,863 @@
+End-to-end Neural-Classical Concatenated Feedback
+Coding with OFDM Guidance
+Adnan Can Buyuksirin, Hun-Seok Kim, Senior Member, IEEE
+Department of EECS, University of Michigan, Ann Arbor, MI
+{adnancan, hunseok}@umich.edu
+Abstract—In this paper, we propose an end-to-end (E2E)
+optimized concatenated feedback coding scheme that combines a
+neural inner encoder/decoder with a classical low-density parity-
+check (LDPC) outer code for reliable feedback-based communi-
+cation over multipath fading channels. A key contribution of
+this work is the inclusion of the LDPC decoder within the
+training loop by exploiting the differentiability of the sum-
+product algorithm (SPA), allowing gradient-based optimization
+to flow across the entire feedback-based communication chain. To
+enhance robustness over multipath fading channels, we integrate
+orthogonal frequency-division multiplexing (OFDM) guidance as
+well as the bit-interleaved coded modulation (BICM) paradigm
+into the proposed concatenated feedback coding approach. The
+proposed framework supports practical blocklengths and fading
+scenarios, significantly outperforming both fully neural and non-
+E2E concatenated baselines.
+Index Terms—End-to-end learning, feedback coding, concate-
+nated codes, LDPC codes, OFDM, deep learning
+I. INTRODUCTION
+The concept of a communication system with receiver
+feedback dates back to the earliest days of information theory.
+Shannon [1] showed that for a discrete memoryless chan-
+nel with noiseless feedback, the channel capacity remains
+unchanged. Nonetheless, while feedback does not increase
+the theoretical maximum rate, it significantly improves the
+achievable error exponent, reducing error probabilities at rates
+below capacity and enhancing system performance.
+Inspired by the recent remarkable progress of deep-learning
+(DL) based physical layer communication and coding schemes
+[2]–[6], researchers have specifically investigated DL-based
+feedback coding schemes. Deepcode [7], for example, em-
+ploys recurrent neural networks (RNNs) to jointly optimize
+encoding and decoding strategies with feedback, significantly
+outperforming classical schemes by effectively shaping trans-
+missions based on prior feedback. Building on the TurboAE
+[3] framework, the Feedback Turbo Autoencoder (FTAE)
+[8] explicitly incorporates receiver feedback at each iteration
+of decoding, further enhancing reliability compared to its
+feedforward counterpart.
+Recent advances have leveraged powerful neural architec-
+tures to enhance feedback-based coding performance. At-
+tentionCode [9] introduced a Transformer-inspired architec-
+ture that dynamically aligns transmitted symbols with prior
+feedback using self-attention, exploiting temporal correlations
+across rounds and significantly improving reliability over
+This work was in part funded by NSF SWIFT #2228974. Source code avail-
+able at https://github.com/adnancanb/E2E-Concatenated-Feedback-OFDM
+earlier recurrent approaches. However, AttentionCode pro-
+cesses each message bit individually, resulting in long symbol
+sequences and frequent feedback exchanges. Building on this,
+Generalized Block Attention Feedback (GBAF) codes [10]
+adopt a Transformer encoder-based design to jointly encode
+groups of bits in a block-wise manner, substantially reduc-
+ing forward-feedback interactions while capturing temporal
+and spatial dependencies more efficiently. Complementary to
+these, LIGHTCODE [11] focuses on computational efficiency,
+achieving performance comparable to GBAF with a much
+smaller neural architecture, though requiring a substantially
+larger training batch size for similar reliability.
+Despite significant advancements, current DL-based feed-
+back coding schemes are primarily constrained to very short
+block lengths and show performance degradation as codeword
+lengths increase, even when the coding rate is held constant
+[9]–[11]. Additionally, these schemes are typically designed
+for simple channel models like additive white Gaussian noise
+(AWGN) or flat fading channels, and they lack evaluation
+under more realistic models such as frequency-selective multi-
+path fading channels. Although the concept of concatenating
+a classical outer code with an inner neural code has been
+explored (e.g., CCN codes [4]), previous schemes have not
+been optimized through fully end-to-end (E2E) learning across
+the concatenated classical-neural coding design.
+In this work, we propose a unified framework to address
+these limitations. First, inspired by [5], we develop an OFDM-
+guided feedback transmission model and evaluate feedback-
+based codes over multipath fading channels with longer
+blocklengths. Building on this model, we introduce a novel
+concatenated feedback coding scheme, where a neural inner
+code manages feedback utilization and a classical outer code
+ensures overall reliability. Our main contribution is an E2E
+trainable system that integrates LDPC codes as an outer code
+by leveraging the differentiable structure of the sum-product
+algorithm (SPA), enabling gradient-based optimization across
+the entire communication chain. To further enhance robustness
+over frequency selective fading channels, we incorporate the
+bit-interleaved coded modulation (BICM) [12] paradigm to
+introduce diversity to further enhance the performance. Our
+results demonstrate that the proposed methodology signif-
+icantly outperforms purely neural and direct concatenation
+counterparts that do not utilize E2E optimization.
+II. OFDM-GUIDED FEEDBACK TRANSMISSION
+We consider an OFDM-guided feedback coding scheme
+over multipath fading wireless channels for both forward and
+2025 IEEE Global Communications Conference: Wireless Communications
+5103
+GLOBECOM 2025 - 2025 IEEE Global Communications Conference | 979-8-3315-7781-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/GLOBECOM59602.2025.11432731
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 
+𝒖∈𝟎, 𝟏𝒌 
+Outer
+Channel
+Encoder
+𝜋
+Symbol
+Mapping
+Neural 
+Encoder
+ (𝑬𝝓)
+IFFT
+Feedforward
+Multipath 
+Channel
+Remove
+CP
+FFT
+Equalizer
+Neural 
+Decoder
+ (𝑫𝜽)
+𝜋−1
+Outer
+Channel
+Decoder
+ෝ𝒖∈𝟎, 𝟏𝒌 
+LLRs ∈ℝ𝒏
+Unit
+Delay
+IFFT
+FFT
+Equalizer
+OFDM Transmitter
+OFDM Transmitter
+OFDM Receiver
+OFDM Receiver
+Trainable
+Non-trainable
+Optional, Non-trainable
+Add
+CP
+Remove
+CP
+Add
+CP
+Feedback
+Multipath 
+Channel
+Fig. 1. Block diagram of the overall system. Red boxes denote trainable modules; light-blue boxes denote non-trainable signal-processing components; and
+dashed-outline boxes denote optional, non-trainable operations.
+feedback links, under a passive feedback setup where feedback
+transmission depends only on the received signal without
+additional encoding. Communication unfolds over T rounds,
+enabling iterative information/feedback exchange between the
+transmitter and receiver to ensure reliable transmission. In this
+section, we develop the corresponding signal model.
+A. OFDM Transmission
+Consider an OFDM system employing N subcarriers, re-
+sulting in a total bandwidth of N∆f, where ∆f denotes the
+subcarrier spacing. Assume that the transmission occurs over a
+static multipath wireless channel consisting of P propagation
+paths. The delay associated with the i-th path is given by [13]
+τi =
+li
+N∆f ≤τmax = lmax
+N∆f ,
+(1)
+where li is the normalized delay of the i-th path, and lmax is
+the maximum normalized delay among all paths. To mitigate
+inter-symbol interference (ISI) caused by delay spread, a
+cyclic prefix (CP) of length LCP ≥lmax is typically appended
+to each transmitted OFDM symbol.
+At the transmitter, a frequency-domain symbol vector x ∈
+CN is transformed into time domain via the inverse fast
+Fourier transform (IFFT) as
+s = FH
+Nx,
+(2)
+where FH
+N
+∈CN×N is the Hermitian transpose of the
+normalized fast Fourier transform (FFT) matrix FN. Then a
+CP is added to the time-domain signal s prior to transmission.
+The receiver first removes the CP. Provided that LCP ≥
+lmax, the effective time-domain channel matrix becomes cir-
+culant, and can be expressed as [13]
+Ht =
+P
+X
+i=1
+αi Πli,
+(3)
+where αi denotes the complex gain of the i-th path, and Π is
+the forward cyclic-shift matrix.
+After CP removal, the receiver performs FFT to recover
+the transmitted signal x. The frequency-domain input-output
+relationship is thus given by
+y = FNHts + η = Heffx + η,
+(4)
+where Heff = FNHtFH
+N is the effective frequency-domain
+channel matrix, and η ∼CN(0, σ2I) denotes the AWGN
+vector in frequency-domain.
+Since Ht is a circulant matrix, it is diagonalized by FFT
+as [14]
+Heff = FNHtFH
+N = Λ,
+(5)
+where Λ = diag(h) contains the subcarrier-wise frequency
+responses. The input-output relationship then decouples across
+subcarriers as
+yj = hj · xj + ηj,
+j = 0, 1, . . . , N −1,
+(6)
+which allows per-subcarrier equalization such as zero-forcing
+(ZF) or minimum mean square error (MMSE). Throughout
+this work, we assume LCP ≥lmax condition is satisfied.
+B. Feedback Signal Model
+During each communication round ρ = 1, . . . , T, the
+transmitter sends an OFDM frequency-domain symbol vector
+x(ρ) ∈CN over the forward channel. The received time-
+domain signal is processed through cyclic prefix removal and
+FFT, yielding the frequency-domain received vector.
+Assuming perfect channel state information (CSI) at the
+receiver, ZF equalization is applied independently across sub-
+carriers. The equalized output at subcarrier j during round ρ
+is obtained from (6) as
+ˆy(ρ)
+j
+= x(ρ)
+j
++
+η(ρ)
+ff,j
+h(ρ)
+ff,j
+,
+(7)
+where h(ρ)
+ff,j ∈C denotes the forward channel gain on subcar-
+rier j and η(ρ)
+ff,j ∼CN(0, σ2
+ff) represents the AWGN term.
+The equalized vector ˆy(ρ) = [ˆy(ρ)
+0 , . . . , ˆy(ρ)
+N−1] ∈CN is
+then forwarded to the transmitter through the feedback link.
+Transmission over the feedback channel results in the received
+feedback observation on subcarrier j
+˜y(ρ)
+j
+= h(ρ)
+fb,j ˆy(ρ)
+j
++ η(ρ)
+fb,j,
+(8)
+where h(ρ)
+fb,j ∈C is the feedback channel gain and η(ρ)
+fb,j ∼
+CN(0, σ2
+fb) denotes AWGN on the feedback link.
+2025 IEEE Global Communications Conference: Wireless Communications
+5104
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 
+Assuming perfect feedback CSI at the transmitter, ZF
+equalization is again applied, yielding
+ˆ˜y(ρ)
+j
+=
+˜y(ρ)
+j
+h(ρ)
+fb,j
+= ˆy(ρ)
+j
++
+η(ρ)
+fb,j
+h(ρ)
+fb,j
+.
+(9)
+The resulting vector ˆ˜y(ρ) = [ˆ˜y(ρ)
+0 , . . . , ˆ˜y(ρ)
+N−1] ∈CN represents
+the refined feedback observations obtained during round ρ.
+It is important to note that the feedback observations ˆ˜y(ρ)
+become available for transmitter processing starting from
+round ρ + 1 for ρ = 1, . . . , T −1. Feedback collected during
+round T is not utilized, as the communication process ends
+after T rounds.
+III. PROPOSED CONCATENATED FEEDBACK CODING
+This section presents the proposed concatenated feedback
+coding scheme, which integrates a classical outer channel
+code with an inner feedback-based neural encoder and decoder
+pair. Our E2E training methodology enables joint optimization
+of the entire communication system over multipath fading
+channels. Instead of appending an outer LDPC code after an
+independently trained neural encoder/decoder, the outer code
+is embedded within the computational graph by incorporating
+a differentiable LDPC SPA decoder. The overall system archi-
+tecture is illustrated in Fig. 1, highlighting both the trainable
+and non-trainable components involved in the transmission,
+feedback, and decoding processes.
+A. Concatenated Feedback Encoding
+The transmitter first encodes the information vector u ∈
+{0, 1}k into a codeword c ∈{0, 1}n using a binary outer
+encoder e : {0, 1}k →{0, 1}n with rate R1 = k/n. We
+adopt the 5G New Radio (NR) LDPC code as the outer code,
+with rate matching applied as specified in [15]. Since the
+LDPC encoding operates over the finite field GF(2), where
+all operations are performed modulo-2, it is inherently non-
+differentiable and thus detached from the computational graph.
+During training, the original information vector u serves
+directly as the supervised learning target.
+To improve robustness against frequency-selective fading,
+we employ BICM [12], which introduces diversity by dis-
+persing adjacent coded bits across different fading subcarriers.
+In BICM, the codeword c ∈{0, 1}n is first permuted by an
+interleaver represented by a permutation matrix π ∈Rn×n,
+producing the interleaved sequence ˜c = πc. Each row of
+π contains exactly one nonzero entry, ensuring a bijective
+and lossless mapping. The interleaved bit vector ˜c is then
+partitioned into n/m groups of m bits, where each group
+is mapped to a complex-valued modulation symbol via a
+memoryless modulation function µ : {0, 1}m →C, resulting
+in the modulated symbol vector z ∈Cn/m.
+The modulated vector z is partitioned into N message
+blocks, each associated with one of the N available OFDM
+subcarriers, resulting in M = (n/m)/N symbols per block.
+Such block-wise processing enables a sequence-to-sequence
+encoding paradigm [16], wherein the encoder progressively
+refines its transmission strategy across multiple communica-
+tion rounds with feedback. We adopt the Transformer encoder-
+based GBAF model [10] for the design of the inner neural
+encoder and decoder. We refer the interested reader to [10]
+for a detailed description of the model and the sequence-to-
+sequence encoding paradigm, due to space limitations.
+During each communication round ρ ∈{1, . . . , T}, the
+inner neural encoder generates one complex-valued parity
+symbol per message block, resulting in the OFDM frequency-
+domain transmit vector x(ρ) ∈CN. Since exactly one parity
+symbol per block is transmitted at each round, the inner
+code rate is R2 = M/T, leading to an overall system rate
+R = R1R2 = (k/n)(M/T).
+The input to the inner encoder at round ρ is the knowledge
+vector at the transmitter, defined following the structure
+introduced in the GBAF model [10] as
+ψ(ρ) =
+
+z, x(1), . . . , x(ρ−1), ˆ˜y(1), . . . , ˆ˜y(ρ−1)
+,
+(10)
+where x(ρ′) denotes the transmitted OFDM symbol and ˆ˜y(ρ′)
+denotes the refined feedback observation from round ρ′.
+This construction enforces a unit-delay constraint, wherein
+feedback collected during a given round is utilized starting
+from the next round. By progressively incorporating past
+transmitted signals and feedback observations, the encoder
+dynamically refines its transmission signals across commu-
+nication rounds.
+The inner encoder is parameterized by ϕ and modeled as a
+neural network Eϕ that outputs the current transmit vector as
+x(ρ) = Eϕ(ψ(ρ)).
+(11)
+To meet average power constraints consistent with prior
+neural feedback schemes such as Deepcode [7], GBAF [10],
+and LIGHTCODE [11], the encoder output is constrained by
+E
+"
+1
+N
+T
+X
+ρ=1
+∥x(ρ)∥2
+#
+≤1,
+(12)
+ensuring the average per-subcarrier transmit power across all
+rounds does not exceed 1. This constraint is implemented via
+a differentiable normalization layer applied to the output of
+the inner neural encoder, allowing learned power adaptation
+across rounds and subcarriers.
+B. Decoding and E2E Training
+At the end of T communication rounds, the receiver collects
+a sequence of equalized OFDM vectors
+n
+ˆy(1), . . . , ˆy(T )o
+,
+ˆy(ρ) ∈CN,
+(13)
+each corresponding to the received subcarrier symbols after
+applying ZF equalization using perfect CSI.
+To jointly exploit all prior observations across rounds, we
+define the knowledge vector at the receiver as
+ξ(T ) =
+
+ˆy(1), . . . , ˆy(T )
+,
+(14)
+which concatenates the equalized OFDM vectors from all
+T communication rounds. Again, this formulation is directly
+aligned with the GBAF framework [10], where the decoding
+function utilizes accumulated knowledge over rounds.
+2025 IEEE Global Communications Conference: Wireless Communications
+5105
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 
+The inner neural decoder Dθ, parameterized by θ, processes
+ξ(T ) and outputs (estimated) soft log-likelihood ratios (LLRs)
+corresponding to the interleaved codeword as
+L(˜c) = Dθ(ξ(T )) ∈Rn.
+(15)
+Specifically, for each bit position i, the decoder produces
+a pair of logits ζi = [ζi,0, ζi,1]. A log-softmax operation
+is applied across each pair to normalize the logits, followed
+by computing the soft LLR as the difference between the
+normalized components:
+Li(˜c) = ζi,0 −ζi,1.
+(16)
+Stacking across all n bit positions yields the LLR vector L(˜c).
+To recover the original bit ordering prior to interleaving,
+the soft LLR vector L(˜c) is deinterleaved using the inverse
+of the permutation matrix, π−1 ∈Rn×n. Accordingly, the
+deinterleaved LLR vector is computed as
+˜L = π−1L(˜c),
+(17)
+providing soft reliability estimates for the bits of the original
+transmitted codeword c ∈{0, 1}n.
+The deinterleaved LLRs ˜L are then fed to a belief propaga-
+tion (BP) decoder operating under the SPA across I iterations.
+Let i ∈{1, . . . , n} and j ∈{1, . . . , n−k} denote variable and
+check nodes, respectively, with Tanner-graph neighborhoods
+N(i) = {j : (i, j) edge} and N(j) = {i : (i, j) edge}. The
+message updates for iteration ℓ= 1, . . . , I are given by [17]:
+γ(ℓ)
+i→j = ˜Li +
+X
+j′∈N(i)\{j}
+γ(ℓ−1)
+j′→i ,
+(18)
+γ(ℓ)
+j→i = 2 tanh−1
+
+
+Y
+i′∈N(j)\{i}
+tanh
+ 
+γ(ℓ)
+i′→j
+2
+!
+,
+(19)
+initialized with γ(0)
+i→j = ˜Li and γ(0)
+j→i = 0.
+After I iterations, the a-posteriori LLR for bit ci is com-
+puted as
+Lpost
+i
+= ˜Li +
+X
+j∈N(i)
+γ(I)
+j→i.
+(20)
+The posterior probability estimate used for training is then
+obtained through the sigmoid function as
+ˆqi =
+1
+1 + eLpost
+i
+.
+(21)
+Since the 5G LDPC code is systematic, the first k entries
+of ˆq correspond directly to the information bits u. The mini-
+batch loss is obtained by minimizing the binary cross-entropy
+(BCE) over these positions, given by
+L = −1
+Bk
+B
+X
+b=1
+k
+X
+i=1
+(ub,i log ˆqb,i + (1 −ub,i) log(1 −ˆqb,i)) ,
+(22)
+where B denotes the mini-batch size.
+Since all operations inside the SPA, including addition,
+multiplication, tanh(·), and tanh−1(·), are differentiable, gra-
+dients seamlessly propagate through the SPA decoder into the
+neural encoder Eϕ and decoder Dθ. During inference, hard
+decisions are made by ˆci = I(Lpost
+i
+< 0), and the first k bits
+yield the final decoded message ˆu ∈{0, 1}k.
+IV. NUMERICAL RESULTS
+In this section, we present numerical evaluations of the
+proposed BICM-enhanced E2E optimized concatenated feed-
+back coding scheme. We compare its performance against
+three baselines under the same system coding rate constraint:
+(i) a fully neural feedback-based model without any outer
+code, (ii) a direct concatenation of a neural inner encoder
+and an LDPC outer code without E2E training, and (iii)
+5G LDPC forward error correction (FEC) scheme without
+feedback. All models employ OFDM at the physical layer
+and are assessed over multipath fading channels. While all
+feedback schemes employ ZF equalization, the FEC baseline
+uses MMSE equalization.
+A. Experimental Setup
+All models are evaluated at a system coding rate of
+R = 1/3, with outer LDPC code rate R1 = 1/2 and inner
+neural code rate R2 = 2/3. The information vector has length
+k = 384, resulting in a codeword of n = 768 bits, which is
+interleaved and mapped to 384 4-QAM symbols (m = 2 bits
+per symbol) across N = 64 OFDM subcarriers with M = 6
+symbols per block. The inner encoder transmits one symbol
+per block per round over T = 9 rounds, satisfying R2 =
+M/T = 2/3. For the fully neural model, the input consists
+of 384 bits, mapped to 192 4-QAM symbols and distributed
+over N = 64 subcarriers (M = 3 symbols per subcarrier),
+with one symbol per subcarrier transmitted per round over 9
+rounds, thus achieving R = M/T = 1/3. Transmission occurs
+over the 3GPP EVA channel [18] with subcarrier spacing
+∆f = 30 kHz, assuming a constant frequency response across
+communication rounds. We also assume that forward and
+feedback links share the same/reciprocal channel realization,
+reflecting time-division duplexing (TDD) operation. All neural
+models adopt the GBAF [10] architecture.
+All models are trained using the AdamW optimizer with
+an initial learning rate of 0.0025, linearly decayed over
+150,000 iterations, and a batch size of 4096. For the proposed
+E2E scheme, the outer LDPC decoder is incorporated during
+training via a differentiable SPA, whereas for the direct
+concatenation baseline, the inner neural encoder/decoder is
+trained independently to produce correct LDPC codewords
+using BCE loss. The fully neural baseline is similarly trained
+using BCE loss without any outer code. During training, the
+feedforward signal-to-noise ratio (SNR) is uniformly sam-
+pled from 5 to 11 dB to compute σ2
+ff, whereas evaluation
+is performed at fixed SNR values between 6 and 10 dB
+using Monte Carlo simulations. The SPA decoder runs for
+10 iterations for the proposed E2E scheme and 20 iterations
+for the direct concatenation and FEC baselines, highlighting
+the superior performance of the proposed scheme even with
+fewer decoding iterations. The SPA decoder is implemented
+with numerical stability enhancements following the guide-
+lines in [19], ensuring optimized performance. We consider
+two feedback conditions: (i) noisy feedback, where feedback
+2025 IEEE Global Communications Conference: Wireless Communications
+5106
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 
+6
+8
+10
+12
+14
+16
+18
+20
+Average Forward SNR (dB)
+10−9
+10−8
+10−7
+10−6
+10−5
+10−4
+10−3
+10−2
+10−1
+BER
+5G LDPC (FEC)
+Fully Neural Baseline
+Direct Concatenation
+Proposed E2E
+Without π
+Test-time π
+Train/Test-time π
+(a) Noiseless feedback case.
+6
+8
+10
+12
+14
+16
+18
+20
+Average Forward SNR (dB)
+10−9
+10−8
+10−7
+10−6
+10−5
+10−4
+10−3
+10−2
+10−1
+BER
+5G LDPC (FEC)
+Fully Neural Baseline
+Direct Concatenation
+Proposed E2E
+Without π
+Test-time π
+Train/Test-time π
+(b) Noisy feedback case.
+Fig. 2. BER performance under (a) noiseless and (b) noisy feedback. The proposed E2E schemes consistently outperform all baselines. The train/test-time
+interleaving configuration demonstrates strong resilience to feedback noise and delivers the best overall performance.
+observations undergo multipath fading and are corrupted by
+AWGN with variance σ2
+fb, corresponding to a feedback SNR
+of 20 dB; and (ii) noiseless feedback, where ZF equalization
+cancels multipath distortion and no feedback noise is present,
+resulting in distortionless feedback transmission.
+B. Experimental Results
+To assess the impact of interleaving, we evaluate two BICM
+configurations. In the first, a fixed interleaver is applied during
+both training and inference, allowing the E2E model to adapt
+to the interleaved structure. In the second, interleaving is
+applied only at inference. For comparison, both the proposed
+E2E scheme and the direct concatenation baseline are also
+trained and tested without interleaving. Additionally, the direct
+concatenation model is evaluated with interleaving applied
+only at inference. Training-time interleaving is unnecessary
+here, as the neural decoder directly targets LDPC codewords,
+making interleaving ineffective during training. The 5G LDPC
+system inherently adopts BICM, while the fully neural base-
+line does not use interleaving, as it offers no benefit due to
+architectural differences.
+Fig. 2(a) demonstrates that under noiseless feedback, the
+proposed E2E concatenated scheme consistently achieves the
+lowest BER across all configurations. Among the baselines,
+the direct concatenation model with test-time interleaving
+outperforms both its non-interleaved counterpart and the fully
+neural model, achieving a BER of ≈3.6 × 10−6 at 10 dB.
+The fully neural baseline performs slightly better than the
+direct concatenation setups in the low SNR regime from 6
+to 8 dB, with a BER of ≈1.7×10−3 at 6 dB. In contrast, all
+E2E variants substantially outperform the baselines across the
+entire SNR range. The proposed E2E scheme with test-time-
+only interleaving achieves a BER of ≈5.7 × 10−9 at 10 dB,
+offering more than two orders of magnitude improvement over
+the best-performing baseline. Among the E2E configurations,
+the no-interleaving variant yields the highest BER, reaching
+≈3.5 × 10−8 at 10 dB, indicating that interleaving plays
+a crucial role in enhancing robustness. Performance with
+test-time-only and train/test-time interleaving remains nearly
+identical. Lastly, all feedback-based methods significantly
+outperform the 5G LDPC FEC baseline, which achieves
+≈5.4 × 10−3 at 10 dB, confirming the benefits of feedback-
+based communication.
+Fig. 2(b) shows that under noisy feedback, the proposed
+E2E concatenated scheme consistently outperforms all base-
+lines across the entire SNR range as well. Among the base-
+lines, the fully neural model performs best at low SNR,
+achieving a BER of ≈1.9 × 10−3 at 6 dB and ≈4.0 × 10−4
+at 8 dB. However, at higher SNRs, the direct concatenation
+model with test-time interleaving becomes more effective,
+achieving ≈1.5 × 10−4 at 9 dB and ≈3.6 × 10−5 at 10 dB,
+surpassing the neural baseline. The direct concatenation model
+without interleaving yields the highest BER across all SNRs,
+starting at ≈7×10−3 at 6 dB and improving to ≈1.5×10−4
+at 10 dB, showing a promising error decay but remaining
+inferior to all other configurations. In contrast, the E2E
+train/test-time interleaving configuration consistently achieves
+the best performance, reaching a BER of ≈8.3 × 10−9 at
+10 dB and ≈1.5 × 10−8 at 9 dB, achieving approximately
+the same performance compared to its noiseless behavior.
+Notably, this configuration is the only one that maintains near-
+identical performance across noisy and noiseless, with just
+a minor degradation at 6 dB where the BER increases from
+≈5.1×10−7 to ≈8.3×10−7. This confirms that exposing the
+decoder to interleaved bit structures during training enables
+it to effectively interpret soft feedback even when corrupted
+by multipath distortion and noise. On the other hand, no-
+interleaving and test-time-only interleaving variants lack this
+level of robustness, showing greater sensitivity to feedback
+channel. Overall, these results highlight that while all E2E
+variants provide significant gains over traditional baselines,
+the train/test-time interleaving configuration offers unmatched
+robustness across feedback conditions and SNR regimes.
+Impact of E2E Training with Outer Code:
+The LLR
+2025 IEEE Global Communications Conference: Wireless Communications
+5107
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 
+−20
+0
+20
+LLR Values
+0.00
+0.01
+0.02
+0.03
+0.04
+0.05
+0.06
+0.07
+Density
+Feedforward SNR: 6 dB
+−20
+0
+20
+LLR Values
+0.00
+0.01
+0.02
+0.03
+0.04
+0.05
+0.06
+0.07
+Density
+Feedforward SNR: 10 dB
+(a) Direct concatenation baseline.
+−10
+−5
+0
+5
+10
+LLR Values
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+Density
+Feedforward SNR: 6 dB
+−10
+−5
+0
+5
+10
+LLR Values
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+Density
+Feedforward SNR: 10 dB
+(b) Proposed E2E optimized scheme.
+Fig. 3.
+LLR histograms under noisy feedback. (a) Direct concatenation baseline, exhibiting overconfident LLRs with minimal neutral mass. (b) Proposed
+E2E scheme, yielding a more balanced reliability distribution with a central hump of mid-confidence LLRs.
+histograms observed under noisy feedback reveal significant
+differences between the direct concatenation baseline and the
+proposed E2E optimized scheme. In OFDM, where subcarriers
+experience diverse fading, the direct concatenation decoder
+exhibits an overconfidence effect, producing narrow side peaks
+far from zero that sharpen as channel SNR improves as
+shown in Fig. 3(a). In contrast, the E2E optimized scheme
+preserves these side peaks while introducing a large amount
+of low-confidence LLRs around zero, as depicted in Fig. 3(b).
+This reflects underlying uncertainty in the presence of deeply
+faded subcarriers with a more balanced representation. This
+identifies uncertain bits requiring further iterative refinement,
+supplying the SPA decoder with richer soft inputs. More-
+over, in the E2E optimized scheme, the LLR amplitude
+is compressed relative to the baseline, moderating extreme
+magnitudes and yielding a more balanced confidence spectrum
+as shown in Fig. 3(b). Consequently, the outer SPA decoder
+benefits from a more informative LLR distribution, enhancing
+iterative updates and therefore outperforming direct concate-
+nation. Although only the noisy feedback case is presented
+due to limited space, similar patterns appear under noiseless
+feedback conditions.
+V. CONCLUSION
+We introduced a BICM-enhanced, E2E optimized concate-
+nated coding framework that integrates a neural inner en-
+coder/decoder with a classical LDPC outer code for feedback-
+enabled OFDM communication over multipath fading chan-
+nels. By leveraging a differentiable SPA decoder, the entire
+system is trained jointly, enabling seamless integration of
+neural and classical components. Our results show that all
+E2E variants significantly outperform traditional baselines,
+with the train/test-time interleaving configuration offering
+the most consistent performance across varying SNR and
+feedback conditions, while also exhibiting strong resilience to
+distortion, making it a practical and robust solution for future
+feedback-based communication systems.
+REFERENCES
+[1] C. Shannon, “The zero error capacity of a noisy channel,” IRE Trans-
+actions on Information Theory, vol. 2, no. 3, pp. 8–19, 1956.
+[2] T. O’Shea and J. Hoydis, “An introduction to deep learning for the
+physical layer,” IEEE Transactions on Cognitive Communications and
+Networking, vol. 3, no. 4, pp. 563–575, 2017.
+[3] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath,
+“Turbo autoencoder: Deep learning based channel codes for point-to-
+point communication channels,” in Advances in Neural Information
+Processing Systems, vol. 32, 2019.
+[4] O. G¨unl¨u, R. Fritschek, and R. F. Schaefer, “Concatenated classic and
+neural (CCN) codes: ConcatenatedAE,” in IEEE Wireless Communica-
+tions and Networking Conference (WCNC), 2023, pp. 1–6.
+[5] M. Yang, C. Bian, and H.-S. Kim, “OFDM-guided deep joint source
+channel coding for wireless multipath fading channels,” IEEE Transac-
+tions on Cognitive Communications and Networking, 2022.
+[6] E. Bourtsoulatze, D. Burth Kurka, and D. G¨und¨uz, “Deep joint source-
+channel coding for wireless image transmission,” IEEE Transactions on
+Cognitive Communications and Networking, 2019.
+[7] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode:
+Feedback codes via deep learning,” IEEE Journal on Selected Areas in
+Information Theory, vol. 1, no. 1, pp. 194–206, 2020.
+[8] Y. Jiang, H. Kim, H. Asnani, S. Oh, S. Kannan, and P. Viswanath,
+“Feedback turbo autoencoder,” in IEEE International Conference on
+Acoustics, Speech and Signal Processing (ICASSP), 2020.
+[9] Y. Shao, E. Ozfatura, A. G. Perotti, B. M. Popovi´c, and D. G¨und¨uz,
+“AttentionCode: Ultra-reliable feedback codes for short-packet commu-
+nications,” IEEE Transactions on Communications, 2023.
+[10] E. Ozfatura, Y. Shao, A. G. Perotti, B. M. Popovi´c, and D. G¨und¨uz, “All
+you need is feedback: Communication with block attention feedback
+codes,” IEEE Journal on Selected Areas in Information Theory, 2022.
+[11] S. K. Ankireddy, K. Narayanan, and H. Kim, “LIGHTCODE: Light
+analytical and neural codes for channels with feedback,” IEEE Journal
+on Selected Areas in Communications, pp. 1–1, 2025.
+[12] G. Caire, G. Taricco, and E. Biglieri, “Bit-interleaved coded modula-
+tion,” IEEE Transactions on Information Theory, vol. 44, no. 3, pp.
+927–946, 1998.
+[13] Y. Hong, T. Thaj, and E. Viterbo, Delay-Doppler Communications:
+Principles and Applications.
+New York, NY, USA: Academic, 2022.
+[14] Y. Chi, L. Liu, Y. Ge, X. Chen, Y. Li, and Z. Zhang, “Interleave fre-
+quency division multiplexing,” IEEE Wireless Communications Letters,
+vol. 13, no. 7, pp. 1963–1967, 2024.
+[15] 3GPP, “5G; NR; Multiplexing and channel coding,” 3rd Generation
+Partnership Project (3GPP), TS 38.212, 2018.
+[16] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning
+with neural networks,” in Advances in Neural Information Processing
+Systems, vol. 27, 2014.
+[17] W. Stark, Introduction to Digital Communications.
+Cambridge Uni-
+versity Press, 2023.
+[18] 3GPP, “Evolved universal terrestrial radio access (E-UTRA) and evolved
+universal terrestrial radio access network (E-UTRAN),” 3rd Generation
+Partnership Project (3GPP), TS 36.300, 2017.
+[19] J.
+Hoydis,
+S.
+Cammerer,
+F.
+Ait
+Aoudia,
+M.
+Nimier-David,
+L. Maggi, G. Marcus, A. Vem, and A. Keller, “Sionna,” 2022,
+https://nvlabs.github.io/sionna/.
+2025 IEEE Global Communications Conference: Wireless Communications
+5108
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:23:47 UTC from IEEE Xplore.  Restrictions apply. 

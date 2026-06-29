@@ -1,0 +1,608 @@
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+A New LDPC Decoder Hardware Implementation with Improved Error Rates
+
+P. Schla¨fer, S. Scholl, E. Leonardi and N. Wehn Microelectronic Systems Design Research Group University of Kaiserslautern, Germany {schlaefer, scholl, wehn}@eit.uni-kl.de
+
+Abstract—LDPC codes are commonly decoded by conventional belief propagation algorithms like the min-sum algorithm. However especially for small block lengths belief propagation performs poorly in comparison to maximum likelihood decoding. In this paper we propose a new decoding algorithm, that is inspired by augmented belief propagation from literature and present hardware architectures and implementations for 28nm ASIC technology. The new decoder has a much higher complexity, but provides a gain of up to 1.2 dB signal-to-noise ratio compared to conventional belief propagation decoding.
+Keywords—Low density parity check codes, Iterative decoding, Improved decoding, Baseband, Hardware, ASIC, Architecture
+I. INTRODUCTION
+Low-density parity-check (LDPC) decoders are widely adopted in today’s applications for forward error correction. For efficient hardware implementation of LDPC decoders usually belief propagation (BP) heuristics are used. A drawback of these heuristics is, that they perform considerably worse than the optimum maximum likelihood (ML) decoding principle with respect to frame error rate (FER). This is especially the case for short LDPC codes, which have loopy Tanner graphs, where a gain of up to 1.5 dB can be achieved when using ML decoding [1], [2] with BPSK modulation. It is therefore worth to investigate new decoding methods and their hardware implementations, which improve the FER of currently used systems. This is especially interesting for systems which have very tight requirements on FER or benefit from excellent FER, that is beyond today’s available solutions. Several algorithms can be found in literature. They use different approaches that are for example based on countering oscillations [3], information set decoding [4], using multiple parity check matrices [5] or the augmented BP, that modifies the input information and performs several decoding runs [2].
+In real world applications decoding algorithms are implemented as dedicated hardware to meet throughput and power requirements. Despite the research efforts regarding new algorithms, hardware implementations of LDPC decoders optimized for superior FER have - to our best knowledge - not yet been investigated. The idea of augmented BP seems to be appealing for improving the FER due to two reasons: First, it has been shown that considerable gain in FER can be achieved. If a high effort is spent, even near ML performance is possible. Second, the algorithm is scalable and offers a flexible trade-off between FER improvement and hardware complexity.
+In this paper, we propose a simple, “hardware friendly” algorithm inspired by the augmented BP algorithm and propose two hardware architectures. Based on these architectures we
+
+analyze the decoder convergence and propose a new stopping criterion, which increases the throughput (TP) by a factor of up to six. Detailed implementation results for area and throughput are presented in a 28nm Fully Depleted Silicon On Insulator (FD-SOI) ASIC technology. This is the first LDPC decoder hardware, that improves the FER beyond that of currently known hardware implementations. So we demonstrate new approaches to achieve superior FER while keeping acceptable implementation complexity.
+The structure of the paper is as follows: Section II introduces the system setup and the decoding algorithm. Hardware architectures are presented in Section III followed by a description of a new stopping criterion in Section IV. Detailed results on FER and the ASIC implementation are given in Section V.
+
+II. ALGORITHM
+In this section, we introduce the system setup and the saturated min-sum (SMS) decoding algorithm, which is the basis of our hardware implementation and point out the differences to augmented BP.
+
+A. System & LDPC Codes
+
+The considered system transmits N code bits x =
+
+(x0, x1, ...xN−1), xi ∈ GF (2) using BPSK or 64-QAM
+
+modulation over an additive white Gaussian noise (AWGN)
+
+channel. After demodulation on the receiver side the received
+
+bits are described by a vector of log likelihood ratios (LLRs)
+
+y = (y0, y1, ..., yN−1), yi ∈ R, with yi = ln
+
+p(xi =0) p(xi =1)
+
+. The
+
+reliabilities of the received bits are given by |yi|. Bits with a
+
+low reliability are more likely in error than others - a fact, that
+
+will be exploited in the following.
+
+Since the suboptimality of belief propagation is worse for decreasing block length, we consider short LDPC codes. A (96,48) quasi cyclic LDPC code and a (128,64) multi-edge type (MET) LDPC code [6] are used (downloadable from www.unikl.de/channel-codes [7]). MET codes have an excellent FER performance and are therefore interesting for systems with strict FER requirements. For the same reason, we have set the maximum number of decoding iterations for the LDPC decoders to a fairly large number of 30, above which only very little improvements in FER can be achieved.
+
+B. The SMS Decoding Algorithm
+The proposed SMS algorithm follows the idea of the augmented BP [2], but is designed to enable efficient hardware implementations by focussing on simplicity. It consists of several BP decoding runs, that process different input LLR
+
+978-1-4799-7431-3/15/$31.00 ©2015 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+
+vectors. For each decoding run some LLRs are saturated. Finally a list decoder selects the best codeword among all decoding runs for output.
+
+The decoding process starts by selecting the S least reliable bit positions in y for saturation. Saturation means replacing the original LLR of a selected bit position by the maximum or minimum possible LLR value (for hardware: minimum and maximum fixed point value). Saturation of S bit positions in all combinations then yields 2S different LLR vectors yl, l = 0, 1, .., 2S − 1, which are decoded by 2S different and independent LDPC decoding runs. Each decoding run will either output a valid codeword or will not converge at all. Among all valid codewords found the one with minimum euclidean metric will be output, according to the common list decoding procedure [8]. The overall decoding procedure is summarized in Algorithm 1.
+
+Algorithm 1 SMS Decoding Algorithm
+
+Input: LLR vector y, number of saturated bits S
+
+Output: decoded codeword xbest
+
+1: Determine S bit positions s0, s1..sS−1 with smallest reliability |yi|
+2: Generate 2S input LLR vectors yl, l = 0, .., 2S − 1: set all
+
+positions s0, s1..sS−1 to max or min value 3: for l = 0, .., 2S − 1 do 4: run BP for 30 iterations with input yl 5: if codeword found: save output in xl
+
+6: end for
+
+7: output xbest =
+
+argmin
+
+x {xl|l=0,1,..,2S −1}
+
+N −1 i=0
+
+yi
+
+xi
+
+In comparison to augmented BP the following key simplifications have been introduced, for which no major impact on FER performance has been observed.
+• Node Selection Strategy: In [2] a sophisticated node selection strategy for saturation is proposed which relies not only on bit reliabilities, but considers a sub graph structure, that consists of unsatisfied check nodes and neighbouring variable nodes. We propose to use only the bit reliabilities. This requires only a small sorting unit, which can be efficiently implemented in hardware.
+• Decoding Runs Scheduling: In [2] the bit positions are successively selected. After each saturation several decoding iterations are performed, before selecting a new bit position for saturation. This procedure limits the possible decoder architectures and results in a low hardware utilization. Moreover, it is required to determine the least reliable bit positions (i.e. a sorting procedure) for each of the large number of node selection steps in [2]. In our algorithm the scheduling is simplified by saturating and enumerating all bits before starting the LDPC decoding runs. After the saturation step all 2S saturated LLR vectors are processed independently and no later node selection is required. This results in a high degree of freedom for the hardware architecture.
+• Codeword Selection: The final stage is the selection of the output codeword. Although in [2] an additional
+
+Node Selector
+
+y
+
+Channel Value RAM
+
+Saturator
+
+Inner LDPC Decoder
+
+List Decoder
+
+xbest
+
+Fig. 1: Serial SMS decoder architecture.
+
+y
+
+LLR0 Pos.0
+
+LLR1 Pos.1
+
+Positions Permutation Generator
+
+Ctrl. to
+SAT
+
+...
+
+LLRS-1 Pos.S-1
+
+LLRs
+
+enable
+
+Controller
+
+Fig. 2: Node Selector architecture.
+
+first codeword strategy is proposed, that simply outputs the first codeword found, we search for a better codeword by considering more than one codeword for output. This avoids losses in FER that occur if the first codeword is taken.
+• Check Node Operation: In [2] the sum-product algorithm (SPA) with an optimal check node (e.g. based on the tanh rule) is used, see [8]. However, to reduce hardware complexity we use the min-sum approximation [9]. For the short codes considered in this paper under fixed-point quantization the min-sum check node does not impact the FER as will be seen in Section V-A (Fig. 8 and Fig. 9).
+It is worth to mention, that the SMS further simplifies for MET codes. The input LLR vector consists of several punctured nodes, that are initialized with zero LLRs. Since zero LLR bit positions naturally have the least reliability, one can simply chose the punctured positions for saturation. This fully eliminates the need for a sorting unit in the decoding architecture.
+III. HARDWARE ARCHITECTURE
+In this section, we propose hardware architectures for the SMS algorithm. A serial and a parallel architecture for SMS decoding is presented.
+A. Serial SMS Decoder
+The serial decoder processes the 2S different saturated LLR vectors one after another until all 2S saturated vectors are processed. Thus only one “inner” LDPC decoder is instantiated and one saturated LLR vector is processed at a time. After the decoding of one vector is finished, the next saturated input vector is fed to the inner LDPC decoder.
+The basic building blocks of a complete SMS decoder are the node selector (NS), the channel message RAM, a saturation unit (SAT), the inner LDPC decoder and finally a list decoder (LD). The top level architecture of the serial SMS decoder is shown in Fig. 1. In each clock cycle one LLR value is received. It is fed to the NS unit and at the same time stored in the channel message RAM.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+
+Node Selector (NS): The NS determines the S bit positions with smallest reliability. This task is accomplished by sorting the N input LLRs and selecting the S smallest LLR values, see Fig. 2. Receiving the input LLRs sequentially allows to compare each channel LLR with the S smallest LLRs found before, which are stored in registers. If a smaller LLR is found, it is inserted in the sorted list of S LLRs by setting the multiplexer control signals accordingly. After all LLRs are received, the stored positions point out the smallest S LLRs. Only then the permutation generator is enabled and uses these messages to send control signals to the saturator. Note, that for MET codes the node selector is not required, because the least reliable bits (i.e. the punctured bits) are known in advance.
+Saturator (SAT): To generate the 2S different saturated LLR vectors yl, the bit positions previously determined by the NS must be saturated which is performed by the SAT hardware unit. The SAT receives the channel messages from the channel RAM and the unreliable bit positions from the NS unit. As soon as a complete codeword is stored in the channel RAM and the least reliable bit positions are identified by the NS, the SAT unit sends the first saturated LLR vector to the LDPC decoder. The SAT unit either sends the original channel LLR or a value saturated to the minimum or maximum possible LLR value. The resulting hardware architecture consists of simple multiplexers.
+Inner LDPC Decoder: An LDPC decoder performs the actual min-sum decoding task. The choice of the LDPC decoder architecture is mainly determined by application parameters like required throughput and available area. An extensive study of state-of-the-art LDPC decoder architectures is given in [10]. Here a partially parallel decoder architecture implementing the min-sum algorithm is chosen, which is based on the slotlayered concept [11]. Three slots of variable node functional units (VFUs) feed messages to the check node functional units (CFUs). For an efficient implementation, the VFUs and CFUs are merged into check node blocks. The network between CFUs and VFUs is implemented by use of cyclic barrel shifters. A single network approach, using offset shifts is chosen to simplify routing in the design. The architecture has a good trade-off between implementation complexity and performance.
+List Decoder (LD): After the decoding of one of the 2S saturated LLR vectors is finished, the resulting hard bits and soft input LLRs are passed to the LD unit. It calculates the metric of each decoded codeword according to Algorithm 1, Line 7, and stores the best one. Fig. 3 shows the architecture of the LD unit. The LD reads the channel LLRs y from the channel message RAM and at the same time receives the output data xl from the LDPC decoder. Dependent on the decoder hard output bits, either the according channel value or a zero is fed to an accumulator. The result of this accumulation is the metric used to select the best codeword.
+Whenever the calculated metric is better than the ones found before, the LDPC decoder output must be stored in the output RAM. However, we know only after the metric calculation if the received codeword is better or worse than the ones stored before. Thus the output RAM is split in two parts from which at any point in time only one is enabled for writing. A dedicated controller makes sure that the best codeword is kept in one part of the RAM and only the other RAM is
+
++
+SUM
+
+0 y
+Inner sign LDPC decoder
+out
+
+Controller
+
+write enable
+
+RAM 0
+
+xbest
+
+RAM 1
+
+Fig. 3: List decoder architecture.
+
+Node Selector
+y
+
+Saturator
+
+Inner LDPC Decoder 0
+
+Channel
+
+Saturator
+
+Value RAM
+
+Inner LDPC Decoder 1
+
+List Decoder
+
+xbest
+
+Saturator
+
+Inner
+LDPC Decoder 2S-1
+
+Fig. 4: Parallel SMS decoder architecture
+
+overwritten. At the same time at which the LDPC decoder sends the decoded data to the LD unit, the next saturated LLR vector is fed into the decoder. This procedure is repeated until all 2S input LLR vectors are decoded. Only then the LD unit outputs the best of all decoded codewords.
+The described serial SMS architecture is compact in area, but suffers from a high latency and therefore a low throughput. A parallel architecture, that increases throughput will be presented in the next section.
+B. Parallel SMS Decoder
+Whenever high throughputs are required, a highly parallel architecture is needed. Due to the introduced simplified scheduling in the SMS algorithm (see Section II-B, Decoding Runs Scheduling) it is possible to perform the decoding of the 2S saturated LLR vectors yl in parallel. The parallel SMS decoder makes use of 2S LDPC decoders to achieve a high throughput.
+The top level architecture is shown in Fig. 4. Most of the components remain the same as they have been in the serial SMS architecture. In total 2S LDPC decoders and SAT units are required to allow for parallel generation and processing of all saturated LLR vectors. In the rare case that more than one decoder finds a valid codeword at the same point in time, they will be processed sequentially by the LD. Summarized, the presented architecture allows to combine the improved FER with high throughput.
+IV. LATENCY ANALYSIS AND STOPPING CRITERION
+In this section, we investigate the typical behaviour of the SMS. We show, that the sum of all iterations of SMS is typically very large and approaches the worst case number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+ocurrence [%] occurence [%] FER
+
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+
+100
+
+100
+
+@FER=10−2
+
+@FER=10−2
+
+@FER=10−4
+
+@FER=10−4
+
+80
+
+@FER=10−6
+
+80
+
+@FER=10−6
+
+60
+
+60
+
+40
+
+40
+
+20
+
+20
+
+0 01234567 found codewords per frame
+
+00 1 2 3 4 5 6 7 different codewords per frame
+
+Fig. 5: Number of converging decoding runs (left) and different found codewords for the (96,48) LDPC code with S = 4
+
+of 30 · 2S. We propose a stopping criterion, that significantly reduces the total number of iterations and therefore improves latency and throughput.
+A. Convergence Analysis
+Since only single bits are flipped it may be assumed that in different decoding runs the decoder often converges to the same codeword. Contrary, in the ideal case, to improve FER a large variety of different codewords has to be generated, from which the list decoder can choose the best one. However, the following analysis shows, that neither is the case. Instead, a large fraction of decoding runs do not converge at all. Unfortunately, in these cases the inner LDPC decoder performs the maximum number of iterations, which is 30 in our setup. This also leads to a constantly high number of total iterations and therefore a high latency and low throughput for the SMS.
+A detailed analysis is presented for the (96,48) LDPC code with S = 4, i.e. 16 decoding runs. Fig. 5 (left) shows the number of convergent decoding runs and the number of different codewords found per frame. Dependent on the signalto-noise ratio (SNR) only a small number of decoding runs converge. Even for F ER = 10−6 in most cases less than 30 % of the decoding runs converge. However Fig. 5 (right) reveals that the number of different codewords found is very small (mostly one or two) and is independent of the SNR.
+B. Proposed Stopping Criterion
+Based on the observations described in the preceding section, we introduce a stopping criterion, that improves latency and throughput. A conventional LDPC decoder can halt the decoding process before the maximum number of iterations is performed, if a valid codeword is found. Similarly an SMS decoder can stop the decoding of the 2S input LLR vectors before all of them have been processed.
+We propose a new stopping criterion based on the fact, that the number of different codewords found is very small. Instead of evaluating all convergent runs, we restrict the selection to only very few codewords. After k codewords are found SMS stops and outputs the best out of k codewords. This strategy avoids losses in FER, that occur if only the first codeword is taken. It has to be mentioned, that this stopping criterion is largely dependent on the applied architecture.
+In the serial architecture the decoding runs are calculated serially in time. Therefore the decoder stops after k codewords
+
+Stopping Criterion for Hardware: (96,48) LDPC, BPSK, SMS with 4 saturated LLRs 100
+
+10−1
+
+10−2
+
+10−3
+
+all codewords
+
+1 codeword, parallel arch.
+
+10−4
+
+2 codewords, parallel arch.
+
+1 codeword, serial arch.
+
+2 codewords, serial arch.
+
+10−5
+
+3 codewords, serial arch.
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+Eb/N0 / dB
+
+Fig. 6: FER comparison for the proposed stopping criterion.
+
+For the considered case only the first two codewords for the
+
+parallel and first three codewords for the serial architecture are
+
+sufficient.
+
+have been found. For maximum efficiency of the stopping criterion, saturated LLR vectors yl that are expected to converge should be processed first. Thus the processing order of the saturated input vectors is important. The following strategy has been found to be suitable: We start saturating the S selected bit LLRs without flipping any signs. For the following yls, beginning with the least reliable bit, the signs are flipped to generate the next input vectors. This procedure generates the most promising saturated vectors first, which leads to improved behaviour of the serial decoder.
+For the parallel architecture, the k considered codewords are the ones, which converge first, i.e. require the least number of iterations. Our simulations show, that early converging codewords are more likely to give good results than ones which appear after many iterations of the inner LDPC decoder. For this reason k can be chosen smaller for the parallel architecture than for the serial one. Whenever k valid codewords have been found, the decoding of all other inner decoders is stopped immediately. This allows for a huge reduction of the overall performed iterations and thus increases the throughput and reduces latency and power consumption to a greater extend, than is possible for the serial architecture.
+Using the proposed stopping criterion, the choice of k is crucial. k has to be large enough not to compromise FER, but as low as possible to achieve the best improvement in latency. The simulations for the (96,48) LDPC code with S = 4 in Fig. 6 show, that in case of the parallel architecture two codewords are enough and in case of the serial three codewords are required. For these cases the FER is not affected. Fig. 7 shows the average improvement in latency for different target FERs. For the parallel architecture a reduction of up to 88 % and for a serial architecture a reduction of up to 55 % can be achieved by applying the proposed technique (if FERs down to 10−6 is considered).
+For different codes these numbers may vary. In Section V results on throughput are given with and without stopping criterion, where k is chosen such that no impairment in FER occurs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+Latency / Iterations
+
+FER
+
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+
+Latency for parallel architecture 30
+
+Latency / Iterations
+
+20
+
+10
+
+all codewords
+
+2 codewords
+
+100−2 500
+
+10−3
+
+10−4FER
+
+10−5
+
+Latency for serial architecture
+
+10−6
+
+400
+
+300
+
+200
+
+all codewords
+
+3 codewords 100
+
+100−2
+
+10−3
+
+10−4 FER
+
+10−5
+
+10−6
+
+Fig. 7: Latency improvements of the proposed stopping crite-
+
+rion
+
+Hardware Implementation: (96,48) LDPC, BPSK 100
+
+Min−Sum Decoder
+
+10−1
+
+SMS, 4 saturated LLRs SMS, 6 saturated LLRs
+
+Maximum Likelihood
+
+10−2
+
+SPA (floating point)
+
+FER
+
+Hardware Implementation: (128,64) Multi−Edge Type LDPC 100
+Min−Sum Decoder
+
+SMS, 4 saturated LLRs
+
+SMS, 6 saturated LLRs
+
+10−1
+
+Maximum Likelihood
+
+SPA (floating point)
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/N0 / dB
+
+Fig. 9: FER for the (128,64) MET LDPC Decoder
+
+Hardware Implementation: (96,48) LDPC, 64−QAM 100
+
+Min−Sum Decoder
+
+SMS, 4 saturated LLRs
+
+10−1
+
+SMS, 6 saturated LLRs
+
+Maximum Likelihood
+
+10−2
+
+FER
+
+10−3
+
+10−3
+
+10−4
+
+10−5
+
+10−6 1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+Eb/N0 / dB
+
+Fig. 8: FER for the (96,48) LDPC Decoder
+
+10−4
+
+10−5
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+6
+
+Eb/N0 / dB
+
+Fig. 10: With 64-QAM modulation SNR gains of over 1 dB
+
+are achieved
+
+V. RESULTS
+In the following section we present the FER performance and ASIC synthesis results of the proposed hardware decoder.
+A. Simulation Results for FER
+Figs. 8, 9 and 10 provide the FER for the implemented decoders for the (96,48) and (128,64) multi-edge type LDPC code. The min-sum decoders serve as reference implementations and SNR gain is measured between this conventional decoder and the proposed SMS implementations. The number of saturated bits has been chosen to be 4 or 6. A gain of over 1 dB could be achieved under 64-QAM modulation. Under BPSK the gain ranges between 0.4 and 0.5 dB for 4 saturated bits and between 0.5 and 0.7 dB for 6 saturated bits.
+All decoders have been implemented using the min-sum check node and using the proposed stopping criterion. The provided ML results have been obtained by the methods described in [1].
+
+B. Implementation Results
+In this section, we present hardware synthesis results of different SMS decoders. All designs are implemented on a 28nm low power FD-SOI CMOS library. We considered the following PVT parameters: Worst Case (WC, 0.9 V, 125◦C), Nominal Case (NOM, 1.0 V, 25◦C) and Best Case (BC, 1.1 V, -40◦C). Synthesis as well as P&R were performed with the Worst Case PVT settings of the 28nm library. The designs where synthesized for a target frequency of 500 MHz which is reached under Worst Case conditions after place & route (P&R). We show results on area, throughput and area efficiency. Area efficiency normalizes throughput to area and allows for a fair comparison of different architectures. The decoders operate on fixed-point values, whose quantization has been optimized not to affect the FER. The chosen quantization is 7 bits for the (96,48) LDPC code and 8 bits for the multiedge type code. The physical layout for the parallel SMS decoder is shown in Fig. 11.
+Different SMS decoder architecture synthesis results are compared in Table I. As shown before, for S = 4 a significant
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT)
+
+TABLE I: Comparison of conventional min-sum and SMS decoder architectures.
+
+LDPC code
+Architecture # saturated bits S Post P&R Area [mm2] TP @ FER=10−5 [Mbit/s] Area Eff. [Mbit/s/mm2] SNR gain BPSK [dB] SNR gain 64-QAM [dB]
+
+(96,48)
+min-sum -
+0.06 797 14557 0.0 0.0
+
+(128,64)
+min-sum -
+0.11 420 3716 0.0 0.0
+
+(96,48)
+serial SMS 4
+0.07 2.9 42.7 0.5 0.7
+
+(96,48)
+parallel SMS 4
+0.89 93.2 104.7 0.5
+0.7
+
+(128,64)
+parallel SMS 4
+1.82 168.4
+92.5 0.4 0.7
+
+(96,48)
+serial SMS 6
+0.07 0.6 8.4 0.7 1.2
+
+(96,48)
+parallel SMS 6
+3.52 126.1 35.8
+0.7 1.2
+
+(128,64)
+parallel SMS 6
+7.24 112.3 15.5
+0.5 1.0
+
+TABLE III: Throughput in Mbit/s with and without stopping criterion for SMS decoder (S = 4, F ER = 10−5)
+
+LDPC code
+Architecture TP w/o stop. crit. TP with stop. crit.
+
+(96,48)
+serial 2.1 (100%) 2.9 (139%)
+
+(96,48)
+parallel 28.5 (100%) 93.1 (326%)
+
+(128,64)
+serial 2.2 (100%) 3.1 (141%)
+
+(128,64)
+parallel 28.0 (100%) 168.4 (600%)
+
+Fig. 11: Parallel SMS decoder post P&R chip layout for 4 saturated bits (16 inner decoders) for the (96,48) LDPC. Each inner LDPC decoder is shown in a different color. The white areas represent the additional SMS components, i.e. NS, SAT, channel RAM and LD.
+
+TABLE II: (96,48) serial SMS decoder components post P&R area.
+
+Component
+
+NS LLR RAM SAT LD Inner LDPC
+
+Post P&R Area [µm2] 812
+
+5256 676 7056
+
+54756
+
+gain in SNR is achieved at the expense of area efficiency. This holds for both, the serial and the parallel architecture. However, it can be observed, that the throughput of the serial architectures is heavily impaired. Considering the architectures for S = 6 shows, that shifting the decoding performance closer to the ML solution is feasible, but extremely expensive. In the case of the (96,48) code additional 0.2 dB are gained by S = 6 compared to S = 4 but at the same time the area efficiency is cut by a factor of three.
+Table II shows the area of the SMS decoder components. For a serial SMS decoder the area overhead introduced by the additional components (NS, SAT, LD, LLR RAM) is about 20 %. In a parallel decoder architecture the overhead is negligible.
+The proposed stopping criteria improved throughput by a factor of 3.26 and 6 for the parallel architectures, see Table III. For the serial architecture the improvement is less. Therefore, regarding the area efficiency, the serial architectures cannot compete with the parallel versions.
+VI. CONCLUSION
+We have proposed a new LDPC decoding algorithm and hardware implementation with significantly improved error rates. Gains of up to 0.7 dB for BPSK and 1.2 dB for 64-QAM
+
+have been achieved. The area efficiency has been improved by proposing a stopping criterion, that increases throughput up to a factor of 6. Future works need to introduce more elaborated stopping criteria, that reduce the number of iterations further and lead to an improved area efficiency or a higher gain in SNR.
+ACKNOWLEDGEMENT
+We gratefully acknowledge financial support by the DFG (project-ID: KI 1754/1-1 and WE 2442/8-1).
+REFERENCES
+[1] S. Scholl, F. Kienle, M. Helmling, and S. Ruzika, “Integer Programming as a Tool for Code Analysis,” in 9th International ITG Conference on Systems, Communications and Coding, Jan 2013.
+[2] N. Varnica, M. P. C. Fossorier, and A. Kavcic, “Augmented Belief Propagation Decoding of Low-Density Parity Check Codes,” IEEE Transactions on Communications, vol. 55, no. 7, pp. 1308–1317, 2007.
+[3] S. Gounai, T. Ohtsuki, and T. Kaneko, “Modified Belief Propagation Decoding Algorithm for Low-Density Parity Check Code Based on Oscillation,” in Vehicular Technology Conference, 2006. VTC 2006Spring. IEEE 63rd, vol. 3, 2006, pp. 1467–1471. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1683079
+[4] M. Fossorier, “Iterative Reliability-based Decoding of Low-Density Parity Check Codes,” IEEE Journal on selected Areas in Communications, vol. 19, no. 5, pp. 908–917, May 2001.
+[5] T. Hehn, J. B. Huber, and S. Laendner, “Improved iterative decoding of LDPC codes from the IEEE WiMAX standard,” in Proc. Int Source and Channel Coding (SCC) ITG Conf, 2010, pp. 1–6.
+[6] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge University Press, 2008.
+[7] S. Scholl and M. Helmling. (2015) Database of Channel Codes and ML Simulation Results. www.uni-kl.de/channel-codes.
+[8] T. K. Moon, Error Correction Coding: Mathematical Methods and Algorithms. Wiley-Interscience, 2005.
+[9] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[10] P. Schla¨fer, M. Alles, C. Weis, and N. Wehn, “Design Space of Flexible Multi-Gigabit LDPC Decoders,” Hindawi VLSI Design Journal, vol. 2012, 2012.
+[11] C. Gimmler, F. Kienle, C. Weis, N. Wehn, and M. Alles, “ASIC Design of a Gbit/s LDPC Decoder for Iterative MIMO Systems,” in Proc. Int Computing, Networking and Communications (ICNC) Conf, 2012, pp. 192–197.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:57 UTC from IEEE Xplore. Restrictions apply.
+
+

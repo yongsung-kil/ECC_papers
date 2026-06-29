@@ -1,0 +1,363 @@
+Applying Transparent Lossless Data Compression to Improve the Feasibility of Using Advanced Error Correction Codes in Solid-State Drives
+Ningde Xie, Guiqiang Dong, and Tong Zhang ECSE Department, Rensselaer Polytechnic Institute, USA
+
+Abstract—As advanced error correction codes (ECC) which support soft decoding is suggested to use in the future NAND flash memories, the requirement of sensing and transferring multi-bit soft information from the flash cells to controller will incur a large read access latency. This paper proposes to exploit the lossless compressibility of files in LDPC coded NAND flash memories to reduce such latency overhead, other than saving storage space as in conventional practice. The key idea is to apply run-time lossless data compression to enable an opportunistic use of a stronger LDPC code with more coding redundancy, and trade such opportunistic extra error correction capability to allow more coarser-grained memory sensing and hence lead to less read response speed overhead without sacrificing the overall performance. Since the basic operation of NAND flash is typically realized in the unit of page (e.g., 4KB user data per page in the current NAND flash), we only apply this strategy to each individual page independently in order to be completely transparent to the firmware, operating systems and users. This paper quantitatively studies the effectiveness of this design strategy in 2bits/cell NAND flash memories. Results in the case study show that with this design strategy, up to 95.24% on-chip memory sensing latency reduction and 66.67% flash-tocontroller data transfer latency can be achieved respectively.
+Index Terms—NAND flash, lossless compression, error correction code, LDPC.
+I. INTRODUCTION
+As the fastest growing segments in semiconductor industry, NAND flash memory is being used in ever-diverse applications to realize high-capacity, high-performance and non-volatile solid-state data storage. The continuous growth of NAND flash memory storage density has been mainly driven by aggressive technology scaling (e.g., NAND flash memory using 25nm technology has been recently reported by Intel and Micron [1]). Besides technology scaling, multi-level per cell (MLC) storage technique has been widely used to further improve NAND flash memory storage density. In current design practice, most MLC NAND flash memories store 2 bits per cell, and 3 and even 4 bits per cell NAND flash memories have been recently reported in the open literature [2]–[6]. Such continuous technology scaling and aggressive use of MLC storage have significantly reduced the bit cost and increased storage capacity per chip (e.g., above 40% reduction of bit cost per year [7] and the capacity per chip has been doubling every year since 2001). These trends, along with the advantages in terms of low power consumption, small size and no mechanical part, make solid-state drive (SSD) based
+
+on NAND flash memory become a viable alternative to the traditional hard disk drives.
+As the industry is pushing the technology scaling and use of MLC technique to their limits, raw storage reliability of NAND flash memory has been inevitably degrading, which demands an increasingly powerful error correction capability. In current design practice, BCH codes are being widely used. Besides employing stronger BCH codes, there have been a growing interest in the industry to explore other more advanced error correction codes (ECC) [8], e.g., low-density parity-check (LDPC) codes and soft-decision Reed-Solomon (RS) codes. However, since almost all the advanced ECCs require soft-decision input for their decoding, a straightforward use of those advanced ECCs tends to significantly degrade the overall SSD read response speed from two perspectives: (i) NAND flash memory sensing latency is linearly proportional to the sensing granularity, and (ii) the bus for flashto-controller data transfer has to handle a much heavier load, leading to much longer data transfer latency. Since the read response time is one of the most important metrics in SSD [9], how to most practically apply advanced ECCs in future SSD is a nontrivial issue.
+This paper proposes to apply transparent lossless data compression to reduce the read latency overhead induced by using advanced ECCs in SSD. The rationale of this work is very intuitive and can be briefly described as follows. In NAND flash memory, data storage is realized in the unit of page, and each page stores a certain number of user data (typically ranging from 512 byte to 4K byte) and the associated ECC coding redundancy. If one page of user data can be losslessly compressed to a certain extent, more storage space will become available to store ECC coding redundancy, which makes it possible to use a stronger ECC with more-thanenough error correction capability for the present page. For advanced ECCs demanding soft-decision memory sensing, a stronger ECC on average requires less soft-decision precision (i.e., a relatively coarser-grained memory sensing) than a weaker ECC, given the same target decoding failure rate. Therefore, intra-page lossless data compression can enable an opportunistic use of stronger-than-normal-case ECCs, which can allow memory sensing precision reduction and hence lead to less overhead on SSD read response speed. Since the lossless compression of each page is completely transparent to
+
+978-1-4244-8933-6/10/$26.00 ©2010 IEEE
+
+31
+
+SiPS 2010
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:20:02 UTC from IEEE Xplore. Restrictions apply.
+
+the file system and users, it is called transparent lossless data
+
+Vpp
+
+compression. Motivated by the above intuitive discussion, this
+
+paper presents a corresponding SSD system design strategy
+
+and uses LDPC codes as example to evaluate the effectiveness.
+
+Our simulation results show that the bus load can be reduced
+
+by up to 66.7% for 2bits/cell NAND flash memory.
+
+II. BACKGROUND
+
+A. Basics of NAND Flash Memory
+
+Each NAND flash memory cell is a floating gate transistor whose threshold voltage can be configured (or programmed) by injecting certain amount of charges into the floating gate. The continuous growth of NAND flash memory storage density has been mainly driven by technology scaling and MLC technique, i.e., to store more than 1 bit in each memory cell (or floating-gate MOS transistor) by programming the cell threshold voltage into one of l > 2 voltage windows. Because of its obvious storage density advantage, MLC NAND flash memory has been increasingly dominating flash memory market. In current design practice, most MLC NAND flash memories store 2 bits per cell.
+Before one flash memory cell can be programmed, it must be erased (i.e., its threshold voltage is set to the lowest voltage window). A tight threshold voltage control is typically realized by using program-and-verify approach with a stair case program voltage Vpp [10]. Because NAND flash memory should sweep the entire operational voltage window using this program-and-verify procedure, the NAND flash memory write latency tends to be inversely proportional to the program step voltage ΔVpp. Ideally, threshold voltage distributions of different storage states should be sufficiently far away from each other to ensure a high raw storage reliability. In practice, due to various effects such as background pattern dependency, noises, and cell-to-cell interference [11], the threshold voltage distributions may be very close to each other or even overlap, leading to non-negligible raw bit error rates. In the following, we present an MLC cell threshold voltage distribution model that will be used for quantitative performance evaluation and comparison in this work. The erase state tends to have a wide Gaussian-like distribution [12], i.e., the probability density function (PDF) of the threshold voltage distribution can be approximated as
+
+p0(x)
+
+=
+
+√1 σ0 2π
+
+· e , −
+
+(x−μ)2 2σ02
+
+where σ0 is the standard deviation and μ is the mean threshold voltage of the erase state. All the other states tend to have the
+
+same threshold voltage distribution, as illustrated in Fig. 1. The
+
+model consists of two parts, including an uniform distribution
+
+in the middle and Gaussian distribution tail on both sides [12].
+
+The width of the uniform distribution equals to the program
+
+step voltage ΔVpp, and the standard deviation of the Gaussian distribution is denoted as σ. The Gaussian distribution on
+
+both sides models the overall effect of background pattern
+
+dependency, noises, and cell-to-cell interference. Let P0 and P1 denote the probabilities of the uniform distribution and the
+
+Fig. 1. Threshold voltage distribution model NAND flash memory (except the erase state).
+
+Gaussian distribution, respectively. We have the overall PDF
+
+fpr(x) as
+
+⎧ ⎪⎪⎪⎪⎨
+
+√c σ 2π
+
+,
+
+b
+
+−
+
+0.5ΔVpp
+
+≤
+
+x
+
+≤
+
+b
+
++
+
+0.5ΔVpp
+
+fpr(x) = ⎩⎪⎪⎪⎪
+
+√c σ 2π
+
+e−
+
+(x−b−0.5ΔVpp 2σ2
+
+)2
+
+,
+
+x
+
+>
+
+b
+
++
+
+0.5ΔVpp
+
+e √c
+
+−
+
+(x−b+0.5ΔVpp 2σ2
+
+)2
+
+σ 2π
+
+,
+
+x
+
+<
+
+b
+
+−
+
+0.5ΔVpp
+
+where b is the mean of the threshold voltage (i.e., the center
+
+of the distribution as shown in Fig. 1), and the constant c can
+
+be solved based on P0 + P1 =
+
++∞ −∞
+
+fpr (x)dx
+
+=
+
+1.
+
+B. SSD Read Access Latency
+
+An SSD contains one controller and multiple NAND flash chips. SSD read access latency includes the on-chip NAND flash sensing latency, flash-to-controller data transfer latency, and the latency of ECC decoding on the controller. The on-chip NAND flash sensing is carried out in a fully serial manner, hence its latency is linearly proportional to the memory cell sensing levels. The on-chip hard-decision sensing latency of 2bits/cell NAND flash memories is typically few tens of μs, e.g., 20μs. Therefore, to support a soft-decision n-bit per cell memory sensing in 2bits/cell NAND flash memory, the on-chip memory sensing latency will increase by (2n − 1)/(22 − 1) times, e.g., from 20μs to 207μs when n equals to 6. Note that for the page-based read operation in NAND, reference voltage has to be moved to all possible boundaries instead of carrying out binary tree search which can only be used if sensing one cell.
+In current design practice, most NAND flash memory chips support an 8-bit I/O bus with clock frequency of up-to 100MHz. Assuming the NAND flash chip connects with the SSD controller through a 100MHz 8-bit I/O bus, it will take at least 41μs to transfer one 4KB page from NAND flash chip to controller in the case of hard-decision memory sensing. Similarly, in order to support a soft-decision n-bit per cell memory sensing in 2bits/cell NAND flash memory, the flashto-controller data transfer latency will increase by n/2 times, e.g., from 41μs to 123μs when n equals to 6. The latency of ECC decoding on the controller depends on the achievable decoding throughput, e.g., assume the decoder can achieve a throughput of 4Gbps, the decoding latency can be around 16μs when the page size is 4KB. The above discussions clearly show that the support of fine-grained soft-decision memory
+
+32
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:20:02 UTC from IEEE Xplore. Restrictions apply.
+
+sensing tends to significantly increase the overall SSD read response time, e.g., 20 + 41 + 16 = 77μs in the case of harddecision memory sensing and 207 + 123 + 16 = 346μs in the case of 6-bit per cell sensing in 2bits/cell NAND flash memory.
+III. PROPOSED DESIGN STRATEGY
+One of the most prevailing real-life applications of data compression [13] is to increase the effective storage capacity of mass data storage media such as conventional hard disk drives and SSD. However, compared with lossy data compression being universally used in multimedia file storage, lossless data compression is much less popular for two main reasons: (i) a compressed file may not be easily modified and managed on the storage media, and (ii) since the lossless data compression ratio1 can rarely be much better than 2:1 in contrast to lossy data compression ratio of over hundreds, there is less interest and incentive in using lossless data compression to save storage space. As a result, except multimedia data files, many files stored on mass data storage media today are not compressed at all although they are losslessly compressible, such as web pages, text files, and software and system files, etc. This observation directly motivates the basic idea of this work, as illustrated in Fig. 2: We can apply runtime transparent lossless data compression to opportunistically enable the use of a stronger ECC. Its stronger-than-necessary error correction capability can be traded to allow coarsergrained memory sensing, which can directly improve SSD read response speed. We note that lossless decompression only involves simple table lookup and can be done on-the-fly, hence it does not induce any noticeable latency overhead on SSD read operations.
+Since compression ratio of lossless data compression heavily depends on the data length, it can be very difficult to achieve a large compression ratio such as 2:1 within each individual page. Fortunately, as demonstrated in the following case study, the compression ratio may not necessarily be a concern in practice. Different from the conventional use of lossless data compression that aims to improve effective storage capacity and hence should achieve a compression ratio of close or even larger than 2:1, a very small compression ratio can provide enough extra storage space for a sufficiently stronger ECC. For example, a compression ratio of 1.11:1 can reduce the ECC code rate from 19/20 to 6/7, which represents a very large coding gain and hence can potentially enable a coarser-grained memory sensing. Therefore, this can drastically simplify the implementation of intra-page transparent lossless data compression. Moreover, current NAND flash memories have reasonably large page size, e.g., most NAND flash memories use 4K-byte user data per page. Such relatively large page sizes make it more feasible to achieve a small compression ratio within each page at reasonable implementation cost.
+1In this work, compression ratio is defined as the ratio of the data length before compression over the length after compression, hence it should be greater than one.
+
+Let Rn denote the code rate of the normal ECC used by SSDs without using any intra-page transparent lossless data compression, i.e., the same rate-Rn ECC is used to protect all the pages of uncompressed original user data as in current design practice. If one page of user data can be compressed with a compression ratio of rc, we could accordingly reduce the code rate from Rn to Rn/rc, leading to more redundant space with the same codeword length. As a result, we can leverage such run-time opportunistically extra redundancy to reduce the NAND flash memory sensing precision while maintaining the same overall storage system reliability. Ideally, we may expect that the code rate (and hence error correction capability) can be gracefully adjusted with a very fine granularity in order to maximize the potential benefit. However, such ideal scenarios with fine-grained configurability and adaptability may largely complicate the overall system design and incur non-negligible implementation overhead. Therefore, in this work, we consider the simplest and most practical scenario where only two different ECC code rates are allowed. Let Rn and Rs (where Rn > Rs) denote these two code rates, where Rn is the rate of the normal ECC when NAND flash memories do not use any data compression and Rs is the rate of a stronger ECC enabled by opportunistic run-time lossless data compression. In particular, we have
+• If rc ≤ rt, then we use the normal rate-Rn code to protect the uncompressed user data. Accordingly, NAND flash memory chip will use a full-precision memory sensing when this page is being read.
+• If rc > rt, then we use the powerful rate-Rs code to protect the compressed user data. Accordingly, NAND flash memory chip will use a reduced-precision memory sensing when this page is being read.
+Let qf and qr (where qf > qr) represent the memory sensing quantization bit number in full-precision and reducedprecision memory sensing, respectively. Let α denote the probability that one page can be compressed with a ratio equal or larger than the threshold rt. We could estimate that the on-chip NAND flash memory sensing latency and flash-tocontroller data transfer latency can be reduced by
+
+Lsens
+
+=
+
+α
+
+·
+
+2qf − 2qr 2qf − 1
+
+,
+
+and
+
+Ltrans
+
+=
+
+α
+
+·
+
+qf
+
+− qf
+
+qr
+
+.
+
+(1)
+
+IV. CASE STUDY
+
+In this section, we present a case study to show the effectiveness of the above design strategy assuming the use of LDPC codes in future SSDs. We consider 2bits/cell NAND flash memory with 4KB page size. The program step voltage ΔVpp is normalized to 0.4 and the distance between the mean of two adjacent threshold voltage windows is normalized to 1. Given the value of program step voltage ΔVpp, the page error rate (PER) will depend on the standard deviations of the erased state (i.e., σ0) and the other three programmed states (i.e., σ). We fix the normalized σ0 as 0.1 and all the following simulations are carried out by varying normalized σ. First, to demonstrate the significant advantage of LDPC codes over
+
+33
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:20:02 UTC from IEEE Xplore. Restrictions apply.
+
+ 
+
+
+
+ 
+
+
+ 
+  
+
+
+
+ 
+
+
+ 
+
+Fig. 2. Illustration of the proposed design strategy.
+
+ 
+
+
+BCH codes being used in current design practice, we construct a binary (34528, 32800, 108) BCH code based on GF(216), and construct a regular rate-19/20 (34520, 32794) quasi-cyclic LDPC (QC-LDPC) code with the parity check matrix column weight of 4. The QC-LDPC code parity check matrix contains an array of 2 × 40 circulant matrices, where all the circulant matrices have a column weight of 2 and are constructed randomly subject to the 4-cycle free constraint. QC-LDPC decoder employs the min-sum decoding algorithm [14]. Fig. 3 shows a simulated PER performance and comparison, where QC-LDPC code decoding uses floating-point memory-sensing precision.
+
+100
+
+10−1
+
+(34520, 32794) QC−LDPC
+
+(34528, 32800, 108) BCH
+
+10−2
+
+Page Error Rate (PER)
+
+10−3
+
+10−4
+
+10−5
+
+10−6 0.115 0.12 0.125 0.13 0.135 0.14 0.145 0.15 0.155 0.16 σ
+
+Fig. 3. PER performance and comparison to show significant advantage of LDPC codes over BCH codes being used in current design practice.
+
+For the above rate-19/20 QC-LDPC code, we further carry out simulations to evaluate the impact of memory sensing precision on decoding performance, as shown in Fig. 4, where memory sensing precision ranges from 2-bit to 6-bit. We set the full-precision memory sensing as qf = 6, i.e., the 2bits/cell NAND flash memory chip carries out 6-bit memory sensing for each memory cell if the page is not compressed. For different reduced-precision memory sensing configuration, we have to use LDPC codes with different code rates, which accordingly demands different compression ratio threshold rt. Given each specific reduced memory sensing precision, we carry out extensive simulations to search for the corresponding LDPC code that has no decoding performance loss compared with the rate19/20 LDPC code with full-precision 6-bit memory sensing. As shown in Fig. 5, reducing memory sensing precision from 6 bits to 5, 4, 3, and 2 bits demand accordingly reducing code rate from 19/20 to 16/17, 12/13, 7/8, and 6/7, respectively,
+
+Page Error Rate (PER)
+
+100
+
+Floating Point
+
+10−1
+
+Q=6 Q=5
+
+10−2
+
+Q=4 Q=3
+
+Q=2
+
+10−3
+
+10−4
+
+10−5
+
+10−6 0.11 0.115 0.12 0.125 0.13 0.135 0.14 0.145 0.15 0.155 0.16 σ
+Fig. 4. PER simulation results in the presence of different memory sensing precisions.
+
+which correspond to lossless data compression threshold rt of 1.01, 1.03, 1.09, and 1.11, respectively. We also need to point out that although Q=3 and code rate of 7/8 shows much better performance than the baseline case, if we increase the code rate to 8/9 that is the next possible one close to 7/8, it will show slight performance loss.
+
+Page Error Rate (PER)
+
+10−1
+
+Q=6, rate−19/20 LDPC, rt=1.00:1 Q=5, rate−16/17 LDPC, rt=1.01:1
+
+10−2
+
+Q=4, rate−12/13 LDPC, rt=1.03:1 Q=3, rate−7/8 LDPC, rt=1.09:1
+
+10−3
+
+Q=2, rate−6/7 LDPC, rt=1.11:1
+
+10−4
+
+10−5
+
+10−6
+0.152 0.153 0.154 0.155 0.156 0.157 0.158 0.159 0.16 σ
+
+Fig. 5. PER simulation results of different LDPC codes with different memory sensing quantization bits, which have no performance loss compared with rate-19/20 LDPC code with full-precision 6-bit memory sensing.
+
+Recall that α denotes the probability that one page can be compressed with a ratio equal or larger than the threshold rt, we can calculate the reduction of on-chip memory sensing latency and flash-to-controller data transfer latency according
+
+34
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:20:02 UTC from IEEE Xplore. Restrictions apply.
+
+to (1). Clearly, there is a design trade-off in this context, i.e., as we increase the compression threshold rt and hence reduce the code rate of the strong ECC code, we can improve the SSD read response speed for compressed pages, while at the same time less amount of pages can be compressed with a ratio equal or larger than rt and hence the probability α will drop. In practice, designers may have to carry out extensive representative simulations to evaluate this involved trade-off and select the optimal rt leading to the maximal average SSD read response speed. Ideally, for an application with the extreme case where all the user data can be compressed with a ratio over 1.11, we can choose qr of 2 and use a rate-6/7 LDPC code for each page. According to (1), we can get the upper bound for the reduction of on-chip memory sensing latency Lsens and flash-to-controller data transfer latency Ltrans to be 95.24% and 66.67% respectively.
+In this work, we further carry out compression for various user data, executable and system files on one server with red hat enterprise edition Linux and several EDA software installed. The lossless data compressor is designed based on the well-known LZ77 algorithm [15]. Results show that α is 0.9991, 0.9787, 0.8817 and 0.8583 when we set rt as 1.01, 1.03, 1.09, and 1.11, respectively. Therefore, according to (1), we can estimate the reduction of on-chip memory sensing and flash-to-controller data transfer latency as listed in Table I. Let Lsens, Ltrans, and Ldec represent the latency of on-
+
+TABLE I REDUCTION OF ON-CHIP MEMORY SENSING AND FLASH-TO-CONTROLLER
+DATA TRANSFER LATENCY UNDER DIFFERENT REDUCED MEMORY
+SENSING PRECISION IN OUR CASE STUDY.
+
+qr rt
+
+α
+
+Lsens Ltrans
+
+5 1.01 0.9991 50.75% 16.65%
+
+4 1.03 0.9787 74.57% 32.62%
+
+3 1.09 0.8817 78.37% 44.09%
+
+2 1.11 0.8583 81.74% 57.22%
+
+chip memory sensing, flash-to-controller data transfer, and ECC code decoding, respectively. Following the discussions in Section II-B, we set Lsens = 207μs, Ltrans = 123μs, and Ldec = 16μs when full-precision 6-bit memory sensing is being used, leading to a total SSD read response latency of 346μs. Based upon the results listed in Table I, we can estimate that the average SSD response latency can be reduced from 346μs to 220μs, 152μs, 130μs and 106μs, respectively, when we set qr as 5, 4, 3, and 2. Hence, in this case, we should choose qr of 2, and correspondingly set lossless compression ratio threshold rt as 1.11 and use rate-6/7 LDPC code when one page is compressed.
+V. CONCLUSIONS
+This paper demonstrates the potential of using lossless data compression to reduce the bus load in the LDPC coded NAND flash systems. This work has a two-fold motivation: (i) lossless data compression is not being widely used today in mass data
+
+storage systems such as NAND flash memories, leaving many losslessly compressible files are stored uncompressed, (ii) the basic read/write unit in NAND flash is equal-sized pages, and modern NAND flashes employ increasingly powerful ECCs to protect each page data to ensure the storage integrity, while a stronger ECC needs more storage space to store coding redundancy. The underlying idea of this work is to apply run-time intra-page lossless data compression to enable an opportunistic use of a stronger LDPC code without incurring any storage space overhead, and trade such more-than-enough error correction capability for a coarsely sensing of soft information. To evaluate and demonstrate this design strategy, we carried out a case study and the results show that with this design strategy, up to 95.24% on-chip memory sensing latency reduction and 66.67% flash-to-controller data transfer latency can be achieved respectively.
+REFERENCES
+[1] Intel, Micron Introduce 25-Nanometer NAND - The Smallest, Most Advanced Process Technology in the Semiconductor Industry, http://www.intel.com/pressroom/archive/releases/20100201comp.htm, Feb., 2010.
+[2] Y. Li et al., “A 16 Gb 3-Bit Per Cell (X3) NAND Flash Memory on 56 nm Technology With 8 MB/s Write Rate,” IEEE Journal of Solid-State Circuits, vol. 44, pp. 195–207, Jan. 2009.
+[3] C. Trinh et al., “A 5.6MB/s 64Gb 4b/Cell NAND Flash memory in 43nm CMOS,” in IEEE International Solid-State Circuits Conference (ISSCC), Feb. 2009, pp. 246–247.
+[4] C. Yu, S. Zhang, P.Y. Kam, and J. Chen, “Bit-Error Rate Performance of Coherent Optical M-ary PSK/QAM using Decision-Aided Maximum Likelihood Phase Estimation,” Optics Express, vol. 18, no. 12, pp. 12088–12103, 2010.
+[5] J. Lu, F. Huang, Z. Wang, and W. Wu, “Refinement of an analytical approximation of the surface potential in MOSFETs,” Bandaoti Xuebao(Chinese Journal of Semiconductors), vol. 27, no. 7, pp. 1155–1158, 2006.
+[6] H. Nitta, T. Kamigaichi, F. Arai, T. Futatsuyama, M. Endo, N. Nishihara, T. Murata, H. Takekida, T. Izumi, K. Uchida, et al., “Three Bits Per Cell Floating Gate NAND Flash Memory Technology for 30nm and beyond,” in IEEE International Reliability Physics SymposiumPhysics Symposium, Montreal, 2009, 2009, pp. 307–310.
+[7] C. Park, P. Talawar, D. Won, M. Jung, J. Im, S. Kim, and Choi, “A High Performance Controller for NAND Flash-based Solid State Disk (NSSD),” in Proceedings of the 21st IEEE Non-Volatile Semiconductor Memory Workshop, 2006, pp. 17–20.
+[8] N. Duann, “Error Correcting Techniques for Future NAND Flash Memory in SSD Applications,” in Flash Memory Summit, 2009.
+[9] M.H. Kryder and C.S. Kim, “After Hard Drives - What Comes Next?,” IEEE Transactions on Magnetics, vol. 45, no. 10, 2009.
+[10] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, “Introduction to Flash memory,” Proceedings of the IEEE, vol. 91, pp. 489–502, April 2003.
+[11] K.-T. Park et al., “A Zeroing Cell-to-Cell Interference Page Architecture With Temporary LSB Storing and Parallel MSB Program Scheme for MLC NAND Flash Memories,” IEEE Journal of Solid-State Circuits, vol. 43, pp. 919–928, April 2008.
+[12] K. Takeuchi, T. Tanaka, and H. Nakamura, “A double-level-Vth select gate array architecture for multilevel NAND flash memories,” IEEE Journal of Solid-State Circuits, vol. 31, pp. 602–609, April 1996.
+[13] K. Sayood, Introduction to Data Compression, Morgan Kaufmann, 2nd edition, 2000.
+[14] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and Xiao-Yu Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, pp. 1288–1299, Agu. 2005.
+[15] J. Ziv and A. Lempel, “A Universal Algorithm for Sequential Data Compression,” IEEE Transactions on Information Theory, vol. 23, pp. 337–343, May 1977.
+
+35
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:20:02 UTC from IEEE Xplore. Restrictions apply.
+
+

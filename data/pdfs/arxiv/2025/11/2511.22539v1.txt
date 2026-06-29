@@ -1,0 +1,1314 @@
+1
+TransCoder: A Neural-Enhancement Framework for Channel Codes
+Anastasiia Kurmukova, Student Member, IEEE, Selim F. Yilmaz, Emre Ozfatura, Member, IEEE, and Deniz Gu¨ndu¨z, Fellow, IEEE,
+
+arXiv:2511.22539v1 [cs.IT] 27 Nov 2025
+
+Abstract—Reliable communication over noisy channels requires the design of specialized error-correcting codes (ECCs) tailored to specific system requirements. Recently, neural networkbased decoders have emerged as promising tools for enhancing ECC reliability, yet their high computational complexity prevents their potential practical deployment. In this paper, we take a different approach and design a neural transmission scheme that employs the transformer architecture in order to improve the reliability of existing ECCs. We call this approach TransCoder, alluding both to its function and architecture. TransCoder operates as a code-adaptive neural module aimed at performance enhancement that can be implemented flexibly at either the transmitter, receiver, or both. The framework employs an iterative decoding procedure, where both noisy information from the channel and updates from the conventional ECC decoder are processed by a neural decoder block, utilizing a block attention mechanism for efficiency. Through extensive simulations with various conventional codes (LDPC, BCH, Polar, and Turbo) and across a wide range of channel conditions, we demonstrate that TransCoder significantly improves block error rate (BLER) performance while maintaining computational complexity comparable to traditional decoders. Notably, our approach is particularly effective for longer codes (block length > 64) and at lower code rates, scenarios in which existing neural decoders often struggle (despite their formidable computational complexity). The results establish TransCoder as a promising practical solution for reliable communication among resourceconstrained wireless devices.
+Index Terms—Error correction codes, Block-attention mechanism, Transformer, Wireless communication, Neural decoder.
+I. INTRODUCTION
+R ELIABLE communication over noisy channels is essential in modern digital systems, and error-correcting codes (ECCs) play a critical role in ensuring data integrity. Classical linear codes, such as polar codes [1] and low-density paritycheck (LDPC) codes [2], and linear codes with memory, such as Turbo codes [3], which are based on convolutional codes [4], have been shown to achieve near-capacity performance [5] on additive white Gaussian noise (AWGN) channels for long block lengths. Although these codes have been successfully
+A. Kurmukova is with the Department of Electrical and Electronic Engineering, Imperial College London, London SW7 2AZ, U.K. (Corresponding author.) E-mail: a.kurmukova22@imperial.ac.uk.
+S. F. Yilmaz was with the Department of Electrical and Electronic Engineering, Imperial College London, London SW7 2AZ, U.K., when the work was done. E-mail: s.yilmaz21@imperial.ac.uk.
+Emre Ozfatura is with the Department of Electronics Engineering, Sabanci University, Istanbul, Turkey. E-mail: emre.ozfatura@sabanciuniv.edu.
+D. Gu¨ndu¨z is with the Department of Electrical and Electronic Engineering, Imperial College London, London SW7 2AZ, U.K. E-mail: d.gunduz@imperial.ac.uk.
+
+adopted in modern communication network protocol [6], there are various open challenges that continue to drive research in this area, including suboptimal performance in short block length regimes [7], limited adaptability to varying channel conditions [8], and the rapid growth of maximum-likelihood decoding complexity with the block length.
+In particular, decoding complexity is a critical metric in evaluating ECCs for deployment in practical wireless systems. Since optimal maximum likelihood decoding for linear codes is NP-hard, practical implementations rely on efficient iterative decoding algorithms tailored to specific code families. These include Tanner graph based belief propagation (BP) for LDPC codes [2], factor graph based BP [9], [10], successive cancellation (SC) [1] and successive cancellation list (SCL) [11] decoding for polar codes, and the Bahl-Cocke-Jelinek-Raviv (BCJR) decoding algorithm for Turbo codes [3]. Demand for low-complexity near-optimal decoding solutions, coupled with advances in neural network architectures, has led to many recent studies on neural-assisted error correction, with most of the efforts focusing on improving the decoding performance of existing codes. Neural BP reduces the bit error rate (BER) by introducing trainable weights into conventional BP decoding on Tanner graphs [12], [13], the polar factor graph [14], [15], or the Turbo decoder [16]. Further replacement of conventional algorithms with trainable architectures, while preserving the decoding structure, resulted in models such as neural successive cancellation [17] for polar codes and neural BCJR [18] for convolutional codes.
+There are also fully neural decoding approaches [19] that are not based on any existing decoding algorithm but are limited to extremely short codes. The idea of syndromebased neural decoding [20] for linear codes and the attention mechanism [21] resulted in the creation of the error correction code transformer (ECCT) [22], which embeds parity-check constraints into the self-attention mechanisms. This decoder surpasses the conventional BP decoder in terms of BER, and the model was further simplified through quantization and better masking in [23]. Transformer-based decoding was further improved in [24] by introducing cross-message passing. However, these fully transformer-based approaches result in huge increases in decoding complexity and drastic memory consumption compared to conventional decoders, which significantly limits their potential adoption in practical systems. Moreover, the improvements in BER often do not translate into improvements in the block error rate (BLER). Finally, it has been shown in [25] that even the BER performance of these codes falls short of state-of-the-art (SoTA) decoding
+
+2
+
+Transmitter
+
+TransCoder
+
+b
+Message bits
+
+Channel
+
+c
+
+TransCoder s
+
+Encoder Codeword Encoder Symbols
+
+Wireless Channel
+~
+
+Receiver
+
+y TransCoder p Channel Decoder
+output
+
+>
+
+y
+
+x
+
+Channel output
+
+r iterations
+TransCoder Refinement
+prf
+
+LLRs
+fm2d l
+Channel Decoder
+
+>
+
+b
+Message estimate
+
+fd2m
+Channel Decoder
+
+>
+
+x
+b
+Message estimate
+
+fm2d
+
+lrf LLRs
+
+Fig. 1. Overview of the TransCoder-based communication paradigm.
+
+algorithms, casting serious doubt on the practical utility of these high-complexity ML-based decoding approaches.
+Another approach is to modify the encoding function or the transmitted codeword of a fixed code while retaining the decoder. A good example of this approach is the method introduced in [26], where the authors introduce minor perturbations to the modulated codeword to optimize its placement within the decision regions of the prescribed decoder, thereby improving its decoding accuracy without any modifications to the decoding algorithm. The standard modulation constellations can be improved without considering the channel code structure via signal shaping [27] or through trainable signal shaping [28]–[30]. A fully neural encoder and decoder without any pre-defined code structure [31] showed good performance only for extremely short code lengths. In [32], the authors introduced a neural architecture for both the encoder and decoder, preserving the recursive encoding/decoding structure of Reed-Muller codes, which demonstrates great error correction capability. However, such an approach requires considerable changes to the encoding/decoding procedure and is limited to one class of codes.
+In this paper, we propose TransCoder, a novel approach that preserves the structure of existing ECCs while transforming the transmission scheme through neural processing at both ends of the communication link. Unlike previous neural approaches that modify the encoder or decoder directly, TransCoder operates as additional adaptive neural encoding/decoding modules (illustrated in Fig. 1) that enhance the robustness of the transmitted codewords in standard BPSK/QPSK constellations. The complete TransCoder pipeline comprises three key components: a neural encoder module that adaptively adjusts codewords before noisy transmission, a primary decoder for initial channel output processing, and a refinement decoder that iteratively improves the noisy channel output. While the best performance is achieved with the full pipeline, an important advantage of our approach is its modular nature: even a partial implementation at either the transmitter or receiver can still yield substantial improvements.
+The effectiveness of TransCoder can be understood through
+
+its impact on the distribution of pairwise codeword distances. In Fig. 2, we plot the histogram of normalized pairwise distances between modulated codewords with and without TransCoder for the relatively short code BCH (31, 16) with just 216 possible codewords. Our neural framework restructures the code distribution to enhance codeword distinguishability while preserving the underlying code structure. Even when employed only at the encoder, TransCoder achieves a more Gaussian-like distance distribution, similar to the theoretically optimal Gaussian codebook. Employing TransCoder at both ends results in a similar Gaussian-like distance distribution with an increased average pairwise distance.
+Our comprehensive experimental evaluations employing various code families (LDPC, BCH, Polar, and Turbo) in diverse channel conditions demonstrate that TransCoder significantly outperforms both standard and neural-based decoders in terms of block error rate (BLER) performance. The gains of the proposed scheme are most pronounced for longer codes (with lengths greater than 64 and up to 512 that were tested) and lower code rates, while existing transformer-based approaches [23], [24] often show mediocre performance in these settings. For instance, with LDPC (384, 192) code, TransCoder achieves a 1dB gain at a BLER of 10−5 compared to both conventional BP decoding with 20 iterations and CrossMPT [24]. Having the conventional decoder incorporated inside the pipeline allows us to keep the transformer-based module small; thus, the TransCoder computational complexity exceeds that of conventional approaches like BP decoding by just one order of magnitude, while being two orders of magnitude less than the SoTA CrossMPT decoder.
+These results represent a major milestone in the practicality of transformer-based error correction solutions for communication systems with limited computational and memory resources. By bridging the divide between SoTA neural decoding methods and the efficiency of traditional algorithms like BP, this work offers a compelling path toward real-world deployment in resource-constrained environments. Our major contributions can be summarized as follows.
+• Novel Framework: We introduce a novel end-to-end communication framework enabled through the TransCoder
+
+3
+
+TransCoder (Encoder + Decoder)
+
+TransCoder (Encoder only)
+
+0.25
+
+BCH (31, 16)
+
+0.20
+
+Normalized distance count
+
+0.15
+
+0.10
+
+0.05
+
+0.00 0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+Pairwise distance
+
+Fig. 2. Normalized pairwise distances distribution between modulated codewords.
+
+block, which effectively reshapes codeword distance distribution while preserving underlying code structures. In other words, TransCoder unifies traditional hand-crafted encoding/ decoding algorithms with neural networkassisted solutions, offering a robust and efficient errorcorrection framework. • Practical Efficiency: TransCoder achieves superior error correction performance while maintaining computational complexity comparable to BP decoding, with flexible deployment options at the transmitter and/or the receiver. • Versatility: The proposed TransCoder mechanism can be utilized in conjunction with all major code families (LDPC, BCH, Polar, Turbo), with particularly striking gains for longer codes and higher code rates, regimes in which existing neural approaches typically struggle. • Reproducibility: We provide a complete implementation of TransCoder as a publicly available code 1 to enable further research and practical applications.
+The remainder of the paper is organized as follows. Section II describes the communication system and defines the parts of the conventional transmission pipeline, including errorcorrection codes. Section III presents the proposed TransCoder framework, i.e., the structure of neural modules and the organization of the information flow between the conventional and neural decoders. Section IV provides numerical comparisons with a baseline without TransCoder and the SoTA neural decoders to evaluate the performance of the proposed framework. Finally, Section V concludes this paper, while further details on the model implementation are provided in the Appendix A.
+Notations: Throughout this work, we use the following notations: x = [x0, x1, . . . , xn−1] refers to an n-dimensional vector, xi denotes the ith element, a sequence of n-dimensional vectors refers to X = [x0, . . . , xk−1] or to a matrix form Xk×n of shape k × n. We use calligraphic X to denote an ordered set of elements {x0, . . . , xn−1}, and use Qm to refer to a particular ordered set {q0, . . . , q2m−1} of m-digit binary numbers, where qi is the binary representation of integer i, for i = 0, . . . , 2m − 1.
+
+1The source code is available at https://github.com/smeshk/TransCoder.
+
+II. SYSTEM MODEL
+
+We consider a point-to-point additive white Gaussian noise
+
+(AWGN) channel as it is common in the literature, though
+
+the presented method can be directly applied to other channel
+
+models. Given a binary message b of length k, the goal
+
+of the transmitter is to convey this bit sequence reliably to
+
+the receiver over the AWGN channel. This is achieved by
+
+introducing redundancy into the sequence and encoding it
+
+into a new binary sequence of length n > k to facilitate
+
+transmission over the noisy channel, that means employing
+
+a channel code C(n, k) defined over the binary field F2.
+Let this encoding operation be denoted by EC(n,k): b ∈ {0, 1}k →− c ∈ {0, 1}n, where codeword c ∈ C(n, k) is the
+
+binary sequence encoded with the channel code C(n, k). The
+
+code
+
+rate
+
+of
+
+this
+
+encoding
+
+scheme
+
+is
+
+defined
+
+as
+
+R
+
+=
+
+k n
+
+.
+
+In
+
+the
+
+scope of this work, we limit our focus to binary linear block
+
+codes as they are mostly presented in the wireless transmission
+
+standards [6].
+
+After generating codewords, the transmitter maps each
+
+codeword c into a sequence of symbols s from the chosen
+
+constellation, i.e., for binary phase-shift keying (BPSK) modulation s ∈ {−1, 1}n, to be transmitted over the channel. We
+
+note that, in the most general case, the length of c need not
+
+be equal to that of s if larger constellations are used, e.g.,
+
+QAM. We will restrict our presentation to BPSK modulation
+
+for simplicity.
+
+The sequence of modulated symbols s is transmitted over
+
+the channel:
+
+y=s+w ,
+
+(1)
+
+where w represents the Gaussian noise component independent and identically distributed (i.i.d.) with wi ∼ N (0, σ2), i = 0, . . . , n − 1. An average power constraint,
+imposed on the symbol sequence s, is expressed as follows:
+
+Eb
+
+1 n
+
+⟨s,
+
+s⟩
+
+≤1 ,
+
+(2)
+
+and is averaged over all information sequences b, while for the BPSK case, the power is precisely equal to 1. The signalto-noise ratio (SNR) of this system is SNR ≜ 1/σ2. At the receiver, the noisy sequence y is processed by the demodulator
+(if modulation was applied) to obtain the probabilities for every bit position to pass them to the channel decoder DC(n,k).
+
+A common practice in implementing channel decoders [6] is to take the log likelihood ratios (LLRs) l ∈ Rn as an input, where each LLR li at position i, i = 0, . . . , n − 1, is given by:
+
+li
+
+=
+
+log
+
+Pr(ci Pr(ci
+
+= =
+
+0|y) 1|y)
+
+.
+
+(3)
+
+For example, for the BPSK case, LLR computation can be
+
+simply expressed as:
+
+li =
+
+yi 2σ2
+
+,
+
+∀i = 0, . . . , n − 1.
+
+Having received the LLRs, channel decoder DC(n,k) produces an estimate bˆ of the original message b, i.e., DC(n,k): l ∈ Rn →− bˆ ∈ {0, 1}k.
+
+4
+
+The system performance can be evaluated by two key metrics: the block error rate (BLER) and the bit error rate (BER). BLER is defined as:
+
+BLER ≜ Eb,w[1{bˆ≠ b}] ,
+
+(4)
+
+which quantifies the rate of incorrectly decoded codewords averaged over all possible transmitted information sequences b and all channel realizations w. The BER is given by:
+
+BER ≜ Eb,w
+
+1 k
+
+k
+1{ˆbi≠ bi}
+
+,
+
+(5)
+
+i=1
+
+representing the average rate of bit errors across all k bits.
+
+A. Linear Block Codes
+A linear block code C(n, k) over the binary field F2n can be defined by the generator and parity-check binary matrix pair Gk×n and H(n−k)×n, respectively. The generator matrix G generates the codeword c by computing the parity checks from the information sequence b, i.e.,
+
+EC(n,k) : b ∈ {0, 1}k →− c = bG ∈ {0, 1}n ,
+
+(6)
+
+where the multiplication is performed over the binary field F2. The parity-check matrix H of size (n − k) × n satisfies GHT = 0 and cHT = 0 for any codeword c ∈ C(n, k). For any given binary sequence cˆ ∈ {0, 1}n, the parity-check matrix H can be used for syndrome calculation cˆHT , which is non-zero iff cˆ ∈/ C(n, k). The parity-check matrix H is commonly used in decoding; for instance, in syndrome-based error correction or in BP decoding [2] performed over the Tanner graph constructed from H.
+There are different implementations of linear block codes based on the specific properties/constructions of matrices G and H. For example, polar codes [1] perform channel polarization via a special construction of G and low density parity check (LDPC) codes [2] have a low density parity-check matrix H. The choice of the linear code and its decoding algorithm relies on the system requirements. Depending on the decoding algorithm, the decoder returns a hard (binary) estimate of the codeword cˆ ∈ {0, 1}n, for instance, successive cancellation (SC) decoding for polar codes, or a soft estimate of the codeword x ∈ Rn that also can be treated as the bit reliability estimates, like in BP decoding for LDPC codes. To convert the soft estimate into a hard estimate, one can use the sign function, followed by a mapping to the binary domain, i.e., cˆ = 0.5−0.5 sign(x). In the scope of this work, we utilize soft estimate to enable iterative decoding for refinement.
+Next, we present the proposed TransCoder framework, which operates as an addition to the conventional channel encoder and decoder through transformer-based neural modules applied both at the transmitter and receiver.
+
+III. TRANSCODER
+The key idea behind the TransCoder design is to enhance the performance of a given channel code through the integration of additional neural encoder and decoder modules into the standard coding framework. Hence, as illustrated in Fig. 1,
+
+the overall architecture consists of five main blocks: two at the transmitter side, namely, channel encoder, TransCoder encoder, and three at the receiver side, namely, TransCoder decoder, channel decoder, and TransCoder refinement decoder. Nevertheless, the TransCoder framework is adaptable to the system requirements and can be partially used in the transmission scheme. The limited integration of modules, i.e., only TransCoder encoder or decoder parts, does not change the idea of neural-assisted improvement of codeword weight distribution as illustrated in Fig. 2, though the whole pipeline brings the full benefits of the proposed scheme. Each of the TransCoder modules is based on the transformer encoder architecture with minor differences. Here, we will further explain these modules operating within the encoding/decoding phases separately.
+A. Encoding phase
+The encoding process at the transmitter consists of two stages. First, the binary information sequence b of length k is passed through the channel encoder, producing the codeword c for the chosen channel code C(n, k), as in Eq. 6. Then, the codeword c is further processed by the TransCoder encoder ET , which outputs a sequence of n real symbols to be transmitted over the channel:
+ET (·; θ) : c ∈ {0, 1}n →− s ∈ Rn,
+where θ are the trainable model parameters, and the vector s can also be denoted as a sequence of real symbols [s0, . . . , sn−1] , si ∈ R, i = 0, . . . , n − 1. To ensure the average power constraint from Eq. (2) is satisfied, the TransCoder encoder has the power normalization module at the last stage consisting of symbol normalization and power reallocation, for which we will provide more details below.
+TransCoder encoder ET first exposes the codeword to a BPSK-based pre-modulation s¯ = 2c − 1, s¯ ∈ {−1, 1}n. Then, the symbol vector s¯ is first divided into nb blocks of size m each, to form a sequence Sbl = [s˜0, . . . , s˜nb−1], where s˜i = [s¯im, . . . , s¯(i+1)m−1], i = 0, . . . , nb − 1. The obtained sequence of blocks Sbl is mapped by a block attention module (that follows a transformer encoder architecture) into a new sequence of nb blocks of the same size m, and it is further processed by the normalization module, as mentioned before.
+B. Decoding phase
+At the receiver side, complementary to the TransCoder encoder, the TransCoder decoder first divides the received noisy channel output y = [y0, . . . , yn−1] into nb blocks of size m each, Y = [y˜0, . . . , y˜nb−1], where y˜i = [yim, . . . , y(i+1)m−1]. Then, again, following the transformer encoding pipeline, each symbol block y˜i is mapped to a 2m-dimensional probability vector p˜i, since the cardinality for the prediction of each block is 2m; formally,
+DT (·; θ) : Y →− Pbl ,
+where θ are the trainable model parameters.
+
+5
+
+The block-wise probabilities Pbl = [p˜0, . . . , p˜nb−1] computed for each symbol block can be converted to bit-wise LLRs for each of the m bits in the block, using a message passing function fm2d(Pbl, m), as LLRs are required by the channel decoder. First, the probability estimates for all the bit positions
+are obtained for each block, i.e.,
+
+2m −1
+
+pi =
+
+p˜i,j qj , qj ∈ Qm ,
+
+(7)
+
+j=0
+
+where Qm refers to the set of binary vector representations of integers from 0 to 2m − 1 and p˜i,j is jth element of the vector of probabilities p˜i for ith block. Then, the sequence of bitwise probabilities computed for each block [p0, . . . , pnb−1] is flattened into a vector p of length n, and the function
+fm2d(Pbl, m) returns the bit-wise LLR estimates l utilizing the bit-wise probability estimates pi, as the probability of having 1 at the ith position, thus:
+
+li
+
+≜
+
+log
+
+1
+
+− pi pi
+
+,
+
+(8)
+
+according to the LLR definition in Eq. 3.
+At the next stage, computed LLRs l are passed to the channel decoder DC(n,k), which produces the message estimate bˆ. If iterative refinement is enabled, the channel decoder outputs
+the soft codeword estimate x, which we also refer to as the
+bit reliability estimates that are further used in the decoding
+pipeline.
+Iterative Refinement: Iterative channel decoders utilize
+the bit reliability estimates x at each iteration as input to the
+next decoding iteration to improve their reliability. Extending this idea, TransCoder refinement decoder DTrf aims to produce refined block-wise probability estimates, which are then fed
+back to the channel decoder. To exploit both the information
+from the noisy channel and the channel decoding results, the TransCoder refinement decoder DTrf takes as input both the channel output and the bit reliability estimates x from
+the channel decoder. Then the refinement iterations can be
+performed in a loop. Thus, refinement decoder facilitates the
+partitioning of the channel decoding process and enhances
+error-correction capabilities through different decoding stages. The TransCoder refinement decoder DTrf has an identical
+structure to the TransCoder decoder DT with the only difference in the doubled input block length 2m. During the jth refinement iteration, j = 1, . . . , Nrf , a concatenation of channel outputs and the reliability estimates from the channel decoder is processed by DTrf to generate the refined blockwise probabilities:
+
+DTrf (·; θ) : Y, Xj →− Pbrlf,j ,
+
+where Xj is a jth sequence of the bit reliability estimates produced by the channel decoder and processed by fd2m(·) function before passing it to the TransCoder module. This function rescales the soft estimates xj through inversing the LLR calculations and mapping the results into the [−1, 1] interval to align the values with channel outputs y. To formalize,
+
+fd2m(·) first applies the inverse of function in (8), and then applies BPSK pre-mapping:
+
+xˆj
+
+=
+
+fd2m(xj )
+
+=
+
+21
+
+exp xj + exp xj
+
+−1
+
+.
+
+The rescaled reliability estimates for the jth refinement iteration are given by Xj = x˜j0, . . . , x˜jnb−1 , where x˜ji = [xˆijm, . . . , xˆ(ji+1)m−1].
+After the final refinement iteration, the channel decoder
+produces its final estimate of the transmitted information sequence ˆb ∈ {0, 1}k.
+
+C. Architectural Details
+
+1) Block Attention Mechanism: As previously mentioned,
+
+proposed neural modules, TransCoder encoder ET and decoder DT (along with the refinement iteration decoder DTrf ), share the same structure and are based on the transformer
+
+encoder architecture [21] while also adopting a block-wise
+
+attention design [33], [34]. As the TransCoder modules take
+
+the set of blocks of length m as input, the vectors are
+
+padded first before reshaping if needed. For full architectural
+
+details, including pseudocode and component equations, see
+
+Appendix A1.
+
+2) Power normalization and reallocation: To ensure that
+
+the power constraint in Eq. (2) is satisfied on average, in our
+
+experiments, we consider the following approach. We assume
+
+that the symbol si ∈ R at the ith position of vector s, i =
+
+0, . . . , n − 1, has a marginal distribution of psi with mean µsi
+
+and variance σsi . Then by normalizing symbols index-wise,
+
+i.e.,
+
+si′
+
+=
+
+si
+
+− µsi σsi
+
+,
+
+(9)
+
+one can bound the average power consumption by 1 for the ith symbol. By normalizing over all indices i = 0, . . . , n − 1, one can approximately ensure the power constraint (2). However, there are two challenges to be addressed: first, it is difficult to predict the distribution psi ; second, these statistics vary during training. Hence, similarly to the well-known batch-
+normalization method used in training neural weights, we
+estimate these statistics over each batch during training in
+different channel conditions. Then, at test time, we take a significantly large batch, in the order of 104, and compute the values of µsi and σsi to collect the statistics for the given test setting and ensure the average power constraint for these
+conditions.
+After symbol-wise normalization in Eq. (9) described in
+the previous section, we multiply the sequence of averaged symbols s′ by a learnable vector w of size n, ||w|| = 1, which allows us to further optimize the power allocation over
+the transmitted symbols.
+
+D. Training Framework and Loss Function
+The training of the proposed neural TransCoder modules can be performed separately from channel decoding (without
+
+6
+
+backpropagation through it) by optimizing the per bit probabilities p 2 given by TransCoder to the decoder in Eq. (7), using binary cross-entropy loss for the target codeword c:
+n
+LT C (p, c) = {ci log(1 − pi) + (1 − ci) log pi} . (10)
+i=0
+One of the major drawbacks of using the loss LT C for training is that the learned TransCoder is oblivious to the channel decoder and targets solely minimizing the average bitwise prediction error. However, this target may not be aligned with the correction capability of the channel decoder; that is, a probability distribution with a higher loss term according to Eq. (7), does not necessarily imply a harder correction task for the channel decoder.
+In other words, we expect TransCoder to produce the LLRs from Eq. (8) that are better aligned with the error correction capability of the particular channel decoder used. Hence, alternative to loss function LT C, we consider differentiable decoders and optimize the channel decoder predictions directly through end-to-end training. The loss term used for end-toend training is also a binary cross-entropy loss, where the true labels are bits of the target codeword c and the predictions are the probabilities obtained by passing soft codeword estimates x, given by the channel decoder, to sigmoid function σ(·):
+n
+LCD(x, c) = {ci log(1−σ(xi))+(1−ci) log σ(xi)} .
+i=0
+(11)
+We do not consider any modifications to the integrated channel decoders in this work; therefore, the loss is taken at the end of channel decoding iterations/stage to allow for the optimization of TransCoder outputs for the specific channel decoding task. We used the binary cross-entropy loss after channel decoding for Turbo code and polar codes with an SC decoder, achieving the best results while taking the average of the losses after every iteration (every stage for the SC decoder), which is the loss used for training the neural decoders in [16], [17].
+The binary cross-entropy optimizes the bit-wise probabilities or BER from Eq. (5), while the main metric of channel decoding is the probability of correct decoding or BLER from Eq. (4). Designing a loss function that optimizes BLER remains an open problem for channel decoders. Thus, for most neural channel decoders, the training is performed with binary cross-entropy loss. Though, for the Tanner graph-based BP decoder (for LDPC and BCH codes), we observed that training with only binary cross-entropy loss from Eq. (11) shows suboptimal performance.
+In this work, we also introduce an additional loss term that functions as a regularizer for the model training. This approach tries to align the learning process with the code structure
+2In the block attention framework in [34], block-wise estimates in the form of multi-class predictions are employed; however, in our preliminary experiments, we observed that in our specific problem, where Transcoder is integrated with a channel decoder, bit-wise estimation, hence binary prediction, performs better.
+
+and is particularly efficient for BP decoding, which performs
+message passing based on the parity check matrix structure.
+Regularization with soft parity check values: Before
+explaining the proposed regularization loss, we recall that during the conventional syndrome calculation, for the ith row of the parity check matrix H, which forms a binary vector of length n, denoted by hi = H[i, :], i = 0, . . . , n − k − 1, each syndrome value, i.e., the parity check, is computed modulo 2 for the binary codeword estimate. Inspired by syndrome computation, we introduce the notion of soft parity check, which refers to the scalar vector product (c, hi) for a vector c ∈ Rn[0,1]. We remark that, from the construction, the soft parity check (c, hi) for a codeword c ∈ C can only take even values 0, 2, . . . that are less than or equal to the parity check weight |hi|. The soft parity check can also be calculated for the soft codeword estimate x given by the channel decoder after projecting its values to the interval [0, 1]:
+
+x¯ =
+
+fcl(x, [−1, 1]) + 1 2
+
+,
+
+(12)
+
+where, fcl(·, ·) is the clipping function. Then the soft parity check for the soft estimate x will be (x¯, hi) for ith parity check, while the target value is given with the soft parity check of the transmitted codeword (c, hi).
+The underlying idea behind the use of the soft parity check
+values is to have a better distance metric between the codeword
+and its estimate by reformulating the problem as a multi-label classification problem. To be more precise, let Xspc be the set of all possible (and unique) soft parity check values for the given channel code with parity check matrix H. We remark that Xspc is finite and its dimension |Xspc| ≤ maxi⌊|hi|/2⌋.
+Since the set Xspc is finite, we can consider a soft parity check (c, hi) ∈ Xspc calculated for the codeword as a true label for each soft parity check value (x¯, hi). Hence, predicting a true label from soft parity check values (x¯, hi) can be considered as a multi-label classification problem. To be more precise, for a given (x¯, hi), we first evaluate its relation to all the labels from the set Xspc by computing the distances between the soft parity check value we obtained and
+all possible ones:
+
+d(x¯,hi) = {|(x¯, hi) − x|}x∈Xspc .
+Then, we treat the obtained vector of distances d(x¯,hi) as logit values, which can then be translated into log-probabilities through the log softmax LSM (·) layer. Hence, the final loss is categorical cross-entropy loss CE(·, ·) averaged over all n − k soft parity checks calculated based on the soft codeword estimate x¯, i.e.,
+
+LH (x¯, c, H) =
+
+n
+
+1 −
+
+k
+
+n−k−1
+
+CE(LSM (d(x¯,hi)),
+
+(c,
+
+hi)).
+
+(13)
+
+i=0
+
+When training with a BP channel decoder, we use a combination of two losses from Eqs. (11) and (13) to ensure that
+
+7
+
+both bit-wise and parity check-wise optimization is in place for the best results:
+
+LBP (x, c, H) =
+
+1 2
+
+LCD(x, c) + LH
+
+fcl(x,
+
+[−1, 2
+
+1])
+
++
+
+1
+
+,
+
+c,
+
+H
+
+,
+
+according to the definition of projection in Eq. (12). As the backpropagation process through multiple channel
+decoding stages might not provide accurate gradients, the loss for all considered channel codes was computed during every run of the channel decoder; thus, if there were r−1 refinement iterations, the loss would be computed r times and averaged.
+
+IV. NUMERICAL RESULTS
+In this section, we conduct extensive simulations to analyze the performance of the proposed TransCoder framework from the point of both computational complexity and the achieved error rate. We compare it with conventional code structures as well as the SoTA neural decoding algorithms. Table I provides the notations employed throughout this and previous sections.
+
+A. Simulation Setup
+1) Code Structure: For the numerical analysis, we consider a range of channel code families (taken from [35]) with different decoders and various code rates:
+• LDPC codes [2] with a BP decoder, which is part of the 5G NR standard [6], and a neural modification of the BP decoder (NBP) [12] that introduces trainable weights to the graph over which the message passing algorithm is performed. We consider a range of code lengths from small n = 49 to medium n = 121, as well as longer codes n = 384, compliant with the IEEE 802.22 wireless regional area network (WRAN) standard, with code rates varying from 0.5 to ∼ 0.83. For the greater code length n = 384, the NBP decoder is omitted due to the lack of any improvement.
+• Polar codes [1] with SC and SCL [11] decoders, while the latest is included in the 5G NR standard [6] (though we need to mention here that we use the SCL decoder with metric path calculation, whereas in the standard, an additional CRC code is used). We consider short n = 128 and long n = 512 codes with code rates varying from 0.5 to 0.75.
+• BCH codes [36], [37]. We consider both the standard BP decoder and neural BP (NBP) decoder for code lengths n = 31 and n = 63, with code rates ranging from 0.5 to 0.81.
+• Turbo codes [3] used in the LTE standard with a turbo decoder. We consider a code length of n = 132 with a code rate of ∼ 0.3.
+For iterative decoders, we mention the number of iterations performed, as it drastically affects the decoding performance. For example, we denote the BP or NBP decoder with i iterations as BP-i or NBP-i, respectively. The number of turbo decoder iterations i is denoted similarly as Turbo-i. For the SCL decoder for polar codes, the list size is equal to 8 in our experiments, and we additionally denote this as L = 8.
+
+2) Benchmarks: As the proposed framework includes both channel coding and neural modules, we provide as benchmarks both conventional channel decoders and SoTA neural decoders. Existing channel decoders offer adjustable complexity, improving performance by increasing the number of iterations or expanding the list size; thus, with a reasonably chosen complexity, they serve as natural baselines. For considered linear block codes, the SoTA neural decoding is transformerbased, and we limit our scope to the two most recent decoders, namely, AECCT [23] and CrossMPT [24]:
+• AECCT is an improved and accelerated version of the ECCT model [22], the first fully neural transformer based decoder applicable to any linear block code. We report here only the parameters from the original paper [23] that yield the best results, specifically the transformer encoder layers N = 6 and N = 10 with the embedding size d = 128.
+• CrossMPT is another transformer based neural decoder that shows improved performance compared to ECCT [22] by employing additional cross message passing during decoding, similarly to a conventional BP decoder. For this model, we also include the parameters that showed the best results in the original paper [24], which are N = 6 and d = 128.
+For neural decoding benchmarks, which are transformer-based and show polynomial complexity growth with sequence length, we omit the results for longer block lengths, such as n = 512 for polar codes3.
+3) TransCoder Configurations: In Section III, we have shown that the proposed Transcoder framework has a modular structure. Based on the scenario and the performance target, TransCoder can be implemented with only a subset of the modules. Here we consider 5 different scenarios of the proposed TransCoder framework integration, including the full pipeline:
+• ET , DT , DTrf as the TransCoder encoder, decoder, and refinement decoder correspondingly;
+and the variations with selected TransCoder modules integrated into the transmission scheme:
+• ET , DT as the TransCoder encoder and decoder, while the refinement decoder is omitted (for example, for noniterative decoders like SC/SCL for polar codes);
+• DT , DTrf as the TransCoder decoder and refinement decoder, requiring only modifications at the receiver side;
+• DT as the TransCoder decoder while the refinement decoder is omitted, again, requiring only modifications at the receiver side;
+• ET as the TransCoder encoder, requiring only modifications at the transmitter side.
+We denote the number of channel decoder runs r in the TransCoder framework (r > 1 if iterative refinement decoding is enabled; with r − 1 denoting the number of refinement iterations) as rxDC(n,k).
+3All the simulations were run on Nvidia RTX A6000 GPUs with 48GB of memory.
+
+8
+
+TABLE I NOTATIONS
+
+Notation
+b, c, s y, w, ˆb cˆ, x k, n C(n, k) EC(n,k), DC(n,k) ET , DT and DTrf BP-i, NBP-i SC; SCL, L= i
+
+Definition
+Bit sequence, encoded bits (codeword) by channel code, and encoded symbols by the neural encoder, respectively. Received noisy symbols, noise vector, estimate of b by channel decoder, respectively. Hard estimate of c by channel decoder and soft estimate of c (bit reliabilities), respectively. Length of the information bit sequence b, total number of encoded symbols Linear channel code with length n and dimension k Channel code encoder and decoder, respectively, for channel code C(n, k)
+TransCoder encoder, TransCoder decoder and TransCoder refinement iteration decoder, respectively BP and neural BP (NBP) decoders with i iterations successive cancellation (SC) and successive cancellation list (SCL) with list size i decoders (for polar codes)
+
+4) Training framework: The proposed end-to-end communication framework utilizing TransCoder neural modules was trained in an end-to-end fashion with fixed and backpropagatable channel decoders. During the training, the average signal magnitude was fixed to 1 and the SNR Eb/N0 of the considered AWGN channel was uniformly sampled for every transmission from the interval [ 2, 8] dB. Both training and testing datasets were generated by uniform sampling of a binary information bit sequence b ∈ {0, 1}k that is then encoded into a codeword c ∈ {0, 1}n with the underlying channel code C(n, k). We use both BER and BLER metrics to evaluate the scheme’s performance, ensuring that there were at least 106 transmitted codewords to collect enough statistics and at least 100 messages were incorrectly decoded. The hyperparameters of the TransCoder modules and the training details can be found in Table VI in Appendix A.
+B. Experimental Results
+Considering the channel codes mentioned in Section IV-A1, we present the performance results for −ln(BLER) in Table II for the channel decoding and neural-based benchmarks, along with the two different configurations of the proposed TransCoder framework defined in Section IV-A3. The chosen TransCoder configurations demonstrate the performance of the full pipeline and the second best configuration, with some of the TransCoder modules omitted. The ablation study of the different TransCoder configurations is provided further in Section IV-D. For every considered setting, the performance is evaluated at Eb/N0 ∈ {4, 5, 6} dB, except in cases where we could not collect enough statistics during the simulation.
+1) LDPC codes: We considered a range of LDPC codes, specifically code lengths n = {49, 121, 384} and different code rates. For all LDPC codes, we provide the results for the full TransCoder pipeline and the scenario with integrated TransCoder decoders only, as it presents the best results for these codes. The comparison to the BP baseline shows that both considered TransCoder configurations significantly improve the BLER performance, especially for higher SNRs. Moreover, the NBP decoder does not demonstrate a similar order of improvement compared to the scenario with TransCoder decoders, showing the advantages of the proposed model. However, neural decoding benchmarks, AECCT N = 10 and CrossMPT N = 6, show the best performance for shorter codes, more specifically with n = 49 and n = 121, and higher
+
+code rates, close to 0.5, at high SNR, while the TransCoder framework is beneficial for longer code lengths and lower code rates that might be challenging for neural decoders.
+Takeaway IV-B1: TransCoder outperforms NBP decoders for LDPC codes for both full pipeline and configuration with only TransCoder decoders.
+2) BCH codes: As the BCH codes are considered with the BP decoder, which is suboptimal for this class of codes, the improvements shown by neural decoders and the TransCoder framework are more profound compared to LDPC codes with the BP decoder, although the TransCoder relies on channel decoding within the decoding pipeline. That is also why, for these codes, the second best TransCoder framework would be the ET , which has only the integrated TransCoder encoder at the transmitter side, as it reshapes the codeword weight distribution, as illustrated in Fig. 2. Similarly to the LDPC codes, the TransCoder framework is beneficial for longer code length n = 63 and lower code rates ∼ 0.5, while the transformer-based AECCT decoder outperforms other schemes for the shortest considered block length of n = 31 and at higher code rates.
+Takeaway IV-B1 and IV-B2: For BCH codes with BP decoding, TransCoder shows the best performance gain with longer block lengths and lower code rates compared to other transformer-based approaches.
+3) Polar codes: For the considered polar codes, the TransCoder framework has shown significant improvement compared to SC and SCL decoders. Notably, for code length n = 128 and for longer codes (512, 256) at lower code rates the TransCoder with the SC decoder outperforms the conventional SCL decoder with path metric calculation for a list size of L = 8. As SC and SCL decoders are not iterative, the TransCoder refinement decoding is not enabled in this case. Moreover, the neural decoders exhibit increasing complexity for longer codes, and we are unable to provide the results for code lengths n = 512 due to model complexity. For a moderate code length of n = 128, TransCoder, even with a simpler decoder, i.e., SC, outperforms the state-of-the-art neural decoders for all considered code rates. This can be explained by the fact that these models use masking based
+
+9
+
+TABLE II
+BLOCK ERROR RATE RESULTS − ln(BLER) FOR THREE DIFFERENT SNR VALUES Eb/N0 = {4, 5, 6} dB IN EACH ROW. HIGHER VALUES INDICATE BETTER RELIABILITY (I.E., LOWER BLER). THE BEST RESULTS ARE SHOWN IN BOLD, WHILE THE SECOND BEST ARE UNDERLINED. * SOME VALUES CORRESPOND TO EXTREMELY LOW BLOCK ERROR RATES (BLER < 10−8 , OR − ln(BLER) > 18.5), FOR WHICH WE COULD NOT COLLECT RELIABLE
+STATISTICS DUE TO AN INSUFFICIENT NUMBER OF OBSERVED ERROR EVENTS WITHIN OUR SIMULATION LIMITS.
+
+Channel code
+
+Channel decoder
+
+AECCT
+
+CrossMPT
+
+TransCoder
+
+LDPC (49, 24) LDPC (121, 60) LDPC (121, 70)
+LDPC (121, 80)
+LDPC (384, 192)
+LDPC (384, 256)
+LDPC (384, 320)
+BCH (31, 16)
+BCH (63, 36)
+BCH (63, 45)
+BCH (63, 51)
+
+BP-40
+
+NBP-40
+
+4.15 6.56 9.58 4.02 6.45 9.67
+
+N =6
+
+N = 10
+
+N =6
+
+3.71 6.22 9.50 4.46 7.28 11.13 4.50 7.12 10.76
+
+DT , DTrf , 4×BP-10 4.12 6.64 9.95
+
+ET , DT , DTrf , 4×BP-10 4.10 6.59 10.05
+
+3.27 6.29 10.80 3.25 6.50 11.51 2.23 5.12 9.65 3.06 6.45 11.50 3.14 6.62 11.86 3.27 6.60 11.50 3.27 6.65 11.70
+
+4.40 8.13 12.32 4.42 8.18 12.09 3.31 6.78 12.18 4.30 8.20 13.24 4.27 8.58 13.40 4.48 8.25 13.47 4.43 8.28 13.43
+
+BP-30
+
+NBP-30
+
+N =6
+
+N = 10
+
+5.07 8.93 14.07 5.15 9.09 14.10 4.11 8.11 13.17 5.10 9.52 13.91
+
+N =6 5.07 9.52 13.91
+
+DT , DTrf 3×BP-10 5.18 9.16 14.24
+
+ET , DT , DTrf , 3×BP-10 5.16 9.27 14.28
+
+BP-20 10.00 11.66 N/A — —
+
+N =6
+
+N = 10
+
+N =6
+
+DT , DTrf , 2×BP-10
+
+ET , DT , DTrf , 2×BP-10
+
+— 4.92 9.25 12.19 9.10 12.34 11.97 6.79 11.48 12.35 11.51 15.65 > 18.5 10.90 15.50 > 18.5
+
+7.62 11.29 14.04 — —
+
+— 4.28 8.97 12.82 6.98 11.74 12.91 6.01 11.55 12.87 7.71 12.04 > 18.5 8.07 12.31 > 18.5
+
+3.55 7.01 9.35 — —
+
+— 2.14 5.95 10.44 3.14 7.59 11.54 2.96 7.50 11.48 3.58 7.28 10.44 3.76 7.61 10.93
+
+BP-40
+
+NBP-40
+
+N =6
+
+N = 10
+
+N =6
+
+2.64 3.82 5.25 2.72 4.11 5.91 4.87 6.75 9.60 5.37 7.38 10.55 3.98 5.94 8.56
+
+ET , BP − 40 3.54 5.17 7.16
+
+ET , DT , DTrf , 8×BP-5 3.88 5.54 7.69
+
+1.30 2.22 3.51 1.21 2.07 3.24 2.13 3.65 5.85 2.37 3.97 6.22 2.20 3.98 6.61 2.65 4.18 6.22 3.05 4.97 7.48
+
+2.08 3.57 5.30 2.03 3.69 5.92 3.03 5.22 8.32 2.98 5.08 8.07 2.57 4.60 7.52 2.75 4.58 6.83 2.85 4.90 7.68
+
+1.59 2.78 4.21 1.47 2.82 4.60 2.79 4.87 8.01 3.01 5.28 8.48 2.79 5.03 8.02 1.92 3.38 5.22 1.98 3.71 6.12
+
+Polar code (128, 64) Polar code (128, 86) Polar code (128, 96) Polar code (512, 256) Polar code (512, 384)
+Turbo LTE (132, 40)
+
+SC
+
+SCL, L = 8
+
+N =6
+
+N = 10
+
+N =6
+
+5.52 8.20 11.35 5.78 8.43 11.50 1.50 3.19 5.62 2.85 5.34 8.64 2.50 6.62 11.86
+
+4.17 6.24 8.75 4.32 6.29 8.75 2.11 4.24 7.44 3.58 6.31 10.25 3.93 7.06 11.23
+
+3.67 5.80 8.46 3.98 6.05 8.74 2.27 4.66 7.82 3.13 5.97 9.00 3.52 6.32 9.18
+
+7.98 11.04 13.96 8.29 11.05 14.41 — — — — —
+
+—
+
+——
+
+—
+
+4.96 8.79 13.56 6.28 10.17 14.55 — — — — —
+
+—
+
+——
+
+—
+
+Turbo-2
+
+N =6
+
+N = 10
+
+N =6
+
+6.38 9.51 12.98 — —
+
+— 0.69 1.55 2.92 1.88 3.45 5.72 2.70 4.76 7.68
+
+ET , DT , SC
+
+ET , DT , SCL, L = 8
+
+6.19 9.29 12.66 6.82 9.60 13.01
+
+4.95 8.06 12.03 6.61 10.16 14.29
+
+4.00 6.71 9.41 4.96 7.26 9.68
+
+9.79 14.58 19.33 12.24 16.31 > 18.5
+
+5.16 9.39 14.10 6.81 10.61 15.31
+
+ET , DT , Turbo-2 6.79 9.77 13.16
+
+ET , DT , DTrf , 2×Turbo-1 7.22 10.37 13.49
+
+TABLE III COMPARISON OF THE COMPUTATIONAL COMPLEXITY OF DIFFERENT MODELS. ECCT RESULTS ARE SHOWN FIRST, FOLLOWED BY ET , DT , DTrf . INFERENCE TIMES ARE MEASURED PER BATCH (bs = 1000). FOR ECCT, WE REPORT COMPLEXITY RESULTS FOR A SIMPLER VERSION (N = 6).
+
+Method
+LDPC (121,70) LDPC (384,320) BCH (63,45)
+
+# Params
+
+ECCT ET , DT , DTrf
+
+1.2M 1.4M 1.2M
+
+10k, 15k, 15k 10k, 15k, 15k 10k, 15k, 15k
+
+# FLOPs
+
+ECCT
+
+ET , DT , DTrf
+
+229.7M 53.1M 99.8M
+
+514k, 764k, 770k 1.5M, 2.3M, 2.3M 236k, 351k, 354k
+
+Inference Time
+
+ECCT
+
+ET , DT , DTrf
+
+37.0ms N/A
+27.0ms
+
+2.2ms, 2.6ms, 2.7ms 2.0ms, 2.7ms, 2.8ms 2.1ms, 2.6ms, 2.6ms
+
+on the parity check matrix, which is less informative due to its high density for polar codes compared to LDPC codes.
+4) Turbo codes: The considered Turbo code (132, 40) has the lowest code rate among the codes in our experiments, and in this case, the modern transformer based decoders drastically fail compared to the well-established methods, such as the turbo decoder. On the other hand, TransCoder improves the performance, both with and without refinement decoding enabled.
+
+Takeaway IV-B3: For polar codes, TransCoder trained with the SC decoder improves the performance of both the SC and SCL decoders, and for most of the codes, the performance gain for the TransCoder pipeline with the SC decoder is greater compared to the improvement offered by SCL with path metric calculation.
+
+10
+
+Takeaway IV-B1, IV-B2, IV-B3 and IV-B4: For all the code families that have been investigated, e.g., BCH, LDPC, Polar, TransCoder outperforms the channel decoding baseline, especially, in the high SNR regimes.
+
+-ln(BLER)
+
+Performance vs. Complexity for LDPC code (121,60) at 5 dB
+
+7.0
+
+6.5
+BP-40
+6.0
+BP-20
+
+TraTnTrsarTCanronasdsnCeCsorCod,doeDedrT,re,BErD,PT,E-T2D,T,D0TDTrBfTP4, D-x2BTr0fP4-1xB0P-10CrosEsCMCPTT,,NN==160
+
+5.5
+
+C. Complexity Analysis
+
+TransCoder’s practical utility hinges on its computational efficiency compared to standard BP and state-of-the-art transformer-based methods. Table III provides a detailed comparison of computational requirements across different neural approaches. Note that ECCT with N = 10 can achieve comparable performance to our approach but requires substantially more computational resources than the N = 6 baseline.
+Unlike fully transformer-based models that require extensive computational resources and memory, TransCoder’s efficiency stems from three design choices: i) Block attention mechanism that processes data in manageable chunks rather than attending to entire sequences; ii) Modular architecture that allows selective deployment of components based on system requirements; iii) Efficient iterative refinement strategy that maximizes performance gain per computational cost. For example, as shown in Table III, TransCoder requires only 10−15k parameters per module for LDPC (121, 70), compared to 1.2M parameters for equivalent transformer-based approaches. This significant reduction in parameter count, combined with efficient block processing, makes TransCoder particularly suitable for practical deployments.
+For further analysis of the theoretical (time) complexity of neural decoders compared to conventional decoders, we provide a number of multiplications/additions for the BP decoder, CrossMPT [24], and ECCT [22] decoders, and TransCoder modules in Table IV for selected LDPC codes:
+
+• For the BP algorithm over a Tanner graph defined
+
+for LDPC codes in [38], the number of multiplica-
+
+tions/additions in one BP iteration is equal to the number
+
+of edges in the Tanner graph, and it has the lowest
+
+complexity. • The CrossMPT and ECCT 4 decoders are transformer-
+
+based and have similar architectures; they also show
+
+similar complexity, which is the amount of operations
+
+in the attention layers. The complexity results here are
+
+given for transformer encoder layers N = 6, embedding
+
+size d = 128, the number of attention heads h = 8. We
+
+can see that the complexity of these decoders exceeds
+
+that of conventional decoders by more than 4 orders of
+
+magnitude.
+
+• TransCoder modules are also transformer-based; however,
+
+the use of block attention with a number of blocks nb =
+
+⌈
+
+n m
+
+⌉
+
+and
+
+a
+
+much
+
+smaller
+
+embedding
+
+size
+
+dmodel
+
+=
+
+16
+
+results in a significant decrease in complexity. The block
+
+size is m = 3 for LDPC (121, 60) and m = 4 for
+
+4In Table II, the performance results are provided for AECCT, an improved ECCT model. Given that the architectures are similar, we report here the complexity of the ECCT model, which does not use any quantization and is straightforward for complexity evaluation.
+
+5.0
+
+ECCT, N=6
+
+4.5
+
+104
+
+Co1m05plexity (Nu10m6 ber of mu1l0t7iplications 1o0r8 additions)109
+
+Fig. 3. Performance as − ln(BLER) vs. complexity as number of multiplications or additions for LDPC code (121, 60) at 5 dB.
+
+LDPC (384, 320). Results show that the complexity of the TransCoder module is more than 2 orders of magnitude less compared to ECCT.
+The proposed TransCoder framework achieves SoTA neural decoding performance while maintaining a concise model architecture, as illustrated in Fig. 3 for LDPC code (121, 60) at 5 dB. While large-scale transformer baselines like CrossMPT and ECCT reach high performance peaks, they incur astronomical computational costs. In contrast, the TransCoder framework leverages underlying channel decoding to bridge the gap between traditional BP and heavy neural models. The most advanced TransCoder configuration (ET , DT , DTrf ) achieves superior performance, outperforming CrossMPT, while operating at a lower complexity. This represents a complexity reduction of over two orders of magnitude compared to pure transformer-based approaches, demonstrating that the TransCoder framework offers a highly efficient trade-off between neural capability and computational tractability.
+
+D. Ablation Study on TransCoder Configurations
+Next, we investigate the effect of the TransCoder configurations further. In Table V, we compare the performance in −ln(BLER) while integrating different TransCoder modules into the transmission scheme against baseline BP-20 decoding at Eb/N0 = {4, 5, 6} dB across both LDPC and BCH families.
+For LDPC codes, we omitted the configuration with only the TransCoder encoder ET module, as it does not show significant improvement for these codes. The two configurations with only decoders employed, DT and DT , DTrf , show particularly significant improvements in lower SNRs. The best improvements in the high SNR regime, however, are demonstrated by the full TransCoder pipeline ET , DT , DTrf for all considered LDPC codes.
+For BCH codes, the performance boost provided by the TransCoder encoder ET is significantly greater than the performance gains from the configuration with TransCoder decoders DT , DTrf . Thus, we observe that for different code families, different configuration choices demonstrate the most significant improvements.
+
+11
+
+TABLE IV COMPARISON OF THE NUMBER OF THE MULTIPLICATIONS OR ADDITIONS FOR DIFFERENT MODELS.
+
+Method BP TransCoder
+CrossMPT ECCT
+
+Part of the model
+1 iteration 50 iterations encoder layer F E(·) and embedding
+ET DT or DTrf encoder layer final embedding
+decoder encoder layer final embedding
+decoder
+
+Number of multiplications/additions
+E 50E 12nbdm 2 odel + nb2dmodel + 2nb2 12nbdm 2 odel + 3mnbdmodel 2 layers+emb
+3 layers+emb (11n + 13npc)d2cm + 4npcn(dcm + h)
+n(n + npc) 6 layers+emb 12(n + npc)dc2m + 2(npc + n)2(dcm + h) (n + npc)2 6 layers+emb
+
+Comparison for LDPC (121, 60) LDPC (384, 320)
+
+726 36k 156k 132k 444k
+600k 40M 22k 241M 46M 35k 278M
+
+1280 64k 461k 313k 1.2M
+1.7M 96M 172k 577M 143M 200k 856M
+
+TABLE V COMPARISON OF − ln(BLER) FOR THREE DIFFERENT SNR VALUES Eb/N0 = {4, 5, 6} dB IN EACH ROW. HIGHER VALUES INDICATE BETTER
+RELIABILITY (I.E., LOWER BLER). THE BEST RESULTS ARE SHOWN IN BOLD, WHILE THE SECOND BEST ARE UNDERLINED.
+
+Channel code LDPC (49, 24) LDPC (121, 60) LDPC (121, 70)
+BCH (31, 16)
+BCH (63, 36)
+BCH (63, 45)
+BCH (63, 51)
+
+Channel decoder BP-20
+3.93 6.15 9.14 3.09 5.87 9.84 4.09 7.37 11.92
+BP-20 2.45 3.43 4.62 1.25 2.06 3.17 2.01 3.28 4.87 1.56 2.69 4.07
+
+DT BP-20 3.87 6.30 9.46
+3.14 6.33 10.76
+4.24 7.85 12.35 ET
+BP-20 3.39 4.86 6.71
+2.53 3.92 5.69
+2.64 4.32 6.36
+1.89 3.29 5.08
+
+TransCoder
+
+DT , DTrf
+
+ET , DT
+
+2×BP-10
+
+BP-20
+
+3.97 6.41 9.53 3.86 6.25 9.54
+
+3.15 6.32 10.66 3.13 6.40 11.15
+
+4.24 7.77 12.09 4.23 7.88 12.65
+
+DT , DTrf 4×BP-5
+
+ET , DT BP-20
+
+2.59 3.79 5.37 3.60 5.21 7.22
+
+1.28 2.34 3.92 2.72 4.46 6.52
+
+2.02 3.71 6.01 2.61 4.50 6.82
+
+1.50 2.89 4.99 1.77 3.28 5.34
+
+ET , DT , DTrf 2×BP-10
+3.95 6.37 9.67
+3.14 6.37 11.17
+4.26 7.82 12.76 ET , DT , DTrf 4×BP-5
+3.83 5.50 7.65
+2.98 4.89 7.39
+2.80 4.81 7.61
+1.93 3.63 6.01
+
+V. CONCLUSION
+We introduced TransCoder, a novel neural performance enhancing transmission framework that combines the benefits of the existing structure of error correction codes with the power of modern transformer architectures. Our approach uniquely combines three key innovations: adaptive neural encoding at the transmitter, block-attention processing for efficient decoding, and an iterative refinement mechanism that enhances decoding accuracy. Through extensive experimentation across major code families (LDPC, BCH, Polar, and Turbo), we have demonstrated that TransCoder achieves significant improvements in block error rate (BLER) while maintaining computational efficiency comparable to traditional BP and other decoders. TransCoder’s modular design enables flexible deployment at either the transmitter or receiver, mak-
+
+ing it particularly valuable for practical systems with varying computational and latency constraints. e.g., the decoder can dynamically decide on the number of decoding iterations depending on the available computational resources and the delay/reliability trade-off required for the underlying application. It also has the advantage of benefiting from efficient hardware implementations of legacy encoding and decoding algorithms. By reshaping the distribution of codeword distances without modifying the underlying code structures, TransCoder establishes a new paradigm for error correction that bridges conventional coding theory and neural approaches, offering a practical path forward for next-generation communication systems.
+
+12
+
+TABLE VI THE TABLE OF HYPERPARAMETERS FOR THE TRANSCODER MODULES.
+
+Notation
+m nheads dkhead dmodel N¯enc N¯dec -
+-
+-
+
+Hyperparameter
+Block size Number of heads for self-attention Number of features per head Model size nheads × dkhead Number of layers in the encoder Number of layers in the decoder Total number of epochs Batches per epochs Batch size Learning rate
+Scheduler
+Optimizer
+
+Value
+3 1 16 16 2 3 10000 1 1000 1e − 3
+1−epoch N epochs
+Adam
+
+APPENDIX
+
+A. Implementation details
+
+Table VI shows the employed hyperparameters for the
+
+TransCoder model.
+
+1) Block Attention Mechanism: As mentioned previously,
+
+the TransCoder encoder ET and decoder DT (along with the refinement iteration decoder DTrf ) have a symmetric structure. Similarly to the mechanism in [33], [34], the input sequence
+
+to any neural module is split into disjoint blocks of equal
+
+size. Each block is then processed and transformed into a new
+
+block of required size, while cross-block attention mechanisms
+
+capture dependencies between blocks. Each neural module
+
+comprises four main consecutive stages: pre-processing, fea-
+
+ture extractor F E, positional encoding P E, attention feature
+
+module AF , sequence-to-sequence encoder S2S and the final
+
+mapping layer F M AP . Below, we describe the structure of
+
+the neural module and the role of its components in the
+
+encoding and decoding tasks.
+
+Pre-Processing Stage: The input to the neural encoder or
+
+decoder is a sequence of modulated bits (for the encoder) or
+
+noisy channel outputs (for the decoder) of length n, which
+
+are divided into chunks of size m. If the sequence length n
+
+is not divisible by m, the input sequence is first padded with
+
+m − n (mod m) ones (which correspond to zeros exposed
+
+to the BPSK-based pre-modulation) to ensure divisibility. The
+
+padded
+
+sequence
+
+is
+
+then
+
+split
+
+into
+
+⌈
+
+n m
+
+⌉
+
+blocks,
+
+each
+
+of
+
+size
+
+m. For the case of the refinement iteration decoder, the input
+
+consists of two vectors of size n: noisy channel outputs and
+
+soft estimates of probabilities per bit by the channel decoder.
+
+Then both vectors are pre-processed separately in the same
+
+way
+
+as
+
+for
+
+the
+
+single
+
+vector
+
+case,
+
+and
+
+the
+
+resulting
+
+⌈
+
+n m
+
+⌉
+
+blocks
+
+for each of the input vectors are concatenated together to form
+
+new
+
+⌈
+
+n m
+
+⌉
+
+blocks
+
+of
+
+size
+
+2m.
+
+Feature Extractor: This part for both the encoder and
+
+decoder consists of three fully connected neural network
+
+layers, each employing a ReLU activation function. Feature
+
+extractor F E transforms m-dimensional input blocks into
+
+blocks of dimension dmodel, enabling the extraction of meaningful features. At the encoder, F E captures features from the
+
+modulated codeword blocks, while at the decoder, it captures
+
+both the noise scale and the available information from the
+
+noisy input to facilitate accurate signal reconstruction.
+
+Positional Encoder: The additional fixed positional encoding after feature extraction helps to capture the positional features that can be especially important for capturing codeword structure while using the block attention mechanism. In our model, a fixed positional embedding is used, calculated for even and odd positions correspondingly as:
+
+pei,2j
+
+=
+
+sin
+
+i
+
+1000
+
+2j L
+
+pei,2j+1
+
+=
+
+cos
+
+i
+
+1000
+
+2j+1 L
+
+,
+
+where L = 200, i ∈ [nblocks]. Attention Feature Module: This module rescales the in-
+
+put of every layer in the sequence-to-sequence encoder by
+
+applying an attention mechanism between the input and the
+
+noise level similar to [39]. For the conventional transmission
+
+scheme, the noise standard deviation is required for LLR
+
+calculations in Eq. (3), then the usage of this parameter
+
+does not limit the scheme’s application. First, the block of
+
+model size dmodel is concatenated with an additional channel
+
+information and passed through 2 linear layers, to obtain the
+
+mask with the same shape dmodel as an input block and then
+
+the input is scaled with weights from the obtained mask.
+
+Sequence-to-Sequence Encoder: This submodule pro-
+
+cesses
+
+a
+
+sequence
+
+of
+
+⌈
+
+n m
+
+⌉
+
+number
+
+of
+
+dmodel-dimensional
+
+blocks. Sequence-to-sequence encoder S2S is transformer-
+
+based and consists of Nlayers identical transformer layers,
+
+where each layer consists of feed-forward network, multi-head
+
+attention, and layer normalization. Structurally, this submodule
+
+is identical for both the encoder and decoder; however, the
+
+decoder contains additional transformer layers to handle the
+
+increased complexity of the decoding task. Output Mapping Layer: The final component of the neural
+encoder and decoder architecture, called F M AP , transforms the dmodel-dimensional blocks generated by the S2S submodule into output symbols.
+Transmitter Side: At the transmitter, the entire encoding
+
+pipeline discussed above consists of the concatenation of the channel encoder EC for the chosen channel code C(n, k), and the TransCoder encoder ET (·, θenc, m). which is a block attention-based encoder with trainable weights θenc.
+Receiver Side: At the receiver, decoding is performed
+using a concatenation of the decoders. As previously dis-
+cussed, the decoding process consists of neural decoding phase, represented by TransCoder decoders DT (·; θdec, m) and DTrf (·; θdrefc, m), with trainable weights θdec, θdrefc, respectively, and channel code decoding phase, represented by a channel decoder DC. The interaction between these two phases is complex, as the neural and channel decoders have
+
+mismatched input and output spaces. To address this, the
+
+transition between the transformer space and the channel decoder space is handled by the T 2D and D2T modules,
+
+which we will discuss in further detail. Refinement Iteration: The main motivation behind the
+refinement iterations is to improve the predictions of the
+neural decoder while using the obtained estimations from the
+channel decoder. Thus, we added an additional block attention mechanism-based decoder DTrf that processes both channel
+
+13
+
+outputs and partially denoised sequence ycc simultaneously. The output of the channel decoder, re-scaled by module D2T , can also be considered as a prior belief on the bit-wise
+probabilities that results in a significant improvement of final
+LLRs predictions. 2) Polar Codes Training: To enhance the end-to-end train-
+ability of our TransCoder, we approximated the sum-product
+function within the polar code’s successive cancellation (SC)
+decoder using a pre-trained compact neural network during the
+training phase. This approximator, comprising three linear lay-
+ers with Tanh activation functions, was selected for its superior
+differentiability, facilitating more effective backpropagation.
+For inference, the standard TransCoder architecture with the
+conventional sum-product operation was employed.
+REFERENCES
+[1] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes,” in 2008 IEEE International Symposium on Information Theory, 2008, pp. 1173–1177.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[3] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near shannon limit errorcorrecting coding and decoding: Turbo-codes. 1,” in Proceedings of ICC ’93 - IEEE International Conference on Communications, vol. 2, 1993, pp. 1064–1070 vol.2.
+[4] P. Elias, “Coding for noisy channels,” IRE Conv. Rec., vol. 3, pp. 37–46, 1955.
+[5] D. J. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” vol. 33, no. 6, 1997, pp. 457–458.
+[6] 3GPP, “Multiplexing and channel coding (release 10) 3GPP ts 21.101 v10.4.0.” https://www.3gpp.org/ftp/Specs/2023-06/Rel-10/21 series/21101-a40.zip, 2018.
+[7] Y. Polyanskiy, H. V. Poor, and S. Verdu´, “Channel coding rate in the finite blocklength regime,” vol. 56, no. 5, p. 2307–2359, may 2010. [Online]. Available: https://doi.org/10.1109/TIT.2010.2043769
+[8] J. Hou, P. Siegel, and L. Milstein, “Performance analysis and code optimization of low density parity-check codes on rayleigh fading channels,” IEEE Journal on Selected Areas in Communications, vol. 19, no. 5, pp. 924–934, 2001.
+[9] E. Arikan, “A performance comparison of polar codes and Reed-Muller codes,” IEEE Communications Letters, vol. 12, no. 6, pp. 447–449, 2008.
+[10] E. Arıkan, “Polar codes : A pipelined implementation,” 2010. [Online]. Available: https://api.semanticscholar.org/CorpusID:38221574
+[11] I. Tal and A. Vardy, “List decoding of polar codes,” in IEEE Int’l Symposium on Information Theory Proceedings, 2011, pp. 1–5.
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), 2016, pp. 341–346.
+[13] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[14] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT). IEEE Press, 2017, p. 1361–1365. [Online]. Available: https://doi.org/10.1109/ISIT.2017.8006751
+[15] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in 2017 IEEE International Workshop on Signal Processing Systems (SiPS), 2017, pp. 1–6.
+[16] S. A. Hebbar, R. K. Mishra, S. K. Ankireddy, A. V. Makkuva, H. Kim, and P. Viswanath, “Tinyturbo: Efficient turbo decoders on edge,” in 2022 IEEE International Symposium on Information Theory (ISIT). IEEE Press, 2022, p. 2797–2802. [Online]. Available: https://doi.org/10.1109/ISIT50566.2022.9834589
+[17] Z. Aharoni, B. Huleihel, H. D. Pfister, and H. H. Permuter, “Data-driven neural polar decoders for unknown channels with and without memory,” IEEE Transactions on Information Theory, vol. 70, no. 12, pp. 8495– 8510, 2024.
+[18] H. Kim, Y. Jiang, R. B. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in International Conference on Learning Representations, 2018. [Online]. Available: https://openreview.net/forum?id=ryazCMbR-
+
+[19] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in 2017 51st Annual Conference on Information Sciences and Systems (CISS), 2017, pp. 1–6.
+[20] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes - a syndrome-based approach,” 02 2018.
+[21] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” 2017. [Online]. Available: https://arxiv.org/abs/1706.03762
+[22] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Advances in Neural Information Processing Systems, A. H. Oh, A. Agarwal, D. Belgrave, and K. Cho, Eds., 2022.
+[23] M. Levy, Y. Choukroun, and L. Wolf, “Accelerating error correction code transformers,” 2024. [Online]. Available: https://arxiv.org/abs/ 2410.05911
+[24] S.-J. Park, H.-Y. Kwak, S.-H. Kim, Y. Kim, and J.-S. No, “CrossMPT: Cross-attention message-passing transformer for error correcting codes,” 2024. [Online]. Available: https://arxiv.org/abs/2405.01033
+[25] Y. Yuan, P. Scheepers, L. Tasiou, Y. C. Gu¨ltekin, F. Corradi, and A. Alvarado, “On the design and performance of machine learning based error correcting decoders,” arXiv:eess.SP:2410.15899, 2024.
+[26] A. Kurmukova and D. Gunduz, “Friendly attacks to improve channel coding reliability,” in Proceedings of the AAAI Conference on Artificial Intelligence, vol. 38, no. 12, 2024, pp. 13 292–13 300.
+[27] Z. Qu and I. B. Djordjevic, “On the probabilistic shaping and geometric shaping in optical communication systems,” IEEE Access, vol. 7, pp. 21 454–21 464, 2019.
+[28] R. T. Jones, M. P. Yankov, and D. Zibar, “End-to-end learning for gmi optimized geometric constellation shape,” in 45th European Conference on Optical Communication (ECOC 2019), 2019, pp. 1–4.
+[29] K. Gu¨mu¨s¸, A. Alvarado, B. Chen, C. Ha¨ger, and E. Agrell, “End-toend learning of geometrical shaping maximizing generalized mutual information,” in 2020 Optical Fiber Communications Conference and Exhibition (OFC), 2020, pp. 1–3.
+[30] V. Aref and M. Chagnon, “End-to-end learning of joint geometric and probabilistic constellation shaping,” in 2022 Optical Fiber Communications Conference and Exhibition (OFC), 2022, pp. 1–3.
+[31] T. O’Shea and J. Hoydis, “An introduction to machine learning communications systems,” ArXiv, vol. abs/1702.00832, 2017. [Online]. Available: https://api.semanticscholar.org/CorpusID:8010317
+[32] A. V. Makkuva, X. Liu, M. V. Jamali, H. Mahdavifar, S. Oh, and P. Viswanath, “KO codes: Inventing nonlinear encoding and decoding for reliable wireless communication via deep-learning,” in Proceedings of the 38th International Conference on Machine Learning, ser. Proceedings of Machine Learning Research, M. Meila and T. Zhang, Eds., vol. 139. PMLR, 18–24 Jul 2021, pp. 7368–7378. [Online]. Available: https://proceedings.mlr.press/v139/makkuva21a.html
+[33] E. Ozfatura, Y. Shao, A. G. Perotti, B. M. Popovic´, and D. Gu¨ndu¨z, “All you need is feedback: Communication with block attention feedback codes,” IEEE Journal on Selected Areas in Information Theory, vol. 3, no. 3, pp. 587–602, 2022.
+[34] E. Ozfatura, Y. Shao, A. Ghazanfari, A. Perotti, B. Popovic, and D. Gu¨ndu¨z, “Feedback is good, active feedback is better: Block attention active feedback codes,” in ICC 2023-IEEE International Conference on Communications. IEEE, 2023, pp. 6652–6657.
+[35] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, D. Kraft, S. Ruzika, and N. Wehn, “Database of channel codes and ML simulation results,” https://rptu.de/en/channel-codes, 2019.
+[36] A. Hocquenghem, “Codes correcteurs d’erreurs,” Chiffres (in French), vol. 2, pp. 147–156, 1959.
+[37] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Information and Control, vol. 3, no. 1, pp. 68–79, 1960.
+[38] ETSI EN 302 307, “Digital video broadcasting (DVB) standard,” in Second Generation Framing Structure Channel Coding and Modulation Systems for Broadcasting, 2004.
+[39] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless image transmission using deep source channel coding with attention modules,” IEEE Transactions on Circuits and Systems for Video Technology, vol. 32, no. 4, pp. 2315–2328, 2021.
+
+

@@ -1,0 +1,305 @@
+EFFICIENT DSP IMPLEMENTATION OF AN LDPC DECODER
+
+Gottfried Lechner, Jossy Sayir
+Telecommunications Research Center Vienna (ftw.)
+A-1220 Vienna, Austria {lechner,sayir}@ftw.at
+
+Markus Rupp
+TU Vienna, Institute for Communication and RF Engineering
+A-1040 Vienna, Austria mrupp@nt.tuwien.ac.at
+
+ABSTRACT
+We present a high performance implementation of a belief propagation decoder for decoding low-density parity-check (LDPC) codes on a fixed point digital signal processor. A simplified decoding algorithm was used and a stopping criteria for the iterative decoder was implemented to reduce the average number of required iterations. This leads to an implementation with increased throughput compared to other implementations of LDPC codes or Turbo codes. This decoder is able to decode at 5.4Mbps on a Texas Instruments TMS320C64xx DSP running at 600MHz.
+1. INTRODUCTION
+Low-density parity-check (LDPC) codes were introduced by Gallager [1] in 1962. They allow transmission at rates close to channel capacity while having a decoding complexity which is linear in the block length. Due to lack of powerful processors at the time of their invention, they were mostly forgotten, then rediscovered after the invention of Turbo codes [2].
+In this paper, we present an implementation of an LDPC decoder on a digital signal processor (DSP). The DSP used is a Texas Instruments TMS320C64xx fixed point processor. We present an efficient implementation utilizing the parallel units of this DSP. Furthermore, we compare the data throughput with existing DSP implementations of Turbo codes.
+The rest of this paper is organized as follows: in Section 2, we describe LDPC codes, the decoding algorithm and an approximation of this algorithm that is suited for fixed point operations. The implementation on the DSP is described in Section 3. In Section 4, a stopping criterion is introduced and Section 5 shows the computation requirements of the implementation. In Section 6, simulation results are presented and compared with an existing implementation of a Turbo decoder.
+
+2. LDPC CODES
+LDPC codes are block codes described by a paritycheck matrix. The term low-density originates from the fact that the number of ones in the parity-check matrix is small compared to the block length. Therefore, the matrix is sparse, which leads to a decoding algorithm with a computational complexity that is linear in the block length [3].
+This decoding algorithm works iteratively by passing messages on the edges of the associated factor graph, which is a bipartite graph containing variable nodes (representing the digits of the codeword) and check nodes (representing the parity-check equations). The messages are Log-Likelihood-Ratios (LLR), i.e. the sign represents the binary digit (0 → +, 1 → −) and the magnitude represents the reliability of the decision.
+This paper focuses on regular codes, i.e. every variable node is connected to dv check nodes and every check node is connected to dc variable nodes. A factor graph of a code with dv = 3 and dc = 6 is shown in Figure 1. The connections between the variable nodes and the check nodes are realized using an edge interleaver.
+The operations at the variable and check nodes are described in the next subsections following the notation of [4]. Zm(i)n denotes a message sent from variable node n to check node m at iteration i and Lm (i)n denotes a message sent from check node m to variable node n at iteration i. The set of neighboring check nodes of a variable node n is denoted as M(n) and the set of neighboring variable nodes of a check node m is denoted as N (m).
+2.1. Variable Nodes
+Each variable node receives one message Ln(0) from the channel and one message L(mi)n from every check node it is connected to. In every iteration, the variable node has to calculate an outgoing message Zm(i)n to every con-
+
+,(((
+
+,9
+
+,&$663
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+variable nodes
+
+edge interleaver
+
+check nodes
+
+Note that the correction term is constant and can be implemented with low complexity. For our implementation we used the results from [4], where the value of β is optimized when designing the code using density evolution.
+
+channel
+
+Fig. 1. Factor Graph of a LDPC Code.
+
+nected check node according to
+
+Zm(i)n = Ln(0) +
+
+L(mi) n .
+
+(1)
+
+m ∈M(n)\m
+
+After every iteration, the variable nodes have to calculate an estimate of the a-posteriori LLRs
+
+A(ni) = L(n0) +
+
+L(mi) n .
+
+(2)
+
+m ∈M(n)
+
+These operations are already suited for implementation on a fixed point DSP and therefore, no simplifications are made.
+
+2.2. Check Nodes
+
+Every check node represents a single parity-check code.
+
+The outgoing messages Lm (i)n of a check node can be
+
+computed as
+
+⎡
+
+⎤
+
+Lm (i)n = 2 atanh ⎣
+
+tanh Zm(i−n1) ⎦ . (3) 2
+
+n ∈N (m)\n
+
+This computation can not be implemented simply on a fixed point DSP. Therefore, we use an approximation similar to the Max-Log-MAP algorithm
+
+Lm (i)n
+
+≈
+
+n
+
+min
+∈N (m)\n
+
+|Zm(i−n 1)|
+
+·
+
+sgn(Zm(i−n1)). (4)
+
+n ∈N (m)\n
+
+To improve the performance, we also included a correction term as shown in [4] called offset belief propagation based decoding
+
+L(mi)n ← sgn(L(mi)n) · max(|L(mi)n| − β, 0).
+
+(5)
+
+3. IMPLEMENTATION
+We implemented a regular LDPC code with dv = 3, dc = 6 (rate = 0.5) and a random edge interleaver in C extended by intrinsic functions for the C64. All computations in our implementation are performed with 16 bit quantization, a value large enough so that the loss in performance due to quantization effects can be neglected. The implementation of the three parts of the decoder is described in the next sections.
+
+3.1. Variable Nodes
+The computation of the outgoing messages and the aposteriori LLRs of a variable node can be done efficiently by computing first equation (2) and then subtracting the incoming message from the sum for every outgoing message
+
+Zm(i)n = An(i) − L(mi)n.
+
+(6)
+
+This leads to three additions and three subtractions per variable node.
+
+3.2. Check Nodes
+For an outgoing message of a check node, the product of the signs of all other incoming messages has to be computed. This can be done by first computing the product of the signs of all inputs and then multiplying every outgoing message with the sign of the associated incoming message.
+The min operation of equation (4) can be efficiently calculated by splitting it up in the following way, where ai and bi represents the magnitude of an incoming and outgoing message respectively.
+
+x12 = min(a1, a2)
+
+x34 = min(a3, a4)
+
+x56 = min(a5, a6)
+
+x1234 = min(x12, x34)
+
+x1256 = min(x12, x56)
+
+x3456 = min(x34, x56)
+
+(7)
+
+,9
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+and calculating the outgoing messages as
+
+b1 = min(a2, x3456)
+
+b2 = min(a1, x3456)
+
+b3 = min(a4, x1256)
+
+b4 = min(a3, x1256)
+
+b5 = min(a6, x1234)
+
+b6 = min(a5, x1234)
+
+(8)
+
+For every check node, we need six abs operations and six comparisons for computing the magnitude and sign of the incoming messages. Furthermore, we need 12 min operations, six additions and 24 logical operations for calculating the outgoing messages. All these operations can be implemented without using branches and many operations are independent from each other, allowing the compiler to optimize the code and to utilize the parallel computation units of this DSP.
+
+3.3. Edge Interleaver
+The interleaver is theoretically the easiest part of the implementation. However, it requires random like memory access operations which are very time consuming. We integrated the interleaver operations in the check nodes because there, it is possible to access the memory while computing the complex (in comparison to the variable nodes) outgoing messages of the check nodes.
+All operations needed in our implementation (abs, min, max, add, sub and comp) are available as intrinsic functions that can interpret a 32 bit word as two 16 bit words and perform two operations in one instruction. To utilize this feature, we have to arrange the messages in memory in a special way so that messages from odd nodes are stored in the lower part and messages from even nodes are stored in the higher part of a 32 bit word.
+This reordering of messages compared to Figure 1 can theoretically be done by placing an additional interleaver between the edge interleaver and the variable/check nodes. In practice, these two additional interleavers are included in the edge interleaver.
+With this arrangement, we are able to calculate two variable nodes and two check nodes at the same time, i.e. doubling the data throughput.
+
+4. STOPPING CRITERION
+An advantage of the LDPC decoder in comparison to a Turbo decoder is that the decoder can easily detect whether it reached a valid codeword. This is done by verifying that every check node is fulfilled, i.e. the
+
+Table 1. Computation Requirements of the LDPC Decoder.
+
+abs min/max
+logical add/sub
+comp load store
+
+variable node
+6 4 4
+
+check node 6 12 24 6 6 18 12
+
+correction 6 6
+
+product of the signs of the incoming messages of a check node is positive for all check nodes. Since we calculated the product of the signs already we can use it to stop iterating when the decoder reached a valid codeword. Otherwise, we will continue iterating until a predefined maximum number of iterations is reached.
+An additional gain of this stopping criterion is that the decoder is able to mark a block that has not been decoded successfully. This can be used by higher layers.
+The implementation of the stopping criterion leads to a variable decoding time. An advantage of this property is that the average number of iterations can be used to estimate the Eb/N0 of the channel if this is required.
+5. IMPLEMENTATION REQUIREMENTS
+The decoder was implemented in C and the number of cycles required per iteration was simulated. Including the correction term and the stopping criteria, we achieved a fixed computation time of 11.1 cycles/iteration/bit. For a DSP running at a clock frequency of 600MHz and an average number of 10 iterations, this results in a data throughput of 5.4Mbps. This implementation is approximately 2.6 times faster than a comparable Turbo Decoder implemented on the same type of DSP [5]. However, the Turbo decoder needs fewer iterations to converge. This makes the comparison between LDPC decoder and Turbo decoder difficult.
+The computation requirements of our implementation are summarized in Table 1. The values given in the table do not account for the parallel computation of two nodes described in Subsection 3.3. Furthermore, when calculating the total number of operations for one iteration, it must be considered that the number of check nodes is half the number of variable nodes.
+
+,9
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+6. SIMULATION RESULTS
+We simulated the bit error rate of the implemented regular LDPC decoder using a codeword length of N = 10228 and compared the performance with a Turbo decoder using an 8-state component encoder and an even-odd interleaver described in [5] with the same block length. The Turbo code was punctured by transmitting the two parity sequences alternatively to achieve the same rate as the LDPC code.
+Figure 2 shows the bit error rate of both decoders for a given maximum number of iterations using binary phase shift keying and an additive white Gaussian noise channel.
+To compare the required computation time, we show the number of cycles per bit in Figure 3. Due to the stopping criterion, the average number of cycles depends on Eb/N0 for our decoder while the computation time of the Turbo decoder is constant. For low Eb/N0 the computation time for the LDPC decoder is higher than for the Turbo decoder. For high Eb/N0 the decoder is able to converge to the transmitted codeword after a few iterations which leads to a computation time that is lower than for a Turbo decoder.
+7. CONCLUSION
+In this paper, we showed how to implement a decoder for LDPC codes using a fixed point DSP. By using a correction term and an easy to implement stopping criterion, we were able to achieve similar performance as with a Turbo decoder. At high Eb/N0, our LDPC decoder requires less computation time than the Turbo decoder. In addition, the LDPC decoder has the advantage that it is able to detect a unsuccessful decoding operation and can pass this information to higher layers.
+Our implementation can be extended to different rates and to irregular LDPC codes. Irregular codes have a lower bit error rate for a given Eb/N0 but usually require a higher number of iterations to converge. Further work should be done to design irregular LDPC codes with good convergence behavior and good performance in terms of bit error rate.
+8. REFERENCES
+[1] R.G. Gallager, “Low density parity check codes,” IRE Transactions on Information Theory, vol. IT8, pp. 21–28, Jan 1962.
+[2] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and
+
+BER
+
+100
+
+LDPC
+
+Turbo 3 iterations
+
+Turbo 4 iterations
+
+10Ŧ1
+
+Turbo 5 iterations
+
+10Ŧ2
+
+10Ŧ3
+
+10Ŧ4
+
+10Ŧ5
+
+10Ŧ6
+
+10Ŧ7
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+Eb/N0
+
+Fig. 2. Bit error rate.
+300 LDPC Turbo 3 iterations Turbo 4 iterations Turbo 5 iterations
+250
+
+200
+
+150
+
+100
+
+50
+
+0
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+Eb/N0
+
+Fig. 3. Required cycles per bit.
+
+cycles/bit
+
+decoding: Turbo-codes,” in Proc. 1993 IEEE International Conference on Communications, Geneva, Switzerland, 1993, pp. 1064–1070.
+[3] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[4] Jinghu Chen and Marc P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Communications Letters, vol. 6, no. 5, pp. 208–210, 2002.
+[5] Yingtao Jiang, Yiyan Tang, Yuke Wang, and Dian Zhou, “A DSP-based turbo codec for 3G communication systems,” in Proc. 2002 IEEE International Conference on Acoustics, Speech, and Signal Processing, 2002, pp. III–2685–III–2688.
+
+,9
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+

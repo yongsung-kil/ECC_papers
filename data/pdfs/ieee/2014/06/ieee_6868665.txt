@@ -1,0 +1,440 @@
+Energy-Efficient Gear-Shift LDPC Decoders
+Kevin Cushon∗, Saied Hemati†, Shie Mannor‡ and Warren J. Gross§
+∗Institutionen fo¨r Systemteknik, Linko¨ping University, Linko¨ping, Sweden. E-mail: kevin.cushon@liu.se. †Dept. of Electrical & Computer Engineering, University of Idaho, Moscow, Idaho, USA. E-mail: shemati@uidaho.edu.
+‡Dept. of Electrical Engineering, Technion, Haifa, Israel. E-mail: shie@ee.technion.ac.il. §Dept. of Electrical & Computer Engineering, McGill University, Montreal, Canada. E-mail: warren.gross@mcgill.ca.
+
+Abstract—In this paper, we present LDPC decoder designs based on gear-shift algorithms, which can use multiple decoding algorithms or update rules over the course of decoding a single frame. By first attempting to decode using low-complexity algorithms, followed by high-complexity algorithms, we increase energy efficiency without sacrificing error correction performance. We present the GSP and IGSP algorithms, and ASIC designs of these algorithms for the 10 Gbps Ethernet (2048,1723) LDPC code. In 65nm CMOS, our pipelined GSP decoder achieves a core area of 5.29mm2, throughput of 88.1 Gbps, and energy efficiency of 39.3 pJ/bit, while our IGSP decoder achieves a core area of 6.00mm2, throughput of 100.3 Gbps, and energy efficiency of 14.6 pJ/bit. Both algorithms achieve error correction performance equivalent to the offset min-sum algorithm. The throughput per unit area and energy efficiency of these decoders improve upon state-of-the-art decoders with comparable error correction performance.
+Index Terms—Iterative decoding, energy efficiency, LDPC codes, VLSI, gear-shift
+I. INTRODUCTION AND PRIOR WORK
+Low-density parity-check (LDPC) codes are error correction codes that are frequently used in high-performance communications systems, due to their ability to approach the theoretical limits of error correction. However, their iterative soft-decision decoding algorithms suffer from high computational complexity and auxiliary circuit implementation issues, which leads to high energy consumption. Since many applications of LDPC codes require energy consumption to be as low as possible, there is a high demand for energy-efficient decoders.
+We propose a gear-shift decoding approach with the goal of minimizing energy consumption. Gear-shift decoders are defined as decoders that can switch between a set of different decoding rules at different points in the decoding process [1]. In our proposed approach, decoding begins with lowercomplexity algorithms, and switches to higher-complexity algorithms as decoding proceeds. Assuming that the lowercomplexity phase successfully decodes most frames, the average energy cost of the higher-complexity phase is very low, since it is rarely used. The composite decoder therefore has average energy efficiency similar to the lower-complexity algorithm, while having the error correction performance of the higher-complexity algorithm.
+Previous multi-algorithm decoders generally do not have energy efficiency as a design goal. For instance, the tri-mode decoder proposed in [2] implements three different algorithms, but does not investigate operation as a gear-shift decoder. A
+
+variable quantization scheme is proposed in [3], in which the dynamic range and precision of inter-node messages is variable from one iteration to another, improving BER performance. To the best of our knowledge, the only gear-shift decoder design focused on improving energy efficiency is the variableprecision split-row min-sum design presented in [4]. This decoder first attempts split-row min-sum decoding with 3 quantization bits, then switches to 4 bits after a small number of iterations.
+One drawback of gear-shift decoding is that extra logic is needed to implement multiple decoding rules. However, depending on the choice of decoder architecture and algorithms, different decoding rules can be implemented with minimal overhead. This can arise from hardware commonality between different algorithms, or an intrinsic ability of a given algorithm to vary the resolution of messages and computations from one iteration to another. Two examples of the latter are bit-serial min-sum [5] and digit-online LDPC decoders [6]. However, other than noting their amenability to gear-shifting, no further development has been done on these architectures.
+Two more algorithms that are highly amenable to gear-shift decoding are pulse-width modulated offset min-sum (PWMOMS) [7] and improved differential binary (IDB) [8]. PWMOMS can support variable message resolution without any changes whatsoever to the node circuitry - we call this a GSP decoder, for “gear-shift pulse-width”. Combination IDB/GSP (or IGSP, “IDB with gear-shift pulse-width”) decoders can also be implemented with modest additional computational complexity over a conventional PWM-OMS decoder, and allow application of the gear-shift concept to greatly reduce average energy consumption.
+The remainder of this paper will describe gear-shift decoding algorithms and schedules for the GSP and IGSP decoders, their hardware architectures, and ASIC post-layout design results in 65nm CMOS.
+II. THE GSP AND IGSP DECODING ALGORITHMS
+The process of decoding LDPC codes can generally be described as belief propagation over a graphical model of the code. This graphical model is a Tanner graph [9], which is a bipartite graph in which one set of vertices (the variable nodes, or VNs) represent the digits of a codeword, and the other set (the check nodes, or CNs) represent parity checks between neighboring VNs. These nodes iteratively exchange messages,
+
+978-1-4799-360A9u-th0o/r1iz4e/d$li3ce1n.0se0d ©use2l0im1it4edItEo:EYEonsei Univ. Downloaded on J2u1n9e 24,2026 at 18:22:29 UTC from IEEE Xplore. Restrictions apply. ASAP 2014
+
+Fig. 1. Tanner graph representation of an LDPC code.
+
+using them to update their “beliefs” at each iteration, until a termination condition is met - usually, when a valid codeword is detected, or a maximum number of iterations have been performed. Figure 1 shows an example Tanner graph representation of a small LDPC code.
+One of the most well-known LDPC decoding algorithms is the offset min-sum algorithm (OMS) [10], which achieves near-optimal error rate performance with manageable hardware complexity. PWM-OMS [7] is a form of OMS in which the VNs and CNs exchange messages in a sign-magnitude pulse-width format. In these messages, the sign bit is transmitted on the first clock cycle, followed by the magnitude, which is encoded in the number of clock cycles for which a pulse is held high. This number representation format has several advantages for an OMS decoder. In particular, it uses only a single wire, which prevents routing congestion, and the CN function of finding the minimum magnitude of a set of messages can be done with an AND gate. Also, as mentioned previously, the message resolution can be varied without any additional hardware, making it naturally suited to gear-shift decoding. We call this the GSP algorithm, for “gear-shift pulse-width”, and define it as follows:
+First, the iteration count k, variable node (VN) to check node (CN) messages mv→c, and CN-to-VN messages mc→v are initialized to zero, and the decoder is initialized with the log-likelihood ratios (LLRs) of the received bits from the channel:
+
+Lv = ln
+
+P (xv = 0 | yv) P (xv = 1 | yv)
+
+,
+
+(1)
+
+where xv is the vth transmitted bit, and yv is the vth value received from the channel.
+Next, the VNs compute the VN-to-CN messages mv→c and the hard decision bit hv:
+
+Mv(k→)c = Lv +
+
+mc(k′→−1v) ,
+
+(2)
+
+c′∈Nv \c
+
+mv(k→) c = sgnr Mv(k→)c · min m(mka)x, max
+
+Mv(k→)c − β , 0
+
+(3) ,
+
+Fig. 2. Examples of pulse-width encoded messages in GSP decoding. Values of M greater than mmax are truncated, which reduces information exchange and error correction performance, but also reduces the amount of computation and number of clock cycles per decoding iteration.
+
+hv = sgnr Lv +
+
+m(ck′→−1v) ,
+
+(4)
+
+c′ ∈Nv
+
+where mv(k→) c is the message from VN v to CN c at iteration k, Mv(k→)c is the memory associated with that message, β is a constant offset (β = 1, a typical implementation value, is used
+
+for this design), and Nv is the set of CNs incident to VN v. The function sgnr is a sign function modified so that sgnr(0) = 1.
+Finally, the CNs compute the CN-to-VN messages mc→v:
+
+m(ck→) v =
+
+sgnr
+
+v ′ ∈Nc \v
+
+mv(k′→ ) c
+
+· min
+v ′ ∈Nc \v
+
+m(vk′→ ) c
+
+, (5)
+
+where m(ck→)v is the message from CN c to VN v at iteration k, and Nc is the set of VNs incident to CN c. At this point, decoding stops if a valid codeword is detected via satisfaction of all parity constraints, or if the iteration k has reached a limit kmax. Otherwise, k is incremented, and Equations 2 - 5 are repeated.
+This differs from standard OMS in two ways: first, the offset β is applied to the VN-to-CN messages, rather than the CNto-VN messages. This is possible due to the sign-magnitude number representation of pulse-width messages, which allows both positive and negative zero. Second, messages with magnitudes larger than mm (ka)x are truncated to m(mka)x.
+In conventional PWM-OMS, mm (ka)x is fixed at 2q − 1 − β, where q is the number of message quantization bits. In GSP, m(mka)x is set to a low value initially, and is raised gradually until it reaches 2q − 1 − β, which is equivalent to offset minsum with full q-bit precision. In other words, decoding begins with magnitude-limited message exchanges that consume less energy than using the decoder’s full precision. If the frame does not converge to a valid codeword, the magnitude limit is incrementally increased on successive iterations, which increases the energy cost per iteration, but also the error correction capability of the decoder. Additionally, lower values of m(mka)x reduce the number of clock cycles per iteration. Figure 2 shows examples of GSP messages, and demonstrates the truncating effect of mm (ka)x values that are lower than the maximum values that can be stored in the VN memories M .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u2n0e 24,2026 at 18:22:29 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I
+
+10−1
+
+GSP DECODING SCHEDULE
+
+Phase Iterations mmax Clock cycles
+
+10−2
+
+1
+
+6
+
+2
+
+5
+
+2
+
+18 (24)a
+
+3
+
+20 (25)a
+
+10−3
+
+3
+
+4
+
+4
+
+3
+
+4
+
+20 (24)a
+
+5
+
+18 (21)a
+
+10−4
+
+5
+
+2
+
+Total
+
+20
+
+6
+
+14 (16)a
+
+—
+
+90 (110)a
+
+10−5
+
+FER / BER
+
+a Numbers in parentheses are for pipelined GSP.
+
+10−6
+
+10−7
+
+IDB 15 iter. FER IDB 15 iter. BER GSP/IGSP FER GSP/IGSP BER OMS 20 iter. FER OMS 20 iter. BER
+
+The IGSP algorithm uses IDB [8] as its first stage, then switches to GSP for the final stages. In IDB, nodes exchange binary messages each iteration, with the VNs adding all incoming messages and applying the result as a delta to the LLR value it had stored on the previous iteration. In brief, the VN update is defined as:
+
+10−8
+10−9 3.5 3.75 4 4.25 4.5 4.75 5 5.25 5.5 Eb/N0 [dB]
+Fig. 3. BER/FER for GSP, standard OMS, and the IDB phase of IGSP. The overall BER/FER performance of IGSP is equivalent to GSP.
+
+Mv(k) = Mv(k−1) +
+
+s·
+
+b(ck′ →−1v)
+
+c′ ∈Nv
+
+− d · sgnr
+
+Mv(k−1) (6)
+
+m(vk→) c = sgnr Mv(k) .
+
+(7)
+
+The parameters s and d are set to 0.5 and 1 respectively for this design. The CN update is defined as:
+
+mc(k→) v =
+
+sgnr m(vk′→ ) c .
+
+(8)
+
+v ′ ∈Nc \v
+
+IDB offers considerable power savings over min-sum based algorithms, since it requires only a single q-bit memory in the VN, compared to one for every outgoing edge - these memories can be disabled with clock gating while the decoder is operating in IDB mode. Furthermore, it has a high degree of circuit commonality with PWM-OMS. In particular, no additional logic is needed in a PWM-OMS check node to support IDB decoding, and the adder network in the VN can be used for either algorithm.
+We have developed decoding schedules for GSP and IGSP using the (2048, 1723) 10 Gbps Ethernet LDPC code. Table I summarizes the GSP decoding schedule, while IGSP prepends this schedule with 15 iterations of IDB, followed by a reset to the original channel input data, which adds 16 clock cycles total. These schedules are based around decoders with q = 4 (as in other min-sum decoders of this code such as [11] and [12]), with 1 sign bit and 3 integer bits.
+Figure 3 plots the simulated BER/FER performance of GSP and IGSP using this code and schedule, along with the IDB phase of IGSP, and a baseline of standard OMS with 20 iterations and q = 4. GSP actually achieves performance a very small amount better than OMS - this can be attributed to the message truncation having an effect similar to that of successive relaxation, and thus improving error correction performance [13]. IGSP achieves the same overall performance as GSP, since it resets to the original channel data after the IDB
+
+phase and then applies the same decoding schedule. Although the IDB phase has much poorer performance than GSP, its FER shows that it will successfully decode the vast majority of frames for Eb/N0 ≥ 4.5dB and will therefore considerably increase energy efficiency in this region.
+III. IMPLEMENTATION RESULTS
+We have created VLSI circuit layouts for the previously described GSP and IGSP decoders in TSMC 65nm 7LM singleVt CMOS. We present results for three different decoder designs: unpipelined and pipelined versions of GSP, and an IGSP decoder. These use the decoding schedules described in Section II. All decoders are fully parallel, use the (2048, 1723) LDPC code from the 10 Gbps Ethernet specification, and q = 4 bits of quantization for channel input values. Post-layout simulations, including clock trees and using extracted RC parasitics, are used to characterize the silicon area, throughput, and energy consumption of these decoders. All reported results use “typical” operating conditions (TT process, VDD = 1.0 V or 0.8 V, and T = 25◦C).
+The two GSP decoders can be run in “standard PWM-OMS” mode, in which all iterations use mmax = 6. Standard PWMOMS mode was used to collect results for OMS, which we present as a baseline for comparison with GSP and IGSP.
+Figure 4 shows the hardware architecture and critical paths of the IGSP decoder. Note that it is highly similar to PWMOMS [7], with the CNs being identical. In the VNs, updown counters (UDCs) and down counters (DCs) perform conversion between binary and pulse-width formats, with an adder network computing the outgoing messages. One DC is replaced with a combination DC and IDB accumulator. Additional logic in the VN performs IDB computation, with muxes selecting the appropriate outputs and bypassing the UDCs while in IDB mode. The GSP decoders are, in fact, nearly identical to PWM-OMS - the only difference is in the controller state machine, so they share the same top-level architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u2n1e 24,2026 at 18:22:29 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. Top level block diagram of the IGSP decoder, showing a check node, 2 neighbouring variable nodes, and other top-level components. The critical path in GSP mode is traced in red, while the IDB mode critical path is traced in blue. A purple line is used for segments where they intersect.
+
+Figures 5 and 6 respectively plot the average throughput and energy efficiency of the GSP and IGSP decoders, as well as baselines for standard OMS that were obtained by running the GSP decoders in PWM-OMS mode. The GSP decoders achieve considerably higher throughput than their PWM-OMS counterparts, with the pipelined version showing 68% improvement at Eb/N0 = 5.5dB, and the unpipelined version 84%. Energy efficiency is roughly 20% improved in GSP compared to PWM-OMS. The IGSP decoder produces some interesting results because of its IDB decoding mode. Referring back to Figure 3, approximately 98% of frames decode successfully during the IDB phase at Eb/N0 = 4.5dB, and so it can be said that this is the “turning point” at which IDB begins to dominate the throughput and energy performance of the decoder. Beyond this point, IGSP has much lower energy consumption than GSP. While IGSP consumes 5.25 times the energy of a dedicated IDB decoder [8], it achieves error correction performance equal to OMS.
+The implementation results for these designs are summarized in Table II, along with implementation data for the most relevant prior works. The other decoders, [11] and [12], are held in comparison because they implement the offset minsum algorithm without additional heuristics, as do GSP and IGSP. Other recent decoding algorithms such as IDB [8] and split-row min-sum [4] [14] can achieve lower computational complexity and energy consumption, but are excluded from this comparison since they cannot achieve equivalent error correction performance.
+Using the iterative decoder performance metrics defined in [15], unpipelined GSP achieves 39% higher scaled throughput and an 8% improvement in scaled energy per bit compared to [11], while pipelined GSP achieves an 85% improvement in scaled throughput and 4% lower energy per bit. IGSP further improves average throughput and energy efficiency, but at the cost of having 11% higher silicon area and a 10% lower
+
+Throughput (Gbps)
+
+120
+
+GSP unpipelined 1.0V
+
+GSP unpipelined 0.8V
+
+100
+
+GSP pipelined 1.0V GSP pipelined 0.8V
+
+IGSP 1.0V
+
+IGSP 0.8V
+
+80
+
+OMS unpipelined 1.0V
+
+OMS pipelined 1.0V
+
+60
+
+40
+
+20
+
+0
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+Eb/N0 [dB]
+
+Fig. 5. Average throughput for GSP, IGSP, and OMS.
+
+clock frequency than unpipelined GSP. Despite the lower clock frequency, it has higher throughput because decoding takes fewer clock cycles on average compared to GSP. Its average throughput of 100.3 Gbps at Eb/N0 = 5.5dB is the highest of all surveyed decoders, but due to its higher area, it has scaled throughput almost identical to pipelined GSP. Among offset min-sum decoders, it has the best energy efficiency by a significant margin - its scaled energy is 14.6 pJ/bit, which is 64% lower than [11] and 61% lower than unpipelined GSP.
+IV. CONCLUSION
+In this paper we presented LDPC decoding algorithms and architectures using gear-shift techniques to improve energy efficiency. Gear-shift decoders can use multiple update rules during decoding, and therefore allow for energy reduction strategies in which simple, lower-energy algorithms are attempted first, followed by more complex algorithms if earlier
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u2n2e 24,2026 at 18:22:29 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II IMPLEMENTATION RESULTS FOR GSP AND IGSP DECODERS, INCLUDING COMPARISONS WITH OTHER WORKS
+
+Decoding algorithm LDPC code
+Technology Quantization bits Area (scaled to 65nm) (mm2)
+Utilization Decoding iterations
+Supply voltage (V) Clock frequency (MHz) Min. throughput (Gbps)
+Max. latency (ns) Av. throughput (Gbps)b
+Av. power (mW)b Av. energy (pJ/bit)b Scaled energy (pJ/bit)a, b Scaled throughput (Gbps/mm2)b, d
+
+GSP (Unpipelined)
+
+(2048,1723)
+
+65nm
+
+4
+
+5.29
+
+87%
+
+20
+
+1.0
+
+0.8
+
+290
+
+200
+
+6.53
+
+4.50
+
+314
+
+455
+
+65.8
+
+45.4
+
+2465.7 1059.0
+
+37.5
+
+23.3
+
+37.5
+
+12.4
+
+This work
+GSP (Pipelined) (2048,1723) 65nm 4 5.29 88% 20 1.0 0.8 475 320 8.76 5.90 234 347 88.1 59.4
+3465.8 1445.9 39.3 24.3 39.3 16.7
+
+IGSP (2048,1723)
+65nm 4
+6.00 91% 35 1.0 0.8 262 175 4.98 3.35 411 611 100.3 66.9 1464.3 608.0 14.6 9.1 14.6 16.6
+
+[11]
+
+Offset MS
+
+(2048,1723)
+
+65nm
+
+4
+
+5.35
+
+84.5%
+
+8 + 6 post proc.
+
+1.2
+
+0.7
+
+700 100
+
+8.53 1.22
+
+240 1680
+
+47.7 6.67
+
+2800 144
+
+58.7 21.5
+
+40.8
+
+8.92
+
+[12]
+Layered OMS (2048,1723)
+90nm 4
+5.35 (2.79) 84.4% 4
+1.2 0.8 137 85 11.7 7.23 175 283 11.7c 7.23c 1559c 386.8c 133.4c 53.5c
+92.6c 4.19c
+
+a Energy scaled to 1.0 V b Eb/N0 = 5.5dB unless otherwise noted c Eb/N0 = 3.0dB d Average throughput per unit area scaled to 65nm at constant frequency
+
+Energy per decoded bit (pJ / bit)
+
+100
+
+GSP unpipelined 1.0V
+
+90
+
+GSP unpipelined 0.8V
+
+GSP pipelined 1.0V
+
+80
+
+GSP pipelined 0.8V
+
+IGSP 1.0V
+
+70
+
+IGSP 0.8V
+
+OMS unpipelined 1.0V
+
+60
+
+OMS pipelined 1.0V
+
+50
+
+40
+
+30
+
+20
+
+10
+
+0
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+Eb/N0 [dB]
+
+Fig. 6. Average energy per bit for GSP, IGSP, and OMS.
+
+attempts fail. PWM-OMS and IDB are naturally amenable to these techniques, and form the basis of our GSP (gear-shift pulse-width min-sum) and IGSP (IDB with GSP) decoding algorithms. Our ASIC implementations of GSP decoders achieve large improvements in area efficiency, and slight improvements in energy efficiency compared to other recent decoders using the offset min-sum algorithm. IGSP achieves much larger improvements in throughput and energy efficiency without compromising error correction performance, but at the cost of having higher silicon area and latency.
+REFERENCES
+[1] M. Ardakani and F.R. Kschischang, “Gear-shift decoding,” IEEE Trans. Commun., vol. 54, no. 7, pp. 1235–1242, July 2006.
+[2] Xiaoheng Chen, Qin Huang, Shu Lin, and V. Akella, “FPGA-based lowcomplexity high-throughput tri-mode decoder for quasi-cyclic LDPC
+
+codes,” in Communication, Control, and Computing, 2009. Allerton 2009. 47th Annual Allerton Conference on, 2009, pp. 600–606. [3] Cha-Hao Chung, Yeong-Luh Ueng, Ming-Che Lu, and Mao-Chao Lin, “Adaptive quantization for low-density-parity-check decoders,” in Information Theory and its Applications (ISITA), 2010 International Symposium on, 2010, pp. 13–18. [4] T. Mohsenin, H. Shirani-mehr, and B. M. Baas, “LDPC Decoder with an Adaptive Wordwidth Datapath for Energy and BER Co-Optimization,” VLSI Design (Hindawi Journal of), vol. 2013, no. 1, pp. 1–14, 2013. [5] A. Darabiha, A.C. Carusone, and F.R. Kschischang, “A bit-serial approximate min-sum LDPC decoder and FPGA implementation,” in Circuits and Systems, 2006. ISCAS 2006. Proceedings. 2006 IEEE International Symposium on, May 2006, pp. 149–152. [6] P.A. Marshall, V.C. Gaudet, and D.G. Elliott, “Effects of Varying Message Precision in Digit-Online LDPC Decoders,” in Signal Processing Systems (SiPS), 2012 IEEE Workshop on, Oct 2012, pp. 7–12. [7] K. Cushon, C. Leroux, S. Hemati, S. Mannor, and W.J. Gross, “A MinSum Iterative Decoder Based on Pulsewidth Message Encoding,” IEEE Trans. Circuits Syst. II, vol. 57, no. 11, pp. 893 –897, Nov. 2010. [8] K. Cushon, S. Hemati, C. Leroux, S. Mannor, and W.J. Gross, “HighThroughput Energy-Efficient LDPC Decoders Using Differential Binary Message Passing,” IEEE Trans. Signal Process., vol. 62, no. 3, pp. 619–631, 2014. [9] R.M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, 1981. [10] Jinghu Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and XiaoYu Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, 2005. [11] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, April 2010. [12] A. Cevrero, Y. Leblebici, P. Ienne, and A. Burg, “A 5.35 mm2 10GBASE-T Ethernet LDPC decoder chip in 90 nm CMOS,” in Solid State Circuits Conference (A-SSCC), 2010 IEEE Asian, Nov. 2010, pp. 1–4. [13] S. Hemati and A.H. Banihashemi, “Dynamics and performance analysis of analog iterative decoding for low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 61–70, 2006. [14] T. Mohsenin, D.N. Truong, and B.M. Baas, “A low-complexity messagepassing algorithm for reduced routing congestion in LDPC decoders,” IEEE Trans. Circuits Syst. I, vol. 57, no. 5, pp. 1048 –1061, May 2010. [15] F. Kienle, N. Wehn, and H. Meyr, “On Complexity, Energy- and Implementation-Efficiency of Channel Decoders,” IEEE Trans. Commun., vol. 59, no. 12, pp. 3301–3310, December 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u2n3e 24,2026 at 18:22:29 UTC from IEEE Xplore. Restrictions apply.
+
+

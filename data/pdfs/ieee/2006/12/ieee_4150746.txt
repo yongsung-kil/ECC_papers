@@ -1,0 +1,243 @@
+Error Correction Using a Message-Passing Decoder to Process Cyclic Redundancy Checks
+Quentin H. Spencer Distribution Control Systems, Inc. 945 Hornet Dr., Hazelwood, Missouri, 63042, USA
+qspencer@ieee.org
+
+Abstract— This paper proposes a method for correcting errors in messages encoded using cyclic redundancy checks (CRCs), which are typically only used for error detection. This is accomplished for messages of a known length by deriving a paritycheck matrix representation of the CRC. The parity-check matrix can then be used to correct errors using the message-passing decoder (MPD) commonly used to decode LDPC codes. The CRC parity-check matrix is not sparse, which inhibits performance of the MPD, but this effect can be reduced by modifying the matrix using recently proposed sparsification techniques to eliminate short cycles. The technique is practical mainly for codes with short block sizes, and can also be applied to coding schemes that concatenate a CRC with an outer error correcting code. Simulation results demonstrate some performance gains, although less than what can be gained using custom-designed LDPC codes for the same rate and message length.
+I. INTRODUCTION
+The impressive performance of low-density parity-check (LDPC) and related codes using iterative decoding techniques has raised the question of whether similar decoding methods can be used to improve the performance of existing codes. While the message-passing decoder (MPD) commonly used to decode LDPC codes can theoretically be applied to any linear block code, there is little advantage in this for common algebraic codes such as Hamming, BCH, and Reed-Solomon codes because their parity-check matrices are relatively dense. This high density leads to a very large number of short cycles in the Tanner graph of the code, which significantly degrades performance relative more sparse LDPC designs. However, sparsification methods have been proposed recently [1, 2] that can remove all cycles of length 4 from any block code, resulting in performance improvements over what can be achieved using algebraic decoders.
+For some communications applications with short message lengths, it is important to keep coding overhead to a minimum, but it is desirable to correct as many errors as possible. The use of the MPD with extended parity-check matrices for these cases can improve performance. However, many short block high-rate codes also have a low minimum distance, making the probability of undetected error relatively high. It is therefore common in this situation to add a secondary error checking mechanism, such as a cyclic redundancy check (CRC), to each message.
+While the most common reference implementation of the CRC is a linear feedback shift register, various alternate
+
+methods have been proposed with the goal of speeding up the computation of a CRC in customized hardware. Some of the propose parallelization methods [3, 4] can be used to generate an equivalent parity-check matrix representation of an arbitrary CRC for messages of an arbitrary length. When the CRC is used with an outer error correcting code, the paritycheck matrices of the CRC and outer code can be combined into a single parity-check matrix, which can then be extended using sparsification methods to eliminate short cycles. This can improve the overall packet error rate, but this potentially comes at the cost of increasing the number of undetected errors.
+In this paper, we describe the method of deriving a paritycheck matrix representation from a CRC, and illustrate the trade-off between error detection and error correction that results when using this parity-check matrix with the message passing decoder. We then present simulation results that compare MPD performance of codes consisting of various concatenations of CRC with Hamming and BCH codes, as well as customized LDPC codes of the same dimensions. We also propose methods of reducing undetected errors in order to achieve comparable undetected error rates to the traditional hard-decision CRC decoder.
+II. CREATING A CRC PARITY CHECK MATRIX
+The most typical implementation of the CRC is using a linear feedback shift register (LFSR). Hardware CRC implementations using LFSRs are very simple, and they are able to process messages of any length. However, for very long messages over high-speed communication links, a serial process of encoding and decoding is often too slow. For this reason, there has been interest in designing hardware that performs this operation either partially or completely in parallel [4]. The ideas behind parallelizing CRC computation can be applied to the derivation of parity-check matrix representations of CRC.
+The key to deriving a parity-check matrix for an arbitrary CRC is that the CRC computation is a linear operation, and the similarities between LFSRs and IIR filters, a fact first observed in [3]. Let CRC-M (x) represent a CRC of length M for an input vector x. Let zN,j represent an input vector of length N , where the jth bit is a 1 and all others are zeros. Due to the linearity of the CRC computation, the M -bit CRC of a vector
+
+1-4244-0357-X/06/$20.00 ©2006 IEEE This full texAt puathpoerriwzeads plieceernrseevdiewuseed alimt thiteedditroe:ctYioonnosfeIiEUEnEivC. oDmomwunnloicaadtieodnsoSnoJcuientyes2u3b,j2ec0t2m6aattte1r9e:x1p3e:r0ts7foUrTpCubfrliocmatiIoEnEinEtXheplIoErEeE. GRLeOstBriEctCioOnMs a2p0p06ly.proceedings.
+
+x of length N be expressed as
+
+CRC-M (x) = CRC-M (zN,j) ,
+
+(1)
+
+j∈J
+
+where J is the set of the indices of the nonzero bits in x, and all summations are modulo 2. This could also be stated as
+
+N
+
+CRC-M (x) = CRC-M (zN,j)xj ,
+
+(2)
+
+j=1
+
+where xj is the jth element of x. In this form, the CRC computation can be expressed as a matrix multiplication if we regard each CRC-M (zN,j) as a column vector. Define the M × N matrix
+H(CNRC)-M = CRC-M (zN,1) CRC-M (zN,2) · · · CRC-M (zN,N ) . (3)
+
+We can now state the summation in (2) as
+
+CRC-M (x) = H(CNRC)-M x ,
+
+(4)
+
+for any arbitrary vector x of length N . Thus, H(CNRC)-M represents the parity-check matrix for computing a CRC of length M for any message of length N . In its traditional use, a received message x is determined to be correct (or more accurately, it is correct with high probability) if the CRC computed at the receiver contains all zeros. Using this representation, the CRC can be viewed as a linear block code.
+As noted earlier, this process for creating a parity-check matrix can also be viewed as the computation of an impulse response of a filter. The LFSR implementation of CRC computation consists of a shift register with taps on some of the elements of the register which are fed back and summed with the input. This is structurally very similar to an all-pole infinite impulse response (IIR) filter, except that instead of operating on real-valued inputs, all arithmetic is performed in GF(2). In both cases, the impulse response is infinite, but it can be calculated up to an arbitrary finite length. While an IIR filter typically only has one output, with a CRC we want the entire contents of the shift register, or M outputs for one input vector. This can be viewed in two perspectives–transposition methods used to convert one hardware implementation of a filter to another could be used to generate M equivalent IIR filters in GF(2), or the output of the CRC can be viewed as the internal state of the IIR filter. From the IIR filtering perspective, the matrix H(CNRC)-M can be viewed as the N -point “impulse response” of a filter with M simultaneous outputs.
+Figure 1 illustrates the parity-check matrix representation of H(C1R0C0)-16, a 100-bit CRC computation using a standard CRC-16 (generator polynomial x16 + x15 + x2 + 1).
+It is common in many applications to concatenate the use of a CRC with an outer error correcting code, since many error correcting codes are limited in their ability to both correct and detect errors. In such cases, if the outer code is a (N, K) linear block code, it is straightforward to generate a single
+
+Fig. 1. Image of the parity-check matrix representation of the CRC-16 computation for a 100-bit packet, where the CRC is added at the beginning of the packet and it is computed by clocking the 100th bit into the shift register first.
+
+parity-check matrix from the respective parity-check matrices of the outer code and the M -bit CRC:
+
+H=
+
+H(N, K) 0 H(CNRC−-M K)
+
+,
+
+(5)
+
+where 0 is a (N − K) × M matrix containing zeros. Note that if the outer code is a systematic code, this implies that the first N − K columns of H(N, K) are an identity matrix, so that H will have N − K columns with weight one. This construction of H (and that of HC(1R0C0)-16 illustrated in Figure 1) assumes that the parity-check bits of the CRC and the outer code are prepended to the beginning of the packet. If the parity-check bits are appended at the end of the packet, the order of the HC(NRC−-M K) and 0 blocks will be reversed.
+One of the advantages of using CRC for error checking is that they can easily be computed for packets of any arbitrary length. The creation of a parity-check matrix compromises this flexibility somewhat because it imposes a maximum length. However, for communication protocols where the maximum packet length is already known, it is possible to compute the parity-check matrix for the maximum possible length and use the matrix in the same way as a shortened block code, by assuming that packets shorter than the maximum length are padded by zeros. When a CRC parity-check matrix is combined with an outer block code, this poses a potential problem. Suppose in the example above, the outer code is the (255, 247) Hamming code and the CRC is a CRC-16. The longest possible unencoded packet is 231 bits. If the CRC is computed by clocking the input bits into the LFSR starting with bit 231 and ending with bit 1, then the CRC matrix will have a structure like that in Figure 1. The combined paritycheck matrix can be computed for the maximum size and it can then be used for any size less than 255 bits. However, if the CRC is computed starting with bit 1 and ending at bit 231, as is commonly the case when the CRC and outer code paritychecks are appended at the end of a packet, the columns of H(N, K) and H(CNRC−-M K) will align differently for every packet length shorter than 255, so each packet length will result in a unique combined parity-check matrix. This would result in the need to store a separate parity-check matrix in the receiver for every possible packet length, although this may be feasible if the number of unique lengths that must be supported is limited.
+
+III. ERROR DETECTION VS. ERROR CORRECTION
+In its parity-check matrix representation, the CRC can now be used like any other block code with the message passing decoder. One obvious problem posed by this is that the matrix
+
+1-4244-0357-X/06/$20.00 ©2006 IEEE This full texAt puathpoerriwzeads plieceernrseevdiewuseed alimt thiteedditroe:ctYioonnosfeIiEUEnEivC. oDmomwunnloicaadtieodnsoSnoJcuientyes2u3b,j2ec0t2m6aattte1r9e:x1p3e:r0ts7foUrTpCubfrliocmatiIoEnEinEtXheplIoErEeE. GRLeOstBriEctCioOnMs a2p0p06ly.proceedings.
+
+100
+
+10−1
+
+Error Detection
+
+Correction, Optimal
+
+Correction, 1 Error
+
+10−2
+
+Correction, 5 Iterations
+
+Error Probability
+
+10−3
+
+10−4 10−5
+
+Undetected Errors
+
+10−6
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+SNR (dB)
+
+Fig. 2. Comparison of error detection vs. correction capability for 100-bit packets using a CRC-16 (the signal is BPSK with AWGN).
+
+is not necessarily sparse, resulting in short cycles that impede performance. This can be solved to some extent by applying algorithms designed to remove cycles of length 4 [1, 2], although they are limited in that the auxiliary variables that are added create additional unknowns that must be solved in order to converge to a valid codeword.
+The second problem posed by this method of error correction is that it reduces the number of errors that are detected. Avoiding undetected errors is a particular challenge for almost all high-rate codes with short message length, including LDPC codes [5].
+Figure 2 illustrates the trade-off between error detection and correction for BPSK signals with additive white Gaussian noise, by comparing the overall packet error rates with undetected error rates for 100-bit packets using the CRC-16. Four decoding approaches are included. The first is simple error detection with no correction attempted. The second case uses the derived parity-check matrix (extended using the 4cycle removal algorithm from [2]) to correct errors, with the maximum number of iterations in the decoder set at 20 (increasing it beyond 20 had little effect). The third and fourth cases use error correction with limitations. One case imposes a limit of one bit per packet to be corrected and assumes an error has occurred if more than one bit is changed during decoding. The other case imposes an artificially low limit of 5 iterations on the decoder. There are two curves for each of these cases, the packet error rate and the undetected error rate. Using the CRC-16 in the traditional way results in the lowest undetected error rate, which reaches its maximum level at 5 dB. As the SNR approaches 0, the undetected error rate will eventually approach 2-16, the probability that a random pattern will satisfy the 16 parity checks. Using the CRC bits for error correction instead of detection results in a substantial reduction in error rate, with a gain of more than 4 dB at a packet error probability of 10-2. The cost of this error correction capability (in addition
+
+to more computation) is an increase of more than two orders of magnitude in the probability of undetected error, such that the majority of errors are not detected at high SNR. The two cases where limits are imposed on the error correction achieve a compromise between these two extremes. Limiting the number of iterations appear to be a better approach than limiting the number of corrections, since it has better undetected and overall error rates. In this case the increase in undetected errors is only about one order of magnitude, while the gain in the overall error rate is still over 2 dB at 10-2. This idea was pursued further by limiting the number of iterations to less than 5 (these results are not included in Figure 2). For 3-4 iterations, there is a slight increase in the overall error rate and corresponding slight decrease in undetected error rate. For 2 iterations, only a few errors are corrected, but the undetected error rate is slightly below that of the traditional CRC error detection method. When only one iteration of the MPD was performed, no errors are corrected, but the undetected error rate is reduced to less than 10−6 (with a simulation size of 5×10−6). This suggests the use of a single-iteration MPD as a soft-decision error detection method to improve the error detection ability of CRCs.
+One cause of undetected errors is the presence of lowweight codewords, which can cause the MPD to erroneously converge to a valid codeword that is “closer” to the received signal than the transmitted codeword [6]. This is a particularly challenging problem for codes of high rate and short block size, such as those we are considering here. Most CRCs are designed so that they will detect all error patterns of odd weight plus patterns of weight 2. When viewed as linear block codes, this means that they have a weight spectrum consisting of all even numbered weights beginning at a minimum distance of 4. These codewords of weight 4 likely make a significant contribution to the undetected errors observed when using the MPD to decode a CRC-16 in Figure 2. This problem is reduced somewhat when used in conjunction with other error correcting codes. If two block codes are concatenated to produce a combined parity check matrix as in equation (5), the set of valid codewords will be the intersection of the set of valid codewords for H(N, K) and 0 HC(NRC−-M K) , respectively. This implies that the minimum distance of the combined code will be greater than or equal to the maximum of the minimum distances of the combined codes. For example, if a CRC is combined with a Hamming code, which has minimum distance 3, the minimum distance of the combined code will be 4, and only those codewords of weight 4 that satisfy both the Hamming and CRC parity checks will be valid codewords for the combined code. This results in a lower rate of undetected errors, as will be demonstrated by the simulation results in the next section.
+IV. SIMULATION RESULTS
+In this section, we compare the performance of various concatenated CRC and block codes and custom-designed LDPC codes of similar rates. Specifically, we consider codes with rates similar to that of a 16-bit CRC concatenated with
+
+1-4244-0357-X/06/$20.00 ©2006 IEEE This full texAt puathpoerriwzeads plieceernrseevdiewuseed alimt thiteedditroe:ctYioonnosfeIiEUEnEivC. oDmomwunnloicaadtieodnsoSnoJcuientyes2u3b,j2ec0t2m6aattte1r9e:x1p3e:r0ts7foUrTpCubfrliocmatiIoEnEinEtXheplIoErEeE. GRLeOstBriEctCioOnMs a2p0p06ly.proceedings.
+
+a (255, 247) Hamming code used in earlier examples. This particular combination is used in the power line communications scheme of [5]. It can accommodate a maximum uncoded packet of 231 bits, and the coding adds 24 bits of overhead. We compare performance here for total packet lengths of 100 bits and 200 bits, which have effective coding rates of 0.76 and 0.88, respectively. In addition to the Hamming/CRC-16 combination, we also consider the case of the (255, 239) BCH code used with an inner 8-bit CRC (polynomial x8+x2+x+1). This has the same combined rate as the Hamming/CRC16 combination, but more of the bits are allocated to error correction than detection when using traditional decoding techniques.
+Along with the concatenated block-code/CRC schemes, some custom-designed LDPC codes of similar rates are included here for comparison. The LDPC codes used here all have the same block-cyclic structure as those based on cyclic difference families [7, 8], where the parity-check matrix is a concatenation of circulant square matrices. This type of code has a low encoding complexity and can be described compactly. For the 100-bit packet length, two different (100, 75) designs are considered. While this has one bit more redundancy than the (100, 76) codes it is compared to, this particular size is significant because 100 is the largest block size for which a regular LDPC code of weight 3 with 25 bits of overhead can be constructed that is free of 4-cycles [6]. We describe the block-cyclic codes using the same notation used in [5, 7], where a code consisting of L circulant blocks is defined by L polynomials which represent the first column of each block, and those polynomials can be described as sets of coefficients, for example 1 + x + x6 can be represented by the set C1 = {0, 1, 6}. The block-cyclic code of this type is defined as: C1 = {0, 1, 6}, C2 = {0, 2, 10}, C3 = {0, 3, 12}, C4 = {0, 4, 11}. Unfortunately, while this particular code is free of 4-cycles, it has a minimum distance of 6 (which is typical for high-rate codes of this size), which leads to a relatively high undetected error rate. For short high-rate block codes of a fixed size, increasing the code density tends to decrease the number of low-weight codewords. Based on this principle, a scheme for finding codes with good minimum distance properties has been proposed which uses a sparse matrix as the basis for a searching for more dense matrices with better codeword weight spectra [5]. Using this method, the weight-3 code was modified to create a weight-5 code, defined as: C1 = {0, 1, 3, 6, 10}, C2 = {0, 2, 10, 15, 16}, C3 = {0, 3, 8, 12, 15}, C4 = {0, 4, 5, 11, 18}. This code has a large number of short cycles, but the benefit is that the overall number of low-weight codewords has been reduced, and the minimum distance increased to 8.
+Figure 3 compares the performance of the various coding schemes for 100-bit packets with BPSK signaling and additive white Gaussian noise. The first curve is the reference case where the Hamming (255, 247) code is used with CRC-16 and decoded in the traditional way, using algebraic decoding to correct up to one bit error with the Hamming code and detecting most errors using the CRC-16. The second curve
+
+100
+
+10−1
+
+Hamming (255,247) / CRC−16
+
+10−2
+
+Hamming / CRC−16, MPD BCH (255,239) / CRC−8, MPD
+
+LDPC (100,75) weight−3, MPD
+
+LDPC (100,75) weight−5, MPD 10−3
+
+Error Probability
+
+10−4
+
+10−5
+
+10−6
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+SNR (dB)
+
+Fig. 3. Comparison of Hamming/CRC, BCH/CRC and LDPC codes under message passing decoding for 100-bit packets. The effective code rates are 0.76 for the Hamming and BCH codes, and 0.75 for the LDPC code. The top curves are overall message error probability, and the lower curves are undetected error probability.
+
+is based on the same encoding scheme, but the code is decoded using a message-passing decoder and the paritycheck matrix is extended to remove 4-cycles. The third curve corresponds to the combined BCH (255, 239)/CRC-8 decoded using the MPD, and the last two curves correspond to the two LDPC designs. The weight-3 LDPC code has the best overall performance, but with a very high undetected error rate. The weight-5 code trades some of that performance for a substantial reduction in undetected errors, the lowest of all the codes compared here. At a packet error rate of 10-2, using the MPD to process the Hamming/CRC-16 code is able to achieve more than 2 dB gain relative to hard decision decoding, while having a peak error rate that is only slightly higher than that of hard-decision decoding. An additional benefit is that the probability of undetected error goes to zero with SNR, so in a synchronous communication system where a signal may be absent for some reason, the probability of erroneously processing noise and obtaining a valid codeword is considerably lower than the hard-decision decoder. On the other hand, if we compare undetected errors as a percentage of total errors, the percentages are higher for the MPD.
+In both of the examples presented here, the undetected error rates are consistently lower for the BCH/CRC-8 code than the Hamming/CRC-16 code. This is due to the more favorable weight spectrum. The CRC-8 and CRC-16 both have minimum distances of 4, while the Hamming code has a minimum distance of 3, and the two-error correcting BCH code minimum distance of 5. This means that the concatenated Hamming/CRC-16 has a minimum distance of 4, while the BCH/CRC-8 has a minimum distance of 6 (due to the fact that the CRC has no odd-weight codewords). This reduction in low-weight codewords results in a corresponding reduction in undetected errors. This difference is particularly striking when
+
+1-4244-0357-X/06/$20.00 ©2006 IEEE This full texAt puathpoerriwzeads plieceernrseevdiewuseed alimt thiteedditroe:ctYioonnosfeIiEUEnEivC. oDmomwunnloicaadtieodnsoSnoJcuientyes2u3b,j2ec0t2m6aattte1r9e:x1p3e:r0ts7foUrTpCubfrliocmatiIoEnEinEtXheplIoErEeE. GRLeOstBriEctCioOnMs a2p0p06ly.proceedings.
+
+100
+
+10−1
+
+10−2
+
+Error Probability
+
+10−3
+
+Hamming (255,247) / CRC−16
+
+Hamming / CRC−16, MPD
+
+BCH (255,239) / CRC−8, MPD
+
+10−4
+
+LDPC (200,175), MPD
+
+10−5
+
+10−6
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+SNR (dB)
+
+Fig. 4. Comparison of Hamming/CRC, BCH/CRC and LDPC codes under message passing decoding for 200-bit packets. The effective code rates are 0.88 for the Hamming and BCH codes, and 0.875 for the LDPC code. The top curves are overall message error probability, and the lower curves are undetected error probability.
+
+considering that with a CRC-8, the probability of undetected error using hard-decision decision decoding will asymptotically approach 2-8 as the SNR goes to zero. However, the cost of this benefit is that for both of the packet lengths tested here, the code does not perform as well as the Hamming/CRC-16.
+Figure 4 compares the same Hamming and BCH coding schemes with 24 bits of redundancy for packets of length 200. The effective code rate for this case is 0.88. For comparison, a (200, 175) LDPC code (rate 0.875) of weight 5 was designed, which is defined as: C1 = {0, 3, 4, 9, 15}, C2 = {0, 1, 3, 9, 13}, C3 = {0, 1, 2, 8, 16}, C4 = {0, 4, 9, 16, 24}, C5 = {0, 3, 8, 14, 15}, C6 = {0, 2, 3, 6, 14}, C7 = {0, 2, 5, 12, 18}, C8 = {0, 3, 4, 14 ,19}. The minimum distance of this code is 6, and it has a large number of short cycles. In spite of this, it clearly has the best performance of all the codes at this rate, while having nearly the best undetected error rate. With the hard-decision decoding method, the rate of undetected errors is similar to that of the 100-bit packets, but with the message-passing decoder, the rate is reduced substantially with the longer packets. The BCH coding scheme produced no undetected errors in this particular simulation, though undoubtedly it does still produce them with very low probability.
+V. CONCLUSION
+CRCs were originally designed for error detection, but by creating parity-check matrix representations of the CRC calculation, the message passing decoder can be used to correct errors. To reduce the effect of the relatively dense parity-check matrices that result from this process, sparsification techniques that add auxiliary variables to the code can be used to remove
+
+short cycles. This process results in a trade-off between error detection and error correction, where adjusting the number of iterations in the decoder or the number of bit corrections can increase the number of undetected errors while reducing the overall number of errors. Reducing the number of iterations to just one results in no error correction, but a substantial reduction in undetected errors.
+Undetected errors are also reduced when the technique is applied to error control protocols that combine a CRC with a linear block code. An example of this is the power-line communication system in [5]. In such cases, the parity-check matrices can be combined into a single virtual code. Based on the simulation results presented here for high-rate codes such as Hamming and BCH codes combined with CRCs, this appears a promising method of achieving 1-2 dB gain over traditional decoding. However, custom-designed LDPC codes of the same rate can produce even better performance. Furthermore, it is important to note that a message passing decoder requires a substantial increase in computational complexity relative to traditional algebraic decoders and shiftregister CRC implementations.
+For these reasons, LDPC codes are still the preferred choice for communication systems that require high code rates and short message lengths. However, there are many existing communication systems that use CRC and algebraic block codes, which could benefit from the use of iterative decoding. While the computational cost of iterative decoding is higher, it can still be practical in some cases. An example of this is the case (such as the communication system in [5]) of a network configuration where a single device is used to communicate with a large number of other devices.
+REFERENCES
+[1] S. Sankaranarayanan and B. Vasic, “Iterative decoding of linear block codes: A parity-check orthogonalization approach,” IEEE Transactions on Information Theory, vol. 51, no. 9, pp. 3347–3353, September 2005.
+[2] V. Kumar and O. Milenkovic, “On graphical representations of algebraic codes suitable for iterative decoding,” IEEE Communications Letters, vol. 9, no. 8, pp. 729–731, August 2005.
+[3] G. Albertengo and R. Sisto, “Parallel CRC generation,” IEEE Micro, vol. 10, no. 5, pp. 63–71, 1990.
+[4] M. Sprachmann, “Automatic generation of parallel CRC circuits,” IEEE Design & Test of Computers, vol. 18, no. 3, pp. 108–114, May-June 2001.
+[5] Q. H. Spencer, “Short-block LDPC codes for a low-frequency power-line communications system,” in IEEE International Symposium on Power Line Communications and Its Applications. IEEE, April 6-8 2005, pp. 95–99.
+[6] D. J. C. MacKay and M. C. Davey, “Evaluation of Gallager codes for short block length and high rate applications,” in Codes, Systems and Graphical Models, ser. IMA Volumes in Mathematics and its Applications, B. Marcus and J. Rosenthal, Eds. New York: Springer, 2000, vol. 123, pp. 113–130. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/CodesRegular.html
+[7] S. J. Johnson and S. R. Weller, “A family of irregular LDPC codes with low encoding complexity,” IEEE Communications Letters, vol. 7, no. 2, pp. 79–81, February 2003.
+[8] B. Vasic and O. Milenkovic, “Combinatorial constructions of low-density parity-check codes for iterative decoding,” IEEE Transactions on Information Theory, vol. 50, no. 6, pp. 1156–1176, June 2004.
+
+1-4244-0357-X/06/$20.00 ©2006 IEEE This full texAt puathpoerriwzeads plieceernrseevdiewuseed alimt thiteedditroe:ctYioonnosfeIiEUEnEivC. oDmomwunnloicaadtieodnsoSnoJcuientyes2u3b,j2ec0t2m6aattte1r9e:x1p3e:r0ts7foUrTpCubfrliocmatiIoEnEinEtXheplIoErEeE. GRLeOstBriEctCioOnMs a2p0p06ly.proceedings.
+
+

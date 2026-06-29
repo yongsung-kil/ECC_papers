@@ -1,0 +1,926 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+383
+
+High-Throughput LDPC Decoder for Multiple Wireless Standards
+Wei Chen , Yajie Li, and Dake Liu , Senior Member, IEEE
+
+Abstract— It is a great challenge to design an LDPC decoder with multi-standard compatibility, flexibility and low silicon overhead. This paper presents the efficient and low-overhead design of an LDPC decoder tailored for multi-standard, which include WLAN, 5G NR and WiMAX. We follow the design principles of Application-Specific Instruction-set Processor (ASIP). In order to enhance throughput, we double the computational speed by reducing memory speed from double logic speed to logic speed. By proposing the optimized hybrid scheduling algorithm based on matrix reordering, we further solve scheduling problems and eliminate pipeline conflicts. Through performing logic synthesis utilizing the 28 nm SMIC CMOS cell library, synthesis results show that the core area of our designed decoder is 0.86 mm2, the logic gate count is 1716 K, and our design achieves impressive throughput rates, that is up to 9.96 Gbps for WLAN, 7.69 Gbps for WiMAX, and 33 Gbps for 5G NR. Compared with other state-of-the-art LDPC decoders, the experimental results show that our proposed decoder has up to 4.5× higher throughput, 3.9× better area efficiency and 5.8× better energy efficiency than these state-of-the-art implementations.
+Index Terms— LDPC decoding, multiple standards, ASIP, pipeline conflicts elimination, hybrid scheduling.
+I. INTRODUCTION
+BASEBAND computing platform in wireless communications necessitates the support of various communication standards, and need to simultaneously keep power consumption and silicon area costs in check. This has led to the exploration of highly reusable modules. In all modules of the baseband chip, the forward error correction (FEC) decoding module accounts for approximately 40% of the total processing workload [1]. This significant proportion imposes stringent demands on the design of the FEC decoder, requiring high-level efficiency optimization. Compared with other mainstream FEC codewords, LDPC codes have great advantages in both low-complexity design and high-performance transmission. These advantages make LDPC codes replace the previous FEC codewords and become the shared channel coding scheme of 5G NR. LDPC decoder is widely adopted in multiple wireless standards, including WLAN, WiMAX and 5G NR, as shown in Table I. How to meet multi-standard compatibility while achieving high computation capability,
+Manuscript received 17 March 2024; revised 20 May 2024 and 11 June 2024; accepted 21 June 2024. Date of publication 4 September 2024; date of current version 9 January 2025. This work was supported by the National Natural Science Foundation of China under Grant 62464005. This article was recommended by Associate Editor L. Gan. (Corresponding author: Dake Liu.)
+The authors are with the School of Information and Communication Engineering, Hainan University, Hainan 570288, China (e-mail: weichen@hainanu.edu.cn; Liyajie@hainanu.edu.cn; dake@hainanu.edu.cn).
+Digital Object Identifier 10.1109/TCSI.2024.3419425
+
+TABLE I LDPC CODE PARAMETERS IN WIRELESS COMMUNICATION STANDARDS
+flexibility and low silicon overhead, which is an important challenge. We hence design an LDPC decoder specifically tailored for WLAN, 5G NR and Wi-MAX to solve this challenge in complex application scenarios. Through the hardware sharing of multiple modes, the silicon area is effectively saved, and the flexibility and computation capability are improved to satisfy the performance of decoding in current 5G and future 6G communication standards.
+Some state-of-the-art LDPC decoders were designed in recent years. An LDPC decoder was proposed to achieve high decoding efficiency by adopting a multi-state parallel node update structure [2]. Ling et al. proposed a 5G NR LDPC decoder [3], which could achieve high resource utilization and throughput by increasing parallelism on a single code word. The multi-stream LDPC decoder based on the advance parallel architecture were proposed [4], [5], which could achieve efficient real-time decoding. Based on a column-wise SC-LDPC decoding architecture, Herrmann et al. proposed a decoder for spatially coupled LDPC codes [6]. A low-complexity and high-throughput pipelined layered QC-LDPC decoding architecture was proposed to improve throughput [7]. A lowpower LDPC decoding architecture using reversible logic gates was proposed to reduce latency [8]. Gong et al. proposed a reusable and efficient architecture for QC-LDPC decoding, which could reduce the complexity of the encoder [9]. An efficient LDPC decoding architecture was proposed to achieve a high throughput-to-resource overhead ratio [10].
+Except for the efficient decoding architectures, efficient decoding algorithms is another research orientation. A decoding algorithm called the Best, Requested, and Default algorithm was proposed, which could reduce memory and computational resources [11]. Zhu et al. proposed a low-complexity LDPC decoding algorithm for ultra-high-order modulated signals [12]. An efficient scheduling algorithm for layered decoding of block LDPC codes was proposed, which could accelerate decoding convergence [13]. The reinforcement learning-based and deep learning-based decoding
+
+1549-8328 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+384
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+algorithms of LDPC codes were proposed, which could optimize decoding process [14], [15]. Bao et al. proposed an improved adaptive granularity progressive LDPC decoding algorithm to reduce the memory read latency [16], [17]. A check-belief propagation decoding algorithm for LDPC codes was proposed to reduce the complexity of decoding [18]. A joint group shuffled scheduling decoding based on double LDPC codes was proposed, which could improve decoding performance [19], [20]. A parallel extended min-sum decoding algorithm was proposed to reduce decoding latency [21]. Some layered QC-LDPC decoding scheme based on the quantized offset min-sum decoding methods were proposed, which could achieve better decoding stability [22], [23].
+Most of the above studies either have missing coverage of multiple wireless standards, or have insufficient throughput for high-speed standards, such as 5G NR, WLAN and WiMAX. Moreover, the existing state-of-the-art LDPC decoder used a single-port memory design with frequency doubling [24], [25], [26], which imposed constraints on the maximum attainable system clock frequency. This design also led to the poor performance of the logic circuit, as well as the complexity of the system, and the inability to optimize the logic circuit. At the same time, the state-of-the-art decoding algorithms had posteriori memory access conflicts, which resulted in a decline in the throughput. Thus, for multiple wireless standards (5G NR, WiMAX and WLAN), we design a high-throughput LDPC decoder without using the design of single-port memory with frequency doubling, which is a valuable research orientation. If these three LDPC codes are integrated into a single circuit, its flexibility is poor and its power consumption advantage is not significant. When the communication protocol is updated or the application scenario is changed, the original design can’t be modified and requires re-taping out, the huge amount of NRE (Non-Recurring Engineering) is not accepted by the chip design. In order to meet the requirements for high performance and low power consumption, which is posed by continuously updated high-speed communication standards, we propose a multi-mode ASIP that supports software defined radio (SDR), which combines the advantages of flexibility, high performance, and low overhead. We hence design a generic LDPC decoder architecture based on ASIP design approach, and apply it to three LDPC codes. We extend the compatibility of LDPC decoder, and propose the SIMD (Single Instruction Multiple Data) architecture with enhanced parallelism, which enables compatibility with random code lengths and rate decoding for multiple wireless standards, and also satisfies the demands for high-speed decoding. Meanwhile, we propose a hybrid scheduling and decoding algorithm based on matrix reordering, which can solve the pipeline collision problem, and reduce the data access conflicts without causing performance loss to the decoder. Finally, we design the memory subsystem to achieve simultaneous data access without frequency-doubling. This design eliminates constraints on the system clock frequency imposed by memory. At the same time, our design reuses the multi-mode decoding standard to save the logic gates. Compared with the existing stateof-the-art LDPC decoders, we establish the comprehensive advantages of performance and area.
+
+The subsequent sections of this paper are organized as follows: In the section II, we present the research on the optimized hybrid scheduling and decoding algorithm. Following that, in the section III, we present the implementation process of LDPC decoding ASIP, which includes the design of top-level architecture, instruction and data path. The section IV presents the pipeline conflicts elimination method and memory subsystem design within the LDPC decoder. The experimental results and performance comparison are presented in section V. The section VI is conclusion.
+
+II. ALGORITHM IMPLEMENTATION PROCESS A. Decoding Algorithm
+
+Belief Propagation (BP) algorithm is the most basic soft decision decoding algorithm. It is widely used in digital communications. Its typical implementation is a logarithmic domain confidence propagation (LLR BP) algorithm, the difference is that the LLR BP algorithm converts the probability message to the logarithmic domain for expression, and in the process of variable node information update and hard decision message, this algorithm replaces a large number of non-multiplicative operations with linear summation operation. In order to meet the decoding requirements, we optimize and implement the decoding algorithm in this research. Firstly, we briefly summarize the aforementioned BP and LLR BP algorithm, and we can get the following formula. i, j is the row and column identifier in the matrix, l represents the number of multiplex layers, n and m represent variable node and check node respectively, Ci \ j represents the set of all check nodes adjacent to the row i except the column j, R j \i represents the set of all variable nodes adjacent to the column j except the row i, and Pi represents the initialization probability of the channel passing to the variable node.
+Its check node information update is:
+
+L L R(l)(m) = 2tanh−1(
+
+tanh ( 1 L L R(l−1)(n))) (1)
+
+2
+
+i ′∈R j \i
+
+Variable node information update is:
+
+L L R(l)(n) = L L R (Pi ) +
+
+L L R(l)(m)
+
+(2)
+
+j ′∈Ci \ j
+
+The Minimum-Sum (MS) decoding algorithm is a simplification of the updated expression of checknode information based on LLR BP.
+Then, the variable node information is updated:
+
+L L R(l−1)(m) = sgn L L Rl−1(m) · L L R(l−1)(m) (3)
+
+Check node information is updated:
+
+L L R(l)(n) =
+
+sgn L L R(l−1)(m) · min L L R(l−1)(m)
+
+i ′∈R j \i
+
+i ′∈R j \i
+
+(4)
+
+The MS algorithm simplifies the LLR BP algorithm, and replaces the tanh operation with the minimum value and symbol operation, but due to the use of approximate calculation, there is a big deviation between the calculated value of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+385
+
+check node and the original actual value, which will directly lead to the loss of decoding performance. In this design, we use the MS algorithm for node updates, and incorporate a multiplicative correction factor denoted as λ . We propose the optimized MS algorithm for processing nodes (x, y) to reduce the loss of decoding performance, as shown in Equ. 5.
+
+f (x, y) = sign (x)·sign (y)·min {|x| , |y|} fL (x, y) = λ ·sign (x)·sign (y)·min {|x| , |y|} (5)
+
+We use Equ. 5 to simplify the following proposed forward-backward parallel iterative decoding process, as shown below. Sr represents the number of non-zero matrices in the row r of the base matrix, r,k represents the posteriori information of the k non-zero element in the row r of the base matrix.
+
+r,k = λ · f y0, y1, . . . , yk−1, yk+1, . . . , ysr −1
+
+
+
+
+
+=λ
+
+sign y j  · min y j
+
+j∈[0,sr −1]\k
+
+j∈[0,sr −1]\k
+
+
+
+
+
+=λ
+
+sign yj 
+
+j ∈[0,sr −1]
+
+·s i gn
+
+
+
+submin
+
+(
+
+yk
+
+)
+
+·
+
+
+
+j
+
+∈[0,sr −1]
+min
+
+ j∈[0,sr −1]
+
+yj yj
+
+, ,
+
+idxmin = k i d xmin̸=k
+
+(6)
+
+Our proposed optimization method firstly traverses all the y j , j∈ [0, sr − 1], then finds the minimum y j and the second minimum y j . And we record the subscript j of the minimum y j as id xmin. When the output subscript k overlaps with id xmin, the minimum y j is precisely the one that needs to be removed, so the second minimum value is adopted. When the
+output subscript k does not overlap with id xmin, the minimum value is adopted. sign (yk) is the symbol removal operation.
+
+B. Hybrid Decoding Schedule
+In order to reduce the hardware complexity, we also propose the hybrid decoding algorithm based on the partial parallel update method. Compared with the original BP and LLR BP algorithm, our proposed decoding algorithm makes significant improvements, has great implementation advantages, and has a positive significance in reducing transpose difficulty and accelerating convergence speed. In our design, we implement the proposed scheduling algorithm, which involves dividing the decoding check matrix H into M distinct and nonoverlapping layers, the size of each layer is Z × N Z . This division is based on the lifting factor Z and relevant base matrix.
+The QC-Raptor-like code is widely used in 5G due to its excellent error correction performance and codeword structure suitable for hardware implementation. Let HM×N denote the check matrix of the QC-Raptor-like code:
+
+HM×N =
+
+Hcore H0 Hc HI M×N
+
+(7)
+
+where M = N−K, and Hcore, Hc, H0, HI represent the core matrix, submatrix C, all-zero submatrix and identity submatrix respectively. Hcore is a high bit rate check matrix, Hc is extended by Hcore. Let the QC-Raptor-like code (N , K ) be decoded. The algorithm has N variable nodes and M check nodes. The check matrix is divided into L × C sub-matrices, each of which is of Z × Z size. The LDPC structure of WLAN and WiMAX also decomposes the entire check matrix into several sub matrices of size Z × Z , each of which can only be a zero matrix or a translated identity matrix. In WLAN and WiMAX, the size of Z generally ranges from 24 to 96, while in 5G NR, it generally ranges from 8 to 384. In order to meet the requirements of the maximum operational parallelism in matrix for these communication standards, the parallelism is set to the greatest common divisor of Z generally used in 5G NR, WLANand WiMAX, which is 8. Our proposed feasible parallel method of LDPC code is to update multiple layers in parallel, we hence adopt the design of updating 8 sub-layers at the same time. When there are more than 8 sub-layers, it can also be completed by using parallel structure, which can better adapt to the decoding of long and short codes. Such a computing path in which 8 sub-layers are updated at the same time is called 8 state parallel computing SISO (Soft Input Soft Output). Then the parallel process is to dispatch parallel sub-layers to multiple SISO. Since each SISO can handle 8 sub-layers, Z sub-layers need a total of P = Z /8 SISO. Our partial layered decoding schemeis to update the Z rows of the check matrix at the same time. The number of rows in the check matrix is an integral multiple of Z , our designed decoder does not process all layers. Compared with conventional full parallel decoding algorithm, the difference of our decoding algorithm is that the update process of the variable nodedoes not wait for the update of the check node of all rows, but after the update of the check nodeof each row, and only for the affected variable nodes. Moreover, in order to further improve the decoding rate, we achieve that Z rows of the check matrix are updated at the same time in a clock. And in our hybrid scheduling and decoding algorithm, the update process of the variable node and the update of the check node are merged, it can be considered that the column update is included in the row update. Z rows hence can be updated in parallel without conflict, thus speeding up the convergence rate.
+For LDPC of 5G NR, the sequencing of variable node and check node updates doesn’t follow the left-to-right order. In the process of 48 parallel decoding, decoding proceeds by per-layer, and computation is performed for each non-zero submatrix within a layer. One single clock cycle is allocated for each non-zero submatrix. In summary, the proposed LDPC hybrid scheduling and decoding algorithm used in this design is shown in Algorithm 1. The specific steps of this algorithm are:
+1) Initialization: We use a look-up table to store the non-zero submatrix information within distinct HB matrices. There are two tables, one is utilizedto record the number of rows of the i-th non-zero submatrix in the HB matrix, we call this table as location table X. The other is utilized to record the rotation value of the non-zero submatrix with respect to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+386
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+Algorithm 1 LDPC hybrid scheduling and decoding algorithm
+
+1. Initialize the number of iterations iter and Max_iter
+
+2. Initialize all message values passed from check node m to variable node
+
+n
+
+3. Initialize the posterior probability value LLR of all variable nodes n
+
+4. for iteration i=1: Max_iter
+
+5. for layer b=1: M/Z
+
+6.
+
+for row z=1: Z //Forward iteration
+
+7.
+
+m=(b−1) Z +z
+
+8.
+
+Qn→m = L L Rn − Rm→n
+
+9.
+
+Rm→n = f (Qn′ →m , α)
+
+10.
+
+Update L L R′n = Qn→m + Rm′ →n
+
+11.
+
+Store L L R′n
+
+12.
+
+for row z=Z : 1 //Backward iteration
+
+13.
+
+Qn′ →m = L L Rn′ − Rm→n
+
+14.
+
+Rm′ →n = f (Qn→m , β)
+
+15.
+
+if conflict free = true then //no conflict
+
+16.
+
+Update L L Rn = Qn→m + Rm→n
+
+17.
+
+Store L L Rn
+
+18.
+
+else //conflict
+
+19.
+
+Load L L Rn
+
+20.
+
+L L R′n = L L Rn − Rm→n + Rm′ →n
+
+21.
+
+Store L L Rn′
+
+22.
+
+Update L L Rn = Qn→m + Rm→n
+
+23.
+
+end if
+
+24.
+
+end for
+
+25. end for
+
+26. end for
+
+the unit matrix, which is used as control information for data interleaving, called the rotation value table P. In this way, the position i, j in the matrix can be eliminated.
+2) Forward Iteration: The forward iteration’s updating sequence progresses from the initial non-zero submatrix in the first row to the last non-zero submatrix in the last row. Additionally, it moves from the leftmost to the rightmost for each layer. Let x = (x0, x1 . . . xK −1) be the uncoded codeword, and y = (γ0, γ1 . . . γN−1) be the received channel codeword. Based on the Equ. 5, various input LLR outcomes can be consist of:
+
+f (x0, x1, x2 . . . xn−1) = L L R (x0⊕x1⊕x2 . . . ⊕xn−1) = f ( f ( f (x0, x1) x2) . . . xn−1) (8)
+
+The k check values are updated in the manner described below:
+
+αk = f ( f ( f (γ0, γ1) γ2) . . . γk
+
+(9)
+
+Using Qn→m to represent the message value passed from variable node n to check node m, it can be obtained:
+
+Qn→m = L L Rn − Rm→n
+
+(10)
+
+where L L Rn represents the posterior probability value of variable n. Rm→n denotes the message value transmitted from check node m to variable node n, it can be obtained:
+
+Rm→n = f (Qn→m , α)
+
+(11)
+
+3) Backward Iteration: It is the same with the aforementioned process, k check values need to be passed:
+
+βk = f ( f f γsr −1, γsr −2 γsr −3 . . . γk
+
+(12)
+
+This can also be accomplished via backward iterations:
+
+βk = f (βk+1, γk )
+
+(13)
+
+The posteriori information is obtained by the following formula:
+
+k = f (αk , βk+1)
+
+(14)
+
+That is:
+
+L L Rn = Qn→m + Rm→n
+
+(15)
+
+When attempting to read LLR messages for the current layer before the updated messages from the preceding layer have been written back, memory conflicts arise. To mitigate this issue in the hybrid decoding algorithm, we propose a hybridscheduling method:
+Firstly, define m→n
+
+L L Rn′ = Qn→m + Rm′ →n = L L Rn − Rm→n + Rm′ →n
+
+= L L Rn + m→n
+
+(16)
+
+If: j = i + 1, then:
+
+L L Rnj = L L Rni + m j →n
+
+(17)
+
+where m→n represents the influence of the check node on the
+
+L L Rn
+
+value.
+
+L L Rn′ ,
+
+Q
+
+′ n→m
+
+and
+
+Rm′ →n
+
+represent
+
+the
+
+values
+
+calculated through backward iteration. If there are two check
+
+nodes m and n from different layers (for example, from layer
+
+i and layer j), then:
+
+L L Rnk = L L Rni + m j →n + ml →n
+
+(18)
+
+Available:
+
+L L Rnk = Qn→mi + Rmi →n + ml →n
+
+(19)
+
+To deliver its message value, this update is postponed to another check node.
+Our proposed hybrid scheduling and decoding algorithm simplifies the update process of check nodes, and reduces the complexity of decoding. Our proposed algorithm uses approximate calculation to simplify LLR BP and LBP(Layered BeliefPropagation) algorithms. In order to solve the performance loss caused by approximate computation, and the problem that MS algorithm makes the amplitude of check node update larger, our proposed algorithm introduce a multiplicative correction factor λ , which can reduce the amplitude of check node update, thus achieving a balance between maintaining lower complexity and achieving superior performance. The average time complexity of our proposed algorithm, LLR BP, LBP and MS algorithms is O(N 3), O(N 4), O(N 4) and O(N 3log N ). It can be seen that the complexity of our algorithm is lower than that of LLR BP, LBP and MS algorithms.
+The state-of-art scheduling and decoding algorithms [26], [27], [28] ignore the impact of hardware constraints on throughput. We propose a hardware-friendly hybrid scheduling and decoding algorithm. Our algorithm realizes that the part of the input information of the backward iterative operation is the calculated result value of the forward operation, and the forward message update value is read and used in the backward iteration. This design can enable the variable node LLR value to receive multiple numerical judgments and corrections during one iteration calculation with low hardware complexity, and reduce the number of iterations. Meanwhile, by simplifying the update process of check nodes, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+387
+
+Fig. 1. The top-level architecture of LDPC decoder.
+hardware complexity of our proposed algorithm is relatively low. Compared with the state-of-art scheduling and decoding algorithms, the innovation of our proposed algorithm is to improve convergence speed and the throughput of the decoder with low hardware complexity. Our proposed algorithm can solve the bottleneck of throughput limitation under hardware constraints.
+III. HARDWARE DESIGN
+A. The Top-Level Architecture of LDPC Decoder
+We design the top-level architecture of LDPC decoder, as shown in Fig. 1. It contains several important modules. The control logic contains PC (Program Counter), data memory access, program memory, FSM (Finite State Machine) and instruction fetch/ decoding. Address generation unit is used to generateforward and backward iterative addresses. Address transform unitis used to provide address for each memory bank. Look-up table is the non-zero submatrix position and shift value lookup table of LDPC. Global memory system (GMS) is used to provide input data, output data, and data that need to be shared among multiple SISO. Read permutation network is used to provide data replacement from multiple memory banks in GMS to multiple SISO. Write permutation network is used to provide data replacement from multiple SISO to multiple memory banks in GMS. Based on the address generated by address generation unit and address transform unit, each memory bank can be accessed. SISO array is soft input and soft output unit, which contains multiple SISO, each SISO contains data path for iterative update operation, local buffer and inner buffer.
+The analysis in the Section II indicates that achieving the parallel forward and backward iterations depends on specific conditions, if a single-port memory is accessed twice within a clock cycle, the maximum clock frequency is 500 MHz,
+
+and the data path is constrained to operate at a frequency of 250 MHz. It thus half the decoding performance and the bottleneck shall be eliminated.
+If dual-port memory is used and the decoder is compatible with multi-mode decoding, a dual-port memory array with large bandwidth and large capacity can be offered, yet the silicon cost is high. At the same time, the current design of LDPC decoders is insufficient to support 5G-compatible LDPC look-up tables and some buffers, and have insufficient parallelism, which leads to poor LDPC decoding performance in 5G communication systems.
+In addition to being responsible for signal control within the decoding part, the control path of the LDPC decoder also preserves three types of information that are critical to the decoding procedure: the position information of element “1” in the basic graph matrix, the information of layer structure processing sequence, and the basic matrix information, which is cyclic shift coefficient information. In BG1 (the 5G basic graph matrix), the maximum row weight is 19, with a corresponding maximum number of rows being 46, the ROM size for BG1 hence is configured at 19×46 = 1×874 in our designed architecture. In BG2, the maximum row weight is 10, with a corresponding maximum row count of 42. Consequently, the ROM size tailored for BG2 is configured as 10×42 = 1×420 in our designed architecture.
+In our designed architecture, to reduce memory resources, the ROM memory only stores the address of column associated with the “1” element in each row. At the same time, the insertion of FIFO (First Input First Output) is used to realize the reading and writing of the residual value, and the start mark of each layer operation. The control signal of the FIFO exists in the upper 2 bits of the ROM. The control relationship is obtained by the algorithm introduced in Section IV, and it is initialized in ROM together.
+The dimensions of the 5G base matrix significantly surpass those of WIFI and WiMAX. The maximum of sub-layers Z is 384. For LDPC structure of all communication standards, the maximum size of Z is 384, each SISO module can process 1 to 8 sub-layers. Parallel SISO modules can also be used to complete updates for more than 8 sub layers, the requisite number of SISO modules is determined as 384/8 = 48 in our designedarchitecture. This ensures that the process is available for LDPC codes of various lengths. Our decoder can achieve parallel decoding of multiple layers (n Z ). If Z is 2, based on the proposed hybrid scheduling and decoding algorithm, our decoder will make 48 SISO modules run in parallel to achieve multi-layer (n Z ) parallel decoding. The decoder architecture’s peak parallelism achieves high-throughput for decoding, and achieves rapid decoding suitable for different scenarios.
+B. The Design of Instruction Set
+To enhance decoding flexibility, our design adopts the SIMD structure of ASIP. In order to implement the proposed algorithm in Section II, the instruction shall have three domains: address domain for configuring the counter of forward and backward address, function domain for expressing the arithmetic execution, and special state control domain for discriminating the special state, this domain primarily includes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+388
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+TABLE II INSTRUCTION SET FORMAT
+
+TABLE III ASSEMBLY CODE FOR DECODING
+
+the end of the parallel window and the sliding window, and the special state. The instruction set format is shown in Table II.
+Among them: the control words for the forward and backward address counters are denoted as as and bs respectively. The control words for the backward and forward sliding window counters are denotedas bw and aw respectively. Additionally, the validity signals are represented by aen and ben. br represents the working status of the parallel window, le represents the status of special iteration, and c0-c2 controls the hard loop counter and marks whether a loop jump occurs. Finally, the number of repeats is represented by repcnt.
+The decoding operation of LDPC is composed of several forward and backward iterations. In the forward operation, the processing order between different layers is layered with the increment of the number of layers. In the same layer, the update operation is carried out one by one according to the address value of the non-zero sub-matrix, which is indicated by the check matrix in the layer, and the operation of a non-zero submatrix is performed in a clock. For the check matrix of LDPC, in each sub-layer, let there be a maximum of St nonzero elements in total. The backward iteration is one layer later than the forward iteration, and in the same layer iteration, the order of backward iteration update is opposite to that of forwardoperations. When performing an iteration operation, updating the information of the Z sub-layer simultaneously. The control process of the instruction set to the decoding process is described as Table III, the specific process of decoding is as follows. clras representsresetting the counter to zero, setbs represents that the counter is set to the default values, ba and bb represent the flags for forward and backward iterations respectively.
+The stage A: The forward count is cleared, the backward count is set to the window length St, the window count is accumulated, the forward is invalid (enable signal alphaen = 0), the backward is valid;
+The stage B: The backward iteration is decremented, and the backward is valid (enable signal betaen = 1). There is no forward behavior indicated here, and the default behavior is that the forward direction is invalid and the count remains unchanged. These statements need to be executed NOPNUM-1 times;
+
+Fig. 2. Pipeline of decoding. In the figure, In Buf represents inner buffer, Ir Buf represents input receive buffer, and Le represents the flag of the first layer of the first iteration.
+The stage C: The forward address is unchanged (keep 0) and invalid, and the backward is decremented and valid;
+The stage D: Forward iteration is incremented and forward is enabled, backward iteration is decremented and backward is enabled. These statements need to be executed St- NOPNUM-1 time;
+The stage E: Forward iteration is incremented and forward is enabled, backwarditeration is unchanged and backward is invalid. This statement needs to be executed execute NOPNUM times, and finally return to the stage A to continue execution, or return to the beginning of the next iteration, there hence are two loop counters c0, c1 decreasing and combination hopping.
+The characteristics of forward and backward iterations is that they are independent and related operations. In the decoder design, each part has separate parallel pipeline, and an instruction is utilized to concurrently control two pipelines, and two pipelines is used to update the alignment of the backward and forward computation stages. As shown in Fig. 2, the data used in the forward iteration is prepared at the PMU stage, the part data in the global memory is prepared at the RDM stage, and the data used in the backward iteration is prepared at the RDB stage. EXEA1 is aligned with EXEB1, and EXEA2 is aligned with EXEB2. EXEA1 and EXEA2 are the forward iteration update part. EXEB1. EXEB2 and EXEL1/2/3 are the backward iteration update part. WPMU and WRM are the write back processes for LLR update values. At the end of the forward iteration (the start of backward iteration), data can be directly inputted from front to back (skipping reading/ writing SISO buffer), streamlining the data flow at this moment to achieve the shortest “read memoryexecute-write back” cycle. For LDPC, the count of pipeline stages is totally 10 at the “write to memory” round.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+389
+
+4) The posterior value is calculated, in order to prevent overflow during the operation, it is necessary to saturate the external information, and perform information compensation after the operation in this step.
+When decoding 5G LDPC, the maximum total number of non-zero sub-matrices is 316 of HBG1. Therefore, the inner buffer depth should be increased to 316 accordingly. The double barrel shifter method is used for the periodic rotation of arbitrary given lifting factor. This method not only saves hardware resources, but also flexibly realizes the configuration of multiple rotation values.
+
+Fig. 3. SISO data path of decoding. In the figure, REG represents register.
+C. The Design of Data Path
+The designed SISO data path of the hybrid decoding algorithm for LDPC is shown as Fig. 3.
+The SISO operation can be partition into four steps:
+1) Before the first iteration, using the input information value I as the known LLR value at this time, and according to the value of the external information read from the register of the external information, the subtraction operation is performed, and the result is recorded as a prior information value. After the forward or backward operation, the value is recorded in the corresponding register.
+2) When performing the forward and backward iterative operation, as shown in the Fig. 3, the value used for calculation is read from the special internal register, and after the calculation is completed, the write-back operation is completed at the same time. Therefore, it can be known that the registers at this location should also be arranged in a ping-pong layout. After the decoupling FIFO is inserted, the β information is updated while the operands are read from the FIFO. The process value of each forward operation should also be stored in the corresponding forward register. For the read-write control of double-write operation and decoupled FIFO, the control information is obtained by computer simulation before the chip works, and the control information can be stored in the highest 2 digits of the quantified value at each position in the reordered index table, the control hence includes the start/ end flag of each layer and the write in/ write out flag of FIFO.
+3) To realize the operation of the scaling factor, the value of the scaling factor selected in our design is 0.75. The design uses 0.75 because its implementation logic is relatively simple, and this value is suitable for most decoding operations of code length.
+
+IV. CONFLICT-FREE PIPELINING OPTIMIZATION AND THE DESIGN OF MEMORY SUBSYSTEM
+
+A. Conflict-Free Pipeline Optimization
+
+Based on the analysis presented in Section II, we can see
+
+that for forward and backward iterative algorithms of LDPC,
+
+the forward iteration process for the current layer is executed
+
+concurrently with the backward iteration process for the pre-
+
+ceding layer. However, the sequence used for writing back is
+
+opposite to the input sequence used in forward iteration. Such
+
+a parallel design will make the backward reading operation
+
+precede the forward write operation, which is called read-
+
+after-write (RAW) conflicts. It is evident that due to before the
+
+completion of the write-back process for the preceding layer’s
+
+information, there is a necessity to access the LLR information
+
+in the current layer, and serious RAW conflicts hence have
+
+been caused, which affects decoding efficiency. At the same
+
+time, the memory system needs to facilitate parallel forward
+
+and backward operations by enabling concurrent read and
+
+write operations. If simply merging, it will result in a memory
+
+array with dual-port high-bandwidth and high-capacity. The
+
+state-of-the-art LDPC decoders uses a single-port memory
+
+with a doubled clock rate instead of dual-port memory.
+
+For typical LDPC hierarchical decoder designs, the causes
+
+of conflicts were explained in detail in reference [23]. In order
+
+to eliminate conflicts in data paths, this reference proposed
+
+a typical reordering method. Based on this previous work,
+
+we propose an optimized reordering method for this conflict,
+
+which rearranges the submatrix tables and stores them in LUT
+
+for the replacement of information stored in the original ROM.
+
+This method rewrites the operation order of elements between
+
+rows, and rewrites the update order of elements between
+
+columns in the same row. We simulated this method before
+
+the implementation on hardware. The outcome is applied to
+
+substitute for the original base matrix search table.
+
+Our matrix reordering method include row swapping and
+
+sequence reordering. The specific steps are as follows. Where
+
+BJ×K is basis matrix, J = R(B) is the number of rows (layers) of the basis matrix. Each layer contains Z sublayers, and K =
+
+C(B) is the column of the basis matrix. Let Xi = D(B j )
+
+represents a non-zero element in B j (the j-th row of the B
+
+matrix),
+
+and
+
+X
+
+=
+
+[
+
+X
+
+T 1
+
+X
+
+T 2
+
+...
+
+X
+
+T J
+
+T
+]
+
+.
+
+Let
+
+Pj
+
+=
+
+B j,X j
+
+represents
+
+the rotation of the non-zero matrix in the check matrix, and
+
+P
+
+=
+
+[ P1T
+
+P2T
+
+..
+
+.
+
+PkT
+
+T
+]
+
+.
+
+1) Row Swapping: To reduce the computational complexity,
+
+the search scope is limited to cases where the number of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+390
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+Algorithm 2 RowSwapping
+
+1. (B, X, P) : =RowSwapping (B)
+
+2. Nmin := ∞
+
+3. for c : = 0 to ∞ do
+
+4.
+
+(B, succeed, Nmin ) : =FindNextRow (B, 1, c, Nmin )
+
+5.
+
+if succeed then
+
+6.
+
+load B, X, P
+
+7.
+
+exit
+
+8.
+
+end if
+
+9. end for
+
+Algorithm 4 SequenceReordering
+
+1. (X, P) := SequenceReordering (B)
+
+2. Lmax := maxC D B j , f or all j 3. for j:= 0 to J do
+
+4.
+
+L:= Lmax
+
+5.
+
+R:= ∅
+
+6.
+
+for θ := [1, −1, 2, −2] do
+
+7.
+
+X j , Pj , R, L := FillRow ( j, B j , B j+θ , R, L , X j , Pj )
+
+8.
+
+end for
+
+9. X j , Pj , R, L := FillRow ( j, B j , B j , R, L , X j , Pj )
+
+10. end for
+
+Algorithm 3 FindNextRow
+
+1. (B, succeed, Nmin ) :=FindNextRow (B, r , c, Nmin ) 2. succeed := f alse
+
+3. if r ==J then
+
+4.
+
+if C(D (B j )∩D(B1))≤c then
+
+5.
+
+succeed := tr ue
+
+6.
+
+(X, P) := SequenceReordering(B)
+
+7.
+
+N :=ConflictTest(X)
+
+8.
+
+if N < Nmin then
+
+9.
+
+Nmin := N
+
+10.
+
+dump B, X, P
+
+11.
+
+end if
+
+12. end if
+
+13. end if
+
+14. for rn := r + 1 to J do
+
+15.
+
+B := RowExchange(B, r + 1, rn )
+
+16.
+
+if C(D(Br )∩D(Br+1))≤c then
+
+17.
+
+(B, succeed, Nmin ) :=FindNextRow(B, r + 1, c, Nmin )
+
+18.
+
+end if
+
+19. end for
+
+conflicts is less than the maximum acceptable number of common elements between layers, denoted as c. It is advisable to set c as small as possible. When setting c specifically, it can be gradually increased from 0 until a solution is found. The algorithm RowSwapping calls the subfunction FindNextRow after each setting of c. The process is outlined in Algorithm 2. FindNextRow is detailed in Algorithm 3.
+In Algorithm 3, the number of conflicts is denoted as N , and the minimum value of N is Nmin. The row indices start from 1. It attempts to swap the current row Br with each next row Br+1, and tests if the number of common elements between the current row and the next row is less than or equal to c. If this condition is satisfied, the next row becomes the current row, and the iterative process continues. When the last row is reached and it also satisfies the condition with the first row, a feasible optimized matrix is generated. After that, two subprocesses (SequenceReorderingand ConflictTest) are called. If the number of conflicts in the current solution is less than the previously recorded number of conflicts, a feasible optimized basis matrix solution is obtained. The iterative process will continue until all possible matrices have been identified, after which the minimum number of conflicts and the corresponding basis matrix B can be obtained.
+2) Sequence Reordering: We define d j, θ as the number of clock cycles between write and read operations, referred to as the distance, where θ represents the offset address of the current layer. The conflict occur when 0 < d j, θ . A larger distance corresponds to fewer conflicts for all layers. This can be expressed as maxd j,θ , θ = [−2, −1, 1, 2] , j∈[1, J ]. The maximized maxd j,θ can be achieved by rearranging the
+
+Algorithm 5 FillRow
+
+1.
+
+(x, p, R, L) := FillRow ( j, B j , Bk , R, L , x, p)
+
+2.
+
+K := D(B j )∩D(Bk )
+
+3.
+
+U := K \R
+
+4.
+
+l := C(U )
+
+5.
+
+L := L− l
+
+6.
+
+if j is odd then
+
+7.
+
+xL+1:L+ j := U
+
+8.
+
+pL+1:L+ j := B j,U
+
+9.
+
+else
+
+10.
+
+xL+1:L+ j := F(U )
+
+11.
+
+pL+1:L+ j := B j,F(U )
+
+12.
+
+end if
+
+13. R:= R∪U
+
+common elements (index values) between rows in table X. We propose a low-complexity non-search algorithm to find maxd j,θ . The specific process is as follows.
+To obtain maxd j,−1, the common elements between rows r and r + 1 need to be written back as early as possible. A similar situation applies to obtaining maxd j,±2. Writing back earlier is equivalent to reading later. In summary, all these requirements are equivalent to one demand: the common elements should be read as late as possible. Based on this requirement, all the common elements between rows need to be placed on the right-hand side of the read sequence for the current layer. The common elements between rows r and r ± 1 should be placed first, followed by the common elements between rows r and r ±2. Finally, other non-common (non-conflicting) elements are placed. Since there may be common elements shared among multiple layers, the already placed common elements do not need to be placed again. The specific implementation of the Sequence Reordering process is described in Algorithm 4, which calls the FillRow procedure detailed in Algorithm 5. In SequenceReordering, the maximum count of non-zero elements across all rows of the base matrix B are denoted as maxC(D(B j )). Upon completion of the placement of all elements, a reorganized index matrix X is attained. Consequently, the sequences for reading and writing operations can be deduced from this reorganized matrix. In Algorithm 5, the set K consists of the common elements between row j and row j + θ. The set of elements to be placed U is the complement of K to R. The F(U ) operation is used to invert the order of elements in set U . To position the new elements to the left of the already placed elements R, the locations L of the placed elements need to be recorded. Finally, a reordered index matrix and its corresponding matrix of values (LDPC non-zero submatrix rotation values) are obtained.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+391
+
+Fig. 4. The schematic diagram of conflicts generation and elimination.
+
+We take a non-zero variable node group index as an example, the index (position index) table after reordering and its update diagram are shown in first group in Fig. 4. The number of nodes represent the number of rows and positions of the non-zero sub-matrix, and also represents the number of addresses stored as the LLR value. The colored nodes indicate a RAW conflict while reading and writing back.
+After using a reordered table, the updated schematic diagram of matrix reordering is shown in the second group in Fig. 4. At this time, it can be observed that the conflict is basically eliminated. The hybrid schedule is further used, the update schematic diagram at this time is shown in the last group in Fig. 4. It can be seen that when the remaining few conflicts exist, we can load the previous LLR value for calculation, and store the result in the FIFO buffer. When needed, we can take the deviated LLR value from the FIFO buffer and then according to the formula, use the difference between the current value and the past value to calculate the correct LLR value, and write the result back to the LLR memory.
+In Fig. 4, each node refers to the variable node update, the colored VN (Variable Node) means that there will be a RAW conflict. The VN of the underlined value refers to using residual values for new supplementary calculations at that location, and updating the LLR value stored there. The FIFO bit width is designed as 8 bits, because the precision of the LLR data used by LDPC in the calculation process is retained to 8 bits.
+The current design ideas for RAW conflict solution [24], [25], [29] are to avoid conflicts by adding stall cycle, or to postpone posteriori probability until another check node passes its message. This solution will cause a certain degree of pipeline latency and greatly affect the decoding efficiency. In addition, reference [26] proposes a RAW solution through genetic algorithm, which has relatively high complexity. Our innovation is topropose a low-complexity matrix reordering method, which is carried out through computer simulation before the decoder work, and the results are directly used to
+
+replace the original basis matrix lookup table. It does not need to modify the hardware, but it can bring significant throughput gain. Though rewriting the order of element between rows and updating the order of elements within the same row, this method achieves matrix reordering to avoid conflicts, which is an effective and low-cost technology for conflict mitigation. And we propose a hybrid scheduling algorithm to further improve the decoding efficiency, and eliminate the remaining conflicts. In addition, in order to support simultaneous read and write operations to avoid RAW conflicts, the current state-ofart design uses single-port double-frequency memory or dualport memory, which will greatly limit the system execution frequency of the decoder. Our innovation is to propose the ping-pong memory architecture, which can improve the system execution frequency with lower memory area and power consumption.
+B. The Design of Parallel Memory Subsystem
+When the operation unit of the data processing is performing the operation and iteration of the message value, the memory unit cannot update the data synchronously and can only remain idle, which is the characteristic of the interworking update of the layered decoding unit. In the same way, when the access unit of the memory performs read and write operations, the operation processing unit is in an idle state. In this update method, since each data processing requires the previous calculation value, each step of processing needs to perform storage and read operations.
+It becomes evident that when forward and backward iterations are executed in parallel, the access unit of memory is idle for each forward/backward calculation. Meanwhile, the computing module is not utilized during each read/write back operation. Therefore, if we simultaneously update the processing unit and access memory, it becomes feasible to achieve parallel forward and backward iteration by using hardware. To conserve hardware resources, the updated schematic diagram of our designed hierarchical decoding module for both forward and backward processes is shown in Fig. 5(a).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+392
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+Fig. 5. The update schematic diagram of decoding module (a) and memory state transition diagram(b). In figure, RAMA and RAMB represent two RAM groups in a set of RAMs, C2V and V2C represent the check-to-variable message and variable-to-check message respectively.
+However, one SRAM can only be accessed once in a clock. To achieve two accesses in each clock pipeline, the current state-of-the-art LDPC decoders use a parallel layered decoding algorithm and GMS (Global Memory System). GMS clock rate is double of logic clock rate. Because thedecoding process needs to support simultaneous write and read operation, the dual-port memory array with great capacity and bandwidth is not a well-suited solution, the state-of-the-art LDPC decodershence use a single-port frequency-doubling memory in place of dual-port memory, which greatly limits the system execution frequency of the decoder. CMOS (Complementary Metal Oxide Semiconductor) logic circuits have rapid processing speeds and are easy to decompose pipelines, while it is impossible to design multi-pipelined SRAM, which is the current bottleneck of the state-of-the-art LDPC decoders. The utilization of double-speed SRAM will increase power consumption, and halve the performance of logic circuit.
+We design an input buffer module utilizing a “ping-pong” structure. The collaborative operation of two RAM groups enables efficient data buffering. For reading and writing to the memory subsystem at the same time when decoding, an input control signal is designed for two RAM groups to meet the memory requirements, as shown in Fig. 6(c). Where Waddr/ InvWaddr is used to write back the data for backward iteration, and wen is used to indicate whether the data for backward iteration is valid. Raddr/ InvRaddr is used for data reading in forward iterations, and Wdata/ Rdata represent writing and reading data respectively. The GMS in a SISO is shown in Fig. 6(a), each 40 bits word consists of eight 5-bits quantized node information, and the maximum column of HBG1 is 68 words.
+The RAM is divided into two groups: RAMA and RAMB, as shown in Fig. 6(c), and we use parameter registers to control the reading and writing of the two-group:
+RAMA_WR = 2′b00RAMB_WR = 2′b01
+RAMA_RD = 2′b10RAMB_RD = 2′b11
+Based on the count of input enable signals and clock edge enable signals, four states can be switched to realize simultaneous data input and output, as shown in Fig. 5(b).
+
+Fig. 6. Schematic diagram of memory subsystem.
+According to the lifting factor Z , the information from the received codeword will be partitioned into several small segments. To extract codeword information from Z bits in a clock cycle, it is essential to store the initial segment of information from each codeword. The sequential storage of the first bit information takes place within the first RAM memory, the second bit in each codeword information segment is subsequently stored in the second RAM memory, with the process continuing similarly for subsequent bits and RAM memories, as shown in the Fig. 6(b). The information of the Z -th bit in a codeword will be stored in the Z -th RAM memory in a sequential manner. When it is needed to retrieve the n-th segment of codeword information, it is sufficient to simultaneously access the information stored at the address n-1 across all RAM memories, ranging from the first to the Z -th. For BG1, n is less than or equal to 68, and for BG2, n is less than or equal to 52.
+We replace eachset of RAMs with a ping-pong memory: RAMA and RAMB, RAMA and RAMB represent two RAM groups in a set of RAMs. Accessing a set of RAMs is equivalent to accessing a ping-pong memory. The processing flow of ping-pong memory: In the first data buffering cycle, the input data stream is cached in RAMA, where each data is stored in the different bank of RAMA; In the second data buffering cycle, the input data stream is cached in RAMB, where each data is stored in the different bank of RAMB. And at the same time, the data cached in RAMA duringthe previous cycle is output; In the third data buffering cycle, the input data stream is cached in RAMA, and at the same time, the data cached in RAMB during the previous cycle is output; The process continues in this loop until the entire data stream has been transferred. When multiple accesses are focusing on a specific set of memory, our memory subsystem based on the proposed ping-pong memory can thus be operated to complete both read and write operation in a cycle.
+Some state-of-the-art LDPC decoders use single-port frequency-doubling memory or dual-port memory [21], [22], [24], we compare our proposed ping-pong memory structure with these memories, which is presented in Table IV. Compared with single-port frequency-doubling memory or dual-port memory [21], [22], [24], our proposed ping-pong memory structure improves the normalized frequency to memory area ratio by about 3.6×, 3.4× and 3× respectively, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+393
+
+Fig. 7. Different scheduling and clock cycle costs.
+TABLE IV THE COMPARISON WITH DIFFERENT MEMORY STRUCTURE
+
+Fig. 8. The comparison of throughput between layered scheduling and hybrid scheduling when it is HBG1, rate = 0.35.
+Fig. 9. The comparison of throughput between layered scheduling and hybrid scheduling when it is HBG1, rate = 0.35 and HBG2, rate = 0.2.
+
+improves the normalized frequency to power ratio by about 8×, 4× and 1.6× respectively. The experiments show that our proposed ping-pong memory structure can improve the frequency of the LDPC decoder with less memory area and power consumption.
+
+Fig. 10. The error performance of 5G LDPC.
+
+V. PERFORMANCE ANALYSIS
+A. Decoding Clock Costs
+Based on the optimized scheduling algorithm: Hybrid scheduling based on MR (Matrix Reordering), the decoding clock cycle cost is significantly reduced and the efficiency is improved, as shown in Fig. 7. In code mode 1, the number of clock cycles before optimization is three times that after optimization, which has a great effect on improving throughput.
+
+B. Throughput
+
+One of the key performance indexes of the LDPC decoder
+
+is throughput. Calculating the decoder’s throughput using the
+
+formula:
+
+P×N× f
+
+T hroughput =
+
+(20)
+
+I ×T
+
+Within this formula, P representsthe count of cyclic shift
+
+parallel groups, N represents the length of LDPC code, and
+
+f represents the operating clock frequency, I represents the
+
+number of iterations, and T represents an iteration cycle cost.
+
+From the formula, the LDPC code is represented by (N, K),
+
+K is the number of information bits in the LDPC codeword.
+
+Considering that the decoder’s throughput is primarily pro-
+
+portional to K , a clock frequency of 400 MHz is selected to
+
+evaluate throughput across various K values, we get T versus
+
+K in Fig. 8 and Fig. 9.
+
+Fig. 8 displays the comparison of throughput between layered scheduling and hybrid scheduling when it is HBG1, rate = 0.35. And when it is HBG1, rate = 0.35 and HBG2, rate = 0.2, Fig. 9 displays the comparison of throughput between layered scheduling and hybrid scheduling. The experimental result indicates that compared with layered scheduling method, the proposed hybrid scheduling method has significant improvements in throughput. When K reaches its maximum value, the throughput achieves its peak, reaching about 5294 Mbps at 400 MHz. When the SMIC of 28 nm is used for digital front-end synthesis, the timing report shows that the maximum throughput is 27645 Mbps.
+C. Bit Error Rate
+In this paper, the fixed-point quantization test scheme of 8bit is adopted, and the error floor is about 10−9. The predominant source of error arises from data quantization, saturation computation, and streamlining the realization of the f(x, y). Various K values are chosen to measure the bit error rate, and Fig. 10 illustrates that all 5G LDPC codes with different lengths converge to 0 within an Eb/N0 range of 8dB.
+When the maximum iterations are 8, Fig. 11 show the simulation results of different decoding algorithms on the code rate = 2/ 3, Z = 104, N = 2600 BG1 code. As can be seen, our proposed algorithm shows the best error-correction performance. When the maximum iterations are 8, Fig. 12 and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+394
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+TABLE V THE COMPARISON WITH THE STATE-OF-THE-ART LDPC DECODERS
+
+Fig. 11. BER comparison of different decoding algorithms.
+
+Fig. 13. The error correction performance of WiMAX LDPC.
+
+Fig. 12. The error correction performance of WLAN LDPC.
+
+Fig. 14. The layout of LDPC decoder.
+
+Fig. 13 show the error correction performance of WLAN and WiMAX LDPC codes in our designed LDPC decoder respectively, the error floor is about 10−9 and 10−9.2 respectively.
+D. Analyze and Comparison We propose an LDPC decoder specifically designed for
+compatibility with WiMAX, WLAN, and 5G NR standards. The designed LDPC decoder is synthesized using Synopsys Design Compiler and 28 nm CMOS technology, the layout of
+
+LDPC decoder is shown in Fig. 14. The silicon layout shows that the logic equivalent gate is about 1716 K, the memory is 2420 K, and the total area is 0.86 mm2. The peak dynamic power consumption below 1.1 GHz is 103 mW.
+Compared with the state-of-the-art LDPC decoders, our proposed LDPC decoder significantly improves the decoding throughput of LDPC, which is presented in Table V. Compared with the LDPC decoder designed for WLAN standard [2], our design improves the normalized maximum throughout by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: HIGH-THROUGHPUT LDPC DECODER FOR MULTIPLE WIRELESS STANDARDS
+
+395
+
+about 28%, and improves the normalized area efficiency by about 3×. Compared with the LDPC decoder designed for 5G NR standard [4], [7], [24], [25], our design improves the normalized maximum throughout by about 2.1×, 2.8×, 4.5× and 1.3× respectively, improves the normalized area efficiency by about 1.3×, 2.1×, 2.2× and 3.8× respectively, improves the normalized energy efficiency by about 1.4×, 3.2×, 1.2× and 2.4× respectively, and our normalized maximum throughout is about 4× that of the reference [26]. Compared with the LDPC decoder designed for WiMAX standard [21], [22], our design improves the normalized maximum throughout by about 33% and 30% respectively, improves the normalized area efficiency by about 3.9× and 2.7× respectively, and improves the normalized energy efficiency by about 5.8× and 2× respectively. The experimental results also show that our hardware complexity is lower than those of state-of-theart LDPC decoders. We can see that our designed LDPC decoder achieves higher energy efficiency, throughout and area efficiency than those of state-of-the-art LDPC decoders. These improvements are achieved without compromising the area and bit error rate. It is sufficient to satisfy the 5G requirements. These experimental results also prove that the proposed architecture of LDPC decoder provides compatibility with multiple communication standards. The combined advantages of area, power consumption and throughput become more obvious. The aforementioned experimental results indicate that our design has obvious comprehensive advantages of throughput, area efficiency and energy efficiency.
+VI. CONCLUSION
+This paper presents the efficient hybrid scheduling and decoding algorithms. Based on it, we present the hardware design of LDPC decoder, which includes the architecture design of the decoder, the instruction set and data path design. The conflict-free pipelining optimization method and memory subsystem design are presented. We modify the design of the frequency-doubling memory subsystem, which eliminates the frequency limitation of the system, and greatly improves the performance of the system. These contributions result in high-throughput and high decoding efficiency LDPC decoder for multiple communication standards. Our proposed high parallelism architecture can not only reduce decoding delay and improve flexibility, but also support the decoding functions of multiple communication standards, and leave room for future communication standard changes, such as 6G. Compared with other state-of-the-art LDPC decoders, the experimental results show that our designed LDPC decoder achieve higher throughput and lower power consumption. Our design provides a reference for solving the challenge, that is, how to meet multi-standard compatibility while achieving high computation capability, flexibility and low silicon overhead.
+REFERENCES
+[1] W. Chen and D. Liu, “Conflict free parallel data access technology for matrix calculation in memory system of ASIP of 5G/6G macro base stations,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 43, no. 1, pp. 99–112, Jan. 2023.
+
+[2] T. X. Pham, T. T. Nguyen, and H. Lee, “Hamming-distance trellis minmax-based architecture for non-binary LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 70, no. 7, pp. 2390–2394, Jul. 2023.
+[3] J. Ling and P. Cautereels, “Fast LDPC GPU decoder for cloud RAN,” IEEE Embedded Syst. Lett., vol. 13, no. 4, pp. 170–173, Dec. 2021, doi: 10.1109/LES.2021.3052714.
+[4] S. Yun, B. Y. Kong, and Y. Lee, “Area- and energy-efficient LDPC decoder using mixed-resolution check-node processing,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 69, no. 3, pp. 999–1003, Mar. 2022.
+[5] R. Amiri and H. Mehrpouyan, “Multi-stream LDPC decoder on GPU of mobile devices,” in Proc. IEEE 9th Annu. Comput. Commun. Workshop Conf. (CCWC), Jan. 2019, pp. 1004–1009.
+[6] M. Herrmann and N. Wehn, “Beyond 100 Gbit/s pipeline decoders for spatially coupled LDPC codes,” EURASIP J. Wireless Commun. Netw., vol. 2022, no. 1, p. 90, Sep. 2022.
+[7] T. Thi Bao Nguyen, T. Nguyen Tan, and H. Lee, “Low-complexity highthroughput QC-LDPC decoder for 5G new radio wireless communication,” Electronics, vol. 10, no. 4, p. 516, Feb. 2021.
+[8] M. Awais, A. Razzaq, A. Ahmed, and G. Masera, “LDPC check node implementation using reversible logic,” IET Circuits, Devices Syst., vol. 13, no. 4, pp. 443–455, Jul. 2019.
+[9] J. Gong, Z. Lu, L. Wang, X. Chu, and X. Wen, “A reusable and efficient architecture for QC-LDPC encoder with less expansion factors,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 12, pp. 2089–2101, Dec. 2023.
+[10] D. Theodoropoulos, N. Kranitis, A. Tsigkanos, and A. Paschalis, “Efficient architectures for multigigabit CCSDS LDPC encoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 5, pp. 1118–1127, May 2020.
+[11] J. Jabour, C. Marchand, and E. Boutillon, “The best, the requested, and the default elementary check node for EMS NB-LDPC decoder,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), Mar. 2023, pp. 1–6.
+[12] H. Zhu, M. Fu, C. Hou, and G. Hu, “Low-complexity LDPC decoding algorithms for ultra-high-order modulated signals,” Opt. Exp., vol. 31, no. 25, p. 41645, 2023.
+[13] S. Park, “Block-based scheduling algorithm for layered decoding of block LDPC codes,” IEICE Trans. Commun., vol. 105, no. 11, pp. 1408–1413, 2022.
+[14] S. Habib, A. Beemer, and J. Kliewer, “RELDEC: Reinforcement learning-based decoding of moderate length LDPC codes,” IEEE Trans. Commun., vol. 71, no. 10, pp. 5661–5674, Oct. 2023.
+[15] Q. Wang et al., “Normalized min-sum neural network for LDPC decoding,” IEEE Trans. Cogn. Commun. Netw., vol. 9, no. 1, pp. 70–81, Feb. 2023.
+[16] B. Bao, Q. Li, W. Guan, Q. Wang, L. Liang, and X. Qiu, “Adaptive granularity progressive LDPC decoding for NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., early access, Nov. 15, 2024, doi: 10.1109/TCAD.2023.3332829.
+[17] B. Bao, W. Guan, L. Liang, and X. Qiu, “An efficient GC-LDPC encoder architecture for high-speed NAND flash applications,” IEICE Electron. Exp., vol. 21, no. 2, Jan. 2024, Art. no. 20230477.
+[18] W. Guan and L. Liang, “Check-belief propagation decoding of LDPC codes,” IEEE Trans. Commun., vol. 71, no. 12, pp. 6849–6858, Dec. 2023.
+[19] Q. Chen, Y. Ren, L. Zhou, C. Chen, and S. Liu, “Design and analysis of joint group shuffled scheduling decoding algorithm for double LDPC codes system,” Entropy, vol. 25, no. 2, p. 357, Feb. 2023.
+[20] C. Chen, S. Liu, Q. Chen, and Z. Xu, “Rate-compatible protograph LDPC codes for source coding in joint source—Channel coded modulation systems,” Electronics, vol. 12, no. 12, p. 2610, Jun. 2023.
+[21] J. Choe and Y. Lee, “High-throughput non-binary LDPC decoder architecture using parallel EMS algorithm,” IEEE J. Solid-State Circuits, vol. 57, no. 10, pp. 2969–2978, Oct. 2022.
+[22] M. K. Roberts, “Simulation and implementation design of multi-mode decoder for Wimax and WLAN applications,” Measurement, vol. 131, pp. 28–34, Jan. 2019.
+[23] B. Wang, Y. Zhu, and J. Kang, “Two effective scheduling schemes for layered belief propagation of 5G LDPC codes,” IEEE Commun. Lett., vol. 24, no. 8, pp. 1683–1686, Aug. 2020.
+[24] H. Cui, F. Ghaffari, K. Le, D. Declercq, J. Lin, and Z. Wang, “Design of high-performance and area-efficient decoder for 5G LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 2, pp. 879–891, Feb. 2021.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+396
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 1, JANUARY 2025
+
+[25] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G newradio standard,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2035–2048, May 2022.
+[26] V. L. Petrovic´, M. M. Markovic´, D. M. E. Mezeni, L. V. Saranovac, and A. Radoševic´, “Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467, Dec. 2020.
+[27] T. C.-Y. Chang, P.-H. Wang, J.-J. Weng, I.-H. Lee, and Y. T. Su, “Belief-propagation decoding of LDPC codes with variable nodecentric dynamic schedules,” IEEE Trans. Commun., vol. 69, no. 8, pp. 5014–5027, Aug. 2021.
+[28] K. Tian and H. Wang, “A novel base graph based static scheduling scheme for layered decoding of 5G LDPC codes,” IEEE Commun. Lett., vol. 26, no. 7, pp. 1450–1453, Jul. 2022.
+[29] O. Boncalo, G. Kolumban-Antal, A. Amaricai, V. Savin, and D. Declercq, “Layered LDPC decoders with efficient memory access scheduling and mapping and built-in support for pipeline hazards mitigation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 4, pp. 1643–1656, Apr. 2019.
+Wei Chen received the M.S. degree from East China Normal University, Shanghai, China, in 2017, and the Ph.D. degree from Hainan University, China, in 2023. He is currently a Lecturer with Hainan University. His current research interests include application specific instruction-set processors designs and integrated circuit designs.
+
+Yajie Li received the M.S. degree from Hainan University, China, in 2022. Her current research interests include integrated circuit design.
+Dake Liu (Senior Member, IEEE) received the D.Tech. degree from Linköping University, Linköping, Sweden, in 1995. He is currently a Professor and the Academy Chairperson of the School of Information and Communication Engineering, Hainan University, China; a Professor and the Head of the Institute of Application Specific Instruction Set Processors (ASIP), Beijing Institute of Technology; and a Professor with Linköping University. His current research interests include integrated circuit designs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:55:32 UTC from IEEE Xplore. Restrictions apply.
+
+

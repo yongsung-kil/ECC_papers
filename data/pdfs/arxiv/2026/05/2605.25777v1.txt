@@ -1,0 +1,510 @@
+Best-First Ordered Statistics Decoding of Quantum LDPC Codes
+Michele Banfi∗†, Marco Ferrari†, Antonino Favano∗, Alberto Tarable†, and Luca Barletta∗ †Consiglio Nazionale delle Ricerche, Italy. E-mail: {alberto.tarable, marcopietro.ferrari}@cnr.it ∗Politecnico di Milano, Milan, 20133, Italy. E-mail: {michele.banfi, antonino.favano, luca.barletta}@polimi.it
+
+arXiv:2605.25777v1 [cs.IT] 25 May 2026
+
+Abstract—Belief Propagation (BP) followed by Ordered Statistics Decoding (OSD) has emerged as the gold standard for decoding quantum low-density parity-check (QLDPC) codes. Recent advancements in this field have proposed new methods and algorithms to lower the complexity of this standard pipeline. Because of code degeneracy, and more in general because multiple distinct error patterns can produce the same syndrome, OSD is inherently a list-decoding technique; that is, it enumerates a set of syndrome-consistent candidates and returns the most probable one. In this work, we propose a variant of OSD, which we call Best-First OSD (BF-OSD), that explores the error-candidate space more efficiently by traversing it in order of decreasing likelihood, rather than by brute-force enumeration of a pre-selected subset. In addition, we depart from the conventional BP + OSD cascade: instead of conditioning the OSD invocation on BP convergence, we invoke OSD after a fixed, small number of BP iterations. This design choice is motivated by the full circuit-level noise regime, in which BP is particularly unreliable. Monte Carlo simulations of a family of Bivariate Bicycle (BB) codes under full circuitlevel noise show that BF-OSD matches the performance of the BP + OSD baseline while exploring the solution space with 1/100th of the query budget.
+I. INTRODUCTION
+Recent work on Quantum Error Correcting Codes (QECC) [1] has highlighted the promising family of Quantum LowDensity Parity-Check Codes (QLDPC). QLDPC codes typically exploit the Calderbank–Shor–Steane (CSS) code construction [2], [3]. Because of the sparsity of their parity-check matrices, QLDPCs are appealing from a hardware perspective, as sparsity implies fewer and lower-weight connections between physical qubits. Particular attention has been given to one such construction, the Bivariate Bicycle (BB) codes [4], which allow for a practical physical layout on superconducting hardware.
+The gold standard for decoding QLDPC codes combines two algorithms in cascade: Belief Propagation (BP) and Ordered Statistics Decoding (OSD) [5]. BP is run first, and OSD is invoked only if BP fails to converge to a valid syndromesatisfying solution [6]. In this setup, BP acts as a fast first guess of the error pattern, while OSD serves as a fallback that is guaranteed to return a syndrome-valid solution. Two practical observations motivate our work. First, well-known variants of OSD used in this cascade, OSD-w and OSD-CS [5], [6], explore the solution space inefficiently, enumerating a pre-selected subset of low-reliability bit-flip combinations rather than traversing candidates in order of likelihood. Second,
+
+conditional invocation of OSD makes the overall decoder inefficient in regimes where BP often fails to converge due to a numerous presence of length-4 cycles, such as under the full circuit-level noise model considered in this work.
+We therefore propose two intertwined changes to the standard decoding flow: (i) a new variant of OSD, Best-First OSD (BF-OSD), which traverses the affine coset of syndromeconsistent solutions in order of increasing cost via a best-first search over XOR combinations of null-space generators. Under a fixed query budget Q, BF-OSD achieves a tighter approximation to Maximum-Likelihood (ML) decoding than OSD-w or OSD-CS at comparable cost, and is naturally anytime; that is, its solution improves as more queries are performed; and (ii) rather than gating OSD on BP outcome, we run BP for only a small number of iterations, enough to propagate local information across the Tanner graph and produce non-uniform soft outputs, and then always invoke BF-OSD. In support of this approach, we also replace the flooding BP schedule with a serial update scheme, which propagates information faster without increasing decoder complexity [7].
+These two design choices are coupled, reducing the number of BP iterations risks yielding posterior estimates that are far from convergence. To ensure we exploit all available soft information in this potentially degraded regime, we were motivated to investigate alternative OSD column-ordering conventions (Section IV) alongside the coset search carried out by BF-OSD (Section V). We evaluate the resulting decoding pipeline on a family of BB codes under the full circuit-level noise model.
+
+II. NOISE MODEL
+
+As in [4], we adopt the full circuit-level noise model, which captures realistic failure modes introduced by the quantum operations themselves (CNOTs and single-qubit gates, idling, state preparation and measurement), rather than assuming an ideal data-qubit depolarising channel. Crucially, this model also accounts for error propagation. For example, an X error occurring on the control qubit before a CNOT gate propagates to the target. Finally, because measurements are themselves noisy, syndrome extraction must be repeated over multiple rounds.
+As a consequence, the parity-check matrices HX and HZ from the CSS construction
+
+H=
+
+HX 0
+
+0 HZ
+
+,
+
+HX HZT = 0,
+
+(1)
+
+no longer define the graph used for BP decoding. Instead,
+
+decoding is performed on spatio-temporal decoding matrices
+
+HX,dec and HZ,dec, whose columns index elementary circuit faults and whose rows index detect (syndrome-difference)
+
+events. The decoder task is to identify which fault, or which
+
+linear combination of faults, occurred during computation,
+
+given the observed detector pattern.
+
+The construction of these matrices, as described in [4],
+
+[8], starts by building the stabilizer circuit that implements
+
+one round of syndrome extraction (with qubit connectivity
+
+defined by HX and HZ ), and then repeating it for m rounds. We follow the standard convention of setting the number of
+
+syndrome-extraction rounds equal to the code distance, m = d,
+
+thereby balancing the time-like and space-like components of
+
+the circuit-level fault distance [4], [8], [9].
+
+On top of this space-time circuit, we enumerate every single-
+
+fault location. For each fault f , we simulate error propagation
+
+through the remainder of the circuit, recording the tuple formed
+
+by the detector pattern df and the logical effect ℓf . Entries with identical tuples are merged and their fault probabilities
+
+summed, since two faults that share both syndrome and logical
+
+effect are, by construction, indistinguishable to any decoder. In
+
+the end,
+
+p(d, ℓ) =
+
+pf ,
+
+(2)
+
+f : (df ,ℓf )=(d,ℓ)
+
+where p(d, ℓ) is the probability of the tuple (d, ℓ) and pf is the probability of fault f .
+Tracking the logical effect, not just the syndrome, is essential in QEC, since any correction that commutes with the logical operators yields a valid recovery. This is the familiar notion of degeneracy, which is typical of quantum codes and has no classical counterpart. Even when the decoder outputs a physical error e2 that differs from the true error e1, as long as e1e2 belongs to the stabilizer group S, the logical state is preserved, e1e2|ψ⟩ = S|ψ⟩ = |ψ⟩, S ∈ S. In practice, this means that the list of candidate errors explored by OSD can safely include many stabilizer-equivalent alternatives, and the true quantity of interest is the logical failure probability rather than the disagreement with the true physical error.
+
+Performance Metric
+Following [4], we report the per-round logical error rate pL, obtained from the per-shot logical failure probability PL(Nc) measured over Nc syndrome-extraction rounds:
+pL = 1 − 1 − PL(Nc) 1/Nc ≈ PL(Nc)/Nc, (3)
+where the approximation holds in the regime PL(Nc) ≪ 1. Reporting pL rather than PL(Nc) enables fair comparisons across codes simulated for different numbers of rounds and makes the threshold and sub-threshold scaling directly visible.
+
+Implication for the decoder
+The full circuit-level noise model has two key consequences that shape our decoder design. First, the decoding matrices
+
+HX,dec and HZ,dec are substantially denser and larger than the original CSS check matrices; consequently, BP operates on a Tanner graph with many more short cycles. As a result, BP convergence is slower and less reliable than in a codecapacity setting. Second, the merged fault probabilities tend to be relatively uniform across the columns of HX,dec and HZ,dec. However, even a small number of BP iterations can produce informative, non-uniform soft outputs that OSD can exploit. Together, these observations justify our design choices: we use a short BP warm-up phase sufficient to inform the subsequent OSD stage, without attempting to drive BP to full convergence.
+
+III. STANDARD OSD IMPLEMENTATIONS
+Two variants of OSD are commonly used in the literature: OSD-w (also called OSD-E, where E stands for Exhaustive) and OSD-CS (where CS stands for Combination Sweep) [6]. Both build on a common foundation, OSD-0, and then search for a more likely candidate by enumerating bit-flip combinations over the OSD-0 free set. They differ only in which combinations are explored.
+
+A. OSD-0
+OSD-0 is the core of standard OSD approaches and also the starting point of our algorithm. It is guaranteed to return a syndrome-consistent error vector e. Given the BP soft outputs (LLRs), OSD-0 reorders the columns of the decoding matrix Hdec and applies Gaussian Elimination (GE) to select r = rank(Hdec) linearly independent pivot columns P. The remaining k = N − r columns form the free set F.
+Gaussian elimination is guaranteed to select an independent pivot set of minimum aggregate LLR weight, i.e., an optimal solution obtained via a greedy algorithm (see the Appendix for a formal proof). We note that this property is often overlooked in the literature and state it here explicitly.
+The free bits are then assigned their hard decisions, and the pivot bits are solved from the syndrome via back-substitution, as discussed in Section IV. The output is a candidate error Ebase that satisfies H · Ebase = s.
+Two distinct column-ordering conventions appear in the literature and differ significantly in determining which bits become pivots. We discuss this trade-off and our choice in Section IV. On its own, OSD-0 does not approach ML performance; to do so, one must explore the solution space around Ebase, which nevertheless provides a good starting point.
+
+B. OSD-w
+
+OSD-w [6] selects the w least reliable bits in F and enumerates all possible bit-flip patterns on them, producing a search space Dw of size
+
+|Dw| = 2w.
+
+(4)
+
+Among these candidates, including Ebase, the one with the lowest cost (10) is returned. The original classical formulation of Fossorier and Lin [10] instead enumerates all error patterns of Hamming weight up to w over F, yielding a search space
+
+of size
+
+w i=0
+
+k i
+
+.
+
+The
+
+quantum
+
+adaptation
+
+restricts
+
+the
+
+search
+
+to the least reliable subset of F to maintain tractability for the
+
+large information sets typical of QLDPC codes.
+
+C. OSD-CS
+
+OSD-CS is a fast heuristic introduced by Roffe et al. [6]. Rather than enumerating subsets of F up to weight w, it splits the search into two phases:
+
+• Weight-1 phase: test each of the k free columns individ-
+
+ually (k candidates).
+
+• Weight-2 phase: test all pairs drawn from the λ most
+
+unreliable free columns (i.e., those with the smallest LLR
+
+magnitude), yielding
+
+λ 2
+
+candidates.
+
+The resulting search space has size
+
+λ
+
+|DCS| = k +
+
+. 2
+
+(5)
+
+Bravyi et al. [4] use λ = 7 in their simulations of BB codes under full circuit-level noise. While OSD-CS is computationally efficient and performs well in practice, it is inherently a priori, i.e., it selects a fixed subregion of the search space regardless of how candidates actually score. BF-OSD, introduced next, is designed to address this limitation.
+
+B. Confidence Convention
+Fossorier and Lin [10] sort columns by ascending |Λi|, so that the least reliable bits (regardless of sign) become pivots, while the most reliable become free. In the original classical (codeword) setting, a preprocessing step flips every bit whose hard decision is 1, updates the syndrome accordingly, and negates the corresponding LLR, ensuring that all LLRs are positive. Free bits can then safely be set to zero, and pivot bits are solved from the updated syndrome.
+In the quantum setting, although there is no received codeword, this preprocessing step has a natural interpretation in syndrome decoding: for every bit i with Λi < 0, we accept the BP hard decision (ei = 1), absorb its effect into the syndrome (s ← s ⊕ Hcoli ), and replace Λi ← |Λi|. After this transformation, all LLRs are non-negative, confidence sorting reduces to a standard ascending order, and OSD-0 proceeds exactly as in the classical case.
+As a result, uncertain bits are solved from the syndrome, where they belong, while confident bits, whether correct or erroneous, retain their hard decisions. This avoids both failure modes: no confident-error bit is forced to zero, and no uncertain bit is locked into a default value.
+To our knowledge, this distinction has not been made explicit in the QLDPC literature.
+
+IV. ON OSD-0 COLUMN ORDERING
+
+A design choice in OSD-0 that is rarely discussed explicitly is how columns are sorted before GE. This choice determines which bits become pivots and which remain free. Two conventions appear in the literature; we review both and argue that, in our setting where BP runs for only a few iterations, the classical formulation of Fossorier, properly adapted to syndrome decoding, provides a better baseline for BF-OSD solution-space exploration.
+Throughout this section, we define the LLR as
+
+Λi
+
+=
+
+log
+
+P (ei P (ei
+
+= =
+
+0) ,
+1)
+
+(6)
+
+so that Λi > 0 indicates that BP believes bit i is likely correct, Λi < 0 indicates that BP believes it is likely an error, and |Λi| measures confidence regardless of sign.
+
+A. LLR Convention
+Roffe et al. [6] sort columns by ascending LLR, equivalently by descending P (ei = 1). Thus, bits most likely to be in error are included first in the pivot set P, while bits with the largest positive Λi are placed in the free set F and set to zero.
+This choice has a potential drawback. When BP is confident that ei = 1 (Λi ≪ 0), that hard decision is already available, yet it occupies a pivot position whose value is recomputed via matrix inversion. Meanwhile, genuinely uncertain bits (small |Λi|) may end up in the free set and be forced to zero, even though these are precisely the bits whose values should be inferred from the syndrome.
+
+C. Implications for BF-OSD
+In the standard BP + OSD pipeline, BP is typically run until convergence (or until a maximum number of iterations is reached), and OSD is invoked only upon failure. In that regime, most posterior LLRs are positive after convergence, and the difference between the two ordering conventions is minor. In our setting, however, BP is run for only a few iterations to propagate local information across the Tanner graph. As a result, the posterior LLRs are often far from convergence.
+By adopting the confidence-based ordering with the pre-flip step, BF-OSD produces an OSD-0 baseline Ebase that respects all BP hard decisions while concentrating the degrees of freedom on genuinely uncertain bits. This provides a stronger starting point for the subsequent null-space coset search.
+
+V. BF-OSD
+BF-OSD is built on top of the OSD-0 baseline of Section IV: confidence sorting with the pre-flip step adapted to syndrome decoding. It takes Ebase as a starting point and explores the solution space of Hdec · e = s in order of increasing cost, or equivalently decreasing likelihood, until a predefined query budget Q is exhausted.
+
+A. The Solution Space as an Affine Coset
+The set of bit-strings consistent with the observed syndrome is an affine subspace of FN2 , namely a coset of ker(Hdec):
+{e ∈ FN2 : Hdec · e = s} = Ebase ⊕ ker(Hdec). (7)
+Every candidate can therefore be written as
+
+e = Ebase ⊕ g, g ∈ ker(Hdec),
+
+(8)
+
+and the syndrome is satisfied by construction, since Hdec g = 0 implies Hdec e = Hdec Ebase = s. The kernel has dimension N − r, where r = rank(Hdec) and k = N − r is the size of the free set.
+A natural basis of ker(Hdec) can be read directly from the reduced row-echelon form R produced by GE. Let P = {π1, . . . , πr} and F = {f1, . . . , fk} denote the pivot and free column indices, respectively. For each free column j ∈ F, define the null-space generator gj ∈ F2N component-wise as
+ 1 if ℓ = j,  (gj)ℓ = Ri,j if ℓ = πi for some i ∈ {1, . . . , r}, (9) 0 otherwise.
+
+Evaluation Order & Setup # BF-OSD (Cost-driven) # OSD-CS (Breadth-first)
+2 T = {1} cost = 3
+
+1
+⊕g1
+24
+
+T =∅ cost = 0
+⊕g2
+T = {2} cost = 6
+
+1
+⊕g3
+37
+
+T = {3} cost = 9
+
+⊕g2
+
+⊕g3
+
+⊕g3
+
+3
+
+55
+
+6X
+
+7
+
+T = {1, 2} cost = 4
+
+T = {1, 3} cost = 7
+
+T = {2, 3} cost = 10
+
+⊕g3
+
+6
+
+X
+
+T = {1, 2, 3} cost = 8
+
+4 Weight 1
+Weight 2
+Weight 3
+
+B. Cost Function and Generator Weights
+We rank candidates by their negative log-likelihood cost. Using the LLRs (6), we define
+
+cost(e) =
+
+|Λi|,
+
+(10)
+
+i: ei=1
+
+so that lower cost corresponds to a more probable error pattern.
+
+After the confidence pre-flip, all LLRs are non-negative, so
+
+|Λi| = Λi and the cost reduces to a simple sum over the support of e. Since OSD-0 selects pivots optimally, Ebase already attains a good cost within the coset; BF-OSD then searches for a non-
+
+trivial g ∈ ker(Hdec) such that Ebase ⊕ g has strictly lower cost. To order the search, we associate each generator gj with a
+soft weight
+
+wj =
+
+Λi,
+
+(11)
+
+i: (gj )i=1
+
+i.e., the cost incurred by XOR-ing gj alone into Ebase. Generators with low wj act on bits about which BP was uncertain, so XOR-ing them with Ebase is cheap. Generators with high wj would overturn reliable hard decisions and are expensive.
+
+Fig. 1. Comparison of solution-space traversal between BF-OSD and OSD-CS on a subset of three generators with initial base costs w(g1) = 3, w(g2) = 6, and w(g3) = 9. Because generators {1} and {2} destructively interfere to lower the total cost, BF-OSD’s priority queue immediately traverses to depth 2 (evaluating {1, 2} as its 3rd step) before evaluating higher-cost singlegenerator candidates. By constrast, OSD-CS statically sweeps all weight-1 combinations before moving to weight-2 combinations, wasting query budget on low-probability candidates and completely missing the weight-3 candidate. Moreover, with a budget Q = 7, the node with cost = 10 is never visited by BF-OSD.
+Rather than computing this sum from scratch for every node, BF-OSD computes the cost of a child node T ′ = T ∪ {j⋆} incrementally. The new candidate eT ′ = eT ⊕ gj⋆ differs from its parent eT only at the bit indices where (gj⋆ )i = 1. Therefore, BF-OSD updates the parent cost by considering only these flipped bits: if bit i flips in eT , the cost increases or decreases by |Λi|, depending on whether the bit changes from 0 to 1 or from 1 to 0. By pushing these incrementally evaluated children into the priority queue and always popping the top element, BF-OSD traverses the candidate space in nondecreasing order of cost.
+
+C. Best-first Coset Search
+BF-OSD explores the coset via a best-first search tree (see the example in Figure 1), systematically evaluating combinations of generators in increasing order of cost. The state space of this search tree is ker(Hdec). A node in the tree is defined by a subset of free column indices T ⊆ F , which corresponds to the candidate error eT which costs is evaluated using (10)
+The search begins at the root node, represented by the empty set T = ∅, which corresponds to the baseline e∅ = Ebase.
+To expand the tree without generating duplicate combinations, we enforce a strict ordering rule. The children of a node T are generated by adjoining a single new generator gj⋆ , with the condition that j⋆ > max T . This guarantees that each combination is visited exactly once.
+To ensure the algorithm evaluates the most probable candidates first, BF-OSD employs a priority queue keyed on the candidate’s total cost defined in (10). The priority queue acts as a sorted waiting list, always keeping the lowest-cost candidate at the front.
+
+D. Budget, Termination, and Anytime Behaviour
+Because every candidate Ebase ⊕ g already satisfies the syndrome, there is no early stopping based on syndrome matching. Instead, BF-OSD evaluates candidates one at a time until its query budget Q is exhausted and returns the lowestcost candidate seen so far. Several properties follow directly:
+• Monotone improvement: the returned cost can only decrease, or remain constant, as Q increases. The first pop candidate is e∅ = Ebase, and any subsequent candidate is retained only if it improves the running best.
+• No early termination by weight: a weight-2 generator combination can have lower cost than every weight-1 combination (when two generators share many reliable pivots). Therefore, the heap must be drained up to Q.
+• Anytime decoding: BF-OSD always holds a valid, syndrome-consistent candidate. It can be interrupted at any moment, returning the current best solution.
+• Coverage: in the limit Q → 2k, BF-OSD enumerates the entire coset and coincides with coset ML decoding.
+
+VI. PERFORMANCE ANALYSIS
+
+Let N be the number of columns of Hdec, r = rank(Hdec), k = N − r the size of the free set, IBP the number of BP iterations, and Q the BF-OSD query budget.
+
+Belief Propagation: BP performs message updates along
+
+each edge of the Tanner graph, so its complexity is O(|E|) per
+
+iteration, where |E| is the edge count. Replacing the flooding
+
+schedule with a sequential one leaves this per-iteration cost
+
+unchanged: the same message updates are performed, only in a
+
+different order. However, the sequential schedule substantially
+
+reduces the number of iterations needed to propagate informa-
+
+tion over a given graph distance, allowing IBP to remain small. The total BP cost is therefore O(IBP|E|).
+OSD-0: Column sorting costs O(N log N ), and GE over F2 on an r × N matrix is O(r2N ).
+Solution-space exploration: The three OSD variants differ
+
+only in how they enumerate candidates on top of the same OSD-0 baseline. OSD-w evaluates |Dw| = 2w candidates over the w least reliable free columns, each with cost O(N ) for
+
+the XOR and cost evaluation, giving a total exploration cost of
+
+O(2wN ). OSD-CS evaluates |DCS| = k +
+
+λ 2
+
+candidates at the
+
+same per-candidate cost, for a total of O((k+λ2) N ). BF-OSD
+
+evaluates Q candidates, with an additional amortized O(log Q)
+
+cost per pop for the priority queue, yielding a total exploration
+
+cost of O(Q(N +log Q)). Choosing Q ≲ |DCS| therefore gives BF-OSD a budget comparable to OSD-CS, while the best-first
+
+ordering ensures that the Q evaluated candidates are the Q
+
+lowest-cost ones in the coset.
+
+A. Simulation Results
+
+We benchmark the full BP + BF-OSD pipeline on the same family of BB codes reported in [4], namely those reported in Table I. For each code, we simulate Nc = d rounds of syndrome extraction under full circuit-level noise at a physical error rate of p = 10−3, matching the setup of [4]. BP is run using the sum-product algorithm with a sequential schedule for IBP iterations, where IBP is much smaller than the convergence horizon of 10000 iterations used in [4]. BF-OSD is then always invoked with query budget Q. For reference, we also run with the same simulator on identical shots using the baseline BP + OSD-CS decoder of [4] with λ = 7. We report the perround logical error rate pL, obtained from PL(Nc) via the conversion introduced in Section II.
+Figure 2 compares the logical error rate of BF-OSD with that of the baseline across the five BB codes, while Table I reports the corresponding values at p = 10−3. The expected BBcode behavior is observed: pL decreases with increasing code distance. BF-OSD tracks, and in some cases slightly improves upon the BP + OSD-CS baseline while using a comparable query budget.
+We further tested the same codes with a query budget Q of 1% of the original budget, obtaining comparable results.
+Finally, we tested the above experiments with both columnordering conventions and did not observe statistically meaningful differences. This suggests that column ordering may have
+
+Fig. 2. Per-round logical error rate pL of the BP + BF-OSD decoder under full circuit-level noise, for the five BB codes of [4], as a function of physical error rate. Dashed curves report the BP + OSD-CS baseline of [4] for reference.
+
+TABLE I PER-ROUND LOGICAL ERROR RATE pL AT PHYSICAL ERROR RATE p = 10−3 UNDER FULL CIRCUIT-LEVEL NOISE. BASELINE VALUES ARE
+FROM [4].
+
+Code [[N, k, d]] [[72, 12, 6]] [[90, 8, 10]] [[108, 8, 10]] [[144, 12, 12]] [[288, 12, 18]]
+
+BP + OSD-CS [4] 7 × 10−5 5 × 10−6 2 × 10−6 2 × 10−7 2 × 10−12
+
+BP + BF-OSD (this work) 6.58 × 10−5 5.81 × 10−6 1.85 × 10−6 2.38 × 10−7 8.17 × 10−12
+
+only a limited effect on BF-OSD in the present regime. In the discussion of future work, we formulate hypotheses for regimes in which this ordering may become more important.
+VII. CONCLUSION
+We have presented Best-First Ordered Statistic Decoding (BF-OSD), a variant of OSD that explores the coset of syndrome-consistent solutions in order of increasing cost via a best-first traversal of XOR combinations of null-space generators. Under a fixed query budget Q, BF-OSD uses that budget more efficiently than OSD-w or OSD-CS, as it evaluates the Q lowest-cost candidates according to an exact, incrementally maintained cost metric. We have further argued that, in the full circuit-level noise setting, conditioning the invocation of OSD on BP convergence is counterproductive. BP converges slowly on the denser space-time Tanner graph, yet even a small number of sequential iterations already produces informative soft outputs that BF-OSD can exploit effectively. Our simulations on the Bivariate Bicycle codes of [4] support this interpretation. Natural directions for future work include designing an adaptive query budget Q(s, Λ) conditioned on the observed syndrome and BP reliability, as well as studying BF-OSD under min-sum approximations. The latter would help clarify whether, in hardware friendly implementations, the choice of OSD column ordering has a measurable impact on the logical error rate.
+
+APPENDIX
+Applying Gaussian elimination to a matrix whose columns are sorted by weight, effectively acts as a greedy algorithm: a column is selected as a pivot if and only if it is linearly independent of the previously selected pivot columns.
+
+Definition 1. Let E be a finite set, and let I ⊆ 2E. The pair (E, I) is a matroid if the following three properties hold:
+1) ∅ ∈ I; 2) whenever I ∈ I and J ⊆ I, one has J ∈ I; 3) whenever I, J ∈ I and |I| < |J|, there exists e ∈ J \ I
+such that I ∪ {e} ∈ I.
+The sets in I are called independent.
+
+For a matroid (E, I) and a subset X ⊆ E, define the rank
+
+of X by
+
+ρ(X) ≜ max{|I| : I ⊆ X, I ∈ I}.
+
+(12)
+
+A subset B ⊆ E is called a basis if B ∈ I and |B| = ρ(E).
+
+Lemma 1. Let (E, I) be a matroid, and let X ⊆ E. If I ⊆ X is independent and maximal with respect to inclusion among independent subsets of X, then |I| = ρ(X).
+
+Proof. Since I ⊆ X is independent, by definition of rank one has |I| ≤ ρ(X). Suppose, for contradiction, that |I| < ρ(X). Then there exists an independent set J ⊆ X such that |J| = ρ(X) > |I|. By the augmentation axiom of the matroid, there exists e ∈ J \ I such that I ∪ {e} is independent. Because J ⊆ X, the element e belongs to X, and hence I ∪ {e} ⊆ X. This contradicts the maximality of I among independent subsets of X. Therefore |I| = ρ(X).
+Proposition 1. Let A = [a1 a2 · · · an] be a matrix over a field F. Let E = {1, 2, . . . , n}, and define
+I ≜ X ⊆ E : {ai : i ∈ X} is linearly independent over F . (13)
+Then (E, I) is a matroid.
+Theorem 1. Let A = [a1 a2 · · · an] ∈ Fm×n have rank r, and let c1, . . . , cn ∈ R be the column costs (e.g., the LLR weights). Consider the greedy procedure that orders the indices so that
+
+cπ(1) ≤ cπ(2) ≤ · · · ≤ cπ(n)
+
+(14)
+
+and then scans π(1), π(2), . . . , π(n) in this order, adding index π(t) whenever
+
+{aj : j ∈ G ∪ {π(t)}}
+
+(15)
+
+is linearly independent, where G denotes the set of indices selected so far. Let G⋆ be the set obtained after r columns have been selected. Then G⋆ is a minimum-cost basis of the
+column matroid of A, i.e.,
+
+cj = min cj : B ⊆ E,
+
+j∈G⋆
+
+j∈B
+
+{aj : j ∈ B} is a basis of col(A) . (16)
+
+Proof. Let E = {1, 2, . . . , n} and define
+
+I = I ⊆ E : {aj : j ∈ I} is linearly independent . (17)
+
+As established in Proposition 1, (E, I) is the vector matroid associated with A. Its rank is
+
+ρ(E) = rank(A) = r.
+
+(18)
+
+Hence the bases of this matroid are exactly the index sets B ⊆ E of cardinality r such that {aj : j ∈ B} is a basis of col(A).
+Now define a shifted weight function w : E → R by
+
+wj = C − cj, j ∈ E,
+
+(19)
+
+where
+
+C = max cj.
+
+(20)
+
+1≤j≤n
+
+Then wj ≥ 0 for all j ∈ E. Since every basis B of the matroid has cardinality r, we have
+
+wj = (C − cj) = rC − cj.
+
+(21)
+
+j∈B
+
+j∈B
+
+j∈B
+
+Therefore, for two bases B1 and B2,
+
+cj ≤
+
+cj
+
+j∈B1
+
+j∈B2
+
+⇐⇒
+
+wj ≥
+
+wj .
+
+j∈B1
+
+j∈B2
+
+(22)
+
+Thus minimizing the total cost over all bases is equivalent to maximizing the total shifted weight over all bases.
+The greedy algorithm described in the statement scans the columns in nondecreasing order of cj. Equivalently, it scans them in nonincreasing order of wj, since
+
+ci ≤ cj ⇐⇒ wi ≥ wj.
+
+(23)
+
+At each step it keeps an index precisely when adding that index preserves independence in the matroid (E, I). Hence this is exactly the standard greedy algorithm for finding a maximumweight basis of a matroid.
+By the classical theorem of Edmonds on matroids and the greedy algorithm [11], the greedy algorithm returns a basis G⋆ maximizing j∈B wj over all bases B of (E, I). By the equivalence proved above, the same basis G⋆ minimizes
+j∈B cj over all bases. This proves the claim.
+
+REFERENCES
+[1] B. Vasic, V. Savin, M. Pacenti, S. Borah, and N. Raveendran, “Quantum low-density parity-check codes,” arXiv preprint arXiv:2510.14090, 2025.
+[2] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Physical Review A, vol. 54, no. 2, p. 1098, 1996.
+[3] A. Steane, “Multiple-particle interference and quantum error correction,” Proceedings of the Royal Society of London. Series A: Mathematical, Physical and Engineering Sciences, vol. 452, no. 1954, pp. 2551–2577, 1996.
+[4] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory,” Nature, vol. 627, no. 8005, pp. 778–782, 2024.
+[5] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” Quantum, vol. 5, p. 585, 2021.
+
+[6] J. Roffe, D. R. White, S. Burton, and E. Campbell, “Decoding across the quantum low-density parity-check code landscape,” Physical Review Research, vol. 2, no. 4, p. 043423, 2020.
+[7] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial Message-Passing schedules for LDPC decoding,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[8] E. Dennis, A. Kitaev, A. Landahl, and J. Preskill, “Topological quantum memory,” Journal of Mathematical Physics, vol. 43, no. 9, pp. 4452– 4505, 2002.
+[9] A. G. Fowler, M. Mariantoni, J. M. Martinis, and A. N. Cleland, “Surface codes: Towards practical large-scale quantum computation,” Physical Review A—Atomic, Molecular, and Optical Physics, vol. 86, no. 3, p. 032324, 2012.
+[10] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Transactions on Information Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[11] J. Edmonds, “Matroids and the greedy algorithm,” Mathematical programming, vol. 1, no. 1, pp. 127–136, 1971.
+
+

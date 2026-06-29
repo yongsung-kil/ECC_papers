@@ -1,0 +1,369 @@
+218
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+Optimizing Lifetime Capacity and Read Performance of Bit-Alterable 3-D NAND Flash
+Shuo-Han Chen , Member, IEEE, Ming-Chang Yang , Member, IEEE, and Yuan-Hao Chang , Senior Member, IEEE
+
+Abstract—With the technology advance of bit-alterable 3-D NAND flash, bit-level program and erase operations have been realized and provide the possibility of “bit-level rewrite.” Bit-level rewrite is predicted to be highly beneficial to the performance of the densely packed, bit-error-prone 3-D NAND flash because bit-level rewrites can remove error bits at bit-level granularity, shorten the error correction latency, and boost the read performance. Distinctly, bit-level rewrite can curtail the lifetime expense of refresh operations via correcting the error bit stored in the individual flash cell directly without a full-page rewrite, which is employed by previous refresh techniques. However, because bit-level rewrite is predicted to have similar latency and wearing as conventional full-page rewrites, the throughput of bit-level rewrites needs to be examined to avoid low rewrite efficiency. This observation inspires us to investigate and propose the bit-level error removal (BER) scheme to utilize the bit-level rewrites for optimizing both the read performance and lifetime capacity in a most-efficient way. The experimental results are encouraging and showed that the read performance can be improved by an average of 25.22% with 40.39% reduction of lifetime expense.
+Index Terms—3-D NAND flash, bit-alterable, bit-level operations.
+I. INTRODUCTION
+A S THE technology of 3-D NAND flash evolves, bit-level operations have been realized on bit-alterable 3-D NAND flash to provide the possibility of programming and erasing individual flash cells at a time. These bit-level operations are achieved through the p-channel [26] or the dual-channel (i.e., p- and n-channels) [27] 3-D NAND flash structure. In the meantime, bit-level operations are expected to benefit the read performance and the lifetime capacity of 3-D NAND flash [28],
+Manuscript received August 25, 2019; revised November 24, 2019 and March 12, 2020; accepted May 15, 2020. Date of publication June 1, 2020; date of current version January 20, 2021. This work was supported in part by the Research Grants 967 Council of Hong Kong SAR under Project CUHK24209618, in part by the Academia Sinica under Grant AS-CDA107-M05, and in part by the Ministry of Science and Technology under Grant 107-2923-E-001-001-MY3, Grant 108-2218-E-002-048, Grant 1082221-E-001-001-MY3, and Grant 108-2221-E-001-004-MY3. This article was recommended by Associate Editor C. Yang. This article was presented at ACM/IEEE Design Automation Conference (DAC), Las Vegas, USA, June 2–6, 2019 [13]. (Corresponding author: Ming-Chang Yang.)
+Shuo-Han Chen and Ming-Chang Yang are with the Department of Computer Science and Engineering, Chinese University of Hong Kong, Hong Kong (e-mail: qoolili@iis.sinica.edu.tw; mcyang@cse.cuhk.edu.hk).
+Yuan-Hao Chang is with the Institute of Information Science, Academia Sinica, Taipei 115, Taiwan (e-mail: johnson@iis.sinica.edu.tw).
+Digital Object Identifier 10.1109/TCAD.2020.2998781
+
+because bit-level operations can eliminate bit errors at bitlevel (or subpage-level granularity) with bit-level rewrites,1 thus reducing the error correction latency and improving the read performance accordingly. Distinct from previous refresh designs [4], [15] of performing full-page rewrites, bit-level rewrites can have the same error removal effect via rewriting those erroneous flash cells directly, thus lowering the lifetime expense. Furthermore, with bit-level operations, the endurance of NAND flash should be viewed from the perspective of lifetime capacity, which is defined as the total amount of data that can be stored on the NAND flash before the NAND flash wears out. Nevertheless, one major issue of bit-level rewrites is that bit-level rewrites are expected to induce similar latency as conventional page-based rewrites and could possibility lower the rewrite throughput. Thus, this article proposes the bit-level error removal (BER) scheme as a pioneering solution to utilize bit-level rewrites for optimizing both lifetime capacity and read performance on bit-alterable 3-D NAND flash. The technical difficulty of the proposed scheme lies in how to effectively identify and remove error bits via bit-level rewrites without causing the low rewrite throughput issue.
+NAND flash memory is now the mainstream storage medium in both embedded systems and high-performance computers. NAND flash memory gained its popularity with its excellent features, which include shock resistance, high access (i.e., read/write) performance, and low power consumption. Notably, a NAND flash memory chip contains multiple planes, and each plane is composed of multiple flash blocks. Then, within each flash block, there are numerous pages, and each page consists of a certain number of flash cells to store data. Recently, owing to the downscaling issue [36] of traditional planner NAND flash memory, 3-D NAND flash has emerged to provide higher storage density at a lower cost via its vertical channel structure [18], [33]. Nevertheless, flash memory has few fundamental drawbacks, including 1) different sources of bit errors; 2) the erase-before-write2 constraint; 3) the limited lifetime issue; and 4) the asymmetric units between access and erase operations.
+First, on NAND flash memory, there are various sources of bit errors that could lead to incorrectly stored data on flash memory. These bit error sources include retention errors, read/write interference errors, and erase errors. Thus, to ensure
+1Please note that, on flash memory, the “rewrite” operation is composed of an erase and a program operation.
+2In this article, the terms “program” and “write” are used interchangeably for referring to the operation of storing data within flash cells.
+
+0278-0070 c 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+219
+
+the correctness of stored data, flash memory nowadays utilizes error correction schemes, such as the low-density parity-check (LDPC) codes [31], during the data read path to correct bit errors with some redundant parity. Note that the LDPC codes is composed of multiple sensing level to read the stored content in a flash page in a read-retry fashion and induces additional latency during the read path [35], [37]. Second, owing to the erase-before-write constraint, flash cells with out-of-date data need to be erased before reprogrammed. To address this constraint, flash translation layer (FTL) [8], [12], [16], [21] is utilized to redirect data updates to other free or erased flash pages. Then, garbage collection mechanisms [11], [14], [25] are included to reclaim and erase those flash pages with obsolete data. Third, because of the limited lifetime issue, flash memory can only endure a fixed number of program/erase (P/E) cycles. Thus, wear leveling strategies [10], [17], [24] are included in FTL to evenly distribute the program and erase operations through the whole flash memory space, so as to prolong the overall lifetime of flash memory. Finally, due to the asymmetric units between accesses and erases, the read and write operations (resp. erase operations) can only be performed in the unit of a flash page (resp. a flash block). Consequently, while erasing a flash block, the garbage collection mechanisms need to perform the live-page copies for migrating pages with up-to-date data to another free area for preventing data loss. To minimize the data movement, garbage collection mechanisms usually reclaim the block with minimal valid data. These extra data movements are known as write amplification. Other sources of write amplification include updating a small number of flash cells and eliminating bit errors via full-page rewrites.
+To fundamentally resolve the write amplification issue, the 3-D NAND flash structure that enables bit-level operations have been extensively studied. The concept of bit-alterable 3-D NAND flash is realized through utilizing: 1) the p-channel 3-D NAND flash structure [26] to enable the band-to-band tunneling induced hot-electron (BBHE) programming and the -FN hole erasing methods or 2) the dual-channel 3-D NAND flash structure [27] to allow the +FN programming and the -FN erasing methods. Additionally, successful bit-level operations have also been demonstrated by Lue et al. [26], [27]. Furthermore, Chang et al. [5] also proposed a bit-level-aware FTL design to manage data at three different granularities (i.e., page, block, and cacheline) via bit-level erase and program operations. The concept of programming and erasing flash memory at the bit level can be illustrated as Fig. 1. Note that, although bit-alterable flash allows rewriting a flash cell without erasing the whole block, a flash cell still needs to be erased before reprogrammed.
+Based on the success of bit-alterable 3-D NAND flash, this article observes that utilizing bit-level operations to remove error bits on flash memory reveals the possibility of simultaneously improving the reliability of high bit-error-rate 3-D NAND flash and reducing the decoding latency of error correction schemes. In addition, since the pattern of bit errors is usually sparse, the ability to perform bit-level rewrites could also remove error bits in a smaller unit, rather than perform a full-page rewrite. Thus, utilizing bit-level rewrites can effectively can eliminate the need of page-based rewrites
+
+(a)
+
+(b)
+
+(d)
+
+(c)
+
+Fig. 1. Concept of bit-level program and erase operations. (a) Block or bit-level erase. (b) Bit-level program. (c) Bit-level erase. (d) Bit-level program.
+
+that are employed by the existing refresh techniques [4], [15]. Furthermore, by utilizing bit-level rewrites for bit errors removal, the flash devices’ lifetime capacity and the write amplification amount can be improved and reduced, respectively. Notably, lifetime capacity stands for the maximum amount of data that can be stored on the NAND flash through the lifetime of flash storage before the flash cell wears out. In the end, the read performance can also be improved since fewer error bits may lead to shorter decoding latency for those error correction schemes on flash devices. Even though bit-level rewrites can enhance the lifetime capacity and read performance, the major design consideration is that bit-level rewrites may induce similar wear and latency as conventional page-based rewrites.
+For optimizing both the lifetime and read performance via bit-level operations, this article proposes a pioneering solution, called BER scheme, to remove bit errors efficiently without causing the low rewrite throughput issue. Please be noted that this article focuses on exploiting bit-level operations for read performance enhancement and aims to integrate previous excellent works [6], [24], [34] for dealing with the wearing issues. Meanwhile, in the proposed BER scheme: 1) a sensing level tracking mechanism and 2) a sensing latency reduction strategy are included to exploit the bit-level operations effectively for optimizing the lifetime capacity and enhancing the read performance of 3-D NAND flash. First, instead of using full-page rewrites, the BER scheme removes error bits with bit-level rewrites to lower the decoding latency of error correction schemes and economize the lifetime capacity of flash memory. Then, for maximizing the read performance, the sensing level tracking mechanism is introduced to record the minimal sensing level that can be used to decode the flash page successfully after the flash page programmed. This is because pages may have different error patterns and sensing levels due to the different number of P/E cycles and the process variation (PV). Meanwhile, the sensing latency reduction strategy is utilized to remove error bits with bit-level operations for reducing the sensing latency of error correction schemes during read operations. The experimental results show that the proposed BER scheme can improve the read performance by an average of 25.22% and reduce the lifetime expense by 40.39% on average, compared to that of no refresh strategy and the page-based refresh strategy.
+The contributions of this article can be summarized as follows.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+220
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+Fig. 2. Structure of the p-channel and dual-channel (with N+ drain side) bit-alterable 3-D NAND flash [26], [27].
+1) This article is a pioneer solution that exploits the bit-level rewrites of bit-alterable 3-D NAND flash to remove bit errors for both lifetime capacity and read performance improvement.
+2) The proposed BER scheme provides an efficient way of tracking transit errors and identifying permanent errors with the proposed sensing level tracking mechanism.
+3) A novel BER design is proposed to reduce the sensing latency of LDPC decoding.
+The remainder of this article is organized as follows. Section II describes the background of bit-alterable 3-D NAND flash, the error correction schemes, and research motivation. Section III describes the design and mechanism of the proposed BER scheme. Section III then analyzes the implementation overhead of the proposed scheme. Next, Section V evaluates the performance of the BER scheme. Finally, Section VI concludes this article with research remarks.
+II. BACKGROUND AND MOTIVATION
+A. Bit-Alterable 3-D NAND Flash
+The implementation of bit-alterable 3-D NAND flash was first discussed by Lue et al. [26], [27] with two different strategies, which are the p-channel and dual-channel (i.e., p- and n-channels) structures. Accordingly, the p-channel structure can avoid the drawbacks of the gate-induced-drain-leakage (GIDL) erase in n-channel devices. The -FN hole erase can be realized on the p-channel structure with negligible disturb of the source select line (SSL) and the ground select line (GSL). Meanwhile, the p-channel architecture utilizes the band-to-band hot electron (BBHE) programming with a local self-boosting method to create a high virtual drain bias. In the end, both the FN erase selection method and the BBHE programming method are made possible on the p-channel structure to allow a bit-level random rewrite without performing full-block erases. Fig. 2 illustrates the schematic of the p-channel 3-D NAND flash. The device is implemented as a half-pitch 3-D vertical gate junction-free NAND with P+ diffusion junction formed at only one side of the long-channel SSL and GSL.
+On the other hand, the dual-channel 3-D flash NAND structure, which has the characteristics of both n-channel and p-channel NAND, can also achieve the effect of bit-level operations. The schematic of the dual-channel 3-D NAND flash structure is similar to the p-channel structure, apart from that the dual-channel structure has the N+ drain side. As illustrated in Fig. 2, the dual-channel structure is composed
+
+of a N+ drain side near the SSL and a P+ source side near the GSL. Such a dual-channel structure enables both the N+ drain or the P+ source to be used as the carrier source for performing +FN programming and −FN erasing. Thus, the latency of FN operations can be shortened and both +FN/−FN operations have a suitable inhibit method, which realizes the bit-alterable flash memory. For bit-level erase operations, the global self-boosting method for FN erase on p-channel NAND can be selected by inverting the bias polarity of n-channel NAND. Note that the bit-level erase can also be performed in page mode to increase the throughput. For bitlevel rewrite operations, bit-alterable 3-D NAND provides the NAND flash to be erased and programmed in a smaller unit after a NAND flash page already programmed without block erasing. The bit-alterable FTL design [5] has been proposed to enforce cacheline-level mapping via bit-level operations and also enable bit-level-related support within the memory technology device (MTD) layer. Although the bit-alterable 3-D NAND flash can be realized with p-channel or dual-channel structures, one major issue of bit-level operations is that bitlevel program and erase methods may induce similar wearing and latency as conventional block-based erase and page-based operations.
+B. Error Correction Schemes
+Owing to the nature of high error rate on NAND flash memory, existing flash storage devices utilize error correction schemes to ensure the uncorrectable bit error rate below 10−15 to meet the JEDEC standard [1]. To achieve great error correction capability, the LDPC code [31] is one of the most popular used error correction schemes [2], [20], [29]. The implementation of the LDPC code applies an iterative readretry procedure with different reference voltages to sense the stored voltage level of flash cells until an appropriate reference voltage is found to decode the read content successfully. The first round of the read-retry process is known as the hard-decision memory sensing, while the successive read-retry rounds are called soft-decision memory sensing. In this article, the number of read-retry attempts for each read operation is referred to as the sensing level of LDPC codes. Although the successive soft-decision memory sensings can enhance the possibility of successful LDPC decoding, soft-decision memory sensing also induces additional latency during the read path of flash memory. Furthermore, soft-decision memory sensing would be triggered continuously as the raw bit error rate (RBER) deteriorates with the growth of P/E cycles and flash cell density [28].
+With the growing density and downscaling of flash memory, the RBER of flash devices continues to grow. The growing RBER issues not only affect the reliability of flash storage but also lengthens the read latency because multiple soft-decision sensings are required for correcting the error bits via the LDPC codes. To reduce the decoding latency of LDPC codes, pagebased refresh operations [4], [15] are utilized to eliminate error bits on flash memory for ensuring data correctness and reduce the number of soft-decision memory sensing during the read path. For example, a lightweight data refresh method [15] was
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+221
+
+Fig. 3. Motivation example.
+proposed to correct errors in read-hot pages aggressively and move data with no errors into new pages. In addition, decoding latency reduction schemes [22], [35], [37] were also proposed.
+Correcting bit errors via page-based rewrites are inevitable for conventional flash memory to avoid soft-decision memory sensing by lowering the number of error bits. Nevertheless, the main drawback of removing error bits via page-based rewrites is the expense of the lifetime capacity. Lately, with the emergence of bit-alterable NAND flash, one viable option of reducing the LDPC decoding latency is to remove bit errors with the bit-level operations. In this way, the costly page-based rewrites and the read latency of flash storage can be avoided and reduced, respectively. However, since flash memory has the limited number of P/E cycles, directly utilizing the bit-level program and erase methods to remove bit errors may result in low rewrite throughput and possible performance degradation.
+C. Motivation
+Previously, performing full-page rewrites to remove error bits on flash memory is inevitable due to the minimal access unit constraint, despite performing full-page rewrites consumes the valuable lifetime capacity of flash storage. Recently, owing to the emergence of bit-alterable flash memory, fullpage rewrites can be averted via utilizing bit-level rewrites for error bit correction. To better illustrate the difference, an example is given in Fig. 3. As illustrated in the figure, the readretry process with the combination of one hard-decision and one or multiple soft-decision memory sensings is used to read data stored in a flash page. When the decoding failed after the highest soft-decision memory sensing is performed, the data is lost permanently due to excessively high RBER. On the other hand, when the user data and parity are decoded successfully, the decoded data will be returned. Then, the predefined LDPC rule is initiated to determine if a rewrite operation is required to correct those raw bit errors in the flash page. If the rewrite operation is determined to be required, conventional approach corrects error bits via full-page rewrites [4], [15] to rewrite the re-encoded user data and parity to an unused free page, as shown in step (a) of Fig. 3.
+On the contrary, when utilizing bit-level rewrites to correct error bits, the full-page rewrites and the expense of lifetime capacity can be avoided simultaneously, as illustrated in the step (b) of Fig. 3. Note that, in step (b), a hardware-assisted bit comparator [5] is utilized to identify the offset of error bits, so that the bit-level rewrites can be applied to remove
+
+error bits. However, the efficiency of bit-level rewrites should be considered carefully because correcting one error bit has the same latency of rewriting multiple bits or even the whole flash page. The rationale is that the bit-level erase and program operations may induce similar latency as conventional blockbased erase and page-based program operations, respectively. This is because, as the page-based program operation, the bitlevel program operation uses the increment step programming pulse (ISPP) [19] method to program selected flash cells. On the other hand, bit-level erase operation also requires the duration of the erase-voltage pulse to drain the flash cells. Thus, the technical difficulty of reducing LDPC-induced latency via bit-level rewrites lies in how to effectively identify and efficiently correct error bits without inducing the issues of low rewrite throughput. To resolve above issues, we propose a BER scheme to exploit the bit-alterable feature for improving the read performance by reducing the latency of LDPC codes while approaching lifetime capacity optimization. The details of the proposed strategy are described in Section III.
+III. BIT-LEVEL ERROR REMOVAL SCHEME
+A. Overview
+To adequately identify and remove error bits with bit-level operations, this section presents a BER scheme to enhance the reliability and read performance of flash storage with minimal lifetime expense by exploiting the bit-alterable feature. To the best of our knowledge, there were very few studies that explored the possibility of correcting error bits residing on the flash storage via exploiting the bit-alterable feature of 3-D NAND flash. The goal of the proposed BER scheme is to remove error bits with bit-level operations for both the read performance and lifetime capacity optimization. Notably, instead of replacing error correct schemes, the proposed scheme aims to co-work with existing LDPC codes via correctly identified bit errors in flash pages with bit-level operations for both lifetime capacity and read performance optimization. Although buffering the LDPC-corrected flash pages in the RAM space can avoid repeating the decoding procedure, the page-based refresh operation is inevitable for removing error bits from flash memory and preventing data loss. Therefore, to accomplish the design goal of this article, the proposed BER scheme introduces: 1) a sensing level tracking mechanism and 2) a sensing latency reduction strategy. The proposed BER scheme is designed to exploit the bit-level operations capability of bit-alterable 3-D NAND flash and can be extended to other 3-D NAND flash memories if either bit-level or subpage-level operation is available. The system architecture of the proposed BER scheme is illustrated in Fig. 4.
+As shown in Fig. 4, the proposed BER scheme is integrated within the FTL for optimizing the lifetime capacity and read performance via identifying and removing bit errors with two different components. First, the BER scheme utilizes a sensing level tracking mechanism (see Section III-B) to record the initial sensing level that can be used to decode flash pages after the flash page is programmed. Notably, initial sensing level refers to the minimal sensing level that can be
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+222
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+Fig. 4. System architecture of the proposed BER scheme.
+
+Fig. 6. Sensing level tracking mechanism.
+
+Fig. 5. Working flow of the sensing latency reduction strategy.
+used to decode the newly programmed page before any retention or read disturbance errors occur. Second, based on the recorded initial sensing level, a sensing latency reduction strategy (see Section III-C) is utilized to compare the sensing level of successive read operations with the initial sensing level for determining whether the bit-level rewrite is required for correcting error bits and reducing the sensing latency of the LDPC decoder so as to boost the read performance of the target flash device. Notably, the issues of interpage and interblock wear leveling are beyond the scope of this article, and can be well addressed by many excellent existing designs [6], [24], [34].
+B. Sensing Level Tracking Mechanism
+Due to the PV and different wearings, the exact same flash page may have a different number of error bits after each program and during each read. A different number of error bits results in a different number of sensing levels and induces variable sensing latency. Therefore, instead of assuming each page can be decoded successfully via the same LDPC sensing level, the initial sensing level that can decode the newly programmed page is recorded after each flash page program for considering both the transient and permanent error bits while writing a flash page. Instead of driving the initial sensing level from RBER, the initial sensing level is derived from how many softlevel sensing are required while decoding a newly written flash page. The sensing level tracking mechanism is summarized in Fig. 6.
+As shown in Fig. 6, during a write operation, the user data first go through the LDPC encoder and the encoded user data along with the parity are then written (programmed) to a flash page. During the write operations, the sensing level tracking
+
+mechanism records the initial sensing level through the program and verify process of the ISPP method. Therefore, the verify process of the proposed scheme does not induce additional overhead because it is integrated with the ISPP method. The success of the verification is determined by whether the stored data content can be decoded by the LDPC decoder or not. If the verification succeeds, the LDPC sensing level used during the read-verify process is recorded as the initial sensing level and stored in the initial sensing level array. When the verify process fails, the reprogrammed content should go through the same verify process to ensure the stored content can be decoded successfully. Note that each field of the initial sensing level array only requires 3 bits if the LDPC code can support one hard-decision and six soft-decision sensing levels [15], [28]. The initial sensing level array will be reset after block-based erase operations because erase operations introduce additional wearing onto flash pages and may change the minimal sensing level required for decoding flash pages.
+On the other hand, if the verification fails, the encoded data are rewritten to another flash page and verified again to record the initial sensing level. In the proposed BER scheme, the initial sensing level is regarded as the minimal LDPC sensing level that can decode a newly programmed page before any retention or read disturbance errors occur. Notably, although the initial sensing level cannot directly reflect the bit errors induced by page healthiness degradation, the bit errors owing to page healthiness degradation can still be effectively derived through sensing level comparison within future read operations. With the initial sensing level information, the sensing latency reduction strategy (see Section III-C) is utilized to track and shorten the sensing latency for future read operations.
+C. Sensing Latency Reduction Strategy
+To effectively identify retention and disturbance error bits, the BER scheme utilizes the sensing latency reduction strategy to compare the sensing level of every read operations with the recorded initial sensing level. If the LDPC sensing level of successive read operations, denoted as current sensing level, is higher than the recorded initial sensing level, it may indicate that more error bits have been introduced to the flash page after the flash page is programmed. In other words, the sensing latency reduction strategy determines whether the number of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+223
+
+error bits has changed or not via the difference between current sensing level and the initial sensing level because different numbers of error bits require the different number of sensing level within the LDPC decoder (see Table V). The working flow of the sensing latency reduction strategy is summarized in Fig. 5.
+As shown in Fig. 5, to read a flash page with LDPC codes, the hard-decision memory sensing is first utilized to sense the stored bits with a fixed reference voltage and the sensed data are passed through the LDPC decoder. If the hard-decisionmemory-sensed data can be decoded successfully, the decoded user data will be returned directly. Otherwise, if the LDPC decoding fails with the hard-decision-memory-sensed data, the soft-decision memory sensing will be used to sense the stored bits with different levels of reference voltages. After the softdecision memory sensing completes, the decoded user data and the required LDPC sensing level are returned to users and passed through a sensing level comparator, respectively. The sensing level comparator is utilized to determine if bit-level rewrites could be utilized to lower the sensing level and boost the read speed via removing error bits (see Section III-C1). If the sensing level comparator determines that bit-level rewrites are required, the user data will be re-encoded and passed through a hardware-assisted bit comparator [5] for identifying error bits. The bit comparator is utilized to compare the encoded content and the programmed content bit by bit. When the two compared bits are different, bit comparator should record the offset of the error bits, and bit-level rewrites can be applied to those bits after the whole page is compared. Note that bit-level rewrites can be carried in one shot to avoid the long latency of rewrites. Then, the BER scheme can remove error bits in a circular pattern with the bit-level rewrites (see Section III-C2).
+1) Sensing Level Comparator: With the values of initial and current sensing level, one intuitive approach for determining whether a page needs to be rewritten or not for lower sensing latency is to compare initial and current sensing level directly. However, simply comparing the initial and current sensing level does not consider the overall read speed of the flash storage and could possibly cause unnecessary rewrites to pages when the current sensing level of the accessed page is already lower than the average sensing level of the whole flash storage. In other words, when the current sensing level of a page is already lower than the average sensing level, those rewrites to remove bit errors for achieving lower read latency are considered unnecessary. Therefore, to avoid unnecessary rewrites and consider the overall read speed of the flash storage, the proposed sensing level comparator considers three different factors, including the current sensing level, initial sensing level, and average sensing level, to determine whether bit-level rewrites are required or not.
+The average sensing level is calculated via averaging the LDPC sensing level of a fixed number previous read operations. The BER scheme averages the sensing level by referring to the previous flash performance improvement strategy— k-means size check method [23]. The k-means size check method suggested that averaging the request size of a fixed number (e.g., 1000 [11]) of previous read/write operations can
+
+(a)
+(b)
+(c)
+Fig. 7. Scenarios for marking the rewrite-required flag.
+be utilized as an effective guide for performance improvement strategies. In other words, average the sensing level of previous read operations can also reflect the sensing level at the current life stage of flash memory. Within the sensing level comparator, there are three different scenarios, which can be summarized as Fig. 7.
+First, as shown in Fig. 7(a), a flash page will be marked as rewrite-required when the difference between the current sensing level and the initial or average sensing level is larger than one. Second, as shown in Fig. 7(b), flash pages with current sensing level smaller than the average and initial sensing level will not be marked as rewrite-required. Instead, the included strategy will update the value of the initial sensing level to the value of sensing level. Note that, it is possible for pages to have fewer error bits and lower sensing level as the time goes by because of the initial charge loss effect3 or future disturbance of 3-D NAND flash [9]. Finally, the scenario shown in Fig. 7(c) will not be marked as refresh-required to avoid excessive rewrites, because the current sensing level is already lower than the average sensing level of the flash storage and the rewrite has limited effect on improving the overall read performance. The scenarios illustrated in Fig. 7 are also summarized in Algorithm 1 for better understanding.
+2) Bit-Level Circular Refresh: After determining whether a page needs to be rewritten or not via the sensing level comparator, the BER scheme removes the error bits with bit-level operations when the flash storage is idle, instead of actively removing error bits during the read path. To perform bit-level rewrites on those refresh-required pages during idle time, a candidate page list is utilized to keep track of those frequently read (read-hot) pages, as shown in Fig. 8. The candidate page list only tracks read-hot pages because those read-hot pages dominate the overall read performance of the flash storage. Meanwhile, the reread pages are promoted to the list head
+3Owing to the initial charge loss effect, the voltage of a flash cell does not settle to a final value immediately after the cell is programmed or erased. Thus, those unsettled cells may be mistakenly identified as error bits in the first place.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+224
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+Algorithm 1: Operation of the Sensing Level Comparator
+
+Input: currentLevel, initialLevel, averageLevel
+
+Output: rewriteRequiredFlag
+
+1 Initialize rewriteRequiredFlag as not-required;
+
+2 if minimize(initialLevel, averageLevel) < currentLevel then
+
+3 if !(initialLevel ≤ currentLevel ≤ averageLevel) then
+
+4
+
+Mark rewriteRequiredFlag as required;
+
+5 else
+
+6
+
+// Do nothing.
+
+7 end
+
+8 else
+
+9 Update the value of initialLevel to the value of
+
+currentLevel;
+
+10 end
+
+11 return rewriteRequiredFlag;
+
+Fig. 9. Patterns of bit-level circular refresh.
+
+Fig. 8. Candidate page list.
+for raising their priority to be rewritten for error bits removal. When a page is invalidated due to data update or deletion, the page is evicted from the candidate page list to avoid unnecessary rewrites. Then, during the idle time, the BER scheme scans pages from the list head and checks the rewrite-required flag for performing bit-level rewrites to remove error bits. Notably, instead of searching through the candidate page list for pages marked with rewrite-required flag, the BER scheme avoids the searching process by recording the offset of last rewritten pages and continues the checking processing during the next idle time.
+On the other hand, when utilizing bit-level rewrites to remove error bits, the proposed BER scheme sets the smallest bit-level rewrite unit to subpages, which have the same size as the CPU cache line (e.g., 64 bytes). Setting the smallest bit-level rewrite unit to the size of a subpage enhances the throughput of bit-level rewrites because rewriting a single bit induces similar latency as rewriting a flash page. In addition, to avoid excessive rewrites on certain subpages , a refresh pivot is included to remove error bits from a flash page in a circular pattern. During each rewrite operation, the refresh pivot is moved forward to count the number of correctable errors within each subpage until the summation equals the number of error bits that need to be rewritten. The number of error bits need to be rewritten is determined by the sensing level difference derived in sensing level comparator (see Algorithm 1) and the error bits difference between each LDPC sensing level (see Table V). The detailed operations of the circular refresh pattern are illustrated in Fig. 9. If the sensing level difference of a page is 1, and this page has 163 error bits, the sensing level comparator determines that at least seven error bits need to be corrected for reducing the sensing level from level 6 to level 5, based on the relationship between number of error bits and sensing level shown in Table V. Then, the refresh pivot
+
+will be moved forward until seven error bits are counted from each subpage.
+As shown in Fig. 9, the refresh pivot will be moved forward from subpage 4 to subpage 10 since there are exactly seven correctable error bits in these selected subpages. Note that, if a subpage contains no error bits, the rewrite to this subpage will be skipped for avoiding unnecessary wear and rewrite latency. On the other hand, to identify how many error bits exist in each subpage, a hardware-assisted bit comparator [5] is included to identify which bits are erroneous and should be rewritten for reducing the sensing latency of the LDPC decoder. The number of error bits is then summed based on the subpage unit (e.g., 64 bytes) and stored as a bit errors array in the RAM space of the flash controller temporarily. On the other hand, after those selected subpages are rewritten with the re-encoded data, those rewritten subpages are read again to identify any failed rewrites because those failed rewrites may indicate that the subpage contains permanent errors, which are uncorrectable no matter how many rewrites are performed.
+The number of failed rewrites are recorded in a refresh failed array maintained in the page spare area. During the next rewrite operation, the refresh failed count will be subtracted from the bit error count to derive the correctable error. The calculation for deriving the number of correctable error is meant to avoid unnecessary rewrites for those permanent error bits. Based on the number of correctable error bits, the refresh pivot utilized in the sensing latency reduction strategy can now select the desired number of subpages to remove error bits with the bit-level rewrites. Note that the re-encode, bit-level compare, and bit-level rewrites are conducted during the idle time of the flash storage, thus inducing no additional latency to the read/write operations for the flash storage. The above operations are summarized in Algorithm 2 for better understand.
+IV. ANALYSIS
+To understand the amount of reduced lifetime expense during rewrite operation, this section first investigates the reduced rewritten bits in the worst-case scenario (see Section IV-A). Then, the memory overhead of maintaining those data structure of the proposed scheme is reported (see Section IV-B).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+225
+
+Algorithm 2: Bit-Level Circular Refresh Input: refreshFailedCnt, BitErrCnt, RefreshPivot, levelDiff Output:
+1 New errBitsToReomve; 2 New rewriteSubpgaes list; 3 New correctableErrCnt array; 4 Calculate each field of correctableErrCnt via subtracting
+refreshFailedCnt from BitErrCnt; 5 Derive errBitsToReomve based on levelDiff ; 6 while errBitsToReomve > 0 do 7 errBitsToReomve -= correctableErrCnt[RefreshPivot]; 8 Add the subpage pointed by the RefreshPivot to
+rewriteSubpgaes; 9 RefreshPivot += 1; 10 end 11 Perform bot-level rewrites to subpages in rewriteSubpgaes; 12 return null;
+Fig. 10. Analysis example of reduced rewritten bits.
+A. Reduce Amount of Rewritten Bits Most of refresh-based LDPC latency reduction schemes uti-
+lize the full-page rewrites to correct error bits, thus inevitably rewriting those correct bits that do not need to be rewritten. In other words, the full-page rewrites excessively consume the limited and valuable lifetime capacity of flash memory. Even though various studies have been proposed to reduce the number of full-page rewrites via special decoding methods [35], [37] or error characteristics [22] of flash memory, full-page rewrites are unavoidable for removing bit errors to ensure data integrity when the number of error bits is going to exceed the capability of error correction schemes. Instead of utilizing full-page rewrites, the proposed BER scheme aims to utilize bit-level rewrites in the most efficient way to correct bit errors for improving read performance with minimal lifetime expense. To quantify the amount of reduced rewritten bits, this section analyzes the number of rewritten bits in the worst-case scenario. Fig. 10 illustrates the example utilized in this section.
+In this example, we assume that the minimal rewrite unit is 64 bytes and there are 256 subpages in a flash page. Then, we assume that this page has 204 error bits4 and the error bits evenly distributed in each subpage, as shown in Fig. 10. With above assumption, if one is going to utilize the proposed BER
+4Note that, accordingly to Table V, 204 is the maximum number of correctable bit errors that can be corrected by LDPC decoder.
+
+Fig. 11. Rewritten bits comparison.
+scheme to reduce the sensing level from 7 to 1 for reducing decoding latency and improve read performance, the number of minimum error bits need to remove is 204. In other words, if each subpage only has 1 error bits in the worst-case scenario, the BER scheme needs to refresh at least 204 subpages. Then, the number of rewritten bits can be calculated as 64 · 204 · 8, which is 104 448 bits. Note that, 64 and 204 denote the size of a subpage in bytes and the number of rewritten subpages, while 8 converts the unit from bytes to bits.
+On the other hand, if the full-page rewrite is applied directly to rewrite the whole page to the free area, the number of rewritten bits is 16·1024·8, which is 131 072 bits. In this calculation, 16 stands for the page size, while 1024 and 8 convert the unit from KB into bytes and from bytes into bits. In this worstcase scenario, the number of rewritten bits can be reduced by 20.31%. Furthermore, the number of rewritten bits can be further reduced if the number of rewritten subpage is less than that of the above example. For instance, if only 1 subpage is needed to be rewritten, the proposed BER scheme can rewrite that subpage directly and incurs only 64 rewritten bits. On the other hand, the page-based rewrite leads to 1.3 · 104 rewritten bits even when only 1 subpage is required to be rewritten. The analysis results can be summarized as Fig. 11. Please note that the number of rewritten bits of page-based rewrite remains the same since the full-page rewrites are performed even if only one subpage needs to be rewritten. From this analysis results, we can conclude that the proposed BER scheme can effectively reduce the number of rewritten bits for reducing sensing level and improving read performance.
+B. Memory Space Usage
+In this section, the memory space usage of the proposed scheme is analyzed based on whether the data structures need to be stored on flash memory as permanent metadata or not. First, to efficiently utilize bit-level rewrites for removing bit errors, the proposed BER scheme introduces two permanent metadata, including 1) the sensing level array to record the initial sensing level of each page and 2) the refresh failed count array to track the number of uncorrectable error bits in each subpage. Then, the amount of permanent metadata can be calculated as (1), in which Smetadata represents the overall size of permanent metadata that should be preserved on flash
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+226
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+TABLE I DATA STRUCTURE SIZE OF EACH PARAMETERS
+
+TABLE II MEMORY SPACE USAGE ANALYSIS
+
+memory
+
+Smetadata = SsenLevel · Npages
+
++ SfailCnt · Nsubpages · Npages
+
+(1)
+
+where SsenLevel and Npages denote the size required for storing the sensing level of a page and the total number of pages on a flash device, respectively. Then, SfailCnt stands for the size required for storing the number of refresh failed bits within subpages, Nsubpages represent the number of subpages with a flash page. In the following analysis, we assume the size of a page is 16 KB [32], and the size of a subpage is 64 bytes, respectively. Then, Npages and Nsubpages can be calculated according to the size of flash storage.
+On the other hand, the BER scheme also requires three managing data structures on the RAM space to facilitate the rewrite operations. These three managing data structures are: 1) the candidate page list to track read-hot pages along with their refresh require flags; 2) the bit error count array to temporarily store the results of bit comparator; and 3) the correctable error count array to temporarily hold the number of correctable bits of each subpage. Notably, the length of the bit error count and correctable error count arrays is the number of subpages within each page. Therefore, the memory usage of these volatile managing data structure can be calculated as (2)
+
+SRAM = Sptr + Sflag · Ncand
+
++ (SbitErr + SCortBitErr) · Nsubpages
+
+(2)
+
+where Sptr and Sflag represent the size required for storing the pointer and refresh required flag in the candidate page list, while Ncand denote the length of the candidate page list. Next, Ncand denotes the length of the candidate page list and is set to 1000 pages in the following analysis. Finally, SbitErr and SCortBitErr have the same size and stand for the size required to store the error bit count and correctable error count of subpages in a flash page during bit-level rewrites.
+Meanwhile, the actual sizes of each data structure in the above equations are summarized in Table I. In this analysis, we assume the maximum sensing level of LDPC is 7 [15], [28]; thus, SsenLevel only occupied 3 bits for storing sensing level. Then, we refer to previous studies for assuming the maximum RBER5 of 3-D NAND flash is 10−1 and each 64 bytes subpage is expected to have a maximum of 52 error bits. Therefore, those fields, including SfailCnt, SCortBitErr, and SbitErr, used to store the number of bit errors, require 6 bits each for storing the number of error bits.
+
+5According to the previous study [28], the RBER of 3-D NAND flash could reach upto 10−1 after the P/E cycles reaches 25 000 or after the retention time of 104 at the P/E cycles of 10 000.
+
+Based on (1) and (2), the required size of flash storage space, Smetadata, and RAM space, SRAM, for storing the BER scheme-related data structure are 96.38 MB and 4.22 KB when the size of flash storage is 64 GB, and the length of candidate page list is 1000. In other words, the proposed BER scheme only consumes 0.15% of the 64-GB storage space for achieving read performance improvement with 20.31% lower lifetime expense in the worst-case scenario. Therefore, owing to the small size of these data structures, the BER scheme can cache those related data structures in RAM space of flash controller during run time and store onto flash storage space when powering off. In other words, the proposed scheme can avoid excessive updates to the flash area during run time. Table II summarized the trend of Smetadata as the size of flash storage grows. The results also show that the space usage ratio of the structure used by the proposed strategy to the whole flash storage is only 0.15% on average.
+Notably, when compared with the approach of tracking read performance by the read latency in the conference version [13], the revised BER scheme can actually achieve two benefits as it perform bit-level rewrites via recording initial sensing level. First, recording the sensing level can actually lower the memory space overhead for recording the current read performance of a flash page. For instance, when there are 7 LDPC sensing levels, the proposed scheme only requires 3 bits for storing sensing level. On the other hand, if the read latency is utilized as the indicator, and the longest read latency is 239 µs [15], [28], recording the read latency requires 56 bits for each flash page. Second, instead of including a new software or hardware design to measure the read latency within the flash controller, the sensing level information can be directly derived from the LDPC-based error correction code (ECC) module. In the end, the overhead of tracking sensing level can allow the proposed design to lower its overhead for tracking the read performance of flash pages.
+V. PERFORMANCE EVALUATION
+A. Experimental Setup
+In this section, experiments are conducted to evaluate the proposed BER scheme in terms of the average sensing latency of the LDPC codes, the accumulated number of bit rewrites, and the average read/write access latency. In addition, the number of erased blocks during garbage collections is also reported to demonstrate that the proposed BER scheme can also lower the number of erased blocks by eliminating the need
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+227
+
+TABLE III I/O CHARACTERISTICS OF UTILIZED WORKLOADS
+
+TABLE V RELATIONSHIP BETWEEN BIT ERRORS AND READ LATENCY [15], [28]
+
+TABLE IV EXPERIMENTAL PARAMATERS [32]
+
+Fig. 12. Average sensing latency of LDPC.
+
+of page-based rewrites with the bit-level rewrite operations. In the experiments, the proposed BER scheme is integrated into the conventional page-based FTL design and compared with page-based refresh techniques on a flash simulator [7] using real-world traces, including the Microsoft Research Cambridge (MSR) traces (i.e., the file server, media server, project server, proxy server, and user home directory traces) [30], the TPC benchmark [3], and an one-month I/O trace of disk drives of a personal computer [7]. The I/O characteristics are summarized in Table III. The actual I/O size induced by these workloads are larger than the actual size of flash storage. Notably, in our experiments, the compared page-based refresh methods are also performed during the idle time to avoid introducing additional latency to the read/write operations. The experimental settings of this evaluation are summarized in Table IV.
+The I/O latency summarized in Table IV are set according to the specification of 3-D NAND manufactured by Samsung [32]. This section refers to Samsung 3-D NAND for parameter configuration because the actual bit-alterable 3-D NAND flash is still in their manufacturing stage and is not available for actual performance evaluation. On the other hand, relationships between the number of bit errors and the read latency are summarized in Table V, where the error bits denote those tolerable and correctable error bits in a 16 KB page for each LDPC sensing level. Table V is derived based on the error correction capability of LDPC codes when the size of a flash page is 16 KBs. If the page size grows larger than 16 KB, one can increase the number of bits to record error bits. The number of error bits and corresponding LDPC sensing latency are
+
+Fig. 13. Average sensing level of LDPC.
+set and calculated according to previous studies [15], [28]. In addition, the RBER utilized for deriving the number of error bits will also grow as the number of P/E cycles increases [28]. Meanwhile, the normal distribution model is utilized as the error distribution model in this evaluation without losing of generality.
+B. Experimental Results To evaluate the capability of the proposed BER scheme,
+several real-world traces and the TPC benchmark are used to conduct this evaluation. As the goal of the proposed scheme is to boost the read performance via reducing the sensing latency of LDPC error correction scheme, Fig. 12 first show the average sensing latency comparison of the LDPC codes between the proposed BER scheme, the page-based refresh technique,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+228
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+Fig. 14. Number of rewritten bits.
+
+Fig. 17. Number of erase blocks.
+
+Fig. 15. Average read latency.
+
+Fig. 18. Mean of subpage written count.
+
+Fig. 16. Average write latency.
+
+and the conventional approach with no refresh operations. Note that Fig. 13 is also included to show the average sensing level of the LDPC codes with different refresh approaches. As shown in Fig. 12, the average sensing latency of LDPC codes can be reduced by up to 35.13% for the user home directory trace and 17.57% on average, compared to the conventional approach with no refresh operations. The performance difference of each workload mainly results from the number of read requests within each workload. For instance, the user home directory workload has 68% of read requests out of 2.27 · 109 requests, while project server workload only has 12% of read requests of all its requests. Owing to the difference in the percentage of read requests, each workload performs differently regarding the sensing latency, sensing level, and read/write latency.
+
+Fig. 19. Standard deviation of subpage written count.
+On the other hand, when compared with the page-based refresh technique, the average sensing latency of LDPC codes is slightly degraded by 1.59% on average. This is because, instead of removing all error bits with page-based rewrites, the proposed BER scheme only applies bit-level rewrites to a small group of the error bits based on the result of the included sensing level comparator to minimize the number of bit rewrites. However, even though the read performance improvement of BER scheme is slightly lower than page-based refresh technique, Fig. 14 shows that the number of rewritten bits can be hugely reduced by 40.39% on average via the proposed scheme to conserve the expense of lifetime capacity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+229
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 20. Sensing level and rewritten data amount comparison. (a) Project server trace. (b) User home directory trace. (c) TPC benchmark.
+
+To further investigate the effect of the proposed scheme on the read/write performance, the average read/write latency is also reported in Figs. 15 and 16. As shown in Fig. 15, the average read latency can also be improved by up to 25.22% for the user home directory trace and an average of 12.64% due to the reduced LDPC sensing latency, when compared with the conventional approach with no refresh operations. Note the enhancement difference between the sensing latency (see Fig. 12) and read latency is due to the transfer latency required for transferring user data from the flash chip to the flash controller. Meanwhile, similar to the average sensing latency results, the read latency is slightly longer that of the page-based refresh technique by 1.03%. On the other hand, Fig. 16 shows that the proposed BER scheme induces no additional latency to the write operations. Besides, when compared with the conventional approach with no refresh operations, the number of erased block count is neither increased by the BER scheme, as shown in Fig. 17. Therefore, the garbage collection performance of original FTL design is not degraded.
+Next, we turn our attention into investigating the wearing of the proposed BER scheme. The BER scheme utilizes a refresh pivot to avoid excessive wearing on a certain set of subpages. To investigate the wearing condition of subpages, the number of rewrites applied to each subpage within the BER scheme is recorded. Then, we calculate the mean and the standard deviation of subpage written count to reflect the wearing condition. The results are summarized in Figs. 18 and 19. As shown in these figures, we can observe that the value of the standard deviation is much smaller than the value of the mean. For instance, the file server workload has 1.73 · 104 of subpage written count as the mean value, while the standard deviation is only 3.479. Thus, we can conclude that each subpage receives a similar amount of rewrites, and the proposed BER scheme can effectively avoid excessive wearing on a certain set of subpages.
+Finally, an additional set of experiments is conducted to vary the size of the subpage from 32 B to 4096 B to investigate the trend of rewritten data amount and average sensing level. Three traces comprised of different ratios of read and write operations are selected for this set of experiments. The project server trace and user directory trace have the highest ratio of write requests and read requests, respectively, while
+
+the TPC benchmark has a similar amount of write and read requests. The results are summarized in Fig. 20 and show that the variance in sensing level is 1.77%, 5.22%, and 0.22$ on average for the three workloads. On the other hand, the size of the rewritten data amount can grow upto an average of 27.85% for these three workloads when the subpage size is 4096 B. In other words, when the size of subpage changes, the variance in the sensing level of LDPC is negligible. On the other hand, the rewritten data amount grows as the size of the subpage grows. In this article, we refer to the size of a typical CPU cacheline (e.g., 64 bytes) as the subpage size to simultaneously optimize the lifetime capacity and the read performance. In addition, using CPU cacheline as the subpage size also allow the BER scheme to be compatible with the previous proposed bit-alterable FTL design [5] to facilitate the management of bit-alterable flash memory.
+VI. CONCLUSION
+To utilize bit-alterable feature for both lifetime capacity and read performance optimization, this article first presents the BER scheme to remove error bits via the bit-level operations. The proposed scheme introduces a read speed tracking mechanism to record the initial sensing level of each page for determining whether bit-level rewrites are required for enhancing the read speed via removing error bits. Then, the sensing latency reduction strategy is included to remove biterrors with bit-level operations for enhancing read speed and avoid excessive rewrites to conserve lifetime capacity expense. The experimental results show that the read performance can be improved by up to 25.22%, compared to conventional FTL design with no refresh operation, and the lifetime capacity expense can be reduced by 40.39% on average, when compared with page-based refresh technique. In addition, according to our evaluation results, the proposed BER scheme can also effectively avoid excessive rewriting a certain set of subpages.
+REFERENCES
+[1] J. S. S. T. Assn, Failure Mechanisms and Models for Semiconductor Devices, Standard JEP122H, 2016.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+230
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 2, FEBRUARY 2021
+
+[2] B. Chen, X. Zhang, and Z. Wang, “Error correction for multi-level NAND flash memory using reed-solomon codes,” in Proc. IEEE Workshop Signal Process. Syst., Washington, DC, USA, Oct. 2008, pp. 94–99.
+[3] TPC Benchmark, TPC Benchmark, San Francisco, CA, USA, 2018. [Online]. Available: http://www.tpc.org/information/benchmarks.asp
+[4] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. IEEE 30th Int. Conf. Comput. Design (ICCD), Montreal, QC, Canada, Sep. 2012, pp. 94–101.
+[5] H. Chang, H. Lue, Y. Chang, H. Li, K. Wang, and C. Lu, “System performance analysis of bit-alterable 3D NAND flash devices for highperformance solid-state drive (SSD) applications,” in Proc. IEEE Int. Memory Workshop (IMW), Kyoto, Japan, May 2018, pp. 1–4.
+[6] Y. Chang, J. Hsieh, and T. Kuo, “Endurance enhancement of flashmemory storage, systems: An efficient static wear leveling design,” in Proc. 44th ACM/IEEE Design Autom. Conf., San Diego, CA, USA, Jun. 2007, pp. 212–217.
+[7] Y.-H. Chang and T.-W. Kuo, “A management strategy for the reliability and performance improvement of MLC-based flash-memory storage systems,” IEEE Trans. Comput., vol. 60, no. 3, pp. 305–320, Mar. 2011.
+[8] Y.-H. Chang, P.-L. Wu, T.-W. Kuo, and S.-H. Hung, “An adaptive file-system-oriented FTL mechanism for flash-memory storage systems,” ACM Trans. Embedded Comput. Syst., vol. 11, no. 1, pp. 1–19, Apr. 2012.
+[9] C.-P. Chen, H. Lue, C.-C. Hsieh, K.-P. Chang, K. Hsieh, and C. Lu, “Study of fast initial charge loss and it’s impact on the programmed states Vt distribution of charge-trapping NAND flash,” in Proc. Int. Electron Devices Meeting, San Francisco, CA, USA, Dec. 2010, pp. 1–4.
+[10] F. Chen, M. Yang, Y. Chang, and T. Kuo, “PWL: A progressive wear leveling to minimize data migration overheads for NAND flash devices,” in Proc. Design Autom. Test Eur. Conf. Exhibit. (DATE), Grenoble, France, Mar. 2015, pp. 1209–1212.
+[11] S. Chen, Y. Chang, Y. Liang, H. Wei, and W. Shih, “An erase efficiency boosting strategy for 3D charge trap NAND flash,” IEEE Trans. Comput., vol. 67, no. 9, pp. 1246–1258, Sep. 2018.
+[12] S. Chen, C. Tsao, and Y. Chang, “Beyond address mapping: A useroriented multiregional space management design for 3-D NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 6, pp. 1286–1299, Jun. 2020.
+[13] S.-H. Chen, M.-C. Yang, and Y.-H. Chang, “The best of both worlds: On exploiting bit-alterable NAND flash for lifetime and read performance optimization,” in Proc. 56th Annu. Design Autom. Conf. (DAC ’19), New York, NY, USA, 2019, pp. 1–6.
+[14] T. Chen, Y. Chang, Y. Kuan, and Y. Chang, “VirtualGC: Enabling erasefree garbage collection to upgrade the performance of rewritable SLC NAND flash memory,” in Proc. 54th ACM/EDAC/IEEE Design Autom. Conf. (DAC), Austin, TX, USA, Jun. 2017, pp. 1–6.
+[15] Y. Du, Q. Li, L. Shi, D. Zou, H. Jin, and C. J. Xue, “Reducing LDPC soft sensing latency by lightweight data refresh for flash read performance improvement,” in Proc. 54th ACM/EDAC/IEEE Design Autom. Conf. (DAC), Austin, TX, USA, Jun. 2017, pp. 1–6.
+[16] A. Ban, “Flash file system,” U.S. Patent 540 448 5 A, Apr. 1995.
+[17] M. Huang, Z. Liu, L. Qiao, Y. Wang, and Z. Shao, “An endurance-aware metadata allocation strategy for MLC NAND flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 35, no. 4, pp. 691–694, Apr. 2016.
+[18] J. Jang et al., “Vertical cell array using TCAT(terabit cell array transistor) technology for ultra high density NAND flash memory,” in Proc. Symp. VLSI Technol., Honolulu, HI, USA, June 2009, pp. 192–193.
+[19] A. Kenshiro, “Semiconductor NAND type flash memory with incremental step pulse programming,” Granted Patent TW 338 165B, Aug. 1998.
+[20] D. Kim, K. R. Narayanan, and J. Ha, “Symmetric block-wise concatenated BCH codes for NAND flash memories,” IEEE Trans. Commun., vol. 66, no. 10, pp. 4365–4380, Oct. 2018.
+[21] S.-W. Lee, D.-J. Park, T.-S. Chung, D.-H. Lee, S. Park, and H.-J. Song, “A log buffer-based flash translation layer using fully-associative sector translation,” ACM Trans. Embedded Comput. Syst. (TECS), vol. 6, no. 3, p. 18, 2007.
+[22] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. 22nd Asia South Pac. Design Autom. Conf. (ASP-DAC), Chiba, Japan, Jan. 2017, pp. 560–565.
+[23] L.-P. Chang, “Hybrid solid-state disks: Combining heterogeneous NAND flash in large SSDs,” in Proc. Asia South Pac. Design Autom. Conf., Seoul, South Korea, Mar. 2008, pp. 428–433.
+
+[24] J. Liao, F. Zhang, L. Li, and G. Xiao, “Adaptive wear-leveling in flashbased memory,” IEEE Comput. Archit. Lett., vol. 14, no. 1, pp. 1–4, Jan.–Jun. 2015.
+[25] W. Lin and L. Chang, “Dual greedy: Adaptive garbage collection for page-mapping solid-state disks,” in Proc. Design Autom. Test Eur. Conf. Exhibit. (DATE), Dresden, Germany, Mar. 2012, pp. 117–122.
+[26] H. Lue et al., “A novel bit alterable 3D NAND flash using junctionfree p-channel device with band-to-band tunneling induced hot-electron programming,” in Proc. Symp. VLSI Technol., Kyoto, Japan, Jun. 2013, pp. T152–T153.
+[27] H. Lue et al., “A novel dual-channel 3D NAND flash featuring both N-channel and P-channel NAND characteristics for bit-alterable flash memory and a new opportunity in sensing the stored charge in the WL space,” in Proc. IEEE Int. Electron Devices Meeting, Washington, DC, USA, Dec. 2013, pp. 1–4.
+[28] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “HeatWatch: Improving 3D NAND flash memory device reliability by exploiting self-recovery and temperature awareness,” in Proc. IEEE Int. Symp. High Perform. Comput. Archit. (HPCA), Vienna, Austria, Feb. 2018, pp. 504–517.
+[29] R. Micheloni et al., “A 4Gb 2b/cell NAND flash memory with embedded 5b BCH ECC for 36MB/s system read throughput,” in IEEE Int. Solid-State Circuits Conf. Dig. Techn. Papers, San Francisco, CA, USA, Feb. 2006, pp. 497–506.
+[30] D. Narayanan, A. Donnelly, and A. Rowstron, “Write off-loading: Practical power management for enterprise storage,” ACM Trans. Storage (TOS), vol. 4, no. 3, p. 10, 2008.
+[31] W. E. Ryan, “An introduction to LDPC codes,” in CRC Handbook for Coding and Signal Processing for Recoding Systems. Boca Raton, FL, USA: CRC Press, 2004.
+[32] Samsung V-NAND, Samsung, Seoul, South Korea, 2017. [Online]. Available: http://www.samsung.com/semiconductor/products/flashstorage/v-nand/
+[33] H. Tanaka et al., “Bit cost scalable technology with punch and plug process for ultra high density flash memory,” in Proc. IEEE Symp. VLSI Technol., Kyoto, Japan, Jun. 2007, pp. 14–15.
+[34] M. Yang, Y. Chang, T. Kuo, and F. Chen, “Reducing data migration overheads of flash wear leveling in a progressive way,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 5, pp. 1808–1820, May 2016.
+[35] M. Zhang, F. Wu, X. He, P. Huang, S. Wang, and C. Xie, “REAL: A retention error aware LDPC decoding scheme to improve NAND flash read performance,” in Proc. 32nd Symp. Mass Storage Syst. Technol. (MSST), Santa Clara, CA, USA, May 2016, pp. 1–13.
+[36] C. Zhao, C. Z. Zhao, S. Taylor, and P. R. Chalker, “Review on nonvolatile memory with high-k dielectrics: Flash for generation beyond 32 Nm,” Materials, vol. 7, no. 7, pp. 5117–5145, 2014.
+[37] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. Presented 11th USENIX Conf. File Storage Technol. (FAST13), San Jose, CA, USA, 2013, pp. 243–256.
+Shou-Han Chen (Member, IEEE) received the Ph.D. degree from the Department of Computer Science, National Tsing Hua University, Hsinchu, Taiwan, in March 2018.
+After his graduation, he joined the Institute of Information Science, Academia Sinica, Taipei, Taiwan, for working as a Postdoctoral Fellow. During the meanwhile, he visited the Department of Computer Science and Engineering, Chinese University of Hong Kong, Hong Kong, as a Visiting Scholar. He has published many research papers in major highly reputable international journals and conferences, including the IEEE TRANSACTIONS ON COMPUTERS, the IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, the ACM Transactions on Embedded Computing Systems, the ACM Transactions on Storage, ACM/IEEE DAC, and ACM/IEEE ISLPED. His primary research interests include emerging nonvolatile memory and storage technologies, memory and storage systems, and the next-generation memory/storage architecture designs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: OPTIMIZING LIFETIME CAPACITY AND READ PERFORMANCE OF BIT-ALTERABLE 3-D NAND FLASH
+
+231
+
+Ming-Chang Yang (Member, IEEE) received the B.S. degree from the Department of Computer Science, National Chiao-Tung University, Hsinchu, Taiwan, in 2010, and the master’s and Ph.D. degrees from the Graduate Institute of Networking and Multimedia, National Taiwan University, Taipei, Taiwan, in 2012 and 2016, respectively.
+He is currently an Assistant Professor with the Department of Computer Science and Engineering, Chinese University of Hong Kong. His primary research interests, including emerging nonvolatile memory and storage technologies, memory and storage systems, and the next-generation memory/storage architecture designs.
+
+Yuan-Hao Chang (Senior Member, IEEE) received the Ph.D. degree in computer science from the Department of Computer Science and Information Engineering, National Taiwan University, Taipei, Taiwan.
+He is currently a Research Fellow with the Institute of Information Science, Academia Sinica, Taipei, where he served as an Associate Research Fellow from March 2015 and June 2018 and an Assistant Research Fellow from August 2011 and March 2015. His research interests include memory/storage systems, operating systems, embedded systems, and real-time systems. Dr. Chang is a Senior Member of ACM.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:53:05 UTC from IEEE Xplore. Restrictions apply.
+
+

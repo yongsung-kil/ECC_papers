@@ -1,0 +1,391 @@
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+Avoiding Burst-like Error Patterns in Windowed Decoding of Spatially Coupled LDPC Codes
+Kevin Klaiber∗, Sebastian Cammerer∗, Laurent Schmalen† and Stephan ten Brink∗ ∗ Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70659 Stuttgart, Germany
+†Nokia Bell Labs, Lorenzstr. 10, 70435 Stuttgart, Germany,
+
+Abstract—In this work, we analyze efficient window shift schemes for windowed decoding of spatially coupled low-density parity-check (SC-LDPC) codes, which is known to yield close-tooptimal decoding results when compared to full belief propagation (BP) decoding. However, a drawback of windowed decoding is that either a significant amount of window updates are required leading to unnecessary high decoding complexity or the decoder suffers from sporadic burst-like error patterns, causing a decoder stall. To tackle this effect and, thus, to reduce the average decoding complexity, the basic idea is to enable adaptive window shifts based on a bit error rate (BER) prediction, which reduces the amount of unnecessary updates. As the decoder stall does not occur in analytical investigations such as the density evolution (DE), we examine different schemes on a fixed test-set and exhaustive monte-carlo simulations based on our graphic processing unit (GPU) simulation framework. As a result, we can reduce the average decoding complexity of the naive windowed decoder while improving the BER performance when compared to a non-adaptive windowed decoding scheme. Furthermore, we show that a foresightful stall prediction does not significantly outperform a retrospective stall detection which is much easier to implement in practice.
+I. INTRODUCTION
+The general concept of spatial coupling (SC) of codes, i.e., to locally connect multiple versions of a same underlying block code, has been shown to result in powerful code constructions, with excellent bit error rate (BER) performance [1] and a universal behavior with respect to the channel frontend [2], [3]. This superior performance has been analytically shown in [2], [4] and it turns out that, for carefully chosen coupling and code parameters, the belief propagation (BP) decoding threshold converges towards the maximum a posteriori (MAP) decoding threshold of the underlying block code. This effect is known as threshold saturation [2]. However, in practice, the price to pay is typically a high number of BP decoding iterations when decoded with the naive version (block-based) of the BP decoder leading to high decoding complexity due to many unnecessary node updates.
+To overcome this limitation of spatially coupled low-density parity-check (SC-LDPC) codes, a windowed decoding scheme has been proposed in [5] and further analyzed in [6], [7]. It turns out that windowed decoding does not significantly degrade the decoding thresholds nor the BER performance for carefully chosen decoder parameters. Although remarkable decoding thresholds are analytically achieved for the windowed decoder, practically choosing these decoder parameters,
+
+such as the number of iterations per window shift and the window size, is a non-trivial task and provides more degrees of freedom than in the conventional, block-based decoder. The windowed decoder uses the fact that the BER per spatial position converges in a wavelike manner, i.e., subsequent blocks can only be decoded if the previous blocks have been successfully decoded. Therefore, it is sufficient to only update nodes within a few spatial positions and shift the active decoding window whenever a certain block is successfully decoded or a maximum number of iterations reached. Contrary to full BP decoding, windowed decoding requires knowledge about the active positions during decoding or, in other words, the decoder needs to track the decoding wave.
+In a straightforward implementation of windowed decoding, the window is sometimes shifted although a spatial position is still erroneous and, thus, decoding of all following blocks inherently fails, i.e., decoding is stuck. In this work, we focus on SC-LDPC codes, where this effect has been first reported in [8], however, similar observations have been later reported for braided codes in [9]. If not further analyzed, this effect simply shows up as an increased BER in the signalto-noise ratio (SNR) range above the BP threshold of the underlying block code, leading to a shifted waterfall region of the SC-LDPC code. However, when carefully looking at the error distributions, this effect causes a burst-like error distribution only in several decoded codewords which are only partly decoded.
+We propose and compare adaptive windowed decoding schemes with respect to the window position and number of iterations to avoid burst-like errors. Besides the exploration of adaptive window shift schemes, the main objective of this work is to examine whether it is possible to predict the occurrence of decoder stalls. This could lead to a further reduction of decoding complexity due to omitting unnecessary interventions to avoid a decoder stall. An empirical study of the problem seems promising, as the effect does not show up in the conventional threshold analysis. To enable a more systematic analysis of the problem, we create a testset consisting of noisy codewords causing decoder stalls for the naive windowed decoder. Finally, we use our test-set to answer the question whether a foresightful stall prediction does significantly outperform a retrospective stall detection.
+
+978-1-5386-7048-4/18/$31.00 ©2018 IEEE 1 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+II. SC-LDPC AND WINDOWED DECODING
+To clarify notation, we provide a short SC-LDPC introduction, for further details we refer to [1], [2]. SC-LDPC codes
+
+10−1
+
+pwin = 32 pwin = 35 pwin = 38
+
+pwin = 33 pwin = 36
+
+pwin = 34 pwin = 37
+
+BER
+
+can be seen as low-density parity-check (LDPC) codes that
+
+have a superimposed convolutional structure. The unit-memory
+
+SC-LDPC code we consider in this work has a block-type
+
+parity-check matrix Hsc with matrix H0 in blocks indexed by positions (j, j) and matrix H1 in blocks indexed by position (j+1, j) for j ∈ (1, L) and zero matrices in all other positions. The sparse sub-matrices Hi of the SC-LDPC parity-check matrix Hsc have size dim Hi = m × n. Assuming terminated SC-LDPC codes, the overall code length can be adapted by the replication factor L, whereby the overall block length amounts to Ln. In this work, we use the same SC-LDPC code proposed in [8] and, thus, reference the interested reader to
+
+10−2
+123456789 Spatial position inside window
+Fig. 1. BER within a window decoder with fixed I = 3 iterations of size w = 9 for several spatial positions during a decoder stall. The decoder gets stuck at around position 37.
+denotes the current window position, i.e, blocks in (pwin, pwin+ w + µ − 1) are active. In the following, we assume µ = 1.
+
+[8] for further details. The most important characteristics of this code are the code rate R ≈ 0.8 and degree distribution dv = 5, dc = 25. Furthermore, the code is non-uniformly coupled [10] and optimized for a good threshold. Besides it has unit memory µ = 1 and the two sub-matrices H0 and H1 are of size dim H = 960 × 4800.
+
+B. Decoder stall
+Contrary to full BP decoding, windowed decoding may suffer from an effect called decoder stall (see [8] and similarly [9]) caused by unrecoverable errors within the active part of the decoding window. Due to this effect, the decoding performance decreases significantly as subsequent sub-blocks
+
+A. Windowed Decoding
+
+rely on these erroneous blocks. Thus, the observed effect at
+
+If properly terminated, SC-LDPC codes can be decoded the decoder output is similar to burst-like error patterns. We
+
+by the conventional BP algorithm based on Hsc, in the following referred to as full BP decoding. However, in the context of large replication factors L or streaming based data transmission, this procedure is not feasible due to decoding complexity and undesirable high latency. Both problems can be solved by introducing a windowed decoder [6], i.e., the message updates are only conducted within a certain window of size w. This decoding window can now be shifted to the next position after having performed I iterations inside the window while keeping the messages after each window shift. The number of windows Nw denotes the required shifts to decode all spatial positions L.
+We define the average computational complexity C through the number of iterations per window Ii and the window size wi of window i as
+
+1 Nw
+
+C
+
+=
+
+Nw
+
+Ii
+i=1
+
+· wi.
+
+define the stall position s as the first erroneous block after
+
+decoding, i.e.,
+
+
+
+i+η−1
+
+s = arg min 
+
+i j=i
+
+ = η {Pe,post,j >δ}
+
+where Pe,post,j denotes the BER after decoding at spatial position j and δ is a fixed threshold to exclude the case of error floor patterns, e.g., due to absorbing sets. Further, η defines the amount of consecutive erroneous blocks until a stall is marked (e.g., η = µ) and {x>δ} denotes the indicator function, i.e., returns 1 if x > δ and 0 otherwise. Whenever this stall occurs at start position s, all subsequent L − s blocks are typically erroneous without further resynchronization strategy (e.g., as proposed in [9]). Using [8]
+
+Pe,post ≈
+
+1 − E[s] L
+
+· Pe,pre · Pstall.
+
+(2)
+
+we can approximate the BER after decoding, influenced by the
+
+The decoding window can be defined either from variable node decoder stall. The required parameters are the average start
+
+(VN) or check node (CN) perspective. Throughout this work position of the decoder stall E[s], the average BER before
+
+we opt for the CN perspective, leading to an underlying parity- decoding Pe,pre (i.e., the BER at the channel output) and the
+
+check matrix
+
+
+
+
+
+Hµ . . . H1 H0
+
+Hw = 
+
+Hµ . . . H1 H0 ... ... ... ...
+
+
+
+probability of occurrence of a decoder stall Pstall.
+It is important to mention that this problem occurs only in the region between the wave-threshold Eb/N0∗,coupled and (1) the macro-threshold Eb/N0∗,macro [3], i.e., the BP-threshold of the underlying block code. For the code used throughout this
+
+used
+
+within
+
+the
+
+windowed
+
+Hµ . . . H1 decoder. Further,
+
+H0 pwin ∈
+
+wm×(w+µ)n
+(1, Nwin)1
+
+work, asymptotically this region is between Eb/N0∗,coupled = 2.117 dB and Eb/N0∗,macro = 2.896 dB. Above this region, for sufficiently high SNR2 the decoder can recover.
+
+1With abuse of some notation, we assume blocks outside (1, L) are virtual
+positions, initialized with known values. Thus, Nwin > L, e.g. for the adaptive iteration decoder and fixed w there are Nwin = L + w + µ − 1 windows.
+
+2Note that the thresholds are asymptotic thresholds and, thus, only provide first approximation in the finite length regime assuming infinite iterations and n → ∞.
+
+2 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+... ... H1 H0
+
+t=0
+
+H1 H0 t = 1
+
+H1 H0 t = 2
+
+H1 H0
+
+... ... H1 H0
+
+t=0
+
+inc. I
+
+H1 H0 t = 1 t=2
+H1 H0 t = 3
+
+H1 H0
+
+... ... H1 H0 t = 1 shift back H1 H0 t = 0
+shift forward H1 H0 t = 2 H1 H0
+
+H1 H0 ... ...
+
+H1 H0 ... ...
+
+H1 H0 ... ...
+
+spatial pos.
+
+spatial pos.
+
+spatial pos.
+
+(a) Conventional Windowed Decoder
+
+(b) Adaptive Iterations Decoder Fig. 2. Different window decoding schemes.
+
+(c) Window Shift Decoder
+
+The underlying effect for a windowed decoder with I = 3 fixed iterations per window is shown in Fig. 1. In this example the BER-distribution inside different windows pwin around the stall start position is shown. The decoder gets stuck at around position s = 37. First, it is important to mention that at least the left-most position inside the window has to be error-free as this equals the decoder output. As the performed I = 3 iterations per window shift are not enough for successful decoding, the BER of the first spatial position within the decoder starts to increase (i.e., the decoder “loses track of the wave”). An increased number of I = 4 iterations solves the problem, but also increases the average decoding complexity by 33%.
+C. Test-set creation and evaluation
+The occurrence of such decoder stalls is rare but contributes significantly to the BER as many spatial positions are effected. As this effect does not show up in the density evolution (DE) and an analytical prediction does not exist so far, we decided to evaluate different approaches based on a test-set of noisy codewords. This test-set is created using a windowed decoder implemented in CUDA that is capable of fast decoding using graphic processing units (GPUs). Whenever the decoder stalls, the noisy codeword is saved in the test-set. The final test-set contains 2,000 codewords after passing an AWGN channel with SNRb = 2.86 dB. The windowed decoder uses a window size of w = 9 and I = 3 iterations per window. For the testset, we find E[s] = 57.79 (L = 99). The starting positions s is approximately uniformly distributed for s ∈ [10, 90], with lower stall probability at the boundaries due to termination.
+
+low. Note: we do not consider larger window sizes w as this would inherently require more hardware units.
+
+A. Stall detection
+
+To allow adaptive windowed decoding, the decoder needs to track the decoding progress continuously. This can be done by two different approaches:
+1) Parity-check-based: verify whether all parity-checks within a certain window-position are fulfilled or not.
+2) Log likelihood ratio (LLR)-based: estimate the softBER based on the message log likelihood ratios (LLRs) according to [11]
+
+1K
+
+1
+
+Pe,est
+
+=
+
+K
+
+k=1
+
+. 1 + exp(|Lk|)
+
+(3)
+
+The second method uses an estimation of the BER within each sub-block. Due to this fact there can be no hard decision rule, but a threshold δBER used for stall detection.
+In our experiments, we observe that a decision only based on the first spatial position within the decoder does not yield reliable decisions. Thus, we evaluate the decoding progress at third spatial position (keep in mind: µ = 1) leading to more robust decisions. An intuitive explanation can be given by the fact that typically the first positions within the decoder window are almost error-free (e.g., see pwin = 32 in Fig. 1), while the third position is more sensitive to looming stalls. Note that the method used for stall detection is independent of the following decoding algorithms.
+
+B. Adaptive iterations decoder (AID)
+
+III. ADAPTIVE WINDOW DECODING SCHEMES
+An intuitive explanation for Pstall is the observation in Sec. II that in a few (rare) cases, the number of performed iterations is not sufficient for this specific noise realization (see Fig. 1, when using I = 4 instead of I = 3 fixed iterations, decoding is successful), i.e., the decoder needs a locally increased number of iterations. Obviously, an increased fixed number of iterations solves the problem, but also increases the decoding complexity. In the following, we analyze different strategies to decrease Pstall while keeping the overall decoding complexity
+
+The first adaptive decoder uses a trivial concept of increasing the number of iterations I to prevent decoder stalls as described in Alg. 1 and Fig. 2. The value Imin defines the minimum number of iterations per window that are performed in case there is no decoder stall detected. In the other case the decoder can carry out at most Imax iterations per window to prevent from a decoder stall.
+C. Window shift decoder (WSD)
+The second adaptive decoder uses a different approach by shifting the window backwards as described in Alg. 2 and
+
+3 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+Algorithm 1 Adaptive iterations decoder
+Input: Imin min. number of iter. per window Imax max. number of iter. per window for pwin = 1 : Nwin do I ←0 while I < Imax do CN update, VN update and stall detection if I ≥ Imin and stall detection == false then break end if I ←I+1 end while end for
+
+Algorithm 2 Window shift decoder
+
+Input:
+
+Imin min. number of iter. per window
+
+Imax max. number of iter. per window
+
+nb
+
+number of skipped blocks
+
+for pwin = 1 : Nwin do
+
+I ←0
+
+while I < Imax do CN update, VN update and stall detection
+
+if I == Imin and stall detection == false then
+
+break
+
+else if I == Imin then Pstall ← pwin − nb
+end if
+
+I ←I+1
+
+end while
+
+end for
+
+Algorithm 3 Wave tracking decoder
+
+Input:
+
+Imin min. number of iter. per window
+
+Imax max. number of iter. per window
+
+nb
+
+number of skipped blocks
+
+for pwin = 1 : Nwin do
+
+flag ← 0
+
+I ←0
+
+while I < Imax do CN update, VN update and stall detection
+
+if I == Imin and stall detection == false then break
+
+else if I == Imin then pwin ← pwin − nb flag=1
+
+end if
+
+if I > Imin and stall detection == false and flag==1 then
+
+pwin ← pwin + nb flag=0
+
+else if I > Imin and stall detection == false then pwin ← pwin + 1
+end if
+
+I ←I+1
+
+end while
+
+end for
+
+10−1
+
+WD, I = 3 WD, Itemp = 4 Wave Tracking
+
+10−2
+
+Probability of stall
+
+Fig. 2. The number of iterations per window and the window size are constant. The parameters Imin and Imax follow the same definition as in Alg. 1 while another parameter nb is introduced that denotes the number of positions the window is shifted backwards in case of an emerging decoder stall.
+D. Wave tracking decoder (WTD)
+The third adaptive decoder concept is an enhanced version of the window shift decoder. The intuition behind this decoder is to shift the window according to the position of the decoding wave as explained in Alg. 3 and Fig. 2. Thus, this decoder can shift the decoding window backwards and forward based on the position of the decoding wave. Therefore, the decoding wave is mostly kept on the left inside the decoding window and unnecessary updates of error-free positions are minimized. The input parameters of the decoder are the same as in Alg. 2.
+IV. STALL PREDICTION VS. STALL DETECTION
+So far, all proposed decoders rely on a stall detection, i.e., the decoder acts whenever a stall is likely in progress. However, it may require more iterations to recover from such a state in contrast to a decoder which predicts potential issues
+
+5
+
+10 15 20 25 30
+
+Start position of decoder stall s
+
+Fig. 3. Distribution of decoder stalls of different decoders for manipulated block 10 with SNRb,manip = 2.1 dB, SNRb = 2.86 dB, I = 3 and w = 9.
+
+already based on its input channel LLRs. To answer this question, we conduct the following experiment. We manually create codewords that lead to decoder stalls. This is achieved by manipulation of the SNR within single spatial position of the code word (the position is known during this experiment). The parameters of this experiment are the same as used for test-set creation, however, we only use noisy codewords (i.e., a specific noise realization) which can be successfully decoded with the naive windowed decoder. Now, we replace block 10 (to avoid influences of the boundary) by adding noise such that block 10 has a reduced SNRb,manip, i.e., we add artificial noise. Afterwards, the decoder has to decode the manipulated codewords. This procedure guarantees that the decoder stall is caused by the corrupted block at spatial position 10.
+In Fig. 3, the distribution of decoder stalls is visualized for different decoders. In the first case, using constant I = 3, we can notice that only approximately 18% of the manipulated codewords cause the decoder to stall (strongly depending on
+
+4 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+TABLE I AVERAGE COMPLEXITY OF DIFFERENT WINDOWED DECODERS FOR
+SNRB = 2.86 dB AND FIXED w = 9
+
+Decoder WD, I = 3 WD, I = 4 Adaptive Iterations Window Shift Wave Tracking
+
+Avg. Complexity 3 ·w 4 ·w 3.01 ·w 2.77 ·w 2.64 ·w
+
+SNRb,manip of course). The more interesting observation is the distribution of the decoder stall start position s. The average value amounts to E[s] = 11.1. This is something we could have expected. But somehow to our surprise, the corrupted block also causes decoder stalls that are even more than a complete decoding window length away.
+Now, we use the fact that we know which position causes the decoder to stall and check if this can reduce the frequency of stall occurrence. Therefore, we temporarily increase the number of iterations to I = 4 starting at position Ls = 8 until Le = 12. Thereby, the frequency of stall occurrence can be reduced by approximately 40%, but the tail-like distribution of s is still present. Finally, the wave tracking decoder (stall detection) does not show such a behavior. This leads to the conclusion that predicting stalls is not necessarily leading to successful prevention of decoder stalls. The reason is that even if we know which position causes the decoder stall, we can state that it is more likely to stall next to the predicted position, but due to the distribution of s also at subsequent positions. With a pure prediction, the decoder would have to increase the number of iterations to I = 5 whenever a stall may occur. However, in many cases I = 4 is simply sufficient and, thus, the average complexity of a predictive decoder is larger than its retrospective counterpart.3
+
+V. BER PERFORMANCE AND COMPLEXITY
+The BER performance of all proposed decoders is shown in Fig. 4. Further, Table I shows the average complexity for the different decoding schemes. All decoders use the LLR-based stall detection with δBER = 10−7. The fixed iteration decoders either suffer from poor BER performance or significantly higher complexity of approximately 33%. The adaptive iteration decoder improves both quantities, however, a simple adaptive iteration windowed decoder does not provide the best trade-off. Better results are achieved by a window shift. The intuition behind can be given by looking at the decoding wave within the decoder (see Fig. 1): the largest LLR updates are expected in the center of the wave. As the iterative decoder increases the number of iterations whenever the BER decreases in the first positions (i.e., the decoder starts losing track of the wave) the LLR updates are, on average, less effective. Thus, the decoder is conceptually disadvantaged when compared to a window shift decoder. Finally, the Wave Tracking approach combines the best BER performance with the (almost) lowest decoding complexity.
+
+10−1
+
+10−2
+
+BER
+
+10−3 10−4 10−5 10−6
+
+WD, I = 3 WD, I = 4 Adaptive Iterations Window Shift Wave Tracking
+
+2.5
+
+2.6
+
+2.7
+
+2.8
+
+2.9
+
+SNRb [dB]
+Fig. 4. BER performance for different decoders.
+
+VI. CONCLUSIONS AND OUTLOOK
+In this work, we have analyzed different adaptive windowed decoding strategies and their influence on the decoding performance. It turned out that an adaptive window shift performs significantly better, i.e., yields the same Pstall while having lower overall complexity. We have shown by experiment that a foresightful stall prediction does not necessarily outperform an retrospective stall prediction, which allows easier implementations. As a result, the average decoding complexity of the Wave Tracking decoder could be decreased by 34% when compared to a windowed decoder with four fixed iterations.
+
+REFERENCES
+[1] M. Lentmaier, A. Sridharan, D. J. Costello Jr., and K. S. Zigangirov, “Iterative decoding threshold analysis for LDPC convolutional codes,” IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 5274–5289, 2010.
+[2] S. Kudekar, T. Richardson, and R. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief propagation,” IEEE Trans. Inform. Theory, vol. 59, no. 12, pp. 7761–7813, 2013.
+[3] L. Schmalen and S. ten Brink, “Combining spatially coupled LDPC codes with modulation and detection,” in Proc. ITG SCC, 2013.
+[4] A. Yedla, Y.-Y. Jian, P. S. Nguyen, and H. D. Pfister, “A simple proof of threshold saturation for coupled scalar recursions,” in Proc. Internat. Symp. Turbo Codes. IEEE, 2012, pp. 51–55.
+[5] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. VanelliCoralli, and G. E. Corazza, “Windowed decoding of protograph-based LDPC convolutional codes over erasure channels,” IEEE Transactions on Information Theory, vol. 58, no. 4, pp. 2303–2320, 2012.
+[6] A. R. Iyengar, P. H. Siegel, R. Urbanke, and J. K. Wolf, “Windowed decoding of spatially coupled codes,” IEEE transactions on Information Theory, vol. 59, no. 4, pp. 2277–2292, 2013.
+[7] N. Ul-Hassan, A. E. Pusane, M. Lentmaier, G. P. Fettweis, and D. J. Costello Jr., “Non-uniform window decoding schedules for spatially coupled ldpc codes,” IEEE Transactions on Communications, vol. 65, no. 2, pp. 501–510, 2017.
+[8] L. Schmalen, D. Suikat, V. Aref, and D. Ro¨sener, “On the design of capacity-approaching unit-memory spatially coupled LDPC codes for optical communications,” in ECOC 2016; 42nd European Conference on Optical Communication, 2016, pp. 1–3.
+[9] M. Zhu, D. G. M. Mitchell, M. Lentmaier, D. J. Costello Jr., and B. Bai, “Combating error propagation in window decoding of braided convolutional codes,” CoRR, vol. abs/1801.03235, 2018. [Online]. Available: http://arxiv.org/abs/1801.03235
+[10] L. Schmalen, V. Aref, and F. Jardel, “Non-uniformly coupled LDPC codes: Better thresholds, smaller rate-loss, and less complexity,” in Proc. IEEE Int. Symp. on Inform. Theory, June 2017, pp. 376–380.
+[11] P. Hoeher, I. Land, and U. Sorger, “Log-likelihood values and Monte Carlo simulation-some fundamental results,” in 2nd International Symposium on Turbo Codes and Related Topics, 2000, pp. 43–46.
+
+3Remark: Obviously a combination of both methods may further improve the performance.
+
+5 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+

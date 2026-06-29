@@ -1,0 +1,581 @@
+Fifty-third Annual Allerton Conference Allerton House, UIUC, Illinois, USA September 29 - October 2, 2015
+
+Energy-Adaptive Codes
+
+Haewon Jeong (haewon@cmu.edu) School of Electrical and Computer Engineering
+Carnegie Mellon University
+
+Pulkit Grover (pulkit@cmu.edu) School of Electrical and Computer Engineering
+Carnegie Mellon University
+
+Abstract— We provide the first constructions of a new family of error-correcting codes called “energy-adaptive codes.” These codes are designed to enable adaptive circuit implementations that minimize the total system-level energy based on varying distances and target error probabilities. Recent work has explored fundamental limits and practical strategies for minimizing total (transmit + circuit) power, considering both power consumed in computational nodes as well as wires in the circuit. It is now established that to minimize total power, code choice and circuit-design should change with communication distances and/or target error probability. Motivated by circuit area constraints, the energy-adaptive codes adapt energy consumption as distances and/or target error probability change. These codes shrink and expand the wiring area they occupy as demands on the system change, adjusting the hardware by turning on and off non-local wires in the circuit. The code constructions are hierarchical, and use QC-LDPC codes as the basis. We estimate the decoding power savings attained by use of these codes through simulation results. Such codes can be of increasing utility as we enter the era of 1000 devices per person where designing the skilled labor for obtaining optimized designs for each system will simply be unavailable. While our first constructions are admittedly simplistic, the goal of the paper is to bring this new problem to the attention of the coding-theory community.
+I. INTRODUCTION
+Recent work [1]–[6] has explored fundamental limits and practical strategies for communication minimizing total (transmit + circuit) power, considering both power consumed in computational nodes as well as wires in the circuit. Experimental work has also verified that wiring power is a substantial fraction of power consumed in the decoding circuitry [4], and code-design that ignores wiring power can consume more power than is needed [5], [7], [8]. It is now well understood that to minimize total power, code choice should change with communication distances and/or target error probability: the energy-optimal codes for short distance communication, or higher error probability, are “simpler” codes (e.g. lower girth, smaller blocklength) requiring smaller circuit energy even at the cost of increased transmit energy. At long distances, energy-optimal codes operate closer to capacity because circuit power matters less and less in an overall system-level power optimization1.
+In modern systems, communication distance can vary from a few meters to a few kilometers, the target error probability can vary, for e.g., from 10−4 to 10−15, and the SNR and the code-rate can also vary depending on the channel
+1In some cases, such as downlink in mobile communications, circuit power matters even at long distances because it is constrained by the cellphone’s battery.
+
+conditions and the application requirements. Even though it is demonstrably better to use optimized codes for different situations, with circuit designs that adapt accordingly, circuit area constraints limit us from implementing one decoder for each different situation. As we enter the era of 1000 wireless devices per-person and the Internet of Things, not only will we be constrained by the circuit area, the current method of code choice and circuit design itself will need to be overhauled. Currently, optimized design of decoders for each application requires multiple Ph.D. theses (see, e.g., [9]). This resource of highly skilled personnel will simply be unavailable for tens of thousands of systems that will exist, which motivates design of a single universal code and circuit that adapts its rate and energy to suit the system requirements for as many systems as possible. It is conceivable that such a universal system can then be optimized by the available skilled personnel.
+This motivates us to come up with a new family of codes which we call “energy-adaptive” codes. These codes can be implemented using a single decoder, but they enable the implementation to adapt its decoding energy to suit different communication requirements. A similar concept, “rate-adaptive codes” has been used to overcome the circuit area constraints when the communication rate requirements are changing [10]–[12]. However, the questions we ask in energy-adaptive codes and rate-adaptive codes are fundamentally different. Rate-adaptive codes aim to adapt to different communication rates using the same hardware to encode and decode. In the case of energy-adaptive codes, communication rate is fixed but the goal is to design adaptive codes for efficient power usage in decoder circuits. Also, the degree of adaptivity needed for rate-adaptive codes could be much larger than that for rate-adaptive codes since the possible variation is even larger, because communication distances and error-probabilities can together have a significantly larger range of variation than the rate (which is a single parameter).2
+Even though we focus in this paper on adapting to different error-probabilities, such codes can be applicable to situations where one chip should handle both long-distance and shortdistance communication. For instance, servers in data centers
+2One might think that it is enough to use the same code but use different decoding algorithms, such as message passing algorithms with different number of iterations or different number of bits per message. The first issue (different number of iterations) is examined in this paper. The second (different bits per message) will not address our problem because it will still require different circuits to be implemented.
+
+978-1-5090-1824-6/15/$31.00 ©2015 IEEE
+
+132
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+(a) Shannon-theoretic plot of code performance.
+
+(b) A figure found in the documentation of 10 GBASE-T standardization. This shows that the code choice for the standard was guided by traditional Shannon-theoretic view.
+
+Fig. 1. The figure shows how current IEEE 10-GBASE-T standard relies on traditional Shannon-theoretic view of SNR vs BER, where a more sophisticated approach that includes another decoding energy vs BER, or total circuit energy vs BER curve, is needed. These curves are obtained in our work using a Wire Model of decoding power.
+
+need to communicate to a worst-case distance 100 meters, even though the average link-length is only 14 meters [13], [14]. While the current code choice, an RS-LDPC code [9], is a fixed code chosen for its performance at the worst-case distance, can design of a flexible code lower the energy requirements? Can use of energy-adaptive codes reduce energy requirements for distributed machine learning, given that the error-probability requirements in these algorithms are not very severe (thereby allowing the communication error probability to be larger as well). Similarly, in wireless communication, a mobile user has distances that change as the user moves. Can the system adapt its circuit and transmit energy to minimize the total system energy? A flexible code design can enable such adaptation without an increase in hardware area.
+The proposed energy-adaptive codes shrink and expand the wiring area they occupy as demands on the system change, adjusting the hardware by turning on and off non-local wires in the circuit. In this paper, we use quasi-cyclic low density parity check (QC-LDPC) codes [15], [16] as our basis and add hierarchical structures to them. The focus on wiring area comes from our prior work [2], [4], [17], which shows that wiring energy-costs are a significant fraction of total energy, and dominate node-energy as target error-probability is lowered to zero. Our hierarchical constructions with the different levels of hierarchy in a code enable adaptively turning off the wires at higher levels when requirements on the system are less stringent. By giving an explicit layout of message-passing decoding circuitry, we will show that how this code construction enables creating local and global structures on the circuit. As the demands on the system increase (in lowering SNR or reducing target error probability), higher levels of hierarchy are used which turn on increasingly longer, global wires.
+A general definition of hierarchical QC-LDPC codes was introduced in [18]. While our code construction can be viewed as a special case of these codes, the purpose of our
+
+codes is to minimize the decoding circuit energy adaptively, while the goal in [18] was to build high-girth codes.
+It is natural to ask whether rate-adaptive codes be easily modified to achieve energy-adaptive codes. The difficulty with reducing energy consumption is that one needs to reduce not just the number of operations, but also the wiring energy [2], [4] that these codes do not target. As a consequence, the average wire length that is used in computation does not reduce as the requirements on the required performance are lowered (e.g. through higher SNR or relaxed target error probability). While there are code constructions that optimize wiring lengths for a given performance (e.g. [7], [8], [19] etc.) as well as codes that reduce computational overhead for wiring by explicitly making code design such that interconnections are simple to route, these codes are not adaptive.
+In Section III, we provide our hierarchical code construction. In Section IV, we provide simulation results for a 2-level hierarchical design that show the advantage of our hierarchical constructions over an LDPC code designed for the worst-case error-probability with the same overall degree distribution. For a fair comparison with this nonadaptive code, we still allow the nonadaptive code to change its number of iterations in response to changing target errorprobability. We show that when the target error-probability happens to be higher than worst-case target error probability, the proposed codes save significant energy (up to a factor of 2). We expect gains as communication distances change, and increased gains as the number of levels of hierarchy are increased (with careful design), and this is a problem currently under investigation. We discuss this and further future directions in Section V.
+II. HOW MUCH ENERGY CAN WE SAVE IN THE REAL WORLD?
+Does an inefficiency of not using adaptive codes really exist in real-world practical systems? We examine this through the example of data-center communication networks. Let
+
+133
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+us look into how an error-correcting code for “IEEE 10 GBASE-T” standard (for communication over twisted-pair copper wires) was chosen.
+Fig. 1(a) can be found in a publicly available presentation [20] which is a part of the IEEE records on the development of the 10 GBASE-T standard. Comparing with Fig. 1(b), which is a classical Shannon-theoretic representation (the “Shannon-waterfall curves”) makes it clear that these codes were chosen because of their good performance in terms of lowering transmit power. That is, they perform close to the channel capacity. However, as we discussed, this Shannon-theoretic view is insufficient to understand the total system energy since it only focuses on transmit power, while the total system energy gets dominated by encoding/decoding circuit energy at small distances, or as the target error probability approaches 0. Hence, the code chosen merely by this analysis leads to a highly inefficient choice of a code.
+Furthermore, this code choice was driven by the worstcase distance of communication, 100 meters, while the average distance in data centers is only 14 meters. If we use simpler codes for shorter distances of communications, we can save a considerable amount of decoding energy. In fact, analysis in [13] suggests that up to 10x power savings in data-center networks are possible through proper code-design and system optimization. Further, data-centers consume 2% of the world’s electricity, and data-center networks consume 20-50% of the entire data-centers’ energy [13]. Thus a proper code-choice and corresponding circuit design for data-center networks will make a nonnegligible reduction to energy levels on a global scale!
+Finally, this is just one standard. Data center networks use many different technologies and standards, and there are many networks beyond data-center networks that consume significant energy (e.g. set-top boxes). The energy requirements for Information and Communication Technologies exceed 10% of the world energy, and are quickly increasing. Thus this problem is of increasing importance.
+III. CODE DESIGN, AND WIRING AREA AND ENERGY ESTIMATES
+A. Code Design
+In this section, we describe how we design energy-adaptive codes. Since codes are built based on the QC-LDPC codes, we will briefly review on QC-LDPC codes. Then adaptive codes with a hierarchical structure will be introduced. We will then discuss models and estimates of wiring area and energy consumption of decoder circuits.
+QC-LDPC codes are characterized by a parity-check matrix which consists of small submatrices that can be either a circulant permutation matrix or an all-zero matrix. A circulant permutation matrix is a square matrix which shifts an identity matrix to the right by a certain integer called a cyclic shift value. If a code is a (dv, dc)-regular QC-LDPC code with code length dc · q, its parity check matrix can be written as
+
+ I(p1,1) I(p1,2) · · · I(p1,dc ) 
+
+H
+
+=
+
+ 
+
+...
+
+
+
+...
+
+...
+
+...
+
+ 
+
+(1)
+
+
+
+I(pdv,1) I(pdv,2) · · · I(pdv,dc )
+
+where I(pi,j) is a q-by-q circulant permutation with a cyclic shift value of pi,j. In other words,
+
+1 I(pi,j )m,l =
+0
+
+if m + l + pi,j ≡ 0 mod q (2)
+otherwise
+
+where 0 ≤ m, l ≤ q − 1 are the row and column index of the submatrix. To incorporate all-zero matrices in the notation given in (1), we let pi,j to be ∞ and let I(∞) denote an all-zero matrix [21]–[23]. Any parity check matrix of QCLDPC codes can be fully described by its cyclic shift values i.e, pi,j’s.
+Unlike fully random LDPC codes, QC-LDPC codes are constructed in a more structured way using circulant permutation matrices. This reduces the wiring complexity of encoders and decoders, simplifying the hardware design while still enabling large girth codes [15], [24]–[26]. For these reasons, they are widely adopted as wireless communication standards such as IEEE 802.16e (WiMAX), IEEE 802.11n (Wireless LAN), and IEEE 10-Gbase-T (for wired Ethernet, including data-center networks).
+Now, we propose a modified version of conventional QCLDPC codes which has hierarchical structures that make the code circuit-energy-adaptive. A hierarchical structure was devised to easily adjust the code length just by turning off higher levels in the hierarchy to achieve different error rate requirement. This is one possible construction of energyadaptive codes which can adapt its decoding energy, increasing or reducing depending on the application’s requirements.
+A simple 2-level hierarchical code is shown in Fig. 2a. Level 1 blocks can be thought as local structures and the Level 2 block as a global structure which connects two local blocks of Level 1. In Level 1, variable nodes are divided into equal halves and variable-to-check edges connect the nodes only within those separated blocks. Check nodes connecting variable nodes from the both Level 1 blocks appear in the Level 2 block.
+Detailed explanation of the construction is as follows. Each blocks in Level 1 and Level is a QC-LDPC code with length n/2 and n, and the degrees (dv1, dc1) and (dv2, dc2), respectively. We do not need any assumption on our code to be a regular LDPC code, but for ease of analysis, we will use regular codes with dv1 + dv2 = dv, dc1 = dc2 = dc to make the whole code to be a (dv, dc)-regular code. In this setting, the Level 1 sub-codes can be written as
+
+ I(p1,1) I(p1,2) · · · I(p1,dc ) 
+
+H1
+
+=
+
+ 
+
+...
+
+
+
+...
+
+...
+
+...
+
+ 
+
+(3)
+
+
+
+I(pdv1,1) I(pdv1,2) · · · I(pdv1,dc )
+
+134
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+(a) 2-level hierarchical code
+
+(b) 3-level hierarchical code
+
+(c) l-level hierarchical code
+
+Fig. 2. Parity check matrices of hierarchical QC-LDPC codes. We can build a hierarchical code with the arbitrary number of levels l by repeatedly layering lower-level codes.
+
+and Level 2 sub-codes as
+
+ I(p1,1) I(p1,2) · · · I(p1,2dc ) 
+
+H2
+
+=
+
+ 
+
+...
+
+
+
+...
+
+...
+
+...
+
+ 
+
+(4)
+
+
+
+I(pdv2,1) I(pdv2,2) · · · I(pdv2,2dc )
+
+Since there are total of 2dc submatrices per row in Level 2, only half of them are permutation matrices and the rest half are all-zero matrices, i.e, pi,j = ∞ for half of these submatrices in each row of H2.The locations of all-zero submatrices are decided randomly.
+The key idea is to divide the code into local and global structures so that we can save the decoding energy by using only local structures when the desired accuracy is not too high. This construction makes it possible to save substantial energy when we are only decoding the Level 1 sub-code since we can turn off all the long wires in the global structure. In coding-theory literature, there is a class of codes called “locally decodable codes” [27], which sounds similar to our concept of energy-adaptive codes. However, in their goals, these codes are quite different: locally-decodable codes aim at recovering any bit using any set of neighbors of certain size; whereas energy-adaptive codes proposed here prefer using fixed local neighborhoods that are geographically nearby, thereby reducing the required wire lengths.
+We can further extend a simple 2-level structure to a hierarchical code with more levels. Fig. 2b shows how we build a 3-level adaptive code by using 2-level codes as subblocks and adding Level 3 block to interconnect those two sub-blocks. By doing this layering repeatedly, we can make a code with the arbitrary level of hierarchy as shown in Fig. 2c
+Adding more levels allows us to have a more refined control of the flexibility of codes. While there are benefits to increasing the number of hierarchical levels, it comes with its own costs: the code length increases exponentially in the number of levels, and the degrees add up as well. For regularLDPC codes, it is well known that under belief propagation decoding, the performance does not improve beyond a certain degree (for a fixed rate). Hence, we believe we will need to
+
+explore irregular LDPC constructions to allow incorporating more hierarchical levels.
+B. Circuit Energy and Wiring Area Estimates
+In this subsection, we will explain how we estimate the energy consumed by a decoding circuit. To give an asymptotic bound on the decoding circuit energy, we will follow Thompson’s VLSI theory and use a simple wire-andnode model to calculate circuit area. This is the model used in [17], [28]. In this model, the total energy consumed is given as follows:
+
+Etot = ρwireAwiresT
+
+(5)
+
+where ρwire is a unit area power consumption per unit time, Awire is area occupied by all the wires and T is the total computation time. As we are considering decoding circuits, T here can be thought as the number of message passing iterations. As you can see from the equation, energy consumed by nodes are ignored and only wiring energy is considered. This is a good approximation of circuit energy since it is known that wiring power is dominant in the total circuit power consumption.
+Among these parameters in (5), what we can largely improve by a new design of codes is Awires, wiring area. Hence the remaining part of this subsection will focus on how to estimate wiring area of decoding circuits. First we will analyze a decoding circuit of a regular (dv, dc) LDPC code, then we will show how to extend this analysis to our hierarchical code design.
+To compute Awires, following assumptions are introduced in order to incorporate the constraints of planar IC circuits.
+• All wires have the uniform width λ. • Wires and nodes (variable / check) are placed on the
+square grid. • Only two wires can cross perpendicularly at the grid
+points.
+Using this model, let us start by analyzing a regular (dv, dc) LDPC decoder. We will give an area estimate by an explicit layout of nodes and wires of a message-passing
+
+135
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. This diagram shows how we estimate the circuit area of a (dv, dc)regular LDPC decoder. Circular nodes and square nodes correspond to variable nodes and check nodes of message passing decoder, respectively. Each variable node is expanded horizontally by dv/2 to accommodate dv outgoing wires and check node by dc. Each wire on the circuit fully occupies one grid row to avoid overlapping. A rectangle with a dashed line contains all the wires on the circuit, so the area of this rectangle gives an upper bound of the total circuit area.
+
+Fig. 4. Circuit area estimation of a 2-level adaptive code. Because of horizontal expansion to accommodate outgoing wires, each variable node has the width λ · dv/2, Level 1 check node has the width λ · dc1/2, and Level 2 check node has the width λ · dc2/2. Wires going out downwards is omitted in the figure. Active area of using only Level 1 sub-code can be estimated from the dark rectangles in the figure and the area for using the whole code can be estimated from the outer rectangle bounding all the wires.
+
+decoder. Our layout is shown in Fig. 3. First, all nodes are laid out on one horizontal grid row. Each node can have two outgoing edges, one upward and one downward. Variable nodes and check nodes should be extended horizontally to provide the space for all the wires going out from them. If a node has degree d, then it should be extended by d/2 times horizontally to arrange d outgoing edges, half upward and the other half downward. Each we will dedicate one horizontal row to one wire to avoid horizontal wire overlapping.
+With this particular layout, we will approximate the total area occupied by wires using a bounding rectangle which entails all the wires in the circuit. This bounding rectangle is shown in Fig. 3 with a dashed line. By ignoring the area occupied by the nodes, both width and height of the rectangle are λ · n · dv, and thus the circuit area is
+
+Aregular = λ2 · n2 · d2v.
+
+(6)
+
+Being an upper bound on the area (because this is an
+
+achievable layout strategy under our circuit model), this can
+
+be considered as a reasonable estimate of circuit area for a
+
+traditional regular LDPC code.
+
+Now, let us extend this technique to estimate the wiring
+
+area of adaptive codes with the total of D levels. For each
+
+level i, sub-blocks will have a degree (dvi, dc). Hence the
+
+total check node degree is just dc and total variable degree
+
+would be dv =
+
+D i=1
+
+dvi
+
+.
+
+We first start by connecting the shortest wires which are
+
+in Level 1 blocks. By simply applying (6), area required by
+
+each Level 1 sub-block can be written as
+
+A1 = w1 · h1 = (λn1dv1) · (λn1dv1) = λ2n12d2v1 (7)
+where n1 = n/2D−1. Area of a Level 2 block can be calculated by adding new
+check nodes and new edges connecting them as illustrated
+
+in Fig. 4. This gives us an estimate
+
+A2 = w2 · h2 = (2λn1dv1 + λn2dv2) · (λn2(dv1 + dv2)) (8) = (λn2(dv1 + dv2))2
+
+The last equation in (8) follows from the fact that n2 = 2n1. It is easy to see that area required by level l block can be expressed as
+
+l
+
+Al = (λ · nl · dvi)2
+
+(9)
+
+i=1
+
+where nl = n/2D−l. The total area required by the whole code, which is equivalent to AD now becomes
+
+D
+
+AD = (λnD dvi))2
+i=1
+
+(10)
+
+= λ2 · n2 · d2v
+
+This is exactly same as the area required by non-adaptive regular codes given in (6). We can thus see that there is no saving in circuit area when we use all levels in adaptive codes. The main focus, however, is how much area we can save when using only a few levels of sub-codes in our adaptive code construction.
+However, there is one approximation in the above analysis that underestimates the required wiring area for energyadaptive codes: we can not simply adopt A1 in (7) for this area calculation because there is a horizontal expansion of variable nodes that we ignored. There are edges that appear at higher levels of hierarchy that need to connect with variable nodes at Level 1, even though they are not used when only Level 1 nodes and wires are turned on. To take this effect
+
+136
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 5. BER performance over circuit energy is shown for three different constructions of 2-level adaptive codes. We can find a crossing point in each plot which corresponds to the point where Level 2 codes start to perform better than Level 1 codes. By comparing these plots, we can figure out which degree distribution is the best choice. In this case, we observe that (8, 16)-(4, 16) code has the best performance among three, and thus this code is used for comparison with a non-adaptive code in Fig. 6.
+
+into account, area occupied by each Level 1 block should be
+
+rewritten as
+
+A1,new
+
+=
+
+(λn1 dv
+
++ 2
+
+dv1
+
+)
+
+·
+
+(λn1dv1)
+
+=
+
+λ2
+
+· n21
+
+·
+
+dv
+
++ dv1 2
+
+·
+
+dv1
+
+(11)
+
+If we compare (7) and (11), we can note that dv12 in (7) is
+
+substituted
+
+by
+
+dv +dv1 2
+
+· dv1
+
+in
+
+(11).
+
+dv +dv1 2
+
+is
+
+always
+
+greater
+
+than dv1 since the total degree dv is equal to
+
+D i=1
+
+dvi,
+
+which
+
+implies that the area of Level 1 sub-block increases when it
+
+becomes the part of adaptive codes. We can think of it as
+
+a cost of universality that we pay to use one code in an
+
+adaptive fashion.
+
+The total area of Level 1 sub-code in D-level adaptive
+
+code will thus be given as follows:
+
+A1,total
+
+=
+
+1 2D−1
+
+λ2n2
+
+dv
+
++ 2
+
+dv1
+
+dv1
+
+(12)
+
+There are 2D−1 such blocks in Level 1 sub-code and
+
+substituting n1 = n/2D−1 gives the above equation.
+
+Comparing (6) and (12), we can note that an active circuit
+
+area
+
+when
+
+using
+
+only
+
+level
+
+1
+
+sub-code
+
+is
+
+about
+
+1 dv1 2D−1 dv
+
+times smaller than that of non-adaptive code. This clearly
+
+shows that dividing code into more levels and generating
+
+smaller sub-blocks reduce the circuit area exponentially.
+
+By induction, total area required for an arbitrary level l
+
+can be derived as follows:
+
+Al,total
+
+=
+
+1 2D−l
+
+λ2n2
+
+dv
+
++
+
+l i=1
+
+dvi
+
+2
+
+l
+
+dvi
+
+i=1
+
+(13)
+
+Now, let us compare (6) and (13) to see how much area
+
+gain we get by using only l levels of a D-level hierarchical
+
+code.
+
+The
+
+difference
+
+ratio
+
+is
+
+about
+
+1 2D−l
+
+l i=1
+dv
+
+dvi
+
+.
+
+As
+
+we
+
+turn
+
+on more levels of sub-blocks in our adaptive codes, the gain
+
+we get in circuit area gets smaller and smaller, and eventually
+
+when we turn on all D levels of adaptive codes, adaptive
+
+codes and non-adaptive codes will have the same area.
+
+AD,total = λ2n2 dv +
+
+D i=1
+
+dvi
+
+2
+
+D
+dvi = λ2n2dv2
+
+i=1
+
+(14)
+
+IV. SIMULATION RESULTS
+
+In this section, we will combine simulation results of decoding performance with the energy estimates we explained in Section III-B to present an analysis of BER versus circuit energy. For the simulation, we constructed three different 2-level adaptive codes. We will compare their performance against a non-adaptive code with the same length and rate.
+Just as traditional regular LDPC code are denoted as (dv, dc)-regular code, we will denote 2-level adaptive codes as (dv1, dc1)-(dv2, dc2)-adaptive code. Codes we used here are (9,16)-(3,16), (8,16)-(4,16), (7,16)-(5,16) adaptive codes and (12,16)-regular code was used for the comparison. All of them are QC-LDPC codes with the block length 1024, rate 1/4, and girth 6.
+Decoding performance was tested under binary symmetric channel (BSC) using Gallager B algorithm [29], [30]. In all simulations, flip probability was set to 0.025. Decoding was run up to 10 iterations for simulation in Fig. 5 and 14 iterations for Fig. 6.
+In these analyses, circuit energy is calculated by equations (5) and (13). By setting the parameters ρwire and λ are set to 1, total circuit energy in (5) can now be rewritten as:
+
+Etot
+
+=
+
+T
+
+·
+
+1 2D−l
+
+n2
+
+dv
+
++
+
+l i=1
+
+dvi
+
+2
+
+l
+dvi
+
+i=1
+
+(15)
+
+where l = 1, 2 and T is the number of iterations. Since we are not using realistic values for the circuit parameters, xaxis in the figures can be thought as unit-less and thus are normalized to have values between 0 to 15.
+In Fig. 5, the performance of different codes were plotted in separate figures. In each figure, a solid line represents the result of using only Level 1 sub-code and a dashed line represents the result of using both Level 1 and Level 2 together. Each line can be thought as the BER performance over different number of iterations. As each line has the fixed circuit area value, only factor affecting the circuit energy here is the number of iterations.
+When we look into Fig. 5, we can find a crossing point of a Level 1 line (solid) and a Level 2 line (dashed) for all cases. These crossing points indicate the points where we
+
+137
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+has better BER performance. This is due to additional local structures we impose on adaptive codes which can degrade the decoding performance of LDPC codes.
+Finally, we want to mention that the circuit energy calculations here are all based on a simple circuit area estimation technique. If we use more efficient wiring technique than what we used for our estimation, circuit energy can be smaller than what is demonstrated here.
+
+Fig. 6. Comparison of BER performance of (8,16)-(4,16) 2-level adaptive code and a non-adaptive code with the same rate and the same block length. With our adaptive strategy, we will only use Level 1 sub-code until the switching point, and then turn on Level 2 sub-code and decode the whole code. At BER 10−4, the adaptive code consumes approximately 2x less energy than non-adaptive one. However, as BER goes down, beyond a certain point, non-adaptive starts to perform better than adaptive strategy. This is due to additional local structures introduced in adaptive codes that degrade its performance.
+want to switch between Level 1 and Level 2 code. Before the crossing point, using only Level 1 sub-code is sufficient to achieve a target error probability while consuming less circuit energy than using the whole code. After the crossing point, however, one has to turn on Level 2 sub-code as well to achieve a desired BER. As different codes show different behavior, one can decide which degree distribution is optimal by looking into numerical analysis like this. In our case, (8,16)-(4,16) 2-level code (middle) has the best error performance with the same amount of energy.
+A question we posed in this paper is whether it is possible to save energy not just by decreasing the number of iterations but by making the decoding circuit adjustable in a structured way. The result shown in Fig. 6 answers the question in the affirmative. Fig. 6 compares the adaptive strategy using (8,12)-(4,12) 2-level code and the non-adaptive (12,16)regular code. A bold line illustrates how we will use our adaptive code at different BERs. Before the switching point, bold line follows Level 1 line and then switch to Level 2 line. This line can be thought as the best performance we can achieve using this adaptive code. At BER = 10−4, non-adaptive codes require about two times more circuit energy than our adaptive codes. This confirms that using our adaptive strategy can be more energy-efficient than merely decreasing the number of iterations of the fixed code.
+However, below a threshold error-probability, the nonadaptive code starts to perform better than the adaptive codes. Even though the Level 2 code and the non-adaptive code has the same length and the girth, the non-adaptive one always
+
+V. CONCLUSIONS AND DISCUSSIONS
+In this paper, we observed that while it appears necessary to change the code to adapt to changing distances and error-probabilities to achieve energy optimality, implementing multiple decoders on one chip is very impractical. A new class of codes that we call energy-adaptive codes was proposed to solve the problem, which can flexibly adapt its decoding energy to not waste unnecessary energy on decoder circuits.
+We suggested one possible construction of such energyadaptive codes by using hierarchical QC-LDPC codes. To examine the effectiveness of our code design, we built three different 2-level hierarchical codes and a non-adaptive code and compared them. By using VLSI models to estimate circuit energy consumption and, Gallager B decoder simulation to obtain BER at each iteration, we provided a tradeoff of BER and circuit energy. Through this analysis, we were able to confirm that using energy-adaptive codes can substantially reduce the circuit energy, for example, 2x less energy at the target bit error rate 10−4. We believe substantially larger savings should be possible using more careful code design.
+Our goal is also to bring this problem to the attention of the community, and this work has many shortcomings. Even though a wire model is more indicative of energy consumption than a node-model, it is still insufficient to describe the circuit energy consumption accurately. Further, theoretical analyses need to be accompanied with the simulation results to have a better understanding of code design.
+Introducing hierarchical structure on QC-LDPC codes is only one way of designing energy-adaptive codes. We believe other class of codes can be transformed into energy-adaptive codes as well. Our ongoing work explores protograph-based energy-adaptive codes and we aim to examine other classes of codes beyond sparse-graph codes such as polar codes [31] or more classical codes such as Reed-Soloman codes as well.
+ACKNOWLEDGMENTS
+This research was supported by NSF CCF-1350314 (NSF CAREER), and NSF ECCS-1343324 (NSF EARS) awards. We thank Rudiger Urbanke for his feedback during the conference that helped strengthen our introduction.
+REFERENCES
+[1] P. Grover and A. Sahai, “Green codes: Energy-efficient short-range communication,” in Proceedings of the 2008 IEEE Symposium on Information Theory, Toronto, Canada, Jul. 2008.
+[2] P. Grover, A. Goldsmith, and A. Sahai, “Fundamental limits on complexity and power consumption in coded communication,” extended version of paper presented at ISIT, vol. 12, 2012.
+
+138
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+[3] P. Grover, ““Information-friction” and its impact on minimum energy per communicated bit,” IEEE International Symposium on Information Theory (ISIT), 2013.
+[4] K. Ganesan, P. Grover, and J. M. Rabaey, “The power cost of overdesigning codes,” in IEEE Workshop on Signal Processing Systems (SiPS), Oct. 2011.
+[5] C. Blake and F. R. Kschischang, “On the energy complexity of ldpc decoder circuits,” arXiv preprint arXiv:1502.07999, 2015.
+[6] A. Darabiha, A. C. Carusone, and R. Kschischang, “Power reduction techniques for ldpc decoders,” Solid-State Circuits, IEEE Journal of, vol. 43, no. 8, pp. 1835–1845, 2008.
+[7] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Tran. Very Large Scale Integration Systems, vol. 11, pp. 976– 996, 2003.
+[8] V. Nagarajan, S. Laendner, N. Jayakumar, O. Milenkovic, and S. P. Khatri, “High-throughput vlsi implementations of iterative decoders and related code construction problems,” The Journal of VLSI Signal Processing Systems for Signal, Image, and Video Technology, vol. 49, no. 1, pp. 185–206, 2007.
+[9] Z. Zhang, “Design of LDPC decoders for improved low error rate performance,” Ph.D. dissertation, UC Berkeley, Berkeley, CA, 2009.
+[10] M. Yazdani and A. H. Banihashemi, “On construction of ratecompatible low-density parity-check codes,” in Communications, 2004 IEEE International Conference on, vol. 1. IEEE, 2004, pp. 430–434.
+[11] J. Ha, J. Kim, D. Klinc, and S. W. McLaughlin, “Rate-compatible punctured low-density parity-check codes with short block lengths,” Information Theory, IEEE Transactions on, vol. 52, no. 2, pp. 728– 738, 2006.
+[12] J. Li and K. R. Narayanan, “Rate-compatible low density parity check codes for capacity-approaching arq schemes in packet data communications.” in Communications, Internet, and Information Technology. Citeseer, 2002, pp. 201–206.
+[13] P. Grover, “What do we need to do to “green” data-center networks? A fundamental perspective,” in IEEE Online Conference on Green Communications (GreenCom), 2013, pp. 82–87.
+[14] A. Flatman, “Data Centre Link Lengths,” Mar. 2011, http://tinyurl.com/FaltmanCablingSurvey.
+[15] M. P. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” Information Theory, IEEE Transactions on, vol. 50, no. 8, pp. 1788–1793, 2004.
+[16] Y. Wang, J. S. Yedidia, and S. C. Draper, “Construction of high-girth qc-ldpc codes,” in 5th International Symposium on Turbo Codes and Related Topics, vol. 185. Lausanne, Switzerland, 2008.
+[17] K. Ganesan, Y. Wen, P. Grover, A. Goldsmith, and J. Rabaey, “Choosing “green” codes by simulation-based modeling of implementations,” in IEEE Global Telecommunications Conference (Globecom), Dec 2012.
+[18] Y. Wang, S. C. Draper, and J. S. Yedidia, “Hierarchical and high-girth qc ldpc codes,” Information Theory, IEEE Transactions on, vol. 59, no. 7, pp. 4553–4583, 2013.
+[19] P. Grover and A. Sahai, “Fundamental bounds on the interconnect complexity of decoder implementations,” in Conference on Information Sciences and Systems (CISS), Baltimore, MD, Mar. 2011.
+[20] S. Rao, R. Hormis, and E. Krouk, “The 4D-PAM8 Proposal for 10GBASE-T,” Nov. 2003, P802.3 Task Force Meeting, http://www.ieee802.org/3/10GBT/public/nov03/rao 1 1103.pdf.
+[21] S. Myung, K. Yang, and J. Kim, “Quasi-cyclic ldpc codes for fast encoding,” Information Theory, IEEE Transactions on, vol. 51, no. 8, pp. 2894–2901, 2005.
+[22] S. Myung, K. Yang, and Y. Kim, “Lifting methods for quasi-cyclic ldpc codes,” Communications Letters, IEEE, vol. 10, no. 6, pp. 489– 491, 2006.
+[23] N. Kamiya, “Efficiently encodable irregular qc-ldpc codes constructed from self-reciprocal generator polynomials of mds codes,” Communications Letters, IEEE, vol. 14, no. 9, pp. 1–3, 2010.
+[24] Y. Sun, M. Karkooti, and J. R. Cavallaro, “Vlsi decoder architecture for high throughput, variable block-size and multi-rate ldpc codes,” in Circuits and Systems, 2007. ISCAS 2007. IEEE International Symposium on. IEEE, 2007, pp. 2104–2107.
+[25] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design for quasi-cyclic ldpc codes,” Very Large Scale Integration (VLSI) Systems, IEEE Transactions on, vol. 15, no. 1, pp. 104–114, 2007.
+[26] Z. Li, L. Chen, L. Zeng, S. Lin, and W. H. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” Communications, IEEE Transactions on, vol. 54, no. 1, pp. 71–81, 2006.
+
+[27] S. Yekhanin, “Locally decodable codes,” in Computer Science–Theory and Applications. Springer, 2011, pp. 289–290.
+[28] K. Ganesan, P. Grover, J. Rabaey, and A. Goldsmith, “Towards approaching total-power-capacity: Transmit and decoding power minimization for ldpc codes,” arXiv preprint arXiv:1504.01019, 2015.
+[29] R. Gallager, “Low-Density Parity-Check Codes,” Ph.D. dissertation, Massachusetts Institute of Technology, Cambridge, MA, 1960.
+[30] T. J. Richardson and R. L. Urbanke, “The capacity of low-density parity-check codes under message-passing decoding,” Information Theory, IEEE Transactions on, vol. 47, no. 2, pp. 599–618, 2001.
+[31] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051 –3073, july 2009.
+
+139
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,412 @@
+Joint Quantizer Optimization based on Neural Quantizer for Sum-Product Decoder
+Tadashi Wadayama and Satoshi Takabe ∗Nagoya Institute of Technology, Gokiso, Nagoya, Aichi, 466-8555, Japan,
+{wadayama, s takabe}@nitech.ac.jp
+
+arXiv:1804.06002v1 [cs.IT] 17 Apr 2018
+
+Abstract—A low-precision analog-to-digital converter (ADC) is required to implement a frontend device of wideband digital communication systems in order to reduce its power consumption. The goal of this paper is to present a novel joint quantizer optimization method for minimizing lower-precision quantizers matched to the sum-product algorithms. The principal idea is to introduce a quantizer that includes a feed-forward neural network and the soft staircase function. Since the soft staircase function is differentiable and has non-zero gradient values everywhere, we can exploit backpropagation and a stochastic gradient descent method to train the feed-forward neural network in the quantizer. The expected loss regarding the channel input and the decoder output is minimized in a supervised training phase. The experimental results indicate that the joint quantizer optimization method successfully provides an 8-level quantizer for a low-density parity-check (LDPC) code that achieves only a 0.1-dB performance loss compared to the unquantized system.
+I. INTRODUCTION
+The analog-to-digital converter (ADC) is a key component to bridge continuous analog domain and digital domain in digital communication systems. At the frontend of a receiver, an ADC transforms received analog signals to digital signals by sampling and quantization. Since the required bandwidth for signals is extremely broad in recent wideband digital communication systems, ADCs with high data rates are required to handle such wideband signals. In the design phase of such a system, we should carefully consider the hardware cost and power consumption of ADCs because a high precision ADC with a high data rate is known to be expensive and very power hungry [9], [10]. For example, at the receiver side of a wideband MIMO communication system, a number of ADCs are needed in order to implement the analog-to-digital frontend. Studying the potential of low-precision ADCs in MIMO detectors with little degradation of the detection performance is important. Mezghani et al. [11] discussed combinations of the minimum mean squared error (MMSE) receivers for MIMO channels with a low-precision quantizer. Appropriate design for quantizers matched to the MIMO detectors is of practical importance because this yields a receiver with lower power consumption.
+Moreover, a design problem for a combination of a quantizer and a decoder for an error-correcting code (ECC) has been extensively studied. Low-density parity-check (LDPC) codes [1], [2] are a powerful class of ECCs for memoryless channels and have been practically exploited in a number of areas such as satellite broadcasting, local area wireless networks, and non-volatile storage systems. The information bottleneck
+
+method introduced by Tishby et al. [4] is becoming a common tool for designing a quantizer matched to an LDPC decoder [5], [6], [7], [8]. Kurkoski and Yagi [8] presented a method to design a quantizer for binary-input discrete memoryless channels. The quantizer designed using their method is optimal in the sense of maximizing mutual information between the channel input and the quantizer output. Lewandowsky and Bauch [5] used the information bottleneck method to design discretized message passing decoding algorithms.
+Recent progress in deep neural networks (DNN) has triggered wide spread research activities and applications on DNNs. A number of practical applications such as image recognition, speech recognition and robotics arise based on DNNs. The advancement of DNNs has influences on design of algorithms for communications and signal processing [13], [14].
+By unfolding an iterative process of an iterative signal processing algorithm, we can obtain a signal-flow graph, which includes trainable variables that can be tuned using a supervised learning method, i.e., standard deep learning techniques such as stochastic gradient descent algorithms based on backpropagation and mini-batches can be used to adjust the trainable parameters. For example, Nachmani et al. [13] presented a DNN approach to improve the sum-product decoder.
+The joint optimization for quantizers is still a research topic worth studying because direct optimization of a quantizer in terms of decoding performance has not yet been established. Namely, a quantizer and a decoder should be optimized jointly in order to minimize a given distortion measure but such an optimization is not straightforward. The goal of this paper is to present a novel joint quantizer optimization method for optimizing the quantizers matched to the sum-product algorithms. The principal idea is to use a quantizer including a feedforward neural network and the soft staircase function. Since the soft staircase function is differentiable and has non-zero gradient values everywhere, we can exploit backpropagation and a stochastic gradient descent method to train the feedforward neural network in the quantizer. In a training process, the soft staircase function is gradually annealed and eventually it converges to a discrete-valued staircase function. Once the training is finished, the neural quantizer can be replaced with a usual discrete-valued quantizer.
+
+II. PRELIMINARIES
+A. Channel model
+Here, we introduce the following stochastic channel model. Let X be a random variable representing a souse signal which takes a value in Rn where n is a positive integer. The random variable X follows the probability density function (PDF) PX (·), which is referred to as the prior PDF. The channel is described using the conditional PDF PY |X (·|·) where Y is a random variable representing an observed signal which takes a value in Rm, where m is a positive integer. The task of a detector D(·) is to infer a source signal from a received signal Y , namely, the detector produces the estimate signal Xˆ = D(Y ). A distortion measure µ : Rn × Rn → Rn is used to evaluate the quality of the estimation Xˆ . For example, the normalized Hamming measure µ(X, Xˆ ) = (1/n)dH(X, Xˆ ) is often used to evaluate a detection or a decoding algorithm, where dH (·, ·) denotes the Hamming distance. A detector should be designed to minimize the expected distortion E[µ(X, Xˆ )]. Using the notation introduced here, a stochastic channel model can be specified with the 4-tuple: (PX , PY |X , D, µ).
+B. Quantizer
+A real-valued function q : R → T is called a quantizer function if T ⊂ R is a finite set. A device realizing a quantization function is called a quantizer. For simplicity, we write a coordinate-wise quantization function as q(x) =△ (q(x1), q(x2), . . . , q(xn)) for x = (x1, x2, . . . , xn) ∈ Rn. The same convention is used throughout the paper.
+In the present paper, we study the following scenario. Suppose that we have a channel model (PX , PY |X , D, µ). At the receiver side, we will quantize the received signal Y by a quantizer q(·) before the detection process is carried out. The quantized received signal q(Y ) is fed into the detector, and the estimate X˜ = D(q(Y ))) is finally obtained.
+The joint quantizer optimization discussed herein is the problem of designing a quantizer to minimize the expected distortion E[µ(X, D(q(Y )))]. In general, the expected distortion increases when a quantizer is used. In other words, we would like to find a quantizer without a significant increase in the expected distortion.
+C. Soft staircase function
+In order to tackle the joint optimization problem described above, we need solve an optimization problem for minimizing E[µ(X, D(q(Y )))] but the problem is in general computationally intractable because it is a highly non-convex minimization problem. Another obstacle for this problem is that a quantization function is differentiable almost everywhere, but its derivative function is also zero almost everywhere. This means that these obstacles prevent us from using backpropagation to evaluate the gradients of the trainable variables in the quantizer. In other words, no gradient information can pass though the quantizer while backward computation processes.
+As a feasible approach to overcome this difficulty, we introduce a neural quantizer where the corresponding quantizer
+
+function is differentiable and has non-zero derivative values everywhere when the temperature parameter σ2 is positive. The temperature parameter controls the degree of smoothness
+of the neural quantizer function and the function converges to a hard quantizer function at the limit σ2 → 0. Our strategy is to use standard deep learning techniques, such as
+backpropagation and a stochastic gradient descent method, to optimize the neural quantizer. The key is to train the learnable parameters with annealing, i.e., the temperature parameter σ2 is gradually decreased in an optimization process. A hard quantization function that provides smaller expected distortion
+is expected to be obtained at the end of an optimization process.
+The soft staircase function used here is the MMSE estimator function. Let y ∈ R be an input to the neural quantizer. A finite set S ⊂ R is called a level set. We use the following soft staircase function f (r; S, σ2) as a basic component of the neural quantizer:
+
+f (r; S, σ2) =△
+
+s∈S s exp
+
+−
+
+(r−s)2 2σ2
+
+,
+
+σ2 > 0
+
+(1)
+
+s∈S exp
+
+−
+
+(r−s)2 2σ2
+
+f (r; S, σ2) =△ arg min ||r − s||2, σ2 = 0,
+
+(2)
+
+s∈S
+
+where the level set S and the temperature parameter σ2
+controls the shape of the soft staircase. We refer to the function
+in (2) as a solid staircase function. Note that the soft staircase
+function (1) converges to the solid staircase function (2) at the limit σ2 → 0. This justifies the definition in (2)1. Figure 1 presents the shapes of the soft staircase function f (r; S, σ2) for σ2 = 0.0, 0.1, 0.5 where S = {−1.5, −0.5, 0.5, 1.5}. The curve of σ2 = 0.1 has smooth wave-like shape but the function becomes piecewise constant when σ2 = 0.
+The soft staircase function is the MMSE estimator for a
+discrete signal sets over an additive white Gaussian noise
+(AWGN) channel. The derivation of the MMSE estimator is briefly summarized as follows. Let S be a set of signal points: S = {s1, . . . , sM }, si ∈ R. We here assume that the prior distribution on the transmitted signal is given by p(x) = s∈S(1/M )δ(x − s) where δ(·) is Dirac’s delta function. The received symbol is y = x + z where z
+represents a random noise following the zero mean Gaussian distribution with variance σ2. The conditional Probability
+Density Function (PDF) for this channel is thus given by p(y|x) = √ 1 exp −(y − x)2/(2σ2) .
+2πσ2
+We then derive the MMSE estimator E[x|y] of the original
+signal. The joint PDF can be written as
+
+P (x, y) =
+
+√1 δ(x − s) exp
+
+s∈S M 2πσ2
+
+−
+
+(y
+
+− x)2 2σ2
+
+.
+
+(3)
+
+1For practical implementation, the condition σ2 > 0 should be replaced with σ2 > ǫ in (1) in order to avoid numerical instability, where ǫ is a small
+real number. In a similar manner, the condition σ2 = 0 in (2) should be replaced with σ2 ≤ ǫ.
+
+2 1.5
+
+sssiiigggmmmaaa222
+
+= = =
+
+0.0 0.1 0.5
+
+1
+
+0.5
+
+0
+
+-0.5
+
+W1y + b1 relu Wihi−1 + bi WT hT −1 + bT
+
+y
+
+α y˜
+
+.....
+
+.....
+
+.....
+..... .....
+..... .....
+
+soft staircase
+
+h1
+
+hi hT −1
+
+functions f (·; S, σ2)
+
+Fig. 2. Block diagram of the neural quantizer y˜ = qNQ(y; σ2, L).
+
+f(r; S, sigma2)
+
+-1
+-1.5
+-2 -2 -1.5 -1 -0.5 0 0.5 1 1.5 2 r
+Fig. 1. Plot of soft staircase functions f (r; S, σ2) for σ2 = 0, 0.1, 0.5, S = {−1.5, −0.5, 0.5, 1.5}.
+
+Using these quantities, the MMSE estimator E[x|y] is given by
+
+E[x|y] = =
+
+∞
+xp(x|y)dx =
+−∞
+
+∞ −∞
+
+xp(x, y) p(y)
+
+dx
+
+(4)
+
+s∈S s exp
+
+−
+
+(y−s)2 2σ2
+
+s∈S exp
+
+−
+
+(y−s)2 2σ2
+
+= f (r; S, σ2). (5)
+
+III. NEURAL QUANTIZER
+A. Architecture The neural quantizer is a feed-forward neural network
+defined by
+
+h1 = relu(W1y + b1)
+
+(6)
+
+hi = relu(Wihi−1 + bi), i ∈ [2, T − 1] (7)
+
+y˜ = αf (WT hT −1 + bT ; S, σ2),
+
+(8)
+
+where y ∈ R is the input value and y˜ ∈ R is the output
+value. The function relu is the ReLU function defined by relu(x) =△ max{0, x}(x ∈ R) and we follow the convention relu(x) =△ (relu(x1), . . . , relu(xn)) for x = (x1, . . . , xn) ∈ Rn. From some preliminary experiments, we found that the
+ReLU function is well behaved as an activation function in the neural quantizer. The vectors hi ∈ Ru(i ∈ [1, T − 1]) are
+the hidden state vectors representing the internal states of the
+neural quantizer. The length of the hidden state vectors u is
+called the hidden state dimension. The trainable variables are W1 ∈ Ru×1, b1 ∈ Ru, Wi ∈
+Ru×u, bi ∈ Ru i ∈ [2, T − 1], WT ∈ R1×u, bT ∈ R and α ∈ R. The set of trainable variables is compactly denoted by Θ =△ {W1, . . . , WT , b1, . . . , bT , α} for simplicity. The level set S =△ {s0, s1, . . . , sL−1} is defined by si =△ i − L/2 + 1/2(i ∈ [0, L − 1]) for a given positive even integer L, which can be
+regarded as the number of quantization levels.
+
+The entire input and output relationship of the neural quantizer is denoted by qNQ(·; σ2, L) : R → R, namely, y˜ = qNQ(y; σ2, L). The parameters u, T , σ2, and L are the hyper parameters required to specify the structure of a
+neural quantizer. Figure 2 shows a block diagram of the neural
+quantizer defined above.
+A quantization function q : R → R is usually used in parallel, i.e., y˜ = q(y) for y ∈ Rn. In the present case,
+the symbol-wise quantization by the neural quantizer can be described by y˜ = qNQ(y; σ2, L) for y ∈ Rn. This parallel quantization process can be carried out using n-neural
+quantizers. Throughout the paper, we assume that the entire set of n-neural quantizers shares the trainable variables Θ. This means that the n-neural quantizers are identical.
+
+B. Supervised training with annealing
+In the following discussion, we focus on the squared L2 distortion function as the distortion measure, i.e., µ(a, b) =△ ||a − b||22. Our pragmatic approach to the quantizer design problem is to recast the optimization problem as a minimization of the expected loss
+
+K
+
+E
+
+||x(i) − D(qNQ(y(i); σ2, L))||22 ,
+
+(9)
+
+i=1
+
+where x(i), y(i)(i ∈ [1, K]) are randomly generated samples of the random variables X and Y . The trainable variables in Θ of the neural quantizer are adjusted to lower the expected loss by using a stochastic descent type algorithm such as SGD, Momentum, RMSprop, or Adam. If a detector algorithm or a decoding algorithm D is a differentiable function with respect to its input variable, we can use backpropagation to compute the gradients on the trainable variables in Θ. The temperature parameter σ2 should be appropriately decreased in a supervised training process.
+The supervised training process for the neural quantizer is summarized as follows.
+
+(1) Set t = 1. (2) Sample a mini-batch
+
+B =△ {(x1, y1), (x2, y2), . . . , (xK , yK )}
+
+according to the channel model (PX , PY |X ), where x(i), y(i)(i ∈ [1, K]) are realization vectors of random variables X and Y .
+
+(3) After setting the objective function
+K
+||x(i) − D(qNQ(y(i); σ2, L))||22, (10)
+i=1
+execute a backpropagation process to evaluate the gradient of the trainable variables in Θ. (4) Set the temperature parameter σ2 = tη where η is a negative constant called a cooling factor. (5) Update trainable variables in Θ according to the update rule of a specified stochastic gradient descent algorithm. (6) If t < tmax then increment t and return to Step (2). Otherwise, quit the training process.
+Step (4) is relevant to the annealing process, where the cooling factor η controls the decay speed of the temperature parameter σ2. The hyper parameters, i.e., the cooling factor η, the minibatch size K, and the number of mini-batches tmax, should be adjusted carefully to achieve a satisfactory result.
+
+Squared L2 distortion
+
+1 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1
+0
+
+cooling factor: -0.25 cooling factor: -0.75 cooling factor: -1.00 cooling factor: -2.00
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Steps
+
+Fig. 3. Expected squared distortion as a function of training step (L = 4, u = 8, T = 2)
+
+IV. EXPERIMENTAL STUDY: GAUSSIAN SOURCE
+In order to study the fundamental behavior of the neural quantizer, we carried out numerical experiments for the simplest setting, where the source signal follows a Gaussian PDF. Although the quantizer design problem for an i.i.d. Gaussian random variable can be solved efficiently using known algorithms, such as Lloyd algorithm [15], the problem is extremely simple and is therefore suitable for observing the behavior and properties of the neural quantizer.
+A. Model
+The source signal X follows the zero-mean Gaussian PDF with variance 1. Here, we assume a transparent system, where Y = X and y = D(y) hold. Based on this assumption, the objective function to be minimized is E ||x(i) − qNQ(x(i); σ2, L))||22 , i.e., the expected squared L2 distortion between the source signal and the corresponding quantized signals.
+B. Results
+We first discuss the choice of the cooling factor. Figure 3 presents the expected squared L2 distortion as a function of training steps t for the cases η ∈ {−0.25, −0.75, −1.0, −2.0}. The number of levels, the hidden state dimension, and the number of layers is L = 4, u = 8, and T = 2, respectively. In the training processes, the mini-batch size is set to K = 100. From Fig. 3, it can be easily observed that the expected squared L2 distortion rapidly decreases as the number of training steps increases, except in the case of η = −2.0. This implies that the trainable variables in the neural quantizer are successfully updated to lower the objective function in the supervised training processes. The annealing process for η = −2.0 appears to be too fast to decrease the temperature parameter σ2 and results in a higher floor of the objective function values. For the cases of η ∈ {−0.25, −0.75, −1.0}, the minimum distortion is achieved around step t = 50. The cases of η = −0.75 and η = −1.0 provide the best result, i.e.,
+
+the minimum saturated value after t > 50. The observation obtained from this experiment is that an appropriate choice of cooling factor is crucial.
+In this problem setting, Lloyd algorithm [15] can be used to find the optimal quantizer with respect to the expected squared L2 distortion. The paper [15] presents the optimal four-level quantizer obtained by Lloyd algorithm, referred to as Lloyd quantizer. This Lloyd quantizer takes the values in {−1.51, −0.45, 0.45, 1.51} for the above problem setup. The expected squared L2 distortion of the Lloyd quantizer is 0.12. Figure 4 presents the output of a trained neural quantizer and Lloyd quantizer as a function of input. The parameters of the neural quantizer are described in the caption of Fig.4. In this case, the neural quantizer takes the values of {−1.55, −0.52, 0.52, 1.55}, which are fairly close to the quantization levels of the Lloyd quantizer. The expected squared L2 distortion of the neural quantizer is 0.12 which approximately equals that of the optimal value obtained by the Lloyd algorithm.
+
+V. LDPC CODES AND SUM-PRODUCT ALGORITHM
+
+A. Model
+
+Let H∈
+
+FCm 2H×n⊂beFn2an
+
+be an LDPC code of length LDPC matrix defining CH .
+
+n, We
+
+and let assume
+
+a standard LDPC-coded BPSK modulation scheme over an
+
+AWGN channel. The details of the channel model are as
+
+follows. Let X be a random variable representing a transmitted
+
+codeword in CH . The function β : F2 → {+1, −1} defined by β(0) = 1, β(1) = −1 is the binary-to-bipolar conversion
+
+function. The random variable Y representing a received word
+
+is given by Y = β(X)+W. The vector W is an AWGN vector,
+
+where each component of W follows a zero-mean Gaussian distribution with variance v2. The received word Y is first
+
+quantized by the neural quantizer qNQ(·) and the quantized
+
+signals are then passed to an LDPC decoder based on the
+
+log-domain sum-product algorithm [3].
+
+y Squared loss value
+
+2 Neural quantizer Loyd quantizer
+1.5
+1
+0.5
+0
+-0.5
+-1
+-1.5
+-2 -4 -3 -2 -1 0 1 2 3 4 x
+
+500 450 400 350 300 250 200 150 100
+50 0 0
+
+cooling factor: -0.50 cooling factor: -0.75
+cooling factor: -1.0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Steps
+
+Fig. 4. A trained neural quantizer y = qNQ(x) for Gaussian source. (L = 4, u = 8, T = 2, η = −0.75, K = 100, tmax = 200). As a benchmark, the
+quantization function of the Lloyd quantizer is also included.
+
+Fig. 5. Squared loss values as a function of training step (L = 8, u = 8, T = 2)
+
+The log-domain sum-product algorithm is described in detail as follows. Let G = (V, C, E) be the Tanner graph corresponding to the parity check matrix H. The set V = [1, n]
+
+is the set of variable nodes and the set C = [1, m] is the
+set of check nodes. The notation [a, b] represents the set of
+consecutive integers from a to b. The edge set is defined by E =△ {(i, j) ∈ C × V | Hi,j = 1} according to the definition of the Tanner graph, where Hi,j represents the (i, j)component of H. The set A(i)(i ∈ [1, m]) is defined by A(i) =△ {j ∈ [1, n] | Hi,j = 1} and the set B(j)(j ∈ [1, n]) is defined by B(j) =△ {i ∈ [1, m] | Hi,j = 1}.
+The variable node operation can be summarized as βj→i = λj + k∈B(j)\i αk→j , where βj→i is the message from variable node j to check node i and αk→j is the message from check node k to variable node j. The symbol λj
+denotes the incoming log likelihood ratio (LLR) calculated
+
+from the received signal. For a realization of a received symbol yj, the corresponding LLR value is λj = 2yj/v2. For each round, check node i calculates the message from
+
+check node i to variable node j, which is given by αi→j =
+
+2 tanh−1
+
+k∈A(i)\j tanh
+
+1 2
+
+βk→i
+
+. The two operations,
+
+i.e., the variable and check node operations, are repeated to
+
+make the final estimation.
+
+We here combine the neural quantizer and the log-domain sum-product algorithm in the following manner. Let y ∈ Rn
+
+be a received word which is a realization of the random
+variable Y . The receiver first applies the neural quantizer to the received symbols, and we obtain λj = qNQ(yj; σ2, L), j ∈ [1, n]. These quantized LLR values are fed to the variable node
+
+operation for each iteration round. We also apply the sigmoid
+
+function to the final output of the log-domain sum-product
+
+algorithm: xˆj = σ λj + k∈B(j) αk→j , where σ(·) is the sigmoid function defined by σ(x) =△ (1 + exp(−x))−1. A
+
+threshold function is commonly used in the final round of
+
+the sum-product algorithm, but the function has zero gradient almost everywhere. Since we replaced the threshold function by the sigmoid function, a backpropagation algorithm can be used to calculate the gradients of the trainable variables in the neural quantizer. Note that a backpropagation algorithm is applicable to the entire log-domain sum-product algorithm as shown by Nachmani et al. [13]. In the training processes, we used squared L2 distortion as an objective function as in (10).
+B. Results
+Figure 5 shows the squared loss value as a function of training step. In training processes, the Adam optimizer with an initial value 0.04 was used. The LDPC code used in the experiments is a regular LDPC codes PEGReg504x1008 [16] (n = 1008, m = 504) with a variable node degree of 3. We assume an 8-level neural quantizer with parameters u = 8 and T = 2. During the training phase, the mini-batch size is set to K = 100 and the SNR of the channel is set to 2.5 dB for generating the samples. In all of the experiments presented in this subsection, the number of iterations in the sum-product decoder is fixed to 20. Based on this figure, the cooling factor of η = −1.0 appears to be too small to achieve fast convergence.
+Figure 6 presents the bit error rate (BER) curves of the quantized LDPC-coded BPSK scheme. When measuring the BER performance after a training phase finished, we fixed σ2 = 0. This means that the neural quantizer becomes a hard quantizer. We also used the hard threshold function instead of the sigmoid function at the final stage of the sum-product decoder to generate xˆ. We examined three cases in which the maximum number of training steps tmax are 25, 100, and 500. As a baseline, the BER curve of the sum-product decoder without quantization is included in Fig. 6 as well. In the baseline system, the optimal LLR calculation rule λj = 2yj/v2(j ∈ [1, n] is used. In the training phase, we chose the cooling factor η = −0.5. The BER performance
+
+Bit error rate y
+
+100
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+10-5 10-6
+1
+
+Max steps=25 Max steps=100 Max steps=500 No quantization
+1.2 1.4 1.6 1.8 2 2.2 2.4 2.6 2.8
+SNR (dB)
+
+5 PEGReg252x504
+4 PEGReg504x1008 3 2 1 0 -1 -2 -3 -4 -5
+-2 -1.5 -1 -0.5 0 0.5 1 1.5 2 x
+
+Fig. 6. BER curves of sum-product decoder with an 8-level trained neural quantizer (L = 8, u = 8, T = 2). LDPC code: PEGReg504x1008 (n = 1008, m = 504).
+
+Fig. 7. Trained neural quantizers y = qNQ(x) (L = 8, u = 8, T = 2), LDPC codes: PEGReg504x1008 and PEGReg252x504.
+
+of tmax = 25 is very poor because the quantized values were not appropriately learned. In the experiments, the BER performance rapidly improves when tmax > 50. The improvement is saturated around tmax = 500. The difference between the baseline BER curve and the BER curve of tmax = 500 is approximately 0.1 dB over the entire range of SNR. This result indicates that the joint optimization method is able to provide a quantizer with reasonable BER performance.
+Figure 7 plots the trained quantizer functions. The experiment setting is the same as in the previous experiments dealing with PEGReg504x1008. For the purpose of comparison, we included the result of a trained quantizer for a regular LDPC code PEGReg252x504 [16] with n = 504 and m = 252. Figure 7 shows that an 8-level non-uniform quantizer function is learned in the training phase. Moreover, the trained quantizer automatically learned appropriate LLR conversion. Interestingly, the optimized quantizer for n = 504 is not the same as the one for n = 1008. This may imply that the optimal quantizer is dependent on the choice of codes.
+VI. CONCLUDING SUMMARY
+In the present paper, a joint quantizer optimization method for constructing a quantizer matched to the sum-product algorithms was presented. The neural quantizer allows us to exploit standard supervised learning techniques for DNNs to optimize the quantizer. We limited our focus to the sumproduct decoders, but the joint quantizer optimization method proposed herein is expected to be universal, i.e., the proposed method can be applied to another decoding algorithm or a detection algorithm if the algorithm can be described as a differentiable function.
+ACKNOWLEDGMENT
+The present study was supported in part by a JSPS Grantin-Aid for Scientific Research (A) (Grant Number 17H01280),
+
+and a JSPS Grant-in-Aid for Scientific Research (B) (Grant
+Number 16H02878).
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes, MIT Press, 1963. [2] D. J. C. MacKay, “Good error correcting codes based on very sparse
+matrices, ” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399-431, Mar. 1999. [3] T. Richardson and R. Urbanke, Modern Coding Theory, Cambridge University Press, 2008. [4] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck method, ” in Proc. 37th Allerton Conference on Communication and Computation, Monticello, USA, 1999. [5] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method, ” IEEE Access, vol. 6, pp. 4054–4071, Jan. 2018. [6] G. Zeitler, R. Koetter, G. Bauch, and J. Widmer, “On quantizer design for soft values in the multiple-access relay channel, ” in Proc. IEEE ICC, Dresden, Germany, 2009, pp. 1-5. [7] G. Zeitler, “Low-precision analog-to-digital conversion and mutual information in channels with memory, ” in Proc. 48th Annual Allerton Conference on Communication, Control and Computing, Monticello, USA, 2010, pp. 745-752. [8] B. M. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels, ” IEEE Trans. Inf. Theory, vol. 60, no. 8, pp. 4544–4552, 2014. [9] R. H. Walden, “Analog-to-digital converter survey and analysis,” IEEE Trans. Commun., vol. 17, no. 4, pp. 539550, Apr. 1999. [10] J. Singh, O. Dabeer, and U. Madhow, “On the limits of communication with low-precision analog-to-digital conversion at the receiver, ” IEEE Trans. Commun., vol. 57, no. 12, pp. 36293639, Dec. 2009. [11] A. Mezghani, M.-S. Khou and J. A. Nossek, “A Modied MMSE Receiver for Quantized MIMO Systems,” in Proc. IEEE Workshop on Smart Antennas (WSA), 2007. [12] F.Wang, J. Fang, H. Li, and S. Li, “Quantization design and channel estimation for massive MIMO systems with one-bit ADCs,” arXiv:1704.04709v1, 2017. [13] E. Nachmani, Y. Bee´ry and D. Burshtein, “Learning to decode linear codes using deep learning,” 2016 54th Annual Allerton Conf. Comm., Control, and Computing, 2016, pp. 341-346. [14] T. O’Shea and J. Hoydis, “An Introduction to Deep Learning for the Physical Layer,” IEEE Transactions on Cognitive Communications and Networking, vol. PP, no. 99, pp. 1-1. [15] S. P. Lloyd, “Least squares quantization in PCM, ” IEEE Transactions on Information Theory, vol.28,, pp. 129137, 1982. [16] D. J. C. MacKay Encyclopedia of sparse graph codes, online: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+
+

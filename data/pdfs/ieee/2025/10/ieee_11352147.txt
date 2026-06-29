@@ -1,0 +1,861 @@
+Efficient Shuffled Sliding Window Decoding of
+SC-LDPC Codes
+Qin Du, Lisha Luo, Xuan He
+Information Coding and Transmission Key Lab of Sichuan Province, Southwest Jiaotong University, China
+qindu@my.swjtu.edu.cn, lisaluo@my.swjtu.edu.cn, xhe@swjtu.edu.cn
+Abstract—Spatially coupled low-density parity-check (SC-
+LDPC) codes provide excellent performance and low latency
+under sliding window decoding (SWD). To achieve a low-power
+and low-complexity SC-LDPC decoder, we propose a variant of
+SWD called size-λ monotonic double-ended queue SWD (λMDQ-
+SWD), where λ refers to the storage complexity of the update
+at a check node (CN). Our λMDQ-SWD employs the shuffled
+schedule in SWD and uses the MDQ structure to implement
+the CN update. Moreover, it considers using only the minimum
+magnitude from target symbols for the CN update to avoid
+redundant computations. Simulation results show that, although
+under λ = 2, the proposed algorithm achieves comparable
+error correction performance to the state-of-the-art algorithms.
+Moreover, a detailed hardware implementation for the CN update
+is designed. Analysis using the 90nm CMOS technology library
+shows that, compared to the state-of-the-art algorithms, the
+λMDQ-SWD with λ = 2 reduces the area and increases the clock
+frequency of CN update by 63.7% and 107.6%, respectively.
+I. INTRODUCTION
+Spatially coupled low-density parity-check (SC-LDPC)
+codes [1], [2] have been attractive for various applications
+due to the excellent capacity approaching performance and
+low latency characteristic under the sliding window decoding
+(SWD). Featuring a diagonally banded parity-check matrix,
+SC-LDPC codes are considered to be a type of LDPC con-
+volutional code (LDPC-CC) [3]. In particular, with iterative
+decoding algorithms, SC-LDPC codes have been shown to
+reach the maximum a posteriori (MAP) probability threshold
+of the underlying LDPC block code [4].
+However, achieving the MAP threshold with full block
+decoding (FBD) based on flooding schedule using the belief
+propagation (BP) algorithm incurs prohibitively high latency
+and complexity. In contrast to FBD, SWD [2], [5] decouples
+the decoding process from the coupling length L, allowing the
+decoding to proceed while awaiting subsequent message trans-
+missions, significantly reducing latency. In order to further
+reduce the complexity, two primary approaches are available.
+The first approach is to change the message passing (MP)
+algorithm used in SWD. Although the BP algorithm offers ex-
+cellent error correction performance [6], its high computational
+complexity results in slow convergence and high hardware
+costs. To accommodate the constraints of practical hardware
+circuits, suboptimal MP algorithms, such as the min sum (MS)
+algorithm and its variants [7]–[9], can be employed to replace
+BP. The second approach is to apply efficient information
+schedule schemes to the MP algorithm in SWD. Specifically,
+the layered schedule [10] and the shuffled schedule [11] can
+This work was supported by National Natural Science Foundation of China
+(NSFC) under Grant 62331002 and Grant 62571455.
+be employed to accelerate decoding convergence and reduce
+hardware costs. Analytical studies [12] show that for SC-
+LDPC codes, both schedules exhibit faster convergence and
+better performance compared to the flooding schedule [6].
+Building on the established advantage of shuffled schedule
+over flooding schedule, as demonstrated in FBD contexts
+[13], [14], this paper specifically investigates its application
+within the inherently low-latency SWD framework. We term
+this direct integration as shuffled normalized min sum SWD
+(SNMS-SWD), aiming to harness the convergence speedup
+per decoding window. However, while SWD addresses the
+latency issue inherent to FBD, the computational complexity
+of the check node (CN) update in SNMS-SWD remains a
+significant challenge. To address this complexity challenge, we
+propose a shuffled size-λ monotone double-ended queue SWD
+(λMDQ-SWD), which is inspired by the implementations of
+shuffled decoding based on the MDQ data structure [15],
+[16]. Simulation results show that the proposed SWD variant
+has comparable performance to the state-of-the-art variants.
+Furthermore, the results of the implementation demonstrate
+that, for λ = 2, our proposed algorithm reduces the area of
+CN update by 63.7% and increases the clock frequency by
+107.6% compared to the SNMS-SWD.
+The remainder of this paper is organized as follows. Sec-
+tion II illustrates the SC-LDPC codes and the SNMS-SWD.
+Section III presents the λMDQ-SWD and simulation results.
+Section IV describes the hardware architecture and resource
+consumption of the CN update under the proposed algorithm.
+Finally, conclusions are drawn in Section V.
+II. PRELIMINARIES
+In this section, we first briefly review SC-LDPC codes in
+Section II-A. Then, we provide an overview of SNMS-SWD
+in Section II-B.
+A. SC-LDPC Codes
+A time-invariant SC-LDPC code with a nonzero diagonal
+band check matrix is constructed by coupling the Tanner
+diagrams of L identical uncoupled protograph-based LDPC
+codes. Fig. 1 provides an example of a regular (3, 6, L, ms)
+SC-LDPC code, where parameters L and ms are the coupling
+length and the coupling width, respectively. As shown in
+Fig. 1(b), the variable nodes (VNs) at the t-th time slot
+establish direct connections with CNs at three consecutive time
+slots: t, t + 1, and t + 2. This specific interconnection pattern
+is formally referred to as the edge spreading. By applying the
+aboved edge spreading to all of the L block protographs (i.e.,
+2025 Seventeenth International Conference on Wireless Communications and Signal Processing
+2025 Seventeenth International Conference on Wireless Communications and Signal Processing (WCSP) | 979-8-3315-8303-3/25/$31.00 ©2025 IEEE | DOI: 10.1109/WCSP68525.2025.1010573
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 
+(a)
+(b)
+𝑡
+𝑡+ 1 𝑡+ 2
+(c)
+···
+···
+𝐿−1
+0
+1
+2
+Fig. 1: (a) Block protograph of the (3, 6) regular LDPC codes;
+(b) edge spreading with ms = 2 at time slot t; and (c) coupled
+protograph of the terminated SC-LDPC codes with ms = 2.
+copies of the protograph of Fig. 1(a)), a coupled protograph
+is shown in Fig. 1(c).
+More specifically, the protograph can also be represented
+using the basis matrix BSC as follows:
+BSC =
+
+
+B0
+B1
+B0
+...
+B1
+...
+Bms
+...
+...
+B0
+Bms
+...
+B1
+...
+...
+Bms
+
+
+|
+{z
+}
+L
+(L + ms)Munc × LNunc
+,
+(1)
+where Munc×Nunc is the size of the uncoupled base matrices,
+and the memory ms of the coupled code defines the largest dis-
+tance between a pair of coupled blocks. The reduced degrees
+of the first and last ms CNs in the coupling chain relative
+to the internal CNs marginally reduce the code rate while
+simultaneously increasing the iterative decoding threshold [4]
+of the SC-LDPC code.
+Then, the final parity-check matrix HSC can be constructed
+from BSC by lifting with the lifting factor Z. In this process,
+the zeros and ones in BSC are replaced via Z × Z zero
+matrices and Z ×Z circulant or general permutation matrices.
+Let the parity-check matrix HSC of the SC-LDPC code be
+of dimension M × N, where M denotes the number of
+rows (CNs) and N represents the number of columns (VNs).
+These dimensions are determined by: M = (L + ms)MuncZ,
+N = LNuncZ.
+B. Shuffled Normalized Min Sum Sliding Window Decoding
+To reduce the total latency, the SWD [2] decodes SC-LDPC
+codes window by window, applying the iterative decoding
+algorithm to the covered nodes within each window. Define
+the window size as W, where ms + 1 ≤W ≤L. A detailed
+sliding window process of the SWD is shown in Fig. 2. From
+Fig. 2, we see that each window covers W · MuncZ CNs and
+W ·NuncZ VNs. Moreover, Nunc ×Z VNs (shown in red) are
+Sliding window
+at time slot 𝑡, 𝑡+ 1, 𝑡+ 2.
+𝐿+ ms 𝑀𝑢𝑛𝑐𝑍
+𝑊𝑁𝑢𝑛𝑐𝑍
+𝑊𝑀𝑢𝑛𝑐𝑍
+𝐿𝑁𝑢𝑛𝑐𝑍
+𝒮𝑡
+Fig. 2: SWD of an SC-LDPC code with ms = 2. Window
+size is set to W = 3 and the gray area indicates the nonzero
+diagonal band in the HSC.
+removed from time slot t to t + 1. These Nunc × Z VNs are
+referred to as the target symbols. For simplicity, we use St to
+represent the target symbol set at time slot t. Due to the natural
+connection between the SWD and the shuffled schedule [11],
+[17], [18], the SNMS-SWD can be naturally applied into each
+window.
+Denote the check-to-variable (C2V) message passed from
+CN ci to VN vj and the variable-to-check (V2C) message
+passed from VN vj to CN ci at the l-th iteration as R(l)
+i,j and
+L(l)
+i,j, respectively. Define the index set of VNs adjacent to
+ci by N(i) and the index set of CNs connected to vj by
+M(j). Use Si to represent the product of the signs of all
+incoming messages at ci. Moreover, let Mt denote the set
+of CNs connected to vj within the t-th window slot. Assume
+that the codeword as u = (u1, u2, ..., uN) and the received
+sequence as y = (y1, y2, ..., yN). Let the log-likelihood ratio
+(LLR) Lj denote the intrinsic (channel) message associated
+with vj, computed as follows:
+Lj = ln
+Pr(yj | uj = 0)
+Pr(yj | uj = 1)
+
+,
+(2)
+where j ∈{1, . . . , N}.
+Consider the shuffled schedule in which each window is
+grouped column by column. Then, the decoding process for
+each column under the SNMS-SWD algorithm consists of
+the CN update followed by the VN update. For the group
+containing VN vj in the t-th window slot during the l-th
+decoding iteration, the detailed decoding steps are as follows:
+Step 1) Initialize L(0)
+i,j , j ∈{1, . . . , N}, i ∈M(j), R(0)
+i,j , i ∈
+{1, . . . , M}, j ∈N(i), and Si, i ∈{1, . . . , M} by Lj, 0, and
+Q
+j∈N(i) sgn(Lj), respectively.
+Step 2) Compute |R(l)
+i,j|, sgn(R(l)
+i,j), and R(l)
+i,j for i ∈Mt as
+follows:
+R(l)
+i,j
+=
+min
+n∈N(i)\j
+L(l−I(n>j))
+i,n
+ ,
+(3)
+sgn(R(l)
+i,j) = Si · sgn(L(l−1)
+i,j
+),
+(4)
+R(l)
+i,j = α · sgn(R(l)
+i,j) ·
+R(l)
+i,j
+ ,
+(5)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 
+where N(i)\j represents the exclusion of j from N(i),
+I(statement)
+=
+1 if the statement is true, otherwise
+I(statement) = 0, and α is a normalized factor.
+Step 3) Compute L(l)
+i,j and update Si for i ∈Mt as follows:
+L(l)
+i,j = Lj +
+X
+m∈M(j)\i
+R(l)
+m,j,
+(6)
+Si = Si · sgn(L(l−1)
+i,j
+) · sgn(L(l)
+i,j),
+(7)
+where M(j)\i represents exclusion of i from M(j).
+The above steps are repeated until all VNs in the t-th
+window slot have been decoded. At the end of each iteration,
+the average error rate Pe,t based on the output LLR of the
+target symbol set St is computed by [19]. If Pe,t is smaller than
+the termination threshold Θ or the maximum iteration Tmax
+is reached, the iterative decoding starts for the next window
+until all windows have been decoded.
+III. PROPOSED SLIDING WINDOW DECODING
+We observed that the computation of |R(l)
+i,j| in (3) causes
+high computational and storage complexity. To address those
+problems, we propose using a size-λ monotone double-ended
+queue (λMDQ) to handle this computation in Section III-A,
+leading to the λMDQ-SWD. Finally, we present the simulation
+results of the proposed algorithm in Section III-B.
+A. λMDQ-SWD Algorithm
+In [15], [16], the size-λ MDQ (λMDQ) scheme was pro-
+posed to efficiently implement the CN update, achieving
+comparable performance and lower complexity compared to
+the original SNMS algorithm [18]. Motivated by this, we
+consider using the λMDQ scheme to the CN update in each
+decoding window. To reduce redundant computation in (3),
+we further consider using only the minimum magnitude of
+the V2C messages connected to ci that have been decoded.
+This is the key idea of our proposed λMDQ-SWD.
+Specifically, similar to [15], we use a two-dimensional
+vector Qi (works as a deque) of fixed size λ to store the
+candidate magnitudes and their column indices in the current
+window. Actually, a larger λ implies a higher accuracy of
+C2V messages as well as a higher storage cost needed by
+the CN update. When we set λ = dc (dc denotes the degree
+of CN), the proposed algorithm is equivalent to SNMS-SWD
+in terms of decoding performance. Let Qi’s h-th element
+be Qi,h =
+
+Q(1)
+i,h, Q(2)
+i,h
+
+, where Q(1)
+i,h is the magnitude and
+Q(2)
+i,h = jh is the column index of vjh. Elements in Qi are
+from the current decoding window and are listed in ascending
+order as follows:
+Q(1)
+i,h1<Q(1)
+i,h2, ∀1 ≤h1 < h2 ≤λ.
+(8)
+Let Qi,# =
+
+Q(1)
+i,#, Q(2)
+i,#
+
+represent the last/tail element of
+Qi. Given the updated V2C message magnitude |L(l)
+i,j|, Qi is
+updated via the λMDQ scheme, as described in Algorithm 1.
+Recall that at the end of decoding in each window of the
+SWD, partial VNs called target symbols are removed and
+cannot participate in the decoding of the next window. In (3),
+Algorithm 1 Q-UPD Function
+Input: Qi and
+L(l)
+i,j
+.
+Output: Qi.
+1: while |Qi| > 0 and
+L(l)
+i,j
+ ≤Q(1)
+i,# do
+2:
+Delete Qi,#.
+3: end while
+4: Insert
+L(l)
+i,j
+, j
+
+to the tail of Qi if |Qi| < λ.
+all V2C messages generated by these target symbols are re-
+peatly compared to compute |R(l)
+i,j|. However, we find that only
+the minimum V2C message is necessary to participate in the
+computation of |R(l)
+i,j|. To reduce unnecessary comparisons, we
+propose using the minimum magnitude of the V2C messages
+connected to ci, not all, to compute |R(l)
+i,j|. Specifically, use
+Qi
+min to store the minimum magnitude of the V2C messages
+connected to ci. Then, the magnitude of the C2V message
+R(l)
+i,j
+ is computed by Q(1)
+i,1 or Q(i)
+min, as follows:
+R(l)
+i,j
+ = min
+
+Q(1)
+i,1 , Q(i)
+min
+
+.
+(9)
+Given the coupling length L, window size W, termination
+threshold Θ, the maximum number of iterations Tmax, and
+the channel message Lj, Algorithm 2 presents the proposed
+λMDQ-SWD algorithm, where we use S
+′
+t to represent the set
+of VNs that are in the t-th window slot excluding St.
+As shown in Algorithm 2, the most computationally costly
+part is Lines 9 to 13. For fixed t and l, executing Lines 8 to
+14 results in a complexity of O(dc) [15], [16] for a CN with
+degree dc. However, when employing SNMS-SWD in each
+window, i.e., deleting Lines 9 and 13, and replacing (9) in
+Line 10 with (3), the complexity will increase to O(d2
+c).
+B. Simulation Results
+In this subsection, we simulate the soft bit error rate (BER)
+and frame error rate (FER) of the proposed λMDQ-SWD
+and SNMS-SWD algorithms to compare their error-correction
+performance.
+Assume that each codeword is transmitted over the additive
+white gaussian noise (AWGN) channel using binary phase
+shift keying (BPSK) modulation. In all simulations, we set
+the maximum number of iterations for each window to 30
+and the termination threshold Θ to 1×10−6. The VN-centered
+approach [20] is employed for all SWD algorithms. For each
+signal-to-noise ratio (SNR), we collect at least 60 frame errors.
+Moreover, the parameters of the simulated codes and related
+grouping strategy are as follows:
+Code C1 [21]:
+• Protograph: (4,20)-regular with Z = 16.
+• Parameters: ms = 1, L = 50.
+• Length: 32128, rate: 0.79.
+Code C2 [22]:
+• Protograph: (3,18)-regular with Z = 60.
+• Parameters: ms = 2, L = 50.
+• Length: 18000, rate: 0.82.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 
+Algorithm 2 λMDQ-SWD Algorithm
+Input: L, W, Θ, Tmax, Lj, j ∈{1, . . . , N}.
+Output: ˆu = (ˆu1, . . . , ˆuN).
+1: {initialization phase}
+2: Set L(0)
+i,j = Lj, R(0)
+i,j = 0 for j ∈{1, . . . , N}, i ∈M(j).
+3: Set Si
+=
+Q
+j∈N(i) sgn(Lj), Qi
+min
+=
+∞for i
+∈
+{1, . . . , M}.
+4: Initialize Qi by using Lj, j ∈N(i) as input to the Q-UPD
+function.
+5: {iterations start here}
+6: for t = 1 →L do
+7:
+for l = 1 →Tmax do
+8:
+for j = (t −1)NuncZ + 1 →(t −1 + W)NuncZ do
+9:
+Delete Qi,1 if Q(2)
+i,1 == j for i ∈Mt.
+10:
+Compute R(l)
+i,j, i ∈Mt using (4), (5) and (9).
+11:
+Compute L(l)
+i,j, i ∈Mt using (6).
+12:
+Compute Si, i ∈Mt using (7).
+13:
+Update Qi by using |L(l)
+i,j| as input to the Q-UPD
+function.
+14:
+end for
+15:
+If Pe,t < Θ or l == Tmax, terminate the decoding
+window and goto line 17.
+16:
+end for
+17:
+for j ∈St and i ∈Mt do
+18:
+Qi
+min = minj∈St
+L(l)
+i,j
+, ∀i ∈Mt.
+19:
+end for
+20:
+for j ∈S
+′
+t and i ∈Mt do
+21:
+Initialize Qi by using |L(l)
+i,j| as input to the Q-UPD
+function.
+22:
+end for
+23:
+Estimate ˆuj, j ∈St based on the stored LLRs.
+24: end for
+25: Return ˆu.
+Grouping strategy: Assuming that there is only one VN in
+each group. For C1, we set W = 6. As a result, one window
+contains 240 · Z VNs(groups) and 48 · Z CNs; for C2, we set
+W = 6. As a result, one window contains 36·Z VNs(groups)
+and 6 · Z CNs.
+The performance curves under C1 and C2 are shown in Fig. 3
+and Fig. 4, respectively. As shown in both Fig. 3 and Fig. 4,
+the λMDQ-SWD with λ = 2, the λMDQ-SWD with λ = 3,
+and the SNMS-SWD have almost the identical performance.
+It indicates that the λMDQ-SWD with λ = 2 stands out as
+the optimal choice (under shuffled schedule) for decoding SC-
+LDPC codes, as it does not suffer from decoding performance
+degradation while having the lowest complexity.
+IV. PROPOSED CHECK-NODE UPDATE ARCHITECTURES
+Since the CN update dominates the complexity of SC-LDPC
+decoders, we consider designing the hardware architecture of
+the CN update based on the proposed λMDQ-SWD algorithm
+in this section. Take the simulation parameters of C1 in
+Section III-B as an example. We present a detailed hardware
+implementation of the CN update in Section IV-A. Then,
+2.8
+3.2
+3.6
+10−8
+10−7
+10−6
+10−5
+10−4
+10−3
+10−2
+10−1
+100
+FER/BER
+ 
+ SNMS-SWD
+ 
+ λMDQ-SWD, λ= 2
+ 
+ λMDQ-SWD, λ= 3
+Fig. 3: FER (dashed) and BER (solid) performance of the C1
+with W = 6, where α = 0.75.
+3.2
+3.6
+4.0
+10−7
+10−6
+10−5
+10−4
+10−3
+10−2
+10−1
+100
+FER/BER
+ 
+ SNMS-SWD
+ 
+ λMDQ-SWD, λ= 2
+ 
+ λMDQ-SWD, λ= 3
+Fig. 4: FER (dashed) and BER (solid) performance of the C2
+with W = 6, where α = 0.75.
+the implementation results based on the ASIC and FPGA
+platforms are provided in Section IV-B.
+A. Hardware Architecture for the λMDQ-SWD Scheme
+Fig. 5 shows the overall architecture of the SC-LDPC de-
+coder for VN vj in the sliding window at time slot t, where the
+CN update includes the Q-UPD and CN-R units. Specifically,
+the CN-R unit computes the C2V message using Qi memory,
+Qi
+min memory, and V2C sign memory. Next, the VN unit
+computes the V2C message based on the C2V message. The
+Q-UPD unit then takes the updated V2C message as input to
+update Qi, and stores the result in Qi memory. At the end of
+decoding for window t, the Qi
+min memory is updated with the
+V2C messages of target symbols.
+We refer to the union of the Algorithm 1 and the Line 9 of
+Algorithm 2 as an update of Qi, and partition the update of Qi
+into two parts: element deletion (ED) and element insertion
+(EI), where ED deletes the old V2C message magnitude
+(see Line 9 of Algorithm 2) and EI inserts the latest V2C
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 
+Fig. 5: General overall architecture of the SC-LDPC decoder
+for VN vj in sliding window at time slot t.
+[4:0][4:0]
+[3:0]
+[3:0][3:0]
+[3:0]
+j
+=
+<
+<
+[3:0]
+[4:0]
+[3:0]
+[4:0]
+m
+j
+m
+[3:0]
+[4:0]
+[3:0]
+[4:0]
+[3:0]
+[4:0]
+ 11111 
+ 1111 
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+1
+Element Deletion
+Element Insertion
+[3:0]
+[4:0]
+Fig. 6: Hardware architecture for Qi update design under the
+λMDQ-SWD with λ = 2.
+message (see Algorithm 1). Since the λMDQ-SWD with λ = 2
+achieves performance comparable to the SNMS-SWD, we set
+λ = 2 for the Qi update design. Consider setting the bit-
+widths of the magnitude and index to 4 bits and 5 bits,
+respectively. Fig. 6 shows the hardware architecture for Qi
+update design under λ = 2, where m and j denote the V2C
+message magnitude and its index, respectively. Specific details
+are as follows:
+Element deletion (ED):
+• If the index j is equal to Q(2)
+i,1 (only Q(2)
+i,1 is possible to
+coincide with j), use MUXs to shift Qi,2 to Qi,1 and set
+Qi,2 to the maximum value.
+• If the index j is not equal to Q(2)
+i,1 , Qi,1 and Qi,2 remain
+unchanged.
+Such an ED requires one 5-bit comparator (CMP) and four
+MUXs (two 4-bit and two 5-bit).
+Element insertion (EI):
+• Inserts m and j by comparing m with Q(1)
+i,1 and Q(1)
+i,2
+while preserving the order sorted as (8).
+Such an EI requires two 4-bit CMPs and six MUXs (three
+4-bit and three 5-bit).
+Note that the structure of the Qi update with λ = 3 is the
+same as that with λ = 2. Thus, the hardware implementation
+TABLE I: ASIC Implementation Results of Different CN
+Update Schemes
+Scheme
+SNMS-SWD
+λMDQ-SWD
+λ=2
+fmax[MHz]
+1235
+2564
+Area[µm2]
+3729
+1353
+Power[mW]
+4.76
+3.98
+Clock cycles
+1
+1
+FoM
+0.069
+0.476
+TABLE II: FPGA Implementation Results of Different CN
+Update Schemes
+Scheme
+SNMS-SWD
+λMDQ-SWD
+λ=2
+fmax[MHz]
+202
+307
+Reg.
+80
+22
+LUT
+120
+41
+Power[mW]
+206
+204
+of the Qi update with λ = 3 can be extended by the structure
+of λ = 2.
+B. Implementation Results and Comparison
+In this subsection, we implement the CN update under
+different SWD algorithms using one clock cycle on both
+ASIC and FPGA platforms. For fair comparison, all schemes
+with 4-bits magnitude and 5-bits column index are designed
+and synthesized. The SNMS-SWD is implemented by finding
+the minimum value [23] based on external information. The
+hardware architectures presented in Section IV-A are coded
+with Verilog HDL. For practical purposes, we consider im-
+plementing the CN update of the proposed algorithm with
+λ = 2 and assuming that each window is decoded column
+by column. The schemes are evaluated in terms of maximum
+frequency (fmax), area, and power consumption, where fmax
+is determined based on the critical path, area and power
+consumption are measured at fmax. For ASIC implementation,
+the Synopsys Design Compiler is used for the synthesis of
+the CN update scheme, derived from TSMC 90nm CMOS
+technology library. Similar to [24], we introduce the figure
+of merit (FoM) metric to evaluate the overall performance of
+each scheme. The FoM is defined as:
+FoM =
+fmax
+Area · Power.
+(10)
+For FPGA verification, the CN update schemes are imple-
+mented on the Xilinx Zynq-7000 device using Vivado.
+Table I presents the ASIC implementation results for
+SNMS-SWD and λMDQ-SWD schemes. The λMDQ-SWD
+scheme consistently achieves the best performance in terms of
+frequency, area, and power. Higher frequency and smaller area
+result in higher FoM, indicating better efficiency. Specifically,
+the FoM for the λMDQ-SWD scheme is 0.476, which is much
+higher than that of SNMS-SWD.
+Table II shows the FPGA resource consumption for SNMS-
+SWD and λMDQ-SWD schemes. The results show that the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 
+proposed λMDQ-SWD achieves higher frequency while con-
+suming fewer register resources, fewer LUTs resources, and
+lower power compared to the SNMS-SWD.
+Both ASIC and FPGA implementation results demonstrate
+the advantages of the λMDQ-SWD scheme. Additionally, λ =
+2 is more cost-effective in terms of hardware implementation
+resource consumption.
+V. CONCLUSION
+In this paper, we proposed a variant of SWD called λMDQ-
+SWD for SC-LDPC codes. Our λMDQ-SWD employs a
+monotone double-ended queue structure and preserves the
+minimum magnitude of target symbols to reduce the complex-
+ity of the CN update. We also presented a detailed hardware
+architecture for the CN update. Extensive simulations and
+hardware implementations show that, the λMDQ-SWD with
+λ = 2 achieves comparable decoding performance but much
+lower resource consumption than the SNMS-SWD. Thus, we
+recommend λMDQ-SWD with λ = 2 as the preferred choice
+for SWD under the shuffled schedule.
+REFERENCES
+[1] D. J. Costello, L. Dolecek, T. E. Fuja, J. Kliewer, D. G. Mitchell, and
+R. Smarandache, “Spatially coupled sparse codes on graphs: theory and
+practice,” IEEE Commun. Mag, vol. 52, no. 7, pp. 168–176, 2014.
+[2] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli,
+and G. E. Corazza, “Windowed decoding of protograph-based LDPC
+convolutional codes over erasure channels,” IEEE Trans. Inf. Theory,
+vol. 58, no. 4, pp. 2303–2320, 2012.
+[3] A. Jimenez Felstrom and K. Zigangirov, “Time-varying periodic convo-
+lutional codes with low-density parity-check matrix,” IEEE Trans. Inf.
+Theory, vol. 45, no. 6, pp. 2181–2191, 1999.
+[4] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation
+via spatial coupling: Why convolutional LDPC ensembles perform so
+well over the BEC,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 803–
+834, 2011.
+[5] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov,
+“Iterative decoding threshold analysis for LDPC convolutional codes,”
+IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 5274–5289, 2010.
+[6] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory,
+vol. 8, no. 1, pp. 21–28, 1962.
+[7] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative
+decoding of low-density parity check codes based on belief propagation,”
+IEEE Trans. Commun, vol. 47, no. 5, pp. 673–680, 1999.
+[8] J. Chen and M. Fossorier, “Density evolution for two improved bp-based
+decoding algorithms of LDPC codes,” IEEE Commun. Lett, vol. 6, no. 5,
+pp. 208–210, 2002.
+[9] J. Zhang, M. Fossorier, D. Gu, and J. Zhang, “Two-dimensional correc-
+tion for min-sum decoding of irregular LDPC codes,” IEEE Commun.
+Lett, vol. 10, no. 3, pp. 180–182, 2006.
+[10] D. Hocevar, “A reduced complexity decoder architecture via layered
+decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process.
+Syst. (SIPS), 2004, pp. 107–112.
+[11] J. Zhang and M. Fossorier, “Shuffled iterative decoding,” IEEE Trans.
+Commun, vol. 53, no. 2, pp. 209–213, 2005.
+[12] E. Sharon, N. Presman, and S. Litsyn, “Convergence analysis of gener-
+alized serial message-passing schedules,” IEEE J. Sel. Areas Commun,
+vol. 27, no. 6, pp. 1013–1024, 2009.
+[13] Y.-L. Ueng, Y.-L. Wang, L.-S. Kan, C.-J. Yang, and Y.-H. Su, “Jointly
+designed architecture-aware LDPC convolutional codes and memory-
+based shuffled decoder architecture,” IEEE Trans. Signal Process,
+vol. 60, no. 8, pp. 4387–4402, 2012.
+[14] Z. Yang, Y. Fang, G. Cai, G. Zhang, and P. Chen, “Design and opti-
+mization of tail-biting spatially coupled protograph LDPC codes under
+shuffled belief-propagation decoding,” IEEE Commun. Lett, vol. 24,
+no. 7, pp. 1378–1382, 2020.
+[15] L.
+Luo,
+X.
+He,
+Y.
+Wang,
+J.
+Xing,
+and
+X.
+Tang,
+“An
+efficient
+scheme
+for
+finding
+minima
+in
+shuffled
+min-
+sum
+decoding
+of
+LDPC
+codes,”
+China
+Commun.,
+early
+access,
+Jun.
+13,
+2023.
+[Online].
+Available:
+http://www.cic-
+chinacommunications.cn/EN/10.23919/JCC.ja.2022-0738
+[16] L. Luo, X. He, Q. Du, K. Han, Z. Di, and X. Tang, “Efficient schemes
+and architectures for check node update in shuffled min-sum decoding
+of LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Paper, pp. 1–14,
+2025.
+[17] Y.-L. Ueng, C.-J. Yang, and C.-J. Chen, “A shuffled message-passing
+decoding method for memory-based LDPC decoders,” in IEEE Int.
+Symp. Circuits Syst, 2009, pp. 892–895.
+[18] Z. Cui, Z. Wang, X. Zhang, and Q. Jia, “Efficient decoder design
+for high-throughput LDPC decoding,” in Proc. IEEE Asia-Pac. Conf.
+Circuits Syst., 2008, pp. 1640–1643.
+[19] S. Mo and L. Chen, “Improved sliding window decoding of spatially
+coupled low-density parity-check codes,” in Proc. IEEE Inf. Theory
+Workshop, 2017, pp. 126–130.
+[20] J. Frenzel, S. M¨uller-Weinfurtner, J. Huber, and R. M¨uller, “Comparison
+of
+windowed-decoder
+configurations
+for
+spatially
+coupled
+ldpc
+codes under equal-complexity constraints,” 2020. [Online]. Available:
+https://arxiv.org/abs/2004.12973
+[21] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S.
+Zigangirov, and D. J. Costello, “Implementation aspects of LDPC
+convolutional codes,” IEEE Trans. Commun, vol. 56, no. 7, pp. 1060–
+1069, 2008.
+[22] S. Abu-Surra, E. Pisek, and R. Taori, “Spatially-coupled low-density
+parity check codes: Zigzag-window decoding and code-family design
+considerations,” in Proc. Inf. Theory Appl. Workshop (ITA), 2015, pp.
+275–281.
+[23] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first
+two minimum values and their hardware implementation,” IEEE Trans.
+Circuits Syst. I, Reg. Paper, vol. 55, no. 11, pp. 3430–3437, 2008.
+[24] P.-Y. Chiu and S.-I. Liu, “A 0.07 pj/b/db 36-gb/s PAM-3 receiver
+using inductor-reused CTLE and one-tap loop-unrolled DFE in 22-nm
+CMOS,” IEEE Trans. Circuits Syst. I, Reg. Paper, vol. 72, no. 4, pp.
+1522–1532, 2025.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:08:18 UTC from IEEE Xplore.  Restrictions apply. 

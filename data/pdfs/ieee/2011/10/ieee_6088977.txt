@@ -1,0 +1,252 @@
+COMBINING LDPC, TURBO AND VITERBI DECODERS: BENEFITS AND COSTS
+
+S. Kunze, E. Matusˇ, G. Fettweis
+TU Dresden Vodafone Chair Mobile Comm. Systems {steffen.kunze, matus, fettweis}@ifn.et.tu-dresden.de
+
+T. Kobori
+NEC Corp. System IP core research labs
+t-kobori@ax.jp.nec.com
+
+ABSTRACT
+In this paper we present a detailed analysis into the benefits and costs of merging decoders for different channel code types such as convolutional, turbo and LDPC codes. An ASIP (application-specific instruction set processor)-based framework for multi-code forward error correction (FEC) architectures is applied to implement three dedicated decoders for convolutional, turbo and LDPC codes respectively as well as one decoder capable of decoding all three. Synthesis results and performance estimations for all architectures are presented and used to draw a clear and fair comparison between single-mode and multi-mode decoders.
+Index Terms— channel decoder, LDPC, turbo decoder, Viterbi decoder, multi-standard
+1. INTRODUCTION
+In many modern mobile communication systems, due to common standardization practice, more than one type of channel coding algorithm is used. The Wimax 802.15e and LTE standards for example both use convolutional turbo coding (CTC) as well as convolutional coding (CC). Wimax even has an option for low-density parity-check (LDPC) codes. The system designer now has to accommodate for all the required coding types and parameter sets. The main concern here is of course the decoding part of the signal processing chain, since it is far more computationally complex than the encoders. FEC decoders are traditionally implemented as specialised IP blocks for different code types. Recently however, there has been some effort to merge decoder architectures for different algorithms. Some notable results have been reported for combining LDPC and CTC decoders in [1], [2] and [3]. In [4] LDPC, CTC and CC decoding is combined. This type of approach gives the system designer the option to reduce the number of IP blocks in the System-on-Chip (SoC) and avoid having to spend chip area for specialised IP that might only be used a small part of the time. A question that has not been conclusively answered yet is just how efficient it is to merge decoders and if it would be advantageous to keep dedicated decoders over a multi-mode solution. In general, it is difficult to compare architectures
+
+since they are often implemented on different technologies with different design goals in mind, making it hard to accurately assess them. This is reflected by a lack of literature on this topic. Most authors just mention logic sizes of the combined decoders and do not do a comparison to single-mode decoders. Two papers actually covering the data path merging of Viterbi and turbo decoding are [5], [6] and in [3] aspects of merging LDPC and turbo decoding are explored. To more deeply explore the effects of merging data paths for all the three cases of CC, CTC and LDPC decoding, we will use the multi-mode ASIP decoder presented in [7] as a reference and starting point. It is programmable to decode each of these code types and is going to serve as a basis to implement three separate ”single-mode” decoders, each of whom is dedicated to CC, CTC or LDPC decoding, respectively. All three single-mode decoders shall follow the same ASIP approach and use the same synthesis parameters to allow a fair evaluation of the multi-mode decoder. Since all conditions are kept constant any differences in logic size can directly be attributed to the changes in architecture design, which makes it easy to actually judge the effects of these design changes. In the next section we will first give an overview of techniques for merging decoding algorithms. In section 3 we will quickly summarize the multi-mode decoder implementation from [7]. Then we will go on to present the ”derived” dedicated decoders in section 4. Section 5 shows implementation results and their evaluation.
+2. MERGING DECODING ALGORITHMS
+Let us take a look at the different approaches that can be taken to combine the functionality of several FEC decoders:
+Memory sharing: This is the most high-level approach to merging decoders. The logic is left mostly unchanged and the separate decoder instances are simply connected to the same memory banks and I/O or system interfaces. If we look at fig. 1, assume that decoder 1 is connected to two memories, A and B. Decoder 2 is also connected to one memory and if the memory interface is sufficiently similar to that of decoder 1, they can share this memory (under the assumption
+
+978-1-4577-1921-9/11/$26.00 ©2011 IEEE
+
+216
+
+SiPS 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Decoders 1 and 2 sharing memory A.
+
+that only one decoder is going to be active at any given time). This approach is not too hard to implement and is able to deliver very good logic area savings in cases where the storage requirements are high, e.g. the DVB-S2 standard. But the results do depend on the application and savings are lower for scenarios with shorter codewords or in environments where there exists an abundance of memories, which might happen e.g. if the target platform is an FPGA with a lot of built-in memory blocks. An example for an implementation employing memory sharing can be found in [4].
+Functional unit merging: If we step one hierarchical level down and look at the functional units (FUs - An FU in our case is used to refer to a building block of a decoder that performs a part of the decoding algorithm, e.g. branch metric computation or traceback) inside of a decoder, there is a lot of redundancy that can be exploited, when trying to merge two decoders. Consider the simplified block scheme in fig. 2. In step 1, we identify that in both data paths, FU1 has similar input and output connections, so it makes sense to merge the two FU1 instances to reuse the connection to memory and any output buffers that might exist. This means the functionality of path A FU1 and path B FU1 are put into one FU (step 2) and made accessible by a selector switch while the number of in/out ports are kept as they were. Now, in the resulting data path we were able to save one connection (between FU1 and memory). Usually, such a FU will have registers for the output ports due to timing or data routing concerns. They can also be shared. Identifying whole groups of FUs that can be utilized in this way can lead to even bigger savings.
+Algorithmic operation merging: Even more low-level is the approach of merging the processing of algorithm kernels such as Add-Compare-Select (ACS). Here, similar operations in the target algorithms are identified and used to design a common basic processing unit. This is of course limited to such algorithms that share suitable operations. For a detailed example of merging ACS and a trellis-based LDPC decoding algorithm, see [3].
+
+Fig. 2. Functional units with similar connections are merged.
+3. MULTI-MODE DECODER ARCHITECTURE
+In [7] we presented a multi-core multi-mode decoder for convolutional, turbo and LDPC codes. Each core of the decoder can be independently programmed to decode either CCs, CTCs or LDPC codes. In fig. 3 you can see an overview schematic of one such decoder core showing the control path and instruction memory (IMEM) as well as the four parallel processing elements (PEs) and respective data memories connected through an interconnect network. As control scheme we apply a very long instruction word (VLIW) approach, where every FU is programmable with an own function instruction word within the VLIW. The PEs work in parallel in a SIMD fashion.
+The data path merging for this architecture was mostly performed on the FU level. Inside a PE, there are several FUs (fig. 4). Most of these are used for more than one algorithm. The Gamma unit, for example, calculates branch metrics in CC/CTC mode and is used for subtracting extrinsic information from channel log-likelihood ratio (LLR) values in LDPC mode. For more details, please refer to [7].
+One PE consists of enough computation blocks to be able to process 16 trellis states in parallel when forward-recursion with ACS is used, as in the Viterbi algorithm. Alternatively, it can process 8 states forward/backward in parallel using the BCJR algorithm. As another option, a PE can process
+
+217
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+DMEM0 Bank 0
+
+DMEM0 Bank 1
+
+DMEM0 Bank 2
+
+DMEM0 Bank 3
+
+Config Reg
+
+AGU &
+CTRL
+
+PE#0
+
+Read/Write Interconnect
+
+PE#1
+
+PE#2
+
+Trellis Interconnect
+
+PE#3
+
+IMEM
+CORE 0
+
+Local Mem
+
+Local Mem
+
+Local Mem
+
+Local Mem
+
+DMEM1 Bank 0
+
+DMEM1 Bank 1
+
+DMEM1 Bank 2
+
+DMEM1 Bank 3
+
+Fig. 3. Top-level view of multi-mode decoder.
+
+extrinsic_in systematic_in
+parity_in
+
+Gamma
+
+PE
+
+Alpha 8x
+Beta 8x
+Local memory
+
+Lambda
+
+extrinsic_out
+
+Fig. 4. Processing element of multi-mode decoder.
+
+Fig. 5. Data path of the viterbi decoder.
+completely equivalent between the specialised decoders and the multi-mode decoder, which allows us an exact comparison.
+4.1. Viterbi Decoder
+The Viterbi decoder has the simplest data path of all decoder realizations (see fig. 5; shaded areas represent unused FUs), it implements the well-known Viterbi algorithm. The interconnect only has to perform the simple multiplexing of input values to the PEs. In the Gamma FU the branch metric calculation is executed and in the Alphabeta FU the state metric calculation. The trellis connection network feeds back the state metrics into Alphabeta FU. Note that it is connected to the other PEs as well, allowing to process 4x16=64 trellis states in parallel. Other active parts are the survivor memory LMEM and the traceback FU, of which there is only one in the decoder. It collects the survivor information from all four PEs to produce the hard-output values.
+
+8 LPDC check node updates in parallel, where connected edge values are loaded sequentially, one per cycle. LDPC decoding is implemented as layered decoding based on the offset Min-Sum algorithm [8]. The architecture was tested with assembly test programs for the three decoding algorithms, which resulted in a throughput of 86 Mbps at a clock frequency of 200 MHz for a (171,133)-CC with rate 0.5, a throughput of 19 Mbps for the LTE turbo code with rate 1/3 and 128 information bits and a throughput of 55 Mbps for the Wimax rate 3/4 LDPC code with 576 information bits
+4. DERIVED DECODER ARCHITECTURES
+Starting with the architecture from section three, we modified the design such as to ”derive” decoder architectures that are dedicated to only decoding one type of code and are optimized with this goal in mind. The overall control structure remains the same though, so that the resulting decoders are still programmable with assembly programs and these programs are executed in the same way as on the original architecture. Because of this, the decoding performance will be
+
+4.2. Turbo Decoder
+For turbo decoding, the BCJR algorithm [9] is used, with parallel forward and backward recursions. This means that in the turbo decoder many FUs perform similar functions as they do in the Viterbi decoder. Branch metric and state metric computation in Gamma and Alphabeta FUs with trellis connection feedback is almost identical. Different is the function of the interconnect network, it is implemented as crossbar over all four PEs to allow the random memory access necessary for interleaving. The Lambda FU generates the LLRs from forward and backward metrics. LMEM is used as intermediate storage for state metrics. In the DALU FU the new extrinsic values are generated from the LLRs. The details of the turbo PE are shown in figure 6.
+4.3. LDPC Decoder
+LDPC decoding uses a layered offset-min-sum algorithm [8], so most central FUs are used differently than for turbo decoding. A big difference is the interconnect operation. The 4x4 crossbar is coupled with a barrel shifter stage to provide
+
+218
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 6. Data path of the turbo decoder.
+
+inside one PE for turbo decoding.
+
+Table 1. PE configurations for different applications
+
+Viterbi
+
+Turbo
+
+LDPC
+
+Interconnect Gamma FU Alphabeta FU Lambda FU Trellis con. LMEM DALU
+
+1:4 Mux branch metr. state metr.
+inter-PE surv. mem
+-
+
+4x4 Crossbar branch metr. state metr.
+LLR intra-PE metr. storage
+extr.
+
+Barrel shift extr.
+min-sum -
+min storage extr.
+
+5. IMPLEMENTATION RESULTS
+
+Fig. 7. Data path of the LDPC decoder.
+the circular matrix permutations that are required for aligning the message vectors associated with the submatrices of a parity-check matrix to the PEs. The Gamma FU is used to subtract extrinsic value from the current bit value. In the Alphabeta FU the minima search and LLR accumulation operations of the min-sum algorithm are performed. The new extrinsic value is recombined with the bit value in the DALU FU. LMEM is again used as intermediate storage.
+4.4. Combined Viterbi/Turbo Decoder
+The Viterbi/Turbo decoder ist the intermediate step to the full multi-mode decoder. It essentially consists of the turbo decoder plus traceback unit. Additionally, there are some changes in the Alphabeta FU to support both BCJR and the Viterbi algorithm. This decoder was implemented to study the effects of just combining these two algorithms without influence of the rather complex LDPC decoder.
+4.5. Data path configuration overview
+In table 1 there is an overview of the different configurations the PEs use for the different application scenarios. The fields marked with ”extr.” for turbo and LDPC decoding refer to either an addition or subtraction of extrinisic information from/to the bit LLR value. The two fields concerning the trellis connection FU are meant to represent the difference between spanning up to 64 trellis nodes, i.e. connecting several PEs, in convolutional decoding and just connecting 8 nodes
+
+All the architectures presented in the previous section have been synthesized with Synopsys Design Compiler for a 65nm process from TSMC using worst case conditions and a target clock frequency of 200 MHz. The multi-mode decoder implementations use the same test programs as the respective single-mode decoders, so the decoding throughput does not change between implementations. That means the feasability of combining decoders can be decided by just looking at the synthesized logic sizes and the power consumption values. For the presented results, we will focus only on the decoder logic and leave out the memories. The effects of memory sharing can be studied e.g. in [4]. The synthesis results for the three single-code decoders are summarized in table 2. As expected, the Viterbi decoder is
+
+Table 2. Synthesis results single-mode decoders
+
+Viterbi Turbo LDPC
+
+interconnect [mm2] 0.001 0.005 0.35
+
+ctrl logic [mm2]
+
+0.043 0.056 0.039
+
+data path [mm2]
+
+0.055 0.157 0.109
+
+total [mm2]
+
+0.100 0.227 0.192
+
+relatively small compared to the two others. This suggests that the area savings when combining it with the turbo decoder will not be very big, if viewed as percentage of the sum of the two decoders’ area. On the other hand, the overhead incurred over just a turbo decoder will be small. This is enhanced by the similar ACS structure at the heart of the two decoding schemes, which is reflected by the results in table 3.
+In this table we see the logic size of a combined turbo/viterbi decoder compared to the two respective single-mode decoders. The data path is the most interesting aspect for a comparison since the control logic is quite large for this ASIP implementation, which might not be representative for other approaches such as ASIC. There is only a 10% overhead in the data path of the combined decoder compared to the turbo
+
+219
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+Table 3. Results of merging viterbi and turbo decoder
+
+Viterbi Turbo Tur/Vit overh.
+
+intercon.[mm2] 0.001 0.005 0.005
+
+-
+
+ctrl logic[mm2] 0.043 0.056 0.058
+
+4%
+
+data path[mm2] 0.055 0.157 0.173 10%
+
+total [mm2]
+
+0.100 0.227 0.245 8%
+
+decoder. This result is reinforced by similar overhead ratios found in [6] and [5]. The next step was combining LDPC and turbo/viterbi decoder (see table 4). Since the two decoders are roughly of the same size, it is more intuitive to look at the area savings relative to the sum of both as a comparison metric for this case.
+
+Table 4. Results of merging LDPC and turbo/viterbi decoder
+
+intercon.[mm2] ctrl logic[mm2] data path[mm2]
+total [mm2]
+
+Tur/Vit 0.035 0.058 0.173 0.245
+
+LDPC 0.005 0.039 0.109 0.192
+
+comb. 0.038 0.060 0.238 0.345
+
+saving 5% 38% 16% 21%
+
+We see that combining LDPC together with the other decoders also yields area savings. Again focusing on the data path, the area of the combined decoder is 16% lower than the sum of LDPC decoder and turbo/viterbi decoder. This means that from a logic size point of view it definitely makes sense to use a multi-mode decoder over the single-mode ones. If we add up the area of the three single-core decoders, we get a size of 0.321 mm2 in the data path versus 0.238 mm2 for the combined approach, which is equivalent to a 26% area saving. But to get a complete picture, we also need to take a look at the power consumption. We used activity files generated by netlist simulations of the single-mode as well as multimode decoders to estimate power consumption with Synopsys PrimeTime. You can find the results for the three test cases in table 5. Only power consumption in the decoder logic is displayed here, memory is left out.
+
+Table 5. Estimated power consumption (without memories) single-mode multi-mode increase
+
+Viterbi Turbo LDPC
+
+11.5 mW 26.6 mW 23.3 mW
+
+24.9 mW 31.6 mW 33.4 mW
+
+116% 19% 43%
+
+We see a huge increase in power consumption when performing the decoding on the multi-mode decoder, but also
+
+very large variance in the severeness of the increase. There are several factors at play here. One point is that the idle FUs that are not active, e.g. during Viterbi decoding, in the multi-mode decoder (see fig. 5) still use a quite noticeable amount of power. This could be mitigated somewhat by applying clock gating on a FU level (which we did not do in the curent design). The turbo decoding is obviously a lot less impacted by this, because almost every FU is active during decoding. Another point is that the multi-mode FUs are in most cases more complex than the single-mode ones. So, whenever such a FU gets used during decoding, it is going to consume more power than the equivalent single-mode FU. Again, this hits Viterbi decoding the hardest, since it does not need as many complex functions, e.g. in the Alphabeta FU, but still has to use the complex and power-hungry FU when running on the combined decoder. Overall, the only power consumption increase that lies within a reasonable range is the one for turbo decoding, the others are too large to justify for most applications.
+6. CONCLUSIONS
+We have shown the implementation of three decoder cores for convolutional, turbo and LDPC codes, respectively, that are all derived architecturally from one multi-mode ”mother” decoder capable of decoding all three code types. In comparing the implementation results for these decoders, we were able to show that combining Viterbi and turbo decoding incurs an area overhead of roughly 10% over just the turbo decoder. Taking only the data paths into account, the combined Viterbi/turbo/LDPC decoder has an area advantage of about 26% compared to the sum of all three decoders. There is however a heavy penalty on the power consumption of the multi-mode decoder, which leads to the conclusion that it only makes sense to employ a multi-mode solution in an environment that is not completely focused on low-power. An obvious example would be a base station in mobile communications.
+7. REFERENCES
+[1] F. Naessens, B. Bougard, S. Bressinck, L. Hollevoet, P. Raghavan, L. van der Perre, and F. Catthoor, “A unified instruction set programmable architecture for multistandard advanced forward error correction,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS’08), Washington, DC, Oct. 2008, pp. 31–36.
+[2] G. Gentile, M. Rovini, and L. Fanucci, “A multi-standard flexible turbo/LDPC decoder via ASIC design,” in Proc. International Symposium on Turbo Codes and Iterative Information Processing (Turbo Coding’10), Brest, France, sep 2010.
+
+220
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+[3] Y. Sun and J.R. Cavallaro, “Unified decoder architecture for ldpc/turbo codes,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS’08), Washington, DC, Oct. 2008, pp. 13–18.
+[4] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” in Proc. Int. Symposium on Turbo Coding (TURBO CODING’08), Lausanne, Switzerland, Sept. 2008, pp. 13–18.
+[5] F.M. Li, C.H. Lin, and A. Wu, “Unified convolutional/turbo decoder design using tile-based timing analysis of va/map kernel,” IEEE Trans. VLSI, vol. 16, no. 10, pp. 1358–1371, Oct. 2008.
+[6] J.R. Cavallaro and M. Vaya, “VITURBO: A RECONFIGURABLE ARCHITECTURE FOR VITERBI AND TURBO DECODING,” in Proc. Int. Conf. on Acoustics, Speech and Sig. Proc. (ICASSP’03), Hong Kong, Apr. 2003, pp. 497–18.
+[7] S. Kunze, T. Kobori, E. Matusˇ, and G. Fettweis, “A ”MULTI-USER” APPROACH TOWARDS A CHANNEL DECODER FOR CONVOLUTIONAL, TURBO AND LDPC CODES,” in Proc. Int’l Workshop on Signal Processing Systems (SIPS’10), San Jose, CA, USA, Oct. 2010.
+[8] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288– 1299, Aug. 2005.
+[9] L. R. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Inform. Theory, vol. IT-20, pp. 248–287, Mar. 1974.
+221
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:32 UTC from IEEE Xplore. Restrictions apply.
+
+

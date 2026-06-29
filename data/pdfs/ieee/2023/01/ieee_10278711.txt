@@ -1,0 +1,1026 @@
+A Scalable Graph Neural Network Decoder for
+Short Block Codes
+Kou Tian, Chentao Yue, Changyang She, Yonghui Li, and Branka Vucetic
+School of Electrical and Information Engineering, The University of Sydney, Australia
+Abstract—In this work, we propose a novel decoding algorithm
+for short block codes based on an edge-weighted graph neural
+network (EW-GNN). The EW-GNN decoder operates on the
+Tanner graph with an iterative message-passing structure, which
+algorithmically aligns with the conventional belief propagation
+(BP) decoding method. In each iteration, the “weight” on the
+message passed along each edge is obtained from a fully con-
+nected neural network that has the reliability information from
+nodes/edges as its input. Compared to existing deep-learning-
+based decoding schemes, the EW-GNN decoder is characterised
+by its scalability, meaning that 1) the number of trainable
+parameters is independent of the codeword length, and 2) an
+EW-GNN decoder trained with shorter/simple codes can be
+directly used for longer/sophisticated codes of different code rates.
+Furthermore, simulation results show that the EW-GNN decoder
+outperforms the BP and deep-learning-based BP methods from
+the literature in terms of the decoding error rate.
+Index Terms—neural decoder, graph neural network, belief
+propagation decoding, short block codes
+I. INTRODUCTION
+Short codes with strong error-correction capability should
+satisfy the stringent latency and reliability requirements of
+ultra-reliable low-latency communications (URLLC) in 5G
+and future 6G networks [1], [2]. Several short linear block
+codes, including Bose-Chaudhuri-Hocquenghem (BCH) codes
+and low density parity check (LDPC) codes, are promising
+candidates for URLLC due to their superior performance in
+the short block length regions [1]. Although long LDPC codes
+with the BP decoder have been adopted in the data channel of
+5G new radio [3], their short variants suffer from a significant
+gap to the finite block length bound [4]. The suboptimal nature
+of short LDPC codes also results from the limitation of the
+BP decoder, which has a notable performance degradation
+compared to the maximum-likelihood (ML) decoding, due to
+insufficient sparsity in the parity-check matrices [1].
+In recent years, deep learning (DL) technologies have been
+applied in the field of channel coding, particularly, the decoder
+design [5]–[10]. In [6] and [7], the authors proposed a neural
+decoder, namely, the neural BP (NBP), by unrolling the iter-
+ative structure of BP to a non-fully connected network with
+trainable weights. NBP outperforms the conventional BP in
+terms of decoding error rate when using short BCH codes. The
+NBP decoder is further improved in [8], where a hypernetwork
+structure was developed. On the other hand, the performance
+of NBP can be improved by optimizing the input parity-check
+matrices. A pruning-based NBP was presented in [9], which
+removes less-weighted neurons in the NBP network to obtain
+This work has been supported by the SmartSat CRC, whose activities are
+funded by the Australian Government’s CRC Program.
+different parity-check matrices in each iteration. In addition,
+the authors of [10] proposed efficient and well-suited loss
+functions to improve the training process of NBP.
+Although aforementioned DL-aided decoding schemes show
+significantly improved error-correcting performance compared
+to the conventional BP, several issues remain open. 1) Existing
+schemes suffer from high complexity, which increases with
+code length linearly [6], [7], [10] or exponentially [5]. 2) They
+are not scalable to the code length and code rate, i.e., we need
+to re-train the neural networks from scratch when code length
+or code rate changes. 3) The performance of existing schemes
+highly depends on the hyper-parameters of neural networks,
+which are obtained by trail-and-error.
+To address the above issues, we leverage the emerging graph
+neural network (GNN) [11] to develop a novel edge-weighted
+GNN (EW-GNN) decoder for short codes. To simplify the
+selection of hyper-parameters, EW-GNN aligns with BP [12],
+which operates over Tanner graphs with variable nodes and
+parity-check nodes. Specifically, each variable node in EW-
+GNN is assigned a hidden embedding, which is iteratively
+updated based on the edge messages on the Tanner graph.
+Then, each edge messages is assigned a “weight” determined
+by a fully-connected feed-forward neural network (FNN). In
+each decoding iteration, the FNN updates the weights based
+on its input features, i.e., reliability information of nodes/edges
+[13], [14]. By reducing the weights of unreliable edge messages
+generated from small cycles in the Tanner graph, EW-GNN can
+improve the accuracy of the output codeword estimate. The
+number of trainable parameters of EW-GNN does not change
+with the code length. Hence, after the training with a given
+code, the EW-GNN decoder can be applied to other codes with
+different rates and lengths. Simulation results show that EW-
+GNN outperforms the conventional BP and the NBP [7] in
+terms of error rate performance, even when the code length in
+the training stage is different from that in the testing stage.
+Notation: We use a, a, and A to represent a scalar, a
+row vector, and a matrix, respectively. Let ai denote the i-
+th element of the vector a, and Ai,j denote the element at the
+i-th row and the j-th column of the matrix A. We use (·)⊺to
+represent the transpose of a vector or a matrix, e.g., a⊺and
+A⊺. The calligraphic letters denote sets, e.g., the set A. In
+particular, N(µ, σ2) stands for the normal distribution and R
+is the set of real numbers. Pr(·) denotes the probability of an
+event, and | · | is the operator of absolute value.
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+978-1-5386-7462-8/23/$31.00 ©2023 IEEE
+1268
+ICC 2023 - IEEE International Conference on Communications | 978-1-5386-7462-8/23/$31.00 ©2023 IEEE | DOI: 10.1109/ICC45041.2023.10278711
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 
+II. PRELIMINARIES
+A. Linear Block Codes and Tanner Graph
+We consider a binary linear block code C(n, k) that is
+defined by a generator matrix G ∈{0, 1}k×n or a parity-
+check matrix H ∈{0, 1}(n−k)×n, where n and k denote
+the codeword length and message length, respectively. For
+a binary message sequence b ∈{0, 1}k, its corresponding
+codeword c is generated by the encoding operation c = bG
+and satisfies Hc⊺= 0. We assume that the modulated symbol
+x of c is transmitted over the additive white Gaussian noise
+(AWGN) channel with the binary phase shift keying (BPSK)
+modulation. Thus, x is given by x = 1 −2c ∈{−1, 1}n,
+and the noisy received signal y is obtained as y = x + z,
+where z is the AWGN vector with noise power σ2, i.e.,
+zi ∼N(0, σ2). We define the signal-to-noise ratio (SNR) in
+dB as γ = 10 log10(1/σ2). At the receiver side, a soft-decision
+decoder decodes y and outputs an estimate ˆc of the transmitted
+codeword c. A decoding error occurs when ˆc ̸= c.
+Tanner graph is a graphical representation of linear block
+codes [15]. As illustrated in Fig. 1, for a code C(n, k) with
+the parity-check matrix H, its Tanner graph consists of two
+sets of nodes: n variable nodes corresponding to codeword
+bits and n −k check nodes corresponding to parity-check
+equations. The i-th variable node vi is connected to the j-
+th check node uj if the (j, i)-th element of H is one. In
+this case, H can be interpreted as the adjacency matrix of
+a bipartite graph G = (V, U, E) with two disjoint node sets
+V = {v1, ..., vn} and U = {u1, ..., un−k}, and an edge set
+defined as E = {ei,j = (vi, uj) : vi ∈V, uj ∈U, Hj,i = 1}.
+We denote the neighborhood of a variable node vi, i.e., all
+check nodes connected to vi, as M(vi) = {uj ∈U : ei,j ∈E}.
+Similarly, M(uj) = {vi ∈V : ei,j ∈E} represents the set of
+neighbor variable nodes of a check node uj.
+B. Iterative Decoding Algorithm
+BP is a soft-decision decoding algorithm that accepts soft
+information (i.e., the bit-wise log-likelihood ratios (LLRs)
+observed from channel) as its input [13]. We denote the channel
+LLR sequence of codeword c as s ∈Rn. For the BPSK
+modulation over an AWGN channel, si can be obtained by
+si = ln Pr(ci = 0|yi)
+Pr(ci = 1|yi) = 2yi
+σ2 .
+(1)
+The BP decoder performs iterative message-passing on the
+Tanner graph, by transmitting messages between variable nodes
+and check nodes. Specifically, at the t-th iteration, the message
+passed from uj to vi is given by
+µ(t)
+uj→vi = 2 tanh−1
+
+
+Y
+v∈M(uj)\vi
+tanh
+ 
+µ(t−1)
+v→uj
+2
+!
+,
+(2)
+for each uj ∈U and vi ∈M(uj). The message passed from
+vi to uj is given by
+µ(t)
+vi→uj = si +
+X
+u∈M(vi)\uj
+µ(t)
+u→vi,
+(3)
+for each vi ∈V and uj ∈M(vi).
+At the beginning of decoding (i.e., t = 1), the message
+µ(0)
+vi→u is initialized by the channel LLR corresponding to
+…
+…
+…
+…
+…
+𝑣!
+𝑢"
+𝑢#$%
+𝑢!
+𝑖-th variable node
+𝑗-th parity-check node
+edge e&,(
+𝑣&
+𝑢*
+𝑣&
+𝑢*
+𝑣(
+𝑣(!
+𝑣#
+Fig. 1: A bipartite Tanner graph G = (V, U, E).
+variable node vi, i.e., µ(0)
+vi→u = si for vi ∈V and u ∈M(vi).
+Then, BP iteratively performs (2) and (3), and updates the
+messages µ(t)
+uj→vi and µ(t)
+vi→uj along edges in E. This iterative
+process continues until µ(t)
+uj→vi and µ(t)
+vi→uj converge (e.g.,
+see the analysis in [16]), or the allowed maximum number
+of iterations is reached. Finally, assuming that T is the last
+iteration, BP obtains the soft information of vi ∈V as
+ℓvi = si +
+X
+u∈M(vi)
+µ(T )
+u→vi.
+(4)
+Here, ℓvi is known as the a posteriori LLR of the i-th codeword
+bit ci. Therefore, we can obtain ˆci, which is the estimate of the
+transmitted bit ci, based on ℓvi. Specifically, ˆci = 0 if ℓvi > 0,
+and ˆci = 1 otherwise.
+The decoding performance of BP depends on the structure
+of codes (i.e., structure of Tanner graphs). To be more precise,
+it is strongly limited by short cycles existing in the Tanner
+graph. According to [17], small cycles introduce correlations
+between µ(t)
+u→v and µ(t′)
+v→u across decoding iterations where t ̸=
+t′, thereby preventing the a posterior LLR ℓvi being exact.
+For example, for BCH codes and short LDPC codes, BP has
+inferior performance due to the small cycles of their Tanner
+graphs [1], [18].
+III. EDGE-WEIGHTED GNN DECODING ALGORITHM
+A. Graph Neural Networks and Algorithmic Alignment
+GNN is developed for processing graph structured data. It
+learns the low-dimensional representation of graphs, i.e., the
+network embedding, by iteratively propagating and aggregating
+the node/edge information over the graph [11]. Embeddings
+capture the graph topology, and they are used for graph analysis
+tasks, e.g., node/graph classification and link prediction. We
+note that the channel decoding problem is in fact a node
+classification task on the Tanner graph, as demonstrated in
+Section II-A.
+Generally, many existing GNNs can be represented as a
+message passing neural network (MPNN) [19]. For a general
+input graph with node features, MPNN generates node em-
+beddings with two differentiable functions, namely, the update
+function Ut(·) and the message function Mt(·). For each
+edge in the graph, Mt(·) computes a “message” based on the
+node embeddings of its endpoints. Then, for each node, Ut(·)
+updates the embedding value by aggregating messages from its
+neighbors. For details, we refer readers to [19].
+GNN is capable of learning well a wide range of practical
+models based on graphs with superior performance compared
+to the traditional FNN. This is justified by the algorithmic
+alignment framework [12]. Generally speaking, a neural net-
+work aligns well with a classical algorithm if the algorithm
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+1269
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 
+𝑀!(#)
+𝑠"
+𝑢(
+𝑢)
+𝑣'
+𝑀!(#)
+𝑀!(#)
+𝜇#$→&'
+(!)
+𝜇#$→&*
+(!)
+𝜇#$→&+
+(!)
+𝜇#$→&,
+(!)
+𝜇&*→#$
+(!)
+𝑢*
+𝑢+
+𝑀!(#)
+𝜇&'→#$
+(!)
+𝜇&,→#$
+(!)
+𝜇&+→#$
+(!)
+ℎ#$
+(!)
+Fig. 2: Illustration of updating the node embedding in the GNN-based
+decoder. The variable node vi receives messages from M(vi) =
+{ua, ub, uc, ud}.
+can be partitioned into multiple parts, each of which can be
+conveniently modeled by one of the modules in the neural net-
+work1. GNN can align with (in other words, learn well) the BP
+decoding algorithm, because 1) BP solves node classification
+problems on the Tanner graph and 2) both GNN and Tanner
+graph are permutation-invariant (due to the linear property of
+codes) [12, Section 2].
+Motivated by the algorithmic alignment framework of GNN,
+we propose a GNN-based scalable decoder for linear block
+codes. Considering a bipartite graph G = (V, U, E) with
+directed edge messages, as introduced in Section II-A, we
+define the node feature of variable node vi as the received LLR
+information2, si given by (1). In each iteration, the hidden node
+embedding of vi is updated based on incoming edge messages
+µu→vi according to
+h(t)
+vi = Ut
+
+si,
+X
+u∈M(vi)
+Mt(µ(t)
+u→vi, h(t−1)
+vi
+)
+
+,
+(5)
+where the edge message µ(t)
+u→v is iteratively generated from
+µ(t−1)
+v→u . Fig. 2 gives an example of the updating process in
+(5), which will be further elaborated in Section III-B. Since
+n variable nodes correspond to n codeword bits, the GNN
+decoder finally obtains ˆci from h(T )
+vi , for vi ∈V, after T
+iterations.
+B. GNN Decoder with Edge Weights
+In the proposed GNN decoder, we introduce “weight” to
+the edge messages to improve the decoding performance. In-
+tuitively, by reducing the weights of unreliable edge messages
+generated from small cycles in the Tanner graph, it is possible
+to improve the accuracy of the output codeword estimate ˆc.
+The weight is a multiplicative correction factor [20] working
+on the edge message from parity-check nodes to variable nodes.
+Let us denote the weight of µ(t)
+uj→vi in the t-th iteration as
+w(t)
+uj→vi ∈R. By employing an FNN, gθ(·) with trainable
+parameters θ, the weight w(t)
+uj→vi is learned from input features
+that can reflect the reliability of node and edge information,
+which is defined as
+w(t)
+uj→vi=gθ(|µ(t)
+uj→vi|, r(t)(µuj→vi), r(t−1)(µvi→uj), r(t−1)(hvi)).
+(6)
+In (6), |µ(t)
+uj→vi| represents the reliability of edge message3
+1We refer interested readers to [12, Definition 3.4] for its formal definition.
+2GNN are capable of processing various types of nodes by applying different
+update and message functions. In the GNN decoder, the node classification
+only performs on variable nodes that are associated with codeword bits. Thus,
+we only assign features and embeddings to variable nodes for simplicity.
+3This is because µ(t)
+uj→vi can be regarded as an extrinsic LLR (see [13]).
+|𝜇!→#
+$
+|
+𝜇#→!
+($&')
+Update 
+𝜇!→#
+($)
+Eq. (8)   
+Update ℎ#
+($)
+Eq. (11)
+Update 𝜇#→!
+$
+Eq.(10)
+Calculate 
+𝑟$
+*
+Eq. (7)
+FNN 
+𝑔𝜽*
+Eq. (6)
+𝜇!→#
+($&*)
+𝜇!→#
+($&')
+ℎ#
+($&*)
+𝜇#→!
+($&*)
+ℎ#
+($&')
+iteration 𝑡−2
+iteration 𝑡−1
+iteration 𝑡
+Fig. 3: The information flow across adjacent iterations in the EW-
+GNN.
+µ(t)
+uj→vi. Then, r(t)(x) is a residual function given by
+r(t)(x) = |x(t) −x(t−1)|.
+(7)
+Thus, r(t)(µuj→vi), r(t−1)(µvi→uj), and r(t−1)(hvi) represent
+the residual value of µuj→vi, µvi→uj, and hvi, respectively.
+They are also measurements of the reliabilities [14]; precisely,
+a lower residual value is, a more reliable node/edge will be.
+Next, we explain the algorithm of EW-GNN with the help
+of weight w(t)
+uj→vi. At the t-th iteration, EW-GNN first updates
+the edge message from uj to vi according to
+µ(t)
+uj→vi = ln
+fc
+
+1 + Q
+v∈M(uj)\vi tanh
+
+µ(t−1)
+v→uj
+2
+
+, α
+
+fc
+
+1 −Q
+v∈M(uj)\vi tanh
+
+µ(t−1)
+v→uj
+2
+
+, α
+,
+(8)
+where
+fc(x, α) =
+
+
+
+
+
+2 −α,
+x > 2 −α,
+x,
+α ≤x ≤2 −α,
+α,
+x < α,
+(9)
+and α is a model parameter less than 10−7. We note that the
+message update function (2) in BP is not applicable to neural-
+network-based decoders, because tanh−1(·) is unbounded and
+introduces non-differentiable singularities, leading to a non-
+convergence training process. Therefore, we modify tanh−1(·)
+with the clip function fc(·) to avoid the aforementioned issue.
+Compared to the Taylor series expansion of tanh−1(·) used in
+[8], fc(·) in (8) introduces virtually no extra complexity.
+After µ(t)
+uj→vi is obtained for uj ∈U and vi ∈M(uj), the
+updated edge message from vi to uj is given by4
+µ(t)
+vi→uj = si +
+X
+u∈M(vi)\uj
+Mt(µ(t)
+u→vi, h(t−1)
+vi
+)
+= si +
+X
+u∈M(vi)\uj
+w(t)
+u→vi · µ(t)
+u→vi.
+(10)
+Then, the update function Ut(·) aggregates weighted edge mes-
+sages from all neighbor nodes, and updates node embedding
+h(t)
+v
+according to
+h(t)
+vi = Ut
+
+si,
+X
+u∈M(vi)
+Mt(µ(t)
+u→vi, h(t−1)
+vi
+)
+
+= si +
+X
+u∈M(vi)
+w(t)
+u→vi · µ(t)
+u→vi.
+(11)
+At t = 0, the node embeddings h(0)
+vi
+and edge messages
+µ(0)
+vi→u are all initialized to corresponding input features of
+4Mt(µ(t)
+u→vi, h(t−1)
+vi
+)=w(t)
+u→vi · µ(t)
+u→vi as w(t)
+u→vi is a function of h(t−1)
+vi
+.
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+1270
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 
+Algorithm 1: Training and Inference of EW-GNN
+▷End-to-end Training Phase:
+Input : Generator matrix G, parity-check matrix H, training
+batch size NB, training SNR [ γmin, γmax] , number
+of iterations T, learning rate η
+Output: well-trained gθ∗(·)
+1 Create the network topology, G = (V, U, E) from H;
+2 foreach epoch do
+3
+for nb ←1 : NB do
+4
+Obtain codeword c = bG from a random message b;
+5
+Obtain the noisy signal y with the AWGN channel at
+a random SNR γ ∈[ γmin, γmax] ;
+6
+Obtain the received LLR vector s by (1);
+7
+Initialize h(0)
+vi =si, µ(0)
+vi→u =si, µ(0)
+u→v =0, r(0)(·)=0;
+8
+for t ←1 : T do
+9
+foreach ei,j ∈E do
+10
+Update edge message µ(t)
+uj→vi by (8);
+11
+Update weight w(t)
+uj→vi by (6);
+12
+Update edge message µ(t)
+vi→uj by (10);
+13
+end
+14
+foreach vi ∈V do
+15
+Update node embedding h(t)
+vi by (11);
+16
+end
+17
+endfor
+18
+Calculate the multiloss value Lnb by (13);
+19
+endfor
+20
+Update θ with the loss L(θ) =
+1
+NB
+PNB
+nb=1 Lnb by the
+Adam optimizer with learning rate η;
+21 end
+▷Inference Phase:
+Input : LLRs of the received codewords s ∈Rn,
+parity-check matrix H′, number of iterations T ′
+Output: estimated codewords ˆc
+22 Create the network topology, G′ = (V′, U′, E′) from H′;
+23 Execute line 7 to line 17 on G′ with gθ∗(·) for T ′ iterations;
+24 Obtain the estimated codewords ˆc according to (12).
+node vi, i.e., si given in (1). Also, all residuals are initialized
+to 0. Meanwhile, at the t-th iteration, EW-GNN uses node
+embeddings and edge messages propagated from previous two
+iterations to update h(t)
+v , as demonstrated in Fig. 3. After T
+iterations, we obtain the estimated codeword ˆc from the node
+embedding hvi according to the following rule:
+ˆci =
+(
+1,
+h(T )
+vi
+≤0,
+0,
+h(T )
+vi
+> 0.
+(12)
+The algorithm of the proposed EW-GNN decoder is sum-
+marized in Algorithm 1, which includes the training phase
+and the inference phase. Thanks to the scalability of EW-GNN
+decoder, one can apply different Tanner graphs (i.e., H ̸= H′
+and G ̸= G′) in training and inference phases; this will be
+further demonstrated in Section IV.
+C. Training Algorithm
+The goal of the training phase is to find an optimal FNN
+gθ∗(·) that minimizes the difference between the transmitted
+codeword and the estimate output by the EW-GNN decoder.
+For channel coding, a large amount of data samples can be
+easily obtained to perform the end-to-end training [5]. The
+label data, i.e., the transmitted codewords, are generated by
+encoding a random binary message. By imposing an AWGN
+with power σ2 over the symbols of codewords, received LLRs
+can be computed according to (1), which are used as the input
+data of EW-GNN. To improve the robustness of EW-GNN,
+we perform the training process with diverse SNRs uniformly
+distributed in the interval [γmin, γmax] .
+Since the channel decoding can be considered as a bit-wise
+binary classification task, we apply the average binary cross-
+entropy (BCE) per bit per iteration as the loss function, i.e.,
+L = −1
+nT
+T
+X
+t=1
+n
+X
+i=1
+ci log(p(t)
+vi ) + (1 −ci) log(1 −p(t)
+vi ), (13)
+which is the multiloss variant [7] of a regular BCE loss function
+and allows the EW-GNN to learn from early network layers.
+In (13), p(t)
+vi denotes the probability Pr(ci = 1) estimated from
+the node embedding of vi at iteration t, which is given by
+p(t)
+vi =
+1
+1 + eh(t)
+vi
+∈(0, 1).
+(14)
+During the training phase, FNN parameters are updated utiliz-
+ing the Adam optimizer with a given learning rate η [21].
+D. Design of FNN
+We determine the normalization technique and activation
+function used for the FNN by exploiting the domain knowledge
+in channel coding.
+1) Input Normalization: According to (6) and (7), the input
+features of the FNN includes the absolute value of LLR, which
+varies widely in [0, ∞). In this case, feature normalization is
+necessary for better convergence in training. Since all input
+features of gθ(·) is non-negative, they and their transformations
+cannot be assumed to follow normal distributions. As a result,
+the standard score normalization is not applicable to EW-GNN,
+and we normalize the input feature by its mean value. For
+example, the input feature |µ(t)
+uj→vi| is normalized to
+|˜µ(t)
+uj→vi| =
+|µ(t)
+uj→vi|
+1
+E
+P
+ei,j∈E |µ(t)
+uj→vi|
+,
+(15)
+where E is total number of edges in the graph, given by E =
+P Hj,i. Other input features of gθ(·) are normalized in the
+same manner as (15).
+2) Activation Function: In the EW-GNN, we use the expo-
+nential linear unit (ELU) as the activation function for each
+FNN layer, which is defined as
+felu(x) =
+(
+x,
+x > 0,
+β(ex −1),
+x ≤0.
+(16)
+ELU allows to produce negative output weights with small
+values. It is found experimentally that ELU performs better
+than the rectified linear unit (ReLU) activation function which
+only has non-negative outputs, in training of the EW-GNN
+decoder.
+E. Complexity Analysis
+We analyze the computational complexity of the EW-GNN
+decoding algorithm, and compare it with those of the conven-
+tional BP decoder and the DL-based NBP decoder [7].
+1) Inference Complexity:
+BP, NBP, and EW-GNN are
+message-passing decoding algorithms. Thus, their overall com-
+plexity can be characterized by the number of iterations and
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+1271
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 
+the number of operations (e.g., additions and multiplications)
+per iteration.
+In each BP iteration, (2) and (3) are in fact computed for
+each ei,j ∈E. Let Ω1 denote the number of operations in
+computing (2) and (3). Then, the complexity of the BP decoder
+with T iterations is represented as O(Ω1E · T). Note that (4)
+is readily obtained from (3) at iteration T; thus, its complexity
+is negligible. Compared with the BP, a NBP decoder adds
+extra multiplications operation to (3) by assigning E weights
+to corresponding edge messages. At the final iteration T, E
+additional weights are applied to (4) to obtain the decoding
+results. Therefore, the complexity of the NBP decoder is
+represented as O((Ω1 + 1)E · T + E).
+In the proposed EW-GNN algorithm, the weight w(t)
+uj→vi is
+generated on-the-fly by a trained neural network according to
+(6). Let Ω2 denote the total number of operations involved in
+the forward propagation of gθ∗(·). Then, the complexity of the
+EW-GNN decoder with T iterations is represented as O((Ω1 +
+Ω2 + 1)E · T). Here, Ω2 is dependent on the architecture of
+the neural network.
+Since E = ¯dvn for ¯dv being the average degree of variable
+nodes, the complexity of all these algorithms increase linearly
+with the code length n.
+2) Training complexity: We use the number of trainable
+parameters in neural networks to represent the training com-
+plexity. Since the NBP decoder assigns in total 2E trainable
+parameters (weights) to edge messages in (3) and (4) [7,
+Section V], it has the training complexity 2E, which increases
+linearly with the length of input codewords.
+Different from existing DL-aided decoding algorithms in
+the literature [5]–[10], the training complexity of EW-GNN
+is independent of the code length and code rate k/n, and only
+depends on the network size of gθ(·). In this work, we apply
+a 3-layer FNN with 32 hidden units for gθ(·), whose training
+complexity is Ωt = 1249 for arbitrary block codes. In this
+case, the proposed EW-GNN has a lower training complexity
+than the NBP algorithm for large E (e.g., for large code length
+n and dense parity-check matrix H).
+IV. EXPERIMENTS AND RESULTS
+We evaluate the error-correction performance and the scal-
+ability of the proposed EW-GNN for short BCH codes and
+LDPC codes. The BP and NBP decoders [7] are considered
+as benchmarks for performance comparison. The decoding
+performance of these algorithms are measured by bit error rates
+(BER) at various SNRs. The BER is obtained by performing
+simulations until at least 10,000 bit errors are collected. The
+training of the EW-GNN algorithm is implemented using
+TensorFlow with hyper-parameters in Table I.
+A. BCH Codes
+We first train an EW-GNN decoder for the (63, 51) BCH
+code with T = 8 decoding iterations, and consider two infer-
+ence scenarios with different number of decoding iterations,
+T = 8 and T = 30.
+TABLE I: Hyper-parameters of the proposed EW-GNN
+Parameters
+BCH codes
+LDPC codes
+Clip factor α
+10−32
+10−7
+SNR range [γmin, γmax]
+[3 dB, 8 dB]
+[1 dB, 8 dB]
+Batch size NB
+2000
+4000
+Learning rate η
+10−3 ∼10−5
+Number of iterations T
+8
+FNN layers
+3
+Number of hidden units
+32
+ELU factor β
+1.0
+1) BER performance: As shown in Fig. 4a, EW-GNN
+outperforms BP and NBP in terms of BER for (63, 51) BCH
+code with both T = 8 and T = 30. When T = 8, our proposed
+EW-GNN decoder has 1.2 dB and 0.62 dB larger coding
+gains compared to the BP and NBP algorithms, respectively, at
+high SNRs. Although EW-GNN is trained in the scenario with
+T = 8, its BER performance remains superior with a larger
+number of decoding iterations. As shown, when T = 30, the
+EW-GNN decoder outperforms the NBP decoder by 0.61 dB.
+It is worth noting that our proposed decoder with T = 8 has a
+better BER performance than the NBP decoder with T = 30.
+2) Scalability:
+We directly apply the EW-GNN model
+trained for the (63, 51) BCH code with T = 8 to decode
+(63, 45) and (63, 36) BCH codes. Note that the Tanner graph
+of (63, 51) BCH codes has much fewer edges (i.e., smaller
+network size) than those of (63, 45) and (63, 36) BCH codes.
+As can been seen in Figs. 4b and 4c, the EW-GNN algorithm
+still achieves better BER performance than the BP and NBP
+algorithms for (63, 45) and (63, 36) BCH codes. For example,
+when decoding the (63, 36) BCH code with T = 30, the
+proposed EW-GNN increases the coding gain by 0.8 dB and
+0.2 dB compared to BP and NBP respectively.
+B. LDPC Codes
+In this subsection, we train the EW-GNN decoder for the
+half-rate CCSDS (32, 16) LDPC code [22] with the number of
+decoding iterations T = 8.
+1) BER performance: As depicted in Fig. 5a, the proposed
+EW-GNN algorithm achieves the best decoding performance
+among all its counterparts in decoding the (32, 16) LDPC code.
+Specifically, when T = 30, EW-GNN improves the coding
+gains of BP and NBP by 0.21 dB and 0.1 dB at high SNRs,
+respectively.
+2) Scalability: To investigate the scalability of EW-GNN
+to different code lengths, the EW-GNN model trained for the
+(32, 16) LDPC codes is directly applied to longer LDPC codes
+at the same code rate. As shown in Fig. 5b, when n = 128,
+the EW-GNN decoder still outperforms the BP decoder and the
+NBP decoder in terms of BER. Furthermore, when n = 256
+as illustrated in Fig. 5c, EW-GNN outperforms BP and NBP
+by 0.3 dB and 0.2 dB of the coding gain at high SNRs,
+respectively. Therefore, we highlight that even though EW-
+GNN is trained with an extremely short code (n = 32), it
+can achieve better BER performance when applied to longer
+codes without fine-tuning. This property enables the use of
+EW-GNN in practical communication systems with dynamic
+code lengths. In addition, one can train the EW-GNN with
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+1272
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 
+1
+2
+3
+4
+5
+6
+7
+8
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(63,51) BCH
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(a) k = 51
+1
+2
+3
+4
+5
+6
+7
+8
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(63,45) BCH
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(b) k = 45
+1
+2
+3
+4
+5
+6
+7
+8
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(63,36) BCH
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(c) k = 36
+Fig. 4: BER performance for BCH codes of length n = 63. EW-GNN is only trained with the (63, 51) BCH code and T = 8.
+1
+2
+3
+4
+5
+6
+7
+8
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(32,16) LDPC
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(a) n = 32
+1
+2
+3
+4
+5
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(128,64) LDPC
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(b) n = 128
+1
+1.5
+2
+2.5
+3
+3.5
+4
+4.5
+SNR(dB)
+10-6
+10-4
+10-2
+BER
+(256,128) LDPC
+BP (T=8)
+NBP (T=8)
+EW-GNN (T=8)
+BP (T=30)
+NBP (T=30)
+EW-GNN (T=30)
+(c) n = 256
+Fig. 5: BER performance for LDPC codes at rate 1/2. EW-GNN is only trained with the (32, 16) LDPC code and T = 8.
+very short codes to decode much longer codes, to save the
+training time and memory consumption.
+V. CONCLUSION
+In this paper, we developed a scalable GNN-based decoding
+algorithm for short linear block codes, referred to as the edge-
+weighted graph neural network (EW-GNN) decoder. Simula-
+tion results show that EW-GNN can improve BER performance
+compared to the conventional BP and the NBP decoder for
+short BCH and LDPC codes. EW-GNN has training complexity
+independent of codeword lengths, which is lower than that
+of NBP for long/dense linear codes. Moreover, EW-GNN
+is scalable to the code length and code rate, i.e., a well-
+trained EW-GNN can be used to decode codes with different
+parameters without re-training.
+REFERENCES
+[1] M. Shirvanimoghaddam, M. S. Mohammadi, R. Abbas, A. Minja, C. Yue,
+B. Matuz, G. Han, Z. Lin, W. Liu, Y. Li, et al., “Short block-length codes
+for ultra-reliable low latency communications,” IEEE Commun. Mag.,
+vol. 57, no. 2, pp. 130–137, 2018.
+[2] C. Yue, V. Miloslavskaya, M. Shirvanimoghaddam, B. Vucetic, and Y. Li,
+“Efficient decoders for short block length codes in 6G URLLC,” arXiv
+preprint arXiv:2206.09572, 2022.
+[3] “NR; Multiplexing and channel coding (Release 16), v16.0.0,” Tech. Rep.
+TS 38.212, 3rd Generation Partnership Project (3GPP), Jan. 2020.
+[4] Y. Polyanskiy, H. V. Poor, and S. Verd´u, “Channel coding rate in the
+finite block length regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5,
+pp. 2307–2359, 2010.
+[5] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-
+based channel decoding,” in Proc. Annu. Conf. Inf. Sci. Syst. (CISS),
+pp. 1–6, 2017.
+[6] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” in Proc. Annu. Allerton Conf. Commun.
+Control Comput. (Allerton), pp. 341–346, 2016.
+[7] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and
+Y. Be’ery, “Deep learning methods for improved decoding of linear
+codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–
+131, 2018.
+[8] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block
+codes,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), pp. 2326–
+2336, 2019.
+[9] A. Buchberger, C. H¨ager, H. D. Pfister, L. Schmalen, and A. G. Amat,
+“Pruning neural belief propagation decoders,” in Proc. IEEE Int. Symp.
+Inf. Theory (ISIT), pp. 338–342, 2020.
+[10] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node
+activations,” IEEE Commun. Lett., pp. 1–1, 2022.
+[11] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A
+comprehensive survey on graph neural networks,” IEEE Trans. Neural
+Netw. Learn. Syst., vol. 32, no. 1, pp. 4–24, 2021.
+[12] K. Xu, J. Li, M. Zhang, S. S. Du, K. ichi Kawarabayashi, and S. Jegelka,
+“What can neural networks reason about?,” in Proc. Int. Conf. Learn.
+Represent. (ICLR), 2020.
+[13] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary
+block and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2,
+pp. 429–445, 1996.
+[14] X. Liu, Z. Zhou, R. Cui, and E. Liu, “Informed decoding algorithms
+of LDPC codes based on dynamic selection strategy,” IEEE Trans.
+Commun., vol. 64, no. 4, pp. 1357–1366, 2016.
+[15] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans.
+Inf. Theory, vol. 27, no. 5, pp. 533–547, 1981.
+[16] T. J. Richardson and R. L. Urbanke, “The capacity of low-density parity-
+check codes under message-passing decoding,” IEEE Trans. Inf. Theory,
+vol. 47, no. 2, pp. 599–618, 2001.
+[17] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor graphs and the sum-
+product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519,
+2001.
+[18] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-bases
+belief-propagation for decoding of short block codes,” in Proc. IEEE Int.
+Symp. Inf. Theory (ISIT), pp. 311–315, 2007.
+[19] J. Gilmer, S. S. Schoenholz, P. F. Riley, O. Vinyals, and G. E. Dahl,
+“Neural message passing for quantum chemistry,” in Proc. Int. Conf.
+Mach. Learn. (ICML), pp. 1263–1272, 2017.
+[20] M. R. Yazdani, S. Hemati, and A. H. Banihashemi, “Improving belief
+propagation on graphs with cycles,” IEEE Commun. Lett., vol. 8, no. 1,
+pp. 57–59, 2004.
+[21] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+in Proc. Int. Conf. Learn. Represent. (ICLR), 2015.
+[22] “Short block length LDPC codes for TC synchronization and channel
+coding,” Tech. Rep. 231.1-O-1, Consultative Committee for Space Data
+Systems (CCSDS), Apr. 2015.
+2023 IEEE International Conference on Communications (ICC): SAC Machine Learning for Communications and Networking Track
+1273
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:05:37 UTC from IEEE Xplore.  Restrictions apply. 

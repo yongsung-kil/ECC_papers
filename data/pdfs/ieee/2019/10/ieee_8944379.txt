@@ -1,0 +1,243 @@
+Work-in-Progress: ECC Management with Rate Compatible LDPC Code for NAND Flash Storage
+
+Jae-Bin Lee
+Division of Computer and Electronic Systems Engineering, Hankuk University of Foreign Studies South Korea gaebin1212@gmail.com
+
+Geon-Myeong Kim
+Division of Computer and Electronic Systems Engineering, Hankuk University of Foreign Studies South Korea kgm2543@naver.com
+
+Seung-Ho Lim
+Division of Computer and Electronic Systems Engineering, Hankuk University of Foreign Studies South Korea lim.seungho@gmail.com
+
+ABSTRACT
+The NAND flash memory has rapidly increased in storage capacity per unit area, and the rate of occurrence of errors per P/E cycle is also rapidly increasing accordingly. ECC modules such as LDPC have been added to flash controller for recovering from the errors. However, the system designs to increase the lifetime of the flash memory storage device are still in great demand. In this paper, we design the LDPC encoding and decoding scheme to get stepwise code rate according to the P/E cycle by applying rate-compatible LDPC, as well as the management scheme of excessive parity data. Through this, we can improve the error recovery rate of flash memory storage system and extend the lifetime of NAND flash storage system while reducing the system read and write overhead due to the increase in additional parity data.
+KEYWORDS
+ECC, RC-LDPC, pchk, parity data
+1 INTRODUCTION
+The NAND flash memory capacity has increased sharply, however, this development has led to a drastic increase in the rate of data errors. The NAND flash memory generates additional parity data by using ECC (Error Correction Code) in order to recover errors occurring in the operations on the page which is a unit of reading and writing. ECC generation module is included in the NAND flash controller and the generated ECC parity is stored in spare region of the page that stores corresponding data. Typically, the applied ECC schemes are Bose-Chaudhuri-Hocquenghem (BCH)[3] code or LDPC (low-density parity-check) code[4]. Recently, the LDPC is more likely to be used for ECC module of NAND flash controller [5–7]. Even if the ECCs are applied, the lifetime of the NAND flash memory storage device is restricted due to a rapidly increasing error. Specifically, as the P/E cycle increases, the error rate increases more and the P/E cycle corresponding to the error occurrence threshold gradually decreases. The error recovery rate for increasing error can
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. CASES’19 Companion, October 13–18, 2019, New York, NY, USA © 2019 Association for Computing Machinery. ACM ISBN 978-1-4503-6925-1/19/10. . . $15.00 https://doi.org/10.1145/3349569.3351535
+
+be increased by generating and storing more ECC parity data [8–10]. However, in this case, there are two problems. First, ECC engine module which can additionally generate ECC parity is required. Secondly, parity data generated excessively cannot be stored in the existing spare region of within a page, which leads additional read and write operations, as well as space overhead.
+In this paper, we propose the design of rate-compatible LDPC scheme that has several different code rates according to the P/E cycle, and their parity data management system as well. The scheme sets several, i.e., two or three, P/E cycle sections, and generates different length of ECC parity with different code rate for each P/E cycle section. Even though there are different lengths of codeword at each P/E cycle section, extended parity check matrix(pchk) is applied for steps with rate-compatible encoding, and as a result, the increasing ECC parity of higher level is just appended to existing codeword of lower level so as not to be mixed with the existing parity data. The additional ECC parity should be stored somewhere apart from original data if the codeword length is larger than region of each page, which includes spare region. The ECC parities, that cannot be written to spare region, is aggregated and stored together at other region. A page storing ECC parities covers several data pages of corresponding codeword. Also those are cached in buffer memory to reduce read overhead. At decoding stage, decoding is applied in the order of low-level codeword to high-level codeword. For each level, the exact codeword is retrieved from flash memory. If decoding is successful, parity data for high-level codeword does not need to be retrieved. We can reduce retrieval overhead of ECC parity for high-level codeword since those are aggregated and cached.
+2 RATE-COMPATIBLE LDPC AND ECC PARITY DATA MANAGEMENT
+LDPC is a data encoding method that generates a codeword including parity data from source data using a parity check matrix (pchk). In the case of binary pchk, most of the elements are zero and contain a small amount of one element. The structure of pchk can be determined according to the code rate, which is the ratio of data to code word, and parity data of various sizes can be generated from source data of the same size. Generally, when pchk is determined according to the code rate and the source data is encoded, the parity data is distributed in different bit order in the codeword, so it is difficult to separate parity data that is additionally generated for different coding rates.
+Our system supports several code rates with extended versions of pchk. Figure 1 shows a diagram of how LDPC pchk is constructed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:49:02 UTC from IEEE Xplore. Restrictions apply.
+
+Codeword = m check bits, k message bits e = Parity bits to be added by PCHKe
+
+m
+
+k
+
+m
+
+mA
+
+B
+
+extension
+
+e
+
+A = m x m, non−singular QC maxrix B = m x k, QC matrix
+
+PCHK
+
+I = e x e Identity matrix O = m x e zero matrix D = e x e QC matrix E = e x k QC matrix
+
+me
+
+k
+
+AO
+
+B
+
+DI
+
+E
+
+Ae
+
+Be
+
+(non−singular)
+
+PCHK e
+
+Figure 1: pchk extension method for stepwise parity data.
+
+−1 G=A xB
+
+1
+
+k
+
+1
+
+m
+
+G
+
+xk S = m
+
+GENERATOR
+
+extension
+
+−1
+
+Ge= A e x B
+
+k
+
+1
+
+1
+
+P
+
+S
+
+Codeword for Lower P/E cycles
+
+Parity can be separated
+
+m
+
+G
+
+xk S
+
+e
+
+G’
+
+GENERATOR e
+
+m =
+e
+
+Pe
+
+P
+
+S
+
+Codeword e for Higher P/E cycles
+
+Parity Management
+
+Nand Flash Memory
+
+S
+
+P
+
+S
+
+P
+
+S
+
+P
+
+S
+
+P
+
+Pe Pe Pe Pe ......
+
+... ...
+
+S
+
+P
+
+S
+
+P
+
+Normal data block
+
+Parity block
+
+Figure 2: Generator matrix and parity data management.
+
+and extended to generate stepwise parity data. When the pchk structure for the basic parity data is structured as shown in the left part of the figure, in which it is divided into the area A and the area B, the extension of the pchk for generating additional e bit parity data can be extended as shown in the right part of the figure. Figure 2 shows how parity data is generated using the basic pchk and extended pchk. We can generate G and Ge generator matrices using pchk and pchke, and generate parity data for each step through generator matrix and matrix operation of source data.
+Figure 2 also shows a structure in which flash memory stores and manages parity data generated in stages. The parity data generated in the first step is stored with the data in the spare region of each page as in the conventional manner. The parity data generated by the pchk of the second or higher level is stored to a separate flash memory region. At this time, since the data area is relatively larger than the additionally generated parity data, the parity data for a plurality of pages are collected and stored in one page. For instance, if additional parity data of 256 bytes is generated for 4KB data, additional parity for 16 data pages can be stored in one page of the area storing parity data together. The page write for parity data is also managed in the DRAM cache of the flash storage until one page is full, and then the page is written to the page of the parity data block when it is full. The cache for parity data is managed separately from the cache in the data area for reducing retrieval overhead. In addition, information on parity data associated with each data is designed to be tracked and managed together with a mapping table in the FTL (Flash Translation Layer) area.
+
+Relative Uncorrected Bit Error Rate
+
+1
+
+proposed
+
+conventional
+
+0.1
+
+0.01
+
+0.001
+
+0.0001
+
+0
+
+1000
+
+2000
+
+P/E cycles
+
+3000
+
+4000
+
+5000
+
+Figure 3: Relative Bit Errors Rate of the proposed system.
+
+Relative Read overhead(%)
+
+proposed conventional 1.0
+0.8
+0.6
+0.4
+0.2
+0
+
+1000
+
+2000
+
+P/E cycles
+
+3000
+
+4000
+
+5000
+
+Figure 4: Relative read overhead of the proposed system.
+
+3 PRELIMINARY RESULTS
+In order to show the feasibility of the proposed method, pchk and pchke for three stages of LDPC with code rates of 0.8, 0.67, and 0.57 were constructed in the manner described above. The code rates are changed when P/E cycles are 2000 and 4000. With the configuration, error recovery rates of LDPCs and relative read overhead were simulated. Figures 3 and 4 are representations of these simulation results. As shown in the figure, if the stepwise extended LDPC scheme is applied, it can be confirmed that the extended LDPC shows a higher error frame error recovery rate than the basic LDPC scheme. As the P/E cycle increases by using one LDPC module, it can be confirmed that the error recovery rate can be increased by applying the stepwise extended LDPC coding scheme, and it is possible to increase the service lifetime. For read overhead, the proposed system would reduce additional read overhead by separating additional parities from data pages.
+REFERENCES
+[1] N. Mielke et al.: “Bit error rate in NAND Flash memories”, IRPS (2008) 9 (DOI:10.1109/RELPHY.2008.4558857).
+[2] Cai, Y. et al.: “Program interference in MLC NAND flash memory: Characterization, modeling, and mitigation,” ICCD (2013) 123.
+[3] Micron, “Enabling Software BCH ECC on a Linux platform”, Technical Note, TN-29-71, April, 2012.
+[4] K. Zhao, et al., “LDPC-in-SSD: Making advanced Error Correction Codes Work Effectively in Solid State Drives”, 11th USENIX Conference on File and Storage Technologies, Feb. 2013.
+[5] H. Sun, et al, “Exploiting intracell bit-error characteristics to improve min-sum LDPC decoding for MLC NAND flash-based storage in mobile device,” IEEE Trans. Very Large Scale Integr. Syst., vol. 24, no. 8, pp. 2654–2664, Aug. 2016.
+[6] K. Haymaker and C. A. Kelley, “Structured bit-interleaved LDPC codes for MLC flash memory,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 870–879, May 2014.
+[7] Thuy Van Nguyen, Aria Nosratinia, Dariush Divsalar, “The Design of RateCompatible Protograph LDPC Codes”, IEEE Transactions on Communications, Vol. 60, No. 10, Oct. 2012.
+[8] Shunzhuo Wang, et al. “Lifetime Adaptive ECC in NAND Flash Page Management”, Design, Automation and Test in Europe (DATE), 2017.
+[9] Yuan-hua Liu, “Rate-compatible QC-LDPC codes based on PEXIT”, Electronics Letters, Vol. 54, pp. 1120-1122, Sep. 2018.
+[10] Pingping Chen, et al. “Rate-Adaptive Protograph LDPC Codes for Multi-LevelCell NAND Flash Memory”, IEEE Communications Letters, Vol. 22, No. 6, June 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:49:02 UTC from IEEE Xplore. Restrictions apply.
+
+

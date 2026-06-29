@@ -1,0 +1,506 @@
+A Unified Deep Learning Based Polar-LDPC Decoder for 5G Communication Systems
+Yaohan Wang†, Zhichao Zhang†, Shunqing Zhang†, Shan Cao† and Shugong Xu† † Shanghai Institute for Advanced Communication and Data Science, Key laboratory of Specialty Fiber Optics and Optical Access Networks,
+Joint International Research Laboratory of Specialty Fiber Optics and Advanced Communication, Shanghai University, Shanghai, 200444, China
+Email:{wangyaohan1, zhichaozhang, shunqing, cshan, shugong}@shu.edu.cn
+
+Abstract—In the 5G communication systems, a hybrid approach to support polar codes for control plane and LDPC codes for data plane has been identified as the channel coding solution for enhanced mobile broadband (eMBB) scenario. One of the major challenges to implement this approach is to design powerful decoders at the terminal side. Inspired from a useful machine learning based polar decoder, we proposed a deep learning based unified polar-LDPC by concatenating an indicator section. Through numerical experiments, we show that the proposed deep neural network (DNN) based decoding architecture can achieve the similar decoding performance compared with the traditional BP-based decoding algorithm. Meanwhile, the proposed unified approach shares the same network architecture and parameters with isolated approaches, which saves significant implementation resources consequently.
+Index Terms—polar codes, LDPC codes, unified architecture, deep learning, deep neural networks
+I. INTRODUCTION
+Polar codes, as the first provable capacity achieving codes for symmetric binary-input memoryless channels, were first proposed by E. Arıkan in his ground-breaking paper [1]. With the discovery of channel polarization phenomenon, the similar concept has been widely extended to various applications, including source coding, data compression, as well as other specific applications with modified polar codes structure [2]. Due to the potential impacts to change the modern coding schemes, polar codes have attracted significant research attentions in both academia and industry [3]. In the meantime, low-density parity-check (LDPC) codes [4], proposed by R. Gallager 50 years ago, have been proved to be a suitable channel coding scheme for high throughput transmission and adopted as a compulsory channel coding scheme for IEEE 802.11ax system [5]. In the fifth generation (5G) communication systems, since we require reliable control signaling and high throughput data transmission simultaneously for enhanced mobile broadband (eMBB) scenario, a hybrid solution to apply polar codes for control plane and LDPC codes for data plane transmissions was agreed in the Third Generation Partnership Project (3GPP) Radio Access Network (RAN) meeting held in Reno [6].
+One of the major challenges to apply polar and LDPC codes in 5G systems is to implement powerful decoders at the terminal side. From the hardware resource point of view, a brute-force approach to build polar and LDPC decoders in
+
+a separate manner is inefficient and a reconfigurable architecture to support them simultaneously with smart decoding algorithm is therefore desirable [7]. Thanks to the high compatibility of belief propagation (BP) algorithm, a reconfigurable merged BP-based decoding scheme was proposed in [7] with shared factor graphs. However, this approach rely on a careful design of the decoding structure and the generalization to different coding rates will be challenging.
+To solve the above issue, a machine learning based decoding structure becomes popular in recent years. For example, to decode the convolutional codes or turbo codes [8], a recurrent neural network (RNN) architecture was proposed in [9] to exploit the correlation among different encoded bits. To decode polar codes, a scalable deep neural network (DNN) based decoding scheme was proposed in [10], where a near maximum a posterior (MAP) performance could be achieved. As far as we aware, whether a machine learning based decoding structure can be applied to support multiple coding schemes is still open. In this paper, we shall tackle the above problem through a deep learning based decoding structure. By inserting an indicator section to identify coding types, the proposed unified approach exploits the similarity between neural networks and merged BP decoding algorithms. We then optimize the neural network configurations by choosing different network classes and other related parameters. The corresponding performance is also verified under different signal-to-noise ratio (SNR) in order to obtain a reliable result. Through some numerical experiments, we are able to show that more or less the same decoding performance (e.g. less than 0.5 dB SNR gap) can be achieved, if compared with the traditional detection schemes. Meanwhile, the proposed neural network based decoding scheme shares the same network architecture and parameter for both polar and LDPC detection schemes, which saves significant resource overhead, if compared with conventional isolated decoding approaches such as [11].
+The rest of this paper is organized as follows. Section II provides some preliminary knowledge of polar and LDPC codes and a brief introduction of deep learning. The proposed generalized unified network architecture is discussed in Section III and the detail optimization of our unified structure are shown in Section IV. We provide the corresponding numerical experiments in Section V, and finally, concluding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+978-1-5386-6119-2/18/$31.00 ©2018 IEEE
+
+LDPC / Polar Encoder
+
+BPSK Modulation
+
+AWGN
+
+.
+
+.
+
+. .
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+. .
+
+.
+
+.
+
+.
+
+LDPC / Polar Decoder
+
+Fig. 1. An overview of (N, k) polar-LDPC encoding/decoding system. In this system, N coded bits x are generated from k information bits b according to generation matrix Gl and Gp. After the BPSK modulation, modulated symbols s are transmitted through AWGN channel. We will estimated the information bits bˆ at the receiver side based on the observed symbols y.
+
+remarks are given in Section VI.
+
+II. BACKGROUND
+In this section, we briefly introduce polar and LDPC codes Gl
+with current decoding mechanisms in the first part, and then discuss the basic structure for deep learning, which will be used in the unified decoding scheme.
+
+A. Polar and LDPC Codes
+Consider a channel coding scheme (N, k) as shown in Fig. 1, where k information bits b = [b1, b2, . . . , bk] are mapping into N coded bits x = [x1, x2, . . . , xN ] according to different coding schemes. Denote Gp and Gl to be the generation matrices for polar and LDPC schemes, the N bit coded information x are generated at the transmitter side through x = b · Gp and x = b · Gl respectively. According to [1], the generation matrix Gp can be computed via a continuous Kronecker product of the basic matrix F, i.e.,
+
+Gp = F⊗ log2 N , and F =
+
+1 1
+
+0 1
+
+,
+
+(1)
+
+where F⊗m represents the m-th Kronecker power of F. Correspondingly, Gl can be obtained through [4], Gl = [Q Ik] as shown in Fig 2, where Q is the transpose of the matrix P obtained by parity check matrix H [4]. Ik is the k×k identity matrix. In the practical communication systems, the modulation process will be applied before transmission. Without loss of generality, we assume binary phase shift keying (BPSK) and the transmitted symbols s = [s1, s2, . . . , sN ] can be generated through,
+
+si =
+
+1 −1
+
+xi = 1 xi = 0
+
+(2)
+
+Fig. 2. An illustration example of the generation matrix for (16,8) LDPC codes. Ik denotes k × k identity matrix and Q denotes the transpose of the matrix P obtained by H [4].
+
+At the receiver side, the observed symbols corrupted by additive white Gaussian noise (AWGN), n = [n1, n2, . . . , nN ], can be modeled through,
+
+y = s + n.
+
+(3)
+
+Define fp(·) and fl(·) to be the decoding function for polar and LDPC respectively, and the estimated information bits bˆp and bˆl are given by,
+
+bˆp = fp(y) bˆl = fl(y)
+
+(4)
+
+where fp(·) and fl(·) can be found in [1] and [12].
+
+B. Deep Learning
+Deep learning [13], as a new approach to describe highly nonlinear input and output relations, is widely applied in the areas of voice recognition, natural language processing and computer vision during recent years. Instead of designing a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+
+…
+
+…
+
+…
+
+…
+
+…
+
+…
+
+…
+
+…
+
+…
+
+…
+
+Indicator Section
+……
+
+Information Section (observed symbols)
+……
+
+Input Layer
+
+Hidden Layers
+
+Output layer
+
+Fig. 3. An illustration example of generalized network architecture for channel decoding. The observed symbols y and the estimated bits bˆ are input and output nodes of the neural network.
+
+complicated algorithm from human knowledge, deep learning technologies allow machines to learn an efficient algorithm directly from some training data. Generally speaking, by integrating more processing layers in a neural network, we are able to describe much more complicated algorithms with improved performance via deep learning.
+Without loss of generality, we consider a neural network with several layers, including input layer, output layer and hidden layers. In each layer, a series of neurons are applied to describe the linear (via weighted sum plus bias) and nonlinear (via activation function) relations among input and output values. Two types of activation functions [14], namely sigmoid and rectified linear unit (ReLU), are commonly used in the network design and the corresponding mathematical expressions are given by,
+
+σsigmoid(z)
+
+=
+
+1 1 + e−z ,
+
+σReLU(z) = max{0, z}.
+
+(5)
+
+With a huge number of neurons in the network as shown in Fig. 3, an extremely complicated algorithm, such as channel decoding, can be represented. Another important factor in the deep learning is the metric to evaluate the performance of neural networks. In the current practices, a loss function, such as cross entropy or mean square errors (MSE), is usually applied to measure the imperfectness between the predicted values through neural networks and true values.
+
+III. PROPOSED GENERALIZED AND UNIFIED NETWORK ARCHITECTURE
+To describe the highly nonlinear relation for channel decoding, e.g. fl(·) and fp(·) in Section II-A, we follow the traditional design methodology as shown in [11], where the observed symbols y and the decoded bits bˆl, bˆp are mapped into input and output layers of the neural network. The activation functions for hidden layers and output layers are ReLU and sigmoid respectively, and the loss function is chosen to be the MSE. Mathematically speaking, the loss
+
+Fig. 4. The proposed input pattern for generalized and unified network architecture. In the proposed design, the indicator section I and the information section (observed symbols) y are concatenated as the input layer for the network.
+
+functions for polar (Lp) and LDPC (Ll) decoding can be described through,
+
+Lp
+
+=
+
+1 k
+
+bˆp − b
+
+bˆp − b
+
+T
+,
+
+(6)
+
+Ll
+
+=
+
+1 k
+
+bˆl − b
+
+bˆl − b
+
+T
+,
+
+(7)
+
+where (·)T denotes the vector transpose operation. With a unified architecture, we need to figure out a
+generalized decoding function, which can decode the observed symbols based on the encoding types. We propose the concept called indicator section, that is, add different bits before the receiver receives different codewords. Denote I = {LDPC, polar} to be the indicator section, and the decoding function (4) can be generalized as,
+
+bˆ =
+
+bˆp = fp (y) = f (y, I = polar) bˆl = fl (y) = f (y, I = LDPC)
+
+= f (y, I) ,
+
+(8)
+
+where bˆ are the generalized estimation of information bits b. Through this approach, we are able to propose the generalized unified network architecture as follows.
+• Input Layer: Concatenation of information section (observed symbols) y and indicator section I as shown in Fig. 4.
+• Hidden Layers: Deploy neural network to estimate the decoding functions and the activation functions are ReLU.
+• Output Layer: bˆ, the generalized estimation of information bits b and the activation function is sigmoid.
+• Loss Function: MSE of the decoding results, i.e.,
+
+L = 1 bˆ − b
+
+bˆ − b
+
+T
+.
+
+(9)
+
+k
+
+The overall generalized unified network architecture is shown in Fig. 5, where we minimize the loss function between the output estimated bits bˆ and the original information bits b to provide an end-to-end training environment.
+
+IV. UNIFIED NETWORK OPTIMIZATION
+In this section, based on the generalized and unified network architecture as shown in Fig. 5, we optimize the network configurations by choosing different network classes, size of indicator sections, and size of neural networks. Generalization results are discussed in what follows.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+
+N Modulated Symbols Transmitter
+BPSK Modulation
+
+AWGN Channel Concatenated Input
+
+Receiver
+
+100
+
+Polar and LDPC under different network classes
+
+10-1
+
+BER
+
+N-bit Encoded Bits Polar and LDPC Encoder
+
+10-2
+
+k-bit Information Bits
+
+Decoded Information Bits
+
+Fig. 5. A system overview of the generalized and unified network architecture for polar and LDPC decoders. By concatenating the indicator section, we propose a unified decoding network that can deal with polar and LDPC decoding simultaneously.
+
+TABLE I AN OVERVIEW OF NETWORK CONFIGURATIONS AND PARAMETERS.
+
+DNN
+
+LSTM
+
+CNN
+
+Input Layer 16 input symbols 16 dimension
+
+16*1*1
+
+Layer1
+
+Dense 512-ReLU LSTM 116 16*3*1-ReLU
+
+Layer2
+
+Dense 256-ReLU LSTM 116 Permute(1,3,2)
+
+Layer3
+
+Dense 128-ReLU
+
+-
+
+32*3*3-ReLU
+
+Layer4
+
+-
+
+-
+
+Dense 24-ReLU
+
+Output Layer 8-way sigmoid 8-way sigmoid 8-way sigmoid
+
+Total Parameters
+
+173960
+
+170760
+
+197216
+
+10-3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0[dB]
+
+Fig. 6. BER versus SNR relation for (16, 8) polar and LDPC codes. In this experiment, DNN network architecture outperforms the other two for LDPC and polar decoding simultaneously.
+
+100
+
+Different size of indicator section
+
+10-1
+
+BER
+
+10-2
+
+A. Network Classes
+One of the most important approaches to optimize the network configurations is to choose the suitable network class, where we consider commonly used DNN [15], convolutional neural network (CNN) [16], and long-short term memory (LSTM) [17] in this paper1. DNN is a computationally powerful parallel neural network, which can be used for joint channel equalization and decoding [14]. CNN is often used for feature extraction and widely applied to deal with correlated noise [16]. LSTM is a type of recurrent neural network suitable for sequential signal processings such as decoding the convolutional codes [9]. In order to provide a fair comparison, we design the corresponding networks with similar number of training parameters and training samples (epochs). The detailed values of network configurations and parameters are listed in Table I. In Fig. 6, we plot BER versus SNR relation for (16, 8) polar and LDPC codes. Through this experiment, we can show that DNN network architecture outperforms the other two. This partially because DNN architecture has strong ability to deal with independent one dimension data as reported in [15].
+1In this experiment, we tested polar and LDPC codes separately in order to provide a general idea on different network classes and it is worth to note that the neural network sizes for polar and LDPC decoding are identical.
+
+10-3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0[dB]
+
+Fig. 7. BER versus SNR relation for (16, 8) polar and LDPC codes with different size of indicator section. According to the above results, the indicator section with only one bit is sufficient in terms of BER versus SNR performance.
+
+B. Size of Indicator Section
+Another dimension that we plan to optimize is the size of indicator section. By intuition, the size of indicator section provides possibility to balance the scalability of network (e.g. to decode more types of channel coding) and the network complexity (e.g. to introduce more parameters for training). BER versus SNR relation under different size of indicator section is shown in Fig. 7. As we can see from this figure, the indicator section with only one bit provides sufficient BER versus SNR performance for both LDPC and polar cases. Meanwhile, if we plan to support more types of channel coding, a minimum size of indicator section to identify different coding schemes will be sufficient.
+C. Size of Neural Network
+In addition to the network classes and the size of indicator section, we shall also investigate the size of neural network, which trades the network complexity for the decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 8. BER versus SNR relation for (16, 8) polar and LDPC codes with different size of neural networks. According to the above results, the 3layer DNN with size (512, 256, 128) provides a reasonable performance and complexity.
+
+performance. Without loss of generality, we consider a 3layer DNN architecture and the corresponding parameters vary from 32 to 1024. As shown in Fig. 8, for LDPC and polar codes, the 3-layer DNN architecture with layer size (512, 256, 128) provides a reasonable performance, e.g. less than 0.1 dB gap if compared with more complicated network such as (1024, 512, 256), and maintains reasonable complexity.
+
+D. Generalization
+
+In the practical deployment, SNR in the training stage might be different from the real operation period. Therefore, we shall verify the generalization ability for the unified DNN-based detector. In order to provide a more reliable result, we test the average MSE L¯ under different SNR conditions, defined by
+
+L¯
+
+=
+
+1 J
+
+J
+
+Lj .
+
+(10)
+
+j=1
+
+where Lj denotes the average MSE under the j-th SNR condition.
+Following the conventional generalization approach, we train the unified DNN-based decoder under different training SNR, ρj, and test the average MSE L¯ result under different SNR conditions. More precisely, we consider the testing SNR from 0 dB to 5 dB with 0.5 dB per step, e.g. J = 11 in this case. The overall results are listed in Table II and the optimal training SNR is therefore 0 dB.
+
+TABLE II
+THE AVERAGE MSE VERSUS THE TRAING SNR USING THE UNIFIED DNN-BASED DECODER. (TRAINING EPOCHS 5 × 104 )
+
+ρj -2
+
+-1
+
+0
+
+1
+
+2
+
+3
+
+4
+
+10
+
+L¯ 0.05960 0.05640 0.05534 0.05536 0.05549 0.05670 0.05855 0.0989
+
+V. SIMULATION RESULTS
+In this section, we compare the proposed DNN-based unified polar-LDPC decoder with traditional BP decoders and isolated schemes. The proposed architecture’s settings are summarized as follows. First, a 3-layer DNN architecture with size (512, 256, 128) is adopted to decode the unified (16,8) polar and LDPC codes, where the generation matrices are elaborated in Section II-A. Second, we choose ‘1’ for ‘polar codes’ and ‘−1’ for ‘LDPC codes’ in the indicator section. Last but not least, we choose the number of training epoch2 to be 5×104. At the test stage, the BER performance is evaluated under 4×105 samples, or equivalently, 3.2×106 bits. All the simulations are performed using a standard desktop3 with operating system Ubuntu 16.04 and the software environment is Python v3.5.2. The detail parameters are listed in Table III.
+The comparison results of BER versus SNR performance are shown in Fig. 9. In the polar decoding case, our proposed DNN-based unified polar-LDPC decoder achieves more or less the same decoding performance (less than 0.2 dB gap at BER equals to 10−2) with the conventional polar BP detection [18]. This small gap may be due to the size of the network or the small performance gap caused by the introduction of the indicator section. While in the LDPC decoding case, it outperforms the traditional LDPC BP decoding scheme [16] by 0.8 dB4 at BER equals to 10−2. From the above results, we can see that the proposed unified decoder can approach or surpass the traditional BP decoding performance.
+In Table IV, we compare the decoding efficiency of different decoding schemes, including the proposed DNNbased unified polar-LDPC decoder, the isolated DNN-based decoders for polar and LDPC, as well as the conventional BP-based polar and LDPC decoders. From the throughput point of view, the DNN-based approaches provides six orders of magnitude improvement if compared with the traditional BP-based decoding schemes. Meanwhile, compared with the traditional isolated DNN-based polar or LDPC decoders, the unified approach provides nearly the same throughput (less than 0.4% loss) with marginal network overhead (e.g. less than 0.3% overhead in terms of total parameters) from the indicator section.
+VI. CONCLUSION
+In summary, we propose a unified polar-LDPC decoder using deep learning approach. By integrating the indicator section with observed symbols, we are able to build the unified DNN architecture to support both polar and LDPC decoding simultaneously. Our simulation results show that the proposed architecture can provide similar BER performance against traditional BP method, while achieves a
+2This is the minimum number of epochs needed to get a stable training result.
+3In our simulations, the desktop contains an Intel CPU i5-5300U, 16G memory, and no GPU card is installed.
+4According to [19], the performance of BP-based LDPC decoding may be limited when the coding length is not sufficiently long.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+
+Unified DNN structure (512,256,128)
+
+TABLE III UNIFIED DNN SETTINGS FOR OUR EXPERIMENTS
+
+Epochs 5 ×104
+
+Batch size 512
+
+Test Size (bits) 3.2 ×106
+
+CPU i5-5300U
+
+System Ubuntu 16.04
+
+TABLE IV THROUGHPUT AND NETWORK SIZE COMPARISON AMONG DIFFERENT IMPLEMENTATION SCHEMES
+
+Input Throughput (Kbps)
+Total Parameters
+
+Polar (DNN) y
+1.14853 × 106 173960
+
+Polar (BP) y
+4.59 -
+
+LDPC (DNN) y
+1.1372 × 106 173960
+
+LDPC (BP) y
+0.38 -
+
+Unified (polar/LDPC) (y, I)
+1.14657/1.13379 × 106 174472
+
+100
+
+Compare both polar and LDPC codes with BP
+
+10-1
+0.8dB
+
+BER
+
+10-2
+
+0.2dB
+
+10-3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+’
+
+Eb/N0[dB]
+
+Fig. 9. BER versus SNR performance comparison for the proposed DNNbased unified polar-LDPC decoder and conventional BP-based polar and LDPC decoders.
+
+significant improvement with respect to the throughput. From the above simple examples, we believe the extension of unified DNN architecture to other types of coding schemes will be straight-forward.
+ACKNOWLEDGE
+This work was supported by the National Natural Science Foundation of China (NSFC) Grants under No. 61701293 and No. 61871262, the National Science and Technology Major Project Grants under No. 2018ZX03001009, ”Shuguang Program” supported by Shanghai Education Development Foundation and Shanghai Municipal Education Commission, the Huawei Innovation Research Program (HIRP), and research funds from Shanghai Institute for Advanced Communication and Data Science (SICS).
+REFERENCES
+[1] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on Information Theory, vol. 55, no. 7, pp. 3051 – 3073, Jul. 2009.
+[2] M. El-Khamy, H. Mahdavifar, G. Feygin, J. Lee, and I. Kang, “Relaxed polar codes,” IEEE Transactions on Information Theory, vol. 63, no. 4, pp. 1986 – 2000, Apr. 2017.
+[3] K. Niu and K. Chen, “CRC-aided decoding of polar codes,” IEEE Communications Letters, vol. 16, no. 10, pp. 1668 – 1671, Oct. 2012.
+
+[4] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[5] B. Bellalta, “IEEE 802.11ax: High-efficiency Wlans,” IEEE Wireless Communications, vol. 23, no. 1, pp. 38–46, 2016.
+[6] Huawei, Hisilicon, and et. al., Way Forward on Channel Coding, R11613211, 3GPP TSG-RAN WG1, Reno, U.S.A., Nov. 2016.
+[7] J. Liu, S. Jing, X. You, and C. Zhang, “A merged BP decoding algorithm for polar-ldpc concatenated codes,” in IEEE international conference on Digital Signal Processing (DSP), Aug. 2017, pp. 1–5.
+[8] M. Jeanne, J.-C. Carlach, and P. Siohan, “Joint source-channel decoding of variable-length codes for convolutional codes and turbo codes,” IEEE transactions on communications, vol. 53, no. 1, pp. 10–15, 2005.
+[9] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in The International Zurich Seminar on Information and Communication (IZS 2018) Proceedings. ETH Zurich, 2018, pp. 48–50.
+[10] S. Cammerer, T. Gruber, J. Hoydis, and S. t. Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” arXiv preprint arXiv:1702.06901, 2017.
+[11] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-based channel decoding,” in IEEE Annual Conference on Information Sciences and Systems (CISS), 2017, pp. 1–6.
+[12] F. Zarkeshvari and A. H. Banihashemi, “On implementation of minsum algorithm for decoding low-density parity-check (LDPC) codes,” in IEEE Global Telecommunications Conference, 2002., vol. 2, 2002, pp. 1349–1353.
+[13] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. MIT Press, 2016, http://www.deeplearningbook.org.
+[14] H. Ye and G. Y. Li, “Initial results on deep learning for joint channel equalization and decoding,” in IEEE 86th Vehicular Technology Conference (VTC-Fall), 2017, pp. 1–5.
+[15] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Signal Processing Systems (SiPS), 2017, pp. 1–6.
+[16] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 144–159, 2018.
+[17] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural computation, vol. 9, no. 8, pp. 1735–1780, 1997.
+[18] B. Yuan and K. K. Parhi, “Early stopping criteria for energy-efficient low-latency belief-propagation polar code decoders,” IEEE Transactions on Signal Processing, vol. 62, no. 24, pp. 6496–6506, 2014.
+[19] J. Chen and M. P. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Transactions on communications, vol. 50, no. 3, pp. 406–414, 2002.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:04 UTC from IEEE Xplore. Restrictions apply.
+
+

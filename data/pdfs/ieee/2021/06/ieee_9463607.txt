@@ -1,0 +1,763 @@
+2021 13th International Conference on Communication Software and Networks
+A 5G-Oriented LDPC Encoder Based on ByteParallel Configurable Cyclic Shift
+
+2021 13th International Conference on Communication Software and Networks (ICCSN) | 978-1-6654-3182-8/20/$31.00 ©2021 IEEE | DOI: 10.1109/ICCSN52437.2021.9463607
+
+Yisong Sun University of Chinese Academy of
+Sciences (UCAS) Institute of Automation, Chinese Academy of Sciences (CASIA)
+Beijing, China sunyisong2016@ia.ac.cn
+
+Huan Li Institute of Automation, Chinese Academy of Sciences (CASIA)
+Chinese Academy of Sciences (CAS)
+Beijing, China lihuan2013@ia.ac.cn
+
+Chen Guo Institute of Automation, Chinese Academy of Sciences (CASIA)
+Chinese Academy of Sciences (CAS)
+Beijing, China chen.guo@ia.ac.cn
+
+Donglin Wang Institute of Automation, Chinese Academy of Sciences (CASIA)
+Chinese Academy of Sciences (CAS)
+Beijing, China donglin.wang@ia.ac.cn
+
+Abstract—In this paper, we propose a Byte-Parallel Configurable Cyclic Shift (BP-CCS) algorithm, which converts the cyclic shift into a byte-parallel form. This method alleviates the low efficiency of cyclic shift calculation in Low Density Parity Check (LDPC) encoding under the 5G protocol effectively. Besides, we also expand the instruction set of self-developed DSP Universal Communication Processor (UCP) to cope with the hardware implementation bottleneck of BP-CCS algorithm. This allows the implementation of a BP-CCS-based LDPC encoder on UCP, which has been verified on the taped-out chip. Experimental results show that the time consumed by the BP-CCS-based LDPC encoder is about 1/50 of the time specified in 5G communication protocol standard, and the encoder architecture can be easily reconstructed in real time through parameter configuration.
+Keywords—5G, LDPC encoder, BP-CCS, UCP
+I. INTRODUCTION
+The fifth-generation communication system, referred to as 5G, is a new generation of mobile networks following the fourth-generation communication system [1], [2]. Its application scenarios include Enhanced Mobile Broadband (eMBB), UltraReliable Low-Latency Communication (uRLLC), and Massive Machine-Type Communication (mMTC). As the primary application scenario of 5G, eMBB needs to meet performance requirements such as high reliability, high mobility, and high data transmission rate. In order to meet these performance requirements, each key technology in communication system needs to be optimized systematically. Wherein, channel coding and decoding technology is a key technology of 5G, and the optimization of its performance plays a vital role in the improvement of the transmission rate and bit error rate of the 5G communication system [3]. At the 87th meeting of 3GPP RAN1 held in Las Vegas in November 2016, Low Density Parity Check (LDPC) codes were selected as the data channel coding scheme in the eMBB scenario [4]. Therefore, the research of LDPC encoding and decoding technology is of great significance for breaking the performance bottleneck of 5G communication systems.
+Regarding the implementation of low-complexity encoders for LDPC codes, a lot of researches have been conducted in related fields. Ruslan Goriushkin et al. [5] developed a pipeline architecture for FPGA implementation of a QC-LDPC encoder. The results are provided for implementation on a FPGA ZYNQ-
+
+7 ZC706 Evaluation Board for code with rate 5/6 and block lengths from 576 to 2304. Steffy Johnson et al. [6] presents the straightforward method and the lower triangular modification approach, which are the two encoding schemes for LDPC codes and compares the area utilization of both on FPGA platform, and observed that the device utilization by the straightforward method is considerably very small as compared to that of lower triangular modification approach. An efficient multi-rate encoder for IEEE 802.16e LDPC codes was proposed by WANG Xiumin et al. in [7], which outperforms current single rate encoders with acceptable hardware consumption and efficient memory consumption on the Altera FPGA Cyclone II EP2C70F896C6 device. V. Nandala et al. [8] proposed An efficient compact encoding process with the pipelining design of LDPC Encoder with a two stage, three stage and Maximal Rate Pipelining structures. The designed architectures are synthesized in SYNOPSYS tool and implemented in the XC3S250E FPGA device. Literature research shows that currently LDPC encoders are mostly implemented using FPGAs. When faced with scenarios with multiple code lengths in practical applications, FPGA-based encoders cannot quickly reconstruct the computing architecture, and the parallelism of key computing steps is low, which greatly restricts the coding rate in practical applications.
+To solve these problems, we designed a high-speed parallel LDPC encoder based on our self-developed DSP (Universal Communication Processor, UCP), taking full advantage of the multi-granularity parallel architecture of UCP to achieve higher encoding rate. Compared with other existing work, the innovative identity of this paper is primarily reflected in three aspects:
+• We developed a Byte-Parallel Configurable Cyclic Shift (BP-CCS) algorithm, which effectively improves the computational efficiency of cyclic shift in LDPC encoding.
+• We customized the BP-CCS algorithm dedicated instruction on UCP, which effectively solved the bottleneck of BP-CCS-based LDPC encoder on UCP.
+• The structure of the BP-CCS-based LDPC encoder can be quickly reconstructed through parameter
+
+978-1-6654-3182-8/21/$31.00 ©2021 IEEE
+
+17
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+configuration, so as to flexibly deal with scenarios with multiple code lengths.
+The remaining sections of this paper is organized as follows. In Section II, we introduce the basic principles of LDPC encoding, and the BP-CCS algorithm scheme is presented in Section III. The hardware implementation of the BP-CCS-based LDPC encoder on the chip is discussed in Section IV. Section V and Section Ⅶ give the experimental results and conclusions respectively.
+II. PRELIMINARIES
+The LDPC code was proposed by Gallager [9] at the Massachusetts Institute of Technology in 1962. It is essentially a linear block code with a sparse check matrix. LDPC encoding is the process of calculating the parity bits based on the coding matrix and the information bits, and synthesizing the information bits and the parity bits into a complete codeword. We use c to represent the information bits, w to represent the parity bits, and Η to represent the coding matrix, then the LDPC encoding is the process of solving the following linear equations [9]:
+
+c
+
+H
+
+
+
+w
+
+ 
+
+=
+
+0
+
+(1)
+
+In the 5G protocol [10], information bits and parity bits are divided into fixed lengths, named subblocks. The length of the subblock is marked as N , and the length of the information bits and the parity bits are both integral multiples of N . The coding matrix Η is obtained from the coding base matrix H BG through a series of transformations. The common structure of coding base matrix HBG is shown in Fig. 1 and the steps to obtain the coding matrix Η from the coding base matrix H BG are as follows:
+a) Replace the blank cells in HBG with the all-zero matrix of N  N
+b) Replace each non-blank cell of index (i, j ) in HBG
+with a circular permutation matrix of N  N , which is obtained by cyclically shifting the identity matrix of
+N  N to the right HBG (i, j ) times
+For the convenience of description, we split the coding
+matrix Η into Hc Hw  according to the lengths of the
+information bits and parity bits. Correspondingly, HBG can be
+split into HBG,c HBG,w  . Then (1) is equivalent to
+
+Hcc  Hww = 0
+
+(2)
+
+where  means modulo 2 addition. According to the nature of
+modulo 2 addition, (2) can be further transformed into
+
+Hcc = Hww
+
+(3)
+
+94 73
+
+55 83
+
+70
+
+27
+
+22 79 9
+
+12
+
+00
+
+24 22 81
+
+33
+
+0
+
+00
+
+61
+
+47
+
+65 25
+
+00
+
+39
+
+84
+
+41 72
+
+00
+
+46 40
+
+82
+
+79 0
+
+00
+
+95 53
+
+14 18
+
+00
+
+11 73
+
+2
+
+47
+
+00
+
+12
+
+83 24
+
+43
+
+51
+
+00
+
+94
+
+59
+
+70 72
+
+00
+
+7 65
+
+39 49
+
+00
+
+43
+
+66
+
+41
+
+26 7
+
+0
+
+Fig. 1. LDPC coding base matrix HBG . The entire matrix is divided into two parts according to the length of the information bits and the parity bits.
+
+In this formula, both Hc and Hw are composed of cyclic permutation matrixes of N  N , and both c and w are composed of subblocks of length N . It is unrealistic to solve (3) directly due to the huge scale of the coding matrix. According to the knowledge of linear algebra, when the cyclic permutation matrix, which is obtained by cyclically shifting the identity
+matrix of N  N to the right HBG (i, j ) times, is multiplied by
+a subblock of length N , it is equivalent to cyclically shifting the
+subblock up HBG (i, j ) times. Therefore, we can step to obtain
+the parity bits as follows:
+a) Split the multiplication operation of Hc and c on the left side of (3) into the multiplication operations of cyclic permutation matrixes in Hc and the corresponding subblocks in c , and covert these operations into subblock cyclic shift operations. Then accumulate the results of the cyclic shift operations by row to get the result of Hcc .
+b) In the same way, split the multiplication operation of Hw and w on the right side of (3) into the multiplication operations of cyclic permutation matrixes in Hw and the corresponding subblocks in w , and covert these operations into subblock cyclic shift operations. According to the equation relation in (3), the first subblock of Hw w has been obtained from the previous step. Since the first subblock row of Hw has only one cyclic permutation matrix, the first subblock of w is obtained as long as the first subblock of Hw w is cyclically shifted once reversely.
+c) According to the characteristics that the other subblock rows of Hw have and only have two cyclic permutation matrices, and the first subblock of w has been obtained by the previous step, the other subblocks of w can be obtained row by row.
+According to the analysis, the key operation step in LDPC encoding is the cyclic shift of the subblock. In the 5G protocol [10], common subblock lengths are 384, 352, 320, etc., which are all relatively long subblock lengths. When implemented on FPGA, the cyclic shift of a long subblock is usually
+
+18
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+implemented by a shift register [5]-[7]. The realization principle of this scheme is clear and intuitive, but the computational efficiency is low, especially when the number of shifts is large. In addition, it is not possible to quickly reconstruct the computing architecture when facing scenarios with multiple code lengths. In view of the above problems, this paper gives a Byte-Parallel Configurable Cyclic Shift (BP-CCS) scheme in the following section to solve these problems.
+III. BYTE-PARALLEL CONFIGURABLE CYCLIC SHIFT SCHEME
+Since the bit length of the subblock is N , the byte length of the sub-block is Nbyte = N / 8 . We assume that the shift number
+is S . An intuitive algorithm of cyclic shift is to perform S shifts. The input of each shift is based on the output of the previous shift, and there is a data dependency between them. This kind of shifting algorithm is often adopted on FPGA. A shift register of length N is used to store the input data, and the register is shifted S times to obtain the output result. Record the number of shifts as t , if the shift is limited to only one direction, the number of shifts required in the worst case is
+
+t1 = N −1
+
+(4)
+
+If the shift direction is not limited, the number of shifts required in the worst case is
+
+t2
+
+=
+
+N  2
+
+ 
+
+(5)
+
+Obviously, no matter whether the shift direction is limited or not, the time complexity of the above serial shift algorithm is
+O ( N ) . In a long subblock scenario, N is a relatively large
+value. At this time, the serial shift algorithm will consume a lot of computing time and seriously affect the efficiency of the LDPC encoding. In fact, we can find that each byte in the shift result is at most related to two bytes in the input data if we carefully observe the cyclic shift process. Which two bytes are specifically related to can be obtained through certain calculations from the shift value defined in the coding base matrix. By shifting the word spliced of these two bytes, each byte in the shift result can be obtained in parallel, and all the bytes are combined to obtain the cyclic shift result. The number of shifts within a spliced word can also be calculated from the shift value defined in the coding base matrix.
+
+Input Data
+
+Cyclic Shift Value S
+
+High Six Bits of Cyclic Shift Value SH
+
+Byte Address Calculation
+
+Byte Extraction
+
+Splicing Shift
+
+Output Data
+
+Low Three Bits of Cyclic Shift Value SL
+
+Fig. 2. Flowchart of BP-CCS algorithm. The algorithm consists of four main steps: preprocessing of coding base matrix, byte address calculation, byte extraction and splicing shift. The shift value S will be divided into high bits
+SH and low bits SL . The high bits SH determine which two bytes are spliced,
+and the low bits SL determine how much to shift after splicing.
+
+Based on the parallelization ideas above, we proposed a Byte-Parallel Configurable Cyclic Shift (BP-CCS) algorithm. The flowchart of the algorithm is shown in Fig. 2 and the detailed algorithm steps are as follows:
+
+1) Preprocessing of coding base matrix Split the shift value S defined in the coding base matrix into high 6 bits SH and low 3 bits SL .
+
+SH
+
+=
+
+S   8 
+
+(6)
+
+SL = S mod 8
+
+(7)
+
+2) Byte address calculation Calculate the address of the two bytes required in the input data when performing splicing shifting for each byte in the output result based on SH . Suppose the byte index in the output
+result is i , the required lower byte address is PL (i) , and the
+higher byte address is PH (i) .
+
+PL (i) = ( SH + i) mod Nbyte
+
+(8)
+
+PH (i) = (SH + i +1) mod Nbyte
+
+(9)
+
+3) Byte extraction Take out the two bytes required for splicing shifting according to the addresses calculated in the previous step.
+Suppose the lower byte taken out is BL (i) , and the higher byte
+is BH (i) .
+
+BL (i) = c PL (i)
+
+(10)
+
+BH (i) = c PH (i)
+
+(11)
+
+4) Splicing shift Perform a splicing shift operation on the two bytes taken out, and the shift number is specified by SL . Suppose the result of the cyclic shift is r .
+
+r (i) = BH (i) BL (i)  SL
+
+(12)
+
+The BP-CCS algorithm transforms the cyclic shift into a byte-parallel calculation process through a series of designs. The calculation time is no longer related to the subblock length N , and the time complexity of the cyclic shift is reduced from
+O ( N ) to O (1) . When the subblock length N is large, the
+performance acceleration ratio is particularly significant.
+
+IV. HARDWARE IMPLEMENTATION AND INSTRUCTION CUSTOMIZATION
+In order to evaluate the actual performance of the BP-CCS scheme in LDPC encoding, we implemented a BP-CCS-based LDPC encoder on the self-developed processor UCP. UCP is a DSP processor with an innovative architecture, using a SIMD vector operation unit with a bit width of 512. UCP has several functional units (FUs) that can run in parallel, and its microcode
+
+19
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+pipeline adopts a coarse-grained reconfigurable architecture (CGRA), and FUs are interconnected through a configurable compact crossbar. This flexible interconnection architecture allows convenient combination of FUs into complex operators, such as Fast Fourier Transform (FFT). In the following paragraphs, we will specifically introduce the hardware implementation of the BP-CCS algorithm and the hardware implementation of the BP-CCS-based LDPC encoder.
+
+A. Hardware Implementation of BP-CCS Algorithm
+1) Preprocessing of coding base matrix According to the 5G protocol[10], the encoding matrix H is a large-scale sparse matrix, so it is not practical to store it directly in the memory. Therefore, we choose to store the coding base matrix HBG . The storage method adopts the sparse matrix storage method, that is, only the value S and row and column
+indexes (row, col ) of non-zero elements are stored in memory.
+The operation performed when calculating SH is divided by 8 and then rounded down, which can be realized by Bit Shift instruction of UCP. The operation performed when calculating SL is to take the remainder of 8, which can be realized by the Bit And instruction of UCP.
+
+2) Byte address calculation The operation performed when calculating lower byte
+address PL (i) is to take the remainder of Nbyte after addition,
+which can be realized by Mod Add instruction of UCP, as shown in Fig. 3 (a).
+
+The operation performed when calculating higher byte
+address PH (i) is also to take the remainder of Nbyte after
+addition. According to (9), this operation is the addition of three source operands, and at least two Mod Add instructions are
+required. Considering that PL (i) has been obtained, (9) can be
+simplified as
+
+PH (i) = (PL (i) +1) mod Nbyte
+
+(13)
+
+SH
+
+SH
+
+SH
+
+SH
+
+SH
+
+PL(NBYTE)
+
+PL(3) PL(2) PL(1) PL(0)
+
+NBYTE PL(NBYTE)
+
+3
+
+2
+
+1
+
+0
+
+Mod Add
+
+PL(3) PL(2)
+(a)
+
+PL(1)
+
+PL(0)
+
+c
+
+1 PH(NBYTE)
+
+1
+
+1
+
+1
+
+1
+
+Mod Add
+
+PH(3) PH(2)
+(b)
+
+PH(1)
+
+PH(0)
+
+c
+
+PL(NBYTE) BL(NBYTE)
+
+PL(3) PL(2) PL(1) PL(0)
+IND
+BL(3) BL(2) BL(1) BL(0)
+(c)
+
+PH(NBYTE) BH(NBYTE)
+
+PH(3) PH(2) PH(1) PH(0)
+IND
+BH(3) BH(2) BH(1) BH(0)
+(d)
+
+Fig. 3. Instruction operation of BP-CCS algorithm. (a) is the calculation of
+
+lower byte address P (i) . (b) is the calculation of higher byte address P (i) . (c)
+
+L
+
+H
+
+is the extraction of lower byte BL (i) . (d) is the extraction of higher byte
+
+BH (i) .
+
+Tm Byte63 Byte62
+
+Tn
+
+30
+
+63
+
+Byte31 Byte30
+
+31
+
+1
+
+Byte1 Byte0
+
+0
+
+62
+
+Result Byte30 Byte63
+
+Byte31 Byte1
+
+Byte0 Byte62
+
+Fig. 4. Function description of IND instruction. The data to be interleaved is stored in Tm, and the interleaving index is stored in Tn. The operation of this
+instruction can be expressed as result i = Tm Tni .
+
+After simplification, the calculation of PH (i) can be
+realized by only one Mod Add instruction, as shown in Fig 3 (b).
+3) Byte extraction The operation performed during byte extraction is to extract the corresponding byte from the input data according to the byte address. This is in line with the function of the IND instruction of UCP. IND instruction is a special instruction in UCP, and its function description is shown in Fig 4.
+Therefore, we use the IND instruction to extract the lower
+byte BL (i) , as shown in Fig 3 (c). And the higher byte BH (i)
+is extracted in the same way, as shown in Fig 3 (d).
+4) Splicing shift The operation performed during the splicing shift is to splice every two bytes of the same index in the two source registers into a word, then perform a shift operation on the word, and finally intercept the lower 8 bits and write them to the same index in the target register. Since there is no corresponding instruction in the UCP instruction set, completing the splicing shift operation requires a combination of several basic operation instructions, which takes a lot of cycles. In order to speed up the splicing shift operation, we have customized a dedicated Splicing Shift instruction based on the UCP architecture to complete the splicing shift quickly. The hardware structure design of this instruction is shown in Fig. 5 and the instruction function description is shown in Fig 6.
+
+Tn[15][3][7:0]
+
+Splicer
+
+opd[15][3][15:0]
+
+Tk[15][3][7:0]
+
+Truncation
+
+sh_cnt[15][3][2:0]
+
+Shifter[15][3]
+
+sh_result[15][3][15:0]
+
+Truncation
+
+sh_result[15][3][7:0]
+
+Write-back
+
+Tr[15][3][7:0]
+
+...
+
+Tn[0][1][7:0]
+
+Splicer
+
+opd[0][1][15:0]
+
+Tk[0][1][7:0]
+
+Truncation
+
+sh_cnt[0][1][2:0]
+
+Shifter[0][1]
+
+sh_result[0][1][15:0]
+
+Truncation
+
+sh_result[0][1][7:0]
+
+Write-back
+
+Tr[0][1][7:0]
+
+Tn[0][0][7:0]
+
+Splicer
+
+opd[0][0][15:0]
+
+Tk[0][0][7:0]
+
+Truncation
+
+sh_cnt[0][0][2:0]
+
+Shifter[0][0]
+
+sh_result[0][0][15:0]
+
+Truncation
+
+sh_result[0][0][7:0]
+
+Write-back
+
+Tr[0][0][7:0]
+
+Fig. 5. Hardware structure design of Splicing Shift instruction. The data to be splicing shifted are stored in Tm and Tn, the shift value is stored in Tk, and the result is output to Tr. The variable opd is used to store the intermediate result after splicing, and the variable sh_result is used to store the intermediate result after shifting.
+
+20
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+Tm_Byte63
+
+Tm_Byte3 Tm_Byte2 Tm_Byte1 Tm_Byte0
+
+Tn_Byte63
+
+Tn_Byte3 Tn_Byte2 Tn_Byte1 Tn_Byte0
+
+Splice
+
+Tm_Byte63 Tn_Byte63
+
+Tm_Byte3 Tn_Byte3 Tm_Byte2 Tn_Byte2 Tm_Byte1 Tn_Byte1 Tm_Byte0 Tn_Byte0
+
+Shift
+
+Tk_Byte63
+
+Tk_Byte3
+
+Tk_Byte2
+
+Tk_Byte1
+
+Tk_Byte0
+
+Tr_Byte63
+
+Tr_Byte3 Tr_Byte2 Tr_Byte1 Tr_Byte0
+
+Fig. 6. Function description of Splicing Shift instruction. Each byte in Tm is spliced with the corresponding byte in Tn, and then shifted according to the shift value defined by the corresponding byte in Tk, and the lower eight bits are intercepted and written back to the corresponding byte in Tr.
+
+BL(NBYTE)
+
+BL(3) BL(2) BL(1) BL(0)
+
+BH(NBYTE)
+
+BH(3) BH(2) BH(1) BH(0)
+
+SL
+
+SL
+
+SL
+
+SL
+
+SL
+
+Splicing Shift
+r
+Fig. 7. Splicing shift of lower byte BL (i) and higher byte BH (i) . The shift
+value is specified by SL and the result is output to r .
+We used the designed Splicing Shift instruction to realize the
+splicing shift of lower byte BL (i) and higher byte BH (i) , as
+shown in Fig 7.
+5) The instruction allocation and load balancing of functional units
+UCP has many parallel functional units, including four multiplication and addition units IMA0~3, four bus interface units BIU0~3, and four interleaving units SHU0~3. Each functional unit has unique functions and instructions, but some of the same functions and instructions are also shared between functional units. Therefore, after mapping each key operation of BP-CCS to instructions, it is also necessary to consider how to allocate each instruction to functional units reasonably. In addition, if the number of instructions of each functional unit in a loop body is not equal, the functional unit with a small number of instructions will inevitably consume extra cycles to synchronize the functional unit with a large number of instructions, resulting in great performance loss. Therefore, we also need to consider load balancing, that is, try to make the number of instructions of each functional unit equal, thereby reducing the performance loss. Considering the two aspects above comprehensively, we allocate the instructions of BP-CCS to functional units, and obtain the cascade diagram of the functional units, as shown in Fig 8.
+
+Cyclic Shift Value S
+
+IMA0
+
+Bit Shift Bit And
+
+IMA2 IND
+SHU2
+
+Mod Add
+
+IMA1
+
+Mod Add
+
+SHU1
+
+IND
+
+IMA3
+
+Splicing Shift
+
+Cyclic Shift Result r
+
+Input Data c
+IND
+Fig. 8. Cascade diagram of the functional units. Bit shift and Bit And instructions are allocated to IMA0, and Mod Add instruction is allocated to IMA1 and IMA2. IND instruction is allocated to SHU1 and SHU2, and Splicing Shift instruction is allocated to IMA3.
+
+B. Hardware Implementation of BP-CCS-Based LDPC Encoder
+After completing the design of the key operation BP-CCS, we can use this design to conveniently construct an BP-CCSbased LDPC encoder. Take the calculation of the first subblock of the parity bits as an example. We store the information bits and HBG in memory. The BIU functional unit reads the information bits and the non-zero elements of the first subblock row of HBG from the memory, and stores them in the M registers. The BP-CCS operator sequentially reads each nonzero element of HBG,c and the information bits subblock
+corresponding to each non-zero element from the M register, and performs a cyclic shift operation on the information bits subblock according to the element value of HBG,c , then
+accumulates the result. After that, the BP-CCS operator reads the non-zero element of HBG,w from the M register, and
+performs reverse cyclic shift on the result accumulated in the previous step according to the element value of HBG,w , so that
+the first subblock of the parity bits is obtained, and the subblock is written back to the memory through the BIU functional unit. The complete flow chart is shown in Fig 9.
+
+Shift Value S0 from HBG,c
+Subblock c0 from Information Bits
+
+BP-CCS Operator
+
+Cyclic Shift Result r0
+
+Shift Value S1 from HBG,c
+Subblock c1 from Information Bits
+Shift Value S2 from HBG,c
+Subblock c2 from Information Bits
+
+BP-CCS Operator
+BP-CCS Operator
+...
+
+Cyclic Shift Result r1
+Cyclic Shift Result r2
+
+Shift Value S0 from HBG,w
+BP-CCS Operator
+
+First Subblock w0 of Parity Bits
+
+Shift Value Sn from HBG,c
+Subblock cn from Information Bits
+
+BP-CCS Operator
+
+Cyclic Shift Result rn
+
+Fig. 9. Flow chart of BP-CCS-based LDPC encoder. Each subblock of information bits is cyclically shifted through the BP-CCS operator according to the corresponding shift value. The intermediate result of the cyclic shift is modulo-2 accumulated, and then according to the shift value corresponding to the first sub-block of the parity bits, the reverse cyclic shift is performed through the BP-CCS operator to obtain the first subblock of the parity bits.
+
+21
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+V. EXPERIMENTAL RESULTS AND DISCUSSION
+In this section, we will verify the performance of the BPCCS-based LDPC encoder compared with the 5G protocol standard, and show the feature that the encoder can be flexibly configured.
+In order to evaluate the performance of the BP-CCS-based LDPC encoder, we implemented the encoder using UCP's selfdeveloped assembly language, and used UCP's own tool chain to carry out RTL simulation, and then carried out hardware verification on the taped-out UCP chip. UCP chip adopts TSMC (Taiwan Semiconductor Manufacturing Company) 16-nm tapeout process, and the main frequency can work stably at 1.2GHz.
+We selected the four scenarios with the largest amount of computation in the 5G protocol for performance verification, as shown in Table Ⅰ, and Table Ⅱ lists the performance of BP-CCSbased LDPC encoder in these scenarios. According to the 5G protocol[10], a complete encoding process needs to be completed within 0.5ms. As can be seen from Table Ⅱ, the time required for the BP-CCS-based LDPC encoder with Splicing Shift instruction to complete the encoding process in these four scenarios is from 0.0125ms to 0.0143ms, which is about 1/40 of the time specified in the 5G protocol. According to our analysis, its excellent performance is mainly due to the following two aspects:
+First, the excellent performance benefits from the algorithm design of BP-CCS. The BP-CCS algorithm does not adopt the traditional serial cyclic shift scheme, but transforms the cyclic shift into a byte-parallel calculation process through a series of designs, reducing the time complexity of the cyclic shift from
+O ( N ) to O (1) . When the subblock length is relatively long,
+the performance acceleration ratio is particularly significant.
+Second, the excellent performance benefits from UCP's architectural advantages. The powerful computing power and high-speed main frequency of UCP are important guarantees for excellent performance. The efficient parallel architecture of UCP enables the calculations in the BP-CCS algorithm to be executed in parallel on UCP, giving full play to the advantages of byte parallelism of the BP-CCS algorithm. The easyexpandable instruction set of UCP allows us to easily customize the special instruction "Splicing Shift" of the BP-CCS algorithm, thereby solving the key performance bottleneck of the algorithm in hardware implementation. As can be seen from Table Ⅱ, when the Splicing Shift instruction is used, the processing time is about 1/5 of that when the Splicing Shift instruction is not used.
+
+TABLE I.
+Scenarios Number of Code
+Blocks Number of Subblocks Subblock
+Length Code Block Length (bit)
+
+PARAMETERS OF DIFFERENT SCENARIOS
+
+a
+
+b
+
+c
+
+d
+
+21
+
+22
+
+23
+
+24
+
+66
+
+384
+
+25344
+
+TABLE II.
+
+PERFORMANCE OF DIFFERENT SCHEMES
+
+Scenarios
+
+Encoder Without
+
+Cycles
+
+Splicing Shift
+
+Processing
+
+Instruction
+
+Time (ms)
+
+Encoder With
+
+Cycles
+
+Splicing Shift
+
+Processing
+
+Instruction
+
+Time (ms)
+
+Processing Time Specified in [10]
+
+(ms)
+
+a 79700 0.0664 14998 0.0125
+
+b 83493 0.0696 15711 0.0131
+
+c 87286 0.0727 16424 0.0137
+
+0.5000
+
+d 91079 0.0759 17137 0.0143
+
+TABLE III. TIME COST OF SCENARIOS SWITCHING
+
+Scenarios Number of Code Blocks Number of Subblocks
+Subblock Length Code Block Length (bit)
+Cycles Percentage
+
+e 10 66 384 25344 7155 55.37%
+
+e→f 37
+0.29%
+
+f 8 66 352 23232 5729 44.34%
+
+In addition to performance advantages, another advantage of BP-CCS-based LDPC encoder is configurability. In the BP-CCS algorithm, the length of the subblock is specified by the variable N . In the BP-CCS-based LDPC encoder, we can easily modify N through configuration data, thereby switching the subblock length of the encoder, so that the encoder can flexibly deal with multiple scenarios with different subblock lengths. However, for FPGA-based LDPC encoders, switching the subblock length of the encoder usually requires re-programming, which consumes a lot of time. As can be seen from the Table Ⅲ, we have cascaded two scenarios with different subblock lengths. When the encoder switches between the two scenarios, only 0.29% of the cycle is consumed, which can be regarded as real-time switching.
+VI. CONCLUSIONS
+In this paper, we have discussed a Byte-Parallel Configurable Cyclic Shift (BP-CCS) algorithm, which converts the cyclic shift into a byte-parallel form to solve the lowefficiency problem of cyclic shift calculation in LDPC encoding. In addition, to break the bottleneck in the hardware implementation of the BP-CCS algorithm, we expanded the instruction set of the self-developed DSP Universal Communication Processor (UCP), thereby implementing a BPCCS-based LDPC encoder on UCP, and verifying it on the taped-out chip. The experimental results show that the time consumed by the BP-CCS-based LDPC encoder is about 1/50 of the time specified in 5G communication protocol standard, and the encoder architecture can be easily reconstructed in real time through parameter configuration.
+Even though we only evaluated the performance of the BPCCS-based LDPC encoder on UCP, the encoder design is also applicable to other SIMD architectures. In future research, we will continue to explore parallelization schemes for other 5G physical layer algorithms such as LDPC decoding, and explore efficient hardware implementation schemes for these algorithms on UCP.
+
+22
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] Agiwal M, Roy A, Saxena N. "Next Generation 5G Wireless Networks: A Comprehensive Survey, " IEEE Communications Surveys & Tutorials, 2016, 18(3):1617-1655
+[2] S. Parkvall, E. Dahlman, A. Furuskar, and M. Frenne, "NR: The new 5G radio access technology, " IEEE Commun. Standards Mag., vol. 1, no. 4, pp. 24–30, Dec. 2017.
+[3] D. Hui, S. Sandbeg, Y. Blankenship, M. Andersson, and L. Grosjean, "Channel coding in 5G new radio: A tutorial overview and performance comparison with 4G LTE, " IEEE Veh. Technol. Mag., vol. 13, no. 4, pp. 60–69, Dec. 2018.
+[4] K. D. Rao and T. A. Babu, "Performance Analysis of QC-LDPC and Polar Codes for eMBB in 5G Systems," 2019 International Conference on Electrical, Electronics and Computer Engineering (UPCON), Aligarh, India, 2019, pp. 1-6.
+[5] R. Goriushkin, P. Nikishkin, A. Ovinnikov, E. Likhobabin and V. Vityazev, "FPGA Implementation of LDPC Encoder Architecture for
+
+Wireless Communication Standards, " 2020 9th International Conference on Modern Circuits and Systems Technologies (MOCAST), Bremen, Germany, 2020, pp. 1-4.
+[6] S. Johnson and N. Gaur, "Comparison of FPGA implementation of LDPC encoder algorithms, " 2016 6th International Conference - Cloud System and Big Data Engineering (Confluence), Noida, 2016, pp. 603-605.
+[7] Wang, X., Ge, T., Li, J., Su, C. and Hong, F. (2017), "Efficient Multi‐ rate Encoder of QC ‐ LDPC Codes Based on FPGA for WIMAX Standard. " Chinese J. Electron., 26: 250-255.
+[8] Nandalal, V., Anand Kumar, V. "Design and Analysis of (5, 10) Regular LDPC Encoder Using MRP Technique. " Wireless Pers Commun (2021).
+[9] R. Gallager, "Low-density parity-check codes, " IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21-28, Jan. 1962.
+[10] 3GPP, "NR; Multiplexing and Channel Coding (Release 16), " document TS 38.212, V16.4.0, Dec. 2020.
+
+23
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:33 UTC from IEEE Xplore. Restrictions apply.
+
+

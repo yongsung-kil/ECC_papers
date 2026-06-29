@@ -1,0 +1,425 @@
+Enhancing SSD Performance with LDPC-aware Garbage Collection
+
+Yajuan Du∗†, Yunpei Jia∗, Meng Zhang‡, Jun Zeng∗, and Chun Jason Xue† ∗School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China
+†Department of Computer Science, City University of Hong Kong, Kowloon, Hong Kong ‡Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan, China
+Email: dyjcityu2013@gmail.com, jiayunpei@hust.edu.cn
+
+Abstract—With the technology scaling of solid state drives (SSDs), data reliability has to be ensured by advanced LowDensity Parity-Check (LDPC) codes. As LDPC reads often take high latency, read performance involved in traditional garbage collection, called external GC, is largely decreased, which affects system performance. GC can choose not to correct data with LDPC codes but just copy valid pages into registers of NAND flash, which we call internal GC. Although this method avoids long latency in LDPC reads, the data integrity is sacrificed because of error aggregation in valid pages. To balance performance and reliability, this paper proposes a new garbage collection method, named as LDPC-aware Garbage Collection (LaGC), to selectively choose blocks with high error rates to perform external GC. These blocks are often close to uncorrectable error rates, which take a small portion during a long flash life period. Thus, most of blocks perform internal GC and keep advantage of low read latency. Experimental results show that LaGC can reduce 78% of read latency in external GC and achieve about 2% system performance improvement.
+I. INTRODUCTION
+Solid State Drives (SSDs), as the main storage device of phones and personal computers, provide higher [1] access performance than Hard Disk Drives (HDDs) by the physical nature that no mechanical moving happens. However, there are several shortcomings in SSDs, which degrade its potential performance advantage [2]. Garbage Collection (GC) often takes long time to perform page migrations and block erases. Furthermore, as SSDs have much higher RBERs than HDDs because of flash errors [3], Low-Density Parity-Check (LDPC) codes [4], [5] have to be applied to guarantee data reliability. As high latency is involved in LDPC reads [6], more page migration costs have to be paid in GC. Thus, SSD performance is further decreased.
+In order to achieve less GC effects on write amplification, lazy GC schemes are popularly applied in SSDs, which often happen when free storage space is not enough for upcoming requests. Latency caused by this kind of GC largely affects on system performance. Existing methods improve SSD performance by reducing GC frequencies or page migration numbers [7]. This paper considers to solve this problem in view of optimizing LDPC read performance involved in page migrations. According to different read mechanisms, GC can choose to perform GC reads externally in controller or internally in flash registers. External GC decodes, corrects and re-encodes data
+978-1-5386-1768-7/17/$31.00 c 2017 IEEE
+
+in valid pages by LDPC codes in controller while internal GC only reads data into registers and then programs to new pages. The first mechanism can lower RBERs and avoid read failure but induces worse read performance, which further decreases GC performance as well as SSD performance while the second mechanism has better GC performance without long-latency LDPC reads but cannot ensure data integrity.
+This paper proposes LaGC, a LDPC-aware garbage collection method, to improve GC performance of SSDs. LaGC selectively performs LDPC error correction in GC process, i.e. external GC, on blocks according to their retention time. LaGC only chooses long-kept blocks for external GC, that are prone to read failure because of high RBERs. As most of blocks are far from read failures, internal GC happens and brings high read performance. All in all, LaGC not only develops latency advantage of internal GC but also avoids read failures by external GC. By testing performance of six real workloads in Disksim platform [8] with SSD extensions [9], LaGC can reduce 78% of read latency and improve about 5% of GC performance compared with external GC.
+The contributions of this paper are as follows:
+• Studies the tradeoff between performance and reliability of two read mechanisms in GC with real workloads.
+• Proposes LaGC to selectively choose page read methods in GC by exploiting the above tradeoff. LaGC can achieve a good balance between performance and reliability.
+• Evaluates LaGC with six real workloads in simulation platform Disksim and verifies its effectiveness on read latency involved in GC, GC performance, and SSD performance.
+The rest of the paper is organized as follows. The background and motivation are presented in Section II. Section III presents the proposed LaGC. The evaluation is shown in Section IV. Related works are described in Section V. We conclude this paper in Section VI.
+II. BACKGROUND AND MOTIVATION
+This section first introduces the basic operations of SSDs. Then, two read mechanisms in garbage collection are illustrated and analyzed.
+A. Basics of SSDs
+SSDs, usually adopting NAND flash as storage medium, are mainly made up by two components: the controller and the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:47 UTC from IEEE Xplore. Restrictions apply.
+
+flash packages. The controller is the core of SSDs, in which there are many software modules to respond to host requests and manage flash packages, such as the Flash Translation Layer (FTL) module, the LDPC module and the GC module.
+There are three main operations on SSDs: read, write and erase. Read operation, the basic unit of which is page, mainly goes through four steps: address translation with FTL, sensing flash data to register, transferring data to controller, and LDPC decoding in controller. The LDPC read process is performed iteratively with read-rety steps until the decoding succeeds. If data kept time becomes longer, read latency will be higher. In write operation, data is written to corresponding physical pages with an incremental-step-pulse programming method [10] .
+Different from HDDs, SSDs have block erase operation because of the out-of-space update nature. Write amplification is induced by GC because of migration of valid pages in victim blocks. In order to reduce the write amplification, garbage collector often chooses the block with the most invalid pages as the victim block. After migrating data of valid pages, the victim block will be erased to recycle.
+B. Two Read Methods in GC
+According to the read method used in GC, garbage collection can be divided into external GC and internal GC, as shown in Figure 1.
+
+a3
+
+Flash Controller
+
+a2
+
+GC command a4
+
+Flash Controller GC command
+
+4K Register
+
+a1
+
+a5
+
+Flash Package
+
+4K Register
+
+b1
+
+b2
+
+Flash Package
+
+a. ExternalGC
+
+b. InternalGC
+
+Fig. 1. The two read methods in GC. GC operations with the two methods are called External GC in Figure (a) and Internal GC in Figure (b).
+A GC scheme to perform LDPC error correction in page migrations is called external GC, which can ensure data reliability. As shown in Figure 1(a), when the controller sends a GC command to flash package, the external GC begins to perform five steps as follows: Step a1, The controller reads a page from the flash into the register; Step a2, The data stored in the register are transferred to the controller by controllerto-flash bus; Step a3, LDPC codes are used to decode the data and encode the error-free data again within the controller; Step a4, The controller returns re-encoded data back to the register; Step a5, The data are written to new places from register. At the expense of latency caused by LDPC decoding, external GC can correct errors in data and ensure data integrity.
+Compared with external GC, internal GC has less steps because no LDPC decoding happens in page migrations. As shown in Figure 1(b), valid pages only communicate with register by two steps: b1 and b2. In Step b1, valid pages in victim blocks are read into the register while in Step b2, the
+
+data in register are written back to new blocks. As both steps take much less time than the that in LDPC reading, the internal GC induces less read latency than external GC.
+C. Preliminary Study
+In order to study performance and reliability of external GC and internal GC, this section presents a preliminary study on six workloads. The read latency results are shown in Figure 2(a). In order to investigate data reliability of pages, we set the error rate BER0 as a threshold, which approaches the RBERs that probably induce read failures. Statistical results are shown in Figure 2(b).
+
+Average Read Time in GC
+
+1
+
+EXTERNALGC
+
+0.5
+
+INTERNALGC
+
+0
+
+prn1
+
+ts0
+
+w0 proxy0
+
+prn0 rsrch0 Average
+
+(a) Average Read Time.
+
+1
+
+Error Rate Distribution
+
+0.5
+
+<=BER0
+
+>BER0
+
+0
+
+prn1
+
+ts0
+
+w0 proxy0
+
+prn0 rsrch0
+
+(b) Error Rate Distribution.
+
+Fig. 2. Study on Performance and Reliability of Two GC Methods.
+
+From Figure 2(a), we can see that internal GC takes much lower read cost compared with external GC. However, it has a fatal drawback in data integrity, as shown in Figure 2(b). Because of error aggregation, there are a small portion of pages with high RBERs, which are prone to read failures. These pages easily make bad blocks, which largely decreases data reliability. This paper proposes LaGC to solve the unbalance between performance and reliability of the two GC methods.
+III. LDPC-AWARE GARBAGE COLLECTION
+This section presents the design of LaGC in details. Figure 3 shows the architecture of SSDs integrated with LaGC. One storage module and one functional module are developed in LaGC: the Block Retention Information (BRI) and the Garbage Collection Assistant (GCA). The BRI module provides the information of block data kept time, that helps GCA to determine which GC read methods to use and the GCA module assists garbage collector when performing GC.
+A. Maintaining of Block Retention Information
+The BRI module contains two sub-modules, one in flash and the other in controller. The sub-module in flash stores all BRI, i.e. the time of first page written in spare area of each block. The other sub-module in controller, called Block Retention Table (BRT) always stores BRI of part of blocks with least valid pages. Each BRT entry contains a block number and first page time of the block. When invoking GC operations, the BRT is first read to provide information for GCA module. When one GC finishes, the BRT updates according to BRI in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:47 UTC from IEEE Xplore. Restrictions apply.
+
+Host
+
+Flash Translation Layer
+
+BRT BN FPT
+
+GC Assistant
+Garbage Collector
+
+LDPC Decoder
+Flash Controller
+
+Flash Package
+
+Flash Package
+
+Flash Package
+
+Flash Package
+
+Flash Package
+
+4K Register
+
+4K Register
+
+Plane Block
+
+Plane Block
+
+. .
+
+...
+
+..
+
+.
+
+.
+
+Block
+
+Block
+
+Fig. 3. The Architecture of SSDs Integrated with LaGC.
+
+BRT
+
+BN
+
+FPT
+
+ĸ
+
+Ĺ
+
+GC
+
+ķ
+
+Request
+
+Victim Block Detector
+
+Ŀ
+
+Valid Page Detector
+
+Update
+
+Ŀ
+
+BRT
+
+Erase Operator
+ľ ļ
+Write Operator
+
+ĺ
+LDPC Selector
+
+Garbage Collector
+
+Garbage Collector Assistant
+
+Ľ
+
+LDPC
+
+Ļ
+
+Decoder
+
+Fig. 4. The Process of LaGC.
+
+order to always keep the part of blocks with least valid pages. Thus, GC always hit the BRT, which makes GC performance less affected by LaGC.
+Every time during GC, the garbage collector looks up the BRT to obtain the corresponding data kept time, which assists the GCA module to make decisions. The data kept time can be computed by subtracting the stored time for each block with current time. All values in the BRT are initialized as 0 when SSDs begin to be used. There are two management scenarios to update the values of BRT. The first scenario is that when receiving a write request to a new block, first page time of the corresponding block is updated to be the current time. The second scenarios is that when GC happens, BRI of the corresponding block as well as its entry in BRT are reset to be zero after block erasing. The two sub-modules in BRI is dynamically maintained to ensure the timeliness of information for block data kept time.
+B. Garbage Collection Assistant
+As shown in Figure 4, the GCA module contains two submodules: the valid page detector and the LDPC selector. The valid page detector is used to determine whether the victim block contains valid pages. If there are valid pages in the victim block, the read operation should migrate valid pages to other blocks. The LDPC selector is activated to determine whether to perform LDPC decoding by judging the data kept time of the victim block. Given a fixed RBER threshold that is close to read failures, data kept time threshold are adjusted according to P/E cycles. We obtain the different data kept time from the error model in [11]. The LDPC selector identifies the dangerous blocks and performs LDPC reading on the valid pages of them. Conversely, for blocks with data kept time smaller than the threshold, the LDPC selector performs internal GC.
+C. The Process of Garbage Collection with LaGC
+With the support of above two modules, LaGC can make effective GC, details of which are listed as follows: Step 1: GC request is received by the garbage collector, and
+the victim block detector selects a block with the most invalid pages as the victim block. Step 2: The garbage collector accesses the BRT to obtain the data kept time information of the victim block.
+
+Step 3: The data kept time information is sent to the GCA. And the valid page detector determines whether there are valid pages in the victim block. If no, go to Step 9. Otherwise, go to Step 4.
+Step 4: The valid page detector sends block information to the LDPC selector for further operations.
+Step 5: The block kept time is beyond the threshold, the GCA module decides to decode the data in the LDPC decoder.
+Step 6: The block kept time is less than the threshold, the GCA module decides to read the data of valid pages to register in garbage collector and then perform a write operation.
+Step 7: After decoding the data successfully, the LDPC Decoder performs the write operation.
+Step 8: The erase operation is launched by garbage collector in order to recycle the victim block.
+Step 9: Garbage collector updates the BRT entry.
+D. Analysis of Overhead Involved in LaGC
+The storage overhead in LaGC comes from two submodules in the BRI. In all-BRI sub-module in flash spare areas, 2 Bytes are used to store data kept information of each block which lies in the spare area of SSDs. Assuming there are 8 packages in the SSD system with size of 32G, each package contains 8 planes and each plane is made up of 1024 blocks. The storage overhead of the BRT with all block entries is 128M, which is 4% of the SSD. We assume the BRT in flash controller contains 100 entries, this overhead is negligible.
+IV. EVALUATION
+1) Experiment Setup: In order to evaluate the effectiveness of LaGC, six workloads have been run to simulate a SSD system in Disksim [8] with SSD extensions [9]. The total size of the flash system is 32GB and it is configured by eight packages, which contains eight planes. Each plane is made up of 1024 blocks and each block contains 64 pages. The read, write and erase latency is set to 25µs, 200µs and 2ms respectively.
+According to the error model proposed in [11], we set the BER0 as 0.006 and P/E cycle as 8000. In order to correctly simulate the situation of SSDs in the late lifetime stage, we set the value of each block’s retention time as one year.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:47 UTC from IEEE Xplore. Restrictions apply.
+
+Average Read Time in GC
+
+1 0.8 0.6 0.4 0.2
+0
+Fig. 5.
+
+EXTERNALGC LaGC INTERNALGC
+
+prn1
+
+ts0
+
+w0 proxy0
+
+prn0 rsrch0 Average
+
+Average Read Latency Normalized to ExternalGC.
+
+2) Improvement on Read Latency: Average read latencies cost by external GC, LaGC and internal GC are shown in Figure 5. From the results, we can obtain two observations. The first observation is that LaGC can effectively improve the read performance of GC compared with external GC. On average, about 78% of the read latency is improved. This improvement comes from read latency reductions of victim blocks with retention less than the threshold. The second observation is that the average read latency of LaGC is just a little higher than the internal GC, which means that the read performance of LaGC is close to that of internal GC. This is because that there are just a few long-kept blocks by external GC, which has little effect on overall read latency.
+
+Average GC Cost
+
+1
+
+EXTERNALGC
+
+0.5
+
+LaGC
+
+INTERNALGC
+
+0
+
+prn1
+
+ts0
+
+w0 proxy0
+
+prn0 rsrch0 Average
+
+(a) Average GC Cost.
+
+Average System Response Time
+
+1
+
+EXTERNALGC
+
+0.5
+
+LaGC
+
+INTERNALGC
+
+0
+
+prn1
+
+ts0
+
+w0 proxy0
+
+prn0 rsrch0 Average
+
+(b) Average System Performance.
+
+Fig. 6. Results of GC Performance and System Performance Normalized to ExternalGC.
+3) GC Cost and System Performance: Figure 6(a) shows the average GC cost of external GC, LaGC and internal GC. We can find that the improvement caused by prn1 workload is the most obvious among all workloads, which is about 10%. This is because its GC number is the largest. In summary, the average GC cost improved by LaGC on all workloads is 5% compared with external GC. System response time, shown in Figure 6(b), is also improved by LaGC compared with External GC. The average improvement is about 2% performance of external GC. In conclusion, LaGC not only improves performance of external GC but also guarantee data reliability of internal GC.
+
+V. RELATED WORK
+
+Related work about optimizing the GC performance can be categorized into two methods. The first method is to reduce the number of GC operations. Hahn et al. [12] proposed a justin-time garbage collection method to avoid conflicts between
+
+aggressive GC and lazy GC. Background garbage collection [13] is proposed to perform garbage collection in background when system is idle, which can largely reduce GC effects on performance. The second method is to select the victim block with the least number of valid pages i.e, to reduce write amplification. Analytical models [14], [15] are proposed to analyze the factors to cause amplification and tries to optimize these factors in theory. Lu et al. [16] proposed to reduce write amplification by considering applications in file system level. Our paper proposes a new view to improve GC performance.
+VI. CONCLUSION
+
+In order to improve GC performance of SSDs, this paper proposes LaGC, which can intelligently decide page read method during GC according to block data kept time. Experimental results show that LaGC can balance the tradeoff between reliability and performance.
+ACKNOWLEDGEMENT
+
+This work is supported by National Science Foundation of China 61572411 and National 863 Program 2015AA015304.
+REFERENCES
+
+[1] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, “Introduction to
+
+flash memory,” Proceedings of the IEEE, vol. 91, no. 4, pp. 489–502,
+
+2003.
+
+[2] L. M. Grupp, J. D. Davis, and S. Swanson, “The bleak future of NAND
+
+flash memory,” in FAST, 2012.
+
+[3] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC
+
+NAND flash memory: measurement, characterization, and analysis,” in
+
+DATE, 2012.
+
+[4] D. J. MacKay, “Good error-correcting codes based on very sparse
+
+matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2,
+
+pp. 399–431, 1999.
+
+[5] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving LDPC
+
+performance via asymmetric sensing level placement on flash memory,”
+
+in ASP-DAC, 2017.
+
+[6] Y. Du, D. Zou, Q. Li, L. Shi, H. Jin, and C. J. Xue, “LaLDPC: Latency-
+
+aware LDPC for read performance improvement of solid state drives,”
+
+in MSST, 2017.
+
+[7] S. Wu, Y. Lin, B. Mao, and H. Jiang, “GCaR: Garbage collection aware
+
+cache management with improved performance for flash-based ssds,” in
+
+ICS, 2016.
+
+[8] “The
+
+disksim
+
+simulation
+
+environment
+
+(v4.0),”
+
+http://www.pdl.cmu.edu/DiskSim/, accessed: 2016-11.
+
+[9] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. S. Manasse,
+
+and R. Panigrahy, “Design tradeoffs for SSD performance.” in USENIX
+
+ATC, 2008.
+
+[10] K.-D. Suh, B.-H. Suh, Y.-H. Lim, J.-K. Kim, Y.-J. Choi, Y.-N. Koh, S.-
+
+S. Lee, S.-C. Kwon, B.-S. Choi, J.-S. Yum et al., “A 3.3 v 32 mb NAND
+
+flash memory with incremental step pulse programming scheme,” IEEE
+
+Journal of Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, 1995.
+
+[11] Y. Pan, G. Dong, Q. Wu, and T. Zhang, “Quasi-nonvolatile SSD: Trading
+
+flash memory nonvolatility to improve storage system performance for
+
+enterprise applications,” in HPCA, 2012.
+
+[12] S. S. Hahn, S. Lee, and J. Kim, “To collect or not to collect: Just-in-
+
+time garbage collection for high-performance ssds with long lifetimes,”
+
+in DAC, 2015.
+
+[13] K. Smith, “Garbage collection,” in Flash Memory Summit, 2011.
+
+[14] P. Desnoyers, “Analytic modeling of ssd write performance,” in SYSTOR,
+
+2012.
+
+[15] X.-Y. Hu, E. Eleftheriou, R. Haas, I. Iliadis, and R. Pletka, “Write
+
+amplification analysis in flash-based solid state drives,” in SYSTOR,
+
+2009.
+
+[16] Y. Lu, J. Shu, and W. Zheng, “Extending the lifetime of flash-based
+
+storage through reducing write amplification from file systems,” in FAST,
+
+2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:47 UTC from IEEE Xplore. Restrictions apply.
+
+

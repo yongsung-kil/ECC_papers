@@ -1,0 +1,393 @@
+A Fully-Unrolled LDPC Decoder Based on Quantized Message Passing
+
+Alexios Balatsoukas-Stimming∗, Michael Meidlinger†, Reza Ghanaatian∗, Gerald Matz†, and Andreas Burg∗
+
+∗EPFL, Switzerland
+Email: {alexios.balatsoukas, reza.ghanaatian, andreas.burg}@epfl.ch
+
+†Vienna University of Technology, Austria
+Email: {mmeidlin, gmatz}@nt.tuwien.ac.at
+
+arXiv:1510.04589v1 [cs.IT] 15 Oct 2015
+
+Abstract—In this paper, we propose a finite alphabet message passing algorithm for LDPC codes that replaces the standard min-sum variable node update rule by a mapping based on generic look-up tables. This mapping is designed in a way that maximizes the mutual information between the decoder messages and the codeword bits. We show that our decoder can deliver the same error rate performance as the conventional decoder with a much smaller message bit-width. Finally, we use the proposed algorithm to design a fully unrolled LDPC decoder hardware architecture.
+I. INTRODUCTION
+The excellent error correction performance of low-density parity-check (LDPC) codes, alongside with the availability of low-complexity and highly parallel decoding algorithms and hardware architectures makes them an attractive choice for many high throughput communication systems. LDPC codes are traditionally decoded using iterative message passing (MP) algorithms like the sum-product (SP) algorithm and variants thereof [1], most notably the min-sum (MS) algorithm. Those conventional algorithms rely on the exchange of continuous messages, which are usually quantized with resolutions of 4 to 7 bits in most in hardware implementations. Lower resolutions are possible but entail severe performance penalties, especially in the error-floor region [2].
+Previous work on quantized MP algorithms for LDPC decoding has shown that decoders which are designed to operate directly on message alphabets of finite size can lead to improved performance. There are numerous different approaches towards the design of such decoders. For example, the authors of [3], [4] and [5] consider look-up table (LUT) based update rules that are designed such that the resulting decoders can correct most of the error events contributing to the error floor. However, their design is restricted to codes with column weight 3 and to binary output channels. In [6] a quasiuniform quantization was proposed which extends the dynamic range of the messages at later iterations and improves the error floor performance. However, the design of [6] still relies on the conventional message update rules and therefore does not reduce the required message bit-width. Finally, the authors of [7], [8] consider message updates based on an information theoretic fidelity criterion. While [3], [4], and [6] analyze the performance of their decoding schemes by means of frame error rate (FER) simulations, [7] only provides density
+Funded by WWTF Grant ICT12-054.
+
+evolution results and [8] focuses solely on the algorithm for designing the message update rules. To the best of our knowledge, none of the above schemes have been assessed in terms of their impact on hardware implementations.
+Contribution: In this paper, we derive a low-complexity decoding algorithm that is designed to directly operate with a finite message alphabet and that manages to achieve better error-rate performance than conventional algorithms with message resolutions as low as 3 bits. Based on this algorithm, we synthesize a fully unrolled LDPC decoder and compare our results with our implementation of the only existing fully unrolled LDPC decoder [9]. Our approach for the design of the variable node update rule is similar to [7], [8], but we use a more sophisticated tree structure as well as a different check node update rule.
+
+II. LDPC CODES AND MIN-SUM DECODING
+
+A (dv, dc)-regular LDPC code is the set of codewords
+
+c ∈ {0, 1}N Hc = 0 ,
+
+(1)
+
+where all operations are performed modulo 2. The parity check matrix H ∈ {0, 1}M×N contains dv ones per column and dc ones per row and is sparse in the sense that dv < dc N . The parity-check matrix forms an incidence matrix for a Tanner graph which contains N variable nodes (VNs) and M check nodes (CNs). Variable node n is connected to check node m if and only if Hmn = 1.
+LDPC codes are traditionally decoded using MP algorithms, where information is exchanged between the VNs and the CNs over the course of several decoding iterations. Let the message alphabet be denoted by M. For simplicity, in this work we assume that M does not change over the iterations. At each iteration the messages from VN n to CN m are computed using the mapping Φv : L × Mdv−1 → M, which is defined as
+
+µn→m = Φv Ln, µ¯N (n)\m→n ,
+
+(2)
+
+where N (n) denotes the neighbours of node n in the Tanner graph, µ¯N (n)\m→n ∈ Mdv−1, is a vector that contains the incoming messages from all neighboring CNs except m,
+and Ln ∈ L denotes the channel log-likelihood ratio (LLR) corresponding to VN n. Similarly, the CN-to-VN messages
+
+Ln µ¯m1→n
+
+n Φv µn→m
+µ¯mdv −1→n
+
+m1 . . . mdv−1
+
+m
+
+(a)
+
+n1 . . . ndc−1
+
+n
+
+µn1→m Φc
+
+µndc −1 →m µ¯m→n
+m
+
+(b)
+
+Fig. 1: VN update (a) and CN update (b) for N (n) = {m, m1, . . . , mdv−1} and N (m) = {n, n1, . . . , ndc−1}
+
+are computed using the mapping Φc : Mdc−1 → M, which is defined as
+
+µ¯m→n = Φc µN (m)\n→m ,
+
+(3)
+
+Figure 1 illustrates the message updates in the Tanner graph. In addition to Φv and Φc, a third mapping Φd : L × Mdv → {0, 1} is needed to provide an estimate of the transmitted
+codeword bit based on the incoming check node messages and the channel LLR Ln
+
+cˆn = Φd(Ln, µ¯N (n)→n).
+
+(4)
+
+For the widely used MS algorithm, the mappings read
+
+ΦM v S(L, µ¯ = L + µ¯i,
+
+(5)
+
+i
+
+ΦcMS(µ = sign µ min |µ|,
+
+(6)
+
+where min |µ| denotes the minimum of the absolute values of
+the vector components, sign µ = j sign µj and M = L = R. The decision mapping Φd is defined as
+
+ΦdMS(L, µ¯)
+
+=
+
+1 2
+
+1 − sign
+
+L+
+
+µ¯i
+
+.
+
+(7)
+
+i
+
+III. FINITE-ALPHABET DECODER DESIGN ALGORITHM
+
+The MS algorithm assumes that the message set M and the LLR set L are real numbers. However, it is impractical to use floating-point arithmetic in hardware implementations of such decoders and the message alphabets are usually discretized using a relatively low number of uniformly spaced quantization levels. This uniform quantization, together with the well-established two’s complement and sign-magnitude binary encoding, leads to efficient arithmetic circuits, but it is not necessarily the best choice in terms of error-rate performance.
+Recently, efforts have been made to devise decoders that are designed to work directly with finite message and LLR alphabets [3], [7]. Instead of arithmetic computations such as (5)
+
+and (6), the update rules for these decoders are implemented as look-up tables (LUTs). There are numerous approaches to the design of such LUTs. In the following, we provide an algorithm that is a mixture between the conventional MS algorithm and purely LUT-based decoders. More specifically, we only replace the VN update rules with LUTs, which are designed using an information theoretic metric. For the design of the CNs, we exploit the fact that the outputs of the LUTbased VNs, although not representing real numbers, can be ordered and for symmetric channels, the message sign can be directly inferred from the labels, cf. section III-B. This allows us to use the standard MS update rule, thereby avoiding the high hardware complexity that a LUT-based CN design would cause for codes with high CN degree. Our hybrid algorithm provides excellent performance even with very few message levels and leads to an efficient hardware architecture, which is described in detail in Section IV.
+
+A. Mutual Information Based VN LUT Design
+
+The key idea behind the LUT design method that we employ is that, given the CN-to-VN message distributions of the previous iterations, one can design the VN LUTs for each iteration in a way that maximizes the mutual information between the VN output messages and the codeword bit corresponding to the VN in question.
+We first describe how the distribution of the CN-to-VN messages can be computed based on the distribution of the incoming CN-to-VN messages. If the Tanner graph is cyclefree, then the individual input messages of a CN at iteration i are iid conditioned on the transmitted bit x1, and their distribution is denoted by p(mi|)x(µ|x). Then, the joint distribution of the (dc − 1) incident messages conditioned on the transmitted bit value corresponding to the recipient VN (cf. Fig. 1) reads
+
+pm(i)|x(µ|x) =
+
+1 dc−2 2
+
+dc −1
+pm(i|)x(µj |xj ), (8)
+
+x: x=x j=1
+
+where x denotes the modulo-2 sum of the components of x. Using the update rule (6), the distribution of the outgoing CN-to-VN message is then given by
+
+p(mi|)x(µ¯|x) =
+
+pm(i)|x(µ|xn),
+
+(9)
+
+µ∈Mµ¯
+
+where Mµ¯ µ min |µ| = |µ¯| ∧ sign µ = sign µ¯ . The output message values are given by
+
+µ log p(mi|)x(µ|0) . p(mi|)x(µ|1)
+
+(10)
+
+Conventional decoding algorithms need a high dynamic range in order to represent the growing message magnitudes, as they are using the same message representation for every iteration. In our LUT-based decoder, the message representation changes from one iteration to the next and the message values grow
+
+1In the following, random variables are denoted by sans-serif letters.
+
+implicitly as the distributions p(mi|)x(µ|x) become more and more concentrated over the course of the iterations, thus providing an explanation for the good performance we can achieve with very low resolutions.
+Let µ¯ = µ¯1, . . . , µ¯dv−1 denote the (dv − 1) incident CNto-VN messages that are involved in the update of a certain VN (one of which is always the channel LLR L) and let x be the transmit bit corresponding to this VN. Then, the joint distribution of the VN input messages is given by [7]
+
+pL(i,)m|x(L, µ¯|x) =
+
+dv −1
+
+pL|x(L|x0)
+
+p(mi|)x(µ¯j |xj ).
+
+x: x0=···=xdv −1=x
+
+j=1
+
+(11)
+
+Given this distribution, we can construct an update rule
+
+Φ(vi) MI = arg max I(m; x) = arg max I Q(L, m); x , (12)
+
+Q∈Q
+
+Q∈Q
+
+where Q is the set of all deterministic mappings in the form of (2) and I(m; x) denotes the mutual information between m and x. Hence, the resulting update rule locally maximizes the information flow between the CNs and the VNs.
+An algorithm that solves (12) with complexity O |L|3|M|3(dv−1) was provided in [8]. Using the update rule (12), we can compute the message conditional distribution of the next iteration
+
+pm(i|+x1)(µ|x) =
+
+p(Li,)m|x(L, µ¯|x).
+
+(L,µ¯): Φv(i) MI(L,µ¯)=µ
+
+(13)
+
+Given an initial message distribution pm(0|)x(µ|x) and a distribution of the channel LLRs pL|x(L|x), the repeated alternating application of (8), (9) and (11) to (13) produces a sequence of locally optimal VN update mappings Φ(vi) MI, i ∈ {1, . . . , I},
+where I denotes a pre-determined maximum number of per-
+formed iterations.
+
+B. Discussion and Practical Considerations
+1) LUT-based VN and Tree Structure: As the mappings Φv take |L|·|M|(dv−1) inputs, a direct application of the algorithm described in Section III-A is restricted to low weight codes. However, we can construct a hierarchy of mappings where each partial mapping only processes a subset of the inputs and the intermediate outputs of preceding stages.2 The quantizer design for such a hierarchy follows directly by considering only the messages incident to the respective mapping in (11) and, for the intermediate nodes, replacing the distributions (9) of the incident CN messages by the distributions (13) of the previous stage.
+2) Channel Output Quantization: So far we considered the initial distributions p(m0|)x(µ|x) and pL|x(L|x) as given. When designing practical decoders for communication applications, the initial distributions follow from the transmission channel and the LLR quantization of the preceding signal processing.
+
+2In our simulations, we observe that the choice of LUT tree structure can significantly affect the FER performance of the decoder. It is an interesting open problem to identify the best possible tree structure under some complexity constraint (e.g., we could limit the number of LUT inputs to two).
+
+Throughout the rest of the paper, we consider a binary input additive white Gaussian noise (BI-AWGN) channel followed by maximum mutual information quantization of the LLRs [10]. In this case, the initial distributions depend on the SNR, which renders the LUT design SNR-specific. Nevertheless, we observe in our simulations that the decoder generally performs well also for SNRs other than the design SNR.
+3) Message Representation for Symmetric Channels: Consider the practically relevant case where |M| and |L| are even and the distributions p(m0|)x(µ|x) and pL|x(L|x) are symmetric in the sense that
+
+|L|
+
+pL|x(Lk|0) ≡ pL|x(L|L|−k+1|1),
+
+k = 1, . . . , 2
+
+(14)
+
+p(m0|)x(µk|0) ≡ pm(0|)x(µ|M|−k+1|1),
+
+|M| k = 1, . . . ,
+2
+
+(15)
+
+or equivalently, expressed in terms of the LLRs values
+
+Lk ≡ −L|L|−k+1
+
+µk ≡ −µ|M|−k+1.
+
+(16)
+
+For that case, computing the CN update (6) is simplified as the sign follows immediately from the message labels. Thus, for the CN update the message values do not need to be stored and the entire decoder can be implemented based on the message labels.
+4) Decision Stage: Since the discrete messages of our decoder do not represent real numbers but are labels, a simple arithmetic decision mapping such as (7) is not possible. Instead, Φd has to be implemented as a generic mapping as well. The construction of Φd is similar to the construction of Φv, with the difference that all dv input messages and the channel LLR have to be processed and that the output is binary.
+
+IV. LUT-BASED FULLY UNROLLED DECODER HARDWARE ARCHITECTURE
+In the previous section, we have described an algorithm that can construct locally optimal variable node update rules in the form of LUTs for a given quantization bit-width for each iteration for any given (dv, dc)-regular LDPC code. Most conventional LDPC decoder architectures are either partially parallel, meaning that fewer than N VNs and M CNs are instantiated, or fully parallel, meaning that N VNs and M CNs are instantiated. Using a LUT-based decoder with a carefully designed quantization scheme can significantly reduce the memory required to store the messages exchanged by the VNs and CNs due to the reduced message bit-width required to achieve the same FER performance. However, both for partially parallel and for fully parallel decoders, separate LUTs would be required within each VN for each one of the performed decoding iterations, significantly increasing the size of each VN, and thus possibly outweighing the gain in the memory area.
+An additional degree of parallelism was recently explored in [9], where a fully unrolled and fully parallel LDPC decoder was presented. This decoder instantiates N VNs and M CNs for each iteration of the decoding algorithm, leading to a total of N I VNs and M I CNs. While such a fully unrolled
+
+Fig. 2: Top level decoder architecture processing pipeline. The channel LLRs are the input of the left-hand side and the decoded codeword is obtained as the output of the right-hand side.
+
+decoder requires significant hardware resources, it also has a very high throughput since one decoded codeword can be output in each clock cycle. Thus, the hardware efficiency (i.e., throughput per unit area) of the fully unrolled decoder presented in [9] turns out to be significantly better than the hardware efficiency of partially parallel and fully parallel (nonunrolled) approaches. Since in a fully unrolled LDPC decoder architecture VNs and CNs are instantiated for each iteration, it is a very suitable candidate for the application of our LUTbased decoding algorithm.
+In this section, we describe the hardware architecture of our fully unrolled LUT-based LDPC decoder. Our hardware architecture is similar to the architecture used in [9], while the most important differences are the optimized LUT-based variable node and the significantly reduced bit-width of all quantities involved in the decoding process.
+A. Decoder Architecture
+An overview of our decoder architecture is shown in Fig. 2. Each decoding iteration is mapped to a distinct set of variable nodes and check nodes which then form a processing pipeline. In essence, a fully unrolled and fully parallel LDPC decoder is a systolic array in which data flows from left to right. A new set of N channel LLRs can be read in each clock cycle, and a new decoded codeword is output in each clock cycle. The decoding latency as well as the maximum frequency depend on the number of performed iterations as well as the number of pipeline registers present in the decoder. Our decoder consist of three types of stages, namely the CN stage, the VN stage, and the DN stage, which are described in detail in the sequel. As long as a steady flow of input channel LLRs can be provided to the decoder, there is no control logic required apart from the clock and reset signals.
+1) Check Node Stage: Each CN stage contains M check node units, as well as M dc Qmsg-bit registers which store the check node output messages, where Qmsg denotes the number of bits used to represent the internal decoder messages. Moreover, each CN stage contains N Qch-bit channel LLR registers which are used to forward the channel LLRs required by the following variable node stages, where Qch denotes the
+
+number of bits used to represent the channel LLRs. Due to (16), we can use a check node architecture which is
+practically identical to the check node architecture used in [9]. More specifically, each check node consists of a sorting unit that identifies the two smallest messages among all dc input messages and an output unit which selects the first or the second minimum for each output, along with the appropriate sign. The sorting unit contains 4-input compare-and-select (CS) units in a tree structure, which identify and output the two smallest values out of the four input values [9]. We use signmagnitude (SM) to represent all message labels. The SM2TC unit used in the check node of [9] is not required in our architecture since the variable node does not perform any arithmetic operations where the two’s complement representation could be favorable.
+2) Variable Node Stage: Each VN stage contains N variable node units, as well as N dv Qmsg-bit registers that store the variable node output messages. Moreover, each VN stage contains N Qch-bit channel LLR registers which are used to forward the channel LLRs required by the following VN stages.
+In the variable node architecture used in the adder-based decoder of [9], all input messages are added and then the input message corresponding to each output is subtracted from the sum in order to form the output message, thus implementing the conventional MS update rule given in (5). In order to avoid overflows, in our implementation of [9] the bit-width of the internal signals is increased by one bit for each addition.
+For our LUT-based decoder the adder tree is replaced by dv LUT trees, each of which computes one of the dv outputs of the variable node. One possible LUT-tree structure is shown in Fig. 3a, where µ¯ denotes an internal message from a check node and L denotes the channel LLR. LUT sharing between the dv LUT trees can be achieved by identifying the nodes that appear in more than one tree and instantiating them only once, thus significantly reducing the required hardware resources. Moreover, keeping the number of inputs of each LUT as low as possible ensures that the size of the LUTs, which grows exponentially with the number of inputs, is manageable for the automated logic synthesis process.
+
+LUT µ
+
+LUT LUT
+
+LUT cˆ
+
+10−2
+
+FER
+
+LUT LUT
+µ¯ µ¯ µ¯ µ¯ µ¯ L
+(a)
+
+LUT LUT
+µ¯ µ¯ µ¯ µ¯ µ¯ µ¯ L
+(b)
+
+Fig. 3: (a) A variable node LUT tree for the calculation of one output
+
+of a variable node of degree dv = 6. Each LUT-based variable node
+
+contains dv such LUT trees, one for each of the
+
+dv dv −1
+
+possible
+
+combinations of input messages.
+
+(b) A decision node LUT tree for a variable node of degree dv = 6.
+
+Each LUT-based decision node contains a single decision tree.
+
+10−5 10−8
+
+LUT-based, (Qch = 4, Qmsg = 3) Fixed-point, (Qch = 4, Qmsg = 4) Fixed-point, (Qch = 5, Qmsg = 5) Floating-point, I = 5 Floating-point, I = 10
+
+3 3.5 4 4.5 5 5.5 6
+
+Eb/N0 [dB]
+
+Fig. 4: FER vs Eb/N0 for the N = 2048 (6, 32)-regular LDPC code defined in IEEE 802.3an.
+
+3) Decision Node Stage: The variable node that corresponds to the final decoding iteration is called a decision node (DN). The DN stage contains N decision nodes, as well N single-bit registers that store the decoded codeword bits. The DN stage does not contain channel LLR registers, as there are no subsequent decoding stages where the channel LLRs would be used. The architecture of a decision node is generally simpler than that of a variable node, as a single output value (i.e., the decoded bit) is calculated instead of dv distinct outputs.
+More specifically, in the architecture of [9], the decision metric of (4) is already calculated as part of the variable node update rule. However, for the decision node, there is no need to subtract each input message from the sum in order to generate dv distinct output messages. It suffices to check whether the sum is positive or negative, and output the corresponding decoded codeword bit.
+In our LUT-based decoder, as discussed in Section III-B4, a LUT tree is designed whose tree node has an output bit-width of a single bit, which is the corresponding decoded codeword bit. An example of a decision LUT tree for a decision node that corresponds to a code with dv = 6 is shown in Fig. 3b. Each decision node contains a single LUT tree, in contrast with the variable nodes which contain dv LUT trees.
+B. Decoding Latency and Throughput
+Our LUT-based architecture contains pipeline registers at the output of each stage (VN, CN, and DN). Thus, for a given number of decoding iterations I, the decoding latency is 2I clock cycles. Since one decoded codeword is output in each clock cycle, the decoding throughput of the decoder, measured in Gbits/s, is given by T = N f , where f denotes the operating frequency measured in GHz.
+C. Memory Requirements
+Each pipeline stage except the DN stage requires an N Qch channel LLR register. Moreover, each VN and CN stage requires N dvQmsg (equivalently, M dcQmsg) registers to store the output messages. Finally, the DN stage requires N registers
+
+to store the decoded codeword bits. Thus, the total number of register bits required by our LUT-based decoder can be calculated as
+
+Btot = (2I − 1)N (dvQmsg + Qch) + N.
+
+(17)
+
+Naturally, (17) can also be used to calculate the register bits required by an adder-based MS architecture with the same pipeline register structure.
+
+V. IMPLEMENTATION RESULTS
+In this section, we present synthesis results for a fully unrolled LUT-based LDPC decoder and we compare it with synthesis results of our implementation of a fully unrolled adder-based MS LDPC decoder. We have used the paritycheck matrix of the LDPC code defined in the IEEE 802.3an standard [11] (10 Gbit/s Ethernet), which is a (6, 32)-regular LDPC code of rate R = 13/16 and blocklength N = 2048. For the fixed point decoder and the LUT-based decoder, a total of I = 5 decoding iterations are performed, since from Fig. 4 we observe that increasing the number of iterations to, e.g., I = 10, does not lead to a significant improvement in performance for this LDPC code. All synthesis results are obtained by using a TSMC 90nm CMOS library under typical operating conditions.
+
+A. Quantization Parameters
+For the LUT-based decoder, we have used Qch = 4 bits for the representation of the channel LLRs and Qmsg = 3 bits for the representation of the internal messages, as this leads to an error correction performance that is very close the floatingpoint MS decoder (cf. Fig. 4). For the variable nodes, we use the LUT tree structure of Fig. 3a and for the decision nodes we use the LUT tree structure of Fig. 3b. The design SNR is set to 4.5 dB. For the adder-based MS decoder which serves as a reference, we use Qch = 5 bits for the representation of the channel LLRs and Qmsg = 5 bits for the representation of the internal messages, as this leads to practically the same FER performance for the LUT-based and the adder-based MS decoder, as can be seen in Fig. 4.
+
+TABLE I: Synthesis Results
+
+Area Frequency Latency Throughput Area Efficiency
+
+Adder-based MS 35.63 mm2 495 MHz 20.20 ns 1014 Gbps
+28.46 Gbps/mm2
+
+LUT-based 33.79 mm2 813 MHz
+12.30 ns 1665 Gbps 49.27 Gbps/mm2
+
+TABLE II: Area Breakdown
+
+Check Nodes Pipeline Registers
+Total
+Variable Nodes I1 Variable Nodes I2 Variable Nodes I3 Variable Nodes I4 Pipeline Registers
+Total I1 Total I2 Total I3 Total I4
+Decision Nodes Pipeline Registers
+Total
+Logic Area Register Area
+Total Area
+
+Adder-based MS LUT-based
+
+Check Node Stage
+
+2.77 mm2 1.11 mm2 3.88 mm2
+
+1.11 mm2 0.70 mm2 1.81 mm2
+
+Variable Node Stage
+
+2.35 mm2 4.62 mm2
+
+2.35 mm2 4.78 mm2
+
+2.35 mm2 2.35 mm2
+
+4.64 mm2 4.68 mm2
+
+1.11 mm2 0.57 mm2
+
+3.46 mm2 3.46 mm2 3.46 mm2
+
+5.32 mm2 5.48 mm2 5.34 mm2
+
+3.46 mm2 5.38 mm2
+
+Decision Node Stage
+
+2.035 mm2 3.21 mm2
+
+0.03 mm2 2.38 mm2
+
+0.03 mm2 3.24 mm2
+
+Top-Level Decoder
+
+25.58 mm2 27.46 mm2
+
+10.05 mm2 6.33 mm2
+
+35.63 mm2 33.79 mm2
+
+B. Adder-based vs. LUT-based Decoder
+We present synthesis results for the adder-based and the LUT-based decoders in Table I. For fair comparison, we synthesized both designs for various clock constraints and selected the result with the highest hardware efficiency for each design. These results should not be regarded in absolute terms, as the placement and routing of such a large design is highly non-trivial and will increase the area and the delay of both designs significantly. However, it is safe to make relative comparisons, especially when considering the fact that the LUT-based decoder will be easier to place and route due to the fact that it requires approximately 40% fewer wires for the interconnect between the VN, CN, and DN stages. We observe that the LUT-based decoder is approximately 8% smaller as well as 64% faster than the adder-based MS decoder. As a result, the area efficiency of the LUT-based decoder is 73% higher than that of the adder-based MS decoder. For both designs, the critical path goes through the CN, but in the LUT-based decoder the delay is smaller due to the reduced bit-width.
+We show the area breakdown of the LUT-based and the adder-based decoders in Table II. We observe that the VN stage area of the LUT-based decoder varies significantly over the iterations, even though the LUT tree structures are identical. This is not unexpected, since the contents of the LUTs are different for different iterations and the resulting logic circuits can have very different complexities. Moreover, we see that the CN stage of the LUT-based decoder is approximately 53%
+
+smaller than the CN stage of the adder-based decoder due to the bit-width reduction enabled by the optimized LUT design. The VN stage of the LUT-based decoder, on the other hand, is larger than the VN stage of the adder-based decoder. However, the reduction in the CN stage is larger than the increase in the VN stage, leading to an overall reduction in area. From Table II we can see that this reduction stems mainly from the reduced number of required registers, as the area occupied by the logic of each decoder is similar.
+VI. CONCLUSION
+In this paper, we described a method that can be applied to design a discrete message-passing decoder for LDPC codes by replacing the standard VN update rules with locally optimal LUT-based update rules. Moreover, we presented a hardware architecture for a LUT-based fully unrolled LDPC decoder which can reduce the area and increase the operating frequency compared to a conventional adder-based MS decoder by 8% and 64%, respectively, due to the significantly reduced bitwidth required to achieve identical error correction performance. Finally, the LUT-based decoder requires approximately 40% fewer wires, simplifying the routing step, which is a known problem in fully parallel architectures.
+REFERENCES
+[1] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug 2005.
+[2] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright, “Design of LDPC decoders for improved low error rate performance: quantization and algorithm choices,” Communications, IEEE Transactions on, vol. 57, no. 11, pp. 3258–3268, Nov 2009.
+[3] S. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite alphabet iterative decoders – part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Trans. on Communications, Oct. 2013.
+[4] D. Declercq, B. Vasic, S. Planjery, and E. Li, “Finite alphabet iterative decoders – Part II: Towards guaranteed error correction of LDPC codes via iterative decoder diversity,” IEEE Transactions on Communications, vol. 61, no. 10, pp. 4046–4057, October 2013.
+[5] F. Cai, X. Zhang, D. Declercq, S. Planjery, and B. Vasic´, “Finite Alphabet Iterative Decoders for LDPC Codes: Optimization, Architecture and Analysis,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 61, no. 5, pp. 1366–1375, May 2014.
+[6] X. Zhang and P. Siegel, “Quantized Iterative Message Passing Decoders with Low Error Floor for LDPC Codes,” IEEE Trans. on Communications, vol. 62, no. 1, pp. 1–14, Jan. 2014.
+[7] B. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise thresholds for discrete LDPC decoding mappings,” in Proc. IEEE Global Telecommunications Conf. (GLOBECOM), Nov. 2008.
+[8] B. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, Aug 2014.
+[9] P. Schlafer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput LDPC decoding,” in IEEE Workshop on Signal Processing Systems (SiPS), October 2013, pp. 153–158.
+[10] A. Winkelbauer and G. Matz, “On quantization of log-likelihood ratios for maximum mutual information,” in Proc. 16th IEEE Int. Workshop on Signal Processing Advances in Wireless Communications (SPAWC 2015). Stockholm, Sweden: accepted for publication, Jun. 2015.
+[11] “IEEE Standard for Information Technology – Telecommunications and Information Exchange between Systems – Local and Metropolitan Area Networks – Specific Requirements Part 3: Carrier Sense Multiple Access with Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications,” IEEE Std. 802.3an, Sep. 2006.
+
+

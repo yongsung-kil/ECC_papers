@@ -1,0 +1,324 @@
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit) | 979-8-3503-9180-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/EUCNC/6GSUMMIT63408.2025.11037065
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+Development of a Universal FPGA-Based Coprocessor for 5G NR and WLAN LDPC Coding
+Lukasz Lopacinski1, Yiyun Jian1, Muhammad Nauman1, Pukar Shakya1, Milos Krstic1,2, Eckhard Grass1,3
+1 IHP Leibniz Institute for High Performance Microelectronics, Frankfurt (Oder), Germany 2 University of Potsdam, Potsdam, Germany
+3 Humboldt-University of Berlin, Berlin, Germany
+
+Abstract—Low-density parity-check (LDPC) codes are widely used in modern communication systems due to their near-capacity error correction performance. This paper presents a practical FPGA implementation of a universal hardware coprocessor for LDPC encoding and decoding, focusing on a system-level architecture, achievable data rate, latency measurements, and hardware resource utilization. The LDPC coding is realized by the Xilinx hardware macros available in the Xilinx RF-SoC FPGAs. We explore various design simplifications, including core combining, memory management, and data scheduling, to achieve high throughput while maintaining the lowest implementation complexity. The proposed architecture is implemented on an FPGA platform and is equipped with 10 Gb/s Ethernet interfaces, demonstrating real-time decoding capabilities and improved performance compared to software-based approaches. Experimental results validate the design, showcasing its applicability in high-speed communication systems. This work can serve as a reference for engineers and researchers aiming to deploy LDPC decoding in FPGA-based environments by reusing the existing Intellectual Property (IP), which is freely available in Xilinx SoC.
+Keywords—LDPC, hard macros, coprocessor, FPGA, 10G Ethernet, forward error correction, data link layer, VHDL
+I. INTRODUCTION
+Efficient forward error correction (FEC) is one of the key elements of every wireless communications processing chain. FEC allows for a reduction in the number of retransmissions at the data link layer level and also facilitates the extension of the data size that can be encapsulated into one physical layer (PHY) frame [1]. Efficient FEC from the communication point of view usually means that the bit error correction is at a high level, so the method can correct a large number of bit errors with minimal overhead caused by redundancy bits. The perfect case is if the selected method can approach the Shannon limit of channel capacity if the length of the codeword is long enough. From the system simulation point of view, several different algorithms can be selected for effective error correction. However, when the design is targeted to be implemented with a state-of-the-art FPGA platform, and time and hardware resources are strongly limited, FEC implementation becomes very difficult. From our experience, implementation of FEC alone can easily cost more than one year for a well-experienced hardware developer, as it is shown in [2], [3], [4]. In the case of small-scale prototype projects, there is typically no possibility
+
+of investing so much effort in the implementation of a state-ofthe-art communication block. Thus, FEC in such practical small-scale systems is usually based on intellectual property (IP) cores provided by external vendors or on IP reused from other projects. In this paper, we describe one of the solutions provided by Xilinx [5] and show a design that can extend the functionality of the basic cores. We introduce the concept of a universal FPGA coprocessor that can be easily reused in many projects. We will also describe the practical advantages and drawbacks of this solution, as well as describe how to parametrize this IP to use this implementation in the shortest possible implementation time. Our solution uses 10G Ethernet for input and output data interfaces. The whole design is optimized from the point of view of implementation cost and time. Thus, at every step, the most straightforward architecture is selected. The main idea behind this paper is to give the reader an overview of the complexity and implantation effort of reusing the free-of-charge LDPC IP cores provided in RF-SoC FPGAs, as well as emphasize the advantages of modern FPGA systems for the implementation of FEC coding.
+II. WORK DETAILS
+Fig. 1 and Fig. 2 depict the internal architecture of the encoder and decoder FPGAs, respectively. Most of the functionality of the decoder is reflected in a mirrored architecture of the decoder. Thus, we keep most of the functionality descriptions common for both architectures.
+A. 10 Gb/s Input and Output Interfaces with XGMII Protocol
+The input and output interfaces use 10 Gb/s Ethernet PHY with minimal physical coding and physical medium attachment sublayers (PCS/PMA) [6]. Ethernet media access control (MAC) is not included. Thus, the receiving Ethernet sniffs all incoming packets, regardless of their format, addresses, and CRC correctness. On the transmitter side, the PCS/PMA transmits all frames provided to the module irrespective of its correctness with respect to the Ethernet standard, so it sends to the ‘small form-factor pluggable’ (SFP) transceivers everything that is supplied to the input. The PCS/PMA implementation is based on free-of-charge Xilinx IP cores. Thus, running the 10G Ethernet cores is relatively straightforward. In our configuration, we supply the cores with 156.25 MHz clock that the Xilinx ZCU208 supports on board clock generator. This
+
+268
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+
+clock is multiplied by the PCS/PMA internal phase-locked loop (PLL) to achieve the line rate of 10 Gb/s. The input and output to the IP cores use XGMII protocol [6] with a 64-bit data bus synchronized to 156.25 MHz. In our case, we distinguish only the four most straightforward XGMII commands: start-offrame, data-transmission, stop-of-frame, and idle. Our XGMII implementation is also responsible for Ethernet preamble generation and Ethernet-CRC checking and appending.
+The bus consists of 64-bit. Thus, the length of the received frames is a multiple of eight bytes. If the incoming frame does not fulfill this requirement and is in the length of, e.g., 121 bytes, then the remaining 7 additional bytes are taken from the XGMII bus and appended as data to our coprocessor. This trick significantly simplifies the processing because the FPGA always processes full 64-bit words, and we do not need to support additional byte enable and disable signals throughout the whole design. Also, this simplification is fully transparent to the TCP/IP protocol stack of Windows and Linux because at the PHY layer, the frame length is extracted during frame reception, and at the IP/TCP/UDP level, the packet/datagram length is read from the protocol headers. Up to now, no machine had problems with the interpretation of our Ethernet-lengthmodified frames. At the end of the frame, we can add any number of additional dummy bytes until the last CRC bytes are correctly appended. Later, when the IP/TCP/UDP header is processed, the dummy bytes are automatedly discarded in the TCP/IP stack without causing any errors.
+
+10G PCS /PMA Ethernet
+
+XGMII +flow ctrl.
+
+Sync – clk FIFO
+
+Eth. frame buffer
+
+Encoder Input FSM
+Rate ctrl., + VIO
+Frame length FIFO
+
+LDPC Enc.
+LDPC Enc.
+LDPC Enc.
+LDPC Enc.
+
+Deskew FIFO
+Deskew FIFO
+Deskew FIFO
+Deskew FIFO
+
+Baseband
+Encoder Output FSM
+
+10G PCS
+
+XGM
+
+Eth.
+
+/PMA
+
+II
+
+TX
+
+Ethernet
+
+FSM
+
+Eth. frame buffer
+
+Sync– clk FIFO
+
+Modules marked in blue – 156.25 MHz clock domain Modules marked in black – 240 MHz clock domain
+Fig. 1. Encoder-FPGA architecture.
+Due to the reason that our Ethernet processing is purely located on the lowest PHY level in the ISO/OSI representation, and we
+
+do not process any addressing fields of the frame/packet, our FPGA coprocessor is the simplest level 1 device like the simplest Ethernet hubs which are not any longer in use (please do not confuse with Ethernet switches, which operate at level 2). Thus, the FPGA LDPC encoding and decoding are fully transparent for Windows and Linux machines. The XGMII command interpreter, Ethernet preamble, and CRC appending functionalities are implemented directly in VHDL and consist of a single finite state machine (FSM) for each module.
+
+Baseband
+10G PCS /PMA Ethernet
+
+XGMII
+
+Sync – clk FIFO
+
+Decoder Input FSM
+Rate ctrl., + VIO
+Frame length FIFO
+
+LDPC Dec.
+LDPC Dec.
+LDPC Dec.
+LDPC Dec.
+
+Deskew FIFO
+Deskew FIFO
+Deskew FIFO
+Deskew FIFO
+
+Frame buffer
+Decoder Output FSM
+
+10G PCS /PMA Ethernet
+
+XGM II
+
+Eth. TX FSM
+
+Eth. frame buffer
+
+Modules marked in blue – 156.25 MHz clock domain Modules marked in black – 240 MHz clock domain
+Fig. 2. Decoder-FPGA architecture.
+
+Sync– clk FIFO
+
+B. Ethernet Flow Controlling at the Encoder FPGA
+At the encoder FPGA, there is one more functionality worth mentioning. The XGMII protocol [6] interpreter is connected to a frame buffer. This allows monitoring of the free space in the buffer and sending an Ethernet pause frame defined in IEEE 802.3x standard. This frame enables the Ethernet MAC flow control and must be sent to a unicast or a reserved multicast 0180-C2-00-00-01 address. In our case, as we do not support any frame addressing, the static multicast option is selected. The specificity of this frame is the “EtherType” field set to 0x8808. Then, the Ethernet MAC interpreters the data within this frame as a duration of transmission pause equal to 512 PHY bit times. In our case, we again maximally simplify our implementation, and the pause field is set to a static value of 0x01FF. This allows the addition of zero-padding to the frame and precompute CRC. After that, such a 64 B frame can be stored in a small look-uptable (LUT) and quickly transmitted every time when the
+
+269
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+
+Ethernet frame buffer is full. This simple flow-control implementation works in Linux and Windows operating systems with all Ethernet cards that we used up to now. Thus, it is very efficient in shaping the traffic on the encoder side. The encoder is adding redundancy bits to Ethernet frames and sending them via another 10 Gb/s interface. Thus, the input to the FPGA must be restricted to throughput below 8 Gb/s, assuming the LDPC rate is equal to or less than 0.8. The remaining Ethernet ports in our encoder and decoder FPGAs do not require flow controlling because we assume that the link with data and redundancy is saturated to the Ethernet throughput of maximally 10 Gb/s. Moreover, the targeted baseband throughput is limited to 6.6 Gb/s. The FPGA throughput is implicitly reduced, and no further flow control is needed. We assume that the LDPC decoders can support the raw-encoded stream with a rate of at least 10 Gb/s, which is also explained later in this manuscript.
+C. Baseband Interface
+Both FPGAs can use external 10 Gb/s ports to receive and send the data, but there is also an option to include a baseband processor for wireless transmission. Because our LDPC encoding and decoding cores use hard macros and the remaining elements do not occupy significant hardware resources, we have a place in the FPGA for the complete wireless baseband implementation. This option is also included in the architecture and clocking scheme, where we can turn off the outcoming Ethernet port at the encoder, and route the data to the VHDL baseband. While at the decoder, the incoming frames can be read from the baseband instead of the Ethernet port. The ZCU208 board used in our project has also integrated DAC and ADC converters. We can implement the complete subsystem, starting from Ethernet, FEC, and baseband, to the analog converters.
+D. Clock Synchronization, Clock Domains, and Framebuffers
+The input and output Ethernet interfaces require a 156.25 MHz clock domain. Due to this reason, we use dual port memories encapsulated with FIFO logic to synchronize the data path, and three flip-flops connected in serial to synchronize all single-bit signals. The LDPC encoder and decoder interfaces work with a clock above 200 MHz to compensate for any idle cycles in the processing to be sure that the complete processing chain can support 10 Gb/s processing. The LDPC interfaces and baseband processors are located in a single domain to reduce the synchronization efforts. Thus, each FPGA board consists of at least three clock domains: 156.25 MHz input Ethernet port domain, 240 MHz LDPC processing domain, and 156.25 MHz output Ethernet domain. Because two separate Ethernet ports are used, those ports might have different clock skews. Thus, the 156.25 MHz domains should be treated separately, although they have the same frequencies. For clock synchronization, a single instance of block-ram memory with independent ports is used. For buffering ethernet frames, a separate buffer located in the LDPC-interface domain at the input, and Ethernet-clk domain at the output are used. Such distribution allows for a reduction in the number of synchronizers for controlling signals that have to be instantiated. The Ethernet frame buffer at the
+
+encoder-FPGA assembles 118 block-rams, which allows the allocation of 65536 data words with 64 bits. The Ethernet frame buffer at the decoder FPGA is smaller and uses 15 block rams, which can store 8192 words with 64 bits each.
+E. Input and Output FSMs for LDPC Encoders and Decoders
+The LDPC encoder and decoder cores provided by Xilinx as hard-macro in the FPGA have very flexible architecture and support many codes with different coderates. Although the hard macro is very useful, it also has some minor drawbacks, which make the usage of those cores complicated. One of the problems is the need to control the start and stop signals for each frame. The interface lacks a simple functionality that allows it to shift to the core the information that the currently processed block is the last in the frame. There is an option of inserting an external block identifier on the control interface, but in our case, it was relatively complicated to maintain the block order in this way. Thus, after the encoding or decoding, we receive the series of LDPC codewords and data blocks, but we do not know to which frame those data blocks were categorized or where the individual frames start and end. For this reason, the LDPC-core user can build a wrapper that controls the frames and counts the number of LDPC blocks that are used to encode each frame. In our case, we have one FSM at the encoder input, which shifts the data to the encoder and counts the number of codewords to which the frame is encoded. After the complete data frame is moved into the encoder, the information about a number of utilized LDPC blocks is shifted to a shared memory organized as a FIFO (‘Frame length FIFO’ as indicated in Fig. 1 and Fig. 2). At the output of the LDPC encoder (or decoder), anther FSM is placed. This FSM constantly reads the shared memory FIFO, and as soon as there is an element to read, it can initialize its block counters with the required value. If the output blocks reach the number read from the FIFO, the current frame needs to be terminated, and a new frame has to be started. It is worth mentioning that the other FEC-IPs provided by Xilinx, e.g., Reed-Solomon, have embedded an additional signal that is delayed by the number of encoding/decoding clocks, which can be used to indicate the bytes or blocks, which are the last in the frame in a very straightforward fashion. Thus, no additional FSMs, data counters, control interfaces, or status interfaces for controlling frame consistency are needed. Such a simple solution significantly reduces the effort of using the cores.
+Both mentioned FSMs also implement the functionality of LDPC block padding. Usually, the incoming ethernet frame is not a multiple of the length of the LDPC blocks, and padding or code shortening needs to be performed. In our case, we use the most straightforward solution, and we pad the data with 0xAA55 values to be sure that parity equations in LDPC coding are still working correctly. Padding with zero values without a scrambler would cause the codeword to be full of zeroes, and binary operations on all zero patterns always give zero as a result. The check nodes in the decoder would not work efficiently. The padding at the encoder reduces the maximal data rate, which is also explained later in this paper.
+The input and output FSM also need to puncture (remove) the 2Z bits of the beginning of the codeword as defined in the 5G-NR standard. The first two columns in the 5G-based graphs
+
+270
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+
+have a very large weight compared to other parity matrix sections. Thus, any error in those columns would strongly propagate across many check nodes. Those bits are not transmitted but punctured, and this puncturing we do manually in our case. The 2Z-puncturing value is caused by the fact that the base graphs for parity matrix construction are lifted Z-times. It also can work without puncturing, but the bit error rate (BER) performance is reduced.
+F. LDPC Encoders and Decoders
+The core elements of our coprocessor are LDPC encoders and hard-macros coders [5], [7] embedded in the Xilinx FPGA chip. The main advantage of those cores is the fact that their implementation is moved from FPGA logic to pure-ASIC cores in the FPGA silicon. This leads to two significant benefits. Firstly, the usage of the cores does not lead to a reduction in the FPGA resources available to the user. Thus, the FPGA fabric can still be used to run the baseband or data link layer processor. Secondly, the LDPC decoder running in dedicated silicon is significantly faster than in FPGA logic. In our case, the clock for the encoders and decoders is set to 660 MHz, which substantially increases the throughput. FPGA LUT and FF fabric can not work with large designs with this clock, and therefore, the performance is very strictly reduced. Also, the resources to implement a layered decoder are significant. Thus, the move with dedicated silicon implementation for LDPC significantly reduced the effort of embedding FEC in many projects. In another case, the usage of LDPC would be complicated. In many published papers, LDPC implemented in FPGA LUT usually consumes all of the FPGA logic and achieves a data rate between 1 Gb/s to the maximum of 16 Gb/s. Moreover, such implementations generally support only a single selected code at a rate of 5/6 [8]. LDPC decoders are usually too heavy to be run in FPGA LUTs [9]. The Xilinx silicon-embedded LDPC coders allow to flexibly switch the code, codeword length, and rate on the fly. The LDPC coding standard between 5G and WLAN can be changed as a synthesis option. Although this functionality is fully supported, the codeswitching in the 5G-NR mode is a bit difficult because to have a smooth code transition at maximal throughput, we need to shift the new graph code settings to configuration FIFO according to the internal pipeline state. Entering the code setting too early or too late, as compared to the coding process, causes coding delays. To avoid the problems of parameter synchronization with the internal pipeline, we used another trivial practical trick. Before starting every new frame at the encoder and decoder, we check the code setting register. If the setting is changed, we wait until the current encoding/decoding frame is shifted out of the cores, and we generate internal resets for the LDPC cores and all external codeword counters. After the reset, new settings are provided to the modules, and after a delay of approx. 900 ns, the implementation works with new settings. All data coding inconsistencies are entirely avoided. This is the most straightforward strategy for dealing with the settings interface of the cores. Instead of following the timing requirements for the control interface, it is easier to restart all cores and always load only one base graph instead of mixing the graphs for different decoding layers during the code-
+
+switching. It is not the most elegant solution and adds some latency to the implementation, but it is the simplest solution.
+In our case, we use a Virtual-Input-Output (VIO) core to change the coding parameters and read the implementation statistics externally via a USB connection. The module responsible for this functionality is denoted as ‘Rate ctrl., + VIO’ in Fig. 1 and Fig. 2. This module controls the coders and FSMs related to the coding parameters.
+To increase the decoding throughput, we use four coders in parallel. Actually, the encoding throughput of the cores can be as high as 20 Gb/s, so the encoding is not problematic in our case. At the encoder, the limit is the output 10 Gb/s Ethernet interface. More problematic is the decoding, where a single decoder core can not provide more than ~2.8 Gb/s, and this applies only for selected codes at a rate of ~0.815. Usually, a single instance provides ~2 Gb/s at a rate of ~0.6 and a codeword length of approx. ~2000 bits. Thus, the average decoding speed cannot be higher than ~8 Gb/s for four aggregated cores. Generally, there are some specific restrictions on coder usage and functionality. The encoding and decoding operation can not be switched in real-time, but design resynthesize is needed. Thus, the selected architecture 4+4 is the tradeoff between the supported encoding-decoding functionality, throughput, data rate, and design simplicity. Any other combination leads to more complicated structures.
+At the encoder, we maintain the same encoding architecture as in the decoder. Four encoders are also used. This means that each of the LDPC instances is responsible for processing ¼ of the data word, which means that the coders have 16 bits of input and outputs in our case. This also means that the FPGA supports an interleaved LDPC coding scheme that has increased performance against burst errors. The continuous data stream is interleaved between four cores, with every 16 bits. This interleaving can be even improved if a more complicated bitswapping pattern is used, which is a relatively simple task to implement but has not yet been considered by us.
+The drawback of using four coders in parallel is the problem of terminating the codewords that are not fully utilized at the end of frame coding. This problem is more severe if a longer codeword is selected. Longer coders statistically need more extended padding, and in our case, the padding length is multiplied by four because four cores are used in parallel. This is a significant drawback of our implementation, as well as our architecture in general. The simplifications we have used in the implementation lead to a degradation of efficiency.
+III. RESULTS
+Fig. 3. depicts the targeted environment where the implemented FPGA-FEC coprocessor will be used. The details of the data link layer processor are available in [10]. The baseband and THz link are under implementation. Thus, it has been replaced by a 10G Ethernet cable to record the results and test the implementation. The baseband can be implemented in a separate FPGA development kit but also can be integrated as a core inside the LDPC-FPGA. Our design supports both configurations.
+
+271
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+
+Linux
+
+FPGA Data
+
+PC
+
+10G
+
+Link 10G
+
+Eth. Layer Eth.
+
+FPGA
+
+Baseband+
+
+LDPC
+
+THz wireless link
+
+10G
+
+Eth.
+
+10G Eth.
+
+FPGA
+
+FPGA
+
+LDPC
+
+Data
+
+Linux
+
+10G Link 10G
+
+PC
+
+Eth. Layer Eth.
+
+Fig. 3. Targeted processing chain including FPGA implemented data link layer processor, FPGA-baseband (during implementation), and 130nm CMOS THzfrontend (during implementation).
+
+Information bits throughput [Gb/s] 9
+
+8
+
+7
+
+6
+
+5
+
+4
+
+LDPC(864,704) R=0.81 LDPC(1728,1408) R=0.81
+
+LDPC(2176,1280) R=0.59
+
+3
+
+LDPC(4352,1408) R=0.32
+
+2
+
+1
+
+0
+
+0
+
+5 10 15 20 25 30 35 40 45
+
+Input Ethernet frame length [kB]
+
+Fig. 4. Encoding and decoding throughput for four different 5G-NR LDPC
+
+codes.
+
+A. Information Bits Throughput
+Fig. 4 depicts the achievable throughput when encoder and decoder FPGA are interfaced with 10 Gb/s Ethernet. We tested the performance for Ethernet frames in the range of 0.1 kB to 32 kB. Two vertical black dashed lines show the frame length limit at 1.5 kB and 9 kB. The lower limit corresponds to a typical Ethernet frame MTU length, and the second dashed line indicates the limit of 9 kB for Jumbo frames. The frames with a length below 1.5 kB should not be used at all in our setup. In the other case, the data section of four-aggregated LDPC codewords is usually much longer than the Ethernet payload, and large padding occurs at the end of the LDPC data. This significantly reduces the information bit throughput. Generally, the saw-shape of the performance curve shown in Fig. 4 is caused by the fact that we use a static padding for not full data codewords, and this padding remains at the PHY link. Additionally, padding is extended by a factor of four, because we aggregate four LDPC coders into one stream. Generally, this simple solution is the main drawback of our implementation and needs to be improved as one of the first issues. In our case, in front of the FEC coprocessor, we have a data link layer processor implementation that aggregates up to 32 Ethernet frames with a standard length of ~1.5 kB. Thus, frames with a length of ~48 kB are expected on the input to our coprocessor. This extended frame length significantly reduces the padding overhead, but if shorter frames are expected, then the padding should not be done the way it is proposed here.
+
+The upper limit for LDPC decoding for codes LDPC(864,704), LDPC(1728,1408), and LDPC(2176,1280) is caused by the 10 Gb/s Ethernet link going to the baseband part from the LDPC encoder. The encoders and decoders are able to work faster, but here, the limit is the Ethernet. Ten Gb/s is not enough to transfer information bits together with the redundancy. For LDPC(4352,1408), the limit is set by the LDPC decoders. The peak throughput is only ~2 Gb/s in this mode, when four aggregated instances are considered.
+The Xilinx cores natively have implemented 128 hardware check nodes. Thus, the cores achieve the best performance if the code can use 128 check nodes directly or, eventually, a value that allows the utilization of 128 check nodes by enabling more advanced computation scheduling.
+
+TABLE I. PROCESSING DELAYS OF THE IMPLEMENTED COPROCESSOR
+
+Component Ethernet PHY TX+RX
+
+Initial Delay (first bit in to first bit out)
+~ 330 ns
+
+Data Preprocessing
+LDPC(864,704) Encoding (Including all wrappers and handshaking) LDPC(864,704) Decoding (Including all wrappers and handshaking) LDPC(1728,1408) Encoding (Including all wrappers and handshaking) LDPC(1728,1408) Decoding (Including all wrappers and handshaking) LDPC(2176,1280) Encoding (Including all wrappers and handshaking) LDPC(2176,1280) Decoding (Including all wrappers and handshaking) LDPC (3840,1280) Encoding (Including all wrappers and handshaking) LDPC (3840,1280) Decoding (Including all wrappers and handshaking)
+Data Postprocessing LDPC(864,704)
+
+~ 100 ns ~ 525 ns ~ 740 ns ~ 840 ns ~ 13 800 ns ~ 12 500 ns ~ 12 500 ns ~ 915 ns ~ 2 800 ns ~ 16 000 ns
+
+Data Postprocessing LDPC(1728,1408)
+
+~ 16 000 ns
+
+Data Postprocessing LDPC(2176,1280)
+
+~ 21 500 ns
+
+Data Postprocessing LDPC(3840,1280)
+
+~ 37 500 ns
+
+B. Processing Delays
+Table I summarizes experienced processing delays measured when a frame with ~12 kB data payload is processed for four arbitrarily selected LDPC codes. All latencies are measured as first-bit-in to first-bit-out relations with an empty pipeline after restarting the whole design (one of the worst-case scenarios). Depending on the selected LDPC code, our
+
+272
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+2025 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components, Microelectronics & Photonics (CMP)
+
+implementation shows very different latencies. On average, when multiple blocks are considered, and the pipeline is successfully initialized, the latencies might be lowered. Also, depending on how the FIFOs and control interface are controlled, the response behavior might be improved. Detailed information about the general performance of the hardware cores is reported in [5], [7]
+The very long delay caused by ‘data postprocessing’, as reported in Table I, is caused by the problem that we first receive the whole decoded frame from the decoder, store it in the RAM buffer, and then initialize the Ethernet transmission. This means that a kind of ‘store-and-forward’ methodology is used, which causes significant latency and is not recommended.
+C. FPGA resources
+Table II reports the FPGA resources used to implement the design. Because the coders are implemented as hardware macros outside the FPGA logic, the design is very lightweight. The FPGA can also easily run the baseband core. This is the main advantage of the hardware macros. They do not consume logic resources, work much faster than implementation made in LUT logic, and are very flexible according to supported parity matrices. In standard LUT logic, it would be challenging to implement such flexible coders, even if all of the FPGA logic were to be used for this purpose.
+
+TABLE II. FPGA RESOURCES UTILIZATION
+
+Resource
+LUT (Look-up-tables) FF (D-type flip-flops) BRAM (SRAM memory) BUFG (clock lines)
+
+Used Pcs 22304
+
+Utilization FPGA Utilization [%] 5.62
+
+29614
+
+3.48
+
+216
+
+19.95
+
+13
+
+1.87
+
+IV. CONCLUSION
+In this paper, we show an example of an FPGA-coprocessor implementation, which is based on embedded LDPC cores available in Xilinx RF-SoC. To increase the data throughput to ~10 Gb/s, we aggregate four encoders and four decoders into one logical LDPC processor. Although the LDPC coders are available as IP macros, there is still quite a high effort to use them as universal coprocessors, and many practical issues have to be solved. The most challenging is the problem of signaling when the currently processed frame (or data block) is completed. The core datasheet describes the technique of using block identifiers on control and status interfaces, but in our case, we were not able to employ this strategy successfully in the design, due to the interface usage being very complicated. Thus, we designed our own state machines with frame-memory information that controls the input and output frames. This simplified all dependencies to the LDPC core interfaces. We recommend that when using this implementation of LDPC, the data block termination issues should be considered from the very beginning of the design process. Also, store-and-forward
+
+buffering must be avoided because it causes latencies that are very large compared to other processing blocks. The last issue that must be considered during the design phase is the codermultiplexing. We use a static bus-word division to four coders, but then the padding of codewords is also increased by a factor of four. Thus, a kind of round-robin scheduling or better padding schemes should be considered. Finally, it is worth mentioning that it is possible to include very efficient codeword interleaving when four or more cores are used in parallel.
+ACKNOWLEDGMENT
+This work was mainly supported by the German Research Foundation (DFG) project PSSS-FEC, project no. 442607813, and partly by the European Union’s Horizon Europe research and innovation program, project COREnext, grant no. 101092598.
+REFERENCES
+[1] L. Lopacinski, “Improving Goodput and Reliability of Ultra-High-Speed Wireless Communication at Data Link Layer Level,” Ph.D. dissertation, BTU Cottbus Senftenberg, 2017.
+[2] A. Hasani, L. Lopacinski, M. Krstic, and E. Grass, “Fully Parallel Fully Unrolled BP Decoding of LDPC and Polar Codes,” in Proc. IEEE Wireless Communications and Networking Conference (WCNC), 2023.
+[3] L. Lopacinski et al., “A Hardware Optimized High Throughput LDPC Decoder Supporting 3 Tb/s in 28 nm CMOS,” in Proc. International Symposium on Personal, Indoor and Mobile Radio Communications, 2022.
+[4] A. Hasani et al., “550 Gbps LDPC Decoder in 28 nm CMOS,” in Proc. European Conference on Networks and Communications (EUCNC 2022), 2022.
+[5] Xilinx Inc., “Soft-Decision FEC Integrated Block,” www.xilinx.com/products/intellectual-property/sdfec.html
+[6] Xilinx Inc., “10G Ethernet PCS/PMA v6.0,” Xilinx Datasheet, 2015.
+[7] Xilinx Inc., “Soft-Decision FEC Integrated Block v1.1.” LogiCORE IP Product Guide, 2022.
+[8] R. Goriushkin, P. Nikishkin, A. Ovinnikov, E. Likhobabin, and V. Vityazev, “FPGA Implementation of LDPC Encoder Architecture for Wireless Communication Standards,” 2020 9th International Conference on Modern Circuits and Systems Technologies, MOCAST 2020.
+[9] L. Lopacinski, M. Brzozowski, and R. Kraemer, “Data link layer considerations for future 100 Gbps terahertz band transceivers,” Wirel Commun Mob Comput, 2017.
+[10] Y. Jian, L. Lopacinski, K. Tittelbach-Helmrich, M. Scheide, K. Krishnegowda, and E. Grass, “Challenges for designing an FPGA-based data link layer processor dedicated to sub-THz communication,” Proceedings of 2023 Workshop on Microwave Theory and Technology in Wireless Communications, MTTW 2023, 2023.
+
+273
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+

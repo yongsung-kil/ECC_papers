@@ -1,0 +1,731 @@
+Transformer-Based Decoding in Concatenated Coding Schemes Under Synchronization Errors
+Julian Streit, Franziska Weindel and Reinhard Heckel
+School of Computation, Information and Technology, Technical University of Munich Munich Center for Machine Learning
+Email: julian.streit@tum.de, franziska.weindel@tum.de, reinhard.heckel@tum.de
+
+2025 IEEE International Symposium on Information Theory (ISIT) | 979-8-3315-4399-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISIT63088.2025.11195598
+
+Abstract—We consider the reconstruction of a codeword from multiple noisy copies, each independently corrupted by insertion, deletion, and substitution errors. This problem arises, for example, in DNA data storage. A common code construction uses a concatenated code with an outer linear block code and an inner marker code, decoded via Belief Propagation (BP) and the BahlCocke-Jelinek-Raviv (BCJR) algorithm, respectively. However, the BCJR algorithm scales exponentially with the number of noisy copies, making reconstruction from more than about four copies infeasible. In this paper, we introduce BCJRFormer, a transformer-based neural inner decoder for marker codes. BCJRFormer achieves error rates comparable to the BCJR algorithm for single-message transmissions while scaling only quadratically with the number of noisy copies. This makes BCJRFormer well suited for DNA data storage, where multiple reads of the same DNA sequence are common. To further reduce the bit error rate, we replace the BP outer decoder with a transformer-based decoder. Combined, this results in a performant and efficient endto-end transformer-based pipeline for decoding multiple noisy copies corrupted by insertion, deletion, and substitution errors.
+I. INTRODUCTION
+DNA data storage is an emerging storage medium that encodes binary data into DNA sequences for high-density, longterm storage. However, the processes of writing, storing, and reading the DNA are error-prone, resulting in multiple noisy copies of the same sequence [1]. Errors can be categorized into substitutions and erasures, and insertions and deletions. While optimal linear codes are known for erasures and substitutions, no such guarantees exist for insertions and deletions.
+A common approach to address insertion, deletion and substitution errors is a concatenated coding scheme with an inner and outer encoder/decoder pair. The inner code is often nonlinear, such as marker codes [2] or watermark codes [3], and is typically decoded using the Bahl-Cocke-Jelinek-Raviv (BCJR) algorithm. BCJR achieves maximum a posteriori (MAP) decoding under the assumption of perfect channel state information. The outer code is often a linear block code, such as a low-density parity-check (LDPC) code [4] or a polar code [5], and is decoded using Belief Propagation (BP). BP achieves MAP decoding when the Tanner graph it decodes on has no cycles [6].
+The classical BCJR algorithm scales exponentially with the number of input sequences, making joint decoding over multiple noisy copies infeasible. The authors of [7] analyze the performance of separately decoding each noisy copy using
+
+xˆin
+
+1 M
+
+Transformer
+
+Positional & Sequence Embedding
+Linear Embedding
+
+Y1 Y2 Y3 Y4 Y5 Drift Sliding Window
+
+xin IDS Channel
+
+r1
+
+r2
+
+r3
+
+r4
+
+r5
+
+Fig. 1: Overview of BCJRFormer for joint decoding of marker sequences over the IDS channel.
+
+BCJR and then aggregating the log-likelihood ratios, but report higher bit error rates. To address this, we propose BCJRFormer, a transformer-based architecture for inner decoding of marker codes that achieves error rates close to joint BCJR decoding while scaling only quadratically with the number of noisy copies.
+To further reduce bit error rates, we replace the outer BP algorithm with the Error Correcting Code Transformer (ECCT), originally proposed in [8] for binary-input symmetric-output channels. Together, BCJRFormer and ECCT form a twostep decoding approach for LDPC codes concatenated with a marker code, which improves efficiency and reduces bit error rates for correcting insertion, deletion, and substitution errors compared to traditional BP and BCJR decoding.
+II. RELATED WORK
+Deep learning has been widely explored for decoding in wireless communication systems [9]–[17]. We focus on related work addressing neural decoding for insertion, deletion, and substitution errors, as this is most relevant to our setting.
+Several neural decoders have been proposed to replace traditional iterative algorithms such as BCJR or BP [18]–[23]. These approaches can be broadly categorized into model-based and model-free [24].
+The authors of [25] propose two model-based recurrent neural network architectures, FBNet and FBGRU, for decoding marker codes under insertion, deletion, and substitution errors. The model input is derived from the BCJR algorithm, similar to how we construct the input for BCJRFormer. FBNet and FBGRU outperform BCJR when channel state information is imperfect.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+The authors of [26] propose a bidirectional gated recurrent unit (BiGRU) network for decoding sequences with deletions and substitutions to overcome vanishing and exploding gradients in RNNs. Their method uses one BiGRU for decoding marker codes and another for decoding codewords encoded with LDPC or convolutional codes.
+Model-free neural decoders are not constrained by a fixed architecture but need to learn both the encoding scheme and how to correct errors. The authors of [8] propose the Error Correction Code Transformer (ECCT), which encodes code structure into the model by restricting attention to bits related by parity-check equations. ECCT outperforms existing neural decoders on binary input symmetric output channels.
+More recently, the authors of [27] propose CrossMPT to improve ECCT’s decoding performance. CrossMPT uses two cross-attention modules, one for channel noise and one for syndrome information, mimicking the check and variable node updates of the BP algorithm.
+The authors of [28] propose DNAformer, an end-to-end retrieval system for DNA data storage. DNAformer uses transformers to reconstruct sequences from multiple noisy reads, followed by a classical coding scheme to correct remaining errors after reconstruction.
+III. BACKGROUND
+In this section, we provide an overview of the concepts relevant to our work. We first introduce our channel model and discuss concatenated codes, with a focus on the BCJR algorithm, which is used to derive the input to BCJRFormer. We then describe the transformer architecture and the ECCT decoder.
+A. Channel Model
+We consider transmission over the insertion, deletion, and substitution (IDS) channel for the binary alphabet. The IDS channel is parameterized by the deletion probability pD, the insertion probability pI , and the transmission probability pT = 1−pI −pD. A bit is transmitted correctly with probability 1 − pS and substituted with probability pS. The IDS channel can be generalized to non-binary alphabets, such as the quaternary alphabet used in DNA data storage [3].
+B. Concatenated Schemes and Linear Codes
+Concatenated codes consist of an inner and an outer encoder/decoder pair. A message m ∈ {0, 1}k is encoded by an outer encoder to xout ∈ {0, 1}nout , which is then encoded by an inner encoder to xin ∈ {0, 1}nin . After transmitting xin, the inner decoder synchronizes the received sequence r ∈ {0, 1}nrec and provides soft information in the form of log-likelihood ratios to the outer decoder. Using this soft information and its parity-check bits, the outer decoder corrects remaining substitution errors.
+The outer code is typically a linear block code. A (k, nout) linear block code is defined by a generator matrix G ∈ {0, 1}k×nout and a parity-check matrix H ∈ {0, 1}(nout−k)×nout . The generator matrix G encodes messages m into codewords
+
+xout. The parity-check matrix H defines the parity-check equations for decoding and can be represented as a bipartite Tanner graph [6]. The BP algorithm operates on the Tanner graph and iteratively passes messages between check and variable nodes to reconstruct the original message. We use LDPC codes [29] as our outer code, as they are a common choice.
+
+C. Marker Codes and the BCJR Algorithm
+
+As the inner code, we use marker codes, which are defined
+
+by a fixed binary marker sequence sm ∈ {0, 1}nm . The
+
+marker sequence sm is inserted after every Nm input bits
+
+of the outer codeword xout. The resulting inner codeword has
+
+length
+
+nin
+
+=
+
+nout
+
++
+
+nm
+
+⌊
+
+nout Nm
+
+⌋.
+
+The
+
+markers
+
+allow
+
+the
+
+inner
+
+decoder to synchronize the received sequence r. For each
+
+inner codeword bit xiin, with 1 ≤ i ≤ nin, the inner decoder
+
+approximates the LLRs
+
+LLR(xiin
+
+|
+
+r)
+
+∝
+
+ln
+
+P (xiin P (xiin
+
+= =
+
+0, 1,
+
+r) .
+r)
+
+(1)
+
+The BCJR algorithm is a forward-backward algorithm that
+
+uses the channel’s Markov property to compute (1). We follow
+
+[3] and use a latent drift variable Di to preserve the Markov property of the IDS channel. The drift variable Di is defined as
+
+the difference between the number of insertions and deletions
+
+before transmitting the i-th bit. BCJR’s forward (αi) and backward (βi) recursions are given by
+
+αi(d′)
+
+=
+
+pI 2
+
+αi(d′
+
+−
+
+1)
+
++
+
+pD αi−1 (d′
+
++
+
+1)
+
++ pT αi−1(d′)
+
+P (xiin = ξ)F (ξ, ri+d′ ), (2)
+
+ξ∈{0,1}
+
+βi(d)
+
+=
+
+pI 2
+
+βi(d
+
++
+
+1)
+
++
+
+pD βi+1 (d
+
++
+
+1)
+
++ pT βi+1(d)
+
+P (xiin = ξ)F (ξ, ri+1+d). (3)
+
+ξ∈{0,1}
+
+Here, d and d′ are realizations of the drift variable D, and
+
+F (ξ, ri) =
+
+pS 1 − pS
+
+if ξ ̸= ri, otherwise.
+
+By combining the forward and backward recursions, we sim-
+
+plify the calculation of the joint probabilities in (1) to obtain
+
+P (xiin = ξ, r) =
+
+pI 2
+
+αi(d
+
+−
+
+1)βi(d)
+
+d + pDαi−1(d + 1)βi(d)
+
+(4)
+
++ pT αi−1(d)βi(d)F (ξ, ri+d).
+
+For a more detailed discussion of the BCJR algorithm, we refer the reader to [30], [31].
+
+D. Transformer and ECCT
+
+The transformer architecture [32] uses attention to model
+
+dependencies across the input sequence. Attention is defined
+
+as:
+
+QK ⊤
+
+Att(Q, K, V ) = Softmax √ V ,
+
+(5)
+
+dk
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+xout
+
+xin
+
+m
+
+Lin. Code
+
+Marker Code
+
+...
+
+Outer
+
+Inner
+
+IDS Channel
+
+xˆin
+
+r1 r2 . . . rM
+
+xˆout
+
+ECCT
+
+BCJRFormer
+
+Fig. 2: Joint decoding of concatenated codes using BCJRFormer as inner and ECCT as outer decoder.
+
+where the query Q, key K, and value V matrices are computed from the input embeddings via learned linear projections. The scalar dk denotes the model’s embedding dimension.
+A transformer consists of multiple stacked multi-head attention layers. Each attention layer contains nh attention heads, where each head performs attention on a reduced hidden dimension of dk/nh. The outputs of all heads are concatenated and passed through a linear layer, typically followed by dimensionality reduction to match the task-specific output size.
+The ECCT decoder [8] incorporates code structure by masking out unrelated bit positions in its self-attention mechanism. Let rBPSK ∈ [−1, 1]nout denote the noisy output of a binary phase-shift keying modulated codeword transmitted over a binary-input symmetric-output (BISO) channel. The model input is the concatenation of the magnitude |rBPSK| ∈ Rnout and the syndrome ϕ(syn(bin(rBPSK))) ∈ Rnout−k, where bin(x) = 0.5(1 − sign(x)) binarizes the signal, syn(x) = Hx mod 2 computes the syndrome using the parity-check matrix H, and ϕ(x) = 2x − 1 maps binary values to bipolar form.
+IV. METHOD
+In this section, we introduce our method, BCJRFormer, which efficiently decodes multiple noisy copies of inner codewords encoded with marker codes. We also explain how we modified ECCT to be used as an outer decoder with BCJRFormer to improve error rates over the IDS channel.
+
+A. BCJRFormer
+
+Our proposed BCJRFormer model, shown in Fig. 1, is
+
+a decoder-only transformer. We focus on constructing an
+
+appropriate input tokenization, which achieves near-BCJR
+
+performance and is scalable to jointly decode multiple noisy
+
+copies of the same codeword. Below, we describe the input
+
+construction for both single and joint decoding.
+
+1) Single Copy: For 1 ≤ i ≤ nin we define input tokens Yi ∈ Rδ×2 with window size δ = dmax − dmin + 1, where
+dmin and dmax are chosen as lower and upper bounds on the
+drift of all received sequences. For each attainable drift value
+
+dmin ≤ j ≤ dmax and alphabet symbol ξ ∈ {0, 1}, we set
+
+Yi,j,ξ = P (xiin = ξ)F (ξ, ri+dj ).
+
+(6)
+
+Assuming the outer codeword bits are i.i.d., the prior proba-
+
+bility
+
+of
+
+any
+
+non-marker
+
+bit
+
+xiin
+
+is
+
+P (xiin
+
+=
+
+ξ)
+
+=
+
+1 2
+
+,
+
+yielding
+
+Yi,j,ξ
+
+=
+
+1 2
+
+F
+
+(ξ
+
+,
+
+ri+dj
+
+).
+
+For
+
+any
+
+marker
+
+bit
+
+ξm,
+
+P (xiin
+
+=
+
+ξm)
+
+=
+
+1. Thus, Yi,j,ξm = F (ξm, ri+dj ) and Yi,j,(1−ξm) = 0.
+
+We flatten each token Yi and then embed the flattened
+
+tokens into the transformer’s hidden dimension dk using a
+
+linear layer and learned positional embeddings. The attention
+
+layers’ output nin × dk is passed through a final dk × 1 linear
+
+layer,
+
+followed
+
+by
+
+a
+
+sigmoid
+
+function
+
+σ(x)
+
+=
+
+1 1+exp(−x)
+
+,
+
+to
+
+give the prediction probabilities xˆin.
+
+2) Multiple Sequence Alignment: Our input representation
+
+extends naturally to multiple transmissions of the same mes-
+
+sage. For M transmissions, 1 ≤ k ≤ M and 1 ≤ i ≤ nin, we define the token matrices Yik ∈ Rδ×2 as in (6) and use the same embedding. We then concatenate the tensors Y k along
+
+their first dimension and add a second positional embedding
+
+that encodes the sequence position k.
+
+The embedded input passes through the transformer and
+
+a final dk × 1 linear layer, as in the single-sequence case, resulting in tokens yˆ ∈ RMnin . We compute yˆin ∈ Rnin using
+
+yˆiin
+
+=
+
+1 M
+
+M
+
+yˆjnin+i,
+
+(7)
+
+j=1
+
+since we found that simple averaging performs as well as a
+
+linear layer. Finally, yˆin passes through a sigmoid layer to
+
+yield prediction probabilities xˆin.
+
+B. ECCT as Outer Decoder
+We adapt ECCT for use as an outer decoder by transforming its input. We transform the normalized log-likelihood ratio approximation from the inner decoder (after removing marker bits) into bipolar vectors xϕ = ϕ (exp (LLR (xout | r))) ∈ [−1, 1]nout . The input to ECCT is the concatenation of the magnitude part |xϕ| and the syndrome part ϕ syn(bin xϕ .
+The inner decoder introduces noise that depends on the specific input codeword. As a result, outer decoding over the IDS channel varies with the codeword, unlike decoding over a BISO channel, where the noise is independent of the input. For example, aligning an all-zero codeword is simpler than aligning a codeword with alternating patterns. Consequently, we cannot train only on the all-zero codeword as in [8]; instead, we train on pseudorandomly generated codewords to capture codeword-dependent noise.
+
+C. Training
+
+We train both BCJRFormer and ECCT using binary cross-
+
+entropy (BCE)
+
+1n
+
+BCE(xˆ, x) = n
+
+xi ln(xˆi) + (1 − xi) ln(1 − xˆi), (8)
+
+i=1
+
+which measures the difference between the model predictions
+
+xˆ and the target sequence x (i.e., the inner or outer sequence
+
+to be decoded). The training dataset is generated dynamically by generating pseudorandom messages m ∈ {0, 1}k.
+
+For BCJRFormer, each sequence is first encoded using an
+
+LDPC outer code, followed by an inner marker code. We then
+
+simulate M transmissions over the IDS channel. The model
+
+is trained by minimizing BCE between the inner decoder’s
+
+predictions xˆin and the corresponding inner codeword bits xin.
+
+ECCT is designed to learn the inner decoder’s multiplicative noise z = xϕ ·ϕ(xout) by minimizing BCE(zˆ, bin(z)), where
+
+zˆ is ECCT’s output. We obtain the predicted codeword as xˆout = bin(−zˆ · sign(xϕ)).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+M =2 M =3 M =4 M =5
+
+0.1
+
+10−2
+
+M = 10
+
+10−3
+
+BER BER
+
+BCJR N = 96
+
+BCJRFormer N = 96
+
+BCJR N = 204
+
+BCJRFormer N = 204
+
+0.01
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+pI = pD
+
+·10−2
+
+Fig. 3: BCJRFormer performs comparably to BCJR for single transmis-
+sions at pS = 0. Outer LDPC codes of lengths (96, 48) and (204, 102) are concatenated with markers sm = 001 inserted every Nm = 6 bits.
+
+10−4
+
+10−5
+
+BCJR BCJRFormer
+
+2
+
+4
+
+6
+
+8
+
+pI = pD
+
+·10−2
+
+Fig. 4: Joint inner decoding performance of BCJRFormer scales like BCJR across cluster sizes M . A (96, 48) LDPC outer code is transmitted with markers sm = 001 inserted every Nm = 6 bits at pS = 0.012.
+
+D. Complexity
+We determine the complexity of jointly decoding multiple sequences using BCJR and BCJRFormer to justify our deep learning-based approach.
+As in Section IV-A, we restrict the drift states of the BCJR decoder at each time step to the range [dmin, dmax]. For M sequences, joint decoding requires tracking δM joint drift states. Each drift state allows up to κ = Imax + 2 transitions, with Imax being the maximum number of insertions per state. Consequently, the total complexity of BCJR decoding is O(nin(κδ)M ), where nin is the input sequence length [7].
+In contrast, BCJRFormer only scales quadratically in M . The transformation of the received sequences into the model’s input, as in (6), and the subsequent embedding have a combined complexity of O(M ninδdk). Each transformer block incurs quadratic complexity, scaling as O M 2n2inNdecdk , where Ndec is the number of attention layers [32].
+V. EXPERIMENTAL RESULTS
+We compare BCJRFormer to the classical BCJR algorithm, which performs maximum likelihood decoding and sets a performance upper bound. We show that BCJRFormer achieves error rates close to BCJR while allowing joint decoding of multiple sequences, and that combining it with an outer transformer decoder outperforms the combination of classical decoders BCJR and BP.
+A. Setup
+We train all neural decoders with the Adam optimizer [33]. Each BCJRFormer model has a hidden dimension of 96, six attention layers, and eight attention heads per layer, for a total of about 700,000 parameters. We train at a batch size of 256 for 160,000 iterations, and use a cosine decay learning rate schedule that starts at 2.5e−4 and decays to 2.5e−5 after a 20,000 iterations warmup.
+All ECCT models have a hidden dimension of 128, eight attention layers with eight heads per layer, for a total of about
+
+1.6 million parameters. We train ECCT at a batch size of 1024
+
+for 120,000 iterations with a constant learning rate of 1e−4.
+
+For inner decoders we restrict the drift states dmin and dmax
+
+to ±5
+
+nin
+
+pD 1−pD
+
+and fix
+
+the maximum number
+
+of
+
+insertions
+
+per transmitted symbol to Imax = 2 [3]. When using BP as the
+
+outer decoder, we perform 50 iterations to ensure convergence.
+
+We measure performance as bit error rate (BER), defined
+
+as the ratio of incorrectly decoded bits to the total number of
+
+transmitted bits. We average error rates over 409,600 randomly
+
+generated codewords, unless noted otherwise.
+
+B. BCJRFormer Single Codeword
+We compare BCJRFormer and BCJR for inner decoding of single sequences using a short (96, 48) LDPC code [34] and a longer (204, 102) LDPC code [35]. For the short LDPC code, we insert the marker sequence sm = 001 every Nm = 6 bits, and for the longer LDPC code, every Nm = 7 bits. This gives inner codeword lengths of 144 and 291 with rates of 2/3 and approximately 0.7, respectively. We trained a range of models for both codes over varying pI = pD with pS = 0. The BER results in Fig. 3 show that BCJRFormer closely matches the performance of the BCJR algorithm for both code lengths and across all insertion and deletion rates considered.
+
+C. BCJRFormer Joint Inner Decoding
+We evaluate BCJRFormer for jointly decoding M noisy copies of a codeword. Inner decoders are trained for different values of M , with pI = pD varied and pS fixed at 0.012. We compare the resulting error rates to those of standard BCJR decoding.
+For M = 3, we evaluate BCJR on only 40,960 samples due to its exponential complexity. As shown in Fig. 4, BCJRFormer achieves error rates that closely match those of BCJR as the number of received copies increases. For M > 3, BCJRFormer continues to attain decreasing BER, while BCJR becomes computationally impractical.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+M =1
+
+M =2
+
+0.1
+
+M =3
+
+M =4
+
+M =5
+
+BER BER
+BER
+
+10−2 0.01
+
+10−3
+
+10−4 2
+
+BCJRFormer Dynamic BCJRFormer
+
+4
+
+6
+
+pI = pD
+
+8 ·10−2
+
+Fig. 5: BCJRFormer models trained on varying cluster sizes perform similarly to those with fixed M . A (96, 48) LDPC outer code with markers sm = 001 every Nm = 6 bits is transmitted at pS = 0.012.
+
+0.001
+
+ECCT - Marker BP - Marker ECCT - Conv. BP - Conv.
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+pI = pD
+
+·10−2
+
+Fig. 6: The outer ECCT decoder outperforms BP for a (96, 48) LDPC
+outer code at pS = 0.012, as shown for a rate-1/2 convolutional code (g = [5, 7]8), and a 001 marker code with Nm = 6.
+
+0.1
+
+0.01
+
+0.001
+
+BCJRFormer + ECCT
+
+BCJR + ECCT
+
+BCJRFormer + BP
+
+BCJR + BP
+
+0.0001
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+pI = pD
+
+·10−2
+
+Fig. 7: Transformer-based decoder combinations can achieve lower error rates than iterative algorithms. Shown for a (96, 48) LDPC code with markers sm = 001 inserted every Nm = 6 bits, transmitted at pS = 0.0
+
+In DNA data storage, the number of received copies Mk varies for each transmitted sequence, making it inefficient to train models on fixed cluster sizes M . We show that a single BCJRFormer model can decode sequences when Mk varies between Mmin and Mmax. We handle varying Mk by padding the concatenated input RninMk×δ×2 with a dedicated token to RninMmax×δ×2 and mask the Mmax − Mk padded columns in (5) and (7). We evaluate the BER of a dynamically trained model, where we sample Mk ∈ [Mmin, Mmax] uniformly at random for each codeword, and compare it to models trained on fixed Mk. As shown in Fig. 5, the dynamic model performs comparably to models with fixed Mk, with only a minimal performance trade-off.
+D. ECCT for Outer Decoding
+We compare the ECCT decoder with BP using the short (96, 48) LDPC code from Section V-B. We consider two inner
+
+code constructions, a (2, 1, 2) zero-terminated convolutional code (generator polynomials g = (5, 7)8) with a pseudorandom offset to reduce block cyclicity [36], and a marker code with markers 001 inserted every Nm = 6 bits. We train models on the output of an inner BCJR decoder, varying pI = pD while keeping pS = 0.012 fixed. Fig. 6 shows that the ECCT decoder outperforms BP decoding across most channel configurations.
+While the comparison uses standard BP, additional messagepassing iterations or extensions such as ensemble BP [37] and weighted BP [13] may reduce the performance gap. We leave such comparisons to future work, as our main focus is on improving inner decoding.
+E. End-to-End Transformer Decoding
+We show that an end-to-end transformer pipeline with BCJRFormer as the inner decoder and ECCT as the outer decoder outperforms both BCJR and BP.
+We reuse the BCJRFormer models from Section V-B and train a separate ECCT outer decoder for each, using the inner decoder outputs corresponding to a channel configuration with pI = pD and a substitution probability of pS = 0.012. Fig. 7 compares various combinations of inner and outer decoders. ECCT consistently achieves lower error rates than BP across all channel conditions considered. In the low-noise regime, combinations using BCJRFormer as the inner decoder significantly outperform those using BCJR, demonstrating that a transformer-based pipeline can outperform iterative decoding in concatenated coding schemes.
+VI. CONCLUSION
+In this work, we proposed a performant and efficient transformer-based decoding approach for multiple noisy copies of a codeword transmitted over the IDS channel. Future work can investigate jointly training BCJRFormer and ECCT to further reduce error rates, and evaluate how BCJRFormer’s performance scales with compute.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] R. Heckel, G. Mikutis, and R. N. Grass, “A Characterization of the DNA Data Storage Channel,” Scientific Reports, vol. 9, no. 1, p. 9663, Jul. 2019.
+[2] F. Sellers, “Bit loss and gain correction code,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 35–38, Jan. 1962.
+[3] M. Davey and D. Mackay, “Reliable communication over channels with insertions, deletions, and substitutions,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 687–698, Feb. 2001.
+[4] F. Wang, D. Fertonani, and T. M. Duman, “Symbol-Level Synchronization and LDPC Code Design for Insertion/Deletion Channels,” IEEE Transactions on Communications, vol. 59, no. 5, pp. 1287–1297, May 2011.
+[5] I. Tal, H. D. Pfister, A. Fazeli, and A. Vardy, “Polar Codes for the Deletion Channel: Weak and Strong Polarization,” IEEE Transactions on Information Theory, vol. 68, no. 4, pp. 2239–2265, Apr. 2022.
+[6] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, 1981.
+[7] I. Maarouf, A. Lenz, L. Welter, A. Wachter-Zeh, E. Rosnes, and A. G. i Amat, “Concatenated codes for multiple reads of a DNA sequence,” IEEE Transactions on Information Theory, vol. 69, no. 2, pp. 910–927, 2023.
+[8] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Advances in Neural Information Processing Systems, S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, Eds., vol. 35. Curran Associates, Inc., 2022, pp. 38 695–38 705.
+[9] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: Feedback codes via deep learning,” Advances in neural information processing systems, vol. 31, 2018.
+[10] S. A. Hebbar, V. V. Nadkarni, A. V. Makkuva, S. Bhat, S. Oh, and P. Viswanath, “Crisp: Curriculum based sequential neural decoders for polar code family,” in International Conference on Machine Learning. PMLR, 2023, pp. 12 823–12 845.
+[11] M. Ebada, S. Cammerer, A. Elkelesh, and S. ten Brink, “Deep learningbased polar code design,” in 2019 57th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2019, pp. 177–183.
+[12] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in 2017 IEEE International workshop on signal processing systems (SiPS). IEEE, 2017, pp. 1–6.
+[13] E. Nachmani, Y. Be’Ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2016, pp. 341–346.
+[14] J. Kuck, S. Chakraborty, H. Tang, R. Luo, J. Song, A. Sabharwal, and S. Ermon, “Belief propagation neural networks,” Advances in Neural Information Processing Systems, vol. 33, pp. 667–678, 2020.
+[15] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block codes,” Advances in Neural Information Processing Systems, vol. 32, 2019.
+[16] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT). IEEE, 2017, pp. 1361–1365.
+[17] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[18] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), Sep. 2016, pp. 341–346.
+[19] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Beery, “Deep Learning Methods for Improved Decoding of Linear Codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, Feb. 2018.
+
+[20] M. H. Sazlı and C. Is¸ık, “Neural network implementation of the BCJR algorithm,” Digital Signal Processing, vol. 17, no. 1, pp. 353–359, 2007.
+[21] N. Shlezinger, N. Farsad, Y. C. Eldar, and A. J. Goldsmith, “Data-driven factor graphs for deep symbol detection,” in 2020 IEEE International Symposium on Information Theory (ISIT), 2020, pp. 2682–2687.
+[22] N. Farsad, N. Shlezinger, A. J. Goldsmith, and Y. C. Eldar, “Datadriven symbol detection via model-based machine learning,” in 2021 IEEE Statistical Signal Processing Workshop (SSP), 2021, pp. 571–575.
+[23] N. Shlezinger, Y. C. Eldar, N. Farsad, and A. J. Goldsmith, “ViterbiNet: Symbol detection using a deep learning based viterbi algorithm,” in 2019 IEEE 20th International Workshop on Signal Processing Advances in Wireless Communications (SPAWC), 2019, pp. 1–5.
+[24] N. Shlezinger, J. Whang, Y. C. Eldar, and A. G. Dimakis, “Model-based deep learning,” Proceedings of the IEEE, vol. 111, no. 5, pp. 465–499, 2023.
+[25] G. Ma, X. Jiao, J. Mu, H. Han, and Y. Yang, “Deep learning-based detection for marker codes over insertion and deletion channels,” IEEE Transactions on Communications, vol. 72, no. 10, pp. 5945–5959, 2024.
+[26] E. U. Kargı and T. M. Duman, “A deep learning based decoder for concatenated coding over deletion channels,” in ICC 2024 - IEEE International Conference on Communications, 2024, pp. 2797–2802.
+[27] S.-J. Park, H.-Y. Kwak, S.-H. Kim, Y. Kim, and J.-S. No, “CrossMPT: Cross-attention message-passing transformer for error correcting codes.” [Online]. Available: http://arxiv.org/abs/2405.01033
+[28] D. Bar-Lev, I. Orr, O. Sabary, T. Etzion, and E. Yaakobi, “Deep DNA storage: Scalable and robust DNA storage via coding theory and deep learning,” 2024.
+[29] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[30] L. Bahl and F. Jelinek, “Decoding for channels with insertions, deletions, and substitutions with applications to speech recognition,” IEEE Transactions on Information Theory, vol. 21, no. 4, pp. 404–411, 1975.
+[31] F. Jelinek, Statistical Methods for Speech Recognition. Cambridge, MA, USA: MIT Press, 1998.
+[32] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” in Advances in Neural Information Processing Systems, I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, Eds., vol. 30. Curran Associates, Inc., 2017.
+[33] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in 3rd international conference on learning representations, ICLR 2015, san diego, CA, USA, may 7-9, 2015, conference track proceedings, Y. Bengio and Y. LeCun, Eds., 2015, tex.bibsource: dblp computer science bibliography, https://dblp.org tex.timestamp: Thu, 25 Jul 2019 14:25:37 +0200. [Online]. Available: http://arxiv.org/abs/1412.6980
+[34] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of Channel Codes and ML Simulation Results,” www.uni-kl.de/channel-codes, 2019.
+[35] D. Mackay, “Encyclopedia of Sparse Graph Codes,” https://www.inference.org.uk/mackay/codes/data.html.
+[36] V. Buttigieg and N. Farrugia, “Improved bit error rate performance of convolutional codes with synchronization errors,” in 2015 IEEE International Conference on Communications (ICC), 2015, pp. 4077– 4082.
+[37] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-bases belief-propagation for decoding of short block codes,” in 2007 IEEE International Symposium on Information Theory. IEEE, 2007, pp. 311– 315.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:54 UTC from IEEE Xplore. Restrictions apply.
+
+

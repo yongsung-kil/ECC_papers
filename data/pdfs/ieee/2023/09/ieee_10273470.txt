@@ -1,0 +1,341 @@
+2023 12th International Symposium on Topics in Coding (ISTC) | 979-8-3503-2611-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISTC57237.2023.10273470
+
+Learning to Decode Linear Block Codes using Adaptive Gradient-Descent Bit-Flipping
+
+Jovan Milojkovic´
+
+Srdan Brkic
+
+Predrag Ivanisˇ
+
+Bane Vasic´
+
+School of Electrical Engineering School of Electrical Engineering School of Electrical Engineering Department of ECE
+
+University of Belgrade
+
+University of Belgrade
+
+University of Belgrade
+
+University of Arizona
+
+Belgrade, Serbia
+
+Belgrade, Serbia
+
+Belgrade, Serbia
+
+Tucson, USA
+
+mj205018p@student.etf.bg.ac.rs
+
+srdjan.brkic@etf.rs
+
+predrag.ivanis.etf.rs
+
+vasic@ece.arizona.edu
+
+Abstract—In this paper we propose a generalization of the recently published adaptive diversity gradient-descent bit flipping (AD-GDBF) decoder, named generalized AD-GDBF (gAD-GDBF) decoder. While the original AD-GDBF decoder was designed for the binary symmetric channel and used mostly to decode regular low-density parity-check codes, the gAD-GDBF algorithm incorporates several improvements which makes it eligible for the additive white Gaussian channel and decoding of arbitrary linear block code. The gAD-GDBF decoder uses the genetic algorithm to optimize a set of learnable parameters, for a targeted linear block code. The effectiveness of the proposed method is verified on short Bose–Chaudhuri–Hocquenghem (BCH) codes, where it was shown that for the same number of decoding iterations the gAD-GDBF decoder outperforms the belief-propagation decoder in terms of bit error rate and at the same time reduces the decoding complexity significantly.
+Index Terms—Bose–Chaudhuri–Hocquenghem codes, bitflipping, genetic algorithm, gradient-descent, diversity decoding, linear block codes
+I. INTRODUCTION
+In the fifth-generation standard for broadband cellular networks (5GNR) ultra-reliable low-latency communication (URLLC) is recognized as one of the most important service category. However, the most powerful capacity-approaching error correction codes, like turbo or low-density parity-check (LDPC) codes, do not meet the requirements of the URLLC [1]. Recently, considerable progress was made related to the design of short precoded polar codes [2]. Nevertheless, it was shown in [1] that short Bose–Chaudhuri–Hocquenghem (BCH) codes perform closely to the theoretical bounds for a wide range of error rates, under the assumption of the maximum likelihood (ML) decoding.
+Given the fact that the ML decoding of BCH codes is considered to be unacceptably complex, recent research attempts try to improve decoders traditionally applied on LDPC codes, like belief propagation (BP) and offset min-sum (OMS), in
+This research was supported by the Science Fund of the Republic of Serbia, under grants No. 7750284 (Hybrid Integrated Satellite and Terrestrial Access Network - hi-STAR) and No. 6462951 (LIDA). This work was also supported by the Serbian Ministry of Science, Technological Development and Innovation. B. Vasic´ acknowledges the support of the NSF under grants CCF1855879, CCF-2100013, CIF-2106189, CCSS-2027844, CCSS-2052751. and NASA-SURP. B. Vasic´ has disclosed an outside interest in Codelucida to the University of Arizona. Conflicts of interest resulting from this interest are being managed by The University of Arizona in accordance with its policies.
+
+order to use them on BCH codes. The most promising methods use machine learning techniques to adjust the BP/OMS decoders to a certain BCH code. In the pioneering work [3], Nachmani et al. showed that the BP decoder is only a special case of a deep neural network (DNN) and created neural BP (NBP) decoder, by adding learnable weights to messages passed between nodes of the Tanner graph. Interestingly, Lugosch and Gross in [4] showed that an even bigger improvement could be achieved with neural OMS (NOMS) decoder. Their work was refined again by Nachmani et al. in [5], [6], by using recursive DNNs and optimization of neural network node activations. Finally, Tian et al. in [7] proposed an edge-weighted graph neural network decoder, which also surpasses the BP decoder on short block codes.
+The majority of the aforementioned approaches use DNNs to design the decoder, while the number of hidden layers is proportional to the number of decoding iterations. This makes the optimization of the decoders for a larger number of iterations hard, and we argue that the gain of neural decoders, with respect to the BP decoder, usually reduces, if the number of iterations increases (this claim is consistent with numerical results from [7]). Furthermore, training of DNNbased decoders is conduced by minimizing cross-entropy loss function, which can produce suboptimal decoders, as the actual performance metrics are bit or frame error rates.
+In this paper we take a different learning approach, which represents a generalization of our recently proposed adaptive diversity gradient-descent bit-flipping (AD-GDBF) decoder [8]. The AD-GDBF decoder is a collection of GDBF decoders with momentum (GDBF-w/M), proposed by Savin in [9], with synergistic behaviour, that is accomplished through optimization of momentum values and weights associated to the GDBF energy function. The AD-GDBF decoder from [8] was designed only for the binary symmetric channel and primarily regular LDPC codes, while here we propose several modifications that ensure its competitiveness on additive white Gaussian noise (AWGN) channels and short block codes, like BCH codes. The learnable parameters are obtained by the genetic algorithm and training on a predefined error set, while the bit error rate is directly minimized during the training.
+Although some significant probabilistic bit-flipping decoders were proposed in the past, like noisy GDBF (NGBF)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:44:46 UTC from IEEE Xplore. Restrictions apply.
+
+[10], [11] and the probabilistic GDBF-w/M [9] decoders, the bit-flipping decoders are usually considered to be inferior compared to the BP decoder on AWGN channel, when applied to LDPC codes. To the best of our knowledge, bit-flipping algorithms, that approach the BP decoding on block codes with dense parity matrices, have not been reported. In this paper we show that our decoding framework can outperform the BP decoder on short BCH codes, run with the same number of iterations, while its complexity is significantly lower than the BP decoding complexity.
+
+II. LEARNABLE DIVERSITY DECODING FRAMEWORK
+A. Preliminaries
+Consider a binary linear block code (N, K), with code length N and K information bits per codeword, described by a parity check matrix H = [hji]M×N . Each column of the parity matrix is associated to a variable vi, 1 ≤ i ≤ N and a set indices P(vi) = {j|hji = 1}, where cardinality |P(vi)| represents a degree of the variable vi. Similarly, the j-th row of H is coupled with the parity check equation cj, 1 ≤ j ≤ M , defined by the following set of indices Q(cj) = {i|hji = 1}. The total number of ones in the parity matrix we denote by E = j,i hj,i. Let us define the bipolar codeword of a code as x = (x1, x2, . . . , xN ), where xi ∈ {±1} satisfies i∈Q(cj) xi = 1, for all 1 ≤ j ≤ M . We consider transmission through the binary-input AWGN channel, which corrupts sent codeword x and outputs a vector y = (y1, y2, . . . , yN ), y ∈ RN .
+The goal of the gradient-descent bit flipping decoders is to maximize the objective function f (x) defined as follows [12]
+
+N
+
+M
+
+f (x) = xiyi +
+
+xi,
+
+(1)
+
+i=1
+
+j=1 i∈Q(cj )
+
+where the first term represents the correlation between the received vector and a potential solution, while the second term is a penalty factor that ensures that the global solution is a valid codeword. The non-linearity of the objective function makes searching for the codeword, that is the most correlated with the received vector, hard.
+Iterative gradient-based algorithms, that are used to solve the optimization problem (1), associate local energy to each variable during a decoding iteration and flip the variables with energy below the threshold, for the predefined maximal number of iterations, denoted in this paper as Lmax. These methods have tendencies to oscillate between local optima and usually perform worse compared to the massage-passing decoders. In the following subsection, we present a learnable framework that matches the decoding operations to a certain code and overcomes the convergence problems of the stateof-the-art gradient-descent algorithms.
+
+B. General decoder description
+We first explain the operations conducted in each decoding iteration, then we highlight the introduced improvements and conditions under which our approach can be reduced to
+
+the state-of-the-art GDBF-w/M decoder [9] and our decoder
+previously described in [8]. We associate a decimal value, called the potential to each
+variable vi during the ℓ-th decoding iteration, and denote it by ri(ℓ). It is initialized prior to the first iteration to the value received from the channel, i.e. ri(0) = yi, 1 ≤ i ≤ N . The potential of vi in the ℓ-th iteration is calculated based on the local energy, denoted by Ei(ℓ), with minimal value Em(ℓi)n = min1≤i≤N Ei(ℓ). The variable decisions xˆi(ℓ) are obtained by xˆi(ℓ) = sign(ri(ℓ)), where sign(·) denotes signum function.
+Each decoding iteration consists of three parts: i) calculation
+of the local energy of variables, ii) updating potential of the
+variables, and iii) deciding to restart the decoder or change the
+momentum vector. Energy calculation. Consider now the local energy Ei(ℓ)
+calculated as follows
+
+Ei(ℓ) = w1(ℓ,i)yixˆi(ℓ−1) + w2(ℓ,i)
+
+s(jℓ) + mli ,
+
+(2)
+
+j ∈P (vi )
+
+where w1(ℓ,i) and w2(ℓ,i) are learnable weights associated to the i-th variable during the ℓ-th decoding iteration, s(jℓ) =
+n∈Q(cj) xˆn(ℓ−1), while mli ∈ {0, 1, . . . , I}, I ∈ N+, is the momentum correction term, chosen for each variable
+separately from a vector m = (m1, m2, . . . , mL′ , 0), based on
+the variable’s past flipping activity. Namely, if the last flip of
+the i-th variable occurred during the t-th iteration we calculate
+the index term ℓi as
+
+ℓi = min(ℓ − t, L′ + 1),
+
+(3)
+
+while ℓi prior to the decoding is initialized to L′+1. We restrict the influence of the momentum to L′ consecutive iterations,
+while variable flips from other iterations are neglected. Variable potential updates. In each decoding iteration ℓ,
+a set of highlighted variables is formed as follows
+
+F (ℓ) = {vi|Ei(ℓ) ≤ Em(ℓi)n + δ},
+
+(4)
+
+where δ ≥ 0 is a predefined margin, which enables flipping
+multiple bits, if needed. If δ = 0 we flip a single bit during an iteration. We also define an auxiliary set G(ℓ) as follows
+
+G(ℓ) = {vi|vi ∈/ F (ℓ) ∧ ℓi ≤ L′′},
+
+(5)
+
+where L′′ ≤ L′ is an iteration window in which we keep track of the flipping activity. Afterwards, variable potentials are updated according to the following
+
+1 1 ri(ℓ) = ri(ℓ−1) − F(ℓ) (vi)xˆi(ℓ−1)δ1(ℓ) + G(ℓ) (vi)xˆ(iℓ−1)δ2(ℓ),
+(6)
+
+where δ1(ℓ) > 0 and δ2(ℓ) > 0 are potential increments adapted across iterations, which steer variables potential towards pos-
+itive or negative direction, and 1A(x) is an indicator function
+of a set A defined as follows
+
+1A(x) =
+
+1 0
+
+if x ∈ A if x ∈/ A.
+
+(7)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:44:46 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 gAD-GDBF decoding framework
+Input: y = (yi, y2, . . . , yN ) ∈ RN Output: x = (xi, x2, . . . , xN ) ∈ {±1}N
+Initialization: ℓ = 1, ri = yi, ℓi = L′+1, ∀i = 1, . . . , N
+while ℓ ≤ Lmax do xi = sign(ri), ∀i = 1, . . . , N sj = i∈Q(cj) xi, ∀j = 1, . . . , M if sj = 1, ∀j = 1, . . . , M then ℓ = Lmax else if ℓ ∈ M then Update m end if if ℓ ∈ S then ri = yi, ∀i = 1, . . . , N end if Emin = +∞ for i = 1, . . . , N do ℓi = min(ℓi, L′) + 1 Ei = w1(ℓ,i)yixi + w2(ℓ,i) j∈P(vi) sj + mli Emin = min{Emin, Ei} end for F = {vi|Ei ≤ Emin + δ} G = {vi|vi ∈/ F ∧ ℓi ≤ L′′} for i = 1, . . . , N do
+ri = ri − 1F (vi)xiδ1(ℓ) + 1G (vi)xiδ2(ℓ)
+if xi ̸= sign(ri) then ℓi = 0
+end if end for ℓ=ℓ+1 end if end while
+
+Note that the sets F (ℓ) and G(ℓ) are disjoint and at most one increment (δ1(ℓ) or δ2(ℓ)) is associated to a single variable.
+Momentum updates. We allow momentum vector changes
+(updates) in predefined iterations. Prior to the decoding a set of indices M ⊂ {1, 2, . . . , Lmax} is defined, while the momentum vector is changed in all iterations ℓ ∈ M.
+Decoding restarts. Prior to the decoding, a set of indices S ⊂ {1, 2, . . . , Lmax} is formed, and
+
+if ℓ ∈ S ⇒ ri(ℓ) = yi, ∀i = 1, . . . , N.
+
+(8)
+
+For convenience, we chose S ⊆ M, which means that every decoder restart is followed by the momentum update, while the momentum update may not lead to the decoder restart.
+The proposed decoding framework we call the generalized AD-GDBF (gAD-GDBF) decoder and formally express it in Algorithm 1, where, for the reason of clarity, we abandon the dependency on the decoding iteration for all the parameters, which values will be re-written in the subsequent iteration.
+
+The proposed scheme reduces to the GDBF-w/M decoder, described in [9], if the following condition are fulfilled
+• The sets of restart indices and momentum updates are empty, i.e., S = M = ∅;
+• The momentum values are organized in non-increasing order, i.e., m1 ≥ m2 ≥ . . . ≥ mL′ ≥ 0;
+• The variable potentials are initialized to ri(0) = sign(yi) and δ1(ℓ) = 2 and δ1(ℓ) = 0, for all 1 ≤ i ≤ N , and 1 ≤ ℓ ≤ L;
+• The weights w1(ℓ,i) = w, w > 0 and w2(ℓ,i) = 1, for all 1 ≤ i ≤ N , and 1 ≤ ℓ ≤ L.
+Our published AD-GDBF decoder, described in [8], is mostly used for regular LDPC codes and on binary symmetric channels, and does not allow different weights to be associated to different variable bits, nor does it use varying potential increments (it automatically flips bits from the set F). Next we will explain the key features of the proposed algorithm.
+We allow weights w1(ℓ,i) and w2(ℓ,i) to be chosen independently for each variable bit (or groups of bits) in order to adjust the decoder to a specific code structure, i.e., to compensate irregularity of a code. If all variables were scaled with the same values (for example w1 and w2), erroneous variables with the lower degrees will be harder to correct. For example, consider two isolated erroneous variables vi and vj, with degrees |P(vi)| = 3 and |P(vj)| = 7, respectively. If both variables have all unsatisfied checks, the variable vi will have the energy Ei = w1yi − 3w2, if no previous flips occurred, while under the same condition, the energy of the variable vj is Ej = w1yj − 7w2 and with high probability vj will be flipped before the variable vi. By adding learnable weights, we can change the behaviour of the decoder and force it to flip variables with lower degrees more frequently.
+On the other hand, the momentum mℓ is an additive term with the purpose to reduce consecutive flipping of the same variable bits, as described in [9]. We also allow changes of momentum vector m after the predefined number of iterations, in order to prevent oscillatory behavior, commonly attributed to trapping sets. The frequent momentum updates can be seen as a pseudo-random perturbation of the energy function behavior usually achieved only in probabilistic decoders.
+Variable potential updates are another way to mimic behavior of probabilistic decoders (like [13]). Instead of flipping all variables from the set F (ℓ) automatically, we only push the variable potentials towards flipping, where only a portion of variables from F (ℓ) will change the sign. In a sense, the absolute potential of variables with the lowest energy is reduced, while the variables that were flipped in previous L′′ iterations were ”rewarded” and their absolute potential is increased. Although the momentum term in the energy function has the same responsibility, our numerical results have shown that the two approaches complement one another. In our decoding framework, the momentum term is restricted to L′ iterations – two flips of the same variable separated for more than L′ iterations are not prevented. On the other hand, a variable potential is accumulated from the start of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:44:46 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I: Complexity of various decoders per decoding iteration on (63,45) / (127,106) / (255,215) BCH codes.
+
+Decoder BP NBP
+NOMS gAD-GDBF
+
+# of learnable params. -/-/-
+495 / 1135 / 4735 495 / 1135 / 4735 180 / 204 / 360
+
+# of multiplications 846 / 1995 / 8920 1341 / 3130 / 13655 495 / 1135 / 4735 126 / 254 / 510
+
+# of tanh of tanh−1 432 / 1008 / 4480 432 / 1008 / 4480 -/-/-/-/-
+
+# of additions 864 / 2016 / 8960 864 / 2016 / 8960 1296 / 3024 / 13440 126 / 254 / 510
+
+# of comparisons -/-/-/-/-
+1242 / 2961 / 13320 125 / 253 / 509
+
+# of XORs -/-/-/-/-
+846 / 1995 / 8920 477 / 1114 / 4695
+
+decoding (or from the previous decoder restart) and even after the momentum effect is lost, previously flipped variables will less likely to be flipped again.
+Decoding restarts prevent the decoding process to converge to a wrong codeword and the detailed explanation of the technique can be found in [8], [11].
+Due to space limitations, we do not show the gain achieved by each improvement we introduced separately; however, the numerical examples from Section III indicate that the exclusion of any modification will result in inferior performance.
+C. Learning method
+We can divide all the parameters of the algorithm, described in the previous subsection into two categories:
+• heuristics - maximal number of iterations Lmax, momentum length and values, L′ and I, respectively, increment window length L′′, energy margin δ, the set M;
+• learnable parameters - energy wights w1(ℓ,i) and w2(ℓ,i), (1 ≤ i ≤ N , 1 ≤ ℓ ≤ Lmax), variable potential increments δ1(ℓ) and δ2(ℓ), (1 ≤ ℓ ≤ Lmax), |M| different momentum vectors m, and the set of restarts S, (|S| ≤ |M|).
+Values of the heuristics are chosen empirically and known in advance, i.e., prior to the optimization of the learnable parameters. Values of the learnable parameters are obtained through machine learning-type optimization. Note that in the general description of the decoder we allow different weights to be assigned to each variable during each decoding iteration, which can make the optimization complex. To reduce the number of learnable parameters we put the following restrictions:
+• all the variables with the same degree have the same weight and
+• the weights and the potential increments are constant between two momentum updates, i.e.,
+w1(ℓ,i) = w1(k,|)P(vi)|, w2(ℓ,i) = w2(k,|)P(vi)|, δ1(ℓ) = δ1(k), δ2(ℓ) = δ2(k), ∀i = 1, . . . , N ∧ m < ℓ ≤ k, (9)
+where {m, k} ⊂ M ∪ {0}, m < k, is such that there does not exist n ∈ M, for which m < n < k. In other words, m and k are the two closest elements in M ∪ {0}. Recall that S ⊆ M, and S can be constructed by optimizing |M| binary
+indicators 1S (x), x ∈ M. Thus, the total number of revised
+learnable parameters depends on the cardinality of M and the number of distinct variable degrees in a code (called D) i.e., it is equal to |M|(2D + L′ + 3).
+To further reduce the complexity of the optimization, we quantize the learnable parameters and allow them to take values only from finite discrete sets. Then we represent all the learnable parameters in binary form, append one after another,
+
+and use a genetic algorithm to optimize all the parameters jointly. The advantage of using genetic algorithm is that we can directly use error rate (bit or frame) as a criterion function and directly steer the learnable parameters toward minimizing error rate on predefined training sets. The detailed description of the optimization process can be found in our previous work [8], and we omit it here because of the space limitations.
+D. Complexity analysis
+To compute the energy function of a variable, given in eq. (2), we need two floating point multiplications and additions, while the parity equation sj(ℓ), is performed with |Q(cj)| − 1 binary XOR operations. Thus, the total number of multiplications/additions per iteration is equal to 2N , and we also need E +N −M binary XOR operations. To calculate the minimum energy value we need N − 1 comparators, and additional N comparators to form the set F (ℓ). Note that we neglect the summation Si = j s(jℓ) as the majority of variables will have the maximal value of the summation Si = |P (vi)| (all satisfied parity checks), and we can initialize Si to |P (vi)| and subtract twice the number of unsatisfied checks for a small percentage of variables that have unsatisfied checks. Similar reasoning holds for the potential updates (eq. (6)), which are performed even less frequently. It follows that the density of the parity check matrix has a weaker influence on the complexity of the gAD-GDBF decoder, compared to the BP-based decoders.
+In table I we present the number of operations required to perform a single iteration of the gAD-GDBF decoder for several BCH codes, assuming |M| = 6. We also compare the complexity of the gAD-GDBF decoder with the BP and NBP decoders, based on the analysis from [14] and the NOMS algorithm, which complexity we estimate as in [8]. It can be observed that, compared to the BP decoder, the gADGDBF algorithm used on (63,45) BCH code requires more than 6 times less multipliers and adders, and for the BCH code (127,106) we observed more than 8 times complexity reduction.
+III. NUMERICAL RESULTS
+The performance of the gAD-GDBF decoder is expressed in a form of the bit error rate (BER) dependency on the Eb/N0 (energy per information bit to noise power spectral density ratio) are presented in Fig. 1 for several BCH codes. The optimized parameters of designed decoders and used parity check matrices are publicly available in [15].
+We first verified the significance of the introduced improvements in the gAD-GDBF decoder, by showing its superiority compared to the GDBF-w/M decoder on (63,45) code. Additionally, we observed that the gAD-GDBF decoders, if run
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:44:46 UTC from IEEE Xplore. Restrictions apply.
+
+10-1
+
+10-1
+
+10-1
+
+10-2
+
+10-2
+
+10-2
+
+10-3 10-3
+10-3 10-4
+10-4
+
+10-4
+
+10-5
+
+10-5
+10-6 10-5
+10-6 10-7
+
+10-6
+
+10-8
+
+10-7
+
+10-7
+
+10-9
+
+10-8
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+7
+
+7.5
+
+8
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+(a) BCH (63,45) code
+
+(b) BCH (127,106) code
+
+(c) BCH (255,215) code
+
+Fig. 1: Performance of the gAD-GDBF decoder on various BCH codes.
+
+for Lmax = 300 iterations on (63,45) and (127,106) codes provide gain close to 1.0 dB, compared to the BP decoder, run for Lmax = 50 iterations. Interestingly, our decoders even outperform the BP decoder run for Lmax = 300. It should be emphasized that increasing the number of iterations for the BP decoder beyond 300, does not improve the decoding, and the performance loss compared to the gAD-GDBF decoder cannot be reduced. Furthermore, we can see that the proposed decoder, run for 300 iterations, outperforms the NBP and NOMS decoders. These decoders are designed only for Lmax = 5 iterations and it is unknown whether the loss, compared to the gAD-GDBF decoder, can be compensated by adding more iterations. Furthermore, we can see that the gAD-GDBF decoder, run for 25 iterations on (127,106) code, matches the performance of the NOMS decoder for Eb/N0 ≈ 8 dB, while the slopes of the BER curves indicate that the gAD-GDBF decoder will outperfom the NOMS decoder, for larger Eb/N0 values. Finally, we can see that the gADGDBF decoder, run for Lmax = 800 iterations on (255,215) code, for higher Eb/N0, outperforms the BP decoder, run for Lmax = 50 iterations and performs closely as the BP decoder with Lmax = 300 iterations.
+IV. CONCLUSION
+Although deterministic, our decoder incorporates a key feature of probabilistic decoders – the ability to constantly improve the performance by using more decoding iterations. Furthermore, it represents a low-complexity solution and we can see that adding more iterations does not necessarily create insurmountable obstacles when it comes to the practical realizations. For example, on (255,215) BCH code, a single iteration of the gAD-GDBF decoder requires more than 17 times less multipliers, compared to the BP iteration, and even if we neglect other complex BP operations (like tanh), we still achieve higher coding gains than the BP decoder, with significantly lower complexity. For shorter codes, our design
+
+methods gave even better results and we were able to surpass
+the BP decoder with the same number of iterations.
+REFERENCES
+[1] M. Shirvanimoghaddam, M. Mohammadi, R. Abbas, A. Minja, C. Yue, B. Matuz, G. Han, Z. Lin, W. Liu, Y. Li, S. Johnson, and B. Vucetic, “Short block-length codes for ultra-reliable low latency communications,” IEEE Comm. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[2] V. Miloslavskaya and B. Vucetic, “Design of short polar codes for SCL decoding,” IEEE Trans. Commun., vol. 68, no. 11, pp. 6657–6668, Nov. 2020.
+[3] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016.
+[4] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), June 2017.
+[5] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Jan. 2018.
+[6] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node activations,” IEEE Commun. Letters, vol. 26, no. 11, pp. 2527–2531, Nov. 2022.
+[7] K. Tian, C. Yue, C. She, Y. Li, and B. Vucetic, “A scalable graph neural network decoder for short block codes,” 2022, [Online]. Available: https://arxiv.org/abs/2211.06962.
+[8] S. Brkic, P. Ivanis, and B. Vasic´, “Adaptive gradient descent bit-flipping diversity decoding,” IEEE Commun. Letters, vol. 26, no. 10, pp. 2257– 2261, Oct. 2022.
+[9] V. Savin, “Gradient descent bit-flipping decoding with momentum,” in Proc. 2021 11th Inter. Symp. on Topics in Coding (ISTC), Aug. 2021.
+[10] G. Sundararajan and E. Winstead, C.and Boutillon, “Noisy gradient descent bit-flip decoding for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 10, pp. 3385–3400, Oct. 2014.
+[11] T. Tithi, C. Winstead, and G. Sundararajan, “Decoding LDPC codes via noisy gradient descent bit-flipping with redecoding,” 2015, [Online]. Available: http://arxiv.org/abs/1503.08913.
+[12] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding LDPC codes,” IEEE Trans. Commun., vol. 58, no. 6, pp. 1610–1614, June 2010.
+[13] O. A. Rasheed, P. Ivanis, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Commun. Letters, vol. 18, no. 9, pp. 1487–1490, Sep. 2014.
+[14] G. Li, X. Yu, Y. Luo, and G. Wei, “A bottom-up design methodology of neural min-sum decoders for LDPC codes,” IET Communications, vol. 17, no. 3, pp. 377–386, Mar. 2023.
+[15] Generalized AD-GDBF decoder database. [Online]. Available: https://github.com/milojko94/gAD-GDBF
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:44:46 UTC from IEEE Xplore. Restrictions apply.
+
+

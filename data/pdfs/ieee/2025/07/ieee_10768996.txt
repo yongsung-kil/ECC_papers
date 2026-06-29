@@ -1,0 +1,715 @@
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+2645
+
+A Sub-0.8-pJ/bit Universal Soft-Detection Decoder Using ORBGRAND
+Arslan Riaz , Member, IEEE, Alperen Yasar , Graduate Student Member, IEEE, Furkan Ercan , Member, IEEE, Wei An , Member, IEEE, Jonathan Ngo , Student Member, IEEE,
+Kevin Galligan, Graduate Student Member, IEEE, Muriel Médard , Fellow, IEEE, Ken R. Duffy , Senior Member, IEEE, and Rabia Tugce Yazicigil , Senior Member, IEEE
+
+Abstract— Guessing random additive noise decoding (GRAND) has enabled the practical implementation of maximum likelihood (ML) or near-ML decoding, shifting the paradigm of code-specific decoder design to a code-agnostic decoding architecture. Ordered reliability bits GRAND (ORBGRAND) is a soft-detection variant of GRAND that uses soft information to guide its query order to significantly improve the decoding performance. This work presents the first-integrated energy-efficient hardware implementation of ORBGRAND to achieve ultra-low energy (sub-pJ/bit) and power consumption (5 mW) while using a small core area of 0.4 mm2 in 40-nm CMOS. The proposed architecture enables dynamic power savings by implementing an efficient sorter that allows the decoder to use the sorted bits immediately without waiting for the entire list to be sorted and an efficient landslide unit that generates noise effect sequences in parallel. The chip is implemented in 40-nm CMOS with a re-configurable architecture that enables decoding of any binary linear code from 32 to 256 bits of code length and 0.8–1 code rate. For a code length of 256 bits and a code rate of 0.94, it provides a measured energy consumption of 0.76 pJ/bit and power consumption of 4.9 mW from a 1.0-V supply voltage at an operating frequency of 90 MHz providing a throughput of 6.5 Gb/s and a latency of 40 ns at a targeted frame error rate (FER) of 10-7.
+Index Terms— Decoder, forward error correction, guessing random additive noise decoding (GRAND), ordered reliability bits GRAND (ORBGRAND), soft detection.
+I. INTRODUCTION
+EVER since Shannon’s remarkable work [1] in 1948 established the mathematical framework for channel coding,
+efforts have been directed toward developing code struc-
+tures to approach the channel’s capacity. Maximum likelihood
+Received 17 July 2024; revised 6 October 2024 and 8 November 2024; accepted 12 November 2024. Date of publication 27 November 2024; date of current version 1 July 2025. This article was approved by Associate Editor Ben Keller. This work was supported in part by the Defense Advanced Research Projects Agency (DARPA) under Grant HR00112120008 and in part by the National Science Foundation (NSF) Division of Electrical, Communications and Cyber Systems (ECCS) under Award 2128517 and Award 2128555. (Corresponding author: Arslan Riaz.)
+Arslan Riaz, Alperen Yasar, Furkan Ercan, Jonathan Ngo, and Rabia Tugce Yazicigil are with the Department of Electrical and Computer Engineering, Boston University, Boston, MA 02215 USA (e-mail: arslanr@bu.edu; rty@bu.edu).
+Wei An and Muriel Médard are with Massachusetts Institute of Technology, Cambridge, MA 02139 USA.
+Kevin Galligan is with the Hamilton Institute, Maynooth University, W23 F2H6 Maynooth, Ireland.
+Ken R. Duffy is with the Department of Electrical & Computer Engineering and Department of Mathematics, Northeastern University, Boston, MA 02115 USA.
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/JSSC.2024.3502240.
+Digital Object Identifier 10.1109/JSSC.2024.3502240
+
+(ML) decoding is optimally accurate for any code with uniform at random information bits. In the 1970s, however, it was established that ML decoding of codes is NP-hard in code length [2]. As a result, the existing standards use decoders co-designed with code-specific decoding methods for a restricted class of codes. For hard detection scenarios, examples of such codes include Reed–Solomon codes [3], Reed–Muller (RM) codes with majority logic decoding [4], [5], and Bose–Chaudhuri–Hocquenghem (BCH) codes with Berlekamp–Massey decoding [6], [7]. Soft-detection decoders use additional reliability information to provide significantly better decoding performance, such as low-density parity-check codes (LDPCs) [8] with soft-detection belief propagation decoding [9] and Turbo codes with soft-detection iterative decoders [10] and the recently proposed cyclic redundancy check (CRC)-assisted polar (CA-Polar) codes with softdetection CRC-assisted successive cancellation list (CA-SCL) decoding [11], [12], [13]. The latter has been adopted as a standard for all control channel communications in 5G New Radio [14]. Most of these decoders can be used only with a specific class of codes.
+The recently proposed guessing random additive noise decoding (GRAND) algorithm [15] introduces a code-agnostic approach that enables practical implementation of ML or near-ML decoding of any moderate redundancy codebook with limited complexity. Instead of relying on the code structure for decoding, GRAND produces noise effect sequences in the order of likelihood of occurrence, which are removed from the received sequence, and the resulting sequence is checked for codebook membership. It has been shown that the GRAND does not need to test all possible noise effect sequences [15]. GRAND with abandonment (GRAND-AB) generates noise effect sequences up to a maximum threshold, for example, a maximum Hamming weight (HW), and abandons the search process. This has led to the development of an efficient hard-detection GRAND implementation [16] and multiple synthesized designs [17], [18], [19]. The development of near-optimal universal decoders enables a single chip to decode a large set of codebooks within the same hardware footprint, including those that have not yet been introduced [20]. Such a decoder also allows the decoding of random linear codes and upgrades the error detection capability of ubiquitous CRCs to error correction [21], [22].
+Decoding performance can be significantly improved using the soft information when it is available at the receiver [23]
+
+0018-9200 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2646
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+to guide the query order of GRAND in soft-detection scenarios. Symbol reliability GRAND (SRGRAND) [24] uses a 1-bit quantized soft information to improve the decoding performance by dividing the received bits into two categories: reliable and unreliable. Soft GRAND (SGRAND) [25] is a true soft-ML decoder that fully uses the soft information for each demodulated bit to build the noise effect sequences. However, the practical implementation of SGRAND with highly parallelizable hardware is challenging since the order of generated noise effect sequences changes for each received demodulated input. A solution to this challenge is offered by ordered reliability bits GRAND (ORBGRAND) [26], which uses a predetermined logistic weight (LW) order to rank the noise effect sequences based on the soft information and provides near-optimal ML decoding while being hardware-friendly. ORBGRAND has recently been shown to be almost capacityachieving [27]. As a result of ORBGRAND’s low complexity and highly parallelizable nature, several hardware architectures have already been proposed [28], [29] despite its introduction in 2021. These works aim to achieve high-throughput performance without emphasizing energy efficiency. This work aims to improve energy efficiency while meeting the throughput and latency requirements for power-constrained devices.
+This work presents architectural details and design decisions of the first-integrated ORBGRAND chip [30] consuming ultra-low energy of 0.76 pJ/b and low power of 4.9 mW on a small core area of 0.4 mm2 in 40-nm CMOS. The chip uses an area- and power-efficient sorter that runs in parallel with the pattern generator, error generator, and error checker to sequentially provide the bits in the ascending order of their reliability. The sorting process is abandoned as soon as a codeword is found, thereby reducing the system’s energy consumption dynamically. The chip has a reconfigurable architecture that can decode any binary linear codebooks with a code length of 32–256 bits and code rate of 0.8–1. Furthermore, the chip supports an additional mode of operation for the widely used CRC code, where the codebook membership check is split into segments of 32 bits to reduce power consumption further. This mode uses the cyclic nature of CRC to perform the membership check with a tradeoff in latency to support power-constrained IoT devices.
+The rest of this article is organized as follows. Section II provides an overview of the ORBGRAND algorithm. In Section III, we describe the architecture of the ORBGRAND chip and various design decisions to optimize the performance. The measurement results are described in Section IV. Section V provides a detailed performance comparison of the ORBGRAND chip with the other state-of-the-art code-specific decoders and other ORBGRAND architectures. We present the concluding remarks in Section VI.
+II. ALGORITHM
+Consider an n-bit binary codeword cn ∈ {0, 1}n consisting of k information bits and n − k parity bits. The code rate is represented as r = k/n. Consider that the transmitter modulates this codeword cn and transmits it through a noisy channel where it is impacted by independent continuous
+
+additive noise N n ∈ Rn, resulting in the received signal Y n = mod(cn) + N n where mod represents the modulation operation. The log-likelihood ratio of Y n is defined as
+
+follows:
+
+LLR(Yi ) = log
+
+fY |C (Yi |1) fY |C (Yi |0)
+
+(1)
+
+where fY|C is the probability density function of Y for a given codebook C. We use the sign bit of each LLR(Yi ) to obtain the hard detection bits yi as given by the following equation:
+
+yi
+
+=
+
+(sign(LLR(Yi )) 2
+
++
+
+1) .
+
+(2)
+
+The hard demodulated sequence yn represents an estimate of cn. The noise effect sequence en is the difference between the transmitted codeword cn and the demodulated received signal yn. Note that the noise effect differs from the noise
+
+itself—the noise may be continuous, whereas the noise effect,
+
+whether it flips a bit or not, is discrete. The principle of the GRAND algorithm relies on generating an estimate eˆn of the
+
+noise effect in the decreasing order of likelihood, which is subtracted from the received sequence yn, and the resultant guess yˆn is then queried for codebook membership check. For
+
+binary linear codes, the codebook membership check can be
+
+performed by multiplying a sequence with the parity matrix
+
+H of the codebook. The product will be a zero vector if and
+
+only if the sequence is a codebook member. ORBGRAND uses
+
+soft information to guide the order in which the noise effect
+guesses are made. The reliability of yi is defined as |LLR(Yi )|.
+ORBGRAND sorts yi in ascending order of their reliabilities |LLR(Yi )| and stores the indices in a permutation vector π n = (π1, . . . , πn). It then constructs an ordered binary noise effect sequence zˆn based on the sorted sequence of |LLR(Yi )|. The permutation vector π n maps zˆn back to the original order in
+
+which the bits are received to obtain the estimated noise effect eˆn. This noise effect sequence is subtracted from the received sequence yn, which flips the bits at the respective positions indicated by eˆn to obtain an estimate yˆn of cn. This estimate
+
+is then queried for codebook membership. The block diagram
+
+of the algorithm is shown in Fig. 1. Here, we define LW as the sum of non-zero indices in zˆn as given by the following
+
+equation:
+
+n
+
+LW = i zˆi .
+
+(3)
+
+i =1
+
+The LW represents the sum of positions of the bits to be flipped after they have been sorted in the ascending order of their reliabilities. It assigns a probability weight to the bits, where less reliable bits have a lower LW and more reliable bits have a higher LW. Since the bits with lower reliability are more likely to be erroneous, we make queries in the ascending order of LW which prioritizes flipping bits with lower reliability first. The first noise effect sequence corresponds to an LW of zero, i.e., zˆn = 0, indicating no bits are flipped and the received sequence yn is checked for codebook membership. The second query generates a noise effect sequence for an LW of one, where the first bit in zˆn is one. This indicates that the first least reliable
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2647
+
+Fig. 1. Flowchart of the ORBGRAND algorithm.
+
+Fig. 2. Design goals of this work and a flow graph of the system to demonstrate the dynamic activation of blocks.
+
+bit in yn must be flipped. The third query, corresponding to an LW of two, flips the second least reliable bit in yn. The fourth query has an LW of three, for which two possible noise effect sequences can be generated: either the third least reliable bit can be flipped corresponding to HW of one, or both the first and second least reliable bits can be flipped, having an HW of two. According to the basic ORBGRAND model [26], noise effect sequences with the same LW are equally likely so those ties can be broken arbitrarily. The noise effect sequence is removed from the demodulated sequence yn, and the resultant sequence yˆn is checked for codebook membership. The decoding is complete if the membership check is satisfied, and yˆn is the decoded output. If the membership check fails, the next noise effect sequence is generated, removed from the demodulated sequence, and what remains is checked for codebook membership till the membership check is satisfied or the maximum number of queries is reached, at which point the decoding process is terminated.
+Compared with the hard-detection GRAND [16], the additional steps in ORBGRAND include sorting the bits according to their soft information and generating distinct integer partitions corresponding to increasing LW order to create noise effect sequences for noise guessing. Since the integer partitions of LW are predetermined, they can be stored in a lookup table (LUT) on the chip, but such an implementation will lead to a high area and power consumption [29] since roughly 2(n−k) number of patterns need to be stored. Generating the patterns on the fly is essential for improved area efficiency. A hardware-friendly approach to partitioning the integer into unique combinations can be obtained by the landslide algorithm explained in [26]. For a given LW and HW, this algorithm starts by piling up i blocks in ascending order in j columns where i = LW and j = HW. The blocks that fit in j columns in ascending order starting from one are fixed, but the remaining blocks are rearranged on its top to produce all the unique integer partitions. The landslide algorithm and its hardware implementation are explained in detail in Section III-C.
+
+III. CIRCUIT AND SYSTEM ARCHITECTURE IMPLEMENTATION
+This section presents the details of the hardware architecture and the design decisions underpinning the decoder’s high energy efficiency and low power consumption. The goal of this work is to implement ORBGRAND in hardware with ultra-low energy consumption (sub-pJ/bit) and low power consumption (less than 5 mW), occupying a small core area (less than 0.5 mm2) to achieve a high area efficiency (greater than 10 Gb/s/mm2). The system dynamically activates blocks only as needed to accomplish this objective until a codeword is found. This is illustrated in Fig. 2 with an example. Previously proposed architectures [28], [29] perform pattern generation only after the completion of sorting of bits in the ascending order of their reliabilities. In the present design, significant resource efficiency comes from implementing them in parallel and abandoning the sorting when it is not further required.
+Once a codeword is identified, all the system blocks enter sleep mode to save power. Each block has an enable signal that is provided by the controller. In the sleep mode, the enable signal is set to low, and the clock-gating module in each block disables the clock for all registers. In addition, each block’s inputs are gated through an AND operation with the enable signal, ensuring that during sleep mode, all the inputs are forced to low which reduces the switching activity to zero. Consequently, only leakage power is dissipated during the sleep mode, which is negligible in 40-nm low-power technology. A module enters sleep mode when it is either not in use or has completed its task and is no longer required. When the chip is operated with the sleep mode activated, it consumes 2× lower power in the universal mode while decoding any codebook, and 4× lower power in the CRC mode at a target output frame error rate (FER) of 10-7, compared with when all modules are constantly active. Furthermore, each system block is optimized for low power consumption and low area, as explained in Sections III-A–III-E. The detailed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2648
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+Fig. 3. Architecture of the ORBGRAND decoder. The TCU is composed of buffers to load the LLRs on the chip and provide the decoded output back.
+
+chip architectural block diagram is shown in Fig. 3. The first step is a codebook membership check. This is done by an error checker block that performs the matrix multiplication of the parity matrix H of a given codebook with the received demodulated sequence yi . If the initial membership check is satisfied, the remaining blocks of the system remain in the sleep mode, and the received sequence is the decoded output. If the membership check fails, the sorter is first invoked to sort the indices of the bits yi in the increasing order of their reliabilities |LLR(Yi )|. The pattern generator produces the sets of indices to be flipped based on the ascending order of LW. The error generator takes the sorted indices from the sorter and the pattern vector from the pattern generator to produce the guessed sequence yˆi . The same error checker block can be used to perform the membership check on the guessed sequence. The decoding process is completed as soon as the guessed sequence yˆi satisfies the membership check. Otherwise, the next pattern is generated and tested till the maximum supported LW is reached. At that stage, the decoding is abandoned. For a code length of n, the maximum LW is LWmax = (n × (n + 1))/2, corresponding to the case where all the n bits are flipped. The LWmax determines the design tradeoff between the accuracy and the hardware complexity. An upper bound on the number of queries can be used to limit the complexity without significantly degrading the decoding accuracy.
+For all GRAND algorithms, the probability of finding the correct codeword decreases as the number of queries increases [15]. After 2n−k queries, GRAND returns an
+
+incorrect codeword on average. Note that this is not a limita-
+
+tion of GRAND but rather a characteristic of ML decoding
+
+since GRAND remains ML or near ML. Hard-detection
+
+GRAND implementations [16], [17] use a maximum HW of
+
+3 bits as the threshold on noise guessing before the decod-
+
+ing is abandoned. Using soft-detection ORBGRAND with a
+
+moderate redundancy codebook having (n − k) of 22 bits,
+
+queries with an LW of > 104 will return erroneous results
+
+on average. Therefore, the LWmax is chosen to be 104 for our
+
+implementation, after which the search is abandoned. For an
+
+LWmax of 104, the maximum supported HW is 13 obtained
+
+from the equation LWmax ≥
+
+HWmax k=1
+
+k.
+
+In Sections III-A–III-E, we discuss each circuit block’s
+
+implementation and performance in detail.
+
+A. Error Checker
+The error checker consists of registers, AND, and XOR gates. The H matrix of a given codebook is loaded on the n ×(n −k) register files at the start of the decoding. These registers are clock-gated to save power and only consume dynamic power when a new H -matrix is loaded. There are a total of n × (n − k) AND gates and (n − 1) × (n − k) XOR gates. The matrix multiplication is performed in a single cycle. This produces the output H yi that undergoes bitwise OR operation to determine whether the product is non-zero. The membership check is satisfied only if the product is zero. Since the same block is used to perform a membership check, first on the received demodulated sequence yi , and later on the guessed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2649
+
+Fig. 4. (a) Architecture of the minimum reliability sorter. There are log2(n) stages of comparators. Each comparator takes two sets of magnitudes Xm and Ym , their respective indices Xi and Yi and tags Xt and Yt , and selects the element with a lower magnitude as the output Zm with its index Zi . If both the tags are zero, then the output tag Zt is zero, which disables the comparator in the next stage. The effect of a disabled tag is illustrated as switches here. The gate-level architecture of the comparator cell is also shown. (b) Comparison of this sorter with the bitonic sorter is shown here. (c) Performance gain in terms
+of energy per sorted bit is illustrated for a range of SNRs.
+
+sequence yˆi produced by the error generator, a multiplexer (MUX) is used to select the input of the error checker. Multiple branches of error checker blocks are used to parallelize the error-checking process. The discussion on choosing an optimal number of branches is presented in Section III-F. One of the branches of the error checker is used as the primary branch that performs the membership check on the received demodulated sequence. On satisfying a membership check, the secondary branches of the error checker remain in sleep mode while the primary branch takes on the following received sequence. All the available branches are activated when the error generator starts providing the guessed noise effect sequences.
+B. Sorter
+The additional algorithmic step in soft-detection ORBGRAND compared with hard-detection GRAND is to sort the received bits according to their reliabilities. The latency of the sorter is an important metric as it impacts the system’s latency significantly since the noise effect sequences are typically generated after the bits have been sorted. For this reason, a bitonic sorter or a modified version of bitonic sorter has been used in previous hardware architectures [28], [29] as it takes only log2(n) cycles to sort the n bits completely. However, the bitonic sorter uses a significant area and power since it needs n × log2(n) comparisons. Thus, a bitonic sorter forms the energy, power, and area bottleneck. While the work in [28] attempted to address the bottleneck by using a segmented bitonic sorter, this solution came with a tradeoff: The accuracy was compromised as the sorted lists from each segmented bitonic sorter were directly combined, resulting in an imperfectly sorted final output. Our key observation is that the pattern generator does not need the fully sorted list to start the generation of the noise effect sequences. If a sorter can begin providing the sorted bits in ascending order on the fly, the pattern generator can use this partial list to produce the noise effect guesses. This will allow the system to abandon the sorting as soon as we find a pattern, reducing the energy dynamically. In other words, we sort only as many bits as
+
+needed till we find a guess. This dynamic approach enables simplification of the sorter to reduce its power and area without compromising accuracy. This flexibility of running the sorter in parallel to the decoding stems from the ML nature of the ORBGRAND algorithm where the queries are made in the descending order of likelihood.
+In this work, we designed a simple sorter based on the principle of bubble sorting that we call a minimum reliability sorter. It compares the inputs against each other using log2(n) stages of comparators and returns the global minimum value and index in one cycle. Next, that value is removed from its input to get the following minimum value, sorting the list in ascending order. As soon as the first element is available, we can start the pattern generator that will use the minimum reliability index to generate the first test pattern, and so on. As soon as we find a codeword, we abandon the running sorter. Since the system supports a maximum LW of 104, we do not need the fully sorted list of n bits. Instead, we only need the 104th least reliable bit in the worst case (W.C.). Thus, the sorter will sort up to this value at most, and then go into sleep mode, saving power while the pattern generator tests combinations. We further reduce the switching activity of the sorter by assigning a 1-bit tag to each input element, as illustrated in Fig. 4(a). At the start of the sorting, all the input elements have a tag of one. The sorter returns the minimum element at each cycle with a non-zero tag and index. In the next cycle, the index of this output is used to set the tag associated with that element to zero. This operation disables the corresponding comparator in the first stage. A deactivated comparator directly passes on the value that has a non-zero tag as its output. If both the inputs to a comparator have a tag of zero, the output tag of the comparator is set to zero, which disables the comparator in the next stage. Using this method, we only need to update the 1-bit tag register, which reduces the dynamic power consumption by 18% and switching activity by 11% compared with the sorter without tags. A pipelining stage is inserted between the fourth and fifth stages of comparators to break the critical path.
+We synthesized a bitonic sorter and the proposed minimum reliability sorter at 90 MHz using 40-nm CMOS technology
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2650
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+Fig. 5. (a) Normalized power, area, and W.C. latency comparison of bitonic sorter with minimum reliability sorter and (b) overall contribution of minimum reliability sorter in the area and power reduction of the decoder. The pie charts in (c) and (d) show the energy consumption distribution of the individual blocks of the decoder with a bitonic sorter and minimum reliability sorter at SNR of 5 dB, respectively.
+
+to compare their performance as shown in Fig. 4(b). The best case is defined when the sorter only sorts the least reliable bit, and the sorting is abandoned. Conversely, the W.C. happens when the sorter needs to sort at least 104 of the least reliable bits to achieve the maximum LW of 104. The synthesized performance shows that the proposed minimum reliability sorter has far better energy efficiency than a bitonic sorter, even in the W.C. Fig. 4(c) shows the gains in sorting energy obtained (9×–72×) when the proposed minimum reliability sorter is used over a bitonic sorter for a range of different signal-to-noise ratios (SNRs) (SNR range of 4–8 dB). Fig. 5(a) summarizes the reduction in the power and area obtained when the bitonic sorter is replaced with a minimum reliability sorter, and Fig. 5(b) shows the contribution of this implementation in reducing the decoder’s total area and power consumption. Even though the W.C. latency of the minimum reliability sorter is much higher than the bitonic sorter, since the decoder does not have to wait for the minimum reliability sorter to finish, the latency of the decoding is not affected. Fig. 5(c) and (d) shows the energy consumption distribution of the decoder blocks at an SNR of 5 dB for both the bitonic sorter and the minimum reliability sorter. The same input frames are used to obtain the energy distribution in both the cases. The energy consumption of the other decoder blocks remains unchanged; however, the energy consumption of the sorter is significantly reduced. As a result, the total energy consumption of the decoder decreases when the bitonic sorter is replaced by the minimum reliability sorter, causing the energy contribution of the other system modules to increase proportionally. Fig. 5 illustrates that the bitonic sorter has a dominant energy contribution to the system, which decreases significantly when a minimum reliability sorter is used instead.
+C. Pattern Generator
+The pattern generator produces a vector of indices representing the combinations of least reliable bits to be flipped for generating a codeword guess. This block implements the landslide algorithm to create the integer partitions for noise effect sequences [26]. These integer partitions represent the order in which the sorted list of the least reliable bits will be flipped. The architecture of the pattern generator is shown in Fig. 6. The pattern generator has an LW/HW generation
+
+unit and a landslide unit. The landslide unit produces all the
+
+patterns for a given LW and HW provided by the LW/HW
+
+generation unit. The landslide unit triggers a done signal
+
+when no more unique patterns can be produced. The LW/HW
+
+generator unit interprets the done signal as a trigger to update
+
+its values.
+
+1) LW/HW Generation Unit: The LW/HW generation unit
+
+has two counters: one for LW and the other for HW. Both the
+
+counters start from one when the pattern generator is invoked.
+
+An adder block maintains the running sum of HW from one to
+
+its current value. This sum must not exceed a given LW. After
+
+the landslide unit triggers the done signal, if this sum is less
+
+than the current LW, the HW counter increments, otherwise
+
+the LW counter is incremented, and the HW counter is reset
+
+to one.
+
+A single LW/HW generation unit can be used to provide
+
+multiple sets of LW and HW values to multiple branches of
+
+the landslide unit, thereby increasing parallelization. In our
+
+implementation, the LW/HW generation unit produces four
+
+sets of LW and HW values simultaneously for the four inde-
+
+pendent branches of the landslide unit. Each branch produces
+
+patterns for its assigned LW and HW. The LW/HW generation
+
+unit keeps track of the branch that exhausts all its patterns to
+
+update its LW or HW values.
+
+2) Landslide Unit: The landslide unit takes the LW and HW
+
+as inputs from the LW/HW generation unit. It first finds the
+
+difference in LW from the cumulative sum of HW called the
+
+residual defined as R = LW −
+
+HW k=1
+
+k.
+
+The
+
+HW
+
+is
+
+first
+
+used
+
+to construct a fixed sequence of consecutive integers starting
+
+from one that we call base (Bi ) where i represents the number of a column. The total number of columns in this sequence is
+
+equal to HW. An example with an LW of 18 and an HW of 4 is
+
+shown in Fig. 6. In this case, the base sequence will be Bi = {1, 2, 3, 4}. The cumulative sum of HW is 10, and the residual
+
+value is R = 18−10 = 8. We arrange blocks from the residual
+
+on the top of this base in various configurations that provide
+
+the pattern vector Pi . First, we place all the residual blocks in the highest column yielding a pattern of Pi = {1, 2, 3, 12}. This pattern indicates that the first, second, third, and 12th
+
+least reliable bits must be flipped to produce an error guess.
+
+Next, one block from the residual will be arranged in the next
+
+column on the left, and one in the highest column. This is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2651
+
+Fig. 6. Operation of the landslide algorithm is illustrated with blocks for a given LW of 18 and an HW of 4. The circuit implementation of the landslide algorithm and its synthesized performance are also shown.
+
+called the cor e Ci shown in Fig. 6 as dark gray blocks. The remaining residual blocks called the cr ust will be placed in the highest column again. The cor e Ci is stored in a set of registers and updated each cycle, and the cr ust is always placed in the highest column of the core to produce a new configuration of the residual. At each cycle, a block from a higher column slides to a lower column that we call landslide. Every time a landslide occurs, a new set of patterns are generated. The cor e value should be in ascending order with the column index to ensure that all integer partitions are unique. Therefore, when a landslide occurs in a column on the left, Ci of all the columns on the right must be incremented by the same number. To find the column where the landslide will occur, we define dr op Di of each column as the difference between its residual blocks and the residual blocks of the highest column. Landslide will occur in the column with the highest index that has a drop greater than one. For example, at time t7, the drop of the columns is Di = {5, 4, 3, 0}. In the next cycle, a landslide will occur in the third column. Ci is updated by adding one block to the third column and one block to the fourth column from the residual, and the remaining one block will be added on the top of the rightmost column, generating a pattern of Pi = {1, 3, 6, 8}. The landslide unit keeps producing new sets of residual block arrangements until the dr op of all the columns is less than one. When this condition is met, the landslide unit has finished producing all the unique patterns belonging to a given LW and HW, and a new pair of LW and HW is fetched from the LW/HW generation unit. Algorithm 1 summarizes the landslide unit operation.
+
+Algorithm 1 Landslide
+
+Input: L W, H W
+
+Output: P(i)
+
+C(i) ← 0, R(i) ← 0
+
+B(i) ← 1 ≤ i ≤ H W
+
+R( j) ← LW −
+
+HW i =1
+
+B(i )
+
+where
+
+j
+
+=
+
+HW
+
+Update D(i) for 1 ≤ i ≤ H W
+
+while D(i) > 1 do
+
+Find largest index k such that D(k) > 1
+
+C(i) ← C(i) + 1 for k ≤ i ≤ H W
+
+crust ←
+
+HW i =1
+
+R(i) −
+
+HW t =1
+
+C (i )
+
+R(i) ← C(i) for 1 ≤ i ≤ H W
+
+R( j) ← R( j)+ crust where j = H W
+
+P(i) ← B(i) + R(i) for 1 ≤ i ≤ H W
+
+Update D(i) for 1 ≤ i ≤ H W
+
+end while
+
+The circuit-level implementation of the pattern generator is shown in Fig. 6. The dr op Di is obtained by subtracting the residual of the highest column from the remaining columns by binary subtractors. A comparator, consisting of an OR operation between the output bits of the subtractor except the least significant bit, indicates whether the dr op is greater than one. An XOR operation between consecutive outputs of comparators gives the index where the landslide will occur next. This index is converted into binary value by a binary decoder and used to select the column where one block will be
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2652
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+Fig. 7. (a) Architecture of the error generator with an example for a baseline implementation. (b) Illustration of the optimization of the MUX area.
+
+added to update its Ci . Another set of XOR gates and MUXes is needed to update Ci of the remaining columns.
+The synthesized performance of the pattern generator in the 40-nm CMOS is shown in Fig. 6. A single branch of the pattern generator consumes only 0.002 mm2 of area with a low power consumption of 0.14 mW, making it possible to have multiple branches operating in parallel without significant overhead in area or power.
+
+D. Error Generator
+
+The vector produced by the pattern generator unit represents
+
+the bits to be flipped to guess the noise effect, arranged
+
+in ascending order according to their reliabilities. The error
+
+generator unit remaps these values to their original sequence
+
+using the sorted list of indices from the sorter. This reordered
+
+sequence is then used to construct a noise effect guess vector
+
+of n bits, where bits at the indicated locations are set high,
+
+and all other bits are zero. This noise effect guess is XORed
+
+with yi to yield the estimated sequence yˆi .
+
+The architecture for the error generator is illustrated in
+
+Fig. 7(a), accompanied by an example. Assume the sorter
+
+produced a sorted list of indices {23, 11, 14, 7, . . . , 19} and the
+
+pattern generator produced an output of {1, 3, 4}, indicating
+
+the first, third, and fourth least reliable bits to be flipped. The
+
+error generator selects the first, third, and fourth elements
+
+from the sorter output, i.e., the 23rd, 14th, and 7th bits.
+
+Consequently, the noise effect guess vector will have the 23rd,
+
+14th, and 7th bits active high, and all the remaining bits as
+
+zeros. When XORed with yi , this error vector will flip the bits
+
+at the respective indices of the original sequence yi to produce
+
+yˆi . The output of the error generator is the codeword guess yˆi forwarded to the error checker for codebook membership verification.
+
+For an LWmax of 104 supported by the chip, the maximum
+
+HW is 13 obtained from the equation
+
+k HWmax
+k=1
+
+≤
+
+L Wmax.
+
+A maximum HW of 13 means that the error vector will have at
+
+most 13 high indices. In a naive implementation, we could use
+
+13 copies of 104-to-1 MUXes, each selecting a corresponding
+
+element from the sorter output based on one of the patterns
+
+produced by the pattern generator. However, this approach
+
+would lead to high area consumption, as each MUX requires
+
+104 input lines and a 7-bit select line. Recognizing that the sum of indices from the pattern generator will not exceed 104, not all the MUXes require all 104 sorted elements as inputs. Therefore, we reduce the number of input lines for each MUX according to the highest index of the sorted list needed for each MUX. The maximum number Qi of the first 104 elements of the sorter required by the ith MUX is given by the following equation:
+
+Qi =
+
+104 −
+
+i −1 k=1
+
+k
+
+.
+
+i
+
+(4)
+
+When the HW is one, we will need access to all the 104 least reliable bits to cover the range of LW from 1 to 104. Therefore, the first MUX requires all the first 104 sorted elements. When the HW is two, the range of indices for the first MUX is 2–103, and the range of indices for the second MUX is 1–51. Hence, the second MUX only needs the first 51 sorted elements. The 13th MUX, in contrast, requires just the first two sorted elements, as illustrated in Fig. 7(b). This strategy significantly reduces the total MUX area, achieving approximately 5.6× lower area compared with direct implementation. As a result, the error generator’s overall area and power consumption are roughly halved (2× reduction) compared with direct implementation. The performance gains obtained by the MUX optimization are shown in Fig. 8.
+Since multiple branches in the system perform the error search in parallel, multiple codeword guesses can satisfy the membership check simultaneously. To preserve the algorithm’s accuracy, a comparator receives the candidates from multiple branches and chooses the output with the lowest LW, corresponding to the highest likelihood of being the correct guess.
+
+E. CRC Mode
+CRCs are binary linear codes that are widely used owing to the simplicity of their implementation and power-efficient error-checking capability. GRAND algorithms can upgrade CRCs from error detection to error correction [21]. When decoded using GRAND, short CRC codes exhibit error correction capabilities that match those of widely used codes like BCH and CA-Polar, without being constrained by code length or rate.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2653
+
+Fig. 8. (a) Reduction in the total MUX area, error generator’s area, and its power consumption obtained by the MUX optimization. (b) Reduction in overall area and power consumption of the decoder achieved by MUX optimization.
+
+Fig. 10. Performance evaluation of the system via synthesis to find the optimal number of parallel branches.
+
+Fig. 9. Block diagram illustrating the CRC codebook membership check performed by the segmented syndrome block for a 128-bit codeword.
+We implemented a CRC-tailored syndrome block for CRC membership check that enables further power reduction suitable for power-constrained devices, thereby prolonging battery life. Taking advantage of the cyclic property of CRC, the codeword is divided into segments of 32 bits, and the syndrome is computed iteratively. The CRC syndrome membership check will take n/32 cycles. Fig. 9 shows the architecture of the CRC syndrome block with an example to compute the syndrome of a 128-bit codeword.
+Two sets of 32 × 32-bit registers are required for segmented multiplication. These registers are programmed before the start of the decoding process. The first register set is loaded with the pre-computed syndromes of individual bits of a 32-bit vector, and the second register contains the identity matrix. When the decoding starts, the first 32 most significant bits (MSBs) of the received sequence yi are multiplied by the contents of the first register in the first cycle. In the second cycle, this product is XORed with the next 32 MSBs of yi , and the multiplication is performed again with the first register set. In the last cycle, we use the second register for multiplication to get the final syndrome of yi . For a 128-bit codeword,
+
+this process will take four cycles. This block has 4× fewer registers, 7.8× fewer gates, and 3× lower power consumption than the error checker. The error checker is disabled during the initial membership check in CRC mode. The advantage in area and power comes with a tradeoff in the latency of membership checks. Compared with the error checker, which takes a single cycle for the membership check, the segmented CRC block will take n/32 cycles. This feature allows the ORBGRAND chip to perform error detection and correction using CRCs while meeting the low power requirements of IoT devices used in non-latency-critical applications.
+F. Parallellization
+Parallel branches of the system perform multiple queries to speed up the noise-guessing process. Error search starts as soon as the sorter starts sorting the bits in ascending order of their reliability. Since the sorter is the most power-hungry block in the system, we use a single sorter and activate multiple branches of the landslide unit, error generator, and error checker when sufficient bits have been sorted.
+Multiple branches reduce the latency but come with a tradeoff in the area and power of the system. To choose the optimal number of branches in the system, we performed synthesis and evaluated the system performance in terms of energy per bit, power, area, throughput, and latency as the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2654
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+Fig. 11. Dynamic activation of the parallel branches of the landslide unit with fixed offsets to prevent system idling when a single sorter is shared. The blue boxes represent the number of least reliable bits sorted. Each branch of the landslide unit produces patterns for the LW values shown in this flow diagram. The gray box represents an update in the LW value of a branch by the LW/HW generation unit.
+
+Fig. 12. (a) Chip’s die micrograph, (b) measurement setup, and (c) measured and simulated FER performances for two different codebooks with varying lengths and rates.
+
+number of branches increases. We define the figure of merit (FoM) as throughput divided by the product of area and energy per bit. It can be seen from Fig. 10 that the optimal system performance is obtained when the number of branches is four.
+Since the system has a single sorter, if all the branches are activated as soon as the sorter is invoked, the error search will have to be stalled to wait for the sorter’s output. Therefore, these branches are activated sequentially, so no stalling is required when the branches share a single sorter. Since the pattern generator produces patterns in a pre-determined order, a fixed offset is needed for branch activation. The first branch is activated six cycles after the sorter starts sorting. The second branch is activated after a fixed offset of five cycles, allowing both branches to run without stalling. The third and fourth branches are activated after an offset of 13 cycles. This dynamic activation of branches ensures that sorted indices required by these parallel branches do not exceed the sorter output at any given time. This dynamic activation of parallel branches is illustrated in Fig. 11. The sorter output is the number of least reliable bits sorted. The indices in red determine the offset required for the branches since these indices are immediately used as soon as they are sorted. Each landslide unit produces a pattern for the given LW. The gray boxes show that the LW/HW generation unit has updated the LW for a particular branch that has completed the generation of all the given patterns for the previous value of LW.
+IV. MEASUREMENTS
+The chip is fabricated in the 40-nm CMOS technology occupying an active core area of 0.4 mm2. The die micro-
+
+graph is shown in Fig. 12(a). The decoder’s universality is demonstrated using different codebooks with varying code lengths and rates. The chip is reconfigurable to decode any binary linear codebook with a code length of 32–256 bits and varying rates (0.8–1). A test controller unit (TCU) is implemented, which consists of buffers to load the LLRs on the chip and provide the decoded data. The performance of the TCU is separately measured and excluded from the decoder’s performance since this block only facilitates the decoder testing. The clock is externally provided using the I/O pin. The input to the chip is the LLR vectors quantized to 6 bits, along with the demodulated bits. The chip is measured at the nominal supply voltage of 1.0 V at a maximum operating frequency of 90 MHz. The measurement setup of the chip is shown in Fig. 12(b). The chip is soldered to a custom PCB that connects to an Opal Kelly XEM7360 FPGA for the measurements. The FPGA is connected to the host PC, which sends the input LLRs along with associated demodulated bits and receives the decoded data back from the chip. For the simulations and the measurements in this section, the channel is modeled as additive white Gaussian noise (AWGN), and the binary phaseshift keying (BPSK) modulation scheme is used.
+A. Frame Error Rate
+The decoding performance of the chip is measured in terms of FER at different SNRs. Fig. 12(c) shows the FER performance of the chip obtained after decoding CA-Polar and CRC codebooks of 256- and 128-bit codelengths with code rates of 0.937 and 0.875, respectively. The solid markers represent the measured data, which agrees well with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2655
+
+Fig. 13. Chip’s (a) measured energy per bit, (b) measured latency, and (c) measured throughput performance for CRC and CA-Polar codebook with varying rates and code length.
+
+Fig. 14. (a) Voltage–frequency scaling of the chip measured for a CRC codebook of 256-bit code length in the universal mode. (b) Voltage–frequency scaling using the CRC mode to save power. (c) Latency tradeoff when CRC mode is used at nominal operating conditions of the chip.
+
+the simulated performance, thus validating the measurement results. Similar decoding performance is obtained for different codebooks, demonstrating the universality of the chip. Traditionally, CRCs have been used almost exclusively for error detection only. This work presents soft-detection decoding of CRCs, which provides competitive performance compared with the CA-Polar codes of the same dimensions.
+B. Energy, Latency, and Throughput
+The measured energy consumption per bit is shown in Fig. 13(a) for CRC and CA-Polar codebooks of 256- and 128-bit code length. The chip consumes 0.76 pJ/bit of energy from a nominal supply voltage of 1.0 V at an operating frequency of 90 MHz at a targeted output FER of 10-7 in the 40-nm CMOS when a 256-bit codebook is used. The decoder provides similar energy consumption regardless of the type of codebook used, and the energy consumption naturally decreases as the SNR increases, making the decoder adapt to its favorable channel conditions without any external control.
+The measured average latency and throughput of the chip are shown in Fig. 13(b) and (c), respectively. The average latency to decode a codeword of 256-bit length is measured to be 40 ns at an operating frequency of 90 MHz at a targeted FER of 10-7. At these operating conditions, the chip provides a throughput of 6.5 Gb/s. At the output FER of 10-5, the chip
+
+provides a throughput of 4.3 Gb/s for a codeword of 256-bit code length. The information throughput at an output FER of 10-7 and 10-5 for a code length of 256 bits and a code rate of 0.94 is 6 and 4 Gb/s, respectively. The throughput decreases for a shorter code length since some of the blocks in the system are inactive. Maximum throughput is obtained with a code length of 256 bits.
+The graph in Fig. 14(a) shows the chip’s measured voltage and frequency scaling performance. This measurement is conducted for a CRC codebook of 256-bit code length. The chip supports the lowest supply voltage of 0.75 V, at which it consumes an energy of 0.54 pJ/b at 35-MHz operating frequency. Fig. 14(b) shows the power consumption of the chip when the voltage and frequency are varied in both universal mode, where one branch of the error checker performs codebook membership check, and in the CRC mode where the segmented syndrome is used for the codebook membership check. CRC mode provides about 1.8× lower power consumption at the nominal operating conditions of the chip while providing the same FER performance as the universal mode. The tradeoff in latency is shown in Fig. 14(c) when the segmented syndrome is used in the CRC mode for a codebook of 256-bit code length. The CRC mode takes 2.9× higher latency. This mode of operation is useful for applications where the latency is not critical but there is a strict demand for power consumption such as battery-operated IoT devices.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2656
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+Fig. 15. Comparison table of the chip’s performance with the state-of-the-art code-specific decoders [31], [32], [33], [34], [35] and synthesized ORBGRAND architectures [28], [29].
+
+V. COMPARISON
+
+For performance comparison with the state-of-the-art fabricated code-specific decoders [31], [32], [33], [34], [35] and other proposed ORBGRAND architectures [28], [29], we report the measured performance of our decoder chip at two targeted FERs of 10-5 and 10-7. The comparison table is shown in Fig. 15. Since different decoders support different code rates, we have compared the performance using information bits such as energy per information bit and information throughput. The table in Fig. 15 also shows the performance of other works normalized to 40 nm and 1.0-V supply voltage. The scaling is done for the area, power, information throughput, energy per information bit, and area efficiency by S2, SV 2, 1/S, S2V 2, and 1/S3 where S represents the ratio of target technology to 40 nm and V represents the ratio of target supply voltage to 1.0 V, respectively. When non-normalized performance is considered, the chip consumes 27×, 56×, 9×, 20×, 2.6×, 86×, and 6.8× lower power and 3.9×, 5×, 33×, 273×, 34×, 139×, and 61× lower energy per information bits than [28], [29], [31], [32], [33], [34], and [35], respectively. The chip has 5.6×, 12.9×, 1.6×, 1.5×, and 1.76 × lower area than [28], [29], [31], [32], and [34] and 2.2× and 1.1× higher area than [33] and [35].
+The W.C. latency of the chip depends on the number of parity bits and occurs very infrequently. Fig. 16(a) shows the proportion of the frames with the W.C. latency as a function of
+
+Fig. 16. (a) Proportions of the frames that go up to a W.C. latency at a given Eb/N0, i.e., the probability of W.C. latency occurring during decoding. (b) Measured W.C. latency of our decoder for CRC codebook of 256- and 128-bit code lengths with different code rates. The straight line corresponds to the LW threshold of the chip.
+Eb/N0. Fig. 16(b) shows the W.C. latency of the chip in cycles for a CRC codebook with 256- and 128-bit code lengths with different rates. For CRC(256, 240), the worst case latency is measured to be 1657 µs at 90 MHz of operating frequency that occurs infrequently with a probability of 10-8 at a target output FER of 10-5.
+Fig. 17 shows comparison of the energy consumption per information bit, the information throughput, and the power of the decoders reported for various FERs. The green arrows on the top-right show the direction in which the ideal system performance is desired. The dotted diagonal lines on this graph
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2657
+
+do not include effects such as parasitics, performance degradation due to routing, and timing mismatch, all of which lower maximum operating frequency. Such effects can account for more than 2× of frequency lowering. A summary of the chip’s synthesized and measured performance is shown in Fig. 18 for different code rates and lengths. The synthesized decoder supports an operating frequency of 180 MHz. The synthesized design consumes 242 fJ/b of energy with a latency of 20 ns, a power consumption of 3.1 mW, and provides 12.8 Gb/s of throughput. Here, the performance, such as energy per bit and throughput, is shown for the 128- and 256-bit code lengths.
+
+Fig. 17. Comparison of the state-of-the-art decoders’ energy, throughput, and power with the ORBGRAND chip at different targeted FERs.
+
+VI. CONCLUSION
+We present the hardware architecture of the first integrated universal soft-detection decoder using ORBGRAND. The decoder architecture is reconfigurable to any binary linear codebook with 32- to 256-bit code length and varying code rates from 0.8 to 1. The decoder is optimized for low power and ultra-low energy consumption by dynamically sorting only the required bits and implementing an efficient integer partition generation unit to test the noise effect sequences. The decoder has been implemented in the 40-nm CMOS technology that uses a small core area of 0.4 mm2. The universality of the decoder is demonstrated via measured performance for CA-Polar and CRC codebooks with 256- and 128-bit code lengths. The decoder consumes 0.76 pJ/b of energy and 4.9 mW of power while providing a throughput of 6.5 Gb/s and a latency of 40 ns at the operating frequency of 90 MHz from a 1-V power supply for a 256-bit code length irrespective of the codebook used. This code-agnostic decoder achieves sub-pJ/b of energy consumption and consumes less than 5 mW of power, orders of magnitude lower than the state-of-the-art code-specific decoders. This implementation enables energyefficient soft-detection decoding of any binary linear codebook for a wide range of applications with a strict demand on power and area while meeting the throughput and latency requirements.
+
+Fig. 18. Measured and synthesized performance summary of the ORBGRAND chip.
+are the constant power lines. There is a tradeoff between throughput and power, where higher throughput comes with higher dynamic power consumption while the energy per bit is roughly the same. The total energy consumption decreases as higher throughput is obtained since the leakage part of total power contributes less to the overall system power. Compared with the prior works, this work pushes the boundary of the lowest energy consumption of the decoders in the sub-pJ range while consuming less than 5 mW of power.
+While we provide the measured results obtained from the chip, comparing the fabricated chip with the synthesized-only designs does not provide a fair comparison since the syntheses
+
+ACKNOWLEDGMENT
+The opinions, findings, and conclusions expressed in this material are those of the author(s) and do not necessarily reflect the views of these organizations.
+REFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” Bell Syst. Tech. J., vol. 27, no. 3, pp. 379–423, 1948.
+[2] E. Berlekamp, R. J. McEliece, and H. C. A. Van Tilborg, “On the inherent intractability of certain coding problems (corresp.),” IEEE Trans. Inf. Theory, vol. IT-24, no. 3, pp. 384–386, May 1978.
+[3] I. S. Reed and G. Solomon, “Polynomial codes over certain finite fields,” J. Soc. Ind. Appl. Math., vol. 8, no. 2, pp. 300–304, Jun. 1960.
+[4] I. Reed, “A class of multiple-error-correcting codes and the decoding scheme,” Trans. IRE Prof. Group Inf. Theory, vol. 4, no. 4, pp. 38–49, Sep. 1954.
+[5] D. E. Müller, “Application of Boolean algebra to switching circuit design and to error detection,” Trans. IRE Prof. Group Electron. Comput., vol. EC-3, no. 3, pp. 6–12, 1954.
+[6] E. R. Berlekamp, Algebraic Coding Theory. Singapore: World Scientific, 1968.
+[7] J. Massey, “Shift-register synthesis and BCH decoding,” IEEE Trans. Inf. Theory, vol. IT-15, no. 1, pp. 122–127, Jan. 1969.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+2658
+
+IEEE JOURNAL OF SOLID-STATE CIRCUITS, VOL. 60, NO. 7, JULY 2025
+
+[8] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf.
+
+Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+
+[9] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance
+
+of low density parity check codes,” Electron. Lett., vol. 33, no. 6,
+
+pp. 457–458, 1997.
+
+[10] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes. 1,” in Proc. IEEE Int. Conf. Commun., vol. 2, May 1993, pp. 1064–1070.
+
+[11] K. Niu and K. Chen, “CRC-aided decoding of polar codes,” IEEE
+
+Commun. Lett., vol. 16, no. 10, pp. 1668–1671, Oct. 2012.
+
+[12] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+
+[13] A. Balatsoukas-Stimming, A. J. Raymond, W. J. Gross, and A. Burg,
+
+“Hardware architecture for list successive cancellation decoding of polar
+
+codes,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 61, no. 8,
+
+pp. 609–613, Aug. 2014.
+
+[14] Technical Specification Group Radio Access Network; NR; Multiplex-
+
+ing and Channel Coding (release 16), document 3GPP TR 38.212,
+
+2020.
+
+[15] K. R. Duffy, J. Li, and M. Médard, “Capacity-achieving guessing random
+
+additive noise decoding,” IEEE Trans. Inf. Theory, vol. 65, no. 7,
+
+pp. 4023–4040, Jul. 2019.
+
+[16] A. Riaz et al., “Multi-code multi-rate universal maximum likelihood decoder using GRAND,” in Proc. IEEE 47th Eur. Solid State Circuits Conf. (ESSCIRC), Sep. 2021, pp. 239–246.
+
+[17] S. M. Abbas, T. Tonnellier, F. Ercan, and W. J. Gross, “High-throughput
+
+VLSI architecture for GRAND,” in Proc. IEEE Workshop Signal Pro-
+
+cess. Syst. (SiPS), Oct. 2020, pp. 1–6.
+
+[18] S. M. Abbas, M. Jalaleddine, and W. J. Gross, “High-throughput VLSI architecture for GRAND Markov order,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Oct. 2021, pp. 158–163.
+
+[19] S.-I. Chu, S.-A. Ke, S.-J. Liu, and Y.-W. Lin, “An efficient hard-detection GRAND decoder for systematic linear block codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 11, pp. 1852–1864,
+
+Nov. 2023.
+
+[20] V.
+
+Papadopoulou,
+
+M.
+
+Hashemipour-Nazari,
+
+and
+
+A. Balatsoukas-Stimming, “Short codes with near-ML universal decoding: Are random codes good enough?” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Oct. 2021, pp. 94–98.
+
+[21] W. An, M. Médard, and K. R. Duffy, “CRC codes as error correction
+
+codes,” in Proc. IEEE Int. Conf. Commun., Jun. 2021, pp. 1–6.
+
+[22] K. Galligan, P. Yuan, M. Médard, and K. R. Duffy, “Upgrade error detection to prediction with GRAND,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2023, pp. 1818–1823.
+
+[23] T. Kaneko, T. Nishijima, and S. Hirasawa, “An improvement of soft-
+
+decision maximum-likelihood decoding algorithm using hard-decision
+
+bounded-distance decoding,” IEEE Trans. Inf. Theory, vol. 43, no. 4,
+
+pp. 1314–1319, Jul. 1997.
+
+[24] K. R. Duffy, M. Médard, and W. An, “Guessing random additive
+
+noise decoding with symbol reliability information (SRGRAND),” IEEE
+
+Trans. Commun., vol. 70, no. 1, pp. 3–18, Jan. 2022.
+
+[25] A. Solomon, K. R. Duffy, and M. Médard, “Soft maximum likelihood decoding using GRAND,” in Proc. IEEE Int. Conf. Commun. (ICC),
+
+Jun. 2020, pp. 1–6.
+
+[26] K. R. Duffy, W. An, and M. Médard, “Ordered reliability bits guessing
+
+random additive noise decoding,” IEEE Trans. Signal Process., vol. 70,
+
+pp. 4528–4542, 2022.
+
+[27] M. Liu, Y. Wei, Z. Chen, and W. Zhang, “ORBGRAND is almost capacity-achieving,” IEEE Trans. Inf. Theory, vol. 69, no. 5,
+
+pp. 2830–2840, May 2023.
+
+[28] S. M. Abbas, T. Tonnellier, F. Ercan, M. Jalaleddine, and W. J. Gross,
+
+“High-throughput and energy-efficient VLSI architecture for ordered
+
+reliability bits GRAND,” IEEE Trans. Very Large Scale Integr. (VLSI)
+
+Syst., vol. 30, no. 6, pp. 681–693, Jun. 2022.
+
+[29] C. Condo, “A fixed latency ORBGRAND decoder architecture with
+
+LUT-aided error-pattern scheduling,” IEEE Trans. Circuits Syst. I, Reg.
+
+Papers, vol. 69, no. 5, pp. 2203–2211, May 2022. [30] A. Riaz et al., “A sub-0.8pJ/b 16.3 Gbps/mm2 universal soft-
+detection decoder using ORBGRAND in 40 nm CMOS,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, Feb. 2023,
+
+pp. 432–434.
+
+[31] Y. Tao, S.-G. Cho, and Z. Zhang, “A configurable successive-cancellation
+
+list polar decoder using split-tree architecture,” IEEE J. Solid-State
+
+Circuits, vol. 56, no. 2, pp. 612–623, Feb. 2021.
+
+[32] D. Kam, B. Y. Kong, and Y. Lee, “A 1.1 µs 1.56 Gb/s/mm2 cost-efficient large-list SCL polar decoder using fully-reusable LLR buffers in 28 nm CMOS technology,” in Proc. IEEE Symp. VLSI Technol. Circuits (VLSI Technol. Circuits), Jun. 2022, pp. 204–205.
+[33] C.-F. Teng, C.-H. Chen, and A.-Y. Wu, “An ultra-low latency 7.8–13.6 pJ/b reconfigurable neural network-assisted polar decoder with multi-code length support,” in Proc. IEEE Symp. VLSI Circuits, Jun. 2020, pp. 1–2.
+[34] Y.-T. Chen, W.-C. Sun, C.-C. Cheng, T.-L. Tsai, Y.-L. Ueng, and C.-H. Yang, “An integrated message-passing detector and decoder for polar-coded massive MU-MIMO systems,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 3, pp. 1205–1218, Mar. 2019.
+[35] D. Kam, S. Yun, J. Choe, Z. Zhang, N. Lee, and Y. Lee, “A 21.9 ns 15.7 Gbps/mm2 (128,15) BOSS FEC decoder for 5G/6G URLLC applications,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, Feb. 2024, pp. 50–52.
+Arslan Riaz (Member, IEEE) received the B.S. degree in electrical engineering from the National University of Sciences and Technology (NUST), Islamabad, Pakistan, in 2018, and the M.S. and Ph.D. degrees from Boston University, Boston, MA, USA, in 2024, specializing in guessing random additive noise decoding hardware implementation.
+He was a Research Assistant with the Electrical Engineering Department, Lahore University of Management Sciences (LUMS), Lahore, Pakistan, from 2018 to 2019. He is currently a Post-Doctoral Associate with the Electrical and Computer Engineering Department, Boston University. His research is oriented toward the development of energy-efficient and secure wireless communication systems in collaboration with Massachusetts Institute of Technology (MIT), Cambridge, MA, USA, and Northeastern University, Boston. Dr. Riaz was a recipient of several awards, including IEEE COMSNETS’22 and COMSNETS’23 Best Research Demo Award, CISE Best Presentation Award 2022 and 2024, and BU Doctoral Achievement Award 2024.
+Alperen Yasar (Graduate Student Member, IEEE) received the B.Sc. degree in electronics engineering from Sabanci University, Istanbul, Türkiye, in 2021. He is currently pursuing the Ph.D. degree with the Department of Electrical and Computer Engineering, Boston University, Boston, MA, USA.
+Since the fall of 2021, he has been a member of the Wireless Integrated Systems and Extreme Circuits Laboratory (WISE-Circuits), Boston University. His research interests include ultra-low-power analog design for biomedical applications and analog/RF solutions for physical-layer security.
+Furkan Ercan (Member, IEEE) received the B.Sc. degree in electrical and electronics engineering and the M.Sc. degree in sustainable environment and energy systems from Middle East Technical University, Ankara, Türkiye, in 2011 and 2015, respectively, and the Ph.D. degree from McGill University, Montréal, QC, Canada, in 2020, specializing in advanced polar decoder algorithms and their implementations.
+His career trajectory includes positions as a 5G Algorithm Developer at Octasic, Montréal, in 2021 and as a Post-Doctoral Associate with Boston University, Boston, MA, USA, in 2022. He is currently a Staff Research Scientist with Intel Corporation, Hudson, MA, USA. His research is centered on algorithms, signal processing, and the hardware and software implementations for channel coding in the domains of 5G, 6G, and satellite communications. He has made significant contributions to the field, documented through various journals, patents, proceedings, invited talks, book chapters, and awards. Dr. Ercan currently serves as an Associate Editor for IEEE COMMUNICATIONS LETTERS, where he continues to contribute his expertise to the advancement of communication technologies.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+RIAZ et al.: SUB-0.8-pJ/bit UNIVERSAL SOFT-DETECTION DECODER USING ORBGRAND
+
+2659
+
+Wei An (Member, IEEE) received the bachelor’s degree in automatic control from Shanghai Jiao Tong University, Shanghai, China, the master’s degree in electrical engineering from the University of Delaware, Newark, DE, USA, and the Electrical Engineering and Ph.D. degrees from the Department of Electrical Engineering and Computer Science, Massachusetts Institute of Technology (MIT), Cambridge, MA, USA.
+He is an Engineer that specializes in signal processing for wireless and optical communications. His interests are in taking projects from conception, through stages of algorithm design, simulation, VLSI design, verification, and production.
+
+Inaugural MIT Excellence in Postdoctoral Mentoring Award in 2022 and the Inaugural MIT EECS Graduate Student Association Mentor Award in 2013, voted by the students. She set up the Women in the Information Theory Society (WithITS) and Information Theory Society Mentoring Program, for which she was recognized with the 2017 IEEE Aaron Wyner Distinguished Service Award. She serves on the Nokia Bell Labs Technical Advisory Board. She currently serves as the Editor-in-Chief for the IEEE TRANSACTIONS ON INFORMATION THEORY. She was elected as the President of the IEEE Information Theory Society in 2012 and served on its board of governors for a dozen years. She has served as an Editor or a Guest Editor for many IEEE publications, including the IEEE TRANSACTIONS ON INFORMATION THEORY, the IEEE JOURNAL OF LIGHTWAVE TECHNOLOGY, and the IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY.
+
+Jonathan Ngo (Student Member, IEEE) received the B.S. degree in electrical engineering from Boston University, Boston, MA, USA, in 2022.
+As an undergraduate, he joined the Wireless Integrated Systems and Extreme Circuits (WISE Circuits) Group, Boston University, to assist in secure wireless communication device development. During that time, he received UROP Grants in 2021 and 2022. He is currently an FPGA Verification Engineer at Collins Aerospace, Charlotte, NC, USA.
+Kevin Galligan (Graduate Student Member, IEEE) received the Ph.D. degree from the Hamilton Institute, Maynooth University, Maynooth, Ireland, in 2024.
+He has authored several peer-reviewed articles, including one that received the Best Paper award at CISS 2023. His research has focused on decoding algorithms for channel codes.
+
+Ken R. Duffy (Senior Member, IEEE) received the B.A. degree in mathematics and the Ph.D. degree in probability theory from the Trinity College Dublin, Dublin, Ireland, in 1996 and 2000, respectively.
+He is currently a Professor of electrical and computer engineering and a Professor of mathematics with Northeastern University, Boston, MA, USA, where he is also with the Institute for the Wireless Internet of Things. He works in collaborative multidisciplinary teams to design, analyze, and realize algorithms using tools from probability, statistics, and machine learning. The algorithms he has developed have been implemented in digital circuits and in DNA. He has co-authored a cover article of Trends in Cell Biology in 2012. Dr. Duffy was a Co-Founder of the Royal Statistical Society’s Applied Probability Section in 2011 and a co-recipient of the Best Paper Award at the IEEE International Conference on Communications in 2015, the Best Paper Award from IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING in 2019, the Best Research Demo Award from COMSNETS in 2022 and 2023, and the Ellersick Best Paper Award from IEEE MILCOM in 2024. He serves as an Associate Editor for the IEEE TRANSACTIONS ON INFORMATION THEORY and the IEEE TRANSACTIONS ON MOLECULAR, BIOLOGICAL AND MULTI-SCALE COMMUNICATIONS.
+
+Muriel Médard (Fellow, IEEE) received the three bachelor’s degrees in EECS, mathematics, and Humanities from Massachusetts Institute of Technology (MIT), Cambridge, MA, USA, in 1989, 1989, and 1991, respectively, and the M.S. and Sc.D. degrees from MIT in 1991 and 1995, respectively.
+She is currently the NEC Professor of software science and engineering with the Electrical Engineering and Computer Science (EECS) Department, MIT, where she leads the Network Coding and Reliable Communications Group, Research Laboratory for Electronics. She is the Chief Scientist of Steinwurf, Steinwurf, Denmark, which she has co-founded. For technology transfer, she has also co-founded CodeOn, USA, for which she consults. She has more than 80 U.S. and international patents awarded, the majority of which have been licensed or acquired. She has supervised more than 40 master’s students, more than 20 Ph.D. students, and more than 25 post-doctoral fellows. Dr. Médard was elected as a member of the German National Academy of Sciences Leopoldina in 2022, the American Academy of Arts and Sciences in 2021, and the U.S. National Academy of Engineering in 2020, and a fellow of the U.S. National Academy of Inventors in 2018. She received the Honorary Doctorate from the Technical University of Munich in 2020, the University of Aalborg in 2022, and the Budapest Institute of Technology and Economics (BME) in 2023. She was a co-recipient of the MIT 2004 Harold E. Edgerton Faculty Achievement Award in 2007. She received the 2017 IEEE Communications Society Edwin Howard Armstrong Achievement Award and the 2016 IEEE Vehicular Technology James Evans Avant Garde Award. She received the 2022 IEEE Kobayashi Computers and Communications Award. She also received the 2019 Best Paper Award for IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, the 2018 ACM SIGCOMM Test of Time Paper Award, and nine conference paper awards. She received the
+
+Rabia Tugce Yazicigil (Senior Member, IEEE) received the Ph.D. degree from Columbia University, New York, NY, USA, in 2016.
+She was a Post-Doctoral Associate with Massachusetts Institute of Technology (MIT), Cambridge, MA, USA. She is currently an Assistant Professor with the ECE Department, Boston University, Boston, MA, USA, and a Network Faculty with Sabanci University, Istanbul, Türkiye. Her research interests lie at the interface of integrated circuits, bio-sensing, signal processing, security, and wireless communications to innovate system-level solutions for future energy-constrained applications. Dr. Yazicigil is an Active Member of the Solid-State Circuits Society (SSCS) Women-in-Circuits Committee and a member of the 2015 MIT EECS Rising Stars Cohort. She received numerous awards, including the NSF CAREER Award in 2024, the Early Career Excellence in Research Award for the Boston University College of Engineering in 2024, the Catalyst Foundation Award in 2021, the Boston University ENG Dean Catalyst Award in 2021, and the “Electrical Engineering Collaborative Research Award” for her Ph.D. research in 2016. She is the Workshop Co-Chair for the IEEE ESSERC 2024 and a Technical Program Committee Member for the IEEE ISSCC, RFIC, and DAC. She is selected as an IEEE SSCS Distinguished Lecturer for the 2024–2026 term and elected to the IEEE SSCS AdCom as a Member-at-Large in 2024. She was selected as a member of the 2024 National Academy of Engineering (NAE) U.S. Frontiers of Engineering (USFOE) Cohort. She serves as an Associate Editor for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I (TCAS-I) and the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR ARTIFICIAL INTELLIGENCE (TCASAI).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:41:35 UTC from IEEE Xplore. Restrictions apply.
+
+

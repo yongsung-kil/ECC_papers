@@ -1,0 +1,1321 @@
+5692
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+Fully Parallel Stochastic LDPC Decoders
+Saeed Sharifi Tehrani, Student Member, IEEE, Shie Mannor, Member, IEEE, and Warren J. Gross, Member, IEEE
+
+Abstract—Stochastic decoding is a new approach to iterative
+
+decoding on graphs. This paper presents a hardware architecture
+
+for fully parallel stochastic low-density parity-check (LDPC) de-
+
+coders. To obtain the characteristics of the proposed architecture,
+
+we apply this architecture to decode an irregular state-of-the-art
+
+(1056,528) LDPC code on a Xilinx Virtex-4 LX200 field-pro-
+
+grammable gate-array (FPGA) device. The implemented decoder
+
+= 10 achieves a clock frequency of 222 MHz and a throughput of about
+
+1.66 Gb/s at
+
+0
+
+4.25 dB (a bit error rate of
+
+8). It
+
+provides decoding performance within 0.5 and 0.25 dB of the
+
+floating-point sum-product algorithm with 32 and 16 iterations,
+
+respectively, and similar error-floor behavior. The decoder uses
+
+less than 40% of the lookup tables, flip-flops, and IO ports avail-
+
+able on the FPGA device. The results provided in this paper
+
+validate the potential of stochastic LDPC decoding as a practical
+
+and competitive fully parallel decoding approach.
+
+Index Terms—Field programmable gate arrays (FPGAs), iterative decoding, low-density parity-check (LDPC) codes , stochastic decoding.
+
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) block codes [1] are powerful linear error-correcting codes with decoding performance close to the Shannon capacity limit [2]. These codes have been considered for several recent digital communication standards such as the DVB-S2 [3], the IEEE 802.3an (10GBASE-T) [4], the IEEE 802.16e (WiMAX) [5], and the IEEE 802.11n (WiFi) [6] standards. LDPC codes are usually iteratively decoded by means of belief propagation [7] using message passing algorithms such as the Sum–Product Algorithm (SPA) or its less-complex approximation, the Min-Sum Algorithm (MSA) [8], with the expense of some decoding loss. LDPC codes and their iterative decoding process can be graphically represented using bipartite factor graphs [9]. Factor graphs consist of two distinctive groups of nodes, variable nodes (VNs) and parity-check nodes (PNs). Each edge in a factor graph connects a VN to a PN. LDPC decoding involves message passing between VNs and PNs over the edges of the factor graph. This message passing scheme can be done concurrently, which inherently introduces a high level of parallelism in LDPC decoding. This attractive feature together with the excellent decoding performance of LDPC codes have made the
+Manuscript received April 7, 2007; revised June 6, 2008. First published August 19, 2008; current version published Ocrober 15, 2008. The associate editor coordinating the review of this paper and approving it for publication was Prof. Jarmo Takala. The authors acknowledge the Natural Sciences and Engineering Research Council of Canada (NSERC), the Canada Research Chairs (CRC), and the Fonds Québécois de la Recherche sur la Nature et les Technologies (FQRNT) for their financial support.
+The authors are with the Department of Electrical and Computer Engineering, McGill University, Montreal, Quebec, H3A 2A7, Canada (e-mail: sshari9@ece. mcgill.ca; shie@ece.mcgill.ca; wjgross@ece.mcgill.ca).
+Digital Object Identifier 10.1109/TSP.2008.929671
+
+efficient high-speed implementation of LDPC decoders a focal point of research in recent years.
+In general, fully parallel and partially parallel architectures are two main strategies for the implementation of LDPC decoders. In the fully parallel strategy, the entire factor graph is implemented in hardware and all VNs and PNs in the graph are updated concurrently. Fully parallel decoders are usually implemented to achieve high-throughput decoding of a certain LDPC code at the cost of high area consumption. This approach is particularly considered for applications with high-speed requirements such as the IEEE 802.3an (10GBASE-T) standard [4]. The partially parallel approach instantiates a portion of the factor graph. Partially parallel decoders employ memory and hardware resource sharing to manage message passing between different portions of the factor graph. The main benefits of this approach are to minimize the area and/or to offer the flexibility to support different block lengths and code rates in applications such as IEEE 802.16e (WiMAX) [5] and IEEE 802.11n (WiFi) [6]. However, the partially parallel approach has a much lower throughput compared to the fully parallel approach. The partially parallel approach is also used for the implementation of LDPC decoders with very long block lengths where the fully parallel approach is not feasible today, such as the LDPC code for the DVB-S2 standard with a block length of 64 800 bits [10].
+A major challenge in the implementation of LDPC decoders is the complexity of the interconnections between VNs and PNs. The complexity of the interleaver is due to the random-like locations of ones in the code’s parity-check matrix. This problem is acute for practical fully parallel decoders (where the code block length is usually large) and results in routing congestion and interconnection problems [11]–[13]. The routing congestion causes high area consumption and low logic utilization in the decoder. For instance, with 4-bit precision of probability messages, the 52.5 mm die size of the (1024,512) decoder in [11] has a logic utilization of 50% in its core; the rest of the core area is occupied by wires. In addition to high area consumption, the presence of long physical wires in the interleaver increases the power consumption and limits the maximum achievable clock frequency and thus the throughput of a fully parallel LDPC decoder (see [11]–[14]). To alleviate these problems, different approaches are investigated in the literature at both code design and hardware implementation levels. One approach is to design “implementation-aware” codes. In this approach, instead of randomly choosing the locations of ones in the parity-check matrix (at the code design stage), the parity-check matrix of an LDPC code is designed with constraints allowing a suitable structure for decoder implementation and providing acceptable decoding performance [15]–[20]. Another approach used to alleviate the routing congestion problem is to use bit-serial or digit-serial architectures to implement LDPC decoders. Examples of this approach are the recent FPGA
+
+1053-587X/$25.00 © 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+
+5693
+
+implementation of a bit-serial (480,355) LDPC decoder in [21],
+
+the ASIC implementation of a (660,480) LDPC decoder in
+
+[12] based on bit-serial approximate MSA, and the MSA-based
+
+bit-serial (256,128) LDPC decoder in [22]. Also, a message
+
+broadcasting technique was recently suggested to alleviate the
+
+routing congestion by reducing node-to-node communication
+
+complexity in LDPC decoders [13]. Bit-flipping (BF) decoding
+
+[1] is another approach for low-complexity LDPC decoding
+
+with the cost of some performance loss. Bit-flipping methods
+
+do not exploit message passing, they use the knowledge of
+
+unsatisfied parity-checks to iteratively correct bit errors. Re-
+
+cently, there has been research interest in various bit-flipping
+
+methods such as weighted BF methods (see [23] and [24]) and
+
+a newly proposed differential binary BF-based method [25].
+
+Among conventional BF methods, the weighted BF method
+
+in [24] performs well on many LDPC codes and has a per-
+
+formance loss of about 0.5 to 1 dB, compared to SPA [24].
+
+LDPC decoders can be implemented with a programmable
+
+architecture or processor, which lend themselves to Software
+
+Defined Radio (SDR). SDR is a programmable hardware plat-
+
+form that consists of multiple processing and memory units.
+
+SDR supports software implementations of wireless communi-
+
+cation protocols for physical layers. SDR offers flexibility to
+
+support codes with different block lengths and rates, however,
+
+the throughput of SDR-based LDPC decoders is usually low
+
+(e.g., see [26]). In addition to digital decoders, continuous-time
+
+analog implementations have been considered for LDPC codes
+
+[27] and other error-correcting codes [28]–[33]. Compared to
+
+their digital counterparts, analog decoders offer improvements
+
+in speed and/or power. However, because of the complex and
+
+technology-dependent design process, the analog approach has
+
+been only considered for short error-correcting codes. The only
+
+reported analog LDPC decoder decodes a (32,8) code [27].
+
+Stochastic decoding is a new alternative approach for
+
+decoding LDPC codes. Stochastic decoding is inspired by
+
+stochastic computation [34] where probabilities are converted
+
+to streams of stochastic bits and complex probability operations
+
+such as division and multiplication are performed on stochastic
+
+bits using simple bit-serial structures. Early stochastic decoding
+
+methods could only decode acyclic/simple codes such as very
+
+short LDPC codes or Hamming codes [35]–[37]. Stochastic
+
+decoding was also used for decoding a (256,121) Turbo product
+
+code based on acyclic (16,11) Hamming component trellis
+
+decoders [38], [39]. The earliest hardware implementation of
+
+a stochastic LDPC decoder belongs to a specially-constructed
+
+tail-biting (16,8) LDPC decoder [37]. The first practical sto-
+
+chastic method for decoding LDPC codes was proposed in [40].
+
+It was shown that with respect to the floating-point SPA, sto-
+
+chastic decoding is potentially able to achieve almost identical
+
+decoding performance for short LDPC codes and near-optimal
+
+performance for practical (long) LDPC codes. The potential of
+
+this method for low-complexity and fast decoding was recently
+
+validated by an FPGA implementation of a (1024,512) regular
+
+LDPC decoder with degree-3 VNs and degree-6 PNs [41]. This
+
+decoder occupies about 36% of a Xilinx Virtex-4 LX200 FPGA
+
+device. It also achieves a throughput of 706 Mb/s at a bit error
+
+rate (BER) of
+
+[41].
+
+Fig. 1. Typical factor graph and the interleaver for an (n; k) LDPC code. A length-4 cycle is dashed. In a conventional implementation with W -bit representation of messages, each edge requires 2W wires (for two directions).
+
+This paper presents an architecture for fully parallel stochastic LDPC decoding. Compared to our previous work in [41], this paper proposes several novel architectural techniques that improve both the hardware and decoding performance of stochastic decoders. The proposed architecture is applied to a fully parallel stochastic LDPC decoder that decodes a state-of-the-art irregular (1056,528) LDPC code on a FPGA. To show the good decoding performance and the error-floor behavior of the proposed architecture, the decoding performance of (1056,528) and (1056,704) stochastic decoders are compared to the floating-point SPA. It should be noted that the floating-point SPA is considered as a nearly-ideal case for LDPC decoding and has very high hardware complexity, hence, the BER decoding performance of hardware architectures are usually not compared to the floating-point SPA. This paper also discusses the hardware performance and various attractive features and tradeoffs offered by the proposed architecture. The rest of the paper is organized as follows. Section II provides a brief overview of LDPC codes, SPA, and stochastic decoding. Section III describes stochastic LDPC decoding. Section IV proposes the architecture for the fully parallel LDPC stochastic decoder along with various novel architectural features. Sections V and VI discuss the performance and tradeoffs, and provide comparison with the state-of-the-art work. Finally, Section VII gives the conclusions.
+
+II. BACKGROUND
+
+A. Review of LDPC Codes and the Sum–Product Algorithm
+
+A binary
+
+LDPC code is defined as the null space of
+
+a sparse
+
+parity-check matrix ,
+
+, where
+
+is the transmitted block containing information and
+
+parity bits. This LDPC code can be represented by a factor graph
+
+with VNs and
+
+PNs. The th VN, , is connected to th
+
+PN if and only if
+
+in (see Fig. 1). The number of
+
+edges connected to a node (in the interleaver) is referred to as
+
+the degree of the node and represented as for the VNs and
+
+for the PNs. In regular codes, and are fixed for all VNs
+
+and PNs, respectively. In irregular LDPC codes, and vary
+
+for different nodes.
+
+The SPA is an iterative algorithm for decoding LDPC
+
+codes. SPA uses soft information (probabilities) received
+
+from the channel and iteratively processes them. The SPA
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+5694
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+makes decisions by comparing final probabilities to a threshold
+
+value (hard-decision) at the end of the decoding process. Let
+
+and respectively denote the th sample in the
+
+transmitted and received block, in a binary phase-shift keying
+
+(BPSK) transmission over an additive white Gaussian noise
+
+(AWGN) channel. Also, let
+
+be the probability
+
+message from the VN with
+
+to the PN with
+
+and
+
+be the probability message from to .
+
+Let
+
+represent the set of VNs connected to and,
+
+represent the set of PNs connected to .1 The SPA
+
+steps in the probability-domain can be described as follows
+
+(see [9] and [42] for details).
+
+Fig. 2. Some possible streams for a probability of 0.8125.
+
+1) Initialize the received probability for as
+
+.
+
+2) The sends to all connected PNs.
+
+3) The PN sends
+
+to the VN :
+
+4) The VN sends
+
+to the PN :
+
+(1)
+Fig. 3. Early structure for a stochastic (a) VN and (b) PN [35], [40].
+
+(2)
+
+some possible streams for a probability of
+
+.
+
+5) Stop decoding once a fixed number of iterations has been
+
+exceeded or the estimated vector, , satisfies
+
+.
+
+Otherwise, return to Step 3.
+
+In each stream, 13 bits out of 16 bits are 1. Using stochastic transformation, operations such as multiplication and division on probabilities can be performed using simple structures. For example, multiplication of two probabilities represented by
+
+Due to the high (hardware) complexity of the SPA operations in the probability-domain, the SPA is usually implemented in the log-domain where channel probabilities are considered as log-likelihood ratios (LLRs):
+
+two stochastic streams can be performed by an AND gate and a division of two probabilities can be approximated by a JK flip-flop (see [34] and [46]).
+Fig. 3(a) shows the early structure for a stochastic VN [35], [40] and Fig. 3(b) illustrates the structure for a stochastic PN
+
+(3) [35] (see Appendix I for the proof of these operations). A sto-
+
+chastic VN uses its previous output bit (i.e.,
+
+) when its
+
+where and are the th transmitted and received symbols,
+
+respectively, and is the LLR of . Using the log-domain
+
+conversion, VNs calculate the summation of LLR messages and
+
+PNs employ
+
+processing to compute their outgoing mes-
+
+sages [42]. In MSA, the
+
+processing in PNs is approxi-
+
+mated to reduce the complexity at the expense of about 0.5 to
+
+1 dB performance loss, compared to the SPA [43], [44]. To com-
+
+pensate for some of the loss, different improved methods are
+
+suggested in the literature (e.g., see [45]).
+
+input bits are not equal. This is referred to as the hold state of the VN for the corresponding edge. The decoding process proceeds by VNs and PNs exchanging bits over the edges of the graph. Each decoding round is called a decoding cycle (DC). A DC includes the exchange of one bit between VNs and PNs and thus does not directly correspond to one iteration in the SPA [40]. The simplicity of the stochastic approach as well as its bit-serial nature is appealing for LDPC decoding. However, these stochastic structures are not sufficient for decoding practical codes. Stochastic decoders are prone to the latching (lock-up) problem
+
+B. Stochastic Computation and Decoding
+
+In stochastic computation, probabilities received from the
+
+channel are converted to streams of bits called Bernoulli se-
+
+quences [34]. In this transformation, each bit in a stochastic
+
+stream is equal to 1 with the probability to be represented.
+
+Therefore, the observation of 1’s in a stream of bits, ,
+
+determines the probability, i.e.,
+
+. The trans-
+
+formation of a probability to a stochastic stream is not unique,
+
+therefore, different stochastic streams are possible for a given
+
+probability. This also implies that the order/sequence of 1’s in
+
+a stochastic stream is not important. For example, Fig. 2 shows
+
+when the code graph has cycles. The latching problem refers to the situation where the existence of cycles in the code graph correlates the stochastic streams and makes groups of stochastic nodes stick into fixed states for several DCs [38], [40]. This situation is particularly more likely to happen when the PNs connected to a VN in the cycle are in disagreement about the correctness of the received bit at the VN. In this case, the input of the stochastic VN are not equal, therefore, the VN remains in the hold state for several DCs and repeatedly outputs the same bit. Also, as shown in [40], the latching problem is more pronounced at high SNRs where the probabilities received from the channel are very close to 1 (or 0) and hence bits in the equiva-
+
+1This is without loss of generality since a higher degree nodes can be con- lent stochastic streams are mostly 1s (or 0s) and rarely change.
+
+verted to subgraphs containing only degree three nodes [9].
+
+In this situation, the lack of random bit transitions (from 0 to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+
+5695
+
+1 and vice versa) within cycles prevents nodes from exiting the nonhold states [see Fig. 3(a)]. The essentials of the operation of
+
+fixed states they have locked in. The latching problem prevents EMs are as follows.
+
+the affected nodes from converging to right decisions and hence 1) EM are only updated with the regenerative bits. Therefore,
+
+disrupt the convergence of the decoder to the right codeword and
+
+when a VN is not in the hold state, the newly produced re-
+
+severely degrades the BER decoding performance. The latching
+
+generative bit is used as the outgoing bit of the edge and
+
+problem is particularly acute for long LDPC codes because the
+
+the EM is updated with this new bit. When the VN is in
+
+code graph has many cycles, particularly, short cycles such as
+
+the hold state for an edge, a bit is randomly chosen from
+
+length-6 cycles (namely, 6-cycles) or length-4 cycles (4-cycles).
+
+the corresponding EM and is used as the outgoing bit. This
+
+Due to these problems, early stochastic decoders could only de-
+
+mechanism breaks the correlation of stochastic streams by
+
+code simple/short or acyclic error-correcting codes.
+
+rerandomizing stochastic bits and also reducing the corre-
+
+lation caused by the hold state in a stochastic stream. The
+
+III. STOCHASTIC LDPC DECODING
+In order to circumvent the switching activity problem and reduce the latching problem, the noise-dependent-scaling method and edge memories (EMs) are suggested in [40]. Scaling and EMs are essential for decoding practical LDPC codes. In this paper, we also propose internal memories (IMs) to improve the BER performance of stochastic LDPC decoders, especially when high-degree VNs are used.
+
+reason is that every time the hold state happens, a bit is randomly chosen from previous regenerative bits (which are not generated in the hold state). 2) In order to facilitate the convergence of the decoder, EMs need to have a time-decaying reliance (forgetting mechanism) on previous regenerative bits and only rely on most recent regenerative bits. Different embodiments can be used to implement EMs. One implementation which is used in this paper is to use an -bit
+
+A. Scaling Channel Reliabilities
+
+shift-register with a single selectable bit. In this implementation, the shift register is updated with regenerative bits and in the case
+
+Scaling methods have been previously suggested in the literature for the performance improvement of SPA (e.g., see [47] for details). In [40], A new and essential scaling method for stochastic decoders (called noise-dependent-scaling) was suggested. This method was used to provide a similar level of switching activity over different ranges of SNRs, which results in improved BER performance for stochastic decoders. In this scaling method the received channel reliabilities are scaled by a factor which is proportional to the noise level in the channel. The scaled LLRs are, however, independent of channel noise
+
+of hold state a bit is (pseudo) randomly chosen from the shift register using a (pseudo) randomly generated address. Clearly, the length of the shift-register, , guarantees the time-decaying reliance mechanism needed for an EM. Another possible implementation for EMs is to transform regenerative bits to the probability domain using up/down counters and then regenerate the new stochastic bits based on the measured probability by the counter. This implementation also needs to exploit time-decaying mechanisms such as saturating limits and feedback to rely on recent (regenerative) bits.
+
+and thus the decoder does not need to estimate the noise in the channel. Assuming a BPSK transmission over an AWGN C. Internal Memories
+
+channel, the scaled LLR for the th received symbol in the Regenerative bits are important for the proper operation of a
+
+block is [40]
+
+stochastic decoder. The lack of enough regenerative bits prop-
+
+agating in the decoder results in less switching activity and a
+
+higher possibility of latching. For this reason, the structure used
+
+for constructing VNs is crucial for BER performance of sto(4) chastic decoders. It is known that in general a VN can be con-
+
+where is the th transmitted symbol in the block, is the
+
+zero-mean AWGN sample with a power-spectral-density of
+
+and,
+
+is the soft output of the channel (in the form
+
+of a LLR). is a fixed parameter which is used as a maximum
+
+magnitude for the received symbols. For example, for a BPSK
+
+modulation can be set to 6. Also, is a fixed factor whose
+
+value is chosen based on the best BER performance of the sto-
+
+chastic decoder [40].
+
+structed based on subgraphs of lower degree nodes [9], [35].
+
+In this paper, the construction of stochastic VNs is also based
+
+on subgraphs of low-degree subnodes (with
+
+). We also
+
+propose to use internal memories (IMs) for each subnode in
+
+high-degree VNs to significantly decrease the chance of the hold
+
+state in a high-degree VN. This structure is shown in Fig. 4
+
+where each IM is assigned to one subnode. The operation of
+
+IMs is similar to EMs but the IM length is much shorter than
+
+(it is only a few bits). An IM is updated with regenerative
+
+B. Edge Memories and Regenerative Bits
+
+bits produced by the subnode and in the case of the hold state for a sub-node a bit is randomly chosen as the outgoing bit of
+
+EMs are memories assigned to edges in the factor graph. EMs the subnode.
+
+are used to break the correlation between stochastic streams using re-randomization to circumvent the latching problem. In D. Summary of Stochastic LDPC Decoding
+
+this respect, stochastic bits generated by a VN are categorized Upon receiving a block from an AWGN channel, channel re-
+
+into two groups: regenerative bits [41] and conservative bits. liabilities are scaled as in (4) and then transformed to stochastic
+
+Conservative bits are output bits which are produced in the hold streams. Each VN receives one bit per DC and propagates its
+
+state and regenerative bits are output bits which are produced in outgoing 1-bit messages to the connected PNs. PNs check the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+5696
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+Fig. 5. Conversion of channel probabilities to stochastic streams.
+
+Fig. 4. Construction of a VN based on IMs used for low-degree sub-VNs. An EM is only used for the exit edge.
+TABLE I IRREGULAR LDPC CODES CHOSEN FROM THE IEEE 802.16e STANDARD
+
+44 lookup tables to apply scaling, and each lookup table seri-
+
+ally generates probabilities for
+
+VNs. This uses
+
+DCs,2 where is the number of DCs the decoder
+
+spends to input channel reliabilities, apply scaling and output
+
+the decoded bits.
+
+B. Probability to Stochastic Stream Conversion
+
+parities and send their 1-bit messages to VNs. The output of each VN at the end of a DC is passed to an up/down counter in which its sign-bit determines the hard-decision. This exchange of bits between VNs and PNs will be stopped as soon as all the parity-checks are satisfied or a maximum number of DCs is exceeded.
+IV. DECODER ARCHITECTURE
+Table I summarizes the characteristics of two LDPC codes considered in this paper. Both codes are irregular and belong to the IEEE 802.16e (WiMAX) standard [5]. The code used for implementation is the (1056,512) code. The (1056,704) code is only used to study performance behavior. The reader should note that this paper does not propose an LDPC decoder for the WiMAX standard and the main reason to choose these codes was to show the applicability of the stochastic approach to decode state-of-the-art irregular LDPC codes with high-degree nodes designed for recent applications (using the fully parallel design approach).
+A. Scaling
+
+The conversion of each to the corresponding stochastic
+
+stream is done by employing a 7-bit comparator as shown in
+
+Fig. 5. In this structure, is fixed during the decoding opera-
+
+tion and is compared to a (pseudo) random number, , which
+
+changes at every DC. The output bit of the comparator is 1 when
+
+and 0 otherwise. Therefore, the density of 1’s in the
+
+output stochastic stream is
+
+. The random number in the
+
+figure is generated by a distributed randomization engine (DRE)
+
+which is described in Section IV-G. The output of each com-
+
+parator is fed to one VN in each DC. The decoder, hence, needs
+
+one comparator per VN.
+
+An attractive advantage of using lookup tables to apply
+
+scaling in stochastic decoders is that the precision of the lookup
+
+tables’ output probabilities can be increased without a signif-
+
+icant change in the decoder complexity. This is so because
+
+the precision of probabilities does not affect the interleaver,
+
+VNs or PNs. It only affects the size of lookup tables used for
+
+scaling, the comparators and the DRE. This, however, is not
+
+the case for SPA or MSA-based decoders where changing the
+
+precision means significantly increasing the number of wires
+
+in the interleaver. For the case of bit-serial SPA or MSA-based
+
+decoders, increasing the precision increases the latency of each
+
+iteration and hence reduces the throughput, because more clock
+
+cycles are needed to bit-serially send messages between nodes.
+
+We used lookup tables to apply scaling to the symbols re- C. Stochastic Variable Nodes
+
+ceived from the AWGN channel. The input of each lookup table is a 6-bit received symbol and the output is the corresponding probability, represented in 7 bits. Probabilities in each lookup table are calculated as
+
+Fig. 6 depicts the architecture of VNs in the (1056,528) sto-
+
+chastic decoder (only one output and its corresponding inputs
+
+are shown). EM lengths of
+
+,
+
+, and
+
+bits are used for
+
+,
+
+, and
+
+VNs, respectively.
+
+EMs are implemented as shift-registers with a single selectable
+
+(5) bit using shift register lookup tables available in Xilinx Virtex
+
+architectures. The architecture of
+
+VNs are based on two
+
+where is the scaled LLR according to (4). Note that due to the
+
+symmetry in (5), a lookup table can store only half of the prob-
+
+abilities. For example, it is possible to only store probabilities
+
+for positive ’s (i.e., probabilities
+
+). When a is nega-
+
+tive, an additional NOT operation can be performed on the sto-
+
+chastic stream (during probability to stochastic stream conver-
+
+subnodes. The architecture of
+
+VNs are based on
+
+two
+
+and one
+
+subnodes. IM lengths of
+
+and
+
+are used for
+
+and
+
+VNs, respectively.
+
+A VN has two modes of operation, described as follows.
+
+1) Partial Initialization Mode: Prior to the decoding oper-
+
+ation and when the channel probabilities are all loaded into
+
+sion). Using this scheme the size of each lookup table is
+
+2Here and in the rest of the paper, it is assumed that each DC takes one clock
+
+bits or 28 bytes. The implemented stochastic decoder employs cycle.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+
+5697
+
+= 7 Fig. 7. Architecture of a stochastic d
+
+PN. The “parity-check satisfied”
+
+signal is used for termination criteria.
+
+D. Hard-Decision Using Saturating Up/Down Counters
+
+The output bit of each VN at the end of every DC is passed
+
+to an up/down counter. Each counter is incremented when re-
+
+ceiving 1 and decremented when receiving a 0 bit. The coun-
+
+ters are implemented as saturating counters which stop incre-
+
+menting/decrementing when they reach their maximum/min-
+
+imum limits. For this implementation, we used 4-bit saturating
+
+counters that count from 7 to 7. The sign-bit of each counter
+
+determines the hard-decision, i.e., in a BPSK transmission a 0
+
+sign-bit of the counters determines a “ ” decoded bit and a 1
+
+sign-bit determines a “ ” decoded bit.
+
+Based on our observation, we discovered that for the case of
+
+stochastic LDPC decoders, up/down counters are mostly effec-
+
+tive at low SNRs (high BERs). At high SNRs, up/down counters
+
+= 2 = 3 = 6 Fig. 6. Architecture for (a) a d
+
+VN, (b) a d
+
+VN and, (c) a d
+
+VN based on IMs and an EM (in each figure, only one output and its corre-
+
+sponding inputs are shown).
+
+can be neglected and replaced by 1-bit flip-flops. In this case, the last output bit of each VN directly determines the hard-decision. The reason is that at high SNRs where convergence of stochastic decoders is fast, the counters easily become saturated
+
+(i.e., high reliability) which implies that they mostly receive
+
+constant output bits from VNs. The output bits of VNs at low the decoder, VNs start to initialize their EMs according to the SNRs are, however, less reliable and are more varying. received probability. Although it is possible for EMs to start
+
+from zero state [41], however, the initialization of EMs im- E. Stochastic Parity-Check Nodes
+
+proves the convergence of the stochastic decoder. In the imple-
+
+mented decoder, we consider partially initializing the EMs to
+
+16 bits. During the partial initialization, the EMs of each VN
+
+are bit-serially updated with the output of the node comparator
+
+for
+
+DCs.
+
+2) Decoding Mode: After the partial initialization phase, the
+
+decoding operation starts. Each VN in the Fig. 6, uses a signal
+
+to determine if the VN is in the hold state
+
+or not
+
+. When the VN is not in the hold state, the new regenerative
+
+bit is used as the output bit and also to update the EM. In the
+
+The construction of a PN is based on XORing the input bits
+
+received from VNs. Fig. 7 shows the structure of a
+
+PN used in the implemented stochastic decoder. The construc-
+
+tion of the
+
+in the decoder is similar. PNs send their
+
+output bits to VNs. In addition, each PN produces a “parity-
+
+check satisfied” output signal which determines if the corre-
+
+sponding parity-check is satisfied. This signal is used to termi-
+
+nate the decoding as will be discussed in Section IV-H.
+
+F. Asynchronous Pipelining and Interleaver Design
+
+case of the hold state, a bit is randomly chosen from the EM. This scheme is also employed in each subnode to update the IMs. The random selection of bits in EMs and IMs are done by (pseudo) random addresses which vary in each DC. These addresses are also provided by the DRE in Section IV-G.
+
+As mentioned earlier, the structure of interleavers in LDPC decoders results in (long) wires and forces a bottleneck on the speed and throughput of decoders. For this reason, fully parallel architectures can use pipelining to break the wires and increase the speed/throughput. However, pipelining the
+
+Due to the partial initialization scheme at the beginning of interleaver in conventional SPA or MSA-based decoders has the decoder operation, the range of (pseudo) random addresses a drawback: it increases the number of clock cycles required
+
+is limited to 4 bits (i.e., 0 to 15) for 40 DCs. This ensures that per iteration by a factor of , the number of pipeline stages.
+
+during the hold state, a valid bit is picked from EMs. When The reason is that in SPA and MSA, there is a data dependency
+
+decoding proceeds for 40 DCs and EMs are updated, the DRE between iterations and the output of nodes at each iteration
+
+produces full range addresses for EMs.
+
+depends on their outputs at the previous iteration. For instance,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+5698
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+assume that the nonpipelined decoder runs for iterations and
+
+uses 1 clock cycle per iteration. In the decoder with pipelined
+
+interleaver, clocks are needed to pass messages generated
+
+in the previous iteration. Therefore, although the pipelined
+
+decoder is faster than the nonpipelined decoder, it needs
+
+clock cycles to provide the same BER decoding performance.
+
+To reduce this inefficiency and to increase the utilization of
+
+decoder, the pipelined LDPC decoders need to decode more
+
+than one codeword in the pipelined interleaver at the expense of
+
+more hardware complexity [22]. Another suggested technique
+
+in the literature is block interlacing [13]. This technique is
+
+used to increase the throughput of the decoder by processing
+
+two consecutive blocks simultaneously. In [13], the block
+
+interlacing technique together with a message broadcasting
+
+technique provided high throughput for ASIC LDPC decoders
+
+using 16 iterations of MSA and 32 iterations of hard-deci-
+
+sion message-passing decoding algorithm [48]. In addition to
+
+these methods, the flooding-type update-schedule algorithm is
+
+suggested in [49]. This algorithm allows limited partitioning
+
+of some of the long wires in the decoder using flip-flops [49]
+
+without affecting the required clock cycles per iteration. This
+
+relies on the similarity of time-consecutive messages which
+
+limitedly let nodes tolerate operating with messages produced
+
+in recent iterations. However, in this algorithm the degree of
+
+freedom for partitioning wires is limited. In [49], only messages
+
+from two consecutive iterations are used at VNs.
+
+We claim that the above-mentioned drawbacks and limita-
+
+tions do not apply to stochastic decoders. The operation of sto-
+
+chastic nodes does not depend on the output bits produced in
+
+the previous DC. In fact, the order of bits in stochastic streams
+
+is not important for the nodes. That is why EMs with random bit
+
+selection and different lengths can be used at VNs. Therefore,
+
+if a stochastic decoder needs to operate for DCs to decode
+
+a codeword, the -stage pipelined stochastic decoder needs a
+
+maximum of
+
+DCs to decode the codeword. This in-
+
+teresting characteristic introduces a high degree of freedom for
+
+partitioning wires in stochastic decoders, which is especially ad-
+
+vantageous for ASIC implementations.
+
+1) In principle, an “arbitrary” number of pipeline stages can
+
+be used in the interleaver to break the wires and increase
+
+the clock rate to a “desired” speed.
+
+2) Pipelining in a stochastic decoder does not need to be
+
+uniform in the entire factor graph. Different stages of
+
+pipelining can be used for different edges. It is also
+
+possible to only pipeline some (critical) wires in the inter-
+
+leaver with an arbitrary number of pipeline stages.
+
+It should be noted that because stochastic decoders (and other
+
+bit-serial approaches) require less wires to represent the factor
+
+graph, pipelining the interleaver in stochastic decoders requires
+
+less hardware resources (registers) compared to the conven-
+
+tional SPA or MSA-based decoders. For the implemented
+
+stochastic decoder we used a four-stage pipeline interleaver.
+
+as the addresses of EMs and IMs. Although this amount of random numbers for the entire decoder might seem high, as shown in [41], (pseudo) random numbers can be significantly shared at two levels without having a considerable impact on the decoding performance of the decoder: 1) different EMs can share the same random address and 2) random numbers used in comparators and random numbers used as the addresses of EMs and IMs can share bits. Sharing random numbers significantly reduces the complexity of the randomization engine.
+In this paper, we propose a distributed architecture to generate random numbers. The DRE consists of 48 independent randomization engines (REs). Each RE generates the required random numbers for a portion of the factor graph and consists of only two 10-bit linear feedback shift registers (LFSRs) associated with prime polynomials. Random bits in each RE are generated by XORing different bits of the two LFSRs. The main reason to use a distributed structure is to reduce the routing required by DRE. Note that by using the asynchronous pipelining technique in Section IV-F the interleaver is no longer a bottleneck for the speed of a stochastic decoder. This is so because an arbitrary number of registers can be used to break long wires in a pipelined stochastic interleaver. In this case, the routing required by REs becomes a limiting factor for the speed and hence using a distributed architecture for generating random numbers becomes essential. It should be noted that the asynchronous pipelining technique is also applicable for DRE because the sequence/order of random numbers is not important for comparators, EMs and IMs.
+
+H. Termination Criteria
+The stochastic decoder checks two criteria in each DC to terminate the decoding operation: 1) it checks if all the PNs are satisfied or 2) if a maximum number of DCs has been exceeded. As soon as one of the criteria is satisfied, the decoder outputs the sign-bit of each saturating up/down counters as the decoded codeword and starts loading the probabilities for the next received block. Checking the first criterion is done by NORing “parity-satisfied” signals from all PNs (i.e., decoding is terminated if all the 528 parity-checks are satisfied). This is implemented as a three-stage pipelined NOR tree. The latter criterion is checked using a counter.
+
+I. Input/Output Unit
+
+As mentioned previously, the decoder uses
+
+DCs
+
+to load 1056 received symbols (each with 6-bits precision) into
+
+the decoder and apply scaling. To do so, the decoder employs
+
+264 input pins. While loading the probabilities, the decoder also
+
+outputs the previous 1056 bit decoded codeword using 44 pins
+
+(in
+
+DCs). Therefore, the total IO overhead is
+
+24 DCs.
+
+V. PERFORMANCE AND TRADEOFFS
+
+G. Distributed Randomization Engine
+
+Table II lists the parameters used for each code. To obtain the characteristics of the proposed architecture, the (1056,528)
+
+The randomization engine is responsible for providing irregular LDPC decoder is implemented on a Xilinx Virtex-4
+
+random numbers in the decoder. In the proposed architecture, XC4VLX200-11FF1513 device using Xilinx ISE 9.2 tool. The
+
+(pseudo) random numbers are used in comparators and also Sections V-A–D discuss the performance of the decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+TABLE II DECODING PARAMETERS USED
+
+5699
+TABLE III XILINX VIRTEX-4 XC4VLX200-11FF1513 DEVICE UTILIZATION (LUT:
+4-INPUT LOOKUP TABLE, FF: FLIP-FLOP)
+
+Fig. 8. BER performance of the implemented (1056,528) irregular stochastic decoder and decoders in [41] and [50].
+
+Fig. 10. Histograms of T
+
+at different SNRs (based on 1 million blocks).
+
+decoders fixed-point implementation with limited precision (usually 4 bits) is considered which causes additional decoding loss and higher error-floors.
+B. Area and Clock Frequency
+Table III summarizes the area consumption of the (1056,528) decoder on the FPGA device. The decoder occupies about 38% of the four-input lookup tables and 24% of the flip-flops available on the device. These occupied resources are distributed in 51% of the device slices. The decoder uses one clock cycle per DC and achieves a clock rate of 222 MHz after place-and-route.
+
+C. Throughput
+
+As mentioned in Section IV-H, the decoder terminates the de-
+
+Fig. 9. BER performance of the (1056,704) irregular stochastic decoder.
+
+coding and starts loading the next codeword when all the parity check signals are satisfied or, when a maximum number of DCs
+
+has been exceeded. Due to these termination criteria , the
+
+A. Bit Error Rate Performance
+Figs. 8 and 9 show the BER performance. These figures also depict the performance of the floating-point SPA. Also depicted in Fig. 8 is the performance of the decoder in [50] whose im-
+
+average number of DCs used to load, decode and output code-
+
+words determines the throughput of the decoder. For the sake of
+
+brevity, we refer to
+
+as the average number of DCs in the
+
+rest of the paper.
+
+is equal to
+
+plementation values will be discussed in Section VI. Compared
+
+(6)
+
+to floating-point SPA with 32 and 16 iterations, the irregular
+
+stochastic decoders only have a loss of about 0.5 and 0.25 dB, where
+
+is the average number of DCs used by the
+
+respectively, at low BERs. It should be highlighted that, in core decoder to decode codewords and, as mentioned before,
+
+the shown BER region, a similar error-floor behavior to that
+
+and
+
+. It should be noted that at high
+
+of floating-point SPA is observed. Note that the floating-point SNRs (low BERs),
+
+is much less than the maximum DC
+
+implementation outperforms the fixed-point implementation used by the core decoder (
+
+DCs). In fact at
+
+which is usually considered in hardware implementations. In low BERs, only a few codewords require a high number of DCs
+
+fact, due to the complexity/area concerns, in most fully parallel to decode. This is shown in Fig. 10 where the histograms of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+5700
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+For the (1056,528) decoder,
+
+is 740 DCs. With the
+
+achieved clock rate of 222 MHz, this results in a maximum
+
+latency of 3.3 s which is in an acceptable range for most
+
+applications such as the IEEE 802.16e (WiMAX) standard. In
+
+addition, as Fig. 12 suggests, for applications which have a
+
+strict latency requirement, it is possible to tradeoff the latency
+
+with some BER performance.
+
+VI. COMPARISON
+
+A. Comparison With FPGA Fully Parallel Decoders
+
+Table IV compares different aspects of the most recent
+
+FPGA-based fully parallel LDPC decoders. To our knowl-
+
+edge, the decoders in [50] and [21] are the fastest and the
+
+second fastest (nonstochastic) FPGA-based fully parallel
+
+Fig. 11. T and throughput of the decoder at different SNRs (based on 1 LDPC decoders, respectively. The decoder in [50] decodes
+
+million blocks).
+
+a (1200,600) regular code which is constructed based on the
+
+Progressive-Edge-Growth (PEG) method. The throughput of
+
+the decoder is 12 Gb/s. This throughput was achieved by em-
+
+ploying 3-bit fixed-point MSA with ten iterations. The decoder
+
+in [21] decodes a (480,355) regular code with a throughput of
+
+650 Mb/s using bit-serial approximate MSA with 15 iterations.
+
+Also, the decoder in [41] is a (1024,512) stochastic decoder
+
+with a throughput of 706 Mb/s at a BER of . Compared to
+
+the regular code used in [41], the (1056,528) code in this paper
+
+has a much more complex structure due to its irregularity and
+
+high degree nodes.
+
+Table IV gives the throughput efficiency per information bit
+
+for each decoder. As discussed in Section V-C, the throughput of
+
+the (1056,528) decoder varies at different SNRs. For example,
+
+the decoder provides a throughput of 694 Mb/s at a
+
+2.5 dB
+
+and at
+
+4.25 dB
+
+the throughput is about 1.66 Gb/s. This throughput is be-
+
+yond the requirements of most applications. Compared to [50] Fig. 12. BER performance of the (1056,528) stochastic decoder over DCs. and [21], the stochastic decoder has a higher latency. This la-
+
+tency is however within an acceptable range for many appli-
+
+over different SNRs are depicted. These histograms are
+
+based on observation of 1 million blocks.
+
+Fig. 11 shows the observed
+
+over different SNRs. It
+
+also shows the throughput of the decoder based on
+
+at
+
+different SNRs for the achieved clock rate of 222 MHz.
+
+and the throughput of the decoder vary at different BERs. As
+
+Fig. 11 shows, at high SNRs (low BERs) the throughput of the
+
+decoder is higher than the requirements of many applications.
+
+The decoder provides a throughput of more than 1 Gb/s for
+
+dB. The throughput of the decoder at
+
+4.25 dB is about 1.66 Gb/s.
+
+cations. Usually, a latency limit of about 6 s is assumed for channel decoders in applications such as WiMAX. In addition, as mentioned before, for applications with more strict latency requirements, it is possible to tradeoff the decoding performance and the latency (see Fig. 12).
+Table IV also gives the absolute area as well as area efficiency based on the number of four-input lookup tables and flip-flops per coded bit and, slices per coded bit. Note that a Logic Element in the Altera Stratix architecture has one four-input lookup table and one flip-flop [51] which is half of the resources of a slice in a Xilinx Virtex-4 architecture [52]. Since the number of lookup tables and flip-flops were not reported in [21], the comparison
+
+D. Latency
+
+with this decoder is based on the approximate slice per coded bit efficiency. The area efficiency of the stochastic decoder is
+
+Fig. 12 shows the BER performance of the stochastic decoder
+
+versus DC. The maximum number of DCs used for decoding
+
+the (1056,528) code was
+
+DCs. Due to the
+
+termination criteria of the decoder,
+
+only influences
+
+the latency of the decoder. The maximum latency of the decoder
+
+is determined by
+
+which is calculated as
+
+better than the bit-serial decoder in [21]. Compared to [50], the stochastic decoder needs more lookup tables and flip-flops per coded bit (but offers about 1.3 dB decoding gain as shown in Fig. 8). The majority of this difference is due to the higher degree of VNs. As shown, the stochastic decoder in [41], with the same rate and node degrees as in [50], needs much less resources than this work and offers a better slice per coded bit efficiency
+
+(7) compared to [50].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+
+5701
+
+TABLE IV COMPARISON OF RECENT FPGA-BASED FULLY PARALLEL LDPC DECODERS (LUT: 4-INPUT LOOKUP TABLE, FF: FLIP-FLOP, LE: LOGIC ELEMENT)
+
+Compared to other fully parallel approaches, an important [12], [14], [21], [50] to make the number of wires low and/or to
+
+advantage of the stochastic approach is its good decoding per- prevent having large nodes with the expense of decoding loss.
+
+formance and error-floor behavior. Fig. 8 compares the perfor- In stochastic decoding, the number of wires in the interleaver
+
+mance of decoders in [50] and [41]. Both codes are regular is minimized, i.e., one wire per direction. Also, the precision
+
+and have the same rate and node degree. As shown, while the of the input probabilities does not affect the interleaver and the
+
+PEG-based code in [50] is longer, stochastic decoders outper- complexity of the majority of components in the decoder such
+
+form this decoder by more than 1 dB. It should be noted that as PNs, VNs and saturating up/down counters. In addition,
+
+the reported area efficiency for stochastic decoders is for pro- stochastic decoding offers the asynchronous pipelining tech-
+
+viding a performance close to the floating-point SPA. The sto- nique which provides a high degree of freedom for pipelining
+
+chastic decoding approach is able to easily tradeoff the hard- the interleaver and breaking long wires in the decoder with
+
+ware complexity and decoding performance. For example, if a negligible effect on the number of DCs used. These inter-
+
+performance close to fixed-point MSA with limited precision esting features enable stochastic decoders to easily achieve
+
+is required, it is possible to significantly increase the area ef- high speeds and provide a good decoding performance while
+
+ficiency and/or reduce the latency of the stochastic decoder by having a better/comparable area consumption compared to
+
+using much shorter EMs/IMs, simpler DRE and by reducing the conventional fully parallel methods with limited precision. The
+
+precision of comparators/counters.
+
+achieved high clock frequency of 222 MHz and the throughput
+
+of 1.66 Gb/s (at
+
+4.25 dB) on an FPGA device for
+
+B. Potentials for ASIC Implementation
+
+a complex (1056,528) irregular code with high degree nodes
+
+shows this potential. The proposed architecture provides a significant potential for
+
+high-throughput fully parallel decoding on ASIC. The routing C. Comparison With Partially Parallel Decoders
+
+congestion problem caused by the large number of wires in the interleaver is a daunting problem in fully parallel ASIC LDPC decoders. In both ASIC and FPGA implementations, the number of wires in the interleaver significantly affects the area consumption [11], [12], [22]. As mentioned before, 50% of the core area in [11] with a die size of 52.5 mm is occupied by wires using 4-bit precision. Another example is [50] where the authors report that with 5-bit precision the (1200,600) fully parallel decoder could not fit in a Virtex-4 LX200 FPGA device.3 Therefore, the conventional fully parallel LDPC decoders have to use limited precision (usually, 3 or 4 bits) [11],
+
+As mentioned in Section I, partially parallel decoders use memory and share hardware to tradeoff area/flexibility with throughput. Fully parallel decoders, however, occupy much larger area but provide much higher throughput. In this respect, partially parallel and fully parallel decoders occupy a different place on the tradeoff curve. This is also the case for the proposed fully parallel architecture. Compared to the recent FPGA and ASIC partially parallel decoders, the (1056,528) stochastic decoder occupies much more (absolute) area but corrects more errors at a much higher speed. For example, the multirate partially parallel decoder in [53] occupies 1640 to
+
+2 2 2 3Using 5-bit precision, this decoder would use 1200 3 5 2 = 36000 6568 slices and uses more than 60K bits of RAM, and provides
+
+physical wires (in 2 directions) in the interleaver.
+
+a throughput of 41 to 278 Mb/s on a Xilinx Virtex-II 2V8000
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+5702
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 56, NO. 11, NOVEMBER 2008
+
+device. Also, the partially parallel (8176,7154) decoder in [54] uses about 23 K to 27 K slices and 128 block RAMs of a Xilinx VirtexII-6000 FPGA device and, provides a throughput of 172 Mb/s with 15 decoding iterations. Another recent example is the ASIC implementation of a partially parallel (1024,506) decoder in [55] with a throughput of 31.2 Mb/s with eight decoding iterations.
+
+VII. CONCLUSION
+
+We proposed an architecture for fully parallel stochastic
+
+LDPC decoders. Using this architecture, we demonstrated
+
+the performance of a fully parallel stochastic LDPC decoder
+
+that decodes a state-of-the-art irregular (1056,528) code on a
+
+Xilinx Virtex-4 LX200 FPGA device. This decoder exploits
+
+several novel architectural techniques, provides a throughput
+
+of 1.66 Gb/s at
+
+4.25 dB (BER of ) and,
+
+achieves decoding performance within 0.5 and 0.25 dB loss of
+
+floating-point SPA with 32 and 16 iterations, respectively. The
+
+decoder also shows similar error-floor behavior as floating-point
+
+SPA with 32 iterations. To our knowledge, this decoder is the
+
+first stochastic LDPC decoder which decodes a state-of-the-art
+
+code and it is the first irregular and one of the fastest and most
+
+area-efficient fully parallel LDPC decoders implemented on
+
+FPGA.
+
+APPENDIX PROOF OF STOCHASTIC VN AND PN OPERATIONS
+
+Consider the XOR gate in Fig. 3(b) and its input stochastic
+
+streams with
+
+and
+
+. The
+
+output bit is 1 when
+
+and
+
+, or when
+
+and
+
+. Therefore,
+
+.
+
+The output of other boolean operations is calculated similarly.
+
+Now consider the VN structure in Fig. 3(a). This structure can
+
+be represented as a Markov chain with two states (0 state and 1
+
+state). The probability (transition) matrix of this chain is
+
+where in is the probability of transition from state to
+
+. The probability of having 1 in the steady state
+
+of the chain (i.e.,
+
+) is calculated by computing
+
+the eigenvector of with respect to an eigenvalue of 1, which
+
+is equal to
+
+.
+
+ACKNOWLEDGMENT
+The authors would like to thank the reviewers and the associate editor for providing helpful comments.
+
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inf. Theory, vol. 8, no. , pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645–1646, 1996.
+[3] The Digital Video Broadcasting Standard [Online]. Available: www. dvb.org
+[4] The IEEE P802.3an 10GBASE-T Task Force [Online]. Available: www.ieee802.org/3/an
+[5] The IEEE 802.16 Working Group [Online]. Available: http://www. ieee802.org/16/
+
+[6] The IEEE 802.11n Working Group [Online]. Available: http://www. ieee802.org/11/
+[7] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. San Mateo, CA: Morgan Kaufmann, 1988.
+[8] N. Wiberg, “Codes and Decoding on General Graphs,” Ph.D. dissertation, Electrical Engineering Dept., Linkoping Univ,, Linkoping, Sweden, 1996.
+[9] F. Kschischang, B. Frey, and H. Loeliger, “Factor graphs and the sumproduct algorithm,” IEEE Trans. Inf. Theory, vol. 47, pp. 498–519, Feb. 2001.
+[10] P. Urard et al., “A 135 Mb/s DVB-S2 compliant codec based on 64,800b LDPC and BCH codes,” in IEEE ISSCC Dig. Tech. Papers, Feb. 2005.
+[11] A. Blanksby and C. Howland, “A 690-mw 1-Gb/s 1024-b rate-1/2 lowdensity parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[12] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “A 3.3-Gbps bit-
+serial block-interlaced min-sum LDPC decoder in 0.13-m CMOS,”
+in Proc. Custom Integrated Circuits Conf., Sep. 2007, pp. 459–462. [13] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Block-interlaced
+LDPC decoders with reduced interconnect complexity,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 55, no. 1, pp. 74–78, Jan. 2008. [14] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Multi-Gbit/Sec low density parity check decoders with reduced interconnect complexity,” in IEEE Int. Symp. Circuits Syst., San Jose, CA, May 2005, pp. 5194–5197. [15] E. Boutillon, J. Castura, and F. Kschischang, “Decoder-first code design,” in Proc. 2nd Int. Symp. Turbo Codes Related Topics, Brest, France, Sep. 2002, pp. 459–462. [16] E. Yeo, B. Nikolic, and V. Anantharam, “Iterative decoder architectures,” IEEE Commun. Mag., vol. 41, no. 8, pp. 132–140, Aug. 2003. [17] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Commun. Mag., vol. 11, no. 6, pp. 976–996, Dec. 2003. [18] M. Mansour and N. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, pp. 684–698, Mar. 2006. [19] J. Chen et al., “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005. [20] T. Zhang and K. Parhi, “Joint (3,k)-regular LDPC code and decoder/encoder design,” IEEE Trans. Signal Process., vol. 52, no. 4, pp. 1065–1079, Apr. 2004. [21] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “A bit-serial approximate min-sum LDPC decoder and FPGA implementation,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Greece, May 2006, pp. 149–152. [22] T. L. Brandon et al., “A scalable LDPC decoder ASIC architecture with bit-serial message exchange,” Integration, The VLSI J., vol. 41, no. 3, pp. 385–398, May 2008. [23] J. Zhang and M. P. C. Fossorier, “A modified weighted bit-flipping decoding of low-density parity-check codes,” IEEE Commun. Lett., vol. 8, pp. 165–167, Mar. 2004. [24] M. Jiang, C. Zhao, Z. Shi, and Y. Chen, “An improvement on the modified weighted bit flipping decoding algorithm for LDPC codes,” IEEE Commun. Lett., vol. 9, pp. 814–816, Sep. 2005. [25] N. Mobini, A. H. Banihashemi, and S. Hemati, “A differential binary message-passing LDPC decoder,” in Proc. IEEE Global Telecomm. Conf. (IEEE GLOBECOM), Washington, DC, Nov. 2007, pp. 1561–1565. [26] S. Seo, T. Mudge, Y. Zhu, and C. Chakrabarti, “Design and analysis of LDPC decoders for software defined radio,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS), Shanghai, China, Oct. 2007, pp. 210–215.
+[27] S. Hemati, A. Banihashemi, and C. Plett, “A 0.18 m analog min-sum
+iterative decoder for a (32,8) low-density parity-check (LDPC) code,” IEEE J. Solid-State Circuits, vol. 41, pp. 2531–2540, Nov. 2006. [28] F. Lustenberger et al., “All-analog decoder for a binary (18,9,5) tailbiting trellis code,” in Proc. Eur. Solid-State Circuits Conf., 1999, pp. 362–365.
+[29] M. Moerz, T. Gabara, R. Yan, and J. Hagenauer, “An analog 0.25 m
+biCMOS tailbiting map decoder,” in Proc. IEEE Custom Integrated Circuits Conf., Feb. 2000, pp. 356–357.
+[30] V. Gaudet and G. Gulak, “A 13.3-Mb/s 0.35 m CMOS analog turbo
+decoder IC with a configurable interleaver,” IEEE J. Solid-State Circuits, vol. 38, pp. 2010–2015, Nov. 2003.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+SHARIFI TEHRANI et al.: FULLY PARALLEL STOCHASTIC LDPC DECODERS
+
+5703
+
+[31] C. Winstead, J. Dai, S. Yu, C. Myers, R. Harrison, and C. Schlegel, “CMOS analog map decoder for (8,4) Hamming code,” IEEE J. SolidState Circuits, vol. 39, pp. 122–131, Jan. 2004.
+[32] D. Vogrig, A. Gerosa, A. Neviani, A. G. I. Amat, G. Montorsi, and S.
+Benedetto, “A 0.35 m CMOS analog turbo decoder for the 40-bit rate
+1/3 UMTS channel code,” IEEE J. Solid-State Circuits, vol. 40, pp. 753–762, Mar. 2005. [33] M. Arzel et al., “Analog slice turbo decoding,” in Proc. IEEE Int. Symp. Circuits Syst., May 2005, pp. 332–335. [34] B. Gaines, Advances in Information Systems Science. New York: Plenum, 1969, ch. 2, pp. 37–172. [35] V. Gaudet and A. Rapley, “Iterative decoding using stochastic computation,” Electron. Lett, vol. 39, no. 3, pp. 299–301, Feb. 2003. [36] A. Rapley, C. Winstead, V. Gaudet, and C. Schlegel, “Stochastic iterative decoding on factor graphs,” in Proc. 3rd Int. Symp. Turbo Codes Related Topics, Brest, France, Sep. 2003, pp. 507–510. [37] W. J. Gross, V. Gaudet, and A. Milner, “Stochastic implementation of LDPC decoders,” in Proc. 39th Asilomar Conf. Signals, Systems, Computers, Pacific Grove, CA, Nov. 2005, pp. 713–717. [38] C. Winstead, V. Gaudet, A. Rapley, and C. Schlegel, “Stochastic iterative decoders,” in Proc. IEEE Int. Symp. Information Theory (ISIT), Sep. 2005, pp. 1116–1120. [39] C. Winstead, “Error-control decoders and probabilistic computation,” in Proc. Tohoku Univ. 3rd Student-Organizing Int. Mini-Conf. Information Electronics System (SOIM-COE), Sendai, Japan, Oct. 2005, pp. 349–352. [40] S. Sharifi Tehrani, W. J. Gross, and S. Mannor, “Stochastic decoding of LDPC codes,” IEEE Commun. Lett., vol. 10, no. 10, pp. 716–718, Oct. 2006. [41] S. Sharifi Tehrani, S. Mannor, and W. J. Gross, “An area-efficient FPGA-based architecture for fully-parallel stochastic LDPC decoding,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS), Shanghai, China, Oct. 2007, pp. 255–260. [42] C. B. Schlegel and L. C. Perez, Trellis and Turbo Coding. Piscataway, NJ: IEEE Press, 2004. [43] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in Proc. IEEE Global Telecomm. Conf. (IEEE GLOBECOM), Nov. 2001, vol. 2, pp. 1021–1025.
+[44] F. Guilloud, E. Boutillon, and J.-L. Danger, “-min decoding algorithm
+of regular and irregular LDPC codes,” in Proc. 3rd Int. Symp. Turbo Codes (ISTC), Brest, France, Sep. 1–5, 2003, pp. 451–454. [45] S. Howard, C. Schlegel, and V. Gaudet, “A degree-matched check node approximation for LDPC decoding,” in Proc. IEEE Int. Symp. Information Theory, Adelaide, Australia, Sep. 4–9, 2005, pp. 1131–1135. [46] S. Sharifi Tehrani, S. Mannor, and W. J. Gross, “Survey of stochastic computation on factor graphs,” in Proc. 37th IEEE Int. Symp. MultipleValued Logic, Oslo, Norway, May 2007, pp. 54–59. [47] M. R. Yazdani, S. Hemati, and A. Banihashemi, “Improving belief propagation on graphs with cycles,” IEEE Commun. Lett., vol. 8, no. 1, pp. 57–59, Jan. 2004. [48] T. J. Richardson and R. Urbanke, “The capacity of low-density parity-check codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, pp. 599–618, Feb. 2001. [49] N. Onizawa, T. Ikeda, T. Hanyu, and V. Gaudet, “3.2-Gb/s 1024-b rate-1/2 LDPC decoder chip using a flooding-type update-schedule algorithm,” in Proc. 50th IEEE Midwest Symp. Circuits Systems, Brest, France, Aug. 2007, pp. 217–220. [50] R. Zarubica, S. G. Wilson, and E. Hall, “Multi-Gbps FPGA-based low density parity check (LDPC) decoder design,” presented at the IEEE Global Telecomm. Conf. (IEEE GLOBECOM), Washington DC, Nov. 2007. [51] Stratix Device Handbook, Altera Corporation, San Jose, CA [Online]. Available: www.altera.com [52] Virtex-4 User Guide, Xilinx Corp., San Jose, CA [Online]. Available: www.xilinx.com [53] K. K. Gunnam, G. S. Choi, M. B. Yeary, and M. Atiquzzaman, “VLSI architectures for layered decoding for irregular LDPC codes of WiMax,” in Proc. IEEE Int. Conf. Communications, Jun. 2007, pp. 4542–4547.
+
+[54] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design for quasi-cyclic LDPC codes,” IEEE Trans. VLSI Systems, vol. 15, no. 1, pp. 104–114, Jan. 2007.
+[55] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. VLSI Syst., vol. 54, no. 6, pp. 542–546, Jun. 2007.
+Saeed Sharifi Tehrani (S’05) received the B.Sc. degree in computer engineering from Sharif University of Technology, Tehran, Iran, in 2002 and the M.Sc. degree in electrical and computer engineering from the University of Alberta, Edmonton, AB, Canada, in 2005. He is currently working towards the Ph.D. degree at the Department of Electrical and Computer Engineering, McGill University, Montreal, QC, Canada.
+His research interests include digital signal processing systems, low-complexity error-controlcoding techniques, and design and hardware implementation of iterative decoders. Mr. Sharifi Tehrani received the Post Graduate Scholarship Award from the Alberta Informatics Circle of Research Excellence (iCORE) during his M.Sc. study at the University of Alberta. He is also an awardee of the doctoral research scholarship from the Fonds Québécois de la Recherche sur la Nature et les Technologies (FQRNT) as well as a recipient of the Alexander Graham Bell Canada Graduate Scholarship Doctoral Award (CGS D) from the Natural Science and Engineering Council of Canada (NSERC).
+Shie Mannor (S’00–M’03) received the B.Sc. degree in electrical engineering, the B.A. degree in mathematics (both summa cum laude), and the Ph.D. degree in electrical engineering from the Technion—Israel Institute of Technology, Haifa, Israel, in 1996, 1996, and 2002, respectively.
+During spring semester 2002, he was a Lecturer at the Electrical Engineering Department of the Technion. From 2002 to 2004, he was a Postdoctoral Associate with the Massachusetts Institute of Technology (MIT), Cambridge. He is currently an Assistant Professor of Electrical and Computer Engineering at McGill University, Montreal, QC, Canada. His research interests include machine learning and pattern recognition, planning and control, multiagent systems, and communications. Dr. Mannor was a Fulbright scholar in 2002, and he is currently a Canada Research Chair in Machine Learning.
+Warren J. Gross (S’92–M’04) received the B.A.Sc. degree in electrical engineering from the University of Waterloo, Waterloo, ON, Canada, in 1996, and the M.A.Sc. and Ph.D. degrees from the University of Toronto, Toronto, ON, Canada, in 1999 and 2003, respectively.
+Currently, he is an Assistant Professor with the Department of Electrical and Computer Engineering, McGill University, Montreal, QC, Canada. His research interests are in the design and application of signal processing microsystems and custom computer architectures. In summers 2004 and 2005, he was a Visiting Professor at the Université de Bretagne-Sud, Lorient, France. Dr. Gross is a member of the Design and Implementation of Signal Processing Systems Technical Committee of the IEEE Signal Processing Society. He served as the General Chair of the Sixth Analog Decoding Workshop. He has served on the Program Committees for the IEEE Workshop on Signal Processing Systems, the IEEE Symposium on Field-Programmable Custom Computing Machines, and the International Conference on Field-Programmable Logic and Applications. He is a Member of the IEEE and a licensed Professional Engineer in the Province of Ontario.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:21:37 UTC from IEEE Xplore. Restrictions apply.
+
+

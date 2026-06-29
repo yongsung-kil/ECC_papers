@@ -1,0 +1,1022 @@
+A SHUFFLED ITERATIVE BIT-INTERLEAVED CODED MODULATION RECEIVER FOR THE DVB-T2 STANDARD: DESIGN, IMPLEMENTATION AND FPGA PROTOTYPING
+
+Meng Li1, Charbel Abdel Nour1, Christophe Jégo2, Jianxiao Yang1 and Catherine Douillard1
+
+1Institut Telecom, Telecom Bretagne, CNRS Lab-STICC UMR3192 Technopôle Brest Iroise, CS 83818 29238 Brest Université Européenne de Bretagne, France firstname.lastname@telecom-bretagne.eu
+
+2IPB, ENSEIRB-MATMECA, CNRS IMS UMR 5218 351, Cours de la Libération, 33405 Talence Université de Bordeaux, France christophe.jego@ims-bordeaux.fr
+
+ABSTRACT Rotated QAM constellations improve Bit-Interleaved Coded Modulation (BICM) performance over fading channels. Indeed, an increased diversity is obtained by coupling a constellation rotation with interleaving between the real and imaginary components of transmitted symbols either in time or frequency domain. Iterative processing at the receiver side can provide additional improvement in performance. In this paper, an efficient shuffled iterative receiver is investigated for the second generation of the terrestrial digital video broadcasting standard DVB-T2. Scheduling an efficient message passing algorithm with low latency between the demapper and the LDPC decoder represents the main contribution. The design and the FPGA prototyping of the resultant shuffled iterative BICM receiver are then described. Architecture complexity and measured performance validate the potential of iterative receiver as a practical and competitive solution for the DVB-T2 standard.
+Index Terms — BICM, shuffled iterative receiver, LDPC decoder, rotated constellation, DVB-T2 standard
+1. INTRODUCTION
+The second generation of terrestrial video broadcasting standard (DVB-T2) was defined in 2008. The key motivation behind developping a second generation is to offer high definition television services. One of the key technologies in DVB-T2 is a new diversity technique called rotated constellations [1]. This concept can significantly improve the system performance in frequency selective terrestrial channels thanks to Signal Space Diversity (SSD) [2]. Indeed, SSD doubles the diversity order of the conventional BICM schemes and largely improves the fading performance especially for high coding rates [3]. When using conventional QAM constellations, each signal component, in-phase (I) or quadrature (Q), carries half of the binary information held in the signal. Thus, when a constellation signal is subject to a fading event, I and Q components fade identically. In the case of severe fading, the information transmitted on I and Q components suffers an irreversible loss. The very simple underlying idea in SSD involves transmitting the whole binary content of each constellation signal twice and separately yet without loss of spectral efficiency. Actually, the two projections of the signal are sent separately in two different time periods, two different OFDM subcarriers or two different antennas, in order to benefit from time or
+
+frequency or antenna diversity respectively. When concatenated with Forward Error Correcting (FEC) codes, simulations [3] show that rotated constellation provides an important gain over conventional QAM on wireless channels. In order to achieve additional improvement in performance, iterations between the decoder and the demapper (BICM-ID) can be introduced. BICM-ID with an outer LDPC code was investigated for different DVB-T2 transmission scenarios [3]. It is shown that an iterative processing associated with SSD can provide additional error correction capability reaching more than 1.0 dB over some types of channels. Thanks to these advantages, BICM-ID has been recommended in the DVB-T2 implementation guidelines [4] as a candidate solution to improve the performance at the receiver.
+However, designing a low complexity high throughput iterative receiver remains a challenging task. One major problem is the computation complexities at both the rotated QAM demapper and at the LDPC decoder. In [5], a flexible demapper architecture for DVB-T2 is presented. Lowering complexity is achieved by decomposing the rotated constellation into two-dimensional sub-regions in signal space. In [6], a novel complexity-reduced LDPC decoder architecture based on the vertical layered schedule [7], [8] and the normalized Min-Sum (MS) algorithm is detailed. It closely approaches the full-complexity BP performance provided in the implementation guidelines of the DVB-T2 standard. Another critical problem is the additional latency introduced by the iterative process at the receiver side. Indeed, the ID especially with interleaver and de-interleaver imposes a latency that can have an important impact on the whole receiver. Therefore, an efficient information exchange method between the demapper and the decoder has to be applied. We propose to extend the recent shuffled decoding technique introduced in the turbo-decoding field [8] to avoid long latency. The basic idea of shuffled decoding technique is to execute all component decoders in parallel and to exchange extrinsic information as soon as it is available. It forces however a vertical layered schedule for the LDPC decoder as explained in [7]. In this context, processing one frame can be decomposed into multiple parallel smaller subframe processing having each a length equal to the parallelism level. While having a comparable computational
+
+978-1-4577-1921-9/11/$26.00 ©2011 IEEE
+
+55
+
+SiPS 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+complexity as the standard iterative schedule, the receiver with a shuffled iterative schedule enjoys a lower latency. However, such a parallel processing requires good matching between the demapping and the decoding processors in order to guarantee a high throughout pipeline architecture. This calls for an efficient message passing between these two types of processors.
+Two main contributions are presented in this work. The first is the investigation of different schedules for the message passing algorithm between the decoder and the demapper. The second represents the design and FPGA prototyping of a shuffled iterative bit-interleaved coded modulation receiver. The paper is organized as follows. Section 2 summarizes the basic principles of the BICM-ID with SSD adopted in DVB-T2. In Section 3, the detection of a rotated constellation, the vertical layered decoding using a normalized MS algorithm and the shuffled iterative receiver process are detailed. Then, the design of an efficient iterative receiver is described in Section 4. Finally, an implementation of the iterative BICM receiver and its experimental setup onto FPGA device are presented in Section 5.
+
+2. BICM-ID SCHEME
+
+The channel model used to simulate and emulate the effect of erasure events is a modified version of the classical Rayleigh fading channel. More information about this model is given in [5].
+
+2.1. Description of BICM-ID with SSD
+
+u
+
+FEC
+
+encoder
+
+Bit interleaver
+
+c
+
+v Rotated
+
+I
+
+S
+
+QAM
+
+x
+
+mapper Delay d Q
+
+(a)
+
+I Delay d y
+Q
+(b)
+
+Rotated QAM demapper
+
+S-1
+Bit de-interleaver (b)
+S
+
+FEC decoder
+
+Fig. 1. (a) The BICM with SSD transmitter; (b) Conventional BICM-ID receiver.
+
+At the transmitter side, the messages u are encoded as
+the codeword c . Afterwards, this codeword c is interleaved
+by S and becomes the input sequence v of the mapper. At each symbol time t, m consecutive bits of the interleaved sequence v are mapped into complex symbol xt . At the receiver side, the demapper calculates a two-dimensional squared Euclidean distance to obtain the bit LLR vˆti of the ith
+bit of symbol vt. These demapped LLRs are then deinterleaved and used as inputs of the decoder. The extrinsic information is finally generated by the decoder and fed back to the demapper for iterative demapping.
+The SSD introduces two modifications to the classical BICM system shown in Fig. 1. The classical QAM
+
+constellation is rotated by a fixed angle Į. Its Q component is delayed d symbol periods. Therefore, the in-phase and quadrature components of the classical QAM constellation are sent at two different time periods, doubling the constellation diversity of the BICM scheme. When a severe fading occurs, one of the components is erased and the corresponding LLRs could be computed from the remaining component.
+
+2.2. The BICM scheme adopted in the DVB-T2 standard
+
+The DVB-T2 standard provides a large set of transmitter configurations. This wide choice is motivated by the sheer nature of a broadcast network. It should be able to adapt to different geaographical locations characterized by different terrain topologies.
+Irregular Repeat Accumulate (IRA) codes have been adopted for DVB-T2. Two different frame lengths (16200 bits and 64800 bits) and a set of different code rates (1/2, 3/5, 2/3, 3/4, 4/5 and 5/6) are supported. A blockwise bit interleaver and a bit to constellation symbol multiplexer is applied before mapping except for QPSK. Eight different Gray mapped constellations with and without rotation are also supported by the standard ranging from QPSK to 256QAM.
+3. ITERATIVE RECEIVER FOR DVB-T2
+
+The feasibility of an iterative receiver is conditioned by the derivation of an iterative demapping algorithm that takes into account prototyping constraints.
+3.1. Demapping algorithm for an iterative receiver
+
+For Gray-mapped QAM constellations, the demapper
+
+calculates two-dimensional Euclidean distance for the computation of the LLR vˆti related to the ith bit of vt. The
+
+resulting vˆti becomes:
+
+vˆti
+
+¦   ¦ ¦   ¦ xt
+
+F0i
+
+
+
+­° ® °¯
+
+
+
+Deuc V
+
+2 w
+
+xt
+
+
+
+j
+
+m1 0, jzi,bj
+
+0
+
+ext (jt
+
+)
+
+½° ¾ °¿
+
+
+
+xt
+
+F1i
+
+
+
+­®° °¯
+
+Deuc V
+
+2 w
+
+xt
+
+
+
+m1
+
+ext
+
+(t j
+
+)
+
+°½ ¾
+
+j 0, jzi,bj 0
+
+°¿
+
+(1)
+
+where Deuc (xt ) is the square of the Euclidean distance
+
+between the constellation point and the equalized observation,
+
+i.e,
+
+Deuc ( xt )
+
+¬ª
+
+U
+
+t
+
+
+
+d
+
+(
+
+yI eq,t
+
+d
+
+
+
+xI td
+
+)¼º
+
+2
+
+
+
+¬ª
+
+Ut
+
+(
+
+yQ eq,t
+
+
+
+xtQ )¼º2
+
+(2)
+
+the operator  denotes the Jacobian logarithm, i.e.,
+
+  x  y
+
+°­max  x, y  log 1  exp x  y  , if x  y d 5
+
+® ¯°
+
+max  x, y  log 1  exp5, else
+
+(3)
+
+ext
+
+(t j
+
+)
+
+is
+
+the
+
+a
+
+priori
+
+information
+
+of
+
+the
+
+ith
+
+mapping
+
+bit
+
+bi
+
+of
+
+the symbol xt provided by the decoder after the first iteration.
+
+yI eq,t d
+
+and
+
+yQ eq,t
+
+respectively
+
+represent
+
+the
+
+in-phase
+
+and
+
+quadrature components of the equalized complex symbol
+
+. yeq,t Ut is a scalar representing the channel attenuation at
+
+time t. Fbi represents the subset of constellation symbols with
+
+56
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+ith bit bi b , b ^0,1` . V 2 is the Additive White Gaussian
+Noise (AWGN) variance. To reduce the computation complexity of (1), a sub-region
+selection algorithm [5] is proposed to avoid a complete search of signals in the constellation plane. However, when iterative processing is considered, this algorithm becomes greatly sub-optimal since the selected region may not contain the minimum Euclidean distance for the extrinsic information. Therefore, in this work the Maxlog approximation represents the only applied demapping simplification.
+
+3.2. LDPC decoding algorithm for an iterative receiver
+
+A vertical shuffled schedule (VSS) replaces the traditional horizontal layered schedule (HSS) in the design of the iterative receiver. A detailed description of believe propagation and Min-Sum algorithms for a VSS is provided in [6]. The proposed VSS Min-Sum (VSSMS) introduces only a small penalty with respect to VSS BP while greatly reducing decoding complexity. However, in the context of BICM-ID, the VSSMS introduces an additional penalty and reduces the expected performance gain. In fact, a decoding algorithm with a higher accuracy is a must in this case. The Min-Sum-3 or VSSMS3 algorithm represents the best compromise between the required precision and complexity. The difference between the VSSMS and VSSMS3 is that the 3rd minimum values are updated and saved leading to increased accuracy for the check node processing.
+
+3.3. Interleaver algorithm for an iterative receiver
+
+A critical problem in the implementation of a frame-byframe schedule in the iterative receiver is the latency introduced by the block interleaver and de-interleaver. To overcome this problem, we proposed a novel solution. The first step is replacing the classical RAM based block interleaver and de-interleaver memorizing the connections between the demapper and the decoder by a Look-Up-Table (LUT). The second step is applying VSS decoding instead of the typical layered HSS LDPC decoding. Consequently, both the decoded and demapped extrinsic informations can be exchanged before the end of one frame processing.
+
+3.4. The algorithm for an iterative shuffled receiver
+
+The shuffled demapping and decoding algorithm is detailed Fig. 2 as follows:
+
+Demapper to Bit information
+
+Bit to Check information
+
+Demap
+Processors
+
+Variable
+Processors
+Bit to Demapper information
+
+Check
+Processors
+Check to Bit information
+
+90 Parallelism
+
+Fig.2. The basic idea of the parallelized iterative receiver
+
+Shuffled Parallel Demapping and Decoding Algorithm For iteration  t 1, 2,...,tmax , within one parallel processing unit with Q
+bits ( Q can be 1, 45, 90, 120, 180 or 360), perform the following algorithm
+
+for the current code bit index n 1, 2,...,Q that corresponds to interleaved
+bit index i S 1,S 2,...,S Q , where i S n :
+
+Demapper processing for  i S 1,S 2,...,S Q
+
+(observation node processing)
+
+  ¦ vˆti
+
+|
+
+max
+xt F0i
+
+°­ ® ¯°
+
+
+
+1 V2
+w
+
+Deuc
+
+xt
+
+
+
+m 1
+
+ext
+
+(t j
+
+)
+
+½° ¾
+
+
+
+j 0, jzi,bj 0
+
+°¿
+
+(4)
+
+  ¦ max
+xt F1i
+
+­° ® °¯
+
+
+
+1 V2
+w
+
+Deuc
+
+xt
+
+
+
+m 1
+
+ext
+
+(t j
+
+)
+
+½° ¾
+
+j 0, jzi,bj 0
+
+¿°
+
+Decoder processing for  n 1,2,...,Q
+
+(check node processing)
+
+  E (t mn
+
+)
+
+­tP!1 ° ° ®
+
+°­D ® ¯°D
+
+m m
+
+K K
+
+ 
+
+sgn sgn
+
+T (t 1) mn
+T (t 1) mn
+
+
+
+M
+
+1 m
+
+,
+
+
+
+M
+
+0 m
+
+,
+
+if n Pm0 else
+
+(5)
+
+°° tP1 ¯
+
+0
+
+(bit node processing)
+
+LLRn vˆti , where n S 1 i
+
+(6)
+
+T (t) n
+
+­°
+
+LLRn ,
+
+¦ ®
+°¯
+
+LLRn
+
+
+
+mM (n)
+
+Emn(t) ,
+
+t1 else
+
+T (t) mn
+
+T (t) n
+
+
+
+E (t) mn
+
+(bit node updating for next demapping)
+
+extn( t )
+
+T (t) n
+
+
+
+LLRn
+
+(check node updating)
+
+      D m
+
+D m
+
+
+
+sgn
+
+T (t 1) mn
+
+ sgn
+
+T (t) mn
+
+,
+
+mM n
+
+(7) (8) (9) (10)
+
+    ­
+°
+
+M
+
+0 m
+
+min1st
+
+Tmtn
+
+,
+
+T t 1 mk '
+
+,
+
+Pm0
+
+index
+
+M
+
+0 m
+
+    °
+®M
+
+1 m
+
+°
+
+min 2nd
+
+Tmtn
+
+,
+
+T t 1 mk '
+
+,
+
+Pm1
+
+index
+
+M
+
+1 m
+
+    °
+¯
+
+M
+
+2 m
+
+min 3rd
+
+Tmtn
+
+,
+
+T t 1 mk '
+
+,
+
+Pm2
+
+index
+
+M
+
+2 m
+
+where k '  N (m) \ n .
+
+(11)
+
+In each shuffled sub-iteration, Q demappers apply equ. (4) to update Q LLRs as the input of LDPC decoder. Then Q check node processors and bit node processors in the decoder compute equ. (5) to equ. (11) to send the feed back extrinsic messages to demappers. The sub-iteration is carried out sequentially along the groups of Q bit nodes. The advantage of such a scheduling is a lower decoding latency. It also leads to a decrease in the number of required iterations and better Bit Error Rate (BER) performance. There are several possible message passing schedules between the decoder and the demapper. They correspond to the possible combinations of the parallelism of LDPC decoder and the partial update strategies at the demapper. The interesting cases that are listed in Table 1. Schedule A adopts a serial schedule between the demapper and the VSS based LDPC decoder. Eachconstellationsymbolprocessingleadsto log2 (M ) variable
+
+57
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+Schedule
+
+A
+
+B
+
+C
+
+Receiver based on Demapper
+
+Demapper symbols
+
+1
+
+LDPC d 90
+
+LDPC d 90
+
+Updated LLR
+
+log2 (M ) d 90  log2 (M )
+
+90
+
+LDPC Parallelism
+
+1
+
+90
+
+90
+
+LDPC bits processed log2(M )
+
+90
+
+90
+
+Feedback Extrinsic log2(M )
+
+90
+
+90
+
+Table.1. Message passing schedules for the iterative receiver
+
+bits updated at the LDPC decoder input. Then, all the extrinsic information is fed back to the original symbol. Schedules B and C are based on a VSS LDPC decoder, with parallelism of 90. In other words, 90 variable bits get updated and generate 90 extrinsic information that is fed back to 90 demappers maximum. If all bits originate from different symbols, then the processing requires 90 demappers working in parallel. This clearly represents a worst case processing scenario. The difference between Schedule B and Schedule C is in the number of the LLRs that are updated during the iterative processing at the demapper. Note that we have chosen Schedule C for the design of the iterative receiver.
+
+10-1 256-QAM Fading erasure 15% R45 64K
+
+and the hardware requirements in terms of resources. At third, by decomposing the frame decoder into several VSS processors each working on a set of variable nodes, the latest information decoded or demapped can be rapidly exchanged and thus accelerate the iterative process convergence.
+Fig.4 (a) and (b) compare the schedule of the iterative frame-by-frame HSS decoding and the one of the proposed architectural solution with a parallelism of 90. Lets take the example of 64K-LDPC with a code rate of 4/5 having 630 nonzero elements in its 360 u 360 parity-check matrix. In order to perform one iteration for one coded frame, the
+former requires 630u 360 / 90  64800u 2 cycles, while the
+latter needs only 630 u 360 / 90  ' cycles, where ' is the
+delay of performed LUT interleaver accesses.
+
+One iteration of HSS (N-K)/P layers
+
+3
+
+write (N)
+
+3
+
+read (N)
+
+Demapping
+
+(N/M) symbols
+
+One iterative of the BICM-ID receiver with HSS LDPC decoding
+Fig.4. (a) Scheduling of horizontal iterative receiver
+
+One sub-iteration of VSS
+
+1 0 -2
+
+1 column (P bits)
+
+3
+
+LUT (P)
+
+Demapping
+
+1 0 -3
+
+(max P) Symbols
+
+BE R
+
+Iterative
+1 0 -4
+
+Non-Iterative
+
+One sub-iterative of the BICM-ID receiver with VSS LDPC decoding
+Fig.4. (b) Scheduling of vertical iterative receiver
+
+1 0 -5
+
+ID Schedule C LDPC VSSBP floating P=90
+
+ID Schedule B LDPC VSSBP floating P=90
+
+ID Schedule C LDPC VSSM S3 floating P=90
+
+ID Schedule B LDPC VSSM S3 floating P=90
+
+1 0 -6
+
+NID LDPC VSSM S3 floating P=1
+
+21
+
+22
+
+23
+
+24
+
+25
+
+Eb/N0(dB)
+
+Fig. 3. Performance comparison for rotated 256-QAM over a fading channel with 15 % of erasures. DVB-T2 64K LDPC, rate R=4/5
+
+4. DESIGN OF AN EFFICIENT ITERATIVE RECEIVER
+The proposed shuffled algorithm for the iterative receiver has several advantages compared to the non-iterative and iterative frame-by-frame HSS decoding. At first, the VSS schedule directly targets updating variable information and facilitates the information exchange between demapping and decoding processors. At second, the LUT based interleaver “virtualizes” the usual buffer and reduces both the latency
+
+These LUT accesses should be adapted to the processing parallelism of the LDPC decoder, 90 in this case. Indeed, the design of the interleaver was based on a parallelism degree of 360 as explained in [10]. Therefore, we have considered and implemented as a first step only an iterative receiver for a QPSK constellation.
+The architecture of the proposed iterative receiver is illustrated in Fig.5. One main demapper progressively computes the Euclidean distances and their LLRs to be memorized in the LLR RAM and ECD RAM. Two of those RAMs are allocated, one in charges of initialization and one in charges of decoding. The LDPC decoder core is composed of 90 check node processors and 90 bit node processors. In charge of updating LLRs, 90 simplified demappers process extrinsic feedback generated by the decoder and the extrinsic information RAM. Euclidean distances between the received observation and constellation symbols are memorized instead of I and Q components and the according CSI information in order to minimize the delay of the feedback
+
+58
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+demapping
+
+Demapper Main
+
+Demapper Main
+
+Demapper Main
+
+Demapper Main
+
+processes decoding
+
+Init LLRA
+
+Init LLRB
+
+De-Interleaver
+
+Decoder
+Processors
+
+Init LLRA
+
+Init LLRB
+
+De-Interleaver
+
+Decoder
+Processors
+
+Init LLRA
+
+Init LLRB
+
+De-Interleaver
+
+Decoder
+Processors
+
+Init LLRA
+
+Init LLRB
+
+De-Interleaver
+
+Decoder
+Processors
+
+Demapper bf
+Processors
+Interleaver
+
+Demapper bf
+Processors
+Interleaver
+
+Demapper bf
+Processors
+Interleaver
+
+Demapper bf
+Processors
+Interleaver
+
+demapping feedback
+
+ecd LLRA
+
+ecd LLRB
+
+BICM-ID core
+
+ecd LLRA
+
+ecd LLRB
+
+ecd LLRA
+
+ecd LLRB
+
+ecd LLRA
+
+ecd LLRB
+
+frame1
+
+frame2 time
+
+frame3
+
+frame4
+
+Fig.5. The proposed architecture of the vertical iterative receiver
+
+demapper. The updated LLRs are available only after two cycles of introducing updated extrinsic information. In this way, the LDPC decoder processes the latest updated LLRs, even for the bits with a check node degree equal to 3.
+
+ext0(0)
+
+llr0(0)
+
+ext0(1)
+
+llr0(1)
+
+ext1(0)
+
+'HPDSSHU llr1(0)
+
+/'3& 'HFRGHU &ROXPQ
+
+ext1(1)
+
+'HPDSSHU llr1(1)
+
+/'3& 'HFRGHU &ROXPQ
+
+Fig.6. Efficient message passing schedule for BICM-ID QPSK
+
+with a constant distance of Q. The bits of columns Kb  i and
+Kb  i  4 are associated to the same input symbols for a QPSK constellation. All the sub-iterations of the parity check part processes the LLRs from LLR RAM. The first four columns process the LLRs updated during the previous iteration. In contrast, the later four columns process the LLRs from RAM, but LLR values are updated by the previous four column groups. Actually, few modifications are necessary in the design of the LDPC decoder architecture to apply an iterative process to the BICM. Fig.7 gives the architecture to process the messages exchange between the demappers and the decoders.
+
+LLR RAM 1 0
+
+LDPC core
+
+EXT RAM
+
+ECD RAM
+
+0
+
+1
+
+Demapper
+
+Core
+
+1
+
+QPSK
+
+0
+
+Fig.7. Selection process for the message exchange in the receiver
+
+In the information part of the LDPC matrix, the bits of columns i and i 1 are associated to the same input symbol
+for a QPSK constellation. Fig. 6. gives an efficient message passing schedule between the demapper and the decoder. The odd columns use the updated LLRs generated during the process of the previous column. As for the even column, they need to get the LLR values from the LLR RAM (re-usage of init RAM) in which the LLRs have been updated during the previous iteration. If all the LLR values are obtained from the LLR RAM, the message passing schedule is equivalent to the classical frame by frame schedule. To obtain quasi-cyclic property, a reorder is carried out among the parity check bits,
+
+5. FPGA IMPLEMENTATION AND PROTOTYPING
+The experimental setup is a development board from Dinigroup that contains 6 Xilinx Virtex5 LX330 devices. Fig. 8 shows the different components of the experimental setup implemented onto only one of the FPGAs. The BICM-ID receiver is made up of a main rotated demapper and a BICMID core. This core is composed of 90 simplified demappers and 90 LDPC decoders. In the experimental setup, we have also integrated the rotated demapper previously described in [5]. The proposed BICM-ID receiver was synthesized and implemented onto the FPGA. Computational resources of the BICM-ID MS core takes up about 11% and 44% of a Xilinx XC5VLX330 FPGA slice registers and slice LUTs, respectively. If a BICM-ID MS3 core is implemented, 12% slice registers and 52% slice LUTs are necessary.
+
+XC5VLX330 Registers LUTs. RAMs
+
+BICM-ID MS 23,118 9,3130
+
+179
+
+BICM-ID MS3 26,088 10,8126
+
+193
+
+Table.2. HW resources for the two different BICM-ID cores
+
+59
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+equalizer rotated
+demapper demapper feedback deinterleaver
+LDPC decoder
+
+Erasure % SNR
+
+BICMID core
+
+interleaver
+6 bits
+
+11 bits
+
+7 bits
+
+LDPC encoder interleaver
+
+XI
+
+rotated mapper
+
+bit
+
+bit
+
+bit
+
+10 bits
+
+d
+
+Rayleigh channel emulator
+
+YI YQ
+9 bits 8 bits
+
+YeqI YeqQ
+d
+9 bits
+d
+
+LLR ECD
+
+LLR 6 bits
+
+LLR 6 bits
+
+bit
+BER computation
+
+XQ
+
+ȡI ȡQ
+
+CSII CSIQ
+
+PRG
+
+Fig. 8: Experimental setup for prototyping the BICM receiver
+
+The maximum frequency estimated for the BICM-ID MS core after place and route is 80MHz. It results in a throughput of 107 Mbps, for R=4/5 @ 15 iterations. A comparison of simulated performance and experimental setup measured performance in terms of BER of the designed BICM-ID receiver with VSSMS and VSSMS3 decoding algorithm for a QPSK constellation, a code rate R=4/5 and 64,800 bit frames, is presented in Fig. 9. More than 10 dB gain is observed from the BICM-ID VSSMS3 receiver when compared to the non-rotated QPSK in a non-iterative receiver. Moreover, an additional gain of 0.9dB is achieved for the iterative receiver with VSSMS3 decoding algorithm when compared to the non-iterative BICM receiver.
+
+this is the first hardware implementation of BICM-ID receiver for the DVB-T2 standard.
+ACKNOWLEDGMENT
+This work has been carried out in the framework of the SME42 project of the EUREKA's Eurostars programme.
+REFERENCES
+[1] L. Vangelista, N. Benvenuto, S. Tomasin, C. Kokes, J. Stott, A. Filippi, M. Vlot, V. Mignone, and A. Morello, “Key technologies for next-generation terrestrial digital television standard DVB-T2,” IEEE Communications Magazine, vol. 47, no. 10, pp. 146–153, 2009.
+
+1 0-1
+
+[2] J. Boutros and E. Viterbo, “Signal space diversity: A power- and
+
+bandwidth-efficient diversity technique for the Rayleigh fading
+
+channel,” IEEE Trans. Inform. Theory, vol. 44, no. 4, pp. 1453–
+
+1 0-2
+
+1467, July 1998.
+
+1 0-3
+10-4 BI CM-I D
+
+Rotated QPSK
+
+QPSK
+
+[3] C. Abdel Nour and C. Douillard, “Improving BICM
+performance of QAM constellations for broadcasting applications," 5th Int. Symp. on Turbo Codes and Related Topics, Lausanne, Switzerland, pp. 55-60, Sep. 2008.
+
+1 0-5
+B I CM
+1 0-6
+
+1 0-7 1 0-8
+6
+
+ID ScheduleC V SSM S3 simulation fix ID Schedule C V SSM S3 prototype ID ScheduleC V SSM S2 prototype NID V SSM S2 prototype NID V SSM S2 prototype
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+E b /N0 (d B )
+
+Fig. 9: Performance comparison for QPSK over a fading channel
+
+with 15 % of erasures. 64K frames, DVB-T2 LDPC, rate R=4/5
+
+CONCLUSION
+BICM-ID shows best theoretical performance in the implementation guidelines of the DVB-T2 standard. In this paper, we have detailed a vertical schedule that enables an efficient data exchange between the demapper and the decoder in an ID context. Then, an FPGA prototype characteristics and performance for BICM-ID receivers based on a vertical schedule of min-sum and min-sum-3 has been discussed. The designed iterative receiver achieves high performance gain as expected. To the best of our knowledge,
+
+[4] DVB-T2, “Implementation guidelines for a second generation digital terrestrial television broadcasting system (DVB-T2)”, draft ETSI TR 102 831 3 V0.10.00, Nov., 2009.
+[5] M. Li, C. Abdel Nour, C. Jégo and C. Douillard, “Design of Rotated QAM Mapper/Demapper for the DVB-T2 Standard,” SiPS 2009: IEEE workshop on Signal Processing Systems, October 2009.
+[6] M. Li, C. Abdel Nour, C. Jégo and C. Douillard, “Design and FPFA prototyping of a bit-iterleaved coded modulation receiver for the DVB-T2 standard,” SiPS 2010: IEEE workshop on Signal Processing Systems, October 2010.
+[7] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” In Proc. Signal Processing Systems SIPS 2004, pp 107–112, October 2004.
+[8] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[9] M. Li, C. Abdel Nour, C. Jégo and C. Douillard, “Efficient iterative receiver for Bit-Interleaved Coded Modulation with signal space diversity for DVB-T2,” ICASSP 2010, May 2010.
+[10] Yokokawa, T., Kan, M., Okada, S.,Sakai, L., “Parity and column twist bit interleaver for DVB-T2 LDPC codes”, Turbo Codes and Related Topics, 2008 5th International Symposium, Sept 2008.
+
+BER
+
+60
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:00:30 UTC from IEEE Xplore. Restrictions apply.
+
+

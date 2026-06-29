@@ -1,0 +1,669 @@
+Parallel Encoding Algorithm for LDPC Codes Based on Block-Diagonalization
+Takayuki Nozaki Yamaguchi University, JAPAN Email: tnozaki@yamaguchi-u.ac.jp
+
+Abstract—In this paper, we propose an efficient parallel encoding algorithm for the low-density parity-check (LDPC) codes. The main idea of the proposed encoding algorithm is the blockdiagonalization of the parity part of a given parity check matrix by row and column permutation. The numerical examples in this paper show that the proposed encoding algorithm efficiently works in the multi-processor systems.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes, invented by Gallager [1], are defined by sparse parity check matrices. Due to the sparseness of the parity check matrices, LDPC codes are decoded by the belief propagation (BP) algorithm, which is a parallel decoding algorithm with complexity O(N ), where N is the code-length. On the other hand, LDPC codes are encoded by its generator matrix with complexity O(N 2). In other words, the complexity of encoding is larger than that of decoding for large code-length. Hence, it is important to reduce the encoding complexity of the LDPC codes.
+Richardson and Urbanke [2] proposed the first efficient encoding algorithm, which is based on transforming the parity check matrix into an approximate triangular matrix by row and column permutation. This algorithm can encode the LDPC codes with complexity O(N + δ2), where δ is proportional to N and δ ≪ N , and is called gap. Kaji [3] proposed an encoding algorithm based on LU-decomposition and showed that the encoding algorithm outperforms Richardson and Urbanke’s (RU) encoding algorithm in terms of the complexity for small δ. Recently, encoding algorithms based on blocktriangularization were proposed in [4], [5]. However, those encoding algorithms [2], [3], [4], [5] are sequential algorithms.
+In this paper, we propose an efficient parallel encoding algorithm for the LDPC codes to reduce the time of encoding. The main idea of the proposed encoding algorithm is the block-diagonalization of the parity part of a given parity check matrix by row and column permutation. By using the block-diagonalization, encoding of LDPC codes comes down to several small systems of linear equations. By parallelly solving those small systems of linear equations, the proposed parallel algorithm is realized. Moreover, rearranging row and column of diagonal submatrices by the RU algorithm, those small systems of linear equations are efficiently solved. The numerical examples in this paper show that the proposed encoding algorithm efficiently works in the multi-processor systems.
+
+The remainder of the paper is organized as follows. Section II briefly reviews the general framework of encoding algorithm for the LDPC codes and the RU encoding algorithm. Section III introduces hypergraph representation for parity check matrices and hypergraph partition problem. Those will be used for transforming a given parity check matrix into a singly bordered block-diagonal form. Section IV proposes a parallel encoding algorithm. Section V shows some numerical examples of the proposed algorithm and compares the complexity of the proposed algorithm and the RU encoding algorithm.
+
+II. PRELIMINARIES
+This section briefly reviews a general framework of encoding for LDPC codes and the RU encoding algorithm.
+
+A. General Framework of Encoding for LDPC codes
+
+In this section, we consider the general framework of the
+
+encoding algorithm for the LDPC codes over the finite field Fq of the order q. We assume that the M ×N parity check matrix
+
+H has full rank, i.e, rank(H) = M . For a given H, encoding
+
+maps a message m of length N − M into a codeword x of
+
+length N .
+
+Encoding algorithms of LDPC codes are divided into two
+
+steps, called precoding step and encoding step. In the pre-
+
+coding step, the algorithm transforms the parity check matrix
+
+H into a systematic form Hsys = (HP HI ), where HP
+
+is a M × M non-singular matrix and called the parity part
+
+of H and HI is called the information part of H. Similarly,
+
+each codeword is partitioned as x =
+
+p m
+
+, where p ∈ FqM
+
+(resp. m ∈ FqN−M ) is called the parity part (resp. information part). Since Hx = 0 holds, we have HP p = −HI m. Hence,
+
+in the encoding step, the algorithm generates codeword x
+
+corresponding to the message m by solving HP p = −HI m.
+
+To reduce the encoding complexity, HP should have some
+
+form which can be efficiently solved.
+
+To keep the decoding performance of an LDPC code and
+
+the number of non-zero entries in its parity-check matrix H,
+
+the precoding step transforms H only by row and column
+
+permutation, i.e, by using two permutation matrices P and Q,
+
+Hsys = PHQ. By summarizing above, the precoding step is
+
+regarded as an algorithm finding two permutation matrices P
+
+and Q such that HP p = −HI m is efficiently solved.
+
+978-1-4673-7704-1/15/$31.00 ©2015 IEEE
+
+1911
+
+ISIT 2015
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:50:59 UTC from IEEE Xplore. Restrictions apply.
+
+B. Richardson and Urbanke’s (RU) Encoding Algorithm
+In this section, we briefly review the RU encoding algorithm. In the precoding step, the RU encoding algorithm transforms a given parity check matrix H into an approximate triangular matrix (ATM), which is described as
+
+HATM = PHQ =
+
+T D
+
+C E
+
+HIu HlI
+
+,
+
+(1)
+
+where HP =
+
+T D
+
+C E
+
+, HI =
+
+HIu HIl
+
+, T is an (M − δ) ×
+
+(M − δ) upper triangular matrix, C, D, E, HIu and HIl are
+
+(M − δ) × δ, δ × (M − δ), δ × δ, (M − δ) × (N − M ) and
+
+δ × (N − M ) matrices, respectively.
+
+Assume that the parity part of a codeword is partitioned as
+
+p=
+
+pu pl
+
+, where pu and pl are of length (M − δ) and δ,
+
+respectively. Define Φ := (E − DT−1C). Then, the encoding
+
+step is given as follows:
+
+1) Derive pl from the following equation
+
+pl = Φ−1(DT−1HIu − HIl )m.
+
+2) Solve pu by using backward substitution of T
+
+Tpu = −Cpl − HuI m.
+
+Denote the number of non-zero elements in the matrix A, by wt(A). Let Z(A) be the number of rows in A such that there exists at least one non-zero element. Define S(A) := wt(A) − Z(A). The numbers of multiplication µ and addition α of the encoding step of the RU algorithm are
+
+µ = wt(HI ) + 2wt(T) + wt(C) + wt(D) + wt(Φ−1), (2) α = S(HI ) + 2S(T) + S(C) + S(D) + S(Φ−1) + M, (3)
+
+respectively. Summarizing the above, the precoding step of the RU algo-
+rithm is regarded as an algorithm, whose input is the original parity check matrix H and output is a four-tuple of matrices (HATM, P, Q, Φ−1). Hence, we denote the precoding step of the RU algorithm, as ATM(H) → (HATM, P, Q, Φ−1). This notation will be used in Section IV-D.
+
+III. HYPERGRAPH REPRESENTATION AND PARTITION PROBLEM
+This section defines hypergraphs and introduces the hypergraph representation of matrices [6, Section 3.2] and hypergraph partitioning problem.
+
+A. Hypergraph Representation of Matrix
+Definition 1 (Hypergraph): Let U be a finite set, and let E be a family of non-empty subset of U. The pair (U , E) is called hypergraph with the set of vertices U and the set of nets (or hyperedges) E. If the i-th node ui ∈ U is in the j-th net ej ∈ E, i.e, ui ∈ ej, we call ui connected to ej.
+The hypergraph (U , E) is called graph if |ej| ≤ 2 for all ej ∈ E [7]. In other words, a hypergraph is a generalization of a graph.
+
+In [6], C¸ atalyu¨rek and Aykanat gave two hypergraph representation of a sparse matrix, called column net model and row net model. In this paper, since we only employ the row net model, we refer the row net model as hypergraph representation of a matrix.
+For a given M × N matrix H = (hi,j), the hypergraph representation HH = (U , E) is constructed in the following way. The number of vertices |U| is m and the number of nets |E| is n. The node ui is connected to the edge ej iff hi,j ̸= 0, i.e, ui ∈ ej ⇐⇒ hi,j ≠ 0. In other words, the i-th net (resp. j-th vertex) corresponds to the i-th column (resp. j-th row).
+Remark 1: Consider the Tanner graph GH corresponding to the parity check matrix H. If we transform the variable nodes (resp. check nodes) in GH to nets (resp. vertices), we can obtain the hypergraph representation for the parity check matrix H.
+
+B. Hypergraph Partitioning Problem
+
+A family Π = {U1, U2, . . . , UK } of non-empty subsets of U is a K-way hypergraph partition of H = (U, E) if the
+followings are satisfied:
+
+• Each pair of parts is disjoint, i.e, Ui ∩ Uj = ∅ for all 1 ≤ i < j ≤ K.
+
+• Union of K parts is equal to U , i.e,
+
+K i=1
+
+Ui
+
+=
+
+U.
+
+For a fixed partition Π, if a net e ∈ E connects to a node
+
+u in a part Ui, we call that the net e connects to the part Ui. Denote the set of nets connecting to a part Ui, by N (Ui). A net is called cut if the net connects to more than one parts.
+
+For a fixed partition Π, the set of cuts is called cut set and
+
+denoted by X (Π). The cutsize of Π is given by |X (Π)|.
+
+A partition is balanced [6] if the following holds:
+
+|U |
+
+max |Ui| ≤
+i
+
+(1 + ϵ), K
+
+where ϵ ≥ 0 represents the predetermined maximum imbalance ratio.
+The K-way hypergraph partitioning problem is described as follows: For a given hypergraph (U , E), derive a balanced K-way partition Π such that |X (Π)| is minimized. The hypergraph partitioning problem is NP-hard [8]. However, there exist several heuristic algorithms. PaToH [9], [10] is a heuristic algorithm solving hypergraph partitioning problem. This paper employs PaToH to solve hypergraph partitioning problem.
+
+IV. PARALLEL ENCODING ALGORITHM
+In this section, we propose a parallel encoding algorithm based on block-diagonalization. The precoding step of the proposed algorithm firstly transforms a given parity check matrix into a singly bordered (SB) block-diagonal form. Secondly, the precoding step of the proposed algorithm rearranges the rows and columns of the diagonal submatrices in the SB blockdiagonal matrix.
+This section is organized as follows. Section IV-A introduces transformation of a given parity check matrix into a SB block-diagonal form. Section IV-B rearranges the rows and columns of the diagonal submatrices in the SB block-diagonal
+
+1912
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:50:59 UTC from IEEE Xplore. Restrictions apply.
+
+matrix and constructs a parity part HP . Section IV-C gives the encoding step of the proposed algorithm. By summarizing Section IV-A and IV-B, Section IV-D presents the precoding step of the proposed encoding algorithm. Finally, we evaluate the complexity of the proposed algorithm in Section IV-E.
+
+A. Singly bordered block-diagonalization
+
+In this section, we define the K-way SB block-diagonal matrix and introduce K-way SB block-diagonalization for
+
+matrices [11].
+
+Definition 2 (Block matrix): A block matrix is a matrix
+
+whose row and column are partitioned into several sections. A
+
+matrix A of size M × N with r row partitions and s column
+
+partitions is described as
+
+⎛
+
+⎞
+
+A1,1 A1,2 · · · A1,s
+
+⎝⎜ ...
+
+... . . . ... ⎠⎟ ,
+
+Ar,1 Ar,2 · · · Ar,s
+
+where
+s j=1
+
+Ai,j is of Nj = N .
+
+size We
+
+Mi × refer
+
+Nj . the
+
+Notice that
+
+r i=1
+
+Mi
+
+=
+
+M
+
+and
+
+submatrix Ai,j as the (i, j)-th
+
+block and refer i (resp. j) as block column (resp. block row).
+
+Definition 3 (Block diagonal matrix): A block diagonal
+
+matrix is a square matrix whose non-zero blocks form square
+
+submatrices and are only arranged in diagonal blocks. A block
+
+diagonal matrix with r row and column partitions is denoted
+
+by diag[A1,1, . . . , Ar,r]. Definition 4 (K-way SB block-diagonal matrix): A SB
+
+block diagonal matrix is a block matrix whose non-zero
+
+blocks are only arranged in diagonal blocks and the last block
+
+column. The M × N matrix is a K-way SB block-diagonal
+
+matrix if the matrix is described as
+
+⎛
+
+A1 O · · · O
+
+⎜⎜⎝⎜⎜⎜
+
+O ... O
+
+A2 ...
+O ···
+
+O ... AK
+
+⎞
+
+B1
+
+B2 ...
+BK
+
+⎟⎟⎟⎠⎟⎟ ,
+
+O O · · · O AK+1
+
+where Ai (resp. Bi) is Mi × Ni (resp. Mi × NK+1) matrix and MK+1 ≥ 0. In particular, if MK+1 = 0, then a K-way SB block-diagonal matrix is written in
+
+⎛
+
+⎞
+
+A1 O · · · O B1
+
+⎜⎜⎜⎝
+
+O ...
+
+A2
+
+...
+
+O ...
+
+B2 ...
+
+⎠⎟⎟⎟
+
+.
+
+O O · · · AK BK
+
+We refer to transforming matrix H to K-way SB blockdiagonal matrix as K-way SB block-diagonalization of H.
+For a given K-way hypergraph partition Π, define UK+1 := {u ∈ U | u ̸∈ e ∀e ∈ E \ X (Π)}. In words, UK+1 represents the set of vertices only connected to X (Π). The following algorithm provides a K-way SB block-diagonalization of a parity check matrix H by using K-way hypergraph partition.
+Algorithm 1 (SB block-diagonalization): Input: An M × N parity check matrix H, the number of
+
+partitions K Output: A K-way SB block-diagonalized matrix HKSBBD
+1) Construct hypergraph representation HH for H. 2) By solving the K-way hypergraph partitioning problem
+for HH, provide Π = {Ui}1≤i≤K . 3) (Column-permutation) For i ∈ [1, K] := {1, 2, . . . , K},
+label the columns corresponding to the nets in N (Ui) \ X (Π), by i. Label the columns corresponding to the nets in X (Π), by K + 1. Sort the columns of H in ascending order of labels. 4) (Row-permutation) For i ∈ [1, K], label the rows corresponding to the vertices in Ui \ UK+1, by i. Label the rows corresponding to the vertices in UK+1, by K + 1. Sort the rows of H in ascending order of labels. 5) Output the resulting matrix as HKSBBD
+Remark 2: For i ∈ [1, K], the vertices in Ui \ UK+1 corresponds to the i-th block column of HSBBD. Similarly, for j ∈ [1, K], the nets in N (Ui) \ X (Π) corresponds to the j-th block row of HSBBD. Since the nets in N (Ui) \ X (Π) connects only to vertices in Ui \ UK+1, the (i, j)-th block Ai,j is equal to O for i ̸= j, i, j ∈ [1, K].
+Assume that the parity check matrix H ∈ FM×N has full rank, i.e, rank(H) = M . Then the following lemmas and proposition hold.
+Lemma 1: If H has full rank, MK+1 ≤ NK+1 holds.
+Proposition 1: If H has full rank, sub-matrix AK+1 has full rank, i.e, rank(AK+1) = MK+1.
+We can obtain this lemma and proposition in a proof by contradiction.
+Proposition 1 shows that the sub-matrix AK+1 always has full rank. On the other hand, there is a possibility that rank(Ai) < Mi for i ∈ [1, K].
+
+B. Construction of Parity Part HP
+
+Assume rank(Ai) = Mi, for all i ∈ [1, K]. As discussed in Section II, by using conventional encoding algorithm, e.g, the
+
+RU encoding algorithm, we can obtain a pair of permutation
+
+matrix (Pi, Qi) such that HiP , given by PiAiQi = (HPi IiI ), is efficiently solved. In this section, we rearrange the rows
+
+and columns of submatrices Ai by using such (Pi, Qi) and construct the parity part HP .
+
+1) In the case of MK+1 > 0 : Denote PiBiQK+1 = (BiP BiI ) for i ∈ [1, K], where BiP (resp. BiI ) is an Mi × MK+1 (resp. Mi × (NK+1 − MK+1)) matrix. By the column permutation matrix diag[P1, P2, . . . , PK+1] and the row permutation matrix diag[Q1, Q2, . . . , QK+1], the matrix HKSBBD is transformed as:
+
+⎛A1P AI1 O O · · · O
+
+O
+
+B1P
+
+BI1 ⎞
+
+⎜⎜⎜⎝⎜⎜
+
+O ... O
+
+O ...
+
+AP2
+
+A2I
+
+...
+
+O ...
+
+O ...
+
+O O O · · · APK AIK
+
+B...2P BPK
+
+B...I2 BIK
+
+⎟⎟⎟⎠⎟⎟
+
+O O O O · · · O O AKP +1 AIK+1
+
+1913
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:50:59 UTC from IEEE Xplore. Restrictions apply.
+
+The submatrix HP (resp. HI ) is constructed from the odd
+
+(resp. even) block columns, i.e,
+
+HP = ⎜⎜⎝⎛⎜AO...1P
+
+··· ...
+···
+
+O ... APK
+
+B...1P BPK
+
+⎞ ⎟⎟⎟⎠ ,
+
+(4)
+
+O HI = ⎜⎜⎜⎝⎛AO...I1
+
+··· O
+··· O . . . ... · · · AIK
+
+ABB...PKIKI1 +1⎟⎞⎟⎟⎠
+
+=:
+
+⎛ ⎜⎝⎜⎜
+
+H... 1I HIK
+
+⎞ ⎟⎟⎟⎠ .
+
+(5)
+
+O · · · O AKI +1
+
+HIK+1
+
+2) In the case of MK+1 = 0 : Define BIi := PiBi. In a similar way to the previous section, by the column permutation
+
+matrix diag[P1, . . . , PK ] and the row permutation matrix
+
+diag[Q1, . . . , QK , I], the matrix HSKBBD is transformed as:
+
+⎛AP1 AI1 O O · · · O
+
+O BI1 ⎞
+
+⎜⎜⎝⎜
+
+O ...
+
+O ...
+
+A2P
+
+AI2
+
+...
+
+O ...
+
+O ...
+
+B...I2 ⎟⎟⎠⎟ .
+
+O O O O · · · APK AIK BKI
+
+The submatrix HP (resp. HI ) is constructed as:
+
+⎛A1P
+
+⎞ O
+
+HP = ⎜⎝
+
+...
+
+⎟⎠ ,
+
+(6)
+
+O
+
+HI = ⎜⎝⎛A...1I
+
+··· ...
+
+AKP O ...
+
+B1 ...
+
+⎞ ⎠⎟
+
+=:
+
+⎛ ⎜⎝
+
+H... 1I
+
+⎞ ⎠⎟
+
+.
+
+(7)
+
+O · · · AIK BK
+
+HKI
+
+Since det(HP ) = i det(APi ) ≠ 0, the parity part HP is non-singular. In other words, there is an unique solution of HP p = −HI m for a given m.
+3) Construction Algorithm: Let I{·} be the indicator function which is equal to 1 if the condition inside the braces is fulfilled and 0 otherwise. The construction of parity part HP and information part HI is summarized as the following algorithm.
+Algorithm 2 (Construction of HP and HI ): Input: A K-way SB block diagonal matrix HSKBBD with rank(Ai) = Mi for all i ∈ [1, K + 1] Output: Parity part HP and information part HI
+1) By using ATM(Ai) → (AAi TM, Pi, Qi, Φi−1), get (Pi, Qi) for all i ∈ [1, K + I{MK+1 > 0}].
+2) If MK+1 > 0 holds, then construct HI and HP as in Section IV-B1. Otherwise, constrict HI and HP as in Section IV-B2.
+Remark 3: In Step 1, Algorithm 2 employs the RU encoding algorithm to get permutation matrices (Pi, Qi). Naturally, we can employ other encoding algorithms to get permutation matrices (Pi, Qi). In other words, we can replace the RU algorithm used in Step 1 with other encoding algorithm which gives (Pi, Qi).
+
+C. Encoding Step
+
+Let p (resp. m) be partitioned into K + 1 parts pi (resp. mi) of length Mi (resp. Ni − Mi). Then, the encoding step of the proposed algorithm is the following.
+1) In the case of MK+1 > 0: From (4) and (5), we have
+
+APi pi +BPi pK+1 = −AiI mi − BIi mK+1, ∀i ∈ [1, K], (8)
+
+AKP +1pK+1 = −AIK+1mK+1.
+
+(9)
+
+Notice that from (8), pi for i ∈ [1, K] is solved if pK+1 is given. Hence, the encoding algorithm is given as follows:
+
+1) Solving (9), derive pK+1. 2) Parallelly solving (8), derive pi for all i ∈ [1, K].
+Notice that APi pi = b is efficiently solved by some conventional methods, e.g, the RU algorithm.
+2) In the case of MK+1 = 0: From (6) and (7), we have
+
+AiP pi = −AiI mi − BiI mK+1, ∀i ∈ [1, K].
+
+(10)
+
+Notice that pi is derived independently each other, from (10). Hence the encoding algorithm is given as follows:
+
+1) Parallelly solving (10), derive pi for all i ∈ [1, K]. Therefore, the proposed encoding algorithm efficiently works in the K-processor system if MK+1 = 0 holds.
+
+D. Precoding Step
+
+By summarizing Section IV-A and IV-B, this section gives
+the precoding step of the proposed algorithm. Algorithm 3 (Precoding step):
+Input: An M × N full-rank parity check matrix H, the maximum number of partitions Kmax Output: Parity part HP and information part HI
+1) Set K ← Kmax. 2) Inputting H and K to Algorithm 1, get HSKBBD. 3) If rank(Ai) = mi for all i ∈ [1, K], then go to Step 5.
+Otherwise, set K ← K − 1 and go to the next step.
+4) If K > 1, then go to Step 2. Otherwise, go to the next
+step. 5) Construct HP and HI , by using Algorithm 2 with input
+HKSBBD. Remark 4: As discussed in Section IV-C, MK+1 = 0 is desired since the encoding algorithm parallelly works. Hence,
+Step 2 should be repeated until MK+1 = 0 holds.
+
+E. Complexity
+
+In this section, we evaluate the encoding complexity in the
+
+case of employing the RU algorithm to derive permutation
+
+matrices (Pi, Qi). More precisely, we compute the number of multiplication and addition of the proposed algorithm.
+
+Then, matrix AiP is described as
+
+Ti Ci Di Ei
+
+and Φi :=
+
+Ei − DiTi−1Ci.
+
+In the case of MK+1 = 0, from (10), the numbers of
+
+multiplication µi and addition αi for deriving pi are given
+
+in a similar way of Section II-B
+
+µi = wt(HIi ) + 2wt(Ti) + wt(Ci) + wt(Di) + wt(Φi−1), αi = S(HIi ) + 2S(Ti) + S(Ci) + S(Di) + S(Φ−i 1) + Mi.
+
+1914
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:50:59 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I THE BLOCK SIZE OF H2SBBD FOR SOME CODES IN [12]
+
+Name
+PEGReg504x1008 PEGReg252x504 PEGirReg504x1008 PEGirReg252x504
+32000.2240.3.105 16383.2130.3.103 4095.737.3.101
+10000.10000.3.631 8000.4000.3.483 4000.2000.3.243 504.504.3.504
+
+(N, M )
+(1008, 504) (504, 252)
+(1008, 504) (504, 252)
+(32000, 2240) (16383, 2130)
+(4095, 737)
+(20000,10000) (8000, 4000) (4000, 2000) (1008, 504)
+
+(N1, M1) (N2, M2) (N3, M3) (277,251) (272,253) (459,0) (128,126) (141,126) (235,0) (302,252) (313,252) (393,0) (149,126) (154,126) (201,0)
+(5656,1000) (6116,1140) (20228,0) (3365,1055) (3471,1075) (9547,0)
+(893,369) (902,368) (2300,0)
+(5764,4904) (6166,5096) (8120,0) (2373,1990) (2400,2010) (3227,0)
+(1158,989) (1209,1011) (1633,0) (301,253) (297,251) (410,0)
+
+TABLE II COMPARISON OF ENCODING COMPLEXITY FOR THE PROPOSED
+ALGORITHM WITH THE RU ALGORITHM
+
+Name
+
+RU Algorithm
+
+Proposed Algorithm
+
+PEGReg504x1008
+
+µ/α (δ)
+
+µ1/α1 (δ1)
+
+µ2/α2 (δ2)
+
+4599/3542 (21) 2369/1802 (23) 2384/1819 (23)
+
+PEGReg252x504
+
+2283/1739 (16) 1125/839 (13) 1124/843 (13)
+
+PEGirReg504x1008
+
+5068/4058 (1) 2587/2079 (2) 2599/2093 (1)
+
+PEGirReg252x504
+
+2560/2054 (1) 1284/1028 (2) 1289/1034 (1)
+
+32000.2240.3.105 102659/98159 (7) 50366/48136 (10) 52180/49871 (10)
+
+16383.2130.3.103
+
+55472/51164 (16) 27453/25298 (15) 28055/25848 (19)
+
+4095.737.3.101
+
+14418/12915 (10) 7192/6428 (9) 7174/6412 (9)
+
+10000.10000.3.631 144200/123378 (337) 87501/76950 (302) 96271/85278 (325)
+
+8000.4000.3.483
+
+45006/36709 (141) 23913/19638 (117) 25204/20868 (127)
+
+4000.2000.3.243
+
+20240/16075 (74) 10417/8279 (64) 10475/8298 (61)
+
+504.504.3.504
+
+4572/3517 (19) 2262/1721 (14) 2273/1729 (16)
+
+In the case of MK+1 > 0, the numbers of multiplication µi∗ and addition αi∗ for deriving pi are given in a similar way of Section II-B
+µi∗ =wt(HIi ) + 2wt(Ti) + wt(Ci) + wt(Di) + wt(Φi−1) + wt(BPi ),
+αi∗ =S(HiI ) + 2S(Ti) + S(Ci) + S(Di) + S(Φ−i 1) + 2Mi + S(BiP ).
+V. NUMERICAL EXAMPLES
+In this section, we give some numerical examples of the proposed encoding algorithm and compare the complexity of the proposed encoding algorithm with the RU encoding algorithm.
+A. Examples of SB Block-Diagonalization
+In this section, we transform some parity check matrices given in [12] into 2-way SB block-diagonal matrices by Algorithm 1. From Table I, we see that Algorithm 1 gives 2-way SB block diagonal matrices with M3 = 0 for those examples. In other words, the parity part p1, p2 can be parallelly and simultaneously solved. Moreover, we see that M1 is nearly equal to M2. In other words, the size of diagonal blocks are nearly equal.
+B. Comparison of Encoding Complexity
+In this section, we calculate the number of operations of the proposed encoding algorithm and compare with that of the RU algorithm. In those numerical examples, at first, we construct HP and HI by using Algorithm 2, where the inputs of Algorithm 2 are 2-way SB block-diagonal matrix given in
+
+Table I. Next, we calculate the number of operations for the HP and HI from equations in Section IV-E. The number of operations are given in Table II.
+Table II shows the numbers of multiplication µ and addition α for the RU algorithm and the proposed algorithm. In the first column of Table II gives the name of codes given in [12]. The second column of Table II gives the number of operations µ, α and the gap δ of the approximate triangular matrix. The third (resp. fourth) column gives the number of operations and the gap for deriving p1 (resp. p2). Since the derivation of p1 and p2 are carried out two processors, µ1 and α1 (resp. µ2 and α2) show the numbers of operations of the first processor (resp. second processor).
+From Table I, we see that, the number of operations to derive p1 and p2 are nearly equal. In other words, the proposed algorithm adequally divides the operation for encoding to two processors.
+VI. CONCLUSION AND FUTURE WORKS
+In this paper, we have proposed a parallel encoding algorithm based on block-diagonalization of the parity part of the parity check matrix. Numerical examples in the paper have shown that the proposed algorithm adequally divides the operation for encoding to processors. As a future work, we will extend this algorithm for the spatially coupled codes.
+ACKNOWLEDGMENT
+This work was partially supported by JSPS KAKENHI Grant Number 25889061.
+REFERENCES
+[1] R. G. Gallager, Low Density Parity Check Codes. in Research Monograph series, MIT Press, Cambridge, 1963.
+[2] T. Richardson and R. Urbanke, “Efficient encoding of low-density paritycheck codes,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[3] Y. Kaji, “Encoding LDPC codes using the triangular factorization,” IEICE Trans. Fundamentals, vol. 89, no. 10, pp. 2510–2518, 2006.
+[4] T. Shibuya, “Block-triangularization of parity check matrices for efficient encoding of linear codes,” in Proc. 2011 IEEE Int. Symp. Inf. Theory (ISIT), July 2011, pp. 533–537.
+[5] T. Shibuya and K. Kobayashi, “Efficient linear time encoding for LDPC codes,” IEICE Trans. Fundamentals, vol. 97, no. 7, pp. 1556–1567, 2014.
+[6] U. V. C¸ atalyu¨rek and C. Aykanat, “Hypergraph-partitioning-based decomposition for parallel sparse-matrix vector multiplication,” IEEE Transactions on Parallel and Distributed Systems, vol. 10, no. 7, pp. 673–693, Jul 1999.
+[7] C. Berge, Hypergraphs, ser. North-Holland mathematical Library. Elsevier, 1989.
+[8] T. Lengauer, Combinatorial algorithms for integrated circuit layout. John Wiley & Sons, Inc., 1990.
+[9] U¨ . V. C¸ atalyu¨rek, “Hypergraph models for sparse matrix partitioning and reordering,” Ph.D. dissertation, Computer Engineering and Information Science Bilkent University, 1999.
+[10] U¨ . C¸ atalyu¨rek and C. Aykanat, “PaToH (partitioning tool for hypergraphs),” in Encyclopedia of Parallel Computing. Springer, 2011, pp. 1479–1487.
+[11] C. Aykanat, A. Pinar, and U. V. C¸ atalyu¨rek, “Permuting sparse rectangular matrices into block-diagonal form,” SIAM J. Sci. Comput., vol. 25, no. 6, pp. 1860–1879, Jun. 2004.
+[12] D. Mackay, “Encyclopedia of sparse graph codes,” http://wol.ra.phy.cam.ac.uk/mackay/codes/data.html.
+
+1915
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:50:59 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,544 @@
+2024 9th International Conference on Communication, Image and Signal Processing (CCISP) | 979-8-3503-5665-6/24/$31.00 ©2024 IEEE | DOI: 10.1109/CCISP63826.2024.10765534
+
+Efficient FPGA Implementation of Syndrome-assisted Layered Belief Propagation
+Decoder for CV-QKD Systems
+
+1st Yong Chen School of Information Science
+and Technology Donghua University
+Shanghai, China lycy658@163.com
+
+2nd Xue-Qin Jiang* School of Information Science
+and Technology Donghua University
+Shanghai, China xqjiang@dhu.edu.cn
+
+3rd Genlong Chen School of Information Science
+and Technology Donghua University
+Shanghai, China glchen2008@dhu.edu.cn
+
+4th Peng Huang State Key Laboratory of Advanced Optical
+Communication Systems and Networks Shanghai Jiao Tong University Shanghai, China huang.peng@sjtu.edu.cn
+
+5th Enjian Bai School of Information Science
+and Technology Donghua University
+Shanghai, China baiej@dhu.edu.cn
+
+6th Han Hai School of Information Science
+and Technology Donghua University
+Shanghai, China hhai@dhu.edu.cn
+
+Abstract—In this paper, we propose a QC-LDPC decoder architecture with low complexity as well as excellent decoding performance in CV-QKD systems, which employs the syndromeassisted layered belief propagation decoding algorithm. To minimize the complexity of hardware implementation and resource consumption in iterative decoding, we use fixed-point numbers instead of floating-point numbers to update node messages. Additionally, two-segment nonuniform lookup tables are employed to implement Ψ(x) efficiently. Besides, the layered syndromeassisted early termination (LS-ET) scheme is introduced, resulting in the reduction of the number of decoding iterations while maintaining superior frame error rate (FER) performance. The experimental results indicate that the QC-LDPC decoder implemented on an FPGA is capable of achieving throughput of 50.8 Mbps when the code length is 26112 and code rate is 22/68.
+Index Terms—QC-LDPC, CV-QKD, FPGA, syndrome, BP.
+I. INTRODUCTION
+Owing to the development of quantum computers, various current cryptographic algorithms will no longer be able to guarantee the security of information transmission. Consequently, quantum key distribution (QKD) becomes one of the feasible techniques to solve this problem [1] [2].
+Two main variants of QKD protocols exist: continuousvariable (CV) QKD and discrete-variable (DV) QKD, which are used for generating symmetric random secret keys over the quantum channel [2]. Compared to DV-QKD, CV-QKD employs high-sensitivity, low-noise heterodyne or homodyne detectors to measure the corresponding coherent states [3]. This approach facilitates efficient, stable, and cost-effective distribution of quantum keys. The post-processing procedure
+
+is relatively sophisticated in the development of the CV-QKD system, involving four main steps: basis sifting, identity authentication, information reconciliation (IR), and privacy amplification (PA). During IR, error correction codes (ECCs) [4] are employed to rectify errors resulting from quantum channel disturbances and potential eavesdropping. Low-density paritycheck (LDPC) codes, known for approaching the Shannon limit in performance, are commonly used for error correction in IR [5].
+Currently, the speed of the post-processing in high-speed CV-QKD systems is limited by the throughput of IR [6]. The necessity for lengthy codes and multiple iterative operations inherent to IR renders the throughputs of ECCs in the central processing units (CPUs) severely constrained. One effective approach to enhancing throughput is leveraging the graphics processing units (GPUs) acceleration. Reference [7] and [8] demonstrate that acceleration using GPU increased the throughputs of IR from 9.17 Mbps to 30.39 Mbps. Field programmable gate arrays (FPGAs) offer distinct advantages over CPUs and GPUs, especially in LDPC decoder design. FPGAs can use pipeline parallelism and data parallelism to accomplish more concurrent processing than GPUs and consume less power than CPUs and GPUs [9].
+The survey presented in [10] demonstrates that the majority of current decoders employ the min-sum algorithm (MSA). Although the MSA is more hardware-friendly, it will cause large loss of decoding efficiency compared to the belief propagation (BP) algorithm. In addition, the layered BP (L-BP) schedule requires only one type of computational node units (CNUs) when implemented based on FPGA in comparison to the flooding schedule. Besides, the early termination (ET) scheme
+
+979-8-3503-A5u6t6h5or-i6ze/2d4l/ic$e3n1s.e0d0u©se20lim24iteIdEtEo:EYonsei Univ. Downloaded on June9724,2026 at 16:11:48 UTC from IEEE Xplore. Restrictions apply.
+
+is frequently employed in iterative decoding to decrease the average number of decoding iterations.
+However, to our knowledge, the existing ET schemes cannot reduce average iteration count of failed decoding iterations since they neglect to assess the error-correcting status [11]. Against this background, aiming to obtain a decoder module with good performance while reducing the number of invalid decoding iterations, the LDPC code utilizing the L-BP algorithm based the layered syndrome-assisted early termination (LS-ET) is adopted.
+The main contributions of this paper are described as follows. Firstly, a syndrome-assisted L-BP decoder is implemented to accommodate the characteristics of FPGAs. Secondly, in order to minimize hardware resource consumption and simplify implementation, we employ fixed-point numbers of type (1,6,12) for the quantization of log-likelihood ratios (LLRs) and node messages. Besides, two segmented look-up tables (LUTs) are utilized to implement Ψ(x). Thirdly, we implement LS-ET module using syndromic variation rates to reduce invalid decoding iteration of the IR. The result demonstrates that quasi-cyclic (QC) LDPC decoder can achieve throughputs of 50.8 Mbps in accordance with the 5G new radio (5G NR) standard.
+This paper is organized as follows. Section II presents QCLDPC codes in the 5G NR standard and L-BP algorithm. Then, Section III describes design of the proposed QC-LDPC decoder. We provide results of simulation and implementation in Section IV. In conclusion, Section V provides the summary.
+
+II. PRELIMINARIES
+We commence with a overview of LDPC codes and the structure of QC-LDPC codes. Subsequently, the L-BP algorithm is described in detail.
+
+A. 5G NR QC-LDPC
+
+In binary LDPC codes, (N, K) codes can be described using
+
+a parity check matrix (PCM) or tanner graph, where N is the
+
+length of codes and K is the length of information bits. The
+
+PCM for a (6, 3) LDPC code can be expressed as
+
+⎡
+
+⎤
+
+101001
+
+A = ⎣0 1 1 0 1 0⎦ .
+
+(1)
+
+0 1 0 1 0 1 3×6
+
+Due to the irregularity of its PCM, conventional LDPC codes necessitate significant memory consumption in hardware implementations, particularly for longer codes. The QC-LDPC code matrix, unlike LDPC codes, possesses a special structure that can be defined by the base matrix Hb. A Hb is defined as follows:
+
+Hb =
+
+0 −1
+
+1 0
+
+−1 2
+
+−1 −1
+
+,
+2×4
+
+(2)
+
+where -1 represents zero matrix, 0 represents unit matrix, and the other elements represent cyclic shift matrix of unit matrices. When the expansion factor Z is 3, the expanded PCM is shown in Fig.1.
+
+Fig. 1. The expanded PCM of QC-LDPC code.
+
+Furthermore, the 5G NR standard specifies two types of QC-LDCP codes, where the base matrices are defined by basis graphs (BG)#1 and BG#2, respectively [12].
+
+B. The Layered belief propagation Algorithm (L-BP)
+
+In the post-processing, the transmitter (Alice) and the re-
+
+ceiver (Bob) are in possession of two correlated sequences of
+
+binary random numbers.
+
+Following the acquisition of the syndrome from Bob, Alice
+
+employs it as side information to decode and thereby obtain the
+
+secret key [13]. The detailed process is explained as follows.
+
+Step (a) The LLR of the variable node in first iteration is
+
+calculated by
+
+L(Pi) = LLR0
+
+= ln Pi(0) .
+
+(3)
+
+Pi(1)
+
+Step (b) For each layer, the node message is updated by
+
+Lqj(ki ,l) = L(qi)(k,l−1) − Rj(ki ,l−1),
+
+(4)
+
+Rj(ki ,l) = (1 − 2Sj )
+
+sgn(Lqj(ki ,l))
+
+i∈N (j)\i ⎡
+
+⎤
+
+×Ψ⎣
+
+Ψ(Lqj(ki ,l))⎦ , (5)
+
+i∈N (j)\i
+
+Ψ(x)
+
+=
+
+−
+
+log(tanh
+
+|x| ), 2
+
+(6)
+
+where sgn denotes the sign value, k represents the number of
+
+iterations and l stands for the number of layers.
+
+Step (c) The posterior LLR is updated by
+
+L(qi)(k,l) = Lqj(ki ,l) + Rj(ki ,l).
+
+(7)
+
+Step (d) Once all layers have been updated, decoding will
+
+begin:
+
+u = 1, L(qi) < 0 .
+
+(8)
+
+0, else
+
+Step (e) If HuT = S, the decoding results are correct, otherwise return (b) up to the maximum number of iterations.
+
+III. FPGA ARCHITECTURE
+This section presents a description of the QC-LDPC decoder implemented on a Vertex-7 FPGA device. The overview design diagram of the QC-LDPC decoder is presented in Fig.2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June9824,2026 at 16:11:48 UTC from IEEE Xplore. Restrictions apply.
+
+Iteration process
+
+CNUs
+R_MEM
+
+LLR_MEM
+
+Syn_MEM
+
+NO
+Decision
+
+LS- YES Secret
+
+ET
+
+key
+
+Fig. 4. Flowchart for check node calculation.
+
+Ini_LLR
+
+PCM_MEM
+
+Fig. 2. The overview design diagram of the QC-LDPC decoder.
+
+A. The parallelism and fixed-point numbers
+
+Modifying the row weight Rw, expansion factor Z, and
+
+degree of parallelism Q enables the applications of QC-LDPC
+
+codes under different standards. In particular, we assume
+
+Q
+
+=
+
+Z V
+
+,
+
+where
+
+V
+
+is an integer. In the proposed frame,
+
+the layer count matches the row count in the base matrix.
+
+Meanwhile, we set V = 4 in the case of intra-layer parallel
+
+computation. The processing of nodes is completed by Q-
+
+parallel CN U s. In addition, the node messages in the BRAMs
+
+must be carefully chosen due to the high degree of parallelism.
+
+Therefore, the barrel shifter [14] relies on the non-zero offset
+
+and the corresponding position values in the base matrix to
+
+read out and write back the data correctly.
+
+In hardware implementations, fixed-point numbers conserve
+
+resources by requiring fewer bits compared to floating-point
+
+numbers.
+
+Obviously, increasing quantization bits improves decoding
+
+performance while requiring more hardware resources. In
+
+general, when the quantization bits reach a certain threshold,
+
+the loss becomes negligible. The bit width of the integer
+
+parts can be determined by testing the bounds of the data.
+
+Concurrently, we conducted a series of fixed-point simulations
+
+to determine the bit width of the fractional parts. In the
+
+scheme, we select fixed-point numbers of type (1,6,12) for
+
+the quantization of LLR and node information.
+
+Fig. 3. Datapath of CNUs
+
+B. The datapath of computational node units
+
+Fig.3 illustrates the structure of the node information
+
+read and write employed in the iteration processing. The
+
+P CM M EM is employed for storing the Hb of the QC-
+
+LDPC code. To conserve memory, only the non-zero offset
+
+and the corresponding address values of the base matrix are
+
+retained.
+
+The LLR M EM and R M EM are employed for storing
+
+posterior LLRs and check node messages generated during
+
+node processing. The number of memories is determined
+
+according to the degree of parallelism Q. The width is the
+
+fixed-point length of the node messages and the depth is given
+
+by
+
+h
+
+=
+
+N Q
+
+.
+
+In
+
+the
+
+first
+
+iteration,
+
+the
+
+LLR
+
+MEM
+
+stores
+
+the
+
+initial LLRs.
+
+The Syn M EM is employed to store the local syndrome
+
+from Bob. The bit width and depth correspond to the expansion
+
+factor and layer count respectively.
+
+The iterative computation of the node messages is the key
+
+to the realization of the decoder. The calculations performed
+
+by the CN U s are shown in (4)-(7). The processing of node
+
+messages can be segmented into four steps:
+
+• Firstly, read the offset value Ho and the corresponding position value Ha from P CM M EM . Subsequently, the contents of llr rd and Rji rd should be read from both LLR M EM and R M EM , based on the Ha to ensure timing alignment.
+• Secondly, offset the llr rd by the Ho to get llr. The llr and the Rji rd are divided into Q routes to calculate (4).
+• Thirdly, CN U s execute (6)-(7). The check node mes-
+sages are updated as illustrated in Fig. 4. Subsequently, the updated check node messages, Rji wr, are written to the corresponding R M EM without offset. • Finally, CN U s execute (8) to update llr wr, which is written to the corresponding LLR M EM after reverse
+deflection by barrel shifter.
+
+During the processing, llr rd and Rji rd read from their corresponding memories and rewrite them after updating the node messages.
+
+C. Implementations of Ψ(x) in look-up tables
+The implementation of Ψ(x) on FPGAs incurs massive resource consumption and high latency. Consequently, it is necessary to employ the segmented LUT to implement Ψ(x).
+In the range (0, 4), the value of Ψ(x) changes rapidly, requiring the high-precision LUT to implement. On the contrary,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June9924,2026 at 16:11:48 UTC from IEEE Xplore. Restrictions apply.
+
+as the downward trend of Ψ(x) in the range (4, 8) is relatively slow, the low-precision LUT is applied.
+For the range (0,4), a LUT with depth of 512 is created and the index of the single-port ROM is set to 9’d0 to 9’d511 for its FPGA implementation. For the range (4,8), it is divided into a 32-segment LUT. Besides, it can be observed that Ψ(8) is very close to zero, so we set Ψ(x ≥ 8) = 0.
+
+D. The layered syndrome-assisted early termination
+
+When the Decision module is finished, the LS-ET is activated. The structure of the LS-ET is illustrated in Fig.5. The layered offset data and layered position data read from P CM M EM are initially input into the LS-ET based on the layer structure. Subsequently, the decoding codewords u are split into n segments, with n corresponding to the column number in the base matrix. The codewords corresponding to the position data Ha are selected and then offset to the left by the barrel shifter. All codewords that have undergone a shift are subjected to a layer syndrome Sˆ(k,l) following the bitwise permutation. Simultaneously, the local syndrome Sl of Syn mem is written to LS-ET in the form of layer. Subsequently, the syndrome variation can be denoted by
+
+Sx(okr,l) = Sˆ(k,l) ⊗ Sl.
+
+(9)
+
+If Sx(okr,l) = 0, the syndrome variation of next layer Sx(okr,l+1) should be evaluated. This processing should be repeated until
+
+estimating the syndrome variation of all layers successfully.
+
+Otherwise, it is necessary to compare the syndromic variation rate λˆ by
+
+λˆ =
+
+E(Sx(okr,l)) − E(Sx(okr,l−1)) E(Sx(okr,l−1))
+
+.
+
+(10)
+
+If λˆ > λ, increase the counter Cnum by 1, where λ is set to an initial value of 0.005. If Cnum reaches 3, terminate iterative decoding.
+
+IV. EXPERIMENTAL RESULTS
+
+Based on the model described, the QC-LDPC decoder is
+
+implemented on a Vertex-7 FPGA device (XC7VX690T). We
+
+will assess the performance by analyzing the throughput, the
+
+frame error rate (FER), the bit error rate (BER), and the
+
+average number of iterations.
+
+High throughput is one of the primary advantage of FPGA-
+
+based LDPC decoders. The throughput T can be calculated
+
+using
+
+T=
+
+fclk · Z
+
+,
+
+(1 − R) · Nr · Niter
+
+(11)
+
+where fclk is the clock frequency, Z is the expansion factor, R is the code rate, Nr is the average number of nodes in each row of Hb and Niter is the number of iterations. The maximum throughtput of the designed QC-LDPC decoder can reach 50.8 Mbps when fclk is chosen to be 250 MHz.
+Fig.6 plots the FER versus SNR for BP, L-BP and MSA when the corresponding number of iterations is 100. The decoding performance of the L-BP algorithm is demonstrably superior to that of the BP and MSA. There is also a comparison of the FERs of L-BP in the two quantization formats where the difference in FERs is less than 10−3.
+
+100
+
+10-1
+
+FER
+
+10-2
+
+MSA, float-point number
+
+10-3
+
+BP, float-point number
+
+L-BP, float-point number
+
+L-BP, fixed-point number
+
+0.64
+
+0.66
+
+0.68
+
+0.7
+
+SNR
+
+0.72
+
+0.74
+
+Fig. 6. Comparison of the FER between the MSA, the BP and LBP.
+
+Fig. 5. Logic structure of the proposed LS-ET module.
+
+BER
+
+float-point number fixed-point number 10-2
+10-3
+10-4
+10-5
+10-6 0.6 0.62 0.64 0.66 0.68 0.7 0.72 0.74 SNR
+Fig. 7. Comparison of the BER of the LBP between the float-point number and fixed-point number, the corresponding number of iterations are 300.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on Jun1e0204,2026 at 16:11:48 UTC from IEEE Xplore. Restrictions apply.
+
+300
+ET LS-ET 250
+
+Average number of iterations
+
+200
+
+150
+
+100
+
+50
+
+0
+
+0.62
+
+0.64
+
+0.66
+
+0.68
+
+0.7
+
+0.72
+
+SNR
+
+Fig. 8. Comparison of the average number of iterations between the ET and LS-ET schemes.
+
+ET
+
+100
+
+LS-ET
+
+scheme to optimize the trade-off between decoding performance and implementation complexity. The LS-ET scheme increases the throughput by reducing unnecessary number of iterations. In addition, fixed-point number quantization scheme and two-segmented LUTs scheme are employed for memory structure reductions and implementation complexity. The results of the simulation on the Vertex-7 FPGA device (XC7VX690T) demonstrate that the QC-LDPC decoder exhibits excellent decoding performance and the throughput of 50.8 Mb/s. Consequently, the QC-LDPC decoder is applicable to the IR of CV-QKD systems.
+ACKNOWLEDGMENTS
+This work is supported by Innovation Program for Quantum Scienceand Technology (Grant No.2021ZD0300703), Shanghai Municipal Science and Technology Major Project (Grant No. 2019SHZDZX01), the State Key Laboratory of Advanced Optical Communication Systems and Networks (Grant No. 2024GZKF006), China.
+
+10-1
+
+FER
+
+10-2
+
+10-3
+
+0.64
+
+0.66
+
+0.68
+
+0.7
+
+SNR
+
+0.72
+
+0.74
+
+Fig. 9. Comparison of the FER between the ET and LS-ET schemes.
+
+Fig.7 illustrates the variations in BER of L-BP algorithm using (1, 6, 12) fixed-point and floating-point numbers. The BER difference is remarkably small (less than 10−5), as shown in Fig.7.
+In addition, we provide the performance evaluation of the ET and LS-ET schemes. When the number of iterations is 300, Fig.8 demonstrates the comparison of the average number of iterations between two schemes. At low SNRs, the average number of iterations for the ET scheme is approximately 300. It is impossible to ascertain the success of decoding until reaching the maximum number of iterations. In contrast, the LS-ET scheme evaluates the error correction status by utilising the syndromic variation rates as an evaluation parameter. It is necessary to identify the invalid iteration within the iterative decoding code at low SNRs. As the SNR increases, the number of invalid iterations decreases significantly. In addition, the comparison of FERs between the two schemes in Fig.9 indicates that the performance loss is extremely small.
+V. CONCLUSION
+In this paper, we implemented an FPGA-based QC-LDPC decoder using the L-BP algorithm combined with LS-ET
+
+REFERENCES
+[1] N. Gisin, G. Ribordy,W. Tittel, and H. Zbinden, “Quantum cryptography,” Rev. Mod. Phys., vol. 74, no. 1, pp. 145–195, Jan. 2002.
+[2] V. Scarani, H. Bechmann-Pasquinucci, N. J. Cerf, M. Dusˇek, N. Lu¨tkenhaus, and M. Peev, ”The security of practical quantum key distribution,” Rev. Mod. Phys., vol. 81, no. 3, pp. 1301–1350, Sep. 2009.
+[3] C. Zhou, X. Wang, Z. Zhang, S. Yu, Z. Chen, “Rate compatible reconciliation for continuous-variable quantum key distribution using Raptor-like LDPC codes,” Science China, vol. 64, no. 6, pp. 30–38, Jun. 2021.
+[4] Xue-Qin Jiang, P. Huang, D. Huang, D. Lin, and G, Zeng, Secret information reconciliation based on punctured low-density parity-check codes for continuous-variable quantum key distribution, Phys. Rev. A, vol.95, no.2, p.022318, Feb. 2017.
+[5] T. Richardson and R. Urbanke, Modern Coding Theory.New York,NY, USA: Cambridge Univ. Press, 2008.
+[6] M. Navascues, F. Grosshans, and A. Acin, ”Optimality of Gaussian attacks in continuous variable quantum cryptography,” Phys. Rev. Lett., vol. 97, no. 19, p. 190502, Nov. 2006.
+[7] M. Milicevic, C. Feng, L. M. Zhang, and P. G. Gulak, ”Quasi-cyclic multi-edge LDPC codes for long-distance quantum cryptography,” NPJ Quantum Inf., vol. 4, Art. no. 21, Apr. 2018.
+[8] S. J. Johnson, A. M. Lance, L. Ong, M. Shirvanimoghaddam, T. C. Ralph, and T. Symul, ”On the problem of non-zero word error rates for fixed-rate error correction codes in continuous variable quantum key distribution,” New J. Phys., vol. 19, no. 2, p. 023003, Feb. 2017.
+[9] A. Tanaka et al., ”High-speed quantum key distribution system for 1Mbps real-time key generation,” IEEEJ. Quantum Electron., vol. 48, no. 4, pp. 542–550, Apr. 2012.
+[10] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, ”A survey of FPGA-based LDPC decoders,” IEEE Commun. Surveys Tuts., vol. 18, no. 2, pp. 1098–1122, 2nd Quart., 2016.
+[11] K. Zhang, J. Hou, Xue-Qin Jiang, E. Bai, P. Huang, G. Zeng, Highspeed information reconciliation with syndrome-based early termination for continuous-variable quantum key distribution, Opt. Express, vol. 31, no. 22, pp.34000-34010, Oct. 2023
+[12] D. Hui, et al., ”Channel coding in 5G new radio: a tutorial overview and performance comparison with 4G LTE,” IEEE Veh. Technol. Mag., vol. 13, no. 4, pp. 60-69, Dec. 2018.
+[13] A. D. Liveris, Z. Xiong, and C. N. Georghiades, ”Compression of binary sources with side information at the decoder using LDPC codes,”IEEE Commun. Lett., vol. 6, no. 10, pp. 440–442, Oct. 2002.
+[14] Y. Jung, Y. Jung, S. Lee, and J. Kim, ”Low-complexity multi-way and reconfigurable cyclic shift network of QC-LDPC decoder for WiFi/WIMAX applications,” IEEE Trans. Consum. Electron., vol. 59, no. 3, pp. 467–475, Aug. 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on Jun1e0214,2026 at 16:11:48 UTC from IEEE Xplore. Restrictions apply.
+
+

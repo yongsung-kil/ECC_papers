@@ -1,0 +1,386 @@
+Implementation ofLDPC decoder for 802.16e
+Xiao Peng *, Satoshi Goto *
+
+Abstract - The implementation complexity of the decoder for Low-density Parity-check Codes (LDPC) is dictated by memory and interconnection requirements. In this paper, we investigate the approaches to realize Turbo Decoding Message Passing (TDMP) algorithm. We compare the performance and implementation complexity of original approach, Jacobian approach, normalized min-sum approach and offset min-sum approach which are targeted for QuasiCyclic (QC) LDPC code defined in IEEE 802.16e standard. The normalized and offset approaches are more suitable for hardware implementation, which are realized on the FPGA. 1.
+Index Terms - LDPC, min-sum, TDMP
+I. INTRODUCTION
+LDPC codes were originally proposed in 1962 by Robert Gallager[ 1]. Since then, since the contemporary investigations in concatenated coding overshadowed LDPC codes and the hardware of that time could not support effective decoder implementations, LDPC codes remained largely unstudied for over thirty years. Until the Mackay published his work in 1998, LDPC codes began to be strongly promoted.
+There are potential advantages to LDPC codes which are discussed in literatures. Firstly, both abstractly and practically, LDPC codes have been proved to be capable of closely approaching the channel capacity. Secondly, LDPC codes have better performance than that of turbo codes which are also popular channel coding approaches in some cases, with iterative decoding algorithms which are easy to implement, and are also parallelizable in hardware. Thirdly, LDPC codes of almost any rate and block length can be created simply by specifying the shape of the parity check matrix, and the flexibility in rate is obtained only through considerable design effort. Fourthly, because the validity of a codeword is validated by its parity checks, even when errors do occur, they are almost always detected errors especially for long codes. Lastly, on the commercial side, LDPC codes are not patent protected.
+For LDPC decoding, the main methods can be divided in to two kinds: one is the hard-decision and the other one is softdecision decoding. The former one was proposed by Gallager, and is always used to be an introduction example of LDPC codes. And the latter one would lead to much better results, and this paper will only talk about this method. Since soft-
+1 This work was supported by "Ambient SoC Global COE Program of Waseda University" of the Ministry of Education, Culture, Sports, Science and Technology, Japan.
+* is with the Graduate School of Information, Production and Systems of
+Waseda University, Japan (e-mail: pengxiao@suou.wasedajp).
+
+decision decoding was discovered independently several times and as a matter of fact comes under different names. The most common ones are the belief propagation algorithm (BPA), the message passing algorithm (MPA) and the sum-product algorithm (SPA). MPA will be used in the following discussion.
+Also, MPA could be classified into two categories: two phase message passing (TPMP) and turbo decoding message passing (TDMP) which is proposed by Mansour, et al[2]. LDPC codes are decoded iteratively using the TPMP algorithm was proposed by Gallager as well. It computes the probability values with each bit-node and the probability values with the each check-node iteratively. Each iteration is consists of two phases of computations: in the horizontal phase, messages in the form of probability vectors are passed to the check nodes, where the messages are combined, and in the vertical phase, messages in the form of probability vectors are passed to the bit nodes, where the messages are combined. Updates in each phase are independent and can be parallelized.
+Up to now, there are many works on the TPMP algorithms and its variations, which come down are log likelihood ratio (LLR) MPA, a posterior probability (APP) MPA, min-sum MPA, normalized MPA and offset MPA. While the TDMP, which is also called as layered decoding algorithm, basically treat the parity check matrix as horizontal layers and update the extrinsic messages layer by layer. This layered decoding algorithm can improve the decoding convergence time by a factor of two and hence double the throughput.
+In this paper, we investigate the approaches to realize TDMP algorithm and compare the performance and the hardware complexity of original approach, Jacobian approach, normalized min-sum approach and offset min-sum approach. During the investigation of these approaches, we point out the suitable approaches for implementation are normalized and offset min-sum approaches, which are implemented on the FPGA for IEEE 802.16e LDPC codes.
+II. TDMP ALGORITHMS AND CORRELATIVE APPROACHES
+In this section, the LLR-based TDMP algorithm and the correlative approaches are introduced and discussed.
+A. LLR-Based TDMP algorithm
+To some extent, the TDMP algorithm is a simple variable of the MPA algorithm. As described in literatures, this algorithm is always implemented with QC-LDPC codes. The IEEE 802.16e standard also uses this code structure.
+
+978-1-4244-3870-9/09/$25.00 ©2009 IEEE
+
+501
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:19:22 UTC from IEEE Xplore. Restrictions apply.
+
+-1 94 "73 -1 -I -1 -I -1 ~ S 8., -I -1 7 0 -I -1 -I -I -1 -1 -I -I -1 -I -1 27 -I -1 -I 2:! 79 9 -I -1 -I I:! -I 0 0 -1 -1 -I -I -1 -I -I -1 -I -I -I -I 24 22 81 -I 33 -I -I -I 0 -I -I 0 0 -I -I -I -I -I -I -I -I 61 -1 47 -1 -1 -1 -1 -1 65 25 -1 -1 -1 -1 -I 0 0 -1 -1 -1 -1 -1 -1 -I -1 -1 39 -1 -1 -1 8·1 -1 -1 41 71 -1 -1 -1 -1 -1 0 0 -1 -1 -1 -1 -1 -1 -1 -I -I -1 46 40 -I R:! -I -1 -I 79 0 -I -I -1 -I 0 0 -1 -I -I -1 -I -1 -I 95 5~1 -I -1 -I -1 -1 14 I~ -1 -I -I -I -1 -I -I 0 0 -I -I -1 -I -1 11 73 -1 -1 -1 1 -1 -1 ·t7 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 -1 -1 -1 12 -I -I -1 83 24 -I 43 -I -1 -I ~ 1 -I -I - 1 -1 -I -I - 1 -1 0 0 - 1 -I -1 -I -I -1 -I 94 -I 59 -I -1 70 7:! -1 -I -I -1 -1 -I -I -1 -I 0 0-1 -I -I 7 65 -I -I -I -I 39 49 -I -I -I -I -I -I -I -I -I -I -I -I 0 0 <13 -1 -1 -1 -1 66 -1 ·11 -I -1 -1 26 7 -1 -I -1 -1 -1 -1 -1 -1 -I -1 0
+(A)
+
+(B) Fig. 1. Structure of QC-LDPC
+For a QC-LDPC code, the parity check matrix (PCM) is constructed from a seed matrix by replacing each '1' in the seed matrix with a z <z cyclically shifted identity sub-matrix, where z is an expansion factor. As shown in Fig.1, (A) is the seed matrix specified for rate 1/2 code in 802.16e standard[3], (B) is the structure of the PCM expanded from this seed matrix. Since in the PCM of QC-LDPC code, the column weight of each layer expanded from the row of the seed matrix is only 1, the extrinsic LLR information could update layer by layer during the iterative decoding. Thus, the TDMP algorithm is described as follows:
+
+Input:
+
+Parity-check matrix H, Channel posterior probabilities g
+
+Initialization: Intrinsic message: A ~ 0
+
+LLR: L~8
+
+Iteration:
+
+Foreach row m in H
+Foreach columnj thatHmj =1
+
+-; n L J - L' A A'j mj ~
+
+mt -jI
+
+~
+
+sign(Amn)e\ll(
+
+\ll(Afflj ) )
+
+nEN(m)\j
+
+jEN(m)\n
+
+L j A ~ fflj +A~lj
+
+End
+
+End
+
+Decision:
+
+> 0 ~ s. =0
+
+Compute
+
+L; { < 0 ~ xn
+
+Iteration times++
+=1
+
+If cHT = 0 or Iteration times> threshold, STOP
+
+Else go to Iteration
+
+In the algorithm listed above, \{I(x) =-log[tanh(l.:l)]. This
+2 function is very complicated to implement in hardware design, thus there are variations of the original method.
+
+B. Jacobian approach and its variation
+As elaborated in [4], the LLR of binary random variable is
+defined as L(U) =10g(Pu (u =0) / Pu (u =1)), where Pu denotes
+the probability that takes the value 0 and 1. Using the Jacobian logarithm, the tanh rule can be expressed as
+L(U EB V) = sign(L(U))sign(L(V)) min(\L(U)\, \L(V)\)
++ log(l + e-1L(U)+L(V)I) -log(1 + e-L(U)-L(V))
+
+Consider check node m with de edges from symbol nodes
+
+and define two sets of auxiliary binary random variables:
+
+1; = X nl
+
+bde = x nde
+
+h =1; EB xnl
+
+= bde - I bde EB xnde - I
+
+L,: = Ide
+
+EB x nde
+
+= bl b2 EB x nl
+
+Using xnl EB xn2 EB ... EB xnde =0 , we obtain that
+
+L(b2 )
+= L(xni ) L(J;-I EB bi+l )
+{
+L(lde-l)
+
+i =1 i = 2,3, ... , de -1
+i = de
+
+This is a forward-backward algorithm, requiring 3(de - 2)
+
+computation of L(U EB V). The I(x) =10g(1 + e-1xl ) can be
+
+realized using LUT or piecewise approximation in hardware design.
+For applications with high throughput requirements, the recursive algorithms such as the forward-backward algorithm may not be well suited. Using the method proposed in [5], we define that
+Ibb f(a, b) = sign(a)sign(b)e[rninclal, + loge! + e-dal+lbb) -loge! + e-daHbb)]
+
+g(a, b) = sign(a)sign(b)e[rnin(jal, Ibl)+ log(1- e-da/+1bj)) -log(!- e -da/-/bj))]
+
+As a result, this approach requires de - 1 computation of
+
+I(a,b) , and de computation of g(a,b) , while these two
+
+functions can also be implemented by using LUT.
+
+C. Normalized and Offset min-sum approach
+The normalized and offset min-sum TDMP algorithms simply modify the check message producing method by using the minimum extrinsic LLR information in the layer to represent the whole \ll(x) computation, which are described
+as follows:
+
+Input:
+
+Parity-check matrix H, Channel posterior probabilities g
+
+Initialization:
+
+Intrinsic message: A ~ 0
+
+(1)
+
+LLR: L~8
+
+(2)
+
+502 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:19:22 UTC from IEEE Xplore. Restrictions apply.
+
+Iteration:
+Foreach row m in H
+Foreach column j that H mj =1
+
+')
+A
+
+mj
+
+~
+
+LJ·
+
+_Amt -jl
+
+(3)
+
+normalized
+
+A: I1 u
+
+~
+
+knEN(m)\j
+
+sign(Amn)-minjEN(tn)\n
+
+IAmnl
+
+(4)
+
+offset
+
+A: I1 u ~ nEN(m)\j sign(Amn)-max(minjEN(m)\nIAmnl-fJ,O)
+
+(5)
+
+End End
+Decision:
+> 0 ~ ». =0 Compute L; { < 0 ~ xn =1 Iteration times++ If cH T = 0 or Iteration times> threshold, STOP
+Else go to Iteration
+For hardware design, these two approaches can be simply implemented by using comparator, which would highly reduce hardware complexity.
+
+III. IMPLEMENTATION OF NORMALIZED AND OFFSET APPROACH
+
+A. Normalizedfactor k and Offsetfactor fJ
+
+The keynote for the normalized min-sum algorithm is to choose the proper normalized factor k, which can be variable during the iterative decoding. However, for hardware implementation, k should be fixed to a suitable constant, meanwhile the performance of the decoder will decrease slightly.
+Table 1 shows the suitable k factor for all the modes of the LDPC code defined in IEEE 802.16e based on the float computation simulation.
+TABLE I
+
+Code rate
+
+Normalized factor k
+
+1/2
+
+0.80
+
+2/3A
+
+0.76
+
+2/3B
+
+0.76
+
+3/4A
+
+0.76
+
+3/4B
+
+0.77
+
+5/6
+
+0.77
+
+For hardware design, this constant k should be a fixed point constant which can be easily represented in binary system, therefore we choose k=O. 75 to in our implementation.
+Similarly , the offset factor fJ should also be carefully
+selected. Table 2 shows the suitable fJ factor for all the modes
+of the LDPC code defined in IEEE 802.16e.
+
+Code rate
+1/2 2/3A 2/3B 3/4A 3/4B 5/6
+
+TABLE 2
+
+Offset factor fJ
+0.16 0.12 0.12 0.11 0.12 0.12
+
+Based on this simulation result, we choose fJ = 0.125 in our
+implementation.
+
+B. Partially parallel decoder architecture
+
+Pre-processing
+
+Input Buffer
+
+Control ') Mode Select (' ROM
+
+Unit
+
+-
+
+/
+
+"
+
+~ ~L j ~~d~trix~>
+
+/
+
+Initial Unit
+
+L-Memory
+
+Network ~/------.- Unit
+
+PE_enable
+
+L·-~"
+
+-.
+
+- \ -( PE core)
+
+:=L'
+I RirMemory I
+PE_enable
+
+L·---------/'
+
+\
+
+- \ -( PE core)
+
+':=L
+'j RirMemory I
+
+1 ~(/ Desi~ion
+
+UnIt )
+
+.
+
+,
+
+;r=~PE core)
+':=L'
+I RirMemory I
+
+Fig. 2. Top level decoder architecture
+
+As shown in Fig.2, the TDMP decoder uses partially parallel iterative decoding architecture.
+When the input code stream feed into the decoder, the buffer unit executes the pre-processing in order to give the rate and length information to the control unit and give the code to the initial unit. The initial unit is use to calculating (1) and (2) described in the min-sum algorithm. The control unit mainly has three functions: producing the control signal of network unit based on the number of seed matrix which comes from the ROM, the sequential controlling of the pipeline and the maintaining the memory reading and writing. The PE Core is used for computing (3), (4) and (5), which is the key operation part of the decoder. Since the iterative decoding is conducted layer by layer, and in each layer there are at most 96 lines, we need 96 PE cores for running simultaneously. Compared with fully decoding architecture, this is the so-called partially parallel decoding method. The L memory is used to store the LLR information. The network unit transfers the LLR
+
+503 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:19:22 UTC from IEEE Xplore. Restrictions apply.
+
+information from L memory to the correct PE cores. C. Network Unit
+(A)
+
+As shown in Fig.4, the target of the Processing Engine (PE) is to find the minimum value of the input LLR information and
+subtract the offset factor f3 , and use this offset value to update
+the check message. Since this structure is simply using comparator, adder and multiplexer, the hardware cost would be highly reduced.
+For the normalized min-sum approach, the variation of the structure is replacing the offset part by the normalize part, which could be realized by using shift registers and adders.
+
+(B)
+Fig. 3. Benes Network
+To realize simultaneous transferring 96 numbers, the multiplexer is not a considerable choice regarding its huge hardware cost. In our design, we utilize the Benes network for the network unit. As shown in Fig.3, (A) is the 2 X 2 Benes network[6] which is the basic unit for constructing the larger network. For this unit, if the control signal is "0", the state of the unit is bar state which means the sequence of output is unchanged, while if the control signal is "1", the state is cross state that information would pass cross to the other direction. Using this unit, the 128 X 128 Benes network is constructed for the decoder recursively: make two copies of the unit, add two more stages, one before and one after the double-height network, and connect all the new units to the existing network. The principle for connecting the units is each unit in the front and end stage should connect both of two sub-network.
+D. PE Core
+
+E. FPGA implementation result
+We implemented the decoder in the Xilinx vertex-5 series FPGA chip XC5VFX130T. Table 3 shows the result of this design;
+TABLE 3
+
+Used
+
+Available
+
+o
+
+N
+
+oN
+
+LUT SFF BRAM Throughput(Mbps)
+
+26607 25198
+14 109
+
+26505 25688
+14 107
+
+81920 81920
+298
+
+32% 31% 30% 32%
+4%
+
+0: Offset TDMP; N:Normalized TDMP
+
+As shown in table 3, the hardware cost and performance of
+
+the normalized TDMP approach and offset TDMP approach
+
+are almost the same, this is basically because the convergence
+
+speed of the two algorithms are close to each other and using
+
+the same hardware architecture.
+
+v. CONCLUSION
+In this paper, we investigate the approaches to realize TDMP algorithm and compare the hardware complexity of original approach, Jacobian approach, normalized min-sum approach and offset min-sum approach. During the investigation of these approaches, we point out the suitable approaches for implementation are normalized and offset minsum approaches, which are implemented on the FPGA for IEEE 802.16e LDPC codes. The implementation result shows that the performance of the two approaches are almost the same, and they are all satisfy the 802.16e standard.
+
+Fig. 4. Processing Engine (PE) of Offset TDMP
+
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MAMIT Press, 1963.
+[2] M. M. Mansour and N. R. Shanbhag, "High-throughput LDPC decoders," IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, pp. 976-996, Dec. 2003.
+[3] "IEEE std 802.16e™-2005,'' Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems, Feb. 2006.
+[4] Xiao-Yu Hu, "Efficient Implementations of the Sum-Product Algorithm for Decoding LDPC Codes", GLOBECOM '01. IEEE Volume 2, 25-29 Nov. 2001
+[5] Yang Sun, Cavallaro, l.R, "A low-power I-Gbps reconfigurable LDPC decoder design for multiple 4G wireless standards", SOC conference, pp.367-370, 2008
+[6] V. E. Benes. Mathematical theory of connecting networks and telephone traffic. Academic Press, 1965.
+
+504 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:19:22 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1873 @@
+arXiv:2502.16408v1 [quant-ph] 23 Feb 2025
+
+Decision-tree decoders for general quantum LDPC codes
+Kai R. Ott1, Bence Het´enyi2, and Michael E. Beverland2 1ETH
+2IBM Quantum February 25, 2025
+Abstract We introduce Decision Tree Decoders (DTDs), which rely only on the sparsity of the binary check matrix, making them broadly applicable for decoding any quantum low-density parity-check (qLDPC) code and fault-tolerant quantum circuits. DTDs construct corrections incrementally by adding faults one-by-one, forming a path through a Decision Tree (DT). Each DTD algorithm is defined by its strategy for exploring the tree, with well-designed algorithms typically needing to explore only a small portion before finding a correction. We propose two explicit DTD algorithms that can be applied to any qLDPC code: (1) A provable decoder: Guaranteed to find a minimumweight correction. While it can be slow in the worst case, numerical results show surprisingly fast median-case runtime, exploring only w DT nodes to find a correction for weight-w errors in notable qLDPC codes, such as bivariate bicycle and color codes. This decoder may be useful for ensemble decoding and determining provable code distances, and can be adapted to compute all minimumweight logical operators of a code. (2) A heuristic decoder: Achieves higher accuracy and faster performance than BP-OSD on the gross code with circuit noise in realistic parameter regimes.
+1
+
+Contents
+
+1 Introduction and summary of results
+
+3
+
+2 A guide to decoding matrices in different settings
+
+7
+
+2.1 Classical codes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+
+2.2 Stabilizer codes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+
+2.3 Logical memory circuits for stabilizer codes . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+
+2.4 Logical operation circuits for stabilizer codes . . . . . . . . . . . . . . . . . . . . . . . . . 11
+
+3 Decoding formalism
+
+13
+
+3.1 Basic definitions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+
+3.2 Decoding graph and set representation of bitstrings . . . . . . . . . . . . . . . . . . . . . . 14
+
+3.3 Belief propagation decoding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+
+3.4 MaxSAT decoding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+
+4 Decision-tree decoding
+
+18
+
+4.1 Decision tree . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+
+4.2 Main algorithm and exploration subroutine . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+
+4.3 Exploration using breadth-first search . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+
+4.4 Exploration using syndrome height (from an oracle) . . . . . . . . . . . . . . . . . . . . . 22
+
+5 Height-bound decision-tree decoder
+
+23
+
+5.1 Exploration using syndrome-height lower bounds . . . . . . . . . . . . . . . . . . . . . . . 23
+
+5.2 Exploration refinement with belief propagation . . . . . . . . . . . . . . . . . . . . . . . . 25
+
+5.3 Syndrome-height lower bounds from syndrome neighborhoods . . . . . . . . . . . . . . . . 25
+
+5.4 Numerical results for color codes and bivariate bicycle codes with perfect measurements . 28
+
+6 Belief-propagation decision-tree decoder
+
+31
+
+6.1 Exploration using belief propagation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+
+6.2 Numerical results for the gross code with circuit noise . . . . . . . . . . . . . . . . . . . . 31
+
+7 Outlook and future directions
+
+34
+
+A Appendices
+
+41
+
+A.1 Noise models and testing decoders numerically . . . . . . . . . . . . . . . . . . . . . . . . 41
+
+A.2 Belief-propagation with ordered statistics decoding . . . . . . . . . . . . . . . . . . . . . . 42
+
+A.3 Relations between different syndrome-height bounds . . . . . . . . . . . . . . . . . . . . . 43
+
+A.4 Finding the code distance using a min-weight decoder . . . . . . . . . . . . . . . . . . . . 45
+
+A.5 Finding all min-weight logical operators using height-bounded decision trees . . . . . . . . 45
+
+A.6 Runtime comparison of height-bound DTD and MaxSAT decoding . . . . . . . . . . . . . 46
+
+2
+
+1 Introduction and summary of results
+Fault-tolerant quantum computing (FTQC) is believed to be essential for realizing large-scale quantum algorithms capable of solving classically intractable problems [BMT+22, DMB+23, HCL+24, MGG20, JEP+21, KLM+24]. FTQC relies on Quantum Error Correction (QEC) codes, which encode computational states and uses carefully designed fault-tolerant (FT) circuits to detect and correct faults during computation. A critical challenge in this process is to determine appropriate corrections based on measurement outcomes.
+This work focuses on decoders, classical algorithms that correct faults using measurement outcomes, which must be fast and accurate for practical use. Decoding is formulated as a linear algebra optimization problem involving two key matrices: the check matrix H ∈ FM 2 ×N , which maps N possible faults to M check outcomes, and the logical action matrix A ∈ FK2 ×N , which maps faults to their effects on stored information. Given a set of unknown faults F ∈ F2N , the decoder uses the observed syndrome σ = HF ∈ FM 2 to propose a correction Fˆ such that σ = HFˆ. The decoder succeeds if Fˆ satisfies both HFˆ = σ and AFˆ = AF . An important class is min-weight decoders, which output a correction Fˆ with minimum weight, resulting in strong practical performance and provable correction guarantees.
+This framework applies to quantum codes, FT circuits, and classical codes, with instances and noise models set by H and A. Unlike classical decoding, where the code (and thus H) can typically be selected to simplify decoding, fault-tolerant circuit decoding offers limited control over H, which depends on hardware and noise but is usually sparse. Even when H has exploitable structure, prototyping benefits from testing new quantum codes and fault-tolerant strategies before developing bespoke decoders. Thus, a compelling goal is to develop a decoder that:
+(i) works as a general qLDPC decoder (i.e., requires only that H is sparse), (ii) guarantees a min-weight correction, and (iii) runs in poly(w) worst-case time for weight-w faults, enabling fast decoding in practical settings.
+We expect there is no decoder which meets all three criteria, although to date its existence has not been ruled out1. MaxSAT reductions enable general qLDPC decoders with guaranteed min-weight corrections but remain much slower than other decoders in practical settings, even with optimized SAT solvers [BBD+24, NH24]. Min-weight perfect matching [DKLP02] and union-find [DN21] decoders satisfy (ii) and (iii), but not (i) because they are limited to check matrices with a maximum column weight of two—applicable to surface codes (and to color codes via reduction [Del14]) but excluding many other relevant cases. Notably, union-find has been extended to some other qLDPC codes, but its correction guarantees weaken significantly [DLB22], failing criterion (ii). Formally efficient, provable decoders for qLDPC codes with finite rate [PK21b, KLNW24] and finite relative distance [DHLV23, LH22] represent significant theoretical progress. However, these decoders require check matrices with strong expansion properties [LTZ15, KLNW24], limiting their applicability regarding criterion (i). Moreover, their practical use is hindered by high runtime prefactors and large code sizes [BE21, SKB23].
+The absence of practically efficient, provable decoders for general qLDPC codes has led to heuristic decoders, such as Belief Propagation with Ordered Statistics Decoding (BP-OSD) [FL02, PK21a, RWBC20] and a range of recent proposals [HBK+23, JGHVF24, GCR24, iM24, WB24, diEMREM24, KKL24]. Heuristic decoders are currently the only viable option for many practical applications, but replacing them with provable decoders that achieve competitive runtimes (satisfying (i), (ii), and (iii)) would be highly desirable. This work makes progress toward that goal, with key contributions summarized below.
+1NP-hardness is known for min-weight decoding of general stabilizer [HLG11] but is not known for the qLDPC sub-family.
+3
+
+Figure 1: (Left) An illustration of the first three levels of the decision tree (DT) for a distance-5 color code. Each DT node (blue triangle) represents a partial correction, with the root DT node (red outline) at the center. DT nodes are labeled with the code’s Tanner graph, where black circles are data vertices, white squares are check vertices, red circles indicate partial corrections, and yellow stars mark syndrome vertices. A syndrome vertex is selected from each DT node, and its neighboring fault vertices are added to form child nodes. DT nodes with trivial syndromes (green outline) represent valid corrections. (Right) Starting at the root node, DT decoders iteratively explore by assigning a cost to each child of the lowestcost node in the tree. For example, using the syndrome height h(σ), the minimum weight of any error with syndrome σ, as the cost function yields a minimum-weight correction in w steps for weight-w errors.
+Main results: We introduce the general qLDPC Decision Tree Decoder (DTD) family, including:
+(1) A provable decoder that satisfies (i) and (ii). Although it generally falls short of (iii), numerical evidence suggests fast median-case runtime for some qLDPC code families.
+(2) A heuristic decoder with better accuracy and faster empirical runtime than BP-OSD.
+The provable decoder is likely our most significant contribution, as few general qLDPC decoders offer correction guarantees [BBD+24, NH24].
+Decision Tree Decoders: The core idea of the DTD family is to construct a correction incrementally, adding faults one at a time, akin to the flip algorithm of Sipser and Spielman [SS96]. This decision sequence traces a path through a decision tree (see Figure 1), retaining all possible choices, in contrast with list decoding algorithms, where choices are dropped [DS06, TV15]. Structural properties of the problem help reduce the search space; for instance, each unsatisfied check vertex neighbors at least one actual fault: it is sufficient to restrict to faults connected to a single check vertex at each search step. Nonetheless, the decision tree grows exponentially, and effective algorithms must explore and construct only a small part before identifying a low-weight correction that cancels the syndrome. Different DTD algorithms use varying strategies to navigate the decision tree. DTDs have a loose sparsity requirement for the check matrix H to keep the number of children per node manageable.
+A key observation (see Figure 1) is that a DTD decoder satisfying criteria (i), (ii), and (iii) could be constructed with an oracle for the syndrome height h(σ), defined as the minimum weight of a correction for a given σ. In each round, the decoder selects a fault that reduces the syndrome height by one, which yields a min-weight correction after precisely h(σ) iterations. While creating a practical algorithm this
+4
+
+way seems unlikely, as no efficient method for computing h(σ) is known for general qLDPC codes, this idea motivates both our provable and heuristic DTD algorithms.
+Provable decoder: The Height-bound DTD algorithm performs an assisted breadth-first search, using easily computable lower bounds on h(σ) to prune large parts of the decision tree. We use ‘neighborhood bounds’ applicable to any qLDPC code, which rely on the requirement that each unsatisfied check vertex has at least one neighboring fault. Height-bound DTD also uses BP for tie-breaking, improving search efficiency while ensuring min-weight corrections. Empirically, it explores an optimal number of decision tree nodes in the median case across various QEC codes (see Figure 2), including color codes [BMD06, BMD07] and bivariate bicycle codes [BCG+24]. This is encouraging, as the decoder performs well despite weaker syndrome-neighborhood bounds for topological codes like color codes, where syndromes appear only at string endpoints. Even better performance is expected for expander codes, where large errors produce large syndromes. An intuitive explanation for height-bound DTD’s strong median-case performance, even for topological codes, is that while large errors with small syndromes (and thus weak syndrome-neighborhood bounds) occur, they are quite rare.
+
+Figure 2: Provable decoder. For several distance-d color codes (CC) and bivariate bicycle codes (BB),
+
+for
+
+each
+
+w
+
+≤
+
+d−1 2
+
+we
+
+randomly
+
+sample
+
+all
+
+weight-w
+
+X -type
+
+faults.
+
+We report the median number
+
+of decision tree nodes explored by two decoding algorithms: height-bound DTD and naive breadth-
+
+first DTD. As expected, breadth-first DTD explores exponentially many nodes in w (with dashed, fit
+
+parameter bCC = 3.825 and bBB = 4.902), while height-bound DTD, perhaps surprisingly, explores only
+
+w nodes.
+
+Heuristic decoder: Unlike the provable decoder height-bound DTD, which performs a rigorously guided breadth-first search of the DT, our heuristic algorithm BP-DTD uses belief propagation to estimate costs for DT nodes and explores in a depth-first manner. Another difference is that BP-DTD accommodates non-uniform fault probabilities, making it better-suited for circuit noise than height-bound DTD. This approach offers faster worst-case performance than height-bound DTD but does not guarantee min-weight corrections. Our fast, non-provable BP-DTD algorithm aligns with several recently proposed heuristic decoders [HBK+23, JGHVF24, GCR24, iM24, WB24, diEMREM24, KKL24, LCPS24, HBQ+24,
+
+5
+
+SN23], and is conceptually most similar to the guided-decimation decoder [GCR24] and the closed-branch decoder [iM24]. Although detailed optimization and comparisons with other heuristic decoders are beyond the scope of this work, encouraging initial results in Figure 3 show significant improvements over BP-OSD for time-sensitive decoding.
+Figure 3: Heuristic decoder. Cutoff-time performance curves for BP-OSD and BP-DTD for the gross code under circuit noise of strength p = 10−3. Failure probability arises from two sources: exceeding the cutoff time T or decoding within T but producing an incorrect correction. At early and late times, both decoders perform similarly—either relying on a BP pre-decoder or having enough time to terminate, with BP-DTD showing slightly lower logical error rates in the late regime. In the intermediate regime, BP-DTD terminates more often than BP-OSD, leading to significantly lower logical error rates.
+Applications and open questions: The height-bound decoder provides provable minimum-weight corrections and often runs very quickly, though it can be slow in some cases. This makes it appropriate for decoder ensembles [SJG20, BSH+23, SNV24], where a fallback decoder could handle cases where it fails to terminate on time. Beyond decoding, the decision tree and height bound are valuable tools. In Appendix A.5, we describe an algorithm that leverages these tools to compute all minimum-weight logical operators of a code. In Appendix A.4 we review how to use height-bound DTD (or any min-weight decoder) as a subroutine in distance-finding algorithms by finding minimum-weight corrections for an augmented check matrix as has been explored with SAT-solvers [SC22]. Additionally, BP-DTD appears well-suited for gateware implementations, like FPGAs, due to its parallelizability and the theoretical O(1) runtime per BP iteration on specialized hardware. Open questions remain (see Section 7): how can these DTD algorithms be improved, what other provable or practical DTD algorithms can be developed, and what are their most compelling applications?
+The remainder of this work is organized as follows: In Section 2, we review how the decoding matrices H and A arise in various contexts, including classical codes, stabilizer codes, and quantum circuits. Section 3 provides key definitions, and Section 4 introduces the general decision-tree decoder family. In Section 5 and Section 6 we present and analyze our provable and heuristic decoding algorithms heightbound DTD and BP-DTD. We conclude in Section 7, with a brief discussion of potential future work. Additional details and results are provided in the appendices.
+6
+
+2 A guide to decoding matrices in different settings
+
+This section provides a unified language to describe decoding in terms of decoding matrices H ∈ FM 2 ×N and A ∈ F2K×N across various contexts, as summarized in Table 1. Our decision tree decoders are applicable to all of these scenarios, provided that the check matrix H is sparse. While this section aims
+to offer a helpful clarification and review of decoding, it is not essential for understanding the remainder
+of the paper; key definitions and notation are established in Section 3.
+
+Decoding problem
+Classical code [n, k, d] Stabilizer code [[n, k, d]]
+
+Check matrix (M ×N )
+m×n m × 2n
+
+CSS-type
+
+HX : mX × n
+
+stabilizer code [[n, k, d]] HZ : mZ × n
+
+Logical memory circuit mR × N
+
+for stabilizer code [[n, k, d]]
+
+Logical operation
+
+circuit for stabilizer
+
+M ×N
+
+codes [[n, k, d]]→[[n,′ k,′ d′]]
+
+Logical action matrix (K ×N ) n×n 2k × 2n
+AX : k × n AZ : k × n 2k × N
+(k + k′) × N
+
+Comments
+
+A is identity matrix (usually omitted)
+
+m ≥ n−k (>if over-complete checks∗)
+
+Constraint (mX + mZ ) ≥ n − k. Special case of stabilizer code with:
+
+H=
+
+HX 0
+
+0 HZ
+
+,A=
+
+AX 0
+
+0 AZ
+
+R-rounds of stabilizer extraction.
+
+N depends on circuit and noise.
+
+Measures l commuting logical Paulis,
+
+and applies k−l to k′ logical isometry.
+
+M, N depend on circuit and noise.
+
+Table 1:
+
+Summary of check and logical action matrices H
+
+∈
+
+M ×N
+F2
+
+and
+
+A
+
+∈
+
+K ×N
+F2
+
+across settings.
+
+∗The constraint m ≥ n − k applies everywhere m appears in the table. Classical, stabilizer, and CSS
+
+codes assume perfect check measurements. Logical memory and logical operation circuits account for
+
+general circuit noise, including noisy measurements, but assume a noise-free final round of stabilizer
+
+measurements (this assumption can be relaxed). For CSS codes, we use the convention HX = SZ, with
+
+HX detecting X errors and SZ the Z-type stabilizer matrix. CSS-type restrictions on circuits, not shown
+
+here, similarly block-diagonalize the circuit decoding matrices, as they do for CSS codes.
+
+Given unknown faults F ∈ F2N , the decoder is provided the syndrome σ = HF ∈ FM 2 and proposes a correction Fˆ, succeeding if HFˆ = σ and AFˆ = AF . Before reviewing decoding in each of the settings in Table 1, we comment on some general aspects:
+
+• It is natural to define two additional matrices—the stabilizer matrix S and the logical operator matrix L—given H and A. While well-known in the context of stabilizer codes2, S and L are also
+meaningful in more general decoding settings. The stabilizer matrix S consists of rows that form
+a complete linear basis of vectors s satisfying Hs = 0 and As = 0. This captures the equivalence imposed by A: two vectors f and f ′ are equivalent (f ∼ f ′) if and only if Hf ′ = Hf and Af ′ = f ′, which is equivalently expressed as f ′ = f + s for s ∈ rowspace(S). The logical operator matrix L
+consists of rows that form a complete, linearly independent basis of inequivalent vectors l satisfying
+Hl = 0 and Al ̸= 0 (any such vector l is a linear combination of rows of L and H).
+
+2For
+
+a
+
+stabilizer
+
+code,
+
+S
+
+∈
+
+n−k×2n
+F2
+
+and
+
+L
+
+∈
+
+2k×2n
+F2
+
+correspond
+
+to
+
+the
+
+generators
+
+of
+
+the
+
+stabilizer
+
+group
+
+S
+
+and
+
+the
+
+logical operators L, respectively. In this case, H and A align with S and L after swapping the first and second sets of n
+
+columns. This direct correspondence between H and S and between A and L does not hold for circuit decoding.
+
+7
+
+• The decoding problem is invariant under linearly independent row recombinations of each of H and A. In practice, certain choices can aid decoders (e.g. regular structure, redundancy and low row/column weights).
+• In this section, we do not restrict the probability distribution for F : we allow each of the 2N bitstrings to occur with a given probability, capturing arbitrary correlations between the bits of F . Outside this section (see Section 3), for simplicity we restrict to uncorrelated distributions, where each bit Fj is independently drawn with probability pj. We can however introduce additional bits to F to reproduce the effect of correlations between the original bits. For example, in a stabilizer code with noise where X, Y , and Z errors occur independently with probability p, one could use a length-N = 2n fault vector (encoding X and Z errors with correlations) or a length-N = 3n fault vector (encoding X, Y , and Z errors independently) to represent the same error model.
+• Throughout this work, we use the term ‘quantum-LDPC’ to refer to any infinite family of decoding problems with (a fixed choice of) check matrices which have bounded row and column weights.
+2.1 Classical codes
+For a classical linear code, the check matrix H ∈ F2M×N is the main object defining the code. Codewords are bitstrings F ∈ FN2 such that HF = 0. Given a codeword F , an additional error E results in (F + E), which has syndrome σ = H(F + E) = HE. The logical action matrix A is the identity matrix and does not play a role (therefore A is typically not discussed in classical coding theory). This means that in the typical scenario of classical codes, all codewords are considered in-equivalent, and as such the distance d of the code is the Hamming weight of the smallest non-trivial vector in the kernel of H. Therefore the classical code properties [n, k, d] correspond to the n = N bits of the message, which encodes k = dim ker(H) = N − rank(H) logical bits. Since M ≥ rank(H), we have the constraint that M ≥ n − k.
+2.2 Stabilizer codes
+Here we specify how the decoding matrices arise for stabilizer codes. Let n be the number of qubits that the code is defined on. A stabilizer code is defined by its stabilizer group S, which is an abelian subgroup of the n-qubit Pauli group which does not include −I. The code space is the simultaneous +1 eigenspace of every element of S. We typically fix a set of m generators of the stabilizer group, which can be over-complete, and use this to define the code. In Figure 4(a) and (b) we define a family of color codes [BMD06, BMD07] and the gross code [BCG+24] (an example of a bi-variate bicycle code [MMM04, KP13, PK21a, PK21b]) which we use as examples.
+In what follows we define a number of important properties of a stabilizer code S. To distinguish some of these from other definitions for the more general space-time codes in the next section, we will add S as a superscript in places.
+Checks: A check is a bit that captures the measurement outcome of a generator, taking a value 0 for a code state in the absence of any error. When a check is 0 (corresponding to a +1 measurement outcome) we say it is ‘satisfied’, and when it is 1 (corresponding to a -1 measurement outcome) we say it is ‘unsatisfied’.
+8
+
+(a)
+
+(b)
+
+Figure 4: (a) Three instances of the color code family with distances 3, 5 and 7 (larger distance codes are defined by extending the pattern). Qubits are at vertices, with an X- and a Z-type stabilizer generator supported on the qubits of each face. (b) The gross code with qubits at vertices on this tiling of the torus. There is a weight-6 X-type (Z-type) stabilizer generator supported on the four qubits on each red (green) square face and on two additional qubits located at fixed translated vectors relative to the face, indicated by red (green) arrows for one highlighted face.
+
+Pauli errors: We can represent any n-qubit Pauli error P1 ⊗ P2 ⊗ . . . Pn as a length 2n bit string E = b1b2, . . . b2n, where for j ∈ 1, . . . n the pair of bits (bj, bn+j) are: (0, 0) if Pj = I, (1, 0) if Pj = X, (0, 1) if Pj = Z and (1, 1) if Pj = Y .
+Check matrix: The check matrix HS ∈ F2m×2n of the code is a binary matrix with 2n columns and m rows. (Note that HS is the check matrix H that is used for decoding the stabilizer code. We use the superscript S here on H and A to make it easier to refer back to these objects later.) The entry HiSj is 0 if the ith generator commutes with X on the jth qubit, and 1 otherwise, while the entry HiS,n+j is 0 if the ith generator commutes with Z on the jth qubit, and 1 otherwise.
+The Tanner graph T of the code is the graph which has the check matrix HS as its adjacency matrix, and it is conventional to use circular nodes for errors and square nodes for stabilizer checks. It is common to draw the X- and Z-type subgraphs of the Tanner graph, which we write as TX and TZ respectively, which correspond to the first and second sets of n columns of HS respectively. (A stabilizer generator which is neither purely X nor purely Z type will appear in both subgraphs).
+CSS-type stabilizer codes: If the code is a CSS [Got96, CRSS97] code, a set of generators exists which are each either purely X-type or purely Z-type, such that HS is block diagonal, in which case TX and TZ are disjoint subgraphs of T . Our convention for CSS codes is to list the mX Z-type stabilizer generators first, which form the top-left submatrix HX of HS , and to then list the mZ X-type stabilizer generators, which form the bottom-right submatrix HZ of HS . (Note that this convention for CSS code matrices is the opposite of what is most common in the literature, but avoids the definition of the symplectic product and also is more parallel to our other definitions of check matrices which are defined by considering rows in terms of detections of faults.) For example, the decoding graphs depicted in Figure 6 for X-type noise with perfect measurement correspond to the X-type Tanner graphs for the color and gross codes. (Note: in some literature the Tanner graph is drawn more compactly for CSS codes by combining the node for each error pair Xi and Zi such that there is a single node corresponding to each data qubit i, which is unambiguous since each check node corresponds to a pure X- or Z-type stabilizer generator.)
+Syndrome: Let E be the length-2n bit string that represents an n-qubit Pauli error. The syndrome
+9
+
+σS of E is σS = HS E (with arithmetic modulo two) is the list of m measurement outcomes that would be obtained if the stabilizer generators of the code were measured on a code state with E applied to it. In other words, the syndrome is a vector of check outcomes ordered according to the rows of HS .
+Logical action matrix: Any Pauli operator which commutes with all stabilizer generators but is not in either S or −S is a non-trivial logical operator (stabilizers are sometimes referred to as trivial logical operators). We define the distance d as the smallest weight of any non-trivial logical operator. Two logical operators B and C are equivalent if there is a stabilizer S ∈ S such that B ∝ SC. The number of independent stabilizer generators is 2k, where k is the number of logical qubits encoded by the code. We form the logical action matrix AS ∈ F22k×2n, which is a binary matrix with 2n columns and 2k rows, by taking each row to be the bit string representing an independent logical operator. It is common use the notation [[n, k, d]] to specify these important properties of a stabilizer code.
+2.3 Logical memory circuits for stabilizer codes
+Here we assume a circuit which measures a set of stabilizer generators of an [[n, k, d]] stabilizer code with stabilizer group S, repeated over R rounds. We will assume that the last round is fault-free (this assumption can be relaxed to form a windowed-decoding strategy, which we will not discuss in this work for simplicity). The presentation intentionally mirrors the previous subsection on stabilizer codes to highlight analogies.
+Circuit checks: The circuit outputs a length-M bit string of circuit checks, each of which is a bit formed from the parity of the measurement outcomes of a stabilizer generator on two consecutive rounds, which is 0 in the absence of faults. When a circuit check is zero we say it is ‘satisfied’, and when it is one we say it is ‘unsatisfied’. In some literature [Gid21], circuit checks are known as ‘detectors’. Given R rounds, and m stabilizer generators of the code, there will be M = R · m circuit checks.
+Circuit faults: These can be thought of as a generalization of Pauli errors for a stabilizer code. We assume that an explicit set of N distinct faults can occur. Each of the N faults has the effect of flipping a subset of detector outcomes, and leaves a residual Pauli error at the end of the circuit. We use the fault bit string F ∈ F2N to denote a set of faults (indicated by 1s in the bit string) occurred.
+Circuit check matrix: The circuit check matrix H ∈ F2M×N is a binary matrix with N columns and M rows. For i ∈ 1, . . . M , the entry Hij is 1 if the ith detector outcome is flipped by the jth fault, and 0 otherwise.
+Circuit syndrome: The syndrome of a set of faults F is the bit string σ of detector values that result from F , which is obtained from the circuit check matrix as σ = HF (with arithmetic modulo two).
+Circuit logical action matrix: The circuit logical action matrix A ∈ F22k×N encodes the effect of the residual Pauli at the end of the circuit caused by each fault. (Note that the logical action matrix needs to be modified if the space time code implements a non-trivial logical operation such as measuring a logical operator rather than just syndrome extraction [BHK24].) More specifically, suppose that the jth fault results in a residual error Ej (in binary symplectic form) at the end of the circuit. Then the jth column A∗j of A is given by A∗j = AS Ej, where AS is the logical action matrix of the code. The circuit distance d is the minimum weight of any circuit logical.
+We can also define a circuit stabilizer group as follows. Given the full set of N faults that can occur, a set of faults S ∈ F2N is a circuit stabilizer if and only if HS = 0 and AS = 0. The set of all such faults forms a group.
+10
+
+2.4 Logical operation circuits for stabilizer codes
+Here we review decoding for a more general setting where quantum circuits are used to build logical operations on stabilizer codes. We do not test our decoders on logical operations in this paper, but we hope that this description may be useful for reference.
+The general description of logical operation circuits we review here has been considered in many different works and is referred to by many names, including the detector noise model [Gid21], spacetime codes [DP23, BFHS17, Got22], logical blocks [BDM+23], and stabilizer channels [BHK24]. All of these works include descriptions of logical operation circuits which are somewhat equivalent to what we review here, but our notation and presentation most closely aligns with the material in Refs. [BHK24, KBP23].
+Stabilizer channels: A stabilizer channel is a circuit composed of stabilizer operations—Pauli basis state preparations, measurements, Clifford unitaries, and conditional Pauli measurements based on parities of earlier measurement outcomes. Such a circuit transforms an initial [[n, k, d]] stabilizer code into a (possibly different) output [[n′, k′, d′]] stabilizer code. In this context, a decoder’s task is to detect and correct faults in the circuit, ensuring robust logical action. We will assume in the rest of this discussion that the circuit is a stabilizer channel.
+Logical action: The logical action of any (stabilizer channel) circuit has a simple form [BHK24] as shown in Figure 5. Its action is to first measure a set of l independent commuting logical Pauli operators for the input code, and then apply an isometry from the resulting (k − l)-qubit code space to the k′-qubit output code space. By analyzing the independent logical failure modes of the circuit, we see that A has K = k + k′ rows.
+
+(a)
+
+(b)
+
+Figure 5: (a) The logical action of any stabilizer channel from k to k′ logical qubits is to measure a set of
+l independent commuting logical Paulis of the input code, and to apply an isometry from the remaining k − l to k′ logical qubits of the output code. This is fully specified by k-dimensional and k′-dimensional
+Clifford unitaries C and B, and the number l = 0, 1, 2, . . . k. (b) We use orange and blue disks to indicate
+logical X- and Z-type faults in this logical circuit that can have non-trivial action (note that a Z error after a |0⟩ preparation is trivial). We can specify all logical failures by the bitstrings a ∈ Fl2, b ∈ F2k′−k+l, c ∈ F2k−l and d ∈ F2k−l. Each of the k + k′ rows of A corresponds to a bit in one of these bitstrings.
+
+Detectors and logical outcomes: The circuit will in general include many measurements, although these are not necessarily associated with repeated stabilizer measurements for a stabilizer code. Each detector is formed from the parity (or the complement of the parity) of a set of measurement outcomes, with trivial value in the absence of faults. Each logical measurement outcome of the circuit is formed from the parity (or the complement of the parity) of a set of measurement outcomes, with the value equal to the logical outcome in the absence of faults.
+To identify the sets of circuit outcomes forming detectors and logical outcomes, consider a modified circuit where each operation occurs in a separate time step, creating a sequential structure. In a faultfree stabilizer circuit, each measurement outcome is either [BHK24]: (i) uniformly random, (ii) fixed
+
+11
+
+(determined by the parity of a set of earlier measurement outcomes), or (iii) dependent on the logical state of the input code (specified by the parity of a set of earlier outcomes and the logical measurement outcome). A detector corresponds to each type (ii) outcome and includes that outcome and the earlier circuit outcomes it depends on. Similarly, a logical outcome corresponds to each type (iii) measurement, including that outcome and the earlier circuit outcomes it depends on.
+Constructing decoding matrices: Each fault is a distinct event that can: (a) introduce a Pauli operator on qubits in the circuit at some time (which can be pulled through the circuit to form a residual Pauli on the output), (b) cause detector outcomes to flip, (c) cause some logical measurement outcome to flip. For N faults, and M detectors, the check matrix is formed as usual, with a column for each fault and a row for each detector, with Hij = 1 iff detector i is flipped by fault j. Similarly, each fault can result in logical failures as specified in Figure 5 such that the logical action matrix has a column for each of the N faults and a row for each of the K logical failure modes, with Aij = 1 iff fault j leads to failure mode i.
+Note that the resulting check and logical action matrices H and A may not be in the most convenient form. Linearly independent recombinations of rows can be used to reduce the column weight etc.
+12
+
+3 Decoding formalism
+Here we fix the notational conventions needed for the rest of this work.
+
+3.1 Basic definitions
+
+The primary definitions we will work with are in Definition 1.
+Definition 1 (Faults and decoding). Consider a check matrix H ∈ {0, 1}M×N , a logical action matrix A ∈ {0, 1}K×N , a probability vector p ∈ (0, 1/2)N and a weights vector w ∈ (0, ∞)N .
+Let the fault bitstring F ∈ {0, 1}N be randomly drawn according to the distribution
+
+N
+P(F ) = (1 − pj)
+j=1
+
+pj 1 − pj
+
+Fj
+.
+
+Given F , the syndrome σ ∈ {0, 1}M is obtained from σ = HF . A decoder is a classical algorithm which, given σ ∈ {0, 1}M (and with knowledge of the objects H, A and w), proposes a correction Fˆ ∈ {0, 1}N . We say that the decoder succeeds if both HFˆ = σ and AFˆ = AF , and that it fails otherwise.
+
+Arithmetic involving binary objects such as σ = HF etc., are modulo two here and elsewhere.
+The decoding problem phrased in Definition 1 is very general and applies to many settings of interest. The objects H, A, p, w here can be specified for a classical code, a quantum stabilizer code, a fault-tolerant stabilizer circuit that implements a stabilizer code, or something even more general such as a space time code. We include a discussion of these cases that explains how the objects arise in each case in Section 2.
+Low Density Parity Checks: We will assume that the check matrix H is sparse, and more specifically, that it has a maximum column weight c and maximum row weight r. In other words, we are focused on decoding for quantum Low Density Parity Check (qLDPC) codes.
+Weights: Instead of providing the decoder with the probability vector p, we instead provide it with a weight vector w ∈ (0, ∞)N . For a fault bitstring F we define its weight by
+
+N
+w(F ) = wjFj.
+j=1
+
+Unless otherwise stated, we will take the weight of fault j to be given by the log-probability ratio (LPR),
+
+i.e.,
+
+wj
+
+=
+
+log
+
+1−pj pj
+
+,
+
+in
+
+which
+
+case
+
+p
+
+and
+
+w
+
+form
+
+a
+
+bijection
+
+and
+
+are
+
+thus
+
+equivalent.
+
+We
+
+will
+
+make
+
+it
+
+clear
+
+when we find it convenient to assume a different choice of weight vector, such as uniform weights where
+
+wj = 1 for all j (in which case w(F ) is the Hamming weight of F ).
+
+Min-weight decoding: A sub-optimal, but common strategy which often performs well in practice is where the fault bitstring F with syndrome σ with the minimum weight w(F ) is output, i.e.,
+
+Fˆmin-wt = arg min(w(F )).
+F |HF =σ
+
+13
+
+Note that (when weights are LPRs) finding an F with minimal w(F ) is equivalent to finding an F with maximum P(F ), such that min-weight decoding is often called most-likely error (MLE) decoding. For general stabilizer codes, min-weight decoding is NP-hard [HLG11].
+
+Optimal decoding: The optimal decoding strategy, called most-likely coset (MLC) decoding, is to find a fault bitstring with syndrome σ which maximizes the conditional probability of the coset of equivalent fault bitstrings, i.e.,
+
+
+
+
+
+Fˆopt = arg max 
+
+P(F + S) .
+
+F |HF =σ S|HS=0,AS=0
+
+For general stabilizer codes, optimal decoding is #P complete [IP15] (even harder than NP-hard). We know of no results on the computational difficulty of general quantum low density parity check (LDPC) codes (where the check matrix has bounded row and column weight).
+Syndrome height: It is useful for some of our decoding strategies to define the syndrome height h(σ) as the weight of the lowest-weight fault configuration F which has syndrome σ, i.e.,
+
+h(σ) = min w(F ).
+F |HF =σ
+Unless otherwise stated, the syndrome height will be computed using uniform weights.
+Decimation: It can be a useful step in some decoders to assume a subset of fault bits are included in a correction and then to consider the residual decoding problem that results. Consider a check matrix H, a probability vector p and a syndrome σ. Given any fault bitstring F , we can define:
+
+• the decimated check matrix HF is obtained by removing each jth column from H where Fj = 1, • the decimated probability vector pF is obtained by removing each jth element from p where Fj = 1.
+
+3.2 Decoding graph and set representation of bitstrings
+We often find it convenient to work with a graphical representation of H (see Figure 6). The decoding graph3 G is the bipartite graph which has biadjacency matrix H ∈ {0, 1}M×N . There are two types of vertices: fault vertices (corresponding to columns of H), and check vertices (corresponding to rows of H). We write N (v) to specify the neighbors of a vertex v in G. We write N (V ) = N (v1) ∪ N (v2) ∪ . . . for a set of vertices V = {v1, v2, . . . }. The fault degree c (check degree r) is the maximum weight of any individual column (row) of H.
+We use j = 1, 2, . . . N to denote a fault vertex. We then use F to denote a set of fault vertices in two representations: as a set F = {j1, j2, . . . }, and as bit string F ∈ {0, 1}N (with Fj = 1 for j ∈ {j1, j2, . . . }). Similarly, we use σ to denote a set of check vertices both as a set σ = {i1, i2, . . . } and as a bit string representation σ ∈ {0, 1}M (with σi = 1 for i ∈ {i1, i2, . . . }). When B and C are interpreted as sets, we use B + C to denote their symmetric difference, consistent with B + C being modulo-two addition when
+3One may wonder why we do not call G the Tanner graph – the reason is that in places we will discuss the same code under different noise models and we reserve the term Tanner graph for the defining representation of the code rather than having it depend on the noise model. For stabilizer codes, the decoding graph is the Tanner graph. This is discussed further in Section 2 and Section A.1.
+
+14
+
+(a)
+
+(b)
+
+Figure 6: Decoding graphs for X-type noise with perfect measurements. There is a colored square vertex for each check, and a circle vertex for each fault (single-qubit X error). (a) For three instances of the color code family with distances 3, 5 and 7 (larger distances can be obtained by extending the pattern). (b) For the gross code, where we draw only one pair of non-local edges (red), but there is a pair (not drawn) for for all square check vertices in the graph. See Figure 4 for definitions of these codes.
+
+B and C are interpreted as bit strings. When B and C are interpreted as bit strings, we use B ∪ C to denote the (non-exclusive) or, consistent with B ∪ C being the union when B and C are interpreted as sets. Lastly, for B and C interpreted as sets, when C ⊆ B we write C − B to specify set difference for clarity (though this is equivalent to writing B + C). The syndrome σ of a fault set F = {j1, j2, . . . } is σ = N (j1) + N (j2) + · · · = N (F ) = HF .
+
+3.3 Belief propagation decoding
+
+Here we review the belief propagation (BP) decoding algorithm. We use BP as a subroutine of some of the decoders we present in this work.
+
+BP is a message-passing algorithm on the decoding graph which was originally designed for classical codes. There are many versions of BP, we use a relatively standard version which was used for quantum codes in [PK21a, RWBC20]. BP can be thought of as an algorithm which, given the observed syndrome σ, estimates the posterior probability P(Fj = 1|σ) that the jth fault occurred. The algorithm obtains this estimate by passing messages back and forth between fault vertices and check vertices over a sequence of iterations.
+
+More specifically, the message passing is initialized by each fault vertex j passing neighboring checks i ∈ N (j) messages consisting of its LPR:
+
+µ(j0→) i
+
+=
+
+log
+
+1
+
+− pj pj
+
+.
+
+This is followed by alternating rounds of check-to-fault message updates according to the minimum-sum
+
+rule
+
+µi(→ t) j = (−1)σi
+
+sign(µj(t′−→1i))
+
+·
+
+j
+
+′
+
+min
+∈N (i)\{j
+
+}|µj(t′−→1i)
+
+|,
+
+j′∈N (i)\{j}
+
+corresponding LPR updates
+
+Λ(jt)
+
+=
+
+log
+
+1 − pj pj
+
++
+
+µ(i→ t) j ,
+
+i∈N (j)
+
+15
+
+and fault-to-check message updates
+
+µj(t→) i = Λj(t) − µi(→ t) j .
+
+At every timestep t, the error pattern Fˆ is estimated from the posterior log-probability ratios with
+
+Fˆj =
+
+0 1
+
+if if
+
+Λ(jt) ≥ 0 Λ(jt) < 0
+
+The algorithm stops if the estimated error Fˆ is consistent with the syndrome σ = HFˆ, in which case we say BP converged, or if the maximum number of iterations is reached without providing a valid solution, in which case we say BP did not converge.
+
+We
+
+denote
+
+the
+
+final
+
+LPR
+
+estimate
+
+of
+
+fault
+
+j
+
+output
+
+by
+
+the
+
+last
+
+iteration
+
+as
+
+ΛBP(j)
+
+=
+
+Λ(tend
+j
+
+)
+
+.
+
+We also denote the arithmetic mean of the LPRs over the last lbuff BP rounds as
+
+lbuff −1
+
+Λ¯ j =
+
+Λ(tend
+j
+
+−l)
+
+.
+
+l=0
+
+This can smooth possible oscillations occurring during BP similar to [GCR24].
+
+Finally, we define the decimated LPR estimate ΛBP(j | σ, F ) which is the ΛBP(j) obtained when running BP to decode σ on the decimated check matrix HF , and accordingly Λ¯BP(j | σ, F ).
+A well-known disadvantage of BP is that it sometimes does not converge, especially if the decoding graph G contains loops or if there are equivalent corrections with the same weight. A common strategy is to use a follow-up decoder to handle these cases, with ordered statistics decoding being among the most commonly used option. We use the resulting two-step decoder known as BP-OSD to compare some of our decoders, and we review BP-OSD briefly in Appendix A.2.
+
+3.4 MaxSAT decoding
+
+Here we briefly review the use of reductions to MaxSAT to form general qLDPC decoders [BBD+24, NH24].
+
+The MaxSAT problem involves finding a boolean variable assignment bl (l = 1, 2, 3, . . . ) that satisfies the maximum number of clauses. Each clause is defined in terms of boolean variables using logical operations such as logical OR (∨), logical XOR (⊕), and logical NOT (¯b, the negation of a boolean variable b). For example, typical clauses might include (b1 ∨ b¯2) and ((b¯1 ⊕ b2) ∨ b3). By assigning weights to clauses, the MaxSAT problem generalizes to finding the assignment that minimizes the weight of
+unsatisfied clauses. For decoding, it is useful to distinguish between hard clauses (with infinite weight),
+which must be satisfied, and soft clauses (with finite weight), where minimizing the total weight of
+unsatisfied clauses is the objective.
+
+The minimum-weight decoding problem can be formulated as a MaxSAT problem, where the boolean
+
+variables are the bits of the correction Fj. Hard clauses are derived from the syndrome equation σ = HF
+
+mod 2, expressed as:
+
+
+
+
+
+N
+
+σi ⊕  HijFj , i = 1, . . . , M.
+
+j=1
+
+16
+
+Soft clauses arise from minimizing the weight w(F ), introducing N clauses: F¯j, with weight wj, j = 1, . . . , N.
+Constructing an end-to-end decoder via MaxSAT reduction requires solving the MaxSAT instance. Ref. [BBD+24] used Z3 [dMB08], while Ref. [NH24] found Open-WBO [MML14] most effective. Practical solvers often perform better with reformulated clauses (different, but logically equivalent to those stated above), such as converting the problem into Max 3-SAT in conjunctive normal form using auxiliary variables, as described in [NH24]. MaxSAT decoding achieves significantly lower logical error rates than heuristic methods like BP-OSD but is substantially slower, even with state-of-the-art solvers optimized for MaxSAT benchmarking competitions [BBD+24, NH24].
+One challenge of the MaxSAT mapping approach to qLDPC decoding is that it seems quite difficult to incorporate structure to improve the performance for specific code families, and also difficult to incorporate the notion of stabilizer equivalence that exists in decoding of quantum codes. In Appendix A.6, we compare the runtime of our minimum-weight decoder (height-bound DTD) with data for the MaxSAT decoder in [BBD+24, NH24].
+17
+
+4 Decision-tree decoding
+In this section we first define the decision tree in Section 4.1, then introduce the main decision-tree decoding (DTD) Algorithm 1 in Section 4.2. The main DTD algorithm is defined with respect to a subroutine which specifies how the decision tree is explored. In Section 4.3 and Section 4.4 we introduce and analyze some conceptually simple exploration subroutines that serve as a warm-up to build intuition for the more practically relevant ones which we provide later in Section 5 and Section 6.
+4.1 Decision tree
+The decision tree is the main object needed to understand the family of decision-tree decoders. Here we reiterate and expand upon the description of the decision tree that we provided in Figure 1 of Section 1.
+The decision tree T is defined for a particular syndrome σ on the decoding graph G. Start by including a root node for T . Next, take a check vertex i in the set σ and add a child to the root node for each neighboring fault j ∈ N (i). Each child (labeled by (j) for j ∈ N (i)) in turn has its own children (labeled by (j, j′)) for j′ ∈ N (i′) \ {j}, where i′ is a check vertex in the set σ + N (j), the updated syndrome that would be obtained by applying the fault j when the original syndrome was σ. The full T is obtained by continuing this procedure iteratively until all branches terminate in a leaf. Each node in T is then uniquely labeled by the path of faults which were taken to reach it.
+Note T is never fully constructed in decision-tree decoding, rather parts of it are generated procedurally, as we explore it.
+Figure 7: First 4 levels of the decision tree T of the Steane code [Ste96] for the syndrome given in the root node. (We draw the Steane code as the d = 3 color code as in Figure 4(a,c)). In each node we show the updated syndrome (highlighted with yellow stars) and the decisions taken to reach it (highlighted green fault vertices), with the original syndrome σ at the root node.
+18
+
+It can be useful to visualize a decoding graph for each node in T , where we highlight the set F of fault vertices in the path to the node, and also the updated syndrome σ + HF (see Figure 7)). Each node in the decision tree can be considered as an attempted correction that could be applied, which succeeds if the updated syndrome is trivial. Every minimum weight correction corresponds to a leaf in the tree. Since only the set (and not the order-specific sequence) of faults F in a path fully specify the applied correction, and also the sub tree starting from this node, T contains a lot of redundancy. Algorithm 1, to be discussed later, avoids exploring these equivalent sub trees.
+The decision tree is very large, but it is always finite for any given syndrome σ and decoding graph G. To see that all branches in the tree T terminate on a leaf, consider a node in the tree that has been reached by a path through a set of faults F , and note that any children of this node must correspond to a fault j ∈ N (σ + HF ) \ F . If N (σ + HF ) \ F is empty, then the node has no children and is therefore a leaf. Therefore, a path through the tree must terminate at the latest when |F | = N and so the tree has at most depth N . Note that every solution node (i.e., when σ + HF = ∅) is a leaf, but not every leaf corresponds to a solution (when σ + HF ≠ ∅ but N (σ + HF ) ⊆ F ). The longest path from the root to a leaf is then at most as long as the total number of fault nodes in G. One final point to note is that, the decision tree is constructed by picking any check vertex of the updated syndrome at each step, and as such the tree depends on that choice. The tree arising from any such choice can be used for the algorithm.
+4.2 Main algorithm and exploration subroutine
+Here we introduce the main decision tree decoding (DTD) Algorithm 1. At a high level, the algorithm searches for a correction for the syndrome σ by exploring the decision tree T , starting at the root. As the algorithm proceeds it dynamically generates or grows parts of T until a solution is found. More specifically, it stores the set Tseen of all ‘seen’ nodes, and separately stores a set Tlive of ‘live’ nodes, which retains the subset of seen nodes, which have not yet been explored.
+To guide the algorithm’s exploration, each node in Tlive is assigned a cost. In each round, the lowestcost live node is selected and the algorithm stops if it provides a valid correction. Otherwise, we run an Explore subroutine, which ’explores’ this node in the decision tree, that is it identifies the faults that lead to its children and assigns them a cost for further exploration. All variants of the decision-tree decoder family differ only by this Explore subroutine, which defines order the search space is explored through the assignment of cost. Additionally, the Explore subroutine can directly return a solution. If Tlive becomes empty at any point in the algorithm, without having produced a solution, the algorithm terminates indicating that no correction exists that is consistent with the syndrome.
+Let us add a few comments to clarify a number of aspects of Algorithm 1:
+• This ‘main’ algorithm applies for all decision tree decoders that we consider in this work. The difference between different versions of the algorithm is captured entirely within the inlined Explore subroutine, which controls how the decision tree is explored by assigning costs to different partial corrections. Different costs produce very different DTD algorithms. We will generally name specific DTD algorithms after their exploration subroutines.
+• No significant part of T is ever fully constructed and stored in Algorithm 1, instead we explore small parts of it and store (in Tseen) relevant information about what has been explored, and store (in Tlive) information about what could be considered for further exploration.
+19
+
+Algorithm 1 Decision-tree decoder (main)
+
+1: procedure Decode(σin)
+
+2: Tseen ← {∅} 3: Tlive ← [(∅, σin, 0)] 4: while Tlive not empty do
+
+5:
+
+(F, σ, C) ← first(Tlive)
+
+6:
+
+if σ empty then
+
+7:
+
+return F
+
+8:
+
+end if
+
+▷ Decode syndrome σin ▷ Initialize seen tree nodes ▷ Initialize live nodes (fault set, syndrome, cost)
+▷ Extract cheapest node
+▷ Finish if correction found
+
+9:
+
+Exploration subroutine:
+
+Identifies the fault vertices jl leading to the current node’s children. Assigns them a cost C(jl).
+
+Computes: {(j1, C(j1)), . . . , (jb, C(jb))}
+
+10:
+
+for j ∈ {j1, . . . , jb} do
+
+11:
+
+F (j) ← F ∪ {j}
+
+12:
+
+σ(j) ← σ + N (j)
+
+13:
+
+if F (j) ∈/ Tseen then
+
+14:
+
+insert (F (j), σ(j), C(j)) into Tlive
+
+15:
+
+add F (j) to set Tseen
+
+16:
+
+end if
+
+17:
+
+end for
+
+18: end while
+
+19: return failure
+
+20: end procedure
+
+▷ Updated fault set ▷ Updated syndrome
+▷ No correction was found
+
+20
+
+• Since the correction F (and the corrections of all descendants) found by the exploration of T does not depend on the order faults were added to F by the algorithm, we just store F in Tseen. Fault sets which are considered for exploration are checked against those already seen to avoid redundancy. This ensures Algorithm 1 never explores a node of T if an equivalent node has already been explored.
+• We store ‘live nodes’ which may be further explored in Tlive. Each element (F, σ, C) consists of the partial correction F , the updates syndrome σ and a cost C. We always explore the cheapest element, so when implementing this algorithm in practice it makes sense to store elements in Tlive according to their cost (for example as a heap).
+• Many objects, including partial corrections F and updated syndromes σ are expected to be sparse bit strings (or equivalently small sets), which makes sense to take advantage of in implementations.
+To compare the efficiency of decision tree decoders resulting from different exploration subroutines in Algorithm 1, we define the number of explored nodes ν as the total number of nodes the exploration subroutine is called on before finding a correction.
+In the following subsections (Section 4.3 and Section 4.4) we consider the tree-exploration approaches generated by some simple but illuminating cost functions, which illustrates how very different behavior of decision-tree decoding algorithms can arise.
+4.3 Exploration using breadth-first search
+Here we consider the first of our two warm-up examples of DTD algorithms (which are illustrative but impractical). A minimum-weight correction corresponds to the shortest path from the root to a leaf in T , or more generally, the path with the lowest total weight when weights are non-uniform. A standard method for finding such a path is weighted breadth-first search, making it a natural approach for minimum-weight decoding.
+When the Explore Subroutine 2 is used in Algorithm 1, we call the resulting decoder the Breadth-first DTD. In the Explore Subroutine 2, assigning the cost change from parent to child as the weight of the selected fault vertex naturally results in a weighted breadth-first exploration of the decision tree, yielding a minimum-weight correction (see Lemma 1).
+Subroutine 2 (Weighted) breadth-first exploration 1: pick i ∈ σ 2: for j ∈ N (i)\F = {j1, j2, . . . jb} do 3: C(j) ← C + wj 4: end for
+Lemma 1 (Breadth-first DTD: min-weight). When using exploration Subroutine 2, the DTD Algorithm 1 returns a minimum-weight correction.
+Proof. The algorithm explores all nodes of the decision tree in order of increasing weight until it finds a correction. All minimum-weight corrections are contained in the decision tree, and as such the first correction that is found will be of minimum weight and is output by the decoder.
+21
+
+4.4 Exploration using syndrome height (from an oracle)
+
+Here we consider the second of our two warm-up examples of DTD algorithms (which are illustrative but impractical). The breadth-first exploration discussed in Section 4.3 is guaranteed to find a minimumweight correction but is expected to be very slow as it will need to look at all lower-weight sets of faults first before finding the solution. Here we consider a different cost function, namely the syndrome height h(σ) (which is the weight of a minimum-weight correction for the syndrome σ; see Section 3.1). The syndrome-height cost function results in an exploration that is guaranteed to find a minimum-weight correction for σ applying the explore subroutine to O(h(σ)) corrections in the decision tree. There is a catch: there is no efficient way to compute the syndrome height in general, and so we cannot form a practical decoder from this. However we find it conceptually useful to understand how the decision-tree decoder would work assuming access to a hypothetical oracle for the syndrome height.
+When the Explore Subroutine 3 is used in Algorithm 1, we call the resulting decoder the Height-oracle DTD. The exploration subroutine based on syndrome height is given in Subroutine 3.
+
+Subroutine 3 Height oracle exploration
+1: pick i ∈ σ 2: for j ∈ N (i)\F = {j1, j2, . . . jb} do 3: σ(j) ← σ + N (j) 4: C(j) ← h(σ(j)) 5: end for
+
+▷ From HeightOracle
+
+Lemma 2 (Height-oracle DTD: min-weight, min explored nodes). When using exploration Subroutine 3, the DTD Algorithm 1 returns a minimum-weight correction Fˆ∗ after exploring a minimum number of nodes ν = |Fˆ∗|.
+Proof. Consider a tree node with syndrome σ′ and a child node with syndrome σ′′ = σ′ + N (j) for some fault node j. Then h(σ′′) ≥ h(σ′)−wj with equality attained iff j is in a minimum-weight correction for σ′. Always going down a branch that maximally decrements the cost thus directly leads to a minimum-weight correction Fˆ∗ for σ in |Fˆ∗| calls of the explore subroutine.
+This height-oracle exploration is illustrated in Figure 1 in Section 1. While we know of no efficient way to compute the syndrome height (we believe there is none), using syndrome height as a cost measure inspires the other more practical algorithms that we introduce in Section 5 and Section 6, where the syndrome height is efficiently bounded or estimated.
+
+22
+
+5 Height-bound decision-tree decoder
+In this section, we introduce a decoder that explores the decision tree using a cost function based on lower bounds of the syndrome height, and which is guaranteed to find a minimum-weight correction. The catch is that this decoder is not guaranteed to terminate quickly for all error patterns (it works best when syndrome-height lower bounds are relatively tight). The intuition behind this approach is that lower bounds of the syndrome height allow large branches of the decision tree to be avoided knowing that they cannot lead to a lower weight error than that which is ultimately found.
+We introduce the basic exploration subroutine in Section 5.1, and prove it provides a minimum-weight correction. We then introduce a refined version of the exploration in Section 5.2 which does not affect the minimum-weight guarantee, but which uses BP to help find a solution more quickly. This is the exploration version we use in our height-bound DTD. We characterize the runtime of the height-bound DTD numerically in Section 5.4, observing that the median-case runtime scales linearly with the weight of the error for a range of 2D color codes and bivariate bicycle codes. There are also two notable appendices associated with the material in this section: In Appendix A.6 we compare the runtime of height-bound DTD with published data for MaxSAT decoders, which are also min-weight. In Appendix A.5 we provide an algorithm that uses the decision tree and the height bound to compute all min-weight logical operators of a code.
+
+5.1 Exploration using syndrome-height lower bounds
+
+Recall that the decision tree exploration in Section 4.4 based on syndrome height finds a minimum-weight correction in linear time, but that we know of no efficient way of computing the syndrome height. In that algorithm, the syndrome height is useful because it can be used to identify the weight of the minimumweight correction contained in the descendants of any node in the decision tree, eliminating all but the optimal node for exploration during each iteration. Later in Section 5.3 we will see that while we cannot efficiently compute the syndrome height, we have lots of techniques to find lower bounds. While this does not eliminate all but the optimal node during each round, it can eliminate many nodes.
+
+To see how this works, suppose that we have reached a node labeled by the fault set F with updated syndrome σ, and suppose that hmin(σ) is a lower bound of h(σ). Let the cost of node F be
+
+C = w(F ) + hmin(σ).
+
+(1)
+
+Note that C ≤ w(F ) + h(σ), i.e., C lower bounds the weight of any correction that could be reached by exploring node F and its descendants. As such, if we find a correction by exploring some other node with cost less than or equal to C, then we know that we will not be able to find anything better by exploring node F .
+
+In Subroutine 4 we show the exploration subroutine that inserts the cost of Eq. (1) into the DTD decoder Algorithm 1 by calling a function height lower bound. We call this the (unrefined version) of the height-bound exploration to distinguish it from that which we use for our main height-bound DTD which is provided in Section 5.2. When the Explore Subroutine 4 is used in Algorithm 1, we call the resulting decoder the (unrefined) height-bound DTD.
+
+Lemma 3 (Height-bound DTD: min-weight). When using exploration Subroutine 4, the DTD Algorithm 1 returns a minimum-weight correction. Similarly, using exploration Subroutine 5, the DTD Algorithm 1 returns a minimum-weight correction.
+
+23
+
+Subroutine 4 Height-bound exploration (unrefined version)
+
+1: pick i ∈ σ
+2: for j ∈ N (i)\F = {j1, j2, . . . jb} do 3: F (j) ← F ∪ {j} 4: σ(j) ← σ + N (j) 5: hmin ← height lower bound(σ(j)) 6: C(j) ← max hmin + w(F (j)), C
+7: end for
+
+▷ Use bound from hmin unless bound from parent stronger
+
+We prove the case for Subroutine 4 (and later explain why the proof still holds for Subroutine 5).
+
+Proof. Consider three nodes (see Figure 8):
+
+1. (Fˆ∗, ∅, C∗): The solution found by Algorithm 1 (obtained in line 5 from Tlive). 2. (Fˆ, ∅, C): Any other arbitrary solution in the decision tree. 3. (F˜, σ˜, C˜): The ancestor node of (Fˆ, ∅, C) currently in Tlive.
+
+We show that the found solution Fˆ∗ has minimum weight, i.e. that w(Fˆ∗) ≤ w(Fˆ), as follows:
+
+w(Fˆ∗) = C∗ − hmin(∅) = C∗ ≤ C˜ ≤ w(F˜) + h(σ˜) ≤ w(F˜) + w(Fˆ − F˜) = w(Fˆ)
+
+definition of cost
+
+as 0 ≤ hmin(∅) ≤ h(∅) = 0
+
+(2)
+
+definition of algorithm
+
+definition of cost as H(Fˆ − F˜) = σ˜
+
+by linearity of weight
+
+as required.
+
+We make the following remarks:
+
+• The weighted breadth-first exploration Subroutine 2 is a special case of Subroutine 4 with the trivial lower bound hmin(σ) = 0 ∀ σ.
+• Since in decision-tree decoding we cannot select a fault twice, we could replace h(σ) with the decimated syndrome height hF (σ) (height of the syndrome σ on the decimated check matrix HF ) in Eq. (1) and the proof would still hold. Taking decimation into account would lead to stronger bounds but possibly increase the complexity of finding such bounds.
+
+24
+
+Figure 8: Decision tree decoding with the cost function C = w(F ) + hmin(σ) yields a minimum weight solution. We sketch part of the decision tree T just before the the algorithm finds a correction Fˆ∗. Nodes filled black have been seen, while nodes filled gray have not, and nodes outlined in red are live and under consideration for exploration. Two nodes corresponding to valid corrections (i.e., have trivial updated syndrome) are filled green, including Fˆ∗ and another node Fˆ. We also label the node F˜, which is the live ancestor of Fˆ. The fact that correction Fˆ∗ is found implies that C∗ = w(Fˆ∗) must be the lowest cost for any live node, such that in particular C˜ ≥ C∗. Then Fˆ∗ must be a minimum-weight solution as w(Fˆ∗) = C∗ ≤ C˜ ≤ w(Fˆ).
+5.2 Exploration refinement with belief propagation
+The cost defined in Eq. (1) is discrete which can lead to ties that make for a rather arbitrary search (especially when uniform weights are used). For any choice among the ties, the algorithm will eventually find a minimum weight solution, but some choices could do so much faster than others.
+To remedy this, we run belief propagation and use its output as a tiebreaker. We generalize the cost to a vector C = (Cbound, Ctie-break) ∈ R2 and cost vectors are compared by first comparing their Cbound components (from the height lower bound), and then comparing Ctie-break (for which we use BP) only if the former reports equality. The tie-break cost of the parent node is initialized as Ctie-break = 0, and then we run belief propagation, using the estimated LPR output ΛBP(j | σ) as Ct(ije)-break for each child (specified by fault vertex j). This process continues: the tie-breaker cost of the jth child of a parent node with fault set F is found by running decimated BP and adding the estimated LPR output ΛBP(j |σ, F ) to the tie-breaker cost of the parent. Since the LPR is a large negative value for a fault that BP is confident occurred, lower costs are preferred.
+When the resulting Explore Subroutine 5 is used in Algorithm 1, we call the resulting decoder heightbound DTD. Since we only invoke Ctie-break for tie-breaking cases of Cbound, the proof of Lemma 3 remains unaffected by replacing Subroutine 4 by Subroutine 5.
+5.3 Syndrome-height lower bounds from syndrome neighborhoods
+We have not yet specified how to find lower bounds on the syndrome height h(σ). We require bounds to be efficient to evaluate, and ideally they should be somewhat tight for typical syndromes, which can depend on the check matrix H of the code. We assume uniform fault weights in this section.
+In this section, we present bounds that can be applied to any qLDPC code based on the requirement that every syndrome vertex must have at least one fault in its neighborhood. The resulting ‘syndromeneighborhood bounds’ are expected to be weak for topological codes, due to the existence of string
+25
+
+Subroutine 5 Height-bound exploration
+
+1: Cbound, Ctie-break ← C 2: {ΛBP(j|σ, F )}, FˆBP ← BPDecimated(σ, F )
+
+▷ Run BP on σ with decimation F
+
+3: pick i ∈ σ
+
+4: for j ∈ N (i)\F = {j1, j2, . . . jb} do 5: F (j) ← F ∪ {j}
+
+6: σ(j) ← σ + N (j)
+
+7: hmin ← height lower bound(σ(j)) 8: C(j) ← max hmin + w(F (j)), Cbound , Ctie-break + ΛBP(j | σ, F )
+
+9: end for
+
+operators with syndromes only at their endpoints. However, syndrome-neighborhood bounds ought to be tighter for codes with expansion, where large errors produce large syndromes. Nevertheless, as shown in Section 5.4, height-bound DTD using syndrome-neighborhood bounds achieves excellent median-case runtime for 2D color codes, a topological code family (and we find even better performance for bivariate bicycle codes).
+Loose bound from fault degree: Suppose G has fault degree c (which is the maximum number of check vertices touching any individual fault vertex). Given a syndrome σ, a single fault can be responsible for a maximum number of c check vertices in σ and so a height lower bound is
+
+|σ|
+
+h(σ) ≥ h1(σ) =
+
+. c
+
+(3)
+
+Tighter bound from syndrome structure: Clearly the bound in Eq. (3) can be strengthened in certain cases. For example, consider a scenario where no two check vertices in σ neighbor the same fault vertex (which would imply h(σ) ≥ |σ|). To find a tighter bound, we need a more detailed analysis. The following bound arises from the requirement that there must be at least one fault in the neighborhood of every syndrome vertex, making refinements based on the structure of overlaps of those neighborhoods.
+
+Lemma 4. Consider a syndrome σ caused by an (unknown) correction F . Let c be the max column weight of H (equivalently, the maximum number of check nodes adjacent to any fault node in G). Let Bl be the set of all fault vertices which touch precisely l vertices in σ for l = 1, 2, . . . , c. (Note that Bl depends on σ and the decoding graph G alone, not on F .) Let the sensitivity sen(i) of a check vertex i ∈ σ be the largest value l such that i is adjacent to an element of Bl. Let Al be the set of vertices in σ with sensitivity l and al = |Al|. Lastly, define ql recursively:
+
+qc = 0, ql = (ql+1 + al+1) mod (l + 1) for l = 1, 2, . . . c − 1.
+
+The syndrome height h(σ) ≥ h2(σ), where:
+
+h2(σ) =
+
+ac c
+
++
+
+qc−1 + ac−1 c−1
+
++
+
+qc−2 + ac−2 c−2
+
++···+
+
+q1 + a1 1
+
+c
+=
+
+ql + al . l
+
+(4)
+
+l=1
+
+Proof. To derive this bound, note any valid correction must include at least one fault next to each check vertex in the syndrome. We seek the minimum number of fault vertices required to satisfy this condition for all check vertices in the syndrome.
+
+26
+
+We proceed by considering sets of fault vertices Bl and check vertices Al with decreasing sensitivity
+
+levels l. Starting from Bc and Ac, each fault vertex in Bc can explain (i.e., be adjacent to) at most c
+
+check vertices in Ac. Thus, selecting
+
+ac c
+
+fault vertices from Bc would be sufficient to neutralize (in
+
+the best-case scenario) all check vertices in Ac, except for a remainder of ac mod c checks that are left
+
+un-neutralized.
+
+Next, we move to Bc−1 and Ac−1. Each fault vertex in Bc−1 can explain at most c − 1 check vertices,
+
+but only those in Ac−1 and any remaining un-neutralized checks from Ac. Therefore, the total number
+
+of checks to be neutralized at this stage is qc−1 + ac−1, where qc−1 = ac mod c. Selecting
+
+qc−1 +ac−1 c−1
+
+fault vertices from Bc−1 ensures that all remaining checks in Ac and Ac−1 are neutralized, except for a
+
+new remainder qc−2 = (qc−1 + ac−1) mod (c − 1).
+
+This process repeats recursively. At each step l, the remainder ql = (ql+1 +al+1) mod (l+1) represents
+
+the number of checks left un-neutralized after accounting for faults in the previous step. To neutralize
+
+the checks at step l, we select
+
+ql +al l
+
+fault vertices from Bl. Summing over all steps from l = 1 to c,
+
+provides the given lower bound on the syndrome height h(σ).
+
+Algorithm 6 Height-bound computation
+
+1: procedure HeightBound(σ)
+
+2: al ← 0 ∀l = 1, . . . c
+
+3: for i ∈ σ do
+
+4:
+
+sen(i) = 1
+
+5:
+
+for j ∈ N (i) do
+
+6:
+
+sen(i) ← max(sen(i), |N (j) ∩ σ|)
+
+7:
+
+end for
+
+8:
+
+asen(i) ← asen(i) + 1
+
+9: end for
+
+10: q ← 0
+
+11: h2 ← 0
+
+12: l ← c
+
+13: while l > 0 do
+
+14:
+
+h2 ← h2
+
+q+al l
+
+15:
+
+q ← (q + al) mod l
+
+16:
+
+l ← l−1
+
+17: end while
+
+18: return h2
+
+19: end procedure
+
+▷ Initialize al vector ▷ Populate al vector ▷ Find sensitivity sen(i) for all checks
+▷ Initialize remainder ▷ Initialize bound ▷ Find bound ▷ Update bound
+▷ Update remainder
+
+We provide Algorithm 6 that computes the syndrome-height lower bound in Eq. (4). Let us briefly consider the time complexity of this computation for any syndrome σ for a code code family. Let constants r and c be the max row and column weights of any matrix H in the code family. Finding the number of syndrome vertices a fault vertex touches is O(c), while doing this for all faults around a specific check is then O(rc). Since this is repeated for all checks in the syndrome, we end up with a time complexity of O(|σ|rc) for the calculation of all of the als. The calculation of the bound from that vector is just an additional O(c), such that the total time complexity of Algorithm 6 is O(|σ|rc). For better
+
+27
+
+time complexity, one could use a different algorithm that reuses partial height-bound calculations from parents in the decision tree for child nodes, since their syndromes are only slightly updated.
+Bounds from syndrome subsets: The bound in Eq. (4) still holds if we evaluate it for a subset of the syndrome σ′ ⊂ σ, such that h(σ) ≥ h2(σ′). It holds because the bound in Eq. (4) arises from the requirement that there must be at least one fault in the neighborhood of every syndrome vertex, and removing vertices from the syndrome cannot increase the number of faults required to satisfy this constraint. One important case arises when G has k-colorable check vertices (which is the case for the color codes and bivariate-bicycle codes as seen in the next section). Then taking σ′ as the syndrome checks of one color, the fault degree is at most 1 such that c1 = |σ′|, and Eq. (4) reduces to h(σ) ≥ h2(σ′) = |σ′|. See Figure 9, where we provide an example on the 2D color code.
+Another important case is where σ separates into disjoint clusters such as σ = σA ⊔ σB where N (σA) and N (σB) are disjoint. In this case, the bounds we obtain for each cluster can be added together to form a bound on h(σ) ≥ h2(σA) + h2(σB). This generalizes straightforwardly to more than two clusters.
+A final general comment is that in some cases various height lower bounds may apply, in which case we can always use whichever happens to be the tightest for a given syndrome.
+
+(a)
+
+(b)
+
+Figure 9: Our syndrome height bounds are based on the fact that there must be at least one fault in
+the neighborhood (gray) of each syndrome node. (a) The naive bound h1(σ) = ⌈7/3⌉ = 3 does not take structure of the syndrome neighborhoods into account, whereas the more refined bound h2(σ) = 4 does and can be tighter. (b) Using the green-colored syndrome subset σ′, provides an even tighter bound in this case h2(σ′) = |σ′| = 5.
+
+We provide some other height-lower bounds and prove relations between them in Appendix A.3.
+
+5.4 Numerical results for color codes and bivariate bicycle codes with perfect measurements
+Here, we numerically evaluate the runtime of height-bound DTD (defined in Section 5.2), measured by the number of explored decision tree nodes. We use two CSS code families: the standard triangular color codes [BMD06, BMD07] (see Figure 4(a) in Section 2) and a set of bivariate bicycle codes4 presented in Ref. [BCG+23], including the gross code (see Figure 4(b) in Section 2).
+4The bivariate bicycle codes are taken from Table 3 in [BCG+23], which appears in the arXiv version but not the journal version of the paper.
+
+28
+
+We assume independent X and Z errors on each qubit, with perfect stabilizer measurements (see Section A.1), and decode X and Z errors separately. The color codes and the bivariate bicycle codes we study all have 3-colorable X-type (Z-type) check vertices5 (see Figure 6), meaning that each check vertex can be assigned a color red r, green g, or blue b, such that no two check vertices of the same color are connected to the same fault vertex in the decoding graph GX (GZ). This allows us to apply the following lower bound:
+h(σ) ≥ max(h2(σ), |σr|, |σg|, |σb|),
+for h2(σ) in Eq. (4), and where σ = σr ⊔ σg ⊔ σb is the syndrome decomposed into color components.
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Figure 10: Number of explored decision tree nodes ν with height-bound DTD. (a), (b): Median and 95th percentile of ν for color codes. (c), (d): Median and 95th percentile of ν for bivariate bicycle codes. For all codes studied, the median ν is minimal (ν = w) for errors of weight w < d/2, but increases for w > d/2. For three of the four bivariate bicycle codes studied, the 95th percentile ν is also minimal (ν = w) for w < d/2. (All error bars are smaller than the markers).
+
+To evaluate the runtime of height-bound DTD for each code, we use it to correct uniformly sampled weight-w X-errors and record the number of explored decision tree nodes, reporting the median and 95th percentile in Figure 10. The results are very promising: for all tested codes, the median was optimal (equal to w) for all w < d/2, where d is the code distance (or its upper bound if unknown). Restricting to
+5The 3-colorable property is well known for color codes [BMD06] and we learned it held for bivariate bicycle codes through private correspondence with Ted Yoder and Sergey Bravyi [YB].
+
+29
+
+the bivariate bicycle codes, the results are even better: for most cases with w < d/2, the 95th percentile was also optimal (equal to w). By contrast, in Figure 2 in Section 1 we see that using brute-force breadth-first exploration the median number of explored nodes grows exponentially with w.
+In Figure 11, we examine the tails of the runtime distribution for the color code family. For odd distances d, we uniformly sample weight-w = ⌊d/2⌋ errors (the largest correctable weight) and plot the number of explored nodes for various percentiles in Figure 11(a). We observe that the data for each percentile fits a polynomial ν = wα reasonably well. In Figure 11(b), we plot the fitted α values, finding α = −0.132 log2 ϵ + 0.843 for the percentile 100 · (1 − ϵ). For fixed (finite) ϵ, this indicates polynomial scaling of ν with w, but as ϵ → 0, α diverges, implying super-polynomial worst-case runtime with w.
+
+(a)
+
+(b)
+
+Figure 11: Scaling behavior of decoder runtime for the color code family. (a) Number of explored nodes
+(ν) for weight-w = ⌊d/2⌋ X-errors, plotted across percentiles 100 · (1 − ϵ). For each ϵ, we fit the function ν = wα, extracting fit parameter α(ϵ). (b) A plot of α(ϵ) versus ϵ (log scale).
+
+Numerical details: In what follows, we provide further details needed to reproduce the data in this section. For the BP subroutine of Subroutine 5 we use tend = 12 rounds. In the case of 2D color codes, there is a symmetry between X and Z such that X errors and Z errors behave identically, so we restrict to X errors. For the BB codes we present only the data for X errors as we observed almost identical performance for Z errors. To estimate uncertainties for the median and 95th percentile values in Figure 10, we resampled the data but observed values of ν were all within ±1, which is smaller than the marker size. In Figure 11(a), we use whichever is larger between ±1 and the resampling estimate as the uncertainty for each data point. In Figure 11(b), we plot the χ2-fit estimate of α along with its corresponding uncertainty. The uncertainties for the data points here are below the marker size.
+Comparison with MaxSAT: In Appendix A.6, we compare the runtime of our height-bound DTD to MaxSAT decoding data from Ref. [NH24]. Encouragingly, our algorithm appears significantly faster in the low-error-rate regime, though the MaxSAT decoder appears to outperform it at error rates closer to the threshold. While this comparison provides qualitative insights, it should be interpreted cautiously since the runtimes were measured on different machines, with implementations that were not optimized for absolute runtime. A key conceptual difference between these algorithmic approaches is that incorporating code-specific structure (e.g., tighter height bounds) appears clearer for height-bound DTDs than for MaxSAT decoders.
+
+30
+
+6 Belief-propagation decision-tree decoder
+This section introduces a heuristic decision-tree decoder which may be useful for fast decoding. The decoder uses belief propagation to assign costs to nodes resulting in an approximate depth-first exploration. We provide and explain the exploration subroutine in Section 6.1 and compare the decoder’s speed and accuracy with a standard BP-OSD algorithm in Section 6.2.
+
+6.1 Exploration using belief propagation
+
+Our heuristic algorithm calculates a cost update using belief propagation (BP). Specifically, for a decision
+tree node with fault set F , syndrome σ and cost C, we apply decimated BP (see Section 3.3), which outputs the LPR Λ¯j = Λ¯BP(j | σ, F ) for each fault j. The cost update ∆C for each child is then computed, resulting in a new child cost of C + ∆C, where ∆C is given by:
+
+∆C(Λ¯ j)
+
+=
+
+13 π
+
+arctan
+
+Λ¯ j − 1 2
+
+11 +.
+2
+
+(5)
+
+This monotonically increasing function of Λ¯j helps to stabilize the decoder by keeping the cost within a finite range, even though Λ¯j is unbounded (with Λ¯j → −∞ (+∞) indicating BP is certain that j is (is not) part of a minimum-weight correction). The constants in Eq. (5) are somewhat arbitrary; the selected values give ∆C(−∞) = −1 and ∆C(+∞) = 12, reflecting changes in the decimated syndrome height hF (σ). Specifically, hF (σ) decreases by 1 when a fault is in a minimum-weight correction and increases by s − 1 otherwise, where s is the weight of the smallest stabilizer containing the fault.
+
+From the heuristic cost update in Eq. (5), we define the BP exploration Subroutine 7. When Explore Subroutine 7 is used in Algorithm 1, we call the resulting decoder BP-DTD.
+
+Subroutine 7 BP-guided exploration
+
+1: {Λ¯ j}, FˆBP ← BPDecimated(s, F ) 2: if σ = HFˆBP then 3: return F ∪ FˆBP
+
+4: end if
+
+5: pick i ∈ σ
+
+6: for j ∈ N (i)\F = {j1, j2, . . . jb} do
+
+7:
+
+∆C
+
+=
+
+13 π
+
+arctan(
+
+1 2
+
+(Λ¯ j
+
+−
+
+2))
+
++
+
+11 2
+
+8: C(j) ← C + ∆C
+
+9: end for
+
+▷ Run BP on σ with decimation F ▷ If BP converged, invoke early-exit condition
+
+Note that in Subroutine 7 if BP converges to a valid partial correction σ = HFˆBP, the algorithm exits early and the decision tree decoder returns the full correction F ∪ FˆBP.
+
+6.2 Numerical results for the gross code with circuit noise
+Here we numerically evaluate the runtime and accuracy of the belief-propagation decision tree decoder (BP-DTD) using BP exploration Subroutine 7. The decoder is tested on the gross code, a [[144, 12, 12]] bivariate-bicycle code from [BCG+24] (see Figure 4(b) in Section 2 for details) assuming circuit noise.
+
+31
+
+We compare the accuracy and runtime of the BP-DTD and BP-OSD algorithms by generating random samples at physical error rates at physical error rates between p = 0.001 and p = 0.004, recording each decoder’s runtime and whether it succeeds for each sample. Since no system-independent metric exists, we report absolute runtimes measured on the same CPU cluster, noting that implementation details and processor type may influence the results. Figure 12 shows that BP-DTD outperforms BP-OSD in the whole probed error rate regime. Figure 13 presents runtime distributions, with logarithmic binning and relative frequencies shown as the fraction of samples per bin. BP-OSD shows a bimodal distribution, with the later mode corresponding to cases requiring the OSD stage. In contrast, BP-DTD has a smoother distribution, lower average runtime at low error rates, but longer tails at higher error rates.
+Figure 12: Comparing the logical error rate for the gross code for a range of circuit-noise error rates when decoding with BP-DTD versus BP-OSD (with combination-sweep 10). Note here that we do not divide by the number of error correction cycles.
+In many scenarios, both the decoding accuracy and runtime are crucial, requiring trade-offs [DPVS23]. We propose using cutoff-time performance curves, which plot the logical failure probability against the cutoff time T . Logical failure occurs either by exceeding T or by decoding within T but outputting an incorrect correction. In Figure 3 (Section 1), we compare the cutoff-time performance curves for BPDTD and BP-OSD at p = 0.001 error rate, highlighting BP-DTD’s significantly lower failure rates at intermediate cutoff times.
+Numerical details: In what follows, we provide further details needed to reproduce the data in this section. The circuit parity-check matrix for the gross code is obtained from the publicly available code in Ref. [GCR24], which uses the same syndrome extraction circuit as [BCG+24] and the standard linearized circuit noise model (see Section A.1) with R = 12 syndrome measurement rounds plus one perfect round. Here we decode only the X-type errors. For BP-OSD, we use combination sweep setting 10 and tend = 100 BP rounds as a pre-decoder (see Appendix A.2), with Roffe’s standard Cython implementation [RWBC20, Rof22]. We found that varying the combination sweep order had negligible
+32
+
+Figure 13: Runtime distributions of BP-DTD and BP-OSD for different circuit-noise error rates. BPOSD shows a bimodal distribution, where the later mode corresponds to cases requiring the OSD stage. In contrast, BP-DTD has a smoother distribution with lower average runtime. (Note that the data is separated into time-bins with width that grows logarithmically with decoding time.) impact on runtime distributions, so results are shown only for BP-OSD-10. For BP-DTD, parameters are tend = 100 at the root node, tend = 12 for other nodes, buffer length lbuff = 8, and a node cap of 50000, after which decoding is declared a failure. The DTD code, written in Python, calls a modified Cython-based BP subroutine adapted from Roffe’s version to enable decimation and buffering.
+33
+
+7 Outlook and future directions
+We conclude by first highlighting two potential applications of the height-bound DTD. One promising application is as a pre-decoder: if it converges quickly, it guarantees a minimum-weight correction; otherwise, a fast fallback decoder can provide a correction without such guarantees. Another application is to provably determine the distances of specific qLDPC codes by adapting a method described in Ref. [BCG+24] for finding distance upper bounds. By replacing the heuristic BP-OSD with the provable height-bound DTD, we can identify the exact distance rather than merely upper-bounding it (see Appendix A.4).
+Finally, we identify several promising directions for future research:
+• Leveraging stabilizer equivalence: In the height-bound decoder, the algorithm terminates when it finds a correction and ensures no lower-weight correction exists. However, two corrections are equivalent if they differ by a stabilizer. A faster version of the height-bound decoder (with equally strong correction guarantees) could more aggressively search for a correction and then ensure no lower-weight non-equivalent correction exists (i.e., corrections differing by a logical operator). Upon finding a valid correction, the decoder could aggressively prune the remaining search space by applying bounds that tighten the bound for each node given the known correction.6
+• Alternative versions of height-bound DTD: Exploring alternative tie-breaking methods beyond the decimated BP used in this work may further improve decoding speed. Also, while the current height-bound DTD applies to any qLDPC decoding problem, including circuit-level noise, it does not exploit non-uniform fault probabilities. Developing lower bounds on syndrome height for non-uniform fault settings could enhance its effectiveness in this context. It could also be interesting to consider variants of the decoder which provide faster solutions but with weaker guarantees (perhaps outputting a correction along with a bound on how far it is from having minimum weight).
+• Other provable qLDPC decoders: Ensemble decoding suggests it would be very useful to identify other provable decoders (either provable performance or provable runtime [diEMREM24] but not both)? Another question is: What kind of syndrome height bounds would allow us to prove something non-trivial about the worst-case run time for an asymptotic code family?
+• Other applications of DTD techniques: It may be possible to adapt decision tree decoding techniques to solve other problems, for example to identify provable weight gaps between the minimum-weight correction and any logically non-equivalent correction (to bound the failure rate of specific fault-tolerant protocols).
+• Improving heuristic decoders: Further optimization of BP-DTD’s cost function could yield significant performance improvements, with optimal parameters likely depending on the specific QEC code and error rate regime. One promising direction may be to train a neural network to estimate the syndrome height, which could then be used as a cost metric for the decision tree decoder. Since the model only needs to output a single number rather than a complete correction, training may be simpler and more efficient compared to other neural-network-based decoders.
+• Cutoff-time performance curves: Comparing existing and new heuristic decoders could help identify which methods perform best under different time constraints and error regimes.
+6Specifically, for a DT node F and known correction Fˆ, any non-equivalent correction F ′ descending from F must satisfy |F ′| ≥ 2|Fˆ ∩ F | + d − |F |. The closer F is to Fˆ, the tighter this bound becomes.
+34
+
+In summary, improving cost functions, leveraging stabilizer equivalence, and exploring ensemble decoding strategies are promising directions for both provable and heuristic decision tree decoders. A primary challenge remains developing decoders that apply to any qLDPC code, return minimum-weight corrections and have provably efficient worst-case runtime (or proving that such a decoder cannot exist).
+Acknowledgments: This work benefited heavily from guidance and insightful discussions with thesis supervisors James R. Wootton and Joseph M. Renes, and also feedback from Nicolas Delfosse, Anqi Gong, Tomas Jochym-O’Connor, and Anirudh Krishna. We thank Ted Yoder and Sergey Bravyi for pointing out that the set of bivariate bicycle codes we test our height-bound decoder on have 3colorable decoding graphs.
+35
+
+References
+
+[BBD+24] [BCG+23] [BCG+24] [BDM+23] [BE21] [BFHS17] [BHK24] [BMD06] [BMD07] [BMT+22]
+[BSH+23]
+[CBDH20] [CRSS97] [Del14]
+
+Lucas Berent, Lukas Burgholzer, Peter-Jan H.S. Derks, Jens Eisert, and Robert Wille. Decoding quantum color codes with maxsat. Quantum, 8:1506, October 2024.
+Sergey Bravyi, Andrew W. Cross, Jay M. Gambetta, Dmitri Maslov, Patrick Rall, and Theodore J. Yoder. High-threshold and low-overhead fault-tolerant quantum memory. arXiv version, 2023.
+Sergey Bravyi, Andrew W Cross, Jay M Gambetta, Dmitri Maslov, Patrick Rall, and Theodore J Yoder. High-threshold and low-overhead fault-tolerant quantum memory. Nature, 627(8005):778–782, 2024.
+H´ector Bomb´ın, Chris Dawson, Ryan V. Mishmash, Naomi Nickerson, Fernando Pastawski, and Sam Roberts. Logical blocks for fault-tolerant topological quantum computation. PRX Quantum, 4:020303, Apr 2023.
+Nikolas P Breuckmann and Jens Niklas Eberhardt. Quantum low-density parity-check codes. PRX Quantum, 2(4):040101, 2021.
+Dave Bacon, Steven T Flammia, Aram W Harrow, and Jonathan Shi. Sparse quantum codes from quantum circuits. IEEE Transactions on Information Theory, 63(4):2464– 2479, 2017.
+Michael E Beverland, Shilin Huang, and Vadym Kliuchnikov. Fault tolerance of stabilizer channels. arXiv preprint arXiv:2401.12017, 2024.
+Hector Bombin and Miguel Angel Martin-Delgado. Topological quantum distillation. Physical Review Letters, 97(18):180501, 2006.
+H. Bombin and M. A. Martin-Delgado. Exact topological quantum order in d = 3 and beyond: Branyons and brane-net condensates. Phys. Rev. B, 75:075103, Feb 2007.
+Michael E Beverland, Prakash Murali, Matthias Troyer, Krysta M Svore, Torsten Hoefler, Vadym Kliuchnikov, Guang Hao Low, Mathias Soeken, Aarthi Sundaram, and Alexander Vaschillo. Assessing requirements to scale to practical quantum advantage. arXiv preprint arXiv:2211.07629, 2022.
+Johannes Bausch, Andrew W Senior, Francisco JH Heras, Thomas Edlich, Alex Davies, Michael Newman, Cody Jones, Kevin Satzinger, Murphy Yuezhen Niu, Sam Blackwell, et al. Learning to decode the surface code with a recurrent, transformer-based neural network. arXiv preprint arXiv:2310.05900, 2023.
+Rui Chao, Michael E Beverland, Nicolas Delfosse, and Jeongwan Haah. Optimization of the surface code design for majorana-based qubits. Quantum, 4:352, 2020.
+A. R. Calderbank, E. M. Rains, P. W. Shor, and N. J. A. Sloane. Quantum error correction and orthogonal geometry. Phys. Rev. Lett., 78:405–408, Jan 1997.
+Nicolas Delfosse. Decoding color codes by projection onto surface codes. Physical Review A—Atomic, Molecular, and Optical Physics, 89(1):012317, 2014.
+
+36
+
+[DHLV23]
+
+Irit Dinur, Min-Hsiu Hsieh, Ting-Chun Lin, and Thomas Vidick. Good quantum ldpc codes with linear time decoders. In Proceedings of the 55th annual ACM symposium on theory of computing, pages 905–918, 2023.
+
+[diEMREM24] Antonio deMarti iOlius, Imanol Etxezarreta Martinez, Joschka Roffe, and Josu Etxezarreta Martinez. An almost-linear time decoding algorithm for quantum ldpc codes under circuit-level noise. arXiv e-prints, pages arXiv–2409, 2024.
+
+[DKLP02]
+
+Eric Dennis, Alexei Kitaev, Andrew Landahl, and John Preskill. Topological quantum memory. Journal of Mathematical Physics, 43(9):4452–4505, 2002.
+
+[DLB22]
+
+Nicolas Delfosse, Vivien Londe, and Michael E Beverland. Toward a union-find decoder for quantum ldpc codes. IEEE Transactions on Information Theory, 68(5):3187–3199, 2022.
+
+[dMB08]
+
+Leonardo de Moura and Nikolaj Bjørner. Z3: An efficient smt solver. In C. R. Ramakrishnan and Jakob Rehof, editors, Tools and Algorithms for the Construction and Analysis of Systems, pages 337–340, Berlin, Heidelberg, 2008. Springer Berlin Heidelberg.
+
+[DMB+23]
+
+Alexander M Dalzell, Sam McArdle, Mario Berta, Przemyslaw Bienias, Chi-Fang Chen, Andr´as Gily´en, Connor T Hann, Michael J Kastoryano, Emil T Khabiboulline, Aleksander Kubica, et al. Quantum algorithms: A survey of applications and end-to-end complexities. arXiv preprint arXiv:2310.03011, 2023.
+
+[DN21]
+
+Nicolas Delfosse and Naomi H Nickerson. Almost-linear time decoding algorithm for topological codes. Quantum, 5:595, 2021.
+
+[DP23]
+
+Nicolas Delfosse and Adam Paetznick. Spacetime codes of clifford circuits. arXiv preprint arXiv:2304.05943, 2023.
+
+[DPVS23]
+
+Nicolas Delfosse, Andres Paz, Alexander Vaschillo, and Krysta M Svore. How to choose a decoder for a fault-tolerant quantum computer? the speed vs accuracy trade-off. arXiv preprint arXiv:2310.15313, 2023.
+
+[DS06]
+
+Ilya Dumer and Kirill Shabunov. Soft-decision decoding of reed-muller codes: recursive lists. IEEE Transactions on information theory, 52(3):1260–1266, 2006.
+
+[FL02]
+
+Marc PC Fossorier and Shu Lin. Soft-decision decoding of linear block codes based on ordered statistics. IEEE Transactions on information Theory, 41(5):1379–1396, 2002.
+
+[GCR24]
+
+Anqi Gong, Sebastian Cammerer, and Joseph M Renes. Toward low-latency iterative decoding of qldpc codes under circuit-level noise. arXiv preprint arXiv:2403.18901, 2024.
+
+[Gid21]
+
+Craig Gidney. Stim: a fast stabilizer circuit simulator. Quantum, 5:497, July 2021.
+
+[Got96]
+
+Daniel Gottesman. Class of quantum error-correcting codes saturating the quantum Hamming bound. Physical Review A, 54(3):1862, 1996.
+
+[Got22]
+
+Daniel Gottesman. Opportunities and challenges in fault-tolerant quantum computation. arXiv preprint arXiv:2210.15844, 2022.
+
+37
+
+[HBK+23] [HBQ+24] [HCL+24] [HLG11] [iM24] [IP15] [JEP+21]
+[JGHVF24] [KBP23] [KKL24] [KLM+24] [KLNW24] [KP13] [LCPS24]
+
+Oscar Higgott, Thomas C. Bohdanowicz, Aleksander Kubica, Steven T. Flammia, and Earl T. Campbell. Improved decoding of circuit noise and fragile boundaries of tailored surface codes, 2023.
+Timo Hillmann, Lucas Berent, Armanda O Quintavalle, Jens Eisert, Robert Wille, and Joschka Roffe. Localized statistics decoding: A parallel decoding algorithm for quantum low-density parity-check codes. arXiv preprint arXiv:2406.18655, 2024.
+Kin Tung Michael Ho, Kuan-Cheng Chen, Lily Lee, Felix Burt, Shang Yu, Po-Heng, and Lee. Quantum computing for climate resilience and sustainability challenges, 2024.
+Min-Hsiu Hsieh and Franc¸ois Le Gall. Np-hardness of decoding quantum error-correction codes. Physical Review A—Atomic, Molecular, and Optical Physics, 83(5):052331, 2011.
+Antonio deMarti iOlius and Josu Etxezarreta Martinez. The closed-branch decoder for quantum ldpc codes. arXiv preprint arXiv:2402.01532, 2024.
+Pavithran Iyer and David Poulin. Hardness of decoding quantum stabilizer codes. IEEE Transactions on Information Theory, 61(9):5209–5223, 2015.
+John Jumper, Richard Evans, Alexander Pritzel, Tim Green, Michael Figurnov, Olaf Ronneberger, Kathryn Tunyasuvunakool, Russ Bates, Augustin Zˇ´ıdek, Anna Potapenko, Alex Bridgland, Clemens Meyer, Simon a. A. Kohl, Andrew J. Ballard, Andrew Cowie, Bernardino Romera-Paredes, Stanislav Nikolov, Rishub Jain, Jonas Adler, Trevor Back, Stig Petersen, David Reiman, Ellen Clancy, Michal Zielinski, Martin Steinegger, Michalina Pacholska, Tamas Berghammer, Sebastian Bodenstein, David Silver, Oriol Vinyals, Senior W, Andrew, Koray Kavukcuoglu, Pushmeet Kohli, and Demis Hassabis. Highly accurate protein structure prediction with alphafold. Nature, 596(7873):583–589, July 2021.
+Sana Javed, Francisco Garcia-Herrero, Bane Vasi´c, and Mark F Flanagan. Low-complexity linear programming based decoding of quantum ldpc codes. In ICC 2024-IEEE International Conference on Communications, pages 1782–1787. IEEE, 2024.
+Vadym Kliuchnikov, Michael Beverland, and Adam Paetznick. Stabilizer circuit verification. arXiv preprint arXiv:2309.08676, 2023.
+Ching-Feng Kung, Kao-Yueh Kuo, and Ching-Yi Lai. Efficient approximate degenerate ordered statistics decoding for quantum codes via reliable subset reduction. arXiv preprint arXiv:2412.21118, 2024.
+Matthias Klusch, Jo¨rg L¨assig, Daniel Mu¨ssig, Antonio Macaluso, and Frank K. Wilhelm. Quantum artificial intelligence: A brief survey, 2024.
+Anirudh Krishna, Inbal Livni Navon, and Mary Wootters. Viderman’s algorithm for quantum ldpc codes. In Proceedings of the 2024 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA), pages 2481–2507. SIAM, 2024.
+Alexey A. Kovalev and Leonid P. Pryadko. Quantum kronecker sum-product low-density parity-check codes with finite rate. Phys. Rev. A, 88:012311, Jul 2013.
+Matthias C L¨obl, Susan X Chen, Stefano Paesani, and Anders S Sørensen. Breadth-first graph traversal union-find decoder. arXiv preprint arXiv:2407.15988, 2024.
+
+38
+
+[LH22] [LTZ15]
+[MGG20] [MML14]
+[MMM04]
+[NH24] [PK21a] [PK21b] [Rof22] [RWBC20]
+[SC22]
+[SJG20] [SKB23]
+[SN23] [SNV24] [SS96]
+
+Ting-Chun Lin and Min-Hsiu Hsieh. Good quantum ldpc codes with linear time decoder from lossless expanders. arXiv preprint arXiv:2203.03581, 2022.
+Anthony Leverrier, Jean-Pierre Tillich, and Gilles Z´emor. Quantum expander codes. In Foundations of Computer Science (FOCS), 2015 IEEE 56th Annual Symposium on, pages 810–824. IEEE, 2015.
+He Ma, Marco Govoni, and Giulia Galli. Quantum simulations of materials on near-term quantum computers. npj Computational Materials, 6(1), July 2020.
+Ruben Martins, Vasco Manquinho, and Inˆes Lynce. Open-wbo: A modular maxsat solver,. In Carsten Sinz and Uwe Egly, editors, Theory and Applications of Satisfiability Testing – SAT 2014, pages 438–445, Cham, 2014. Springer International Publishing.
+David JC MacKay, Graeme Mitchison, and Paul L McFadden. Sparse-graph codes for quantum error correction. IEEE Transactions on Information Theory, 50(10):2315–2330, 2004.
+Mohammadreza Noormandipour and Tobias Haug. Maxsat decoders for arbitrary css codes, 2024.
+Pavel Panteleev and Gleb Kalachev. Degenerate quantum ldpc codes with good finite length performance. Quantum, 5:585, 2021.
+Pavel Panteleev and Gleb Kalachev. Quantum ldpc codes with almost linear minimum distance. IEEE Transactions on Information Theory, 68(1):213–229, 2021.
+Joschka Roffe. LDPC: Python tools for low density parity check codes, 2022.
+Joschka Roffe, David R White, Simon Burton, and Earl Campbell. Decoding across the quantum low-density parity-check code landscape. Physical Review Research, 2(4):043423, 2020.
+Noah Shutty and Christopher Chamberland. Decoding merged color-surface codes and finding fault-tolerant clifford circuits using solvers for satisfiability modulo theories. Physical Review Applied, 18(1):014072, 2022.
+Milap Sheth, Sara Zafar Jafarzadeh, and Vlad Gheorghiu. Neural ensemble decoding for topological quantum error-correcting codes. Physical Review A, 101(3):032338, 2020.
+Lev Stambler, Anirudh Krishna, and Michael E Beverland. Addressing stopping failures for small set flip decoding of hypergraph product codes. arXiv preprint arXiv:2311.00877, 2023.
+TR Scruby and K Nemoto. Local probabilistic decoding of a quantum code. Quantum, 7:1093, 2023.
+Noah Shutty, Michael Newman, and Benjamin Villalonga. Efficient near-optimal decoding of the surface code through ensembling. arXiv preprint arXiv:2401.12434, 2024.
+Michael Sipser and Daniel A Spielman. Expander codes. IEEE transactions on Information Theory, 42(6):1710–1722, 1996.
+
+39
+
+[Ste96] [TV15] [WB24]
+[YB]
+
+Andrew Steane. Multiple-particle interference and quantum error correction. Proceedings of the Royal Society A, 452(1954):2551–2577, 1996.
+Ido Tal and Alexander Vardy. List decoding of polar codes. IEEE transactions on information theory, 61(5):2213–2226, 2015.
+Stasiu Wolanski and Ben Barber. Introducing ambiguity clustering: an accurate and efficient decoder for qldpc codes. In 2024 IEEE International Conference on Quantum Computing and Engineering (QCE), volume 2, pages 402–403. IEEE, 2024.
+Ted Yoder and Sergey Bravyi. Private correspondence. Personal communication, 2024.
+
+40
+
+A Appendices
+
+A.1 Noise models and testing decoders numerically
+
+Here we define the experiments and noise models that we use for the studies in Section 5.4 and Section 6.2, and specify how we test the decoders numerically.
+
+We perform Quantum Memory experiments using CSS codes, that is, we are in the setting of logical memory circuits for CSS-type stabilizer codes (for which we refer back to Table 1 and Section 2.2, Section 2.3). Here, decoding is performed independently for X-type noise via the X-type check matrix HX (or HZ for Z-type noise). HX and HZ (and equivalently the corresponding decoding graphs GX and GZ) depend on the exact noise model used and the number of stabilizer extraction rounds chosen, which we discuss below.
+
+Data qubit noise: Each data qubit experiences an X error with probability p, and (independently)
+a Z error with probability p, and then the stabilizer generators are measured perfectly. Because the
+measurements are perfect, performing a single round R = 1 is sufficient. In this setting the check matrices HX , HZ reduce to the check matrices HXS , HZS of the underlying CSS-type stabilizer code, and the decoding graphs GX , GZ are precisely its tanner graphs TX , TZ . We use this noise model in Section 5.4 to study the height-bound DTD on the color code family (shown in Figure 6(a)) and the
+bi-variate bicycle code family (a member of which is shown in Figure 6(b)).
+
+Circuit depolarizing noise: An explicit detailed circuit built from one- and two-qubit operations (single qubit preparations and measurements in the Pauli basis, and Clifford unitaries) which measures the stabilizers for R − 1 rounds, and then another round of perfect measurements is included. Each operation fails with probability p. When a preparation fails, an orthogonal state is prepared. When a measurement fails, the outcome is flipped. When a Clifford unitary fails, a random non-trivial Pauli operator is applied to its support.7 We use this noise model in Section 6.2 to study the decoding of the gross code which was shown in Figure 6(b). To do so, we take R = 12 + 1, i.e. 12 rounds of noisy stabilizer measurements (using the stabilizer extraction circuit used in [BCG+24]), followed by a single round of perfect measurements.
+
+Testing decoders: We can test a decoder by sampling among the possible fault configurations and for each fault configuration F , running the decoder on the syndrome σ = HF , and then checking whether the decoder output Fˆ succeeds or fails. (Since we are exclusively using CSS codes and always only decoding either X-type or Z-type errors, we drop the subscripts X and Z. We consider two kinds of samples: (1) sampling uniformly from the set of all fault configurations of a given (integer) weight w, and (2) sampling according to the probability distribution P(F ) defined in Definition 1.
+
+If Ntrials are sampled, of which Nfail fail and the rest succeed, we estimate the logical failure probability:
+
+PL
+
+=
+
+Nfail . Ntrials
+
+7Note that as we have described this model, the different failure modes (for example each of the 15 non-trivial Paulis
+which can occur when a CNOT gate fails) are mutually exclusive, whereas we have assumed all faults occur independently.
+In Ref. [CBDH20] it was shown that there is an exact map from this exclusive noise model to an independent one where each of the aforementioned failure modes occur with probability p′ = p/15 + O(p2). Here, as in other works in the literature [BCG+24], we drop the non-linear corrections for simplicity.
+
+41
+
+We report the uncertainty in the estimate of PL by the Wilson Score Interval (for a standard normal interval half-width of 2):
+
+1 PL ∈ 1 + 4/Ntrials
+
+Nfail + 2 ± 2 Ntrials Ntrials Ntrials
+
+Nfail(1
+
+−
+
+Nfail ) Ntrials
+
++
+
+1
+
+In addition to the logical failure rate, we also study other features of decoders, such as their run time. For these, we find it informative to provide more information about the sample distribution than that captured by the mean, and so we often report the median value or more generally the value at a particular percentile among those observed in the sample.
+
+A.2 Belief-propagation with ordered statistics decoding
+
+The advantages of BP are high speed and parallelizability. However, because of its inherent locality, BP does not always converge to a solution consistent with the syndrome even for an infinite amount of message-passing rounds [PK21a, GCR24]. In quantum error correction, BP is thus often used as a predecoder. In the case BP fails to produce a valid solution within a certain maximum number of iterations, its output will be used by a different (post-processing) decoding strategy such as orderedstatistics decoding (OSD) [RWBC20], matching or union-find (UF) [HBK+23].
+In zero-order OSD (BP-OSD-0), the degeneracy of the decoding problem is lifted by reducing the search-space such that it allows for a unique solution. For that the checkmatrix is reorderd such that the rank(H) linearly independent columns with the highest LPR are on the left side (in S) followed by the remainder of the columns on the right (T ), which are also ordered according to LPRs:
+
+HΠBP = S T
+
+where ΠBP is the corresponding N × N permutation matrix, S is a M × rank(H) matrix and T is a M × (N − rank(H)) matrix. There is a unique solution x to Sx = σ (given by x = A+σ, where A+ is the
+
+pseudo-inverse given σ always lies in the column-span of S), which defines the solution to the original
+
+problem by Fˆ = ΠBP
+
+x 0
+
+:
+
+HFˆ = HΠBP
+
+x 0
+
+=
+
+S
+
+T
+
+x 0
+
+= Sx = σ
+
+In higher-order OSD, we additionally allow faults in the support of T . That is, we allow vectors t and
+
+define Fˆt = ΠBP
+
+x + S+Tt t
+
+, which is always a solution as
+
+HFˆt = HΠBP
+
+x + S+Tt t
+
+=
+
+S
+
+T
+
+x + S+Tt t
+
+= Sx + Tt + Tt = σ
+
+Again, the use of the pseudo-inverse S+ is well justified by the fact that T t is always in the column span of S.
+The chosen solution is then the one with the minimal weight Fˆ = arg maxt w(Fˆt). In principle, there are 2N−rank(H) choices for t, so this search quickly becomes untractable. In practice, there are two main approaches:
+
+42
+
+• The exhaustive-search order λ (BP-OSD-ES-λ), which searches over all t with support on the λ left-most columns in T , giving 2λ configurations.
+
+• The combination-sweep order λ (BP-OSD-CS-λ), which searches through all configurations of t
+
+which have hamming weight 1 and all hamming-weight 2 configurations with support on the first
+
+λ columns of T . In total this yields N − rank(H) +
+
+λ 2
+
+configurations.
+
+For fixed number of configurations checked, combination-sweep order performs slightly better than exhaustive-search order [RWBC20]. Throughout this work, we implicitly use combination-sweep order and write BP-OSD-λ as short for BP-OSD-CS-λ.
+BP-OSD is implemented in the python package ldpc by [Rof22]
+
+A.3 Relations between different syndrome-height bounds
+
+Here we consider bounds on the syndrome height from Section 5 and provide a few others. While the other bounds are less tight (which we show below), they may be preferred for their simplicity for some applications. We try to make this discussion self-contained, so first we review the setting. Consider a bipartite graph G with two types of vertices: check vertices and fault vertices, such that no two check vertices share an edge and no two fault vertices share an edge. Let c be the maximum number of check vertices touching any individual fault vertex. Let the error F be an (unknown) set of fault vertices. The syndrome σ is then the set of check vertices which neighbor an odd number of fault vertices in F .
+Let Bl be the set of fault vertices in G (which may or may not be in F ) which touch l vertices in σ for l = 1, 2, . . . , c. Let bl be the size of the set Bl for l = 1, 2, . . . , c. Let sen(v) of a check vertex v ∈ σ be the largest integer m such that v is adjacent to an element of Bm for m = 1, 2, . . . , c. Let al be the number of vertices in σ with sen = l for l = 1, 2, . . . , c. Given σ, let h(σ) be the minimum size of a fault set F that results in the syndrome σ. Consider the following lower bounds bounds for h(σ):
+
+h1(σ) = h2(σ) =
+h3(σ) = h4(σ) =
+
+|σ| .
+c
+
+ac + (ac mod c) + ac−1 + ((ac mod c) + ac−1) mod (c − 1) + ac−1 + . . . .
+
+c
+
+c−1
+
+c−2
+
+(6)
+
+c al . l
+l=1
+
+|σ| − |Bc| . c−1
+
+These bounds are related by:
+h2(σ) ≥ h3(σ), h3(σ) ≥ h1(σ), h3(σ) ≥ h4(σ),
+such that h2(σ) is the tightest bound out of the four.
+
+43
+
+That h3(σ) ≥ h1(σ) is pretty straightforward, so we do not include that proof explicitly. Next we prove that h3(σ) ≥ h4(σ). Consider a syndrome σ with fault vertex sets Bc, Bc−1, . . . , B1, and partition |σ| = ac + ac−1 + · · · + a1. We define a new function h5(σ) as follows:
+
+h3(σ) =
+
+r
+
+al l
+
+≥
+
+ac + ac−1 + ac−2 + a1
+
+c
+
+c−1
+
+=
+
+ac + |σ| − ac c c−1
+
+= h5(σ),
+
+l=1
+
+(7)
+
+and therefore the function h5(σ) forms a weaker lower bound than h3(σ). Now define a subset σ′ ⊂ σ
+obtained by removing one of the check vertices from σ which touches an element of Bc. This means |σ′| = |σ| − 1 and a′c = ac − ∆ for 1 ≤ ∆ ≤ c, since that check vertex was touching at least one fault vertex that was touching c elements of σ, and some of those check vertices could have been touching more than one element of Bc (in which case they would still contribute to a′c). Also note that |Bc′ | ≤ |Bc| − 1. Therefore
+
+h5(σ′) =
+
+ac − ∆ + |σ| − 1 − ac + ∆
+
+c
+
+c−1
+
+=
+
+ac + |σ| − ac + ∆/c − 1
+
+c c−1
+
+c−1
+
+≤ h5(σ).
+
+We repeat this process iteratively (removing a syndrome vertex touching a fault vertex that touches c syndrome vertices), until we end up with a syndrome σ′′ such that ac′′ = 0 (which implies Bc′′ is empty). We have that:
+
+h3(σ) ≥ h5(σ) ≥ h5(σ′) ≥ h5(σ′′) =
+
+|σ′′| c−1
+
+≥
+
+|σ| − |Bc| c−1
+
+= h4(σ),
+
+(8)
+
+where the last inequality is obtained by noting that it must be possible to obtain σ′′ from σ by a sequence of removing at most |Bc| check vertices.
+
+Lastly we show that h3(σ) ≤ h2(σ) since:
+
+c al = ac + ac−1 + ac−2 + . . . l c c−1 c−2
+l=1
+
+= ac + ac mod c + ac−1 + ac−2 + . . .
+
+c
+
+c
+
+c−1 c−2
+
+≤ ac + ac mod c + ac−1 + ac−2 + . . .
+
+c
+
+c−1 c−1 c−2
+
+= ac + ac mod c + ac−1 + ac−2 + . . .
+
+c
+
+c−1
+
+c−2
+
+= ac + ac mod c + ac−1 + ((ac mod c) + ac−1) mod (c − 1) + ac−2 + . . .
+
+c
+
+c−1
+
+c−1
+
+c−2
+
+≤ ac + ac mod c + ac−1 + ((ac mod c) + ac−1) mod (c − 1) + ac−2 + . . .
+
+c
+
+c−1
+
+c−2
+
+c−2
+
+= ac + ac mod c + ac−1 + ((ac mod c) + ac−1) mod (c − 1) + ac−2 + . . .
+
+c
+
+c−1
+
+c−2
+
+...
+
+44
+
+The left-hand side is still smaller or equal even when taking the ceiling of it (to get h3(σ), because the right-hand side h2(σ) is an integer). So rounding up the LHS is at most equal to h3 and will never overtake h3. In other words, the bound h2 implies h3. We have confirmed by generating some explicit random syndrome instances that there is a separation between the bounds h3 and h2.
+Lastly, we point out that h2(σ) is the tightest lower bound for h(σ) that can be obtained from the al vector alone. That is, for any vector al, there exists a decoding graph G and a syndrome σ with the vector al such that h(σ) = h2(σ). Of course, there can be other tighter bounds for h(σ) that use information beyond the al vector.
+
+A.4 Finding the code distance using a min-weight decoder
+
+Here we review how to use a decoder (such as height-bound DTD) which is guaranteed to output a minweight correction to determine the distance of a specific qLDPC code. This is essentially the approach described in Ref. [BCG+24], which used BP-OSD to find upper bounds on code distance, but where we use a min-weight decoder in palce of BP-OSD.
+
+For decoding matrices H ∈ F2M×N and A ∈ F2K×N , construct an extended check matrix H(i) ∈
+
+(M +1)×N
+F2
+
+for each i ∈ 1, . . . , K
+
+by appending the ith row of A to H.
+
+Set the syndrome σ(i) ∈ FM 2 +1
+
+such that σj(i) = 1 only for j = M + 1 and use the min-weight decoder to find a min-weight correction
+
+Fˆ(i) ∈ F2N , which represents a min-weight logical operator for H that is non-trivial for the ith row of A.
+
+Note that the decoder may not be guaranteed to terminate quickly (we have no such guarantee for height-bound DTD for example). Therefore the decoder may not always find Fˆ(i) for all i ∈ 1, . . . , K within an acceptable period of time. However, if it does, the code distance is given by d = mini |Fˆ(i)|,
+since any non-trivial logical operator must be non-trivial for at least one row of A.
+
+A potential challenge for this approach when using height-bound DTD is that the added row in H(i) corresponds to a high-degree vertex (at least d) in the decoding graph. This will result in a large number of children in the DT at the first step of the algorithm, which may be somewhat alleviated by a careful basis choice for A so that the vertex degree is not much more than d.
+
+A.5 Finding all min-weight logical operators using height-bounded decision trees
+
+Here we provide an approach to compute the matrix L(d) ∈ FR2 ×N , whose rows form the complete set of min-weight logical operators, given H, A, and d.
+
+A naive approach would exhaustively test all
+
+N d
+
+weight-d faults, retaining those with HF = 0
+
+and AF ≠ 0. However, this is computationally infeasible; for example, the gross code with perfect
+
+measurements would require testing
+
+144 12
+
+≈ 1017 X-operators. The algorithm we propose does not run
+
+in polynomial time, but significantly reduces the computation allowing analysis for moderate code sizes.
+
+It leverages two key insights:
+
+1. Min-weight logical operators form connected components in G: Each minimum-weight logical operator corresponds to a connected component in the graph G, where all fault nodes in its support are connected by paths that avoid fault nodes outside the operator’s support. This can
+
+45
+
+be proved by contradiction. Assume a logical operator F with weight d has multiple disconnected components, one of which is Fc. Decomposing F as F = Fc ⊔ F⊥, we have HF = 0, which implies HFc = 0 and HF⊥ = 0. This means that Fc is either a stabilizer (making F⊥ a smaller logical operator) or itself a smaller logical operator than F , contradicting the assumption. 2. Logical operator enclosure constraint: A fault F cannot be enclosed by a minimum-weight logical operator if hmin(σ(F )) + |F | > d.
+The first insight enables the use of the decision tree: by selecting any fault node j, all size-d connected components enclosing j are nodes at level-(d − 1) of the decision tree τ (σ) for σ = N (j). This reduces the search space to N · (r − 1)d−1 ≈ 109 for the gross code (where r is the row weight of H). The second insight further reduces the search space by pruning nodes in the decision tree that cannot lead to weight-d logical operators. We also remove decision tree nodes that correspond to stabilizers.
+To manage memory efficiently, the tree exploration is divided into two stages. Rather than constructing all layers of the decision tree sequentially, the algorithm generates layers up to a chosen generation s and then identifies logical operators descending from each node at level s individually. This is achieved using two algorithms: Algorithm 8, which takes an initial fault set Fin with weight w < d and outputs L(d)|Fin , the set of all weight-d logical operators enclosing Fin; and Algorithm 9, which constructs the decision tree up to level s and (sequentially) applies Algorithm 8 to each node at that level to determine the descending weight-d logical operators. (Note that we interchangeably say that a logical operator descends from, and that it encloses the fault set of a node in the decision tree.)
+Using this approach with height bound h2(σ) from Eq. (4), we found 84 and 1884 distinct distance-d X-type logical operators for the [[72,12,6]] and [[144,12,12]] bivariate bicycle codes, respectively.
+A.6 Runtime comparison of height-bound DTD and MaxSAT decoding
+Here, in Figure 14 we compare the runtime required to decode color codes under data qubit noise by height-bound DTD (Section 5.4) with the MaxSAT decoder from Ref. [NH24], discussed in Section 3.4. Both are general qLDPC decoders guaranteed to produce minimum-weight corrections. The height-bound DTD data (from a single process on an Intel Core i9-10885H CPU, Windows 11, 32GB RAM) is compared with data extracted (by eye) from Fig. 1b of Ref. [NH24] (using an award-winning MaxSAT solver Open-WBO [MML14], run serially on an unspecified CPU). This crude comparison provides qualitative insights but should be interpreted cautiously, as runtimes were measured on different machines and neither implementation was optimized for absolute runtime. Notably, the height-bound DTD appears significantly faster in the low-error-rate regime but similar or even slower than the MaxSAT decoder near the threshold.
+46
+
+Algorithm 8 Find L(d)|Fin , the set of all weight-d logical operators enclosing Fin
+
+Require: Error Fin with weight w. Require: Check matrix H, logical action matrix A, and minimum weight d.
+
+1: Initialize Aw ← {Fin} 2: Initialize empty sets Ar+1 ← ∅ for r = w, . . . , d − 1 3: for r = w to d − 1 do
+
+▷ Start with the initial fault set. ▷ Prepare storage for all generations.
+▷ Iterate through weight layers.
+
+4: for all F ∈ Ar do
+
+5:
+
+σ ← HF
+
+▷ Explore each fault set in the current layer. ▷ Update the syndrome for F .
+
+6:
+
+Find smallest i such that σi = 1
+
+7:
+
+for all j ∈ N (i) do
+
+▷ Identify the first unsatisfied check. ▷ Iterate over neighboring faults.
+
+8:
+
+if Fj = 1 then
+
+9:
+
+continue to next j
+
+▷ Skip if j is already in F .
+
+10:
+
+end if
+
+11:
+
+F ′ ← F + {j}
+
+▷ Add fault j to the set.
+
+12:
+
+σ′ ← σ + N (j)
+
+▷ Update the syndrome.
+
+13:
+
+if r = d − 1 and σ′ = 0 and AF ′ ̸= 0 then
+
+14:
+
+Add F ′ to Ar+1
+
+▷ Found weight-d logical operator.
+
+15:
+
+else if r < d − 1 and hmin(σ) + r + 1 ≤ d and σ ̸= 0 then
+
+16:
+
+Add F ′ to Ar+1
+
+▷ Prune.
+
+17:
+
+end if
+
+18:
+
+end for
+
+19: end for
+
+20: end for
+
+21: return Ad
+
+▷ Final set Ad is L(d)|Fin , all weight-d logical operators enclosing Fin.
+
+47
+
+Algorithm 9 Find L(d) for given H, A, d, and s (tree search separation point)
+
+Require: Weight s.
+
+Require: Check matrix H, logical action matrix A, and minimum weight d.
+
+1: Initialize A1 ← {{j} | j = 1, . . . , N }
+
+▷ Start with single-node fault sets.
+
+2: Initialize empty sets Ar+1 ← ∅ for r = 1, . . . , s − 1
+
+▷ Prepare storage for layers.
+
+3: for r = 1 to s − 1 do
+
+▷ Iterate through layers up to s.
+
+4: for all F ∈ Ar do
+
+▷ Explore each fault set in the current layer.
+
+5:
+
+Compute syndrome σ ← HF
+
+▷ Update the syndrome.
+
+6:
+
+Find smallest i such that σi = 1
+
+▷ Identify the first unsatisfied check.
+
+7:
+
+for all j ∈ N (i) do
+
+▷ Iterate over neighboring faults.
+
+8:
+
+if Fj = 1 then
+
+9:
+
+continue to next j
+
+▷ Skip if j is already in F .
+
+10:
+
+end if
+
+11:
+
+F ′ ← F + {j}
+
+▷ Add fault j to the set.
+
+12:
+
+σ′ ← σ + N (j)
+
+▷ Update the syndrome.
+
+13:
+
+if σ ≠ 0 then
+
+14:
+
+Add F ′ to Ar+1
+
+▷ Store valid sets for the next layer.
+
+15:
+
+end if
+
+16:
+
+end for
+
+17: end for
+
+18: end for
+
+19: Initialize A ← ∅
+
+▷ Prepare to compute logical operators.
+
+20: for all F ∈ As do
+
+▷ Explore each fault set at separation level s.
+
+21: Use Algorithm 8 to compute L(d)|Fin 22: Add elements of L(d)|Fin to A 23: end for
+
+▷ Find descending weight-d logical operators.
+
+24: Form matrix L(d) by taking each element in A as a row
+
+▷ Construct result matrix.
+
+25: return L(d)
+
+▷ Output matrix of min-weight logical operators.
+
+48
+
+Figure 14: Comparison of the provable minimum-weight decoders, height-bound DTD and MaxSAT, for distance-9 and distance-13 color codes. In the low-error-rate regime, height-bound DTD achieves runtimes more than an order of magnitude faster than MaxSAT. At higher error rates, its performance becomes comparable to or worse than MaxSAT.
+49
+
+

@@ -1,0 +1,612 @@
+2014 IEEE International Symposium on Information Theory
+
+Instanton search algorithm for the ADMM penalized decoder
+
+Xishuo Liu Dept. of Electrical & Computer Eng.
+University of Wisconsin-Madison Madison, WI, USA
+Email: xliu94@wisc.edu
+
+Stark C. Draper Dept. of Electrical & Computer Eng.
+University of Toronto Toronto, ON, Canada Email: stark.draper@utoronto.ca
+
+Abstract—Linear programming (LP) decoding using the alternating direction method of multipliers (ADMM) has been shown to be an efficient algorithm. A non-convex variation based on the ADMM LP decoder called the ADMM penalized decoder was introduced by Liu et al. (IEEE ITW, Sep. 2012) to close the signal-to-noise ratio (SNR) gap between LP decoding and classic belief propagation (BP) decoding. This algorithm was shown to achieve or outperform BP decoding at all SNRs, including high SNRs where BP decoding suffers from the error floor effect. In this paper, we study the behaviors of the ADMM penalized decoder at high SNRs where simulation is infeasible. We use a generic tool called instanton analysis and propose an instanton search algorithm for the ADMM penalized decoder. We then apply the algorithm to the [155, 64] Tanner code and a [1057, 813] LDPC code. We show that the instanton information we obtained provides good predictions for word-error-rate curve at high SNRs. In addition, our results suggest that the ADMM penalized decoder can suffer from trapping sets.
+I. INTRODUCTION
+In [1], Barman et al. apply the alternating direction method of multipliers (ADMM) to the linear programming (LP) decoding problem proposed by Feldman et al. in [2]. This ADMM LP decoder is efficient even for large block length low-density parity-check (LDPC) codes. Simulation results in [1] show that LP decoding has a considerable signal-to-noise ratio (SNR) gap when compared to belief propagation (BP) decoding at low SNRs. This SNR gap was closed by Liu et al. in [3] where the authors add a non-convex penalty function to the LP decoding objective. The authors then apply the same ADMM routine to this new penalized objective. It is shown via simulations that this new decoder can decode much faster than ADMM LP decoding. In addition, it outperforms BP decoding at all SNRs for the [2640, 1320] Margulis code [4]. We use “ADMM penalized decoder” to refer to the decoder proposed in [3].
+The ADMM penalized decoder is better than BP or LP decoder in many aspects. First, the decoding speed of ADMM penalized decoding is faster than that of BP or LP decoding.1 Second, ADMM penalized decoding achieves the best worderror-rate (WER) performance among the three decoders [3].
+This work was supported by the National Science Foundation under Grants CCF-1217058. The work of S. Draper was supported in part by an NSERC Discovery Research Grant.
+1Measured by our software serial implementations of all decoders on the same CPU.
+
+Third, ADMM penalized decoding only requires basic arithmetic operations that are easy for hardware. All these aspects suggest that ADMM penalized decoding may be preferred to both BP and LP decoder in practice. However, due to the limitations on analyzing non-convex problems, it is hard to establish theory for the ADMM penalized decoder. This means that we are uncertain about the high-SNR behavior of the decoder, which becomes a crucial problem when applying this decoder to ultra-low error rate applications such as fiber-optic channels and data storage.
+In this paper, we answer the following question: Given a code and a set of parameters for the ADMM penalized decoder, what is the high-SNR slope of the WER curve in an additive-white-Gaussian-noise (AWGN) channel? To answer this questions, we use a numerical approach following the methodology in [5], where the concept of instanton analysis is used. Instantons are the most probable noise vectors causing the decoder to fail and by searching for these noise vectors for a decoder/code pair, one can predict the high-SNR behavior of that decoder/code pair (see also [6]).
+We summarize two major contributions in this paper. First, we propose an instanton search algorithm for the ADMM penalized decoder. This algorithm has two parts. We use ISAPD and ISA-R to refer to each part2. The first part, ISAPD, is an iterative algorithm extended from [7]. The second part, ISA-R, is a generic instanton search algorithm based on Nesterov’s gradient free technique [8]. When given an output from another instanton search algorithm, e.g. ISA-PD, ISAR can try to refine the results and produce a more probable noise vector. Although ISA-R can be initialized with any random input, its performance is significantly improved when initialized with the output from ISA-PD.
+Our second set of contributions are our findings with the instanton information we obtained. First, we show that the minimum norm instanton found using the algorithms we propose provides a good prediction of the slope of the WER curve at high SNRs. Second, We find that the more penalty we add, the worse the high-SNR performance we can expect. This implies that the optimal penalty coefficient depends on
+2ISA-PD stands for “Instanton Search Algorithm for Penalized Decoder”. ISA-R stands for “Instanton Search Algorithm Refinement”.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4799-5186-4/14/$31.00 ©2014 IEEE
+
+696
+
+2014 IEEE International Symposium on Information Theory
+
+SNR and should be small for high SNRs. Third, we observe that the failures for the ADMM penalized decoder are also related to trapping set topology, which is widely studied for BP decoders (e.g. [4]). This implies that good code designs that alleviate trapping set issues (e.g. [9]) should also benefit the ADMM penalized decoder.
+
+II. PRELIMINARIES
+In this section, we review the ADMM penalized decoder and instanton analysis for error correction codes. We point out references for readers interested in details.
+
+A. The ADMM penalized decoder
+
+In this paper, we consider binary LDPC codes. The set of
+
+variable nodes (resp. check nodes) is denoted by I (resp. J ).
+
+Denote by y the received noisy vector. Then the log-likelihood
+
+ratios γ can be calculated as γi = log
+
+Pr[Y =yi|X=0] Pr[Y =yi|X=1]
+
+. By
+
+relaxing the maximum likelihood (ML) decoding problem, one
+
+can obtain the following LP decoder [2]:
+
+min γT x s. t. P jx ∈ PPdj , ∀j ∈ J ,
+
+(1)
+
+where P j is the operation of selecting the sub-vector of x that participates in the jth check. PPdj is the parity polytope in dj dimensional Euclidean space. It is defined as the convex hull of all even-parity binary vectors of length dj . In [3], the authors propose applying the ADMM algorithm to the following non-
+convex problem:
+
+ADMM-PD: min γT x + g(xi) s. t. P jx ∈ PPdj (2)
+i
+where g : [0, 1] → R {±∞} is a non-convex penalty function.
+We refer readers to [3] for details on the ADMM formulation for this non-convex problem. This decoder is denoted as ADMM-PD. The penalty function g(·) plays an important role. It is shown in [3] that g1(x) = −α1|x − 0.5| and g2(x) = −α2(x−0.5)2 are good choices. Decoders using these two penalties have simple ADMM updates. When the penalty coefficients α1 and α2 are chosen properly, both decoders can decode significantly faster than LP decoding. Moreover, simulation results in [3] show that ADMM-PD outperforms BP decoding at all SNRs simulated. The remaining question is to determine how the decoder behaves at SNRs where simulation is infeasible. In [10], the authors use sequential linear programs to approximate the non-convex problem in ADMM-PD. These linear programs can be considered as a sequence of reweighted LP decoders. It is shown in [10] that a two-round reweighted LP decoder is guaranteed to correct more errors than LP decoding in bit flipping channels (cf. [11]). However this approach is only an approximation and cannot be directly applied to AWGN channels.
+
+B. Instantons in the context of error correction codes
+In [12], the authors introduced instanton analysis for error correction codes, which can be used to predict the slope of the WER curve at high SNRs (see also e.g. [5], [6]).
+
+The generality of instanton analysis makes it a good candidate for analyzing the high-SNR performance of ADMMPD. One necessary part of this analysis is an algorithm that identifies instantons. A generic algorithm based on the “amoeba” method (also called the “Nelder-Mead method”) is introduced in [12], however specific algorithms that exploit the characteristics of a decoder can perform better. An instanton search algorithm for BP decoding is introduced in [5]. For LP decoding, there is a tight relationship between instantons and pseudocodewords [7]. Based on this connection, [7], [13] proposed iterative algorithms to search for pseudocodewords for the AWGN channel. This idea is extended for the BSC where efficient instanton search algorithm are proposed [14]. We first review the definition of instantons and then rephrase instanton search as a non-convex optimization problem.
+Definition 1: Instantons are the most probable configurations of the channel noise that result in decoding failures. At high SNRs, the WER is dominated by the most probable instantons [5]. Searching for instanton is equivalent to the following optimization problem: Let ninst denote the most probable instanton for a code and a decoder when the transmitted codeword is the all-zero codeword3, then
+
+ninst =
+
+argmax
+
+Pr(n).
+
+n: decoding fails with noise n
+
+The constraint set is non-convex in general. In the AWGN channel, this can be translated to finding the minimum norm noise configuration such that the decoder fails. That is,
+
+min
+
+n
+
+2 2
+
++
+
+(C
+
+−
+
+n 22)I{decoding succeeds with noise n}
+
+(3)
+
+n
+
+where I{statement} is the indicator function that equals to 1 if statement is true and 0 otherwise; C > 0 is a large enough constant so that all decoding failures attain a lower cost in this
+objective than any decoding success.
+
+III. INSTANTON SEARCH ALGORITHMS FOR THE ADMM
+PENALIZED DECODER
+We first introduce a specific algorithm for the ADMM penalized decoder denoted by ISA-PD. Then we describe a generic algorithm, denoted by ISA-R, which is used to refine the output from ISA-PD. We note that ISA-PD is already able to produce good instanton search results. However ISAR can still refine the results obtained by ISA-PD. This is demonstrated in Section IV.
+
+A. Specific algorithm for the ADMM penalized decoder
+In [7], the authors propose an iterative algorithm to find the minimum weight pseudocodeword in the AWGN channel. For each iteration, the algorithm sends a noise vector, which is calculated from the previous iteration to guarantee that LP decoding would fail, to an LP decoder. The output from the LP decoder, a pseudocodeword, is used to calculate the minimum norm noise vector that can produce this failure. This noise
+
+3BP decoding, LP decoding and ADMM-PD are all symmetric to all codewords.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:03 UTC from IEEE Xplore. Restrictions apply.
+697
+
+2014 IEEE International Symposium on Information Theory
+
+vector is then used in the next iteration. The algorithm terminates when it converges or exceeds the maximum number of iterations allowed. This algorithm is executed repeatedly with random initializations in order to get statistics for instantons.
+For ADMM-PD, there is no clean connection between decoder failures and instantons due to the fact that ADMM-PD is trying to solve a non-convex problem. Whenever ADMM-PD fails, the output is not necessarily a vertex of the fundamental polytope. However since both LP decoding and ADMM-PD are minimizing an objective over the same constraint set, we can develop an iterative algorithm similar to [7]. Note that for ADMM-PD, we need a different approach for determining a noise vector for the next iteration. Assuming that the allzero codeword is transmitted and the decoder’s output is ω for the current iteration, we solve for the smallest norm noise vector that confuses 0 and ω. This translates to the following optimization problem:
+
+min
+
+n
+
+2 2
+
+s. t. γ(n)T ω +
+
+g(ωi) ≤ N g(0) (4)
+
+i
+
+where γ(n) is the LLR for noise n and N is the block length. Using standard Lagrange multiplier technique, we can obtain the solution
+
+n∗ = ω
+
+1
+
+ω
+
+2 2
+
+σ2 ω 1+ 2
+
+N g(0) −
+
+g(ωi)
+
+i
+
+,
+
+where g(·) is the same function in (2) and can be replaced with the specific penalty used. Equipped with this optimization problem, we summarize the instanton search algorithm for ADMM-PD in Algorithm 1. Note that this algorithm may not converge. And, similar to [7], one should expect to run the algorithm multiple times with random initializations to obtain statistics of instantons for ADMM-PD.
+
+Algorithm 1 Instanton Search Algorithm for ADMM-PD
+
+(ISA-PD)
+
+1: Initialize a noise vector n0 sufficiently large that ADMMPD fails and outputs a vector ω0.
+
+2: Choose the maximum number of iterations allowed T .
+
+Choose a tolerance ǫ > 0.
+
+3: for all k = 1, . . . , T do 4: Let u be the solution of problem (4) given ωk−1.
+
+5: Search for the smallest scaling factor a > 0 such that
+
+decoder fails with noise au. 6: Assign nk ← au. 7: Let ωk be the output of decoder when decoding the
+noise vector nk. 8: Store nk if it is the minimum norm noise vector from
+
+all previous trials.
+
+9: if nk − nk−1 2 ≤ ǫ then
+
+10:
+
+Stop loop.
+
+11: end if
+
+12: end for
+
+B. Generic instanton search algorithm as a refining step
+
+Although the “amoeba” minimization algorithm can be applied to any decoder, the cost of using this algorithm is huge. The algorithm not only converges slowly, but also requires memory that scales quadratically with respect to block length4. Thus it is infeasible to apply this algorithm to large block length codes.
+In this paper, we base our instanton search algorithm, ISAR, on Nesterov’s random gradient free algorithm (cf. [8]). In short, the algorithm in [8] starts at a random initial point. For each iteration, it picks a Gaussian random search direction and evaluates the objective function. It then calculates the gradient using the function evaluation from the previous step and pick a step size to move forward. This algorithm only requires the two most recent vectors thus consumes much less memory compared to the “amoeba” minimization.
+Instead of directly applying this method to the objective function in (3), we make three important tweaks: First, we make the objective function have a non-zero gradient when the decoder succeeds:
+
+min (1 − I{decoding succeeds with noise n})
+
+n
+
+2 2
+
+n
+
+(5)
+
++CI{decoding succeeds with noise n}
+
+1−
+
+n
+
+2 2
+
+.
+
+In other words, for each iteration, we run ADMM-PD using the current noise vector and evaluate (5).
+Second, we leverage the knowledge learned from ISA-PD. Similar to the case of “amoeba” minimization [6], initialization of ISA-R is crucial in order to obtain small norm instantons. In this paper, we use outputs from Algorithm 1 as the initialization. As we will show in Section IV, the instanton search results from ISA-PD tend to have only a few non-zero entries. We use this knowledge in our algorithm and only select the random Gaussian search direction in Nesterov’s method to have support on these coordinates for which the entries are non-zero.
+Third, the indicator function in (5) may create a huge step size in ISA-R depending on the constant C. Thus we restrict the step size for each iteration.
+
+IV. NUMERICAL RESULTS
+A. Instanton analysis as an approach to predict WER
+We now apply the proposed algorithm to the [155, 64] Tanner code [15] and a [1057, 813] LDPC code from [16]. For both codes, we obtain instanton information for different penalty coefficients α1 and α2. We fix parameters (cf. [3]) as follows: µ = 3, Tmax = 100, ρ = 1.9, ǫ = 10−5. 5 For each data point, we randomly generate K = 1000 initial noise vectors with large power and apply ISA-PD followed by ISA-R. For ISA-R, we use C = 20000 (cf. (3)). Using notations in [8, eq.(66)], we let uk be an Gaussian vector with
+
+4The algorithm needs to save n + 1 vectors of length n, which results in O(n2) spatial complexity.
+5We also fixed the channel standard deviation parameter to be 0.5 for the [155, 64] Tanner code and 0.45 for the [1057, 813] code. This parameter is
+used to calcluate the log-likelihood ratios γ in ADMM-PD.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:03 UTC from IEEE Xplore. Restrictions apply.
+698
+
+2014 IEEE International Symposium on Information Theory
+
+the
+
+identity
+
+covariance
+
+matrix
+
+and
+
+hk
+
+=
+
+1 40000
+
+.
+
+Moreover,
+
+we
+
+restrict each step size to have ℓ2 norm less than or equal to 1.
+
+In Fig. 1, we plot the minimum instanton norm as a
+
+function of penalty coefficient α2. For each α2, we sort the
+
+K instantons we find, denoted by ni, i = 1, ..., K, such
+
+that
+
+n1
+
+2 2
+
+≤
+
+n2
+
+2 2
+
+≤
+
+···
+
+≤
+
+nK
+
+2 2
+
+.
+
+We
+
+then
+
+plot
+
+the
+
+norm
+
+nφ
+
+2 2
+
+where
+
+φ
+
+=
+
+⌊K/100⌋
+
+and
+
+label
+
+it
+
+“1%
+
+minimum
+
+instanton” in Fig. 1. In order to compare with BP and LP
+
+decoding, we plot the effective distance for both decoders.
+
+Note that the LP pseudo-distance (16.35 in Fig. 1) is the
+
+norm of the most probable noise that leads to decoding failure
+
+(see also [17, Sec. 6]). Results for BP decoding is obtained
+
+from [18].
+
+We make the following observations: First, there is a clear
+
+trend that as the penalty increases, the minimum instanton
+
+norm decreases. This implies that the high-SNR performance
+
+of ADMM-PD decreases as the penalty coefficient increases.
+
+Second, we observe that the fluctuation of the minimum norm
+
+curves increases as α2 increases. Third, ISA-R makes some refinements at points at α = 0.5, 0.8. It makes a significant
+
+refinement at α = 1.8. This is important because it suggests
+
+that the results obtained by ISA-PD for large α2 are not accurate especially for α2 ≥ 1.6. Therefore, a curve fitted
+
+instanton norm should predict WER more accurately for large
+
+α2’s compared to raw data. Thus we suggest using the curve fitted results. E.g. for α = 2, results suggest that the minimum
+
+instanton norm is 13.8. We show in Fig. 2 that this result
+
+predicts the WER slope well.
+
+In Fig. 2, we plot the WER asymptotics predicted by
+
+the minimum norm instanton as well as simulation results.
+
+We use α2 = 2 in our simulation because this value is empirically the optimal in terms of WER for SNR = 1.3
+
+and 1.65 for this code. All data points are based on more
+
+than 100 decoding errors. We make three observations: First,
+
+the asymptotics predicted by the minimum instanton norms
+
+and the simulated WER curves are almost parallel for each
+
+decoder at high SNRs. Second, there are two crossover points
+
+in Fig. 2. The first one occurs near SNR = 1.75 where LP
+
+decoding outperforms BP decoding. The second one occurs
+
+near SNR = 2.3 where LP decoding outperforms ADMM-
+
+PD with an ℓ2 penalty. This matches our expectation from the instanton results in Fig. 1. Third, the asymptotic curves only
+
+approximate the slope of the WER. If we were to approximate
+
+the actual WER, we would need to compute the multiplicity
+
+and the curvature factor of the instantons (cf. [6]). We discuss
+
+the multiplicity in Section IV-B.
+
+In Fig. 3, we plot the instanton profile for the [1057, 813]
+
+code for ADMM-PD with both ℓ1 and ℓ2 penalties. We first use the algorithm in [7] to obtain statistics for LP decoding.
+
+Based on all instantons we observed, the minimum norm
+
+instanton for LP decoder is an actual codeword. This implies
+
+that LP decoding is as good as ML decoding at high SNRs
+
+for this code, which matches the simulation results obtained
+
+in [1]. We make three comments on Fig. 3. First, the algorithm
+
+in [7] is not guaranteed to find the minimum weight pseu-
+
+docodeword. If the weight were actually 7 for LP decoding
+
+17
+
+LP instanton (pseudo-distance) [7]
+
+1% minimum instanton
+
+16
+
+Minimum instanton norm from ISA-PD
+
+Refined results from ISA-R
+
+BP decoding, 100 iterations [18]
+
+15
+
+Instanton norm
+
+14
+
+13
+
+12
+
+11 0.2 0.4 0.6 0.8 1 1.2 1.4 1.6 1.8 2
+penalty coefficient α2
+
+Fig. 1. Instanton norm as a function of penalty coefficient for the [155, 64] code when decoded by ADMM-PD with ℓ2 penalty.
+
+then our results would suggest that we can push the penalty coefficient up to 1 without losing much performance at high SNRs. Second, we observe significant fluctuations in terms of instanton norms. However the one percent instanton norm curves for both penalties decrease monotonically as the penalty coefficients α1 and α2 increase. The fluctuation is due to limited simulation time. Third, ADMM-PD with an ℓ1 penalty does worse than ADMM-PD with an ℓ2 penalty for a given parameter αi. However, the results obtained in [3] suggest that the optimal α1 is less than the optimal α2. This implies that both penalties are comparable in terms of instanton norms when using each one’s optimal parameters.
+These results are important in practice. First, although ADMM-PD is observed to outperform LP decoding in [3], it is not as good as LP decoding asymptotically in SNR for nonzero penalty coefficients. Second, in practice, we need to adjust the penalty coefficient as a function of the SNR the code operates at. In particular, we can expect that small penalty coefficients produce better error rate performances at high SNRs, as is shown in Fig. 2.
+B. Weaknesses of ADMM-PD
+It is noticeable from Fig. 3 that the minimum (not the 1%) instanton norm stays almost constant for some α’s. This suggests that there might be some common structures underlying these instantons, which motivates us to study the patterns of these noise vectors.
+We observe that for all minimum norm instantons, there are only a few nonzero entries. Moreover, every instanton we studied has support on trapping set structures which have been widely studied for BP decoders. For the [155, 64] code, we observe instantons with non-zeros entries on (5, 3) (plotted in Fig. 4) and (6, 4) trapping sets. For the [1057, 814] code, we observe instantons with non-zeros entries on (5, 1) and (7, 1) trapping sets. And the (7, 1) trapping set contributes to most of the norm 7 instantons in Fig. 3.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:03 UTC from IEEE Xplore. Restrictions apply.
+699
+
+2014 IEEE International Symposium on Information Theory
+
+ϴ
+
+ϱϯ
+
+ϵϮ
+
+0
+10
+
+ϭϮϰ
+
+ϭϬϲ
+
+ϭϬϵ
+
+−5
+10
+
+ϳϲ
+
+ϰϬ
+
+Ϯϭ
+
+ϴϵ
+
+ϱϲ
+
+Ϯϰ
+
+WER
+
+ϮϬ
+
+ϴϮ
+
+10−10
+
+ADMM LP decoding
+
+Sum-product BP decoding, 100 iterations
+
+ADMM-PD with ℓ2 penalty, 100 iterations Asymptote, BP
+
+Asymptote, ADMM-PD with α2 = 2
+
+Asymptote, LP
+
+−15
+10
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR
+
+Fig. 2. Comparisons of simulation results and asymptotic slopes predicted
+
+by instantons/pseudocodewords for the [155, 64] code. WER is plotted as a
+
+function
+
+of SNR (not
+
+in
+
+(dB)).
+
+Each asymptote
+
+is
+
+∼ exp(−
+
+inst
+n
+
+2 2
+
+s2 /2),
+
+where s2 is SNR. The value of
+
+inst
+n
+
+2 2
+
+for
+
+BP,
+
+ADMM-PD
+
+and
+
+LP
+
+are
+
+11.48, 13.8 and 16.35, respectively.
+
+8.5
+
+8
+
+7.5
+
+Instanton norm
+
+7
+
+6.5
+
+LP pseudo-distance
+
+6
+
+1% minimum instanton, ℓ2 penalty 1% minimum instanton, ℓ1 penalty
+
+Minimum instanton norm, ℓ2 penalty
+
+Minimum instanton norm, ℓ1 penalty
+
+5.5
+
+0.2 0.4 0.6 0.8 1 1.2 1.4 1.6 1.8 2
+
+penalty coefficient αi, i = 1, 2
+
+Fig. 3. Instanton norm as a function of penalty coefficient for the [1057, 813] code when decoded by ADMM-PD.
+
+We note two aspects where these results are useful. First, the results imply that we can leverage trapping set knowledge in the literature to compute the multiplicity of a particular instanton. Second, one can expect that code designs that alleviate trapping set effect should also benefit ADMM-PD.
+V. DISCUSSIONS ON THE RESULTS
+We briefly discuss our intuitions on these results. We note that the penalized decoder aims to penalize fractional solutions by adding penalties to the objective on a symbol-by-symbol basis. As a result, the decoder becomes easier to get stuck at some local configurations such as trapping sets. Meanwhile, increasing the penalty coefficient can decrease the significance of channel evidence and the optimization constraints during
+
+Fig. 4. The support of an instanton for the [155, 64] code showing a (5, 3) trapping set, each node indexed by the variable or check number.
+the decoding process. Therefore a small noise can create a bias at the first iteration of decoding such that it is hard to reverse. So the instanton norm tends to be small for large penalty coefficients.
+REFERENCES
+[1] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[2] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[3] X. Liu, S. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” in IEEE Inf. Theory Workshop (ITW), Sept. 2012, pp. 367–371.
+[4] D. J. C. MacKay and M. S. Postol, “Weaknesses of Margulis and Ramanujan-Margulis low-density parity-check codes,” Electronic Notes in Theoretical Computer Science, vol. 74, no. 0, pp. 97–104, 2003.
+[5] M. Stepanov and M. Chertkov, “Instanton analysis of low-density paritycheck codes in the error-floor regime,” in IEEE Int. Symp. Inf. Theory, 2006, pp. 552–556.
+[6] S. Chilappagari, M. Chertkov, M. Stepanov, and B. Vasic, “Instantonbased techniques for analysis and reduction of error floors of LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 855–865, 2009.
+[7] M. Chertkov and M. G. Stepanov, “An efficient pseudocodeword search algorithm for linear programming decoding of LDPC codes,” IEEE Trans. Inf. Theory, vol. 54, no. 4, pp. 1514–1520, Apr. 2008.
+[8] Y. Nesterov, “Random gradient-free minimization of convex functions,” CORE discussion paper, 2011.
+[9] Y. Wang, S. Draper, and J. Yedidia, “Hierarchical and high-girth QC LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 7, pp. 4553–4583, July 2013.
+[10] X. Liu, S. Draper, and B. Recht, “The ℓ1 penalized decoder and its reweighted LP,” in 50th Annual Allerton Conf. on Comm., Control, and Computing (Allerton), Oct. 2012, pp. 1572–1579.
+[11] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 82–89, Jan. 2007.
+[12] M. G. Stepanov, V. Chernyak, M. Chertkov, and B. Vasic, “Diagnosis of weaknesses in modern error correction codes: a physics approach,” Physical review letters, vol. 95, no. 22, p. 228701, 2005.
+[13] M. Chertkov and M. Stepanov, “Polytope of correct (linear programming) decoding and low-weight pseudo-codewords,” in IEEE Int. Symp. Inf. Theory (ISIT), Aug. 2011, pp. 1648–1652.
+[14] S. K. Chilappagari, M. Chertkov, and B. Vasic, “An efficient instanton search algorithm for LP decoding of LDPC codes over the BSC,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4417–4426, 2011.
+[15] R. M. Tanner, D. Sridhara, and T. Fuja, “A class of group-structured LDPC codes,” in ICSTA, Ambleside, UK, 2001.
+[16] D. J. C. MacKay, “Encyclopedia of sparse graph codes,” available online at http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+[17] P. O. Vontobel and R. Koetter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” Arxiv preprint, vol. abs/cs/0512078, 2005.
+[18] M. Stepanov, “Instantons causing iterative decoding to cycle,” ArXiv 1108.5547, 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:03 UTC from IEEE Xplore. Restrictions apply.
+700
+
+

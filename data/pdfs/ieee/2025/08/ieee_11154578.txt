@@ -1,0 +1,587 @@
+Mixed-Integer ADMM Decoding for LDPC Codes
+
+Anthony Ho Dept. of Electrical & Computer Engineering
+University of Toronto Toronto, ON, Canada Email: anth.ho@mail.utoronto.ca
+
+Stark C. Draper Dept. of Electrical & Computer Engineering
+University of Toronto Toronto, ON, Canada Email: stark.draper@utoronto.ca
+
+2025 13th International Symposium on Topics in Coding (ISTC) | 979-8-3315-8983-7/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISTC65386.2025.11154578
+
+Abstract—In this paper, we study the use of the alternating method of multipliers (ADMM) to decode LDPC codes at moderate blocklengths (100 to 1000 bits). Placing ADMM decoding in a mixed-integer optimization framework, this allows us to leverage an exploration-exploitation paradigm to realize further errorcorrection performance for the same budget of total number of iterations. We demonstrate our ideas with numerical simulations for the (155,64) rate-0.4 Tanner Code and the (480,360) rate-3/4 code from the IEEE 802.22 WRAN standard.
+I. INTRODUCTION
+The emergence of new applications in wireless communications, such as 6G and machine-type communication [1] has spurred considerable investigation of short-to-medium blocklength error-correcting codes (<1000 bits) [2]. In the past decades, low-density parity check (LDPC) codes have been the focus of significant research, owing to their superior error-correction performance at long blocklengths when paired with iterative message-passing belief propagation (BP) decoders [3]. The requirements of the shorter blocklength regime motivate the development of new LDPC decoders that can flexibly trade off complexity for error-correction performance.
+Ideally, one would have a single family of code-decoder pairs that could adapt to a wide range of blocklengths, code rates, signal-to-noise ratios, and target error rates. In the context of LDPC codes, one can increase the total number of iterations in an attempt to reduce the error rate. However, increasing the number of iterations for BP decoding results only in a moderate decrease in error rate. This is in contrast, for example, to polar codes with CRC-aided successive cancellation list (CA-SCL) decoding [4]. For polar codes under CA-SCL decoding, by increasing the size of the list and consequently increasing the decoder’s complexity, we can considerably improve the error-correction performance. It would be valuable to develop a decoder for LDPC codes that can also flexibly trade off complexity for error-correction performance, similar to how CA-SCL decoding accomplishes this for polar codes.
+In an effort to improve the complexity-performance tradeoff, we introduce Mixed-Integer ADMM (MI-ADMM) decoding. In MI-ADMM decoding, we successively tighten the relaxation used in Linear Programming (LP) decoding by adding integer constraints. The idea of using integer constraints in LP decoding was first explored by Draper et al. [5] in the context of Adaptive LP decoding [6], where they used general-
+
+purpose LP solvers and a naive search. In contrast, MI-ADMM decoding is amenable to efficient hardware implementation [7] and incorporates smarter strategies to search for codeword solutions. The possibility of adding integer constraints to ADMM decoding was noted by Kraft and Wehn [8], where they sketched the general approach and listed some challenges of using such a scheme to perform maximum likelihood (ML) decoding. In this paper we realize a practical decoding scheme that places ADMM decoding in a mixed-integer framework, provide results for some codes, and describe some of the design tradeoffs involved.
+The rest of this paper is organized as follows. In Section II, we provide a summary of ADMM decoding and of its parity polytope projection. In Section III, we introduce MI-ADMM decoding. In Section IV, we provide numerical results.
+
+II. PRELIMINARIES
+
+A. LP Decoding
+
+Consider an LDPC code C defined by an M × N parity
+
+check matrix H. As a Tanner graph, the code can be rep-
+
+resented as M parity check nodes and N variable nodes.
+
+Let [N ] = {1, 2, . . . , N } be the index set of size N . Let
+
+N v(i) = {cj : Hji = 1, j ∈ [M ]} be the set of check nodes
+
+connected to variable node vi, i.e., vi’s check neighbourhood.
+
+Similarly, let N c(j) = {vi : Hji = 1, i ∈ [N ]} be the set of
+
+variable nodes connected to check node cj, i.e., cj’s variable
+
+neighbourhood. With slight abuse of notation, we denote the
+
+degree of check node cj as dj = |N c(j)|, the degree of
+
+variable node vi as di = |N v(i)|.
+
+Consider a binary-input memoryless channel W : X → Y,
+
+and let y ∈ YN be the output of the channel. Maximum-
+
+likelihood decoding solves the optimization problem x∗ =
+
+arg minxˆ∈C γT xˆ, where γ is the vector of log-likelihood ratios
+
+such that γi = log
+
+W (yi|0) W (yi|1)
+
+. This is an integer program
+
+where the solution space is the set of valid codewords as
+
+defined by the parity check equation xˆHT = 0. Feldman
+
+et al. [9] proposed LP decoding as an LP relaxation of ML
+
+decoding, where LP decoding solves the linear program
+
+x∗ = arg min γT x
+
+s.t.
+
+xN c(j)
+
+∈
+
+e
+PPdj
+
+,
+
+∀j
+
+∈
+
+[M ].
+
+(1)
+
+In
+
+(1),
+
+e
+PPdj
+
+is
+
+the
+
+even
+
+parity
+
+polytope
+
+of
+
+degree
+
+dj
+
+and
+
+xN c(j) denotes the sub-vector of x formed by the elements in
+
+the neighbourhood of check node cj. The even parity polytope
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:47:53 UTC from IEEE Xplore. Restrictions apply.
+
+is the convex hull of the points on the unit hypercube that satisfy the j-th parity check constraint. So,
+
+e
+PPdj
+
+=
+
+conv({x
+
+∈
+
+{0, 1}dj
+
+:
+
+∥x∥1
+
+is
+
+even}).
+
+(2)
+
+Similarly, we will find it useful in Section III to define the odd parity polytope [10], [11], as
+
+o
+PPdj
+
+=
+
+conv({x
+
+∈
+
+{0, 1}dj
+
+:
+
+∥x∥1
+
+is
+
+odd}).
+
+(3)
+
+B. ADMM Decoding
+
+While early works on LP decoding used general-purpose
+
+LP solvers, Barman et al. [12], [13] introduced the use of
+
+ADMM to solve the linear program and decode LDPC codes
+
+efficiently. In ADMM decoding, each check node cj for j ∈
+
+[M ] is associated with auxiliary variables zj. Parity checks are
+
+reformulated as a pair of constraints xN c(j) = zj and zj ∈
+
+e
+PPdj
+
+.
+
+ADMM
+
+decoding
+
+minimizes
+
+the
+
+augmented
+
+Lagrangian
+
+Lµ(x, z, λ) = γT x +
+
+λjT (xN c(j) − zj )
+
+j∈[M ]
+
+µ +
+2
+
+∥xN c(j) − zj ∥22, (4)
+
+j∈[M ]
+
+where µ is the augmented Lagrangian parameter. The ADMM updates have the following closed forms
+
+
+
+x(ik+1)
+
+=
+
+1  [0,1] | N v(i)|
+
+j∈N c(i)
+
+zj(,ki)
+
+−
+
+λ(jk,i) µ
+
+zj(k+1) =
+
+x(Nk+c (1j))
+
++
+
+λ(k) µ
+
+,
+
+PPde j
+
+λ(jk+1) = λ(jk) + µ x(Nk+c(1j)) − zj(k+1) .
+
+ − γi  ,
+µ (5a) (5b)
+(5c)
+
+In (5a) and (5b), S(·) denotes the projection onto the set S. Note that (5b) involves projection onto the even parity
+
+polytope. This is the most computationally intensive step
+
+in ADMM decoding. A number of papers [11], [14], [15]
+
+have worked to reduce the complexity. One hardware-efficient method to project a point v ∈ Rd onto PPde is presented
+by Wasson et al. [7] where, building on earlier papers, there
+
+are four main steps. First, the facet of the parity polytope
+
+closest to v is identified. This facet is associated with the odd-
+
+weighted vertex of the d-dimensional hypercube closest to v.
+
+A
+
+similarity
+
+transform
+
+is
+
+applied
+
+to
+
+both
+
+v
+
+and
+
+e
+PPd
+
+that
+
+rotates
+
+this odd-weighted vertex to the origin. Next, the translated
+
+point is projected onto a simplex. Lastly, the projected point
+
+is rotated back by an inverse similarity transform.
+
+III. MI-ADMM DECODING
+In this section, we present the mixed-integer ADMM (MIADMM) decoding algorithm, where we introduce integer constraints to tighten the LP relaxation. This places ADMM decoding into a branch-and-bound framework akin to that
+
+sketched in [8]. In Section III-A, we first introduce the integerconstrained ADMM solver, which is a subroutine of the complete MI-ADMM decoding algorithm, defined in Section III-B. The idea of “pinning” particular variables to {0, 1} arises in various places in the LP literature: for example in [5], [8] in the context of mixed-integer LP decoding. It is also used in [11] where a low-complexity recursive approach to projection is developed by projecting onto a sequence of even- or odd-parity polytopes of smaller dimension. Lastly, in Section III-C we discuss how MI-ADMM decoding introduces an explorationexploitation trade-off.
+
+A. Integer-Constrained ADMM Solver
+
+A key aspect of designing a mixed-integer ADMM de-
+
+coding algorithm is that integer constraints must be easy
+
+to incorporate into the ADMM framework. To accomplish
+
+this, we constrain both the entries in the x-vectors and their
+
+corresponding entries in the zj-vectors. To ensure the integer
+
+constraints are compatible with the parity polytope projection
+
+of the zj-vectors, we exclude the integer-constrained entries of zj and project the unconstrained entries onto a lower
+
+dimensional parity polytope.
+
+We first define the notation as it pertains to the application of
+
+integer constraints to ADMM. Let I ⊆ [N ] be the index set of variables that are constrained to be integer, and let Ic := {i ∈
+
+[N ], i ∈/ I} be the complement of I which contains the indices
+
+of the unconstrained variables. Let V := (xi)i∈I be the tuple of values of the integer constraints. Let Ij ⊆ [dj] be the index
+set of integer constraints associated with check node cj, where
+zj,k ∈ {0, 1} if k ∈ Ij. Denote |Ij| as the size of set Ij. Let Ijc := {k ∈ [dj], k ∈/ Ij} be the set of unconstrained elements of check node cj. Define the sub-vector z˜j as consisting of the non-integer-constrained entries of the vector zj, where k ∈ Ijc for the k-th entry in zj.
+For the z-update step in equation (5b), we now have two
+
+cases. If
+
+e
+PPdj
+
+−|Ij
+
+|
+
+,
+
+k∈Ij zj,k (mod the even parity
+
+2) = 0, polytope
+
+then we project z˜j of dimension dj −
+
+onto |Ij |.
+
+On the other hand, if the integer constraints are such that
+
+PPkdo∈j −Ij|Izjj|,,k
+
+(mod 2) = 1, the odd parity
+
+then we polytope
+
+need to project z˜j of dimension dj −
+
+onto |Ij |,
+
+to account for the odd parity of the integer constraints.
+
+Consequently, we also set the dual variable associated with
+
+integer constraints to λj,k = 0 for k ∈ Ij.
+
+For the projection algorithm in [7], accommodating both
+
+even and odd parity polytope projections only means a change
+
+in finding either the closest odd or closest even vertex, re-
+
+spectively. For the odd parity polytope projection, we find the
+
+closest even-weighted vertex as it corresponds to the closest
+
+facet of the odd parity polytope. From [7, Algorithm 2, Line
+
+4], this equates to a simple change in checking if a sum is
+
+even or odd for the even and odd projections, respectively.
+
+Hence, these two different projections can use essentially the
+
+same (hardware-compatible) algorithm, aside from this minor
+
+change.
+
+It is important to observe that care must be taken when
+
+selecting integer constraints, since improper selection could
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:47:53 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Mixed-Integer ADMM Decoding
+
+Parameters: Search Strategy, Variable Selection Strategy,
+
+Cost Estimation Strategy, Max Total Iterations Imax, Max
+
+Inner Iterations Iinner Input: LLR vector γ
+
+1: x ← 0.51N , k ← 0
+
+2: for j ∈ [M ] do
+
+3: zj ← 0.51dj , λj ← 0dj
+4: end for 5: Nroot ← ({}, {}), T ← {Nroot}, C˜ ← {0} 6: while k < Imax and xˆHT ≠ 0 do 7: Select next node N = (I, V) according to costs C˜
+
+8: x ←MI-ADMM-SOLVER(x, z, λ, Iinner, I, V) 9: Select next branching variable i∗
+
+10: for ℓ ∈ {0, 1} do
+
+11:
+
+Get new child node Nℓ ← (I ∪ {i∗}, V ∪ {ℓ})
+
+12:
+
+Estimate costs C˜i∗,ℓ of node Nℓ
+
+13:
+
+Update costs C˜ ← C˜ ∪ C˜i∗,ℓ
+
+14: end for
+
+15: Update tree T with new child nodes N0, N1
+
+16: xˆ ←HARDDECISION(x)
+
+17: k ← k + Iinner
+
+18: end while
+
+19: Return xˆ
+
+lead to infeasibility. For example, for a given check node cj, if all of its neighbouring variable nodes are constrained to be integer, but their modulo-2 sum is not 0, then any solution with this set of integer constraints would be infeasible. While classic integer-constrained LP solvers are built to address this, this is one of the challenges discussed in [8]. Hence, in the algorithm that follows, a variable is considered eligible to be imposed as an integer constraint only if all of its adjacent check nodes are connected to 3 or more unconstrained variables. That is, the set of variables that are eligible to be added to the integer-constrained set I is given as K := i ∈ Ic : ∀j ∈ N c(i), |Ijc| ≥ 3 .
+B. Mixed-Integer ADMM Decoding
+We now present the MI-ADMM decoding algorithm, which places ADMM decoding into a branch-and-bound (B&B) framework. The B&B procedure builds a tree by sequentially partitioning the solution space and storing the sub-problems as nodes in a tree structure. MI-ADMM decoding essentially constructs a B&B tree of sub-problems that partitions the solution space using integer constraints. B&B starts from the root node, which is the LP relaxation. The decoding procedure then successively “branches” on each subsequent node by adding new integer constraints, creating new nodes (and new sub-problems). MI-ADMM decoding solves these sub-problems until a valid codeword is found, or the maximum number of iterations is met. The MI-ADMM decoder has three main steps: (i) node selection, (ii) (integer-constrained) ADMM solving (as discussed in Section III-A), and (iii) variable selection.
+
+First, the node selection step involves using the search strategy to pick the next node to explore. The particular search strategy used has a considerable impact on the complexity and performance of the decoder. Choosing a poor search strategy that traverses much of the B&B tree without finding good potential solutions would lead to increased decoding times, increased memory requirements, and decreased errorcorrection performance. We found that best-first-search consistently outperforms other search strategies. Best-first-search uses a heuristic cost function to choose the next node, along with a priority queue for the node ordering. The heuristic cost function, or cost estimation method, highlighted in the results in Section IV is dubbed strong estimation. Strong estimation performs one extra ADMM iteration with the new integer constraints and calculates the cost as the Lagrangian in equation (4). The priority queue is then ordered based on the lowest cost.
+After the node is selected, this sub-problem is passed to the integer-constrained ADMM solver. The solver runs for Iinner ADMM iterations. If the output of the ADMM solving step is a codeword, then we have our solution. If not, then the algorithm continues on to the variable selection step. We note that we assume ℓ2-penalized ADMM decoding as the underlying ADMM solver [16]. Under penalized ADMM decoding, the objective function is no longer linear, making it difficult to bound the objective value. For this reason, the “bounding” portion of branch-and-bound (e.g., as discussed in [8]) is not considered.
+Finally, the variable selection step involves selecting the next branching variable to which to apply an integer constraint. This step creates two new sub-problems, both of which are added to the B&B tree as new branches, introducing the integer constraints 0 and 1 for the newly selected variable. In this paper, we employ the most fractional rule as our variable selection method. The most fractional rule branches on the variable closest to 0.5, stated simply as arg mini∈K |xi − 0.5|. The intuition for this heuristic is that it constrains the most “problematic” variables, i.e., those furthest from being integer. Different heuristics can be employed for node selection, cost estimation, and variable selection to improve the decoding performance, e.g. see [17]. Algorithm 1 describes the full MIADMM decoding algorithm.
+C. Branch Exploration vs Node Exploitation
+The maximum number of iterations for the ADMM solver controls the computational complexity/error-correction performance trade-off. While there is overhead in the variable selection and cost estimation steps, the majority of the computational time remains associated with the ADMM update steps. Within the B&B framework of MI-ADMM decoding, we have a choice of how we want to distribute the total number of ADMM iterations throughout the nodes of the B&B tree. Standard ADMM decoding can be interpreted as being at one (trivial) end of a spectrum of MI-ADMM decoders, equivalent to allocating all of the iterations to solving only the root node of the B&B tree. At the other extreme, we can choose to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:47:53 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+100
+
+10 1
+
+10 1
+
+FER
+
+10 2
+
+10 3 10 4 10 5
+
+ADMM (Imax = 20000) MI-ADMM (Imax = 50) MI-ADMM (Imax = 100) MI-ADMM (Imax = 500) MI-ADMM (Imax = 1000) MI-ADMM (Imax = 5000) MI-ADMM (Imax = 20000) ML
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+Eb/N0 (dB)
+
+FER
+
+10 2
+
+10 3 10 4 10 5
+
+ADMM (Imax =20000) MI-ADMM (Imax = 50) MI-ADMM (Imax = 100) MI-ADMM (Imax = 500) MI-ADMM (Imax = 1000) MI-ADMM (Imax = 5000) MI-ADMM (Imax = 20000) ML
+
+2.00 2.25 2.50 2.75 3.00 3.25 3.50 3.75 4.00 Eb/N0 (dB)
+
+Fig. 1: FER Performance of MI-ADMM Decoding for the Fig. 3: FER Performance of MI-ADMM Decoding for the
+
+(155,64) Tanner code C1 under varying maximum total itera- (480,360) WRAN code C2 under varying maximum total
+
+tions Imax.
+
+iterations Imax.
+
+Eb/N0 (dB)
+
+3.8
+
+3.6
+
+3.4
+
+3.2
+
+3.0
+
+2.8
+
+BP ADMM
+
+2.6
+
+MI-ADMM
+
+100
+
+1000
+
+Total Iterations
+
+10000
+
+Fig. 2: SNR vs Total Iteration for the (155,64) Tanner code C1 at an operating point of FER = 10−3. The vertical line
+indicates 10000 total iterations.
+
+allocate just one ADMM iteration to each node, maximizing the number branches of the B&B tree that are explored.
+At the heart of MI-ADMM decoding is this branchexploration/node-exploitation trade-off. We quantify this as the trade-off between the number of inner iterations (Iinner) and the maximum total iterations (Imax). Here, Iinner is the maximum number of ADMM iterations performed at each individual node of the B&B tree, while Imax is a max on the sum total number of inner iterations for the whole algorithm. By fixing Iinner as a fraction of Imax, we typically improve the errorcorrection performance at the cost of extra complexity. The extra complexity comes from the variable selection and cost estimation steps. Keeping track of the B&B tree itself requires additional computation and memory not needed by standard ADMM decoding. The total number of nodes of the B&B tree that can be explored is Imax/Iinner.
+IV. NUMERICAL RESULTS
+In this section, we present results for MI-ADMM decoding, where we demonstrate further improvement is possible over the standard ADMM decoder. For the ADMM decoder (both with and without integer constraints), ℓ2-penalization is used along with early termination. The augmented Lagrangian parameter µ and the penalty parameter α were found using a grid-search. The over-relaxation parameter ρ was set to 1.9
+
+and the early termination parameter ϵ was 10−5. The integerconstrained ADMM solvers and the standard ADMM decoder use a horizontal layered update schedule [18]. Binary phaseshift keying (BPSK) modulation was used over the additive white Gaussian noise (AWGN) channel. We present results for two short-to-medium blocklength codes: the (155,64) rate-0.4 Tanner Code (C1) [19], and the (480,360) rate-3/4 code from the IEEE 802.22 WRAN Standard (C2) [20]. The simulations were performed on the Niagara supercomputer at the SciNet HPC Consortium [21]. The results for the ML simulations are courtesy of [22].
+The FER performance of MI-ADMM as a function of both the Eb/N0 and Imax for the (155,64) rate-0.4 Tanner code (C1) is plotted in Fig. 1. MI-ADMM shows significant improvement over both ADMM and BP decoding. At Imax = 20000 and at an operating FER of 10−3, MI-ADMM decoding demonstrates a gain of around 0.4 dB over ADMM decoding.
+In Fig. 3 we see that for the WRAN code (C2) at low SNR (≤ 3.0 dB), ADMM decoding at Imax = 20000 performs similarly to MI-ADMM decoding at the same Imax. At higher SNRs, MI-ADMM at Imax = 20000 improves on ADMM decoding by 0.25 dB. At 4.0 dB, MI-ADMM with Imax = 1000 achieves the same FER as ADMM at Imax = 20000.
+The FER performance as a function of Imax for code C1 is more apparent in Fig. 2. Figure 2 plots the Imax required to achieve an operating FER of 10−3 at a given SNR. This is the Pareto frontier for the optimal iteration-SNR trade-off. MI-ADMM decoding achieves superior performance as Imax is increased compared to BP or ADMM for any Imax. At Imax = 10000, the gap between MI-ADMM and ADMM reaches approximately 0.35 dB, and the gap to BP decoding at the same number of iterations is just under 1 dB. Although the complexity of a BP iteration is not equal to that of an ADMM iteration, it is important to notice that the performance of BP does not scale as well compared to MI-ADMM decoding under increasing total iterations, which can be seen from the increasing gap in Fig. 2 as total iterations is increased. It is interesting to note that (standard) ADMM outperforms BP at these short blocklengths, an observation also made in [23].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:47:53 UTC from IEEE Xplore. Restrictions apply.
+
+10 2 10 3
+
+Imax = 100 Imax = 250 Imax = 500 Imax = 1000 Imax = 2500 Imax = 5000 Imax = 10000 Imax = 20000
+
+FER
+
+10 4 1
+
+10
+
+100
+
+1000
+
+10000
+
+Inner Iterations
+
+Fig. 4: Inner Iteration vs FER plotted versus maximum total iterations for C1. Each data point averages the top 10 results over a grid search for the optimal values of α and µ.
+
+Figure 4 presents the effect of the number of inner iterations on FER performance for C1. This is the branch-exploration vs node-exploitation trade-off of Section III-C. For all curves, the FER performance follows a “U”-shape, with a clear minimum at around 10 inner iterations. Standard ADMM decoding is when Imax = Iinner, the right-most point of the each curve.
+While increasing Imax improves the frame error rate, it also increases the worst-case decoding time. However, the decoder often finds a codeword earlier in the tree search, meaning the average decoding is much lower. In our singlecore CPU simulations, the (155,64) Tanner Code at an Eb/N0 of 3 dB using MI-ADMM decoding with Imax = 20000 had a worst-case time of 3.22 seconds, but an average-case time of 9.5 × 10−4 seconds. For the (480,360) WRAN code (C2) at Eb/N0 = 3 dB, the worst case time was 12.5 seconds, while the average case time was 9.43 × 10−2 seconds.
+REFERENCES
+[1] N. H. Mahmood, S. Böcker, A. Munari, et al., “White paper on critical and massive machine type communication towards 6G,” preprint arXiv:2004.14146, 2020.
+[2] M. C. Cos¸kun, G. Durisi, T. Jerkovits, et al., “Efficient error-correcting codes in the short blocklength regime,” Physical Communication, vol. 34, pp. 66–79, 2019.
+[3] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1997.
+[4] K. Niu and K. Chen, “CRC-aided decoding of polar codes,” IEEE Comm. Lett., pp. 1668–1671, Oct. 2012.
+[5] S. C. Draper, J. S. Yedidia, and Y. Wang, “ML decoding via mixed-integer adaptive linear programming,” in IEEE Int. Symp. Inf. Theory, Jun. 2007, pp. 1656–1660.
+[6] M. H. Taghavi and P. H. Siegel, “Adaptive linear programming decoding,” in Proc. Int. Symp. Inf. Theory, 2006, pp. 1374–1378.
+[7] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-based linear program decoding with the alternating direction method of multipliers,” IEEE Trans. Signal Process., vol. 67, no. 19, pp. 4976–4991, 2019.
+
+[8] K. Kraft and N. Wehn, “ADMM-based ML decoding: From theory to practice,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2021, pp. 8278–8282.
+[9] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, pp. 954–972, Mar. 2005.
+[10] G. Lancia and P. Serafini, “The parity polytope,” in Compact Extended Linear Programming Models. Cham: Springer Int., 2018, pp. 113–121.
+[11] F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “A reduced-complexity projection algorithm for ADMM-based LP decoding,” IEEE Trans. Inf. Theory, vol. 66, no. 8, pp. 4819–4833, 2020.
+[12] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Proc. Allerton Conf., Moticello, IL, Sep. 2011, pp. 253–260.
+[13] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, 2013.
+[14] H. Wei and A. H. Banihashemi, “An iterative check polytope projection algorithm for ADMM-based LP decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 1, pp. 29–32, 2018.
+[15] Q. Xia, Y. Lin, S. Tang, and Q. Zhang, “A fast approximate check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Commun. Lett., vol. 23, no. 9, pp. 1520–1523, 2019.
+[16] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, 2016.
+[17] D. R. Morrison, S. H. Jacobson, J. J. Sauppe, and E. C. Sewell, “Branch-and-Bound algorithms: A survey of recent advances in searching, branching, and pruning,” Discrete Optimization, vol. 19, pp. 79–102, 2016.
+[18] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast converging ADMM-penalized algorithm for LDPC decoding,” IEEE Commun. Lett., vol. 20, no. 4, pp. 648–651, 2016.
+[19] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, pp. 533–547, 1981.
+[20] IEEE. “IEEE 802.22 working group on wireless regional area networks.” (2019), [Online]. Available: https://www.ieee802.org/22/.
+[21] M. Ponce, R. van Zon, S. Northrup, et al., “Deploying a top-100 supercomputer for large parallel workloads: The Niagara supercomputer,” in Practice and Experience in Advanced Research Computing 2019: Rise of the Machines (Learning), ser. PEARC ’19, Chicago, IL, USA: Association for Computing Machinery, 2019.
+[22] M. Helmling, S. Scholl, F. Gensheimer, et al. “Database of Channel Codes and ML Simulation Results.” (2019), [Online]. Available: www.uni-kl.de/channel-codes.
+[23] D. Artemasov, A. Fominykh, A. Frolov, P. Rybin, and K. Andreev, “Short codes for ADMM-based decoding,” in Int. Symp. Prob. Redundancy Inf. Contr. Syst., 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:47:53 UTC from IEEE Xplore. Restrictions apply.
+
+

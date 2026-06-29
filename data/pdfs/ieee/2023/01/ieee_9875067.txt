@@ -1,0 +1,562 @@
+66
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+Low Computational-Complexity SOMS-Algorithm and High-Throughput Decoder Architecture for QC-LDPC Codes
+Anuj Verma , Graduate Student Member, IEEE, and Rahul Shrestha , Senior Member, IEEE
+
+Abstract—This article proposes a simplified offset min-sum (SOMS) decoding algorithm for the QC-LDPC codes. It is an implementation-friendly algorithm based on a new logarithmiclikelihood-ratio (LLR) grouping technique that alleviates the computational complexity of the QC-LDPC channel-decoder. This work also presents a parallel and hardware-efficient architecture of the QC-LDPC decoder based on the suggested SOMS algorithm. Additional architectural transformations have been carried out to reduce the routing complexity of the proposed decoder and deliver lower latency and higher throughput. Comprehensive performance analysis of the SOMS algorithm has been presented under various scenarios based on the specifications of the 5G-NR standard. It shows that the suggested SOMS algorithm delivers an adequate FER of 10−5 at SNR of 1.3 dB while decoding 16-QAM modulated QC-LDPC code with the code rate of 1/3 and the code length of 26112 bits. Subsequently, our QC-LDPC decoder has been hardware-implemented on the FPGA platform (Xilinx Zynq-Ultrascale+ board) that operates at the maximum clock frequency of 128.36 MHz. It can be reconfigured to support seven different 5G-NR code lengths and code rates that range between 10368−26112 bits and 1/3−8/9, respectively. This FPGA implementation of the proposed QC-LDPC decoder delivers a peak throughput of 13.3 Gbps and latency of 0.77 µs while decoding with 10 iterations. On comparing this work with the reported implementations, the proposed decoder has shown 7.5× higher throughput and 34% better hardware efficiency than the stateof-the-art implementations.
+Index Terms—Digital architectures, field-programmable gatearray (FPGA), 5G new-radio (5G-NR), layered scheduling, offset min-sum decoding algorithm, quasi-cyclic low-density paritycheck (QC-LDPC) code.
+I. INTRODUCTION
+N EAR Shannon-limit performance of LDPC code [1], [2] and its lower decoding complexity with inherent parallelism [3] have proliferated the adoption of LDPC code in various wireless-communication standards like IEEE 802.11n/16e, DVB-S2/T2/RCS, HPAV, ITU-T G.hn, DTMB,
+Manuscript received 4 February 2022; revised 30 May 2022 and 30 July 2022; accepted 29 August 2022. Date of publication 2 September 2022; date of current version 16 January 2023. This work was supported in part by Interdisciplinary Cyber Physical Systems (ICPS) Division, Department of Science and Technology (DST), Ministry of Science and Technology, Government of India. The review of this article was coordinated by Dr. Balasubramaniam Natarajan. (Corresponding author: Rahul Shrestha.)
+The authors are with the School of Computing and Electrical Engineering, Indian Institute of Technology (IIT), Mandi, Himachal Pradesh 175005, India (e-mail: d17029@students.iitmandi.ac.in; rahul_shrestha@iitmandi.ac.in).
+Digital Object Identifier 10.1109/TVT.2022.3203802
+
+and CMMB [4], [5], [6]. The latest technological development in the telecommunication sector is the 5G-NR technology that is envisioned to rendering enhance connectivity to users and materialize the digitization of diverse industrial verticals. In recent release-16 of 5G-NR standardization of the physical layer, the third-generation partnership-project (3GPP) has advocated LDPC code as a standard channel code for data transmission [7]. Such standardization must be compliant with the requirements of international mobile telecommunications (IMT)-2020 set by international telecommunication union (ITU) specifications which are profoundly advanced than the IMT-Advanced specifications of 4 G technology [8]. These high-end 5G-NR specifications are distributed over three use cases: enhanced mobile broadband (eMBB) that addresses data-driven cases of accessing multimedia content, massive machine type communication (mMTC) which is characterized by a large volume of connected devices (like NB-IoT applications) with low cost plus longer battery life, and ultra-reliable low-latency communications (URLLC) that target the delivery of critical communication [9]. To support these high-end cases, the 5G-NR standard has a specified peak data-rate of 10–20 Gbps, latency ≤1 ms, spectral efficiency of 15–30 bits/s/Hz, connection density of 106 devices/km2, bandwidth of 100 MHz, etc [10], [11], [12]. Therefore, all the hardware blocks of analog-RF frontend and digital baseband in the 5G-NR physical layer must be designed efficiently to match the aforementioned specifications of high-throughput (for eMBB), enhanced hardware/spectral-efficiency (for mMTC), and low latency (for URLLC). It is a known fact that channel decoding at the digital baseband module of receiver is an extremely hardware as well as power-hungry process that incurs very high latency. From a broader perspective, key challenge lies in the design of high-throughput LDPC decoder architecture with enhanced hardware-efficiency and lower latency. Our work addresses this issue from algorithmic and architectural aspects for the offset min-sum QC-LDPC decoding based on layered scheduling.
+There are various decoding algorithms for LDPC codes such as the improved sum-product (SP) algorithm which has lower computational complexity than the SP and the fast Fourier transform-based SP algorithms [13]. Further, the secondminimum approximation min-sum (SAMS) algorithm [14] incurs lower complexity at the level of check-node to variablenode message computations, at the cost of coding loss. Similarly, Yun et al. [16] suggested min-sum (MS) algorithm based
+
+0018-9545 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+67
+
+LDPC decoder that delivers better hardware compatibility and lower computational complexity [18]. Subsequently, the architectural design of the LDPC decoder is classified based on the degree of parallel data-streaming viz. fully-parallel decoder architecture with complex routing network that delivers higher throughput [19], partially-parallel decoder design targets hardware/energy efficient delivering moderate throughput [20], and serial decoder architecture for lower throughput applications where higher latency is tolerable [21]. On the other side, the performance and routing complexity of the LDPC decoder also depend on two scheduling techniques: layered and flooding [23], [24]. A hybrid-NMS algorithm based on layered scheduling, proposed by Zhao et al. [25], delivered double convergence rate in comparison with the flooding schedule based decoding algorithm. Similarly, Zhang et al. [26] suggested a parallellayered decoding-architecture based on a puncturing scheme that supports all code rates of IEEE 802.16e (WiMAX) standard. On the one side, the LDPC decoder based on the flooding schedule delivers degraded performance, higher throughput, and lower latency at the cost of huge switching complexity [24], [27]. On the other side, a layered schedule based LDPC decoder delivers excellent performance, medium-throughput, moderate routing complexity, and longer latency. However, this routing complexity escalates while decoding the LDPC code with higher code lengths and multiple code rates, which exacerbates hardwareefficiency and throughput of LDPC decoder.
+Therefore, one of the major research problems in the design of a high-throughput LDPC decoder is the proliferation of decoding complexity that alleviates its hardware efficiency, throughput, and memory efficiency. There are contributions in the literature that attempt to address such complexity of data-routing like the Euclidian geometry-based technique which is suitable for low-throughput decoder architecture with profound memory requirements [28]. Similarly, the split-row threshold method consumes extra clock-cycles for updating check and variable nodes [29], another Q-based decoder architecture has been proposed for the communication standard like IEEE 802.15.3c [30]. In addition, the path-unrolling method [31] is arduous to design a hardwired-permutational network for higher expansion factor. Such ramification further escalates while decoding LDPC code for large code lengths at multiple code rates [22], as specified by the contemporary 5G-NR standards [7]. These adverse effects have been addressed in our work by proposing a hardware-friendly QC-LDPC decoding algorithm (with layered schedule) that adopts a new simplified technique of grouping and processing the received channel LLRs. This algorithm synchronizes and simplifies the computations carried out by check and variable nodes. On the other hand, it is challenging to design high-throughput LDPC decoder architecture, compliant with the high-end specifications of the 5G-NR wireless standards. Since its achievable throughput is the ratio of code length and latency, higher code length and lower latency are the most preferable factors for the design of high-throughput decoder architecture. Therefore, this work employs a high parallelism methodology to achieve lower latency and high throughput QC-LDPC decoder architecture. However, such methodology surges the hardware consumption; nevertheless, the proposed SOMS algorithm
+
+with lower computational complexity alleviates the hardware consumption. Hence, it results a new QC-LDPC decoder architecture that is hardware efficient and delivers higher throughput. Highlights of our contributions are enumerated as follows.
+1) A hardware-friendly simplified offset min-sum (SOMS) decoding algorithm with layered scheduling has been proposed to decode QC-LDPC code. This algorithm alleviates the computational complexity of LDPC decoder. In addition, it renders faster accessibility for the data processing of LLRs between CNs and VNs at higher code lengths and multiple code rates.
+2) Various techniques have been incorporated into the proposed LDPC decoding algorithm viz. memory selection technique (MST), cyclic rotational technique (CRT), and memory writing technique (MWT). They primarily mitigate the problem of data overcrowding while performing the selection of LLRs from the memory bank and storing updated LLRs back into the memory.
+3) Corresponding to the proposed SOMS algorithm, a new architectures of the QC-LDPC decoder and its submodules are presented in this paper. These architectures are designed based on the IMT-2020 physical-layer specifications of the 5G-NR standard. Additional optimizations of these architectures have been carried out to reduce the routing complexity, lower the decoding latency, and enhance the throughput of the proposed QC-LDPC decoder.
+4) Comprehensive hardware utilization and frame-error-rate (FER) performance analysis of the proposed decoder architecture and decoding algorithm, respectively, are presented in this paper. Consecutively, hardware implementation of our decoder architecture has been performed in the FPGA platform and its results are compared with the relevant state-of-the-art implementations. Eventually, real-world hardware testing for functional verification of the proposed LDPC-decoder FPGA-prototype has been carried out.
+II. PRELIMINARIES
+QC-LDPC codes are the linear block codes constructed using sparse parity-check-matrix H ∈ C(n−k)×n where k represents the number of information bits, n denotes the code length, and k/n is the code rate. Such H matrix is an expanded version of base-graph matrix B where its every element bi,j ∈ Cz×z is a permutational identity or zero matrix with an expansion factor of z. Fundamentally, this base graph matrix B ∈ Cmb×nb proliferates into H ∈ Cm×n parity-check matrix where m = (n − k) = mb×z and n = nb×z[31]. For example, Fig. 1(a) shows the B ∈ C5×4 matrix where each element bi,j is zero/permutational-identity matrix with an expansion factor z=3. Furthermore, it schematically shows the expanded version of the second row from this B matrix for better clarity. On the other side, the decoding algorithm for such QC-LDPC code is based on the principle of belief propagation that iteratively processes the received noisy channel LLRs which are represented by the L vector that comprises such digitally quantized channel-LLRs. This decoding algorithm has been designed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+68
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+the AP-LLR vector A, as
+V1i×n = A1×n − [Eri−1]1×n = {v1, v2, v3 · · · vn}. (2)
+During layer-updation from Fig. 1(d), rth layer of B matrix is expanded with z×z permutational-identity and zero matrices for ‘non −1’ and ‘−1’ elements, respectively. Such process has been illustrated with an example in Fig. 1(a) for z = 3. In the expanded version of B matrix, indices that hold a value of ‘1’ are mapped with their corresponding VN-LLR from V vector. Unlike, there are no assignment for the remaining indices of expanded B matrix layer. These replacements generate U ∈ Cz×n matrix for the rth layer of B matrix. Subsequently, all non-assigned values from U matrix are excluded to construct updated U ∈ Cz×t matrix where t quantifies the number of ‘non −1’ elements in rth layer of B matrix. For clarity, Fig. 1 (a and b) shows an example of layer-updation process for the 2nd layer of B5×4 matrix that is expanded with z = 3.
+3) CN and AP-LLRs Computations: In this subtask, CN updation-matrix C ∈ Cz×t is generated from updated U matrix where each element of C matrix is computed as
+
+Fig. 1. (a) Schematic illustration of an example where B5×4 matrix is expanded with an expansion factor z = 3, replacing its elements with permutationalidentity and zero matrices (b) generation of V and U matrices for the expanded layer of B matrix (c) construction of C matrix and E(r) row vector (d) an
+overall flow-diagram of offset min-sum based conventional QC-LDPC decoding
+algorithm with layered scheduling.
+
+based on the graphical representation of LDPC code, referred to as the Tanner graph [3]. Here, the quantized LLRs of L vector are iteratively propagated between check-nodes (CNs) and variable-nodes (VNs) to generate an estimated codeword X. An overall flow chart of the OMS-based conventional QC-LDPC decoding algorithm with layered scheduling is shown in Fig. 1(d) where the quantized channel LLRs of L vector are the inputs that are estimated by the channel conditions. In this schematic representation, the decoding algorithm has been segregated into multiple subtasks whose detailed explanations are presented as follows.
+1) Initialization: This subtask initializes the a-posteriori LLR (AP-LLR) vector A ∈ C1×n with L vector of n received channelLLRs, and an extrinsic-LLR matrix E ∈ Cmb×n as zero matrix, as shown below.
+
+A1×n = L1×n;
+
+E = [0]mb×n;
+
+(1)
+
+In addition, i variable that tracks the decoding iterations is initialized to zero (i = 0). This value of i increments by one after
+every iteration, during the decoding process, till its magnitude
+reaches the maximum number of iterations (denoted by imax). 2) VN and Layer Updation: Here, VN vector V ∈ C1×n for
+the rth layer of B matrix is computed, by subtracting the rth row-vector of E matrix (denoted by E(r) ∈ C1×n vector) with
+
+C(p, q) =
+
+sign{U (p, g)}× min |U (p, g)|
+
+g∈U (p)\U (p,q)
+
+g∈U (p)\U (p,q)
+
+(3)
+
+where C(p, q) and U (p, q) are the elements of pth row & qth col-
+
+umn of C, and updated U matrices, respectively. Similarly, U (p)
+
+∈ C1×t represents pth row-vector of U matrix. Furthermore,
+
+g ∈ U (p)\U (p, q) is an indices-vector of U (p), excluding the
+
+index of U (p, q) element. For example, if a row vector U (2) = [3,
+
+6, −5, 7] then its indices-vector g {i.e. g ∈ U (2)\U (2, 3)}, that
+
+excludes U (2, 3) = −5, is given by g = [1, 2, 4]. The C matrix,
+
+corresponding to rth layer of B matrix, is transformed into new E(r) ∈ C1×n row-vector by assigning zeroes and elements of
+
+C matrix, as illustrated with example in Fig. 1(c). Subsequently,
+
+such E(r) row vectors replace the rth row of E matrix, thus
+
+updating this matrix. These E(r) row-vector elements are added
+
+with the elements of VN-vector (V ) as
+
+A1×n = V1×n + [E(r)]1×n = {a1, a2, a3, · · · an} (4)
+
+to generate the updated version of A that is used while processing the next (r+1)th layer of B-matrix, as shown in the flow diagram of Fig. 1(d). In every decoding iteration, A and E(r) vectors are computed for all the layers of B matrix. Note that the updated A vector is processed in every layer updation and for all the decoding iterations. However, generated E(r) vectors during the layer processing only update the E matrix (rather defers to be used in consecutive layer processing) which will be used in the next decoding iteration, as shown in Fig. 1(d).
+4) Hard Decision and Syndrome Test: Finally, the estimated hard-decision vector X = {χ1, χ2, χ3, · · · χn} is computed using A vector, generated by processing the last layer of B matrix in every decoding iteration. Hence, these elements are computed as,
+
+χi =
+
+0 1
+
+ai ≥ 0 otherwise
+
+,
+
+ai ∈ A,
+
+χi ∈ X,
+
+(5)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+69
+
+Fig. 2. Flow diagram representing the data flow of proposed QC-LDPC decoding algorithm with layered scheduling.
+∀ i = {1, 2, 3 · · · n}. After computing X vector, the syndrome S is determined as S = X· Hτ where τ represents transpose. During the syndrome test, if S = 0 then the decoding process is terminated, otherwise it continues until the maximum iteration imax is reached.
+III. PROPOSED ALGORITHM AND COMPUTATIONAL COMPLEXITY ANALYSIS
+This section commences with the presentations of an implementation-friendly QC-LDPC decoding algorithm that is based on offset min-sum decoding with layered scheduling and it is referred as SOMS algorithm in this paper. Subsequently, computational complexity analysis of the proposed SOMS decoding algorithm is also discussed here.
+A. Proposed Decoding Algorithm
+Mathematical formulation and corresponding flow diagram of the proposed SOMS decoding algorithm are presented in Algorithm 1 and Fig. 2, respectively. Here, the received LLRs in L vector are initially divided and stored in AP-LLRs A matrix where every row of this matrix has z number of LLRs. Such LLR sorting representation alleviates the computational complexity of the decoding algorithm and simplifies its implementation, which will be clarified later in section IV-B. As discussed earlier in section II and shown in Fig. 1, the conventional QC-LDPC decoding algorithm updates CNs and VNs element-wise which is a rigorous process for higher code lengths that extend with the huge-sized B matrices of QCLDPC codes for 5G-NR standard [7]. Thus, exacerbating the data-flow synchronization between CNs and VNs that leads to higher computational complexity and data-congestion from an implementation perspective. The proposed SOMS algorithm alleviates such ramifications with the aid of a new simplified LLR-grouping technique that synchronizes the computations of
+
+Algorithm 1: Proposed SOMS Decoding Algorithm.
+
+1: Inputs: Quantized-LLRs (L) = {l1, l2, l3, . . . , ln};
+
+2: Output: Decoded bits (X) = {χ1, χ2, χ3, . . . , χn};
+
+3: Initialization:
+
+4: Anb×z = 0; ET ×z = 0; i = 0; 5: for j = 1 to nb
+6: α = (j − 1) × z + 1; γ = j × z;
+
+7: A(j) = [lα : lγ]; 8: end for(j)
+
+Grouping of z LLRs
+
+9: Message exchange between CNs and VNs iteratively:
+
+10: for i = 0 to (imax − 1) 11: γ = 0;
+
+12: for r = 1 to mb
+13: P1×tb = [p1, p2, p3, . . . , ptb ]; 14: Stb×z = MST (Anb×z, P1×tb ); 15: α = γ + 1; γ = α + tb − 1;
+16: etb×z = E[(α : γ); (1 : z)]; 17: Vtb×z = Stb×z − etb×z; 18: W1×tb = [w1, w2, . . . , wtb ]; 19: etb×z = CRT (Vtb×z, W1×tb ); 20: Rz×tb = [etb×z]τ ; 21: for j = 1 to z
+
+Algorithm 2 Sub-matrix
+Algorithm 3
+
+22:
+
+min1 = min (|R(j)|1×tb );
+
+23:
+
+idx = ζ(min1).|R(j)|1×tb ;
+
+ζ(·) function:
+
+Determines the index of min1 from |R(j)|1×tb
+
+vector.
+
+24:
+
+min2 = min (|R(j)\R(j, idx)|);
+
+25:
+
+D1×tb = sign (R(j)t×tb ); m =
+
+tb k=1
+
+Dk ;
+
+26:
+
+min1 = max {(min1 − β), 0};
+
+27:
+
+min2 = max {(min2 − β), 0};
+
+28:
+
+C(j)1×tb = min1; C(j, idx) = min2;
+
+29:
+
+C(j) = (m × D1×tb ) ◦ C(j)1×tb ; Hadamard
+
+product
+
+30: end for(j)
+
+31: etb×z = [Cz×tb ]τ ; 32: Retb×z = CRT (etb×z, (z − W1×tb )); Algorithm
+3
+
+33: E[(α : γ); (1 : z)] = Retb×z; 34: atb×z = Retb×z + Vtb×z; 35: Anb×z= MWT(Anb×z, a1×tb , P1×tb ); Algorithm 4 36: end for (r)
+
+37: ν1×n = [A(1), A(2) . . . A(nb)] = [ν1, ν2 · · · νn];
+
+38:
+
+χi =
+
+0 νi ≥ 0 1 otherwise
+
+, νi ∈ ν, χi ∈ X
+
+39: end for(i)
+
+40: X1×n = {χ1, χ2, χ3, . . . , χn}.
+
+CNs and VNs in matrix format. As a result, it inculcates lower computational complexity, simplified data-formation for CNs & VNs, and simplifies the CN’s computation. The suggested SOMS algorithm has been segregated into various sub-tasks (i.e. presented in Algorithms: 1 − 4) and their detailed descriptions are presented in the remaining parts of this section.
+1) Initialization: This sub-task of the proposed SOMS algorithm has been represented by lines 3−8 in Algorithm 1. At
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+70
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+Algorithm 2: Memory Selection Technique (MST).
+
+1: Inputs: Pnb×z, Q1×tb = {q1, q2, q3, . . . , qtb }; 2: Output: Stb×z; 3: Initialization:
+
+4: Ttb×z = [0]tb×z; 5: Row updation:
+
+6: for i = 1 to tb 7: T (i) = P (qi);
+
+Row-updation
+
+8: end for
+
+9: Stb×z = Ttb×z.
+
+Algorithm 3: Cyclic Rotational Technique (CRT).
+
+1: Inputs: Ptb×z, Q1×tb = {q1, q2, q3, . . . , qtb }; 2: Output: Stb×z; 3: Initialization:
+
+4: Ttb×z = [0]tb×z; 5: Row rotation and updation:
+
+6: for i = 1 to tb 7: T (i) = P (i) >>> qi;
+
+Circular right-shift
+
+8: end for
+
+9: Stb×z = Ttb×z.
+
+first, the received LLRs (i.e. l1, l2, l3 · · · ln) of L vector are stored in AP-LLR A ∈ Cnb×z matrix that incorporates B ∈ Cmb×nb BG-matrix where mb = m/z and nb = n/z. Here, z number of LLRs are placed in every row of A matrix and each rth row of AP-LLR matrix is represented as A(r) row-vector. Hence, A
+matrix comprises of nb such LLR groups which correspond to nb columns of B matrix. Furthermore, an extrinsic-LLR matrix E ∈ CT ×z has been initialized as zero matrix where T is the number of all ‘non −1’ elements in the entire B matrix. Eventually, an
+iteration variable i is reset that is later incremented by one after
+every decoding iteration.
+2) LLRs Selection and VN-matrix Updation: This subtask
+has been segregated into two processes: LLRs selection and
+VN-matrix updation, as shown in Fig. 2. In the former process, P ∈ C1×tb index vector is computed that comprises the indices of ‘non −1’ elements (denoted by p1, p2, p3 · · · ptb in line 13 of Algorithm 1) in ongoing rth row of B matrix where tb refers to the number of ‘non −1’ elements in such B(r) row-vector. For example, if a row-vector B(3) = {23, 67, −1, 0, −1, 4, 3} then the value of tb = 5 and the index vector P1×5 = {1, 2, 4, 6, 7} which excludes the indices 3 and 5 of ‘−1’ elements in B(3) vector. Such P index-vector and A matrix are processed by
+the proposed memory-selection technique (MST) for computing S ∈ Ctb×z selection-matrix, as illustrated in line 14 of
+Algorithm 1 that is separately presented in Algorithm 2. This
+technique simplifies the mathematical computation and lowers
+the hardware-complexity for determining S selection-matrix
+that is explained in next section. In the VN-matrix updation process, sub-matrix e ∈ Ctb×z represents α to γ row-vectors of E matrix. Subsequently, the VN-matrix updation V ∈ Ctb×z is
+generated by subtracting e sub-matrix from S selection-matrix.
+Hence, aforementioned LLRs selection and VN-matrix updation subtask is represented between lines 13 − 17 in Algorithm 1.
+3) LLRs Rotation: The cyclic rotational technique (CRT) has
+been proposed in our work to perform the LLR-rotation subtask
+which is presented in Algorithm 3 and indicated by line 19 in Algorithm 1. At first, the weighted-vector W ∈ C1×tb is generated that contains all ‘non −1’ elements of rth row vector of B matrix. For example, if row vector B(3) = {23, 67, −1, 0, −1, 4, 3} then W1×5 = {23, 67, 0, 4, 3}. In line 7 of Algorithm 3, the ‘>>>’ operator represents circular right shift in any P (i) row-vector. For example, if P (2) = {9, −7, 4, −2, 6, −3, 8} then P (2) >>> 3 will result {6, −3, 8, 9, −7, 4, −2}. Such LLRs rotation subtask has been expressed by lines 18 − 20 in Algorithm 1 where
+
+Algorithm 4 Memory Writing Technique (MWT).
+
+1: Inputs: Pnb×z, Qtb×z, R1×tb = {r1, r2, r3, . . . , rtb }; 2: Output: Snb×z; 3: Initialization:
+
+4: Tnb×z = Pnb×z; 5: Row updation:
+
+6: for i = 1 to tb
+
+7: T (ri) = Q(i);
+
+Row-updation
+
+8: end for
+
+9: Snb×z = Tnb×z.
+
+e ∈ Ctb×z is computed using CRT on the VN-updation matrix (V ) and weighted-vector (W ). Eventually, a rotational matrix R ∈ Cz×tb stores the transpose (τ ) of CRT-computed e matrix.
+4) CN and Extrinsic Matrix Updation: In Algorithm 1, the CN updation has been row-wise processed on R rotational matrix, as shown in lines 21 − 30. Here, all the elements of jth row-vector R(j) are replaced by ‘min1’ value, except in idx index of this row vector where ‘min2’ value is assigned as an element, as illustrated in lines 22 − 29 of Algorithm 1. Here, β is an offset value that depends on the quantization bits format under the fixed point representation [40]. In our work, β has
+been assigned an optimized value of ‘2’ based on the extensive
+FER performance analysis that has been presented in section
+IV. These mathematical computations of CN-updation alleviate
+the implementation complexity of CN-unit architecture and also
+reduce the size of extrinsic memory which is further explained in section IV. In the extrinsic memory updation, from lines 31 − 33 of Algorithm1, the transpose of Ctb×z matrix is again cyclically rotated by (z − W1×tb )1×tb vector using CRT, represented in Algorithm 3. Finally, the output matrix Retb×z generated by CRT is stored along α − γ rows of extrinsic memory matrix E for the next decoding-iteration, as presented in line 33 of the
+Algorithm 1 and shown in Fig. 2.
+5) AP-LLR Computation and Matrix Updation: This subtask
+is exclusively performed by the suggested memory-writing-
+technique (MWT), as presented in Algorithm 4. To begin with, a ∈ Ctb×z matrix is computed by adding Retb×z and VN Vtb×z matrices. Such a matrix and index-vector P are used for updating the AP-LLR matrix A (using the MWT) which is expressed by lines 34 and 35 in Algorithm 1. This updated AP-LLR matrix A is subsequently used for the computation of hard-decision vector
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+71
+
+TABLE I COMPARISON OF COMPUTATIONAL COMPLEXITIES INCURRED BY VARIOUS QC-LDPC DECODING ALGORITHMS
+
+Fig. 3. Comparative analysis of computational complexities among the proposed SOMS and other decoding algorithms in terms of (a) comparison computations, (b) additions, and (c) memory requirement, with the increasing m value.
+
+X1×n, after accomplishing all the decoding iterations (i.e. when i = imax).
+6) Hard Decision and Syndrome Test: Eventually, the harddecision vector X is generated after the conversion of AP-LLR matrix A into a AP-LLR vector ν1×n. Such AP-LLR vector ν1×n is used for the computation of estimated hard-decision vector X1×n which is performed in lines 37 and 38 of Algorithm 1. Thereafter, the syndrome S = X · Hτ is checked and if S = 0 then decoding process is terminated else it continues till the maximum iteration imax is reached, as clearly shown in Fig. 2.
+B. Computational Complexity Analysis
+Here, the computation complexity of the proposed SOMS decoding algorithm has been estimated and compared with the computational complexities of other QC-LDPC decoding algorithms. Assume that the average CN and VN degrees of parity-check-matrix H are represented by dc and dv, respectively. Computational complexity and memory requirements of the various QC-LDPC decoding algorithms are quantified in Table I. It shows the analysis of computational loads of all the decoding algorithms for a single decoding iteration. As illustrated in Table I, improved sum-product (SP) and adjusted min-sum (MS) algorithms require special operations to be performed. Unlike, the proposed SOMS algorithm does not require such special operations. Furthermore, our SOMS algorithm incurs dv·k lesser comparisons than 2D self-corrected (SC) decoding algorithm [39]. However, the SOMS algorithm requires more additional operations than 2D-SC decoding algorithms. In Table I, memory requirement of the SOMS algorithm has been expressed by summing the memory consumed by n received LLRs and the extrinsic-memory storage. Therefore, the total
+
+memory requirement of the SOMS algorithm is 2·m + n which is comparatively lower than improved-SP, adjusted MS, and 2D-SC min-sum decoding algorithms [18], [39], as listed in Table I.
+Comparative plots of the computational complexities for proposed SOMS and other decoding algorithms, with varying m values, are shown in Fig. 3. They are obtained for the code rate of 1/3 and fixed VN as well as CN degrees (i.e. dc = 8 and dv = 5). In Fig. 3 (a − c), the variations of comparisons, additions, and memory consumptions of decoding algorithms have been plotted while scaling the m value between 100−30000 bit [7]. It can be observed that our SOMS algorithm incurs a significant reduction in overall computational complexity with respect to the stateof-the-art decoding algorithms. Specifically, Fig. 3(a) shows the comparison computations of various decoding algorithms where the SOMS algorithm requires lesser comparison operations than the state-of-the-art 2D-SC MS decoding algorithm [39]. Similarly, the variations of addition computations needed by different algorithms are presented in Fig. 3(b). Here, the suggested SOMS algorithm consumes more additions than the 2D-SC MS decoding algorithm and lesser additions than the MS algorithm [18]. Further, plots of memory requirements for different decoding algorithms are represented in Fig. 3(c). From Table I, the proposed SOMS algorithm needs n memory storage for channel-LLRs, and two minimum LLRs, corresponding to each of the check-nodes which is referred as extrinsic-LLR storage. Thus, the overall memory required by SOMS algorithm is 2×m + n and it is lesser compared to other decoding algorithms. Note that the maximum m value for 5G-NR standard has been specified to be 17664 b for a lower code rate of 1/3 [7]. Hence, for m = 17664 b, our SOMS decoding algorithm consumes ≈16% lesser comparison computations, 25% more addition
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+72
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+operations, and ≈41% lesser memory storage, compared to the state-of-the-art 2D-SC MS decoding algorithm [39], as shown in Fig. 3 (a − c). Aforementioned analysis shows that the aggregated percentage of reductions in comparison computations and memory requirement is greater than the percentage of increment in addition operations. Therefore, the proposed SOMS algorithm delivers alleviated computational complexity in comparison to other decoding algorithms.
+
+IV. ARCHITECTURAL CONTRIBUTIONS
+This section proposes a high-throughput QC-LDPC decoder architecture based on the suggested SOMS decoding algorithm. In this paper, designs of various decoder submodules are first presented and they are eventually aggregated into an overall QCLDPC decoder architecture. Note that the design specifications of the proposed decoder architecture are compliant to the 5G-NR wireless-communication standard [7]. Standardization of QCLDPC codes for 5G-NR is primarily based on two prototype base-graph (BG) matrices: BG1 and BG2. The expansion factor z for BG matrices has been quantified based on z = a×2j where a ∈ {2, 3, 5, 7, 9, 11, 15} and 0 ≤ j ≤ 7. Thus, peak value of z is 384 with a = 3 and j = 7, based on 5G-NR specification [7], [32]. Therefore, maximum information bits supported by BG1 matrix is 22 × 384 = 8448 b (i.e. k = 8448 b) with the code rates (r) ranging between 1/3−8/9 [32]. Since the initial two columns of these BG matrices are extremely congested, they are punctured while encoding and are assigned zero value while decoding [7]. Such puncturing is performed on parity bits to support various code rates of the 5G-NR standard. Therefore, the proposed QC-LDPC decoder architecture has been designed to decode the received channel LLRs corresponding to the maximum value of code length, which is n = 68 × 384 = 26112 b (with 8448 information-bits) that is compliant to the BG1 matrix and supports all the standard code rates and other code lengths of 5G-NR specification.
+A. Initialization and Memory Updating Unit
+The quantized channel-LLRs L = {l1, l2, l3 · · · ln} are first processed by a submodule, referred as initialization & memory updating unit (IMUU), of the proposed QC-LDPC decoder. The suggested IMUU architecture has been presented in Fig. 4. It accomplishes two subtasks: initialization (presented in lines 3−8 of Algorithm 1) and AP-LLR matrix updation (referring line 35 in Algorithm 1 & Algorithm 4) of the proposed flow-diagram from Fig. 2. In IMUU architecture, 7-bit quantized-LLRs li ∀ i ∈ n are foremost fed to 1:384 de-multiplexer (DeMUX1) whose outputs are buffered by registers (REGs) for 384 clock cycles, as shown in Fig. 4. Subsequently, 384 LLRs at the outputs of REGs are concatenated (‘:’) and denoted by Lc = {l1 : l2 : l3 · · · l384} that has the bit width of 2688 b (i.e. 384 × 7-bit). These processes of buffering and concatenation for 384 clock-cycles repeat 68× in IMUU architecture to obtain initialized A matrix.
+The buffered DeMUX1 output Lc is transferred to the dataselection multiplexer-network (DSMN) that decides whether to perform initialization or AP-LLR matrix updation subtask. Here, REGs at the DeMUX1-outputs sequentially deliver 68 Lc
+
+Fig. 4. Proposed architecture of initialization & memory updating unit (IMUU) that executes initialization and VN-matrix updation (based on memory writing technique from Algorithm 4) tasks in Algorithm 1.
+values one-after-other, corresponding to 68 different columns of BG matrix, to the DSMN that comprises of 19 parallel 2:1 multiplexers. Each of these 2:1 multiplexers is fed with Lc and updated AP-LLRs a(i) (for ith 2:1 multiplexer) values, as shown in Fig. 4. Here, every ith multiplexer of DSMN routes either Lc or a(i) to perform initialization or AP-LLR matrix updation, respectively. The DSMN outputs are referred as D = {d(1), d(2)· · ·d(19)} and are processed by memory multiplexer network (MMN). This MMN comprises of 25 multiplexers of various sizes ranging between 2:1−8:1 multiplexers to generate 25 LLR-groupings denoted by M = {m(1), m(2)· · ·m(25)}, as shown in Fig. 4. Furthermore, d(3)−d(10) DSMN outputs are fed to routing network which directly maps these eight signals to 42 H = {h(1), h(2)· · ·h(42)} signals. Collectively, one d(1), 25 M and 42 H LLR groups (in total 68 LLR groups) are stored in 68 memory register units (MRUs) of memory register bank (MRB). Here, each MRU has a size of 384×7-bits that stores 384 LLRs of 7-bit each and thus, MRB has 68 × 384 = 26112 memory-locations for storing input channel-LLRs corresponding to 26112 QC-LDPC encoded-bits. Such 68 LLR groups are stored in 68 MRUs of MRB as shown in Fig. 4. It shows that all 68 outputs from MRB are denoted by A = {A(1), A(2)· · ·A(68)} and all these LLRs are generated in a single clock-cycle from IMUU architecture. Therefore, the IMUU submodule provides the output-data based on the high-parallelism technique that aids our QC-LDPC decoder to achieve high-throughput and also experience lower data-congestion.
+B. Memory Selection and Extrinsic-LLR Storage Memory
+The proposed architecture of memory selection and extrinsicLLR storage memory (MSESM) is presented in Fig. 5. It shows that 68 A(i) LLR groups from IMUU are fed to MMN of MSESM that incorporates 19 parallel multiplexers (MUXes) of various sizes between 2:1−30:1 multiplexers. These MUXes perform the LLRs selection subtask of the proposed algorithm,as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+73
+
+Fig. 5. Proposed architectures of memory selection & extrinsic-LLR storage memory (MSESM), DCOM, SMTC, and integrator unit.
+shown in Fig. 2. This subtask is mathematically represented as memory-selection technique (MST) in Algorithm 2 that is invoked in line 14 of Algorithm 1. Each of these MMN MUXes routes specific combination of A(i) LLRs based on the B matrix columns to generate S(j) ∀ j = {1, 2, 3, · · · 19} LLRs. In parallel, an extrinsic-LLR storage memory (ELSM) stores the E matrix in the compressed form of extrinsic-LLRs (e-LLRs) to enhance the hardware efficiency of our decoder design. Each location of ELSM is reserved for the e submatrix that is used for VN-matrix updation subtask (referring to Fig. 2). Thus, ELSM has a depth of 46 memory locations corresponding to all 46 layers/rows of the BG1 matrix [7]. As shown in Fig. 5, ELSM architecture is fed with compressed extrinsic-LLRs (CE-LLRs) of 12288 b (i.e. 384 × 32 b) which is a concatenation of 384 aggregated extrinsic-LLRs (AE-LLRs) where each AE-LLR has a bit width of 32 b (sign-magnitude format).
+Hence, ELSM has a word-length of 12288 bits that are fetched at its output which is segregated into 384 different 32-bit AE-LLRs and are fed to 384 parallel decompression (DCOM) units, as shown in Fig. 5. Such AE-LLR has four parts: four most-significant-bits (MSBs) between 31−28 b-positions represent the magnitude of min1, next four bits (27−24 b-positions) hold min2 value, 19 b across 23−5 b-positions correspond to signs of 19 eLLRs from CNs, and last five least-significant-bits (LSBs) of 4−0 b-positions represent index for the placement of min2, as illustrated in Fig. 5 (min1 and min2 values will be discussed in the next subsections). The suggested architecture of the DCOM unit comprises of a multiplexer (COMUX) and 19 parallel sign-magnitudes to two’s-complement converters (SMTCs), as shown in Fig. 5. The 76-bit output of COMUX has 19 parts (of 4 bits each) that represent 18 replications of min1 magnitudes and one min2 magnitude in the specific pattern
+
+illustrated in (6).
+
+⎛
+
+⎞
+
+min2 ⎜⎜⎜⎜⎝⎜⎜⎜⎜⎜mmmiiinnn... 111111
+
+min11 min2
+min12 ...
+min12
+
+min12 min12 min2
+...
+min13
+
+··· ··· ··· ...
+···
+
+min117 min117 min117
+...
+min2
+
+min118 min118 min118
+...
+min118
+
+⎠⎟⎟⎟⎟⎟⎟⎟⎟⎟
+
+(6)
+
+min11 min12 min13 · · · min118 min2
+
+The selection among such states at the COMUX output depends on the 5-bit index value tapped from 32-bit AE-LLR. Earlier, this COMUX is designed by the various equalizers, MUXes, and by-pass networks [31]. This COMUX unit renders the lower routing-complexity because it routes only two data signals (min1 and min2). These 19 min1/min2 magnitudes and their corresponding 19 sign-bit those are tapped from AE-LLR (between 23−5 b-positions) are fed to 19 parallel SMTCs.
+Each SMTC converts sign-magnitude value into its equivalent two’s complement format using a 2:1 multiplexer and a conversion unit (ConU), based on following simplified Boolean equations: f3 = g¯3 + g¯2 · g¯1 · g¯0, f2 = g¯3 · g¯2 + g¯2 · g1 + g¯2 · g¯0 + g2 · g¯1 · g¯0, f1 = g¯1 · g0 + g1 · g¯0, f0 = g0. Every DCOM unit produces 95-bit (i.e. 19 × 5 b) which is a concatenation of 19 e-LLRs where each e-LLR is represented in 5-bit two’scomplement format. Thus, all 384 DCOMs generate 384 e-LLRs of 95-bit each and are further applied to integrator unit, as shown in Fig. 5. In this integrator unit, input 384 e-LLRs are stored row-wise in a memory array of size 384 × 19 where each element of this array is segregated into e-LLRs of 5-bit, which is represented as mi,j such that i ∈ 384 and j ∈ 19. These elements are processed by transformation logic to generate 19 output of 1920 b each, those are represented as e = {e(1), e(2), · · · e(19)} where e(j) = {m1,j : m2,j : · · · : m384,j} ∀ j = {1, 2, 3, · · · 19} where ‘:’ indicates concatenation. These e-LLRs (e) are corresponding to the submatrix of E matrix, represented by line 16 of Algorithm 1. This submodule subsequently receives all the routed data and processes in parallel fashion, as shown in Fig. 5. Therefore, aforementioned parallel processing of min1 as well as min2 signals and ConU based SMTC have alleviated data-routing and hardware-consumption of the proposed QC-LDPC decoder architecture.
+
+C. Variable-Nodes and Check-Nodes Updation Module
+The suggested design of variable-nodes and check-nodes updation module (VCUM) is fed with two output LLRs from MSESM: 2688-bit selected-LLRs i.e. S(j) ∀ j = {1, 2, 3· · ·19} and 1920-bit extrinsic-LLRs i.e. e(j) ∀ j = {1, 2, 3· · ·19}, as shown in Fig. 6(a). These LLRs are processed by VCUM to generate 95-bit updated CN-LLRs i.e. C(j) ∀ j = {1, 2, 3· · ·384}, 1920-bit VN-LLRs V (j) ∀ j = {1, 2, 3· · ·19}, and a 12288-bit CE-LLRs which is concatenation of 384 32-bit AE-LLRs, as represented by lines 17−30 in Algorithm 1. Foremost, subtraction unit of VCUM performs VN-matrix updation using S and e LLRs to generate VN-LLRs. Such subtraction unit comprises of 19 subtractor submodules (SSs) where each of them consists of 384 subtractors. In the literature, VN updation is conventionally
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+74
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+Fig. 7. The suggested architecture of a-posteriori-LLR computation module (ACM) for the proposed QC-LDPC decoder.
+
+Fig. 6. (a) Proposed architecture of VCUM that is an aggregation of SU, rotational unit, splitter, and MSUs (b) splitter internal architecture (c) detail architecture of single MSU.
+performed by data-processing in sequential manner [34]; unlike, this work simultaneously computes these VN-updated values with lower latency and surge in hardware requirement.
+These V (j) VN-LLRs are fed to rotational unit that performs cyclic-rotational technique (CRT), referring to Algorithm 3. This unit is a network of 18 MUXes ranging between 3:1−46:1 MUXes to perform the LLR cyclic-rotation of Fig. 2 and generates 19 rotated e(j) ∀ j = {1, 2, 3· · ·19} LLRs of 1920-bit each, as shown in line 19 of Algorithm 1. These 19 rotated 1920-bit e LLRs are subsequently fed to splitter unit that transposes them (referring line 20 of Algorithm 1) into 384 95-bit R LLRs. Fig. 6(b) shows splitter-unit architecture where 19 input e LLRs (of 1920 b each) are stored as segregated ni,j LLRs of 5-bit each such that i ∈ {1, 2, 3· · ·19} and j ∈ {1, 2, 3· · ·384}. Such segregated LLRs are processed by transformation logic to generate 384 output values of 95-bit R(j) ∀ j = {1, 2, 3 · · · 384} LLRs where each R(j) = {n1,j : n2,j : n3,j : · · · : n19,j } ∀ j = {1, 2, 3 · · · 384}. Now, these R LLRs are fed to 384 min-sum units (MSUs) for check nodes updation subtask, as shown in lines 21−30 of Algorithm 1.
+In MSU architecture, 95-bit rotated 19 R(j) LLRs are segregated into 19 LLRs of 5-bit each and are processed by corresponding two’s complement to the sign-magnitude converter
+
+(TCSMC), as shown in Fig. 6(c). The TCSMC architecture is identical to the SMTC design. The sign-bits (MSBs) −i.e. represented as D1×tb in line 25 of Algorithm 1− and magnitude bits of all 19 SM-LLRs are processed by sign-unit (SU) and magnitude-unit (MU), respectively. Here, SU XORs all 19 sign-bits of D vector to generate a product bit m which is XORed with input 19 sign-bits of D vector to generate an updated signs for corresponding 19 SM-LLRs, as presented in line 25 of Algorithm 1. Simultaneously, minimum value generator (mVG-19) [33] of MU computes two minima values (min1 and min2) and position of min2 (i.e. idx) for the 4-bit magnitudes of all 19 SM-LLRs. Both min1 and min2 values are subtracted with an optimized offset value of (2)2 [41], and further routed via two 2:1 MUXes to maintain its non-negativity, as shown in Fig. 6(c). Thereafter, min1, min2 and idx values are fed to COMUX that generates 76-bit (19 × 4-bit) output which is an aggregation of 19 updated 4-bit SM-LLR magnitudes of R(j) vector, as shown in line 28 of Algorithm 1. Furthermore, such 76-bit COMUX-output is segregated into 19 updated SM-LLR magnitudes of 4-bit each. This COMUX unit is the replacement of various equalizers and MUXes [31] to achieve lower hardware consumption and routing complexity. These 19 magnitudes and their corresponding 19 updated sign-bits from SU are simultaneously fed to 19 SMTCs which convert the updated SM-LLRs into TC-LLRs. Subsequently, 19 such 5-bit TC-LLRs are concatenated into a 95-bit C(j) CN-LLR. Furthermore, min1 and min2 values of 4-bit each, 19 updated sign-bits and 5-bit idx value are concatenated to generate 32-bit AE-LLR. Thus, each MSU generates a 32-bit AE-LLR and a 95-bit updated C(j) CN-LLR, as illustrated in Fig. 6(c).
+D. A-Posteriori-LLR Computation Module
+The suggested architecture of a-posteriori-LLR computation module (ACM) executes lines 31−34 in Algorithm 1, as shown in Fig. 7. It shows that 384 C(j) CN-LLRs from VCUM are first processed by integrator unit that generates e(j) ∀ j = {1, 2, 3· · ·19} LLRs of 1920 b each. These e(j) LLRs are the transpose of C(j) LLRs. Further, such 19 e(j) LLRs are cyclically rotated by the re-rotational unit −based on the proposed CRT from Algorithm 3− to generate Re(j) LLRs. The re-rotational unit architecture is identical to rotational unit. Furthermore, 19 VN-LLRs V (j) from VCUM along with 19 re-rotated Re(j) LLRs from re-rotational unit are fed to adder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+75
+
+Fig. 8. Proposed QC-LDPC decoder architecture that is compliant to 5G-NR specifications, supporting all the code rates of 5G NR and decodes 8448 bits from 26112 received channel-LLRs.
+
+Fig. 9. Timing diagram that represents scheduling of layer computation in overall QC-LDPC decoder architecture.
+
+unit that updates AP-LLRs, based on line 34 in Algorithm 1, as shown in Fig. 7. Such addition-unit comprises of 19 addition modules (AMs) where each AM consists of 384 adders. Such AMs add concatenated-LLRs of V (j) VN-LLRs with corresponding LLRs from Re(j) LLRs to produce 19 AP-LLRs of 2688-bit each i.e. a(j) ∀ j = {1, 2, 3· · ·19} which are fed back to IMUU, as shown in Fig. 4. These 19 a(j) LLRs are used for the next (r + 1)th layer-processing of BG matrix in the proposed LDPC decoding algorithm, as shown in Fig. 2.
+E. Overall QC-LDPC Decoder Architecture
+The proposed QC-LDPC decoder architecture that aggregates aforementioned submodules (i.e. IMUU, MSESM, VCUM and ACM) with a hard decision register memory (HDRM) is shown in Fig. 8. The decoding process initiates by feeding 7-bit channel LLRs li ∀ i = {1, 2, 3· · ·n} to IMUU where n can range upto a maximum value of 26112 b, based on the 5G-NR specification [7], [32]. Here, IMUU performs initialization and AP-LLR matrix updation to generate these stored LLRs in concatenated form of A(j). These A(j) LLRs and a 12288-bit CE-LLR from VCUM are subsequently processed by MSESM that performs LLRs selection (using MST from Algorithm 2) and updates e-LLR matrix of flow-diagram from Fig. 2. Further, MSESM computes S(j) and e(j) LLRs ∀ j = {1, 2, 3· · ·19}. Such LLRs are routed by VCUM to perform VN-matrix updation, cyclicrotation from (3), and CN-matrix updation to generate V (j), C(j), and a CE-LLR, as shown in Fig. 8. These C(j) and V (j) LLRs from VCUM are processed by ACM to compute a(j) AP-LLRs which are fed back to IMUU for performing the AP-LLR matrix updation using MWT −referring Algorithm 4− that is corresponding to rth layer-processing of B matrix, as shown in Fig. 8. Such layer-processing consumes two clock cycles in IMUU for rth B matrix layer-processing. This updated memory of IMUU is used in the next (r + 1)th layer-processing of B matrix and such layer-processing continues till the last layer of BG matrix which is computed in single decoding iteration.
+
+Therefore, an overall decoder architecture is designed based on the high parallelism property of LDPC codes and also achieves the lower routing complexity or data congestion, as discussed in the aforementioned submodules.
+Timing schedule of the overall QC-LDPC decoder architecture has been presented in Fig. 9. Initially, LLRs are fed into IMUU by asserting high value to LLR-writing signal which takes n clock cycles to load the LLRs. Thereafter, LLR-reading signal is asserted high to provide the LLRs which are corresponding to an ongoing BG matrix layer. Consecutively, VN updation, CN updation, and AP-LLR updation processes are started that correspond to various layers of BG matrix, as shown in Fig. 9. These updation processes follow an overlapping message scheme [42] to reduce the latency of decoder architecture. After the computations of AP-LLRs, they are written back to IMUU by triggering high the LLR-writing signal, as illustrated in Fig. 9. Furthermore, the aforementioned processing continues till the last mb layer of BG matrix, and this marks the end of a single decoding iteration. Such processes are repeatedly carried out for 10 decoding iterations. The proposed decoder architecture operates on 46 processing layers for a 1/3 code rate that consumes 92 clock cycles (i.e. 46 × 2 clock cycles) for a single iteration. Therefore, it requires 920 clock cycles (i.e. 92 × 10 clock cycles) to complete 10 iterations. After the 10th iteration, HDRM is activated and stores all the sign-bits of updated AP-LLRs that are corresponding to A(j) LLRs in the MRB of IMUU, as shown in Fig. 4 and 8. However, the LDPC decoder must generate 8448 decoded bits corresponding to information bits, compliant to 5G-NR specifications. Hence, only 8448 LLRs are encapsulated by an initial 22 A(j) LLRs of IMUU to generate the decoded information bits. Therefore, 384 MSBs (corresponding to 384 7-bit updated AP-LLRs) from each A(j) LLR are tapped as a word of 384 bits which is stored in HDRM, as depicted in Fig. 8. It also shows that 22 such 384 b words are tapped and concatenated from A(j) LLRs and stored in HDRM, which has a size of 22×384 bit (i.e. equivalent to 8448 decoded bits). Eventually, these decoded bits from HDRM are fetched out sequentially in every clock cycle.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+76
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+Fig. 10. (a) Fixed-point FER performance-analysis of proposed SOMS decoding algorithm for various bit-quantization. (b) Comparative FER performanceanalysis of proposed-SOMS and conventional QC-LDPC decoding algorithms. Here, CAR: conventional-algorithm-rate and PAR: proposed-algorithm-rate.
+
+Fig. 11. (a) Comparative FER performance analysis of the proposed SOMS algorithm with respect to the existing standard algorithms in the fixed point bit-quantization of 7 b. (b) FER versus SNR plots of SOMS algorithm for various offset β values.
+
+V. PERFORMANCE ANALYSIS, IMPLEMENTATION RESULTS, COMPARISONS, HARDWARE VERIFICATION, AND ASIC DESIGN
+A. Performance Analysis
+This work presents comprehensive performance analysis of the proposed SOMS decoding algorithm from Algorithm 1 based on the specifications that are compliant to the 5G-NR standard [7], as discussed in section IV. For each signal to noise ratio (SNR) value, an extensive Monte Carlo simulation has been performed to decode ≈ 106 transmitted bit, using a binary phase shift keying (BPSK) modulation scheme, via additive white Gaussian noise (AWGN) channel environment. The FER performance analysis of the proposed SOMS algorithm for different bit quantization of input LLRs have been shown in Fig. 10(a). These multiple plots from fixed point simulations are obtained for the bit width range of 5−13 bit while decoding at minimum, moderate and maximum code rates of 1/3, 3/4, and 8/9, respectively, for 10 decoding iterations. In Fig. 10(a), the FER performance of our decoding algorithm gradually improves with the increasing bit width values. However, such up scaling of bit width adversely increases hardware requirement and power consumption of the proposed decoder architecture. Nevertheless, our decoding algorithm with 7-bit quantization delivers an adequate FER of 10−5 at 0.9 dB of SNR for a code rate of 1/3, as shown in Fig. 10(a). Furthermore, Fig. 10(b) shows the comparative FER performance analysis between proposed and conventional [19] QC-LDPC decoding algorithms for all the code rates of the 5G-NR standard. These code rates are ranging between 1/3 to 8/9 and are compliant to the BG1 base matrix of 5G-NR specification [7]. In Fig. 10(b), these FER plots of different code rates 1/3, 2/5, 1/2, 2/3, 3/4, 5/6, and 8/9 are obtained for the 5G-NR specified maximum code lengths (in bits) of 26112, 21888, 17664, 13440, 12288, 11136, and 10368, respectively, for an expansion factor of z = 384. In comparison with the conventional algorithm [19], the proposed SOMS decoding algorithm delivers a minimum coding loss of 0.025 dB and maximum coding loss of 0.34 at 10−4 FER for 1/3 and 8/9 code rates, respectively. The proposed SOMS decoding algorithm is hardware friendly in nature that incurs
+
+lower computational complexity with minor coding loss and it consequently enables the design of hardware efficient architecture for LDPC decoder.
+Comprehensive and comparative FER performance analysis of the proposed SOMS decoding algorithm with the various standard decoding algorithms has been presented in Fig. 11(a). Such analysis is carried out at a code rate of 1/3 for 10 decoding iterations. It is to be noted that the suggested SOMS algorithm shows minor coding losses of 0.020 dB, 0.032 dB, 0.025 dB with respect to MS [15], normalized MS [16], and offset MS [18] decoding algorithms at the FER of 10−4, respectively, as illustrated in Fig. 11(a). Subsequently, Fig. 11(b) presents the FER versus SNR plots of our SOMS decoding algorithm at various offset (β) values that depend on the LLR quantization bit under the integer representations [40]. Note that the β value increases with the LLR quantization bits. Here, β is mathematically computed as β = E[CBP ] − E[CMS] where E[CBP ] and E[CMS] represent expectations of CN updated messages for belief-propagation (BP) and MS algorithms, respectively. Furthermore, an optimized value of β must be obtained that allows the SOMS algorithm to deliver adequate FER performance for specific fixed point format. Thereby, Fig. 11(b) shows that an optimum FER performance of SOMS algorithm has been achieved at β = 2 for 7-bit quantization format.
+It is imperative to understand the effects of various modulation schemes on the FER performance of the decoding algorithm. Thereby, Fig. 12(a) presents the FER performances of the proposed SOMS decoding algorithm (with 7-bit fixed-point quantization) for various modulation schemes at a code rate of 1/3. It can be observed that our algorithm delivers a FER of 10−5 at 1.05 dB and 1.3 dB SNRs for BPSK and 16 quadratureamplitude-modulation (16-QAM) schemes, respectively. Subsequently, FER versus iteration plots of our decoding algorithm based on the aforementioned modulation schemes are presented in Fig. 12(b). Here, the proposed SOMS algorithm delivers a constant FER of 10−5.8 beyond 15 decoding iterations for BPSK modulation. Likewise, the 16-QAM scheme renders a constant FER of 10−2.9 beyond 18 iterations, as shown in Fig. 12(b). These performance analysis are carried out for the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+77
+
+Fig. 12. (a) Comparative FER performance-analysis of our SOMS decoding algorithm for various modulation schemes. (b) FER versus decoding-iterations plots of SOMS decoding algorithm for different modulation schemes. Note that QPSK and 16-QAM schemes are specified by the 5G-NR wirelesscommunication standard.
+Fig. 13. (a) Comparative FER performance-analysis of the SOMS decoding algorithm for various code lengths at different values of expansion factor (z). (b) Throughput and (c) latencies delivered by the proposed QC-LDPC decoder architecture for various combinations of code lengths and code rates, as specified by the 5G-NR standard.
+maximum code length of 26112 b with the highest expansion factor of z = 384 at the fixed code rate of 1/3, compliant to the 5G-NR specification. In addition, there are four more code lengths at 1/3 code rate: 22032 b, 15232 b, 11958 b, and 8160 b, with the corresponding z values of 324, 224, 176, and 120, respectively, that the LDPC decoder must support for the 5G-NR wireless-communication standard [7]. Therefore, Fig. 13(a) presents the FER plots of the suggested-SOMS decoding algorithm for such five code lengths with varying expansion factors at a fixed code rate of 1/3 where the one with the longest code length delivers superior performance among all.
+B. Implementation Results and Comparisons The suggested QC-LDPC decoder architecture has been syn-
+thesized, post-route simulated, and hardware prototyped in the FPGA platform of the Xilinx Zynq-Ultrascale+ board. This prototype is capable of decoding a maximum code length of 26112 bits with a mother code rate of 1/3 and also supports all
+
+other code lengths and code rates (specified by the 5G-NR standard [7]) with the aid of global controller, as shown in Fig. 8. This proposed QC-LDPC decoder achieves a maximum throughput (ΘT ), expressed as ΘT = (n × max)/(I × LHb × C), of 13.3 Gbps while decoding a code with n = 10368 bits, LHb = 5 base matrix layers at a code rate of 8/9. On the other side, ΘT = 3.64 Gbps of minimum throughput is obtained by this design for n = 26112 bits, LHb = 46 base matrix layers at a code rate of 1/3. Here, I represents the number of decoding iterations (I = 10 iterations in this work), and C denotes the number of clock cycles consumed while processing each base matrix layer (C = 2 clock cycles, as discussed earlier in section IV-E). Our proposed decoder architecture achieves the high-throughput due to its higher code length (n for 5G-NR) and lower latency which is achieved by the balance amount of parallelism technique. However, due to such parallelism, hardware consumption tends to increase. Nevertheless, this adverse effect has been calibrated with the aid of our lower computational complexity SOMS decoding algorithm that results in hardware-efficient decoder architecture. Thus, our QC-LDPC decoder achieves higher throughput with lower hardware consumption.
+Static timing analysis indicates that the suggested decoder operates at a maximum clock frequency of max = 128.36 MHz. Further, it has shortest and longest latencies (computed as ΛD = n/ΘT ) of 0.77 μs at 8/9 code rate and 7.17 μs at 1/3 code rate, respectively. Apart from these combinations of code lengths and code rates, there are other such combinations specified by the 5G-NR standard [32] and are also supported by our decoder architecture. For these pairs of code lengths and code rates, Fig. 13(b) and (c) present throughput and decoding-latency values achieved by the proposed LDPC decoder, respectively.
+This paper presents two figure-of-merits (FOMs) for fair comparison: hardware utilization efficiency (HUE) and peakthroughput to latency ratio (PTLR) as
+
+HUE =
+
+Hu LHb × ΘT
+
+and P T LR =
+
+ΘT ΛD
+
+(7)
+
+where Hu represents the FPGA hardware utilization of the LDPC decoder. Here, HUE denotes the amount of hardware consumed per layer of base matrix to attain a throughput of 1 Mbps and it has a unit of hardware-resources/layer/Mbps. Thereby, a lower value of HUE is desirable for hardware-efficient design. It is to be noted that the number of base matrix layers (LHb) is proportional to hardware consumption, as it increases the size of steering logic with a larger LHb value in the LDPC decoder architecture. On the other side, PTLR represents the peak throughput achieved by the decoder (expressed in Mbps) in every 1 μs of the processing time. Desirably, PTLR value must be higher and it has a unit of Mbps/μs. Implementation results of our QC-LDPC decoder architecture are compared with the relevant state-of-the-art works in Table II. It shows that the proposed QC-LDPC decoder architecture has 7.5× higher throughput compared to the state-of-the-art Logicore intellectual-property (IP) of the LDPC decoder from Xilinx [36]. Subsequently, it can be observed that our decoder delivers 3.6× better throughput than the implementations reported by Y. Liu et al. in [37]. Based on the aforementioned formulations of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+78
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+TABLE II COMPARISON OF PROPOSED LDPC-DECODER IMPLEMENTATION-RESULTS WITH THE STATE-OF-THE-ART WORKS
+
+FOMs from (7), the proposed LDPC decoder delivers a HUE of 1.96 hardware-resources/layer/Mbps which is 34% lower than the most-efficient contemporary work, reported by Shan Cao et al. [34]. Furthermore, Table II presents PTLRs of proposed and reported designs. Thus, FPGA implementation of the suggested LDPC decoder has achieved competitive PLTR among all the reported works and specifically 2× better than the highest value reported by Y. Liu et al. in [37], as shown in Table II. Therefore, the proposed LDPC decoder is hardware efficient design that delivers higher throughput. For fair comparison with the state-of-the-art work from [34], we have implemented our decoder architecture in the same platform of Intel Altera Startix-IV FPGA board and its results are compared with [34] in Table II. It shows that the proposed decoder delivers 93.5% higher throughput, 95.96% better PLTR, and 8.1% lower HUE than the implementation results of [34].
+C. Hardware Verification and ASIC Design
+The proposed QC-LDPC decoder that is hardware implemented on Xilinx Zynq UtraScale+ FPGA-board has been functionally verified with the aid of MATLAB-simulation environment, as shown in Fig. 14. It shows schematic representation and snapshot of our real-world test environment. In the MATLAB environment, LDPC encoder converts k information-bit into n codeword-bit (such that n>k). Subsequently, these n bits are modulated and transmitted via AWGN channel-environment. At the receiver end, n LLR samples are fetched from the channel that are corresponding to n noisy-bit. Furthermore, these n LLR samples are fixed-point quantized into a 7-bit value which is fed to the FPGA-implemented LDPC decoder, as shown in Fig. 14. These quantized input-LLR samples from the MATLAB
+
+Fig. 14. Schematic-representation and snapshot of the real-world test setup for the FPGA-prototype of proposed LDPC decoder.
+environment are written into the co-efficient (.coe) file, which is interfaced with the FPGA prototype of our decoder. Specifically, this .coe file is used for initializing the block random-accessmemory (BRAM) of the FPGA board. Consecutively, the LPDC decoder on FPGA processes these quantized-LLR samples and generates the hard decoded-bits. The integrated logic analyzer (ILA) IP-core tracks the updated LLR values and outputs the decoded-bits of the LDPC decoder. Therefore, initialized BRAM and ILA IP-core are instantiated along with the LDPC-decoder on the FPGA board that are synchronously operated by onboard system clock, as shown in Fig. 14. Thereafter, the output decoded-bit of LDPC decoder is configured to interact with ILA IP-core and PMOD connector of the FPGA board. Thus, ILA
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+VERMA AND SHRESTHA: LOW COMPUTATIONAL-COMPLEXITY SOMS-ALGORITHM AND HIGH-THROUGHPUT DECODER ARCHITECTURE
+
+79
+
+Fig. 15. ASIC chip layout of the proposed QC-LDPC decoder in 90 nm-CMOS technology node, occupying a core area of h×w = 6.45 mm2.
+TABLE III COMPARISON OF ASIC IMPLEMENTATION RESULTS OF PROPOSED LDPC
+DECODER WITH RELEVANT STATE-OF-THE-ART WORKS
+IP-core and PMOD connectors are digitally interfaced with the monitor of the host computer and the mixed-signal-oscilloscope (MSO), respectively, as shown in Fig. 14. Eventually, the output decoded-bits from LDPC FPGA-prototype is displayed on the MSO/host-computer screen and are verified with the simulated outputs from MATLAB environment.
+Furthermore, the proposed QC-LDPC decoder has been ASIC synthesized and post-layout simulated in united microelectronics corporation (UMC) 90 nm-CMOS technology node, with the supply voltage of 1 V. At first, our design is coded using the verilog hardware-description language which is functionally verified, synthesized, and static-timing analyzed as well as power estimated with the aid of verilog compiler-&-simulator, design compiler and prime time EDA-tools from Synopsys, respectively. Following that, its gate-level netlist has been imported to Cadence Innovus tool where the physical design processes like floorplan, placement, power routing, nano routing, clock tree synthesis and timing analysis have been carried out. Thus, the final chip layout of our LDPC decoder is shown in Fig. 15 that consumes an area of 6.45 mm2. Based on the timing analysis, our decoder operates at the maximum clock frequency of 192.3 MHz and delivers a peak throughput, expressed as ΘT = (n × max)/{(I × LHb) + Υ}, of 9.6 Gbps while decoding a code with n = 2592 bits, LHb = 5 base matrix layers at a code rate of 8/9. Here, Υ = 2 represents the number of clock-cycles consumed while reading and writing data from HDRM.
+
+Further, complete implementation results of the suggested LDPC decoder are listed in Table III where they are compared with the results of relevant reported works from the literature. The proposed decoder has achieved 57.3% higher throughput than the state-of-the-art implementation, reported by S. Yun et al. [16]. For fair comparison, our implementation results are also compared with recently reported work of H. Cui et al. [40], which has been implemented in the same 90 nm-CMOS process, as illustrated in Table III. It shows that the proposed work achieved 18.3× higher throughput and 2.8× degraded energy efficiency than the results of [40].
+VI. CONCLUSION
+This paper presented a new SOMS decoding algorithm with lower computational complexity. Based on it, we presented hardware architecture of the QC-LDPC decoder with additional architectural transformations for parallel processing and lower routing complexity. These contributions resulted in highthroughput decoder architecture and inherent algorithmic qualities reduced its hardware requirement. Thus, these hybrid contributions in algorithmic and architectural domains resulted in new hardware-efficient and high-throughput QC-LDPC decoder for contemporary wireless communication systems. Comprehensive performance analysis and hardware implementation results have proven that our design performs in-par and better than the state-of-the-art algorithms and implementations, respectively. Therefore, the proposed QC-LDPC decoding algorithm and decoder architecture are significant for the deployment of recent and future wireless-communication systems like 5G-NR and 6 G technologies.
+ACKNOWLEDGMENT
+Authors would like to thank Interdisciplinary Cyber Physical Systems (ICPS) Division, Department of Science and Technology (DST), Ministry of Science and Technology, Government of India, for supporting this research work.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Elec. Lett., vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[3] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[4] IEEE Standard for Inf. Tech., Telecomm. and Inf. EX. B/W Sys. Loc. and MAN Spec. Req. - Part 11: Wireless LAN MAC and PHY Layer Spec, IEEE Standard 802. 11-2016 (Revised of IEEE Standard 802.11-2012), pp. 1–3534, Dec. 2016.
+[5] IEEE Standard for Local and MAN -Part 16: Air Interface for Fixed and Mobile BB Wire. Access Sys. - Amendment for PHY and MAC Layers for Comb. Fixed and Mob. Oper. in Lic. Bands, IEEE Standard 802.16e-2005 and IEEE Standard 802. 16-2004/Cor 1-2005 (Amendment and Corrigendum to IEEE Standard 802.16-2004), pp. 1–822, Feb. 2006.
+[6] S. Kumawat, R. Shrestha, N. Daga, and R. Paily, “High-throughput LDPCDecoder architecture using efficient comparison techniques & dynamic multi-frame processing schedule,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 62, no. 5, pp. 1421–1430, May 2015.
+[7] Chairman’s notes of AI 7.1.5 on consideration on LDPC design for NR, doc. R1-1611112, 3GPP, Nov. 2016. [Online], Available:http://www.3gpp. org/ftp/TSG_RAN/WG1_RL1/TSGR1_87/Docs/R1-1611112.zip
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+80
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 72, NO. 1, JANUARY 2023
+
+[8] IEEE, “IEEE 5G and beyond technology roadmap white paper,” Mar. 2018. [Online]. Available: https://futurenetworks.ieee.org/images/ files/pdf/ieee-5g-roadmap-white-paper.pdf
+[9] C. Mao, M. Khalily, P. Xiao, T. W. C. Brown, and S. Gao, “Planar submillimeter-wave array antenna with enhanced gain and reduced sidelobes for 5G broadcast applications,” IEEE Trans. Antennas Propag., vol. 67, no. 1, pp. 160–168, Jan. 2019.
+[10] R. Shrestha and R. P. Paily, “High-throughput turbo decoder with parallel architecture for LTE wireless communication standards,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 61, no. 9, pp. 2699–2710, Sep. 2014.
+[11] International Telecom Union Radiocommunication (ITU-R), “IMT vision framework and overall objectives of the future development 1035 of IMT for 2020 and beyond,” Sep. 2015.
+[12] TRAI, “A white paper on enabling 5G telecom regulatory authority India,” Feb. 2020.
+[13] M. K. Roberts and R. Jayabalan, “An improved low-complexity sumproduct decoding algorithm for low-density parity-check codes,” Front. Inf. Technol. Electron. Eng., vol. 16, no. 6, pp. 511–518, Jun. 2015.
+[14] H. Lopez, H. -W. Chan, K. -L. Chiu, P. -Y. Tsai, and S. -J. J. Jou, “A 75-Gb/s/mm2 and energy-efficient LDPC decoder based on a reduced complexity second minimum approximation min-sum algorithm,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 4, pp. 926–939, Apr. 2020.
+[15] H. Li, J. Guo, C. Guo, and D. Wang, “A low-complexity min-sum decoding algorithm for LDPC codes,” in Proc. IEEE 17th Int. Conf. Commun. Technol., 2017, pp. 102–105.
+[16] S. Yun et al., “Area- and energy-efficient LDPC decoder using mixedresolution check-node processing,” IEEE Trans. Circuits Syst., II, Exp. Briefs, vol. 69, no. 3, pp. 999–1003, Mar. 2022.
+[17] Richardson et al., “Adjusted min-sum decoder” U. S. Patent 20180109269, Apr. 2018.
+[18] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and Xiao-Yu Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[19] O. Boncalo and A. Amaricai, “Ultra high throughput unrolled layered architecture for QC-LDPC decoders,” in Proc. IEEE Comp. Soc. Ann. Symp. VLSI, 2017, pp. 225–230.
+[20] N. Yang et al., “Reconfigurable decoder for LDPC and polar codes,” in Proc. IEEE Int. Symp. Circuits Syst., 2018, pp. 1–5.
+[21] T. Bhatt, V. Sundaramurthy, V. Stolpman, and D. McCain, “Pipelined block-serial decoder architecture for structured LDPC codes,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process. Proc., 2006, pp. IV–IV.
+[22] C. Sham, X. Chen, F. C. M. Lau, Y. Zhao, and W. M. Tam, “A 2.0 gb/s throughput decoder for QC-LDPC convolutional codes,” IEEE Trans. Circuits Syst. I., Reg. Papers, vol. 60, no. 7, pp. 1857–1869, Jul. 2013.
+[23] M. M. Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check matrix codes,” IEEE Trans. Signal Process., vol. 54, no. 11, pp. 4376–4392, Nov. 2006.
+[24] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[25] M. Zhao, X. Zhang, L. Zhao, and C. Lee, “Design of a high-throughput QC-LDPC decoder with TDMP scheduling,” IEEE Trans. Circuits Syst., II, Exp. Briefs, vol. 62, no. 1, pp. 56–60, Jan. 2015.
+[26] K. Zhang, X. Huang, and Z. Wang, “A high-throughput LDPC decoder architecture with rate compatibility,” IEEE Trans. Circuits Syst. I., Reg. Papers, vol. 58, no. 4, pp. 839–847, Apr. 2011.
+[27] A. Darabiha, A. Chan Carusone, and F. R. Kschischang, “Power reduction techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43, no. 8, pp. 1835–1845, Aug. 2008.
+[28] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design for quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 15, no. 1, pp. 104–114, Jan. 2007.
+[29] T. Mohsenin, D. N. Truong, and B. M. Baas, “A low-complexity messagepassing algorithm for reduced routing congestion in LDPC decoders,” IEEE Trans. Circuits Syst. I., Reg. Papers, vol. 57, no. 5, pp. 1048–1061, May 2010.
+[30] M. Li, C. Yang, and Y. Ueng, “A 5.28-Gb/s LDPC decoder with timedomain signal processing for IEEE 802.15.3c applications,” IEEE J. SolidState Circuits, vol. 52, no. 2, pp. 592–604, Feb. 2017.
+[31] M. Milicevic and P. G. Gulak, “A multi-gb/s frame-interleaved LDPC decoder with path-unrolled message passing in 28-nm CMOS,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 10, pp. 1908–1921, Oct. 2018.
+
+[32] H. Li, B. Bai, X. Mu, J. Zhang, and H. Xu, “Algebra-assisted construction of quasi-cyclic LDPC codes for 5G new radio,” IEEE Access, vol. 6, pp. 50229–50244, 2018.
+[33] C. Wey, M. Shieh, and SVSD. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I., Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[34] S. Cao, T. Lin, S. Zhang, S. Xu, and C. Zhang, “A reconfigurable and pipelined architecture for standard-compatible LDPC and polar decoding,” IEEE Trans. Veh. Technol., vol. 70, no. 6, pp. 5431–5444, Jun. 2021.
+[35] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting FPGA,” IEEE Trans. Very Large Scale Integr. Syst., vol. 29, no. 6, pp. 1141–1151, Jun. 2021.
+[36] Xilinx, “Xilinx LogiCORE IP: LDPC encoder/decoder v2.0,” Feb. 2021. [Online]. Available: https://www.xilinx.com/member/ldpc-enc-dec/ldpc. html#kintexuplus
+[37] Y. Liu, W. Tang, and D. G. M. Mitchell, “Efficient implementation of a threshold modified min-sum algorithm for LDPC decoders,” IEEE Trans. Circuits Syst., II, Exp. Briefs”, vol. 67, no. 9, pp. 1599–1603, Sep. 2020.
+[38] O. Boncalo, G. Kolumban-Antal, A. Amaricai, V. Savin, and D. Declercq, “Layered LDPC decoders with efficient memory access scheduling and mapping and built-in support for pipeline hazards mitigation,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 66, no. 4, pp. 1643–1656, Apr. 2019.
+[39] P. Kang, Y. Xie, L. Yang, and J. Yuan, “Enhanced quasi-maximum likelihood decoding based on 2D modified min-sum algorithm for 5G LDPC codes,” IEEE Trans. Commun., vol. 68, no. 11, pp. 6669–6682, Nov. 2020.
+[40] H. Cui et al., “Design of high-performance and area-efficient decoder for 5G LDPC codes,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 68, no. 2, pp. 879–891, Feb. 2021.
+[41] T. T. Nguyen-Ly et al., “Analysis and design of cost-effective, highthroughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. Syst., vol. 26, no. 3, pp. 508–521, Mar. 2018.
+[42] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic low-density parity check codes,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+[43] M. K. Roberts, “Simulation and implementation design of multi-mode decoder for WiMAX and WLAN applications,” ELSEVIER Meas., vol. 131, pp. 28–34, Jan. 2019.
+Anuj Verma (Graduate Student Member, IEEE) received the B.Tech. degree in electronics and communication from Inderprastha Engineering College, Ghaziabad, India, in 2013, and the M.Tech. degree in very large scale integration from the Deenbandhu Chhotu Ram University of Science and Technology, Murthal, India, in 2017. He is currently working toward the Doctoral degree with the School of Computing and Electrical Engineering, Indian Institute of Technology Mandi, Mandi, India. His research focuses on developing the channel decoding algorithms and architectures for next-generation wireless-communication standard.
+Rahul Shrestha (Senior Member, IEEE) received the Ph.D. degree in electronics and electrical engineering from the Indian Institute of Technology Guwahati, India, in 2014. From 2014 to 2016, he was working as Assistant Professor with the Center for VLSI & Embedded System Technologies, International Institute of Information Technology Hyderabad, India. Sine 2016, he holds the position of Assistant Professor with the School of Computing and Electrical Engineering, Indian Institute of Technology Mandi, Mandi, India. In 2018, he was a Visiting Assistant Professor with the Blekinge Institute of Technology, Karlskrona, Sweden, under the European Erasmus International Credit Mobility Programme. His research interests include designing efficient algorithms and digital VLSI architectures and its transformation into ASIC-chip or FPGA-prototype for the real-world applications of signal processing, wireless communication, deep neural network, forward-error-correction channel decoders, cognitive radio, and cooperative spectrum sensing.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:02:03 UTC from IEEE Xplore. Restrictions apply.
+
+

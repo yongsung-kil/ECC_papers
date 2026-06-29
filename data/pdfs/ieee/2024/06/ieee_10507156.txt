@@ -1,0 +1,480 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+2897
+
+Area-Efficient QC-LDPC Decoding Architecture With Thermometer Code-Based Sorting and Relative Quasi-Cyclic Shifting
+Boseon Jang , Hyejung Jang , Graduate Student Member, IEEE, Sungho Kim , Kangjoon Choi , Student Member, IEEE, and In-Cheol Park , Senior Member, IEEE
+
+Abstract— The 5G New-Radio (NR) communication standard requires high throughput and low latency, so low-density paritycheck (LDPC) codes, which have higher inherent parallelism and lower decoding complexity than turbo codes, were adopted as the main coding method for data channels. In traditional LDPC min-sum decoders, the check node unit was realized using a sorting unit based on the min-tree structure. However, this structure resulted in high hardware complexity and long latency. To address this issue, we propose a new sorting method based on the thermometer code-based number system. Additionally, we introduce a new LDPC decoding architecture that reduces the number of QSN stages from two to one, significantly lowering the shifting logic complexity needed to support different lifting sizes. This is achieved by using relative shift amounts instead of absolute shift amounts specified in the parity check matrix. The proposed decoder implemented using a partially parallel structure in a 65nm CMOS technology satisfies the various operation modes and the throughput requirements of the 5G NR standard, and boasts a higher normalized throughput than state-of-the-art LDPC decoders.
+Index Terms— Low-density parity-check codes, thermometer code, normalized min-sum algorithm, VLSI hardware implementation, 5G new-radio standard, area-efficient, quasi-cyclic LDPC decoder.
+I. INTRODUCTION
+LOW-DENSITY parity-check (LDPC) codes, which were first developed in the 1960s by Gallager [1] and
+rediscovered later by MacKay and Neal [2], have seen growing interest over the past decade. Due to their excellent errorcorrection performance that approaches the Shannon limit, LDPC codes have been widely adopted in a variety of applications, including solid-state drive (SSD) storage systems and communication standards such as DVB-S2X, ITU-T G.hn,
+Manuscript received 14 September 2023; revised 14 December 2023 and 21 February 2024; accepted 9 April 2024. Date of publication 23 April 2024; date of current version 30 May 2024. This work was supported by the Ministry of Science and ICT (MSIT), South Korea, under the Information Technology Research Center (ITRC) Support Program by the Institute of Information and Communications Technology Planning and Evaluation (IITP) under Grant IITP-2020-0-01847. This article was recommended by Associate Editor X. S. Zhang. (Corresponding author: In-Cheol Park.)
+The authors are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea (e-mail: bsjang@ics.kaist.ac.kr; hjjang@ics.kaist.ac.kr; shkim@ics.kaist.ac.kr; kjchoi@ics.kaist.ac.kr; icpark@kaist.edu).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCSI.2024.3389040.
+Digital Object Identifier 10.1109/TCSI.2024.3389040
+
+10GBASE-T, ATSC, and IEEE 802.16e/11ax [3], [4], [5], [6], [7]. In recent years, the third-generation partnership-project (3GPP) standardized the physical layer of 5G New-Radio (NR) in release-16 [8], while the International Telecommunication Union (ITU) established key performance requirements for International Mobile Telecommunications (IMT)-2020 [9]. The usage patterns of 5G NR are categorized into 3 scenarios: enhanced mobile broadband (eMBB), ultra-reliable and low latency communications (URLLC), and massive machine-type communication (mMTC) [10]. To support these usage cases, a 5G-NR system must provide a high peak data rate of 20 Gbps and a low latency of 1ms. In order to meet these requirements, long codewords associated with high code rates are dominant in data transmission. Owing to the inherent parallelism and low decoding complexity [11], LDPC codes have better error correcting performance and area-throughput efficiency than Turbo codes which have been used in 4G Long Term Evolution (LTE), and therefore were selected as the channel coding method for data channels.
+It is well-known that random connections between variable nodes and check nodes result in the best achievable decoding performance, approaching the channel capacity. However, it is practically impossible to store the random connection patterns for codes with long code lengths. As a result, practical LDPC codes are typically designed with a specific structure that allows multiple nodes to be processed in parallel both in encoding and decoding. The parity-check matrix (PCM) of a quasi-cyclic (QC) LDPC code consists of sub-matrix blocks [12], each of which is a circularly-shifted identity matrix or a zero matrix. The PCM can be defined by a base graph, where each element of the base graph is replaced with a circularly permuted identity submatrix or a zero submatrix. The width of a submatrix is commonly referred to as the lifting size.
+There have been many decoding algorithms developed for LDPC codes. Among these, the sum-product (SP) algorithm offers excellent error-correction performance, but requires complex hyperbolic functions in processing check nodes (CNs), leading to a high hardware complexity. To mitigate the computational complexity, therefore, the min-sum (MS) algorithm [13] was proposed as a practical solution by approximating the hyperbolic functions. The approximate functions that can be calculated using two minima play a crucial role in reducing complexity, although
+
+1549-8328 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2898
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+this comes at the cost of a slight performance degradation. To compensate for the performance degradation caused by message approximation, two variations of the MS algorithm were developed: the normalized MS (NMS) and offset MS (OMS) [14], [15], [16], [17], [18].
+The maximum lifting size in 5G NR is 384, making the corresponding PCM too large to process at once. How to divide and conquer the PCM is known as scheduling, a crucial aspect of decoding. The flooding scheduling [19] involves repeating two update steps: first, all variable nodes are updated using messages from check nodes, and then check nodes are updated using messages from variable nodes. In the row layered scheduling [20], a group of independent check nodes, referred to as a layer, is processed in parallel, while the column layered decoding [21] processes one variable node at a time and updates all the check nodes related to it. The messages in a layer are updated and passed to the next layer in sequence. This process increases the convergence speed because each node is updated more often and can use the most recent messages in its decoding process of each iteration. This makes the layered scheduling an ideal approach for QC-LDPC codes, as the lifting size determines the number of rows that can be processed in parallel without any data dependencies.
+With regards to hardware implementation, a column-layered decoder was proposed in [22], and a flooding decoder was proposed in [23]. However, the throughput of the columnlayered decoder is too low to meet the requirements of the 5G NR standard, and the flooding decoder typically requires a large amount of hardware resources compared to row-layered decoders. As a result, row-layered decoding has become the preferred method, and various such decoders have been presented in [24], [25], [26], [27], and [28]. Although these decoders can achieve high throughput, the parallel processing of a layer in a pipelined architecture results in low hardware utilization, as the data hazards between consecutive layers must be resolved before proceeding to the next layer. In addition, large parallelism results in high hardware resource consumption and high routing complexity.
+In order to alleviate the hardware complexity of LDPC decoders, diverse methods have been presented in [29], [30], [31], [32], [33], [34], [35], [36], [37], and [38]. In [29], a modified rejection-based scheme was proposed to find two minima using one-hot sequences instead of indices, which simplifies the min-sum decoding. However, its sorting mechanism remains complex and results in a significant latency. In [30], [31], [32], and [33], the complexity of a check node unit (CNU) was reduced by roughly seeking the second minimum. This resulted in a noticeable degradation in decoding performance. [34] reduced the hardware complexity by computing only the first minimum, but could not meet the throughput requirement of the 5G NR standard. In [35], [36], [37], and [38], a layer was divided into several blocks and processed sequentially, and the processing scheduling of the blocks was rearranged in [36], [37], and [38] to resolve pipeline conflicts. However, this block serial method was unable to meet the required throughput. Inspired by stochastic computation [39], a hybrid stochastic (HS) decoder was proposed in [40] and [41]. However, random number generators are additionally required to generate stochastic
+
+numbers, and the inherent bit-stream operation lengthens the processing latency significantly.
+The digital error-correcting module responsible for channel codes must be designed with hardware efficiency in mind while meeting mandatory requirements. In this paper, we focus on implementing an area-efficient LDPC decoder that improves hardware utilization and meets throughput requirements. We propose a novel CNU architecture that efficiently identifies two minima using thermometer codes. To further reduce the hardware complexity of a CNU without compromising error-correcting performance, we combine input normalization with the thermometer coding. Additionally, we propose a new architecture that utilizes a single QSN stage, reducing the number of large shifters and enabling an area-efficient LDPC decoder that supports all operation modes of the 5G NR standard. Lastly, we also propose a single-port memory architecture to minimize the required memory area further.
+The rest of this paper is organized as follows: Section II explains the fundamentals of LDPC codes, and Section III describes the previous LDPC decoder components that have commonly been used. Section IV explains the proposed CNU and cyclic shifting architectures, Section V demonstrates the entire QC-LDPC decoder architecture, and Sections VI and VII present the effectiveness of the proposed techniques and implementation results, respectively. Finally, conclusion remarks are made in Section VII.
+
+II. PRELIMINARIES
+
+An (n, k) LDPC code, where n and k represent the codeword length and the number of information bits, is defined by a parity check matrix H that has a small number of non-zero terms. H can be visualized by a bipartite graph called a Tanner graph [42] where a column of H maps to a variable node, and a row of H to a check node. In the Tanner graph, there is an edge between a check node and a variable node if the corresponding position in H has a non-zero value. The number of edges connected to a check node is called the row degree of H and that to a variable node is referred to as the column degree.
+Since a LDPC code is a linear code, it satisfies 0 = c·HT for a codeword c, and each of the (n − k) check nodes is a single parity check code. The syndrome of the m-th check node is
+
+N
+
+Sm = zi hmi ,
+
+(1)
+
+i =1
+
+where zi is the hard-decision value of the i-th bit of the codeword.
+
+A. QC-LDPC Codes
+A large-sized memory is required to save the information of an almost random PCM that represents the connections between check nodes and variable nodes. As a result, practical LDPC codes are designed with a quasi-cyclic (QC) structure that enables parallel decoding of multiple nodes. The PCM of a QC-LDPC code is composed of circularly shifted identity submatrices or all-zero sub-matrices, as depicted in Fig. 1. If the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2899
+
+Fig. 1. A PCM and its permutation shift matrix with lifting size 3.
+size of a sub-matrix, referred to as the lifting size, is Z, the size of the PCM H is mb Z × nb Z , and H can be represented simply with a base graph P and a set of shift coefficients. To distinguish all-zero sub-matrices, also known as null submatrices, from circularly shifted identity sub-matrices, the shift coefficient of a null sub-matrix is usually denoted with a value of −1. If the lifting size Z is known, H can easily be recovered from P. Additionally, the orthogonality of the cyclic shifted identity submatrix allows all rows in a row of sub-matrices to be processed in parallel and the rows form a layer in the layered scheduling. Since a QC-LDPC code can be expressed with a small amount of information and a base graph, it can be implemented more efficiently than other LDPC codes.
+B. 5G NR LDPC Codes
+The QC-LDPC codes defined in the 5G NR standard are based on two base graphs: BG1 and BG2. BG1 is used for long codewords and high code rates, while BG2 is for relatively short codewords and low code rates [11]. Both BGs consist of a core part and an extension part. The core part encodes the information systematically and has a small number of null matrices for high error-correcting performance. Therefore, the core part consists of an information portion and a parity portion, and the parity portion is dual-diagonal for efficient encoding. The 5G NR LDPC code is a raptor-like code that supports H-ARQ [43]. In other words, the extension part can be partially used to provide various code rates associated with different error-correcting performances.
+To support codewords with various lengths, 5G NR defines 51 irregular lifting sizes ranging from 2 to 384. The lifting size Z is a value of a×2 j , where a∈ {2, 3, 5, 7, 9, 11, 13, 15} and 0 ≤ j≤ 7. The key requirements are related to the minimum technical performance of IMT-2020 issued by the ITU [9]. Note that the peak data rate is 20Gbps under error-free condition.
+C. LDPC Decoding Algorithm
+The sum-product (SP) decoding algorithm, also known as belief-propagation (BP), shows outstanding error-correcting performances among various LDPC decoding algorithms.
+
+In the algorithm, an LDPC code is regarded as a single-paritycheck code at a check node and a repetition code at a variable node. After performing the maximum a posteriori (MAP) decoding for each node, the generated messages are repeatedly exchanged between check and variable nodes through the edges, and finally, the a posteriori probability (APP) of the codeword is updated. However, the high computational complexity of the hyperbolic functions calculated in the check node makes hardware implementations impractical, so the complexity of the SP algorithm was relaxed by approximating the hyperbolic functions. The relaxed decoding algorithm, called a min-sum (MS) algorithm, is improved in performance by applying a normalization technique [14], [15], [16]. In this paper, we focus on the normalized MS (NMS) algorithm and the row-based layered scheduling, which allows a faster convergence speed than the flooding scheduling, and enables hardware-friendly implementation.
+In the row-layered decoding, a number of rows corresponding to the lifting size are regarded as a layer, and the layers are successively processed one by one. In that sense, the rowlayered decoding is different from the flooding scheduling that processes all rows simultaneously. The decoding algorithm consists of 4 steps: initialization, variable-node processing, check-node processing and APP update. In the initialization step, a variable node v is set to an intrinsic log-likelihood ratio (LLR) value Iv, given below for the additive white Gaussian noise (AWGN) channel:
+
+Iv
+
+=
+
+2yv σ2
+
+,
+
+(2)
+
+where yv and σ 2 denote the corresponding channel output and the channel noise variance, respectively. All check-to-variable (C2V) messages are set to 0, and the APP values of all variable nodes are initialized to the intrinsic LLR values.
+After the initialization, the decoding process successively decodes layers, one layer at a time. In decoding a layer, each variable node v sends an extrinsic message called a variable-tocheck (V2C) message Qvc to a check node c connected in the current layer being processed. The Qvc message is computed as follows:
+
+Qvc = Iv +
+
+Rc′v = Lv − Rcv
+
+(3)
+
+c′∈Cv \c
+
+where Cv represents the set of all the check nodes connected to v, Cvc is Cv − c, Lv and Rcv denote the APP value updated in the previous layers and the C2V message updated in the
+previous iteration, respectively.
+Each check node c in the current layer updates the outgoing
+extrinsic message, called a C2V message Rˆcv, to be sent to a variable node v connected to c as follows:
+
+Rˆcv = α · S · min |Qv′c| ,
+
+(4)
+
+v′∈Vv \v
+
+where Vc is the set of all variable nodes connected to c, Vcv denotes Vc − v, the constant α is a normalization factor, and S = v′∈Vc\v sign(Qv′c). The MS algorithm approximates the complex hyperbolic function in the SP algorithm by
+finding the minimum value among the related V2C messages.
+However, as the approximation usually overestimates the C2V
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2900
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+message, the MS algorithm results in a degradation of errorcorrecting performance. To compensate for this degradation, the minimum magnitude is modified by multiplying it by a normalization factor less than 1. Note that in the layered scheduling, a variable node is related to a single check node in the current layer.
+After updating C2V messages, each variable node updates its APP value Lˆ v as follows:
+
+Lˆ v = Iv +
+
+Rc′v + Rˆcv
+
+c′∈Cv \c
+
+= Lv − Rcv + Rˆcv
+
+= Qvc + Rˆcv.
+
+(5)
+
+This process is carried out for each layer, which has as many rows as the lifting size, and then consecutively proceeds to the next layer. When all layers have been processed, we call it one iteration. At the end of each iteration, a tentative codeword qˆ is obtained by hard-deciding the APP values:
+
+Fig. 2. A conventional check node unit with a min-tree module.
+
+qˆv =
+
+0, 1,
+
+i f Lˆ v ≥ 0 other wise.
+
+(6)
+
+If qˆ·H T = 0 or the number of iterations exceeds the maximum limit, the decoding stops. Otherwise, a new iteration starts. The check that verifies whether qˆ·H T = 0 is called a syndrome check. Layered scheduling updates the APP values after processing each layer. This ensures that the most recently updated APP values are used in processing the next layer, which significantly increases the convergence speed.
+
+III. PREVIOUS LDPC DECODER COMPONENTS
+As shown in (4), the check-node processing requires a nonlinear calculation to find the minimum value. In addition, an updated check node transfers an extrinsic message to each connected variable node. Besides finding the smallest V2C message, it is also necessary to identify the second smallest message and deliver it to the variable node with the smallest message. Additionally, the index of the first minimum is required to restore C2V messages in the next iteration. Therefore, special min-tree structures were developed in [44] and [45] to support the search for two minima. The number of comparators was reduced in [44] by utilizing the intermediate comparison results computed for the first minimum in collecting the candidates for the second minimum.
+In digital signal processing, digital data are usually represented in the 2’s Complement (2C) number system. As described in Section II, V2C messages are generated by subtracting C2V messages from the APP values, and updated C2V messages are added to the V2C messages to make new APP values. The 2C number system is widely used in LDPC decoding due to the large number of arithmetic operations involved. In the check-node processing, it is necessary to find the first and second minima among the magnitudes of V2C messages. Therefore, the minimum search requires converting 2C values to signed-magnitude (SM) values. The SM values must be converted back to 2C values for the remaining arithmetic operations and for storing them in memory.
+A conventional check-node unit, built with the min-tree structure, is depicted in Fig. 2. The input V2C messages,
+
+Fig. 3. Data alignment shifts for row-based layer processing.
+represented in the 2C number system, are first converted to SM values. The signs are used to create a set of sign values that are used to make extrinsic messages. Among the V2C magnitude values, the first and second minima and the index of the first minimum are found in the MIN-Tree unit. The minimum values are normalized by the NORM unit and fed into the C2V maker, which generates C2V messages using the set of sign values. The C2V information, including MIN1, MIN2, IDX, and signs, is stored in the C2V memory and used in the next iteration. As the complexity of the MINTree unit is significant, the conventional CNU suffers from high complexity and long processing delays. Since the number of CNUs is as many as the degree of parallelization in decoding, the complexity of each CNU plays a significant role in determining the complexity of the entire LDPC decoder.
+The PCM H of a QC-LDPC code consists of sub-matrices, each of which is either a circulant identity matrix or a zero matrix. Since the data of a codeword are arranged in order in the APP memory, the row-layered decoding requires shifting a submatrix of the lifting size by the corresponding shift
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2901
+TABLE I CONVERSION OF A 3-BIT BINARY CODE TO A 7-BIT THERMOMETER CODE
+
+Fig. 4. Finding a minimum from two thermometer codes.
+
+coefficient to efficiently collect the data to be processed in a check node, as depicted in Fig. 3. Therefore, the cyclic shifting module plays an important role in the QC-LDPC decoder. In particular, the 5G NR standard supports diverse lifting sizes and different shift coefficients depending on the lifting sizes. For this reason, a key component in a QCLDPC decoder is a programmable cyclic shifting module that supports all the predefined lifting sizes. Such a shifter has been studied intensively in [46], [47], [48], [49], [50], and [51], and the most representative one is the QC-LDPC shift network (QSN) [46] that consists of two shifters and a merge network combining the results of the two shifters.
+IV. PROPOSED CHECK-NODE UNIT AND CYCLIC SHIFTING ARCHITECTURE
+This section proposes two methods effective in realizing an area-efficient LDPC decoder.
+
+A. Thermometer Code
+The thermometer code (TC), also known as the unary code, represents a value of N with the lowest consecutive N bits set to 1 and the others to 0 [52]. The magnitude of a TC value is indicated by the number of 1’s, and there are no 0s between two consecutive 1’s. For an n-bit binary value, the corresponding thermometer code has (2n − 1) bits, as shown in Table I. For example, an unsigned binary code, 110, represents 6. Since it consists of 3 bits, a resultant TC would have 7 bits, and 110 will be converted into 0111111 which has 6 successive 1’s from the lowest bit. Owing to the characteristic of successive 1’s, the comparison of two or more codes can be simply realized. Finding the minimum from two TC values is exemplified in Fig. 4, where the two TC values are 6 and 3, and the minimum is generated through bitwise AND operations. Therefore, the comparison between TC values has a much shorter delay than that of 2C values which needs comparators. Note that even a negative 2C value can be directly mapped to a thermometer code by considering its absolute value, so a 2C-to-TC converter can replace the 2C-to-SM converter in a CNU. Similarly, after finding the two minima in the TC number system, they can be converted back to 2C values by detecting the first 1 from the most significant bit.
+B. Thermometer Code-Based CNU Architecture
+In previous min-sum LDPC decoder, the first and second minima were found by using a min-tree module that was associated with high complexity and long latency. Since the operating frequency is limited by the processing latency
+
+Fig. 5. The proposed (a) CNU architecture and (b) MIN gate logic.
+of the min-tree module, the min-tree operation is usually pipelined, resulting in significant overheads caused by the required pipeline registers. Many methods have been presented to mitigate the complexity [35], [36], [37], [38], but all the previous methods have reduced the CNU complexity at the cost of degrading the error-correcting performance. In that sense, the challenge lies in designing a low-complexity CNU without compromising the error-correcting performance. In this paper, we propose a thermometer code-based CNU architecture for the first time to achieve an area efficiency without degrading the error-correcting performance.
+The proposed CNU architecture is illustrated in Fig. 5(a). First, 5-bit 2C V2C messages are converted to a 15-bit TC value. The sign maker derives the signs of C2V messages from the signs of the V2C messages, like in Fig. 2. The TC values are then fed into the MIN Gate Logic, which finds the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2902
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+TABLE II
+HARDWARE COMPLEXITY OF MIN GATE LOGIC FOR VARIOUS NUMBERS OF INPUTS
+
+TABLE III
+CONVERSION OF A 4-BIT BINARY CODE TO A NORMALIZED THERMOMETER CODE (TC)
+
+first and second minima and the index of the first minimum. The outputs of MIN Gate Logic, MIN1, MIN2, and IDX, are stored in the C2V memory as they are required to restore C2V messages in the next iteration. The C2V maker generates new C2V messages based on the two minima, the signs computed in the sign maker, and the index.
+The major difference from the conventional CNU is that the min-tree module has been replaced with the MIN Gate Logic which is mainly composed of logic gates, as shown in Fig. 5(b). The first minimum can be easily derived by conducting AND operations for all input TC values. Then, each input TC value is compared to MIN1 to find the position of MIN1. This is achieved by conducting bitwise XOR operations with MIN1 and performing a bitwise NOR operation for the comparison result. The 27-bit vector generated through this process contains 1 at the position of MIN1 and 0 otherwise. This vector is used to exclude the first minimum in selecting the second minimum. For this purpose, the vector is transformed to a one-hot code that has only one 1. The one-hot code is used to mask the first minimum when searching for the second minimum, and the position of the 1 is converted to a binary value to generate the index of the first minimum. The mask operation is achieved simply by performing OR operations for TC values. Finally, the second minimum is selected by conducting AND operations for the masked TC values. Table II summarizes the hardware complexity of the MIN Gate Logics for various numbers of inputs, along with those of two previous works, [17] and [18].
+C. Normalized Input Check-Node Processing
+The MS decoding algorithm, which approximates hyperbolic operations to achieve hardware-friendly implementations, leads to a normalized technique [14], [15], [16] to alleviate the performance degradation. In the conventional CNU, two minimum V2C messages are found first and then multiplied by a positive normalization factor, which is usually less than 1, so as to compensate for the performance degradation caused by the approximation.
+How to process the normalization is described here to lower the complexity of the proposed TC-based CNU further. The normalized MS (NMS) decoding algorithm modifies the check
+
+node operation in (4) as follows:
+
+Rˆcv
+
+=
+
+α
+
+·
+
+S
+
+·
+
+min
+v′ ∈Vc \v
+
+|Qv′c| .
+
+(7)
+
+In the proposed normalization, the check-node operation is changed to
+
+Rˆcv
+
+=
+
+S
+
+·
+
+min |α
+v′ ∈Vc \v
+
+·
+
+Qv′c| .
+
+(8)
+
+In other words, the minimum value is found after multiplying the input V2C messages by the normalization factor. Since the normalization factor is positive, (7) and (8) are identical. This approach applies normalization to every V2C message involved, leading to additional hardware overhead in the conventional CNU, but it can effectively reduce the hardware complexity of the proposed TC-based CNU. The 2C-to-TC converter that links a binary number to a TC is simply modified to map a binary number to a normalized TC. An additional benefit is the potential to reduce the bit-width of the normalized thermometer code because the normalization factor is less than 1, decreasing the hardware complexity accordingly.
+In order to implement hardware-friendly decoders, the normalization factor is usually set to 0.75. In this paper, we assume that the APP is represented in a 7-bit 2C representation, and V2C and C2V messages are represented in a 5-bit SM representation. Therefore, the TC is represented by 15 bits to maintain the same quantized resolution. This means that the normalized TC can have a bit-width of either 12 bits with a normalization factor of 12/15 = 0.8 or 11 bits with a normalization factor of 11/15 = 0.73. Table III illustrates the normalized 12-bit and 11-bit TC values corresponding to a 4-bit binary code, where the values in parentheses represent the corresponding integer values.
+
+D. Relative Shift Coefficient
+A Cyclic shifter performing a simple shift operation requires a large area, as its input size is as large as the maximum lifting size. Specifically, in 5G NR, multiple QSNs are required to support various lifting sizes, and each QSN is realized with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2903
+
+Fig. 6. Data alignment shifts in the conventional architecture with double
+
+QSN stages.
+
+Fig. 8. Proposed decoder with a single QSN stage utilizing relative shift
+
+coefficients.
+
+Fig. 7. Shift coefficients for a code with rate 22/25 and lifting size 384. (a) Original shift coefficients and (b) relative shift coefficients.
+two barrel-shifters and a merge network. In practical decoding, the hardware complexity resulting from the QSNs can be larger than that of the decoding operation itself. Recognizing this issue, we propose a new method to reduce the number of required QSNs.
+Previous LDPC decoders have two QSN stages at the front and rear of the decoding function unit (DFU), as illustrated in Fig. 3. The shift operation required to align data for QC-LDPC decoding in the conventional two QSN stage architecture is depicted in Fig. 6. First, the APP values stored in order are read out from the APP memory and shifted for decoding operations. Then, the updated APP values are rolled back into the in-order form to store them into in the APP memory. In the next layer, similar shift operations are performed based on the corresponding shift coefficient.
+In the layered scheduling that sequentially processes layers one by one, there are two consecutive shift operations between two adjacent layers: a roll-back shift for the former layer and another shift for the latter layer. Since no processing operation takes place between the two shifts, they can be combined into a single shift. In other words, the updated APP values are directly stored into the APP memory without performing the roll-back shift, and in the next layer, the APP values read from the APP values are shifted by the difference of the two shift coefficients.
+
+Consider two adjacent shift coefficients, sa and sb: the rollback shift is a shift by -sa, and another shift by sb is required in the next layer. The same result can be achieved by performing a shift of (sb - sa). More precisely, the new shift coefficient, called a relative shift coefficient, is (sb - sa) mod Z , where Z is the lifting size. The relative shift coefficient sˆ(ib, jb) at row ib and column jb of the base graph is computed as follows:
+sˆ (ib, jb) = s (ib, jb) − s (i − 1)b , jb (modZ ) , (9)
+where s(·) represents the original shift coefficient. The relative circulant base graph is illustrated in Fig. 7, where the original absolute shift coefficients are shown in Fig. 7(a), and the relative shift coefficients are depicted in Fig. 7(b). This example is derived from an LDPC code defined in 5G NR with a rate of 22/25 and a lifting size of 384. In Fig. 7(b), the first layer is decomposed into two rows of shift coefficients. The shift coefficient in the first row is the same as the original shift coefficient and is used for the first iteration, while the second row contains the relative shift coefficient to be used for the remaining iterations.
+Therefore, as shown in Fig. 8, the updated APP values are directly stored in the APP memory without performing rollback shifts, and the APP values read from the memory are shifted by the relative shift coefficients for the processing of the next layer.
+V. PROPOSED QC-LDPC DECODER ARCHITECTURE
+To conform to the 5G NR standard, an LDPC decoder must achieve a throughput of 20 Gbps while supporting various code rates and lifting sizes. Additionally, it should be implemented with efficient hardware complexity and utilization. In this section, we describe how an area-efficient LDPC decoder is designed by applying the TC-based CNU and the single QSN stage architecture described in Section IV. Furthermore, we will explain how to reduce memory area by using singleport memories.
+A. Partially Parallel Architecture
+A partially parallel architecture was presented in [53] to mitigate hardware complexity by processing a partial number of rows in a layer at a time. Moreover, a novel stride
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2904
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+Fig. 9. Partially parallel scheduling of a submatrix in a 6-parallel decoder.
+
+Fig. 11. Configuration of C2V memories. (a) The accesses of two-port C2V memories and (b) the accesses of single-port C2V memories.
+
+Fig. 10. Block diagram of the proposed decoding function unit.
+scheduling of memory accesses was developed to solve the data alignment issues caused by partial parallelism, which is effective in supporting all lifting sizes specified in the 5G NR standard. The main concept of the partially parallel architecture is depicted in Fig. 9. In the toy example, there are six DFUs, but only three are activated at a time. The submatrix size or lifting size is 9, and the shift coefficient is 2. The APP values to be accessed simultaneously are color-coded. As the APP memory is designed for six DFUs, a row consists of six APP values to be accessed together. In the example, the number of active APP values is three, which corresponds to the number of activated DFUs, while D represents an unnecessary value not involved in decoding.
+For more details, refer to [53]. The partially parallel architecture efficiently supports various lifting sizes and code rates, while maintaining high hardware utilization by processing a layer with a small number of DFUs. This makes it possible to realize an area-efficient 5G LDPC decoder that meets the peak throughput.
+B. Decoding Function Unit
+The proposed architecture of a decoding function unit (DFU) is presented in Fig. 10, where 27 7-bit APP values that form a row of the BG1 PCM are fed to a DFU that updates the APPs after conducting variable node and check node processing. In the variable-node unit (VNU), the C2V restore module restores C2V messages from the C2V information
+
+updated in the previous iteration. The restored 5-bit C2V messages are then subtracted from the APPs to derive 5-bit V2C messages. Some V2C messages that are not involved in the check-node operation, which correspond to submatrices of a shift coefficient of −1, are replaced with maximum values to prevent them from affecting the check-node operation.
+The V2C messages are then fed to the proposed CNU described in Section IV. The CNU updates C2V messages and also generates a 40-bit C2V information vector containing two 4-bit magnitudes of MIN1 and MIN2, a 5-bit index of MIN1, and 27 sign values. This C2V information vector is stored in the C2V memory to restore C2V messages in the next iteration. In the APP update unit (APPU), the updated C2V messages are added to the V2C messages to create new 7-bit APP values, which are stored into the APP memory.
+C. Memory Configuration
+A QC-LDPC decoder requires two types of memory: APP memory and C2V memory. For the APP memory, the core part of the PCM needs a separate memory for each submatrix. As the core part of BG1 has 26 submatrices, 26 memory banks are necessary. When 32 DFUs are operating simultaneously, each memory bank of the APP memory should support a bit-width of 224 bits so that it can read and write 32 7-bit APP values at a time. For the maximum lifting size of 384, each memory bank is accessed 12 times, which means it has 12 entries. As for the extension part of the PCM, only one sub-matrix is accessed when decoding a layer, so the entire extension part can share a memory. Similar to the core part, the shared memory has a bit-width of 224 bits and a total of 504 entries, as the extension part deals with 42 layers and 12 entries per layer.
+The C2V memory stores C2V information vectors, each of which is composed of 40 bits as mentioned earlier. The rows of a layer are divided into groups, and each group is processed by a DFU. Therefore, each DFU has a separate C2V memory to store the C2V information vectors for the rows allocated to the DFU, as shown in Fig. 11(a). A DFU sequentially accesses
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2905
+
+Fig. 12. Supporting logic for a single-port memory, and data accesses of a C2V memory and a DFU.
+the C2V information vectors stored in order. As depicted in Fig. 11(b), combining two C2V information vectors to configure them as one word of a single-port memory allows the two C2V information vectors to be read or written alternatively every clock cycle, resulting in the same effect as a two-port memory.
+To employ a single-port memory instead of a two-port memory, a supporting circuit is required between the C2V memory and the DFU, as shown in Fig. 12. Two C2V information vectors can be accessed from the C2V memory every clock cycle. One C2V information vector read from the C2V memory is immediately processed in the DFU, while the other one is temporarily kept in a buffer to process it in the next cycle. When writing C2V information vectors generated by the DFU, the first C2V information vector is temporarily kept and combined with the second C2V information vector produced in the next cycle. The combined C2V information vectors are stored into the C2V memory at once. Therefore, we alternately read or write the C2V memory every clock cycle, while the DFU reads and writes simultaneously in every cycle. To realize such a single-port C2V memory, an additional circuit is necessary, but its complexity is much smaller than the area reduced by employing the single-port C2V memory.
+D. Overall Architecture
+Fig. 13 shows the overall LDPC decoder architecture based on partially parallel scheduling, which employs the propose TC-based CNU and the single QSN stage architecture. The proposed decoder has four pipeline stages, and the dotted vertical lines represent pipeline registers, except for the APP memories. The proposed TC-based CNU plays a significant role in minimizing the processing latency of a check node and reducing the number of pipeline stages compared to the previous one [53]. Additionally, the QSN is placed only in one stage. Therefore, the proposed decoder is effective in reducing the hardware overhead caused by pipeline registers, as well as increasing the throughput. The APP dependency between successive layers causes the pipeline to stall until all APPs in the current layer are updated before the next layer starts. As the number of pipeline stalls is proportional to the number
+
+of pipeline stages, reducing pipeline stages leads to an increase in throughput.
+The overall operation of the proposed decoder is described below. First, 32 7-bit APP values are read from an APP memory bank, and they are then shifted through a QSN by a relative shift coefficient of the PCM to align them for DFUs. Next, they are transferred to the DFUs through the distributing network. Since there are 27 APP memories, the distributing network outputs 32 sets of 27 APP values, and each set is fed to a DFU that performs the check-node operation with a C2V information vector. For a row or check node, the syndrome of the APPs corresponding to the row is checked to detect any errors. After processing the last layer of an iteration, it is possible to determine whether the decoding fails by checking the syndromes of all rows. The updated APPs, which were distributed for DFU processing, are collected through the gathering network and written into the APP memories. The gathering network generates 27 sets of 32 APP values, and each set is stored into an APP memory.
+VI. EFFECTIVENESS OF THE PROPOSED METHODS
+This section describes how effective the proposed techniques are in hardware implementation.
+A. Thermometer-Code Based CNU
+In the proposed architecture, the 15-bit TC values are used in the CNU, and the bit-width has further reduced to 11 bits by considering the normalization together. It is essential to ensure that normalized TC values do not cause a significant degradation in error-correcting performance. A LDPC code with a lifting size of 384, as defined in the 5G NR standard, was decoded using two normalization factors of 0.8 and 0.73. The simulation considered a code rate of 11/12, which was achieved by considering only the core part, and setting the maximum number of iterations to 100. As shown in Fig. 14, there are almost no performance difference between the normalized TC-based check node processing and the baseline processing with conventional check nodes.
+As only a limited number of iterations is allowed in hardware implementation, the proposed normalization has been simulated with a maximum iteration number of 10 and compared with the results of the conventional NMS algorithm achieved with the same number of maximum iterations. The resulting FERs are illustrated in Fig. 15, where it is clear that both FER curves are very similar to each other and have a negligible difference in error-correcting performances.
+Table IV compares the hardware complexities required to implement the proposed CNU and the conventional CNU designed with the min-tree structure. The proposed structure provides advantages in terms of delay and area. Changing comparators in the min-tree to bitwise AND gates reduce the delay significantly, about 37%, and makes the proposed CNU operate in a single cycle. Note that the conventional architecture has to adopt a 2-stage pipelined structure due to the delay of the min-tree.
+In Table IV, the converter area is counted for 27 2C-toTC converters in the proposed CNU and 27 SM converters in the conventional CNU. Note that a 2C-to-TC converter
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2906
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+Fig. 13. Overall architecture of the proposed LDPC decoder.
+
+TABLE IV CNU COMPLEXITIES
+
+Fig. 14. Error-correcting performances of normalized check node processing for two normalization factors.
+
+the overhead caused by the 2C-to-TC converters. Furthermore, the hardware overhead for generating C2V messages can be further reduced since the index of MIN1 is generated directly from the 27-bit vector without comparing the indices of the 27 messages. Consequently, the proposed TC-based CNU reduces the hardware complexity by 20% without sacrificing any performance.
+The hardware complexity reduction achieved by using normalized TC values is summarized in Fig. 16. The conventional CNU contains normalization modules to implement the NMS decoding algorithm. By reducing the bit-width of the TC, the hardware complexity is significantly decreased. For example, the 11-bit TC reduces the entire hardware complexity of a CNU by up to 36% compared to the conventional CNU.
+
+Fig. 15. Error-correcting performance with a maximum iteration number of 10 for the conventional NMS algorithm and the proposed decoder.
+is approximately 1.59 times more complex than an SM converter. However, the proposed MIN Gate Logic reduces the hardware complexity by approximately 46%, offsetting
+
+B. Single QSN Stage
+Compared to the conventional decoder that requires two QSN stages with absolute shift coefficients, which is depicted in Fig. 3, the relative shift coefficient enables a layered decoder to be constructed with a single QSN stage, as illustrated in Fig. 8. The area required for QSN is halved, which reduces the hardware complexity significantly. Note that no additional logic is required to compute relative shift coefficients, as the original base graphs storing absolute shift coefficients can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2907
+
+Fig. 17. A layout of the prototype LDPC decoder design in 65-nm process. The white and the yellow box represent the APP memory and the C2V memory, respectively. The red box is the memory storing the base graphs.
+
+Fig. 16. Reduction of CNU complexity.
+
+TABLE VI MEMORY CONFIGURATION FOR THE PROPOSED DECODER
+
+TABLE V COMPARISON OF TWO-PORT AND SINGLE-PORT C2V MEMORY BANKS
+
+layered scheduling. To maximize hardware efficiency, the normalized TC is represented in 11 bits, while a parallelism of 32 is applied to minimize the hardware resources, ensuring the throughput required for 5G NR.
+
+be replaced with new base graphs containing relative shift coefficients.
+C. Single-Port C2V Memory
+Since a C2V memory is necessary for a DFU, there are 32 banks in total. In the conventional two-port memory, each bank has 12 entries, and an entry contains a C2V information vector. With a maximum of 46 layers in the 5G NR standard, a C2V memory bank consists of 552 entries. However, in case of single-port memory, each C2V memory bank has 6 entries Z per layer, as an entry stores two C2V information vectors. The number of entries in a single-port memory is halved, accordingly. Table V summarizes the hardware complexities of a C2V memory realized with a two-port register file and a single-port register file, where the single-port version reduces the area complexity to a half, power consumption by 18% and the delay by 33% as well.
+VII. IMPLEMENTATION RESULTS
+This section presents the implementation results of the proposed LDPC decoder design. It was designed in a 65-nm CMOS process using Design Compiler of Synopsys for logic synthesis and IC Compiler II of Synopsys for placement and routing. Fig. 17 shows the layout of the proposed decoder, which has a core are of 3.82mm2 with a cell utilization rate of 75%. The design incorporates a single QSN stage and 32 DFUs that contain TC-based CNUs. It adopts the normalized min-sum decoding algorithm and the row-based
+
+A. Complexity Analysis of the Proposed Decoder
+In the proposed LDPC decoder, the logic area occupies 0.81mm2, and the equivalent gate count, counted by taking a two-input NAND gate as one, is 0.63M. The logic area is divided into several portions: QSN, VNU, CNU, APPU, pipeline register (PIPE REG), controller, support logic for single-port C2V memory (SP C2V), and others. Each of these portions represents 24.3%, 13.9%, 20.4%, 6.2%, 21.2%, 6.2%, 4.9%, and 2.7%, respectively. The remaining portion includes syndrome checkers as well as distributing and gathering networks. It is important to note that even with the proposed methods, the QSN and CNU still require significant areas.
+B. Memory Analysis of the Proposed Decoder
+Table VI presents the memory areas resulting from using 7-bit APP and 5-bit C2V configurations. Since both memories have a relatively small number of entries, they are implemented with register files, which offer advantages over SRAM in terms of area and latency. The APP memory consists of 26 banks for the core part of the PCM and one shared bank for the extension part. In contrast, the C2V memory has 32 banks. Due to the physical limitations of register files, one bank for the core part was constructed using four 56-bit register files, and the shared bank was realized with seven 32bit register files. Similarly, one bank in the C2V memory was implemented using two 40-bit register files. The number of entries in a memory matches the logical memory described in Section VI, and the total memory capacity is 889,344 bits, with 182,784 bits allocated to APP memory and 706,560 bits to C2V memory. It is worth noting that although the capacity of C2V memory is much greater than that of APP memory,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2908
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+TABLE VII ASIC IMPLEMENTATION RESULTS OF THE PROPOSED AND STATE-OF-THE-ART LDPC DECODERS
+
+the area of C2V memory including the supporting logic is smaller than that of APP memory thanks to its single-port implementation.
+
+C. Throughput Analysis of the Proposed Decoder
+
+The formula for calculating the throughput of a LDPC decoder is given as:
+
+T hr oughput = Z × Nk × fclk ,
+
+(10)
+
+Iavg × L R × C L K lay
+
+where Nk is the number of information blocks, fclk is the operating frequency, Iavg denotes the average number of iterations, and L R and C L K lay stands for the total number of layers to be processed and the total number of clock cycles needed to process a layer, respectively. In the proposed decoder the critical path delay from the input of CNU to the APP update is 1.98ns, necessitating the setting of the operating frequency to 500 MHz. With 3 decoding iterations, a 4stage pipelined architecture, and a parallelism of 32, the peak throughput is 23.47 Gbps, as calculated by
+
+384Z × 22blk × 500 × 106 f = 23.47 Gbps .
+
+{3itr × 4lyr ×
+
+384r ow 32D FU
+
++ 3pipe
+
+}
+
+D. Comparison With Previous Decoders
+Table VII summarizes the characteristics of both the proposed and previous decoders. Targeting the 5G NR standard, all the decoders were designed based on row-layered scheduling, but their processing structures are different: partial parallelism [53], full parallelism [24] and block serial [37].
+
+The proposed decoder, which was designed to process the NMS decoding algorithm, supports all code rates and lifting sizes required for the 5G NR standard. The proposed decoder can use the layer skipping technique [53], but it was excluded to ensure a fair comparison. The throughputs shown in Table VII were calculated using the same codeword configurations considered in previous papers for a fair comparison.
+Compared to [53], which uses the same partial parallelism of 32, the proposed decoder was implemented with a smaller number of pipeline stages, resulting in a higher throughput per iteration. Hence, applying the proposed methods significantly reduces the area and plays an important role in achieving a larger throughput-area ratio (TAR). Reference [24], designed based on full parallelism, has a smaller area than the proposed decoder but supports only a small codeword of 3072 bits. Moreover, the full-parallel processing is limited to within a layer, and the data dependency between layers requires that the current layer be completed before starting the next layer. This limitation reduces the pipeline utilization and actual throughput, resulting in a lower peak throughput. In [37], which employs block serial architecture, one block in a layer is processed at a time, resulting in a significantly lower decoding throughput than the proposed decoder, despite higher hardware complexity. Thus, the proposed methods for achieving areaefficient implementations have led to the highest TAR.
+VIII. CONCLUSION
+This paper has proposed three methods to alleviate the hardware complexity of LDPC decoders. First, a novel checknode architecture was presented that uses thermometer codes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+JANG et al.: AREA-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+2909
+
+to find two minima, which is completely different from the conventional approach that uses the min-tree structure dealing with signed-magnitude numbers. The proposed checknode unit (CNU) converts V2C messages into thermometer codes and then finds the minimum using simple logic gates. To reduce the complexity further, the thermometer code (TC) is generated by considering normalization together with conversion. The normalized thermometer code reduced the hardware complexity of a CNU by up to 36% without degrading error-correcting performance. Second, a new decoder architecture requiring only one QSN stage was developed to reduce the complexity of shifting operations. Two successive shifting operations are combined into one by taking a relative shift coefficient. Lastly, the C2V memory, traditionally implemented with two-port memories, was realized with single-port memories. Reducing the number of ports from two to one was proven to be an effective way to reduce memory complexity. All the proposed methods are effective in reducing the hardware complexity of QC-LDPC decoders and do not hinder support for all code rates, lifting sizes, and peak decoding throughput specified in the 5G NR standard. Implementation results have shown that the proposed decoder achieves the highest throughput-area ratio among state-of-the-art decoders. As future communication standards beyond 5G suppose a lot more higher data transmission and demand a much higher throughput, QC-LDPC codes are likely to be used as main error-correcting codes in next generations. We believe that the proposed methods would be effective in realizing QC-LDPC decoders for future standards. As the TC generator is larger than the binary code generator, the TC generator should be studied in depth to reduce its hardware complexity.
+ACKNOWLEDGMENT
+The authors would like to thank IC Design Education Center (IDEC), South Korea, for supporting the EDA tools.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1997.
+[3] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), Standard ETSI EN 302 307-2 V.1.1.1 (2014-10), 2014.
+[4] (2005). IEEE P802.3an (10GBASE-T) Task Force. [Online]. Available: http://www.ieee802.org/3/an/
+[5] Standard: Synchronization Standard for Distributed Transmission, ATSC, Boston, MA, USA, 2007.
+[6] Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed Broadband Wireless Access Systems, IEEE Standard 802.16-2004, 2004.
+[7] Standard for Information Technology—Telecommunications and Information Exchange between Systems Local and Metropolitan Area Networks–Specific Requirements Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 1: Enhancements for High-Efficiency WLAN, Standard 802.11-2020, 2020.
+[8] Chairman’s Notes of A1 7.1.5 on Channel Coding and Modulation for NR, document R1-1613710, 3GPP, Nov. 2016. [Online]. Available: https://www.3gpp.org/ftp/tsg_ran/wg1_rl1/TSGR1_67/Docs/ R101613710.zip
+
+[9] Minimum Requirements Related to Technical Performance for IMT-2020 Radio Interface (s), document M.2410-0, ITU, Geneva, Switzerland, 2017.
+[10] M. Shafi et al., “5G: A tutorial overview of standards, trials, challenges, deployment, and practice,” IEEE J. Sel. Areas Commun., vol. 35, no. 6, pp. 1201–1221, Jun. 2017.
+[11] Multiplexing and Channel Coding, Standard 3GPP, TS 38.212 V 16.5.0, Apr. 2021. [Online]. Available: https://www.3GPP.org
+[12] R. Gallagher, “Analysis of number of independent decoding iterations,” in Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 2003, pp. 91–99.
+[13] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[14] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[15] M. K. Roberts and R. Jayabalan, “A Power- and area-efficient multirate quasi-cyclic LDPC decoder,” Circuits, Syst., Signal Process., vol. 34, no. 6, pp. 2015–2035, Dec. 2014.
+[16] Y. Liu, W. Tang, and D. G. M. Mitchell, “Efficient implementation of a threshold modified min-sum algorithm for LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 9, pp. 1599–1603, Sep. 2020.
+[17] S. Kumawat, R. Shrestha, N. Daga, and R. Paily, “High-throughput LDPC-decoder architecture using efficient comparison techniques & dynamic multi-frame processing schedule,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 62, no. 5, pp. 1421–1430, May 2015.
+[18] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[19] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[20] E. Sharon, S. Litsyn, and J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” in Proc. 23rd IEEE Conv. Electr. Electron. Eng. Isr., Sep. 2004, pp. 223–226.
+[21] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[22] S. Usman and M. M. Mansour, “Fast column message-passing decoding of low-density parity-check codes,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 7, pp. 2389–2393, Jul. 2021.
+[23] K. Suravi and R. Shrestha, “High-throughput VLSI architecture for LDPC decoder based on low-latency decoding technique for wireless communication systems,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), Jul. 2022, pp. 206–211.
+[24] A. Verma and R. Shrestha, “Low computational-complexity SOMSalgorithm and high-throughput decoder architecture for QC-LDPC codes,” IEEE Trans. Veh. Technol., vol. 72, no. 1, pp. 66–80, Jan. 2023.
+[25] H. Cui, F. Ghaffari, K. Le, D. Declercq, J. Lin, and Z. Wang, “Design of high-performance and area-efficient decoder for 5G LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 2, pp. 879–891, Feb. 2021.
+[26] A. Verma and R. Shrestha, “A new partially-parallel VLSI-architecture of quasi-cyclic LDPC decoder for 5G new-radio,” in Proc. 33rd Int. Conf. VLSI Design 19th Int. Conf. Embedded Syst. (VLSID), Jan. 2020, pp. 1–6.
+[27] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting FPGA,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 6, pp. 1141–1151, Jun. 2021.
+[28] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux, “Highspeed LDPC decoders towards 1 Tb/s,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 5, pp. 2224–2233, May 2021.
+[29] A. Hasani, L. Lopacinski, G. Panic, and R. Kraemer, “High-throughput multi-frame decoding of QC-LDPC codes with modified rejection-based minimum finding,” IEEE Access, vol. 10, pp. 5378–5389, 2022.
+[30] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+[31] S. Yun, B. Y. Kong, and Y. Lee, “Area- and energy-efficient LDPC decoder using mixed-resolution check-node processing,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 69, no. 3, pp. 999–1003, Mar. 2022.
+[32] V. L. Petrovic and D. M. El Mezeni, “Reduced-complexity offset min-sum based layered decoding for 5G LDPC codes,” in Proc. 28th Telecommun. Forum (TELFOR), Nov. 2020, pp. 1–4.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+2910
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 6, JUNE 2024
+
+[33] H. Lopez Davila, T.-H. Wu, S. J. Jou, S.-G. Chen, and P.-Y. Tsai, “Low routing complexity multiframe pipelined LDPC decoder based on a novel pseudo marginalized min-sum algorithm for high throughput applications,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 1, pp. 29–42, Jan. 2023.
+[34] B. N. Tran-Thi, T. T. Nguyen-Ly, and T. Hoang, “An FPGA design with high memory efficiency and decoding performance for 5G LDPC decoder,” Electronics, vol. 12, no. 17, p. 3667, Aug. 2023.
+[35] A. Verma and R. Shrestha, “Hardware-efficient and high-throughput LLRC segregation based binary QC-LDPC decoding algorithm and architecture,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 8, pp. 2835–2839, Aug. 2021.
+[36] V. L. Petrovic´, M. M. Markovic´, D. M. E. Mezeni, L. V. Saranovac, and A. Radoševic´, “Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467, Dec. 2020.
+[37] C.-Y. Lin, L.-W. Liu, Y.-C. Liao, and H.-C. Chang, “A 33.2 Gbps/Iter. Reconfigurable LDPC decoder fully compliant with 5G NR applications,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2021, pp. 1–5.
+[38] K. Tian and H. Wang, “A novel base graph based static scheduling scheme for layered decoding of 5G LDPC codes,” IEEE Commun. Lett., vol. 26, no. 7, pp. 1450–1453, Jul. 2022.
+[39] B. R. Gaines, “Stochastic computing systems,” in Advances in Information Systems Science. Boston, MA, USA: Springer, 1969, pp. 37–172.
+[40] S. Hu, K. Han, F. Wang, and J. Hu, “Hybrid stochastic LDPC decoder with fully correlated stochastic computation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 9, pp. 3643–3654, Sep. 2022.
+[41] S. Hu, K. Han, Y. Zhu, G. Shen, F. Wang, and J. Hu, “High throughput and hardware efficient hybrid LDPC decoder using bit-serial stochastic updating,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 70, no. 9, pp. 3653–3664, Sep. 2023.
+[42] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[43] T.-Y. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, “Protographbased raptor-like LDPC codes,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1522–1532, May 2015.
+[44] Y. Lee, B. Kim, J. Jung, and I.-C. Park, “Low-complexity tree architecture for finding the first two minima,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 62, no. 1, pp. 61–64, Jan. 2015.
+[45] C. Zhang, S. Weng, X. You, and Z. Wang, “Area-efficient check node unit architecture for single block-row quasi-cyclic LDPC codes,” in Proc. IEEE Asia–Pacific Conf. Circuits Syst. (APCCAS), Nov. 2014, pp. 431–434.
+[46] X. Chen, S. Lin, and V. Akella, “QSN—A simple circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 57, no. 10, pp. 782–786, Oct. 2010.
+[47] Z. Zhong, Y. Huang, Z. Zhang, X. You, and C. Zhang, “A flexible and high parallel permutation network for 5G LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 12, pp. 3018–3022, Dec. 2020.
+[48] H. Harb and C. Chavet, “Fully parallel circular-shift rotation network for communication standards,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 12, pp. 3412–3416, Dec. 2020.
+[49] E. Boutillon and H. Harb, “Extended barrel-shifter for versatile QC-LDPC decoders,” IEEE Wireless Commun. Lett., vol. 9, no. 5, pp. 643–647, May 2020.
+[50] H. Lam, S. Lu, H. Qiu, M. Zhang, H. Jiao, and S. Zhang, “A highefficiency segmented reconfigurable cyclic shifter for 5G QC-LDPC decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 1, pp. 401–414, Jan. 2022.
+[51] S. Song, H. Cui, and Z. Wang, “A universal efficient circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 10, pp. 1553–1557, Oct. 2022.
+[52] K. Raajitha, K. Meenakshi, and Y. M. Rao, “Design of thermometer coding and one-hot coding,” in Proc. 3rd Int. Conf. Intell. Commun. Technol. Virtual Mobile Netw. (ICICV), Feb. 2021, pp. 601–609.
+[53] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G newradio standard,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2035–2048, May 2022.
+
+Boseon Jang received the B.S. degree in electronic and electrical engineering from Hongik University, Seoul, South Korea, in 2021, and the M.S. degree in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2023. His current research interests include VLSI architectures for error-correction codes, communication systems, and neural network processors.
+Hyejung Jang (Graduate Student Member, IEEE) received the B.S. degree in information systems and computer science from Hanyang University, Seoul, South Korea, in 2019, and the M.S. degree in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2024. Her current research interests include VLSI architectures for error-correction codes, communication systems, and neural network processors.
+Sungho Kim received the B.S. degree in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2023, where he is currently pursuing the M.S. degree. His current research interests include VLSI architectures for error-correction codes, communication systems, and neural network processors.
+Kangjoon Choi (Student Member, IEEE) received the B.S. degree in electronic engineering from Hanyang University, Seoul, South Korea, in 2023. He is currently pursuing the M.S. degree in electrical engineering with Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea. His current research interests include VLSI architectures for error-correction codes, communication systems, and neural network processors.
+In-Cheol Park (Senior Member, IEEE) received the B.S. degree in electronic engineering from Seoul National University, Seoul, South Korea, in 1986, and the M.S. and Ph.D. degrees in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 1988 and 1992, respectively.
+Since June 1996, he has been an Assistant Professor and is currently a Professor with the School of Electrical Engineering, KAIST. Prior to joining KAIST, he was with the IBM T. J. Watson Research Center, Yorktown, NY, USA, from May 1995 to May 1996, where he carried out research on high-speed circuit design. His current research interests include computer-aided design algorithms for high-level synthesis and very large-scale integration architectures for general-purpose microprocessors. Dr. Park received the Best Design Award at ASP-DAC in 1997 and the Best Paper Award at ICCD in 1999.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:30 UTC from IEEE Xplore. Restrictions apply.
+
+

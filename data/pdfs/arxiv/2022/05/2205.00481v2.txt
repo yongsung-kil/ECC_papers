@@ -1,0 +1,833 @@
+A recipe of training neural network-based LDPC decoders
+Guangwen Li, Xiao Yu
+
+arXiv:2205.00481v2 [cs.IT] 9 Aug 2022
+
+Abstract—It is known belief propagation decoding variants of LDPC codes can be unrolled easily as neural networks after assigning differed weights to message passing edges flexibly. In this paper we focus on how to determine these weights, in the form of trainable parameters, within a framework of deep learning. Firstly, a new method is proposed to generate highquality training data via exploiting an approximation to the targeted mixture density. Then the strong positive correlation between training loss and decoding metrics is fully exposed after tracing the training evolution curves. Lastly, for the purpose of facilitating training convergence and reducing decoding complexity, we highlight the necessity of slashing the number of trainable parameters while emphasizing the locations of these survived ones, which is justified in the extensive simulation.
+Index Terms—Deep learning, Neural network, Belief propagation, Finite Geometry LDPC codes, Min-Sum, Training
+I. INTRODUCTION
+In modern telecommunication system, the error correction codes, as an indispensable ingredient, appears to combat unavoidable random noises in the communication channel via deliberately designed redundancy in encoding. Among them, the family of linear low-density parity-check codes (LDPC) [1] demonstrate prominent error correction capability by achieving near Shannon Limit asymptotically. However, the accompanied iterative belief propagation (BP) decoders require substantial computational resources, thus unbearable in some harsh applications. With the target of reducing decoding complexity effectively, the min-sum (MS) and its variants, normalized min-sum and offset min-sum (OMS) (NMS) [2], [3] were proposed as an approximation to the BP. Regretfully, the incurred performance loss is not negligible in most cases.
+On the other hand, with the giant leap of computational power and rapid development of machine learning theory, various deep learning strategies were deployed successfully in the fields from traditional image processing [4], objection detection [5], face recognition [6] to more challenging tasks such as natural language processing [7] and autonomous driving [8] etc. Their success is symbolized finally with the state-of-the-art performance.
+Many attempts have recently been explored to integrate deep learning methods into the realm of LDPC codes decoding. To overcome the challenging obstacle in code space, known as curse of dimensionality [9], the authors in [10]–[15] proposed the neural normalized min-sum (NNMS) or neural offset
+G.Li is with the College of Information & Electronics, Shandong Technology and Business University, Yantai, China e-mail: lgwa@sdu.edu.cn
+X.Yu is with the Department of Physical Sports, Binzhou Medical University, Yantai, China e-mail: yuxiao@bzmu.edu.cn
+
+min-sum (NOMS) decoders, after unrolling the original minsum decoding schemes into typical neutral networks such as convolutional neural network (CNN) or recurrent neural network (RNN) with respect to the Tanner graph of a code in lieu of an arbitrary neural network, It was verified that such approaches can achieve near maximum a posteriori (MAP) decoding performance for classical codes such as BCH codes and short Gallager LDPC codes [16]. Furthermore, for a class of protograph-based 5G LDPC codes of long block, whose structure is quasi cyclic, [17], [18] explored to apply machine learning techniques with fully sharing edge weights and achieved better decoding performance. Besides that, for a class of irregular LDPC codes, it was proposed in [19] to assign and share weights for the NNMS decoder in terms of the degree distribution of the code, thus outperformed its counterparts.
+Sticking to the design of NNMS decoder, we elaborate on how to optimize its training to obtain a universal decoder with excellent performance in a wide range of signal noise ratio (SNR) region. Our main contribution consists of one innovation and two findings. Since the feeding of a neural decoder impacts substantially its training outcome, we propose to generate input data with respect to a novel approximation to the targeted mixture probability density. Then the relation between training loss and decoding metrics is clarified statistically, by way of explaining the underlying changes along with the training iteration of all evolution curves. Lastly, it is found the performance of a neural decoder is greatly affected by the locations of its trainable parameters, instead of their amount. Therefore, with a proper configuration of trainable parameters, the benefits we gain range from lightening the training burden to reducing the complexity of the finalized decoder, which is verified in the followed simulations.
+The remainder of the paper is organized as follows. Section II presents the necessary background about LDPC decoding variants, as well as the neural networking structure of NNMS. The motivation of our scheme is presented in Section III, while experimental results are discussed in detail in Section IV. Section V concludes this work with some remarks and suggestions of further research directions.
+II. BACKGROUND
+For error correction codes, the redundancy added in in channel encoding makes it possible to transmit information reliably over unreliable channels.
+Assume each code bit ci, i = 1, 2, · · · ∈ N is modulated with BPSK via 1 − 2ci, where N denotes code block length.
+
+Due to the disturbance of additive white Gaussian noise (AWGN) of zero mean and variance σ2, the log-likelihood
+ratio (LLR) of the i-th bit at channel output is given by
+
+bvi = log
+
+p(yi|ci = 0 p(yi|ci = 1
+
+=
+
+2yi σ2
+
+(1)
+
+where yi is the i-th noisy signal. As a result, a positive(negative) yi hints the bit sent being 0(’1’). Then these LLRs will be regarded as channel messages involved in the BP.
+
+A. Standard BP and some MS variants
+The bipartite Tanner graph of a code, whose structure pertains totally to its parity check matrix H, consists of N variable nodes and M check nodes. And each ’1’ at the i-th row and the j-th column of N denotes variable node i and check node j is connected with an edge in the Tanner graph.
+For LDPC codes, the standard BP is a competitive one among many decoding schemes, in the sense it is optimal under the assumption of a tree-like Tanner graph without any cycles. However, it degrades to being suboptimal for any code of practical implementation, since the unavoidable cycles of the Tanner graph make the passed messages between nodes in the BP no longer independent of each other.
+To be self-contained, let us take a close look at the decoding process of BP. For i ∈ {1, 2, ..., N }, j ∈ {1, 2, ..., M }, l ∈ {1, 2, ..., T }, where T is the maximum number of iterations, at the l -th iteration, the message from variable node vi to check node cj is 2
+
+x(vli)→cj = bvi +
+
+xc(lp−→1v) i
+
+(2)
+
+cp →vi
+
+p∈C(i)/j
+
+while the message from cj to vi is 3
+
+
+
+
+
+xc(lj)→vi
+
+=
+
+2tanh−1
+
+ 
+
+tanh
+
+ vq→cj
+
+x(vlq)→cj 2
+
+  
+
+(3)
+
+q∈V (j )/i
+
+where C(i)/j denotes all neighboring check nodes of vi excluding cj, and V(j)/i denotes all neighboring variable nodes of cj excluding vi,
+
+x(vli) = bvi +
+
+xc(lp−→1v) i
+
+(4)
+
+cp →vi
+
+p∈C(i)
+
+To circumvent the expensive computation of tanh function in (3), the MS was substituted for it via a simple approximation in (5), at the cost of some performance loss.
+
+
+
+
+
+xc(lj)→vi
+
+=
+
+ 
+
+sgn
+
+ vq→cj
+
+xv(lq)→cj
+
+ 
+
+min
+
+ vq→cj
+
+xv(lq)→cj
+
+q∈v(j)/i
+
+(5)
+
+q∈v(j)/i
+
+What makes the MS more attractive is its characteristic of scale invariance, suitable for the case of channel noise with
+
+unknown σ2. In comparison, the BP performance will suffer seriously with inaccurate estimation of σ2 [14].
+To bridge the performance gap between MS and BP decoders, the NMS and OMS were proposed to multiply or add a constant correction term in the min term of (5) respectively, the validity of which was verified in literature.
+
+B. Related work of the NNMS
+
+Since performance of NOMS lags behind NNMS generally [14], only the NNMS is discussed henceforth.
+A MS can be readily transformed into a trellis structure by unrolling each iteration of it. Then the NNMS as a special neural network, is born by adding trainable parameters α, β, γ as shown in 6 and 7 on the edges of the trellis. These parameters, as a whole, will play a dual role of mitigating adverse effect due to the cycles in the Tanner graph and narrowing performance gap between the MS and BP. Till now one pending subject about the NNMS is the assignment of its parameters which dominates its performance.
+
+xv(li)→cj = αi(l)bvi +
+
+βp(l,)i x(clp−→1v) i
+
+(6)
+
+cp →vi
+
+p∈C(i)/j
+
+
+
+
+
+
+
+
+
+x(clj)→vi
+
+=
+
+ 
+
+vq →cj
+
+sgn
+
+x(vlq)→cj
+
+ 
+
+γq(l,)j
+
+min
+vq →cj
+
+x(vlq)→cj  (7)
+
+q∈v(j)/i
+
+q∈v(j)/i
+
+Algorithm 1 NNMS decoding
+
+Input: channel signals b, H, T , and well trained α, β, γ
+
+Output: estimated binary vector c
+
+1: For any i ∈ {1, 2, ..., N }, j ∈ {1, 2, ..., M } 2: xc(0j)→vi = 0, l = 1;
+3: repeat
+
+4: calculate vi− > cj message with 6;
+
+5: calculate cj− > vi message with 7; 6: c(l) = (cˆ1, cˆ2, ..., cˆN ), cˆi = (1 − sgn(xv(li)))/2 by 4; 7: if Hc(l) = 0 then
+
+8:
+
+return c(l);
+
+9: else
+
+10:
+
+l = l + 1;
+
+11: end if
+
+12: until (l > T ) 13: return c(T );
+
+For the purpose of illustration, the neural network architecture of NNMS is presented in Fig. 1
+In training phase, the neural decoders starts off with a data batch feeding, outputs an evaluation of the predefined loss function, then applies a gradient descent method to update all trainable parameters in a back propagation mode. More feedings, more updates. The training usually continues until the loss function halts declining or all data epochs are iterated. A flow chart of training NNMS is shown in Fig. 2.
+In testing phase, a well trained NNMS, as presented in Alg. 1, is likely to improve decoding performance prominently.
+
+III. MOTIVATION OF OUR SCHEME
+
+1st iteration
+
+2nd iteration
+
+···
+
+T th iteration
+
+variable nodes
+
+check nodes
+
+variable nodes
+
+check nodes
+
+variable nodes
+
+γ (1) 1
+
+β(1)
+
+γ (2)
+
+β(2)
+
+γ (3)
+
+check nodes
+
+γ(T −1) ···
+
+β(T )
+
+···
+
+variable nodes
+1
+
+2
+
+···
+
+2
+
+···
+
+3
+
+3
+
+···
+
+4
+
+···
+
+4
+
+5 ...
+
+...
+
+...
+
+...
+
+···
+
+...
+
+...
+
+···
+
+... 5
+
+M
+
+M
+
+···
+
+M
+
+N
+
+N
+
+N
+
+N
+
+Soft output
+...
+
+α(1)
+
+α(2)
+
+α(l) · · ·
+
+α(T )
+
+···
+1 2 3 4 5 ··· N Soft input
+
+Fig. 1. A full-loaded NNMS framework in which the trainable parameters α, β, γ assigned for each edge can be shared each other or trimmed off to meet the need of applications, and the edge connections is in line with placement of non-zero elements of check matrix H
+
+start
+Construct NNMS model, with α, β, γ initialized to be ’1’s
+Define loss function for NNMS output
+
+Although we can generate a volume of AWGN random data of designated σ2 without any effort, it is another story to determine a proper evaluation of σ2 for the training data of a specific code. As a result, when the input data with light σ2 is less error-prone, the resulting NNMS can not cope with channel noisy signals even in medium SNR region. On the other, noisy data of aggravated σ2 may prevent the NNMS from acquiring its decoding ability due to training divergence.
+Instead of the routine practice of blending the feeding data of some typical SNR points within a certain range [9], [15], we propose to approximate it by generating training data according to a unique Gaussian density N (µa, σa2), deferred to be discussed in Section IV.
+In NNMS training phase, what intrigues us most is the relations between the loss function defined for decoder output and decoding metrics such as bit error rate (BER) or frame error rate (FER). However, it is too complex to analyze them in math expressions, we instead approach it by tracing the training curves graphically in next section, hoping that will shed lights on what happened behind the scenes.
+Naturally, given a well trained NNMS decoder, another question raised is whether it is feasible to cut down the number of trainable parameters as many as possible so as to reach a better tradeoff between its decoding performance and computational complexity. After all, more trainable parameters imply more real multiplication operations involved. It is found that for some LDPC codes of rigorous algebraic structures or being randomly designed, at the cost of negligible performance loss, a full-loaded NNMS can be trimmed off even to retaining only one parameter which weighs the collection of incoming check messages and that of channel signals, suggesting that the importance of a proper placement of trainable parameters can not be overestimated.
+
+Generate AWGN data batches, Feeding NNMS model for training
+
+Loss value fixed
+
+or end of feeding
+
+NO
+
+YES Trained NNMS with optimized α, β, γ
+
+end Fig. 2. Flow chart of training NNMS
+
+IV. EXPERIMENTAL RESULTS
+Three LDPC codes of different designs will be discussed herein, consisting of code A: a WiMAX (802.16) LDPC code (1056,880) [16], code B: a finite geometry LDPC code (1023,781) [20], and code C: a Gallager LDPC code (1008,504) [21]. For code A, it boasts of quasi-circular property, code B has high row redundancy due to its squared H, while code C is randomly designed without any algebraic structure.
+For the ensemble of NNMS decoders, we can distinguish them from each other further by the number and locations of trainable parameters. The abbreviation ’SNNMS’ refers to the neural decoder with a shared trainable parameter for each iteration at the check nodes side, that is, α(l) = 1, β(1) = 1, γ(l) = γ(l). Likewise, ’UNNMS’ is the one with a unique trainable parameter across all iterations, or α(l) = 1, β(1) = 1, γ(l) = γ, while ’ANNMS’ denotes a full-loaded NNMS decoder without any trimming as shown in Fig. 1.
+
+A. Training phase
+We performed all the training and testing of the NNMS neural model of T hidden layers on TensorFlow2.x of Colab or Kaggle cloud platforms.1.
+1) Choice of loss function: One prerequisite of training is to select a viable loss function among the ones off the shelf, on which we apply a stochastic gradient descent (SGD) method to optimize these trainable parameters.
+Given the authentic and estimated binary vectors c and c(j), j = 1, 2, ...T , the hybrid loss function is defined as follows,
+
+(c, c) = ρ ce(c, c) + (1 − ρ)κ mse(c, c)
+
+(8)
+
+where the weight factor ρ = 0.2 and balance factor κ = 100, and its cross entropy term is
+
+1 NT 1
+
+1
+
+ce(c, c) = N T
+i=1 j=1 z=0
+
+p(ci = z) log p(c(ij) = z)
+
+and the other mean squared error (MSE) term is
+
+1N mse(c, c) = N
+
+1
+
+p(ci
+
+=
+
+z)(p(c(iT )
+
+=
+
+z)
+
+−
+
+2
+z)
+
+i=1 z=0
+
+The ce(c, c), measures the density difference of the estimated codeword bits and the ground truth. Meanwhile, a ’multiloss’ approach [22], via averaging the cross entropy of all T iterations, ensures a stable outcome. For mse(c, c), it measures the average deviation of reliability of estimations from the original labels. This loss definition can effectively reduce the risk of training divergence caused by the oscillation of parameter updates.
+2) Generating of training data: Notably, the assumption of all-zeros codeword transmitted in training, has no impact on the validness of the followed inferences, in the sense the trained NNMS can deal with the cases of any codeword sending equally well, This unique property, attributed to satisfying the message passing symmetry conditions [23], greatly simplifies the training process. Correspondingly, the loss definition 8 reduces to
+
+(c, c)
+
+=
+
+ρ NT
+
+NT
+log
+i=1 j=1
+
+1 p(c(ij ) =0)
+
++
+
+(1−ρ)κ N
+
+N p2(ci(T )
+i=1
+
+=
+
+0)
+
+(9)
+
+Although it is an easy task to simulate codeword sendings through communication channel disturbed by AWGN noise of designated σ2, we have to think twice about how to obtain volumes of ’qualified’ data in feeding a NNMS, so that the training is well directed and the trained decoder has superior performance.
+In literature [9], [15], each minibatch of training data comprises of samples drawn equally from a few evenly spaced SNR points. Notably, an inappropriate selection of these points may substantially affect training effectiveness. For one thing, the strong noise in harsh SNR region will ruin the manoeuvre of learning the structure of a neural decoder. Conversely,
+
+1Related source code will be open in github website after documented well
+
+in extra high SNR region, the trained parameters may lack
+
+sufficient shifts, leading to the inability to decoding noisy
+
+signals.
+
+Assuming the blended minibatch consists of data from
+
+I SNR points, then for each point, its component Yi ∼
+
+N (1, σi2),
+
+and
+
+the
+
+related
+
+LLR
+
+Zi
+
+=
+
+2 σi 2
+
+Yi
+
+∼
+
+N
+
+(
+
+2 σi 2
+
+,
+
+4 σi 2
+
+),
+
+i = 1, 2, ..., I. So a random variable Z with the mixture
+
+density f (Z), describing the blended data, is a weighted-sum
+
+of its component density fzi (Z), where K is the number of information bits in a codeword.
+
+(SNR)i =
+
+Eb N0
+
+N i = 10 log10 2Kσi2
+
+(10)
+
+1I
+
+f (Z) = I
+
+fZi (Z)
+
+i=1
+
+(11)
+
+1I
+
+I2
+
+µa
+
+=
+
+E [Z ]
+
+=
+
+I
+
+E[Zi]
+i=1
+
+=
+
+i=1
+
+I σi2
+
+1
+
+σe 2
+
+= σe − σs
+
+σs
+
+x2 dx, I → +∞
+
+(12)
+
+σa2
+
+=
+
+D[Z ]
+
+=
+
+1 I
+
+I
+
+i=1
+
+2 ( σi2
+
+)2
+
++
+
+4 σi2
+
+− µ2a
+
+(13)
+
+1
+
+σe 1
+
+1
+
+= σe − σs
+
+σs
+
+4( x4 + x2 )dx, I → +∞
+
+For code B, assuming SNR=2.8 ∼ 3.2dB, I = 5, with formulae 10,12 and 13, µa = 6.096, σa2 = 12.232. As shown in in Fig. 3, the mixture density perfectly matches
+a Monte-Carlo sampling of the blended LLRs feeding a
+decoder. Furthermore, the fitting of a normal variable with the calculated (µa, σa2) almost overlays the underlying mixture density, which suggests that a minibatch of data may be
+approximately generated instead by directly sampling a normal
+variable of appropriate parameters. For the case of I → +∞, we obtain the parameters (µa = 6.093, σa2 = 12.212), after identifying the corresponding standard deviation σs and σe of the interested SNR endpoints.
+
+Fig. 3. Distribution of input’ LLRs for (1023,781) code
+
+TABLE I TRAINING SETTINGS OF THREE CODES
+
+Three Codes code A code B code C
+
+SNR Range (dB)
+[3.2,3.8] [2.8,3.2] [1.8,2.4]
+
+Minibatch number size
+2000 64 2000 64 2000 32
+
+# of epochs
+6 6 6
+
+T
+20 10 15/20
+
+3) Training settings: For codes A,B,C, as listed in Table I, the training settings are similar up to minor shifts for some columns.
+All trainable parameters are initialized to be ”1”, which poses the starting point of a neural decoder to be a standard MS. Such a setting can expedite the training process to converge to a local optimum, compared with the routine normal distribution initialization. Meanwhile, we lean on the Adam optimizer [24] to update these parameters with an exponential decaying learning rate wherein the initial rate is 0.002, decay rate 0.95 and decay steps 400.
+4) Training process analysis: It is often difficult to get the exact soft decoder output distribution analytically. For instance of SNNMS decoding of code A, we resort to a Monte-Carlo sampling to obtain the fitted density curve in Fig. 4. Apparently, the high density region concentrates on the positive clipped value 100, hinting most bits made correct decision of being ’0’ with high confidence.
+
+Fig. 5. Loss training curve of code B
+
+Fig. 6. BER training curve of code B
+
+Fig. 4. Distribution of output’ LLRs for (1023,781) code
+Furthermore, to probe the connections between loss evaluation and BER/FER, Figs. 567 present three training evolution curves with/without smoothing.
+As shown in Fig. 5, Initially, the loss is evaluated with 2.45 for the input data, then it spikes to 5.86 after the feeding starts off, synchronized with a transitional BER/FER declining. Soon afterwards, with the proceeding of training process, the loss drops to 2.45 again, but with a substantially lowered BER/FER. The training ends up with a loss of around 0.67. Meanwhile, the BER/FER improves steadily almost at the same pace with the loss curve, which reveals their strong positive correlation.
+
+Fig. 7. FER training curve of code B
+
+Specifically, calculated with
+
++∞ 1 √
+
+e dx −
+
+(x−µa 2σa2
+
+)2
+
+0
+
+2πσa
+
+(14)
+
+where µa and σa2 are acquired with 12 and 13, the initial BER of the input data is 0.04, at which moment the loss is 2.45 as marked in Fig. 5. When the loss curve revisits the horizontal line of 2.45, the accompanied BER is found below 0.008 statistically. Consequently, an identical loss value is mapped to two different BERs, indicating the training process plays the role of polarization. That is, helped by message passing in the neural networking, most codeword bits at output can luckily make correct binary choice except for a few obstinate ones. A similar observation holds for FER metric as well.
+
+5) Training result analysis: For code B of SNNMS decoder, we traced the evaluation of its trainable parameters from beginning to end, and recorded some intermediate results in Table II.
+
+TABLE II PARAMETERS EVALUATION AND PERFORMANCE METRICS FOR CODE B OF
+SNNMS WITH T = 10
+
+i-th step
+
+weight list values
+
+Loss FER BER
+
+0
+
+0.54/ 0.544/ 0.54/ 0.544/ 0.544/ 0.54/ 0.54 / 0.54 0.54 / 0.54
+
+5.52 0.85 0.084
+
+500
+
+0.546 /0.562 / 0.548 / 0.509 /0.528/ 0.51 / 0.289 -0.138/ -0.351/ -0.291
+
+5.04 0.91 0.052
+
+1600
+
+0.569 / 0.523/ 0.418/ -0.074/ -1.021/ -1.435/ -1.13 -0.978/ -0.986/ -0.98
+
+2.79 0.23 0.0056
+
+4400
+
+0.307 /-0.051/ -0.974/ -1.748/ -1.177/ -1.06 / -1.034/ -1.028/ -1.065/ -1.126
+
+1.43
+
+0.11
+
+0.0042
+
+11999
+
+-1.059/ -1.153/ -1.114/ -1.085/ -1.094 / -1.072 -1.079 /-1.118 /-1.182/ -1.252
+
+0.49
+
+0.075
+
+0.0035
+
+Given an arbitrary input x, the softplus function log(1 +ex) outputs a positive number, which fits well as a trainable parameter in our application. Hence, before training, all parameters are initialized to be ’1’ implying x = 0.542, as observed in Table II, these parameters ends up training with a list whose elements are roughly ’-1’. Considering the robustness of neural network, it naturally reminds us to attempt the traditional NMS using the softplus function evaluated at the point of ’-1’ as its correction factor, labelled as ’UNNMS’ in the following tests. As illustrated in the next subsection, such a simplification incurs no perceptible performance punishment. Furthermore, it is found weighting the LLR of each codeword bit with trainable α is invalid for the purpose of enhancing decoder performance, showing that the neural network treats every component of a codeword equally.
+B. Testing phase
+A Monte-Carlo simulation is employed to accomplish the task of evaluating the performance of BER/FER for NNMS variants. For all codes A,B and C, at least 100 frame errors are required to be detected at each tested SNR point to reduce the estimation variance. And the maximum number of iteration T is shown in the legends of each plot (cf. Table I). As
+
+benchmarks, the original plots of BP or other decodings are presented for comparison.
+It has to be clarified there exists some performance discrepancy among different BP implementations [25]. It is roughly attributed to two variations. For one thing, when the row weight dc of H is heavy, then the required successive multiplication of up to dc − 1 tanh functions in updating the outgoing message of each check node is a challenge in terms of computation precision, and the situation is worsened in the scenario of all-zeros codeword sending in high SNR region where a clipping is called. For another, in favor of parallel processing, our BP employs simple flooding messages scheduling instead of more advanced schedules [26]. To avoid any ambiguity, our BP implementation is since referred as ’SBP’.
+1) Testing results analysis: Assuming all neural decoders are available after training, given testing data feeding, SNNMS and UNNMS of code A with T = 20 achieve almost identical performance with that of SBP with T = 40, which is slightly behind the curve marked ’Msr-F(40)’ originated in [16] for the reason of implementation details.
+100
+
+10−1
+
+BER/FER
+
+10−2
+
+10−3
+
+SNNMS-B(20) SNNMS-F(20)
+
+UNNMS-B(20)
+
+10−4
+
+UNNMS-F(20) SBP-B(40)
+
+SBP-F(40)
+
+Msr-F(40)
+
+10−5 2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0(dB)
+
+Fig. 8. BER/FER comparison for the decoding schemes of code A
+For code B, Fig. 9 shows BER/FER curves of various decoders, among which ’Msr-B/F (50)’ denotes the original BER/FER plot drawn in [20] with T = 50 for its BP. Since the performance of SNNMS or ANNMS leads UNNMS marginally, they are safely omitted in the plot. It is evident the MS is much less competitive compared with the others in all SNR region. At the point BER = 10−4 of SNR waterfall region, UNNMS with T = 10 surpasses SBP with T = 50, even though its performance lags behind the Msr-B(50) within 0.2dB. The similar observation holds for the FER curves as well.
+For code C with T = 15, 20, Fig. 10 demonstrates that the performance of NNMS variants enhances with the increase of iterations T . Hopefully, with a further increase of T , it can come closer to the leading curve marked ’ADMM-F’ (cf. [27]) which is enlightened by a differed decoding methodology.
+
+100
+
+10−1
+
+10−2
+
+BER/FER
+
+10−3
+
+UNNMS-B(10)
+
+UNNMS-F(10)
+
+10−4
+
+MS-B(50) MS-F(50)
+
+SBP-B(50)
+
+10−5
+
+SBP-F(50) Msr-B(50)
+
+Msr-F(50)
+
+10−61.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0(dB)
+
+Fig. 9. BER/FER comparison for the decoding schemes of code B
+
+100
+
+10−1
+
+BER/FER
+
+10−2
+
+SNNMS-F(15)
+
+10−3
+
+UNNMS-F(15) ANNMS-F(15)
+
+UNNMS-F(20)
+
+SNNMS-F(20)
+
+ADMM-F
+
+10−4 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0(dB)
+
+Fig. 10. BER/FER comparison for the decoding schemes of code C
+
+In sum, whether the codes are structured or randomly designed, the neural network manifests itself as a powerful alternative of designing low-complexity and high-performance decoders.
+Last but not the least, we have to rethink why each member of the neural ensemble demonstrated a similar performance, regardless of a huge difference in terms of number of trainable parameters. It is conjectured that for a code of algebraic circular or quasi-circular H, its underlying encoding protects each bit or check of a codeword equally well, thus making the attempt of weighting per item in vain. On the other hand, for those codes without structure, the weighting functionality of a trainable parameter cancels off neutrally for all kinds of decoding cases. With the fact that the weighting between collections, named ’sharing’ in literature works well, as demonstrated for the case of UNNMS decoder, thus it reminds us to focus on its location or impact scope when adding a trainable parameter, in case of a casual adding may lead to heavy training load and
+
+mean benefits.
+C. Complexity analysis
+For all three codes, compared with the other NNMS variant and BP, UNNMS is a competitive decoder, in the sense of achieving roughly equivalent performance with the minimum number of trainable parameters. Specifically, for code B, UNNMS with the maximum number of iteration T = 10 lags behind standard BP with T = 50 within 0.2dB at most. Besides that, the single multiplicative parameter of UNNMS can be approximated by bit shifting. Thus UNNMS actually requires only addition operations, while the BP is in need of volumes of multiplications besides the expensive tanh functions. Likewise, for codes A and C, UNNMS achieves equal performance compared with standard BP, at the cost of less or equal T iterations. Therefore, simplified arithmetic operation, plus less iterations, greatly promotes the throughput of UNNMS.
+Next we briefly compare the complexity of UNNMS with the popular alternating direction method of multipliers (ADMM) decoder [28], which belongs to another class of LDPC decoding schemes rooted in mathematical programming.
+Given a code, assuming dc and dv are the average row weight and column weight of H respectively, the bit and check nodes update of UNNMS requires total N (dv + dc) + 2M dc additions per iteration, according to 2 and 5. In comparison, N (dv + 1) + 3M dc additions, N multiplications and N + M time-consuming projections are called per iteration for the ADMM method. Considering the setting of T of UNNMS is commonly fewer than that of ADMM method, we conclude that the former is much lighter in terms of complexity.
+V. CONCLUSIONS AND FUTURE DIRECTIONS
+In the framework of NNMS, we elaborated on how to generate high quality data as the feeding to the neural decoder in training. Then the roadmap of a training process was investigated and two findings are worth mentioning. For one thing, there exists a strong positive correlation between loss function and BER/BER metrics after tracing the relevant evolution curves. For another, it is essential to investigate the structure of the LDPC codes to properly configure the placement of trainable parameters. The UNNMS, as a tailored NNMS, justified this assertion in extensive simulation by achieving a better tradeoff between performance and complexity.
+For the loss definition of 8, it is indicative of BER performance only, whereas a correct estimation of all codeword bits concurrently is ideal. To bypass this detour, it is helpful to update the loss definition by including some term containing FER information. It was reported in [29] that the decoding performance was enhanced after exploiting a differentiable term pertained to decoding syndrome in the loss definition. For classical ReedMuller codes, [30] designed a new loss definition for training and proved its effectiveness in optimizing its survived parameters after reducing. It remains to be checked whether these definitions are applicable for more LDPC codes.
+
+It is likely the ensemble of neural decoders are robust to minor shifts of parameter evaluations. This feature can be exploited to approximate the arithmetic multiplication with a power of two, which is hardware friendly [31]. Yet it has to be explored fully later.
+Besides that, it is always worth trying some novel networking structures for the neural decoders to meet the demands of those challenging applications.
+ACKNOWLEDGEMENT
+The authors would like to thank Google corporation for providing the excellent computing platforms of Colab and Kaggle online, which make it possible to train and test our models freely. Thanks also are given to the anonymous reviewers for providing their valuable feedback in improving the quality of this paper.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, pp. 21–28, 1962.
+[2] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (ldpc) codes,” Ieee Transactions on Communications, vol. 53, pp. 549–554, 2005.
+[3] M. Jiang, C. Zhao, L. Zhang, and E. Xu, “Adaptive offset min-sum algorithm for low-density parity check codes,” Ieee Communications Letters, vol. 10, pp. 483–485, 2006.
+[4] M. I. Razzak, S. Naz, and A. Zaib, “Deep learning for medical image processing: Overview, challenges and the future,” Classification in BioApps, pp. 323–350, 2018.
+[5] R. J. Wang, X. Li, and C. X. Ling, “Pelee: A real-time object detection system on mobile devices,” Advances in neural information processing systems, vol. 31, 2018.
+[6] G. Hu, Y. Yang, D. Yi, J. Kittler, W. Christmas, S. Z. Li, and T. Hospedales, “When face recognition meets with deep learning: an evaluation of convolutional neural networks for face recognition,” in Proceedings of the IEEE international conference on computer vision workshops, 2015, pp. 142–150.
+[7] T. Young, D. Hazarika, S. Poria, and E. Cambria, “Recent trends in deep learning based natural language processing,” ieee Computational intelligenCe magazine, vol. 13, pp. 55–75, 2018.
+[8] S. Grigorescu, B. Trasnea, T. Cocias, and G. Macesanu, “A survey of deep learning techniques for autonomous driving,” Journal of Field Robotics, vol. 37, pp. 362–386, 2020.
+[9] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-based channel decoding,” in 2017 51st Annual Conference on Information Sciences and Systems (CISS). IEEE, 2017, pp. 1–6.
+[10] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT). IEEE, 2017, pp. 1361–1365.
+[11] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Beery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, pp. 119–131, 2018.
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2016, pp. 341–346.
+[13] F. Liang, C. Shen, and F. Wu, “An iterative bp-cnn architecture for channel decoding,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, pp. 144–159, 2018.
+[14] L. P. Lugosch, Learning algorithms for error correction. McGill University (Canada), 2018.
+[15] Q. Wang, S. Wang, H. Fang, L. Chen, L. Chen, and Y. Guo, “A modeldriven deep learning method for normalized min-sum ldpc decoding,” in 2020 IEEE International Conference on Communications Workshops (ICC Workshops). IEEE, 2020, pp. 1–6.
+
+[16] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of channel codes and ml simulation results,” www. uni-kl. de/channel-codes, 2019.
+[17] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph ldpc codes,” Ieee Journal on Selected Areas in Communications, 2021.
+[18] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5g ldpc codes by machine learning,” Ieee Access, vol. 6, pp. 50 179–50 186, 2018.
+[19] L. Wang, S. Chen, J. Nguyen, D. Dariush, and R. Wesel, “Neuralnetwork-optimized degree-specific weights for ldpc minsum decoding,” arXiv preprint arXiv:2107.04221, 2021.
+[20] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” Ieee Transactions on Information Theory, vol. 47, pp. 2711–2736, 2001.
+[21] D. MacKay, “Encyclopedia of Sparse Graph Codes,” www.inference. org.uk/mackay/codes/data.html, 2008.
+[22] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “Rnn decoding of linear block codes,” arXiv preprint arXiv:1702.07560, 2017.
+[23] T. Richardson and R. Urbanke, Modern coding theory. Cambridge university press, 2008.
+[24] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” arXiv preprint arXiv:1412.6980, 2014.
+[25] X. Zhang and P. H. Siegel, “Quantized iterative message passing decoders with low error floor for ldpc codes,” IEEE Transactions on Communications, vol. 62, no. 1, pp. 1–14, 2013.
+[26] J. Zhang and M. Fossorier, “Shuffled belief propagation decoding,” in Conference Record of the Thirty-Sixth Asilomar Conference on Signals, Systems and Computers, 2002., vol. 1. IEEE, 2002, pp. 8–15.
+[27] H. Wei, “Admm decoding of ldpc codes: Simplification and improvement,” Thesis, 2021.
+[28] Y. Wei, M.-M. Zhao, M.-J. Zhao, and M. Lei, “Admm-based decoder for binary linear codes aided by deep learning,” IEEE Communications Letters, vol. 24, no. 5, pp. 1028–1032, 2020.
+[29] L. Lugosch and W. J. Gross, “Learning from the syndrome,” in 2018 52nd Asilomar Conference on Signals, Systems, and Computers. IEEE, 2018, pp. 594–598.
+[30] M. Lian, F. Carpi, C. Hger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and snr adaptation,” in 2019 IEEE International Symposium on Information Theory (ISIT). IEEE, Conference Proceedings, pp. 161–165.
+[31] B. Vasi, X. Xiao, and S. Lin, “Learning to decode ldpc codes with finitealphabet message passing,” in 2018 Information Theory and Applications Workshop (ITA). IEEE, Conference Proceedings, pp. 1–9.
+
+

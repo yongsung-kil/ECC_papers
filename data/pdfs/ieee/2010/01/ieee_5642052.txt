@@ -1,0 +1,497 @@
+On the Scalability of SIMD Processing for Software Defined Radio Algorithms
+
+Peter Westermann and Hartmut Schro¨der Circuits and Systems Lab
+Technische Universita¨t Dortmund Otto-Hahn-Str. 4
+44221 Dortmund, Germany {peter.westermann, hartmut.schroeder}@tu-dortmund.de
+
+Abstract—Software defined radio (SDR) systems require programmable architectures that provide high performance combined with high energy efficiency. Wide single instruction, multiple data (SIMD) architectures could potentially satisfy these demands, but only few publications examine the interdependence between the SIMD width and the performance of typical SDR algorithms. In this paper, we present a detailed analysis of three SDR algorithm classes on a newly developed scalable SIMD architecture, which combines SIMD processing with long instruction word (LIW) execution. Although radix-2 and mixed-radix fast Fourier transform, sphere decoding, and low-density parity-check decoding all benefit from SIMD processing, our results show that there are different constraints on the performance.
+I. INTRODUCTION
+The software defined radio (SDR) technology has gained significant interest for mobile devices as well as base stations. SDR promises a cost-effective and flexible solution, potentially supporting multiple wireless standards on a common platform. Yet, the computation and power requirements of future fourth generation (4G) cellular wireless standards, as proposed by the ITU [1], are steep. For example, a downlink peak data rate of 600 MBit/s is required for a 4G compliant 40 MHz channel.
+Single instruction multiple data (SIMD) processing is considered as a key technology for SDR systems, offering high computing power with low energy consumption. Future SDR systems might consist of multiple SIMD cores and some dedicated accelerators. This paper aims at providing insight for the challenge of choosing an appropriate SIMD width for such a SIMD core: small SIMD widths provide less computing power than wide SIMD widths, but some SDR algorithms may not feature enough data parallelism to fully utilize wide SIMD data paths [2]. In our study, we discuss three different classes of SDR algorithms and analyze the scalability of SIMD processing on a newly developed scalable SIMD architecture with long instruction word (LIW) support. The algorithm classes are introduced in section III. The contributions of this paper are as follows:
+• We introduce a newly developed scalable SIMD processor architecture with LIW support and different permutation network topologies (section IV).
+• We discuss the SIMD scalability of radix-2 and mixedradix fast Fourier transforms (FFTs), sphere decoding using the fixed-complexity sphere decoder, and decoding
+
+for quasi-cyclic low density parity-check codes (section V). Different network topologies are also considered. The results demonstrate that the algorithms have different scalability requirements on the relation between algorithm parameters and SIMD width.
+Related research is discussed in section II. We draw conclusions from our findings in section VI.
+II. RELATED WORK
+The Advanced Computer Architecture Lab at the University of Michigan at Ann Arbor has done a lot of work on SIMD processor architectures for SDR [2]–[5]. The issue of the scalability of SIMD processing has been examined in [2], [4].
+In [2], the scalability of a 1024-point FFT, two MIMO algorithms (space time block coding and V-BLAST), and an LDPC decoder for WiMAX (z = 96, rate 5/6) on the Signalprocessing On Demand Architecture (SODA) is analyzed. The results show good scalability for FFT and MIMO processing, while parallelism in LDPC decoding is limited by the expansion factor z. Our research complements this study by considering a LIW SIMD architecture and by analyzing the effects of different FFT sizes and LDPC expansion factors. We also consider sphere decoding for MIMO detection.
+In [4], the development of the ARM Ardbeg processor from SODA is discussed. During the development, different SIMD widths have been analyzed for some third generation (3G) wireless algorithms. The results show that energy and delay can both be reduced by increasing the SIMD width. Furthermore, four different permutation network topologies have been analyzed for a 32-way SIMD processor. We adopted the analysis of different network topologies.
+III. PHYSICAL LAYER PROCESSING IN AN SDR SYSTEM
+Fig. 1 shows a possible physical layer for a future SDR system. The main building blocks on the transmitter side are channel encoder, multiple input, multiple output (MIMO) encoder (e.g. spatial multiplexing), and multi-carrier modulation based on orthogonal frequency division multiplexing (OFDM). On the receiver side, the corresponding decoding and demodulation tasks have to be performed in reverse order. These tasks are the computationally most demanding stages of the receiver. Further tasks are channel estimation and
+
+978-1-4244-79A3ut8ho-r2iz/e1d0lic/$en2s6ed.0u0se©lim2it0ed1t0o: IYEonEseEi Univ. Downloaded on J3u0n9e 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+Mod. Mapping
+
+synchronization. In the following, OFDM-based modulation, sphere decoding for MIMO detection, and LDPC codes for channel coding will be discussed.
+A. OFDM-based (De-)Modulation
+OFDM is a frequency-division multiplexing (FDM) method for multi-carrier transmission. The incoming data stream is divided into multiple parallel sub-carriers, which are modulated by conventional methods such a quadrature amplitude modulation (QAM). The sub-carriers are defined in frequency domain and represent orthogonal frequencies. On the transmitter side, the sub-carriers are transformed into a time-domain OFDM symbol, using the inverse fast Fourier transform (IFFT), and a guard interval (usually as cyclic prefix) is added to prevent intersymbol interference. On the receiver side, the guard interval is removed and the sub-carriers are demodulated by an FFT.
+Orthogonal frequency division multiple access (OFDM-A) is a multi-user extension of an OFDM system. Here different users are assigned different subsets of sub-carriers. The user data may be defined in frequency domain — as in the singleuser OFDM case — or in time domain. The second case is called single carrier frequency division multiple access (SCFDMA). Each user’s data is defined as a time domain signal, transformed into frequency domain using a short FFT, and mapped into a subset of OFDM sub-carriers. The UMTS long term evolution (LTE) standard [6] applies OFDM-A for downlink transmission and SC-FDMA for uplink transmission. Both downlink and uplink use a 2048-point IFFT (transmitter) for 20 MHz bandwidth and smaller IFFTs for smaller bandwidths (e.g. 512-point for 5 MHz). In the uplink, each user is assigned multiple resource blocks, consisting of 12 sub-carriers, with a maximum number of 1200 sub-carriers and a restriction of the FFT sizes to a product of powers of two, three, and five. Hence, SC-FDMA requires support for mixed-radix FFTs. Both pure radix-2 and mixed-radix FFTs are considered in the SIMD scalability analysis.
+
+Mod. Mapping
+
+MIMO: Spatial Multiplexing
+
+Channel Coding
+
+IFFT CP
+
+DAC / RF
+
+IFFT CP
+
+DAC / RF
+
+B. Sphere Decoding for MIMO Detection
+MIMO systems utilize multiple transmit and receive antennas to improve signal quality or data rate. In the latter case — denoted as spatial multiplexing — the independent transmit antennas are used for multiple parallel data streams. Systems typically utilize 2 × 2 or 4 × 4 antennas. Sphere decoding is a decoding method for spatial multiplexing, which allows maximum-likelihood detection with reduced complexity. The sphere decoder first transforms the channel matrix into upper triangular form and then applies a depth-first tree search algorithm on the symbol space.
+The major draw backs of sphere decoding are as follows: the number of required searched symbol vectors fluctuates and the decoding cannot be easily parallelized [7]. Hence, different modified algorithms have been designed, which apply breadth-first search and limit the number of searched paths at the cost of decreased performance. Examples are the Kbest sphere decoder (e.g. [8]) and selective spanning with fast enumeration (SSFE) [9]. We apply the fixed-complexity sphere decoder (FSD) [10], due to its low computational complexity with quasi-maximum likelihood performance [11].
+C. LDPC Codes
+LDPC codes are forward error correction (FEC) codes based on sparse parity-check matrices. They have been discovered by Gallager in 1960 [12], but have only gained consideration for implementation after the advent of turbo codes. LDPC codes can achieve performance close to the Shannon limit with relatively low decoder complexity — and don’t require licensing. Hence, LDPC codes have been considered for many wireless systems, such as WiMAX [13] and CMMB [14].
+Due to the regularity of the LDPC matrix, quasi-cyclic LDPC codes, defined by a base matrix Hb, are used in most standards. Each element of Hb defines a z-by-z submatrix of the LDPC matrix. The submatrices are either permutation matrices or zero matrices. WiMAX defines multiple LDPC codes with different expansion factors (z-factors) from one common Hb.
+LDPC decoders operate iteratively using message passing algorithms. The LDPC code is described by a set of bit nodes (representing the code word) and a set of check nodes (representing parity check conditions). During the decoding process, messages are sent from bit nodes to check nodes and vice versa. Most implementations use the min-sum algorithm for decoding, which requires only a minimum operation and sign products for the check node processing.
+
+Channel Decoding
+MIMO: Sphere Decoder Channel Estimation
+
+FFT CPR
+
+ADC / RF
+
+FFT CPR
+
+ADC / RF
+
+Fig. 1. Block diagram of transmitter and receiver in a MIMO-OFDM system
+
+IV. SCALABLE SIMD ARCHITECTURE
+The analysis of the scalability of the SIMD width for SDR algorithms is based on a newly developed scalable SIMD processor architecture. This section provides an overview of the processor architecture development, explains design decisions, and outlines the methodology that was used for the scalability analysis.
+
+310 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+Program Memory
+
+LIW
+
+BU
+
+Decoder
+
+16 Bit RF
+
+1 Bit RF
+
+16 registers 8 registers
+
+ALU
+
+MAC
+
+Scalar Data Path
+
+LSU + AGU
+Scalar to Vec.
+
+Scalar Memory
+Vector Memory
+
+16 Bit RF 16 registers
+
+1 Bit RF 8 registers
+
+40 Bit RF 2 registers
+
+Move
+
+ALU
+
+MAC
+
+Unit
+
+16 Bit Vector Lane 1
+
+Vec. to Scalar to VLSU
+to VPN
+
+Vector LSU + AGU
+
+Vector Permutation Network
+
+16 Bit RF 16 registers
+
+1 Bit RF 8 registers
+
+40 Bit RF 2 registers
+
+Move
+
+ALU
+
+MAC
+
+Unit
+
+16 Bit Vector Lane 2
+
+Vec. to Scalar to VLSU
+to VPN
+
+Shuffle RF 8 registers
+
+16 Bit RF 16 registers
+
+1 Bit RF 8 registers
+
+40 Bit RF 2 registers
+
+Move
+
+ALU
+
+MAC
+
+Unit
+
+16 Bit Vector Lane NSIMD
+
+Vec. to Scalar to VLSU
+to VPN
+
+Fig. 2. Block diagram of the scalable SIMD processor architecture.
+
+1) Architecture Overview: The proposed scalable SIMD processor architecture was developed using the LISA language [15], which was extended with macros for scalability support [16]. LISA was chosen as it enables the automatic generation of a fast, cycle-accurate instruction set simulator (ISS), synthesizable register transfer level (RTL) code, and necessary software development tools, such as assembler, disassembler, and linker, from one common description.
+A block diagram of the developed processor architecture is shown in Fig. 2. The data path consists of a scalar 16-bit data path and a scalable SIMD data path with multiple 16bit lanes. For the scalability analysis we considered SIMD widths ranging from 8 to 64 16-bit lanes (128 to 1024 bits). The processor contains two separate local memories for scalar and vector data with separate load/store units and address generators. Each SIMD lane contains a local 16-bit 16-entry register file, eight 1-bit mask registers, and two 40-bit accumulator registers for intermediate results of MAC operations. The SIMD data path supports masked execution and single cycle multiplication. As many baseband algorithms operate on complex data, instructions for complex multiplication and MAC operations have been added. Complex operations treat a pair of consecutive vector elements as imaginary and real part of a complex number; the multiplication is split into two real-valued multiplications and takes two clock cycles.
+2) Permutation Network Support: As part of the scalability analysis, we decided to consider multiple permutation networks with different network topologies. This approach enables analyzing the benefit of more flexible permutations on
+
+the algorithm performance. Existing SIMD architectures apply different types of networks ranging from single stage shuffle networks [3] to full crossbar networks [17] and multi-stage networks on two input vectors [4].
+Multi-stage inverse butterfly and crossbar network topologies have been implemented. As algorithms, such as the FFT, require permutations on pairs of vectors, networks with different widths (one vector or two vectors) have been considered. Hence, overall four network topologies have been realized. In the following, permutation networks with two input vectors will be abbreviated as double-vector networks and permutation networks with one input vector will be denoted as single-vector networks. All network topologies directly support rotation and butterfly permutations through special instructions, as these operations are necessary for FFT and LDPC decoding (sections V-A respectively V-C). Other permutations can be defined using shuffle pattern registers.
+3) Instruction Level Parallelism: Architectural support for instruction level parallelism (ILP) can improve the utilization of SIMD units and reduce the execution time. Hence, LIW support was considered for the scalable SIMD processor architecture. However, LIW requires additional register file ports, which increase the area and power demands of the register file. Therefore, implementations of W-CDMA [18] and FFT [19] algorithms on the Embedded Vector Processor (EVP) [17] first have been analyzed in order to decide on the number of LIW slots. An average number of 3.53 parallel instructions per cycle was measured for a radix-2 FFT loop, which contains three FFT stages and vector permutations. Most algorithms achieved average numbers of between 2.4 and 2.6 parallel instructions (e.g. radix-3 FFT stage: 2.47; channel estimation: 2.6; tap solver: 2.46). Based on these results, we decided to implement the processor architecture with variable-length LIW support with up to four parallel SIMD or scalar instructions.
+The architectural features are summarized in Table I. The term SIMD width is used for the number of elements in a vector and SIMD bit width denotes the corresponding width in bits.
+4) Analysis Methodology: Sixteen different instances of the scalable SIMD processor architecture, with four different SIMD widths and four network topologies, have been implemented using LISA tools (Synopsys Processor Designer) and register transfer level (RTL) code has been generated. Synopsys Design Compiler in topographical mode has been used for synthesizing the processors in a 90 nm process with a target clock frequency of 300 MHz. Assembly code for all processor configurations has been hand-coded and optimized for LIW execution and run times have been measured during simulation. The energy consumption was extracted from the synthesized processors based on the execution of the algorithms. The energy consumption includes leakage and the estimated energy of the clock tree. Memories were not synthesized and are excluded from the energy and area results, but included in the performance analysis. In section V-D, energy results are normalized to a 128-bit SIMD processor with a single-vector butterfly network. The average power
+
+311 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I SUMMARY OF ARCHITECTURE FEATURES
+
+Frequency Execution mode Instruction width
+
+Processor architecture 300 MHz (90 nm) variable length LIW, 4 slots 24 . . . 96 bits
+
+SIMD architecture
+
+SIMD bit width
+
+128, 256, 512, or 1024
+
+SIMD width [16-Bit]
+
+8, 16, 32 or 64
+
+Data precision
+
+16-bit (fixed-point/integer)
+
+Masking support
+
+yes
+
+Permutation network
+
+multi-stage inverse butterfly network
+
+or crossbar network
+
+Permutation network width 1 or 2 vectors
+
+SIMD register file
+
+16 entries, full bypassing, single-
+
+vector network: 7 read/ 4 write ports,
+
+double-vector network: 8 read/ 5 write
+
+ports
+
+consumption of this processor is approximately 42 mW for the execution of the implemented algorithms.
+
+V. ALGORITHMS: RESULTS AND ANALYSIS
+In the following, results for radix-2 and mixed-radix FFT, fixed-complexity sphere decoding, and LDPC decoding will be presented and analyzed. Both FFT and sphere decoding operate on complex 16+16 bit vector elements. Hence, the term SIMD width will be used to describe the number of 32bit elements for FFT and sphere decoding and the number of 16-bit elements for LDPC decoding.
+Next to the available data parallelism, there are other factors that can influence the performance gain through a wider SIMD width. An increased overhead due to required additional — or more complex — permutations limits the achievable speedup. On the other hand, a greater SIMD width may require less registers for storing necessary data. Hence, if memory access is a limiting factor, the speedup with a doubled SIMD width may be even greater than two. These effects are demonstrated below.
+
+A. Radix-2 and Mixed-Radix FFT
+In prior work, radix-2 and mixed-radix FFT have been implemented on the EVP [17] and SIMD algorithms have been developed [19], [20]. The algorithms have been designed with the goals of minimizing the number of vector permutations and guaranteeing that all stages of the FFT operate on full vectors. The resulting requirements on the ratio between the SIMD width NSIMD and the FFT length differ for the mixedradix and the pure radix-2 case:
+
+Nradix-2 ≥ 2 · NSIMD
+
+(1)
+
+Nmixed-radix = k · NS2IMD
+
+(2)
+
+A radix-2 FFT can be efficiently vectorized if the FFT length Nradix-2 is at least double the SIMD width. However, in the mixed-radix case, the FFT length Nmixed-radix should be a multiple of the squared SIMD width.
+
+TABLE II FFT THROUGHPUT IN FFTS PER SECOND FOR A 128 BIT SIMD
+PROCESSOR WITH A SINGLE-VECTOR BUTTERFLY NETWORK
+
+FFT size FFTs/s FFT size FFTs/s FFT size FFTs/s
+
+8 3.40 107
+256 5.71 105
+384 3.41 105
+
+16 1.68 107
+512 2.56 105
+576 1.98 105
+
+32 7.14 106
+1024 1.05 105
+768 1.46 105
+
+64 2.96 106
+2048 5.26 104
+960 1.07 105
+
+128 1.11 106
+192 7.30 105
+1152 9.07 105
+
+The radix-2 and mixed-radix FFT both require log2 (NSIMD) permutation stages if either the constraint in (1) or (2) is fulfilled. In the mixed-radix case, all permutations are butterfly permutations on pairs of vectors. In the radix-2 case with an FFT length smaller than the squared SIMD width, all permutation stages, except for the last one, are butterfly permutations on pairs of vectors. The last permutation stage is more complex and has to be segmented into multiple permutations for an inverse butterfly network or a single-vector network. Furthermore, the pairs of output vectors from permutation stages are always used in conjunction in the following FFT stage.
+All radix-2 FFT sizes that conform to (1) up to a 2048point FFT and six different mixed-radix FFTs have been implemented. For SIMD bit widths of 512 and 1024 bits (16 respectively 32 complex elements), only few mixedradix FFTs have been implemented, because constraint (2) is not fulfilled. The FFTs operate on complex data vectors, i.e. two 16-bit elements represent one complex value. The normalized speedup is displayed in Fig. 3 (radix-2 results on the left-hand side and mixed-radix results in the middle). The performance of the baseline implementation (128 bit SIMD processor, single-vector butterfly network) is mostly determined by the number of multiplications and additions required for the FFT stages. As a reference, throughput results for radix-2 and mixed-radix FFTs are shown in Table II. The run time of six FFTs including initialization was measured, which corresponds to the long cyclic prefix mode in LTE [6].
+The results show a few deviations from the expected linear speedup that warrant further discussion. The speedup of the smallest FFTs is always below linear speedup. The reason for this behavior is the overhead for the initialization of parameters at the beginning of the FFT, which does not decrease with increasing SIMD widths. For small FFTs, the initialization overhead somewhat outweighs the speedup that is achieved for the actual FFT computation; for bigger FFTs the initialization overhead is negligible relative to the FFT computation. Furthermore, there are significant differences in performance between the permutation networks on 32-way and 64-way SIMD processors: the crossbar networks outperform the inverse butterfly networks, and the double-vector networks outperform the single-vector networks. Double-vector networks always achieve a better performance than singlevector networks, because the FFTs require permutations on
+
+312 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+Speedup vs. 128 Bit, Bfy1
+
+9 SIMD architecture
+
+8
+
+1024 Bit, Bfy1
+
+1024 Bit, Cross1
+
+7
+
+1024 Bit, Bfy2
+
+1024 Bit, Cross2
+
+512 Bit, Bfy1 6
+512 Bit, Cross1
+
+512 Bit, Bfy2 5
+512 Bit, Cross2
+
+256 Bit, Bfy1 4
+256 Bit, Bfy2
+
+256 Bit, Cross1 3
+256 Bit, Cross2
+
+128 Bit, Bfy1 2
+128 Bit, Cross1
+
+128 Bit, Bfy2 1
+128 Bit, Cross2
+
+0
+
+Fig. 3. Normalized speedup for the considered algorithms. The speedup is normalized to the performance of a 128-bit SIMD processor with an inverse butterfly network with a width of one vector. The abbreviations Bfy k and Cross k denote inverse butterfly respectively crossbar networks with a width of k vectors.
+
+pairs of vectors. Such a permutation can be done with one permutation operation on a double-vector network. On a singlevector network, one move operation and two permutation operations are necessary (3 operations per pair of vectors). As the following FFT stage requires only two operations on the SIMD ALU and one complex multiplication (two cycles on the SIMD MAC), the additional overhead of the move operation cannot be completely hidden by LIW execution. As this effect only occurs for the log2 (NSIMD) FFT stages that require permutations, the effect is relatively small for big FFTs and more significant for small FFTs. The differences between crossbar and inverse butterfly networks occur due to the increased complexity of the last permutation stage for radix-2 FFTs smaller than the squared SIMD width. Using an inverse butterfly network, this permutation has to be segmented into multiple operations. In most cases, two permutations are needed, three combinations of SIMD width and FFT size require three permutation operations: 32-point FFT with SIMD bit width 512 bit and 64-point and 128-point FFT with SIMD bit width 1024 bit. The overhead of three permutation stages (instead of one) cannot be completely hidden by LIW execution.
+The peaks for the 128-point FFT (SIMD bit widths 512
+
+and 1024 bits) and the 1024-point FFT (1024 bits) occur due to limiting memory access for smaller SIMD widths. As the processor architecture has only 16 SIMD registers, all FFTs that require more than eight data vectors have to be partitioned into multiple loops with at most eight input vectors and spanning at most three consecutive FFT stages. If only two consecutive radix-2 stages are processed in a loop, the same amount of operations is needed for loading and storing data vectors as for actual computations — if twiddle factors cannot be stored in registers, memory access dominates the performance. If only one radix-2 stage is done per loop, the performance is always dominated by memory access. This is the case for the 128-point FFT with SIMD bit widths smaller than 512 bits. For a SIMD bit width greater than or equal to 512 bits, the 128-point FFT can be computed without partitioning into multiple loops. Hence, there is no overhead due to memory access. The 1024-point FFT contains a loop with two consecutive radix-2 stages that requires memory access for reading twiddle factors if the SIMD bit width is less than 1024 bits. In case of a SIMD bit width of 1024 bits, these twiddle factors can be stored locally in registers.
+The mixed-radix FFTs show a similar behavior to the pure radix-2 FFTs. If constraint (2) is fulfilled, a linear speedup is
+
+313 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+achieved. The 384-point FFT serves as a counter-example: for SIMD bit widths greater than 256 bits, the constraint is not fulfilled. Hence, further permutation operations are necessary, leading to a reduced speedup. On the 512 bit SIMD processors, the speedup is 3.68 for single-vector and 3.84 for double vector networks. On the 1024 bit SIMD processors, the gap to linear speedup increases. Here, speedups of 6.2 (single-vector network) and 6.52 (double-vector network) can be measured. Yet, the decreased speedup does not solely occur because additional permutations are necessary. In fact these permutations are mostly hidden by LIW execution. The main issue is that the input vectors of the additional permutation stages are not used in conjunction in the following FFT stage. Hence, more data vectors are needed to perform useful computations after the permutation stage. Due to the fixed number of available registers, this limits the number of consecutive FFT stage that can be performed in one loop. The overall performance is therefore dominated by memory access.
+B. Fixed-Complexity Sphere Decoder
+The fixed-complexity sphere decoder [10] has been implemented for a 4 × 4 antenna system with quadrature phaseshift keying (QPSK) and 16-QAM support. The decoder operates in three steps: reordering of the channel matrix, matrix decomposition into triangular form, and reduced tree search. The first two stages consist of matrix transformations of the channel matrix. These stages can be either parallelized by processing one matrix row/column in parallel or by processing multiple OFDM sub-carriers in parallel. The first approach requires intra-vector operations (e.g. dot product) and offers only limited parallelism. The second approach allows parallel processing of sub-carriers up to the size of the FFT. The tree search can be parallelized by processing multiple possible transmit symbols in parallel or again by processing multiple sub-carriers. The latter approach offers more parallelism and, due to the orthogonality of sub-carriers, requires no communication between vector elements.
+The implemented sphere decoder processes multiple subcarriers in parallel in all stages of the algorithm. Hence, parallelism is only limited by the length of the OFDM symbol. The implementation is easily scalable for different SIMD widths. The baseline implementation with a 128 bit SIMD bit width and a single-vector butterfly network achieves a throughput of 54.86 Mbps for QPSK modulation and 34.85 Mbps for 16QAM. The obtained speedups are shown in Fig. 3 (as 4x4 FSD). For both QPSK and 16-QAM a linear speedup is achieved, i.e. a doubling of the SIMD width results in exactly doubled throughput. The selected permutation network does not influence the performance.
+C. Decoder for Quasi-cyclic LDPC Codes
+We implemented LDPC decoders for WiMAX codes [13] with code rates 2/3 and 5/6 with three different expansion factors for z-by-z submatrices (z = 32, z = 64 and z = 96). The expansion factor z = 96 defines the biggest and hence
+
+most challenging LDPC matrices. The decoders use the minsum algorithm with a serial schedule [21], i.e. one row of the matrix Hb is processed at a time. Ten decoding iterations per code word have been done for the measurements.
+The processing consists of two parts: check node update and bit node update. During the check node update, all non-zero zby-z submatrices in a row are processed. First, the data vectors corresponding to the submatrix are loaded and rotated. Next, a message to the check node is calculated by subtracting the old check node data for this bit node. Then, the min-sum algorithm updates the minimum of all messages to the check node and the message signs. During the bit node update, the new check node information (based on the min-sum algorithm) is added to the messages from bit to check nodes to get the new bit node information. As a last step, the bit node rotation has to be reversed. The required processing can be realized by two loops on all bit nodes connected to the check nodes. The check node processing requires to store the minimum, 2nd minimum, and minimum position of all incoming messages and the sign bits of these messages for each node. The serial schedule enables to overwrite the bit node data with the messages to the check nodes, further reducing the required memory.
+Woh et al. [2] already showed that LDPC decoding can be vectorized by processing one z-by-z submatrix in parallel. Our results for SIMD bit widths less than 1024 bit — and z = 64 with a SIMD bit width of 1024 bit — support this conclusion (see Fig. 3 on the right-hand side). The code rate has no significant impact on the speedup. For comparison purposes, the achieved throughputs of the baseline implementation (128 bit SIMD bit width, single vector butterfly network) are displayed in Table III.
+Seo et al. [22] presented an optimized implementation of a WiMAX LDPC decoder for z = 96 and R = 5/6 on a customized variant of the 512-bit SODA processor clocked at 400 MHz. On the original SODA processor, a throughput of 18.3 Mbps is achieved. The optimized implementation uses accelerator units and customized instructions and achieves an improved throughput of 30.4 Mbps. Our implementation for the same LDPC code on a 512-bit SIMD processor has a throughput of 18.2 Mbps at a clock frequency of 300 MHz, which is comparable to the results on SODA for 400 MHz.
+Surprisingly, Fig. 3 shows that speedups better than linear speedup are obtainable for z-factors 32 and 64. The reason for this behavior is the limited number of registers in combination with the number of needed data vectors. If at most two vectors are needed for z bit nodes, all required data for the check and bit node updates (the old values of minimum, 2nd minimum, minimum position and signs at the check node and the updated values) can be kept in registers. Hence, the rotation of data vectors and the check node respectively bit node update can be done in one step. If more vectors are needed for z values, the processing has to be split into separate rotation and node update loops. This results in a degraded performance. Hence, bigger SIMD widths that only require one or two data vectors per submatrix achieve an increased speedup.
+The LDPC decoding algorithm allows to process multiple
+
+314 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III LDPC DECODER THROUGHPUT IN MBPS FOR A 128 BIT SIMD
+PROCESSOR WITH SINGLE-VECTOR BUTTERFLY NETWORK
+
+Expansion factor Throughput [Mbps] for R=5/6 Throughput [Mbps] for R=2/3
+
+Z=32 4.72 4.66
+
+Z=64 4.86 4.80
+
+Z=96 4.73 4.57
+
+TABLE IV NORMALIZED AREA EXCLUDING MEMORIES
+
+Architecture 128 Bit 256 Bit 512 Bit 1024 Bit
+
+Bfy1 1.000 1.814 3.567 6.914
+
+Cross1 1.003 1.847 3.713 7.461
+
+Bfy2 1.096 2.029 4.012 7.811
+
+Cross2 1.125 2.168 4.412 9.579
+
+submatrices in a row of matrix Hb in parallel. However, there are issues that counteract efficient SIMD processing. Firstly, due to the presence of zero submatrices, the processed submatrices do not always occupy consecutive memory locations. This issue can be overcome by reordering bit positions before the decoding, but it is not possible to guarantee consecutive submatrices for all LDPC codes. Secondly, parallel processing of multiple submatrices in one vector requires support for vector element rotations on segments of a vector. These rotations can be realized on all considered permutation networks, but come with a significant memory overhead: rotations on complete vectors can be defined by a scalar rotation distance, rotations on segments of a vector have to be specified by permutation patterns that require significantly more memory.
+The implementations for 1024 bit wide SIMD processors with z = 32 and z = 96, which require parallel processing of multiple submatrices, have been realized by interleaving two consecutive code words instead of reordering submatrices in a code word. The overhead for the interleaving and deinterleaving is low as these steps are required only once per pair of code words and not in each decoding iteration. Furthermore, by choosing an appropriate interleaving pattern, partial rotations defined by permutation patterns can be avoided for crossbar network topologies. A different interleaving pattern had to be used for inverse butterfly network topologies1 and permutation patterns had to be used to define the permutations in this case. With these modifications, approximately linear speedup can be achieved even for SIMD widths greater than the expansion factor z.
+D. Energy and Area
+Fig. 4 and Table IV show normalized energy consumption respectively normalized area. Normalization was done based on the energy consumption and the area of the 128-bit SIMD architecture with a single-vector inverse butterfly network. Memories have not been synthesized and are excluded from the analysis.
+Fig. 4 shows mostly normalized energy figures smaller than one. This can be explained by the energy consumption of the LIW instruction decoder and the scalar data path. Both do not depend on the SIMD width. Hence, the required energy does not scale with the SIMD width.
+Besides this effect, the results are consistent with the obtained speedups. Short FFTs, with less than linear speedup due to the initialization overhead, achieve the worst energy figures.
+1The interleaving pattern for crossbar networks is too complex to be done in one operation on an inverse butterfly network.
+
+The lowest normalized energy consumption is obtained for the LDPC decoders with z-factors 32 and 64, which have speedups above linear speedup.
+Double-vector networks require more area and more energy than single-vector networks, unless the increased network width translates into better speedup (e.g. small radix-2 FFTs). Even the fixed-complexity sphere decoder, which only uses permutations to rotate candidate symbols, requires more energy on double-vector network due to the increased number of register file ports.
+E. LIW performance analysis
+One of the major features of the proposed SIMD processor architecture is the support of 4-way LIW execution. LIW support has been realized with the intention of reducing the time overhead for non-computational operations (i. e. memory access, data movement, and vector permutations).
+The benefit of LIW processing can be assessed by analyzing the resource utilization of the computational SIMD vector processing units — the vector ALU (VALU) and the vector MAC unit (VMAC). The resource utilization RVALU of the VALU respectively RVMAC of the VMAC describes the relative amount of time that the unit has been active for useful computations. A resource utilization value close to 100 percent for either of these processing units indicates that the overhead for non-computational operations can be hidden by LIW execution. Table V displays the resource utilization and the average number of parallel operations in a LIW instruction Npar. ∅ for the inner loops of the implemented algorithms. The algorithms spend most of their processing time on the execution of these inner loops. For most of the inner loops, the LIW performance does not depend on the SIMD width or the type of permutation network. The minimum and maximum values are given for loops whose structure depends on the SIMD width or permutation network.
+The FFT results show a high degree of parallelism and resource utilization values close to the optimum. Here, a comparison between a radix-2 FFT loop without vector permutation stages (denoted as inter) and a radix-2 FFT loop with vector permutations (denoted as intra) is especially interesting. For double-vector permutation networks, there is no overhead for vector permutations in the intra case and the VALU still does useful computations all the time (RVALU = 100%). The VMAC resource utilization is reduced, because the last FFT stage does not require multiplications. For single-vector permutation networks, vector permutations lead to a small overhead, which reduces the resource utilization of the computational units
+
+315 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+1,2
+
+1,1
+
+1
+
+0,9
+
+0,8
+
+1024 Bit, Bfy1
+
+0,7
+
+1024 Bit, Cross1
+
+1024 Bit, Bfy2
+
+1024 Bit, Cross2
+
+1,2
+
+1,1
+
+1
+
+0,9
+
+0,8
+
+512 Bit, Bfy1
+
+0,7
+
+512 Bit, Cross1
+
+512 Bit, Bfy2
+
+512 Bit, Cross2
+
+1,2
+
+1,1
+
+1
+
+0,9
+
+0,8
+
+256 Bit, Bfy1
+
+0,7
+
+256 Bit, Cross1
+
+256 Bit, Bfy2
+
+256 Bit, Cross2
+
+1,2
+
+1,1
+
+1
+
+0,9
+
+0,8
+
+128 Bit, Cross1
+
+0,7
+
+128 Bit, Bfy2
+
+128 Bit, Cross2
+
+Fig. 4. Normalized energy for the considered algorithms. The energy is normalized to the performance of a 128-bit SIMD processor with an inverse butterfly network with a width of one vector. The abbreviations Bfyk and Crossk denote inverse butterfly respectively crossbar networks with a width of k vectors.
+
+(RVALU = 92.31%), as they are not active in some clock cycles. The FSD channel ordering and QR-decomposition almost exclusively consist of matrix multiplications, hence the VMAC utilization is high and the VALU utilization is low. Furthermore, a complex multiplication occupies the VMAC for two clock cycles, but only requires one instruction. Therefore, the average number of parallel instructions is low. The LDPC decoder throughput is clearly limited by the VALU, which is active all the time; the VMAC is not used as the decoding algorithm does not require multiplications.
+VI. CONCLUSION
+SIMD based processor architectures offer good scalability for typical SDR algorithms. The results for all implemented
+
+algorithms show approximately linear speedup for all considered SIMD widths. Yet, the results also unveil different constraints for optimal performance gains based on the ratio of algorithm parameters and SIMD width: the FFT can be done with minimum overhead for data reordering if the FFT size is a multiple of the SIMD width (radix-2 case) or the squared SIMD width (mixed-radix case), SIMD parallelization of the fixed-complexity sphere decoder is only limited by the length of an OFDM symbol, and LDPC decoding is limited by the expansion factor, but the results also show that the z factor is no hard limit.
+The obtained speedups also demonstrate that a LIW architecture can potentially hide the overhead of necessary vector permutations (and memory access). For example, on a SIMD
+
+316 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE V LIW RESOURCE UTILIZATION ANALYSIS FOR INNER LOOPS OF SDR
+ALGORITHMS
+
+Description 3 radix-2 FFT stages (inter) 3 radix-2 FFT stages (intra) Radix-3 FFT stage Radix-6 FFT stage Radix-5 FFT stage FSD channel ordering QR-decomposition FSD: QPSK sphere search FSD: 16-QAM sphere search LDPC check node update LDPC bit node update
+
+Npar. ∅ 2.92
+2.75–3.71 2.86–3.29 2.67–2.39 2.81–3.16
+1.82 1.78 2.13 2.61 2.63 3.83
+
+RVMAC [%] 100
+92.31–100 100 88.89 87.50 88.12 91.21 89.29 87.30
+∅ ∅
+
+RVALU [%] 100
+61.54–66.67 71.43 88.89 81.25 47.67 32.54 60.71 69.84 100 100
+
+processor with a double-vector network, a loop containing three radix-2 FFT stages with vector permutations has the same run-time as three radix-2 stages without permutations.
+The speedups for different network topologies indicate that the choice of the permutation network has negligible impact for small SIMD widths. Yet, the differences in speedup grow with increasing SIMD widths — especially for the FFT. The results show a significant improvement in performance from a single-vector network to a double-vector network and a smaller improvement from inverse butterfly network to crossbar network.
+Short mixed-radix FFTs and LDPC decoders with SIMD widths greater than the expansion factor have performance limitations due to memory access patterns, i.e. data from different memory locations is potentially needed for one data vector. An architecture that supports single instruction multiple disjoint data (SIMdD) processing [23] can potentially overcome these limitations. A SIMdD architecture provides multiple address generators for different sub-vectors [5]. Furthermore, the LDPC decoder benefits from specialized instructions for rotation operations on sub-vectors (without the need for storing permutation patterns in memory). The impact of these modifications on the performance is a possible topic for future work.
+ACKNOWLEDGMENT
+The authors thank Matthias Lechtenberg and Stefan Nowak (TU Dortmund) for sharing their knowledge on LDPC codes.
+REFERENCES
+[1] Rep. ITU-R M.2134, “Requirements related to technical performance for IMT-Advanced radio interface(s),” International Telecommunication Union - Radiocommunication, Tech. Rep., 2008.
+[2] M. Woh, Y. Lin, S. Seo, T. Mudge, and S. Mahlke, “Analyzing the scalability of SIMD for the next generation software defined radio,” in IEEE International Conference on Acoustics, Speech and Signal Processing 2008, ICASSP 2008., March 31 2008–April 4 2008 2008, pp. 5388–5391.
+[3] Y. Lin, H. Lee, M. Woh, Y. Harel, S. Mahlke, T. Mudge, C. Chakrabarti, and K. Flautner, “SODA: A High-performance DSP Architecture for Software-Defined Radio,” IEEE Micro, vol. 27, no. 1, pp. 114–123, Jan/Feb 2007.
+
+[4] M. Woh, Y. Lin, S. Seo, S. Mahlke, T. Mudge, C. Chakrabarti, R. Bruce, Kershaw, A. D. Reid, M. Wilder, and K. Flautner, “From SODA to Scotch: The Evolution of a Wireless Baseband Processor,” in Proc. 41st Intl. Symposium on Microarchitecture (MICRO), Nov. 2008, pp. 152– 163.
+[5] M. Woh, S. Seo, S. Mahlke, T. Mudge, C. Chakrabarti, and K. Flautner, “AnySP: anytime anywhere anyway signal processing,” in Proc. 36th Intl. Symposium on Computer Architecture (ISCA), vol. 37, no. 3. New York, NY, USA: ACM, 2009, pp. 128–139.
+[6] Technical Specification Group Radio Access Network, “TS 36.211 Evolved Universal Terrestrial Radio Access (E-UTRA); Physical Channels and Modulation (Release 8),” 3rd Generation Partnership Project, Tech. Rep. V8.9.0, Dec. 2009.
+[7] B. Mennenga, E. Matus, and G. Fettweis, “Vectorization of the sphere detection algorithm,” in Circuits and Systems, 2009. ISCAS 2009. IEEE International Symposium on, May 2009, pp. 2806–2809.
+[8] Z. Guo and P. Nilsson, “Algorithm and implementation of the K-best sphere decoding for MIMO detection,” Selected Areas in Communications, IEEE Journal on, vol. 24, no. 3, pp. 491 – 503, march 2006.
+[9] M. Li, B. Bougard, E. Lopez, A. Bourdoux, D. Novo, L. Van Der Perre, and F. Catthoor, “Selective Spanning with Fast Enumeration: A Near Maximum-Likelihood MIMO Detector Designed for Parallel Programmable Baseband Architectures,” in Communications, 2008. ICC ’08. IEEE International Conference on, May 2008, pp. 737–741.
+[10] L. Barbero and J. Thompson, “Fixing the Complexity of the Sphere Decoder for MIMO Detection,” Wireless Communications, IEEE Transactions on, vol. 7, no. 6, pp. 2131–2142, June 2008.
+[11] J. Jalde´n, L. Barbero, B. Ottersten, and J. Thompson, “The Error Probability of the Fixed-Complexity Sphere Decoder,” Signal Processing, IEEE Transactions on, vol. 57, no. 7, pp. 2711–2720, July 2009.
+[12] R. G. Gallager, Low Density Parity Check Codes. M.I.T. Press, 1963. [13] IEEE Standard for Local and Metropolitan Area Networks Part 16: Air
+Interface for Broadband Wireless Access Systems, IEEE Std 802.162009 ed., IEEE Computer Society and IEEE Microwave Theory and Techniques Society, May 2009. [14] K. Zhang, X. Huang, and Z. Wang, “An Area-Efficient LDPC Decoder Architecture and Implementation for CMMB Systems,” in Applicationspecific Systems, Architectures and Processors, 2009. ASAP 2009. 20th IEEE International Conference on, July 2009, pp. 235–238. [15] S. Pees, A. Hoffmann, V. Zivojnovic, and H. Meyr, “LISA–machine description language for cycle-accurate models of programmable DSP architectures,” in DAC ’99: Proceedings of the 36th ACM/IEEE conference on Design automation. New York, NY, USA: ACM, 1999, pp. 933–938. [16] P. Westermann and H. Schro¨der, “Modeling Scalable SIMD DSPs in LISA,” in SAMOS 2009, LNCS 5657, K. B. et al., Ed. Springer-Verlag Berlin Heidelberg, 2009, pp. 160–169. [17] K. van Berkel, F. Heinle, P. P. E. Meuwissen, K. Moerman, and M. Weiss, “Vector processing as an enabler for software-defined radio in handheld devices,” EURASIP Journal on Applied Signal Processing, vol. 16, pp. 2613–2625, 2005. [18] P. Westermann, G. Beier, H. Ait-Harma, and L. Schwoerer, “Performance Analysis of W-CDMA Algorithms on a Vector DSP,” in Proceddings of the 4–th European Conference on Circuits and Systems for Communications (ECCSC’08), July 10–11 2008. [19] ——, “Developing FFTs for SC-FDMA on the Embedded Vector Processor,” in Proceedings of the 13th International OFDM-Workshop (InOWo’08), 2008. [20] P. Westermann and H. Schro¨der, “Constraints on the SIMD Vectorization of Radix-2 and Mixed-Radix FFTs,” in 17th European Signal Processing Conference (EUSIPCO 2009). Glasgow, Scotland: EURASIP, August 24-28 2009, pp. 1274–1278. [21] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient Serial MessagePassing Schedules for LDPC Decoding,” Information Theory, IEEE Transactions on, vol. 53, no. 11, pp. 4076–4091, Nov. 2007. [22] S. Seo, T. Mudge, Y. Zhu, and C. Chakrabarti, “Design and analysis of LDPC decoders for software defined radio,” in Signal Processing Systems, 2007 IEEE Workshop on, Oct. 2007, pp. 210–215. [23] H. C. Hunter and J. H. Moreno, “A new look at exploiting data parallelism in embedded systems,” in CASES ’03: Proceedings of the 2003 international conference on Compilers, architecture and synthesis for embedded systems. New York, NY, USA: ACM Press, 2003, pp. 159–169.
+
+317 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:09:11 UTC from IEEE Xplore. Restrictions apply.
+
+

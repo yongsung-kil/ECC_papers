@@ -1,0 +1,232 @@
+2016 45th International Conference on Parallel Processing Workshops
+
+Parallelizing LDPC Decoding using OpenMP on Multicore Digital Signal Processors
+
+Murat Sever
+Aselsan A.ù. REHøS
+Ankara, Turkey msever@aselsan.com.tr
+
+Enver Çavuú
+YÕldÕrÕm BeyazÕt University Electrical and Electronics Engineering Department
+Ankara, Turkey ecavus@ybu.edu.tr
+
+Abstract— One attractive solution to long simulation time of LDPC codes is to implement inherently parallel decoding algorithms using multicore platforms. In this paper, we present the first OpenMP parallel implementation of LDPC decoding algorithm on a multicore DSP architecture and report its performance. Parallelized Normalized Min-Sum decoding algorithm is implemented on 8-core Texas Instruments (TI) DSP using OpenMP framework. Performance results are obtained by Unified Instrumentation Architecture (UIA). Our results show that the parallelized decoding on 8-core TI DSP achieves more than 6x speedup compared to single-core version.
+Keywords— LDPC; OpenMP; multicore; DSP; parallelization; channel coding; error detection and correction.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes [1] [2] have received widespread attention because of their excellent near Shannon-limit error correcting performance and inherently parallelizable decoding structure. Due to their superior capabilities, LDPC codes have been adopted in storage applications and in many communications standards such as DVB-S2, WLAN (802.11n), WPAN (802.15.3c) and WiMAX (802.16e). Despite widespread usage of LDPC codes, the highly complicated iterative decoding process leads to very long simulation time when verifying decoding performance under different decoding parameters.
+One attractive acceleration method for decoding of LDPC codes is to use multicore platforms. Multicore architectures considerably enhance data processing speeds, as multiple cores can handle many operations simultaneously. An important aspect of multicore approach is the proper migration of software development to the multicore environment. Parallelizing code to run over multicore platform requires some thread library and compiler support. Texas Instruments (TI) has recently introduced an OpenMP support into their development environment, which enables easy porting of single-core applications to multicore platform.
+Recently, some implementations using OpenMP on TI’s KeyStone multicore architecture are presented to parallelize various applications such as HEVC video decoding [3], High Performance Computing (HPC) [4], an edge detection algorithm [5] and Synthetic Aperture Radar (SAR) algorithm [6]. However, to the best of our knowledge, there is no work that implements LDPC decoding on TI’s multicore platform. In
+
+literature, multicore implementations of LDPC decoding are mainly concentrated on GPU based platforms. In [7], Intel based General Purpose Processors (GPP), Graphics Processing Units (GPU) and CELL Broadband Engine (CELL/BE) are deployed to run parallelized LDPC decoding algorithms. The results in [7] shows that CELL/BE performs better for short/medium codes while for larger codes GPUs provide the best performance. Similarly, in [8, 9, 10] OpenMP implementation on general purpose CPUs are compared against single-CPU and GPU implementation. These studies report up to 3.3x, 4x, and 4.5x speedups on 4-core GP-CPU [10], quadcore GP-CPU [8], and an 8-core GP-CPU [9], respectively.
+In this work, we focus on implementing software-based LDPC decoding algorithms on TI’s multicore DSP. The code written for single core is modified to comply with OpenMP standards. As iterative message passing process of LDPC decoding extensively uses shared memory, OpenMP framework is more suitable to parallelize the decoding algorithm. Normalized Min-Sum Algorithm (NMSA) is used for decoding of LDPC codes. NMSA is parallelized using OpenMP programming model in Code Composer Studio (CCS) Integrated Development Environment (IDE) and then implemented on a multicore DSP platform from Texas Instruments, TMDSEVM6678LE, featuring TMS320C6678 with 8 identical cores. This device is based on the Keystone I multicore architecture, namely C66x. Unlike other computing platforms, it can be either used as an accelerator under control of a host processor to offload work or as a full standalone system where whole application can run. Our work is the first evaluation of LDPC decoding on a multicore DSP using OpenMP. The results show that the parallelized decoding on 8-core TI DSP achieves more than 6x speedup compared to single-core version.
+This paper is organized as follows. A review of LDPC decoding algorithm and multicore development environment used in this work are given in Section II. Proposed implementation, including optimization techniques, and compiler directives are discussed in Section III. Section IV presents performance evaluation results and finally Section V concludes the paper.
+
+2332-5690/16 $31.00 © 2016 IEEE
+
+46
+
+DOI 10.1109/ICPPW.2016.22
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+II. LDPC DECODING ALGORITHM AND MULTICORE DEVELOPMENT ENVIRONMENT
+In this section, decoding algorithm of LDPC codes, OpenMP framework and TI DSP platform is reviewed. A. Decoding of LDPC Codes
+An LDPC code is defined by a parity-check matrix, usually referred to as H matrix. Rows in the H matrix correspond to parity check equations, whereas columns correspond to bits in codeword. A visual representation of parity-check matrix, called Tanner Graph, is often used to assist in understanding decoding of LDPC codes. A Tanner Graph is a bipartite graph with two types of nodes: Check (parity) nodes and bit (variable) nodes. The bit nodes are usually drawn as circles, and check nodes are usually drawn as squares. An edge between a bit node and check node indicates that corresponding bit node is involved in the parity check constraint. An LDPC code with n bit nodes and k information bits is represented as (n, k). So, there are (n-k) number of check nodes. An example parity-check matrix for a (7, 4) code and its corresponding Tanner Graph are shown in Fig. 1, where the parallelizable structure of LDPC decoding is also apparent.
+ͳͲͳͲͳͲͲ ‫ ܪ‬ൌ ൥Ͳ ͳ ͳ ͳ Ͳ ͳ Ͳ൩
+ͳͳͲͲͲͲͳ
+Fig. 1. Parity-check matrix and corresponfing Tanner Graph for a (7, 4) code
+Decoding of LDPC codes is done by iteratively passing messages between two sets of nodes represented in the Tanner graph. Sum-product algorithm (SPA), originally introduced by Gallager, performs the best but it has a very high computational complexity. NMSA [11] is a popular approximation scheme, which offers lower hardware complexity at the cost of performance degradation. The main steps of NMSA are summarized as follows. 1st Step: Initialization: Check node to bit node messages, ୨୧, are initialized to zero and LLR (Log-Likelihood Ratio) values for the bit nodes are set to corresponding channel's a priori values. This process is given in (1) and (2):
+
+ܴ௝௜ ൌ Ͳ
+
+(1)
+
+ߣ௜ ൌ ‫ܴܮܮ‬௜
+
+ൌ ܳ௜௝ ൌ
+
+ʹ‫ݕ‬௜ ߪଶ
+
+(2)
+
+where ɉ୧ is channel a priori information and ‫ݕ‬௜ is received channel message information. An additive white Gaussian
+noise (AWGN) channel is assumed with zero mean and variance ɐଶǤ
+
+2nd Step: Check Node Processing: Check node j receives messages from neighbouring bit nodes, and propagates back the updated messages, ܴ௝௜, according to (3)
+
+ܴ௝௜
+
+=
+
+Į
+
+ቌ ݉݅݊
+௜ᇱ‫א‬ேሺ௝ሻ̳௜
+
+൫ȁܳ௜ᇱ௝ ȁ൯
+
+ෑ
+
+‫݊݃ݏ‬ሺܳ௜ᇱ௝ ሻቍ
+
+(3)
+
+௜ᇱ‫א‬ேሺ௝ሻ̳௜
+
+where N(j) is the set of neighbour bit nodes connected to check node j. ݅ƍ ‫ܰ א‬ሺ݆ሻ̳݅ means all bit nodes connected to check node j except bit node i and Į is the normalization factor.
+
+3rd Step: Bit Node Processing: The outgoing messages, ܳ௜௝, which carry the extrinsic information passed from bit node i to check node j, are estimated based on (4):
+
+ܳ௜௝= ‫ܴܮܮ‬௜ െ ܴ௝௜
+
+(4)
+
+Posterior reliability value, also referred to as soft output of the received bit is updated as in (5).
+
+‫ܴܮܮ‬௜ ൌ ߣ௜ ൅ ෍ ܴ௝௜
+
+(5)
+
+௝‫א‬ேሺ௜ሻ
+
+4th Step: Syndrome Check: The parity check operations, ܿ ή ‫்ܪ‬is performed based on hard decision variables, ܿ௜, from (6)
+
+ܿ௜ ൌ ቄͳͲ
+
+݂݅ ‫ܴܮܮ‬௜ ൏ Ͳ ‫݁ݏ݅ݓݎ݄݁ݐ݋‬
+
+(6)
+
+If  ή ୘ ൌ Ͳ or the number of iterations equals the maximum limit then the decoder is stopped else the decoder goes back to 2nd step and continues iterating.
+
+B. OpenMP Framework
+With multicore trend, parallelizing existing code previously written for running on a single core is one of the most challenging jobs for software developers. Several parallel programming models have been proposed so far, such as Message-Passing Interface (MPI), thread libraries (Pthreads), Open Computing Language (OpenCL) and Open Multiprocessing (OpenMP) to address multicore software development challenge. MPI is generally used for distributed memory architectures whereas OpenCL is an open standard to write parallel applications for heterogeneous platforms. In contrast, OpenMP is a framework designed for shared memory multiprocessing. As LDPC decoding algorithm extensively uses shared memory for message passing between bit and check nodes, OpenMP framework is more suitable to parallelize the decoding algorithm of LDPC codes.
+
+47 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+OpenMP is not a new programming language. It introduces some notation that provides straightforward port of existing sequential codes by simple use of compiler directives. The directives tell the compiler which part of the code executes in parallel and how to distribute them among the parallel threads. The compiler considers and interprets directives when application is enabled to use OpenMP. The program starts as a single thread of execution as any sequential program does. This thread is called initial thread. A team of threads is forked at the start of parallel region and joined at the end [12]. The start of parallel region is indicated by #pragma omp parallel directive. This fork-join process of OpenMP is illustrated in Fig. 2.
+Initial thread
+Fork
+Team of threads
+
+The C6678 also integrates 4096kB internal memory (usually referred as MSMC memory) shared among cores. The MSMC inside SoC allows the cores to dynamically share the internal and external memories for both code and data. TI’s OpenMP implementation configures MSMC in shared level 2 mode (SL2). In this mode, SL2 RAM is cacheable only within the local L1P and L1D caches. Fig 3. below shows the general functional block diagram of the multicore processor used in this work. However, since cache coherency is not performed upon this state, shared variables concurrently accessed and modified by different threads running on different cores must be placed into a non-cached shared memory segment. In order to allow this, OpenMP runtime creates a non-cached alias for entire MSMC memory range [14]. Shared variables are placed into non-cached portion of MSMC memory. Code and constants are put into cached part of the memory. This approach makes parallelization even faster. It is important not to overlap these two segments.
+
+Join Initial thread
+
+Fig. 2. OpenMP Fork/Join Model
+Workload can be shared by all cores available using appropriate OpenMP work sharing constructs. The most common work sharing approach is to distribute the work in a for-loop among the threads in a team. However, not all loops can be suitable for this type of work sharing. Data dependencies may prevent loop parallelization. It is the user’s responsibility to decide loop parallelization is applicable or not. OpenMP allows the programmer to control the number of threads that execute a parallel region. If it takes T1 to execute an application on a single core and TP to execute the same code on P cores then, parallel speedup can be defined as the ratio ்భ .
+்ು
+If speedup increases with an increasing number of cores, the system is said to be scalable.
+C. Embedded DSP Platform
+Performance improvement achieved by parallelization is evaluated on TI’s Keystone based module, TMDSEVM6678LE. The module features TMS320C6678 System-on-chip (SoC) which includes identical 8 TMS320C66x (C66x) DSP cores providing both fixed- and floating-point capability. TI’s KeyStone family is a wellknown DSP architecture thanks to its low-power characteristics. It only consumes 10W at 1GHz clock frequency. The KeyStone architecture is designed with tiered multicore memory architecture, allowing for full processing entitlement across all cores while executing concurrently [13]. It contains two levels of memory: separate 32kB local program and data memories exist at level 1 (L1P and L1D). There exists 512kB L2 memory separate to each core. The L1 and L2 memories can be configured to be used as cache, RAM or part RAM/part cache. The L1 local memories are configured as RAM entirely. L2 memory is used as local memory to store thread private variables.
+
+Fig. 3. Reference DSP architecture
+There is no operating system (OS) running at the processor level, instead each core executes its own instance of Real-Time Operating System (RTOS), called SYS/BIOS. It is a lightweight native RTOS provided by TI. A C/C++ compiler, debugger is provided in the development environment. The compiler supports OpenMP 3.0 to allow easy porting of existing single core code to multicore platform. The compiler translates OpenMP into multi-threaded code with calls to a custom runtime library built on top of SYS/BIOS and interprocessor communication (IPC) protocols [14]. TI also provides Code Composer Studio (CCS), an Eclipse based Integrated Development Environment (IDE) for code development.
+III. IMPLEMENTATION
+In this work, a single core version of LDPC decoding algorithm is modified to run on TI’s KeyStone multicore DSP platform, where an OpenMP-based multi-threading scheme is used to parallelize code. In this section, the key aspects of the implementation are described.
+LDPC decoding is coded entirely in C using the Code Composer Studio™ Integrated Development Environment (IDE) v5.5, MCSDK v2.1.2.6 and SYS/BIOS v6.35.4.50. UIA v1.3.1.08 is utilized to instrument code and to provide benchmark statistics. OpenMP 3.0 is supported in evaluation platform. The project is built with the maximum compiler optimization level. To verify improvement by multicore processing, we use 1 to 8 cores run the NMSA decoding algorithm simultaneously.
+There are many options to improve the execution speed of code on DSP. With proper use of compiler directives and better memory placement and alignment better execution times can
+
+48 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+be achieved. Different data sections can be placed into specific region in memory by using appropriate directives. RTSC project provides a configuration file where necessary information is given to the linker on how to bind memory sections to the memory segments defined by a platform file. Code segment from configuration file shown below instructs the linker to map user defined section “.L2vars” into memory segment “L2SRAM”:
+// load const vars section into L2SRAM Program.sectMap[".L2vars"] = new Program.SectionSpec(); Program.sectMap[".L2vars"].loadSegment = "L2SRAM";
+Pragma directives tell the compiler how to treat a certain function or a section of code. In our implementation, compiler is guided to allocate memory from desired section. We allocate constant data on L2 memory for speed consideration:
+#pragma DATA_SECTION (WeightRow, ".L2vars") #pragma DATA_ALIGN ( WeightRow, 64 ); const unsigned char WeightRow[M] = {...}
+The first step in creating an OpenMP program is to identify the parallelism it contains. Considering LDPC decoding, this is an easy task since LDPC decoding is inherently parallel. The parallel implementation using the eight cores on the TMS320C6678 DSP platform can be achieved by letting each core process a different portion of the parity check matrix. Work is shared between cores by dividing parity check matrix into the horizontal and vertical non-overlapping strips for check to bit and bit to check processing, respectively. The parity-check matrix is divided evenly into equal strips in order to distribute load into cores equally. In multicore implementation of NMSA, each of selected number of cores concurrently processes messages sent form bit node to check node or vice-versa. Bit to check processing, check to bit processing and syndrome check code blocks are parallelized using OpenMP directive #pragma omp parallel for specifying variable scope information by means of private and shared annotations. OpenMP runtime allows different threads to run across different cores. OpenMP #pragma omp parallel for language extension offers easy parallelization of sequential code. Fig. 4 and Fig.5 illustrate how the parity-check matrix is divided into horizontal and vertical strips and allocated among 4 cores DSP cores, respectively.
+10100100
+Core#0
+01001000
+00010011
+1 0 1 0 0 1 0 0 Core#1
+00001010
+Core#2
+10010000
+01000110
+0 0 1 0 0 0 0 1 Core#3
+Fig. 4. Check node processing using horizontal striping of H matrix
+
+10100100
+01001000 00010011
+10100100
+00001010
+10010000 01000110
+00100001
+Core#0 Core#1 Core#2 Core#3
+Fig. 5. Bit node processing using vertical striping of H matrix
+We chose to store extrinsic messages in the non-cached shared memory region while constants are stored in the cached region to access them through L1D cache memory. This way each core has access to up-to-date data to process and writes updated messages back to their relevant places without any additional synchronization mechanism. Below code segment shows example worksharing loop construct for making hard decision given in (6). The work is shared between cores through vertical striping.
+static void MakeHardDecision() {
+int i; // make hard decision here #pragma omp parallel for for (i = 0; i < N; i++) {
+if (SumAll[i] > 0) CodewordHat[i] = 0;
+else CodewordHat[i] = 1;
+} }
+NMSA steps-2 and-3, given in Section II are repeated until maximum number of iterations is reached. We instrument code with log events in order to measure time spent in each step:
+while(currentIter < MAX_ITER_COUNT) {
+currentIter++;
+// start a new iteration Log_write2(UIABenchmark_start,
+(xdc_IArg)"iteration time, using %d cores", NumberOfCores);
+// start c2b Log_write2(UIABenchmark_start, (xdc_IArg)"c2b
+time, using %d cores", NumberOfCores); CheckToBitProcess(); Log_write2(UIABenchmark_stop, (xdc_IArg)"c2b
+time, using %d cores", NumberOfCores);
+// start b2c Log_write2(UIABenchmark_start, (xdc_IArg)"b2c
+time, using %d cores", NumberOfCores); BitToCheckProcess();
+
+49 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+Log_write2(UIABenchmark_stop, (xdc_IArg)"b2c time, using %d cores", NumberOfCores);
+Log_write2(UIABenchmark_stop, (xdc_IArg)"iteration time, using %d cores", NumberOfCores);
+}
+IV. RESULTS
+After all considerations mentioned in the previous sections are taken into account in porting sequential decoding algorithm into multicore platform, we performed experimental analysis using TDMSEVM6678LE Evaluation Module (EVM), C6678 processor running at 1GHz. XDS560V2 emulator was used to program and debug code running on the EVM. Benchmark results are acquired while code is running on the target through JTAG connection. In our experiments, we applied NMSA to the codes from DVB-S2. Selected LDPC code has a codeword length of 16200 bits and rate of 8/9.
+Fig. 6 shows speedups achieved for each type of processes. Fig. 6 also reveals that check node processing has a better scalability compared to bit node processing.
+
+Fig. 6. Speedup using OpenMP
+Because LDPC decoding is an iterative process, time spent at each iteration is an important parameter. Table 1 shows the execution times of each iteration and achieved speedup with number of cores. It can be seen that 8-core implementation achieves a 6.4x speedup. The results also demonstrate scalability of LDPC decoding algorithm successfully on multicore DSPs. However, the throughputs achieved are far from those required for real-time execution.
+
+TABLE I.
+
+EXECUTION TIMES FOR AN ITERATION AND SPEEDUP VERSUS
+NUMBER OF CORES
+
+Execution time (us) Speedup
+
+1
+6015
+
+Number of cores
+
+2
+
+4
+
+6
+
+8
+
+3081 1636 1167 947
+
+1.95 3.68 5.15 6.35
+
+These results prove that inherently parallel decoding algorithm of LDPC codes can be easily parallelized using OpenMP, which provides flexible programming model to
+
+create parallel code for shared memory architectures, hiding internal synchronization details from the programmer.
+V. CONCLUSION
+In this paper, we have presented parallelized implementation of LDPC decoding using OpenMP. It can be leveraged to take advantage of the multicore DSP by parallelizing algorithms quickly. Our implementation has been tested on a multicore embedded DSP platform, TI’s C6667 DSP. Multicore processing using OpenMP reduces processing times considerably. Our performance evaluation shows scalable speedup as more cores are included in multicore processing. When 8 cores are run simultaneously, the speedup reaches 6.4. Further speedup can be achieved by decoding many codewords in parallel and taking advantage of DSP architecture which itself provides several levels of parallelism like compiler specific pragmas or intrinsic SIMD instructions.
+REFERENCES
+[1] R. G. Gallager, "Low-density parity-check codes," IRE Trans. Inf. Theory, Vols. vol. IT-8, pp. 21-28, Jan 1962.
+[2] D. MacKay and R. Neal, "Near shannon limit performance of low density parity check codes," Electron. Lett., vol. 32, no. 18, p. 1645, Aug 1996.
+[3] M. Chavarrías, F. Pescador, M. J. Garrido, E. Juárez and C. Sanz, "A Multicore DSP HEVC Decoder Using an Actor-based Dataflow Model," in IEEE International Conference on Consumer Electronics (ICCE), 2015.
+[4] M. Ali, E. Stotzer, F. D. Igual and R. A. van de Geijn, "Level-3 BLAS on the TI C6678 multi-core DSP," in IEEE 24th International Symposium on Computer Architecture and High Performance Computing, 2012.
+[5] M. Wu, W. Wu, N. Tai, H. Zhao, F. Jiawu and N. Yuan, "Research on OpenMP Model of the Parallel Programming Technology for Homogeneous Multicore DSP", 5th IEEE International Conference on Software Engineering and Service Science (ICSESS), pp.921,924, 2014.
+[6] D. Wang, M. Ali and E. Blinka, "Synthetic Aperture Radar (SAR) Implementation on a TMS320C6678 Multicore DSP," Texas Instruments, 2015.
+[7] G. Falcao, L. Sousa and V. Silva, "Massively LDPC Decoding on Multicore Architectures," IEEE Transactions on Parallel and Distributed Systems, vol. 22, no. 2, pp. 309-322, 2011.
+[8] C. C. Chan and F. C. M. Lau, "Simulation of LDPC convolutional decoders with CPU and GPU," in Consumer Electronics, Communications and Networks (CECNet), 2012.
+[9] H. Xu, W. Wan, W. Wang, J. Wang, J. Yang and Y. Wen, "Comparison of parallelization strategies for minsum decoding of irregular LDPC codes," in Tsinghua Science and Technology, 2013.
+[10] J.-Y. Park and K.-S. Chung, "LDPC decoding for CMMB utilizing OpenMP and CUDA parallelization," in 17th
+
+50 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+Asia-Pacific Conference on Communications (APCC), 2011. [11] J. Chen and M. Fossorier, "Density evolution for two improved BP-based decoding algorithms of LDPC codes," vol. 6, pp. 208-210, 2002. [12] C. Chapman, G. Jost and R. Van Der Pas, Using OpenMP, The MIT Press, 2008. [13] C. Hu and D. Bell, "KeyStone Memory Architecture," Texas Instruments, 2010. [14] «OMP (OpenMP Runtime for SYS/BIOS) Users Guide,» Texas Instruments.
+51 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:20:56 UTC from IEEE Xplore. Restrictions apply.
+
+

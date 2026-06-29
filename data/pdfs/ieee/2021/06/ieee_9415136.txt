@@ -1,0 +1,829 @@
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+5431
+
+A Reconfigurable and Pipelined Architecture for Standard-Compatible LDPC and Polar Decoding
+Shan Cao , Member, IEEE, Ting Lin , Shunqing Zhang , Senior Member, IEEE, Shugong Xu , Fellow, IEEE, and Chuan Zhang , Senior Member, IEEE
+
+Abstract—With low-density parity-check (LDPC) codes and polar codes selected as the standard codes for the fifth generation (5 G) enhanced Mobile Broad Band scenario (eMBB), a decoding architecture that can simultaneously support the decoding of control and data plane becomes necessary at the terminal side to meet the raising requirement for 5 G network deployment. Due to the special structure of LDPC codes according to the Release 15 (R15) 5 G standard, a straight-forward extension of the existing reconfigurable scheme is in general difficult. Therefore in this paper, a unified decoding architecture is proposed that can be reconfigured to either LDPC codes or polar codes. Due to various differences between the two codes such as parity-check matrices, codeword lengths and iterative methods, a joint decoding algorithm is introduced by reordering basic decoding operations to the unified add-comparison-add pattern for both codes. Then, a pipelined structure of reconfigurable decoding unit (RDU) is presented correspondingly which is fully compatible with all decoding patterns of the R15 standard. And finally, a reconfigurable decoder is proposed with multiple levels of parallelism, and the reconfiguration scheme is introduced to improve the hardware utilization and decoding efficiency. The proposed decoder is implemented in FPGA and ASIC, respectively, and has achieved state-of-the-art performance in throughput and area efficiency compared to LDPC-only and polar-only decoders.
+Index Terms—LDPC code, polar code, decoder, reconfigurable architecture, standard-compatible.
+I. INTRODUCTION
+A IMING to support dense, diversified, and mission-critical wireless traffics, the fifth-generation (5 G) wireless systems [1] have been identified as one of the key enablers for
+Manuscript received October 15, 2020; revised February 26, 2021; accepted April 19, 2021. Date of publication April 23, 2021; date of current version July 8, 2021. This work was supported by the National Natural Science Foundation of China (NSFC) under Grants 61904101 and 62071284, National Science and Technology Major Project under Grant 2018ZX03001009, and the National Key Research and Development Program of China under Grants 2017YFE0121400 and 2019YFE0196600, the Innovation Program of Shanghai Municipal Science and Technology Commission under Grant 20JC1416400. The review of this article was coordinated by Dr. Ha Nguyen. (Corresponding author: Shan Cao.)
+Shan Cao, Ting Lin, Shunqing Zhang, and Shugong Xu are with the Key Laboratory of Specialty Fiber Optics and Optical Access Networks, Joint International Research Laboratory of Specialty Fiber Optics and Advanced Communication, Shanghai Institute for Advanced Communication and Data Science, Shanghai University, Shanghai 200444, China (e-mail: cshan@shu.edu.cn; zjzslt@shu.edu.cn; shunqing@shu.edu.cn; shugong@shu.edu.cn).
+Chuan Zhang is with LEADS, Southeast University, Nanjing 210096, China National Mobile Communications Research Laboratory, Southeast University, Nanjing 210096, China, Quantum Information Center, Southeast University, Nanjing 210096, China, Purple Mountain Laboratories, Nanjing 210096, China (e-mail: chzhang@seu.edu.cn).
+Digital Object Identifier 10.1109/TVT.2021.3075232
+
+the information society beyond 2020. Among the candidate technologies for 5 G system [2], channel coding is one of the most important features in the physical layer. To satisfy the high throughput data transmission and reliable control signaling requirement for 5 G systems, a hybrid solution to apply polar code [3] for control plane and low-density parity-check (LDPC) code [4] for data plane transmissions has been agreed in the 3 rd Generation Partnership Project (3GPP) radio access network meeting [5].
+For the decoding of channel codes, the decoding performance, including both the decoding throughput and bit error rate, is generally the primary concern in wireless communication systems. Several efficient parallelism exploration schemes [6]–[8] and early stopping criteria [9]–[13] are proposed to improve throughput, while various attempts in decoding and scheduling schemes [14]–[17] and pipelined structure optimization schemes [18], [19] are introduced to increase hardware utilization and multi-standard coverage. The increasingly diverse application scenarios and high-performance requirements in 5 G and beyond wireless communication systems bring even higher hardware complexity to the hardware implementation of decoders. Various codeword lengths and parity-check matrices are required that large chip area and power consumption become inevitable to decoders. A unified decoding architecture that can satisfy all decoding requirements in an embedded communication terminal is therefore necessary. A similar attempt has been made during the 4 G communication phase that reconfigurable turbo/LDPC decoder architecture was proposed in [20]. However, for 5 G communication, most decoders of LDPC codes and polar codes are designed for individual decoding. The straightforward extension of current designs to standard-compatible and reconfigurable of both codes is in general difficult due to the complicated code structure. In [21], a merged belief-propagation (BP) based decoding scheme was proposed with shared factor graphs, and in [22], a joint polar-LDPC decoder was introduced rely on a special structure of code structure, but none of them is standard-compatible.
+In this paper, a joint LDPC/polar decoding algorithm is introduced based on the BP decoding algorithm. Based on that, a reconfigurable decoding architecture is proposed for standardcompatible decoding of LDPC codes and polar codes. In the proposed decoder, the structure of basic decoding units, decoding dataflow and the parallelism scheme are all optimized to improve throughput and hardware utilization. The main contributions of this paper are summarized as follows.
+
+0018-9545 © 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5432
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+r Fully Compatible with 3GPP R15 Standard. For conven-
+
+tional decoding architectures of LDPC codes and polar
+
+codes, it is difficult and inefficient to be expanded to decode
+
+both codes. Meanwhile, several codeword lengths and code
+
+rates should be supported for LDPC codes and polar codes
+
+according to 3GPP technical specification (TS) 38.212 [23]
+
+in order to be suitable for various application scenarios,
+
+which also brings huge complexity in hardware imple-
+
+mentation. Therefore in this paper, a hardware-oriented
+
+joint decoding scheme is introduced by extracting intrinsic
+
+decoding rules for different coding rates so that unified
+
+decoding is enabled and efficient even when both LDPC
+
+and polar decoding capabilities are compulsory. Unified
+
+representations for the decoding of both codes are extracted
+
+so that the decoding units can be unified by the same basic
+
+structure for both LDPC codes and polar codes, while high
+
+hardware resources utilization and decoding throughput
+
+r
+
+can able be guaranteed. Reconfigurable and Pipelined
+
+Decoding
+
+Units with High
+
+Resource Utilization. The structure of reconfigurable de-
+
+coding units (RDU) is proposed based on the joint decoding
+
+algorithm following the add-comparison-add calculation
+
+pattern. Each unit can be used for several message updates
+
+depending on decoding patterns in either LDPC decoding
+
+mode or polar decoding mode. Up to 20 decoding patterns
+
+are supported to improve hardware utilization for various
+
+codeword lengths and code rates. An average of 92.44%
+
+reuse efficiency can be achieved by the proposed RDU for
+
+r
+
+LDPC and polar codes. Dynamically configurable RDU array with multi-level par-
+
+allelism. The RDUs are organized in several RDU arrays so
+
+that both inter-codeword parallelism and intra-codeword
+
+parallelism can be exploited. A dynamical configuration
+
+scheme is then introduced correspondingly to optimize
+
+the decoding flow and hardware configuration. In this
+
+way, the proposed decoder is fully adaptable to the 5 G
+
+standard while the throughput and hardware utilization
+
+are maximized.
+
+Implementation results in field-programmable-gate-array
+
+(FPGA) and application specified integrated circuit (ASIC) have
+
+demonstrated the efficiency of the proposed decoder. Compared
+
+with state-of-the-art standalone LDPC or polar decoders, the
+
+proposed decoder has a high logic utilization rate and can
+
+achieve higher hardware efficiency and comparable throughput
+
+performance, while fully compatible with the communication
+
+standard, which is more suitable for embedded 5 G terminals
+
+with much higher hardware reuse and smaller chip area.
+
+The rest of the paper is organized as follows. Section II
+
+introduces preliminary information of polar and LDPC codes.
+
+In Section III, a joint polar-LDPC decoding algorithm is pro-
+
+posed, and the corresponding reconfigurable decoding unit is
+
+presented in Section IV. Then in Section V, the architecture of
+
+the proposed reconfigurable decoder is proposed, as well as the
+
+reconfiguration scheme of the decoder. Implementation results
+
+in both FPGA and ASIC are given in Section VI. Finally, we
+
+conclude this paper in Section VII.
+
+II. PRELIMINARIES
+In this section, a brief introduction to the encoding and de-
+coding structure is given for both LDPC and polar codes. Without loss of generality, we consider an (N, K) code,
+which generates N coded bits x = [x1, x2, . . . , xN ] from K information bits b = [b1, b2, . . . , bK ] according to [4]. After the binary phase shift keying (BPSK) modulation, the modulated symbols s = [s1, s2, . . . , sN ], where si = 1 if xi = 1 and si = −1 otherwise. At the receiver side, the observed symbols y = [y1, y2, . . . , yN ], corrupted by the additive white Gaussian noise (AWGN) n = [n1, n2, . . . , nN ], are determined through1 y = s + n. We can obtain the initial log-likelihood ratios (LLRs) L = [Ly1 , Ly2 , . . . , LyN ] based on the observations y and pass them into the detector.
+
+A. LDPC Codes
+An (N, K) LDPC code has an (N − K) × N parity-check matrix H, which illustrated the the factor graph for its BP decoding. As shown in Fig. 1(a), there are two types of nodes in the factor graph in the traditional BP detection, check nodes (symbolized as C) and variable nodes (symbolized as V ). If a ‘1’ locates at the jth row and the ith column of the H, there would be an edge between the i-th check node ci and the j-th variable node vj in the factor graph. Otherwise, nodes ci and vj are not connected. For connected nodes, corresponding messages are iteratively updated through the Eqn.(1) ∼(3).
+
+Mc(jt)→vi =
+
+sign Mv(t→) cj Φ
+
+Φ Mv(t→) cj
+
+,
+
+v ∈Vi
+
+v ∈Vi
+
+(1)
+
+Mv(it→) cj = L0bˆi +
+
+Mc(t→) vi .
+
+(2)
+
+c
+
+Here Ma(t→) b denotes the message passing from node a to node b in the t-th iteration. v ∈ Vcj \vi and c ∈ Cvi \cj represent
+
+all variable/check nodes connected to cj and vi excluding vi
+
+and cj, respectively. sign(·) identifies the sign of inner symbols
+
+and
+
+Φ(·)
+
+is
+
+defined
+
+by
+
+Φ(·)
+
+=
+
+−
+
+log(tanh(
+
+|·| 2
+
+)).
+
+In
+
+addition,
+
+the
+
+initial condition for the BP update is given by Mc(j0→) vi = L. After
+
+completing an iteration of the messages between the connected
+
+check nodes and variable nodes, update Lb(ˆti) by
+
+Lb(ˆti) = L0bˆi +
+
+Mc(t→) vi .
+
+(3)
+
+c
+
+Hard decision is taken by
+
+ˆb(it) =
+
+0, 1,
+
+if Lb(ˆti) ≥ 0 otherwise
+
+(4)
+
+and the estimated codeword should satisfies
+
+un · HT = 0
+
+(5)
+
+1Note that if other modulation schemes, such as QPSK or QAM, are applied, we can obtain similar per-symbol results by replacing n with the equivalent noises.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5433
+
+Fig. 1. An example of the BP algorithm using massage passing for LDPC decoding. (a) The framework of BP decoding for LDPC codes; (b) illustration of the check node processing element (CPE) in the decoder when the check node is connected to four variable node; (c) the structure of the CPE for message updates in check nodes; (d) illustration of the variable node processing element (VPE) in the decoder when the variable node is connected to three check nodes; (e) the structure of a VPE for message updates in variable nodes.
+
+where un denote the estimated codeword (ˆb(1t), ˆb(2t), . . . , ˆb(nt)) at the end of iteration t. If (5) is satisfied for the estimated codeword un, the decoding process stops. Typically in the BP decoding of LDPC codes, messages are updated in check node processing elements (CPE) and variable node processing elements (VPE) respectively. As shown in Fig. 1 (b) and (c), the structure of a CPE is illustrated for a check node cj which is connected to four variable nodes, and messages Mc(jt)→vi (i ∈ [1, 4]) in Eqn.(1) are updated in the CPE. Then in a VPE, messages Mv(it→) cj updates in Eqn.(2) are performed for a variable node vi when vi is connected to cj (j ∈ [1, 3]) as illustrated in Fig. 1(d) and (e).
+B. Polar Codes
+For an (N, K) polar code, the BP decoding is based on a factor graph composed of (n + 1) × N nodes (N = 2n), where N denotes the length of codeword and K denotes the length of information word. As illustrated in Fig. 2(a), the framework of BP decoding for a polar code with N = 8 has 3 stages of processing elements (PE), each of which has 4 PEs. In each iteration of the commonly-used round-trip scheduling method, left messages L are updated from the rightmost stage to the leftmost stage, after that right messages R are updated reversely.
+
+Therefore, in each PE of the decoder, both left messages and
+
+right messages are updated as shown in Fig. 2(b). Message
+
+updates in the j-th PE of stage i at the t-th iteration are cal-
+
+culated based on Eqn.(6), and the structure of a PE is given in
+
+Fig. 2(c) accordingly.
+
+⎧
+
+⎨⎪⎪LLii,,jj+=N/g2(L=i+g1(,R2ji−,j1,,
+
+Li+1,2j + Li+1,2j−1)
+
+Ri,j+N/2), + Li+1,2j ,
+
+⎩⎪⎪RRii++11,,22jj−=1
+
+= g(Ri,j , Li+1,2j + Ri,j+N/2), g(Ri,j , Li+1,2j−1) + Ri,j+N/2.
+
+(6)
+
+Here
+
+g(a,
+
+b)
+
+=
+
+log(cosh(
+
+a+b 2
+
+)
+
+−
+
+log(cosh(
+
+a−b 2
+
+))).
+
+The
+
+two
+
+types of messages are updated iteratively for I times. After the
+
+I iterations, the estimation xˆj is obtained by:
+
+xˆj =
+
+1, 0,
+
+if Li,j < 0 and j ∈ A otherwise
+
+(7)
+
+III. HARDWARE-ORIENTED JOINT DECODING ALGORITHM
+As we have elaborated in the previous section, both polar and LDPC decoding have similar BP decoding progress that messages are updated iteratively according to the factor graph. However, both basic decoding operations and the decoding dataflow are different in hardware implementation details. In
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5434
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+Fig. 2. An illustration of polar BP decoding. (a) The framework of BP decoding for (8,4) polar codes; (b) the left and right message passing illustration of a PE in the decoder; (c) the structure of a PE.
+
+order to explore further underlying similarity in between, unified representations for the decoding of both codes are presented for both the structure and parallelism of basic decoding units.
+
+A. Decoding Units
+
+For polar codes, left and right message updates within a
+
+PE can be simplified by the min-sum algorithm [14] that g(a, b) ≈ sign(a)sign(b) min(|a|, |b|). Eqn.(6) can be therefore
+
+re-written as
+
+⎧
+
+⎪⎪⎨⎪⎪⎪⎪⎪⎪⎪⎪LLii,,jj+=N|·Lm/s2ii+ign=n1(,(2|sLLji−gii+1+n|1(1),R,22+jji−−,jL11))|is,s+ii|gg1L,nn2i(j(+L,L1i,i2++j11,+,22jj−R+1i),jRm+iNi,nj/+(2|N|R)/,i2,)j |, ⎪⎪⎪⎪⎪⎪⎪⎪⎪⎩⎪RRii++11,,22|·jjLm−i=1+in=1s(,i2|gRjs−niig(1,jRn|)|(,iR+,|jLi)R,isj+i)ig,1sjn,i2+g(jLnN+(i/L+2R.i1+,2i,1jj,−2+j1N)+/m2R|i)n,i(,j|+RNi,/j2|,)
+
+(8)
+
+After the simplification, only signed additions and comparisons for minimum absolute values are required in a PE. Therefore, each PE can be decomposed into three adders (represented by “ADD”) and three absolute value comparators (represented by “CMPa”) as illustrated in Fig. 3(b). The ADD unit is a twoinput adder of signed digits, while the CMPa unit is a two-input comparator that calculates the minimum absolute values of the inputs. An ADD unit and two following CMPa units are used for the calculation of Li,j and Ri+1,2j−1, while a CMPa unit and two following ADD units are used for the calculation of Li,j+N/2 and Ri+1,2j .
+
+To fully explore the potential operation reuse, basic operations of decoding for LDPC codes are also simplified based on [24]. The check node update in Eqn.(1) is re-written as
+
+Mc(jt)→vi =
+
+sign
+
+Mv(t→−1c)j
+
+min
+v
+
+|Mv(t→−1c)j |
+
+,
+
+(9)
+
+v
+
+where the production and minimization of v is performed over the set Vcj \cj. And we scale the decoding of LDPC into finegrained iterations by re-ordering message passing using layered
+decoding. Assuming that only one check node cj is updated in each iteration, the corresponding variable node messages Mv(it→) cj (vi ∈ Vcj ) are updated as
+
+Mv(it→) cj = L(vti−1) − Mc(jt−→1v)i .
+
+(10)
+
+The check node cj is then updated by (9), and the corresponding LLR messages of variable nodes vi (vi ∈ Vcj ) are updated through
+
+L(vti) = L(vti−1) − Mc(jt−→1v)i + Mc(jt)→vi
+
+= Mv(it→) cj + Mc(jt)→vi .
+
+(11)
+
+In the conventional architecture of layered decoding, message passing of check nodes and variable nodes are processed separately, i.e., all check nodes are updated first and all variable nodes are then updated accordingly, the progress of which is repeated until Eqn.(5) is satisfied. Therefore, a couple of CMPa units are required for check node updates and several ADD units are required for variable node updates, in which case the hardware re-use is low if these modules are reconfigured as the decoding unit of polar codes. To make it possible for the reconfiguration of basic decoding units for both LDPC codes and polar codes,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5435
+
+Fig. 3. Basic decoding units for polar codes and LDPC codes. (a) For LDPC codes, the illustration of the basic decoding unit for a check node which is connected to 4 variable nodes; (b) for polar codes, the illustration of the basic decoding unit for a PE contains both right messages and left messages updates; (c) a possible structure of the reconfigurable unit (RU) which can be used for both LDPC codes and polar codes.
+
+we combine the update of a check node and its corresponding variable nodes as follows.
+
+⎧ ⎪⎨
+
+Mv(it→) cj
+
+= L(vti−1) − Mc(jt−→1v)i
+
+⎪⎩
+
+Mc(jt)→vi = v L(vti) = Mv(it→) cj
+
+sign Mv(t→−1c)j + Mc(jt)→vi .
+
+minv
+
+|Mv(t→−1c)j |
+
+(12)
+
+An example is given as illustrated in Fig. 3(a) that the check node c1 is connected to four variable nodes v1, v2, v3 and v4. In each decoding iteration, four ADD units are first required for updates of the four variable nodes, six CMPa units are then required to update check node c1, and LLR messages are updated by four ADD units finally. Therefore, a total of eight ADD units and six CMPa units are required in this case which follows the “ADD-CMPa-ADD” order. By comparison with the decoding unit of polar codes in Fig. 3(b), we can find that both decoding units in Fig. 3(a) and Fig. 3(b) are mainly composed of ADD units and CMPa units and have similar dataflow in either the “ADD-to-CMPa” order or the “CMPa-to-ADD” order. Accordingly, a decoding unit in Fig. 3(a) of LDPC codes can also be decomposed into two basic decoding units of polar codes. Therefore as shown in Fig. 3(c), an example structure of a reconfigurable unit (RU) is illustrated, which can be used for message updates of a check node and its 4 corresponding variable nodes for LDPC codes, and can also perform as two basic PEs in parallel for polar codes. In this example case, basic units can be 100% reused in the LDPC mode, while 75% of ADD units and 100% of CMPa units are reused in the polar mode.
+Based on the above re-organization of the decoding manner, the decoding unit of LDPC codes and polar codes can be unified
+
+by decoding units with the same basic structure with reconfiguration, while high hardware resource utilization is able to be guaranteed by optimizing the structure of the decoding unit.
+B. Decoding Flow
+After we unify the decoding units of LDPC codes and polar codes, another problem is whether the dataflow of the two decoding schemes can be unified so that the reconfiguration would not bring much control overhead. We consider one iteration of the BP decoding.
+For LDPC codes, the decoding can be taken as massive message update progress, each of which is a check node update and several corresponding variable node updates as shown in Eqn.(12). Assume there are Nu RUs in the decoder, each of which has 12 ADD units and 6 CMPa units. It can be therefore used for the message update of a check node which is connected with 4 variable nodes (8 ADD units and 6 CMPa units required), and can also be used for 2 check nodes simultaneously each of which is connected to 3 variable nodes (12 ADD units and 6 CMPa units required). For a (10, 5) LDPC codes as shown in Fig. 4(a), there are 5 check nodes and 10 variable nodes. Among the 5 check nodes, two of them are each connected to three different variable nodes, while three of them are each connected to four variable nodes. Each check node connected to four variable nodes can be mapped to an RU, while the two check nodes connected to three variable nodes can share an RU. Assuming Nu = 2, two RUs can be used in parallel. In this case, the two RUs should be used twice for the updates of all check nodes in each iteration, and two RU latency is therefore required for each iteration.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5436
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+Fig. 4. The decoding flow of LDPC codes and polar codes when there are two RUs, each with 12 ADD units and 6 CMPa units. (a) For a (10,5) LDPC code, the decoding in one iteration is divided into two stages, and in each stage two RUs are used in parallel; (b) for an (8,4) polar code, two PEs are included in an RU and the decoding in one iteration is therefore divided into three stages.
+
+Similarly for an (N, K) polar codes, N/2 PEs are required in each stage and n = log2˜N stages are required in each iteration. Therefore, N × n/2 times PE process are needed in one iteration. Under the same assumption that there are Nu = 2 RUs and each RU has 12 ADD units and 6 CMPa units, each RU performs as 2 PEs. Taking the (8, 4) polar code for example as shown in Fig. 4(b), the two RUs can accomplish one stage of message updates, and the three stages should be processed in order.
+After extracting an efficient and unified structure of RU for both polar codes and LDPC codes, the decoding flow of both codes can be processing in the same manner that the decoding flow is first unrolled based on the coding structure and then tiled again according to the underlying hardware. Both the hardware structure and the controlling logic can be therefore unified for high hardware utilization.
+IV. RECONFIGURABLE DECODING UNIT
+Based on the joint decoding feature of LDPC codes and polar codes, we introduce a reconfigurable decoding unit (RDU) in this section, which acts as the basic decoding unit for both codes.
+A. The Structure of the RDU
+The structure of the RDU is organized in the “ADD-CMPaADD” manner as shown in Fig. 5(a). The datapath of the RDU is divided into 5 pipeline stages which can be fully pipelined. In the first and last stages, the ADD array composed of several parallel ADD units is the main component which can be used for the calculation of (10), (11) for LDPC codes and (8) for polar codes. In the middle three stages, several CMPa units are integrated into each stage for the min-sum operations of both codes.
+
+Each RDU works in a very-long-instruction-word (VLIW) manner that the control information is generated off-line before the decoding and used for the reconfiguration of the unit. By reconfiguration, three ADD units from stage 1 (or stage 5) and three CMPa units (illustrated by an CMPax3 unit in Figure 5(a)) from stage 2∼4 can perform as a decoding PE of polar codes as shown in Fig. 5(b). Similarly, six ADD units (4 from stage 1 and 2 from stage 5) and six CMPa units (the CMPax6 unit in stage 2) can perform as two decoding PEs of polar codes. For LDPC codes, a check node update typically requires all the 5 stages of an RDU. Therefore, one or two check node updates can be processed in parallel depending on the connectivity with corresponding variable nodes.
+B. Reconfiguration of RDU for LDPC Codes
+For LDPC codes, two kinds of rate-compatible base graphs, base graph 1 (BG1) and base graph 2 (BG2), should be supported according to 3GPP R15 [23] for the data channel coding. BG1 is for larger block lengths and higher data rates, while BG2 is for smaller block lengths and lower data rates. The encoding and decoding of LDPC codes are based on the H matrix, the size of which is 46 × 68 and 42 × 52 for BG1 and BG2, respectively. In the H matrix, each element hi,j represents an Z × Z sub-matrix, and hi,j ∈ {−, 0, 1, 2, · · · }. The value of “−” in H stands for an all-zero matrix of size Z × Z, the value of “0” stands for a circular permutation matrix I(Pi,j) of size Z × Z, and the value of “n” (n ∈ N) stands for an Z × Z matrix that is circularly shifted right by mod(n, Z) from an Z × Z identity matrix. The lifting size of Z is also specified by 3GPP R15 to 51 different values ranging from 2 to 384. The values of Z can be divided into 8 sets, each corresponding to one basic lifting size x, x ∈ {2, 3, 5, 7, 9, 11, 13, 15}. In each set, values of lifting size Z = x × 2y, where y = [0, log2(384/x)].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5437
+
+Fig. 5. The reconfigurable and pipelined structure of the RDU. (a) The block diagram of the RDU; (b) illustration of the reconfigurable datapath for a decoding PE of polar codes or part of the decoding path of LDPC codes; (c) illustration of the reconfigurable datapath for two decoding PEs of polar codes or part of the decoding path of LDPC codes.
+TABLE I NUMBER OF SUB-MATRICES IN BOTH HBG1 AND HBG2 WHERE EACH CHECK NODE HAS Nj CONNECTED VARIABLE NODES
+
+According to the optimized decoding scheme of LDPC codes,
+a check node, and its connected variable nodes are updated
+following Eqn.(12). Assuming that the number of variable nodes connected to the same check node is symbolized as Nj, Nj is the number of positive integers of the corresponding row of the H matrix. Due to the property of the H matrix, check nodes in the same sub-matrix have the same Nj. Based on the rule in Eqn.(12), 2×Nj ADD units and Nj2 − 2Nj CMPa units are required for each check node update. As shown in Table.I, the number of sub-matrices for each value of Nj is listed. For BG1, the values of Nj range from 3 to 19, while the values of Nj range from 3 to 10 for BG2. We can find that check nodes with Nj ≤ 5 accounts for a large proportion, while the value of Nj is more than 11 only for check nodes in the first four sub-matrices of BG1. Therefore in the structure of the RDU, a maximum Nj of 11 is supported, which can be either used for the check node with Nj less than 11, or used for multiple check nodes that the
+
+sum of Nj is no more than 11. For check nodes with Nj greater than 11, the RDU is required to calculate twice.
+In each iteration, check nodes that have no shared variable nodes can be updated simultaneously, while check nodes should be updated one after another if they have shared variable nodes. Therefore if hardware allows, check nodes in the same lifting block can be updated in parallel, and check nodes in different lifting blocks can also be updated in parallel if their corresponding sub-matrices are orthogonal. To accelerate the computing and improve hardware utilization, different lifting blocks are simultaneously processed in the same RDU if they have no shared variable nodes and the sum of Nj is no more than 11, while check nodes in the same block can be processed in parallel if there are multiple RDUs. For BG1, we can see that no variable node is connected to two consecutive layers from the 22nd to 45th rows and the sum of Nj in two consecutive layers does not exceed 11. Therefore, two consecutive layers are processed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5438
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+Fig. 6. The illustration of data path reconfigurability of the proposed RDU in LDPC decoding mode. (a) The data path of RDU in LDPC mode when the decoding pattern is Nj = 11; (b) the data path of MRDU in LDPC mode when the decoding pattern is (Nj = 4) + (Nj = 4).
+
+simultaneously from row 20 to 45 for BG1, and similarly from row 20 to 41 for BG2. In this way, the hardware utilization of the RDU is improved in the LDPC decoding mode, and the decoding latency in one iteration is reduced 12 × Z cycles for BG1 and 11 × Z cycles for BG2.
+Therefore, during the decoding of LDPC codes, the RDU is configured into several decoding patterns for different check nodes updates depending on the length of codeword and the H matrix. An illustration is given in Fig. 6 that the RDU works in two different patterns in the LDPC decoding mode, which are the Nj = 11 decoding pattern as shown in Fig. 6(a), and the (Nj = 4) + (Nj = 4) decoding pattern as shown Fig. 6(b). The colored units and registers indicate the data path in this case, while the grey ones are in idle state. The reconfigure information controls the multiplexers for the mode selection and pattern selection. As shown in Fig. 6(a), the decoding is divided into 5 pipeline stages and all ADD units and CMPa units are active in this case. To reduce the number of CMPa units required, the multiplexers (MUX _ A, MUX _ B and MUX _ C) are designed to output the minimum value, the second minimum value and the address of the minimum value. Here, the MUX _ A, MUX _ C select the minimum and second minimum value from the results of 3 CMPa units, while MUX _ B selects from 6 CMPa units. As shown in Fig. 6(b), the RDU is shared by two check nodes each of which is connected to 4 variable nodes. For each check node, four ADD units in stage 1 and 5, CMPa×6 units in stage 2 are required, and CMPa×3 unit in stage 3 and 4 are idle. In this way, the hardware utilization is increased and the latency is significantly reduced.
+
+Fig. 7. The illustration of data path of the RDU in polar decoding mode.
+in idle state at the illustrated cycle. Each green solid line box represents a PE, which has 3 ADD units and 3 CMPa units as illustrated in Fig. 3(b). Each PE is divided into 2 pipeline stages to be correspondence with the structure in the LDPC decoding mode. Meanwhile, to avoid memory access conflicts, the input and output data of every two PEs are grouped to update messages of neighboring bits.
+A total of 21 ADD units and 21 CMPa units are utilized for the simultaneous message updates of 7 nodes in the polar decoding mode, while in the LDPC decoding mode 22 ADD units and 21 CMPa units are required. Therefore, the reuse rate of main logics in an RDU achieves 95.45% and 100% for ADD units and CMPa units, respectively.
+
+C. Reconfiguration of RDU for Polar Codes
+In the polar decoding mode, the RDU is reconstituted into 7 separate PEs, each of which is a basic decoding unit for the calculation of (8). As shown in Fig. 7, the active data path of the RDU in the polar mode is highlighted, while the grey ones are
+
+V. RECONFIGURABLE DECODER
+For joint decoding of LDPC codes and polar codes, a reconfigurable decoder architecture is proposed based on the joint decoding algorithm and the RDU structure. As shown in Fig. 8(a), the decoder is composed of an RDU cluster, a decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5439
+
+Fig. 8. The architecture of the proposed decoder which can be configurable for LDPC and polar decoding. (a) The block diagram of the decoder; (b) an example case illustration of the structure and timing of the RDU cluster when decoding LDPC codes; (c) an example case illustration of the structure and timing of the RDU cluster when decoding polar codes.
+
+controller, a memory controller and the reconfigurable memory. The decoder has 2 decoding modes (LDPC mode and polar mode), 20 decoding patterns to be compatible with the 5 G R15 standard. The controlling information is generated accordingly for decoding units and memory by the decoding controller and memory controller, respectively.
+A. The Hierarchy of Decoding Parallelism
+In the proposed architecture, the RDU cluster consists of several RDUs for the parallel decoding of both codes. In different decoding modes and decoding pattern, the RDU cluster can be re-organized to different numbers of RDU arrays. Each RDU array has several RDUs working in the single-instructionmultiple-data (SIMD) manner to accelerate the decoding of the same codeword, while different RDU arrays are used for parallel decoding of different codewords. A set of instruction words are generated by the decoding controller to re-grouping RDUs for each codeword dynamically according to the decoding mode and decoding pattern.
+For ease of re-organization of the RDU cluster in numbers of decoding situations, RDUs have no direct data communication with each other. Instead, each RDU is connected to several memory banks through a mini switching bus. The interconnection between RDUs and memory banks is reconfigured according to the instruction words for various lengths of codewords.
+For LDPC codes, RDUs in the same RDU array update messages of check nodes in the same lifting block. As illustrated in Fig. 8(b), assume there are 16 RDUs in the RDU cluster and each RDU array has 2 RDUs. Totally 8 codewords can be decoded simultaneously in 8 RDU arrays, and in an RDU array, each RDU is responsible for half of the lifting block (i.e. Z/2 check nodes) in a codeword. The message updates of adjacent check nodes can be fully pipelined in the same lifting block since they have
+
+no shared variable nodes. Therefore, Z/NRDU + 4 cycles are required for a lifting block, where NRDU is the number of RDUs in an RDU array. For adjacent lifting blocks, message updates cannot be overlapped since they may have shared variable nodes for check nodes in different blocks.
+For polar codes, RDUs in the same RDU array are used for message updates of the same stage in each iteration of a codeword decoding. Take polar codes with 1024-bit codeword length as an example. As shown in Fig. 8(c), 16 RDUs are divided into an RDU array (i.e. NRDU = 16), and N/14NRDU + 1 cycles are required for a stage, where N is the codeword length of polar codes. After the stopping condition of (7) is required in t iterations, each of which has 10 stages, the decoding of the current codeword is accomplished and the next one starts.
+B. Reconfiguration of the RDU Organization
+Since the length of codewords, the H matrix and the lifting size change significantly for LDPC codes and polar codes according to the standard, the hardware utilization is typically low for a certain setting of the RDU cluster. Therefore, to support flexible decoding requirement and to improve hardware utilization, the proposed RDU cluster can be reconfigured into different numbers of RDU arrays according to the decoding mode and decoding pattern.
+When the number of RDUs required by an RDU cluster in one decoding iteration is larger than the total number of RDUs, all RDUs are organized in one RDU array. Otherwise, the RDUs are divided into several RDU arrays that the number of RDUs required in one iteration are combined into an RDU array. RDUs in the same array are used to accelerate the decoding of a codeword, while different RDU arrays are used for parallel decoding of different codewords, so that multiple user processing is enabled.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5440
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+Algorithm 1 Decoding flow of the reconfigurable decoder
+
+1: if Decoding mode = ‘LDPC’ then LDPC decoding
+
+mode
+
+2: Set I = min(Z, NRDU ); 3: Set J = NRDU /I ; 4: for j = 1 → J do
+5: K = 0, B = 1;
+
+6: while The stopping criteria in (5) is satisfied. do
+
+7:
+
+for i = 1 → I do
+
+8:
+
+Update check node CK+i of lifting block B,
+
+codeword j;
+
+9:
+
+end for
+
+10:
+
+K = (K + I) mod Z; B = B + K + I /Z;
+
+11: end while
+
+12: end for
+
+13: else Polar decoding mode
+14: Set I = min(NRDU , N/14); 15: Set J = NRDU /I ; 16: for j = 1 → J do
+
+17: while The stopping criteria in (7) is satisfied. do
+
+18:
+
+for s = log2 N → 1 do
+
+19:
+
+K = 0;
+
+20:
+
+for i = 1 → I do
+
+21: Update left and right messages of nodes K + 7i − 6 ∼ K + 7i, stage s, codeword j;
+
+22: K = K + 7I;
+
+23:
+
+end for
+
+24:
+
+end for
+
+25:
+
+for s = 1 → log2 N do
+
+26:
+
+K = 0;
+
+27:
+
+for i = 1 → I do
+
+28: Update left and right messages of nodes K + 7i − 6 ∼ K + 7i, stage s, codeword j;
+
+29: K = K + 7I;
+
+30:
+
+end for
+
+31:
+
+end for
+
+32: end while
+
+33: end for
+
+34: end if
+
+Assume the number of RDUs in the RDU cluster is NRDU = I × J, where the number of RDU arrays is J and the number of RDUs in an RDU array is I. The values of I and J are determined by the codeword length (N ), the number of RDUs (NRDU ), the lifting size (Z) and the decoding mode. To maximize the hardware utilization and decoding throughput, a configuration scheme is introduced to select the best configuration and decoding flow of LDPC codes and polar codes, details of which are explained in Algorithm 1.
+
+VI. IMPLEMENTATION RESULTS
+The proposed decoding architecture is implemented in both FPGA and ASIC which is fully compatible with all codeword lengths of LDPC codes and polar codes in 3GPP R15 standards. To evaluate the efficiency of the proposed decoder, implementation results are compared with state-of-the-art decoders in this section.
+A. Trade-Off Between Throughput and Hardware Utilization
+For LDPC codes, the throughput of decoders changes greatly with the structure of H matrices (i.e., different lifting size Z and different base graphs). For a fair comparison, the decoding throughput in the LDPC decoding mode of the proposed decoder is calculated as follows, where niter and NRDU denotes the number of iterations and RDUs of the proposed decoder, ncol and nrow denote the number of columns and rows of elements in the HBG matrix, and nrow = nrow − 12 + 4 = nrow − 8 for BG1 and nrow = nrow − 11 for BG2. The value of nrow is different for BG1 and BG2, since there are four sub-matrices when Nj = 19 in BG1 only. In this case, RDUs need to be calculated twice and 4 more cycles are required each time. Z determines the maximum number of RDUs for a codeword that can be decoded in parallel.
+It can be seen from the equation (13), shown at the bottom of the page, that the decoding throughput mainly depends on the codeword length of LDPC codes (which decides the value of nrow, ncol, and Z) and the number of RDUs in the RDU cluster NRDU . Since the codeword length of LDPC codes varies significantly, the value of NRDU is critical for a high hardware utilization in various decoding patterns of LDPC codes. Assuming that the probability of occurrence of different codewords is identical, the average hardware utilization under different settings of NRDU is shown in Fig. 9. Candidate values of NRDU is set to x × 2y, where x ∈ {2, 3, 5, 7, 9, 11, 13, 15}, y ∈ N, and NRDU ≤ 100, corresponding to potential values of Z. From simulation results, we can find that when x = 2 the corresponding value of NRDU can achieve a higher hardware utilization within a certain data range. That is because when the number of RDUs is within a reasonable range, there are fewer RDUs that are idle for the most codeword cases. Moreover, as the number of NRDU increases, the decoding throughput would increase while the hardware utilization rate decreases generally. Therefore, it would be a trade-off of throughput and hardware utilization when selecting the number of RDUs. Since the average hardware utilization is larger than 85% in all decoding patterns and values of NRDU , it would be better to set the value of NRDU to the minimum value that satisfies the required decoding throughput and to be the power of 2 to improve hardware utilization.
+
+Thp.
+
+=
+
+⎧ ⎪⎪⎨
+
+Freq. nrow
+
+× ×
+
+ncol × Z 5× niter
+
+⎪⎪⎩Freq.
+
+×
+
+ncol
+
+×
+
+Z /
+
+nrow × niter
+
+× NRDU , if Z
+−plx − lef t
+
+NRDU ≥ Z; − lceil Z
+NRDU
+
++5
+
+, otherwise
+
+(13)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5441
+
+TABLE III THE REUSE EFFICIENCY η OF THE PROPOSED DECODER FOR THE DECODING OF
+LDPC CODES AND POLAR CODES
+
+Fig. 9. The average hardware utilization under different numbers of RDUs when NRDU = x × 2y.
+TABLE II FPGA IMPLEMENTATION RESULTS WITH 6-BIT FIXED-POINT LLR OF THE
+PROPOSED RECONFIGURE DECODER
+
+As shown in Table III, the reuse efficiency for RDUs, controlling units (including the memory controller and the decoding controller), and memory is given for LDPC codes and polar codes, respectively. We can see that the reconfigurable architecture has a very high reuse efficiency for RDUs, upto 82.67% and 99.94% for LDPC and polar codes, respectively. Since LDPC codes are used for data channel, the maximum codeword length and the types of decoding patterns required are much larger than polar codes. Therefore, the reuse efficiency of the controlling part is much lower in the LDPC decoding mode than the polar decoding mode. As for the memory part, the reuse efficiency is inevitably low for LDPC due to the long codeword required in data channel. However, the reuse efficiency achieves 100% for the memory reuse of polar codes, which means no extra storage resource is wasted in the memory hierarchy.
+
+B. FPGA Implementation Results
+
+The proposed decoder is implemented on Intel Altera Stratix IV FPGA [25]. The LLR values are quantized to 6-bit fixedpoint numbers and NRDU is set to 2. Implementation results are given in Table II. By the proposed decoding architecture, 42 423 ALUTs and 4351 registers are required when the decoder works only for LDPC codes. For the decoding of polar codes, the decoder has a consumption of 8886 ALUTs and 2279 registers. By reconfiguration, the decoder can be used either for LDPC codes or polar codes by 11.3% increase in ALUTs and 30% increase in registers compared to the LDPC-only decoder.
+To efficiently evaluate the hardware reuse of the reconfigurable decoder, the reuse efficiency ηL and ηp is defined for LDPC codes and polar codes as shown in (14) and (15), respectively.
+
+ηL
+
+=
+
+RL
+
++ Rp RL
+
+−
+
+Rr ,
+
+(14)
+
+ηp
+
+=
+
+RL
+
++ Rp Rp
+
+−
+
+Rr ,
+
+(15)
+
+where Rr, RL and Rp denote the hardware resources used for the reconfigurable decoder, the LDPC-only decoder, and the polar-
+only decoder by the proposed decoding architecture. In the ideal
+case, if we can reuse all the hardware resources, e.g. Rr = RL = Rp, the reuse efficiency ηL and ηp become 100%. However, Rr is always greater than max{RL, Rp} due to the different decoding flow, codeword lengths, code rates, etc.
+
+C. ASIC Implementation Results
+ASIC implementation results of the proposed reconfigurable decoder are also given after synthesis by the Synopsys Design Compiler in ZTE 55 nm CMOS technology. The LLR values are quantized to 6-bit fixed-point numbers and NRDU is set to 32. Since currently there is no decoder for both LDPC codes and polar codes, the performance of the proposed decoder is compared to state-of-the-art LDPC-only decoders and polar-only decoders, results of which are listed in Table. IV.
+For polar codes, the typically codeword length of 1024 and 1/2 code rate is taken as example without loss of generality. The decoding throughput is 1228.8 Mbps and the area efficiency (defined as throughput/chip area) is 2234.18 Mbps/mm2. For fair comparison with state-of-the-art decoders, all implementations are normalized to 55 nm technology with 1.32 V supply voltage. Compared to polar decoders [30] and [31], the proposed decoder has higher throughput and area efficiency after technology normalization.
+For LDPC codes, since there are multiple cases of codeword lengths and code rates according to the standard, four typical cases are given as examples which are codeword length 1088 and 2720 under code rate 11/34, and codeword length 1664 and 2912 under code rate 5/26. The throughput ranges from 466.29 Mbps to 594.29 Mbps, and the area efficiency ranges from 811.44 Mbps/mm2 to 1080.53 Mbps/mm2 in example cases. Compared to LDPC decoders [26] [27] [28], the proposed decoder can be used for all code rates required by the 5 G R15 standard, and can be also reconfigured to a polar decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5442
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+TABLE IV ASIC IMPLEMENTATION RESULTS OF THE PROPOSED DECODER COMPARED WITH BASELINE DECODERS
+
+a This decoder can decode all code rates defined in the Mobile WiMAX standard, including 1/2, 2/3A, 2/3B, 3/4A, 3/4B and 5/6 [32].
+
+b This decoder can decode all code rates defined in the IEEE 802.11n standard, including 1/2, 2/3, 3/4 and 5/6.
+
+c The latency is calculated by latency(in microsecond) = latency(in cycles)/f requency.
+
+d
+
+Normalized
+
+to
+
+55
+
+nm
+
+and
+
+1.32
+
+V
+
+based
+
+on:
+
+frequency
+
+∼
+
+s,
+
+area
+
+∼
+
+s−2 ,
+
+and
+
+power
+
+∼
+
+s−2 (
+
+Vdd Vdd
+
+)2 ,
+
+where
+
+s
+
+is
+
+the
+
+scaling
+
+factor
+
+[33].
+
+Moreover, it has a better performance compared to [27] [28]. For the decoder [26], a peak throughput of 1111.09 Mbps and area efficiency of 1683.47 Mbps/mm2 can be achieved, which is higher than the proposed decoder. That is because the code rate may significantly affect the throughput that the throughput may increase almost proportionally to the code rate for the same decoding architecture. In the 5 G R15 standard, code rates are generally much lower compared to the code rate of 5/6 in [26]. If normalized to the same coding rate, the decoding throughput may increase by 8.1% by the proposed decoder.
+
+and area efficiency while saving many hardware resources by configuration.
+A more flexible scheme for parallel decoding of multiple RDUs and unified early stopping criteria may potentially further improve hardware utilization and throughput, which is one of our future work. Moreover, a decoding framework based on deep learning is another future work to seek a breakthrough solution to the unified decoding architecture of mainstream channel codes.
+
+VII. CONCLUSION AND FUTURE WORK
+In this paper, a reconfigurable decoding architecture is proposed for both LDPC codes and polar codes, which is fully compatible with the decoding requirement of 5 G R15 standard. Both the decoding units and decoding flow are optimized in the proposed decoder so that unified decoding is enabled by hardware reconfiguration. Multi-level parallelism is explored to maximize decoding throughput and hardware utilization. In this way, the RDU, the basic decoding unit of proposed decoder, has 82.67% and 99.94% hardware reuse for LDPC and polar codes. For the typical polar codes with codeword length of 1024, the throughput is 1.23 Gbps and the area efficiency is 2.23 Gbps/mm2; while for LDPC codes with 2912 codeword length and 5/26 code rate, the throughput is 594 Mbps and the area efficiency is 1.08 Gbps/mm2 in ZTE 55 nm CMOS technology. Implementation results show that the proposed decoder achieves state-of-the-art performance on both peak throughput
+
+REFERENCES
+[1] J. Thompson et al., “5G wireless communication systems: Prospects and challenges,” IEEE Commun. Mag., vol. 52, no. 2, pp. 62–64, Feb. 2014.
+[2] J. Lee et al., “Spectrum for 5G: Global status, challenges, and enabling technologies,” IEEE Commun. Mag., vol. 56, no. 3, pp. 12–18, Mar. 2018.
+[3] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[4] G. Cancellieri, Low Density Parity Check Codes. Springer Int. Publishing: Switzerland, 2015.
+[5] RAN-TSG, “Final report of 3GPP TSG RAN WG1 #87v1.0.0,” 3GPP, Tech. Rep., Feb. 2017.
+[6] K. K. Gunnam, G. S. Choi, M. B. Yeary, and M. Atiquzzaman, “VLSI architectures for layered decoding for irregular LDPC codes of WiMax,” in Proc. IEEE Int. Conf. Commun., 2007, pp. 4542–4547.
+[7] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+CAO et al.: A RECONFIGURABLE AND PIPELINED ARCHITECTURE FOR STANDARD-COMPATIBLE LDPC AND POLAR DECODING
+
+5443
+
+[8] S. Kim, G. E. Sobelman, and H. Lee, “A reduced-complexity architecture for LDPC layered decoding schemes,” IEEE Trans. Very Large Scale Integration Syst., vol. 19, no. 6, pp. 1099–1103, Jun. 2011.
+[9] B. Yuan and K. K. Parhi, “Early stopping criteria for energy-efficient low-latency belief-propagation polar code decoders,” IEEE Trans. Signal Process., vol. 62, no. 24, pp. 6496–6506, Dec. 2014.
+[10] C. Simsek and K. Turk, “Simplified early stopping criterion for beliefpropagation polar code decoders,” IEEE Commun. Lett., vol. 20, no. 8, pp. 1515–1518, Aug. 2016.
+[11] Q. Zhang, A. Liu, and X. Tong, “Early stopping criterion for belief propagation polar decoder based on frozen bits,” Electron. Lett., vol. 53, no. 24, pp. 1576–1578, 2017.
+[12] S. M. Abbas, Y. Fan, J. Chen, and C. Tsui, “Low complexity belief propagation polar code decoder,” in Proc. IEEE Workshop Signal Process. Syst., 2015, pp. 1–6.
+[13] C. Yang, J. Yang, X. Liang, Z. Zhang, X. You, and C. Zhang, “BP polar decoders with early termination and belief enhancing,” in Proc. IEEE 23rd Int. Conf. Digit. Signal Process., 2018, pp. 1–5.
+[14] A. Pamuk, “An FPGA implementation architecture for decoding of polar codes,” in Proc. 8th Int. Symp. Wireless Commun. Syst., 2011, pp. 437–441.
+[15] H. Y. Lee, Y. H. Pan, and Y. L. Ueng, “A node-reliability based CRCaided successive cancellation list polar decoder architecture combined with post-processing,” IEEE Trans. Signal Process., vol. 68, pp. 5954–5967, Oct. 2020.
+[16] U. U. Fayyaz and J. R. Barry, “Polar codes for partial response channels,” in Proc. IEEE Int. Conf. Commun., 2013, pp. 4337–4341.
+[17] Y. Ueng, B. Yang, C. Yang, H. Lee, and J. Yang, “An efficient multistandard LDPC decoder design using hardware-friendly shuffled decoding,” IEEE Trans. Circuits Syst. I Regular Papers, vol. 60, no. 3, pp. 743–756, Mar. 2013.
+[18] J. Yang, C. Zhang, H. Zhou, and X. You, “Pipelined belief propagation polar decoders,” in Proc. IEEE Int. Symp. Circuits Syst., 2016, pp. 413–416.
+[19] C. Ji, Z. Zhang, X. You, and C. Zhang, “Pipelined implementations for belief propagation polar decoder: From formula to hardware,” in Proc. IEEE Int. Workshop Signal Process. Syst., 2019, pp. 248–253.
+[20] C. Condo, M. Martina, and G. Masera, “VLSI implementation of a multi-mode turbo/LDPC decoder architecture,” IEEE Trans. Circuits Syst. I Regular Papers, vol. 60, no. 6, pp. 1441–1454, Jun. 2013.
+[21] J. Liu, S. Jing, X. You, and C. Zhang, “A merged BP decoding algorithm for polar-LDPC concatenated codes,” in Proc. 22nd Int. Conf. Digit. Signal Process., Aug. 2017, pp. 1–5.
+[22] N. Yang et al., “Reconfigurable decoder for LDPC and polar codes,” in Proc. IEEE Int. Symp. Circuits Syst., 2018, pp. 1–5.
+[23] R. A. N. T. S. Group, “Multiplexing and channel coding (release 15) for radio access network,” 3GPP, Tech. Rep., France, 2018.
+[24] I. Tsatsaragkos and V. Paliouras, “A reconfigurable LDPC decoder optimized for 802.11n/ac applications,” IEEE Trans. Very Large Scale Integration Syst., vol. 26, no. 1, pp. 182–195, Jan. 2018.
+[25] Stratix IV Device AlteraHandbook, SIV5V1-4.8, Intel Corporation, San Jose, U. S. A., Jan. 2016.
+[26] C. Roth, P. Meinerzhagen, C. Studer, and A. Burg, “A 15.8 pj/bit/iter quasi-cyclic LDPC decoder for IEEE 802.11 n in 90 nm CMOS,” in Proc. IEEE Asian Solid-State Circuits Conf., 2010, pp. 1–4.
+[27] S. Hemati, A. H. Banihashemi, and C. Plett, “A 0.18-μm CMOS analog min-sum iterative decoder for a (32,8) low-density parity-check (LDPC) code,” IEEE J. Solid-State Circuits, vol. 41, no. 11, pp. 2531–2540, Nov. 2006.
+[28] Tzu-Chieh Kuo and A. N. Willson, “A flexible decoder IC for WiMAX QC-LDPC codes,” in Proc. IEEE Custom Integr. Circuits Conf., 2008, pp. 527–530.
+[29] C. Yu, H. Chuang, B. Lin, P. Cheng, and S. Chen, “Improvement on a block-serial fully-overlapped QC-LDPC decoder for IEEE 802.11n,” in Proc. IEEE Int. Conf. Consum. Electron., 2014, pp. 446–447.
+[30] Y. S. Park, Y. Tao, S. Sun, and Z. Zhang, “A 4.68 Gb/s belief propagation polar decoder with bit-splitting register file,” in Proc. Symp. VLSI Circuits Dig. Tech. Papers, 2014, pp. 1–2.
+[31] J. Sha, X. Liu, Z. Wang, and X. Zeng, “A memory efficient belief propagation decoder for polar codes,” China Commun., vol. 12, no. 5, pp. 34–41, 2015.
+[32] Air Interface for Fixed and Mobile Broadband Wireless Access Systems, IEEE Standard 802, 16, Feb. 2006.
+[33] G. Peng, L. Liu, S. Zhou, S. Yin, and S. Wei, “A 1.58 gbps/w 0.40 Gbps/mm2 ASIC implementation of MMSE detection for 128 × 8 64-QAM massive MIMO in 65 nm CMOS,” IEEE Trans. Circuits Syst. I Regular Papers, vol. 65, no. 5, pp. 1717–1730, May 2018.
+
+Shan Cao (Member, IEEE) received the B.S. and Ph.D. degrees in microelectronics from Tsinghua University, China, in 2009 and 2015, respectively. She was a Postdoc with School of Information and Electronics, Beijing Institute of Technology during 2015 and 2017. She is currently an Assistant Professor with Shanghai University. Her current research interests include wireless communication systems, channel encoding and decoding, machine learning algorithms, and hardware acceleration.
+Ting Lin received the B.E. degree from the Department of Communication Engineering, Shanghai University, Shanghai, China, in 2018. He is currently working toward the master’s degree in information and communication engineering with Shanghai University. His research interests include low-density parity-check codes decoding, polar codes decoding and its ASIC design.
+Shunqing Zhang (Senior Member, IEEE) received the B.S. degree from the Department of Microelectronics, Fudan University, Shanghai, China, in 2005, and the Ph.D. degree from the Department of Electrical and Computer Engineering, Hong Kong University of Science and Technology, Hong Kong, in 2009.
+He was with the Communication Technologies Laboratory, Huawei Technologies, as a Research Engineer and then a Senior Research Engineer from 2009 to 2014, and a Senior Research Scientist of Intel Collaborative Research Institute on Mobile Networking and Computing, Intel Labs from 2015 to 2017. Since 2017, he has been with the School of Communication and Information Engineering, Shanghai University, Shanghai, China, as a Full Professor. He has authored or coauthored more than 60 peer-reviewed journal and conference papers, as well as over 50 granted patents. His current research interests include energy efficient 5G/5G+ communication networks, hybrid computing platform, and joint radio frequency and baseband design. He was the recipient of the National Young 1000-Talents Program and won the paper award for Advances in Communications from IEEE Communications Society in 2017.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+5444
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 70, NO. 6, JUNE 2021
+
+Shugong Xu (Fellow, IEEE) graduated from Wuhan University, China, in 1990, and received the master’s degree in pattern recognition and intelligent control from the Huazhong University of Science and Technology (HUST), China, in 1993, and the Ph.D. degree in EE from HUST in 1996. He is a Professor with Shanghai University, Head of the Shanghai Institute for Advanced Communication and Data Science (SICS). He was the Center Director and Intel Principal Investigator of the Intel Collaborative Research Institute for Mobile Networking and Computing (ICRI-MNC), prior to December 2016, when he joined Shanghai University. Before joining Intel in September 2013, he was a Research Director and Principal Scientist with the Communication Technologies Laboratory, Huawei Technologies. Among his responsibilities at Huawei, he Founded and Directed Huawei’s Green Radio Research Program, Green Radio Excellence in Architecture and Technologies (GREAT). He was also the Chief Scientist and PI for the China National 863 project on End-to-End Energy Efficient Networks. Shugong was one of the Co-Founders of the Green Touch consortium together with Bell Labs etc, and he was the Co-Chair of the Technical Committee for three terms in this international consortium. Prior to joining Huawei in 2008, he was with Sharp Laboratories of America as a Senior Research Scientist. Before that, he conducted research as a Research Fellow in City College of New York, Michigan State University and Tsinghua University. He has authored or coauthored more than 100 peer-reviewed research papers in top international conferences and journals. One of his most referenced papers has more than 1400 Google Scholar citations, in which the findings were among the major triggers for the research and standardization of the IEEE 802.11S. He has more than 20 U.S. patents granted. Some of these technologies have been adopted in international standards including the IEEE 802.11, 3GPP LTE, and DLNA. His current research interests include wireless communication systems and machine learning. He was Awarded .National Innovation Leadership Talent. by China government in 2013, was elevated to IEEE Fellow in 2015 for contributions to the improvement of wireless networks efficiency. Shugong is also the winner of the 2017 Award for Advances in Communication from IEEE Communications Society.
+
+Chuan Zhang received the B.E. degree in microelectronics and the M.E. degree in very-large scale integration (VLSI) design from Nanjing University, Nanjing, China, in 2006 and 2009, respectively, and the M.S.E.E. and Ph.D. degrees from the Department of Electrical and Computer Engineering, University of Minnesota at Twin Cities (UMN), USA, in 2012. He is currently the Excellence Professor and the Purple Mountain Professor with Southeast University. He is also with the LEADS, the National Mobile Communications Research Laboratory, Quantum Information Center, Southeast University, and the Purple Mountain Laboratories, Nanjing. His current research interests include low-power high-speed VLSI design for digital signal processing and digital communications, bio-chemical computation and neuromorphic engineering, and quantum communications. Dr. Zhang is a Member of the Seasonal School of Signal Processing and Design and Implementation of Signal Processing Systems TC of the IEEE Signal Processing Society and the Circuits and Systems for Communications TC, the VLSI Systems and Applications TC, and the Digital Signal Processing TC of the IEEE Circuits and Systems Society. He was the recipient of the Best Contribution Award of IEEE Asia Pacific Conference on Circuits and Systems (APCCAS) in 2018, the Best Paper Award in 2016, the Best (Student) Paper Award of IEEE International Conference on DSP in 2016, three Best (Student) Paper Awards of IEEE International Conference on ASIC in 2015, 2017, and 2019, respectively, the Best Paper Award Nomination of the IEEE Workshop on Signal Processing Systems in 2015, three Excellent Paper Awards and two Excellent Poster Presentation Awards of the International Collaboration Symposium on Information Production and Systems from 2016 to 2018, the Outstanding Achievement Award of the Intel Collaborative Research Institute in 2018, and the Merit (Student) Paper Award of the IEEE APCCAS in 2008. He also received the Three-Year University-Wide Graduate School Fellowship of UMN and the Doctoral Dissertation Fellowship of UMN. He is an Associate Editor FOR IEEE TRANSACTIONS ON SIGNAL PROCESSING and IEEE OPEN JOURNAL OF CIRCUITS AND SYSTEMS. He is a Corresponding Guest Editor for IEEE JOURNAL ON EMERGING AND SELECTED TOPICS IN CIRCUITS AND SYSTEMS twice. He is also the Secretary-Elect of the Circuits and Systems for Communications TC of the IEEE Circuits and Systems Society.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:08:22 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,733 @@
+44
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+Idle time reduction in TDMP implementation of LDPC decoder
+
+Wojciech Sułek∗ ∗Faculty of Automatic Control, Electronics and Computer Science, Institute of Electronics
+Silesian University of Technology, Gliwice, Poland
+wsulek@polsl.pl
+
+Abstract— This article concerns the hardware iterative decoder for a subclass of LDPC (Low-Density Parity-Check) codes that are implementation oriented. They are known as Architecture Aware LDPC (AA-LDPC). The decoder has been implemented in a form of parameterizable VHDL description. To achieve high clock frequency of the decoder hardware implementation, a large number of pipeline registers has been used in the processing chain. However, the registers increase the processing path delay, since the number of clock cycles required for data propagating is increased. Thus in general the idle cycles must be introduced between decoding subiterations. In this paper we provide a method for calculation the exact number of required idle cycles on the basis of parity check matrix of the code. Then we propose a heuristic algorithm for parity check matrix optimization to minimize the total number of required idle cycles and hence maximize the decoder throughput. The proposed matrix optimization by sorting rows and columns does not change the code properties, however the decoder throughput can be significantly increased.
+I. INTRODUCTION
+Outstanding error correction performance and highly parallel iterative decoding algorithms have made Low-Density Parity Check (LDPC) codes [1] the most powerful error correcting codes for reliable high speed communication applications. Despite the constant progress in electronics technology, the hardware design for LDPC coding systems is still not straightforward. The main challenges include defining low complexity, high throughput decoder architectures and making the architectures versatile, i.e. capable of decoding large family of codes.
+Several LDPC decoder architectures have been proposed to solve the problem of efficient message delivery between the computation units. A Fully parallel architecture (e.g. [?]) exploits the benefit of parallel decoding schemes. However, the implementation complexity is very high and impractical for codes of larger blocks. On the other side, serial architectures, where the single processing unit is shared for area efficiency are too slow for most applications. Partially parallel architectures, with some limited number of processing units allow proper cost-performance tradeoffs, see e. g. [?], [2]. It has been recognized that the partially parallel decoder architectures can be accomplished well for some subclass of codes, with structured parity check matrix, known as Architecture-Aware LDPC ( [3]) or VLSI-Oriented ( [2]).
+A partially parallel decoder has been implemented in the form of synthesizable, parameterizable VHDL description.
+
+The decoder can be configured for decoding any code that has the parity check matrix in the Architecture-Aware form. The target hardware platform for the implemented decoder is FPGA; Xilinx VirtexII devices were used for decoder verification. In this paper we briefly present the decoder structure. Then we focus on pipeline processing optimization that has been proposed to speed up the decoding process.
+The pipeline registers has been used to achieve high clock frequency of the decoder hardware implementation and in consequence high data-throughput. However, the registers increase the processing path delay as the number of clock cycles required for propagating data is increased. Thus the main problem connected with pipeline processing is that the new step must not be started before the previous one is completed if the data updated in the previous step is required for the new one. Hence in general the idle clock cycles must be introduced. However we show in this article that the number of required idle cycles is somehow dependent on the parity check matrix structure. Moreover we present the parity check matrix optimization algorithm that can minimize the required idle cycles number. As a result of the idle time reduction, the decoder throughput is significantly increased, which is shown in the experimental results.
+In this paper we first provide a basic concepts connected with LDPC codes and the Architecture Aware subclass of codes. Then the decoder structure is presented with emphasis on pipeline processing elements. In the following sections we study the conditions for necessity of idle cycles and provide a method for calculation the exact number of required idle cycles on the basis of parity check matrix structure. Then we propose a parity check matrix optimization method to minimize the total number of idle cycles and finally present results obtained with proposed optimization method for several cases.
+II. LDPC CODES BASICS
+LDPC codes are linear block codes [4] with sparse paritycheck matrix. The parity-check matrix HM×N of a code C represents the relation between N bits of the codeword and M parity-check equations. Vector x = {x1, x2, . . . , xN } is a correct codeword (x ∈ C) iff the parity check condition HxT = 0 is satisfied (in GF (2) field). The coderate R = (N − M )/N characterizes the amount of redundancy in the codeword.
+
+978-1-4244-7626-8/10/$26.00 ©2010 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+45
+
+Bit nodes
+
+Vb = {b1,b2 ,…, b7}
+
+b1
+
+b2
+
+b3
+
+b4
+
+b5
+
+b6
+
+b7
+
+e1
+
+e2
+
+e12
+
+⎡1 0 0 1 0 1 1⎤ H = ⎢0 1 0 1 1 1 0⎥
+
+c1
+
+c2
+
+⎢⎣0 0 1 0 1 1 1⎥⎦ Check nodes
+
+c3
+Vc = {c1, c2 , c3}
+
+{ } E = {e1, e2,…, e12} = (b1, c1 ), (b2 , c2 ) ,…, (b7 , c3 )
+
+Fig. 1. Parity check matrix and the Tanner graph
+
+Based on the parity check matrix, a bipartite graph G
+
+(Tanner graph) is defined with bit nodes corresponding to bits
+
+and check nodes corresponding to parity-check equations (fig.
+
+1). Formally: G = (Vc ∪ Vb, E), where Vc = {c1, c2, . . . , cM } is the set of the check nodes, Vb = {b1, b2, . . . , bN } is the set of bit nodes and E ⊆ Vb × Vc is the set of edges. An edge ei = (bn, cm) belongs to E if and only if hmn = 0. A Tanner graph is (dc, db)-regular if all its check nodes have degree dc and all its bit nodes have degree db. Otherwise, the graph is irregular and the corresponding code is called irregular LDPC.
+
+The Tanner graph visualizes iterative message passing al-
+
+gorithms used for decoding. The algorithms are performed
+
+by exchanging messages (beliefs) between bit nodes and
+
+check nodes through the edges in both directions. Each node
+
+of the graph represents computation of updated beliefs. In
+
+the case of soft-decision decoding, initializing values are in
+
+the form of probabilities or some functions of probabilities.
+
+Most commonly used is LLR-BP version of algorithm (Log-
+
+Likelihood Ratio Belief Propagation), where log-likelihood ra-
+
+tios of probabilities are used. In this case operations performed
+
+in the graph nodes are sums (bit nodes) and sums of nonlinear
+
+functions of messages (check nodes). LLR-BP and its modifi-
+
+cations are considered the most frequently [3], [5] for hardware
+
+implementations. Inputs to the decoding algorithm are bit
+
+values altogether with measures of its reliability based on
+
+channel observations, which are in the form of log-likelihood
+
+ratios (denoted as δn for nth bit): δn = log
+
+P (xn=0|yn) P (xn=1|yn)
+
+,
+
+where xn is the transmitted bit and yn is the ,,soft” decision
+
+at the receiver. The basic two-phase message-passing (TPMP)
+
+algorithm is described in reach literature, e.g. [1], [4], [5].
+
+A. TDMP Decoding Algorithm
+Here we focus on Turbo-Decoding Message-Passing (TDMP) algorithm [3], [6] that has been used for the presented hardware decoder. It is based on a modification in message passing scheme of the classic TPMP algorithm, where C is considered as the concatenation of some number of codes. A word is a correct codeword if it belongs to all constituent supercodes.
+Let Cd denote the dth supercode with parity check matrix Hd, d = 1, . . . , D. The code is then C = C1 ∩ . . . ∩ CD and its parity check matrix is HM×N = H1; H2; . . . ; HD T.
+
+Furthermore, the check node set Vc of the Tanner graph of the code is partitioned as Vc = Vc1 ∪ . . . ∪ VcD. It is assumed that the rows in each submatrix Hd do not overlap (each bit node is
+
+incident to at most 1 check node in the subset Vcd). Following [1], we denote the set of indexes of check nodes adjacent to
+
+bit node bn by M (n) and – similarly – the set of indexes of bit nodes adjacent to check node cm by N (m). Furthermore, N (m) \n represents the set N (m) excluding n.
+
+The TDMP algorithm determines a codeword iteratively in
+
+D subiterations, with one subiteration per constituent code Cd.
+
+Following [7], we denote
+
+d n
+
+the
+
+LLR
+
+reliability
+
+value
+
+for
+
+bit
+
+nth assuming that the codeword belongs to supercode Cd and
+
+λdn the reliability values calculated in the previous iteration. The sum of n-messages for all supercodes in addition to the
+
+channel values δn is the posterior reliability value, denoted by n and updated at each subiteration. The TDMP algorithm is
+summarized as follows.
+
+1) Initialization
+
+γn := δn = log
+
+P (xn = 0|yn) P (xn = 1|yn)
+
+(1)
+
+λnd := 0, n = 1, . . . , N d = 1, . . . , D (2)
+
+2) Iteration
+Carry out decoding subiterations d = 1, . . . , D. At
+subiteration d: – For each m such that cm ∈ Vcd, for each n ∈ N (m):
+
+Qnd := γn − λdn
+
+(3)
+
+d n
+
+:=
+
+sgn Qdn × ψ−1
+
+ψ |Qdn | (4)
+
+n
+
+n
+
+n := Qnd +
+
+d n
+
+=
+
+γn
+
+−
+
+λdn
+
++
+
+d n
+
+(5)
+
+where n ∈ N (m) \n, where cm is the check node in the subset Vcd incident to bn (as we assumed, there is only one such check node) and ψ(x) is a nonlinear function defined as: ψ(x) = ψ−1(x) = − ln (tanh(x/2)) that
+can be calculated approximately [5], [8].
+– Store the and -values as λ and γ-values to be used
+as inputs in the next subiteration:
+
+γn := n,
+
+λdn :=
+
+d n
+
+,
+
+n = 1, . . . , N (6)
+
+3) Stop Criterion After all subiterations make hard decisions x = {x1, x2, . . . , xN } such that
+
+1, xn := 0,
+
+n≤0 n>0
+
+(7)
+
+If the parity check equation HxT = 0 is satisfied or a maximum number of iterations imax is reached, halt the algorithm with x as output. Otherwise, go to step 2.
+The decoder receives soft channel values δ and generates reliability values of the decoded bits . These values are updated at each subiteration. Furthermore, for each constituent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+46
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+subiteration, extrinsic reliability values are computed assuming that the codeword belongs to the supercode. The algorithm is described in detail in a few articles [3], [6]. The main advantages of TDMP scheme over standard TPMP are that it exhibits a faster convergence behavior (about 20%-50% fewer decoding iterations) as well as it allows a memory savings due to eliminating multiple bit-to-check messages [3].
+
+B. AA-LDPC Codes
+
+As is well known, efficient partially-parallel decoder imple-
+
+mentation is possible for parity-check matrices with certain
+
+constraints on their form. Firstly, as we assumed, the rows of
+
+H are partitioned such that in each submatrix Hd all columns
+
+contain at most single non-zero element. Secondly, in order
+
+to suitably organize message ( ) memory, the set of bit nodes
+
+of the graph is partitioned into L subsets Vb = Vb1 ∪ . . . ∪ VbL of P nodes, such that considering supercode Cd, each bit node from any subset Vbj is adjacent to exactly one check node from subset Vcd or each bit node from this subset is not adjacent to any check node from subset Vcd. Then single
+memory word may consist of P -values (corresponding to bits from single subset Vbj) that are delivered to P computing modules in a single clock period by configurable interleaver
+
+that shuffles the fragments of the memory word according to
+
+the local graph structure of the code.
+
+With such code-graph organization, a parity check matrix
+
+is similar to the one shown in equation (8):
+
+⎡
+
+⎤
+
+P1,1 P1,2 · · · P1,L
+
+H
+
+=
+
+⎢⎢⎢⎣
+
+P2,1 ...
+
+P2,2 ...
+
+··· ...
+
+P2,L ...
+
+⎦⎥⎥⎥
+
+(8)
+
+PD,1 PD,2 · · · PD,L
+
+Matrix H is composed of D × L submatrices, where each submatrix Pd,l of size P × P is either an all-zero matrix or a permutation matrix obtained by permuting columns of an identity matrix [3]. Placement of nonzero submatrices in H is specified by so-called seed matrix W. It is a D × L matrix with elements wd,l = 0 if Pd,l is the all-zero submatrix and wd,l = 1 if Pd,l is the permutation submatrix. Codes with parity check matrix arranged in this manner are known as
+Architecture Aware subclass of LDPC codes (AA-LDPC).
+
+III. DECODER ARCHITECTURE
+A configurable decoder, based on TDMP scheme has been implemented in the form of synthesizable VHDL model. This model can be adjusted for decoding any regular or irregular code that has the matrix H in the presented ArchitectureAware form. The decoder structure has been described in detail in other papers, e.g. [9]. Here we focus on pipeline processing that has been used to speed up the decoding process.
+The simplified block diagram of the decoder is presented in fig. 2. Reliability values of the decoded bits are stored in memory. Typical message wordlength is in range W = 5 . . . 8 and its selection defines the tradeoff between the decoder performance and decoder area. Computations corresponding to (3)-(5) are performed in so-called Soft-Input-Soft-Output
+
+δ
+
+PW
+
+Configurable
+
+Interconnection
+
+W
+
+Network
+
+Γ Memory
+
+W
+SISO Unit 1
+
+SISO Unit 2
+
+SISO Unit P
+
+W
+
+P
+
+PW
+
+Configurable
+
+Interconnection
+
+Network
+
+Fig. 2. Structure of the decoder
+
+(SISO) modules. It is convenient to use P SISO modules operating in parallel. One full iteration consists of D subiterations (d = 1, . . . , D), thus it is performed in D time slots.
+In a single time slot, messages n, n ∈ N (m) are fed to the SISO unit in a serial manner through Configurable Interconnection Network, updated in the SISO, and then serially fed back to the -memory. A memory word consists of P -values, hence wordlength for -memory equals P W and memory depth is L. Configurable Interconnection Network ensures proper messages propagation, according to the structure of the permutation submatrices Pd,l (see eq. (8)). The messages are stored in -memory, which is partitioned and included in SISO units as small memory buffers.
+Time slot duration, i.e. the number of clock cycles for executing single subiteration, depends on check-nodes degree as well as the number of pipeline registers in the processing chain. The pipeline registers – denoted as grey boxes in the figures – are essential components to achieve high clock frequency of the decoder hardware implementation and in consequence high data-throughput. However, the registers increase the processing path delay as the number of clock cycles required for propagating data is increased. Here the main problem connected with pipeline processing arises. The new subiteration must not be started before the previous one is completed if the data ( messages) updated in the previous subiteration are required for the new one. Hence in general the idle clock cycles must be introduced to await for the completion of the previous subiteration. Thus the increase in clock frequency due to the pipelining is counterfeited by the increase in number of idle clock cycles.
+In the classic literature concerning TDMP decoding [3], [6], [7] the problem mentioned above is not treated at all. In the next sections we first study the conditions for necessity of idle cycles and provide a method for calculation the exact number of required idle cycles on the basis of parity check matrix structure. Then we propose a parity check matrix optimization method to minimize the total number of idle cycles.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+47
+
+γ W+
+
+Q
+
+λ – Subtr*
+
+W
+
+W
+
+CNU
+
+λ Memory
+
+LIFO Buffer
+
+Λ+
++ Add*
+
+Fig. 3. SISO module
+
+Γ
+
+1
+
+34
+
+7
+
+9
+
+2
+
+5
+
+89
+
+12
+
+1
+Λ
+
+4
+
+67
+
+10
+
+In (γ) 1 3 4 7 9 Out (Γ)
+
+Tidle2
+
+Tidle3
+
+2 5 8 9 12
+
+1 4 6 7 10
+
+9 7 43 1
+
+12 9
+
+TP
+
+IV. NUMBER OF IDLE CYCLES CALCULATION
+The basic block diagram of SISO module is presented in fig. 3. The main component is CNU (Check Node Unit), which is responsible for messages calculation as in (4). Since the CNU operates in a double recursion scheme (see e.g. [8]), the output messages are in reversed order. Blocks denoted as Subtr* and Add* are subtractor and adder respectively with clipping elements constraining results to W bits.
+To achieve high clock frequency, five pipeline registers (grey boxes in fig. 3) has been used in the CNU as well as two registers in blocks Add* and Subtr*. The placement of the registers has been designed experimentally by observing the synthesis results for VirtexII FPGA and trying to exploit the maximum achievable clock speed.
+Let TP be the total pipeline delay of the decoder defined by the number of clock cycles from the last -memory read to the first -memory write. The TP delay is equal to the sum of delays due to interconnection network (TNET ) and due to SISO module (TSISO): TP := 2TNET + TSISO. In the case of the implemented decoder we have: TNET = 1 (fig. 2), TSISO = 9 (fig. 3), thus TP = 11.
+Let Tiddle be the number of idle cycles required before subiteration d is started (i.e. the first message is fetched). Obviously Tiddle depends on TP , but also – as will be shown – it is dependent on the existence of nonzero elements in the same columns of dth, d − 1, d − 2 and d − 3 rows of the seed matrix. It is illustrated by a following example.
+Figure 4 presents a part of some parity check matrix, where the numerated boxes represent permutation submatrices and grey boxes – all-zero submatrices. At the bottom of the figure we present a sequence of data transmitted from / to the memory, where the numbers indicate memory cells that are read / written, which are consistent with the location of the nonzero submatrices in the parity check matrix.
+Before the 2nd subiteration can be started (blue marks in the figure), the decoder has to await for memory cell 9 update from the 1st subiteration (black marks). Precisely: the pause Ti2dle has to ensure that memory cell 9 read (2nd subiteration) is at least one cycle after memory cell 9 write (1st subiteration). (,,Write first” configuration of two-port memory is used for implementation.) Thus the idle cycles are needed if common messages are processed in the consecutive subiterations, which is a result of ,,overlapping” ones in consecutive rows of seed
+
+Fig. 4. Data sequence on the Γ-memory ports for example rows of H
+
+matrix (here: ones in column 9th). In the example presented in fig. 4, Ti2dle = TP − 2.
+Furthermore, the need for idle cycles is still possible even
+if two consecutive rows of seed matrix do not contain ones
+in a common column. Such a case is presented in fig. 4 for the 3rd subiteration (red marks). The pause Ti3dle has to ensure memory cell 1 read (3rd iteration) is at least one cycle after this
+memory cell update (1st subiteration). The common memory
+cell 1 usage is a result of ,,overlapping” ones in every second
+rows of seed matrix (here: ,,black” and ,,red” rows).
+Here we propose a formula for exact calculation of required idle cycles Tiddle , on the basis of seed matrix structure. Let X(d2,d1) be an auxiliary variable defined as:
+• if rows d2th and d1th of the seed matrix do not contain ones in a common column, then X(d2,d1) = ∞
+• if rows d2th and d1th of the seed matrix contain a one in a common column l, then X(d2,d1) is a difference between the number of ones in d2th row in columns with indexes lower than l and the number of ones in d1th row in columns with indexes greater than l, diminished by 1.
+• if rows d2th and d1th of the seed matrix contain ones in more than one column, then the rule stated above applies
+for the column with the lowest index l.
+
+Formally it can be stated as:
+
+⎧
+
+⎪⎪⎪⎨∞l−1,
+
+∀l∈1...L wd2,l = 0 ∨ wd1,l = 0
+L
+
+X(d2 ,d1 )
+
+=
+
+⎪⎩⎪⎪i=1 wd2,i
+
+−
+
+wd1,i − 1,
+i=l+1
+min(l) : wd2,l
+
+=
+
+1
+
+∧
+
+wd1 ,l
+
+=
+
+1
+
+(9)
+
+With reference to the above example, for the case presented
+
+in fig. 4, e.g. X(2,1) = 3 − 0 − 1 = 2 and X(3,2) = ∞.
+
+We can observe that the value of X(d,d−1) (in case it is not ∞) represents the difference between the pipeline delay
+
+TP and the number of required idle cycles. Let T1d be the number of idle cycles before subiteration d is started with
+
+considering only awaiting for the completion of the previous
+
+(d − 1) subiteration. It can easily be shown that:
+
+T1d = max 0, (TP − X(d, d−1)) ,
+
+2 ≤ d ≤ D (10)
+
+For the above example, T12 = TP − 2 because X(2,1) = 2 and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+48
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+T13 = 0 because X(3,2) = ∞. So X(d,d−1) = ∞ simply means that idle cycles are not required before subiteration d.
+If awaiting for the completion of penultimate (d − 2)
+
+subiteration is considered (the third, ,,red” row in fig. 4), the number of idle cycles, denoted as T2d, equals:
+
+T2d = max 0, (TP − X(d, d−2) − deg(cd−1) − Tidd−le1) ,
+
+3≤d≤D
+
+(11)
+
+where deg(cd−1) is degree of check node cd−1 in the seed
+graph, which is equal to the number of write cycles to the memory at subiteration d − 1. The T2d is a difference between TP and X(d, d−2), but diminished by the number of cycles exploited for subiteration d−1: the write to the memory cycles deg(cd−1) and the idle cycles Tidd−le1.
+Finally, sometimes the need for idle cycles is due to awaiting
+for completion of d − 3 subiteration. In this case the number
+of idle cycles equals:
+
+T3d = max 0, (TP − X(d, d−3) − deg(cd−1) − Tidd−le1
+
+− deg(cd−2) − Tidd−le2 ,
+
+4≤d≤D
+
+(12)
+
+To determine the desired value of Tiddle, the case among the mentioned above that gives the highest number of idle cycles
+has to be considered. Thus:
+
+Ti2dle = T12 Ti3dle = max T13, T23 Tiddle = max T1d, T2d, T3d ,
+
+(13) 4≤d≤D
+
+Equation (13) along with (10)-(12) show how to calculate the number of required idle cycles for the consecutive subiterations.
+
+V. OPTIMIZATION OF THE PARITY CHECK MATRIX
+
+In order to minimize the total idle time of the decoder and hence substantially increase the decoder throughput, a heuristic optimization algorithm has been developed. The algorithm takes advantage of the following linear code properties:
+• shuffling the rows of the parity check matrix does not change the code defined by the matrix at all,
+• shuffling the columns of the parity check matrix does not change error performance of the code – it results only in adequate shuffling of the bit sequence in the codeword.
+Thus the algorithm consist of sorting the seed matrix columns and rows in a way to minimize the total number of idle cycles in a full iteration, defined as:
+
+D
+
+Tidle =
+
+Tiddle
+
+d=1
+
+(14)
+
+The proposed algorithm is presented below as algorithm 1. In the first step, columns of W are sorted according to their growing weights (number of ones). It is motivated by the fact that more idle cycles are needed, when ones are located in a common columns with lower indexes (fig. 4). Shifting
+
+Algorithm 1: Seed matrix optimization to minimize Tidle
+
+Input: Seed matrix WD×L, pipeline delay TP Output: Optimized seed matrix WD×L
+
+1 Sort columns of W according to their weights: on the left side of W
+
+columns with the lowest weight.
+
+2 Topt := ∞
+
+3 for k=1, . . . ,1000 do
+
+4
+
+W := 0
+
+5
+
+Select randomly a row of W and fix it as the first row of W .
+
+6
+
+for d = 2, . . . , D do
+
+7
+
+Among rows of W not included in W yet, select a row that
+
+fixed as a dth row of W gives the lowest number of idle cycles Tiddle (13). If more than one row satisfies this condition, then make a random selection among them.
+
+8
+
+Fix the selected row as a dth row of the matrix W .
+
+9
+
+Determine the total number of idle cycles Tidle for matrix W ,
+
+according to the eq. (14).
+
+10
+
+if Tidle < Topt then
+
+11
+
+Wopt := W
+
+12
+
+Topt := Tidle
+
+13 W := Wopt
+
+columns with large weight to the right side of seed matrix decreases probability of this unfavorable situation.
+Next, the algorithm searches for a matrix W consisting of all rows of W arranged in a way that minimizes Tidle determined according to the eq. (14). The first row of W is selected randomly and every other (dth) is chosen among rows that ensure obtaining the lowest possible number of idle cycles Tiddle determined as in (10)-(13). A random choice is made if more than one row satisfies this condition.
+The described procedure is repeated a number of times and among obtained seed matrices, the one with the lowest Tidle is selected as a final result. As experiments have shown, 1000 repetitions is a sufficient number for obtaining satisfactory results. In most cases increasing this number above 1000 does not improve results significantly.
+A large number of experiments have been performed in order to verify performance of the proposed optimization algorithm. Results of optimization for several seed matrices are shown in tables I and II. We present seed matrices with different sizes and coderates R, regular and irregular constructions. All seed matrices were constructed with Progressive Edge Growth algorithm [10].
+Table I presents total idle times for original matrix W as well as matrices obtained with the algorithm 1. We included results for two different number of repetitions (km = 1000, 5000) of the main loop in the algorithm. As was mentioned, more than 1000 repetitions didn’t improve the results in most cases and in the other few cases the improvement was really insignificant.
+It can be seen that the number of required idle cycles after seed matrix optimization is very low, compared to this number before optimization. In many cases Tidle = 0 can be obtained, especially for codes with lower rates. For codes with higher rates R, some greater than 0 idle time is sometimes necessary, because due to lower number of rows in H and their higher weights, it is harder to select ,,non-overlapping”
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE Region 8 SIBIRCON-2010, Irkutsk Listvyanka, Russia, July 11 -- 15, 2010
+
+49
+
+TABLE I RESULTS: DECODER IDLE CYCLES BEFORE AND AFTER OPTIMIZATION
+
+Tidle
+
+Seed matrix
+
+W
+
+W
+
+W
+
+km = 1000 km = 5000
+
+W21×42 (R = 0.5)
+
+161
+
+8
+
+8
+
+reg., max deg(bm) = 3
+
+W55×110 (R = 0.5)
+
+217
+
+0
+
+0
+
+reg., max deg(bm) = 3
+
+W64×128 (R = 0.5)
+
+813
+
+0
+
+0
+
+irreg., max deg(bm) = 15
+
+W30×90 (R = 0.66)
+
+318
+
+16
+
+16
+
+irreg., max deg(bm) = 8
+
+W25×100 (R = 0.75)
+
+305
+
+35
+
+34
+
+irreg., max deg(bm) = 6
+
+W40×200 (R = 0.8)
+
+382
+
+0
+
+0
+
+reg., max deg(bm) = 3
+
+reduce throughput of the decoder. However, as was shown, by means of proper parity check matrix columns and rows reordering, the number of idle cycles can be significantly reduced. The heuristic algorithm for such optimization of the parity check matrix has been developed. The goal of the algorithm is minimization of the total idle time of the decoder. A large number of experiments has been performed. The achieved reduction of the idle time for variety seed matrices is always significant. In many cases idle time can be reduced even to zero. The resulting decoder throughput increase is also meaningful. Hence the full advantage of the speedup due to pipelined processing can be taken with the presented optimization method.
+REFERENCES
+
+rows. Moreover we can observe that for matrices with larger sizes, the results obtained are better, which is related to its greater sparsity.
+As a result of the idle time reduction, the decoder throughput is significantly increased, which is shown in table II. The presented throughput values are dependent on the number of SISO units P used for implementation (P is usually equal to the permutation submatrix size). The throughput has been determined making use of synthesis results for Xilinx XC2V3000 FPGA device, where we achieved clock frequency fclk = 145 MHz for a normalized Min-Sum messages calculation algorithm [11] used in SISO implementation. Throughput is also dependent on number of nonzero elements in seed matrix and the number of iterations imax. We assumed imax = 10, which is a common assumption for throughput calculation [7].
+The typical number of SISO units is in range P = 10 . . . 100. For example, a decoder with P = 32 SISO units, wordlength W = 6, occupies about 1/3 of the available resources of the mentioned XC2V3000 device. For a rate R = 0.5 code the throughput is then more than 60Mb/s and it is about twice as much as for the decoder without proposed parity check matrix optimization. The presented throughput increase is the main virtue of the work presented in this paper.
+
+TABLE II RESULTS: DECODER THROUGHPUT BEFORE AND AFTER OPTIMIZATION
+
+Seed matrix
+W21×42 (R = 0.5), reg. W55×110 (R = 0.5), reg. W64×128 (R = 0.5), irreg. W30×90 (R = 0.66), irreg. W25×100 (R = 0.75), irreg. W40×200 (R = 0.8), reg.
+
+Throughput
+
+W
+
+W
+
+km = 1000
+
+P · 1.06 [Mb/s] P · 2.27 [Mb/s]
+
+P · 1.46 [Mb/s] P · 2.41 [Mb/s]
+
+P · 0.727 [Mb/s] P · 1.99 [Mb/s]
+
+P · 1.42 [Mb/s] P · 2.79 [Mb/s]
+
+P · 1.77 [Mb/s] P · 3.19 [Mb/s]
+
+P · 2.36 [Mb/s] P · 3.87 [Mb/s]
+
+[1] David J. C. MacKay, “Good Error-Correcting Codes Based on Very Sparse Matrices,” IEEE Trans. Inform. Theory, vol. 45, No. 2, pp. 399– 431, March 1999.
+[2] Hao Zhong and Tong Zhang, “Block-LDPC: A Practical LDPC Coding System Design Approach,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 52, No. 4, pp. 766–775, April 2005.
+[3] Mohammad M. Mansour and Naresh R. Shanbhag, “High Throughput LDPC Decoders,” IEEE Transactions on Very Large Scale Integration Systems, vol. 11, No. 6, pp. 976–996, December 2003.
+[4] Shu Lin and Daniel J. Costello, Jr., Error Control Coding: Fundamentals and Applications, 2nd Edition, Prentice-Hall, Inc., Upper Saddle River, New Jersey 07458, 2004.
+[5] Jinghu Chen, Ajay Dholakia, Evangelos Eleftheriou, Marc P. C. Fossorier, and Xiao-Yu Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, No. 8, pp. 1288–1299, August 2005.
+[6] Mohammad M. Mansour, “A Turbo-Decoding Message-Passing Algorithm for Sparse Parity-Check Matrix Codes,” IEEE Transactions on Signal Processing, vol. 54, No. 11, pp. 4376–4392, November 2006.
+[7] Mohammad M. Mansour and Naresh R. Shanbhag, “A 640-Mb/s 2048Bit Programmable LDPC Decoder Chip,” IEEE Journal of Solid-State Circuits, vol. 41, No. 3, pp. 684–698, March 2006.
+[8] Xiao-Yu Hu, Evangelos Eleftheriou, Dieter M. Arnold, and Ajay Dholakia, “Efficient Implementations of the Sum-Product Algorithm for Decoding LDPC Codes,” in IEEE Globecom, San Antonio, Texas, USA, November, 2001, pp. 1036–1036E.
+[9] Wojciech Sulek and Dariusz Kania, “Code Construction Algorithm for Architecture Aware LDPC Codes with Low-Error-Floor,” in Proc. (IEEE) Region 8 international conference on computational technologies in electrical and electronics engineering – SIBIRCON 2008, Novosibirsk, Russia, July, 2008.
+[10] Xiao Yu Hu, Evangelos Eleftheriou, and Dieter M. Arnold, “Regular and Irregular Progressive Edge-Growth Tanner Graphs,” IEEE Trans. Inform. Theory, vol. 51, No. 1, pp. 386–398, January 2005.
+[11] Jinghu Chen and Marc P. C. Fossorier, “Near Optimum Universal Belief Propagation Based Decoding of Low-Density Parity Check Codes,” IEEE Transactions on Communications, vol. 50, No. 3, pp. 406–414, March 2002.
+
+VI. CONCLUSIONS
+In this article we have shown that the main drawback of the LDPC decoder pipelined implementation is the necessity for idle cycles. These cycles are required due to existence of feedback in the processing chain. Idle cycles significantly
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:45 UTC from IEEE Xplore. Restrictions apply.
+
+

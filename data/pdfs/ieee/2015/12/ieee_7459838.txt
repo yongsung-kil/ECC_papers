@@ -1,0 +1,169 @@
+Template-Based QC-LDPC Decoder Architecture Generation
+
+Oana Boncalo, Petru Florin Mihancea, Alexandru Amaricai University Politehnica Timisoara Timisoara, Romania
+{oana.boncalo, petru.mihancea, alexandru.amaricai} @cs.upt.ro
+
+Abstract— This paper presents an automated template-based approach for layered QC-LDPC architectures. The underlying idea is to be able to generate any number of fairly optimized hardware designs with only a minimum effort required by tuning high level parameters (parity check matrix, number of AP-LLR messages being processed at a time, etc.). Having chosen a partially parallel architecture, template design effort has been concentrated in two directions: distributed control across the LDPC decoder for modularity and versatility, and datapath design in order to support any given parallelism at processing node level. All user inputs are propagated by the proposed automated flow for all design phases: (i) Verilog HDL LDPC architecture (ii) test-benches and verification environments (iii) evaluation step (BER/FER, average iterations, cost, throughput) of the LDPC decoder architecture. We present the results for the architectures generated for ࢊ࢜ ൌ ૜ǡ ࢊ࢜ ൌ ૝ regular QC-LDPC code, as well as for the WiMAX (1152,2304) irregular code, with different levels of parallelism at processing node level.
+Keywords—template; layered QC-LDPC; design exploration;
+I. INTRODUCTION
+Time, space and energy optimization of LDPC decoders is of main concern for today hardware industry [5]. However, this kind of investigation requires the usage of a wide range of distinct tools for hardware description and architectural variation specification, testing, simulation, synthesis, etc. [1][2][3][4][5]. In this paper, we present an environment to support design parameter exploration for LDPC decoders. It includes a tool for automatic generation of customized decoder architectures, as well as the integration of well-known industrial tools for verification and implementation (Modelsim, Xilinx ISE). As pressure is ever-increasing for design productivity, people are reluctant to try-out new languages/methodologies. We have opted for a template based design with some smart tags for specifying information/tuning architecture parameters that would shorten the learning curve in an already established process, but, on the other hand, would support the extra flexibility needed. Hence, the template approach tries to act as extension of the existing Verilog HDL constructions for modeling variability.
+The emphasis when building the QC-LDPC template architecture has been: (i) IP reuse by versatile building blocks – design has been intended as modular as possible in a bid to extend and/or reuse some of the building blocks for new
+
+templates; furthermore, the goal is to have fairly optimized and parametrized sub-design modules that target good throughput and high hardware (HW) utilization efficiency (HUE), while taking into account the characteristics of FPGA technology; (ii) veri¿cation environment reuse - a key ingredient that drives the acceptance of the overall environment is the System Verilog verification environment that co-simulates C++ models of decoders with their HDL architectures; (iii) automatized flow that integrates both academic and commercial tools covering all the steps from generation to actually running the processes (e.g. simulation, implementation).
+The contributions of this paper are: (i) automated flow with centralized parameter tuning (one configuration file) that propagates user options throughout the entire process; (ii) modular architecture with distributed control; a key ingredient is datapath parallelism p, which states the number of parallel APLLR messages processed at one time; (iii) efficient memory utilization (multi-codeword approach, packed AP-LLR messages, serialization of check-node message accesses). Although the generated architecture is fairly optimized, the focus of this work is to provide an efficient way to generate HW designs, which can be validated through co-simulation with a higher level model for LDPC codes. By using the proposed methodology, weeks of design and verification time can be saved by not manually redoing the work needed to customize: the Verilog HDL design files, the testbench files, the scripts for simulation, synthesis, and implementation, the higher level model inputs.
+This paper is organized as follows. Section II summarizes related approaches. Section III offers a brief introduction of QCLDPC codes. It then presents the proposed decoder template architecture with its sources of variability. Section IV discusses the build flow for the design exploration environment, the process and the customization tool. Results for both regular and irregular codes are presented in Section V, while Section VI is dedicated to concluding remarks.
+II. RELATED WORK
+Several approaches for generating QC-LDPC decoders have been proposed. These rely either on HDL synthesis performed by commercial tools, or in-house tools to derive the HDL from an untimed, typically C descriptions [3][5]. Both approaches consider layered scheduling; the approach in [3] uses Vivado HLS, while [5] relies on an in-house tool called PICO. The
+
+978-1-4673-7218-3/15/$31.00 ©2015 IEEE
+
+ICICS 2015
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:12 UTC from IEEE Xplore. Restrictions apply.
+
+results from [3] are rather modest, for an irregular code IEEE 802.11n, rate ͳΤʹ, the throughput is no greater than 20Mbps, with considerable resource usage (56 BRAMs, and 3232 slices). The work in [5] addresses mainly ASIC. The type of variability the authors stress out is that of the number of processing units in order to accommodate different rates specified in nowadays standards. Techniques for power reduction are block level gated clock. Pipelining the design has been employed together with hazard detection logic and stalls as a way to mitigate data access conflicts. It is important to stress out that, for high rate codes, this will inevitably lead to a high number of conflicts that trigger stalls and considerably degrade HUE.
+The works in [1][2][4] use the idea of template to generate fully flooded LDPC decoder architectures. The approach in [1] combines Verilog HDL with Phyton. No insight on how the template is specified, or on FPGA specific optimizations has been given. The work in [4] builds Simulink blocks for the processing units for maximal flooded architecture message parallelism, and uses Matlab scripts to link them in a fully flooded memoryless architecture. With respect to the partially parallel solution proposed in this paper, the control complexity is considerable lower. The work in [2] focuses on designing varying parallelism processing units for LDPCs using Matlab.
+III. LAYERED QC-LDPC DECODERS
+A. Layered LDPC decoding
+LDPC codes [6] are linear codes defined by sparse paritycheck matrices. Two types of processing nodes are required: variable-nodes and check-nodes, corresponding to the columns and the rows of the parity check matrix ‫ܪ‬. Message inputs for these nodes are dictated by the non-zero entries of the paritycheck matrix. Quasi-Cyclic (QC) LDPC codes are built using a base matrix ‫ܤ‬, where each non-negative entry is replaced by a circulant square permutation matrix of size ݉ ൈ ݉[8]. The resulting matrix H has a layered structure, where each layer is composed by ݉ consecutive rows. LDPC codes can be iteratively decoded using message-passing algorithms, and the exchange of messages takes place in several rounds or iterations.
+Based on the order the messages are being processed, two types of scheduling exist: flooding, where all check nodes are processed followed by the processing of all variable nodes [9]. A different approach is layered scheduling, where horizontal layers of the matrix ‫ ܪ‬are processed sequentially [10]. The processing within a layer is performed in parallel; similar to the flooding scheduling. The layers are processed serially.
+Regarding decoding algorithms, Min-Sum (MS) and its variants are widely used due to their suitability for HW implementation. MS layered decoding algorithm starts with the initialization of the a-posteriori log likelihood ratios (AP-LLR), denoted with γ n , with the received values of log-likelihood ratios
+(denoted γ n ). Each layer processing comprises of the following steps:
+
+Step1. Variable-node message computation α z,n = γ n − βz,n ; ∀z ∈ M L ∀n ∈ H (z)
+
+Step2. Check-node messages computation
+
+∏ ( ) §
+βz,n = ¨
+
+· sgn(αz,n' ) ¸ × min αz,n' ; ∀z ∈ M L ∀n ∈ H (z)
+
+© n '∈H ( z)\ n
+
+¹
+
+Step3. AP-LLR update:
+
+γ n = αz,n + βz,n ; ∀z ∈ M L ∀n ∈ H (z)
+
+Typically, exchanged messages are quantized on a finite number of bits, such as 4 bits Įz,n and ȕz,n and 6 bits for γ n . dc and dv represent the number of non-zero entries per column and row of ‫ܪ‬, respectively. Regular codes have constant dc and dv for all layers; otherwise, the LDPC are irregular.
+B. Layered LDPC architecture
+The targeted layered QC-LDPC architecture is depicted in Fig. 1 and it is composed of the following modules:
+• Variable-Check Node (VCN) processing block – A number of ݉ VCN units is used to perform the processing corresponding to a layer. Each VCN performs the computation associated to one row within the layer. The parameters associated to the VCN are: (i) message quantization (ii) parallelization degree ‫ –݌‬the number of AP-LLR messages which can be processed in parallel (iii) number of pipeline stages (iv) LDPC decoding algorithm – we have implemented MS and Self Corrected MS. The parallelization degree dictates the number of pipeline levels needed by the CNU comparator. The pipeline for the CNU is optional. Without pipeline, for high ‫ݏ݁ݑ݈ܽݒ ݌‬, the maximum frequency degrades.
+• AP-LLR memory and routing network – This module stores the γ n messages and routes them to the corresponding VCN. The size and organization of the memory is dependent on: (i) γ n messages quantization - ‫ݐ݊ܽݑݍ‬ሺߛ௡ሻ (ii) parallelization degree of the VCN (iii) number of processed codewords. Regarding the routing network, it is implemented using barrel shifters. The number of barrel shifters is ʹ ൈ ‫݌‬, the number of levels for a barrel shifter is ‫ڿ‬ଶ݉‫ۀ‬ǡ     ݉ ൈ ‫ݐ݊ܽݑݍ‬ሺߛ௡ሻ multiplexers.
+• Check node message memory and routing – stores the ȕz messages and routes them to their corresponding VCN. ȕz are stored in compressed form - ߚ௖௢௠௣. For MS, the compressed form contains the first two minimums, the index of the first minimum and the signs. The size of ߚ௖௢௠௣ is ඃଶ ݀௖̴௠௔௫ඇ ൅ ʹ ൈ ൫‫ݐ݊ܽݑݍ‬൫ߚ௜௝൯ െ ͳ൯ ൅ ݀௖̴௠௔௫. The memory word size is equal to ሺ‫݁ݖ݅ݏ‬ሺߚ௖௢௠௣ሻ ൈ ݉ሻΤ‫ڿ‬ଶ ݉‫ ۀ‬. The depth of this memory is equal to ܰ ൈ ‫ڿ‬ଶ ݉‫ۀ‬. Routing is performed using two shift registers of size ‫݁ݖ݅ݏ‬ሺߚ௖௢௠௣ሻ ൈ ݉ – one for read and one for write-back.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:12 UTC from IEEE Xplore. Restrictions apply.
+
+Fig.1. QC-LDPC template architecture overview
+In order to increase the modularization of the above components, local control units have been developed for each of them. For each of the three main modules, the local control units generate:
+• AP-LLR message memory– it generates the read and write addresses as well as the shift amounts for the read and write BS; both types of information are LDPC code dependent – code attributes – and are embedded in dedicated ROM memories. It is beyond of the scope of this article to discuss methods for generating the ROMs. For this work, we have used a constructive approach based on a Greedy algorithm that takes each layer at a time, and tries to schedule memory access operations as soon as possible, with the nodes with higher ݀௩ degrees allocated first. These are more likely to generate conflicts. In case of conflict it backtracks and tries to interchange the bank IDs from previously allocated layers.
+• Check node message memory – it generates the read and write addresses as well as the shift signal for the 2 shift registers used for routing
+• VCN processing block – it generates the signals corresponding to the first and last groups of input/output APLLR layer messages
+A main control module for the LDPC decoder is used in order to initiate new read operations from the two memories, as well as generating the number of number of AP-LLR messages corresponding to a layer.
+We target FPGA implementations. Both the AP-LLR message memory and the check-node message memory are implemented using BRAM memory blocks. In Xilinx FPGA technology they have configurable widths from 8-72 bits and depth of at least 512 data entries. A storage alternative for Xilinx FPGA is distributed RAM, which is essentially mapped in logic. For implementing the two memories using BRAMs, we select the maximum width 72 in order to minimize the number of blocks. For the example of WiMAX code, rate ͳΤʹ, circulant size ݉ ൌ ͻ͸, message quantization for Ȗ and ȕ of 6 respectively 4, ‫ ݌‬ൌ ͳ parallelization, reading/writing 96 Ȗ messages will lead in a memory width of 576 bits, while the number of memory addresses is 24 (out of
+
+512). This example exposes a massive under-utilization of BRAM blocks used for the implementation of the AP-LLR memory.
+For the ȕ module, with compressed codeword Ⱦ௖௢௠௣(16 bits/codeword), the requirements for a straightforward implementation (all Ⱦ௖௢௠௣ need to be read at once during a clock cycle) are width of 1596 bits while a number of 12 BRAM entries are used. The number of required blocks is 22. As stressed out during the previous example, the width of the ȕ memory is considerably larger than the Ȗ memory. Hence, an opportunity for serializing the read would reduce the number of BRAM blocks used. We achieve this in the proposed architecture by pipelining the barrel shifter. Furthermore, by tuning the ‫ ݌‬parameter, we serialize the Ȗ codeword reads. This sets an upper bound for the number of cycles to read all the codewords to ൛‫݀ڿ‬௖ ௠௜௡Τ‫ۀ݌‬ǡ ݊௣௜௣௘̴஻ௌൟ , where ݊௣௜௣௘̴஻ௌ is the number of pipeline levels of the barrel shifter having a maximum value of ‫ڿ‬ଶ ݉‫ۀ‬. For the example considered, we can serialize the read during 6 cycles. This means that we can reduce the number of the blocks by a factor of 6, from 22 to 4 blocks.
+Unit pipelining is a must when targeting working frequencies in the range of 200-300 Mhz or higher for FPGA devices. Furthermore, because of the structure of FPGA slices, in many cases it comes at virtually no cost. Nonetheless, through the process of pipelining, operations are broken down and result updating is delayed for several cycles (equal to the pipeline depth). This means that data is read every cycle but processed and updated several cycles later. This behavior does not match a truly layered scheduling described in Section II-A.
+Considering the previous remarks, we can resolve the delayed update problem by processing multiple codewords successively multi-codeword decoding. This means that layer L processing occurs during ௅ሺ଴ሻሾ‫ݐ‬଴ǡ ‫ݐ‬௞ሿ time window for codeword 0, ௅ሺଵሻሾ‫ݐ‬଴ ൅ ‫݌‬ǡ ‫ݐ‬௞ ൅ ‫݌‬ሿ time window for codeword 1, and so on. A total of p + ʹ ‫݊ כ‬஻ௌ ൅ ݊௏஼ே clock cycles are needed until all layer L data is updated to memory. ݊஻ௌ and ݊௏஼ே represent the number of pipeline registers for the routing and processing path respectively.The advantages of employing this technique are: (i) ensures truly layered decoders if a sufficient number of codewords are decoded – i.e . for WiMAX rate 1/2 irregular LDPC code and ‫ ݌‬ൌ ͳ, processing 4 codewords ensures truly layered decoding (ii) increased BRAM utilization efficiency. Furthermore, this technique implies no throughput or operating frequency degradation.
+C. Layered QC-LDPC Design Customization Space
+As described in previous section, layered LDPC architectures have a wide range of customization parameters. These can be classified as following:
+1. Code attributes – These are determined by the LDPC code and include: base matrix ‫ܤ‬, circulant size, message quantization, or the LDPC decoding algorithm
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:12 UTC from IEEE Xplore. Restrictions apply.
+
+2. Architecture parameters – These include: parallelization degree ‫݌‬, number of processed codewords, number of pipeline stages at VCN, number of decoding iterations
+3. Environment parameters – These can be classified as follows: (i) simulation and verification – number of simulations, SNR range, (ii) Synthesis and implementation – target FPGA device, synthesis options, implementation constraints.
+Designing, verifying and implementing an LDPC decoder represents a complex task. Even if the same architecture is used, modifying few parameters requires the entire design-verificationimplementation cycle to be redone. To address this problem, we have built a tool that generates the entire framework – RTL source code, verification framework and implementation scripts – for LDPC decoder, based on the set of input/customization parameters.
+
+IV. DESIGN EXPLORATION FLOW
+
+A. Overview
+Fig. 2 summaries the main actions performed automatically by the proposed environment. It consists of 5 steps, of which steps 2 – 5 correspond to a usual circuit design flow. They are achieved by invoking well-known commercial tools such as ModelSim and Xilinx ISE. However, these tools operate on an HDL description and thus, when exploring architectural alternatives, the tools will usually work with many similar but distinct decoder specifications. Moreover, all these tools must be properly configured with (possibly common) information such as test-bench and configuration data, synthesis and implementation options, etc.
+
+The most important step in the proposed flow is represented
+
+by the customization. This action is performed by a dedicated
+
+tool that we developed. It takes as inputs the design and code
+
+parameters given by the user
+
+(described in Section II.c)
+
+and the HDL decoder templates, and it generates the RTL
+
+Verilog source code for the desired LDPC decoder. The decoder
+
+templates capture the general architecture of the decoder and of
+
+the internal components, but also specify possible architectural
+
+variations (e.g., parallelization degree) and the way the decoder
+
+must be built in the presence of such a variation. Consequently,
+
+processing the template and using the user arguments (e.g., the
+
+desired parallelization degree), the customization tool will
+
+output the concrete Verilog decoder description with the
+
+particularities / variations desired by the user.
+
+Templates have been developed for different abstraction layers within the LDPC decoder hierarchy: (i) LDPC decoder template - it describes the common layered LDPC architecture, the building blocks and connections within (ii) LDPC decoder components templates – they describe the architecture of the main modules of the LDPC decoder (e.g. gamma memory read interface, beta module, processing units array with local control unit, see Section II.b) (iii) basic block templates such as barrel shifter, comparators, etc.
+
+Fig.2. Customization, verification and implementation flow
+The user parameters are passed through the hierarchy in a topdown approach. From the description perspective, these are (i) parametrized Verilog HDL blocks (using generate constructs, module parameters), fully custom templates (e.g. control ROMs, which are fully re-generated for each set of user inputs), hybrid descriptions (a mix of Verilog HDL and smart tags for the parts that require more advanced customization features than those supported by Verilog HDL language – e.g. tree comparator used in check node processing with optional pipeline levels).
+For each set of parameters, an instantiation of this environment and the concrete Verilog HDL design files for the LDPC decoder is generated. To re-create all this steps manually requires a great deal of effort and copy-paste operations that are error prone. Furthermore, after setting the inputs from the process in place, any number of instantiations of this environment can be made.
+B. Verification Methodology
+Verification has been carried out at several levels in the design: block level (barrel shifter, comparator in the check node processing), sub-module level (for the AP-LLR memory subsystems, the processing nodes, and the check node memory subsystem), as well as the top-level LDPC decoder. For block level verification, Verilog test-benches have been used. For submodules and top level LDPC architecture, SystemVerilog environments (SVE) have been developed. The validation of the result is through co-simulation with a C++ simulator of the transmission chain. It includes: random frame generator, encoder, modulation, channel noise, automatic gain control, demodulation, quantization, decoding, and result processing. The RTL LDPC decoder architecture can be verified in two ways: (i) the output of the RTL implementation is compared with the output of the decoder in the C++ simulator, (ii) the output of the RTL decoder is verified with the output of the encoder in the C++ simulator. The latter is used in order to evaluate the frame error rate and the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:12 UTC from IEEE Xplore. Restrictions apply.
+
+bit error rate of the RTL Verilog decoder. The simulator is encapsulated in a DLL and accessed through the DPI-C interface in ModelSim. The SystemVerilog environment allows the passing of information both ways: (i) from the model to the design - decoder inputs and, if desired, simulation model outputs and (ii) from the SystemVerlog to C++ for BER/FER statistics.
+V. RESULTS
+We have generated several LDPC decoders for the following LDPC codes: WiMAX rate ͳΤʹ irregular code, ݀‫ ݒ‬ൌ ͵, rate ͳΤʹ regular code, ݀‫ ݒ‬ൌ Ͷ rate ͳΤʹ regular code and ݀‫ ݒ‬ൌ Ͷ, rate ͵ΤͶ [11]. The number of coded bits is 2304 for WiMAX and 1296 for the regular codes. The circulant sizes are: 96 for WiMAX, 54 for rate ͳΤʹ regular codes and 27 rate ͵ΤͶ regular codes. The message quantization is (4,6) for all cases. The synthesis has been performed for the Xilinx Virtex-7 XC7VX485T FPGA device. Results, depicted in Table I, show that processing node level parallelism increase will lead both to better throughput, but also to increase cost (BRAM and slices). Furthemore, increased parallelism will also lead to a decrease in the maximum frequency. For both regular codes and WiMAX irregular code, the increase in throughput, as well as cost, is proportional to the parallelism degree.
+Custom designed layered LDPC decoders for FPGA have been proposed in [12][13]. The decoder in [12] has been implemented on Zynq platform (7-series as Virtex-7) for WiMAX rate ͳΤʹ LDPC code; it has a cost of up to 3732 slices and 24 BRAM and throghput of up to 410 Mbps for coded bits (throughput computed for 10 iterations) for the highest rate ͷΤ͸. The generated decoder has approximativelly the same resource usage/throughput ration. The decoder in [13] has been implemented on Xilinx Virtes-6 devices for a 2048 length rate ͳΤʹ LDPC code. It has a cost of more than 6200 slices and 36 BRAM and a throughput of 150 Mbps (coded bits). We can observe that the proposed decoder provides better or comparable throughput and better BRAM usage for most parallelization degrees for the WiMAX rate ͳΤʹ LDPC code, even though the proposed solutions are generated.
+VI. CONCLUSIONS
+The contributions of this work are as follows: (i) tool for customization of templates of layered QC-LDPC decoders (ii) automated build flow: customization of verification, synthesis, and implementation scripts (iii) FPGA technology specific knowledge embedded in the template (multi-code-word approach to compensate pipeline delay and improve decoding performance and convergence; barrel shifter pipeline delay is a “clever way” of buying “time” and relax port constraints for the check message memory; automated pipeline insertion for the datapath check-node unit implementation when varying the number of AP-LLR’s processed in one clock cycle). The developed layered LDPC generation flow outputs layered LDPC decoders with higher throughput than hand-made LDPC decoder solutions in [12][13] and comparable cost.
+
+REFERENCES
+[1] J. Demma and P. Athanas, “A hardware generator for factor graph applications”, Proceedings of the 2014 International Conference on ReConFigurable Computing and FPGAs, IEEE, 2014.
+[2] G. Falcão, M. Gomes, J. Gonçalves, P. Faia and V. Silva, “HDL library of processing units for an automatic LDPC decoder design”, Research in Microelectronics and Electronics, IEEE, 2006.
+[3] E. Scheiber, G.H. Bruck and P. Jung, “Implementation of an LDPC decoder for IEEE 802.11n using VivadoTM high-level synthesis”, Proceedings of the 2013 International Conference on Electronics Signal Processing and Communication Systems, 2013.
+[4] D.M. Pham and S.M. Aziz, “An automated design methodology for FPGAbased multi-gbps LDPC decoders”, Proceedings of the 15th International Conference on Computer and Information Technology, IEEE, 2012.
+[5] Yang Sun, J.R. Cavallaro, and Tai Ly, “Scalable and low power LDPC decoder design using high level algorithmic synthesis”, Proceedings of the IEEE International SOC Conference, IEEE, 2009.
+[6] R. G. Gallager, Low Density Parity Check Codes, M.I.T. Press, 1963, Monograph.
+[7] O. Boncalo, A. Amaricai, A. Hera, V. Savin “Cost Efficient FPGA Layered LDPC Decoder With Serial AP-LLR Processing”, Field Programmable Logic and Applications (FPL), 2014.
+[8] M.P.C. Fossorier, “Quasicyclic Low-Density Parity-Check Codes from Circulant Permutation Matrices,” IEEE Trans. on Information Theory, vol. 50, no. 8, pp. 1788–1793, 2004.
+[9] F. R. Kschischang and B. J. Frey, “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE Journal on Selected Areas in Communications, vol. 16, no. 2, pp. 219–230, 1998.
+[10] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. of IEEE Workshop on Signal Processing Systems (SIPS), 2004, pp. 107–112.
+[11] i-RISC/Deliverable 6.1 “Report on Reliability Aware Synthesis and LDPC Decoders Built with Unreliable Components” online: http://www.irisc.eu/home/liblocal/docs/iRISC_Deliverables/i-RISC_D6.1.pdf
+[12] S. Yesil, M Arslan “Dual port ram based layered decoding for Multi Rate Quasi-Cyclic LDPC codes” Proc. 12th International Conf. on Signal Processing, 2014
+[13] H. Zhao, J.P. Long, “Implementing the NASA Deep Space LDPC Codes for Defense Applications,” Proc. Military Communications Conference, MILCOM 2013
+
+TABLE I. RESULTS FOR DIFFERENT CODES AND PARALLELIZATION DEGREES
+
+Code
+Regular dv3 [r1/2, P=1]
+Regular dv3 [r1/2, P=3]
+Regular dv3 [r1/2, P=6]
+Regular dv4 [r1/2, P=1]
+Regular dv4 [r1/2, P=4]
+Regular dv4[r3/4, P=1]
+Regular dv4[r3/4, P=4]
+WiMAX, [r1/2, P=1] WiMAX, [r1/2, P=2] WiMAX, [r1/2, P=3]
+
+Cost (LUT-FF pairs, BRAMs)
+14185 pairs, 9 BRAM 36832 pairs, 20 BRAM 77753 pairs, 66 BRAM 16249 pairs, 8 BRAM 59637 pairs, 25 BRAM 9963 pairs, 6 BRAM 32713 pairs, 24 BRAM 28455 pairs, 16 BRAM 56982 pairs, 24 BRAM 91050 pairs, 37 BRAM
+
+Freq [MHz] 246 234 235 226 190 225 219 240 218 178
+
+T[coded] Mbps 425 1084 2030 300 912 295 1051 630 1116 1318
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:12 UTC from IEEE Xplore. Restrictions apply.
+
+

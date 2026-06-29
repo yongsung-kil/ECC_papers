@@ -1,0 +1,771 @@
+978-1-7281-5655-2/20/$31.00 ©2020 IEEE 
+LDPC Decoder Power Consumption Optimization 
+ 
+Maksim Y. Zinchenko  
+Formation and processing of radio 
+signals dept 
+National Research University “MPEI” 
+Moscow, Russia 
+ZinchenkoMY@gmail.com 
+Alexey M. Levadniy 
+Formation and processing of radio 
+signals dept 
+National Research University “MPEI” 
+Moscow, Russia 
+ 
+Yuri A. Grebenko 
+Formation and processing of radio 
+signals dept 
+National Research University “MPEI” 
+Moscow, Russia 
+ 
+Abstract—The paper presents the results of developing a 
+decoder architecture of low-density parity check code of the 
+DVB-S2 standard for field programmable gate array. It 
+supports several code rates and codeword lengths described in 
+the appendix of the standard. The proposed decoder 
+architecture has a partially parallel structure, which allows to 
+achieve high decoding performance and efficient use of chip 
+area. The presence of double-diagonal submatrices in the 
+structure of the parity check matrices was also confirmed, and 
+a method for eliminating them was implemented. In the work, 
+an analysis of parameters affecting the static and dynamic 
+power consumption in the field programmable gate array was 
+made. Based on it, algorithmic and architectural methods for 
+reducing consumption are proposed. The paper describes the 
+developed architectures and methods to reduce chip power 
+consumption. 
+Keywords—FEC, LDPC, FPGA, DVB-S2, power consumption 
+I. INTRODUCTION 
+Forward Error Correction (FEC) improves the reliability 
+of the transmitted information. The ability to correct errors on 
+the receiving side and restore the original information is 
+achieved by introducing redundancy in the original data. 
+Among FEC codes, binary low-density parity check codes 
+(LDPC), have become widespread in recent years [1]. These 
+codes are used in many modern data communication 
+standards: DVB-S2 / T2 / C2, IEEE 802.11n / ac (Wi-Fi), 
+WiMAX, etc. Moreover, they are able to provide maximum 
+transmission speeds with a limited frequency band, and have 
+several advantages compared to well-established turbo codes. 
+The gain in the signal-to-noise level due to LDPC coding with 
+the same proportion of control symbols can be up to 3 dB for 
+the selected error probability level of 10-6. The use of these 
+codes is also effective in counteracting wideband impulse 
+noise as well as interference causing signal erasure [2]. 
+However, in addition to advantages, binary low-density 
+codes have disadvantages, because of which their widespread 
+use only began in the mid-2000s. These include the difficulty 
+of developing an effective code structure optimized for the 
+hardware implementation of the encoder and decoder, as well 
+as the presence of various structural effects. These effects 
+often lead to the appearance of residual errors in the decoded 
+codeword. That adducts to error floor on the error probability 
+graph. The authors presented a detailed description of this 
+phenomenon, as well as one of the ways to eliminate it, in [3]. 
+Since the LDPC code structure presented in the DVB-S2 
+standard with a long codeword length of 64800 bits was taken 
+as the basis, it is advisable to use a field programmable gate 
+array (FPGA) for practical application and obtaining high 
+performance. In this work, architectures of the encoder and 
+decoder were proposed for implementation in the FPGA 
+Xilinx Artix-7 xc7a200. A feature of the development of the 
+architecture for FPGAs is the need to take into account the 
+limited amount of crystal resources. In addition, given the 
+possible use of the LDPC code in portable data 
+communication systems, it is desirable to reduce the static 
+and dynamic power consumption. In this work, the LDPC 
+encoder was developed in accordance with the coding 
+algorithm presented in the standard, the authors presented a 
+description of its architecture in [4]. The main difficulty 
+arises with the implementation of the decoding algorithm. 
+Since efficient decoder architecture should not only perform 
+decoding in accordance with the standard, but also provide 
+predetermined performance and low power consumption. 
+II. FUNDAMENTALS 
+Low Density Parity Check Codes are Linear Block Codes. 
+A feature of LDPC is the low density of significant elements 
+in the matrix — units that mean the connection of codeword 
+bits with corresponding checks. The second-generation 
+digital satellite broadcasting standard (DVB-S2) uses LDPC 
+codes. It defines 21 degrees of coding and two codeword 
+lengths - 16200 and 64800 bits [5]. Reference tables are 
+presented in the appendix to the standard, using which, it is 
+possible to construct generating matrices G for each degree 
+of coding R and codeword length. Moreover, the 
+corresponding parity check matrices H can be generated. A 
+convenient graphical way of representing the structure of 
+LDPC-code is the Tanner bipartite graph, which includes bit 
+and check nodes. The use of LDPC codes of this standard 
+with iterative decoding methods and “soft” input bits allows 
+to come very close to the channel bandwidth according to 
+Shannon. 
+In addition, the code structure in this standard is quasi-
+cyclic and optimized for hardware execution, which allows 
+processing of up to 360 parity checks in parallel. In the work 
+for the subsequent implementation 6 coding rates were 
+chosen. Fig. 1 presents graphs of the dependence of the bit 
+error rate (BER) on the ratio Eb/N0 for these coding rates and 
+codeword lengths. 
+III. DECODER ARHITECTURE 
+When developing the decoder architecture, the required 
+performance level was set as follows: the decoding time of a 
+single codeword with a length of 64800 bits at 50 decoding 
+iterations should not exceed 2 ms. That allows to obtain a 
+maximum information rate of 24.3 Mbit/s with a encoding rate 
+R = 3/4. Based on these restrictions, a partially parallel model 
+was selected for decoder architecture in which 90 functional 
+units 
+(FUs) 
+calculate 
+90 
+parity 
+check 
+expressions 
+simultaneously. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:46:55 UTC from IEEE Xplore.  Restrictions apply. 
+In the classical algorithm “sum-product”, each iteration of 
+decoding is divided into two stages. At the first stage, the 
+values of all parity check expressions (check nodes) are 
+calculated based on the logarithmic likelihood ratios (LLR) 
+of the bits of the codeword (bit nodes). After that, at the 
+second stage, all probability values of bits (bit nodes) of the 
+codeword are updated taking into account the values of all 
+associated values of the parity check expressions (check 
+nodes). The disadvantage of the classical algorithm is the use 
+of the resource-intensive function (1) in the calculations at the 
+second stage and the need to store in memory not only bit 
+probabilities, but also values of check expressions. 
+𝛹(𝑥) = 𝑙𝑜𝑔𝑒𝑥+ 1
+𝑒𝑥−1 = −𝑙𝑜𝑔⁡(𝑡𝑎𝑛ℎ𝑥
+2) 
+(1) 
+In the work, instead of the “sum-product” algorithm, a 
+hardware-effective algorithm “minimum-sum” is used, in 
+which the calculation of function (1) is approximated by 
+summing the minimums of probabilities included in the 
+parity check [6]. In addition, a modification of the “minimum 
+sums” algorithm has been made, which allows us to switch 
+from a two-stage algorithm to a one-stage algorithm with the 
+simultaneous calculation values of check expressions and 
+updating the probabilities of codeword bits. This significantly 
+reduces the amount of required FPGA memory. Table 1 
+presents the number of check expressions, the calculation of 
+which is necessary to complete one iteration of decoding and 
+the number of bits included in each parity check expression. 
+Fig. 2 shows a block diagram of the proposed architecture 
+of the LDPC decoder. It supports 6 coding rates of the DVB-
+S2 standard and has a partially parallel architecture with 90 
+blocks processing parity checks. 
+The proposed decoder architecture includes the following 
+blocks: input, output and decoder control, barrel shifter,  
+90 functional units for processing parity checks expressions, 
+90 blocks of LLRs memory. 
+TABLE I.  
+LDPC CODES IN THE DVB-S2 STANDART 
+Codeword 
+size 
+Coding rate, R 
+Number of parity 
+checks 
+The number of 
+bits included in 
+each check 
+expression 
+64800 
+1/4 
+48600 
+4 
+1/2 
+32400 
+7 
+3/4 
+16200 
+14 
+Codeword 
+size 
+Coding rate, R 
+Number of parity 
+checks 
+The number of 
+bits included in 
+each check 
+expression 
+16200 
+11/45 
+12240 
+4 
+2/5 
+9720 
+6 
+2/3 
+5400 
+8 
+ 
+To decode the LDPC code of the DVB-S2 standard, it is 
+important to provide high throughput of memory accesses 
+with a pseudo-random change of the read and write address. 
+The linear organization of the memory structure will not be 
+able to provide the necessary bandwidth, therefore, to resolve 
+this limitation, developed architecture proposes to divide the 
+memory into 90 blocks and access them in parallel. 
+It was found that the cyclic shift occurring in the 360x360 
+submatrices is also mapped on the address space of 90 
+memory blocks. When reading, this shift must be 
+compensated so that the bit probabilities arrive at the 
+corresponding functional units. After recalculating the 
+probabilities of bits in FUs, the values must be written to the 
+original memory blocks and addresses, that is, it is necessary 
+to restore the original cyclic shift. Fig. 3 shows examples of 
+possible mapping of cyclic shifts onto parallel memory 
+structure. 
+For this organization of memory for storing bit 
+probabilities, a method for mapping a linear codeword onto a 
+INPUT
+CONTROL
+DECODER
+CONTROL
+BARREL SHIFTER
+CONTROL
+BARREL SHIFTER
+BARREL SHIFTER
+OUTPUT
+CONTROL
+RAM 
+1
+FU 1
+FU 2
+FU 3
+FU 90
+FU 89
+RAM 
+2
+RAM 
+3
+RAM 
+90
+RAM 
+89
+. . . . . . . . . .
+. . . . . . . . . .
+INF. BITS
+CODEWORD
+LLRs
+Fig. 2. LDPC decoder architecture block diagram 
+Memory block number
+Memory block address
+1
+2
+3
+4
+.
+.
+.
+.
+42 43 44 45 46 47 48 49
+.
+.
+.
+.
+87 88 89 90
+1
+2
+3
+4
+.
+.
+.
+.
+42 43 44 45 46 47 48 49
+.
+.
+.
+.
+87 88 89 90
+Memory block address
+89 90
+1
+2
+3
+4
+.
+.
+.
+.
+42 43 44 45 46 47 48 49
+.
+.
+.
+.
+87 88
+Fig. 3. Variants of LLRs cyclic shifts distribution in memory blocks 
+1E-07
+1E-06
+1E-05
+1E-04
+1E-03
+1E-02
+1E-01
+1E+00
+-3
+-2
+-1
+0
+1
+2
+3
+4
+5
+Pb
+Eb/N0 (dB)
+LDPC R=1/4 (N=64800)
+LDPC R=1/2 (N=64800)
+LDPC R=3/4 (N=64800)
+LDPC R=2/3 (N=16200)
+LDPC R=2/5 (N=16200)
+LDPC R=11/45 (N= 16200)
+Fig. 1. BER vs. Eb/N0 ratio for selected DVB-S2 LDPC codes 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:46:55 UTC from IEEE Xplore.  Restrictions apply. 
+parallel memory structure was developed. Moreover, the 
+algorithm for recalculating the addresses of the bits 
+probabilities is determined taking into account the periodicity 
+of the check matrix H. In addition, reading and writing of 90 
+LLRs in parallel were implemented taking into account the 
+cyclic shift in the 360x360 submatrices. To do this, the shift 
+is compensated in front of the inputs of the functional units 
+and restored to the output of the processing units. That allows 
+to write the updated values of the bit probabilities in the 
+original blocks and addresses of the FPGA memories. This 
+processing is performed with each reading and writing to 
+memory, taking into account the pipelined type of data 
+movement implemented in the decoder and carried out by a 
+matrix of shift multiplexers in blocks of barrel shifters. 
+In the process of checking the operation of the decoder, it 
+was revealed that parallel processing of the codeword leads 
+to the degradation of the correction ability compared to 
+sequential decoding. A study of the decoding process showed 
+that this deterioration is caused by FPGA memory access 
+conflicts. Such conflicts arise when two processing units try 
+to write new bit probability values to the FPGA memory cell 
+with the same address. An analysis of the causes of these 
+conflicts showed that they are associated with the structure of 
+the LDPC code of the DVB-S2 standard since submatrices 
+360x360 of the check matrix H may contain double 
+diagonals. Table 2 shows the number of double-diagonal 
+(DD) submatrices for various coding rates. 
+TABLE II.  
+DOUBLE-DIAGONAL SUBMATRICES IN THE CHECK MATRIX 
+Coding 
+rate, R 
+Number of 
+double diagonal 
+submatrices 
+Check Matrix Size 
+With DD sub-
+matrices 
+Without DD sub-
+matrices 
+1/4 
+3 
+48600х64800 
+49680х65880 
+1/2 
+8 
+32400х64800 
+35280х67680 
+3/4 
+23 
+16200х64800 
+24480х73080 
+11/45 
+0 
+12240х16200 
+12240х16200 
+2/5 
+8 
+9720х16200 
+12600х19080 
+2/3 
+14 
+5400х16200 
+10440х21240 
+ 
+As mentioned above, the units in the matrix H denote the 
+relationship of the probabilities of the codeword bits and the 
+corresponding checks. Due to the presence of the double 
+diagonal submatrix, a group of 360 bit nodes will be twice 
+associated with the 360 check nodes. In contrast to the 
+execution of the algorithm sequentially, parallel processing 
+leads to entrance of a bit node in two parallel-calculated 
+checks. As a result, the updated value of the bit probability 
+obtained when calculating the first check expression will not 
+be taken into account when calculating the second check 
+expression. The bit error gradually accumulates and the 
+decoder's correcting ability is severely degraded. In the work, 
+this problem was solved by transforming the structure of the 
+check matrix, described in detail in [7]. This method consists 
+in constructing an equivalent matrix H in which submatrices 
+with two diagonals are divided into two submatrices: a 
+submatrix with one diagonal and a linking unit submatrix. 
+The advantage of using this method of eliminating double 
+diagonals in 360x360 submatrices is the ability to save the 
+decoding algorithm unchanged. However, this increases the 
+decoding time due to the process of additional check 
+expressions and requires a larger amount of memory to store 
+the probabilities of bits of the linking submatrices. Table 2 
+contains the dimensions of the check matrices H obtained 
+after eliminating double diagonals. 
+IV. FPGA POWER CONSUMPTION OPTIMIZATION 
+In developing the decoder under the FPGA, it is important 
+to reduce the power consumption of the chip. It consists of two 
+components: static and dynamic power consumption. While 
+static consumption mainly depends on the number of FPGA 
+hardware resources involved. Dynamic consumption is 
+determined by the number and frequency of switching logic 
+elements [8]. 
+A. Static consumption reduction 
+To reduce static consumption, it is necessary to decrease 
+the total number of logical elements FPGAs used. However, 
+since the developed architecture must meet the performance 
+requirements, it is impossible to reduce the amount of 
+resources used by changing the number of parallel processing 
+units and block memory. One of the parameters, the change of 
+which does not affect the performance, but allows to reduce 
+the static consumption, is the bit depth of the processed 
+logarithmic likelihood relations. Though the choice of the 
+number of significant bits in the probability values affects not 
+only the occupied FPGA resources, but also the decoding 
+quality. Fig. 4 shows graphs comparison of the dependence of 
+the bit error rate on the ratio Eb/N0 for a different number of 
+significant bits in the bit depth of logarithmic likelihood ratios. 
+As can be seen from Fig. 4, good results are obtained when 
+the number of significant bits in the vectors of the logarithmic 
+likelihood ratios is greater than 4. It can be seen that with 6 
+significant bits the “step” on the graph of the bit error rate will 
+be lower than with 5. If the necessary reliability of data 
+transfer is set equal to 10-5, then the gain of using a 6-bit 
+architecture will be equal to 1.7 dB compared to 5-bit. A 
+further increase in bit depth to 7 bits does not give a tangible 
+gain compared to 6 significant bits. 
+To compare the static consumption using 5 and 6 
+significant bits two architectures of the LDPC decoder for 
+FPGA were synthesized. The results are presented in table 3. 
+TABLE III.  
+USED FPGA RESURCES 
+Significant bits in LLRs 
+5 bit 
+6 bit 
+The number of LUT used 
+72933 (55 %) 
+81739 (61 %) 
+The number of FF used 
+93040 (35 %) 
+105738 (40 %) 
+Estimated FPGA 
+consumption power 
+2.379 W 
+2.548 W 
+ 
+1E-07
+1E-06
+1E-05
+1E-04
+1E-03
+1E-02
+1E-01
+1E+00
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+Pb
+Eb/N0 (dB)
+uncoded
+7 bit
+6 bit
+5 bit
+4 bit
+Fig. 4. The effect of LLRs bit depth on BER vs. Eb/N0 ratio graph 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:46:55 UTC from IEEE Xplore.  Restrictions apply. 
+A comparison of synthesis results allows us to conclude that 
+use of a 5-bit architecture makes it possible to reduce the 
+number of used logical elements by 6%, triggers by 5%. 
+Moreover, the total FPGA static consumption will decrease by 
+0.169 watts. 
+B. Dynamic consumption reduction 
+The number of used logical elements and the frequency of 
+switching their states determine dynamic FPGA power 
+consumption. In the decoder, most of the logic switching is 
+performed during iterative decoding of the codeword. 
+Therefore, 
+decoding 
+time 
+directly 
+affects 
+dynamic 
+consumption. 
+There are several ways to reduce codeword processing 
+time: limit the maximum number of decoding iterations, early 
+completion of decoding in case of obtaining the desired 
+codeword or not process undecodable codewords (early 
+termination). 
+First, the optimal value of the maximum number of 
+decoding iterations (Itermax) was determined. The changes in 
+dependence of bit error rate on the Eb/N0 ratio for LDPC code 
+(N=64800, R=1/2) for different Itermax values were compared. 
+The results are presented in Fig. 5. 
+In the DVB-S2 standard, it is proposed to limit decoding 
+to 50 iterations. In the work, the number maximum iterations 
+equal to 30 was chosen, since this allows to reduce the 
+decoding time by 40% with a slight decrease in decoding 
+quality by 0.4 dB. 
+In the decoding process, after the completion of each 
+iteration, the number of failed parity expressions is calculated. 
+If this number is zero, then all checks converged and the 
+correct code word is obtained. The decoder completes the 
+decoding and produces a corrected information vector. Thus, 
+with good Eb/N0 ratio, the number of iterations can be 
+significantly less than Itermax. 
+To determine the non-decodable codewords, we used the 
+metric of the number of failed parity checks at completion of 
+various iterations. To determine the optimal iteration and 
+constant threshold value for comparison, we studied the 
+change in the number of failed parity checks (FPC) depending 
+on the iteration of decoding and the ratio Eb/N0. The results for 
+the LDPC code with N = 64800 and R = 1/2 are shown in  
+Fig. 6 and 7. 
+The analysis of the graphs in Fig. 6 shows a sharp decrease 
+in the number of FPCs in the first iterations for decodable and 
+non-decodable words. At subsequent iterations, this level for 
+decodable vectors continues to decrease smoothly, while for 
+non-decodable words it remains close to a constant value.  
+Thus, the best strategy for determining non-decodable 
+codewords is to compare the level of failed parity checks with 
+a threshold value on 3-5 iterations. The threshold value should 
+be chosen in such way, starting from the boundary ratio of 
+Eb/N0 the codewords are considered decodable. For example, 
+from the graph in Fig. 7 it can be seen that for the 4th iteration, 
+the threshold value of the FPC for the boundary ratio Eb/N0 = 
+1 dB (for code N = 64800; R = 1/2) is 4050. 
+1E-06
+1E-05
+1E-04
+1E-03
+1E-02
+1E-01
+1E+00
+0.7
+0.8
+0.9
+1
+1.1
+1.2
+1.3
+1.4
+Pb
+Eb/N0 (dB)
+iter50
+iter30
+iter25
+iter20
+iter15
+Fig. 5. The dependence of the bit error rate on the ratio Eb/N0 and 
+Itermax 
+0
+2000
+4000
+6000
+8000
+10000
+12000
+14000
+0
+5
+10
+15
+20
+25
+30
+35
+40
+45
+50
+Failed checks (pcs)
+Iteration number
+Series1
+Series2
+Series4
+FEC-blocks:
+Decoded in 30 
+iterations
+Undecodable
+Undecodable in 30 
+iterations
+Fig. 6. Dependence of FPC on decoding iterations for codewords with 
+different initial Eb/N0 rations 
+0
+1,000
+2,000
+3,000
+4,000
+5,000
+6,000
+7,000
+8,000
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+1.8
+2
+Failed checks (pcs)
+Eb/N0 (dB)
+iter0
+iter2
+iter3
+iter4
+iter5
+iter9
+Fig. 7. Dependence of FPCs on Eb/N0 at various iterations 
+1E-06
+1E-05
+1E-04
+1E-03
+1E-02
+1E-01
+1E+00
+0
+0,2
+0,4
+0,6
+0,8
+1
+1,2
+1,4
+1,6
+1,8
+2
+PB
+Eb/N0 (dB)
+Исходные параметры
+Оптимальные параметры
+Initial
+Optimal
+0
+10
+20
+30
+40
+50
+60
+0
+0,2
+0,4
+0,6
+0,8
+1
+1,2
+1,4
+1,6
+1,8
+2
+Iterations
+Eb/N0 (dB)
+Fig. 8. Characteristics comparison of the decoder with initial and 
+optimal parameters 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:46:55 UTC from IEEE Xplore.  Restrictions apply. 
+Graphs comparison of the decoder characteristics with the 
+initial and optimal operation parameters are presented in Fig. 
+8. It could be concluded that the application of the proposed 
+methods to reduce dynamic consumption allows to maintain 
+the quality of decoding at the initial level and reduce the 
+number of iterations used for undecodable codewords. 
+Therefore, the decoder operating time and its dynamic power 
+consumption are reduced. 
+Fig. 9 shows the dependence of the gain in power 
+consumption ∆P on the ratio Eb/N0 for the LDPC code with  
+N = 64800 and R = 1/2. As can be seen from the graph, the 
+use of the proposed methods for decreasing the static and 
+dynamic power consumption of FPGAs allows reducing the 
+consumption by 2.5 W for undecodable codewords. 
+V. CONCLUSION 
+The paper describes the architecture features of the  
+DVB-S2 LDPC decoder for six coding rates. Using the 
+optimal algorithm for processing parity check expressions 
+reduces the complexity of implementation and the occupied 
+FPGA hardware resources. The proposed partially-parallel 
+architecture meets the high demands for the required 
+throughput of the interfaces between the memory and 
+functional units. Conflicts of accesses to memory blocks 
+related to the presence of double diagonals in the submatrices 
+of the LDPC check matrix of the standard were found and a 
+method for resolving them was proposed. The parameters of 
+the decoder affecting the static and dynamic power 
+consumption of the FPGA and methods for selecting their 
+optimal values are analyzed. The total power consumption of 
+FPGA was reduce by 2.5 W while maintaining the quality of 
+decoding at the initial level. 
+REFERENCES 
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Transactions 
+on information theory, vol. 8, no. 1, pp. 21-28, 1962. 
+[2] V.A. Vargauzin and I. А. Tsikin, Methods of increasing the energy and 
+spectral efficiency of digital radio communications. Saint-Petersburg: 
+BHV-Petersburg, 2013. 
+[3] M. Y. Zinchenko, A. M. Levadniy and Y. A. Grebenko, “Concatenated 
+error correction code implementation on FPGA,” In Proc. IEEE 
+Systems of Signal Synchronization, Generating and Processing in 
+Telecommunications (SYNCHROINFO’19), 2019, pp. 1-4.  
+[4] M. Y. Zinchenko, A. M. Levadniy and Y. A. Grebenko, “Development 
+of the LDPC coder-decoder of the DVB-S2 standard on FPGA,” In 
+Proc. IEEE Systems of Signal Synchronization, Generating and 
+Processing in Telecommunications (SYNCHROINFO’18), 2018, pp. 
+1-3. 
+[5] ETSI EN 302 307 Digital video broadcasting (DVB); second 
+generation framing structure, channel coding and modulation systems 
+for broadcasting, interactive services, news gathering and other 
+broadband satellite applications, Tech. rep., ETSI, 2005. 
+[6] H. Zhong, W. Xu, N. Xie, and T. Zhang, “Area-Efficient Min-Sum 
+Decoder Design for High-Rate QC-LDPC Codes in Magnetic 
+Recording,” IEEE Transactions on Magnetics, vol. 43, No. 12, Dec. 
+2007, pp. 4117 - 4122. 
+[7] C. Marchand, J-B Dore, L. Conde-Canencia and E. Boutillon, “Conflict 
+Resolution by Matrix Reordering for DVB-T2 LDPC Decoders,” IEEE 
+Global Telecommunications Conference’09 (Honolulu, HI), Dec. 
+2009, pp. 1–6. 
+[8] I. Tarasov, “Estimation of power consumption and choice of power 
+supply system Xilinx FPGAs,” Journal of Components and 
+Technology, Feb., pp. 62-64, 2009. 
+0
+0,5
+1
+1,5
+2
+2,5
+3
+0
+0,25
+0,5
+0,75
+1
+1,25
+1,5
+1,75
+2
+∆P (W)
+Eb/N0 (dB)
+Fig. 9. The gain in reduction of the FPGA power ∆P vs. Eb/N0 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:46:55 UTC from IEEE Xplore.  Restrictions apply. 

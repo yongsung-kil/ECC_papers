@@ -1,0 +1,816 @@
+Scaling Deep Learning-based Decoding of Polar
+Codes via Partitioning
+Sebastian Cammerer∗, Tobias Gruber∗, Jakob Hoydis†, and Stephan ten Brink∗
+∗Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70659 Stuttgart, Germany
+{cammerer,gruber,tenbrink}@inue.uni-stuttgart.de
+†Nokia Bell Labs, Route de Villejust, 91620 Nozay, France
+jakob.hoydis@nokia-bell-labs.com
+Abstract—The training complexity of deep learning-based
+channel decoders scales exponentially with the codebook size
+and therefore with the number of information bits. Thus, neural
+network decoding (NND) is currently only feasible for very
+short block lengths. In this work, we show that the conventional
+iterative decoding algorithm for polar codes can be enhanced
+when sub-blocks of the decoder are replaced by neural network
+(NN) based components. Thus, we partition the encoding graph
+into smaller sub-blocks and train them individually, closely
+approaching maximum a posteriori (MAP) performance per
+sub-block. These blocks are then connected via the remaining
+conventional belief propagation decoding stage(s). The resulting
+decoding algorithm is non-iterative and inherently enables a high-
+level of parallelization, while showing a competitive bit error
+rate (BER) performance. We examine the degradation through
+partitioning and compare the resulting decoder to state-of-the-
+art polar decoders such as successive cancellation list and belief
+propagation decoding.
+I. INTRODUCTION
+Non-iterative and consequently low-latency decoding toget-
+her with close to maximum a posteriori (MAP) decoding per-
+formance are two advantages of deep learning-based channel
+decoding. However, this concept is mainly restricted by its
+limited scalability in terms of the supported block lengths,
+known as curse of dimensionality [1]. For 𝑘information bits,
+the neural network (NN) needs to distinguish between 2𝑘
+different codewords, which results in an exponential training
+complexity in case that the full codebook needs to be learned.
+In this work we focus on NN decoding of polar codes and
+show that the scalability can be significantly improved towards
+practical lengths when the NN only replaces sub-components
+of the current decoding algorithm.
+List decoding [2] with manageable list sizes and excellent
+bit error rate (BER) performance for short block lengths makes
+polar codes [3] a potential candidate for future communication
+standards such as the upcoming 5G standard or internet
+of things (IoT) applications. As polar codes are currently
+proposed for the 5G control channel [4], decoding algorithms
+for very short block lengths are of practical importance [5].
+Besides that, the rate can be completely flexible adjusted
+with a single-bit granularity. However, the price to pay is an
+inherently serial decoding algorithm which is in general hard
+to accelerate, e.g., through parallel processing [6]. This leads
+to high decoding latency when compared to state-of-the-art
+low density parity check (LDPC) codes/decoders [7]. Thus,
+there is a demand for alternative decoding strategies. Besides
+algorithmic optimizations [7] of the existing algorithms, mo-
+difying the code structure [8] can be considered to overcome
+this issue. However, once standardized, the encoder cannot be
+changed. In this work, we propose an alternative approach by
+applying machine learning techniques to find an alternative
+decoding algorithm instead of changing the code structure.
+Once trained, the final decoding algorithm (i.e., the weights
+of a deep neural network) itself is static and can be efficiently
+implemented and parallelized on a graphical processing unit
+(GPU), field programmable gate array (FPGA), or application-
+specific integrated circuit (ASIC).
+A first investigation of the topic learning to decode was
+already done in [1]. The authors showed that the main dif-
+ficulty lies within the curse of dimensionality meaning that
+for 𝑘information bits 2𝑘classes exist, leading to exponential
+complexity during the training phase. In other applications,
+such as computer vision, the number of possible output classes
+is typically limited, e.g., to the number of different objects. In
+contrast to many other machine learning fields, an unlimited
+amount of labeled training data is available, since the encoding
+function and the channel model are well known. Additionally,
+a clear benchmark with existing decoders is possible. Although
+very powerful machine learning libraries such as Theano [9]
+and Tensorflow [10] are available nowadays and the computa-
+tion power increased by order of magnitudes, the exponential
+complexity still hinders straight-forward learning of practical
+code lengths as shown in [11]. It was observed in [11], that
+there is a certain generalization of NN decoding, meaning that
+the NN can infer from certain codewords to others it has never
+seen before. This is essential for learning longer codes and
+gives hope that neural network decoding (NND) can be scaled
+to longer codes. However, to the best of our knowledge, the
+naive approach of learning to decode only works for rather
+small block lengths.
+The authors in [12] proposed the idea of using machine
+learning techniques to train the weights of a belief propagation
+factor graph in order to improve its decoding performance for
+high density parity check (HDPC) codes. As the Tanner graph
+is already given initially and only its weights are refined, their
+approach scales very well for larger block lengths and does
+not suffer from the curse of dimensionality. However, in this
+case, the use of machine learning refines an existing solution.
+978-1-5090-5019-2/17/$31.00 ©2017 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 
+The decoding algorithm itself is not learned, since the iterative
+nature of the BP algorithm is kept.
+In our work, we tackle the problem of completely replacing
+the polar code decoder by a machine learning approach. As
+it turns out, only small codeword lengths can be trained
+efficiently, and thus we divide the polar encoding graph
+into several sub-graphs (cf. [13]). We learn sub-block wise
+decoding and couple the components by conventional belief
+propagation (BP) stages. This scales the results from [11]
+towards practical block lengths.
+II. POLAR CODES
+An encoder for polar codes maps the 𝑘information bits
+onto the 𝑘most reliable bit positions of the vector u of length
+𝑁, denoted as information set 𝔸, while the remaining 𝑁−𝑘
+positions are treated as frozen positions. These frozen positions
+are denoted as ¯𝔸and must be known at the decoder side.
+Now the input block u is encoded according to x = u ⋅G𝑁,
+where G = F⊗𝑛is the generator matrix and F⊗𝑛denotes the
+𝑛𝑡ℎKronecker power of the kernel F = [ 1 0
+1 1 ]. The resulting
+encoding circuit is depicted in Fig. 1 for 𝑁= 8, which also
+defines the decoding graph. This factor graph consists of
+𝑛+ 1 = log2(𝑁) + 1 stages, each consisting of 𝑁nodes.
+The BER performance of a polar code highly depends on
+the type of decoder used and has been one of the most exciting
+and active areas of research related to polar coding. There are
+two main algorithmic avenues to tackle the polar decoding
+problem:
+1) successive cancellation-based decoding, following a se-
+rial “channel layer unwrapping” decoding strategy [3],
+2) belief propagation-based decoding based on Gallager’s
+BP iterative algorithm [14].
+Throughout this work, we stick with the BP decoder as its
+structure is a better match to neural networks and enables
+parallel processing. For details about successive cancellation
+(SC) decoding and its list extension called successive cancel-
+lation list (SCL) decoding, we refer the interested reader to [2]
+and [3]. The BP decoder describes an iterative message passing
+algorithm with soft-values, i.e., log likelihood ratio (LLR)
+values over the encoding graph. For the sake of simplicity,
+we assume binary phase shift keying (BPSK) modulation and
+an additive white Gaussian noise (AWGN) channel. However,
+other channels can be implemented straightforwardly. For a
+received value 𝑦, it holds that
+𝐿𝐿𝑅(𝑦) = ln
+(𝑃(𝑥= 0∣𝑦)
+𝑃(𝑥= 1∣𝑦)
+)
+= 2
+𝜎2 𝑦
+where 𝜎2 is the noise variance. There are two types of LLR
+messages: the right-to-left messages (L-messages) and the left-
+to-right messages (R-messages). One BP iteration consists of
+two update propagations:
+1) Left-to-right propagation: The R-messages are updated
+starting from the leftmost stage (i.e., the stage of a priori
+information) until reaching the rightmost stage.
+𝑢6
+𝑢7
+𝑢4
+𝑢5
+u𝑁
+x𝑁
+𝑢2
+𝑢3
+𝑢0
+𝑢1
+𝑥4
+𝑥0
+𝑥5
+𝑥1
+𝑥6
+𝑥2
+𝑥7
+𝑥3
+Fig. 1: Polar Encoding circuit for 𝑁= 8; blue boxes indicate
+the independent partitions of the code for 𝑀= 2 and green
+boxes for 𝑀= 4.
+2) Right-to-left propagation: The L-messages are updated
+starting from the rightmost stage (i.e., the stage of
+channel information) until reaching the leftmost stage.
+The output from two nodes becomes the input to a specific
+neighboring processing element (PE) (for more details we refer
+to [15]). One PE updates the L- and R-messages as follows
+[15]:
+𝐿𝑜𝑢𝑡,1 =
+𝑓(𝐿𝑖𝑛,1, 𝐿𝑖𝑛,2 + 𝑅𝑖𝑛,2)
+𝑅𝑜𝑢𝑡,1 =
+𝑓(𝑅𝑖𝑛,1, 𝐿𝑖𝑛,2 + 𝑅𝑖𝑛,2)
+𝐿𝑜𝑢𝑡,2 =
+𝑓(𝑅𝑖𝑛,1, 𝐿𝑖𝑛,1) + 𝐿𝑖𝑛,2
+𝑅𝑜𝑢𝑡,2 =
+𝑓(𝑅𝑖𝑛,1, 𝐿𝑖𝑛,1) + 𝑅𝑖𝑛,2
+(1)
+where
+𝑓(𝑎, 𝑏) = ln
+(1 + 𝑒𝑎+𝑏
+𝑒𝑎+ 𝑒𝑏
+)
+.
+For initialization, all messages are set to zero, except for the
+first and last stage, where
+𝐿𝑖,𝑛+1 = 𝐿𝑖,𝑐ℎ, and
+𝑅𝑖,1 =
+{
+𝐿𝑚𝑎𝑥
+∀𝑖∈¯𝔸
+0
+else
+(2)
+with L𝑚𝑎𝑥denoting the clipping value of the decoder (in
+theory: 𝐿𝑚𝑎𝑥→∞), as all values within the simulation
+are clipped to be within (−L𝑚𝑎𝑥, L𝑚𝑎𝑥). This prevents from
+experiencing numerical instabilities.
+A. Partitionable Codes
+As opposed to other random-like channel codes with close-
+to-capacity performance, polar codes exhibit a very regu-
+lar (algebraic) structure. It is instructive to realize that the
+encoding graph, as visualized in Fig. 1 for 𝑁= 8, can
+be partitioned into independent sub-graphs [13], [16], i.e.,
+there is no interconnection in the first log2(𝑁𝑝) stages, where
+𝑁𝑝denotes the number of bits per sub-block. We define a
+partitionable code in a sense that each sub-block can be
+decoded independently (i.e., no interconnections within the
+same stage exist; leading to a tree like factor graph). This
+algorithm can be adopted to all partitionable codes and is
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 
+not necessarily limited to polar codes. Each sub-graph (in
+the following called sub-block) is now coupled with the other
+sub-blocks only via the remaining polar stages as depicted in
+Fig. 1. In order to simplify polar decoding, several sub-blocks
+𝐵𝑖can now be decoded on a per-sub-block basis [13]. The
+set of frozen bit positions ¯𝔸need to be split into sub-sets ¯𝔸𝑖
+corresponding to the sub-blocks 𝐵𝑖(with information vector
+u𝑖) and, thus, each sub-block might show a different code rate.
+In a more abstract view, we follow the spirit of [17]. Their
+simplified successive cancellation (SSC) algorithm partitions
+the decoding tree into single-parity checks (SPC) and repeti-
+tion codes (RC). This turns out to be a very efficient way
+of improving the overall throughput, as the SPC and RC
+sub-decoders can be efficiently implemented. Our approach
+replaces these partitions by NNs.
+B. Deep-Learning for Channel Coding
+For the fundamentals of deep learning, we refer the reader
+to [18]. However, for the sake of terminology, we provide
+a brief overview on the topic of machine learning. For a
+more detailed explanation how to train the sub-block NND we
+refer to [11]. A comprehensive analysis of the corresponding
+training complexity is given in [11]. Feedforward NNs consist
+of many connected neurons which are arranged in 𝐿layers
+without feedback connections. The output 𝑦of each neuron
+depends on its weighted inputs 𝜃𝑖𝑥𝑖and its activation function
+g, given by
+𝑦= g
+(∑
+𝑖
+𝜃𝑖𝑥𝑖+ 𝜃0
+)
+.
+(3)
+The whole network composes together many different functi-
+ons f (𝑙) of each layer 𝑙and describes an input-output mapping
+w = f (v; Θ) = f (𝐿−1) (
+f (𝐿−2) (
+. . .
+(
+f (0) (v)
+)))
+(4)
+where v, w and Θ denote the input vector, output vector
+and the weights of the NN, respectively. It was shown in
+[19] that such a multi-layer NN with 𝐿= 2 and nonlinear
+activation functions can theoretically approximate any conti-
+nuous function on a bounded region arbitrarily closely—if the
+number of neurons is large enough. A training set of known
+input-output mappings is required in order to find the weights
+Θ of the NN with gradient descent optimization methods and
+the backpropagation algorithm [20]. After training, the NN is
+able to find the right output even for unknown inputs which
+is called generalization.
+As described in [11], we use a feed-forward deep NN that
+can learn to map a noisy version of the codeword to its
+corresponding information bits. Each hidden layer employs
+rectified linear unit (ReLU) activation functions and the final
+stage is realized with a sigmoid activation function [18] in
+order to obtain output values in between zero and one giving
+the probability that the output bit is “1”. In order to keep the
+training set small, we extend the decoder NN with additional
+layers which model an abstract channel [11], i.e., a training set
+8
+9
+10
+11
+12
+13
+14
+0
+0.2
+0.4
+0.6
+0.8
+# information bits 𝑘
+gap to MAP perf. [dB]
+𝑁= 32
+𝑁= 64
+Fig. 2: Scalability shown by the gap to MAP performance
+in dB at BER = 0.01 for 32/64 bit-length polar codes with
+different code rates for fixed learning epoches.
+containing every codeword is sufficient to train with as much
+training samples as desired.
+It was shown in [11], that it is possible to decode polar
+codes with MAP performance for small block lengths. The
+BER performance gap between a NND and MAP decoding is
+shown in Fig. 2. It illustrates that learning to decode is limited
+through exponential complexity as the number of information
+bits in the codewords increases.
+III. PARTITIONED POLAR NEURAL NETWORK DECODING
+Instead of using sequential SCL sub-block decoders as in
+[13], we replace them by NN decoders. Every sub-block
+NN𝑖covers 𝑘𝑖information bits. As the number of possible
+encoder output states (i.e., different codewords) is 2𝑘𝑖, efficient
+training is only possible for small sub-blocks, containing a
+small amount of information bits 𝑘𝑖[11]. The advantage of
+this concept is that each sub-block NN decoder can be trained
+independently. However, each NN has its own corresponding
+frozen bit positions 𝔸𝑖and a specific block lengths 𝑁𝑖. As we
+deal with man made signals, the training and validation dataset
+can be created by random input data, a conventional polar
+encoder and a channel. Thus, an infinite amount of labeled
+training data is available.
+Now, the NN decoder can be efficiently trained offline to
+MAP performance [11], since the effective block-size per sub-
+block 𝑁𝑖reduces by the number of sub-blocks 𝑀. Each NN
+decoder outputs the decoded codeword (and/or the extracted
+information bits) either as soft-values, i.e., probabilities, or
+after a hard-decision which might require re-encoding. These
+bits are now treated as known values.
+Our proposed decoder consists of two stages (see Fig. 1 and
+Fig. 3):
+1) 𝑀deep learning blocks, trained to decode the corre-
+sponding sub-codeword with length 𝑁𝑖and frozen bit
+position vector 𝔸𝑖
+2) A conventional BP part, when the already decoded sub-
+blocks are propagated via the coupling stages of the
+remaining polar encoding graph.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 
+Polar-like
+structure
+channel input (LLR)
+NND2
+(𝑁2, 𝑘2, 𝔸2)
+ˆu2
+NND1
+(𝑁1, 𝑘1, 𝔸1)
+ˆu1
+...
+...
+...
+...
+...
+...
+...
+decoded codeword
+R
+BP
+L
+ˆx1
+ˆx2
+Fig. 3: Partitioned neural network polar decoding structure.
+After initializing the rightmost stages with the received
+channel LLR-values, messages are propagated from stage to
+stage according to the BP update rules in (1) until the first NN
+decoder stage 𝑛NN (see Fig. 1). Then, the first NN decoder
+estimates the received sub-block NN1. After having decoded
+the first sub-block, the results are propagated via conventio-
+nal BP decoding algorithms through the remaining coupling
+stages (see Fig. 1 and 3). Thus, this algorithm is block-wise
+sequential where 𝑀sub-blocks NN𝑖are sequentially decoded
+from top to bottom. The detailed decoding process works as
+follows:
+1) Initialize stage 𝑛+ 1 with received channel LLR-values
+2) Update stages 𝑛NN to 𝑛+ 1 according to BP algorithm
+rules (propagate LLRs)
+3) Decode next sub-block (top to bottom)
+4) Re-encode results and treat results as perfectly known,
+i.e., as frozen bits
+5) If not all sub-blocks are decoded go to step 2
+The interface between the NND and the BP stages depends
+on the trained input format of the NN. Typically, the NN
+prefers normalized input values between 0 and 1. Fortunately,
+it was observed in [11] that the NN can handle both input
+formats and effective training is possible.
+In summary, the system itself can be modeled as one large
+NN as well. Each BP update iterations defines additional
+layers, which are deterministic and thus do not effect the
+training complexity, similar to regularization layers [18]. This
+finally leads to a pipelined structure as depicted in Fig. 4. As
+each NN is only passed once and to emphasize the difference
+compared to iterative decoding, we term this kind of decoding
+as one-shot-decoding.
+A. Further Optimizations
+As it can be seen in Fig. 2, the limiting parameter is the
+number of information bits per sub-block 𝑘𝑖, since it defines
+BP
+NN1
+BP
+NN2
+BP
+NN3
+received
+codeword 1
+BP
+NN1
+BP
+NN2
+BP
+received
+codeword 2
+BP
+NN1
+BP
+received
+codeword 3
+. . .
+. . .
+...
+...
+𝑡
+Fig. 4: Pipelined implementation of the proposed PNN deco-
+der.
+the number of possible estimates of the NND. One further im-
+provement in terms of sub-block size can be done by merging
+multiple equally-sized sub-blocks such that ∑
+𝑖𝑘𝑖< 𝑘max,
+leading to an unequal sub-block size. This helps to obtain as
+few as possible sub-blocks. The results for 𝑀= 8 partitions
+are shown in Fig. 5.
+Additionally, finetuning-learning can be applied to the
+overall network in order to adjust the independently trained
+components to the overall system. This means that the whole
+decoding setup is used to re-train the system such that the
+conventional stages are taken into consideration for decoding.
+This prevents from performance degradation due to potentially
+non-Gaussian NN-input distributions, which was assumed
+during the training. Such an effect can be observed whenever
+clipping of the LLRs is involved. However, the basic structure
+is already fixed and thus only a small amount of the 2𝑘possible
+codewords is sufficient for good training results. The required
+training set is created with the free-running decoder.
+The coupling could be also done by an SC stage (as ori-
+ginally proposed in [13]) without having additional iterations.
+However, the BP structure suits better to the NN structure as
+both algorithms can be efficiently described by a graph and
+their corresponding edge weights. Thus, the BP algorithm is
+preferred.
+For cyclic redundancy check (CRC) aided decoding (a CRC
+check over the whole codeword) the CRC check can be split
+into smaller parts as in [13], where each CRC only protects
+one sub-block, i.e., the CRC can be considered by the NN
+decoders and thus straightforwardly learned. However, this
+requires at least some larger NN-sub-blocks, otherwise the
+rate-loss due to the CRC checks becomes prohibitive and is
+thus not considered at the moment.
+IV. COMPARISON WITH SCL/BP
+In general, a fair comparison with existing solutions is
+hard, as many possible optimizations need to be considered.
+We see this idea as an alternative approach, for instance in
+cases whenever low-latency is required. The BER results for
+𝑁= 128 and different decoding algorithms are shown in
+Fig. 5. As shown in Tab I, the size of the partitions is chosen
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE I: Number of information bits 𝑘𝑖for each sub-block
+sub-block 𝑖
+1
+2
+3
+4
+5
+6
+7
+8
+sub-block size 𝑁𝑖
+32
+16
+16
+16
+16
+8
+8
+16
+information bits 𝑘𝑖
+1
+3
+11
+5
+13
+7
+8
+16
+0
+1
+2
+3
+4
+5
+6
+10−6
+10−5
+10−4
+10−3
+10−2
+10−1
+𝐸𝑏/𝑁0 [dB]
+BER
+SC
+PSCL8 {32, 16, 16, 16, 16, 8, 8, 16}
+PNN8 {32, 16, 16, 16, 16, 8, 8, 16}
+BP
+SCL (𝐿= 32)
+Fig. 5: BER performance of the proposed partitioned NN
+decoder for 𝑁= 128 and 𝑀= 8 partitions with variable size
+in comparison to state-of-the-art SC, BP and SCL (𝐿= 32)
+decoding.
+such each partition does not contain more than 𝑘max = 12
+information bits, which facilitates learning the sub-blocks. The
+training time of each sub-block highly depends on how many
+information bits the sub-block contains. Therefore, training
+time varies from 30 minutes per sub-block up to one day on a
+single GPU. If the sub-block does not contain any frozen bits,
+a simple hard-decision decoder is used. Basically, the concept
+of partitioning polar codes helps to scale NND to longer codes.
+We denote a partitioned neural network (PNN) with 𝑀
+partitions as PNN𝑀. Although each NN in the PNN can be
+learned to approximately MAP performance, there is a loss 𝜆
+between PNN decoding and conventional SCL decoding with
+list size 𝐿. We limit ourselves in this work to 𝐿= 32. The
+loss 𝜆can be explained by two main reasons:
+1) Loss through partitioning 𝜆part as the concept only
+applies sub-block MAP decoding.
+2) Loss due to sub-optimality of the NND 𝜆NN, due to
+insufficient training or non-Gaussian input distributions.1
+For further analysis of this problem, we replace the NNDs
+in each partition by SCL decoders with list size 𝐿= 32 as
+in [13] and obtain a partitioned successive cancellation list
+(PSCL) decoder. As before, PSCL𝑀terms a PSCL decoder
+1We did not focus on how to find the best NN structure for each NN because
+we want to introduce the concept of partitioned polar codes in order to scale
+NND. We expect that for sufficient training and hyperparameter tuning [21]
+this loss vanishes.
+1
+2
+4
+8
+16
+32
+64
+1
+2
+3
+4
+5
+number of equally sized partitions
+NEPSCL
+𝑁= 64
+𝑁= 128
+𝑁= 256
+𝑁= 512
+𝑁= 1024
+Fig. 6: Effect of the partitioning on the BER performance.
+64bit
+𝜆part
+𝜆NN
+128bit
+𝜆part
+𝜆NN
+256bit
+𝜆part
+𝜆NN
+512bit
+𝜆part
+𝜆NN
+NE
+1
+2
+3
+4
+5
+Fig. 7: Normalized error NEPSCL due to 𝜆part (blue) and NEPNN
+due to 𝜆NN (green) for fixed size of partitions 𝑁𝑖= 16.
+with 𝑀partitions. This enables the investigation of larger
+partition sizes and thus the effect of partitioning, which is
+currently not possible with NNs due to the limited training
+length. Since SCL decoding approximates MAP performance
+for properly chosen parameters [2], the PSCL gives a lower
+bound on the expected BER according to the actual number
+of partitions. This enables to observe 𝜆part and 𝜆NN separately.
+In order to quantify the loss, we introduce a similar concept
+as in [11]: the normalized error (NE) for a decoding concept,
+e.g., PNN, PSCL, which is given by
+NE = 1
+𝐷
+𝐷
+∑
+𝑡=1
+BER (𝜌𝑡)
+BERSCL (𝜌𝑡)
+(5)
+where 𝜌𝑡is a certain signal to noise ratio (SNR) value,
+BER (𝜌𝑡) denotes the decoders BER for this specific SNR and
+BERSCL (𝜌𝑡) is the corresponding BER of the SCL decoder,
+respectively. Thus, NE compares the decoding performance
+over a range of 𝐷different SNR values 𝜌1, . . . , 𝜌𝑇.
+It can be observed in Fig. 6, that NEPSCL increases with the
+number of partitions, i.e., decreases with the partition sizes.
+Fig. 7 relates the effect of 𝜆part and 𝜆NN. It can be observed
+that the main error originates from partitioning and only a
+small part from suboptimal NNs. The amount of sub-blocks
+with larger 𝑘𝑖increases with larger codelength and at the
+same time it is more difficult to achieve MAP performance
+for these blocks [11]. Therefore, the loss 𝜆NN becomes more
+important for longer codes. The training complexity limits the
+feasible sub-block size of PNN decoding and thus long codes
+require a lot of partitions. The larger the number of partitions,
+the larger 𝜆part. However, the fast progress in the machine
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 
+100
+200
+300
+400
+500
+0
+1,000
+2,000
+3,000
+𝑁
+synchronization steps 𝑆
+BP
+SC(L)
+MAP
+PNN
+Fig. 8: Comparison of required synchronization steps for
+different polar decoding approaches.
+learning domain might enable larger sub-blocks, which should
+improve 𝜆part and therefore the overall performance of the
+PNN concept.
+In order to approximate the decoding latency in Fig. 8, we
+count the number of synchronization steps as operations can
+be done in parallel, but need to be synchronized after each
+synchronization step. The latency of the SCL algorithm can
+be described by 𝒪(𝑁log 𝑁) because it estimates each bit
+sequentially. Thus, the number of required synchronization
+steps is
+𝑆SCL = 𝑁log 𝑁.
+The BP algorithm scales much better with 𝒪(log 𝑁) because
+synchronization is required after each BP stage but depends
+on the number of iterations 𝐼, namely,
+𝑆BP = 2𝐼log 𝑁.
+The PNN decoder enforces less BP updates and the NNDs
+itself only synchronize after each layer
+𝑆PNN = 𝑁
+𝑁𝑃
+𝑁𝐻+ 𝑁
+𝑁𝑃
+2 log 𝑁
+𝑁𝑃
+where 𝑁𝑃and 𝑁𝐻respectively denote the size of each
+partition and the number of hidden layers in the NN. Fig. 8
+is given for 𝑁𝑃
+= 16 and 𝑁𝐻
+= 3. To sum up, our
+approach enables latency reduction of BP decoding, while
+being competitive with the SC and BP BER performance.
+V. CONCLUSION
+In this work, we have shown that one way to reach
+scalability of deep-learning based channel decoding can be
+described by replacing sub-components of an existing decoder
+by NN-based components. This enables scalability in terms
+of block length and number of information bits towards
+practical lengths. Meanwhile, the length is still limited to short
+codes as the degradation through partitioning limits the overall
+performance of this concept. The BER performance of our
+decoder turns out to be similar to the SC and BP perfor-
+mance. However, the latency reduces a lot when the inherent
+parallel structure of this algorithm is exploited, since one-
+shot-decoding (i.e., non-iterative decoding) becomes possible.
+We have shown that the performance degradation is mainly a
+result of the small partitions, as the sub-block size is currently
+strictly limited by the training. Nonetheless, the proposed setup
+would scale very well for larger sub-blocks, therefore future
+work needs to be done on potential improvements of the NN
+structure such that larger components become available.
+REFERENCES
+[1] X.-A. Wang and S. B. Wicker, “An artificial neural net Viterbi decoder,”
+IEEE Trans. Commun., vol. 44, no. 2, pp. 165–171, Feb. 1996.
+[2] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Trans. Inform.
+Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[3] E. Arkan, “Channel polarization: A method for constructing capacity-
+achieving codes for symmetric binary-input memoryless channels,” IEEE
+Trans. Inform. Theory, vol. 55, no. 7, pp. 3051–3073, July 2009.
+[4] “RAN1 meeting #87,” http://www.3gpp.org/DynaReport/TDocExMtg–
+R1-87–31665.htm, accessed: 2017-01-09.
+[5] G. Liva, L. Gaudio, T. Ninacs, and T. Jerkovits, “Code design for
+short blocks: A survey,” CoRR, vol. abs/1610.00873, 2016. [Online].
+Available: http://arxiv.org/abs/1610.00873
+[6] S. Cammerer, B. Leible, M. Stahl, J. Hoydis, and S. ten Brink,
+“Combining belief propagation and successive cancellation list decoding
+of polar codes on a GPU platform,” in accepted for 42th Int. Conf. on
+Acoustics, Speech, and Signal Processing (ICASSP), 2017.
+[7] P. Giard, G. Sarkis, A. Balatsoukas-Stimming, Y. Fan, C. y. Tsui,
+A. Burg, C. Thibeault, and W. J. Gross, “Hardware decoders for polar
+codes: An overview,” in 2016 IEEE International Symposium on Circuits
+and Systems (ISCAS), May 2016, pp. 149–152.
+[8] J. Guo, M. Qin, A. G. i Fabregas, and P. H. Siegel, “Enhanced belief
+propagation decoding of polar codes through concatenation,” in 2014
+IEEE Internat. Symp. Inf. Theory, June 2014, pp. 2987–2991.
+[9] R.
+Al-Rfou,
+G.
+Alain,
+A.
+Almahairi,
+and
+et
+al.,
+“Theano:
+A
+python
+framework
+for
+fast
+computation
+of
+mathematical
+expressions,” CoRR, vol. abs/1605.02688, 2016. [Online]. Available:
+http://arxiv.org/abs/1605.02688
+[10] M.
+A.
+et
+al.,
+“Tensorflow:
+Large-scale
+machine
+learning
+on
+heterogeneous
+distributed
+systems,”
+CoRR,
+vol.
+abs/1603.04467,
+2016. [Online]. Available: http://arxiv.org/abs/1603.04467
+[11] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-
+based channel decoding,” in Proc. of CISS, March 2017.
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” Proc. of the Allerton Conf. on Commun.,
+Control, and Computing, 2016.
+[13] S. A. Hashemi, A. Balatsoukas-Stimming, P. Giard, C. Thibeault, and
+W. J. Gross, “Partitioned successive-cancellation list decoding of polar
+codes,” in 2016 IEEE International Conference on Acoustics, Speech
+and Signal Processing (ICASSP), March 2016, pp. 957–960.
+[14] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Inform.
+Theory, vol. 8, no. 1, pp. 21–28, January 1962.
+[15] J. Xu, T. Che, and G. Choi, “XJ-BP: Express journey belief propagation
+decoding for polar codes,” in IEEE Global Communications Conference
+(GLOBECOM), Dec 2014, pp. 1–6.
+[16] B.
+Li,
+H.
+Shen,
+and
+D.
+Tse,
+“Parallel
+decoders
+of
+polar
+codes,”
+CoRR,
+vol.
+abs/1309.1026,
+2013.
+[Online].
+Available:
+http://arxiv.org/abs/1309.1026
+[17] G. Sarkis, P. Giard, A. Vardy, C. Thibeault, and W. J. Gross, “Fast
+list decoders for polar codes,” IEEE Journal on Selected Areas in
+Communications, vol. 34, no. 2, pp. 318–328, Feb 2016.
+[18] I.
+Goodfellow,
+Y.
+Bengio,
+and
+A.
+Courville,
+“Deep
+Learning,”
+2016,
+book
+in
+preparation
+for
+MIT
+Press.
+[Online].
+Available:
+http://www.deeplearningbook.org
+[19] K. Hornik, M. Stinchcombe, and H. White, “Multilayer feedforward
+networks are universal approximators,” Neural Networks, vol. 2, no. 5,
+pp. 359–366, 1989.
+[20] D. E. Rumelhart, G. E. Hinton, and R. J. Williams, “Parallel distri-
+buted processing: Explorations in the microstructure of cognition, vol.
+1.”
+Cambridge, MA, USA: MIT Press, 1986, ch. Learning Internal
+Representations by Error Propagation, pp. 318–362.
+[21] J. S. Bergstra, R. Bardenet, Y. Bengio, and B. K´egl, “Algorithms
+for hyper-parameter optimization,” in Advances in Neural Information
+Processing Systems 24.
+Curran Associates, Inc., 2011, pp. 2546–2554.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:41 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,774 @@
+ITW 2007, Lake Tahoe, California, September 2 - 6, 2007
+
+Functions and Architectures for LDPC Decoding
+
+C. Jones, S. Dolinar, K. Andrews, D. Divsalar Jet Propulsion Laboratory Pasadena, CA 91109-8099 U.S.A.
+{crjones, sdolinar, andrews, dariush}@jpl.nasa.gov
+
+Y. Zhang, W. Ryan Electrical and Computer Engineering
+University of Arizona Tucson, AZ 85721, U.S.A.
+{yifei, ryan}@ece.arizona.edu
+
+Abstract— Implementation of belief propagation for lowdensity parity-check codes involves selection of functions possessing manageable dynamic range, topologic considerations for aggregation of these functions such that nodes of varying degree can be efficiently realized, and message passing architectures that offer various alternatives for flexibility and throughput. This paper discusses each of these topics and contrasts optimal and sub-optimal techniques where appropriate. In particular, optimal functions for producing extrinsic messages in the absence of an inverse function are described and compared to sub-optimal approaches that do not compute a full set of extrinsic messages. In addition we describe structured and universal message passing architectures and discuss scenarios where application of each may be appropriate.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes are undergoing wide adoption in terrestrial and deep-space wireless communication standards. Deployments that seek to maximize performance gains that LDPC codes can offer must consider typical trade-offs associated with area, throughput, implementation loss, and cost. This paper discusses several aspects of these trades and attempts to provide a series of options such that a decoder most appropriate for a given trade space can be realized.
+An operational domain alternative to a decoder embedded within a radio transceiver system is centered on the problem of accelerating computer simulations for studying the behavior of LDPC codes under iterative decoding. Such simulations can require a few months of simulation to reach a bit error rate (BER) below 10−10 on a modern personal computer or workstation. A field-programmable gate-array (FPGA) represents an alternative platform for simulations at these low error rates.
+Many different LDPC decoder implementations have been described in the literature [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], and [12]. Most of these papers focus on decoders for a specific code [2] and [3] or decoders for a class of structured codes [5], [7], [9], and [11]. In this paper we attempt to describe issues related to decoder design in general and also provide several example architectures. In the next section we discuss log-likelihood ratio belief propagation (BP) related functions. Section III provides an analysis of the complexity associated with computing dc unique extrinsic values at a constraint node. Section IV discusses still lowercomplexity techniques that have quite good performance.
+
+Finally, Section V introduces message passing architectures for both structured and arbitrary LDPC codes.
+
+II. BELIEF PROPAGATION
+
+The Tanner graph representing an LDPC code is a bipartite graph with variable nodes on one side and check nodes
+on the other. An iterative LDPC decoder evaluates a multi-
+dimensional function at each node of this graph at each iteration. A degree-dc check node takes inputs from dc variable nodes and produces dc outputs to send back to the same nodes. A degree-dv variable node takes inputs from dv check nodes, plus one additional input from the channel if the corresponding variable is transmitted, and produces dv outputs to send back to the check nodes.
+We first introduce some notation. On the variable node (left-hand) side of the bi-partite graph, messages u arrive and messages V depart. At the constraint node (right-hand) side of the graph messages v arrive and messages U depart. All four message types are log-likelihood ratios (LLRs). The constraint node log-a-posteriori probability, or U AP P , is defined as the constraint node message determined by the dc variable messages that arrive at a constraint node of degree-dc. The notation Uj = U AP P \vj denotes the outgoing constraint message determined by all incoming edges with the exception of edge vj. Message vj represents intrinsic information that is left purposefully absent in the extrinsic message computation Uj = U AP P \vj .
+The extrinsic information Vj = V AP P \uj departing variable nodes is computed by first evaluating the variable node a-posteriori probability V AP P by summing all of the variable node’s inputs, and then “backing out” individual terms from
+this sum by subtraction:
+
+dv
+V AP P = uj
+j=0
+
+Vj = V AP P − uj , (1)
+j=1..dv
+
+where dv is the variable node degree. The so called ‘Log-Hyperbolic-Tangent’ definition of BP
+constraint updating provides a useful starting point for a discussion of various possible constraint node update functions. In the equation below, sign and magnitude are separable since the sign of LnTanh(x) is determined by the sign of x.
+
+1-4244-1564-0/07/$25.00 ©2007 IEEE
+
+577
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+U AP P
+
+=
+
+⎡
+dc
+⎣
+j=1
+
+⎤ sgn(vj )⎦
+
+ln
+
+⎛ ⎝⎜⎜ 1
+1
+
++ −
+
+P dc −
+e j=1
+P dc −
+e j=1
+
+„ ln
+
+1+e−|vj 1−e−|vj
+
+| |
+
+„ ln
+
+1+e−|vj 1−e−|vj
+
+| |
+
+« «
+
+⎞ ⎟⎠⎟
+
+.
+
+(2)
+
+The corresponding extrinsic messages Ui can be written in
+
+terms of the function Λln BP (v) = ln
+
+1+e−|v| 1−e−|v|
+
+, as
+
+⎡
+
+⎤
+
+⎛
+
+⎞
+
+Ui = ⎣ sgn(vj )⎦ Λln BP ⎝ Λln BP (vj )⎠ (3)
+
+i=1..dc
+
+j=i
+
+j=i
+
+The inner recursion in this computation is efficiently performed by first summing terms from all dc inputs to the check node, and then “backing out” individual terms from this sum via subtraction:
+
+dc
+
+Λln BP (vj ) − Λln BP (vi), i = 1, . . . , dc
+
+(4)
+
+j=1
+
+The function Λln BP (v) appearing in both the inner and outer recursions of (3) is evaluated via table look-up. Therefore, computation of all dc extrinsic values in (3) follows from dc table look-ups, dc − 1 additions, dc subtractions, and a final dc table look-ups. The cost of computing the extrinsic sign entails dc − 1 (single-bit) exclusive-or operations to form the AP P extrinsic sign, followed by dc incremental exclusive-or operations to back-out the appropriate intrinsic sign to form
+each final extrinsic sign.
+Although (3) allows very efficient organization of the requisite computations, the critical function Λln BP (v) used in the recursions is notoriously difficult to approximate due
+to dynamic range issues. An alternate approach starts by rearranging (2) for the dc = 2 case,
+
+sgn(v1)sgn(v2) ln
+
+1 + e|v1|+|v2| e|v1| + e|v2|
+
+.
+
+(5)
+
+Two applications of the Jacobian logarithmic identity (ln(ea + eb) = max (a, b) + ln 1 + e−|a−b| ) [13] result in the Min* recursion that is discussed in the rest of the
+paper (note that max() above results in min() below because max(0, |v1| + |v2|) − max(|v1|, |v2|) = min(|v1|, |v2|)),
+
+ΛBP ∗ (v1, v2) = sgn(v1)sgn(v2)Min∗(v1, v2)
+
+(6)
+
+where
+
+Min∗(v1, v2) = min (|v1| , |v2|) + ln 1 + e−(|v1|+|v2|)
+
+− ln 1 + e−||v1|−|v2||
+
+(7)
+
+Note that (6) is not an approximation. It is easy to show that dc−1 recursions on ΛBP ∗ yield exactly U AP P in equation (2), and each of the individual extrinsic messages Ui in (3) can be computed by dc − 2 recursions on ΛBP ∗ . However, because of
+
+0.7
+
+0.6
+
+y(x) = −0.25|x| + 0.6875 |x| < 2.75
+0.5
+
+y(x) = −0.375|x| + 0.6875
+
+|x| < 1.0
+
+0.4
+
+= −0.1875|x| + 0.5 1.0 < |x| < 2.625
+
+0.3
+
+0.2
+
+y(x) = ln(1 + e−|x|)
+
+0.1
+
+0
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+x
+
+Fig. 1: Non-linear function (ΛBP ∗ ) at the core of proposed
+
+algorithm and single / double line approximations to the
+
+function that can easily be implemented in combinatorial logic.
+
+the non-linearity of the recursion (6), it is not possible to first combine all dc inputs to form U AP P and then to “back out” terms one at a time via subtraction to obtain the individual messages Ui. Thus, a straightforward application of (6) would require dc (dc − 2) calls to ΛBP ∗ to update all dc extrinsic messages departing from a degree-dc constraint node. This quadratic complexity compares unfavorably to the 2dc look-up operations (augmented with 2dc−1 additions and subtractions) needed to compute all extrinsic magnitudes based on the form in (3).
+On the other hand, computations based on (6) have a significant advantage over computations based on (3) in that the function Min∗(v1, v2) is much easier to approximate accurately than the function Λln BP (v). The main reason is that, the function ln 1 + e−|x| , used to compute the two correction terms in the definition of Min∗, ranges over a small interval [0, ln(2)], whereas the range of the function ΛLnBP is [0, ∞]. It is very difficult to represent the outputs of ΛLnBP accurately in this unbounded range, but accurately representing the outputs of Min∗ is quite manageable.
+The numerical computation advantages of the Min∗ approach have led to the development of strategies for efficiently organizing the applications of Min∗ to compute the full set of dc outgoing extrinsic messages. The goal is to reduce the requisite number of operations from quadratic in dc to linear in dc. This reduction is possible because many of the dc (dc − 1) ΛBP ∗ operations used to produce dc unique extrinsics share similar partial products. The next section describes a generic scheduling of these operations that produce the dc requisite extrinsics with minimum applications of the ΛBP ∗ operation.
+III. EFFICIENT ORGANIZATION OF THE EXTRINSIC
+COMPUTATIONS
+The method of (6) and (7) is to decompose the computations of the extrinsic messages departing a degree-dc constraint node into a series of binary operations ΛBP ∗ (v1, v2). This binary
+
+578
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+operation is commutative and associative, and it is convenient to denote it generically by v1 v2 ΛBP ∗ (v1, v2). The desired dc outputs from the degree-dc node are
+Ui = v1 . . . vi−1 vi+1 . . . vdc,. (8)
+i=1..dc
+Note that only the input vi is missing from this “generalized summation” for obtaining the extrinsic message Ui.
+Straightforward computation of the expressions in (8) would require dc(dc − 2) applications of the binary operator to produce the dc requisite outputs for each type of node. Fortunately, there are efficient ways to organize the set of binary operations such that intermediate quantities can be re-used for the computation of more than one output. The number of required primitive operations can be reduced from quadratically increasing with dc to linearly increasing with dc.
+For example, if has a readily computable (and equally primitive) inverse operator , then one can first compute
+U AP P = v1 . . . vdc
+by combining all inputs using , and then obtain the dc requisite outputs by “backing out” the individual vi terms using the “generalized subtraction” inverse operator:
+Ui = U AP P vi.
+i=1..dc
+This algorithm requires dc − 1 applications of , plus dc applications of . This approach is the basis for the efficient organization of computations at variable nodes, as represented by (1), where in this case represents ordinary addition and
+represents ordinary subtraction.1 At constraint nodes, however, the primitive operation is the nonlinear function ΛBP ∗ = sgn(v1)sgn(v2)Min∗(v1, v2) defined in (6). While well-behaved approximations are known for Min∗(v1, v2), the same is not true for its inverse. In fact, if Min∗(v1, v2) is replaced by its 0th-order approximation, min(v1, v2), this operation is not invertible. We note that noninvertibility can also happen with finite-precision implementations of variable nodes, if the sum of all inputs uj exceeds the quantizer’s saturation level. For these reasons it is interesting to find algorithms that compute all of the requisite outputs using only operations, and without requiring application of the inverse operator . An algorithm A∗(dc) that uses only 3(dc − 2) operations to correctly compute the dc outputs U1, . . . , Udc , for any set of dc inputs v1, . . . , vdc , is the following: First form dc − 1 intermediate quantities y1 = v1, and yi = yi−1 vi, for i = 2, . . . , dc − 1, by successively “accumulating” the inputs in ascending order. Form another dc − 1 intermediate quantities ydc = vdc , and yi = yi+1 vi, for i = dc − 1, . . . , 2, by accumulating the inputs in descending order. Finally, set U1 = y2, Udc = ydc−1, and compute the remaining dc − 2 outputs as Ui = yi−1 yi+1, for i = 2, . . . , dc − 1.
+1except note that the computations in (1) require one extra operation at a non-punctured variable node to account for its one extra input message (u0) from the channel.
+
+The algorithm A∗(dc) is optimal in the sense that no algorithm A(dc) using only operations can correctly compute the dc requisite outputs U1, . . . , Udc for all possible values of the dc inputs v1, . . . , vdc , using fewer than 3(dc −2) operations. This simple-to-prove result is somewhat obscure in the LDPC
+coding literature, but it has been long noted (e.g., by Mackay
+[17] or by Hu et al [19]) that the complexity of calculating dc unique extrinsics using the BCJR algorithm is 3(dc −2). Proof is by backward induction, starting with any algorithm A(dc) that correctly computes the dc outputs for a degree-dc node, and then deriving from A(dc) a valid algorithm A(dc − 1) for a degree-(dc − 1) node that omits at least three of A(dc)’s applications of .
+
+IV. REDUCED EXTRINSIC APPROXIMATIONS
+
+Further complexity reductions are possible with approxi-
+
+mations that do not require the constraint nodes to produce
+
+dc unique extrinsic outputs. We include by reference the BP-
+
+Based [14] and the Approximate-Min*-BP [16] techniques.
+
+Each is similar in that it produces two, rather than dc, unique
+
+magnitudes per constraint node (sign information is assigned
+
+identically as in Full-BP).
+
+The BP-Based method searches for the first and second
+
+minimum values entering a check node and assigns the second
+
+minimum to the edge whose incoming magnitude was the first
+
+minimum and the first minimum to all other edges. Searching
+
+for the two smallest magnitudes costs at least dc+ log2 dc −2 [15]. The technique loses up to 1 dB of performance compared
+
+to Full-BP. However, incremental-cost variations, for instance
+
+Offset-BP-Based [14] updating, can be tuned such that only
+
+0.1 to 0.2 dB is lost. Another attractive feature of these
+
+techniques is that they obviate the SNR-scaling dependent
+
+correction term in Min* and therefore permit decoder designs
+
+that are free of the typically required channel SNR estimate.
+
+Approximate-Min*-BP operates using
+
+ΛBP ∗ (v1, v2),
+
+but passes a result whose magnitude is exactly equal to
+
+U AP P to all edges save the edge with the lowest incoming
+
+reliability. This edge gets the appropriate extrinsic magnitude
+
+U AP P \vmin. The total cost is dc − 1 comparisons (to find vmin) followed by dc − 1 applications of . In addition to relatively low complexity, the technique exhibits less that 0.05
+
+dB of loss from Full-BP. This has been verified in [16] and in
+
+extensive field programmable gate array based tests across a
+
+wide family of LDPC codes at the Jet Propulsion Laboratory.
+
+The method works because the edge that ‘most needs’ accurate
+
+extrinsic information (the weakest arriving edge) gets it. All
+
+other outgoing messages in Full-BP would be dominated by
+
+the weakest arriving edge, such that inclusion of an additional
+
+intrinsic value in each of these is apparently not detrimental.
+
+A disadvantage of Approximate-Min*-BP is that it relies on
+
+Min* and therefore requires a reasonable SNR estimate such
+
+that initial variable observations are appropriately scaled.
+
+V. LOW DENSITY PARITY CHECK CODE DECODERS
+In this section we describe message passing architectures for qausi-cyclic codes based on shifted identity (circulant) liftings
+
+579
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+of small bi-partite graphs called protographs [18]. We then present distinct message passing architectures that include row and column pre-processing techniques for graphs that possess not inherent structure.
+A. A Decoder for Structured Protograph-Based Codes
+LDPC decoders implemented in hardware are typically partially parallel, partially serial machines. The decoding graph for an LDPC code generally has several hundred to several thousand variable and check nodes, while a typical FPGA or ASIC is only large enough to perform the simultaneous computations associated with a few to a few score graph nodes.
+For LDPC codes with a protograph structure, it is natural to build a decoder that updates all of the variable (or check) nodes in one copy of the protograph simultaneously, and that updates each of the copies serially. The graph for an (n = 12, k = 4) LDPC code is sketched in Figure 2, built from a protograph with three variable nodes and two check nodes, and expanded by a factor of four. Variable nodes are shown as circles, check nodes as squares, and the copies of the protograph are interconnected by cyclic shifts within the bundles of edges. A decoder for this code is assembled placing memories on each graph edge as shown, and interconnecting them with computation circuits at each of the graph nodes. This example contains three variable node computation circuits, two check node computation circuits, and eight memory blocks.
+Before decoding begins, the received noisy channel symbols are stored in the channel symbol memories at the top of the figure, and all the edge memories are cleared. In the first clock cycle of the first half-iteration in the decoding process, the three variable node circuits act as the top variable node of each stack in the figure. Simultaneously, each fetches the first channel symbol from its channel memory, and the first incoming messages from each of the edge memories. Each computes new outgoing messages, and writes these values back to the edge memories. In the second clock cycle, the variable node processing units repeat the process for the second layer in the figure, and so on, until all the variable nodes in the graph have computed output messages. This completes the first half-iteration, and leaves the edge memories filled with messages bound from variable nodes to check nodes.
+The second half-iteration proceeds similarly, with the two check node processing units consecutively updating copies of the check-node half of the protograph. Rather than accessing the edge memories in sequence, the check nodes add an offset (modulo the circulant size) to the memory addresses to implement the circulant shifts. Iterations continue in this fashion, until all check equations are satisfied or some maximum number of iterations is reached. This decoder is particularly convenient in hardware because there is no need for a switch matrix to manipulate edge connections, or for a large description of the LDPC code with which to control that switch matrix. Instead, the protograph is wired in place, and the circulant “phases” are stored as a small number of
+
+channel sym memory
+
+channel sym memory
+
+channel sym memory
+
+edge edge memory memory
+
+edge memory
+
+edge memory
+
+cyclic shift
+
+cyclic shift
+
+cyclic shift
+
+cyclic shift
+
+edge memory
+cyclic shift
+
+Fig. 2: Top level view of an architecture for structured protograph decoding.
+
+constants used to adjust the memory addresses used by the check node processors.
+In practice, the hardware resources available may not be well matched to the size of the protograph. This is readily solved by expanding the protograph to fill the circuit area available, with minor modifications to the memory addressing circuits. It is also probable that the node computation circuits cannot perform full message updates in a single clock cycle; they are readily pipelined without memory access problems, because the permutations for each edge bundle are simple cyclic shifts.
+
+B. Universal Decoder Architecture : Type I
+
+In this section, we introduce the first type (Type-I) of univer-
+
+sal LDPC decoder architecture, based on a preprocessing oper-
+
+ation on the parity-check matrix, which is capable of decoding
+
+an arbitrary (e.g., with random H matrix) LDPC code and is
+
+easily reconfigurable. A similar idea was proposed in [8], but
+
+discussed briefly. We present here for the Type I architecture
+
+the memory allocation and H matrix preprocessing algorithm
+
+for load balancing. This architecture is particularly effective
+
+for unstructured, irregular LDPC codes, and is quite general
+
+and easily reconfigurable.
+
+In this architecture, we target a partially parallel structure
+
+and exploit a serial implementation of the node processors.
+
+First, H is divided into N column blocks and M row blocks,
+
+where N and M are design parameters selected for conve-
+
+nience or according to some practical constraints. Each column bcliabolsoluetcldkbroyicwnoNcnlbs.ulidEosectaskcohfcNrnooumwldocbodclloou(cnmnks,niissnt,Nnceolxuf)cdeecpsmotluothM mmdant(smtrhwoe,whlaesMms,ntencx)ocilersuopnmwtotnsthdbawtilvhotihecsnkem is not divisible by M . There will then be N variable node
+
+processors (VNPs) and M check node processors (CNPs), with
+
+the VNPs operating in parallel during one half-iteration and the
+
+CNPs operating in parallel during the other half-iteration. Each
+
+VNP CNP VNP
+
+performs performs is shared
+
+calculations for
+
+calculations for
+
+by
+
+n N
+
+columns,
+
+n Nm M
+
+variable nodes and each check nodes. Because a
+
+and similarly for the CNPs,
+
+the number of node processors is much smaller than that of the
+
+580
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3: Serial implementation of variable node processor by method of Eq. 1.
+
+fully parallel architecture. This architecture also reduces the
+
+number of interconnections between the variable nodes and
+
+the check nodes.
+
+A memory location which stores messages (LLRs) is as-
+
+sociated with each edge (equivalently, with each 1 in H).
+
+Each node processor first accesses the memory locations of the
+
+edges adjacent to a group of nodes. Unlike structured codes,
+
+for the generic unstructured LDPC code, this information is
+
+scattered randomly in memory. The main problem for the
+
+universal decoder design is the arrangement of edge-messages
+
+into a limited number of memory blocks, avoiding memory-
+
+access violations. Instead of updating all of the messages for
+
+a node together within one clock cycle, the computation for
+
+a node processor in a Type-I universal decoder is executed
+
+sequentially. That is, the node processor receives the incoming
+
+messages serially. After a set of operations, the outgoing
+
+messages are sent out and stored in the corresponding edge-
+
+memory elements one by one. The implementations for the
+
+serially operated VNPs and CNPs are shown in Fig. 3 and
+
+Fig. 4, respectively. The operations in a VNP use a 2’s-
+
+complement (2C) representations, while those in a CNP use
+
+sign-magnitude (SM) representation. There are two conversion
+
+blocks, 2C-to-SM and SM-to-2C, at the outputs the VNPs
+
+and CNPs. In a CNP, the most-significant bit (MSB) of
+
+the messages is a sign bit which is separated for the sign
+
+calculation. Λln BP is evaluated by a look-up table (LUT) and
+
+the implementation proceeds according to (3). Observe that
+
+these serial implementations are adaptable to any node degree
+
+and hence can easily accommodate irregularity. The serial
+
+design also makes the insertion of pipelines very easy. Thus,
+
+the partially parallel structure reduces the area and improves
+
+throughput, while the serial node processor simplifies memory
+
+allocations and works with any node degree.
+
+As described above, H is partitioned into M N submatrices
+
+of size
+
+m M
+
+×
+
+n N
+
+and a block of memory is allocated to
+
+each of these submatrices. The size of a given memory block
+
+is proportional to the number of 1’s in the submatrix to which
+
+it corresponds. We can uniquely label each edge by a pair
+
+of integers (x, y), where x ∈ {1, 2, ..., M N } is the memory
+
+block index and y is the edge index of the memory block.
+
+The specifics of this labeling scheme and, more generally, the
+
+Type-I universal decoder will be illustrated by the following
+
+example.
+
+Example 1: Consider the parity-check matrix for a regular
+
+Fig. 4: Serial implementation of check node processor by method of Eq. 3.
+
+code with column weights dv = 3 and row weights dc = 6:
+
+⎡
+
+⎤
+
+100010110011
+
+H = ⎢⎢⎢⎢⎣⎢⎢
+
+0 0 1 1
+
+0 1 1 1
+
+1 0 0 1
+
+1 1 1 0
+
+0 1 1 0
+
+0 0 1 1
+
+1 0 0 0
+
+1 1 0 0
+
+1 1 1 0
+
+1 1 0 0
+
+0 0 0 1
+
+0 0 0 1
+
+⎥⎦⎥⎥⎥⎥⎥ .
+
+(9)
+
+001001100111
+
+For this code, n = 12 and m = 6. We choose the parallelism factors for VNP and CNP to be N = 3 and M = 2. There are 36 edges (i.e., 1’s in H) which correspond to a total of 36 memory elements. First, we partition the H matrix into M N = 6 submatrices, with the edges indexed as in Fig. 5(a). If we label the memory blocks from 1 to 6 column-by-column, then the required storage capacities (numbers of 1’s in the submatrices) are 5, 7, 7, 5, 6, and 6. The imbalance of the memory block size is of course due to the different number of 1’s in the submatrices. This can be easily resolved by an appropriate column permutation. (In general, row permutations would also be performed, but these are not necessary here.) Specifically, the six submatrices will be balanced at six edges each if we exchange columns 4 and 8, as shown in the Fig. 5(b). The corresponding memory blocks for these six groups of six edges would be configured as in the model of Fig. 5(c).
+Fig. 6 shows the decoder structure for this example. As explained above, each edge is represented by a pair of integers (x, y), where in this case both x and y range from 1 to 6. As an example, VNP3 is responsible for sequentially processing variable nodes v9, v10, v11 and v12, whose edge-memories reside in memory blocks 5 and 6 (see Figs. 5(b) and (c)). The messages updated by variable node v9 traverse along the edges (5,1), (5,2), and (6,1). The VN updating is completed in four VN cycles, each of which takes a few clock cycles depending on the design. After the VN update, the decoder switches to the CN update stage. The two CNPs work in a manner similar to what we have just described for the VNPs. Observe that no two edges from the same memory block will be processed during the same clock cycle so that memory-access violations are prevented. The specific information about the connections between variable nodes and check nodes should be stored in
+
+581
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 6: Decoder structure for the LDPC code in Example 1.
+
+Fig. 5: Rearrangement of H matrix and corresponding memory blocks.
+ROMs initially. Because of the regularity of the code in the above example,
+each node takes the same number of clock cycles to complete the computations. The control logic for all of the VNPs (or CNPs) are exactly the same. All the node processors can share one control module whose output depends on the node degree. However, the case for irregular codes is different. This is because nodes of different degrees can be processed in the same node cycle as shown in Fig. 7. Clearly, the low-degree nodes are processed in a shorter period of time than the highdegree nodes, and the length of the node processing cycle is determined by the node of with the largest degree. The result is idle time slots for the VNP processors corresponding to lowdegree nodes. To utilize the processors efficiently (minimize idle time), we propose the following preprocessing algorithm.
+The preprocessing of an H matrix for an irregular LDPC code requires three steps, all involving row and column permutations. First, the columns and rows are sorted in ascending order according to their weights (degrees). Thus, if we label the columns by their weights (i.e., VN degrees), the sorted order would be c(d11), cd(21), ..., cd(n11), c(d12), cd(22), ..., cd(n22), and so on, where d1 < d2 < ... are the VN degrees. The rows are sorted in an analogous manner. Second, columns and rows of the same degree are distributed as uniformly as possible across the predetermined N VN groups and M CN groups in the following manner: the first column c(d11) is put in the first VN group, the second column c(d21) is put in the second VN group, ..., the N -th column is put in the last VN group;
+
+the N + 1-th column is put in the first VN group, and so on.
+
+After this redistribution of the columns, an analogous process
+
+is applied to the rows. This redistribution guarantees that the
+
+nodes updated at the same node cycle possess degrees with
+
+minimum differences, so that the overall number of clock
+
+cycles for the decoder is minimized (consider Fig. 7). For
+
+the third step, as discussed for regular codes, the number of
+
+1’s in each of the
+
+MN
+
+submatrices should be
+
+close
+
+to
+
+E MN
+
+to
+
+balance the load for each memory block, where E is the total
+
+number of edges in the Tanner graph (1’s in the parity check
+
+matrix). However, there is another constraint required to apply
+
+this procedure to irregular codes. Namely, we only exchange
+
+the columns or rows with the same degree to maintain the
+
+minimum overall number of clock cycles.
+
+C. Universal Decoder Architecture : Type II
+A hardware decoder suitable for decoding unstructured graphs was also constructed at JPL and used to test hundreds of candidate code designs for threshold and error-floor performance at throughputs close to 10 Mbps on a Xilinx Virtex-II XC2V 8000 FPGA.
+The design partitions the code’s parity matrix into L block columns and L block rows as shown in Fig. 8 (for L=4). As will be described, data is ordered alternatingly in column and row order in L total addressable RAM elements. Block columns (rows) are assigned variable (check) nodes such that
+
+Fig. 7: Waste clock cycles for irregular codes.
+
+582
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+the total number of edges in each block column (row) is as
+
+close to constant as possible while still containing an integer
+
+number of variables (checks). In this way, the Type-II decoder
+
+differs from the previously described Type-I decoder. Specif-
+
+ically, nodes
+
+while the Type-I decoder per column block, Type-II
+
+would assign
+
+assigns
+
+E L
+
++
+
+n L
+γ
+
+variable edges per
+
+column block where E is the total number of edges in the
+
+parity matrix and γ < dmax ensures that block columns end on variable node boundaries (dmax is the maximum variable or constraint node degree of the code).
+
+This has some advantages. First, given that node processors
+
+consume edges serially (for instance Figs. 3, 4), the total time
+
+spent in any given block column (row) is roughly the same
+
+regardless of code irregularity. This means that idle time is
+
+essentially avoided since all block column (row) processors
+
+finish after a similar number of clock cycles. A challenging
+
+aspect of the architecture is how to move data from the L
+
+edge memory RAMs from a column to row ordered format
+
+(and vice-versa). This is addressed with a second partitioning,
+
+shown in Fig. 8, where block columns (rows) are divided into
+
+sub-matrices such that
+
+E L2
+
+edges are assigned to each sub-
+
+matrix. A total of 4L RAMs are deployed. Of these, 2L are
+
+used by L variable (constraint) node processors in a from/to
+
+manner to update extrinsic values while an additional 2L
+
+RAMs implement column-to-row or row-to-column interleav-
+
+ing.
+
+The interleaving schedule is described by the color coded
+
+labeling in Fig. 8. Here there are L block columns and L block
+
+rows, each represented by a physical RAM element. In the
+
+figure, all elements from the ‘A’ group are interleaved without
+
+collision in
+
+E L2
+
+clock cycles, then all elements from the ‘B’
+
+group, and so on. The most expensive aspect of the architecture
+
+is that over the course of the L interleaving time periods, the
+
+output path from each block column (row) must be connected
+
+to the input path from each block row (column). This requires a cross-bar whose complexity scales as L2. Given this constraint,
+
+we have been able to achieve parallelism factors up to L = 16
+
+in commercially available FPGAs.
+
+Due to the double buffering, the decoder operates on two
+
+blocks simultaneously and its total throughput scales like
+
+A
+
+D
+
+C
+
+B
+
+B
+
+A
+
+D
+
+C
+
+C
+
+B
+
+A
+
+D
+
+D
+
+C
+
+B
+
+A
+
+Fig. 8: Collision-free interleave scheduling for an L = 4 parallel decoding implementation. Regions labeled with the same letter are interleaved from/to during the same time span.
+
+N (F L/2EI), where I is the number of decoding iterations, F is the clock rate, and N is the code block size.
+VI. CONCLUSION
+This paper describes several aspects of LDPC decoder
+design. We considered various constraint node functions and
+discussed their dynamic range and operational complexities.
+Message passing architectures for structured and unstructured
+graphs were presented and possible circuit implementations
+were described.
+REFERENCES
+[1] R. G. Gallager, Low Density Parity Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] A. Blanksby and C. Howland, ”A 690mw 1Gb/s, rate-1/2 low-density parity-check code decoder,” IEEE Journal of Solid-State Circuits, vol. 37, pp. 404-412, Mar. 2002.
+[3] E. Yeo, P. Pakzad, B. Nikolic´ and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magnetics, vol. 37, pp. 784-755, Mar. 2001.
+[4] T. Zhang and K. K. Parhi, “A 54Mbps (3,6)-regular FPGA LDPC decoder,” IEEE Workshop on Signal Processing Systems, pp. 127-132, Oct. 2002.
+[5] T. Richardson and R. Urbanke, “Methods and apparatus for decoding LDPC codes,” United States Patent 6,633,856, Oct. 14, 2003.
+[6] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Transactions on VLSI Systems, vol. 11, no. 6, 2003.
+[7] S. Olcer, “Decoder architecture for array-code-based LDPC codes.” IEEE Global Telecommunications Conference, vol. 4, pp. 2046-2050, Dec. 2003.
+[8] F. Guilloud, “Generic architecture for LDPC codes decoding,” Ph.D. dissertation, Telecom Paris, 2004.
+[9] Z. Wang, Y. Chen, and K. K. Parhi, “Area efficient decoding of quasicyclic low density parity check codes,” Proc. of IEEE International Conf. on Acoustics, Speech, and Signal Processing, vol. 5, May 2004, pp. 4952.
+[10] Z. Wang and Q. Jia, “A 170Mbps (8176, 7156) quasi-cyclic LDPC decoder implementation with FPGA,” The 2006 IEEE International Symposium on Circuits and Systems, 21-24 May 2006, pp. 5095-5098.
+[11] L. Sun, B. V. K. Vijaya Kumar, “Field programmable gate array implementation of a generalized decoder for structured low-density paritycheck codes,” IEEE International Conference on Field Programmable Technology, 2004.
+[12] Se-Hyeon Kang and In-Cheol Park, “Loosely coupled memory-based decoding architecture for low density parity check codes,” IEEE Transactions on Circuits and Systems I: Fundamental Theory and Applications, vol. 53, pp. 1045-1056, May 2006.
+[13] E. Eleftheriou, T. Mittelholzer, and A. Dholakia,“A reduced-complexity decoding algorithm for low-density parity-check codes”, IEE Electron. Letters, vol. 37, pp. 102-104, Jan. 2001.
+[14] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, H. Xiao-Yu, “Reduced-Complexity Decoding of LDPC Codes”, IEEE Transactions on Communications, vol. 53, pp. 1288-1299, Aug. 2005.
+[15] D. E. Knuth, “The Art of Computer Programming”, Reading, MA. Addison Wesley, 1973, vol. 3, pp. 181-242.
+[16] C. Jones, E. Valles, M. Smith, and J. Villasenor, “Approximate-Min* constraint node updating for LDPC code decoding”, Proc. IEEE Military Communications Conference (MILCOM), vol. 1, pp. 157-162, Oct. 2004.
+[17] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices”, IEEE Trans. Inf. Theory, vol. 45, no. 3, pp. 399-431, Mar. 1999.
+[18] J. Thorpe,“Low Density Parity Check (LDPC) Codes Constructed from Protographs”, JPL INP Progress Report 42-154, Aug. 2003.
+[19] X. Hu, E. Eleftheriou, D. Arnold, A. Dholakia, “Efficient implementations for the sun-product algorithm for decoding LDPC codes”, Proc. IEEE Internation Conference on Communications, 2001.
+
+583
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:42 UTC from IEEE Xplore. Restrictions apply.
+
+

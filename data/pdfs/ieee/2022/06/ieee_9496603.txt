@@ -1,0 +1,449 @@
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+1785
+
+Exploiting Uncorrectable Data Reuse for Performance Improvement of Flash Memory
+Jinhua Cui , Member, IEEE, Cheng Liu, Junwei Liu, Jianhang Huang , and Laurence T. Yang , Fellow, IEEE
+
+Abstract—With the increased density and the technology scaling, flash memory is more vulnerable to noise effects, overwhelmingly lowering the data retention time. The periodic data refresh technique is commonly used to retain the long-term data integrity. However, the frequent refresh requests introduce the increased access conflict and severe write amplification, leading to suboptimal performance and lifetime improvement of flash memory-based storage systems. In this article, we propose ApproxRefresh, which enables the uncorrectable data reuse with the assistance of approximate-computing applications to reduce the refresh costs. Specifically, we design a lightweight remapping-free refresh technique, called RFR, to periodically correct, compute an enhanced ECC, and only remap new ECC parity bits, which dramatically reduces the refresh costs. Then, with approximate-read and precise-read hotness awareness, ApproxRefresh selectively adopts RFR or the traditional remapping-based refresh technique to reduce the refresh costs and the read disturbance. Besides, ApproxRefresh further improves flash access performance based on data hotness and process variations. In addition, a corresponding ApproxRefreshaware garbage collection algorithm is proposed to complete the design. Evaluations show that ApproxRefresh reduces the refresh latency by 36.19% over the state of the art.
+Index Terms—Approximate computing, data refresh, flash memory, garbage collection, solid-state drives.
+I. INTRODUCTION
+I N THE past decade, NAND flash memory-based solid-state drives (SSDs) are widely adopted in the storage systems, ranging from embedded systems in the mobile devices to the large-scale cloud platforms. With the continuing technology scaling, the bit density improvement, and the 3-D flash technologies, SSD capacity has been dramatically boosted [1], [2]. However, while modern high-capacity SSDs are yielded by
+Manuscript received January 26, 2021; revised April 27, 2021 and July 8, 2021; accepted July 11, 2021. Date of publication July 26, 2021; date of current version May 20, 2022. This work was supported in part by the National Natural Science Foundation of China under Grant 61902136 and Grant 61932010, and in part by the Fundamental Research Funds for the Central Universities under Grant 2019kfyXJJS090. This article was recommended by Associate Editor Z. Shao. (Corresponding author: Jinhua Cui.)
+Jinhua Cui, Cheng Liu, and Junwei Liu are with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan 430074, Hubei, China (e-mail: cjhnicole@gmail.com; chengliu98@outlook.com; ljweii@163.com).
+Jianhang Huang is with the School of Electronic and Information Engineering, Xi’an Jiaotong University, Xi’an 710049, Shaanxi, China (e-mail: huangjhsx@gmail.com).
+Laurence T. Yang is with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan 430074, Hubei, China, and also with the Department of Computer Science, St. Francis Xavier University, Antigonish, NS B2G 2W5, Canada (e-mail: ltyang@ieee.org).
+Digital Object Identifier 10.1109/TCAD.2021.3100310
+
+these advanced technologies, the charge loss is much more severe, decreasing the data retention time [3].
+In order to retain the long-term data integrity by mitigating the retention errors of flash memory, the state-of-the-art SSDs widely employ the periodic data refresh technique [4], [5]. Before the retention-induced errors surpass the error correction capability of the error correction code (ECC), the refresh request periodically reads the data out, corrects possible errors, and then remaps the stored data into a new location. However, the refresh request interferes with the user I/O requests, degrading the I/O performance of the storage device. Owing to the interference with refresh requests, the normal I/O requests may be blocked and the read/write latency variance raises up to 100×. In addition, the flash endurance is highly correlated with the program/erase (P/E) cycles. The frequent writes in the refresh requests contribute to severe write amplification and, thus, degrading the flash memory lifetime. As a result, flash refresh technology creates difficulty in guaranteeing the stringent performance and endurance requirements of SSDs. In the literature, much effort has been invested to reduce the refresh costs. This includes the specified in-place programming for the refresh requests [4], avoiding refreshing the hot data [5], [6], reducing the refresh frequency through better data layout [3], [7], or accommodating the temperature impact [8].
+In this work, we first pursue a better understanding of the data characteristic after performing the refresh request, and find better ways to mitigate the refresh costs. The refreshed data that have been remapped by the conventional data refresh technique in SSDs, are referred to as the uncorrectable data, for the reason that their errors are likely to surpass the error correction capability of ECC. We reconsider the data reliability problem of the refreshed data and analyze the actuality of the uncorrectable data. Our key finding from the characterization of refresh is that the uncorrectable data rise considerably with the increased refresh frequency in the modern high-capacity flash-based SSDs. Although it is difficult to reuse these uncorrectable data for conventional precise storage system, the increasingly widespread approximate-computing applications [1], [9] provide a great opportunity to flexibly exploit them for improving refresh performance. Approximatecomputing applications, such as audio, video, and image processing applications, have the inherent error tolerance. For example, even though some data pages could not be corrected by the ECC engine in SSDs, they could be tolerated by approximate-computing applications. Many works have been proposed to exploit error resilience data for access
+
+1937-4151 c 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1786
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+performance improvement [1], [9], [10]. Different from these works that use flash memory to store either approximate data or precise data, systems using our scheme can support both precise read and approximate read for the same data, e.g., an image is error resilient for recognition applications (need supporting approximate read), while it also should be precise for scientific computing applications (need supporting precise read for the same data).
+We propose ApproxRefresh, the approximate-aware refresh scheme for NAND flash memory-based SSDs, which enables uncorrectable data reuse (UDR) with the assistance of approximate-computing applications. To achieve this goal, several approaches are proposed. First, a remapping-free refresh technique (RFR) is proposed to periodically correct, compute an enhanced ECC, and only remap new ECC parity bits, which reduces the refresh costs dramatically while exploiting UDR for the subsequent read requests. Second, the approximate read-aware RFR (AR-RFR) is proposed to selectively adopt RFR, the traditional remapping-based refresh (we call RBR in this article), or RBR with UDR, to reduce the refresh costs and the read disturbance. Third, AR-RFR further improves flash access performance by considering both process variations (PVs) and data hotness. Fourth, a corresponding ApproxRefresh-aware garbage collection algorithm (ApproxGC) is proposed to complete the design. The following summarizes our contributions.
+1) We explore the potential of UDR by selectively adopting low-overhead RFR or RBR with the approximate-read and precise-read hotness awareness. As a result, the refresh costs and the read disturbance are reduced dramatically.
+2) We enhance the proposed approximate-aware refresh scheme with PV awareness to further improve the flash access performance.
+3) We also propose a corresponding ApproxRefresh-aware garbage collection algorithm to assist the implementation of ApproxRefresh.
+4) Evaluations show that ApproxRefresh reduces the refresh latency by 36.19% over the state of the art. In addition, we observe that ApproxRefresh dramatically reduces the refresh costs especially for the modern high-capacity flash memory.
+II. BACKGROUND AND RELATED WORK
+A. Data Errors in Flash Memory
+In the NAND flash memory cell, the floating gate transistor (FGT) can hold electrical charges that are used to represent data. The different number of charges stored in FGT denotes different stored data. These data stored in the flash memory cell are prone to errors.
+Data errors in flash memory have attracted tremendous research attention over the past ten years. These errors can be classified into four main categories, namely, read disturbance error, program interference error, P/E cycling error, and retention error, respectively. The dominant source of flash errors is the retention error that leaks charge away from FGT after programming the flash memory cell [11]. The P/E cycling error
+
+Fig. 1. Procedure of refresh.
+is another profound factor, which causes charge trapped in FGT with the repeated P/E cycles. With more P/E cycles, the flash cell gradually wears, resulting in more data failure. The third error type is the program interference error [12]–[14]. When programming one flash cell, its surrounding flash cells unintentionally shift the threshold voltages because of the parasitic capacitance coupling between these flash cells. The last one is the read disturbance error [15]–[17]. While frequently accessing the same data, the pass-through voltage applied to the unread flash cells within the same block generates a weak programming effect, as a result, the unread flash cells unintentionally change the stored data. All these errors deteriorate the reliability problem of flash memory.
+To correct raw bit errors, ECC is being used in all the NAND flash memory-based SSDs, e.g., Bose–Chaudhuri– Hocquenghem code (BCH), or low-density parity-check code (LDPC) [18]–[21]. By encoding user data with extra parity data, each flash page is associated with ECC. When one or more bits are corrupted by errors, e.g., retention errors or read disturbance errors, the user data can be reconstructed with these redundancy parity data. If the number of bit errors exceeds the error correction capability of ECC, ECC will fail to recover the original data.
+B. Data Refresh on Flash Memory
+One common solution to deal with the deteriorated flash reliability problem is to use the periodic data refresh technique. As shown in Fig. 1, the refresh procedure consists of the following steps: 1) under the refresh request, a victim flash block is selected; 2) the valid pages in the victim flash block will be read out to SSD controller, with in-order reading; 3) ECC engine corrects the possible errors in the pages; and 4) the error-free data pages are programmed to free flash pages. Meanwhile, the mapping information of the logical page address (LPN) to the physical page address (PPN), short for LPN-to-PPN, is remapped with the updated PPN in the mapping table. Beside, the state of the old physical page in the victim block is changed to invalid.
+Although this straightforward remapping-based refresh technique guarantees the long-term data integrity, the extra read and program operations may block the normal I/O requests and prevent flash memory from achieving high-performance guarantee for modern applications. Furthermore, the refreshinduced writes consume more P/E cycles, and thus degrade the flash memory lifetime. Cai et al. [4] designed a specified in-place refresh technique to reduce the implementation overhead, whereas the adaptive-rate FCR adaptively adjusts
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+
+1787
+
+the refresh frequency to reduce the number of refresh operations. Luo et al. [6] separated the write-hot data away from seldom updated pages, which avoids performing costly refresh operations on the frequently updated data pages. Di et al. [3], [7] designed a better data layout that considers both the block endurance and the data retention time requirement, to minimize the refresh operations. In particular, the data required to retain for long-duration time are allocated to the blocks with high endurance with priority. Seif et al. [8] accommodated the temperature impact on the data retention time and proposed a flexible data refresh technique to reduce the number of the refresh operations. Farjallah et al. [22] advanced refresh granularity to pages and proposed a selective refresh technique to adapt the refresh frequency of any specific data page to its actual raw bit-error rate (RBER).
+All the above research efforts have been devoted to the design of efficient data refresh technique in SSDs. In contrast to these prior works, our proposed ApproxRefresh scheme is based on our key observation: the uncorrectable data increase considerably in the modern high-capacity flash-based SSDs. To the best of our knowledge, this article is the first one on exploiting the UDR for reducing the refresh costs. We want to highlight that our proposed ApproxRefresh scheme is orthogonal to the state-of-the-art data refresh techniques in SSDs. Consequently, our proposed ApproxRefresh scheme can be combined with them to further improve the refresh performance.
+C. Approximate Computing
+Approximate computing exploits the error resilience of the approximate data in many modern applications, e.g., image processing, scientific computation, and video storage. These applications can tolerate the occasional errors. For example, even though some data pages could not be corrected by ECC engine in SSDs, they could be tolerated by approximate computing applications. However, data in the conventional precise applications must be entirely accurate after the error correcting of ECC. Previous studies have exploited approximate data for improving the I/O performance, the storage lifetime, or the storage density. Sampson et al. [9] and Han et al. [23] proposed to reuse the worn-out blocks to store approximate data, so as to extend the flash lifetime significantly. Sampson et al. [9] and Cui et al. [1] leveraged approximate data to enhance the write performance. Li et al. [10] leveraged approximate data to improve the robustness of precise data, whereas Li et al. [24] proposed an approximate SSD cache to reduce eviction frequency. Researches also proposed the specified approximate storage substrates for the specified applications, e.g., image encoding, video encryption [25], [26].
+Different from the approximate flash storage which uses flash memory cells with various reliability to store either approximate or precise data, systems using our scheme can support both precise read and approximate read for the same data, thus improving feasibility and flexibility of storage system. In addition, approximate flash storage achieves performance/lifetime/energy benefits by speeding up the read/write processing of approximate data, while our
+
+Fig. 2. What are the uncorrectable data?
+scheme explores the potential of UDR for minimizing the refresh costs and reducing the read disturbance.
+III. MOTIVATION In this section, we introduce the concept of the uncorrectable data that used in ApproxRefresh, its actuality, and then how it can be exploited for the refresh performance benefits.
+A. What Are the Uncorrectable Data? To retain the long-term data integrity, the data refresh tech-
+nique is widely employed in the modern flash-based SSDs. After refreshing the victim flash block through the conventional refresh approach, e.g., FCR [4], the RBERs of the original data on the selected flash block go beyond the error correction capability of ECC. These original data are referred to as uncorrectable data in the specific time interval between the end time of the refresh operation and the start time of the next erase operation. As shown in Fig. 2, at time t2, data are refreshed. At time t3, the next erase operation is performed on the same data. The data residing in the refreshed flash page during the time interval between t2 and t3 are uncorrectable data. Since the RBERs of uncorrectable data go beyond the error correction capability of ECC, the traditional read requests on the uncorrectable data fail. It may seem that uncorrectable data are useless data. Our experiments observe that the uncorrectable data exist for a long time and in this article, we try to exploit the uncorrectable data for the refresh cost reduction.
+B. Why Do the Uncorrectable Data Rise? There are two main causes of the increment of the uncor-
+rectable data. First, with the repeated P/E cycles, the tunnel oxide layer gets damaged, and more charges are incorrectly trapped. As a result, the RBERs of the flash pages increase. Second, due to fast technology scaling and bit density improvement, SSDs are more vulnerable to errors. Therefore, the refresh technique is triggered more frequently, leading to the deteriorated refresh costs and the increment of the uncorrectable data. Our experiments observe that, with more frequent refresh rates, the total capacity of the uncorrectable data increases dramatically.
+Besides, when SSDs are becoming larger and workloads typically exhibit a certain amount of skew [6], [27], the life cycle of the uncorrectable data (i.e., the existing period of the uncorrectable data) can get longer. The reason is that there will be more chance to find entire invalidated blocks for garbage collection (e.g., greedy GC) and, thus, the erasing of the blocks that contain the uncorrectable data can be delayed. As a result, with the increased quantity and life cycle of the uncorrectable
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1788
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+Fig. 3. Read hotness distribution for the uncorrectable data.
+data, we have more opportunities to exploit the uncorrectable data for refresh performance optimization.
+
+C. How to Get the Most Out of the Uncorrectable Data?
+We next study the potential of reusing the uncorrectable data and its benefits.
+Opportunities in Applications: Since the RBERs of the uncorrectable data go beyond the error correction capability of ECC, we have little potential of reusing them for conventional precise applications due to the lack of data integrity. Fortunately, as mentioned in Section II-C, many modern approximate-computing applications can tolerate a certain degree of bit errors and, thus, the uncorrectable data can be successfully accessed again for these approximate-computing applications.
+The benefit of the UDR with the assistance of approximatecomputing applications is that the read disturbance can be reduced. Studies [17], [28] showed that the read disturbance is proportional to the total number of read operations performed on one flash block. If we enable UDR, the read operations generated by the approximate-computing applications (also known as approx-reads) can be scheduled to the uncorrectable data, while the read operations generated by the conventional precise applications (also known as precise-reads) are allocated to the traditional error-corrected precise pages on the new flash block. Hence, the read disturbance on the new flash block can be reduced when scheduling approx-reads to the uncorrectable data.
+Though intuitive, naively enabling UDR to deal with the read disturbance problem is not feasible in SSDs. From our previous discussion, the quantity and life cycle of the uncorrectable data increases considerably in the modern SSDs. As a result, a large amount of the uncorrectable data will be stored in SSDs, leaving less storage capacity for the incoming user I/O data in the long term.
+Maximizing the Benefits of UDR: To overcome the aforementioned drawbacks, in this article, we exploit the readhotness characteristics of the uncorrectable data for both 1) the read disturbance reduction and 2) the refresh performance improvement.
+Specifically, we take both the request frequency of approxreads and that of precise-reads into account. According to the approx-read hotness and the precise-read hotness, we categorize the uncorrectable data into four types: 1) AP_hot (Approx-read hot and precise-read hot); 2) P_cold (Approxread hot and precise-read cold); 3) A_cold (Approx-read cold and precise-read hot); and 4) AP_cold (Approx-read cold and precise-read cold). Fig. 3 shows the distribution of the four types of the uncorrectable data for 10 different workloads
+
+Fig. 4. ApproxRefresh-enabled SSD organization.
+listed in Table III in Section V. The figure shows that different workloads have significant different access patterns. For example, in smm, precise-read requests accessing the uncorrectable data are very few.
+Based on the identified access characteristics of the uncorrectable data, the refresh costs and read disturbances can be regulated. For P_cold and AP_cold data pages, they are rarely precise-read. While the uncorrectable data can be reused for approx-reads, we can further design a lightweight data refresh scheme that has a tradeoff between the refresh performance and the precise-read latency. We exploit this tradeoff to speed up the refresh performance (we will elaborate it in detail in Section IV-B). For AP_hot data pages, they are frequently accessed by both precise-reads and approx-reads. If we enable UDR, we can opportunistically redirect approx-reads to the uncorrectable data pages while scheduling precise-reads to the traditional error-corrected precise pages. Thus, enabling UDR for the AP_hot data pages can be exploited to reduce the read disturbance. For A_cold data pages, enable UDR is unnecessary for the reason that they are rarely approx-read by applications. As a result, we can perform the traditional remapping-based refresh technique to remap the uncorrectable data pages and make them invalid (we will elaborate it in detail in Section IV-C).
+To summarize, the preceding discussion shows that enabling UDR with the assistance of approximate-computing applications helps to reduce the read disturbance. In addition, by exploiting the approximate-read and precise-read hotness of the uncorrectable data, we can further improve the refresh performance while incurring minimal overheads.
+IV. PROPOSED MECHANISMS
+A. System Overview
+Fig. 4 shows the overview of the ApproxRefresh-enabled SSD organization. ApproxRefresh is integrated in the SSD controller at the SSD side. Note that the ApproxRefreshenabled SSD supports both precise read and approximate read for the same data. At the high level, error-resilient applications and traditional applications transfer I/O requests to the NAND flash memory-based SSD. Previous approximate computing strategies differentiate approximate data and precise
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+
+1789
+
+Fig. 5. Procedure of RFR.
+data based on annotating by the programmers or using an approximate computing aware compiler, e.g., EnerJ [29]. In the ApproxRefresh-enabled SSD, similar annotation is passed together with each request through the host file system to the SSD such that the approximate information of request data can be delivered to the SSD controller.
+At the device level, our ApproxRefresh scheme exploits the UDR for refreshing performance improvement, and it is composed of: 1) approximate read-aware RFR, AR-RFR, and 2) ApproxRefresh-aware GC, ApproxGC. AR-RFR is further composed of: 1) the proposed RFR and 2) the traditional remapping-based refresh (we call RBR in this article). ARRFR selectively adopt RFR or RBR to reduce the refresh costs and the read disturbance. AR-RFR further improves flash access performance by considering both PVs and data hotness. Then, ApproxGC is proposed to fully utilize AR-RFR. At the low level, to implement the practical ApproxRefresh scheme, we also implemented the special command, the A_READ and P_READ_RF commands for handing the approximate read request, and the precise read request accessing the uncorrectable data page, respectively.
+B. Remapping-Free Refresh
+The design goal of RFR is to enable and exploit UDR in the refresh scheme for reducing the refresh costs dramatically. The basic idea of RFR is to maintain the long-term data integrity by only remapping an enhanced ECC with more parity bits for each valid page in the victim block without remapping the whole user data. Then, the subsequent read operations generated by the approximate-computing applications, or called approx-reads, can be directly scheduled to the uncorrectable data page without any read performance loss.
+To achieve this goal, Fig. 5 illustrates the procedure of RFR, which includes the following steps: all the valid pages in the victim block are read out and corrected by the default ECC engine ( 1 and 2 ). RFR computes an enhanced ECC with more parity bits for each page, which can correct more errors until the data retention time reaches the guaranteed retention time provided by the manufactories ( 3 ). Then, these new parity bits are merged into one or more ECC pages and programmed to a dedicated ECC block ( 4 ). Thus, RFR only writes the enhanced ECC for each page, avoiding migrating the entire page during refresh, which dramatically reduces the refresh costs. In this case, processing an approx-read request only needs to directly access the original uncorrectable data page without any extra overhead ( 5 ) while fulfilling a preciseread request would suffer from the overhead of handling two flash read operations ( 6 ).
+
+Enhanced ECC Model in RFR: In the above procedure of
+RFR, the most critical step is how to compute an enhanced
+ECC with more parity bits for each page ( 3 in Fig. 5). The
+enhanced ECC adopts more parity bits to enhance the error
+correction capability of ECC. The number of parity bits for the
+enhanced ECC is calculated according to two models: 1) error
+correction strength model and 2) flash reliability model.
+To simplify the analysis, we adopt the widely used binary BCH as the default ECC scheme.1 Binary BCH code is a
+popular forward-error correcting code constructed by using the Galois field, GF(2m) in the form of (n, k, t). n is the codeword length equal to 2m − 1 for the positive integer m. t is the error correction capability indicating the maximum tolerable bit errors, less than 2m − 1. k is the information bit length of data protected, greater than or equal to 2m − m × t. Therefore, the BCH code (n, k, t) is capable of maximum correcting t errors with n − k parity bits. The relationship between these parameters can be expressed as
+
+n = 2m − 1
+
+t < 2m − 1
+
+k ≥ 2m − m × t.
+
+(1)
+
+Given the fraction of erroneous bits after applying ECC as the uncorrectable bit-error rate (UBER), the relationship between UBER and RBER can be expressed as follows [1]:
+
+UBER =
+
+n i=t+1
+
+n i
+
+· RBERi · (1 − RBER)n−i
+
+(2)
+
+k
+
+where RBER is the standard metric to evaluate flash reliability, and it is mainly correlated with the number of P/E cycles and retention time. The reliability model derived from [1] and [23] can be calculated as
+
+log(RBER) = (a × PE + b) × log(RET) + c × PE + d (3)
+
+where PE is the current P/E cycles and RET denotes the reten-
+tion time. This reliability model has four coefficients: a and b
+control the impact of P/E cycles on RBER growth rate, and c
+and d are used to control the impact of retention time on RBER
+growth rate. By fitting the characterization data tested on a real flash chip, the values of constants were set as a = 2.77×10−6, b = 0.69, c = 1.16 × 10−3, and d = −19.67.
+Based on the above models, both the time to trigger refresh
+and the required number of parity bits for the enhanced ECC
+can be acquired as follows.
+1) Calculating the Trigger Time for Refreshing Data Pages: Given the industrial standard UBER, e.g., 10−16 [30], the max-
+imum correctable bit-error rate (CBERmax) under the default ECC (n, k, t) can be calculated by (2). Then, with the current P/E cycle (PEcurrent) and the calculated CBERmax, we can easily calculate the maximum supported data retention time
+(RETsupport) by (3). As a result, to retain the long-term data integrity, refresh needs to be triggered before the time interval
+RETsupport.
+
+1Note that the design is also applicable to other ECC, e.g., LDPC.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1790
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+TABLE I DESCRIPTIONS OF FLASH ACCESSING INTERFACES
+(a)
+
+(b)
+
+Fig. 6. Layout of the normal and ECC page. (a) Layout of normal flash page. (b) Layout of ECC page.
+2) Calculating the Required Number of Parity Bits for the Enhanced ECC: Given the guaranteed retention time (RETmax) provided by the flash memory manufactories, e.g., three months [31], the estimated maximum bit-error rate (RBERmax) when the data retention time reaches RETmax can be obtained from (3). After that, based on the industrial standard UBER and the calculated RBERmax, the enhanced ECC (n , k, t ) can be generated from (2). n is the new codeword length for the enhance ECC, k is the same information bit length as in the default ECC, and t is the new maximum tolerable bit errors under the enhance ECC. Finally, the required number of parity bits for the enhanced ECC, n − k, can be acquired.
+Enhanced ECC Page Structure in RFR: In the procedure of RFR, another critical step is how to merge new ECC parity bits for multiple uncorrectable data pages into one ECC page ( 4 in Fig. 5).
+A normal flash page consists of a data area storing user data and a spare area storing ECC and other house-keeping data, e.g., one flash page with the 4-kB user data area and the 224-B spare area. Unlike the layout of normal flash page, one ECC page from the dedicated ECC block, consists of three parts: 1) a metadata area (to store specific meta data); 2) a data area (to store multiple parity entries);2 and 3) a spare area (to store ECC and other house-keeping data), as shown in Fig. 6(b).
+In the ECC page, the ECC in the spare area is generated by the default configured ECC (n, k, t) (not the enhanced ECC (n , k, t )) when treating the bits in the meta area and the multiple parity entries in the data area as the common user data. Note that under one ECC page, the total size of both the metadata area and the data area, should be equal to the size of the data area of the normal flash page, e.g., 4 kB. While the multiple parity entries with fixed length n −k are stored in one ECC page that associates with user data from different uncorrectable data pages, the index for locating the exact position of each parity entry should be considered. The simplest way is to maintain the logical page address (LPN) to the physical page address (PPN), called LPN-PPN, with the ECC page offset information in the mapping table of the flash translation layer (FTL). However, this straightforward way accommodating all these information for each parity entry in the FTL mapping table is not a feasible option, as it requires a large memory space and sacrifices the valuable DRAM space in
+2Note that the enhanced ECC parity bits for one uncorrectable data page are referred to as one “parity entry” throughout this article.
+
+SSDs. Instead, we use the specific metadata, which is stored at the most significant bits part of the ECC page, to sequentially locate the corresponding LPN of each parity entry and associate them with the original user data. When the ECC page is full or there is no enough space for the next parity entry (adding another parity entry will across the current ECC page), a new ECC page will be assigned. Fig. 6(b) presents an example illustrating three parity entries combined into one ECC page. If we aggressively add the fourth parity entry into this ECC page, only a subset can be stored, and the remaining portion will be stored in another ECC page. To prevent one parity entry storing in more than one ECC page, we directly fill the unused end part of the data area with ones (the initial erase state bits), i.e., filling 1 into the “unused” area in Fig. 6(b).
+Handing Precise-Read in RFR: After performing RFR, the subsequent read requests accessing the uncorrectable data page should be handled differently from normal read command ( 5 and 6 in Fig. 5).
+As Table I shows, we expose sets of read/write interfaces to access flash memory. The “WRITE" (resp. “READ”) interface is the normal write (resp. normal read) in the conventional SSDs. The A_READ interface is responsible for processing approximate read requests accessing uncorrectable data page ( 5 in Fig. 5). When we enable the A_READ interface with the AFlag, approximate read can be directly executed similar to normal read, except that data aggressively do not need to go through the error correction flow to correct bit errors. This is because approximate data can be accessed without ECC protection [10]. Suspending the error correction process under A_READ in SSD is practical, as the ECC can be disabled using SET FEATURES command, according to the Micron datasheet [32]. Therefore, the approximate read latency is slightly reduced, compared to the normal read latency, due to the elimination of the error correction time in A_READ.
+In P_READ_RF, precise read requests need to access both the uncorrectable data page and the corresponding parity entry in the ECC page ( 6 in Fig. 5). When enabling the P_READ_RF interface with the PFlag, we can query the mapping table to acquire the two different physical addresses of data with the LPN information (how to map LPN to two PPNs in the mapping table is explained later). The special P_READ_RF is composed of two subreads, which can be enabled by utilizing the A_READ command to access the uncorrectable data page in the remapping-free-refreshed block (first subread), and the normal read command to access the ECC page from the ECC block (second subread). Such a P_READ_RF command sequence is practical for the reason that some existing advanced commands, e.g., multiplane read
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+
+1791
+
+operations, are similarly issued. The access finish time of P_READ_RF is determined by the slowest subread. After finishing the second subread, we only need the corresponding parity entry instead of an entire ECC page. P_READ_RF reads the meta data area of the accessed ECC page to find the LPN and its offset. With the offset value, we can easily obtain the corresponding parity entry in the ECC page. After accessing all data from two locations, the user data and the enhanced ECC parity bits can be integrated into the data content. Then, data content are processed by the enhanced ECC (n , k, t ) decoding engine to detect and correct all bit errors, and the P_READ_RF operation completes. Therefore, the precise read latency of P_READ_RF is increased when compared to the normal read latency, due to the overhead of handling two flash read operations. The P_READ_RF performance can be improved by selecting the ECC block from other idle flash planes (or even other idle flash chips). We leave the design of more effective method on improving them for future work. Note that both the A_READ and the P_READ_RF commands can be implemented in the flash memory interface of SSDs that supports the user-defined command. Supporting two new user-defined read commands in SSD is practical, as current flash memory supports various read operations, e.g., baseline read operation, multiplane read operation, cache read operation [33], [34], and many previous studies have designed their user-defined multiple read commands [24], [34], [35].
+
+Algorithm 1: Approximate AR-RFR
+input : Bvictim, the victim block to be refreshed; Tpread, precise-read threshold; Taread, approx-read threshold
+output: Rmode, the refresh mode (RFR, RBR, or RBR with UDR).
+
+1 repeat
+
+2 pvalid ← valid page in Bvictim; 3 cpread ← precise-read counter of pvalid;
+
+4 caread ← approx-read counter of pvalid; 5 if cpread ≤ Tpread then
+
+6
+
+Rmode = RFR; /* this valid page pvalid
+
+is AP_cold or P_cold
+
+*/
+
+7 else
+
+8
+
+if caread > Taread then
+
+9
+
+Rmode = RBR with UDR; /* this valid
+
+page pvalid is AP_hot
+
+*/
+
+10
+
+else
+
+11
+
+Rmode = RBR; /* this valid page
+
+pvalid is A_cold
+
+*/
+
+12
+
+end
+
+13 end
+
+14 until no other valid page in Bvictim;
+
+C. Approximate Read-Aware RFR
+While the naive RFR strategy in the above section reduces the refresh costs dramatically, it also inevitably increases the precise-read latency. To mitigate the increased precise-read latency, we further propose a novel approximate AR-RFR mechanism. The main idea of AR-RFR is to decide a proper refresh mode (remapping-free refresh or remapping-based refresh) based on the approx-read and precise-read hotness of victim pages for maximal refresh performance improvement while incurring minimal overheads.
+Algorithm 1 elaborates the details of AR-RFR. To achieve the goal, we first need to identify the read hotness. After reading out one valid page in the victim flash block (line 2), AR-RFR counts the number of the precise-read and approxread requests that have occurred on the data page, respectively (lines 3 and 4). The counter-based strategy, which identifies pages as read-hot when they are read more than T times, was widely adopted in recent works [28], [36]. As approx-read and precise-read introduce different overheads, we set two different thresholds Taread and Tpread to identify their historical hotness. By adopting read hotness identification, the valid pages in the victim block can be categorized into four types.
+1) AP_hot: If the approx-read counter of one page reaches Taread and the precise-read counter of one page reaches Tpread, the page is AP_hot.
+2) P_cold: If the approx-read counter of one page reaches Taread and the precise-read counter of one page is less than Tpread, the page is P_cold.
+
+3) A_cold: If the approx-read counter of one page is less than Taread and the precise-read counter of one page reaches Tpread, the page is A_cold.
+4) AP_cold: If the approx-read counter of one page is less than Taread and the precise-read counter of one page is less than Tpread, the page is AP_cold.
+With the hotness-type information, AR-RFR works as follows to choose the best refresh mode. For AP_cold and P_cold pages, AR-RFR triggers RFR (Section IV-B) that trades off precise-read performance, for the reason that these data pages are rarely precise-read by applications (lines 5–7). After executing RFR, we still keep track of the precise-read hotness of each page. Once one page becomes to be frequently preciseread, the original uncorrectable data page is corrected by enhanced ECC (n , k, t ) and then the error-free data are remapped to a new normal page. This process can be done by leveraging the P_READ_RF command and then normal write command.
+For A_cold and AP_hot pages, RFR with higher preciseread overhead is not a feasible option. Therefore, AR-RFR triggers RBR for them, e.g., FCR [4]. The existing state-ofthe-art RBR periodically reads, corrects, and remaps the stored data to a different physical location before it accumulates more retention errors than can be handled by ECC. In this case, the refresh costs are inevitable. The A_cold pages have little potential of reusing uncorrectable pages for the reason that they are rarely approx-read. AR-RFR directly selects RBR to refresh A_cold pages without any optimization (lines 10–12).
+Nevertheless, the AP_hot pages still can be exploited when refreshing. Lines 8–10 show that AR-RFR selects RBR to refresh the AP_hot pages while enabling the uncorrectable
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1792
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+Fig. 7. RBR for the AP_hot pages.
+data page reuse. Fig. 7 shows the procedure of RBR for the AP_hot pages. AR-RFR refreshes the AP_hot pages by triggering RBR to read, correct, and remap to new precise pages. But, after remapping, the erasing of the victim block is delayed in order to enable the uncorrectable data pages reuse. By separating approx-reads and precise-reads in the I/O scheduler and scheduling approx-reads to the uncorrectable data pages, the read counts on the precise pages are significantly reduced, leading to less read disturbance on the new blocks. Read disturbance reduction brings several advantages: 1) with decreased errors, the number of read retries decreases, thus improving precise-read performance and 2) with decreased errors, the subsequent refresh frequency can be reduced. Note that the uncorrectable data pages will also be invalided when their corresponding new precise pages reach the next refresh operation.
+To prevent the uncorrectable data page from suffering too many errors that fail the approximate-computing applications, AR-RFR need to provide the worst case uncorrectable data reliability guarantees. Specifically, before RBER of the data page exceeds the worst case tolerable bit-error rate of approximate applications, TBER, we disable UDR. Currently, we use the empirical TBER value, 2.2 × 10−3, according to other approximate storage proposal [37]. When RBER of the data page [we can get the RBER model from (3)] exceeds the threshold TBER, we upgrade the uncorrectable data page to precise data page. That is, to disable the AP_hot uncorrectable data pages, we simply change the page state of AP_hot uncorrectable data page as the normal invalid. To disable the AP_cold and P_cold uncorrectable data pages, we use the precise command P_READ_RF to read out data and then copy data to another new data page (this data page is then a precise data page). Thus, after disabling the uncorrectable data page, the subsequent approx-read requests will be also scheduled to the remapped pages just like precise-read requests. Our experiments observe that this case is rarely triggered.
+D. Management of Process Variation
+NAND flash memory exhibits nonnegligible fabrication PVs among the physical locations of flash memory. As a result, there is inherent variation among difference flash blocks, and some blocks have higher RBERs than others. To simplify the discussion, the blocks with low RBERs are referred to as strong blocks (the pages within one strong block are also strong), whereas, the blocks with high RBERs are referred to as weak blocks (the pages within one weak block are weak pages). As the two types of data pages (strong and weak pages) have the large RBER variations, the refresh frequencies to
+
+them are obviously different. Using the strategy mentioned in the previous section (Section IV-B), we can obtain the different refresh intervals, RETsupport, for strong/weak pages.
+Since PVs lead to pages with varying degrees of RBER, strong/weak pages exhibit the latency variations of flash operations. Thus, our proposed refresh design should take these latency variations into consideration. This is because, no matter in which refresh mode AR-RFR decides based on read hotness, program operation is applied to remap data to new location. The operation latencies of flash pages under one refresh mode are subject to latency variations. Furthermore, the subsequent reads performance of these remapped pages are also subject to latency variations.
+As the operation latencies of flash pages are subject to PVs, ApproxRefresh can exploit page latency variations for performance improvement for different refresh modes. For the RFR mode, ApproxRefresh remaps the victim valid data to weak pages. Since strong pages are precious resources and these data under the RFR model are precise-read cold, it is preferable to allocate weak page for these data. Data are P_cold or AP_cold under RFR mode, where the subsequent reads performance will not degrade. This is because, on the one hand, rare precise-reads occur, and the read performance impact is not significant. On the other hand, approx-reads are allocated to the uncorrectable data, and these approx-reads can be directly executed similar to normal read except that data aggressively do not need to go through the error correction flow to correct bit errors, as shown in Table I.
+For both RBR mode and RBR with the UDR mode, ApproxRefresh remaps valid data to strong pages. In particular, valid data under RBR with UDR mode are preferentially scheduled to strong pages to minimize the subsequent access latency. This is because the valid data are precise-read hot, and the subsequent precise-reads on strong pages will not be affected. The approx-reads under RBR with the UDR mode are also allocated to the uncorrectable data, which is similar to the RFR mode, and the performance is also enhanced. Note that we coordinate data to strong/weak pages at the refresh time, not the first time when data are programmed into flash memory. As data be wrote by the first time, it is hard to exactly predict the future read hotness. But when refresh requests trigger, the historical information of the read hotness after a period of data retention time can be leveraged to exploit the PVs.
+E. Flash Translation Layer Design
+Mapping Table: To locate the ECC page and the original uncorrectable data page, the page mapping table in the proposed ApproxRefresh scheme needs to be revised. In addition to the conventional primary mapping table (PMT), we also maintain one ECC mapping table (EMT) and one uncorrectable mapping table (UMT), as shown in Fig. 8. After performing RFR, EMT associates the physical page number (PPNecc) of the ECC page with PPN of its original data. After performing RBR on the AP_hot page, UMT maps PPN of the remapped page to the physical page number (PPNreuse) of the reused AP_hot page.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+
+1793
+
+Fig. 8. ApproxRefresh-aware FTL mapping entry.
+In particular, PMT is the primary table indexed by 31-bit logical page number (LPN), and it prefixes a 2-bit flag to the 31-bit PPN for differentiating three cases.
+1) 00: The page state in PMT is “p_valid” (normal precise and valid).
+2) 01: The page state in PMT is “u_valid” (uncorrectable and valid) and PPNecc of the ECC page is stored in EMT. This happened after performing RFR. The subsequent approx-reads can access data with the LPN-PPN information in PMT directly, while precise-reads need to access data with both the LPN-PPN information in PMT and PPN-PPNecc information in EMT.
+3) 10: The page state in PMT is “p_valid” (same to the “00” case), and PPNreuse of the corresponding uncorrectable data page is in UMT. This happened after performing RBR on the AP_hot page while enabling reuse. The page state of the uncorrectable data page is set as “u_invalid” (uncorrectable and invalid) for the reason that it would not incur page migration during GC, just like the “n_invalid” (normal invalid) page. The subsequent precise-reads can access data with LPN-PPN information in PMT directly, while approx-reads access PPNreuse with the help of the LPN-PPN information in PMT and then PPN-PPNreuse information in UMT.
+We maintain PMT, EMT, and UMT in memory. PMT maps an LPN to a PPN as the conventional FTL. The size of EMT/UMT dynamically changes according to the amount of the uncorrectable data in real time. Note that the space overhead for EMT and UMT can be very small. This is because uncorrectable data exist only after data refresh. These uncorrectable data also may be invalid for subsequent updating write operations. Compared to other traditional data in SSD, the uncorrectable data are still less. Under the conventional page-level FTL, for a given 128 GB SSD with 8-kB page size (simulated in our experiment), the memory size for PMT should be 128 MB. Since the 2-bit flag in PMT can be one of the three situations (00, 01, or 10), the memory size for both EMT and UMT can be only up to that of PMT (i.e., 128 MB) under the worst case estimation. To reduce the DRAM demand in practice, we adopt the similar strategy in DFTL [38] to selectively hold the frequently accessed mapping information of the mapping tables in memory. Therefore, in our experiment, the 128 GB SSD only requires about 16-MB space at most for storing these mapping tables.
+Under this mapping mechanism, the access performance of conventional reads is the same as before, whereas approx-reads and precise-reads incur minimal additional searching overhead. When handing traditional read operations with a given LPN, FTL only searches the corresponding PPN in PMT. Thus,
+
+this will not incur additional searching overhead for traditional reads. When searching the access location for approximate read operations, FTL looks up the mapping information in both PMT and UMT. As UMT can be very small, this triggers minimal additional searching overhead for approximate reads. If precise read operations need to access both the uncorrectable data page and the corresponding parity entry in the ECC page, FTL checks the mapping information in both PMT and EMT. This also triggers minimal additional searching overhead for precise reads.
+Garbage Collection: When there is a need to invoke garbage collection, a traditional greedy garbage collection would reclaim the block with the most number of invalid pages, regardless of their page types, i.e., if these pages are u_invalid or n_invalid pages. Such a garbage collection algorithm often leads to suboptimal results. We enhance the greedy garbage collection as follows (called ApproxRefresh-aware GC, ApproxGC).
+1) Victim Block Selection: When identifying a victim block, ApproxGC not only considers the total number of invalid pages, but also considers the block type, invalid types, and approx-read hotness. The candidate victim blocks are among the traditional data blocks, not the dedicated ECC blocks. This is because there is an avalanche of PPN-PPNecc updating in EMT if we reclaim these dedicated ECC blocks. The only exception is that when all the ECC data pages in one ECC block are invalid, the ECC block can be reclaimed by ApproxGC. For blocks with the same number of invalid pages, we prioritize the selection of blocks that have less historical approx-reads on u_invalid pages for the reason that they have less chance to be reused. At most two types of invalid pages (i.e., n_invalid, and u_invalid) exist in the flash block. Specifically, we can use the approx-read counter obtained from AR-RFR (Section IV-C) in SSDs to obtain the historical statistics for u_invalid pages on the flash block.
+2) Precise-Read Hot/Cold Separation: As RFR is invoked only when all the valid pages in the victim block are AP_cold or P_cold, ApproxGC should not only consider write hotness but also consider precise-read hotness. When copying valid pages, write-hot pages are first separated from write-cold pages as usual for reducing write amplification. Then, among writecold pages, the precise-read-cold pages are moved to a separate block such that the proposed lightweight refresh scheme can be adopted for the refresh costs reduction.
+F. Overhead Analysis
+ApproxRefresh, while improving the I/O performance of NAND flash memory, introduces extra three types of overheads: 1) hardware overhead; 2) storage overhead; and 3) firmware overhead.
+For the hardware overhead, ApproxRefresh further demands another ECC [i.e., the enhanced ECC (n , k, t )], except that there is one default ECC in SSD. Similar to the ECC code in the previous studies [39], we can employ the ECC code for a variety of different rates that all share the same fundamental hardware. Thus, the multirate ECC design incurs a minimal overhead.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1794
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+For the firmware overhead, since we add a dedicated block list for relocating precise-read-cold pages and a dedicated block list for storing enhanced ECC parities, we demand extra two active blocks, i.e., the integration of multistreamed technology if it is not embedded already. Kang et al. [40] showed that the overhead is trivial.
+For the storage overhead, ApproxRefresh needs storage space for enhanced ECC data. In order to avoid unnecessary write amplification, remapping-free refresh should be disabled when the available free space goes below a threshold, e.g., 10% of the SSD. Fortunately, as SSDs are becoming denser and larger due to technology scaling and multilevel technology, remapping-free refresh has large chance to be enabled. Besides, ApproxRefresh keeps a bitmap that identifies the strong pages in the SSD. For the 128-GB MLC SSD simulated in our experiment, there are 64K blocks, resulting in 8-kB bitmap if using two types of blocks (i.e., strong and weak blocks). In addition, ApproxRefresh maintains the read hotness status of each wordline, which requires 1-bit to record preciseread hotness, 2-bit to record approx-read hotness. Overall, less than 3-MB additional space for flash memory-based SSD is required.
+V. EXPERIMENT AND ANALYSIS
+A. Evaluation Setup and Methodology
+We evaluated the ApproxRefresh-enabled SSD implemented on the trace-driven simulation platform, SSDsim [41]. The detailed SSD parameters used in our evaluations can be found in Table II. The three basic operation (read/write/erase) latencies of flash memory used in our evaluations are based on settings in previous work [34], [42]. The latency for read, program, and erase operations is 95 µs, 700 µs, and 3.5 ms, respectively. Since the added A_READ operation latency is slightly lower than the normal read latency, we set the A_READ operation latency to 80 µs. Due to the access to two different pages, the latency of the P_READ_RF operation is prolonged. We use a worst case estimation, where the two subread can not be processed in parallel, and we set the P_READ_RF latency to 210 µs. This is because P_READ_RF involves two page reads (two normal read), so its latency is set as 95 µs + 95 µs + 20 µs = 210 µs (where 20 µs is the ECC decoding time for the user data on the uncorrectable data page and the enhanced ECC parity bits on the ECC page). The Tpread and Taread for identifying precise-read and approx-read hotness is set to 1 and 3, respectively. We use the reliability model in (3) to model RBERs of data pages. To model PV of flash memory and its impact on RBER distribution, we followed the approach in [43] that PV is assumed as a log-normal distribution model. In order to trigger refresh commands, we perform a linear extrapolation to shorten the data retention time according to [7].
+To use the modern applications with the inherent error resilience, we collect ten raw I/O traces with both errorresilient applications and precise applications for one week at the block layer. When running two scientific and numerical computing applications, we collected fft and smm on a server computer. The two img and two vid traces are the I/O traces
+
+TABLE II MAIN SSD SPECIFICATION
+mainly for the image and the video processing applications, respectively. The two laptop workloads are collected on a personal laptop, recording the one-week I/O activities of the user, whereas two mobile track the mobile phone activity for one week. Based on the application type of the collected data, we added one flag to distinguish approximate read and regular precise read, which is consistent with previous approximate flash work [1], [10], [42]. Table III summarizes the characteristics of these traces evaluated in our experiments, where the AP_hot ratio, P_cold ratio, A_cold ratio, and AP_cold ratio are collected under the proposed ApproxRefresh scheme. The read/write ratio means that the percentage of read/program operations in the traces. We also show the amount of accessed data, the number of total requests, and space utilization in Table III.
+In the experiments, we implemented and compared the following schemes.
+1) FCR: This is the scheme that implements the classic data refresh technique [4]. It does not exploit the error resilience in modern applications.
+2) WARM: WARM [6] is the enhanced version of FCR. The main idea behind WARM is to separate write-hot data from write-cold data, such that the residing refresh count on the write-hot data can be reduced.
+3) RBR_a: This scheme is built on top of FCR with the approximate read awareness. It enables the UDR for the AP_hot pages.
+4) RFR: This scheme implements the RFR technique. In particular, it is adopted for the AP_cold and P_cold pages.
+5) AR-RFR: This scheme integrates RBR_a and RFR. AR-RFR adopts the remapping-free refresh mode for the AP_cold and P_cold pages, whereas AR-RFR also adopts the remapping-based refresh with the UDR mode for the AP_hot pages.
+6) ApproxRefresh: This scheme is built on top of AR-RFR with PV awareness. ApproxRefresh integrates all the proposed refresh techniques and optimizations.
+B. Refresh Performance Comparison Refresh Performance: Fig. 9 presents the normalized
+refresh-induced latency under different refresh schemes. Compared to the baseline FCR scheme, ApproxRefresh achieves a significant overall refresh latency reduction by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+TABLE III CHARACTERISTICS OF THE EVALUATED I/O WORKLOADS
+
+1795
+
+Fig. 9. Normalized refresh latency.
+
+Fig. 10. Refresh mode distribution in ApproxRefresh.
+
+36.19% on average. The refresh performance improvement of ApproxRefresh comes from two aspects.
+1) By scheduling approx-reads to the original AP_hot pages among RBR_a, AR-RFR, and ApproxRefresh, the read disturbance on the new precise block is reduced. The rationale is that the read disturbance is proportional to the number of the read operations to one flash block. Consequently, with reduced read disturbance, the subsequent refresh frequency is reduced.
+2) By only remapping enhanced ECC parity bits for the AP_cold and P_cold pages among RFR, AR-RFR, and ApproxRefresh, the number of writes during the refresh operation is significantly reduced.
+From the figure, we can see WARM largely reduces the refresh latency under some traces, e.g., img1. This is because WARM efficiently separates write-hot data from write-cold data, reducing the refresh counts on write-hot data dramatically. We highlight that our proposed ApproxRefresh scheme is orthogonal to WARM. Consequently, ApproxRefresh can be combined with WARM to further improve the refresh performance. As the I/O latency for read and write is asymmetric, the most time-consuming part of one refresh operation is the write activities for remapping the valid data of the selected flash block. Therefore, as the number of writes is significantly reduced, the refresh latency is also dramatically reduced. Overall, the results clearly demonstrate the effectiveness of ApproxRefresh in improving refresh performance.
+By comparing the results with the ratio of each page type shown in Table III, it can be observed that the effectiveness of ApproxRefresh closely correlates to the sum of AP_hot, AP_cold, and P_cold page ratio in each benchmark. For example, ApproxRefresh achieves the largest refresh performance improvements, i.e., 51.55% for img2, and the smallest, i.e., 5.99% for mobie1.
+To fully understand the refresh performance improvement in ApproxRefresh, Fig. 10 reports the cumulative distribution
+
+Fig. 11. Normalized I/O throughput.
+of different selected refresh modes in ApproxRefresh. We can observe that the more RBR mode is selected, e.g., mobie1 and mobie2, the smaller improvement the refresh performance has. This is because, with more number of RFR modes, the refresh costs can be reduced dramatically. Also, if the number of RBR with UDR mode is more, the refresh costs can be reduced as well.
+C. I/O Performance Comparison
+I/O Throughput: To show the efficiency of ApproxRefresh on the I/O performance improvement, Fig. 11 plots the read/write throughput comparison under different refresh schemes. On average, ApproxRefresh provides about 21.39% better throughput than FCR. The read/write performance improvement mainly comes from the reduced number of programming operations in both RFR, AR-RFR and ApproxRefresh. During one refresh operation, with the fewer writes, I/O access contention between user I/Os and background refresh can be reduced, thereby improving the overall I/O throughput.
+Read/Write Performance: Next, we further compare the normalized average read and write response time in Figs. 12 and 13, respectively. The results are normalized to FCR. From the figure, ApproxRefresh achieves 20.10% read response time reduction and 25.17% write response time reduction compared to FCR. The I/O performance improvement mainly
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1796
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+Fig. 12. Normalized average read response time.
+
+Fig. 15. Comparing the normalized endurance capacity.
+
+Fig. 13. Normalized average write response time.
+
+Fig. 16. Comparing the normalized energy consumption.
+
+Fig. 14. Comparing the normalized erase count.
+
+Fig. 17. Refresh performance comparisons among ApproxRefresh and the state-of-the-art schemes.
+
+comes from the improved refresh efficiency, for the reason that refresh may introduce access contention with user I/O requests. Thus, the I/O performance improvement for ApproxRefresh also closely correlates to the selected refresh mode ratio. In addition, it shows that the write performance improvement is slightly better than read performance improvement. The reason is that SSDs have the characteristics of asymmetric I/O latencies, and the writes are usually scheduled with lower priority, leading to different effects.
+D. Lifetime Comparison
+Erase Count: We next compare the flash lifetime when adopting different refresh schemes. Fig. 14 reports the normalized erase count, which directly affects the lifetime of flash memory. From the figure, on average, ApproxRefresh slightly reduces erase count by 5.21% over FCR. The lifetime improvement also comes from the decreased refresh frequency and the reduced writes during the lightweight remapping-free refresh periods.
+Endurance Capacity: The endurance capacities are compared when adopting different refresh schemes. The endurance capacity is referred to as the total write count the entire SSD can maintain before the flash memory wears out [6]. Fig. 15 compares the normalized endurance capacity under different schemes, with the results normalized to FCR. On average, ApproxRefresh improves the endurance capacity by 1.06× over FCR. The rationale is that ApproxRefresh reduces the write counts during refresh operations under the remappingfree refresh mode. Therefore, ApproxRefresh maintains more remaining available write count.
+
+E. Energy Consumption Comparison
+Energy Consumption: We next compare the energy consumption under different refresh schemes. We adopted the energy model from Cui et al. [2] to calculate the total energy consumption of the NAND flash memory-based SSD and a typical 128-MB DRAM buffer inside SSD. We model all three basic operations, read/write/erase in flash memory, whereas read/write/refresh operations in the DRAM component also consume energy. Fig. 16 reports the energy consumption comparison under different refresh schemes. As we can observe from the figure, on average, ApproxRefresh achieves 24.70% energy consumption reduction over FCR. The energy consumption reduction in ApproxRefresh mainly because it exploits the UDR for refreshing performance improvement.
+F. Comparisons with Other Schemes
+Several state-of-the-art refresh schemes have been proposed to enhance the refresh performance. We compare the refresh performance of ApproxRefresh and the state-of-the-art schemes (i.e., FCR [4], RM [3], [7], and PR [44]) and summarize the results in Fig. 17. The results are normalized to FCR. As we mentioned in the previous content, if the refresh performance is improved by one scheme, it also improves the I/O performance and extends the lifetime of flash memory. As a result, we only report the refresh performance metrics in this section.
+On average, ApproxRefresh substantially outperforms these state-of-the-art schemes. By considering the block endurance variations due to PVs, RM allocates high-endurance blocks to write-cold data in priority. Therefore, RM further reduces the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: EXPLOITING UNCORRECTABLE DATA REUSE FOR PERFORMANCE IMPROVEMENT OF FLASH MEMORY
+
+1797
+
+number of refresh operations than FCR. PR targets on reducing the refresh latency for each refresh operation. PR only migrate the susceptible bits of one valid page to new location, avoids copying the entire page. On the other hand, ApproxRefresh exploits the UDR to enable the lightweight remapping-free refresh, which also dramatically reduces the refresh latency. As ApproxRefresh can be combined with WARM to further improve the refresh performance, we also show the refresh performance for ApproxRefresh+WARM. When WARM efficiently reduces the refresh counts for write-hot data under fft, smm, img1, and img2, ApproxRefresh+WARM further reduces the refresh latency for write-cold data under these traces.
+VI. CONCLUSION
+In this article, we proposed ApproxRefresh that enables UDR on flash memory with the assistance of approximatecomputing applications. ApproxRefresh selectively adopts the remapping-free refresh or remapping-based refresh technique with the approximate-read hotness awareness for the I/O performance and the lifetime improvement. ApproxRefresh further improves flash access performance based on PVs and data hotness. A corresponding ApproxRefresh-aware garbage collection algorithm was also proposed to fully utilize ApproxRefresh. Evaluations showed that ApproxRefresh reduces the refresh latency by 36.19% over the conventional remapping-based refresh technique.
+REFERENCES
+[1] J. Cui, Y. Zhang, L. Shi, C. J. Xue, W. Wu, and J. Yang, “ApproxFTL: On the performance and lifetime improvement of 3-D NAND flashbased SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 10, pp. 1957–1970, Oct. 2018.
+[2] J. Cui, J. Liu, J. Huang, and L. T. Yang, “SmartHeating: On the performance and lifetime improvement of self-healing SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 40, no. 1, pp. 52–65, Jan. 2021.
+[3] Y. Di, L. Shi, C. Gao, Q. Li, C. J. Xue, and K. Wu, “Minimizing retention induced refresh through exploiting process variation of flash memory,” IEEE Trans. Comput., vol. 68, no. 1, pp. 83–98, Jan. 2019.
+[4] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. Int. Conf. Comput. Design (ICCD), 2012, pp. 94–101.
+[5] R.-s. Liu, C.-l. Yang, and W. Wu, “Optimizing NAND flash-based SSDs via retention relaxation,” in Proc. USENIX Conf. File Storage Technol. (FAST), 2012, p. 11.
+[6] Y. Luo, Y. Cai, S. Ghose, J. Choi, and O. Mutlu, “WARM: Improving NAND flash memory lifetime with write-hotness aware retention management,” in Proc. IEEE Symp. Massive Storage Syst. Technol. (MSST), Aug. 2015, pp. 1–14.
+[7] Y. Di, L. Shi, K. Wu, and C. J. Xue, “Exploiting process variation for retention induced refresh minimization on flash memory,” in Proc. Design Autom. Test Europe (DATE), 2016, pp. 391–396.
+[8] M. Seif et al., “Refresh frequency reduction of data stored in SSDs based on a-timer and timestamps,” in Proc. 22nd IEEE Eur. Test Symp. (ETS), 2017, pp. 1–6.
+[9] A. Sampson, J. Nelson, K. Strauss, and L. Ceze, “Approximate storage in solid-state memories,” ACM Trans. Comput. Syst., vol. 32, no. 3, pp. 25–36, 2013.
+[10] Q. Li, L. Shi, J. Yang, Y. Zhang, and C. J. Xue, “Leveraging approximate data for robust flash storage,” in Proc. Design Autom. Conf. (DAC), 2019, pp. 1–6.
+[11] L. Shi, K. Wu, M. Zhao, C. J. Xue, D. Liu, and E. H. Sha, “Retention trimming for lifetime improvement of flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 35, no. 1, pp. 58–71, Jan. 2016.
+
+[12] Y. Cai, O. Mutlu, E. F. Haratsch, and K. Mai, “Program interference in MLC NAND flash memory: Characterization, modeling, and mitigation,” in Proc. Int. Conf. Comput. Design (ICCD), 2013, pp. 123–130.
+[13] H. Yassine, M.-A. Badiu, and J. Coon, “Model-based detector for SSDs in the presence of inter-cell interference,” 2019. [Online]. Available: arXiv:1902.01212.
+[14] Y. Shim, M. Kim, M. Chun, J. Park, Y. Kim, and J. Kim, “Exploiting process similarity of 3D flash memory for high performance SSDs,” in Proc. Int. Symp. Microarchit., vol. 1, 2019, pp. 211–223.
+[15] M. Hasan and B. Ray, “Tolerance of deep neural network against the bit error rate of NAND flash memory,” in Proc. IEEE Int. Reliabil. Phys. Symp. (IRPS), 2019, pp. 1–4.
+[16] K. Ha, J. Jeong, and J. Kim, “An integrated approach for managing read disturbs in high-density NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 35, no. 7, pp. 1079–1091, Jul. 2016.
+[17] J. Cui, W. Liu, J. Huang, and L. T. Yang, “Exploiting disturbance-aware read redirection for performance improvement in 3D flash memory,” in Proc. Great Lakes Symp. VLSI, 2020, pp. 95–100.
+[18] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. Asia South Pac. Design Autom. Conf. (ASP-DAC), 2017, pp. 560–565.
+[19] N. Z. K. Zhao, W. Zhao, H. Sun, T. Zhang, and X. Zhang, “LDPC-inSSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. USENIX Conf. File Storage Technol. (FAST), 2013, pp. 243–256.
+[20] J. Cui, W. Wu, X. Zhang, J. Huang, and Y. Wang, “Exploiting latency variation for access conflict reduction of NAND flash memory,” in Proc. IEEE Symp. Massive Storage Syst. Technol., 2017, pp. 1–7.
+[21] M. Zhang et al., “BeLDPC: Bit Errors Aware Adaptive Rate LDPC Codes for 3D TLC NAND Flash Memory,” in Proc. Design Autom. Test Europe Conf. Exhibition, 2020, pp. 302–305.
+[22] E. Farjallah, J. M. Armani, V. Gherman, and L. Dilillo, “Improvement of the tolerated raw bit error rate in NAND flash-based SSDs with selective refresh,” Microelectron. Rel., vol. 96, pp. 37–45, May 2019.
+[23] L. Han, Z. Shen, Z. Shao, and T. Li, “Optimizing RAID/SSD controllers with lifetime extension for flash-based SSD array,” ACM SIGPLAN Notices, vol. 53, no. 6, pp. 44–54, 2018.
+[24] F. Li, Y. Lu, Z. Wu, and J. Shu, “ASCache: An approximate SSD cache for error-tolerant applications,” in Proc. Design Autom. Conf. (DAC), 2019, pp. 1–6.
+[25] D. Jevdjic, K. Strauss, L. Ceze, and H. S. Malvar, “Approximate storage of compressed and encrypted videos,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2017, pp. 361–373.
+[26] Q. Guo, K. Strauss, L. Ceze, and H. S. Malvar, “High-density image storage using approximate memory cells,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2016, pp. 413–426.
+[27] J. Cui, Y. Zhang, J. Huang, W. Wu, and J. Yang, “ShadowGC: Cooperative garbage collection with multi-level buffer for performance improvement in NAND flash-based SSDs,” in Proc. Design Autom. Test Europe (DATE), 2018, pp. 1247–1252.
+[28] Q. Li et al., “Improving read performance via selective Vpass reduction on high density 3D NAND flash memory,” in Proc. IEEE Non-Volatile Memory Syst. Appl. Symp. (NVMSA), 2017, pp. 1–4.
+[29] A. Sampson, W. Dietl, E. Fortuna, D. Gnanapragasam, L. Ceze, and D. Grossman, “EnerJ: Approximate data types for safe and general low-power computation,” ACM SIGPLAN Notices, vol. 46, no. 6, pp. 164–174, 2011.
+[30] N. Mielke et al., “Bit error rate in NAND flash memories,” in Proc. IEEE Annu. Int. Rel. Phys. Symp. (IRPS), 2008, pp. 9–19.
+[31] H. Sun, P. Grayson, and B. Wood, “Quantifying reliability of solid-state storage from multiple aspects,” in Proc. Int. Workshop Storage Netw. Archit. Parallel I/Os (SNAPI), 2011, pp. 1–8.
+[32] Micron. 4Gb, 8Gb, 16Gb: x8, x16 NAND Flash Memory Features. Accessed: Jul. 19, 2009. [Online]. Available: https://datasheet.octopart.com/MT29F4G16ABBDAH4-IT3AD-Microndatasheet-11758868.pdf
+[33] Micron. 4GB, 8GB, 16GB: x8, x16 NAND Flash Memory. Accessed: Apr. 4, 2011. [Online]. Available: https://datasheet.octopart.com/ MT29F4G16ABBDAH4-I%3AD-Micron-datasheet-11758868.pdf
+[34] C. Y. Liu, J. B. Kotra, M. Jung, M. T. Kandemir, and C. R. Das, “SOML Read: Rethinking the read operation granularity of 3D NAND SSDs,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2019, pp. 955–969.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+1798
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 6, JUNE 2022
+
+[35] H. Kim, D. Shin, Y. H. Jeong, and K. H. Kim, “SHRD: Improving spatial locality in flash storage accesses by sequentializing in host and randomizng in device,” in Proc. USENIX Conf. File Storage Technol. (FAST), 2017, pp. 271–283.
+[36] C. Gao et al., “Constructing large, durable and fast ssd system via reprogramming 3D TLC flash memory,” in Proc. Int. Symp. Microarchit. (MICRO), 2019, pp. 493–505.
+[37] Y. Lee, J. Park, J. Ryu, and Y. Kim, “AxFTL: Exploiting error tolerance for extending lifetime of NAND flash storage,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 11, pp. 3239–3249, Nov. 2020.
+[38] A. Gupta, Y. Kim, and B. Urgaonkar, “DFTL: A flash translation layer employing demand-based selective caching of page-level address mappings,” ACM SIGPLAN Notices, vol. 44, no. 3, pp. 229–240, 2009.
+[39] P. Huang, Y. Liu, X. Zhang, P. H. Siegel, and E. F. Haratsch, “Syndromecoupled rate-compatible error-correcting codes: Theory and application,” IEEE Trans. Inf. Theory, vol. 66, no. 4, pp. 2311–2330, Apr. 2020.
+[40] J. U. Kang, J. Hyun, H. Maeng, and S. Cho, “The multi-streamed solidstate drive,” in Proc. USENIX Workshop Hot Top. Storage File Syst., 2014, p. 13.
+[41] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput. (ICS), 2011, pp. 96–107.
+[42] J. Cui, Y. Zhang, W. Wu, J. Yang, Y. Wang, and J. Huang, “DLV: Exploiting device level latency variations for performance improvement on flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 8, pp. 1546–1559, Aug. 2018.
+[43] Y. Pan, G. Dong, and T. Zhang, “Error rate-based wear-leveling for nand flash memory at highly scaled technology nodes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 21, no. 7, pp. 1350–1354, Jul. 2013.
+[44] J. Cui et al., “Leveraging partial-refresh for performance and lifetime improvement of 3D NAND flash based SSDs in cyber-physical systems,” J. Syst. Archit., vol. 103, Feb. 2020, Art. no. 101685.
+
+Junwei Liu received the B.S. degree from the South-Central University for Nationalities, Wuhan, China, in 2019. He is currently pursuing the master’s degree with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan.
+His research interests include flash memory, nonvolatile memory, and storage systems.
+Jianhang Huang received the B.S. and M.S. degrees from Xi’an Jiaotong University, Xi’an, Shaanxi, China, in 2012 and 2015, respectively, where he is currently pursuing the Ph.D. degree under the guidance of Prof. Weiguo Wu.
+His major research interests include cluster rendering, distributed tracing, and flash memory-based storage system.
+
+Jinhua Cui (Member, IEEE) received the B.S. degree from Southwest University, Chongqing, China, in 2012, and the Ph.D. degree in computer science from Xi’an Jiaotong University, Xi’an, Shaanxi, China, in 2018.
+She was a visiting Ph.D. student with the Computer Science Department, University of Pittsburgh, Pittsburgh, PA, USA. She is currently an Assistant Professor with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China. Her current research interests include NAND flash memory based storage system, approximate storage, big data, and cloud computing.
+Cheng Liu received the B.S. degree in computer science and technology from Shaanxi Normal University, Xi’an, China, in 2020. He is currently pursuing the master’s degree with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China.
+His research interests include computer architecture and NAND flash memory-based storage system.
+
+Laurence T. Yang (Fellow, IEEE) received the B.E. degree in computer science and technology and the B.Sc. degree in applied physics from Tsinghua University, Beijing, China, in 1992, and the Ph.D. degree in computer science from the University of Victoria, Victoria, BC, Canada, in 2006.
+He is currently a Professor with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China, and the Department of Computer Science, St. Francis Xavier University, Antigonish, NS, Canada. His research has been supported by the National Sciences and Engineering Research Council and the Canada Foundation for Innovation. His research interests include parallel and distributed computing, embedded and ubiquitous/pervasive computing, and big data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:21:53 UTC from IEEE Xplore. Restrictions apply.
+
+

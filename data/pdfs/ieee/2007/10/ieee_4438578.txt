@@ -1,0 +1,300 @@
+Third International Conference on Semantics, Knowledge and Grid
+
+A Reliable Scheme for Cluster Storage System
+
+Xu Li, Changsheng Xie, Qinqi Wei, Qiang Cao Huazhong University of Science & Technology, Wuhan National Laboratory for Optoelectronics, Wuhan, China 430074
+lixu_cn@163.com
+
+Abstract
+An important issue in the design of large-scale cluster storage systems is their vulnerability to nodes crash and network failures. To explore the feasibility of implementing a reliable, high performance distributed cluster storage system, we adopt a reliable scheme that data are distributed across storage nodes using erasure coding with small Low-Density Parity-Check (LDPC) code. We implement our new scheme in RSC, a proof-of-concept reliable cluster storage system, along with two other well known RAID-1 and RAID-5 schemes. Performance test results show that such a reliable scheme can provide high reliability while keeping the performance overhead small.
+Keywords: Erasure code, LDPC, Fault tolerance, Reliability, Cluster storage systems
+1. Introduction
+With the exponential growth of network bandwidth, storage capacity, and computational resources, distributed storage systems such as the PVFS, Lustre deliver high-bandwidth I/O to applications running on clusters. In these systems, data files are usually split into multiple data stripes across cluster nodes to improve the system scalability and I/O throughput. At the same time, their reliability is far worse than that of smaller storage systems due to the increased number of storage nodes.
+Thus an important problem in the design of such striped storage systems is how to reduce their vulnerability due to components’ failures efficiently. The usual approach to building a reliable storage system out of unreliable components is importing redundancy scheme. Traditional method towards redundant storage is full replication, where every block is replicated in a mirror block on another one. The other method is using erasure coding schemes: each data object is divided into m fragments and recoded into n fragments which are stored in distributed nodes.
+Low-Density Parity-Check code (LDPC) [1] provides a good solution to this problem because it
+
+allows decoding original data using relatively few and simple XOR parity operations. In contrast to the ReedSolomon code, it does not code the data optimally which require f*m blocks to reconstruct the stored file, where f is an overhead factor that is greater than one, but approaches one as m approaches infinity[2].
+In this paper our work focuses on design and implements a high performance fault-tolerant scheme based on small LDPC code. The rest of this paper is organized as follows: Section 2 provides a literature review of related works. In section 3 we present the brief knowledge of LDPC and present an efficient way to generate graphs with good guarantees on their redundancy requirement by utilizing Monte Carlo techniques [3]. The implementation of reliable scheme is shown in Section 4. Our evaluation and measurement results are present in Section 5. We summarize this paper and outline future work in Section 6.
+2. Related Work
+Distributed redundancy schemes have been extensively studied in a number of striped file system projects [4]. Many distributed storage systems rely only on replication, including PAST, CFS for WANs, and Tertiary disk, Google File System (GFS) for LANs. The RAID-x architecture [5] is a distributed RAID scheme that uses a mirroring technique. These applications need high, sustained bandwidth, replication scheme suffers from the limitation of mirroring.
+Erasure codes have been used by several distributed storage systems. Such as Reed-Solomon code, it is widely used for storage systems in WAN and LAN. Since Reed-Solomon code has a significant storage overhead, mostly it is used for archival storage. LDPC code has not been studied as much for storage systems before. Recently there is also some work [6] that researches the suitability of LDPC code for Wide Area Network storage.
+We rely solely on erasure coding by using LDPC code which is similar to Gaidioz [7]. In contrast to their work which based on a Peer-to-Peer topology that our
+
+0-7695-3007-9/07 $25.00 © 2007 IEEE
+
+394
+
+DOI 10.1109/SKG.2007.84
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+work is focus on our existing cluster file systems. We do much more analysis on the storage performance both on the normal and degraded state respectively.
+
+3. LDPC Coding
+
+3.1 LDPC Basis
+
+Here we give a brief overview of LDPC code, for
+
+detailed presentations please see Ref. [1]. Although file
+
+systems use LDPC codes to operate on blocks of data,
+
+the specification of LDPC codes is typically on bits of
+
+data. Blocks are simply composed of multiple bits. In
+
+this work, we use the following symbol definition as
+
+Table 1: Table 1. ٛ Symbol definition of LDPC
+
+Symbol
+
+Definition
+
+m
+
+number of data bits
+
+n
+
+number of coding bits
+
+N = n + m total number of bits
+
+R=m/N
+
+rate of a code
+
+o
+
+average number bits that must be
+
+present to decode all the bits of the data
+
+f = o/m
+
+overhead factor of a code
+
+LDPC codes have m + n nodes and are based on bipartite graphs with two sets nodes--the left nodes, l1, l2, . . . , lm, and the right nodes, r1,r2, . . . , rn. Edges only connect left nodes to right nodes. A simple example graph is depicted in Figure 1. From m=4 data words l1, l2, l3, l4 (bits in the simplest case), n=3 coding words r1, r2, r3 are calculated by exclusive-or operation. For example r1 = l1+l3+l4. Encoding the redundant information in the coding words is done in a time growing linear with the number of edges in the graph.
+
+3.2 Availability Analysis of LDPC code
+
+LDPC code makes use of the dependencies between
+
+the file blocks to enhance the availability. We assume
+
+that these N blocks are dependent of each other.
+
+Therefore, the availability of a file AL using LDPC
+
+code replication is [8]:
+
+m′+n′
+
+∑ AL ( µ, m′, n′ ) =
+
+(m′+ i
+
+n′
+
+)µ
+
+i
+
+(1
+
+−
+
+µ
+
+)m′+
+
+n′−i
+
+i=m′
+
+N
+
+∑ = (iN )µi (1− µ)N −i
+
+(1)
+
+i=m′
+
+Where µ is the availability of host and
+
+m′ = m , n′ = (1-f) m + n
+
+(2)
+
+According to the statistical analysis work of Plank [2], different LDPC code rates have differ overhead factor and availability. From formula (1) we can calculate that the rate R=1/2 and 1/3 may provide a high availability with high storage overhead. Rate R = 2/3 has a low overhead but a low failure rate. For
+example, with µ =0.96, R=2/3, we need m=14 and
+
+n=7 for reaching a failure rate of 10-7, while the same availability can be obtained with an R=5/8 (which has almost the same storage overhead) with m=10 and n=6. For our availability goals, rate R=5/8 provides a good tradeoff in storage overhead and availability. We use m=10 and n=6.
+To generate a good graph depending on the parameters m and n, we define p as a probability for a right-hand node to be connected to a given left-hand node. We ran the graph generation algorithm we create graphs by using Monte Carlo technique, and the resulting graph is show on Fig.2. It has the property of tolerating the loss of any three data blocks, that is, the file can always be reconstructed even if any three storage nodes are failed.
+
+Figure 1. An example of a LDPC code for m=4, n=3.
+The data and coding words are then assembled into data and coding blocks and can be stored in distributed storage systems. Since LDPC code do not encode optimally more than m (fm, f>1) blocks are need to reconstruct the original file, when get random blocks. However in a high reliable cluster storage system, it is very worthy to achieve high reliability and good performance with a few extra special overhead.
+
+Figure 2. An example of a graph with m=10 and n=6 which can be reconstructed with any 13 nodes. The max overhead factor is fmax=1.23.
+4. Implementation 4.1 Overall Architecture of the System
+A prototype for the system presented in the article has been implemented. In our previous work, we have implemented a high I/O performance storage cluster RSC, for details please refer to [9]. In RSC, we haven’t employed any erasure coding schemes before, so we can implement our reliable scheme in this platform and
+
+395 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+exam its performance. By employing this scheme, we needn’t modify any architecture of RSC and only need to change the data layout in the server nodes.
+The basic building blocks of RSC are two types of cluster nodes: client compute nodes (client) and storage nodes (server). Compute nodes are used to response the user request and computing tasks. Applications that access data stored in RSC through the client nodes. Parallelism in RSC leads to performance gain while using the LDPC code technique improves the reliability.
+4.2 Storing and Retrieve Files Each file is split into several data stripes with the
+same block size, and then evenly distributed on a set of hosts. Figure 3 shows how the data and redundancy blocks are distributed in the code scheme to prevent data loss in the case of no more than three nodes crashes. The data blocks are labeled L10, L11 etc. and the corresponding coding blocks are labeled R10, R11 etc. The contents of a coding block are parity for specific portions of the corresponding data blocks.
+Figure 3. The LDPC code scheme
+When reading a file, the client first tries to retrieve the data blocks. Unless some nodes are unreachable or some data blocks are not found, these m fragments are sufficient to reconstruct the file efficiently. In case of failure, the client uses the code graph to find the control blocks required and retrieves them instead.
+When writing a file, the involved data blocks are changed, and the corresponding parity blocks should be updated simultaneously. Client checks the offset and size of a write to determine the number of partial stripe writes to be performed.
+5. Performance Evaluation 5.1. Experimental Setup
+We present an evaluation of the performance of the reliable scheme on RSC platform. We have implemented performance test on 1Gbps Ethernet, the test is carried out on twenty-six PCs that are jointed through IP switch, 16 client nodes and 16 server nodes. The hardware configurations of these PCs are the same: Intel Xeon 2.8GHZ CPU; 1GB RAM; Maxtor 300GB
+
+ATA hard disk. The benchmark tool is the latest version of XDD 6.5.
+We compare their read and write performance with other two configurations: RSC with RAID-1 scheme and RAID-5 scheme.
+
+5.2 Performance for normal workload From Fig.4(a) we observe that their read
+performance are very close when clients number less than 8, but when clients number continue increase the RAID-5 outperform other two schemes. The reason is that RAID-5 has more data servers to support larger read bandwidth than LDPC scheme and RAID-1 scheme when clients’ number added.
+
+Bandwidth (MB/s)
+
+900 800 700 600 500 400 300 200 100
+0 0
+
+R A ID -1 R A ID -5 LDPC
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+N um ber of C lients
+
+Figure 4(a). Aggregate read performance comparison in normal workload status; data block size is 256KB.
+
+Bandwidth (MB/s)
+
+40 0 35 0 30 0 25 0 20 0 15 0 10 0
+50 0 0
+
+R A ID -1 R A ID -5 LDPC
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+N umber of C lients
+
+Figure 4(b). Aggregate write performance comparison in normal workload status, data block size is 256 KB.
+
+However their write performances are in diversity. For example in Fig.4(b), when client number is 6, the aggregate write performance of LDPC, RAID-1 and RAID-5 are 165MB/s, 127MB/s, 257MB/s respectively. The write performance of LDPC scheme is lower than RAID-1, but higher than RAID-5 mode. This is because when execute write operation, RAID-5 and LDPC need read the old data and parity for the corresponding data block, but RAID-1 need only write data in couples directly. The better performance of LDPC is dues to its more efficient decoding performance than RAID-5.
+The LDPC scheme’s aggregate read and write performance increase as the client node number increase to 10, then keep near-constant. It shows that when up to 10 more clients, the aggregate performance is limited as network has reached its utmost bandwidth.
+
+396 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+5.3 Performance for degrade workload Since RAID-5 scheme can only tolerant one node
+failed, we measure the read and write performance of LDPC scheme and RAID-5 scheme when one server node is crashed.
+As shown in Fig. 5(a) and 5(b) compared with the normal status, both the read and write performance are decline obviously. The read and write performance of LDPC scheme outperform RAID-5 mode. For example, when clients number is 5, the read rates are 210MB/s in LDPC scheme and 179MB/s in RAID-5 scheme, similarly the write rates are 57MB/s and 46MB/s respectively. This is because in degrade status, RAID-5 need to read all other N-1 data blocks to reconstruct the lost data block. However LDPC scheme only need a few data blocks to reconstruct the lost one. By the same causation, it is easy to understand that why in Fig.5 (b) the write performance of LDPC scheme is much better than RAID-5 scheme too.
+
+Bandwidth (MB/s)
+
+35 0 30 0 25 0 20 0 15 0 10 0
+50 0 0
+
+R A ID -5 LDP C
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+N um ber of C lients
+
+Figure 5(a). Aggregate read performance comparison in degrade workload status; data block size is 256 KB.
+
+Bandwidth (MB/s)
+
+110 100
+90 80 70 60 50 40 30 20 10
+0
+
+R A ID -5 LDPC
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+N um ber of C lients
+
+Figure 5(b). Aggregate read performance comparison in degrade workload status; data block size is 256 KB.
+
+6. Conclusion and Future Work
+
+We have implemented a new reliable scheme for a high performance storage system on a commodity computing cluster. The redundancy of storage files are based on erasure coding with small Low-Density Parity-Check code. The contrastive experiments verify this scheme can provide higher reliability with a low storage and performance overhead than other popular redundancy schemes.
+
+This work presented here is ongoing work and many interesting future research are under further study. (1) Currently our scheme doesn’t support the dynamic scalability. We need improve our scheme to keep working consistent when storage nodes number is changed. (2)We intent to design a more flexible code scheme that can generate different code graph according to the variable reliability requirement. (3)We will implement an efficient cache mechanism to improve the write and reconstruct performance.
+7. Acknowledgments
+This research is supported by National 973 Great Research Project of P.R. China under grant (2004CB318203) and National Natural Science Foundation under grant (60603074 and 60603075).
+References
+[1] S. B.Wicker and S. Kim. Fundamentals of Codes, Graphs, and Iterative Decoding. Kluwer Academic Publishers, Norwell, MA, 2003. [2]J.S.Plank, A.L. Buchsbaum, R.L.Collings and M.G.Thomason, “Small Parity-check erasure codesexploration and observations”, In DSN-05: International Conference on Dependable Systems and Networks, IEEE, 2005. [3]J.S.Plank and M. G. Thomason, “A practical analysis of low-density parity-check erasure codes for wide-area storage applications”, In DSN-04: International Conference on Dependable Systems and Networks, June 2004. [4]Manoj Pillai and Mario Lauria, “CSAR: Cluster Storage with Adaptive Redundancy”, In ICPP 2003, Kaohsiung, Taiwan, Oct 2003. [5]Kai Hwang, Hai Jin, and Roy Ho, “RAID-x: A New Distributed Disk Array for I/O-Centric Cluster Computing”, In Proceedings of HPDC-9, Pittsburgh, PA, 2000. [6]Rebecca L. Collins James S. Plank, “Assessing the Performance of Erasure Codes in the Wide-Area”, In DSN05: International Conference on Dependable Systems and Networks, 2005. [7]Benjamin Gaidioz, Birger Koblitz, Nuno Santos, “Exploring high performance distributed file storage using LDPC codes”, Parallel Computing, 33(4-5) 2007, pp.264-274 [8]W. K. Lin, D. M. Chiu, and Y. B. Lee, “Erasure Code. Replication Revisited”, In Proc. of 4th International Conference on Peer-to-Peer Computing, 2004 [9]Li Xu, Xie Changsheng, Feng Zhongyan, “RSC: a Reliable High I/O Performance Storage Cluster for Multimedia Applications”, In Proceedings of the CIS’2006, Guangzhou, 2006, pp.1407-1411
+
+397 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+

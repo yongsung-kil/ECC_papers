@@ -1,0 +1,886 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+2035
+
+Multi-Mode QC-LDPC Decoding Architecture With Novel Memory Access Scheduling for 5G New-Radio Standard
+Seongjin Lee, Sangsoo Park , Graduate Student Member, IEEE, Boseon Jang , and In-Cheol Park , Senior Member, IEEE
+
+Abstract— As the low-density parity-check (LDPC) code has a powerful error-correcting performance and can achieve high throughput, it is being used in many application areas and recently adopted as a channel coding method in the 5G NewRadio communication standard. Unlike other LDPC codes, the 5G LDPC code has various irregular lifting sizes to support diverse message lengths. To meet the demanding requirements of the 5G standard, many solutions have been presented, but all of them are either impractical or fail to satisfy all the requirements. This paper, for the first time, proposes an areaefficient QC-LDPC decoder that satisfies the peak throughput requirements of the 5G standard and supports all the lifting sizes specified in the 5G standard. Instead of relying on full parallelism like in the previous works, this work tries partial parallelism to mitigate the hardware complexity, which leads to high efficiency in hardware complexity. In addition, a novel memory access scheduling method is proposed to solve the data access and alignment problems caused by the partially parallel structure, which is effective in supporting all the lifting sizes. A LDPC decoder realized in 65-nm CMOS technology demonstrates that its decoding throughput is greater than 20Gbps and its area is smaller than the existing decoders.
+Index Terms— 5G new-radio standard, area-efficient, high throughput, layered decoding, low-density parity-check (LDPC) codes, memory access, multi-mode, quasi-cyclic LDPC, VLSI implementation.
+I. INTRODUCTION
+T HE low-density-parity-check (LDPC) code, invented in the 1960s by Gallager [1], has widely been used in diverse fields such as communication and storage systems over the past two decades due to its error-correcting performance near to the Shannon limit. Among various LDPC codes, the Quasi-Cyclic (QC) LDPC code is effective in encoding and decoding, and thus it has been adopted as a main error
+Manuscript received August 17, 2021; revised November 19, 2021 and December 30, 2021; accepted February 3, 2022. Date of publication February 16, 2022; date of current version April 28, 2022. This work was supported in part by the National Research Foundation of Korea under Grant NRF-2017R1E1A1A01076992; and in part by the Ministry of Science and ICT, South Korea, under Grant IITP-2020-0-01847. This article was recommended by Associate Editor J. Lota. (Corresponding author: In-Cheol Park.)
+The authors are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea (e-mail: sjlee@ics.kaist.ac.kr; sspark@ics.kaist.ac.kr; bsjang@ics.kaist.ac.kr; icpark@kaist.edu).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCSI.2022.3150022.
+Digital Object Identifier 10.1109/TCSI.2022.3150022
+
+correction code in practical applications, especially in several wireless communication standards such as IEEE 802.16e (WiMAX) [2], IEEE 802.11n (Wi-Fi) [3], and DVB-S2 [4]. Recently, the LDPC code has been adopted for the 5G NewRadio (NR) standard [5]. The 5G LDPC code is designed for a peak throughput of 20Gbps, and has two base graphs, BG1 and BG2, that can be expanded to support various codeword lengths by changing the lifting size. A 5G LDPC code is derived by expanding one of two base graphs, and there are 51 lifting sizes ranging from 2 to 384 bits. Unlike the other standards, additional techniques such as rate matching and puncturing are applied to improve the code efficiency. These complex requirements introduce challenging constraints in the design of a decoder, making it important and urgent to design a practical QC-LDPC decoder for the 5G standard.
+The implementation of LDPC decoders has been addressed in terms of algorithmic and architectural perspectives. Among many LDPC decoding algorithms, the sum-product (SP) algorithm achieves an excellent error-correcting performance but suffers from a quite huge computational complexity caused by hyperbolic functions. To reduce the complexity, the min-sum (MS) algorithm [6] approximates the complex functions at the cost of a little degradation of error-correcting performance. Some variations of the MS algorithm, such as normalized MS (NMS) and offset MS (OMS) [7], have focused on filling the performance gap between the SP and the MS algorithms, and they have actively been used in practical implementations.
+The original message-passing schedule, often called a flooding decoding algorithm or two-pass algorithm, updates all the check nodes simultaneously using the variable-to-check (V2C) messages, and then updates all the variable nodes simultaneously by using check-to-variable (C2V) messages. Then it updates a-posteriori-probability (APP) messages by considering the new C2V messages. Recently, several attempts have been made to achieve high throughput by modifying the conventional scheduling methods [8]. In IEEE 802.11n and IEEE 802.16e, codeword lengths are not relatively large, which makes the conventional scheduling quite reasonable. In contrast, the maximum codeword length in the 5G standard is much larger than the previous ones, so tremendous hardware resources are required if designed based on the conventional scheduling, making it inappropriate for the 5G standard.
+
+1549-8328 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2036
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+The row-layered schedule, which treats each row as a separate parity check matrix and processes rows serially one by one, was presented in [9]. As the nodes involved in a row are updated when processing the row, a variable node is updated several times in an iteration. One iteration takes more time, but less iterations are required in the row-layered decoding algorithm. The number of iterations is empirically known to be reduced by almost a half. Owing to the serial processing of layers, the decoding throughput of the rowlayered decoding is inherently low. For QC-LDPC codes, however, a layer covers multiple rows of which number is equal to the lifting size, so the multiple rows can be processed in parallel, as they are orthogonal to each other. As a result, the throughput can be enhanced by increasing the number of rows to be processed in parallel. Several studies have tried to take advantage of the row-layered decoding by making a tradeoff between parallelism and hardware complexity [10], [11]. This paper will use the row-layered decoding method to utilize the parallel processing benefit of QC-LDPC codes.
+In the viewpoint of architectural perspective, it is important to analyze how much parallelism should be used to meet the peak throughput. The parallelism corresponding to the maximum lifting size is called full parallelism in this paper, and the less parallelism is called partial parallelism. Though the decoding throughput can be improved by increasing the number of rows to be processed in parallel, a fully parallel architecture is sometimes inappropriate because of the huge hardware resources required and the complex interconnections among them. Instead, this paper proposes a partially parallel architecture by analyzing the relationship between parallelism and decoding throughput.
+Various LDPC decoding architectures have been presented for the 5G standard, and they have targeted either applicationspecific integrated circuits (ASICs) [12], [13] or field programmable gate arrays (FPGAs) [14], [15]. In [12], the data dependency hazard in the pipeline was solved by reordering instructions and rescheduling data. As it still had the structural hazard related to the memory, however, it required additional V2C memories. In addition, it satisfied the peak throughput requirement of 20Gbps only when the decoding completes in one iteration. In [13], the data dependency hazard was eliminated by pipelining three independent codewords, but the high decoding throughput was achieved by processing independent codewords, which is hard to achieve in practical communication systems based on handshaking protocols. A 5G LDPC decoder was first implemented based on a fully parallel architecture in [14], but it needed tremendous hardware resources to support full parallelism and realize large interconnections. The data dependency hazard problem between adjacent layers was solved in [15] by pre-calculating conflicted APP messages. However, it required FIFO buffers and extra logic circuits, and furthermore, the throughput was not satisfactory because there was a single memory from which all the data were accessed serially. All of the works described above are basically based on full parallelism, requiring a lot of hardware resources and being ineffective to deal with 51 lifting sizes specified in the 5G standard.
+
+To meet the specifications of the 5G standard, we need to develop a decoder that can handle 51 lifting sizes and provide a peak throughput of 20Gbps. As the peak throughput is required in the downlink, the decoder should be area-efficient. In this paper, a novel area-efficient multi-mode QC-LDPC decoding architecture is proposed for the 5G standard. The proposed architecture is partially parallel, but meets the peak throughput requirement with a relatively small number of processing units. In addition, it can support all 51 lifting sizes, which is enabled by a novel scheduling of memory accesses. The new memory access scheduling is effective in solving the data access and data alignment problems caused by the partially parallel architecture. In addition, we propose a simple layer skip method to increase the throughput further. The proposed decoder implemented in a 65-nm CMOS technology shows that it needs the smaller area than the existing decoders while satisfying the peak throughput requirement.
+The rest of the article is organized as follows: Section II describes the fundamentals of LDPC codes, a brief introduction to 5G LDPC codes, and major decoding algorithms that have commonly been used. The proposed decoding architecture is explained in Section III, and the implementation results are presented in Section IV. Finally, concluding remarks are made in Section V.
+II. PRELIMINARIES An (n, k) LDPC code is defined by a parity check matrix H that has a sparse number of 1’s, and it can be represented in a bipartite graph called a Tanner graph. The rows and columns of H correspond to the check and variable nodes of the Tanner graph, respectively. A check node and a variable node are connected by an edge in the Tanner graph if there is 1 in the corresponding position in H. Most of practical LDPC codes are quasi-cyclic. The parity check matrix of a QC-LDPC code consists of cyclic-shifted identity sub-matrices and all-zero sub-matrices called null matrices. If the size of H is mb Z × nb Z , where the lifting size Z is the size of a sub-matrix, H can be simply represented with a protograph, often called a base graph, and a set of shift coefficients. To represent a null sub-matrix, a value of -1 is used as its shift coefficient. In a QC-LDPC code, a cyclic-shifted identity submatrix is orthogonal. In order words, a cyclic-shifted identity submatrix can be processed in parallel, as all the rows or columns containing the submatrix are independent. In addition, it is efficient to express a long QC-LDPC code, because the parity check matrix can be represented with a small amount of information.
+A. 5G LDPC Code
+The LDPC codes in the 5G standard have two base graphs, BG1 and BG2, designed for different scenarios: BG1 is mainly developed for long transport blocks and high code rates, while BG2 is designed for short transport blocks and low code rates. For BG1, the code rate ranges from 1/3 to 8/9 and the information length can be 292 bits to 8448 bits, while the code rate is 1/5 to 2/3 and the information length is up to 3840 bits for BG2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2037
+
+Fig. 1. A base matrix of 5G LDPC codes. A and D constitute the core part. E, I and O constitute the extension part. D has a dual-diagonal structure for simple encoding, I stands for an identity matrix, and O is an empty part.
+
+channel outputs yv and channel noise variance σ 2 as follows;
+
+Iv
+
+=
+
+2 yv σ2
+
+.
+
+After the initialization, each variable node v sends a V2C
+
+message Qvc, which is initialized to intrinsic message Iv , to a
+
+connected check node c. Each check node c calculates a C2V
+
+message Rcv to be sent to a connected variable node v as
+
+follows;
+
+⎛
+
+⎞
+
+
+
+Rcv = S · τ ⎝
+
+τ (|Qvc|)⎠
+
+v ∈Vc\v
+
+where Vc represents the set of all variable nodes connected to
+
+a τ
+
+check (x) =
+
+nodec, −ln ta
+
+Vc\v
+
+nh
+
+x 2
+
+is .
+
+Vc
+
+−
+
+v,
+
+S
+
+=
+
+v∈Vc\v si gn(Qvc), and
+
+Each variable node now updates its APP value Lv as
+
+expressed in (1), and V2C messages as in (2),
+
+
+
+Lv = Iv +
+
+Rcv
+
+(1)
+
+c∈Cv
+
+Qvc = Lv − Rcv
+
+(2)
+
+Fig. 2. Lifting sizes in 5G NR LDPC codes.
+The base matrix consists of five parts as depicted in Fig. 1, where the core part consisting of A and D is designed for high code rates and has high-degree rows for high errorcorrecting performance. The rows in E are orthogonal or quasi-orthogonal. The extension part in I consists of degree-1 variable nodes and is used to transmit additional information whenever the decoding fails, supporting H-ARQ. That is why the code is called a raptor-like code [16]. The first two columns are not transmitted for higher code rates. In addition, the extension part can be punctured to support various code rates.
+To support various codeword lengths, 5G LDPC defines 51 lifting sizes as shown in Fig. 2. The lifting size Z is a value of a × 2 j , where a ∈ {2, 3, 5, 7, 9, 11, 13, 15} and 0 ≤ j ≤ 7. It is irregular and ranges from 2 to 384.
+B. QC-LDPC Decoding Algorithm
+A LDPC code can be effectively decoded by the beliefpropagation (BP) algorithm, which is often called the sumproduct (SP) algorithm, that updates variable nodes and check nodes iteratively by sending the C2V and the V2C messages through the edges of the Tanner graph. The BP algorithm consists of the following steps: initialization and iterative processes including check-node update, variable-node update and APP update. For an additive white Gaussian noise (AWGN) channel, variable nodes are initialized with log-likelihood ratio (LLR) values Iv that are calculated from
+
+where Cv denotes the set of all check nodes connected to
+
+a variable node v. After updating the APP, the tentative
+
+codeword qˆ is obtained by hard-deciding the APP value as
+
+
+
+
+qˆv =
+
+0, Lv ≥ 0 1, other wi se.
+
+This method, which is frequently called the flooding decoding algorithm or the two-pass algorithm, updates all check nodes and then all variable nodes iteratively.
+The row-layered decoding of a QC-LDPC code regards a number of rows as a layer, and processes layer by layer instead of processing all rows at the same time. The number of rows in a layer is equal to the lifting size. For each layer, a V2C message Qvc is calculated with the APP value and C2V messages that are recently updated. Accordingly, the APP calculation and the variable update are changed as follows,
+
+Qvc
+
+=
+
+L
+
+(P v
+
+)
+
+⎛−
+
+Rc(vP)
+
+⎞
+
+
+
+Rcv = S · τ ⎝
+
+τ (|Qvc|)⎠
+
+v ∈Vc\v
+
+Lv
+
+=
+
+Qvc
+
++
+
+Rcv
+
+=
+
+L
+
+(P) v
+
++
+
+Rcv
+
+−
+
+Rc(vP).
+
+(3)
+
+where
+
+L
+
+(P) v
+
+and
+
+Rc(vP)
+
+are
+
+the
+
+APP
+
+value
+
+of
+
+node
+
+v
+
+and
+
+the C2V message from check node c to variable node v
+
+that have been determined previously, respectively. In (3),
+
+since the new APP value Lv is generated by utilizing the
+
+previous
+
+APP
+
+value
+
+L
+
+(P v
+
+)
+
+,
+
+it
+
+has
+
+the
+
+contributions
+
+coming
+
+from
+
+other layers. Therefore, the convergence rate of the layered
+
+decoding algorithm is approximately twice faster than that of
+
+the flooding algorithm.
+
+The check node operation in SP decoding needs to evaluate the complex nontrivial function τ (x) that is difficult to realize in hardware. To reduce the computational complexity, a sim-
+
+plified method called the min-sum (MS) approximation was
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2038
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+Algorithm 1 Row-Layered Offset Min-Sum Decoding
+
+Algorithm for QC-LDPC Codes
+
+1: Input: y, σ 2; offset: β; Output: qˆ ;
+
+2: Initialization: 3: for v = 1 : n do
+
+4: if v ≤ 2 Z
+
+5:
+
+Lv = 0;
+
+6: else
+
+7:
+
+Lv
+
+=
+
+2 yv σ2
+
+;
+
+8: end if
+
+9: for c ∈ Cv do
+
+10:
+
+Rcv = 0;
+
+11: end for
+
+12: end for
+
+13: Decoding:
+
+14: for t = 1 : tmax do// Max iteration
+
+15: for l = 1 : mb do// The number of layers
+
+16:
+
+for c = (l − 1) ∗ Z + 1: l ∗ Z do
+
+17: 18:
+
+for
+
+v∈ Qvc
+
+Vc =
+
+do
+
+L
+
+(P v
+
+)
+
+−
+
+Rc(vP);
+
+19:
+
+end for
+
+20:
+
+for v ∈ Vc do 
+
+
+
+21:
+
+Rcv = S · max
+
+min
+v Vc\v
+
+(| Q v  c |)
+
+−
+
+β,
+
+0
+
+;
+
+22:
+
+Lv
+
+=
+
+L
+
+(P) v
+
++
+
+Rcv
+
+−
+
+Rc(vP); //
+
+APP
+
+Update
+
+23:
+
+end for
+
+24:
+
+end for
+
+25: end for
+
+26: // Hard Decision and Syndrome Check
+
+27: for v = 1
+: n do
+
+28:
+
+qˆv =
+
+0, Lv ≥ 0 1, other wi se
+
+29: end for
+
+30: If H · qˆ = 0, then break; // Early stopping
+
+31: end for
+
+presented in [6]. The MS algorithm changes the check node operation to
+
+Rcv
+
+=
+
+S
+
+· min
+v Vc\v
+
+|Qvc| .
+
+(4)
+
+III. PROPOSED QC-LDPC DECODING ARCHITECTURE
+In the design of a 5G QC-LDPC decoder, it is important to reduce the hardware complexity while satisfying the required peak throughput, and to support all the code lengths and all the lifting sizes specified. The operational scenarios and the performance requirements to be considered are summarized in TR 38.913 [17]. In short, the maximum data rate is 20Gbps for downlink and 10Gbps for uplink. All the previous 5G works have been based on full parallelism, making the hardware complexity too large to be employed in practical realization. To overcome the limitation, the proposed architecture is developed based on partial parallelism by deriving the most suitable number of processing units rather than simply relying on full parallelism.
+
+A. Fixed-Point Decoding Algorithm
+A fixed-point decoding algorithm is required in practical implementations, so we have investigated the error-correcting performance resulting from a fixed-point representation consisting of three parts: a sign bit, an integer part denoted with Qi bits, and a fraction part with Q f bits. The maximum value and the minimum value in the (Qi + Q f + 1)-bit fixed-point representation are 2(Qi+Q f ) − 1 and −2(Qi+Q f ), respectively, when interpreted as integer values. To convert a floating-point value to a fixed-point value x˜, x is shifted left by Q f and round to the closest integer. Then, the rounded value is clipped by the maximum value. Since the bit-width and the location of the radix point affect the performance and the memory size directly, it is very important to determine Qi and Q f .
+
+x˜ = cli p (r ound (x)) ,
+
+cli p⎧( p)
+
+
+
+⎨⎪⎪⎪⎪⎪⎪⎪−2(Qi +Q f −1)
+
+ Qf, 
+
+=
+
+⎪⎪⎪⎪⎪⎪⎩⎪
+
+2(Qi p,
+
++Q
+
+f
+
+−1)
+
+−
+
+1
+
+ Qf,
+
+p ≤ ((−2(Qi +Q f −1))
+ Qf) p > ((2(Qi +Q f −1) − 1)
+ Qf) other wi se.
+
+In general, the APP values, which is the input to a LDPC decoder, are calculated from the channel outputs and the channel noise variance, and then quantized to Lv . The bitwidth of the fixed-point representation should be large enough to avoid significant performance degradation.
+
+As the MS approximation usually overestimates the magnitude of a C2V message, it decreases the error-correcting performance. To compensate for the overestimation, the magnitude is modified by multiplying a normalization factor α or by subtracting an offset β. These modifications are known as normalized min-sum (NMS) and offset min-sum (OMS), respectively [7]. The row-layered OMS decoding algorithm is presented in Algorithm 1. The difference of error-correcting performances between the two modified decoding algorithms is negligible, while the NMS decoding algorithm requiring additional multiplication is a little more complex in hardware implementation than the OMS decoding algorithm that needs only addition in normalization.
+
+B. Overall Architecture
+
+The peak throughput of 20Gbps specified in 5G NR should
+
+be achieved for LDPC codes that have a lifting size of 384
+
+and a code rate of 8/9 when the channel is almost error-free.
+
+Assuming that the average number of iterations is 3, the clock
+
+frequency is 500MHz, and the number of pipeline stage is 6,
+
+the row-layered decoding algorithm has a throughput estimated
+
+as (4),
+
+T=
+
+Z × Nb × R Iavg × Mb × C L K lay × TC L K
+
+=
+
+384 × 27bi ts
+
+3i tr.
+
+×
+
+5l a y er
+
+×
+
+(
+
+384 P
+
++
+
+5)
+
+×
+
+2ns
+
+(5)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2039
+
+Fig. 3. The proposed QC-LDPC decoding architecture.
+
+where P is the number of processing units employed in the decoder, the number of sub-iterations taken to process a single layer is 384/P, and the number of stall cycles to be considered before starting a new layer is one less than the number of pipeline stages. Since the decoding is iterative, we need to consider the data dependency between layers. In other words, there may be data dependency hazards between layers, so we need to insert 5 stall cycles between the consecutive layers. Under the maximum throughput requirement of 20Gbps, the number of DFUs should be at least 30 even if the layer skip method to be described later is considered. The proposed scheduling can handle all the lifting sizes specified in the 5G standard when the parallel factor P is 32, and practical implementation factors are considered to show that 32 is the most reasonable parallel factor. To minimize the hardware overhead related to cyclic shifters and their control, it is recommended to use a power-of-two parallel factor. As indicated in (4), a parallel factor of 16 is inappropriate to use, because the number of DFUs should be at least 30 to meet the peak throughput requirement. Another parallel factor of 64 achieves a much higher throughput, but it requires 64 APP values to be accessed at once, increasing the word length of the memory. Since the word length is practically limited to 100∼200 bits, more DFUs leads to a greater number of memory banks and a much higher area accordingly, making the parallel factor of 64 an inappropriate choice. On the other hand, a parallel factor of 32 can meet the peak throughput requirement at the cost of a reasonable area.
+There are several units in the proposed architecture: 27 APP memories for storing APP LLR values, QC-LDPC shift networks (QSNs) for cyclic-shifting only valid data by the shift coefficients in the parity check matrix, the distribution network distributes 32 data coming from each APP memory to 32 DFUs. Conversely, the gathering network collects 32 data from 32 DFUs to send them to an APP memory, 32 DFUs for processing the decoding algorithm, and a syndrome checker to check if H·s is zero.
+
+To increase the operating frequency, in addition, it employs a 6-stage pipelined structure. The 6 pipeline stages are separated by the red dotted lines in Fig. 3. At the beginning of the decoding process, the controller generates a memory address according to the lifting size Z. The APP memory is an on-chip SRAM that can be accessed in a cycle, so it provides the desired data to K activated DFUs for Z/K cycles, K data per cycle. When the processing of a layer is completed, the resulting APP data are stored into the APP memory for Z/K cycle. Since the on-chip SRAM is usually slower than registers or combinational logic circuits, it forms a critical path and plays a critical role in determining the operating frequency of the decoder. Accordingly, the number of pipeline stages is determined to 6 in the proposed decoder. The APP memory does not have pipeline registers inside, but they are placed at the boundary of two pipeline stages because they are accessed in the two stages, one for reading and the other for writing. There are 27 paths from the APP memories and 32 paths from the C2V memories. Considering the maximum row weights of BG1, we need to select 19 out of 27 paths. For this, [14] developed an enormous multiplexer network associated with a significant hardware complexity. A different approach is used in the proposed architecture. Unnecessary paths among 27 paths are marked with special flags to prevent them from being selected. The masking method removes the excessively large multiplexer networks at the cost of the small overhead needed to handle the flags, which will be described in detail in Subsection III-F.
+C. APP Memory Structure of the Proposed Architecture
+In general, a LDPC decoder needs to store APP LLR values. [14] presented a way to store all APP values in a register cluster consisting of enormous flip-flops. However, the register cluster occupies a much larger area than on-chip memory, and even worse, its routing complexity is too high to be a practical solution. In [12], all APP values are stored in one memory, which significantly reduces the number of input and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2040
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+output ports and the routing complexity. However, the required data must be accessed over multiple cycles, which dramatically increases the latency. In addition, as full parallelism is used in the architecture, the memory must support very wide data, ranging from thousands to tens of thousands of bits, but the word length in a practical memory is in general limited to hundreds of bits. For a practical implementation of the APP memory, we employ 26 separate memory banks and one shared memory bank of which word-length is wide enough to store 32 APP values. A memory in the 26 separate memory banks stores as many APP values as the lifting size corresponding to the core part of H that covers A, D, E of Fig. 1. Since the core part has no independent submatrices that have exclusive accesses, the core part requires as many memory banks as the number of submatrices in a layer. The shared APP memory bank, on the other hand, covers all APP values corresponding to part I of H, because their accesses are exclusive in time in the layered decoding [18]. In other words, only one sub-matrix in I is accessed in decoding a layer. As shown in Fig. 1, the shift coefficients of the diagonal submatrices in I are all zeros, so no cyclic-shifter is required there. The shared memory bank is effective in reducing the number of input and output ports and the routing complexity. Since the LDPC decoding algorithm is iterative, the memory banks are conceptually associated with dual ports to make it possible to perform read and write operations at the same cycle.
+
+Fig. 4. Sequential scheduling of a submatrix for 3-parallel architecture. (a) For a submatrix with a lifting size Z of 9 and a shift coefficient c of 2, the values needed at the same time are colored in the same color. (b) A memory structure for a 3-parallel architecture needs to access two rows, as the values with the same color are not positioned at a row.
+
+D. Conventional Memory Access Scheduling
+Since the data corresponding to a submatrix are stored as one word in the fully parallel memory structure, all the data can be accessed in parallel, which means that the fully parallel architecture does not require any memory access scheduling. However, in the proposed partially parallel decoder, the memory is also partially parallel, and stores the APP values of a submatrix into multiple entries. In that case, it is necessary to make a method to access the appropriate data efficiently. First, we analyze the conventional memory access scheduling methods such as sequential scheduling and stride scheduling. Let P, Z, and c be the number of DFUs, the lifting size, and the shift coefficient of a submatrix, respectively.
+The sequential scheduling [19], which is simple and has widely been used, is exemplified in Fig. 4 (a), where Z is 9, P is 3, and c is 2. Three consecutive rows are assigned to three DFUs, and the data colored in the same color are processed at the same time. Fig. 4 (b) shows the partially parallel memory structure that stores three APP values in a row. As the shift coefficient c is 2 in this example, the data in the same color should be input to the three DFUs at the same time. However, unless c is a multiple of the number of DFUs, it is impossible to read all the necessary data in one memory access. As shown in Fig. 4 (b), data 2, 3, and 4 of the first sequence are scattered into two different rows, and they can be accessed by reading the memory two times. These sequential scheduling makes sense for the previous standards associated with a few lifting sizes and a relatively low throughput. For example, the IEEE 802.11n standard has only three lifting sizes of 27, 54 and 81, and the sequential scheduling is sufficient for the standard when the number of processors
+
+Fig. 5. Stride scheduling of a submatrix. (a) For a submatrix with a lifting size Z of 9 and a shift coefficient c of 2, the values accessed at the same time in a 3-parallel architecture are colored in the same color. (b) A memory structure for a 3-parallel architecture needs to access one row, as the values with the same color are all positioned at a row. The stride scheduling is applicable only when the lifting size is a multiple of the parallel factor.
+is a great common divisor (GCD) of the lifting sizes, 27 in IEEE 802.11n standard. In the 5G standard, however, there are 51 lifting sizes and a myriad of shift coefficients are defined, so the sequential scheduling dramatically increases the control overhead and the access time, being inappropriate for the 5G standard.
+To overcome the drawback of sequential scheduling, another scheduling called stride scheduling was presented [20], [21]. The stride scheduling partitions one layer into P subsets in order, and each subset is handled by a DFU. Therefore, each DFU is in charge of Z/P rows, and the row indices accessed at the same time differ by stride s = Z/P. This is the reason why the method is called stride scheduling. Fig. 5 (a) shows an example of stride scheduling, where Z is 9, P is 3, and c is 2. The rows assigned to a DFU are different from Fig. 5 (a). The partially parallel memory structure for stride scheduling
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2041
+
+Fig. 6. Proposed scheduling of a submatrix for 6-parallel architecture. (a) 3 DFUs are only activated in this case. For a submatrix with a lifting size Z of 9 and a shift coefficient c of 2, the values to be accessed at the same time are colored in the same color. (b) A memory structure for a 6-parallel architecture needs to access one row, as the values with the same color are all positioned at a row. D stands for an unnecessary value that is not involved in the decoding.
+
+is depicted in Fig. 5 (b). Unlike the sequential scheduling, the data in a row are not sequential but separated by stride s. The P APP values stored in a row can be accessed at the same time, and distributed to P DFUs. Therefore, the stride scheduling works well even if c is not a multiple of P, but it is limited to the case that the lifting size Z is a multiple of P. If the lifting size Z is not a multiple of P, the sequential scheduling should be used instead of the stride scheduling, causing additional access cycles and hardware overhead. Such a case is said to have a data access problem. Since most of the previous standards have a few lifting sizes and P can be a factor of Z, there is no need to consider the data access problem. For the 5G standard with 51 lifting sizes, however, it is impossible to select such a P that is a factor of all the lifting sizes, which makes the conventional stride scheduling inappropriate for the 5G standard.
+
+E. Proposed Memory Access Scheduling
+The case that multiple lifting sizes are not a multiple of a certain number has not been studied. To solve the data access problem, we propose for the first time a novel memory access scheduling that is effective in dealing with all the lifting sizes specified in the 5G standard. To solve the data access problem, it is necessary to break the stereotype that all the employed DFUs have to be utilized. There is no reason to use all of the DFUs, which means that there is no need to store P valid values in a row of the APP memory. Therefore, a stride can be determined differently by activating only a part of P DFUs. In the proposed method, one layer is partitioned into K subsets, where K is calculated as
+
+K = max({k|k divides Z, k ≤ P}).
+
+(6)
+
+Fig. 6 (a) shows an example, where Z is 9, P is 6, c is 2, and K is 3. It looks like the conventional stride scheduling, but it is different in that each row is assigned to only K DFUs, not to P DFUs. In the example, there is no data access problem,
+
+Fig. 7. QSN operation. (a) A memory structure for 6-parallel architecture, where lifting size Z is 9, parallelism P is 6. (b) If the shift coefficient c is 2, the sequence of the second data is different from that of the first row. (c) a QSN operation consisting of a left shift, a right shift, and merging. (d) Implementation of the QSN.
+as Z is a multiple of K. A partially parallel memory structure developed for the proposed scheduling is shown in Fig. 6 (b), where D stands for a value that is not involved in the decoding process.
+After reading a row of data, the data are in general cyclicshifted to feed them to the corresponding DFUs. Since only K values in the row are valid, the conventional cyclic-shifter that rotates P values is not useful. In other words, there is no need to shift the unnecessary values not involved in the decoding process. We called this issue a data alignment problem. A specific cyclic-shifter that cyclic-shifts only K valid values is required to solve the problem. Fortunately, such a shifter was already studied for the previous standards to handle multiple lifting sizes, which is the QC-LDPC shift network (QSN) [22]. The Benes network [25] is an efficient structure to perform all types of permutations, but it is inefficient in processing partial circular shift. The QSN consists of two shifters each of which shifts either left or right and one multiplexor that combines the two shifter outputs, so it has been known to have the shortest critical path among the networks developed for LDPC decoding so far.
+The QSN, which is popularly needed to support the data alignment problem, is also used in the proposed architecture. For the first entry of partially parallel memory structure shown in Fig. 7 (a), where Z is 9, P is 6, c is 2, and K is 3, only 3 valid values out of 6 are required to be cyclic-shifted by 1, as shown
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2042
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+TABLE I COMPARISON OF THE NUMBERS OF READ OPERATIONS IN THE SEQUENTIAL SCHEDULING AND THE PROPOSED SCHEDULING
+
+in Fig. 7 (b). Such a QSN is composed of a left shift network, a right shift network, and a merge network, as depicted in Fig. 7 (c). For the shift operation, a local shift coefficient u is first computed in the controller. Then, the data read from the memory is left shifted by u in the left shift network, and right by shifted K-u in the right shift network. Finally, the two shifted data are combined in the merge network, where K resulting values from the left are valid and the rest ones are treated as unnecessary values. The data alignment problem is solved by employing the QSN, as only K valid data are appropriately cyclic-shifted. An implementation of the QSN is shown in Fig. 7 (d).
+Activating K DFUs instead of P DFUs leads to low utilization, but does not degrade the throughput in most cases specified in the 5G standard. To show that proposed scheduling has almost no disadvantage, the numbers of read operations needed to process one layer in the sequential scheduling and the proposed scheduling are compared with assuming 32 DFUs, and summarized in Table I. The number of activated DFUs according to the lifting size is also shown for the proposed scheduling. Except for the case of 176, the number of read operations needed in the proposed scheduling is equal to or less than that in the sequential scheduling, which means that most of the lifting sizes can be effectively processed by the proposed scheduling without sacrificing the decoding throughput. Note that the conventional stride scheduling is not applicable to most of the lifting sizes.
+If the input LLR values are delivered sequentially, the proposed scheduling needs to rearrange the codeword. The codeword rearrangement can be accomplished by taking a transpose memory that writes in the column order and reads in the row order [24]. The transpose operation should be performed for each group of the lifting size, the transpose memory consists of 384 elements, which is the maximum lifting size, and forms a 12 × 32 array, as shown in Fig. 8, in order to read a row of 32 data at a time. The transpose operation takes additional cycles in the initialization, if the input LLR values are delivered sequentially. However, the additional cycles and the hardware overhead are not so heavy,
+
+Fig. 8. Transpose memory.
+as the transpose operation is conducted for each group of the lifting size instead of the whole codeword and the area of a transpose memory is 0.04mm2 in 65nm process, corresponding to about 2% of the logic part of the decoder. It takes 12 cycles to initialize an APP memory except for the shared one, so the initialization takes 288 cycles at maximum because the first two block columns punctured are implicitly initialized to zeros. We assume that the rearranged codeword is delivered to the decoder.
+F. Decoding Function Unit In processing the row-layered OMS decoding algorithm, it is
+necessary to perform three processing steps for each layer: variable-node update, check-node update, and APP update. These processing steps are actually computed as shown in Fig. 9. First, the APP values read from the memory banks are shifted through the QSN, and then used as the input. In the C2V restore module, the previous C2V information read from the C2V memory are used to restore individual C2V messages. Then, V2C messages are generated by subtracting the C2V messages from the APP values, taking into account overflow and underflow cases. Aforementioned in section III-B,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2043
+
+Fig. 9. Block diagram of the DFU.
+
+the masking method is used to validate only 19 paths out of 27 paths, which is enabled by employing a vector of 27 maskflag bits. A mask-flag bit of 1 indicates that the corresponding path is not involved, so the corresponding value is replaced with the maximally representable value. Then the SM module converts the value to the signed magnitude value that is needed in the MIN TREE module that finds the first and second minimum values by using the tree architecture presented in [23]. An 8-input tree architecture is exemplified in Fig. 10, and two primitive units, C1M1 and C1M2, are used to realize the tree architecture.
+According to the layer shown in Fig. 10, m2, m4, and m5 are converted to the maximum values, and they are eventually removed in selecting the first and second minimum values. In other words, the maximum values, or the masked APP values, are not involved in the searching process of the first and second minimum values. The MIN TREE module outputs the first minimum, the second minimum, and the index of the first minimum. Next, the offset value is subtracted from the first and second minimum values in accordance with the definition of the OMS algorithm. If the result is less than 0, it is set to 0. The results of the MIN TREE module are concatenated with the sign bits generated in the SIGN MAKER module to form the C2V information to be used in the next iteration, and then the C2V information is used in the 2C module to make new C2V messages. Finally, the new C2V messages are added to the V2C messages to make new APP values, taking into account overflow and underflow cases. Of course, the new APP values corresponding to the mask-flag bits of 1 are not stored into the APP memory banks.
+
+Fig. 10. Architecture of the MIN TREE unit.
+
+G. Syndrome Checker
+To meet the peak throughput of the 5G standard, an early termination method is adopted to finish the decoding process if the syndromes are all checked to be zero. The syndrome check is conducted for each iteration. Every row of the parity check matrix can be regarded as a single parity check, so the decoding can be finished earlier than the maximum number of
+
+iterations if no errors are detected for all rows. Fig. 11 depicts the detailed structure of the syndrome checker.
+The new APP values generated by the DFUs are hard-decisioned and fed to the syndrome checker; the bit is set to 1 if the APP value is less than 0, and otherwise it is set to 0. Note that the APP values corresponding to the masked paths
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2044
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+no update of APP values for such a case, we can skip the first layer in the first iteration so as to enhance the decoding throughput. The APP values are appropriately updated even if we start from the second layer in the first iteration. The skipping of the first layer in the first iteration increases the peak throughput, being effective especially when the code rate is high.
+
+Fig. 11. Detailed structure of the syndrome checker.
+
+IV. IMPLEMENTATION RESULTS
+This section presents the implementation results of the proposed decoder and compares it with the previous decoders. While meeting the peak throughput and dealing with all the lifting sizes, the proposed decoder occupies the smallest area.
+
+are disabled by AND-ing with the inverse of the mask-flag bits, which converts unnecessary APP values to 0 in order to make them not involved in the syndrome check. Also, by adopting a thermometer code circuit that makes k consecutive bits to 1’s and the remaining bits to 0’s, only k valid rows in 32 are included in the syndrome check. The syndrome of a row is 1 if there is a parity error in the row. Due to the partially parallel structure, the syndrome check deals with up to 32 rows at once. The syndrome flag is set to 0 at the beginning of an iteration, and accumulated by OR-ing for all the layers. If the syndrome flag is 0 at the end of an iteration, the decoding process can be terminated because all the rows have no parity errors.
+H. Data Flow of Proposed Decoding Architecture The data flow of the proposed decoding architecture is
+exemplified in Fig. 12, where Z, P, K are 9, 4, 3, respectively. This example considers a small Z, but the practical lifting size is usually much larger, varying from 2 to 384. The APP values read from the APP memory are cyclic-shifted by the QSN, and fed to the DFUs. Note that only valid values, not all the values, are shifted, and that the output of DFU 3 is not necessary as it was given unnecessary inputs. The new APP values updated by the DFUs pass through the gathering network and the QSN, and are finally written to the APP memory. The proposed decoding architecture with the novel memory access scheduling can handle all the lifting sizes with a parallel factor P of 32. In addition, it completely eliminates the data access and the data alignment problems, becoming a feasible solution for the 5G standard.
+I. Skipping of the First Layer in the First Iteration
+In general, the LDPC decoding starts with initializing C2V values to zero, and then begins the processing of the first layer. As the first two systematic columns are not transmitted, the initial LLR values of the punctured part are assumed to be zero. In other words, the probability that a bit in the punctured part is 0 is equal to the probability that it is 1.
+The MS algorithm finds the first and second minimum values and uses them as C2V values. In the first iteration, the two minimum values of the first layer are obviously zero due to the APP values of the punctured part. Since there is
+
+A. Simulation Results
+To decide reasonable bit-widths for APP and C2V messages, we have conducted intensive simulations with assuming that the codeword is modulated with the quadrature phase shift keying (QPSK) and transmitted under the additive white Gaussian noise (AWGN) channel. In the simulations based on BG1, for example, the lifting size is 384, which corresponds to 8448 information bits at 8/9 code rate. The layered OMS decoding algorithm has been conducted with a maximum iteration of 10 and an offset value of 0.0011 in the binary representation. The decoding performances resulting from the double-precision floating-point representation and two fixed-point candidates are shown in Fig. 13, where the 8-bit representation is apparently reasonable as there is almost no loss from the error-correcting performance resulting from the double-precision floating-point representation. Frame-error rates (FERs) for three code rates are depicted in Fig. 14, which have been obtained from the fixed-point layered offset minsum decoding. The average number of iterations to complete the decoding is depicted in Fig. 15 (a).
+Assuming P is 32, the decoding throughputs for three code rates are depicted in Fig. 15 (b), where the peak throughput requirement for the LDPC code of code rate 8/9 is satisfied when the SNR is higher than 5dB.
+B. ASIC Implementation Results of Proposed Decoder
+The proposed architecture was implemented in a 65-nm CMOS technology, and the ASIC characteristics are summarized in Table II. The proposed decoder was designed in an 8-bit fixed-point representation to support all the code rates and all the lifting sizes specified in the 5G standard. In particular, it is the first decoder that handles all 51 lifting sizes. It employs the row-layered OMS algorithm, which has widely been used for hardware implementations, and shows almost the same error-correcting performances as those obtained in the double-precision floating-point representation. Unlike the previous works, the proposed decoder takes a partially parallel structure to achieve a high efficiency in area, and a 6-stage pipelined architecture to increase the operating frequency to 500MHz. The early termination and the layer skip method described in subsection III-I plays a role of increasing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2045
+
+Fig. 12. A flow of the proposed decoding architecture when lifting size Z is 9, parallelism P is 4, and activation K is 3, where an updated value is denoted with a prime mark.
+TABLE II CHARACTERISTICS OF THE PROPOSED AND THE PREVIOUS DECODERS
+
+the peak throughput. As a result, the implemented decoder achieves a throughput of 21.78Gbps as follows,
+
+T
+
+=
+
+384 × 27bi ts
+
+(3i
+
+tr.
+
+×
+
+5l a y er
+
+−
+
+1)
+
+×
+
+(
+
+384 32
+
++ 5) × 2ns
+
+=
+
+21.78Gbps.
+
+Fig. 16 shows the layout of the proposed decoder, which has a core area of 5.74mm2 with a cell utilization rate of 68%. As shown in Fig. 17, the logic part is mainly divided into the following components: QSN, VNU, CNU, APP and syndrome checker, accounting for 38.6%, 9.4%, 45.5%, 5% and 0.9%, respectively. The on-chip memories are surrounded by colored
+
+lines; red for the shared memory, yellow for the APP memory, and white for the C2V memory. Since the maximum word length allowed for a dual-port memory is limited, the APP and C2V memories are realized by concatenating multiple memories.
+C. Comparison With State-of-the-Art Decoders The characteristics of three previous QC-LDPC decoders
+are also summarized in Table II. The decoding architecture in [12] was implemented based on a fully parallel architecture and achieved a peak throughput of 33.2Gbps if decoded
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2046
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+Fig. 13. Frame-error rates (FERs) resulting from the floating-point and fixed-point layered offset min-sum decoding algorithms for a code derived from base matrix 1.
+
+Fig. 16. A Layout of the proposed QC-LDPC decoding architecture implemented in 65-nm process. The read box is the shared memory for the extension part, the yellow box is the APP memory banks for the core part, the green box is the memory banks storing the parity check matrix, and the white box is the C2V memory banks.
+
+Fig. 14. Frame-error rates (FERs) of the layered offset min-sum decoding algorithms for various code rates obtained including 8/9, 1/3, and 1/2 and 8-bit fixed-point APP values.
+
+Fig. 17. Area breakdown of the logic part.
+
+Fig. 15. Fixed-point layered offset min-sum decoding performance for a code derived from base matrix 1. Several code rates are considered, including 8/9, 1/3, and 1/2. (a) Average number of iterations to complete decoding, and (b) the corresponding throughput.
+in one iteration. Compared to [12], the proposed decoder occupies a 45% smaller core area. The pipelined decoding architecture in [13] achieved a peak throughput of 71.7Gbps
+
+by overlapping the processes of multiple codewords into the pipelined decoding process. Although these architectures have the higher peak throughput than the proposed one, the surplus throughput exceeding 20Gbps has no practical meaning. Though [13] is associated with a smaller area, the codeword length supported is fixed to 1032 bits and much shorter than the longest codeword of 5G.
+Since the architecture of [14] was implemented in a FPGA, it is impossible to directly compare the proposed decoder with [14]. For a fair comparison, the architecture of [14] was analyzed in the viewpoint of ASIC. In the architecture of [14], the APP memory consists of 208,896 flip-flops because all APP values must be read at once, and multiplexer networks are required to select 19 out of 68 values. Since the largest row weight is 19 in BG1, 38 cyclic-shifters are required to shift valid APP values. In particular, the input size of a cyclic-shifter is 2,688 bits. Finally, 384 DFUs is required to support full parallelism. The characteristics are listed in Table III, which clearly shows that the proposed decoding architecture is smaller than [14]. Though [14] requires 38 cyclic-shifters, which is smaller than that required in the proposed decoder, a cyclic-shifter is associated with a much larger area because the input size is much larger than that of the QSN employed in the proposed decoder.
+In short, the proposed decoding architecture is associated with the smallest core area while satisfying the peak throughput specified in the 5G standard.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: MULTI-MODE QC-LDPC DECODING ARCHITECTURE WITH NOVEL MEMORY ACCESS SCHEDULING
+
+2047
+
+TABLE III COMPARISON OF THE PROPOSED DECODING ARCHITECTURE AND [14]
+V. CONCLUSION A QC-LDPC decoding architecture has been proposed to support the peak throughput requirement, all code rates, and all lifting sizes specified in the 5G standard. In particular, it is the first decoding architecture developed to handle all the lifting sizes. The proposed architecture utilizes partial parallelism to decrease the hardware complexity, and employs a novel memory access scheduling to support all lifting sizes. The proposed memory access scheduling has improved the stride scheduling in order to completely solve the data access and data alignment problems caused by adopting partial parallelism. The proposed decoder evaluated in a 65-nm CMOS technology have achieved 21.78Gbps at 500MHz operating frequency with a core area of 5.74 mm2. Compared with several previous decoding architectures, the proposed decoder is smaller in core area while meeting the peak throughput requirement of the 5G standard.
+ACKNOWLEDGMENT The authors would like to thank the IC Design Education Center (IDEC), South Korea, for supporting the EDA tool.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962, doi: 10.1109/TIT.1962.1057683.
+[2] Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed Broadband Wireless Access Systems, IEEE Standard 802.16-2004, 2004.
+[3] Standard for Information Technology-Local and Metropolitan Area Networks-Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.11-2016, 2016.
+[4] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), Standard ETSI EN 302 307-2 V.1.1.1, Oct. 2014.
+[5] Chairman’s Notes of A1 7.1.5 on Channel Coding and Modulation for NR, document R1-1613710, 3GPP, Nov. 2016. [Online]. Available: https://www.3gpp.org/ftp/tsg_ran/wg1_rl1/TSGR1_67/Docs/ R101613710.zip
+[6] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999, doi: 10.1109/26.768759.
+
+[7] J. Chen and M. P. C. Fossorier, “Density evolution for two improved
+
+BP-based decoding algorithms of LDPC codes,” IEEE Commun.
+
+Lett., vol. 6, no. 5, pp. 208–210, May 2002, doi: 10.1109/4234.
+
+1001666.
+
+[8] S. Yun, D. Kam, J. Choe, B. Y. Kong, and Y. Lee, “Ultra-
+
+low-latency LDPC decoding architecture using reweighted off-
+
+set min-sum algorithm,” in Proc. IEEE Int. Symp. Circuits
+
+Syst. (ISCAS), Oct. 2020, pp. 1–5, doi: 10.1109/ISCAS45731.2020.
+
+9181189.
+
+[9] E. Sharon, S. Litsyn, and J. Goldberger, “An efficient message-
+
+passing schedule for LDPC decoding,” in Proc. 23rd IEEE
+
+Conv. Electr. Electron. Eng. Isr., Sep. 2004, pp. 223–226, doi:
+
+10.1109/EEEI.2004.1361130.
+
+[10] D. E. Hocevar, “A reduced complexity decoder architecture via lay-
+
+ered decoding of LDPC codes,” in Proc. IEEE Workshop Signal
+
+Process. Syst. (SIPS), Oct. 2004, pp. 107–112, doi: 10.1109/SIPS.2004.
+
+1363033.
+
+[11] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered
+
+decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel.
+
+Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009, doi:
+
+10.1109/JSAC.2009.090816.
+
+[12] C.-Y. Lin, L.-W. Liu, Y.-C. Liao, and H.-C. Chang, “A 33.2 Gbps/Iter.
+
+reconfigurable LDPC decoder fully compliant with 5G NR applications,”
+
+in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2021, pp. 1–5, doi:
+
+10.1109/ISCAS51556.2021.9401329.
+
+[13] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux,
+
+“High-speed LDPC decoders towards 1 Tb/s,” IEEE Trans. Circuits
+
+Syst. I, Reg. Papers, vol. 68, no. 5, pp. 2224–2233, May 2021, doi:
+
+10.1109/TCSI.2021.3060880.
+
+[14] A. Verma and R. Shrestha, “A new VLSI architecture of next-generation
+
+QC-LDPC decoder for 5G new-radio wireless-communication standard,”
+
+in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Oct. 2020, pp. 1–5, doi:
+
+10.1109/ISCAS45731.2020.9181188.
+
+[15] V. L. Petrovic´, M. M. Markovic´, D. M. El Mezeni, L. V. Saranovac,
+
+and A. Radoševic´, “Flexible high throughput QC-LDPC decoder with
+
+perfect pipeline conflicts resolution and efficient hardware utilization,”
+
+IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467,
+
+Dec. 2020, doi: 10.1109/TCSI.2020.3018048.
+
+[16] T. Y. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, “Protograph-
+
+based raptor-like LDPC codes,” IEEE Trans. Commun., vol. 63,
+
+no. 5, pp. 1522–1532, May 2015, doi: 10.1109/TCOMM.2015.
+
+2404842.
+
+[17] Study on Scenarios and Requirements for Next Generation
+
+Access Technologies, document TR 38.913, 3GPP, 2017. [Online].
+
+Available:
+
+https://portal.3gpp.org/desktopmodules/Specifications/
+
+SpecificationDetails.aspx?specificationId=2996
+
+[18] QC-LDPC Code Throughput Comparison, document R1-1706177,
+
+Mediatec. Accessed: Apr. 3, 2017.
+
+[19] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design
+
+for quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale
+
+Integr. (VLSI) Syst., vol. 15, no. 1, pp. 104–114, Jan. 2007, doi:
+
+10.1109/TVLSI.2007.891098.
+
+[20] J. Dielissen, A. Hekstra, and V. Berg, “Low cost LDPC decoder for
+
+DVB-S2,” in Proc. Design Automat. Test Eur. Conf., 2006, pp. 1–6, doi:
+
+10.1109/DATE.2006.243816.
+
+[21] B. Kim and I.-C. Park, “Area-efficient QC-LDPC decoder architec-
+
+ture based on stride scheduling and memory bank division,” IEICE
+
+Trans. Commun., vol. E96.B, no. 7, pp. 1772–1779, Jul. 2013, doi:
+
+10.1587/transcom.E96.B.1772.
+
+[22] X. Chen, S. Lin, and V. Akella, “QSN—A simple circular-shift network
+
+for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. Circuits
+
+Syst. II, Exp. Briefs, vol. 57, no. 10, pp. 782–786, Oct. 2010, doi:
+
+10.1109/TCSII.2010.2067811.
+
+[23] Y. Lee, B. Kim, J. Jung, and I. C. Park, “Low-complexity tree
+
+architecture for finding the first two minima,” IEEE Trans. Circuits
+
+Syst. II, Exp. Briefs, vol. 62, no. 1, pp. 61–64, Jan. 2015, doi:
+
+10.1109/TCSII.2014.2362663.
+
+[24] G. A. Ruiz and M. Granda, “Efficient low-power register array with
+
+transposed access mode,” Microelectron. J., vol. 45, no. 4, pp. 463–467,
+
+2014.
+
+[25] V. E. Beneš, “Optimal rearrangeable multistage connecting networks,”
+
+Bell Syst. Tech. J., vol. 43, no. 4, pp. 1641–1656, Jul. 1964, doi:
+
+10.1002/j.1538-7305.1964.tb04103.x.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+2048
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 69, NO. 5, MAY 2022
+
+Seongjin Lee received the B.S. degree in electrical engineering from Korea University, Seoul, South Korea, in 2019, and the M.S. degree in electrical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2021. His current research interest includes VLSI architectures for neural network processors.
+
+Boseon Jang received the B.S. degree in electronic and electrical engineering from Hongik University, Seoul, South Korea, in 2021. He is currently pursuing the M.S. degree with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea. His current research interests include VLSI architectures for error-correction codes and communication systems.
+
+Sangsoo Park (Graduate Student Member, IEEE) received the B.S. degree in electronics engineering from Kyungpook National University, Daegu, South Korea, in 2020. He is currently pursuing the M.S. degree with the Division of Future Vehicle, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea. His current research interests include algorithms and VLSI architectures for error-correction codes, communication systems, and neural network processors.
+
+In-Cheol Park (Senior Member, IEEE) received the B.S. degree in electronic engineering from Seoul National University, Seoul, South Korea, in 1986, and the M.S. and Ph.D. degrees in electrical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 1988 and 1992, respectively.
+Since June 1996, he has been an Assistant Professor and is currently a Professor with the School of Electrical Engineering, KAIST. Prior to joining KAIST, he was with the IBM T. J. Watson Research Center, Yorktown, NY, USA, from May 1995 to May 1996, where he researched high-speed circuit design. His current research interests include computer-aided design algorithms for high-level synthesis and very-large-scale integration architectures for general-purpose microprocessors. Dr. Park received the Best Design Award at ASP-DAC in 1997 and the Best Paper Award at ICCD in 1999.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+

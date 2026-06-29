@@ -1,0 +1,462 @@
+Design and Evaluation of Information Bottleneck LDPC Decoders for Software Defined Radios
+
+Jan Lewandowsky, Gerhard Bauch
+Hamburg University of Technology Institute of Communications 21073 Hamburg, Germany
+{jan.lewandowsky,bauch}@tuhh.de
+
+Matthias Tschauner Fraunhofer Institute for Communication, Information Processing and Ergonomics (FKIE) 53343 Wachtberg, Germany matthias.tschauner@fkie.fraunhofer.de
+
+Peter Oppermann Fraunhofer Institute for Medical Image Computing (MEVIS) 28359 Bremen, Germany peter.oppermann@mevis.fraunhofer.de
+
+Abstract—The Information Bottleneck method allows to construct information-optimum message passing decoders for lowdensity parity-check codes. In such decoders lookup tables replace the classical node operations of the variable and the check nodes. These lookup tables are designed using the Information Bottleneck principle of maximizing the relevant information. Unlike state-of-the-art decoders which use real valued log-likelihood ratios for decoding, the considered decoders do not process any real values, but only quantization indices. Nevertheless, they have performance extremely close to belief propagation decoding. Since hardware representation of unsigned integers is efficient and lookup table implementations have low complexity, it is reasonable to assume that the designed decoders offer advantages over their conventional counterparts in practice. In this paper, we evaluate, quantify and discuss these advantages in a practical experiment. Our focus lies on a software defined radio application, where the channel decoder is implemented on a digital signal processor. We present several implementations of the considered decoders and compare them with state-of-the-art decoders. Our results show considerable gains of the Information Bottleneck decoders in terms of bit error rate performance and net decoding throughput.
+I. INTRODUCTION
+Binary low-density parity-check (LDPC) codes offer remarkable error correction performance, but their decoding is a bottleneck in modern communication receivers. Typically, iterative message passing decoding algorithms are applied for decoding of LDPC codes. In these decoding algorithms, log-likelihood ratios (LLRs) are processed and updated iteratively by variable and check nodes. The well known message passing decoding algorithms for LDPC codes are the belief propagation decoding algorithm and its approximations, for example, the min-sum decoding algorithm [1]. Iterative belief propagation decoding although yields very good performance, has high complexity. This complexity mainly results from high precision representation of LLRs in the hardware. Moreover, non-linear functions of several LLRs have to be evaluated iteratively, also resulting in high complexity. Unfortunately, suboptimal message passing decoding algorithms, such as the min-sum decoding algorithm and quantized decoder implementations with low precision, suffer from losses in terms of bit error rate performance [2]. Therefore, low complexity implementations of LDPC decoders with performance close
+
+to belief propagation decoders are of huge interest. In this context, several authors recently investigated novel LDPC decoders constructed with tools from information theory [3]– [8]. The idea of the considered decoders is simple: The variable and the check nodes pick outgoing messages which maximize the relevant information from a finite set of unsigned integers in each decoder iteration. For this purpose, they use lookup tables (LUTs) which process and deliver these unsigned integer messages. Tishby’s Information Bottleneck method [9] allows to construct the desired LUTs which aim to preserve relevant information under compression. Building channel decoders using the concept of relevant information preserving LUTs is entirely different to conventional signal processing approaches which focus on LLRs. The existing works illustrate remarkable bit error rate performance of this approach. The resulting decoders have performance extremely close to double precision belief propagation decoders with a bit width of only 4 bits per message [3]–[8]. While construction of the decoders using the technique of iterative density evolution is described in detail in the existing literature, for example, in our preliminary work [8], works on practical implementations of the considered decoders are rare. One work which describes a similar decoding principle in a very high throughput implementation with an unrolled decoder is [10]. In contrast to this work, in this paper we focus on software defined radio (SDR) implementations of Information Bottleneck decoders. We present practical results on the novel LDPC decoders obtained using an SDR evaluation platform. Doing so, we aim to reduce the gap mentioned in the existing literature on the topic with a focus on SDRs. The driving idea of SDRs is to implement elementary parts of a radio signal processing chain in software which is run on a general purpose signal processing platform [11], [12]. Using this approach, crucial design parameters of a communications chain, such as the channel coding/decoding and modulation/demodulation schemes can be adapted with a simple software update. This of course offers great flexibility. However, SDR development comprises mapping signal processing algorithms to the available signal processing resources of a platform and is therefore challenging from an engineering perspective. In this work, we present and investigate several implementations of Information
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+Bottleneck LDPC decoders and state-of-the-art decoders on a digital signal processor (DSP) which is embedded on an SDR development platform. We introduce specific implementation optimizations and compare the memory requirements, the bit error rate performances and the decoding throughputs of all implemented decoders in a practical experiment. Our findings prove that the novel Information Bottleneck decoders have considerable practical advantages over their conventional counterparts.
+The paper is structured as follows: The next section briefly introduces the principles of state-of-the-art decoders and Information Bottleneck decoders for LDPC codes. Section III deals with implementation aspects and describes the hardware platform used. In Section IV, we introduce the experimental setup and present results from the practical experiments. Section V concludes the paper.
+
+II. PRELIMINARIES
+This section provides an overview of state-of-the-art LDPC decoding, the Information Bottleneck method and Information Bottleneck LDPC decoders.
+
+A. LLR based Message Passing Decoding of LDPC Codes
+State-of-the-art message passing decoders for LDPC codes iteratively process and update LLRs at variable and check nodes. The variable and the check nodes are connected according to the positions of non-zero entries in a sparse paritycheck matrix. In belief propagation decoding, the check nodes receive LLRs from the variable nodes and generate extrinsic information. The obtained extrinsic information is propagated back to the variable nodes in form of LLRs. A degree dc check node which receives dc LLRs L(c0), L(c1), . . . , L(cdc−1) along its connected edges evaluates
+
+Lc,ext(cj ) =
+
+L(ci),
+
+(1)
+
+i=j
+
+where denotes the well known box-plus operation from
+[13]. Variable nodes sum up received LLRs for generating extrinsic information. A degree dv variable node receiving LLRs L(c0), L(c1), . . . , L(cdv−1) along its connected edges evaluates
+
+Lv,ext(cj ) = Lch(cj ) + L(ci),
+
+(2)
+
+i=j
+
+where Lch(cj) corresponds to the channel LLR of the respective codeword bit cj. Please note that the corresponding incoming message L(cj) is excluded in (1) and (2) because extrinsic information shall be generated. Message passing between variable and check nodes is repeated iteratively, until a certain exit criterion, for example, an allowed maximum number of decoder iterations is met. Then the variable nodes perform their final bit decision which is a hard decision on the sum of all incoming messages as a posteriori information
+
+instead of extrinsic information shall be obtained. The boxplus operation which is used in (1) for two LLRs L(c0) and L(c1) is given by
+
+L(c0)
+
+L(c1)
+
+=
+
+log
+
+1 + exp (L(c0) + L(c1)) . exp (L(c0)) + exp(L(c1))
+
+(3)
+
+Evaluation of this transcendent function is quite complex. However, one can rewrite it as [1]
+
+L(c0) L(c1) = sign(L(c0))sign(L(c1)) min(|L(c0)|, |L(c1)|)+ fc(|L(c0) + L(c1)|) − fc(|L(c0) − L(c1)|), (4)
+
+where fc(x) is given by
+
+fc(x) = log (1 + exp(−x)) .
+
+(5)
+
+We call fc(x) the Jacobian logarithm correction function. Please note that (4) exactly corresponds to L(c0) L(c1) and is not an approximation. Evaluation of the function fc(x) is still complex, as it requires evaluation of the log(.) and the exp(.) functions. Nevertheless, fc(x) can be implemented in a one dimensional LUT, to avoid the explicit evaluation of the log(.) and exp(.) functions in fc(x) [1]. It will be shown later that only a few LUT entries are required to achieve practically equivalent performance to belief propagation decoding. A decoder which implements the Jacobian logarithm correction function fc(x) in a LUT is called a Jacobian logarithm decoder in this paper.
+Neglecting the terms including fc(x) in (4) simplifies the check node operation and yields the so called min-sum approximation
+
+L(c0) L(c1) ≈
+sign(L(c0))sign(L(c1)) min(|L(c0)|, |L(c1)|). (6)
+If this approximation is used for the check node operation in a belief propagation decoder, the resulting decoding algorithm is called the min-sum decoding algorithm. The minsum decoding algorithm requires less computational resources than the belief propagation decoding algorithm, but also offers worse error correction capability (cf. Section IV). The minsum decoder and the Jacobian logarithm decoder will serve as benchmark decoders in this paper.
+B. Information Bottleneck Method
+The Information Bottleneck method is an information theoretical framework which was introduced by Naftali Tishby et al. in [9]. The method provides several clustering algorithms which compress an observed random variable Y to a compact compression variable T while maximizing so called preserved relevant mutual information I(T ; X) shared between T and a relevant variable X. A constraint on the cardinality of T introduces the aforementioned compression. An Information Bottleneck algorithm inputs joint distribution p(x, y) and the desired output alphabet T . It delivers a mapping p(t|y) which we restrict to be a deterministic mapping in this paper. The mapping tells which y ∈ Y are mapped onto which t ∈ T .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+b0 −→ y0 b1 −→ y1
+
+f (y0, y1)
+
+t0 representing x0 = b0 ⊕ b1
+
+y0 y1 f0(y0, y1) t0
+
+b0, b1 ∈ {0, 1} y0, y1 ∈ T
+
+I(T0; X0) −→ max t0 ∈ T
+
+Fig. 1. Illustration of a two-input LUT, implementing a function f (y0, y1) for a check node. The LUT inputs two incoming integers y0, y1 ∈ T and also delivers an unsigned integer t0 ∈ T . The incoming integers statistically depend on bits b0, b1. The LUT is designed in a way which aims to maximize I(T0; X0) with the Information Bottleneck method.
+
+y2
+
+t1 f1(t0, t1)
+
+t2 f2(t2, y4)
+
+t
+
+y3 f0(y2, y3)
+
+to y5
+
+y4
+
+Fig. 2. Illustration of a decomposition implementing a degree dc = 6 check node operation.
+
+Thus, it describes a functional connection between t and y, that is, t = f (y). This mapping clusters the set of all possible realizations y. Since typically |T | << |Y|, several y ∈ Y are mapped onto the same t ∈ T . All y mapped onto the same t can be considered to be in one cluster. While the cardinality of T determines the compression level of the clustering operation, the elements of T can be chosen arbitrarily. For this paper, we use an index set which contains all unsigned integers representable using q bits in hardware. Therefore, T = {0, 1, . . . , 2q − 1}. We typically consider q = 4.
+C. Information Bottleneck LDPC Decoding
+The construction of Information Bottleneck LDPC decoders is performed using a framework which pairs a discretized variant of density evolution with the Information Bottleneck method from [9]. Density evolution is applied to track joint input distributions p(x, y) for the Information Bottleneck method, as it was first proposed in a similar manner by Kurkoski et al. in [14]. The Information Bottleneck method is then applied to find optimum message mappings for the incoming messages of the variable and the check nodes in each iteration. Effectively, this is done by clustering the set of all possible incoming messages of a variable or a check node in a way which preserves relevant information on the code bits. The resultant mappings are stored as LUTs which can then be used as node operations in the decoder. The decoder construction framework is described, for example, in our preliminary work [8] in detail. This is why we limit ourselves to explaining the fundamental decoding principle in this paper.
+An Information Bottleneck LDPC decoder works on quantized output indices received from a channel output quantizer. We consider a q bit quantizer, such that these quantization indices are from the set {0, 1, . . . , 2q − 1}. The integer indices from the quantizer are passed to the check nodes in the first decoding iteration directly. Instead of generating extrinsic information using LLRs and the box-plus operation, the check nodes process these incoming integer indices yl using elementary two-input LUTs illustrated in Figure 1. The depicted two-input LUT implements t0 = f (y0, y1) and therefore maps incoming integers y0 and y1 onto an outgoing integer t0 ∈ {0, 1, . . . , 2q − 1}. Please note that while there
+
+exist (2q)2 = 22q distinct possible input pairs (y0, y1), there are only 2q << 22q possible output values t0. Therefore, t0 = f (y0, y1) can be interpreted as compression operation.
+This compression operation is designed with the Informa-
+
+tion Bottleneck method to preserve the mutual information
+
+I(T0; X0), such that the output of the operation is highly informative about the sum x0 = b0 ⊕ b1 of the respective
+
+code bits. Therefore, the two-input function can be seen as
+
+an information-optimum equivalent to the box-plus operation
+
+which works on integer indices from the quantizer instead of
+
+LLRs.
+
+While the above seems theoretical, from an implementation
+
+perspective it is extremely simple. Once constructed with the
+
+Information Bottleneck method, the operation t0 = f (y0, y1)
+
+can be implemented in a LUT. The two-input LUT simply corresponds to a length 22q vector which tells which combination
+
+(y0, y1) yields which t0 ∈ T . We denote this vector lut. Each entry in lut corresponds to the output t0 ∈ T of the two-input LUT of a check node for a particular two-input combination
+
+(y0, y1). For a given (y0, y1), t0 is obtained using an indexing
+
+function
+
+idx(y0, y1) = y0 · 2q + y1.
+
+(7)
+
+The idx function maps the coordinate (y0, y1) to the position of the outgoing t0 for a particular pair (y0, y1). Then, t0 is read from the vector lut, i.e.,
+
+t0 = f (y0, y1) = lut[idx(y0, y1)].
+
+(8)
+
+By concatenating two-input LUTs, it is possible to further implement more complex LUTs for higher node degrees which require to process more than two input messages yl. Figure 2 illustrates a two-input decomposition of a degree dc = 6 check node operation as an example. The check node receives dc = 6 messages y0, y1, . . . , y5 in total and processes dc − 1 = 5 incoming messages to generate an outgoing message for one particular target edge. In the shown example, incoming message y5 is excluded at the input because extrinsic information for the target edge which delivered y5 shall be generated. Message generation has to be carried out for all other target edges analogously by excluding the respective input message. In general, several possible node decompositions exist and the choice of a particular decomposition is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+important, which will be discussed later. In Figure 2 we have added m indices to the distinct two-input operations fm(., .). The reason is that in an Information Bottleneck decoder the LUTs depend on the statistics of the input variables and are not identical. In the depicted decomposition, only operations t0 = f0(y0, y1) and t1 = f0(y2, y3) can use the same LUT configuration because their inputs are identically distributed. Therefore, these operations have the same index m = 0. Operation t2 = f1(t0, t1) in contrast requires a different LUT configuration because the inputs (t0, t1) follow a different joint probability distribution than (y0, y1) and (y2, y3). The same holds for t = f2(t2, y4). We denote the number of distinct two-input LUTs in a certain node decomposition by M and add an index m ∈ {0, 1, . . . , M − 1} to the vectors lutm to distinguish the vectors for the respective two-input LUTs. These lutm have to be stored to implement the check node operation in a particular decoder iteration. In Figure 2, M = 3.
+It is well known that the input distributions of the messages passed in a conventional LDPC decoder evolve over the iterations. Assuming a cycle free Tanner graph of the paritycheck matrix, it is possible to write down equations which describe this evolution. This technique is known as density evolution. In an Information Bottleneck LDPC decoder, this evolution has the consequence that the LUTs required to implement the node operations also vary over the iterations i. Therefore, we also have to distinguish the vectors lut(mi), referring to the respective iteration i. By simply concatenating all lut(mi) vectors in a long vector LUT and adding offsets for the iteration and the subscript m to the idx function (7), generalizing (8) to w = fm(u, v) in iteration i is simple. The m-th two-input LUT in the i-th decoding iteration can calculate its output w for inputs (u, v) as
+
+w = LUT[ptr(i, m) + idx(u, v)].
+
+(9)
+
+Function ptr(i, m) points to the beginning of the subvector which characterizes the two-input LUT fm(u, v) in iteration i. It is calculated as
+
+ptr(i, m) = iM · 22q + m · 22q.
+
+(10)
+
+Evaluation of (9) replaces all LLR based check node operations in an Information Bottleneck LDPC decoder. It can be implemented using only integer arithmetic, as only memory addresses are calculated and lookups are performed. The very same principle is also applied to implement variable node operations in an Information Bottleneck LDPC decoder [8], but skipped here for brevity.
+The LUTs applied in an Informaton Bottleneck decoder are designed for a particular design-Eb/N0. Therefore, the decoder works on a set of static LUTs.
+
+III. DSP IMPLEMENTATION OF LDPC DECODERS
+In this section, we describe some important implementation aspects of the Information Bottleneck LDPC decoders in our DSP implementation. We typically consider (dv, dc) = (3, 6) regular LDPC codes because two such codes were applied in our practical experiment described later. We have implemented
+
+several decoders on a Texas Instruments R TMS320C6474 DSP [15]. We will refer to this chip as C6474 in the following. The C6474 was embedded on an eInfochips R TMDSEVM6474L evaluation board [16]. All software run on the DSP was written in C++ programming language and compiled using the DSP vendor’s compiler. This section first provides an overview of properties of the DSP and the development platform which are especially relevant for the implementation of LDPC decoders on the selected DSP. Later, we present several new implementation ideas and aspects.
+A. Determining Hardware Properties
+The C6474 is a fixed-point DSP. Therefore, we performed all decoder implementations using only fixed-point and integer arithmetic. The C6474 was clocked with main frequency of 1 GHz in our experiments. Not only for the Information Bottleneck LDPC decoder, but also for all conventional LDPC decoders, memory access is one of the main performance factors. In all LDPC decoders the messages have to be read from and written back into the memory. Especially in an Information Bottleneck LDPC decoder the LUTs have to be accessed extremely often. In our setup, a four layer memory architecture was present: The C6474 provides 32 registers with a width of 32 bits each for one of two functional units. These registers are accessible by the arithmetical and logical unit (ALU) without any stall cycles and can be utilized to store intermediate results in the decoding process, which will be discussed later. Moreover, the C6474 provides a layered cache which is separated into a very fast L1 cache and a slightly slower L2 cache. The size of the L1 data (L1D) cache was 32 kilobytes. L1D access can be considered to be one of the most determining operations in the Information Bottleneck LDPC decoder because segments of the LUT vectors have to be accessed by all variable and all check nodes in a particular decoder iteration. Therefore, cache hits and misses strongly influence the throughput of the decoder. The accessible L2 cache was 1024 kilobytes in our setup. The caching process is mostly invisible to the DSP programmer, but should be considered inherently during programming. Finally, the chosen evaluation board provides 256 megabytes of DDR2 RAM which is clocked with 66 MHz and is very slow in comparison to the aforementioned caches.
+The C6474 has several built-in functions which can be utilized in the LDPC decoding process for conventional as well as Information Bottleneck LDPC decoders. These functions are called intrinsics and can be executed in a single CPU cycle [17]. For example, there are several minima intrinsics which allow to find the minimum of several fixed-point numbers. These intrinsics are useful in the min-sum and the Jacobian logarithm decoder. Another important intrinsic operation for this work is bit field extraction. Bit field extraction allows to extract a group of neighboring bits from a longer word in the memory. Using bit field extraction, it is possible to utilize standard 8, 16 and 32 bit data types to embed several 4 bit integers. This can be used to significantly reduce the memory footprint of an Information Bottleneck LDPC decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+y1
+
+y0
+
+y3
+
+y2
+
+y5
+
+y4
+
+f0
+
+f0
+
+f0
+
+t0
+
+t1
+
+t2
+
+f1
+
+f1
+
+f1
+
+t3
+
+t4
+
+t5
+
+f2
+
+f2
+
+f2
+
+f2
+
+f2
+
+f2
+
+to y0
+
+to y1
+
+to y2
+
+to y3
+
+to y4
+
+to y5
+
+Fig. 3. Illustration of generation of all outgoing messages for a degree dc = 6 check node with reuse of intermediate results for an arbitrary LDPC decoder type. Using the shown decomposition, all six outgoing messages can be determined with only twelve operations. In an Information Bottleneck LDPC decoder only three different two-input LUTs are required to implement f0(u, v), f1(u, v) and f2(u, v).
+
+B. Implementation of All Decoders: Reusing Intermediate Results
+As mentioned earlier, the C6474 DSP has 32 registers accessible by the ALU without any stall cycles. We aim to utilize these registers during decoding. Recall that Figure 2 shows message generation for the edge which delivered incoming message y5. A straightforward approach to message generation for any other target edge in Figure 2 would be to exchange the respective incoming message yl with y5 in the illustration and to re-evaluate all fm(u, v) afterwards. Say, we replaced message y0 with y5. Then we would have to re-evaluate f0(y5, y1), followed by f1(t0, t1) and f2(t2, y4) to determine the new outgoing message for the edge which delivered y0. However, please note that t1 could remain completely unchanged, if we were able to store t1. Consequently, we can dismiss one operation in the determination of the new outgoing message because we can reuse the intermediate result t1. Obviously, for the considered node decomposition, replacing y0 with y5 is not the best idea. Two more operations can be saved, if we replace y4 with y5 because then we just have to re-evaluate f2(t2, y5) to determine the new outgoing message. When the principle of reusing intermediate results is applied for the generation of all dc = 6 outgoing messages, it offers considerable reductions in the number of required operations. In Figure 3 we present a node decomposition
+
+which calculates all outgoing messages of degree dc = 6 check nodes using only twelve operations. Generation of all outgoing messages would require dc(dc − 2) = 24 operations, if no intermediate results were reused. Moreover, we emphasize that the structure presented in Figure 3 requires only three different LUTs to implement f0(u, v), f1(u, v) and f2(u, v) in an Information Bottleneck decoder. Finding an optimum structure with respect to the reuse potential of intermediate results and a minimum number of required LUTs for a given node degree is an interesting problem. Here we restrict ourselves to the considered node degree dc = 6. To the best of our knowledge, the presented structure in Figure 3 minimizes the number of required operations and the required number of distinct LUTs for this node degree. This structure inherently contains evaluation of f2(f1(f0(y0, y1), f0(y2, y3)), y4) which is also depicted in Figure 2, as illustrated using red edges. The intermediate results tl of this node decomposition easily fit into the registers of the C6474. A simple method to keep the intermediate results in the registers is using the C++ register keyword.
+We note, that it does not matter, whether the performed operations on the messages and the intermediate results are lookups in LUTs or two-input operators of LLRs. As a result, the proposed node decomposition can also be applied in any conventional LDPC decoder with the min-sum or the box-plus operation.
+C. Implementation of Information Bottleneck Decoder: LUT Reduction Technique
+Information Bottleneck LDPC decoders with 4 bit messages have performance very close to belief propagation [3]–[8]. In the DSP implementation, however, one has to use standard data types available on the selected platform for all messages and also for the LUT entries for optimal utilization of the available bus and memory architecture of the DSP. The standard data types for unsigned integers supported by the C6474 have a bit width of 8, 16 and 32 bits. The idea we discuss here is an optimization for the Information Bottleneck LDPC decoder which halves the required memory to store the LUTs. The idea is very simple: LUT vectors for the variable and the check nodes have to be stored to implement the node operations. The entries of these vectors can take values 0, 1, . . . , 15 in the considered 4 bit architecture. The smallest available standard integer data type is a uint8. A uint8 has a bit width of wuint8 = 8 bits. From a programming perspective, it appears practical to store each element of the LUT vectors directly in one memory cell of a uint8 array. However, storing 4 bit data in an array with an elementary data type of bit width wuint8 = 8 bits results in the upper half word being always 0000 in the binary representation. Essentially, we simply use each upper half word to store the next entry in LUT and in doing so halve the overall required size of the array in the memory. Accessing an entry in the LUT, however, becomes a little more complicated. Accessing a particular memory cell in the modified array always reads two LUT entries because the DSP reads 8 neighbored bits (a uint8) over its memory bus.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+As a result, either the upper or the lower half word needs to be extracted from the fetched result to get the desired LUT entry. Therefore, to read 4 bit value LUT[idx], the respective array has to be accessed at position idx/2 . Depending on if idx is even or odd, the lower or the upper 4 bits of the read uint8 have to be extracted afterwards.
+We will refer to the proposed technique as LUT reduction as it reduces the size of the LUTs in the memory. Including the caches, the C6474 makes up a complex system. There is no simple answer to the question of the best choice of optimization towards a reduced memory footprint or a reduced number of operations for the LUT implementation. In the next subsection we present a technique which results in larger LUTs that need a reduced number of operations for the LUT access. We compare both techniques in Section IV.
+D. Implementation of Information Bottleneck Decoder: LUT Expansion Technique
+Calculation of addresses to access the LUTs is the main computational task in an Information Bottleneck LDPC decoder. In this subsection we consider an implementation optimization which aims to reduce the number of calculations required to generate the outgoing messages of a node. The presented technique can be applied to variable and check nodes. We will consider a check node with LUT vector LUT here.
+Recall that the outcome of any two-input LUT has to be obtained using (9). Starting at the two-input LUTs which deliver t0 and t1 in Figure 2 (and use the same subvector lut(mi) of LUT because m = 0 for both LUTs), it is easy to understand that the intermediate results obtained, serve as an input to another two-input LUT in the next step of message generation. In particular, once t0 and t1 have been generated, one moves to the next LUT f1(t0, t1) and operation t2 = f1(t0, t1) is evaluated. Consequently, once t0 and t1 have been read from LUT, t2 is calculated as t2 = LUT[ptr(i, m + 1) + idx(t0, t1)]. Expanding the calculation of the next accessed memory address reveals that there is a part in the address which only depends on i, m = 0 and t0, that is,
+ptr(i, m + 1) + idx(t0, t1) = iM · 22q + (m + 1) · 22q + t0 · 2q +t1 (11)
+only depends on i, m, t0
+As a result, instead of storing t0 in LUT, one could also put the braced part of (11) into this vector at the address of t0. This results in the advantage that once a value has been read from the memory the next accessed address can be calculated using only one integer addition. We denote the braced expression in (11) by t0. The same principle can also be applied for the following two-input LUTs. Only the last concatenated LUT with index m = 2 in this example has to deliver the original t ∈ {0, 1, . . . , 2q − 1}. Therefore, this table stays unchanged.
+Please recall that f0(y0, y1) and f0(y2, y3) use the same subvector of LUT. Therefore also t1 instead of t1 would
+
+be read if the LUTs were implemented using the proposed
+method. Anyway, it is possible to recapture t1 from t1 to evaluate f1(t0, t1) using the relation
+
+t1 = (t1/2q) mod 2q.
+
+(12)
+
+The proposed technique does not affect the potential of reusing intermediate results and consequently can also be used for the node decomposition shown in Figure 3. However, it requires a base data type which is large enough to hold the modified LUT entries to store the vector LUT in an array. For the parameters used in this paper, the smallest standard data type large enough to store all tm that appear, is a uint16. Therefore, the array holding LUT needs to have a base data type of length wuint16 = 16 bits. In comparison to the technique presented in the last subsection, where two LUT entries were stored in one 8 bit integer, this increases the size of the LUT vectors by factor of four. This is why we will refer to the proposed technique as LUT expansion.
+
+IV. EXPERIMENTAL SETUP, RESULTS AND DISCUSSION
+In this section we describe the experiments conducted and their results. We compare the memory requirements, the bit error rate performances and the net decoding throughputs of all considered decoder types.
+
+A. Setup, Implemented LDPC Decoders and Applied Codes
+1) General Setup: We have implemented an LDPC encoded data transmission over an additive white Gaussian noise (AWGN) channel on the physical layer. The applied modulation scheme was binary phase shift keying modulation. At the receiving end, the channel output was quantized using a 4 bit quantizer as described in [7]. For the conventional decoding algorithms, LLRs were assigned to the respective quantized channel outputs with fixed-point precision. For the Information Bottleneck LDPC decoders the unsigned 4 bit integers from the quantizer were used for decoding.
+2) Details on Implemented LDPC Decoders: We have implemented a min-sum decoder, a Jacobian logarithm decoder and Information Bottleneck decoders with the proposed LUT reduction and LUT expansion on the DSP. The conventional decoding algorithms used fixed-point arithmetic. In order not to degrade the conventional decoding algorithms by a bad choice of parameters, we have experimented with the bit width and the number of fractional bits of the fixed-point numbers in these decoders to find the parameters which offer best performance. Finally, we used eight bit fixed-point numbers with four bits designated to the fractional part. We refer to this allocation as the Q8.4 fixed-point format. We found that increasing the bit width further does not improve the decoding performance of the conventional decoders, but slows them down significantly.
+For all implemented decoders, the maximum number of iterations was set to imax = 50 in our experiment. All decoders performed a parity-check in each iteration and stopped decoding with the final bit decision, if all parity-checks were satisfied after a check node update.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+TABLE I COMPARISON OF MEMORY REQUIREMENTS OF DISTINCT DECODERS
+
+100
+
+Decoder all all
+
+Code code a) code b)
+
+Memory for graph structure 15.84 kilobytes 48.0 kilobytes
+
+Decoder min-sum decoder Jacobian logarithm decoder Information Bottleneck with LUT reduction Information Bottleneck with LUT expansion
+
+Memory for LUTs 0 kilobyte
+0.022 kilobyte 38.4 kilobytes 153.6 kilobytes
+
+Code a) a) a) b) b) b)
+
+Decoder min-sum decoder Jacobian logarithm decoder Information Bottleneck min-sum decoder Jacobian logarithm decoder Information Bottleneck
+
+Memory for exchanged messages 10.56 kilobytes 10.56 kilobytes 5.28 kilobytes 32.0 kilobytes 32.0 kilobytes 16.0 kilobytes
+
+bit error rate
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+belief propagation Q8.4 Jacobian logarithm
+
+10−5
+
+Info. Bottleneck min-sum
+
+10−6 0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+notation: 1.0 kilobyte = 1000 byte
+
+Eb/N0 [dB]
+
+3) Applied LDPC Codes: We have selected two distinct (dv, dc) = (3, 6) regular LDPC codes from [18] for evaluation of the decoders. The identifiers of these codes are Margulis2640.1320.3 which we will call code a) from now on and 8000.4000.3.483 which we will refer to as code b). The first number in the identifier is the codeword length. Both codes have a code rate of 1/2.
+
+100 10−1 10−2 10−3
+
+bit error rate
+
+B. Comparison of Memory Requirements
+The memory requirements of the distinct decoder types are provided in Table I. The memory required to store the graph structure between variable nodes and check nodes is listed at the top for code a) and code b). This memory requirement is independent of the decoder type. Underneath, a comparison of the memories required to store the LUTs in the distinct decoder types is shown in the center part of Table I. While the minsum decoder does not require any LUT, we implemented the Jacobian logarithm decoder with a very small 22 byte LUT because this was sufficient to achieve the performance of a belief propagation decoder evaluating (3) in the Q8.4 fixedpoint format (cf. Section IV-C). The Information Bottleneck decoders naturally require larger memory amounts to store the LUTs for all decoding iterations. Both variants, the one with LUT reduction and with LUT expansion, require several kilobytes of memory to store the LUTs. Finally, the bottom part of Table I compares the memory required for the exchanged messages in the decoders. Here the Information Bottleneck LDPC decoders can profit from a shorter 4 bit representation of the exchanged messages.
+In summary, Information Bottleneck decoders require larger memory amounts than the conventional decoders. Anyway, they are still moderate. For example, a Jacobian logarithm decoder for code b) requires around 80 kilobytes of memory, while an Information Bottleneck decoder with LUT reduction needs 102.4 kilobytes. When LUT expansion is used, the Information Bottleneck decoder needs 217.6 kilobytes. However, we will see that LUT expansion offers considerable gains in the decoding throughput. Finally, we note that all decoders easily fit into the memory of the applied platform.
+
+10−4 10−5
+
+belief propag. Q8.4 Jacobian logarithm Info. Bottleneck min-sum
+
+10−6 0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0 [dB]
+
+Fig. 4. Bit error rates of several decoders for code a) (top) and code b) (bottom) on the C6474 DSP and Q8.4 belief propagation reference curves. The proposed Information Bottleneck LDPC decoder with 4 bit messages offers performance very close to the one of a Jacobian logarithm decoder. The min-sum decoder is outperformed by all other decoders.
+
+C. Comparison of Bit Error Rate Performances
+Figure 4 shows bit error rates over Eb/N0 of all considered LDPC decoders which were implemented on the C6474 DSP within the scope of this work. The upper part of the figure refers to the shorter code a) and the lower part refers to the longer code b). The figure also includes bit error rates of a belief propagation decoder which used Q8.4 fixed-point precision, but was solely implemented on a computer and not run on the DSP. The fixed-point belief propagation curves generated using a computer are included for verification reasons and to illustrate that the Jacobian logarithm decoder which uses a very compact LUT with a size of only 22 bytes on the DSP (cf. Table I) is equivalent to the belief propagation decoder which evaluates (3) in the same fixed-point format, as it can clearly be observed. The loss of the Information Bottleneck decoder in comparison to the Jacobian logarithm decoder in the waterfall
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+region of both curves is typically smaller than 0.1 dB. The min-sum decoder is outperformed by the Jacobian logarithm decoder and the Information Bottleneck LDPC decoder. Its loss in comparison to the Information Bottleneck decoder for a bit error rate of 10−4 is approximately 0.4 dB over Eb/N0 for code a) and also about 0.4 dB over Eb/N0 for code b). Please note that the bit error rate performance of the Information Bottleneck decoder is independent of the particular LUT implementation variants that we have described in the preceding section. These results motivate the application of Information Bottleneck LDPC decoders from a bit error rate performance perspective because they almost achieve the performance of the Jacobian logarithm decoder and outperform the min-sum decoder. The question of their decoding throughput benefits in comparison to the state-of-the-art decoders will be discussed in the next subsection.
+D. Comparison of Net Decoding Throughputs
+Figure 5 compares the average net decoding throughputs of all implemented LDPC decoders on the C6474 DSP over Eb/N0.
+The curves for the Information Bottleneck decoders are labeled with LUT expansion and LUT reduction as introduced in Sections III-C and III-D according to their respective LUT implementation. The main result which holds for both codes is that both variants of the Information Bottleneck LDPC decoder offer the highest net decoding throughputs among of all implemented decoders over the complete shown range of Eb/N0. This is particularly important while recalling the bit error rate performance of the Jacobian logarithm decoder and the Information Bottleneck decoder over Eb/N0 shown in Figure 4. While the bit error rate of both decoders is almost identical, the Information Bottleneck decoders run significantly faster on the DSP. The LUT expansion technique offers the highest decoding throughput on the expense of larger LUTs. Interestingly, there is an Eb/N0 interval from approximately 1.1 to 1.5 dB for both codes, where the decoding throughput of the Jacobian logarithm decoder comes close to the Information Bottleneck decoder with LUT reduction. This effect is caused by a slightly lower average number of iterations of the Jacobian logarithm decoder in this interval due to its slightly better error correction performance (cf. Figure 4). Anyway, we emphasize that both curves for the Information Bottleneck decoders lie above the ones for the Jacobian logarithm decoder. Concerning the state-of-the-art algorithms, it is very interesting that the curves for the Jacobian logarithm decoder and the min-sum decoder intersect at Eb/N0 ≈ 2.5 dB for code a) and at Eb/N0 ≈ 2.4 dB for code b). This is due to the fact that the Jacobian logarithm decoder requires extra resources to evaluate its LUT for fc(x), but the gains in comparison to the simpler min-sum operation become smaller with increasing Eb/N0. To quantify the gains of the Information Bottleneck decoder, we exemplarily extracted several data points from the curves plotted in Figure 5 and mention them in Table II. The upper part of the table corresponds to code a) and the lower one corresponds to code b). At the bottom of each part, the
+
+TABLE II NET DECODING THROUGHPUTS
+
+Net decoding throughputs, code a) in kilobits/second:
+
+Eb/N0 in dB Jacobian logarithm decoder Info. Bottleneck LUT reduction Info. Bottleneck LUT expansion
+min-sum decoder
+
+04
+
+8
+
+12
+
+59.8 445.1 786.8 1352.9
+
+72.8 514.8 924.7 1585.5
+
+85.5 589.8 1034.2 1711.0
+
+65.8 486.2 892.2 1454.2
+
+gain LUT expansion wrt. Jacobian log. 43% 33% 31% 26% gain LUT expansion wrt. min-sum 30% 21% 16% 18% Net decoding throughputs, code b) in kilobits/second:
+
+Eb/N0 in dB Jacobian logarithm decoder Info. Bottleneck LUT reduction Info. Bottleneck LUT expansion
+min-sum decoder
+
+0 4 8 12 55.9 399.3 708.5 1255.7 72.2 481.7 866.7 1485.1 84.8 552.5 974.5 1611.4 61.1 432.5 774.5 1324.5
+
+gain LUT expansion wrt. Jacobian log. 52% 38% 38% 28% gain LUT expansion wrt. min-sum 39% 28% 26% 22%
+
+throughput gains of the fastest Information Bottleneck decoder with LUT expansion with respect to the Jacobian logarithm decoder and the min-sum decoder in percent are provided.
+V. CONCLUSION
+We have investigated the applicability of a novel LDPC decoding principle in the context of SDR. In particular, we have developed and implemented Information Bottleneck LDPC decoders on a DSP based SDR evaluation platform and conducted a comprehensive comparison to state-of-the-art LDPC decoders. We have shown that Information Bottleneck LDPC decoders have significantly higher net decoding throughput than the Jacobian logarithm decoder which offers almost identical bit error rate performance over Eb/N0. Moreover, Information Bottleneck decoders have higher net decoding throughput and better bit error rate performance than the minsum decoder. Finally, we have shown that trading net decoding throughput for smaller LUTs in the Information Bottleneck decoders is possible by employing the proposed LUT reduction and expansion techniques. The memory requirements of Information Bottleneck LDPC decoders are reasonable and available on a typical SDR platform. From the above, we draw the conclusion that Information Bottleneck LDPC decoders are very interesting candidates for SDR applications.
+ACKNOWLEDGEMENT
+The authors would like to thank Mr. Souradip Saha for his help in revising this manuscript.
+REFERENCES
+[1] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[2] Z. Zhang, L. Dolecek, M. Wainwright, V. Anantharam, and B. Nikolic, “Quantization Effects in Low-Density Parity-Check Decoders,” in Proceedings of 2007 IEEE International Conference on Communications (ICC), Jun. 2007, pp. 6231–6237.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+net decoding throughput in kilobits/s
+
+2,000 1,500 1,000
+
+Jacobian logarithm Information Bottleneck with LUT reduction Information Bottleneck with LUT expansion min-sum
+
+500
+
+net decoding throughput in kilobits/s
+
+0 0
+2,000 1,500 1,000
+
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 Eb/N0 in dB
+Jacobian logarithm Information Bottleneck with LUT reduction Information Bottleneck with LUT expansion min-sum
+
+500
+
+0 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 Eb/N0 in dB
+Fig. 5. Decoding throughputs of several decoders for code a) (top) and code b) (bottom) on the C6474 DSP for Eb/N0 ∈ [0, 15] dB. All curves rise over Eb/N0 as all decoders perform fewer iterations on average for higher Eb/N0.
+
+[3] F. J. C. Romero and B. M. Kurkoski, “Decoding LDPC codes with mutual information-maximizing lookup tables,” in Proceedings of 2015 IEEE International Symposium on Information Theory (ISIT), Hong Kong, China, Jun. 2015, pp. 426–430.
+[4] F. J. C. Romero and B. M. Kurkoski, “LDPC decoding mappings that maximize mutual information,” IEEE Journal on Selected Areas in Communications, vol. 34, no. 9, pp. 2391–2401, Sep. 2016.
+[5] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, “A fully-unrolled LDPC decoder based on quantized message passing,” in Proceedings of 2015 IEEE Workshop on Signal Processing Systems (SiPS), Hangzhou, China, Oct. 2015, pp. 1–6.
+[6] M. Meidlinger and G. Matz, “On irregular LDPC codes with quantized message passing decoding,” in Proceedings of 2017 IEEE 18th International Workshop on Signal Processing Advances in Wireless Communications (SPAWC), Sapporo, Japan, Jul. 2017, pp. 1–5.
+[7] J. Lewandowsky and G. Bauch, “Trellis based node operations for LDPC decoders from the information bottleneck method,” in Proceedings of 2015 9th IEEE International Conference on Signal Processing and Communication Systems (ICSPCS), Cairns, Australia, Dec. 2015, pp. 1–10.
+[8] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method,” IEEE Access, vol. 6, pp. 4054–4071, Jan. 2018.
+[9] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck method,” in Proceedings of 37th Allerton Conference on Communication and Computation, Monticello, USA, 1999.
+
+[10] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mu¨ller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC decoder based on finite-alphabet message passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[11] J. Mitola, “The software radio architecture,” IEEE Communications Magazine, vol. 33, no. 5, pp. 26–38, May 1995.
+[12] T. Ulversoy, “Software defined radio: Challenges and opportunities,” IEEE Communications Surveys & Tutorials, vol. 12, no. 4, pp. 531– 555, May 2010.
+[13] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block and convolutional codes,” IEEE Transactions on Information Theory, vol. 42, no. 2, pp. 429–445, Mar. 1996.
+[14] B. M. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise thresholds for discrete LDPC decoding mappings,” in Proceedings of 2008 IEEE Global Telecommunications Conference (GLOBECOM), New Orleans, USA, Dec. 2008, pp. 1–5.
+[15] “TMS320C6474 data sheet,” Texas Instruments Incorporated, Dallas, USA.
+[16] “TMDSEVM6474L / TMDSEVM6474LE technical reference manual,” eInfoChips Incorporated, California, USA.
+[17] “TMS320C6000 cpu and instruction set reference guide,” Texas Instruments Incorporated, Dallas, USA.
+[18] D. J. C. MacKay, “Encyclopedia of sparse graph codes.” [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html, visited on Nov. 14th 2017
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:14:03 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-5602-0/18/$31.00 ©2018 IEEE
+
+

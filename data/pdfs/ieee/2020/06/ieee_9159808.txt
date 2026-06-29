@@ -1,0 +1,262 @@
+A Deeply Pipelined, Highly Parallel and Flexible LDPC Decoder
+Je´re´my Nadal∗, Mickae¨l Fiorentino∗, Elsa Dupraz† and Franc¸ois Leduc-Primeau∗
+∗E´ cole Polytechnique de Montre´al, Montre´al, Que´bec, Canadam, †IMT Atlantique, Lab-STICC, UBL, Brest, France
+
+Abstract—A deeply pipelined and parallel LDPC decoder architecture is proposed in this paper. The main feature of this architecture is the ∆-update scheme, which relaxes the data dependency requirement and allows for deeper pipelines than typical decoders. The proposed architecture also has the flexibility to handle a large number of codes. Frame error rate performance is shown for three codes with different quantization parameters. Finally, the impact of pipeline depth on processing time and on the energy-delay product (EDP) is evaluated from post-synthesis results. The results show that the ability to have deeper pipelines can lead to large reductions in EDP.
+I. INTRODUCTION
+Low-density parity check (LDPC) is the key correcting code for several communication standards, such as 801.11n (WiFi) and 5th generation new radio (5GNR). Building hardware implementations of LDPC decoders is more and more challenging due to the increasing demands in data rate, qualityof-service, and flexibility while keeping the latency and the energy consumption as low as possible. This is for instance the case for the upcoming 5GNR standard, where new services such as ultra-reliable low-latency communication (URLLC) are introduced. Some internet-of-thing applications may also require central units with very powerful decoding capabilities, due to the important amount of data they receive from thousands of machines or sensors.
+In this context, we propose a novel highly parallel and deeply pipelined LDPC decoder architecture for high data rate and low latency applications, which we have implemented in a 65 nm technology node. Deep pipeline is supported thanks to a novel ∆-update mechanism, introduced in [1], which allows to ignore some of the data dependencies of the layered schedule. This paper provides the first hardware implementation of a decoder architecture based on the ∆-update, including postsynthesis results. It demonstrates for the first time the benefits of using these techniques in terms of latency, processing throughput, and energy consumption, for several codes having different sparsity and regularity characteristics. It also shows that the proposed architecture is flexible enough to support many type of LDPC codes.
+This paper is structured as follows. Section II describes LDPC codes and the offset min-sum (OMS) decoding algorithm with the ∆-update mechanism. Then, Section III introduces the proposed ∆-update LDPC decoder architecture. Section IV presents the post-synthesis and frame error rate (FER) performance results for different pipeline depth and quantization choice. The impact of the pipeline on the process-
+
+ing time and the energy-delay product (EDP) is also analysed in this section. Finally, Section V concludes the paper.
+II. LDPC CODES AND DECODER
+A. LDPC Codes
+The quasi-cyclic (QC)-LDPC codes [2] are considered in this paper due to their suitability for hardware implementation. The QC-LDPC code construction starts with a base matrix (BM) of size Nr × Nc. Each non-zero element of this BM is expanded by a Z-by-Z cyclically-shifted identity matrix, where Z is the lifting size. The circular shift values depend on Z and on the edge positions in the BM. This family of codes allows for efficient hardware implementations with a high degree of parallelism and a high processing throughput [3]. In this work, we consider 3 types of LDPC codes: i) 5GNR code [4] with BM index 1 (BM1), code rate (CR) 1/3, and Z = 32, ii) 802.11n WiFi code [5] with CR 1/2, and Z = 27, and iii) the code proposed in [1], with a 9-color constraint and Z = 18, referred as C9 − Z18 in the rest of paper.
+B. Quantized OMS-LDPC Decoder
+After encoding and transmitting the message over the noisy channel, the received signal at time i is yi = xi + wi, where xi is the ith transmitted modulated symbol, and wi is the additive Gaussian noise with variance σ2. For simplicity, the BPSK modulation is employed: xi ∈ {−1, +1} = 2ci − 1, where ci is the ith transmitted bit. For each channel output yi, the decoder first computes Qµ-bits belief outputs µi as µi = satQµ ( αyi ), where . define the rounding operator, α is a belief scaling parameter depending on Qµ and σ2, and
+satQ(x) = max(min(x, 2Q−1 − 1, −2Q−1))
+is the Q-bits saturation operator. To describe the decoding algorithm, the following variables are introduced: µ(i→ t) j corresponds to the variable node (VN) i to check node (CN) j message at iteration number t, λj(t→) i is the CN j to VN i message at t, Λi is to the current sum of the incoming messages at VN index i. The Λi are referred to as the VN belief sums, Vj is the set of VN indexes connected to the CN j, Nr is the number of rows in the BM, β is a positive integer coefficient corresponding to the offset parameter, Qλ and QΛ > Qµ respectively represent the number of quantization bits for the λ(jt→) i variables and for the Λi variables.
+The OMS LDPC decoding algorithm [6] with row-layered scheduling works as follows. At the first iteration t = 1, the VN belief sums Λi are initialized with the channel beliefs µi,
+
+978-1-7281-7044-2/20/$31.00 ©2020 IEEE 263 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Proposed LDPC decoder hardware architecture.
+
+and the messages µi(→ 1)j are set to 0. Then, at each iteration t > 1, the messages µi(→ t) j and the belief sums Λi are sequentially updated for each j ∈ {0, ..., Z × (Nr − 1)} according to the
+following equations, ∀i:
+
+µi(→ t) j = sgn(Λi − λj(t→−i1))satQλ (|Λi − λj(t→−i1)|),
+
+(1)
+
+λj(t→) i =
+
+sgn(µl(→ t) j ) max l∈mVijn\i|µ(l→ t) j | − β, 0 , (2)
+
+l∈Vj \i
+
+Λi = satQΛ λj(t→) i + µi(→ t) j ,
+
+(3)
+
+where sgn(.) denotes the sign operator. The algorithm stops when a given number of iterations is reached or when an early termination (ET) criterion is fulfilled, for instance if all paritycheck equations are satisfied. When considering QC paritymatrices, the VN belief sums Λi are typically processed in parallel per sub-block of Z rows, called layer, due to the absence of data dependency in these sub-blocks.
+
+C. ∆-Update Technique
+Data dependencies between successive layers cause update conflicts which can highly damage the FER performance or the processing rate of the decoder. The sparsity of the LDPC parity-check matrix often limits the data dependencies. However, some irregular codes, such as the ones used in 5GNR or 802.11n standards, can be very dense. To avoid such conflicts, the ∆-update mechanism was proposed in [1]. The main idea is to compute the difference ∆i between the updated VN belief sum and its current value. Once the computation is finished, ∆i is used to update the next VN belief sum Λi. If a VN is involved in several concurrent CN computations, its message-update schedule is simply altered, while other VNs can still be updated normally. To incorporate the ∆-update mechanism in the layered OMS LDPC decoder algorithm described in Section II-B, equation (3) is replaced by
+∆i = λj(t→) i − λj(t→−i1),
+and the VN belief sums are updated by adding ∆i to the previous Λi value: Λi ← satQΛ (∆i + Λi). Equations (1) and (2) remain unchanged.
+
+III. PROPOSED HARDWARE ARCHITECTURE
+A. Delta-Update LDPC Decoder Architecture
+The top-level architecture of the proposed LDPC decoder is shown in Fig. 1. To allow high-throughput and low latency decoding, two parallelism axes are considered:
+
+• up to DCMAX VN belief sum Λi in the BM (i.e. entire check nodes) are processed in parallel,
+• up to ZMAX rows (i.e. all check nodes in a layer) are processed in parallel.
+Therefore, the architecture is composed of DCMAX Shift-∆-Mem units connected to ZMAX check node processing elements (CNPEs). The Shift-∆-Mem unit number l ∈ {0, ..., DCMAX − 1} takes as input, after the first decoding iteration, a vector ∆ of ZMAX ∆-update signals (Q∆ bits) coming from the lth output of the ZMAX CNPEs. Each shift unit is composed of two barrel shifters in parallel followed by a last multiplexer stage for selecting the output [7]. The Λ-memories, each of depth NsubVN store the ZMAX VN belief sums of QΛ bits associated with a subset of NsubVN variable nodes. Each row of the memory contains variable nodes associated with a single block-column of the parity-check matrix.
+The novelty of the architecture resides in the +∆ units that add the shifted ∆-update and the VN belief sums to update, read from the Λ-memories. The outputs of the +∆ units corresponds to the updated VN belief sums vector, and is written back into the Λ-memories. As described in Section II-C, this scheme enables to support deep pipeline configurations without update conflicts, at the cost of additional decoding iterations. This is particularly needed for highly parallel architectures where several pipeline stages are required to reduce the critical path of the 2-min search computation tree. It is worth noting that, contrary to most state-of-the-art architectures, it is not possible to avoid the use of the shift W unit in Fig. 1 due to the ∆-update scheme [1]. It is however a minor drawback as it only introduces a slight complexity increase and deeper pipeline depth can be supported.
+In the CNPE architecture, the variable node processor (VNP) front unit subtracts the VN Belief sums Λi to the Qλ bits message values λ(t−1) of the previous iteration. After sign and magnitude separation, the magnitudes of the obtained DCMAX messages are saturated to Qλ − 1 bits and fed to the 2-min search unit. This block is composed of cascaded sort and merge structures described in [8]. The major change compared to typical CNPE architectures comes from the VNP back unit. It outputs the ∆-update values of Q∆ = Qλ +1 bits obtained by subtracting the old message values λt−1 with the newly obtained message values λt. These new messages are finally stored into the λ-memories, each of depth Nr,MAX which corresponds to the maximum number of BM rows that the decoder can support.
+B. Pipeline Configuration
+Several pipeline configurations are supported on blocks having a recursive structure. This is the case for the shift and the 2-MIN search units, highlighted in blue in Fig. 1, where a pipeline register can be instantiated (or not) between each stage. Furthermore, the clock cycle latency due to the Λ-memory write cycle is counted as a pipeline stage, and one mandatory pipeline register stage is added before the +∆ unit. Let dshift ∈ {1, ..., log2(ZMAX)} and d2-MIN ∈
+
+264 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I SIMULATION PARAMETERS FOR THE CODES AND THE DECODING.
+
+Code type
+Code rate Code length Lift. size Z
+(Eb/N0)W F (Eb /N0 )E F
+Qλ αW F αEF
+
+5GNR
+1/3 2176
+32
+1.3 dB 2 dB 56 7 4 4.5 4.5 3 5.2 4.2
+
+801.11.n
+1/2 648 27
+2.5 dB 3.2 dB 567 3.2 4.2 4.2 2.5 2.5 2.5
+
+C9 − Z18
+1/2 2592
+18
+1.7 dB 2.4 dB 567 4 5.7 5.7 2.5 5.7 4.2
+
+{1, ..., log2(MAX DC) + 1} respectively be the pipeline depth of these two blocks, where . denotes the ceiling function. Therefore, the total pipeline depth of the LDPC decoder is: dDEC = d2-MIN + 2 × dshift + 2.
+It is worth mentioning that the read from Λ-memory and the +∆ computation must be performed during the same clock cycle. Otherwise, update conflicts may occur, and techniques to avoid them will be considered in future work. Therefore, the clock period will be ultimately limited by the propagation time of the ∆-update path.
+IV. SIMULATIONS AND RESULTS
+A. Performance Evaluation
+This section aims to analyze the FER performance of the proposed decoder architecture when considering Qλ ∈ {5, 6, 7} and the three LDPC codes presented in Section II-A. To support all these cases, the decoder architecture is implemented with MAX DC = 26, ZMAX = 32, itmax = 25 (with ET), Nr,MAX = 96, NsubVN = 8, Qµ = Qλ and QΛ = 8. The pipeline depth dDEC is set to 15 for the 5GNR code and the C9 − Z18 codes, and to 4 for the 802.11n code.
+For all the results presented in this section, two MonteCarlo simulations are performed for each considered case. The first simulation considers a belief scaling parameter αW F that minimizes the FER at a given Eb/N0 value in the waterfall region (noted (Eb/N0)W F ). The second simulation considers the optimized belief scaling parameter αEF at a (Eb/N0)EF value in the error floor region. All the code and decoding parameters are presented in Table I. For all the simulations, we have found the optimal offset to be β = 1.
+Figure 2 shows the FER results for each code and each Qλ. Each simulation curve is obtained by selecting, for each Eb/N0 value, the best FER from the waterfall and error floor simulation setups. It can be observed that Qλ = 6 and Qλ = 7 achieve similar FER performance for the 5GNR and C9 − Z18 codes, and the FER is degraded when Qλ = 5. Particularly, we observe a FER increase before the error floor. This can be explained by the fact that the belief scaling is not optimised in this region, and that this parameter has a strong influence when the number of quantization bits is too low. Therefore, α must be optimised for all Eb/N0 values when case Qλ = 5, requiring an accurate noise power estimator in practice. For the remaining of this section, Qλ = 6 will be considered.
+
+10 0 10 -1
+
+Q =5 Q =6 Q =7
+
+10 -2
+
+FER
+
+10 -3
+
+10 -4
+
+10 -5
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+E /N
+b0
+
+Fig. 2. FER simulation of the LDPC decoders with different Qλ values and codes.
+
+TABLE II SYNTHESIS RESULTS FOR DIFFERENT PIPELINE DEPTH WITH Qλ = 6.
+
+Pipeline depth
+
+5
+
+7
+
+9 13
+
+Cell count (×106) 1.01 1.06 1.18 1.23
+
+Cell area (mm2)
+
+4.31 4.34 5.00 5.38
+
+Net area (mm2)
+
+1.80 1.87 2.01 2.07
+
+Total area (mm2) 6.12 6.22 7.01 7.45
+
+Clock period (ns)
+
+2 1.4 1.2 1.1
+
+Estimated power (W) 1.32 2.07 2.87 3.63
+
+B. Synthesis Results
+The synthesis flow that we have developed to perform the synthesis of the reported architectures relies on the Cadence GenusTM tool and the TSMC65GP 65nm design kit. Table II compares the results obtained for different pipeline depth dDEC, in terms of design complexity, clock period and dynamic power consumption. The clock period is a measure of the maximum speed achievable by the design. For each pipeline depth configuration, it is obtained by successively running the synthesis with incremented clock period targets, until the obtained slack is positive. The architecture parameters are the same as described in Section IV-A, with Qλ = 6. The pipeline stage locations are chosen to balance the propagation delay between each stage.
+Results show that the maximum clock frequency is almost doubled when comparing dDEC = 5 and dDEC = 13 cases. This increase in speed is achieved at the cost of area and power consumption: the cell count and the cell area are respectively increased by 21% and 25%, and the power consumption is increased by a factor of 2.75. When the pipeline depth reaches 13, the propagation path between each register becomes shorter than the ∆-update path discussed in Section III-B. Therefore, there is no reason to increase the pipeline depth above 13 as it would results in a waste of area and power consumption. The dynamic power consumption significantly increases with the pipeline depth, which is due to: i) the faster switching activity of the transistors, ii) increased area resulting from added pipeline registers. In the following section, we evaluate the trade-offs between speed and power consumption,
+
+265 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized decoding time (ns/bit) Normalized EDP (nJ.ns/bit²)
+
+5
+
+2.5
+
+5GNR, worst case
+
+5GNR, average
+
+802.11n, worst case
+
+4
+
+801.11n, average
+
+2
+
+C -Z , worst case
+9 18
+
+C -Z , average
+
+3
+
+9 18
+
+1.5
+
+5GNR 802.11n C -Z
+9 18
+
+2
+
+1
+
+1
+
+0.5
+
+0
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+Pipeline depth
+
+Pipeline depth
+
+Fig. 3. Average and worst-case decoding time for different pipeline depths Fig. 4. Normalized EDP for different pipeline depths and codes, for a FER and codes, for a FER target of 10−2 at (Eb/N0)W F values (given in Table I). target of 10−2 at (Eb/N0)W F values (given in Table I).
+
+using the EDP and the decoding time metrics.
+C. Pipeline Depth Analysis
+The ∆-update mechanism described in Section II-C enables the use of architectures with deep pipeline. Higher clock frequency can be reached, at the cost of an increased number of decoding iteration, in-between the layered and the flooding schedules. In this section, the impact of the pipeline depth on the decoding time and the EDP is analyzed when considering the synthesis results obtained in IV-B.
+We define the average normalized decoding time (NDT) as NDTavg = n˜clkTclk/L, where n˜clk is the average number of clock cycle to perform a decoding (with ET), Tclk is the clock period of the circuit and L is the code length. The worst-case NDT is defined as NDTMAX = NrtmaxTclk/L. Note that 1/NDTMAX gives the worst-case throughput, while 1/NDTavg gives the best throughput that can be achieved by the architecture if inputs can be buffered. To measure EDP, we assume that ET is used to calculate the energy, while the delay corresponds to NDTMAX. Therefore we have EDP = NDTavg · NDTMAX · PD, where PD is the dynamic power estimated by the synthesis tool.
+Fig. 3 shows the average and worst-case NDT when the pipeline depth d varies from 1 to 15, for all the codes. These results are obtained for a 10−2 FER target at (Eb/N0)W F . Results are extrapolated for dDEC ≤ 5, assuming that the clock period perfectly scale with the pipeline depth. Through successive Monte-Carlo simulation, tmax is obtained when the FER target is reached while the ET mechanism is disabled. Then, the ET is activated to deduce n˜clk. Pipeline stage locations have been chosen to minimize the critical path delay, and Tclk is obtained from the synthesis results presented in Section IV-B. It can be seen that increasing dDEC always results in improved decoding times for all the codes. In fact, we observed that the clock period decreases faster than the increase in number of iterations. However, for very deep pipelines (dDEC ≥ 9), latency gains are marginal while penalizing the power and area. This is particularly visible in Fig. 4, where the EDP slowly increases when dDEC ≥ 9. The 5GNR and 802.11n codes cannot be pipelined with more than 1 stage when
+
+considering a parallel architecture with a strict row-layered schedule. Therefore, the ∆-update scheme with dDEC = 7 reduces the EDP by 75% for the 5GNR code and 62% for the 802.11n code. The C9 − Z18 code is designed to support pipeline depth up to dDEC = 5 [1], which results in a reduction of 23% of the EDP (when dDEC = 7). This demonstrates that deeper pipelines can reduce the EDP.
+V. CONCLUSION
+A novel highly parallel LDPC decoder architecture is proposed. Thanks to its ∆ update scheme, deep pipelines can be supported without update conflicts, at the cost of additional decoding iterations. This scheme also allows to easily support many different codes without complex control mechanisms. We observed that the ability to increase the pipeline depth allows a significant reduction of the decoding time and of the EDP. This demonstrate the efficiency of the ∆-update scheme to improve the processing speed and the EDP of highlyparallel LDPC decoders.
+REFERENCES
+[1] E. Dupraz, F. Leduc-Primeau, and F. Gagnon, “Low-latency LDPC decoding achieved by code and architecture co-design,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), Dec 2018, pp. 1–5.
+[2] Seho Myung, Kyeongcheol Yang, and Jaeyoel Kim, “Quasi-cyclic LDPC codes for fast encoding,” IEEE Trans. Inf. Theory, vol. 51, no. 8, pp. 2894–2901, Aug 2005.
+[3] S. Kim, G. E. Sobelman, and H. Lee, “a reduced-complexity architecture for LDPC layered decoding schemes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst.
+[4] 3GPP TS 38.212 , “3rd generation partnership project; technical specification group radio access network; multiplexing and channel coding,” https://portal.3gpp.org/desktopmodules/Specifications/ SpecificationDetails.aspx?specificationId=3214.
+[5] “IEEE Standard for Information technology, Local and metropolitan area networks, Part 11: Wireless LAN MAC and PHY Specifications,” IEEE Std 802.11n-2009, pp. 1–565, 2009.
+[6] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. on Commun.
+[7] X. Chen, S. Lin, and V. Akella, “QSN—a simple circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. on Circuits and Systems II: Express Briefs, vol. 57, no. 10, pp. 782–786, Oct 2010.
+[8] F. Leduc-Primeau, F. R. Kschischang, and W. J. Gross, “Modeling and energy optimization of LDPC decoder circuits with timing violations,” IEEE Trans. on Commun., vol. 66, no. 3, pp. 932–946, March 2018.
+
+266 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+

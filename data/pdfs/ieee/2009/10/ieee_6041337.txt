@@ -1,0 +1,619 @@
+Energy Efficiency of SISO Algorithms for Turbo-Decoding Message-Passing LDPC Decoders
+
+Erick Amador EURECOM
+06904 Sophia Antipolis, France erick.amador@eurecom.fr
+
+Vincent Rezard Infineon Technologies France 06560 Sophia Antipolis, France vincent.rezard@infineon.com
+
+Renaud Pacalet TELECOM ParisTech 06904 Sophia Antipolis, France renaud.pacalet@telecom-paristech.fr
+
+Abstract—The decoding of LDPC codes using the turbodecoding message-passing strategy is considered. This strategy can be used with different SISO message computation kernels. We analyze the suitability for VLSI implementation of various message computation algorithms in terms of implementation area, energy consumption and error-correcting performance. As one of the computation kernels, we introduce the recent SelfCorrected Min-Sum algorithm and show the advantages it brings from an energy efficiency perspective. We present comparisons among the studied kernels implemented in a 65nm CMOS process and use a test case from the codes defined in IEEE 802.11n to show differences in energy efficiency.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes [1] currently stand as one of the best known error-correcting codes due to their capacity-approaching performance and the inherent parallelism of their iterative decoding algorithm. Several communication standards have already adopted these codes for forward-error correction. The implementation of these decoders present several challenges, especially when targeting wireless communications on mobile terminals, where ultra-low power operation is required.
+In this paper we investigate the energy efficiency of VLSI decoders based on the turbo-decoding message-passing (TDMP) [2] strategy using several message computation kernels. We perform a design-time exploration in order to assess the trade-offs between energy consumption, error-correcting performance and implementation area. We introduce the recent Self-Corrected Min-Sum algorithm [3] as a message computation kernel and demonstrate its native energy efficient capabilities. The concept of erasing unreliable messages in this algorithm reduces the net switching activity of the processing units, it allows a reduction of the number of active processing nodes per iteration and enables a simple stopping criterion for the iterative processing. We show results for a TDMP LDPC decoder for the codes defined in IEEE 802.11n [4] using a 65nm CMOS process. The paper is organized as follows: Section II introduces LDPC codes and TDMP decoding, Section III shows the message computation kernels explored and Section IV presents the decoder architecture proposed. Section V elaborates on the main points concerning the energy efficiency of these iterative decoders along with a comparison among the explored computation kernels. Section VI concludes the paper.
+
+II. LDPC CODES LDPC codes are linear block codes defined by a sparse parity-check matrix H. The number of nonzero elements in a row and in a column of H define the degree of the row and column respectively. The code can be represented also by a bipartite graph, where columns of H are mapped to variable nodes and rows are mapped to check nodes. Nonzero elements in H represent edges in the graph between the corresponding nodes. In order to simplify implementation issues a specific structure can be enforced within the code. Figure 1 shows the parity-check matrix and graph for a structured LDPC code.
+Z
+Z
+mb × Z
+
+nb × Z
+
+(a) Parity-check matrix
+
+0 ...
+
+nb − 1
+
+...
+
+...
+
+...
+
+cluster of Z check
+nodes
+
+Z Edge Permutations
+
+...
+
+...
+
+...
+
+0
+
+mb − 1
+
+(b) Bipartite graph
+
+cluster of Z variable
+nodes
+
+Fig. 1. Structured LDPC code
+
+Structured codes consist of several layers of nonoverlapping rows, where these layers are composed of Z × Z submatrices. Z describes the level of parallelism within the code since Z non-overlapping rows can be processed at the same time. These submatrices can be either a permutation
+matrix derived from an identity matrix or an all-zeros matrix. For the matrix shown in figure 1(a) there are M = mb × Z parity-check constraints (mb block-rows) and N = nb × Z codeword symbols (nb block-columns). The graph representation in figure 1(b) contains edges of width Z, grouping Z nodes into clusters. This allows the possibility to instantiate a
+subset of the processing nodes, generating a clear advantage
+in terms of flexibility and silicon area as well as reducing the
+complexity of the interconnection network.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+A. TDMP Decoding
+
+III. SISO KERNELS
+
+Gallager introduced an iterative two-phase message-passing decoding algorithm [1] where check nodes and variable nodes exchange extrinsic reliability values associated with each codeword symbol. Each decoding iteration consists of two phases: variable nodes update and send messages to the neighboring check nodes, and check nodes update and send back their corresponding messages. The operation of each node is independent and in general can be executed in parallel with other nodes. This characteristic enables the use of different scheduling techniques that impact the convergence speed of the decoding task. The TDMP schedule [2] shows important improvements over the two-phase schedule: a faster convergence and reduced memory requirements.
+In TDMP the check nodes of the graph are evaluated sequentially, updating and propagating more reliable messages along the graph. Furthermore, this method merges check and variable updates in one step, reducing the memory requirements when compared to the traditional two-phase method. Another important advantage is the reduction in the number of iterations by up to 50%, indeed saving energy by the same proportion.
+From the detailed description in [5] we summarize the TDMP decoding as follows. Let the vector δ = [δ1, . . . , δN ] denote the initial channel observations (intrinsic information) per codeword symbol as log likelihood ratios and a vector γ = [γ1, . . . , γN ] denote the sum of all messages generated in the rows of H for each codeword symbol (posterior messages). Let us define as well a vector λi = [λ1i , . . . , λcii ] for each row i in H that contains the ci extrinsic messages generated after each decoding round, where ci is the degree of the row. Let Ii define the set of ci nonzero values in row i, such that the ci elements of γ and δ that participate in row i are denoted by γ(Ii) and δ(Ii) respectively. Furthermore, let the vector ρ define the prior messages. Algorithm 1 describes the decoding of the ith row of H.
+
+The processing complexity of the decoding task resides in the operations performed in the variable and check nodes of the code graph. Essentially the operation at the variable node is an addition of the incoming messages, whereas the operation at the check node involves more operations and it is where the tradeoff of performance and complexity takes place. In the context of TDMP the check node operation takes place on step 3 of algorithm 1. We refer to this step as message computation for generating the vector Λ = SISO(ρ) from the prior messages ρ. The optimal message computation is performed by the Sum-Product (SP) algorithm [1] by:
+
+Λj = ψ−1
+
+ψ(ρn)
+
+(1)
+
+n∈Ii \j
+
+where
+
+ψ(x)
+
+=
+
+−
+
+1 2
+
+log(tanh(
+
+x 2
+
+))
+
+=
+
+ψ−1(x)
+
+(2)
+
+Implementing (2) is highly complex mainly due to the effects of quantization and the nonlinearity of the function. Along with the TDMP schedule, [2] proposed the computation of messages by using a simplified form of the BCJR algorithm [6] to process the 2-state trellis of each single parity-check constraint of the code. Indeed this approach views an LDPC code as the parallel concatenation of single parity-check codes. The reader is refered to [2] and [5] for a detailed analysis. The computation of messages is performed by:
+
+Λj = Q[j](. . . (Q(Q(ρ1, ρ2), ρ3), . . .), ρci )
+
+(3)
+
+where
+
+Q(x, y)
+
+= max(x, y) + max
+
+5 8
+
+−
+
+|x−y| 4
+
+,
+
+0
+
+−
+
+max
+
+5 8
+
+−
+
+|x+y| 4
+
+,
+
+0
+
+− max(x + y, 0)
+
+(4)
+
+Algorithm 1 TDMP Decoding Initialization λi ← 0 γ(Ii) ← δ(Ii) For each iteration: 1) Read vectors γ(Ii) and λi 2) Generate prior messages: ρ = γ(Ii) − λi 3) Process ρ with a soft-input soft-output (SISO) algorithm: Λ = SISO(ρ) 4) Writeback vectors: λi ← Λ γ(Ii) ← ρ + Λ
+The process iterates until a stopping criterion is satisfied, refer to section V-C. Hard decisions are taken by slicing the vector γ to obtain the decoded message.
+
+is the so-called max-quartet function and the subscript [j] denotes the index of the variable to exclude from the computation.
+The Min-Sum (MS) algorithm [7] approximates the operation in (1) with less complexity but at the cost of errorcorrecting performance. The MS operation computes messages by:
+
+Λj =
+
+(sign(ρn)) · min |ρn|
+
+(5)
+
+n∈Ii \j
+
+n∈Ii \j
+
+Several correction methods have been proposed to recover the performance loss of the MS operation, such as the Normalized-MS (NMS) and Offset-MS (OMS) algorithms [7]. These correction methods essentially downscale the check node messages, which are overestimated in the first place in MS. NMS computes messages by scaling equation (5) by a factor α, whereas OMS computes messages by:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+Λj =
+
+(sign(ρn)) · max min |ρn| − β, 0 (6)
+
+n∈Ii \j
+
+n∈Ii \j
+
+where β is an offset value. It has been shown recently in [3] that the sub-optimality of MS decoding is not due to the overestimation of the check node messages, but instead to the loss of the symmetric Gaussian distribution of these messages. This symmetry can be recovered by eliminating unreliable variable node messages or cleaning the inputs of the check node operation. By doing so [3] introduces the SelfCorrected MS (SCMS) decoding which exhibits quasi-optimal performance. An input to the check node operation is identified as unreliable if it has changed its sign with respect to the previous iteration. In algorithm 2 we show how to use SCMS to compute messages within TDMP for decoding row i.
+
+BER
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5 10−6 10−7
+
+SP MS SCMS NMS BCJR OMS
+
+10−8
+
+0.8
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+Eb/No in dB
+
+Algorithm 2 TDMP-SCMS
+Initialization λi ← 0 γ(Ii) ← δ(Ii) At iteration k = 0:
+1) Read vectors γ(Ii), λi and ρiold 2) Generate new prior messages: ρinew = γ(Ii) − λi 3) Generate MS input κ such that:
+for all j ∈ ci do if sign(ρinewj ) = sign(ρoi ldj ) then κj = 0 else κj = ρinewj end if
+end for
+4) Generate MS output Λ = M S(κ):
+
+Λj =
+
+(sign(κn)) · min |κn| (7)
+
+n∈Ii \j
+
+n∈Ii \j
+
+5) Writeback vectors: λi ← Λ ρiold ← ρni ew γ(Ii) ← ρinew + Λ
+
+The vector κ = [κ1, . . . , κci ] corresponds to the corrected inputs for the MS operation. Steps 3 and 4 correspond to the main features of the SCMS algorithm, where unreliable variable messages are identified and erased. In this way unreliable values are no longer propagated along the code graph.
+Figure 2 shows the simulated error-correcting performance for these computation kernels applied to the TDMP decoding of the quasi-cyclic LDPC code (length N = 1944, rate R = 1/2) defined in IEEE 802.11n [4] over the AWGN channel with QPSK modulation. The normalization and offset values for NMS and OMS used were α = 0.8 and β = 0.35 respectively, with a maximum number of 60 iterations. The
+
+Fig. 2. Bit error rate performance
+
+γ-memory
+
+π
+
+λi-memory
+Processing unit
+
+P units π−1
+
+Fig. 3. TDMP decoder architecture
+performance for BCJR is the closest to the optimal SP. MS performs the simplest approximation to SP and indeed shows the largest performance loss. Both NMS and OMS close significantly the performance gap between SP and MS but approach a relatively high error floor. SCMS is the MS-based kernel that shows the smallest performance gap to SP, in fact it shows a lower error floor, as reported in [3].
+IV. DECODER ARCHITECTURE
+Figure 3 shows a top level view of the proposed architecture for TDMP decoding. The required storage elements are the posterior messages memory (γ) and the extrinsic messages memory (λ). The γ-memory stores as many values as the codeword length, whereas the λ-memory size corresponds to the number of edges in the code graph. The λ-memory is partitioned and bound to a processing unit following a static allocation of rows to processing units. Shuffling units π and π−1 are used to distribute posterior messages to and from the processing units. P processing units handle the required operations for messages computation, figure 4 shows the data flow for this unit.
+The SISO unit performs the message computation kernel of choice. As can be seen from section III the MS-based kernels fundamentally perform a running comparison of magnitudes and sign calculation. The processing unit for SCMS requires
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+λi
+
+ρ
+
+Λ
+
+SISO unit
+
+λi
+
+γ(Ii)
+
+30
+γ(Ii)
+
+25
+
+Fig. 4. SISO processing unit
+
+ρoi ld
+
+SP
+
+20
+
+SCMS
+
+NMS
+
+Avg. iterations
+
+λi
+
+ρni ew Correction κ MinSum Λ
+
+λi
+
+BCJR OMS
+
+unit
+
+unit
+
+15
+
+γ(Ii)
+
+γ(Ii)
+
+sign(ρinew)
+
+ρiold
+
+10
+
+Fig. 5. SCMS processing unit
+5
+
+a precomputation block for performing step 3 from algorithm 2. Figure 5 shows the processing unit for SCMS message computation.
+In table I we show the cell area from the synthesis of serial processing units using the different SISO kernels on a CMOS technology of 65nm and message quantization of 6-bits. We show as well the average energy per iteration consumed1 when decoding the code N = 1944, R = 1/2 from [4]. It is interesting to notice the energy consumption of the SCMS unit compared to the other MS-based ones. It was observed that due to the erased messages used in SCMS this unit shows a net decrease in switching activity compared to the other MSbased units. As expected the BCJR unit shows the largest area and energy consumption, mainly due to the higher complexity of the datapath to implement equation (4).
+
+Avg. Energy in nJ
+
+0
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+Eb/No in dB
+
+Fig. 6. Average decoding iterations
+
+250
+
+200
+
+SCMS
+
+NMS
+
+BCJR
+
+OMS
+
+150
+
+100
+
+50
+
+TABLE I COMPARISON OF PROCESSING UNITS
+
+Type
+MS NMS OMS SCMS BCJR
+
+Cell area [µm2]
+3504.48 3827.04 3806.88 3744.48 5674.08
+
+Energy [nJ] N=1944,R=1/2
+4.31 6.71 6.30 3.25 12.07
+
+The architecture in figure 3 is independent of the SISO kernel used. Besides the processing units, only the λ-memory is affected by this choice. This memory stores as many values as edges in the code graph, but the MS-based algorithms allow a simple but valuable reduction in the memory size. These algorithms have the characteristic that for n inputs there will be two output magnitudes and n output signs. This allows to store only two magnitudes, ci signs and an index (log2 ci bits) for each row i. For our test case this corresponds to a reduction of 52% for this memory, this is indeed a main difference in implementation area between the BCJR and the MS-based kernels. This is not precisely the case with the SCMS kernel, as it requires to store the signs of the ci prior messages for each row i. This corresponds to an increase of 35% of this memory with respect to the other MS-based kernels.
+1Pertinent activity files in VCD format along with the synthesized netlists were used with a power estimation tool.
+
+0
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+Eb/No in dB
+
+Fig. 7. Average energy on computation kernels
+
+V. ENERGY EFFICIENCY
+A. Convergence Speed
+The iterative nature of the decoding algorithm shows a dynamic behavior that depends upon external factors such as the received signal-to-noise ratio. In figure 6 we show the average number of iterations required for decoding using different computation kernels with the same simulation scenario from figure 2. The SP kernel is the fastest to converge, with BCJR following very closely the same behavior. OMS appears as the fastest MS-based kernel, followed by NMS and SCMS as the slowest one.
+From an energy efficiency perspective it is compelling to compare the net consumption from each kernel, as for example the fastest one may consume more energy per iteration than the slowest one. In figure 7 we show the average energy consumed in the processing units accounting for the average number of iterations to complete the decoding task. It is observed how SCMS is the processing kernel with the best energy efficiency from the processing units perspective. BCJR is the kernel that requires the less number of iterations but each iteration incurs in a higher energy cost.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+Percentage of inactive check nodes
+Percentage of erased messages
+
+16
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+Iterations
+
+Fig. 8. Inactive check nodes in SCMS decoding
+
+B. Active nodes
+The number of nodes in the code graph that are active during each decoding iteration impacts the energy consumption. In [8] the authors proposed to deactivate the variable nodes that have converged to a strong belief after a few iterations, where this condition is detected when the summation of all incoming messages surpasses a given threshold. The error-correcting performance is affected by the value of this threshold, furthermore this criterion adds a compare operation per variable node.
+The SCMS kernel offers a simple criterion to disable a check node on a given iteration. The concept of erasing messages avoids the propagation of unreliable messages along the code graph. If there are two or more erased messages per row (step 3 in algorithm 2) that particular check node is effectively rendered useless for the decoding task as all its output values would have magnitude zero. Although there is a similar argument for any Min-Sum based kernel (two or more zero magnitude input messages) the SCMS kernel benefits from the fact that the minimum finders are not used.
+Detecting this condition allows to save the processing required along with the writeback of messages to the memories. This criterion adds a compare operation per check node and does not affect the error-correcting performance. In figure 8 we show the average percentage of disabled check nodes per iteration for 105 codewords at Eb/N0 = 1dB on our test case scenario. In our implementation this translates to an average reduction of 8% in energy per iteration for a SCMS-based decoder. Algorithm 3 outlines this simple criterion for energy reduction.
+
+Algorithm 3 Check node deactivation - SCMS
+ǫi: number of erased messages in row i M : set of check nodes for all rows i ∈ M do
+Compute ǫi if ǫi ≥ 2 then
+Move to next row else
+Decode row end if end for
+
+10 9 8 7 6 5 4 3 2 1 0 5
+
+Undecodable codeword Decodable codeword
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+45
+
+50
+
+55
+
+60
+
+Iterations
+
+Fig. 9. Percentage of erased messages
+
+C. Stopping criterion
+Iteration control oversees that only the necessary number of iterations are executed for both successful and unsuccessful decoding. Typically, successful decoding is verified by the condition H · xT = 0 (syndrome check), where x is a valid codeword. If this condition is not satisfied decoding continues until a maximum number of iterations has been reached. Therefore early detection of an undecodable codeword is essential to save energy on unnecessary decoder operation.
+We consider the case for early detection of an undecodable codeword and how SCMS provides this capability with the concept of erased messages at very low complexity. In SCMS the total number of erased messages per iteration approaches zero relatively fast for a decodable codeword. In the case of an undecodable codeword the number of erased messages fluctuates around a mean value. In figure 9 we show how the percentage of erased messages evolves with each iteration for a decodable and an undecodable codeword.
+By detecting the characteristic decreasing monotonic behavior of the number of erased messages when the decoder enters a convergence state, it is possible to save energy on potential undecodable codewords. This simple criterion is equivalent in principle to the work in [9] but using a different decision metric: [9] follows the evolution of the mean checksum of check nodes, but requires knowledge of the SNR. The stopping criterion we propose for the SCMS kernel simply follows the evolution of the total number of erased messages by counting the increments of this metric and halting the decoding task once the number of increments exceeds a given threshold T . This threshold is a static parameter tuned by simulations and essentially trades error-correcting performance and the average number of iterations.
+The implementation cost of this criterion corresponds to a counter along with an accumulator and a compare operation to make the halting decision.
+In figure 10 we show the average number of total iterations for a few values of T and the performance loss L for a bit error
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+Average iterations Energy (nJ) Area (mm2)
+
+rate of 10−6. It can be observed that for T = 8 the average
+
+1600
+
+Energy breakdown
+
+number of iterations can be reduced up to 60%, reducing
+
+1400
+
+energy consumption for the average decoding task by the same
+
+proportion.
+
+1200
+
+Area breakdown 0.35 0.3 0.25
+
+1000 0.2
+
+60
+
+800
+
+0.15
+600
+50 0.1
+400
+
+No stopping criterion
+
+40
+
+T=12, L=0.06dB
+
+200
+
+0.05
+
+T=10, L=0.1dB
+
+30
+
+T=8, L=0.13dB
+
+0
+
+BCJR
+
+OMS
+
+SCMS
+
+BCJR
+
+OMS
+
+SCMS
+
+0
+
+γ-memory λ-memory
+
+processing units shuffling units
+
+20
+Fig. 11. Energy and area breakdown
+
+10
+
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+Eb/No in dB
+
+Fig. 10. Average total iterations and stopping criteria
+
+D. Decoders Comparison
+We performed an estimation on the decoders implementation area and energy consumption of the individual components shown in the architecture of figure 3, using three computation kernels for the test case of the code N = 1944, R = 1/2 in [4]. Benes networks were used as shuffling units [10], and low-power dual-port RAMs for the required memories providing a bandwidth of 12 samples/cycle to three processing units in all decoders.
+In figure 11 we show the implementation area and energy breakdown. The energy breakdown corresponds to the completion of a decoding task using the average number of iterations from 105 codewords at Eb/N0 = 1dB. To have a fair comparison all decoders used syndrome check as stopping criterion and all nodes activated at run-time. On all decoders at least 70% of the energy is consumed on the memory subsystem, this shows the relevance of the optimization that can be exploited by SCMS shown in section V-B.
+Since the number of required iterations is highly dynamic, in table II we show the energy efficiency per iteration for these decoders in order to have a proper figure of merit.
+
+TABLE II ENERGY EFFICIENCY OF SISO KERNELS
+
+Energy efficiency
+
+BCJR OMS NMS SCMS
+
+[pJ/bit/iteration] 64.87 46.98 47.61 43.61
+
+VI. CONCLUSIONS
+We performed a comparison among several message computation kernels within TDMP decoding of LDPC codes to
+
+observe the tradeoffs on energy efficiency, implementation area and error-correcting performance. We proposed the use of the SCMS kernel and identified its built-in characteristics for better energy efficiency: reduced net switching activity in the processing units, reduced number of active nodes per iteration and a stopping criterion for early detection of undecodable codewords. Even though the differences on implementation area are small, OMS presented the smallest footprint and best energy efficiency for the average complete decoding task for the studied test case. Nevertheless SCMS shows a better errorcorrecting performance and energy efficiency per iteration, in addition to its built-in energy optimizations derived from the concept of erasing unreliable messages.
+REFERENCES
+[1] Robert Gallager, “Low-Density Parity-Check Codes,” IRE Trans. Inf. Theory, vol. 7, pp. 21–28, January 1962.
+[2] Mohammad Mansour and Naresh Shanbhag, “High-Throughput LDPC Decoders,” IEEE Trans. on VLSI Systems, vol. 11, no. 6, pp. 976–996, December 2003.
+[3] V. Savin, “ Self-Corrected Min-Sum Decoding of LDPC Codes ,” in Proc. of IEEE International Symposium on Information Theory , 2008, pp. 146–150.
+[4] IEEE-802.11n, “Wireless LAN Medium Access Control and Physical Layer Specifications: Enhancements for Higher Throughput,” P802.11n/D3.07, March 2008.
+[5] Mohammad Mansour, “A Turbo-Decoding Message-Passing Algorithm for Sparse Parity-Check Matrix Codes,” IEEE Trans. on Signal Processing, vol. 54, no. 11, pp. 4376–4392, November 2006.
+[6] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (corresp.),” Information Theory, IEEE Transactions on, vol. 20, no. 2, pp. 284–287, 1974.
+[7] J. Chen and M. Fossorier, “ Near Optimum Universal Belief Propagation based Decoding of LDPC codes ,” in IEEE Trans. on Comm. , 2002, pp. 406–414.
+[8] E. Zimmermann, P. Pattisapu, K. Bora, and G. Fettweis, “Reduced Complexity LDPC Decoding using Forced Convergence,” Proc. of the 7th International Symposium on Wireless Personal Multimedia Communications, pp. 12–15, September 2004.
+[9] Zhiaqiang Cui, Lupin Chen, and Zhongfeng Wang, “ An Efficient Early Stopping Scheme for LDPC Decoding ,” in 13th NASA Symposium on VLSI Design , 2007.
+[10] M. Rovini, G. Gentile, and L. Fanucci, “ Multi-size circular shifting networks for decoders of structured LDPC codes ,” IEE Electronics Letters , pp. 938–940, August 2007.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+

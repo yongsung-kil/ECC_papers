@@ -1,0 +1,424 @@
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+Ensemble Belief Propagation Decoding for Short Linear Block Codes
+Kira Kraft, Matthias Herrmann, Oliver Griebel, Norbert Wehn Technische Universita¨t Kaiserslautern
+{kraft, herrmann, griebel, wehn}@eit.uni-kl.de
+
+Abstract—The upcoming communication standard 6G is expected to specify high demands on the efficiency of current communication systems, especially on the latency and error correction performance of the decoding unit. A well-investigated algorithm that allows a low-latency implementation is Belief Propagation (BP) decoding on the Tanner graph, which is the state-of-theart decoding algorithm for Low-Density Parity-Check (LDPC) codes. In this paper, we present a methodology to apply this BP algorithm to non-LDPC codes while achieving a good error correction performance. In addition, we propose a method to generate a diverse ensemble of parity-check matrices for short linear block codes to enable the use of Multiple-Bases Belief Propagation (MBBP), an extension to BP, further improving the error correction performance of LDPC and non-LDPC codes. At the example of LTE Turbo codes, our results show that this approach is capable of achieving the error-correcting performance of the Turbo code’s state-of-the-art max-Log MAP algorithm, while being a universal approach for decoding any kind of short linear block code.
+Index Terms—Forward Error Correction, Belief Propagation, Universal Decoder
+I. INTRODUCTION
+Belief Propagation (BP) [1] is a widely adopted concept in the decoding of forward error correcting codes. As a messagepassing algorithm, BP relies on the iterative exchange of messages (“beliefs”) in a graphical model, which typically varies among different code classes, for example, the component code’s Trellis for Turbo codes [2], the Factor Graph for ReedMuller (RM) codes [3] or Polar codes [4], or the Tanner graph for Low-Density Parity-Check (LDPC) codes [5], [6].
+Today, LDPC codes are the preferred code class in high data rate and high performance applications like 5G-NR, Wi-Fi, etc. The reasons for this dominance are capacity approaching code performance for large code block sizes [6] and the availability of highly efficient and high-throughput and lowlatency decoding hardware. The latter is a result of two important factors: i) low-complexity node update rules, especially with the introduction of the min-sum approximation and ii) inherent decoding parallelism on the underlying Tanner graph (in contrast to, e. g., Turbo codes) [7].
+It is expected that the sixth generation mobile system standard (6G) will specify even more stringent requirements, especially with respect to latency and error-correcting performance compared to 5G. While decoding latency is not a major concern in LDPC coded transmission systems due to the aforementioned parallelism, the structural latency, that is determined by the code block size, gains importance.
+
+Therefore small code block sizes play an important role in the standardization of 6G. However, for short LDPC codes performance of BP decoding is significantly impaired as a result of the relatively dense matrix and the presence of short cycles in the Tanner graph. The same problem occurs in the decoding of code classes other than LDPC codes, in the following referred to as non-LDPC codes. It is therefore an important question how this effect can be mitigated to enable low-latency BP decoding of short LDPC codes and non-LDPC codes with acceptable error-correcting performance. Several works already tried to apply Tanner-graph-based BP decoding to non-LDPC codes: The authors of [8] propose to adapt the parity-check matrix in every iteration of the BP algorithm, which results in a large computational overhead, while the authors of [9] introduce weights on the edges of the Tanner graph (obtained by a neural network) that can help to mitigate the effects of short cycles in a single BP decoding instance.
+Another approach to apply BP decoding on the Tanner graph for non-LDPC codes is Multiple-Bases Belief Propagation (MBBP) [10], [11]. Since different parity-check matrices of the same code can lead to different Tanner graphs, the performance of the Tanner BP algorithm is tied to the paritycheck matrix used to identify the code. The idea of MBBP is therefore to use an ensemble of different parity-check matrices for decoding with multiple instances of a Tanner BP algorithm in parallel. Thereby, a certain decoding diversity is introduces, which can mitigate the effects of short cycles. The main challenge in this approach lies in finding a set of suitable diverse parity-check matrices of the same code. In original MBBP, the approach is restricted to cyclic codes and the different matrices are obtained by cyclic shifts of minimal codewords of the (also cyclic) dual code. Thus, MBBP is still restricted to certain code classes and cannot be used for all kinds of codes as finding the different parity-check matrices is not obvious.
+The recently proposed Automorphism Ensemble Decoding (AED) [12] can be seen as a generalization of MBBP. Instead of using multiple parity-check matrices for decoding, the idea is to permute the decoder input according to the code’s automorphisms and thereby generating multiple decoding instances. Basically, instead of relying on the algorithm to perform differently for different representations of the paritycheck matrix, it now relies on a certain decoder asymmetry, as the decoding algorithm performs differently for different inputs (though with the same error weights). Thus, AED is
+
+ISBN 978-3-8007-6050-3
+
+297
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+still restricted to certain code classes. In this paper, we close the gap that still remains open
+when aiming to apply BP decoding on the Tanner graph as a universal decoder for all kinds of code classes, namely applying it to code classes that do not possess a non-trivial automorphism group. To achieve this, we propose a method to generate a suitable set of different parity-check matrices for non-cyclic codes that can be combined in MBBP decoding. Our investigations in this paper will mainly focus on LTE Turbo codes, as they are neither cyclic nor have a non-trivial automorphism group, however, we want to emphasize that the approach is applicable to all kinds of linear block codes.
+In detail, this paper makes the following new contributions:
+• We present a method of producing a number of different as sparse as possible parity-check matrices for a given code that can then be combined for MBBP decoding. This method is independent of the code class and especially does not require the code to have a special structure.
+• We provide simulation results for the error-correcting performance of MBBP for LTE Turbo codes and compare them to the state-of-the-art decoding algorithm for Turbo codes. Our results show that MBBP is competitive with the max-Log MAP algorithm.
+• Additionally, we show that the approach of generating different parity-check matrices can also be applied to LDPC codes, especially for unstructured LDPC codes with unknown automorphism group. By combining several parity-check matrices of LDPC codes in MBBP decoding, we show that the error-correcting performance can be improved.
+The paper is structured as follows: In Section II, the background of BP on the Tanner graph, MBBP, AED and methods to alter a given parity-check matrix is revised. Section III describes the methodology of our approach to find sparse and different parity-check matrices of a given code. In Section IV the results are presented. The paper is concluded in Section V.
+In the remainder of this paper, BP decoding on the Tanner graph will simply be denoted by BP decoding.
+II. BACKGROUND
+A. Belief Propagation
+Belief Propagation (BP) decoding is a commonly used decoding technique for LDPC codes. It is an iterative messagepassing algorithm working on the code’s Tanner graph [13]. The Tanner graph representation of a code is directly derived from the parity-check matrix H. In detail, each column of H defines an instance of a so-called Variable Node (VN), and each row of H defines an instance of a so-called Check Node (CN). Each one-entry in H induces an edge between the corresponding variable and check node. Figure 1 shows the Tanner graph of a given H matrix with 3 CNs and 4 VNs.
+The main reason for BP decoding not being used for codes with dense parity-check matrices is the high number of small cycles inside the Tanner graph. The highlighted parts in Figure 1a and Figure 1b show a 4-cycle in graph and matrix
+
+⎛
+
+⎞ v0
+
+v1
+
+v2
+
+v3
+
+1110
+
+⎜⎝ 1 0 1 1 ⎟⎠
+
+1101
+(a) H-Matrix
+
+c0
+
+c1
+
+c2
+
+(b) Tanner Graph
+
+Figure 1. H-Matrix and Corresponding Tanner Graph
+
+Figure 2. Architecture of MBBP Decoding from [11]
+representation, respectively. These small cycles decrease the error-correcting performance of the algorithm, as they feed back information from a node to itself over a short number of iterations. This behavior disturbs the BP algorithm, since all messages should preferably be independent from each other. In fact, it is known that the BP algorithm works optimally on acyclic graphs.
+B. Multiple-Bases Belief Propagation
+The idea of Multiple-Bases Belief Propagation (MBBP) proposed in [10], [11] is depicted in Figure 2. It requires different representations of the code’s parity-check matrix H, H1, . . . , Hl, l ∈ N, from which l corresponding BP decoding instances are created that all decode the same input y. Every decoding instance that converged to a valid codeword (xˆi ∈ C) processes its output to a list, from which the most likely codeword xˆ according to a Maximum-Likelihood (ML) criterion is chosen. While the idea of MBBP is quite simple, its crucial point lies in the generation/selection of the different matrices Hi. First, each single BP decoding instance has to perform well. Therefore, suitable matrix representations Hi have to be found. The requirements for matrix representations suitable for BP decoding are described in Section II-D. Second, the ensemble of BP decoding instances has to be diverse, meaning that they complement each other well regarding their ability to correctly decode certain error patterns.
+In [10], [11], MBBP decoding is therefore only applied to short cyclic codes, where the different parity-check matrices are obtained by cyclic shifts of minimal dual codewords. A general approach to generate a diverse set of suitable paritycheck matrices for all kinds of linear block code, such that
+
+ISBN 978-3-8007-6050-3
+
+298
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+Algorithm 1 Minimize Ones from [20]
+Require: Parity-check matrix H ∈ {0, 1}n−k×n, time limit tmax
+1: i = 0 2: for i = 0, . . . , n − k − 1 do 3: find a subset S of rows that minimizes the number of
+one-entries in row i within time limit tmax 4: Hi,· = Hi,· + j∈S Hj,· 5: return one-minimized matrix H
+
+Figure 3. Architecture of AED from [12]
+MBBP decoding can be applied, is so far not known.
+C. Automorphism Ensemble Decoding
+Automorphism Ensemble Decoding (AED) [12] has come up in recent years and can be seen as a generalization of MBBP decoding. The general idea is depicted in Figure 3. While in MBBP decoding, several different BP decoding instances are run in parallel, in AED, the same decoding instances are run with different inputs obtained by permutations πi from the code’s automorphism group. As in MBBP decoding, among all valid codewords found, the most likely one according to an ML criterion is chosen as output.
+While the main effort in MBBP decoding lies in generating different suitable matrices, the main effort of AED lies in finding the automorphism group of the used code. So far, the automorphism groups of Reed-Muller codes [12], Polar codes [14]–[16] and of some quasi-cyclic LDPC codes [17] have been identified and can be used for AED. Some codes, however, do not have a non-trivial automorphism group [18]. Among these codes are LTE Turbo codes or non-structured LDPC codes.
+D. Matrix Representations Suitable for BP Decoding
+To efficiently apply (MB)BP decoding to non-structured codes, a suitable representation of their parity-check matrices needs to be found.
+In [19], the authors identified the following features for matrices to work well for BP decoding:
+• The number of ones in each row should be small (small check node degree).
+• The number of ones in each column should be large (large variable node degree).
+• The number of small cycles should be small (ideally no four-cycles in the corresponding Tanner graph).
+One way to alter a given parity-check matrix was proposed in [20]. As the set of codewords C is defined as the kernel of the parity-check matrix, i. e.,
+C = {c ∈ {0, 1}n | H · c ≡ 0 mod 2},
+kernel-preserving operations can be performed in terms of elementary row operations, that are commonly used in Gaussian elimination. In general, they consist of swapping rows,
+
+multiplying rows with non-zero scalars, and adding multiples of rows to other rows. Swapping rows does not affect the performance of the BP decoding algorithm for a flooding schedule, as the connections between the CNs and VNs remain the same. Since one is the only non-zero scalar, multiplications with scalars do not alter the matrix. Therefore, the only kernelpreserving operation that can be performed is the addition of a set of rows to another row. By only using kernelpreserving operations, the authors of [20] propose an algorithm to minimize ones in a given parity-check matrix, thereby also reducing the number of short cycles in the corresponding Tanner graph.
+Another approach to break up short cycles was proposed by the authors of [19] as well as the author of [21] by inserting additional VNs and CNs in the corresponding Tanner graph. The results are very promising for Binary Erasure Channels (BEC), but not for Additive White Gaussian Noise (AWGN) channels.
+III. METHODOLOGY
+In this section, we will first recall the method from [20] and use it to obtain a suitable parity-check matrix representation for BP decoding for any given code. In addition, we extend the method to generate a diverse set of parity-check matrices that complement each other when combined in MBBP decoding, thus enabling the use of MBBP decoding for all kinds of linear block codes.
+A. Minimizing Ones in the Matrix
+To obtain sparsified parity-check matrices, we apply the row-wise integer programming-based heuristic presented in [20]. It was originally proposed to reduce the runtime of ML decoding, however, we will show that it can also be applied to obtain a matrix representation suitable for BP decoding, as reducing ones in a given matrix inherently reduces the number of short cycles.
+The minimization procedure from [20] is recalled in Algorithm 1. It successively traverses the rows of a given paritycheck matrix H and searches for a subset S of rows that can be added to the current row to minimize the number of ones in the current row. Searching for the set S is done solving an integer linear program (ILP) (see Line 3) with a fixed time limit tmax, i. e., the best-found set S is output when this time limit is reached.
+
+ISBN 978-3-8007-6050-3
+
+299
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+Algorithm 2 Minimize Ones - Multiple Matrices
+
+Require: Parity-check matrix H ∈ {0, 1}n−k×n, time limit
+
+tmax, number of matrices N
+
+1: i = 0
+
+2: while i < N do
+
+3: randomly permute the rows of H
+
+4: call Algorithm 1 to obtain Hi
+
+5: if Hi is unique up to row permutations then
+
+6:
+
+Hi = Hi
+
+7:
+
+i=i+1
+
+8: return one-minimized matrices Hi, i = 0, . . . , N − 1
+
+Algorithm 3 Maximum-Coverage Heuristic
+
+Require: Sets Si, i = 0, . . . , N − 1, integer l 1: Find j ∈ {0, . . . , N − 1} such that |Sj| is maximized 2: L = [j]
+
+3: for i = 1, . . . , l − 1 do 4: Find j ∈ {0, . . . , N − 1} such that
+is maximized
+
+|L|−1 k=0
+
+SL(k)
+
+∪
+
+Sj
+
+5: L.append [j]
+
+6: return list of set indices L
+
+Table I SPARSIFIED H -MATRICES FOR LTE TURBO CODES
+
+B. Obtaining a Set of Matrices
+Using Algorithm 1 we are able to find a sparse representation of a dense parity-check matrix. For applying MBBP decoding we however need a diverse set of suitable paritycheck matrices. In a first step, we therefore apply Algorithm 1 in different orders of the rows to obtain different matrices. Since Algorithm 1 is only a heuristic algorithm (as there is the time limit tmax for solving the row-wise ILPs), its output is not exact and depends on the input. With a different order in which the rows are processed, we therefore obtain different outputs. The procedure is depicted in Algorithm 2.
+After calling Algorithm 2, N matrices are obtained that are unique up to row permutations, as permuting rows results in the same performance in BP decoding (see Section II-D).
+In a second step, out of these N matrices, we want to select a set of l matrices to be decoded in MBBP decoding. The goal is to not only select “good” matrices under BP decoding, but to select several matrices that complement each other best. This problem can be viewed as a Maximum Coverage Problem [22]: Given a collection of sets Si and a natural number l, the goal is to select l sets such that the number of elements in the union of those l sets is maximized. In our case, this translates to the following: For obtaining the sets Si, we performed test simulations (1000 frames at an SNR of 2 dB) for every decoding instance i ∈ {0, . . . , N − 1} corresponding to the N different matrices. The sets Si then represent the correctly decoded frames for this decoding instance, so Si ⊆ {0, . . . , 999}. Out of those N sets, the goal is to select l sets such that the number of correctly decoded frames in MBBP decoding is maximized. As the maximum coverage problem is an NP-hard problem, we use a straightforward heuristic that successively adds the set to the output, which complements the previously chosen sets most [22]. The procedure is formalized in Algorithm 3.
+IV. RESULTS
+In this section, we validate our methodology for LTE Turbo codes. As previously mentioned, LTE Turbo codes are noncyclic codes that only possess a trivial automorphism group. Therefore, they are a code class that could not yet be decoded using AED or MBBP decoding. We, again, want to emphasize that the approach is applicable to any kind of linear block code.
+
+k n H-matrix #1’s #4-cycles
+
+40
+
+132
+
+original 1-min
+
+1388 472
+
+79848 205
+
+48
+
+156
+
+original 1-min
+
+1880 568
+
+149178 277
+
+56
+
+180
+
+original 1-min
+
+2444 663
+
+258652 319
+
+64
+
+204
+
+original 1-min
+
+3084 760
+
+407954 383
+
+80
+
+252
+
+original 1-min
+
+4584 952
+
+907630 509
+
+128 396
+
+original 1-min
+
+10836 1538
+
+5241252 884
+
+256 780
+
+original 1-min
+
+40392 75328948
+
+3187
+
+2151
+
+In the first part of this section, the improvements in the parity-check matrix representations for LTE Turbo codes of different blocklengths are shown when applying Algorithm 2. In the second part, the Frame Error Rate (FER) performance under MBBP decoding is investigated and compared to the Turbo code’s state-of-the-art decoding algorithm. Lastly, we showcase that this approach can also be used to improve the error-correcting performance of LDPC codes, though more research in this area is necessary to obtain large improvements.
+A. Matrix Improvements
+Table I shows the improvements in the number of ones and the number of small 4-cycles for LTE Turbo codes of different blocklengths and rate 1/3. We applied Algorithm 2 to the original parity-check matrices obtained from [23] to obtain N = 25 unique (up to row permutations) parity-check matrices. The algorithm was run with Matlab and Gurobi on a single core of an Intel® i7-6700 CPU @ 3.5 GHz with time limit tmax set to 60 s. The results in Table I show the best obtained result among those N matrices. All obtained matrices are in about the same range regarding their number of ones and number of 4-cycles. It can be seen that the number of ones and number of small cycles in the matrices can be drastically reduced, promising an improved performance under (MB)BP decoding.
+In the next step, Algorithm 3 is applied to select l = 1, 2, 4, 8, 16 matrices out of these N = 25 matrices, respectively, to be combined in MBBP decoding.
+
+ISBN 978-3-8007-6050-3
+
+300
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+100
+
+100
+
+100
+
+10−1
+
+10−1
+
+10−1
+
+Frame Error Rate
+
+Frame Error Rate
+
+Frame Error Rate
+
+10−2
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+10−3
+
+10−4 01234567 Eb/N0 [dB]
+(a) k = 40 Turbo Code
+100
+
+10−4 01234567 Eb/N0 [dB]
+(b) k = 48 Turbo Code
+100
+
+10−4 01234567 Eb/N0 [dB]
+(c) k = 56 Turbo Code
+
+10−1
+
+10−1
+
+Frame Error Rate
+
+Frame Error Rate
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+10−4 0
+
+1234567 Eb/N0 [dB]
+(d) k = 64 Turbo Code
+
+10−4 01234567 Eb/N0 [dB]
+(e) k = 128 Turbo Code1
+
+Figure 4. Error-correcting performance of short LTE Turbo Codes under our proposed ensemble Belief Propagation
+
+Frame Error Rate
+
+100
+10−1
+10−2
+10−3
+10−4 1 1.5 2 2.5 3 3.5 4 4.5 Eb/N0 [dB]
+
+8/10 8/20 8/40 8/100 8/200 16/10 16/20 16/40 16/100 16/200 Max-Log MAP ML
+
+Figure 5. FER of k = 64 Turbo Code. The notation x/y means that x different matrices are taken for MBBP, each with a maximum number of iterations y.
+
+B. LTE Turbo Codes
+Figure 4 shows the error-correcting performance of MBBP decoding with the matrices obtained in the previous section. All simulations were carried out as Monte-Carlo simulations over an AWGN channel using Binary Phase-Shift Key (BPSK) modulation with a minimum of 100 error frames. The BP decoding algorithm was run with min-sum approximation for a maximum of 40 iterations, an Extrinsic Scaling Factor (ESF) of 0.875 and floating point precision. The gray curve shows the performance of the BP algorithm on the original parity-
+1The max-Log MAP results for k = 128 were obtained from [24] with a fully pipelined iteration unrolled XMAP architecture, a quantization of 6 bits for the channel LLRs, and 8 turbo half-iterations.
+
+check matrix from [23], the green curve the performance of the BP algorithm on the best one-minimized matrix obtained by setting l = 1 in Algorithm 3. The yellow, orange, red and blue curves show the performance under MBBP decoding setting l = 2, 4, 8, 16, respectively. For reference, the black curve depicts the resulting performance of the max-Log MAP algorithm for serial processing of 14 turbo half-iterations and an ESF of 0.75. The dotted ML curve was taken from [23].
+It can be observed that moving from the original Turbo code parity-check matrix to a sparsified one improves the FER performance of BP decoding immensely, which is due to the drastically decreased number of one-entries and short cycles in the optimized parity-check matrix (see Table I). The performance improves the more matrices are taken for MBBP decoding, reaching the max-Log MAP performance at l = 16 matrices for almost all considered blocklengths. Although the MBBP does not outperform the max-Log MAP in terms of FER performance, it should be noted that a respective hardware implementation of the parallel MBBP will have a much lower latency than the max-Log MAP due to the parallel nature of the decoding algorithm.
+The performance of MBBP decoding for Turbo codes for different maximal iterations is depicted in Figure 5 for the length k = 64 Turbo code. The notation x/y means that x different matrices are taken for MBBP, each with a maximum number of iterations y. It can be seen that the code ensembles only converge slowly, which is most likely due to the short cycles still existent in the code.
+
+ISBN 978-3-8007-6050-3
+
+301
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+WSA & SCC 2023, 27.02. – 03.03.2023, Braunschweig, Germany
+
+Frame Error Rate
+
+100 10−1 10−2 10−3
+
+BP orig 2 Matrices 4 Matrices 8 Matrices 16 Matrices
+ML
+
+10−4
+
+10−5 1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 [dB]
+
+Figure 6. MBBP for the (128, 64) CCSDS Code
+
+C. LDPC Codes
+In Figure 6 the FER performance of the (128, 64) CCSDS LDPC code [23], [25] under MBBP decoding for different l is depicted. As the code’s parity check matrix already has maximum sparsity, applying Algorithm 2 will always output the same matrix. We therefore first randomly densified the original matrix by performing random row operations and then applied Algorithm 2 to obtain different matrices for the (128, 64) CCSDS code that contain up to 15% more oneentries than the original matrix. As most of the frames were already correctly decoded using the original matrix, we only considered the additional decoder instances if the original one failed. It can be seen that the FER improvement under MBBP decoding is around 0.5 dB at an FER of 10−3. Note that the automorphism group for non-structured LDPC codes is in general unknown. Especially in the case of this CCSDS LDPC code, AED cannot be applied.
+V. CONCLUSION AND FUTURE WORK
+In this work, we presented an approach for the generation of a diverse set of parity-check matrix representations for any given code, eventually enabling the application of MBBP decoding as a universal decoding concept. For LTE Turbo codes, we demonstrated that the presented approach achieves similar FER performance compared to the state-of-the-art max-Log MAP decoding algorithm. In addition, we showcased that our approach can also be used to improve the errorcorrecting performance for short LDPC codes over that of conventional BP decoding.
+For future work, combining our approach with a weighted BP decoding algorithm (as proposed in [9]) is of great interest. The introduction of edge weights could not only improve the convergence behavior of the individual decoder (see Figure 5) but also the diversity among the set of decoders operating on the matrices obtained by our approach. This could also result in a crucial performance improvement for applying MBBP decoding for short LDPC codes.
+ACKNOWLEDGEMENT
+The authors acknowledge financial support by the Federal Ministry of Education and Research of Germany in the project “Open6GHub” (grant number: 16KISK004).
+
+REFERENCES
+[1] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. Morgan Kaufmann, 1988.
+[2] R. J. McEliece, D. J. C. MacKay, and J.-F. Cheng, “Turbo decoding as an instance of Pearl’s” belief propagation” algorithm,” IEEE Journal on selected areas in communications, vol. 16, no. 2, pp. 140–152, 1998.
+[3] G. D. Forney, “Codes on graphs: Normal realizations,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 520–548, 2001.
+[4] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on information Theory, vol. 55, no. 7, pp. 3051–3073, 2009.
+[5] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[6] D. J. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 33, no. 6, p. 457, 1997.
+[7] C. Kestel, M. Herrmann, and N. Wehn, “When Channel Coding Hits the Implementation Wall,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), Dec. 2018.
+[8] J. Jiang and K. R. Narayanan, “Iterative soft decision decoding of reed solomon codes based on adaptive parity check matrices,” in International Symposium onInformation Theory, 2004. ISIT 2004. Proceedings. IEEE, 2004, p. 261.
+[9] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2016, pp. 341–346.
+[10] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-bases belief-propagation for decoding of short block codes,” in 2007 IEEE International Symposium on Information Theory. IEEE, 2007, pp. 311– 315.
+[11] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiplebases belief-propagation decoding of high-density cyclic codes,” IEEE transactions on communications, vol. 58, no. 1, pp. 1–8, 2010.
+[12] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism ensemble decoding of reed–muller codes,” IEEE Transactions on Communications, vol. 69, no. 10, pp. 6424–6438, 2021.
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on information theory, vol. 27, no. 5, pp. 533–547, 1981.
+[14] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “On the automorphism group of polar codes,” in 2021 IEEE International Symposium on Information Theory (ISIT). IEEE, 2021, pp. 1230– 1235.
+[15] C. Pillet, V. Bioglio, and I. Land, “Polar codes for automorphism ensemble decoding,” in 2021 IEEE Information Theory Workshop (ITW). IEEE, 2021, pp. 1–6.
+[16] ——, “Classification of automorphisms for the decoding of polar codes,” in ICC 2022-IEEE International Conference on Communications. IEEE, 2022, pp. 110–115.
+[17] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. Ten Brink, “Automorphism ensemble decoding of quasi-cyclic ldpc codes by breaking graph symmetries,” IEEE Communications Letters, 2022.
+[18] N. Sendrier, “Finding the permutation between equivalent linear codes: The support splitting algorithm,” IEEE Transactions on Information Theory, vol. 46, no. 4, pp. 1193–1203, 2000.
+[19] J. S. Yedidia, J. Chen, and M. P. Fossorier, “Generating code representations suitable for belief propagation decoding,” in Proceedings of the Annual Allerton Conference on Communication Control and Computing, vol. 40, no. 1. The University; 1998, 2002, pp. 447–456.
+[20] F. Gensheimer, T. Dietz, S. Ruzika, K. Kraft, and N. Wehn, “Improved maximum-likelihood decoding using sparse parity-check matrices,” International Conference on Telecommunication, 2018.
+[21] S. Sankaranarayanan, “Iterative decoding of codes on graphs,” Ph.D. dissertation, The University of Arizona, 2006.
+[22] D. S. Hochbaum and A. Pathria, “Analysis of the greedy approach in problems of maximum k-coverage,” Naval Research Logistics (NRL), vol. 45, no. 6, pp. 615–627, 1998.
+[23] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of Channel Codes and ML Simulation Results,” www.uni-kl.de/channel-codes, 2019.
+[24] S. Weithoffer, C. A. Nour, N. Wehn, C. Douillard, and C. Berrou, “25 years of turbo codes: From mb/s to beyond 100 gb/s,” in 2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing (ISTC). IEEE, 2018, pp. 1–6.
+[25] Consultative Committee for Space Data Systems, “TC Synchronization and Channel Coding,” Green Book, 2021.
+
+ISBN 978-3-8007-6050-3
+
+302
+
+© VDE VERLAG GMBH · Berlin · Offenbach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:45 UTC from IEEE Xplore. Restrictions apply.
+
+

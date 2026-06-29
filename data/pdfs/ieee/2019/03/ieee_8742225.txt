@@ -1,0 +1,929 @@
+  978-1-5386-2014-4/18/$31.00 ©2018 IEEE 
+ 
+1
+Scaling the Fast x86 DVB-S2 Decoder to 1 Gbps 
+Eugene Grayver 
+Aerospace Corporation 
+2310 E. El Segundo Blvd. 
+El Segundo, CA 90245 
+310-336-1274 
+Eugene.Grayver@aero.org 
+ 
+ 
+ 
+Abstract—Software implementation of LDPC decoders has been 
+an active area of development for the last 10 years.  Researchers 
+have focused on implementing the computationally expensive 
+algorithm on both GPPs and GPUs.  A major leap in 
+performance was reported in the groundbreaking paper by 
+Bertrand le Gal [2].  This paper builds on the work in [2] by 
+considering the scaling of that implementation on modern 
+many-core processors. We look at the performance of LDPC 
+code specified in the DVB-S2 standard.  The large block size of 
+the DVB-S2 code makes the memory architecture of the 
+processor just as important as the clock rate and instruction set.  
+We present results for two generations of Intel Xeons, an Intel 
+Phi (KNL), the recently released AMD EPYC.  The key finding 
+is that performance scaling is limited by the amount of available 
+cache memory rather than the number of cores.  We also find 
+that heavily multi-threaded, but deterministic software 
+architecture benefits from explicit allocation of threads to cores 
+vs. allowing the operating system to manage threading.  The 
+maximum throughput of 1 Gbps was achieved on a mid-range 
+AMD server – issuing a new era of all-software receivers for 
+very high rate waveforms.  We also present the performance of 
+the algorithm ported to a low-power ARM processor and 
+compare that to a low-end Intel Core. 
+ 
+TABLE OF CONTENTS 
+1. INTRODUCTION ....................................................... 1 
+2. DVB-S2 ERROR CORRECTION CODE .................... 1 
+3. MODERN CPU ARCHITECTURE ............................. 2 
+4. LDPC DECODER SIMD IMPLEMENTATION ......... 2 
+5. SCALING ACROSS CORES ....................................... 3 
+6. BENCHMARKING ..................................................... 3 
+7. AMD EPYC PROCESSOR ....................................... 5 
+8. SCALING ON DIFFERENT PROCESSORS ................. 5 
+8.1 ARM Processor .......................................................... 6 
+9. EARLY TERMINATION ............................................ 6 
+10. BENCHMARKING CAVEATS .................................. 6 
+12. THREAD/CORE ASSIGNMENT OPTIMIZATION .... 7 
+13. CONCLUSION......................................................... 7 
+REFERENCES............................................................... 7 
+BIOGRAPHY ................................................................ 8 
+ 
+1 Unfortunately this is not the case of space payloads, where available 
+radiation-hardened processors lag years behind 
+ 
+1. INTRODUCTION 
+Computers keep getting faster, and the much-predicted 
+demise of Moore’s Law keeps getting pushed further into the 
+future.  The computational capacity of modern general-
+purpose processors (GPPs) is so high that tasks that have been 
+traditionally implemented in specialized hardware can now 
+be done entirely in software1.  These new capabilities 
+underlie the field of software defined radio (SDR).  
+Forward error correction decoding is typically the most 
+computationally demanding task in a wireless receiver, and 
+the computational requirements of a receiver are typically 
+much greater than of a transmitter.  Modern FEC decoders 
+(e.g. Turbo, LDPC) require multiple iterations to converge on 
+a solution.  Each iteration requires operations on each bit (soft 
+decision) in the block.  The operations can be done with low 
+precision (e.g. 8 bits) and therefore do not fit efficiently into 
+the modern 64-bit processors.  This ‘poor match’ motivates 
+some processor developers to include dedicated hardware 
+accelerators for FEC decoding [3][5].  Software-centric 
+modems implemented on GPPs often include a dedicated 
+FPGA or GPU accelerator board specifically for FEC 
+decoding.  The disadvantages of these hybrid approaches are 
+clear: higher NRE due to the need to develop on multiple 
+architectures, significant sustainment risk as the ‘unique’ 
+accelerators become unavailable.   
+Ground processing receivers that are not SWAP constrained 
+can trade decreased efficiency for lower cost by 
+implementing the FEC decoding entirely in software on a 
+GPP.  This paper presents an implementation of a powerful 
+FEC decoder that provides up to 1 Gbps of real-time 
+throughput on a mid-range server.  This level of performance 
+was unthinkable just a few years ago (the author has fielded 
+many ‘there-is-no-way’ comments from colleagues).   
+2. DVB-S2 ERROR CORRECTION CODE 
+The details of forward error correction in general, and the 
+LDPC algorithm in particular, are well beyond the scope of 
+this paper.  This section provides the briefest of summaries.  
+The two key attributes of modern FEC are: 
+• 
+Soft inputs.  The received symbols are mapped to 
+soft decisions that indicate how confident the 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+2
+receiver is that a bit is a ‘0’ vs. a ‘1’. 
+• 
+Iterative decoding that uses the known code 
+structure to leverage the ‘more confident’ symbols 
+to increase the confidence in all other symbols.   
+One of the most popular FEC algorithm is known as low 
+density parity check (LDPC).  It is a systematic block code 
+(i.e. a fixed-length input block is appended with parity bits).  
+The DVB-S2 code [3] was developed specifically for high-
+rate systems such as satellite video broadcast.  It uses a rather 
+large block size of 64,800 bits.  The design of good LDPC 
+codes was not fully understood at the time the code was 
+developed.  While the code performs rather well (i.e. close to 
+the Shannon capacity) at low SNR, it exhibits an error floor 
+at higher SNR.  The error floor is due to infrequent bursts of 
+errors.  A high-rate BCH code was concatenated with the 
+LDPC code to ‘clean up’ these infrequent bursts of error. 
+LDPC 
+Decoder
+BER
+SNR
+BCH 
+Decoder
+BER
+SNR
+ 
+Figure 1. Concatenated LDPC + BCH 
+The BCH code operates on hard decisions (i.e. ‘0’/’1’) and 
+requires only one iteration. It requires much less computation 
+than the LDPC. Furthermore, it is only needed when the 
+LDPC decoder fails to converge – i.e. some bits do not match 
+the LDPC code structure after the maximum number of 
+allowed iterations. 
+The LDPC code is defined by a very sparse matrix, where a 
+‘1’ indicates that an input bit should be used to compute a 
+particular parity bit.  For example, the rate ½ code matrix is 
+64800×32400, and contains 226799 non-zero elements, for a 
+density of 0.01%. 
+ 
+3. MODERN CPU ARCHITECTURE 
+ 
+Modern CPUs are extraordinarily complex devices optimized 
+to be ‘jacks of all trades’ – from running large databases to 
+video games to scientific computation.  The key parameters 
+of a CPU are: clock frequency, number of cores, amount of 
+cache, and the instruction set.  Despite continued progress in 
+semiconductor technology, the clock frequency has not 
+increased much in the past decade.  The main issue is high 
+heat dissipation required at high clock rates.  The processors 
+have instead been increasing the number of cores, the amount 
+of cache, and adding new instructions.  The key to taking 
+advantage of the modern CPUs is to parallelize the workload.  
+Instead of processing everything on one core at a high rate, 
+we must split up the workload into many subtasks that can be 
+ 
+2 A 2nd order effect of using these SIMD instructions is somewhat higher 
+power consumption, which in turn leads to higher chip temperature.  Without 
+adequate cooling, the CPU may throttle frequency to avoid overheating. 
+executed at the same time.  The parallelism extends in two 
+dimensions: across multiple cores, and within a single 
+instruction executing on each core.  The second dimension is 
+known as single-instruction multiple-data (SIMD).  The basic 
+concept of SIMD is to allow multiple data items (e.g. bytes, 
+floats) to be processed at the same time (Figure 2).  For 
+example, the SSE4 instruction set allows processing of up to 
+16 bytes at once, while the AVX2 instruction set allows up to 
+32 bytes at once.  Note that the time taken to process one 
+instruction is exactly the same whether 1 byte or 32 bytes are 
+processed2. 
+A0
+C0
+B0
+A1
+C1
+B1
+A2
+C2
+B2
+A3
+C3
+B3
+ 
+Figure 2. SIMD processor 
+The number of cores, the amount of cache within each core, 
+the amount of cache shared between cores, and interconnect 
+between cores are all important features of a processor and 
+can have a dramatic effect on performance. 
+SIMD
+Cache
+ALU, etc
+SIMD
+Cache
+ALU, etc
+SIMD
+Cache
+ALU, etc
+SIMD
+Cache
+ALU, etc
+Cache
+ 
+Figure 3. Quad core processor 
+The complexity of modern processors makes it very difficult 
+to estimate the performance of any algorithms.  The old 
+approach of counting the number of operations (i.e. MOPS) 
+is almost meaningless. The interaction between the processor 
+and the memory subsystem can change the instructions 
+executed per clock cycle (IPC) by a factor of 100.  Operations 
+on data in L1 cache take 10x less time than those that those 
+that require data to be pulled from L3 cache, while accessing 
+data in external RAM takes another 3-5x longer.  If data 
+access pattern is predictable, the processor can pre-fetch from 
+the ‘slower’ RAM, thereby hiding the access time.  
+Unfortunately, the inherent ‘interleaving’ built into modern 
+block codes makes memory access rather irregular. 
+4. LDPC DECODER SIMD IMPLEMENTATION  
+The key breakthrough made by Bertrand Le Gal in [2]3 is to 
+3 Readers are encouraged to review this highly readable reference. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+3
+take full advantage of the SIMD instructions for LDPC 
+decoding.  The basic idea is to recognize that each LDPC 
+block can be decoded independently of any other block.  
+Therefore, multiple blocks can be decoded in parallel.  The 
+next key idea is that LDPC decoding algorithm is very regular 
+and branch-free.  The same operations are performed over 
+and over and the program flow is independent of the data 
+being processed (i.e. no if/then clauses).  Consider the 
+following toy example: 
+• 
+The block size is 4 bits. 
+• 
+The rule to transform the input data, X, to output, x  
+𝑥0 = 𝑋1 + 𝑋2
+𝑥1 = 𝑋0 −𝑋3
+𝑥2 = 𝑋2 + 𝑋3
+𝑥3 = 𝑋3 + 𝑋0 
+• 
+The processor SIMD instructions support up to 3 
+data values at once 
+Three input blocks, A,B,C are grouped together in a matrix. 
+Note that this increases the latency to at least 3 input blocks.   
+𝐴0
+𝐴1
+𝐴2
+𝐴3
+𝐵0
+𝐵1
+𝐵2
+𝐵3
+𝐶0
+𝐶1
+𝐶2
+𝐶3
+ 
+The matrix is then transposed into 
+𝐴0
+𝐵0
+𝐶0
+𝐴1
+𝐵1
+𝐶1
+𝐴2
+𝐵2
+𝐶2
+𝐴3
+𝐵3
+𝐶3
+ 
+Each row of the matrix fits into a SIMD register.  A single 
+operation is required to compute the output values for all 3 
+input blocks. 
+[𝑎0
+𝑏0
+𝑐0] = [𝐴1
+𝐵1
+𝐶1] + [𝐴2
+𝐵2
+𝐶2] 
+The overhead of the transpose operation is amortized over the 
+multiple iterations required to decode an LDPC block. 
+The code accompanying [2] provides two implementations 
+for modern processors: 16 blocks using SSE instructions and 
+32 blocks using AVX2 instructions. 
+5. SCALING ACROSS CORES 
+A simple program, shown in Figure 4, was developed to 
+benchmark overall performance.  
+Input thread
+Collect N blocks 
+and put into a 
+buffer
+Put LLR in buffer
+Count++
+Count < N*B
+Get empty buffer
+Wait for input LLR
+Put full buffer
+Empty Buffers
+Full Buffers
+Decoder thread #1
+Decoder thread #N
+Get full buffer
+Decode
+Put empty buffer
+ 
+Figure 4. Multi-threaded benchmark application. 
+The SIMD parallelism described in the previous section takes 
+advantage of each processor core.  Multiple instances of the 
+algorithm are launched in different threads to take advantage 
+of multiple cores available on a modern processor.   The LLR 
+input is supplied from memory, making the input thread very 
+fast.  The decoding process can be broken up into two 
+threads: one for LDPC and one for BCH (see Figure 1).  The 
+BCH processing is significantly faster than LDPC (at least 
+10×), and one BCH thread can be shared between multiple 
+LDPC threads.  Alternatively, BCH and LDPC can be 
+executed sequentially in one thread. 
+6. BENCHMARKING 
+Benchmarking was run on the following machines:  
+CPU 
+CPUs 
+Cores 
+Cache 
+Freq 
+Year 
+E5-2690v4 
+2 
+28 
+35 
+2.6 
+2016 
+E5-2695v4 
+2 
+36 
+45 
+2.1 
+2016 
+EPYC-7351 
+2 
+32 
+64 
+2.4 
+2018 
+i7-8700K 
+1 
+6 
+12 
+3.7 
+2017 
+Cortex-A3 
+1 
+4 
+1 
+1.2 
+2017 
+ 
+We arbitrarily choose one machine (E5-2695v4) for many 
+benchmarks, because the qualitative results apply to many 
+others.  All the benchmarks use rate ½ code with 20 
+iterations.  Throughput is measured in channel bits (i.e. soft 
+decisions) rather than in user bits. 
+ 
+There are a number of ways to assign threads to cores: 
+• 
+‘arbitrary’ – Allow the operating system to select 
+• 
+‘sequential’ – Each thread gets assigned to a 
+sequential core number 
+• 
+‘alternating’ – For multi-CPU machines, assign 
+threads 
+sequentially, 
+but 
+alternate 
+between 
+processors. 
+• 
+‘optimal’ – Thread/core assignment optimization 
+will be discussed in section 12. 
+ 
+As can be seen from Figure 5, thread assignment makes a 
+large difference in overall throughput.   
+ 
+Some processor resource becomes saturated at around 8 
+threads and there is no further scaling. This can be observed 
+in the ‘sequential’ curve where there is a plateau from 8 to 
+18, as well as in the ‘alternating curve’, where there is a 
+plateau starting around 16 threads.  So, less than half of the 
+available cores (8/18) can be used effectively for LDPC 
+decoding.  In fact, additional threads decrease overall 
+throughput.  This observation is important because the 
+unused cores can potentially be allocated to other tasks (that 
+do not require more of the saturated resource). 
+ 
+Allowing the operating system to assign threads to cores 
+results in a large variance in throughput.  Over a short time 
+(5s), the OS is learning the best assignment.  Over a longer 
+time (25s), the assignment stays fixed and the variance goes 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+4
+down4.  The behavior is rather different for the EPYC 
+processor, as shown in Figure 6.  EPYC’s memory 
+architecture allows more linear scaling with the number of 
+cores.  The arbitrary assignment still falls behind for high 
+number of cores. This behavior is most likely5 due to the 
+operating system scheduling the thread that generates data 
+(just memory copy) on the same core as a decoder thread.  
+The data generation thread is starved of CPU cycles and 
+cannot feed decoder threads on other cores.  
+ 
+ 
+Figure 5. Throughput for thread assignment options 
+(GNU Compiler, E5-2695v4) 
+ 
+Figure 6. Throughput for thread assignment options 
+(EPYC-7351) 
+The software can be built using either the open-source GNU6 
+compiler or the Intel optimizing7 compiler.  The intel 
+compiler increases throughput by about 10%, as shown in 
+Figure 7.  The Intel compiler will be used for all subsequent 
+benchmarks on the Intel processors, and GNU compiler for 
+the AMD processor. 
+ 
+4 This behavior is unacceptable for a real-time system, where the throughput 
+needs to be deterministic over short time intervals. 
+5 We can replicate this behavior by intentionally assigning a decoder and 
+data source threads on the same core. 
+6 -O3 -march=native -finline -funroll-loops -unroll-aggressive -mavx2 
+7 Add: -fast -ansi-alias -no-prec-div -qopt-prefetch -auto-ilp32  -xHOST -
+ 
+Figure 7. GNU vs. Intel compiler 
+The software in [2] has specific optimization to guide the 
+processor’s prefetch logic.  The prefetch logic attempts to get 
+data from slower (L3/DRAM) memory before it is needed.  
+The prefetch optimization is implemented by creating a large 
+lookup table with addresses of data elements needed in the 
+next loop iteration.  As can be seen in Figure 8, this 
+optimization increases throughput by up to 25% when the 
+number of threads is below 10.  However, as the number of 
+threads increases, the prefetch starts degrading overall 
+performance.  All subsequent benchmarks will not use the 
+prefetch optimization (unless explicitly stated). 
+ 
+Figure 8. Effect of prefetch optimization 
+The software can be built with either SSE (16 blocks) or AVX 
+(32 blocks) instructions.  As can be seen in Figure 9, AVX 
+instructions result in almost double the throughput when the 
+number of threads is low.  However, throughput saturates at 
+just 6 threads8. 
+fma 
+8 The AVX instructions significantly increase processor power consumption 
+and limit the maximum frequency when multiple cores are active.  The small 
+frequency decrease also contributes to lower overall throughput at higher 
+thread count. 
+0
+100
+200
+300
+400
+500
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+Sequential
+Alternating
+Arbitrary (5s)
+Arbitrary (25s)
+0
+500
+1000
+1500
+2000
+0
+10
+20
+30
+40
+Throughput [Mbps]
+Threads
+Sequential
+Alternating
+Arbitrary
+0
+100
+200
+300
+400
+500
+600
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+GNU Compiler
+Intel Compiler
+0
+100
+200
+300
+400
+500
+600
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+No prefetch
+prefetch
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+5
+ 
+Figure 9. Effect of instruction set SSE vx AVX 
+The combination of Figure 5, Figure 8, and Figure 9 provides 
+strong evidence that the scarce resource is cache memory. 
+Once the total amount of memory allocated by all threads 
+exceeds available cache, performance plateaus and starts to 
+degrade.  The additional memory required for the prefetch 
+table causes the saturation to occur with fewer threads.  
+Likewise, the buffer sizes for AVX are twice those for SSE, 
+and the throughput saturates at roughly half the number of 
+threads. 
+A rough estimate of the memory allocated for each decoder 
+thread validates this hypothesis.  The decoder needs three 
+large buffers: input data, variable nodes, output data.  The 
+input and output buffers for each DVB-S2 block are 64800 
+elements9.  The rate ½ code has 226799 messages.  The total 
+for each block is then ~360 kB.  The two CPUs have a total 
+of 90 MB of cache.  The expected number of threads (i.e. 
+decoder instances) that can be held entirely in cache is 
+calculated in Table 1. 
+Table 1. Cache utilization 
+SSE
+AVX
+MB/Thread
+5.7
+11.4
+Threads/Cache
+16
+8  
+ 
+7. AMD EPYC PROCESSOR 
+Intel processors have dominated the high-end desktop and 
+server markets for at least the past 10 years.  A new server 
+processor from AMD was introduced in 2018.  The EPYC 
+processor architecture is significantly different from the Intel 
+Xeon.  The Xeon is a monolithic die, but EPYC uses multiple 
+chips in the same package.  Xeon has significantly higher 
+bandwidth and lower latency when transferring data between 
+cores (if the EPYC cores are not on the same die).  Since all 
+the threads are operating almost independently for the LDPC 
+decoder, this latency/bandwidth difference is significant. The 
+other major difference is that the EPYC does not have a good 
+implementation of the AVX instruction set – the instructions 
+ 
+9 All values are stored as one byte. 
+are supported by take multiple clock cycles to execute.  On 
+the plus side, the EPYC has 8 memory channels (one per die) 
+vs. 4 for the Xeon. 
+These two considerations make the results presented in 
+Figure 10 very unexpected.  The remarkable result shows that 
+the EPYC scales almost perfectly linearly all the way to 32 
+cores. 
+ 
+Figure 10.  EPYC vs Xeon (alternating assignment) 
+As expected, the AVX performance of EPYC is quite poor, 
+as shown in Figure 11. 
+ 
+Figure 11. AVX vs SSE instructions in EPYC 
+Not only does the performance scale linearly, but the single-
+core performance is almost 2x faster as well.  We do not have 
+a good explanation for this difference, but it has been 
+confirmed across many benchmarks. 
+8. SCALING ON DIFFERENT PROCESSORS 
+The performance for different processors is presented in 
+Figure 12.  A detailed view showing only the Intel processors 
+is given in Figure 13.  As can be seen from that figure and 
+Table 210, the throughput per MHz is almost constant for the 
+different Intel processors. 
+10 Note that the single-core operating frequency is significantly higher than 
+when many cores are active. 
+0
+100
+200
+300
+400
+500
+600
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+SSE
+AVX
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+EPYC-7351
+E5-2695v4
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+SSE
+AVX
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+6
+ 
+Figure 12. Performance across multiple processors 
+ 
+Figure 13. Performance for Intel processors 
+ 
+Table 2. Throughput per MHz 
+Processor Freq
+Rate
+Msps/MHz
+EPYC-7351
+2900
+73.7218
+0.025
+E5-2695v4
+3300
+44.7148
+0.014
+i7-8700K
+4300
+63.9702
+0.015
+E5-2690v4
+3500
+48.3375
+0.014  
+ 
+8.1 ARM Processor 
+The code in [2] was developed specifically for the 
+x86/SSE/AVX instruction set.  The ARM processor has its 
+own SIMD instruction set known as NEON.  Some of the 
+SSE instructions have to be implemented multiple NEON 
+instructions11.  The ported code was benchmarked on a 
+ 
+11 The _mm_sign_epi8 instruction is particularly bad. The author 
+acknowledges the work by an Aerospace Corporation intern Carmelo Furlan. 
+12 In fact, more iterations may (very rarely) actually cause the decoder to 
+diverge again. 
+13 As can be seen in Figure 9 of the reference, throughput doubles as SNR 
+increases by just 0.5 dB. 
+Cortex-A53 processor running at 1.2 GHz.  The processor is 
+inside a Xilinx Ultrascale+ Zynq FPGA, executing without 
+an operating system.  The 1 MB of cache is not enough to 
+hold the entire code block.  Throughput of 2.7 Mbps was 
+achieved.   
+9. EARLY TERMINATION 
+One of the reasons LDPC decoding is computationally 
+expensive is that it requires many (>20) iterations.  Once the 
+decoder has converged to a valid codeword, there is no reason 
+to do any more iterations12.  The technique of stopping 
+iterations once the code has converged is known as early 
+termination.   The higher the SNR, the lower the average 
+number of iterations required to converge.  Thus, a decoder 
+that takes advantage of early termination can support much 
+higher average throughput at higher SNR [6]13.  On average, 
+only a few blocks require the maximum number of 
+iterations14.   
+The algorithm considered in this paper processes multiple 
+blocks at once.  The iterations can be terminated only once 
+all the blocks have converged.  This makes early termination 
+less likely that if each block was considered separately.  In 
+fact, the code in [2] does not implement early termination at 
+all.  The cost of verifying convergence is very low, and it was 
+added to the code15.  The results, shown in Figure 14, show 
+that increasing SNR by 1.5 dB roughly doubles the 
+throughput. 
+ 
+ 
+Figure 14. Effect of early termination 
+10. BENCHMARKING CAVEATS 
+Generating reliable and repeatable results that compare 
+different CPUs can be challenging.  All the machines used in 
+this paper boot over the network from the same server, 
+thereby guaranteeing the same kernel, compiler, and OS 
+versions.  Further, the kernel and OS reside in memory, 
+eliminating potential effects of the nonvolatile storage.  The 
+benchmarks are run for 25 s for each point (unless otherwise 
+14 For real-time applications, one approach is to keep an ‘iteration budget,’ 
+where the total number of iterations over some period of time is capped.  That 
+way challenging blocks can get a much larger number of iterations. 
+15 Note that all the benchmarks presented so far do not use early termination, 
+and are fixed at 20 iterations. 
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+1
+11
+21
+31
+Throughput [Mbps]
+Threads
+EPYC-7351
+E5-2695v4
+E5-2690v4
+i7-8700K
+0
+100
+200
+300
+400
+500
+600
+1
+6
+11
+16
+Throughput [Mbps]
+Threads
+E5-2695v4
+E5-2690v4
+i7-8700K
+5
+10
+15
+20
+400
+500
+600
+700
+800
+1
+1.1
+1.125
+1.2
+1.25
+1.5
+1.75
+2
+2.25
+2.5
+Iterations
+Throughput [Mbps]
+Eb/No
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+7
+stated).  Longer benchmarks would be desirable, but we 
+found that the results do not vary by more than a few percent.  
+Longer simulations stress the thermal management of the 
+computer, which is outside the scope of this paper.  For 
+example, an hour-long simulation on the EPYC processor 
+showed throughput decreased by about 2% due to lower 
+frequency dictated by the maximum thermal load (Figure 15).  
+The CPU governor is set to ‘performance’ and sets the 
+frequency of all the cores to maximum.  This avoid the initial 
+ramp-up16. 
+ 
+Figure 15. Throughput change over time due to heating 
+12. THREAD/CORE ASSIGNMENT OPTIMIZATION 
+The decoder application benchmarked for this paper is rather 
+simple – only one type of thread is used.  Further, the 
+processor architecture is tractable and a logical thread/core 
+assignment can be derived analytically.  However, a practical 
+application (e.g. a complete receiver) will have many kinds 
+of threads, with different CPU resource requirements (e.g. 
+some may require lots of RAM while others require many 
+SIMD instructions).  The optimal assignment of threads to 
+cores, and even the decision of how many threads of each 
+type to start becomes an important problem.  As discussed in 
+[8], the optimization is NP-hard and becomes intractable for 
+even a modest number of thread type on a 32-core machine.  
+This problem has received a lot of attention [7][8][9], but the 
+Linux kernel uses simple heuristics, leaving the detailed 
+assignment up to the user (if necessary).  We applied genetic 
+programming approach to the (almost) trivial scenarios in this 
+paper: 
+1. One thread type (LDPC + BCH) 
+2. Two thread types: LDPC and BCH 
+Each processor core can be assigned to a thread or left 
+unused.  The output of the genetic optimizer17 match the 
+manually tuned results. 
+ 
+16 We do not, however, disable the idle (C) states. 
+ 
+Figure 
+16. 
+Genetic 
+optimization 
+of 
+thread/core 
+assignment for two scenarios. 
+13. CONCLUSION 
+LDPC decoding is usually the most computationally 
+expensive part of a receiver. For many software-centric 
+receivers, the decoding was off-loaded to an accelerator – 
+either an FPGA or a GPU.  The hybrid architecture 
+significantly increased the development time and made 
+porting to new systems more challenging.  In this paper we 
+have shown that mid-range COTS servers can decode LDPC 
+at gigabit rates, which is sufficient for most applications. 
+Getting the best performance out of a processor and 
+maintaining the throughput for real-time operation requires 
+some attention to the processor architecture. 
+ 
+REFERENCES 
+[1] Eugene Grayver, “Implementing Software Defined 
+Radio,” Springer, 2012 
+[2] Le Gal, Bertrand, and Christophe Jego. "High-
+throughput multi-core LDPC decoders based on x86 
+processor." IEEE Transactions on Parallel & Distributed 
+Systems 1 (2016): 1-1  
+[3] ETSI, “Digital Video Broadcasting (DVB)”, 
+https://www.dvb.org/standards/dvb-s2  
+[4] NXP, “MAPLE baseband accelerators,” 
+https://www.nxp.com/docs/en/fact-sheet/B4860FS.pdf 
+[5] Xilinx, “Soft-Decision FEC Integrated Block,” 
+https://www.xilinx.com/products/intellectual-
+property/sd-fec.html  
+[6] Kun, David. "High throughput GPU LDPC encoder and 
+decoder for DVB-S2." 2018 IEEE Aerospace 
+Conference. IEEE, 2018. 
+[7] Rao, Jia, et al. "Optimizing virtual machine scheduling 
+in NUMA multicore systems." High Performance 
+Computer Architecture (HPCA2013), 2013 IEEE 19th 
+International Symposium on. IEEE, 2013. 
+17 Using the Python DEAP package 
+1795
+1800
+1805
+1810
+1815
+1820
+1825
+1830
+1835
+1840
+0
+1000
+2000
+3000
+Throughput [Mbps]
+Time [s]
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+8
+[8] Lai, Pan, et al. "Utility maximizing thread 
+assignment and resource allocation." arXiv 
+preprint arXiv:1507.01101 (2015). 
+[9] Liu, Yi, et al. "Allocating tasks in multi-core 
+processor based parallel system." Network and 
+Parallel Computing Workshops, 2007. NPC 
+Workshops. IFIP International Conference on. 
+IEEE, 2007. 
+BIOGRAPHY 
+Dr. Eugene Grayver received a 
+B.S. 
+degree 
+in 
+electrical 
+engineering from Caltech, and a 
+Ph.D. degree from UCLA in 2000. 
+He was one of the founding team 
+members 
+of 
+a 
+fabless 
+semiconductor company working 
+on 
+low-power 
+ASICs 
+for 
+multi-antenna 3G mobile receivers.  In 2003 he joined The 
+Aerospace Corporation, where he is currently working on 
+flexible communications platforms.  His research interests 
+include reconfigurable implementations of digital signal 
+processing algorithms, adaptive computing, and system 
+design of wireless data communication systems.  He is also 
+participating in the software-defined radio community, 
+trying to define a common configuration standard and 
+determine optimal partitioning between software and 
+hardware. 
+ 
+ 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+9
+ 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:37 UTC from IEEE Xplore.  Restrictions apply. 

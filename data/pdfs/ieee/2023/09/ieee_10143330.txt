@@ -1,0 +1,393 @@
+3770
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+
+Efficient Protection of FPGA Implemented LDPC Decoders Against Single Event Upsets (SEUs) on Configuration Memories
+Zhen Gao , Member, IEEE, Yinghao Cheng , Qiang Liu , Senior Member, IEEE, Anees Ullah , Member, IEEE, and Pedro Reviriego , Senior Member, IEEE
+
+Abstract— Low Density Parity Check (LDPC) codes are used in 5G systems for traffic channels due to their excellent error correction capability for long sequences, and the Min-Sum algorithm is widely applied in practical implementations of LDPC decoders due to its low complexity. If the decoder is implemented on a SRAM-based field-programmable gate array (SRAM-FPGA), the radiation-induced single-event upsets (SEUs) can affect the operation of the LDPC decoder by corrupting the configuration memory, which can change the circuit functionality and will not be corrected unless the FPGA is reconfigured. Therefore, protection of LDPC decoders with low overhead is an important problem, especially for resource-limited on-board space systems. In this paper, an efficient Duplicate With Comparison (DWC) protection scheme is proposed based on the different distribution of the parity check sum of the LDPC decoder in the error-free case and the faulty case. In particular, the check sum accumulation number and threshold are optimized to achieve high detection probability with short delay. FPGA based implementation and hardware fault injection experiments are conducted to evaluate the performance of the proposed schemes. Experimental results show that, the effect of SEUs on the LDPC decoder can be completely eliminated by the proposed scheme with 2 times computational overhead and 1.69 times power consumption overhead compared to the unprotected decoder.
+Index Terms— LDPC decoders, fault tolerance, single event upsets, SRAM-FPGAs, configuration memories, fault injection.
+I. INTRODUCTION
+LOW Density Parity Check (LDPC) codes are a type linear error-correcting block codes proposed by Gallager
+Manuscript received 16 March 2023; revised 5 May 2023; accepted 22 May 2023. Date of publication 2 June 2023; date of current version 30 August 2023. This work was supported in part by the National Natural Science Foundation of China (NSFC) under Grant 62171313 and Grant 61974102, in part by the ACHILLES Project under Grant PID2019-104207RB-I00, in part by the 6G-INTEGRATION Project under Grant TSI-063000-2021127, and in part by the Spanish Agencia Estatal de Investigación under Grant 10.13039/501100011033. This article was recommended by Associate Editor N. Karimian. (Corresponding author: Zhen Gao.)
+Zhen Gao and Yinghao Cheng are with Tianjin University, Tianjin 300072, China (e-mail: zgao@tju.edu.cn; yhc2021@tju.edu.cn).
+Qiang Liu is with the School of Microelectronics, Tianjin University, Tianjin 300072, China (e-mail: qiangliu@tju.edu.cn).
+Anees Ullah is with the Department of Electronics Engineering, University of Engineering and Technology Peshawar, Abbottabad Campus, Abbottabad 220101, Pakistan (e-mail: aneesullah@uetpeshawar.edu.pk).
+Pedro Reviriego is with the Departamento de Ingenería de Sistemas Telemáticos, Universidad Politécnica de Madrid, 28040 Madrid, Spain (e-mail: pedro.reviriego@upm.es).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCSI.2023.3279444.
+Digital Object Identifier 10.1109/TCSI.2023.3279444
+
+in 1962 [1], and its performance is close to the Shannon Limit [2]. Due to the simple encoding and parallel decoding properties, Quasi-Cyclic LDPC (QC-LDPC) has been widely used in many wireless communications standards, e.g. DVB-32 [3], 802.16e [4], CCSDS [5]. In particular, LDPC codes have been adopted in 5th generation (5G) New Radio (NR) for its low latency and high throughput [6], and are also widely applied in space communications due to its high transmission reliability [7].
+On-board processing (OBP) enables flexible digital signal processing on satellites, so that the same payload can be adapted for different tasks [8]. SRAM-FPGAs are a good option for OBP platforms due to abundant logic resources and good re-configurability [9], [10]. For example, SRAM-FPGAs are used in [11] to support different LDPC decoding schemes. However, These circuits suffer from cosmic radiation, and the most frequent effect is single event upsets (SEUs) [12]. As reported in [13], the cosmic ray heavy ion flux in the geosynchronous orbit is about 100 particles/cm2 per day, which can cause about 10−6 upsets/bit-day in many sensitive devices, e.g. SRAM-FPGAs. SRAM-FPGAs can suffer two types of SEUs: errors on configuration memory and errors on user memory [14]. Errors on the user memory only introduce changes to the stored data, and most of them can be flushed by data updates. Instead, errors on the configuration memory can modify the circuit design and can only be corrected by reconfiguration. In addition, the configuration memory is typically larger than user memory, so SEUs on it are a critical problem for the reliability of SRAM-FPGA implemented modules on OBP. As reported in [15] and [16], a single error on the configuration memory of a FPGA based LDPC decoder can substantially degrade the decoding performance, or even stop the LDPC decoder if the SEU occurs on the control logic of decoder. Therefore, the protection of LDPC Decoders in OBP against SEUs on the configuration memories of FPGA is an important issue.
+There are many works on fault tolerant design for LDPC decoders, but most of them are for the protection against SEUs on the user memories. For example, time redundancy is applied in [17] for computing nodes, where the voting of multiple computations is used to improve the reliability of the computing node. Differently, Hamming codes are applied in [18] to selectively protect the sign bit of the intermediate results, so that the reliability of the decoders can be improved
+
+1549-8328 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+GAO et al.: EFFICIENT PROTECTION OF FPGA IMPLEMENTED LDPC DECODERS
+
+3771
+
+with low overhead. Similarly, the authors in [19] applied Triple Modular Redundancy (TMR) for some critical data and duplicated the sign bits for other data. When a sign bit is detected to be wrong for a non-critical data, the data is assigned to be 0 to reduce the effect of the error. A similar idea was applied in [22], where a parity bit is added to all the memories and the detected faulty data is set to be 0 to reduce the effect of the error to the decoding results. Differently from those works, [20] and [21] explored the inherent fault tolerance property of LDPC decoders to memory errors to reduce energy consumption by voltage overscaling, and [21] proposed an unequal error protection technique of the memory for different iterations.
+There are also a few works on the protection of the LDPC decoder implemented on FPGAs. For example, [22] considered the protection of FPGA implemented LDPC decoders against SEUs on the configuration memories. They proposed first to identify the critical components of the FPGA based LDPC decoder based on the performance degradation when SEUs occur on the configuration memory of different components, and then selectively protect the most critical ones with redundancy method, e.g. TMR. Similarly, [23], [24], [25], and [26] also proposed protection schemes for the computing components in LDPC decoders, but they all took the failure model of timing violations, where an error on the hardware makes the propagation delay longer than what can be tolerated by the circuit design, so that an incorrect output value is propagated to the rest of the circuit. This model cannot be applied for the effect of SEUs on the configuration memory of an FPGA based implementation [13]. In summary, all these works only considered the computing components of the decoder in their protection scheme and did not consider the control and interconnection logic that are shown to be more fragile in [15].
+A complete protection of the LDPC decoder can be achieved by conventional protection schemes, such as TMR or scrubbing [27], [28]. However, since TMR introduces more than three times of hardware resources and power, it is not suitable for an OBP platform that is limited in terms of computation resources and power [29]. For scrubbing, although it can be used to correct SEUs on the configuration memory [30], [31], the system still suffers the impact of the error during the time between the error occurrence and the scrubbing. Therefore, a better solution is to have an efficient fault tolerance design to ensure the reliability of the decoder when an SEU occurs and apply scrubbing to avoid error accumulation [31].
+In this paper, we propose an efficient Duplicate With Comparison (DWC) scheme to protect the FPGA implemented LDPC decoders against SEUs on the configuration memory. In particular, the Parity Check Sum (PCS) for the decoding result is used for detection of the faulty copy when two decoders give different outputs, and a PCS accumulation method within a decision window is proposed to decrease the false detection probability. The FPGA implementation and hardware fault injection experiments prove that the proposed scheme can dramatically improve the reliability of the LDPC decoder with an overhead much lower than that of the TMR.
+The rest of the paper is organized as follows. In Section II, a brief introduction to LDPC decoders and the Min-Sum
+
+Fig. 1. A general structure for LDPC decoders.
+algorithm are provided. In Section III, an FPGA implementation of the LDPC decoder is presented, and the fault properties of its main components is studied based on fault injection experiments. Then the proposed DWC scheme is presented in Section IV, and its performance is evaluated in Section V. Finally, the paper ends with conclusions in Section VI.
+II. BRIEF INTRODUCTION OF LDPC DECODERS This section first presents the basic structure of a LDPC decoder, and then introduces the commonly used Min-Sum algorithm for its practical implementation.
+
+A. Structure of a LDPC Decoder
+For a code with M information bits and N coded bits (with a coding rate r = M/N ), a typical LDPC decoder is composed of N Variable Nodes (VNs), K=N-M Check Nodes (CNs) and one Parity Check block as shown in Fig. 1, where L(Pi ) is the input Log Likelihood Ratio (LLR) for the i-th symbol, and L(qi j ) and L(r ji ) are the messages transferred from the i-th VN to the j-th CN and those from the j-th CN to the i-th VN, respectively. The decoder works in an iterative way. In each iteration, the VNs first transfer L(qi j ) to the CNs to update L(r ji ), and then the CNs transfer L(r ji ) to VNs to update L(qi j ). This process repeats until a code word cˆ meets the parity check or the maximum iteration number is achieved. Finally, the first M bits of cˆ (containing N bits) are selected as the final decoding results.
+
+B. Min-Sum Algorithm
+Min-Sum algorithm can dramatically reduce the complexity of LDPC decoders by replacing the multiplications by comparisons, so is widely used for practical implementation of LDPC decoders [33]. The basic procedures for LDPC decoding based on the Min-Sum algorithm are listed as follows.
+1) Message Initialization for VNs: If the standard deviation of the Gaussian noise the i-th input symbols of the decoder are denoted as σ and yi , respectively, then the messages from VNs can be initialized with the input channel LLRs according to equation (1) as:
+
+L(0) qi j = L (Pi ) = 2yi σ 2, i = 1, 2, . . . , N , j
+
+= 1, 2, . . . , K
+
+(1)
+
+2) Iterative Decoding Processing: For the k-th iteration, the decoder performs three steps.
+Step 1: The messages on CNs are updated according to
+
+L(k) r ji =
+
+sgn L(k−1) qi′ j · L(k−1) qi′ j (2)
+
+i ′∈I j \i
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+3772
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+
+Fig. 2. The structure of FPGA implemented LDPC decoders.
+
+in which I j represents the index set of VNs that are connected with the j th CN, and I j \i represents the set that excludes i, and sgn and min are the operations for getting the sign of an input and the minimum value of a set.
+Step 2: The messages on VNs are updated according to
+
+L(k) qi j = L (Pi ) +
+
+L(k) r j′i
+
+(3)
+
+j ′∈ Ji \ j
+
+in which Ji represents the index set of CNs that are connected with the i th VN, and Ji \ j represents the set that excludes j.
+Step 3: The LLR for the i th input symbol is updated as
+
+L(k) (qi ) = L (Pi ) + L(k) r ji ,
+
+(4)
+
+j ∈Ji
+
+then sgn(L(qi )) is taken as the estimation of the i-th bit of the codeword. 3) Check of termination condition After
+
+each iteration, the decoder will check whether the decoding sequence cˆ = [cˆ1, cˆ2, . . . , cˆN ] meets
+
+ccheck=cˆ×H = 0
+
+(5)
+
+where H is the N × K parity check matrix of the LDPC code, and ccheck = [c1c, c2c,. . . , ccK ] is a 1×K check vector. Usually, the number of 1s in a row (column) of H is called
+the row weight (column weight), and the total number of 1s
+of H is called the weight of H. The decoder terminates once
+equation (6) holds. Otherwise, it will continue to iterate until the maximum iteration number (k = kmax ).
+
+III. FPGA IMPLEMENTATION OF A LDPC DECODER
+A. Structure of the FPGA Implemented LDPC Decoder
+In this paper, the QC-LDPC code for IEEE 802.16e is used as a case study. The coding rate is r = 1/2 with K= 288 and N= 576. The degree of a VN (or CN) is defined as the number of CNs (or VNs) that are connected to it, corresponding to the row weight (or column weight). The decoder for the selected QC-LDPC code is composed of VNs with three degrees (2, 3 and 6) and CNs with two degrees (6 and 7). If the VN or CN with a degree of d is denoted
+
+as VNd or CNd, the numbers of VN2, VN3 and VN6 (or the number of rows with weight of 2, 3 or 6) in the decoder are 264, 192 and 120, respectively, and those for CN6 and CN7 (or the number of columns with weight of 6 or 7) are 192 and 96, respectively. To achieve a trade-off between decoding throughput and hardware complexity, a partial parallel structure proposed in [33] is applied in our implementation of the QC-LDPC decoders, where a small number of VN Units (VNUs) and CN Units (CNUs) are reused for the processing of all VNs and CNs. Denoting the numbers of units for VNU2, VNU3 VNU6, CNU6 and CNU7 as x, y, z, n and m, the reuse times of them for each iteration are 264/x, 192/y, 120/z, 192/n and 96/m, respectively, where the reuse times of VNUs are proportional to N (264+192+ 96 = 576), and those for CNUs are proportional to K (192+96 = 288).
+As shown in Fig. 2, the main components of the decoder can be divided into four types of modules (except the top), control modules (DecCtrl, DecCheck and Ctransport), computing modules (VNU2/3/6 and CNU6/7), interconnection modules (InputV2/V3/V6, IterForC6/C7, IterForV2/V3/V6, IterLatC6/ C7 and IterLatV2/V3/V6) and memories (Qstore, Rstore and Cstore). The function of these modules and the procedures of the FPGA implemented decoder are introduced as follows.
+1) Message Initialization for VNs: The decoder is started by DecCtrl, and the input LLRs to VNUs is provided by InputV modules. Then VNUs calculate Q messages based on equation (1), the IterLatV modules store the results in Qstore.
+2) Iterative Decoding Processing: First, Q messages are read from Qstore, and fed to CNUs by IterForC modules. CNUs calculate R messages based on equation (2), and the results are stored in Rstore by IterLatC modules. Second, R messages are read from Rstore, and fed to VNUs by IterForV modules. VNUs update Q messages and the LLRs of input symbols based on equation (3) and (4), respectively, and estimate cˆi by getting the sign of the results of equation (4). These results are stored in Qstore and Cstore by IterLatV and Ctransport, respectively.
+3) Check of Termination Condition: DecCheck reads the decisions from Cstore and calculates ccheck according to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+GAO et al.: EFFICIENT PROTECTION OF FPGA IMPLEMENTED LDPC DECODERS
+
+3773
+
+TABLE I RESOURCE USAGE OF THE UNPROTECTED LDPC DECODER (N = 4/6/8)
+TABLE II DECODING TIME FOR DIFFERENT PARALLELISM
+equation (5). Then if Csum = k ckc = 0, DecCtrl will set the successful decoding flag as Fsd = 1. Fsd will kept to be 0 for all iterations with Csum > 0, and is set to be 1 when k = kmax . In this paper, we set kmax = 30.
+B. Resource and Time Consumption of the LDPC Decoder The QC-LDPC decoder based on the Min-Sum algorithm
+was implemented using Verilog, and mapped to the Xilinx UltraScale SoC (xczu9eg-2ffvb1156i). The resource usages of the different modules are listed in Table I for three different parallelisms (n = 8/6/4, m = 4/3/2, x= 11/8/6, y= 8/6/4, z= 5/4/3). As we can see, the complexity of the top and control modules is independent of the parallelism, and that of computing modules is almost linearly proportional to the parallelism. For interconnection modules, higher parallelism (larger number of computing nodes) implies less connections between each CNU or VNU to the memories, so the complexity for single connection module is lower. But since more connection modules are needed, the total complexity of interconnection modules increases for higher parallelism.
+The maximum decoding time of the implemented LDPC decoder for different parallelism levels is shown in Table II for kmax = 30. As expected, the total decoding time is almost inversely proportional to the parallelism because the time for each iteration is shorter with a larger number of computing nodes running in parallel. Taking n = 8 as the example, the initialization phase takes 74 cycles, and each iteration takes 153 cycles. In each iteration, CNUs take 74 cycles to update R messages, VNUs take 74 cycles to update Q messages, and the parity check takes 5 cycles. So the maximum number of cycles for the decoding process is 74+30∗(74+74+5) = 4664.
+C. Reliability of the Unprotected LDPC Decoder To provide a reference for the reliability evaluation of
+the proposed fault tolerance scheme in Section IV, in this section, we first analyze the different effects of SEUs to the unprotected decoder for a high SNR, and then further analyze the performance degradation of the decoder by SEUs in terms of bit error rate (BER) for lower SNRs. Both analysis are based on the hardware fault injection experiment results on the Xilinx UltraScale SoC. The fault injection platform and the test procedure will be introduced in detail in Section V-B.
+1) Effects of SEUs to the Decoding Results at High SNR: The related configuration bits for a component of the decoder are usually called essential bits, among which the ones that
+
+SEUs on them would affect the decoding process are called critical bits. In [16], the decoder runs for 50 times with different inputs for the SEU on each essential bit, and the SNR for the inputs is 2dB so that there are no decoding errors in the fault free case. In this case, the critical bits are identified by checking whether the data in Qstore and Rstore after the last iteration is different from that in the fault free case. For one essential bit of a specific module, if at least one mismatch is detected for 50 different inputs, it would be identified as critical. Then the effect of SEUs on that module is measured using the ratio of critical bits over essential bits. Based on the results in [16], the effects of SEUs on control modules and computing modules is not related to the parallelism, and the reliability for inter-connection modules decreases for lower parallelism. In this paper, the design of the fault tolerance scheme only depends on the types of effect of SEUs, and can be applied for the decoder with any parallelism. So in the remaining of the paper, we only consider the parallelism of n = 8 for analysis and evaluation.
+The numbers of essential bits and critical bits for different types of modules are listed in Table III. As we can see, the number of essential bits and the portion of critical bits for control modules are much lower than those for other modules. Further analysis shows that the effect of SEUs can be classified into four types. The most severe effect is that the SEU stops the decoder from working normally (System Failure), so that the decoder cannot provide valid Fsd and decoding results within the maximum decoding time. The second is that the decoder outputs wrong results with the maximum number of iterations. An interesting observation for this type is that a very small number of SEUs may generate for some inputs fewer error bits than the fault free case (so improving the decoding result). The third is that the SEUs affect the decoding process for some inputs (change the data in Qstore and Rstore), but do not change the decoding results. An interesting observation for this type is that some SEUs may even terminate the decoding process earlier with the correct outputs than the fault free case. The fourth is that the SEUs has no influence to the decoding process for some inputs. The proportion for the four types of SEU effect is presented in Fig. 3 for control modules, computing modules and inter-connection modules, respectively. For each type of module, the denominator is 50 times the number of the critical bits (the total number of decoding runs), and the numerator is the number of runs among them that cause one of the four types of effect. As we can see, over 76% of the critical bits for control module will have a severe impact on the decoder (either system failure or wrong outputs). But this ratio for computing and interconnection modules is only 9.18% and 5.51%, respectively. On the contrary, the proportion of negligible effect (correct results or no influences) for the computing and interconnection modules is as high as 90.82% and 94.49%, respectively. These results are reasonable because the control modules are responsible for scheduling of the whole decoding process, SEUs on it are more likely to srupt the normal working procedures of the decoder. On the other hand, SEUs on the computing and interconnection modules are more likely to introduce errors to the intermediate results, so most of them can be tolerated
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+3774
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+TABLE III ESSENTIAL BITS AND CRITICAL BITS FOR EACH
+MODULE IN LDPC DECODER
+
+Fig. 3. Distributions of SEU effects for different modules in the decoder.
+TABLE IV DECODING BER FOR NORMAL DECODER AND THAT WITH SEUS
+
+by the decoder itself. Such fault tolerance capability has also been identified in the reliability evaluation for other channel decoders [34], [35], [36].
+2) Effects of SEUs to the Bit Error Rate: In practice, the output BER of the LDPC decoder is kept lower than 1E-5 with adaptive coding and modulation (ACM) and power control, and the BER is rarely higher than 1E-3. To evaluate the effect of SEUs to BER, we generate thousands of packets with decoding BER in the Fault Free case (BERFF) of 1.38E-5, 1.06E-4, 4.03E-4 and 1.9E-3 using Matlab on a PC, and feed the LLRs for each packet to the FPGA implemented decoder. Then the BER with SEUs causing the last three effects (so excluding System Failure) on all modules is measured, and the results are listed in Table IV, in which the ratio of the BER with SEUs (BERF) over that without SEUs (BERFF) is also provided. As we can see, SEUs can increase the BER by more than two orders of magnitude for BERFF of 1.38E-5. For inputs with higher BERFF, BERF increases slightly, so the ratio decreases to less than one order of magnitude for BERFF of 1.9E-3. These results show that SEUs on only 9.18% and 5.51% of the critical bits of the computing and interconnection modules would cause severe performance degradation for the LDPC decoder.
+Furthermore, we also recorded the number of error bits (Ne) in each packet for SEUs on different modules, and the histogram of Ne for BER of 1.38E-5 is presented in Fig. 4, where the portions for different ranges of number of error bits are provided. In the fault free case, the decoded packets may include at most 1 or 2 error bits even for a BER of 1E-3. But as we can see from the figures, SEUs on the configuration memory may cause hundreds of error bits in the decoded
+
+Fig. 4. Distribution of Error Bits Number with SEUs.
+output. Taking the results for control modules as an example, the portion of Ne within [0, 2] is 96.75%, and those within [3, 150] and larger than 150 are 3% and 0.25%, respectively. The portion for large Ne is obviously larger than that for computing and interconnection modules. Considering both the results in part 1) and 2), although the number of critical bits for the control modules is much smaller than that for other modules, SEUs on them will severely affect the operation of the decoders, so all the three types of modules should be fully considered for a complete protection of the LDPC decoder.
+IV. PROPOSED FAULT TOLERANT LDPC DECODER
+In this section, we first introduce the structure and general procedure of the DWC based fault tolerant LDPC Decoder in subsection A. Then the property of the key parameter (Csum) of the decoder and the fault detection method based on this property are introduced in subsections B and C, respectively.
+A. Structure of the Fault-Tolerant LDPC Decoder
+To have a complete protection for the LDPC decoder, we propose a DWC structure as shown in Fig. 5. In this scheme, in addition to the normal decoded bit sequence (cˆ), each copy of the decoder also outputs the successful decoding flag (Fsd ) and parity check result (Csum). Since Fsd and Csum are the inner signaling and variable that already exist in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+GAO et al.: EFFICIENT PROTECTION OF FPGA IMPLEMENTED LDPC DECODERS
+
+3775
+
+Fig. 5. Structure of the DWC protected LDPC decoder.
+Fig. 6. General procedure of the fault detection and correction (FDC) module.
+decoder, this scheme does not require modifications to the decoder itself, which facilitates the use of the proposed scheme in practical scenarios.
+The general procedure of the Fault Detection and Correction (FDC) module is shown in Fig. 6, and works as follows: 1) If one decoder does not provide the successful decoding flag (Fsd = 0), the output of the other decoder is selected as the result; 2) If two decoders provide the same output, one of them is selected as the final result; 3) If the outputs from the two decoders are different, the parity check results are utilized to detect the faulty decoder, which will be introduced in detail in subsection C. As we can see, Step 1) can deal with the SEUs that cause system failure, and the detection of SEUs causing Wrong Results relies on Step 3). SEUs that do not change the decoding results (Correct Results and No Influence) will not trigger Step 3). In any case, partial reconfiguration would be triggered by the detection report (dashed lines in Fig. 6) to remove the SEU in the faulty decoder. During the reconfiguration of the faulty decoder, the other one continues to provide decoding results by itself. Based on our implementation on Xilinx UtralScale SoC (xczu9eg2ffvb1156i) with clock frequency of 100MHz, the partial reconfiguration takes about 38ms. Since the SEUs are usually sparse in time, we assume that there will not be a second SEU occurring during this time. On the other hand, the decoding for one packet takes about 0.06ms, so the decoder that is identified as correct needs to work alone for about 680 packets. This means that the fault detection method should be very reliable, a wrong detection may cause unreliable decoding results for the following 680 packets. Since the detection of a decoder with system failure is simple and reliable, the reliability of the proposed DWC scheme is determined by the Csum based fault detection.
+
+B. Study of the Properties of Csum
+Since the goal of the protection is to eliminate the effect of SEUs on the performance of the decoder, we can select the decoder that provides fewer error bits based on Csum. However, it is not apparent that larger Csum must correspond to more error bits. For example, the Csum for one error bit can be 2, 3 and 6 for the QC-LDPC code in the IEEE 802.16e standard, and the value depends on the weight of the row in H that corresponds to the position of the error bit in cˆ. While the Csum for two error bits may also be 2 or 3. For example, if the two columns of H corresponding to the two error bits both have two 1s, and two 1s (one from each column) are in the same row, then we would have Csum = 2. If the two columns of H corresponding to the two error bits have two 1s and three 1s, respectively, and two 1s are in the same row, then we would have Csum = 3. So, it is possible that a decoder with more error bits produces a smaller Csum.
+To determine the relationship between Csum and the number of error bits (Ne), we run the decoder for large number of inputs with different Signal to Noise Ratios (SNRs), and collect millions of pairs of (Ne, Csum). Then the average value of Ne for a specific Csum is calculated, and the results are shown in Fig. 7. Based on the figure, Ne approximated equals to Csum for Csum ≤ 70, is linear proportional to Csum with larger slope (∼6) for 70 < Csum < 100, and increases slowly for Csum > 100. Based on these results, we can confirm that larger Csum usually implies more error bits on average.
+C. Fault Detection Based on the Accumulation of Csum
+Although the faulty decoder can be detected for most cases due to its larger Csum, there still exists a small false detection probability due to the rare cases when a faulty decoder produces a smaller Csum. In this case, if we report the detection result
+based on a single judgement of Cs1um > Cs2um or Cs1um < Cs2um, the normal decoder may be mistaken as the faulty one and reconfigured for recovery. Then the faulty decoder would continue to produce wrong result for the following hundreds of packets during the configuration time. Therefore, considering that the decoding of successive packets is independent, we propose to make the fault detection decision based on the accumulation of Csum (C Acc). Since the faulty decoder is more likely to generate larger C Acc for several successive packets decoding, a lower false detection probability should be achieved based on C Acc.
+Intuitively, C Acc for larger number of accumulations (NA) can provide more reliable fault detection. However, larger NA will increase the time for fault detection, which will increase the probability for another SEU to occur. Since the DWC protection will fail if both decoders are corrupted by SEUs, the value of NA should be as small as possible in practice as long as the SEUs do not introduce severe degradation to the decoding performance. Furthermore, based on our experiments, the C Acc for the faulty decoder may increase to a large value quickly in most cases. Therefore, we can make the decision when C Acc is larger than a threshold (Cth), so that the detection time can be reduced to a few runs. The optimal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+3776
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+
+Fig. 7. Average number of error bits for different Csum .
+
+accumulation number and threshold so that all the SEUs that significantly increase the BER can be detected. Although it is possible that the faulty decoder is selected as the normal one due to a smaller C Acc and keeps working during the reconfiguration of the other one, this only occurs for the cases that the SEU affects the decoder slightly, so the BER degradation caused by the false detection would be very small. As we will see in Section V, the BER performance of the DWC protected decoder is almost the same with decoder in the fault free case. In addition, the FDC module works in an asynchronous way in our design. Therefore, although the C Acc based detection may increase the detection time, it will not decrease the throughput of the decoder.
+On the other hand, since only SEUs that obviously affect the BER will be detected in our design, the frequency of repair based on re-configuration would be lower than that for the TMR protected decoder. So our design has lower repairing overhead.
+V. EVALUATION OF PROTECTED LDPC DECODERS
+This section first evaluates the complexity and power consumption of the protected LDPC decoders, and then evaluates the reliability based on fault injection experiments.
+
+Fig. 8. Working procedures of C Acc-based fault detection.
+
+selection of NA and Cth would be discussed in Section V
+
+based on experiment results.
+
+Based on above design, the structure of the proposed fault
+
+detection scheme is shown in Fig. 8, which is composed
+
+of C Acc Update, Fault Detection and Output Selection. The
+
+procedure for each part is introduces as follows:
+
+1) C Acc Update: The initial values for C Acc and the accumu-
+
+lation times t are 0. For each time that Cs1um is different from
+
+Cs2um , t is added by 1, and Cs1um and Cs2um are accumulated
+
+on
+
+C
+
+1 Acc
+
+and
+
+C
+
+2 Acc
+
+,
+
+respectively.
+
+2) Fault Detect: The fault detection decision is given
+
+when one C Acc is larger than Cth, or the maximum number
+
+of accumulations
+
+is
+
+achieved (t
+
+=
+
+N A ).
+
+If
+
+C
+
+1 Acc
+
+>
+
+Cth
+
+(or
+
+C
+
+2 Acc
+
+>
+
+Ct h ),
+
+Decoder 1 (or Decoder 2) is identified as faulty. For the
+
+case of t = NA, the decoder corresponding to larger C Acc is
+
+identified as faulty. Once a detection is given, the value of
+
+C Acc and t would be set to 0.
+
+3) Output Selection: The decoding result from the decoder
+
+corresponding to smaller C Acc would be selected as the output.
+
+D. Comparison With TMR
+The general drawback of DWC compared with TMR is the possible false detection, which may dramatically degrade the performance for some systems. In our design, this problem is avoided by making use of the properties of LDPC decoders. The performance of LDPC decoders is determined by BER, so we introduce the decision variable (C Acc) that is related to BER for fault detection. On this basis, we can optimize the
+
+A. Resource and Power Consumption
+The protected LDPC decoder based on the proposed scheme was implemented using Verilog, and mapped to a Xilinx UltraScale SoC (xczu9eg-2ffvb1156i). The TMR protected version is also implemented on the same board for comparison. With the clock frequency of 100MHz, the resource and Power consumption of the unprotected and protected decoders are listed in Table V. As we can see, the complexity of the DWC protected decoder is about 2.004 times that for the unprotected decoder, which is 33% lower than the TMR protected. The power consumption of the DWC-protected decoder is 1.69 times of that of the unprotected decoder, which is much lower than that of the TMR-protected decoder (2.2 times). In both cases, the ratios are below 2 times and 3 times respectively as there is a base FPGA power consumption that is independent of the design and introduces an offset that explains the lower ratios. Finally, it should be noted that the power consumption does not include that for partial reconfiguration in the DWC and TMR protected decoder.
+The DWC protected decoder introduces an additional delay of one cycle compared with the unprotected decoder due to the FDC operation, which does not affect the clock frequency and the throughput of the decoder. The value of NA and Cth are reconfigurable in the implementation, and the change of NA and Cth does not affect the complexity of the protected decoder.
+1) Fault Injection Platform: To assess the reliability of the unprotected and protected LDPC decoders, SEUs have been injected on the configuration memories of the decoders using an adapted version of the fault injection tool described in [37] on the Xilinx UtralScale SoC (xczu9eg-2ffvb1156i) with the addition of the SEM IP core [38]. The Essential Bit File
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+GAO et al.: EFFICIENT PROTECTION OF FPGA IMPLEMENTED LDPC DECODERS
+TABLE V RESOURCE AND POWER CONSUMPTION OF UNPROTECTED
+AND PROTECTED LDPC DECODER
+
+3777
+
+Fig. 10. BER improvement by the proposed protection with different N A.
+
+Fig. 9. Structure of fault injection platform for LDPC decoders.
+(EBD) file is first generated during the bitstream generation in Vivado for the Design Under Test (DUT), which can be the unprotected or detected decoder. The EBD file is then parsed to generate a fault dictionary, which stores the essential configuration bit locations of the DUT and is then used by the SEM IP core for fault injections on DUT.
+The fault injection platform is composed of a PC and the FPGA evaluation board, which are connected by an USB cable for fault injection control from the PC to the FPGA board and results are reported from the board to the PC. As shown in Fig. 9, the FPGA board consists of the Processing System (PS) part and the Programmable Logic (PL) part. The PS consists of two ARM processors (a 4-core Cortex-A53 and a 2-core Cortex-R5), DDR controller and UART controller. The DDR stores the fault dictionary of essential bits in the configuration memory and the UART logs results to the PC. The PL part includes two copies of the LDPC decoder i.e. Golden and DUT, the fault injector and a comparator. The fault injector is mainly composed of the Hardware Internal Configuration Access Port (ICAP) core (HWICAP) and the SEM IP core. Both of them can access the configuration memory for the DUT through the ICAP interface, where the former is used for SEU injection and the latter is used for SEU recovery based on partial re-configuration. The comparator is used to calculate the differences between the outputs from the Golden and DUT systems and to send the results to the ARM processor.
+The inputs to the decoders are fed from the ARM processor and the software on the ARM controls the fault injection process. The reliability evaluation experiments include four steps. First, one address of the configuration memory for the DUT is selected from the fault dictionary. Second, the SEM IP core is initiated to flip the bit at the address. Third, two outputs are generated by the Golden and DUT channelizers for the same inputs, and the differences between them are reported to the ARM by the comparator. Fourth, the DUT is re-configured through HWICAP for SEU recovery. The four steps will be repeated for all the addresses in the fault dictionary of the DUT, and the results for each bit will be recorded by the ARM processor, including the Fsd flag.
+
+B. Reliability of the DWC-Protected to SEUs
+Similar to the cases for unprotected decoder, the reliability of the protected decoder is evaluated with inputs for different BERs (1.38E-5, 1.06E-4, 4.03E-4 and 1.9E-3). In this section, we evaluate the reliability of the protected when SEU occurs on a decoder copy and the FDC module, respectively. For the former, the reliability with different NA and Cth is evaluated, based on which the optimal setting can be determined. In the experiments, once the FDC module gives a fault detection report, partial reconfiguration will be triggered to recovery the identified faulty decoder, during which time the other decoder continues to process the following inputs by itself. The complete procedure is considered when calculating the BER, so the results can reflect the situation in practical applications.
+1) Effect of SEUs on One Decoder Copy With Different NA: We injected SEUs on one of the LDPC decoders, and collect the outputs of the DWC protected decoder and the fault detection reports for different NA from 1 to 19. In Fig. 10, the ratio of the BER for the DWC protected decoder (BERP) over BERFF is provided. As expected, larger NA brings lower BERP. In particular, compared with the results in Table IV the protection can decrease the BER by more than two orders of magnitude for BERFF of 1.38E-5 even with NA = 1, from 399 to 1.2. The BERP is very close to BERFF when NA is larger than 7 for BERFF of 1.38E-5 and 1.06E-4. For BERFF of 4.03E-4 and 1.9E-3, BERP is very close to BERFF for NA larger than 11. Considering that the LDPC decoder rarely works in the scenario with BER higher than 1E-3, NA of 11 should be large enough in the practical applications of the DWC protected LDPC decoder.
+Fig. 11 shows the false detection probability (PF D) of the proposed fault detection scheme for different NA. As expected, larger NA brings lower PF D. It is interesting to observe that the value of PF D is about 0.7% for NA =7 with BERFF of 1.38E-5 and 1.06E-4, and for NA = 11 with BERFF of 4.03E-4 and 1.9E-3. But as introduced above, we have BERP ≈ BERFF in these cases. This phenomenon means that the occasional false detection has little impact to the BER performance of the DWC protected decoder. This is because the false detection happens in the cases that the C Acc from the faulty decoder is smaller than that from the normal decoder after NA accumulations, which means the SEU only has a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+3778
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+
+Fig. 11. False detection probability of the proposed scheme with Fig. 12. CDF of CAcc for normal decoder with N A of 11. different N A.
+
+negligible impact on the faulty decoder so that it even produces
+fewer error bits than the normal one. In this case, the faulty
+decoder will continue to produce very small error bits during
+the reconfiguration of the normal decoder. This result implies that we do not need to pursue a PF D of 0 with a very large NA, which will increase the detection time without further improvements of the protection performance.
+2) Effect of SEUs on One Decoder Copy With DifferentCth: To determine the threshold Cth to reduce detection time, we record the value of C Acc for the normal decoder and one with SEU for NA = 11, and the Cumulative Distribution Function (CDF) curves for the two decoders are shown in
+Fig. 12 and Fig. 13, respectively. As we can see, the value of C Acc for the normal decoder will never exceed 35 for BERFF of 1.38E-5 and 1.06E-4, and the probability for C Acc >35 is about 0.01% and 0.02% for BERFF of 4.03E-4 and 1.9E-3 respectively. On the other hand, the probability for C Acc < 35 is about 1% for the faulty decoder even for BERFF of 1.38E-5. So, if Cth is selected to be 35, we can detect the faulty decoder based on C Acc > 35 for most of the cases. By setting NA = 11 and Cth = 35 in the proposed FDC scheme, the actual number of accumulations for each fault detection report (NAA) is recorded during the experiments, and the distribution is shown in Fig. 14 for different BERFF, in which the average value of NAA and the probability for NAA > 5 are provided. As we can see, the detections can be made based on only
+two accumulations in average for low BERFF (1.38E-5 and 1.06E-4). Although the probability for larger NAA increases for higher BERFF, the average NAA is still as low as 3 even for BERFF of 1.9E-3. In particular, such significant reduction of the detection time (8/11=72.7%) almost introduces no impact
+to the performance of the protected decoder in terms of BER
+and false detection probability.
+3) Effect of SEUs on the FDC Module: We also inject SEUs on the FDC module with the setting of NA = 11 and Cth = 35. The number of essential bits for FDC is 314347, and the experiment results show that SEUs on only 8.92%
+of them (28037) will affect the decoding results. Such low ratio is reasonable because most logic in FDC are for C Acc accumulation and comparisons, SEUs on these parts may cause
+fault detections but would not change the correct outputs
+
+Fig. 13. CDF of CAcc for faulty decoder with N A of 11.
+Fig. 14. Distribution of number of accumulations with Cth of 35.
+(either selection of cˆ1 or cˆ2 is correct). The failures for the FDC module are mainly caused by SEUs on critical bits that controls the final outputs. Since the total overhead of the FDC module is less than 0.4% of the unprotected decoder, the reliability of the DWC scheme could be further improved by protecting these critical parts based on partial TMR with a negligible increase of the overhead.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+GAO et al.: EFFICIENT PROTECTION OF FPGA IMPLEMENTED LDPC DECODERS
+
+3779
+
+TABLE VI PARAMETERS FOR DIFFERENT CODING RATE OF QC-LDPC IN 802.16E
+C. Discussion on the Selection of Accumulation Number NA for Different Coding Rates and Code Lengths
+The value of NA is determined by the value of Csum and Cth. For a fixed Cth, smaller NA is required for larger Csum. The value of Csum is actually the number of 1s in ccheck, which is related to the number of error bits in the decoding sequence cˆ (Ne) and the weight of H (WH ) based on equation (5). Larger Ne and larger WH would cause larger Csum. Therefore, the impact of coding rate (r ) and code length (N ) on the selection of NA can be analyzed based on their impact on Ne and WH .
+For the QC-LDPC code for 802.16e, the row weight, column weight and the overall weight of H for different coding rates and code lengths are listed in Table VI. As we can see, the row weight and column weight are independent from the code length, and the overall weight of H is proportional to the code length. In addition, the row weight is almost unchanged for different coding rates, and the column weight increases for higher coding rates. On the other hand, coding rate is used to adapt the change of channel, so that the same BER performance can be maintained with different SNRs. Therefore, it is reasonable to assume that the decoding BER performance is the same for different coding rates in the fault free case. Finally, we assume the number of VNUs and CNUs are fixed for different coding rate and code length. With these parameters and assumptions, the analysis can be performed as follows.
+1) Impact of Coding Rate to the Selection of NA: Based on the iterative decoding process introduced in Section II-B and III-A, we can see that the number of affected LLRs (in equation (4)) of a VNU or CNU is determined by product of its degree and the reuse time. For the fixed code length N , higher coding rate means smaller K . In this case, the reuse times of VNUs do not change, and that of CNUs decreases. Since the degree of VNUs remains unchanged for different coding rates and the increment of the degree of CNUs is reversely proportional to K, the number of affected LLRs does not change, so that the value of error bits Ne should be unchanged. On the other hand, the overall weight of H also does not change much for different coding rate. Therefore, we can get the conclusion that the coding rate does not affect the value of Csum and thus the selection of NA.
+2) Impact of Code Length to the Selection of NA: For a fixed coding rate, larger code length N also means larger K . Then the reuse times for each VNU and CNU increase proportionally with the code length, so that an error on a VNU or CNU will corrupt more LLRs and bring more error bits (larger Ne) in the decoding sequence. On the other hand, the overall weight of H also increases proportionally with the code length. In this case, the value Csum will increase, so smaller NA is required for a fixed threshold.
+
+VI. CONCLUSION
+LDPC decoders are widely used in 5G mobile systems and satellite communication platforms, so their reliability to cosmic radiation is an important issue for reliable communication, especially for SRAM based FPGAs implementations. In this paper, the reliability of an unprotected LDPC decoder against SEUs on the configuration memories is first studied. Then the different features of the parity check sum of the decoder in the normal case and faulty case are utilized to propose an DWC based protection scheme. Furthermore, optimal accumulation number and decision threshold are selected to decrease the detection time without degradation of fault detection performance. The technique has been implemented on FPGA and evaluated with fault injection experiments. Results show that the effect of SEUs on the configuration memories can be completely eliminated by the proposed scheme, and the computation and power overhead are about 2 and 1.69 times of that for the unprotected decoder, respectively, which are much lower than those of the TMR scheme. Finally, it should be noted that although the protection scheme was proposed and evaluated for a specific LDPC code, the basic idea and approach would also be applicable for other LDPC codes.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, p. 1645, 1996.
+[3] ETSI. (2013). ETSI EN 302 307 V1.3.1 Digital Video Broadcasting (DVB); Second Generation. [Online]. Available: https://www. dvb.org/standards/dvb-s2
+[4] Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed Broadband Wireless Access Systems, Standard 802.162004, 2004.
+[5] Recommendation for Space Data System Standards; TM Synchronization and Channel Coding, document CCSDS 131.0-B-2, CCSDS, 2011.
+[6] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[7] Á. Álvarez, V. Fernández, and B. Matuz, “An efficient NB-LDPC decoder architecture for space telecommand links,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 4, pp. 1213–1217, Apr. 2021.
+[8] J. M. Aghadavoodi and K. Jakobs, “Concept of on-board-processing satellites,” in Proc. Universal Personal Commun., Sep. 2002, p. 14.
+[9] S. Lopez, T. Vladimirova, C. Gonzalez, J. Resano, D. Mozos, and A. Plaza, “The promise of reconfigurable computing for hyperspectral imaging onboard systems: A review and trends,” Proc. IEEE, vol. 101, no. 3, pp. 698–722, Mar. 2013.
+[10] F. Siegle, T. Vladimirova, J. Ilstad, and O. Emam, “Availability analysis for satellite data processing systems based on SRAM FPGAs,” IEEE Trans. Aerosp. Electron. Syst., vol. 52, no. 3, pp. 977–989, Jun. 2016.
+[11] L. Ma, C. Sham, J. Sun, and R. Valencia Tenorio, “A real-time flexible telecommunication decoding architecture using FPGA partial reconfiguration,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 10, pp. 2149–2153, Oct. 2020.
+[12] J. C. Fabero et al., “Single event upsets under 14-MeV neutrons in a 28-nm SRAM-based FPGA in static mode,” IEEE Trans. Nucl. Sci., vol. 67, no. 7, pp. 1461–1469, Jul. 2020.
+[13] E. Petersen, Single Event Effects in Aerospace. Hoboken, NJ, USA: Wiley, 2011.
+[14] R. Giordano, D. Barbieri, S. Perrella, R. Catalano, and G. Milluzzo, “Configuration self-repair in Xilinx FPGAs,” IEEE Trans. Nucl. Sci., vol. 65, no. 10, pp. 2691–2698, Oct. 2018.
+[15] E. N. D. Souza and G. L. Nazar, “Cost-effective resilient FPGA-based LDPC decoder architecture,” in Proc. IEEE IOLTS, Jul. 2019, pp. 84–89.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+3780
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 70, NO. 9, SEPTEMBER 2023
+
+[16] Z. Gao, Y. Cheng, and P. Reviriego, “Evaluation of the effects of SEUs on configuration memories in FPGA implemented QC-LDPC secoders,” in Proc. IEEE DFT, Oct. 2022, pp. 1–6.
+[17] H. Li, D. Lee, K. Chen, and A. A. Wu, “An algorithmic error-resilient scheme for robust LDPC decoding,” in Proc. VLSI Design, Autom. Test (VLSI-DAT), Apr. 2015, pp. 1–4.
+[18] G. Ge, L. Yin, and Q. Huang, “LDPC decoder with embedded coding on unreliable memories,” in Proc. IEEE GLOBECOM, Dec. 2017, pp. 1–6.
+[19] M. May, M. Alles, and N. Wehn, “A case study in reliability-aware design: A resilient LDPC code decoder,” in Proc. Design, Autom. Test Eur., Mar. 2008, pp. 456–461.
+[20] A. M. A. Hussien, W. M. Elsharkasy, A. M. Eltawil, F. Kurdahi, and A. Khajeh, “Low overhead correction scheme for unreliable LDPC buffering,” in Proc. IEEE Global Conf. Signal Inf. Process., Dec. 2013, pp. 667–670.
+[21] P. Schläfer et al., “Error resilience and energy efficiency: An LDPC decoder design study,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2016, pp. 588–593.
+[22] B. Li, Y. Pei, and N. Ge, “Area-efficient fault-tolerant design for lowdensity parity-check decoders,” in Proc. IEEE 84th Veh. Technol. Conf. (VTC-Fall), Sep. 2016, pp. 1–5.
+[23] L. Varshney, “Performance of LDPC codes under faulty iterative decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4427–4444, Jul. 2011.
+[24] S. M. S. T. Yazdi, H. Cho, and L. Dolecek, “Gallager B decoder on noisy hardware,” IEEE Trans. Commun., vol. 61, no. 5, pp. 1660–1673, May 2013.
+[25] C.-H. Huang, Y. Li, and L. Dolecek, “Gallager B LDPC decoder with transient and permanent errors,” IEEE Trans. Commun., vol. 62, no. 1, pp. 15–28, Jan. 2014.
+[26] S. Brkic, O. Al Rasheed, P. Ivaniš, and B. Vasic, “On fault tolerance of the Gallager B decoder under data-dependent gate failures,” IEEE Commun. Lett., vol. 19, no. 8, pp. 1299–1302, Aug. 2015.
+[27] Altera Corporation, “Test methodology of error detection and recovery using CRC in Intel FPGA devices,” Altera, San Jose, CA, USA, Appl. Note 539, Aug. 2019.
+[28] “Vivado design suite user guide: Partial reconfiguration,” Xilinx, San Jose, CA, USA, Appl. Note UG909, Feb. 2022.
+[29] A. M. Keller and M. J. Wirthlin, “Partial TMR for improving the soft error reliability of SRAM-based FPGA designs,” IEEE Trans. Nucl. Sci., vol. 68, no. 5, pp. 1023–1031, May 2021.
+[30] X. Yang, Y. Li, C. Fang, C. Nie, and F. Ni, “Research on evolution mechanism in different-structure module redundancy fault-tolerant system,” in Proc. Int. Symp. Intell. Comput. Appl. Singapore: Springer, 2015, pp. 171–180.
+[31] M. Wirthlin, “High-reliability FPGA-based systems: Space, high-energy physics, and beyond,” Proc. IEEE, vol. 103, no. 3, pp. 379–389, Mar. 2015.
+[32] Xilinx, “Xilinx TMRTool user guide,” Version 13.2, San Jose, CA, USA, Appl. Note UG156, Jun. 2017.
+[33] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, “A survey of FPGA-based LDPC decoders,” IEEE Commun. Surveys Tuts., vol. 18, no. 2, pp. 1098–1122, 2nd Quart., 2016.
+[34] Z. Gao, L. Zhang, Y. Cheng, K. Guo, A. Ullah, and P. Reviriego, “Design of FPGA-implemented Reed–Solomon erasure code (RS-EC) decoders with fault detection and location on user memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 6, pp. 1073–1082, Jun. 2021.
+[35] Z. Gao, L. Zhang, T. Yan, K. Guo, Z. Xu, and P. Reviriego, “Design of SEU-tolerant turbo decoders implemented on SRAMFPGAs,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 12, pp. 2563–2572, Dec. 2020.
+[36] Z. Gao, J. Zhu, R. Han, Z. Xu, A. Ullah, and P. Reviriego, “Design and implementation of configuration memory SEU-tolerant Viterbi decoders in SRAM-based FPGAs,” IEEE Trans. Nanotechnol., vol. 18, pp. 691–699, 2019.
+[37] A. Ullah, P. Reviriego, and J. A. Maestro, “An efficient methodology for on-chip SEU injection in flip-flops for Xilinx FPGAs,” IEEE Trans. Nucl. Sci., vol. 65, no. 4, pp. 989–996, Apr. 2018.
+[38] Soft Error Mitigation Controller v4.1 LogiCORE IP Product Guide (PG034), v4.1, Xilinx, San Jose, CA, USA, May 022.
+
+Zhen Gao (Member, IEEE) received the B.S., M.S., and Ph.D. degrees from Tianjin University, China, in 2005, 2007, and 2011, respectively. He was a Visiting Scholar with GeorgiaTech from 2008 to 2010 and a Post-Doctoral Researcher with Tsinghua University, China, from 2011 to 2014. Since 2015, he has been an Associate Professor with Tianjin University. His research interests include fault-tolerant design, blockchain, and wireless communications.
+Yinghao Cheng received the B.S. degree from the China University of Mining and Technology in July 2021. He is currently pursuing the master’s degree with Tianjin University. His research interests include radiation effects study and fault tolerant design for digital signal processing.
+Qiang Liu (Senior Member, IEEE) received the Ph.D. degree from the Department of Electrical and Electronic Engineering, Imperial College London, London, U.K., in 2008. From 2009 to 2011, he was a Research Associate with the Department of Computing, Imperial College London. He is currently a Professor with the School of Microelectronics, Tianjin University. His research interests include digital integrated circuit design and hardware security.
+Anees Ullah (Member, IEEE) received the B.Sc. and M.Sc. degrees in electrical engineering from the University of Engineering and Technology Peshawar, Peshawar, in 2009 and 2011, respectively, and the Ph.D. degree in computer engineering from Politecnico di Torino, Italy, in 2015. From 2016 to 2017, he was a Post-Doctoral Researcher with Universidad Antonio de Nebrija, Spain. Currently, he is an Assistant Professor with the University of Engineering and Technology Peshawar. His research interests include fault-tolerant digital systems design, fault injection in FPGAs, FPGA-based ternary content addressable memories (TCAMs), and approximate computing.
+Pedro Reviriego (Senior Member, IEEE) received the M.Sc. and Ph.D. degrees in telecommunications engineering from the Technical University of Madrid, Madrid, Spain, in 1994 and 1997, respectively. From 1997 to 2000, he was a Research and Development Engineer with Teldat, Madrid, working on router implementation. In 2000, he joined Massana to work on the development of 1000BaseT transceivers. From 2004 to 2007, he was a Distinguished Member of Technical Staff with LSI Corporation, working on the development of Ethernet transceivers. From 2007 to 2018, he was with Universidad Antonio de Nebrija and Universidad Carlos III de Madrid from 2018 to 2022. He is currently with Universidad Politécnica de Madrid.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:22 UTC from IEEE Xplore. Restrictions apply.
+
+

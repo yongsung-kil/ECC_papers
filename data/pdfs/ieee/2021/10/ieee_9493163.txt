@@ -1,0 +1,923 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+6439
+
+Sign-Preserving Min-Sum Decoders
+Franklin Cochachin , Emmanuel Boutillon , Senior Member, IEEE, and David Declercq , Senior Member, IEEE
+
+Abstract— This paper proposes a new finite precision iterative decoder for low-density parity-check (LDPC) codes. The proposed decoder, named Sign-Preserving Min-Sum (SP-MS), significantly improves the decoding performance compared to the classical Offset Min-Sum (OMS) decoder when messages are quantized on q = 2, 3, or 4 bits. The particularity of the SP-MS decoder is that messages cannot take the 0 value, and can fully benefit from the q bits of precision. The optimization of the SP-MS decoder is investigated in the asymptotic limit of the code length using density evolution (DE). Our study shows that 3-bit SP-MS decoders can achieve the same error-correcting performance as 5-bit OMS decoders, and 2-bit SP-MS decoders outperform 3-bit OMS decoders. The finite-length simulations confirm the conclusions of the DE analysis for several LDPC codes. Our SP-MS decoder shows a signal-to-noise ratio (SNR) gain up to 0.43 dB, with a memory/wire reduction of up to 40%, compared to the OMS decoder. Moreover, the SP-MS decoder converges faster and uses fewer iterations than the OMS decoder, with an improvement of up to 83.3% of the average decoding throughput. On an FPGA, the SP-MS decoder reduces resource utilization by up to 56% compared to the OMS decoder.
+Index Terms— Error correction, low-density parity-check (LDPC) codes, density evolution, sign-preserving min-sum (SP-MS) decoders, error floors.
+I. INTRODUCTION
+L OW-DENSITY Parity-Check (LDPC) codes [1]–[3], first introduced by Gallager in 1963, are widely used in communication standards and storage applications [4]–[8] because they provide an exceptional error correction capability. LDPC codes can be efficiently decoded by Message-Passing (MP) algorithms that use a Tanner graph [9] representation. One of the best MP algorithm is the Sum-Product algorithm also called Belief-Propagation (BP) algorithm [10]. The BP
+Manuscript received January 11, 2021; revised May 22, 2021; accepted July 11, 2021. Date of publication July 26, 2021; date of current version October 18, 2021. This work was supported by the French National Research Agency (ANR) through the Noise-Against-Noise Decoders (NAND) Project under Grant ANR-15-CE25-0006-01. This article was presented in part at the 2018 IEEE International Symposium on Turbo Codes Iterative Information Processing. The associate editor coordinating the review of this article and approving it for publication was J. Yuan. (Corresponding author: Franklin Cochachin.)
+Franklin Cochachin was with Lab-STICC, UMR 6285, Université Bretagne Sud, Centre de Recherche BP 92116, 56321 Lorient, France, and also with ETIS UMR 8051, CY Cergy Paris Université, ENSEA, CNRS, 95000 Cergy, France (e-mail: franklinch7@gmail.com).
+Emmanuel Boutillon is with Lab-STICC, UMR 6285, Université Bretagne Sud, Centre de Recherche BP 92116, 56321 Lorient, France (e-mail: emmanuel.boutillon@univ-ubs.fr).
+David Declercq is with ETIS UMR 8051, CY Cergy Paris Université, ENSEA, CNRS, 95000 Cergy, France (e-mail: declercq@ensea.fr).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2021.3099173.
+Digital Object Identifier 10.1109/TCOMM.2021.3099173
+
+decoder has excellent decoding performance in the waterfall region but at the cost of high computational complexity. It is worth noting that large length irregular LDPC codes decoded by the BP decoder can approach the Shannon limit [11], [12].
+The effect of quantization on the messages of MP decoders has been extensively examined over the past 20 years. In [13], the authors show that for a quantized BP decoder, at least 6 bits of precision should be used for the Binary Input Additive White Gaussian Noise (BI-AWGN) channel to obtain performance similar to infinite precision decoders. The Min-Sum (MS) and Offset-corrected Min-Sum (OMS) decoders [14], [15], derived from the BP decoder, reduce computational complexity at the cost of a small performance degradation in the waterfall region, especially when they are implemented in finite precision. For quantized MS and OMS decoders, the effect of clipping and quantization for the BI-AWGN channel are examined in [15] and [16]. Thanks to their reduced complexity, the hardware implementation of the OMS decoder [17] and other variants of the MS decoder [18]–[20] show a good trade-off between complexity and decoding performance.
+Recently, finite-alphabet LDPC decoders [21] with reduced precision (e.g., from 4 bits to 3 bits), and good error correction performance have been proposed [22], [23]. Reducing the precision of messages is a natural strategy to reduce hardware complexity and increase the throughput of LDPC decoders. It is worth mentioning that there is a non-negligible performance loss when the number of precision bits becomes too small, which is the case of 2-bit MS-based decoders [24]–[26].
+However, many LDPC decoders that use 1 bit of precision for messages are discussed in the literature. These 1-bit LDPC decoders are not quantized versions of either the BP decoder or the MS decoder; we can cite for example stochastic-based decoders [27], [28], bit-flipping-based decoders [29], [30], and binary message-passing decoders [31], [32]. The advantage of 1-bit LDPC decoders is their very low hardware complexity compared to higher precision decoders, but they usually require a much larger number of decoding iterations, and their performance degradation is significant.
+In this paper, we propose a new finite precision iterative decoder for low complexity hardware implementation, named Sign-Preserving Min-Sum (SP-MS) decoder, which always preserves the sign of messages. The SP-MS decoder forbids the 0 value in its message alphabet during the iterative decoding, meaning that a message cannot be erased. Also, unlike traditional quantized decoders, the proposed decoder uses all the possible values of the alphabet generated for a
+
+0090-6778 © 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6440
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+given precision and uses the sign of the incoming messages to increase the reliability of the outgoing messages at variable nodes. We investigate SP-MS decoders defined over small message alphabets constructed from q = 2, 3, or 4 bits of precision. We also quantize the Log-Likelihood Ratios (LLRs) on small alphabets constructed from qch = 3 or 4 bits of precision.
+In [33], the Sign-Preserving Noise-Aided Min-Sum (SP-NA-MS) decoders were examined for the case of regular LDPC codes considering the same precision (3 and 4 bits) for both the messages and the LLRs. In this paper, we modify and extend the work of [33] from regular to irregular LDPC codes. Moreover, we study the performance of SP-MS decoders in which the messages are quantized with one bit less than the LLRs. We also propose an offset model that depends on the magnitude of unsaturated variable-to-check messages, and optimize the offset values with Density Evolution (DE). Finally, we propose a method to improve the performance of SP-MS decoders in the error floor region, when the precision of the messages is lower than the precision of the LLRs.
+Our study of the SP-MS decoders with Density Evolution shows that (qch = 4, q = 3)-bit SP-MS decoders have the same convergence threshold as classical (qch = 5, q = 5)-bit OMS decoders. Also, we show that (qch = 3, q = 2)-bit SP-MS decoders have better error correction performance than classical (qch = 3, q = 3)-bit OMS decoders. These conclusions are corroborated by finite length Monte Carlo (MC) simulations, and we obtain signal-to-noise ratio (SNR) gains up to 0.43 dB compared to the MS/OMS decoders.
+Comparing the hardware complexity of the SP-MS and the OMS decoders, we observe that the SP-MS decoder allows us to greatly reduce the complexity of the message update rules when the precision of the messages is reduced. When using the SP-MS, a memory/wire reduction of up to 40% is achieved. Also, the SP-MS uses fewer iterations (converges faster) with an improvement of up to 83.3% of the average decoding throughput. Comparing the synthesis results on a Xilinx FPGA of the SP-MS and the OMS decoders, we observe that the SP-MS decoder has a significant improvement in clock frequency by up to 30%, and reduces resource utilization by up to 56%. These results open new possibilities for massive parallel implementation of LDPC decoders.
+The outline of the paper is as follows. Section II introduces the basic notions of quantized decoders and LDPC codes. Section III explains how to preserve the sign of the messages in SP-MS decoders, and how to optimize the SP-MS decoders with DE. Section IV presents the results of the asymptotic analysis of regular and irregular LDPC codes. In section V, finite length performance of the SP-MS decoders and the MS/OMS decoders are presented. In section VI, we propose a method to mitigate the early appearance of the error floor of SP-MS decoders. In Section VII, we discussed the hardware complexity of the SP-MS decoders and we present the synthesis results on a Xilinx FPGA of the SP-MS decoders and the OMS decoders. In Section VIII, we compare the SP-MS decoder with other decoders proposed in the literature. Finally, Section IX concludes this paper.
+
+II. BASIC NOTIONS OF CLASSICAL QUANTIZED DECODERS AND LDPC CODES
+
+An LDPC code is a linear block code defined by a sparse
+
+parity-check matrix H = [hmn] composed of M rows by N columns, with M < N . The usual graphical representation
+
+of an LDPC code is a Tanner graph, which is a bipartite
+
+graph G composed of two types of nodes: the variable nodes
+
+(VNs) vn, n = 1, . . . , N and the check nodes (CNs) cm, m = 1, . . . , M . A VN in the Tanner graph corresponds to a column
+
+of H, and a CN corresponds to a row of H. An edge
+
+connecting CN cm to VN vn exists if and only if hmn = 0. Let V(v) denote the set of neighbors of a VN v, and
+
+V(c) denote the set of neighbors of a CN c. The degree
+
+of a node is the number of its neighbors in G. A code
+
+is said to have a regular column-weight dv if all VNs v have the same degree dv. Similarly, if all CNs c have the same degree dc, a code is said to have a regular row-weight dc. In case of irregular LDPC codes, the nodes can have
+
+different connection degrees, defining an irregularity distrib-
+
+ution, which is usually characterized by the two polynomials
+
+λ(x) =
+
+dv,max i=1
+
+λi xi−1 ,
+
+and
+
+ρ(x)
+
+=
+
+dc,max j=1
+
+ρj xj−1.
+
+The
+
+parameters λi (respectively ρj) indicate the fraction of edges
+
+connected to degree i VNs (respectively degree j CNs) [34].
+
+For regular codes, the polynomials are reduced to monomials, λ(x) = xdv−1 and ρ(x) = xdc−1.
+
+Let x = (x1, . . . , xN ) ∈ {0, 1}N be a codeword that satisfies HxT = 0. In this paper, x is mapped by the Binary
+
+Phase-Shift Keying (BPSK) modulation and transmitted over the BI-AWGN channel with noise variance σ2. The channel
+
+output y = (y1, . . . , yN ) is modeled by yn = (1 − 2xn) + zn for n = 1, . . . , N , where zn is a sequence of independent
+
+and identically distributed (i.i.d.) Gaussian random variables with zero mean and variance σ2. The decoder produces the
+
+vector xˆ = (xˆ1, . . . , xˆN ) ∈ {0, 1}N that is an estimation of x.
+To check whether xˆ is a valid codeword, we verify that the syndrome vector is all-zero, i.e. HxˆT = 0.
+
+The LLRs that can be computed at the channel output are
+
+equal to
+
+LLR(yn) = log
+
+Pr(yn | xn = 0) Pr(yn | xn = 1)
+
+=
+
+2yn σ2
+
+∀n = 1, . . . , N.
+
+(1)
+
+For quantized decoders, the LLRs have to be quantized and saturated. Let AL denote the decoder input alphabet, defined as AL = {−Nch, . . . , −1, 0, +1, . . . , +Nch}, composed of 2Nch + 1 states, with Nch = 2(qch−1) − 1 and where qch is the number of precision bits used to quantize the LLRs. Let the quantizer be defined by Q : R → AL
+
+Q (a) = S ( α a + 0.5 , Nch) ,
+
+(2)
+
+where . depicts the floor function and S(b, Nch) is the saturation function clipping the value of b in the interval [−Nch, Nch], i.e. S(b, Nch) = min(max(b, −Nch), +Nch). The parameter α is called channel gain factor and is used to increase or decrease the amplitude of LLRs at the decoder
+input. The value of α can be seen as an extra parameter in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+
+6441
+
+the quantized decoder that can be analyzed and optimized for better performance. With these notations, we define the quantized version of the LLRs that initialize the MP decoder by the vector I = (I1, . . . , IN ) ∈ ALN , with
+
+In = Q (LLR(yn)) ∀n = 1, . . . , N.
+
+(3)
+
+A MP decoder exchanges messages between VNs and CNs
+along the edges of the Tanner Graph. During each iteration,
+the VN update (VNU) and CN update (CNU) compute outgo-
+ing messages from all incoming messages.
+For classical quantized decoders, the finite message alphabet AM is defined as AM = {−Nq, . . . , −1, 0, +1, . . . , +Nq}, and consists of 2Nq + 1 states, with Nq = 2(q−1) − 1 and where q is the number of quantization bits for the messages.
+Typically, the message alphabet is equal to the decoder input alphabet, i.e. qch = q and AM = AL. Let ∈ N denote the iteration number. Let also mv( →) c ∈ AM denote the variableto-check message sent from VN v to CN c in the th iteration, and mc(→) v ∈ AM denote the check-to-variable message sent from CN c to VN v in the th iteration.
+Let us briefly recall the VNU and CNU equations for the
+quantized MS-based decoders before introducing the SP-MS decoders. For this purpose, let Ψv : AL × A(Mdv−1) → AM denote the discrete function used for the update at a VN v of degree dv, and let Ψc : A(Mdc−1) → AM denote the discrete function used for the update at a CN c of degree dc.
+The update rule at a CNU is given by
+
+the classical MS decoder. The discrete functions Ψv and Ψc
+satisfy the symmetry conditions presented in [34]. Let γ( ) = (γ1( ), . . . , γN( )) denote the a posteriori prob-
+abilities (APP) in the th iteration with alphabet Aapp = {−Nq dv −Nch, . . . , −1, 0, +1, . . . , +Nq dv +Nch}. The APP γn( ) ∈ Aapp is associated to a VN vn, n = 1, 2, . . . , N . Let Ψa : AL×AM (dv) → Aapp denote the discrete function used for the APP computation at a VN v of degree dv. The function Ψa satisfies the same conditions of symmetry as the function Ψv. With these notations, the APP computation at a VN vn is given by
+
+γn( ) = Ψa
+
+In, mc(→) vn c∈V(vn)
+
+= In +
+
+mc(→) vn .
+
+c∈V (vn )
+
+(6)
+
+From the APP, xˆn can be computed as xˆn = (1 − sign(γn( )))/2 if γn( ) = 0, otherwise, xˆn = (1 − sign(In))/2, for n = 1, . . . , N .
+At the initialization stage of MS-based decoders ( = 0), variable-to-check messages are initialized using m(v0n)→cm = S(In, Nq) where cm ∈ V(vn), for n = 1, . . . , N ; the saturation function S is required only when q < qch, i.e., Nq < Nch.
+Analyzing (4) and (5), we can see that the message alphabet AM of classical quantized decoders uses only 2q − 1 levels out of a total of 2q levels achievable with q precision bits. For
+example, using q = 3 bits of precision, only 7 levels among
+8 levels are used in AM .
+
+mc(m)→vn = Ψc ⎛
+
+mv( →) cm v∈V(cm)\{vn} ⎞
+
+=⎝
+
+sign mv( →) cm ⎠
+
+v∈V (cm )\{vn }
+
+×
+
+min
+
+v∈V (cm )\{vn }
+
+mv( →) cm
+
+.
+
+(4)
+
+Let mv(n+→1)c,mU denote the unsaturated variable-to-check message in the ( + 1)th iteration, defined as
+
+m(vn+→1)c,mU = In +
+
+mc(→) vn .
+
+c∈V (vn )\{cm }
+
+The alphabet of the unsaturated variable-to-check message m(vn+→1)c,mU , denoted AU , is defined as AU = {−Nq (dv − 1) − Nch, . . . , −1, 0, +1, . . . , +Nq (dv − 1) + Nch}. Then,
+the update rule at a VNU is expressed as
+
+mv( n+→1)cm = Ψv In, mc(→) vn c∈V(vn)\{cm}
+
+= Λ mv( n+→1)c,mU , ϕv ,
+
+(5)
+
+where the function Λ(.) is defined by Λ(a, ϕv) = sign(a) S (max(|a| − ϕv, 0), Nq).
+The CNU (4) and VNU (5) define the classical OMS
+decoder with offset value ϕv ∈ {+1, . . . , +(Nq − 2)} applied at the VN1, where the special case of ϕv = 0 corresponds to
+
+III. SIGN-PRESERVING MIN-SUM DECODERS
+In the classical MS-based decoders, the value of the messages can be zero. In that case, the erased message, i.e. mv(n+→1)cm = 0, does not carry any information and does not participate in the convergence of the decoder. In this paper, we propose a new type of decoder, with a modified VNU using a sign preserving factor, so that the VNU never generates erased messages.
+A. Quantization Used for SP-MS Decoders
+Using the sign-and-magnitude representation, one can obtain discrete alphabets that are symmetric and composed of 2qch states. The decoder input alphabet for SP-MS decoders is defined as BL = {−Nch, . . . , −1, −0, +0, +1, . . . , +Nch}, with Nch = 2(qch−1) − 1. Similarly, the message alphabet for SP-MS decoders denoted by BM is defined as BM = {−Nq, . . . , −1, −0, +0, +1, . . . , +Nq}, with Nq = 2(q−1)−1. The sign of a message m ∈ BM indicates the estimated bit value while the magnitude |m| represents its reliability. In this paper, it is assumed that 2 ≤ q ≤ qch. The alphabets BL and BM can be easily implemented in hardware because each value of BL and BM has a natural (sign, magnitude) binary representation. An example of the binary representation of AM and BM for q = 3 is shown in Table I, showing that −0 is
+1Note that in the literature, ϕv is often applied at the CN. Applying the offset at the VN or at the CN is equivalent only when the saturation function is not used since mini=1,...,n(|xi| − ϕv) = mini=1,...,n(|xi|) − ϕv.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6442
+TABLE I BINARY REPRESENTATION OF THE QUANTIZED VALUES
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+Fig. 1. The offset model Υ for (ϕs = 1, ϕa = 1, ϕ0 = 0).
+
+represented by 1002s, +0 is represented by 0002s, etc., where the index “2s” indicates the (sign, magnitude) format.
+In order to obtain the quantized version of the LLRs belonging to BL, the quantization process defined in (2) is replaced by
+
+Q∗ (a) = (sign(a), S ( α |a| , Nch)) ,
+
+(7)
+
+The quantized LLRs In = Q∗ (LLR(yn)) ∈ BL for n = 1, . . . , N are used to initialize the decoder. In the initialization stage, i.e. at = 0, the variable-to-check messages mv(n)→cm are computed as mv(0n)→cm = S(In, Nq) where cm ∈ V(vn), for n = 1, . . . , N . Note that the operation of saturation S is
+required only when q < qch, i.e., Nq < Nch.
+
+B. Sign-Preserving Min-Sum Decoders
+Let us now define the VNU and CNU update rules for SP-MS decoders. The discrete functions Ψv, Ψc, and Ψa of SP-MS decoders are defined in their modified alphabets, i.e. Ψv : BL × BM (dv−1) → BM , Ψc : BM (dc−1) → BM , and Ψa : BL × BM (dv) → Bapp.
+The update rule at the CNU of SP-MS decoders is given by
+
+mc(m)→vn = Ψc ⎛
+
+mv( →) cm v∈V(cm)\{vn}
+
+=⎝
+
+sign mv( →) cm ,
+
+v∈V (cm )\{vn }
+
+min
+v∈V (cm )\{vn }
+
+mv( →) cm
+
+.
+
+(8)
+
+The CNU computes outgoing messages that always belong to BM based on all the incoming messages that also belong to BM . It is to be noted that (8) is identical to (4).
+In the case of the VNU, the update rule of classical MS
+decoders (5) does not guarantee that the outgoing message belongs to BM . We therefore modify the VNU rule to ensure that the outgoing message will always belong to BM . Let us denote by μv(n)→cm the sign-preserving factor for the variableto-check message from VN vn to CN cm, defined as
+
+μv( n)→cm = ξ sign(In) +
+
+sign mc(→) vn , (9)
+
+c∈V (vn )\{cm }
+
+where the value of ξ depends on the value
+
+column-weight dv of a VN vn: ⎧ ⎨⎪0, if dv = 2,
+
+ξ = ⎪⎩21,,
+
+if dv > 2 and dv is odd, if dv > 2 and dv is even.
+
+of the (10)
+
+μv(n)→cm takes its values in {−1, +1} for dv = 2, in {−dv, −dv + 2, . . . , −1, +1, . . . , +dv} for dv odd and dv > 2, and in {−dv − 1, −dv + 1, . . . , −1, +1, . . . , +dv + 1} for dv even and dv > 2. Thus, μv(n)→cm is always an odd
+number.
+
+Let us now redefine the unsaturated variable-to-check message m(vn+→1)c,mU as
+
+mv( n+→1)c,mU
+
+=
+
+μv( n)→cm 2
+
++ In +
+
+mc(→) vn .
+
+c∈V (vn )\{cm }
+
+(11)
+
+The alphabet of mv(n+→1)c,mU is given by BU = {−Nq (dv − 1) − Nch − (dv − 1 + ξ)/2, . . . , −1.5, −0.5, +0.5, +1.5, . . ., +Nq (dv − 1) + Nch + (dv − 1 + ξ)/2}. We note that (μv(n)→cm )/2 can be written as (μv(n)→cm )/2 = (μv(n)→cm )/2 + 0.5. The fractional part of (μv(n)→cm )/2, which is 0.5, prevents m(vn+→1)c,mU from being zero and guarantees that a sign is always assigned to the variable-to-check message. The integer part of (μv(n)→cm )/2 increases the reliability of the message m(vn+→1)c,mU and thus helps the decoder to converge faster.
+Then, the update rule at a VNU of the SP-MS decoder with
+offset value ϕv is given by
+
+mv( n+→1)cm = Ψv In, mc(→) vn c∈V(vn)\{cm} = sign mv( n+→1)c,mU , S max mv( n+→1)c,mU − ϕv , 0 , Nq
+
+. (12)
+
+The APP computation at a VN vn of the SP-MS decoder is defined as follows
+
+γn( ) = Ψa In, mc(→) vn c∈V(vn)
+
+1 = In + 2 ξ sign(In)
+
++
+
+mc(→) vn
+
++
+
+1 2
+
+sign
+
+c∈V (vn )
+
+mc(→) vn
+
+. (13)
+
+The alphabet of APPs for SP-MS decoders is given
+by Bapp = {−Nq dv − Nch − (dv + ξ)/2), . . . , −1, 0, +1, . . . , +Nq dv + Nch + (dv + ξ)/2)}. From the APP,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+
+6443
+
+xˆn can be computed as xˆn = (1 − sign(In))/2 if γn( ) = 0, otherwise, xˆn = (1 − sign(γn( )))/2 for n = 1, . . . , N .
+
+C. Optimization of Sign-Preserving Min-Sum Decoders
+In order to optimize Sign-Preserving Min-Sum decoders, we analyze the offset value ϕv. In (12), we can see that the offset value ϕv is applied to m(vn+→1)c,mU , and the value of the offset is the same for any value of the message. We can further improve the performance by replacing the constant value ϕv by an offset whose value depends on mv(n+→1)c,mU . To simplify the
+notations in this section, we use mu to denote any m(vn+→1)c,mU ∈ BU and m to denote any mv(n+→1)cm ∈ BM .
+To perform the optimization, we consider three offset values that are denoted by ϕ = (ϕs, ϕa, ϕ0), where ϕs is applied to |mu| = Nq +0.5, ϕa is applied to |mu| ∈ {2.5, . . . , Nq −0.5}, and ϕ0 is applied to |mu| = 1.5. It is not necessary to consider an offset value for the values |mu| > Nq + 0.5 because those values will be saturated to |Nq|. Let Υ : ϕ = (ϕs, ϕa, ϕ0) be an offset model used at VNs. The offset corrected message is
+obtained as
+m = (sign(mu), S (max ( |mu| − b, 0) , Nq)) , (14)
+where the offset b ∈ {ϕs, ϕa, ϕ0} depends on the magnitude of mu.
+As an example, Υ : ϕ = (ϕs = 1, ϕa = 1, ϕ0 = 0) is depicted in Fig. 1 for (q = 3, Nq = 3).
+Let us discuss the case of ϕs = ϕa = ϕ0. The SP-MS decoder with offset ϕv = 1 can be obtained as a special case of Υ setting ϕ = (1, 1, 1); similarly, the SP-MS without offset, i.e. ϕv = 0, can be obtained with the setting ϕ = (0, 0, 0).
+The offset values ϕs and ϕ0 are applied to the extreme values of the message alphabet BM . Therefore, ϕs and ϕ0 have to be analyzed differently from ϕa.
+In the case of very low message precision q = 2, Υ is defined only by one offset value ϕ = (ϕs). For this special case, the message alphabet, which is only composed of four different values, is given by BM = {−1, −0, +0, +1}, with Nq = 1.
+
+D. Density Evolution for Sign-Preserving Min-Sum Decoders
+
+The goal of DE [34]–[36] is to recursively compute the
+
+probability mass function (PMF) of the messages in the Tanner
+
+graph along the iterations. DE enables us to predict whether
+
+an ensemble of LDPC codes, parametrized by its degree
+
+distribution, decoded with a given MP decoder, converges to
+
+zero error probability in the limit of infinite block length.
+
+For the BI-AWGN channel, the DE threshold δ is the
+
+maximum value of the standard deviation σ or the minimum
+
+SNR for which the decoder converges to a zero error prob-
+
+ability. As in [33] and [37], δ can be expressed as δdb =
+
+10 log10
+
+1 2 R σ∗2
+
+, where σ∗ = δ and R is the rate of the
+
+code.
+
+In this paper, the details of the DE equations are not pre-
+
+sented, and we refer to [38] for a complete presentation. The
+
+DE threshold δ depends on the degree distribution (λ(x), ρ(x))
+
+of the code, but also on the quantized decoder parameters: the
+
+number of precision bits (qch, q), the channel gain factor α, and the offset values (ϕs, ϕa, ϕ0). We use DE to jointly optimize the offset values (ϕs, ϕa, ϕ0) and the channel gain factor α for a fixed precision (qch, q) and a fixed degree distribution (λ(x), ρ(x)) as follows
+
+(ϕs∗,
+
+ϕ∗a ,
+
+ϕ0∗,
+
+α∗)
+
+=
+
+arg
+
+min
+(ϕs ,ϕa ,ϕ0 ,α)
+
+{δdb
+
+(λ(x),
+
+ρ(x),
+
+qch ,
+
+q,
+
+α, ϕs, ϕa, ϕ0)} . (15)
+
+The optimization of the offset values of the model Υ and the channel gain factor α is made using a greedy algorithm that computes a local maximum of the DE threshold. For MS and OMS decoders, the optimization (15) is reduced to the optimum channel gain factor α∗ that is computed by performing a grid-search.
+
+IV. ASYMPTOTIC ANALYSIS OF SIGN-PRESERVING MIN-SUM DECODERS
+In this section, we present the asymptotic analysis of SP-MS decoders for regular and irregular LDPC codes with the values of the sign preserving factor ξ defined in (10).
+
+A. Regular LDPC Codes
+For all results presented in this section, we consider four ensembles of (dv, dc)-regular LDPC codes with the following parameters: (i) (dv = 3, dc = 6) and code rate R = 0.5, (ii) (dv = 4, dc = 64) and R = 0.94, (iii) (dv = 5, dc = 20) and R = 0.75, and (iv) (dv = 6, dc = 32) and R = 0.8413. We also consider quantized decoders with precision (qch, q) ∈ {(5, 5), (4, 4), (4, 3), (3, 3), (3, 2)}.
+DE thresholds of the classical MS and OMS decoders are
+given in Table II, which shows that the OMS is almost always superior to the MS for the cases involved, except when qch = q = 3 for regular (dv = 3, dc = 6) LDPC codes and regular (dv = 4, dc = 64) LDPC codes.
+In Table III, we indicate the optimal channel gain factor α∗, the optimal offset values ϕ∗ = (ϕ∗s, ϕ∗a, ϕ∗0), and the DE thresholds δdb obtained with (15) for optimized SP-MS decoders. We also show the DE gain/loss compared to the
+best DE thresholds of MS/OMS decoders indicated in bold in Table II, for the same precision of the LLRs (qch). We report in Table IV the DE losses of the (4, 3)-bit SP-MS decoder with respect to the (5, 5)-bit OMS decoder. Several conclusions can be derived from this analysis.
+1) First, the DE thresholds of SP-MS decoders are almost
+always better than the DE thresholds of classical
+decoders when the same precision for the messages and the LLRs is used (qch = q). An exception appears for the regular (dv = 6, dc = 32) LDPC code, we observe a degradation of around 0.01 dB. 2) Second, the DE thresholds of (qch, q = qch − 1)-bit SP-MS decoders are almost equal or equal to the DE thresholds of (qch, q = qch)-bit SP-MS decoders for dv ∈ {4, 5, 6}. In the case of dv = 3, the DE threshold of the (3, 2)-bit SP-MS decoder is significantly worse than the DE threshold of the (3, 3)-bit SP-MS decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6444
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+TABLE II DE THRESHOLDS OF CLASSICAL MS (ϕv = 0) AND OMS (ϕv = 1) DECODERS
+
+TABLE III DE THRESHOLDS OF SP-MS DECODERS FOR THE (dv , dc)-REGULAR LDPC CODES
+
+TABLE IV DE LOSSES OBTAINED BY COMPARING THE (4, 3)-BIT SP-MS AND THE (5, 5)-BIT OMS
+
+We can observe that the performance of the (4, 3)-bit
+SP-MS decoder can come close to the performance of the (5, 5)-bit OMS decoder, within 0.05 dB for dv ∈ {4, 5, 6}. We also observe that the (3, 2)-bit SP-MS decoders show a better performance than the (3, 3)-bit MS and (3, 3)-bit OMS decoders; the only exception appears for dv = 3. From these observations, we can conclude that the
+SP-MS decoders can be implemented using lower
+precision for the messages than for the LLRs, with q = qch − 1, with a negligible impact in the decoding performance.
+3) Third, the DE gains of SP-MS decoders are significant for low precision (qch = 3, q = 3) and very low precision (qch = 3, q = 2), while the DE gains are smaller for the largest precision (qch = 4, q = 4) and (qch = 4, q = 3). The largest gain obtained is around
+
+0.279 dB for the regular (dv = 3, dc = 6) LDPC code and precision (qch = 3, q = 3).
+We thus conclude that the SP-MS decoders are more
+effective when the decoders are implemented in low
+precision.
+4) A final remark comes from the interpretation of the optimum ϕ∗ obtained through the DE analysis. For the case of precision q ≥ 3, we have ϕ∗ = (ϕ∗s, ϕ∗a, ϕ∗0) = (1, 1, 0) for regular dv = 3 LDPC code. The value ϕ∗0 = 0 means that the offset is not applied to the message mu = ±1.5, hence mu = ±1.5 is mapped to m = ±1. For SP-MS decoders, when using the precision q ≥ 3
+and regular dv > 3 LDPC codes, we always have ϕ∗ = (ϕ∗s, ϕa∗, ϕ0∗) = (1, 1, 1) which corresponds to the SP-MS decoder with offset ϕv = 1. In the case of very low precision q = 2, we obtain ϕ∗ = (ϕ∗s) = 1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+TABLE V DE THRESHOLDS OF MS AND OMS DECODERS
+FOR THE WIMAX DEGREE DISTRIBUTION
+
+6445
+
+for regular dv = 5 and dv = 6 LDPC codes, and ϕ∗ = (ϕ∗s) = 0 for dv = 3 and dv = 4. These results indicate that the optimal offset correction
+depends on both the amplitudes of the messages and the
+VN degree.
+
+Fig. 2. FER performance for (3, 6)-regular QC-LDPC code.
+
+B. Irregular LDPC Codes
+
+In the case of regular LDPC codes, we have observed that the optimum offset values (ϕ∗s, ϕ∗a, ϕ0∗) depend on the VN degree. Therefore, in order to optimize the SP-MS
+decoders for the irregular LDPC codes, we extend our optimization approach by considering an offset model Υ with
+different offset values for the different VN degrees. The precision considered in this section is qch = q ∈ {3, 4}.
+Let Υ(2) : ϕ(2) = ϕ(s2), ϕ(a2), ϕ0(2) denote the offset model for the VNs of degree dv = 2, and let Υ(3) : ϕ(3) =
+ϕ(s3), ϕ(a3), ϕ(03) denote the offset model for the VNs of
+degree dv = 3. Finally, we decide to use the same model for all other VNs with degrees dv ≥ 4, denoted Υ(≥4) : ϕ(≥4) =
+ϕ(s≥4), ϕa(≥4), ϕ0(≥4) . The optimization of the offset values for an irregular LDPC code with distribution (λ(x), ρ(x)) is performed by the maximization of the DE thresholds:
+
+ϕ(2)∗, ϕ(3)∗, ϕ(≥4)∗, α∗ = arg
+
+min
+
+{δdb} . (16)
+
+(ϕ(2) ,ϕ(3) ,ϕ(≥4) ,α)
+
+For our analysis, we consider the ensemble of irregular
+
+LDPC codes that follows the distribution of the R = 1/2
+
+LDPC code described in the WIMAX standard [6]. The degree
+
+distribution of the
+
+and
+
+ρ(x)
+
+=
+
+48 76
+
+x5
+
+WIMAX
+
++
+
+28 76
+
+x6
+
+.
+
+code For
+
+is
+
+λ(x)
+
+=
+
+22 76
+
+x+
+
+this distribution,
+
+24 76
+
+x2
+
++
+
+30 76
+
+x5
+
+we indicate
+
+in Table V the DE thresholds of the MS and OMS decoders.
+
+The DE thresholds of SP-MS decoders are summarized
+
+in Table VI, where we indicate the optimum channel gain factor α∗ and the optimum offset values ϕ(2)∗, ϕ(3)∗, ϕ(≥4)∗ .
+
+These results confirm the conclusions of the regular LDPC
+
+codes analysis: (i) the DE thresholds of SP-MS decoders are
+
+better than the DE thresholds of MS and OMS decoders, (ii) the optimum value of ϕ∗0 is 0 for dv = 3 VNs and for precision q ∈ {3, 4}, and (iii) the optimum value of ϕ(≥4)∗ is ϕ(≥4)∗ = (1, 1, 1) for precision q ∈ {3, 4}.
+
+Another conclusion can be derived from this table.
+
+The DE analysis shows that the offset should not be
+
+applied on degree dv = 2 VNs, since we always obtain
+
+Fig. 3. FER performance for (4, 64)-regular QC-LDPC code.
+(ϕ(s2), ϕa(2), ϕ0(2)) = (0, 0, 0). This observation, combined with the fact that the optimum values of ϕ(≥4)∗ are always 1, leads to the conclusion that the offset in SP-MS decoders must be chosen carefully for irregular LDPC codes.
+Finally, the gains of SP-MS decoders for irregular codes are larger than for the regular codes with a gain of 0.4307 dB for lower precision q = 3 and a gain of 0.4359 dB for the largest precision q = 4.
+V. FINITE LENGTH PERFORMANCE OF SIGN-PRESERVING MIN-SUM DECODERS
+In this section, we present the frame error rate (FER) performance of classical MS, classical OMS, and SP-MS decoders over the BI-AWGN channel.
+A. Performance of Regular LDPC Codes To corroborate the asymptotic results obtained by DE,
+we present the Monte Carlo simulations for (i) the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6446
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+TABLE VI DE THRESHOLDS OF SP-MS DECODERS FOR THE WIMAX DEGREE DISTRIBUTION
+
+TABLE VII DE GAINS AND SNR GAINS OF SP-MS DECODERS FOR THE (dv , dc)-REGULAR LDPC CODES
+
+Fig. 4. FER performance for (5, 20)-regular QC-LDPC code.
+
+Fig. 5. FER performance for the ETHERNET code.
+
+(dv = 4, dc = 64)-regular QC-LDPC code with N = 8960, rate R = 0.94 and circulant size L = 140 for Flash Memory [8], and (ii) the (dv = 6, dc = 32)-regular LDPC codes with R = 0.8413 for the IEEE 802.3 ETHERNET code [5].
+
+In addition, the PEG algorithm from [39] is used to design the
+following regular QC-LDPC codes: (iii) a (dv = 3, dc = 6)regular QC-LDPC code with length N = 1296, rate R = 1/2 and circulant size L = 54, and (iv) a (dv = 5, dc = 20)-regular
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+
+6447
+
+Fig. 6. FER convergence comparison on the ETHERNET code at Eb/N0 = 4.75 dB.
+
+Fig. 7. Average number of iterations of the ETHERNET code with different decoders.
+
+QC-LDPC code with length N = 10240, rate R = 3/4, and circulant size L = 512. For all codes, the Belief Propagation decoder performance is shown as a benchmark2. A maximum of 100 iterations have been set for dv = 3 LDPC codes, while for the case of dv ∈ {4, 5, 6} LDPC codes, a maximum number of 30 iterations has been used. For each simulated
+SNR, the FER is estimated with at least 100 frame errors. Fig. 2 shows the FER performance comparison between
+the classical MS, classical OMS, and SP-MS decoders, for three precisions of messages q ∈ {2, 3, 4}, and for the regular (dv = 3, dc = 6) QC-LDPC code. Fig. 3 draws the same curves for the regular (dv = 4, dc = 64) QC-LDPC code.
+The results show that for low precision messages q = 3 and for regular dv = 3 LDPC codes, the MS decoder is better than the OMS decoder. This result is not surprising since the DE thresholds in Table II are better for MS than for OMS with q = 3 bits of precision. The same observation holds for the regular (dv = 4, dc = 64) QC-LDPC code and precision q = 3.
+The gains/losses of the SP-MS decoders compared with the MS/OMS measured at FER = 10−2 are reported in Table VII, which shows that the Monte Carlo simulations are congruent
+with the values predicted by the DE thresholds. The FER performance curves plotted in Fig. 2 and Fig. 3
+show that the (4, 3)-bit SP-MS decoders and the (3, 2)-bit SP-MS decoders exhibit poor performance due to an early error floor. A method to mitigate the early appearance of the
+error floor is proposed in section VI. Simulation results for the case of the dv = 5 QC-LDPC
+code are shown in Fig. 4, and in Fig. 5 for the IEEE 802.3 ETHERNET code. As for the dv = 3 and dv = 4 LDPC codes, the gains predicted by the DE correspond to the SNR gains at FER = 10−2. The gains/losses are reported
+in Table VII.
+2The simulation results for the BP decoder were obtained with the open-source simulator AFF3CT: A Fast Forward Error Correction Toolbox, 2020. [Online]. Available: https://aff3ct.github.io/index.html
+
+From Fig. 5, we can see that the (4, 3)-bit OMS decoder has the same performance as the (4, 4)-bit OMS decoder. We also observe that the (3, 2)-bit OMS decoder exhibits a very high error floor. In addition, the (3, 2)-bit SP-MS decoder mitigates the early appearance of the error floor and it greatly outperforms the (3, 2)-bit OMS decoder and the (3, 3)-bit OMS decoder, thus the SP-MS decoder is an excellent candidate for a hardware implementation.
+B. Convergence Performance Analysis
+FER convergence results are presented in Fig. 6 for the IEEE 802.3 ETHERNET code. This figure shows that the FER curves for the SP-MS decoders decrease faster than for the MS and the OMS decoders. This figure also shows that the BP decoder converges faster than all quantized decoders during the first 6 iterations; after 7 iterations, the FER curve of the BP decoder decreases slowly. It is to be noted that from iteration 7 to iteration 20, the (qch = 4, q)-bit SP-MS decoders show better performance than the BP decoder.
+We note that the FER convergence performance of the (qch, q = qch−1)-bit SP-MS and the (qch, q = qch)-bit SP-MS are almost equal or equal. In addition, after 10 iterations of decoding, only marginal FER improvement is obtained for the (qch = 4, q)-bit SP-MS. The maximum number of decoding iterations can thus be set to 10 without significant performance degradation. Similarly, the maximum number of iterations for the (qch = 3, q)-bit SP-MS can be set to 15.
+Finally, compared to the MS/OMS decoders, the SP-MS decoder uses fewer iterations to reach the same FER. For example, at Eb/N0 = 4.75 dB, the (4, 3)-bit SP-MS and the (4, 4)-bit SP-MS reach FER = 10−6 with 6 iterations, while the (4, 4)-bit OMS uses 9 iterations.
+The average number of decoding iterations for the ETHERNET code is shown in Fig. 7. For low precision qch = 3, we note that the SP-MS decoder not only has a better performance than the MS/OMS decoder, it also has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6448
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+VI. MITIGATION OF THE EARLY APPEARANCE OF THE ERROR FLOOR
+In this section, we propose a method to mitigate the early appearance of the error floor of the SP-MS decoder when the precision of the messages is lower than the precision of the LLRs, i.e. when q = qch − 1.
+
+Fig. 8. FER performance for the WIMAX LDPC code with R = 1/2.
+the lowest average number of decoding iterations, which leads to lower latency and a higher average throughput. At Eb/N0 = 4.5 dB, the average number of decoding iterations is 5.5 for the OMS whereas it is only 3 for the SP-MS. This reduction of the average number of decoding iterations translates into a 83.3%3 improvement of the average decoding throughput.
+When comparing the FER performance, the FER convergence, and the average number of iterations, the (qch, q = qch − 1)-bit SP-MS decoder offers the best trade-off between performance and complexity. For applications that require low hardware complexity, the (3, 2)-bit SP-MS decoder is the best option. For applications where hardware complexity is not an issue and decoding performance is privileged, the (4, 3)-bit SP-MS decoder is the best choice.
+We also performed MC simulations for the following LDPC codes: (dv = 4, dc = 8, N = 1296), (dv = 5, dc = 10, N = 1280), (dv = 3, dc = 12, N = 1296), (dv = 4, dc = 16, N = 1296), and (dv = 5, dc = 20, N = 1280), and we obtained similar conclusions.
+C. Performance of Irregular LDPC Codes
+Fig. 8 shows the simulation results for the WIMAX rate 1/2 LDPC code, for a maximum of 100 iterations. We observe that the SNR gains in the waterfall region are congruent with the gains predicted by the DE analysis, with a 0.40 dB gain for q = 3 and a 0.40 dB gain for q = 4, at FER = 10−2.
+Additionally, the (3, 3)-bit SP-MS decoder has the same FER performance as the (4, 4)-bit MS decoder. In the waterfall region, the (4, 4)-bit SP-MS has the same FER performance as the (5, 5)-bit OMS.
+3For a fully parallel architecture, the average decoding throughput is given by Tavg = N F/Lavg (in Mbit/s), where F (in MHz) is the clock frequency and Lavg is the average number of decoding iterations. Note that F is constant for all decoders.
+
+A. Early Appearance of the Error Floor
+
+Our MC simulations of regular LDPC codes shows that
+
+the (qch, q = qch − 1)-bit SP-MS decoders have almost the same performance as the (qch, q = qch)-bit SP-MS decoder for dv ≥ 5 LDPC codes. In the case of dv = 3 and dv = 4 LDPC codes, the (qch, q = qch − 1)-bit SP-MS decoder exhibits a
+very high error floor as shown in Fig. 2 and Fig. 3.
+
+The early appearance of this error floor is not due to
+
+trapping sets, but to the effect of low message precision on
+
+the VNU computation: the maximum absolute value of check-
+
+to-variable messages is too small compared to the maximum
+
+absolute value of the LLRs. This effect is due to configurations
+
+where the sum of check-to-variable messages does not exceed
+
+an erroneous high LLR value and therefore cannot correct the
+
+bit error.
+
+Let us take the example of the (3, 2)-bit SP-MS decoder,
+
+with Nch = 3, Nq = 1, and the case of a VN vn con-
+
+nected to three check-nodes c1, c2, and c3. For this example,
+
+we assume that xn = 0 is the value of the bit associated
+
+with variable-node vn, hence, the estimated bit xˆn is correct
+
+(xˆn = 0) if γn( ) > 0 or if In > 0 for γn( ) = 0. In Table VIII,
+
+we show the APP γn( ) computed with the discrete function
+
+Ψa defined in In ∈ {−3, −2,
+
+(13) for a fixed −1, −0, +0}. For
+
+value mc(3)→vn = In = −3 we obtain
+
++1 γn( )
+
+and >0
+
+(xˆn = 0) only when mc(1)→vn = mc(2)→vn = mc(3)→vn =
+
++1, i.e. one can estimate the correct value of the bit only
+
+if all messages have the maximum allowed value (+Nq). For the case of In = −2 (respectively In = −1) we can see 3 (respectively 6) configurations to correctly estimate
+
+the bit.
+
+The effect of low precision messages is even more pro-
+
+nounced on the message update at the VNU. Considering In = −3, mc(1)→vn = mc(2)→vn = +1, and ϕv = 1 (ϕs = ϕv) we obtain mv(n+→1)c3 = Ψv (−3, +1, +1) = −0 using (14),
+i.e. the VNU will propagate an incorrect message despite
+
+the correct values of the check-to-variable (or incoming in
+
+this case) messages. This kind of VNU error propagation has
+
+a negative impact on the decoding process and contributes
+
+to the observed high error floor. A similar behavior can be observed for other configurations such as mv(n+→1)c3 = Ψv(In = −2, mc(1)→vn = +1, mc(2)→vn = +0) = −0 or mv( n+→1)c3 = Ψv(In = −2, mc(1)→vn = +0, mc(2)→vn = +0) = −0.
+
+B. Mitigation of the Early Appearance of the Error Floor
+To mitigate the appearance of the early error floor, we propose a modification of the VN update that involves changing the maximum amplitude of the check-to-variable messages from Nq to Ω > Nq after a given number of iterations Lm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+TABLE VIII ALL VALUES THAT CAN TAKE γn( ) = Ψa In, m(c1)→vn , m(c2)→vn , m(c3)→vn , WITH m(c3)→vn = +1
+
+6449
+
+TABLE IX OPTIMAL VALUES TO IMPLEMENT THE (qch, q = qch − 1)-BIT SP-MS DECODERS
+TABLE X ALL VALUES THAT CAN TAKE γn( ) = Ψa In, wc(1)→vn , wc(2)→vn , wc(3)→vn , WITH wc(3)→vn = +2
+
+The amplitude Nq is used for the first Lm − 1 iterations, and then a larger amplitude Ω > Nq is used from iteration Lm until the end of decoding. Then the modified VNU rule is
+given by
+
+mv( n+→1)cm = Ψv In, mc(→) vn c∈V(vn)\{cm} = sign mv( n+→1)c,mU , S max mv( n+→1)c,mU − b, 0 , Nq
+
+. (17)
+
+where b ∈ {ϕs, ϕa, ϕ0} is the offset and the unsaturated variable-to-check message mv(n+→1)c,mU is redefined as
+
+m(vn+→1)c,mU
+
+=
+
+μv( n)→cm 2
+
++ In +
+
+wc(→) vn ,
+
+c∈V (vn )\{cm }
+
+(18)
+
+with the value of wc(→) vn depending on the iteration:
+
+w=c(→)⎩⎨⎪⎧⎪⎪⎪vnmmscc((i→ → g))nvvnn
+
+, , mc(→) vn
+
+if if , Ω , if
+
+< Lm, ≥ Lm and ≥ Lm and
+
+mc(→) vn mc(→) vn
+
+< Nq, = Nq.
+
+(19)
+
+In addition, the APP computation at a VN vn is redefined as follows
+
+γn( ) = Ψa In, wc(→) vn c∈V(vn)
+
+=
+
+In
+
++
+
+1 2
+
+ξ
+
+sign(In)
+
++
+
+wc(→) vn
+
++
+
+1 2
+
+sign
+
+c∈V (vn )
+
+wc(→) vn
+
+. (20)
+
+The variable-to-check messages mv(n+→1)cm ∈ BM are computed using (17), and the CNU generates check-to-variable messages mc(m+→1)vn ∈ BM with (8).
+The optimal values of α∗, ϕ∗ = (ϕs∗, ϕ∗a, ϕ∗0), and the new parameters Ω and Lm, computed with Monte Carlo simulations, are reported in Table IX, and those values are used to implement the (qch, q = qch − 1)-bit SP-MS decoders for the dv = 3 and dv = 4 LDPC codes.
+To illustrate how the proposed method helps the decoder, we use the example of the (3, 2)-bit SP-MS decoder and
+consider the parameters presented in Table IX. The new values of the APP γn( ) computed after iteration Lm are shown in Table X. The circled numbers correspond to the
+new configurations for which we can estimate the correct
+value of the bit with our modification. As an example for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6450
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+Fig. 9. Lowering error floors for dv = 3 and dv = 4 LDPC codes.
+
+Fig. 10. Comparison of the performance of (qch, q = qch − 1)-bit SP-MS decoders with the MS and OMS decoders after lowering the error floor.
+
+In = −3, we observe that from a single configuration (Table VIII), we now have 5 configurations (Table X) to correctly estimate the bit. Calculating the variable-to-check message mv( n+→1)c3 for In = −3, mc(1)→vn = mc(2)→vn = +1, and ϕv = 1 (ϕs∗ = ϕv), using the modified VNU, the output message now propagates the correct sign, with mv(n+→1)c3 = Ψv In = −3, wc(1)→vn = +2, wc(2)→vn = +2 = +0.
+Fig. 9 shows the simulation results of the (qch, q = qch − 1)-bit SP-MS decoders for dv ∈ {3, 4} LDPC codes. We can see that the proposed modification helps greatly to lower the error floor.
+The FER performance curves obtained using the optimal values presented in Table IX, plotted in Fig. 10, show that the (4, 3)-bit SP-MS decoder is slightly better than the (4, 4)-bit OMS decoder. In addition, the (3, 2)-bit SP-MS decoder is
+
+better than the (3, 3)-bit MS/OMS decoder for the dv = 4 LDPC code. In the case of the dv = 3 LDPC code, we observe a loss of performance of the (3, 2)-bit SP-MS compared with the (3, 3)-bit MS.
+The proposed method to mitigate the appearance of the early
+error floor can be easily adapted to the case of MS/OMS
+decoders. First, the unsaturated variable-to-check message is redefined as m(vn+→1)c,mU = In + c∈V(vn)\{cm} wc(→) vn , where wc(→) vn = Ω sign mc(→) vn if ≥ Lm and mc(→) vn =
+Nq, otherwise, wc(→) vn = mc(→) vn . Then, the variable-to-check message is computed with mv(n+→1)cm = Λ mv(n+→1)c,mU , ϕv .
+Finally, the APP computation is redefined as γn( ) = In + c∈V(vn) wc(→) vn . The check-to-variable message is computed
+using (4). For example, we obtain with MC simulation that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+
+6451
+
+TABLE XI SYNTHESIS RESULTS ON FPGA FOR THE IEEE 802.3 ETHERNET CODE
+
+TABLE XII COMPARISON OF THE SP-MS DECODER WITH OTHER DECODERS REPORTED IN THE LITERATURE
+
+Fig. 11. Performance comparison of the SP-MS decoders with other decoders reported in the literature for the IEEE 802.3 ETHERNET code.
+
+(Ω = 2, Lm = 12, α∗ = 0.68, ϕv = 1) optimizes the FER performance of the (3, 2)-bit OMS decoder for the IEEE 802.3 ETHERNET code; we have observed that the (3, 2)-bit OMS decoder has almost the same performance as the (3, 3)-bit OMS decoder, and we have not observed the appearance of the error floor at Eb/N0 = 5 dB.
+VII. HARDWARE COMPLEXITY OF SIGN-PRESERVING MIN-SUM DECODERS
+A. Reduction of Wires and Memory
+The decoding performance results indicate that the (qch, q = qch − 1)-bit SP-MS decoder is a good candidate for hardware implementation. The memory and the number of wires used in an implementation is the same for the MS, OMS, and
+
+SP-MS decoders when the same precision is used (qch = q). Considering a fully parallel architecture, when the precision q goes from 3 bits to 2 bits, the reduction of wires is 33.33%, whereas when the precision q goes from 4 bits to 3 bits, a reduction of 25% of wires is obtained. For a layered architecture, a memory reduction of up to 33.33% can be obtained when check-to-variable messages are stored. In the case of storing the check-to-variable messages in the compressed format4of [40] that requires the storage of the signs, first and second minima, and the index of the first minima, a memory reduction of up to 15.38% can be achieved for the regular (dv = 3, dc = 6) LDPC code.
+4The size of memory required to store the check-to-variable messages of a CN of degree dc is: dc + log2(dc) + 1 + 2(q − 1).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6452
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+The FER results show that the (4, 3)-bit SP-MS can achieve the performance of the (5, 5)-bit OMS, thus enabling a significant reduction of the wires (by 40%), with negligible performance degradation (0.028 dB for dv = 6, see Table VII for other values). In addition, a reduction of up to 40% in the size of the memory can be achieved by using q = 3 bits message precision instead of q = 5 bits.
+B. Synthesis Results on FPGA
+In this section, we present the synthesis result of a fully parallel architecture on the Xilinx XC7V2000T-1FLG1925 FPGA chip for the IEEE 802.3 ETHERNET code. The main available resources of the FPGA are: (i) 2,443,200 Slice Registers, (ii) 1,221,600 Slice LUTs, and (iii) 351,321 LUT-FF pairs.
+The FPGA resource utilization of the OMS and SP-MS decoders is listed in Table XI. In addition, the maximum clock frequency that each decoder can reach is listed. From the results obtained, we can see that the maximum clock frequency of (qch, q = qch − 1)-bit SP-MS is higher compared to the maximum clock frequency of the (qch, q = qch)-bit OMS, we observe an increase in the clock frequency of up to 30%. Reduced precision for the messages entails reduced complexity of the VNUs and CNUs and reduced wires in implementation, and thus a reduced critical path, which enables a higher clock frequency (i.e. the throughput is increased).
+When comparing the use of FPGA resources, we can clearly see that the (qch, q = qch − 1)-bit SP-MS decoders use less resources than the (qch, q = qch)-bit OMS decoders. A large savings of FPGA resources can be observed: around 27% of slice registers and 56% of slice LUTs for low precision (qch = 3, q = 2) compared to precision (qch = 3, q = 3), and 20% of slice registers and 48% of slice LUTs for precision (qch = 4, q = 3) compared to precision (qch = 4, q = 4). These results confirm that the complexity of update rules is reduced when the precision of messages is reduced.
+From all these results, we can conclude that the SP-MS decoder is better overall than the MS/OMS decoder. Not only does the SP-MS decoder have better performance, it also reduces the complexity of the VN and CN processing, and finally it has a better convergence speed.
+VIII. COMPARISON WITH OTHER STUDIES
+Many decoders have been proposed in the literature for the IEEE 802.3 ETHERNET code, and some of them are listed in Table XII. In Fig. 11, we compare the error correction performance of the SP-MS decoders and the decoders listed in Table XII. The BER/FER curves of the decoders listed in Table XII were taken directly from the cited papers. All SP-MS decoders exhibit better BER/FER performance than the (4, 3)-bit finite alphabet decoder [23], the (2, 2)-bit APP based MS decoder [25], and the (5, 1)-bit delayed stochastic decoder [28].
+Additionally, the (3, 2)-bit SP-MS decoder has almost the same performance as the (5, 5)-bit split-row-16 MS decoder [18] and the (4, 3)-bit normalized probabilistic MS
+
+decoder [20] with a much lower hardware complexity. Comparing the (3, 2)-bit SP-MS decoder with the (6, 1)-bit improved differential binary decoder [32] and the (6, 1)-bit MTFM-based stochastic decoder [27], we observe that all three decoders have almost the same performance. It is worth mentioning that the (3, 2)-bit SP-MS decoder uses only 20 iterations whereas the 1-bit LDPC decoders [27], [28], [32] use more than 300 iterations.
+As a last remark, we observe that the SP-MS decoders exhibit an error floor at a FER level of 10−8 due to trapping sets.
+IX. CONCLUSION
+In this paper, we have proposed a new message-passing iterative LDPC decoder which uses a sign-preserving factor that helps the decoder keeping the sign information of extrinsic messages during the VNU processing. The sign-preserving factor also helps increasing the reliability of variable-to-check messages and thus helps the finite precision iterative decoder improving the error-correcting performance. We have also proposed an offset model that depends on the magnitude of unsaturated variable-to-check messages. Density Evolution was used to optimize our SP-MS decoder performance. The analysis conducted with DE has shown that the sign preservation of messages is always beneficial for low precision SP-MS decoders. The DE threshold results for SP-MS decoders have also shown that the precision of messages can be reduced by one bit while maintaining the same error-correcting performance. The finite-length Monte Carlo simulations have corroborated the DE analysis.
+For the regular dv = 3 and dv = 4 LDPC codes, reducing the precision of the messages creates an early error floor. To mitigate the appearance of the early error floor, we have proposed a method that involves increasing the maximum amplitude of the check-to-variable messages during the VNU processing.
+In this study, we have demonstrated that the (4, 3)-bit SP-MS decoders can achieve the same error-correcting performance as the (5, 5)-bit MS/OMS decoders, and the (3, 2)-bit SP-MS decoders outperform the (3, 3)-bit MS/OMS decoders, with a SNR gain of up to 0.43 dB. We have also shown that the SP-MS decoders converge faster than the MS/OMS decoders. With the synthesis results on an FPGA, we have also demonstrated the low hardware complexity required by the SP-MS decoders.
+ACKNOWLEDGMENT
+This study has been funded by the French National Research Agency (ANR) under grant number ANR-15-CE25-0006-01 (NAND project).
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” Ph.D. dissertation, Dept. Elect. Eng., Massachusetts Inst. Technol., Cambridge, MA, USA, 1963.
+[2] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[3] D. Declercq, M. Fossorier, and E. Biglieri, Channel Coding: Theory, Algorithms, and Applications: Academic Press Library in Mobile and Wireless Communications. Oxford, U.K.: Elsevier, 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+COCHACHIN et al.: SIGN-PRESERVING MIN-SUM DECODERS
+
+6453
+
+[4] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), Standard ETSI EN 302 307-2 V1.1.1, ETSI, Oct. 2014.
+[5] IEEE Standard for Ethernet, Standard 802.3-2015 (Revision of IEEE Std 802.3-2012), Mar. 2016, pp. 1–4017.
+[6] IEEE Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems— Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands and Corrigendum 1, Standard 802.16e-2005, 2005.
+[7] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[8] IEEE Approved Draft Standard for Error Correction Coding of Flash Memory Using Low-Density Parity Check Codes, Standard IEEE P1890/D2, Jan. 2018, pp. 1–56.
+[9] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[10] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[11] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low-density parity-check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[12] S.-Y. Chung, G. D. Forney, Jr., T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[13] L. Ping and W. K. Leung, “Decoding low density parity check codes with finite quantization bits,” IEEE Commun. Lett., vol. 4, no. 2, pp. 62–64, Feb. 2000.
+[14] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[15] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[16] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density Parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 53, no. 4, pp. 549–554, Apr. 2005.
+[17] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T Ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, Apr. 2010.
+[18] T. Mohsenin, D. N. Truong, and B. M. Baas, “A low-complexity message-passing algorithm for reduced routing congestion in LDPC decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 5, pp. 1048–1061, May 2010.
+[19] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+[20] C.-C. Cheng, J.-D. Yang, H.-C. Lee, C.-H. Yang, and Y.-L. Ueng, “A fully parallel LDPC decoder architecture using probabilistic minsum algorithm for high-throughput applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 9, pp. 2738–2746, Sep. 2014.
+[21] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite alphabet iterative decoders—Part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Trans. Commun., vol. 61, no. 10, pp. 4033–4045, Oct. 2013.
+[22] T. T. Nguyen-Ly, V. Savin, K. Le, D. Declercq, F. Ghaffari, and O. Boncalo, “Analysis and design of cost-effective, high-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 3, pp. 508–521, Mar. 2018.
+[23] R. Ghanaatian et al., “A 588-Gb/s LDPC decoder based on finitealphabet message passing,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[24] F. Zarkeshvari and A. H. Banihashemi, “On implementation of min-sum algorithm for decoding low-density parity-check (LDPC) codes,” in Proc. Global Telecommun. Conf. (GLOBECOM), Nov. 2002, pp. 1349–1353.
+
+[25] Z. Cui and Z. Wang, “Improved low-complexity low-density paritycheck decoding,” IET Commun., vol. 2, no. 8, pp. 1061–1068, Sep. 2008.
+[26] V. A. Chandrasetty and S. M. Aziz, “FPGA implementation of high performance LDPC decoder using modified 2-bit min-sum algorithm,” in Proc. 2nd Int. Conf. Comput. Res. Develop., May 2010, pp. 881–885.
+[27] S. S. Tehrani, A. Naderi, G.-A. Kamendje, S. Hemati, S. Mannor, and W. J. Gross, “Majority-based tracking forecast memories for stochastic LDPC decoding,” IEEE Trans. Signal Process., vol. 58, no. 9, pp. 4883–4896, Sep. 2010.
+[28] A. Naderi, S. Mannor, M. Sawan, and W. J. Gross, “Delayed stochastic decoding of LDPC codes,” IEEE Trans. Signal Process., vol. 59, no. 11, pp. 5617–5626, Nov. 2011.
+[29] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding ldpc codes,” IEEE Trans. Communu., vol. 58, no. 6, pp. 1610–1614, Jun. 2010.
+[30] G. Sundararajan, C. Winstead, and E. Boutillon, “Noisy gradient descent bit-flip decoding for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 10, pp. 3385–3400, Oct. 2014.
+[31] C. Winstead and E. Boutillon, “Decoding LDPC codes with locally maximum-likelihood binary messages,” IEEE Commun. Lett., vol. 18, no. 12, pp. 2085–2088, Dec. 2014.
+[32] K. Cushon, S. Hemati, C. Leroux, S. Mannor, and W. J. Gross, “High-throughput energy-efficient LDPC decoders using differential binary message passing,” IEEE Trans. Signal Process., vol. 62, no. 3, pp. 619–631, Feb. 2014.
+[33] F. Cochachin, E. Boutillon, and D. Declercq, “Optimization of signpreserving noise-aided min-sum decoders with density evolution,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–5.
+[34] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[35] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[36] C. K. Ngassa, V. Savin, E. Dupraz, and D. Declercq, “Density evolution and functional threshold for the noisy min-sum decoder,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1497–1509, May 2015.
+[37] F. Cochachin, D. Declercq, E. Boutillon, and L. Kessal, “Density evolution thresholds for noise-against-noise min-sum decoders,” in Proc. IEEE 28th Annu. Int. Symp. Pers., Indoor, Mobile Radio Commun. (PIMRC), Oct. 2017, pp. 1–7.
+[38] F. Cochachin, “Noise-against-noise decoders: Low precision iterative decoders,” Dept. Sci. Sci. de l’Ingénieur, Université Bretagne Sud, Lorient, France, 2019.
+[39] A. Venkiah, D. Declercq, and C. Poulliat, “Design of cages with a randomized progressive edge-growth algorithm,” IEEE Commun. Lett., vol. 12, no. 4, pp. 301–303, Apr. 2008.
+[40] Z. Wang and Z. Cui, “A memory efficient partially parallel decoder architecture for quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 15, no. 4, pp. 483–488, Apr. 2007.
+Franklin Cochachin received the bachelor’s degree in telecommunications engineering from the National University of Engineering [Universidad Nacional de Ingeniería (UNI)], Lima, Peru, in 2014, and the Ph.D. degree in telecommunications from Université Bretagne Sud, Lorient, France, in 2019. From 2016 to 2019, he was a Ph.D. Student at ETIS ENSEA/UCP/CNRS UMR-8051, Cergy-Pontoise, France, and Lab-STICC UMR-6285/UBS BP-92116, Lorient, France. His research interests include error-correction coding theory, the design and implementation of iterative error-correcting decoders on FPGA/ASIC platforms, and digital communications.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+6454
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 10, OCTOBER 2021
+
+Emmanuel Boutillon (Senior Member, IEEE) was born in Chatou, France, in 1966. He received the Ph.D. degree from Télécom ParisTech, Paris, France, in 1995. In 1991, he was an Assistant Professor with the Ecole Multinationale Supérieure des Télécommunications, Dakar, Senegal. In 1992, he joined Télécom ParisTech as a Research Engineer, where he conducted research in the field of VLSI for digital communications. In 1998, he spent a sabbatical year with the University of Toronto, Toronto, ON, Canada. In 2000, he joined Université Bretagne Sud as a Professor. He ran LESTER Lab from 2005 to 2007 and the CACS Department from 2008 to 2015. He is currently a Scientific Advisor with Lab-STICC. In 2011, he spent his sabbatical year at INICTEL-UNI, Lima, Peru. His research interests include the interactions between algorithms and architecture in the field of wireless communications and high-speed signal processing. In particular, he works on turbo codes and low-density parity-check decoders.
+
+David Declercq (Senior Member, IEEE) was born in June 1971. He received the Ph.D. degree in statistical signal processing from the University of Cergy-Pontoise, France, in 1998. He held a Junior Position at the Institut Universitaire de France from 2009 to 2014. He worked several years on the particular family of LDPC codes, from both the code and decoder design aspects. Since 2003, he has been developing strong expertise in non-binary LDPC codes and decoders in high-order Galois fields GF (q). A large part of his research project is related to non-binary LDPC codes. He investigates mainly two aspects: 1) the design of GF (q) LDPC codes for short and moderate lengths and 2) the simplification of the iterative decoders for GF (q) LDPC codes with complexity/performance tradeoff constraints. He has published over 55 articles in major journals, such as IEEE TRANSACTIONS ON COMMUNICATIONS, IEEE TRANSACTIONS ON INFORMATION THEORY, Communications Letters, and IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS, and presented over 150 papers in major conferences in information theory and signal processing. His research interests lie in digital communications and error-correction coding theory.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:38:26 UTC from IEEE Xplore. Restrictions apply.
+
+

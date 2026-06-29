@@ -1,0 +1,562 @@
+A Reconfigurable Decoder for Standard-Compatible LDPC Codes and Polar Codes
+Ting Lin, Shan Cao, Shunqing Zhang, Shugong Xu and Chuan Zhang†
+Shanghai Institute for Advanced Communication and Data Science Key Laboratory of Specialty Fiber Optics and Optical Access Networks Joint International Research Laboratory of Specialty Fiber Optics and Advanced Communication
+Shanghai University, Shanghai 200444, China †National Mobile Communications Research Laboratory, Southeast University, China
+E-mail: {zjzslt, cshan, shunqing, shugong}@shu.edu.cn, †chzhang@seu.edu.cn
+
+Abstract—With the raised requirements by 5G wireless communications, a reconfigurable decoder supporting both LDPC codes (for data plane) and polar codes (for control plane) is required. Due to the inherent structure differences between LDPC codes and polar codes, an straightforward combination of existing decoders is generally difficult. In this paper, we propose a joint decoding algorithm by analyzing the standard-compatible coding structure and re-investigating the merged BP algorithm. Based on that, we implement the joint decoding scheme using a pipelined hardware architecture and show that the proposed approach achieves higher hardware efficiency than traditional schemes. Decoding performance loss is negligible if compared with existing stand-alone LDPC or polar decoder.
+Index Terms—LDPC code, polar code, reconfigurable architecture, standard-compatible
+I. INTRODUCTION
+Aiming to support dense, diversified, and mission-critical wireless traffics, the fifth generation (5G) wireless systems [1] have been identified as one of the key enablers for the information society beyond 2020. Based on the current progress, a hybrid solution to apply low-density parity-check (LDPC) code [2] for data plane and polar code [3] for control plane was agreed in the 3GPP radio access network meeting [4]. Although LDPC and polar codes have been proven to offer high throughput data transmission and reliable control signaling simultaneously, the decoding complexity is usually high, especially at the 5G terminal side. From the hardware resource point of view, a brute-force approach to build LDPC and polar decoders in a separate manner definitely results in hardware redundancy. Therefore, a reconfigurable architecture to support both simultaneously with refined decoding algorithm is expected [5].
+Thanks to the high compatibility of belief propagation (BP) algorithm, a merged BP based decoding scheme was proposed in [6] with shared factor graphs. Nevertheless, the conventional reconfigurable architecture can only support limited code length and the concatenation approach to generate large codeword length is proven to be inefficient for LDPC codes and the straightforward extension to standard-compatible decoder is generally difficult. In this paper, we analyze the coding structure as specified in 3GPP document [7] and re-investigate
+
+the BP decoding algorithm accordingly to figure out the common feature. By proposing a joint detection algorithm and pipelined hardware architecture, we are able to show with practical Field-Programmable-Gate-Array (FPGA) implementation that the proposed detection algorithm can support a standard compatible decoding requirements with 26.65 Mbps throughput, less than 36 µs delay and 82.1% hardware reuse efficiency for LDPC decoding, and 21.80 Mbps throughput, less than 24 µs delay and 76.0% hardware reuse efficiency for polar decoding. Meanwhile, our proposed scheme achieves higher hardware efficiency and comparable throughput. This decoder can be used for both LDPC and polar decoding, which serves a suitable architecture for battery limited 5G terminals.
+The rest of this paper is organized as follows. The joint polar-LDPC decoding is proposed in Section II. The full pipelined decoder is discussed in Section III. In Section IV, we provide the implementation results and comparison with the separated one. Finally, we conclude this paper in Section V.
+
+II. JOINT DECODING ALGORITHM
+
+As we known, both polar and LDPC decoding share the similar BP algorithms based on message passing. However, the detailed message updating operations and message passing paths are in general non-identical. To fully explore the possibility of joint decoding for polar and LDPC codes, we start with the analysis on the basic computing operations as well as decoding flow for two decoding schemes, and then re-organize them with a more efficient algorithm. In the polar decoding scheme, the basic operation, g(a, b), can be approximated through g(a, b) ≈ sign(a)sign(b) min(|a|, |b|) according to the min-sum approximation [8]. If we denote the signed addition to be A and the min-sum approximation to be M, the iteration process of basic computational block (BCB) can be simplified using the following equations,
+
+  Atmp = A
+
+M , M (t)
+c2j →vi+1
+
+(t−1) vi →cj +N/2
+
+ Mtmp = M
+
+M , M (t)
+vi ,cj
+
+(t−1) c2j −1 →vi+1
+
+978-1-7281-2940-2/19/$31.00 ©2019 IEEE
+
+73
+
+APCCAS2019
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:42:11 UTC from IEEE Xplore. Restrictions apply.
+
+
+ 
+
+Mc(jt)→vi
+
+=M
+
+M (t)
+c2j−1
+
+→vi+1
+
+,
+
+Atmp
+
+
+
+   
+
+M (t)
+cj +N/2 →vi
+
+=
+
+A
+
+Mtmp, Mc(2tj)→vi+1
+
+ 
+
+M (t)
+vi+1 →c2j −1
+
+=
+
+M
+
+Mv(it→ ) cj , Atmp
+
+
+
+   
+
+M (t)
+vi+1 →c2j
+
+=A
+
+Mtmp, Mv(it,)cj+N/2
+
+where we introduce the dummy variables Atmp and Mtmp for illustration purpose.
+In the LDPC decoding scheme, based on the simplification method as shown in [9], the check node update equation is given by,
+
+Mc(jt)→vi =
+
+sign
+
+Mv(t′ → −1c)j
+
+min
+v′
+
+|Mv(t′→ −1c)j |
+
+,
+
+(1)
+
+v′
+
+where the production and minimization of v′ is performed over the set Vcj \cj.
+To exploit joint decoding of polar and LDPC codes, we
+
+scale the decoding of LDPC into fine-grained iterations by
+
+re-ordering message passing using layered decoding. Assume only one check node cj is updated in each iteration, the corresponding variable node messages Mv(it→ ) cj (vi ∈ Vcj ) are updated by,
+
+Mv(it→ ) cj = L(vti−1) − Mc(jt−→1v)i .
+
+(2)
+
+The check node cj is then updated by (1), and the corresponding log-likelihood ratio (LLR) messages of variable nodes vi (vi ∈ Vcj ) are updated through,
+
+L(vti) = Mv(it→ ) cj + Mc(jt)→vi .
+
+(3)
+
+Denote Nj to be the number of variable nodes connected to the check node cj, the value of Nj varies from 3 to 19
+according to the specification of 5G eMBB scenario [7]. The
+message passing procedure can be reordered and mapped to
+the M and A operations as shown in (4)-(6). Based on some trivial manipulations, Nj2/2 times M operations and 2Nj times A operations per iteration are necessary.
+
+MV(tc)j →cj Mc(jt)→Vcj
+LV(tc)j
+
+= {A(L(vt1−1), −Mc(jt−→1v)1 ), · · · , A(L(vtN−j1),
+
+−Mc(jt−→1v)Nj )},
+
+(4)
+
+= M(Mv(1t−→1c)j , Mv(2t−→1c)j , · · · , Mv(N t−j 1→) cj )
+
+= M M(v1, v2), · · · , M(vNj−1, vNj ) , (5)
+
+= {A(Mv(1t)→cj , Mc(jt)→v1 ), · · · , A(Mv(N t)j →cj ,
+
+Mc(jt)→vNj )}.
+
+(6)
+
+III. RECONFIGURABLE DECODER
+
+In this section, we propose a reconfigurable decoder for LDPC and polar codes in accordance with the above joint decoding algorithm. The architecture of the proposed reconfigurable architecture is shown in Fig. 1, composed of a basic reconfigurable decoding unit (RDU) cluster, a reconfigure control unit and a memory controller.
+The hardware resources of each RDU are organized in an A − M − A manner. The RDU is divided into 5 pipeline
+
+Control Bus
+RDU
+RDU
+
+RDU RDU
+
+RDU Cluster RDU
+Data Bus
+RDU
+
+MEM MEMORY CTRL
+
+Reconfigurable Control Unit
+Fig. 1. The block diagram of the proposed reconfigurable decoder. In order to support joint LDPC and polar decoding, the RDU cluster structure is proposed with 6 RDUs working in a single-instruction-multiple-data (SIMD) manner.
+
+TABLE I DECODING FLOW REORDERING FOR A 4992-BIT LDPC CODE
+
+Order
+1 2 3 4 5 6 7 8
+
+Decoding pattern
+4+4 5+4 5+3 3+3
+6 5 8 10
+
+No. of submatrices
+7 6 2 2 3 1 2 2
+
+No. of check nodes
+672 576 192 192 288 96 192 192
+
+stages which can be full-pipelined. In the first and last stages, the A operations are performed, including equations (2) (3) for LDPC and BCB operation for polar codes, while in the remaining stages, the M operations, such as (1) for LDPC and BCB operation for polar codes, are thus performed. Note that for each 5-stage RDU, at most 2 check node updates or 6 polar BCBs can be processed simultaneously.
+A. Case Study for LDPC Codes
+When the RDU works in the LDPC mode, it can be configured into several decoding patterns depending on the length of codeword and the standardized parity-check matrix (H matrix). Several check nodes updates is able to be processed simultaneously, each of which is divided into 5 pipeline stages. The RDU can be fully pipelined that 5 decoding pattern can be processed simultaneously.
+Take a 4992-bit codeword C for example. The H matrix is the case that set index iLS = 2 in base graph 2 according to [7], which determines the connectivity of check nodes and variable nodes. Each element in the H matrix represents a 96× 96 submatrix, and there are 42 × 52 submatrices. According to the principle of layered decoding, check nodes with no shared variable nodes can be updated simultaneously. Therefore, we reorder the check nodes and regroup them so that several check nodes can be processed in parallel. The decoding is in the order as shown in Table I. Fig.2(a) gives an illustration when a 5+4 decoding pattern is performed. The colored units and registers indicates the data path in this case, while the grey ones are in idle state. The left data path updates check nodes connected with 5 variable nodes, while the right one is for check nodes with 4 variable nodes.
+
+74
+
+APCCAS2019
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:42:11 UTC from IEEE Xplore. Restrictions apply.
+
+Ă8 8 8 8 8 8 8 8 8 8 8 8 Ă
+
+inputs
+
+A
+
+A
+
+A
+
+AA
+
+A
+
+MMM
+
+MMM
+
+MMM
+
+88
+
+88 88 88
+
+A
+
+AAA
+
+sign bits
+
+MMM
+
+MMM
+
+Ă Ă
+
+MMM
+
+88 88
+
+8
+
+88
+
+Ă
+
+Ă
+
+inputs A A A
+
+A
+
+88 88 8 8
+
+88 88 88
+
+A
+
+A
+
+A
+
+AAA sign bits
+
+MMM BCB1
+
+MMM
+
+Ă
+
+MMM
+
+M MĂ M
+
+BCB2
+
+BCB3
+
+BCB5 MMM
+
+BCB4
+
+BCB6 MMM
+
+A
+
+A
+
+A
+
+AA
+
+A
+
+A
+
+A
+
+AA
+
+A
+
+A
+
+A
+
+AA
+
+A
+
+A
+
+A
+
+AA
+
+(a) Co澻n濴fi澼澳g濖澻濴u瀂澼r瀁澳濖a濹濼t瀂濺io瀁瀈濹n瀅濼濴濺瀇f瀈濼瀂o瀅瀁r濴澳瀇濹(濼瀂4瀅瀁9澳澻澳濇濹9瀂濌2瀅濌澳,濅澻濇9澿濌濌6濉濌0濃濅)澼澿澳濌濟L濉濗濃D濣澼濖澳P濟澳C濗濶瀂濣濷c濖濸o澳澳濶d濼瀁瀂e澳濷濈i濸澾n澳濇濼瀁澳5瀃澳濈+濴澾瀇4瀇濇濸p澳瀅瀃瀁a濴tt瀇e瀇濸r瀅n瀁
+
+澻濵澼(澳b濖)瀂瀁C澻濹濵濼o濺澼澳瀈n濖瀅fi濴瀂g瀇瀁濼u瀂濹濼r瀁濺a澳瀈濹t瀂i瀅o濴瀅澳瀇n澻濼濄瀂濃f瀁o濅澳濇濹r瀂澿濈(瀅濄澳1澻濅濄0澼濃澳2瀃濅4瀂濇,濿澿濴濈5瀅濄澳1濶濅2瀂澼澳)濷瀃濸瀂p濿o濴瀅la澳濶r瀂c濷o濸de
+
+Fig. 2. The illustration of data path reconfigurability of the proposed RDU. (a) The data path of RDU in LDPC mode when the decoding pattern is 5+4; (b) the data path of RDU in polar mode.
+
+B. Case Study for Polar Codes
+In polar decoding mode, the RDU is reconfigured to 6 polar BCB blocks. Each BCB integrates 3 M units and 3 A units, and is divided to 2 pipeline stages. The data path of RDU in polar mode is highlighted as shown in Fig.2(b), and the grey ALUs and registers are in idle state at the illustrated cycle. BCB 1∼3 works in the A − M manner, while the otherill 3 BCBs works in the M−A manner. A BCB operation has a 2clock-cycle latency, and every two BCBs blocks are grouped to update messages of neighboring bits to avoid memory access conflicts.
+In the proposed architecture, the reconfigure control unit is used to re-order the decoding flow, re-group decoding units and reconfigure the data path of each RDU. The memory controller connects the proposed architecture to the system memory, and is used to re-organize the intermediate data and reconfigure the memory for different codes and variable lengths of codeword. The memory organization is designed correspondingly to enable the modified decoding and data flow. There are two memory blocks, one for the LLR messages of LDPC codes, the other one for both the C2V messages of LDPC codes and L and R messages of polar codes.
+IV. SIMULATION AND IMPLEMENTATION
+In this section, we simulate and implement the proposed reconfigurable decoding scheme according to the 3GPP R15 standard [7]. (4992, 960) LDPC and (1024, 512) polar codes are considered and the proposed architectures are implemented and evaluated under Altera Stratix IV series.
+A. Effect of Data Width and Data Precision
+As a baseline performance, we assume the 16-bit floatingpoint parameters are applied and the overall BER versus SNR curve is evaluated as the performance metric. The decoding performance and the overall hardware resources for different data widths and data precisions are depicted in Fig. 3. Based on the simulated results, we show that 6-bit data width provides sufficient resolution for both polar and LDPC codes in terms of BER versus SNR performance, and requires relatively small amount of hardware resources in the meantime.
+
+TABLE II FPGA IMPLEMENTATION RESULTS WITH 6-BIT FIXED-POINT LLR
+
+Items
+
+LDPC Polar Reconfigurable Reuse Eff. (η)
+
+ALUTs Register Iteration Thp. (Mbps) Freq. (MHz)
+
+4314 1817
+5 26.65
+
+3197
+
+4427
+
+1258
+
+1907
+
+10
+
+5/10
+
+21.80 26.65/21.80
+
+333.33
+
+82.1% 76.0%
+-
+
+B. Advantages of Proposed Architecture
+To demonstrate the efficiency of reconfigurable architectures, we define the reuse efficiency η as
+
+η = 2 × (1 − Rr/(RL + Rp)) ,
+
+(7)
+
+where Rr, RL and Rp denote the hardware resources used for reconfigurable decoder, LDPC-only decoder, and polar-only decoder. In Table II, we summarize the FPGA implementation results with 6-bit fixed-point LLR. Following the definition of reuse efficiency, we show that for hardware resources such as registers and adaptive look-up tables (ALUTs), the reuse efficiency from 76.0% to 82.1% can be achieved.
+The FPGA implementation results of the proposed reconfigurable decoder is compared with the baseline decoders for LDPC codes [10] [11] and polar codes [12] [13], as shown in Fig.4(a) and Fig.4(b) respectively. We use σ = {hardware/throughput} to represent the hardware resource saving due to the reconfigurablity. For LDPC codes, the values of σ are given by the columnar of Fig.4(a) for both baseline decoders and the proposed decoder. Since the baseline decoders are based on different H matrices, the size of which significantly influences the decoding throughput, we re-calculate the values of σ to fit the three H matrices as labeled by the polyline. For the H matrix compatible with 5G standard, the proposed reconfigurable decoder has a 73.06% reduction of σ compared with [10], and 15.53% compared with [11]. For (1024, 512) polar codes, as we can see from Fig. 4(b), the proposed reconfigurable decoder decrease the
+
+75
+
+APCCAS2019
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:42:11 UTC from IEEE Xplore. Restrictions apply.
+
+BER BER Hardware Resourse
+
+100
+
+10-1
+
+10-2
+
+floating-point, 16 bits
+
+fixed-point, 1S+11I+4S
+
+fixed-point, 1S+4I+3S
+
+fixed-point, 1S+4I+1S
+
+10-3
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+E /N (dB)
+b0
+
+(a)
+
+100
+
+10-1
+
+10-2
+
+floating-point, 16 bits
+
+10-3
+
+fixed-point, 1S+11I+4S
+
+fixed-point, 1S+4I+3S
+
+fixed-point, 1S+4I+1S
+
+10-4
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0(dB)
+
+(b)
+
+6000 5000 4000
+
+ALUTs, RDU Cluster ALUTs, Control Unit ALUTs, Memory Controller Register, RDU Cluster Register, Control Unit Register, Memory Controller
+
+3000
+
+2000
+
+1000
+
+0
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+Data Width(bits)
+
+(c)
+
+Fig. 3. Comparison of the decoding performance and the overall hardware resources for different data widths and data precisions. (a) BER versus Eb/N0 LDPC decoding performance under different quantization precision. (b) BER versus Eb/N0 polar decoding performance under different quantization precision. (c) Hardware for different data widths. ALUTs and registers required for the control unit remain unchanged, while those for the RDU and memory controller
+increase proportionally to the data width.
+
+value of σ by 73.02% compared to [12], while σ is increased by 5.56% compared with the well-designed polar-only decoder [13] due to the reconfigurable control logic.
+V. CONCLUSION AND FUTURE WORK
+In this paper, we implement a reconfigurable LDPC/polar decoder with pipelined structure by exploiting same common operations in decoding algorithm for LDPC and polar decoding. The results of FPGA implementation show advantages of hardware utilization over a separate manner. The decoding architecture will be expanded to support all code structures in 3GPP R15 standard. To further improve the throughput of the decoder, a clustered architecture composed of more RDUs and implemented by ASIC is one of our future work.
+REFERENCES
+[1] J. Thompson, X. Ge, H. C. Wu, R. Irmer, H. Jiang, G. Fettweis, and S. Alamouti, “5G wireless communication systems: prospects and challenges,” IEEE Communications Magazine, vol. 52, no. 2, pp. 62–64, Feb. 2014.
+[2] G. Cancellieri, Low Density Parity Check Codes. Springer International Publishing, 2015.
+[3] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on Information Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[4] RAN-TSG, “Final report of 3GPP TSG RAN WG1 #87 v1.0.0,” 3GPP, Tech. Rep., Feb 2017.
+[5] J. Gu, S. Yin, L. Liu, and S. Wei, “Stress-aware loops mapping on CGRAs with dynamic multi-map reconfiguration,” IEEE Transactions on Parallel and Distributed Systems, pp. 1–1, 2018.
+[6] J. Liu, S. Jing, X. You, and C. Zhang, “A merged BP decoding algorithm for polar-LDPC concatenated codes,” in 2017 22nd International Conference on Digital Signal Processing (DSP), Aug 2017, pp. 1–5.
+[7] R. A. N. T. S. Group, “Multiplexing and channel coding (release 15) for radio access network,” 3GPP, Tech. Rep., 2018.
+[8] B. Yuan and K. K. Parhi, “Early stopping criteria for energy-efficient low-latency belief-propagation polar code decoders,” IEEE Transactions on Signal Processing, vol. 62, no. 24, pp. 6496–6506, Dec. 2014.
+[9] I. Tsatsaragkos and V. Paliouras, “A reconfigurable LDPC decoder optimized for 802.11n/ac applications,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 1, pp. 182–195, Jan. 2018.
+[10] V. A. Chandrasetty and S. M. Aziz, “A multi-level hierarchical quasicyclic matrix for implementation of flexible partially-parallel LDPC decoders,” in 2011 IEEE International Conference on Multimedia and Expo, Jul 2011, pp. 1–7.
+
+#Resource/Throughput
+
+180
+
+160
+
+140
+
+baseline-1 [10], (1152,576)
+
+baseline-2 [11], (2304,1152)
+
+120
+
+proposed, (1024,512)
+
+transformed baseline-1 [10]
+
+100
+
+transformed baseline-2 [11]
+
+transformed proposed
+
+80
+
+60
+
+40
+
+20
+
+0 baseline-1 [10]
+
+baseline-2 [11] Size of the H matrix
+
+(a)
+
+120
+
+5G-standard proposed
+
+100
+
+#Resource/Throughput
+
+80 73.02%
+60
+
+40 -5.56%
+20
+
+0 baseline-3 [12]
+
+baseline-4 [13]
+(b)
+
+proposed
+
+Fig. 4. The FPGA implementation efficiency (number of hardware resources divided by throughput) of the proposed decoder compared with baseline decoders. (a) For the decoding of LDPC codes, the proposed decoder is compared with baselines [10] and [11]; (b) For the decoding of polar codes, it is compared with baselines [12] and [13].
+
+[11] H. Ding, S. Yang, W. Luo, and M. Dong, “Design and implementation for high speed ldpc decoder with layered decoding,” in 2009 WRI International Conference on Communications and Mobile Computing, Jan 2009, pp. 156–160.
+[12] J. Yang, C. Zhang, H. Zhou, and X. You, “Pipelined belief propagation polar decoders,” in 2016 IEEE International Symposium on Circuits and Systems (ISCAS), May 2016, pp. 413–416.
+[13] A. Pamuk, “An FPGA implementation architecture for decoding of polar codes,” in 2011 8th International Symposium on Wireless Communication Systems, Nov 2011, pp. 437–441.
+
+76
+
+APCCAS2019
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:42:11 UTC from IEEE Xplore. Restrictions apply.
+
+

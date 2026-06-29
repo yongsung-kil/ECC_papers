@@ -1,0 +1,750 @@
+2025 IEEE Information Theory Workshop (ITW) | 979-8-3315-3142-3/25/$31.00 ©2025 IEEE | DOI: 10.1109/ITW62417.2025.11240406
+
+2025 IEEE Information Theory Workshop (ITW)
+A Decoder with Reinforcement Learning Feedback
+Milad Taghipour, Bane Vasic´, Fellow, IEEE Department of Electrical and Computer Engineering, the University of Arizona, Tucson, AZ
+Email: miladt@arizona.edu, vasic@ece.arizona.edu
+
+Abstract—This paper explores the application of reinforcement learning techniques to improve the performance of bit-flipping decoders and finding their optimal decisions. We begin by providing an overview of bit-flipping based decoders and reinforcement learning algorithms. We then outline the methodology for mapping the iterative decoding process into Markov Decision Processes (MDPs). We propose a feedback-based method to exploit and enhance the performance of existing well-established decoders by applying reinforcement learning algorithms after a selected decoder. In essence, we modify the MDP to reduce the number of states, making reinforcement learning algorithms feasible for lowrate and long-length codes. In addition, focusing on the correction of dominant error patterns of a selected decoder improves its error correction capability. Finally, we present experimental results for the Binary Symmetric Channel (BSC) to demonstrate the efficiency of the proposed methods.
+Index Terms—Reinforcement Learning, bit-flipping algorithm, Iterative Decoders, trapping sets, linear Block codes, LDPC codes, Error-floor.
+I. INTRODUCTION
+E RROR correcting codes are critical for reliable communication over noisy channels. While LDPC codes and iterative decoders can asymptotically approach channel capacity, their performance in the finite-length regime remains suboptimal. This limitation is primarily due to trapping sets [1], [2] and pseudocodewords [3], which often have lower weight than the minimum distance of the code [4], leading to error floors at high SNR. These structures hinder iterative decoders from achieving maximum likelihood performance. To mitigate this, several approaches have been proposed, including modifications to belief propagation [5]–[8] and the use of Finite Alphabet Iterative Decoders (FAIDs) [9], [10]. Recent advances in artificial intelligence have motivated interest in designing efficient decoders for finite-length codes. Developing efficient, high-performance decoders with low computational complexity remains challenging for short to medium-length codes. One approach involves parameterized belief propagation (BP) decoders [11]–[14], which retain the advantages of standard BP while improving convergence speed and error-correction performance. The authors in [15] presented the generalization gap of the Neural BP decoder. An alternative approach is to view the problem of decoding as a decision-making problem,
+The authors acknowledge the support of the National Science Foundation under grants CIF-2420424, CIF-2106189, CCF-2100013, CCSS-2052751, and CCSS-2027844. Bane Vasic´ has disclosed an outside interest in his company Codelucida to The University of Arizona. Conflicts of interest resulting from this interest are being managed by The University of Arizona in accordance with its policies.
+
+using reinforcement learning (RL) to learn optimal policies. In this context, decoding is modeled as a Markov Decision Process (MDP), where RL guides sequential bit-flipping decisions [16], [17]. Similarly, [18] formulates belief propagation scheduling as an MDP, optimizing check-node scheduling to improve performance over conventional flooding strategies. In this paper, we propose a feedback decoding strategy designed to further enhance the performance of well-established iterative decoders in the literature. This approach leverages an RL block to address error patterns that a decoder fails to correct, thereby effectively expanding its correctable region. In general, this method can be employed to improve state-of-the-art decoders and strengthen their error correction capabilities. The remainder of this paper is organized as follows. Section II provides the necessary background on channel coding. Section III introduces the MDP framework and RL-based bit-flipping strategy. In Section IV, we propose the RL feedback decoding technique to improve decoder performance. The numerical results are presented in Section V. The paper concludes with a summary of the findings in Section VI.
+II. CHANNEL CODING BACKGROUND
+Let us assume C to be a binary linear code with parameters (n, k, dmin), where n is the code length, k is the code dimension, and dmin is the minimum distance of the code. We define a binary linear code C = {c ∈ Fn2 | cHT = 0}, where H is the parity-check matrix, which is an m × n binary matrix. We also define hci as the i-th column of the parity check matrix H. The error correction capability of a code can be defined on the basis of its minimum distance as t = ⌊(dmin − 1)/2⌋. A codeword c is transmitted through the Binary Symmetric Channel (BSC) as y = (1 − 2c) + z, where y is the received row vector of length n, and z is a row vector of length n generated by i.i.d. Bernoulli random variable with parameter ρ which is the cross-over probability of the channel.
+Let y = (y1, y2, · · · , yn) denote the input provided to the decoder, and let xℓ = (xℓ1, xℓ2, · · · , xnℓ ) for ℓ ≤ D represent the output vector at the ℓ-th iteration. The decoder operates until it either finds a valid codeword or reaches the predefined maximum number of iterations D, whichever comes first. As a result, the decoder’s final output will be either a valid codeword or xD. The bit-flipping algorithm is a fast, simple yet effective algorithm in the decoding of error correcting codes such as LDPC codes. The idea is to flip bits that are the least reliable to maximize the number of satisfied checks [19].
+
+979-8-3315-3142-3/25/$31.00 ©2025 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Information Theory Workshop (ITW)
+
+The BF algorithm with majority update rule is provided in Algorithm 1, where s is a syndrome row vector of length m, q = (q1, · · · , qn) is an n-length row vector representing the number of unsatisfied checks connected to each variable, B is the set of candidates for flipping based on the majority update rule, vi is the i-th variable node, and ⊕ denotes modulo-2 addition.
+
+Algorithm 1 Bit-Flipping Decoder with Majority Update Rule
+
+Input: x = sign(y), H (parity-check matrix), maximum
+
+iteration number. Output: estimated codeword cˆ.
+
+1: ˆc = x
+
+2: s = mod (ˆcHT , 2)
+
+▷ Syndrome Computation
+
+3: while s ≠ 0 and maximum iterations is not reached do
+
+4: q = sH
+
+▷ Compute violated parity checks
+
+5:
+
+B
+
+=
+
+{i
+
+∈
+
+[n]
+
+|
+
+qi
+
+≥
+
+⌊ deg(vi) 2
+
+⌋
+
++
+
+1}
+
+▷ Update Rule
+
+6: cˆi ← cˆi ⊕ 1; ∀i ∈ B
+
+▷ Flip Bit
+
+7: s = mod (ˆcHT , 2)
+
+8: end while
+
+III. MARKOV DECISION PROCESS AND BIT-FLIPPING STRATEGY
+
+MDPs provides a mathematical framework for modeling
+
+decision-making problems where outcomes are random or de-
+
+terministic under the control of a decision maker [20]. An MDP
+
+can be defined based on (S, A, P, R, γ), where S is the set of
+
+finite states representing all situations of the environment, A is
+
+the set of finite actions that the decision maker, or agent, can take, Psas′ = P (s′ | s, a) ≜ P (St+1 = s′ | St = s, At = a) is the probability transition function P : S ×A×S → [0, 1] which represents the probability of going to state s′ from state s after
+
+taking action a, R(s, a) is the reward function R : S × A → R
+
+which represents the immediate reward received after taking
+
+action a in state s, and γ ∈ [0, 1] is the discount factor which
+
+denotes the importance of future rewards. A deterministic
+
+policy π is a mapping π : S → A, where π(s) denotes
+
+the action to take in state s. The goal in an MDP is to find
+
+an optimal policy π⋆ that maximizes the expected cumulative
+
+reward π⋆ = arg maxπ Eπ[
+
+∞ t=0
+
+γtR(st
+
+,
+
+π(st))
+
+|
+
+s0
+
+=
+
+s],
+
+where Eπ is the expectation by taking actions under policy
+
+π. In the context of the BF strategy, we define the state and
+
+action spaces, as well as the reward function, following the
+
+formulation in [16], as detailed below.
+
+A. State and Action Spaces
+Given that the code dimension is n, each of these n bits can be erroneous. In other words, the action space A should be designed to allow the flipping of each bit at any time step. Therefore, the set of actions is A = {1, 2, · · · , n}. The decoding process can be terminated based on the value of the syndrome vector, which indicates the positions of unsatisfied checks in the code. Consequently, the state space S is defined by all possible binary syndromes of length m. The initial state
+
+s0 = yHT represents the syndrome of the received vector. Next, we need to define the transition probability function P (s′ | s, a) for an MDP. By taking action a from state s, we transition to state s′ = s + hca with probability 1, indicating that it is a deterministic MDP. Terminal state corresponds to
+the all-zero syndrome, indicating that a codeword is obtained
+and that the decoding process should be terminated. We also impose a limit of L steps for decoding.
+
+B. Reward Strategy
+
+Choosing a reward strategy is crucial in RL algorithms because it significantly impacts the learning efficiency and the resulting policy. Since the goal of the decoding problem primarily relies on finding a codeword, we define a positive reward of 1 if an agent reaches the terminal state. It is also necessary to penalize the action of flipping a bit at each step in order to encourage the decoder to find a solution that requires the fewest possible bit flips. This helps identifying the set of least reliable bits to find a codeword, thereby minimizing the probability of word error rate. Thus, we define a reward function for the BSC
+
+R(s, a, s′) =
+
+−
+
+1 L
+
++
+
+1,
+
+−
+
+1 L
+
+,
+
+if s′ = 0 otherwise.
+
+(1)
+
+C. Q-learning Algorithm
+
+Q-learning is a model-free reinforcement learning algorithm that is used to solve MDPs. It has the ability to learn the optimal policy π⋆ directly from interactions with the environment without requiring the model of environment. The action-value function Q : S × A → R is defined to be the expected cumulative rewards starting from state s, taking action a, and using policy π to select actions afterwards
+
+∞
+Qπ(s, a) = Eπ[ γtR(st, π(st)) | S0 = s, A0 = a]. (2)
+t=0
+
+Q-learning algorithm aims to learn the optimal action-value
+
+function
+
+Q⋆(s,
+
+a)
+
+=
+
+max
+π
+
+Qπ (s,
+
+a)
+
+(3)
+
+that find the expected reward of taking action a in state s and following the optimal policy afterwards. The Q-learning algorithm iteratively updates the Q-values using the following rule
+
+Q(s, a) ← Q(s, a) + α[R(s, a) + γ max Q(s′, a′) − Q(s, a)]
+a′
+(4) updating the Q-values based on the immediate rewards received and the estimated value of subsequent maximum action-value estimate, where α ∈ (0, 1] is the step size for updating the Q values. The Q-learning algorithm is given in Algorithm 2 [20], where sE is the set of terminal states. It is worth noting that the complexity of Q-learning algorithm is O(|S| × |A|2), due to the need to update each state-action pair and compute the maximum Q-value over all possible actions in the subsequent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Information Theory Workshop (ITW)
+
+Algorithm 2 Q-learning Algorithm
+
+Input: Initialize Q(s, a) arbitrarily (e.g., randomly), except Q(se, a) = 0, ∀se ∈ SE. Set the number of episodes Nepisodes. Output: Optimal action-value function Q(s, a) for all s ∈ S,
+
+a ∈ A.
+
+1: for i ← 1 to Nepisodes do
+
+2: Initialize state s
+
+3: while s ∈/ SE do
+
+4:
+
+Choose action a from state s using an exploration-
+
+exploitation strategy (e.g., ϵ-greedy)
+
+5:
+
+Take action a, observe reward R(s, a) and next state
+
+s′
+
+6:
+
+Update Q-value:
+
+Q(s, a) ← (1 − α)Q(s, a) + α R(s, a) + γ max Q(s′, a′)
+a′
+
+7:
+
+s ← s′
+
+8: end while
+
+9: end for
+
+Algorithm 3 Deep Q-learning Algorithm
+
+Input: Initialize replay memory B, initialize Q-networks Qθp(s, a) and Qtθ(s, a) with random weights θ and θ−, and set epo as the number of episodes. Output: Primary Q-network Qpθ(s, a)
+1: for i = 1, 2, . . . , epo do
+2: Sample a random minibatch (s, a, r, s′) of transitions
+
+from B.
+
+r,
+
+if s′ ∈ SE
+
+3:
+
+Set y ←
+
+r
+
++
+
+γ
+
+max
+a′
+
+Qθt −
+
+(s′,
+
+a′),
+
+otherwise
+
+4: Perform a gradient descent step on (y − Qθp(s, a))2
+
+with respect to θ.
+
+5: if fixed number of steps are reached then
+
+6:
+
+Update Qt ← Qp
+
+7: end if
+
+8: end for
+
+state during each iteration, as described in Equation (4). We employ the ϵ-greedy strategy for the action selection step.
+
+D. Deep Q-learning Algorithm
+
+Deep Q-learning is an extension of Q-learning, a popular
+RL algorithm, that uses deep neural networks to approximate
+the Q-function [21]. Q-learning stores a real-valued table of size |S| × |A|, which is infeasible for low-rate or long codes. We assume Qθ(s, a) represents the estimation of the Q-function with learnable parameters θ. We store transition tuples (s, a, r, s′) obtained from simulating the MDP in a set B called replay memory. For stable training, we use two neural networks a primary Q-network Qθp(s, a) for selecting actions and a target Q-network Qθt (s, a) to provide more stable Qvalue updates. The agent balances exploration and exploitation using an ϵ-greedy policy with linear decay. Then, we update the parameter θ based on reducing the loss function
+
+L(θ)
+
+=
+
+E(s,a,r,s′ )∈B [r
+
++
+
+γ
+
+max
+a′ ∈A
+
+Qtθ− (s′,
+
+a′)
+
+−
+
+Qθp(s,
+
+a)]2
+
+(5)
+
+where gradient descent based methods are employed to update the parameters θ to minimize the loss function defined in Equation (5). Periodically, after some iterations the target network is updated to match the primary network θ− ← θ, improving the stability of training. The goal is to maximize cumulative rewards by learning an optimal policy over time. The full algorithm is shown in Algorithm 3.
+
+IV. FEEDBACK DECODER
+As explained in Section III-C, the complexity of the Qlearning update rule is O(|S| × |A|2), which is proportional to the number of states and the square of the number of actions. For the BF MDP defined in Section III-A, this becomes O(n22n−k). In this section, we aim to establish a general framework for reducing the number of states in the MDP. Due
+
+Fig. 1: Feedback based Reinforcement Learning decoder.
+
+to the large state and action spaces associated with low-rate and long-length codes, this approach becomes computationally infeasible. Thus, we propose a general feedback method to leverage the advantages of well-established codes and decoders from the literature. We incorporate an RL block to correct errors that the selected decoder fails to correct, thereby enhancing its performance and expanding its overall correctable region through an RL-based mechanism. In addition, the RL-based feedback decoder can be applied iteratively up to L times to further improve performance, as illustrated in Figure 1. We define RcΦ to be the successful decoding region of a chosen decoder Φ
+
+RΦc = {x ∈ F2n|Φ(x) = arg min d(x, c′)}.
+
+(6)
+
+c′ ∈C
+
+We also define the miscorrectable region of the decoder Φ as the set of channel vectors for which the decoder assigns a codeword to the received word that is not the closest codeword.
+
+RΦm = {x ∈ Fn2 |Φ(x) ∈ C, Φ(x) ̸= arg min d(x, c′)} (7)
+c′ ∈C
+
+Then, we can define the set of failure-inducing error patterns as the complement of the set of correctable and miscorrectable error patterns
+
+RΦf = {x ∈ Fn2 |Φ(x) ∈/ RΦc ∪ RΦm}.
+
+(8)
+
+We denote by SiΦ the set of syndromes corresponding to the i (correctable, failure, or miscorrectable) decoding region RiΦ of the decoder Φ, where SiΦ = {yHT | y ∈ RiΦ} and i ∈
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Information Theory Workshop (ITW)
+
+{c, f, m}. The state space of the new MDP is SfΦ ∪ {0}, and the action space is A = {1, 2, · · · , n}. The reward function is
+defined as follows
+
+R(s, a, s′) =
+
+−
+
+1 L
+
++
+
+1,
+
+−
+
+1 L
+
+,
+
+if s′ ∈/ SfΦ is s′ ∈ SfΦ.
+
+(9)
+
+By employing the feedback strategy, the state space of the MDP is reduced from 2n−k to | SfΦ | +1, where | SfΦ | denotes the number of syndromes that the selected decoder Φ fails to correct. The RL block interacts with the existing
+decoder to expand its correctable region. The general decoding
+procedure during inference is outlined in Algorithm 4, where π⋆(s) denotes the optimal policy. Given the convergence of
+the Q-learning algorithm, we formulate the following theorem
+to characterize the error-correction capability of the optimal
+policy.
+
+Algorithm 4 Decoder with Reinforcement Learning Feedback
+
+Input:x = sign(y), H (parity-check matrix), and maximum
+
+iteration number. Output: estimated codeword cˆ.
+
+1: xin = (1 − x)/2 2: sin = mod (xinHT , 2)
+
+3: while sin ̸= 0 and maximum iterations is not reached do
+
+4: xout = Φ(xin)
+
+▷ output of the chosen decoder
+
+5: sout = mod (xoutHT , 2)
+
+6: if sout ̸= 0 then
+
+7:
+
+a = π⋆(sin)
+
+▷ Output of RL Block
+
+8:
+
+xin ← xin ⊕ a
+
+9:
+
+sin = mod (xinHT , 2)
+
+10:
+
+cˆ = xin
+
+11: else
+
+12:
+
+cˆ = xout
+
+13:
+
+Break
+
+14: end if
+
+15: end while
+
+Theorem 1. The error correction capability of the proposed feedback decoder, utilizing the reward function defined in Equation (9), is lower bounded by
+
+⌊
+
+miny∈RΦf
+
+wH (y)
+
++
+
+miny∈RΦm
+
+wH
+
+(y)
+
+−
+
+1 ⌋
+
+(10)
+
+2
+
+where wH (·) denotes the Hamming weight of an error.
+
+Proof. The details of the proof are given in the extended version of this paper in [22].
+
+Remark 1. To correct the entire failure region, it is essential to have precise knowledge of the miscorrection region. Accordingly, the reward function is modified as follows
+
+ − 
+
+1 L
+
++
+
+1,
+
+if s′ = ScΦ
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+if s′ ∈ SfΦ
+
+(11)
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ SmΦ
+
+Then, the error-correction capability of the integrated decoder, after the convergence of training, is lower bounded by the minimum of the weight of the miscorrected error and the errorcorrection capability of the code, i.e.,
+
+min t, min wH (y) .
+
+(12)
+
+y∈RΦm
+
+To further reduce the number of states, we employ the concept of truncated MDP to decrease the state space size in the following.
+
+A. Feedback Decoder with Truncated MDP
+
+To further reduce the number of states in the MDP of the feedback decoder, we propose the concept of a truncated MDP, where the state space is restricted to states lying within a Hamming ball centered around a codeword. We define a Hamming ball B(c, w) with a radius w for a binary linear code of length n to cover all received words within a maximum hamming distance of w or less around a codeword c ∈ C defined as
+
+B(c, w) = {x ∈ Fn2 | dH (x, c) ≤ w}
+
+(13)
+
+where dH (x, c) represents the hamming distance between the codeword c and the received word x. We define a hamming ball B(w) with radius w of a code C to be the union of hamming balls centered at each codeword c ∈ C, i.e., B(w) = ∪∀c∈CB(c, w). The hamming ball B(w) includes all received words within a maximum hamming distance of w from any codeword c ∈ C. S(w) denotes the set of syndromes associated with B(w), where S(w) = {yHT | y ∈ B(w)}.
+By combining the concept of the feedback decoder with the
+truncated MDP, the number of states can be further reduced. We define BRΦc (w) as the bounded successful decoding region of a given decoder Φ with radius w, represented as
+
+BRcΦ(w) = B(w) ∩ RΦc .
+
+(14)
+
+Similarly, we define the bounded failure and miscorrection decoding regions of the decoder Φ as
+
+BRfΦ(w) = B(w) ∩ RfΦ
+
+(15)
+
+BRm Φ (w) = B(w) ∩ RΦm.
+
+(16)
+
+We denote BSΦi (w) as the set of syndromes corresponding to the i decoding region BRiΦ(w) of the decoder Φ, where i ∈
+{c, f, m} represents the correctable, failure, and miscorrectable region, respectively. BSΦi (w) is defined as
+
+B
+
+S
+
+Φ i
+
+(w)
+
+=
+
+{yH T
+
+|
+
+y
+
+∈
+
+BRiΦ(w)}.
+
+(17)
+
+The action space is defined as in pervious sections, i.e., A = {1, 2, · · · , n}. The reward function, similar to Equation (9), is
+
+defined as
+
+ − 
+
+1 L
+
++
+
+1,
+
+if
+
+s′
+
+∈
+
+B
+
+S
+
+Φ f
+
+(w)
+
+∩
+
+S(w)
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+if
+
+s′
+
+∈
+
+B
+
+S
+
+Φ f
+
+(w)
+
+(18)
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ S(w)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Information Theory Workshop (ITW)
+
+FER BER
+
+100 10-2 10-4 10-6
+
+BF QL Feedback(w=2) QL Feedback(w=3) DQ Feedback(w=2) DQ Feedback(w=3) DQ Feedback(w=4) FER Estimation BF FER Estimation(w=2) FER Estimation(w=3)
+
+10-8
+
+10-10
+
+10-12
+
+10-8
+
+10-6
+
+10-4
+
+10-2
+
+100
+
+100 10-2 10-4
+
+BF QL Feedback(w=2) QL Feedback(w=3) DQ Feedback(w=2) DQ Feedback(w=3) DQ Feedback(w=4)
+
+10-6
+
+10-8 10-4
+
+10-3
+
+10-2
+
+10-1
+
+(a)
+
+(b)
+
+Fig. 2: Simulation results for the Tanner code using the Bit-Flipping decoder and and its Q-learning and Deep-Q network feedback methods for truncated MDPs with radii w = {2, 3, 4}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+, where S(w) denotes the complement of the set S(w). The error correction capability of bounded feedback decoder, after the convergence of training with the reward function defined in Equation (18) and based on Theorem 1 is given by
+
+min miny∈BRΦf (w) w(y) + miny∈BRΦm(w) w(y) − 1 , w (19) 2
+
+where the minimum of the empty set is considered to be infinity, i.e., min ∅ = ∞. We can also define a reward function similar to Equation (11) as
+
+ − 
+
+1 L
+
++
+
+1,
+
+if s′ = BScΦ(w)
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+if s′ ∈ BSfΦ(w)
+
+(20)
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ BSΦm(w) ∪ S(w).
+
+The error correction capability of bounded feedback decoder, after the convergence of training with the reward function defined in Equation (20) and based on Remark 1, is given by
+
+min min w(y) − 1, w .
+
+(21)
+
+y ∈BRΦm (w)
+
+V. NUMERICAL RESULTS
+
+In this section, we present numerical results for the Tanner code with parameters (155, 64, 20). We select the arbitrary decoder Φ to be the bit-flipping decoder, which, in general, can be any well-established code and decoder pair from the literature. The goal is to enhance its performance through the integration of the RL block. The bounded error weight enumerator of the Tanner code under the BF decoder, around all-zero codeword, is E(w = 4) = 10092825x4 + 154225x3 + 620x2, where w denotes the maximum weight of the error patterns considered during decoding. The multiplicity of xi represents the number of uncorrectable weight-i errors under BF decoder. In addition, no miscorrections are observed for this code when employing the BF decoder for error patterns with weights of at most 4. In Figure 2, we illustrate the performance of the bit-flipping algorithm alongside truncated MDPs with radii w = {2, 3},
+
+trained using the Q-learning, and radii w = {2, 3, 4}, trained using the Deep Q-learning algorithms. We also present the frame error rate (FER) estimates in the error floor region for the feedback model learned using the Q-learning algorithm based on their uncorrectable error patterns. The results demonstrate that, instead of training the RL block to learn the entire code space, we can use the existing bit-flipping algorithm and incorporate the RL block as a feedback architecture to enhance its performance. The Q-learning algorithm with w = {2, 3} achieves improved performance with guaranteed error correction. However, for w = 4, the state space becomes prohibitively large, making it impractical to use a Q-table. In this case, we train only the Deep Q-Network. Using the Deep-Q network, for w = 2, it does not effectively learn the decision boundary due to the small radius of the Hamming ball. However, for w = 3, as shown by comparison with the Q-table results, the network is able to generalize the optimal policy and successfully correct error patterns were not encountered during training. For w = 4, further performance improvement is observed in comparison to w = 3.
+VI. CONCLUSIONS
+In this paper, we propose a novel feedback method aimed at reducing the number of states in the MDP. Additionally, we focus on enhancing the performance of a chosen decoder by targeting only those error patterns that the decoder fails to correct. In essence, the feedback method seeks to efficiently expand the correctable region of the decoder. In general, our goal is to leverage the performance of existing well-designed decoders and refine their state space and using RL algorithms to further enhance their decoding performance.
+REFERENCES
+[1] T. Richardson, “Error Floors of LDPC Codes,” in Proceedings of the Annual Allerton Conference on Communication Control and Computing, vol. 41, no. 3. The University; 1998, October 2003, pp. 1426–1435.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Information Theory Workshop (ITW)
+
+[2] B. Vasic´, S. K. Chilappagari, D. V. Nguyen, and S. K. Planjery, “Trapping Set Ontology,” in 2009 47th Annual Allerton Conference on Communication, Control, and Computing (Allerton), September 2009, pp. 1–7.
+[3] C. A. Kelley and D. Sridhara, “Pseudocodewords of Tanner Graphs,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4013– 4038, November 2007.
+[4] R. Koetter and P. O. Vontobel, “Graph-Covers and Iterative Decoding of Finite Length Codes,” in Proc. 3rd Intern. Symp. on Turbo Codes and Related Topics, September 2003, pp. 1–5.
+[5] N. Varnica, M. P. C. Fossorier, and A. Kavcic, “Augmented Belief Propagation Decoding of Low-Density Parity Check Codes,” IEEE Transactions on Communications, vol. 55, no. 7, pp. 1308–1317, July 2007.
+[6] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “MultipleBases Belief-Propagation Decoding of High-Density Cyclic Codes,” IEEE Transactions on Communications, vol. 58, no. 1, pp. 1–8, January 2010.
+[7] A. I. V. Casado, M. Griot, and R. D. Wesel, “LDPC Decoders with Informed Dynamic Scheduling,” IEEE Transactions on Communications, vol. 58, no. 12, pp. 3470–3479, December 2010.
+[8] Y. Han and W. E. Ryan, “Low-Floor Decoders for LDPC Codes,” IEEE Transactions on Communications, vol. 57, no. 6, pp. 1663–1673, June 2009.
+[9] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite Alphabet Iterative Decoders—Part I: Decoding Beyond Belief Propagation on the Binary Symmetric Channel,” IEEE Transactions on Communications, vol. 61, no. 10, pp. 4033–4045, October 2013.
+[10] D. Declercq, B. Vasic, S. K. Planjery, and E. Li, “Finite Alphabet Iterative Decoders—Part II: Towards Guaranteed Error Correction of LDPC Codes via Iterative Decoder Diversity,” IEEE Transactions on Communications, vol. 61, no. 10, pp. 4046–4057, September 2013.
+[11] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to Decode Linear Codes Using Deep Learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), September 2016, pp. 341–346.
+
+[12] T. Gruber, S. Cammerer, J. Hoydis, and S. Ten Brink, “On Deep Learning-Based Channel Decoding,” in 2017 51st Annual Conference on Information Sciences and Systems (CISS). IEEE, March 2017, pp. 1–6.
+[13] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep Learning for Decoding of Linear Codes - A Syndrome-Based Approach,” in 2018 IEEE International Symposium on Information Theory (ISIT), June 2018, pp. 1595–1599.
+[14] L. Lugosch and W. J. Gross, “Neural Offset Min-Sum Decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT), June 2017, pp. 1361–1365.
+[15] S. Adiga, X. Xiao, R. Tandon, B. Vasic´, and T. Bose, “Generalization Bounds for Neural Belief Propagation Decoders,” IEEE Transactions on Information Theory, vol. 70, no. 6, pp. 4280–4296, February 2024.
+[16] F. Carpi, C. Ha¨ger, M. Martalo`, R. Raheli, and H. D. Pfister, “Reinforcement Learning for Channel Coding: Learned Bit-Flipping Decoding,” in 2019 57th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, September 2019, pp. 922–929.
+[17] M. Taghipour, A. K. Pradhan, and B. Vasic´, “Reinforcement Learning Assisted Decoding,” in International Telemetry Conference 2024, October 2024, pp. 1–5.
+[18] S. Habib, A. Beemer, and J. Kliewer, “Belief Propagation Decoding of Short Graph-Based Channel Codes via Reinforcement Learning,” IEEE Journal on Selected Areas in Information Theory, vol. 2, no. 2, pp. 627– 640, April 2021.
+[19] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009.
+[20] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. MIT Press, 2018.
+[21] V. Mnih, K. Kavukcuoglu, D. Silver, A. Graves, I. Antonoglou, D. Wierstra, and M. Riedmiller, “Playing Atari with Deep Reinforcement Learning,” 2013. [Online]. Available: https://arxiv.org/abs/1312.5602
+[22] M. Taghipour and B. Vasic, “Action-List Reinforcement Learning Syndrome Decoding for Binary Linear Block Codes,” July 2025. [Online]. Available: https://arxiv.org/abs/2507.17893
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:22 UTC from IEEE Xplore. Restrictions apply.
+
+

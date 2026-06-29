@@ -1,0 +1,489 @@
+2022 IEEE Asia Pacific Conference on Circuits and Systems (APCCAS) | 978-1-6654-5073-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/APCCAS55924.2022.10090379
+
+The 2022 IEEE Asia Pacific Conference on Circuits and Systems
+
+Low-Complexity Dynamic Single-Minimum Min-Sum Algorithm and Hardware Implementation
+for LDPC Codes
+
+Qinyuan Zhang, Suwen Song, and Zhongfeng Wang School of Electronic Science and Engineering, Nanjing University, Nanjing, China
+Email: zhangqinyuanzqy@163.com, suwsong@sina.com, zfwang@nju.edu.cn
+
+Abstract—As a type of low-complexity decoding algorithm for low-density parity-check (LDPC) codes, the single-minimum min-sum (smMS) algorithm avoids finding the second minimum, while estimates it by adding a fixed value to the minimum instead. However, the inaccurate estimation of the sub-minimum results in obvious performance degradation. In this work, we propose an improved smMS algorithm, which adds a dynamic value to the minimum based on a special variable that can be easily computed and largely represents the convergence degree of iterative decoding. This new algorithm is thus called dynamic smMS (dsmMS) algorithm. In comparison to the standard normalized min-sum (NMS) algorithm, the performance gap for LDPC code (672,588) is narrowed from 0.55 dB of the smMS to 0.12 dB of the dsmMS. We also present a partially parallel decoding architecture for the dsmMS algorithm, and implement it under 55nm CMOS technology with an area of 0.21 mm2. Furthermore, compared with the traditional NMS decoder, the proposed design can reduce the area of the total decoder by 22%.
+Index Terms—Low-density parity-check (LDPC) codes, lowcomplexity, single-minimum min-sum (smMS) algorithm, VLSI implementation.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are a class of linear block codes known for their good performance and low decoding complexity. They were first introduced by Gallager [1] in 1962. Many communication protocols have adopted LDPC codes, such as IEEE802.16e [2], IEEE802.3an [3], and IEEE802.15.3c [4]. In addition, LDPC codes have been widely used in optical fiber communication [5] and 5G communication [6]. Although the belief propagation (BP) [7] algorithm has the best decoding performance among multiple decoding algorithms, it is unrealistic in practical applications because many complex operations are involved, such as exponentiation, logarithm, and division. The min-sum (MS) [8] algorithm was proposed to simplify the check node unit (CNU) and hence reduce the decoding complexity of the BP algorithm. It only includes basic operations like comparison and addition, which reduces the computational complexity but causes noticeable performance degradation. Two variants of the MS algorithm, the normalized min-sum (NMS) and offset min-sum (OMS) algorithms, were proposed in [9] to reduce the performance loss by introducing a correction factor. In MS algorithm and its variants, the core process in CNU is to find the minimum and the second minimum of multiple absolute values. To
+
+reduce the complexity, the single-minimum min-sum (smMS) [10] algorithm uses the minimum plus a fixed value to calculate the second minimum. But this algorithm sacrifices certain decoding performance in exchange for lowering the implementation complexity. To further improve the decoding performance, [11] proposed the variable weight MS (vwMS) algorithm in which the value is related to iterations. [11] divides the number of decoding iterations into several sections, and each section adopts a different fixed value, determined by exhaustive searching. However, in an iteration range, a fixed value is still used regardless of the convergence degree. There is still an obvious performance gap between the vwMS and the NMS.
+In this paper, an improved smMS algorithm called dynamic smMS (dsmMS) algorithm is proposed, which focuses on approximating the second minimum with the sum of a dynamic value ∆d and the minimum. To estimate the value more accurately, an easily-obtained variable η is introduced, i .e., the number of non-matching bits [12] between the signs of the external messages and a-posteriori-probability (APP) values, which could well reflect the convergence degree of iterative decoding. A codeword eigenfunction f (x) needs to be pre-constructed between η and ∆d, i .e., ∆d = f (η). Applying the dynamic value, the proposed dsmMS algorithm could offer better performance than the smMS algorithm and the vwMS algorithm. For the considered codes, the dsmMS can get close to the NMS decoding within 0.1 dB. Finally, we develop a partially parallel decoding architecture for the dsmMS algorithm. Synthesis results demonstrate that about 22% of the area could be saved in comparison to the NMS decoder under 55nm CMOS technology.
+The rest of the paper is organized as follows. Section II gives the notations and the preliminaries for the MS algorithm and the conventional smMS algorithm. In Section III, the proposed dsmMS algorithm is described in detail. Simulation results and performance comparisons are presented in Section IV. Section V illustrates the hardware architecture including implementation results. Finally, conclusions are drawn in Section VI.
+II. PRELIMINARIES
+A. Notations
+Consider a binary LDPC code specified by a parity check matrix H with M rows and N columns. M represents the
+
+978-1-6654-5073-7/22/$31.00 ©2022 IEEE
+
+389
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:46:44 UTC from IEEE Xplore. Restrictions apply.
+
+number of check nodes and N implies the number of variable nodes in the Tanner graph. Let Nm = {n : H(m, n) = 1} be the set of variable nodes connected to check node m. Similarly, Mn = {m : H(m, n) = 1} denotes the set of check nodes connected to variable node n. Also, let Nm\n(Mn\m) represent the set Nm(Mn) with node n(m) excluded. A length-N binary sequence x is a codeword if all parity check equations are met, i.e., xHT = 0. Quasi-cyclic (QC)-LDPC codes [13] are of great interest for low-complexity hardware implementations due to their regular structures. The H matrix of a QC-LDPC code can be divided into Mb × Nb square submatrices of size z × z. Each sub-matrix is either a zero matrix or a z × z cyclically shifted identity matrix.
+There are three types of decoder architectures: fully-parallel, serial, and partially parallel [14]. In a fully-parallel architecture, all rows and columns of H are handled at the same time. Because one iteration only takes one cycle, this decoder delivers the highest throughput. Conversely, there is only one CNU and one variable node unit (VNU) in the serial architecture. And the check-to-variable (c2v) and variable-tocheck (v2c) messages are all stored in memories. Partially parallel decoders offer a balance between throughput and area. Numerous CNUs and VNUs are used in a partially parallel architecture to execute row or column blocks of H in a timemultiplexed mode.
+
+B. Conventional LDPC Decoding Algorithms
+We denote the c2v message conveyed from the check node m to the variable node n by µm,n and the v2c message conveyed from the variable node n to the check node m by λm,n, respectively. ln represents the intrinsic message. Early termination implies that the results of hard decision in an iteration satisfy the parity check equations. The iteration will continue unless it reaches a pre-determined maximum number of iterations Imax or early termination occurs. In [9], a normalization factor α is introduced to improve the decoding performance. This algorithm is thus called normalized minsum (NMS) algorithm, which is described as follows:
+1) Initialization:
+
+µm,n = 0, ∀m ∈ {1, ..., M } , ∀n ∈ Nm,
+
+(1)
+
+λn,m = ln, ∀n ∈ {1, ..., N } , ∀m ∈ Mn.
+
+(2)
+
+2) Check Node Processing (CNP): For each check node m connected to variable node n ∈ Nm,
+
+µm,n = α ×
+
+sign (λn ,m) × min |λn ,m| . (3)
+
+n ∈Nm\n
+
+n ∈Nm\n
+
+3) Variable Node Processing (VNP): For each variable node n connected to check node m ∈ Mn,
+
+λn,m = ln +
+
+µm ,n.
+
+(4)
+
+m ∈Mn\m
+
+4) Hard Decision:
+
+λn = ln +
+
+µm ,n,
+
+(5)
+
+m ∈Mn
+
+zn = sign(λn),
+
+(6)
+
+where λn and zn represent the APP message and the result of hard decision for the variable node n, respectively.
+The smMS algorithm modifies the check node update operation, using a fixed value ∆fix to emulate the sub-minimum. The check node processing of the smMS algorithm is shown as Eq. (7).
+
+µm,n =
+
+sign (λn ,m) × α
+
+n ∈Nm\n
+
+(7)
+
+× qm + ∆fix, if n = the index of qm;
+
+qm,
+
+otherwise,
+
+where qm = min |λn ,m|.
+n ∈Nm
+III. THE PROPOSED DECODING ALGORITHM
+For the sake of description, denote the first and second minimum magnitudes of the input v2c messages in one check node by min1 and min2, respectively. To improve the performance of the smMS algorithm and maintain the advantage of low complexity, the dynamic smMS (dsmMS) decoding algorithm with flooding schedule is proposed. In the modified CNUs, we find min1 and estimate min2 through a concise method, where a dynamic value ∆d is got based on a special variable that can be easily computed and largely represents the convergence degree of iterative decoding. The idea of introducing a variable as a tool to judgment the convergence degree originates from [12] in the turbo decoding.
+The relationship between APP values and external messages is shown in Eq. (8), in which these two variables tend to share the same signs as the decoding converges. Therefore, the number of non-matching bits between the signs of APP values and external messages, denoted as η, can be considered as a tool to reflect the convergence degree of iterative decoding. Considering the actual difference ∆ between min1 and min2 is also strongly correlated with the decoding convergence, we propose to construct a functional relationship between the number of non-matching bits η and the actual difference ∆ to simulate min2 with high accuracy. This functional relationship is called the codeword eigenfunction.
+
+APP = Intrinsic message + External message.
+
+⇒λn = ln +
+
+µm ,n.
+
+(8)
+
+m ∈Mn
+
+To explore the codeword eigenfunction, a large quantity of samples were randomly simulated. Each sample is the result of one frame in one iteration. Fig. 1 shows the difference ∆ between min2 and min1 versus the number of nonmatching bits η for all samples, where IEEE802.3an LDPC code (2048,1723) is used. As decoding converges, the number
+
+390
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:46:44 UTC from IEEE Xplore. Restrictions apply.
+
+T h e d iffe re n c e ∆
+
+3 .5
+
+3 .0
+
+2 .5
+
+2 .0
+
+1 .5
+
+1 .0
+
+0 .5 0
+
+200
+
+400
+
+600
+
+800
+
+T h e n u m b e r o f n o n -m a tc h in g b its η
+
+Fig. 1. The plotted graph for code (2048,1723).
+
+according to the variable η and the pre-constructed codeword eigenfunction f (x), i .e., ∆d = f (η); Third, get the estimated value of min2, i .e., min2 = min1 + ∆d. Notice that η does not exist during the first iteration, so we directly use a constant to initialize ∆d.
+We can further set an adjustment value ∆a for ∆d using the parity check equations. This advanced version of the dsmMS algorithm is called the fine-tuned dsmMS (fdsmMS) algorithm. Finally, the estimated variable is ∆d + ∆a. For LDPC code (2048,1723), ∆a can be calculated by the following equation:
+
+∆a =
+
+−0.3, 0,
+
+η ≥ 300 and pm = 0; otherwise,
+
+(11)
+
+where pm = 0 represents that the parity check equation corresponding to the m-th row is not satisfied in the previous iteration.
+
+of non-matching bits η is getting smaller, and the difference ∆ tends to be larger. In addition, we fitted this relationship with a linear segmentation function aim to reduce the complexity, in which each segment can even be a constant.
+Since dynamic value ∆d is closer to the difference ∆, the performance gap caused by the fixed value ∆fix can be greatly narrowed. The simulation experiments are carried out on three LDPC codes used in the IEEE standards, which are code (2048,1723) in the IEEE802.3an standard [3], code (672,588) and code (672,504) in the IEEE802.15.3c standard [4]. Eqs. (9a–9c) show their codeword eigenfunctions, respectively. The codeword eigenfunction is hardware-friendly because there are only basic operations such as addition, shift, and comparison. In particular, code (2048,1723) can still earn ideal performance by using Eq. (10). Unlike Eq. (9a), each iteration segment in Eq. (10) adopts a constant.
+
+ 0.75, 
+∆d1 = 1,
+
+iter = 0; iter = 0 and η ≥ 300; (9a)
+
+ 
+
+1 256
+
+(300
+
+−
+
+η)
+
++
+
+1,
+
+otherwise.
+
+ 2, 
+∆d2 = 2,
+
+iter = 0; iter = 0 and η ≥ 100; (9b)
+
+ 
+
+1 16
+
+(100
+
+−
+
+η)
+
++
+
+2,
+
+otherwise.
+
+ 1.5, 
+∆d3 = 2.5,
+
+iter = 0; iter = 0 and η ≥ 50; (9c)
+
+ 
+
+1 16
+
+(50
+
+−
+
+η)
+
++
+
+2.5,
+
+otherwise.
+
+1, iter = 0 or η ≥ 400;
+
+
+
+
+
+1.25, iter = 0 and 250 ≤ η < 400;
+
+∆d1
+
+= 1.5,
+
+iter = 0 and 100 ≤ η < 250;
+
+(10)
+
+
+
+
+
+1.75, otherwise.
+
+Finally, the modified CNUs are described as follows: First, get min1 from the compressed information; Second, obtain η from the previous iteration, and compute a dynamic value ∆d
+
+IV. SIMULATION RESULTS
+The performance of the NMS, smMS, vwMS, and the proposed dsmMS is evaluated on the above three codes. The error-correction performance curves are shown in Fig. 2. These algorithms are simulated over the additive white gaussian noise (AWGN) channel with zero mean and variance σ2 using the binary phase shift keying (BPSK) signaling. The maximum number of iterations is set to 30. The scaling factor α is always 0.75. For fair comparison, parameters in the vwMS and smMS are set as in [11]. The decoding will be terminated when 50 failure decoding codes are collected. Only those parameters (i .e., Eq. (9)) that yield the best performance are selected for comparisons. For code (672,588) and code (672,504), the smMS algorithm exhibits noticeable performance degradation away from the NMS at bit-error-rate (BER) < 10−6. Compared with the smMS, the proposed dsmMS can lower the error floor and significantly improve the decoding performance, more than 0.4 dB for these two codes. The dsmMS algorithm leads to about 0.1 dB performance gain in comparison to the smMS for code (2048,1723). For all three codes, the proposed dsmMS outperforms the smMS and the vwMS, close to the NMS within 0.1 dB.
+Fig. 3 shows the BER performance of the NMS, smMS, dsmMS, and fdsmMS algorithms for code (2048,1723). In the dsmMS algorithm, case 1 adopts Eq. (9a) as the codeword eigenfunction while case 2 applies Eq. (10). As can be seen, the performance curves of case 1 and case 2 are very close. About 0.03 dB performance gain can be obtained at BER = 10−7 by using the fine-tuning method. Finally, we can approach to the NMS less than 0.08 dB.
+The performance of the NMS and dsmMS algorithms with floating-point and two quantization schemes is compared in Fig. 4. The maximum number of failure decoding codes is set to 100. The quantization scheme is represented by [q : f ], where q stands for the total number of bits including the sign bit, and f represents the number of fractional bits. We have simulated many quantization schemes and finally selected the two most suitable ones. These two quantization schemes are
+
+391
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:46:44 UTC from IEEE Xplore. Restrictions apply.
+
+BER
+
+1 0 -2
+
+c o d e (2 0 4 8 ,1 7 2 3 )
+
+c o d e (6 7 2 ,5 8 8 )
+
+c o d e (6 7 2 ,5 0 4 )
+
+1 0 -3
+
+N M S [9 ]
+
+sm M S [1 0 ]
+
+v m M S [1 1 ]
+
+1 0 -4
+
+d sm M S
+
+1 0 -5
+
+1 0 -6
+
+1 0 -7
+
+1 0 -8
+
+3 .0
+
+3 .5
+
+4 .0
+
+4 .5
+
+5 .0
+
+5 .5
+
+6 .0
+
+E b /N 0 (d B )
+
+Fig. 2. BER performance curves for LDPC codes.
+
+1 0 -2
+
+NM S
+
+sm M S
+
+d sm M S case1
+
+fd sm M S c a se 1
+
+1 0 -3
+
+d sm M S case2
+
+fd sm M S c a se 2
+
+1 0 -4
+
+1 0 -5
+
+1 0 -6
+
+Compressor Decompressor
+
+NM S
+
+N M S [8 :2 ]([7 :2 ])
+
+1 0 -5
+
+N M S [6 :1 ]([6 :1 ]) d sm M S
+
+d s m M S [8 :2 ]([7 :2 ])
+
+d s m M S [6 :1 ]([6 :1 ])
+
+1 0 -6
+
+BER
+
+1 0 -7
+
+1 0 -8
+
+4 .8
+
+5 .0
+
+5 .2
+
+5 .4
+
+5 .6
+
+5 .8
+
+6 .0
+
+E b /N 0 (d B )
+
+Fig. 4. Performance of the quantized NMS and dsmMS algorithms for code (672,588).
+
+Old Message Register
+Array
+
+LLR Memory
+
+Barrel Shifter
+1
+
+VNU1 CNU1
+
+VNU2
+...
+
+CNU2
+...
+
+VNUNv CNUNv
+
+Current Message Register
+Array
+Barrel Shifter
+2
+
+BER
+
+1 0 -7
+
+Fig. 5. Architecture of the partially parallel decoder for dsmMS algorithm.
+
+1 0 -8
+
+3 .6
+
+3 .8
+
+4 .0
+
+4 .2
+
+4 .4
+
+4 .6
+
+E b /N 0 (d B )
+
+Fig. 3. BER performance curves for code (2048,1723).
+
+[8 : 2]([7 : 2]) and [6 : 1]([6 : 1]). The former is used for channel log-likelihood ratios (LLRs) and external messages, and the latter (in parentheses) is used for v2c and c2v messages. The performance comparison of the quantized NMS and dsmMS algorithms is dsmMS [8 : 2]([7 : 2]) > dsmMS [6 : 1]([6 : 1]) > NMS [8 : 2]([7 : 2]) NMS [6 : 1]([6 : 1]) when BER < 4 ∗ 10−8.
+V. HARDWARE ARCHITECTURE
+A. Top-Level Architecture
+The overall block diagram of the dsmMS decoder is shown in Fig. 5, including VNUs, CNUs, LLR Memory, Compressor, Decompressor, two Barrel Shifts, and two Message Register Arrays. Compressor combines min1, the index of min1, and the product of all signs of the c2v messages into compressed information. Decompressor has the opposite function, that is, it recovers these messages from the compressed information.
+The decoder uses a partially parallel architecture [14], which processes one column block of H per cycle. In this case, each decoding iteration takes Nb cycles. Assume that the H matrix of QC-LDPC code consists of Mb × Nb cyclic permutation matrices of dimension z × z. The row weight is denoted as dc
+
+and the column weight is dv. Because multiple sub-matrices of one column block are processed simultaneously, dvz CNUs and dvz VNUs are needed. Nv in Fig. 5 is equal to dvz.
+The decoding process is briefly described as follows: At the beginning of the decoding, old message registers are initialized as 0, and current message registers are set as the maximum values. By shifting and decompressing the information read from Old Message Register Array, the c2v messages can be recovered. Next, VNUs execute Eqs. (4-6). The main operation in CNUs is to find the input v2c messages of the least magnitude, and these minimum values are finally stored in the Current Message Register Array after being compressed and shifted. At last, after all column blocks in one iteration have been processed, the messages are passed from the Current Message Register Array to the Old Message Register Array.
+B. Hardware Resources Analysis
+The reduction in hardware resources of the proposed decoder is analyzed in this subsection. QC-LDPC code (672,588) is used as an experimental code. In the original NMS decoder, the compressed information contains min1, min2, the index of min1, and the product of all signs of the c2v messages. min1 and min2 are both required, inducing more complex check node processing units, more storage due to min2, and more congested routing. By contrast, the dsmMS decoder simplifies the procedure of calculating min2 and saves the storage of min2. When the quantization scheme [6:1]([6:1]) is used, the
+
+392
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:46:44 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I COMPARISON RESULTS OF THE IMPLEMENTED DECODER
+
+Code Technology Area(µm2) Frequency(MHz) Power(mW)
+
+NMS (672,588)
+55nm 273423
+278 26.2
+
+smMS (672,588)
+55nm 209398
+267 20
+
+dsmMS (672,588)
+55nm 212285
+266 20.1
+
+performance than the smMS and the vwMS. For the considered codes, the dsmMS can get close to the NMS decoding within 0.1 dB. We further develop a partially parallel architecture for the dsmMS algorithm and presented the synthesis results for ASIC. Under 55nm CMOS technology, about 22% of the area is saved in comparison to the NMS decoder. In brief, the proposed dsmMS decoder presents a promising solution to low-complexity LDPC decoding.
+
+TABLE II THE AREA OF MAIN BLOCKS (µm2 )
+
+Total CNU Barrel Shifter 1 Barrel Shifter 2 VNU Decompressor
+
+NMS
+273423 13563 56479 102142 25675 7992
+
+smMS
+209398 8153 38154 70046 23439 12734
+
+dsmMS
+212285 8190 38408 70013 24084 14122
+
+bit width of both min1 and min2 is set to 5. Since there are 32 column blocks in the parity check matrix H, the bit width of the index is 5. Therefore, in the proposed decoder, the bit width of the compressed information in the Message Register Arrays is reduced from 16 to 11 compared with the NMS decoder. In the previous Decompressor, min2 can be obtained directly through the compressed information. But now, the area of the Decompressor will increase since min2 is obtained by adding min1 to an estimated variable ∆d. In the CNUs, the comparison units will be reduced since there is no need to compare the absolute values of the v2c messages to find min2.
+C. Synthesis Results
+Our hardware design is described by Verilog language and synthesized using 55nm CMOS standard cell library. To be fair, we re-implemented the standard NMS and smMS decoders, and synthesized them under the same environment. The synthesis results for the LDPC code (672,588) are shown in Table I. Compared with the NMS algorithm, the dsmMS decoder saves 22% of the area with a small increase in delay, and it is very close to the results of smMS decoder. It is observed from Table II that the area reduction of the dsmMS decoder mainly comes from the Barrel Shifters. The essential reason for this phenomenon is the reduction in the bit width of the compressed information. The area of the Decompressor increases from 0.008 mm2 to 0.014 mm2, which has a weak effect on the overall decoder. The area of the CNUs also confirms the analysis in Section V-B.
+VI. CONCLUSION
+In this paper, we propose a new algorithm called dynamic single-minimum min-sum (dsmMS) algorithm for LDPC decoding. The computation complexity is reduced by approximating the sub-minimum with the sum of a dynamic value and the minimum. Compared with the smMS, using dynamic value ∆d instead of fixed value ∆fix, the proposed dsmMS can significantly improve the decoding performance. Simulation results demonstrate that the dsmMS offers much better
+
+ACKNOWLEDGMENT
+This work was supported in part by the National Nat-
+ural Science Foundation of China under Grant 62174084,
+62104097 and in part by the High-Level Personnel Project
+of Jiangsu Province under Grant JSSCBS20210034, the Key
+Research Plan of Jiangsu Province of China under Grant
+BE2019003-4.(Corresponding author: Zhongfeng Wang.)
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] IEEE Standard for Local and Metropolitan Area Networks Part 16: Air Interface for Broadband Wireless Access Systems, May. 2009.
+[3] IEEE Standard for Local and Metropolitan Area Networks Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications, 2008.
+[4] IEEE Standard for Local and Metropolitan Area Networks Part 15.3: Wireless Medium Access Control (MAC) and Physical Layer (PHY) Specifications for High Rate Wireless Personal Area Networks (WPANs), Oct. 2009.
+[5] B. P. Smith and F. R. Kschischang, “Future prospects for fec in fiberoptic communications,” IEEE Journal of Selected Topics in Quantum Electronics, vol. 16, no. 5, pp. 1245–1257, 2010.
+[6] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5g new radio,” IEEE Communications Magazine, vol. 56, no. 3, pp. 28–34, 2018.
+[7] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Info. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[8] M.P.C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May. 1999.
+[9] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and X.Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[10] A. Darabiha, A.C. Carusone, and F.R. Kschischang, “A bit-serial approximate min-sum LDPC decoder and FPGA implementation,” in Proc. IEEE Int. Symp. on Circuits and Systems (ISCAS), May. 2006, pp. 149–152.
+[11] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Feb. 2014.
+[12] Z. Wang and K.K. Parhi, “High performance, high throughput turbo/SOVA decoder design,” IEEE Trans. Commun., vol. 51, no. 4, pp. 570–579, May. 2003.
+[13] Y. Kou, S. Lin, and M.P.C. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Trans. Info. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[14] X. Zhang, VLSI Architectures for Modern Error-Correcting Codes, Crc Press, 2016.
+
+393
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:46:44 UTC from IEEE Xplore. Restrictions apply.
+
+

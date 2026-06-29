@@ -1,0 +1,484 @@
+3700
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 11, NOVEMBER 2025
+
+Generalized LDPC Codes With Low-Complexity Decoding and Fast Convergence
+Dawit Simegn, Dmitry Artemasov , Kirill Andreev , Pavel Rybin , and Alexey Frolov
+
+Abstract—We consider generalized low-density parity-check (GLDPC) codes with component codes that are duals of Cordaro– Wagner codes. Two efficient decoding algorithms are proposed: one based on Hartmann–Rudolph processing, analogous to Sum-Product decoding, and another based on evaluating two hypotheses per bit, referred to as the Min-Sum decoder. Both algorithms are derived using latent variables and a appropriate message-passing schedule. A quantized, protograph-based density evolution procedure is used to optimize GLDPC codes for Min-Sum decoding. Compared to 5G LDPC codes, the proposed GLDPC codes offer similar performance at 50 iterations and significantly better convergence and performance at 10 iterations.
+Index Terms—Generalized LDPC codes, Cordaro–Wagner codes, decoding algorithms, density evolution.
+I. INTRODUCTION
+G ENERALIZED LDPC codes were first proposed by Tanner in [1]. Similar to conventional LDPC codes, GLDPC codes can be represented by a sparse bipartite graph; however, the single parity-check (SPC) codes traditionally used at the check nodes are replaced by more powerful linear codes, such as Hamming codes [2], Bose–Chaudhuri– Hocquenghem (BCH) codes [3], Hadamard codes [4], and others. In what follows, we refer to these as component codes, and the corresponding nodes in the graph are referred to as constraint nodes (CNs). Numerous works have investigated various aspects of GLDPC codes, including their distance properties [2], [5], iterative decoding performance using bit-wise maximum a posteriori (MAP) decoding of component codes [2], [3], [6], and their error floor behavior [7]. Their suitability for ultra-reliable low-latency communications (URLLC) has also been studied [8]. In addition, we highlight the literature on doubly generalized LDPC codes [9], [10], which can be viewed as product-like codes or GLDPC codes with two types of component codes. We also mention works on GLDPC codes with mixed checks [11], where a small portion of generalized CNs is added to a graph otherwise composed of SPC CNs.
+Despite their strong error-correcting capabilities, GLDPC codes have several drawbacks: (a) the complexity of the
+Received 30 June 2025; revised 31 July 2025; accepted 16 August 2025. Date of publication 20 August 2025; date of current version 10 November 2025. This work was supported by the Russian Science Foundation under Project 23-11-00340 (https://rscf.ru/en/project/2311-00340/). The associate editor coordinating the review of this article and approving it for publication was N. Wu. (Corresponding author: Dmitry Artemasov.)
+The authors are with the Center for Next Generation Wireless and IoT, Skolkovo Institute of Science and Technology, 121205 Moscow, Russia (e-mail: dawit.simegn@skoltech.ru; d.artemasov@skoltech.ru; k.andreev@skoltech.ru; p.rybin@skoltech.ru; al.frolov@skoltech.ru).
+Digital Object Identifier 10.1109/LWC.2025.3600912
+
+decoding operations increases due to the introduction of more sophisticated constraints1; (b) the construction lacks flexibility, as it is difficult to vary the length of the component codes, unlike in the case of SPC codes; and (c) the design procedures are often complicated and inaccurate, particularly when based on asymptotic threshold analysis. Regarding the last point, we refer specifically to the binary-input additive white Gaussian noise (AWGN) channel. While several works [4], [9] employ extrinsic information transfer (EXIT)-based analysis, the Gaussian approximation used in such methods is often inaccurate. This issue was addressed in [13] through the use of a Gaussian mixture model; however, to propagate the density through the constraint node, one still needs to perform computationally intensive Monte Carlo simulations.
+In this letter, we investigate a specific construction of GLDPC codes with component codes that are duals of Cordaro–Wagner codes [14]. The parity-check matrix (PCM) of each such component code consists of distinct non-zero columns of height 2. To minimize the number of codewords with weight 2, the distribution of these columns should be as close to uniform as possible. The choice of component codes is motivated by the following considerations: by using PCMs with only two rows, we expect the decoding complexity to remain acceptable even under MAP decoding. Additionally, the length of the component codes can be easily varied. In what follows, we refer to these codes as CW-GLDPC codes. This type of construction has been previously proposed in the literature [15]. The main objective of this letter is to conduct a fair comparison between CW-GLDPC codes and the LDPC codes used in the 5G standard. To this end, we develop efficient algorithms for both decoding and designing CW-GLDPC codes.
+Our main contributions can be summarized as follows. We propose two simple yet effective decoding algorithms for CW-GLDPC codes. The first algorithm leverages Hartmann– Rudolph decoding [16] for component code processing and similar to the conventional Sum-Product (SP) decoder used in binary LDPC codes. The second algorithm, referred to as the Min-Sum (MS) decoder, is derived by evaluating two competing hypotheses for each bit within the component code. We further describe these algorithms by introducing latent variables and outlining an appropriate message-passing (MP) schedule for their implementation. To design the PCM of CW-LDPC codes we utilize a low-complexity, quantized, protograph-based density evolution (DE) procedure tailored to the proposed MS decoder. Finally, we benchmark CW-LDPC codes against standardized 5G LDPC codes across three
+1While there are papers on simplified constraint node processing [12], these simplifications typically result in performance degradation.
+
+2162-2345 c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:48 UTC from IEEE Xplore. Restrictions apply.
+
+SIMEGN et al.: GENERALIZED LDPC CODES WITH LOW-COMPLEXITY DECODING AND FAST CONVERGENCE
+
+3701
+
+representative scenarios characterized by different code rates and block lengths. Our results demonstrate that, under equal computational complexity, CW-GLDPC codes offer comparable performance to 5G LDPC codes after 50 decoding iterations, while significantly outperforming them in the early stages of decoding – achieving faster convergence and superior performance at 10 iterations.
+The paper is structured as follows. Section II describes the construction of our proposed GLDPC codes. In Section III we present message passing algorithm-based decoders. The methods optimizing the Tanner graphs of CW-GLDPC codes for the proposed decoding algorithms are described in Section IV. Section V covers simulation results, their analysis, and conclusions. Scalars are denoted by non-bold letters (e.g., x or X), vectors by bold lowercase letters (e.g., x), and matrices by bold uppercase letters (e.g., X). The indicator function of an event E is denoted by 1E. For any positive integer n, we define [n] = {1, . . . , n}. Consider a matrix X of size m × n, and let I ⊆ [n] be a subset. We denote by XI the submatrix of X formed by the columns indexed by I.
+
+II. CODE CONSTRUCTION
+A. Component Code
+Let us consider the dual of the Cordaro–Wagner code. The parity check matrix of such code consists of non-zero columns of height 2, e.g.,
+
+H9 = [h1, . . . , h9] =
+
+0 1
+
+1 0
+
+1 1
+
+0 1
+
+1 0
+
+1 1
+
+0 1
+
+1 0
+
+1 1
+
+.
+
+Let us introduce the following sets:
+
+X = i : hi = b1 Y = i : hi = b2 Z = i : hi = b3
+
+0 1T , 1 0T , 1 1T .
+
+Then, for H9 we have: X = {1, 4, 7}, Y = {2, 5, 8}, Z = {3, 6, 9}.
+
+Now it is easy to check that the number of codewords of
+
+weight 2 in the code can be calculated as
+
+|X| 2
+
++
+
+|Y| 2
+
++
+
+|Z| 2
+
+and thus this quantity is minimized in case when |X| ≈ |Y| ≈
+
+|Z|. For this reason to construct a component code of length n we start from semi-infinite matrix H∞ = [b1b2b3b1b2b3 . . . ]
+
+and choose the first n columns to obtain the component code PCM, i.e., Hn = H[∞n].
+Note, that each codeword c satisfies one of the following
+
+set of equalities (where ⊕ denotes the modulo-two sum):
+
+ci = ci = ci = v , v ∈ {0, 1}.
+
+(1)
+
+i ∈X
+
+i ∈Y
+
+i ∈Z
+
+B. CW-GLDPC Codes
+Now, let us consider the construction of a CW-GLDPC code, starting from a bipartite Tanner graph. The graph’s vertex set comprises variable nodes (VNs) V = {v1, . . . , vN }, corresponding to code symbols, and constraint nodes P =
+
+Fig. 1. Generalized LDPC structure for six variable nodes and two generalized parity checks having degrees 5 and 4.
+
+Fig. 2. Correspondence between the GLDPC Tanner graph (presented in the form of adjacency matrix Γ) and a resulting parity check matrix H.
+{p1, . . . , pM }, which enforce constraints on these symbols. A VN vi is connected to a CN pj if and only if bit ci participates in constraint pj .
+In this construction, the SPC codes typically associated with CNs in LDPC Tanner graphs are replaced by the component codes introduced in Section II-A. A CN is satisfied if the bits on its incident edges form a valid codeword of the corresponding component code. A sequence c = [c1, . . . , cN ] is a valid CW-GLDPC codeword if all CNs are satisfied.
+An example is shown in Fig. 1. The resulting code is linear, and its parity-check matrix H can be constructed by replacing each 1 in the graph’s adjacency matrix Γ with a column from the component code’s PCM, and each 0 with an all-zero column (see Fig. 2).
+
+III. DECODING ALGORITHMS
+In this section, we consider MP decoding algorithms for CW-GLDPC codes. The VN processing rules are exactly the same as those for conventional LDPC codes; however, the processing rules at the CNs differ significantly, and we describe them in the remainder of the section.
+Following the standard turbo decoding strategy (see [17], [18]) CN processing includes the bitwise MAP decoding of the corresponding component code and calculation of the extrinsic information. Let us consider the component code C of length n, let L = [L1, . . . , Ln ] be the incoming messages, we have the following bitwise MAP rule (i ∈ [n])
+
+Lˆi
+
+=
+
+ln
+
+σi ,0 σi ,1
+
+=
+
+ln
+
+c∈C:ci c∈C:ci
+
+=0 =1
+
+μ(c) μ(c)
+
+,
+
+(2)
+
+where The
+
+μ(c) = extrinsic
+
+n i =1
+
+μi
+
+(ci
+
+)
+
+information
+
+and can
+
+μi (0)/μi (1) = exp be obtained as E =
+
+[Li ]. α(Lˆ − L),
+
+where α is the scaling factor. We note that Lˆ can be obtained
+
+with use of BCJR algorithm [19] which operates on the trellis
+
+representation of the component code. In what follows we do
+
+not consider this approach and aim to derive simple closed-
+
+form CN processing rules.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:48 UTC from IEEE Xplore. Restrictions apply.
+
+3702
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 11, NOVEMBER 2025
+
+A. SP Algorithm
+To reduce complexity, the sums σi,0 and σi,1 can be calculated using the dual code. This approach is known as the Hartmann–Rudolph decoding [16]. Let S ⊆ [n], we define
+
+ϕS =
+
+tanh
+
+Li 2
+
+.
+
+(3)
+
+i ∈S
+
+Up to permutation of the columns, the dual code C⊥ is represented by the following four codewords ci⊥, i = 1,. . . ,4.
+c1⊥ = [0 . . . 0, 0 . . . 0, 0 . . . 0], c2⊥ = [1 . . . 1, 1 . . . 1, 0 . . . 0], c⊥3 = ⎡[1 . . . 1, 0 . . . 0, 1 . . . 1],⎤
+
+c⊥4 = ⎣0 . . . 0, 1 . . . 1, 1 . . . 1⎦.
+
+X
+
+Y
+
+Z
+
+According to the Hartmann–Rudolph decoding rule, we can
+
+write (s ∈ {0, 1})
+
+⎛
+
+⎞
+
+σi,s = γ
+
+n
+⎝
+
+ϕc{jj⊥} + (−1)s
+
+n
+
+ϕ{jc}j⊥ ⊕1i =j
+
+⎠,
+
+c⊥∈C⊥ j =1
+
+j =1
+
+where γ is some value that does not depend on s. Then, if i ∈ X, using the four codewords of the dual code
+introduced above, we obtain:
+
+1 γ
+
+σi ,0
+
+=
+
+1 + ϕ{i}
+
++ ϕXϕY
+
++ ϕYϕX\{i}
+
++ ϕXϕZ + ϕZϕX\{i}
+
++ ϕYϕZ + ϕZϕYϕ{i}
+
+= 1 + ϕ{i} 1 + ϕYϕX\{i} + ϕZϕX\{i} + ϕZϕY ,
+
+where the last equality holds from ϕX = ϕ{i}ϕX\{i}. Having a similar derivation for σi,1, we get
+
+Lˆi = ln 1 + ϕ{i} 1 − ϕ{i}
+
+1 + ϕX\{i}ϕY + ϕX\{i}ϕZ + ϕYϕZ .
+1 − ϕX\{i}ϕY − ϕX\{i}ϕZ + ϕYϕZ
+
+Using the fact that Li = ln [(1 + ϕ{i})/(1 − ϕ{i})] and the following equality
+
+ln
+
+1 1
+
++ −
+
+ab ab
+
++ −
+
+ac ac
+
++ +
+
+bc bc
+
+=
+
+ln
+
+1 1
+
++ −
+
+a a
+
+b+c 1+bc b+c 1+bc
+
+= 2 tanh−1
+
+a
+
+b+c 1 + bc
+
+,
+
+we get
+
+Lˆi = Li + 2 tanh−1
+
+ϕX\{i }
+
+·
+
+ϕY + ϕZ 1 + ϕYϕZ
+
+(4)
+
+= Li + 2 tanh−1 ϕX\{i} · tanh tanh−1 ϕY + tanh−1 ϕZ .
+
+B. MS Algorithm
+
+The expression (2) can be approximated as follows:
+
+Lˆi
+
+≈
+
+ln
+
+maxc∈C:ci =0 μ(c) maxc∈C:ci =1 μ(c)
+
+=
+
+ln
+
+max max
+
+μ μ
+
+c0(i,0) c1(i,0)
+
+,μ ,μ
+
+c0(i,1) c1(i,1)
+
+.
+
+(5)
+
+Let c0(i) and c1(i) be the codewords that maximize the numerator and denominator, respectively. These are the closest
+codewords with 0 and 1 in the i-th position, representing two
+competing hypotheses. Given the simplicity of the component
+code, such codewords can be constructed explicitly. Taking into account (1), we consider four codewords cs(i,v) – the most probable codewords with ci = s ∈ {0, 1} and fixed v ∈ {0, 1}, which leads to the right-hand side expression in (5).
+The idea is similar to SPC code decoding: we need to
+consider only the positions with the smallest LLR magnitudes in each of the sets X, Y, and Z. Without loss of generality, we assume that i ∈ X. We introduce the index mX and the LLR value L˜X(i) as follows:
+
+mX
+
+arg min Lj , j ∈X\{i}
+
+L˜X(i) = (−1) j∈X\{i} sj LmX ,
+
+(6)
+
+where sj = 1Lj <0. These quantities can be defined similarly for the sets Y and Z.
+Let hmX , hmY , and hmZ be the values of hypothesis c0(i,0) at positions mX, mY, and mZ, respectively. Clearly,
+
+hmX =
+
+sj , hmY =
+
+sj , hmZ =
+
+sj .
+
+j ∈X\{i,mX}
+
+j ∈Y\{mY}
+
+j ∈Z\{mZ}
+
+We have
+
+µ c0(i,)0 µ c(0i,)1 µ c1(i,)0 µ c1(i,)1
+
+∝ µi (0)µmX hmX µmY hmY µmZ hmZ , ∝ µi (0)µmX hmX ⊕ 1 µmY hmY ⊕ 1 µmZ hmZ ⊕ 1 , ∝ µi (1)µmX hmX ⊕ 1 µmY hmY µmZ hmZ , ∝ µi (1)µmX hmX µmY hmY ⊕ 1 µmZ hmZ ⊕ 1 ,
+
+where we use the symbol ∝ instead of = since the values are to be multiplied by a common constant2.
+Next, making simple transformations we can write Lˆi ≈ Li + Ei , where
+Ei = max L˜X(i) + L˜Y + L˜Z, 0 − max L˜Y + L˜Z, L˜(Xi) , (7)
+
+and the superscript (i) is omitted for L˜Y and L˜Z, since i ∈ X. Note that the update rules for i ∈ Y and i ∈ Z take a similar form.
+
+C. Decoding With Use of Latent Variables
+
+Let us now examine the expression (4) in more detail
+
+and represent it using a factor graph [17]. This rule can be
+
+interpreted as the result of introducing a latent variable into
+
+the component code’s PCM, as shown in (8):
+
+⎡
+
+11 ··· 1
+
+H=⎣
+
+11 ··· 1
+
+⎤ 1
+
+1⎦
+
+(8)
+
+11 ··· 1 1
+
+X
+
+Y
+
+Z
+
+L
+
+2This constant reflects the fact that differences occur in only four positions, while the remaining codeword positions are identical.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:48 UTC from IEEE Xplore. Restrictions apply.
+
+SIMEGN et al.: GENERALIZED LDPC CODES WITH LOW-COMPLEXITY DECODING AND FAST CONVERGENCE
+
+3703
+
+Fig. 3. Graphical representation of the rule (4).
+
+A natural question arises: what happens if we apply the standard min-sum (MS) decoding algorithm to the matrix (8)? From Fig. 3, we derive the following update rule:
+Ei = (−1)s L˜X(i) (−1)s(L˜Y+L˜Z) min |L˜X(i)|, |L˜Y + L˜Z| , (9)
+where s(L) = 1L<0. By exhaustively considering all possible sign combinations
+and magnitude relationships, one can verify the following result:
+Statement 1: The extrinsic values computed by (7) and (9) are identical, i.e., Ei = Ei .
+Thus, the CN update rules can be implemented using the standard SP or MS algorithms applied to a factor graph with a latent variable. It is important to note that the scheduling (i.e., the order of updates) also plays a critical role in the overall decoding performance (see the numerical results).
+
+IV. PARITY CHECK MATRIX OPTIMIZATION
+
+To optimize the Tanner graph (see Fig. 1) of the CWGLDPC code for the MS decoding algorithm (9), we employ a DE framework. To reduce computational complexity, we optimize the protograph, which is then lifted using the approximate cycle extrinsic (ACE) message degree algorithm [20]. This approach efficiently eliminates short cycles in the lifted graph. Because the component code is decoded via the MAP approach (or its low-complexity approximation (9)), we focus solely on cycles in the Tanner graph.
+Optimization is carried out using a genetic algorithm: the best-performing protographs are slightly perturbed to produce the next generation. The signal-to-noise ratio (SNR) is gradually decreased in small steps, guiding the search toward an optimal base graph that meets the desired error threshold.
+We perform quantized DE [21] on a protograph structure [22], which defines a constrained subset of the GLDPC ensemble by specifying degree distributions and edge connections3 The only modification to the standard DE procedure is the CN update rule (9), implemented as a sequence of classical MS updates. The idea of quantization is that the distribution of LLRs is represented in the form of probability mass functions over a regular grid.
+V. NUMERICAL RESULTS AND CONCLUSION
+
+Fig. 4. Simulation results for Scenario A (top), Scenario B (middle), and Scenario C (bottom). The legend shown above applies to all subfigures.
+MP decoding algorithms. The primary performance metric is block error rate (BLER) as a function of Es /N0. Following standard 5G NR practices, we use quadrature phase shift keying (QPSK) modulation over an AWGN channel.
+We analyze three scenarios (A, B, C), with code parameters and performance gains of CW-GLDPC over 5G-LDPC summarized in Table I. Simulation results are shown in Fig. 4 (top to bottom: A, B, C).
+Although performance comparisons are often based on the SP algorithm with 50 iterations, practical solutions typically employ MS-like decoders. Therefore, we also evaluate the normalized layered min-sum4 (NLMS) algorithm with 50 and 10 iterations. Note that the CW-GLDPC codes considered here were optimized specifically for 50 NLMS iterations. We also
+
+In this section, we evaluate the performance of CW-GLDPC codes and compare them to 5G-LDPC codes using various
+3The source code is available at https://github.com/and-kirill/gldpc_de.
+
+4A layer-wise scheduled MS decoding algorithm with scaling factor α. We fix α = 0.75 for all cases as a near-optimal and hardware-friendly value for 5G codes. For GLDPC codes, we fixed the same α = 0.75 for optimization
+and subsequent numerical experiments.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:48 UTC from IEEE Xplore. Restrictions apply.
+
+3704
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 11, NOVEMBER 2025
+TABLE I PARAMETERS OF THE 5G LDPC AND CW-GLDPC CODES AND PERFORMANCE GAINS FOR DIFFERENT SCENARIOS
+
+note that, for each figure, the same code is used to evaluate all curves of the same color.
+As shown in Table I, CW-GLDPC codes outperform 5GLDPC codes under NLMS decoding, particularly with 10 iterations in scenarios A and B. This performance gain is even more pronounced in scenario C. These results highlight the superior convergence behavior of CW-GLDPC codes under the proposed MS decoding approach – an important advantage for future communication system design. Note that MAP decoding of the considered component code is equivalent to messagepassing decoding with latent variables and proper scheduling (Fig. 3). To highlight the role of scheduling, we evaluate a variant of CW-GLDPC codes, denoted CW-GLDPC-L, which incorporates latent variables but is decoded as a standard LDPC code. This demonstrates that the introduction of latent variables must be accompanied by proper scheduling.
+Finally, we analyze the computational complexity per decoding iteration. For an LDPC CN of degree n, processing requires finding two minimums using 2n−3 comparisons (worst case). In CW-GLDPC, where n = |X| + |Y| + |Z| for three groups, this reduces to 2n−9 comparisons plus six additional comparisons and three summations to evaluate min{|L˜X(i)|, |L˜Y+L˜Z|} in (9) per group combination. For both code types, VN processing requires 2Δ summations (where Δ is the VN degree), with doubling occurring when summing over all edges except the target edge.
+Table I summarizes the total operations per iteration (nonlayered processing assumed), including summations (# +), comparisons (# ≷), and multiplications by α (equivalent to the number of non-zero Tanner graph elements, # NZ). We omit sign product evaluation as it constitutes a lightweight operation. CW-GLDPC shows superior efficiency, requiring fewer operations per iteration and achieving faster convergence at comparable SNR values.
+REFERENCES
+[1] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[2] M. Lentmaier and K. S. Zigangirov, “On generalized low-density paritycheck codes based on hamming component codes,” IEEE Commun. Lett., vol. 3, no. 8, pp. 248–250, Aug. 1999.
+[3] J. Boutros, O. Pothier, and G. Zemor, “Generalized low density (Tanner) codes,” in Proc. IEEE Int. Conf. Commun., 1999, pp. 441–445.
+[4] G. Yue, L. Ping, and X. Wang, “Generalized low-density parity-check codes based on Hadamard constraints,” IEEE Trans. Inf. Theory, vol. 53, no. 3, pp. 1058–1079, Mar. 2007.
+[5] R. M. Tanner, “Minimum-distance bounds by graph analysis,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 808–821, Feb. 2001.
+
+[6] Y. Liu, P. M. Olmos, and D. G. M. Mitchell, “On the design of generalized LDPC codes with component BCJR decoding,” in Proc. IEEE Glob. Commun. Conf. (GLOBECOM), 2020, pp. 1–6.
+[7] G. Liva, W. E. Ryan, and M. Chiani, “Quasi-cyclic generalized LDPC codes with low error floors,” IEEE Trans. Commun., vol. 56, no. 1, pp. 49–57, Jan. 2008.
+[8] Y. Liu, P. M. Olmos, and D. G. M. Mitchell, “Generalized LDPC codes for ultra reliable low latency communication in 5G and beyond,” IEEE Access, vol. 6, pp. 72002–72014, 2018.
+[9] Y. Wang and M. Fossorier, “Doubly generalized LDPC codes over the AWGN channel,” IEEE Trans. Commun., vol. 57, no. 5, pp. 1312–1319, May 2009.
+[10] M. Lentmaier, G. Liva, E. Paolini, and G. Fettweis, “From product codes to structured generalized LDPC codes,” in Proc. 5th Int. ICST Conf. Commun. Netw. China, 2010, pp. 1–8.
+[11] Y. Liu, P. M. Olmos, and T. Koch, “A probabilistic peeling decoder to efficiently analyze generalized LDPC codes over the BEC,” IEEE Trans. Inf. Theory, vol. 65, no. 8, pp. 4831–4853, Aug. 2019.
+[12] S. Hirst and B. Honary, “Application of efficient chase algorithm in decoding of generalized low-density parity-check codes,” IEEE Commun. Lett., vol. 6, no. 9, pp. 385–387, Sep. 2002.
+[13] D. Chang, Q. Peng, G. Wang, G. Yan, and D. Yin, “On the gap to channel capacity of generalized low-density parity-check codes,” IEEE Open J. Commun. Soc., vol. 6, pp. 1780–1793, 2025.
+[14] J. Cordaro and T. Wagner, “Optimum (n, 2) codes for small values of channel error probability (Corresp.),” IEEE Trans. Inf. Theory, vol. 13, no. 2, pp. 349–350, Apr. 1967.
+[15] V. S. Usatyuk et al., “Generalized low-density parity check codes (GLDPC),” U.S. Patent US11 075 651B2, Jul. 27, 2021. [Online]. Available: https://patents.google.com/patent/US11075651B2
+[16] C. Hartmann and L. Rudolph, “An optimum symbol-by-symbol decoding rule for linear codes,” IEEE Trans. Inf. Theory, vol. 22, no. 5, pp. 514–517, Sep. 1976.
+[17] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[18] S. T. Brink, “Convergence behavior of iteratively decoded parallel concatenated codes,” IEEE Trans. Commun., vol. 49, no. 10, pp. 1727–1737, Oct. 2001.
+[19] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),” IEEE Trans. Inf. Theory, vol. 20, no. 2, pp. 284–287, Mar. 1974.
+[20] T. Tian, C. R. Jones, J. D. Villasenor, and R. D. Wesel, “Selective avoidance of cycles in irregular LDPC code construction,” IEEE Trans. Commun., vol. 52, no. 8, pp. 1242–1247, Aug. 2004.
+[21] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[22] G. Liva and M. Chiani, “Protograph LDPC codes design based on EXIT analysis,” in Proc. IEEE Glob. Telecommun. Conf. (GLOBECOM), 2007, pp. 3250–3254.
+[23] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:48 UTC from IEEE Xplore. Restrictions apply.
+
+

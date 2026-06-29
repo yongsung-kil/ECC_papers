@@ -1,0 +1,529 @@
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+Deep Unfolding-Aided Sum-Product Algorithm
+for Error Correction of CRC Coded Short Message
+Qilin Zhang∗, Shinsuke Ibi∗, Takumi Takahashi†, and Hisato Iwai∗ ∗ Graduate School of Science and Engineering, Doshisha University, Kyoto, Japan
+E-mail: ctwg0301@mail4.doshisha.ac.jp, {sibi, iwai}@mail.doshisha.ac.jp † Graduate School of Engineering, Osaka University, Osaka, Japan E-mail: takahashi@comm.eng.osaka-u.ac.jp
+
+AbstractŮThis paper proposes a deep unfoldingaided sum-product algorithm (SPA) for error correction decoding of cyclic redundancy check (CRC) coded short message. SPA is a practical decoding algorithm for linear codes without requiring enormous computational complexity. However, if the SPA is used as it is for CRC codes, belief correlation and outliers will be induced in the iterative decoding process, resulting in lousy correction capability. To compensate for this drawback, we design a SPA-based decoding process for CRC code that incorporates a data-driven design based on deep learning and learning optimization of internal trainable parameters. Considering the operation principle of soft-decision decoder, a novel loss function based on a weighted average of negentropy, which is a key measure to evaluate the Gaussianity, and BCE of the decoder output is proposed. Numerical results show that the proposed algorithm improves the bit error rate (BER) performance with deep unfolding and negentropy-aware loss function.
+I. Introduction
+The error correction capability of low-density parity check (LDPC) codes has proved to be capable of approaching the Shannon limit with the aid of decoding methods based on sum-product algorithm (SPA), a kind of belief propagation (BP) [1]. Nevertheless, LDPC codes demonstrate high error correction capability only when the code length is sufficiently long, and the capability will signiĄcantly reduce when the code length is short. The Internet of things (IoT), which plays an important role in the next-generation wireless communication infrastructure, tends to use smaller packet sizes. Therefore, high error correction capability cannot be expected even if LDPC code is utilized for IoT communication. Some conĄgurations, which deliberately do not use error-correcting codes, are sometimes used as standard, such as Bluetooth low energy (BLE) 4.0.
+Even in such conĄgurations, the cyclic redundancy check (CRC) code is typically utilized to detect packet error events. Since parity bits of about 24 bits are appended to the information bit sequence of the CRC code, the coding rate will be high when the length of the information bit sequence is very long. Therefore, it cannot be expected to function as an error-correcting code in general. However, on the premise that IoT communication has a small packet
+
+size, it is possible to use the CRC error detecting code as an error correction code. For example, if the number of information bits is 48 bits, the coding rate of the CRC with 24 parity bits is 2/3, which means that the coding rate of the error correction code is relatively low. In this case, high error correction capability can be expected.
+Based on the above, this paper investigates the use of CRC code as an error correction code. SPA is a practical decoding algorithm for linear codes without requiring enormous computational complexity. However, the CRC code contains many short cycles in the parity check matrix if the SPA is used as it is. In this case, belief correlation and outliers will be induced in the iterative decoding process, resulting in lousy correction capability. To address this issue, this paper aims to design an SPA-based decoding algorithm for CRC code that incorporates a data-driven design based on deep learning and learning optimization of internal trainable parameters [2]. Appropriate adjustment of trainable weight parameters is effective in mitigating the harmful effects of belief correlation and outliers.
+In recent years, data-driven algorithm design based on deep learning techniques has rapidly attracted attention in the Ąeld of wireless communications [3], [4]. In particular, many investigations using deep unfolding (DU) have been reported in statistical signal processing, where analytical mathematical models are given with relatively high accuracy [5], [6]. DU is the application of the error backpropagation and stochastic gradient methods used in conventional deep learning to a signal Ćow graph similar to a feed-forward neural network (FFNN), given by expanding the iterative structure of the algorithm. DU optimizes the trainable parameters embedded in the signal Ćow graph so as to minimize designed cost functions. If the trainable parameters can be successfully tuned, the algorithm can be designed while enjoying the advantages of both modeldriven and data-driven approaches [5], [7].
+Since the forward error correction (FEC) is usually optimized for additive white Gaussian noise (AWGN) channels, their error correction capability is maximized when the log-likelihood ratio (LLR) input to the softdecision decoder follows a Gaussian distribution [8]. That is, the proposed SPA decoder should be trained with a loss function that can enhance the Gaussianity of the output
+
+978-616-590-477-3 ©2022 APSIPA
+
+APSIPA ASC 2022
+
+1737
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+Fig. 1. Schematic of a typical transceiver for digital communication systems.
+
+Fig. 2. Tanner graph of the parity check matrix of a CRC code.
+
+LLR, while improving the convergence property of iterative detection [9]. In light of the above, we design a novel loss function based on a weighted average of negentropy and binary cross-entropy (BCE) to optimize the trainable SPA decoder via data-driven tuning for CRC decoding.
+The contributions of this study are summarized as follows:
+• A DU-aided SPA with trainable parameters is proposed for error correction decoding of CRC-coded short messages.
+• A loss function based on a weighted average negentropy and BCE is designed for shorter packet sizes.
+Throughout this paper, vectors and matrices are denoted by lower- and upper-case bold-face letters, respectively. Furthermore, p(a♣b) represents the probability density function (PDF) of a given the condition of b. E¶·♢ is the expected value of random variables. RN and CN denote real and complex Ąelds of length N , respectively. ℜ¶·♢ denotes the real part of the complex value.
+
+II. System Model
+A. Signal Model
+Fig. 1 shows the schematic of a typical transceiver for digital communication systems. The information source generates a binary information vector b = [b1, . . . , bl, . . . , bL] ∈ ¶0, 1♢L of L bits length, where the occurrence probabilities of 0 and 1 for bl are assumed to be equal. Subsequently, according to the information vector b, the channel encoder yields binary code vector c = [c1, . . . , cn, . . . , cN ] ∈ ¶0, 1♢N of N bits length for the FEC with a coding rate Rc = L/N . The modulator converts the code vector c into a signal suitable for the communication channel. In this paper, binary phase shift keying (BPSK) in the baseband model is assumed, and the transmit vector with N symbols is denoted by x = [x1, . . . , xn, . . . , xN ] ∈ CN . The constituen√t transmit symbol √at the d√iscrete time n is given by xn = Es(2cn − 1) ∈ ¶− Es, + Es♢, where Es is signal power density.
+The transmit vector x reaches the receiver via the additive white Gaussian noise (AWGN) channels. The resultant receive vector y = [y1, . . . , yn, . . . , yN ] ∈ CN is given by
+
+y = x + z,
+
+(1)
+
+where z = [z1, . . . , zn, . . . , zN ] ∈ CN whose entries zn obey complex-valued Gaussian PDF with mean 0 and
+
+(i)
+
+(i1)
+
+(i)
+
+(i)
+
+(a) Variable node.
+
+(b) Function node.
+
+Fig. 3. Model of SPA operations.
+
+variance of the noise power density N0. While observing
+
+the received symbol yn, the channel LLR is calculated at
+
+the demodulator. In BPSK signaling, the channel LLR is
+
+simply given by
+
+√
+
+λn
+
+=
+
+ln
+
+p(yn♣cn p(yn♣cn
+
+= =
+
+0) 1)
+
+=
+
+−
+
+4
+
+Es N0
+
+ℜ¶yn♢.
+
+(2)
+
+Then, for error corrections, the channel LLR vector λ = [λ1, . . . , λn, . . . , λN ] ∈ RN is decoded by the channel decoder. Eventually, the decoder yields decoded information vector bˆ = [ˆb1, . . . , ˆbl, . . . , ˆbL] ∈ ¶0, 1♢L.
+
+B. Sum-Product Algorithm
+In SPA, the decoding proceeds by exchanging belief messages calculated by fundamental variable and function node operations over the Tanner graph of the parity check matrix H ∈ ¶0, 1♢M×N , iteratively, where M = N − L is the number of parity checks. An example of Tanner graphs is depicted in Fig. 2. In the graph, N variable nodes and M function nodes are connected by edges deĄned by H [10]. Let hn,m be the (n, m) element of H. If hn,m = 1, there exists the edge between the n-th variable and the m-th check nodes.
+As shown in Fig. 3, βn(i→) m denotes the belief message sent from the variable node cn to the function node um along the edge at the i-th iteration step. On the other hand, αm (i)→n denotes the message sent from the function node um to the variable node cn at the i-th iteration step. Let Am be the set of column indices n in the m-th row of H with hn,m = 1. Similarly, Bn be the set of row numbers m in the n-th column with hn,m = 1. The exchange of messages shall be iterated at most I times.
+
+1738
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+Based on the above assumptions, the belief message is updated and exchanged as follows.
+
+Step 0: Initialization
+Compute the channel LLR λn based on (2). In addition, initialize αm (0→ ) n = 0. Step 1: Variable node operation
+Fig. 3(a) shows the process of variable node operations. The variable node message βn(i→) m at the i-th iteration step is updated as
+
+βn(i→) m = λn +
+
+αm (i−′→1)n,
+
+(3)
+
+m′ ∈Bn \m
+
+where Bn \ m denote the set Bn except m. Step 2: Function node operation
+Fig. 3(b) shows the process of function node operation. The function node message αm (i)→n at the i-th iteration step is updated as
+
+
+
+
+
+αm (i)→n = 2 tanh−1 
+
+tanh
+
+βn(i′)→m 2
+
+ 
+
+,
+
+(4)
+
+n′ ∈Am \n
+
+where Am \ n denote the set Am except n. Step 3: Output processing and parity check
+
+The detected code vector cˆ = [cˆ1, . . . , cˆN ] ∈ ¶0, 1♢N is obtained by
+
+γn(i) = λn +
+
+αm (i)→n,
+
+(5)
+
+m∈Bn
+
+cˆn =
+
+0, γn(i) ≥ 0 1, γn(i) < 0.
+
+(6)
+
+If the parity check equation Hcˆ = 0 is satisĄed, cˆ is output as the detection value, and iterative decoding is terminated. If not satisĄed, return to Step 1 and perform the iterative computation. However, if the maximum number of iterations I is reached, the latest cˆ obtained is output as it is.
+In a Tanner graph, a path starting from a variable node and returning to the same node is called a loop (or cycle). When a Tanner graph contains short loops, the decoding performance by SPA is degraded. In particular, loops of length 4 seriously affect decoding performances, so it is desirable to construct the parity check matrix so that such short loops are avoided as much as possible [11].
+As shown in Fig. 2, if a matrix is expanded into a Tanner graph, there are several loops of length 4, for example, indicated by the bold line between the variable and function nodes. When such short loops are included in the graph, the outliers of the belief message are gradually ampliĄed by the nature of the SPA, degrading decoding performance. Therefore, the DU described in the next section is introduced to compensate for SPA and mitigate the effect of outliers.
+
+Fig. 4. Model of feed-forward neural network.
+Fig. 5. Signal Ćow graph given by unfolding SPA.
+III. Deep Unfolding-Aided Sum-Product Algorithm
+A. Deep Unfolding Model for SPA This section describes DU, which applies deep learning
+techniques to SPA. An FFNN is a network in which information is propagated only in one direction from the input side to the output side, as shown in Fig. 4. In addition, the FFNN is divided into three sections: input, intermediate, and output layers, which are composed of multiple nodes connected by edges. The intermediate layer can have multiple layers, and training a network with deep intermediate layers is called deep learning. Each node has an Şactivation function,Ť and edges have Şweights.Ť The output value of each node is calculated by the linearly weighted values of the nodes in the previous layer connected to it via the activation function [12].
+Fig. 5 illustrates the signal Ćow graph given by unfolding the iterative structure of SPA, which exchanges message beliefs αn(i→) m and βm(i)→n. Now, let us recall (3) and (4). The variable node operation of (3) has a linearly weighted structure, and the function node operation of (4) can be regarded as an activation function that uses a hyperbolic tangent function. Thus, regarding the function node operation followed by the variable node operation at the i-th iteration step as the node operation of deep FFNN, the similarity can be found between Figs. 4 and 5.
+
+1739
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+To beneĄt from deep neural networks even in SPA, trainable weight parameters ζη(i) ∈ [0, 1] are introduced to variable node operation as
+
+βn(i→) m ← ζη(i) · βn(i→) m + (1 − ζη(i)) · βn(i→−1m),
+
+(7)
+
+where η corresponds to the index of an edge in the Tanner graph. Note that (7) is belief damping operation [13], [14]. Furthermore, in the last output layer, sigmoid function σ(x) is applied as [15]
+
+
+
+
+
+γn = σ − λn +
+
+αm (I→ ) n ,
+
+(8)
+
+m∈Bn
+
+where we have
+
+σ (x)
+
+=
+
+1
+
+1 + e−x
+
+.
+
+(9)
+
+By controlling the trainable parameters ζη(i) appropriately on the basis of the deep learning technique, such as error back-propagation and stochastic gradient, the vulnerability of SPA to the outlier problem can be relaxed. This approach of unfolding an iterative algorithm and treating it as an FFNN is called deep unfolding (DU) [16].
+
+B. Loss Function
+
+The trainable parameters embedded in the deep FFNN are optimized to minimize loss function for reducing bit error rate (BER), improving convergence property of iterative behavior, and so on. Training data sets of the code vector c and received LLR vector λ are prepared in advance, and data-driven tuning of the trainable parameters ζη(i) is performed. Note that the code vector c and corresponding LLR λ are perfectly known at the optimizer in the training phase, whereas c is unknown at the receiver in the test phase.
+Three types of loss functions are introduced in this paper to improve the performance of DU-aided SPA decoding for CRC codes by data-driven tuning as follows.
+1) Binary Cross Entropy (BCE): The cross-entropy loss function is often used for classiĄcation problems when outputs are interpreted as probabilities or probabilistic beliefs [17]. BCE, which is a special case of cross-entropy, deals with binary classiĄcation problems, and it is deĄned as
+
+N
+
+Jbce = −
+
+cn ln γn + (1 − cn) ln(1 − γn) . (10)
+
+n=1
+
+The minimization of the BCE loss function Jbce is equivalent to the maximization of the joint likelihood function
+
+given by
+
+N
+
+L=
+
+γncn (1 − γn)1−cn ,
+
+(11)
+
+n=1
+
+where we have Jbce = − ln L. If γn expresses exact probability without any approximation, the maximization of L, namely the minimization of Jbce, gives the optimal solution of ζη(i) in terms of Şmaximum-likelihood principle.Ť
+
+2) Negentropy (NEG):
+For the operation principle of soft-decision decoder, a fundamental assumption involved in the belief calculation of (4) is Gaussianity of beliefs αm (i)→n and βn(i→) m satisfying the consistency condition (i.e., mean:variance = 1:2) [18]. Negentropy (NEG), which is often used in the independent component analysis (ICA), is a key index for evaluating the Gaussianity of random variable [19]. Assuming PDF of γn(I) has symmetry, let v be a random variable of −γn(I)xn given by (5) without the sigmoid function. The negentropy of v is given by
+
+Jneg (v) = Hd (vGauss) − Hd (v) ,
+
+(12)
+
+where vGauss denotes a random variable that follows a Gaussian distribution with the same variance as v. Hd (v) is the differential entropy deĄned by
+
+Hd (v) = pv (ξ) ln pv (ξ) dξ.
+
+(13)
+
+The value of negentorpy is zero if and only if v follows a Gaussian distribution. In other words, incorporating negentropy into the loss function enables distribution shaping of the beliefs for approaching Gaussian distribution since output value γn(i) is computed from αm (i)→n and αm (i)→n is done from βn(i→) m. However, the calculation of negentropy requires numerical integration involving the PDF pv (·), which has high computational burden. To solve this problem, the approximated formula is often used in ICA, which is expressed as [19]
+
+Jneg
+
+=
+
+k1
+
+ E
+
+ ¯v
+
+exp
+
+ −
+
+¯v2 2
+
+2
+
++k2
+
+ E
+
+ exp
+
+ −
+
+¯v2 2
+
+
+
+−
+
+√1 2 2
+
+,
+
+(14)
+
+where
+
+k1
+
+=
+
+√36 8 3−9
+
+,
+
+k2
+
+=
+
+√24 16 3−7
+
+,
+
+and
+
+¯v
+
+=
+
+(v − µv) /σv
+
+de-
+
+note the random variable standardized by mean µv = E ¶v♢
+
+and variance σv2 = E (v − µv)2 . The mean and variance
+
+are both calculated from the actual observed values.
+
+3) BCE+NEG:
+
+Negentropy does not contribute to the improvement of the decoding performance alone because it works only for Gaussian shaping. To beneĄt from both BCE and negentropy, the proposed loss function, consisting of a weighted average of BCE and negentropy, is expressed as
+
+Jloss = w · Jneg + (1 − w) · Jbce,
+
+(15)
+
+where w ∈ [0, 1] denotes the weight coefficient determined by the information length L and Es/N0. In this paper, the DU-aided SPA is optimized given the value of w and the value of the Ąxed Es/N0 in the training phase.
+
+1740
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+TABLE I Achievable minimum BER by using DU.
+
+L [bit] test Es/N0
+BCE training Es/N0
+Ąxed w
+NEG training Es/N0
+Ąxed w
+BCE+NEG training Es/N0
+optimized w
+
+16 2 dB
+1.81 × 10−4 0 dB 0.0
+1.32 × 10−4 1 dB 1.0
+1.19 × 10−4 0 dB 0.6
+
+40 4 dB
+1.50 × 10−4 2 dB 0.0
+1.28 × 10−4 2 dB 1.0
+1.28 × 10−4 2 dB 0.4
+
+64 5 dB
+1.69 × 10−4 4 dB 0.0
+2.06 × 10−4 3 dB 1.0
+1.40 × 10−4 2 dB 0.5
+
+IV. Numerical Results
+A. Simulation Parameters
+Computer simulations were conducted to verify the performance of the DU-aided SPA with several loss functions for CRC decoding. Error correction is performed by M = 24 bits of CRC parity when the length of information vector L is 16, 40, and 64 bits, respectively. The generator polynomial of the CRC-24 is deĄned by [20]
+
+G = x24 + x10 + x9 + x6 + x4 + x3 + x + 1.
+
+(16)
+
+The training process of the DU-aided SPA is implemented
+by PyTorch using Adam optimizer with a learning rate of 0.005. The number of trainable parameter updates is 104.
+
+B. Hyper-Parameters of Training Es/N0 and Weight w for DU-Aided SPA
+Let training and test Es/N0 be Es/N0 at the training and test phases, respectively. In the training phase, the trainable parameters ζη(i) are tuned by data-driven optimization on the basis of loss functions. On the other hand, in the test phase, BER is evaluated by using the tuned parameters ζη(i).
+Fig. 6 characterizes BER performance when given arbitrary hyper-parameters of training Es/N0 and weight w. The test Es/N0 are 3, 4, and 5 dB for L = 16, 40, and 64, respectively, for tuning the BER performance around BER = 10−4. Note that loss functions of w = 0 and w = 1 correspond to BCE and NEG criteria, respectively. According to these results, the error correction capability of DU-aided SPA can be improved by using the trained parameters of training Es/N0 and weight w, which minimize BER in the test phase.
+Tab. I summarizes the achievable minimum BER and optimal training Es/N0 and weight w in Fig. 6. In cases of L = 16 and 40, the loss function of NEG achieves smaller BER than BCE. In principle, minimizing BCE leads to minimizing BER. However, the sigmoid function in (8) cannot compute exact probability due to approximation for simpliĄcation of backpropagation in the deep neural network. The results imply that the effect of the NEG criterion for Gaussian shaping is more signiĄcant in smaller information lengths. On the other hand, in the case of
+
+TABLE II required Es/N0 [dB] to satisfy BER = 10−4:
+(·) indicates gain [dB] from w/o DU.
+
+L [bit]
+w/o DU BCE NEG
+BCE+NEG
+
+16
+2.76 2.28 (0.48) 2.11 (0.65) 2.07 (0.69)
+
+40
+4.56 4.17 (0.39) 4.06 (0.50) 4.11 (0.45)
+
+64
+6.04 5.19 (0.85) 5.22 (0.82) 5.17 (0.87)
+
+L = 64, BCE achieves smaller BER than NEG. The relatively long information length might relax belief outliers induced by short cycles in the factor graph. As a result, the accuracy of the sigmoid approximation is improved, resulting in lower BER. The BCE+NEG loss function can consistently achieve the minimum BER by assigning the appropriate weight w, since the importance of BCE and NEG can be adjusted with the parameter w.
+C. BER v.s. Test Es/N0 Performances
+Fig. 7 shows BER performances of DU-aided SPA with BCE, NEG, and BCE+NEG loss functions against test Es/N0 in the test phase while using tuned trainable parameters ζη(i), which achieves minimum BER shown in Tab. I. As a baseline performance, the BER without error correction Şw/o ECŤ and DU Şw/o DUŤ are depicted in the Ągure.
+As can be seen in Fig. 7, SPA without DU Şw/o DUŤ has a signiĄcant coding gain compared to Şw/o ECŤ. Therefore, it is obvious that CRC codes with short information length should be utilized as error correction codes instead of error detection codes. The coding gain of SPA decoder is capable of improving with the aid of DU. Tab. II summarizes the Es/N0 required to satisfy BER = 10−4 with and without DU and coding gain form Şw/o DUŤ. Although there are no signiĄcant differences among the three loss functions, datadriven tuning of DU achieves about 0.7, 0.5, and 0.9 coding gain at BER = 10−4 for L = 16, 40, and 64, respectively. In terms of BER minimization, we should pay attention that BCE is not always the best choice. Tab. II implies that SPA decoding capability is improved by data-driven tuning to mitigate the harmful effect of short loops in the Tanner graph.
+V. Conclusions
+In this paper, we designed a DU-aided SPA for error correction decoding of CRC-coded short messages. In the proposed method, the trainable parameters effectively solve outlier problems caused by short cycles in the parity check matrix. In addition, we also designed a loss function, which is given by a weighted average of BCE and negentropy. Computer simulations demonstrate the proposed method can improve the BER performance, and the negentropyaware loss function design is effective, especially in shorter packet sizes. These results imply the possibility that an appropriate combination of the model-driven SPA and
+
+1741
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+
+7-10 November 2022, Chiang Mai, Thailand
+
+BER BER BER
+
+(a) L = 16, Test Es/N0 = 3 dB.
+
+(b) L = 40, Test Es/N0 = 4 dB.
+
+(c) L = 64, Test Es/N0 = 5 dB.
+
+Fig. 6. BER performance when given arbitrary hyper-parameters of training (Tr) Es/N0 and weight w.
+
+100
+
+100
+
+100
+
+w/o EC
+
+w/o EC
+
+w/o EC
+
+10-1
+
+w/o DU BCE
+
+10-1
+
+w/o DU BCE
+
+10-1
+
+w/o DU BCE
+
+NEG
+
+NEG
+
+NEG
+
+10-2
+
+BCE+NEG
+
+10-2
+
+BCE+NEG
+
+10-2
+
+BCE+NEG
+
+10-3
+
+10-3
+
+10-3
+
+10-4
+
+10-4
+
+10-4
+
+10-5 012345678 Test Es/N0 [dB]
+(a) L = 16.
+
+10-5 012345678 Test Es/N0 [dB]
+(b) L = 40.
+
+10-5 012345678 Test Es/N0 [dB]
+(c) L = 64.
+
+Fig. 7. BER performances of DU-aided SPA with BCE, NEG, and BCE+NEG loss functions against test Es/N0.
+
+data-driven DU algorithm can realize high-accuracy SPA even for short CRC-coded messages.
+Acknowledgment
+A part of this work was supported by JSPS KAKENHI Grant Number JP21H01332 and JP22H01483, Japan.
+References
+[1] R. Gallager, ŞLow-density parity-check codes,Ť IRE Trans. on Information Theory, vol. 8, no. 1, pp. 21Ű28, Jan. 1962.
+[2] D. J. MacKay and R. M. Neal, ŞNear Shannon limit performance of low density parity check codes,Ť Electronics letters, vol. 33, no. 6, pp. 457Ű458, July 1997.
+[3] K. Gregor and Y. LeCun, ŞLearning fast approximations of sparse coding,Ť in Proc. of the 2010 International Conference on Machine Learning(ICML), June 2010, pp. 399Ű406.
+[4] D. Ito, S. Takabe, and T. Wadayama, ŞTrainable ISTA for sparse signal recovery,Ť IEEE Trans. on Signal Processing, vol. 67, no. 12, pp. 3113Ű3125, June 2019.
+[5] J. R. Hershey, J. L. Roux, and F. Weninger, ŞDeep unfolding: Model-based inspiration of novel deep architectures,Ť arXiv preprint arXiv:1409.2574, Nov. 2014.
+
+[6] D. Shirase, T. Takahashi, S. Ibi, K. Muraoka, N. Ishii, and S. Sampei, ŞDeep unfolding-aided Gaussian belief propagation for correlated large MIMO detection,Ť in Proc. of the 2020 IEEE Global Communications Conference(GLOBECOM), Dec. 2020, pp. 1Ű6.
+[7] H. He, S. Jin, C.-K. Wen, F. Gao, G. Y. Li, and Z. Xu, ŞModeldriven deep learning for physical layer communications,Ť IEEE Wireless Communications, vol. 26, no. 5, pp. 77Ű83, May 2019.
+[8] L. Hanzo, T. H. Liew, and B. L. Yeap, Turbo coding, Turbo Equalisation and Space-Time Coding: EXIT-Chart-Aided NearCapacity Designs for Wireless Channels. Wiley-IEEE Press, Mar. 2011.
+[9] D. Shirase, T. Takahashi, S. Ibi, K. Muraoka, N. Ishii, and S. Sampei, ŞNegentropy-aware loss function for trainable belief propagation in coded MIMO detection,Ť in Proc. of the 2021 IEEE Global Communications Conference (GLOBECOM), Dec. 2021, pp. 1Ű6.
+[10] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, ŞFactor graphs and the sum-product algorithm,Ť IEEE Trans. on Information Theory, vol. 47, no. 2, pp. 498Ű519, Feb. 2001.
+[11] D. Rathod and R. Awale, ŞShort-cycle reduction algorithm in parity-check matrix of an irregular LDPC code to improve error Ćoor rate and computational complexity,Ť International Journal of Innovative Research in Advanced Engineering, vol. 1, no. 7, Aug. 2014.
+[12] M. H. Sazli, ŞA brief review of feed-forward neural networks,Ť
+
+1742
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of 2022 APSIPA Annual Summit and Conference
+Communications Faculty of Sciences University of Ankara Series A2-A3 Physical Sciences and Engineering, vol. 50, no. 01, Jan. 2006. [13] A. Chockalingam and B. S. Rajan, Large MIMO Systems. Cambridge University Press, Feb. 2014. [14] P. Som, T. Datta, A. Chockalingam, and B. S. Rajan, ŞImproved large-MIMO detection based on damped belief propagation,Ť in Proc. of the 2010 IEEE Information Theory Workshop on Information Theory (ITW). IEEE, Jan. 2010, pp. 1Ű5. [15] E. Nachmani, Y. BeŠery, and D. Burshtein, ŞLearning to decode linear codes using deep learning,Ť in Proc. of the 2016 Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, Sept. 2016, pp. 341Ű346. [16] T. Wadayama and S. Takabe, ŞDeep unfolding approach for signal processing algorithms: Convergence acceleration and its theoretical interpretation,Ť IEICE ESS Fundamentals Review, vol. 14, no. 1, pp. 60Ű72, July 2020. [17] R. Reed and R. J. MarksII, Neural Smithing: Supervised Learning in Feedforward ArtiĄcial Neural Networks. Mit Press, Feb. 1999. [18] J. Hagenauer, ŞThe EXIT chart-introduction to extrinsic information transfer in iterative processing,Ť in Proc. of the 2004 European Signal Processing Conference(EUSIPCO), Sept. 2004, pp. 1541Ű1548. [19] A. Hyvarinen, J. Karhunen, and E. Oja, ŞIndependent component analysis,Ť Studies in Informatics and Control, vol. 11, no. 2, pp. 205Ű207, June 2002. [20] (2013, Dec.) SpeciĄcation of the Bluetooth System, Core Version 4.1. Bluetooth SIG. [Online]. Available: https://www.bluetooth.com/speciĄcations/specs/corespeciĄcation-4-1/
+
+7-10 November 2022, Chiang Mai, Thailand
+
+1743
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:51:15 UTC from IEEE Xplore. Restrictions apply.
+
+

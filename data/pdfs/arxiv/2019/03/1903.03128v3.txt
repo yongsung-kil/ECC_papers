@@ -1,0 +1,1218 @@
+Decoder-in-the-Loop: Genetic Optimization-based LDPC Code Design
+Ahmed Elkelesh∗, Moustafa Ebada∗, Sebastian Cammerer∗, Laurent Schmalen† and Stephan ten Brink∗ ∗ Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany
+† Communications Engineering Lab, Karlsruhe Institute of Technology, Kreuzstr. 11, 76133 Karlsruhe, Germany
+
+arXiv:1903.03128v3 [cs.IT] 25 Sep 2019
+
+Abstract—LDPC code design tools typically rely on asymptotic code behavior and are affected by an unavoidable performance degradation due to model imperfections in the short length regime. We propose an LDPC code design scheme based on an evolutionary algorithm, the Genetic Algorithm (GenAlg), implementing a “decoder-in-the-loop” concept. It inherently takes into consideration the channel, code length and the number of iterations while optimizing the error-rate of the actual decoder hardware architecture. We construct short length LDPC codes (i.e., the parity-check matrix) with error-rate performance comparable to, or even outperforming that of well-designed standardized short length LDPC codes over both AWGN and Rayleigh fading channels. Our proposed algorithm can be used to design LDPC codes with special graph structures (e.g., accumulatorbased codes) to facilitate the encoding step, or to satisfy any other practical requirement. Moreover, GenAlg can be used to design LDPC codes with the aim of reducing decoding latency and complexity, leading to coding gains of up to 0.325 dB and 0.8 dB at BLER of 10−5 for both AWGN and Rayleigh fading channels, respectively, when compared to state-of-the-art short LDPC codes. Also, we analyze what can be learned from the resulting codes and, as such, the GenAlg particularly highlights design paradigms of short length LDPC codes (e.g., codes with degree-1 variable nodes obtain very good results).
+Index Terms—LDPC codes, belief propagation decoding, short LDPC code design, EXIT charts, genetic algorithm, evolutionary algorithms, artificial intelligence, decoding complexity.
+I. INTRODUCTION
+The design of Low-Density Parity-Check (LDPC) codes is well-established at the limits of the infinite length regime. The classical design tools, e.g., density evolution [1] and EXIT charts [2], provide the required analysis to design long LDPC codes of superior performance at negligible gaps from the Shannon limit [3]. However, for finite length LDPC codes, a sufficiently good LDPC code turns out to deviate from the guidelines (e.g., degree distributions) provided by the classical design tools which are based on the asymptotic length code analysis. It turns out that LDPC codes lack performance in the ultra-short length regime when compared to more structured, and thus explicit, coding schemes such as Polar, Reed–Muller (RM) or Bose-Chaudhuri-Hocquenghem (BCH) codes (see [4] for an exhaustive comparison).
+Nonetheless, LDPC codes can be seen as the workhorse of many of today’s (and upcoming) communication standards motivated by a simple and well-understood decoder, namely
+This work has been supported by DFG, Germany, under grant BR 3205/5-1.
+
+the belief propagation (BP) decoder. However, emerging applications based on short block transmission have urged the need for well-designed “ultra-short” codes, cf. ultra-reliable and low-latency communications (URLLC); e.g., for machineto-machine type communications and Internet of Things networks. In these applications, it is also preferable to work with a unified decoding hardware, i.e., one (de-)coding scheme fits all – from block lengths of several hundred up to tenthousands of bits. This trend is also reflected by the fact that the 3GPP group agreed to replace the Turbo codes by LDPC codes in the upcoming New Radio (NR) access technology standard [5], [6]. Also, short LDPC codes are used in nearearth and deep space applications [7]. Thus, rather than finding new coding schemes for URLLC implying new decoding algorithms and hardware structures, we aim to leverage shortlength LDPC codes by explicitly optimizing them at short length and under actual decoder constraints. To some extent, our approach also follows the current trend of data-driven computation/optimization in the field of machine learning, i.e., rather than tailoring the code to a specific canonical model (e.g., additive white Gaussian noise (AWGN) channel with non-quantized messages), our method inherently takes any practical decoder hardware constraints “in-the-loop” into account and directly optimizes from the data (i.e., the actual decoder behavior).
+Typically, the LDPC code design is divided into two subproblems: 1.) finding a good general code structure (degree profile or protograph) and 2.) optimizing the explicit realization of the code (edges of the actual graph). Although there exists some work on short-length code design, e.g., [8], most practical approaches rely on heuristics, e.g., greedy-based optimization techniques such as Progressive Edge Growth (PEG) [9] which, however, typically require degree profiles found by asymptotic assumptions. In [10], a differential evolution algorithm-based approach has been used to optimize the protograph of an LDPC code. However, to the best of our knowledge, no differential evolution-based optimization of the full H-matrix has been reported so far, probably, due to the demanding computational complexity of the algorithm. In [11], it has been shown that a simple concatenation of an LDPC code with a cyclic redundancy check (CRC) code significantly enhances its performance under high-complexity ordered statistic decoding (OSD). Unfortunately, the gain vanishes for classical iterative decoding. Thus, it seems as if finding sparse graphs with good short length performance
+
+remains to be a cumbersome task. Yet, there is simply no suitable design strategy to find such a sparse H-matrix due to the exponentially increasing design-space of the problem.
+A practical coding scheme also implies some further constraints on the parity-check matrix to enable low-complexity encoding such as, e.g., accumulator-based structures. We show that our approach can also be applied to given code structures such as irregular repeat-accumulate (IRA) codes. We refer to [12] for details on these structural graph constraints.
+The main contribution of this work is an efficient LDPC code design tool resulting in short codes comparable to, or even outperforming, state-of-the-art short LDPC codes over both AWGN and Rayleigh fading channels. The proposed scheme is used to design the complete parity-check matrix (i.e., H-matrix) directly, unlike the classical way where the degree distribution is optimized first. This optimization involves no PEG [9] or similar algorithms, but is only based on the Genetic Algorithm (GenAlg), similar to what has been proposed for polar codes in [13]. One strong asset of the proposed design tool is that it can be tailored to any specific required constraint on the H-matrix, resulting in codes which are of both low encoding and, thus, low hardware complexity. It is worth mentioning that extensions to longer LDPC codes are straightforward with the current framework. Furthermore, designing LDPC codes tailored to other types of decoders (e.g., quantized BP decoder, OSD) is possible. The source code and the H-matrices from this work can be found online.1
+
+II. LDPC CODES
+An LDPC code, originally introduced by Gallager [14], is conventionally represented by its corresponding (m×n) paritycheck matrix H = [h ji]m×n (referred to as H-matrix throughout this work), where n represents the number of variable nodes (VNs) (i.e., also the code block length) and m represents the number of check nodes (CNs) the code has. The number of information bits per codeword is k = n − rank (H). Therefore, the actual code rate is designated by Rc = k/n which could be potentially higher than the so-called design rate rd = (n−m)/n. A corresponding graphical representation [15] is the Tanner graph, in which a VN vi is connected to a CN c j if h ji = 1, with i ∈ {1, . . . , n} and j ∈ {1, . . . , m}.
+The decoding of LDPC codes is iteratively performed over the Tanner graph where soft messages (i.e., Log Likelihood Ratio (LLR) messages) are propagated over the graph between variable nodes and check nodes according to
+
+Π Lcj→vi = 2 · tanh−1
+
+tanh
+i =i
+
+Lvi →c j 2
+
+∑ Lvi→c j = Lch,i + Lc j →vi
+j =j
+where Lch,i is the LLR channel output, Lcj→vi is the message from CN c j to VN vi and Lvi→cj is the message from VN vi to CN c j. For more details, we refer to [12], [16] and [17].
+
+1https://github.com/AhmedElkelesh/Genetic-Algorithm-based-LDPCCode-Design
+
+IE,VND, IA,CND
+
+1
+
+1
+
+0.8
+1
+0.6
+
+0.4
+
+0.8
+
+0.2
+
+d¯c = 8
+
+0.6 d¯v = 4
+
+for
+
+Eb N0
+
+= 0.4
+
+dB
+
+0 0 0.2 0.4 0.6 0.8 1
+
+IA,VND, IE,CND
+(a) Asymptotically op0ti.m4 al
+
+()
+
+100
+
+0.2
+
+0 0
+
+10−3
+
+IE,VND, IA,CND
+IE,VND, IA,CND
+
+0.8
+
+0.6 see Sec. VI
+
+0.4
+
+0.2 0 0
+
+d¯c = 6.5469
+
+d¯v = 3.2734
+
+for
+
+Eb N0
+
+=0
+
+dB
+
+d¯v = 3.2734
+
+for
+
+Eb N0
+
+=1
+
+dB
+
+0.2 0.4 0.6 0.8 1
+
+IA,VND, IE,CND
+
+(b) GenAlg LDPC Code
+
+d¯c = 6.5469( )
+
+d¯v = 3.2734
+
+for
+
+Eb N0
+
+=0
+
+dB
+
+d¯v = 3.2734
+
+for
+
+Eb N0
+
+=1
+
+dB
+
+0.2 0.4 0.6 0.8 1 IA,VND, IE,CND
+
+BLER
+
+Asymptotically optimal
+
+GenAlg LDPC Code
+
+10−6 1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Eb/N0 [dB]
+(c) (n = 128, k = 64) LDPC codes; BP decoding with Nit,max = 200; bi-AWGN channel
+
+Fig. 1: The LDPC code design paradigm for asymptotic length fails in the
+short-length regime.
+
+LDPC code design is, thus, the process of determining (i.e., optimizing) the connections h ji ∈ {0, 1} of the bipartite Tanner graph under certain requirements (e.g., a target error floor or some hardware constraints). Optimizing the degree distributions of the Tanner graph is conventionally pursued via EXIT charts [2], by matching the EXIT curves of the check node decoder (CND) and variable node decoder (VND). This means that the open decoding tunnel between the two EXIT curves should be minimal to operate close to the channel capacity [2]. Another method, density evolution [1], iteratively tracks the (average) probability density functions of the messages propagated between the VND and CND.
+
+The classical design methods assume infinitely long lengths n → ∞, a graph that contains no cycles and infinite number of decoding iterations [18]. These assumptions are not valid when considering the problem of short LDPC code design, which raises the need for a design tool tailored to short length codes [8]. An optimal EXIT chart-based LDPC code design (e.g., matched EXIT curves) is inefficient for a short LDPC code, as shown in Fig. 1. One can see that a PEG-optimized short LDPC code realization following the asymptotically optimal degree profiles (see Fig. 1a) has a worse error-rate performance, shown in Fig. 1c, when compared to another short LDPC code designed by our proposed algorithm, and whose EXIT curves are not well-matched and even intersecting in the high mutual information region (see Fig. 1b). This reaffirms our aforementioned statements about the inefficiency of the classical code design tools in the short-length regime.
+
+knm
+
+Population i (Pi): set of candidate LDPC codes
+Pi+1
+
+Initialize Population P1
+
+yes
+
+no PNpop,max
+
+i < Npop,max?
+
+LDPC Encoder x
+
+Select fittest H HGenAlg
+Terminate
+
+Pi+1 Update Population (Mutations & Crossovers)
+BLERs
+
+Channel
+y LDPC Decoder (e.g., BP, OSD)
+
+Decoder-in-the-Loop
+
+Fig. 2: Abstract view of genetic algorithm (GenAlg)-based LDPC code design.
+
+III. GENETIC ALGORITHM-BASED LDPC CODE DESIGN
+
+We consider the design of an LDPC code as an optimization
+
+problem, in which the target is to minimize the block error-rate
+
+(BLER) at a certain design SNR. This optimization problem
+
+has some constraints defined by the problem at hand. The
+
+code
+
+rate
+
+Rc
+
+=
+
+1
+
+−
+
+rank(H) n
+
+,
+
+the
+
+number
+
+of
+
+VNs
+
+and
+
+the
+
+number
+
+of CNs should remain constant. In other words, we keep the
+
+number of VNs fixed to n (i.e., no puncturing involved) and
+
+the number of CNs fixed to m (i.e., we assume no redundant checks2). Furthermore, every variable (or check) node must be
+
+connected to at least one check (or variable) node, respectively.
+
+To solve this problem, similar to [13], we apply the genetic
+
+algorithm (GenAlg) [19].
+
+The design process starts with an initial population of
+
+some randomly constructed LDPC codes (i.e., population 1).
+
+An error-rate computation framework is used to assess the
+
+error-rate performance of the found LDPC codes at a certain
+
+design SNR and a fixed maximum number of BP iterations
+
+Nit,max. The best LDPC codes from this population are picked
+
+and then undergo evolutionary transformations (mutations and
+
+crossovers). This process is repeated until a certain target error-
+
+rate or a maximum number of populations (i.e., epochs) is
+
+reached, see Fig. 2.
+
+The “mutations” are done by adding (or removing) an edge
+
+to (or from) the parent H-matrix at a random position, or a
+
+combination of both, Fig. 3. The “crossover” is a symmetric
+
+2D-crossover between two parent H-matrices (i.e., H1 and H2). The left (or upper) half matrix of H1 is concatenated with the right (or lower) half matrix of H2) forming two offspring H-matrices in the next population, Fig. 4.
+
+Population (i+1) contains the best (in terms of error-rate) T
+
+H-matrices from population i, together with mutated offsprings
+
+from those T H-matrices and offsprings due to crossover
+
+between each pair of T parent H-matrices. For all simulation
+
+results using the GenAlg as discussed next, we set T = 20. We
+
+refer to [13] for further details on the GenAlg for code design.
+
+For the sake of reproducibility, the source code is available
+
+online.
+
+2In case the resulting H-matrix is not of full rank, it holds that Rc > rd which, if needed, could be (in a naive implementation) solved by freezing some VNs. Thus, we do not impose any further constraint other than m CNs.
+
+v1
+
+v1
+
+v1
+
+v1
+
+v2
+
+v2
+
+v2
+
+v2
+
+v3
+
+c1 v3
+
+c1 v3
+
+c1 v3
+
+c1
+
+v4
+
+c2 v4
+
+c2 v4
+
+c2 v4
+
+c2
+
+v5
+
+c3 v5
+
+c3 v5
+
+c3 v5
+
+c3
+
+v6
+
+c4 v6
+
+c4 v6
+
+c4 v6
+
+c4
+
+v7
+
+c5 v7
+
+c5 v7
+
+c5 v7
+
+c5
+
+v8
+
+v8
+
+v8
+
+v8
+
+v9
+
+v9
+
+v9
+
+v9
+
+v10
+
+v10
+
+v10
+
+v10
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 3: Mutation examples; All derived from parent (a) by: removing an edge
+
+(b), adding an edge (c), or a combination of both (d).
+
+ 1 1 0 1 1 1 0 1  1 1 1 0 1 0 1 1 
+
+ 1 0 1 1 1 0 1 1  0 1 1 1 1 1 0 1 
+
+ 
+
+1
+
+1
+
+1
+
+0
+
+1
+
+1
+
+1
+
+0
+
+ 
+
+1
+
+1
+
+0
+
+1
+
+1
+
+1
+
+1
+
+0
+
+ 
+
+01110111 10110111
+
+(a) Parent 1 H1
+
+(b) Parent 2 H2
+
+ 1 1 0 1 1 0 1 1  1 1 0 1 1 1 0 1 
+
+ 1 0 1 1 1 1 0 1  1 0 1 1 1 0 1 1 
+
+ 
+
+1
+
+1
+
+1
+
+0
+
+1
+
+1
+
+1
+
+0
+
+ 
+
+1
+
+1
+
+0
+
+1
+
+1
+
+1
+
+1
+
+0
+
+ 
+
+01110111 10110111
+
+(c) Offspring 1
+
+(d) Offspring 2
+
+Fig. 4: Crossover examples between the two parents H1 and H2.
+
+IV. INSIGHTS FROM OPTIMIZED LDPC CODES OVER AWGN CHANNEL
+To be consistent with the results in [4], we design LDPC codes with code length n = 128, code dimension k = 64 and, thus, code rate Rc = 0.5. All considered LDPC codes in this section are simulated over the binary-input AWGN (biAWGN) channel. All reference LDPC codes taken from [4] were designed through a girth optimization technique based on the PEG algorithm and are considered state-of-the-art: the standardized LDPC code by the Consultative Committee for Space Data Systems (CCSDS) for satellite telecommand links ( ), an accumulate-repeat-3-accumulate (AR3A) LDPC code ( ), an accumulate-repeat-jagged-accumulate (ARJA) LDPC code ( ), and the proposed protograph-based LDPC code for the upcoming 5G NR standard with a base graph (base graph 2 in [20]) optimized for small blocklengths ( ). As a calibration step of our decoding framework, we were able to reproduce exactly the same BLER curves using our own simulation setup. Therefore, the presented gains are not an artefact of different decoder implementations.
+To get started, our initial population P1 contains a set of randomly constructed regular (3, 6) LDPC codes (no PEG used).
+
+A. Error-rate performance
+
+Using GenAlg, we inherently design the whole edge interleaver (i.e., H-matrix) tailored to BP decoding with a maximum number of BP iterations Nit,max = 200 at a design SNR of 5 dB. The resulting LDPC code ( ) performs equally good as the 5G LDPC code over the whole simulated SNR range, as shown in Fig. 5a.
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+AR3A LDPC from [4] 5G LDPC [20]
+GenAlg LDPC @ 5 dB GenAlg TB-IRA @ 5 dB
+
+Construction @ design SNR (3,6) Regular LDPC ARJA LDPC from [4]
+GenAlg IRA @ 5 dB GenAlg PTB-IRA @ 5 dB
+
+To facilitate the encoding of the GenAlg-based LDPC codes, we design accumulator-based codes (i.e., a structured interleaver). We refer the interested reader to [12], [17] for more details about different structured types and design methods of LDPC codes. In this work, we design IRA codes3 such that the H-matrix has the form
+H = [HL HR]
+
+10−2
+
+where HL is the sub-matrix to be optimized and HR is a fixed “dual-diagonal” square sub-matrix with dimensions m × m
+
+BLER
+
+10−4
+
+10−6 2
+
+GenAlg (Nit,max = 200) 2.5 3 3.5 4 4.5
+
+5
+
+5.5
+
+1
+
+
+
+1 1
+
+
+
+  
+
+1 ...
+
+  
+
+
+
+HIRRA
+
+=
+
+ 
+
+... ...
+
+ . 
+
+  
+
+... 1
+
+  
+
+
+
+
+
+
+
+11 
+
+11
+
+Average Iterations Nit,avg
+
+Eb/N0 [dB] (a) BLER comparison
+
+Construction @ design SNR
+
+60
+
+CCSDS Up-Link LDPC [21]
+
+(3,6) Regular LDPC
+
+5G LDPC [20]
+
+40
+
+GenAlg LDPC @ 5 dB
+
+GenAlg IRA @ 5 dB
+
+GenAlg TB-IRA @ 5 dB
+20
+GenAlg PTB-IRA @ 5 dB
+
+0
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0 [dB] (b) Average number of required iterations
+
+450
+
+η
+
+=
+
+Nit ,avg ·E k
+
+300
+
+150
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 5 dB GenAlg IRA @ 5 dB GenAlg TB-IRA @ 5 dB GenAlg PTB-IRA @ 5 dB
+
+Average decoding complexity η
+
+0
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0 [dB] (c) Average decoding complexity; E is the number of edges in the
+graph of the code
+
+The resulting IRA code without tailbiting ( ) designed at 5 dB under 200 BP iterations approaches, again, the performance of the 5G LDPC code, as shown in Fig. 5a.
+To avoid degree-1 VNs, an upper-right 1 is included in the H-matrix for tailbiting irregular repeat-accumulate (TB-IRA) codes, such that HR has the form
+
+1
+
+1
+
+1 1
+
+
+
+  
+
+1 ...
+
+  
+
+
+
+HTRB-IRA
+
+=
+
+ 
+
+... ...
+
+ . 
+
+  
+
+... 1
+
+  
+
+
+
+
+
+
+
+11 
+
+11
+
+The TB-IRA code has only degree-2 VNs in the HR-matrix. The GenAlg-based TB-IRA code ( ) designed at 5 dB again approaches the performance of the 5G LDPC code, as shown in Fig. 5a.
+To facilitate the encoding step, while still avoiding degree-1 VNs, a weight-three column replaces the weight-one column in the IRA code and is then moved to the first column in HR, and thus the name pseudo-tailbiting irregular repeat-accumulate (PTB-IRA) codes, as
+
+1 1
+
+
+
+ 11
+
+
+
+  
+
+1 ...
+
+  
+
+
+
+HPRTB-IRA
+
+=
+
+ 
+
+1
+
+... ...
+
+ . 
+
+  
+
+... 1
+
+  
+
+
+
+
+
+
+
+1 1
+
+1
+
+1
+
+Fig. 5: Several (n = 128, k = 64) LDPC codes decoded with BP decoding
+using Nit,max = 200 iterations over the bi-AWGN channel.
+
+3Similar to the LDPC codes of the DVB-S.2 standard.
+
+This code is similar to the WiMAX LDPC codes (IEEE 802.16e) and the WiFi LDPC codes (IEEE 802.11n). The resulting GenAlg-based PTB-IRA code ( ) designed at 5 dB again approaches the performance of the 5G LDPC code, as shown in Fig. 5a.
+In some applications, it is crucial to ensure that the worst case decoding latency is relatively low while having an acceptable error-rate performance. In BP decoding, the worst case latency is proportional to Nit,max. So we design LDPC codes tailored to iterative BP decoding with reduced maximum number of BP iterations Nit,max. Using GenAlg, an LDPC code tailored to Nit,max = 20 BP iterations ( ) designed at 5 dB outperforms the 5G LDPC code, leading to an Eb/N0 gain of 0.325 dB at BLER of 10−5, as shown in Fig. 6a. The resulting code under 20 BP iterations ( ) approaches the error-rate performance of the LDPC codes from [4], with lower Nit,max. For example, when compared to an AR3A LDPC code decoded with Nit,max = 200 iterations ( ). Thus, the proposed code can be decoded with reduced worst case decoding latency with competitive error-rate performance.
+It is fair to mention that the 5G LDPC code was designed to support a wide range of blocklengths and code rates. Thus, the error-rate performance was not the only design target. The 5G LDPC codes enables high degree of implementation parallelism and an organized message passing process, besides being described in a compact manner [6]. Fortunately, other such structural constraints can be imposed in our genetic optimization problem to further simplify encoding and decoding implementations of the resulting GenAlg-based LDPC codes.
+
+BLER
+
+100 10−1 10−2 10−3 10−4 10−5 10−6
+1 20 15 10
+
+All codes decoded with Nit,max = 20 except ( ) AR3A LDPC from [4]; Nit,max = 200
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 5 dB
+
+2
+
+3
+
+4
+
+Eb/N0 [dB] (a) BLER comparison
+
+0.3 dB
+
+0.325 dB
+
+0.325 dB
+
+5
+
+6
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 5 dB
+
+Average Iterations Nit,avg
+
+B. Decoding latency and complexity
+We show that for a fixed Nit,max, significant decoding latency and decoding complexity reduction can be achieved only by optimizing the LDPC code edge interleaver. In BP decoding of LDPC codes, the average decoding latency can be measured using the average number of BP iterations needed by the decoder Nit,avg. Due to the early stopping condition used, the average number of performed iterations Nit,avg is much lower than Nit,max, especially in the high SNR region. Fig. 5b and Fig. 6b show that our proposed GenAlg-based LDPC codes required on average a lower number of BP iterations when compared to conventionally designed (reference) LDPC codes for the same Nit,max. This potentially leads to a reduction in the decoding latency. Thus, higher throughput decoder implementations are possible.
+In a parallel iterative (message passing) decoder, the decoding complexity depends on the number of performed iterations and the number of arithmetic operations per iteration. The number of arithmetic operations per iteration is proportional to the number of edges in the Tanner graph of the code E. In other words, the decoding complexity heavily depends on the total number of messages passed between the VNs and the CNs. This means that an average decoding complexity measure can be calculated as the product of the average number of iterations Nit,avg (due to the early stopping condition) and the number of edges in the Tanner graph E.
+
+5
+
+1 1 1.5 2 2.5 3 3.5 4 4.5
+
+Eb/N0 [dB] (b) Average number of required iterations
+
+150
+Construction @ design SNR
+
+CCSDS Up-Link LDPC [21]
+
+(3,6) Regular LDPC
+
+100
+
+5G LDPC [20]
+
+GenAlg LDPC @ 5 dB
+
+Average decoding complexity η
+
+50
+
+η
+
+=
+
+Nit ,avg ·E k
+
+0 1 1.5 2 2.5 3 3.5 4 4.5
+Eb/N0 [dB] (c) Average decoding complexity; E is the number of edges in the
+graph of the code
+Fig. 6: Several (n = 128, k = 64) LDPC codes decoded with BP decoding
+using Nit,max = 20 iterations over the bi-AWGN channel.
+
+·10−5
+
+BLER @ 5 dB
+
+10
+
+GenAlg epochs
+
+5G LDPC [20]
+
+7
+
+4
+
+1
+
+1 50 100 150 200 250 300
+
+Population index i
+
+Fig. 7: Evolution of the BLER at design SNR Eb/N0 = 5 dB; (n = 128, k = 64)
+LDPC codes; BP decoding with Nit,max = 20; bi-AWGN channel.
+
+Similar to [18], we use the average decoding complexity per information bit η as the decoding complexity measure throughout this work
+
+η
+
+=
+
+Nit,avg k
+
+·E .
+
+Fig. 5c and Fig. 6c show a decoding complexity comparison between our proposed LDPC codes and the 5G LDPC codes under BP decoding with Nit,max = 200 and Nit,max = 20, respectively. This means that decoding complexity reduction was possible by designing the LDPC code using GenAlg.
+Although our design algorithm, which depends on errorrate simulations (Fig. 7), is more complex than most of the conventional design tools, our proposed codes can be decoded with (much) lower complexity (Fig. 5c and Fig. 6c). Thus, there is a trade-off between offline (i.e., design) complexity and online (i.e., decoding) complexity. However, one should keep in mind that the design is only done once while the decoding complexity applies to every later usage of the designed code. Furthermore, our proposed framework can be potentially used to design LDPC codes with the aim of reducing the decoding latency and/or complexity with a slightly relaxed error-rate performance constraint.
+
+C. Minimum distance dmin
+Computing the minimum distance dmin of LDPC codes can be formulated as an integer program (see equation (1)), which can be solved by numerical optimization methods [22]:
+
+n
+
+min
+
+∑ xi
+
+i=1
+
+subject to Hx − 2z = 0,
+
+(1)
+
+n
+
+∑ xi ≥ 1
+i=1
+
+where x ∈ {0, 1}n, z ∈ Zm and all operations are performed
+
+over integer numbers. dmin is the value of the objective
+
+function
+
+n
+∑i=1
+
+xi
+
+at
+
+the
+
+minimum.
+
+Table I shows the dmin of different LDPC codes. As a
+
+reference, we included the dmin of the 5G polar code specified
+
+by the 3GPP group [20] and the RM code with the same
+
+code length n and code dimension k. The results in Table I,
+
+Fig. 5a and Fig. 6a reassure that the minimum distance dmin
+
+is not the only parameter to consider in order to enhance the performance of short linear codes under BP decoding. This can be attributed to the fact that the performance of a linear code under iterative decoding is dominated by the Tanner graph structure of the code and not its dmin [23]. However, it is worth mentioning that maximizing dmin is important to enhance the error-floor behavior of a code [12]. The CCSDS LDPC code has the largest dmin when compared to other LDPC codes considered in this work, because it was designed to operate in the very low error-rate region.
+
+Table I: dmin of different (n = 128, k = 64)-codes
+
+Code CCSDS Up-Link LDPC
+
+in Figures dmin 14
+
+(3, 6) Regular LDPC
+
+8
+
+GenAlg LDPC @ 5 dB, 200 iter
+
+9
+
+GenAlg LDPC @ 5 dB, 20 iter
+
+8
+
+GenAlg IRA @ 5 dB
+
+9
+
+GenAlg TB-IRA @ 5 dB
+
+9
+
+GenAlg PTB-IRA @ 5 dB
+
+9
+
+5G Polar (no CRC)
+
+8
+
+RM
+
+16
+
+V. RESULTS FOR THE RAYLEIGH FADING CHANNEL
+To demonstrate the flexibility of our proposed design algorithm, we also design LDPC codes for the Rayleigh fading channel. To be more precise, we assume an ergodic Rayleigh fading model with full Channel State Information (CSI) which can be motivated as the result of an Orthogonal FrequencyDivision Multiplexing (OFDM)-based transmission in a multipath propagation environment and, thus, is omnipresent in today’s wireless communication systems. Our proposed design algorithm benefits from having the decoder-in-the-loop and the channel-in-the-loop. Thus, designing LDPC codes tailored to both the decoder and the channel is possible.
+We design LDPC codes tailored to BP decoding with Nit,max = 200 iterations at a design SNR Eb/N0 = 8 dB. As shown in Fig. 8a, the resulting LDPC code ( ) outperforms the 5G LDPC code optimized for short block lengths over the whole simulated SNR range (i.e., an Eb/N0 gain of 0.2 dB at a BLER of 10−4). Moreover, our proposed LDPC code uses a lower number of iterations on average when compared to the 5G LDPC code as depicted in Fig. 8b. Also, the average decoding complexity needed to decode our proposed LDPC code is lower than that required for decoding the 5G LDPC code, see Fig. 8c. Thus, our proposed LDPC code has a better error-rate performance and can be decoded with reduced decoding latency and decoding complexity when compared to the 5G LDPC code.
+Similarly, we use the same procedure to design LDPC codes tailored to a lower number of BP iterations Nit,max = 20. In Fig. 9a, we show that our GenAlg-designed LDPC code ( ) outperforms the 5G LDPC code over the whole simulated SNR range and an Eb/N0 gain of 0.8 dB is achieved at a BLER of 10−4. Again, a significant reduction in the average number of required iterations (i.e., decoding latency measure) and the average decoding complexity is achieved when compared to the reference (standardized) LDPC codes, see Fig. 9b and Fig. 9c.
+
+BLER
+
+100 10−1 10−2 10−3 10−4 10−5 10−6
+200 150 100
+
+Construction @ design SNR 0.2 dB
+
+CCSDS Up-Link LDPC [21]
+
+(3,6) Regular LDPC
+
+0.2 dB
+
+5G LDPC [20]
+
+GenAlg LDPC @ 8 dB
+
+0.25 dB
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Eb/N0 [dB] (a) BLER comparison
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 8 dB
+
+BLER
+
+100
+
+10−1
+
+10−2
+
+10−3 10−4 10−5
+20 15 10
+
+0.65 dB Construction @ design SNR
+
+CCSDS Up-Link LDPC [21]
+
+(3,6) Regular LDPC
+
+0.8 dB
+
+5G LDPC [20]
+
+GenAlg LDPC @ 8 dB
+
+0.8 dB
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Eb/N0 [dB] (a) BLER comparison
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 8 dB
+
+Average Iterations Nit,avg
+
+Average Iterations Nit,avg
+
+50
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Eb/N0 [dB] (b) Average number of required iterations
+
+1500 1000
+
+Construction @ design SNR CCSDS Up-Link LDPC [21]
+(3,6) Regular LDPC 5G LDPC [20]
+GenAlg LDPC @ 8 dB
+
+5
+
+1
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Eb/N0 [dB] (b) Average number of required iterations
+
+150
+
+Construction @ design SNR
+
+CCSDS Up-Link LDPC [21]
+
+(3,6) Regular LDPC
+
+100
+
+5G LDPC [20]
+
+GenAlg LDPC @ 8 dB
+
+Average decoding complexity η
+
+Average decoding complexity η
+
+500
+
+η
+
+=
+
+Nit ,avg ·E k
+
+50
+
+η
+
+=
+
+Nit ,avg ·E k
+
+0
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Eb/N0 [dB] (c) Average decoding complexity; E is the number of edges in the
+graph of the code
+
+Eb/N0 [dB] (c) Average decoding complexity; E is the number of edges in the
+graph of the code
+
+Fig. 8: Several (n = 128, k = 64) LDPC codes decoded with BP decoding Fig. 9: Several (n = 128, k = 64) LDPC codes decoded with BP decoding
+
+using Nit,max = 200 iterations over the Rayleigh fading channel.
+
+using Nit,max = 20 iterations over the Rayleigh fading channel.
+
+VI. LESSONS LEARNED FROM THE GENETIC LEARNING
+ALGORITHM
+Besides superior decoding performance, we aim to understand what makes the resulting codes so powerful and further analyze the final code structure. As such, the GenAlg may even provide new design paradigms for short length codes.
+First, we observed that our optimized GenAlg-based LDPC codes (i.e., H-matrices) contain some degree-1 VNs. It is well-known that degree-1 VNs are unfavorable in unstructured LDPC codes as they increase the probability of having more than one degree-1 VN being connected to the same CN (recall TB-IRA and PTB-IRA). In that case, these degree-1 VNs suffer from unrecoverable poor decoding performance. Obviously, this, prevents having an open tunnel between the VND and CND EXIT curves as shown in Fig. 1b, and converging to the (1, 1) point is not possible. However, as shown in Fig. 1, if wisely placed, those degree-1 VNs are not degrading the actual error-rate performance of the shortlength LDPC code. Similarly in [24], degree-1 VNs were used to improve the iterative decoding thresholds of protographbased LDPC codes. One interesting observation is that in our optimized GenAlg-based LDPC codes, there is no CN which is connected to more than one degree-1 VN, despite the fact that this was not a constraint in the optimization problem. Thus, GenAlg was able to “learn” that the design in which a CN is connected to more than one degree-1 VN should be avoided. A similar application of degree-1 VNs was reported by Richardson in multi-edge type LDPC codes [25].
+In order to further investigate the found degree profile, we show a BER comparison between two long length LDPC codes (n = 128000) in Fig. 10, as a sanity check:
+1) Conventional design: the first code is a single realization following the (asymptotically) optimal degree profile found by EXIT chart-based curve matching as shown in Fig. 1a.
+2) GenAlg-based design: the second code is a scaled version (realization) following the degree profile of our optimized GenAlg-based short length LDPC code as shown in Fig. 1b. It has a non-negligible amount of degree-1 VNs, but we ensure per-design that only one degree-1 VN is connected per CN.
+As shown in Fig. 10, it can be seen that the long LDPC code designed based on EXIT chart curve matching benefits from a lower threshold than the code based on GenAlg. Further, the GenAlg-based long LDPC code indeed suffers from an inevitable error-floor due to the significant portion of degree1 VNs it has. Therefore, Fig. 1 and Fig. 10 clearly indicate that short length codes follow different design paradigms and, thus, the GenAlg-based design process leads to better (in terms of error-rate) short length LDPC codes. The intuition behind this effect is the fact that, typically, the price-to-pay for nonmatched EXIT curves is a degraded waterfall performance. However, in the short length regime, the slope in the waterfall region is more important than its exact starting position (i.e., threshold).
+
+10−2
+
+Degree profile according to Matched EXIT, Fig. 1a Scaled GenAlg, Fig. 1b
+
+BER
+Shannon limit
+
+10−4
+
+−1
+
+0
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0 [dB] Fig. 10: Sanity check for long codes; (n = 128000, k = 64000) LDPC codes;
+BP decoding with Nit,max = 200; bi-AWGN channel.
+
+Further, we also observe that in our GenAlg-based short LDPC codes, no degree-2 VNs are involved in a short cycle. Despite being a well-known structural constraint in LDPC design, this was not explicitly outlined as a constraint in our GenAlg optimization process. Again, GenAlg was able to “learn” this constraint independently.
+Next we summarize a few remarkable observations from our GenAlg results:
+• Degree-1 VNs do not necessarily cause a performance degradation in short length LDPC codes.
+• In the short length LDPC code design process, a nonmatched EXIT curves scenario can lead to a good short length LDPC code, while obviously leading to a poor long length LDPC code.
+• Unfavorable graph structures (e.g., degree-2 VNs involved in short girth) were inherently avoided by GenAlg without an explicit constraint imposed on it.
+
+VII. CONCLUSION
+The classical LDPC code design tools are based on asymptotic length assumptions which are not valid in the short-length regime. Therefore, we focus on constructing short-length LDPC codes (i.e., the parity-check matrix) using the genetic algorithm. We propose a flexible framework accommodating practical decoding requirements and channel constraints. We construct LDPC codes without any special graph structure (i.e., we use a random edge interleaver) and demonstrate the flexibility of the proposed framework. We also construct accumulator-based LDPC codes which can be encoded easily. Our proposed LDPC codes outperform some well-designed state-of-the-art (standardized) LDPC codes over both AWGN and Rayleigh fading channels. Moreover, we design LDPC codes tailored to a reduced number of BP iterations in order to reduce the decoding complexity and latency with good error-rate performance (e.g., a coding gain of up to 0.8 dB when compared to the 5G LDPC code is reported over the Rayleigh fading channel). Finally, we observed that allowing the presence of carefully placed degree-1 VNs opens up more degrees of freedom for code design, and does not degrade the error-rate performance of our proposed short length LDPC codes.
+
+REFERENCES
+[1] T. Richardson and R. Urbanke, “Modern Coding Theory,” Cambridge University Press, Oct. 2007.
+[2] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of Low-Density Parity-Check Codes for Modulation and Detection,” IEEE Trans. Commun., vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[3] S. Chung, G. Forney, T. Richardson, and R. Urbanke, “On the Design of Low-Density Parity-Check Codes within 0.0045 dB of the Shannon Limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[4] M. C. Cos¸kun, G. Durisi, T. Jerkovits, G. Liva, W. E. Ryan, B. Stein, and F. Steiner, “Efficient Error-Correcting Codes in the Short Blocklength Regime,” Physical Communication, vol. 34, pp. 66–79, June 2019.
+[5] 3GPP TSG RAN Meeting no. 71, RP-160671, “New SID Proposal: Study on New Radio Access Technology,” NTT DOCOMO Inc., Go¨teborg, Sweden, Mar. 2016.
+[6] T. Richardson and S. Kudekar, “Design of Low-Density Parity Check Codes for 5G New Radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[7] T. de Cola, E. Paolini, G. Liva, and G. P. Calzolari, “Reliability Options for Data Communications in the Future Deep-Space Missions,” Proceedings of the IEEE, vol. 99, no. 11, pp. 2056–2074, Nov. 2011.
+[8] M. Ebada, A. Elkelesh, S. Cammerer, and S. ten Brink, “Scattered EXIT Charts for Finite Length LDPC Code Design,” in IEEE Int. Conf. Commun. (ICC), May 2018, pp. 1–7.
+[9] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and Irregular Progressive Edge-Growth Tanner Graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[10] H. Uchikawa, “Design of Non-Precoded Protograph-based LDPC Codes,” in IEEE Int. Symp. Inf. Theory (ISIT), June 2014, pp. 2779– 2783.
+[11] J. Van Wonterghem, A. Alloum, J. J. Boutros, and M. Moeneclaey, “Performance Comparison of Short-Length Error-Correcting Codes,” in Symp. Commun. Veh. Tech. (SCVT), Nov. 2016, pp. 1–6.
+[12] G. Liva, S. Song, L. Lan, Y. Zhang, S. Lin, and W. E. Ryan, “Design of LDPC Codes: A Survey and New Results,” J. Commun. Software Syst., vol. 2, no. 3, p. 191–211, Sep. 2006.
+[13] A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “DecoderTailored Polar Code Design Using the Genetic Algorithm,” IEEE Trans. Commun., vol. 67, no. 7, pp. 4521–4534, July 2019.
+[14] R. Gallager, “Low-Density Parity-Check Codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[15] R. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[16] W. E. Ryan, “An Introduction to LDPC Codes,” in CRC Handbook for Coding and Signal Processing for Recording Systems, CRC Press.
+[17] W. E. Ryan and S. Lin, “Channel Codes: Classical and Modern,” Cambridge University Press, 2009.
+[18] B. Smith, M. Ardakani, W. Yu, and F. R. Kschischang, “Design of Irregular LDPC Codes with Optimized Performance-Complexity Tradeoff,” IEEE Trans. Commun., vol. 58, no. 2, pp. 489–499, Feb. 2010.
+[19] J. H. Holland, Adaptation in Natural and Artificial Systems: An Introductory Analysis with Applications to Biology, Control and Artificial Intelligence. Cambridge, MA, USA: MIT Press, 1992.
+[20] “Technical Specification Group Radio Access Network,” 3GPP, 2018, TS 38.212 V.15.1.1. [Online]. Available: http://www.3gpp.org/ftp/Specs/ archive/38 series/38.212/
+[21] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of Channel Codes and ML Simulation Results,” www.uni-kl.de/channel-codes, 2019.
+[22] M. Punekar, F. Kienle, N. Wehn, A. Tanatmis, S. Ruzika, and H. W. Hamacher, “Calculating the Minimum Distance of Linear Block Codes via Integer Programming,” in 6th Int. Symp. Turbo Codes Iterative Inf. Process., Sep. 2010, pp. 329–333.
+[23] M. Schwartz and A. Vardy, “On the Stopping Distance and the Stopping Redundancy of Codes,” IEEE Trans. Inf. Theory, vol. 52, no. 3, pp. 922– 932, Mar. 2006.
+[24] A. Abbasfar, D. Divsalar, and K. Yao, “Accumulate-Repeat-Accumulate Codes,” IEEE Trans. Commun., vol. 55, no. 4, pp. 692–702, Apr. 2007.
+[25] T. Richardson, “Multi-Edge Type LDPC Codes,” presented at the Workshop honoring Prof. Bob McEliece on his 60th birthday, California Institute of Technology, Pasadena, California, May 2002.
+
+Ahmed Elkelesh received the B.Sc. degree (with highest honours) in Information Engineering and Technology in 2013 from the German University in Cairo and M.Sc. degree (with distinction) in Communications Engineering and Media Technology in 2016 from the University of Stuttgart. During his years of study in Germany, he was a research assistant with Fraunhofer IPA Stuttgart and an intern at Sony Stuttgart Technology Center. Since 2016, he has been a member of research staff with the Institute of Telecommunications, University of Stuttgart, where he is working toward the Ph.D. degree. His main research topic is channel coding, with particular emphasis on polar codes and LDPC codes. Further research interests include the areas of information theory, modulation, machine learning and SDR. He was the recipient of the Anton-und-KlaraRo¨ser prize 2017 for his master thesis.
+Moustafa Ebada received the B.Sc. (with distinction) from the Communications department in the German University in Cairo, Egypt in 2013 and his M.Sc. degree in electrical engineering and information technology from the University of Stuttgart, Germany in 2016, where he is currently working toward the Ph.D. degree. During his master studies, he was a research assistant with multiple institutes of the University of Stuttgart including fields of radio frequency technology, signal processing and telecommunications. Since 2016, he has been a member of research staff with the Institute of Telecommunications, University of Stuttgart. His main research topics are channel coding, particularly polar code construction and decoding. Besides, designing short LDPC codes for high speed applications. Further research interests include machine learning, particularly designing error correction codes and utilization of the state-ofthe-art coding schemes in the field of Multiple Access Channel.
+Sebastian Cammerer (S’16) received the B.Sc. and M.Sc. degree (with distinction) in electrical engineering and information technology from University of Stuttgart, Germany, in 2013 and 2015, respectively. During his years of study he worked as a research assistant at multiple institutes of University of Stuttgart. Since 2015 he is a member of research staff at Institute of Telecommunications, University of Stuttgart, and is pursuing his Ph.D. His main research topics are channel coding and machine learning for communications. Further research interests are in the areas of modulation, parallelized computing for signal processing and information theory. He is recipient of the Best Publication Award of the University of Stuttgart 2019, the Anton- und Klara Ro¨ser Preis 2016, the Rohde&Schwarz Best Bachelor Award 2015 and the VDE-Preis 2016 for his master thesis.
+Laurent Schmalen is a professor at Karlsruhe Institute of Technology (KIT) where he leads the Communications Engineering Lab (CEL). He received the Dipl.-Ing. degree in electrical engineering and information technology and the Dr.-Ing. degree from RWTH Aachen University of Technology, Aachen, Germany. From 2011 to 2019, he was with Bell Labs as a member of technical staff and from 2016 to 2019 also as department head of the Coding in Optical Communications department. From 20142019, he was Guest Lecturer at the University of Stuttgart, Germany. His research interests include forward error correction, modulation formats, and information theory for future optical networks. He is a senior member of the IEEE and recipient and co-recipient of several awards, including the E-Plus Award for his Ph.D. thesis, the Best Paper Award of the 2010 ITG Speech Communication Conference, the 2013 Best Student Paper Award at the IEEE Signal Processing Systems workshop, and the 2016 Journal of Lightwave Technology best paper award. Additionally, he received 2014 IEEE Transactions on Communications Exemplary Reviewer Award and the 2019 Journal of Lightwave Technology Outstanding Reviewer Recognition.
+
+Stephan ten Brink (M’97–SM’11) has been a faculty member at the University of Stuttgart, Germany, since July 2013, where he is head of the Institute of Telecommunications. From 1995 to 1997 and 2000 to 2003, Dr. ten Brink was with Bell Laboratories in Holmdel, New Jersey, conducting research on multiple antenna systems. From July 2003 to March 2010, he was with Realtek Semiconductor Corp., Irvine, California, as Director of the wireless ASIC department, developing WLAN and UWB single chip MAC/PHY CMOS solutions. In April 2010 he returned to Bell Laboratories as Department Head of the Wireless Physical Layer Research Department in Stuttgart, Germany. Dr. ten Brink is a recipient and co-recipient of several awards, including the Vodafone Innovation Award, the IEEE Stephen O. Rice Paper Prize, the IEEE Communications Society Leonard G. Abraham Prize for contributions to channel coding and signal detection for multiple-antenna systems. He is best known for his work on iterative decoding (EXIT charts) and MIMO communications (soft sphere detection, massive MIMO).
+
+

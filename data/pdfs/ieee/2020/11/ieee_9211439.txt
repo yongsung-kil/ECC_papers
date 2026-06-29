@@ -1,0 +1,351 @@
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+3467
+
+Error Diluting: Exploiting 3-D NAND Flash Process Variation for Efficient Read on LDPC-Based SSDs
+Kong-Kiat Yong and Li-Pin Chang , Member, IEEE
+
+Abstract—3-D NAND flash has become the mainstream in modern SSD designs because it offers superior bit storage density. However, while enjoying the large capacity, 3-D NAND flash is highly prone to bit errors due to its cylindrical cell structure. Modern SSDs employ the low-density parity-check (LDPC) errorcorrecting code to manage bit errors in 3-D NAND flash. Strong LDPC error correction is subject to a high time overhead, because it may require many sensing levels on read to obtain sufficiently confident bit input information. By exploiting the bit-error rate variation among vertical layers of 3-D NAND flash, we propose diluting bit errors of cells at error-prone, lower layers by mixing them with bit data of cells from reliable, upper layers. Cells at reliable layers provide highly confident bit input information that helps reduce the number of sensing levels on cell at errorprone layers. Our experimental results showed that the proposed approach improved the read throughput by 29% and reduced the read latency by 43% compared with a conventional multichip SSD design.
+Index Terms—Flash translation layer, low-density parity check (LDPC), solid state disks.
+I. INTRODUCTION
+T HE STORAGE capacity of flash-based solid-state disks (SSDs) dramatically improved in the recent years thanks to the high cell-bit density technology. Specifically, triplelevel cell (TLC) flash divides the cell threshold voltage into eight regions to represent three logical bits in a memory cell. However, with high-level cells, the margin between adjacent voltage states becomes narrow, and bit errors emerge as the cell threshold voltage undesirably shifts under the interference from various noises [1], [2]. Low-density parity check (LDPC) has been adopted for bit-error management of high-level flash cells [3]. LDPC is a probability-based error-correcting code and its error-correcting capability increases as the confidence of bit input information improves. The confidence is controlled by sensing levels, each of which standards for a reference voltage for comparison against the cell threshold voltage on read. Reading data from error-prone cells may require many sensing levels for successful decoding, and even if the algorithm
+Manuscript received April 17, 2020; revised June 17, 2020; accepted July 6, 2020. Date of publication October 2, 2020; date of current version October 27, 2020. This work was supported in part by the Ministry of Science and Technology, Taiwan, under Grant MOST 107-2628-E-009-002MY3. This article was presented in the International Conference on Embedded Software 2020 and appears as part of the ESWEEK-TCAD special issue. (Corresponding author: Li-Pin Chang.)
+The authors are with the Department of Computer Science, College of Computer Science, National Chiao Tung University, Hsinchu 30010, Taiwan (e-mail: zacyong.cs07g@nctu.edu.tw; lpchang@cs.nctu.edu.tw).
+Digital Object Identifier 10.1109/TCAD.2020.3012646
+
+overhead can be hidden by hardware accelerators, the overhead of voltage sensing is still at the same magnitude of that of reading flash memory.
+There have been excellent studies for efficient LDPC decoding on flash memory. The confidence of bit input information is subject to the voltage resolution of sensing levels and their corresponding likelihood values. Considering the effects of various interference, sensing levels can be placed surrounding the expected threshold voltage to obtain bit input information with high confidence using a reduced number of sensing levels [4]. It is also possible to weight more on the logarithmic-likelihood ratio (LLR) value of sensing levels near the expected cell threshold voltage [5]. Approaches without tweaking the LDPC algorithm have also been proposed. With the fast detection of bit errors, it is possible to avoid costly LDPC decoding on error-free data [6]. In addition, inserting known data is also beneficial to reduce the strength of LDPC decoding [7]. However, these prior studies do not exploit the highly nonuniform bit-error rates in 3-D NAND flash memory. Reading error-prone, unreliable memory regions still requires significantly more sensing levels than reading reliable memory regions.
+Modern NAND flash designs are evolving toward 3-D architectures, in which layers of flash cells are stacked vertically for a massive storage capacity. However, 3-D NAND flash is subject to an even more severe reliability issue due to layerto-layer interference [1], [8]. In addition, the manufacturing process of 3-D NAND flash introduces significant variation in bit-error rates among layers. Cells at lower layers are less reliable due to significant charge leakage, so reading data from lower layers requires multiple sensing levels for a sufficient strength of LDPC decoding. Frequent read sensing disturbs neighbor cells and creates new erroneous bits, necessitating more sensing levels for LDPC decoding [8]. In fact, cells at the upper layers are highly reliable and can provide highly confident bit input information. A question is how to exploit the high reliability of upper-layer cells to improve the decoding efficiency of lower-layer cells. To the best of our knowledge, there is little work exploiting the highly nonuniform bit-error rates in 3-D NAND flash for efficient LDPC decoding.
+This study aims for improving the LDPC decoding efficiency for cells at relatively unreliable layers. Our design exploits the highly nonuniform bit-error rates among layers of 3-D NAND flash. The LDPC decoding algorithm takes probability information associated with each input bit. The higher the probability, the more confident the bit input is. It uses an iterative belief-propagation process to exchange
+
+0278-0070 c 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3468
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+the existing LDPC module for improved read performance in
+
+3-D NAND flash memory.
+
+In summary, this study makes the following contributions.
+
+1) Validating the effect of error diluting on sensing-level
+
+reduction.
+
+2) Proposing a variation-aware subpage striping design for
+
+the best effect of diluting bit errors.
+
+3) Demonstrating the SSD read performance improvement
+
+based on realistic workloads.
+
+Our results show that our firmware-level technique was
+
+(a)
+
+highly beneficial to read performance under read-oriented
+
+workloads. Specifically, compared with a conventional mul-
+
+tichip SSD design, the proposed design improved the read
+
+throughput and read latency by 29% and 43%, respectively.
+
+Read-intensive SSDs have been identified as a critical build-
+
+ing block for emerging applications, including real-time data
+
+analytics and machine learning [10], [11]. We believe that the
+
+proposed error-diluting method will greatly benefit the read
+
+(b)
+
+performance of this class of SSDs.
+
+Fig. 1. (a) Architecture of 3-D CT NAND flash. (b) Threshold voltage (Vth) distribution of TLC.
+probability information among message bits until all erroneous bits are flipped [9]. With this, our basic idea is to dilute errors in bit input information of cells from an error-prone, lower layer by mixing the input with that of cells from a reliable, upper layer. With the highly confident bit input information from upper-layer cells, decoding data from lower-layer cells could use a reduced number of sensing levels. The concept is to reduce the strength of error correction on unreliable pages (which are the units for flash read/write) with the aid of the bit-input information from highly reliable pages. Specifically, we propose interleaving two pages of data between a pair of an upper-layer page and a lower-layer page. This way, while not changing sensing levels on the upper-layer page, the decoding process will use fewer sensing levels on the lower-layer page.
+There are several design challenges pertaining to the proposed idea. First, for the best effect of sensing-level reduction, the pairing of two pages should aim for a large difference between the bit-error rates of the two paired pages. Here, not only the layer-to-layer variation but also the page-type variation in bit-error rates should be considered. Second, in realistic workloads, the host generates both small, fragmented read requests and long, sequential ones. Servicing small read requests could suffer from an amplified read overhead because both the two paired pages are read for decoding. Third, interleaving data between a pair of pages involves subpage address mapping. This fine-grained mapping should not impose a large extra overhead on the existing SSD internal address mapping mechanism.
+Storage/memory reliability is not only a hardware-specific issue but also more a challenge for software. Compared with the hardware implementation of powerful LDPC decoders, the embedded software, i.e., the SSD firmware in this study, is more capable of strategic organization of data for better utilization of the error-correcting hardware. The proposed method, error diluting, is a software/firmware-level technique based on
+
+II. BACKGROUND AND RELATED WORK
+A. 3-D NAND Flash and Process Variation
+Fig. 1(a) depicts a typical architecture of 3-D chargetrapping (CT) NAND flash based on cylindrical silicon–oxide– nitride–oxide–silicon (SONOS) cells [12]. This architecture employs a number of layers. A layer is on the X–Y plane. Each layer consists of the same number of parallel word lines running through the X dimension. A vertical cylindrical channel goes through the Z dimension.1 The intersection of a vertical channel and a horizontal word line forms a cell, which is the basic unit for bit storage.
+In a typical design, a word line consists of 128K cells (1K = 210). With the TLC technology, the threshold voltage Vth of a cell is divided into eight segments to represent three logical bits [13]. Logical bits on the same word line form three different pages according to their cell-bit significance. In other words, a word line represents three pages, i.e., MSB, CSB, and LSB pages, named after their cell-bit significance. A cell contributes 1 b to each of the three pages. This way, the size of each page is 128 kB = 16 kB.
+The unit for flash writing/reading is a page. While writing a page injects electron charge into the cell nitride tier, reading a page compares the cell Vth against multiple reference voltages Vrefs. A block, which is the unit for erasure, consists of multiple vertical slices on the X–Z plane. Typically, a slice has 64 vertically stacked word lines, and a block is composed of four slices [14]. With this, a block has 4 × 64 = 256 word lines, and on these word lines there are 256 × 3 = 768 pages. Erasing a block discharges cells on all its word lines. The block size is 768 × 16 kB = 12 MB.
+Fig. 1(b) shows the Vth distribution of TLC under uniform values of bits [8]. The Vth distribution form eight states, which sufficiently represent three logical bits. In particular, the ER (111) state stands for the Vth level of an erased (discharged) cell. Recall that cells on the same word line are shared by an
+1The order of layer numbering is vendor specific. It can be either ascending or descending.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+YONG AND CHANG: ERROR DILUTING: EXPLOITING 3-D NAND FLASH PROCESS VARIATION FOR EFFICIENT READ ON LDPC-BASED SSDs
+
+3469
+
+(a)
+
+(b)
+
+(c)
+
+(a)
+Fig. 2. Flash read sensing for (a) hard-decision decoding with one sensing
+level and (b) and (c) soft-decision decoding with multiple sensing levels.
+
+MSB, a CSB, and an LSB page. If the Vth value of a cell is currently at the P7 (101) state, then the cell contributes 1, 0, and 1 to the MSB, CSB, and LSB page, respectively. The three pages on the same word line are read individually. For example, to read the MSB page of a word line, the Vth values of all cells on the word line are compared against Vref3 and Vref7 in parallel using two voltage comparison operations. In particular, if the Vth state of a cell is any one between Vref3 and Vref7 (i.e., P3–P6) then the MSB value of the cell is 0. Otherwise, the MSB of the cell is 1. The resultant MSB values of all cells are loaded into an internal page register for later use. Similarly, as Fig. 1(b) shows, reading the CSB page and the LSB page require comparison against 3 and 2 reference voltages, respectively.
+The architecture shown in Fig. 1(a) is subject to significant layer-to-layer process variation because of the tapered cylindrical structure. Here, process variation refers to the variability in the semiconductor manufacturing process. At lower layers, the diameter of the channel hole is small and the curvature of the ONO layer is high, and therefore the capacitive coupling between the CT tier and the control gate is high. With this, the lateral charge leaking becomes more significant [15] at lower layers, and the charge leaking undesirably lowers the cell Vth and creates bit errors. As reported in [1], the average raw bit-error rate (rBER) at the bottom layer can be three times as high as that at the top layer. Furthermore, Vth loss at high-voltage states is more significant so MSB pages are more prone to bit-flipping errors [13]. Taking the two types of variations (layer-to-layer and page-type) into consideration, it was reported that in a 3-D NAND device, the highest page rBER can be 21 times as high as that of the lowest page rBER [1].
+B. LDPC Decoding
+In addition to the error-prone flash cells at lower layers, the cylindrical cell structure of 3-D NAND flash introduces new types of noises, e.g., early retention loss and cross-layer interference [1], which further degrade the memory reliability. Modern SSDs adopt the LDPC error-correcting code to cope with the reliability issue of 3-D NAND flash. With a code rate k/n or (n, k), LDPC encodes a message of k bits into a codeword of n bits (n ≥ k). In typical SSD applications, the code rate is 8/9, i.e., 1 parity bit is generated per 8 message bits, and the message size is 4 kB [3]. LDPC is a probability-based error-correcting code. The input value for each bit indicates how high is the belief that the bit is 1 (or 0). LDPC can use one or multiple thresholds, i.e., voltage levels for read sensing, to increase the confidence on the bit input. The more sensing
+
+(b)
+Fig. 3. Concept of error diluting. (a) Decoding two flash pages separately. The lower-layer flash page requires many sensing levels. (b) Virtual page mixes bit-input information from an upper layer and a lower layer for sensing-level reduction on lower-layer cells.
+levels are used, the higher the capability of error correction will be.
+Fig. 2(a) shows a reading flash for hard-decision decoding, which involves only one sensing level (also known as the hard-sensing level) to determine the binary input value for each bit. The two Gaussian-like curves depict the Vth distribution of two adjacent Vth states out of all the eight. If hard-decision decoding fails, the flash-translation layer (FTL, the firmware inside of SSDs) proceeds to soft-decision decoding by adding two extra soft-sensing levels. As Fig. 2(b) shows, the three sensing levels create four Vth regions, each of which is associated with a value of the log-likelihood ratio (LLR). A large positive LLR value indicates a strong belief that the input bit is 0, while a small negative LLR value indicates the opposite. The initial LLR values for the Vth regions are calculated based on the estimated mean and variance of the Vth distributions of adjacent states [2]. LDPC decoding is based on an iterative message-passing procedure, and it uses fewer iterations to decode with highly confident LLR values. If soft-decision decoding with three sensing levels still fails, as shown in Fig. 2(c), the FTL increases the strength of error correction by adding more soft-sensing levels. However, sensing levels should be carefully used because flash reading with many sensing levels is subject to a high time overhead.
+C. Basic Idea
+As mentioned earlier, flash cells at upper layers are more resistant to Vth loss and thus are less prone to bit errors. Fig. 3(a) shows two flash pages X and Y: page X is from an upper layer and page Y is from a lower layer. The cellbit significance of pages X and Y is arbitrary. For example, page X can be an LSB page and page Y can be an MSB page. Now, because of the smaller distortion of cell Vth distribution, the upper-layer page X provides highly confident LLR values and requires only one sensing level to decode. On the other hand, cells in the lower-layer page Y are subject to a large Vth
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3470
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+shift, which creates more bit errors and degrades the accuracy of bit input information (LLR value confidence). Therefore, the lower-layer page Y requires more sensing levels for error correcting (seven in this example).
+Based on this observation, we propose using virtual pages. Let the two halves of a flash page X be denoted by X0 and X1. A virtual page involves bit information from different layers. Fig. 3(b) shows that a virtual page is composed of a half page from an upper layer and a half page from a lower layer. For example, the left virtual page is composed of two half pages X0 and Y0. The LDPC unit generates parity bits for the virtual page and distributes them in the two half pages. This design comes with two merits: first, by mixing the bit information from a lower layer with that from an upper layer, the average rBER is lowered and the strength of error correction can be reduced. Second, because flash cells at an upper layer are less prone to Vth shift, they can provide highly confident input information of bits (LLR values) using their original sensing levels. With this, lower-layer cells can use fewer sensing levels for sufficient decoding strength. Fig. 3(b) depicts that the number of sensing levels on the lower-layer half page is reduced (from 7 to 3) while that on the upper-layer half page remains the same. Because the latency of reading flash scales with the number of sensing levels, this design will reduce the time overhead of decoding page data.
+D. Related Work
+Zhao et al. [3] were among the pioneers who investigated the application of LDPC for bit-error management in SSDs. They demonstrated that increasing sensing levels for softdecision decoding effectively improved the capability of error correction. Based on this, low-overhead decoding methods for effective error correction were proposed. Considering that retention and read/write disturbance have different effects on cell Vth values, Li et al. [4] proposed placing sensing levels surrounding the expected cell Vth values to improve the confidence of bit-input information. Zhang et al. [5] proposed weighting more on the LLR values of the sensing levels near the expected cell Vth to differentiate the more likely cases of the actual Vth value from the less likely cases. Qi et al. [6] proposed using the CRC checksum for fast detection of errorfree pages and conducting LDPC decoding only on the pages that failed the CRC check. Li et al. [7] proposed padding known data to compressed page data in the same physical page. Since known data (virtually) do not contribute to bit errors, decoding the compressed data will not involve strong error correction. However, these prior studies are not aware of the high rBER variation in 3-D NAND flash, so pages at unreliable layers are still subject to a high decoding overhead.
+3-D NAND flash is more prone to process variation than planar flash because of its tapered structure of channel cylinders. Luo et al. [1] measured the Vth distribution of cells at different layers. They identified that pages at different layers are subject to highly different rBERs due to the layer-to-layer process variation. Liu et al. [8] further reported that various noises, including read/write disturbance and retention, exaggerated the rBER variation among layers. The LDPC module
+
+Fig. 4. Correctable rBER and page read latency with respect to different numbers of sensing levels.
+progressively increases sensing levels when decoding data from pages at unreliable layers. Du et al. [16] proposed using a large increment of sensing levels when decoding error-prone pages to avoid the decoding attempts that are unlikely to succeed. Di et al. [17] proposed using strong compression when storing data in pages at unreliable layers. With this, the unused cells in a page were not programmed to high-voltage states to avoid unnecessary wear of these error-prone cells. However, the studies above did not consider the possibility of cross-layer optimization to improve the efficiency of decoding data from pages at unreliable layers.
+Different from prior related work, in this study, we show that strategic data placement greatly benefits the read performance of LDPC-based SSDs. Data placement is a high-level policy and is implemented by the embedded firmware/software. It offers a greater level of flexibility to exploit the reliability variation in 3-D NAND flash for efficient LDPC decoding.
+III. DILUTING BIT ERRORS FOR IMPROVED LDPC DECODING EFFICIENCY
+In this section, we first develop a model of LDPC decoding capability and page read overhead with respect to different sensing levels. Based on this model, we demonstrate how mixing cell-bit input information from different layers, i.e., bit-error diluting, benefits the efficiency of LDPC decoding.
+A. LDPC Decoding Capability and Overhead
+To understand the capability of LDPC decoding with respect to different sensing levels, we implemented the LDPC algorithm as a module on top of a flash-cell Vth simulator. The LDPC module encoded each 4-kB message with a code rate of 8/9, and the number of decoding iterations was limited to 30. For the Vth simulator, the initial Vth value of each flash cell was generated by a Gaussian distribution, whose mean and standard deviation were based on those reported by [13]. Because retention error is the most significant source of bit errors, we employed the retention error model presented in the study to develop the Vth shift for 60-day retention. The simulation was concerned with the highest correctable rBER of MSB pages. We started with one sensing level for harddecision decoding, and during the process, if an MSB page failed decoding, one extra sensing level was added for softdecision decoding. On successful decoding, the current rBER
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+YONG AND CHANG: ERROR DILUTING: EXPLOITING 3-D NAND FLASH PROCESS VARIATION FOR EFFICIENT READ ON LDPC-BASED SSDs
+
+3471
+
+TABLE I SELECTED COMBINATIONS OF A STRONG PAGE AND A WEAK PAGE AND
+THEIR ORIGINAL SENSING LEVELS (WITHOUT PAGE PAIRING) AND SENSING LEVELS WITH PAGE PAIRING
+
+Fig. 5. Sensing levels required by different types of pages at various layers.
+was returned. The simulation was repeated 100 times on 3000 word lines with randomly generated data patterns.
+Fig. 4 shows that compared with hard-decision decoding, soft-decision decoding (sensing levels ≥2) achieved significantly higher correctable rBERs. While the capability of soft-decision decoding improved with the number of sensing levels, the improvement was the most significant when the number of sensing levels grew from 2 to 3. The marginal gain diminished gradually for sensing levels greater than 3. Fig. 4 also illustrates the time overhead of flash page reading based on the specifications of [14]. Reading with one single sensing level (the hard-decision level) employed the conventional page read command and its latency was the lowest. Reading with multiple sensing levels was based on the soft-read flash command, which involved multiple Vth sensing operations and soft-read information transfer. The read time overhead appeared scaling linearly with the number of sensing levels.
+B. Strong–Weak Page Pairing
+We extended the Vth simulator with the consideration of layer-by-layer process variation in 3-D NAND flash. Here, we set the initial page rBERs according to the process variation among 64 layers reported in [1]. Based on this, we developed the cell-Vth shift for 3000 P/E cycles and 30 days of retention. Fig. 5 depicts the number of sensing levels that LSB pages, CSB pages, and MSB pages required to decode successfully at different layers. While pages at upper layers succeeded harddecision decoding (using only one sensing level), pages at lower layers required soft-decision decoding with up to seven sensing levels. In addition, decoding MSB/CSB pages required much more sensing levels than LSB pages. This is because a high-voltage state is more susceptible to voltage loss. As Fig. 1(b) shows, Vth loss in the two highest states P7 and P6 flips the MSB and CSB, respectively.
+Pages at upper layers are less prone to Vth shift, so they have fewer erroneous bits and can also provide highly confident LLR values. Conversely, decoding pages at lower layers often requires stronger error correction with many sensing levels. By mixing the input information of bits from layers of different degrees of reliability, we aim for reducing the number of sensing levels on lower-layer pages.
+Because the FTL manages data in terms of pages, we propose using virtual pages, which are as large as physical pages.
+
+The codeword (encoded data) of a virtual page is split and stored in two equal-sized physical subpages. In our design, the four subpages of two virtual pages are interleaved between two paired physical pages. For efficiency, decoding the two virtual pages involves two page read commands only. The FTL reads input information of bits from the two paired physical pages and reassembles the bit information of the virtual pages. After this, under the instruction of the FTL, for each virtual page, the LDPC module obtains LLR values of the bit information by table lookup and decodes message bits from the LLR values. Notice that the two subpages in the same physical page use the same number of sensing levels.
+Between two physical pages, we refer to the page having a lower rBER as a strong page, and the other page is called a weak page. We conducted LDPC decoding with and without the proposed page pairing to determine how many sensing levels were required by a pair of pages. Table I shows that compared with decoding the two pages individually, decoding two interleaved virtual pages from the page pair required noticeably fewer sensing levels on the weak page. For instance, without page pairing, two pages required 7 and 1 sensing levels to decode, respectively. Now, with page pairing, decoding two virtual pages from the two pages required 3 and 1 sensing levels, respectively. In particular, the weak page required 4 fewer sensing levels. Results also indicated that if the difference in the original sensing levels of two paired pages was large, the weak page received a large reduction in sensing levels.
+There are several reasons behind this phenomenon. First, the strong page did not require extra sensing levels because it already provided highly confident LLR values with its existing sensing levels. Second, mixing bit information from the strong page diluted bit errors in the weak page, and decoding with a lower rBER requires fewer sensing levels. Third, when the number of sensing levels was small, an increment in the level count (e.g., from 2 to 3) greatly improved the correctable rBER. Therefore, the number of sensing levels of the weak page in a page pair was usually smaller than the average of the original sensing levels. For example, after pairing two pages that originally required 2 and 7 sensing levels, the weak page required 3 sensing levels only, which was smaller than the average of 2 and 7.
+In our simulation, the majority (70%) of all page pairs succeeded to decode with the reduced number of sensing levels shown in Table I. The other page pairs underwent a retry process to find the minimally sufficient sensing levels for successful decoding (see Section IV-B). We observed that these
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3472
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+(a)
+
+(b)
+
+(a)
+
+(b)
+
+Fig. 7. Flash chip execution timeline with and without the proposed variation-
+
+aware subpage striping.
+
+(c)
+
+(d)
+
+Fig. 6. (a) RAID-0 page-level striping. (b)–(d) Different subpage striping strategies for virtual pages. Virtual pages a = {a0, a1} and b = {b0, b1}, marked in gray, are interleaved between two pages at the subpage level. For
+simplicity, each chip shows only one of all its blocks.
+
+page pairs required only one more sensing levels on the weak page than the reduced numbers in Table I.
+IV. SUBPAGE STRIPING FOR BIT-ERROR DILUTING
+This section presents a subpage striping design that exploits the process variation of 3-D NAND flash for the best effect of our error-diluting strategy.
+A. Variation-Aware Subpage Striping
+The proposed strong–weak page pairing method interleaves two virtual pages between a pair of physical pages. The LDPC module requires to read the two paired physical pages to decode any one or both of the two virtual pages. Because modern SSDs are equipped with an array of flash chips, if two paired pages are stored in different chips, then the LDPC module can read both pages in parallel. For the sake of brevity, in this study, we assume that each chip operates independently, and our discussion does not involve a shared data path among chips.
+Distributing data among chips aims for a high degree of chip parallelism on sequential access. Fig. 6(a) depicts a simple strategy, page-level RAID-0 striping, for page distribution. It can easily be enhanced to support virtual pages through subpage striping. Fig. 6(b) shows subpage RAID-0 striping, which pairs two parallel pages in the two chips and interleaves two virtual pages between the paired pages. Let a virtual page x be composed of two subpages x0 and x1. Here, virtual pages a = {a0, a1} and b = {b0, b1} are interleaved between two LSB pages at the topmost layer of chips C0 and C1. The LDPC module can read the two LSB pages from the two chips in parallel to decode virtual pages a and b. However, this basic design pairs two pages both from a reliable layer, and neither of the pages benefits from bit-error diluting.
+
+Our strong–weak page pairing strategy exploits the variation in rBERs among layers for reduced sensing levels on weak pages. Fig. 6(c) depicts an improved subpage striping design, which pairs pages at upper layers (layers 0–31) with pages at lower layers (layers 32–63) for an amplified difference between the rBERs of paired pages. Now, as previously depicted in Fig. 5, pages of different cell-bit significance also exhibit noticeable variation in their rBERs. Fig. 6(d) shows a further improved subpage striping design that pairs an MSB page at a lower layer with an LSB page at an upper layer for the best effect of error diluting.
+Fig. 7 shows the execution timeline of servicing two read requests R1 = {t, u} and R2 = {a, b} on two flash chips. Fig. 7(a) shows the scenario of page-level RAID-0 striping [as shown in Fig. 6(a)]. Suppose that an LSB page at layer 0 and an MSB page at layer 32 require 1 and 7 sensing levels to decode alone, respectively. Now, without our subpage striping and page pairing, the completion of R1 and R2 is subject to the high latency of decoding data from weak pages. Differently, Fig. 7(b) shows the execution timeline of our variation-aware subpage striping design [as depicted in Fig. 6(d)]. The page data t and u are interleaved between two paired pages (and so are a and b). According to Table I, the LDPC module requires only 1 and 3 sensing levels on the strong page and weak page (previously 1 and 7), respectively, to decode the two pages of data t and u. Both R1 and R2 benefit from the variationaware subpage striping because of the significant reduction of sensing levels on weak pages. Overall, the read latency and throughput are both improved significantly.
+B. Read Request Processing
+Our design interleaves two pages of data (i.e., two virtual pages) between two physical pages. However, if the host issues a small read request of one single page, the FTL still has to read two paired pages to decode the requested data, doubling the read overhead. We present two methods for the FTL to alleviate this overhead. We first propose using a small read cache of the recently decoded page data. This design, call cache reading, exploits spatial locality in host read pattern. If two virtual pages are sequentially written and stored in a page pair, then it is highly possible that they will be read sequentially in the future. When a page read arrives, if the page data are present in the cache then the read is serviced immediately. Otherwise, the FTL identifies the page pair that the requested page is associated with, decodes two virtual pages from the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+YONG AND CHANG: ERROR DILUTING: EXPLOITING 3-D NAND FLASH PROCESS VARIATION FOR EFFICIENT READ ON LDPC-BASED SSDs
+TABLE II FRAGMENT OF THE SENSING-LEVEL RETRY TABLE
+
+3473
+
+Fig. 8. Flow of processing a page read.
+page pair, loads the decoded virtual pages into the cache, and reports completion of the page read. Next time, if the other virtual page is requested by the host, it is already present in the read cache. In our current design, the cache manages 512 pages of data using the least-recently used (LRU) policy.
+In addition to sequential read bursts, the host also generates small, fragmented read requests. In this case, not both virtual pages decoded from a page pair will be used by the host. The second method, called snap reading, utilizes the partial-page read command of commodity flash chips [18]. For example, based on Fig. 6(d), suppose that only a virtual page a is requested by the host. FTL issues two partial page read commands to fetch subpages a0 and a1, decodes page data a, and loads the result into the cache. Partial page reading is applicable to either one of the two halves of a physical page. Based on the performance specs of [18], compared with a full-page read, a half-page read uses 33% and 50% less time on busy reading and data transferring, respectively.
+Fig. 8 shows the process of handling a page read. The FTL first examines the size of the host read request that the page read belongs to. If the host request is large, i.e., it involves multiple pages, each of which is 16 kB in our study, then the page read is a highly possible part of a sequential read burst. In this case, the FTL performs cache reading: it reads the two physical pages that the requested page data is interleaved between, decodes two pieces of page data from the two physical pages, and loads the decoded data into the read cache. If the associated host request is not large (≤16 kB), then the FTL uses snap reading: it issues two partial page read commands to fetch two subpages, one from each physical page, decodes a page of data from the two subpages, and then loads the decoded page data into the read cache. It is possible that the page does not use subpage striping (see the next section). In this case, the FTL reads and decodes the page as if in a conventional SSD design. Whether or not a page uses subpage striping can be identified by looking up the mapping table (see Section IV-E).
+Upon successful decoding of data from two paired physical pages, the FTL records the current number of sensing levels on each page. Next time when reading the two pages for decoding, the FTL reuses their latest sensing levels to begin with sufficient decoding strength. However, if decoding fails with the reused sensing levels, the FTL progressively adds more sensing levels on the two pages until decoding succeeds. The
+
+retry process is based on a predetermined table, which stores a sequence of sensing-level combinations. A fragment of the retry sequence is shown in Table II. For example, if the FTL fails to decode data from a pair of pages with sensing levels 2 and 2, it tries again with sensing levels 2 and 3 on the strong page and weak page, respectively. The sequence is empirically determined based on two principles. First, the retry process favors increments in sensing levels on the weak page more than on the strong page. Second, the process refrains from using many sensing levels on the weak page. The rest of the retry table is constructed based on the two rules. Notice that during the retry process, rereading a page is required only if its number of sensing levels changes. Decoding failure is not a frequent event and we shall report the retry overhead in the experimental section.
+C. Write Request Processing
+The FTL allocates free pages to service incoming write requests. The strategy of page allocation for write requests is also related to the management of read overhead. If the request size is larger than one page, then the incoming data undergo subpage striping. This is because a large request is usually part of a sequential write burst, and sequentially written data will, with high probability, be read sequentially in the future. On the other hand, a write request of one single page often contributes to random-reading data, so it is serviced without subpage striping. This is because, although our design utilizes partial page read commands, reading a full page from a chip still uses less total chip time than reading two partial pages from two chips.
+A large write request consists of multiple page writes, and the FTL services two page writes at a time. Our subpage striping method dispatches the two page writes to different chips based on their logical addresses. Now, to write two pages of data to two chips, the FTL allocates a strong page and a weak page, each from a distinct chip, for subpage striping. In each chip, let a newly erased block that is accepting new page writes be referred to as a log block. A log block is always as large as one flash block. We propose dividing a log block into a strong page pool, which consists of free pages at the upper 32 layers, and a weak page pool, which is formed by free pages at the lower 32 layers. Pages in each pool are allocated from the topmost layer to the bottom layer. In addition, pages in the strong pool are allocated in the ascending order of cellbit significance (e.g., from LSB to MSB) and those in the weak pool are allocated in the descending order of cell-bit significance. Normally, the three pages of the same word line must be written one by one in the ascending order of cell-bit significance (LSB first). Recent 3-D CT NAND flash designs
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3474
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+have started employing one-shot programming [14], so it is possible to collect the three pages in the descending order of cell-bit significance and write these pages all at once. With this design, the LSB page at layer 0 of a log block in the first chip is paired with the MSB page at layer 32 of a log block in the second chip.
+With the page allocation method, although a weak page is paired with a strong page in a different chip, the pairing of physical pages between two chips is not static. This is because the active log block of a chip is a garbage-collected free block, which can be an arbitrary block in the chip. After forming a new pair of pages, the FTL reuses their previously recorded sensing levels for decoding. If decoding fails, the FTL employs the retry process mentioned in the prior section to choose new sensing levels for the paired pages.
+Because small write requests do not involve subpage striping, the FTL maintains an additional log block for small requests and this log block is not partitioned into pools. This way, each chip has two active log blocks, one for large requests and the other for small ones. The small-write log block also serves the last page write of an odd-sized, large write request. This design guarantees that the total numbers of free strong pages and free weak pages in the large-write log block are always balanced.
+D. Garbage Collection
+When a chip runs low on free space, the FTL conducts a series of data copying operations followed by block erasure on the chip to reclaim free blocks. The activities are collectively called garbage collection. Each chip employs a third log block for the garbage-collected data. The use of a third log block benefits garbage collection efficiency by avoiding mixing longlived, garbage-collected data with incoming host data in the same log block. To reclaim a free block, the FTL selects a block that has the smallest amount of valid data as the victim, copies all valid data from the victim to the garbage-collection log block, and then erases the victim. Like the large-write log block, the garbage-collection log block is also divided into two page pools to preserve page strength across garbage collection.
+To copy a valid page for garbage collection, the page is first read for decoding. The decoded, error-free page is then encoded again and written to the garbage-collection log block. Now, if the valid page is paired with another page in a different chip, then both pages are read and decoded. After this, the valid page is copied to the garbage-collection log block. Notice that the pairing page in another chip is read but not rewritten/copied. However, the copying of a valid page now requires to read two pages. To mitigate this extra overhead, we propose that if the valid page is a strong page, then it is copied without being decoded, i.e., the FTL copies its raw data (encoded message) to the garbage-collection log block. This way, copying the page does not involve its pairing page. Because copying raw data may accumulate bit errors, in our current design, the strong page of a page pair undergoes up to five times of raw-data copying before it requires LDPC decoding to clear up its bit errors. This number was empirically set according to [19]. The other case is much simpler that the page
+
+TABLE III 3-D NAND FLASH PARAMETERS [14]. † BASED ON THE SNAP READ
+COMMAND LATENCY (8 KB) IN [18]
+to be copied is not involved in subpage striping. The page is copied without involving any pairing page.
+E. Implementation Overhead Existing FTLs employ a RAM-resident mapping structure
+that maps logical page numbers (LPNs) to physical page numbers (PPNs). For modern large-page flash memory, subpage mapping has been an industry standard for the best write performance [20]. Our subpage striping design inherits this fine-grained mapping from existing FTLs. In our design, only two sequential LPNs are allowed to be written to a pair of physical pages through subpage striping. For each LPN mapping entry, we propose adding two bits, one indicating whether the LPN is paired with its neighbor or not and the other indicating whether the LPN is the first or the second in a page pair. For example, suppose that the mapping entries of LPNs 99 and 100 are (x, yes, first) and (y, yes, second), respectively. When the host reads LPN 99, the FTL knows that the LPN is mapped to PPN x and its neighbor LPN 100 is stored in a paired PPN y. The FTL reads the paired PPNs x and y for decoding. Our method also keeps track of the number of sensing levels that each physical page uses in its latest successful decoding attempt. Although the information is a page-level overhead, each LPN requires only 3 b to support a level number up to 7.
+V. EXPERIMENTAL RESULT A. Experimental Setup and Performance Metrics
+We conducted a series of experiments on an SSD simulator with the parameters of 3-D NAND flash geometry and operation latency listed in Table III. The simulator was based on DiskSim with an SSD extension from Microsoft.2 The simulator provides necessary functionalities for the evaluation of our error-diluting method, such as the multichip structure, a command queue, and a basic FTL implementation. The FTL always selected a block of the largest amount of invalid data for garbage collection, and it dispatched incoming page writes to flash chips based on their logical page addresses. The SSD adopted a command queue of up to 16 pending requests and a small read cache of 512 pages.
+We enhanced the simulator for our error-diluting method. Based on the results in Section III-A, each page was associated with an rBER value according to its layer position and cellbit significance. An LDPC decoding module was added before the page read routine to determine the result (success or fail) of a decoding attempt with a given number of sensing levels.
+2https://www.microsoft.com/en-us/download/details.aspx?id=52332
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+YONG AND CHANG: ERROR DILUTING: EXPLOITING 3-D NAND FLASH PROCESS VARIATION FOR EFFICIENT READ ON LDPC-BASED SSDs
+TABLE IV WORKLOAD CHARACTERISTICS
+
+3475
+
+The read/write flows of the FTL were enhanced based on the details described in Sections IV-B and IV-C.
+Our experiments involved the following methods for performance comparison: Baseline was a conventional multichip FTL employing page-level RAID-0 striping for the initial page data placement. Read-hot migration, RHM, was a straightforward improvement upon Baseline. In addition to page-level RAID-0 striping, it monitors the read frequency of pages and periodically promoted frequently read pages to upper layers for efficient LDPC decoding. Error-diluting, ED, was our variation-aware subpage striping method. The strong–weak page pairing policy involved the layer-to-layer and page-type rBER variation for the best result of error diluting. ED was equipped with cache reading and snap reading to handle sequential page reads and random ones. The initial data placement for Baseline/RHM and ED are demonstrated in Fig. 6(a) and (d), respectively.
+Table IV shows the characteristics of our experimental workloads, which were obtained from the SNIA-IOTTA and UMass trace repositories. The application scenarios of the workloads include mainstream services, such as Web server (web2) and media server (mds). While most of the experimental workloads were read intensive for better observation of the SSD read performance, we deliberately included read– write workloads (prn1 and hm0) to assess the efficacy of error diluting under a heavy write stress. Our experiments involved the following performance metrics: read throughput and read latency, which directly reflected the time overhead of LDPC decoding. Read amplification, which is the ratio of the total amount of data physically read from flash memory to that requested by the host; write amplification, whose definition was analogous to read amplification. An ideal result exhibited a high level of throughput and low values of read latency, read amplification, and write amplification.
+B. Read Performance
+ED Versus Baseline: Fig. 9 shows the read throughput of the three methods, all normalized to Baseline. The read throughput of ED was 29% higher on average compared with that of Baseline. The improvement was mainly attributed to the reduction of sensing levels on weak pages, as previously shown in Fig. 7. In particular, ED achieved a greater improvement under the first three workloads, src21, web2, and proj4. As shown in Table IV, the small-read ratios of the src21 and web2 workloads were very low (5% and 7.1%), indicating the presence of
+
+Fig. 9. Read throughput, all normalized to Baseline. The absolute values are with Baseline.
+many large read requests (≥16 kB). The proj4 workload consisted of both large read requests and small ones, as indicated by its slightly higher small-read ratio and moderate average read size. Our strong–weak page pairing strategy significantly benefited the overhead of handling large read requests in the three workloads.
+For the second three workloads, usr2, mds1, and ws1, ED obtained slightly lower improvements in read throughput (but still higher than 25%). The usr2 and mds1 workloads were relatively less read intensive as their read request ratio were 81% and 93%, respectively. For the ws1 workload, although its read ratio was extremely high (99.97%), its small-read ratio was very high (70.8%). Small read requests were handled by snap reading, but they did not benefit from strong–weak page pairing as much as large read requests did. If snap reading was disabled, due to the extra overhead of handling small read requests, the improvement under ws1 was dropped from 28% to 17%.
+ED was not very beneficial to the last three workloads, proj3, prn1, and hm0. For the proj3 workload, its read requests were concentrated on only 2.6% of the disk space. Many of its reads were serviced by caching so decoding data from pages was not necessary. The prn1 workload had a low read ratio so the benefit of page pairing was diluted by the unchanged write overhead. The hm0 workload was write-dominant. Moving one valid page for garbage collection may require to decode data from a pair of pages (whose overhead will be addressed later), and with this extra read overhead, ED slightly degraded the read performance under hm0.
+Overall, our ED approach reduced the total number of sensing levels by up to 40% under src21 and 24% on average. It improved the read throughput under eight of the nine workloads. Specifically, ED was highly effective under a workload producing bulk read requests or when the read coverage was sufficiently larger than the read cache size.
+RHM: In our experiment, for every 10 000 read requests, RHM migrated the page data that had been read at least ten times to upper layers. It should have improved the read performance because decoding page data from reliable layers required only a few sensing levels. However, Fig. 9 indicates that RHM obtained no meaningful performance improvement. We observed that under all workloads, the qualified read-hot data occupied no more than 1% of the disk space. Many of the read requests bound for this tiny set of read-hot data were
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3476
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+(a)
+
+(b)
+
+Fig. 12. Amplification factors of (a) write and (b) read.
+
+Fig. 10. Average read latency, all normalized to Baseline. The absolute values are with Baseline.
+Fig. 11. 99.999% tail read latency, all normalized to Baseline. The absolute values are with Baseline.
+serviced by the read cache (512 pages) without accessing flash memory. We could choose to promote more page data to upper layers by lowering the threshold of data migration. However, read requests of some workloads, e.g., proj4 and usr4, covered more than one half of the disk volume space (50% and 75%), and read-data migration with a low threshold would risk a surge of write stress and prematurely wearing out flash memory.
+Read Latency: Fig. 10 shows the read latency of the three methods, all normalized to Baseline. The read latency of ED was 43% lower than that of Baseline on average, and this improvement appeared more significant compared with the read throughput improvement in Fig. 9. This is because among the parallel page reads of a read request, the request latency was subject to the slowest one. When involving page reads from lower layers, Baseline suffered from a high request latency. In contrast, in the best case, ED decreased the latency of reading a weak page from 675 µs (7 sensing levels) to 315 µs (3 sensing levels) by pairing the weak page with a strong page. In addition, speeding up a read request decreased the waiting time of all pending read requests in the command queue, and therefore the overall latency reduction was amplified. We also identified that a reduced read latency on weak pages helped improve the utilization of chips. For example, read requests in the command queue could be all waiting for the completion of slow weak-page reads on a subset of all chips. With Baseline, under the web2 and proj3 workloads, the lowest time utilization of an individual chip was as low as 74%. ED balanced the read latencies between strong pages and weak pages, improving this number to 94%.
+
+Tail Read Latency: Fig. 11 shows the 99.999% tail read latency, all normalized to Baseline. Under seven out of the nine workloads, ED did not negatively impacted on the tail read latency and even greatly improved the latency under four workloads. ED slightly increased the tail read latency under src21 and proj4. It was caused by the waiting time of reading paired pages from a few congested chips. On the other hand, RHM suffered from degraded tail read latencies because of the conflict between host read requests and internal migration operations of read-hot data.
+Sensing-Level Retry: As mentioned in Section IV-C, if two newly paired pages fail to decode using their old sensing levels, the FTL runs a retry process to find new sensing levels for them. We observed that the decoding failure rate was as low as 1.3% and the retry process contributed to less than 1% of the average read latency. This is because pairing new pages was not a frequent event under the read-oriented workloads. In addition, recently written data were barely read under the read–write workloads.
+C. Write and Read Amplification
+Fig. 12(a) shows the write amplification factor (WAF) under two read-intensive workloads (web2 and proj4) and two read– write workloads (prn1 and hm0). The WAF metric indicated how high the extra page write overhead was. Extra page writes were contributed by garbage collection (in all methods) and read-hot data migration (by RHM only). The ideal value was 1.0. Now, the WAF of Baseline was nearly ideal but spiked to 2.1 under the read–write hm0 workloads. This is because under hm0, the demand for free space was high, and in each victim block selected by garbage collection, nearly one half of all its pages were still valid. The WAF values of RHM were noticeably higher than those of Baseline under the proj4, prn1, and hm0 workloads, reflecting the overhead of read-hot data migration. The WAF values of ED appeared almost identical to those of Baseline, indicating that the proposed subpage striping method did not negatively impact on the efficiency of garbage collection.
+Read amplification factor (RAF) reflected how many extra page reads were generated by garbage collection (in all methods), read-hot data migration (by RHM only), and decoding unused page data (by ED only). Notice that RAF can be below 1.0 due to read caching. The RAF levels of all methods under the first three workloads were very close because host reading was much more frequent than garbage collection and/or readhot data migration. However, ED experienced a higher RAF
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+YONG AND CHANG: ERROR DILUTING: EXPLOITING 3-D NAND FLASH PROCESS VARIATION FOR EFFICIENT READ ON LDPC-BASED SSDs
+
+3477
+
+(a)
+
+(b)
+
+Fig. 13. (a) Read throughput improvement factors under different degrees
+
+of process variation and (b) read throughput on flash arrays of different sizes.
+
+(a)
+
+(b)
+
+under the garbage-collection-intensive hm0 workload. This is because when a weak page was copied during garbage collection, ED still had to read its pairing page for decoding to clear up bit errors (see Section IV-D).
+Although ED used extra page reads under intensive activities of garbage collection, it did not negatively affect the SSD lifetime as its impact on WAF in Fig. 12(a) was very small. To mitigate this read overhead due to data migration, it is possible for the FTL to monitor the WAF and stop using page pairing when long-term, intensive garbage collection activities are detected.
+D. Sensitivity Study
+We investigated how read performance was affected by changing selected experimental parameters. Here, read throughput results were presented because command queuing could exaggerate the improvement in read latency.
+Page-Pairing Method: When pairing two pages for error diluting, ED aimed to amplify the rBER difference between the two pages for the best effect of sensing-level reduction on the weak page. Our page pairing strategy involved not only layer-to-layer but also page-type rBER variation. Here, we considered ED without any awareness of rBER variation as the control [see Fig. 6(b)]. Results showed that when ED involved only the layer-to-layer rBER variation [see Fig. 6(c)], it improved the read throughput by 23%. When ED involved both layer-to-layer and page-type rBER variation [see Fig. 6(d)], it further pushed the improvement to 28.4%. In other words, read performance benefited from page pairing the most when both layer-wise and page-wise rBER variation were considered.
+Layer-to-Layer Process Variation: Process variation is becoming increasingly significant in future 3-D NAND flash designs [15]. We evaluated ED with three degrees of process variation: lowPV, curPV (the current setting), and highPV, of which the average rBER at the lower 32 layers were 1.3, 2, and 3.6 times as high as that at the upper 32 layers, respectively. These settings were adopted to sufficiently reflect different degrees of process variation. Fig. 13(a) shows the read-throughput improvement factor of ED with full process-variation awareness compared with ED without any process-variation awareness [Fig. 6(d) versus (b)]. Results show that the performance improvement was significant on NAND flash of a high degree of process variation.
+
+Fig. 14. (a) Average page rBERs of upper 32 layers and lower 32 layers at different P/E cycles. (b) Read throughput improvement factors over different P/E cycles.
+Flash Aging: The effect of flash aging amplifies the variation in page rBERs, including the layer-to-layer and page-type variation [21]. Suppose that in the prior experiments, flash blocks had undergone 3K P/E cycles. To reflect the page rBERs in different stages of flash lifetime, we set the average rBER of pages in the upper 32 layers and that of pages in the lower 32 layers for 1K, 2K and 3K P/E cycles based on the trend of page rBERs within a block reported in [21], as shown in Fig. 14(a). With this, in Fig. 14(b), we reported the read-throughput improvement factor of ED (see the prior test for definition). Results indicate that the performance gain of ED was more significant over P/E cycles due to the amplified rBER variation.
+SSD Parallelism: ED exploited chip parallelism by distributing paired pages to different chips. We are interested in the read performance of ED on flash arrays of different numbers of chips. As Fig. 13(b) shows, the read throughput of ED consistently improved as the flash array size increased. The read throughput improvements appeared smaller under the writeheavy hm0 workload because a large proportion of the SSD bandwidth was consumed by write requests.
+Snap Reading: Because two virtual pages were interleaved between two pages, when servicing a small host read request, ED utilized snap reading to avoid reading unused data from flash pages. We observed that under the ws1 workload, which consisted of many small, random read requests, selective use of snap reading effectively reduced the RAF of ED from 1.36 to 0.95 and improved read throughput by 11%.
+VI. CONCLUSION
+While providing a high storage density at an affordable cost, 3-D NAND flash architectures introduce significant process variation among layers. Reading data from unreliable layers requires strong LDPC error correction and is subject to a high latency. Because LDPC decoding is based on belief propagation, we identified that mixing bit-input information from error-prone layers with that from reliable layers effectively reduces the overhead of read sensing for error-prone layers. This idea, called error diluting, pairs pages from layers of different degrees of reliability. A subpage striping strategy is therefore presented for an amplified discrepancy between the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+3478
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 11, NOVEMBER 2020
+
+bit-error rates of paired pages for the best effect of error dilut-
+ing. Our experimental results demonstrated that our design was
+highly effective in terms of read performance improvement
+compared with a conventional SSD design. We believe that
+our approach is highly useful because read-intensive SSDs are
+becoming a critical building block for emerging applications
+and process variation is predicted to be increasingly significant
+in future 3-D NAND flash designs.
+REFERENCES
+[1] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,” in Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 3, p. 37, 2018.
+[2] Y. Luo, “Architectural techniques for improving NAND flash memory reliability,” 2018. [Online]. Available: arXiv:1808.04016.
+[3] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” Presented at the 11th USENIX Conf. File Storage Technol. (FAST), 2013, pp. 243–256.
+[4] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. IEEE 22nd Asia South Pac. Design Autom. Conf. (ASP-DAC), Chiba, Japan, 2017, pp. 560–565.
+[5] M. Zhang, F. Wu, X. He, P. Huang, S. Wang, and C. Xie, “REAL: A retention error aware LDPC decoding scheme to improve NAND flash read performance,” in Proc. 32nd Symp. Mass Storage Syst. Technol. (MSST), Santa Clara, CA, USA, 2016, pp. 1–13.
+[6] S. Qi, D. Feng, N. Su, L. Mei, and J. Liu, “CDF-LDPC: A new error correction method for SSD to improve the read performance,” ACM Trans. Storage, vol. 13, no. 1, p. 7, 2017.
+[7] Q. Li, L. Shi, R. Pan, C. Ji, X. Li, and C. J. Xue, “Selective compression scheme for read performance improvement on flash devices,” in Proc. IEEE 36th Int. Conf. Comput. Design (ICCD), Orlando, FL, USA, 2018, pp. 43–50.
+[8] W. Liu et al., “Characterizing the reliability and threshold voltage shifting of 3D charge trap NAND flash,” in Proc. IEEE Design Autom. Test Eur. Conf. Exhibit. (DATE), Florence, Italy, 2019, pp. 312–315.
+[9] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[10] D. Rollins. (2018). Machine Learning, Read-Intensive Artificial Intelligence and Real-Time Analytics: Three Data Center Workloads That Can Benefit From QLC Technology Right Now. [Online] https://www.micron.com/about/blog/2018/june/three-data-centerworkloads-that-can-benefit-from-qlc-technology-right-now
+[11] Mainstream Solid-State Drives. (2019). [Online]. Available: https://www.ibm.com/support/knowledgecenter/POWER8/p8hal /pxhal_read_intensive_ssd.htm
+[12] R. Micheloni, L. Crippa, C. Zambelli, and P. Olivo, “Architectural and integration options for 3D NAND flash memories,” Computers, vol. 6, no. 3, p. 27, 2017.
+[13] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Errors in flashmemory-based solid-state drives: Analysis, mitigation, and recovery,” 2017. [Online]. Available: arXiv:1711.11427.
+[14] C. Kim et al., “A 512-GB 3-b/cell 64-stacked WL 3-D-NAND flash memory,” IEEE J. Solid-State Circuits, vol. 53, no. 1, pp. 124–133, Jan. 2018.
+
+[15] A. Arreghini, G. S. Kar, J. Van Houdt, and G. Van den Bosch, “Ultimate scaling projection of cylindrical 3D SONOS devices,” in Proc. 4th IEEE Int. Memory Workshop, Milan, Italy, 2012, pp. 1–4.
+[16] Y. Du, Y. Zhou, M. Zhang, W. Liu, and S. Xiong, “Adapting layer RBERs variations of 3D flash memories via multi-granularity progressive LDPC reading,” in Proc. 56th Annu. Design Autom. Conf., Las Vegas, NV, USA, 2019, p. 37.
+[17] Y. Di, L. Shi, S.-H. Chen, C. J. Xue, and E. H.-M. Sha, “1 + 1 > 2: Variation-aware lifetime enhancement for embedded 3D NAND flash systems,” in Proc. 20th ACM SIGPLAN/SIGBED Int. Conf. Lang. Compilers Tools Embedded Syst., 2019, pp. 45–56.
+[18] Micron 3D NAND Flash Memory Key Specifications. Accessed: Apr. 2, 2020. [Online]. Available: https://www.micron.com/products/solidstate-drives
+[19] F. Wu, J. Zhou, S. Wang, Y. Du, C. Yang, and C. Xie, “FastGC: Accelerate garbage collection via an efficient copyback-based data migration in SSDs,” in Proc. 55th ACM/ESDA/IEEE Design Autom. Conf. (DAC), San Francisco, CA, USA, 2018, pp. 1–6.
+[20] H. Yong, K. Jeong, J. Lee, and J.-S. Kim, “vStream: Virtual stream management for multi-streamed SSDs,” in Proc. 10th USENIX Workshop Hot Topics Storage File Syst. (HotStorage), Boston, MA, USA, Jul. 2018, p. 18.
+[21] F. Wu et al., “Characterizing 3D charge trap NAND flash: Observations, analyses and applications,” in Proc. IEEE 36th Int. Conf. Comput. Design (ICCD), Orlando, FL, USA, 2018, pp. 381–388.
+Kong-Kiat Yong received the B.S.E. degree from the Department of Computer Science, National Chiao Tung University, Hsinchu, Taiwan, in 2018, where he is currently pursuing the master’s degree with the Institute of Computer Science and Engineering.
+His current research interests include flash memory reliability and ECC.
+Li-Pin Chang (Member, IEEE) received the M.S.E. and Ph.D. degrees in computer science and information engineering from National Taiwan University, Taipei, Taiwan, in 1997 and 2003, respectively.
+He is a Professor with the Department of Computer Science, College of Computer Science, National Chiao Tung University, Hsinchu, Taiwan. His current research interests include operating systems, storage systems, nonvolatile memory, and mobile devices. Prof. Chang served on the technical program committee in many conferences of his field, including IEEE RTAS, IEEE ICCD, and EMSOFT. He is currently an Associate Editor of the ACM Transactions on Embedded Computing Systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:13 UTC from IEEE Xplore. Restrictions apply.
+
+

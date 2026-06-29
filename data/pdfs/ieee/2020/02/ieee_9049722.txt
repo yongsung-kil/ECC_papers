@@ -1,0 +1,774 @@
+ 
+ 
+Learning PHY Layer Parameters via SNR-Value 
+Network 
+Ahmed Abotabl, Member, IEEE, Jung Hyun Bae, Member, IEEE, and Kee-Bong Song, Member, IEEE 
+                  
+Abstract— In a typical communications system design such as 
+5G cellular system, the optimal closed-form solutions are often 
+available under certain assumptions of idealities. However, such 
+optimal solutions frequently incur implementation complexity 
+issues and are also susceptible to non-idealities. On the other hand, 
+approximate solutions designed to handle such issues typically 
+involve certain algorithmic parameters which cannot be 
+determined in a closed-form, and an exhaustive effort is required 
+for optimization of such parameters in a typical system design 
+stage. In this paper, we propose a framework in which such 
+optimization can be automated by continuously adapting signal-
+to-noise ratio (SNR) and parameters to be optimized for physical 
+layer simulation on various randomly sampled environments. We 
+show that this framework can also be explained by a theory of 
+reinforcement learning (RL), which provides a guideline for 
+detailed operation of running the framework. As a specific 
+application, we discuss a problem of low-density, parity-check 
+(LDPC) decoder offset optimization and demonstrate that learned 
+values perform close to the ones found by the exhaustive effort. 
+I. INTRODUCTION 
+    When designing an algorithm for a communications 
+system equipped with a well-defined channel model such as 
+a typical cellular communications system, we are often 
+interested in finding the optimal solutions in a closed-form. 
+A few examples of such solutions are maximum likelihood 
+(ML) multiple-input, multiple-output (MIMO) detector or 
+sum-product (SP) algorithm for iterative low-density, parity-
+check (LDPC) decoding. However, such optimal solutions 
+are often difficult to be implemented especially in a small 
+form-factor devices such as cellular modem and are also 
+susceptible to non-idealities. In such cases, we typically come 
+up with approximate solutions such as various sub-optimal 
+MIMO detectors [1] and various forms of offset-min-sum 
+(OMS) LDPC decoding algorithms [2]. While such 
+approximate algorithms may provide performance close to its 
+optimal counterparts, one of the main issues is that they 
+typically require parameter optimization which does not have 
+a closed-form solution and frequently requires an exhaustive 
+effort. 
+Let us consider a specific example of offset determination 
+of OMS LDPC decoding algorithm. Assuming that we have 
+a simulator which can provide reasonable approximate real-
+life performance of the algorithm, optimizing the offset 
+typically involves obtaining the relationship between the 
+performance metric, usually the block error rate (BLER), and 
+the signal-to-noise ratio (SNR) for different offset values as 
+shown in Fig. 1. To do this, a designer would first need to 
+find a reasonable range of SNR which provides BLER range 
+of interest and come up with appropriate quantization of SNR  
+ 
+Samsung Semiconductors Inc., SOC Lab, 9868 Scranton Road, San 
+Diego, CA, 92121, USA. 
+ 
+Fig. 1. BLER versus SNR with different offset values for some LDPC code  
+ 
+Fig. 2. Operating SNR at 10% BLER for a range of offset values 
+and offset values for simulation to balance the optimization 
+quality and complexity. To make matters worse, there 
+typically are large amount of transmission scenarios, each of 
+which may require different offset value. Furthermore, any 
+significant modification in the overall processing pipeline 
+may require new optimization. The challenge of exhaustive 
+effort can also be explained through Fig. 2 that shows the 
+underlying relationship between the SNR required to give a 
+certain BLER (10% in the figure) and different values of the 
+parameter to be optimized (offset value in the figure). 
+Generating this figure may require the generation of the 
+curves in Fig. 1. 
+In this paper, we present a new framework which 
+efficiently replaces the aforementioned exhaustive effort 
+(sweeping) by continuously adapting (learning) SNR and 
+parameters to be optimized. Such adaptation is done using a 
+series of physical layer simulations on various randomly 
+sampled transmission environments. One of the main 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+978-1-7281-4905-9/20/$31.00 ©2020 IEEE
+614
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 
+advantages of this framework is that a designer does not need 
+to be involved once the learning procedure initiates, and 
+hence, any potential re-optimization of parameters can also 
+easily be done by simply re-running the procedure. In our 
+framework, we utilize neural networks to represent the 
+continuously adapted SNR and optimization parameters for 
+each transmission environment, and such continuous 
+adaptation and use of neural networks are similar to well-
+known deep RL approaches [10]. Neural networks for SNR 
+and optimization parameters, which are termed SNR-value 
+network and policy network respectively are continuously 
+trained during the learning procedure, and we also show that 
+this framework can indeed be explained by the theory of RL. 
+Use of RL has been applied in wireless communications 
+systems as also briefly summarized in [3]. In fact, an 
+approach similar to our proposed framework was recently 
+discussed in [4], which also utilizes a simulator to perform 
+learning of parameters. One of the main differences between 
+[4] and our framework is that we identify SNR as an important 
+performance metric which needs to be properly controlled 
+and optimized under normal operating condition, e.g. 10% 
+BLER. As described in Section 3, we build the state space 
+mainly based on SNR such that steady-state SNR can 
+eventually be trained for proper operating point in our 
+framework. As mentioned before, our main target is to 
+replace the exhaustive sweeping of parameters which happen 
+in many areas of algorithm design for communications 
+system, and our focus on SNR control is the main reason why 
+we can achieve such an objective.   
+In Section 2, the proposed framework is presented, in 
+Section 3, the RL formulation is shown and in Section 4 an 
+example of optimizing the offset value in offset min-sum 
+algorithm is presented as an application scenario. Finally, 
+Section 5 concludes the paper. 
+II. FRAMEWORK DESCRIPTION 
+The proposed framework is described by Fig. 3, and we 
+provide description of its building blocks below:  
+1) Transmission environments are inputs to this 
+framework. Transmission environments are used to 
+determine the appropriate SNR value and the 
+parameter values that are stored in the SNR-value 
+network and the policy network, respectively and all 
+these are used to provide the appropriate simulation 
+setting. 
+2) A simulator is assumed to be built to model the real 
+transmission environment accurately. The input to the 
+simulator is the SNR value at which it will operate, the 
+values of the parameters to be optimized and the 
+transmission environment. 
+ 
+ 
+Fig. 3. The proposed framework for parameter optimization 
+3) An SNR-value network is a neural network that takes 
+the environment parameters as input and outputs the 
+appropriate SNR that should result in an operating 
+target BLER which is set by the designer.  
+4) A policy network is a neural network that takes the 
+environment parameters as input and outputs the 
+optimal parameter values that should result in the 
+operating target BLER at the appropriate SNR value 
+mentioned above. 
+   The environment in Fig. 3 includes various factors that can 
+affect parameters to be optimized such as channel profile, 
+modulation order, transmission rank, data rate etc. Including 
+all the possible factors is not efficient therefore, the factors 
+that participate in the optimization problem should be chosen 
+carefully as will be shown in Section 4. 
+A. Training stage 
+During the training stage, we randomly sample 
+transmission environments and update the SNR-value 
+network and the policy network by utilizing the observed 
+error events from the simulator. For each transmission 
+environment, we consider the following update rule for the 
+SNR value (𝑆𝑁𝑅) and the parameter value (𝜃).  
+ 
+𝑆𝑁𝑅𝑛𝑒𝑤= 𝑆𝑁𝑅𝑜𝑙𝑑+ 𝛼1(𝑃𝑒,𝑜−𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡), 
+(1) 
+ 
+𝜃𝑛𝑒𝑤= 𝜃𝑜𝑙𝑑−𝛼2(𝑎−𝜃𝑜𝑙𝑑)(𝑃𝑒,𝑜−𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡), 
+(2) 
+where 𝛼1 and 𝛼2 are some positive learning rates, 𝑃𝑒,𝑜 is the 
+simulator output BLER, and 𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡 is the target operating 
+BLER. The variable 𝑎 requires more careful explanation which 
+will be provided shortly. 
+    Before describing full training procedure, let us first look at 
+the SNR update rule provided in (1). Intuitively speaking, if the 
+output BLER of the simulator is higher than intended, the 
+SNR value should increase. On the other hand, the SNR value 
+should decrease if the output BLER of the simulator is lower 
+than intended. It can be easily seen that the SNR update rule 
+in (1) has such a behavior. Note that our update rule only 
+utilizes the observed BLER based on observed error events 
+from the finite number of data packet transmissions, which is 
+not necessarily the true statistics. 
+   Let us now look at the parameter update rule in (2). As 
+mentioned earlier, the policy network provides 𝜃 for each 
+transmission environment. During the training stage, we 
+prefer to explore different parameter values around 𝜃 such 
+that we can learn if there are better parameter values than the 
+current one. To do that, we consider 𝜃 as a mean of a 
+Gaussian random variable with a small variance we choose, 
+and we select random realization 𝑎 of the aforementioned 
+Gaussian random variable every time we run the simulation. 
+In the update rule in (2), a value 𝑎 which is either smaller or 
+larger than 𝜃 is tried, and 𝜃 is updated towards 𝑎 if we 
+observe smaller error probability than the current operating 
+BLER assuming that 𝜃 provides the target BLER. If the 
+observed BLER is higher than the target BLER, then 𝜃 is 
+updated against 𝑎. Note that using the Gaussian random 
+variable for exploration is a well-known approach in RL [5] 
+with the name of Gaussian policy, and we will provide more 
+details in Section 3. 
+   The above SNR-value and the parameter update is 
+described assuming a single transmission environment, but 
+we utilize a batch, e.g., size of 100, of transmission 
+environments at the same time to update the aforementioned 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+615
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 
+two neural networks similar to a typical deep RL [10]. In this 
+case, the update portion 𝛼1(𝑃𝑒,𝑜−𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡)  and −𝛼2(𝑎−
+𝜃𝑜𝑙𝑑)(𝑃𝑒,𝑜−𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡) are averaged over a batch to perform 
+a typical gradient-based neural network update [10]. 
+   We are now ready to describe the full training procedure. 
+ 
+Algorithm 1: Training procedure of the proposed 
+framework 
+Initialize SNR and parameter (policy) networks 
+while stopping condition is not satisfied do 
+1) Randomly 
+select 
+a 
+batch 
+of 
+transmission 
+environments 
+2) For each transmission environment: 
+a. 
+Generate outputs of SNR-value and policy 
+networks 
+b. Randomly generate parameter values using the 
+policy network output 
+c. 
+Run simulation and obtain BLER 
+3) Update the SNR-value and the policy networks  
+end while 
+ 
+   Stopping condition mentioned above can be a predefined 
+number of iterations, performance on a validation set etc. To 
+evaluate performance of our framework, a test set that 
+represents a variety of environment parameters is generated 
+and for each realization in this test set, the optimal value of 
+the parameters to be optimized is obtained via exhaustive 
+sweeping of the parameters as in a traditional approach. Then, 
+we define mean square error (MSE) for the purpose of 
+evaluation as below 
+ 
+𝑀𝑆𝐸= 1
+𝑛∑(𝑆𝑁𝑅𝑚,𝑖
+(𝑡) −𝑆𝑁𝑅(𝑡)(𝑃(ℎ𝑖)))
+2
+𝑛
+𝑖=1
+, 
+ 
+(3) 
+where 𝑆𝑁𝑅𝑖
+(𝑡)(𝑃(ℎ)) is the SNR value required to operate at 
+a target BLER when the output of the policy network is 𝑃(ℎ) 
+for a given environment ℎ and 𝑆𝑁𝑅𝑚,𝑖
+(𝑡) = min
+x {𝑆𝑁𝑅𝑖
+(𝑡)(𝑥)}. 
+The function 𝑆𝑁𝑅𝑖
+(𝑡)(𝑥)  is what is generated via the 
+exhaustive sweeping mentioned earlier (see Fig. 2).  
+   Note that the size of the test set should be small enough 
+such that we can reduce the amount of the exhaustive effort 
+for finding 𝑆𝑁𝑅𝑖
+(𝑡)(𝑥), but it needs to be large enough such 
+that MSE on the test set provides reasonable performance 
+reference. The test set is generated by a wide variety of 
+transmission environments while taking into considerations 
+practical aspects. For example, the combination of low code 
+rate with high modulation order is neither common nor 
+interesting and hence, can be eliminated from the test set. 
+   The aforementioned MSE can also be considered as a cost 
+function of our framework, and stopping condition utilizing 
+performance on a validation set can be based on this. In this 
+case, an appropriate validation set of transmission 
+environments needs to be constructed. 
+   It is worth noting that the simulator and the operating SNR 
+are 
+completely 
+under 
+control 
+unlike 
+conventional 
+reinforcement learning problems at which the control over the 
+world is very limited. This control allows us to learn the 
+optimal parameters more efficiently than exploring an actual 
+transmission environment where we have very limited 
+control. 
+Remark 1: A lookup table (LUT) is one way to store and 
+update the SNR and the parameter values for different 
+transmission conditions but it can be unpractical when the 
+environment parameters space is large. Moreover, a LUT can 
+only be used for the environment parameters that are realized 
+in the LUT. On the other hand, a neural network can learn the 
+underlying relationship between the environment and the 
+SNR and parameters value.  
+Remark 2: Conventionally, the error of a given neural 
+network is calculated by comparing its output directly with a 
+test set. However, in our approach we compare with the SNR 
+since different values of the parameters under optimization 
+can lead to the same minimum SNR value which leads to 
+different optimal parameter values. 
+B. Application stage 
+ 
+Once the training is done, the only thing necessary at the 
+application stage is the policy network. During the actual 
+transmission, the transmission environment is provided as an 
+input to the policy network which generates parameter values 
+as an output. Traditionally, a LUT stores the optimal 
+parameter value for each transmission environment. Given the 
+functional similarities between a LUT and a neural network as 
+in Remark 1 above, the operation at application stage in our 
+framework is similar to the one in the traditional sweeping 
+approaches while our framework naturally utilizes a more 
+powerful neural network rather than a LUT. 
+III. RL FORMULATION 
+In this Section, we explain our framework especially the 
+training stage in terms of the theory of RL. The main point is 
+to define a Markov decision process (MDP) with an average 
+reward formulation in which an agent which is in a certain 
+state takes an action and learns from the reward [5].  
+A. MDP formulation 
+The MDP at time 𝑡 is defined by a state 𝑠𝑡= (ℎ, 𝑆𝑁𝑅𝑡), an 
+action 𝑎𝑡 as a realization of the parameter to be optimized, 
+and a reward 𝑟𝑡= −𝑆𝑁𝑅𝑡 with state transition 
+ 
+(ℎ, 𝑆𝑁𝑅𝑡+1) = (ℎ, 𝑆𝑁𝑅𝑡+ 𝛿(𝑠𝑡, 𝑎𝑡)), 
+(4) 
+where ℎ is a transmission environment, and 
+ 
+𝛿(𝑠𝑡, 𝑎𝑡) = 𝛥(𝑃𝑒,𝑜(𝑠𝑡, 𝑎𝑡) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡). 
+(5) 
+𝑃𝑒,𝑜(𝑠𝑡, 𝑎𝑡) is an observed BLER from simulation at state 𝑠𝑡 
+when action 𝑎𝑡 is taken. 𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡 is the target BLER, and 𝛥 is a 
+small positive constant. Note that 𝑎 was used in the previous 
+section as the experienced value. This does not contradict with 
+its definition in this section since the action is nothing but the 
+experienced value. Clearly, the next state depends only on the 
+current state and not on the history of previously visited states. 
+    In RL, a policy 𝜋(𝑎|𝑠) which provides action 𝑎 in state 𝑠 
+is defined. A policy can either be deterministic which means 
+that there is only one action 𝑎 in state 𝑠 or be stochastic 
+which means that 𝜋(𝑎|𝑠) is a probability distribution of 𝑎. In 
+this paper, we use a stochastic policy to explore different 
+options of the parameters under optimization. To describe the 
+objective of RL, let us define the average reward as in [6]. 
+ 
+𝜌(𝜋, ℎ) = lim
+𝑛→∞ 
+1
+𝑛𝐸{𝑟1 + 𝑟2 + ⋯+ 𝑟𝑛|𝜋 }
+ 
+ 
+ 
+(6) 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+616
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+    = ∑𝑑𝜋,ℎ(𝑠) ∑𝜋(𝑎|𝑠)𝑅𝑠
+𝑎
+𝑎
+𝑠
+, 
+(7) 
+ 
+where 𝑑𝜋,ℎ(𝑠) is the stationary distribution of the states under 
+the policy 𝜋 and the transmission environment and 𝑅𝑠
+𝑎 is the 
+expected reward for taking action 𝑎 at state 𝑠 which is 
+formally defined as 
+ 
+ 
+𝑅𝑠
+𝑎= 𝐸{𝑟𝑡+1|𝑠𝑡= 𝑠, 𝑎𝑡= 𝑎 }. 
+ 
+(8) 
+   The objective of the RL problem we have is then to design 
+a policy which maximize 𝜌(𝜋, ℎ)  for each transmission 
+environment ℎ. Note that the average reward given in [6] is 
+independent of the initial state, which is one of the key points 
+in the average reward formulation. In our case, SNR should 
+be considered as such an initial state whose dependency is 
+lost, and we can think of this as an impact of the SNR 
+adaptation to eventually operate at a given target BLER. The 
+dependency of the average reward in (6) on the transmission 
+environment ℎ is a natural consequence of the state transition 
+rule (4) since both the previous and the future states have the 
+explicit element ℎ. From now on, we remove the dependency 
+on ℎ for simpler notation in the rest of the paper. 
+   A designer perspective to run exhaustive simulations to 
+obtain curves similar to the ones in Fig. 1 explains how the 
+designer is interested in finding the optimal parameter value 
+at the steady state SNR. In other words, the majority of 
+physical layer parameter optimization is about the long term 
+average performance, which provides justification for the 
+average reward formulation. 
+B. Policy gradient: Actor-critic approach 
+   In this paper, we utilize a policy gradient approach to train 
+a policy network that outputs the policy parameters 𝜃(ℎ) as a 
+function of the environment ℎ. To provide necessary 
+background for derivation of our framework, we briefly 
+summarize below the original derivation of actor-critic policy 
+gradient approach [6].  
+   Actor-critic policy gradient requires calculation of the 
+gradient of the average reward with respect to the policy 
+parameters as follows: 
+∇𝜃𝜌
+= 𝐸𝑠~𝑑𝜋(𝑠)(𝐸𝑎~𝜋𝜃(𝑎|𝑠)(∇𝜃log(𝜋𝜃(𝑎|𝑠)) 𝐴𝜋(𝑠, 𝑎))) 
+(9) 
+where 𝐴𝜋(𝑠, 𝑎) is the advantage function given by 
+ 
+𝐴𝜋(𝑠, 𝑎) = 𝑄𝜋(𝑠, 𝑎) −𝑉𝜋(𝑠) 
+ 
+(10) 
+where 𝑄𝜋(𝑠, 𝑎) is the action-value function and 𝑉𝜋(𝑠) is the 
+value function. The main components of the actor-critic 
+approach is a critic which estimates the value function and 
+the actor which updates the policy in the direction suggested 
+by the critic. 
+ Using the definition of the reward function, one can find that 
+ 
+𝐴𝜋(𝑠, 𝑎) = 𝑅𝑠
+𝑎−𝜌(𝜋) + ∑𝑃𝑠𝑠′
+𝑎𝑉𝜋(𝑠′) − 𝑉𝜋(𝑠)
+𝑠′
+, 
+(11) 
+where 𝑃𝑠𝑠′
+𝑎 is state transition given in (4) with 𝑆𝑁𝑅𝑡+1 = 𝑠′, 
+𝑆𝑁𝑅𝑡= 𝑠 and 𝑎𝑡= 𝑎. 
+Since the model of this process is not perfectly known (e.g. 
+𝑃𝑠𝑠′
+𝑎), the above expression cannot be evaluated. Therefore, 
+sampling is necessary to estimate 𝐴𝜋(𝑠, 𝑎). By sampling at 
+state 𝑠, an action 𝑎 is taken and a transition to a new state 𝑠′ 
+occurs. Accordingly, the sampled advantage function is 
+ 
+ 
+𝐴𝜋(𝑠, 𝑎) ≈𝑟(𝑠, 𝑎) −𝜌(𝜋) + 𝑉𝜋(𝑠′) −𝑉𝜋(𝑠) 
+ 
+(12) 
+𝑟(𝑠, 𝑎) is the sampled reward when taking action 𝑎 while 
+being in state 𝑠. Now, by setting 𝑠= 𝑠∗ where 𝑠∗= −𝜌(𝜋), 
+we have 𝑟(𝑠∗, 𝑎) = 𝜌(𝜋) −𝛿(𝑠∗, 𝑎) and from the definition 
+of 𝑉𝜋(𝑠), 𝑉𝜋(𝑠∗) = 0. Therefore, 
+ 
+ 
+𝐴𝜋(𝑠∗, 𝑎) ≈−𝛿(𝑠∗, 𝑎) + 𝑉𝜋(𝑠′) 
+ 
+(13) 
+   Finally, by assuming that the SNR fluctuations during the 
+learning process is moving at a linear part of the underlying 
+BLER-SNR curve and that the SNR loop gain is small, which 
+is formally stated by:  
+ 
+𝑃𝑒(𝑠, 𝜋) = 𝐸𝑎~𝜋(𝑃𝑒(𝑠, 𝑎)) is a monotonically decreasing 
+function of SNR (dB) 
+ 
+𝑃𝑒(𝑠∗, 𝜋) = 𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡 
+ 
+𝑃𝑒(𝑠, 𝜋) is concave for 𝑠< 𝑠𝑙, linear in the range [𝑠𝑙, 𝑠𝑟] 
+and convex for 𝑠> 𝑠𝑟 
+ 
+ 0 < Δ < 1/|𝑃𝑒
+′(𝜌(𝜋), 𝜋)| 
+we can find a small enough value of Δ which ensures that 
+𝑉𝜋(𝑠′) always has the same sign as 𝛿(𝑠, 𝑎) and hence, 
+ 
+ 
+𝐴𝜋(𝑠∗, 𝑎) ≈−𝛿(𝑠∗, 𝑎) 
+ 
+(14) 
+A proof for this step is provided in Appendix A. 
+  Now, 
+the 
+last 
+remaining 
+step 
+is 
+to 
+calculate ∇𝜃log(𝜋𝜃(𝑎|𝑠)). This depends on the selection of 
+the policy. A reasonable choice is a Gaussian policy with a 
+fixed variance and a mean that is given by the policy network. 
+This approach is practical in terms of exploration since the 
+experienced parameter value which is normally distributed 
+around the policy network output and the output error event 
+of the simulator control how the average of the network shall 
+be updated. 
+   Under Gaussian policy given by 
+ 
+ 
+𝜋𝜃(𝑎|𝑠) = 𝛽exp(−
+(𝑎−𝜃)2
+2𝜎2 ), 
+(15) 
+we have 
+ 
+ 
+∇𝜃log(𝜋𝜃(𝑎|𝑠)) = 𝛼(𝑎−𝜃). 
+(16) 
+By substitution in (9), the gradient of the average reward is 
+given by 
+ 
+ 
+∇𝜃𝜌≈−𝛼(𝑎−𝜃)𝛿(𝑠, 𝑎) 
+ 
+(17) 
+under the assumption that the system is operating at  𝑠∗=
+−𝜌(𝜋) which is approximated by the SNR-value network. 
+   Note that the actor-critic approach derived in this section is 
+for each transmission environment ℎ. In a deep RL approach 
+[11], a batch of such transmission environments are typically 
+used at the same time, and neural networks are utilized to 
+store and generate 𝜌(𝜋) and 𝜃. Given that, the final actor 
+critic approach is summarized as below, and each step of the 
+algorithm has one-to-one correspondence to each step of the 
+training procedure of the proposed framework in Section 2.1. 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+617
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+Algorithm 2. The procedure of the actor-critic algorithm 
+Initialize SNR and policy networks 
+Repeat: 
+1) Randomly 
+select 
+a 
+batch 
+of 
+transmission 
+environments 
+2) For each transmission environment: 
+a. Generate outputs of SNR-value and policy 
+networks 
+b. Randomly generate action using the policy 
+network output 
+c. 
+Observe a reward at the state given by the 
+SNR-value after taking the action generated in 
+b 
+3) Update the SNR-value and the policy networks  
+IV. APPLICATION SCENARIO 
+As an example of applying the proposed framework, the 
+offset value in the offset-min-sum (OMS) LDPC decoding 
+algorithm [2] is considered for optimization in this section. 
+Optimizing the offset value is not a novel problem in this 
+paper, and deep learning tools have been used to find the 
+optimal offset value of the OMS algorithm [7],[8],[11]. The 
+main drawbacks of these techniques is that they require an 
+immense training effort to find the optimal offset value under 
+a given transmission condition such as the code rate. For a 
+variety of transmission conditions, the training has to be 
+performed individually under every single transmission 
+condition which is a very complex operation which we 
+address in this paper. 
+For these results, we use the 5G LDPC codes [9,12]. These 
+LDPC codes are Quasi-cyclic codes that can be generated by 
+lifting one of two possible protographs with a limited set of 
+lifting sizes. The limitations imposed by the new radio (NR) 
+standard on the modulation size and code rate are also taken 
+into account to guarantee the optimization of codes that are 
+used in practical situations. 
+In this example, we rely on empirical observations that 
+showed some dependence between certain environment 
+parameters and the optimized offset and accordingly define 
+the transmission environment as 
+ 
+ 
+ℎ= [𝑐ℎ  𝑅𝑎𝑛𝑘  𝑄  𝑅  𝐵𝐺  𝑍  𝑖𝑡𝑒𝑟𝑚] 
+ 
+(18) 
+where 𝑐ℎ is the channel type which can be either AWGN, 
+EPA or EVA channel, Rank is the transmission rank which is 
+1 or 2, 𝑄 is the modulation order which is 4/16/64/256 QAM, 
+𝑅 is the code rate, 𝐵𝐺 is the base graph which can be either 
+base graph 1 or base graph 2, 𝑍 is the lifting size and 𝑖𝑡𝑒𝑟𝑚 is 
+the maximum number of decoder iterations. 
+   The SNR-value network is constructed with two hidden 
+layers with 200 nodes each. The activation of the hidden 
+layers is a ReLu activation while the activation of the output 
+layer is a linear activation. The policy network is constructed 
+with two hidden layers with 50 nodes each. A ReLu 
+activation is used for the hidden layers and a sigmoid 
+activation is used for the output layer. 
+  In order to test the quality of the learned offset value, a test 
+set is generated by exhaustively finding the SNR at 10% 
+BLER, which is the target BLER, for a given range of the 
+ 
+Fig. 4. MSE evolution of the policy network 
+ 
+Fig. 5. Learning from experience move the (policy network output, SNR-
+value network output) towards an optimal point. 
+ 
+Fig. 6. SNR (dB) loss CDF with respect to the best offset  
+offset value for 500 different cases with different 
+transmission environment ℎ. The 500 test cases are generated 
+to be representative and of practical relevance. We applied 
+uniform sampling for channel type, transmission rank, and 
+the maximum number of decoder iterations. For remaining 
+parameters, we randomly selected lifting size with larger 
+probability on larger sizes, and randomly selected code rate, 
+base graph, and modulation order imposing the constraints to 
+satisfy NR specification [9]. 
+   Fig. 4 shows the MSE evolution with the learning iterations. 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+618
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 
+For a given transmission environment, Fig. 5 shows the 
+relationship, obtained via exhaustive simulations, between 
+the SNR at 10% BLER and the offset value. On top of this 
+curve, the figure displays two points for before and after the 
+training. The x-axis of the point gives the policy network 
+output and the y-axis gives the SNR-value network output. 
+As shown, with training, the point moves towards the optimal.  
+By defining the SNR loss as the difference between the 
+minimum SNR achieved via exhaustive effort and the SNR 
+achieved via the proposed framework, Fig. 6 shows the 
+cumulative distribution function of the SNR loss when the 
+system operates at 10% target BLER. It can be seen that, with 
+90% probability, the learned offsets have less than 0.15dB 
+SNR gap compared with the best ones found exhaustively. 
+V. CONCLUSION 
+This paper presented a new automated framework which 
+simplifies physical layer parameter optimization. The 
+framework can be explained by a well-known reinforcement 
+learning idea. The proposed learning procedure provides 
+close to the best achievable performance which typically 
+requires tedious exhaustive effort. This opens great 
+possibility 
+of 
+expediting 
+algorithm 
+design 
+in 
+a 
+communications system such as 5G which involves large 
+amount of parameters to be optimized.  
+VI. ACKNOWLEDGMENT 
+The authors would like to thank Homa Esfahanizadeh for 
+her validation of the SNR-value network. 
+Appendix A 
+ In this appendix, it is shown that 𝑉𝜋(𝑠′) has the same sign 
+as  𝛿(𝑠, 𝑎). We assume that 𝛿(𝑠∗, 𝑎) < 0  and other cases 
+follow similarly. At 𝑡= 0, by definition: 
+ 
+ 
+−𝑅0 = 𝑠′ = −𝜌(𝜋) + 𝛿(𝑠∗, 𝑎) 
+ 
+(19) 
+Therefore, 
+ 
+ 
+𝜖0 = −𝑅0 + 𝜌(𝜋) = 𝛿(𝑠∗, 𝑎) 
+ 
+(20) 
+has the same sign as 𝛿(𝑠∗, 𝑎). Now, for 𝑡> 0, similarly 
+define 
+ 
+ 
+𝜖𝑡= −𝑅𝑡+ 𝜌(𝜋) 
+ 
+(21) 
+and suppose that 𝜖𝑡 has the same sign as 𝛿(𝑠∗, 𝑎). This means 
+that either 𝜖𝑡< 0 or 𝑅𝑡> 𝜌(𝜋). This leads to the following: 
+ 
+−𝑅𝑡+1 = 𝐸𝑠𝑡~𝑑𝑡
+𝜋(𝑠𝑡+ 𝐸𝑎𝑡~𝜋(𝐸(𝛿(𝑠𝑡, 𝑎𝑡)))) 
+ 
+(22) 
+= 𝐸𝑠𝑡~𝑑𝑡
+𝜋(𝑠𝑡+ 𝐸𝑎𝑡~𝜋(Δ𝑆𝑁𝑅(𝑃𝑒(𝑠𝑡, 𝑎𝑡) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡))) 
+ 
+(23) 
+= −𝑅𝑡+ Δ𝑆𝑁𝑅(𝐸𝑠𝑡~𝑑𝑡
+𝜋(𝑃𝑒(𝑠𝑡, 𝑎𝑡) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡)) 
+(24) 
+< −𝑅𝑡+ Δ𝑆𝑁𝑅(𝑃𝑒(𝑠𝑡, 𝜋) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡) 
+ 
+(25) 
+The last inequality comes from the concavity and linearity 
+assumptions on the support of 𝑑𝑡
+𝜋 when 𝑠< −𝜌(𝜋). 
+ Now, from the monotonicity assumption of 𝑃𝑒(𝑠, 𝜋),  
+ 
+ 
+|𝑃𝑒(𝑠∗, 𝜋)| ≥|𝑃𝑒(𝑠𝑡, 𝜋) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡
+𝑠−𝜌(𝜋)
+| 
+ 
+(26) 
+For an s such that 𝑑𝑡
+𝜋(𝑠|𝑠0) > 0. Then, 
+ 
+−𝑅𝑡+1 < −𝑅𝑡+ Δ𝑆𝑁𝑅(𝑃𝑒(𝑅𝑡, 𝜋) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡) 
+ 
+(27) 
+< −𝑅𝑡+
+1
+|𝑃𝑒(𝑠∗, 𝜋)|(𝑃𝑒(𝑅𝑡, 𝜋) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡) 
+ 
+ 
+(28) 
+< −𝑅𝑡+ |
+𝑅𝑡−𝜌(𝜋)
+𝑃𝑒(𝑅𝑡, 𝜋) −𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡
+| (𝑃𝑒(𝑅𝑡, 𝜋)
+−𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡) 
+ 
+(29) 
+= −𝜌(𝜋) 
+ 
+(30) 
+The last equality comes from the fact that 𝑅𝑡< 𝜌(𝜋)  , 
+𝑃𝑒(𝑠, 𝜋)  is a monotonic decreasing function of s and 
+𝑃𝑒(𝜌(𝜋), 𝜋) = 𝑃𝑒,𝑡𝑎𝑟𝑔𝑒𝑡. 
+Therefore, it follows that 𝜖𝑡+1 = −𝑅𝑡+1 + 𝜌(𝜋) < 0. 
+REFERENCES 
+[1] M. Rahmati, D. Bai, and J. Lee, “Low complexity soft detection of high 
+order QAM with prior information,” in IEEE 82nd Vechicular 
+Technology Conference (VTC2015-Fall), 2015, pp. 1-5. 
+[2] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X. –Y. Hu, 
+“Reduced-complexity decoding of LDPC codes,” IEEE tran. on 
+communications, vol. 53, no. 8, pp. 1288-1299, 2005. 
+[3] C. Jiang, H. Zhang, Y. Ren, Z. Han, K. C. Chen, and L. Hanzo, 
+“Machine learning paradigms for next-generation wireless networks,” 
+IEEE wireless communications, vol. 24, no. 2, pp. 98-105, 2016. 
+[4] S. Joseph, R. Misra, and S. Katti, “Towards self-driving radios: 
+Physical layer control using deep reinforcement learning,” in 
+Proceedings of the 20th International workshop on Mobile Computing 
+Systems and Applications, pp. 69-74, 2019. 
+[5] R. S. Sutton and A. G. Barto, Reinforcement learning: An introduction. 
+MIT press, 2018. 
+[6] R. S. Sutton, D. A. McAllester, S. P. Singh, and Y. Mansour, “Policy 
+gradient 
+methods 
+for 
+reinforcement 
+learning 
+with 
+function 
+approximation,” in Advances in neural information processing 
+systems, 2000, pp. 1057–1063. 
+[7] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 
+International Symposium on Information Theory (ISIT). IEEE, 2017, 
+pp. 1361–1365. 
+[8] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and 
+Y. Be’ery, “Deep learning methods for improved decoding of linear 
+codes,” Journal of Selected Topics in Signal Processing, vol. 12, no. 1, 
+pp. 119–131, 2018. 
+[9] TS 38.313, “Multiplexing and channel coding,” 3GPP technical 
+specification v15.4.0, 2018. 
+[10] S. 
+Levine, 
+“cs294-112 
+deep 
+reinforcement 
+learning,” 
+http://rail.eecs.berkeley.edu/deeprlcourse, accessed: 2010-09-30. 
+[11] A. Abotabl, J. H. Bae, K-B. Song, “Offset min-sum optimization for 
+general decoding scheduling: A deep learning approach,” in Vehicular 
+Technology Conference (VTC). IEEE, 2019. 
+[12] J. H. Bae, A. Abotabl, H.-P. Lin, K.-B. Song, and J. Lee, “An overview 
+of channel coding for 5G NR cellular communications,” APSIPA trans. 
+on Signal and Information Processing, vol. 8, 2019.
+ 
+2020 International Conference on Computing, Networking and Communications (ICNC): Machine Learning for 
+Communication and Networking
+619
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:45:45 UTC from IEEE Xplore.  Restrictions apply. 

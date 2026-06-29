@@ -1,0 +1,591 @@
+Scheduling Algorithm for Partially Parallel Architecture of LDPC Decoder by Matrix Permutation
+
+In-Cheol Park and Se-Hyeon Kang
+Department of Electrical Engineering and Computer Science, KAIST 373-1 Guseong-dong, Yuseong-gu, Daejeon 305-701, Republic of Korea
+{icpark, shkang}@ics.kaist.ac.kr
+
+Abstract— The fully parallel LDPC decoding architecture can achieve high decoding throughput, but it suffers from large hardware complexity caused by a large set of processing units and complex interconnections. A practical solution of areaefficient decoders is to use the partially parallel architecture in which a PU is shared for a several rows or columns. It is important in the partially parallel architecture to determine the rows or columns to be processed in a PU and their processing order. The dependencies between rows and columns should be considered to minimize the overall processing time by overlapping the decoding operations. This paper proposes an efficient scheduling algorithm that can be applied to general LDPC codes, which is based on the concept of the matrix permutation. Experimental results show that the proposed scheduling achieves a higher decoding rate, leading to a reduction of 25% processing time on the average. A 1024-bit rate-1/2 LDPC decoder employing the proposed scheduling algorithm provides almost 1Gbps decoding throughput and occupies one-fifth area compared to the fully parallel decoder.
+I. INTRODUCTION
+Low density parity check (LDPC) codes are originally devised to exploit low decoding complexity by constructing sparse parity check matrices. Though the LDPC code does not have a maximized minimum distance due to the randomly generated sparse parity check matrix, the typical minimum distance increases linearly as the block length increases. Moreover, the error probability decreases exponentially for a sufficiently long block length, whereas the decoding complexity is linearly proportional to the code length. Recent simulation results show that the LDPC code can achieve a performance that is within 0.04 dB of Shannon limit and the performance is close to that of the turbo code if the block length is larger than 1000 bits [2].
+Despite of these advantages, when the LDPC code was first introduced, it made a little impact on the information theory community because of the storage requirements in encoding and the computational complexity in decoding. Modern VLSI technology is so advanced that it enables parallel architectures exploiting the benefit of inherently parallel LDPC decoding algorithms. Blanksby et al. implemented an 1-Gb/s fully parallel decoder in which the message passing algorithm is directly mapped [3]. This architecture, however, requires a large number of complex routings between concurrent processing units (PUs) each of which corresponds to a node of the message passing algorithm, leading to the average net
+
+length of 3mm and the total die size of 52.5mm2. On the other side, Yeo et al. proposed an area-efficient architecture that serializes the computations by sharing PUs [4]. Consequently, one iteration takes 9612 cycles and wide-input multiplexers are required to select one of 18432 intermediate values to be fed into the shared PUs. These two counter examples show that high throughput LDPC decoding architectures should exploit the benefit of parallel decoding algorithms while reducing the interconnection complexity.
+The partially parallel architecture is a good trade-off between throughput and hardware cost. Since a PU is shared for a number of rows or columns, the number of PUs becomes much smaller than that of the fully parallel architecture. As decoding operations are parallel in nature, it is important to determine which rows or columns are processed in a PU. In the grouping, the dependencies between rows and columns should be considered to minimize the overall cycles by overlapping the decoding operations. There has been a heuristic scheduling algorithm proposed for quasi-cyclic LDPC codes [9], but it cannot be applied to general LDPC codes. This paper proposes an efficient scheduling algorithm that can be applied to general LDPC codes. The proposed algorithm is based on the concept of the matrix permutation.
+The rest of this paper is organized as follows. Section II explains briefly about the low density parity check code and the decoding algorithm. Section III proposes a new scheduling algorithm which helps partially parallel LDPC decoder to achieve high throughput using matrix permutation. Experimental results of the proposed algorithm are shown in Section IV. Finally, Section V addresses some concluding remarks.
+II. LDPC DECODER ARCHITECTURE
+The LDPC code, which was first introduced by Gallager in 1962 [1], is defined by a binary linear block code of length n and a parity check matrix H with a column weight γ and a row weight ρ: (n, γ, ρ). The parity check matrix H has n columns and J rows that correspond to the block length and the total number of parity check equations of the code, respectively. The column weight γ and the row weight ρ represent the number of 1’s in a column and a row, respectively, and they are much smaller than n to achieve the sparse matrix H. Fig. 1 (a) shows an example matrix H of (12, 3, 6) LDPC code with indicating the code parameters.
+A. Message Passing Algorithm
+The LDPC code is often represented by a factor graph to make it easy to understand the message passing decoding algorithm, which is a bipartite graph that expresses how a global function of
+
+0-7803-8A8u3th4o-r8iz/e0d5l/ic$e2n0se.0d0us©e 2lim0i0te5d ItoE:EYoEn.sei Univ. Downloaded on5J7un7e823,2026 at 12:08:24 UTC from IEEE Xplore. Restrictions apply.
+
+many variables is factored into a product of local functions [7]. Fig. 1 (b) shows the factor graph of a (12, 3, 6) LDPC code, which consists of two sets of nodes: i.e. variable nodes, {vj}, and check nodes, {ci}. The edge between a variable node vj and a check node ci is constructed if there is 1 at (i, j) in the parity check matrix. Therefore each check node represents a check equation used in generating parity check bits and each variable node represents one bit in the codeword. The variable nodes that are connected to a check node are called the neighbor variable nodes of the check node. For a variable node, the neighbor check nodes are defined similarly.
+
+variable
+
+v1
+
+message
+
+v2
+column weight γ = 3
+row weight ρ = 6 v3
+
+110001110010
+
+v4
+
+rows J = 6
+
+011110101000
+
+v5
+
+H = 111001001001
+000100110111
+
+v6
+
+000011011110
+
+v7
+
+101110000101
+
+v8
+
+columns n = 12
+v9
+
+(a)
+
+v10
+
+c1 c1 = v1 + v2 + v6 + v7 + v8 + v11 c2 c2 = v2 + v3 + v4 + v5 + v7 + v8 c3 c3 = v1 + v2 + v3 + v6 + v9 + v12 c4 c4 = v4 + v7 + v8 + v10 + v11 + v12 c5 c5 = v5 + v6 + v8 + v9 + v10 + v11
+
+v11
+
+c6 c6 = v1 + v3 + v4 + v5 + v10 + v12
+
+v12
+
+check
+
+message
+
+(b)
+
+Fig. 1. A (12, 3, 6) LDPC code. (a) Parity check matrix. (b) Factor graph.
+
+Unlike the general parity check codes, a LDPC code cannot be optimally decoded since its decoding is NP-complete. An iterative approximate algorithm called a message-passing algorithm is used instead, which is also known as sum-product [8] or belief propagation [5]. The message-passing algorithm can be expressed easily based on the factor graph as below.
+
+1) Initialize each variable node vj to the probability ratio of the corresponding received bit. The probability ratio is the first variable
+
+message to be sent to the neighbor check nodes.
+
+∆ij
+
+=
+
+∆j
+
+=
+
+p(rj P(rj
+
+| |
+
+xj xj
+
+= =
+
++1) − 1)
+
+=
+
+exp( 2rj σ2
+
+)
+
+(1)
+
+2) Variable-to-check (VTC) step: Each check node ci computes
+
+the likelihood ratio, Λij, by using variable messages of its neighbor
+
+variable nodes except from vj. This is the check message to be sent
+
+to variable node vj.
+
+∏ Λij
+
+=
+
+1− ∆ij'
+
+1+∆ j '∈N (i)\ j
+
+ij'
+
+(2)
+
+3) Check-to-variable (CTV) step: Each variable node vj
+
+computes probability ratios, denoted by ∆ij, by using check
+
+messages of its neighbor check nodes except from ci. This is the
+
+variable message to be sent again to check node ci.
+
+∏ ∆ij
+
+=
+
+p(rj P(rj
+
+| +1)
+
+1− Λi' j
+
+| −1) i'∈M ( j)\i 1 + Λi' j
+
+(3)
+
+4) For each variable node, create a tentative bit-by-bit decoding
+
+xj using the pseudo-posteriori probability ∆j.
+
+∏ ∆ j
+
+=
+
+p(rj P(rj
+
+| +1) | −1)
+
+1 − Λij i∈M ( j) 1 + Λij
+
+(4)
+
+⎧0 xj = ⎨⎩1
+
+when ∆ j ≤ 1 when ∆ j > 1
+
+(5)
+
+5) Check if x·HT = 0 is satisfied. If it is satisfied or the
+
+maximum number of iterations is reached, the decoding algorithm
+
+finishes. Otherwise, the algorithm repeats from step 2).
+
+The symbols, ∆ and Λ, correspond to the outgoing messages of
+the variable and check nodes, respectively, and N(i) and M(j)
+represent the set of neighbor nodes of check node ci and variable node vj, respectively. The not-notation (’) marked as superscript means that the product is calculated over the indexes excluding its
+own index. The VTC operation calculates the check messages {Λij} of check node ci using the variable messages {∆ij} for variable nodes identified by the i-th row of the matrix H. A detailed
+explanation of the algorithm can be found in [6].
+
+B. Partially Parallel Architecture
+
+The fully parallel architecture is inherited from the messagepassing algorithm and all the operations required in each node are implemented as a PU. The number of PUs is as many as the number of the variable and check nodes. Although the fully parallel implementation of the message-passing algorithm is straightforward and results in a high throughput decoder, it faces with complex interconnections required to sum up the Λij and ∆ij messages that are calculated in the PUs spread over the chip area.
+
+In the partially parallel architecture, each PU takes in charge of several numbers of rows or columns as shown in Fig. 2. As a PU is shared for a number of rows or columns, the number of PUs becomes much smaller than that of the fully parallel architecture. Thus the number of VTC (CTV) operations processed in a cycle is as many as the number of check (variable) PUs. The check messages calculated row-by-row by a check PU can be grouped and stored into a local memory to save area, and variable PUs access them later.
+
+∆ ij memory
+1,1 1,2 1,6 1,7 1,8 1,11 2,2 2,3 2,4 2,5 2,7 2,9 3,1 3,2 3,3 3,6 3,9 3,12 4,4 4,7 4,8 4,10 4,11 4,12 5,5 5,6 5,8 5,9 5,10 5,11 6,1 6,3 6,4 6,5 6,10 6,12
+
+3:1 mux
+3:1 mux
+
+shared check
+PU
+shared check
+PU
+
+1:6 demux
+
+1:12 demux Λij memory
+1,1 1,2 2,3 2,4 2,5 1,6 1,7 1,8 2,9 4,10 1,11 3,12 3,1 2,2 3,3 4,4 5,5 3,6 2,7 4,8 3,9 5,10 4,11 4,12 6,1 3,3 6,3 6,4 6,5 5,6 4,7 5,8 5,9 6,10 5,11 6,12
+
+4:1 mux
+
+4:1 mux
+
+4:1 mux
+
+shared variable
+PU
+
+shared variable
+PU
+
+shared variable
+PU
+
+Fig. 2. Partially parallel LDPC decoding architecture.
+
+The VTC and CTV operations are parallel in nature and thus a PU can process any rows or columns regardless of their order in matrix H. Since a PU takes in charge of several rows or columns in the partially parallel architecture, we have to determine which rows or columns are processed in the PU. In the grouping, the dependencies between rows and columns should be considered to minimize overall cycles by overlapping the VTC and CTV operations. For example, the CTV operation for v1 in the (12, 3, 6) LDPC code requires the VTC operations for c1, c3 and c6 to be completed beforehand. In addition, it is important to determine the processing order of rows or columns for a PU, because the dependence of the Λij and ∆ij can hinder the overlapped processing.
+
+III. SCHEDULING ALGORITHM
+Traditionally, the CTV operations can start only after the entire VTC step finishes completely, and vice versa. A well-scheduled
+
+5779 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:24 UTC from IEEE Xplore. Restrictions apply.
+
+sequence of the message calculations can reduce the latency, because a CTV operation can start in the course of the VTC step if the corresponding row summation values are available, and vice versa. The overlapped processing of the VTC and CTV steps results in a reduced number of cycles for an iteration.
+A. Overlapped Processing
+Fig. 3 shows an example of overlapped processing for the (12, 3, 6) LDPC code, assuming that the numbers of check PUs and variable PUs are two and three, respectively. Each arrow denotes a clock cycle and the numbers above an arrow indicate the row or column indices processed at that cycle. If the VTC and CTV steps are performed according to the increasing order of indices without scheduling, no overlapped processing is possible. Though two CTV operations for v2 and v7 can start at the last cycle of the VTC step, the CTV step does not start until three CTV operations are enabled for easy control design. If the VTC operations are scheduled as shown in Fig. 4 (b), three CTV operations for v2, v6 and v9 can start processing at the last cycle of the VTC step. Furthermore, the CTV operations can be scheduled to enable the VTC operations of the next iteration to start earlier. In this example, the scheduling of the VTC and CTV operations saves two cycles.
+
+without schedule
+
+VTC
+
+1,2 3,4 5,6
+
+operations :
+
+1,2 3,4
+
+CTV operations
+
+:
+
+1,2,3 4,5,6 7,8,9 10,11,12
+
+with schedule
+
+VTC
+
+1,3
+
+operations :
+
+CTV : operations
+
+2,5 4,6
+
+1,3 2,5 4,6
+
+2,6,9 7,8,11 1,3,12 4,5,10
+
+2,6,9 7,8,11
+
+Fig. 3. An example of overlapped processing
+The scheduling process can be viewed as the row and column permutation of the parity check matrix H. Fig. 4 (a) is the original parity check matrix H whose size is M×N. In this case, the size of H is 6×12 and we assume 2 check PUs and 3 variable PUs. If there are m check PUs, m rows at the top of the matrix are processed in the first cycle, the next m rows in the second cycle, and so on. Thus the VTC step takes M/m cycles. Similarly, the CTV step takes N/n cycles if there are n variable PUs. The permutation changes the sequence of the VTC and CTV operations to enlarge the empty slots at the lower left and upper right corners as shaded in Fig. 4 (b).
+
+1 2 3 4 5 6 7 8 9 10 11 12
+
+111
+
+111
+
+1
+
+2 1111 1 1
+
+3111
+
+1
+
+1
+
+1
+
+4
+
+1
+
+11 111
+
+5
+
+11 1111
+
+61 111
+
+11
+
+(a)
+
+2 6 9 7 8 11 1 3 12 4 5 10
+
+111 1111
+
+3111
+
+111
+
+21 11
+
+1 11
+
+5 11 11
+
+11
+
+4
+
+111
+
+11 1
+
+6
+
+111111
+
+(b)
+
+Fig. 4. Scheduling by the permutation of matrix H. (a) Matrix H. (b) Permuted matrix.
+
+The empty slots in a column mean that the processing of the column can start as long as the rows above the empty slots are processed beforehand. If there are k empty slots in a column, the column processing can start ⎣k/m⎦ cycles earlier, and if the first n
+
+columns have more than m empty slots, all the variable PUs can start their processing one cycle earlier. The simultaneous early starting is possible if the m×n slots that are at the lower left part surrounded by thick lines are all empty, and it is required to achieve an easy control design. For example, as three columns have empty slots larger than two in Fig. 4 (b), they can start after two cycles of the VTC step. Similarly, the empty slots in a row mean that the processing of the row can start as long as the columns at the left hand side of the empty slots are processed beforehand, leading to two rows that can start after three cycles of the CTV step.
+In fact, the earliest cycle found by the permutation is not the real starting time of the CTV (VTC) step. For the sake of easy control design, we assume that the CTV (VTC) step performs continuously without skipping cycles once it starts. If there is a cycle in which any column (row) cannot be processed during the CTV (VTC) step, the former operations are delayed to achieve continuous CTV (VTC) operations.
+B. Scheduling Algorithm
+It takes a considerable amount of time to find an optimum schedule that minimizes the overall cycles because of the large number of rows and columns. There has been a heuristic scheduling algorithm proposed for quasi-cyclic LDPC codes [9], but it cannot be applied to general LDPC codes. We describe a new scheduling algorithm developed for the partially parallel LDPC decoding architecture. The proposed algorithm described below is based on the concept of the matrix permutation. The algorithm makes the row sequence and column sequence that can result in empty spaces in the lower left and upper right corners of the permuted matrix when the matrix H is rearranged according to the sequences.
+Step 1: row sequence = null, column sequence = null. Step 2: Select a row rk randomly.
+The row sequence is enlarged by appending rk, and the column sequence is appended by inserting {cy|cy ∈ rk } . Go to Step 4. Step 3: If all the rows contained in a column are selected, such a column is called a completed column. If a column contained in a row is also in the column sequence, it is called a common column of the row. For each unselected row, count the number of common columns (CC) and the number of columns to be completed (CTC) when the row is selected. Select a row from unselected rows, ri, that has the maximal CTC. If there are more than two rows associated with the maximal CTC, we select the one that has the largest CC. The row sequence is appended by ri, and the column sequence is enlarged by appending the columns of ri that are not in the current column sequence. Step 4: Find completed columns, and move them to the front of the first uncompleted column in the column sequence. Step 5: If there are unselected rows, go to Step 3. Step 6: Permute the matrix H according to the row sequence and column sequence. Step 7: If there are m check PUs, the first m rows at the top of the permuted matrix are assigned to the first cycle of the VTC step, the next m rows to the second cycle, and so on. Similarly, for n variable PUs, the first n columns at the left of the permuted matrix are assigned to the first cycle of the CTV step, the next n columns to the second cycle, and so on.
+
+5780 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:24 UTC from IEEE Xplore. Restrictions apply.
+
+The random row selection in Step 2 is to explore more search space by starting from a different row. Step 3 to 5 are the main loop for matrix permutation and Step 6 to 7 assign rows and columns to PUs considering easy control design after scheduling. In the algorithm, rows are selected to make the upper right part of the permuted matrix as empty as possible and completed columns are moved to the left in order to make enlarged empty space in the lower left part. An example of the algorithm is illustrated in Fig. 5.
+
+1 2 6 7 8 11 1111111
+(a)
+
+1 2 6 7 8 11 3 9 12
+
+1111111
+
+3111
+
+111
+
+(b)
+
+1 2 6 7 8 11 3 9 12 4 5
+
+1111111
+
+3111
+
+111
+
+211
+
+11 11
+
+(c)
+
+row CTC CC 202 303 403 503 601
+row CTC CC 214 404 514 612
+
+2 1 6 7 8 11 3 9 12 4 5
+
+1111111
+
+3111
+
+111
+
+21
+
+1
+
+11 11
+
+(d)
+
+row CTC CC 415 525 625
+
+2 6 9 1 7 8 11 3 12 4 5 10
+
+111 1111
+
+31111
+
+11
+
+21 1 1
+
+1 11
+
+5 11
+
+11
+
+11
+
+(f)
+
+2 6 9 1 7 8 11 3 12 4 5 10
+
+111 1111
+
+31111
+
+11
+
+21 1 1
+
+1 11
+
+5 11
+
+11
+
+11
+
+4
+
+111 11 1
+
+(g)
+
+2 6 9 7 8 11 1 3 12 4 5 10
+
+111 1111
+
+3111
+
+111
+
+21 11
+
+1 11
+
+5 11 11
+
+11
+
+4
+
+111
+
+11 1
+
+(h)
+
+row CTC CC 436 636
+row CTC CC 666
+
+2 1 6 7 8 11 3 9 12 4 5 10
+
+1111111
+
+3111
+
+111
+
+21
+
+1
+
+11 11
+
+5
+
+1 11 1
+
+11
+
+(e)
+
+2 6 9 7 8 11 1 3 12 4 5 10
+
+111 1111
+
+3111
+
+111
+
+21 11
+
+1 11
+
+5 11 11
+
+11
+
+4
+
+111
+
+11 1
+
+6
+
+111111
+
+(i)
+
+Fig. 5. An illustrative example of the proposed scheduling. (a) Select r1. (b) Append r3. (c) Append r2. (d) Move c2. (e) Append r5. (f) Move c6, c9. (g) Append r4. (h) Move c7, c8, c11. (i) Append r6.
+
+IV. EXPERIMENTAL RESULTS
+
+By applying the scheduling algorithm to a (1024, 3, 6) LDPC code, we can save the number of processing cycles per iteration as summarized in Table I, where parallelism (m, n) stands for an implementation associated with m check PUs and n variable PUs.
+
+TABLE I CYCLES SAVED BY SCHEDULING PER ITERATION
+
+Parallelism
+(4, 8) (8, 8) (16, 8) (8, 16) (16, 16) (32, 16) (16, 32) (32, 32) (64, 32)
+
+Cycles w/o schedule
+256 192 160 128 96 80 64 48 40
+
+Cycles w/ schedule
+195 139 129 93 70 60 47 36 30
+
+Saved cycles
+61 53 31 35 26 20 17 12 10
+
+Saved cycles (%)
+23.8 27.6 19.4 27.3 27.1 25.0 26.6 25.0 25.0
+
+We designed two (1024, 3, 6) LDPC decoders using a 0.18 um CMOS process for parallelism (16, 32) and (32, 64). The performances of the decoders are summarized in Table II. The first decoder corresponding to parallelism (16, 32) occupies an area of 6.29 mm2 and provides more than 500 Mbps decoding throughput at the frequency of 200 MHz, and the second decoder corresponding to parallelism (32, 64) takes 10.08 mm2 and provides almost 1Gbps decoding throughput at the same frequency. The resulting bit rate of the second decoder is comparable to the fully parallel architecture proposed by Blanksby et al., but significant
+
+area reduction is achieved. Although the iteration number in Blanksby’s implementation is fixed to 64 due to the scan-chain like I/O mechanism, there is no restriction in the proposed architecture. We chose 8 iterations to provide sufficient BER performance.
+
+TABLE II COMPARISON OF LDPC DECODERS
+
+Blanksby
+
+Proposed
+
+[3]
+
+Parallelism (16,32) Parallelism (32,64)
+
+Technology Bit rate
+Area
+
+0.16 um
+1 Gbps 52.5 mm2
+
+MEM: Other:
+
+0.18 um
+582 Mbps 6.29 mm2 3.46 mm2 2.83 mm2
+
+0.18 um
+985 Mbps 10.08 mm2 6.45 mm2 3.63 mm2
+
+V. CONCLUSIONS
+This paper has presented an efficient scheduling algorithm for partially parallel LDPC decoders to minimize the overall processing time by overlapping CTV and VTC steps. As the VTC and CTV operations are parallel in nature, a PU can process any rows or columns regardless of their order in matrix H, and thus it is very important to determine which rows or columns are processed in a PU. In the grouping, the dependencies between rows and columns should be considered to overlap the VTC and CTV operations. Based on the concept of the matrix permutation, the proposed scheduling algorithm generates the row sequence and column sequence that can result in empty spaces in the lower left and upper right corners of the permuted matrix when matrix H is rearranged according to the sequences. Experimental results show that the proposed scheduling achieves a higher decoding rate, leading to a reduction of 25% processing time on the average.
+
+ACKNOWLEDGMENT
+This work was supported by Institute of Information Technology Assessment through the ITRC, by the Korea Science and Engineering Foundation through MICROS center and by IC Design Education Center (IDEC).
+
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Info. Theory, vol. IT-8, pp. 533-547, Jan. 1962.
+[2] S. Chung, D. Forney, T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the Shannon limit,” IEEE Comm. Letters, vol. 5, pp. 58-60, Feb. 2001.
+[3] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s, rate-1/2 lowdensity parity-check code decoder,” IEEE J. of Solid-State Circuits, vol. 37, pp. 404-412, Mar. 2002.
+[4] E. Yeo, P. Pakzad, B. Nikolić and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magnetics, vol. 37, pp. 748-755, Mar. 2001.
+[5] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference, Morgan Kaufmann, 1988.
+[6] K. Lo, Layered space time structures with low density parity check and convolutional codes, MS Thesis, School of EIE, Univ. of Sydney, 2001.
+[7] F. R. Kschischang, B. J. Frey, and H. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Info. Theory, vol. 47, pp. 498519, Feb. 2001.
+[8] N. Wiberg, Codes and decoding on general graphs, PhD thesis, Dept. of EE, Linköping Univ. Sweden, 1996.
+[9] Y. Chen, K. K. Parhi, “Overlapped message passing for quasi-cyclic low-density parity check codes,” IEEE Trans. Circuits and Syst. I, vol. 51, pp. 1106-1113, Jun. 2004.
+
+5781 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:24 UTC from IEEE Xplore. Restrictions apply.
+
+

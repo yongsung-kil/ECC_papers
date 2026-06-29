@@ -1,0 +1,1699 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+2213
+
+Reconstruction-Computation-Quantization (RCQ): A Paradigm for Low Bit Width LDPC Decoding
+Linfang Wang , Graduate Student Member, IEEE, Caleb Terrill, Student Member, IEEE, Maximilian Stark , Zongwang Li , Sean Chen, Chester Hulse, Calvin Kuo, Richard D. Wesel , Fellow, IEEE, Gerhard Bauch , Fellow, IEEE, and Rekha Pitchumani
+
+Abstract— This paper uses the reconstruction-computationquantization (RCQ)paradigm to decode low-density parity-check (LDPC) codes. RCQ facilitates dynamic non-uniform quantization to achieve good frame error rate (FER) performance with very low message precision. For message-passing according to a flooding schedule, the RCQ parameters are designed by discrete density evolution. Simulation results on an IEEE 802.11 LDPC code show that for 4-bit messages, a flooding Min SumRCQ decoder outperforms table-lookup approaches such as information bottleneck (IB) or Min-IB decoding, with significantly fewer parameters to be stored. Additionally, this paper introduces layer-specific RCQ, an extension of RCQ decoding for layered architectures. Layer-specific RCQ uses layer-specific message representations to achieve the best possible FER performance. For layer-specific RCQ, this paper proposes using layered discrete density evolution featuring hierarchical dynamic quantization (HDQ) to design parameters efficiently. Finally, this paper studies field-programmable gate array (FPGA) implementations of RCQ decoders. Simulation results for a (9472, 8192) quasi-cyclic (QC) LDPC code show that a layered Min SumRCQ decoder with 3-bit messages achieves more than a 10% reduction in LUTs and routed nets and more than a 6% decrease in register usage while maintaining comparable decoding performance, compared to a 5-bit offset Min Sumdecoder.
+Manuscript received September 5, 2021; revised January 11, 2022; accepted January 29, 2022. Date of publication February 7, 2022; date of current version April 18, 2022. This research was supported by National Science Foundation (NSF) grant CCF-1911166 Physical Optics Corporation (POC) and SA Photonics. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect views of the NSF, POC, or SA. An earlier version of this paper was presented in part at the IEEE GLOBECOM 2020 [1] [DOI: 10.1109/GLOBECOM42002.2020.9348139] and the IEEE GLOBECOM 2021 [2] [DOI: 10.1109/GLOBECOM46510.2021.9685732]. The associate editor coordinating the review of this article and approving it for publication was R. Venkataramanan. (Corresponding author: Linfang Wang.)
+Linfang Wang, Caleb Terrill, Sean Chen, Chester Hulse, Calvin Kuo, and Richard D. Wesel are with the Department of Electrical and Computer Engineering, University of California, Los Angeles, Los Angeles, CA 90095 USA (e-mail: lfwang@ucla.edu; cterrill26@ucla.edu; mistystory@ ucla.edu; chulse@ucla.edu; calvinkuo@ucla.edu; wesel@ucla.edu).
+Maximilian Stark and Gerhard Bauch are with the Institute of Communications, Hamburg University of Technology, 21073 Hamburg, Germany (e-mail: maximilian.stark@tuhh.de; bauch@tuhh.de).
+Zongwang Li and Rekha Pitchumani are with Samsung Semiconductor, Inc., San Jose, CA 95134 USA (e-mail: zongwang.li@samsung.com; r.pitchumani@samsung.com).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2022.3149913.
+Digital Object Identifier 10.1109/TCOMM.2022.3149913
+
+Index Terms— LDPC decoder, low bit width decoding, hardware efficiency, layered decoding, FPGA.
+I. INTRODUCTION
+L OW-DENSITY Parity-Check (LDPC) codes [3] have been implemented broadly, including in NAND flash systems and wireless communication systems. Message passing algorithms such as belief propagation (BP) and Min Sumare utilized in LDPC decoders. In practice, decoders with low message bit widths are desired when considering the limited hardware resources such as area, routing capabilities, and power utilization of FPGAs or ASICs. Unfortunately, low bit width decoders with uniform quantizers typically suffer a large degradation in decoding performance [4]. On the other hand, the iterative decoders that allow for the dynamic growth of message magnitudes can achieve improved performance [5].
+LDPC decoders that quantize messages non-uniformly have gained attention because they provide excellent decoding performance with low bit width message representations. One family of non-uniform LDPC decoders use lookup tables (LUTs) to replace the mathematical operations in the check node (CN) unit and/or the variable node (VN) unit. S. K. Planjery et al. propose finite alphabet iterative decoders (FAIDs) for regular LDPC codes in [6], [7], which optimize a single LUT to describe VN input/output behavior. In [6] a FAID is designed to tackle certain trapping sets and hence achieves a lower error floor than BP on the binary symmetric channel (BSC). Xiao et al. optimize the parameters of FAID using a recurrent quantized neural network (RQNN) [8], [9], and the simulation results show that RQNNaided linear FAIDs are capable of surpassing floating-point BP in the waterfall region for regular LDPC codes.
+Note that the size of the LUTs in [6]–[9] describing VN behavior are an exponential function with respect to node degree. Therefore, these FAIDs can only handle regular LDPC codes with small node degrees. For codes with large node degrees, Kurkoski et al. develop a mutual-informationmaximization LUT (MIM-LUT) decoder in [10], which decomposes a single LUT with multiple inputs into a series of concatenated 2 × 1 LUTs, each with two inputs and one
+
+0090-6778 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2214
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+output. This decomposition makes the number of LUTs linear with respect to node degree, thus significantly reducing the required memory. The MIM-LUT decoder performs lookup operations at both the CNs and VNs. The 3-bit MIM-LUT decoder shows a better FER than floating-point BP over the additive white Gaussian noise (AWGN) channel. As the name suggests, the individual 2 × 1 LUTs are designed to maximize mutual information [11]. Lewandowsky et al. use the information bottleneck (IB) machine learning method to design LUTs and propose an IB decoder for regular LDPC codes. As with MIM-LUT, IB decoders also use 2 × 1 LUTs at both CNs and VNs. Stark et al. extend the IB decoding structure to support irregular LDPC codes through the technique of message alignment [12], [13]. The IB decoder shows an excellent performance on a 5G LDPC code [14], [15]. In order to reduce the memory requirement for LUTs, Meidlinger et al. propose the Min-IB decoder, which replaces the LUTs at CNs with label-based min operation [16]–[19].
+Because the decoding requires only simple lookup operations, the LUT-based decoders deliver high throughput. However, the LUT-based decoders require significant memory resources when the LDPC code has large degree nodes and/or the decoder has a large predefined maximum decoding iteration time, where each iteration requires its own LUTs. The huge memory requirement for numerous large LUTs prevents these decoders from being viable options when hardware resources are constrained to a limited number of LUTs.
+Lee et al. [4] propose the mutual information maximization quantized belief propagation (MIM-QBP) decoder which circumvents the memory problem by designing nonuniform quantizers and reconstruction mappings at the nodes. Both VN and CN operations are simple mappings and fixed point additions in MIM-QBP. He et al. in [20] show how to systematically design the MIM-QBP parameters for quantizers and reconstruction modules. Wang et al. further generalize the MIM-QBP structure and propose a reconstruction-computation-quantization (RCQ) paradigm [1] which allows CNs to implement either the min or boxplus operation.
+All of the papers discussed above focus on decoders that use the flooding schedule. The flooding schedule can be preferable when the code length is short. However, in many practical settings such as coding for storage devices where LDPC codes with long block lengths are selected, the flooding schedule requires an unrealistic amount of parallel computation for some typical hardware implementations. Layered decoding [21], on the other hand, balances parallel computations and resource utilization for a hardware-friendly implementation that also reduces the number of iterations as compared to a flooding implementation for the same LDPC code.
+A. Contributions
+As a primary contribution, this work extends our previous work on RCQ [1] to provide dynamic quantization that changes with each layer of a layered LDPC decoder, as is commonly used with a protograph-based LDPC code. The original RCQ approach [1], which uses the same quantizers
+
+and reconstructions for all layers of an iteration, suffers from FER degradation and a high average number of iterations when applied to a layered decoding structure. The novelty and contributions in this paper are summarized as follows:
+• Layer-specific RCQ Decoding structure. This paper proposes the layer-specific RCQ decoding structure. The main difference between the original RCQ of [1] and the layer-specific RCQ decoder is that layer-specific RCQ designs quantizers and reconstructions for each layer of each iteration. The layer-specific RCQ decoder provides better FER performance and requires a smaller number of iterations than the original RCQ structure with the same bit width. This improvement comes at the cost of an increase in the number of parameters that need to be stored in the hardware.
+• layer-specific RCQ Parameter Design. This work uses layer-specific discrete density evolution featuring hierarchical dynamic quantization (HDQ) to design the layer-specific RCQ parameters. We refer to this design approach as layer-specific HDQ discrete density evolution. For each layer of each iteration, layer-specific HDQ discrete density evolution separately computes the PMF of the messages. HDQ designs distinct quantizers and reconstructions for each layer of each iteration.
+• FPGA-based RCQ Implementations. This paper presents the Lookup Method, the Broadcast Method and the Dribble Method, as alternatives to distribute RCQ parameters efficiently in an FPGA. This paper verifies the practical resource needs of RCQ through an FPGA implementation of an RCQ decoder using the Broadcast method. Simulation results for a (9472, 8192) quasi-cyclic (QC) LDPC code show that a layer-specific Min SumRCQ decoder with 3-bit messages achieves a more than 10% reduction in LUTs and routed nets and more than a 6% reduction in register usage while maintaining comparable decoding performance, compared to a standard offset Min Sumdecoder with 5-bit messages.
+B. Organization
+The remainder of this paper is organized as follows: Sec. II introduces the RCQ decoding structure and presents an FPGA implementation of an RCQ decoder. Sec. III describes HDQ, which is used for channel observation quantization and RCQ parameter design. Sec. IV shows the design of the layerspecific RCQ decoder. Sec. V presents simulation results including FER and hardware resource requirements. Sec. VI concludes our work.
+II. THE RCQ DECODING STRUCTURE
+The updating procedure of message passing algorithms contains two steps: 1) computation of the output message, 2) communication of the message to the neighboring node. To reduce the complexity of message passing, the computed message is often quantized before being passed to the neighboring node. We refer to the computed messages as the internal messages, and communicated messages passed over the edges of the Tanner graph as external messages.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+
+2215
+
+Fig. 1. Illustration of a generalized RCQ unit which consists of three mod-
+ules: Reconstruction that maps a be-bit value to a bi-bit value, Computation that performs arithmetic operations, and Quantization that quantizes abi-bit value to a be-bit value.
+
+When external messages are produced by a uniform quantizer, low bit width external messages can result in an early error floor [22]. Thorpe et al. introduced a non-uniform quantizer in [4]. Their decoder adds a non-uniform quantizer and a reconstruction mapping to the output and input of the hardware implementation of each node unit. This approach delivers excellent decoding performance even with a low external bit width. The RCQ decoder [1] can be seen as a generalization of the decoder introduced in [4].
+In this section, we provide detailed descriptions of the RCQ decoding structure. Three FPGA implementation methods for realizing the RCQ functionality are also presented.
+
+A. Generalized RCQ Unit
+
+A generalized RCQ unit as shown in Fig. 1 consists of the
+
+following three modules:
+
+1) Reconstruction Module: The reconstruction module applies a reconstruction function R(·) to each incoming be-bit external message to produce a bi-bit internal message, where bi > be. We denote the bit width of CN and VN internal message by bi,c and bi,v, respectively. For the flooding-scheduled RCQ decoder, R(·) is iteration-specific and we use Rc(t)(·) and Rv(t)(·) to represent the reconstruction of check and variable
+node messages at iteration t, respectively. In the layer-specific
+
+RCQ decoder, R(·) uses distinct parameters for each layer in each iteration. We use Rc(t,r)(·) and Rv(t,r)(·) to represent
+
+the reconstruction of check and variable node messages at
+
+layer r of iteration t, respectively. The reconstruction functions
+
+are mappings of the input external messages to log-likelihood
+
+ratios (LLR) that will be used by the node. In this paper, these
+
+mappings are systematically designed by HDQ discrete density
+
+evolution, which will be introduced in a later section.
+
+For a quantizer Q(·) that is symmetric, an external message
+
+d ∈ F2be can be indicates sign
+
+represented as [dMSB d˜], where and d˜ ∈ Fb2e−1 corresponds
+
+dMSB ∈ {0, 1} to magnitude.
+
+We define the magnitude reconstruction function R∗(·) :
+
+Fmb2ees−s1age→, d˜,Ftb2oi−t1h,e
+
+which maps the magnitude of magnitude of internal message.
+
+external Without
+
+loss of generality, we restrict our attention to monotonic
+
+reconstruction functions so that
+
+R∗(d˜1) > R∗(d˜2) > 0, for d˜1 > d˜2,
+
+(1)
+
+where d˜1, d˜2 ∈ Fb2e−1. The reconstruction R(d) can be expressed by R(d) = dMSB R∗(d˜) . Under the assumption
+of a symmetric channel, we have R([0 d˜]) = −R([1 d˜]). 2) Computation Module: The computation module F (·)
+uses the bi-bit outputs of the reconstruction module to compute a bi-bit internal message for the CN or VN output. We denote
+the computation module implemented in CNs and VNs by Fc and Fv, respectively. An RCQ decoder implementing the min operation at the CN yields a Min Sum(ms) RCQ decoder.
+If an RCQ decoder implements belief propagation (bp) via
+the boxplus operation, the decoder is called bpRCQ. The computation module, Fv, in the VNs is addition for both bpRCQ and msRCQ decoders.
+3) Quantization Module: The quantization module Q(·) quantizes the bi-bit internal message to produce a be-bit
+external message. Under the assumption of a symmetric
+channel, we use a symmetric quantizer that features sign information and a magnitude quantizer Q∗(·). The magnitude quantizer selects one of 2be−1 − 1 possible indexes using the threshold values {τ0, τ1, . . . , τmax}, where τj ∈ Fb2i for j ∈ {0, 1, . . . , 2be−1 −2} and τmax is τjmax for jmax = 2be−1 −2. We also require
+
+τi > τj > 0, i > j.
+
+(2)
+
+Given an into sign
+
+internal message h ∈ F2bi , part hMSB and magnitude
+
+which can be decomposed part h˜, Q∗(h˜) ∈ Fb2e−1 is
+
+defined by:
+
+⎧ ⎪⎨0,
+
+h˜ ≤ τ0
+
+Q∗(h˜) = ⎪⎩j2,be−1 − 1,
+
+τj−1 < h˜ ≤ τj h˜ > τmax,
+
+(3)
+
+where 0 < j ≤ jmax. Therefore, Q(h) is defined by Q(h) = [hMSB Q∗(h˜)]. The super/subscripts introduced for R(·) also apply to Q(·).
+
+B. Bit Width of RCQ Decoder
+The three tuple (be, bi,c, bi,v) represents the precision of messages in a RCQ decoder. For the msRCQ decoder, it is sufficient to use only the pair (be, bi,v) because bi,c = be, we simply denote bi,v by bv. The CN min operation computes the XOR of the sign bits and finds the minimum
+of the extrinsic magnitudes. For a symmetric channel, the min operation can be computed by manipulating the external
+messages, because the external message delivers the relative
+LLR meaning of reconstructed values. Since we only use external messages to perform the min operation, Rc(·) and Qc(·) are not needed for the msRCQ decoder. Finally, we use ∞ to denote a floating point representation.
+
+C. FPGA Implementation for RCQ
+The RCQ FPGA decoder may be viewed as a modification to existing hardware decoders based on the BP or MS decoder algorithms, which have been studied extensively [23]–[26]. The RCQ decoders require extra Q(·) and R(·) functions to quantize and reconstruct message magnitudes. To implement Q(·) and R(·) functions, we have devised the Lookup,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2216
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+to route the RCQ parameters from the central control unit to the VNs.
+3) Dribble Method: The Dribble method attempts to reduce the number of long wires required by the Broadcast method. Registers in the VNs save the current thresholds and reconstruction values necessary for the Q(·) and R(·) functions. Once again, quantization and reconstruction can be implemented using the logic in Fig. 2. When a new set of parameters is required, the bits are transferred (dribbled) one by one or in small batches from the control unit to the VN unit registers. Just as in the Broadcast method, two extra block RAMs and logic for the Q(·) and R(·) functions are required. The penalty of the Dribble method comes with the extra usage of registers in the VN units.
+We have implemented all methods and explored their resource utilization in [2].
+
+Fig. 2. msRCQ magnitude reconstruction module (a) and magnitude quantization module (b). In FPGA, magnitude reconstruction module is realized by a multiplexer, and magnitude quantization is realized by comparison functions and a thermometer-to-binary decoder which realizes the mapping relationship shown in (c).
+Broadcast, and Dribble methods. These three approaches are functionally identical, but differ in the way that the parameters needed for the Q(·) and R(·) operations are communicated to the nodes.
+1) Lookup Method: The quantization and reconstruction functions simply map an input message to an output message. Thus, a simple implementation uses lookup tables implemented using read-only memories (ROMs) to implement all these mappings. The Q(·) and R(·) functions in every VN require their own ROMs, implemented using block RAMs. Because Q(·) and R(·) change with respect to different iterations and/or layers, one potential drawback of the Lookup method is a large block RAM requirement.
+2) Broadcast Method: The Broadcast method provides a scheme where all RCQ parameters are stored centrally in a control unit, instead of being stored in each VN. Each VN only takes in the Q(·) and R(·) parameters necessary for decoding the current iteration and layer, and use logic to perform their respective operations. Fig. 2 shows an implementation for a 3-bit RCQ, which uses mere 2 bits for magnitude reconstruction and quantization. The 2-bit magnitude reconstruction module is realized by a4 × 1 multiplexer. The 2bit magnitude quantization consistsof two steps, first a thermometer code [27], wherethe contiguous ones are analogous to mercury in a thermometer, isgenerated by comparing the input with all thresholds, and then thethermometer code is converted to the 2-bit binary form by using athermometerto-binary decoder, which realizes the mappingrelationship in Fig. 2c.Two block RAMS are required in the control unit for the thresholds and reconstruction values. Small LUTs in each VN implement the Q(·) and R(·) functions. The main penalty of the Broadcast method is the additional wiring necessary
+
+III. HIERARCHICAL DYNAMIC QUANTIZATION (HDQ)
+This section introduces the HDQ algorithm, a non-uniform quantization scheme that this paper uses both for quantization of channel observations and for quantization of internal messages by RCQ. Our results show, for example, that HDQ quantization of AWGN channel observations achieves performance similar to the optimal dynamic programming quantizer of [11] for the binary input AWGN channel, with much lower computational complexity.
+A. Motivation
+The quantizer plays an important role in RCQ decoder design. First, the channel observation is quantized as the input to the decoder. This section explores how to use HDQ to quantize the channel observations. Second, the parameters of R(·) and Q(·) are also designed by quantizing external messages according to their probability mass function (PMF) as determined by discrete density evolution. The use of HDQ to quantize internal messages is described in Section IV.
+The HDQ approach designs a quantizer that maximizes mutual information in a greedy or progressive fashion. Quantizers aiming to maximize mutual information are widely used in non-uniform quantization design [1], [12], [14]–[20], [28]–[31]. Due to the interest of this paper, the cardinality of quantizer output is restricted to 2b, i.e., this paper seeks b-bit quantizers. Kurkoski and Yagi [32] proposed a dynamic programming method to find an optimal quantizer that maximizes mutual information for a binary input discrete memoryless channel (BI-DMC) whose outputs are from an alphabet with cardinality B, with complexity O(B3). The dynamic programming method of [11] finds the optimal quantization, but the approach becomes impractical when B is large.
+In order to quantize the outputs for a channel with large cardinality B when constructing polar codes, Tal and Vardy devised a sub-optimal greedy quantization algorithm with complexity O(B log(B)) [32]. In [28], Lewandowsky et al. proposed the modified Sequential Information Bottleneck (mSIB) algorithm to design the channel quantizer and LUTs for LDPC decoders. mSIB is also a suboptimal quantization technique with complexity O(aB), where
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+
+2217
+
+a is the number of trials. As a machine learning algorithm,
+
+multiple trials are required for good results with mSIB. Typical
+
+values of a range, for example, from 15 to 70.
+
+HDQ is proposed in [1] as an efficient b-bit quantiza-
+
+tion algorithm for the symmetric BI-DMC with complexity
+
+O
+
+2b log(γ )
+
+log(B)
+
+. HDQ has less complexity than mSIB and
+
+also the Tal-Vardy algorithm. This section reviews the HDQ
+
+using symmetric binary input AWGN channel as an example.
+
+As an improvement to the HDQ of [1], sequential threshold
+
+search is replaced with golden section search [33].
+
+B. The HDQ Algorithm
+Let the encoded bit x ∈ {0, 1} be modulated by Binary Phase Shift Keying (BPSK) and transmitted over an AWGN channel. The modulated BPSK signal is represented as s(x) = −2x + 1. We denote the channel observation at the receiver by y where
+
+y = s(x) + z,
+
+(4)
+
+and z ∼ N (0, σ2). The joint probability density function of x and y, f (x, y; σ), is:
+
+f (x, y; σ) = √ 1
+
+e . −
+
+(y−s(x))2 2σ2
+
+(5)
+
+2 2πσ2
+
+HDQ seeks an b-bit quantization of the continuous channel output y, as in [30]. In practice, often y is first quantized into B values using high-precision uniform quantization where B  2b, i.e., analog-to-digital (A/D) conversion. Let W be the result of the A/D output, where W ∈ W and W = {0, 1, . . . , B − 1}. The alphabet of B channel outputs from the A/D converter is then subjected to further non-
+uniform quantization resulting in a quantization alphabet of 2b values. We use D to represent the non-uniform quantizer output, which is comprised of the b bits D = [D1, . . . , Db]. HDQ aims to maximize the mutual information between X and D.
+For the symmetric binary input AWGN channel, a larger
+index w implies a larger LLR, i.e.:
+
+log
+
+PW |X (i|0) PW |X (i|1)
+
+<
+
+log
+
+PW PW
+
+|X |X
+
+(j (j
+
+|0) |1)
+
+,
+
+∀i < j.
+
+(6)
+
+Based on Lemma 3 in [11], any binary-input discrete memoryless channel that satisfies (6) has an optimal b-bit quantizer that is determined by 2b−1 boundaries, which can be identified by their corresponding index values. Denote the 2b − 1 index thresholds by {ξ1, ξ2, . . . , ξ2b−1} ⊂ W. Unlike the dynamic programming algorithm [11], which optimizes boundaries
+jointly, HDQ sequentially finds thresholds according to bit
+level, similar to the progressive quantization in [29].
+The general b-bit HDQ approach is as follows: 1) We assume an initial high-precision uniform quan-
+tizer. For this case, set the extreme index thresholds ξ0 = 0 and ξ2b = B − 1, which are the minimum and maximum outputs of the uniform quantization.
+2) The index threshold ξ2(b−1) is selected as follows to determine the bit level 0:
+
+ξ2(b−1) = arg max I(X ; D1) ,
+
+(7)
+
+ξ0 <ξ<ξ2b
+
+where
+
+D1 = ½(W ≥ ξ2(b−1)).
+
+(8)
+
+3) The index thresholds ξ2(b−2) and ξ3∗2(b−2) are selected as follows to determine bit level 1:
+
+ξ2(b−2)
+
+=
+
+arg max I(X; D2|D1
+ξ0 <ξ<ξ2b−1
+
+= 0),
+
+ξ3∗2(b−2)
+
+=
+
+arg max I(X; D2|D1
+ξ2b−1 <ξ<ξ2b
+
+= 1) ,
+
+(9) (10)
+
+and
+
+D2 =
+
+½(W ≥ ξ ) 2(b−2) if D1 = 0 ½(W ≥ ξ ) 3∗2(b−2) if D1 = 1.
+
+(11)
+
+4) In the general case, when the thresholds for k previous quantization bits have been determined, 2k thresholds {ξ(j+0.5)2b−k , j = 0, .., 2k − 1} must be selected to determine the next quantization bit. Each threshold
+maximizes I(X; Dk+1|Dk = dk, . . . , D1 = d1) for a specific result for the k previous quantization bits. HDQ provides the 2b − 1 index thresholds {ξ1, . . . , ξ2b−1}. For channel quantization, the index thresholds can be mapped
+
+to channel outputs. For the RCQ decoding, the messages are
+LLR values, the LLR magnitude thresholds {τ0, . . . , τ2b−1−2} are calculated from the index thresholds {ξ2b−1+1, . . . , ξ2b−1} as follows:
+
+τi =
+
+log
+
+PW PW
+
+|X |X
+
+(ξ1+i+2b−1 (ξ1+i+2b−1
+
+|0) |1)
+
+,
+
+i = 0, 1, .., 2b−1 − 2
+
+(12)
+
+HDQ also provides the joint probability between code
+bit X and quantized message D, P (X, D). The magnitude reconstruction function R∗(·) is computed as follows:
+
+R∗(d)
+
+=
+
+log
+
+PXT PXT
+
+(0, (1,
+
+d + 2b−1 ) d + 2b−1 )
+
+,
+
+d = 0, 1, . . . , 2b−1 −1.
+
+(13)
+
+C. Golden-Section Search and Complexity Analysis
+After k stages of HDQ, there are 2k quantization regions each specified by their leftmost and rightmost indices ξ and ξr. The next stage finds a new threshold ξ∗ for each of these 2k regions. Each ξ∗ is selected to maximize a conditional mutual information as follows:
+
+ξ∗ = arg max I(ξ),
+
+(14)
+
+ξ <ξ<ξr
+
+where
+
+I(ξ) = I (X; Dk+1(ξ)|D1 = d1, . . . , Dk = dk)
+
+(15)
+
+=
+
+P
+
+x,dk+1
+
+x, dk+1(ξ)|dk1
+
+log
+
+P (dk+1(ξ)|x, dk1 P (dk+1(ξ)|dk1 )
+
+)
+
+(16)
+
+for the binary k-tuple d1k = d1, . . . , dk that defines (ξ , ξr).
+
+The probability P x, dk+1(ξ)|dk1 is defined as follows:
+
+⎧ ⎪⎨⎪⎪⎪ P x, dk+1(ξ)|dk1 = ⎩⎪⎪⎪⎪
+
+ξ w=ξl
+
+PXW
+
+(x,
+
+w)
+
+ξr w=ξl
+
+PW
+
+(w)
+
+ξr w=ξ+1
+
+PX
+
+W
+
+(x,
+
+w)
+
+ξr w=ξl
+
+PW
+
+(w)
+
+dk+1 = 0 dk+1 = 1.
+
+(17)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2218
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+Fig. 3. Illustration of one iteration of golden-section search for finding
+
+maximum point of f (x) in the interval [al, ar]. a
+
+=
+
+ar
+
+−
+
+ar −al γ
+
+and
+
+a
+
+=
+
+al
+
++
+
+ar −al γ
+
+.
+
+Because
+
+f (a
+
+) < f (a ), [a
+
+, ar] is truncated and [al, a
+
+]
+
+becomes the new search interval for the next iteration.
+
+Fig. 4. A trellis whose paths represent all 2-bit quantizers for a BI-DMC with 8 outputs. The vertices in column i are possible values for ith threshold ξi. Each branch in the trellis identifies a quantization region.
+
+Because I(ξ) is concave in ξ, the local maximum can be
+
+found using the golden section search [33], a simple but robust
+
+technique to find extreme point of a unimodal function by
+
+successively narrowing the range of values on a specified
+
+interval. Specifically, Fig. 3 illustrates one iteration of golden-
+
+section search for finding maximum point of f (x) in the
+
+interval [al, a√r]. First, find a
+
+=
+
+ar
+
+−
+
+ar −al γ
+
+and a
+
+=
+
+al
+
++
+
+ar −al γ
+
+,
+
+where γ =
+
+5+1 2
+
+.
+
+Because
+
+f (a
+
+)
+
+<
+
+f (a ),
+
+which
+
+suggests
+
+that the maximum point lies in [al, a ], the interval [a , ar]
+
+is truncated and [al, a ] is updated as the next round search
+
+interval. Further details of golden-section search can be found
+
+in [33]. When using the golden-section search to find all
+
+2b − 1 thresholds for the b-bit HDQ, I(ξ) will be computed
+
+using (15) a number of times that is proportional to:
+
+21
+
+2b−1
+
+logγ(B) + logγ (B2,i) + · · · + logγ(Bb,i),
+
+(18)
+
+i=1
+
+i=1
+
+≤ logγ(B) + 2 logγ
+
+B 2
+
++ · · · + 2b−1 logγ
+
+B 2b−1
+
+(19)
+
+=
+
+2b log(γ)
+
+log(B).
+
+(20)
+
+Bj,i is the ith interval length in j − 1 bit level quantization and
+
+2j−1 i=1
+
+Bj,i
+
+=
+
+B.
+
+Therefore,
+
+a
+
+b-bit
+
+quantization
+
+on
+
+a
+
+B-output
+
+channel using HDQ can be designed in O
+
+2b log(γ )
+
+log(B)
+
+time.
+
+D. Comparing HDQ With Optimal Dynamic Programming
+This subsection provides an example contrasting HDQ with the dynamic programming solution. Following [11], Fig. 4 gives a trellis whose paths represent all 2-bit quantizers for a binary input DMC with 8 outputs. The outputs are indexed from 0 to 7 and satisfy (6). The vertices in column i are possible values for ξi, and each path represents a valid quantizer whose thresholds are determined by the vertices in each column. Each branch in the trellis identifies a quantization region. For example, the branch connecting vertex ξ0 = 0 to vertex ξ1 = 2 specifies the leftmost quantization region as {0,1}, i.e., ξ = 0 and ξr = 1.
+
+The dynamic programming algorithm determines vertices of all columns jointly, whereas HDQ identifies the vertices in a greedy way, by first finding the vertex in column 2 to maximize I(X; D1) and then vertices in column 1 and 4 to maximize I(X; D2|D1 = d1). Hence, the greedy approach of HDQ only searches part of trellis and therefore is sub-optimal. However, our simulations show that HDQ finds the quantizer that perform closely to the optimal one.
+
+E. Simulation Result
+This section provides simulation results for quantizing symmetric binary input AWGN channel observations. The simulations compare HDQ to the optimal dynamic programming result as well as to two sub-optimal approaches: mSIB with 20 and 70 trials and the greedy quantization algorithm describe in [28]. For all the quantization approaches, the channel observations are first quantized uniformly into B = 2000 points between −2 and 2.
+Fig. 5a gives the thresholds as a function of σ2 for HDQ, dynamic programming, mSIB with 20 and 70 trials, and greedy quantization. The quantization thresholds for HDQ, dynamic programming, and mSIB are indistinguishable in Fig. 5a. HDQ has significantly lower complexity than both dynamic programming and mSIB. The thresholds for greedy quantization algorithm of [32] deviate noticeably from the thresholds found by the other approaches.
+In order to quantify the performance of sub-optimal quantizers, we define ΔI as follows:
+
+ΔI = Idp(X; D) − Isub(X; D),
+
+(21)
+
+where Idp(X; D) and Isub(X; D) are the mutual information
+between code bit X and quantized value D as obtained by
+dynamic programming and sub-optimal quantizers, respectively. Fig. 5b plots ΔI as a function of σ2 for each sub-
+optimal quantizer. All three sub-optimal quantizers perform quite well with ΔI < 10−3 bits. However, HDQ and mSIB achieve ΔI < 10−6, significantly outperforming the greedy
+approach of [32].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+
+2219
+
+A. Decoding a Quasi-Cyclic LDPC Code With a Layered Schedule
+
+QC-LDPC codes are structured LDPC codes characterized by a parity check matrix H ∈ F(2n−k)×n which consists of square sub-matrices with size S, which are either the all-
+
+zeros matrix or a cyclic permutation of the identity matrix.
+
+These cyclic permutations are also called circulants that are
+
+represented by σi to indicate that the rows of the identity
+
+matrix are cyclically shifted by i positions. Thus an M × U
+
+base matrix Hp can concisely define a QC-LDPC code, where each element in Hp is either 0 (the all-zeros matrix) or σi
+
+(a circulant). QC-LDPC codes are perfectly compatible with
+
+horizontal layered decoding by partitioning CNs into M layers
+
+with each layer containing S consecutive rows. This ensures
+
+that each VN connects to at most one CN in each layer.
+
+Denote the ith CN and jth VN by ci and vj respectively. Let u(cti)→vj be the LLR message from ci to its neighbor vj in tth iteration and lvj be the posterior of vj . In the tth iteration,
+a horizontal-layered Min Sumdecoder calculates the messages u(cti)→vj and updates the posteriors lvj as follows:
+
+lvj ← ⎛lvj − u(cti−→1v)j ∀j ∈ N⎞(ci),
+
+(22)
+
+u(cti)→vj = ⎝
+
+sign(lv˜j )⎠
+
+˜j∈N (ci)/{j }
+
+×
+
+min
+j˜∈N (ci)/{j
+
+}
+
+|lv˜j |,
+
+∀j
+
+∈ N (ci),
+
+(23)
+
+lvj ← lvj + uc(ti)→vj ∀j ∈ N (ci).
+
+(24)
+
+N (ci) denotes the set of VNs that are neighbors of ci. For a QC-LDPC code with a long block length, layered decoding
+
+is preferable for hardware implementations because parallel
+
+computations of each of (22), (23), and (24) exploit the
+
+QC-LDPC structure.
+
+Fig. 5. Fig. (a): Quantization thresholds for dynamic programming, msIB, and HDQ on the BI-AWGNC as a function of σ2 for B = 2000. Fig. (b): Mutual information loss between each sub-optimal quantizer and optimal quantizer for BI-AWGNC as a function of σ2 for B = 2000.
+IV. HDQ DISCRETE DENSITY EVOLUTION AND RCQ PARAMETER DESIGN
+Discrete density evolution [34] is a technique to analyze the asymptotic performance of an LDPC ensemble. In this section, we present HDQ discrete density evolution, which is used for designing the quantization thresholds and reconstruction mappings of RCQ decoders and analyzing decoding performance under an RCQ framework. As HDQ discrete density evolution for LDPC decoders with a flooding-schedule has been described thoroughly in our precursor conference paper [1], this section is focused on HDQ discrete density evolution for LDPC decoders with a layered schedule. Specifically, this section considers layer-specific msRCQ decoding on QC-LDPC codes.
+
+B. Representation Mismatch Problem
+
+The RCQ decoding structure in [1] can be used with a
+
+layered schedule as discussed in Sec. IV-A. Fig. 6a illustrates
+
+the paradigm for an msRCQ decoder with a layered schedule. The Qv(t) and Rv(t) are designed by the HDQ discrete density
+evolution as in [1]. Even though the msRCQ decoder has better
+
+FER performance than the standard Min Sumdecoder under
+
+a flooding schedule [1], under a layered schedule, msRCQ
+
+has worse FER performance than standard Min Sumand also
+
+requires more iterations. These performance differences are
+
+shown below in Fig. 9 of Sec. V. This subsection explains
+
+how the performance degradation of the RCQ decoder under
+
+the layered schedule is caused by the representation mismatch
+
+problem.
+
+Consider a regular LDPC code defined by a parity check
+
+matrix H. In iteration t, define the PMF between code bit x
+
+and X
+
+external = {0, 1}
+
+CaNndmDessa=ges{0u,c(.ti).→. v,j2baes−P(1(ct}i),.vjO)(nXe,
+
+D), where underlying
+
+assumption of HDQ discrete density evolution is that all CN
+
+messages have the same PMF in each iteration, i.e., for any
+
+(ci, vj) and (ci , vj ) that satisfy Hi,j = Hi ,j = 1:
+
+P((cti),vj)(X, D) = P((cti) ,vj )(X, D).
+
+(25)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2220
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+Unlike a decoder using a flooding schedule, which updates lv(tj)→ci only using CN messages in iteration t − 1, decoders using a layered schedule use messages from both iteration t − 1 and iteration t. The VN messages computed in different layers utilize different proportions of check-to-variable node messages from iterations t − 1 and t. Since the check-tovariable node messages from different iterations have different
+reliability distributions, the VN messages from different layers also have different distributions. Therefore (25) and (26) no longer hold true, and a single R(t)(·) is insufficient to accurately describe CN messages from different layers.
+In conclusion, the it Representation Mismatch Problem refers to inappropriately using a single R(t) and single Q(t) for all layers in iteration t of a layered decoding schedule. This issue degrades the decoding performance of layer-scheduled
+RCQ decoder. On the other hand, the conventional fixed-point decoders that do not perform coarse non-uniform quantization,
+such as standard Min Sumdecoder, are not affected by the
+changing the distribution of messages in different layers and hence don’t have representation mismatch problem.
+
+Fig. 6. Two layered decoders. Fig. (a) uses the same RCQ parameters for each layer as with the msRCQ design for a flooding decoding in [1]. Fig. (b) shows the proposed layer-specific msRCQ decoder in [2], which features separate RCQ parameters for each layer.
+
+(25) implies that the message indices of different CN have the same LLR representation, i.e.:
+
+log
+
+P((cti),vj )(0, d) P((cti),vj )(1, d)
+
+= log
+
+P((cti) ,vj P((cti) ,vj
+
+)(0, d) ,
+)(1, d)
+
+d ∈ {0, . . . , 2be − 1}.
+
+(26)
+
+The msRCQ decoder with a flooding schedule obeys (25)
+and (26) because the VN messages to calculate different
+CN messages have the same distribution. Therefore, it is
+sufficient for a decoder with a flooding schedule to use the iteration-specific reconstruction function R(t) for all external CN messages. However, for a decoder with a layered schedule,
+the VN messages to calculate CN messages from different
+layers have different distributions. For the decoder with a layered schedule, lv(tj)→ci is calculated by:
+
+lv(tj)→ci = lv(cjh) +
+
+u(cti)→vj
+
+{i |i ∈N (vj ),i <i}
+
++
+
+u(cti−→1)vj ,
+
+{i |i ∈N (vj ),i >i}
+
+(27)
+
+C. Layer-Specific RCQ Design
+
+Based on the analysis in the previous subsection, R and Q
+
+should Adapt for the PMF of messages in each layer, in order
+
+to solve the representation mismatch problem. This motivates
+
+us to propose the layer-specific RCQ decoding structure in this
+
+paper, as illustrated in Fig. 6b. The key difference between the
+
+RCQ decoder and layer-specific RCQ decoder is that layer-
+
+specific RCQ designs quantizers and reconstruction mappings for each layer in each iteration. We use R(t,r) and Q(t,r) to
+
+denote the reconstruction mapping and quantizer for decoding
+
+iteration t and layer r, respectively. As illustrated in Fig. 6b,
+
+layer-specific RCQ specifies R and Q for each layer to handle
+
+the issue that messages in different layers have different PMFs.
+
+This leads to a significant increase in the required memory because the memory required to store R(t,r) and Q(t,r) is
+
+proportional to the product of the number of layers and the
+
+number of iterations required for decoding the QC-LDPC
+
+code. Designing Q(t,r)(·) and R(t,r)(·) for layer-specific msRCQ
+
+requires the message PMF for each layer in each iteration.
+
+However, HDQ discrete density evolution [1], which performs
+
+density evolution based on ensemble, fails to capture layer-
+
+specific information. In this section, we propose a layer-
+
+specific HDQ discrete density evolution based on base matrix
+
+Hp of QC-LDPC code. In layer-specific HDQ discrete density evolution, the joint PMF between code bit X and external
+
+message D from check/variable nodes are tracked in each layer in each iteration. We use P (t,r)(X, Dc), X ∈ {0, 1}, Dc ∈ {0, . . . , 2be − 1} to represent the joint PMF between
+
+code bit and CN message in layer m and iteration t. Similarly, VN messages are denoted by P (t,r)(X, Dv).
+
+1) Initialization: For an AWGN channel with noise variance
+
+σ2, the LLR of channel observation y is l
+
+=
+
+2 σ2
+
+y
+
+.
+
+For
+
+the msRCQ decoder with bit width (be, bv), the continuous
+
+channel LLR input is uniformly quantized into 2bv regions.
+
+Each quantization region has a true log likelihood ratio, which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+
+2221
+
+we refer to as ld, so that we have an alphabet of bv realvalued log likelihood ratios Dch = {l0, . . . , l2bv −1}. Using these values, the joint PMF between the code bit X and channel LLR message Dch ∈ {0, . . . , 2bv − 1} is:
+
+PXDch (x,
+
+d)
+
+=
+
+PD
+
+(d)
+
+e(1−x)ld eld + 1
+
+,
+
+X ∈ {0, 1},
+
+ld ∈ Dch .
+
+(28)
+
+The distribution PXDch (x, d) is used for the HDQ discrete density evolution design. The actual decoder does not use the real-valued likelihoods ld but rather uses bv-bit channel LLRs obtained by uniformly quantizing continuous channel
+LLR values.
+2) Variable Nodes PMF Calculation: Given a base matrix Hp, with entry Hp(r, c) at row r and column c, define the sets of active rows R(c) for a specified column c and active columns C(r) for a specified row r as follows:
+
+R(c) = {r|Hp(r, c) =
+ 0}, C(r) = {c|Hp(r, c) =
+ 0} (29)
+
+In iteration t and layer r, consider the joint PMF between a
+code bit X corresponding to a VN in the circulant Hp(r, c) and the vector D, which includes the channel message Dch for X and the check node messages Dc incident to that VN.
+This PMF is calculated by:
+
+Pv(t,r,c)(X, D) = P (X, Dch)
+
+k∈R(c)P (t,k)(X, Dc)
+k<r
+
+k∈R(c)P (t−1,k)(X, Dc) ,
+k>r
+
+(30)
+
+is defined as follows:
+
+P (x, [d1, d2]) = P (X1, D1) P (X2, D2)
+
+(31)
+
+1 PX (x) PX1D1 (x, d1)PX2D2 (x, d2), (32)
+
+x ∈ {0, 1}, d1, d2 ∈ {0, . . . , 2be − 1}. When |R(c)| is large, the alphabet D of possible input message vectors D is large with |D| = 2bv+(|R(c)|−1)be. To manage the complexity of HDQ discrete density evolution, message vectors D with
+
+similar log likelihoods are clustered via one-step-annealing as
+
+in [1] for (30).
+
+The layer-specific msRCQ decoder uses layer-specific para-
+
+meters, and for each layer the marginal distribution on the
+
+computed variable node messages will be distinct. The mar-
+
+ginal distribution used by HDQ at layer r is computed as
+
+follows:
+
+P˜v(t,r) =
+
+1 |C(r)|
+
+Pv(t,r,c)(X,
+
+D)
+
+|
+
+c
+
+∈
+
+C(r)
+
+(33)
+
+where P (t,r)(X, Dv) and Q(t,r)(·) can be obtained by quantizing P˜v(t,r) using HDQ:
+P (t,r)(X, Dv), Q(t,r)(·) = HDQ P˜v(t,r), 2be , (34)
+where HDQ is defined as a function that realizes be-bit HDQ on P˜v(t,r) and generates P (t,r)(X, Dv) and Q(t,r) as outputs. Note that (33) and (34) realize implicit message alignment in [13] such that the internal messages from any c ∈ C(r) use same set of thresholds for quantization and the same external messages from any c ∈ C(r) have same LLR interpretations, regardless of node degree.
+
+3) Check Nodes PMF Calculation: Let lv(t,r)(d) be the LLR of external VN message d in layer r and iteration t. As an LLR, this CN input lv(t,r)(d) has the following meaning:
+
+lv(t,r)(d)
+
+=
+
+log
+
+PX(tD,rv)(0, PX(tD,rv)(1,
+
+d) , d)
+
+d = 0, . . . , 2be − 1.
+
+(35)
+
+Given input messages d1, d2 ∈ Dv, the CN min operation
+
+produces the following output:
+
+lMouSt = min |lv(t,r)(d1)|, |lv(t,r)(d2))|
+
+×sgn(lv(t,r)(d1)) × sgn(lv(t,r)(d2)). (36)
+
+Under the symmetry assumption, there is a dout ∈ Dv that has the LLR computed as lMouSt :
+
+lMouSt
+
+=
+
+log
+
+PX(tD,rv) PX(tD,rv)
+
+(0, (1,
+
+dout dout
+
+) )
+
+.
+
+(37)
+
+Define the follow function:
+
+dout = MS(d1, d2),
+
+(38)
+
+where dout, d1, d2 ∈ Dv. (38) holds if and only if (36) and (37) and are both satisfied.
+Define the binary operation by:
+
+P˜XD(x, d) = P (X1, D1) P (X2, D2)
+
+(39)
+
+Ä PX1D1 (x1, d1)PX2D2 (x2, d2).
+d1,d2:MS(d1,d2)=d x1,x2:x1 x2=x
+(40)
+
+The joint PMF between code bit and external CN message in layer r and iteration t can be updated by:
+
+P (t,r)(X, Dc) = P (t,r)(X, Dv) . . . P (t,r)(X, Dv) (41)
+
+P (t,r)(X, Dv) (|C(r)|−1).
+
+(42)
+
+R(t,r)(·) can be directly computed using P (t,r)(X, Dc):
+
+R(t,r)(d)
+
+=
+
+log
+
+PX(tD,rc)(0, p(Xt,Dr)c (1,
+
+d) d)
+
+,
+
+d ∈ {0, . . . , 2be − 1}. (43)
+
+D. Threshold
+
+At
+
+any
+
+specified
+
+Eb No
+
+,
+
+layer-specific
+
+HDQ
+
+discrete
+
+density
+
+evolution constructs the R(t,r)(·) and Q(t,r)(·) functions for
+
+each layer r at each iteration t and also computes the
+
+mutual information I(t,r)
+
+Eb No
+
+between a code bit and its
+
+corresponding variable node message in each layer r at each
+
+iteration t. An important design question is which value of
+
+Eb No
+
+to
+
+use
+
+to
+
+construct
+
+the
+
+R(t,r)(·)
+
+and
+
+Q(t,r)(·)
+
+functions
+
+implemented at the decoder, which necessarily will work over
+
+a
+
+range
+
+of
+
+Eb No
+
+values
+
+in
+
+practice.
+
+Define
+
+the
+
+threshold
+
+of
+
+a
+
+layer-specific RCQ decoder given a base matrix with M layers
+
+and maximum number of decoding iterations IT as:
+
+Eb ∗ = inf Eb : I(IT ,r) Eb > 1 − , ∀r ∈ [1, M ] ,
+
+No
+
+No
+
+No
+
+(44)
+
+i.e.,
+
+Eb ∗ No
+
+is
+
+the smallest
+
+Eb No
+
+that
+
+achieves a
+
+mutual information
+
+between the code bit and the external message that is greater
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2222
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+Fig. 7. Fig. (a): FER performance of 4-bit msRCQ and bpRCQ decoders with floating point message representations use at the VNs. Fig. (b): FER performance of fixed point 4-bit msRCQ decoders, compared with other nonuniform quantization decoders.
+
+that 1 − for each layer. Our simulation results show that
+
+Eb ∗ No
+
+for
+
+= 10−4 produced R(t,r)(·) and Q(t,r)(·) functions
+
+that
+
+deliver
+
+excellent
+
+FER
+
+performance
+
+across
+
+a
+
+wide
+
+Eb No
+
+range.
+
+V. SIMULATION RESULT AND DISCUSSION
+This section presents RCQ and layer-specific RCQ decoder designs for two example LDPC codes and compares their FER performance with existing conventional decoders such as BP, Min Sum, and state-of-the-art non-uniform decoders, such as an IB decoder. All decoders are simulated using the AWGN channel, and at least 100 frame errors are collected for each point. We also compare hardware requirements for an example LDPC code.
+
+A. IEEE 802.11 Standard LDPC Code
+
+We first investigate the FER performance of RCQ decoders
+
+with a flooding schedule using an IEEE 802.11n standard
+
+LDPC code taken from [35]. This code has n = 1296,
+
+k = 648, and the maximum number of decoding iterations
+
+was set to 50.
+
+Fig. 7a shows the FER curves of 4-bit bpRCQ and
+
+msRCQ decoder with floating-point internal messages, i.e.,
+
+bpRCQ(4,∞,∞) and msRCQ(4,∞), respectively. The notation
+
+of ∞ represents floating-point message representation. Denote
+
+floating point BP nad Min Sum by BP(∞) and Min Sum(∞),
+
+respectively. The 4-bit bpRCQ decoder has at most 0.1 dB
+
+degradation compared with the floating-point BP decoder, and
+
+outperforms
+
+floating-point
+
+BP
+
+at
+
+high
+
+Eb No
+
+.
+
+The
+
+4-bit
+
+msRCQ
+
+performs better than conventional Min Sumand even surpasses
+
+BP
+
+at
+
+high
+
+Eb No
+
+.
+
+The
+
+lower
+
+error
+
+floor
+
+of
+
+msRCQ
+
+decoder
+
+as
+
+compared to standard BP follows from the slower message
+
+magnitude convergence rate as compared to standard BP. This
+
+is similar to improved error floors achieved by the averaged BP
+
+(ABP) [35], which decreases the rate of increase of message magnitudes by averaging the posteriors lv(t) in consecutive
+
+iterations. As shown in Fig. 7a, ABP also delivers a lower
+
+error floor than standard BP.
+
+The slow magnitude convergence rate of msRCQ decoder
+
+can be explained as follows. For conventional Min Sumde-
+
+coder, the magnitude of each check node message is always
+
+equal to the magnitude of an input variable node message for
+
+that CN. This is not true for the msRCQ decoder. msRCQ
+
+compares the relative LLR meanings of input messages and
+
+returns an external message by implementing the min opera-
+
+tion. However, the external message is then reconstructed at
+
+the VN to an internal message magnitude that is in general
+
+different from the message magnitudes that were received by
+
+the neighboring CN.
+
+For the example of a degree-3 CN, (45) computes the
+
+likelihood associated with a message lt that is outputted from the min operation applied to the other two input messages
+
+indexed by i and j:
+
+lt = log
+
+{(i,j)|t=M {(i,j)|t=M
+
+S(i,j)} S(i,j)}
+
+P P
+
+(0, (1,
+
+i)P i)P
+
+(0, (0,
+
+j j
+
+) )
+
++ +
+
+P P
+
+(1, (0,
+
+i)P i)P
+
+(1, (1,
+
+j j
+
+) )
+
+.
+
+(45)
+
+Note that the boxplus operation is computed as follows:
+
+li
+
+lj
+
+=
+
+log
+
+P (0, P (0,
+
+i)P (0, i)P (1,
+
+j) j)
+
++ +
+
+P (1, P (1,
+
+i)P (1, i)P (0,
+
+j) j)
+
+.
+
+(46)
+
+Comparing with (46), it can be seen that (45) applies the boxplus operation to the probability of the group of messages that share same value for M S(i, j). Applying the boxplus operation to the group of messages produces a value that lies between the extremes of the messages produced by individual boxplus operations. This grouping process lowers the maximum output magnitude and therefore decreases the message magnitude growth rate in an iterative decoding process. As noted in [36], a possible indicator of the emergence of error trapping sets may be a sudden magnitude change in the values of certain variable node messages, or fast convergence to an
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+TABLE I HARDWARE USAGE OF VARIOUS DECODING STRUCTURE FOR (9472,8192) QC-LDPC CODE
+
+2223
+
+Fig. 8. Average magnitudes of lv(t) vs. iteration for BP, ABP, Min Sumand
+
+msRCQ
+
+for
+
+Fig.
+
+6a
+
+simulation
+
+at
+
+Eb No
+
+= 2.6
+
+dB.
+
+unreliable estimate. Therefore, slowing down the convergence
+
+rate of VN messages can decrease the frequency of trapping
+
+set events. Both msRCQ decoder and A-BP in [35] reduce the
+
+convergence rate of VN messages and hence deliver a lower
+
+error floor.
+
+The effect of averaging can be seen in Fig. 8, which gives
+
+the average magnitude of lv(t) for four decoders with a noise-
+
+corrupted
+
+all-zero
+
+codeword
+
+at
+
+Eb No
+
+=
+
+2.6
+
+dB
+
+as
+
+the
+
+input.
+
+The
+
+oscillation pattern of the BP decoder has been reported and
+
+discussed in [36]. As shown in Fig. 7a, ABP also outperforms
+
+belief
+
+propagation when
+
+Eb No
+
+is
+
+high.
+
+Fig. 7b compares msRCQ(4,10) with other non-uniform
+
+quantization LDPC decoders. Simulation results show that
+
+both IB [28] and Min-IB [17] decoders exhibit an error
+
+floor after 2.40dB. The MIM-QMS [37] decoder has a
+
+similar decoding structure to msRCQ. Note that MIM-QMS
+
+requires the determination of the internal bit width used by
+
+the VNs before designing quantization and reconstruction
+
+parameters, so reducing the bit width of VNs requires another
+
+design cycle. In contrast, for the purposes of HDQ discrete
+
+density evolution design process, msRCQ assumes that the
+
+internal VN messages are real-valued. This assumption is
+
+an approximation since the internal VN messages will have
+
+finite precision in practical implementations. During actual
+
+decoding, the reconstruction operation R(·) produces a high-
+
+precision representation for use in computations at the VN.
+
+We found that assuming real-valued internal messages in
+
+the design process introduces negligible loss for practical
+
+internal message sizes while greatly simplifying the design.
+
+Our simulation results in 7b confirm that high precision
+
+internal messages have FER performance that is very close
+
+to real-valued internal messages. The RCQ decoder has more
+
+efficient memory usage than LUT-based decoders. For the
+
+Fig. 9. Fig. (a): FER performance of fixed point L-msRCQ decoders for (9472, 8192) LDPC code. Fig. (b): FER performance of fixed point L-msRCQ decoders for (9472, 8192) LDPC code.
+investigated non-uniform LDPC code, 4-bit IB and 4-bit MinIB require 14.43k and 10.24k bits, respectively, for storing LUTs per iteration, whereas msRCQ(4,12) and msRCQ(4,10) require 165 bits and 135 bits only.
+B. (9472, 8192) QC-LDPC Code In this section we consider a rate-0.8649 quasi-regular
+LDPC code, with all VNs having degree 4 and CNs having degree 29 and 30, as might be used in a flash memory controller. We study this (9472, 8192) QC-LDPC code using
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2224
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+various decoders with a layered schedule. The layer number
+
+of the investigated LDPC code is 10.
+
+Fig. 9a shows the FER curves of various decoders. The
+
+maximum number of decoding iterations of all studied
+
+decoders is 10. The layer-specific msRCQ(4,8) outperforms
+
+msRCQ(4,10) by 0.04 dB, which shows the benefit of opti-
+
+mizing layer and iteration specific RCQ parameters. The layer-
+
+specific msRCQ(3,8) delivers similar decoding performance
+
+to msRCQ(4,10). The decoding performance of 2-bit layer-
+
+specific msRCQ has a 0.2 dB degradation compared with
+
+the 4-bit layer-specific msRCQ decoder. Fig. 9a also shows
+
+a fixed point offset Min Sum(OMS) decoder with offset factor 0.5. At a FER of 10−8, OMS(6,8) and OMS(5,7) outperform
+
+layer-specific msRCQ(3,8) by 0.02 dB, yet are inferior to
+
+layer-specific msRCQ(4,8) by 0.02 dB. Fig. 9b shows the
+
+average decoding iteration times for some of the decoders
+
+studied
+
+in
+
+Fig.
+
+9a.
+
+At
+
+high
+
+Eb No
+
+,
+
+the
+
+msRCQ(4,10)
+
+decoder
+
+requires the largest average number of iterations to complete
+
+decoding. On the other hand, layer-specific msRCQ(4,8) has a
+
+similar decoding iteration time to OMS(5,7) and BP(∞) in this
+
+region. Layer-specific msRCQ(3,8) requires a slightly higher
+
+average number of iterations than layer-specific msRCQ(4,8)
+
+and OMS(5,7).
+
+We implemented OMS and layer-specific msRCQ decoders
+
+with different bit widths on the programmable logic of a Xilinx
+
+Zynq UltraScale+ MPSoC device for comparison. Each design
+
+meets timing with a 500 MHz clock. The broadcast method
+
+described in [2] is used for RCQ design. Table I summarizes
+
+the hardware usage of each decoder. Simulation result shows
+
+that layer-specific msRCQ(4,8) has a similar hardware usage
+
+with OMS(5,7), and layer-specific msRCQ(3,8) has more than
+
+a 10% reduction in LUTs and routed nets and more than a 6%
+
+reduction in registers, compared with OMS(5,7).
+
+VI. CONCLUSION
+
+This paper investigates the decoding performance and
+
+resource usage of RCQ decoders. For decoders using the
+
+flooding schedule, simulation results on an IEEE 802.11 LDPC
+
+code show that a 4-bit msRCQ decoder has a better decoding
+
+performance than LUT based decoders, such as IB decoders
+
+or Min-IB decoders, with significantly fewer parameters to
+
+be stored. It also surpasses belief propagation in the high
+
+Eb No
+
+region because a
+
+slower message convergence rate avoids
+
+trapping sets. For decoders using the layered schedule, conven-
+
+tional RCQ design leads to a degradation of FER performance
+
+and higher average decoding iteration time. Designing a layer-
+
+specific RCQ decoder, which updates parameters in each layer
+
+and iteration, improves the performance of a conventional
+
+RCQ decoder under a layered schedule. Layer-specific HDQ
+
+discrete density evolution is proposed to design parameters
+
+for RCQ decoders with a layered schedule. FPGA implemen-
+
+tations of RCQ decoders are used to compare the resource
+
+requirements of the decoders studied in this paper. Simulation
+
+results for a (9472, 8192) QC LDPC code show that a
+
+layer-specific Min SumRCQ decoder with 3-bit messages
+
+achieves a more than 10% reduction in LUTs and routed
+
+nets and a more than 6% register reduction while maintaining
+
+comparable decoding performance, compared to a 5-bit offset
+Min Sumdecoder.
+REFERENCES
+[1] L. Wang, R. D. Wesel, M. Stark, and G. Bauch, “A reconstructioncomputation-quantization (RCQ) approach to node operations in LDPC decoding,” in Proc. GLOBECOM IEEE Global Commun. Conf., Dec. 2020, pp. 1–6.
+[2] C. Terrill et al., “FPGA implementations of layered MinSum LDPC decoders using RCQ message passing,” 2021, arXiv:2104. 09480.
+[3] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[4] J. K.-S. Lee and J. Thorpe, “Memory-efficient decoding of LDPC codes,” in Proc. IEEE ISIT, Adelaide, SA, Australia, Sep. 2005, pp. 459–463.
+[5] X. Zhang and P. H. Siegel, “Quantized iterative message passing decoders with low error floor for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 1, pp. 1–14, Jan. 2014.
+[6] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic´, “Finite alphabet iterative decoders—Part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Trans. Commun., vol. 61, no. 10, pp. 4033–4045, Oct. 2013.
+[7] D. Declercq, B. Vasic, S. K. Planjery, and E. Li, “Finite alphabet iterative decoders—Part II: Towards guaranteed error correction of LDPC codes via iterative decoder diversity,” IEEE Trans. Commun., vol. 61, no. 10, pp. 4046–4057, Oct. 2013.
+[8] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Finite alphabet iterative decoding of LDPC codes with coarsely quantized neural networks,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[9] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Designing finite alphabet iterative decoders of LDPC codes via recurrent quantized neural networks,” IEEE Trans. Commun., vol. 68, no. 7, pp. 3963–3974, Jul. 2020.
+[10] F. J. C. Romero and B. M. Kurkoski, “LDPC decoding mappings that maximize mutual information,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2391–2401, Sep. 2016.
+[11] B. M. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels,” IEEE Trans. Inf. Theory, vol. 60, no. 8, pp. 4544–4552, Aug. 2014.
+[12] M. Stark, J. Lewandowsky, and G. Bauch, “Information-optimum LDPC decoders with message alignment for irregular codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2018, pp. 1–6.
+[13] M. Stark, “Machine learning for reliable communication under coarse quantization,” Ph.D. dissertation, Inst. Commun., Hamburg Univ. Technol., Hamburg, Germany, 2021.
+[14] M. Stark, G. Bauch, L. Wang, and R. D. Wesel, “Information bottleneck decoding of rate-compatible 5G-LDPC codes,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2020, pp. 1–6.
+[15] M. Stark, L. Wang, G. Bauch, and R. D. Wesel, “Decoding ratecompatible 5G-LDPC codes with coarse quantization using the information bottleneck method,” IEEE Open J. Commun. Soc., vol. 1, pp. 646–660, 2020.
+[16] M. Meidlinger, A. Balatsoukas-Stimming, A. Burg, and G. Matz, “Quantized message passing for LDPC codes,” in Proc. Asilomar Conf. Signals, Syst., Comput., Nov. 2015, pp. 1606–1610.
+[17] M. Meidlinger and G. Matz, “On irregular LDPC codes with quantized message passing decoding,” in Proc. IEEE 18th Int. Workshop Signal Process. Adv. Wireless Commun., Jul. 2017, pp. 1–5.
+[18] M. Meidlinger, G. Matz, and A. Burg, “Design and decoding of irregular LDPC codes based on discrete message passing,” IEEE Trans. Commun., vol. 68, no. 3, pp. 1329–1343, Mar. 2020.
+[19] R. Ghanaatian et al., “A 588-Gb/s LDPC decoder based on finitealphabet message passing,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[20] X. He, K. Cai, and Z. Mei, “On mutual information-maximizing quantized belief propagation decoding of LDPC codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[21] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[22] X. Zhang and P. H. Siegel, “Quantized iterative message passing decoders with low error floor for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 1, pp. 1–14, Jan. 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: RCQ: PARADIGM FOR LOW BIT WIDTH LDPC DECODING
+
+2225
+
+[23] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright, “GEN03-6: Investigation of error floors of structured low-density parity-check codes by hardware emulation,” in Proc. IEEE Globecom, Nov. 2006, pp. 1–6.
+[24] A. M. Sadek and A. I. Hussein, “Flexible FPGA implementation of min-sum decoding algorithm for regular LDPC codes,” in Proc. 11th Int. Conf. Comput. Eng. Syst. (ICCES), Dec. 2016, pp. 286–292.
+[25] Y. Liu, C. Zhang, P. Song, and H. Jiang, “A high-performance FPGA-based LDPC decoder for solid-state drives,” in Proc. IEEE 60th Int. Midwest Symp. Circuits Syst. (MWSCAS), Aug. 2017, pp. 1232–1235.
+[26] R. Anantharaman, K. Kwadiki, and V. P. K. S. Rao, “Hardware implementation analysis of min-sum decoders,” Adv. Electr. Electron. Eng., vol. 17, no. 2, pp. 179–186, Jun. 2019.
+[27] M. P. Ajanya and G. T. Varghese, “Thermometer code to binary code converter for flash ADC—A review,” in Proc. Int. Conf. Control, Power, Commun. Comput. Technol. (ICCPCCT), Mar. 2018, pp. 502–505.
+[28] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method,” IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[29] N. Wong, E. Liang, H. Wang, S. V. S. Ranganathan, and R. D. Wesel, “Decoding flash memory with progressive reads and independent vs. Joint encoding of bits in a cell,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[30] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), Dec. 2011, pp. 1–6.
+[31] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[32] I. Tal and A. Vardy, “How to construct polar codes,” IEEE Trans. Inf. Theory, vol. 59, no. 10, pp. 6562–6582, Oct. 2013.
+[33] J. Kiefer, “Sequential minimax search for a maximum,” Proc. Amer. Math. Soc., vol. 4, no. 3, pp. 502–506, 1953.
+[34] S.-Y. Chung, “On the construction of some capacity-approaching coding schemes,” Ph.D. dissertation, Dept. Elect. Eng. Comput. Sci., Massachusetts Inst. Technol., Cambridge, MA, USA, 2000.
+[35] Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Standard 802.11-2012 (Revision of IEEE Std 802.112007), 2012, pp. 1–2793.
+[36] S. Landner and O. Milenkovic, “Algorithmic and combinatorial analysis of trapping sets in structured LDPC codes,” in Proc. Int. Conf. Wireless Netw., Commun. Mobile Comput., vol. 1, 2005, pp. 630–635.
+[37] P. Kang, K. Cai, X. He, S. Li, and J. Yuan, “Generalized mutual information-maximizing quantized decoding of LDPC codes with layered scheduling,” 2020, arXiv:2011.13147.
+
+Caleb Terrill (Student Member, IEEE) is currently pursuing the bachelor’s degree in computer engineering with the University of California at Los Angeles (UCLA), Los Angeles, CA, USA. He has worked on RTL hardware designs for ASIC and FPGA applications as an intern at Apple, Intel, and Northrop Grumman. He joined the UCLA Communications Systems Laboratory in 2020 and works on high-performance FPGA designs for ratecompatible LDPC decoders with reduced message bit widths using RCQ message passing. He is interested in AI/ML acceleration architectures as well as computer networks and plans to pursue further research as a Master’s student. At UCLA, he serves as the President for the IEEE Student Chapter.
+Maximilian Stark received the B.Sc., M.Sc., and Ph.D. degrees (Hons.) in electrical engineering from the Hamburg University of Technology (TUHH) in 2014, 2017, and 2021, respectively. In 2016, he studied at the Chalmers University of Technology during an Erasmus semester. From 2017 to 2021, he was with the Institute of Communications, TUHH, as a Research Assistant. In 2019, he was with Nokia Bell Labs, France, as a Visiting Researcher in the area of deep learning in communications. In 2021, he joined Bosch research responsible for the development of AI/ML methods for V2X communications. Here, he also actively contributes to 3GPP as RAN delegate mainly with respect to AI/ML air interface standardization and sidelink communication and positioning enhancements. His research interests include machine learning methods for communications and signal processing, with a particular interest in channel coding, the information bottleneck method, and coarsely quantized signal processing. He was a recipient of the Karl H. Dietze Award in 2017 for his master’s thesis.
+Zongwang Li received the Ph.D. degree in electrical engineering from Shanghai Jiao Tong University, Shanghai, China, in 2002. He is currently with the Memory Solution Laboratory, Samsung Semiconductor, Inc., San Hose, CA, USA, as a Research Engineer. His research interests include storage system architecture, storage accelerator for machine learning and big data workload, and error control coding.
+
+Sean Chen received the B.S. degree in electrical engineering from the University of California at Los Angeles (UCLA), Los Angeles, CA, USA, in 2021, where he is currently pursuing the Ph.D. degree with the Digital Microwave Laboratory. His research interests include applied electromagnetics, signal processing, and communication theory.
+
+Linfang Wang (Graduate Student Member, IEEE) received the M.Sc. degree in information and communication engineering from the Harbin Institute of Technology, Harbin, China, in 2018. He is currently pursuing the Ph.D. degree with the University of California at Los Angeles (UCLA), Los Angeles, CA, USA. His current research interest lies in coding theory, especially on LDPC code, trellis code, and the application of deep learning/machine learning on channel coding.
+
+Chester Hulse is currently pursuing the master’s degree with the University of California at Los Angeles (UCLA), Los Angeles, CA, USA. He has been a part of UCLA’s Communication Systems Laboratory since 2019. He has worked on implementing high throughput LDPC decoders for FPGAs. He has also worked on high performance bare metal C++ firmware for SpaceX. He is interested in efficient high performance embedded systems and space travel.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+2226
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 4, APRIL 2022
+
+Calvin Kuo received the B.S. degree in ECE from the University of California at Los Angeles (UCLA), Los Angeles, CA, USA, in 2021, where he is currently pursuing the M.S. degree in ECE. In 2020, he joined the Communications Systems Laboratory. His research interest includes front end VLSI design.
+Richard D. Wesel (Fellow, IEEE) received the B.S. and M.S. degrees in electrical engineering from the Massachusetts Institute of Technology in 1989 and the Ph.D. degree in electrical engineering from Stanford University in 1996. He is currently a Professor with the Electrical and Computer Engineering Department, UCLA, and an Associate Dean for Academic and Student Affairs at the Henry Samueli School of Engineering and Applied Science, UCLA. His research interests include communication theory with particular interest in low-density paritycheck coding, short-blocklength communication with feedback, and coding for storage. He has received the National Science Foundation CAREER Award, the Okawa Foundation Award for research in information theory and telecommunications, and the Excellence in Teaching Award from the Samueli School of Engineering. He has served as an Associate Editor for Coding and Coded Modulation for the IEEE TRANSACTIONS ON COMMUNICATIONS.
+
+Gerhard Bauch (Fellow, IEEE) received the Dipl.-Ing. and Dr.-Ing. degrees in electrical engineering from the Munich University of Technology (TUM) in 1995 and 2001, respectively, and the Diplom-Volkswirt degree (master’s) in economics from FernUniversität Hagen in 2001. In 1996, he was with the German Aerospace Center (DLR), Oberpfaffenhofen, Germany. From 1996 to 2001, he was a member of Scientific Staff with TUM. From 1998 to 1999, he was also a Visiting Researcher with AT&T Labs Research, Florham Park, NJ, USA. In 2002, he joined DOCOMO Euro-Labs, Munich, Germany, where he has been managing the Advanced Radio Transmission Group. In 2007, he was appointed as a Research Fellow of DOCOMO EuroLabs. He was a Full Professor with the Universität der Bundeswehr Munich from 2009 to 2012. Since October 2012, he has been the Head of the Institute of Communications, Hamburg University of Technology.
+Rekha Pitchumani received the Ph.D. degree in computer science from The University of California, Santa Cruz, Santa Cruz, CA, USA. She is currently a Research Manager at the Memory Solutions Laboratory, Systems Technology Group, San Jose, CA, USA. Her work at Samsung focuses on the systems design and device architecture of next-generation memory and NAND flash SSDs, such as CXL memory, key-value SSDs, and computational storage. Her work prior to Samsung was on key-value data management for shingled magnetic recording disks.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:08:29 UTC from IEEE Xplore. Restrictions apply.
+
+

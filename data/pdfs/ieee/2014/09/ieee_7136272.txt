@@ -1,0 +1,411 @@
+2014 IEEE 25th International Symposium on Personal, Indoor and Mobile Radio Communications
+
+A Simplex Algorithm for LP Decoding Hardware
+
+Florian Gensheimer
+
+Stefan Ruzika
+
+Stefan Scholl, Norbert Wehn
+
+Optimization Research Group
+
+Mathematical Institute Microelectronic Systems Design Research Group
+
+University of Kaiserslautern
+
+University of Koblenz-Landau
+
+University of Kaiserslautern
+
+67663 Kaiserslautern, Germany
+
+56070 Koblenz, Germany
+
+67663 Kaiserslautern, Germany
+
+Email: gensheim@mathematik.uni-kl.de Email: ruzika@uni-koblenz.de
+
+Email: {scholl, wehn}@eit.uni-kl.de
+
+Abstract—An efficient LP decoder is the key building block for a maximum likelihood decoder based on integer programming. In this paper we propose to employ a variant of the simplex algorithm for LP decoding, called the dual simplex algorithm. This algorithm has two advantages: It inherently uses the received LLRs to generate a close to optimum starting solution and it allows to reuse former LP solutions if an adaptive LP decoding scheme is used. It is shown, that the dual simplex algorithm outperforms the standard (primal) simplex by a factor of 15-20 in runtime. This allows for efficient future hardware implementations. Furthermore the use of fixed-point instead of floating-point numbers is investigated to further reduce hardware complexity.
+I. INTRODUCTION
+The best possible decoding strategy for error correction in communication systems is maximum likelihood (ML) decoding. However, since ML decoding is NP-hard, usually decoding heuristics are used. These heuristics have a low complexity and can be efficiently implemented in hardware. Their main drawback is that, due to the heuristic nature, they exhibit a suboptimal frame error rate (FER) or signal-to-noise ratio (SNR) in comparison to ML.
+This is especially the case for codes with small block lengths, where the decoding heuristics for LDPC codes (SPA) and turbo codes suffer from correlated messages. This leads to a large gap in SNR between heuristics and ML decoding, which has been shown to reach 1.5 dB (see www.unikl.de/channel-codes and [1]). Moreover, for dense codes, like BCH and Reed-Solomon codes, still hard decision decoding is utilized in many applications, which may lead to losses up to 3 dB over ML.
+An efficient method for ML decoding of short block codes is using mathematical optimization [2]. Here the ML decoding problem is formulated as an integer program (IP). To this IP all efficient methods of optimization theory can be applied. It has been shown in [1], that IP can be used to perform ML decoding in software for short block codes, that can not be tackled by other ML decoding methods, like the Viterbi algorithm.
+Since solving the integer program is usually very complex, first its relaxed problem, called linear program (LP), is solved. This is often termed LP decoding [3]. To obtain the IP solution a branch-and-bound approach [4] or cutting-plane techniques [5] can be used. In either case the kernel algorithm is the LP solving process, that is conducted usually many times and thus represents the main complexity for ML decoding.
+
+In literature different approaches have been introduced to perform LP decoding. Interior point methods have been investigated in [6] and [7]. In [8] a message passing algorithm has been proposed. Recently methods based on ADMM have gained growing interest [9].
+However, the most important algorithm is the simplex algorithm [10]. It can be considered as the standard algorithm for solving LP problems and is widely used in practice. Its complexity is exponentially in theory, but usually much less in practice. The efficiency of the simplex algorithm for practical relevant problems has been proven in many applications [11]. Its results are exact and it is a well-studied algorithm in optimization theory. Therefore we focus on the simplex algorithm in this work.
+The simplex algorithm has been investigated for LP decoding in [12]. Here the authors propose a decomposition method. However no adaptive approach is used and therefore the number of iterations is comparatively large. Additionally, the work is limited to LDPC codes and fixed-point quantization is not addressed.
+Since software implementations are often too slow for practical applications, dedicated hardware implementations are required for acceleration of the decoding process. Hardware implementations of the simplex algorithm have been investigated only very briefly and only for general applications.
+In [13] a complete hardware implementation of a generic simplex algorithm on FPGA has been proposed. However issues of the algorithm itself, that impact hardware performance, like the reducing number of simplex iterations and quantization effects, are not addressed.
+In this paper, we investigate simplex algorithms for efficient LP decoding for a future hardware implementation. We propose the use of the dual simplex algorithm, which largely reduces the number of required iterations. This is because this algorithm is able to use the LLRs to produce a proper starting solution and it allows to reuse LP solutions as a starting solution for further processing. Furthermore, we analyse the impact of fixed-point quantization for the numerical values in the algorithm. Since floating-point operations lead to complex hardware, the use of fixed-point numbers is investigated.
+In Section II we repeat the basics of LP decoding. A detailed description of the primal and the dual simplex algorithm can be found in Section III followed by a numerical complexity and quantization analysis in Section IV.
+
+978-1-4799-4912-0/14/$31.00 c 2014 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:06:02 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4799-4912-0/14/$31.00 ©2014 IEEE
+
+790
+
+II. LP DECODING AND OPTIMIZATION
+In this section, we introduce basic definitions and results of optimization theory and LP decoding. Furthermore, we summarize the adaptive LP decoding algorithm in [14].
+
+A. Linear and Integer Programs
+
+A linear program (LP) in standard form is given by
+
+min z = cT x
+
+(1)
+
+s. t. Ax = b
+
+(2)
+
+x≥0
+
+(3)
+
+where x ∈ Rl are the decision variables, A ∈ Rm×l (with rank(A) = m), b ∈ Rm and c ∈ Rl is a row vector. The vector c ∈ Rl defines the objective function, which is minimized. The
+constraints of the LP are given by (2) and (3). If the LP has
+an inequality of the form Ai,.x < bi, it can be transformed into standard form by introducing a slack variable xl+1 and replacing the inequality by Ai,.x + xl+1 = bi. Geometrically, the set of feasible points P = {x ∈ Rl|Ax = b, x ≥ 0} describes a polyhedron. If the integrality condition x ∈ Zl is
+added to the LP constraints (2) and (3), we get the definition
+of an IP.
+
+B. LP Decoding
+
+In [3] and [2], it is shown that for binary linear block codes
+
+and memoryless binary-input output-symmetric channels the
+
+ML decoding problem can be modeled as an IP of the form
+
+x∗ML = arg minx∈C
+
+n j=1
+
+λj xj
+
+,
+
+where
+
+λ
+
+denotes
+
+the
+
+LLR
+
+vector and C a code of length n with k information bits.
+
+Since the ML problem is NP-hard, Feldman et. al [3] propose
+
+a linear relaxation of the ML problem. This linear program,
+the LP decoding problem, has the form minx∈P (H) λT x with C = P (H) ∩ {0, 1}n. The polyhedron P (H), which depends
+on the parity check matrix H ∈ {0, 1}(n−k)×n of the code,
+
+can be described by the box constraints 0 ≤ x ≤ 1 and the
+
+forbidden set inequalities [3]
+
+xj −
+
+xj ≤ |V | − 1
+
+(4)
+
+j∈V
+
+j∈N (i)\V
+
+for all V ⊆ N (i) with |V | odd and i = 1, . . . , n − k, where N (i) = {j ∈ {1, . . . , n} : Hij = 1}. But this formulation of the LP decoding problem cannot be solved efficiently for most codes of practical interest. This is due to the large number of constraints, that depend exponentially on the number of ones in the parity check rows. To perform LP decoding efficiently, an adaptive approach can be used, which we describe in the following.
+
+C. Adaptive LP Decoding
+In [14] Zhang and Siegel propose an adaptive LP decoding algorithm. It is based on the mentioned LP formulation of P (H). But instead of using the whole formulation (4), they only start with some constraints of the form 0 ≤ xj and xj ≤ 1. After every iteration, they use the optimal solution xˆ of the last solved LP and check if this solution generates cuts.
+
+This means that they go through every parity row i and test if xˆ ∈ conv(Ci), where Ci is the code defined by parity row i. In [15] it is shown that if xˆ ∈/ conv(Ci), then there is exactly one forbidden set inequality of parity row i, that is violated by xˆ. In [14] Zhang and Siegel characterize these violated inequalities and use their cut-search algorithm for finding these inequalities. In this way, at most one violated inequality per parity row is added to the current LP in every iteration. The algorithm finds the optimal solution after at most n iterations [15]. Hence, only small-scaled LP problems (compared to (4)) have to be solved in the adaptive LP decoding algorithm.
+Since for nearly all codes of practical interest the formulation in Eq. (4) is too large, we employ adaptive LP decoding throughout this paper.
+D. From LP to ML Decoding
+LP decoders do not actually perform ML decoding. However they are the key component in extended algorithms, that perform IP/ML decoding. The two main extensions are the branch-and-bound and cutting-plane techniques. Here, LP problems are solved several times. The LP solutions are then successively forced to the optimal IP solution and the ML codeword. An efficient algorithm for IP based ML decoding can be found e.g. in [4].
+III. AN EFFICIENT SIMPLEX ALGORITHM
+The most important algorithm for solving LPs is the simplex algorithm by G.B. Dantzig (see e. g. [10]). In this section, we introduce the fundamentals of the (primal) simplex algorithm and propose a variant, called the dual simplex algorithm, which largely reduces the calculation time.
+An important concept behind the simplex algorithms are the bases. A basis B = {k1, . . . , km} ⊂ {1, . . . , l} is an ordered size-m subset of linearly independent columns of A. In the following, N = {1, . . . , l} \ B will denote the indices of all non-basic columns of A. If a basis B is given, AB denotes the submatrix of A, that consists of all basic columns of A. AN represents the non-basic columns of A. The basic entries of x and c are denoted by xB and cB, the non-basic entries are given by xN and cN . The basic solution x w.r.t. B is given by xB = A−B1b and xN = 0. By definition, it fulfills the constraints (2). A basic solution x is feasible, if it also fulfills the constraints (3), i. e. xB ≥ 0 component-wise.
+A. Primal Simplex Algorithm
+The standard version of the simplex algorithm is the primal simplex algorithm. It is based on the fact that optimality is obtained in a vertex of the polyhedron [10]. Every vertex corresponds to a feasible basic solution. The algorithm starts in one vertex and moves to adjacent vertices with better objective function values until an optimal vertex is reached. If the simplex algorithm moves from one vertex to another, exactly one non-basic column of A is exchanged with a basic column. The choice of the column, that enters the basis, is determined by the reduced cost vector entries c˜j = cj − cBA−B1Aj for j ∈ N . This vector describes the potential improvements in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:06:02 UTC from IEEE Xplore. Restrictions apply.
+791
+
+objective value, if a non-basic column j enters the basis. The algorithm stops, if the optimality condition c˜ = c−cBA−B1A ≥ 0 is fulfilled. In this case, an optimal feasible basic solution is found.
+The crucial step for the primal simplex algorithm is the choice of the starting vertex. If the starting vertex is close to the optimal solution only a small number of iterations is required. In coding applications often only a small number of bits are in error, i.e the LLRs correspond to a point that is close to the optimal solution. However, the simplex algorithm in its primal form cannot make use of this information, because this point is usually not a feasible solution. Only the zero codeword is always directly usable as a starting vertex without further computational effort.
+
+B. Dual Simplex Algorithm
+In this section we propose a different variant of the simplex algorithm for LP decoding, called the dual (bounded) simplex algorithm. The main advantage of the dual variant is, that it can use the channel LLRs to choose a starting point close to the optimal solution without any extra effort and it can reuse former optimal solutions, as we will see shortly.
+First, we consider the original dual simplex algorithm for LPs in standard form [10]. Its main difference to the primal simplex is the fact, that it starts in a basic solution that fulfills the optimality condition c˜ ≥ 0 and that is not feasible, in general. The optimality condition remains valid after every basis exchange and the algorithm terminates if it reaches a basic solution that is also feasible.
+Since the LP decoding problem has upper bounds xj ≤ 1 for all bit variables x1, . . . , xn, the problem needs to be transformed into standard form for this algorithm. This transformation leads to a larger problem and a less efficient algorithm. Hence, we use special primal and dual simplex algorithms for bounded variables (see [16] and [17]) for our numerical tests.
+In the dual bounded simplex algorithm, the concept of basic solutions and the optimality condition are generalized in the following way: Let B be a basis and 0 ≤ x ≤ u the variable bounds. The vector x is called a basic solution if xB = AB−1(b − AN xN ) and xj ∈ {0, uj} for all j ∈ N . The optimality condition is generalized to c˜j ≥ 0 for all j ∈ N with xj = 0 and c˜j ≤ 0 for all j ∈ N with xj = uj. The entries c˜B are always zero. In the adaptive LP decoding algorithm [14], the optimal solution of the first LP can be computed directly by a hard decision for every bit, i. e.,
+
+xj =
+
+0 1
+
+if λj ≥ 0 if λj < 0
+
+∀j = 1, . . . , n.
+
+(5)
+
+This codeword can be used as a starting point for the dual bounded simplex algorithm in the first LP with added cuts. In the corresponding basic solution, the columns of the slack variables of all added cuts form the basis B. Since all slack variables have zero costs, this means that c˜N = λ. Hence, it follows from (5) that this basic solution fulfills the optimality condition and that we can use the bit vector in (5) as a starting point. Since this bit vector would be optimal in a channel
+
+without noise, it is likely to be “closer” to the real optimal codeword than the zero codeword, which is used as a starting point in the primal variant.
+Another advantage of the dual bounded variant is the fact that the optimal point of the last LP can be used as starting point in the next LP of the adaptive algorithm. In the next LP the columns of the slack variables of the new cuts are then added to the basis. The reduced cost vector stays unchanged and non-negative (see [17]). This is not possible in the primal variant, where the next LP starts again in the zero codeword, which is likely to have a much worse objective value and therefore to require a large number of iterations.
+Algorithm 1 summarizes the adaptive LP decoding algorithm with the dual bounded simplex method.
+
+Algorithm 1 Adaptive Dual Simplex Algorithm
+
+Input: Parity check matrix H, LLR vector λ
+
+Output: Optimal solution (x1, . . . , xn) of the LP decoder
+
+1: Initialize x as in (5)
+
+2: A = b = B = ∅, c = λ, N = {1, . . . , n}, u = (1, . . . , 1) 3: Apply cut-search alg. for (x1, . . . , xn) to each row of H 4: if no cut is found then
+
+5: return (x1, . . . , xn) 6: else
+
+7: add the new cuts to the LP by updating A, b, c, u and
+
+the representation of AB 8: add slack variables of the new cuts to x and their
+
+columns to B
+
+9: find leaving variable p ∈ B with xp < 0 or xp > up 10: if no such p exists then
+
+11:
+
+go to 3
+
+12: else
+
+13:
+
+find entering variable q ∈ N s.t. optimality cond.
+
+holds for basic solution to (B \ {p}) ∪ {q}
+
+14:
+
+B = (B \ {p}) ∪ {q}, N = (N \ {q}) ∪ {p},
+
+update x and the representation of AB
+
+15:
+
+go to 9
+
+IV. IMPLEMENTATION COMPLEXITY
+A. Complexity Comparison
+In the following, we present numerical results, that demonstrate the superiority of the dual simplex algorithm. For this purpose, we implemented the primal bounded and the dual bounded simplex algorithm in the adaptive LP decoding scheme. We compare the average number of simplex iterations that are needed during the whole adaptive algorithm, where an iteration corresponds to one basis exchange. These numbers correspond directly to the runtime performance.
+For the numerical tests we consider a very short (32,16) LDPC code [18], the (63,45) BCH code and a (96,48) LDPC code. The (96,48) code is a quasi-cyclic LDPC code, that is based on the WiMAX protograph, which has been lifted using a progressive edge growth technique [19]. The codes have been analysed under BPSK modulation and the AWGN channel.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:06:02 UTC from IEEE Xplore. Restrictions apply.
+792
+
+As can be seen in Fig. 1, 2 and 3, for all three codes the dual simplex algorithm outperforms the primal variant by a factor of approximately 15-20. For larger SNR values a tendency for even greater improvement can be observed. This large reduction translates directly in a increase of throughput (or a reduction in chip area) by a factor of 15-20 in a future hardware implementation.
+
+avg. number of iterations
+
+102
+
+101
+
+100
+
+Dual Bounded Simplex Primal Bounded Simplex
+
+0
+
+2
+
+4
+
+6
+
+Eb/N0(dB)
+
+Fig. 1. Average number of iterations per LP for the (32, 16) LDPC code
+
+avg. number of iterations
+
+102
+
+101
+
+100
+
+Dual Bounded Simplex Primal Bounded Simplex
+
+0
+
+2
+
+4
+
+6
+
+Eb/N0(dB)
+
+Fig. 2. Average number of iterations per LP for the (63, 45) BCH code
+
+B. Quantization Issues
+The number format of choice in most software implementations is floating point. It combines a high resolution with a large range of values at the expense of complex arithmetic operations. If an algorithm is to be implemented as a fast dedicated hardware chip (FPGA or ASIC), it is desirable to use fixed-point instead of floating-point numbers. Then the complexity of the arithmetic operations can be reduced extensively. A lower number of bits, that are required to represent a number, leads to a further reduction of complexity.
+In the simplex algorithm mainly arithmetic operations need to be performed. Therefore it is of great interest to utilize fixed-point numbers to reduce its implementation complexity. It should be mentioned that moving from floating-point to fixed-point representation and reducing the number of bits impact the accuracy. Precision and range of the numbers are reduced and errors may be introduced during calculations, leading to degraded performance of the algorithm. In the simplex algorithm the utilization of fixed-point numbers could lead to a wrong choice of the column, that enters or leaves the basis and therefore to a deteriorative basis exchange. Wrong values in c˜ or x can lead to a premature or no termination. Finally these effects lead to a decreased FER performance.
+To increase numerical stability, we represent the basis matrix AB by a LU decomposition, which is used in most advanced implementations [16]. The basis exchange is realized by the Forrest/Tomlin update (see [16] for more implementation details).
+In Fig. 4, 5 and 6 we present numerical quantization analyses. The notation x.y means that each number is represented by x bits, y of which constitute the fractional part. As can be seen in the figures, 14 to 24 bits are required to achieve a fixedpoint performance close to the floating-point performance. The exact number of bits varies for different code types. Codes with larger block length usually require more iterations and are therefore more prone to numerical errors.
+100
+
+avg. number of iterations
+
+103
+
+102
+
+101
+
+Dual Bounded Simplex
+
+Primal Bounded Simplex
+100
+
+0
+
+2
+
+4
+
+6
+
+Eb/N0(dB)
+
+Fig. 3. Average number of iterations per LP for the (96, 48) LDPC code
+
+frame error rate
+
+10−1
+
+10−2
+
+64-bit Floating
+
+10−3
+
+18.9 Fixed 14.7 Fixed
+
+12.6 Fixed
+
+10.5 Fixed
+
+10−4
+
+0
+
+2
+
+4
+
+6
+
+Eb/N0(dB)
+
+Fig. 4. LP decoding performance of the adaptive algorithm for the (32,16) LDPC code with different number representations
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:06:02 UTC from IEEE Xplore. Restrictions apply.
+793
+
+100
+
+ACKNOWLEDGMENT
+
+We gratefully acknowledge financial support by the DFG
+
+(project-ID: KI 1754/1-1).
+
+frame error rate
+
+10−1
+
+10−2 10−3
+
+64-bit Floating 18.9 Fixed 16.8 Fixed 14.7 Fixed 12.6 Fixed
+
+0
+
+2
+
+4
+
+6
+
+Eb/N0(dB)
+
+Fig. 5. LP decoding performance of the adaptive algorithm for the (63,45) BCH code with different number representations
+
+100
+
+frame error rate
+
+10−1
+
+10−2
+
+64-bit Floating 24.12 Fixed 20.10 Fixed 18.9 Fixed 16.8 Fixed
+
+0
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0(dB)
+
+Fig. 6. LP decoding performance of the adaptive algorithm for the (96,48) LDPC code with different number representations
+
+V. CONCLUSION & FUTURE WORK
+In this paper we have presented an efficient algorithm for LP decoding. It has been shown, that the dual simplex algorithm has a more than 15–20 times lower runtime than the standard primal algorithm. This leads to a smaller hardware design or an increase in throughput by the same amount. The reason for this improvement is that the dual simplex algorithm can use the channel LLRs for a close to optimal starting solution and reuse former LP solutions in the adaptive algorithm. Furthermore we investigated the impact of using fixed-point numbers.
+Future work includes a hardware implementation to evaluate the actual speed and size of the design. Further investigations will be necessary to implement the LP solver in an IP solver for ML decoding.
+
+REFERENCES
+[1] S. Scholl, F. Kienle, M. Helmling, and S. Ruzika, “Integer Programming as a Tool for Code Analysis,” in 9th International ITG Conference on Systems, Communications and Coding, Jan 2013.
+[2] M. Breitbach, M. Bossert, R. Lucas, and C. Kempter, “Soft-decision decoding of linear block codes as optimization problem,” European Transactions on Telecommunications, vol. 9, no. 3, pp. 289–293, 1998. [Online]. Available: http://dx.doi.org/10.1002/ett.4460090308
+[3] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to Decode Binary linear codes,” IEEE Transactions on Information Theory, vol. 51, pp. 954–972, 2005.
+[4] M. Helmling, E. Rosnes, S. Ruzika, and S. Scholl, “Efficient MaximumLikelihood Decoding of Linear Block Codes on Binary Memoryless Channels,” in In Proc. IEEE International Symposium on Information Theory, 2014, accepted.
+[5] A. Tanatmis, S. Ruzika, H. W. Hamacher, M. Punekar, F. Kienle, and N. Wehn, “A Separation Algorithm for Improved LP-Decoding of Linear Block Codes,” IEEE Transactions on Information Theory, vol. 56, no. 7, pp. 3277–3289, 2010.
+[6] P. Vontobel, “Interior-point algorithms for linear-programming decoding,” in Information Theory and Applications Workshop, 2008, Jan 2008, pp. 433–437.
+[7] M. Taghavi, A. Shokrollahi, and P. Siegel, “Efficient Implementation of Linear Programming Decoding,” IEEE Transactions on Information Theory, vol. 57, no. 9, pp. 5960–5982, 2011. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6006620
+[8] P. O. Vontobel and R. Koetter, “Towards Low-Complexity LinearProgramming Decoding,” in Turbo Codes Related Topics; 6th International ITG-Conference on Source and Channel Coding (TURBOCODING), 2006 4th International Symposium on, April 2006, pp. 1–9.
+[9] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition Methods for Large Scale LP Decoding,” IEEE Transactions on Information Theory, vol. 59, no. 12, pp. 7870–7886, 2013. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6595057
+[10] A. Schrijver, Theory of linear and integer programming. John Wiley & Sons, 1986.
+[11] R. Shamir, “The Efficiency of the Simplex Method: A Survey,” Management Science, vol. 33, no. 3, pp. 301–334, 1987. [Online]. Available: http://pubsonline.informs.org/doi/abs/10.1287/mnsc.33.3.301
+[12] H. Liu, W. Qu, B. Liu, and J. Chen, “On the Decomposition Method for Linear Programming Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 58, no. 12, pp. 3448–3458, 2010. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=5628280
+[13] S. Bayliss, C.-S. Bouganis, G. Constantinides, and W. Luk, “An FPGA implementation of the simplex algorithm,” in Field Programmable Technology, 2006. FPT 2006. IEEE International Conference on, 2006, pp. 49–56.
+[14] X. Zhang and P. H. Siegel, “Adaptive Cut Generation Algorithm for Improved Linear Programming Decoding of Binary Linear Codes,” IEEE Transactions on Information Theory, vol. 58, no. 10, pp. 6581–6594, Oct. 2012.
+[15] M.-H. Taghavi and P. Siegel, “Adaptive Methods for Linear Programming Decoding,” Information Theory, IEEE Transactions on, vol. 54, no. 12, pp. 5396–5410, Dec 2008.
+[16] A. Koberstein, “The Dual Simplex Method, Techniques for a Fast and Stable Implementation,” Ph.D. dissertation, University of Paderborn, 2005.
+[17] G. L. Nemhauser and L. A. Wolsey, Integer and Combinatorial Optimization. New York, NY, USA: Wiley-Interscience, 1988.
+[18] S. Abu-Surra, D. DeClercq, W. Ryan, and D. Divsalar, “Trapping set enumerators for specific LDPC codes,” in Information Theory and Applications Workshop (ITA), 2010, 2010, pp. 1–5. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=5454095
+[19] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Transactions on Information Theory, vol. 51, no. 1, pp. 386–398, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:06:02 UTC from IEEE Xplore. Restrictions apply.
+794
+
+

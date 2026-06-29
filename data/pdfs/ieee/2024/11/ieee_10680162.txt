@@ -1,0 +1,857 @@
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+6519
+
+ECCPM: An Efficient Internal Data Migration Scheme for Flash Memory Systems
+Haihua Hu, Guojun Han , Senior Member, IEEE, Wenhua Wu , You Zhou , and Chang Liu , Member, IEEE
+
+Abstract—The copyback command can be used to accelerate data migration in solid-state drives. However, the reliability of this command is not guaranteed, posing challenges for broad utilization within the consumer electronics device. The existing algorithms for predicting the copyback threshold do not consider two issues: 1) Due to page/wordline restrictions restrictions, the accumulation of errors across pages during copyback operations is asymmetrical; and 2) The controller lacks prior knowledge about the raw bit error rate (RBER) before decoding. As a result, it is impossible to predict the frequency of copyback command execution. In this paper, we explore the mathematical models of flash programs and read operations. We further develop the state transition probability matrix for wordline-level data migration within the same plane. Therefore, we propose a predictive model for the maximum copyback threshold within the same plane. To address these two issues, we conduct tests and analyse the characteristics of error accumulation in copyback using actual chips and substitute the relative entropy of the state distribution in our prediction model for RBER. By integrating these insights, we introduce an estimated copyback count prediction model (ECCPM). The simulation results demonstrate that the ECCPM can significantly reduce latency while minimally impacting write amplification.
+Index Terms—Copyback, wear leveling, reliability, NAND flash memory, solid state drive.
+I. INTRODUCTION
+C OMPARED with hard disk drives (HDDs), solid state drives (SSDs) based on NAND flash memory offer significant advantages in terms of low power consumption and faster access speed [1], [2]. As a result, SSDs have become increasingly popular in consumer electronics, such as computers and mobile embedded devices [3], [4], [5]. Unlike conventional storage systems, modern flash-based storage systems present distinctive features [6]. First, when the
+Received 15 May 2024; revised 24 July 2024; accepted 18 August 2024. Date of publication 13 September 2024; date of current version 31 December 2024. This work was supported in part by the National Natural Science Foundation of China under Grant U2001203; in part by the Core Technology Research and Development Projects of Shunde District under Grant 2130218002519; in part by the Opening Project of Science and Technology on Reliability Physics and Application Technology of Electronic Component Laboratory under Grant 22D09; and in part by the Guangdong Basic and Applied Basic Research Foundation under Grant 2022A1515110602. (Corresponding author: Guojun Han.)
+Haihua Hu, Guojun Han, Wenhua Wu, and Chang Liu are with the School of Information Engineering, Guangdong University of Technology, Guangzhou 510006, China (e-mail: haihua@mail2.gdut.edu.cn; gjhan@gdut.edu.cn; wuwh_gdut@gdut.edu.cn; liuchang@gdut.edu.cn).
+You Zhou is with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan 430074, China (e-mail: zhouyou2@hust.edu.cn).
+Digital Object Identifier 10.1109/TCE.2024.3459892
+
+number of blocks written to the flash reaches a maximum threshold, invalid blocks need to be erased to free up space for the SSDs to write new data [7]. The erase operation is performed in blocks; before the entire block can be erased, the valid pages within the block must be migrated [8]. Second, since flash memory does not allow for in-place updates, the data need to be updated off-site, requiring new logical and physical mappings to be recorded. This increases the cost of migration [9]. In addition, pages are susceptible to noise interference, which requires implementing an error correction code (ECC) before migrating data from the original physical page to a new page. This procedure results in an increase a longer migration response time [3], [10].
+Read, write, and erase commands are the fundamental operations of flash memory, and the response time is notably prolonged during data processing [11], [12]. Taking the Micron NAND flash memory product (MT29F8G08MAAWC) as an example, each page’s read and write operations take approximately 50 us and 650 us, respectively. Furthermore, the erase operation requires a substantial duration of 2 ms [13]. To increase data processing efficiency, flash manufacturers have offered advanced commands, such as copyback, multiplane, and interleaving commands, which can further enhance performance [14], [15]. Among them, the copyback command is typically used for internal data migration (IDM) scenarios. This process involves transferring data from one page to another within the same plane. Intra-plane reverse operations are approximately 30% faster than conventional inter-plane data operations, as they eliminate the need for external data migration (EDM) operations [16]. Additionally, the copyback operation does not engage the SSDs controller, thereby bypassing the need to migrate data from the flash memory chip to the SSDs controller [17].
+According to [18], the response time for managing 16 KB page data through IDM is 45.1% lower than that through the EDM. However, owing to certain limitations, implementing the copyback operation within the data migration management model of the flash translation layer (FTL) presents several challenges. First, flash memory undergoes multiple programming cycles and is susceptible to noise interference, potentially leading to errors in detecting the read reference voltage (RRV) [19]. In addition, the error correction engine and RRV detection model are not integrated within the flash memory itself. Data from the source page need to be externally loaded into the SSDs controller for error correction, thereby increasing the risk of bit error transmission and the potential for unrecoverable data loss during IDM copyback operations.
+
+1558-4127 c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6520
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+Second, the SSDs controller performs error correction to determine whether a copyback operation should be initiated. This not only results in excessive latency overhead but also limits the effectiveness of copyback operations. For example, to safeguard the integrity of the data against the cumulative bit errors introduced by copyback operations, [20] introduced a copyback-based garbage collection (GC) scheme. This scheme includes a feasibility test for each copyback operation, which requires reading data into the SSDs controller for error correction to assess the need for IDM.
+To enhance SSDs performance through multiple copyback operations, Wang et al. proposed the FastGC algorithm based on experimental observations of copyback operation on an actual 3D TLC NAND flash memory chip [18]. The algorithm monitors the maximum copyback threshold under different levels of noise interference and calculates the number of copyback executions via a feasibility detection model. The algorithm uses EDM to relocate data that exceed the copyback threshold to mitigate the accumulation of bit errors. Hong et al. investigated the impact of various noise sources on the wear levels of flash memory blocks and reported that each block may possess a unique level of copyback threshold error [21]. The authors propose the rCPB scheme, designed to mitigate the effects of wear and tear by considering the variability in copyback thresholds within each block.
+However, these methods encounter two significant challenges. First, the decision to implement IDM depends on the recorded number of copyback operations. In other words, the raw bit error rate (RBER) remains unknown prior to decoding. RBER cannot serve as prior information to ascertain whether the current copyback operation has reached the maximum migration threshold unless EDM is applied each time. Second, the copyback command is subject to page/wordline restrictions, and characteristics of error accumulation are also asymmetrical across different types of pages. Therefore, it is highly important to analyse and model the mechanism of copyback and design an effective maximum threshold prediction model for copyback. The purpose of the above actions is to improve the performance of consumer electronic products with flash memory systems as storage media. The contributions of this paper can be summarized as follows:
+• In our study of error accumulation in TLC flash memory, we conducted tests on actual 3D flash memory devices and observed two key phenomena. First, owing to the inherent limitation of wordline restriction, the RBER of the three types of pages exhibit asymmetry during the copyback process. Second, the manufacturing process of 3D flash memory introduces inconsistent interference between wordlines, indicating that relying solely on the mean RBER or best RBER cannot guarantee reliability.
+• To facilitate the modelling of copyback error accumulation, we developed and analysed read and program models of flash memory, using the MLC as an example. We introduce a Markov model to describe the noise interference in copyback operations at the wordline level. Regardless of whether IDM or EDM is used, the noise between blocks tends to be similar within the same plane, and the probability of state transitions among wordlines
+
+is also comparable. The Markov chain can be utilized to predict the maximum number of copyback operations at the wordline level, enhancing our understanding of error dynamics and reliability in flash memory systems. • To address the issue of unknown wear counts and the consequent uncertainty in noise levels, we propose an estimation copyback count prediction model (ECCPM) to meet the operational requirements of flash memory. For chips with unknown wear counts, storing the probability distribution of wordlines in each migration process is essential, although this approach entails a certain level of storage overhead. This information is then used as prior knowledge to effectively estimate the number of copyback operations for a wordline in the current noise environment. • Considering the computational complexity and storage overhead associated with the ECCPM, we conducted offline experiments to estimate the set of state transition probability matrices for each program-erase (PE) interval. During the GC process, we utilized EDM to extract the state probability distribution of each wordline. We subsequently identified the state transition probability matrix that best fits the current level of wear using a voting method. This approach facilitates the calculation of copyback thresholds for different page types under the current conditions. The remainder of this paper is organized as follows. Section II presents background information on computer storage architecture and copyback. Section III presents the error characteristics of the copyback operation. Section IV presents the introduction of the read program model and the establishment of the copyback model. Following an analysis of the constraints associated with the copyback model, this section introduces the ECCPM models as proposed in Section V. The simulation results are presented in Section VI, and the conclusions are presented in Section VII.
+II. BACKGROUND AND RELATED WORK
+A. Architecture of SSDs Storage System
+1) Front-End: As shown in Fig. 1, the front-end includes applications, virtual file systems, page caches, file systems, general block layers, and device driver layer. In this article, The main role of the front-end is to send requests in the form of a block input/output (Bio) structure to the general block layer, and then submit the requests to the device driver layer.
+2) back-End: The host interface layer in the back-end is responsible for submitting requests to the controller. The FTL is crucial in handling read/write requests. The FTL abstracts the characteristics of flash memory and provides access to the file system in the form of a block device. The FTL architecture consists of three main parts: 1) address translator, 2) GC, and 3) wear leveling [5], [22].
+• Address Translator. The function of an address translator is to map logical addresses to their corresponding physical addresses. A commonly used method for address translation is page-level translation, where each logical page corresponds to a physical page. While this approach
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS
+
+6521
+
+Fig. 1. Architecture of SSDs storage system.
+
+allows for more precise address mapping, it does necessitate a higher overhead in DRAM storage. • Garbage Collection. GC operates in two modes: passive and active. Passive GC is typically triggered when the amount of free space in flash memory drops below a predetermined threshold. Active GC is triggered when the SSDs are in the I/O idle state, and can be preempted without affecting the current data access. • Wear Leveling. This strategy is designed to balance write and erase operations across the SSDs, thus mitigating wear imbalance among different blocks. Wear leveling can be categorized into two types: static and dynamic. In the context of SSDs, static wear leveling involves the periodic scanning of blocks with lower access frequency. This process entails migrating cold data to flash blocks with higher erase counts. The objective of this process is to attain a more uniform distribution of wear across the blocks. In dynamic wear leveling, SSDs prioritize the selection of idle flash blocks with lower erase counts for new writes. This strategy facilitates the even distribution of write and erase operations throughout the SSDs, effectively mitigating wear imbalance among the blocks. 3) Copyback: Copyback is an advanced command in flash memory chips that facilitates the transfer of valid data between physical pages within the same plane. This command ensures that the data migration operation does not engage the data bus of the flash memory channel, thereby optimizing the efficiency of the operation. Data migration can be implemented through two approaches: 1) EDM and 2) IDM. Notably, copyback is a crucial component in the IDM approach. Fig. 1 illustrates the detailed process of EDM, involving the migration of data from one plane to another within a flash memory device. The process of inter-plane data migration comprises seven sequential steps. During Step 1 , the process starts by retrieving Page 3 from Block 0 in Plane 0,
+
+followed by storing it within a 4KB data register. In Step 2 , the data is transferred to the flash memory controller. Subsequently, the data from Page 1 is transferred from the flash memory controller to the data buffer, enabling ECC processing. The error corrected data is then sent back to the flash memory. Ultimately, the data is programmed into Page 0 of Block 0, which is located in Plane 4. The inplane copyback operation, as illustrated concurrently in Fig. 1, presents a more straightforward alternative since it merely necessitates three steps. In Step 1 , the flash controller initiates the copyback operation specifically targeting Plane 0. Finally, in Step 2 , each plane reads a page of data into a 4 KB data register. In Step 3 , the data is written to the target pages within different blocks of the same plane. Considering that GC typically involves moving multiple pages of data, utilizing the in-plane copyback operation can significantly expedite the process compared to conventional copyback operations within the same plane. Furthermore, the in-plane copyback operation is confined to a single plane, thus obviating the need for external channels. This configuration frees up the external channels to accommodate simultaneous operations more efficiently [13].
+B. Related Work
+Numerous studies have previously addressed the topic of data migration in flash memory systems.
+1) Advanced Commands for Data Migration: Advanced commands for data migration have been the focus of numerous studies by researchers aiming to enhance SSDs performance. Techniques such as multi-plane operations and interleaved multi-level commands facilitate parallel processing, significantly boosting. For example, previous studies have found that increasing the level of concurrency with planar stripes within SSDs can greatly improve throughput. However, some
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6522
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+strategies might monopolize the data transmission channel. For example, Shahibi et al. proposed a plane-level garbage collection scheme that occupies the data channel [23]. Park et al. explored channel-level and packet-level parallelism to enhance SSDs performance through request reordering and dynamic write request mapping [15]. Although these methods can improve io throughput, EDM is still used in the process of data migration.
+2) Copyback Operation for Data Migration: Jeong et al. developed a technique to reduce data transmission overhead by enabling devices to directly transmit data over a shared I/O bus in flash-based storage systems. This method updates only the erroneous bits over error detection [17]. Kim et al. proposed decoupling the front-end (i.e., core, system bus) and back-end (i.e., flash memory) of SSDs, and providing on-chip networks to connect controllers together, utilizing the router’s “routing” ability to route traffic to facilitate communication, thereby overcoming the limitations of copyback operations and achieving global copyback operation [6]. Wang et al. proposed the FastGC algorithm to maximize the efficiency of IDM by tracking the number of copyback operations [18]. Hong et al. designed an effective error management scheme that can handle continuous copyback operations while ensuring data reliability [21]. Pang et al. proposed the PcGC algorithm for efficient programming of MLC parity pages, although it does not account for the threshold inconsistency of parity pages [24]. In addition, copyback commands can also be used for data forensics and secure data deletion practices [25], [26].
+3) Mathematical Model of Flash Memory: Cai et al. used the read retry function in a 2Y-nm (i.e., 20-24 nm) MLC flash memory chip during their experiments to obtain an approximate threshold voltage for each cell. By comparing multiple fitted threshold voltage distributions, they found that the Gaussian distribution exhibited the least significant error [27]. Wang et al. explored the threshold voltage distribution of 3D flash memory by considering ISPP noise, WL-WL interference, tunneling oxide degradation, and the RTN effect in poly silicon [28]. Hu et al. further estimated the parameters of the existing mathematical model of the flash memory threshold voltage distribution, and used the estimated parameters to predict the RRV [29]. The threshold voltage distribution mentioned is modeled for flash memory under test with regular commands, but extending it to model advance commands is not addressed.
+Many algorithms focus on speeding up data migration with advanced commands but overlook complex mathematical modeling principles. Previous research on mathematical modeling of flash memory has concentrated on the threshold voltage distribution, applicable only to common commands like read, program, and erase. It lacks mathematical modeling for advanced commands. To solve these problems, this paper proposes a mathematical model to predict copyback count.
+III. ERROR CHARACTERISTICS OF THE COPYBACK OPERATION
+In this section, we delve into the copyback characteristics of multi bit 3D flash memory. First, we introduced the hardware
+
+platform used in the experiment and the information of the flash memory samples selected for testing and simulation. Subsequently, we analyse the establishment of a distribution model for program, read, and copyback operation based on our experimental observations.
+A. Page/Wordline Restrictions
+At present, the primary interfaces offered by flash memory manufacturers are ONFI and toggle, which establish parity restrictions for the copyback migration page of MLC flash memory: “The least significant bit (LSB) of the page addressed between the source and target pages should be the same”. In other words, data on odd address pages can only be migrated to other odd addressed pages within the same plane, and similarly, data on even addressed pages can only be migrated to even addressed pages in the same plane. This parity restriction can be called page restriction. While these parity restrictions are clearly defined for MLC types in both Toggle 2.0 and ONFI standards, they do not explicitly address TLC types, leading to ambiguity regarding the applicability of these restrictions to TLC flash memory. According to [30], specific restrictions for TLC are suggested:“ For copyback TLC program, the page data copy order should always input lower page data followed by middle page data and input the upper page data the last”. In particular, copyback operations from TLC to TLC mode must adhere to a sequential order between wordlines. This mode is referred to as wordline restriction in this article.
+B. Introduction to 3D Flash Memory Tests
+Our model was tested via a 3D TLC NAND flash validation system on an FPGA-based test platform. The effectiveness of the proposed scheme was verified by the measured data. Consequently, we assessed the error accumulation characteristics of two 3D NAND flash memory chips subjected to read disturb and retention time under similar PE cycles are presented. The precision of the scheme relies on the FPGA hardware platform. As illustrated in Fig. 2, the nonvolatile memory testing apparatus used in this experiment is the NanoCycle test platform.
+As shown in Fig. 2, the chip lead on the platform can be dynamically controlled by connecting to a personal computer. The test platform receives commands to read, write, erase, and test the chip at high and low temperatures. Additionally, it supports multi-plane operations and read retry functionalities. The platform is equipped with six channels that facilitate parallel testing of flash memory chips. In this experiment, we independently validated the performance of ToshibaBiCS3 and YMTCX19050. The specifications of these two 3D NAND flash chips are detailed in Table I.
+C. Copyback Characterization Tests
+In the platform experiment, we initially focused on the copyback operation between similar blocks (NPE = 7000).1
+1In this paper, NPE, R, T are used to represent the number of PE cycles, the number of read operation and the retention time, respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS
+
+6523
+
+Fig. 2. The test platform used in this experiment.
+TABLE I 3D TLC NAND FLASH CHIP INFORMATION
+We began by examining the RBER changes across different types of TLC chips. We subsequently investigated the effects of read disturb and retention errors on TLC type performing the copyback operations.
+1) Observation 1: As shown in Fig. 3, in the experimental environment without read disturbance and retention error processing, we perform a comparison of the RBER across multiple copyback operations in wordline restriction. As shown in Fig. 3 (a), (b) and (c), the RBER for copyback operations in wordline restriction is the YMTCX19050. As the number of copyback operations increases, the RBER for the three page types exhibits an asymmetric trend. In general, the error probability for the CSB is higher than that for other pages, indicating that reliability is guaranteed. The threshold of the CSB copyback count is smaller than that of the other two page types. For example, when the RBER is 0.004, the CSB copyback threshold is 6, whereas the LSB and MSB thresholds are 9 and 8, respectively. As shown in Fig. 3 (b), it is the RBER for the copyback operation of the ToshibaBiCS3 type in the wordline restriction. Owing to the different structures of ToshibaBiCS3 and YMTCX19050, the error probabilities also vary. In addition, the encoding methods used in ToshibaBiCS3 cells are different from those used in YMTCX19050 cells, resulting in distinct RBER trends for the three pages following copyback operations. Overall, the copyback frequency across the three pages is more uniform in the ToshibaBiCS3. For example, when the RBER is 0.004, the threshold for the number of copybacks for CSB, LSB, and MSB is uniformly 10.
+
+2) Observation 2: As shown in Fig. 4, the RBER of different pages during copyback operations under the same read disturb is compared between two chips. As shown in Fig. 4 (a), (b) and (c), the threshold for the number of copyback operations in wordline restriction differs among the three page types of YMTCX19050. While read disturbances somewhat mitigate the RBER in copyback operations for YMTCX190, the reduction in RBER is minimal. Fig. 4 (d), (e), and (f) reveal that read disturb significantly affects the three types of ToshibaBiCS3 pages in wordline restriction. Compared with the YMTCX19050, the ToshibaBiCS3 is more susceptible to read disturb interference, resulting in increased RBER. For example, when RBER is 0.004, the threshold for the number of copybacks for CSB is 9, while both LSB and MSB are 10. Overall, the RBER trends for the three page types in wordline restriction exhibit an asymmetric pattern for both chips.
+3) Observation 3: To investigate the error characteristics caused by the retention noise, copyback operations are frequently utilized in situations related to data refresh and migration. As shown in the Fig. 5, when the refresh interval is set to one week, retention accelerates error accumulation during copyback operations. Thus, we conclude that long retention times may not be suitable for copyback in scenarios involving data migration and refresh.
+4) Observation 4: For MLC flash memory, the NanoCycle test platform is currently unable to support testing of the MLC model chips. However, a publicly available mathematical model for the MLC threshold voltage distribution can be utilized to analyse and observe the copyback characteristics of MLC chips. To investigate the error characteristics of copyback on odd/even pages, we conducted a series of experiments considering factors affecting bit errors during different PE cycles. We aim to simulate the capabilities of ECC as accurately as possible. The MLC model parameters are simulated according to [31], and the mean and variance of noise under different PE cycle conditions are computed. These model parameters are then used in the threshold voltage distribution and the LDPC code (2048, 2304) is employed for error correction encoding [31], [32]. The initial values for log-likelihood ratios (LLRs) are computed via the approach described in [33]. In addition, this experiment uses the publicly available model of threshold voltage distribution to simulate the random migration of data across different wordlines within the same plane. This is followed by successive applications of the same method to migrate the transferred data to other wordlines. We utilize copyback operations to transfer data between blocks within the same PE cycle until the ECC capability is surpassed, ensuring data integrity. Fig. 6 and Fig. 7 depict the relationship between BER and the number of copyback operations executed for a single page of data. With an increase in the number of copyback operations and PE cycle count, the occurrence of bit errors in the data gradually increases. The maximum number of copyback operations for page data within a given PE cycle is defined as the copyback count threshold. Theoretically, the integrity of the data stored in flash memory is guaranteed as long as the number of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6524
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+Fig. 3. Error accumulation characteristics for copyback. (a), (b), (c) corresponding to CSB, LSB and MSB of YMTCX19050 respectively; (d), (e), (f) corresponding to CSB, LSB and MSB of ToshibaBiCS3 respectively.
+
+Fig. 4. Error accumulation characteristics for copyback at R = 100. (a), (b), (c) corresponding to CSB, LSB and MSB of YMTCX19050 respectively; (d), (e), (f) corresponding to CSB, LSB and MSB of ToshibaBiCS3 respectively.
+
+copyback operations performed remains below the maximum threshold.2 However, as shown in Table II, the maximum copyback count differs between the upper and lower pages of a wordline under the same noise conditions.
+2Contemporary SSDs manufacturers require UBER below 10−16 [7]. Because the time required for the device to reach 10−16 exceeded the range of the experimental platform, we can only shorten the testing time and maintain a relatively high accuracy within the range. It should be noted that the iteration number was used to verify the ECC convergence ability, and the more iterations, the lower the UBER; for example, in this study, the decoding iteration number was set to 1 in the experiment, and the threshold for UBER was 10−5.
+
+5) Trade Off: The best RBER enhances performance for a small subset of pages, yet it is not a reliable indicator for most. In contrast, while the mean RBER typically acts as the reference threshold for copyback counts in most solution scenarios, the inherent process variations between wordlines in 3D flash memory mean that reliability for some pages cannot be consistently ensured. Therefore, the worst RBER provides a more reliable measure of the minimum reliability threshold and is better suited as a copyback count threshold indicator for most pages. To balance reliability, this study focuses solely on analysing the worst RBER. Although this approach implies that some pages may not
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS
+
+6525
+
+Fig. 5. Error accumulation characteristics for copyback at T = 1 week. (a), (b), (c) corresponding to CSB, LSB and MSB of YMTCX19050 respectively; (d), (e), (f) corresponding to CSB, LSB and MSB of ToshibaBiCS3 respectively.
+TABLE II DISTRIBUTION OF COPYBACK THRESHOLD UNDER
+DIFFERENT PE CYCLES IN MLC
+
+Fig. 6. The relationship between LSB and bit error rate.
+
+IV. MODELING AND ANALYSIS OF COPYBACK COUNTS PREDICTION
+In this section, we model the program, read, as well as the page/wordline restrictions of flash memory. Considering reliability issues, the maximum copyback threshold for each page is determined by the ECC capability limit. For different flash memory chips, the noise interference may be similar, but the maximum threshold for the page copyback operation may vary. We aim to model based on the principles of read and program to achieve the model‘s universality. Therefore, we have adopted the following assumptions: modern SSD firmware is configured with wear leveling algorithms. Even though the dynamic and static wear leveling algorithms ensure that the PE cycles of blocks within a plane remain closely aligned. Additionally, modern SSDs are equipped with a data scrambling mechanism, ensuring that the distribution of data states written to the SSDs is uniform. Finally, when two blocks on the same plane are subjected to wear leveling, the fixed RRV detects state transitions in both blocks with comparable probabilities.
+
+Fig. 7. The relationship between MSB and bit error rate.
+achieve the maximum IDM, it offers a balance more suited to the practical demands of real-world consumer electronic devices.
+
+A. Program Model
+In NAND flash memory, each cell on a wordline can be classified into an erased state s1 and programmed states s2, s3, s4. The threshold voltage of the erased state follows a Gaussian
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6526
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+distribution [29], which can be modeled as
+
+psi (x)
+
+=
+
+√1
+
+−
+e
+
+(x−μsi 2σs2i
+
+)2
+
+,
+
+σsi 2π
+
+(1)
+
+where μsi and σsi are the mean and standard deviation, respectively, i ∈ {1, 2, 3, 4}.
+
+B. Read Model
+
+Using MLC as an example, the RRV {a1, a2, a3} are commonly employed to detect the states of individual memory cells. However, noise interference can introduce inaccuracies in the interpretation of specific cell states by the RRV, leading to misclassification of various states. For example, the calculation method for the read model when transitioning from state m to state n is expressed as
+
+Pmn = Q
+
+an−1 − μsm σsm
+
+− Q an − μsm , σsm
+
+(2)
+
+where Q(y) =
+
+∞ y
+
+√1 2π
+
+−t2
+e2
+
+dt,
+
+a0
+
+and
+
+a4
+
+represent
+
+the
+
+thresh-
+
+old voltage boundaries respectively, m, n ∈ {0, 1, 2, 3, 4}. (3)
+
+represents the transition probabilities of the cell’s state after
+
+detection [34], [35], so we get the state transition probability
+
+matrix as follows
+
+⎡
+
+⎤
+
+P11 P12 P13 P14
+
+P = ⎢⎣⎢PP3211
+
+P22 P32
+
+P23 P33
+
+P24 P34
+
+⎦⎥⎥.
+
+(3)
+
+P41 P42 P43 P44
+
+C. Modeling of Copyback Count Prediction
+The wear leveling algorithm ensures that the number of PE cycles for each block in the plane remains within a specified margin of error, resulting in similar noise levels. Thus, using a fixed RRV to detect cell states in blocks with comparable PE cycles yields similar probabilities of incorrect state identification P. Considering the requirements for page/wordline restrictions in flash memory, data within SSDs are uniformly migrated and programmed across wordlines [13]. During the migration process, the SSDs controller migrates the data in the wordline to other wordlines in the same plane, and its state transition probability can be regarded as a Markov model. This model needs to store the data of the comparable PE cycle on the same wordline, so it can predict the probability of state transition and the migration count of each page. The transition probabilities between states are described using (4). For MLC flash memory, there are four states, and the state transition matrix is a 4 × 4 matrix. Each row in the matrix represents the probability distribution of states. Before the data is transferred to the flash memory, the scrambler module of the controller presents an independent equal probability distribution across the four cell states, and the initial state vector of the system is S(0) = [S1(0), S2(0), S3(0), S4(0)], where Sj(0) represents the probability that the system is in the initial state j. After k iterations of IDM, the probability distribution of the system being in state j is denoted as Sj(k), and the state vector after k iterations of IDM is represented as S(k) = [S1(k), S2(k), S3(k), S4(k)]. Here, Sj(k) represents
+
+the probability of the system being in the state j after k
+
+copyback operations. Therefore, the Markov prediction model
+
+for copyback can be represented as
+
+⎡
+
+⎤
+
+P11 P12 P13 P14
+
+S(k) = S(k − 1) ∗ P = S(k − 1)⎢⎢⎣PP3211
+
+P22 P32
+
+P23 P33
+
+PP2344⎥⎦⎥
+
+P41 P42 P43 P44
+
+⎡ P11
+
+P12
+
+P13
+
+P14⎤k
+
+= S(0) ∗ Pk = S(0) ∗ ⎢⎢⎣PP2311
+
+P22 P32
+
+P23 P33
+
+PP3244⎥⎥⎦ ,
+
+(4)
+
+P41 P42 P43 P44
+
+where it has the following properties:
+
+4 j=1
+
+Pij
+
+=
+
+1,
+
+i
+
+∈
+
+{1,
+
+2,
+
+3,
+
+4}
+
+Pij ≥ 0,
+
+i, j ∈ {1, 2, 3, 4}.
+
+(5)
+
+D. Analysis of Copyback Count Prediction Model
+In real-world situations, random noise can lead to bit errors on flash memory pages caused by noise occur randomly. As a data receiver, it is challenging to predict the maximum copyback migration value based on the current RBER. To tackle this problem, we suggest using the Kullback-Leibler (KL) divergence, also known as relative entropy, to measure the difference between the initial state distribution and the state distribution after copyback migration. The KL divergence quantifies the gap between two probability distributions [29]. The expression is given by
+
+4
+β = Si(0)log
+i=1
+
+Si(0) Si(k)
+
+,
+
+(6)
+
+where β represents the error, k represents the number of copyback operations, Si(0) represents the initial distribution of the i-th state, and Si(k) represents the distribution of the i-th state after migration. For instance, according to Table II,
+the maximum number of copyback operations for LSB pages across NPE = 4000 is 7. As shown in 8, the relationship between β and the copyback count, NPE = 4000 is located at a copyback count of 7 and the β value corresponds to 0.0004329. The EDM process is triggered when the β value
+exceeds 0.0004329.
+
+V. DESIGN OF ECCPM
+A. Estimation Copyback Count Prediction Model (ECCPM)
+When the initial state vector S(0) and the state transition probability matrix P are known, the prediction model above can be used to forecast the state of the system during the k-th copyback operation. In the copyback prediction model, determining the probabilities of the current noise’s state transition matrix for accurate prediction is crucial. When real-time recordings of PE cycles on flash memory chips are not available, it is becomes impossible to accurately apply the copyback model to predict the number of copyback operations used on a specific page. This also hinders the ability to determine whether the page has reached its maximum copyback count. The construction and prediction
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS
+
+6527
+
+of the copyback model depend on previously observed noise
+
+to determine the transition probability matrix. Without real-
+
+time recording of the PE cycle count, we are unable to obtain
+
+sufficient information to determine the transition probabilities.
+
+This hinders accurately predicting of the copyback operation
+
+counts. In such circumstances, alternative methods may be
+
+required to infer the copyback count or to consider other
+
+known information to estimate the copyback model for the
+
+current scenario.
+
+ej(k) represents the fitting error between the estimated probability value Sˆj(k) of the state j and the actual value Sj(k)
+
+after the k-th copyback operation. The fitting error can be
+
+defined as ej(k) = Sj(k) − Sˆj(k) = Sj(k) −
+
+n i=1
+
+Si(k
+
+−
+
+1)Pˆ ij.
+
+For the m-th copyback operation, the sum of the absolute
+
+values of the fitting error between the actual value Sj(k) and the estimated value Sˆj(k) of the probability under the state
+
+j is Qj. Therefore, the sum of the absolute values of errors
+
+during the transition process of m-th copyback operation in
+
+the states n is Q: Q =
+
+n j=1
+
+Qj
+
+=
+
+n j=1
+
+m k=1
+
+|ej(k)|
+
+=
+
+n j=1
+
+m k=1
+
+|Sj(k)
+
+−
+
+Sˆ j (k)|
+
+=
+
+|Sj(k)
+
+−
+
+n i=1
+
+Si(k
+
+−
+
+1)Pˆ ij|.
+
+By
+
+introducing the sum of absolute error values as a constraint, an
+
+optimization model for copyback is established. The objective
+
+function is to minimize the sum of absolute error values,
+
+denoted as Q, after m copyback operations in the state j. The
+
+constraint condition ensures that the resulting values are nonnegative and can be expressed as follows3
+
+Fig. 8. β variations over PE cycles.
+
+min Q
+
+(7)
+
+s.t. Pˆ ij ≥ 0 i = j
+
+Pˆ ij > δ i = j.
+
+(8)
+
+B. Analysis of predicting the Remaining Number of Copyback Operation
+On the basis of the above discussion, estimating the remaining number of copyback operations is not feasible when the prior information of RBER or noise levels is unavailable. To predict the remaining number of copyback operations for flash memory pages, it is necessary to use ECCPM prior to data migration, which can then be used to predict the remaining copyback count. Therefore, we propose an algorithm to predict the number of remaining copyback operations without relying on prior knowledge.
+The basic idea of the algorithm is to utilize the estimated copyback model to calculate the discrepancy (i.e., the β value) between the current and initial state probability distributions, which act as a substitute for the RBER value. Essentially, by determining whether the β value reaches the threshold, it is possible to ascertain if a current page has reached its maximum number of copybacks. As shown in Fig. 8, although the β value can act as a proxy for RBER, we observed that the corresponding β value of the maximum copyback threshold varies across different PE environments. To establish a fixed β
+3In order to obtain the state transition probability, we assume that the predefined threshold is δ = 0.92 to obtain a highly accurate state transition probability matrix in the estimation process. It should be noted that the Pˆ ii tested in this paper is greater than 0.92, so δ = 0.92 has been used to estimate the superiority of the state transition probability matrix.
+
+Fig. 9. Under different noises, β reaches the limit of the maximum copyback threshold for LSB (dashed line) and MSB (solid line).
+
+as the maximum threshold for copyback, we have improved (6) by integrating an exponential constraint term, resulting in
+
+4
+β = Si(0)log
+i=1
+
+Si(0) Sˆ i (k)
+
++ γ eS4(0).
+
+(9)
+
+Eq. (9) is used to align the maximum copyback threshold for all noise points on different page types on the same wordline. As shown in Fig. 9, to meet the maximum copyback threshold of each page type in Table II, when the parameter γ is set to 0.8, the maximum copyback thresholds of all noise points on different pages are aligned. The solid line aligns with the determined β value of the LSB in different noises, whereas the dotted line aligns with the determined β value of the MSB in different noises. For example, when β is equal to 1.0275 (solid line), the x-coordinate of the solid line passing through NPE = 3000 is between 1 and 2, and the maximum threshold of copyback is 1 for MSB at NPE = 3000. During the execution of the algorithm, the error value is calculated in each iteration. When the error value exceeds the β threshold, the number of iterations is equal to the remaining count of copyback operations. The application of this algorithm to MLC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6528
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+Algorithm 1 The ECCPM Is Used to Solve the Maximum Algorithm 2 ECCPM Is Used in the Data Migration
+
+Copyback Threshold of MSB and LSB of MLC Flash Memory Algorithm for Page/Wordline Restrictions
+
+Input: The estimated state transition probability matrix Pˆ ; ε =
+
+{εLSB, εMSB}; εLSB, εMSB represents the values of the dashed and solid lines in Fig. 9, respectively;
+
+Output: The maximum copyback threshold of copyback for the plane
+
+cˆLSB,cˆMSB;
+
+1: cˆLSB = 0,cˆMSB = 0; 2: for j in {LSB, MSB} do
+
+3: while True do
+
+4:
+
+S(cˆ + 1) = S(cˆ + i)Pˆ ;
+
+5:
+
+use (9) to compute β;
+
+6:
+
+if β > εj then
+
+7:
+
+break;
+
+8:
+
+end if
+
+9:
+
+cˆ = cˆ + 1;
+
+10: end while
+
+11: end for
+
+flash memory is detailed in Algorithm 1, which can also be extended to TLC and QLC in practical scenarios.
+1) Data Migration of ECCPM: The ECCPM requires extensive reading of the entire wordline to estimate the threshold of the copyback. However, due to the characteristics of remote updates in flash memory, ECCPM must also read additional invalid pages in order to evaluate the state probability distribution of wordlines. This process incurs significant time latency and space overhead if ECCPM is carried out each time. Therefore, ECCPM is suitable for offline execution. As detailed in Algorithm 2, the main process for data migration in response to GC requests after ECCPM obtains copyback thresholds for various page types is elaborated. In the case of unknown noise levels, ECCPM is used to solve the matrix set B = {Pˆ 1, Pˆ 2, . . . , Pˆ m−1, Pˆ m, Pˆ m+1, . . . , Pˆ M} offline, where m is the interval of the PE period and M is the total number of maximum interval PE cycle. When the GC threshold is reached, EDM is conducted to capture the true state probability distribution of each wordline during the migration process. By traversing all matrices in the set B, the estimated state probability distribution and true state probability distribution
+
+Input: Current wear degree Indicates the value of PE
+
+NPE, Estimated state transition probability matrix set B = {Pˆ 1, Pˆ 2, . . . , Pˆ m−1, Pˆ m, Pˆ m+1, . . . , Pˆ M}, the current number of
+
+superblocks that require GC Ngc, the maximum threshold for the
+
+number of superblocks to execute of pages that can be programmed
+
+GC in a
+
+Ngmcax, the superblock
+
+maximum Npmaagxe, the
+
+number type of
+
+bits stored in the flash memory cell Ntype, initial state probability
+
+distribution Sˆ init, estimated state probability distribution Sˆ , true state
+
+probability distribution Sˆ and voting statistics vector y.
+
+1: if The value of NPE is known prior information then 2: According to Algorithm 1, the transition probability matrix Pˆ
+
+is used to predict the maximum threshold of copyback for various
+
+page types;
+
+3: else
+
+4: if Ngc > Ngmcax then
+
+5:
+
+Select the i-th superblock to be erased based on the wear
+
+condition and add it to the reclaim queue;
+
+6:
+
+for j = 1 to Npmaagxe do
+
+7:
+
+Read the data of the j-th page of the i-th superblock
+
+8:
+
+if j mod Ntype == 0 then
+
+9:
+
+Obtain the state probability distribution S
+
+10:
+
+for m = 1 to M do
+
+11: 12:
+
+Seˆm==SinitkKPˆ=m1 |Sk − Sˆk|
+
+13:
+
+end for
+
+14:
+
+mmin = min1≤m≤M em;
+
+15:
+
+Element ymmin of vector y, ymmin =ymmin +1;
+
+16:
+
+end if
+
+17:
+
+end for
+
+18:
+
+mmax = max1≤m≤M ym;
+
+19:
+
+The transition matrix Pˆ mmax is the optimal matrix in the
+
+current environment;
+
+20: end if
+
+21: end if 22: if Ngc > Ngmcax then 23: Select the block to be erased according to wear-leveling
+
+24: if the number of copyback of the selected superblock page
+
+is less than the threshold then
+
+25:
+
+Perform IDM operations;
+
+26: else
+
+27:
+
+Perform EDM operations;
+
+28: end if
+
+29: end if
+
+errors for each matrix, are calculated, identifying the transition
+
+matrix with the smallest error, and a vote is cast on its
+
+sequence number. The voting count is represented by the vector y. After the GC is completed, the matrix Pˆ mmax corresponding to the current wear level can be identified by locating the sequence number with the maximum value of vector y, and ultimately obtaining the maximum copyback threshold for different page types. This method does not require execution every time; it only needs to determine the matrix Pˆ mmax . If the GC conditions are met, a superblock that meets the conditions is selected for erase, followed by page data transfer. When the copyback threshold is smaller than the copyback threshold, the IDM mode is recommended.
+C. Complexity Analysis
+1) Storage Overhead Analysis: The main storage overhead of Algorithm 1 is used for the parameters of matrix Pˆ . This matrix Pˆ should be adjusted according to the specific
+
+Once adjusted, the matrix Pˆ remains stable for a certain
+period of time and does not require frequent updates. Taking
+YMTCX19050 in Table I as an example, recording the copy-
+back counts for each page occupies 4 bits of storage space.
+With a page size of 18 KB, this equates to a storage capacity
+of 39.78 GB per die, necessitating up to 1.2 MB of space. Each plane stores the matrix Pˆ , and the size of each element in the matrix Pˆ accounts for 8 bytes. Consequently, the storage requirement for the matrix Pˆ is 8 * 8 * 8 * 2 = 1 KB. If we
+collect data from 14 sets of state transition matrices ranging
+from 1 to 7000 PE cycles, at intervals of 500 PE cycles, the memory usage of a LUN is 1.2 MB+500 KB.
+2) Time Analysis: As shown in Algorithm 2, the time complexity of using ECCPM for data migration is O(MNpmaagxe). However, the time complexity can be effectively managed by
+using the voting method to ascertain the current wear state in
+
+noise threshold conditions (i.e., T, R), and needs modification vector y. Once the wear state is determined, the voting process
+
+only when the noise condition reaches a certain threshold. is discontinued, ensuring that the method does not introduce
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS
+
+6529
+
+Fig. 10. βacc variations over PE cycles.
+
+excessive latency into the system’s subsequent operations. This approach helps maintain system efficiency while effectively managing wear levels.
+
+VI. EXPERIMENT
+
+A. ECCPM Accuracy Analysis
+
+In this case, S(k) represents the probability distribution, while Sˆ(k) represents the estimated probability distribution, where k represents the current copyback number, i ∈ {1, 2, 3, 4}. Therefore, we obtain
+
+4
+βacc = Si(k)log
+i=1
+
+Si(k) Sˆ i (k)
+
+.
+
+(10)
+
+We use (10) to measure the correlation between the two probabilities. As shown in Fig. 10, we evaluated the βacc of the estimated distribution and the true distribution. It can be observed that when the NPE = 7000, the βacc is less than 9 × 10−7, which is close to 0. Typically, the value of βacc is [0,1]. The smaller the value is, the closer the two distributions
+
+are, indicating the better estimation performance.
+
+Fig. 11. βacc variations over PE cycles. TABLE III
+EXPERIMENTAL SYSTEM ENVIRONMENT CONFIGURATION
+TABLE IV SSDS CONFIGURATION
+
+B. β Value vs RBER Analysis in Real Chips
+As shown in Fig. 11, the β value predicted by the estimated matrix P in the copyback operation is compared with the β value measured by the real data and the beta value predicted by the matrix P calculated by the real data. The three lines are largely consistent, indicating that ECCPM can be applied to the real flash memory scenes. For example, as shown in Fig. 11, when RBER is 0.0003. The copyback thresholds of MSB, LSB and CSB are 4, 6 and 7 respectively, and the β values corresponding to the real data are 4.17 × 10−6, 9.27 × 10−6and 1.253 × 10−5, respectively. The above three values can be used as thresholds, and the maximum copyback count threshold of the three kinds of copyback pages can then be calculated with the estimated matrix Pˆ .
+C. Latency Analysis of ECCPM
+1) Experiment Setup: The FEMU used for workload testing is a simulator based on the QEMU emulator [36]. It allows indepth research on the architecture shown in Fig. 1 and supports modifications to the kernel, interfaces, and flash translation
+
+layer. Its open-source design, accurate simulation results, and scalability are widely acknowledged. The experimental setup for FEMU is detailed in Table III.
+In order to evaluate the system performance of the ECCPM model, simulated experiments are conducted using the parameters specified in Table IV and Table V.
+2) Latency Analysis: To analyse response latency overhead, time models for copyback operations and EDM are provided, following the ONFI 5.1 protocol.
+As shown in Fig. 12, the copyback operation includes reading data from a physical page within a plane into the page register of that plane, then writing the data from the page register into the target physical page within the same plane. This process involves a read operation and a write operation without utilizing the data bus, eliminating the data transfer
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6530
+
+TABLE V TIME OVERHEAD
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+Fig. 14. Normalized latency in 70%/30% rand read/write mix workload.
+
+Fig. 15. Normalized latency in 100% seq read/write mix workload.
+TABLE VI 100% RAND WRITE OF WA
+
+Fig. 12. Timing diagram of copyback operation.
+
+TABLE VII 70% RAND WRITE OF WA
+TABLE VIII 100% SEQ WRITE OF WA
+
+Fig. 13. Normalized latency in 100% rand write mix workload.
+
+phase. Hence, the total time for a copyback operation can be calculated as follows:
+
+Tcopyback = 14 ∗ tWC + tR + tPROG
+
+(11)
+
+The process of EDM includes both a read operation and a write operation, along with an additional process for ECC. Therefore, the total time for a copyback operation can be calculated as follows:
+
+TEDM = 14 ∗ tWC + tR + tPROG + N ∗ tRC
+
++ N ∗ tPROG + tECC
+
+(12)
+
+3) Synthetic Workload Analysis: To verify the performance of the proposed scheme under the actual workload, three workloads are tested via FIO4 to evaluate the latency performance. These three workloads are 100% random write, 70% random write, and 100% sequential write. Fig. 13 shows
+
+4FIO: Flexible I/O Tester. https://github.com/axboe/fio.
+
+the normalized system latency for 100% random writes. First, TCB-GC introduces additional latency because this process requires reading data from outside the flash memory for error correction. Second, in four different noise scenarios (NPE = 3000, NPE = 4000, NPE = 5000 and NPE = 6000), the system latency is reduced by 18%, 16%, 10.1% and 7.2% respectively. Fig. 14 shows the normalized system latency for 70% random writes. Compared with that of TCB-GC, the latency of ECCPM-GC is latency by 22.8%, 24.9%, 0.5%, and 3.7% lower, respectively. Fig. 15 shows the normalized system latency of 100% sequential write. Compared with those of TCB-GC, the system latencies of NPE = 3000, NPE = 4000, and NPE = 5000 of ECCPM-GC are reduced by 2.1%, 1.1% and 1.9% respectively. However, ECCPM-GC causes an increase of 0.1% in system latency when NPE = 6000 is used. At the later stage of the flash memory (the number of PE cycles exceeds 7000), only external data migration is used to ensure reliability, and the system performance is the same as that of the conventional GC algorithm based on copyback.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+HU et al.: ECCPM: AN EFFICIENT INTERNAL DATA MIGRATION SCHEME FOR FLASH MEMORY SYSTEMS TABLE IX
+AVERAGE RESPONSE TIME WITH DIFFERENT SCHEMES
+TABLE X PERFORMANCE RANKING OF DIFFERENT SCHEMES
+
+6531
+
+In summary, our proposed model can significantly reduce system latency under ECCPM-GC, especially for random write workloads.
+Write amplification (WA) is an important indicator of system performance. The experimental results in Tables VI, VII and VIII show that the WA has not significantly deteriorated under the three workloads. The tables show there is no significant difference in WA. This also indicates that the proposed scheme substantially reduces system latency without affecting WA.
+4) Experimental Results for Real-Workloads: The nvmectrl command in the front-end sends real workload requests to the SSDs back-end, comparing two copyback-based GC algorithms: FastGC and PcGC [18], [24]. At the same time, we used FIO to simulate the real workload to compare the experimental schemes. We implemented copyback improvement algorithms based on FastGC and PcGC on FEMU. ECCPM predicts copyback thresholds for scenarios with asymmetric page types during data migration, allowing friendly integration with FastGC and PcGC. The combined solutions are ECCPM-FastGC and ECCPM-PcGC for performance evaluation. FastGC and PcGC are detailed below:
+• FastGC aims to reduce the impact of GC by using copyback threshold counts based on the mean RBER, significantly improving performance compared with conventional GC methods that do not consider ECC reliability. However, FastGC does not consider page/wordline restrictions.
+• When faced with an unknown page type’s copyback threshold count, PcGC must retrieve data to the ECC module of the controller via the copyback-read command for decoding. The error correction bit is then sent to the flash memory, causing a specific latency in data transmission.
+As shown in Table IX, the average response time of the proposed ECCPM-GC is evaluated against five other schemes using TCB as the baseline. Six real-world workloads are
+
+selected for this evaluation. From mds_0, it can be observed
+
+that the total amount of written data is insufficient to trigger
+
+GC, so the latency of these types is basically the same. It
+
+can be observed from workload hm_0 that the amount of
+
+written data for this workload is currently the highest among
+
+these workload groups. It can be observed that ECCPM-GC
+
+has a lower latency than existing schemes. When ECCPM is
+
+combined with FastGC and PcGC, the latency can be further
+
+reduced. A similar situation can be observed from usr_0, but
+
+the number of write requests in usr_0 is smaller than that in
+
+hm_0. Overall, the more write requests there are, the greater
+
+the combination of ECCPM and GC related algorithms can
+
+have, as the copyback operation only works only during data
+
+migration.
+
+5) Statistical Analysis of ECCPM: The Friedman test is a
+
+non-parametric method that does not require data to follow
+
+a normal distribution, making it suitable for cases with small
+
+sample sizes or uneven variances. This approach can be used
+
+in this experiment to compare differences between various
+
+schemes. As shown in Table X, the performance of the differ-
+
+ent schemes in each workload is ranked to determine the order.
+
+In cases where values are identical, the same average ranking
+
+is assigned. The Friedman test statistic can be expressed as
+
+12 k∗n∗(k+1)
+
+∗
+
+(Rj2) − 3 ∗ n ∗ (k + 1), where k represents the
+
+number of schemes, n denotes the types of workloads, and
+
+Rj represents for the average ranking of the j−th workloads. The p-value is calculated via the Friedman test statistic to
+
+determine if there is a significant difference. An analysis of the
+
+average rankings of the schemes indicates that ECCPM-PcGC
+
+performs the best in terms of response latency, followed by
+
+ECCPM-FastGC and ECCPM algorithms, outperforming the
+
+other schemes. The results clearly show that the Friedman test
+
+yields a statistic of a statistic of 22.62 and a corresponding
+
+p-value of 0.0246, which is lower than the significance level
+
+of α = 0.05. This indicates that we can reject the hypothesis
+
+that there is a significant difference in the performance of all
+
+schemes in reducing response latency.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+6532
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+VII. CONCLUSION
+This paper proposes an efficient copyback threshold prediction model called ECCPM, which can be used to ensure data reliability. In testing and analysing the chip with copyback commands, we found that the RBER had asymmetry in each page type. Therefore, we modelled the read, write, and copyback commands of flash memory, and the ECCPM could effectively estimate the number of copyback operations of wordlines in a noisy environment. The performance of ECCPM was quantitatively evaluated via extensive experiments which compared it with a conventional GC scheme and two state-of-the-art techniques, FastGC and PcGC. The experimental results show that compared with the latest methods, the ECCPM can effectively reduce the response latency. The statistical analysis results reject the hypothesis that there is a significant difference in the performance of all the schemes in reducing response latency. The combination of the ECCPM with the latest copyback-based GC optimization scheme ranks the highest in terms of performance improvement. This combination is more suitable for 3D NAND flash memory as a storage medium for consumer electronics products.
+REFERENCES
+[1] Y. Luo, M. Lin, Y. Pan, and Z. Xu, “Dual locality-based flash translation layer for nand flash-based consumer electronics,” IEEE Trans. Consum. Electron., vol. 68, no. 3, pp. 281–290, Aug. 2022.
+[2] M. Zhang et al., “ALCod: Adaptive LDPC coding for 3D NAND flash memory using inter-layer RBER variation,” IEEE Trans. Consum. Electron., vol. 69, no. 4, pp. 1068–1081, Nov. 2023.
+[3] Y. Li, G. Han, S. Huang, C. Liu, M. Zhang, and F. Wu, “Exploiting metadata to estimate read reference voltage for 3-D nand flash memory,” IEEE Trans. Consum. Electron., vol. 69, no. 1, pp. 9–17, Feb. 2023.
+[4] J. Zhang, M. Lin, Y. Pan, and Z. Xu, “CRFTL: Cache reallocationbased page-level flash translation layer for smartphones,” IEEE Trans. Consum. Electron., vol. 69, no. 3, pp. 671–679, Aug. 2023.
+[5] C. Ma et al., “Rebirth-FTL: Lifetime optimization via approximate storage for NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 10, pp. 3276–3289, Oct. 2022.
+[6] J. Kim, M. Jung, and J. Kim, “Decoupled SSD: Reducing data movement on NAND-based flash SSD,” IEEE Comput. Archit. Lett., vol. 20, no. 2, pp. 150–153, Jul.–Dec. 2021.
+[7] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash memory based solidstate drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[8] Q. Li, L. Shi, Y. Cui, and C. J. Xue, “Exploiting asymmetric errors for LDPC decoding optimization on 3D NAND flash memory,” IEEE Trans. Comput., vol. 69, no. 4, pp. 475–488, Apr. 2020.
+[9] Q. Wu, Y. Zhou, F. Wu, H. Jiang, J. Zhou, and C. Xie, “Understanding and exploiting the full potential of SSD address remapping,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 11, pp. 5112–5125, Nov. 2022.
+[10] Y. Li, G. Han, C. Liu, M. Zhang, and F. Wu, “Exploiting the singlesymbol LLR variation to accelerate LDPC decoding for 3-D NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 42, no. 12, pp. 5146–5150, Dec. 2023.
+[11] J. -W. Hsieh, H.-Y. Lin, and D.-L. Yang, “Multi-channel architecturebased FTL for reliable and high-performance SSD,” IEEE Trans. Comput., vol. 63, no. 12, pp. 3079–3091, Dec. 2014.
+[12] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and C. Ren, “Exploring and exploiting the multilevel parallelism inside SSDs for improved performance and endurance,” IEEE Trans. Comput., vol. 62, no. 6, pp. 1141–1155, Jun. 2013.
+[13] W. Wang and T. Xie, “PCFTL: A plane-centric flash translation layer utilizing copy-back operations,” IEEE Trans. Parallel Distrib. Syst., vol. 26, no. 12, pp. 3420–3432, Dec. 2015.
+[14] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput., 2011, pp. 96–107.
+
+[15] S.-Y. Park, E. Seo, J.-Y. Shin, S. Maeng, and J. Lee, “Exploiting internal parallelism of flash-based SSDs,” IEEE Comput. Arch. Lett., vol. 9, no. 1, pp. 9–12, Jan. 2010.
+[16] “NAND flash performance improvement using internal data move.” Micron. 2006. [Online]. Available: http://applicationnotes.digchip.com/024/24-19936.pdf
+[17] J. Jeong and Y. H. Song, “A technique to improve garbage collection performance for NAND flash-based storage systems,” IEEE Trans. Consum. Electron., vol. 58, no. 2, pp. 470–478, May 2012.
+[18] S. Wang, Y. Zhou, J. Zhou, F. Wu, and C. Xie, “An efficient data migration scheme to optimize GC in SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 40, no. 3, pp. 430–443, Mar. 2021.
+[19] X. Fang et al., “High-precision short-term lifetime prediction in TLC 3-D NAND flash memory as hot-data storage,” IEEE Trans. Comput.Aided Design Integr. Circuits Syst., vol. 42, no. 10, pp. 3224–3235, Oct. 2023.
+[20] TN2915: NAND Flash Internal Data Move Introduction, Micron Technol., Boise, ID, USA, 2006.
+[21] D. Hong, M. Kim, J. Park, M. Jung, and J. Kim, “Improving SSD performance using adaptive restricted-copyback operations,” in Proc. IEEE Non-Vol. Memory Syst. Appl. Symp. (NVMSA), Hangzhou, China, 2019, pp. 1–6.
+[22] S. Wang, F. Wu, C. Yang, J. Zhou, C. Xie, and J. Wan, “WAS: Wear aware superblock management for prolonging SSD lifetime,” in Proc. Design Autom. Conf., 2019, pp. 1–6.
+[23] N. Shahidi, M. T. Kandemir, M. Arjomand, C. R. Das, M. Jung, and A. Sivasubramaniam, “Exploring the potentials of parallel garbage collection in SSDs for enterprise storage systems,” in Proc. Int. Conf. High Perform. Comput., Netw., Storage Anal.,2016, pp. 561–572.
+[24] S. Pang et al., “PcGC: A parity-check garbage collection for boosting 3-DNAND flash performance,” IEEE Trans. Comput.Aided Design Integr. Circuits Syst., vol. 42, no. 12, pp. 4364–4377, Dec. 2023.
+[25] N. Y. Ahn and D. H. Lee, “Forensics and anti-forensics of a NAND flash memory: From a copy-back program perspective,” IEEE Access, vol. 9, pp. 14130–14137, 2021.
+[26] R. Zhu, Y. Wang, P. Bai, Z. Liang, W. Wu, and L. Tang, “CPSD: A data security deletion algorithm based on copyback command,” in Proc. IEEE Int. Conf. Artif. Intell. Comput. Appl. (ICAICA), Dalian, China, 2022, pp. 1036–1041.
+[27] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Design Autom. Test Eur. (DATE), 2013, pp. 1285–1290.
+[28] K. Wang, G. Du, and Z. Lun, “Modeling of program Vth distribution for 3-D TLC NAND flash memory,” Sci. China Inf. Sci., vol. 62, no. 4, pp. 42401–42410, 2019.
+[29] H. Hu, G. Han, W. Wu, and C. Liu, “Channel parameter and read reference voltages estimation in 3D NAND flash memory using unsupervised learning algorithms,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 43, no. 1, pp. 305–318, Jan. 2024.
+[30] X1-9050 Package Datasheet, YMTC, Wuhan, China, 2020. [31] Z. Peng, R. He, G. Han, G. Cai, and Y. Fang, “Neighbor-a-
+posteriori information assisted cell-state adaptive detector for NAND flash memory,” IEEE Commun. Lett., vol. 23, no. 11, pp. 1967–1971, Nov. 2019. [32] X. Lin, G. Han, S. Ouyang, Y. Li, and Y. Fang, “Low-complexity detection and decoding scheme for LDPC-coded MLC NAND flash memory,” China Commun., vol. 15, no. 6, pp. 58–67, Jun. 2018. [33] S. Ouyang, G. Han, Y. Fang, and W. Liu, “LLR-distributionbased non-uniform quantization for RBI-MSD algorithm in MLC flash memory,” IEEE Commun. Lett., vol. 22, no. 1, pp. 45–48, Jan. 2018. [34] M. Zhang, F. Wu, Q. Yu, N. Fu, and C. Xie, “eLDPC: An efficient LDPC coding scheme for phase-change memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 42, no. 6, pp. 1978–1987, Jun. 2023. [35] Z. Mei, K. Cai, and X. He, “Deep learning-aided dynamic read thresholds design for multi-level-cell flash memories,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2850–2862, May 2020. [36] H. Li, M. Hao, M. H. Tong, S. Sundararaman, M. Bjørling, and H. S. Gunawi, “The CASE of FEMU: Cheap, accurate, scalable and extensible flash emulator,” in Proc. 16th USENIX Conf. File Storage Technol. (FAST), 2018, pp. 83–90. [37] J. Park, M. Kim, M. Chun, L. Orosa, J. Kim, and O. Mutlu, “Reducing solid-state drive read latency by optimizing read-retry,” in Proc. 26th ACM Int. Conf. Archit. Support Program. Lang. Oper. Syst., vol. 1, 2021, pp. 702–716.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:18 UTC from IEEE Xplore. Restrictions apply.
+
+

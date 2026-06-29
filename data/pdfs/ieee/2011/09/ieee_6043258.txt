@@ -1,0 +1,1028 @@
+An Area-Efficient LDPC Decoder For Multi-Standard With Conflict Resolution
+Changsheng Zhou, Yunlong Ge, Xubin Chen, Yun Chen and Xiaoyang Zeng State Key Laboratory of ASIC and System, Fudan University No. 825, Zhangheng Road, Shanghai, China
+Email: {09212020074,09212020013,09210720054,chenyun,xyzeng}@fudan.edu.cn
+
+Abstract—This paper presents an area efficient decoder architecture that supports both perfectly structured and not perfectly structured LDPC codes. To verify our architecture, an areaefficient LDPC decoder that supports both China Multimedia Mobile Broadcasting (CMMB) and Digital Terrestrial/ Television Multimedia Broadcasting (DTMB) standards is developed. A solution is proposed to avoid memory access conflict problem caused by TDMP algorithm. The main timing schedule is arranged carefully to handle the operations of our solution while avoiding much additional hardware consumption. We also optimize the extrinsic message storing strategy to reduce the memory bits needed. Besides the extrinsic message recover and the accumulate operation are merged together. Based on SMIC 0.13 um standard CMOS process, the core area of the decoder is only 4.75 mm2 and the maximum operating clock frequency is 200 MHz. With 5 iterations, the estimated average power consumption is 48.4 mW at 25 MHz for CMMB and 130.9 mW at 50 MHz for DTMB with 1.2V supply.
+Index Terms—LDPC decoder, TDMP, CMMB, DTMB, Conflict Resolution
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes [1], for its high performance, are wildly used in digital broadcast and communication standards. Usually people need different devices to support different standards. However it’s too costly and inconvenient, so one current for VLSI design is that hardware should be reconfigurable to meet different demands in different situation such as [2], [3]. In some occasion such as electronic product for cars, people may want to receive both CMMB [4] and DTMB [5] signals, in this case hardware should be very flexible to support these standards. However there are two kinds of LDPC codes in different standards: 1) Perfectly structured LDPC codes such as QC-LDPC,AA-LDPC codes and so on that exist in DTMB, IEEE 802.16e and other standards.2)Not perfectly structured LDPC codes such as HSLDPC and IRA-LDPC codes that exit in CMMB, DVB-S2 and other standards. In this paper we will present an area-Efficient LDPC decoder that supports both of them.
+Distinguished by the flow of message updating operation, there are two major decoding algorithms: 1) The original Two-Phase Message-Passing (TPMP) algorithm, introduced by Gallager [1], passes messages between check nodes and variable nodes alternately. 2) The Turbo-Decoding MessagePassing (TDMP) algorithm, introduced by Mansour [6], also known as the layered decoding algorithm. The extrinsic messages from variable node to check node are used immediately
+
+during each layer in variable node operation. Generally TDMP algorithm has faster convergence and only needs about half the number of iterations with the same performance than TPMP. Furthermore, as explained in [6], TDMP has memory advantage. All these advantages lead to less hardware and power consumption.
+Although TDMP is more efficient, but it will come across memory access conflict problem when decoding not perfectly structured LDPC codes. These codes have Double Diagonal Sub Matrix (DDSM) in their parity check matrices. To solve this problem, [7] first introduces group splitting through memory mapping for DVB-S2. Then [8] proposes a solution based on the reordering of the matrices using split process. But [8] can only reduce the number of DDSMs and the level of parallelism is also reduced. [9] uses additional memory addresses to store the two intermediate posteriori messages from DDSMs, then decoder get the correct posteriori message by sub the old posteriori message from sum of those two new posteriori messages in next process. So [9] will need both additional memories and reading clocks. Besides [9] may also need additional accumulators to finish the computation. Our previous work [10] generates an additional message as one of the prior message to calculate posteriori message in DDSMs. It also needs additional accumulators. Based on [9] and [10], this paper will present a solution with normal decoding process and only little additional hardware.
+Traditionally, extrinsic messages of the same layer would be read/wrote in one clock and different layer has one unique address. The size of extrinsic messages per layer needed to store depends on the row weight. But row weight and the number of layers differ largely between codes in different rates and standards. If using the traditional extrinsic message storing strategy, the depth and width of memory needed will differ largely in different cases. Commonly the max value will play the decisive role. However it’s too expensive both in hardware and power consumption. In this paper we will optimize the extrinsic message storing strategy.
+We don’t do extrinsic message recover separately as commonly do. Extrinsic message recover does nothing but translates a value in true form to its two’s complement. This translation equals to change add or sub operation to each other in the accumulator. Besides the translation may introduce add operation that will need much hardware. In the decoder proposed, we will do the extrinsic messages recover and
+
+978-1-4577-1292-0/11/$26.00 c 2011 IEEE
+
+105
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+accumulate operation in the same processor. The rest of the paper is organized as follows: Section II
+briefly introduces the LDPC codes in CMMB and DTMB. In Section III, the classic TDMP algorithm and the memory access conflict problem are introduced first. Then our solution is presented. Section IV presents VLSI implement of the decoder. The results are followed in Section V. Section VI concludes the paper.
+
+II. LDPC CODES IN CMMB AND DTMB
+LDPC code is one kind of Forward Error Correction (FEC) code. It’s defined by a M × N sparse parity-check matrix H as shown in Fig.1 (a). The H matrix can be represented by a bipartite Tanner graph [11]. Each column in H matrix represents a variable node and each row represents a check node. Most elements in H matrix are zero but each nonzero element defines a connection between the corresponding variable node and check node in Tanner graph, as shown in Fig.1 (b).
+
+Sub_block0 Sub_block1
+c0 1 0 1 0 0 1 0 0
+
+Check Nodes
+c0 c1 c2 c3
+
+c1 0 1 0 1 0 0 1 0
+
+c2 1 0 1 0 0 0 0 1
+
+c3 0 1 0 1 1 0 0 0
+v0 v1 v2 v3 v4 v5 v6 v7
+
+v0
+
+v1
+
+v2 v3 v4 v5
+Variable Nodes
+
+v6 v7
+
+(a) M X N H matrix
+
+(b) Tanner graph
+
+Fig. 1. Example of H matrix and Tanner graph
+
+The H matrix is composed of Layers x Columns of square sub matrices with a parallelism of P. Most of the sub matrices is zero matrix. Each nonzero matrix in perfectly structured LDPC codes is Single Diagonal Sub Matrix (SDSM) while there may be Double Diagonal Sub Matrix (DDSM) in not perfectly structured LDPC codes. The number of ones in each column is called column weight (Wc) while the number of ones in each row is called row weight (Wr). Take H matrix in 1 (a) for example, these parameters (Layers, Columns, P, SDSM, DDSM, Wc, Wr) are (1, 2, 4, 1, 1, 2, 3). The parameter P in CMMB is flexible and is set to 128 to be compatible with DTMB. The main parameters of H matrices in CMMB and DTMB are listed in Table I.
+
+TABLE I MAIN PARAMETERS OF H MATRICES IN CMMB AND DTMB
+
+Standard
+
+CMMB
+
+DTMB
+
+Length
+
+9216
+
+7493
+
+P
+
+128
+
+127
+
+Rate
+
+1/2 3/4 2/5 3/5 4/5
+
+Wc
+
+3 3 3-11 3-16 3-11
+
+Wr
+
+6 12 7-8 12-13 26-27
+
+Columns
+
+72 72 59 59
+
+59
+
+Layers
+
+36 18 35 23
+
+11
+
+Nonzero Matrix 216 216 275 296 294
+
+DDSMs
+
+2
+
+6
+
+0
+
+0
+
+0
+
+III. TDMP ALGORITHM AND MEMORY ACCESS CONFLICT
+PROBLEM AND PROPOSED SOLUTION
+Firstly let’s give some definition: Iv is the channel intrinsic Logarithm Likelihood Ratio (LLR) of variable node v. Lvk is the posterior message of variable node v in the kth iteration. Rck→v is the extrinsic message from check node c to variable node v in the kth iteration. Lvk→c is the prior message from variable node v to check node c in the kth iteration. α is the normalize factor. N(c) is the set of variable nodes that have connection with check node c. “\” is the symbol of exclusion. sgn(x) is the symbol of computing the sign of x. xvk is the hard decision value of variable node v in the kth iteration. Itemax is the max number of iterations.
+
+A. Classic TDMP algorithm
+The NMS algorithm [12] is adopted to reduce the complexity of extrinsic message updating. Besides NMS can also reduce memory bits needed [13]. Based on NMS,the classic TDMP algorithm can be described as fellows:
+Step 1: Initialization:
+
+Lv0= Iv, R0c→v= 0
+
+(1)
+
+Step 2: Prior Message Process (PMP):
+
+Lvk→c= Lkv−1−Rkc→ −1v
+
+(2)
+
+Step 3: Check Node Process (CNP):
+
+∏
+
+Rkc→v= α×
+
+sgn(Lkn→c)
+
+×
+
+min
+n∈N(c)\v
+
+Lkn→c
+
+(3)
+
+n∈N(c)\v
+
+Step 4: Variable Node Process (VNP):
+
+Lvk= Lkv→c+Rck→v
+
+(4)
+
+Step 5: Repeat step 2, 3 and 4 till all layer has been
+
+processed.
+
+Step 6: Hard decision:
+
+{
+
+xkv =
+
+1 0
+
+Lkv< 0 Lvk ≥ 0
+
+(5)
+
+Step 7: Output process: If k > Itemax or xvk × HT= 0 stops and outputs xvk, else repeat step 2 to step 7.
+
+B. Memory access conflict problem
+
+Since extrinsic messages are used immediately in the VNP of each layer, TDMP has faster convergence and needs less the iterations and memories. Although it’s more efficient, TDMP can’t be used directly to decode not perfectly structured LDPC codes, because there are memory access conflict problems.
+To demonstrate the problem, let’s consider the H matrix in Fig.1 (a). In classic TDMP algorithm, parts of the PMP, CNP and VNP operations can be expressed as fellows:
+PMP:
+
+Lvk0→c0 = Lvk0−1−Rkc0−→1 v0
+
+(6)
+
+Lvk0→c2 = Lvk−0 1−Rkc2−→1 v0
+
+(7)
+
+106
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+CNP:
+
+∏
+
+Rkc0→v0=
+
+α×
+
+sgn(Lnk→c0)
+
+n∈N(c0)\v0
+
+× min
+n∈N(c0)\v0
+
+Lnk→c0
+
+(8)
+
+∏
+
+Rck2→v0=
+
+α×
+
+sgn(Lnk→c2)
+
+n∈N(c2)\v0
+
+× min
+n∈N(c2)\v0
+
+Lkn→c2
+
+(9)
+
+VNP:
+
+Lkv0 (1) = Lkv0→c0 +Rck0→v0
+
+(10)
+
+Lkv0 (2) = Lkv0→c2 +Rck2→v0
+
+(11)
+
+When decoding a DDSM, two posteriori messages Lvk0 (1) and Lvk0 (2) are generated for the same variable node v0 in the VNP operation as shown in (10) and (11). There will
+be a confliction when storing these two messages. Lkv0 (2) will overwrite Lkv0 (1) value because the posterior messages are updated serially. This is usually called a cutting edge as
+
+it equals to cut one posterior message. Every DDSM in not
+
+perfectly structured LDPC codes will introduce P cutting edges
+
+and will lead to performance degradation.
+
+C. Proposed solution
+
+The performance degradation will be unacceptable when there are many DDSMs. This makes TDMP less attractive when decoding not perfectly structured LDPC codes. To solve this problem, [7] first introduces splitting process that bases on reordering of the matrices. Then [8] splits the matrices of DVB-T2 designed with a parallelism of 360 to matrices with a parallelism of 360/S, where S is the number of splits. But [8] can only reduce the number of DDSMs and the level of parallelism is also reduced. [9] uses additional memory addresses to store the two intermediate posteriori messages from DDSMs. When a third processor needs the correct posterior message, the processor will read out the two posteriori messages and carries out an additional computation (12). So [9] will need both additional memories and reading clocks to get the correct posteriori message. Besides [9] may also need additional accumulators to finish the computation (12).
+
+Lkv0 = Lkv0 (1) + Lkv0 (2) − Lkv−0 1
+
+(12)
+
+Our previous work [10] operate PMP and CNP the same
+as (6), (7), (8) and (9). But in PMP, an additional message Lkv0→c0 (temp) is generated as shown in (13). It’s stored instead of Lvk0→c0 as a prior message. Then in VNP the correct posterior message is calculated through (14) and (15).
+
+Lkv0→c0 (temp) = 0 − Rkc0−→1 v0 Cvk0→c0 = Lvk0→c0 (temp) + Rck0→v0 Lkv0 = Lkv0→c2 +Rkc2→v0 +Cvk0→c0
+
+(13) (14) (15)
+
+Much additional hardware is still needed to finish these operations. Based on [9] and [10], we will propose a solution with normal decoding process and only needs little additional hardware. PMP and CNP are operated the same as (6), (7), (8)
+
+and (9). But in PMP, an additional prior message Lvk0→c0+c2 is generated as (16):
+
+Lkv0→c0+c2 = Lvk0→c0 −Rck2−→1 v0 = Lvk−0 1−Rkc0−→1 v0 −Rck2−→1 v0
+
+(16)
+
+Then Lkv0→c0+c2 is stored as the prior message while Lkv0→c0 and Lkv0→c2 are abandoned after CNP. In VNP, the correct posteriori message can be calculated through (17) and
+
+(18):
+
+Lvk0 (temp)=Lvk0→c0+c2 +Rkc2→v0
+
+(17)
+
+Lkv0= Lkv0(temp)+Rkc0→v0 = Lkv0−1+Rkc0→v0−Rck0−→1v0+Rkc2→v0−Rck2−→1v0
+
+(18)
+
+There are some useful characters of DDSMs in the H
+
+matrices of CMMB that can be used to avoid much hardware
+
+consumption when handling the additional operations of (16),
+
+(17) and (18). The timing scheme of decoding operation
+
+should be arranged carefully. It will be demonstrated in Section
+
+IV. Through our solution both perfectly structured and not
+
+perfectly structured LDPC codes can be decoded efficiently
+
+with TDMP.
+
+Fig.2 gives the simulation results of CMMB and DTMB.
+
+These simulations are carried out on the Additive White
+
+Gaussian Noise (AWGN) channel with Binary Phase Shift
+
+Keying (BPSK) modulation. The normalize factor is 0.75 in
+
+CMMB and 0.625 in DTMB for all code rates in both float
+
+and fixed point mode,. In fixed point mode, posterior message
+
+and prior message is quantized to 8 bits with a sign bit, 4-bit
+
+integer and 3-bit fraction while extrinsic message is quantized
+
+to 6 bits. The max iteration is 25 when adopting TPMP while
+
+it’s only 15 when adopting TDMP with our solution. From the
+
+Bit Error Ratio (BER) curve, it can be seen that TDMP with
+
+our solution outperforms TPMP, which doesn’t have conflict
+
+problem, at all rates under the same conditions. Especially
+
+LDPC codes in CMMB are not perfectly structured codes
+
+that may come across memory access problem when adopting
+
+classic TDMP algorithm.
+
+IV. VLSI IMPLEMENT
+For tradeoff between area and throughput, the partially parallel architecture is widely used in LDPC decoders. A certain number (usually the number is the parallelism, P) of variable and check nodes are grouped into a cluster for parallel processing. Besides the partially parallel architecture has very high flexibility which is important in VLSI design for multi-standards. In this paper we also adopt the partially parallel architecture and some optimizations are taken to save both hardware and power consumption. The detail of our architecture will be shown in this section.
+
+A. Main timing schedule
+As check and variable nodes are updated concurrently in each layer in TDMP, there may be correlation between messages in different operations. So some waiting clocks must be inserted during these operations. With careful arrangement,
+
+107
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. BER curves comparison between TDMP with our solution and TPMP in CMMB and DTMB
+
+these waiting clocks can be reused to finish the additional operations (16), (17) and (18) in our solution with the same hardware.
+There are two statements can be given for all the H matrices in CMMB: (1) Only one DDSM exists if there is any in one layer. (2) All the DDSMs are composed of an identity matrix and a Quasi-Cyclic Matrix. Fig.1 (a) shows a simple vision of one layer that has the same characters. If decoder want to handle not perfectly structured LDPC codes that doesn’t satisfy the two statements with our solution, more waiting clocks or additional hardware are needed.
+For simplicity, let’s still take H matrix in Fig.1 (a) as an example. All DDSMs can be divided in two quasi-cyclic matrixes. So H matrix in Fig.1 (a) can be represented as Fig.3. Although the DDSMs in the H matrices of CMMB are not the first nonzero sub matrices in each layer, but it makes no difference if the processing order of nonzero sub matrices in the same layer changes. So we will process the DDSM in each layer first in PMP and CNP and last in VNP if there is any.
+As shown in Fig.4 (a), four-stage pipeline is adopted in the normal timing schedule. This timing schedule is adopted in all LDPC codes in DTMB and most layers in CMMB that
+
+block0
+
+block1
+
+block2
+
+c 0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+1
+
+00
+
+1
+
+0
+
+0
+
+c 1
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+10
+
+0
+
+1
+
+0
+
+c 2
+
+0
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+00
+
+0
+
+0
+
+1
+
+c 0 0 0 1 0 1 0 01 0 0 0 3 v vvv v vvvv vv v 012301234 5 6 7
+
+Fig. 3. Example division of H matrix that has DDSM
+
+don’t have DDSM. It can be seen that three waiting clocks are inserted when decoder change layers and one waiting clock is inserted between CNP and VNP. The corresponding hardware is idling during these waiting clocks. With careful arrangement, these waiting clocks can be reused to finish the additional operations (16), (17) and (18) in our solution.
+The rearranged timing schedule is shown in Fig.4 (b). As DDSMs have one identity matrix in their sub matrices, decoder can calculate one Lkv→c directly without shift Lkv−1 at phase 1. At the same time Lkv−1 can be shifted for the next block since
+
+108
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+VNP of last layer
+B 0
+
+PMP and CNP of current layer
+
+ë
+
+B 0
+
+B 1
+
+B 2
+
+VNP of current layer
+
+PMP and CNP of next layer
+
+BBB 2 10
+
+ï
+
+B 0
+
+B 0
+
+ê
+
+B 0
+
+B 1
+
+B 2
+
+B BB 2 10
+
+î
+
+B 0
+
+B 0
+
+é
+
+B 0
+
+B 1
+
+B 2
+
+BBB 2 10
+
+í
+
+B 0
+
+B 0
+
+è
+
+B 0
+
+B 1
+
+B 2
+
+BB 10
+
+ì
+
+B 0
+
+(a) Normal timing schedule of one layer without DDSM
+
+è
+
+Read
+
+Lk-1 v
+
+from
+
+memory
+
+ì
+
+Read
+
+Lk voc
+
+from memory
+
+A equals operation in (6)
+
+Bn is blockn
+
+é
+
+Shift
+
+Lk-1 v
+
+í Compute Lkv
+
+B equals operation in (16)
+
+ê
+
+Compute
+
+Lk voc
+
+î Shift Lkv
+
+C equals operation in (17)
+
+ë
+
+Compute
+
+Rk cov
+
+and
+
+store
+
+Lk voc
+
+ï
+
+Store Lkv
+
+D equals operation in (18)
+
+VNP of last layer
+
+PMP and CNP of
+
+VNP of
+
+current layer
+
+current layer
+
+PMP and CNP of next layer
+
+B 0
+
+B 0
+
+ê
+
+B 0
+
+é
+
+ë
+
+B 0
+
+B B 1 PriB0B1 2
+
+B 2
+
+Pos
+
+A
+
+B
+
+B 0
+
+B 1
+
+SPriB0
+
+B 2
+
+B SPos
+
+2
+
+t
+
+C
+
+D
+
+B 1
+
+PriB
+0
+
+B 2
+
+B 2 PriB0B1
+
+Pos í t
+
+ïB 0
+îB 0 B 0
+
+B 0
+
+è
+
+B 0
+
+B 2
+
+PriB0B1
+
+ì
+
+B
+
+0
+
+Phase 0 1 2 3 4 5 6 7 8 9
+
+(b) Rearranged timing schedule of one layer with DDSM
+
+Fig. 4. Main timing schedule
+
+they share the same Lvk−1. Then at phase 2, Lvk→c of block0 are shifted to be prepared for operation (16) at phase 3. At phase 5, the additional prior messages Lvk→c+c that stored at phase 4 are read out. Operation (17) is carried out at phase 6. Lvk(temp) are shifted at phase 7. Operation (18) is finished at phase 8. The correct posterior messages are stored as normal at phase 9. In this way we can handle the DDSMs in CMMB with the same hardware and similar operations as quasi-cyclic matrixes done in Fig.4 (a).
+B. Extrinsic message storing strategy
+Based on NMS, extrinsic messages can be simply reduced to: the first and the second minimum absolute values, the position index of the first minimum absolute value and the
+
+signs of all extrinsic messages [13]. It greatly reduces the memory bits needed to store the extrinsic messages. But traditionally, extrinsic messages of the same layer would be read/wrote in one clock and different layer has one unique address. The size of extrinsic messages per layer needed to store depends on the row weight. But row weight and the number of layers differ largely between codes in different rates and standards. If using the traditional extrinsic message storing strategy, the depth and width of memory needed will differ largely in different cases. Commonly the max value will play the decisive role. However it’s too expensive both in hardware and power consumption.
+Table II shows the difference. Extrinsic message is quan-
+
+109
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+tized to 6 bits, so both the min and sub min absolute value would be 5 bits. The row weight ranges 6 to 27, so the position index would need 3-5 bits. The largest difference is the sign bits that have the same range with row weight. Traditionally all parameters must be set to the max value, so the total memory bits needed to store extrinsic messages would be 36x128x42= 193,536 bits.
+
+TABLE II BITS NEEDED TO STORE EXTRINSIC MESSAGES IN CMMB AND DTMB
+
+rate Layers P min Sub index Sign Total
+
+min
+
+bits bits
+
+CMMB
+
+1/2 3/4
+
+36 18
+
+128 5 5 3 128 5 5 4
+
+6
+
+19
+
+12 26
+
+2/5 35
+
+127 5 5 3
+
+8
+
+21
+
+DTMB 3/5 23
+
+127 5 5 4
+
+13 27
+
+4/5 11
+
+127 5 5 5
+
+27 42
+
+To reduce the memory bits needed, we divide the extrinsic message reading and writing operation into several clocks. Only 7 bits per message are processed at one clock. The detail timing schedule of extrinsic message operation is shown in Fig.5. Only three clocks are needed (min[4:0], sub min[4:0], index[2:0] and sgn[7:0] can be processed) for rate 1/2 in CMMB and rate 2/5 in DTMB. Four clocks are needed for rate 3/4 in CMMB and rate 3/5 in DTMB while six clocks for rate 4/5 in DTMB. The total bits processed per clock would be 7x128 (the max parallelism) bits. These bits are divided into 8 memories with a width of 112. The depth of memories needed would be Layers multiply clocks needed and the max value is 108. The total bits needed would be 8 x112x108=96,768 bits, only 50% of the traditional storing strategy.
+
+Clock 1 7 bits
+
+2 7 bits
+
+3 7 bits
+
+4 7 bits
+
+5 7 bits
+
+6 7 bits
+
+[4]
+
+[26:20] [17:14]
+[13:8] [3]
+[4:2] [1:0] [4:0]
+
+[2:0]
+
+[0] [7:1]
+
+min[4:0] Sub_min[4:0] index[4:0]
+
+sgn[26:0]
+
+Fig. 5. Timing schedule of extrinsic message storing
+
+C. Recover and accumulate processor
+We don’t do extrinsic message recover as commonly done. To save hardware, only one accumulator array is used to handle operation (2) and (4). So the accumulator array should support both add and sub operation. And extrinsic message recover does nothing but translates a value in true form to its two’s complement. This translation equals to change add or sub operation to each other in the accumulator. Besides the translation may introduce add operation that will cost much hardware because the two’s complement of a negative value
+
+−abs(Rkc→v) is abs(Rkc→v)+1. In this paper, we will do the extrinsic message recover and accumulate operation in the
+same processor as shown in Fig.6. When cal mode (1 stands
+for sub while 0 for add operation) of the accumulator wants
+to do is different with the sign of current extrinsic message,
+there is a true sub operation. Then the signal Hsub Ladd will be 1 and Temp will be abs(Rkc→v). The add operation of the finite adder will equal to sub operation. If cal mode equals
+current sign of extrinsic message, there is a true add operation. Hsub Ladd will be 0 and Temp will be abs(Rck→v), finite adder will perform the normal add operation.
+
+Abs_min
+
+0
+
+Abs_submin
+
+1
+
+Index_min =?
+Current index
+
+selector Sgns
+
+Abs 0 1
+Abs
+
+Temp
+
+Finite adder
+
+Sgn_out Sgn
+
+Hsub_Ladd
+
++
+
+Sgn Cal_mode
+1 for sub 0 for add
+
+Posterior or Prior message
+
+Result (Prior or Posterior message)
+
+Fig. 6. Recover and accumulate processor
+
+D. VLSI architecture
+As shown in Fig.7, the proposed architecture has about six parts: 1) Central controller; 2) Configurable cyclic-shift network that supports both 127-way and 128-way permutation; 3) 128 Recover and accumulator array that updates prior and posterior messages; 4) 128 NMS array that calculate extrinsic messages; 5) Memories; 6) Parity check and output block that does the parity check work while decoder is iterating and outputs the hard decision bits at last.
+There are five memory banks: Two banks, each is made up of eight memories with depth 72 and width 128, are used to store posterior messages. This enables the decoder to receive channel intrinsic messages while decoding. 72 is the max number of layer and 128 is the max parallelism in H matrices in CMMB and DTMB. As the max row weight is 27, eight memories with depth 26 and width 128 is used to store prior messages. As described in Section IV-B, extrinsic messages occupy a bank of eight memories with depth 112 and width 128. The last bank is in the parity check and output block. This bank is composed of three memories with depth 72 and width 128 each. One memory is used to store the hard decision bits from last iteration that used to do the parity check work. The second one stores the hard decision bits from current iteration while the last one stores the output bits. In this way the decoder can do parity check, iteration and output operation at the same time. Besides all the memory used is single-port memory. No two-port memory is used because it’s about 1.5 times larger and dissipates more power.
+V. VLSI RESULTS
+The proposed decoder which supports both CMMB and DTMB is synthesized and designed physically on SMIC 0.13
+
+110
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+Inputs
+
+Posterior messages block
+Local controller
+
+Posterior messages bank1
+
+72x128 ram1
+
+72x128 ram5
+
+72x128 ram2
+
+72x128 ram6
+
+72x128 ram3
+
+72x128 ram7
+
+72x128 ram4
+
+72x128 ram8
+
+Posterior messages bank2
+
+72x128 ram1
+
+72x128 ram5
+
+72x128 ram2
+
+72x128 ram6
+
+72x128 ram3
+
+72x128 ram7
+
+72x128 ram4
+
+72x128 ram8
+
+Configurable Cyclic-shift
+Network
+
+Central Controller
+
+Hrom
+
+128 Recover and
+Accumulator Array
+
+Local controller
+
+Parity check
+and Output block
+
+Hard decision
+bits
+
+72x128 ram1
+72x128 ram2
+72x128 ram3
+
+Prior messages block
+Local controller
+
+26x128 ram1
+26x128 ram2
+
+Prior messages bank
+
+26x128 ram3
+
+26x128 ram5
+
+26x128 ram4
+
+26x128 ram6
+
+26x128 ram7
+26x128 ram8
+
+Extrinsic messages block
+Local controller
+
+108x112 ram1
+108x112 ram2
+
+Extrinsic messages bank
+
+108x112 ram3
+
+108x112 ram5
+
+108x112 ram4
+
+108x112 ram6
+
+108x112 ram7
+108x112 ram8
+
+128 NMS array
+
+Fig. 7. The architecture of proposed LDPC decoder
+
+um 1.2V 8-metal layer CMOS technology. Fig. 8 shows its layout view, including 35 memories and one rom that store the parameters of H matrices in both CMMB and DTMB. The core area is about 2.16 x 2.20 mm2. The max iteration number can be set according to the channel condition. Due to the constraint of input and output interfaces, the max throughput of the decoder equals to the max operating frequency. If ignoring the bottleneck of input and output interfaces, the decoder can reach a max input throughput of 365.7 Mb/s (code rate 3/4 in CMMB) and a min of 230.2 Mb/s (code rate 2/5 in DTMB) with 10 iterations at max operating frequency of 200 MHz, far beyond the system’s demand (20.22 Mb/s in CMMB and 40.6 Mb/s in DTMB). With 5 iterations, the post-layout estimated power consumption of the core is 48.4 mW at 25 MHz for CMMB and 130.9 mW at 50 MHz for DTMB.
+Table III compares the proposed decoder with other decoders. From this table, it can be seen that the proposed decoder which can support both CMMB and DTMB standards has similar or even less hardware consumption than other decoder that can only support one standard. So the proposed decoder is area efficient.
+
+Hrom
+Fig. 8. Layout view of the proposed LDPC decoder
+
+Hard decision bank
+
+VI. CONCLUSION
+In this paper, we present an architecture that can support both structured and not perfectly structured LDPC codes. A solution is proposed to avoid the memory conflict problem
+
+when adopting TDMP algorithm to decode not perfectly structured LDPC codes. Then we arrange the main timing schedule carefully to finish the additional operations of our
+
+111
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III COMPARISON WITH OTHER LDPC DECODERS
+
+Standard Code Length
+Code rate Frequency (MHz) Throughput(Mbps) @Fre.(MHz),Iter Quantization of Posterior/Prior message Quantization of Extrinsic message
+Memory bits Core Power@Fre,Ite (mW@MHz,ite)
+Core Area(mm2) Core Area scaled into 0.13um(mm2)
+Technology(nm, V)
+
+Proposed
+
+CMMB,DTMB
+
+9126/7493
+
+1/2, 3/4; 2/5, 3/5, 4/5
+
+200
+
+230.2-365.7@200,10
+
+8
+
+6
+
+298,496
+
+48.4@25,5 130.9@50,5
+
+CMMB
+
+DTMB
+
+4.75
+
+4.75
+
+130,1.2
+
+[14] CMMB
+9216 1/2 181 145@181,5 3 3 396K 34@60, 5
+2.6 5.2 90, 1.0
+
+[15] CMMB
+9216 1/2, 3/4
+431 228-342@431,15
+6 5 170K 115@431, -
+4.45 8.9 90, 1.0
+
+[16] DTMB 7493 2/5, 3/5, 4/5
+125 104.5@125,15
+8 6.5(1) 236,245 192@125,5
+9.76 4.88 180,1.8
+
+[17] -
+2048 8/16:1/16:14/16
+125 640@125,10
+4 4 51,680 787@125,10
+14.3 7.15 180,1.8
+
+Note :(1) In [16] the min absolute values is quantized to 7 bits and another 4 bits is used to store the difference between min and sub absolute value.
+
+solution while avoiding cost much additional hardware. The extrinsic messages storing strategy is also optimized to reduce the memories bits needed. And the extrinsic messages recover is merged with the accumulator in the VLSI architecture. To verify our proposed architecture, we design an area efficient decoder that can support both CMMB and DTMB standard. VLSI results show that our architecture has similar or even less hardware consumption than other decoders that can only support one standard.
+ACKNOWLEDGMENT
+This work was supported in part by Key projects of the 11th Five year Plan of China under Grand NO. 2009ZX01031-002-003-2, Project of 863 under Grand NO. SQ2008AA01ZX1480432 and New wireless communication of 2011 Key project under Grand NO. 2011ZX03003-003-03
+REFERENCES
+[1] R. G. Gallager, ”Low density parity check codes,” IEEE Trans. Inf. Theory, vol. 8, pp. 21-28, Jan. 1962.
+[2] Yang Sun, Cavallaro, J.R, ”A low-power 1-Gbps reconfigurable LDPC decoder design for multiple 4G wireless standards,” in Proc. IEEE SOC Conference, pp. 367-370, Sept. 2008.
+[3] Masera, G., Quaglio, F., Vacca, F., ”Implementation of a Flexible LDPC Decoder”, in Proc. IEEE Transatctions on Circuits and Systems, Vol. 54, pp.542-546, June. 2007.
+[4] Mobile Multimedia Broadcasting (P. R. China) Part 1: Framing Structure, Channel Coding and Modulation for Broadcasting Channel
+[5] Quality Supervision and Quarantine, GB 20600-2006, digital terrestrial television broadcasting transmission system frame structure, channel coding and modulation. Beijing: China Standard Press, 2006.
+[6] M.M. Mansour and N.R. Shanbhag. ”High-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, pp.976-996, Dec. 2003.
+[7] John Dielissen, Andries Hekstra, and Vincent Berg, ”Low cost ldpc decoder for dvb-s2,” in Proc. DATE 2006,Vol. 2, pp. 130-135, March 2006.
+[8] Marchand Cedric, Jean-Baptiste Dore, Laura Conde-Canencia, and Emmanuel Boutillon, ”Conflict resolution by matrix reordering for DVBT2 LDPC decoders,” IEEE Global Telecommunications Conference (GLOBECOM), Honolulu, USA, October 2009.
+[9] Authur Segard, Francois Verdier, David Declercq, and Pascal Urard,”A DVB-S2 compliant LDPC decoder integrating the horizontal shuffle scheduling,” International Symposium on Intelligent Signal Processing and Communication Systems (ISPACS), pp. 1013-1016, December 2006.
+
+[10] Yan Ying, Dan Bao, Zhiyi Yu, Xiaoyang Zeng, Yun Chen, ”A CostEfficient LDPC Decoder for DVB-S2 with the Solution to Address Conflict Issue,” IEICE Transactions on Fundamentals of Electronics, Communications and Computer Sciences Vol. E93-A No.8 pp.14151424, Aug. 2010.
+[11] R. M. Tanner, ”A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533-547, Sep. 1981.
+[12] J. Chen and M. C. Fossorier, ”Decoding low-density parity-check codes with normalized APP-based algorithm,” in Proc. IEEE GLOBECOM, vol. 2, pp. 1026-1030, Nov. 2001.
+[13] Gunnam, K, Gwan Choi, Weihuang Wang, Yeary, ”Multi-Rate Layered Decoder Architecture for Block LDPC Codes of the IEEE 802.11n Wireless Standard”, in Proc. IEEE International Symposium on Circuits and Systems, pp.1645-1648, May 2007
+[14] Kai Zhang, Xinming Huang, Zhongfeng Wang, ”An Area-Efficient LDPC Decoder Architecture and Implementation for CMMB Systems”, in PROC.IEEE ASAP, pp. 235-238,July. 2009.
+[15] Kai Zhang, Xinming Huang, Zhongfeng Wang, ”A dual-rate LDPC decoder for china multimedia mobile broadcasting systems”, IEEE Transactions on Consumer Electronices, Vol. 56, pp. 399-407, May. 2010
+[16] Bo Xiang, Rui Shen , An pan, Dan Bao, Xiaoyang Zeng, ”An AreaEfficient and Low-Power Multirate Decoder for Quasi-Cyclic LowDensity Parity-Check Codes”, IEEE Transactions on Very Large Scale Integration (VLSI) Systems ,Vol..18, pp. 1447-1460, Oct. 2010
+[17] M. M. Mansour and N. R. Shanbhag, ”A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol..41, pp. 634-698, March. 2006.
+
+112
+
+ASAP 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:09:06 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1615 @@
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+4127
+
+A First Step Toward On-Chip Memory Mapping for Parallel Turbo and LDPC Decoders: A Polynomial Time Mapping Algorithm
+Awais Hussain Sani, Philippe Coussy, and Cyrille Chavet, Member, IEEE
+
+Abstract—To meet the higher data rate requirement of current and future communication standards, numerous techniques to decode Turbo and LDPC codes on hardware architecture are developed. Unfortunately, interleaving laws that are used in these codes often result in memory access conflicts when massively parallel architectures are targeted which considerably limits the throughput. In this article, the first dedicated approach that finds conflict free memory mapping for every type of codes and for every type of parallelism in polynomial time is presented. The implementation of this highly efficient algorithm shows significant improvement in terms of computational time compared to state of the art approaches. Ultimately, this could enable memory mapping algorithm to be embedded on chips and executed on the fly to support multiple block lengths and standards.
+Index Terms—Conflict free memory mapping, interleaver, LDPC codes, parallel implementation, turbo codes.
+I. INTRODUCTION
+T HE invention of smart-phones, netbooks, digital television and mobile broadband devices lead to the era of high data rate wireless applications. The rapid and huge increase in data traffic begins to strain network capacity and researchers are developing new techniques to cope with this high throughput requirement. As a result of this effort, advanced technologies such as OFDM, MIMO and advanced error correction techniques are included in different telecommunication standards to reliably transfer data at high rates on wireless networks.
+Current telecommunication standards such as [35]–[41] uses turbo [2] and LDPC [3] codes for channel coding, demodulation, equalization and synchronization due to their powerful error correction properties. These codes completely changed the way we perform error correction to reach near Shannon limit of channels capacity. However, the excellent performance of these codes comes at the expense of considerable computational complexity. Hence, parallel architectures must be employed to speed up the decoding process and support required application throughputs. Moreover, several parameters such as scheduling, parallelism level, memory organization and
+Manuscript received November 07, 2012; revised March 05, 2013; accepted April 29, 2013. Date of publication May 20, 2013; date of current version July 22, 2013. The associate editor coordinating the review of this manuscript and approving it for publication was Dr. John McAllister.
+The authors are with Lab-STICC (Laboratoire des Sciences Techniques de l’Information, de la Communication et de la Connaissance), Université de Bretagne-Sud, Lorient 56321, France (e-mail: awais-hussain.sani@univ-ubs.fr; philippe.coussy@univ-ubs.fr; cyrille.chavet@univ-ubs.fr).
+Digital Object Identifier 10.1109/TSP.2013.2264057
+
+network architecture need to be explored to tradeoff circuit area and performances. Unfortunately, parallel processing suffers from memory conflict problem that results in increased latency and hardware cost. With the growing demand of high data rate applications and shrinking time to market constraint, this problem proves to be one of the most problematic factor in designing efficient decoders. This requires the development of dedicated approaches to efficiently implement decoder architecture.
+To manage this problem, conflict is resolved either at run time or during definition of interleaving law or at design time. Solving conflict problem at runtime results in huge hardware cost and delay and becomes an impractical solution for high data rate and low power applications. Designing conflict free interleaving law often simplifies the construction of parallel decoder architectures. However, it only supports particular parallelism used in decoding algorithms (e.g. LTE only supports SISO decoder level parallelism). Moreover, memory conflict problems still exist when parallel architecture for channel decoder is combined with bit de-interleaver i.e. they need to be jointly designed. Almost all the current telecommunication standards [35]–[40] use bit interleaved coded modulation (BICM) to improve error correction performance over fading channel. To design higher throughput channel decoders, it is necessary that bit de-interleaver is also parallelized in order to fulfill the throughput requirement of the system. However, parallelizing bit de-interleaver results in conflict problems and needs conflict management mechanism with increased hardware cost and/or reduced latency. In addition, conflict management also becomes a challenging task in order to design flexible turbo/LDPC decoder architectures supporting multiple standards and block lengths.
+Design time conflict resolution is one of the most feasible solutions to resolve conflict problems for any type of parallelisms and interleaving laws. Conflict free memory mapping is found either manually by analyzing the interleaving law to design a FSM-based controller or automatically by using dedicated algorithm running on computers to generate ROM-based controllers. In order to support multiple block lengths and multiple standards on a single chip, automated approaches require to pre-calculate memory mapping for each block length and to store them on-chip which results in large memory area.
+In this paper, a dedicated approach based on polynomial time memory mapping algorithm is developed. This highly efficient algorithm will encourage to embed memory mapping algorithm on chips in order to execute it on the fly to support multiple block lengths and standards with reduced memory footprint.
+
+1053-587X/$31.00 © 2013 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4128
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+The rest of the paper is organized as follows: Section II presents turbo and LDPC codes and discusses different parallelisms that can be used in decoding these codes to design high throughput decoder. Section III details memory conflict problem and formulates memory mapping problem. Section IV details algorithm to solve this problem and uses pedagogical example to explain it. Section V presents flow of the tool developed in this work and different experiments to design high throughput decoder. Section VI presents different state of the art techniques to solve memory conflict problem and finally in Section VII, we conclude our paper.
+II. PARALLEL IMPLEMENTATION OF TURBO AND LDPC CODES
+A. Turbo Codes
+
+Fig. 1. Tanner graph representation of H.
+can be used to implement turbo decoder. This will increase the throughput at the cost of increase in hardware cost. However, implementation of all these parallelisms may cause memory access conflict problem (discussed in Section III) which increases with higher parallelism.
+
+Turbo codes are constructed through the parallel concatena-
+
+tion of two convolutional codes, which during decoding share
+
+their information to achieve good error correction performance
+
+[2]. Their outstanding performances are also possible due
+
+to the presence of pseudo-random interleaver that scrambles
+
+data to break up neighborhood relations. Moreover, due to
+
+their low-complexity iterative decoding algorithms, turbo
+
+codes are part of current telecommunication standards such as
+
+3GPP-WCDMA [35], 3GPP-LTE [36].
+
+To decode each component code, turbo decoder first calcu-
+
+lates path matrices i.e. -values (using forward recursion) and
+
+then -values (through backward recursion) in order to generate
+
+extrinsic values. This approach is called serial implementation
+
+of turbo decoder. Serial implementation increases decoder
+
+memory and latency that makes it unsuitable for high data rate
+
+applications. To tackle these drawbacks, different parallelism
+
+approaches have been proposed in literature.
+
+The first type of parallelism, called Recursive Unit Paral-
+
+lelism [31], can be directly extracted from decoding algorithm
+
+by concurrently calculating
+
+and extrinsic values used in
+
+BCJR algorithms. This scheme parallelizes the forward and
+
+backward recursive units to double the parallelism degree
+
+without any increase in decoder memory.
+
+In the second type of parallelism, rather than calculating path
+
+matrices ( and values) and extrinsic information for each
+
+trellis transition, decoder calculates these values for more than
+
+one trellis transition at the same time. This type of parallelism is
+
+called Trellis Level Parallelism [32] and is usually represented
+
+as radix- where is the number of trellis transitions paral-
+
+lelized in decoder computation. The improvement in decoder
+
+throughput with slight increase in decoder area motivates to im-
+
+plement higher radix implementation for current standards [33].
+
+In the third type of parallelism, called SISO Decoder Level
+
+Parallelism, data block to be decoded is partitioned into number
+
+of segments or windows where each window is a subset of orig-
+
+inal block. Each window is then allocated to separate BCJR-
+
+SISO decoders and decoded using sliding window BCJR algo-
+
+rithm [34]. These SISO decoders then work in parallel to con-
+
+currently calculate and extrinsic values for all the windows.
+
+Number of data processed at a given time instance depends on
+
+the number of window. This type of parallelism significantly in-
+
+creases throughput and reduces memory of turbo decoder.
+
+To implement high-throughput turbo decoders, any combi-
+
+nations of above described parallelisms can be used. For ex-
+
+ample, both trellis level parallelism and SISO level parallelism
+
+B. Low Density Parity Check (LDPC) Codes
+
+Low Density Parity check Codes (LDPC) [3] are a class of
+
+linear block codes with error correction capabilities very close
+
+to the channel capacity. Due to their excellent error correction
+
+performance, it has already included in several wireless com-
+
+munication standards such as DVB-S2 and DVB-T2 [37], WiFi
+
+(IEEE 802.11n) [39] or WiMAX (IEEE 802.16e) [40].
+
+LDPC codes can be graphically represented as a bipartite
+
+graph called Tanner Graph which depicts the association be-
+
+tween code bit and parity check equation. The Tanner graph con-
+
+sists of two sets of vertices: variable node set (VNs) and check
+
+node set (CNs). A data
+
+represents one bit in the code-
+
+word (i.e. data to be processed) whereas
+
+represents a
+
+check equation used in generating parity check bits (i.e. opera-
+
+tion to be done on the data). An edge connects the th check
+
+node with th variable node if th variable node (VN) is checked
+
+by or included in th check node (CN). Tanner graph is helpful
+
+in understanding the decoding process which functions by ex-
+
+changing messages between CN and VN along the edges of
+
+these graphs [7]. Tanner graph is shown in Fig. 1. In this figure,
+
+a message passed from CN to VN is called
+
+whereas a
+
+message going from VN to CN is represented by
+
+.
+
+The implementation issues, while designing LDPC decoder
+
+architecture, mainly arise due to the routing of the edges of
+
+Tanner graph between VNs and CNs whereas the computation
+
+at VN and CN is quite simple. To cope with routing of edges
+
+of the Tanner graph, following three implementations are pre-
+
+sented in literature.
+
+In Fully Parallel Implementation, dedicated computational
+
+circuitry and network architecture is constructed to directly map
+
+every Tanner graph node and edge in hardware. In this way all
+
+the check node and variable node updates are processed in two
+
+steps [8], [9]. This architecture results in an excellent decoding
+
+speed but at the cost of huge circuit size. Moreover, hard-wiring
+
+of Tanner graph precludes the flexible implementation of LDPC
+
+decoder.
+
+In Fully Serial Implementation, check and variable nodes up-
+
+dates are processed individually one at a time. This architecture
+
+results in lowering the hardware cost of decoder implementa-
+
+tion but introduces huge latency in LDPC decoding. Also, this
+
+delay increases proportionally with the increase of code length.
+
+Furthermore, significant amount of decoder memory is required
+
+to store all check to variable messages
+
+and variable to
+
+check messages
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4129
+
+The problem can best be explained through simple example of turbo codes. In this example, natural and interleaved orders are:
+
+For parallel processing, this codeword is divided into four
+
+windows in both natural and interleaved order where each
+
+window is processed by one processing elements. To increase
+
+memory bandwidth, four memory banks are used so that each
+
+Fig. 2. Partially parallel architecture.
+
+processing element can concurrently get data elements in parallel. If data elements are stored in banks in such a manner
+
+that at each time instant in natural order, all the processing
+
+The third type of implementation, called Partially Parallel Implementation [10], [11], is a trade-off between prohibitive hardware cost (resulted through parallel implementation) and low throughput (caused by serial implementation). In this implementation, several processing elements (PEs) are realized in hardware and are shared between groups of variable nodes and check nodes. Proper numbers of PEs are used in this implementation to obtain the required throughput. Memory is used to store different messages generated during check and vari-
+
+elements always access different memory banks as shown in Fig. 3(a). Unfortunately, in interleaved order all processing elements always access the same memory bank at each time instance as shown in Fig. 3(b). This results in memory conflict problem and increases latency (by four in this example) in data fetching from memory due to the presence of conflict management mechanism in communication network. Furthermore, this problem reduces system throughput and/or increases system cost.
+
+able nodes update. These messages are written into and read out of the memory according to particular edge permutation of
+
+B. Problem Formulation
+
+Tanner graph. This implementation requires decoder memory just like serial implementation. Partially Parallel architecture is shown in Fig. 2. However, partially parallel architectures, suffer from memory access collision problem when more than two processing elements want to access the same memory bank. Collision problem becomes a significant issue with the increase of code word length and is discussed in the next section.
+In this article, we present a polynomial time algorithm that resolves memory conflict problem for both Turbo and LDPC codes and for any type of parallelism or implementation.
+
+Before presenting algorithm to solve mapping problem, it is necessary to formulate our problem and constraints so that one can easily understand the algorithms presented next. Memory mapping problem is the same for both turbo and LDPC, that is, provide concurrent parallel access to all the data elements in both read and write accesses without any conflict. However, depending on the pattern of access of data elements, LDPC memory mapping problem is more complex than turbo mapping problem as explained in this section. Therefore, we formulate these problems separately.
+
+Turbo Codes: To explain the problem, consider a set of
+
+data elements and a set of processing elements which process
+
+these data elements first in natural order and then in inter-
+
+III. MEMORY CONFLICT PROBLEM
+
+leaved order in time instances, where
+
+.
+
+In order to store these data elements and to achieve par-
+
+A. Principle
+
+allel processing of data for high throughput, a set of memory
+
+banks, where
+
+, is used. All the memory banks have the
+
+This section introduces basics of memory conflict problem same size which is equal to
+
+.
+
+for Turbo codes. However, memory conflict problem for LDPC Mapping Problem: Store D data elements in B memory
+
+codes is similar and will be later illustrated in this article. Inter- banks so that P processing elements can access B memory
+
+leavers have been used to improve error correction performance banks in parallel at each natural and interleaved order time
+
+of turbo-like codes by scrambling data so that parity bits gen- instance without any conflict.
+
+erated by encoder are completely different. To implement par- To understand the problem, two matrices are introduced: one
+
+allelism presented in previous sections, interleaver needs to be is related to natural order access and the other to interleaved
+
+parallelized in order to increase the communication bandwidth order access. Each matrix has rows, related to the processing
+
+proportionally. To manage this bandwidth, memory is divided elements, and columns, related to the time instances. Data
+
+into smaller memory banks so that multiple data values can be elements in each row are processed by the processing element
+
+fetched from memory concurrently. However, due to scram- connected with this row. Similarly, P data elements in each
+
+bling caused by interleaver, this parallelism results in communi- column need to be accessed in parallel by processing elements
+
+cation or memory access conflicts. These conflicts occur when for parallel decoder architecture. Fig. 4 depicts two access ma-
+
+multiple data values are fetched from or stored in the same trices in which we have
+
+,
+
+,
+
+and
+
+memory bank at the same time.
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4130
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+Fig. 3. Memory conflict problem in parallel turbo decoder. (a) Conflict free natural order Access; (b) Conflict full interleaved order Access.
+
+Fig. 4. Data access matrices for turbo codes.
+
+Fig. 5. Data access matrices for LDPC codes. (a) Data access matrix; (b) mapping matrix.
+
+To successfully map the data (i.e. to allow conflict free parallel memory access) in a given number of memory banks, two following mapping constraints must be fulfilled:
+— At each time instance, all the memory banks have to be used one and only one time,
+— Each data must be mapped in one and only one memory bank.
+LDPC Codes: Memory mapping problem for LDPC differs from turbo due to its pattern of access of data elements in following way:
+
+Mapping problem can easily be explained using a matrix called data access matrix as shown in Fig. 5(a). This matrix has
+rows, related to the processing elements, and columns, related to the time instances . To accommodate the “Double Memory Mapping” concept, each column is further divided into three sub-columns. First sub-column shows the data which need to be accessed in parallel by processing elements at
+whereas second sub-column contains the memory banks from where data are read and third sub-column represents the memory banks in which these data are written at . Also, data
+
+In turbo codes, each data element is accessed only two times i.e., one time in natural order and the other time in interleaved order by processing elements whereas, in LDPC, it can be accessed more than two times depending on the degree of variable node. Also, it is possible that, in LDPC, some data elements can be accessed by more than one time whereas some others still remain unprocessed.
+
+in each row are processed by the processing element connected
+
+with this row. Fig. 5(b). represents the mapping matrix in which
+
+we have
+
+,
+
+,
+
+and
+
+. Each data
+
+is processed by 3 times which shows the iterative nature of
+
+the data access. However, data accesses are interleaved in time
+
+and there is no regularity in processing the data; e.g., data 3 is
+
+successively processed in time instances and whereas the
+
+first access to the data 4 occurs at time instance .
+
+Taking into account the above pattern of access which
+
+increases the complexity of mapping problem, in this article,
+
+a concept of “Double Memory mapping” [28] is used. This
+
+slightly modifies the mapping problem for LDPC and can be
+
+explained as follows:
+
+Consider a set of data elements
+
+and
+
+a set of processing elements
+
+which process these data elements in time instances
+
+. In order to store these data elements and to
+
+Memory Mapping Constraints: To successfully map the data, (i.e. to allow conflict free parallel memory access) (1) in a given number of memory banks and (2) to tackle the iterative nature of data accesses in error correction coding, the mapping matrix must fulfill the following two constraints:
+• 1- At each time instance, all the memory banks have to be used one and only one time.
+• 2- The bank of the last write access to a data must be the same as the bank of its first read access.
+
+achieve parallel iterative processing of data for high throughput,
+
+a set of memory banks
+
+, where
+
+, is
+
+used.
+
+IV. PROPOSED APPROACH TO FIND CONFLICT FREE MEMORY MAPPING
+
+Mapping Problem: Store D data in B memory banks in such The approach we propose leverages on Bipartite Edge
+
+a manner that P processing elements can, at each time instance, Coloring techniques to solve in polynomial time the mapping
+
+access B memory banks in parallel for first reading P data and problem for both turbo and LDPC codes. Hence, we first
+
+then writing back these P data without any conflict.
+
+transform data access matrices for Turbo Codes and mapping
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4131
+
+matrices for LDPC into bipartite graphs. However, as discussed in previous section, mapping problems for both Turbo and LDPC are slightly different which requires as shown later in the next sub-section two dedicated models. Afterwards, bipartite edge coloring algorithm is applied on these graphs to solve mapping problem. Since edge coloring algorithm is always able to color the edges of bipartite graph with minimum colors, therefore, we show in this article that it is always possible to solve memory mapping problems for both turbo and LDPC codes by using our mapping method in polynomial time.
+
+Fig. 6. Bipartite graph representation for turbo codes. a. Tripartite graph for Fig. 4; b. Bipartite Graph for Fig. 6(a).
+
+A. Definitions Related to Graph Theory
+
+Definition 1: A graph
+
+is a set of nodes , and a
+
+set of edges . If
+
+then an edge
+
+is incident
+
+to and to , and vertices and are said adjacent.
+
+Definition 2: A graph
+
+is bipartite, if a
+
+set of graph vertices decomposed into two disjoint sets such
+
+that no two graph vertices within the same set are adjacent i.e.
+
+. Similarly, a graph
+
+is
+
+tripartite, if,
+
+.
+
+The degree of vertex is the number of edges incident to .
+
+Definition 3: A graph is -regular if all vertices have the
+
+same degree .
+
+Definition 4: A path
+
+is a sequence of edges
+
+. The ends of are vertices
+
+and . If
+
+, is open; otherwise is closed.
+
+Definition 5: A cycle or circuit is a closed path, with no re-
+
+peated vertices other than the starting and ending vertices. If the
+
+number of edges in a circuit is even then it is called even circuit
+
+otherwise it is called odd circuit. A circuit is always even in bi-
+
+partite graph.
+
+Definition 6: An Eulerian path is a closed path which uses
+
+all edges precisely once.
+
+Definition 7: A graph is connected if there is a path be-
+
+tween any two distinct vertices otherwise is disconnected.
+
+Definition 8: A matching in a graph is a set of edges
+
+without common vertices.
+
+Definition 9: A perfect matching is a matching which
+
+matches all vertices of the graph i.e., every vertex of the graph
+
+is incident to exactly one edge of the matching.
+
+Definition 10: An edge coloring of is an assignment of a
+
+color to each edge in .
+
+Definition 11: An edge chromatic number,
+
+, is the
+
+fewest number of colors necessary to color each edge of a graph
+
+so that no two edges incident to same vertex have same color.
+
+In [29], the authors proved that if the maximum vertex degree
+
+is incident to the data vertex and to the natural order
+
+time vertex if needs to be processed at (i.e. data will
+
+be read and next written at time ) where
+
+. Simi-
+
+larly, an edge
+
+is incident to the data vertex and to the
+
+interleaved order time vertex if needs to be processed at
+
+where
+
+.
+
+Turbo codes have the following two distinct properties:
+
+Property 1: The number of accesses to data (i.e., number
+
+of data required to access concurrently) at any time instance is
+
+always same (the number of accesses is equal to the number of
+
+memory banks). This property implies that each time node has
+
+same degree,
+
+, in .
+
+Property 2: Each data element is accessed only two times:
+
+one time in natural order and the other time in interleaved order.
+
+This property imply that in , all the data nodes have the same
+
+degree,
+
+.
+
+Thanks to the property 2, the tripartite graph is converted
+
+into bipartite graph by first joining two edges at each data
+
+vertex and then removing all the data vertices from as shown
+
+in Fig. 6(b). Thanks to property 1, is regular with the degree
+
+of each time node,
+
+.
+
+One point to remember that each edge in now corresponds
+
+to a data node in . So the coloring of edges in actually
+
+means coloring of data nodes in . Also, according to min-
+
+imum edge coloring algorithm for bipartite graph [29], edges
+
+of -regular bipartite graph are colored with
+
+colors
+
+(i.e. the number of concurrent data accesses) and the colors of
+
+edges at each time node are different. If a color corresponds to
+
+a memory bank then the above observations results in the fol-
+
+lowing Lemma,
+
+Lemma 1: All the data elements used in turbo codes can be
+
+stored in B memory banks where
+
+so that P processors
+
+concurrently access B memory bank in parallel without any con-
+
+flict in both natural and interleaved order time instance.
+
+of a bipartite graph is then,
+
+.
+
+C. Construction of Bipartite Graph for Mapping Problem of
+
+LDPC Codes
+
+B. Construction of Bipartite Graph for Mapping Problem of Turbo Codes
+
+The same approach, as presented for turbo codes, is used to construct bipartite graph for LDPC codes. First we construct
+
+To construct bipartite graph, we first construct a tripartite tripartite graph based on mapping matrix and then convert this
+
+graph
+
+and then convert this tripar- tripartite graph into bipartite graph.
+
+tite graph into bipartite graph due to specific pattern of access A Tripartite graph
+
+is constructed
+
+of turbo codes. The tripartite graph , that is constructed using based on mapping matrix of Fig. 5(b). as shown in Fig. 7(a).
+
+natural and interleaved order data access matrices of Fig. 4, is Vertex sets and represent all the time instances at which
+
+shown in Fig. 6(a). In , vertex sets
+
+and
+
+repre- data are read and written respectively. Vertex set represents
+
+sent all the time instances used in natural order access and in- all the data used in the computation. An edge
+
+is incident
+
+terleaved order access respectively whereas vertex set rep- to the data vertex and to the read access time instance vertex
+
+resents all the data elements used in the computation. An edge
+
+if needs to be read at . Similarly, an edge
+
+is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4132
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+D. Bipartite Edge Coloring Algorithm
+
+Fig. 7. Bipartite graph representation for LDPC codes. a. Tripartite graph for Fig. 5; b. Bipartite Graph for Fig. 7(a).
+
+incident to and to the write access time instance vertex if
+
+needs to be written at .
+
+In order to follow the mapping constraint and for functional
+
+correctness of data accesses, the memory bank from which data
+
+is read from its current access must be the same as the memory
+
+bank in which the data has been previously written. If is the
+
+access order of data and is the total number of times the data
+
+is accessed, then
+
+.
+
+Definition 12: Two edges
+
+and
+
+are called
+
+related edges if
+
+After constructing bipartite graph, the next step is to apply bi-
+
+partite edge coloring algorithm to color the edges of that graph
+
+in polynomial time. A simple algorithm [29] is to construct a
+
+perfect matching in , assign one color to the edges of ,
+
+remove from and again construct in
+
+until
+
+all the edges are colored. However, this method is not efficient
+
+as shown in [30]. To reduce the computation time, current edge
+
+coloring algorithms first convert irregular bipartite graph into
+
+regular graph. Fortunately in our case, our bipartite graph is al-
+
+ways regular so we can directly apply edge coloring algorithm
+
+[30] on our graphs. To find minimum edge coloring efficiently,
+
+following divide and conquer approach is used on regular bipar-
+
+tite graph:
+
+Find an Euler partitioning
+
+(see Algorithm 1 for ex-
+
+planation). Then, take every other edge along
+
+to obtain
+
+two
+
+-regular subgraphs and reduce the problem to two
+
+-regular graphs. However, to divide a regular graph into
+
+two regular subgaphs of equal degree, it is necessary that is
+
+even. If is odd, then algorithm first finds perfect matching
+
+in , assign one color to the edges of , remove from
+
+and reduce the problem to
+
+-regular graph where
+
+is even. Complete bipartite edge coloring algorithm is shown in
+
+Algorithm 1.
+
+where
+
+,
+
+and where
+
+and
+
+are respectively the read and
+
+the write access order of data .
+
+To convert this tripartite graph into bipartite graph , we first
+
+join related edges on each data node and then remove data node
+
+to construct bipartite graph as shown in Fig. 7(b).
+
+LDPC codes have following distinct property:
+
+Property 3: The number of accesses to data at any time in-
+
+stance (i.e., number of data required to access concurrently) is
+
+always the same (the number of accesses is equal to the number
+
+of memory banks).
+
+This property implies that in G:
+
+Algorithm 1: Bipartite Edge Coloring Algorithm
+1 edgeColor 2 if ( is odd) 3 if 4 5 6 else
+
+7
+
+Each time node (either read or write) has same degree
+
+8
+
+which means G is always regular.
+
+9
+
+It is important to note that implementation of bipartite edge coloring must fulfill the two constraints that is necessary to
+
+10
+
+if ( is even)
+
+follow to find conflict free memory mapping. First of all, at 11
+
+each time instance during both read and write operation, all the memory banks have been used one and only one time. Secondly,
+
+12
+
+current read and previous write accesses are connected in this 13 bipartite graph, so these two accesses should always be taken from the same memory bank. This results in fulfilling the con- 14
+
+straint that the memory bank of the last write access to a data
+
+must be the same as the memory bank of its first read access in Perfect Matching Algorithm: In this algorithm, it is important
+
+this bipartite graph. The above observations give us the proof to find perfect matching in efficiently. The algorithm [1]
+
+that “Double Memory Mapping” is always possible for every finds a perfect matching in a -regular bipartite graph in
+
+type of LDPC codes and results in the following Lemma,
+
+time where
+
+as explained in Algorithm 2. At each point in
+
+Lemma 2: All the data elements used in LDPC codes can be the algorithm, the sum of the weights of the edges adjacent to a
+
+stored in B memory banks where
+
+so that P processors given vertex is always . When the algorithm terminates, edges
+
+concurrently access B memory bank in parallel for first reading have either weight or weight 0. The edges that have weight
+
+P data and then writing back these P data without any conflict. form a perfect matching [1].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4133
+
+Algorithm 2: Perfect Matching Algorithm from [1]
+
+1 Initially, assign a weight
+
+to each edge e.
+
+2 Find a circuit C in using depth first search (DFS) tree
+
+by starting at the vertex of
+
+or where is the set
+
+of edges with
+
+and
+
+.
+
+3 Since the number of edges in C is always even (this is
+
+the intrinsic property of bipartite graph), divide C into two
+
+matchings M and N by assigning alternate edges to M and
+
+N such that
+
+.
+
+4 Update the weights of the edges in C as follows:
+
+Fig. 8. Matching algorithm: (a) Initialization and (b) construction of circuit .
+other start vertex. Repeat this process until no vertex of nonzero degree remains.
+
+Complete Euler partitioning algorithm is shown in
+
+Algorithm 3.
+
+If the graph is bipartite and -regular where is a positive
+
+5 Go to 2 and repeat until no more circuits can be found.
+
+Note that if the graph is disconnected, algorithm will need to
+
+start a DFS tree at each vertex in
+
+to find all circuits.
+
+integer, then it is possible to split the edges into 2 groups of equal sizes. After the construction of Euler circuit, the edges are oriented according to the path construction. The -regular graph can be split into two -regular graphs by putting the edges
+
+oriented from
+
+(or ) to
+
+(or ) in one graph and
+
+Algorithm 3: Euler Partitioning Algorithm from [30]
+
+the edges oriented from
+
+(or ) to
+
+(or ) in the
+
+1 eulerPartition
+
+other.
+
+Bipartite edge coloring presented in [1] takes O
+
+time
+
+2 is an empty list;
+
+3
+
+is an empty queue:
+
+4 store all vertecies of nonzero even degree in
+
+where
+
+of each node and
+
+in a
+
+graph. In our bipartite graph of turbo codes, degree of each time
+
+node is and number of edges in a graph is
+
+. This means
+
+that overall complexity of finding memory mapping using bi-
+
+5 while
+
+is not empty
+
+6
+
+let q be the first vertex in
+
+7
+
+delete q from
+
+partite edge coloring for turbo codes is O
+
+. In bipar-
+
+tite graph of LDPC codes, each time node is partitioned into
+
+read and write access nodes. This means that overall complexity
+
+of finding memory mapping using bipartite edge coloring for
+
+8
+
+if vertex q has nonzero degree
+
+9
+
+construct a new empty path p;
+
+10
+
+;
+
+LDPC codes is O
+
+.
+
+Edge coloring algorithm is explained through a pedagogical
+
+example in Section IV-E.
+
+11
+
+while vertex has nonzero degree
+
+E. Pedagogical Example
+
+12
+
+select an edge
+
+in G;
+
+13
+
+delete
+
+from G;
+
+14
+
+put
+
+in p;
+
+To explain the algorithm, we present an example based on the natural and interleaved order access matrices presented in Fig. 4 for turbo codes. However, same algorithm can be applied for the mapping matrix presented in Fig. 5 for LDPC codes. Bipartite
+
+15
+
+;
+
+16
+
+end while
+
+17
+
+put path p in P
+
+graph for data access matrices of Fig. 4 is depicted in Fig. 6(b).
+
+This bipartite graph is -regular where
+
+. As explained pre-
+
+viously, edge coloring algorithm first finds the perfect matching
+
+because is odd. To find the perfect matching, the algorithm as-
+
+18
+
+end if
+
+19 end while
+
+20 return P;
+
+signs each edge a weight 1 as shown in Fig. 8(a). Using Depth First Search (DFS) tree, the algorithm finds a circuit,
+as shown in Fig. 8(b) with bold lines. Since all the edges have the weight 1, the algorithm
+
+21 end eulerPartition
+
+arbitrary assigns alternate edges to the matching and . In
+
+this case, algorithm assigns
+
+and
+
+Euler Partitioning: Procedure to find Euler partitioning is
+
+. Also, the algorithm increases the weight of
+
+taken from [30]. This algorithm is modified from the original the edges in by 1 and decreases the weight of the edges in
+
+version because in our case, the graph on which this procedure by 1 as shown in Fig. 9(a). The edges in circuit with weight
+
+is applied is always regular and each vertex has even degree. modification are represented with bold lines in this figure. After
+
+The procedure can be stated as below:
+
+weight modification, edges with degree 0 or 3 are not used in
+
+Choose any vertex of even nonzero degree. Start traversing a determining the circuit in next iteration. Graph used in next it-
+
+graph from one vertex to another by including a traversed edge eration is shown in Fig. 9(b).
+
+into the path and removing that edge from the graph until a However, the algorithm is only terminated when all the
+
+vertex with zero degree is reached. This completes in the par- edges have either weight 3 or 0. Since at the termination
+
+tition. Then start constructing another path by choosing an- of previous iteration, some edges have weight 1 or 2, so
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4134
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+Fig. 9. Matching algorithm: (a) Modification of weights of Edges on and (b) graph used in next iteration.
+
+Fig. 12. Euler partitioning: (a) Graph
+
+; (b) euler partitioning;
+
+(c) edges with clockwise
+
+; and (d) edges with anti clockwise
+
+.
+
+Fig. 10. Matching algorithm: (a) Construction of circuit and (b) modification of weights of edges on .
+
+Fig. 13. Complete edge coloring.
+
+1-regular, algorithms terminates by assigning one color each to
+
+Fig. 11. Perfect matching.
+
+the edges of and . The complete edge coloring of , after attaching data ver-
+
+tices in , is shown in Fig. 13. In this figure, the three colors of
+
+the algorithm continues by constructing another circuit as
+shown in Fig. 10(a). Taking alternate edges, the algorithm finds that first set of edges
+
+the edges which correspond to three memory banks are repre-
+
+sented with gray bold, gray narrow and gray dotted lines. The re-
+
+sultant memory mapping is,
+
+,
+
+and
+
+.
+
+have total weight 4 whereas the second set of edges have total weight 3. So
+the algorithm assigns edges in to matching and edges in to matching . Also, the algorithm increases the weights of
+edges in by 1 and decreases the weights of edges in by 1 as shown in Fig. 10(b). The algorithm continues finding circuits
+
+V. EXPERIMENTS
+In this section, a dedicated approach to explore the design space for both turbo and LDPC decoder is presented. Different experiments have been performed to show the interest of this approach.
+
+and increases and decreases the weights of alternate edges until all the edges have either weight 3 or 0 as shown in Fig. 11. In
+
+A. Design Flow
+
+this figure, the edges with weight 3 give us a perfect matching.
+
+The design flow of the dedicated approach consists of three
+
+After finding perfect matching , the algorithm assigns parts as shown in Fig. 14. In the first part, input constraint file
+
+a color to the edges of , remove from the graph is prepared that can be used in the next step to generate conflict
+
+to construct graph
+
+as shown in Fig. 12(a). Now free memory mapping. The different interleavers used in dif-
+
+the graph transforms into 2-regular graph, so edge coloring ferent standards are implemented in software, in order to auto-
+
+algorithm applied eulerPartition procedure to find Euler par- matically generate the corresponding constraint files. In second
+
+tition
+
+step, bipartite edge coloring algorithm is implemented in soft-
+
+on graph
+
+. The edges in ware. The software takes these input constraint files and gen-
+
+are also given orientation with edges from vertex in erates conflict free memory mapping. The third step generates
+
+to vertex in
+
+are given clockwise orientation VHDL files based on the memory mapping found in the pre-
+
+whereas the edges from vertex in
+
+to vertex in
+
+vious step. These files can be synthesized to design complete
+
+are given anti-clockwise orientation as shown in Fig. 12(b). architecture i.e. network, memory banks and associated con-
+
+After giving orientations, 2-regular graph is split into two trollers.
+
+1-regular graphs by putting the edges oriented clockwise in Target Architecture: In all these experiments, target archi-
+
+and the edges oriented tecture using single port memory bank is shown in Fig. 15.
+
+anticlockwise in
+
+as This architecture consists of processing elements, memory
+
+shown in Fig. 12(c) and 12(d). Since both and are now banks (RAM) and controller. Two extra ROMs are used to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4135
+
+bits and the size of each bus from addressing
+
+ROM to bank is
+
+bits. In all these experiments, it is
+
+considered that each data has a size of 8-bits.
+
+Execution Platform and Targeted Technology: Results ob-
+
+tained in these experiments are presented in term of CPU time
+
+and area. In all these experiments, CPU time of the proposed ap-
+
+proaches are compared with existing approaches using DELL
+
+Core i7 M 620 (2,67 Ghz) machine with 4G RAM. Also, 90
+
+nm technology from STMicroelectronics is used in these ex-
+
+periments to calculate area of different components of resultant
+
+architecture. These areas are given in NAND-gate equivalent to
+
+respect non-disclosure agreement with STMicroelectronics.
+
+B. Designing Parallel Decoder Architecture for HSPA Interleaver Used in 3GPP-WCDMA
+
+After the release of initial draft by 3GPP-WCDMA, series
+
+of specification have been released from time to time for high
+
+speed packet access (HSPA). With the use of more channels and
+
+addition of modulation scheme, Release 5 [38] has upgraded the
+
+HSPA to high speed downlink packet access (HSDPA) to sup-
+
+port high data rate applications. It increased the data throughput
+
+up to 14 Mbps. With the addition of MIMO and 64 QAM, HSPA
+
+is evolved into HSPA+ in Release 8 [35] with the throughput
+
+requirement of up to 43.2 Mbps. To obtain high throughput,
+
+it is necessary to perform turbo decoding on parallel architec-
+
+ture. However, the interleaver used in HSPA+ is not conflict free
+
+to support parallel implementation of turbo decoder. Also, it is
+
+Fig. 14. Design flow for dedicated approach.
+
+necessary to design interleaver architectures that support wide
+
+range of block sizes used in HSPA+ i.e. from 40 to 5114.
+
+Experimental Results: The HSPA interleaving law has been
+
+used in first set of experiments to show the performance of pro-
+
+posed algorithm for finding Single Memory Mapping. Table I
+
+shows the resultant area along with area of different components
+
+of the generated architecture (see Fig. 15) using targeted tech-
+
+nology for
+
+and
+
+, and for different types of
+
+parallelism (see Section II) used in turbo decoding. The archi-
+
+tecture consists of memory banks, crossbar network, addressing
+
+ROMs (address controllers) and network ROM (NW controller)
+
+for each type of parallelism. The resultant area generated in our
+
+approach is the same as the area generated by [25] and [27] since
+
+all these approaches need to store precomputed network and ad-
+
+dressing logic. Due to use of memory, Network and Address
+
+Controller occupy most of the area in designing parallel archi-
+
+tecture for Turbo decoder as depicted in Table I.
+
+Table II demonstrates the CPU time in seconds for proposed
+
+approach and the existing approaches [25] and [27] for each type
+
+Fig. 15. Resultant generated architecture.
+
+of parallelism. The table indicates that the computational time of edge coloring approach is up to 43 times less than the existing
+
+approaches. Also, as the parallelism increases, the time to cal-
+
+culate memory mapping using edge coloring approach remains
+
+control network and to generate addresses for memory banks. nearly constant compared to [25] and [27]. These experiments
+
+Controller is designed to address these ROM and to generate clearly indicate a great advantage of polynomial time algorithm
+
+R/W signal for memory banks.
+
+(designed for every type of parallelism) in terms of computa-
+
+In all these experiments,
+
+tional time compared to [25] and [27]. The comparison is de-
+
+and the size of each addressing
+
+picted graphically in Fig. 16.
+
+such that each
+
+contains words and each Efficient runtime performance of our mapping algorithm mo-
+
+word has a size of
+
+bits. Similarly, if the network is tivates to calculate mapping, addressing and control logic on
+
+crossbar then the size of network
+
+. the fly to support multiple block lengths and standards on single
+
+Also the size of bus from network ROM to network is chip with reduced memory requirement.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4136
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+TABLE I RESULTANT AREA (IN NUMBER OF NAND-GATES) OF DIFFERENT COMPONENTS FOR DIFFERENT TYPES OF TURBO DECODER PARALLELISM
+
+TABLE II CPU TIME (SECONDS) FOR VARIOUS MEMORY MAPPING APPROACHES
+
+Typical serial decoder architecture for LDPC codes is shown
+
+in Fig. 17(a). The serial decoder is designed to process one
+
+check node at a time. To achieve high memory bandwidth, main
+
+memory is divided into number of memory banks to simul-
+
+taneously receive messages from memory. The choice of
+
+depends on the throughput requirement of the targeted applica-
+
+tion. The interleaver and deinterleaver are designed to transfer
+
+data between decoder and memory banks. For high throughput
+
+requirement, any number of check nodes can be concurrently
+
+processed in parallel in partially parallel architecture as shown
+
+in Fig. 17(b). The main memory is divided into
+
+number of memory banks to concurrently fetch
+
+messages
+
+from memory where
+
+and
+
+processed in parallel.
+
+Experimental Results: For experimental purpose, random
+
+codes proposed by Gallager [3] are used to find conflict free
+
+memory mapping for both serial and partially parallel architec-
+
+Fig. 16. Comparison of CPU time for various mapping approach.
+
+tures. Since the introduction of these codes, Gallager’s original construction has been modified to improve code properties
+
+such as girth or expansion [4]. The code used in this experiment
+
+C. Designing Serial and Partially Parallel Architecture for Random LDPC Decoder
+
+has
+
+,
+
+,
+
+variable node
+
+and is constructed using construction method
+
+1A presented in [4]. To show the efficiency of the proposed
+
+Random LDPC codes based on very sparse matrices proves algorithm, memory mapping has been found for both serial
+
+to achieve information rates up to Shannon limit for most of and partially parallel architectures for different parallelisms.
+
+the channels [4]. These codes, first invented by Gallager [3] For serial architecture different values of
+
+, 32, 63 has
+
+and then rediscovered by Makcay [4], can be decoded using been used. For partially parallel architecture, two check nodes
+
+simple and practicable algorithms. Moreover, random LDPC are processed concurrently. However, our algorithm would be
+
+codes are almost always perform good whereas structured able to find memory mapping for any number of concurrent
+
+LDPC codes often perform worse for lower rate codes [6]. check nodes processing. Targeted architecture (see Fig. 15)
+
+However, routing of the edges of tanner graph is not regular and is generated after finding the conflict free memory mapping
+
+even implementing random LDPC codes on serial architecture for each type of parallelism. The resultant area along with
+
+suffers from memory conflict problem. In this experiment, area of different components of the architecture using targeted
+
+conflict free memory mapping for both serial and partially technology is shown in Table III. The area of this generated
+
+parallel architecture is found using Double Memory Mapping architecture is the same as the area generated by [25], [28] due
+
+in polynomial time.
+
+to requirement of dedicated approaches to store addressing and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4137
+
+Fig. 17. Architecture for random LDPC decoder: (a) Serial architecture and (b) partially parallel architecture.
+TABLE III RESULTANT AREA (IN NUMBER OF NAND-GATES) OF DIFFERENT COMPONENTS FOR RANDOM LDPC DECODER ARCHITECTURE
+
+TABLE IV CPU TIME (SECONDS) FOR VARIOUS MEMORY MAPPING APPROACHES
+
+used to solve this problem in literature. These approaches can be classified in three broad categories. In this section, we try to present the state of the art related to each category along with their advantages and disadvantages and explains which factors motivate us to present current polynomial time algorithm to solve memory mapping problem.
+
+A. Conflict Free Interleaving Laws
+
+control logic in memory. This results in large Network and Address controller as depicted in Table III
+Table IV shows the CPU time (in seconds) for proposed approach and the existed approaches [25], [28] for both serial and parallel architectures. The table indicates that the computational time of edge coloring approach is up to 1950 times less than the existing approaches. Also, as the parallelism increases, the time to calculate a memory mapping using edge coloring approach remains nearly constant compared to [25] and [28]. These experiments clearly indicate a great advantage of polynomial time algorithm (designed for every type of parallelism) in terms of computational time compared to [25] and [28]. The comparison is depicted graphically in Fig. 18.
+From these experiments, it is clear that significant improvement in computational time using our approach makes it possible to embed mapping algorithms on chip to calculate mapping on runtime and to support multiple standards and block lengths.
+
+In the first category, code developers take into account memory conflict problem during code construction for both turbo and LDPC codes.
+In [12], spatial and temporal permutations are introduced to construct conflict free turbo interleaver with random interleaver like properties. The benefit of this approach is that we can use barrel shifter interconnection network to realize turbo decoder for this interleaving law in practical applications. However, the approach is not standard compliant and cannot be used for other interleaving laws. Similar techniques are used in [14] and [13] for designing conflict free interleaver, however, the principal purpose of designing interleaver is to construct good performance error correcting turbo codes that supports different block lengths (prunable) and is easy to implement (deterministic). One of the prunable and deterministic interleaver is Quadratic permutation polynomial (QPP) interleaver [15]. It is shown in [16] that QPP interleaver is maximum contention-free i.e., for every window size which is a factor of the interleaver length ,
+
+VI. RELATED WORKS
+
+the interleaver is contention free. This is true for SISO decoder level parallelism. However, for higher data rate applications
+
+As explained in Section III, for high data rate applications, when trellis and recursive units parallelism are also included in
+
+turbo decoders are implemented with parallel architecture each SISO, QPP interleaver is not contention-free and requires
+
+whereas LDPC decoders are realized with partially parallel ar- a router and buffer mechanism to solve memory conflicts.
+
+chitectures in practical cases. Both of these architectures result Moreover, architectural constrains apply during interleaver
+
+in memory conflict problem and different approaches have been design impede the error correction performance of the turbo
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4138
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+(TIBB), Ring Interleaver Bottleneck Breaker (RIBB) and Gen-
+
+eral Interleaver Bottleneck Breaker (GIBB) are proposed to
+
+handle conflict. This work was extended in [45] by introducing
+
+a chordal ring that allows more individual nodes to connect
+
+with each other. However, as the parallelism degree increases,
+
+hardware complexity of LLR distributor and increased buffer
+
+size makes above mentioned approaches prohibitive in terms of
+
+area and latency. To increase the scalability and to meet higher
+
+throughput requirement on flexible communication network,
+
+two heterogeneous multistage networks, butterfly and Benes,
+
+are investigated in [22]. These networks exhibit huge scalability
+
+and very simple packet routing algorithms. However, Butterfly
+
+network suffers from buffer management architecture that
+
+significantly increases its area whereas Benes network requires
+
+pre-computation of routing paths and packet scheduling that is
+
+not a feasible solution for implementing different standards on
+
+the flexible decoder architecture. Also, path diversity provided
+
+Fig. 18. Comparison of CPU time for various mapping approach.
+
+by these networks is not sufficient to manage packet conflicts
+
+for communication intensive architecture such as turbo and
+
+LDPC decoders. To tackle these limitations, Binary de Bruijn
+
+codes. Secondly, conflict free interleavers are regenerated interleaving pattern for particular parallel level which makes it difficult to optimize code performance of interleaving pattern for different parallel levels .
+For LDPC, H matrix is constructed is such a way that data transfer between check nodes (CNs) and variable nodes (VNs) can be made without any conflict for partially parallel architecture. To tackle memory conflict problem, H matrix is divided into different blocks of sub-matrices where each sub-matrix is obtained by permuting rows of the identity matrix [17], [18]. The codes obtained by adding this regularity during construction of codes is called structured codes. Structured codes removes memory conflict problem because transfer of messages between (CNs) and (VNs) are carried out through simple rules (like indices permutation). Also, structured codes simplified the decoder architecture since interconnection network can be im-
+
+Interconnection Network is presented in [23] that is scalable and allows any permutation to be routed efficiently. Due to this path diversity, communication conflicts are managed by deflecting the conflicting packets appropriately until they reach the target processor rather than blocking or buffering them. In [42], [43], extensive study has been performed to determine the performance of different network on Chip (NoC) topologies in the context of decoder architectures whereas [44] presents an architecture to generate addresses for HSPA interleaver using different conflict management mechanisms.
+The flexible networks presented above suffer from large silicon area and cost due to increased buffer control architecture necessary to manage conflicting packets. Also, delay introduced due to conflict management mechanisms degrades the maximum throughput and makes these approaches inefficient for high data rate and low power applications.
+
+plemented through simple network (like barrel shifter) by ex-
+
+ploiting the regularity introduced during code construction. Due
+
+to simplicity in construction, structured codes are part of current C. Design Time Conflict Resolution
+
+telecommunication standards such as [39], [40]. Although it is proved in [18] that performance of structured
+codes is very close to random codes, adding constraints to construct structured codes may degrade the code’s decoding performance. Also, structured codes only support one class of LDPC codes and to handle diverse existing and future classes of LDPC codes (such as no-binary LDPC codes), a general approach to handle memory mapping problem is required which is discussed in this article.
+
+In third kind of approach, different algorithms are proposed to provide conflict free parallel concurrent access to all processing elements through some pre-processing to determine the memory locations for each data element used in the computation. The benefit of these approaches is that decoder implementation does not need any specific network and extra memory elements to support particular interleaving law. Rather any network which supports all the permutation patterns between inputs and outputs can be used to implement any interleaving law. However,
+
+B. Run Time Conflict Resolution
+
+the approach requires some preprocessing to map data in different memory banks for different block lengths and parallelism
+
+In second family of approaches, collision problem is tackled degree.
+
+either through the addition of extra memory elements and/or The most common approach is to prepare conflict graph in
+
+complex interconnection network. This approach supports any which a node represents a data and two nodes are connected if
+
+type of turbo and LDPC codes because interconnections net- and only if the associated data are accessed at the same time.
+
+works are used to manage the conflict at run time on the fly. Node coloring approach can then be used to solve the mapping
+
+In [19]–[21], dedicated interconnection network called LLR problem: each color corresponds to one memory bank. How-
+
+distributor is designed to tackle conflict problem for turbo ever, node coloring is NP-complete problem as shown in [24].
+
+codes. The LLR distributor is connected with all the processing In [25], [26], the authors proposed a heuristics to find conflict
+
+elements on one side and all the memory banks on other side. free memory mapping in turbo decoder. Contrary to the litera-
+
+Different structures such as Tree Interleaver Bottleneck Breaker ture belief, the authors have proven that for every code, conflict
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+SANI et al.: A FIRST STEP TOWARD ON-CHIP MEMORY MAPPING FOR PARALLEL TURBO AND LDPC DECODERS
+
+4139
+
+free memory mapping always exists to tackle collision problem. However, the proposed approach is based on a simulated-annealing algorithm, so the user cannot predict when the algorithm will end. In [27], another heuristic is proposed which finds conflict free memory mapping while optimizing the storage element and interconnection network. However, all these heuristics fail to remove the computational complexity of the problem.
+Although it is claimed in [25], [26] that approaches presented in these articles can be used for LDPC but single memory mapping is not always possible for every class of LDPC codes and double memory mapping is the only solution to map any LDPC Tanner graph. In [28], a technique based on multiple read, multiple write approach is presented. In this technique, each data has two mapping, one from where approach reads the data and the second in which the approach writes the data. The algorithm presents novel idea to solve computationally hard problem through multiple read and multiple write technique but it is based on recursive approach and the time of completion is unknown.
+In this article, we present polynomial time algorithm to solve mapping problem for any type of interleaver using novel modeling approaches based on graph theory for both single and double memory mapping.
+VII. CONCLUSION
+In this article, an efficient dedicated approach has been presented to design high throughput turbo and LDPC decoder. The approach has been developed using polynomial time algorithm to solve memory mapping problem for both turbo and LDPC codes. Also, concepts of single and double memory mapping are introduced to map the data in minimum number of memory banks. To validate the approach, different experiments on interleavers used in current telecommunication standards have been performed. From these experiments, it is clear that our algorithm significantly reduces the computational time to find memory mapping for both turbo and LDPC decoders. This improvement also encourages executing mapping algorithms on the fly to support multiple block on same chip. In future, different optimizations will be made to reduce the cost of network and address controllers. Also, to find mapping that supports particular interconnection network, different constraints will be added in current mapping algorithms.
+
+REFERENCES
+
+[1] A. Schrijver, “Bipartite edge coloring in
+
+time,” SIAM J.
+
+Comput., vol. 28, pp. 841–846, 1998.
+
+[2] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near-Shannon limit
+
+error-correcting coding and decoding: Turbo codes,” in Proc. IEEE Int.
+
+Conf. Commun., 1993, vol. 2, pp. 1064–1070.
+
+[3] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA,
+
+USA: MIT Press, 1963.
+
+[4] D. J. C. MacKay, “Good error-correcting codes based on very sparse
+
+matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar.
+
+1999.
+
+[5] David MacKay’s Gallager code resources [Online]. Available: http://
+
+www.inference.phy.cam.ac.uk/mackay/CodesFiles.html.
+
+[6] S. J. Johnson, Iterative Error Correction Turbo, Low-Density Parity-
+
+Check and Repeat-Accumulate Codes. Cambridge, U.K.: Cambridge
+
+Univ. Press, 2010.
+
+[7] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Reference. San Mateo, CA, USA: Morgan Kaufmann, 1988.
+[8] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density paritycheck code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[9] L. Fanucci, P. Ciao, and G. Colavolpe, “VLSI design of a fully-parallel high-throughput decoder for turbo Gallager codes,” IEICE Trans. Fund. Electron., Commun., Computer Sci., vol. E89-A, no. 7, pp. 1976–1986, Jul. 2006.
+[10] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[11] J.-Y. Lee and H.-J. Ryu, “A 1-Gb/s flexible LDPC decoder supporting multiple code rates and block lengths,” IEEE Trans. Consum. Electron., vol. 54, no. 2, pp. 417–424, May 2008.
+[12] D. Gnaedig, E. Boutillon, M. Jezequel, V. C. Gaudet, and P. G. Gulak, “On multiple slice turbo codes,” in Proc. 3rd Int. Symp. Turbo Codes, Relat. Topics, Brest, France, 2003, pp. 343–346.
+[13] J. Kwak and K. Lee, “Design of dividable interleaver for parallel decoding in turbo codes,” Electron. Lett., vol. 8, no. 22, pp. 1362–1364, 2002.
+[14] A. Giulietti, L. v. d. Perre, and A. Strum, “Parallel turbo coding interleavers: Avoiding collisions in accesses to storage elements,” Electron. Lett., vol. 38, no. 5, pp. 232–234, Feb. 2002.
+[15] J. Sun and O. Y. Takeshita, “Interleavers for turbo codes using permutation polynomials over integer rings ,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 101–119, Jan. 2005.
+[16] O. Y. Takeshita, “On maximum contention-free interleavers and permutation polynomials over integer rings,” IEEE Trans. Inf. Theory, vol. 52, no. 3, pp. 1249–1253, Mar. 2006.
+[17] T. Zhang and K. K. Parhi, “Joint code and decoder design for implementation-oriented (3;k)-regular LDPC codes,” in Proc. Asilomar Conf. Signals, Syst., Comput., Nov. 2001, vol. 2, pp. 1232–1236.
+[18] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. VLSI Syst., vol. 11, pp. 976–996, Dec. 2003.
+[19] M. Thul, N. Wehn, and L. Rao, “Enabling high-speed turbo decoding through concurrent interleaving,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2002, vol. 1, pp. 897–900.
+[20] M. I. Thul, F. Gilbert, and N. Wehn, “Optimized concurrent interleaving for high-speed turbo-decoding,” in Proc. IEEE Int. Conf. Electron., Circuits, Syst. (ICECS), 2002, pp. 1099–1102.
+[21] M. Thul, F. Gilbert, and N. Wehn, “Concurrent interleaving architectures for high-throughput channel coding,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP), 2003, vol. 2, pp. 613–616.
+[22] H. Moussa, O. Muller, A. Baghdadi, and M. Jezequel, “Butterfly and Benes-based on-chip communication networks for multiprocessor turbo decoding,” in Proc. Conf. Design, Autom., Test Eur., Apr. 2007, pp. 654–659.
+[23] H. Moussa, A. Baghdadi, and M. Jezequel, “Binary de Bruijn interconnection network for a flexible LDPC/turbo decoder,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2008, pp. 97–100.
+[24] P. Keyngnaert, B. Demoen, B. De Sutter, B. De Sus, and K. De Bosschere, “Conflict graph based allocation of static objects to memory banks,” in Informal Proc. 1st Workshop Semantic, Program Anal., Comput. Environ., Sep. 2001, pp. 131–142.
+[25] A. Tarable, S. Benedetto, and G. Montorsi, “Mapping interleaving laws to parallel turbo and LDPC decoder architectures,” IEEE Trans. Inf. Theory, vol. 50, no. 9, pp. 2002–2009, Sep. 2004.
+[26] Jing-ling, “Parallel interleavers through optimized memory address remapping,” IEEE Trans. VLSI Syst., vol. 18, no. 6, pp. 978–987, Jun. 2010.
+[27] C. Chavet, P. Coussy, P. Urard, and E. Martin, “Static address generation easing: A design methodology for parallel interleaver architecture,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP), 2010, pp. 1594–1597.
+[28] C. Chavet and P. Coussy, “A memory mapping approach for parallel interleaver design with multiples read and write accesses,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2010, pp. 3168–3171.
+[29] J. L. Gross and J. Yellen, Handbook of Graph Theory. Boca Raton, FL, USA: CRC Press, 2003, vol. 353.
+[30] H. Gabow, “Using Euler partitions to edge color bipartite multigraphs,” Int. J Comput. Inf. Sci., vol. 5, pp. 345–355, 1976.
+[31] Y. Zhang and K. Parhi, “Parallel turbo decoding,” in Proc. Int. Symp. Circuits Syst. (ISCAS), 2004, vol. 2, pp. 509–512.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+4140
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 16, AUGUST 15, 2013
+
+[32] J. P. Woodard and L. Hanzo, “Comparative study of turbo decoding techniques: An overview,” IEEE Trans. Veh. Technol., vol. 49, no. 6, pp. 2208–2233, Nov. 2000.
+[33] R. Asghar and D. Liu, “Towards radix-4, parallel interleaver design to support high-throughput turbo decoding for re-configurability,” in Proc. 33rd IEEE SARNOFF Symp., 2010, pp. 1–5.
+[34] T. K. Blankenship, B. Classon, and V. Desai, “High-throughput turbo decoding techniques for 4G,” in Proc. Int. Conf. 3G Wireless Beyond, May 2002, pp. 137–142.
+[35] Technical Specification Group Radio Access Network; Evolved Universal Terrestrial Radio Access; Multiplexing and Channel Coding (Release 8), 3GPP Standard TS 36.212, Dec. 2008.
+[36] Technical Specification Group Radio Access Network; Multiplexing and Channel Coding (FDD), 3GPP (25.212 V5.9.0), Jun. 2004.
+[37] Digital Video Broadcasting (DVB), “Frame structure channel coding and modulation for the second generation digital terrestrial television broadcasting system (DVB-T2),” DVB Document A122, 2010.
+[38] Technical Specification Group Radio Access Network; Multiplexing and Channel Coding (FDD), 3GPP (25.212 V8.4.0), Dec. 2008.
+[39] Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications: Enhancements for Higher Throughput, IEEE P802.11n/D5.02, Part 11., Jul. 2008.
+[40] Air Interface for Fixed and Mobile Broadband Wireless Access Systems. Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, Corrigendum 1, IEEE P802.16e, Part 16, Feb. 2006.
+[41] DAVINCI Codes [Online]. Available: http://www.ict-davinci-codes.eu [42] M. Martina and G. Masera, “Turbo NOC: A framework for the design
+of network-on-chip-based turbo decoder architectures,” IEEE Trans. Circuits Syst. I, vol. 57, pp. 2776–2789, 2010. [43] C. Condo, M. Martina, and G. Masera, “A network-on-chip-based turbo/LDPC decoder architecture,” in Proc. Design, Autom. Test in Eur. Conf. Exhib. (DATE), March 2012, pp. 1525–1530, 2012. [44] R. Asghar, D. Wu, J. Eilert, and D. Liu, “Memory conflict analysis and interleaver design for parallel turbo decoding supporting HSPA evolution,” in Proc. 12th Euromicro DSD, Aug. 2009, pp. 699–705. [45] F. Speziali and J. Zory, “Scalable and area efficient concurrent interleaver for high throughput turbodecoders,” in Proc. 7th Euromicro DSD, 2004, pp. 334–341.
+Awais Hussain Sani received his Master degree in Micro and Nano Electronics from Université Joseph Fourier, Grenoble, France in 2008 and his Ph.D. degree in electronics engineering from Université de Bretagne-Sud, France, in 2012. He is currently working as post doctorate fellow in Lab-STICC, Université de Bretagne-Sud, France where he is working on the implementation of Signal Processing and Telecommunication Algorithms on Parallel Architectures.
+His research activities include on-chip interconnection network design, flexible telecommunication systems, many-core systems and high-level synthesis.
+
+Philippe Coussy is an associate professor in the Lab-STICC at the Université de Bretagne-Sud, France, where he leads the “Design of Advanced Architectures” group. He was graduated from Université Pierre et Marie Curie (MSc, 1999), Université de Bretagne-Sud (Ph.D., 2003 and Habilitation 2011). He is a member of the technical committee of the IEEE Signal Processing Society, Design and Implementation of Signal Processing Systems (DISPS) since 2011. His research interests include system-level design and methodologies, high-level synthesis, computer-aided design for SoCs, embedded systems, low-power design for FPGAs and neuromorphic computing. He has published more than 60 papers in edited books, journals or conference proceedings on these topics and holds 4 patents in hardware design domain. He has organized several workshops and tutorials in many outstanding international conferences including DAC, DATE, CODES+ISSS and ASP-DAC. He was guest editor for a special issue of Journal of Electrical and Computer Engineering on “ESL Design Methodology” (2012), guest editor for a special issue of IEEE DESIGN AND TEST OF COMPUTER on High-Level Synthesis (2009) and co-editor of the book High-Level Synthesis: From Algorithm to Digital Circuit (Springer) (2008). He regularly serves as PC member in many international ACM/IEEE conferences (DATE, ICASSP, ISCAS, ASAP, GLSVLSI, SIPS, DAC, FPL ) and as reviewer for major journals (IEEE TCAD, TECS, JETCAS, D&T of Computers, ACM TODAES, TECS ). He is Associate Editor of the IEEE SIGNAL PROCESSING LETTERS since April 2013.
+Cyrille Chavet (M’06) received the M.S. and M.Ph. degrees in computer science from the Université Joseph Fourrier (Grenoble, France), in 2003, and the Ph.D. degree in electrical and computer engineering from the Université de Bretagne-Sud (Lorient, France), in 2007.
+From 2003 to 2007, he was with STMicroelectronics, Crolles, France. Then, he held a post-doctoral position with the TIMA Laboratory, Grenoble, France, for a year. He is currently an Associate Professor with the Lab-STICC Laboratory, Université de Bretagne-Sud. His current research interests include high-level synthesis, communication adaptation, memory mapping problems and neural networks.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:43 UTC from IEEE Xplore. Restrictions apply.
+
+

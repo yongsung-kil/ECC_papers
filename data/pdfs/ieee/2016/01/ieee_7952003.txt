@@ -1,0 +1,817 @@
+17th international conference on Sciences and Techniques of Automatic control & computer engineering - STA'2016, Sousse, Tunisia, December 19-21, 2016
+
+STA'2016-PID4042-TCE
+
+Hardware Complexity Reduction of LDPC-CC
+
+Decoders Based on Message-Passing Approaches
+
+Hayfa BEN THAMEUR1, Chaima BOUZOUITA1, Nadia KHOUJA1, Bertrand LE GAL2, Fethi TLILI1, Christophe JEGO2
+1 SUPCOM, GRESCOM Lab, University of Carthage, Tunisia.
+2 Bordeaux INP, CNRS IMS, UMR 5218, Bordeaux University, France.
+
+Abstract—LDPC convolutional codes (LDPC-CC) are a family of error-correcting codes (ECC) used in digital communication systems like the IEEE 1901 standard. High throughput and low complexity hardware architectures were designed for real time systems. In this article we demonstrate that an efficient selection of the message passing (MP) algorithm for LDPC-CC decoding improves the architecture features of related works. In fact, considering the LDPC-CC decoders proposed for the IEEE 1901 standard, we show that an appropriate Min-Sum approximation selection can significantly improve the error correction performance by 0.1 to 0.2 dB in terms of Bit Error Ratio. It can also reduce the hardware complexity by 10% to 20% with no impact on the Bit Error Ratio performance.
+I. INTRODUCTION
+Introduced in 1999 [1], Low Density Parity Check convolutional codes (LDPC-CC) are the convolutional counterpart of LDPC block codes (LDPC-BC) that were proposed by R. Gallager in 1962 [2] and re-discovered by Neal and MacKay in 1997 [3]. The interest of LDPC-CCs stems from their encoding simplicity, their reduced decoding complexity and their strong potential to support versatile application scenarios based on streaming data transmission and adjustable finite block size transmission [4]–[6]. Thus, LDPC-CCs are considered as a promising candidate for the forward error correction module in the 5G air interface design [7].
+The potential of LDPC-CCs has been observed for the SumProduct message passing algorithm (SPA) [8]–[12]. As the SPA has low convergence speed and high hardware complexity due to the costly tanh operations, hardware implementation works have adopted the Min-Sum (MS) approximation [10], [12]–[16] and focused on its sub-optimal variant called Normalized MS (NMS) [17]–[22]. However, to the best of our knowledge, neither a comparison of different MS variants (like Offset MS (OMS), Modified NMS (MNMS)) nor an optimization of the NMS parameter, have been reported yet.
+In this paper, we show that switching from one NMS variant with 0.75 normalization parameter to another would improve the error correction performance of the considered LDPCCC decoder (by 0.2 dB for the case of OMS compared with the NMS(0.75)) with no impact on the decoder’s hardware complexity. Hence, the decoding performance of existing works can be notably enhanced without significant hardware complexity increase. Furthermore, the same bit error rate (BER) performance can be achieved with a lower number of decoding iterations Q. For instance, comparable performances
+
+of the NMS (0.75) with Q = 10 can be reached with OMS where Q = 8 or 9. Thus, the amount of processor units can be reduced so that the LDPC-CC decoder’s hardware complexity can be minimized by 10% to 20%. The decoder latency and power consumption would be also reduced.
+The remainder of this paper is organized as follows: in section 2, an overview of LDPC-CC decoding is presented. Complexity reduction optimizations proposed in literature are then given. In section III, we review MS like decoding algorithms and evaluate their computational complexity. Section IV reports the main experimentation results.
+
+II. DECODING LDPC-CC CODES
+
+A. Preliminaries
+
+An LDPC-CC is a linear code defined by a sparse and semi-
+
+infinite parity check matrix H. The code operates on semi-
+
+infinite sequences v[0,∞] = (v0, v1, v2, ..., vt, ...), t ∈ Z≥0 satisfying the equation: v[0,∞] × H[T0,∞] = 0.
+v[0,∞] is called the code sequence, where vt = (vt(0), vt(1), ..., vt(c−1)), t ∈ Z≥0. Each vt is obtained by a linear transformation of the information sequence
+
+u[0,∞] = (u0, u1, u2, ..., ut, ...), t ∈ Z≥0, where ut = (u(t0), ut(1), ..., ut(b−1)), b ≤ c, t ∈ Z≥0. Hence, the code rate
+(R) is equal to b/c.
+
+The parity check matrix H is referred as the syndrome
+
+former. The common structure of its transposed form HT is:
+
+⎡H0T (0) H[T0,∞] = ⎢⎣⎢⎢⎢
+
+... ...
+
+HmT s (ms) ...
+H0T (t)
+
+... ...
+
+⎤ HmT s (t + ms)⎥⎥⎦⎥⎥
+
+...
+
+...
+
+with:
+
+⎡
+
+⎤
+
+HiT (t) = ⎣⎢⎢hi(1,1...)(t)
+
+... ...
+
+hi(c−b...,1)(t)⎥⎥⎦
+
+hi(1,c)(t) . . . hi(c−b,c)(t)
+
+The submatrices HiT , i = 0, 1, ...ms and t ∈ Z≥0, are c × (c − b) matrices that satisfy several properties:
+1) HmT s (t) = 0, ∀ i < 0, i > ms, t ∈ Z≥0, 2) ∃ ms so that HmT s (t) = 0[c,(c−b)], where ms denotes the syndrome former memory. vs = c × (ms + 1) is called the constraint length. It is the maximum
+
+978-1-5090-3407-9/16/$31.00 ©2016 IEEE
+
+679
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. An example of HT and its related Tanner Graph.
+
+Fig. 2. Register-based processor unit architecture of a LDPC-CC decoder.
+
+length of a non-zero portion of each column of HT which makes it a diagonal matrix. Such structure yields excellent iterative thresholds and affords efficient encoder and decoder implementations [23].
+An (ms, J, K) LDPC-CC is called regular if HT has exactly K ones in each column, starting from the (ms(c − b) + 1)th column, and J ones in each row. In real applications, a periodic (ms, J, K) LDPC-CC is of interest. Its syndrome former HT is said to have a period Ts ∈ Z≥1 if its sub-matrices satisfy HiT (t) = HiT (t+Ts), i = 0...ms, t ∈ Z≥0. If Ts = 1, the code is time-invariant, otherwise for Ts > 1, it is time varying.
+A bi-partite graph, called Tanner Graph, is used to represent LDPC-CCs graphically. Regarding the structure of HT , the related Tanner graph is semi-infinite and highly localised. It is composed of nodes and edges. A node can be either a Variable Node (VN) or a Check Node (CN). An edge connects (vi) and (cj) nodes whenever the element h(j,i) in HT is a 1. Fig. 1 depicts an example of HT [19] and its related Tanner graph.
+B. Decoding LDPC-CC
+Similar to LDPC-BCs, LDPC-CCs are decoded iteratively using the MP-based algorithms [1]. Conventionally, these decoding algorithms perform CN and VN computations in a flooding scheduling. In fact, this scheduling technique was first adopted for hardware implementations of the Min-Sum approximation [10], [13]–[16], [24]. In these architectures, design efforts have been devoted to the design of a single processing unit and its related storage block as well as CN and VN computation kernels. A processor unit gathers the required arithmetic, memory and interconnect elements able to execute one decoding iteration. In the first studies [14], [17], [25], as shown in Fig. 2, each row in the designed processing unit, called processor, behaves like a FIFO. Its length is at least (ms+1) and its width depends on the node degree and the exchanged messages width. An overview of such processor architecture is depicted in Fig. 4. It can be noticed that each processor requires input messages and generates output messages. Let Q denote the number of processor units in the LDPC-CC decoder. The input messages for processor i can be received either from the channel, if i = 0, or processor (i − 1). The outputs from processor i can be forwarded either to the decision unit (if i = Q − 1) or to the next processor (i+1). As mentioned above, messages related to CNs and VNs can be udpated by a flooding scheduling where the MP-based
+
+Fig. 3. Conventional pipeline LDPC-CC decoder architecture.
+algorithm is mainly composed of four computation intensive kernels: Initialization, Check Node Update (CNU), Variable Node Update (VNU) and Hard Decision. Notably, kernels 2 and 3 are performed sequentially. The variable node units are activated only after updating the check node units. Therefore, this scheduling is inefficient because the recently updated information are not taken into account. In sub-section II-C, optimized scheduling techniques are reported.
+LDPC-CC decoder architectures can process data in parallel or in sequential way, with regards to iteration and/or node dimension. Commonly, parallel LDPC-CC decoders exhibit high throughput performances but they have a high decoding latency and a high number of FIFOs. Sequential architectures are suitable for LDPC-CCs with large ms. With a single processor, memory and resources consumption can be notably reduced. Even though the decoder throughput is low, in [24] a low-cost low-power serial decoder architecture has been designed for a (2048,3,6) LDPC-CC decoder that achieves up to 9 Mbps throughput with few hardware resources.
+Referring to the previously described processor architectures, FIFOs can be mapped to registers (Fig. 2) or memories (Fig. 4). In fact, register-based LDPC-CC decoder design, [13], [14], [17], [25], can support unlimited bandwidth but yields expensive power and area costs. It is not suitable for FPGA targets. Memory-based architectures [8], [12], [16], [18], [20]–[22], [26] were proposed instead, where FIFOs are implemented as RAM-based circular buffers and messages are tracked with pointers.
+C. Possible Complexity Reduction Optimizations
+1) Algorithm Level optimizations: A variety of scheduling approaches have been proposed to address flooding-based LDPC-CC decoder design challenges. It includes memory
+
+680
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+sent from cm to vn at the ith iteration. The first low-complexity approximation, called Min-Sum, is provided in equation 1:
+
+Fig. 4. RAM-based processor unit architecture of a LDPC-CC decoder.
+access collision, convergence speed, power and area consumption, etc. Namely, an On-Demand Variable Node Activation (OVA) has been introduced in [27] and experimented in [17], [21], [25]. It has been shown that such a scheduling technique yields a twice faster convergence speed compared with its flooding counterpart due to the use of the most recently updated information. It halves the number of decoding iterations and thus the computational complexity that is necessary to achieve similar BER performances. Then, a computation reordering extension named OVA scheduling with Concealing Channel values (OVA-CC) has been described in [25]. It reduces the memory complexity while the memory cost of messages becomes dc − 1 instead of dc. However, the memory need is still high. A horizontal layered based scheduling MP-algorithm has been proposed in [19]. The main idea is to jointly process the CNU and VNU kernels so that Lmn messages are activated only when it is requested by an active CN. Consequently, they are not stored in memory. Instead, they are computed on the fly during the decoding process [12], [20], [22]. In the current work, the horizontal layered algorithm is selected.
+2) Node Level optimizations: Conventionally, sequential processing of CNUs was adopted for designing LDPC-CC decoders [1], [8], [14]. It lowers the hardware cost, yet it limits the decoding throughput. Later, CNU-parallel decoders for both time-invariant [28], [29] and time-varying [10], [26] LDPC-CCs were proposed. Notably, with such node parallelization, the decoding throughput can be increased considerably and the decoding latency can be reduced. For instance, in [10], it has been reported that based on a small parallelization factor (= 8), the node-parallel decoder can achieve 400 Mbps with fc = 100 MHz compared with the sequential FPGA decoder in [8] that can reach 40 Mbps with fc = 120 MHz.
+III. MIN-SUM DECODING ALGORITHMS FOR LDPC CODES
+A. Decoding algorithm variants
+To reduce the computational complexity of the Sum-Product LDPC algorithm, many approximations were proposed to discard the costly tanh operation. Let Limn denote the message
+
+|Lm i n| =
+
+(n
+
+min
+∈M (m)/n)
+
+|L(ni−m1)|
+
+(1)
+
+Despite its simple software and hardware implementation and its low complexity, this approximation negatively impacts the error correction performance. The information exchanged between the nodes is less reliable. Therefore, new approximations were introduced based on the idea that the error correction performance loss can be recovered by reducing the magnitude of the CN messages, as they are overestimated in the MS algorithm. The first MS variant, Normalized Min-Sum (NMS), is described in equation 2:
+
+|Lm i n| = γ ×
+
+(n
+
+min
+∈M (m)/n)
+
+|L(ni−m1)|
+
+(2)
+
+The factor γ ∈ [0, 1] is called the Normalised factor. Since multiplication operations can be costly, an offset min-sum (OMS) approximation was proposed. It is based on the subtraction of an offset factor from the generated messages according to the equation 3:
+
+|Limn| = max
+
+(n
+
+min
+∈M (m)/n)
+
+|Ln(i−m1)|
+
+− β, 0
+
+(3)
+
+The factor β ∈ [0, 1] is called the offset factor. Both offset and normalization factors are suitable for regular LDPC codes. Hence, a Modified-Normalized Min-Sum (MNMS) was proposed. The main idea is to vary the normalization factor according to equation 4:
+
+γ=
+
+γ1 if Ln,min == 1st min message γ2 if Ln,min == 2nd min message
+
+(4)
+
+The values of factors γ1 and γ2 were obtained empirically from simulations.
+Most of studies on LDPC-CC decoder architectures were assessed based on the MS [10], [12]–[16] or NMS [17], [19]– [22], [25] approximations. To reduce slightly the hardware complexity, γ = 0.75 was used in practice. Indeed, it can be efficiently implemented thanks to a single subtraction [17], [25]. However, this selected coefficient value is suboptimal in terms of error correction performance.
+
+B. Comparison in terms of computational complexity
+In this section, the comparison of the computational complexity of the different decoding algorithms is based on the number of operations performed in the algorithm. Table I
+
+TABLE I COMPARISON OF THE THEORETICAL COMPLEXITY OF THE
+LAYERED-BASED CN COMPUTATION KERNEL.
+
+arithmetic add & sub arithmetic multiply & div abs, min, max, xor, cmp
+Memory access
+
+MS 3dc
+11dc 3dc
+
+NMS
+3dc 2
+11dc 3dc
+
+OMS 3dc + 2
+11dc + 2 3dc
+
+MNMS
+3dc 2
+11dc + 2 3dc
+
+681
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+10−2 10−4
+
+NMS(0.75) NMS(0.8125) OMS(0.125) MNMS(0.75
+
+10−2 10−4
+
+NMS(0.75) NMS(0.8125) OMS(0.125) MNMS(29-27)
+
+BER BER
+
+10−6
+
+10−6
+
+10−8
+
+10−8
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0
+
+Eb/N0
+
+Fig. 5.
+
+BER performance of the IEEE 1901 LDPC-CC (R =
+
+1 2
+
+)
+
+for
+
+different
+
+Fig. 6.
+
+BER performance of the IEEE 1901 LDPC-CC (R =
+
+2 3
+
+)
+
+for
+
+different
+
+variants of the MS algorithm.
+
+variants of the MS algorithm.
+
+presents the computational complexity of MS, NMS, OMS and MNMS algorithms, only for the CNU kernel (VN processing is performed on the fly during the CN processing) since only the layered scheduling is considered in this paper.
+Compared with the usual MS, the NMS, OMS and MNMS variants are slightly more complex in terms of operations. In fact, extra operations (2 multiplications for NMS and MNMS and 2 subtractions for OMS) are necessary. However, this additional complexity is low in terms of hardware cost. Indeed, it can be easily transformed to low cost operations (such as subtractions and shifts). Moreover, at the hardware level, depending on the considered coefficient value, some hardware optimizations can be applied to reduce the hardware complexity so that the switching from one decoding algorithm to another does not increase the cost of the resulted LDPC-CC decoder architecture. Instead, it should provide some error correction performance enhancements. This idea is investigated in the following section.
+
+IV. EXPERIMENTATIONS
+
+A. Evaluation of error correction performances
+
+To estimate the benefits of the MS variants applied to
+
+LDPC-CCs, the IEEE 1901 standard is considered [30]. Sev-
+
+eral related works have proposed hardware decoder implemen-
+
+tations for this standard [19], [22]. They are based on the NMS
+
+algorithm with offset factor equal to 0.75. Referring to these
+
+works, an evaluation of the impact of MS variants on error
+
+correction performance and hardware complexity is done.
+
+Error correction
+
+and
+
+2 3
+
+code
+
+rates
+
+performance simulations were run of the LDPC-CC in IEEE 1901.
+
+for
+
+1 2
+
+A bit
+
+accurate fixed-point software decoder using the quantization
+
+format specified in [22] was implemented. Channel informa-
+
+tion, posterior messages and prior messages are quantized on
+
+8 bits with a sign bit, 3-bit fraction and 4-bit integer while
+
+extrinsic messages are quantized to 6 bits with a sign bit, 3-
+
+bit fraction and 4-bit integer. BER performances of the LDPC-
+
+CC
+
+decoders
+
+are
+
+provided
+
+in
+
+Fig.
+
+5
+
+(R
+
+=
+
+1 2
+
+)
+
+and
+
+6
+
+(R
+
+=
+
+2 3
+
+).
+
+These curves were obtained using the same configuration as
+
+given in [22]: 10 layered decoding iterations are executed, a
+
+BPSK mapping and an AWGN channel are used. Note that we
+
+consider terminated LDPC-CC. The length of the information
+
+sequence
+
+for
+
+1 2
+
+and
+
+2 3
+
+code
+
+rates
+
+are
+
+21600
+
+bits
+
+and
+
+45600
+
+bits, respectively. Termination sequence (the parity part) was
+
+included in code rate computation for AWGN σ setup.
+
+Rate
+
+1 2
+
+experimentations,
+
+summarized
+
+in
+
+Fig.
+
+5,
+
+show
+
+that
+
+algorithms different from NMS (0.75) provide interesting
+
+results. For instance, the OMS variant improves the coding
+
+gain in the waterfall region by 0.2 dB but an error floor region appears at BER=10−7. The NMS (0.8125) approach improves
+
+the error correction performances by 0.1 dB compared with the
+
+NMS (0.75) variant in the waterfall region and does not generate any error floor until BER=10−8. More efficient LDPC-
+
+BC decoding approaches such as MNMS techniques slightly
+
+improve the error correction performance compared with NMS
+
+(0.75). Indeed, these techniques were mainly proposed only
+
+for irregular LDPC-BC codes and not for regular codes as in
+
+IEEE 1901.
+
+Concerning
+
+the
+
+rate
+
+2 3
+
+experimentations
+
+summarized
+
+in
+
+Fig.
+
+6, error correction gains can be noticed, yet they are low.
+
+Indeed, the OMS decoding approach improves the coding gain
+
+only in the waterfall region by 0.1 dB. However, it generates
+
+an error floor at BER=10−7. The NMS (0.8125) approach
+
+enhances the error correction performance by 0.1 dB like
+
+the OMS approach. Similar to generate any error floor region
+
+rate until
+
+12BELRD=P1C0-−C8C. ,TihtedMoeNs MnoSt
+
+variants are still as efficient as the NMS (0.8125) technique
+
+with a higher computational complexity.1
+
+These experimentations demonstrate that IEEE 1901 LDPC-
+
+CC hardware decoders proposed in related works can be
+
+enhanced by other MS approximation techniques proposed for
+
+LDPC-BC architectures. In the next sub-section, the hardware
+
+complexity impact of the MS decoding variants is analyzed.
+
+B. Hardware complexity evaluation
+1) Hardware cost of CN units: In the previous sub-section, we have demonstrated that the OMS and NMS algorithms
+
+1Similar acknowledgments were obtained for other code rates of the IEEE 1901 standard.
+
+682
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+10−2 10−4 10−6
+
+NMS(0.75)@10its NMS(0.8125)@9its NMS(0.8125)@8its OMS(0.125)@8its OMS(0.125)@7its
+
+10−3 10−6
+
+NMS(0.75)@10its NMS(0.8125)@9its NMS(0.8125)@8its OMS(0.125)@9its
+OMS(1)@8its
+
+BER BER
+
+10−8
+
+10−9
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0
+
+Fig. 7.
+
+BER performance of the IEEE 1901 LDPC-CC (R =
+
+1 2
+
+)
+
+for
+
+different
+
+Fig. 8.
+
+BER performance of the IEEE 1901 LDPC-CC (R =
+
+2 3
+
+)
+
+for
+
+different
+
+variants of the MS algorithm when varying the number of iterations.
+
+variants of the MS algorithm when varying the number of iterations.
+
+(with a normalization factor different from 0.75) provide better
+
+error correction performances in fixed-point format. Hardware
+
+decoders based on theses algorithms seem to be attractive.
+
+Indeed, dB for
+
+coding
+
+rate
+
+2 3
+
+gains up to 0.2 dB were achieved. The
+
+for
+
+rate
+
+1 2
+
+impact of
+
+and such
+
+up to 0.1 decoding
+
+approximations on CN unit hardware complexity is also nec-
+
+essary. Assessment of hardware parameters of CN units based
+
+on serial [15] and parallel [10], [26] memory accesses were
+
+measured on ASIC (ST 65 nm) target thanks to the Design
+
+Compiler Logical Synthesis tool. Hardware complexity results
+
+are summarized in Table II. Evaluation of hardware complexity
+
+was performed for the different CN degree supported by the
+
+IEEE 1901 standard.
+
+The synthesis results show that switching from a MS decoding variant to another one has a very limited impact on the CN unit hardware complexity. This acknowledgement is true for both the sequential and the parallel implementations of the CN unit. Thus, switching from one decoding algorithm to another in order to improve the error correction performance of the LDPC-CC decoder would not impact the LDPC-CC decoder hardware properties.
+
+2) Impact estimation on LDPC-CC decoders: Previously, it was illustrated that the implementation of a better MS-based algorithm than the one used in related works [19], [22] has a very limited impact on CNU module performances. Obviously, when considering the overall LDPC-CC decoder, this over-cost is negligible. Indeed, the core area of the LDPC-CC decoder designed in [19] is scaled to 130 nm technology. In this technology, the over-cost due to OMS and NMS (0.8125) CNU is about 2% in average of the CN unit. In comparison with the area of the full LDPC-CC decoder from [19] that is 3.55 mm2, this quantity is negligible. Similar acknowledgments can be drawn for other related work architectures [12], [22]. This demonstrates that the decoding performances of related works can be improved without significant hardware complexity increase according to an exhaustive evaluation of the MSbased decoding variants proposed for LDPC-BC codes.
+
+TABLE II AREA (um2) OF CN UNITS ON ST 65NM ASIC TECHNOLOGY
+(CRITICAL PATH CONSTRAINT IS SET TO 5 NS).
+
+CN
+
+CN NMS NMS OMS
+
+MNMS
+
+type deg. 0.75 0.8125 0.125 0.75-0.8125
+
+Parallel 6 5279 5410 5156
+
+5437
+
+Parallel 9 9662 9851 9312
+
+9970
+
+Parallel 12 11182 11660 11137
+
+11634
+
+Parallel 15 14563 15831 15232
+
+15448
+
+Serial 6 1815 1867 1836 Serial 9 2095 2147 2119 Serial 12 2342 2394 2366 Serial 15 2599 2651 2623
+
+1983 2260 2507 2765
+
+C. Minimizing hardware cost of LDPC-CC decoders
+
+In previous sub-sections, we have shown that changing
+
+the decoding algorithm, or switching from NMS to OMS,
+
+or modifying the normalization factor can improve the error
+
+correction performances of LDPC-CC decoders with a very
+
+limited impact on hardware complexity. However, it is also
+
+possible to benefit from error performance enhancement to
+
+reduce hardware complexity at a same BER performance level.
+
+The hardware complexity of LDPC-CC decoders increases
+
+linearly according to the number of decoding iterations,
+
+denoted as Q. Indeed, in most hardware implementations
+
+the atomic processor architecture is tiled as many times as
+
+required. In few others, the memory elements are duplicated
+
+and the CN units are shared. Even though the memory cost is
+
+highly prevailing, it does not change the acknowledgement.
+
+Thanks to the error correction gain, it becomes possible
+
+to reduce the value of Q while reaching the same BER
+
+performance of the reference LDPC-CC decoder (NMS (0.75)
+
+and Q = 10). This assertion is justified by Fig. 7. For instance,
+
+for
+
+rate
+
+1 2
+
+LDPC-CC
+
+code
+
+with
+
+Q
+
+=
+
+8,
+
+the
+
+OMS
+
+decoder
+
+pro-
+
+vides the same error correction performance than the reference
+
+decoder until BER=10−7. Similarly, NMS (0, 8125) decoders
+
+based on Q = 8 or Q = 9 provide slightly lower and better
+
+error correction performances than the reference decoder.
+
+Thus, thanks to these MS decoding variants, it is possible to
+
+decrease the value of Q by 1 or 2 which reduces the number
+
+683
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+of required processor units by 1 or 2 elements. Consequently,
+
+the decoder hardware complexity is decreased by 10% or 20%.
+
+The processing latency and the power consumption of the
+
+decoder should also benefit from this processor unit reduction.
+
+Other code rates from the IEEE 1901 standard can also draw
+
+benefit from this optimization. The number of decoding itera-
+
+tions required to reach NMS (0.75) performances with OMS
+
+and
+
+NMS
+
+(0, 8125)
+
+approaches
+
+for
+
+rate
+
+2 3
+
+are
+
+summarized
+
+in
+
+Fig. 8. For this code rate, the error correction gain allows
+
+a saving of one decoding iteration in comparison with the
+
+reference decoder. Hence, it minimizes the decoder hardware
+
+complexity by 10% which is still interesting for hardware and
+
+power constrained systems.
+
+V. CONCLUSION
+
+In this paper, we have demonstrated that LDPC-CC hard-
+
+ware architectures proposed in literature can be optimized
+
+thanks to a judicious Min-Sum approximation selection. In-
+
+deed, error performance gains varying from 0.1 to 0.2 dB
+
+can be obtained with an insignificant hardware over-cost in
+
+comparison with related works. Moreover, for a similar error
+
+correction performance level, it can be used to minimize the
+
+amount of decoding iteration executed and so the number
+
+of
+
+hardware
+
+processors.
+
+For
+
+the
+
+IEEE
+
+1901
+
+rate
+
+1 2
+
+decoder
+
+proposed in [19], the hardware complexity reduction obtained
+
+is about 20%. To sum up, an appropriate selection of the MP
+
+algorithm for LDPC-CC decoders can improve significantly
+
+their features.
+
+REFERENCES
+[1] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181–2191, Sep 1999.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, January 1962.
+[3] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 33, no. 6, pp. 457–458, Mar 1997.
+[4] S. Bates, L. Gunthorpe, A. E. Pusane, Z. Chen, K. Zigangirov, and D. J. Costello, “Decoders for low-density parity-check convolutional codes with large memory,” in IEEE International Symposium on Circuits and Systems, May 2006.
+[5] S. Bates, Z. Chen, and X. Dong, “Low-density parity-check convolutional codes for ethernet networks,” in IEEE Pacific Rim Conference on Communications, Computers and signal Processing, Aug 2005.
+[6] S. Bates, D. G. Elliott, and R. Swamy, “Termination sequence generation circuits for low-density parity-check convolutional codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 53, no. 9, pp. 1909–1917, Sept 2006.
+[7] J. Kliewer. (2015) Advances in Error Control Strategies for 5G. Accessed: 2016-08-30. [Online]. Available: https://centers.njit.edu/ cwcspr/sites/cwcspr/files/Joerg\%20Kliewer.pdf
+[8] S. Bates and G. Block, “A memory-based architecture for fpga implementations of low-density parity-check convolutional decoders,” in IEEE International Symposium on Circuits and Systems, May 2005.
+[9] S. Bates, L. Gunthorpe, A. E. Pusane, Z. Chen, K. Zigangirov, and D. J. Costello, “Decoders for low-density parity-check convolutional codes with large memory,” in IEEE International Symposium on Circuits and Systems, May 2006.
+[10] Z. Chen, T. L. Brandon, D. G. Elliott, S. Bates, W. A. Krzymien, , and B. F. Cockburn, “Jointly designed architecture-aware ldpc convolutional codes and high-throughput parallel encoders/decoders,” IEEE Transactions on Circuits and Systems I: Regular Papers,, vol. 57, no. 4, pp. 836–849, April 2010.
+
+[11] C. W. Sham, X. Chen, F. C. M. Lau, Y. Zhao, and W. M. Tam, “A 2.0 gb/s throughput decoder for qc-ldpc convolutional codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 60, no. 7, pp. 1857–1869, July 2013.
+[12] Q. Lu, J. Fan, C. W. Sham, W. M. Tam, and F. C. M. Lau, “A 3.0 Gb/s Throughput Hardware-Efficient Decoder for Cyclically-Coupled QCLDPC Codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 63, no. 1, pp. 134–145, Jan 2016.
+[13] R. Swamy, S. Bates, and T. Brandon, “Architectures for asic implementations of low-density parity-check convolutional encoders and decoders,” in IEEE International Symposium on Circuits and Systems, May 2005.
+[14] R. Swamy, S. Bates, T. L. Brandon, B. F. Cockburn, D. G. Elliott, J. C. Koob, and Z. Chen, “Design and test of a 175-mb/s, rate-1/2 (128,3,6) low-density parity-check convolutional code encoder and decoder,” IEEE Journal of Solid-State Circuits, vol. 42, no. 10, pp. 2245–2256, October 2007.
+[15] M. Bimberg, M. B. S. Tavares, E. Matus, and G. P. Fettweis, “A highthroughput programmable decoder for ldpc convolutional codes,” in IEEE International Conf. on Application-specific Systems, Architectures and Processors, July 2007.
+[16] T. L. Brandon, J. C. Koob, L. van den Berg, Z. Chen, A. Alimohammad, R. Swamy, J. Klaus, S. Bates, V. C. Gaudet, B. F. Cockburn, and D. G. Elliott, “A compact 1.1-gb/s encoder and a memory-based 600-mb/s decoder for ldpc convolutional codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 56, no. 5, pp. 1017–1029, May 2009.
+[17] C. L. Chen, Y. H. Lin, H. C. Chang, and C. Y. Lee, “A 2.37-gb/s 284.8 mw rate-compatible (491,3,6) ldpc-cc decoder,” IEEE Journal of SolidState Circuits, vol. 47, no. 4, pp. 817–831, April 2012.
+[18] S. Y. J. Li, T. L. Brandon, D. G. Elliott, and V. C. Gaudet, “Power characterization of a gbit/s fpga convolutional ldpc decoder,” in IEEE Workshop on Signal Processing Systems, Oct 2012.
+[19] Y. Chen, C. Zhou, Y. Huang, and X. Zeng, “An efficient multi-rate ldpc-cc decoder with layered decoding algorithm,” in IEEE International Conference on Communications (ICC), June 2013.
+[20] C. L. Chen, Y. C. Lan, H. C. Chang, and C. Y. Lee, “A 3.66gb/s 275mw tb-ldpc-cc decoder chip for mimo broadcasting communications,” in IEEE Asian Solid-State Circuits Conference (A-SSCC),, Nov 2013.
+[21] C. L. Chen, S. J. Wu, H. C. Chang, and C. Y. Lee, “A 1-100Mb/s 0.5-9.9mW DPC convolutional code decoder for body area network,” in IEEE Asian Solid-State Circuits Conference (A-SSCC),, Nov 2014.
+[22] Y. Chen, Q. Zhang, D. Wu, C. Zhou, and X. Zeng, “An Efficient Multirate LDPC-CC Decoder With a Layered Decoding Algorithm for the IEEE 1901 Standard,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 61, no. 12, pp. 992–996, Dec 2014.
+[23] D. J. Costello, L. Dolecek, T. E. Fuja, J. Kliewer, D. G. M. Mitchell, and R. Smarandache, “Spatially coupled sparse codes on graphs: theory and practice,” IEEE Communications Magazine, vol. 52, no. 7, pp. 168–176, July 2014.
+[24] S. Bates, Z. Chen, L. Gunthorpe, A. E. Pusane, K. S. Zigangirov, and D. J. Costello, “A low-cost serial decoder architecture for low-density parity-check convolutional codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 55, no. 7, pp. 1967–1976, August 2008.
+[25] C. L. Chen, Y. H. Lin, H. C. Chang, and C. Y. Lee, “A 2.37gb/s 284.8mw rate-compatible (491,3,6) ldpc-cc decoder,” in Symposium on VLSI Circuits (VLSIC),, June 2011.
+[26] Y. L. Ueng, Y. L. Wang, L. S. Kan, C. J. Yang, and Y. H. Su, “Jointly designed architecture-aware ldpc convolutional codes and memory-based shuffled decoder architecture,” IEEE Transactions on Signal Processing, vol. 60, no. 8, pp. 4387–4402, Aug 2012.
+[27] A. E. Pusane, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, “Reduced complexity decoding strategies for LDPC convolutional codes,” in International Symposium on Information Theory, June 2004.
+[28] E. Matus, M. B. S. Tavares, M. Bimberg, and G. P. Fettweis, “Towards a gbit/s programmable decoder for ldpc convolutional codes,” in IEEE International Symposium on Circuits and Systems, May 2007.
+[29] M. B. S. Tavares, E. Matus, S. Kunze, and G. P. Fettweis, “A dualcore programmable decoder for ldpc convolutional codes,” in IEEE International Symposium on Circuits and Systems, May 2008.
+[30] “Ieee draft standard for broadband over power line networks: Medium access control and physical layer specifications,” IEEE P1901/D4.01, July 2010, pp. 1–1589, Dec 2010.
+
+684
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:20 UTC from IEEE Xplore. Restrictions apply.
+
+

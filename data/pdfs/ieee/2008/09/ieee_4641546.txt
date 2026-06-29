@@ -1,0 +1,592 @@
+A LOW-POWER 1-Gbps RECONFIGURABLE LDPC DECODER DESIGN FOR
+MULTIPLE 4G WIRELESS STANDARDS
+Yang Sun and Joseph R. Cavallaro Department of Electrical and Computer Engineering
+Rice University, Houston, TX 77005 Email: {ysun, cavallar}@rice.edu
+
+Abstract— In this paper we present an efficient system-onchip implementation of a 1-Gbps LDPC decoder for 4G (or beyond 3G) wireless standards. The decoder has a scalable datapath and can be dynamically reconfigured to support multiple 4G standards. We utilize a pipelined version of the layered belief propagation algorithm to achieve partial-parallel decoding of structured LDPC codes. Instead of using the sub-optimal Minsum algorithm, we propose to use the powerful belief propagation (BP) decoding algorithm by designing an area-efficient softinput soft-output (SISO) decoder. Two power saving schemes are employed to reduce the power consumption up to 65%. The decoder has been synthesized, placed, and routed on a TSMC 90nm 1.0V 8-metal layer CMOS technology with a total area of 3.5 mm2. The maximum clock frequency is 450 MHz and the estimated peak power consumption is 410 mW.
+I. INTRODUCTION
+The approaching fourth-generation (4G) wireless systems are projected to provide 100 Mbps to 1 Gbps speeds by 2010, which consequently leads to orders of magnitude complexity increases in the wireless receiver SoC (System-on-Chip). As a core technology in wireless communications, FEC (forward error correction) coding has migrated from 2G convolutional/block codes to more powerful 3G Turbo codes, and LDPC (Low-density paritycheck) codes [1] forecast for 4G systems because of their excellent error correction performance and highly parallel decoding scheme. To meet the power consumption constrains in wireless handsets, it is very challenging to design a flexible and high throughput LDPC decoder.
+Most of the research on LDPC decoder design so far has focused on one particular system in which specific optimizations are made to improve the decoder performance. For example, authors in [2][3] discussed LDPC decoders for WiMax system, and authors in [4][5] presented custom designed, non-standard LDPC decoders. In this paper, we discuss a scalable and dynamically reconfigurable LDPC decoder targeting multiple 4G standards. For low power implementations, we introduce an early termination scheme and a distributed SISO decoding and memory banking scheme to reduce power consumption.
+II. DECODING ALGORITHM
+A binary LDPC code is a linear block code specified by a very sparse binary M × N parity check matrix: H · xT =
+
+0, where x is a codeword (x ∈ C) and H can be viewed as a bipartite graph where each column and row in H represent a variable node and check node, respectively.
+
+A. Block structured LDPC codes
+Non-zero elements in H are typically placed at random positions to achieve good performance. However, this randomness is unfavorable for efficient VLSI implementation that calls for structured design. To address this issue, block-structured LDPC codes are recently proposed for several new communication standards such as IEEE 802.11n, IEEE 802.16e, DVB-S2 and DMBT. As shown in Fig. 1, a block structured parity check matrix can be viewed as a 2-D array of square sub matrices. Each sub matrix is either a zero matrix or a cyclically shifted identity matrix Ix. Generally, a block structured parity check matrix H consists of a j × k array of z × z cyclically shifted identity matrices with random shift values x (0 ≤ x < z). Table 1 summarizes the design parameters for H in several standards. In
+
+x
+z Ix
+0
+2z
+
+1-th Layer 2-th Layer
+
+3-th Layer
+3z
+
+4-th Layer
+4z z 2z 3z 4z 5z 6z 7z 8z
+
+Fig. 1. A block structured parity check matrix with block rows (or layers) j = 4 and block columns k = 8, where the sub-matrix size is z × z.
+
+Table 1: Design parameters for H in several standards
+
+LDPC Code j k z
+
+WLAN-802.11n 4-12 24 27-81
+
+WiMax-802.16e 4-12 24 24-96
+
+DMB-T 24-48
+60 127
+
+order to efficiently decode structured LDPC codes, we adopt the layered belief propagation (LBP) algorithm [6], which is described in Algorithm 1. In the description of the algorithm, Nm is the set of variable nodes that connected to check node m, and Nm\n is the set Nm with variable node n excluded. Λmn and λmn denote the check
+
+978-1-4244-2596-9/08/$25.00 ©2008 IEEE
+
+367
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:02:00 UTC from IEEE Xplore. Restrictions apply.
+
+and variable message, respectively. Ln denotes the a posteriori probability (APP) log-likelihood ratio (LLR) of variable node n: Ln = log(P (xn = 0)/P (xn = 1)). Hl denotes l-th layer in H.
+
+Algorithm 1 Layered belief propagation algorithm
+
+Initialization:
+
+∀(m, n)
+
+with
+
+H(m, n)
+
+=
+
+1,
+
+set
+
+Λmn
+
+=
+
+0,
+
+Ln
+
+=
+
+2yn σ2
+
+for iteration i = 1 to I do
+
+for layer l = 1 to L do
+
+1) Read:
+
+∀(m, n) with Hl(m, n) = 1:
+
+Read Ln and Λmn from memory 2) Decode:
+
+λmn = Ln − Λmn
+
+Λnmenw Lnnew
+
+= =
+
+λmj∈nN+mΛ\nnmseniwgn(λmj )Ψ
+
+3) Write back:
+
+j∈Nm\n Ψ(λmj )
+
+Write Lnnew and Λm nenw back to memory end for
+
+end for
+
+Decision making: xˆn = sign(Ln)
+
+III. VLSI ARCHITECTURE
+A. Block-serial scheduling algorithm
+To implement Algorithm 1 in hardware, we propose a block-serial (BS) scheduling algorithm as shown in Fig. 2. In this algorithm, one full iteration is divided into j sub iterations. SISO decoding is applied to each layer in sequence. Each z × z sub-matrix is treated as a macro within which all the involved parity checks are processed in parallel using z number of SISO decoders. Each SISO decoder is independent from all others since there is no data dependence between adjacent check rows.
+
+Datapath
+
+A0 A1 A2 A3 B0 B1 B2 B3
+
+0100 0010 0001 1000
+
+0010 0001 1000 0100
+
+C0 C1 C2 C3
+0000 0000 0000 0000
+
+D0 D1 D2 D3
+1000 0100 0010 0001
+
+D0 B2 A1 D1 B3 A2 D2 B0 A3 D3 B1 A0
+
+SISO 1 SISO 2 SISO 3 SISO 4
+
+D0' B2' A1' D1' B3' A2' D2' B0' A3'
+D3' B1' A0'
+
+Block-serial scheduling
+
+1 Read 2 Decode 3 Write back
+
+Layer 1
+
+Layer 2
+
+…
+
+Sub-iteration 1 Sub-iteration 2
+
+Layer j Sub-iteration j
+
+Fig. 2. Block-serial (BS) scheduling algorithm
+
+B. Low-complexity implementation of BP algorithm
+
+Conventionally, function Ψ(x) = − log(tanh(|x/2|)) is used for the decoding operations in Algorithm 1. However, the Ψ(x) function is prone to quantization noise and can be numerically unstable [7]. Alternately, a different and numerically more robust way to compute the Λmn is shown as
+
+Λmn =
+
+λmj =
+
+λmj λmn,
+
+(1)
+
+j ∈Nm \n
+
+j∈Nm
+
+where the and operations are defined as a b
+
+f (a,
+
+b)
+
+=
+
+log
+
+1+ea eb ea +eb
+
+and
+
+a
+
+b
+
+g(a,
+
+b)
+
+=
+
+log
+
+1−ea eb ea −eb
+
+[8][9].
+
+This computation method is especially suitable for the
+
+proposed BS scheduling algorithm in which the macro
+
+blocks are processed in sequential order. For hardware
+
+implementation, f (·) and g(·) functions can be simplified
+
+to
+
+f (a, b) = sign(a) sign(b) min(|a|, |b|) +
+
+log(1 + e−(|a|+|b|)) − log(1 + e− |a|−|b| ) , (2)
+g(a, b) = sign(a)sign(b) min(|a|, |b|) +
+
+log(1 − e−(|a|+|b|)) − log(1 − e− |a|−|b| ) .
+
+In hardware, the non-linear correction terms log(1 + e−x) and log(1 − e−x) in (2) are approximated using low-
+complexity 3-bit lookup tables (LUTs) [9].
+
+C. Radix-2 SISO decoder
+Fig. 3 shows the proposed SISO decoder architecture for generating Λmn. We refer to it as Radix-2 (R2) recursion architecture since only one element can be processed in one clock cycle. The R2-SISO core consists of one f (·) recursion unit followed by one g(·) unit. Note that the g(·) unit would have the same structure as the f (·) unit but with a different LUT.
+Fig. 4 shows the decoding schedule for check row m. During the first dm1 cycles, the incoming variable messages λmn (∀n ∈ Nm) are fed to the decoder sequentially and the f (·) unit is reused dm times to obtain the intermediate sum Sm. Then, the outgoing messages Λmn (∀n ∈ Nm) are generated in a sequential order by the g(·) unit. Though the decoding is sequential for each check row, multiple (z) check rows within one layer can be processed in parallel by employing multiple (z) SISO decoders, which increases the throughput by a factor of z (see Fig. 2). Furthermore, the decoding throughput can be improved by overlapping the decoding of two layers as shown in Fig. 4. This scheduling would require dual-port memory for simultaneous read and write operations. Typically data dependencies between layers will occasionally stall the pipeline for one or more cycles. However the pipeline stalls can be avoid by shuffling the order of the layers [10].
+
+D. Radix-4 SISO decoder via look-ahead transform
+To increase the throughput of the R2-SISO decoder, a look-ahead transform can be used for the f (·) recursion. This transform leads to an increase in the number of data processed in each cycle as shown in Fig. 5, where two elements are processed in one clock cycle. We refer to this transform as Radix-4 (R4) recursion. Fig. 6 shows the corresponding Radix-4 SISO decoder architecture. Since
+
+1dm is the number of non-zero elements in check row m.
+
+368
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:02:00 UTC from IEEE Xplore. Restrictions apply.
+
+λmn 8
+
+f (·) 8
+D
+FIFO dm
+
+R2-SISO Core
+
+Sm
+
+g (·) 8 Λmn
+
+λmn
+
++ Ln
+
+log(1 + e−(|a|+|b|) )
+
+a 8 ABS |a| +
+
+LUT
+
+log(1 + e−(||a|−|b||) )
+b 8 ABS |b| - ABS LUT - +
+
+1 1 Sign bit XOR
+
+Min(|a|, |b|)
+MIN
+Sign(a) ^ Sign(b)
+
+f (·) Unit
+M U8
+-X X
+
+Fig. 3. Radix-2 (R2) SISO decoder architecture
+Layer l
+λm1, λm2, λm3 ... (1) Read
+
+dm cycle
+
+(2) Decoding (n =1, 2, 3, …)
+
+Λm1, Λm2, Λm3 ... (3) Write back dm cycle
+Layer l+1 Read
+
+Decoding Stage 1
+
+Decoding Stage 2
+
+Write back
+
+Fig. 4. Pipelined decoding schedule
+
+two elements can be processed in each cycle, it has a throughput speed up of 2. Table 2 summarizes the synthesis results (90nm CMOS technology) for the R4 and R2 SISO decoders. To compare these two architectures, we define an efficiency factor η as the throughput speedup with R4-SISO divided by the area overhead. As can be seen, R4-SISO achieves throughput-area efficiency gains especially at lower clock frequency.
+
+x(2n+1)
+
+x(2n)
+
+f (·)
+
+y(2n)
+
+f (·)
+
+y(2n+1)
+
+D
+
+Fig. 5. One level look-ahead transform of f (·) recursion
+
+Table 2: Comparison of two SISO decoder architectures
+
+R2 SISO area
+
+R4 SISO area
+
+η
+
+=
+
+Speedup Area overhead
+
+450 MHz 6978 µm2 12774 µm2
+1.09
+
+325 MHz 6367 µm2 10077 µm2
+1.26
+
+200 MHz 6197 µm2 8944 µm2
+1.39
+
+proposed LDPC decoder architecture. In the proposed BS scheduling algorithm, the parallelism factor is equal to the sub-matrix size z. Since parameter z varies from code to code, i.e. 19 different sizes of z are defined in WiMax, we must design a datapath that is modular and scalable to support different code types. This is achieved by employing distributed SISO decoders and memory banks as shown in Fig. 7. This architecture can also reduce the overall power consumption by deactivating the memory banks and SISO decoders that are not being used. The L messages, on the other hand, are stored in a central memory bank for parallel accessing by z SISO decoders. This is achieved by grouping [1 × z] L messages (associated with each sub-matrix) into one memory word.
+The decoding flow for one sub-iteration is as follows: at each cycle, [1 × z] L messages are first fetched from the L-memory and passed through a circular shifter to be routed to z SISO decoders. The soft input information λmn is formed by subtracting the old extrinsic message Λmn from the APP message Ln. Then the SISO decoder generates a new extrinsic message Λmn and APP message Ln, and stores them back to the Λ-memory and the L-memory, respectively.
+
+Circular Shifter zxz
+-+
+SISO Core
+1
+
+L-Mem
+
+Λmn
+
+-
+
++
+
+Ln λmn
+
+SISO . . . Core
+2
+Λ’mn L’n
+
+-+
+SISO Core
+z
+
+Λ-Mem Λ-Mem Λ-Mem
+
+R4-SISO Core
+
+λm,2n+1
+
+λm,2n
+
+f (·)
+
+FIFO dm/2
+
+FIFO dm/2
+f (·)
+
+Sm
+D
+
++ L2n+1
+
+g (·)
+
+Λm,2n+1
+
+g (·)
+
+Λm,2n
+
++ L2n
+
+Fig. 6. Radix-4 (R4) SISO architecture
+
+E. Scalable and reconfigurable LDPC decoder
+To support multiple LDPC codes, the datapath has to be scalable and reconfigurable. Fig. 7 shows the
+
+Fig. 7. LDPC decoder architecture with scalable datapath
+
+By designing proper control logic, the decoder can
+
+be dynamically reconfigured to support multiple block-
+
+structured LDPC codes. With this partial-parallel archi-
+
+tecture, the pipelined (Radix-4) decoding throughput is
+
+approximately
+
+equal
+
+to
+
+2×k×z×R×f E×I
+
+clk
+
+,
+
+where
+
+k
+
+is
+
+the
+
+number of block-columns in H, z is the sub-matrix size,
+
+R is the code rate, E is the total number of non-zero sub-
+
+matrices in H, and I is the number of full iterations. Note
+
+that the latency of the circular shifter is not included in the
+
+throughput analysis, which may degrade the throughput
+
+369
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:02:00 UTC from IEEE Xplore. Restrictions apply.
+
+by about 5-15%.
+IV. RESULTS
+A multi-mode LDPC decoder which supports both IEEE 802.11n and IEEE 802.16e has been synthesized on a TSMC 90nm 1.0V 8-metal layer CMOS technology. Fig. 8 shows the VLSI layout view of the LDPC decoder. Table 3 compares this decoder with the state-of-the-art LDPC decoders of [3] and [4]. The decoder in [3] has the flexibility to support 19 modes of LDPC codes in the WiMax standard, however it will not support the higher data rates envisioned for 4G and IMT-Advanced. The decoder in [4] has a throughput of 640 Mbps, but it does not have the flexibility to support multiple codes. As can be seen, our decoder shows significant performance improvement in throughput, flexibility, area and power.
+
+Power consumption (mW) Power consumption (mW)
+
+450
+
+450
+
+400
+
+425
+
+400 350
+With early termination
+
+Without early termination
+
+375
+
+300
+
+350
+
+250 325
+
+200 300
+
+150
+
+275
+
+100
+
+250
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+500
+
+1000
+
+1500
+
+2000
+
+2500
+
+Eb/N0 (dB)
+
+Block size (bit)
+
+(a) Early termination (Block size = 2304, Max iter. = 10)
+
+(b) Distributed SISO decoding and memory banking
+
+Fig. 9. Two power reduction techniques
+
+CTRL Misc
+Logic
+L-Mem Circular In/Out
+Shifter Buffer
+R4-SISO Decoder + Distributed Λ-Mem
+x96
+Fig. 8. VLSI layout view of the LDPC decoder
+
+ROM
+
+deactivating the unused SISO decoders and memory banks when the LDPC code size is small.
+V. CONCLUSION
+A high performance LDPC decoder has been described that achieves a throughput of 1 Gbps. The decoder has a scalable datapath and can be dynamically reconfigured to support multiple 4G wireless standards.
+VI. Acknowledgement
+This work was supported in part by Nokia and by NSF under grants CCF-0541363, CNS-0551692, and CNS0619767.
+
+Table 3: LDPC decoder architecture comparison
+
+This Work
+
+[3]
+
+[4]
+
+Flexibility
+
+802.16e/.11n 802.16e 2048-bit fixed
+
+Max Throughput
+
+1 Gbps
+
+111 Mbps 640 Mbps
+
+Total Area
+
+3.5 mm2
+
+8.29 mm2
+
+14.3 mm2
+
+Max Frequency
+
+450 MHz
+
+83 MHz
+
+125 MHz
+
+Peak Power
+
+410 mW
+
+52 mW
+
+787 mW
+
+Technology
+
+90 nm
+
+0.13 µm
+
+0.18 µm
+
+Max Iteration
+
+10
+
+8
+
+10
+
+Algorithm
+
+Full BP
+
+Min-Sum Linear Apprx.
+
+As low power design is critical for wireless receivers, in order to save power, we have implemented a simple and effective early termination criteria for stopping the iteration process. The decoding will stop if the following two conditions are satisfied: 1) the hard decisions for the information bits based on their LLR values do not change over two successive iterations, and 2) the minimum of the absolute values of the information bit LLRs is larger than a pre-defined threshold. As shown in Fig. 9 (a), when the wireless channel is good, the decoding needs fewer iterations to converge, which therefore saves substantial power (up to 65% power reduction). Another power saving technique is to use distributed SISO decoders and memory banks. Fig. 9 (b) shows the power reduction from
+
+References
+[1] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 8, pp. 21–28, Jan. 1962.
+[2] T. Brack, M. Alles, F. Kienle, and N. Wehn, “A Synthesizable IP Core for WIMAX 802.16e LDPC Code Decoding,” in IEEE 17th Int. Symp. Personal, Indoor and Mobile Radio Communications (PIMRC), 2006, pp. 1 – 5.
+[3] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “A 19-mode 8.29mm2 52-mW LDPC Decoder Chip for IEEE 802.16e System,” in 2007 Symposium on VLSI Circuits, June 2007.
+[4] M.M. Mansour and N.R. Shanbhag, “A 640-Mb/s 2048-Bit Programmable LDPC Decoder Chip,” IEEE Journal of Solid-State Circuits, vol. 41, pp. 684–698, March 2006.
+[5] A.J. Blanksby and C.J. Howland, “A 690-mW 1-Gb/s 1024-b, rate1/2 low-density parity-check code decoder,” IEEE Journal of SolidState Circuits, vol. 37, no. 3, pp. 404–412, 2002.
+[6] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Work. on Signal Processing Syst. (SIPS), Oct 2004, pp. 107–112.
+[7] T. Zhang, Z. Wang, and K. Parhi, “On finite precision implementation of low density parity check codes decoder,” in Int. Symposium on Circuits and Systems (ISCAS), vol. 4, May 2001, pp. 202–205.
+[8] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2, pp. 429 – 445, 1996.
+[9] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in IEEE GLOBECOM, Oct. 2001, pp. 1036–1036.
+[10] K. Gunnam, G. S. Choi, M. B. Yeary, and M. Atiquzzaman, “VLSI Architectures for Layered Decoding for Irregular LDPC Codes of WiMax,” in Int. Conf. Commun. (ICC), June 2007.
+
+370
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:02:00 UTC from IEEE Xplore. Restrictions apply.
+
+

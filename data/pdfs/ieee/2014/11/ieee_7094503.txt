@@ -1,0 +1,201 @@
+High-throughput DOCSIS Upstream QC-LDPC Decoder
+Michael Wu1,2, Bei Yin1, Eric Miller1, Chris Dick2, and Joseph R. Cavallaro1
+1Department of ECE, Rice University, Houston, TX; e-mail: {mbw2, by2, ewm1, cavallar}@rice.edu 2Xilinx Inc., San Jose, CA, USA; e-mail: chrisd@xilinx.com
+
+Abstract—The newly released Data Over Cable Service Interface Specification (DOCSIS) 3.1 standard enables gigabit-speed broadband connection over cable television network. The main challenge at the upstream receiver is a computationally intensive LDPC decoder which need to achieve the 1 Gbps throughput with low block error rates. In this paper, we present an implementation of the upstream LDPC decoder on Xilinx FPGA using the VIVADO high level synthesis tool. We show that the resulting design can achieve 1.43 Gbps throughput on a Xilinx Kintex7 XC7K480T FPGA at 204.8 MHz clock frequency with 24% device usage. To our knowledge, this paper presents the first hardware implementation of DOCSIS 3.1 upstream LDPC decoder on FPGA.
+I. INTRODUCTION
+LDPC codes offer capacity-approaching error correction performance and are widely used in many wireless communication standards [1] such as IEEE 802.16e WiMAX and IEEE 802.11n. Recently, the newly released Data Over Cable Service Interface Specification (DOCSIS) 3.1 standard [2] combines wideband OFDM, 4K QAM modulation, with quasi-cyclic low-density parity-check (QC-LDPC) code to exceed the 1 Gbps upstream transmission data rate with low block error rates.
+To perform error correction, the receiver requires an LDPC decoder, which is extremely computationally intensive. The layered scaled min-sum LDPC decoding algorithm is broadly adopted to reduce hardware complexity while ensuring fast error-correction convergence [3], [4]. However, due to the data dependency between adjacent layers, the layered decoding algorithm updates soft bit-level reliability values by processing the parity check matrix sequentially layer by layer which limits the achievable decoder throughput. In addition, compared to the 600 Mbps throughput requirement in 802.11n [5], the DOCSIS 3.1 standard dictates a throughput requirement in excess of 1 Gbps. Furthermore, the block length of the QCLDPC code in the DOCSIS 3.1 standard is also much longer (16200 bits compared to 1944 bits for 802.11n), which increases computational complexity. As a result, meeting the performance requirement of the DOCSIS 3.1 standard poses significant challenge compared to the 802.11n standard.
+The key to maximizing decoder throughput is a good decoding schedule that enables concurrent processing by reducing the data dependency between adjacent layers. In a typical decoder design, an efficient implementation is enabled through hand-coded RTL. As an alternative, the Xilinx Vivado high level synthesis (HLS) tool uses C/C++/SystemC as input
+
+languages and outputs register-transfer level (RTL) designs. This tool can provide quality of result (QoR) similiar to handcoded RTL, while dramatically reducing the design time [6]. In this paper, we implemented a layered min-sum LDPC decoder with a good decoding schedule using the Xilinx Vivado HLS tool that exceeds the DOCSIS 3.1 standard performance requirement. We show that this design achieves 1.43 Gbps throughput on a mid-range Xilinx Kintex 7 XC7K480T FPGA running at 204.8 MHz with only 24% device usage.
+II. DOCSIS 3.1 UPSTREAM FEC
+A. DOCSIS 3.1 Upstream FEC Codes
+The newly released DOCSIS 3.1 standard [2] enables 1 Gbps upstream transmission data rate with 192 MHz OFDM channel and 4K QAM modulation. To achieve good errorcorrection performance, the new standard adopts three QCLDPC [7] codes for forward error correction (FEC) with rates 0.75, 0.85 and 0.89. The codes differ in length (L) and the number of information bits (K). The standard specifies L ∈ {1120, 5940, 16200} and K ∈ {840, 5040, 14400}, respectively, for rate 0.75, 0.85 and 0.89 codes.
+The standard employs different mother matrices for rate 0.75, 0.85 and 0.89 codes which are used to construct the parity check matrices. The mother matrix for the longest QCLDPC code, the rate 0.89 code, is shown in Fig. 1. Each number in the mother matrix represents a Z by Z cyclicshifted identity matrix, where Z = 360 for the rate 0.89 code. A number in the mother matrix represents a shift value. For example, the number 93 in the above matrix indicates a Z × Z identity matrix is cyclic-shifted to the right by 93 positions. The symbol ‘−’ in the matrix indicates a Z × Z zero matrix. The key difference among rate 0.75, 0.85 and 0.89 codes is that the standard specifies a different Z value for each code, where Z ∈ {56, 180, 360} respectively for rate 0.75, 0.85 and 0.89 codes.
+B. Layered Scaled Min-Sum Decoding Algorithm
+To decode a QC-LDPC code, the layered scaled min-sum decoding algorithm is widely used [3], [4], [8], [9]. The decoding algorithm processes the mother matrix layer by layer, where each layer corresponds to a row of the mother matrix. The first iteration of decoding is finished when the decoder finishes processing the last layer of the parity check matrix, at which point the next iteration begins at the first layer once
+
+,(((
+
+
+
+$VLORPDU
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:47:39 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Mother matrix of rate 0.89 LDPC in DOCSIS 3.1
+
+again. After several decoding iterations, the decoder outputs the decision LLRs of the transmitted bits.
+At each layer, the scaled min-sum algorithm computes the check to variable (CTV) messages at the check nodes and variable to check (VTC) messages at the variable nodes. Since the column weight of cyclic-shifted identity matrix is one, the computation at the variable node is straight-forward; the VTC message between the m-th check node and the n-th variable node, Qm,n, can be computed as:
+
+Qm,n = Ln − Rm,n,
+
+where Ln is the decision LLR for the n-th bit and Rm,n is the CTV message from the m-th check node to the n-th variable node. In the first decoding iteration, we initialize Ln to the input channel LLR for the n-th bit (Lnch) and let Rm,n = 0.
+The computational complexity of the decoding algorithm is
+dominated by the operations required at the check node. Let
+Nm be the set of variable nodes connected to the m-th check node and Nm \ n be the set of all variable nodes connected to the m-th check node excluding the n-th variable node. The CTV messages between the m-th check node and n-th variable node, Rm,n, can be computed as:
+
+Rm,n = α · σm,n · μm,n,
+
+(1)
+
+where α = 0.75 is a constant scaling factor which improves the min-sum algorithm performance, σm,n =
+k∈Nm\n sign(Qm,k), and μm,n = mink∈Nm\n |Qm,k|. The decision LLR for the n-th bit can be updated as:
+
+Ln = Qm,n + Rm,n.
+
+Algorithm 1 Two-min algorithm at the m-th check node
+
+1: Initialize: sm = 1, min1 = ∞, and min2 = ∞. 2: for k ∈ Nm do 3: Qm,k = Lk − Rm,k 4: sm = sm · sign(Qm,k) 5: [min1, min2] = min(min1, min2, |Qm,k)|) 6: end for
+
+7: for k ∈ Nm do
+
+8: if min0 = |Qm,k)| then
+
+9:
+
+μm,k = min2
+
+10: else
+
+11:
+
+μm,k = min1
+
+12: end if
+
+13: σm,k = sm · sign(Qm,k) 14: Rm,k = μm,kσm,k 15: Lk = Qm,k + Rm,k 16: end for
+
+MIN
+
+SEL
+
+MIN
+
+SEL
+
+... MIN
+
+SEL
+
+Fig. 2. Naive schedule of the MIN and SEL phases.
+
+L,R
+
+R
+
+APP
+
+RAM
+
+RAM
+
+L,R
+
+MIN
+
+Q
+
+Min1,Min2,signum
+
+SEL
+
+Fig. 3. DOCSIS 3.1 decoder overview.
+
+To reduce complexity, the computation at the check node can be simplified using the two-min algorithm [8], [9] which is summarized in Alg. 1. The two-min algorithm takes advantage of the fact that (1) can be computed easily if the two smallest |Qm,k| values and the product of the signs of all VTC messages, sm = k∈Nm sign(Qm,k), are known. To this end, the twomin algorithm decomposes the decoding algorithm into two phases [8]. The first phase, the MIN phase, computes the VTC messages, Qm,k∀k, and finds the two smallest |Qm,k| values, min1 and min2. The second phase, the SEL phase, computes the CTV messages, Rm,k∀k, using the first and second smallest |Qm,k| values and sm. The second phase then updates the decision LLRs.
+Due to the data dependencies between these two phases, the SEL phase of the current layer needs to update the decision LLRs before the MIN phase for the next layer can start. As a result, data dependencies between these two phases limit the LDPC decoder throughput as steps of the algorithm must occur in a sequential manner, as shown in Fig. 2. The main challenge
+
+is that we need to break the data dependencies between these two phases to achieve the required throughput.
+III. QC-LDPC DECODER IMPLEMENTATION
+We used the Vivado HLS tool to implement our DOCSIS 3.1 decoder. Fig. 3 is a high-level overview of the decoder. The DOCSIS 3.1 decoder consists of two main functional units, a MIN unit and a SEL unit, that exchanges data through memory. In the following section, we first describe the MIN and SEL units. Since the DOCSIS 3.1 standard specifies three different code profiles, we then show the modifications required to enable reconfigurability in order to support these code profiles. Finally, we describe the quantization scheme used to maintain good performance while reducing overall memory requirement.
+A. MIN Unit
+We used a fully parallel design to meet the high data throughput requirement at a low clock frequency. Since the code profile with the largest Z value is 360, our design can
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:47:39 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. MIN unit architecture overview.
+
+Bypass SEL
+SEL MIN
+
+SEL MIN
+UUnniiffiieedd PPrroocceessssiinngg
+
+Bypass MIN
+...
+SEL MIN
+Unniiffiieedd PPrroocceessssiinngg
+DELAY
+
+Fig. 6. Concurrent schedule of the MIN and SEL phases.
+
+Fig. 5. SEL unit architecture overview.
+
+Fig. 7. Reconfigurable cyclic-shifter.
+
+process up to 360 check nodes within a layer in parallel. The MIN unit performs the steps outlined in Line 3–4 of Alg. 1. We leverage the fact that the computational steps at check nodes are completely data parallel, where each node performs the same set of computations on different sets of data. Consequently, we decompose the computational steps into 360 lane wide vector operations, where each lane performs the computational steps required by a check node. Fig. 4 is an overview of the MIN unit.
+Using Vivado HLS, we built a number of vector operators which we used to construct the MIN unit, as shown in the right side of Fig. 4. The vector lane-wise addition (vadd), vector lane-wise absolution value (vabs), and vector lane-wise compare and select (vcmpsel) perform operations in Line 3,5 of Alg. 1. In Line 4 of Alg. 1, we map sign value +1 to 0 and sign value -1 to 1. The product of the signs can then be computed efficiently with bitwise XOR.
+However, each check node processes a different set of nodes and thus requires a different set of input data. While each VTC message Qm,k and CVT message Rm,k are unique to each node, the decision LLRs, Lk, are shared among the check nodes. To this end, the MIN unit reads 360 consecutive decision LLRs as we process a layer of the mother matrix. Since each element of the mother matrix is a shifted identity matrix, the decision LLRs, Lk, can be distributed in the right order across lanes using a cyclic-shifter. The shift required is specified by the mother matrix. For example, for the first layer, the shift value for the first 360 consecutive decision LLRs is 93 for the rate 0.89 code.
+B. SEL Unit
+We use a similar approach to the SEL unit. We decompose the computation steps outlined in Line 8-14 of Alg. 1 into
+
+360 lane wide vector operations. We use the vector lanewise absolute value (vabs), vector lane-wise compare and select (vcmpsel) and the vector lane-wise select (vsel) to performs the steps outlined in Line 8–12 of Alg. 1. We use an XOR to perform the step in Line 13 of Alg. 1. Finally, we use the second vsel to compute the CTV messages and the vector addition to update the decision LLRs in Line 14 and 15 of Alg. 1.
+Since we used a cyclic-shifter in the MIN unit to perform a cyclic shift on the input decision LLRs, we use a cyclic-shifter to perform the inverse cyclic shift to update these decision LLRs.
+C. Scheduling
+With the previous schedule, although we have dedicated units for the MIN phase and the SEL phase, the recursion cannot be pipelined efficiently. In order to increase the throughput of the LDPC decoder, we need to overlap the MIN phase and the SEL phase. To this end, we break the data dependencies between the MIN phase and SEL phase by using the following schedule. We overlap the SEL phase of the current layer with the MIN phase of the next layer. After a small fixed delay, the MIN phase for the next layer can begin after the SEL phase begins for the current layer. We introduce a small delay between the beginning of these two phases to avoid the memory conflict between updating decision LLRs in the current layer during the SEL phase and reading decision LLRs in the next layer’s MIN phase. In fact, an updated decision LLR obtained in the SEL phase is forwarded to the MIN phase for the next layer and is immediately consumed. By concurrently scheduling the MIN phase and SEL phase, we can improve the LDPC decoder throughput by approximately twofold.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:47:39 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 8. BER performance of DOCSIS 3.1 Codes.
+
+D. Reconfiguration
+The decoder needs to support the three code-rates specified by the DOCSIS 3.1 standard. First, different code profiles require different mother matrices, which requires a different set of shifts. We store the three sets of required shifts in a LUT table. To switch code profiles, we simply switch the starting address of the LUT table. Second, different code profiles have different Z values. Since the vector operators in MIN and SEL units have 360 lanes, to support smaller Z values, we simply disable lanes for smaller values. However, the cyclic-shifter needs to be reconfigurable to support smaller Z values. We can construct a cyclic-shifter that supports any Z ≤ 360 wide shifts. We used the design presented in [8], where the authors presented a reconfigurable Z ≤ 360 wide cyclic shifter that uses two 360-wide cyclic shifters and an array of muxes. As shown in Fig. 7, to cyclic shift the input by c places with a Z wide cyclic-shifter, the 360-wide left shifter cyclic-shifts the input by 360−Z +c and the 360-wide right shifter cyclic-shifts the input by c. The array of muxes can then be used to obtain the correct output.
+E. Quantization
+
+The largest memory requirements for the DOCSIS decoder is CVT messages. We stored these messages in block memory on the FPGA. Since the memory requirement for the VTC messages and the decision LLRs is much smaller, we stored these values within look up tables on the FPGA.
+IV. RESULTS
+We implemented the proposed QC-LDPC decoding algorithm using a fully parallel architecture with Vivado HLS 2013, a high level synthesis tool for Xilinx FPGA. As described in Section III, the design can be parameterized to support all three LDPC code rates. Our resulting design is efficient enough to fit into a mid-end Xilinx Kintex7 XC7K480T FPGA.
+The post place and route result of the design can be found in Tbl. I. The design can achieve up to 1.43 Gbps at 8 iterations
+TABLE I POST PLACE AND ROUTE RESULT ON XILINX KINTEX7 XC7K480T FPGA
+
+LUT
+
+FF
+
+Slice BRAM SRL Utilization
+
+115,170 79,438 32,173 95
+
+30
+
+24%
+
+To reduce the memory requirement of the design, we investigated the minimum bitwidth required to achieve good performance. We evaluated the performance of the decoder in an additive white Gaussian noise (AWGN) channel. We found that the internal computational width needs to be 8 bit and the input channel LLR width needs to be 6 bit. This allowed the DOCSIS decoder to achieve < 0.05 dB performance loss at BER performance of 10−8. Although we can use an input channel LLR width of 5 bit and internal computational width of 7 bit, the corresponding performance loss at BER performance of 10−8 is approximately 0.2 dB. To achieve BER performance close to that of the floating point reference, we kept the internal computational width to 8 bit and the input channel LLR width to 6 bit. The BER performance of this corresponding design is shown in Fig. 8.
+
+which exceeds 1 Gbps throughput required in the DOCSIS 3.1 standard with a 204.8 MHz clock frequency. The overall device utilization is only 24% of a Xilinx Kintex7 XC7K480T FPGA.
+V. CONCLUSION
+In this paper, we presented the first implementation of the DOCSIS 3.1 uplink LDPC decoder on FPGA. The implementation is able to exceed the data throughput requirement specified by the standard with only 24% device utilization on a Xilinx Kintex7 XC7K480T FPGA. There are many avenues for future work. For example, there are alternative algorithms such as the self-corrected Min-Sum algorithm [10] which may reduce the bit-width requirement while maintain good BER performance.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:47:39 UTC from IEEE Xplore. Restrictions apply.
+
+ACKNOWLEDGEMENTS
+This work was supported in part by Xilinx, Inc., and by the US National Science Foundation under grants ECCS-1408370, CNS-1265332, and ECCS-1232274.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Info. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] DOCSIS 3.1 Physical Layer Specification. Cable Television Laboratories, Mar. 2014.
+[3] Y. Sun and J. Cavallaro, “VLSI architecture for layered decoding of QC-LDPC codes with high circulant weight,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 21, no. 10, pp. 1960–1964, Oct. 2013.
+[4] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[5] IEEE 802.11n-2009-Amendment 5: Enhancements for Higher Throughput. IEEE Computer Society, Sept. 2009.
+[6] J. Cong, B. Liu, S. Neuendorffer, J. Noguera, K. Vissers, and Z. Zhang, “High-level synthesis for FPGAs: from prototyping to deployment,” IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, vol. 30, no. 4, pp. 473–491, April 2011.
+[7] M. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Info. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[8] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. 42nd Asilomar Conference on Signals, Systems and Computers. IEEE, Nov. 2008, pp. 1137–1142.
+[9] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, 2009.
+[10] J. Andrade, G. Falcao, V. Silva, J. Barreto, N. Goncalves, and V. Savin, “Near-LSPA performance at MSA complexity,” in 2013 IEEE International Conference on Communications (ICC), June 2013, pp. 3281–3285.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:47:39 UTC from IEEE Xplore. Restrictions apply.
+
+

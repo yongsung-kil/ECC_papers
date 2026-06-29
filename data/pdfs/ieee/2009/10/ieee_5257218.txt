@@ -1,0 +1,456 @@
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 45, NO. 10, OCTOBER 2009
+
+3761
+
+Highly Parallel FPGA Emulation for LDPC Error Floor Characterization in Perpendicular Magnetic Recording Channel
+Yu Cai, Seungjune Jeon, Ken Mai, and B. V. K. Vijaya Kumar
+Data Storage System Center, Department of Electrical and Computer Engineering, Carnegie Mellon University, Pittsburgh, PA 15213 USA
+Low-density parity-check (LDPC) codes offer a promising error correction approach for high-density magnetic recording systems due to their near-Shannon limit error-correcting performance. However, evaluation of LDPC codes at the extremely low bit error rates
+(BER) required by hard disk drive systems, typically around 10 12 to 10 15, cannot be carried out on high-performance workstations
+using conventional Monte Carlo techniques in a tractable amount of time. Even field-programmable gate array (FPGA) emulation plat-
+forms take a few weeks to reach BER between 10 11 and 10 12. Thus, we implemented a highly parallel FPGA processing cluster to emulate a perpendicular magnetic recording channel, which enabled us to accelerate the emulation by 100 over the fastest reported emulation. This increased throughput enabled us to characterize the performance of LDPC code BER down to near 10 14 and
+investigate its error floor.
+Index Terms—Error floor, field-programmable gate array (FPGA), low-density parity-check (LDPC) code, multicore.
+
+I. INTRODUCTION
+
+L OW-DENSITY PARITY-CHECK (LDPC) codes [1] offer a promising error correction approach for high-den-
+
+sity magnetic recording system due to their near-Shannon
+
+limit error-correcting performance. But applying LDPC codes
+
+to practical data storage systems still faces many challenges.
+
+Typical hard disk drive (HDD) systems require bit error rates
+
+(BERs) as low as
+
+to
+
+, while most LDPC codes are
+
+believed to suffer from error floor, a sudden decrease in the
+
+slope of the BER-SNR curve. For data storage applications, it
+
+is important to search for LDPC codes which do not show error
+
+floor above BERs of
+
+. Determining if such extremely
+
+low BERs are achievable with LDPC codes in realistic mag-
+
+netic recording channel models is challenging due to limited
+
+theoretical results on LDPC code error floors [2]. Monte Carlo
+
+simulations are the most common way to estimate error floors
+
+of LDPC codes in magnetic recording channels. But this re-
+
+quires the processing of an enormous number of bits (e.g.,
+
+bits to estimate BER of
+
+) to yield a statistically significant
+
+number (e.g., about 100) of errors. Conventional workstations
+
+do not have sufficient computational performance to execute
+
+such simulations in a tractable amount of time. An optimized
+
+LDPC decoder implemented in C/C and executed on a
+
+high-end workstation provides a peak throughput of the order
+
+of hundreds of kilobits per second, and consequently, it needs
+
+at least one month to finish the calculation for bits.
+
+Hardware accelerated emulators using FPGAs have recently
+
+been implemented to investigate the performance of LDPC
+
+codes over magnetic recording channels [3], [4]. A more ac-
+
+curate channel, which considers jitter noise for perpendicular
+
+magnetic recording, was also implemented in an FPGA [5].
+
+These hardware-based accelerators offer increased processing
+
+Fig. 1. LDPC magnetic recording channel emulation core.
+
+speed over software-based simulators and can usually achieve
+
+BER as low as
+
+to
+
+in a few weeks.
+
+Although the FPGA accelerated simulations have reached a
+
+much lower BER than possible with software simulations, a big
+
+gap still exists between the BERs demonstrated and the very low
+
+BER requirements of practical data storage systems. To investi-
+
+gate the code performance at even lower BERs, significant im-
+
+provement in processing throughput must be made over current
+
+FPGA emulators. This paper explores the application of modern
+
+computer architecture techniques of critical path pipelining and
+
+multicore processing to gain orders of magnitude speedup in
+
+throughput. This solution sheds light on the LDPC error floor
+
+and can assist in the evaluation of the error correcting perfor-
+
+mance of LDPC codes of interest.
+
+In Section II, we describe the architecture of the LDPC
+
+channel emulator core and the emulation platform. In
+
+Section III, we give the details on how we achieve the
+
+speedup. We show the FPGA design speedup results and LDPC
+
+BER-SNR curve with error floor in Section IV. Finally, we
+
+provide our conclusions in Section V.
+
+II. CHANNEL MODEL AND EXPERIMENTAL ENVIRONMENT
+
+Manuscript received March 06, 2009. Current version published September 18, 2009. Corresponding author: Y. Cai (e-mail: yucai@andrew.cmu.edu).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TMAG.2009.2022318
+
+A. LDPC Read Channel Single Core Description
+We implemented a model of a magnetic storage system (as shown in Fig. 1) in the FPGAs. It first encodes a pseudorandom user bit sequence by the LDPC encoder. Then, the coded bits are
+
+0018-9464/$26.00 © 2009 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:30 UTC from IEEE Xplore. Restrictions apply.
+
+3762
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 45, NO. 10, OCTOBER 2009
+
+sent to a perpendicular magnetic recording channel model with the step response modeled as a nine-coefficient finite-impulse response (FIR) filter. Additive white Gaussian noise (AWGN) and transition jitter noise are both introduced as impairments. The soft output Viterbi algorithm (SOVA) [6] producing soft information for the LDPC decoder has eight states (because of the use of a partial response target with memory of three samples), uses 7-bit precision, and the length of trace memory is 32 samples. The LDPC decoder uses the min-sum algorithm based on the log-likelihood ratios (LLRs) [7]. The final output is compared with the original data to determine the number of bit errors and block errors.
+
+Fig. 2. Architecture of LDPC core on the Virtex II Pro FPGA.
+
+B. Experimental Environment Platform
+We use the Berkeley Emulation Engine 2 (BEE2) multi-FPGA board [8] as our emulation platform. Each BEE2 board has five Xilinx Virtex-2 Pro FPGAs [9], one “control” FPGA for calculation coordination and four “user” FPGAs for computation. All five FPGAs are interconnected via high bandwidth and low latency mesh-like connections. Each FPGA has two embedded PowerPC 405 processor hard cores in the reconfigurable fabric, which can minimize the latency between the microprocessor and the reconfigurable fabric while maximizing the data throughput.
+
+III. HIGH-SPEED FPGA SIMULATOR
+
+To achieve simulation speedup, we applied two techniques to Fig. 3. Multicore LDPC emulator on three networked BEE2 boards. significantly improve the processing throughput over previously
+
+reported FPGA systems [3], [5]: pipelining and distributed par-
+
+allel multicore processing.
+
+the input data, partial erasure effect, transition noise, and inter-
+
+A. LDPC Read Channel Core Migration and Optimization
+
+symbol interference (ISI) in just one clock cycle. The second critical path is in the channel equalization module. It is an
+
+The LDPC read channel emulator in [3] and [5] is implemented on a FPGA board, which is plugged into the PCI bus of the host PC. The control software runs on the host PC. To gain speedup using these platforms is extremely difficult. First, all the handshaking between the control software and the FPGA simulation board is through a busy PCI bus. This may become
+
+11-coefficient FIR filter and the carrying out 11 multiplications and additions takes a rather long time. We pipelined both these two critical paths into five stages with proper control logic to avoid pipeline hazards. The processing throughput of single LDPC simulator core is increased by a factor of 5, with clock frequency increasing from 20 to 100 MHz.
+
+a bottleneck if we need frequent communication between software and LDPC simulation core, such as accurately recording B. Multicore Acceleration
+
+every code block. Second, there is only one FPGA with lim- Besides clock frequency improvement, we also turn to
+
+ited capacity which makes it impossible to do multicore exten- multicore solution to further increase throughput. To fully
+
+sion. BEE2 board can overcome these limitations with multiple utilize the benefits of multicore parallel processing, the most
+
+FPGAs. We first implement the simulator in control FPGA on important thing is to make multiple cores as independent as
+
+BEE2 board and the architecture is shown in Fig. 2. All the con- possible to make the total throughput increase linearly with
+
+trol software previously running on the host PC is now migrated the total number of processing cores. We apply the leapfrog
+
+to the embedded PowerPC 405. The LDPC simulation core is at- algorithm [10] to divide the long pseudorandom sequence into
+
+tached to the on-chip peripheral (OPB) bus. All the handshaking independent subsequences for parallel processing cores.
+
+between LDPC channel simulation core and software is through Each subsequence has a period of of the original sequence
+
+the high-speed on-chip bus. Due to FPGA’s larger capacity, we of length (about ). No single processor core will repeat a
+
+can put two LDPC read channel cores into one FPGA after a pseudorandom subsequence before it reaches BER of
+
+. In
+
+minor area optimization, as shown in Fig. 2.
+
+essence, the processing of all subsequences in multiple parallel
+
+Due to the complexity of the channel model, the maximum processors is just equal to the processing of one long sequence
+
+clock frequency was limited to 20 MHz [5]. The maximum with an -times faster virtual processor.
+
+clock frequency is determined by the critical path in the slowest The architecture of the FPGA simulation engine with mul-
+
+submodule in Fig. 1. One critical path is in the recording tiple parallel processing cores extension is shown in Fig. 3. We
+
+channel, which performs the calculations necessary to model optimized the LDPC core area to allow two LDPC cores to fit on
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:30 UTC from IEEE Xplore. Restrictions apply.
+
+CAI et al.: HIGHLY PARALLEL FPGA EMULATION FOR LDPC ERROR FLOOR CHARACTERIZATION
+TABLE I LOGIC CONSUMPTION ON XILINX VIRTEX-II PRO FOR DUAL CORE
+
+3763
+
+TABLE II EMULATION TIME COMPARISON FOR BER ESTIMATION
+
+Fig. 4. BER and BLER versus SNR for column weight 3, rate 8/9 LDPC code of length 4923 bits on a [1 2 2 1] PR channel with 80% media noise.
+
+get
+
+real speedup over previous LDPC emulations with
+
+each FPGA. While there are five FPGAs on each of the BEE2 a realistic magnetic channel model.
+
+boards, we could only instantiate nine LDPC cores per board,
+
+rather than the ideal ten, due to control/coordination overhead.
+
+By using three independent BEE2 boards, we obtained a total
+
+of 27 parallel LDPC cores.
+
+All the LDPC cores in a BEE2 board are controlled and mon-
+
+itored by the PowerPC in the control FPGA through extended
+
+on-chip bus. The single LDPC core in control FPGA is attached
+
+directly to IBM CoreConnect on-chip peripheral bus (OPB) as a
+
+slave module. The dual core in user FPGA is connected to OPB
+
+in control FPGA through custom point-to-point channels logic
+
+across control FPGA and user FPGA boundary. The custom
+
+logic can control and configure the status of LDPC core in user
+
+FPGA and it can also collect the status and results from them.
+
+When the board is powered on, the software running in PowerPC
+
+will instantiate a start command and send simulation parameters
+
+to each LDPC core on board. After that, the LDPC cores start
+
+to do the simulation. After every set time interval, the PowerPC
+
+collects the BER and block error rate (BLER) from each core on
+
+the same board and reports them to the host machine. The BER
+
+and BLER will be obtained by combining all the data from three
+
+boards.
+
+As discussed above, independent user sequence and noise se-
+
+quences are assigned to each of 27 LDPC cores to make each
+
+simulation independent. As a result, the processing throughput
+
+increases linearly with the total number of LDPC cores and our
+
+computational throughput is limited solely by hardware avail-
+
+ability. Overall, we achieved
+
+speedup over previously
+
+reported FPGA emulation systems [5], allowing better charac-
+
+terization of the LDPC code error floor.
+
+B. LDPC Error Floor Simulation Results
+
+In Fig. 4, we show the BER and BLER performance of a
+
+quasi-cyclic LDPC code. The code length was 4923 bits and
+
+the code rate was 8/9. The parity-check matrix of the LDPC
+
+code is a 547 4923 matrix, i.e., a 1 9 array of 547 547
+
+circulants. The column weight and row weight of each circu-
+
+lant are three. The positions of ones in the first rows of the nine
+
+circulants are {28, 80, 173}, {10, 90, 179}, {103, 133, 138},
+
+{85, 131, 154}, {55, 79, 156}, {212, 215, 267}, {105, 194,
+
+232}, {29, 64, 161}, and {8, 72, 101}. For the step response
+
+of the perpendicular magnetic channel model,
+
+for
+
+and
+
+for
+
+is used, where
+
+is the maximum magnitude, the channel bit density is
+
+, and the constant
+
+. For tran-
+
+sition jitter noise, the step response was discretized to
+
+resolution. Equalizer has 11 coefficients for a partial response
+
+(PR) target
+
+. Signal-to-noise ratio (SNR) definition
+
+was used, where the code rate
+
+, and and are the stan-
+
+dard deviations of the AWGN and the transition jitter noise,
+
+respectively. The ratio of transition jitter noise to AWGN is
+
+.
+
+Approximately 100-bit errors were collected for BER esti-
+
+mation. At least three block errors are observed for BLER es-
+
+timation. Error bars in Fig. 4 correspond to 95% confidence.
+
+Twenty five local and two global iterations are employed be-
+
+fore final data decoding. We achieved BERs between
+
+and
+
+, which have not been previously reported for a magnetic
+
+recording channel model. This LDPC code is attractive, since
+
+IV. RESULTS
+
+its error floor appears below
+
+BLER or below
+
+BER
+
+for the channel model used in this work. The results verify that
+
+A. FPGA Results
+
+the error rates in high SNR (or low error rate) range cannot be simply extrapolated from low SNR (or high error rate) range
+
+In user FPGA, the resulting logic consumption data are shown results and show the importance of fast simulation tools to eval-
+
+in Table I.
+
+uate the performance in low error rate ranges. The simulation
+
+Table II compares the emulation time of our system with other results suggest that this code may be considered as a good can-
+
+reported work. We assume that 100-bit errors should be col- didate if the requirement of sector error rate is above
+
+,
+
+lected for a confident estimation of BER. We can see that we while not a good candidate for sector error rate around
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:30 UTC from IEEE Xplore. Restrictions apply.
+
+3764
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 45, NO. 10, OCTOBER 2009
+TABLE IV BIT ERRORS PER ERRONEOUS BLOCK WITH NO JITTER NOISE
+
+tistics may be useful information to consider when designing concatenated error-correction schemes.
+
+Fig. 5. BER and BLER versus SNR for column weight 3, rate 8/9 LDPC code of length 4923 bits on a [1 2 2 1] PR channel with zero media noise.
+
+V. CONCLUSION
+
+In this paper, we presented a highly parallel FPGA-based
+
+emulation system to investigate the performance of LDPC
+
+codes for use in perpendicular magnetic recording channels. By
+
+using pipelining and a multicore architecture, we demonstrated
+
+speedup over the fastest previously reported magnetic
+
+recording channel emulator. With this increased throughput, we
+
+could for the first time explore the error floor of LDPC codes at
+
+very low BERs, near
+
+in magnetic recording channel. Our
+
+FPGA evaluation results also indicate that quasi-cyclic LDPC
+
+codes of rate 8/9 and codeword length 4923 bits can offer block
+
+error rates slightly above
+
+for SNRs slightly above 25 dB.
+
+This new ability to explore the error floor behavior of LDPC
+
+codes shows promise for faster, higher fidelity evaluation of
+
+these codes for use in magnetic recording.
+
+Fig. 6. BER and BLER versus SNR for column weight 3, rate 8/9 LDPC code of length 4923 bits on a [1 2 2 1] PR channel with 50% media noise.
+
+ACKNOWLEDGMENT
+The authors would like to thank Prof. J. Hoe and E. Chung for their assistance in using the BEE2 system.
+
+TABLE III BIT ERRORS PER ERRONEOUS BLOCK WITH 80% JITTER NOISE
+or below. Of course, further investigation is required in order to determine the applicability of the code considering issues including timing errors, other impairments of channel, and SNR requirement under a different SNR definition.
+In Fig. 5, we show the BER and BLER performance of the same code on zero jitter noise channels. The fact that error floor in Fig. 5 was not as obvious as in Fig. 4 suggests that we cannot extrapolate the error floor behavior from AWGN studies to more realistic magnetic recording channels that include jitter noise. In Fig. 6, we show the BER and the BLER of the same code on 50% jitter noise channel. Although the 50% jitter noise results are similar to the 80% jitter noise case, they are not identical.
+In Tables III and IV, we show the number of bit errors per erroneous LDPC code block at high SNR for two channels. From these tables, we can see that the number of bit errors per erroneous codeword decreases as SNR increases. These error sta-
+
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] X. Hu, B. V. K. Vijaya Kumar, Z. Li, and R. Barndt, “Error floor estimation of long LDPC codes on partial response channels,” in Proc. IEEE GLOBECOM, Nov. 2007, pp. 259–264.
+[3] L. Sun, H. Song, B. V. K. Vijaya Kumar, and Z. Keirn, “Field-programmable gate-array-based investigation of the error floor of low density parity check (LDPC) codes for magnetic recording channels,” IEEE Trans. Magn., vol. 41, no. 10, pp. 2983–2985, Oct. 2005.
+[4] H. Zhong, T. Zhang, and E. F. Haratsch, “High-rate quasi-cyclic LDPC codes for magnetic recording channel with low error floor,” in Proc. IEEE Int. Symp. Circuits Syst., 2006, pp. 125–128.
+[5] X. Hu, B. V. K. Vijaya Kumar, L. Sun, and J. Xie, “Decoding behavior study of LDPC codes under a realistic magnetic recording channel model,” IEEE Trans. Magn., vol. 42, no. 10, pp. 2606–2608, Oct. 2006.
+[6] J. Hagenauer and P. Hoeher, “A viterbi algorithm with soft-decision outputs and its applications,” in Proc. IEEE GLOBECOM, Nov. 1989, pp. 1680–1686.
+[7] F. Zarkeshvari and A. H. Banihashemi, “On implementation of min-sum algorithm for decoding low-density parity-check (LDPC) codes,” in Proc. IEEE GLOBECOM, Nov. 2002, pp. 1349–1353.
+[8] C. Chant, J. Wawrzynek, and R. W. Broderson, “BEE2: A high-end reconfigurable computing system,” IEEE Design Test Comput., vol. 22, no. 2, pp. 114–115.
+[9] Xilinx Virtex-II Pro Data Sheet, Nov. 11, 2004, DS083, Version 4.1. [10] A. De Matteis and S. Pagnutti, “A class of parallel random number
+generators,” Parallel Comput., vol. 13, pp. 193–198, 1990. [11] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. J. Wain-
+wright, “Lowering LDPC error floors by postprocessing,” in Proc. IEEE GLOBECOM, Nov. 30, 2008, pp. 1–6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:30 UTC from IEEE Xplore. Restrictions apply.
+
+

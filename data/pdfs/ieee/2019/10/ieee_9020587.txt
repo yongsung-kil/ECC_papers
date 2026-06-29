@@ -1,0 +1,748 @@
+2019 IEEE International Workshop on Signal Processing Systems
+AVX-512 Based Software Decodingfor 5G LDPC Codes
+Yi Xu, Wenjin Wang, Zhen Xu, Xiqi Gao National Mobile Communications Research Laboratory, Southeast UniversityNanjing 210096, China
+{xuyi, wangwj, xu zhen, xqgao}@seu.edu.cn
+
+Abstract—In this paper, we investigate how the 5G NR GPP based software defined radio 5G platform. Indeed, re-
+
+LDPC codes can be decoded by GPP effectively with single- searchers have been working on LDPC decoders for multicore
+
+instruction-multiple-data (SIMD) acceleration and evaluate the corresponding achievable throughput on newly released Intel Xeon CPUs. Firstly, a general software implementation archi-
+
+devices (e.g., GPU and CPU) to seek for better flexibility in recent years [4], [5]. In [4], inter-frame parallel offset min-
+
+tecture with SIMD acceleration for horizontal-layered LDPC sum (OMS) and normalized min-sum (NMS) LDPC decod-
+
+decodingispresented,wheretheparallelismcanbeachievedinan ing algorithm are investigated by single-instruction-multiple-
+
+intra-block manner. By utilizing Intel advanced vector extended data (SIMD) on multi-core devices. To reduce the decoding
+
+512 (AVX-512) instruction set, the efficiency of parallelism are maximized and therefore the capacity of x86 processors can be fully exploited. In addition, new features of AVX-512 are
+
+latency of a single code block, a software LDPC decoder implementation on x86 processors that takes advantage of
+
+furtherexploitedtooptimizeloadandstoreoperationsaswellas intra-code-block (intra-CB) parallelization was designed in [5],
+
+preprocessing to reduce the operation cost. Experiments results particularly for both Intel streaming SIMD extensions (SSE)
+
+alsoshowthatIntelXeonGold6154processorscanachieve42to and advanced vector extensions 2 (AVX2) instruction set.
+
+272 Mbps throughput with a single core for ten layered decoding iterations for various code rate and block length. The typical processing latency is below 100 μs. Consequently, an 18-core
+
+However, to best our knowledge, it is unknown so far how can the new features of AVX-512 instruction set be used to
+
+Intel Xeon CPU can achieve up to 5 Gbps decoding throughput. accelerate GPP based 5G NR LDPC decoding and how much
+
+throughput and processing latency can be achieved by a typical
+
+IndexTermsLDPCdecoding,singleinstructionmultipledata x86 processor correspondingly. This is the motivation for our
+
+(SIMD), 5G New Radio, GPP
+
+work.
+
+I. INTRODUCTION
+
+Inspired by the previous research [5], we consider an intraCB parallel horizontal-layered LDPC decoding algorithm as
+
+Thanks to the capacity approaching performance in the wa- the fundamental framework. Utilizing SSE, AVX2 and AVX-
+
+terfall region and the support for rate compatible transmission 512 instruction sets, various parallelism can be achieved
+
+[1], quasi-cyclic low-density parity-check (QC-LDPC) codes specifically for 5G NR LDPC decoding. To maximize the
+
+have been widely applied in various wireless communication throughput and minimize the latency of the decoder, new
+
+systems, and recently adopted as the data channel coding features of AVX-512 are exploited to optimize load and
+
+scheme in 5G enhanced mobile broadband (eMBB) scenarios store operations as well as preprocessing. Compared with
+
+[2]. Due to the inherent parallel encoding/decoding architec- the conventional SSE and AVX2, the significant throughput
+
+turesandlowererrorfloor,theyarealsoconsideredasoneof improvement of the AVX-512-based decoder can be observed.
+
+themostpromisingerrorcorrectioncodes(ECC)candidatefor
+
+5G ultra reliable and low-latency communications (uRLLC)
+
+II. LDPC IN 5G NEW RADIO
+
+services.
+
+Hardware-based wireless communication systems may suf- A. 5G NR LDPC Code
+
+ferfromsignificantcostsintheprocessofsystemdevelopment In order to satisfy the diverse service requirements of voice,
+
+andupdating.Withthecontinuousimprovementofcomputing video, and data in future mobile communication system, 5G
+
+capability of general purpose processor (GPP), many efforts NR is expected to support the various size of information
+
+have been put on the design and development of GPP based block length, ranging from around 100 to 8000 [6]. On the
+
+wirelesscommunicationsplatformsinrecentyears[3],which other hand, the adaptive modulation and coding (AMC), which
+
+have the advantages of fast-development, re- requires the variable rate of channel coding, is significant to
+
+configurability, extensibility, and economy. Consequently, a combat the instability of wireless channel quality. In addition,
+
+large number of GPP-based software defined radio (SDR) to well support hybrid automatic repeat request (HARQ), the
+
+projects have beenlaunched,suchasAmarisoftLTE,Openair- LDPC is expected to allow chase combination and incremental
+
+interface(OAI)andsrsLTE, etc.
+
+redundancy. To this end, rate-compatible raptor-like quasi-
+
+As LDPC decoding contributes considerable computational cyclic LDPC (RL-QC-LDPC) codes have been adopted as the
+
+complexity in 5G new radio (NR) baseband processing, an coding scheme of data channel for eMBB applications in 5G
+
+efficient software implementation architecture of LDPC de- NR technical specification [2].
+
+coding is crucial to the throughput and processing latency of
+
+978-1-7281-1927-4/19/$31.00 ©2019 IEEE
+
+54
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+A QC-LDPC code can be constructed from an M × N base graph (BG) matrix B [7]. Each element bij of the matrix B corresponds to a Z ×Z cyclic permutation matrix (CPM) Pbij .
+If each element in B is replaced by the corresponding CPM, a m × n parity check matrix H can be obtained, where the parity length m = M Z, the code block length n = N Z and the information length k = n − m = (N − M )Z. The BG
+matrix is usually designed first, and then lifted with the socalled lifting factor Z to obtain the final parity check matrix
+with compatible information blocklength size.
+Unlike conventional QC-LDPC codes, the BG matrix of an
+RL-QC-LDPC code ensemble has raptor-like structure, which
+is inherently suitable for rate-compatibility [1]. Two base graphs with raptor-like structure, BG1 with N = 68, M = 46 and BG2 with N = 52, M = 42, were adopted by 3GPP for the channel coding [2]. The lifting factor Z of BG1 and BG2 ranges from 2 to 384. Thus, BG1 is targeted for larger blocklengths (40 ≤ k ≤ 8448) and higher rates (1/3 ≤ R ≤ 8/9), whereas BG2 is targeted for smaller blocklengths (20 ≤ k ≤ 3840) and lower rates (1/5 ≤ R ≤ 2/3).
+
+B. Decoding Algorithm
+
+Besides the parity check matrix, the Tanner graph is also
+used to describe an LDPC code, which is a bipartite graph with n variable nodes (VN) on one side and m check nodes (CN) on the other side. If Hxy = 1, there is an edge connects CNx and VNy. A typical LDPC decoding algorithm can usually be represented as an iterative message propagation process on
+the graph, by exchanging messages along the edges. There
+are two issues determine the performance and computational
+complexity during the message propagation: the computation
+approach and the message propagation scheduling.
+For the computation approach, the belief-propagation (BP)
+algorithm, also knwon as the sum-product algorithm (SPA),
+shows near optimal BER performance. To avoid multiplica-
+tions, a BP algorithm in the Log-Likelihood Ratio (LLR) domain (LLR-BP) is widely used alternatively [8]. Denote Vx and Vx/y as the set of all VNs connected to CNx and Vx with y removed, respectively. We also denote L(xvy)(l) as the message propagated from VNy to CNx in the l-th iteration. Then the message propagated from CNx to VNy in the l-th iteration, is given by
+
+Lx(cy)(l) = 2 tanh−1(
+
+tanh(
+
+1 2
+
+L(xvy)
+
+(l))).
+
+(1)
+
+y ∈Vx/y
+
+However, because of the presence of the tanh function in the expression, SPA is unfriendly to both software and hardware implementations. To simplify the computation, the equation (1) is approximated to
+
+L(xcy)(l)
+
+=
+
+α sgn(L(xvy) (l))
+y ∈Vx/y
+
+·
+
+max(min (
+y ∈Vx/y
+
+L(xvy) (l)
+
+)
+
+−
+
+β, 0),
+
+(2)
+
+where α ∈ (0, 1] is the scale factor, β ∈ [0, +∞) is the offset
+
+factor and sgn(·) is the sign function that extracts the sign
+
+of a real number. Different approximation algorithms can be
+
+obtainedwhenαandβ takedifferentvalues,whicharelisted in Table I [9], [10].
+
+TABLE IPARAMETER RANGES OF DIFFERENT APPROXIMATION ALGORITHMS
+
+Approximation algorithm MS [9]
+NMS [10] OMS [10]
+
+α
+1 (0, 1)
+1
+
+β
+0 0 (0, +∞)
+
+Besides the conventional flooding scheduling, layered-based scheduling is also attractive as the message propagation scheduling for the LDPC decoder. In layered-based scheduling, the parity check matrix are looked as a layered graph that can be sequentially processed, and the decoder iteration is then split into sub-layer iterations. In particular, horizontal-layered scheduling was presented in [11]. From an algorithmic point of view, horizontal-layered scheduling has some advantages compared with the flooding one. Firstly, the decoding iteration number required to achieve similar correction performance is reduced by half. In addition, the horizontal-layered algorithm reduces by approximately 40 percent of the memory footprint (MF) [12]. As in [11] and [4], we employ horizontal-layered scheduling in this work.
+III. SOFTWARE IMPLEMENTATION OF 5G LDPC DECODERS
+
+Received LLR posteriori information
+
+float-type LLR posteriori
+
+Rate
+
+information CB
+
+Fixed-point
+
+De-matching
+
+Arithmetic
+
+byte-type LLR posteriori information CB
+
+SIMD LDPC decoder VN set buffer
+
+... ... ... ...
+
+if l ! itermax
+
+... ... ... ...
+
+CN-to-VN set buffer
+SIMD Load
+SIMD Store
+
+λ(c) i, j,k
+
+(l
+
+1)
+
+λ
+
+(c) i, j,k
+
+(l
+
+)
+
+SIMD Load
+
+SIMD Store
+
+λ( p) i, j,k
+
+(l
+
+1)
+
+λ
+
+( p) i, j,k
+
+(l
+
+)
+
+SIMD Message Propagation
+
+SIMD Hard Decision
+
+Code Block De-segment
+Received TB
+FigVSF 1. Software implementation of 5G LDPC decoder with SIMD Acceler-ation
+
+55
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1 provides a general architecture of software implementation of 5G LDPC decoder with SIMD acceleration. The received LLR from the demodulation firstlyg ot hroughthe ratede-matchingoperation,whichistheinverseprocessofrate matching. Fixed-point arithmetic converts float-typed atainto byte-typedatatomemoryandincreaseparallelism.According to [4], a fixed-pointa rithmeticm ethodc anm inimizet heerror correction performance loss caused by fixed-pointarithmetic, in which the input LLR messages and the messages during the calculation process are represented by 6-bit integers and byte-type integers respectively.
+TABLE IITYPICAL VALUES OF QUNDER DIFFERENT DATA SIZES AND DIFFERENTSIMDINSTRUCTION SETS
+
+W
+
+Q AVX-512 AVX2 SSE
+
+1 byte
+
+64
+
+32
+
+16
+
+2 bytes
+
+32
+
+16
+
+8
+
+4 bytes
+
+16
+
+8
+
+4
+
+After byte-type LLR posteriori information within each CB is loaded into an in-memory VN set buffer, the decoding process begins. Meanwhile, a CN-to-VN set buffer is reserved for messages propagating from CN to VN. The data in the memory buffer will be successively written into the register for parallel processing. In order to describe the parallel processing capability of the system, Q is defined as the maximum parallelism, which indicates the maximum amount of data that registers can process at the same time. Therefore, the value of Q is related to the data size W as well as the type of SIMD instruction set, and typical values are listed in Table II. For the special case of Q = 1, the parallel LDPC decoder degenerates to a serial decoder.
+
+60
+
+AVX-512,Q=64
+
+50
+
+AVX2,Q=32
+
+SSE,Q=16
+
+40
+
+30
+
+blocks of length Z. Since the maximum parallelism is Q, the data block with length Z will be divided into Z/Q parts. When Q is not divisible by Z, the registers cannot be fully utilized and the actual parallelism Qˆ will be less than Q, which can be expressed as
+
+Qˆ =
+
+Z Z/Q
+
+.
+
+(3)
+
+To study the parallelism of decoders based on different instruction sets, we measured the parallelism Qˆ for Z ranged from 2 to 384 in 5G NR [2]. As shown in Fig. 2, with the increase of maximum parallelism Q, the actual parallelism Qˆ increases accordingly. When the value of Z is large, the parallelism Qˆ is close to Q. If Z < Q, the parallelism decreases significantly, and the intra-CB parallelization scheme cannot bring sufficient throughput gain to the system. In this case, the intraCB parallelization scheme can be combined with inter-CB parallelization proposed in [4] to achieve higher parallelism, and the decoder can further improve the throughput without increasing the latency.
+In this implementation, AVX-512 is utilized as the instruction set. On one hand, according to Fig. 2, the LDPC decoder based on AVX-512 can achieve a higher degree of parallelism. On the other hand, SSE and AVX2 instruction sets do not support loading and storing byte-type data with masks due to memory read-write limitations. AVX-512 provides more flexible load and store instructions, which can be utilized to improve decoding performance.
+For ease of expression, the messages in the registers are written in vector form. In Fig. 1, λi(,pj),k(l) represents the k-th posteriori information vector according to CPM with column j in the l-th iteration, and λ(i,cj),k(l) represents the k-th CN-toVN message vector according to CPM Pij in the l-th iteration. The q-th element of λ(i,pj),k(l) is λ(i,pj),k,q(l), which is equal to L(yp()i,j,k,q)(l). Meanwhile, λ(i,cj),k,q(l) = L(xc()i,k,q),y(i,j,k,q)(l) is the q-th element of λ(i,cj),k(l). Then, the vectors can be defined respectively as
+
+λ(i,pj),k(l) = [λi(,pj),k,0(l), λ(i,pj),k,1(l), · · · , λi(,pj),k,Q−1(l)], (4)
+
+λ(i,cj),k(l) = [λ(i,cj),k,0(l), λ(i,cj),k,1(l), · · · , λ(i,cj),k,Q−1(l)]. (5)
+
+In the expressions above, x(i, k, q) and y(i, j, k, q) are the subscripts, which are given by
+
+x(i, k, q) = iZ + kQ + q,
+
+(6)
+
+20
+
+y(i, j, k, q) = jZ + mod(kQ + bij + q, Z),
+
+(7)
+
+10
+
+0
+
+50
+
+100
+
+150
+
+200
+
+250
+
+300
+
+350
+
+Z
+
+where bij is the offset of CPM Pi,j, and q is the element
+number of the vector. At the beginning of decoding, λ(i,pj),k(0) and λ(i,cj),k(0) will
+be loaded from the VN set and the CN-to-VN set into two
+
+registers in CPU respectively. After message propagating, the
+
+FigVSF2.TheparallelismQˆversustheliftingfactorZbasedondifferentSIMD instructionsets
+
+processed vectors λj(c,k)(1) and λ(i,cj),k(1) will be stored in their
+
+original places of VN set and CN-to-VN set. When all the
+
+To ensure that there is no interference between messages messages in the CN-to-VN set are updated, one iteration
+
+when propagating, parallel processing must be carried out in ends and the next iteration follows the processes above. If
+
+56
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+the number of iterations l exceeds the maximum number of iterations itermax, the LLR posteriori information in the VN set is determined in turn to obtain the decoding result of each CB. Finally, multiple CBs will be restored to a complete transmission block (TB), and the whole decoding process is
+completed.
+
+mask1
+
+137 ... 159 0 ... 40
+
+mask2
+
+SIMD MASK STORE
+
+SIMD MASK STORE
+
+IV. FURTHER OPTIMIZATION WITH AVX-512
+INSTRUCTIONS
+A. Load and 4tore 0perations
+According to the memory access scheme mentioned in [5], when loading or storing part vectors, masks are utilized to limit the address and length of the data. For the conventional SSE/AVX2 instruction set, the minimum data size W supported by load and store operations with a mask is 4 byte. Therefore, the general memory access process can only be implementedutilizinggeneralloadandstoreoperationsaswell as logical operations.
+To simplify the load and store processes, a new instruction in the AVX-512 instruction set is utilized, which can load or store packed byte-type integers with a mask. Table III lists two main opcodes of this instruction.
+
+... … ... -23 … -1 0 ... 40 ... … ... 137 ... 1…59 1.6..0 ... 2.0..0 ... ... ...
+VN set (Z = 160)
+
+FigVSF 4. Memory store process to VN set in 5G LDPC codes based onVMOVDQU8 instruction in AVX-512
+B. Hard %ecision
+
+VN set buffer
+
+... ...
+
+λ
+
+( p) j,k
+
+(l
+
+)
+
+SIMD LOAD
+
+λ(0)
+
+λ (1)
+
+SIMD
+
+mask( c'j,k )
+
+SIMD
+
+c j,k
+
+SIMD
+
+COMPARE
+
+SE LECT
+
+ST ORE
+
+... ...
+
+TABLE IIIOPCODES AND CSTYLE FUNCTIONS FOR VMOVDQU8
+
+Decoding result buffer
+
+Opcode VMOVDQU8 zmm k, m512 VMOVDQU8 m512 k, zmm
+
+C style function mm512 mask loadu epi8 mm512 mask storeu epi8
+
+FigVSF 5. Software implementation of hard decision based on AVX-512instruction set
+
+VN set (Z = 160) ... … ... -23 … -1 0 ... 40 ... … ... ... ... ... 137 ... 1…59 1.6..0 ... 2.0..0 ... ... ...
+
+SIMD MASK LOAD
+
+mask1 mask2
+
+SIMD MASK LOAD
+
+0 ... 40
+
+137 ... 159
+
+SIMD OR
+137 ... 159 0 ... 40
+
+By exploiting new features of AVX-512 instruction set, the hard decision process can also be accelerated with the instructioninTableIII.InFig.5,λ(0) andλ(1) areanall-zero vector and an all-one vector with length of 64 respectively. The vector λ(i,pj),k(l) is loaded into the register from the VN set buffer that completes the message propagation process.
+An SIMD comparision instruction determines whether each element in λi(,pj),k(l) is larger than zero. The output cj,k is a mask with length of 8 bytes, which is also the result of the
+hard decision in the bit form. An SIMD selection instruction with mask can extend the bit-form vector cj,k into a byte-form vector cj,k with λ(0) and λ(1). Finally, the result cj,k is stored into the decoded result buffer with a general store operation.
+C. Preprocessing
+
+The starting address is an essential parameter in loading a
+
+FigVSF 3. Memory load process from VN set in 5G LDPC codes based onVMOVDQU8 instruction in AVX-512
+
+VN vector λi(,pj),k(l) from the VN set buffer into the register.
+
+For an online decoding system, if the starting address needs
+
+The first opcode uses the mask to move the unaligned to be calculated every time before the vector is loaded, there
+
+packed byte-type integer value in the in-memory operands will be computational overhead that affects performance. The
+
+to the CPU register. And the second opcode uses the mask computational overhead can be reduced by preprocessing. For
+
+to move the CPU register to the unaligned packed byte-type LDPC decoder with fixed parity check matrix, each decoding integer value in the in-memory operands. As shown in Fig. 3 vector λ(i,pj),k(l) with same i, j, k has the same starting address andFig.4,threeandtwoinstructionscanimplementamemory in memory. Therefore, only one preprocessing of the starting
+
+loadandmemorystoreprocessrespectively.Notably,themask address is required when the decoder is started.
+
+utilized in the AVX-512 instruction set is 8 bytes long. Thus, However, the parity check matrix H of 5G NR LDPC
+
+the new method is more space-efficientt hant heg eneralone. varies with code length and code rate. Preprocessing for all
+
+57
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+possibleparitycheckmatricesresultsinunacceptablememory overhead. It is worth noting that in 5G NR system, each TB will be divided into several CBs before LDPC coding, which have the same parity check matrix H. This feature enables the preprocessing of the starting address of the VN vector to be carried out when each TB of information is received.
+Intheprocessofpreprocessingthestartingaddress,itcanbe foundthatpartsoftheVNvectorshavetwostartingaddresses. Such vectors need to be marked to utilize two start addresses when loading the vector. In addition, the masks used during the loading process also need to be precomputed and stored in the memory.
+V. IMPLEMENTATION RESULTS
+
+Fig. 1 illustrates that fixed-point arithmetic is required before decoding. To study the influence of fixed-point arithmetic ontheerrorcorrectionperformance,anevaluationofthefixedpoint decoder was completed. Input LLR messages and the messages during the calculation process are represented by 6-bit integers and byte-type integers respectively. The block error rate (BLER) performances are reported in Fig. 6. The curves show that fixed-point arithmetic has little effect on the error correction of decoders using BG1 and BG2.
+TABLE VPERFORMANCES COMPARISON OF 5GLDPCDECODER BEFORE ANDAFTER OPTIMIZATION WITH 10LAYERED-BASED DECODINGITERATIONS
+
+TABLE IVLDPCCODES FROM 5GNRUSED FOR PROPOSED SOFTWARE LDPCDECODER EVALUATION
+
+Code Scheme k
+
+R
+
+Z Base Graph
+
+CS1
+
+8448 948/1024 384
+
+BG1
+
+CS2
+
+8448 666/1024 384
+
+BG1
+
+CS3
+
+8448 340/1024 384
+
+BG1
+
+CS4
+
+3840 666/1024 384
+
+BG2
+
+CS5
+
+3840 340/1024 384
+
+BG2
+
+CS6
+
+3840 120/1024 384
+
+BG2
+
+To evaluate the throughput and latency performance of the LDPC decoder implemented by the software presented in section III, a server with Intel Xeon Gold 6154 processors was adopted. The processor has a 3.001GHz main frequency, 18 physical cores sharing 45 MB of L3 cache memory and supports the AVX-512 instruction set. In order to eliminate interference, the three functions provided by the processor, hyperthreading, turbo-boost and frequency scaling, will be turned off in the following test. Six typical LDPC code schemes with different information bit lengths k and code rates R for 5G NR are listed in Table IV.
+
+100
+
+Code
+Scheme
+CS1 CS2 CS3 CS4 CS5 CS6
+
+Before Optimization
+Throughput Latency
+246.45 Mbps 34.28 μs 132.58 Mbps 63.72 μs
+60.66 Mbps 139.26 μs 141.55 Mbps 27.13 μs
+64.48 Mbps 59.56 μs 41.15 Mbps 93.31 μs
+
+After Optimization
+Throughput Latency
+271.80 Mbps 31.08 μs 144.60 Mbps 58.42 μs
+63.38 Mbps 133.30 μs 151.82 Mbps 25.29 μs
+66.24 Mbps 57.97 μs 42.50 Mbps 90.35 μs
+
+To evaluate the effects of the three optimization methods in section IV, the performance comparison of 5G LDPC decoder before and after optimization is shown in Table V. After decoding one million random code blocks through AWGN channel, the average throughput and decoding latency of decoders utilizing the code schemes in Table IV were obtained. The optimized decoder reduces the latency by 3% to 9% approximately. About 70% of this performance gain was due to the utilizing of new load and store operations.
+
+5
+
+4.5
+
+CS1
+
+CS2
+
+4
+
+CS3
+
+3.5
+
+CS4
+
+CS5
+
+3
+
+CS6
+
+2.5
+
+BLER Throughtput(Gbps)
+
+10-1
+
+2
+
+1.5
+
+10-2 10-3 10-4
+
+CS2,float CS2,fixed CS4,float CS4,fixed CS3,float CS3,fixed CS5,float CS5,fixed
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0(dB)
+
+FigVSF 6. Error correction performance of fixed-point software LDPC decoderimplementations with 10 layered OMS decoding iterations
+
+1
+
+0.5
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+Core Number
+
+FigVSF 7. Throughput comparison of LDPC decoder based on CPUs withdifferent cores with 10 layered-based decoding iterations
+A multi-core LDPC decoder is implemented to evaluate the scalability of the proposed LDPC decoder. Considering that Intel Xeon Gold 6154 processors have 18 physical cores, the resultsofcomparingLDPCcodesbasedononecoreto18core CPU are shown in Fig. 7. Throughput varies linearly with the
+
+58
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+number of cores for each LDPC code, indicating that there is no significant interference between the decoders of different threads in the processor. When LDPC decoding is carried out with 18 cores, the throughput reaches 5 Gbps approximately.
+
+Throughtput(Mbps)
+
+900
+
+CS1,stop
+
+800
+
+CS2,stop
+
+700
+
+CS1,nostop
+
+CS2,nostop
+
+600
+
+500
+
+400
+
+300
+
+VI. CONCLUSION
+In this paper, a software implementation architecture with SIMD acceleration for horizontal-layered LDPC decoding of 5G LDPC decoders is presented. The application of AVX-512 instruction set effectively improves the degree of parallelism, and therefore the capacity of x86 processors can be fully exploited. Inaddition, operation cost is reducedby exploiting new features of AVX-512. Currently, the proposed decoder implementationfortenlayereddecodingiterationscanachieve 42 to 272 Mbps throughput with a single core, and 5 Gbps throughput with 18-core Intel Xeon CPU. The focus of this paperistoimprovethroughputwhilemaintaininglowlatency. It is foreseeable that the LDPC decoder with lower energy consumption and high performance can also be implemented by GPP.
+
+200
+
+ACKNOWLEDGMENT
+
+100
+
+0
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9 10
+
+Eb/N0
+
+FigVSF 8. Throughput performances of LDPC decoder implementations whenthe early-stopping criterion is switched on
+
+This work was supported in part by the National Key R&D Program of China under Grant 2018YFB1801103, the National Natural Sci- ence Foundation of China under Grants 61761136016, 61801114, 61631018, and the Natural Science FoundationofJiangsuProvinceunderGrantBK20170688,and the Fundamental Research Funds for the Central Universities.
+
+To improve the average performance of LDPC decoder, decoding results can be detected after each iteration, and decoding can be stopped if the legitimate codeword is found. It can reduce the average latency at high signal-to-noise ratio (SNR). In this experiment, cyclic redundancy check (CRC) is used to determine whether the decoding result is legitimate. Fig. 8 provides the throughput performances of several LDPC decoders when early-stopping criterion is switched on. The throughput of the LDPC decoder with early-stopping criterion is reduced by 35% to 50% when the SNR is low. However, when the waterfall region is reached, the early-stopping criterion drastically improves the average decoding throughput.
+TABLE VITHROUGHPUT PERFORMANCES COMPARING AMONG SSE-BASED, AVX2-BASED AND AVX-512-BASED 5GLDPCDECODER WITH 10 LAYERED-BASED DECODING ITERATIONS
+
+Code
+Scheme
+CS1 CS2 CS3 CS4 CS5 CS6
+
+SSE 80.03 Mbps 39.87 Mbps 18.01 Mbps 43.27 Mbps 20.11 Mbps 12.70 Mbps
+
+Throughput AVX2
+161.95 Mbps 81.80 Mbps 34.38 Mbps 88.41 Mbps 40.52 Mbps 25.58 Mbps
+
+AVX-512 271.80 Mbps 144.60 Mbps 63.38 Mbps 151.82 Mbps 66.24 Mbps 42.50 Mbps
+
+Finally, the performance of the optimized LDPC decoder is compared with the original intra-CB parallel decoder. The SSE-based and AVX2-based 5G LDPC decoder with scheme in [4] was also implemented, whose performance is listed in Table VI. With AVX-512, up to 243% and 71% improvement of throughput can be observed over the conventional SSE and AVX/AVX2, respectively.
+
+REFERENCES
+[1] T. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, “Protograph-based Raptor-like LDPC codes,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1522–1532, May 2015.
+[2] 3GPP TS 38.212, “NR; Multiplexing and channel coding (Release 15),” 2018.
+[3] Y. Ku, D. Lin, C. Lee, P. Hsieh, H. Wei, C. Chou, and A. Pang, “5G radio access network design with the fog paradigm: confluence of communications and computing,” IEEE Commun. Mag., vol. 55, no. 4, pp. 46–52, Apr. 2017.
+[4] B. L. Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Trans. Parallel Distrib. Syst., vol. 27, no. 5, pp. 1373–1386, May 2016.
+[5] ——, “Low-latency software LDPC decoders for x86 multi-core devices,” in Proc. IEEE Workshop on SiPS, Oct. 2017, pp. 1–6.
+[6] T. Richardson and S. Kudekar, “Design of low-Density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28– 34, March 2018.
+[7] L. Zhang, Q. Huang, S. Lin, K. Abdel-Ghaffar, and I. F. Blake, “Quasicyclic LDPC codes: an algebraic construction, rank analysis, and codes on latin squares,” IEEE Trans. Commun., vol. 58, no. 11, pp. 3126–3139, Nov. 2010.
+[8] B. K. Butler and P. H. Siegel, “Error floor approximation for ldpc codes in the awgn channel,” IEEE Trans. Inf. Theory, vol. 60, no. 12, pp. 7416–7441, Dec. 2014.
+[9] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[10] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, March 2002.
+[11] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop on SiPS, Oct. 2004, pp. 107–112.
+[12] J. Ha, D. Klinc, J. Kwon, and S. W. Mclaughlin, “Layered BP decoding for rate-compatible punctured LDPC codes,” IEEE Commun. Lett., vol. 11, no. 5, pp. 440–442, May 2007.
+
+59
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:02 UTC from IEEE Xplore. Restrictions apply.
+
+

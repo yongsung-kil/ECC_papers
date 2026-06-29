@@ -1,0 +1,316 @@
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+5045
+
+Adaptive Read Level Recording for Read Performance Improvement in 3-D NAND Flash
+Shiqiang Nie , Member, IEEE, ZhiKe Li , Fangxing Yu , Song Liu, and Weiguo Wu
+
+Abstract—While low-density parity-check code has been adopted in 3-D flash for improving chip reliability, it suffers from severe read latency due to the increasing number of read retries. Recent studies propose read-level recording to mitigate the performance loss from failed read retries. However, existing schemes induce large updating overhead and achieve suboptimal results, making it critical to develop better tradeoffs among storage overhead, process variation, and performance improvement. In this article, we propose AR2, an adaptive read-level recording scheme to improve read performance for 3-D NOT AND (NAND) flash. It consists of two designs: AR2-win and AR2-pre. AR2-win records the number of read levels that fit the majority of the last N reads, which prevents the worst page from dominating the read level recording. AR2-pre predicts the number of read levels for the next read based on the recorded one and a simple machine learning model, which prevents using stale recorded levels in large-capacity solid-state drives (SSDs). Our experimental results show that AR2 significantly improves the read performance for 3-D NAND flash and achieves on average 15% or more read latency reduction over the state-of-the-art.
+Index Terms—3-D, NAND flash, process similarity (PS), process variation (PV).
+I. INTRODUCTION
+T HE 3-D NOT AND (NAND) flash can dramatically improve storage capacity at low cost, which drives its wide adoption in the storage system of modern computer systems, e.g., embedded devices, personal computers, and data-centers. Based on the cell structure and organization, 3-D flash has two main types: charge trap (CT) and floating gate [1]. Charge trapping has gradually become a more promising technology as it has many advantages, i.e., low cell-to-cell interference, low programming voltage, and good cell endurance [2]. We focus on 3-D CT NAND flash chips in this article.
+With fast technology advances, today’s 3-D flash chips consist of tens to hundreds of layers, which lead to non-negligible reliability concerns with fast shrinking feature sizes [3], [4]. For example, 3-D CT NAND flash faces vertical charge loss and
+Received 15 May 2024; revised 9 October 2024 and 6 January 2025; accepted 21 April 2025. Date of publication 9 May 2025; date of current version 3 December 2025. This work was supported in part by the National Natural Science Foundation of China under Grant 62202368 and in part by the Shandong Provincial Natural Science Foundation under Grant ZR2021LZH009. Associate Editor: T. Dohi. (Corresponding author: ZhiKe Li.)
+The authors are with the School of Computer Science and Technology, Xi’an Jiaotong University, Xi’an 710049, China (e-mail: shiqiang.nie@xjtu. edu.cn; lzk18339166123@163.com; fangxingyu@stu.xjtu.edu.cn; liusong@ mail.xjtu.edu.cn; Wgwu@xjtu.edu.cn).
+Digital Object Identifier 10.1109/TR.2025.3563929
+
+lateral charge migration issues [5]. The page raw bit error rates (RBERs) in 3-D flash chips exhibit significant interlayer and intralayer process variations (PVs), e.g., 27× RBER difference are reported across different layers [6]. Flash pages in the same layer also show significant PVs [7], [8]. In addition, flash pages that have different value patterns and retention time exhibit a significant RBER difference.
+To hold high-level reliability, modern flash chips widely adopt low-density parity-check (LDPC) error correction. However, LDPC suffers from long read latency under errors, i.e., when a flash read operation fails to decode the sensed data after one try, it needs to increase the number of read levels (NRL) and retry the read. The prolonged read latency can be 10× longer than the latency of reading low-RBER pages [9]. To mitigate the prolonged read latency, recent studies propose to track the number of the last read levels (NRL) at different granularity [6], [9], [10]. Du et al. proposed to record the NRL after reading each page such that a future read to the same page starts with the recorded NRL. Shim et al. proposed to exploit the process similarity (PS) to record NRLs at chunk granularity. In this article, We also record NRLs at chunk granularity. A chunk represents a granularity that is bigger than a page but smaller than a block. A chunk consists of the pages in a block from the same layer or several neighboring layers. NRL recording schemes eliminate many failed read retries and, thus, effectively improve the average read latency.
+However, recorded NRLs may become stale after a long retention time. Comparing to an oracle that always chooses the best reading level, page- and layer-level NRL recording schemes degrade read performance by 55% and 27%, respectively. Layer-level NRL recording performs better than pagelevel NRL recording because it exploits the PS within one layer, i.e., pages in a layer share similar program and erase (P/E) cycles and retention time. However, it still suffers from considerable degradation over the oracle because it cannot adapt to the PV within each layer, i.e., after reading a high-RBER page, reading low-RBER pages would use more than necessary reading levels. To summarize, existing NRL recording schemes cannot fully exploit PV and PS in 3-D flash chips, resulting in suboptimal read performance in corresponding systems. To address these issues, we propose AR2, an adaptive read level recording approach for improving the read performance of 3-D NAND flash-based storage systems. Our contributions are summarized as follows.
+1) We propose AR2-win, a majority-based read level recording scheme, for read performance improvement. AR2-win chooses the NRL that fits the majority of the last N
+
+1558-1721 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+5046
+
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+Fig. 1. 3-D NAND flash architecture.
+
+page reads within a chunk. Avoiding using the NRL of the pages with large RBERs prevents such pages from dominating NRL recording and degrading the overall read performance. 2) We propose AR2-pre, a prediction-based read level selection scheme, for read performance improvement. AR2-pre determines the NRL for the next read by applying a simple machine learning (ML) model to the recorded NRLs from itself and neighboring chunks. By integrating both PVs and retention in the model construction, AR2-pre prevents failed retries due to avoiding choosing stale recorded NRLs. 3) We evaluate the proposed schemes and compare them to the state-of-the-art. Our experimental results show that AR2 effectively improves read performance for 3-D NAND flash—on average, we achieve 15% or more read latency reduction over different baseline schemes. The rest of this article is organized as follows. Section II discusses the NAND flash background. We motivate the design and elaborate the details in Section III. Sections IV and V describe the experiment methodology and analyzes the results, respectively. Section VI presents the relative works. Finally, Section VII concludes this article.
+II. BACKGROUND
+A. Architecture of 3-D NAND Flash
+Fig. 1 shows the physical architecture of 3-D CT NAND flash. One cell contains four components, i.e., tunnel oxide, CT material (i.e., SiN), blocking oxide, and poly-silicon from bottom to top. The electrons may be charged and removed by program operation and erase operation, respectively, from its SiN. The 3-D CT flash adjusts the cell shape such that a cell is fully wrapped around by itself. A block in 3-D CT flash spreads across all layers. Within one block, the cells of the same row make up a layer, while layers are stacked and connected with cylindrical channels to boost capacity.
+The NAND flash cell stores one or multiple bits by dividing the threshold voltage into several intervals. Each interval represents a different amount of electrons stored in the cell. The electrons leak through the SiN, which increases slowly with larger P/E cycles and retention time. In 3-D NAND flash, a
+
+Fig. 2. Variability among intrapage and interlayer. (a) Variability among intrapage [12]. (b) Variability among interlayer [12].
+polycrystalline silicon (poly-Si) channel is used, and variations in the grain size of the poly-Si can lead to fluctuations in the threshold voltage [11]. The different leakage speeds induce the corresponding RBERs in 3-D NAND flash. The 3-D NAND flash exhibits significant PS as well as PVs across different layers; that is, most pages within one layer and across neighboring layers have similar RBERs while a small subset of the pages may have significantly worse RBERs than the majority rest [6].
+PV among layers: One of the major PVs is the PV along the Z-axis, referred to as interlayer PV. This PV comes mainly from the diameter difference across the channel holes that connect the stacked pages, which leads to significant vertical charge loss (i.e., through top/bottom oxides) and lateral charge migration [5]. The charge leakage rate of cells varies depending on their position within the channel. Cells located in thinner channel regions experience faster charge leakage, resulting in lower cell reliability. In addition, the retention time difference across the stacked layers also contributes to the interlayer variation. Luo et al. [12] studied commercial 3-D flash chips and found that the RBERs of the pages from the middle layers are 3x or 4x higher than those from top layers, as shown in Fig. 2(b). Ye et al. [13] studied the influence of retention time on different layers and reported 70× RBER difference across different layers.
+PV among pages and intrapage: The PVs along Y -axis (i.e., inside page) and X-axis (i.e., across pages in the same layer), referred to as intralayer variations, are induced by the physical difference and the stored values of the cells. For different values, the more electrons the state has, the higher speed the charge leakage has. As one page always contains thousands of cells (e.g., 128 K for commercial 3-D NAND flash), these different cells exhibit different charge leakage speeds. Fig. 2 reports the PVs of the pages from ten layers of a commercial 3-D MLC solid-state drive (SSD) with 48 layers [12]. The four states, i.e., ER, P1, P2, and P3 (the bars in a different color in the figure), exhibit very different RBERs. Similar results are also presented in [14]. In other studies, Li et al. quantified the dependency of memory
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+NIE et al.: ADAPTIVE READ LEVEL RECORDING FOR READ PERFORMANCE IMPROVEMENT IN 3-D NAND FLASH
+
+5047
+
+cell reliability on contents for 20 nm MLC NAND flash memory chips [15]—the cell storing “01” has four times more RBER than that of the cell storing “11.” For RBER difference across different pages, Ye et al. [13] report 1.3× RBER difference in different pages in the same layer.
+To summarize, the physical difference and content difference lead to significant RBER variations across 3-D flash layers. Such errors can be categorized into programming errors and retention errors. Given a fixed page, the former depends on the P/E cycles of the page and tends to be stable after programming while the latter is time-dependent—the larger interval between the programming time and the read time, the higher RBER the page tends to have. For completeness, flash chips have many other error sources (e.g., read interference [7]) that are less significant. We leave them in future work.
+
+Fig. 3. Read latency comparison among ideal and LALDPC with different ratios of outdated pages. The x-axis represents these workloads used in the experiment.
+
+B. LDPC-Based Read
+We next briefly discuss the read procedure when adopting LDPC error correction. When receiving the request from the host, the flash translation layer (FTL) splits the request into page-sized subrequests and then determines their corresponding physical addresses. The FTL uses a number of predetermined voltages to sense the cells. By default, we use one voltage to differentiate two consecutive states. The sensed data are then transferred into the LDPC decoder. If the LDPC decoder can successfully decode the sensed data, we return the decoded data to the host. This reading process is referred to as hard-decision decoding. Suppose the sensed data contains more errors than hard-decision decoding can handle. In that case, the FTL shall incrementally use more fine-grained voltages to sense the cells, i.e., use two, three, and up to seven read voltages to differentiate two consecutive states. While subsequent reads require more sensing/transfer time, the LDPC decoder receives more sensed data such that, with the help of the log-likelihood ratio table, it can decode the pages with more errors. This reading process is referred to as soft-decision decoding. Studies have shown that soft-decision decoding can achieve much better error correction capability over hard-decision decoding and thus tolerate a much higher error rate, e.g., 1e−2 for 512B LDPC over 4 KB data. However, a major drawback of LDPC is its long sensing and data transfer latency when entering the soft-decision decoding phase. The situation becomes increasingly worse as more pages are likely to have errors toward the middle and end of the chip lifespan. The latency aware low-density parity-check (LALDPC) method [9] observed that all reads on the same page tend to share the same optimal read level over an extended period in 2-D NAND flash. Therefore, it records the last successful read level of the pages to optimize subsequent reads.
+III. AR2 DESIGN
+In this section, we first motivate the design of an adaptive read level recording scheme. We then present the AR2 overview and elaborate its design details.
+A. Motivation
+While LDPC helps us to achieve high-level reliability protection, it suffers from long read latency under errors. That
+
+Fig. 4. Read latency comparison among ideal and PS-read with different chunk level. The x-axis represents these workloads used in the experiment.
+is, when hard-decision decoding cannot correctly decode the returned data, we need to enter soft-decision decoding iteratively increases the NRL. The prolonged read latency can be 10× longer than the latency of reading low RBER pages [9]. Recently proposed read level recording techniques track the NRL of the last successful read at different granularity such that the recorded NRLs can be set as the initial NRL for future reads, which eliminate many failed read retries and, thus, improve read performance [6], [9], [10].
+However, the existing methods cannot achieve a good tradeoff in exploring both PS and PV characteristics in 3-D NAND flash. LALDPC is a scheme that tracks the NRL at page granularity [9]. It focuses on exploiting PVs across different WLs. However, it faces a major issue, i.e., the best NRL for reading a page may increase after a long retention time such that the recorded NRL may be outdated by the time it is used. We conduct an experiment to compare the read performance between LALDPC and an ideal scheme with different percentages of outdated NRLs. The ideal scheme has an oracle that determines the best read level, i.e., using NRL levels can successfully read the page while using (NRL-1) levels cannot decode the sensed data. Fig. 3 summarizes the results with the outdated pages between 20% and 100%. Other experimental configurations are presented in Section VI. In the experiment, we do not consider the access latency to the NRL mapping table. From the figure, we observe that LALDPC is 12% and 55% slower than the ideal when there are 20% and 100% outdated pages, respectively.
+A potential solution for addressing the above issue is to exploit the PS across different pages—Shim et al. [6] proposed to record one NRL for a chunk such that reading any page in the chunk updates the NRL. A chunk is a granularity that is bigger than a page but smaller than a block. A chunk consists of the pages in a block from the same layer or several neighboring layers. A recorded NRL becomes stale only if we do not access any page in the corresponding chunk for a long time. By exploiting the page similarity in the chunk, this scheme mitigates the percentage of outdated NRLs and, thus, helps to improve read performance. Fig. 4 compares the read performance from different schemes.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+5048
+
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+Fig. 5. Ratio of recorded NRL to actual NRL in LALDPC.
+
+Fig. 6. Ratio of recorded NRL to actual NRL in PS-read.
+
+Fig. 7. Overview of the AR2 scheme.
+
+For chunk-based NRL recording, we record one chunk NRL that combines pages from neighboring X layers (X= 1, 2, and 4, respectively).1 From the figure, we observe that the scheme that merges four neighboring layers achieves better performance because the recorded NRL is less likely to become stale. However, it is still much worse than the ideal, i.e., chunk-based NRL recording degrades the read performance by up to 31% slower than the ideal.
+We then compare the percentage of page reads that use the smaller than, the larger than, or the same as the ideal NRLs, respectively, in different schemes. In Figs. 5 and 6, we label the results as Under-read, Over-read, and Precise-read, respectively. From Fig. 5, the degradation of LALDPC comes mainly from outdated NRLs. In particular, after erasing a block and resetting its page NRLs, the SSD tends to accumulate many failed read retries to find the appropriate page NRLs. Since LALDPC records NRLs at the page level, there is no overestimation, i.e., the recorded NRL is either smaller than or the same as the ideal NRL. From Fig. 6, we observe that PS-read introduces NRL overestimation because reading a page with large RBER leaves the recorded NRL larger than the ideal NRLs of other pages in the chunk. Therefore, to achieve a good read performance improvement, we need to find good tradeoffs between PS and PV, which prevent large-RBER pages from dominating the NRL recording and stale NRLs from generating many failed tries.
+To summarize, without fully exploiting the PS and PV in 3D NAND flash, existing read level recording schemes tend to achieve suboptimal read performance improvements.
+B. Overview
+In this section, we briefly go through the process of read requests inside the SSD. In general, the SSD consists of host interface logic (HIL), FTL, error correction engine (e.g., LDPC
+1In this experiment, we only implement the NRL recording in [6] while the proposed voltage adjusting schemes are orthogonal designs.
+
+engine), and flash scheduler unit [2]. The HIL is responsible for communicating with the host; it receives the read requests from the request queue of the host, splits them into page-sized subrequests, and then inserts them into device queues for services. The FTL locates the physical address of each read subrequest using a mapping table. The FTL also maintains an NRL recording table to track the NRL of each chunk. After obtaining the corresponding physical address and the NRL of each read subrequest, the TSU coalesces multiread subrequests as a flash transaction and sends it to the SSD back-end for service, which contains multiple channels and chips. The LDPC engine shall check the raw data for data verification.
+In this article, we propose AR2, an adaptive read level recording scheme, to improve read performance for 3-D flash. It consists of two designs—AR2-win and AR2-pre, as shown in Fig. 7.
+1) AR2-win is a majority-based read-level recording scheme. AR2-win partitions the pages in one block into chunks and tracks an NRL for each chunk that fits the majority of the last N page reads. N is a constant that determines the history window size.
+2) AR2-pre is a prediction-based read level selection scheme. To prevent storing stale NRLs for less frequently accessed chunks, AR2-pre trains a multilayer perceptron (MLP)based ML model, which helps determine a more appropriate NRL for the chunk that is not frequently accessed.
+C. AR2-Win Scheme
+The AR2-win scheme is devised to enable majority-based read-level recording. AR2-win partitions one flash block into multiple chunks; each chunk consists of flash pages coming from several adjacent layers. A chunk can be characterized by (Block#, Layer#, P/E#, Ptime) where “Block#“ is the block index; “Layer#” is the layer index list; “P/E#” tracks the number of P/E cycles; and “Ptime” records the programming time of the first page of the chunk. “Ptime” is used to determine the retention time of the corresponding block. We assume all pages
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+NIE et al.: ADAPTIVE READ LEVEL RECORDING FOR READ PERFORMANCE IMPROVEMENT IN 3-D NAND FLASH
+
+5049
+
+in one chunk are written within a reasonable short duration after programming its first page such that all pages in one chunk have similar retention time.
+The NRL table records the reading levels of those who can successfully read the majority of the pages in chunks. The corresponding entries for the chunks of a block are reset to 1 s after the block is erased. This is sufficient for most cases, e.g., for the P/E range [0, 1000] and retention time [0, 5 h], the FTL can use one reading voltage to differentiate two consecutive states. However, when having the P/E range [5000, 10 000] and/or retention range [1 day, 10 days], a read operation using NRL = 1 is likely to fail and, thus, has to increase NRL to an appropriate value gradually. We leave it to our future optimization to better initialize the table.
+Given a read operation, the FTL determines its appropriate NRL by finding out its corresponding chunk and the recorded value in the NRL table. Modern SSD allows the SET FEATURES command to communicate the desired NRL to the NAND flash such that the read operation returns the desired data as specified. If the read fails, we increase the NRL and reissue the read operation. Otherwise, we return the sensed data to the host system. We track the last successful read to one page of the chunk to update the corresponding NRL in the table records. In addition, we update the NRL value in the table, i.e., where NRLold represents the recorded NRL; NRLcurrent represents the NRL of the current successful read; NRLnew represents the new value updated to the table, and R represent the number of read operations, ranging from 1 to N along with constant α which represents the impact factor of NRLcurrent on NRLnew. For example, with assuming α, NRLold, NRLcurrent, and R to be 4, 4, 0.5, 2, the value of NRLnew equals to 4; but if α, NRLold, NRLcurrent, and R equal be 4, 5, 0.5, 2, the value of NRLnew equals to 4.25 (we still set NRL to be 4 until it reaches to 5). We can observe that the NRL increases more smoothly than these existing schemes. The last N successful NRLs steer the tendency of NRL in NRL table. The larger the N is, the higher impact the historical NRL induces. By default, we set the maximal N to be 10. The value of NRL may fluctuate induced by intralayer variation and retention time. To solve this issue, if the retention time is over the predefined threshold (e.g., 10 days), we reset the N to 1 to recalibrate the NRL.
+Overhead analysis: In this section, we study the overhead induced by this proposed scheme. To implement that NRL table, we record the quadruple of each chunk. The physical page address in mapping table [16], the block index, and the layer index consume 32 b each. We record the NRL of each chunk using 3 b to indicate up to 7 read levels. In addition, we use 4 b to count the number of the past read operation. In summary, we need up to 8 B for each entry in the NRL table. For example, for a 64 GB SSD, the mapping table requires 1152 × 8 B for one block, while the NRL table requires up to 96 × 8 B for one block. The storage overhead of the NRL table is 8.3% of the mapping table. AR2-win looks up the NRL table to obtain the desired NRL for each request. We buffer frequently used entries in the cache for frequently used mapping table entries. Our studies show that the performance impact is less than 1%, which can be ignored.
+
+Fig. 8. Workflow of the AR2-pre scheme.
+D. AR2-Pre Scheme
+While AR2-win helps prevent the pages with large RBERs from dominating the NRL recording, some chunks may have a long retention time and keep stale NRLs due to low access frequency. These chunks shall introduce failed read retries to a sequence of reads before having the NRL updated to the appropriate one, which leads to non-negligible performance overhead. To address this issue, we design AR2-pre that uses a simple ML model to predict the majority RBER in each chunk.
+Fig. 8 illustrates how AR2-pre works. AR2-pre consists of three modules—data collection and preprocessing ML model, and model management. The FTL first obtains these train data (e.g., the beginning program voltage, the program pulse, and the end program voltage) during the read and program operations and then processes and stores these data classified by chunks. These data are read out to train and update our proposed ML model at an idle time, or when we find the model exhibits a large prediction deviation, i.e., we experience one or multiple continuous failed reads.
+1) Data Collection and Preprocess: To construct an MLP model for NRL prediction, we choose the initial program voltage, the program pulse, the end program voltage, the number of P/E cycles, the retention time, the percentage of each program state, and its corresponding RBER to compose the dataset; these data are normalized to the range from 0 to 1. Each row of the dataset has a label, i.e., REBR. The REBR of each page can be obtained from the read operation—we extract the number of erroneous bits in the LDPC decoder to compute the RBER.
+2) ML Method: While many ML-based methods may be used for RBER prediction, we focus on how to design the overall prediction module inside the SSD. That is, the optimization of ML technology is not the main goal. We choose the MLP as the prediction method in this article. We train the model with the data sets collected above.
+Constructing an MLP-based prediction model for 3-D NAND flash requires deciding the number of data dimensions as input. In this article, we choose the datasets from two chunks to train the model—one chunk owns the latest NRL; the other holds the stale NRL. A chunk having the latest NRL gets combined with its adjacent chunks to train the model. Given that the train dataset is a dataset with low-dimension values, we only add two hidden layers in this model. We then choose the widely adopted tanh activation function in our model.
+We first collect the datasets from a batch of similar SSDs and train an initial model using computing servers. We then deploy
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+5050
+
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+the model to the FTL of an SSD and retrain the model to adapt the individual device. This is done by collecting the training data from the device and send it back to the processor to enable the training at idle time. We also periodically retrain the model if the prediction error is above a preset threshold.
+3) Model Management: Since the SSD contains thousands of chunks, it would introduce large storage and computation overheads if we maintain an individual model for each chunk. Instead, we train an MLP model for the chunks sharing similar retention time and raw RBERs. This is based on the recent studies [7], [17], i.e., when adopting LDPC for 4 KB data with 512B coding redundancy, the read level increases by 1 if the RBER increases by 0.001; the BRER increases by 0.001 if the P/E cycles increase from 0 to 10 000 for many blocks.
+To validate this feasibility, we revise the distribution of the P/E cycles according to the measurement results on the 3-D CT NAND flash product (i.e., TLC NAND flash from Toshiba). As the blocks exhibit an average of 35 417 P/E cycles, among these selected blocks, the maximum endurance reaches 37 883 P/E cycles, and the minimum is 32 921 P/E cycles, resulting in a standard deviation of 1064 P/E cycles. Without considering the varied retention time, the endurance of the blocks follows a similar increasing trend until the P/E cycles reach 20 000 [7]. The RBER of the word line at the same position over different blocks also exhibits the similarity [6]. The observation motivates our ML model management scheme.
+Because the wear-leveling algorithm keeps all the blocks having similar P/E cycles, it is feasible to group the blocks according to the varied retention time. The blocks having retention time in the range of dividing retention time (i.e., 0–24 h) belong to the same group. The chunk containing the same layers in the same group shares the same ML model. We induce an error margin to group the blocks dynamically. After these models are trained, the FTL maintains these models for a limited period. The model shall be updated if it cannot predict precisely (i.e., over the predefined threshold). During a read operation, the module checks whether the error margin between the real RBER and the predicted RBER is over the default threshold or not. If yes, we reload and train the model incrementally using the newly collected dataset and then apply the updated model for the following prediction.
+4) Cooperation With AR2-Win Scheme: Both AR2-win and AR2-pre are used to update the NRL table maintained by the FTL, respectively. The AR2-win scheme employs the majority rule to decide the current NRL of the chunks, while the AR2pre scheme uses the ML-based method to predict the NRL of the chunks. The AR2-win guarantees the NRL used to read out data more smoothly; it suits the high read-intensive workload, in which the pages in one chunk are read frequently. The AR2-win scheme updates almost all the NRL of chunks except the NRL of other pages for no reads. The AR2-pre reduces the probability of failed reads if the NRL of a chunk is stale, especially for such a case, the pages are not read frequently. The AR2-pre scheme could solve this issue with the help of the prediction scheme by knowing the RBER of its neighbor layers. If one layer has not been read for a long time, then the NRL of this layer may be
+
+stale, and AR2-pre shall be involved to predict the RBER of this layer.
+In our scheme, AR2-win is used as the default NRL scheme for coming read requests. If the gap of the last read timestamp of one chunk and that of its adjacent chunk is over the default threshold, AR2-pre is invoked to update the staled NRL record asynchronously without any influence on input output (IO) processing, and this updated NRL is treated as the current NRL for AR2-win. The numerical value of the default time gap threshold varies with different vendors.
+5) Implement of AR2-Pre and Overhead Analysis: To implement our scheme on SSD devices, two feasible design architectures can be exploited as open-channel SSD or near-data processing units have been used widely in industries, such as Microsoft, Alibaba, and Facebook [18], [19], [20], [21], which the FTL function, such as garbage collection, I/O scheduler, are implemented at host side while few function modules (e.g., error correcting code (ECC) module) leave inside the device. AR2-pre module shall also run on the host side to utilize the CPU and memory resources from the host. Another design strategy is to design an AI-accelerated chip. Li et al. design corresponding hardware chip embedded inside SSD to implement the k-means algorithm with the TSMC 28 nm technology [22], the result validates the feasibility of AI-accelerated chip inside SSD [22]. To summarize, the proposed AR2-pre can be implemented for modern SSD architecture.
+The storage overhead comes from storing the dataset. As the entry of the dataset contains seven elements, each element uses 4 b to represent. We assume each entry consumes 4 B. If the train dataset contains thousands of entries (assuming always keeping 1000 entries for one chunk in the dataset), it only costs 4 KB for one model. Assuming the SSD contains thousands of models, it only costs several MB of storage, and this overhead can be ignored.
+The computation overhead comes from training ML models. As the host-based ML model has been validated already, we implement and train the proposed ML model by using Python language on a developing board with an ARM-based CPU [23] to evaluate the feasibility of putting the ML model inside SSD. Training the model using a dataset with 3000 entries costs a long time (the average of 2 s in our experiment); predicting the NRL of one chunk uses less time (the average of 300 ms in our experiment). As AR2-pre does not need to support the real-time process, the training procedure can be finished during idle time, and the NRL prediction can be made after the retention time of one chunk is over the default threshold (i.e., the pages in one chunk have not been read for one month), which has not any impact on the I/O process time. In summary, the computation overhead could be ignored both in open-channel SSD and computational SSD. Other works also verify the feasibility of the ML-based scheme inside the SSD [24], [25].
+6) Limitation: Both the proposed schemes utilize the characterization of PS and PV to alleviate the read performance degradation issue. However, it still can not solve that issue totally due to the complexity of PS and PV. For even access in one chunk, AR2-win enables avoiding NRL fluctuation drastically
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+NIE et al.: ADAPTIVE READ LEVEL RECORDING FOR READ PERFORMANCE IMPROVEMENT IN 3-D NAND FLASH
+
+5051
+
+TABLE I SSD PARAMETERS
+TABLE II STATISTICS OF WORKLOADS
+
+different NRL recording schemes (including LDPC in SSD, LALDPC, PS-read, block level recording method [6], [10], [17], [17]) would achieve similar performance. To observe the performance difference among these schemes, we skip this stage and move to that stage when the bit errors of pages start to accumulate, and thus soft-decision decoding is required to decode the raw data. For this purpose, we assume all blocks in the SSD have been erased thousands of times and have a long data retention time. The RBER distribution of pages in one block is referred from [28], which follows the normal distribution to simulate PV across pages and layers. The mean and standard deviation equal 0.008 and 0.05, respectively. The decoding latency of LDPC code and the extra data transfer latency are 15us and 10us, respectively, similar to those in [9]. We use the read response time as metrics to study the performance of proposed schemes compared to the existing schemes.
+
+and changing NRL smoothly. However, for uneven access in one chunk (i.e., only one page, which has the largest NRL than other pages in one chunk, is accessed frequently in the worst case), AR2-win cannot modify NRL quickly, leading to extra fail reads. To tradeoff between computation overhead and update frequency, AR2-pre sacrifices the degree of accuracy of the prediction model by enabling several chunks to share one prediction model. The variation in data characteristics and access frequency may also impact the prediction accuracy. The ML module used in AR2-pre also significantly impacts prediction accuracy. If the module fails to predict accurately, it may lead to additional reads. In this article, we demonstrate the feasibility of using an ML model to predict RBER. A more accurate ML model can replace the current MLP-based model if needed. AR2-pre can predict the NRLs for short-term scenarios effectively. However, for long-term reliability, there is a potential risk of cold read issues, where NAND flash could experience failures or degraded performance after extended periods of inactivity. This issue, though, typically occurs only once when the SSD has been unused for a long time. After the SSD starts up again, AR2 can operate normally, recalculating and applying the appropriate NRLs to restore performance. Although AR2 has these limitations, it still achieves better performance improvement than these existing schemes.
+IV. EXPERIMENTAL METHODOLOGY
+To evaluate the effectiveness of the proposed scheme, we implement the proposed scheme using SSDsim, which has been validated against real hardware platform [26]. Table I provides the detailed configuration of the 3-D NAND flash-based SSD. Table II lists the enterprise servers traces from Microsoft research Cambridge [27]. These workloads are widely used in previous studies.
+As most page reads can succeed using hard-decision decoding (i.e., NRL 1) at the early stage of the flash chip lifetime, these
+
+A. Extended Reliability Model for 3-D NAND Flash
+To train and validate the MLP model in AR2-pre, we need the input datasets as shown in Section III-D. Although the required datasets could be available when the NAND flash is accessed with the specific vendor-only commands, no flash vendor (e.g., Samsung, Intel) releases the specified command set of 3-D NAND flash, so we extend the reliability model of planner flash memories, which is used widely in research papers, to generate the necessary dataset.
+The most significant difference between planner NAND flash and 3-D NAND flash is the novel 3-D architecture. As the reliability model of planner NAND flash does not consider this 3-D feature, we extend the planner model proposed in [29] to model the reliability model of 3-D NAND flash. The RBER of pages depends on its position in the vertical direction for 3-D NAND flash. The RBER of each page is positively correlated with the position, so we introduce several factors to indicate the impact of layer number on reliability.
+The construction of the reliability model of 3-D NAND flash is shown as follows: 1) The threshold voltage distribution of each programmed state could be treated as the convolution of the ideal model (i.e., uniform distribution) and interference model (i.e., the normal distribution), which is the same as that of planner NAND flash, where the ideal model represents the threshold voltage distribution in the ideal case. Interference models denote the interference induced by all the error sources (i.e., P/E error, retention time error, program disturbance, and read interference).
+2) The threshold voltage distribution of the erasing state follows the normal distribution, and the other state follows the uniform distribution. The ideal reliability model is shown as in (1), where the ue and σe are the mean and standard deviation. The threshold voltage of each programmed state ranges from vpp to vpp + ΔVpp, and x is the initial threshold voltage
+
+⎧
+
+P
+
+(x)
+
+=
+
+⎨ ⎩
+
+√1
+
+σe 2π
+
+1 Δvpp
+
+,
+
+e−
+
+(x−ue )2 2σ2
+
+,
+
+erase
+
+state
+
+Vp ≤ x ≤ Vp + ΔVpp.
+
+(1)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+5052
+
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+Fig. 9. Prediction result of AR2-pre. The x-axis represents the P/E count range of the selected page, while the y-axis represents the RBER.
+
+Fig. 10. Actual NRL distribution across all the workloads.
+
+3) Both the interference coming from P/E and retention time are modeled as symmetric exponential distribution and normal distribution, respectively. We modify the P/E cycle-induced error model and the retention time-induced error model to add the impact of position, as shown in (2) and (3)
+
+− |k0 · x|
+
+p(x)
+
+=
+
+1 2λr
+
+·e
+
+λr
+
+.
+
+(2)
+
+P/E cycle induced error model: Where k0 means the interference induced by layer, which represents the interlayer PV, and the other factors, such as λr, come from [29].
+
+Ud = ks (x − x0) · kiN r · ln (1 + l · t/t0) σd2 = ks (x − x0) · km · N r2 · ln (1 + l · t/t0) .
+
+(3)
+
+Retention time induced error model: The difference of (3) is that it contains the factor l indicating the percentage of the speed of charge leakage to which layer contributes. The other factors, such as ks, ki, km, x0, t0, t, come from [29].
+We set these parameters by fitting the measurement data presented in [30]. We generate the train data set (including 3000 rows of data) and the valid dataset (including 1000 rows of data) using the proposed model. The results show it achieves a precise prediction of 94% due to the help of the pages from neighbor layers. Both the predicted RBER and the actual RBER of the tested page are shown in Fig. 9. We can see that this scheme meets our requirements as almost all the predicted RBER and actual RBER are within the same NRL range.
+Noted that the ML model mentioned in this section is used for explaining the design principle, we can replace other advanced ML models into SSD to improve the degree of prediction accuracy and save the power overhead. The model proposed in this article is versatile and can be applied to NAND flash memory even if the V th distribution, as previously discussed, is not present. It is a general framework that can be integrated into SSDs to enhance read performance. The AR2-win is designed to target hot data that is frequently accessed, preventing the overestimation or underestimation of NRLs. On the other hand, AR2-pre focuses on avoiding the storage of stale NRLs for less frequently accessed data. By leveraging an MLP-based ML model, AR2-pre determines more accurate NRLs for infrequently accessed chunks. This approach does not rely on the Vth distribution of NAND flash cells, making the model applicable across a range of scenarios.
+
+V. EXPERIMENTAL RESULTS
+In this section, we compare the results of the following schemes.
+1) LALDPC—We implement the LALDPC without memory capacity limit as the baseline because LALDPC validates the memory overhead brought by the additional NRL recording table is negligible. As mentioned above, AR2 takes less memory overhead compared to LALDPC.
+2) PS-read—We choose the layer-based last read level recording, which is represented in [6]. Note that other optimized schemes proposed in [6] are ignored, as these methods do not focus on the optimization of the NRL recording method, and also, these methods are orthogonal to our schemes.
+3) PaRR—We implement the parallel read proposed in [31], which reduce the read-response time by repeatedly parallelizing read-retry operations.
+4) AR2-win—This scheme implements the AR2-win for tracking NRL such that the chunks from different layers use their NRL table.
+5) AR2-pre—This scheme implements AR2-pre for predicting NRL of other layers once the NRL of its layer is updated. For evaluation purposes, AR2-pre uses the NRL of the last read for the next read, i.e., AR2-win is not employed in this evaluation.
+6) AR2—This scheme combines both AR2-win and AR2-pre to determine the NRL for the next read.
+7) ideal—This scheme assumes that we use an oracle to determine the most appropriate NRL for each read. This scheme determines the upper bound of the benefits of NRL recording schemes.
+1) Statistics of Workloads: This section presents statistics on the NRL distribution of workloads, which reflects the potential performance improvement of workloads, as shown in Fig. 10. Diverse NRLs exist inside the SSD because of the various retention times and PV. Although the NRL distribution of all the pages inside the SSD is the same, the NRL distribution of these accessed pages depends on the access pattern and varies with different workloads. All the workloads show that the NRL 3 dominates over the SSD, while others are only resident in a few pages.
+2) Read Latency Comparison: We have statistics on the completion time of each read request across all the workloads; Fig. 11 shows the read latency among these schemes. We can find that the scheme AR2 reduces the read latency by about 19% and 47% on average compared with the PS-read and LALDPC.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+NIE et al.: ADAPTIVE READ LEVEL RECORDING FOR READ PERFORMANCE IMPROVEMENT IN 3-D NAND FLASH
+
+5053
+
+Fig. 11. Read latency comparison across all the workloads.
+
+Fig. 13. Read latency CDF of workload PRN_0.
+
+Fig. 12. Ratio of NRL for reads to actual NRL in AR2.
+
+Both AR2-win and AR2-pre contribute to the read performance improvement. AR2-win reduces the number of failed reads and their associated performance penalty. AR2-pre predicts the RBER of other neighbor chunks by knowing the RBER of one chunk in advance with a high probability.
+3) NRL Ratio Analysis: We then analyzed the ratio distribution of the NRL estimation, that is, the ratio of NRL used for reads to ideal NRLs. The results are shown in Fig. 12. In the experiment, we fill the pages with dump data and spread the reads across different layers. As mentioned in motivation section, in the LALDPC, 52% of read requests are serviced using the most appropriate NRL while 48% experience underestimation, respectively; in the PS-read, 74% of read requests are serviced using the most appropriate NRL while 9% and 17% experience overestimation and underestimation, respectively. From the figure, By adopting the proposed AR2 scheme, 87% of read requests use the most appropriate NRL to read out the data. Only 9% and 4% of the read requests experience overestimation and underestimation, respectively. Since the read latency is proportional to the length of read request queue and its NRL, overestimating NRL prolongs the flash sensing and data transfer time but avoids the failed read, which leads to few extra read latency. NRL underestimation leads to an increased number of failed read retries, which leads to large extra read latency. The improvement from 52% and 74% in the LALDPC/PS-read to 87% in AR2 saves sensing time and data transfer time and reduces the number of failed retries, and thus achieves large performance improvements.
+4) Read Latency Distribution Analysis: This section focuses on analyzing the improvement in read performance. The procedure of servicing requests could be split into two stages. In the first stage, when the first reads come to each chunk and suffer the failed read, the latency is higher than that of the subsequent reads. In the second stage, the FTL updates the NRL table after serving the first reads. The read latency is more steady at this stage. So, these requests show a stepped increment in read latency due to the impact of the cumulative queue latency. Due
+
+Fig. 14. Read latency CDF of workload PROJ_3.
+to space limitation, we chose to analyze a subset of workloads, i.e., PRN_0 and PROJ_1, where PRN_0 has the least read/write ratio while PROJ_1 has the largest read/write ratio.
+We first collect the statistics of the NRL distributions in these workloads, as shown in Fig. 10. The NRL distribution is formed in the effects of the PV and access pattern. As shown in Figs. 13 and 14, we analyze read requests from the output of SSDsim and sorted these requests by their read latency. The x-axis represents the read access latency (the unit is ms), and the y-axis represents the cumulative distribution function. As we expect, the proposed schemes reduce the read latency of many read requests. For workload PRN_0, we observed 50% latency reduction than the LALDPC and 18% latency reduction than PS-read for 99% of read requests. It exhibits larger read performance improvement as it removes many failed reads. For workload PROJ_3, it also exhibits a reduction in read latency.
+5) Sensitivity Study: Chunk Configuration: In this section, we study the impact of the number of layers in one chunk on the performance. We propose the chunk as an NRL recording entry to utilize PS and alleviate PV as much as possible. We set the number of layers in one chunk to be 1, 2, 4, respectively. The result reveals that the performance fluctuation is modest, as shown in Fig. 15. AR2-win depends on the number of reads on this chunk. As more pages are read evenly, the NRL of the chunk is closer to the NRL of the majority. AR2-pre depends on the footprint (the number of accessed pages). As more pages are in one chunk, this chunk could be accessed with a higher probability. These two factors induce performance fluctuation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+5054
+
+IEEE TRANSACTIONS ON RELIABILITY, VOL. 74, NO. 4, DECEMBER 2025
+
+Fig. 15. Impact of the number of layers in one chunk.
+Fig. 16. Read latency with 20% of outdated pages.
+Fig. 17. Read latency with 40% of outdated pages.
+Varied percentage of outdated pages: In this section, the impact of varied outdated pages inside SSD on performance has been studied. We changed the ratio of the outdated NRL in the NRL recording table to be 20% and 40%, respectively. The results are shown in Figs. 16 and 17. When the ratio of outdated pages is 20%, these schemes, including LALDPC, PS-read, and our proposed scheme, have similar performance for some workloads, such as HM_0, SRC2_0. The reason is that, although outdated NRL induces performance degradation, the read latency also lies on other factors, such as the request interval and the amount of all the read requests, so the performance overhead is concealed. However, our proposed schemes achieve a better performance improvement with the increasing ratio of outdated pages (22% on average in Fig. 17). In real workloads, the more outdated NRLs exist, the better our scheme works.
+VI. RELATED WORK Many studies work on optimizing read performance with LDPC in flash-based SSDs; these works can be categorized into three groups as follows. Reduced BER optimizations: This field focuses on the reduction in BER to reduce failed reads [32], [33]. Zhang et al. [34] proposed to dynamically adjust the sensing voltages to reduce sensing and transferring latency. Wei et al. [35] developed a noise-reduction optimal read voltage determination algorithm to
+
+overcome the measurement noise existing in samples extracted from the feature layers to estimate the optimal read voltage accurately. Feng et al. proposed a combination of dynamic and static models to achieve adaptive optimization of the read reference voltage. [36].
+The flash sensing optimizations: This field aims to put the flash-sensing voltage intelligently. Zhao et al. proposed [17] to apply fine-grained levels in LDPC reads progressively. When the read with a lower level fails, the next level with several extra RVs is applied for flash sensing. Du et al. [37] improved the progressive sensing method with various increased granularity to meet RBER increasing requirements. Li et al. proposed [38] a smart sensing level placement scheme by utilizing three asymmetric error characteristics of flash memory. Luo et al. proposed to learn the RBER variation model inside the SSD controller to predict the optimal read voltage [12]. Chun et al. [4] designed a novel flash chip architecture with an on-die early-retry engine to reduce the number of read-retry.
+LDPC decoding algorithm optimization: This field aims to optimize the LDPC decoding procedure. Li et al. [39] proposed a single state asynchronous estimation (SSAE) method to estimate optimal read reference voltages. Jisung et al. [40] reduce the latency of a read-retry operation by pipelining consecutive retry steps using the CACHE READ command. Wang et al. [41] proposed a retention-aware management module, which could efficiently identify and predict the data access characteristics and precisely allocate the suitable blocks for different data. Du et al. [42] predict the final read level during the early read iteration, thus avoiding unnecessary read-retry latency.
+In recent years, ML algorithms have been increasingly applied for predicting the RBER in NAND flash-based SSDs. Ma et al. [43] proposed an ML model for RBER prediction based on program/erase (P/E) cycles and retention time. Similarly, Wei et al. [44] introduced an ML model for predicting RBER in 2-D flash. LightWarner presented a chip-free reinforcement learning-based predictor capable of predicting RBER across various NAND chips using a single model [45]. ADLPT aimed to reduce redundant prediction operations by leveraging reliability variations [46]. In contrast to these studies, our approach focuses on RBER prediction in 3-D NAND flash, specifically optimizing SSD performance by exploring 3-D layer correlations, which has been largely underexplored in previous work.
+VII. CONCLUSION
+In this article, we proposed AR2, an adaptive read level recording algorithm, to eliminate the read level overestimation and underestimation. It consists of AR2-win and AR2-pre schemes. AR2-win prevents pages with large RBERs from dominating read-level recording. AR2-pre prevents read level underestimation due to low access frequency. Our experimental results show that AR2 achieves significant performance improvement over the optimized state-of-the-art. In further work, we will try to implement our scheme in a real testbed, such as Cosmos OpenSSD, and employ more ML models into SSD firmware to validate the advantage of the AR2 scheme.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+NIE et al.: ADAPTIVE READ LEVEL RECORDING FOR READ PERFORMANCE IMPROVEMENT IN 3-D NAND FLASH
+
+5055
+
+REFERENCES
+[1] H. Maejima et al., “A 512gb 3b/cell 3 d flash memory on a 96-word-linelayer technology,” in Proc. IEEE Int. Solid-State Circuits Conf., 2018, pp. 336–338.
+[2] R. Micheloni et al., Inside Solid State Drives (SSDs). Berlin, Germany: Springer, 2013.
+[3] N. Shibata et al., “A 1.33-tb 4-bit/cell 3-d flash memory on a 96-word-linelayer technology,” IEEE J. Solid-State Circuits, vol. 55, no. 1, pp. 178–188, Jan. 2019.
+[4] M. Chun et al., “Rif: Improving read performance of modern SSDs using an on-die early-retry engine,” in Proc. IEEE Int. Symp. High- Perform. Comput. Archit., 2024, pp. 643–656.
+[5] R. Micheloni, 3D Flash Memories. Berlin, Germany: Springer, 2016. [6] Y. Shim et al., “Exploiting process similarity of 3 d flash memory for high
+performance SSDS,” in Proc. Micro, 2019, pp. 211–223. [7] F. Wu et al., “Characterizing 3 d charge trap NAND flash: Observations,
+analyses and applications,” in Proc. IEEE 36th Int. Conf. Comput. Des., 2018, pp. 381–388. [8] M. Zhang et al., “Alcod: Adaptive LDPC coding for 3 d NAND flash memory using inter-layer rber variation,” IEEE Trans. Consum. Electron., vol. 69, no. 4, pp. 1068–1081, Nov. 2023. [9] Y. Du et al., “LALDPC: Latency-aware LDPC for read performance improvement of solid state drives,” in Proc. Int. Conf. Massive Storage Syst. Technol., 2017, pp. 1–11. [10] J. Cui et al., “Dlv:exploiting device level latency variations for performance improvement on flash memory storage systems,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 37, no. 8, pp. 1546–1559, Aug. 2017. [11] H. Jo et al., “Investigation and modeling of z-interference in Poly-Si channel-based 3-D NAND flash memories,” IEEE Trans. Electron Devices, vol. 69, no. 2, pp. 543–548, Feb. 2022. [12] Y. Luo et al., “Improving 3 D NAND flash memory lifetime by tolerating early retention loss and process variation,” Proc. SIGMETRICS, vol. 2, no. 3, pp. 1–48, 2018. [13] V. Ye, “The solution to the bit error non-uniformity of 3 d NAND,” in Flash Memory Summit, 2017, pp. 1–26. [14] Y. Di et al., “1 1>2: Variation-aware lifetime enhancement for embedded 3 d NAND flash systems,” in Proc. LCTES, 2019, pp. 45–56. [15] J. Li et al., “How much can data compressibility help to improve NAND flash memory lifetime?,” in Proc. Conf. File Storage Technol., 2015, pp. 227–240. [16] A. Gupta et al., “DFTL: A flash translation layer employing demandbased selective caching of page-level address mappings,” ACM SIGPLAN Notices, vol. 44, no. 3, pp. 229–240, 2009. [17] K. Zhao et al., “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” 2013, pp. 243–256. [18] W. Cao et al., “{POLARDB } meets computational storage: Efficiently support analytical workloads in cloud-native relational database,” in Proc. 18th { USENIX} Conf. File Storage Technol. ({FAST} 20), 2020, pp. 29–41. [19] M. Wilkening et al., “Recssd: Near data processing for solid state drive based recommendation inference,” in Proc. 26th ACM Int. Conf. Architectural Support Program. Lang. Operating Syst., 2021, pp. 717–729. [20] C. Wu et al., “Maximizing i/o throughput and minimizing performance variation via reinforcement learning based i/o merging for SSDs,” IEEE Trans. Comput., vol. 69, no. 1, pp. 72–86, Jan. 2019. [21] W. Kang et al., “Dynamic management of key states for reinforcement learning-assisted garbage collection to reduce long tail latency in SSD,” in Proc. 55th Annu. Des. Autom. Conf., 2018, pp. 1–6. [22] B. Li et al., “Haml-SSD: A hardware accelerated hotness-aware machine learning based SSD management,” in Proc. IEEE/ACM Int. Conf. Comput.Aided Des., 2019, pp. 1–8. [23] R. Pi, “Raspberry pi 3 model b,” 2015. [Online]. Available: https://www. raspberrypi.org/products/raspberry-pi-3-model-b
+
+[24] Y.-C. Hu et al., “Dynamic multi-resolution data storage,” in Proc. Micro, 2019, pp. 196–210.
+[25] M. Lokhandwala et al., “Pensieve: A machine learning assisted SSD layer for extending the lifetime,” in Proc. IEEE 36th Int. Conf. Comput. Design, 2018, pp. 35–42.
+[26] Y. Hu et al., “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput., 2011, pp. 96–107.
+[27] N. Dushyanth et al., “Write off-loading: Practical power management for enterprise storage,” ACM Trans. Storage, vol. 4, no. 3, pp. 1–23, 2008.
+[28] N. Papandreou et al., “Characterization and analysis of bit errors in 3 d TLC nand flash memory,” in Proc. IEEE Int. Rel. Phys. Symp., 2019, pp. 1–6.
+[29] Y. Pan et al., “Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,” in Proc. Int. Symp. High-Performance Comp Architecture, 2012, pp. 1–10.
+[30] W. Liu et al., “Characterizing the reliability and threshold voltage shifting of 3 d charge trap NAND flash,” in Proc. Des., Autom. Test Eur. Conf. Exhib., 2019, pp. 312–315.
+[31] J. Cui et al., “Improving 3-d nand SSD read performance by parallelizing read-retry,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 42, no. 3, pp. 768–780, Mar. 2022.
+[32] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. 30th Int. Conf. Comput. Des., 2012, pp. 94–101.
+[33] Y. Zhu et al., “Alarm: A location-aware redistribution method to improve 3 d FG NAND flash reliability,” in Proc. Int. Conf. Netw., Architecture, Storage, 2017, pp. 1–10.
+[34] M. Zhang et al., “Rber aware multi-sensing for improving read performance of 3 d MLC NAND flash memory,” IEEE Access, vol. 6, pp. 61934–61947, 2018.
+[35] D. Wei et al., “Exploiting feature layer for read reference voltage optimization on 3 d NAND flash memory,” IEEE Trans. Consum. Electron., vol. 70, no. 1, pp. 433–444, Feb. 2024.
+[36] H. Feng et al., “Lightweight read reference voltage calibration strategy for improving 3-d TLC NAND flash memory reliability,” IEEE Trans. Device Mater. Rel., vol. 23, no. 3, pp. 370–379, Sep. 2023.
+[37] Y. Du et al., “Adapting layer rbers variations of 3 d flash memories via multi-granularity progressive LDPC reading,” in Proc. 56th ACM/IEEE Design Autom. Conf., 2019, pp. 1–6.
+[38] Q. Li et al., “Exploiting asymmetric errors for LDPC decoding optimization on 3 d NAND flash memory,” IEEE Trans. Comput., vol. 69, no. 4, pp. 475–488, Apr. 2020.
+[39] Y. Li et al., “Exploiting metadata to estimate read reference voltage for 3-d NAND flash memory,” IEEE Trans. Consum. Electron., vol. 69, no. 1, pp. 9–17, Feb. 2023.
+[40] J. Park et al., “Reducing solid-state drive read latency by optimizing readretry,” in Proc. 26th ACM Int. Conf. Architectural Support Program. Lang. Operating Syst., 2021, pp. 702–716.
+[41] T.-Y. Wang et al., “Retention-aware read acceleration strategy for LDPCbased NAND flash memory,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 42, no. 12, pp. 4597–4605, Dec. 2023.
+[42] Y. Du et al., “LDPC level prediction towards read performance of highdensity flash memories,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 42, no. 10, pp. 3264–3274, Oct. 2023.
+[43] R. Ma et al., “Rber-aware lifetime prediction scheme for 3d-TLC NAND flash memory,” IEEE Access, vol. 7, pp. 44696–44708, 2019.
+[44] D. Wei et al., “Prediction models of bit errors for NAND flash memory using 200 days of measured data,” Rev. Sci. Instrum., vol. 90, no. 6, 2019, Art. no. 0 64702.
+[45] Y. Pan et al., “Lightwarner: Predicting failure of 3 D NAND flash memory using reinforcement learning,” IEEE Trans. Comput., vol. 72, no. 3, pp. 853–867, Mar. 2022.
+[46] Y. Pan, “Adlpt: Improving 3 d NAND flash memory reliability by adaptive lifetime prediction techniques,” IEEE Trans. Comput., vol. 72, no. 6, pp. 1525–1538, Jun. 2022.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:46 UTC from IEEE Xplore. Restrictions apply.
+
+

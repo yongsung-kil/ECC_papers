@@ -1,0 +1,426 @@
+2024 IEEE International Symposium on Information Theory (ISIT) | 979-8-3503-8284-6/24/$31.00 ©2024 IEEE | DOI: 10.1109/ISIT57864.2024.10619193
+
+Section-wise Revolving NBP-like Decoders for
+QC-LDPC Codes
+Qinshan Zhang∗, Bin Chen†§, Tianqu Zhuang∗, Yong Jiang∗‡, and Shu-Tao Xia∗‡ ∗Tsinghua Shenzhen International Graduate School, Tsinghua University, China †Harbin Institute of Technology, Shenzhen, China ‡Research Center of Artificial Intelligence, Peng Cheng Laboratory
+Email: {qs-zhang21, zhuangtq23}@mails.tsinghua.edu.cn; chenbin2021@hit.edu.cn; {jiangy, xiast}@sz.tsinghua.edu.cn
+
+Abstract—Recently, deep learning has demonstrated improvements over classical decoding algorithms in various families of error-correcting codes with short to moderate block lengths. Neural decoders like neural belief propagation (NBP), constructed based on the Tanner graphs of linear codes, have been extensively studied, but their application to longer codes is limited due to increased network complexity with longer block lengths. This complexity leads to higher computational costs and deployment challenges, such as GPU memory usage. To address this, we propose a novel revolving framework for NBP-like decoders tailored to QC-LDPC codes, a commonly used class of error correction codes. Our approach leverages the section-wise cyclic structure inherent in QC-LDPC codes, significantly simplifying the complexity of the network. Experimental results demonstrate the effectiveness of our method across various QC-LDPC codes. Especially, compared to the traditional decoding scheme based on the section-wise cyclic structure, our proposed decoder shows substantial improvements on 5G LDPC codes, exhibits better performance than the traditional min-sum decoder, and approaches the sum-product decoder without a noticeable error floor within the investigated noise levels.
+I. INTRODUCTION
+In recent years, deep learning (DL) driven decoder design for error-correcting codes has attracted much attention due to its promising potential and superiority over traditional decoders. After Nachmani et al. [1] proposed neural belief propagation (NBP) decoders for linear codes and showed great performance improvements compared to traditional BP decoders, a class of NBP-like decoders emerged. The original NBP decoder performs message updating in each iteration as the weighted sum-product algorithm (SPA) that introduces trainable weights. Besides, other following works update messages using neural normalized min-sum (NNMS) [2] and neural offset min-sum (NOMS) networks [3] , which are neural network versions of the conventional normalized min-sum algorithm (NMSA) and offset min-sum algorithm (OMSA), respectively.
+Although NBP-like decoders outperform traditional BP decoders for short linear codes, their practicality is still limited by the increasing complexity of neural networks for longer codes. Therefore, another line of research aims to refine NBPlike decoders by simplifying the networks [4]–[7] and weight sharing [8]–[10]. And some other work used autoencoders
+§ Bin Chen is the Corresponding Author.
+
+that consist of cascaded networks to construct and recover longer neural error-correcting codes based on shorter codes [11]–[13]. However, there still exist several challenges when we apply NBP-like decoders to longer codes, especially lowdensity parity-check (LDPC) codes: First, previous works have not fully exploited the structure of codes for decoding, especially quasi-cyclic LDPC (QC-LDPC) codes which are widely applied in modern communication systems. Second, the weight-sharing approach does not fundamentally reduce the complexity of model deployment, because the shared weights still need to be duplicated and expanded into matrices or vectors during computation in deep learning for more efficient operations, offering no optimization from a hardware occupancy perspective. As the code length increases, the memory consumption and computational workload of the neural decoder will still rapidly escalate.
+In this paper, we proposed a revolving framework of modified NBP-like decoders to reduce the computational complexity and enhance the deployment friendliness. Inspired by [14], our decoders are extremely simplified compared to the original neural decoders by fully using the section-wise cyclic structure of QC-LDPC codes, and conducting a revolving iterative decoding (RID) process. The contributions of this paper can be summarized in three aspects:
+• Lower Computational Complexity: Compared to the original neural decoders, our decoders need less message updating in each iteration, lowering the computational complexity.
+• Lower Deployment Difficulty: The proposed decoders are able to be deployed on a GPU more easily with less memory consumption.
+• Greater Generalizability: Our decoders can be generalized to decode a wider class of QC-LDPC codes compared to the conventional CPM-RID decoders in [14], including 5G LDPC codes.
+II. PRELIMINARIS
+A. Section-wise Cyclic Structure of a QC-LDPC Code
+In most of the proposed QC-LDPC codes, the circulant matrices in the parity-check array Hqc of a QC-LDPC code are circulant permutation matrices (CPMs) or zero matrices
+
+979-8-3503-A8u2th8o4riz-6ed/2li4ce/n$s3e1d.u0s0e ©lim2ite0d2t4o:IYEoEnsEei Univ. Downloaded on1J3un9e724,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+(ZMs). Each row of a CPM or ZM can be obtained by
+
+cyclically shifting the preceding row to the right by 1 position.
+
+Let B be an c × r matrix called the base matrix of a QC-
+
+LDPC code. Hqc is an array of CPMs and ZMs derived by replacing each non-zero element of B with a Z × Z CPM,
+
+and by replacing each zero element of B with a Z × Z ZM.
+
+As a result, Hqc is of size cZ × rZ, and it can be further
+
+partitioned as:
+
+⎡
+
+⎤
+
+Hqc,0
+
+Hqc = ⎢⎢⎣⎢
+
+Hqc,1 ...
+
+⎥⎥⎥⎦ ,
+
+(1)
+
+Hqc,c−1
+
+where Hqc,j (j = 0, 1, · · · , c − 1) is called a row-block of Hqc. The row-block Hqc,j consists of Z consecutive rows of Hqc, and can also be seen as a row of CPMs and ZMs derived from the j-th row of B.
+Definition 1: Let Hqc,j,k be the k-th circulant matrix in Hqc,j, beginging with the row hj,k. So the first entire row of row-block Hqc,j is (hj,0, hj,1, · · · , hj,r−1), containing r sections. We refer to the operation of cyclically shifting
+the row within the sections simultaneously as section-wise
+cyclically shifting.
+By applying section-wise right cyclically shifting to the current row to generate the next row Z − 1 times, each by 1 position, the complete j-th row-block is assembled. Therefore, given the top row of each row-block, the complete matrix Hqc can be generated via simply section-wise cyclically shifting.
+
+B. NBP-like Decoders
+
+The skeleton of an NBP-like network is derived from the Tanner graph of a linear code. Consider a linear code of block length n, represented by its parity-check matrix H. For the vth VN and the c-th CN in the Tanner graph, there is an edge (v, c) connected between them if and only if the corresponding element Hc,v = 1. In the network, a hidden layer contains |E| nodes, representing each distinct edge, where |E| is the number of edges in the Tanner graph. The input layer and output layer both consist of n nodes.
+Two hidden layers are involved in each iteration. During iteration t, the first hidden layer updates messages outgoing from VNs:
+
+L(vt→) c = wv(t)Lv +
+
+wc(t→ ) v Lc(t−→1v),
+
+(2)
+
+c ∈N (v)\c
+
+where N (v) denotes the neighboring set of v and N (v)\c
+
+denotes the neighboring CN set of v except c. The parameters, wv(t) and wc(t→ −1v), are both trainable weights. Then the second hidden layer in the iteration t updates messages outgoing from
+
+CNs. The variant of the original NBP, called NNMS updates
+
+CN messages as
+
+⎡
+
+⎤
+
+Lc(t→) v = wc(t→) v ⎣
+
+sign
+
+v ∈N (c)\v
+
+Lv(t)→c
+
+⎦× min
+v ∈N (c)\v
+
+Lv(t)→c
+
+,
+
+(3)
+
+where N (c)\v denotes the neighboring set of c except v, and wc(t→) v is the trainable weight in place of the fixed scaling factor used in the traditional NMSA. Likewise, another variant of NBP called NOMS, replaces the fixed offset used in the traditional OMSA with trainable weights. We collectively refer to the original NBP, modified NNMS and NOMS decoders as NBP-like decoders.
+After going through the T -th iteration, the updated messages will be aggregated for each VN as:
+
+ov = Lv +
+
+wcou→t vLc(T→) v,
+
+(4)
+
+c ∈N (v)
+
+where wcou→t v is a trainable weight.
+
+III. PROPOSED METHOD
+
+A. The Design of Section-wise Revolving NBP-like Decoders
+The parity-check matrix Hqc of a QC-LDPC code, as is mentioned in Section II-A, features a section-wise cyclic property between any two rows within a row-block.
+Definition 2: Let the c×rZ matrix H∗ is constructed by just extracting the top row of each row-block of Hqc and stacking them up in order. This submatrix H∗ of Hqc is called the decoding matrix of the proposed decoder.
+Given the matrix H∗ consisting of the top rows of c row-blocks, Hqc can be covered completely by section-wise cyclically right shifting the rows of H∗ by 1 position simultaneously, repeated Z − 1 times. We refer to the decoding based on H∗ as a sub-iteration. Before using the reliability vector in the next sub-iteration each time, we cyclically shift it to the left by 1 position in a section-wise manner. Then we can readily be aware that Z sub-iterations cover all the message exchanges based on Hqc in one iteration equivalently. And performing ZT sub-iterations based on H∗ is an alternative to conducting T iterations based on Hqc.
+Instead of building a neural network based on the original Hqc, we choose to build its simplified version using H∗. Then, using the simplified NBP-like network, we can execute message updating operations based on H∗, namely a subiteration of the decoding process, which not only reduces the computational load when updating messages, but also alleviates the burden of the GPU memory for easier deployment compared to performing a complete decoding iteration based on H∗. Besides, the decoders across sub-iterations share the same set of weights, featuring the RNN architecture similar to [2]. In other words, we only need to train a single network rather than ZT different networks, which further enhances the deployment friendliness on GPU.
+We present the proposed framework of revolving NBP-like decoders in a single sub-iteration for QC-LDPC codes in Fig. 1, and further describe the overall procedure in Algorithm 1. Typically, we adopt an NNMS network in each sub-iteration. In Algorithm 1, L(etx),v denotes the weighted sum of messages outgoing from CNs and received at the v-th VN in the subiteration t, forming the vector L(etx) of length n. Also, the initialization of it is denoted as Le(1x−Z) for convenience. Note
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J3un9e824,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+‫ۺ‬ሺ௘௧௫ି௓ሻ ‫܀‬ሺ௧ିଵሻ െ ...
+
+NNMS
+based on ۶‫כ‬
+(CN message updating)
+
+‫ۺ‬ሺ௘௧௫ሻ
+
+‫܀‬ሺ௧ሻ ߨ௦௘௖ ሺͳሻ
+
+...
+
+Sub-iteration ‫ݐ‬
+Fig. 1. The architecture of proposed section-wise revolving NNMS decoder in the sub-iteration t for QC-LDPC codes, where πsec(1) denotes sectionwise cyclically shifting the vector to the left by 1 position.
+
+Algorithm 1 Revolving NNMS Decoders for QC-LDPC
+
+Codes
+
+Input: Channel output y Output: Updated reliability vector R(ZT )
+1: R(0) ← y 2: L(e1x−Z) ← 0
+3: for t ← 1 to ZT do
+
+4: /* Updating VN messages */ 5: R(t−1) ← R(t−1) − Le(tx−Z)
+
+6: /* Updating CN messages*/
+
+7: for each CN c do
+
+8:
+
+update Lc(t→) v as (3)
+
+9: end for 10: /* Updating Le(tx) */
+
+11: for each VN v do
+
+12:
+
+Le(tx),v ←
+
+wc(t→ ) v L(ct)→v
+
+c ∈N (v)
+
+13: end for
+
+14: R(t) ← R(t−1) + Le(tx)
+
+15: R(t) ← πsec(R(t), 1)
+
+16: end for
+
+that the set of neighboring CNs of the v-th VN, denoted as N (v), only includes those in the Tanner graph derived from H∗ in Algorithm 1.
+To address the performance degradation when the reliability vector is directly used for a sub-iteration, we design a new pipeline for the decoders like that in [14]. In the sub-iteration t, as is displayed in Fig. 1, before carrying out CN message updating, the messages from CNs Le(tx−Z) in the (t − Z)-th sub-iteration are subtracted from the current reliability vector R(t−1). As a result, the message sent from a VN to its adjacent CNs, as input of the decoder in the current sub-iteration, is the difference between the updated reliability and messages from all its adjacent CNs in the previous corresponding subiteration, leading to a noticeable performance improvement.
+Furthermore, in lines 7-16 of Algorithm 1, we adopt an NNMS network, updating CN messages as (3) once, so the NNMS network consists of an input layer for calculating current VN messages transmitted on each edge, a hidden layer for updating CN messages, and an output layer for producing the modified reliability vector. For an enhanced error-correction
+
+capability, we can integrate NNMS and NOMS methods as
+
+⎡
+
+⎤
+
+Lc(t→) v = ⎣
+
+sign L(vt)→c ⎦
+
+v ∈N (c)\v
+
+(5)
+
+× ReLU
+
+wc(t→) v
+
+×
+
+v
+
+min
+∈N (c)\v
+
+L(vt)→c
+
+− βc(→ t) v
+
+,
+
+where the operation ReLU(·) is defined as ReLU(x) = max(x, 0). By introducing more learnable parameters, the degrees of freedom for optimization are expanded [9]. As a result, this design provides a heightened potential to generalize our proposed approach across other classes of QC-LDPC codes, different from the previous approach in [14] which is constrained to the algebraic QC-LDPC codes.
+
+B. Message Updating and Complexity Analysis
+1) Matrix-based Processing for Message Updating: In deep learning, models are deployed on GPUs to leverage their superiority in matrix computations, thus data processing is conducted through matrix-based operations. For a more intuitive illustration, we have depicted the steps in Fig. 2 using the NNMS network.
+Firstly, we need to subtract CN messages from the reliability vector as described in Section III-A, which is performed in the input layer of the NNMS network. This step is naturally conducted in a matrix-based way. Then each element of the vector serves as the message outgoing from each VN. One can find that this step is distinct from that in the conventional BP, because messages outgoing from a VN are the same.
+Secondly, to obtain |E| different messages transmitted along edges of the Tanner graph as (3), we need |E| copies of the reliability vector, and then stack them vertically as is displayed in Fig. 2a, forming an |E| × n matrix R. Specifically, the i-th row of R is used to calculate the message on the i-th edge (v, c) outgoing from CN c. Since messages from VNs that are not connected to CN c directly should be omitted in the i-th row of R, we use an |E| × n mask matrix M to describe relationships between the i-th edge and each VN, based on the decoding matrix. For the i-th edge (v, c), one of n elements in the i-th row of M shows if a VN is directly connected to CN c. Specifically, the value of the element Mi,j in the i-th row and j-th column of M is defined as
+
+Mi,j =
+
+1, 0,
+
+Hc,j = 1 and v = j otherwise
+
+.
+
+(6)
+
+Then, for each CN message (or each row of R), we need to compute the product of the sign and the minimum absolute value of the unmasked elements based on M. These two operations are denoted as sign(·, M) and abs(·, M) respectively. Specifically, they are defined as
+
+sign(Ri,j, M) =
+
+sign(Ri,j ), +1,
+
+Mi,j = 1 Mi,j = 0
+
+,
+
+(7)
+
+abs(Ri,j, M) =
+
+abs(Ri,j ), +∞,
+
+Mi,j = 1 Mi,j = 0
+
+,
+
+(8)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J3un9e924,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+Repeat
+(a) The process of updating a batch of CN message, where sign(·, M) calculates the sign of each element based on the mask M, abs(·, M) calculates the magnitude of each element based on the mask M, and "T" denotes matrix transposition.
+
+(b) The process of calculating a new reliability vector in the output layer of the NNMS network.
+Fig. 2. The diagrams of data processing of an NNMS network in a matrix-based manner on GPU, where the operators and ⊕ denote element-wise matrix multiplication and addition respectively. The batch size is set to 1 for clarity.
+
+where Ri,j is the element in the i-th row and j-th column of R. Thus we can easily compute the product of the sign and the minimum absolute value of the entire row, excluding the influence of irrelevant elements (messages). After the elementwise multiplication of signs, absolute values, and learnable weights, the CN messages transmitted along |E| edges are obtained simultaneously.
+Finally, the output layer produces a new reliability vector as presented in Fig. 2b. The mask matrix in the output layer is denoted as Mout. For the VN v, if there is an edge (v, c) indexed i, the element in the i-th row and v-th column of Mout is set to 1, otherwise is set to 0. As is vividly depicted in the diagram, the weight matrix is of size |E| × n, which is a very sparse matrix after element-wise multiplied with Mout.
+2) Complexity Analysis: The Tanner graph derived from Hqc of size cZ ×rZ consists of |E| edges, while the simplified Tanner graph derived from H∗ consists of |E|/Z edges. For example, consider a regular QC-LDPC code whose row weight is dc, which is also the degree of each CN in the Tanner graphs based on Hqc and H∗. In Table I, the number of different learnable weights and the memory consumption of weights in the matrix form of several NBP-like decoders are presented. Please note that in practice, there are other intermediate results and gradients for backpropagation stored in the memory and it is quite cumbersome to calculate them completely and explicitly so we omit them here. In summary, the advantages of our proposed decoder are lower computational complexity, lower deployment difficulty, and lower training complexity by extremely simplifying the neural network itself.
+IV. SIMULATION RESULTS
+In this section, we evaluate the performance of the proposed revolving NBP-like decoders for QC-LDPC codes. Specifically, we consider traditional decoding methods, including
+
+BER
+
+10−1
+
+SPA, T=10
+
+10−2
+
+SPA, T=50 NMSA, T=10
+
+CPM-RID, T=10
+
+10−3
+
+CPM-RID, T=50 NNMS-CPM-RID, T=10
+
+NNMS-CPM-RID, T=50
+
+10−4
+
+NBP, T=10
+
+10−5
+
+10−6
+
+10−7
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+4.0
+
+4.5
+
+EbNdB
+
+Fig. 3. BER results for (1040, 520) algebraic QC-LDPC code
+
+SPA, NMSA, and CPM-RID [14], as the primary benchmarks for comparison. The scaling factors for NMSA and CPM-RID are both set to 0.75. To train the decoders, we used binary cross entropy (BCE) loss and the Adam optimizer. The training set of a decoder is randomly and uniformly generated within a preset range (determined empirically) of signal-to-noise ratio (SNR), and it only contains all-zero codewords with additive white Gaussian noise (AWGN). In each simulation run, we terminated only after collecting at least 100 frame errors.
+A. Results for (1040, 520) Algebraic QC-LDPC Code
+We consider the (1040, 520) QC-LDPC code with lifting size Z = 130 constructed in the algebraic approach in [14], which is originally one of the scenarios experimented with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J4un0e024,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I COMPARISONS ON WEIGHT COMPLEXITY OF NBP-LIKE DECODERS FOR QC-LDPC CODES
+
+Decoding matrix Weight sharing
+# of weights Weight comsumption
+(in matrix form)
+
+NBP in [2] (orginal) Hqc \
+T (n + |E|(dc − 1)) + n + ndc
+T (n|E| + |E|2) + n + n|E|
+
+NNMS in [2] Hqc \
+T |E| + n + ndc
+T |E| + n + n|E|
+
+NNMS (RNN) Hqc
+by iteration |E| + n + ndc
+|E| + n + n|E|
+
+[9] Hqc by edge type T · 2(|E|/Z)
+T · 2|E|
+
+NNMS-CPM-RID (ours) H∗
+by iteration |E|/Z + ndc
+|E|/Z + (|E|/Z)n
+
+BER & BLER
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+SPA, T=10, BER SPA, T=10, BLER
+
+NMSA, T=10, BER
+
+NMSA, T=10, BLER
+
+10−4
+
+CPM-RID, T=10, BER CPM-RID, T=10, BLER
+
+NNOMS-CPM-RID, T=10, BER
+
+NNOMS-CPM-RID, T=10, BLER
+
+10−5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+EbNdB
+
+Fig. 4. BER and BLER results for the (800, 160) 5G LDPC code.
+
+using the CPM-RID algorithm. The results for this code are presented in Fig. 3, where our proposed decoder is denoted as NNMS-CPM-RID. Note that T denotes the number of iterations for the SPA, MSA, and NBP decoder, while T denotes the equivalent number of complete iterations for the CPM-RID and NNMS-CPM-RID decoder. When T = 10, we trained our NNMS-CPM-RID decoder and a vanilla NBP decoder from scratch for comparison. When T = 50, we used the NNMS-CPM-RID decoder trained for T = 10 directly without any fine-tuning due to the weight-sharing across subiterations, and we failed to train a satisfactory vanilla NBP decoder due to hardware limitations, which also highlights the superiority of the proposed decoder in terms of GPU deployment difficulty.
+As can be seen in Fig. 3, with reduced computational complexity and hardware implementation challenges, the CPMRID decoder has already demonstrated sufficiently good performance for algebraic QC-LDPC codes. Our proposed decoder achieves only a small improvement compared to the CPM-RID decoder. Besides, at high SNRs, the bit error rate is slightly lower than that of the SPA decoder when T = 50.
+Additionally, when T = 10 the bit error rates (BERs) of CPM-RID and NNMS-CPM-RID decoders are at a relatively lower level than other decoders, and when T = 50 the SPA, CPM-RID, and NNMS-CPM-RID decoders achieve similar performance. Therefore, the convergence rate of CPM-RID and NNMS-CPM-RID is faster than the SPA decoder. This phenomenon can be explained by the fact that CPM-RID
+
+and NNMS-CPM-RID decoders employ a layered decoding approach [15], [16], which allows for more timely message exchanges, leading to relatively better performance with fewer iterations. Although the traditional layered decoding also utilizes a subset of rows from the parity-check matrix during message updates, it is based on a complete Tanner graph. However, our method simplifies the Tanner graph during message updates, reducing the number of computations required for message updates.
+B. Results for (800, 160) 5G LDPC Code
+In order to evaluate the generalization of our proposed decoder, we consider a protograph LDPC code defined in the 5G standard [17]. We used the neural network that updates CN messages as (5) for an enhanced capability, denoted as NNOMS-CPM-RID decoder. The employed base code is BG2, the first two columns of which are always punctured. The lifting size is Z = 16, thus an (800, 160) 5G LDPC code is obtained according to the standard. This code is also used in the literature [9].
+The BER and BLER results for (800, 160) LDPC code are presented in Fig. 4. Compared to the CPM-RID decoder, our NNOMS-CPM-RID decoder achieves a surprisingly significant improvement. Moreover, the NNOMS-CPM-RID decoder outperforms the NMSA decoder at lower SNRs, approaching the performance of the SPA decoder. This is achieved under the premise of remarkably reducing computational complexity and GPU memory consumption, as analyzed in Section III-B2.
+V. CONCLUSION
+In this paper, we proposed a revolving framework for NBPlike decoders for QC-LDPC codes, for lower complexity from the perspective of computation and hardware deployment. After extracting a special subset of rows from the original complete parity-check matrix and building a simplified neural decoder, the decoding process can be still executed well iteratively thanks to the section-wise cyclic structure of the QC-LDPC code. Compared to the previous decoding schemes, the proposed decoder can be applied to the algebraic QCLDPC codes, and other classes of QC-LDPC codes such as 5G LDPC codes. Moreover, it outperforms the MSA and approaches the SPA at some SNRs. The proposed decoder extends the applicability of NBP-like decoders to longer codes, presenting broader possibilities in practice. For future work, exploring more QC-LDPC code classes and designing neural decoders for alternative error-correcting codes is an intriguing topic.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J4un0e124,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+ACKNOWLEDGMENT
+This work is supported in part by the National Natural Science Foundation of China under grant 62171248, 62301189, Guangdong Basic and Applied Basic Research Foundation under grant 2021A1515110066, Guangdong Provincial Key Laboratory of Novel Security Intelligence Technologies (2022B1212010005), the PCNL KEY project (PCL2021A07), and Shenzhen Science and Technology Program under Grant JCYJ20220818101012025, RCBS20221008093124061, GXWD20220811172936001.
+REFERENCES
+[1] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2016, pp. 341–346.
+[2] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[3] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT). IEEE, 2017, pp. 1361–1365.
+[4] A. Buchberger, C. Häger, H. D. Pfister, L. Schmalen, and A. G. Amat, “Pruning neural belief propagation decoders,” in 2020 IEEE International Symposium on Information Theory (ISIT). IEEE, 2020, pp. 338–342.
+[5] A. Buchberger, C. Häger, H. D. Pfister, L. Schmalen, and A. G. i Amat, “Pruning and quantizing neural belief propagation decoders,” IEEE Journal on Selected Areas in Communications, vol. 39, no. 7, pp. 1957– 1966, 2020.
+[6] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node activations,” IEEE Communications Letters, vol. 26, no. 11, pp. 2527– 2531, 2022.
+[7] N. Shah and Y. Vasavada, “Neural layered decoding of 5G LDPC codes,” IEEE Communications Letters, vol. 25, no. 11, pp. 3590–3593, 2021.
+[8] X. Chen and M. Ye, “Cyclically equivariant neural decoders for cyclic codes,” in International Conference on Machine Learning (ICML). PMLR, 2021, pp. 1771–1780.
+[9] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph ldpc codes,” IEEE Journal on Selected Areas in Communications, vol. 39, no. 7, pp. 1983–1999, 2021.
+[10] L. Wang, S. Chen, J. Nguyen, D. Dariush, and R. Wesel, “Neuralnetwork-optimized degree-specific weights for ldpc minsum decoding,” in 2021 11th International Symposium on Topics in Coding (ISTC). IEEE, 2021, pp. 1–5.
+[11] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-topoint communication channels,” in Advances in Neural Information Processing Systems (NeurIPS), vol. 32, 2019.
+[12] M. V. Jamali, H. Saber, H. Hatami, and J. H. Bae, “Productae: Toward training larger channel codes based on neural product codes,” in 2022 IEEE International Conference on Communications (ICC). IEEE, 2022, pp. 3898–3903.
+[13] Q. Zhang, B. Chen, Y. Huang, and S.-T. Xia, “Adaptive productae: Snr-aware adaptive decoding of neural product codes,” in 2023 IEEE International Conference on Communications (ICC). IEEE, 2023, pp. 6337–6342.
+[14] J. Li, K. Liu, S. Lin, and K. Abdel-Ghaffar, “Decoding of quasi-cyclic ldpc codes with section-wise cyclic structure,” in 2014 Information Theory and Applications Workshop (ITA). IEEE, 2014, pp. 1–10.
+[15] N. Jiang, K. Peng, J. Song, C. Pan, and Z. Yang, “High-throughput qcldpc decoders,” IEEE Transactions on Broadcasting, vol. 55, no. 2, pp. 251–259, 2009.
+[16] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic ldpc codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, 2009.
+[17] 5G; NR; Multiplexing and Channel Coding (3GPP TS 38.212 version 17.3.0 Release 17), 3GPP, 2022.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J4un0e224,2026 at 15:43:56 UTC from IEEE Xplore. Restrictions apply.
+
+

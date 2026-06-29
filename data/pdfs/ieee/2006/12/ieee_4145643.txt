@@ -1,0 +1,308 @@
+Memory-Efficient Accelerating Schedule for LDPC Decoder
+
+Kazunori Shimizu† Nozomu Togawa‡ Takeshi Ikenaga† Satoshi Goto†
+†Graduate School of Information, Production and Systems, Waseda University ‡Department of Computer Science, Waseda University
+2–7, Hibikino, Wakamatsu, Kitakyushu, 808–0135, Japan, Tel: +81-93-692-5298 Fax: +81-93-692-5298
+E-mail: kazu@suou.waseda.jp
+
+Abstract— This paper proposes a memory-efficient accelerating schedule for LDPC decoder. Important properties of the proposed techniques are as follows: (i) Partitioning a pipelined operation not to read and write intermediate messages simultaneously enables the accelerated message-passing schedule to be implemented with single-port memories. (ii) FIFO-based buffering reduces the number of memory banks and words for the decoder based on the accelerated message-passing schedule. The proposed decoder reduces the memories for intermediate messages by half compared to the conventional one based on the accelerated message-passing schedule.
+Keywords—Low-Density Parity-Check Codes, MessagePassing Algorithm, FPGA, FIFO buffer
+I. INTRODUCTION
+A Low-Density Parity-Check (LDPC) code was proposed by Gallager in the 1960’s, and it was re-discovered by MacKay and Neal in 1996. Inherent parallelism of a decoding algorithm called message-passing algorithm for LDPC codes makes it suitable for hardware implementations. The message-passing algorithm exchanges the intermediate messages between the check and bit nodes by performing the row and column operations iteratively. The schedule in Refs. [4], [5] performs the row and column operations concurrently using dual memory architecture (i.e. concurrent schedule)1. This architecture reduces a single iterative decoding delay, and makes the controller very simple. However, the messagepassing efficiency between the row and column operations is degraded, and the number of buffer words is double compared to the classical message-passing schedule2 as shown in Ref. [3]. The schedule in Refs. [6]–[7] performs the column operations first in association with the following row operations, and then the row operations are performed. This schedule improves the message-passing efficiency. However, the decoder in Refs. [6] approximates the column operations in order to reduce the column operations delay and the number of buffer words. This approximation degrades the decoding performance significantly. The decoder in Ref. [7] does not approximate the column operations. However, the decoder architecture partitions the memory into a large number of memory banks, and the number of buffer words
+1Dual memory architecture keeps each of messages obtained from row and column operations independently
+2In a classical schedule, all row operations are performed and then all column operations are also performed. This schedule keeps a single message for each non-zero bit in a parity check matrix. The single iterative decoding delay is double compared to the concurrent schedule in addition to the hardware resource is not be fully utilized.
+
+is nearly double compared to the classical schedule. The accelerated message-passing schedule in Ref. [8] performs the row operations first, and then the column operations are performed using every message updated by the row operations. The schedule assures that the row and column operations are performed concurrently, and accelerates the message-passing efficiency. However, the number of buffer words is double compared to the classical schedule.
+This paper proposes a memory-efficient LDPC decoder architecture based on the accelerated message-passing schedule which is shown in Ref. [8]. Important properties of the proposed techniques are as follows: (i) Partitioning a pipelined operation not to read and write messages simultaneously enables the accelerated message-passing schedule to be implemented with single-port memories. (ii) FIFO-based buffering reduces the number of memory words and accesses for the LDPC decoder based on the accelerated messagepassing schedule. The proposed LDPC decoder architecture keeps a single message for each non-zero bit in a parity check matrix as well as the classical schedule. Therefore, the proposed decoder reduces the memories for intermediate messages by half compared to the conventional one based on the accelerated message-passing schedule. Experimental results shows the proposed decoder achieves the best decoding performance, and is efficient for practical implementations.
+
+II. ACCELERATING MESSAGE-PASSING SCHEDULE
+
+A Low-Density Parity-Check (LDPC) code can be de-
+
+coded iteratively using a message-passing algorithm. Each
+
+iteration of the message-passing algorithm is composed of
+
+two phases called row and column operation. The row
+
+operation updates messages α of all check nodes using
+
+messages β, and sends the messages to bit nodes. The
+
+column operation updates messages β of all bit nodes
+
+using messages α and initial messages λ, and sends the
+
+messages to check nodes. Eqs. (1) and (2) show the row and
+
+column operation respectively. α(x, y) and β(x, y) denote
+
+the messages in x-th row and y-th column of the parity check
+
+matrix H. λy denotes the initial message in y-th column.
+
+A(x) {y|Hxy = 1}, B(y) {x|Hxy = 1}, and Galllager
+
+function f(x)
+
+ln
+
+exp(x)+1 exp(x)−1
+
+.
+
+α(x, y) = β(x, y) =
+
+sign(β(x, y )) ·f
+
+f(|β(x, y )|) , (1)
+
+y ∈A(x)\y
+
+y ∈A(x)\y
+
+λy +
+
+α(x , y).
+
+(2)
+
+x ∈B(y)\x
+
+1-4244-0387-1/06/$20.00 c 2006 IEEE
+
+1317
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:12:32 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Parity check matrix for a partially-parallel LDPC decoder, and an accelerated message-passing schedule in q-th column block.
+A parity check matrix for a partially-parallel LDPC decoder has to be structured in order to reuse the parallel check functional units (CFUs) and bit functional units (BFUs).
+Figure. 1 shows the block-structured parity check matrix for a (3,6)-regular LDPC code. The matrix is composed of 3 × 6 sub-blocks, and each sub-block is b × b square matrix3. The diagonal line in each sub-block shown in Fig. 1 represents a non-zero bit in the sub-block. An LDPC decoder computes the row and column operations to update the messages α and β for every non-zero bit in the parity check matrix. In order to accelerate the messagepassing efficiency, we apply an accelerated message-passing
+schedule to the decoder architecture as shown in Ref. [8]. Step1–Step3 in Fig. 1 shows the accelerated messagepassing schedule. The accelerated message-passing schedule performs i1(1,q), i(22,q), i(33,q)-th4 row operations from the top to the bottom in each sub-block concurrently (Step1). i1(1,q), i(22,q), i(33,q)-th row operations updates three messages α (i(11,q), j1), α (i2(2,q), j2), α (i3(3,q), j3)5. Secondly, three column operations are performed at the column positions of the updated messages α (i(11,q), j1), α (i(22,q), j2), α (i(33,q), j3) (Step2). Therefore, the three column operations for j1, j2, j3-th columns are performed using each one of messages α . At this point, we focus on the fact that each jn-th (n ∈ {1, 2, 3}) column operation is performed using three messages α in which one is the updated α and the other two are non-updated messages α. Therefore, in each single column operation, two messages β are to be updated using the updated message α and the other one message β is not to be
+3each b × b square matrix is defined by shifting each row of the identity matrix Ib×b to the right.
+4in(p,q) denotes the row number of the sub-block in p-th row and q-th column block.
+5α (in(p,q), jn) denotes the updated message in i(np,q)-th row and jn-th column of the sub-block in p-th row and q-th column block.
+
+Fig. 2. A timing diagram of row and column operations based on singleport memories.
+updated (Step3). As shown in Fig. 1, in a single sub-block, two non-updated messages α should be read out for two column operations, and two messages β are to be updated by the two column operations.
+III. MEMORY-EFFICIENT HARDWARE ARCHITECTURE
+We propose a memory-efficient LDPC decoder based on the accelerated message-passing schedule.
+A. Pipelined Operations based on Single-Port Memory
+The decoder shown in Ref. [8] based on the accelerated message-passing schedule has two buffers for each of the messages α and β independently. The buffers are implemented with dual-port memories in order to read and write the messages simultaneously.
+In this paper, we propose an efficient pipelined operation which enables the accelerated message-passing schedule to be implemented with single-port memory. The proposed pipelined operation avoids the simultaneous read and write accesses to the same memory bank. The proposed pipelined operation is shown in Fig. 2. The upper half of Fig. 2 shows the row operations and the lower half of that shows the column operations. The proposed pipelined row operation is composed of 7 stages. The row operation starts by reading message β and setting the messages in CFU registers. Six messages β(x, y1), · · · , β(x, y6) are fed to the CFU for decoding a (3,6)-regular LDPC codeword. In order to avoid reading and writing the message β at the same clock cycle, we partition the read and setting procedure into two stages. After that, the CFU computes absolute value |β| (stage 3), and determines the first and second minimum values (stage 4). The CFU compares the absolute values once in each cycle. After that, the CFU select one of the two (stage 5), and then add a sign (plus or minus) for each message α which is given to the column operations (stage 6). These two procedures (stage 5 and 6) are also performed in two stages in the proposed pipelined operation in order to avoid simultaneous read and write accesses.
+The accelerated message-passing schedule performs the three column operations immediately after the row operations are performed. These row and column operations are performed in parallel. As shown in Fig. 1, three updated message α (i1(1,q), j1), α (i(22,q), j2), α (i(33,q), j3) are given to each column operation module, and these messages are stored in the registers of the column operation module. In each stage, three operations are performed sequentially for the three column operations. At the first stage, the BFU read
+
+1318
+
+APCCAS 2006
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:12:32 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. Read/write timing diagram of messages α and β based on the efficient message-passing schedule.
+out two messages α from the two memory banks for each single column operation. After reading the messages α three times for the three column operations, the three updated messages α are written in the three memory banks. As shown in Fig. 2, the proposed pipelined operation avoids the simultaneous read and write accesses to the same memory, and it enables the accelerated message-passing schedule to be implemented with single port memories.
+B. FIFO-based buffering for the accelerated message-
+passing schedule
+The schedule assures that the row and column operations are performed concurrently. However, the buffer size is double compared to the classical schedule since the decoder keeps messages α and β for every non-zero bit in a parity check matrix. A example of the sub-blocks in one column block is given in Fig. 3. The column block is composed of three sub-blocks. In this column block, the conventional decoder shown in Ref. [8] keeps eight messages α and β for each sub-block. Since the messages α and β have to be stored separately, six sets of a eight-word buffer are required for this one column block. At this point, we propose a FIFObuffering for the messages α and β considering read and write timings of them based on the accelerated messagepassing schedule in each sub-block. The read and write timings in one column block is shown in Fig. 3.
+As shown in Fig. 2, read timings for the messages α by the column operations which are derived from x-th row operation occur during the next (x + 1-th) row operation. The read and write timings for the messages α are shown in Fig. 3 (a). Figure 3 (a) for the sub-block 1 shows that the message α which is written by the row operation is read out by the column operation j2 after a delay of six executive row operations, and it also read out by the column operation j3 after a delay of four executive row operations. Therefore, the messages α written by the row operation should be stored in a six-word FIFO buffer as shown in Fig. 3 (a)6. The messages α are shifted to the right word of the FIFO buffer at the timing when the message α is written by the executive row operation. The message α which is given to the column
+6A FIFO buffer can be implemented with a shift register which requires no addressing controller.
+
+operation j2 is read out from the sixth word of the FIFO buffer, and that given to the column operation j3 is read out from the fourth word of the FIFO buffer.
+Figure 2 shows that write timings for the messages β by the column operations which are derived from x-th row operation occur after the read timing for the message β of the second-next (x + 2-th) row operation. The read and write timings for message β are shown in Fig. 3 (b). In the sub-block 1, The message β obtained from the column operation j2 is to be overwritten by the column operation j3 before the read timing by the executive row operation. The message β written by the column operation j3 is read out by the row operation after a delay of two executive row operations. Therefore, the message β obtained from the column operation j3 should be stored in a two-word FIFO buffer as shown in Fig. 3 (b).
+The number of FIFO buffer words is dependent on the
+relationship between shift values in one column block. Let sp,q denote a shift value of the sub-block located at p-th row and q-th column block in M ×N sub-blocks. Each sub-block is a b×b square matrix. Let kp(α,q) and kp(β,q) denote the number of FIFO buffer words for the messages α and β, then kp(α,q) and kp(β,q) can be expressed as follows:
+
+kp(α,q) kp(β,q)
+
+= max
+
+(sp,q − sp ,q ) mod b
+
+(3)
+
+p ∈{1,··· ,M }\p
+
+= min
+
+(sp ,q − sp,q − 3) mod b + 1 (4)
+
+p ∈{1,··· ,M }\p
+
+If the number of sub-blocks M in a column block is given,
+the total number of FIFO buffer words for one column block can be expressed by b, and the following equations show it where M = 3.
+
+kp(α,q) = 2 · b,
+
+(5)
+
+p∈{1,2,3}
+
+kp(β,q) = b − 6.
+
+(6)
+
+p∈{1,2,3}
+
+From Eqs. (5) and (6), the total number of FIFO buffer words for both messages α and β in one column block is 3 × b − 6. The decoders based on a concurrent schedule as shown in
+Refs. [4], [5], and that based on the accelerated schedule shown in Ref. [8] require 2×3×b buffer words for messages α and β in one column block, since the decoders keep both of the messages α and β for every non-zero bit in one column block. Therefore, the proposed FIFO-based buffering enables the decoder to reduce the number of buffer words by more
+than half compared to the conventional decoders.
+
+C. Experimental Results
+We estimate the number of memory banks and buffer words based on the proposed FIFO-based buffering and the conventional architecture for a (3,6)-regular LDPC code where M = 3, N = 6 and b = 64. The results are shown in Table I. Buffers are required for the initial messages, messages α and β, and output data. The decoding performance (i.e. the coding gain where bit error rate is 10−5, and the average number of iterations for decoding where SNR=4.5) is also shown in Table I. The experimental results are performed for a (3,6)-regular LDPC code whose
+
+APCCAS 2006
+
+1319
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:12:32 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I COMPARISONS OF # OF MEMORY BANKS, # OF BUFFER WORDS, CODING GAIN AND AVERAGE # OF ITERATIONS.
+
+Classical Concurrent Ref. [6] Ref. [7] Ref. [8] Proposed
+
+message (α) banks words
+
+–
+
+–
+
+18 18×b
+
+–
+
+–
+
+18 18×b
+
+18 18×b 12 12×b
+
+message (β)
+
+banks
+
+words
+
+18
+
+18×b
+
+18
+
+18×b
+
+6
+
+6×b
+
+36
+
+12×b
+
+18
+
+18×b
+
+6
+
+6×(b − 6)
+
+input (λ)
+
+banks words
+
+6
+
+12×b
+
+6
+
+12×b
+
+6
+
+12×b
+
+18 12×b
+
+6
+
+12×b
+
+6
+
+12×b
+
+output (yˆ)
+
+banks words
+
+6
+
+12×b
+
+6
+
+12×b
+
+6
+
+12×b
+
+18 12×b
+
+6
+
+12×b
+
+6
+
+12×b
+
+total (b=64) banks words
+30 2,688 48 3,840 18 1,920 90 3,456 48 3,840 30 2,652
+
+coding gain BER=10−5
+5.18 [dB] 4.55 [dB] 4.68 [dB] 5.35 [dB] 5.40 [dB] 5.40 [dB]
+
+ave. # of itr. SNR=4.5 4.59 8.56 4.09 3.95 3.38 3.38
+
+code length is 3,072 [bits], and the modified Min-Sum algorithm is applied to the row operations. The maximum number of iterations lmax is 10 in the experiment. In the proposed decoder, the FIFO buffers are implemented with shift registers for those whose number of words are less than 16. The other FIFO buffers are implemented with memory banks. Therefore, the proposed LDPC decoder has 18 memory banks for the messages α and β. The results show that the decoders based on the accelerated messagepassing schedule (Ref. [8] and the proposed one) achieve the best decoding performance. In addition, the number of memory banks and buffer words based on the proposed FIFO-based buffering is much less than that based on a concurrent schedule and the schedule shown in Refs. [7] and [8]. The number of memory banks and buffer words based on the classical schedule is almost same as the proposed FIFO-based buffering. However, in a classical schedule, all row operations are performed and then all column operations are also performed. Therefore, the single iterative decoding delay is double, and the decoding throughput decreases by half compared to that of the accelerated message-passing schedule. The number of memory banks and buffer words of the decoder shown in Ref. [6] is the least among the decoders since the decoder approximates the column operations. However, this approximation degrades the decoding performance significantly, and does not improve it effectively even though the maximum number of iterations increases.
+We implemented the proposed decoder on an FPGA provided from Xilinx. Table II shows the comparison of the implementation results between the proposed decoder and the decoder shown in Ref. [8]. The throughput is estimated with the clock frequency of 100 [MHz] and the average number of iterations for decoding where SNR=4.5 [dB]. The memory banks are implemented with distributed block RAM in the FPGA device. Implementation results show that the proposed decoder reduces the FPGA resources for memories by 30 % where the memories for intermediate message α and β are reduced by about half compared to the conventional decoder based on the accelerated messagepassing schedule, as a result of which the proposed decoder architecture reduces the FPGA resources by 15 % compared to the conventional one. Experimental results shows the proposed decoder achieves the best decoding performance, and is efficient for practical implementations.
+IV. CONCLUSION
+In this paper, we propose a memory-efficient accelerating schedule for LDPC decoder. The proposed FIFO-
+
+TABLE II IMPLEMENTATION RESULT ON FPGA (VIRTEXII XC2V6000).
+
+Number of SLICEs
+Delay Throughput
+
+Decoder in Ref.[8]
+
+Proposed Decoder
+
+Core Mem. Total Core Mem. Total
+
+5,965 13,224 19,189 5,969 10,525 16,494
+
+7.080 [ns]
+
+102 [Mbps]
+
+based buffering based on single-port memories enables the decoder to reduce memories for intermediate messages while achieving the accelerated message-passing schedule as well as the schedule in Ref. [8]. The proposed FIFO-based buffering replaces 18 memory banks for messages α and β with small shift registers. Implementation results show that the proposed decoder reduces the FPGA resources for memories by 30 % where the memories for intermediate message α and β are reduced by about half compared to the conventional decoder, as a result of which the proposed decoder architecture reduces the FPGA resources by 15 % compared to the conventional one.
+Acknowledgment: This work was supported by fund from the MEXT via Kitakyushu innovative cluster project.
+REFERENCES
+[1] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. on Information Theory, Vol.47, pp.498–519, 2001.
+[2] S.Y. Chung, G.D. Forney Jr., T.J. Richardson, R.L. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Communications letters, Vol.5, No.2, Feb. 2001.
+[3] Marjan Karkooti and Joseph R. Cavallaro, “Semi-Parallel Reconfigurable Architectures for Real-Time LDPC Decoding,” IEEE Proceedings of International Conference on Information Thechnology: Coding and Computing, ITCC’04, pp.579–585, Vol 1, Apr., 2004.
+[4] Y. Chen and D. Hocevar, “A FPGA and ASIC Implementation of Rate 1/2 8088-b Irregular Low Density Parity Check Decoder,” IEEE Global Telecmmunications Conference, GLOBECOM’03, pp.113–117, 2003.
+[5] M. Mansour and N. Shanbhag, “Low Power VLSI Decoder Architectures for LDPC Codes,” Proceedings of the International Symposium on Low Power Electronics and Design, pp.284–289, 2002.
+[6] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lantreibecq, B. Gupta, “A 135 Mb/s DVB-S2 Compliant Codec Based on 64800b LDPC and BCH codes,” IEEE International Solid-State Circuits Conference, ISSCC ’05, Vol.1, pp.446–pp.447, 2005.
+[7] E. Boutillon, J. Catura, and F. R. Kschischang, “Decoder-First Code Design, ”, 2nd International Symposium on Turbo Codes and Related Topics, pp. 459–462, Sept., 2000.
+[8] Kazunori Shimizu, Tatsuyuki Ishikawa, Nozomu Togawa, Takeshi Ikenaga, and Satoshi Goto, “Partially-Parallel LDPC Decoder Based on High-Efficiency Message Passing Algorithm,” Proc. IEEE International Conference on Computer Design 2005 (ICCD 2005), pp.503510, Oct.,2005.
+
+1320
+
+APCCAS 2006
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:12:32 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,364 @@
+822
+
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+Learning to Maximize Mutual Information for Read Threshold Design in Flash Memories
+Xiao Ai, Zhen Mei , Member, IEEE, Xuan He , Member, IEEE, Kui Cai , Senior Member, IEEE, Bin Dai , Member, IEEE, and Long Shi , Senior Member, IEEE
+
+Abstract— NAND flash memory suffers from a variety of noises that are difficult to model accurately, hence machine learning-based channel quantization approaches have been studied. However, to enable soft-decision decoding of error correction codes, the existing methods either rely on approximated log-likelihood ratio (LLR) or can only generate a limited number of read thresholds. In this letter, we propose a systematic design for deep neural network (DNN)-aided quantization to approach the optimal performance without any knowledge of the channel. To achieve this, incorporating with a bidirectional gated recurrent unit (BiGRU)-based DNN architecture (two BiGRU layers, one layer normalization, one dropout layer and one fully-connected output layer), the loss function is designed to force the DNN outputs to accurately approximate the channel LLR by maximizing the observed mutual information between the DNN outputs and their labels. Then, a dynamic programming algorithm is proposed to design an arbitrary number of read thresholds by maximizing the mutual information (MMI) between the quantized DNN outputs and their labels, which reduces the computational complexity from exponential (exhaustive search) to quadratic. Simulation results show that the bit error rate (BER) performance of our proposed method is close to that of the MMI quantizer with full channel knowledge, and it outperforms the MMI quantizer in the presence of channel mismatch.
+Index Terms— Channel quantization, observed mutual information, data detection, flash memory, deep learning.
+I. INTRODUCTION
+NAND flash memory is featured by its high performance, high reliability, large storage density, and low power
+consumption. However, the reliability of NAND flash memory
+faces challenges such as programming noise, data retention
+noise, wear-out noise, and cell-to-cell interference (CCI) [1].
+Since the stored data is distinguished by the voltage levels
+of each memory cell, the aforementioned noises can lead to
+Received 2 November 2025; revised 15 December 2025; accepted 2 January 2026. Date of publication 12 January 2026; date of current version 15 January 2026. This work was supported by the National Natural Science Foundation of China (NSFC) under Grants 62201258, 62571455, and 62201283, by the Singapore Ministry of Education Academic Research Fund Tier 2 T2EP502210036 and SUTD Kickstarter Initiative (SKI) Grant 2021_04_05. The associate editor coordinating the review of this letter and approving it for publication was R. A. A. de Souza. (Corresponding author: Zhen Mei.)
+Xiao Ai, Zhen Mei, and Long Shi are with the School of Electronic and Optical Engineering, Nanjing University of Science and Technology, Nanjing 210094, China (e-mail: ax20011212@gmail.com; meizhen@njust.edu.cn; longshi@njust.edu.cn).
+Xuan He is with the School of Information Science and Technology, Southwest Jiaotong University, Chengdu 611756, China (e-mail: xhe@swjtu.edu.cn).
+Kui Cai is with the Science, Mathematics and Technology Cluster, Singapore University of Technology and Design, Singapore 487372 (e-mail: cai_kui@ sutd.edu.sg).
+Bin Dai is with the School of Internet of Things, Nanjing University of Posts and Telecommunications, Nanjing 210003, China (e-mail: daibin@njupt. edu.cn).
+Digital Object Identifier 10.1109/LCOMM.2026.3652147
+
+overlaps of different storage states, leading to the performance degradation of memory sensing.
+To mitigate memory sensing errors caused by various noises and interference, error correction codes (ECCs) can be employed. Among them, Bose-Chaudhuri-Hocquenghem (BCH) codes have been widely used in flash memory due to their strong error correction capabilities [2]. With the development of flash memory technology, the storage density increases from single-level cell (SLC) to multi-level cell (MLC) and triple-level cell (TLC), which will lead to more sensing errors. Low-density parity-check (LDPC) codes have shown capacity-approaching performance using soft-decision decoding (SDD) [3], hence they have been employed in MLC and TLC flash memories to further improve the reliability. To enable SDD for LDPC codes, the channel soft information, i.e. log-likelihood ratio (LLR) is essential. The accuracy of the LLR depends on the number of read thresholds. Generally, more thresholds will lead to more accurate LLR estimation and better decoding performance, but at the cost of read latency.
+In the literature, both model-driven and data-driven methods have been proposed to design read thresholds [1], [4], [5], [6], [7]. In [4], different probability density functions (PDFs) such as Gaussian distribution and Beta distribution were proposed to approximate the voltage distributions of flash memories. Based on the estimated PDFs, read thresholds can be optimized by maximizing the mutual information (MMI) of the quantized flash memory channel [5]. Furthermore, considering the relationship between sensing error rate and entropy, [8] proposed an entropy-based quantization scheme to control error dominating regions.
+The above methods are based on the estimated PDF, but they do not take into account the unknown offsets of the channel caused by the data-retention noise. Recently, methods based on machine learning were also proposed to model the flash memory channel and reduce the calibration errors by optimizing read thresholds. For example, the process variation effect of 3D NAND flash memory is studied through learning models [9], and a dynamic error recovery flow prediction scheme was proposed based on reusable machine learning [10]. Additionally, a novel semi-supervised constrained clustering was employed to identify six storage regions and the coding rate of LDPC codes was further optimized [11].
+To optimize the read thresholds, a histogram-based adaptive method for feedforward neural networks was proposed to achieve near-optimal read reference voltage prediction [12]. Besides, read thresholds were designed based on deep learning (DL) detectors without any channel knowledge [1]. It was verified that recurrent neural networks (RNN) [1] and
+
+1558-2558 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:56:28 UTC from IEEE Xplore. Restrictions apply.
+
+AI et al.: LEARNING TO MAXIMIZE MUTUAL INFORMATION FOR READ THRESHOLD DESIGN
+
+823
+
+convolutional neural networks (CNN) [6] based detectors can achieve a near-optimal BER performance. Moreover, transfer learning was also proposed to reduce the required training samples [7].
+Although the learning-based detectors [1], [6] achieved excellent performance without channel knowledge, they can only generate a limited number of read thresholds, which is not flexible. For example, only three and six read thresholds can be generated to support hard-decision decoding (HDD) and SDD of ECCs for MLC flash memory, respectively. However, more read thresholds are essential to achieve higher error correction capability. Moreover, they can only obtain inaccurate LLR (e.g. mapping the readback voltage to integer-based reliability levels [1] or averaging posterior probabilities [6]), which will further degrade the decoding performance of ECCs. Therefore, we propose a systematic framework for LLR generation and read thresholds design based on the observed mutual information (OMI), without knowing the PDF of the threshold voltages. Our contributions are as follows:
+• Based on the bidirectional gated recurrent unit (BiGRU) network, an accurate LLR estimator is proposed by designing a novel loss function that maximizes the MI between the network outputs and their corresponding bits.
+• Using the generated LLRs, we propose to design read thresholds and corresponding LLRs by searching the thresholds that can maximize the OMI between the quantized LLRs and their corresponding bits.
+• By carefully designing the cost function, a dynamic programming (DP) algorithm is developed to efficiently design the read thresholds, which enables flexible SDD for LDPC codes.
+II. SYSTEM MODEL
+The data stored in flash memory can be characterized by the voltage levels of each memory cell. Specifically, for a memory cell storing m bits there are 2m distinct voltage levels. In this letter, we consider the MLC flash memory that stores 2 bits per memory cell. We refer to the left bit as the most significant bit (MSB) and the right bit as the least significant bit (LSB). The MSB and LSB are encoded independently by the LDPC encoders and then the Gray code mapping (11, 10, 00 and 01) which ensures that only one bit differs between adjacent voltage states is employed to minimize bit errors [3]. Each memory cell can adopt one of four possible voltage states: vs11 , vs10 , vs00 , and vs01 , corresponding to the stored data. The threshold voltages for these states follow distinct PDFs, with average voltage values denoted as Vs11 , Vs10 , Vs00 , and Vs01 , respectively.
+According to [3], [13], and [14], four primary error types affect the reliability of flash memories: programming noise, data retention noise, wear-out noise, and CCI. Specifically, the threshold voltage of each memory cell can be programmed by injecting an amount of charge into the floating gate. This programming procedure is performed by repeatedly pulsing the voltage with step voltage ∆Vpp. Due to process variations, each voltage state is affected by programming noise np with a mean value of zero. The noise variance of the erasure state voltage vs11 is σe2, and the noise variance of
+
+the programming state voltages vs10 , vs00 , vs01 is σp2 [13]. The data retention noise nr obeys a Gaussian distribution
+with mean µrs and standard deviation σrs , where µrs and σrs depend on the voltage of each state, given by µrs = (Vs − x0)·(AtNPαEi + BtNPαEo )·ln(1+T ), and σrs = 0.3 |µrs |, where s ∈ {s11, s10, s00, s01}, T is the retention time, and the
+other parameters (x0, At, BT , αi, αo) are constants. Finally,
+we model the wear-out noise nw as a Gaussian distribution with a mean value of zero and variance σw = 0.00027 NP0.E62 [13], where NPE denotes the number of P/E cycles. Note that
+
+CCI can be mitigated through pre-distortion or post-processing
+
+techniques [15], hence we assume that CCI has been removed
+
+in this work.
+
+The overall threshold voltage distribution can usu-
+
+ally be approximated as a Gaussian mixture distribution,
+
+ps11∼s01 (v) = N
+
+µ , σ2
+s11∼s01 s11∼s01
+
+, where µs11
+
+= Vs11 −
+
+σµer2s1+1 ,σµw2s10+∼sσ0r21s11=, σs21V0s∼1s00∼1s0=1
+
++
+
+△Vpp 2
+
+−
+
+σp2 + σw2 +
+
+µ , r2s10∼s01 σrs10 ∼s01
+
+σs211 [1],
+
+= and
+
+we make the following assumptions about the parameters,
+
+Vs11 = 1.4, Vs10 = 2.6, Vs00 = 3.2, Vs01 = 3.93, ∆Vpp = 0.2, σe = 0.35, σp = 0.05, x0 = 1.4, At = 0.000035, Bt = 0.000235, αi = 0.62, αo = 0.3. Note that the channel model
+
+introduced in this section is only used for data generation
+
+for training and testing of the neural network, and readback
+
+voltages are not necessary to be Gaussian distributed. The
+
+proposed DL-based LLR generator is data-driven and has no
+
+prior knowledge of the channel.
+
+III. DL-BASED LLR GENERATOR
+In this section, we formulate the LLR generation of flash memory channel as a learning problem and propose a deep neural network (DNN)-based LLR estimator. We will generate the LLRs for the MSB page and the LSB page separately, since the MSB and LSB are encoded independently. As the experimental configurations for both MSB and LSB are identical, subsequent descriptions will not differentiate between them.
+The inputs of DNNs are the readback threshold voltages v = {v1, v2, . . . , vt}, where t is the input size of the DNNs. The corresponding stored MSBs and LSBs of v are uMSB = {uMSB(1), uMSB(2), . . . , uMSB(t)}, and uLSB = {uLSB(1), uLSB(2), . . . , uLSB(t)}, respectively. For convenience, both uMSB and uLSB are represented by u. The outputs of the DNN can be represented by a function of v and DNN parameters θ, given by L = f (v, θ), where L = {L1, L2, . . . , Lt} are the estimates of the LLRs.
+To obtain θ that can approximate the real LLRs, a proper loss function L is critical for training the DNN. By minimizing the loss function over the training dataset, the optimal DNN parameters θ∗ are given by θ∗ = arg minθ L. After obtaining θ∗, the trained DNN can serve as the LLR generator to compute the estimated LLRs. Next, we will propose an MMI-based loss function to accurately approximate the LLRs.
+
+A. Learning to Maximize the Mutual Information
+In our work, the DNN is trained to approximate the LLR. For supervised learning, the training samples and their associated labels are both essential. In our case, it is desired that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:56:28 UTC from IEEE Xplore. Restrictions apply.
+
+824
+
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+the DNN can output LLRs. However, the true LLRs of the training samples are unknown, since the calculation of LLRs rely on the PDF of readback voltages which is also unknown. Therefore, the true LLRs cannot serve as labels. How to generate LLR without true LLR labels is a key problem.
+To solve this problem, we propose to use readback voltages v as training samples and the bipolar mappings x of their associated bits u as labels, where x = 1−2·u. By minimizing the loss function between the DNN outputs and labels over the training dataset, the optimal parameters θ∗ are given as
+
+θ∗ = arg min L(L, x).
+
+(1)
+
+θ
+
+The problem is now transformed into designing L(L, x) so that the DNN output can approximate the true LLR. Note that the conventional loss such as cross-entropy and mean square error cannot be employed since the LLR labels are unavailable.
+It is known that the MI is a fundamental limit of communication channels, and the flash memory channel is asymmetric. Hence, the MI between the LLR L¯ and information X is [16]
+
+I(L¯; X) = 1 − 1
+
++∞
+p(L¯|x = +1) log(1 + e−L¯ )dL¯
+
+2 −∞
+
+1 −
+
++∞
+p(L¯|x = −1) log(1 + eL¯ )dL¯.
+
+(2)
+
+2 −∞
+
+By taking the sample average of (2), we can measure the MI for noisy channels with unknown distributions, given by
+
+I(L¯; X) ≈ 1 − 1 N
+
+N
+log2
+
+1 + e−xn·L¯n
+
+,
+
+(3)
+
+n=1
+
+where N denotes the number of observed samples, and the MI in (3) is also called the observed MI (OMI).
+If the OMI calculated using DNN outputs L can approach that using the true LLRs, it implies that L also approaches the true LLRs. Therefore, we propose to use (3) to construct the loss function of the DNN, given by
+
+1 L=
+B
+
+B
+
+log2
+
+1 + e−xn·Ln
+
+.
+
+(4)
+
+n=1
+
+where B is the number of samples in each batch during
+training. After training of the DNN, the loss function in (4)
+are minimized. Hence, the OMI will be maximized and the optimized parameters θ∗ can be used to generate DNN outputs
+that can approximate the true LLRs.
+
+B. Proposed DNN Architecture For Generating LLRs
+To generate better estimation of LLRs, the DNN architecture needs to be carefully designed. In this work, we propose a bidirectional gated recurrent unit (BiGRU) network to generate the LLRs. Fig. 1 shows the proposed BiGRU structure with two BiGRU layers, one normalization layer, one dropout layer and one fully-connected output layer. Specifically, the BiGRU layer is used to capture the features of readback voltages, and the layer normalization is carried out after the BiGRU layer to stabilize the training process by normalizing the layer output. The dropout layer is employed to randomly dropout a portion of neurons to prevent overfitting. The rectified linear
+
+Fig. 1. Proposed BiGRU architecture for LLR Generation.
+Fig. 2. Comparison of the BiGRU approximated LLR and the exact LLR.
+unit (ReLU) activation function is placed between the normalization layer and dropout layer to introduce non-linearity into the neural network, given by σrelu(t) = max{0, t}, σrelu(t) ∈ [0, ∞). The final output L of the DNN can approximate the LLR.
+To evaluate the accuracy of the proposed LLR generator, the BiGRU output and the exact LLR that assume the channel PDF is perfectly known are compared in Fig. 2. It can be observed that for both MSB and LSB, the BiGRU output can well approximate the exact LLR when the magnitude of LLR is smaller than 10. When LLR is large, this approximation is not accurate. The reason is that the loss function in (4) is not to estimate the LLRs, but to maximize the MI since the exact LLRs are not known and cannot serve as labels for training. According to (4), when the LLRs exceeds 10 (corresponding to label x = +1) or falls below −10 (corresponding to label x = −1), the exponential term asymptotically approaches zero, resulting in a negligible influence on MI. Nevertheless, this mismatch will not degrade the BER performance, since when the magnitude of one LLR is large, the reliability of that bit is very high which will not lead to a decision error.
+The total complexity of the proposed BiGRU network is dominated by two BiGRU layers. For a input length t, the time complexity of a single-layer BiGRU is O(th(d + h)), where d is the input dimension and h is the hidden layer dimension. There are two BiGRU layers in the proposed DNN, and the input dimension of the first BiGRU layer and the second BiGRU layer are d and 2h, respectively. Hence, the total time complexity of the two BiGRU layers is O(th(d + 4h)). Therefore, it is not feasible to perform DNN for each block
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:56:28 UTC from IEEE Xplore. Restrictions apply.
+
+AI et al.: LEARNING TO MAXIMIZE MUTUAL INFORMATION FOR READ THRESHOLD DESIGN
+
+825
+
+due to large read latency and power consumption. Hence, it is desired to use read thresholds to obtain the estimated LLRs.
+
+IV. MAXIMIZING OBSERVED MUTUAL INFORMATION-BASED READ THRESHOLDS DESIGN
+To achieve excellent coded BER performance, a well-known read thresholds design approach is maximizing-the-MI (MMI) quantization [5]. However, the MMI quantizer requires the PDF of the flash memory channel. In this section, we propose a new read thresholds design without any channel knowledge by maximizing the OMI.
+To design read thresholds based on the OMI, the readback voltages v with size M are fed into the trained DNN, then the DNN output L can be obtained. Using L and their corresponding labels x, our goal is to obtain a set of optimal read thresholds a∗1, a2∗, · · · , aq∗−1 on v such that the OMI is maximized. Given read thresholds {a1, a2, · · · , aq−1} with a0 = −∞ and aq = ∞, the voltages v can be divided into q groups, i.e., v = {v0, v1, · · · , vq−1}. The corresponding labels x and DNN outputs can also be expressed as x = x0, x1, · · · , xq−1 and L = L0, L1, · · · , Lq−1 , respectively. Assuming that there are Ni elements in [ai, ai+1), the corresponding DNN outputs and labels can be expressed as Li = {Li1, L2i , . . . , LiNi } and xi = {xi1, xi2, . . . , xNi i }, with M = N0 + N1 + . . . + Nq−1. Denote Lˆi as the quantized LLR for the i-th interval, the OMI of the quantized channel is
+
+1 q−1 Ni
+
+Iobs = 1 − N
+
+log2
+
+1 + e−xji ·Lˆi
+
+.
+
+(5)
+
+i=0 j=1
+
+Hence, our goal is to find {a1, a2, · · · , aq−1} that can maximize (5). However, the threshold voltage space is continuous, to obtain the optimal read thresholds a1∗, a∗2, · · · , a∗q−1 , the threshold voltage space needs to be first uniformly quantized
+into p intervals (e.g. p = 1000) bounded by b0, b1, . . . , bp, where b0 = −∞ < b1 = Vs11 < · · · < bp−1 = Vs01 < bp = ∞, and ai ∈ {b1, b2, . . . , bp−1} , i = 1, 2 . . . , q − 1. Hence, the optimal read thresholds are given by
+
+a1∗, . . . , aq∗−1 =
+
+arg max
+
+Iobs. (6)
+
+{a1 ,...,aq−1 }⊂{b1 ,...,bp−1 }
+
+After some simplifications, (6) can be transformed to
+
+a∗1, . . . , aq∗−1
+
+q−1
+
+=
+
+arg min
+
+M (ai, ai+1) ,
+
+{a1,...,aq−1}⊂{b1,...,bp−1} i=0
+
+(7)
+
+where M (ai, ai+1) =
+
+Ni j=1
+
+log2
+
+1 + e−xij ·Lˆi
+
+. The calcu-
+
+lation of the cost function M (ai, ai+1) relies on the choice of the quantized LLR Lˆi. To find Lˆi that can represent the
+
+LLR of the i-th interval, we propose to minimize the mean squared error (MSE) between Lˆi and DNN outputs L in the
+
+i-th interval [ai, ai+1), given by
+
+MSE
+
+Lˆi
+
+1 Ni =
+Ni j=1
+
+Lji − Lˆi
+
+2
+,
+
+(8)
+
+where Lij is the j-th LLR of L in the i-th interval. By solving
+
+the first-order derivative
+
+d dLˆ i
+
+MSE
+
+Lˆi
+
+= 0, the optimal
+
+quantized L-value for the i-th interval is given by Lˆi∗ =
+
+1 Ni
+
+Ni j=1
+
+Lji
+
+.
+
+After
+
+Lˆ i∗
+
+is
+
+becomes M (ai, ai+1) =
+
+determined, the cost
+
+Ni j=1
+
+log2
+
+1 + e−xij ·Lˆi∗
+
+function . Then,
+
+the optimal thresholds can be found by solving (7). While an
+
+exhaustive search over all possible thresholds would require
+
+O pq−1 complexity, we employ the DP algorithm to solve
+
+it efficiently in O p2q . Moreover, the DP approach can also
+
+be easily extended to flash memory with more levels in a cell,
+
+and its complexity consistently scales linearly with p2.
+
+V. PERFORMANCE EVALUATIONS
+In this section, to investigate the SDD performance of ECCs with our proposed BiGRU-based quantizer, the MI and LDPC-coded BER performance using our proposed BiGRU-based quantizer are presented, respectively. In our experiments of BiGRU network, the batch size and learning rate for training are set to 100 and 0.001, respectively. The dropout rate of the dropout layer is 0.1. The training dataset contains voltage samples of 500 LDPC codewords and the training process can be activated periodically (e.g. one week) when the system is in the idle state or the LDPC decoder fails such that the deviation in read voltages calibration and LLRs can be minimized. As a benchmark, the MMI quantizer with full channel knowledge is also included. The complexity of the MMI quantizer is dominated by the thresholds searching which can be efficiently implemented by the DP algorithm with a complexity of O p2q .
+The MI of the BiGRU quantizer and MMI quantizer for both MSB and LSB is illustrated in Fig. 3. First, it can be observed that the MI of the proposed BiGRU-based quantizer without any channel knowledge can closely approach that of the optimal MMI quantizer for different number of read thresholds. Second, the MI for MSB is significantly higher than that for LSB for both quantizers. This indicates that the channel condition of MSB is better than that of LSB, which also implies the BER performance of MSB will also outperform that of LSB in flash memory channel. Finally, it can be observed that with q = 7 for MSB and q = 10 for LSB, the MI can approach that with full-soft channel information.
+Next, to evaluate the LDPC-coded performance, the (4544, 4096) LDPC code is employed with degree distributions λ(x) = 0.0682 x+0.1822 x2+0.1329 x3+0.6167 x4 and ρ(x) = 0.22 x38 + 0.78 x39. The decoding algorithm of the LDPC code is sum-product algorithm (SPA) with a maximum iteration number of 10. The LDPC-coded BERs of the BiGRU quantizer and MMI quantizer for both MSB and LSB are presented in Fig. 4. Similar to Fig. 3, the BER performance of the LDPC code with the proposed BiGRU quantizer which does not require prior knowledge of the channel can closely approach that with the optimal MMI quantizer.
+To investigate the performance of the proposed BiGRU quantizer over different flash memory channels, we conduct experiments under non-Gaussian channels with Beta distribution (β = 2α). As shown in Fig. 5, the BiGRU quantizer can achieve even better performance than the MMI quantizer for both q = 4 and q = 7. The reason is that the channel deviate
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:56:28 UTC from IEEE Xplore. Restrictions apply.
+
+826
+
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+generate LLRs without any prior channel knowledge. Based on the proposed BiGRU-based LLR generator, we have further proposed a DP algorithm to obtain an arbitrary number of read thresholds to enable more flexible SDD of ECCs (e.g. adaptive SDD). Experimental results have illustrated that our proposed BiGRU-based quantizer can approach the optimal performance without any knowledge of channel statistics. In the future, our work can be applied to design LDPC codes for channels with unknown PDFs. In addition, the hardware deployment and the generalization of the proposed DNN-based quantizer to other flash memory types are also worth investigating.
+
+Fig. 3. The MI of the BiGRU quantizer and MMI quantizer over flash memory channels at T = 104 hours.
+Fig. 4. BERs of the BiGRU and MMI quantizers for MSB and LSB over flash memory channels at T = 104 hours.
+Fig. 5. BERs of the BiGRU and MMI quantizers for MSB over non-Gaussian flash memory channels at T = 104 hours.
+from the Gaussian distribution and the MMI quantizer is no longer optimal. Therefore, the MMI quantizer which relies on Gaussian assumptions, degrades significantly. In contrast, our proposed method can always achieve near-optimal performance since it is fully data-driven and does not rely on the knowledge of the channel statistics.
+VI. CONCLUSION In this work, we have proposed a BiGRU-based LLR generator for flash memory by using a BiGRU network to
+
+REFERENCES
+[1] Z. Mei, K. Cai, and X. He, “Deep learning-aided dynamic read thresholds design for multi-level-cell flash memories,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2850–2862, May 2020.
+[2] Y. Lee, H. Yoo, I. Yoo, and I.-C. Park, “High-throughput and low-complexity BCH decoding architecture for solid-state drives,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 5, pp. 1183–1187, May 2014.
+[3] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[4] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2013, pp. 1285–1290.
+[5] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[6] Z. Shi, Y. Fang, Y. Bu, and G. Han, “Convolutional neural network (CNN)-based detection for multi-level-cell NAND flash memory,” IEEE Commun. Lett., vol. 25, no. 12, pp. 3883–3887, Dec. 2021.
+[7] Z. Mei, K. Cai, L. Shi, J. Li, L. Chen, and K. A. S. Immink, “Deep transfer learning-based detection for flash memory channels,” IEEE Trans. Commun., vol. 72, no. 6, pp. 3425–3438, Jun. 2024.
+[8] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[9] J. K. Lee, K. Ko, and H. Shin, “Analysis on process variation effect of 3D NAND flash memory cell through machine learning model,” in Proc. 4th IEEE Electron Devices Technol. Manuf. Conf. (EDTM), Apr. 2020, pp. 1–4.
+[10] M. Hwang, J. Jee, J. Kang, H. Park, S. Lee, and J. Kim, “Dynamic error recovery flow prediction based on reusable machine learning for low latency NAND flash memory under process variation,” IEEE Access, vol. 10, pp. 117715–117731, 2022.
+[11] C. Zambelli et al., “Characterization of TLC 3D-NAND flash endurance through machine learning for LDPC code rate optimization,” in Proc. IEEE Int. Memory Workshop (IMW), May 2017, pp. 1–4.
+[12] D. N. Bailon, S. Shavgulidze, and J. Freudenberger, “Read reference voltage adaptation for NAND flash memories with neural networks based on sparse histograms,” IEEE Access, vol. 11, pp. 56801–56811, 2023.
+[13] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[14] H. Wang, T.-Y. Chen, and R. D. Wesel, “Histogram-based flash channel estimation,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2015, pp. 283–288.
+[15] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[16] M. Mondelli, S. H. Hassani, and R. L. Urbanke, “How to achieve the capacity of asymmetric channels,” IEEE Trans. Inf. Theory, vol. 64, no. 5, pp. 3371–3393, May 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:56:28 UTC from IEEE Xplore. Restrictions apply.
+
+

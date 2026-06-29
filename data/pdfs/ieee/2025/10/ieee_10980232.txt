@@ -1,0 +1,826 @@
+8558
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+GNN-Based Auto-Encoder for Short Linear Block Codes: A DRL Approach
+
+Kou Tian , Graduate Student Member, IEEE, Chentao Yue , Member, IEEE, Changyang She , Senior Member, IEEE, Branka Vucetic , Life Fellow, IEEE, and Yonghui Li , Fellow, IEEE
+
+Abstract—This paper presents a novel auto-encoder based end-to-end channel encoding and decoding. It integrates deep reinforcement learning (DRL) and graph neural networks (GNN) in code design by modeling the generation of code parity-check matrices as a Markov Decision Process (MDP), to optimize key coding performance metrics such as error-rates and code algebraic properties. An edge-weighted GNN (EW-GNN) decoder is proposed, which operates on the Tanner graph with an iterative message-passing structure. Once trained on a single linear block code, the EW-GNN decoder can be directly used to decode other linear block codes of different code lengths and code rates. An iterative joint training of the DRL-based code designer and the EW-GNN decoder is performed to optimize the end-end encoding and decoding process. Simulation results show the proposed auto-encoder significantly surpasses several traditional coding schemes at short block lengths, including low-density paritycheck (LDPC) codes with the belief propagation (BP) decoding and the maximum-likelihood decoding (MLD), and BCH with BP decoding, offering superior error-correction capabilities while maintaining low decoding complexity.
+Index Terms—Channel coding, deep reinforcement learning, GNN, auto-encoder.
+I. INTRODUCTION
+T HE increasing demand for ultra-reliable low-latency communications (URLLC) in next-generation communication
+networks requires low-latency physical-layer designs – par-
+ticularly channel coding schemes. Short codes with strong
+error-correction capability are essential to satisfy the stringent
+latency and reliability requirements of URLLC in 5G and
+future 6G networks [1], [2]. To meet these requirements, the
+channel coding system must demonstrate superior error-rate
+performance and low decoding complexity. This necessitates
+both a well-designed short channel code at the transmitter side
+and an efficient decoder at the receiver side.
+Received 19 June 2024; revised 19 January 2025; accepted 21 April 2025. Date of publication 29 April 2025; date of current version 20 October 2025. The work of Kou Tian was supported by the SmartSat CRC, whose activities are funded by the Australian Government’s CRC Program. The work of Chentao Yue was supported by ARC under Grant DE250101332. The work was supported by ARC under Grant DP210103410, DP250100462 and LP240100451. An earlier version of this paper was presented in part at the IEEE International Conference on Communications (ICC), Rome, Italy, in June 2023 [DOI: 10.1109/ICC45041.2023.10278711]. The associate editor coordinating the review of this article and approving it for publication was R. Tandon. (Corresponding author: Changyang She.)
+Kou Tian, Chentao Yue, Branka Vucetic, and Yonghui Li are with the School of Electrical and Computer Engineering, The University of Sydney, Sydney, NSW 2050, Australia (e-mail: kou.tian@sydney.edu.au; chentao. yue@sydney.edu.au; branka.vucetic@sydney.edu.au; yonghui.li@sydney. edu.au).
+Changyang She is with the School of Electronic and Information Engineering, Harbin Institute of Technology (Shenzhen), Shenzhen 518055, China (e-mail: shechangyang@gmail.com).
+Digital Object Identifier 10.1109/TCOMM.2025.3565602
+
+Several short linear block codes, including Bose-ChaudhuriHocquenghem (BCH) codes, LDPC codes and Polar codes are promising candidates for URLLC due to their superior performance in the short block length regime [1]. Although long LDPC codes with the BP decoder have been adopted in the data channel of 5G new radio [3] due to their near-capacity performance and reasonable decoding complexity, their short variants suffer from a significant performance gap compared to the finite block length bound [4]. The suboptimal performance of short LDPC codes primarily arises from the insufficient sparsity in the parity-check matrices, resulting in inherent limitations of the BP decoder, which exhibits a notable block-errorrate (BLER) performance degradation compared to MLD [1].
+The conventional design of coding schemes involves dealing with a trade-off between BLER performance and decoding complexity. Such designs usually rely on the probabilistic and algebraic analyses. Due to the complexity of these analyses, the encoder and decoder are designed and optimized separately. Codes with high error-correction capabilities require complex decoding algorithms. For example, short BCH codes are among the best-known codes with strong error-correction performance, while their optimal decoding is highly computationally expensive [1]. On the other hand, LDPC paired with BP exhibits a significant BLER gap to the capacity bound, particularly at short block lengths [1].
+Recently, there is a growing interest in leveraging artificial intelligence (AI) for wireless communication and channel coding [5], [6]. AI, particularly deep learning (DL), can potentially surpass analytical methods in the design of communication systems by learning the channel statistics, extracting features from wireless networks and exploring the optimal communication algorithms. AI-driven approaches have shown significant advantages in wireless system design and optimization, including signal detection [7] and channel resource allocation [8]. AI has also been integrated into code designs [9], [10], [11], [12], decoder designs [13], [14], [15], [16], [17], [18], [19], [20], and the joint optimization of encoding and decoding via end-to-end training [21], [22], [23], [24], [25]. The architecture that implements both the encoder and decoder with AI models is referred to as “auto-encoder” channel coding.
+A. Related Works
+1) DL for Code Design: The powerful capabilities of DL in data processing and feature learning offer a novel approach for constructing channel codes that can potentially outperform those designed by using human ingenuity [9], [10], [11], [12]. In [9] and [10], the authors used recurrent neural
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8559
+
+networks (RNNs) to construct low-latency and feedback codes, respectively, demonstrating performance gains. Authors in [11] proposed DL-based polar codes tailored to BP decoding, by treating the frozen positions of a polar code as trainable weights of a neural network. These works utilized existing code structures to ensure a manageable training complexity. Generally, learning to design linear block codes is challenging and faces several major challenges: 1) Curse of dimensionality [26]: As the message length k increases, the volume of the search space (i.e., the number of possible messages and codewords) increases exponentially as 2k. Thus, the required number of training data becomes impractically large for supervised learning. Furthermore, a large k also results in high-dimensional input data, which leads to increased computational complexity. 2) Gradient calculation: Code matrices, i.e., the generator matrix and the parity-check matrix, are binary, which complicates the gradient calculation in the DL training process. 3) Matrix validity: Code matrices must be of full rank to ensure the code linearity, which introduces an extra constraint on the learning process. In [12], reinforcement learning (RL) was used to construct the binary code generator matrix in a systematic form. However, the designed codes exhibit limited error-rate performance.
+2) DL for Channel Decoding: Recent works have achieved notable improvements in using DL-aided decoders to decode traditional analytically designed codes. Deep neural networks based on the structure of the existing decoding algorithms, such as BP, have been extensively explored. In [14] and [15], the authors proposed a neural BP (NBP) decoder, by unrolling the iterative structure of BP to a non-fully connected network with trainable weights. NBP outperforms the conventional BP in terms of BLER when decoding short BCH codes. The NBP decoder was further improved in [16] by integrating it with a hyper-graph network, and it was also enhanced by the pruningbased NBP in [17], which removes less-weighted neurons in the NBP network to obtain different parity-check matrices in each iteration. In addition, the loss functions for training NBP were refined in [18]. Motivated by the graph-based representation of codes using Tanner graphs, [19] proposed a GNN decoder for linear block codes, which demonstrates competitive BLER performance for LDPC and BCH codes. Although aforementioned DL-aided decoders have made significantly progress, they have several limitations. Speficially, 1) their BLER performance gap to the optimal MLD remains significant; 2) they are not scalable to code length and code rate, requiring re-training when either changes; and 3) their performance highly depends on the hyper-parameters of neural networks, which are obtained by trial-and-error.
+3) Auto-Encoder: The traditional coding system integrates individually optimized encoder and decoder, but this approach does not necessarily yield a globally optimal solution. Recently, DL has been used for the global optimization of “auto-encoder” channel coding systems with jointly designed encoder and decoder [21], [22], [23], [24], [25]. However, due to the high complexity of training end-to-end models and the aforementioned dimensionality problem, the application of auto-encoders is often limited to very small code sizes. For example, the auto-encoder proposed in [22] can only be
+
+utilized for codeword lengths up to 8. One solution is to design structured auto-encoder models aligning with specific code structures, such as convolutional auto-encoder (ConvAE) [23] and Turbo auto-encoder (TurboAE) [24], rather than using a direct nontransparent model as in [22]. ConvAE uses convolutional neural networks (CNN) for block codes, and TurboAE is a turbo code-like variant of ConvAE, utilizing multiple CNNs for interleaved encoding and iterative decoding. However, these methods cannot learn good codes at moderate-to-long lengths, offering only slight improvements over analytically designed codes. In [21], the authors proposed a neural belief propagation auto-encoder (NBP-AE), which uses trainable binary weights that represent the parity-check matrix to link the encoder and decoder to enable end-to-end training. However, NBP-AE still has a significant BLER performance gap to the carefully designed encoder-decoder pairs, including BCH codes with its near MLD and irregular LDPC codes with BP. The authors in [27] proposed a Transformer-based auto-encoder model referred to as End-to-End Deep Coding Error Correction Code Transformer (E2E DC-ECCT) for linear block codes. This framework jointly optimizes a single-layer neural code generator, similar to [21], and a Transformer-based decoder, achieving superior performance over state-of-the-art methods at the cost of high training complexity.
+B. Contributions
+This paper proposes a GNN-DRL auto-encoder. First, we develop a DRL-based code designer that can learn better codes with superior error-control capabilities compared to conventional codes. Then, we develop an EW-GNN decoder. Finally, the DRL-based code designer and the EW-GNN decoder are jointly optimized and integrated into an auto-encoder channel coding framework. The main contributions of the paper are summarized as follows:
+• DRL-based code designer: We introduce a DRL-based code designer that leverages GNNs to construct highperformance parity-check matrices for linear block codes. This approach formulates the process of generating matrices as a MDP, where a GNN-based agent directly operates within the parity-check matrix by treating it as a lattice graph. Our DRL-based method supports active explorations of the code space beyond given data samples, and the reward functions are designed to optimize critical code performance metrics, including girth, decoding bit error rate (BER), and the minimum Hamming distance (MHD).
+• Scalable GNN decoder: We develop a novel EW-GNN decoder for short linear block codes. To simplify the selection of hyper-parameters, EW-GNN applies the algorithmic alignment framework [28] by designing a unique GNN that precisely matches the traditional BP decoding method and operates over Tanner graphs. Specifically, each variable node in EW-GNN is assigned a hidden embedding that is iteratively updated based on edge messages on the Tanner graph. Then, each edge message is assigned a “weight” determined by a fully-connected feed-forward neural network (FNN). The FNNs located
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8560
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+on all edges share the same trainable parameters. By reducing the weights of unreliable edge messages generated from small cycles of Tanner graphs, EW-GNN significantly improves the BER compared to BP. Due to the intrinsic scalability properties of GNNs, the number of trainable parameters of EW-GNN does not change with the code length. Moreover, after the supervised training process with a given linear block code, it can be applied to other linear block codes with different rates and lengths. • Jointly-designed auto-encoder: We present an autoencoder framework that combines the proposed DRLbased code designer with the EW-GNN decoder, enabling the joint optimization of codes and their decoders. An iterative training scheme is applied to the proposed auto-encoder model. First, the DRL-based code designer designs the optimal code, using a reward function that minimizes the BER with an initial decoder, e.g., BP. Next, the EW-GNN decoder is trained for the designed code. In the next training iteration, a new code will be updated based on the BER reward from the EW-GNN decoder, and the decoder will be fine-tuned again for the new code. This training process will continue for several iterations. • We conducted extensive simulations to compare our code designer, decoder, and auto-encoder to conventional methods. The DRL-based code designer can discover better codes than LDPC codes under both BP and MLD decoders. Under MLD, the learned code has 0.83 dB more coding gain than the (32, 16) LDPC code on additive white Gaussian noise (AWGN) channels. Moreover, EW-GNN decoder outperforms BP and NBP in terms of BER, even when the code length in the training stage differs from that in the testing stage. For the (63, 51) BCH code, EW-GNN increases the coding gain by 1.2 dB and 0.62 dB compared to BP and NBP decoders, respectively. The proposed auto-encoder framework provides superior error-rate performance compared to multiple conventional encoder-decoder pairs and NBP-AE [21] at short block lengths. For example, our auto-encoder outperforms the (32, 16) LDPC decoded with MLD and BP by a coding gain of 0.63 dB and 1 dB, respectively.
+The rest of this paper is organized as follows. Section II provides the preliminaries. In Section III, we introduce the DRL-based code designer. Section IV presents the EW-GNN decoder, outlining its structure and training algorithm. Section V presents the iterative training process of the proposed auto-encoder framework. In Section VI, we provide simulation results. Finally, Section VII concludes the paper.
+
+II. PRELIMINARIES
+A. Channel Coding With Linear Block Codes
+We consider a binary linear block code denoted by C(n, k), where a k-bit binary message sequence is encoded into a codeword of length n with n > k.
+1) Matrix Representation: For C(n, k), the encoding process can be succinctly represented by
+
+c = bG,
+
+(1)
+
+Fig. 1. A parity-check matrix in systematic form and its corresponding Tanner graph. The path marked by blue lines represents a 4-length cycle.
+
+where b ∈ Fk2 is the raw message, c ∈ F2n is the codeword, and
+
+G
+
+∈
+
+k×n
+F2
+
+is
+
+the
+
+code
+
+generator
+
+matrix.
+
+Eq.
+
+(1)
+
+is
+
+performed
+
+over the binary field F2. We denote the MHD of C(n, k) as
+
+dmin.
+
+The parity-check matrix of C(n, k) is denoted as H ∈
+
+Fm 2 ×n, where m = n − k. A parity-check matrix H can be
+
+transformed into the systematic form as Hstd = (A | Im) through Gaussian elimination, where A ∈ F2m×k and Im is an
+
+identity matrix of size m. The associated systematic generator
+
+matrix can be accordingly obtained as Gstd = (Ik | A ). Thus, G and H are both of full-rank, and either of them can
+
+fully define C(n, k).
+
+2) Graphical Representation: As illustrated in Fig. 1, the
+
+Tanner graph of C(n, k) consists of two sets of nodes: n
+
+variable nodes corresponding to codeword bits and m check
+
+nodes corresponding to parity-check bits. The i-th variable
+
+node vi is connected to the j-th check node uj if the (j, i)-th element of H is one. In this case, H can be interpreted as the
+
+adjacency matrix of a bipartite graph G = (V, U, E) with two
+
+disjoint node sets V = {v1, . . . , vn} and U = {u1, . . . , um}, and an edge set defined as E = {ei,j = (vi, uj) : vi ∈ V, uj ∈ U , Hj,i = 1}. We denote the neighborhood of a variable node vi, i.e., all check nodes connected to vi, as M(vi) = {uj ∈ U : ei,j ∈ E}. Similarly, M(uj) = {vi ∈ V : ei,j ∈ E} represents the set of neighbor variable nodes of a check node uj.
+In the Tanner graph G, a cycle of length λ (i.e., a λ-cycle) is
+
+a closed path that starts and ends at the same node, traversing
+
+λ edges in E without repetition. The girth g of G is the length
+
+of the shortest cycle. Since G is bipartite, we have g ≥ 4. The
+
+girth affects the decoding performance when using BP [29].
+
+3) Belief Propagation Decoding: BP is a soft-decision
+
+decoding algorithm [30]. We denote the channel log-likelihood ratio (LLR) sequence of codeword c as ∈ Rn. For the
+
+binary phase-shift keying (BPSK) modulation over an AWGN
+
+channel, i can be obtained by
+
+i
+
+=
+
+ln
+
+Pr(ci Pr(ci
+
+= =
+
+0 1
+
+| |
+
+yi) yi)
+
+=
+
+2yi σn2
+
+.
+
+(2)
+
+With , BP performs iterative message-passing decoding.
+
+Specifically, at the t-th iteration, it performs
+
+
+
+
+
+µu(tj)→vi = 2 tanh−1 
+
+tanh µ(vt→−u1)j  , (3) 2
+
+v∈M(uj )\vi
+
+for each uj ∈ U and vi ∈ M(uj), and
+
+µ(vti)→uj = i +
+
+µ(ut→) vi ,
+
+(4)
+
+u∈M(vi )\uj
+
+for each vi ∈ V and uj ∈ M(vi). BP iteratively performs (3) and (4), until µ(utj)→vi and µ(vti)→uj converge, or the allowed
+maximum number of iterations is reached.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8561
+
+The BER of BP is strongly related to the girth g. Small cycles introduce correlations between messages passed across decoding iterations, thereby preventing the a posteriori LLR being exact [31]. For BCH codes and short LDPC codes, BP has inferior performance due to their small girths [1], [32].
+
+B. Learning Approaches
+1) Reinforcement Learning: RL is a trial-and-error approach to learn the optimal policy for sequential decisionmaking in dynamic environments. In RL, the decision-maker, known as the agent, performs actions in an environment and refines its behavior based on feedback received as rewards or penalties. A basic RL framework can be described by the MDP with components: State St, Action At, Policy µ, and Reward r. Precisely, policy determines actions in given states, i.e., At = µ(St). The reward evaluates action quality to guide the agent’s behavior, which is given by rt = R(St, At, St+1) with a reward function R. In the agent-environment interaction loop, the agent takes an action At based on the current policy µ and St, then the system transits with a new state St+1 and receives a reward rt. The goal of RL is to learn an optimal policy that can maximize the long-term reward, which is estimated by the action-value (Q-value) function in most RL algorithms.
+In this work, we adopt the deep deterministic policy gradient (DDPG) algorithm [33], which is an actor-critic DRL method combining the strengths of the policy optimization method [34] and the Q-learning method [35]. It applies two deep neural networks to simultaneously learn a deterministic policy and an action-value function. The actor network determines the optimal actions, and the critic network estimates the Q-value, i.e., the long-term reward. DDPG has more stable and faster convergence than traditional RL by combining policy gradient for optimizing policies and Q-learning for value estimation.
+2) Graph Neural Network: GNN is developed for processing graph structured data. It learns the low-dimensional representation of graphs, i.e., the network embedding, by iteratively propagating and aggregating the node/edge information over the graph [36]. Embeddings capture the graph topology, and have been used for graph analysis tasks, e.g., node/graph classification and link prediction [36].
+Message passing neural networks (MPNN) [37] have been successfully implemented in wireless communications [19], [38]. For an input graph, MPNN generates node embeddings through two neural network-based processes: the message calculation process and the embedding updating process. For each edge in the graph, a “message” is computed based on the node embeddings of its endpoints. Then, for each node, MPNN updates the embedding value by aggregating messages from its neighbors. Due to the graph-based nature of GNNs, the message calculation and the embedding updating can be applied to process the information flow on the Tanner graph, as demonstrated in the EW-GNN decoder (see Section IV-A). In the DRL-based code designer, the message calculation and the embedding updating are designed to operate on the lattice graph related to the parity-check matrix of a linear block code (see Section III-C).
+
+Fig. 2. System model.
+III. CODE DESIGN WITH DRL
+The enumeration algorithms to find short codes with the largest MHD [39] involve prohibitively high computational complexity, and the resulting codes often lack efficient decoding algorithms. To efficiently construct codes with superior error-correction performance and low decoding complexity, we propose a DRL-based code designer, which leverages DDPG to produce code parity-check matrices.
+
+A. System Model
+
+As demonstrated in Fig. 2, we consider a binary code C(n, k) defined by a parity-check matrix H ∈ F2m×n, which is generated by the DRL-based code designer. Then, the corresponding generator matrix G ∈ F2k×n can be obtained by Gaussian elimination. A binary message b is then encoded
+to a codeword c following (1). We assume that c is transmitted
+over the AWGN channel with the BPSK modulation. Thus, the modulated symbol x is given by x = 1 − 2c ∈ {−1, 1}n, and
+the noisy received signal y is obtained as y = x + z, where z is the AWGN vector with each zi ∼ N (0, σn2 ). The signal-tonoise ratio (SNR) is defined as SNR = 1/σn2 .
+At the receiver side, a decoder processes y and outputs an estimate cˆ of c. The estimated message bˆ is the first k bits of
+cˆ when the generator matrix is systematic. A decoding error occurs when bˆ = b. The BER performance of the code defined
+by H is calculated as:
+
+1k
+
+b(H) = E k
+
+1[bi=ˆbi] ,
+
+(5)
+
+i=1
+
+where 1[bi=ˆbi] = 1 if bi = ˆbi, and 1[bi=ˆbi] = 0, otherwise. E[·] is the expectation taken over random AWGN noise vectors.
+
+B. Problem Formulation
+The process of constructing parity-check matrices can be treated as a Tanner graph structure generation task. Intuitively, one can use a DRL agent to modify one edge at each time step, until all possible edges are updated. However, for the Tanner graph of C(n, k), the number of steps in each episode can be as high as m × n, which leads to high training complexity. In addition, a reward is only available after the graph is fully generated. This issue is known as the sparse reward because the agent receives feedback only at the end of the entire episode, making it challenging to identify the impact of each individual action.
+To address these issues, we consider a full graph-based MDP where in each step, the agent builds up a complete lattice graph of the whole parity-check matrix. Specifically, each matrix element is a node of the graph with links to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8562
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+Fig. 4. The block diagram of the DRL-based code designer.
+
+Fig. 3. An example of the full graph-based MDP generating a parity-check matrix. The flipping threshold αf is set as 0.5.
+
+its upper, lower, right, and left neighbouring elements. This graph is processed by GNN to produce actions, which will be further detailed in Section III-C. Figure 3 gives an example of the proposed iterative full graph-based MDP. Considering a linear block code C(n, k), a detailed description of the state representation, the action, and the reward function of the full graph-based MDP is as follows.
+1) States: We define the state, St, as the parity-check matrix at time step t, which is fully observed by the DRL agent. At the start of each episode, S1 is initialized by paritycheck matrices from existing well-designed linear block codes [40].
+2) Actions: We define a continuous, high-dimensional action space for link prediction. At each step t, the actor network determines the action At ∈ Rm×n, with all elements scaled to [0, 1]. The agent flips elements of the state matrix according to At. The state transition rule is given by
+
+Sjt,+i 1 =
+
+1 − Sjt,i, Sjt,i,
+
+if Ajt,i > αf , otherwise.
+
+(6)
+
+for 1 ≤ j ≤ m, 1 ≤ i ≤ n, where αf is a predetermined threshold for flipping. Figure 3 shows the generated matrix state before and after an action is taken.
+
+Algorithm 1 Reward Function R St, At, St+1
+
+full rank to allow further performance assessment. In contrast, the reward is zero if the matrix is invalid.
+The coding performance reward is designed to evaluate the error-correction capability of the generated code. We propose two types of coding performance rewards. One is measured from the decoding BER, while another is evaluated directly from the code structure.
+The decoding BER reward is directly measured from the simulated BER with a certain decoder under AWGN channels. Given an updated matrix state St+1 at step t, we treat it as a parity-check matrix and obtain its corresponding generator matrix Gt+1. The decoding BER reward value is obtained as
+
+rdt = | ln( b(St+1))|,
+
+(7)
+
+by performing simulations until 10,000 bit errors are collected.
+The code structure reward estimates the code performance
+by examining MHD and the number of cycles in the Tanner
+graph. As introduced in Section II-A, the larger MHD, the
+better the code error-correction capability. We denote the MHD of the updated state matrix St+1 as dmin(St+1), which is obtained by finding the codeword from Gt+1 with the
+minimum Hamming weight. On the other hand, to ensure that
+the designed code is suitable for Tanner graph-based decoding,
+e.g., BP and EW-GNN, we incorporate cycle analysis into our reward design. For the Tanner graph of St+1, we represent the number of λ-cycles as cλ(St+1), which can be obtained using the algorithm in [41]. We consider the impact of both dmin(St+1) and cλ(St+1) over the code performance, and propose the code structure reward function as
+
+rst
+
+=
+
+dmin(St+1) αd
+
++
+
+cλ
+
+αc (St+1)
+
++
+
+αc
+
+,
+
+(8)
+
+where αd and αc are constants used to limit the range of the reward value. The value of λ is set to 4 to reduce the number
+
+of shortest cycles and decrease the Tanner graph density.
+
+3) Reward: We use step-wise rewards to guide the behaviour of the DRL agent, which combine the validity rewards and the coding performance rewards. The reward design is summarised in Algorithm 1. The validity reward is designed to incentives the generation of valid parity-check matrices. As introduced in Section II-A, a valid linear block code must have a full-rank parity-check matrix. Therefore, we assign an additional reward value rv to valid matrices with
+
+C. GNN-Based Actor and Critic Networks
+Based on DDPG, we utilize the actor-critic algorithm for training our model. The actor network receives the intermediate matrix state St as input and deterministically maps it to an action At. Then, the critic network takes the action-state pair as input, and outputs the corresponding Q-value. Figure 4 provides the block diagram of the DRL-based code designer, illustrating the roles of the actor and critic networks in the full graph-based MDP and the training process. In our model, we introduce a lattice graph representation of the state and design a message-passing matrix neural network (MPMNN), which is an efficient variant of GNN. The proposed MPMNNs are employed in actor and critic networks to extract features from St and the pair of (St, At), respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8563
+
+1) Lattice Graph Representation of the Parity-Check
+Matrix: By taking the actor network as an example, we represent the input matrix St as a lattice graph, in which each element of St is treated as a node, and its immediate neighbors are the adjacent elements to the left, right, above, and below. Notably, St exhibits permutation invariance, meaning that any permutation of the rows or columns of a parity-check matrix will result in the same code properties due to the linear nature of the codes. Thus, we define the neighbor nodes of boundary elements (i.e. elements in the first row, first column, last row, and last column) cyclically, creating a wrap-around connection. An element in the first (or last) row has its upward (or downward) neighbor in the last (or first) row of the same column. Similarly, an element in the first (or last) column has its left (or right) neighbor in the last (or first) column of the same row. The action At can be presented as a lattice graph similar to that for St. We note that At and St are of the same dimension, m × n, and they will be processed jointly at the critic network.
+2) Message Passing-Based Matrix Neural Network: The input feature of MPMNN is denoted as X ∈ Rm×n×d0 , which is a m × n matrix with each element being a vector of length d0. In the matrix X, the element at the j-th row and the i-th column is defined as node (j, i). The node feature is directly obtained from the value of corresponding element in the input matrix, represented as a d0-dimensional vector xji.
+Following the message passing process in the MPNN framework [37], we generate node embeddings iteratively for a total of L layers. At the l-th layer, the hidden embedding of node (j, i), denoted as xˆjl i, is updated based on messages aggregated from its neighbors according to
+
+xˆlj+i 1 = fe(xˆlji, mlji | θe),
+
+mlji = agg(mlji,l, mjl i,r, mjl i,u, mlji,d),
+
+(9)
+
+where xˆlj+i 1 is a de-dimensional vector. The parameterized function fe(· | θe) is a multilayer perceptron (MLP) with trainable parameters θe, working as the embedding updating function in a standard MPNN, and agg(·) is an aggregation function. For node (j, i), mjl i,l, mlji,r, mjl i,u, mlji,d are the messages passed from its neighbors in left, right, up and down
+directions at the l-th layer, and they are calculated as
+
+mjl i,l = fr(xˆjl i, xˆlji,l | θr), mjl i,r = fr(xˆjl i, xˆlji,r | θr), mlji,u = fc(xˆlji, xˆlji,u | θc), mjl i,d = fc(xˆjl i, xˆjl i,d | θc),
+(10)
+
+where xˆlji,l, xˆlji,r, xˆjl i,u, xˆlji,d are embeddings of the neighbours of node (j, i) at the l-th layer. Note that fr(· | θr) and fc(· | θc) are two distinct MLPs to process incoming messages from same-row neighbors and same-column neigh-
+bors, respectively. These messages passed from neighbors are vectors of length dm. At l = 0, we initialize embeddings for each node by applying a linear transformation
+
+xˆ0ji = fin(xji | θin),
+
+(11)
+
+where fin(· | θin) is a dense layer that maps the d0dimensional node into a de-dimensional embedding xˆ0ji, and de > d0.
+
+Algorithm 2 MPMNN fm (X | θm)
+
+The structure and flow of the MPMNN are summarised in Algorithm 2. As can be seen, the parameters of the MPMNN includes θe, θr, θc, and θin in (9)–(11).
+Algorithm 3 Actor Network µ (St | θµ)
+
+3) Action Prediction and Critic Evaluation: We apply two
+
+independent MPMNNs to construct the actor network and the critic network, denoted as fma (Xa | θm a ) and fmc (Xc | θcm), respectively. In the actor network µ(St | θµ), St is directly used as the input of fma (· | θam), i.e., Xa = St ∈ Rm×n×1
+and d0 = 1. After L layers, the readout phase computes the
+
+final action value based on the output embeddings, according
+
+to
+
+Ajt,i = σ(fa(xˆjLi | θa)),
+
+(12)
+
+where fa(· | θa) is a dense layer with inputs of dimension de and outputs of dimension one. The sigmoid function σ(·) is chosen to ensure that the action value is constrained within the range (0, 1). The design of the actor network are detailed in Algorithm 3, where its parameter θµ is the subsumption of θm a from fma (Xa | θam) and θa from (12).
+In the critic network Q(St, At | θQ), the input of fmc (· | θcm) is given by Xc = concat(St, At) ∈ Rm×n×2, where the concat operation combines St and At along the last dimension. Then we perform the MPMNN over this matrix. Following L layers, the readout phase calculates the Q-value by aggregating the embeddings of all nodes, as expressed by
+
+qt = ReLU(fq(agg(xˆLji : 1 ≤ j ≤ m, 1 ≤ i ≤ n) | θq)), (13)
+where fq(· | θq) denotes a dense layer that transforms inputs of size de into a single-dimensional output. To obtain nonnegative Q-values, we use the rectified linear unit (ReLU) as
+the activation function. The steps to compute the output of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8564
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+the critic network are summarized in Algorithm 4, where its parameter θQ is the subsumption of θm c from fmc (Xc | θm c ) and θq from (13).
+Algorithm 4 Critic Network Q(St, At | θQ) Input : State St ∈ Fm 2 ×n, action At ∈ Rm×n Output: Q-vlaue qt
+1 Obtain Xc = concat(St, At) ∈ Rm×n×2; Implement MPMNN with input Xc:
+2 Execute Algorithm 2; Readout phase:
+3 Compute the Q-value qt by (13).
+Algorithm 5 The DRL-Based Code Designer
+
+where A˜ t = µ(St | θµ) is the output of Algorithm 3. The exploration noise ζ is sampled from a mean-zero Gaussian
+distribution. Considering the exploration-exploitation trade-off
+in RL, we design an epsilon-greedy noise selection method, in which ζ are added to the action with a decaying probability . Once ζ is added, is decayed to = 0.995 with a decaying
+rate 0.995, and is initialized to be 1. The variance of the Gaussian noise, σ2, is chosen to be close to the flipping
+threshold in (6). The clip function then limits each element in the noised action A˜ t + ζ to [αlow, αhigh].
+After taking a certain action At, the agent receives a reward rt and observes a new state St+1 according to (6). The transition tuple (St, At, rt, St+1) is stored in a replay buffer D, which is a finite sized cache. At each time step, a minibatch of size NB is uniformly selected from the buffer and used as training samples to optimize the actor and critic networks. The
+optimization of the critic network is performed by minimizing
+the following loss function:
+
+L(θQ)
+
+=
+
+1 NB
+
+NB
+[yt
+nB =1
+
+− Q(St, At
+
+|
+
+θQ)]2.
+
+(15)
+
+The loss is defined as the difference of the Q-value and the target value yt, where the Q-value is obtained by Algorithm 4, and the target value yt is computed according to Bellman
+equation [42]:
+
+yt = rt + γQ (St+1, µ (St+1 | θµ ) | θQ ), (16)
+
+where γ ∈ [0, 1] is a discounting factor. The target networks, µ (· | θµ ) and Q (· | θQ ), are replicas of the actor and critic networks, respectively. The parameters of target networks are updated according to,
+
+θQ ← ρθQ + (1 − ρ)θQ ,
+
+θµ ← ρθµ + (1 − ρ)θµ ,
+
+(17)
+
+where 0 <ρ 1 is a hyper-parameter. Meanwhile, the optimal policy is trained by maximizing the Q-value function,
+
+L(θµ)
+
+=
+
+1 −
+NB
+
+NB
+Q(St, µ(St
+nB =1
+
+|
+
+θµ)
+
+|
+
+θQ).
+
+(18)
+
+D. Training Algorithm
+
+The training process of the DRL-based code designer follows the algorithm detailed in Algorithm 5. During the training phase, we identify the optimal code by selecting the generated parity-check matrix, represented as H∗, which is the state St+1 that yields the highest reward.
+At each time step t, the agent observes the current state St and generates an action by applying the actor network in Algorithm 3. To improve the exploration efficiency in our policy, we introduce noise to the actions during the training phase. The final action At is given by
+
+At = clip(A˜ t + ζ, αlow, αhigh),
+
+(14)
+
+During the training phase, the parameters of the actor and critic networks are updated utilizing the Adam optimizer [43] with given learning rates ηa and ηc, respectively.
+IV. EW-GNN DECODER
+GNN is capable of learning well a wide range of practical models based on graphs, which is justified by the algorithmic alignment framework [28]. GNN can align to the BP decoding algorithm, because 1) BP decoding is a node classification problem on the Tanner graph and 2) both GNN and Tanner graph are permutation-invariant due to the linear property of codes [28, Section 2]. In this section, we propose an EW-GNN decoder operating on the Tanner graph, which is different from the lattice graph used by DRL code designer in Section III.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8565
+
+clip 1 + = ln
+clip 1 −
+
+v∈M(uj )\vi tanh v∈M(uj )\vi tanh
+
+µv(t→ −u1)j 2
+µv(t→ −u1)j 2
+
+, α, 2 − α
+, α, 2 − α (21)
+
+Fig. 5. Illustration of updating the node embedding in the GNNbased decoder. The variable node vi receives messages from M(vi) = {ua, ub, uc, ud}. g(· | θg) is a trainable neural network.
+
+A. GNN Decoder With Edge Weights
+Considering a bipartite Tanner graph G = (V, U, E) with
+directed edge messages, as introduced in Section II-A2, we define the node feature of variable node vi as the received LLR information,1 i given by (2). In each iteration, the hidden node embedding of vi, denoted as h(vti), is updated based on incoming edge messages µ(ut→) v, which is iteratively generated from µv(t→−u1). Figure 5 gives an example of the updating process. Since n variable nodes correspond to n codeword bits, the GNN decoder finally obtains cˆi from h(vTi ), for vi ∈ V, after T iterations.
+In the proposed GNN decoder, we introduce “weight” to
+the edge messages to improve the decoding performance. Intu-
+itively, by reducing the weights of unreliable edge messages
+generated from small cycles in the Tanner graph, it is possible to improve the accuracy of the output codeword estimate cˆ.
+The weight is a multiplicative correction factor [44] working
+on the edge message from parity-check nodes to variable nodes. Let us denote the weight of µ(utj)→vi in the t-th iteration as wu(tj)→vi ∈ R. By employing an MLP, g(· | θg) with trainable parameters θg, the weight wu(tj)→vi is learned from input features that can reflect the reliability of node and edge
+information, which is defined as
+
+wu(tj)→vi
+= g(|µ(utj)→vi|, δ(t)(µuj→vi), δ(t−1)(µvi→uj), δ(t−1)(hvi) | θg). (19)
+
+In (19), |µ(utj)→vi | represents the reliability of edge message µu(tj)→vi , because µu(tj)→vi can be regarded as an extrinsic LLR (see [30]). Then, δ(t)(x) is a residual function given by
+
+δ(t)(x) = |x(t) − x(t−1)|.
+
+(20)
+
+Thus, δ(t)(µuj→vi ), δ(t−1)(µvi→uj ), and δ(t−1)(hvi ) represent the residual value of µuj→vi , µvi→uj , and hvi , respectively. They are also measurements of the reliabilities [45]; precisely, a lower residual value is, a more reliable node/edge will be.
+Next, we explain the algorithm of EW-GNN with the help of weight wu(tj)→vi . At the t-th iteration, EW-GNN first updates the edge message from uj to vi according to
+µ(utj)→vi
+
+1GNN can apply different update and message functions as per applications. In the GNN decoder, the node classification only performs on variable nodes representing codeword bits. Thus, we only assign features and embeddings to variable nodes for simplicity.
+
+where α is a model parameter less than 10−7. We note that the
+message update function (3) in BP is not applicable to neuralnetwork-based decoders, because tanh−1(·) is unbounded and
+introduces non-differentiable singularities, leading to a nonconvergence training process. Therefore, we modify tanh−1(·)
+with the clip function to avoid the aforementioned issue. Compared to the Taylor series expansion of tanh−1(·) used
+in [16], the clip function in (21) introduces virtually no extra
+complexity. After µu(tj)→vi is obtained for uj ∈ U and vi ∈ M(uj), the
+updated edge message from vi to uj is given by2
+
+µv(ti)→uj = i +
+
+wu(t→) vi · µ(ut→) vi .
+
+u∈M(vi )\uj
+
+(22)
+
+Then, the node embedding h(vt) is updated by aggregating weighted edge messages from all neighbor nodes according to
+
+h(vti) = i +
+
+wu(t→) vi · µ(ut→) vi .
+
+u∈M(vi )
+
+(23)
+
+At t = 0, the node embeddings h(v0i) and edge messages µv(0i)→u are all initialized to corresponding input features of node vi, i.e., i given in (2). Also, all residuals are initialized to 0. Meanwhile, at the t-th iteration, EW-GNN uses node
+embeddings and edge messages propagated from previous two iterations to update hv(t).
+After T iterations, we obtain the estimated codeword cˆ from
+the node embedding hvi according to the following rule:
+
+cˆi =
+
+1, 0,
+
+hv(Ti ) ≤ 0, h(vTi ) > 0.
+
+(24)
+
+B. Training Algorithm
+The algorithm of the proposed EW-GNN decoder is summarized in Algorithm 6, which includes the training phase and the inference phase. The goal of the training phase is to find an optimal g(· | θg) that minimizes the difference between the transmitted codeword and its estimate. For channel coding, a large amount of data samples can be easily obtained to perform the end-to-end training [13]. The label data, i.e., the transmitted codewords, are generated by encoding a random binary message. By imposing an AWGN with power σn2 over the symbols of codewords, received LLRs can be computed according to (2), which are used as the input data of EWGNN. To improve the robustness of EW-GNN, we perform the training process with diverse SNRs uniformly distributed in the interval [γmin, γmax] .
+2Mt(µu(tj)→vi, h(vti−1)) = wu(tj)→vi µ(utj)→vi as wu(tj)→vi is a function of hv(ti−1).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8566
+Algorithm 6 Training and Inference of EW-GNN
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+Fig. 6. The iterative training phase of the proposed GNN-DRL auto-encoder architecture with τ training iterations.
+
+Since the channel decoding can be considered as a bit-wise binary classification task, we apply the average binary crossentropy (BCE) per bit per iteration as the loss function, i.e.,
+
+1T L=−
+nT
+
+n
+ci log(pv(ti)) + (1 − ci) log(1 − p(vti)),
+
+t=1 i=1
+
+(25)
+
+which is the multiloss variant [15] of a regular BCE loss function. In (25), pv(ti) denotes the probability Pr(ci = 1) estimated from h(vti) of vi at iteration t, which is given by p(vti) = 1/(1 + exp(hv(ti))) ∈ (0, 1). During the training phase,
+g(· | θg) parameters are updated utilizing the Adam optimizer
+
+with a given learning rate η [43], and LnB in Algorithm 6 is the loss of the nB-th sample in the batch of size NB.
+
+V. AUTO-ENCODER WITH ITERATIVE TRAINING
+An auto-encoder framework for linear block code provides a communication scheme in which both the encoder and the decoder are implemented by machine learning methods, and
+
+they can be optimized jointly. In our auto-encoder model, the DRL-based code designer generates an optimal code with an initial decoder, e.g., BP. The EW-GNN decoder is then trained based on this code. Subsequently, the DRL-based code designer generates a new optimal code with the trained EWGNN decoder, and the EW-GNN decoder is fine-tuned based on the new code. The encoder and decoder will be trained in this manner for several iterations. We employ this iterative training method because the direct joint optimization of a DRL-based model and a supervised learning-based model is difficult due to the vast combined parameter space of two models. On the other hand, the reward-based, unsupervised-learned DRL code designer and the loss-based, supervised-learned EW-GNN decoder have completely different training processes.
+The detailed iterative training process of the proposed autoencoder framework is illustrated in Fig. 6. At the first iteration, a DRL-based code designer is independently trained using the BER reward measured by BP decoding and outputs the learned code H1∗. Conventional linear block codes, such as LDPC and BCH, are chosen as the state initialization matrices at the first iteration. The EW-GNN decoder is then trained based on H1∗ and its corresponding generator matrix G1∗ according to Algorithm 6, providing a well-trained decoder network, which can be represented by its parameters θg(1). In the second training iteration, the θg(1) decoder is employed to measure the decoding BER reward, and the state of the DRL-based code designer is initialized as H1∗. Then, the code designer generates H∗2, which are used to train a new EW-GNN decoder θg(2). This training process is iteratively repeated for a few iterations.
+After τ iterations, our auto-encoder framework produces an expertly designed linear block code represented by Hτ∗, accompanied by an optimally trained EW-GNN decoder with parameters θg∗(τ). These components can be jointly employed to assemble a channel coding system with superior errorcontrol capabilities. Our auto-encoder has offline generation of codes and associated decoders, as the on-the-fly design of codes is impractical due to the extensive complexity DRL model training. Once the auto-encoder generates an optimal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+TABLE I HYPER-PARAMETERS OF THE PROPOSED DRL-BASED CODE DESIGNER
+
+8567
+
+Fig. 7. BER performance for designed (32, 16) linear block codes.
+TABLE II CODE PROPERTIES OF DESIGNED (32, 16) LINEAR BLOCK CODES
+
+linear block code from the DRL-based code designer, H∗τ and Gτ∗ can be stored to enable fast online encoding by (1) and fast online decoding by executing the inference phase in Algorithm 6. The EW-GNN algorithm has a low inference complexity that increases linearly with the code length [20]; thus, its decoding complexity is similar to BP.
+Our auto-encoder framework guides the code matrix design based on a trainable decoding method, allowing the encoder and decoder to reciprocally train toward optimal performance; Moreover, the state initialization and the reward function are continuously updated, improving the exploration efficiency.
+VI. EXPERIMENTS AND RESULTS
+This section presents the results obtained from our proposed algorithms. We first evaluate the performance of the DRLbased code designer and the EW-GNN decoder separately. For the code designer, we examine the BER performance of the learned codes, by using them to encode messages over AWGN channel with BP and MLD decoders. Meanwhile, the BER performance of the proposed EW-GNN decoder is evaluated by using it to decode classic analytically designed codes. Subsequently, we will demonstrate the performance of the proposed auto-encoder framework. All BER results are measured at each SNR by performing simulations until 10,000 bit errors are collected. For different coding schemes, we define coding gain as the difference in SNRs required to achieve the same target BER at high SNRs. The source code is available in open access at https://github.com/KouTian1999/ GNN-DRL-Auto-encoder.
+A. DRL-Based Neural Code Designer
+We evaluate the BER of the codes generated by our DRLbased code designer, as outlined in Algorithm 5. We employ two different types of reward functions to generate two distinct codes Hd∗ and Hs∗. Specifically, Hd∗ is produced using the decoding BER reward in (7) with a 8-iteration BP decoder
+
+over 6 dB AWGN, and H∗s is produced using the code structure reward in (8). Their BER performance is evaluated with the
+BP decoder with 8 iterations and MLD. BP is an efficient
+suboptimal decoder designed for LDPC codes, while MLD
+can fully exploit the error-correction capability of any codes.
+This approach allows us to test the designed codes under both
+optimal and suboptimal decoders. The training algorithm of the
+DRL-based code designer is implemented using TensorFlow,
+with hyper-parameters detailed in Table I.
+As illustrated in Fig. 7, the DRL-based code designer generates H∗d and H∗s with parameters k = 16, n = 32 and they are compared with the traditional CCSDS (32, 16) LDPC [46]. As shown, both H∗d and Hs∗, can achieve better BER performance than the LDPC code. When decoded by BP, Hd∗ achieves the best decoding performance among all the counterparts, and has 0.65 dB more coding gain than
+the LDPC code at high SNRs around 6 dB. Although the
+decoding BER reward value is measured only at the SNR of 6 dB, the learned H∗d demonstrates superior performance over a wide range of SNRs. Under MLD, Hs∗ achieves better BER performance than LDPC, with an increased coding gain
+of 0.83 dB at higher SNRs. This validates the performance
+of the proposed DRL-based code designer in learning good
+codes with superior error-correction capability.
+We further examine the algebraic structure properties of
+these (32, 16) codes, as presented in Table II. As shown in the table, the MHD of the DRL-generated matrices H∗d and H∗s are 3 and 5, respectively, while the CCSDS (32, 16) LDPC code has an MHD of 4. As a result, Hd∗ exhibits inferior performance compared to the LDPC code when decoded using the MLD, while H∗s allows an excellent MLD performance. Table II also demonstrates that the density of these parity-
+check matrices and the number of short cycles in their
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8568
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+Fig. 8. BER performance for BCH codes of length n = 63. EW-GNN is only trained with the (63, 51) BCH code and T = 8.
+
+TABLE III
+
+noting that our proposed decoder with T = 8 has a better BER
+
+HYPER-PARAMETERS OF THE PROPOSED EW-GNN DECODER
+
+performance than the NBP decoder with T = 30.
+
+We directly apply the EW-GNN model trained for the
+
+(63, 51) BCH code with T = 8 to decode (63, 45) and (63, 36)
+
+BCH codes. Note that the Tanner graph of (63, 51) BCH codes
+
+has much fewer edges (i.e., smaller network size) than those
+
+of (63, 45) and (63, 36) BCH codes. As can been seen in Figs.
+
+8b and 8c, the EW-GNN algorithm still achieves better BER
+
+performance than the BP and NBP algorithms for (63, 45) and
+
+(63, 36) BCH codes. For example, when decoding the (63, 36)
+
+BCH code with T = 30, the proposed EW-GNN increases the
+
+coding gain by 0.8 dB and 0.2 dB compared to BP and NBP
+
+associated Tanner graphs. Compared to the benchmark LDPC, the learned H∗d and H∗s are both more sparse and have less number of cycles of length 4. Consequently, both H∗d and H∗s outperform the LDPC code under the BP decoding.
+We note that the BP-decoding BER reward function tends to
+produce matrices with fewer short cycles and lower density, but this leads to poor MHD performance of H∗d. This can be addressed by the auto-encoder framework proposed in
+Section V, whose performance will be demonstrated in Section
+VI-C.
+
+respectively.
+2) LDPC Codes: We train the EW-GNN decoder for the half-rate CCSDS (32, 16) LDPC code [46] with the number of decoding iterations T = 8. As depicted in Fig. 9a, the proposed EW-GNN algorithm achieves the best decoding performance among all its counterparts in decoding the (32, 16) LDPC code. Specifically, when T = 30, EW-GNN improves the coding gains of BP and NBP by 0.21 dB and 0.1 dB at high SNRs, respectively.
+To investigate the scalability of EW-GNN to different code lengths, the EW-GNN model trained for the (32, 16) LDPC
+
+codes is directly applied to longer LDPC codes at the same
+
+B. EW-GNN Decoder
+
+code rate. As shown in Fig. 9b, when n = 128, the EW-GNN
+
+In this subsection, we evaluate the error-correction performance and the scalability of the proposed EW-GNN for short BCH codes and LDPC codes. The BP and NBP decoders [15] are considered as benchmarks for performance comparison. The decoding performance of these algorithms is measured by BER at various SNRs. The training of the EW-GNN algorithm is implemented using TensorFlow with hyper-parameters in Table III.
+
+decoder still outperforms the BP decoder and the NBP decoder in terms of BER. Furthermore, when n = 256 as illustrated in Fig. 9c, EW-GNN outperforms BP and NBP by 0.3 dB and 0.2 dB of the coding gain at high SNRs, respectively. Therefore, we highlight that even though EW-GNN is trained with an extremely short code (n = 32), it can achieve better BER performance when applied to longer codes without finetuning.
+
+1) BCH Codes: We first train an EW-GNN decoder for 3) High-Scalability Performance: As shown in Figs. 8–9,
+
+the (63, 51) BCH code with T = 8 decoding iterations, and the EW-GNN scheme exhibits significant scalability, allowing
+
+consider two inference scenarios with different number of a decoder trained on one code to be used for another without
+
+decoding iterations, T = 8 and T = 30.
+
+retraining. By leveraging the message-passing structure [37],
+
+As shown in Fig. 8a, EW-GNN outperforms BP and NBP the EW-GNN decoder learns at nodes from the immediate
+
+in terms of BER for (63, 51) BCH code with both T = 8 local neighborhood information and the hidden parameters
+
+and T = 30. When T = 8, our proposed EW-GNN decoder shared by all edges in the Tanner graph. Thus, the number
+
+has 1.2 dB and 0.62 dB larger coding gains compared to of trainable parameters is independent of input graph size.
+
+the BP and NBP algorithms, respectively, at high SNRs. The EW-GNN decoder offers a versatile and efficient solution
+
+Although EW-GNN is trained in the scenario with T = 8, for decoding linear block codes of varying lengths, reducing
+
+its BER performance remains superior with a larger number the need for retraining and adapting to different code lengths.
+
+of decoding iterations. As shown, when T = 30, the EW-GNN The ability to generalize from short to long codes ensures
+
+decoder outperforms the NBP decoder by 0.61 dB. It is worth that EW-GNN can maintain high performance across different
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8569
+
+Fig. 9. BER performance for LDPC codes at rate 1/2. EW-GNN is only trained with the (32, 16) LDPC code and T = 8.
+coding scenarios, making them suitable for a wide range of applications in wireless communications.
+4) Visualization of Edge Weights: To provide a clearer understanding of the weight learning process in the EW-GNN decoder, we visualize the dynamic adjustment of edge weights during training and decoding, along with the corresponding BER evolution curve, as shown in Fig. 10. The evolution of weights during the training process is depicted in Fig. 10a, showing the weight values assigned to each edge at the first decoding iteration. The weights in the heat-map are indexed based on the edges of the Tanner graph used in the EW-GNN decoder, with each row representing a unique edge. From early to later epochs, the heat-map gradually transits from cooler to warmer colors, indicating that the weights converge toward higher values as training progresses. As depicted in Fig. 10b, the BER performance of the EW-GNN decoder exhibits a similar convergence process, with a significant BER reduction observed during the initial training stage. Fig. 10c demonstrates the evolution of weights across decoding iterations in a converged EW-GNN decoder, where the learned weights exhibit significant variations across different edges. Reliable edges receive higher weight values, while less reliable edges are assigned lower values. These weight differences become more significant with each decoding iteration. Through the weight optimization process, the EW-GNN decoder focuses on enhancing message passing along reliable edges and reducing the influence of unreliable edges, thereby improving the accuracy of codeword estimation.
+
+C. GNN-DRL Auto-Encoder
+We first evaluate the performance of the proposed autoencoder framework by training it on a (32, 16) code and compare it to the LDPC code. Next, we extend the application of the auto-encoder model to a (63, 45) code and compare its performance against a standard BCH code. Finally, we analyze the impact of its individual components of encoder and decoder separately, and elucidate how the iterative training procedure enhances the performance of auto-encoder.
+1) (32, 16) Codes: We first train an auto-encoder model with τ = 3 training iterations to produce (32, 16) codes. Several benchmarks are considered for comparison: the CCSDS (32, 16) LDPC code paired with the BP decoder, the NBPAE [21], and the E2E DC-ECCT [27]. NBP-AE is equipped with the Gated Neural Belief Propagation (GNBP) decoder, which is an improved trainable version of BP. All these
+
+Fig. 10. Visualization of the learning process of the EW-GNN decoder. (a) Heat-map of learned weights assigned to each edge during 100 training epochs. (b) BER evolution during the training of the EW-GNN decoder. (c) Heat-map of learned weights assigned to each edge across decoding iterations in a converged decoder.
+iterative message-passing decoders, including BP, GNBP, and our EW-GNN, are implemented with 8 decoding iterations. E2E DC-ECCT uses the Deep Coding Error Correction Code Transformer (DC-ECCT) decoder. HE∗ CCT−1 and HE∗ CCT−2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8570
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+Fig. 11. BER performance for designed (32, 16) linear block codes. HA∗ E code is generated by our auto-encoder scheme with three training iterations.
+
+Fig. 12. BER performance for designed (63, 45) linear block codes. HA∗ E code is generated by our auto-encoder scheme with three training iterations.
+
+codes are generated by the E2E DC-ECCT model with different shallow architectures: the first with a decoding layer count of Nl = 2 and an embedding dimensionality of demb = 32, and the second with Nl = 6 and demb = 128.
+In the DRL-based code designer, the parity-check matrix of the CCSDS (32, 16) LDPC is utilized as the state initialization matrix. As depicted in Fig. 11, our auto-encoder outperforms the traditional LDPC coding system by a coding gain of 1 dB under message-passing decoding. Additionally, when compared with the NBP-AE system, our model shows a coding gain of approximately 0.21 dB at high SNRs. This coding gain can be attributed to the reduced number of short cycles in the Tanner graph of the code generated by our DRL-based code designer. Specifically, the code generated by our autoencoder after 3 training iterations, denoted by HA∗ E, has only 77 4-step cycles, which is significantly fewer than 172 short cycles in the code designed by NBP-AE. Furthermore, in the proposed auto-encoder, we can directly apply the trained EWGNN decoder to the designed code with a larger number of decoding iterations than that used in training. By increasing the number of EW-GNN decoding iterations to 30, we can achieve a 0.22 dB further gain compared to using an 8-iteration EWGNN decoder. As shown in Fig. 11, the NBP-AE achieves only minor improvements when the GNBP decoder is re-trained with T = 30. These gains are negligible compared to the significant performance improvement achieved by our EWGNN decoder with increased iterations. For (32, 16) codes, our model with the EW-GNN(T = 30) decoder demonstrates a coding gain of approximately 0.35 dB at high SNRs compared to the NBP-AE system with GNBP(T = 30).
+Compared to the Transformer-based method, our GNN-DRL auto-encoder outperforms HE∗ CCT−1 associated with DCECCT decoding, demonstrating better BER results at all SNR ranges. However, the HE∗ CCT−2 code under DC-ECCT decoding achieves better BER performance than our HA∗ E code under EW-GNN decoding, especially at higher SNRs. The superior performance of the E2E DC-ECCT model (Nl = 6, demb = 128) is achieved at the cost of a much larger network size and higher training complexity, requiring approximately 33 times more trainable parameters than our GNN-DRL autoencoder. For example, for the (32,16) code, our model has 37099 trainable parameters, while E2E DC-ECCT (Nl = 6,
+
+demb = 128) has 1225227 trainable parameters. Our method achieves a good balance between error-correction performance and training complexity.
+We also test the MLD performance of these (32, 16) codes. Despite our auto-encoder model being trained to minimize the EW-GNN decoding BER, generated codes also demonstrate robust BER performance under MLD. Notably, our HA∗ E code has coding gains of 1.28 dB and 0.93 dB over the CCSDS LDPC code and the (32, 16) NBP-AE code, respectively, at high SNRs. Moreover, the proposed auto-encoder is capable of reconciling the decoding efficiency achieved by a suboptimal decoder (e.g., iterative decoding) with the decoding performance achieved by an optimal decoder (e.g., MLD). For example, when using the EW-GNN decoder with T = 30 iterations for HA∗ E, it achieves a BER that is superior to the MLD performance of LDPC for SNRs above 6 dB, with a coding gain of up to 0.63 dB.
+2) (63, 45) Codes: We also train an auto-encoder model using the parity-check matrix of the (63, 45) BCH [40] as the state initialization. As depicted in Fig. 12, the proposed autoencoder, i.e., the learned (63, 45) HA∗ E with its associated EWGNN decoder, is compared with the (63, 45) BCH paired with BP, the (63, 45) NBP-AE system [21], and the (63, 45) E2E DC-ECCT system [27]. Our auto-encoder scheme significantly outperforms the standard BCH with BP and the neural NBPAE system, achieving coding gains of up to 1.81 dB and 0.28 dB at high SNRs, respectively. When increasing the number of decoding iterations from 8 to 30, the learned H∗AE code under EW-GNN decoding still outperforms the NBP-AE code with GNBP, achieving a coding gain of approximately 0.38 dB at high SNRs.
+Figure 12 presents the BER of MLD for these (63, 45) codes. However, unlike the case of (32, 16) codes, the MLD performance of the learned code is worse than that of the BCH code. This is reasonable because the BCH code is the best-known linear code with the highest MHD compared with all other existing codes. Under MLD, the BCH code can achieve the normal approximation bound [1] at this short block length. In addition, our auto-encoder model is specifically trained to optimize coding performance with the EW-GNN decoder, rather than the MLD. The learning process tends to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8571
+
+Fig. 13. Contributions of the DRL-based code designer and the EW-GNN decoder.
+TABLE IV CODE PROPERTIES AFTER EACH TRAINING ITERATION
+generate matrices with lower density and fewer short cycles, which is ideal for BP and EW-GNN to achieve an acceptable performance-complexity trade-off.
+3) Impact of Each Components: In Fig. 13, we analyze the impact of various elements over the performance of the autoencoder by comparing different code-decoder pairs of (32, 16). In the figure, H∗AE is the code produced by our auto-encoder scheme with three training iterations, while H∗d and H∗s are codes produced by the DRL-based code designer using the BP-decoding BER reward and the code structure reward in one-shot training, respectively. When applied to H∗AE, the EWGNN decoder is iteratively trained in the auto-encoder. When applied to H∗d and H∗s, the EW-GNN decoder is fine-tuned for these codes.
+All the schemes using the code designed from DRL, including HA∗ E, Hd∗ and H∗s, can achieve better performance than the traditional LDPC with BP. Our auto-encoder model (i.e., HA∗ E with EW-GNN) achieves the best BER performance among all schemes. In addition, the code generated by our auto-encoder framework, HA∗ E, has better BER results than its counterparts, under all three different decoders. Especially, the BER of the H∗AE under MLD significantly outperforms that of all other coding schemes with substantial coding gains. Furthermore, as shown in Fig. 13, when replacing the LDPC code with the learned code while still decoding with BP, the BER performance improves primarily at low SNRs. Nevertheless, when comparing EW-GNN to BP in decoding LDPC code, the performance gain is significant only at high SNRs. In contrast, the auto-encoder model can have a superior BER performance under a wide range of SNRs. Therefore, both the trainable code and the trainable EW-GNN contribute to the final outstanding performance of the auto-encoder.
+
+Fig. 14. Contributions of the iterative training method. H1∗, H∗2, and H∗3 codes are generated by our auto-encoder after one, two, and three training iterations, respectively.
+4) Impact of Training Approach: To evaluate the impact of the iterative training procedure, we compare the performances of various auto-encoder models with different numbers of training iterations as demonstrated in Fig. 6. As shown in Fig. 14, the BER performance improves significantly with each iteration during the early stage of training. H1∗ achieves superior performance compared to the LDPC code which serves as the initialization code before training, and H∗2 further outperforms H1∗ under both EW-GNN decoder and MLD. However, the coding gain between H∗2 and H∗3 diminishes, indicating that the performance of both code and decoder has nearly converged to the optimal point. This fast convergence can be attributed to the high scalability of the EW-GNN decoder. As discussed in Section VI-B, EW-GNN exhibits high scalability across various codes. Consequently, different codes as training inputs do not significantly affect the optimality of the EW-GNN decoder. Thus, from the second training iteration onwards, performance gain is primarily contributed by the DRL-based code designer. To explain the observed performance improvement during the iterative training process from a code design perspective, we further evaluated the algebraic structure properties of the codes generated in each iteration. As illustrated in Table IV, H∗2 and H3∗ both achieve a higher MHD compared to the LDPC and H1∗, which directly aligns with their superior BER performance at high SNR regions, especially under MLD. From H∗2 to H3∗, the reduction in the number of 4-cycles contributes to a refined code structure, resulting in an additional coding gain. While H∗3 contains more 4-cycles than H∗1, its enhanced MHD leads to better coding performance, demonstrating globally optimized code properties.
+During training, the BER reward for the DRL-based code designer is evaluated using BP/EW-GNN decoding at the specified SNR. Figure 15 shows the BER performance comparison of codes generated by our auto-encoder under different training SNRs. HA∗ E−2dB, HA∗ E−4dB, and H∗AE−6dB are codes generated by the auto-encoder scheme trained at 2 dB, 4 dB, and 6 dB SNRs, respectively. The results demonstrate that H∗AE−6dB achieves better BER performance compared to its counterparts. Although H∗AE−2dB performs slightly better than H∗AE−4dB and HA∗ E−6dB in the 1-2 dB range under EW-GNN decoding, its performance declines at higher SNRs. This indicates that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+8572
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 10, OCTOBER 2025
+
+REFERENCES
+
+Fig. 15. Impacts of the training SNR used to measure the decoding BER reward in the auto-encoder framework.
+codes achieving high BER rewards at high SNRs (e.g., 6 dB) also maintain good performance at low SNRs, whereas codes trained at low SNRs cannot achieve good performance at high SNRs. Based on the experimental results, we train the code generator in our GNN-DRL auto-encoder at 6 dB SNR. The generated codes are thereby optimized for higher SNR conditions, which slightly affects their performance at lower SNRs.
+VII. CONCLUSION
+In this paper, we proposed an innovative auto-encoder framework that leverages GNN and DRL to develop highperformance channel coding schemes for short linear block codes. First, we introduced a DRL-based code designer, where a GNN agent generates the binary parity-check matrix by iteratively flipping its elements. Simulation results demonstrated that the DRL-designed short code exhibit superior BER performance with a 0.83 dB coding gain compared to the standard LDPC code under MLD. Furthermore, we developed a scalable EW-GNN decoder for short linear block codes. Simulation results show that EW-GNN can improve BER performance compared to the conventional BP and the NBP decoder for short BCH and LDPC codes. For example, when decoding (63, 51) BCH code, the proposed EW-GNN increases the coding gain by 1.2 dB than BP. A well-trained EW-GNN can decode longer or more complex codes without retraining, enabling its application in practical communication systems with dynamic code lengths. Finally, the GNN-DRL auto-encoder integrates the DRL-based code designer and the EW-GNN decoder through an iterative joint training process, ensuring simultaneous optimization of both the encoder and decoder. Simulations show that our proposed auto-encoder framework achieves better BER results than multiple traditional coding systems and the NBP-AE from the literature, while keeping the low decoding complexity similar to that of BP. Particularly, our auto-encoder system can achieve a coding gain of 0.63 dB compared to the standard (32, 16) LDPC with MLD.
+ACKNOWLEDGMENT
+Part of this work was done when Chentao She was with the School of Electrical and Computer Engineering, The University of Sydney, Sydney, Australia.
+
+[1] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[2] C. Yue, V. Miloslavskaya, M. Shirvanimoghaddam, B. Vucetic, and Y. Li, “Efficient decoders for short block length codes in 6G URLLC,” IEEE Commun. Mag., vol. 61, no. 4, pp. 84–90, Apr. 2023.
+[3] NR; Multiplexing and Channel Coding (Release 16), Standard TS 38.212, v16.0.0, 3rd Generation Partnership Project (3GPP), Jan. 2020.
+[4] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+[5] Q. Mao, F. Hu, and Q. Hao, “Deep learning for intelligent wireless networks: A comprehensive survey,” IEEE Commun. Surveys Tuts., vol. 20, no. 4, pp. 2595–2621, 4th Quart., 2018.
+[6] L. Dai, R. Jiao, F. Adachi, H. V. Poor, and L. Hanzo, “Deep learning for wireless communications: An emerging interdisciplinary paradigm,” IEEE Wireless Commun., vol. 27, no. 4, pp. 133–139, Aug. 2020.
+[7] N. Samuel, T. Diskin, and A. Wiesel, “Deep MIMO detection,” in Proc. IEEE 18th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2017, pp. 1–5.
+[8] H. Sun, X. Chen, Q. Shi, M. Hong, X. Fu, and N. D. Sidiropoulos, “Learning to optimize: Training deep neural networks for wireless resource management,” in Proc. IEEE 18th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Sapporo, Japan, Jul. 2017, pp. 1–6.
+[9] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “LEARN codes: Inventing low-latency codes via recurrent neural networks,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2019, pp. 1–7.
+[10] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: FeedBack codes via deep learning,” IEEE J. Sel. Areas Inf. Theory, vol. 1, no. 1, pp. 194–206, May 2020.
+[11] M. Ebada, S. Cammerer, A. Elkelesh, and S. T. Brink, “Deep learningbased polar code design,” in Proc. 57th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2019, pp. 177–183.
+[12] L. Huang, H. Zhang, R. Li, Y. Ge, and J. Wang, “AI coding: Learning to construct error correction codes,” IEEE Trans. Commun., vol. 68, no. 1, pp. 26–39, Jan. 2020.
+[13] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2017, pp. 1–6.
+[14] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[15] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[16] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block codes,” in Proc. NeurIPS, 2019, pp. 2326–2336.
+[17] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. Graell i Amat, “Pruning and quantizing neural belief propagation decoders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1957–1966, Jul. 2021.
+[18] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node activations,” IEEE Commun. Lett., vol. 26, no. 11, pp. 2527–2531, Nov. 2022.
+[19] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” in Proc. IEEE GC Wkshps, Dec. 2022, pp. 486–491.
+[20] K. Tian, C. Yue, C. She, Y. Li, and B. Vucetic, “A scalable graph neural network decoder for short block codes,” in Proc. IEEE Int. Conf. Commun., May 2023, pp. 1268–1273.
+[21] G. Larue, L.-A. Dufrene, Q. Lampin, H. Ghauch, and G. R. Othman, “Neural belief propagation auto-encoder for linear block code design,” IEEE Trans. Commun., vol. 70, no. 11, pp. 7250–7264, Nov. 2022.
+[22] T. O’Shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cognit. Commun. Netw., vol. 3, no. 4, pp. 563–575, Dec. 2017.
+[23] H. Ye, L. Liang, and G. Y. Li, “Circular convolutional auto-encoder for channel coding,” in Proc. IEEE 20th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2019, pp. 1–5.
+[24] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-topoint communication channels,” in Proc. NeurIPS, vol. 32, Nov. 2019, pp. 2754–2764.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+TIAN et al.: GNN-BASED AUTO-ENCODER FOR SHORT LINEAR BLOCK CODES: A DRL APPROACH
+
+8573
+
+[25] E. Balevi and J. G. Andrews, “Autoencoder-based error correction coding for one-bit quantization,” IEEE Trans. Commun., vol. 68, no. 6, pp. 3440–3451, Jun. 2020.
+[26] D. L. Donoho et al., “High-dimensional data analysis: The curses and blessings of dimensionality,” AMS Math Challenges Lect., vol. 1, p. 32, Aug. 2000.
+[27] Y. Choukroun and L. Wolf, “Learning linear block error correction codes,” in Proc. Int. Conf. Mach. Learn., vol. 235, May 2024, pp. 8801–8814.
+[28] K. Xu, J. Li, M. Zhang, S. S. Du, K. Kawarabayashi, and S. Jegelka, “What can neural networks reason about,” in Proc. ICLR, Apr. 2020, pp. 1–17.
+[29] Y. Mao and A. H. Banihashemi, “A heuristic search for good low-density parity-check codes at short block lengths,” in Proc. IEEE Int. Conf. Commun. Rec., vol. 1, Jun. 2001, pp. 41–44.
+[30] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2, pp. 429–445, Mar. 1996.
+[31] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[32] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic´, “Multiple-bases belief-propagation for decoding of short block codes,” in Proc. IEEE ISIT, Jun. 2007, pp. 311–315.
+[33] T. Lillicrap et al., “Continuous control with deep reinforcement learning,” in Proc. ICLR, Jul. 2016, pp. 1–14.
+[34] D. Silver, G. Lever, N. Heess, T. Degris, D. Wierstra, and M. Riedmiller, “Deterministic policy gradient algorithms,” in Proc. Int. Conf. Mach. Learn., 2014, pp. 387–395.
+[35] V. Mnih, “Human-level control through deep reinforcement learning,” Nature, vol. 518, pp. 529–533, Feb. 2015.
+[36] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehensive survey on graph neural networks,” IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 1, pp. 4–24, Jan. 2021.
+[37] J. Gilmer, S. S. Schoenholz, P. F. Riley, O. Vinyals, and G. E. Dahl, “Neural message passing for quantum chemistry,” in Proc. 34th Int. Conf. Mach. Learning, vol. 70, 2017, pp. 1263–1272.
+[38] Y. Shen, J. Zhang, S. H. Song, and K. B. Letaief, “Graph neural networks for wireless communications: From theory to practice,” IEEE Trans. Wireless Commun., vol. 22, no. 5, pp. 3554–3569, May 2023.
+[39] M. Grassl, “Bounds on the minimum distance of linear codes and quantum codes,” 2007. [Online]. Available: http://www.codetables.de
+[40] M. Helmling et al. (2019). Database of Channel Codes and ML Simulation Results. [Online]. Available: http://www.uni-kl.de/channelcodes
+[41] M. Karimi and A. H. Banihashemi, “Message-passing algorithms for counting short cycles in a graph,” IEEE Trans. Commun., vol. 61, no. 2, pp. 485–495, Feb. 2013.
+[42] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. Cambridge, MA, USA: MIT Press, 2018.
+[43] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in Proc. ICLR, Dec. 2014, pp. 1–15.
+[44] M. R. Yazdani, S. Hemati, and A. H. Banihashemi, “Improving belief propagation on graphs with cycles,” IEEE Commun. Lett., vol. 8, no. 1, pp. 57–59, Jan. 2004.
+[45] X. Liu, Z. Zhou, R. Cui, and E. Liu, “Informed decoding algorithms of LDPC codes based on dynamic selection strategy,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1357–1366, Apr. 2016.
+[46] Short Block Length LDPC Codes for TC Synchronization and Channel Coding, document 231.1-O-1, Consultative Committee for Space Data Systems (CCSDS), Apr. 2015.
+Kou Tian (Graduate Student Member, IEEE) received the B.E. degree (Hons.) in electrical engineering from The University of Sydney, NSW, Australia, and the B.E. degree in electrical engineering and automation from Harbin Institute of Technology, Harbin, China, in 2020. She is currently pursuing the Ph.D. degree with the School of Electrical and Computer Engineering, The University of Sydney. Her research interests include error control coding and deep learning applications in wireless communication. She received the University Medal during the bachelor’s degree.
+
+Chentao Yue (Member, IEEE) received the bachelor’s degree (Hons.) in information engineering from the Chien-Shiung Wu College, Southeast University, China, in July 2017, and the Ph.D. degree in electrical engineering from The University of Sydney, Australia, in October 2021. He received the Postgraduate Scholarship in Wireless Engineering from the Centre of Excellence in Telecommunications. He is currently an Australian Research Council (ARC) Discovery Early Career Research Award (DECRA) Fellow with The University of Sydney. His research focuses on error control coding, information theory, the Internet of Things, and applications of machine learning in these fields.
+Changyang She (Senior Member, IEEE) received the B.Eng. degree from the Honors College, Beihang University, Beijing, China, in 2012, and the Ph.D. degree from the School of Electronics and Information Engineering, Beihang University, in 2017. From 2017 to 2018, he was a Post-Doctoral Research Fellow with Singapore University of Technology and Design. From 2018 to 2021, he was a PostDoctoral Research Associate with The University of Sydney. From 2021 to 2024, he was the Australian Research Council (ARC) Discovery Early Career Research Award (DECRA) Fellow (Level B) with The University of Sydney. He is currently a Full Professor with Harbin Institute of Technology (Shenzhen). His research interests lie in the areas of ultra-reliable and low latency communications (URLLC), deep learning in wireless networks, edge intelligence, energy-efficient communications, and interdisciplinary research in the metaverse.
+Branka Vucetic (Life Fellow, IEEE) is currently an ARC Laureate Fellow and the Director of the Centre of Excellence for IoT and Telecommunications, The University of Sydney. Her current work is in the areas of wireless networks and the Internet of Things. In the area of wireless networks, she works on communication system design for millimeter wave (mmWave) frequency bands. In the area of the Internet of Things, she works on providing wireless connectivity for mission-critical applications. She is a fellow of Australian Academy of Science, Australian Academy of Technological Sciences and Engineering, and the Engineers Australia.
+Yonghui Li (Fellow, IEEE) received the Ph.D. degree from Beijing University of Aeronautics and Astronautics in November 2002. Since 2003, he has been with the Centre of Excellence in Telecommunications, The University of Sydney, Australia. He is currently a Professor and the Director of the Wireless Engineering Laboratory, School of Electrical and Information Engineering, The University of Sydney. His current research interests include wireless communications, with a particular focus on MIMO, millimeter wave communications, machine-to-machine communications, coding techniques, and cooperative communications. He holds several patents granted and pending in these fields. He was a recipient of the Australian Queen Elizabeth II Fellowship in 2008 and the Australian Future Fellowship in 2012. He received the Best Paper Awards from the IEEE International Conference on Communications (ICC) in 2014, IEEE PIRMC 2017, and the IEEE Wireless Days Conferences (WD) in 2014. He was an Editor of IEEE TRANSACTIONS ON COMMUNICATIONS and IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY. He also served as the Guest Editor for several IEEE journals, such as IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, IEEE Communications Magazine, IEEE INTERNET OF THINGS JOURNAL, and IEEE ACCESS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:22 UTC from IEEE Xplore. Restrictions apply.
+
+

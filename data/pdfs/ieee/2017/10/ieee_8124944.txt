@@ -1,0 +1,247 @@
+Unrolled Layered Architectures For Non-Surjective Finite Alphabet Iterative Decoders
+
+Oana Boncalo University Politehnica Timisoara
+Timisoara, Romania oana.boncalo@cs.upt.ro
+
+Valentin Savin CEA-LETI, MINATEC Campus
+Grenoble, France valentin.savin@cea.fr
+
+Alexandru Amaricai University Politehnica Timisoara
+Timisoara, Romania oana.boncalo@cs.upt.ro
+
+Abstract—This paper proposes cost efficient very high throughput layered decoding architecture for array quasi-cyclic LowDensity Parity-Check (QC-LDPC) codes, targeting tens of Gbps data rates. The targeted throughput is achieved by employing layer unrolling, with pipeline stages inserted in between layers. In order to obtain improved hardware efficiency for the decoder, multiple codewords are processed simultaneously. This leads to increased memory overhead. In order to reduce the associated cost, approximate message storage using Non Surjective-Finite Alphabet Iterative Decoding (NS-FAID) compression tables is employed. Cost efficiency is achieved by hardwired interconnects, compressed message storage using the NS-FAID, as well the A Posteriori Log-Likelihood Ratio (AP-LLR) message memory removal. Several compression tables are evaluated using the Throughput to Area Ratio (TAR) metric.
+Index Terms—Forward Error Correction, LDPC Decoding, Layered Scheduling, NS-FAID
+I. INTRODUCTION
+Forward Error Correction (FEC) represents an important component in both wireless communication systems and NAND based Flash storage devices. With ever increasing data rate requirements, novel approaches on both algorithmic and architectural level are required to accommodate this trend. Low Density Parity Check (LDPC) codes are a class of linear algebraic codes, with decoding performance close to the channel capacity and increased potential for highly parallel decoding architectures [1]. Therefore, improved error correction capability at very high throughputs can be obtained for these codes. LDPC decoding is performed using message passing algorithms, such as Min-Sum (MS) and its variants [2]. These algorithms rely on passing soft messages (messages quantized on a number of bits) along a bipartite graph - Tanner graph [3] - between two types of nodes - variable nodes(VN) and check node(CN) - in several iterations. The hardware architectures implementing message passing LDPC decoding are composed of processing units, interconnection networks and memory blocks. The number and the size of these components are dependent on the desired area and parallelism, as well as on the given code.
+Decoding can be performed using two types of scheduling strategies: flooded and layered. The latter has two important advantages: (i) increased convergence, which results in reduced number of iterations [4], and (ii) reduced memory requirements [5]. The increased convergence is due to the
+
+fact that AP-LLR message updates are performed after each layer; thus, updating of these message is performed several times during one iteration. In order to increase the throughput of layered decoding architectures, layer unrolling has been proposed in [6]. Combined with multiple codeword processing, this technique has shown that throughputs of tens of Gbps can be obtained. Unrolled layered architectures are suitable for very high rate codes, as well as array LDPC codes.
+In this paper, we aim to reduce the memory requirements for unrolled layered decoders by employing Non Surjective Finite Alphabet Iterative Decoding. NS-FAID represents a method that builds on the classical MS, while performing a tight fitting on message storage [7]. The basic idea is to have two working domains in terms of quantization during the iterative processing. The crossing between the two domains is made by means of the framing and de-framing functions. From the memory storage perspective, these are in fact compression/decompression tables.
+This work evaluates the impact of using NS-FAID inside a high throughput layer unrolled decoder architecture implementation of a (3,12) regular array code. First, we need to derive the NS-FAID tables for this code, using the methodology proposed in [8]. Next, we assess the NS-FAID efficiency by implementing the corresponding FPGA unrolled layered architecture using the framing/deframing tables obtained earlier. Synthesis results for Xilinx Virtex-7 devices indicate improvements of up to 30% in logic resource usage with respect to MS based decoders, and an increase of TAR between 25% and 125%.
+This paper is organized as follows: the theoretical background regarding layered decoding of LDPC codes using NS-FAID is described in Section II; the proposed unrolled layered architecture using NS-FAID based processing units is presented in Section III; Section IV is dedicated to FPGA synthesis estimates.
+II. THEORETICAL BACKGROUND
+A. Layered decoding of QC-LDPC codes
+LDPC codes are a class of linear algebraic codes, defined by the parity check matrix H. Quasi-cyclic LDPC (QC-LDPC) are a sub-class of LDPC codes [9], for which the parity check matrix is obtained by expanding each element of the base matrix B with a square matrix of size z × z – with z
+
+978-1-5386-2844-7/17/$31.00 2017 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:52 UTC from IEEE Xplore. Restrictions apply.
+
+being the expansion factor. The special structure of the QCLDPC code allows efficient hardware implementation for the decoder; therefore, QC-LDPC codes are the LDPC codes used in communication and storage standards.The z ×z matrix used during the expansion is either the zero matrix, for negative entries of the B, either the identity matrix shifted by the nonnegative entry value of B.
+LDPC decoding is performed using message passing algorithms. These rely on sending messages along a bipartite graph, called the Tanner graph [3]. The messages are passed between two types of nodes: variable nodes, corresponding to the codeword bits, and the columns of the H matrix, and check nodes, corresponding to the parity check equations, and the rows of the H matrix. The highest error correction capability is obtained by employing soft extrinsic message algorithms, such as the MS decoding [2]. MS and its variants (such as Offset MS, Normalized MS, Self-Correcting MS [10]) are suitable for hardware implementations, as these algorithms rely on simple arithmetic operations: additions at VN level, and comparisons at CN level. Given the fact the messages are quantized on a small number of bits (3-6), the processing units corresponding to VN and CN operations are fairly simple. However, due to the size of the H matrix (thousands of columns and hundreds/thousands of rows), the decoding architectures are complex, with a wide range of trade-offs between the cost (processing units, interconnects and memory blocks) and the throughput of the decoder.
+The following messages are used in LDPC decoding: the channel LLR, γ, represent the input messages; check to variable nodes messages, β; variable to check node messages, α; the AP-LLR message, γ˜. Messages are quantized on a specific number of bits, with β and α quantized on q bits, while γ˜ quantized on p bits, with p ≥ q. The number of nonzero elements in a row of the H matrix represent the check node degree dc, while the number of non-zero elements in a column of the H matrix represent the variable node degree dv .
+LDPC decoding can be performed by employing flooded or layered scheduling. The later relies on splitting the parity check matrix rows in several layers nl. The processing of layers is performed serially (one after another), while the processing within a layer is performed in parallel [5]. Each layer processing results in an update of the AP-LLR messages, which leads to an increase in the decoding convergence. For QC-LDPC codes, each layer consists of one row in the base matrix B (z rows in H). A description of layered decoding using MS algorithm is provided in Algorithm 1.
+B. Non Subjective Finite Alphabet Iterative Decoding
+Non-Surjective Finite Alphabet Iterative Decoders (NSFAIDs) represent a theoretical framework which targets the reduction of β and α messages’ quantization, in order to reduce the memory and routing resources in LDPC decoders, at the cost of negligible error correction capability loss [7]. NSFAID relies on two quantization domains: a higher precision domain for VN processing and AP-LLR update, and a lower
+
+Algorithm 1 Layered Min-Sum
+
+1: Initialization
+
+2: Iterative message exchange
+
+3: for it = 0, ..., Itmax do 4: for l = 1, ..., nl do 5: for all rows m ∈ current layer B(l) do
+
+6:
+
+for all columns n ∈ m do
+
+7:
+
+αm,n = γn − βm,n
+
+{VN message processing}
+
+8:
+
+β˜m,n =
+
+sign (αm,n´ )· min |αm,n´ |
+
+n´ ∈H (m)\n
+
+n´ ∈H (m)\n
+
+{CN message processing}
+
+9:
+
+γ˜n = αm,n + β˜m,n
+
+{AP-LLR message update.}
+
+10:
+
+end for
+
+11:
+
+end for
+
+12: end for
+
+13: if All Parity Check equations are satisfied then
+
+14:
+
+break;
+
+15: end if
+
+16: end for
+
+precision domain for CN processing. The β message memory and the corresponding routing are sized according to the lower quantization domain. The crossing between these two domains is performed by means of framing (reduction in the quantization) and de-framing functions, which are implemented using look-up tables. We denote with w the quantization of β and α messages after applying the framing function. Thus, for w = 2 and q = 4, the framing function will have as input a 4-bit message and will output a 2-bit message. The best framing/de-framing functions have been obtained using the density evolution (DE) method described in [7]. This approach also determines the optimum gain factor µ applied to soft LLR values before quantization.
+Table I summarizes the 10 best NS-FAIDs for (3, 12)regular LDPC code from Table II; DE thresholds and corresponding gain factors are also reported. For comparison purposes, the DE threshold of the MS decoder (with w = q = 4) is also reported at the bottom of the table. It can be observed that the DE threshold corresponding to the best 10 w = 3 NS-FAID functions are lower with respect to the conventional MS, which indicates improved error correction capability.
+III. ARCHITECTURE
+A. Unrolled layered architecture
+Hardware unrolling has been applied for both flooded [11] and layered [6] LDPC decoders, in order to obtain throughput in range of tens of Gbps. For flooded, iteration unrolling for a fully parallel decoder implementation has been performed, while for layered scheduling layer unrolling has been used (for only one iteration). Combined with multiple codeword decoding, unrolled architectures have proved to have improved efficiency with respect to other decoding architectures.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:52 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I BEST NS-FAIDS FOR (3, 12)-REGULAR LDPC CODES
+
+F (LUT)
+
+w=2 SNR-thres (dB) & gain factor µ
+
+[1, 1, 1, 1, 1, 6, 6, 6] [2, 2, 2, 2, 2, 2, 2, 7] [2, 2, 2, 2, 2, 2, 7, 7] [3, 3, 3, 3, 3, 3, 3, 7] [1, 1, 1, 1, 1, 7, 7, 7] [2, 2, 2, 2, 2, 6, 6, 6] [1, 1, 1, 1, 1, 1, 7, 7] [2, 2, 2, 2, 2, 7, 7, 7] [1, 1, 1, 1, 6, 6, 6, 6] [3, 3, 3, 3, 3, 3, 7, 7]
+
+4.651 4.717 4.730 4.812 4.848 4.849 4.920 4.966 4.973 4.991
+
+(9.0) (11.2) (9.6) (13.3) (8.2) (9.1) (11.9) (10.0) (8.4) (13.6)
+
+F (LUT)
+
+w=3 SNR-thres (dB) & gain factor µ
+
+[0, 1, 1, 3, 3, 3, 7, 7] [0, 1, 1, 3, 3, 3, 3, 7] [0, 1, 1, 3, 3, 6, 6, 6] [1, 1, 1, 3, 3, 4, 4, 7] [0, 0, 2, 2, 4, 4, 4, 7] [1, 1, 2, 2, 4, 4, 4, 7] [0, 1, 2, 2, 2, 6, 6, 6] [1, 1, 1, 2, 4, 4, 4, 7] [1, 1, 1, 3, 3, 5, 5, 7] [0, 0, 2, 2, 3, 3, 7, 7]
+
+4.206 4.217 4.240 4.241 4.244 4.256 4.259 4.259 4.261 4.264
+
+(5.8) (5.6) (5.0) (7.4) (6.7) (7.4) (4.6) (7.3) (7.3) (6.6)
+
+w=4
+
+MS decoder
+
+4.326 (6.4)
+
+Fig. 1. Unroll layered architecture overview
+
+In this paper, we have implemented an unrolled layered decoding architecture for NS-FAID based decoding (Fig. 1). It consists of nl stages, corresponding to each of the processed layers of an iteration decoding. The processing of each stage/layer takes one clock cycle. Therefore, one decoding iteration requires nl clock cycles to complete. Pipelining is applied, with pipeline registers placed between each layer processing. In order to increase the hardware usage efficiency, nl codewords are decoded at the same time, with each codeword being processed in one pipeline stage during a clock cycle. Pipeline registers are used to store the γ˜ messages.
+Each stage consist of z combined variable-check node (VCN) processing units. For each unit, a local memory for storing nl × β messages required for a codeword is employed. For FPGA devices, this memory is implemented using the dedicated shift registers (SRL). The depth of the employed SRL is nl. For efficient memory storage, a compressed form of the β message is employed: instead of storing all dc β messages corresponding to a row in the H matrix, we only store their signs, the first absolute minimum value, the second minimum value, as well as the index for the message with the first minimum value.
+An important feature of the unrolled architecture with respect to other layered LDPC decoders (such as the ones in [12], [13], [14]) is represented by the lack of barrel-shifters based routing network. For the unrolled layered, the message routing logic for each stage is hardwired. This results in a significant reduction of logic resources when implemented in FPGA technology.
+B. NS-FAID based processing units
+NS-FAID decoding requires the implementation of framing/de-framing functions within the processing units. The corresponding combined VCN units perform the following operations (see Fig. 2):
+1) VN update - β message is read from the local β memory in reduced quantization (small quantization) form; this message is represented in sign-magnitude (SM ) form. VN update requires the subtraction of β messages from the γ˜ in full precision in order to obtain
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:52 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. NS-FAID VCN design
+the α message. Therefore, the β messages have to be deframed, as well as converted in two’s complement (C2) form. The de-framing operation is performed using lookup tables designed according to the NS-FAID rules. In order to reduce the critical path, a look-up table which performs both the de-framing operation and the SM to C2 conversion is employed. 2) CN update - This operation requires the comparison between the absolute values of updated α messages in order to obtain the new β message. This comparison is performed in the low quantization domain. Therefore, the α messages require framing [7]. Due to the fact that absolute values are required, conversion from C2 to SM is also performed. Both the de-framing and the format conversion are computed by using a single combined LUT. The CN update requires a dc-input comparator. Therefore, for high rate array LDPC codes having large dc values, the reduced precision CN implementation will lead to significant cost savings. The newly update β messages are written in the local memory of each layer, being represented in SM framed format. 3) AP-LLR update - This operation requires the updating of the γ˜ message, by adding in full precision the newly obtained β message contribution. As the updated β message is framed and in SM representation, deframing operation and format conversion are required. Similar to the VN update case, these two are performed using a single look-up table.
+Fig. 2 present the modified VCN processing unit employed by the layered NS-FAID algorithm.
+IV. RESULTS AND DISCUSSIONS
+In order to evaluate the NS-FAID approach, we have used the code described in Table II. It is an array code corresponding to a regular, rate 3/4, with variable node degree dv = 3, and code size 1296 bits. The number of layers unrolled in this case is 3 resulting in a total of 108 × 3 VCN units. The
+
+baseline MS implementation considers w = q = 4 bits for CN message representation, and 6 bits for γ˜ messages; it is denoted as MS(4,6). For evaluation purposes we have implemented 4 NS-FAID decoders. Two for CNU message width w = 2, and 2 for w = 3. For all cases the size of the AP-LLR messages is the same as that of the baseline MS – 6 bits. As described in [6], the baseline MS(4,6) decoder requires 23328 bits for APLLR message storage, and 21384 bits for check-to-variable β storage. By using NS-FAID, the β storage requirements are reduced to 19440 bits for w = 3, and 17496 bits for w = 2. Although, by employing the compressed β message storage, the advantages in storage are diminished, there are significant gains in processing complexity reduction because of the large amount of parallel VCN units used in the decoder unit. As noted previously in [6], in unrolled architectures, the logic part dominates the storage requirements for FPGA technology. On the processing side NS-FAID requires the adding of compression/decompression as depicted in Fig. 2. However, for the VCN implementation, the comparator tree has the highest influence on the critical path, especially with the code rate increase. Hence, there is significant cost gain that counterbalances the additional tables. For the code in Table II, a 12-input comparator is needed.
+
+N × f req
+
+Throughput =
+
+(1)
+
+nit
+
+The throughput is computed according to Eq. (1); the expression corresponds to the case when a number of nl codewords are processed simultaneously, with each layer processing latency equal to 1 clock cycle. The results have been computed for a number of 4 iterations and 3 codewords, which corresponds to a frame error rate (FER) lower than 10−4. To keep the throughput comparison on an equal basis, for FPGA designs, we further define the Throughput to Area Ratio (TAR) metric as:
+
+T AR = Throughput (Mbps/LUT-FF pairs)
+
+(2)
+
+Area
+
+The area in this case is reflected by the LUT-FF pairs cost, since the proposed architecture consumes only logic and no block RAM memory.
+NS-FAID synthesis results for FPGA technology, Virtex7 board, target Device xc7vx485t-2-ffg1761 are presented in Table III. We have selected two tables for each width (w). The TAR improvement ratio suggest that NS-FAIDs implementation within this architecture yield improvement of 20% up to 125%. The difference in resource consumption for the same width w lies in the choice of framing/de-framing functions. As suggested by the synthesis results, the most implementation efficient is the one having the least significant bit of storage removed and replaced by 0. According to the DE analysis prediction F1, and F2 exhibit a performance loss of 0.32 dB and 0.52 dB, while F3 and F4 have a gain of approximatively 0.1 dB compared to MS(4,6) (Table I).
+To further emphasize the efficiency of NS-FAIDs for the unrolled layered architecture, Table IV provides a comparison
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:52 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II REGULAR dv = 3 RATE 3/4 CODE B MATRIX z = 108, CODE SIZE 1296
+100 44 1 107 51 52 22 65 36 94 105 75 61 102 85 63 54 65 99 3 14 13 32 18 70 44 30 3 84 46 40 16 2 16 18 77
+
+TABLE III IMPLEMENTATION RESULTS FOR NS-FAID CONCEPT INTEGRATED IN THE UNROLLED LAYERED ARCHITECTURE OF THE TABLE II CODE
+
+FAID Ensemble
+MS(4,6) F1 = [1, 1, 1, 1, 1, 6, 6, 6] F2 = [2, 2, 2, 2, 2, 6, 6, 6] F3 = [1, 1, 1, 3, 3, 4, 4, 7] F4 = [1, 1, 1, 3, 3, 5, 5, 7]
+
+w [bits]
+4 2 2 3 3
+
+Slice registers
+36986 29178 29233 29826 29826
+
+Slice LUTs Logic Memory
+
+247411 163524 150688 215413 224806
+
+7128 5832 5832 6480 6480
+
+LUT-FF pairs
+271888 187595 174057 245228 254621
+
+Freq [MHz]
+106 137.523 149.373 117.277 118.356
+
+T (4 it.) [GBps]
+34.344 44.388 48.276 37.908 38.232
+
+TAR [MHz/LUT-FF pairs]
+0.1263 0.2366 0.2775 0.1759
+0.15
+
+TABLE IV COMPARISON OF DECODERS WITH CODE SIZE 1296 BITS
+
+Decoder
+LUT-FF pairs No. BRAMS Freq. [MHz] Throughput [Gbps]
+TAR
+
+Baseline MS [6]
+271888 0
+106 34.34 0.12
+
+NS-FAID w = 3 [8]
+67248 0 75 8.1
+0.12
+
+NS-FAID F2
+174057 0 149
+48.37 0.2775
+
+NS-FAID F3
+245228 0 117
+37.90 0.1759
+
+between this work and the conventional layered architecture using NS-FAID for w = 3 β message size. The design from [8] corresponds to the case of a single layer being implemented in hardware. The code from [8] is a regular 0.5 rate code with the same codeword size as in this work. We have scaled the number of iterations and FPGA resources in order to normalize reported estimates. Results show that, due to the very tight fitting, NS-FAID can be advantageously used for layered unroll architecture yielding a very good TAR tradeoff.
+V. CONCLUSIONS
+This paper has investigated the applicability of NS-FAIDs for regular (3,12) codes that are implemented in very high throughput decoder architectures using layered unroll concept. A total of four architectures have been implemented in FPGA, for both w = 2 and w = 3 framing functions. The TAR improvement ratio suggest that NS-FAIDs implementation within this architecture yield improvement of 20% up to 125%, with a cost reduction of 10% for w = 3 and 30% for w = 2. The decoding performance estimated through DE predicts for the worst case a 0.5 dB degradation of the decoding performance in the case of w = 2, and for the w = 3 a 0.1 dB improvement.
+ACKNOWLEDGMENT
+This work has been supported by the Franco-Romanian (ANR-UEFISCDI) Joint Research Programme Blanc2013 project DIAMOND.
+
+REFERENCES
+[1] T. Richardson and R. Urbanke, “The renaissance of Gallager’s lowdensity parity-check codes,” IEEE Communications Magazine, vol. 41, no. 8, pp. 126–131, Aug 2003.
+[2] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[3] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep 1981.
+[4] S. L. E. Sharon and J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” in Proc. of 23rd IEEE Convention of Electrical and Electronics Engineers, 2004, p. 223226.
+[5] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop onSignal Processing Systems, 2004. SIPS 2004., Oct 2004, pp. 107–112.
+[6] O. Boncalo and A. Amaricai, “Ultra High Throughput Unrolled Layered Architecture for QC-LDPC Decoders,” in 2017 IEEE Computer Society Annual Symposium on VLSI (ISVLSI), July 2017, pp. 225–230.
+[7] T. T. Nguyen-Ly, K. Le, V. Savin, D. Declercq, F. Ghaffari, and O. Boncalo, “Non-surjective finite alphabet iterative decoders,” in 2016 IEEE International Conference on Communications (ICC), May 2016, pp. 1–6.
+[8] T. T. Nguyen-Ly, V. Savin, X. Popon, and D. Declercq, “High throughput FPGA implementation for regular non-surjective finite alphabet iterative decoders,” in 2017 IEEE International Conference on Communications Workshops (ICC Workshops), May 2017, pp. 961–966.
+[9] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+[10] V. Savin, “LDPC decoders,” in Channel coding: Theory, algorithms, and applications, D. Declercq, M. Fossorier, and E. Biglieri, Eds. Elsevier, 2014, pp. 211–260.
+[11] P. Schlfer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput LDPC decoding,” in SiPS 2013 Proceedings, Oct 2013, pp. 153–158.
+[12] T. Nguyen-Ly, K. Le, F. Ghaffari, A. Amaricai, O. Boncalo, V. Savin, and D. Declercq, “FPGA design of high throughput LDPC decoder based on imprecise Offset Min-Sum decoding,” in 2015 IEEE 13th International New Circuits and Systems Conference (NEWCAS), June 2015, pp. 1–4.
+[13] S. Mhaske, H. Kee, T. Ly, A. Aziz, and P. Spasojevic, “High-throughput FPGA-based QC-LDPC decoder architecture,” in 2015 IEEE 82nd Vehicular Technology Conference (VTC2015-Fall), Sept 2015, pp. 1–5.
+[14] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, August 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:52 UTC from IEEE Xplore. Restrictions apply.
+
+

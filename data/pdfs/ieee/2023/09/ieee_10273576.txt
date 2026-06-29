@@ -1,0 +1,746 @@
+2023 12th International Symposium on Topics in Coding (ISTC) | 979-8-3503-2611-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISTC57237.2023.10273576
+
+Low-Activity Gallager-B LDPC Decoding
+Simon Brown∗, Je´re´my Nadal† and Franc¸ois Leduc-Primeau∗ ∗Department of Electrical Engineering, E´ cole Polytechnique de Montre´al, Montreal, Canada
+†IMT Atlantique, Lab-STICC, UMR CNRS 6285, F-29238 Brest, France
+
+Abstract—Reducing the energy consumption of LDPC decoders is an essential step towards increasing the relevance of these codes in energy-constrained applications such as protecting on-chip memories. Gallager-B (GaB) LDPC decoders are well suited for high throughput applications due to their low complexity. We propose Low-Activity Gallager-B (LA-GaB), a functional equivalent to GaB with reduced message switching probability, and an adapted density evolution technique capable of predicting its message switching probabilities. We demonstrate an ASIC implementation of LA-GaB in an unrolled configuration achieving a reduction of more than 50% of dynamic energy and lower surface area compared to standard GaB, with no change in decoding performance. We also propose a high-level energy model of this unrolled implementation based on our activity model for rapid design exploration in the energy domain.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are among today’s most commonly used error-correction codes. Their energy efficiency is becoming a primary design constraint as the throughput and density requirements continuously increase, but power budgets do not, particularly for mobile devices [1].
+This paper focuses on the high-throughput, low-energy scenario where Gallager-B (GaB) decoders are advantageous because of their low complexity. One such scenario is onchip memories, where error correction can improve yields or increase performance in low-energy regimes.
+In the CMOS technology commonly used to implement decoders, most of the energy consumption, known as dynamic energy, occurs as a result of signals switching, causing load capacitances to charge or discharge. Most LDPC implementations suffer from high switching activity, thus, high dynamic energy. To address this, we propose the low-activity GallagerB (LA-GaB) algorithm, which is functionally equivalent to the original Gallager-B (O-GaB) algorithm, but reduces the switching activity of messages thanks to a particular change of variable.
+Obtaining accurate energy estimation of application-specific circuits is typically done using post-synthesis or post-layout power estimation tools. However, these tools can only be used after the system has been fully designed, which is a labor and compute-intensive task. Furthermore, to reach accurate results, the power estimation must be fed with switching activity information obtained through time-consuming simulations of the system. As such, these power estimation methods cannot be used to optimize the design of LDPC codes and decoders.
+This work was supported by the Natural Sciences and Engineering Research Council of Canada (NSERC) [reference number RGPIN-2021-04242].
+
+This is of particular concern when exploring design parameters to optimize energy consumption. High-level energy models alleviate this issue, making optimization in the energy domain feasible. Such an energy model was developed in [2] based on post-layout simulations of elementary components. However, the model does not take signal activity into account. A probabilistic method based on density evolution (DE) [3] was proposed in [4] to estimate signal activity and was used to model the energy consumption of pipeline registers storing messages.
+In this paper, we propose an analytical framework to estimate message probabilities of LA-GaB, from which signal activities can be obtained. Furthermore, we implemented LAGaB in TSMC 65nm GP technology in an unrolled configuration to validate energy and circuit area gains. Unrolled implementations have been shown to have higher efficiency in the sense of throughput/area than their iterative counterparts [5]. We propose an energy model for this unrolled implementation based on our message probability model, allowing rapid exploration of design parameters.
+Section II of this article reviews the GaB decoding algorithm, followed by Section III introducing a new, low-activity version of GaB and the corresponding changes induced in hardware implementation. A method for estimating internal signal-switching activity and a high-level energy model is proposed in Section IV. Finally, Section V validates our findings using an ASIC implementation, and Section VI concludes the paper.
+II. BACKGROUND
+A. LDPC Codes
+We consider binary LDPC codes of length N defined by a sparse M ×N parity-check matrix (PCM) denoted H, with M the number of parity checks. Codewords are considered to use systematic construction with K information bits followed by (N − K) parity bits with code rate R = K/N . An equivalent representation of H is a Tanner graph with N variable nodes (VNs) and M check nodes (CNs). Each graph edge represents a connection between a VN and a CN. We define Vi as the set of VN indices connected to CN i and dc(i) = |Vi| the check node degree. Similarly, we define Cj as the set of CN indices associated with VN j and dv(j) = |Cj| the variable node degree.
+The information bits bk, k ∈ [1, K], are encoded to obtain the codeword bits cj, j ∈ [1, N ]. They are transmitted on a binary symmetric channel (BSC) channel with error rate parameter pe. Defining the bit-wise XOR operation ⊕, the jth
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:42:44 UTC from IEEE Xplore. Restrictions apply.
+
+received bit is rj = cj ⊕ej, where ej ∈ {0, 1} are i.i.d. random variables following a Bernoulli distribution with parameter pe.
+
+B. Original Gallager-B Decoding Algorithm
+
+The original Gallager-B algorithm was proposed by Gal-
+lager [6], where binary messages are iteratively exchanged
+between VNs and CNs. Each VN carries the a posteriori estimated codeword bit value. At iteration ℓ, the messages exchanged between CN index i to VN index j and vice-versa are respectively denoted γi(→ ℓ)j and λ(jℓ→) i. For ℓ > 0, the CN update is expressed as
+
+
+
+
+
+γi(→ ℓ)j = λ(jℓ→−i1) ⊕ 
+
+λj(ℓ′→ −1i) ,
+
+(1)
+
+j ′ ∈Ci
+
+with the λ-messages value initialized at λ(j0→) i = rj, ∀j, and with representing modulo-2 summation. In the case of the
+
+Gallager-B decoding algorithm, the VN update function is
+
+determined
+
+by
+
+a
+
+threshold
+
+parameter
+
+th
+
+with
+
+⌈
+
+|V 2
+
+|
+
+⌉
+
+≤
+
+th
+
+≤
+
+|V |
+
+and chosen to minimize the error rate of the decoder. A λ-
+
+message takes the value x ∈ {0, 1} if more than th − 1 input
+
+γ-messages are equal to x. Otherwise, the message takes the
+
+a priori estimated codeword bit value rj. Denoting the logical
+
+complement of rj as r¯j, one way to express the λ-messages
+
+is
+
+λj(ℓ→) i =
+
+r¯j rj
+
+if Λj(ℓ→) i ≥ th, otherwise,
+
+(2)
+
+with
+
+Λj(ℓ→) i = i′ ∈ Vj \ {i} : γi(′ℓ→) j = r¯j .
+
+(3)
+
+This representation will be helpful later in understanding how
+
+to improve the decoding algorithm. Finally, the output bits ˆbj(ℓ)
+
+are
+
+obtained
+
+by
+
+slightly
+
+modifying
+
+(2)
+
+by
+
+fixing
+
+th
+
+=
+
+⌈
+
+|V 2
+
+|
+
+⌉
+
+and (3) where the index i in the set Vj is not excluded.
+
+Gallager decoders are generally suited for highly parallel
+
+implementation since the node update functions can be im-
+
+plemented using a few standard logic gates, and the routing
+
+is simplified as each message corresponds to a 1-bit signal.
+
+Although the error rate of Gallager decoders is higher than
+
+soft-output decoders such as the sum-product and offset min-
+
+sum algorithms, their low complexity hardware architecture
+
+correlates to significant energy savings. Consequently, they
+
+are good candidates for applications requiring energy-efficient
+
+decoders.
+
+III. LOW-ACTIVITY GALLAGER-B
+To reduce the switching activity of O-GaB, we propose a variable change that makes messages independent of the transmitted codeword, thus linking message switching probability only to the channel transition probability. We then demonstrate the implications of LA-GaB on an unrolled implementation since this configuration is ideally suited for high-throughput energy-constrained applications. However, it can also benefit any implementation where hardware nodes process independent messages on successive clock cycles.
+
+S
+
+VNU
+
+CNU
+
+VNU
+
+CNU
+
+D
+
+O
+
+⤨S
+
+P
+
+⤨
+
+VNU
+
+⤨
+
+i p
+
+P CNU ⤨ VNU ⤨ i
+p
+
+P i
+
+CNU
+⤨
+
+D
+
+p
+
+u t p
+
+e
+
+ee
+
+u
+
+l
+
+ll
+
+t
+
+S
+
+VNU i CNU
+
+VNU i i CNU
+
+D
+
+n
+
+syndrome
+
+e
+
+nn ee
+
+info bits parity bits
+
+Fig. 1. Low-activity Gallager-B FPFU architecture.
+
+A. Low-Activity Gallager-B
+
+We can first notice that (2) can be rewritten as
+
+λj(ℓ→) i = rj ⊕ λ⋆ (jℓ→) i ,
+
+(4)
+
+with λ⋆ (jℓ→) i = 1 if Λ(jℓ→) i ≥ th, otherwise 0. Since, λj(0→) i = rj , ⋆
+this implies that the initial value of the low-activity λ-message is λ⋆ j(0→) i = 0. By subtituing (4) into (1), we obtain a new
+equation for γ-messages given by γi(→ ℓ)j = rj ⊕ γ⋆i(→ ℓ)j, with
+
+
+
+
+
+γ⋆i(→ ℓ)j = Si ⊕ 
+
+λ⋆ (jℓ′→ −1i) ,
+
+(5)
+
+j ′ ∈Ci \{j }
+
+where Si = j∈Ci rj corresponds to the ith-bit of the syndrome. Finally, we can substitute the γ-messages in (3)
+by the previously obtained expression to obtain
+
+Λ(jℓ→) i =
+
+i′ ∈ Vj \ {i} : γ⋆i(′ℓ→) j = 1
+
+=
+
+γ⋆i(′ℓ→) j .
+
+i′∈Vj \{i}
+
+(6)
+
+The decoder can then compute the low-activity messages
+
+instead
+
+of
+
+the
+
+original
+
+ones,
+
+since
+
+both
+
+γ⋆
+
+and
+
+⋆
+λ-messages
+
+successively depend on each other, and the syndrome Si is
+
+a constant term that is only determined at the start of the
+
+decoding process. Note that the syndrome value does not
+
+depend on the transmitted codeword. This property is also true for the messages of the first iteration since γ⋆i(→ 1)j = Si
+⋆
+and the λ-messages only depend on the previously computed
+γ⋆ -messages. We can deduce that message values are always
+
+independent of the transmitted codewords for all iterations
+
+through recursion.
+
+B. Low-Activity Unrolled Implementation
+The change in the message-update functions of the LAGaB algorithm results in differences when implemented in hardware. Figure 1 compares the high-level architecture of O-GaB and LA-GaB fully parallel - fully unrolled (FPFU) decoders. Compared to O-GaB, circuits added for LA-GaB are highlighted with dark lines, while circuits removed are drawn with dotted lines. The ↗ ↘ symbol represents interleaver components that implement the PCM interconnections with wires. The first iteration of check node unit (CNU) blocks is replaced with simpler syndrome blocks. The resulting
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:42:44 UTC from IEEE Xplore. Restrictions apply.
+
+or P1[x] is enough to characterize their PMFs fully. The probability that the γ-messages take the value “0” corresponds to the probability of having an even number of “1” values in the input messages and can be expressed as
+
+Fig. 2. CNU and VNU logic gate comparison.
+syndrome vector is used in all subsequent iterations as an input to CNUs. Therefore, the syndrome vector is passed along the decoding pipeline. The variable node units (VNUs) no longer use received bits as inputs. Received bits rj are only required in the initial syndrome computation and for the final decision stage. However, only the information part of the codeword is required to compute the final output; therefore, only K pipeline registers are required at each stage rather than the N previously needed. The size of pipeline registers is equivalent between both versions since the added syndrome bit registers offset the removal of the parity bit registers. However, the syndrome vectors have much lower switching activity, lowering energy consumption. Additionally,
+⋆
+low-activity λ-messages are stored in pipeline registers rather than λ-messages.
+Figure 2 shows the functional differences in CNUs and VNUs. The original VNU can be seen as the low-activity VNU with an added comparison with the received bit before and after the extrinsic majority vote operation. Removing these comparisons saves 2 × dv XOR gates, considerably reducing the VNU surface area and energy consumption, which is significant since VNUs are replicated many times in parallel decoders. Conversely, CNUs are slightly more complex because the syndrome bit input adds a single XOR input, but this does not result in much difference in surface area or energy.
+IV. ACTIVITY AND ENERGY MODELING
+We seek to characterize LA-GaB’s message PMFs by adapting O-GaB DE to validate the lowered switching probability independent of implementation architecture. Given a known hardware architecture, these PMFs can be used to calculate signal-switching activity. We then construct an energy model for the unrolled architecture presented in Section III-B based on the message-switching activities.
+A. Density Evolution for O-GaB Messages
+DE methods are generally used to study the asymptotic error-rate performance of codes under a set of assumptions presented in [3]. To present the DE equations for O-GaB decoders, we introduce the notation Ps[x], which corresponds to the probability that the random variable x is equal to s. Since messages take binary values, knowing either P0[x]
+
+P0 γi(→ ℓ)j
+
+1 =
+2
+
+1−
+
+1 − 2P1 λ(jℓ′→ −1i)
+
+j ′ ∈Ci \{j }
+
+. (7)
+
+For the λ-messages, it is more convenient to derive the PMF of the Λ variable defined in (3). Since all-zero codewords are assumed to be transmitted, Λ can be rewritten as the sum of the input γ-messages. Therefore, the PMF Λ is obtained by performing successive convolutions on the γ-messages and can be computed in the Fourier domain as follows:
+
+|Vj |−1
+
+Pq Λ(jℓ→) i =
+
+ωjqκ
+
+P0 γi(′ℓ→) j + P1 γi(′ℓ→) j ωj−κ ,
+
+κ=0
+
+i′∈Vj \{i}
+
+(8)
+
+√ with ωj = exp 2π −1/|Vj| . The λ-messages take the value
+
+“1” when Λ meets or exceeds the threshold th. Therefore the
+
+λ-message PMF is expressed as
+
+|Vj |−1
+
+P1 λj(ℓ→) i =
+
+Pq Λj(ℓ→) i .
+
+(9)
+
+q=th
+
+These DE equations are conditioned to the transmission of the all-zero codeword and are only valid for O-GaB.
+
+B. Signal Activity Model
+
+We propose to adapt the DE method to derive the message probabilities of LA-GaB. According to (4), we have
+
+P1 λ⋆ j(ℓ→) i = P1 rj ⊕ λ(jℓ→) i
+
+1 =
+2
+
+Pb|¯b Λj(ℓ→) i ≥ th|rj ,
+
+b∈{0,1}
+
+(10) (11)
+
+where Px|y[X|Y ] = P (X = x|Y = y) is the probability that
+X = x given Y = y. We also have rj = cj ⊕ ej, and under the standard cycle-free DE assumption, Λ(jℓ→) i is independent from ej, the indicator variable of an error on received bit j.
+Consequently, we have
+
+Pb|¯b Λ(jℓ→) i ≥ th|rj
+
+=
+
+Pb|b′ Λ(jℓ→) i ≥ th|cj P¯b⊕b′ [ej ],
+
+b′ ∈{0,1}
+
+(12)
+
+with P1[ej] = pe. The probability P1|b′ Λj(ℓ→) i ≥ th|cj can be straightforwardly calculated from (9) if Pq|b′ Λj(ℓ→) i|cj , ∀q ∈ [0, |Vj| − 1], is known. If cj = 0, then the γ-messages coming to VN j, γiℓ′→j ∀i′ ∈ Vj \ {i}, must be equal to zero to satisfy the parity check equation, independently of the transmitted codeword. Otherwise, check node i′ received
+an odd number of erroneous bits. If this event happens for q check nodes, then Λj(ℓ→) i,cj=0 = q. Therefore, we have Pq|0 Λj(ℓ→) i|cj = Pq Λj(ℓ→) i , which can be calculated using the original DE equation (8). When cj = 1, the messages
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:42:44 UTC from IEEE Xplore. Restrictions apply.
+
+must equal 1 unless bits of adjacent VNs are erroneous. Therefore, we have Λj(ℓ→) i,cj=1 = |Vj| − 1 − q = →−q , and Pq|1 Λj(ℓ→) i|cj = P→ −q Λj(ℓ→) i .
+Following a similar mathematical development, the γ-
+message probability of the proposed LA-GaB decoder can be
+expressed as
+
+P1 γ⋆i(→ ℓ)j
+
+1 =
+2
+
+Pb|b′ γi(→ ℓ)j |cj P¯b⊕b′ [ej ].
+
+(b,b′ )∈{0,1}2
+
+(13)
+
+By noting that Pb|b′ γi(→ ℓ)j |cj = Pb⊕b′ γi(→ ℓ)j , we have
+
+P1 γ⋆i(→ ℓ)j = (1 − pe)P1 γi(→ ℓ)j + peP0 γi(→ ℓ)j .
+
+(14)
+
+We are interested in deriving the signal activity for the FPFU architecture depicted in Figure 1. Processed message bits belong to different i.i.d. codewords between successive clock cycles. Therefore, the CNU output bit activity associated with edge i → j is given by
+
+A[γ⋆i(→ ℓ)j ] = 2P0 γ⋆i(→ ℓ)j P1 γ⋆i(→ ℓ)j .
+
+(15)
+
+The VNU output bit activity is obtained by replacing γ⋆i(→ ℓ)j
+
+variable by λ⋆ j(ℓ→) i in the above equation. Following the same
+
+reasoning,
+
+the
+
+O-GaB
+
+message
+
+activities
+
+are
+
+always
+
+equal
+
+to
+
+1 2
+
+.
+
+To improve the accuracy of the switching activity estimation,
+
+we take into account the variations in channel noise induced
+
+by the finite code length, by computing the expectation of (15)
+
+with respect to the observed channel, using the same approach
+
+as in [4].
+
+C. Proposed Energy Model
+Given that the dynamic energy of CMOS circuits is proportional to signal activity, we derive an energy model from our activity analysis, which does not require register-transfer level (RTL) code beyond that needed for finding some elementary technology-specific coefficients.
+The following assumptions are built into the model: (A1) The channel error probability pe is constant between successive codewords. (A2) The decoder is operating in a range of channel conditions (pe range) such that output bit-error rate (BER) is less than 10−3. (A3) The internal signal activity of components is proportional to their output activity. Internal signal activity is not modeled for simplicity. (A4) The impact of parasitic signal switching, also known as glitching, that results from unequal propagation delays in CMOS circuitry is negligible. (A5) All components of a given type consume the same energy. (A6) The dynamic energy consumed by the first iteration syndrome calculation and last iteration decision is identical to ordinary CNUs and VNUs from other iterations, respectively, adjusted for output activity. This an approximation since the syndrome calculation has higher internal signal activity due to taking high-activity code-
+⋆
+words as inputs rather than low-activity λ-messages, and since both the syndrome and decision operations constitute slightly different logic functions than regular CNUs and VNUs. We include this assumption to reduce the number of parameters
+
+TABLE I SYNTHESIS RESULTS IN TSMC 65NM GP
+Code configuration
+
+Version 96.33.964 1024.512.3.103 s2.94.594
+
+Area (mm2)
+
+O-GaB
+
+0.07
+
+0.74
+
+2.14
+
+LA-GaB 0.06 (-11%) 0.66 (-11%) 1.79 (-16%)
+
+Info T/P (Gbps) -
+
+48
+
+512
+
+1776
+
+in the model for simplicity, and we will show that a good fit is achieved regardless. (A7) Routing considerations such as wire length have a negligible impact on circuit dynamic energy consumption. This is again inaccurate, particularly for large codes that require longer wires. However, routing complexity is hard to model accurately, requiring knowledge of technology-specific parameters such as metal-layer count, and would not be appropriate in a high-level energy model.
+Considering all assumptions and regular code constructions, the proposed high-level energy model for all CNUs of a given decoding iteration ℓ is given by
+
+EC(ℓN)U
+
+=
+
+A[γ⋆ (ℓ)]
+
+×
+
+M
+
+×
+
+α(dc) CNU
+
+,
+
+(16)
+
+where
+
+α(dc) CNU
+
+is
+
+the
+
+linear
+
+fit
+
+coefficient
+
+linking
+
+the
+
+dynamic
+
+energy of a single CNU of degree dc to its output activity,
+
+as described in Table II. The VNU energy model can be
+
+obtained by replacing “γ”, “CNU”, and “dc” subscripts in (16)
+
+respectively by “λ”, “VNU”, and “dv”. Similarly, the energy
+
+of a pipeline register is given by
+
+EREG = WREG × (αFF × A[X] + βFF) ,
+
+(17)
+
+where X corresponds to the variable stored in the register, WREG is the bit-width of the given pipeline register, αFF and βFF are the linear fit coefficients linking a single flip-flop’s dynamic energy to output activity.
+The overall energy model is obtained by summing the energy of each component (VNUs, CNUs, and registers) across all unrolled decoding iterations, accounting for each component’s output activity.
+
+V. RESULTS AND COMPARISON
+ASIC FPFU hardware implementations of O-GaB and LAGaB were tested for three different regular code configurations: (96.33.964) with N = 96, dv = 3, dc = 6, R = 0.5; (1024.512.3.103) with N = 1024, dv = 3, dc = 6, R = 0.5; and (s2.94.594) with N = 1998, dv = 4, dc = 36, R = 0.89 all taken from [7]. The Genus tool from Cadence was used to synthesize the decoders and run post-synthesis activity-based energy measurements using TSMC CMOS 65nm GP libraries. All configurations were tested with an iteration count L = 10 and a synthesis clock period constraint of 1ns chosen so that the area usage of all designs remains close to their minimal area. Hardware implementation validation, BER results, and DE switching activity validation were achieved using a cycleaccurate software model of the decoder.
+Table I shows the surface area reduction of the LA-GaB implementation. The reduction is due to the simplification of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:42:44 UTC from IEEE Xplore. Restrictions apply.
+
+A: 96.33.964
+
+B: 1024.512.3.103
+
+C: s2.94.594
+
+1.2 1
+0.8 0.6 0.4
+0
+
+10 -2
+
+10 -4
+
+10 -6
+
+10 -8
+
+0.005
+
+0.01
+
+0.015 0
+
+0.01
+
+0.02
+
+0.03 0
+
+1
+
+2
+
+3
+
+10 -3
+
+Fig. 3. Energy performance comparison. BER values were obtained using a Monte-Carlo simulation of the software model.
+
+0.02
+
+0.019
+
+0.018
+
+0.017
+
+0.016
+
+0.015
+
+2
+
+4
+
+6
+
+8
+
+10
+
+TABLE II ENERGY MODEL FIT COEFFICIENTS FOR TSMC 65NM GP
+Component Degree α (fJ) β (fJ)
+
+CNU
+
+dc = 6 61.45
+
+–
+
+dc = 36 288.14 –
+
+VNU
+
+dv = 3 11.77
+
+–
+
+dv = 4 31.33
+
+–
+
+FLIP-FLOP
+
+–
+
+6.05 6.90
+
+Fig. 4. LA-GaB message PMF model based on density evolution compared to Monte-Carlo measurements for code 1024.512.3.103 and pe = 0.015.
+
+the VNU components shown in Figure 2, and a proportionally
+
+larger reduction is achieved for the configuration with a higher
+
+code rate as the VNU components occupy a larger proportion
+
+of that decoder. Figure 3 shows that the dynamic energy
+
+consumption is roughly cut in half for the LA-GaB decoder
+
+compared to O-GaB across all tested configurations. This
+
+improvement can be attributed to the activity reduction internal ⋆
+to CNUs and VNUs, the storage of lower activity λ-messages
+
+and syndrome vectors inside of pipeline registers and the gate-
+
+count reduction of VNU components.
+
+Figure 4 shows that our DE-based message distribution
+
+model closely matches the measured probabilities. Given a
+
+decoder converging towards a decoding error probability of ⋆
+0, and given that λ-messages represent a posteriori error
+
+estimations, the P1 probability of messages converge towards
+
+the channel error probability pe. In contrast, the P1 probability
+
+of
+
+all
+
+messages
+
+in
+
+O-GaB
+
+is
+
+1 2
+
+,
+
+constant
+
+over
+
+all
+
+iterations
+
+since the composition of messages depends on the received
+
+codeword r formed from arbitrary data rather than depending
+
+only on the error vector e.
+
+Finally, Figure 3 shows a close match of the energy model to
+
+the measured energy for all code configurations. The necessary
+
+energy coefficients for the energy model shown in Table II
+
+were obtained by performing a linear fit of post-synthesis
+
+activity-aware power simulation results of individual isolated
+
+CNU, VNU, and D flip-flop components for a range of output
+
+activities.
+
+VI. CONCLUSION
+This paper proposes a new GaB LDPC decoding algorithm with reduced message switching probability and an energy model for its FPFU ASIC implementation. The model predicts the dynamic energy of flip-flops and node units that compose the decoder based on signal activities. The switching activity of internal messages is derived from the DE technique, adapted to the proposed version of GaB. The energy reduction resulting from LA-GaB and the accuracy of the energy model is validated using activity-aware energy estimations on an ASIC implementation after circuit synthesis. Future work will leverage the energy model to construct codes that minimize energy under fixed error correction and throughput constraints.
+REFERENCES
+[1] M. Herrmann, C. Kestel, and N. Wehn, “Energy efficient FEC decoders,” in 2021 11th Int. Symp. on Topics in Coding (ISTC), 2021.
+[2] K. Ganesan, P. Grover, J. Rabaey, and A. Goldsmith, “On the total power capacity of regular-LDPC codes with iterative message-passing decoders,” IEEE Journal on Selected Areas in Communications, vol. 34, no. 2, pp. 375–396, 2016.
+[3] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 599–618, 2001.
+[4] J. Nadal, S. Brown, E. Dupraz, and F. Leduc-Primeau, “Towards an accurate high-level energy model for LDPC decoders,” in 2021 11th International Symposium on Topics in Coding (ISTC), 2021, pp. 1–5.
+[5] P. Schla¨fer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput LDPC decoding,” in SiPS 2013 Proceedings, 2013, pp. 153–158.
+[6] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[7] D. J. MacKay. Encyclopedia of sparse graph codes. [Online]. Available: https://www.inference.org.uk/mackay/codes/data.html
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:42:44 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,251 @@
+2066
+
+IEEE COMMUNICATIONS LETTERS, VOL. 19, NO. 12, DECEMBER 2015
+
+High Throughput Pipeline Decoder for LDPC Convolutional Codes on GPU
+Yi Hou, Rongke Liu, Member, IEEE, Hao Peng, and Ling Zhao
+
+Abstract—In this letter, we present a graphics processing unit (GPU)-based LDPC convolutional code (LDPC-CC) pipeline decoder with optimized parallelism. The proposed decoder exploits different granularities of decoding parallelism for both the compute unified device architecture (CUDA) kernel execution stage and the data transfer stage. Moreover, the parameter selection criteria for decoder implementation are designed to avoid exhaustive search of all the combinations of parameters. The experiments are carried out on Nvidia GTX460 and GTX580 platforms. The results demonstrate the proposed decoder achieves about 3 times speedup compared to the existing GPU-based work.
+Index Terms—LDPC convolutional code, GPU, pipeline decoder, parallelism.
+I. INTRODUCTION
+T HE Low-Density Parity-Check Convolutional Codes (LDPC-CCs) have been introduced in 1999 by Felström and Zigangirov [1]. The LDPC-CCs outperform their block code counterparts (LDPC-BCs) under belief-propagation (BP) decoding due to the threshold saturation phenomenon [2]. The capacity-approaching thresholds and good error-floor performance of LDPC-CCs make them a hot research topic recently.
+The LDPC-CCs are suitable for transmission in continuous streams as well as in frames of various pre-determined size, therefore have a strong application potential and need to be developed high-performance decoding implementation techniques. FPGAs (Field-Programmable Gate Array) and ASICs (Application Specific Integrated Circuit) are usually used for LDPC-CC decoder implementations [3], [4]. However, their high speed often comes at a price of high development cost and low programming flexibility. DSP (Digital Signal Processor) or CPU (Central Processing Unit)-based decoders could be more flexible than FPGA/ASIC [5], [6], but the decoding throughputs are lower due to the lack of parallel computational resources.
+GPUs, which provide massive parallel execution resources, have rapidly developed recently. Parallel decoding on GPUs with optimized memory accesses and data transfers can get speedup over CPUs/DSPs. The high level programmable feature of GPUs also offers more flexibility than FPGAs/ASICs. Previous GPU-based decoders are mostly for the LDPC-BCs [7]–[9]. However, they are not suitable for use on LDPC-CCs directly since the block lengths even for terminated ones are
+Manuscript received March 15, 2015; revised September 8, 2015; accepted September 25, 2015. Date of publication October 5, 2015; date of current version December 8, 2015. This work was supported by the National Natural Science Foundation of China (91438116, 61401010), by the Program for New Century Excellent Talents in University of China (NCET-12-0030), and by the National Hi-tech R&D Program of China (2015AA01A709). The associate editor coordinating the review of this paper and approving it for publication was M. Baldi.
+The authors are with the School of Electronic and Information Engineering, Beihang University, Beijing 100191, China (e-mail: mokyy@buaa.edu.cn; rongke_liu@buaa.edu.cn; haybla@buaa.edu.cn; zhaoling@buaa.edu.cn).
+Digital Object Identifier 10.1109/LCOMM.2015.2486764
+
+much larger than conventional LDPC-BCs. It results in large initial decoding latency. [10] designs data structure and thread hierarchy for memory coalescing to speed up the LDPC-CC decoder. The pipeline decoder in this letter exploits different granularities of decoding parallelism to reduce both the kernel execution time and decoding latency. The time consumption of bidirectional data transfer and CUDA runtime overhead are taken into account. The throughput of the proposed decoder is enhanced compared with the existing work.
+The rest of this letter is organized as follows. Section II introduces the LDPC-CC and pipeline decoding algorithm. Section III illustrates the optimizations of the proposed GPUbased decoder. Experimental results are shown in Section IV. Finally, concluding remarks are given in Section V.
+
+II. LDPC CONVOLUTIONAL CODES AND PIPELINE DECODING ALGORITHM
+
+A. Structure of LDPC Convolutional Codes
+
+A semi-infinite LDPC-CC with syndrome former memory ms and rate R = b/c can be represented by the following matrix:
+
+HL=DP⎢⎢⎢⎢⎢⎣⎢⎢⎢⎡⎢CCHCHHm(01...((ms10s)))
+
+H0...(1) HHm(mm(smss−+s)11)
+...
+
+...
+··· Hm(ms−s+11)
+...
+
+H0(ms) ···
+
+H0(ms+1)
+
+⎤ ⎥⎥⎥⎥⎥⎥⎦⎥⎥⎥ ...
+
+where the dimension of each sub-matrix Hi(t) (i = 0, 1, . . . , ms, t ∈ Z) is (c − b) × c. Hi(t) = 0 when i < 0 or i > ms. vs = (ms + 1) × c is the decoding constraint length. The semiinfinite LDPC-CC parity-check matrix can be terminated at time t = L. The rate of the terminated LDPC-CC is RL = 1 − (1 + ms/(L − 1))(1 − R), which is slightly changed compared to the non-terminated case with large L.
+The construction of LDPC-CC can be categorized into two major methods: constructing time-invariant LDPC-CC algebraically based on circulant matrices [11] and using an unwrapping procedure to obtain a periodically time-varying LDPC-CC from an LDPC-BC [1]. The latter method is more simple and intuitive, and moreover, it obtains a convolutional gain as compared to the original LDPC-BC. As a result, the proposed decoder is for periodically time-varying LDPC-CCs.
+
+B. Pipeline Decoding Method for LDPC Covolutional Codes
+There are two major decoding methods for LDPC-CCs: pipeline decoding method [1] and windowed decoding method [12].
+
+1558-2558 © 2015 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. Authorized licensSeede uhsttep:li/m/witwedwt.oie: eYeo.onrsge/ipUubnlivic. aDtioownnsl_osatdaneddaorndsJ/upnuebl2ic4a,2ti0o2n6s/aritg1h6t:s1/i0n:d59exU.hTtCmlfrofomr mIEoErEe Xinpfloorrme.atRioens.trictions apply.
+
+HOU et al.: HIGH THROUGHPUT PIPELINE DECODER FOR LDPC CONVOLUTIONAL CODES ON GPU
+
+2067
+
+Fig. 2. The diagram of a pipeline decoding processor’s operating procedure for LDPC-CC. (ms = 2).
+
+A. Fine-Grained Parallelism Optimizations for LDPC-CC Pipeline Decoder
+
+The decoding procedure for one code stream is illustrated
+
+in Fig. 2, two dashed boxes denote each pipeline decoding
+
+processor’s operating region of the parity-check matrix within
+
+one iteration. Each pipeline decoding processor is carried out by ms + 1 CUDA kernels, one of which is shown as the L-shaped shaded region in Fig. 2. In order to boost the throughput of
+
+the pipeline decoder, the proposed architecture optimizes the
+
+Fig. 1. The overall block diagram of the GPU-based LDPC-CC pipeline parallelism within the kernels on three levels to maximize the
+
+decoding architecture.
+
+use of available hardware resources as follows.
+
+1) Instruction-Level Parallelism Optimization: Exploiting
+
+Although the decoding latency is larger for the former method, it has higher coding gain than the latter one. Therefore, the pipeline method is used in the proposed decoder. For LDPC-CCs with syndrome former memory ms, two variable-nodes that are at least ms + 1 time units apart can be performed independently. Therefore, the pipeline decoding method could operate I iterations by employing I independent processors working on different regions of the Tanner graph simultaneously. During the decoding, c received symbols enter the decoder in every time unit, then I processors are executed sequentially to do I iterations. Each processor performs updating for nodes in ms + 1 row and column blocks of the parity-check matrix, the log-domain BP using flooding schedule is adopted in the decoding process.
+
+Instruction-Level Parallelism (ILP) is an efficient way to improve the resource utilization in the GPU. In LDPC-BC decoders, the check-node and variable-node updating operations are usually implemented in separate kernels. This leads to increased kernel launch cost. Besides, the uncertainty of nodes degrees which are read from the constant cache will bring inevitable loop operations and cause the compiler using high-latency local memory rather than low-latency registers. Consequently, the ILP together with decoding throughput are lowered. In the proposed decoder, specific kernels are designed for different row and column blocks with different weights. The loops are unrolled inside the kernels, which improves the utilization of registers to speed up the kernel execution.
+2) Thread-Level Parallelism Optimization: The degree of
+
+III. OPTIMIZED GPU-BASED PIPELINE DECODING ARCHITECTURE FOR LDPC CONVOLUTIONAL CODES
+
+Thread-Level Parallelism (TLP), which is determined by the number of parallel executed threads in each decoding processor, is restricted by the limited on-chip registers per SM. Setting ex-
+
+The general architecture of the proposed GPU-based LDPC-CC decoder is depicted in Fig. 1. Since the coalesced memory access in global memory and parity-check matrix compression in constant memory for the decoder have been well studied in previous literatures, we mainly focus on how to optimize the kernel execution and data transfers in this letter.
+Since the interdependency of the operations causes decoding throughput decline, the kernels should be well-designed to exploit parallelism. Moreover, the data transfers between host and device would cause excessive latency due to the limited PCI-E bandwidth and synchronization, the transfer overhead should be lowered. Therefore, the proposed decoder will reduce the kernel execution time which is called the fine-grained parallelism optimizations and enhance data transfer efficiency which is called the coarse-grained parallelism optimizations.
+
+cessive threads in parallel will reduce the active CUDA blocks in the SM, thus lowers the throughput. The decoder needs to exploit the appropriate TLP to hide the memory and instruction latency. Besides, in order to keep load balance for the kernels, both c and c − b should be divisible by the degree of TLP. Assuming the TLP of the decoder is P, the maximum number of registers which are required in one thread is Q, the maximum number of active blocks assigned to one SM is Nbl, the number of the register resources in one SM is Nreg, the minimum number of threads to hide the memory and instruction latency is Nth. The TLP for the proposed decoder should follow the three conditions described below.
+1 . Q × P × Nbl ≤ Nreg 2 . P × Nbl ≥ Nth 3 . P ≡ 0(mod c) and P ≡ 0(mod(c − b))
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+2068
+
+IEEE COMMUNICATIONS LETTERS, VOL. 19, NO. 12, DECEMBER 2015
+
+3) Function-Level Parallelism Optimization: The parallel
+
+execution of multiple LDPC-CC pipeline decoding processors
+
+determines the Function-Level Parallelism (FLP). Each pro-
+
+cessor operating one iteration is assigned to a CUDA block.
+
+If total code streams M are decoded simultaneously with I
+
+iterations, the total number of required CUDA blocks which is
+
+called the grid size is I × M. Since the thread block scheduler
+
+dispatches CUDA blocks to the SMs in a mostly round-robin order, the grid is divided into waves of CUDA blocks, the wave size depends on the SM quantities Nsm and the number of active blocks per SM Nbl. In order to obtain high degrees of FLP, the grid size should satisfy I × M ≡ 0(mod Nsm × Nbl), otherwise the tail effect which is caused by load imbalance between SMs would degrade the throughput. Though running a
+
+Fig. 3. Normalized Kernel Execution Time under Different degrees of TLP. (a) Tk v.s. decoding iterations under different degrees of TLP for code 1. (b) Tk v.s. decoding iterations under different degrees of TLP for code 2.
+multiple hardware work queues (the Hyper-Q technique) can be more beneficial to the improvement of decoding throughput and reduction of latency.
+
+large number of code streams in parallel can make the tail effect negligible, the resulting large decoding latency is unacceptable. Consequently, the grid size of the GPU-based decoder needs to
+
+IV. EXPERIMENTAL RESULTS AND DISCUSSIONS The proposed GPU-based decoder1 is operated in single pre-
+
+be kept within a few multiples of wave size.
+
+cision on Intel i7-2600 with Nvidia GTX460 (768 MB memory,
+
+7 SMs and 336 CUDA cores) and GTX580 (1.5 GB memory,
+
+B. Coarse-Grained Parallelism Optimizations for LDPC-CC Pipeline Decoder
+
+16 SMs and 512 CUDA cores). The GPU device is connected to the host via PCI-E 2.0 x16 interface. The compiler is gcc 4.8.2 with CUDA 6.5 on Ubuntu 14.04.
+
+Differently from LDPC-BC decoders, the duration between The parity-check matrices of LDPC-CCs chosen for this
+
+the transfer of the received code streams from host to device (H2D) and the decoded streams from device to host (D2H) is only one iteration time in LDPC-CC pipeline decoder, not the total iterations. The unoptimized transfer bandwidth may
+
+experiment are constructed by unwrapping AR4JA codes from CCSDS standard [13] with dimensions of 6144 × 10240 (code 1) and 3072 × 7168 (code 2). The sizes of sub-matrix (c − b) × c are 1536 × 2560 (code 1) and 768 × 1792 (code 2). Both of
+
+become a bottleneck for both throughput improvement and these two LDPC-CCs are irregular codes. The average column
+
+latency reduction. To solve this problem, the proposed decoder weights of code 1 and code 2 are 3 and 3.3 respectively.
+
+extracts coarse-grained parallelism at CUDA stream level to Fig. 3 shows the normalized kernel execution time Tk under enhance the transfer bandwidth and hide the transfer latency. different degrees of TLP on GTX460 and GTX580 respectively.
+
+Since the D2H transfer data only contains spliced hard decision Tk is defined as the average execution time for a kernel to bits, which are significantly less than the H2D transfers, we decode c coded bits per decoding iteration. The results illustrate
+
+mainly optimize the H2D transfer procedure.
+
+that running 256 threads in parallel per decoding processor for
+
+1) Data Transfer Bandwidth Utilization Improvement: Since code 1 and code 2 are appropriate on both GPUs. The decoder
+
+separate transfer of code streams for each pipeline decoding with too low TLP (e.g., 64 and 128) cannot hide memory and
+
+processor can not make full use of the PCI-E bandwidth, the instruction latency. The decoder with too high TLP (e.g., 512)
+
+proposed decoder batches all the code streams required by the will result in register spilling to the high-latency local memory,
+
+kernels running on each CUDA stream together into a buffer thus increases Tk. Note that though the register spilling may in the pinned host memory. Another buffer space is setup in not occur for high TLP when the grid size is too small (e.g.,
+
+the global memory, shown in Fig. 1 to receive the batched 7 iterations for GTX460 with too few code streams), the kernel
+
+data from the host through PCI-E bus and then reallocate execution time is also increased.
+
+the required code streams to the pipeline decoders in parallel Table I shows the normalized kernel execution time with
+
+within the same CUDA stream. The transfer batching could different degrees of FLP on GTX460 and GTX580 respectively.
+
+eliminate most of the per-transfer overhead when using separate transfer and increase the PCI-E bandwidth usage, thus reduce the decoding latency and enhance the throughput.
+2) Data Transfer Latency Hiding: In order to hide the transfer latency, the proposed decoder exploits multiple CUDA
+
+The TLP is set to 256 for both codes. From the results, we can see if the grid size I × M is an integer multiple of the wave size Nsm × Nbl, we could obtain almost the same lower Tk (shown in bold). The number of active blocks Nbl for code 1 and code 2 are 3 and 6 respectively on both GPUs.
+
+streams to execute kernels and H2D/D2H data transfers concur- Table II shows the decoding throughput and latency com-
+
+rently. The approximate decoding latency in this asynchronous
+
+transfer
+
+mode
+
+can
+
+be
+
+calculated
+
+by
+
+Tl
+
+=
+
+c×(ms+1) Throughput
+
+× Sc × Ss
+
+×I,
+
+where Sc and Ss denote the number of code streams per CUDA
+
+stream and the number of CUDA streams respectively, Sc ×
+
+Ss = M. Note that the effect of overlapping kernel execution
+
+with data transfers depends on the number of copy engines
+
+parison before and after coarse-grained parallelism with 21 iterations, 256 TLP on GTX460 and 16 iterations, 256 TLP on GTX580. The BER and FER performance of both codes under 16 and 21 iterations are shown in Fig. 4 (we refer c incoming bits as a frame). Loop unrolling is used for CUDA kernels which nearly halve the execution time. The CPU timer is used
+
+and hardware work queues inside the GPU. Since the kernel
+
+execution time is dominant after transfer batching, having 1Source codes can be downloaded from http://github.com/Haybla.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+HOU et al.: HIGH THROUGHPUT PIPELINE DECODER FOR LDPC CONVOLUTIONAL CODES ON GPU
+
+2069
+
+TABLE I NORMALIZED KERNEL EXECUTION TIME UNDER DIFFERENT FLP
+
+TABLE III DECODING THROUGHPUT COMPARISON WITH EXISTING WORK
+
+Though there is throughput gap between our results and the existing FPGA results, e.g., 4-bit quantized LDPC-CC decoder running 2.0 Gb/s on Stratix IV with 10 iterations [3], the good scalability and backward compatibility make the proposed decoder easy to run on the latest or even future powerful GPUs to achieve higher throughput with very little modifications.
+
+TABLE II THROUGHPUT AND LATENCY IMPROVEMENT BY OPTIMIZATION
+IN COARSE-GRAINED PARALLELISM
+
+V. CONCLUSION
+An optimized GPU-based LDPC-CC pipeline decoder is proposed in this letter. By exploiting the on-chip resources and the characteristic of the LDPC-CCs, the criteria for choosing appropriate degrees of ILP, TLP and FLP within the CUDA kernels are designed. Aiming to reduce the decoding latency, batching separate H2D transfers by using buffers in both host and global memory is presented and multiple CUDA streams for latency hiding is developed. The experimental results show that the proposed decoder achieves higher throughput compared with the existing work. The proposed decoding architecture can be used as a flexible processing unit in a reconfigurable receiver for the software-defined radio systems.
+
+REFERENCES
+
+Fig. 4. BER&FER for Code 1 and Code 2 under 16 and 21 iterations.
+to measure all the time consumed by kernel execution, transfer batching, data transfer and CUDA management overhead. Sc for both codes is set to 8 on GTX460 and 15 on GTX580 to obtain adequate transfer speed after transfer batching (TB) and also guarantee that the grid size is divisible by the wave size. The average H2D transfer bandwidth is improved by using TB from about 28% to 66% of the theoretical peak PCI-E 2.0 × 16 bandwidth on both GPUs. The throughput and latency are both significantly improved by adopting TB and multiple CUDA streams (MS) (Ss = 2) in asynchronous transfer mode than in the synchronous mode with one CUDA stream (1S). The more powerful the GPU is, the more efficient data transfer latency hiding becomes under the same PCI-E bandwidth.
+Table III shows the throughput comparison between our work and the existing work on the same GTX460 platform. The decoder in [10] adopts the pipeline decoding with 20 iterations. Considering that the throughput for different codes would be almost inversely proportional to their average column weights under the same implementation method, the proposed decoder achieves about 3 times speedup than [10].
+
+[1] A. Jiménez Felström and K. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[2] S. Kudekar, T. Richardson, and R. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief propagation,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7761–7813, Dec. 2013.
+[3] C.-W. Sham, X. Chen, F. Lau, Y. Zhao, and W. Tam, “A 2.0 gb/s throughput decoder for qc-ldpc convolutional codes,” IEEE Trans. Circuits Syst. I, vol. 60, no. 7, pp. 1857–1869, Jul. 2013.
+[4] Y. Chen, C. Zhou, Y. Huang, and X. Zeng, “An efficient multi-rate LDPC-CC decoder with layered decoding algorithm,” in Proc. IEEE ICC, Jun. 2013, pp. 5548–5552.
+[5] M. Gomes, V. Silva, C. Neves, and R. Marques, “Serial LDPC decoding on a SIMD DSP using horizontal-scheduling,” in Proc. EUSIPCO, Sep. 2006, pp. 89–101.
+[6] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on ×86 processor,” IEEE Trans. Parallel Distrib. Syst., 2015, to be published. [Online]. Available: 10.1109/TPDS.2015.2435787
+[7] Y. Lin and W. Niu, “High throughput LDPC decoder on GPU,” IEEE Commun. Lett., vol. 18, no. 2, pp. 344–347, Feb. 2014.
+[8] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Sys. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014.
+[9] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. IEEE GlobalSIP, Dec. 2013, pp. 1258–1261.
+[10] Y. Zhao and F. Lau, “Implementation of decoders for LDPC block codes and LDPC convolutional codes based on GPUs,” IEEE Trans. Parallel Distrib. Syst., vol. 25, no. 3, pp. 663–672, Mar. 2014.
+[11] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, and D. Costello, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004.
+[12] M. Papaleo, A. Iyengar, P. Siegel, J. Wolf, and G. Corazza, “Windowed erasure decoding of ldpc convolutional codes,” in in Proc. IEEE ITW, Jan. 2010, pp. 1–5.
+[13] TM Synchronization and Channel Coding, Recommendation for Space Data System Standard, CCSDS 131.0-B-2, Blue Book, Issue 2, Aug. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1788 @@
+2898
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+Memory Efficient Decoder Architectures for Quasi-Cyclic LDPC Codes
+Yongmei Dai, Student Member, IEEE, Ning Chen, Student Member, IEEE, and Zhiyuan Yan, Senior Member, IEEE
+
+Abstract—In this paper, we first propose parallel turbo-sumproduct (PTSP) and turbo-shuffled-sum-product (TSSP) decoding algorithms for partly parallel decoder architectures of quasi-cyclic (QC) low-density parity-check (LDPC) codes. Our proposed algorithms not only achieve faster convergence and better error performance than the sum-product (SP) decoding algorithm, but also need less memory in implementation. Then we propose a partly parallel decoder architecture based on our PTSP algorithm and implement it using FPGA. Our PTSP decoder architecture achieves significantly higher throughput and requires less memory than previously proposed decoder architectures with the same FPGA and LDPC code. Finally, to further reduce the memory requirement, we also propose a partly parallel decoder architecture based on our TSSP algorithm.
+Index Terms—Low-density parity-check (LDPC) codes, quasicyclic (QC) codes, shuffled decoding, sum-product (SP) decoding, turbo decoding.
+I. INTRODUCTION
+L OW-DENSITY PARITY-CHECK (LDPC) codes [1], [2] and their efficient implementations have been receiving a lot of attention due to their near-capacity performance when decoded iteratively. Various (fully parallel, fully serial, and partly parallel) decoder architectures (see, e.g., [3]–[19]) have been proposed. Implementation results show that random code structure is susceptible to implementation problems, whereas regular code structure tends to ease hardware implementation. Quasicyclic (QC) LDPC codes are thus of great interest because they not only have relatively good error performance [20], [21], but can also be conveniently encoded with shift registers (see, e.g., [22]) and efficiently decoded with partly parallel decoder architectures [7]–[13], [15]–[18].
+The sum-product (SP) algorithm (see, e.g., [23]) is a widely used decoding algorithm for LDPC codes. An LDPC code can be represented by its Tanner graph [24], wherein the codeword bits and the parity check equations are represented as variable and check nodes respectively. Each iteration of the SP algorithm consists of two sequential subiterations: check node updates (CNUs) and variable node updates (VNUs). There is in-
+Manuscript received January 2, 2007; revised December 17, 2007 and February 21, 2008. First published April 18, 2008; current version published October 29, 2008. This work was supported in part by Thales Communications Inc., and in part by a grant from the Commonwealth of Pennsylvania, Department of Community and Economic Development, through the Pennsylvania Infrastructure Technology Alliance (PITA). Part of the material in this paper was presented at GLSVLSI, Philadelphia, PA, May 2006. This paper was recommended by Associate Editor M. Stan.
+The authors are with the Department of Electrical and Computer Engineering, Lehigh University, PA 18015 USA (e-mail: yod304@lehigh.edu; nic6@lehigh. edu; yan@lehigh.edu).
+Digital Object Identifier 10.1109/TCSI.2008.922024
+
+herent parallelism among the CNUs and VNUs respectively in each iteration of the SP algorithm, but fully parallel decoder architectures [3], [4] require a large number of processing elements and are prone to congested routing network. Hence, partly parallel decoder architectures are often more feasible [3]–[19]. In particular, memory-bank-based partly parallel decoder architectures for QC LDPC codes based on direct implementation of the SP algorithm (see, for example, [9], [10]) have been intensively studied due to their efficiency. However, the performance of these decoder architectures is limited by several issues. One issue is high power consumption due to frequent memory access. To reduce memory access without sacrificing error performance, power-efficient architectures (see, e.g., [11]) have been proposed. Another issue is low throughput and low hardware utilization efficiency (HUE) resulting from the sequential operations of the check node function units (CNFUs) and variable node function units (VNFUs)—the two kinds of hardware units that implement the CNUs and VNUs, respectively. To overcome this problem, data interleaving, i.e., letting the CNFUs and VNFUs operate alternately on two different blocks of data at the same time [10], [17], is often used, but this approach doubles the memory requirement. A more efficient solution to this issue on the algorithmic level is overlapped SP (OSP) decoding algorithms [12], [13], which partially overlap the CNUs and VNUs. For QC LDPC codes, the decoder architecture based on the optimal OSP algorithm in [13], [25] improves throughput and HUE by up to 100% while achieving the same error performance and using the same amount of memory.
+One disadvantage of the SP and OSP algorithms is their slow convergence. To improve the convergence rate, many variants and extensions of the SP algorithm (see, e.g., [15], [17], [26]–[28]), which essentially split and rearrange the CNUs and VNUs to expedite the message passing, have been proposed. Of particular importance are the turbo [15] and shuffled [27] decoding algorithms since many other algorithms (see, e.g., [17], [28]) can be viewed as variants or extensions of these two algorithms. Breaking one iteration of the SP algorithm into multiple serial subiterations, the turbo and shuffled decoding algorithms require up to 50% fewer iterations to converge and achieve better error performance than the SP algorithm while leading to significant memory savings in implementation [15]. One potential drawback of the turbo (or shuffled) decoding algorithm is that the multiple serial subiterations may offset its advantage in convergence rate and lead to limited decoding throughput. Thus, turbo-sum-product (TSP) and shuffled-sum-product (SSP) algorithms, both of which require only two serial subiterations, have been proposed in [28]. In comparison to the turbo and shuffled decoding algo-
+
+1549-8328/$25.00 © 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2899
+
+rithms respectively, the TSP and SSP algorithms may achieve a better tradeoff between throughput and convergence rate improvement while saving the same amount of memory. Partly parallel decoder architectures implementing the tubo decoding algorithm have also been proposed [15], [16], [18], [19], [26]. For memory-bank-based decoder architectures, Shimizu et al. proposed a high-efficiency message-passing decoder [17] that implements a variant of the turbo decoding algorithm. However, their decoder architecture achieves faster convergence at the expense of more VNUs and doubling the memory requirement compared to the OSP decoder [13], [25].
+In this paper, we focus on the decoding of QC LDPC codes assuming memory-bank-based partly parallel decoder architectures. Our goal is to design new partly parallel decoder architectures that achieve high throughput while requiring less memory. We achieve this goal by a joint algorithmic and architectural approach. The main contributions of this paper are as follows:
+• First, we propose two decoding algorithms for partly parallel decoder architectures: parallel TSP (PTSP) algorithm and turbo-shuffled-sum-product (TSSP) algorithm. In comparison to the SP and OSP algorithms, our PTSP algorithm achieves faster convergence and better error performance, and requires less memory in implementation. Our TSSP algorithm essentially combines the advantages of the TSP and SSP algorithms, leading to more significant memory saving and faster convergence than the PTSP algorithm.
+• Second, we propose a partly parallel decoder architecture based on our PTSP algorithm [29], and implement it using FPGA. Quantization schemes, pipeline schemes, and the implementation of parity check are all investigated to improve the performance of our PTSP decoder architecture. Our carefully designed pipeline schemes not only minimize the number of clock cycles per iteration while reducing critical path delay (and hence the clock period), but also maximize the access throughput of the memory. Our PTSP decoder architecture achieves higher throughput and requires less memory than the decoder architectures in [17], [25] which use the same FPGA and LDPC code. Furthermore, since more than 85% of the power consumption in memory-bank-based partly parallel decoder architecture is due to memory access [11], [30], our decoder architecture consumes less power in accessing memory than those in [17], [25] due to its reduced memory requirement.
+• Finally, to further reduce the memory requirement and improve the convergence rate, we propose a partly parallel decoder architecture based on our TSSP algorithm.
+The rest of the paper is organized as follows. To make this paper self-contained, Section II briefly reviews QC LDPC codes and decoding algorithms for LDPC codes including the SP, turbo, shuffled, TSP, and SSP decoding algorithms. In Section III, we propose our PTSP and TSSP algorithms for partly parallel decoder architectures, and present simulation results to compare all the decoding algorithms. In Section IV, we propose a partly parallel decoder architecture based on our PTSP algorithm, and discuss various implementation issues. FPGA implementation results of our PTSP decoder are also
+
+compared to those of previously proposed decoder architectures in Section IV. Section V proposes a partly parallel decoder architecture based on our TSSP algorithm. Finally, some concluding remarks are given in Section VI.
+
+II. PRELIMINARIES
+
+A. QC LDPC Codes
+
+A subclass of
+
+regular QC LDPC codes can be repre-
+
+sented by a parity check matrix of block rows and block
+
+columns
+
+...
+
+...
+
+...
+
+...
+
+(1)
+
+where denotes an
+
+identity matrix with all the rows
+
+cyclically shifted to the right by positions (
+
+,
+
+). We refer to the code defined by in (1)
+
+as an
+
+QC LDPC code, for which the total number of
+
+parity check equations
+
+, block length
+
+, and
+
+rate
+
+.
+
+B. SP Decoding Algorithm
+
+Given an LDPC code represented by its parity check matrix
+
+, we briefly review the SP algorithm. The SP
+
+algorithm (see, e.g., [23]) is a multi-iteration procedure that iter-
+
+atively exchanges the extrinsic information between check and
+
+variable nodes until either the parity check equations are all sat-
+
+isfied or a pre-set maximum iteration number is reached. Each
+
+iteration of the SP algorithm consists of two sequential subit-
+
+erations, CNUs and VNUs, and which subiteration starts first
+
+depends on initialization. For
+
+, let denote
+
+the message from variable node to check node during the th iteration. Similarly, for
+, let denote the message from check node
+
+to variable node
+
+during
+
+the th iteration. Suppose a codeword
+
+is modulated using BPSK modulation and transmitted over an
+
+additive white Gaussian noise (AWGN) channel, and let
+
+denote the received signals. The SP decoding
+
+algorithm can be formulated as:
+
+• Initialization: For
+
+, calculate the intrinsic
+
+log likelihood ratio (LLR) information obtained from
+
+channel
+
+, and
+
+initialize
+
+,
+
+.
+
+• Iteration
+
+:
+
+1) CNUs: For
+
+and
+
+,
+
+where 2) VNUs: For
+
+(2) .
+
+and
+
+,
+
+(3)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2900
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+Fig. 1. Message passing schedules during one iteration of various decoding algorithms. (a) SP; (b) Turbo; (c) TSP; (d) Group shuffled; (e) SSP.
+
+For
+
+, first compute the a posteriori where denotes the set of check nodes corresponding to
+
+LLR
+
+, and then set the hard
+
+decision either to 0 if
+
+or to 1 otherwise.
+
+• Parity check: If either
+
+or
+
+the maximum iteration number is reached, stop the de-
+
+coding. Otherwise, start the next iteration
+
+.
+
+The CNUs start first here since
+
+. Alternatively, the
+
+VNUs start first if we initialize
+
+. For an
+
+QC
+
+LDPC code, each iteration of the SP algorithm requires roughly
+
+additions per variable node for the VNUs as well as addi-
+
+tions and evaluations of per check node for the CNUs
+
+(see, e.g., [31]). Partly parallel decoder architectures based on
+
+the SP algorithm require
+
+memory units, each to store
+
+one extrinsic LLR [12].
+
+. As shown in Fig. 1(a), each iteration of the
+
+SP algorithm consists of two serial subiterations: first passes the
+
+messages from to all ’s
+
+concurrently, and
+
+then passes the messages from all ’s
+
+to
+
+concurrently. In the turbo decoding algorithm, each iteration be-
+
+comes serial subiterations as shown in Fig. 1(b): first passes
+
+the messages from to and from to , then passes the
+
+messages from to and from to , and so on. Each
+
+subiteration can be viewed as the decoding of one supercode.
+
+Since within one iteration, one supercode can use the updated
+
+and hence more reliable information from the preceding super-
+
+codes, the turbo decoding algorithm requires up to 50% fewer
+
+iterations and achieves better error performance than the SP al-
+
+gorithm. Since the decoding of one supercode needs informa-
+
+C. Variants of the SP Decoding Algorithm
+
+To improve the convergence rate, many variants and exten-
+
+sions of the SP algorithm (see, e.g., [15], [17], [26]–[28]) have
+
+been proposed. In the following, we briefly review the turbo,
+
+shuffled, TSP, and SSP decoding algorithms. Please refer to
+
+[15], [27], [28] for more details.
+
+1) Turbo Decoding Algorithm: For an
+
+QC LDPC
+
+code , the turbo decoding algorithm [15] splits row-wise
+
+into submatrices:
+
+. Each submatrix
+
+tion from only the other supercodes and thus new information
+
+from any supercode can overwrite old information from the suc-
+
+ceeding supercode, this eliminates the need to store the extrinsic
+
+information of one supercode and leads to a memory saving of
+
+units for extrinsic LLRs. This memory saving, however,
+
+comes at the expense of increasing the number of additions per
+
+variable node for the VNUs roughly from to for each it-
+
+eration.
+
+2) TSP Decoding Algorithm: For an
+
+QC LDPC
+
+code, the TSP algorithm [28] splits row-wise into two sub-
+
+is one block row in (1) and defines one
+
+supercode , and
+
+. Each satisfies
+
+the constraint that there is at most one 1 in each column to save
+
+memory. Let and denote the sets of check and variable
+
+nodes respectively in the Tanner graph of . The breakup of
+
+partitions into disjoint subsets:
+
+,
+
+matrices
+
+, where is the top block row and
+
+consists of the other block rows in (1). Only satisfies
+
+the constraint that there is exactly one 1 in each column to save
+
+memory. and define two supercodes and respec-
+
+tively, and
+
+. The breakup of partitions into
+
+two disjoint sets and . In order to save memory and to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2901
+
+exploit the turbo effects, each iteration of the TSP algorithm improve the memory-bank-based partly parallel decoder archi-
+
+has only two serial subiterations, as illustrated in Fig. 1(c): first tectures.
+
+passes the messages from to , from to , and from to ; then passes the messages from to . Same as the A. PTSP Decoding of QC LDPC Codes
+
+SP algorithm, initialization determines which subiteration of the
+
+TSP decoding in Fig. 1(c) starts first. Since the new messages
+
+from are immediately passed to , there is no need to store
+
+them, leading to the memory saving of
+
+units for extrinsic
+
+LLRs. The TSP algorithm leads to faster convergence and better
+
+error performance than the SP algorithm, while having the same
+
+computational complexity. Since the TSP algorithm exploits
+
+the turbo effects of only two supercodes, it converges slightly
+
+slower than the turbo decoding algorithm, but may achieve a
+
+higher throughput due to its fewer subiterations.
+
+3) Shuffled Decoding Algorithm: Essentially a column ver-
+
+sion of the turbo decoding algorithm, the shuffled decoding al-
+
+gorithm [27] splits column-wise into submatrices:
+
+. Each submatrix
+
+is one
+
+block column in (1). Correspondingly, is partitioned into
+
+disjoint subsets:
+
+, where denotes the
+
+set of variable nodes corresponding to
+
+.
+
+We may view each iteration of the SP algorithm as: first passes
+
+the messages from to all ’s
+
+concurrently,
+
+and then passes the messages from all ’s
+
+Similar to the non-overlapped SP decoding, the sequential
+
+processing of subiterations 1 and 2 in the TSP algorithm leads
+
+to low throughput and low HUE assuming memory-bank-based
+
+partly parallel decoder architectures. To improve the throughput
+
+and HUE, we propose the PTSP decoding algorithm, which es-
+
+sentially parallelizes subiterations 1 and 2 of the TSP algorithm.
+
+We illustrate the difference between the TSP and PTSP al-
+
+gorithms during the th iteration in Figs. 2(a) and (b). To sim-
+
+plify notation, in Fig. 2 we denote the set of messages from a
+
+set of check nodes
+
+to a set of variable nodes
+
+during the th iteration of the TSP decoding as
+
+, and that from to
+
+as
+
+. We denote those for
+
+the PTSP decoding as and respectively. For the TSP
+
+algorithm, we assume the memory banks are initialized with
+
+channel intrinsic LLRs and hence subiteration 2 in Fig. 1(c)
+
+starts first. At the th iteration of the TSP decoding, the de-
+
+coding of uses the extrinsic information of the
+
+th
+
+iteration from and itself, i.e.,
+
+is used when calcu-
+
+to concurrently as shown in Fig. 1(a). In the shuffled decoding, each iteration becomes serial subiterations as shown in Fig. 1(d): first passes the messages from to and from to , then passes the messages from to and from to , and so on. The shuffled decoding algorithm also achieves better error performance and faster convergence than the SP algorithm. At the expense of increasing both the number of additions and the number of evaluations per iteration roughly from
+
+lating
+
+, and the decoding of uses the information of
+
+the th iteration from , i.e.,
+
+is used when calculating
+
+. In the PTSP decoding, since the decoding of and
+
+is performed simultaneously, the most recent information can be
+
+exchanged during the decoding process. At the beginning of the
+
+th iteration, the decoding of uses the extrinsic information
+
+of the
+
+th iteration from and itself, i.e.,
+
+is used
+
+to per check node for the CNUs, the shuffled decoding algo-
+
+rithm leads to a memory saving of units for extrinsic LLRs
+
+[27].
+
+4) SSP Decoding Algorithm: The SSP algorithm [28] is
+
+essentially a column version of the TSP algorithm. is split
+
+column-wise into two submatrices
+
+, where
+
+when calculating , and the decoding of also uses the in-
+
+formation of the
+
+th iteration from , i.e.,
+
+is used
+
+when calculating
+
+. As the decoding proceeds, when part
+
+of the information of the th iteration from is available, the
+
+decoding of can use it, i.e.,
+
+is used when calculating
+
+is the leftmost block column and consists of the other
+
+. The decoding of can then use the more reliable infor-
+
+block columns in (1). has exactly one 1 in each row to save memory. Correspondingly, is split into two disjoint sets and , which correspond to and respectively. As illustrated in Fig. 1(e), each iteration of our SSP algorithm also has only two serial subiterations: first passes the messages from to , from to , and from to ; then passes the messages from to . Compared with the SP algorithm, the SSP algorithm has the same computational complexity, and achieves better error performance, faster convergence, and a memory saving of units for extrinsic LLRs.
+
+mation from , i.e.,
+
+can be used when calculating .
+
+Even more reliable information from is then produced and
+
+passed to . Thus, in the PTSP algorithm, increasingly more
+
+reliable information is exchanged between the two supercodes
+
+as the decoding proceeds. However, each time only part of the
+
+information exchanged is from the th iteration. Our simulation
+
+results show that our PTSP algorithm converges slightly slower
+
+than the TSP algorithm.
+
+Finally, each iteration of the PTSP algorithm has the same
+
+computational complexity as that of the SP and TSP algorithms.
+
+III. DECODING ALGORITHMS FOR PARTLY PARALLEL DECODER ARCHITECTURES
+
+The PTSP algorithm almost doubles the throughput of the TSP algorithm while leading to the same memory saving of units for extrinsic LLRs. Note that the number of memory units saved
+
+In memory-bank-based partly parallel decoder architectures of QC LDPC codes [10], [12], [13], due to memory access limitation, the CNUs for the rows in one block row and the VNUs for the columns in one block column are both carried out se-
+
+increases with , , and the code length, but the percentage of
+
+memory saving is always for any
+
+QC LDPC code.
+
+Hence, the percentage of memory saving is more pronounced
+
+for LDPC codes with smaller .
+
+quentially. In this case, having multiple serial subiterations in each iteration as in the turbo or shuffled algorithm leads to low B. TSSP Decoding of QC LDPC Codes
+
+decoding throughput. Hence, based on the TSP and SSP algo- To further improve the memory saving and convergence rate,
+
+rithms, we propose the PTSP and TSSP algorithms to further we propose our TSSP algorithm by combining the TSP and SSP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2902
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+TABLE I COMPARISON OF AVERAGE NUMBERS OF ITERATIONS FOR A (211, 3, 5) SFT CODE (MAXIMUM ITERATION NUMBER IS 50)
+
+during the decoding process. As illustrated in Fig. 4, instead of
+
+always using the information of the
+
+th iteration,
+
+and
+
+, the most recently updated information of the th it-
+
+eration,
+
+and
+
+, are used when they become available
+
+during the decoding process. Consequently, our TSSP algorithm
+
+leads to faster convergence than the TSP, SSP, and PTSP algo-
+
+rithms. Our TSSP algorithm also has the same computational
+
+complexity as the SP algorithm.
+
+C. Simulation Results
+
+Fig. 2. Message passing during the nth iteration of (a) TSP (b) PTSP decoding.
+
+H Fig. 3. Split the parity check matrix for an (m; 3; 5) QC LDPC code both
+row-wise and column-wise.
+
+algorithms. Given an
+
+QC LDPC code, we split its
+
+both row-wise and column-wise into four submatrices as shown
+
+in Fig. 3:
+
+is the top block row and
+
+consists of the other block rows;
+
+is the
+
+leftmost block column and
+
+comprises the other
+
+block columns. The breakup of partitions the set of check
+
+nodes into two disjoint sets and corresponding to
+
+and respectively, and partitions the set of variable nodes
+
+into two disjoint sets and corresponding to and
+
+respectively. has only one 1 in each column and has
+
+only one 1 in each row.
+
+As illustrated in Fig. 4, each iteration of our TSSP algorithm
+
+consists of three serial subiterations: first passes the messages
+
+from to ; then passes the messages from to , to
+
+, and to ; finally passes the messages from to . It is
+
+clear that subiterations 1 and 3 of the TSSP decoding combined
+
+equal subiteration 1 of the TSP decoding, and subiteration 2 of
+
+the TSSP decoding is the same as that of the TSP decoding.
+
+Since we apply the TSP decoding algorithm between and
+
+, we can save the memory corresponding to ( units).
+
+Since we apply the SSP decoding algorithm between and
+
+, we can further save the memory corresponding to
+
+(
+
+units). Hence, only the extrinsic information in
+
+needs to be stored. Furthermore, similar to the PTSP de-
+
+coding, more and more reliable information can be exchanged
+
+We consider a (211, 3, 5) SFT code [20] with block length
+
+and rate
+
+. Fig. 5 compares the bit error rate
+
+(BER) performance of the SP, OSP, turbo, shuffled, TSP, SSP,
+
+PTSP, and TSSP algorithms after 5, 15, and 50 iterations respec-
+
+tively. Setting the maximum number of iterations to 50, Table I
+
+compares the average numbers of iterations all the algorithms
+
+take to converge at different SNR values. Note that the OSP al-
+
+gorithm has the same BER performance and requires the same
+
+number of iterations to converge as the SP algorithm. The CNUs
+
+are carried out according to (2) and we use floating point rep-
+
+resentation of LLRs here. For the turbo decoding algorithm, we
+
+assume 3 supercodes. For the shuffled decoding algorithm, the
+
+five block columns are split into three groups with two, two, and
+
+one block column respectively. Note that the shuffled decoding
+
+cannot save memory with the assumed splitting. The turbo, TSP,
+
+and PTSP algorithms can all save , 33% for this code, of the
+
+total memory for extrinsic LLRs required by the SP algorithm.
+
+The SSP and TSSP algorithms can save and
+
+respectively, 20% and 46.7% respectively for this code, of the
+
+total memory for extrinsic LLRs required by the SP algorithm.
+
+Fig. 5 and Table I show that our PTSP and TSSP algorithms
+
+achieve better BER performance and faster convergence than
+
+the SP and OSP algorithms. At SNR of 2.5 dB, our PTSP and
+
+TSSP algorithms require 25.4% and 35.8% fewer iterations
+
+respectively than the SP algorithm. The faster convergence
+
+of our PTSP and TSSP algorithms potentially leads to higher
+
+throughput. Furthermore, although our PTSP algorithm con-
+
+verges slightly slower than the TSP algorithm as shown in
+
+Table I, it almost doubles the decoding throughput of the
+
+TSP algorithm. Notice that our TSSP algorithm combines the
+
+advantages of both the TSP and SSP algorithms, and achieves
+
+faster convergence than the TSP, SSP, and PTSP algorithms.
+
+We also performed simulations for other SFT codes and sim-
+
+ilar observations can be made.
+
+IV. PTSP DECODER ARCHITECTURE
+Based on our PTSP decoding algorithm, we propose our PTSP decoder architecture and implement it using FPGA. In this section, we first present the details of our PTSP decoder architecture, and then compare its FPGA implementation results with previously proposed decoder architectures.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2903
+
+Fig. 4. Message passing during the nth iteration of TSSP decoding.
+
+used to generate the memory addresses. The units in cor-
+
+respond to the 1’s in (
+
+,
+
+.
+
+Each 1 in has a row number and a column number, and
+
+hence each memory unit in has a row (memory) address
+
+and a column address, between which the difference is .
+
+The VCNFU, shown in Fig. 7, comprises one CNFU and
+
+VNFUs, each of which consists of the components inside the
+
+dashed rectangular boxes in Fig. 7. We refer to the CNFUs
+
+outside the VCNFU as CNFU-
+
+and the
+
+CNFU inside the VCNFU as CNFU-0. CNFU-
+
+performs the CNUs for the th block row, one row at each
+
+step. We refer to the VNFUs inside the VCNFU as VNFU-
+
+. VNFU- performs the VNUs for the th
+
+block column, one column at each step. Each VNFU has two
+
+parts, P1-VNFU and P2-VNFU, which consist of the compo-
+
+nents inside the dotted rectangular boxes to the left and right
+
+Fig. 5. BER performance comparisons for a (211, 3, 5) SFT code (dash line: 5 iterations; solid line: 15 iterations; dash-dot line: 50 iterations).
+
+of CNFU-0 respectively in Fig. 7. The VCNFU has three components: P1-VNFUs performing the VNUs for , CNFU-0 performing the CNUs for , and P2-VNFUs performing the
+
+VNUs for and making hard decisions. Hard decisions can be
+
+A. Hardware Requirement and Decoding Schedule
+
+obtained by simply taking sign bits, usually the most significant bits (MSB), of a posteriori LLRs. The VCNFU and the
+
+For an
+
+QC LDPC code, we propose a partly parallel CNFUs outside the VCNFU simultaneously implement subiter-
+
+decoder architecture based on our PTSP algorithm. Our PTSP ations 1 and 2 shown in Fig. 1(c), respectively.
+
+decoder uses one variable-check node function unit (VCNFU) Let
+
+denote the row addresses of the
+
+and
+
+check node function units (CNFUs). Also, ,
+
+memory banks for extrinsic LLRs on which the CNFUs op-
+
+, and memory banks—labeled as
+
+, erate in their respective block rows. Let
+
+(
+
+,
+
+), and
+
+denote the column addresses of the memory banks for hard de-
+
+respectively—are used to store channel intrinsic LLRs, extrinsic cisions, intrinsic and extrinsic LLRs on which the VNFUs op-
+
+LLRs, and hard decisions respectively. As mentioned before, erate in their respective block columns. Since the CNUs for
+
+there is no need to store the information from . Hence, the are performed by CNFU-0 immediately after the VNUs for
+
+memory banks for extrinsic LLRs correspond to . are performed by the VNFUs in the PTSP decoding, satisfies
+
+Fig. 6 shows the proposed decoder architecture for an ( ,3,5)
+
+. Thus, we can choose
+
+QC LDPC code.
+
+to maximize the information exchange be-
+
+The three types of memory banks differ in the number of ports tween the two supercodes. However, our simulation results show
+
+and wordlength. The
+
+memory banks for extrinsic LLRs that different values for have only marginal effects on error
+
+are dual-port while the memory banks for intrinsic LLRs are performance and convergence rate. Hence, we choose
+
+single-port. The number of ports for the hard decision memory
+
+for simplicity of implementation. The parity
+
+banks depends on the implementation of the parity check, and check matrix shown in Fig. 8 illustrates the starting addresses
+
+extra hard decision memory banks may be needed for fast imple- for an ( , 3, 5) QC LDPC code, where each box, also labeled
+
+mentation of the parity check. Each unit of the memory banks
+
+(
+
+,
+
+), corresponds to one
+
+for hard decisions has exactly one bit, while the wordlength
+
+. Note that the diagonal line inside the box labeled as
+
+for the memory banks for intrinsic and extrinsic LLRs depends denotes the position of 1’s in . We need to store only the ex-
+
+on quantization schemes, which are discussed in Section IV-B. trinsic LLRs that correspond to for
+
+. The bold
+
+Each memory bank consists of units, labeled with addresses dots denote the LLRs CNFU-1 and CNFU-2 are updating, and
+
+(not shown in Fig. 6)
+
+. Modulo- counters are the squares denote the LLRs the VCNFU is updating. The bold
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2904
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+m Fig. 6. Our PTSP decoder architecture for an ( ,3,5) QC LDPC code.
+
+dots and the squares are updated simultaneously at each step.
+
+in Fig. 7. CNFU-0 takes
+
+As the decoding proceeds, for example, when is increased to
+
+as input, and performs the
+
+the square with column address , the decoding of starts
+
+CNUs. Then the VNUs for are performed. The
+
+to use the most recent information from . Similarly, when
+
+updated extrinsic LLRs are written back to the
+
+is increased to the bold dot with row address , the decoding
+
+same memory units
+
+(
+
+,
+
+of starts to use the most recent information from . As
+
+), and hard decisions are written
+
+and continuously increase, more most recent information can
+
+back to the memory units with the column ad-
+
+be exchanged between the two supercodes. Finally, since the
+
+dress in the th memory bank for hard decisions,
+
+VCNFU performs the VNUs first and the CNFUs outside the
+
+denoted as
+
+in Fig. 7.
+
+VCNFU perform the CNUs, and they are updating different ex-
+
+(ii) CNFU-
+
+simultaneously reads
+
+trinsic LLRs in the memory banks simultaneously, the memory
+
+one LLR from each of the memory units with
+
+banks for extrinsic LLRs need to be properly initialized. That is,
+
+row address in the memory banks for extrinsic
+
+in each bank we initialize the memory units on which CNFU-1
+
+LLRs in the th block row, performs the CNUs,
+
+and CNFU-2 operate first with channel intrinsic LLRs, and the
+
+and writes the updated LLRs back to the same
+
+memory units on which the VCNFU operates first with 0’s.
+
+memory units.
+
+PTSP Decoder:
+
+(iii)
+
+,
+
+1) Initialization: Set
+
+and
+
+.
+
+. For the memory bank (
+
+, 3) Stop if either all parity checks are satisfied or the maximum
+
+), initialize the memory units with row
+
+iteration number is reached. Otherwise, go to 2 and start the
+
+addresses from 0 to
+
+, the shaded part
+
+next iteration
+
+.
+
+shown in Fig. 6, with channel intrinsic LLRs, and initialize Note that 2(i) and 2(ii) are referred to as VCNFU and CNFU
+
+the other memory units, the unshaded part shown in Fig. 6, processing steps, respectively, and they are carried out in par-
+
+with 0’s.
+
+allel. Hence, the memory banks for extrinsic LLRs are dual-
+
+2) Iteration
+
+: Repeat (i), (ii), and (iii) for times: port: one port is dedicated to the CNFUs while the other to the
+
+(i) VCNFU: First, VNFU-
+
+simul- VCNFU. At each step, the CNFUs outside the VCNFU read
+
+taneously reads one LLR from each of the
+
+and write the memory banks through one port, and at the same
+
+memory units with column address in the
+
+time the VCNFU reads and writes the memory banks through
+
+memory banks for extrinsic LLRs in the th block the other port. For the extrinsic LLRs in the shaded part shown
+
+column, denoted as
+
+in in Fig. 6, the CNUs are performed first, and for those in the un-
+
+Fig. 7. VNFU-
+
+also reads one shaded part, the VNUs are performed first. Each iteration of the
+
+intrinsic LLR from the memory unit with column PTSP decoding consists of CNFU processing steps and
+
+address in the th memory bank for intrinsic VCNFU processing steps. The CNUs and VNUs are performed
+
+LLRs, denoted as
+
+in Fig. 7. VNFU-
+
+exactly once for each extrinsic LLR in each iteration.
+
+then performs the VNUs for , and Finally, note that the same decoder architecture can also be
+
+produces the LLRs corresponding to the row ad- used to implement the TSP algorithm. Since subiterations 1
+
+dress in the top block row, denoted as
+
+and 2 shown in Fig. 1(c) are to be carried out sequentially, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2905
+
+m Fig. 7. VCNFU for an ( ,3,5) QC LDPC code.
+
+algorithm, the min-sum (MS) algorithm (see, e.g., [31]), is often used for finite precision implementations. In the MS algorithm, the VNUs are the same as in the SP algorithm, and the CNUs in (2) become
+(4)
+
+The MS algorithm can be directly applied to all the variants of
+
+the SP algorithm. For our PTSP algorithm, when the approxi-
+
+mation in (4) is used, we refer to it as the PTSP-MS algorithm.
+
+We assume both extrinsic and channel intrinsic LLRs are rep-
+
+resented by bits, and as in [17], [25], we consider
+
+. For
+
+the SP and PTSP algorithms, we consider two types of quan-
+m Fig. 8. Starting addresses of PTSP decoding for an ( ,3,5) QC LDPC code. tization schemes: uniform and non-uniform [32]. For the MS
+
+and PTSP-MS algorithms, we consider only uniform quantiza-
+
+memory banks for extrinsic LLRs are all initialized to channel intrinsic LLRs and only single-port memory banks are required for extrinsic LLRs.
+
+tion schemes. Let
+
+denote a -bit uniform quantiza-
+
+tion scheme with one sign bit, fractional bits, and
+
+integer bits. Let
+
+denote a -bit non-uniform quan-
+
+tization scheme with one sign bit and one flag bit. The num-
+
+bers of fractional and integer bits depend on the flag bit: when B. Quantization Schemes, Pipeline Schemes, and Parity Check the LLR magnitude is at least 1 and hence the flag bit is set to
+
+To demonstrate the advantages of our PTSP decoder archi- 1, fractional bits and
+
+integer bits are used; other-
+
+tecture, we implement it using FPGA. Quantization schemes, wise the flag bit is set to 0,
+
+fractional bits and no integer
+
+pipeline schemes, and parity check are all carefully designed to bits are used. The BER performance and average iteration num-
+
+improve the performance of our PTSP decoder architecture. In bers of different quantization schemes are compared with their
+
+order to make a fair comparison with the decoder architectures floating point counterparts for different algorithms in Figs. 9 and
+
+in [17], [25], we present the details of quantization schemes, 10 respectively. Note that the maximum iteration number is set
+
+pipeline schemes, and parity check assuming the same (256, 3, to 20 in all simulations. For each quantization type (uniform
+
+6) QC LDPC code used in [17], [25] although they can be easily or non-uniform), we present the simulation results for only the
+
+adapted to any QC LDPC code.
+
+quantization scheme that has the best BER performance or the
+
+1) Quantization Schemes: The quantization scheme is crit- smallest iteration number for each algorithm.
+
+ical since it affects not only area and power consumption of de- As can be seen from Figs. 9 and 10, for both floating point
+
+coder architectures, but also error performance. The func- and fixed point simulations, our PTSP and PTSP-MS algo-
+
+tion in the SP algorithm is usually implemented by look-up ta- rithms always achieve better BER performance and require
+
+bles (LUTs). Since is a non-linear function sensitive to fewer iterations than the SP and MS algorithms, respectively.
+
+quantization noise, a low-complexity approximation of the SP For both SP and PTSP algorithms, non-uniform quantization
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2906
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+Fig. 9. BER performance for the (256,3,6) QC LDPC code.
+
+Fig. 11. One CNFU implementing the MS algorithm for the (256, 3, 6) QC LDPC code.
+
+Fig. 12. Pipeline scheme for CNFU-1 and CNFU-2.
+
+2) Pipeline Schemes: As seen above, the PTSP-MS algo-
+
+rithm leads to faster convergence and hence requires fewer iter-
+
+ations than the MS algorithm. Since each iteration of the PTSP
+
+decoding consists of CNFU or VCNFU processing steps, the
+
+decoding throughput is determined by three factors: the average
+
+iteration number, the number of clock cycles per processing
+
+step, and the clock period. Thus, it is necessary to pipeline the
+
+CNFU and VCNFU carefully so as to minimize the latter two
+
+Fig. 10. Average numbers of iterations for the (256, 3, 6) QC LDPC code.
+
+factors, thereby maximizing the throughput. Since each CNFU (or VCNFU) processing step involves one memory read and one
+
+memory write, the number of clock cycles per processing step
+
+is also constrained by memory access. Since only one port is
+
+schemes lead to slightly better BER performance and faster available for the CNFU (or VCNFU), each CNFU (or VCNFU)
+
+convergence than uniform quantization schemes. Same as the processing step requires at least two clock cycles. To achieve
+
+SP algorithm, our PTSP algorithm is also sensitive to quantiza- high memory throughput and to reduce the number of clock cy-
+
+tion noise and its BER performance starts to show error floors cles per processing step, pipelined memory access is necessary.
+
+at BER around
+
+for both the uniform and non-uniform In the following, we propose our pipeline schemes that achieve
+
+quantization schemes.
+
+exactly two clock cycles per processing step while reducing the
+
+In comparison to the SP and PTSP algorithms, the MS and critical path delay.
+
+PTSP-MS algorithms are less sensitive to quantization noise and In the PTSP decoder shown in Fig. 6, the VCNFU and the
+
+no error floors are observed for both algorithms at BER below CNFUs outside the VCNFU work concurrently and access
+
+. For both the MS and PTSP-MS algorithms, the BER per- the memory banks for extrinsic LLRs concurrently through
+
+formance using fixed point is better than that using floating point different ports. Since the VCNFU is more complex than the
+
+at high SNR. Note that similar observations have been made in CNFUs, we need different pipeline schemes for this two kinds
+
+[31], [33]. Also, for both algorithms, the average iteration num- of hardware components.
+
+bers obtained using fixed point are almost the same as those ob- CNFU-1, CNFU-2, and CNFU-0 (inside the VCNFU) imple-
+
+tained using floating point. At SNR of 4.5 dB, the MS algo- ment the CNUs in (4). Direct implementation of the CNUs in
+
+rithm requires an average of 3 iterations to converge while our (4) introduces substantial delay since it needs to find, among
+
+PTSP-MS algorithm requires an average of 2.3 iterations, which numbers, first the minimum and then the second minimum. Our
+
+is 23% faster than the MS algorithm. Based on our simulation re- implementation of the CNUs, shown in Fig. 11, uses 12 MIN
+
+sults, our PTSP decoder architecture implements the PTSP-MS units (essentially comparators) and 12 XOR gates for this (256,
+
+algorithm, and also uses the (8:3)u quantization scheme as in 3, 6) code to find the minimum among numbers directly for
+
+[17], [25].
+
+each node. The 12 comparators and XOR gates are organized as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2907
+
+Fig. 13. (a) Critical path in the VCNFU. (b) Pipeline scheme for the VCNFU.
+
+a tree of
+
+levels, which is the min- Fig. 13(b), where
+
+, - for
+
+, and
+
+imum number of levels required for numbers. The tree struc-
+
+denote the memory read, computations required
+
+ture in Fig. 11 facilitates the pipeline schemes for the VCNFU in - for
+
+, and the memory write respectively
+
+and the CNFUs, and reduces critical path delay. Furthermore, at the th step of the VCNFU processing. At every odd clock
+
+the 3-level comparator tree is split into two parts, MS1 and MS2, cycle,
+
+,-
+
+,-
+
+, and -
+
+are
+
+consisting of one-level and two-level comparator trees respec- carried out in parallel. At every even clock cycle,
+
+,
+
+tively as shown in Fig. 11. The pipeline scheme for CNFU-1 -
+
+,-
+
+, and -
+
+are carried out in par-
+
+and CNFU-2 is shown in Fig. 12, where
+
+,
+
+, allel. As seen from Fig. 13(b), the memory is occupied by either
+
+and
+
+denote the memory read, the opera- a read or a write operation for each clock cycle after pipelining.
+
+tions required in MS1, the operations required in MS2, and the Thus, the access throughput of the memory is maximized, and
+
+memory write respectively at the th CNFU processing step. each step of the VCNFU processing also takes 2 clock cycles,
+
+At every odd clock cycle,
+
+and
+
+are car- ignoring the time to fill and to drain the pipeline.
+
+ried out in parallel. At every even clock cycle,
+
+and 3) Parity Check: Our PTSP decoding algorithm stops when
+
+are carried out in parallel. After pipelining, each step either the parity check equations are all satisfied or the max-
+
+of the CNFU processing takes 2 clock cycles, ignoring the time imum iteration number is reached. As seen in Fig. 6, in our PTSP
+
+to fill and to drain the pipeline. Since for each clock cycle the decoder, hard decisions are made by the VCNFU and written to
+
+memory is occupied by either a read or a write operation to the the hard decision memory banks. Since the VCNFU makes hard
+
+same port, the access throughput of the memory is maximized. decisions according to the addressing scheme shown in Fig. 8,
+
+The VCNFU essentially combines the function of CNFU-0 the parity check for the rows in the top block row is done
+
+and VNFUs. Each VNFU is split into P1-VNFU and immediately after the hard decisions have been made at each
+
+P2-VNFU, each of which consists of two adders. In each VCNFU processing step. Hence, only the parity check for the
+
+VCNFU processing step, each incoming extrinsic LLR to the bottom two block rows needs to access hard decision memory
+
+VCNFU goes through the signal path shown in Fig. 13(a). banks. The pipeline scheme for the parity check for the bottom
+
+We store the extrinsic and intrinsic LLRs in memory banks two block rows is shown in Fig. 14, where
+
+and
+
+using sign-magnitude (SM) and two’s-complement format,
+
+denote the memory read and parity check opera-
+
+respectively. Since two’s-complement representation of LLRs tion for the th processing step in the th block row. At every
+
+is more convenient for the VNUs and SM representation of odd clock cycle,
+
+and
+
+are carried
+
+LLRs is more convenient for the CNUs and, two sign-mag- out in parallel. At every even clock cycle,
+
+and
+
+nitude-to-two’s-complement (SM - 2’s) conversion blocks
+
+are carried out in parallel. Since for each clock cycle
+
+and two two’s-complement-to-sign-magnitude (2’s - SM) the memory is occupied by a read operation, the memory access
+
+conversion blocks are used in the VCNFU. Since the VCNFU throughput is maximized and the parity check for one row can
+
+involves more computations, we propose a different pipeline be finished in one clock cycle after pipelining. Since the parity
+
+scheme for the VCNFU to reduce the critical path delay while check for one row is twice as fast as one step of the CNFU
+
+minimizing the number of clock cycles per step. To reduce the processing after pipelining, the parity check for the two rows
+
+critical path delay, the computations required in the VCNFU CNFU-1 and CNFU-2 are updating are carried out one after an-
+
+is split into 6 pipeline stages, as shown in Fig. 13(a), where other by accessing the same hard decision memory banks twice.
+
+-
+
+denotes the th stage for the computa- Hence, the parity check for the bottom two block rows shares
+
+tions, and the dashed lines indicate the places where we insert the same addresses with CNFU-1 and CNFU-2, and does not
+
+pipeline registers. The computations required in all pipeline require extra address generation units. For our PTSP decoder
+
+stages are roughly balanced in terms of delays. Each step architecture, two sets of single-port memory banks are used
+
+of the VCNFU processing takes 8 clock cycles as shown in to store hard decisions. At the th iteration, the VCNFU writes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2908
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+TABLE II IMPLEMENTATION RESULTS OF THE (256, 3, 6) QC LDPC CODE ON XILINX VIRTEXII XC2V6000-5FF1152 FPGA
+
+requires 36 dual-port memory banks1 for extrinsic LLRs. In con-
+
+trast, our PTSP-MS decoder only requires
+
+dual-port memory banks for extrinsic LLRs, saving 6 and 24
+
+memory banks for extrinsic LLRs in comparison to the OSP-MS
+
+Fig. 14. Pipeline scheme for the parity check.
+
+and HEMS decoder architectures respectively. In addition to the extrinsic memory banks, our PTSP-MS decoder also needs
+
+single-port memory banks for intrinsic LLRs, and
+
+the hard decisions of the th iteration into one set of memory
+
+banks, and at the same time the parity check for the bottom two
+
+block rows accesses the other set of memory banks to check
+
+whether the hard decisions of the
+
+th iteration satisfy the
+
+parity check equations. The VCNFU and the parity check for
+
+the bottom two block rows alternate between the two sets of
+
+memory banks. Since the parity check for the bottom two block
+
+rows are checking the hard decisions of the previous iteration,
+
+the decoding latency caused by the parity check is one iteration.
+
+single-port memory banks for hard decisions. Totally, our PTSP-MS decoder architecture requires 30 memory banks as shown in Table II. Taking all memory banks into account, our PTSP-MS decoder architecture requires roughly 24% fewer bits of memory than the OSP-MS decoder architecture. Also, according to [11], [30], more than 85% of the power consumption in memory-bank-based partly parallel decoder architectures is due to memory access. The MS, OSP-MS, and our PTSP-MS decoder architectures access memory banks equally frequently, while the HEMS decoder accesses memory banks for extrinsic
+
+LLRs times as often as the other three decoders for the VNUs
+
+C. Implementation Results
+
+since it performs VNUs in parallel with one step of the CNUs. Thus, among all four decoder architectures, the HEMS archi-
+
+In order to make a fair comparison to the decoder architectures in [17], [25], we have implemented our PTSP decoder architecture using the same FPGA in [17], [25]: a Xilinx Vertex II xc2v6000-5ff1152 FPGA, which has 33792 slices and 144 block RAMs (each block RAM is 18 K bits). The synthesis and implementation are carried out using Xilinx ISE Version 8.1. In Table II, we compare the numbers of occupied slices, flip flops, 4-input LUTs, and block RAMs as well as critical path delays, average iteration numbers, and estimated decoding throughput with those from [17], [25]. Note that all four decoder architec-
+
+tecture has the highest memory power consumption, and our PTSP-MS architecture has the lowest memory power consumption due to its reduced memory requirement.
+From Table II, it can be seen that our PTSP-MS decoder architecture achieves higher throughput than all the other three decoder architectures. Assuming clock cycles are required to initialize the memory banks and one additional iteration is required for the parity check as in [25], the decoding throughput of our PTSP-MS decoder can be estimated in the same way as in [25] by
+
+tures in Table II are implemented using the same FPGA, and are
+
+all based on the MS algorithm with the same (8:3)u quantiza-
+
+(5)
+
+tion scheme. The implementation details of the two decoder ar-
+
+chitectures in [17] are reproduced from [17, Table I]. These two
+
+architectures, referred to as MS and HEMS architectures respec-
+
+tively, are based on the MS algorithm and the high-efficiency
+
+min-sum (HEMS) algorithm [17], respectively. The implemen-
+
+tation details of the OSP decoder architecture implementing the
+
+MS algorithm, referred to as the OSP-MS decoder, are repro-
+
+duced from [25, Table I]. The last row shows the FPGA im-
+
+plementation results for our PTSP-MS decoder architecture de-
+
+scribed in Sections IV-A and IV-B.
+
+Comparing all four decoder architectures, it is clear that our
+
+PTSP-MS decoder architecture requires less memory than all
+
+the other three decoder architectures. Each memory bank for in-
+
+trinsic and extrinsic LLRs is
+
+bits and each
+
+memory bank for hard decisions is
+
+. The OSP-MS
+
+decoder requires
+
+dual-port memory banks for extrinsic
+
+LLRs. The MS decoder architecture in [17] uses data inter-
+
+leaving to double the throughput, hence requires 36 single-port
+
+memory banks for extrinsic LLRs. The HEMS decoder [17] also
+
+where is the clock frequency, is the average iteration
+
+number, and is the number of clock cycles required for one
+
+step of processing after pipelining. is approximated by the
+
+inverse of the critical path delay as in [17], [25]. For both the
+
+OSP-MS and our PTSP-MS decoders, we have
+
+. For the
+
+MS and HEMS decoders,
+
+and it is assumed that the
+
+parity check can be finished in clock cycles. Hence, the equa-
+
+tion in [17, (8)] used to estimate throughput is slightly different
+
+from (5). Due to careful architectural design, our PTSP-MS de-
+
+coder architecture achieves higher throughput than the HEMS
+
+decoder architecture, but requires more combinational logic.
+
+Due to faster convergence and careful architectural design, our
+
+PTSP-MS decoder achieves higher throughput than the MS
+
+and OSP-MS decoder architectures. Since our pipeline scheme
+
+1In [34], the total numbers of block RAMs for the MS and HEMS decoder architectures are changed from 102 to 48, among which the number of block RAMs for extrinsic LLRs is still 36. Both numbers are still significantly larger than ours.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2909
+
+m Fig. 16. CVCNFU for an ( , 3, 5) QC LDPC code.
+
+node function unit (CVCNFU) and ,
+
+, and
+
+memory banks—labeled as
+
+,
+
+(
+
+,
+
+), and
+
+respectively—to store channel intrinsic LLRs, extrinsic LLRs,
+
+and hard decisions respectively. Fig. 15 shows the proposed
+
+decoder architecture for an ( , 3, 5) QC LDPC code. As men-
+
+tioned before, there is no need to store the LLRs corresponding
+
+to the top block row and the leftmost block column in Fig. 3,
+
+thus the
+
+memory banks for extrinsic LLRs
+
+correspond to in Fig. 3.
+
+The CVCNFU, shown in Fig. 16, comprises one VCNFU
+
+shown in Fig. 7 and
+
+CNFUs, each of which consists of the
+
+components inside the dashed boxes in Fig. 16. The CVCNFU
+
+has three components: a network of adders and
+
+imple-
+
+menting subiteration 1, a VCNFU implementing subiteration 2,
+
+and a network of adders (subtractors) and implementing
+
+subiteration 3. The two networks of adders and combined
+
+together constitute
+
+CNFUs.
+
+Let and denote the row and column addresses of the
+
+m Fig. 15. Our TSSP decoder architecture for an ( , 3, 5) QC LDPC code.
+
+CNFUs and VNFUs respectively. Since subiteration 2 of the TSSP decoding is essentially the VCNFU processing, still
+
+satisfies
+
+. Since
+
+the VNUs for the extrinsic LLRs in the memory banks corre-
+
+for the VCNFU requires extra registers to store intermediate sponding to is performed immediately after the CNUs for
+
+data, our decoder requires more flip-flops than the OSP-MS the extrinsic LLRs in the memory banks corresponding to ,
+
+decoder architecture, but less than the MS and HEMS decoder satisfies
+
+.
+
+architectures. Note that the throughput of all four decoder Setting to 0, the parity check matrix shown in Fig. 17 illus-
+
+architectures can be improved by increasing the parallelizing trates the starting addresses for an ( , 3, 5) QC LDPC code,
+
+factor (see, e.g., [34], [35]).
+
+and we need to store only the extrinsic LLRs that corresponds
+
+to
+
+. The bold dots de-
+
+V. TSSP DECODER FOR QC LDPC CODES
+
+note the LLRs CNFU-1 and CNFU-2 are working on, and the squares denote the LLRs the VCNFU are working on. In
+
+For applications with stringent memory requirements, we and , dots and squares coincide. Since the VCNFU per-
+
+propose a partly parallel decoder architecture that requires even forms the VNUs first, and the CNFU-1 and CNFU-2 perform
+
+less memory based on our TSSP algorithm. For an
+
+QC the CNUs, and they are updating different extrinsic LLRs in
+
+LDPC code, our TSSP decoder uses one check-variable-check the memory banks at each step, the memory banks for extrinsic
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+2910
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 9, OCTOBER 2008
+
+LLRs need to be initialized in a similar way as for the PTSP de-
+
+coder architecture.
+
+TSSP Decoder:
+
+1) Initialization: Initialize
+
+,
+
+and
+
+. For the memory bank (
+
+,
+
+, initialize the memory units with row
+
+addresses from to
+
+, the shaded part
+
+shown in Fig. 15, with intrinsic LLRs, and initialize the
+
+other memory units, the unshaded part shown in Fig. 15,
+
+with 0’s.
+
+2) Iteration
+
+: Repeat (i), (ii), (iii), and (iv) for
+
+times:
+
+(i) CNFU-
+
+simultaneously reads
+
+one LLR from each of the
+
+memory units
+
+with row address in the
+
+memory banks
+
+for extrinsic LLRs in the th block row, denoted
+
+as
+
+(
+
+,
+
+)
+
+in Fig. 16, performs the CNUs for the extrinsic
+
+LLRs in the memory banks corresponding to
+
+and produces the
+
+LLRs corresponding to
+
+address in the first block column, denoted as
+
+in Fig. 16.
+
+(ii) VCNFU: VCNFU simultaneously reads one LLR
+
+from each of the
+
+memory units with column
+
+address
+
+in the
+
+memory
+
+banks for extrinsic LLRs in the th block column,
+
+denoted as
+
+(
+
+,
+
+) in Fig. 16. VCNFU also reads one LLR
+
+from each of the memory units with column
+
+address in the memory banks for intrinsic
+
+LLRs, denoted as
+
+in Fig. 16.
+
+Together with the output from step 2(i),
+
+, VCNFU then performs the
+
+VNUs for , the CNUs for , and the VNUs for
+
+. The updated LLRs corresponding to
+
+(
+
+,
+
+) are written back
+
+to the same memory units, and the updated LLRs
+
+corresponding to
+
+are
+
+fed to step 2(iii). Hard decisions are written back
+
+to the memory units with column address in
+
+the th memory bank for hard decisions, denoted
+
+as
+
+in Fig. 16.
+
+(iii)
+
+takes as input
+
+and performs the CNUs for the ex-
+
+trinsic LLRs in the memory banks corresponding
+
+to . The updated LLRs are written back to the
+
+same memory units
+
+(
+
+,
+
+).
+
+(iv)
+
+,
+
+.
+
+3) Stop if either all parity checks are satisfied or the maximum
+
+iteration number is reached. Otherwise, go to 2 and start the
+
+next iteration
+
+.
+
+Note that 2(i), 2(ii), and 2(iii) are to be performed sequentially,
+
+and each iteration of the TSSP decoding hence takes more
+
+time than the PTSP decoding. Similar to our PTSP decoder
+
+described in Section IV, careful considerations for quantization
+
+schemes, pipeline schemes, and parity check are required to
+
+achieve high throughput for our TSSP decoder architecture.
+
+m Fig. 17. Starting addresses of TSSP decoding for an ( , 3, 5) QC LDPC code.
+Interested readers should have no difficulty filling in the details.
+The advantage of our TSSP decoder is that it leads to faster convergence and more significant memory saving than the PTSP decoder, as we have shown in Section III.
+VI. CONCLUSIONS
+In this paper, we propose PTSP and TSSP decoding algorithms for memory-bank-based partly parallel decoder architectures of QC LDPC codes, which achieve better BER performance and faster convergence than the SP algorithm while requiring less memory in implementation. We then propose a partly parallel decoder architecture based on our PTSP algorithm and implement it using FPGA. Our implementation shows that our PTSP decoder architecture achieves higher throughput and requires less memory in comparison to the decoder architectures in [17], [25] with the same FPGA and LDPC code. To further reduce the memory requirement, we also propose a partly parallel decoder architecture based on our TSSP algorithm.
+ACKNOWLEDGMENT
+The authors wish to thank the authors of [17] for providing the parity check matrix of the (256, 3, 6) QC LDPC code used in [17].
+REFERENCES
+[1] R. G. Gallager, Low Density Parity Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Info. Theory, vol. 47, no. 11, pp. 2711–2736, Nov. 2001.
+[3] A. Blanksby and C. Howland, “A 690-mw 1-Gbps 1024-b rate-1/2 lowdensity parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[4] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Block-interleaved LDPC decoders with reduced interconnect complexity,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 1, pp. 74–78, Jan. 2008.
+[5] E. Liao, E. Yeo, and B. Nikolic, “Low-density parity-check code constructions for hardware implementation,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2004, vol. 5, pp. 2573–2577.
+[6] S. Kang and I. Park, “Loosely coupled memory-based decoding architecture for low density parity check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 53, no. 5, pp. 1045–1056, May 2006.
+[7] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 53, no. 4, pp. 892–904, Apr. 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: MEMORY EFFICIENT DECODER ARCHITECTURES FOR QUASI-CYCLIC LDPC CODES
+
+2911
+
+[8] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[9] T. Zhang and K. K. Parhi, “Joint (3,k)-regular LDPC code and decoder/encoder design,” IEEE Trans. Signal Process., vol. 52, no. 4, pp. 1065–1079, Apr. 2004.
+[10] M. M. Mansour and N. R. Shanbhag, “Low power VLSI decoder architecture for LDPC codes,” in Proc. IEEE Int. Symp. Low Power Electron. Design (ISLPED), Aug. 2002, pp. 284–289.
+[11] Y. Li, M. Elassal, and M. Bayoumi, “Power efficient architecture for (3,6)-regular low-density parity-check code decoder,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2004, vol. 4, pp. 81–84.
+[12] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic low density parity check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+[13] Y. Dai and Z. Yan, “Optimal overlapped message passing decoding for quasi-cyclic low-density parity-check codes,” in Proc. Global Telecomun. Conf. (Globecom), Dec. 2005, vol. 4, pp. 2395–2399.
+[14] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magn., vol. 37, no. 2, pp. 748–755, Mar. 2001.
+[15] M. M. Mansour and N. R. Shanbhag, “High throughput LDPC decoders,” IEEE Trans. VLSI Syst., vol. 11, no. 12, pp. 976–996, Dec. 2003.
+[16] D. E. Hocevar, “A reduced compelxity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), 2004, pp. 107–112.
+[17] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Partially-parallel LDPC decoder based on high-efficiency message-passing algorithm,” in Proc. Int. Conf. Comput.Design (ICCD), Oct. 2005, pp. 503–510.
+[18] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, no. 3, pp. 684–698, Mar. 2006.
+[19] F. Guilloud, E. Boutillon, J. Tousch, and J. Danger, “Generic description and synthesis of LDPC decoders,” IEEE Trans. Commun., vol. 55, no. 11, pp. 2084–2091, Nov. 2007.
+[20] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004.
+[21] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[22] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient encoding of low-density parity-check codes,” in Proc. Global Telecomun. Conf. (Globecom), Dec. 2005, vol. 3, pp. 1205–1210.
+[23] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[24] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 9, pp. 533–547, Sep. 1981.
+[25] N. Chen, Y. Dai, and Z. Yan, “Partly parallel overlapped sum-product decoder architectures for quasi-cyclic LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Oct. 2006, pp. 226–231.
+[26] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architecture,” in Proc. Global Telecomun. Conf. (Globecom), Nov. 2001, vol. 5, pp. 3019–3024.
+[27] J. Zhang and M. P. C. Fossorier, “Shuffled belief propagation decoding,” in Proc. Asilomar Conf. Signals, Syst. Comput., Nov. 2002, vol. 1, pp. 8–15.
+[28] Y. Dai, Z. Yan, and N. Chen, “High-throughput turbo-sum-product decoding of LDPC codes,” in Proc. CISS 2006, Mar. 2006, pp. 839–844.
+[29] Y. Dai, Z. Yan, and N. Chen, “Parallel turbo-sum-product decoder architecture for quasi-cyclic LDPC codes,” in Proc. ACM Great Lakes Symp. VLSI (GLSVLSI), May 2006, pp. 312–315.
+
+[30] T. Ishikawa, K. Shimizu, T. Ikenaga, and S. Goto, “High throughput decoder for low-density parity-check code,” in Asia and South Pacific Conf. Design Autom., Jan. 2006, pp. 112–113.
+[31] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. Hu, “Reduced-compelxity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[32] T. Zhang, Z. Wang, and K. K. Parhi, “On finite precision implementation of low density parity check codes,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2001, vol. 4, pp. 202–205.
+[33] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 53, pp. 549–554, Apr. 2005.
+[34] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Partially-parallel LDPC decoder achieving high-efficiency message-passing schedule,” IEICE Trans. Fundamentals, vol. E89-A, pp. 969–978, Apr. 2006.
+[35] D. E. Hocevar, “LDPC code construction with flexible hardware implementation,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2003, vol. 4, pp. 2708–2712.
+Yongmei Dai received the B.S. degree from Peking University, Beijing, Chinain 1998, and the M.Eng. degree from National University of Singapore, Singapore, in 2001. She is currently working toward the Ph.D degree at Lehigh University, Bethlehem, PA.
+From 2001 to 2004, she was with the Institute for Infocomm Research (I2R), Singapore, working on MIMO-OFDM systems. Her research interests are in error control coding and signal processing for wireless communication systems.
+Ning Chen received the B.E. and M.E. degrees in electrical engineering from Tsinghua University, Beijing, China, in 2001 and 2004, respectively. Currently, he is working toward the Ph.D. degree in electrical engineering at Lehigh University, Bethlehem, PA.
+His research interests include design of VLSI architectures and circuits of digital signal processing and communication systems, with the emphasis on error-correcting coding.
+Zhiyuan Yan (S’00-M’03–SM’08) received the B.E. degree in electronic engineering from Tsinghua University, Beijing, China, in 1995 and the M.S. and Ph.D. degrees, both in electrical engineering, from the University of Illinois, Urbana, in 1999 and 2003, respectively.
+During summer 2000 and 2002, He was a Research Intern with Nokia Research Center, Irving, TX. He joined the Electrical and Computer Engineering Department of Lehigh University, Bethlehem, PA, as an Assistant Professor in August 2003. His current research interests are in coding theory, cryptography, wireless communications, and VLSI implementations of communication and signal processing systems. He is a member of the IEEE Information Theory, Communications, and Computer Societies.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:12:14 UTC from IEEE Xplore. Restrictions apply.
+
+

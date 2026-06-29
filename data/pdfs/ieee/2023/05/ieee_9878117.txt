@@ -1,0 +1,817 @@
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+1705
+
+LIAD: A Method for Extending the Effective Time of 3-D TLC NAND Flash Hard Decision
+Xiaolei Yu , Jing He, Qianhui Li, Bo Zhang, Xianliang Wang, Liu Yang, Tianchun Ye, Qi Wang, and Zongliang Huo
+
+Abstract—Triple-level cell NAND flash memory is widely used today due to its higher storage density and capacity. However, with the increase in the storage density, lower reliability results in more read times for flash memory and significantly reduces the read performance. In order to avoid unnecessary read operations, this article proposes a hard decision–soft decoding method called location information-assisted decoding (LIAD) method, which determines the additional information required for decoding by mutual information, and then transmits the required information to correct the log-likelihood ratio (LLR). Different from the conventional LLR correction algorithm, this method does not require additional read operations and correct data. Only using sensing results, our method can reduce uncorrectable error bit rate (UBER) by up to 99%, and the system read latency under SSDsim (Hu et al. 2011) simulation can be reduced by up to 53%.
+Index Terms—3-D triple-level cell (TLC) NAND flash memory, bit error rate (BER), low-density parity check code (LDPC), mutual information, read latency.
+I. INTRODUCTION
+N OWADAYS, people cannot live without a variety of storage devices. From the initial 3.5-inch floppy disks to high-speed solid-state drives, storage capacity and speed have always been the most crucial indicators of storage devices, especially for data centers and commercial servers. The original NAND flash memory debuted as a single-level cell (SLC) having only one nonzero state. Later, available equipment uses multiple voltage levels, known as the multilevel cell (MLC).
+Manuscript received 21 March 2022; revised 24 May 2022 and 2 July 2022; accepted 11 July 2022. Date of publication 5 September 2022; date of current version 21 April 2023. This article was recommended by Associate Editor P. R. Panda. (Corresponding authors: Zongliang Huo; Qi Wang; Tianchun Ye.)
+Xiaolei Yu is with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing 100029, China, also with the School of Electronic, Electrical, and Communication Engineering, University of Chinese Academy of Sciences, Beijing 100049, China, and also with Yangtze Memory Technologies Company Ltd., Beijing 100049, China (e-mail: yuxiaolei@ ime.ac.cn).
+Jing He, Qianhui Li, Bo Zhang, Xianliang Wang, and Liu Yang are with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing 100029, China, and also with the School of Electronic, Electrical, and Communication Engineering, University of Chinese Academy of Sciences, Beijing 100049, China (e-mail: hejing@ime.ac.cn; liqianhui@ime.ac.cn; zhangbo@ime.ac.cn; wangxianliang@ime.ac.cn; yangliu@ime.ac.cn).
+Tianchun Ye and Qi Wang are with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing 100029, China (e-mail: wangqi1@ime.ac.cn; tcye@ime.ac.cn).
+Zongliang Huo is with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing 100029, China, and also with Yangtze Memory Technologies Company Ltd., Beijing 100049, China (e-mail: huozongliang@ime.ac.cn).
+Digital Object Identifier 10.1109/TCAD.2022.3191548
+
+Recently, with the emergence of the triple-level cell (TLC), the problem of errors caused by further narrowing the distribution state within a certain threshold voltage range has become more serious, making the conventional decode method incur more read operations, which leads to unbearable read latency. So, this article wants to address a key question: can we get more information from the hard decision?
+The answer is yes. Recently, many researchers have used communication principles in flash memory to study similar problems. Wang et al. [2] assumed an independent and identically distributed (i.i.d.) Gaussian threshold distribution for each level of MLC NAND flash memory and proposed the flash memory N-M channel model. By calculating the mutual information of the flash memory channel under different read voltages, a method of taking the maximum mutual information as the read voltage is proposed. However, the threshold distribution in TLC NAND Flash memory does not satisfy i.i.d. We observe that as the threshold voltage of the flash memory increases, the variance of its distribution state will increase. Therefore, using this method to calculate mutual information is not accurate. Aslam et al. [3] optimized the threshold voltage model, but still uses the N-M channel model proposed in [2], which brings two problems. First, the N-M channel model simultaneously considers the mutual information of N distributed states (four for MLC, eight for TLC) and M threshold voltage quantization regions of the flash memory. With the increase of N and M, the computational complexity of mutual information increases exponentially. Second, in the decoding stage, different logical pages will be decoded separately, considering the mutual information of all distributed states will causing errors (for example, to decode the lower page of MLC, we only need to distinguish the E and P1 states and the P2 and P3 states. At this time, the error between the E and P1 distribution states does not affect the decoding result, so it is wrong to calculate the mutual information between the E and P1 distribution states). Due to the unique physical device characteristics of 3-D TLC NAND flash memory, Wu et al. [4] proposed to use the error mode in TLC to correct the decoding log-likelihood ratio (LLR), but the correction parameters only use statistical laws and lack mathematical guidance. Moreover, the correction needs to know the correct data of the other two logical pages in a physical page, which reduces the algorithm’s robustness and increases the read latency under random read requests.
+This article uses the threshold voltage model proposed in [3] to model the threshold voltage level of 3-D TLC NAND flash
+
+1937-4151 c 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1706
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+Fig. 1. Illustration of TLC NAND flash memory threshold voltage levels and sensing operation.
+
+memory and proposed a more correct 2-M transition probability model to study how to optimize the read operation through mutual information. A hard decision–soft decoding stage is added between conventional hard decision hard decoding and soft decision soft decoding. This is done by transmitting the sensing data to obtain additional information. This article finally determined the maximum information that the 3-D TLC NAND flash memory channel can obtain without additional read operations. For sequential read requests, the location information-assisted decoding (LIAD) method does not need to know the corrected data, only using the sensing results we can increase the flash memory effective retention time by 100%. For random read requests, the method proposed in this article can also increase the retention time by 11%.
+The remainder of this article is organized as follows. Section II introduces the basic knowledge of 3-D TLC NAND flash memory, low-density parity check (LDPC) codes, and SSDsim simulator. Section III introduces the flash memory 2-M channel model and explains its role in the algorithm proposed in this article. Section IV introduces how the LIAD algorithm optimizes the read operations by using the 2-M channel model under different read requests. Section V provides simulation results and experimental results, and Section VI gives the conclusion.
+II. BACKGROUND
+In this section, we first introduce some basic concepts in NAND flash memory, and in the following sections, we give a more comprehensive introduction to the knowledge involved in the algorithm.
+Compared to SLC and MLC, TLC NAND flash memory stores more information bits in one cell, which results in a smaller margin between the two threshold distribution states, making it easier to generate errors. Like MLC NAND flash memory, TLC NAND flash memory usually uses Gray Code when mapping information bits to voltages in TLC cells so that adjacent levels are only different in one bit. Fig. 1 shows an example of 3 bit/cell TLC NAND flash memory. Voltage levels E, S1, S2, S3, S4, S5, S6, and S7 represent information bits “111,” “110,” “100,” “000,” “010,” “011,” “001,” “101,” and “100,” respectively. This article uses physical pages to represent a combination of the lower page, middle page, and upper page. The most significant bit (MSB), center significant bit (CSB), and least significant bit (LSB) in the physical page correspond to the upper, middle, and lower logic page, respectively.
+
+Fig. 2. Illustration of TLC NAND flash memory page read operation.
+Retention time refers to the time that data is stored in flash memory, and effective retention time refers to the time that data is stored in flash memory to an unbearable UBER. Obviously, the effective retention time is different under different lifetime noise and decoding algorithm. A decoding algorithm with stronger error correction capability means a longer effective retention time.
+A. Read Operation of 3-D TLC NAND Flash Memory
+As more than one bit is stored in a single cell, the read operations of TLC NAND flash memory are also complicated. As shown in Fig. 1, Because sense-amplifier comparator provides at most one bit of the information about the threshold at a time, if the cell voltage is on the left of the reading voltage, it contains logic “1”; otherwise, it contains logic “0.” This operation is called sensing. So, in TLC NAND flash memory, reading one page requires at least two sensing operations. As shown in Fig. 2, when reading the lower page, the flash cell needs to be sensed twice by changing the read voltage to V1 and V5, and the sensing result are expressed as D1 and D2, respectively. The final data for the lower page is then represented as D1 ⊕ D2. The read of the upper page is similar, except that the reading voltages need to be set to V3 and V7. The final data is represented as D6 ⊕ D7. For the middle page, the flash cell is sensed three times by changing the read voltages to V2, V4, and V6, representing the results of D3, D4, and D5, respectively. The final data for the middle page is represented as D3 ⊕ D4 ⊕ D5.
+The read requests sent to the flash memory can be divided into two types: 1) sequential read requests and 2) random read requests [6]. Sequential read request means that the read operation is performed in the order from the lower page to the upper page. This brings more available device characterization information to the decoding algorithm, so most LLR correction algorithms (LCAs) only take effect on such read requests. Random read request means that the logical page to be read by the read operation is irregular and arbitrarily specified. This
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1707
+
+makes the characteristics of flash memory devices unable to be effectively utilized, thus posing a greater challenge to the decoding algorithm. As far as we know, very few papers discuss how to optimize the decoding algorithm under this read request.
+B. Basics of LDPC Code
+LDPC code is known as the capacity proximity code for AWGN channels, defined by a sparse M × N parity-check matrix. This matrix can be represented as a Tanner graph with N variable nodes and M check nodes. We can use multiple algorithms, such as the PEG algorithm [7] and the ACE algorithm [8] to generate LDPC codes. Because storage systems usually require a bit error rate (BER) lower than 10−12, and the storage channel is different from the AWGN channel, there has been a lot of research on how to use LDPC in flash memory including [9], [10], [11], [12], [13]. At present, QC-LDPC is mainly used in flash memory controllers.
+Error correction is realized by belief propagation algorithm [14], iteratively calculating the decode messages between variable nodes and check nodes. LDPC decoding schemes can be grouped into two types: 1) hard decision and 2) soft decision. Hard decision uses a single read voltage to distinguish between two adjacent storage states. Of course, we can use multiple read operations between two adjacent distinguish states to improve the decoding performance, multiple read operations can provide more accurate LLR, which is called soft decision. The process of decoding using hard decision information is called hard decoding, and using soft decision information is called soft decoding. Hard decoding is faster than soft decoding, but with less error correction capability [15]. However, the NAND flash memory read latency is proportional to sensing accuracy, soft decision will result in longer read latency. Therefore, extending the effective retention time of hard decision is necessary.
+The state-of-the-art LCAs are divided into two types: one is use additional reads to get more accurate decoding LLR. Ouyang et al. [16] analyzed the position of the optimal read voltage under nonuniform quantization in detail. This kind of method has a complete mathematical analysis and theoretical basis, but inevitably requires more read times, which has an impact on the system performance. another is to use the characteristics of NAND flash memory devices to optimize the decoding LLR. Wu et al. [4] proposed the error mode aware LDPC (EMAL) algorithm. It uses the numerical correlation characteristics of flash memory cell errors to identify different error modes, and then corrects the decoding LLR according to the empirical formula. It guesses the numerical reliability of the high RBER logic page based on the combination of the values in the two logic pages with the low RBER. But this kind of method needs to read three sequential logic pages at the same time, and the lower RBER logic page needs to be decoded correctly. So, the effect is not so good in practical applications.
+C. Introduction to SSDSim
+SSDSim is a widely used accurate and multitiered SSD simulator. It obtains the waiting time, processing time, response
+
+time of each request, total erasure count, buffer hit count, and other detailed information by using the I/O trace file provided by the solid-state storage initiative workload I/O capture program (SSSI WIOCP) [17]. Most of the LCAs have a certain system overhead. For example, the algorithm proposed by Zhang et al. [18]. uses the flash pair bit error (PBE) feature to correct the decode LLR, which requires sequential reading of flash logical pages. The algorithm proposed by Kong et al. [19]. uses the flash cell to cell interference to correct the decoding LLR, which requires sequential reading of flash physical pages. These constraints will more or less affect system performance. However, very few papers use the system performance to measure the effectiveness of the LCA. This article uses flash memory chips from Yangtze Memory Technologies Company Ltd. (YMTC) to collect data sufficient for system simulation. Therefore, this article will use SSDSim to verify the algorithm’s effectiveness.
+III. 3-D TLC NAND FLASH MEMORY 2-M CHANNEL MODEL
+As we mentioned above, the N-M flash memory channel model has some errors, so this article proposes a 2-M flash memory channel model to obtain accurate mutual information. According to the mutual information results, we can divide the flash memory channels into three categories, that is, the algorithm proposed in this article does not need to be use (corresponding to the early retention time, the RBER is low), the algorithm proposed in this article can be used (corresponding to the middle retention time, the RBER is high), the algorithm proposed in this article cannot be used (corresponding to the end of retention time, the RBER is too high). If we decide to use the algorithm proposed in this article, we will determine the decoding information we need through the 2-M model. It should be pointed out that the algorithm proposed in this article extend the effective retention time without increasing read times, so it is suitable for the stage of high RBER. It is necessary to increase the number of reads for too high RBER.
+We use the lower page of TLC NAND flash memory as an example and give the channel models of its hard decision and soft decision, respectively. We consider four additional read voltages (six in total) in the soft decision and quantize the threshold voltage into seven different regions. As shown in Fig. 3, hard decision and quantized soft decision, respectively, correspond to 2-input 2-output, and 2-input 7-output discrete memoryless channels. Note that the distribution state represented by i and the read voltage are independent. “Region” represents an area divided by read voltage, so there are seven Regions for six read operations. But i from 1 to 8 represents eight distribution states from the E state to P7 state independent of read voltage.
+The input to the channel is represented by 0 and 1 per logical page, and the output is set to the threshold voltage region divided by the read voltage. According to the threshold distribution Gray Code of Fig. 1, the number “0” on the lower page corresponds to i = 2, 3, 4, 5 and the number “1” on the lower page corresponds to i = 1, 6, 7, 8. Similarly, the number 0 on the middle page corresponds to i = 3, 4, 7, 8 and the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1708
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+According to the transition probability, we can use the following formula to calculate the mutual information between input and output, and we can easily extend the calculation of mutual information to other read times
+
+Fig. 3. Illustration of TLC NAND flash memory 2–7 channel module.
+
+I(X; Y) = H(X) − H(X|Y)
+
+= H 1, 1 − 22
+
+8 i=1
+
+G(i, 8
+
+Vex1
+
+)
+
+H(P1,
+
+P2
+
+)
+
+−
+
+8 i=1
+
+G(i,
+
+V1)
+
+−
+
+8
+
+8 i=1
+
+G(i,
+
+Vex1)
+
+H
+
+(P3,
+
+P4)
+
+−
+
+8 i=1
+
+G(i,
+
+Vex2)
+
+−
+
+8
+
+8 i=1
+
+G(i,
+
+V1)
+
+H
+
+(P5,
+
+P6)
+
+−
+
+8 i=1
+
+G(i,
+
+Vex3)
+
+−
+
+8
+
+8 i=1
+
+G(i,
+
+Vex2)
+
+H(P7,
+
+P8)
+
+−
+
+8 i=1
+
+G(i,
+
+V5)
+
+−
+
+8
+
+8 i=1
+
+G(i,
+
+Vex3)
+
+H
+
+(P9,
+
+P10)
+
+−
+
+8 i=1
+
+G(i,
+
+Vex4)
+
+−
+
+8
+
+8 i=1
+
+G(i,
+
+V5)
+
+H
+
+(P11,
+
+P12)
+
+− 1−
+
+8 i=1
+
+G(i,
+
+8
+
+Vex4)
+
+H(P13,
+
+P14
+
+)
+
+(3)
+
+number 1 on the middle page corresponds to i = 1, 2, 5, 6. The number 0 on the upper page corresponds to i = 4, 5, 6, 7 and the number 1 on the upper page corresponds to i = 1, 2, 3, 8. The transition probability P1 of the lower page represents the probability that the voltage of the four distributed state cells represented by the number 0 in the lower page is smaller than the read voltage Vex1. For the 2-input 7-output channel model, we can obtain the transition probability P1 to P14 by calculating the probability density function of the threshold voltage model proposed in paper [3]. According to the 2–7 channel model in Fig. 3, we can obtain a total of seven groups of transition probabilities, that is, a group of P1, P2, a group of P3, P4, . . . and a group of P13 and P14. Each group of transition probability represents the probability that the cell voltage of the distributed state represented by the lower page numbers 0 and 1 falls within the specified region
+
+P1 =
+
+G(i, Vex1)
+
+i=2,3,4,5
+
+P2 =
+
+G(i, Vex1)
+
+i=1,6,7,8
+···
+
+···
+
+P13 = 1 −
+
+G(i, Vex4)
+
+i=2,3,4,5
+
+P14 = 1 −
+
+G(i, Vex4)
+
+(1)
+
+i=1,6,7,8
+
+where the calculation of the transition probability from P3 to P12 is similar to P1 and P2. G(i, v) is the probability density function, μi and σi represent the mean and variance of the ith
+distribution of TLC NAND flash memory
+
+G(i, v) =
+
+v √1
+
+−
+e
+
+(v−μi )2
+2σi2
+
+dx.
+
+(2)
+
+−∞ 2π σi
+
+where H(X) is the entropy function [20]
+
+H(X) = − p(x) log p(x)
+
+x∈X
+
+H(X|Y) = p(y)H(X|Y = y).
+
+(4)
+
+y∈Y
+
+Using the above transition probability model, we can calculate the decode LLR of different regions. We assume that the data is completely random before writing, so the written data satisfies P(x = 0) = 1/2, P(x = 1) = 1/2. The LLR calculation formula for each region of the 2-2 transition probability model is as follows [21]:
+
+LLRRegion1,2,6,7
+
+=
+
+log
+
+P1 P2
+
+LLRRegion3,4,5
+
+=
+
+log
+
+P3 . P4
+
+(5)
+
+The LLR calculation formula for each region of the 2–7 transition probability model is as follows:
+
+LLRRegion1
+
+=
+
+log
+
+P1 P2
+
+LLRRegion2
+
+=
+
+log
+
+P3 P4
+
+LLRRegion3
+
+=
+
+log
+
+P5 P6
+
+LLRRegion4
+
+=
+
+log
+
+P7 P8
+
+LLRRegion5
+
+=
+
+log
+
+P9 P10
+
+LLRRegion6
+
+=
+
+log
+
+P11 P12
+
+LLRRegion7
+
+=
+
+log
+
+P13 P14
+
+.
+
+(6)
+
+IV. LOCATION INFORMATION-ASSISTED DECODING
+In this section, we describe the LIAD method principle and decoding algorithm for random read and sequential read request. As mentioned above, we try to insert a hard decision soft decoding phase into the traditional decoding algorithm,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1709
+
+Fig. 4. Decoding flowchart to explain the LIAD method.
+
+which will add a new buffer before initiating soft decision. The general approach is: we use the sensing result instead of the read operation result for decoding. So, we need to use the 2-M model to determine the sensing results we need, which are different under random and sequential read requests.
+A. LIAD Principle
+We use the decoding flowchart shown in Fig. 4 to illustrate the difference between this algorithm and the conventional LLR correct algorithm. First, we save the threshold voltage model in the flash memory controller, which can get the approximate threshold voltage distribution according to P/E and retention time. When a read request comes, we determine
+
+the sensing data needed for decoding. This is done by calculating the channel capacity using the 2-M channel model mentioned in the previous section. Shannon’s law [22] tells us that the maximum code rate that can be transmitted on the channel is less or equal to the channel capacity. Second, We transmit logical page data and the sensing data required for decoding at the appropriate time. Using sensing data, we can optimize the logic page decoding LLR. If we still fail to decode we start the conventional soft decoding process. The impact of different read requests is: under random read requests, we can only use limited sensing results. As shown in Fig. 5, we can only use V1 and V5 sensing results in the lower page decoding process. under sequential read requests, if one
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1710
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+Fig. 5. Lower page transition probability model with logic page location information.
+sensing data is not enough to decode successfully, we can wait for the sensing data of other logical pages and send them out. we will perform seven read operations on three logical pages, and can obtain more sensing information. As shown in Fig. 7, we can use the sensing results of V2, V3, V4, and so on. So, we calculate the new channel transition probability by replacing Vex1, Vex2, and Vex3 in Fig. 3 with V2, V3, and V4 and the decoding performance is better. This is why we propose 2–7 channels in Section III.
+The steps of mutual information calculation (MIC) and LLR correction are shown in Algorithms 1 and 2.
+B. LIAD Decoding Algorithm for Random Read Request
+In this section, we introduce the decoding algorithm under random read requests. The results show that it only needs to send data at most two times to get all the information needed by the method.
+In the random read process, as shown in Fig. 5, taking the lower page as an example, in the hard decision, because the results of two sensing operations are NXORed, we actually lose the position of logic 1, that is, the decoder cannot know whether the logic 1 is in the E state or the P5, P6, and P7 states. By collecting experimental data, we found that the transition probability of the flash memory cell in the Region1 is completely different from the transition probability in Region3. This indicates that the decoding performance will be improved if the location information of E state can be known. Especially, after a certain retention time, because the cell voltage shifts to the left, Region1 basically no longer has 0 to 1 errors, while Region3 will have more 0 to 1 errors.
+Fortunately, it is easy to get the location information for Region1, because in the hard decision, we have actually obtained the location of Region1, that is, the logic 1 in D1,
+
+Algorithm 1 MIC Algorithm
+
+Input: Read voltage list Vt = {V1, V2, . . . , Vn}, P/E cycle time C, retention time R, page type lower, middle, upper Output: Mutual information
+
+1: The μi(R, C) and σi(R, C) of the distribution state determined by R and C is abbreviated as μi and σi. l0 and l1 represents the set of threshold distribution states {2, 3, 4, 5} and {1, 6, 7, 8}. Which
+
+are the distribution states of lower page logic zero and one. m0, m1, u0 and u1 are the same. 2: I(X; Y) = H(X) − H(X|Y)
+
+3: H(X) = − p(x) log p(x) = 1
+
+x∈X
+4: H(X|Y) = p(y)H(X|Y = y)
+
+y∈Y
+
+5: L0 = G(i, V) L1 = G(i, V)
+
+i∈l0
+
+i∈l1
+
+6: M0 = G(i, V), M1 = G(i, V)
+
+i∈m0
+
+i∈m1
+
+7: U0 = G(i, V) U1 = G(i, V)
+
+i∈u0
+
+i∈u1
+
+8: if pagetype = lower then
+
+9: 10:
+
+for V = V1 to H(X|Y)+ =
+
+Vn
+L0
+
+do
++L1
+
+2
+
+H(
+
+L0 L0 +L1
+
+,
+
+L1 L0 +L1
+
+)
+
+11: end for
+
+12: 13:
+
+H else
+
+(ifXp|Ya)g+ety=pe2=−Lm20−idLd1lHe (th2−e1nL−0L−0L1
+
+,
+
+1−L1 2−L0−L1
+
+)
+
+14: replace L0, L1 with M0, M1. 15: else
+
+16: replace L0, L1 with U0, U1. 17: end if
+
+Algorithm 2 LCA
+
+Input: Read voltage list Vt = {V1, V2, . . . , Vn}, P/E cycle time C, retention time R, page type lower, middle, upper Output:
+
+LLRi
+
+1: The μi(R, C) and σi(R, C) of the distribution state determined by R and C is abbreviated as μi and σi. l0 and l1 represents the set of threshold distribution states {2, 3, 4, 5} and {1, 6, 7, 8}. Which
+
+are the distribution states of lower page logic zero and one. m0, m1, u0 and u1 are the same. LLRi represents the LLR of Region i
+
+2: if pagetype = lower then
+
+G(i,V1)
+
+3: LLR1 = log i∈l0 G(i,V1)
+
+i∈l1
+4: for j = 2 to n − 1 do
+
+G(i,Vj+1)− G(i,Vj)
+
+5:
+
+LLRi
+
+=
+
+log
+
+i∈l0
+
+i∈l0
+
+G(i,Vj+1 )−
+
+G(i,Vj)
+
+i∈l1
+
+i∈l1
+
+6: end for
+
+1− G(i,Vn)
+
+7:
+
+LLRn
+
+=
+
+log
+
+i∈l0
+1−
+
+G(i,Vn)
+
+i∈l1
+8: else if pagetype = middle then
+
+9: replace l0, l1 with m0, m1. 10: else
+
+11: replace l0, l1 with u0, u1. 12: end if
+
+but because our final data is D1 ⊕ D2, we lost this part of the information. So, we can transmit the data D1 to get the location of Region1 and Region3. Due to the reversibility
+of the NXOR operation, D2 can be obtained by using the D1 ⊕ D8. In this way, we get the data locations of Region1 and Region3.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1711
+
+Algorithm 3 Decode Algorithm
+
+Input: Initial decoding LLR, P/E cycle time C, retention time R, Code rate CR Output: Decoded bits of current page
+
+1: The decoding algorithm is divided into two parts: mutual
+
+information calculation and LLR correction
+
+2: Initial LLR
+
+3: if pagetype = lower then
+
+4: MI = MIC(Vt, C, R, lower) 5: if MI > CR then
+
+6:
+
+LLRupdate = LCA(Vt, C, R, lower)
+
+7:
+
+Initialize variable node, set the maximum iteration number
+
+as
+
+Kmax,
+
+VN
+
+0 j→i
+
+=
+
+LLRupdate
+
+8:
+
+Update CNij of the ith check node by VNij of the jth variable
+
+node updated in the Kth iteration.
+
+CNkij+1 =
+
+sgn(VNikm) · min VNikm
+
+m∈G(i)\j
+
+9:
+
+Update VNij of the jth variable node by CNij of the ith
+
+check node updated in the K + 1 iteration.
+
+VNikj+1 = LLRupdate + n∈Q(j) CNnkj+1
+
+10:
+
+if VN→ ·HT = 0→ or k = Kmax then
+
+11:
+
+break
+
+12:
+
+else
+
+13:
+
+for k from 1 to Kmax do
+
+14:
+
+repeat steps of 7,8,9
+
+15:
+
+end for
+
+16:
+
+end if
+
+17: else
+
+18:
+
+Start soft decoding
+
+19: end if
+
+20: else if pagetype = middle then
+
+21: same as lower.
+
+22: else
+
+23: same as lower.
+
+24: end if
+
+Fig. 6. LIAD method for random read request. (a) Lower page read request. (b) Middle page read request. (c) Upper page read request.
+As shown in Fig. 6, we do not need to transmit every sensing result of the current page. Take the middle page as an example, only the second sensing result (D4) will be transmitted, at the same time, the flash memory will execute the third sensing operation. Finally, the middle page data (D9) is transmitted. So, we can distinguish four different regions by combining the data D4 and D9. The data combination “11” means that the data is in region one, “10” means that the data is in region two and so on. Decoding LLR is optimized according to different regions.
+C. LIAD Decoding Algorithm for Sequential Read Request In the sequential read process, since the logical page will be
+read continuously, we can use the sensing results of other logical pages to assist the decoding. The sensing information of lower, middle and upper pages can assist each other in correct decoding LLR. So, we can divide the flash threshold voltage into up to eight regions. We take lower page decoding using middle page sensing results as an example. The lower page and middle page perform a total of five sensing operations, and the threshold voltage of the flash memory can be divided
+
+into six regions at most. According to the coding principle, six regions need at least 3-bit representation, so we need to transmit data three times.
+As shown in Fig. 7, the figure on the left is a channel model without middle page sensing results, the figure in the middle is a channel model with one middle page sensing result, and the figure on the right is a channel model with two middle page sensing results. Of course, under the premise of sufficient mutual information, we can use any combination of sensing results to improve the efficiency of flash IO utilization.
+Fig. 8 shows how the lower page uses the sensing results of the middle page to assist in decoding. Flash memory first transfers the lower page data (D8), and then transfers the middle page sensing result (D4) and the middle page data (D9). So, we can distinguish six different regions by combining the data D8, D4, and D9. The data combination “111” means that the data is in region one, “011” means that the data is in region two and so on. Decoding LLR is optimized according to different regions. We can also get six different LLR regions by using the data D2. This is because there will be redundant coding in six regions represented by 3 bits. So, we can choose the free time of the system to transmit data.
+As mentioned in Section III, we calculate the effect of different sensing results on the channel capacity through the 2-M model, which is reflected in different mutual information gains.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1712
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+Fig. 7. Middle page transition probability model with physical page location information.
+
+Fig. 8. LIAD method for sequential read request.
+
+Fig. 9 shows the effect of different logical pages using different sensing results on channel capacity. When decoding, we will select the required information for data transmission. In general, decoding can be successful when the channel capacity reaches a certain requirement, so multiple transmission possibilities exist. We can adjust the transmission time reasonably to improve the IO utilization rate. We found that different information can be obtained using the default read voltage and using the minimum error read voltage. The default read voltage represents the read voltage preset by the manufacturer, without any adjustment, and only has good performance at the beginning of the flash memory life. The minimum error read voltage refers to the read voltage at which the flash memory has the smallest RBER. In general, using the default read voltage, we can get more information from the large read voltage, such as V4, V5, and V6. For the minimum error read voltage, we can get more information from the largest read voltage, namely, V6 and V7. This is because using the default read voltage, some cells in the highest distribution state are shifted to the left of V7, resulting in less information that can be obtained by using the V7 read voltage. For the minimum error read voltage, V7 can still better distinguish the highest and second
+
+Fig. 9. Mutual information obtained from different sensing results. (a) Lower page mutual information under P/E cycle 1K. (b) Middle page mutual information under P/E cycle 1K. (c) Upper page mutual information under P/E cycle 1K.
+highest distribution states, and this is also the area that generates the most errors, so more information can be obtained by using the V7 read voltage. At the same time, we found that whether using the default read voltage or the minimum error read voltage, there is always a sensing result that can provide additional information close to all the sensing results, that is, the main source of information. In any case, obtaining the main information source can achieve a balance between decoding performance and throughput.
+The detailed decoding process is shown in Algorithm 3.
+V. IMPLEMENT AND RESULTS In this section, we first explain our experimental conditions and steps, then we compare the conventional method,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1713
+
+the method proposed in [3] and the LIAD method to illustrate the effectiveness of the method proposed in this article. Finally, we have a brief discussion.
+
+A. Experimental Conditions
+We use 3-D charge trap NAND flash memories fabricated with 64 stacked word-lines (WLs) by YMTC to evaluate the effectiveness of the LIAD method in improving LDPC decoding performance and reducing read latency. We use the ACE algorithm [23] and the stopping set check algorithm [24] in the NAND flash memory storage system to construct a quasicyclic LDPC (QC-LDPC) [25] with the code length of 16 383 and the code rate of 0.87 according to the degree distribution. The experimental data collection uses an FPGA-based testing platform and the windows-based applications connect to the testing platform through an Ethernet port.
+The experimental process described below is mainly divided into two stages: writing data to TLC NAND flash memory and reading the data to detect error codes.
+In the write stage, six types of P/E cycles of 0, 1K, 2K, 3K, 4K, and 5K were selected for the experiment. We perform P/E on different blocks to make them reach the corresponding P/E times, and then we generate address sequences and random numbers to program the entire block. High-temperature acceleration was used to accelerate the retention time of flash memory. The experimental temperature used in this article is 125 ◦C and the Arrhenius Law [26], [27] is used to convert the data retention time at 125 ◦C to data retention time at 55 ◦C.
+In the read stage, in order to reduce the influence of process variation, we read the pages with numbers 2, 8, 14, 20, . . . , 380, which are in different word lines. To reduce the impact of various noises [28] on read operations, we read each page twice and take the average. The reading method we use is scanning reading, reading the entire page every 25 mV from −1.6 to 6 V to get the accurate voltage of each cell. Due to the unique structure of 3-D charge trap NAND flash memory, multiple readings will not have much influence on the threshold voltage, but it will help the experimental results more accurately.
+In order to evaluate the read latency of the system, according to the fabricate’s manual, the flash read time (3-D TLC NAND flash memory multiplane sensing once operation time) was defined as tR, the flash data out time, the time to transmit the data in the page buffer, as a function related to the DQS period and the number of bytes to transmit Tdataout = TDQS × Ndata ÷ 2, and the delay of each decoding iteration of LDPC is set to 1 μs.
+B. Results and Analysis
+In this section, we will analyze the effectiveness of our proposed method from two aspects. The first is the improvement of the decoding performance, and the second is the reduction of read latency.
+When implementing LDPC decoding operations, we set the maximum iteration number as 50. We count the average of decoding iterations and the uncorrectable error bit rate (UBER) under different P/E cycles, retention time, and read voltage.
+
+Fig. 10. Upper page UBER performance of 16K code length LDPC by using conventional, EMAL [3], and LIAD method under P/E cycle 0, 3K and default read voltage.
+Fig. 11. UBER performance of 16K code length LDPC by using conventional, EMAL [3], and LIAD method under P/E cycle 2K and default read voltage.
+Since method [3] can only optimize the upper page during the sequential read operation, to be fair, we compare the UBER of the upper page in Fig. 10. We found that using our proposed method can reduce UBER by at most 99%.
+To explain why our method significantly outperforms the method proposed in [3], we need to rely on Fig. 11. There are different raw BER (RBER) between the lower page, middle page, and upper page, which are caused by the different leakage current speed. Because TLC NAND flash memory cells generally use 2, 3, 2 reading method. At the flash memory end of lifetime, the bit error of the middle page and upper page rises rapidly, which makes it harder to get the correct middle page codeword, and affects the correction of method [3] to the upper page decoding LLR. So, we found that the upper page UBER using the EMAL method is close to its middle page UBER. Our proposed method can operate without correct codewords, so it has more outstanding performance.
+In terms of reducing the number of decoding iterations, due to the high error of the middle and upper pages, the method
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1714
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+TABLE I WORKLOAD CHARACTERISTICS
+
+Fig. 12. ADI of 16K code length LDPC by using conventional, EMAL [3] and LIAD method. (a) ADI under P/E cycle 3K and default read voltage. (b) ADI under P/E cycle 3K and minimum error read voltage.
+proposed in this article can reduce the number of iterations by up to 80% at certain times, while the lower page at the same time can only be reduced by 13%. However, as the retention time increases, the effect of the method proposed in this article on the lower page becomes more obvious, and it can eventually reduce the number of iterations by 50%.
+Fig. 12 indicate the average decoding iterations (ADIs) under default read voltage and minimum error read voltage (The read voltage that results in the least number of bit errors). There are some dashed lines that are not drawn. This is because the ADI on the middle and lower pages using the method of paper [3] is the same as the conventional method, which causes the two lines to overlap.
+When random read requests come, the method proposed in [3] is powerless. The method proposed in this article still has a 20%–95% improvement, although the effective time is relatively short. We also found a phenomenon that when using the minimum error reading voltage, the method proposed in [3] has an approximate performance improvement compared with the method proposed in this article. This is because under the minimum error read voltage, the lower and middle pages have
+
+a greater probability of successful decoding, and the EMAL method can use more information. Fig. 12(b) clearly shows that when lower and middle pages are easier to decode successfully. The EMAL method has the same decoding iterations as the LIAD method. But at the end of retention, the method proposed in this article is slightly better in performance.
+LIAD method can reduce the UBER and ADI of three pages at the same time. Similar to the phenomenon in [3], the method proposed in this article has a better performance improvement under a higher signal-to-noise ratio (SNR, corresponds to the early retention period). This is because at the end life of the flash memory, the read voltage has seriously deviated from the intersection of the threshold distribution, transmitting the data in the data buffer has little meaning. Nevertheless, the method proposed in this article can still reduce the UBER of middle and upper pages by 20% when the number of P/Es is 2K and the retention time exceeds 250 days. For lower page, we can reduce it by more than 50%.
+The results of the mutual information simulation are shown in Fig. 13. We observe that even the slight UBER gap between the middle page and the upper page can be expressed in mutual information. Under the condition of continuous reading, the upper page obtains slightly better mutual information than the middle page. This is because the cell voltage offset in the P7 state is larger, so the sensing result of the middle page can be more effectively used. At the same time, the middle page originally needs to be read three times, and the effectiveness of adding an additional sensing result is not as effective as the upper page.
+In the system simulation, our NAND flash memory has eight channels. Each channel has two planes. Each plane has 970 blocks. Each block has 384 pages. Each page size is 18 kB. We set the sensing time of 3-D TLC NAND flash memory as tR = 32 μs, the DQS period of the flash is 3 ns, and the number of bytes transmitted at one time is 18 432, so our data out time is 27.5 μs, because the data transmission time is less than the sensing time we can perform the next read while transmitting the data. We use the workloads in Table I, all exposed on SNIA [29] and UMass [30]. Develop [29] is obtained from a file server with an average daily download of over 3000. Systortrace [29] is the storage traffic collected on the 2017 commercial office virtual desktop infrastructure (VDI) for 28 consecutive days. It contains a large number of simultaneous read requests, which is the most severe test of the algorithm. MSN [29] was collected on several Microsoft real-time file servers. Radius [29] is obtained from the Radius server responsible for remote access and wireless authentication of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1715
+
+Fig. 13. Predict mutual information of read channel by using conventional and LIAD method under default read voltage. (a) Predict mutual information at P/E cycle 0. (b) Predict mutual information at P/E cycle 3K.
+
+Fig. 14. Read latency performance of 16K code length LDPC at P/E cycle 3K by using conventional, EMAL [3] and LIAD method. (a) Read latency performance under 114 retention days. (b) Read latency performance under 365 retention days.
+
+Fig. 15. Read latency performance of 16K code length LDPC at P/E cycle 1K by using conventional, EMAL [3] and LIAD method. (a) Read latency performance under 114 retention days. (b) Read latency performance under 365 retention days.
+
+global enterprises. Websearch [30] is collected on a popular Internet Web search machine. Financial1 and Financial2 [30] are collected in a large financial institution server.
+This article compares the difference between using the conventional, EMAL, and LIAD methods under different read
+
+requests. To be fair, we read whole physical page, that is, lower, middle, and upper page and count the total time required. As shown in Figs. 14 and 15, we choose two P/E(1K, 3K times) and retention(114, 365 days) times to fully demonstrate the effect of the algorithm proposed in this article in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+1716
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 5, MAY 2023
+
+entire NAND flash life time, by combining P/E and retention conditions, we show the performance comparison of different algorithms at the initial and late retention time under low P/E and high P/E conditions. We use four colors to represent the three methods. The upper graph is the read latency using the default read voltage and the graph below is the read latency using the minimum error read voltage. LIAD random read method means that we only use the sensing result of the current logical page regardless of whether the read is sequential or random. LIAD sequential read method means that the algorithm will use the sensing results of other logical pages. We can find that under random read requests, the LIAD random read method is better than EMAL under certain conditions. This is because the LIAD method can reduce the number of decoding iterations of three pages at the same time, so in part of the time, the EMAL method will waste more time in decoding lower and middle pages. Compared with the traditional decoding algorithm, the LIAD sequential read method can greatly reduce the read latency by up to 43%, and the LIAD algorithm can reduce the read latency by 5%–10% compared with the EMAL algorithm. We found that the LIAD method is better than the EMAL method most of the time. However, the algorithm presented in this article performs poorly in the face of the Systor load, because the Systor load contains a large number of concurrent read requests, which greatly reduces the IO utilization of the algorithm presented in this article. Fortunately, such load characteristics only appear in commercial VDI, and the proposed algorithm still has some advantages with the increase of RBER.
+C. Discussion
+The experimental results found that when the RBER is relatively moderate, the LIAD method can effectively improve the LDPC decoding performance and reduce the read latency. When random read requests come, there is less information available, and the LIAD method tries to find a way to improve system performance without additional read operations. When continuous read requests come, the LIAD method can use more effective information, so the performance is better under sequential read operations. Fortunately, the previous work of [6] showed that sequential read operations accounted for more in NAND flash memory. In general, this article explored the soft information hidden in the hard decision, and tried its best to make the flash memory have better performance without increasing the number of read times.
+VI. CONCLUSION
+In this article, we proposed the LIAD method, which uses the 2-M channel model to evaluate the flash memory channel and combines the page buffer operation of the 3-D TLC NAND flash memory to improve decoding performance and reduce read latency. The LIAD method improved the performance of flash memory random read and sequential read operations without adding additional read operations. Specifically, transmit the data in the page buffer to reasonably infer the correct bit value of the page to be decoded, thereby reducing the UBER of the flash memory page and decreasing the number
+
+of decoding iterations. The experimental results showed that
+the method significantly improves the decoding performance
+and reduces the read latency.
+REFERENCES
+[1] Y. Hu, H. Jiang, D. Feng, L. Tian, and S. P. Zhang, “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput., 2011, pp. 96–107.
+[2] J. Wang, T. A. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. Global Telecommun. Conf., 2011, pp. 1–6.
+[3] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) nand flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[4] F. Wu et al., “Using error modes aware LDPC to improve decoding performance of 3D TLC nand flash,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 4, pp. 909–921, Apr. 2020.
+[5] J. Wang, G. Dong, Z. Tong, and R. D. Wesel, “Mutual-information optimized quantization for LDPC decoding of accurately modeled flash data,” 2012, arxiv.abs/1202.1325.
+[6] F. Chen, D. A. Koufaty, and X. Zhang, “Understanding intrinsic characteristics and system implications of flash memory based solid state drives,” Perform. Eval. Rev., vol. 37, no. 1, pp. 181–192, 2009.
+[7] X. Y. Hu, E. Eleftheriou, and D. M. Arnold, “Progressive edge-growth tanner graphs,” in Proc. IEEE Global Telecommun. Conf., 2002, pp. 1–8.
+[8] T. Richardson, “Error-floors of LDPC codes,” in Proc. Allerton Conf. Commun. Control Comput., Monticello, IL, USA, Oct. 2003.
+[9] J. Wang, L. Dolecek, and R. Wesel, “Controlling LDPC absorbing sets via the null space of the cycle consistency matrix,” in Proc. ICC, 2011, pp. 1–6.
+[10] J. Wang, L. Dolecek, and R. Wesel, “LDPC absorbing sets, the null space of the cycle consistency matrix, and Tanner’s constructions,” in Proc. Inf. Theory Appl. Workshop, 2011, pp. 455–459.
+[11] M. Ivkovic, S. K. Chilappagari, and B. Vasic, “Eliminating trapping sets in low-density parity-check codes by using Tanner graph covers,” IEEE Trans. Inf. Theory, vol. 54, no. 8, pp. 3763–3768, Aug. 2008.
+[12] D. V. Nguyen, B. Vasic, M. Marcellin, and S. K. Chilappagari, “Structured LDPC codes from permutation matrices free of small trapping sets,” in Proc. IEEE Inf. Theory Workshop, 2010, pp. 1–5.
+[13] H. Qin, Q. Diao, L. Shu, and K. Abdel-Ghaffar, “Cyclic and quasi-cyclic LDPC codes: New developments,” in Proc. Inf. Theory Appl. Workshop, 2011, pp. 186–195.
+[14] L. Qiao, S. Liang, C. J. Xue, Q. Zhuge, and H. M. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. Design Autom. Conf., 2017, pp. 560–565.
+[15] K. Zhao, W. Zhao, H. Sun, T. Zhang, and N. Zheng, “LDPC-inSSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. 11th USENIX Conf. File Storage Technol., 2013, pp. 1–9.
+[16] S. Ouyang, G. Han, F. Yi, and W. Liu, “LLR-distribution-based nonuniform quantization for RBI-MSD algorithm in MLC flash memory,” IEEE Commun. Lett., vol. 22, no. 1, pp. 45–48, Jan. 2018.
+[17] G. Yadgar, M. Gabel, S. Jaffer, and B. Schroeder, “SSD-based workload characteristics and their performance implications,” ACM Trans. Storage, vol. 17, no. 1, pp. 1–26, 2021.
+[18] M. Zhang, F. Wu, Y. Du, W. Liu, and C. Xie, “Pair-bit errors aware LDPC decoding in MLC NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 38, no. 12, pp. 2312–2320, Dec. 2019.
+[19] G. Kong, T. Kim, W. Xi, and S. Choi, “Cell-to-cell interference compensation schemes using reduced symbol pattern of interfering cells for MLC NAND flash memory,” in Proc. Asia–Pac. Magn. Record. Conf. (APMRC), 2012, pp. 1–5.
+[20] T. M. Cover and J. A. Thomas, “Elements of information theory; second edition,” Publ. Amer. Stat. Assoc., vol. 103, no. 481, p. 429, 1992.
+[21] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in nand flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[22] C. E. Shannon and C. E. Shannon, The Mathematical Theory of Communication. Urbana, IL, USA: Univ. Illinois Press, 1949.
+[23] T. Tian, C. R. Jones, J. D. Villasenor, and R. D. Wesel, “Selective avoidance of cycles in irregular LDPC code construction,” IEEE Trans. Commun., vol. 52, no. 8, pp. 1242–1247, Aug. 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+YU et al.: LIAD: A METHOD FOR EXTENDING THE EFFECTIVE TIME OF 3-D TLC NAND FLASH HARD DECISION
+
+1717
+
+[24] Y. J. Ko and J. H. Kim, “Girth conditioning for construction of short block length irregular LDPC codes,” Electron. Lett., vol. 40, no. 3, pp. 187–188, 2004.
+[25] L. Lan, L. Q. Zeng, Y. Y. Tai, S. Lin, and K. Abdelghaffar, “Constructions of quasi-cyclic LDPC codes for the awgn and binary erasure channels based on finite fields and affine mappings,” in Proc. Int. Symp. Inf. Theory, 2005, pp. 1–9.
+[26] D. A. Baglee, “Characteristics and reliability of 100 oxides,” in Proc. 22nd Int. Rel. Phys. Symp., 2007, pp. 152–155.
+[27] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. Int. Symp. High Perform. Comput. Archit., 2015, p. 63.
+[28] C. Yu, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash memory based solid-state drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[29] “IoTTA.” Accessed: 2021. [Online]. Available: http://iotta.snia.org/ traces/list/BlockIO
+[30] “UMass trace repository.” 2013. [Online]. Available: http://traces.cs. umass.edu
+
+Bo Zhang received the B.S. degree from Hebei University, Baoding, China, in 2020. He is currently pursuing the M.S. degree with the Institute of Microelectronics of the Chinese Academy of Sciences, Beijing, China, and the University of Chinese Academy of Sciences, Beijing.
+His research interests include 3-D NAND flash memory and SSD systems.
+Xianliang Wang received the B.S. degree from the Hefei University of Technology, Hefei, China, in 2020. He is currently pursuing the M.S. degree with the Institute of Microelectronics of the Chinese Academy of Sciences, Beijing, China, and the University of Chinese Academy of Sciences, Beijing.
+His research interests include 3-D NAND flash memory, NVM Express, and SSD systems.
+
+Xiaolei Yu received the B.S. degree from Harbin University of Science and Technology, Harbin, China, in 2018. He is currently pursuing the Ph.D. degree with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing, China, the University of Chinese Academy of Sciences, Beijing, and the Yangtze Memory Technologies Company, Beijing.
+His research interests include 3-D NAND flash memory, polar code, machine learning, and SSD systems.
+Jing He received the B.S. degree from Wuhan University, Wuhan, China, in 2018. She is currently pursuing the Ph.D. degree with the Institute of Microelectronics of the Chinese Academy of Sciences, Beijing, China, and the University of Chinese Academy of Sciences, Beijing.
+Her research interests include 3-D NAND flash memories, machine learning, and storage systems.
+
+Liu Yang received the M.S. degree from the University of Chinese Academy of Sciences, Beijing, China, in 2016. He is currently pursuing the Ph.D. degree with the Institute of Microelectronics of the Chinese Academy of Sciences, and the University of Chinese Academy of Sciences, Beijing, China.
+His research interests include NAND flash memory reliability and storage systems.
+Tianchun Ye received the bachelor’s degree from Fudan University, Shanghai, China, in 1986.
+He, as the Project Leader and Core Backbone, has completed the research tasks of more than ten scientific research projects, such as the National “Seventh Five-Year Plan” to “Tenth Five-Year Plan,” climbing plan, 863, 973, and Chinese Academy of Sciences Knowledge Innovation Project. In deep submicron and nanoprocessing technology, research on ultrahigh frequency compound semiconductor devices and new devices, a number of scientific research achievements with domestic leading or international advanced level have been achieved.
+Qi Wang received the B.S. and Ph.D. degrees from Fudan University, Shanghai, China, in 1999 and 2005, respectively.
+He is currently a Professor with the Institute of Microelectronics of the Chinese Academy of Sciences and University of Chinese Academy of Sciences, Beijing, China. His research interests include 3-D NAND flash memories, NAND flash memory reliability, error correction coding, machine learning, and storage systems.
+
+Qianhui Li received the M.S. degree from the University of Chinese Academy of Sciences, Beijing, China, in 2019. He is currently pursuing the Ph.D. degree with the Institute of Microelectronics of the Chinese Academy of Sciences, Beijing, China, and the University of Chinese Academy of Sciences.
+His research interests include 3-D NAND flash memories, error correction coding, machine learning, and storage systems.
+
+Zongliang Huo received the B.S. and Ph.D. degrees in microelectronics from Peking University, Beijing, China, in 1998 and 2003, respectively.
+After several yearsŠ flash memory research in Samsung Semiconductor R&D Center, Suwon, South Korea, he worked with the Institute of Microelectronics, Chinese Academy of Sciences, Beijing, the University of Chinese Academy of Sciences, Beijing, and Yangtze Memory Technology Company Ltd., Beijing. His research interests include device fabrication, and characterization and reliability of novel flash memory devices.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:22:54 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,805 @@
+A Scalable Decoder Architecture for IEEE 802.11n LDPC Codes
+Massimo Rovini, Giuseppe Gentile, Francesco Rossi and Luca Fanucci Department of Information Engineering, University of Pisa Via G. Caruso, I-56122 Pisa, Italy
+e-mail: {massimo.rovini, giuseppe.gentile, francesco.rossi, luca.fanucci}@iet.unipi.it
+
+Abstract—This paper describes a scalable IP of a decoder for LDPC codes compliant to IEEE 802.11n and running the wellknown layered decoding algorithm. The decoder architecture is arranged in clusters of serial processing units, which are configurable to process all the codes in the standard and, at the same time, to support multiple frame decoding. An optimization methodology of the iteration latency is also described, which relates to the order of the messages updated by the processors, as well as to the sequence of layers the decoder goes through. The logic synthesis on 65 nm CMOS technology with lowpower standard-cell library, shows that the proposed design is suitable for portable devices, the throughput ranging from 180 to 410 Mbps, and the power consumption being below 235 mW.
+I. INTRODUCTION
+The ever-increasing demand of data-hungry mobile communications has fostered the deployment of high-throughput wireless local area networks (WLAN), desirably reaching datarates up to 100 Mbps in short-range links (hundreds of meters). The physical layer interface of WLAN for high-throughput is currently being standardized in IEEE 802.11n, and drafts are already available [1]. In line with the recent trend opened by DVB-S2 and followed by wireless metropolitan area networks (WMAN), WLAN also relies on low-density parity-check (LDPC) codes [2] as error-correcting codes.
+The renewed interest in LDPC codes is due to their remarkable performance, even at low signal–to–noise ratios (SNR) and with small block-lengths, to the flexibility in the design of the code parameters, and to the relatively simple decoding algorithm, suitable for parallelization. Structured, or architecture-aware (AA) codes [3], further reduce the area and power consumption of the related decoder, improve its memory efficiency, and, above all, offer increased decoder scalability, allowing the full exploration of the complexity/throughput design trade-offs. Furthermore, AA-codes perform very close to random codes. Still in [3], the turbo-decoding messagepassing (TDMP) algorithm is described, in which a code is decoded as the sequence of several super-codes, or layers, thus performing the so-called layered decoding [4].
+In this paper we consider the design of a scalable architecture for a layered LDPC decoder compliant to IEEE 802.11n. For mobile devices, with strict restrictions on area and power consumption, a block-serial implementation that serially processes blocks of parity-check constraints, is preferable to fully parallel architectures [5]; moreover, serial processing units are very flexible in the support of different codes. As a
+
+drawback, they increase the decoding latency, thereby limiting the throughput, and are then typically operated in pipeline [6], [7]. However, in a pipelined layered decoder, hazards may arise in the memory access, and the dependence between layers must be carefully handled; as an improvement of [6] and [7], this paper proposes a decoder architecture and an efficient schedule of the decoding messages to counteract these issues.
+
+II. LDPC DECODING BASICS
+
+Decoding of LDPC codes is achieved in application of the maximum a posteriori (MAP) algorithm, commonly formulated in the form of belief propagation (BP). BP is optimal if the graph of the code does not contain cycles, but it is still used and considered as a reference for practical codes with cycles. In this case, the sequence of the elaborations, known as schedule, highly affects performances in terms of convergence speed and (although less) error correction.
+Recently, BP has been re-formulated in the so-called shuffled or layered decoding [3], [4], [8], [9]. Layered decoding is preferable to the original flooding schedule (FS) [9], because of the increased convergence speed, which is almost double, both for codes with cycles and cycle-free [10]. This is achieved through the early propagation of intermediate, a posteriori messages, made available to the next layers immediately after their computation, and not only at next iteration as in FS.
+Layers can be organized by either check-nodes (CNs) or variable-nodes (VNs), and, accordingly, CN-centric (horizontal) or VN-centric (vertical) decoding algorithms are defined in [8] and [9]. However, CN-centric solutions are more desirable since they allow serial, flexible and simple, architectures of the CN processor. The horizontal layered decoding (HLD) iteratively updates the parity-checks in a layer according to:
+
+− sign
+
+(q+1) m,n
+
+=
+
+− sign
+
+yj −
+
+(q) m,j
+
+(1)
+
+j∈N (m)\n
+
+
+
+
+
+
+
+
+
+(q+1) m,n
+
+= Φ−1 
+
+Φ
+
+yj −
+
+(q) m,j
+
+
+
+(2)
+
+j∈N (m)\n
+
+with yn the total information or soft-output (SO) of the bits involved in the parity-check m, n ∈ N (m), m,n the check– to–variable (c2v) reliability message from CN m to VN n, Φ(x) = Φ−1(x) = − log (tanh(x/2)), and q the iteration index.
+After computation of (1) and (2), the involved SOs are updated
+
+3270 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E9E:37 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+by adding the input variable–to–check (v2c) to the new c2v,
+
+yn = (yn −
+
+(q) m,n
+
+)
+
++
+
+(q+1) m,n
+
+,
+
+∀n
+
+∈
+
+N (m);
+
+once
+
+updated,
+
+SOs
+
+are immediately made available to the next layers, and faster
+
+convergence is achieved. The algorithm is initialized with the
+
+channel a priori log-likelihood ratios (LLRs) yn = λn, with n = 0, 1, ..., N − 1 and N the codeword length.
+
+Magnitude update in (2) is usually reworked recursively
+
+and admits several low-complexity approximations, all based
+
+on the min-sum algorithm [11] and very suitable for serial
+
+implementations. In this work, we considered the 2-output
+
+algorithm [12] based on the modified (or corrected) min-sum.
+
+III. AA-LDPC CODES FOR IEEE 802.11N
+Three codeword lengths, N0 = 648, N1 = 1296 and N2 = 1944 are defined in [1], referred to as short, middle and long codeword in this paper, and for each length, four code rates are specified, 1/2, 2/3, 3/4 and 5/6, for a total of 12 different codes. These are AA-LDPC codes, block-wise partitioned into smaller Bi × Bi sub-matrices, with B0 = 27, B1 = 54 and B2 = 81 for the short, middle and long codeword, respectively.
+Particularly, the parity-check matrix H is arranged in n = Ni/Bi = 24 block columns and mi = (1 − r) · n block rows, with r the code rate, and each sub-matrix is either a rotation of the identity matrix or an all-zero matrix. This allows the very compact description of the parity-check matrix, known as prototype matrix, which only specifies locations and rotations of the non-zero sub-matrices, or blocks. An example of prototype matrix is shown in Fig. 1.
+
+0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+
+61 75 4 63 56
+
+8
+
+2 17 25 1 0
+
+0
+
+56 74 77 20
+
+64 24 4 67
+
+7
+
+00
+
+1
+
+28 21 68 10 7 14 65
+
+23
+
+75
+
+00
+
+2
+
+H= 48 38 43 78 76
+
+7
+
+250 36 15 72
+
+40 2 53 25 52 62 20
+
+44
+
+0
+
+00 00
+
+3 4
+
+69 23 64 10 22 21
+
+124 0 68 20 55 61 40
+
+58 181 34 64 78
+
+11 78 24
+
+68 23 29
+
+52
+
+44
+
+58 1
+
+00
+
+5
+
+006
+
+07
+
+r =81´81 identity matrix rotated by r r =81´81 zero matrix
+
+Fig. 1. Parity-check prototype matrix of the N2 = 1944, rate-2/3 code. Black squares correspond to rotations of the identity matrix, also indicated in
+the square, while empty squares correspond to all-zero matrices.
+
+IV. DECODING PIPELINING & IDLING
+To work properly, practical implementations of HLD must respect dependence between layers, and always use the most updated total information. However, because the elaborations of a serial check-node processor, or simply node-processor (NP), are typically pipelined, one SO could be accessed before being updated, thus corrupting performances. The arising pipeline hazard can be solved with the insertion of null or idle cycles between two consecutive layers [7], where the NP is idled to wait for updated inputs. In opposition to this route, re-formulations of HLD are also viable, as shown in [6] and [13], but extra complexity is brought into the design.
+In this work, we propose an efficient method to arrange the order of the messages in a layer, and accordingly, the sequence of layers the decoder goes through, in order to minimize the overall number of idle cycles, and then, the decoding latency.
+
+A. Reversed Output Processor
+In the LDPC codes for IEEE 802.11.n, the most of the SOs of layer k common to layer k−1 are also common to layer k+1; then, by acquiring these elements last, and reverting the order
+of the output stream w.r.t. the input one, the overall number
+of idle cycles can be effectively reduced, since more time is given to layer k−1 to complete its operations, and, common SOs are also made available earlier to layer k+1.
+To formalize the problem, let us define:
+i. Sk the set of SOs updated by layer k, with degree dk; ii. Ak = Sk ∩ Sk−1, the subset of SOs updated by layer k
+in common with layer k − 1, with αk = |Ak|; iii. Bk = {Sk ∩ Sk+1} \Ak the subset of SOs in common
+with layer k + 1 but not with Ak, with βk = |Bk|; iv. Ck = Sk−1 ∩ Sk ∩ Sk+1 the messages common to both
+layers k−1 and k+1, with χk = |Ck|; v. Rk = Sk\ {Sk−1 ∩ Sk+1} the subset of remaining SOs
+not in common with layers k − 1, k + 1.
+
+LAYER k
+
+dk bk
+
+ck ak
+
+Ik
+
+LAYER k+1
+
+dk+1
+
+bk+1
+
+c a k+1
+
+k+1
+
+Ik+1
+
+SO input stream
+
+Bk Ck Ak LSO
+SO output stream
+
+B C A k+1
+
+k+1 k+1
+
+Ak Ck Bk ak ck bk
+
+Fig. 2. Input and output SO streams in a serial NP with reversed output. Sub-set Ck is drawn next to Bk only for a clearer picture.
+
+The I/O data streams (SO) of a reversed output processor
+(ROP) are shown in Fig. 2, where LSO is the latency of the SO data path1. When Bk is empty, it would be more convenient to acquire Ck last in Ak, so that it would be output very first; otherwise, if Bk = ∅, Ck can be left floating in Ak. From Fig. 2, the dependence between two consecutive layers
+is respected if:
+
+Ik + |Sk+1\Ak+1| ≥ LSO + |Ak\Ck| · u(βk)
+
+(3)
+
+which is solved by Ik = LSO − (dk+1 −αk+1) + (αk −χk) · u(βk), with u(x) the unitary step function.
+A serial NP can not process consecutive layers with decreas-
+
+ing degrees, as the outputs of the two layers would overlap in
+
+time, with corruption of internal data. In this case, idle cycles in the number of ∆dk = dk−dk+1 must be inserted to solve the issue; thus, considering both pipeline hazards and variations
+
+of degrees, the number of idle cycles is:
+
+Ik = max {Ik, ∆dk, 0}
+
+(4)
+
+A final remark concerns possible interactions between three consecutive layers. Indeed, even though (4) is held, layer k +2 could need some message from layer k before this has actually completed its own update. This situation, rather unlikely for the IEEE 802.11.n codes, is not treated here.
+
+1As shown in Fig. 3, LSO includes the delay of the NP, the shifting network and the two accesses to the SO memory. Typical values are 4-6 clock cycles.
+
+3271 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E9E:37 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+B. Optimum Sequence of Layers
+
+The system was then optimized in terms of the sequences of layers used for decoding, in order to minimize the idle time. To this aim, we can define the following cost function:
+
+mi −1
+
+C(p) =
+
+Ik
+
+(5)
+
+k=0
+
+where mi is the number of block-rows or layers in the code, and Ik is computed according to (4). The optimum sequence of layers is that minimizing (5), i.e., pˆ = arg minp∈P C(p), with P the set of all possible permutations over mi layers. For instance, for the rate-2/3, long codeword code of Fig.1, the computer full-search gave pˆ = {0, 2, 7, 5, 6, 3, 4, 1} and Iˆ = {1, 0, 0, 0, 0, 0, 0, 0}.
+Note that, in view of different sequences of layers, differ-
+ent error rates and convergence speeds should be expected;
+nevertheless, simulations showed only negligible differences
+in performance.
+
+V. DECODER ARCHITECTURE
+Aiming at high-throughput, decoding operations are vectorized thanks to the use of structured codes, which allow the parallel update of at most Bi parity-check equations without memory collisions. Higher parallelism is also viable, but it is shown to perform sub-optimally in [13]. Therefore, a set of Bi consecutive rows is always decoded in parallel, and this will be referred to as layer in the remaining of this paper. However, since B0 = B1/2 = B2/3 = 27, NPs can be conveniently arranged in clusters of B0 units each, so that a multi-length decoder needs one/two/three clusters to process the short/middle/long codeword, respectively.
+
+BIO
+
+NP #0 c2v
+
+NP #1
+
+B0
+
+NP #2
+
+message
+
+c2v
+
+MEM
+
+#0
+
+B0
+
+SO
+
+SO
+
+B0
+
+NP #B0-1
+
+B0
+
+NP cluster #0
+
+input buffer FSM
+B0 B0 B0
+
+NP #0 c2v
+
+NP #1
+
+B0
+
+NP #2
+
+message
+
+c2v
+
+MEM
+
+#1
+
+B0
+
+SO
+
+SO
+
+B0
+
+NP #B0-1
+
+B0
+
+NP cluster #1
+
+B0
+
+B0
+
+B0
+
+B0
+
+B0 MS-CS network B0
+
+SO
+
+MEM #0
+
+B0
+
+SO
+
+MEM #1
+
+B0
+
+working in parallel, each one made of a cluster of NPs plus dedicated c2v and SO memory banks; these are vectorized as well, one memory row containing B0 messages.
+In the case of middle (B1 = 2B0) or long (B2 = 3B0) codeword, data-paths are merged in pairs or triplets, respectively, and are twisted in the multi-size circular-shifting (MSCS) network. This constrains K to be at least 3 to get full compliance with IEEE 802.11n. For the same reason, memories are tailored to the worst-case code, and one single c2v memory bank must store up to Q · B0 data, with Q = 88 the maximum number of non-null sub-matrices among the 12 codes. On the other hand, one SO memory bank must always store n · B0 = 648 data.
+To boost the throughput, the architecture of Fig. 3 is also capable of serving several frames in parallel, in the number of Fi(K) = K · 27/Bi . However, only for K a multiple of 6, all HW resources are exploited for every code; otherwise, |K|(Bi/B0) data-paths remain unused.
+A. Pipelined Processor Architecture with ROP
+The architecture of the serial NP is shown in Fig. 4. Idle cycles are inserted with two synchronization strobes, named start and stop, and signalling the first and the last message of one layer: upon reception of stop, the NP suspends the acquisition of new data until the next start is asserted.
+The CN core implements the 2-output algorithm [12] and it works in pipeline with the acquisition of input data; the two computed magnitudes are used along with the updated signs and the knowledge of the index of the minimum input to update the c2v messages. Finally, SOs are computed by adding the output c2v to the input v2c messages.
+The pipeline of the elaborations is also allowed by the presence of the buffer of v2c messages, which is a multi-length shift-register with size the maximum CN degree, dc,max = 22, and ruled with a last-in first-out (LIFO) policy to reverse the output data for the ROP strategy.
+
+v2c
+SO in
+c2v in
+start stop
+
+v2c LIFO buffer
+
+sign accumulator
+OUT 1
+
+sign margin.
+
+OUT 2 MIN index
+
+CN core
+
+SO out c2v out
+
+Fig. 4. Architecture of the serial NP with ROP.
+
+NP #0 c2v
+
+NP #1
+
+B0
+
+NP #2
+
+message
+
+c2v
+
+MEM
+
+#K-1
+
+B0
+
+SO
+
+SO
+
+B0
+
+NP #B0-1
+
+B0
+
+NP cluster #K-1
+
+SO MEM #K-1 B0
+
+Fig. 3. Scalable top-level architecture of the LDPC decoder.
+Figure 3 shows the scalable top-level architecture of the LDPC decoder. It is composed of K independent data-paths,
+
+B. Multi-Size Circular-Shifting Network
+Only one single MS-CS network is shown in Fig. 3 to rotate SO messages. This is possible because messages are rotated in such a way to be stored ready for their next use: to this aim, differential rotations are performed.
+The MS-CS network, whose principle architecture is shown in Fig. 5, circularly shifts Fi input vectors with size Bi, and is made of K single-size circular-shifting (SS-CS) networks, merged in an adaptation network (AN) to implement rotations greater than B0. The proper control of the AN allows multiple
+
+3272 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E9E:37 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+frames to be managed in parallel. Each SS-CS rotates over B0 elements, and is a cascade of ρ = log2 (B0) stages of B0 2to-1 multiplexers, connected in such a way that the r-th stage rotates by 2r, with r = 0, 1, ..., ρ − 1.
+
+stage 0 I0 I1 I2 I3 I4
+
+stage 1
+
+stage 2 O0 O1 O2 O3 O4
+
+R
+
+r0
+
+r1
+
+r2
+
+SS-CS
+
+x0,0
+
+y0,0
+
+5x5
+
+SS-CS
+
+#0
+
+x0,4
+
+y0,3
+
+x1,0
+5x5
+
+y1,1
+
+SS-CS
+
+#1
+
+5x5
+SS-CS
+
+y2,2
+
+#2
+
+5x5
+
+SS-CS
+
+#3
+
+x3,4
+
+y3,4
+
+adaptation network
+
+Fig. 5. MS-CS network architecture for B = 5 and K = 4.
+
+FER
+
+B. Synthesis Results
+The complexity of the register-transfer-level (RTL) design was derived for different values of the bit-true parameters. If NLLR and Nc2v bits are used for input LLRs and c2v messages, respectively, then SOs need NSO = Nc2v + log2 (dv,max) − p bits, with dv,max = 11 the maximum VN degree, and p the bits dropped for a reduced complexity. Note that v2c messages also need NSO bits, since they affect the precision of SOs.
+
+100
+
+60
+
+FER
+
+floating point
+
+bit-true analysis:
+
+(Nc2v, NSO)
+
+10-1
+
+(5,9)
+
+50
+
+(5,8)
+
+(5,7)
+
+(5,6)
+
+10-2
+
+40
+
+10-3
+
+30
+
+Average Speed
+
+VI. IMPLEMENTATION RESULTS
+
+A. Architecture Performance
+
+The design space (parallelism vs. iterations vs. complexity)
+
+was explored by focusing on the decoder latency, which is critical for WLAN: as a reference2, we tailored our design
+
+to a maximum latency of 6 µs. This can be expressed as
+
+L = Tclk · {2 · LIO + Nit · Lit + (dmi−1 + LSO − Imi−1)}, in
+
+which, LIO = Fi · (Ni/BIO) + 2 clock cycles are needed twice,
+
+for data acquisition and reading out, Lit =
+
+mi −1 k=0
+
+(dk
+
++
+
+Ik )
+
+is the iteration time, and after the last layer, at last iteration,
+
+dmi−1 + LSO extra cycles are awaited to empty the pipelines, while no idle cycle is accounted for (−Imi−1) since no next
+layer follows.
+
+Table I reports the maximum number of iterations and
+
+the resulting latency in clock cycles to meet the requirement
+
+L < 6 µs, at the clock frequency of 240 MHz. The overall
+
+number of idle cycles I = Nit ·
+
+mi −1 k=0
+
+Ik
+
+− Imi−1 is also
+
+shown, as well as its value before optimization (Iorig): this is
+
+generally two orders of magnitude higher than with ROP, and
+
+for some code, idle cycles are even unnecessary with ROP.
+
+The value of K, having no effect on the decoding latency,
+
+increases the throughput Γ, but also the decoder complexity,
+
+unfortunately, in a linear way; since the I/O operations are
+
+pipelined, it is:
+
+Γ
+
+=
+
+Fi (K )
+
+·
+
+Tclk
+
+·
+
+Ni · R (Ldec −
+
+LIO)
+
+(6)
+
+Comparing K = 3 with K = 4, the latter is preferable
+
+as it gives more homogeneous performance for the different
+
+codeword lengths. Then, higher values of K would only add
+
+unnecessary complexity to the design. All data of Tab. I refer
+
+to K = 4, but the throughput Γ is also shown for K = 3.
+
+2IEEE 802.11n only states that the acknowledgment must be transmitted within the short inter frame space (SIFS) from data reception, and this can not exceed 16 µs. Reasonably, the time for LDPC decoding is then 6 µs.
+
+10-4
+
+20
+
+Aver Speed floating point
+10-5 bit-true analysis: (Nc2v, NSO) (5,9) (5,8) (5,7)
+10-6 -2.50 -2.25 -2.00 -1.75 -1.50 -1.25
+Es/N0 (dB)
+
+-1.00
+
+-0.75
+
+-0.50
+
+10
+0 -0.25
+
+Fig. 6. FER and convergence speed of code N = 1944, r = 1/2.
+
+Figure 6 shows the frame error rate (FER) of the code with codeword length N2 = 1944 and rate 1/2, with NLLR = Nc2v = 5 and p ranging from 0 to 3. At the target FER of 10−4, only p = 1 is tolerated with negligible losses; similar considerations hold for NLLR = Nc2v = 6, the only difference lying in the gap from the floating-point curve, which is about 0.17 dB with Nc2v = 5 and NSO = 8, 9, while it is ≈ 0 dB with Nc2v = 6 and NSO = 9, 10. Also shown in Fig. 6 is the convergence speed of the decoder for NSO = 7, 8 and 9, almost insensitive to the data precisions below FER = 10−3.
+The scalable IP core was synthesized on a 65 nm CMOS technology from STMicroelectronics, using low-power, 1.20 V standard-cell library. Table II summarizes the results for several bit-true configurations, reporting the RTL complexity in Kgates3 for K = 4, and the related IL; the clock frequency of at least 240 MHz was supported in all cases. As a matter-offact, the configuration with NLLR = 5, NSO = 8 is optimal in terms of the complexity/performance trade-off, and by changing K into 3, the areas of Tab. II would roughly scale down as the ratio 3/4.
+Table III shows the complexity breakdown for the configuration above, including ROM and RAM memories, after mapping on available technology cuts. For each unit, the
+3Equivalent gates are counted by referring to the low-drive 2-input NAND cell with area of 2.08 µm2 for the target library.
+
+3273 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E9E:37 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+TABLE I LDPC DECODER PERFORMANCE WITH ROP AND LSO = 5 AT THE CLOCK FREQUENCY OF 240 MHZ.
+
+r Nit
+Ldec I
+I(%) Iorig Iorig (%)
+L (µs) Γ (Mbps) (K = 4) Γ (Mbps) (K = 3)
+
+1/2 12
+1360 95 7
+1236 49.4
+5.67 246 175
+
+N = 648
+
+2/3 3/4
+
+13
+
+13
+
+1356 0 0
+702 34.1
+
+1436 77 5.4 689
+33.6
+
+5.65 5.98 330 349 235 266
+
+5/6 11
+1363 172 12.6 286 19.4
+5.68 410 289
+
+1/2 13
+1416 90 6.4
+1209 47.7
+5.9 236 114
+
+N = 1296
+
+2/3 3/4
+
+13
+
+13
+
+1356 0 0
+702 34.1
+
+1433 74 5.2 858
+38.7
+
+5.65 5.97 330 349 150 169
+
+5/6 12
+1430 187 13.1 564 31.2
+5.96 389 187
+
+1/2 13
+1381 103 7.5 1157 47.5
+5.75 178 178
+
+N = 1944
+
+2/3 3/4
+
+14
+
+14
+
+1410 14 1 770
+35.5
+
+1427 70 4.9 756
+35.8
+
+5.87 5.95 233 259 233 259
+
+5/6 13
+1404 204 14.5 585 32.8
+5.85 292 292
+
+TABLE II RTL DESIGN COMPLEXITY AND IL FOR K = 4.
+
+Nc2v NSO mm2 Kgates IL (dB)
+
+5
+
+9 0.50 239 8 0.45 217
+
+0.17 0.19
+
+6
+
+10 0.56 271 9 0.52 249
+
+0.02 0.04
+
+number of instances is shown, while for memories, the logical size in bits is reported. Table III also contains the breakdown of the overall (dynamic plus leakage) power consumption, simulated for the worst-case, rate-1/2 short code, and averaged out over three different SNRs. Low-power technology libraries and clock gating techniques were used to minimize the power consumption, which does not exceed 235 mW for the whole decoder, despite its high flexibility.
+
+TABLE III COMPLEXITY/POWER BREAKDOWN WITH K = 4, NC2V = 5, NSO = 8.
+
+Unit NP MS-CS CL tot RTL
+ROM Degree/Idle
+Rotation Parity
+tot ROM
+RAM SO c2v tot RAM
+Decoder
+
+# 108 1 1
+[# × (cut)] bits 2 × (90 × 8) 1 × (2362 × 7) 1 × (1037 × 5)
+23,159 bits
+[# × (cut)] bits 4 × (24 × (27 · 8)) 4 × (88 × (27 · 5))
+68,256 bits
+
+Area (µm2) 108 × 3, 700
+36,000 15,000 0.45 mm2
+Area (µm2) 2 × 4, 300
+9,000 6,100 23,700
+Area (µm2) 4 × 35, 024 4 × 31, 200
+264,896
+0.74 mm2
+
+Power (mW) 108 × 0.934
+20.756 1.253 122.9
+2 × 0.347 3.94 2.91 7.54
+4 × 15.91 4 × 10.14
+104.2 234.6
+
+VII. CONCLUSION
+This paper has described the design of a semi-parallel, scalable, LDPC decoder IP for IEEE 802.11n. The decoder implements the horizontal layered decoding algorithm and idle cycles were used as a means to get independence among layers, and clear pipeline hazards; then, to minimize their number, the reversed output processor was introduced and the layers scrambled for optimal performance: in this way, only from 0% to 14.5% of the iteration time is spent in idling.
+
+As a result of the careful exploration of the throughput/ complexity/error-correction trade-offs, a very efficient decoder configuration has been proposed, using K = 4 clusters of serial processing units, with c2v messages on 5 bits and SOs on 8 bits. While the IL is only about 0.17 dB at FER = 10−4, the useful throughput ranges from 178 to 410 Mbps, and is well balanced over the different codeword lengths. This, along with the low power consumption, makes the proposed design very attractive for mobile applications.
+ACKNOWLEDGMENT
+The authors would like to acknowledge Dr. L. Della Torre, A. Giorgi, R. Riva and S. Valle from STMicroelectronics Agrate, Italy, for the valuable talks.
+REFERENCES
+[1] “IEEE P802.11nTM/D1.06,” Draft amendment to Standard for high throughput, Nov. 2006, 802.11 Working Group.
+[2] R. Gallager, “Low-Density Parity-Check Codes,” Ph.D. dissertation, Massachusetts Institutes of Technology, 1960.
+[3] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. VLSI Syst., vol. 11, no. 6, pp. 976–996, Dec 2003.
+[4] D. Hocevar, “A Reduced Complexity Decoder Architecture via Layered Decoding of LDPC Codes,” in IEEE Workshop on Signal Processing Systems, SISP 2004, 2004, pp. 107–112.
+[5] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 lowdensity parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar 2002.
+[6] T. Bhatt, V. Sundaramurthy, V. Stolpman, and D. McCain, “Pipelined block-serial decoder architecture for structured LDPC codes,” in Proc. IEEE Conf. on Acoustics, Speech and Signal Proc., ICASSP, Apr. 2006.
+[7] Y. Sun, M. Karkooti, and J. Cavallaro, “High throughput, parallel, scalable LDPC encoder/decoder architecture for OFDM systems,” in Proc. IEEE Work. Circuits and Systems, Oct. 2006, pp. 225–228.
+[8] E. Sharon, S. Litsyn, and J. Goldberger, “An Efficient Message-Passing Schedule for LDPC Decoding,” in 23rd IEEE Convention of Electrical and Electronics Engineering in Israel, Sep 2004, pp. 223–226.
+[9] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, “Generic description and synthesis of LDPC decoders,” IEEE Trans. Commun., 2006.
+[10] H. Kfir and I. Kanter, “Parallel versus sequential updating for belief propagation decoding,” Physica A Statistical Mechanics and its Applications, vol. 330, pp. 259–270, Dec. 2003.
+[11] F. Zarkeshvari and A. Banihashemi, “On implementation of min-sum algorithm for decoding low-density parity-check (LDPC) codes,” in Proc. IEEE GLOBECOM, vol. 2, Nov 2002, pp. 1349–1353.
+[12] M. Rovini, F. Rossi, N. L’Insalata, and L. Fanucci, “High-precision ldpc codes decoding at the lowest complexity,” in 14th European Signal Processing Conference, EUSIPCO 2006, Sep 2006.
+[13] M. Rovini, F. Rossi, P. Ciao, N. L’Insalata, and L. Fanucci, “Layered Decoding of Non-Layered LDPC Codes,” in 9th Euromicro Conference on Digital System Design (DSD), Aug-Sep 2006.
+
+3274 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E9E:37 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+

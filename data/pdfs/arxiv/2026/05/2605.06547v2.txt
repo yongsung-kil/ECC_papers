@@ -1,0 +1,675 @@
+Affine Subcode Ensemble Decoding for
+Degeneracy-Aware Quantum Error Correction
+Leo Wursthorn†, Jonathan Mandelbaum†, Sisi Miao†, Hedongliang Liu†, Holger Jäkel†, Stergios Koutsioumpas⋆, Laurent Schmalen†
+† Communications Engineering Lab (CEL), Karlsruhe Institute of Technology (KIT), 76187 Karlsruhe, Germany ⋆ School of Informatics, University of Edinburgh, Edinburgh EH8 9AB, United Kingdom Email: jonathan.mandelbaum@kit.edu
+
+arXiv:2605.06547v2 [cs.IT] 8 May 2026
+
+Abstract—Quantum low-density parity-check codes are promising candidates for low-overhead fault-tolerant quantum computing, but degeneracy is known to impair the convergence of belief-propagation (BP) decoding of these codes. In this work, we show that appending linearly independent rows to a check matrix of a stabilizer code can reduce the search space for a valid degenerate solution. Motivated by this, we extend the recently proposed affine subcode ensemble decoding technique from the classical to the quantum setting. Moreover, we employ overcomplete matrices for each decoding path. Monte-Carlo simulations on toric and generalized bicycle codes demonstrate improved convergence and reduced logical error rate.
+I. INTRODUCTION
+Quantum devices are noisy, making quantum error correction (QEC) essential for scalable fault-tolerant computation [1]–[3]. Quantum low-density parity-check (QLDPC) codes are a promising class of QEC codes, as their sparse checks make them attractive for low-overhead architectures [4]– [7]. The sparsity of classical LDPC codes enables efficient graph-based message-passing decoders, in particular belief propagation (BP) [8], which is attractive for real-time QEC.
+A general class of QEC codes that encode logical information into the joint eigenspace of commuting Pauli operators is given by stabilizer codes. In the stabilizer framework, decoding is inherently degenerate, which means that multiple Pauli errors may share the same syndrome and the same logical effect. Exploiting degeneracy is essential for quantum decoding [9]–[14]. However, degeneracy can also hinder the application of BP decoding to QEC by causing the decoder to oscillate rather than to converge [15]. Additionally, nonconvergence is exacerbated since QLDPC codes contain many trapping sets. Thus, several methods have been proposed to improve the convergence and accuracy of BP-based decoding for QLDPC codes. Post-processing approaches use BP soft information to construct a syndrome-consistent estimate [6], [16]–[18], but can increase worst-case latency, which is problematic for real-time QEC. Other approaches modify BP directly, e.g., through scaled messages [19] or neural BP [13], [20]. Recently, ensemble decoding (ED) has gained attention as a strategy for improving robustness by exploiting diversity
+This work was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project 567557088 and also received funding from the German Federal Ministry of Research, Technology and Space (BMFTR) within the project Open6GHub+ (grant agreement 16KIS2405). Parts of this work have received funding from the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme (grant agreement No. 101001899)
+
+across multiple decoding paths, both in the classical [21]–[26] and quantum settings [15], [27]–[31].
+In this work, we provide a mathematical characterization of degeneracy by introducing degeneracy sets. Building on those, we show that appending additional ∆ linearly independent rows to a check matrix of a stabilizer code and setting the additional syndrome component to any binary vector of length ∆ can split each degeneracy set into equally-sized disjoint subsets. We then extend affine subcode ensemble decoding (aSCED) [32] that has recently been introduced in classical coding theory to the QEC setting, where it naturally exploits this structure and introduces additional diversity. Finally, we present simulation results for toric codes [33], [34] and generalized bicycle (GB) codes [6], demonstrating that aSCED significantly improves the convergence behavior of BP and achieves o√utstanding decoding performance.
+Notation: Let ι = −1 and [n] := {1, 2, . . . , n}. Let q be a prime power and Fq be a Galois field of size q. Let boldface letters denote vectors and matrices, e.g., a and A, where ai is the ith component of a and Aj,i is the element in the jth row and ith column of A; A⊤ denotes the matrix transpose.
+II. PRELIMINARIES
+Consider the Pauli operators in P = {I, X, Y, Z} ⊂ C2×2 that are Hermitian, unitary, and with the commutation properties ZX = −XZ = ιY . Together with N := {±1, ±ι} and the matrix multiplication over C2×2, they form the singlequbit Pauli group G1 := {cP : c ∈ N, P ∈ P}. We extend G1 to Gn := {cP = cP1 ⊗ · · · ⊗ Pn : c ∈ N, Pi ∈ P}, the nqubit Pauli group, via the Kronecker product ⊗. The weight of a Pauli operator P ∈ Gn is wt (P ) := |{i ∈ [n] : Pi ̸= I}|.
+Let S be a commutative subgroup of Gn of order n − k, generated by a set of generators BS := {S1, . . . , Sn−k}. An n, k ⊂ C2n stabilizer code is defined based on S by
+Q(S) := |ψ⟩ ∈ C2n : S |ψ⟩ = (+1) |ψ⟩ , ∀S ∈ S .
+Then, Q(S) possesses a set BL := {Li}2i=k1 ⊂ Gn \ S of 2k independent logical operators [2] such that Li |ψ⟩ ∈ Q(S), ∀ |ψ⟩ ∈ Q(S), but ∃ |ψ⟩ ∈ Q(S) : Li |ψ⟩ ̸= |ψ⟩. Let L ⊂ Gn be the subgroup generated by BL. The distance of the code Q(S) is defined as the minimum weight of a logical operator, i.e., d := minL∈L wt(L). If the minimum distance d is known, we write n, k, d .
+Now, let N ⊗n := {±1, ±ι}I⊗n and Gn := Gn/N ⊗n be the n-qubit Pauli group modulo the global phase, which can be ignored in QEC [2]. Note that Gn admits a vector space structure over F2 [35]. Using the definitions
+
+X(x) := Xx1 ⊗ · · · ⊗ Xxn and Z(z) := Zz1 ⊗ · · · ⊗ Zzn ,
+
+we can associate n-qubit Pauli operators with binary vec-
+tors x, z ∈ F2n. Then, R := {X(x) · Z(z) : x, z ∈ F2n} consists of the representatives of the cosets of Gn such that {N ⊗nR : R ∈ R} = Gn. We use the isomorphism [35] ϕ : (Gn, ·) → (F22n, +) with ϕ(N R) := ϕ(R) := (x|z) for R = X(x)Z(z) ∈ R, and denote its inverse by ϕ−1. Ob-
+
+serve that ϕ is well-defined on equivalence classes, i.e., it does
+
+not depend on the choice of the representative. Furthermore,
+for n = 1, X(x) = Xx1 and Z(z) = Zz1 . Then ϕ maps single-qubit Pauli operators in P to vectors in F22. We extend ϕ to subsets A ⊆ Gn by ϕ(A) := {ϕ(A) : A ∈ A}. Additionally, we equip F22n with the symplectic inner product
+
+n
+
+n
+
+⟨u, v⟩ := ux,i · vz,i + vx,i · uz,i ∈ F2
+
+i=1
+
+i=1
+
+for u = (ux|uz) ∈ F22n and v = (vx|vz) ∈ F22n. It can be shown that ⟨u, v⟩ = 0 iff ϕ−1(u) and ϕ−1(v) commute [36].
+
+A stabilizer code can be characterized by a check matrix
+
+H = (ϕ(S1))T . . . (ϕ(Sn−k))⊤ ⊤ ∈ F2(n−k)×2n. (1)
+A check matrix H ∈ F2m×2n is called overcomplete iff m > rank(H) = n − k.
+An important subclass of stabilizer codes are Calderbank– Shor–Steane (CSS) codes [36], [37] with check matrix
+
+H=
+
+HX 0mZ ×n
+
+0mX ×n HZ
+
+∈ Fm 2 ×2n,
+
+where the component parity-check matrices (PCMs) HX ∈ Fm 2 X×n and HZ ∈ F2mZ×n are PCMs of two classical codes that satisfy the symplectic criterion HX HZ⊤ = 0.
+
+III. DEGENERACY SETS AND DECODING
+
+A. Degeneracy Sets
+
+In this work, we assume a depolarizing channel in which
+
+the ith physical qubit |ψi⟩ is modified independently by a
+
+random Pauli operator Pi ∈ P. Each error X, Z and Y
+
+occurs
+
+with
+
+probability
+
+p 3
+
+,
+
+where
+
+p
+
+denotes
+
+the
+
+physical
+
+error
+
+probability.
+
+The binary representation of Pauli operators allows for
+
+the following mathematical characterization of degeneracy.
+
+By construction, ϕ(BS ) constitutes a basis of an (n − k)dimensional subspace S ⊆ F22n. Similarly, ϕ(BL) is the basis of a 2k-dimensional subspace L ⊆ F22n and all vectors in ϕ(BL) and ϕ(BS ) are linearly independent.
+Now let {ε1, . . . , εn−k} ⊂ F22n be chosen such that it complements ϕ(BS ∪ BL) to a basis of F22n. Then, this set forms the basis of an (n − k)-dimensional subspace E ⊆ F22n and F22n = E ⊕ S ⊕ L is a direct sum of subspaces. Thus, the binary representation e ∈ F22n of an arbitrary Pauli error can
+be uniquely decomposed as
+
+e = ε + σ + λ, ε ∈ E, σ ∈ S, λ ∈ L.
+
+(2)
+
+We characterize the error components as follows:
+• ε or ϕ−1(ε) is the detectable error component since it
+anti-commutes with at least one stabilizer, • σ or ϕ−1(σ) is the trivially undetectable component, • λ or ϕ−1(λ) is the non-trivial undetectable error com-
+ponent, also known as a logical error in literature.
+
+Based on this decomposition, we define a degeneracy set:
+Definition 1. A degeneracy set Dλ,ε is defined as a coset of S in F22n/S resulting in equivalence classes indexed by λ ∈ L and ε ∈ E, i.e.,
+Dλ,ε := λ + ε + S := {λ + ε + σ : σ ∈ S}.
+For any e1, e2 ∈ Dλ,ε, there exists S ∈ S such that ϕ−1(e1) = Sϕ−1(e2), i.e., a degeneracy set summarizes all errors that only differ by a stabilizer.
+
+B. Quantum Decoding Problem
+
+For an arbitrary error e = ε + σ + λ ∈ F22n, the syndrome indicates, for each stabilizer in BS , whether the Pauli operator ϕ−1(e) commutes or anti-commutes with it [38]. The extracted syndrome is denoted by z ∈ Fn2−k, where zj := ⟨e, ϕ(Sj)⟩ for Sj ∈ BS . Note that the syndrome is
+determined by the detectable error component ε, since for
+both other components ⟨λ, ϕ(S)⟩ = ⟨σ, ϕ(S)⟩ = 0, ∀S ∈ S.
+
+A decoder is solving a syndrome-decoding problem: given
+
+H
+
+as
+
+in
+
+(1)
+
+and
+
+given
+
+the
+
+extracted
+
+syndrome
+
+z
+
+∈
+
+n−k
+F2
+
+,
+
+find an estimated error eˆ ∈ F22n such that
+
+⟨eˆ, Hj,:⟩ = ⟨eˆ, ϕ(Sj)⟩ = zj ∀j ∈ [n − k], (3)
+
+where Hj,: is the jth row of H. Now, assume that e ∈ Dλ,ε. We distinguish degeneracy-
+aware decoding and non-degeneracy-aware decoding.
+Degeneracy-aware decoding aims at identifying an error estimate eˆ such that eˆ ∈ Dλ,ε, i.e., the estimated error eˆ is logically equivalent to the occurred error e. In contrast, non-degeneracy-aware decoding aims at finding eˆ = e. The
+decoding result can be characterized into four distinct cases:
+• Type I success: eˆ = e, i.e., the error is estimated exactly. • Type II success: eˆ ≠ e, but is logically equivalent to e. • Type I failure (flagged): no eˆ consistent with z is found. • Type II failure (unflagged): an eˆ consistent with z is
+found, but eˆ ∈/ Dλ,ε.
+The Type II failure will result in a Pauli correction causing a logical error, as eˆ ∈ Dλ′,ε with λ′ ≠ λ induces ϕ−1(eˆ) · ϕ−1(e) = ϕ−1(λ′ − λ) that acts non-trivially on the
+orginal code state.
+
+C. Belief Propagation Decoding for QEC
+BP decoding is an iterative message passing algorithm
+operating on the Tanner graph induced by the check matrix H ∈ F2m×2n of the stabilizer code. The Tanner graph is a bipartite graph consisting of two disjoint sets of nodes: the variable nodes (VNs) {vi}i∈[n], associated with the physical qubits, and the check nodes (CNs) {cj}j∈[m], associated with the rows of H, referred to as checks. A VN vi is connected to a CN cj via an edge iff hj,i := (Hj,i ∨ Hj,n+i) = 1, where ∨ denotes the logical OR. We denote the neighboring sets of VNs and CNs as N (i) := {j ∈ [m] : hj,i = 1} and M(j) := {i ∈ [n] : hj,i = 1}, respectively.
+In this work, quaternary belief propagation (BP4) decoding
+is used, which implements syndrome-based BP decoding over
+F4, providing a unified decoding framework that accounts for all three Pauli errors jointly [19], [39]. In contrast to binary BP [11], which decodes for X- and Z-errors separately, BP4
+
+captures the correlations from simultaneous X- and Z-errors Theorem 1 (Splitting the Degeneracy Sets). Let t be defined
+
+and therefore yields better decoding performance [13].
+
+as in Lemma 1, i.e., with εt ∈ E\{0}, and let zm+1 = g ∈ F2
+
+Specifically, we use log-domain refined BP4 decoding [19]. be the additional non-measured (m + 1)th syndrome bit
+
+Typically, the algorithm is introduced in F4n; to keep minimal notation, we describe the algorithm in F22n. Each VN vi, i ∈ [n], is assigned a log-likelihood ratio (LLR) vector
+Li = L(iX), Li(Z), Li(Y ) ∈ R3, with one component for
+
+corresponding to t. Then, the additional row t splits each degeneracy set Dλ,ε , λ ∈ L, ε ∈ E, into two disjoint subsets
+Dλ(g,)ε = {e ∈ Dλ,ε : ⟨e, t⟩ = g}, g ∈ F2,
+
+each Pauli error ζ ∈ P \ {I}. Let ei := (ei | en+i) denote the binary representation of a Pauli error on the ith qubit. Based
+
+of
+
+equal
+
+size
+
+|Dλ(0,)ε|
+
+=
+
+|Dλ(1,)ε|
+
+=
+
+|Dλ,ε | 2
+
+=
+
+2n−k−1.
+
+on a given physical error probability p0 of the depolarizing channel, the a-priori LLRs are defined as
+
+Proof: Due to Lemma 1, t is linearly independent from ϕ(BS ) and the Pauli operator ϕ−1(t) anti-commutes
+
+with at least one stabilizer S ∈ S since the stabilizer are
+
+L˜(iζ) = ln
+
+P (ei = ϕ(I)) P (ei = ϕ(ζ))
+
+= ln
+
+1 − p0
+p0 3
+
+,
+
+ζ ∈ P \ {I}, generated by BS . Thus, there exists at least one σ ∈ ϕ(BS ) such that ⟨t, σ⟩ = 1. Without loss of generality, assume that
+
+and used to initialize the variable-to-check messages Li→j. ⟨t, σn−k⟩ = 1, i.e., ϕ−1(t) anti-commutes with the (n − k)th To reduce complexity without performance loss in the follow- stabilizer Sn−k. We perform a change of basis for S:
+
+ing CN update, a belief quantization operator λ : R3 → R maps each LLR vector Li→j onto a scalar LLR by
+
+
+
+
+
+σ˜j :=
+
+σj , σj + σn−k,
+
+if ⟨t, σj⟩ = 0, j ∈ [n − k − 1], if ⟨t, σj⟩ = 1,
+
+λ(Li→j) = ln
+
+P (⟨ei, ϕ(η)⟩ = 0) P (⟨ei, ϕ(η)⟩ = 1)
+
+=
+
+ln
+
+ 
+
+
+
+1
+
++
+
+e−L(i→ η)j e−Li(→ ζ ) j
+
+, 
+
+ζ ∈P \{I ,η}
+
+and σ˜n−k = σn−k. Then {σ˜j }nj=−1k is such that ⟨σ˜j, t⟩ = 0, j ∈ [n − k − 1] Thus, the set {σ˜j}nj=−1k−1 forms a basis
+
+another basis of S and ⟨σ˜n−k, t⟩ = 1. of a (dim(S) − 1)-
+
+where η = ϕ−1((Hj,i | Hj,n+i)). For each CN cj, j ∈ [m], the outgoing messages are then computed as
+
+dimensional subspace S˜ ⊂ S consisting of 2n−k−1 binary vectors σ˜ ∈ S˜ such that ⟨σ˜ , t⟩ = 0. Furthermore, the coset σ˜n−k + S˜ consists of 2n−k−1 binary vectors σ˜ ∈ σ˜n−k + S˜
+
+
+
+Li←j = (−1)zj · 2 tanh−1
+
+tanh
+
+i′ ∈M(j )\{i}
+
+
+
+λ(Li→j ) 2
+
+.
+
+such that ⟨σ˜ , t⟩ = 1. Consider an arbitrary Dλ,ε and set β := ⟨λ + ε, t⟩ ∈ F2.
+Let Dλ(β,ε) := λ + ε + S˜ and Dλ(β,ε+1) := λ + ε + (σ˜n−k + S˜)
+
+The outgoing messages of each VN vi are computed for all Pauli errors individually as
+
+with superscript operation conducted in F2. Thus, by con-
+
+struction
+
+|Dλ(β,ε) |
+
+=
+
+|Dλ(β,ε+1)|
+
+=
+
+|Dλ,ε | 2
+
+=
+
+2n−k−1.
+
+Li(→ ζ)j = L˜i(ζ) +
+
+Li←j′ =: Li(ζ) − Li←j ,
+
+j′∈N (i)\{j}
+
+ζ ∈ P \ {I}.
+
+Note that for any e ∈ Dλ(β,ε) it follows that e = λ + ε + σ˜ for some σ˜ ∈ S˜, and, therefore,
+
+⟨ϕ(ζ ),(Hj ′ ,i |Hj ′ ,n+i )⟩=1
+
+⟨e, t⟩ = ⟨λ + ε, t⟩ + ⟨σ˜ , t⟩ = β + 0 = β.
+
+A hard decision on all a-posteriori LLRs Li, i ∈ [n], yields the estimate eˆ, with eˆi = ϕ(I) iff Li(ζ) > 0, ∀ζ ∈ P \ {I}, and eˆi = ϕ arg minζ L(iζ) otherwise. The iterative decoding process is stopped when (3) is satisfied or Imax iterations are reached.
+
+Similarly, for any e ∈ Dλ(β,ε+1) it follows that ⟨e, t⟩ = β + 1. Choosing g = ⟨e, t⟩ concludes the proof.
+Remark 1. Since such rows split the degeneracy sets, we call them splitters.
+
+IV. SPLITTING OF DEGENERACY SETS
+The core idea of the decoding approach introduced in the subsequent section is to append additional rows to the check matrix H ∈ F2m×2n, which are linearly independent of the rows of H. Note that we cannot measure their syndrome since they act non-trivially on the encoded state, so we need to virtually fix additional syndrome bits corresponding to such rows. In the following, we show that if such a linearly appended row is not a logical operator, it has a splitting effect on all the degeneracy sets Dλ,ε, λ ∈ L, ε ∈ E.
+Lemma 1. Let t = εt + σt + λt ∈ F22n be a decomposition with εt ∈ E \ {0}, σt ∈ S, and λt ∈ L. Then t is linearly independent of the rows of H, which form a basis of S.
+Proof: It follows from the definitions of the subspaces S and E in Section III-A that S ∩ E = {0}. By choosing εt ∈ E \ {0}, we ensure t ∈/ S and hence t is linearly independent of the rows of H.
+
+Remark 2. By appending ∆ linearly independent splitters with linearly independent components ε ∈ E \ {0} to the check matrix, each degeneracy set Dλ,ε is split into 2∆ subsets of size 2n−k−∆, indexed by the respective preset syndrome component g ∈ F2∆, e.g., Dλ(g,ε) .
+V. AFFINE SUBCODE ENSEMBLE DECODING
+Ensemble decoding employs K constituent decoding paths in parallel to produce a set of diverse estimates eˆp, p ∈ [K], based on the extracted syndrome z. The final estimate eˆ is selected from a candidate set V := {eˆp : eˆp satisfies (3)} according to the minimum-weight selection [24]
+eˆ = arg min wt(ϕ−1(eˆp)),
+eˆp ∈V
+where |V| = 0 results in a Type I failure. Affine subcode ensemble decoding (aSCED) [32] leverages
+K = L · 2∆ ∈ N decoding paths, where L ∈ N is the number of batches, and 2∆ ∈ N is the number of paths in each batch.
+
+aSCED batch
+
+BP4g1 (H(ℓ))
+
+eˆ1
+
+z
+
+BP4g2 (H(ℓ))
+
+eˆ2
+
+eˆ
+
+...
+
+BP4g2∆ (H(ℓ))
+
+eˆ2∆
+
+Fig. 1. Block diagram of an aSCED batch with 2∆ distinct paths decoding with the same extended check matrix H(ℓ). Each path uses a different syndrome configuration gδ ∈ F2∆, δ ∈ [2∆], corresponding to the ∆ splitters.
+
+Fig. 1 demonstrates the structure of one aSCED batch. Each batch ℓ ∈ [L] decodes on a distinct extended check matrix
+
+ HX
+
+H (ℓ)
+
+=
+
+ 
+
+AX(ℓ)
+
+0mZ ×n
+
+
+
+0
+
+∆ 2
+
+×n
+
+0mX ×n
+
+0
+
+∆ 2
+
+×n
+
+HZ
+
+   
+
+∈
+
+(m+∆)×2n
+F2
+
+,
+
+A(Zℓ) 
+
+where
+
+AX(ℓ), AZ(ℓ)
+
+∈
+
+∆
+F22
+
+×n
+
+each
+
+consist
+
+of
+
+∆ 2
+
+rows
+
+such
+
+that
+
+rank(H(ℓ)) = rank(H) + ∆. The rows of Aζ(ℓ), ζ ∈ {X, Z}
+
+are generated using [25, Algorithm 1] to avoid introducing
+
+additional cycles of length 4 in the Tanner graph representa-
+
+tion of the respective component PCMs. For δ ∈ [2∆], the δth path in the ℓth batch aims at solving
+the decoding problem given H(ℓ) and the extended syndrome
+
+zδ = (zX , gX,δ, zZ , gZ,δ) ∈ F2m+∆,
+
+(4)
+
+where (gX,δ, gZ,δ) =: gδ ∈ F∆2 denotes the binary representation of δ−1. Hence, the paths in one batch cover all possible
+
+syndrome configurations gδ corresponding to the additional rows in A(ζℓ), ζ ∈ {X, Z}.
+According to Lemma 1 and Remark 2, if the rows do
+
+not correspond to logical operators, the ∆ additional rows
+
+of H(ℓ) act as splitters that partition each degeneracy set
+
+Dλ,ε into 2∆ disjoint subsets Dλ(g,εδ) of size 2n−k−∆. Thus,
+
+the δth decoding path in the ℓth batch aims at identifying an
+
+error estimate eˆ in the local degeneracy set Dλ(g,εδ), while the
+
+ℓth batch maintains degeneracy-aware decoding on the full
+
+degeneracy set Dλ,ε =
+
+2∆ δ=1
+
+Dλ(g,εδ ) .
+
+Furthermore, overcomplete check matrices have been
+
+shown to enhance the performance of BP decoding and to
+
+improve the convergence to valid error estimates [13], [40].
+
+Linearly independent rows used for aSCED can provide
+
+benefits for constructing overcomplete check matrices [32].
+
+First, they enlarge the pool of redundant checks obtain-
+
+able through linear combinations of rows in the vertically stacked matrix [Hζ ; A(ζℓ)], ζ ∈ {X, Z} and enable more
+distinct overcomplete check matrices across the ensemble [32,
+
+Sec.VI.B]. Second, choosing a low weight for those addi-
+
+tional rows allows for sparser overcomplete check matrices
+
+with fewer short cycles in the Tanner graph [32, Sec.V.C].
+
+Note that the syndrome corresponding to an overcom-
+
+plete check matrix in the δth path is computed from the extended syndrome in (4) by zδ⊤,oc = M zδ⊤ ∈ Fm 2 oc .
+
+Selection Step LER
+
+100 BP4
+10−1
+
+10−2
+
+10−3 10−4 10−5
+
+OBP4 0.04
+
+0.06 p
+
+Baseline K = 4, ∆ = 2, L = 1 K = 16, ∆ = 4, L = 1 K = 16, ∆ = 2, L = 4 K = 64, ∆ = 2, L = 16
+
+0.08
+
+0.1
+
+Fig. 2. LER of different {BP4, OBP4}-aSCEDK configurations on the 46, 2, 9 GB code with stand-alone BP4 (or OBP4) as a baseline.
+
+Hereby, M ∈ F2moc×(m+∆) is a full-rank matrix that is used for adding linearly dependent rows to the extended
+check matrix in order to form the overcomplete matrix via Ho(ℓc) = M H (ℓ).
+
+VI. NUMERICAL RESULTS
+We evaluate the proposed aSCED design for two families of CSS codes: toric codes [34] and generalized bicycle (GB) codes [6]. In particular, we focus on the 128, 2, 8 toric code with moc = 384 rows in its overcomplete check matrix, the 46, 2, 9 GB code with moc = 800, and the higher-rate 126, 28, 8 GB code with moc = 126. For constructing sparse overcomplete check matrices, we use the probabilistic search from [41].
+The numerical results are obtained by Monte-Carlo simulations assuming a depolarizing channel with physical error probability p. Note that for initializing BP4, we use some fixed p0, which not necessarily equals p, as this approach has empirically been shown to improve performance [13]. We assess decoding performance using the logical error rate (LER), defined as the fraction of trials in which decoding fails to restore the logical state (Type I or II failure). Simulations are run until at least 400 logical errors are recorded or 106 trials have been conducted.
+We use {BP4, OBP4}-aSCEDK to denote an ensemble with K constituent decoders of the respective type, where OBP4 refers to decoding with an overcomplete check matrix. BP4 uses a maximum of Imax = 25 decoding iterations, while OBP4 is limited to Imax = 12. Following [13], we fix p0 = 0.49 and p0 = 0.3 for OBP4 on the 128, 2, 8 toric and 46, 2, 9 GB code, respectively. For the ∆ splitters in each aSCED batch, we use rows of weight 4.
+
+A. Discussion on Ensemble Parameters
+Fig. 2 shows the LER of different {BP4, OBP4}-aSCEDK configurations on the 46, 2, 9 GB code. All configurations outperform their respective stand-alone BP4 decoder (baseline) across the entire simulated regime.
+Furthermore, we observe that, when increasing the ensemble size K, increasing L yields a larger performance gain than increasing ∆, i.e., increasing the number of batches is preferable over increasing the number of paths per batch. For in-
+
+100
+
+100
+
+10−1 10−2
+
+10−1
+
+LER
+
+LER
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+0.03
+
+BP4 OBP4 MWPM [42] cMWPM [42] OBP4-aSCED64 OBP4-aSCED256
+
+0.06
+
+0.09
+
+0.12
+
+0.15
+
+p
+
+Fig. 3. LER of OBP4-aSCEDK, K ∈ {64, 256}, and state-of-the-art decoders, i.e., MWPM and correlated MWPM, on the 128, 2, 8 toric code.
+
+OBP4 OBP4-aSCED64 1
+
+OBP4-aSCED16 OBP4-aSCED256
+
+Fraction of Type I failures
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+
+0.03
+
+0.06
+
+0.09
+
+0.12
+
+0.15
+
+p
+
+Fig. 4. Fraction of Type I failures relative to the total number of logical errors of OBP4 and OBP4-aSCEDK, K ∈ {16, 64, 256}, on the 128, 2, 8 toric code, as a metric for the convergence reliability of the decoders.
+
+stance, for BP4, consider the gap between K = 4, ∆ = 2, L = 1 and K = 16, ∆ = 4, L = 1, compared to the the gap between K = 4, ∆ = 2, L = 1 and K = 16, ∆ = 2, L = 4, where the latter
+is significantly larger. This behavior may be attributed to
+increased diversity between batches: increasing L allows for more distinct check matrices H(ℓ). Based on this observation, we set ∆ = 2 for the remainder of the section, unless stated
+otherwise. Further simulations show that the performance gain of using an additional path decoding with H vanishes for larger ensemble sizes, e.g., K ≥ 16.
+
+B. Results for Overcomplete Check Matrices
+Having discussed the parametrization of aSCED, we now compare aSCED using overcomplete matrices against stateof-the-art decoders, namely binary minimum weight perfect matching (MWPM) [33], correlated MWPM (cMWPM) [43], and (binary) BP with OSD post-processing [6] (BP-OSD). For the numerical results of binary MWPM and cMWPM, we use the Pymatching library [42]. For binary MWPM, Xand Z errors are decoded independently by separate MWPM instances operating on HZ and HX , respectively. The final error estimate of binary MWPM is obtained by combining the binary estimates of both instances. The numerical results of BP-OSD are obtained similarly.
+Fig. 3 shows the LER of OBP4-aSCEDK, binary MWPM, and cMWPM on the 128, 2, 8 toric code. We observe
+
+10−2
+
+10−3
+
+10−4
+
+0.04
+
+0.06 p
+
+BP-OSD OBP4 OBP4-aSCED16 OBP4-aSCED64 OBP4-aSCED256
+
+0.08
+
+0.1
+
+Fig. 5. LER of OBP4-aSCEDK, K ∈ {16, 64, 256}, and BP-OSD on the 126, 28, 8 GB code. BP and OBP4 are limited to Imax = 200 decoding iterations. OSD post-processing is applied at order 10.
+
+that OBP4-aSCEDK outperforms both MWPM decoders for larger ensemble sizes, i.e., K ∈ {64, 256}.
+Fig. 4 shows the fraction of Type I failures relative to the total number of logical errors for OBP4 and OBP4-aSCEDK on 128, 2, 8 toric code. Note that we did not include standalone BP4 since we observed that almost all its failures are
+of Type I. OBP4 reduces the fraction of Type I failures to 0.75 for p = 0.075. OBP4-aSCEDK further mitigates the nonconvergence issues of OBP4, reducing this fraction to 0.15 for K = 16 and 0.0025 for K = 256. Further simulations show that for the 46, 2, 9 GB code, OBP4-aSCED64 exhibits no Type I failures across the entire simulated regime, i.e.,
+always converges to a valid estimate. In practice, this largely
+alleviates the need for a post-processing step such as OSD. Finally, Fig. 5 shows the LER of OBP4-aSCEDK and
+BP-OSD on the 126, 28, 8 GB code, i.e., for a code with k > 2. Note that OSD post-processing is applied at order 10. For OBP4-aSCEDK, each batch uses ∆ = 2 splitters of weight 6. Furthermore, we limit both BP-OSD and OBP4 to Imax = 200 iterations, and fix p0 = 0.1 for the latter. Again, OBP4-aSCEDK yields strong decoding performance
+and outperforms BP-OSD significantly.
+
+VII. CONCLUSION AND OUTLOOK
+In this work, we characterize degeneracy by introducing degeneracy sets. We prove that appending linearly independent rows (splitters) to the check matrix partitions each degeneracy set into disjoint subsets of equal size. Each constituent path of aSCED then exploits this splitting effect by decoding under the influence of a smaller degeneracy set, while the whole ensemble still preserves full degeneracyawareness. Simulation results demonstrate that aSCED significantly improves convergence compared to stand-alone BP and outperforms correlated MWPM for the 128, 2, 8 toric code. In particular, for the 46, 2, 9 GB code, aSCED can fully mitigate Type I failures due to non-convergence and reduces the amount of Type II failures (logical error rate). Future work will extend our framework beyond the depolarizing channel to incorporate fault-tolerant decoding scenarios.
+
+REFERENCES
+[1] P. W. Shor, “Scheme for reducing decoherence in quantum computer memory,” Phys. Rev. A, vol. 52, pp. R2493–R2496, 1995.
+[2] D. Gottesman, “Stabilizer codes and quantum error correction,” Ph.D. dissertation, California Institute of Technology, 1997.
+[3] M. M. Wilde, Quantum Information Theory. Cambridge university press, 2013.
+[4] D. J. C. MacKay, G. Mitchison, and P. L. McFadden, “Sparse-graph codes for quantum error correction,” IEEE Trans. Inf. Theory, vol. 50, no. 10, pp. 2315–2330, 2004.
+[5] J.-P. Tillich and G. Zémor, “Quantum LDPC codes with positive rate and minimum distance proportional to the square root of the blocklength,” IEEE Trans. Inf. Theory, vol. 60, no. 2, pp. 1193–1202, Feb. 2014.
+[6] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” Quantum, vol. 5, p. 585, Nov. 2021.
+[7] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory,” Nature, vol. 627, no. 8005, pp. 778–782, Mar. 2024.
+[8] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[9] P. W. Shor and J. A. Smolin, “Quantum error-correcting codes need not completely reveal the error syndrome,” in Proc. Annu. Symp. Found. Comput. Sci. (FOCS), Burlington, VT, USA, Oct. 1996.
+[10] P. Iyer and D. Poulin, “Hardness of decoding quantum stabilizer codes,” IEEE Trans. Inf. Theory, vol. 61, no. 9, pp. 5209–5223, 2015.
+[11] D. Poulin and Y. Chung, “On the iterative decoding of sparse quantum codes,” Quantum Inf. Comput., vol. 8, no. 10, pp. 987–1000, Nov. 2008.
+[12] H. Yao, W. Abu Laban, C. Häger, A. Graell i Amat, and H. D. Pfister, “Belief propagation decoding of quantum LDPC codes with guided decimation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024.
+[13] S. Miao, A. Schnerring, H. Li, and L. Schmalen, “Quaternary neural belief propagation decoding of quantum LDPC codes with overcomplete check matrices,” IEEE Access, vol. 13, pp. 25 637–25 649, Feb. 2025.
+[14] N. Raveendran and B. Vasic´, “Trapping sets of quantum LDPC codes,” Quantum, vol. 5, p. 562, Oct. 2021.
+[15] T. Müller, T. Alexander, M. E. Beverland, M. Bühler, B. R. Johnson, T. Maurer, and D. Vandeth, “Improved belief propagation is sufficient for real-time decoding of quantum memory,” 2025.
+[16] J. Roffe, D. R. White, S. Burton, and E. T. Campbell, “Decoding across the quantum LDPC code landscape,” Phys. Rev. Res., vol. 2, no. 4, p. 043423, Dec. 2020.
+[17] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, “Localized statistics decoding for quantum low-density paritycheck codes,” Nat. Commun., vol. 16, no. 1, p. 8214, Sep. 2025.
+[18] K. Yin, X. Fang, J. Ruan, H. Zhang, D. Tullsen, A. Sornborger, C. Liu, A. Li, T. Humble, and Y. Ding, “SymBreak: Mitigating quantum degeneracy issues in QLDPC code decoders by breaking symmetry,” Dec. 2024, 10.48550/arXiv.2412.02885.
+[19] C.-Y. Lai and K.-Y. Kuo, “Log-domain decoding of quantum LDPC codes over binary finite fields,” IEEE Trans. Quantum Eng., vol. 2, pp. 1–15, Sep. 2021.
+[20] Y.-H. Liu and D. Poulin, “Neural belief-propagation decoders for quantum error-correcting codes,” Phys. Rev. Lett., vol. 122, no. 20, p. 200501, May 2019.
+[21] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. ten Brink, “Automorphism ensemble decoding of quasi-cyclic LDPC codes by breaking graph symmetries,” IEEE Commun. Lett., vol. 26, no. 8, pp. 1705–1709, Aug. 2022.
+[22] J. Mandelbaum, S. Miao, H. Jäkel, and L. Schmalen, “Endomorphisms of linear block codes,” in Proc. IEEE Int. Symp. Inform. Theory (ISIT), Athens, Greece, Jul. 2024.
+
+[23] T. Hehn, J. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, Jan. 2010.
+[24] S. Miao, J. Mandelbaum, H. Jäkel, and L. Schmalen, “A joint code and belief propagation decoder design for quantum LDPC codes,” in Proc. IEEE Int. Symp. Inform. Theory (ISIT), Athens, Greece, Jul. 2024.
+[25] J. Mandelbaum, H. Jäkel, and L. Schmalen, “Subcode ensemble decoding of linear block codes,” in Proc. IEEE Int. Symp. Inform. Theory (ISIT), Ann Arbor, MI, USA, Jun. 2025.
+[26] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism ensemble decoding of Reed-Muller codes,” IEEE Trans. Commun., vol. 69, no. 10, pp. 6424–6438, Oct. 2021.
+[27] S. Koutsioumpas, H. Sayginel, M. Webster, and D. E. Browne, “Automorphism ensemble decoding of quantum LDPC codes,” Mar. 2025, 10.48550/arXiv.2503.01738.
+[28] S. Koutsioumpas, T. Noszko, H. Sayginel, M. Webster, and J. Roffe, “Colour codes reach surface code performance using Vibe decoding,” Aug. 2025, 10.48550/arXiv.2508.15743.
+[29] A. S. Maan, F. M. Garcia Herrero, A. Paler, and V. Savin, “Decoding correlated errors in quantum LDPC codes,” Nat. Commun., vol. 17, p. 3965, Mar. 2026.
+[30] A. Gong, S. Cammerer, and J. M. Renes, “Toward low-latency iterative decoding of QLDPC codes under circuit-level noise,” Mar. 2024, 10.48550/arXiv.2403.18901.
+[31] M. Ye, D. Wecker, and N. Delfosse, “Beam search decoder for quantum LDPC codes,” 2025. [Online]. Available: https: //arxiv.org/abs/2512.07057
+[32] J. Mandelbaum, P. Bezner, S. ten Brink, H. Jäkel, and L. Schmalen, “Affine subcode ensemble decoding for linear block codes,” Apr. 2026, 10.48550/arXiv.2604.06889.
+[33] E. Dennis, A. Kitaev, A. Landahl, and J. Preskill, “Topological quantum memory,” J. Math. Phys., vol. 43, no. 9, pp. 4452–4505, Sep. 2002.
+[34] A. Y. Kitaev, “Fault-tolerant quantum computation by anyons,” Ann. Phys., vol. 303, no. 1, pp. 2–30, Jan. 2003.
+[35] A. R. Calderbank, E. M. Rains, P. W. Shor, and N. J. A. Sloane, “Quantum error correction via codes over GF(4),” IEEE Trans. Inf. Theory, vol. 44, no. 4, pp. 1369–1387, Jul. 1998.
+[36] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Phys. Rev. A, vol. 54, no. 2, pp. 1098–1105, Aug. 1996.
+[37] A. M. Steane, “Multiple-particle interference and quantum error correction,” Proc. R. Soc. Lond. A, vol. 452, no. 1954, pp. 2551–2577, Sep. 1996.
+[38] J. Roffe, “Quantum error correction: an introductory guide,” Contemp. Phys., vol. 60, no. 3, p. 226–245, Jul. 2019.
+[39] K.-Y. Kuo and C.-Y. Lai, “Refined belief propagation decoding of sparse-graph quantum codes,” IEEE J. Sel. Areas in Inf. Theory, vol. 1, no. 2, pp. 487–498, Aug. 2020.
+[40] S. Laendner, T. Hehn, O. Milenkovic, and J. B. Huber, “When does one redundant parity-check equation matter?” in Proc. Global Conf. Commun. (GLOBECOM), San Francisco, CA, USA, Nov. 2006.
+[41] J. S. Leon, “A probabilistic algorithm for computing minimum weights of large error-correcting codes,” IEEE Trans. Inf. Theory, vol. 34, no. 5, pp. 1354–1359, Sep. 1988.
+[42] O. Higgott and C. Gidney, “Sparse blossom: Correcting a million errors per core second with minimum-weight matching,” Quantum, vol. 9, p. 1600, Jan. 2025.
+[43] A. G. Fowler, “Optimal complexity correction of correlated errors in the surface code,” 2013, 10.48550/arXiv.1310.0863.
+
+

@@ -1,0 +1,704 @@
+5338
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+
+A Deep Learning Assisted Node-Classified Redundant Decoding Algorithm for BCH Codes
+Bryan Liu , Graduate Student Member, IEEE, Yixuan Xie , Member, IEEE, and Jinhong Yuan , Fellow, IEEE,
+
+Abstract— This paper proposes a node-classified redundant decoding (NC-RD) algorithm based on the received sequence’s channel reliability for high-density parity-check (HDPC) codes. Two preprocessing steps are proposed prior decoding. The variable nodes of the parity-check matrix are firstly classified by the k-median algorithm based on the number of shortest cycles associated with each variable node before decoding. Then, by searching among the automorphism group of the HDPC codes, we generate a list of permutations for bit positions by computing and sorting the permutation reliability metrics. The redundant decoder conducts the message-passing decoding according to the sorted permutations, which limit the unreliable information propagation for each permutation. Besides proposing a list decoding algorithm on top of the NC-RD algorithm to augment the decoder’s performance, we show that the NC-RD algorithm can be transformed into a neural network system. More specifically, multiplicative tuneable weights are attached to the decoding messages to optimize the decoding performance. Simulation results of BCH codes over the AWGN channels show that the NC-RD algorithm provides a performance gain compared to the random redundant decoding algorithm. Additional decoding performance gain can be obtained by both the list decoding method and the neural network “learned” NC-RD algorithm.
+Index Terms— High-density parity-check codes, iterative decoding, deep learning.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes with iterative belief-propagation (BP) decoding algorithm have shown to approach the capacity limit for various channels [1], [2]. However, the BP performance is unsatisfying for high-density parity-check (HDPC) codes, such as the Bose–Chaudhuri– Hocquenghem (BCH) codes and the Reed-Solomon codes, due to a large number of short cycles in the codes’ parity-check matrix (PCM) [3]. In recent years, many pivotal works have been proposed on how to improve the decoding performance of HDPC codes under soft-decoding [4]–[9]. In [4], an adaptive belief-propagation (ABP) algorithm was proposed by
+Manuscript received November 26, 2019; revised April 23, 2020; accepted May 31, 2020. Date of publication June 9, 2020; date of current version September 16, 2020. The work was partially supported in part by the Australian Research Council Discovery Projects under Grant DP190101363 and in part by the Linkage Project under Grant LP170101196. The associate editor coordinating the review of this article and approving it for publication was R. Venkataramanan. (Corresponding author: Bryan Liu.)
+The authors are with the School of Electrical Engineering and Telecommunications, University of New South Wales at Sydney, Sydney, NSW 2052, Australia (e-mail: bryan.liu@unsw.edu.au; yixuan.xie@unsw.edu.au; j.yuan@unsw.edu.au).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2020.3001162
+
+Jiang and Narayanan. It limits the propagation of the unreliable information by sorting the log-likelihood ratios (LLRs) and performing Gaussian elimination to the PCM during each decoding iteration. More specifically, the group of bits with least accumulated a posterior probabilities (APPs) are allocated to the systematic part of the PCM after Gaussian elimination. This results in less unreliable information propagation during the message-passing decoding. To reduce the decoding complexity induced by sortation and Gaussian elimination of the ABP algorithm, a random redundant decoding (RRD) algorithm was proposed in [5]. During the decoding iterations, the positions of the bits are permutated following a oneto-one correspondence permutation function to perform the redundant decoding and reduce the accumulation of correlation between the bits in each iteration. The redundant syndromes are explored by the permutations of the bit positions and the permutation function is randomly chosen from a set of permutation functions that send the code to itself, where the permutation set is also known as the automorphism group. Further to the work in [5], a modified RRD (mRRD) algorithm was proposed in [6] and it has shown that by decoding the received sequence with distinct permutations in multiple times, a list of codewords can be generated to improve the decoder’s performance. The RRD and mRRD algorithms appear to approach the maximum likelihood (ML) decoding performance for very short-length and high-rate HDPC codes. However, for medium-length and low-rate HDPC codes, the detrimental influence of the large number of shortest cycles in the PCM becomes severe. The unreliable information could propagate if an unreliable bit is allocated to the variable node (VN) connected to a large number of check nodes. This results in unsatisfying soft-decoding performance.
+In recent years, machine learning has shown to be a promising topic for the future development of the wireless communications [10]–[13]. Numerous deep learning assisted channel detection and decoding algorithms have been proposed to enhance the detection or decoding performances [14]–[20]. Particularly, regarding the decoding algorithms for HDPC codes, a “learnable” BP algorithm was introduced by Nachmani et al. [21], [22], and Be’ery et al. [23]. The traditional BP algorithm is transformed into a tuneable BP neural network framework (BP-NN). Instead of constructing the neural network in a traditional way, where all the neurons are fully-connected, the neurons in the BP-NN are connected following the decoding structures of the BP algorithm. As a result, the multiplicative weights attached to the decoding
+
+0090-6778 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5339
+
+messages in the neural network can be tuned off-line and the whole neural network system performs as an optimization tool to compensate the effects of the large number of length4 cycles in the HDPC codes. Besides the investigations on HDPC codes [21]–[23], the weighted message-passing algorithms have been explored in various codes such as LDPC code [18], Polar code [24], [25] and Quantum-LDPC code [26]. These neural network decoding algorithms are constructed based on the connections of the Tanner graph and the multiplicative weights are employed to the decoding messages to improve the accuracy of the decoding messages. These works demonstrate the effectiveness of the neural network message-passing decoder and inspire researchers to investigate new soft-decision decoding algorithms, together with the neural network transformation, to further augment the decoder’s performance.
+In this paper, we propose a node-classified redundant decoding (NC-RD) algorithm for a type of HDPC codes, the BCH codes. The preprocessing method introduced in [27] for a neural network decoder is further investigated in the message-passing decoding algorithm. With the adoption of the k-median algorithm, we propose to preprocess and classify the VNs according to the number of shortest cycles they involved in. Then, we propose a permutation reliability metric (PRM) based on the classified VNs and the reliability of the received bits. Instead of employing the random permutation as the RRD algorithm, we generate a sorted permutation list based on the PRM to conduct redundant decoding. Therefore, we name the proposed algorithm as node-classified redundant decoding algorithm. The proposed NC-RD algorithm performs as a soft-input soft-output decoding algorithm and it does not require the Gaussian elimination process as the ABP algorithm or the ordered-statistical decoding (OSD) algorithm [28]. On top of the NC-RD algorithm, a modified NC-RD (mNC-RD) algorithm is further complemented to enhance the decoder’s performance. Inspired by the mRRD algorithm, the mNC-RD algorithm generates a list of codewords by decoding the received sequence in multiple times, while the permutation of the bit positions in each time of decoding is selected from a preprocessed permutation list, instead of the automorphism group as in [6]. The preprocessed permutation list is a list of permutation to restrain the propagation of the unreliable information and during each time of decoding, the mNC-RD algorithm performs different permutation orders based on the preprocessed permutation list to increase the opportunities for the decoder to converge to the correct codeword.
+Moreover, given the number of decoding iterations, we transform the NC-RD algorithm to a neural network system to optimize the scaling factors that are attached to the intrinsic information to be conveyed to the VNs in the proposed algorithm. The neural network is constructed following the decoding structure of the NC-RD algorithm. The neurons’ connections in the neural network follow the updating rules of the decoding messages, where the decoding messages are updated based on the BP algorithm. This indicates that for a binary-input symmetric channel, the neural network decoder is “learnable” from all-zero codewords corrupted by additive white Gaussian noise (AWGN). After an off-line training, it is
+
+expected that the NC-RD neural network (NC-RDNN) decoder could compensate the detrimental effect of the large number of length-4 cycles in the PCM of the HDPC codes. Different from the conventional neural network message-passing decoding algorithms which have uniform neural network connections for all the received code sequences, origin from the preprocessing of the NC-RD algorithm, the NC-RDNN decoder’s neurons’ connections are adaptive to the received code sequences. Simulation results of BCH codes show that the proposed NC-RD algorithm provides up to 0.5 dB performance gain compared to the conventional RRD algorithm in [5] under the same number of BP iterations. Furthermore, we simulated the mNC-RD algorithm to demonstrate the performance gain obtained by the list decoding method. A “learned” NC-RD algorithm (NC-RDNN) is simulated and additional 0.18 dB and 0.2 dB gains are obtained for decoding the BCH(31,21) code and the BCH(63,36) code, respectively.
+This paper is organized as follows. In the next section, we will briefly overview the RRD algorithm and in Section. III, we introduce the proposed NC-RD and mNC-RD algorithms. The detailed architecture of the neural network and the NC-RDNN algorithm are discussed in Section. IV. In Section V, we demonstrate the numerical results of the proposed schemes and the concluding remarks are presented in Section VI.
+
+II. PRELIMINARIES
+
+Before we introduce the proposed new decoding algorithm
+
+in the next section, here we briefly review the random redun-
+
+dant decoding (RRD) algorithm, on which the new algorithm
+
+is based.
+
+The RRD algorithm proposed by Halford and Chugg [5]
+
+performs as a soft-input soft-output decoding algorithm that
+
+utilizes the redundant Tanner graph to decode the classical
+
+HDPC codes, where the redundant Tanner graph can be
+
+viewed as the column permutations of the base PCM [5].
+
+The algorithm mainly contains three iterative loops, including
+
+an inner BP iterative e-loop, a middle h-loop for redundant
+
+decoding and an outer q-loop for improving the convergence
+
+behaviour. We use (qmax, hmax, emax) to denote the maximum
+
+number of iterations of the three loops correspondingly.
+
+Suppose a binary codeword b of length n and code-rate R
+
+is modulated into binary phase-shift keying (BPSK) signals
+
+and the modulated sequence is transmitted through an AWGN
+
+channel. Then, the received sequence r of the codeword, r = [r0, r1, . . . , rn−1], can be written as r = (−1)b +z, where z is the AWGN vector with zero mean and variance σ2 for each
+
+element. The log-likelihood ratio (LLR) value of each bit can
+
+be
+
+computed
+
+by:
+
+Li
+
+=
+
+log
+
+Pr(bi Pr(bi
+
+=1|r) =0|r)
+
+,
+
+for
+
+i
+
+∈
+
+{0, .
+
+.
+
+.,
+
+n
+
+−
+
+1}.
+
+Let the LLR values computed at the (q, h, e)-th iteration
+
+be Lq,h,e for the received sequence, the functionality of each
+
+decoding loop is summarized as [5]:
+
+• e-loop: The inner BP iteration. The i-th variable node
+
+(VN) vi to the j-th check node (CN) cj (V2C) information is
+
+updated by
+
+
+
+Lqv,ih→,ecj = Lqv,ih,0 +
+
+Lcq,→ h,evi ,
+
+(1)
+
+c ∈N (vi)−{cj }
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+5340
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+
+where N (vi) is the CN neighbors of the VN vi, Lvq,ih→,ecj
+
+and VN
+
+Lcq,→ h,evi represent vi to CN cj and
+
+the LLR information from CN c to VN
+
+conveyed from vi, respectively.
+
+Here, Lvq,ih,0 denotes the accumulated LLR for VN vi at the (q, h, 0)-th iteration. The check to variable node (C2V)
+
+information Lqcj,h→,evi is updated by:
+
+ Lqcj,h→,evi = 2tanh−1
+
+
+
+ tanh
+
+1 2
+
+Lvq,h→,ecj
+
+ .
+
+(2)
+
+v ∈N (cj )−{vi}
+
+• h-loop: The middle loop updates the LLR values of the
+
+VNs, then randomly permutates the bits positions. The extrin-
+
+sic information conveyed from the inner e-loop accumulates
+
+to the VNs by:
+
+
+
+Lvq,ih+1,0 = Lqv,ih,0 + αq
+
+Lq,h,emax
+c →vi
+
+−1
+
+,
+
+(3)
+
+c ∈N (vi)
+
+where αq performs as a damping coefficient to reduce the fast
+growth of the correlations between the decoding messages in the q-th outer loop iteration.
+• q-loop: The outer loop resets the LLR sequence to the channel received LLRs and the damping coefficient α used in (3) is updated as:
+
+αq+1
+
+=
+
+α0
+
++
+
+(1
+
+−
+
+α0)
+
+q+1 qmax −
+
+1
+
+.
+
+(4)
+
+The RRD algorithm implies to permutate the block code C
+
+during the message-passing iterative decoding, where the per-
+
+mutation is randomly chosen from the codes’ automorphism group. For binary BCH codes with code length n = 2m − 1, the permutation group Per(C) [29] contains the one-to-one correspondence permutation functions π: {0,1, . . ., n-1}→ {0,1, . . ., n-1}. Per(C) contains the permutation of the form:
+
+πu,o(i) = 2ui + o mod n,
+
+(5)
+
+where u ∈ {0, . . . , m − 1} and o ∈ {0, . . . , n − 1}. The permutation is selected from the automorphism group, which contains all the permutations which send the code C into itself. For instance, any cyclic code has an automorphism group which includes a cyclic shift permutation [30]. This indicates that for a given u and o, the binary codeword b = [b0, b1, . . . , bn−1] can be permutated by πu,o(i) such that the permutated codeword bπ has bππ(i) = bi for i ∈ {0, . . . , n−1}.
+By randomly permutating the bit positions, the redundant syndromes are checked correspondingly, which reduces the fast growth of the correlations between the decoding messages [4], [5]. Extension work of the RRD algorithm, such as the mRRD algorithm in [6], also implies random permutation to the bit positions, but the mRRD algorithm decodes the received sequence in multiple times and each time the decoder performs different permutations that are randomly selected from the automorphism group. In our work, instead of performing random permutation of the bit positions, we propose to permutate the bits following an order of the sorted permutation list which is generated based on the channel reliabilities of the received signals. This limits the accumulations of the correlations between the bits and reduces the effect of the unreliable information in the iterative decoder.
+
+III. PROPOSED NODE-CLASSIFIED REDUNDANT DECODER
+In this section, we will detail the proposed NC-RD algorithm. Since the deep learning is employed on top of the proposed NC-RD algorithm, in the following, we will firstly introduce the NC-RD algorithm. Specifically, compared to the conventional RRD algorithm, the NC-RD algorithm is proposed by introducing two preprocessing steps to limit the propagation of the unreliable information. The details for the VNs classification are described in Section III. A and Section III. B describes the computation of the PRMs. Section III. C delivers a toy example to interpret the proposed NC-RD algorithm. Lastly, in Section III. D, we propose a list decoding method, the mNC-RD algorithm, to augment the decoding performance of the NC-RD algorithm.
+A. Variable Nodes Classification
+In [27], Bennatan et al. proposed the preprocessing method that searches among the Per(C) to decide the bit positions to be permutated before decoding. The preprocessing method suggests to permutate the bit positions before decoding so that the sum of the reliabilities in the dense part of a systematic form of the PCM is maximized. The preprocessing method focuses on the systematic form of the PCMs and only one permutation in Per(C) is selected to be used for the decoder.
+In our work, we generalize the preprocessing metric with the VNs which include a smaller number of shortest cycles in the PCM of the HDPC codes. In other words, we evaluate the number of shortest cycles that is contained by the VNs as a metric to preprocess the permutations to be invoked during the decoding once a code sequence is received. It is widely shown that for message-passing decoding algorithms, the decoder’s performance is highly affected by the short cycles in the PCM. Any VN that contains a smaller number of shortest cycles is considered to have less impact on other VNs and the bit associated with that VN is more likely to converge to the APPs [4], [31]–[35]. Following the concept to restrain the unreliable information to be propagated to other VNs, the idea of our work is to allocate the unreliable bits to a set of positions which contain a smaller number of shortest cycles. More importantly, for every decoding iteration, the unreliable bits based on the channel reliabilities are restrained by different syndromes and eventually, it is expected that the unreliable error bits are more likely to be corrected.
+To identify the set of positions for the unreliable bits to be permutated in each iteration, we propose to classify the VNs of the PCM according to the number of the shortest cycles that each VN contains before decoding the received code sequence.
+In particular, we propose a simple VNs classification method by using the k-median algorithm [36]. The k-median algorithm is known to optimize the L1-norm of a data-set [37]. Given a PCM H of a code, the non-zero elements in H are involved into different number of shortest cycles. This directly infers that the VNs contain irregular number of shortest cycles, as the positions of the non-zero elements in each column (VN) of H are different.
+Let us define g = [g0, g1, . . . , gn−1], where gi is the number of the shortest cycles contained by VN vi, i ∈ {0, . . . , n−1}.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5341
+
+Algorithm 1 Variable Nodes Classification by k-Median
+Input: g = [g0, . . . gn−1], k Output: sp, p ∈ {0, . . . , k − 1} Step 1: Initialization: sort g to get gsort and δp is initialize to be δp = gso∗rtp×n/k Step 2: Position set assignment: sp = {i : |gi − δp| ≤ |gi − δj| ∀j, 0 ≤ j ≤ k − 1}, where p ∈ {0, . . . , k − 1} and i ∈ {0, . . . , n − 1}. Step 3: Centroid update: δp = median{gi : i ∈ sp}, p ∈ {0, . . . , k − 1} Repeat Step 2 and 3 until δp, p ∈ {0, . . . , k − 1}, converges to a constant
+With the input of vector g, the proposed algorithm, Algorithm 1, returns k clusters of positions, {s0, . . . , sk−1}, where s0 refers to the set of VNs that contain the least number of shortest cycles, and sk−1 otherwise.
+The number of classified clusters is determined according to the variety of the shortest cycles that the VNs contain. Algorithm 1 firstly sorts g to get the sequence gsort, where g0sort ≤ g1sort, . . . , ≤ gnso−rt1. The k centroids (medians) δp of the clusters, where p ∈ {0, . . . , k − 1}, are initially set to be δp = gso∗rtp×n/k. Each VN is classified to the closest centroid. By iteratively updating the centroids from theclassified data, the proposed algorithm intends to minimize p i∈sp |δp − gi|, which refers to the sum of the absolute distance from the centroids to the classified data. In other words, the k-median algorithm sea rches for a local optimal solution to the objective function min p i∈sp |δp − gi|, for i ∈ {0, . . . , n − 1} and p ∈ {0, . . . , k − 1}.
+The proposed algorithm is simple to be employed for a given PCM. Since Algorithm 1 performs based on the number of shortest cycles that the VNs are involved in the PCM, it is general to different types of channel codes. Specifically, the proposed algorithm classifies the VNs into k clusters where the VNs of each cluster contain similar numbers of shortest cycles. As a result, the VN cluster with the smallest number of shortest cycles draws more attention as the unreliable bits are intentionally to be allocated to the VN cluster to reduce the propagation of the unreliable information and improve the decoding performance. For example, for a cycle-reduced BCH(127,64) code in [5], if the VNs are preset to be classified into k = 3 clusters, by applying Algorithm 1, the centroids after classification are 26, 241, 1044, respectively. It can be seen that the number of the shortest cycles in the first cluster with centroid δ0 is much less or roughly 9.3 times less than that in the second cluster with centroid δ1. We point out that the VNs classification is based on the characteristics of the PCM. Once the VNs are classified, the position set s0 is maintained and can be used for each received sequence. By permutating the unreliable bits to the set of VNs which contain less shortest cycles (length-4 cycles) for HDPC codes, the detrimental effect of these unreliable information propagation is reduced and these unreliable bits will be more likely to be corrected by the decoder.
+
+B. Sortation of the Permutation Group
+
+Based on the classified clusters of the VNs and the channel
+
+reliability of the received signal, a permutation reliability
+
+metric (PRM), denoted by ηπu,o for each permutation π ∈ Per(C) is introduced.
+
+Definition 1: (Permutation Reliability Metric): Given the
+
+position set s0, which refers to the VNs that contain the least
+
+number of shortest cycles, we define the permutation reliability
+
+metric as:
+
+
+
+ηπu,o =
+
+πu,o(i)∈s0 |Lvi |,
+
+(6)
+
+where Lvi denotes the channel LLR of the i-th VN. Here, the PRM ηπu,o indicates the reliability measure for the
+VNs in the cluster of shortest cycles for a given permutation. A list of the metric ηπu,o is generated for u = {0, . . . , m − 1} and o = {0, . . . , n−1}. It can be seen that the smaller the PRM ηπu,o, the set of bits to be permutated to s0 is less reliable. The list of permutations is then sorted based on the PRMs in an ascending order so that η0sort < η1sort < . . . < ηmsor×t n−1, and the corresponding permutation is π0sort, π1sort, …, πmsor×t n−1. By sorting among η, we obtain a list of sorted permutations whose PRM evaluates each permutation’s capability of limiting the unreliable information to be propagated to other VNs based on the channel reliability.
+In message-passing decoding algorithms for HDPCs codes, it is essential to avoid the accumulation of correlations between the bits during the iterations to achieve a good decoding performance [4], [5]. An effective way to reduce the correlation is to explore the redundant syndromes of the HDPCs codes by permutating the bit positions before the start of the next decoding iteration. Meanwhile, in order to limit the unreliable information to be propagated to other VNs, we propose to permutate the bit positions by following the sorted permutation list πsort which permutates the unreliable bits to the VNs with less number of shortest cycles. An inverse permutation (πhsort)−1 is appended to permutate the bit positions back to the origin for each h-loop iteration. Note that besides limiting the propagation of the unreliable information, permutating the bit positions by following the sorted permutation list prevents the decoder from selecting one permutation multiple times during the decoding, which could degrade the decoding performance.
+We point out that using the channel reliabilities to compute the PRMs turns out to be a preprocessing step for the decoder. The PRMs can be computed in parallel and once the permutation list is finalized, the decoder does not need to search for the PRM in a second time during the decoding. This largely reduces the computation latency during the iterative decoding.
+Overall, the proposed NC-RD algorithm reduces the accumulations of the correlations between the bits by the permutation. Meanwhile, the unreliable information based on the channel reliabilities is restrained. The details of the NC-RD algorithm is summarized in Algorithm 2. The algorithm has the inputs of, the set of VNs at positions s0, which has the smallest sum of shortest cycles, the preset damping coefficient α, the received LLR sequence L and the preset maximum number of each loop’s iterations (qmax, hmax, emax) that have qmax, hmax, emax ≥ 1. It can be seen that the maximum number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+5342
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+
+Algorithm 2 Node-Classified Redundant Decoding
+
+Input: s0, α, L, (qmax, hmax, emax) Output: Decoded sequence d Step 1: Initialization: set q = 0, h = 0, e = 0.
+
+Step 2: Preprocessing: Generate the list of metric from (6),
+
+sort the metric and find the set of preprocessed permutation
+
+list [π1sort, π2sort, . Step 3: e-loop:
+
+.
+
+.
+
+,
+
+πsort
+hmax
+
+].
+
+Permutate
+
+the
+
+bit
+
+positions
+
+by
+
+πhsort ,
+
+perform
+
+BP algorithms. If the syndromes are satisfied, then return d.
+
+Otherwise, e = e + 1 and starts another BP iteration until
+
+e = emax. Step 4: h-loop: Update the LLR of the bit by Eq. (3),
+
+perform (πhsort)−1, then reset e = 0 and set h = h + 1, back to Step 3. If h reaches hmax, then go to Step 5.
+
+Step 5: q-loop: Increment α by (4), reset h = 0 and LLR
+
+sequence to L, set q = q + 1 then go back to Step 3 until q
+
+reaches qmax.
+
+of h-loop iteration, hmax, indicates the number of permutations will be performed. Therefore, we give the following definition
+
+based on the proposed NC-RD algorithm.
+
+Definition 2 (Preprocessed Permutation List): For a BCH code with codeword length n = 2m − 1, given the maximum
+
+number of h-loop iteration, hmax, the preprocessed permutation
+
+list is define as: πprep
+
+[π0sort
+
+,
+
+.
+
+.
+
+.
+
+,
+
+πsort
+hmax
+
+−1
+
+],
+
+where
+
+hmax
+
+=
+
+min{hmax, m × n} and min{·} returns the minimum element.
+
+The preprocessed permutation list is generated for the
+
+NC-RD algorithm to restrain the propagation of the unreliable
+
+information. In Algorithm 2, we assume that hmax ≤ m×n for a BCH code with codeword length n = 2m − 1. In case that
+
+the h-loop index h ≥ m × n, the preprocessed permutation
+
+list can be repeatedly employed for the NC-RD algorithm,
+
+i.e., πhsor(tmod m×n) is performed for h ≥ m × n, where mod indicates the remainder of h/(m × n). Compared with
+
+the conventional RRD algorithm, the proposed NC-RD algo-
+
+rithm maintains the same computational complexity during the
+
+decoding iteration. The additional complexity comes from the
+
+computation of the PRMs and the sortation of the PRMs in
+
+the preprocessing steps. The computational complexity of the
+
+preprocessing will be discussed in Section V.C.
+
+C. An Example of Decoding With NC-RD Algorithm
+
+Here, we demonstrate a simple example of decoding the
+
+BCH(7,4) code with NC-RD algorithm. Suppose the BCH(7,4)
+
+code has a parity-check matrix H of
+
+⎡
+
+⎤
+
+1011100
+
+⎣0 1 0 1 1 1 0⎦ .
+
+0010111
+
+It can be found that the number of shortest cycles (length-4) contained by the VNs is g = [0, 0, 1, 1, 3, 1, 0]. If 2 clusters of variable nodes are clustered by Algorithm 1, by the k-median algorithm, the two centroids found are 0 and 1, respectively, which means that the VNs can be classified by allocating each VN to the closest centroid. Correspondingly, the variable nodes’ indices sets for two clusters are s0 = [0, 1, 6] and
+
+s1 = [2, 3, 4, 5]. It is obvious that the VNs at positions s0 contain less number of shortest cycles. Based on the channel reliabilities, we allocate the group of least reliable bits to the VNs at positions s0. Then, for any given received LLR sequence L, we search among the 3×7 choices of permutations in the preprocessin g. The smaller the summation over the absolute of LLRs πu,o(i)∈s0 |Lvi |, where s0 = [0, 1, 6], u ∈ {0, 1, 2} and o ∈ {0, . . . , 6}, the earlier the permutation will be performed during the h-loop iteration. In summary, the propagation of the unreliable information during the decoding is restricted by allocating the unreliable bits to the VNs which contain no length-4 cycles in this example.
+D. The mNC-RD Algorithm
+The proposed NC-RD algorithm reduces the propagation of the unreliable information by allocating the unreliable bits to the group of VNs which contain the number of least shortest cycles. However, since the PCMs of the HDPC codes contains a large number of length-4 cycles, it is difficult for the decoder converges to the correct codeword in one round of decoding. To further enhance the decoding performance, inspired by the mRRD algorithm proposed in [6], we propose a list decoding method to generate a list of decoded codewords by decoding the received sequence several times with different permutation orders in the h-loop iterations. Here we name it as modified NC-RD (mNC-RD) algorithm.
+The mRRD algorithm in [6] decodes the received sequence in multiple times and the permutation of the bit positions in the h-loop is randomly selected from the automorphism group. Inspired by this idea, our proposed mNC-RD list decoding algorithm randomly shuffles the permutation order from the preprocessed permutation list πprep. More specifically, the received sequence is decoded in multiple times as in [6], but each time the permutation order in the h-loop is shuffled based on the preprocessed permutation list. Since the preprocessed permutation list is generated to limit the unreliable information propagation during the message-passing decoding, selecting the permutation from the preprocessed permutation group will restrict the unreliable information propagation compared to randomly select the permutation from the automorphism group. The numerical results of decoding BCH codes by the mNC-RD algorithm will be shown in Section V.
+IV. NEURAL NETWORK AUGMENTED NC-RD ALGORITHM
+In the previous sections, we have introduced the new NC-RD decoding algorithm and the list decoding method to be applied on top of the NC-RD algorithm to improve its decoding performance. In this section, we propose a neural network based NC-RD algorithm which transforms the Tanner-graph of message-passing decoding algorithm into a neural network system.
+We briefly review the transformation of the decoding messages in a Tanner graph and a feed-forward neural network system. Conventional neural network system comprises several layers of neurons. Each layer comprises of neurons such that each neuron computes an affine combination of its inputs,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5343
+
+Fig. 1. Example of transforming decoding messages to a feed-forward neural network.
+where the weights and bias of the affine combination are tuneable parameters that are calibrated during the neural network “learning” process [38]. In Fig. 1, we illustrate a simple example of converting the decoding messages into the neural network feed-forward messages. On the left hand side of Fig. 1, Fig. 1 (a) shows a VN of a conventional Tanner graph, which takes the intrinsic C2V messages Lc→vi , where Lc→vi ∈ R(|N(vi)|×1), |N (vi)| is the cardinality of the VN vi’s neighbors, and R is the set of real values. On the right hand side of Fig. 1 (Fig. 1 (b)), two layers of neurons are depicted to illustrate the processes of generating the V2C messages Lvi→c from the C2V messages Lc→vi , where Lvi→c ∈ R(|N(vi)|×1). Based on the BP updating rules for the VNs, the V2C message is the sum of the intrinsic messages. Therefore, in a matrix form, the V2C messages can be denoted as Lvi→c = Wc→vi Lc→vi , where Wc→vi ∈ F(2|N(vi)|×|N(vi)|) and F2 ∈ {0, 1}. Distinguishing to the real-valued conventional neural network system, in the BP updating rules, the elements in Wc→vi are binary and the 0s in Wc→vi indicate the neurons without connections between two layers. Note that Fig. 1 shows an example of the BP updating rules for the VNs. The processes at the CNs are similar but have non-linear operations which follow the BP updating rules. Multiplicative tuneable weights Wv→cj ∈ R(N(cj)×N(cj)) can be applied to the messages for the CNs as well. For a “learnable” neural network system, multiplicative non-binary tuneable weights are applied to the messages, so now the weight matrix turns to be Wc→vi ∈ R(|N(vi)|×|N(vi)|). Note that 0s are maintained at the corresponding positions in Wc→vi for the neurons without connections and the non-zero elements could be restricted to be positive to guarantee the messages are always convey with the same signs after multiplying the weights.
+Inspired by the concept in [21], [22], which implements the neural network as an optimization tool to improve the decoding performance, as a message-passing decoding algorithm, the NC-RD algorithm can also be transformed into a neural network to further augment its decoding performance. By transforming the proposed NC-RD algorithm into a neural network system, multiplicative tuneable weights can be attached to the intrinsic information Lqcj,h→,evi and Lqcj,h→,evmiax−1 of the e-loop and h-loop, respectively. With the assistant of the graph-based off-line training, it is expected that the multiplicative tuneable weights will compensate the detrimental effect of the length-4 cycles in the PCM of BCH codes and thus, improving the decoding performance.
+
+Once all the edges in the Tanner-graph are transformed into
+
+a feed-forward neural network system, the neural network can
+
+be off-line trained. We assume a feed-forward neural network
+
+is employed, let q = 0, we introduce two coefficients w˜c˜→vi and wˆcˆ→vi to the C2V messages for the e-loop and h-loop,
+respectively, before it is passed to the VN in the decoding
+
+iteration. Now the updating rules in (1) and (3) become:
+
+
+
+Lv0i,h→,ecj = (L0vi,h,0 +
+
+w˜c˜0→ ,h,vei Lc0˜→ ,h,vei ) − Lc0j,h→,evi , (7)
+
+L0vi,h+1,0 = L0vi,h,0 +
+
+c˜ ∈N (vi
+
+)
+wˆc0ˆ→ ,h,veimax
+
+−1
+
+L0,h,emax
+cˆ→vi
+
+−1
+
+,
+
+(8)
+
+cˆ∈N (vi)
+
+The tuneable coefficients w˜c˜0→ ,h,vei and wˆc0ˆ→ ,h,veimax−1 for the e-loop and h-loop, respectively, can be repeatedly used for every decoding iteration to reduce the number of trainable parameters in the neural network. In the numerical results of Section V, every decoding iteration shares the same values of the tuned multiplicative weights w˜c˜→vi and wˆcˆ→vi .
+Fig. 2 illustrates an example of decoding the BCH(7,4) code with NC-RDNN(3,2), where (3,2) indicates the maximum iteration numbers of the h-loop and e-loop, respectively. Since the neural network is considered as a feed-forward system, the outer q-loop iteration is not performed. Given any received code sequence r, we can generate a sorted permutation list according to the method introduced in Section III.B. The preprocessed permutation list is {π0sort, π1sort, π2sort} in Fig. 2. Here, the permutation matrix πisort ∈ Fn2 ×n for i ∈ {0, . . . , hmax − 1} and (πisort)T denotes the transpose of the πisort permutation matrix. The transpose of πisort performs as an inverse permutation matrix which swaps the bits back to the original positions. The neural network in Fig. 2 shows 20 hidden layers of neurons, containing 3 h-loop iterations and 2 BP iterations in each e-loop. The neurons in the first two layers demonstrate the variable nodes of the BCH(7,4) code. The first two layers are connected by a permutation matrix which permutates the unreliable bits to the positions which contain the least number of shortest cycles. The neurons in the third layer represent the decoding messages to be conveyed during the BP iteration. The number of the neurons in the third layer is identical to the number of the non-zero elements in the PCM. The V2C messages are the VNs’ accumulated LLRs and the non-linear BP updating rule for the C2V messages in Eq. (2) is performed from the second layer to the third layer. Once the C2V messages are computed, the V2C messages are updated from the third to the fifth layer based on Eq. (7). Then, another BP iteration is performed to update the C2V messages and in the seventh layer, the VNs’ APPs are accumulated by Eq. (8). The multiplicative coefficients wc˜→vi and wcˆ→vi in Eqs. (7) and (8) are applied to the third to fourth layer and the sixth to seventh layer, respectively. After updating the APPs to the VNs in the seventh layer. The inverse permutation matrix (π0sort)T is performed and the second permutation matrix can be successively applied and so on. In the end, the last layer outputs the LLR of the accumulated APPs of each received symbol.
+It can be seen from Fig. 2 that the NC-RD algorithm is now transformed into a feed-forward neural network. The NC-RD
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+5344
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+
+Fig. 2. An example of decoding the BCH(7,4) code with NC-RDNN(3,2). Note that following Eqs. (7) and (8), the “terminals” that are attached to the neurons in the V2C update and the h-loop LLRs update depict the decoding information from the previous layers that are passed to the neurons.
+
+neural network follows the structures of the NC-RD algorithm and it achieves the same merits as the neural network in [21] that NC-RDNN, or more specifically, the multiplicative weights wc˜→vi and wcˆ→vi are trained with all-zero codewords interrupted by AWGN. Generally, a loss function is preset to identify the closeness between the output of the trained neural network and the ground truth label. During the off-line training, a batch of training realizations are fed into the neural network and the corresponding average loss computed from the loss function is back-propagated by stochastic gradient descent to adjust the values of the tuneable weights in the neural network and eventually, improving the neural network’s decoding performance [38]. The loss function is defined to estimate the errors between the training labels and the estimated outputs. The details of the loss function is explained later in this section. Note that different from the conventional “learned” message-passing neural network decoder [21], where all the training realizations share the same permutation for each h-loop decoding iteration, the NC-RDNN algorithm has the preprocessing stage for each realization of the received sequence. The neural network is trained with a batch of realizations of the all-zero codewords corrupted by the AWGN. This results in that each realization has its corresponding permutation list. The realization in the training batch is permutated individually for every h-loop decoding iteration.
+
+In our simulation, the neural network is constructed by Tensorflow [39]. The cross entropy function,
+
+Fce(y,
+
+yˆ)
+
+=
+
+−
+
+1 n
+
+n−1
+i=0
+
+
+ yvi log(
+
+1
+
++
+
+1 exp(−yˆvi )
+
+)
+
++(1
+
+−
+
+yvi )log(1
+
+−
+
+1
+
++
+
+1 exp(−yˆvi
+
+)
+
+ )
+
+(9)
+
+is employed as the loss function, where exp(·) refers to the
+
+exponential function, y is the ground truth label (all-zero
+
+codeword, that have y = b = 0) of the training sequence
+
+and yˆ is the estimated output (accumulated LLRs of the VNs
+
+in the last layer of the NN). The cross entropy function is
+
+widely implemented for the binary classification problem in
+
+deep learning [38]. In this scenario, the function 1 − 1/(1 +
+
+exp(−yˆvi)) converts the LLR to the APP p(bi = 0|r) for i ∈ {0, . . . , n − 1}, where yˆvi indicates the i-th element of yˆ and bi is the i-th element of the transmitted codeword b.
+Given the transmitted codeword as all-zero sequence that has
+
+yvi be
+
+= 0 for i Fce(0, yˆ)
+
+∈ =
+
+{0, . . . ,
+
+−
+
+1 n
+
+log
+
+n −ni=−101}p, (tbhie=tot0a|lr)lo. sTshfeunscmtiaolnlertuornf sthtoe
+
+loss, the better decoding performance the neural network has
+
+achieved. Benefit from the graph-based neural network where
+
+the connections follow the NC-RD algorithm, over-fitting is
+
+not encountered during the training of the neural network
+
+and the multiplicative weights are tuned during the off-line
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5345
+
+Fig. 3. BER of BCH(31,21) over an AWGN channel.
+
+Fig. 4. BER of BCH(63,36) over an AWGN channel.
+
+training. It is expected that the neural network can reduce the detrimental effect of the large number of length-4 cycles in the PCM of the HDPC codes. As a result, the cross entropy loss is expected to be reduced and the NC-RDNN decoding performance is improved. Note that for a deep NC-RDNN, which may contain a large number of layers, the training techniques such as the multiloss objective function and the L2 regularization in [22], [27] may be applied to the NC-RDNN algorithm to accelerate the training process and compensate the gradient vanishing problem. In the numerical results, since the NC-RDNN is not deep, we use a simple cross entropy function in Eq. (9) as the objective loss function for training. We refer interested readers to [22], [27] for more details on the training techniques.
+V. NUMERICAL RESULTS
+A. Simulation Results
+In this section, we show the numerical results of the proposed NC-RD algorithm in comparison with the conventional RRD algorithm [5], OSD algorithm [28], mRRD algorithm [6] and Perm-RNN algorithm [22]. The codes are simulated with BPSK modulation over AWGN channels. In Figs. 3 to 9, NC-RD refers to the proposed algorithm and (hmax, emax) indicates the maximum number of iterations of the h-loop and e-loop, respectively. The outer q-loop is not considered in the numerical results and the damping coefficient α remains constant during the decoding. OSD-p signifies the order of the ordered statistical algorithm proposed in [28]. The value of λ indicates the number of codewords generated by the list decoding algorithm. The size of the first cluster after the VNs classification algorithm is denoted by |s0|. We list the hyper-parameters for training the NC-RDNN in Tabel I, where the batch size refers to the number of realizations in the training batch, generated from different SNRs in the preset range. Gradient clipping indicates the threshold of the maximum absolute gradient that the stochastic gradient descent algorithm will perform. The number of permutation matrix per sequence refers to the maximum number of h-loop
+
+iterations. The cycle-reduced BCH codes based on the method in [5] are used for the following simulations. Unless special notified, we compare the decoding performance at a BER = 3 × 10−5.
+Fig. 3 illustrates the numerical results of the decoding performance for the cycle-reduced BCH(31,21) code with a maximum number of 60 BP iterations. The damping coefficient α is set to be 0.15 for the RRD and NC-RD algorithms. For the mRRD and mNC-RD algorithms, α is set to be 0.3. Two clusters of VNs are classified by the k-median algorithm, which results in |s0| = 9. The NC-RDNN algorithm is trained under the same number of 60 BP iterations. By employing the NC-RD algorithm, 0.2 dB gain is obtained for decoding the BCH(31,21) code, compared to the RRD algorithm. Fig. 3 demonstrates that the NC-RDNN algorithm provides 0.18 dB gain compared to the NC-RD algorithm. With a list size of 4, the mNC-RD algorithm provides 0.25 dB gain to the NC-RD algorithm. The mNC-RD algorithm outperforms the NC-RDNN algorithm and the mRRD algorithm by 0.07 dB and 0.04 dB, respectively. It can be seen that the mNC-RD algorithm approaches the OSD-2 decoder’s performance which is provable to be the ML performance for the BCH(31,21) code [28].
+Figs. 4 and 5 show the numerical results of the cycle-reduced BCH(63,36) code. For the RRD algorithm and the NC-RD algorithm, the value of α is set to be 0.3. Two clusters of VNs are classified by the k-median algorithm, which results in |s0| = 25. In Fig. 4, the NC-RD(5,2) shows 0.5 dB gain compared to the RRD(5,2) at a BER = 1 × 10−4. A further 0.2 dB gain is obtained by employing the NC-RDNN algorithm. We simulated the Perm-RNN algorithm in [22], which employs the random permutation from the automorphism group in the h-loop iteration and multiplicative weights are attached to the decoding messages. The hyper-parameters and the loss function for training are set to be the same as the NC-RDNN algorithm for a fair comparison. Fig. 4 shows that the proposed NC-RDNN algorithm outperforms the Perm-RNN algorithm by 0.5 dB, which indicates that a potential performance gain can be obtained by the proposed NC-RD
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+5346
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+TABLE I HYPER-PARAMETERS FOR TRAINING THE NC-RD NEURAL NETWORK
+
+Fig. 5. BER of BCH(63,36) over an AWGN channel.
+
+Fig. 7. BER of BCH(127,64) over an AWGN channel.
+
+Fig. 6. Normalized loss during the training of NC-RDNN(5,2) for decoding the BCH(63,36) code.
+algorithm compared to the RRD algorithm when tuneable multiplicative weights are applied to the decoding messages. In Fig. 6, we demonstrate the normalized loss during the training of NC-RDNN(5,2). It can be seen that after training with approximately 2 × 104 batches (7.2 × 106 realizations), the normalized loss is relatively stable, where the normalized loss is below 0.1 with the increment of the training batches.
+
+The proposed mNC-RD algorithm can also be performed with the multiplicative weights attached to the decoding messages. More specifically, the NC-RDNN algorithm is firstly trained to find the multiplicative weights. Then, the mNC-RD algorithm is performed based on the trained weights. We use the label “mNC-RDNN” to indicate the algorithm that has multiplicative weights attached to the decoding messages of the mNC-RD algorithm. The numerical results are shown in Fig. 5. For the mRRD algorithm and the mNC-RD algorithm, the damping coefficient is set to be 0.3. A list size of 4 is employed. Fig. 5 illustrates that the mNC-RD algorithm outperforms the mRRD algorithm by 0.08 dB and a further 0.1 dB gain can be obtained by the mNC-RDNN algorithm. The proposed mNC-RDNN algorithm has a gap of 0.6 dB to the OSD-2 algorithm, which serves as the ML decoding performance.
+We next demonstrate the performance of a longer BCH code, e.g. cycle-reduced BCH(127,64) code, in Fig. 7. A maximum of 200 BP iterations is employed and the value of α is set to be 0.1 for the RRD algorithm and the NC-RD algorithm. For the mRRD algorithm and the mNC-RD algorithm, α is set to be 0.3. Three clusters of VNs are classified by the k-median algorithm, which results in |s0| = 47. “MLD” in Fig. 7 indicates the ML decoding performance that is provided in [3]. The proposed NC-RD algorithm provides 0.3 dB gain compared to the RRD algorithm. Additional 0.7 dB performance gain
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5347
+
+Fig. 8. BER of BCH(255,207) over an AWGN channel.
+
+Fig. 9. BER of BCH(255,207) and BCH(63,36) over an AWGN channel.
+
+is obtained by employing the mNC-RD algorithm with a list size of λ = 20. The mNC-RD algorithm with λ = 20 shows a 0.13 dB and 0.85 dB gain to the mRRD and OSD-1 algorithms, respectively, and the mNC-RD algorithm is 0.3 dB and 1.4 dB away from the OSD-2 algorithm and the MLD performance, respectively. It can be seen from the numerical results of the mNC-RD algorithm that limiting the propagation of the unreliable information throughout the message-passing decoding provides the additional performance gain in list decoding methods.
+For longer BCH codes such as the BCH(255,207) code, three clusters of VNs are grouped by the k-median algorithm, which results in |s0| = 50. A maximum of 600 BP iterations (300 iterations of h-loop and 2 iterations of e-loop) is employed and the value of α is set to be 0.05 for the RRD and NC-RD algorithms. For the mNC-RD and mRRD algorithms, α is set to be 0.3. As shown in Fig. 8, a 0.18 dB gain is achieved by the NC-RD(300,2) compared to the RRD algorithm at a BER = 1.0 × 10−4. Additional 0.6 dB performance gain is obtained by employing the mNC-RD algorithm with a list size of λ = 20. Under the same list size, the mNC-RD algorithm outperforms the mRRD algorithm by 0.1 dB.
+In Fig. 8, we use “Upper Bound - MLD” and “Lower Bound - MLD” to indicate the upper bound and lower bound on the ML decoding of the BCH(255,207) code, respectively. The upper bound is computed based on the derivation in [40], which is an extension of the tangential sphere bound (TSB) [41], [42] on the bit-error probability. The lower bound is simulated by the method introduced in [43]. The upper bound is computed based on the distance spectrum of the binary linear block code C and detailed computations of the bound on the BER can be found in [40]–[42]. The authors in [43] suggest a method to estimate the ML performance based on simulation. In particular, once the codeword is decoded by the preset decoding algorithm, the Euclideandistance between the decoded valid codeword and the received sequence is compared to the Euclidean-distance between the transmitted codeword and the received sequence in order to
+
+determine if the ML decoding algorithm would fail. The lower bound is simulated from the algorithm of the OSD-2 for the BCH(255,207) code. Fig. 8 illustrates that the mNC-RD algorithm with λ = 20 is 0.85 dB away from the upper bound of the ML decoding, and 1.3 dB away from the lower bound of the ML decoding for the BCH(255,207) code.
+B. Influence of the Number of Clusters for Classifying the VNs
+In order to demonstrate the effect of the number of clusters to be preset prior decoding, in Fig. 9, we show the decoding performance of the BCH(255,207) and BCH(63,36) codes with different number of clusters preset for the NC-RD algorithm. The more number of clusters, the closer of the centroids between two adjacent clusters. In other words, the smaller the size of s0, which could influence the NC-RD algorithm’s decoding performance. The value of α is set to be 0.05 and 0.1 for decoding the BCH(255,207) and BCH(63,36) codes, respectively.
+As we previously discussed, the NC-RD algorithm intends to limit the propagation of the unreliable information during the message-passing decoding. For the BCH(63,36) code, when the VNs are classified into 7 clusters, the size of s0 is small (|s0| = 4), whereas some unreliable information could be allocated to the VNs with a relatively large number of shortest cycle that could degrade the decoding performance. That is why we see that the performance with 7 clusters of the VNs is 0.15 dB worse than the NC-RD algorithm with 2 to 4 clusters preset. For a longer BCH code, e.g. BCH(255,207), most of the VNs of the PCM contains a large number of shortest cycles, the decoding performances are not significantly different for various number of clusters when implementing the NC-RD algorithm.
+Note that although the preset number of clusters could provide distinct capabilities of limiting the unreliable information, in Fig. 9, the NC-RD algorithm outperforms the RRD algorithm in all the cases we simulated. In the next section, we will show that the preprocessing complexity depends on
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+5348
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 9, SEPTEMBER 2020
+
+the size of s0. The smaller the size of s0, the less computations of the NC-RD algorithm. Therefore, a tradeoff exists between the computational complexity of the decoder and the decoding performance, where the larger the number of clusters, the less computational complexity of NC-RD’s preprocessing, but the decoding performance could be sacrificed due to the lack of limitation of the unreliable information.
+C. Preprocessing Complexity Analysis
+The generation of the preprocessed permutation list is pivotal for the proposed mNC-RD algorithm, which improves the decoding performance compared to the conventional RRD algorithm. The preprocessed permutation list is generated by the preprocessing steps which include the computation of the PRMs and the sortation of the PRMs. For a BCH code with codeword length n = 2m − 1, regarding the complexity of computing the PRMs, the proposed NC-RD algorithm performs real additions, where the number of permutations grows as O nlog(n + 1) . The complexity of the addition process depends both on the codes’ length and the cardinality of the cluster s0, which relies on the non-zero positions in the PCM. Therefore, in total, the preprocessing requires nlog(n + 1) × |s0| real additions for computing the PRMs. Furthermore, regarding the complexity of sortation of the PRMs, the NC-RD decoder’s sortation complexity depends on the number of permutations (h-loop iteration). Let hm ax be the number of permutations to be found based on the PRMs, i.e., hmax = min{hmax, m × n}. The NC-RD algorithm finds the hmax permutations of the minimum PRMs with a time complexity of O nlog(n + 1) + hmaxloghm ax . The smaller the number of h-loop iterations, the less processing time of sortation of the PRMs.
+VI. CONCLUSION
+In this paper, we proposed an NC-RD algorithm by introducing two preprocessing steps, the VNs classification and the PRMs sortation. The NC-RD algorithm explores the redundant syndromes and limits the propagation of the unreliable information during the message-passing decoding. Besides proposing a modified NC-RD algorithm which generates a list of codewords to augment the decoder’s performance, we show that the proposed NC-RD algorithm is “learnable” by a neural network system. Numerical results show that the proposed NC-RD algorithm outperforms the conventional RRD algorithm and additional performance gains can be obtained by both the list decoding method and the “learned” NC-RD algorithm.
+ACKNOWLEDGMENT
+The authors would like to thank the anonymous reviewers for their generous help and suggestion on the mNC-RD algorithm and the performance bounds on the ML decoder.
+REFERENCES
+[1] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+
+[2] D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “Spatially coupled LDPC codes constructed from protographs,” IEEE Trans. Inf. Theory, vol. 61, no. 9, pp. 4866–4889, Sep. 2015.
+[3] S. Lin and D. J. Costello, Error Control Coding, 2nd ed. Upper Saddle River, NJ, USA: Prentice-Hall, 2004.
+[4] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3746–3756, Aug. 2006.
+[5] T. Halford and K. Chugg, “Random redundant soft-in soft-out decoding of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2006, pp. 2230–2234.
+[6] I. Dimnik and Y. Be’ery, “Improved random redundant iterative HDPC decoding,” IEEE Trans. Commun., vol. 57, no. 7, pp. 1982–1985, Jul. 2009.
+[7] B. Liu, Y. Xie, L. Yang, and J. Yuan, “An iterative soft-decision decoding algorithm with dynamic saturation for short Reed–Solomon codes,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2018, pp. 1–5.
+[8] S. Tang, L. Chen, and X. Ma, “Progressive list-enlarged algebraic soft decoding of Reed–Solomon codes,” IEEE Commun. Lett., vol. 16, no. 6, pp. 901–904, Jun. 2012.
+[9] Q. Huang, J. Wu, C. Zhao, and X. You, “Waterfilling-like multiplicity assignment algorithm for algebraic soft-decision decoding of Reed–Solomon codes,” in Proc. IEEE Int. Conf. Commun., Jun. 2007, pp. 6210–6213.
+[10] B. Liu, Z. Wei, J. Yuan, and M. Pajovic, “Deep learning assisted user identification in massive machine-type communications,” 2019, arXiv:1907.09735. [Online]. Available: http://arxiv.org/abs/1907.09735
+[11] H. He, S. Jin, C. Wen, F. Gao, G. Ye Li, and Z. Xu, “Model-driven deep learning for physical layer communications,” IEEE Wireless Commun., vol. 26, no. 5, pp. 77–83, Oct. 2019.
+[12] P. Dong, H. Zhang, G. Y. Li, N. NaderiAlizadeh, and I. S. Gaspar, “Deep CNN for wideband mmWave massive MIMO channel estimation using frequency correlation,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2019, pp. 4529–4533.
+[13] T. Koike-Akino, Y. Wang, D. S. Millar, K. Kojima, and K. Parsons, “Neural turbo equalization to mitigate fiber nonlinearity,” in Proc. Eur. Conf. Opt. Commun. (ECOC), Sep. 2019, pp. 1–6.
+[14] B. Liu, S. Li, Y. Xie, and J. Yuan, “Deep learning assisted sumproduct detection algorithm for Faster-than-Nyquist signaling,” in Proc. IEEE Inf. Theory Workshop (ITW), Visby, Sweden, Aug. 2019, pp. 1–5.
+[15] N. Doan, S. Ali Hashemi, F. Ercan, T. Tonnellier, and W. Gross, “Neural dynamic successive cancellation flip decoding of polar codes,” in Proc. Eur. Conf. Opt. Commun. (ECOC), 2019, pp. 1–6. [Online]. Available: http://arxiv.org/abs/1907.11563
+[16] Z. Jia, W. Cheng, and H. Zhang, “A partial learning-based detection scheme for massive MIMO,” IEEE Wireless Commun. Lett., vol. 8, no. 4, pp. 1137–1140, Aug. 2019.
+[17] J. Gao and R. Liu, “Neural network aided SC decoder for polar codes,” in Proc. IEEE 4th Int. Conf. Comput. Commun. (ICCC), Dec. 2018, pp. 2153–2157.
+[18] A. Payani and F. Fekri, “Decoding LDPC codes on binary erasure channels using deep recurrent neural-logic layers,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–5.
+[19] S. Cammerer, T. Gruber, J. Hoydis, and S. ten Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” 2017, arXiv:1702.06901. [Online]. Available: http://arxiv.org/abs/1702.06901
+[20] J. Luo, Q. Huang, S. Wang, and Z. Wang, “Error control coding combined with content recognition,” in Proc. 8th Int. Conf. Wireless Commun. Signal Process. (WCSP), Oct. 2016, pp. 1–5.
+[21] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[22] E. Nachmani, Y. Bachar, E. Marciano, D. Burshtein, and Y. Be’ery, “Near maximum likelihood decoding with deep learning,” 2018, arXiv:1801.02726. [Online]. Available: http://arxiv.org/abs/1801.02726
+[23] I. Be’ery, N. Raviv, T. Raviv, and Y. Be’ery, “Active deep decoding of linear codes,” 2019, arXiv:1906.02778. [Online]. Available: http://arxiv.org/abs/1906.02778
+[24] N. Doan, S. Ali Hashemi, E. Ngomseu Mambou, T. Tonnellier, and W. J. Gross, “Neural belief propagation decoding of CRCpolar concatenated codes,” 2018, arXiv:1811.00124. [Online]. Available: http://arxiv.org/abs/1811.00124
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEEP LEARNING ASSISTED NODE-CLASSIFIED REDUNDANT DECODING ALGORITHM FOR BCH CODES
+
+5349
+
+[25] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Oct. 2017, pp. 1–6.
+[26] Y.-H. Liu and D. Poulin, “Neural belief-propagation decoders for quantum error-correcting codes,” Phys. Rev. Lett., vol. 122, no. 20, May 2019, Art. no. 200501, doi: 10.1103/PhysRevLett.122.200501.
+[27] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes—A syndrome-based approach,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2018, pp. 1595–1599.
+[28] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, Sep. 1995.
+[29] F. J. MacWilliams and N. J. A. Sloane, The Theory of Error Correcting Codes, 2nd ed. Amsterdam, The Netherlands: North-Holland, 1978.
+[30] A. Yufit, A. Lifshitz, and Y. Be’ery, “Efficient linear programming decoding of HDPC codes,” IEEE Trans. Commun., vol. 59, no. 3, pp. 758–766, Mar. 2011.
+[31] A. Kothiyal, O. Y. Takeshita, W. Jin, and M. Fossorier, “Iterative reliability-based decoding of linear block codes with adaptive belief propagation,” IEEE Commun. Lett., vol. 9, no. 12, pp. 1067–1069, Dec. 2005.
+[32] T. Hehn, J. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, Jan. 2010.
+[33] P. Kang, Y. Xie, L. Yang, and J. Yuan, “Reliability-based windowed decoding for spatially coupled LDPC codes,” IEEE Commun. Lett., vol. 22, no. 7, pp. 1322–1325, Jul. 2018.
+[34] S. Sharifi Tehrani, C. Jego, B. Zhu, and W. J. Gross, “Stochastic decoding of linear block codes with high-density parity-check matrices,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5733–5739, Nov. 2008.
+[35] B. Vucetic and J. Yuan, Turbo Codes: Principles and Applications, vol. 559. Cham, Switzerland: Springer, 2012.
+[36] E. Alpaydin, Introduction to Machine Learning, 2nd ed. Cambridge, MA, USA: MIT Press, 2010.
+[37] C. Whelan, G. Harrell, and J. Wang, “Understanding the k-medians problem,” in Proc. Steering Committee World Congr. Comput. Sci., Comput. Eng. Appl. Comput. (WorldComp), Aug. 2015, pp. 219–222. [Online]. Available: https://search.proquest.com/ docview/1705667495?accountid=12763
+[38] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, MA, USA: MIT Press, 2016.
+[39] M. Abadi et al. (2015). TensorFlow: Large-Scale Machine Learning on Heterogeneous Systems. [Online]. Available: http://tensorflow.org/
+[40] I. Sason and S. Shamai, “Improved upper bounds on the ML decoding error probability of parallel and serial concatenated turbo codes via their ensemble distance spectrum,” IEEE Trans. Inf. Theory, vol. 46, no. 1, pp. 24–47, Jan. 2000.
+[41] H. Herzberg and G. Poltyrev, “The error probability of M-ary PSK block coded modulation schemes,” IEEE Trans. Commun., vol. 44, no. 4, pp. 427–433, Apr. 1996.
+[42] G. Poltyrev, “Bounds on the decoding error probability of binary linear codes via their spectra,” IEEE Trans. Inf. Theory, vol. 40, no. 4, pp. 1284–1292, Jul. 1994.
+[43] R. Lucas, M. Bossert, and M. Breitbach, “On iterative soft-decision decoding of linear binary block codes and product codes,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 276–296, Feb. 1998.
+
+Bryan Liu (Graduate Student Member, IEEE) received the B.E. degree (Hons.) in electrical and electronic engineering from The University of Auckland, Auckland, New Zealand, in 2017. He is currently pursuing the Ph.D. degree with the School of Electrical Engineering and Telecommunications, University of New South Wales at Sydney, Sydney, NSW, Australia. His research interests include error control coding, channel detection algorithms, and machine learning algorithms.
+Yixuan Xie (Member, IEEE) received the Ph.D. degree in electrical engineering from the University of New South Wales at Sydney (UNSW Sydney), Australia, in 2016. Since then, he has been focusing on FPGA implementation of channel codecs and prototyping communication schemes on software-defined radio platforms. He is currently a member of the School of Electrical Engineering and Telecommunications, UNSW Sydney. His research interests include error control coding, iterative detection/decoding methods, digital communication systems, and multiple access schemes.
+Jinhong Yuan (Fellow, IEEE) received the B.E. and Ph.D. degrees in electronics engineering from the Beijing Institute of Technology, Beijing, China, in 1991 and 1997, respectively. From 1997 to 1999, he was a Research Fellow with the School of Electrical Engineering, The University of Sydney, Sydney, NSW, Australia. In 2000, he joined the School of Electrical Engineering and Telecommunications, University of New South Wales at Sydney, Sydney, where he is currently a Professor and the Head of Telecommunication Group. He has published two books, five book chapters, over 300 papers in telecommunications journals and conference proceedings, and 50 industrial reports. He is a co-inventor of one patent on MIMO systems and two patents on low-density-parity-check codes. His current research interests include error control coding and information theory, communication theory, and wireless communications. He has coauthored four best paper awards and one best poster award, including the Best Paper Award from the IEEE International Conference on Communications, Kansas City, USA, in 2018, the Best Paper Award from the IEEE Wireless Communications and Networking Conference, Cancun, Mexico, in 2011, and the Best Paper Award from the IEEE International Symposium on Wireless Communications Systems, Trondheim, Norway, in 2007. He served as the IEEE NSW Chapter Chair of Joint Communications/Signal Processions/Ocean Engineering Chapter from 2011 to 2014 and served as an Associate Editor for IEEE TRANSACTIONS ON COMMUNICATIONS from 2012 to 2017. He is currently serving as an Associate Editor for IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:16:14 UTC from IEEE Xplore. Restrictions apply.
+
+

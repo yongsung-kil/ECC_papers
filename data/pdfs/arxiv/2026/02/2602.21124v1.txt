@@ -1,0 +1,587 @@
+Quantum Approximate Optimization for Decoding of Low-Density Parity-Check Codes
+Krishnakanta Barik and Goutam Paul
+
+arXiv:2602.21124v1 [quant-ph] 24 Feb 2026
+
+Abstract—Decoding Low-Density ParityCheck (LDPC) codes is a fundamental problem in coding theory, and Belief Propagation (BP) is one of the most popular methods for LDPC code decoding. However, BP may encounter convergence issues and suboptimal performance, especially for short-length codes and in highnoise channels. The Quantum Approximate Optimization Algorithm (QAOA) is a type of Variational Quantum Algorithm (VQA) designed to solve combinatorial optimization problems by minimizing a problem-specific cost function. In this paper, we present a QAOA-based decoding framework for LDPC codes by formulating a decoding cost function that incorporates both parity-check constraints and soft channel reliability information. The resulting optimization problem is solved using QAOA to search for low-energy configurations corresponding to valid codewords. We test the proposed method through extensive numerical experiments and compare its performance with BP decoding. The experimental results demonstrate that the QAOA-based decoder achieves a higher probability of correctly recovering the transmitted codeword than BP across multiple experimental settings.
+I. INTRODUCTION
+A code [1] consists of a structured set of bit strings, usually called codewords, which are constructed according to predefined rules so that reliable transmission over a communication channel is possible. In error-correcting codes, redundancy is deliberately added to the transmitted data. This additional structure allows the receiver to recover the original information even when the channel introduces noise [2]. One widely used example of such codes is the family of Low-Density Parity-Check (LDPC) codes [1, 2]. Because of their strong error-correction performance and the availability of efficient decoding algorithms, LDPC codes are used in modern communication standards such as Wi-Fi and 5G [1]. A decoder [1] is an algorithm whose task is to estimate the transmitted codeword from the noisy channel output. For LDPC codes, the most commonly used
+Krishnakanta Barik is a Research Scholar of Cryptology and Security Research Unit, Indian Statistical Institute krishnakanta r@isical.ac.in
+Goutam Paul is with Faculty of Electronics and Communication Sciences Unit, Indian Statistical Institute goutam.paul@isical.ac.in
+
+decoding method is Belief Propagation (BP) [1], which is an iterative message-passing algorithm that updates the reliability values associated with each bit. Although BP is exact for graphs without cycles, practical LDPC codes typically contain cycles. As a result, BP may fail to converge or may produce incorrect decoding results, even at moderate noise levels [1, 3]. These limitations motivate the study of alternative decoding methods based on global optimization principles.
+Quantum computing [4] exploits quantummechanical principles like entanglement and superposition to perform computations that are difficult or infeasible for classical computers in certain problem settings. In recent years, considerable attention has been given to quantum algorithms that are suitable for near-term noisy quantum devices, commonly referred to as Noisy Intermediate-Scale Quantum (NISQ) systems [5]. This interest is strong in the context of combinatorial optimization problems [6]. One prominent example is the Quantum Approximate Optimization Algorithm (QAOA) [7, 8]. QAOA is a Variational Quantum Algorithm (VQA) [9–11] that aims to find approximate solutions to optimization problems by alternately applying problem-specific and mixing quantum operators. In this framework, the objective function is encoded as a cost Hamiltonian, and a classical optimizer is used to tune the parameters of the quantum circuit to minimize the expected value of this Hamiltonian. Because of its hybrid quantum–classical structure and its natural suitability for binary optimization problems, QAOA has been applied to a broad range of domains. These include graph optimization [12], the tail assignment problem [13], and large sparse hypergraphs and spin glass models [14].
+In this work, we examine the potential of quantum computing in improving the classical decoding process for linear block codes. Our main goal is to increase the chances of successful decoding, which we measure experimentally by conducting multiple independent decoding attempts, while keeping the computational complexity low. To this end, we define a decoding cost function that takes into account both the parity-check matrix of the code and the
+
+reliability information of the noisy communication channel. This cost function provides a natural formulation of the decoding problem as an optimization problem over the codeword space. Based on this cost function, we develop a Quantum Approximate Optimization Algorithm (QAOA) decoding scheme that seeks to find low-energy states representing valid codewords. Numerous experiments are performed to test the performance of the proposed scheme. In nine different experimental settings, each consisting of around 100 independent decoding attempts, the QAOA-based decoder outperforms the classical BP decoder in terms of the empirical decoding success probability, especially in cases where the BP decoder experiences convergence problems.
+We organized this paper as follows. Section II introduces the background material needed for this work. In particular, we review key concepts from classical coding theory, including linear block codes, parity-check matrices, and Belief Propagation (BP) decoding. We also provide the necessary quantum computing background, with an emphasis on the Quantum Approximate Optimization Algorithm (QAOA). In Section III, we present the proposed QAOA-based decoding framework. This section describes the construction of the decoding cost function, explains how it incorporates parity-check constraints and channel reliability information, and outlines how QAOA is applied to the decoding task. Section IV describes the experimental numerical results. Here, the performance of the proposed QAOA-based decoder is evaluated and compared with classical BP decoding across different noise conditions. In Section V, we discuss the benefits of using QAOA as a decoding approach, focusing in particular on its robustness and improved performance in scenarios where BP suffers from convergence issues. Finally, Section VI concludes the paper and outlines possible directions for future work.
+II. Preliminaries
+
+elements from Fn, i.e.,
+C(n, M ) = {x(1), x(2), . . . , x(M)}, x(m) ∈ Fn, 1 ≤ m ≤ M.
+The elements of C are called codewords, and the parameter n is referred to as the block-length.
+Before formally defining Low-Density ParityCheck (LDPC) codes, we first introduce the notions of linear codes, parity-check matrices, and Tanner graphs.
+Definition 2 (Linear Code [1]). A code C ⊆ Fn over a field F is called linear if it is closed under vector addition and scalar multiplication, that is,
+αx + βx′ ∈ C, ∀ x, x′ ∈ C, ∀ α, β ∈ F.
+A linear code C of length n over a field F forms a vector subspace of Fn and therefore has a welldefined dimension k, with 0 ≤ k ≤ n. A generator matrix G is a k × n matrix whose rows constitute a linearly independent basis for the code C.
+Definition 3 (Parity-Check Matrix [1]). Let C ⊆ Fn be a linear code with generator matrix G. The dual code of C is defined as
+C⊥ = {v ∈ Fn | xvT = 0, ∀ x ∈ C}.
+A matrix H whose rows form a basis of the dual code C⊥ is called a parity-check matrix of the code C.
+Thus, if H is a parity-check matrix of a linear code C, then the code can be expressed equivalently as
+C = {x ∈ Fn | HxT = 0T }.
+Definition 4 (Tanner Graph [1]). Let C be a binary linear code and let H be a parity-check matrix of C. By convention, the rows of H are not required to be linearly independent. Assume that H has dimensions m × n. The Tanner graph associated with H is a bipartite graph consisting of two types of nodes:
+
+In this section, we present the necessary classical and quantum preliminaries needed for the proposed decoding framework.
+A. Classical Preliminaries
+
+• n variable nodes, corresponding to the components of a codeword, and
+• m check nodes, corresponding to the parity-check constraints (rows of H).
+
+In classical coding theory, a code is a structured collection of sequences used to represent information for reliable transmission or storage. The formal definition of a code is given below.
+Definition 1 (Code [1]). A code C of length n and cardinality M over a field F is a collection of M
+
+A check node j is connected to a variable node i if and only if Hji = 1, that is, if variable i participates in the j-th parity-check constraint.
+Since a given linear code may admit multiple parity-check matrices, there can be multiple Tanner graphs associated with the same code C.
+
+Definition 5 (Low-Density Parity-Check Codes [1]). Low-Density Parity-Check (LDPC) codes are linear codes that admit at least one sparse Tanner graph.
+
+In the remainder of this section, we outline the decoding problem for linear codes and briefly review the BP algorithm, which is the most commonly used decoding method for LDPC codes. A decoder can be viewed as an algorithm whose task is to infer the transmitted codeword from a noisy channel observation, while at the same time satisfying the parity-check constraints imposed by the code. Given a received vector, the decoder aims to identify a codeword that is consistent both with the channel output and with the underlying algebraic structure of the code.
+
+A key quantity in decoding theory, and in the BP algorithm, is the Log-Likelihood Ratio (LLR) [1]. Channel reliability information is represented using this ratio. For the i-th bit, the LLR is defined as
+
+LLRi
+
+=
+
+log
+
+p(yi p(yi
+
+| |
+
+ci ci
+
+= =
+
+0) ,
+1)
+
+where yi denotes the received channel output corresponding to the transmitted bit ci. A positive LLR indicates that the transmitted bit is more likely to be 0, whereas a negative LLR favors the bit value 1.
+
+Belief Propagation (BP) is an iterative messagepassing decoding algorithm defined on the Tanner graph of a code. In BP, variable and check nodes communicate by passing probabilistic messages that reflect beliefs about the transmitted bits. These messages are updated locally using the parity-check constraints and the channel observations. BP aims to approximate the marginal posterior probabilities of the codeword bits and to estimate the most likely transmitted codeword. The message passed from a variable node v to a check node c is defined as
+
+mv→c = LLRv +
+
+mc′ →v ,
+
+c′∈N (v)\c
+
+LLRv denotes the channel log-likelihood ratio associated with variable node v, and N (v) represents the
+
+set of check nodes connected to v. The message sent
+
+from a check node c to a variable node v is computed
+
+as
+
+
+
+
+
+mc→v = 2 tanh−1 
+
+tanh mv′→c  , 2
+
+v′∈N (c)\v
+
+where N (c) denotes the set of variable nodes connected to check node c. After a fixed number of iterations or upon convergence, the final log-likelihood
+
+ratio for bit i is given by
+
+LLRfiinal = LLRi +
+
+mc→i.
+
+c∈N (i)
+
+The decoded bit xˆi is obtained using the harddecision rule
+
+xˆi =
+
+0, 1,
+
+if LLRfiinal > 0, if LLRfiinal < 0.
+
+Belief Propagation (BP) may exhibit poor decoding performance when the Tanner graph of the code contains short cycles, such as 4-cycles or 6cycles, which introduce strong dependencies among messages and violate the independence assumptions underlying the algorithm. In such situations, messages can repeatedly reinforce incorrect beliefs, leading to unreliable updates and convergence to suboptimal solutions. Another prominent failure mode arises from the presence of trapping sets or stopping sets, which are small subsets of variable nodes that satisfy a large fraction of the parity-check constraints while remaining globally inconsistent with the transmitted codeword. Once BP enters these configurations, it often becomes trapped and fails to converge to the correct solution. In addition, BP can perform poorly when the channel provides strong but incorrect reliability information, causing the log-likelihood ratios to dominate the parity-check constraints and bias the decoder toward an incorrect codeword.
+Several alternative decoding algorithms have been proposed for linear and LDPC codes. Maximum Likelihood (ML) [15] decoding provides optimal decoding performance by selecting the codeword that maximizes the likelihood given the channel observation; however, its computational complexity grows exponentially with the code length, rendering it impractical for moderate and large block sizes. Bit-Flipping [16] decoders offer very low complexity by iteratively correcting bits that violate the most parity-check constraints; however, their performance is generally poor, particularly in the presence of noise and short cycles in the Tanner graph.
+B. Quantum Preliminaries
+Quantum Machine Learning (QML) [17] integrates ideas from quantum computing and machine learning to explore how quantum resources can improve learning and inference. Within QML, Variational Quantum Algorithms (VQAs) [9–11] are a class of hybrid quantum–classical methods in which a parameterized quantum circuit is optimized using a classical optimizer to minimize a problem-dependent cost function. VQAs are particularly well-suited to
+
+near-term quantum hardware, as they employ shallow quantum circuits while offloading the optimization task to classical computation.
+The Quantum Approximate Optimization Algorithm (QAOA) [7, 8] is a well-known example of a variational quantum algorithm developed to approximately solve combinatorial optimization problems. In QAOA, an optimization problem defined over binary variables is encoded into a problemdependent cost Hamiltonian HP , whose ground state corresponds to the optimal solution. Starting from an initial quantum state |s⟩, QAOA evolves the system by alternately applying the cost Hamiltonian and a mixing Hamiltonian HM , which induces transitions between computational basis states. For a circuit depth l, the QAOA ansatz state is given by
+l
+|γ, β⟩ = e−iβjHM e−iγjHP |s⟩ ,
+j=1
+where γ = (γ1, . . . , γl) and β = (β1, . . . , βl) are variational parameters. The objective of QAOA is to minimize the expected weight of the cost Hamiltonian corresponding to this parameterized circuit, leading to the cost function
+P (γ, β) = ⟨γ, β| HP |γ, β⟩ .
+The optimization of QAOA is carried out through a hybrid quantum–classical loop, in which a classical optimizer updates the parameters (γ, β) based on measurement outcomes obtained from the quantum circuit. At each iteration, the quantum device prepares the QAOA state and estimates the cost function through repeated measurements, while the classical optimizer seeks parameter values that reduce the expected energy. After convergence, measuring the optimized QAOA state in the computational basis yields candidate bit strings, with high probability assigned to near-optimal solutions of the original optimization problem.
+III. QAOA for LDPC Decoding
+As discussed in the previous section, the design of a Quantum Approximate Optimization Algorithm (QAOA) for a given problem instance consists of four essential components: (i) a problem-dependent cost Hamiltonian HC corresponding to an objective function over binary variables, (ii) a mixing Hamiltonian HM that enables transitions between feasible configurations, (iii) an initial quantum state |s⟩, and (iv) a classical optimization procedure for updating the variational parameters. In the proposed QAOA-
+
+based LDPC decoder, we adopt the standard choice of the mixing Hamiltonian and initial state, namely
+
+n
+HM = Xj ,
+j=1
+
+|s⟩ = |+⟩⊗n .
+
+where Xj is the Pauli-X operator acting on the jth qubit and promotes transitions between computational basis states. To optimize the variational parameters, we employ the parameter-shift rule [18, 19], which allows the gradients of the quantum circuit with respect to its tunable parameters to be evaluated analytically and facilitates efficient classical optimization. The most critical component of the proposed framework is the construction of the cost Hamiltonian HC, which encodes both the paritycheck constraints of the LDPC code and the channel reliability information. The design of this Hamiltonian is described in detail in the remainder of this section.
+
+We consider a binary vector x = (x1, x2, . . . , xn), and map the binary variables to Ising spin variables according to Zi = (−1)xi , Zi ∈ {+1, −1}. This representation enables a natural formulation of paritycheck constraints and facilitates the construction of an Ising-type Hamiltonian whose ground state corresponds to a valid LDPC codeword with maximum likelihood. Let C denote the set of parity-check constraints of the linear code C, by the parity-check matrix H. For a given parity check c ∈ C, involving the set of variable nodes i ∈ c, the corresponding parity constraint can be expressed as i∈c xi = 0 (mod 2).
+Using the Ising-spin representation Zi = (−1)xi , this condition is equivalently expressed as
+
+Zi = 1.
+i∈c
+Based on this observation, we introduce a paritycheck penalty term that assigns zero energy to configurations satisfying the parity constraint and a positive energy penalty otherwise. The resulting paritycheck Hamiltonian is defined as
+
+1
+
+Hparity(Z) =
+
+1− 2
+
+Zi .
+
+c∈C
+
+i∈c
+
+This Hamiltonian evaluates to zero if and only if all parity checks are satisfied, and assigns a strictly positive energy to any configuration that violates at least one parity constraint. Since the parity-check matrix of an LDPC code is sparse, the corresponding paritycheck Hamiltonian Hparity(Z) can be implemented efficiently on quantum devices.
+
+The influence of channel noise is incorporated
+
+through a channel-dependent penalty term con-
+
+structed from the Log-Likelihood Ratios (LLRs). Let
+
+hi denote the channel LLR associated with the i-th transmitted bit. Using the Ising-spin representation
+
+Zi ∈ {+1, −1}, we define the channel penalty Hamiltonian as
+
+Hchannel(Z) =
+
+n
+
+|hi| 2
+
+(1
+
+−
+
+sign(hi)
+
+Zi)
+
+.
+
+i=1
+
+This term encodes the channel preference for each bit based on the received observation. Specifically, a positive LLR hi > 0 indicates that the transmitted bit xi = 0 is more likely, corresponding to the spin value Zi = +1, whereas a negative LLR hi < 0 favors the bit value xi = 1, corresponding to Zi = −1. The magnitude |hi| quantifies the confidence of the channel observation and determines the strength of the associated energy penalty.
+From an energy-minimization perspective, the contribution of the i-th term of the channel Hamiltonian is minimized if and only if
+
+Zi = sign(hi).
+Specifically, if hi > 0, then sign(hi) = +1 and the energy contribution
+
+mizing the expectation value of H(z) using QAOA, the decoding task is naturally cast as a global optimization problem, in which measured low-energy bit strings correspond to candidate decoded codewords. This observation leads to the following result.
+
+Theorem 1. Let H(z) = Hparity(z) + Hchannel(z) be the decoding cost Hamiltonian defined as
+
+H(Z) =
+
+1 1−
+2
+
+Zi
+
+n
++
+
+|hi| 2
+
+(1
+
+−
+
+sign(hi)
+
+Zi)
+
+,
+
+c∈C
+
+i∈c
+
+i=1
+
+where Zi = (−1)xi with xi ∈ {0, 1}, and hi denotes the channel Log-Likelihood Ratio associated with the i-th bit. Then any minimizer of H(Z) corresponds to a codeword that satisfies all parity-check constraints and is maximally consistent with the channel observations.
+
+IV. Experimental Results
+In this section, we present the experimental results of the decoding schemes. To clearly demonstrate the performance of the proposed approach, we first describe the experimental setup used in our simulations. This is followed by a detailed discussion of the experimental results.
+
+A. Experimental Configuration
+
+|hi 2
+
+|
+
+(1
+
+−
+
+Zi)
+
+All experiments are conducted under the assumption of Binary Phase Shift Keying (BPSK) [20]
+
+is minimized when Zi = +1. Similarly, if hi < 0, then sign(hi) = −1 and the contribution
+
+|hi 2
+
+|
+
+(1
+
++
+
+Zi)
+
+transmission over an Additive White Gaussian Noise (AWGN) channel [20]. Let the transmitted binary codeword be denoted by
+c = [c0, c1, . . . , cn−1], ci ∈ {0, 1},
+
+is minimized when Zi = −1.
+
+where n denotes the code length. The binary sym-
+
+Consequently, the channel Hamiltonian assigns bols are modulated using Binary Phase Shift Keying
+
+lower energy to bit configurations if and only if (BPSK), where each bit is mapped according to
+
+they are consistent with the channel observations, thereby guiding the optimization toward the most
+
+xi = (−1)ci ,
+
+likely transmitted codeword.
+
+corresponding to the mapping 0 → +1 and 1 → −1.
+
+The total cost Hamiltonian for the QAOAbased LDPC decoder is constructed by combining
+
+The resulting transmitted signal vector is therefore given by
+
+the parity-check penalty and the channel-dependent
+
+x = [(−1)c0 , (−1)c1 , . . . , (−1)cn−1 ].
+
+penalty terms. Specifically, the decoding Hamiltonian
+
+is given by
+
+The modulated signal is transmitted over an AWGN
+
+channel, where the received signal is expressed as
+
+H(Z) =
+
+1 1−
+2
+
+Zi
+
+n
++
+
+|hi| 2
+
+(1
+
+−
+
+sign(hi)
+
+Zi)
+
+.
+
+yi = xi + ni.
+
+c∈C
+
+i∈c
+
+i=1
+
+The noise samples ni are assumed to be independent
+
+The key insight underlying this formulation is and identically distributed Gaussian random varithat valid codewords correspond to low-energy con- ables with zero mean and variance σ2, i.e.,
+
+figurations of the decoding Hamiltonian. By mini-
+
+ni ∼ N (0, σ2).
+
+The corresponding Gaussian probability density function [1] is given by
+
+1
+
+n2
+
+p(n) = √ exp 2πσ2
+
+− 2σ2
+
+.
+
+For BPSK transmission over an AWGN channel, soft information is provided to the decoder in the form of LLRs. The LLR associated with the received symbol yi is given by
+
+LLRi
+
+=
+
+log
+
+p(yi p(yi
+
+| |
+
+ci ci
+
+= =
+
+0) 1)
+
+=
+
+2 σ2 yi.
+
+These LLR values are used as inputs to both the classical belief propagation decoder and the proposed QAOA-based decoding framework.
+
+B. Results and Discussion
+
+In this section, we demonstrate through numerical simulations that the proposed QAOA-based decoder achieves improved performance compared to the BP algorithm. For simulating quantum circuits, we use PennyLane [18], while the framework of the architecture is constructed using PyTorch [21]. In Table I, we report the decoding performance for an LDPC code with parameters [n, k] = [6, 2]. The corresponding parity-check matrix is given by
+
+1 1 1 0 0 0
+
+H
+
+=
+
+1 0
+
+1 0
+
+0 1
+
+1 1
+
+0 1
+
+0 0
+
+.
+
+001101
+
+The null space of H has dimension k = 2, and a basis for this null space is chosen as
+
+v1 = [1, 0, 1, 1, 0, 0], v2 = [1, 1, 0, 0, 0, 0].
+
+Using this basis, the complete set of valid codewords is generated.
+
+For classical BP decoding, the maximum number of iterations is fixed to 50. In the quantum-assisted decoding framework, the QAOA is employed with circuit depth l = 10, and each quantum circuit execution uses 1000 measurement shots.
+
+To evaluate performance under different noise conditions, the noise standard deviation is fixed at σ ∈ {1, 1.5, 2}. For each value of σ, a total of 100 independent trials are conducted. Let |C| denote the total number of valid codewords, and let |Y | denote the total number of noisy outputs generated per codeword after transmission through the noise channel, corresponding to the number of independent noise realizations used for testing. The last two columns of Table I report the empirical probability of successful decoding, defined as the ratio of correctly
+
+[n, k] |C| σ |Y | BP [1] QAOA (This Work)
+
+1.0
+
+0.82
+
+[6, 2] 4 1.5 25 0.49
+
+2.0
+
+0.44
+
+0.83 0.60 0.62
+
+1.0
+
+0.82
+
+[7, 3] 8 1.5 13 0.50
+
+2.0
+
+0.35
+
+0.82 0.71 0.56
+
+1.0
+
+0.61
+
+[8, 4] 16 1.5 6 0.37
+
+2.0
+
+0.30
+
+0.72 0.57 0.59
+
+TABLE I: Performance comparison of BP and QAOA-based decoder under different noise levels.
+
+decoded outputs to the total number of tested noisy instances. We observe that as the noise standard deviation σ increases, the probability of successful decoding using the BP algorithm decreases. In contrast, the QAOA-based decoder maintains a higher decoding success probability than the BP decoder.
+
+To further demonstrate the generality of the proposed QAOA-assisted LDPC decoding framework, we consider two additional linear block codes with parameters [n, k] = [7, 3] and [n, k] = [8, 4]. For the [7, 3] and [8, 4] codes, the total numbers of independent trials are set to 104 and 96, respectively. As in the previous experiments, the noise standard deviation is fixed to σ ∈ {1, 1.5, 2}, while all other experimental parameters are kept unchanged to ensure consistent performance comparison across different code lengths.
+
+Figure 1 shows the energy convergence of the QAOA-based decoder as a function of the classical optimization iterations for three different noise levels. The experiments are conducted for a linear block code with parameters [n, k] = [6, 2], whose paritycheck matrix is given by
+
+1 1 1 0 0 0
+
+H
+
+=
+
+0 0
+
+1 0
+
+1 1
+
+1 1
+
+0 1
+
+0 0
+
+.
+
+000111
+
+The QAOA circuit depth is fixed to l = 10, and each circuit evaluation is performed using 1000 measurement shots. The true transmitted codeword is [1, 0, 1, 1, 0, 1]. The three subplots correspond to noise standard deviations σ = 1, 1.5, and 2, respectively, while the total number of classical optimization steps is set to 100. As observed, the QAOA energy decreases consistently with the number of optimization iterations, indicating stable convergence of the variational parameters.
+
+Energy (Loss) Energy (Loss) Energy (Loss)
+
+6
+
+3.5
+
+8
+
+5
+
+3.0
+
+6
+
+4
+
+2.5
+
+4
+
+3
+
+2.0
+
+2
+
+2
+
+1
+
+1.5
+
+0 0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Iteration (Step)
+
+1.0
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Iteration (Step)
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Iteration (Step)
+
+FIGURE 1: Energy convergence of the QAOA-based decoder versus optimization steps for three different experimental settings (σ = 1, 1.5, 2).
+
+V. Advantages
+Belief Propagation (BP) and the Quantum Approximate Optimization Algorithm (QAOA) are two completely different decoding concepts. BP is a local iterative message-passing algorithm that greedily updates beliefs based on neighboring parity-check constraints and channel knowledge. However, this leads to BP being based on local consistency and potentially converging to suboptimal fixed points, especially in the case of short cycles or trapping sets in the Tanner graph. In contrast, QAOA is a global optimization-based decoding method that formulates the decoding problem as a global optimization task by expressing both parity-check constraints and channel reliability knowledge in a unified cost Hamiltonian. QAOA leverages quantum superposition and parameterized unitary evolution to explore a vast configuration space of candidate bit strings simultaneously, instead of pursuing local updates. The global energy-based perspective of decoding enables QAOA to overcome local minima and trapping sets, which are common issues that impede the convergence of BP-based decoders. Therefore, QAOA offers a complementary decoding solution that is especially useful in decoding instances where classical iterative decoders demonstrate poor convergence properties.
+An important aspect of the proposed decoding framework is its computational complexity. For comparison, the belief propagation (BP) algorithm admits linear-time complexity with respect to the code length under standard assumptions. In contrast, the QAOA-based decoder involves both quantum state evolution and classical parameter optimization. On the classical side, a momentum-based gradient descent method is employed to optimize the variational parameters γ and β appearing in the parameterized unitary operations. The computational complexity of this classical optimization procedure is O(poly(m)), where m denotes the number of optimization iterations. On the quantum side, the dominant compu-
+
+tational cost arises from the repeated preparation and evolution of the quantum state according to the QAOA circuit. As discussed in Ref. [22, 23], the corresponding complexity O(poly(l)), where l be the number of layers. Consequently, the overall computational complexity of the proposed QAOA-based decoding scheme can be expressed as O poly(l) + poly(m) . Both the BP decoder and the QAOA procedure run in polynomial time with respect to the code length and the circuit depth, respectively. However, the QAOA-based decoder is observed to provide better decoding performance than the BP algorithm.
+VI. Conclusion and Future Directions
+In this study, we explored a QAOA-based decoding framework for LDPC codes by formulating the classical decoding objective as a quantum cost Hamiltonian. The proposed approach casts LDPC decoding as a global optimization problem, in which paritycheck constraints and channel reliability information are jointly encoded and optimized using the QAOA. Our experimental results, obtained on different problem instances, demonstrate that the QAOA-based decoder achieves performance comparable to BP in standard decoding scenarios. The observed results indicate that optimization-based quantum decoding can provide meaningful advantages even in the nearterm regime.
+In future work, we would like to extend the proposed framework by exploring more expressive QAOA tailored to the structural properties of LDPC decoding, to improve decoding performance, while reducing computational complexity overhead. In particular, we develop theoretical performance and investigate their behavior in the large block-length regime. These research directions are essential for assessing the practical potential and scalability of quantum optimization methods for error-correcting code decoding.
+
+References
+[1] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge University Press, 2008.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[3] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[4] M. Nielsen and I. Chuang, Quantum Computation and Quantum Information: 10th Anniversary Edition. Cambridge University Press, 2010.
+[5] J. Preskill, “Quantum computing in the nisq era and beyond,” Quantum, vol. 2, p. 79, 2018.
+[6] B. Korte and J. Vygen, Combinatorial optimization: theory and algorithms. Springer, 2008.
+[7] E. Farhi, J. Goldstone, and S. Gutmann, “A quantum approximate optimization algorithm,” 2014.
+[8] S. Hadfield, Z. Wang, B. O’Gorman, E. G. Rieffel, D. Venturelli, and R. Biswas, “From the quantum approximate optimization algorithm to a quantum alternating operator ansatz,” Algorithms, vol. 12, no. 2, 2019.
+[9] M. Cerezo, A. Arrasmith, R. Babbush, S. C. Benjamin, S. Endo, K. Fujii, J. R. McClean, K. Mitarai, X. Yuan, L. Cincio et al., “Variational quantum algorithms,” Nature Reviews Physics, vol. 3, no. 9, pp. 625–644, 2021.
+[10] K. Mitarai, M. Negoro, M. Kitagawa, and K. Fujii, “Quantum circuit learning,” Physical Review A, vol. 98, no. 3, p. 032309, 2018.
+[11] D. Wecker, M. B. Hastings, and M. Troyer, “Progress towards practical quantum variational algorithms,” Physical Review A, vol. 92, no. 4, p. 042303, 2015.
+[12] Z. Zhou, Y. Du, X. Tian, and D. Tao, “Qaoain-qaoa: Solving large-scale maxcut problems on small quantum machines,” Phys. Rev. Appl., vol. 19, p. 024027, Feb 2023.
+[13] P. Vikst˚al, M. Gro¨nkvist, M. Svensson, M. Andersson, G. Johansson, and G. Ferrini, “Applying the quantum approximate optimization algorithm to the tail-assignment problem,” Phys. Rev. Appl., vol. 14, p. 034009, Sep 2020.
+[14] J. Basso, D. Gamarnik, S. Mei, and L. Zhou, “Performance and limitations of the qaoa at constant levels on large sparse hypergraphs and spin glass models,” in 2022 IEEE 63rd Annual Symposium on Foundations of Computer Science (FOCS), 2022, pp. 335–343.
+
+[15] J. Wolf, “Efficient maximum likelihood decoding of linear block codes using a trellis,” IEEE Transactions on Information Theory, vol. 24, no. 1, pp. 76–80, 1978.
+[16] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding ldpc codes,” IEEE Transactions on Communications, vol. 58, no. 6, pp. 1610–1614, 2010.
+[17] J. Biamonte, P. Wittek, N. Pancotti, P. Rebentrost, N. Wiebe, and S. Lloyd, “Quantum machine learning,” Nature, vol. 549, no. 7671, pp. 195–202, 2017.
+[18] V. Bergholm, J. Izaac, M. Schuld, C. Gogolin, S. Ahmed, V. Ajith, M. S. Alam, G. AlonsoLinaje, B. AkashNarayanan, A. Asadi et al., “Pennylane: Automatic differentiation of hybrid quantum-classical computations,” arXiv preprint arXiv:1811.04968, 2018.
+[19] M. Schuld, V. Bergholm, C. Gogolin, J. Izaac, and N. Killoran, “Evaluating analytic gradients on quantum hardware,” Physical Review A, vol. 99, no. 3, p. 032331, 2019.
+[20] J. G. Proakis and M. Salehi, Digital communications. McGraw-hill New York, 2001, vol. 4.
+[21] A. Paszke, “Pytorch: An imperative style, high-performance deep learning library,” arXiv preprint arXiv:1912.01703, 2019.
+[22] L. Zhou, S.-T. Wang, S. Choi, H. Pichler, and M. D. Lukin, “Quantum approximate optimization algorithm: Performance, mechanism, and implementation on near-term devices,” Physical Review X, vol. 10, no. 2, p. 021067, 2020.
+[23] Y. Zhang, X. Mu, X.-W. Liu, X. Wang, X. Zhang, K. Li, T. Wu, D. Zhao, and C. Dong, “Applying the quantum approximate optimization algorithm to the minimum vertex cover problem,” Applied Soft Computing, vol. 118, p. 108554, 2022.
+
+

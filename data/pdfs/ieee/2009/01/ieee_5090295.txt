@@ -1,0 +1,626 @@
+DESIGN AND FPGA IMPLEMENTATION OF ITERATIVE DECODERS FOR CODES ON GRAPHS Bharathram Sivasubramanian, Warren J. Gross and Harry Leib
+Department of Electrical and Computer Engineering, McGill University, Montreal, QC,Canada
+
+ABSTRACT
+This work presents a Field Programmable Gate Array (FPGA) implementation of the Min-Sum iterative decoding algorithm for the (8,4) extended Hamming code using a reconfigurable computing system. The Mitrion-C high level language (HLL) is used to program the FPGAs, since it provides flexible tools for FPGAbased prototyping and functional verification for hardware design. A hardware-efficient implementation of the Min-step in the MinSum decoder, which eliminates the use of floating point multipliers, is also presented. The parallelism offered by the Min-Sum algorithm is exploited in hardware, resulting in a 15 fold speedup over optimized software implementations. The performance of the hardware implementation is virtually the same as that predicted by computer simulations, validating the hardware design.
+I. INTRODUCTION
+Since the re-discovery of Low Density Parity-Check (LDPC) codes in [1], codes defined on graphs and their associated iterative decoding algorithms based on the Belief Propagation (BP) framework [2] have been widely studied as a means of approaching the ultimate performance limits of various noisy channels [3], [4]. Due to their excellent performance, codes defined on graphs and iterative decoders have also been adopted in communication standards such as the IEEE802.16e (WiMAX Broadband Wireless Networks) [5] and DVB-S2 (Digital Satellite Video Broadcasting) [6]. In light of these technological developments, the hardware implementation of iterative decoder architectures on reconfigurable systems has become a timely research problem.
+Decoder implementation on FPGAs provides several advantages compared to full custom design on application specific integrated circuits (ASICs) such as reprogrammability and shorter testing and debugging times, thus making them increasingly popular for rapid hardware prototyping. Reconfigurable systems also offer the potential of accelerating or speeding up the algorithm to be implemented by exploiting the parallelism present in the algorithm. With these objectives in mind, we present the design and FPGA implementation of the Min-Sum algorithm for the (8,4) extended Hamming code on a reconfigurable computing system. This work demonstrates a successful methodology for hardware acceleration of iterative decoders, using the (8,4) extended Hamming code as an example.
+In the literature, several BP-based iterative decoding algorithms are available (see [7], [8], [9], [10] and references therein) that trade-off better performance with increased implementation complexity. Out of these available algorithms,
+
+the Min-Sum decoder developed in [7] was chosen, since it lends itself to the simplest implementation. Then, the FPGA design and implementation stage was performed, using the Mitrion-C high level language (HLL) for FPGA programming. The hardware design was tested and it was found that the hardware implementation performance was virtually identical to that of the software. By parallelizing the Min-Sum algorithm, the FPGA implementation showed a substantial speedup over software implementations.
+
+II. CODES ON GRAPHS AND ITERATIVE
+
+DECODING
+
+Consider
+
+a
+
+binary
+
+linear
+
+(n, k)
+
+block
+
+code
+
+C
+
+of
+
+rate
+
+k n
+
+,
+
+with a k×n generator matrix G and an (n−k)×n parity check
+
+matrix H, where blocks of k information bits are encoded
+
+into codewords of n bits. The parity check matrix H can be
+
+viewed as a bipartite graph, known as a Tanner graph [11],
+
+with n variable nodes and m = n− k check nodes. In this
+
+paper, we consider the (8,4) extended Hamming code, where
+
+k = 4, m = 4 and n = 8. The bipartite graph of this code is
+
+given
+
+in
+
+Fig.
+
+1,
+
+w⎡h1ile
+
+its
+0
+
+parity
+11
+
+check
+10
+
+matrix
+00
+
+⎤is
+
+given
+
+by
+
+H=⎣
+
+1 1
+
+1 1
+
+0 1
+
+1 0
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+⎦.
+
+(1)
+
+01110001
+
+Check node
+
+c1
+
+c2
+
++
+
++
+
+c3
+
+c4
+
++
+
++
+
+Variable node
+
+v1 v2 v3 v4 v5 v6 v7 v8
+
+Fig. 1. Bipartite graph of (8,4) extended Hamming Code
+From Fig. 1, note that in the (8,4) extended Hamming code, there are n = 8 variable nodes [v1,· · · ,v8], where [v1,· · · ,v4] represent the k = 4 information bits and [v5,· · · ,v8] represent the m = 4 parity bits. There are also m = 4 check nodes [c1,· · · ,c4], which represent each of the parity check constraints. The check nodes of this code have a degree dc = 4, while variable nodes [v1,· · · ,v4] are of degree 3 and [v5,· · · ,v8] are of degree 1. Consider the coded system shown in Fig. 2. In the (8,4) Hamming encoder, the source bit vector s = [s1,· · · ,s4] is multiplied by the generator
+
+978-1-4244-3508-1/09/$25.00 ©2009 IEEE
+
+1080
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:19 UTC from IEEE Xplore. Restrictions apply.
+
+s
+Binary source
+Channel
+
+Hamming v
+encoder
+
+BPSK mod.
+
+Hard Decision
+
+x
+Binary sink
+ˆs
+
+n
+AWGN
+r
+Matched filter
+
+V−node mv,c C−node
+
+update
+
+update
+
+mc,v
+
+Iterative decoder
+
+Fig. 2. System model
+
+matrix G in modulo-2 arithmetic, yielding v = s•G, where
+
+v = [v1,· · · ,v8] is the codeword. The codeword symbols, vt ∈ {0, 1} are Binary Phase Shift Keying (BPSK) modulated yielding a channel symbol vector, x = [x1,· · · ,x8], where xt = (−1)vt, that are transmitted over an Additive White
+
+Gaussian Noise (AWGN) channel. The discrete time received
+
+signal rt can be expressed as rt = xt + nt, where nt are
+
+i.i.d Gaussian random variables of zero mean and variance
+
+σ2
+
+=
+
+N0 2
+
+,
+
+with
+
+N0 2
+
+being
+
+the
+
+two-sided
+
+noise
+
+power
+
+spectral
+
+density. The channel log-likelihood ratio (LLR) of each
+
+codeword symbol, denoted by Zv, can be expressed as
+
+Zv = ln
+
+Pr(vt = 0|rt) Pr(vt = 1|rt)
+
+= ln
+
+Pr(xt = +1|rt) Pr(xt = −1|rt)
+
+= ln
+
+p(rt|xt = +1) p(rt|xt = −1)
+
++ ln
+
+Pr(xt = +1) Pr(xt = −1)
+
+,
+
+(2)
+
+where the last equality is obtained by using Bayes’ rule.
+
+With equiprobable xt, the second term on the r.h.s. of (2)
+
+vanishes,
+
+and
+
+since
+
+p(rt|xt
+
+=
+
+±1)
+
+=
+
+e , √ 1
+
+−
+
+(rt ∓1)2 2σ2
+
+2πσ2
+
+we
+
+have from (2) that Zv = 2rt/σ2. The general class of soft
+
+decision decoding algorithms for codes defined on graphs
+
+are called “message passing” algorithms [12], [13]. We can
+
+distinguish between two main decoding algorithms, namely
+
+the complete BP [2], [12] and the Min-Sum algorithm [7].
+
+To explain these algorithms, the following notation will be
+
+used. A message in the decoder is denoted by m and the
+
+decoding iteration by the superscript l. The message sent
+
+from codeword symbol (variable node) v to check node c is
+
+denoted by mv,c, while mc,v is a message from check node c to variable node v. In complete BP decoding all messages
+
+are initialized to 0 for iteration l = 0. For l > 0, all variable
+
+nodes send to their neighboring check nodes the extrinsic
+
+information
+
+mv(l,)c =
+
+mc(l−,v1) + Zv.
+
+(3)
+
+c =c
+
+This is followed by the check node update step, where all
+
+check nodes send to their neighboring variable nodes the message of extrinsic information
+
+⎡
+
+⎤
+
+m(cl,)v = 2 tanh−1 ⎣
+
+tanh mv(l),c/2 ⎦.
+
+(4)
+
+v =v
+
+In (3), which will be hitherto referred to as the Sum-
+
+step, the sum is over all adjacent check nodes to v other
+
+than c, while in (4), the product is over all variable nodes
+
+adjacent to c other than v. After p decoding iterations the
+
+variable nodes corresponding to the information bits add
+
+their incoming messages from their neighboring check nodes
+
+to their channel LLR to form the decision variable d(s) = c mc(p,v) +Zv. With the unit step function denoted as u(x),
+the hard decision on every information bit is sˆ= u − d(s) .
+
+The check node update rule of the complete BP algorithm
+
+in (4) is complex and difficult to implement in hardware, due to the presence of the tanh and tanh−1 functions. The
+
+Min-Sum algorithm [7] is a reduced complexity variant of
+
+the complete BP algorithm that simplifies the update rule at the check nodes by replacing the complex tanh and tanh−1
+
+functions with simpler approximations. It retains the Sum-
+
+step given by (3) and uses the following check node update
+
+rule, which will be hitherto referred to as the Min-step:
+
+m(cl,)v = |λmin|
+
+sign mv(l),c ,
+
+(5)
+
+v =v
+where |λmin| is the minimum magnitude of the messages mv ,c, v = v.
+
+III. FPGA IMPLEMENTATION IN MITRION-C
+
+III-A. Mitrion-C and RASC FPGA System
+
+Mitrion-C [14] belongs to the family of high level languages (HLLs) that have emerged in recent years as a new paradigm in reconfigurable computing. HLLs are an alternative to low level hardware descriptive languages (HDLs) such as VHDL or Verilog for programming FPGAs. An important aspect of HLLs is that they provide a layer of abstraction, enabling a high level software code to be mapped into a low level hardware description. This allows users with little hardware design knowledge to rapidly develop FPGA based applications, since the HLL adapts the software code into hardware logic, with minimal user intervention in low level hardware details. A key feature of Mitrion-C is that it is a parallel data flow oriented language, with data types that lend themselves to both finegrained and coarse-grained parallelism. FPGA design using Mitrion-C consists of software and hardware development cycles, as shown in Fig. 3. The software development cycle is performed using the Mitrion Software Development Kit (SDK) [14]. After source code compilation, it generates a hardware independent virtual processor machine code that can be accessed by the debugger/simulator. Upon successful functional verification, the machine code is sent to the processor configurator, which generates VHDL code for the target hardware platform. Tools provided by the target FPGA vendor utilize this VHDL code for hardware synthesis, and place-and-route on the FPGA. Next, we describe
+
+1081
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:19 UTC from IEEE Xplore. Restrictions apply.
+
+the target Reconfigurable Application-Specific Computing (RASC) RC100 FPGA system used to implement the MinSum algorithm in hardware. The RASC [15] architecture is
+
+Software Development Cycle
+Mitrion Source code
+
+Compiler
+
+Mitrion Virtual Processor
+
+Modify Source code
+
+Debugger/ Simulator
+Verify Functionality
+
+Fail Success
+
+Hardware Development Cycle
+
+Fail
+
+Hardware
+
+Testing
+
+Success
+
+Fail
+
+Synthesis,
+
+PAR
+
+Generate VHDL
+
+Send machine code to Configurator
+
+Fig. 3. Design Flow in Mitrion-C
+an example of a high performance reconfigurable computing (HPRC) system, using traditional microprocessors along with FPGAs to provide hardware acceleration. In this paper, the hardware implementation is performed on an SGI Altix 350 [16] system, comprised of eight Intel 1.5 GHz. Itanium 2 CPUs. The Altix is interfaced with two RASC RC100 accelerators, each containing two Xilinx Virtex-4 LX200 FPGAs operating at a clock frequency of 200 MHz. Up to 32 MB of external SRAM (used for storing the input and output data for algorithm execution) is available for each FPGA and is split into two 128-bit wide banks of 16 MB each. The RASC Abstraction Layer [15] provides an application programming interface (API) between the Altix and the RASC hardware, enabling data movement between the Altix and the FPGA external RAMs. A more detailed description of the RASC RC100 system, as well as MitrionC can be found in [17].
+III-B. FPGA Implementation and Testing
+The main goal of this FPGA implementation was to utilize the fine-grained parallelism offered by the Min-Sum algorithm to accelerate the decoder in hardware. From the update rules of (5) and (3), we find that the variable node and check node updates can be performed in parallel, i.e., all check nodes can send their Min-step messages to their neighboring variable nodes in parallel, and all variable nodes can send their messages to their neighboring check nodes in parallel in every Sum-step. The fine-grained parallelism of the Min-Sum algorithm is achieved at the instruction level by setting all Sum and Min updates within the same stage of the data flow in the Mitrion-C program. The main bottleneck in this implementation is the number of decoding iterations, p, which was set to 20, since the performance of the Min-Sum algorithm for this code tends to saturate
+
+with increasing the number of iterations further. The decoder
+
+architecture was first implemented in Mitrion-C HLL and
+
+verified by testing using the Mitrion-C simulator/debugger
+
+environment. Each noisy codeword symbol was represented
+
+as an IEEE-754 32-bit single-precision floating point num-
+
+ber. Since every codeword contains 8 symbols, it consumes 32 × 8 = 256 bits of storage. Furthermore, only four 32-
+
+bit single-precision floating point values can be stored in
+
+each memory address of the external FPGA SRAMs (each
+
+address of the SRAM is 128 bits long). Hence, each noisy
+
+codeword was split into two 4-element vectors of 128 bits
+
+each, and stored in consecutive SRAM memory addresses.
+
+To enable the decoder to check for bit/frame errors, the
+
+4 information bits corresponding to each codeword were
+
+also stored in the SRAM in the next address. The input
+
+and output SRAM buffer sizes chosen were 8 MB each,
+
+corresponding to 524288 addresses. Since each codeword
+
+takes 3 memory addresses of storage (2 for noisy codeword
+
++ 1 for 4 information bits corresponding to the codeword),
+
+a total of 174762 codewords are stored in the input RAM.
+
+Due to constraints on the number of multipliers available in
+
+the FPGA system, the hardware implementation of the Min-
+
+step had to be modified so that it did not use floating point
+
+multiplications. From (5) and Fig. 1, the generic Min-step
+
+for the (8,4) extended Hamming code can be written as:
+
+|o| = min(|a|, |b|, |c|)
+
+(6)
+
+o = |o| × sign(a) × sign(b) × sign(c).
+
+(7)
+
+where o is the output check node message, and a, b and c are the input messages. To get the absolute value of a 32-bit floating point number x, we have to set its sign bit to 0, which is implemented by:
+
+|x| = x & 0x7fffffff,
+
+(8)
+
+where & denotes the bit-wise AND operation, and 0x7fffffff
+
+is a 32-bit mask that sets the sign bit of x to 0. We also
+
+have
+
+signo = signa ⊕ signb ⊕ signc,
+
+(9)
+
+where signo, signa, signb and signc are the sign bits of o, a, b and c respectively and ⊕ denotes the XOR operation.
+
+Thus, to efficiently implement the Min-step in hardware, we
+
+first use (8) in (6) to get |o|. Then, we get signo using (9). Finally, we have
+
+o=
+
+|o|
+
+if signo = 0
+
+|o| ⊕ 0x80000000 if signo = 1,
+
+(10)
+
+where 0x80000000 is a 32-bit mask which sets the sign bit of |o| to 1, thus flipping its sign. Steps (10) and (9) together keep the sign bit of the output message at 0 if there are an even number of 1’s in the sum of the sign bits of a, b and c (this occurs if a, b and c are all positive or 2 of a, b and c are negative), otherwise it is flipped to 1.
+
+The next step was to test and validate the FPGA implementation, as well as to measure the speedup of the hardware over the software, as shown in Fig. 4. For this purpose, a host
+
+1082
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:19 UTC from IEEE Xplore. Restrictions apply.
+
+Host Program in C
+
+RASC Interface
+
+RASC System
+
+Hamming Encoder
+
+AWGN Generator
+
+Software Decoder
+
+S/W Bit/Frame Error counter
+
+Input SRAM
+
+Xilinx FPGA
+
+Hardware Decoder
+
+H/W Bit/Frame Error counter
+
+Output Buffer
+
+Compare Results
+
+Output SRAM
+
+RASC Interface
+Fig. 4. Hardware Testing Setup
+program written in ANSI-C that emulated the transmitter and channel for the coded system shown in Fig. 2 was written. This program included the generation of random sequences of input bits, encoding of the data through the Hamming encoder, BPSK modulation and the AWGN channel simulation. Interfacing of the host program with the FPGA system is accomplished by means of RASC Library [15] abstraction layer calls. The host program is used to fill the input SRAM buffer of the FPGA with noisy codewords and their corresponding information bits. Next, the FPGA reads each noisy codeword from the SRAM, performs the Min-Sum decoding and checks for bit/frame errors by comparing the decoded information bits with the corresponding reference information bits. After all codewords have been decoded, the FPGA writes back the total number of bits/frames in error into the output SRAM. The number of bits/frames in error calculated by the hardware is read back from the SRAM into the host program and the bit error rate (BER) and the frame error rate (FER) measured by the hardware are calculated. The host program then performs Min-Sum decoding on the same set of codewords in software and calculates the software BER/FER. Finally, the host program verifies if the hardware and software BER/FER results match and calculates the speedup of the hardware over the software implementation, defined as the ratio of the software and hardware execution times.
+IV. HARDWARE IMPLEMENTATION RESULTS
+The hardware architecture presented in this paper was developed using Mitrion-C 1.2, while the host program was written in ANSI-C, making use of the RASC Library 2.0, compiled with gcc 4.1.0 and run on a single 1.5 GHz Itanium 2 machine in the SGI Altix 350 system. Although the RASC RC100 system operates at a clock frequency of 200 MHz, Mitrion-C generates circuits that are clocked at a fixed frequency of 100 MHz and hence the clock frequency
+
+of this implementation is 100 MHz. Synthesis and place-androute were performed by Synplify Pro and Xilinx ISE tools. Table I shows the FPGA hardware resources consumed by this implementation. The average time spent for the synthesis and place-and-route was about 5 hours. In order to calculate
+
+Table I. Hardware Resources of Xilinx Virtex-4 LX200 FPGA consumed
+
+Resource
+
+Total Number Amount Used
+
+Flip Flops Lookup tables (LUTs) Fixed point multipliers(18 x 18) 18 KB Block RAMs
+
+178,176 200,448
+96 336
+
+59392 (33%) 70156 (35%)
+0 (0%) 26 (8%)
+
+the speedup, the host program times the end-to-end execution time of the hardware as well as the software implementation to decode the same set of 174762 codewords. The hardware execution time includes the time spent on sending the data to the input RAM and receiving it from the output RAM, in addition to the actual algorithm execution time in the FPGA. For verification purposes, the host program also checks if the total number of bits/frames in error in hardware matches that of the software implementation. Table II summarizes the speedup obtained by the hardware, at varying levels of software optimization, which is obtained by setting the -O flag in the compiler. At the -O0 level, there are no compiler optimizations, while level -O3 represents the highest level of optimization. From Table II, we note that as
+
+Table II. Hardware Speedup over Software Implementation on 1.5Ghz Itanium 2
+
+SW Opt. Level SW Time (ms) HW Time (ms) Speedup
+
+-O0
+
+8123
+
+-O1
+
+2230
+
+-O2
+
+1202
+
+-O3
+
+652
+
+44
+
+185
+
+44
+
+51
+
+44
+
+27
+
+44
+
+15
+
+the software optimization level increases, the speedup of the hardware decreases. To make a fair comparison between the hardware and software implementation, we must choose the most optimized software implementation, given by the -O3 level. At this level of software optimization, the hardware implementation exhibits a 15 fold speedup, showing that the hardware design exploits the parallelism of the Min-Sum algorithm much more than the software.
+The BER/FER performance of the hardware implementation of the Min-Sum algorithm for the (8,4) extended Hamming code is shown in Fig. 5. The BER/FER curves are plotted versus the signal to noise ratio (SNR) per information bit denoted by Eb/N0. Each transmitted frame consisted of one codeword of 8 symbols and the number of decoding iterations, p, for each frame was set to 20. For BER simulations, at least 100 bit errors were counted at each point, while
+
+1083
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:19 UTC from IEEE Xplore. Restrictions apply.
+
+10−2
+
+Hardware BER Software BER Hardware FER Software FER Uncoded BPSK
+
+BER/FER
+
+10−3
+
+10−4
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+E /N [dB]
+b0
+
+Fig. 5. Performance of the Hardware and Software Implementation of the Min-Sum algorithm
+
+for FER simulations, 100 frame errors were counted at each point, to be consistent with the software results. To facilitate the comparison between hardware and software results, the software results are also plotted in Fig. 5. Also plotted in Fig. 5 is the analytical probability of error for uncoded BPSK [18] given by PBP SK = Q 2Eb/N0 . From Fig. 5, we note that the Min-Sum decoder achieves a FER of 10−4 at an SNR of 6.8 dB, providing a coding gain of 1.6 dB over uncoded BPSK. Also from Fig. 5, we observe that the hardware and software results are virtually indistinguishable. This shows that the hardware implementation results are accurate, thereby validating the hardware design.
+V. CONCLUSIONS
+This paper considered the hardware design and implementation of the Min-Sum iterative decoding algorithm for the (8,4) extended Hamming code. This design exploits the fine-grained parallelism offered by the Min-Sum algorithm in hardware and has been implemented using the MitrionC HLL for use on an SGI Altix 350 machine with RASC RC100 FPGA accelerators. The hardware implementation provides a 15 fold speedup over optimized software implementations. Furthermore, the computer simulation and the hardware implementation results are virtually indistinguishable, validating this hardware design.
+VI. REFERENCES
+[1] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inform. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[2] F. R. Kschischang, B. J. Frey, and H. -A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE
+
+Trans. Inform. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001. [3] T. J. Richardson, A. Shokrollahi, and R. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001. [4] T. Richardson and R. Urbanke, “The renaissance of Gallager’s low-density parity-check codes,” IEEE Commun. Mag., vol. 41, no. 8, pp. 126–131, Aug. 2003. [5] I. Std 802.16e, “Draft IEEE standard for local and metropolitan area networks, Part 16: Air interface for fixed and mobile broadband wireless access systems,” Feb. 2006. [6] A. Morello and V. Mignone, “DVB-S2: The second generation standard for satellite broad-band services,” Proc. IEEE, vol. 94, pp. 210–227, Jan. 2006. [7] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999. [8] J. Chen, A. Dolakia, E. Eleftheriou, M. P. C. Fossorier, and X. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288– 1299, Aug. 2005. [9] J. Zhang, M. P. C. Fossorier, D. Gu, and J. Zhang, “Two-dimensional correction for Min-Sum decoding of irregular LDPC codes,” IEEE Commun. Lett., vol. 10, no. 3, pp. 180–182, Mar. 2006. [10] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208– 210, May 2002. [11] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inform. Theory, vol. 27, no. 5, pp. 533–547, Sept. 1981. [12] C. B. Schlegel and L. C. Perez, Trellis and Turbo Coding. Piscataway, NJ: Wiley - IEEE Press, 2004. [13] E. Biglieri, Coding for Wireless Channels. New York, NY: Springer, 2005. [14] S. Mohl, The Mitrion-C Programming Language. Mitrionics Inc., 2005. [15] S. Graphics Inc., Reconfigurable Application-Specific Computing User’s Guide, 007th ed., 2006. [16] ——, SGI Altix 350 System User’s Guide, Mountain View, CA, 2004. [17] J. Koo, D. Fernandez, A. Haddad, and W. J. Gross, “Evaluation of a high-level-language methodology for high-performance reconfigurable computers,” in Proc. IEEE 18th International Conference on ApplicationSpecific Systems, Architectures and Processors, Montreal, QC, Canada, July 2007, pp. 30–35. [18] J. G. Proakis, Digital Communications, 4th ed. McGraw-Hill, 2001.
+
+1084
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:19 UTC from IEEE Xplore. Restrictions apply.
+
+

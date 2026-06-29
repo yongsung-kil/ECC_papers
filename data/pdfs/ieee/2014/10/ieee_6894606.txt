@@ -1,0 +1,1268 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+3385
+
+Noisy Gradient Descent Bit-Flip Decoding for LDPC Codes
+Gopalakrishnan Sundararajan, Student Member, IEEE, Chris Winstead, Senior Member, IEEE, and Emmanuel Boutillon, Senior Member, IEEE
+
+Abstract—A modified Gradient Descent Bit Flipping (GDBF) algorithm is proposed for decoding Low Density Parity Check (LDPC) codes on the binary-input additive white Gaussian noise channel. The new algorithm, called Noisy GDBF (NGDBF), introduces a random perturbation into each symbol metric at each iteration. The noise perturbation allows the algorithm to escape from undesirable local maxima, resulting in improved performance. A combination of heuristic improvements to the algorithm are proposed and evaluated. When the proposed heuristics are applied, NGDBF performs better than any previously reported GDBF variant, and comes within 0.5 dB of the belief propagation algorithm for several tested codes. Unlike other previous GDBF algorithms that provide an escape from local maxima, the proposed algorithm uses only local, fully parallelizable operations and does not require computing a global objective function or a sort over symbol metrics, making it highly efficient in comparison. The proposed NGDBF algorithm requires channel state information which must be obtained from a signal to noise ratio (SNR) estimator. Architectural details are presented for implementing the NGDBF algorithm. Complexity analysis and optimizations are also discussed.
+Index Terms—GDBF, bit flipping, LDPC, weighted bit flipping, noisy GDBF.
+I. INTRODUCTION
+L OW DENSITY PARITY CHECK (LDPC) codes gained considerable research attention in recent years. Due to their powerful decoding performance, LDPC codes are increasingly deployed in communication standards. The performance and cost of using LDPC codes are partly determined by the choice of decoding algorithm. LDPC decoding algorithms are usually iterative in nature. They operate by exchanging messages between basic processing nodes. Among the various decoding algorithms, the soft decision Belief Propagation (BP) algorithm and the approximate Min-Sum (MS) algorithm
+Manuscript received February 7, 2014; revised June 24, 2014 and August 20, 2014; accepted August 29, 2014. Date of publication September 9, 2014; date of current version October 17, 2014. This work was supported by the US National Science Foundation under award ECCS-0954747, and by the FrancoAmerican Fulbright Commission for the Exchange of Scholars. The work also used resources of the CPER PALMYRE II, with funding from FEDER and the region of Brittany, France. The work of G. Sundararajan is supported by a Sant Graduate Innovation Fellowship at Utah State University. The associate editor coordinating the review of this paper and approving it for publication was M. Lentmaier.
+G. Sundararajan and C. Winstead are with the Department of Electrical and Computer Engineering, Utah State University, Logan, UT 84322-4120 USA (e-mail: gopal.sundar@aggiemail.usu.edu; chris.winstead@usu.edu).
+E. Boutillon is with the lab-STICC, UMR 6285, Université de Bretagne Sud, 56321 Lorient, France (e-mail: emmanuel.boutillon@univ-ubs.fr).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2014.2356458
+
+offer the best performance on the binary-input additive white Gaussian noise (AWGN) channel [1], [2], but these algorithms require a large number of arithmetic operations repeated over many iterations. These operations must be implemented with some degree of parallelism to support the throughput requirements of modern communication systems [3], [4]. As a result, LDPC decoders can be highly complex devices.
+Significant effort has been invested to develop reducedcomplexity decoding algorithms known “bit-flipping” decoders. These algorithms are similar in complexity to hard-decision decoding algorithms, but obtain improved performance by accounting for soft channel information. In most bitflipping algorithms, the symbol node updates are governed by an inversion function that estimates the reliability of received channel samples. The inversion function includes the received channel information in addition to the hard-decision syndrome components obtained from the code’s parity-check equations. In the so-called single bit-flipping algorithms, the least reliable bit is flipped during each iteration. In multiple bit-flipping algorithms, any bit is flipped if its reliability falls below a designated threshold, hence multiple bits may be flipped in parallel, allowing for faster operation.
+A recently emerged branch of the bit-flipping family is Gradient Descent Bit Flipping (GDBF), which formulates the inversion function as a gradient descent problem. GDBF algorithms demonstrate a favorable tradeoff between performance and complexity relative to other bit-flipping algorithms. One difficulty for GDBF algorithms is that they are affected by undesirable local maxima which cause the decoder to converge on an erroneous message. Various schemes have been proposed to avoid or escape local maxima, but require additional complexity due to multiple thresholds or computing a global function over the code’s entire block length. In this work, we propose an improved version of the GDBF algorithm, called Noisy GDBF (NGDBF) that offers a low-complexity solution to escape spurious local maxima. The proposed method works by introducing a random perturbation to the inversion function. The resulting algorithm provides improved performance and requires only local operations that can be executed fully in parallel (except for a global binary stopping condition). The proposed NGDBF algorithm comprises a set of heuristic methods that are empirically found to provide good performance for typical codes. Simulation results indicate that the NGDBF’s optimal noise variance is proportional to the channel noise variance. This introduces a possible drawback compared to previous GDBF algorithms: NGDBF requires knowledge of the channel noise variance, which must be obtained from an estimator external to
+
+0090-6778 © 2014 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. Authorized licenSseeedhuttspe:/l/imwiwtewd.itoee: eY.oonrgs/epiuUbnliivc.atDioonwsn_lsotaadneddarodns/Jpuunbeli2ca4t,i2o0n2s6/raigt h1t7s:/5in8d:0e8x.UhtTmCl ffroormmIEoEreEinXfpolromrea.tiRone.strictions apply.
+
+3386
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+TABLE I SUMMARY AND COMPARISON OF BIT-FLIPPING ALGORITHMS
+
+This process is repeated until all parity checks are satisfied, or until a maximum iteration limit is reached. The BFA has
+
+very low complexity since it only requires, in each iteration,
+
+a summation over binary parity-check values for each sym-
+
+bol; however the BFA provides weak decoding performance.
+
+Miladinovic et al. considered a probabilistic BFA (PBFA)
+
+which adds randomness to the bit-flip decision, resulting in
+
+improved performance [6]. In PBFA, when a bit’s parity-check
+
+sum crosses the flip threshold, it is flipped with probability
+
+p. The parameter p is optimized empirically and is adapted
+
+towards one during successive iterations.
+
+Kou et al. introduced the Weighted Bit-Flipping (WBF) algo-
+
+rithm which improves performance over the BFA by incorpo-
+
+rating soft channel information, making it better suited for use
+
+on the Additive White Gaussian Noise (AWGN) channel and
+
+other soft-information channels [2]. In the WBF algorithm, all
+
+parity-check results are weighted by a magnitude that indicates
+
+reliability. For each parity-check, the weight value is obtained
+
+by finding the lowest magnitude in the set of adjacent channel
+
+samples. During each iteration, a summation Ek is computed over the adjacent weighted parity-check results for each symbol
+
+the decoder. Because of the heuristic nature of these results, the position k. The symbol with the maximum Ek (or minimum, paper is organized to present the algorithm’s technical details depending on convention) is flipped. The weights are only
+
+and empirical results first, followed by theoretical analyses that calculated once, at the start of decoding, however the WBF
+
+provide explanations for some of the observed results.
+
+algorithm requires at every iteration a summation over several
+
+The remainder of this paper is organized as follows: weights for each symbol—a substantial increase in complexity
+
+Section II discusses the related work on bit-flipping algorithms, compared to the original BFA. In addition to the increased
+
+as well as some recently reported decoding algorithms that arithmetic complexity, WBF has two major drawbacks: first,
+
+benefit from noise perturbations. Section III describes nota- a potentially large number of iterations are required because
+
+tion and summarizes the proposed NGDBF algorithm and its only one bit may be flipped in each iteration. Second, the
+
+heuristic modifications. Section IV presents simulation results, algorithm must perform a global search to find the maximum
+
+and offers a comparative analysis of the various heuristics. Ek out of all symbols, resulting in a large latency per iteration Section V presents architectural simplifications and complexity that increases with codeword length, thereby hindering a high-
+
+analysis. Section VI presents an evaluation and comparison of throughput implementation.
+
+the algorithms’ convergence to the global maximum-likelihood Researchers introduced several improvements to the WBF.
+
+(ML) solution, and Section VII presents an analysis of some Zhang et al. introduced the Modified WBF (MWBF) algorithm,
+
+of NGDBF’s heuristics—namely threshold adaptation and syn- which obtained improved performance with a slight increase
+
+drome weighting—which are interpreted in terms of evolving in complexity. Jiang et al. described another Improved MWBF
+
+ML decisions on the local neighborhoods of symbol nodes. (IMWBF) algorithm which offered further improvement by
+
+Conclusions are presented in Section VIII.
+
+using the parity-check procedure from the MS algorithm to de-
+
+termine the parity-check weights—another substantial increase
+
+II. RELATED WORK
+
+in complexity. Both of these methods inherit the two key drawbacks associated with single-bit flipping in the WBF algorithm.
+
+This section presents a review of bit-flipping algorithms and Recently, Wu et al. introduced a Parallel WBF (PWBF)
+
+other methods related to the new NGDBF algorithms described algorithm, which reduces the drawbacks associated with single-
+
+in this article. As an aid to the reader, a qualitative summary bit flipping in the other WBF varieties [7]. In the PWBF algo-
+
+of the considered bit-flipping algorithms and their comparative rithm, the maximum (or minimum) Ei metric is found within characteristics are provided in Table I. The performance and the subset of symbols associated with each parity-check. The
+
+complexity comparisons in Table I are qualitative estimates authors of [7] also developed a theory relating PWBF to the BP
+
+made solely within the family of bit-flipping algorithms.
+
+and MS algorithms, and showed that PWBF has performance
+
+The original bit-flipping algorithm (BFA) was introduced by comparable to IMWBF [8]. In the PWBF algorithm, it is still
+
+Gallager in his seminal work on LDPC codes [5]. Gallager’s necessary to find the maximum Ei from a set of values, which BFA is a hard-decision algorithm for decoding on the binary costs delay, but the set size is significantly reduced compared
+
+symmetric channel (BSC), in which only hard channel bits are to the other WBF methods, and it is independent of codeword
+
+available to the decoder. To correct errors, the BFA computes length. In spite of these improvements, PWBF retains the
+
+a sum over the adjacent parity-check equations for each bit complex arithmetic associated with IMWBF.
+
+in the code. If, for any bit, the number of adjacent parity To reduce the arithmetic complexity of bit-flipping algo-
+
+violations exceeds a specified threshold, then the bit is flipped. rithms, Wadayama et al. devised the GDBF algorithm as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3387
+
+a gradient-descent optimization model for the ML decoding M-GDBF, AT-GDBF and RRWGDBF; in this class, mode-
+
+problem [9]. Based on this model, the authors of [9] obtained switching M-GDBF is the best performer. For low-complexity
+
+single-bit and multi-bit flipping algorithms that require mainly algorithms, the typical maximum number of iterations is re-
+
+binary operations, similar to the original BFA. The GDBF ported as T = 100. Second is the high-performance class,
+
+methods require summation of binary parity-check values, which includes H-GDBF and IGDBF. In the high-performance
+
+which is less complex than the WBF algorithms that require class, significant arithmetic complexity is introduced and a
+
+summation over independently weighted syndrome values. The larger number of iterations is reported, T = 300. H-GDBF is
+
+single-bit version of the GDBF algorithm (S-GDBF) requires a the best performer in this class, and in this paper we consider
+
+global search to discover the least reliable bit at each iteration. H-GDBF as representative of the high-performance GDBF
+
+The multi-bit GDBF algorithm (M-GDBF) uses local threshold algorithms.
+
+operations instead of a global search, hence achieving a faster In this work, we propose a new Noisy GDBF algo-
+
+initial convergence. In practice, the M-GDBF algorithm did rithm with single-bit and multi-bit versions (S-NGDBF and
+
+not always provide stable convergence to the final solution. M-NGDBF, respectively). The M-NGDBF algorithm proposed
+
+To improve convergence, the authors of [9] adopted a mode- in this work employs a single threshold and also provides an
+
+switching strategy in which M-GDBF decoding is always fol- escape from the neighborhood of spurious local maxima, but
+
+lowed by a phase of S-GDBF decoding, leveraging high-speed does not require the mode-switching behavior used in the orig-
+
+in the first phase and accurate convergence in the second.
+
+inal M-GDBF. The proposed algorithm also avoids using any
+
+Although the mode-switching strategy provided a significant sort or maximum-value operations. When using the threshold
+
+benefit, the algorithm was still subject to spurious local max- adaptation procedure borrowed from AT-GDBF, as described in
+
+ima. Wadayama et al. obtained further improvements by intro- Section III-D, the proposed M-NGDBF achieves performance
+
+ducing a “hybrid” GDBF algorithm (H-GDBF) with an escape close to the H-GDBF and IGDBF methods at high SNR, with a
+
+process to evade local maxima. The H-GDBF algorithm obtains similar number of iterations. We also introduce a new method
+
+performance comparable to MS, but the escape process requires called Smoothed M-NGDBF (SM-NGDBF) that contributes
+
+evaluating a global objective function across all symbols. When an additional 0.3 dB gain at the cost of additional iterations.
+
+the objective function crosses a specified threshold during the It should be noted that Wadayama et al. proposed using a
+
+S-GDBF phase, the decoder switches back to M-GDBF mode, small random perturbation in the H-GDBF thresholds [9]; the
+
+then back to S-GDBF mode, and so on until a valid result is NGDBF methods use a larger perturbation in combination with
+
+reached. To date, H-GDBF is the best performing GDBF vari- other heuristics to obtain good performance with very low
+
+ant, but requires a maximum of 300 iterations to obtain its best complexity.
+
+performance, compared to 100 for M-GDBF and S-GDBF. The Because of its reliance on pseudo-random noise and single-
+
+major disadvantages of this algorithm are its use of multiple bit messages, the proposed NGDBF algorithms bear some
+
+decoding modes, the need to optimize dual thresholds for resemblance to the family of stochastic iterative decoders that
+
+mode switching and bit flipping, the global search operation were first introduced by Gaudet and Rapley [13]. One of the
+
+and the global objective function used for mode switching. authors (Winstead) introduced stochastic decoding for codes
+
+These global operations require an arithmetic operation to be with loopy factor graphs [14], and Sharifi-Tehrani et al. later
+
+computed over the entire code length, and would be expensive demonstrated stochastic decoding for LDPC codes [15], [16].
+
+to implement for practical LDPC codes with large codeword High throughput stochastic decoders have been more recently
+
+length.
+
+demonstrated by Sharifi Tehrani et al. [17]–[19] and by
+
+Several researchers proposed alternative GDBF algorithms Onizawa et al. [20]. Stochastic decoders are known to have
+
+to obtain fully parallel bit-flipping and improved performance. performance very close to BP, allow for fully-parallel imple-
+
+Ismail et al. proposed an Adaptive Threshold GDBF mentations, and use very simple arithmetic while exchanging
+
+(AT-GDBF) algorithm that achieves good performance without single-bit messages. They may therefore serve as an appropriate
+
+the use of mode-switching, allowing for fully-parallel opera- benchmark for comparing complexity against the proposed
+
+tion [10]. The same authors also introduced an early-stopping SM-NGDBF algorithm (an analysis of comparative complexity
+
+condition (ES-AT-GDBF) that significantly reduces the average is presented in Section V-C).
+
+decoding iterations at lower Signal to Noise Ratio (SNR). In addition to recent work on low-complexity decoding, there
+
+Phromsa-ard et al. proposed a more complex Reliability-Ratio has also been some exploration of noise-perturbed decoding
+
+Weighted GDBF algorithm (RRWGDBF) that uses a weighted using traditional MS and BP algorithms. Leduc et al. demon-
+
+summation over syndrome components with an adaptive thresh- strated a beneficial effect of noise perturbations for the BP al-
+
+old to obtain reduced latency [11]. The RRWGDBF method gorithm, using a method called dithered belief propagation [21].
+
+has the drawback of increased arithmetic complexity because Kameni Ngassa et al. examined the effect of noise perturbations
+
+it performs a summation of weighted syndrome components, on MS decoders and found beneficial effects under certain
+
+similar to previous WBF algorithms. Haga et al. proposed an conditions [22]. The authors of [23] offered the conjecture that
+
+improved multi-bit GDBF algorithm (IGDBF) that performs noise perturbations assist the MS algorithm in escaping from
+
+very close to the H-GDBF algorithm, but requires a global sort spurious fixed-point attractors, similar to the hypothesis offered
+
+operation to determine which bits to flip [12].
+
+in this paper to motivate the NGDBF algorithm.
+
+These GDBF algorithms can be divided into two classes: Up to now, there is not yet a developed body of theory for
+
+First, the low-complexity class, which includes S-GDBF and analyzing noise-perturbed decoding algorithms, and the recent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3388
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+research on this topic tends to adopt a heuristic approach. In this paper we also adopt the heuristic approach, and demonstrate through empirical analysis that noise perturbations improve the performance of GDBF decoders.
+III. PROPOSED NOISY GDBF ALGORITHM A. Notation
+
+maximizes the objective function (2) is also a solution to the
+
+ML problem defined by (1). This is because for any valid
+
+codeword x, the summation
+
+m i=1
+
+si
+
+is
+
+constant
+
+and
+
+equal
+
+to
+
+m. Since the objective functions in (1) and (2) differ only by a
+
+constant term, they must have the same maxima and minima.
+
+By taking the partial derivative with respect to a particular
+
+symbol xk, the local inversion function is obtained as
+
+Let H be a binary m × n parity check matrix, where n >
+m ≥ 1. To H is associated a binary linear code defined by C =Δ {c ∈ F2n : Hc = 0}, where F2 denotes the binary Galois field. The set of bipolar codewords, Cˆ ⊆ {−1, +1}n, corresponding
+to C is defined by Cˆ =Δ {(1 − 2c1), (1 − 2c2), . . . , (1 − 2cn) :
+c ∈ C}. Symbols are transmitted over a binary input AWGN channel defined by the operation y = cˆ + z, where cˆ ∈ Cˆ, z
+
+∂f (x)
+
+Ek = xk ∂xk
+
+= xkyk +
+
+si.
+
+i∈M(k)
+
+(3)
+
+Wadayama et al. showed that the objective function can be increased by flipping one or more xk with the most negative Ek values. The resulting iterative maximization algorithm is described as follows:
+
+is a vector of independent and identically distributed Gaussian random variables with zero mean and variance N0/2, N0 is the noise spectral density, and y is the vector of samples obtained
+at the receiver. We define a decision vector x ∈ {−1, +1}n. We say that
+x(t) is the decision vector at a specific iteration t, where t is
+
+Step 1: Compute syndrome components si = j∈N (i) xj, for all i ∈ {1, 2, . . . ., m}. If si = +1 for all i, output x and stop.
+Step 2: Compute inversion functions. For k ∈ {1, 2, . . . , n}
+compute
+
+an integer in the range [0, T ], and T is the maximum number of iterations permitted by the algorithm. In iterative bit-flipping algorithms, the decision values may be flipped one or more
+
+Ek = xkyk +
+
+si.
+
+i∈M(k)
+
+times during decoding. We will often omit the dependence on
+t when there is no ambiguity. The decision vector is initialized
+as the sign of received samples, i.e., xk(t = 0) = sign(yk) for k = 1, 2, . . . , n.
+The parity-check neighborhoods are defined as N (i) =Δ {j : hij = 1} for i = 1, 2, . . . , m, where hij is the (i, j)th element of the parity check matrix H. The symbol neighborhoods are defined similarly as M(j) =Δ {i : hij = 1} for j = 1, 2, . . . , n. The code’s parity check conditions can be expressed as bipolar syndrome components si(t) =Δ j∈N (i) xj(t) for i = 1, 2, . . . , m. A parity check node is said to be satisfied when
+its corresponding syndrome component is si = +1.
+
+Step 3: Bit-flip operations. Perform one of the following: a) Single-bit version: Flip the bit xk for k = arg mink∈{1,2,...,n} Ek. b) Multi-bit version: Flip any bits for which Ek < θ, where θ ∈ R− is the inversion threshold.
+Step 4: Repeat steps 1 to 3 till a valid codeword is detected or maximum number of iterations is reached.
+The inversion threshold is a negative real number, i.e., θ < 0, to ensure that only bits with negative-valued Ek are flipped. The optimal value of θ is found empirically, as discussed in Section IV-C. The single-bit GDBF algorithm (S-GDBF) incurs a penalty in parallel implementations due to the requirement
+
+B. GDBF Algorithm
+
+of finding the minimum from among n values. The multibit version (M-GDBF) is trivially parallelized, but does not
+
+The GDBF algorithm proposed in [9] was derived by consid-
+ering the maximum likelihood problem as an objective function
+for gradient descent optimization. The standard ML decoding problem is to find the decision vector xML ∈ Cˆ that has maximum correlation with the received samples y:
+
+n
+
+xML = arg max xkyk.
+
+(1)
+
+x∈Cˆ k=1
+
+To include information from the code’s parity check equations, the syndrome components are introduced as a penalty term, resulting in the objective function proposed by Wadayama et al.:
+
+n
+
+m
+
+f (x) = xkyk + si.
+
+(2)
+
+k=1
+
+i=1
+
+converge well because there tend to be large changes in the objective function after each iteration. The objective function increases rapidly during initial iterations, but is not able to obtain stable convergence unless a mechanism is introduced to reduce the flipping activity during later iterations. In this paper, we consider two such mechanisms: mode-switching and adaptive thresholds.
+To improve performance, the authors of [9] proposed a mode-switching modification for M-GDBF, controlled by a parameter μ ∈ {0, 1}: During a decoding iteration, if μ = 1 then step 3b is executed; otherwise step 3a is executed. At the start of decoding, μ is initialized to 1. After each iteration, the global objective function (2) is evaluated. If, during any iteration t, f (x(t)) < f (x(t − 1)), then μ is changed to 0. This modification adds complexity to the algorithm, but also significantly improves performance. In the sequel (Section III-D),
+
+In the GDBF algorithm, a stopping criterion is used to en- it is explained that AT-GDBF eliminates the need for modeforce the condition x ∈ Cˆ, i.e., any allowable solution x must switching by using the strictly parallel mechanism of adaptive
+
+be a valid codeword. Under this constraint, a solution that thresholds [10].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3389
+
+C. Noisy GDBF
+To provide a low-complexity mechanism to escape from local maxima in the GDBF algorithm, we propose to introduce a random perturbation in the inversion function. Based on this approach, we modify the step 2 of the GDBF algorithm as follows: Step 2: Symbol node update. For k = 1, 2, . . . , n compute
+
+Ek = xkyk + w
+
+si + qk,
+
+i∈M(k)
+
+where w ∈ R+ is a syndrome weight parameter and qk is a Gaussian distributed random variable with zero mean and variance σ2 = η2N0/2, where 0 < η ≤ 1. All qk are independent and identically distributed.
+In this step, a syndrome weighting parameter w is introduced. Syndrome weighting is motivated by the local maximum likelihood analysis presented in Section VII. Typically w and η are close to one, and are found through numerical optimization. The optimal values for w and η are code dependent, and are found to be weakly SNR dependent in some cases.
+Throughout this paper, we refer to this algorithm and its variants as Noisy GDBF (NGDBF). Both single-bit and multibit versions are possible, and are indicated as S-NGDBF and M-NGDBF, respectively. In this paper, mode-switching is never used in association with NGDBF; instead, threshold adaptation is employed as explained in the next subsection.
+The perturbation variance proportional to N0/2 was chosen based on an intuition that the algorithm’s random search region should cover the same distance as the original perturbation introduced by the channel noise. The noise-scale parameter η is introduced to fine-tune the optimal perturbation variance for each code. The effect of η on performance is studied empirically in Section IV-D. For some codes, good performance is obtained when using a single SNR-independent value for η. In other cases, η must be varied to get the best performance at different SNR values.
+
+obtains the same performance as M-GDBF with modeswitching, hence it enables fully parallel implementation with only local arithmetic operations. In the sequel we will show that threshold adaptation significantly improves performance in the M-NGDBF algorithm, at the cost of some additional complexity in the bit-flip operations.
+
+E. Output Decision Smoothing
+
+Convergence failures in the M-NGDBF algorithm may arise
+
+from excessive flipping among low-confidence symbols. This
+
+may occur as a consequence of the stochastic perturbation term.
+
+In this situation, the decoder may converge in mean to the
+
+correct codeword, but that does not guarantee that it will satisfy
+
+all parity checks at any specific time prior to the iteration limit
+
+T . More precisely, suppose the decoder is in an initially correct
+
+state, i.e., initially all xk = cˆk. When the inversion function is computed for some xk, there is a non-zero probability of
+
+erroneous flipping due to the noise contribution:
+
+⎛
+
+⎞
+
+pf,k = Pr ⎝xkyk + w
+
+si + qk < θ⎠ .
+
+(4)
+
+i∈M(k)
+
+Now suppose that pf is the least among the pf,k values among all symbols. Then the probability PF that at least one erroneous flip occurs in an iteration is bounded by
+
+PF ≥ 1 − (1 − pf )n.
+
+(5)
+
+This probability approaches one as n → ∞ for any pf > 0. For a sufficiently large code, it would be unlikely to satisfy all checks in a small number of iterations, even if all decisions are initially correct.
+This problem may be compensated by introducing an up/ down counter at the output of every xk. The counter consists of a running sum Xk for each of the N output decisions. At the start of decoding, the counters are initialized at zero. During each decoding iteration, the counter is updated according to the rule
+
+D. Threshold Adaptation
+
+Xk(t + 1) = Xk(t) + xk(t)
+
+(6)
+
+Methods of threshold adaptation were previously investigated to improve the convergence of multi-bit flipping algorithms. In this paper we consider a local Adaptive Threshold GDBF (AT-GDBF) algorithm described by Ismail et al. [10] in which a separate threshold θk is associated with each symbol node. For k = 1, 2, . . . , n, the threshold θk is adjusted in each iteration by adding these steps to the M-GDBF algorithm: Step 0: Initialize θk(t = 0) = θ for all k, where θ ∈ R− is
+the global initial threshold parameter. Step 3b: For all k, compute the inversion function Ek. If
+Ek(t) ≥ θk(t), make the adjustment θk(t + 1) = θk(t)λ, where λ is a global adaptation parameter for which 0 < λ ≤ 1. If Ek(t) < θk(t), flip the sign of the corresponding decision xk.
+In practice, the adaptation parameter λ must be very close
+
+If the stopping criterion is met (i.e., all parity checks are satisfied) then xk is output directly. If the iteration limit T is reached without satisfying the stopping condition, then the smoothed decision is xk = sign(Xk). In practice, the summation in (6) can be delayed until the very end of decoding. This saves activity in the up/down counter and hence reduces power consumption. Results in the sequel are obtained with summation only over the interval from t = T − 64 up to T . When using this procedure, we refer to the algorithm as the “smoothed” M-GDBF method, or in shortened form as SMNGDBF.
+IV. SIMULATION RESULTS
+A. BER Performance
+
+to one. The case λ = 1.0 is equivalent to non-adaptive The proposed NGDBF algorithms were simulated on an
+
+M-GDBF. According to the authors of [10], AT-GDBF AWGN channel with binary antipodal modulation using various
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3390
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+Fig. 1. BER versus Eb/N0 curves for S-NGDBF with T = 100 and η = 1.0 using the rate 1/2 PEGReg504x1008 code simulated over an AWGN channel with binary antipodal modulation. The newly proposed S-NGDBF algorithm is indicated by an asterisk (∗).
+regular LDPC codes selected from MacKay’s online encyclo-
+
+Fig. 2. BER versus Eb/N0 curves for M-NGDBF with T = 100 using the rate 1/2 PEGReg504x1008 code simulated over an AWGN channel with binary
+antipodal modulation. The newly proposed M-NGDBF algorithms (adaptive and non-adaptive) are indicated by asterisks (∗). Several other known algorithms are shown for comparison, including M-GDBF (T = 100), AT-GDBF (T = 100) and H-GDBF with escape process (T = 300).
+
+pedia [26] (all selected codes are partially irregular in parity-
+
+check degree, but are still considered regular codes). For each
+
+code, the NGDBF decoding parameters, including θ, λ, η, and
+
+w, were optimized one at a time, holding fixed values for all
+
+but one parameter. The free parameter was adjusted using a suc-
+
+cessive approximation procedure, repeating the BER simulation
+
+in each trial, and iteratively shrinking the search domain until
+
+the best value was found. This procedure was repeated for each
+
+parameter to obtain good-performing parameters.
+
+All NGDBF algorithms were evaluated for the rate 1/2
+
+(3, 6) regular LDPC code identified as PEGReg504x1008 in
+
+MacKay’s encyclopedia, which is commonly used as a bench-
+
+mark in previous papers on WBF and GDBF algorithms.
+
+Because our primary attention is directed at SM-NGDBF, ad-
+
+ditional simulations were performed to verify this algorithm on
+
+the rate 1/2 regular (4, 8) code identified as 4000.2000.4.244, and on the rate 0.9356 (4, 62) code identified as 4376.282. 4.9598. Unless stated otherwise, all simulations use double precision floating-point arithmetic, channel samples are saturated
+
+Fig. 3. BER versus Eb/N0 curves for SM-NGDBF and H-GDBF with T = 300 using the rate 1/2 PEGReg504x1008 code over an AWGN channel with
+binary anitpodal modulation. The proposed algorithms are indicated by an asterisk (∗).
+
+at Ymax = 2.5, and the syndrome weighting is w = 0.75.
+
+results are shown for the non-adaptive case (λ = 1.0) and for
+
+In each simulation, comparison results are provided for the the adaptive-threshold case with initial threshold θ = −0.9
+
+BP algorithm with 250 iterations, for the MS algorithm with and η = 0.95, where η is the noise-scale parameter described
+
+5, 10, and 100 iterations. Additional appropriate comparisons in Section III-C. For SNR < 3.5 dB, the best performance
+
+are described for each result presented in this section. The MS was obtained with an adaptation parameter of λ = 0.99. At
+
+results presented here represent the strict MS algorithm, i.e., higher SNR values, λ was decreased to 0.97 at 3.5 dB, 0.94
+
+they do not reflect performance for offset-MS or normalized- at 4.0 dB, and 0.9 at 4.25 dB and 4.5 dB. The performance of
+
+MS. For the M-GDBF results, the mode-switching procedure adaptive M-NGDBF is nearly identical to that of H-GDBF with
+
+was used to obtain the best performance in all cases.
+
+escape process, which requires T = 300, and is also very close
+
+To verify the beneficial effect of added noise, we first verified to MS with T = 5.
+
+the S-NGDBF algorithm for the PEGReg504x1008 code with Results for the SM-NGDBF algorithm are shown in Fig. 3.
+
+T = 100. The results are shown in Fig. 1, with comparative re- For SM-NGDBF with T = 100, performance was equal to
+
+sults for S-GDBF (T = 100), WBF (T = 100), MS and BP. The M-NGDBF (i.e., there was no gain from smoothing when T =
+
+results show a gain approaching 1 dB for S-NGDBF compared 100), so these results are not shown. The most improved results
+
+to S-GDBF. This provides a basic empirical validation for the were obtained with T = 300, the same number of iterations
+
+NGDBF concept.
+
+used for H-GDBF with escape process. SM-NGDBF is found
+
+Simulation results for the M-NGDBF algorithm are shown to achieve about 0.3 dB of coding gain compared to H-GDBF,
+
+in Fig. 2. The results in this figure were obtained for the for the same value of T . Compared to M-NGDBF, SM-NGDBF
+
+PEGReg504x1008 code with T = 100. The M-NGDBF is found to achieve about 0.3 dB of coding gain, at the cost of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3391
+
+Fig. 4. BER versus Eb/N0 curves for SM-NGDBF with T = 300 using the rate 1/2 4000.2000.4.244 code over an AWGN channel with binary antipodal modulation. These results were obtained using θ = −0.9, λ = 0.99, and η varied between 0.625 at low SNR (below 2.8) and 0.7 at higher SNR (above 2.8).
+
+Fig. 6. Average number of iterations versus Eb/N0 curves for existing GDBF and proposed NGDBF algorithms using PEGReg504x1008 code in an AWGN
+channel, maximum iterations limited to 100 except for SM-NGDBF and H-GDBF, which have T = 300. The newly proposed algorithms are indicated by an asterisk (∗).
+
+300 iterations are allowed. These results may be interpreted in two ways. First, the adaptive M-NGDBF algorithm requires fewer iterations and is less complex than H-GDBF, but achieves the same performance (Fig. 2)—hence it can be interpreted as a gain in speed and complexity over H-GDBF. Second, by using additional iterations with output smoothing, the speed improvement can be traded for additional coding gain (Fig. 3).
+
+B. Average Iterations per Frame
+
+Fig. 6 shows the average number of iterations per frame as
+
+a function of Eb/N0, using the PEGReg504x1008 code. This plot considers results for M-NGDBF and S-GDBF with T =
+
+100, and for the SM-NGDBF algorithm which has T = 300.
+
+The comparison curves show previously known GDBF algo-
+
+Fig. 5. BER versus Eb/N0 curves for SM-NGDBF with T = 300 using the rate 0.9356 4376.282.4.9598 code over an AWGN channel with binary antipodal modulation. Several other algorithms are also shown for comparison. These results were obtained using θ = −0.7, η = 0.65 and λ = 0.993. The dynamic range and syndrome weighting were also modified for this simulation, using Ymax = 2.0 and w = 0.1875.
+
+rithms with T = 100, and also H-GDBF with T = 300. For the H-GDBF algorithm, the full iteration profile was not disclosed, but it was stated to be 25.6 iterations at an SNR of 4 dB [9] (shown as a single point in Fig. 6). From the plot, we see that the S-NGDBF provides no benefit in iteration count compared to previous algorithms. The M-NGDBF algorithms are
+
+additional iterations (T = 300 for SM-NGDBF vs T = 100 for comparable to previous alternatives; only the Early Stopping
+
+M-NGDBF).
+
+(ES) AT-GDBF algorithm converges faster than M-NGDBF,
+
+To confirm robust performance of the SM-NGDBF algo- and this advantage disappears at higher SNR. At high SNR, i.e.,
+
+rithm, it was simulated for two other LDPC codes, yielding Eb/N0 ≥ 5 dB, the average iteration count is nearly the same the results shown in Figs. 4 and 5. These results confirm that for the M-NGDBF, SM-NGDBF, and ES-AT-GDBF methods.
+
+SM-NGDBF achieves good performance on codes with higher At high SNR, the SM-NGDBF algorithm has the same aver-
+
+variable-node degree (in the case of Fig. 4) and for codes age iterations as M-NGDBF. Although SM-NGDBF requires
+
+with rates above 0.9 (in the case of Fig. 5). In both cases, T = 300—three times higher than M-NGDBF—on average
+
+SM-NGDBF remains competitive with MS decoding.
+
+these algorithms require the same number of iterations when
+
+Among the previously reported bit-flip algorithms, the best operating at the same SNR. As an alternative comparison, we
+
+performance was achieved by Wadayama et al.’s H-GDBF compare the average number of iterations needed to achieve a
+
+algortihm with escape process. Haga and Usami’s IGDBF given BER performance. Fig. 7 shows the average iterations per
+
+achieved nearly identical performance to H-GDBF. Both frame plotted against the measured BER for M-NGDBF and
+
+H-GDBF and IGDBF allow a maximum of 300 iterations to SM-NGDBF. When compared for the same BER, the number
+
+achieve the best performance. Our results indicate that the of iterations needed for SM-NGDBF is on average double the
+
+adaptive M-NGDBF algorithm equals the H-GDBF perfor- number of iterations required for M-NGDBF. This result shows
+
+mance with a maximum of only 100 iterations. Furthermore that the performance gain of SM-NGDBF comes at the cost of
+
+SM-NGDBF exceeds the H-GDBF performance when increased average iterations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3392
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+Fig. 7. Average number of iterations versus BER for the proposed M-NGDBF Fig. 9. Threshold sensitivity of adaptive M-NGDBF algorithm with parame-
+
+and SM-NGDBF algorithms.
+
+ters λ = 0.9, T = 100, η = 1.0 for the PEGReg504x1008 code.
+
+Fig. 8. Threshold sensitivity of the non-adaptive M-NGDBF algorithm with parameters λ = 1.0, T = 100, η = 1.0 for the PEGReg504x1008 code.
+
+Fig. 10. Average iterations for adaptive M-NGDBF as a function of the initial threshold parameter θ for the PEGReg504x1008 code. The remaining parameters are λ = 0.9 and T = 100.
+
+Since the average number of iterations for SM-NGDBF tends sensitivity to θ. The reduced threshold sensitivity is expected
+
+to be small, the smoothing operation is only used in a fraction of received frames. This is because the smoothing operation is only applied when the number of iterations exceeds T − 64. For the PEGReg504x1008 code, the smoothing operation was
+
+because the local thresholds θk are iteratively adjusted during decoding. Since it will take some number of iterations for the θk to settle, the optimal initial threshold should be chosen as the value that minimizes the average iterations per frame. Fig. 10
+
+found to be required for only 6.1% of decoded frames when shows the average number of iterations per frame as a function
+
+simulated at an SNR of 2.75 dB, 1.45% of frames at 3.0 dB, of θ. The iteration count is seen to be only weakly a function of 0.51% of frames at 3.25 dB, and 0.16% of frames at 3.5 dB. θ, with the minimum appearing at θ = −0.6.
+
+For adaptive M-NGDBF, the optimal value of λ is found
+
+C. Sensitivity to Threshold Parameter θ
+
+through a similar empirical search. Results from that search are shown in Fig. 11 for the PEGReg504x1008 code. These results
+
+The optimal threshold values for the non-adaptive M-NGDBF algorithm (i.e., with λ = 1.0) were found empirically through a numerical search. Results from that search are shown in Fig. 8 for the PEGReg504x1008 code, in which the algorithm’s BER is shown as a function of the
+
+reveal a smooth relationship between BER and λ, allowing the optimal value of λ to be found reliably. The sensitivity revealed in Fig. 11 may prove to be difficult for implementations with quantized arithmetic; this problem is analyzed and resolved in Section V-A.
+
+threshold parameter. From this figure, it can be seen that the
+
+M-NGDBF algorithm is highly sensitive to the value of θ, which may prove problematic if the algorithm is implemented
+
+D. Sensitivity to Perturbation Variance
+
+with fixed-point arithmetic at lower precision.
+
+The NGDBF algorithms’ performance is sensitive to the
+
+The adaptive M-NGDBF algorithm was simulated in a sim- precise variance of the noise perturbation terms. As with the
+
+ilar way, and the results shown in Fig. 9 reveal much less θ and λ parameters, the optimal value of the noise-scale
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3393
+
+Fig. 11. Sensitivity of performance for M-NGDBF relative to the global adaptation parameter λ, with parameters θ = −0.9, T = 100, η = 0.96, for the PEGReg504x1008 code.
+
+Fig. 13. BER versus Eb/N0 curves for quantized implementations of the proposed M-NGDBF and SM-NGDBF algorithms, using the PEGReg504x1008 code on an AWGN channel with binary antipodal modulation. Solid curves indicate results for M-GDBF with T = 100, and dashed curves indicate results for SM-NGDBF with T = 300.
+
+weight parameter, w˜ = g(w). After quantization, the inversion function is
+
+E˜k(t) = xk(t)y˜k + w˜
+
+si + q˜k(t).
+
+(8)
+
+i∈M(k)
+
+Fig. 12. Sensitivity of performance for SM-NGDBF relative to the noise scale parameter η.
+parameter η is found through an empirical search. This search may produce different values for different codes and at different SNR values. Example results are shown in Fig. 12 for the SMNGDBF algorithm simulated on the PEGReg504x1008 code. These results show that the optimal η is typically somewhat less than one, and tends to increase toward one at higher SNR.
+E. Effects of Quantization on NGDBF
+In this section we consider the performance of the M-NGDBF algorithm when implemented with limited precision. The algorithm was simulated with quantized arithmetic using Q bits by applying a uniform quantization with NQ = 2Q levels in the range [−Ymax, Ymax] (zero is excluded). The quantized channel sample y˜k is given by the quantization function g(y):
+
+The adaptive M-NGDBF and SM-NGDBF algorithms were simulated using the quantized inversion function with the PEGReg504x1008 code. The BER results are shown in Fig. 13. The quantized simulations reported in this section also use quantized threshold adaptation and the noise sample reuse method described in Section V. The results show that the algorithm is very close to unquantized performance when Q = 3, and the best BER performance is reached when Q = 4. There is a diminishing benefit to BER when Q > 4, however an additional effect is observed in the Frame Error Rate (FER) results shown in Fig. 14. Here we see an “error flare” effect for all cases for M-NGDBF, i.e., when output smoothing is not used. The flare improves when Q is increased. For SM-NGDBF, i.e., when output smoothing is used, the flare evidently does not occur at all, or occurs at a very low FER. These simulations were performed with parameter values Ymax = 1.7 − 1.75, λ = 0.98 − 0.99, θ = −0.7, and w = 0.67 − 0.75. Parameter values were adjusted within these ranges to optimize for BER performance.
+V. ARCHITECTURE CONSIDERATIONS
+This section considers practical concerns for implementing the adaptive SM-NGDBF algorithm. These concerns include limited-precision arithmetic and architectural simplifications.
+
+g(y) = sign(y)
+
+|y|NQ
+
+1 +
+
+2Ymax
+
+2
+
+2Ymax . NQ
+
+(7) A. Implementing Threshold Adaptation
+
+The quantization function is used to obtain quantized values. In Section IV, threshold adaptation was shown to provide The vector of quantized channel samples is denoted by y˜, a significant performance improvement to the M-NGDBF and and each quantized channel sample is y˜k = g(yk). The same SM-NGDBF algorithms. When threshold adaptation is apfunction is used to obtain the quantized inversion threshold, plied, as described in Section III-D, each symbol node must θ˜ = g(θ), the noise perturbation, q˜k = g(qk), and the syndrome independently implement threshold scaling by parameter λ
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3394
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+TABLE II THRESHOLD ADAPTATION EVENTS FOR θ = −0.9, λ = 0.99, Ymax = 2.5
+
+Fig. 14. FER versus Eb/N0 curves for quantized implementations of the proposed M-NGDBF and SM-NGDBF algorithms, using the PEGReg504x1008 code on an AWGN channel with binary antipodal modulation. Solid curves indicate results for M-GDBF with T = 100, and dashed curves indicate results for SM-NGDBF with T = 300.
+
+during every iteration. If implemented with arbitrary precision, this would require implementing multiplication and division operations. When the algorithm is implemented with limited precision, however, only a small number of quantized threshold values are required. The threshold adaptation procedure can therefore be expressed as
+
+θk(t + 1) =
+
+θk(t)λ θk (t)
+
+xk not flipped xk flipped
+
+(9)
+
+If quantized arithmetic is used with low precision, and if λ is close to one (as is commonly the case), then it is possible that g(θkλ) = θk, where g(·) is the quantization function defined by (7). This case represents a failure of threshold adaptation because the local threshold is never able to change.
+To avoid adaptation failures in quantized arithmetic, we introduce the symbol uk as a counter for non-flip events. The counter is initialized at the start of decoding as uk(t = 0) = 0, and the counter is incremented according to the rule
+
+uk (t
+
++
+
+1)
+
+=
+
+uk (t)
+
++
+
+1
+
++ δk(t) 2
+
+(10)
+
+where δk(t) = sign(E˜k(t) − θ˜k(t)). Then the threshold at iteration t can be expressed as
+
+Table II shows threshold adaptation events for an example design with θ = −0.9, λ = 0.99, T = 300, and Ymax = 2.5. The table shows the threshold values θ˜(i) and the corresponding adaptation level τ˜(i) at which the threshold value becomes active. Only two unique threshold values occur when Q = 3; three values occur when Q = 4; and six values occur when Q = 5. There is typically a small number of distinct threshold values, because the values only span a small portion of the quantization range.
+B. Simplification of Noise Sample Generation
+The NGDBF algorithms require generating a Gaussian distributed random number at each symbol node during each iteration. Gaussian random number generators add significant hardware complexity. To simplify the implementation, we considered using only a single Gaussian Random Number Generator (RNG). The random samples are shifted from one symbol node to the next using a shift-register chain, as shown in Fig. 15. This method requires a powerup initialization so that all shift registers are pre-loaded with random samples. Simulations were performed using this method to obtain the results shown in Figs. 13 and 14, which come very close to the floating-point performance.
+As a further simplification, uniform noise samples may be used in place of Gaussian samples, but with an associated performance loss. When repeating the cases from Figs. 13 and 14 using uniformly distributed noise samples, a performance loss of 0.1–0.2 dB was observed. Because this performance loss is undesirable, in the remainder of this paper we will only consider Gaussian distributed noise samples.
+
+θk (uk(t)) = θλuk(t), so the quantized threshold value is then given by
+θ˜k (uk(t)) = g θλuk(t) .
+
+(11) C. Complexity Analysis
+The foregoing considerations are combined to arrive at the (12) top-level architecture shown in Fig. 15. In addition to the shown
+architecture, a channel SNR estimator is required to obtain σ.
+
+In a finite-precision implementation, the quantized threshold θ˜k(t) only changes for certain values of uk. We say that an adaptation event occurs for some uk(t) = τ˜ if θ˜(τ˜) = θ˜(τ˜ −
+1). Since uk can only be changed by zero or one during
+any iteration, the threshold adaptation can be implemented by storing a pre-computed list of adaptation events (θ˜, τ˜).
+
+The symbol node implementation is shown in Fig. 16 and the
+check node implementation is shown in Fig. 17. The check node
+implementation is uncomplicated and standard, requiring only dc − 1 binary XNOR operations per parity-check node. The symbol node requires one ordinary counter and one up/down counter, a (θ˜, τ˜) memory and a signed adder with three Q-
+
+Threshold adaptation can thus be implemented using a simple bit inputs and dv single-bit inputs. Four single-bit operations
+
+combinational logic circuit that detects when uk = τ (i) and are also required, including a toggle flip-flop, a sign multiplier
+
+outputs the corresponding θ˜ = θ˜(i).
+
+(equivalent to an XNOR operation) and two inverters.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3395
+
+Fig. 17. Check node schematic showing a tree of XNOR operations over dc − 1 input messages. The xi messages are locally indexed.
+
+The most complex operation is the multi-input adder. To
+remove the weight parameter w˜ from the syndrome inputs, we require that all y˜k, q˜k, and θ˜ values are pre-scaled by the factor w˜−1 (this pre-scaling is not expressly indicated in Fig. 16).
+Then the scaled inversion function is
+
+E˜kw˜−1 = xky˜kw˜−1 + q˜kw˜−1 +
+
+si
+
+(13)
+
+i∈M (k)
+
+and the flip decision can be expressed as the sign of the difference δk = E˜kw˜−1 − θ˜kw˜−1. This detail allows for the
+
+simplified adder implementation shown in Fig. 16. The effec-
+
+tive complexity of this operation is that of two Q-bit binary
+
+adders and a dv-bit adder.
+
+Based on this proposed architecture, it is possible to make
+
+some high-level complexity comparisons against other related
+
+decoding methods. When making comparisons at this level,
+
+it is not possible to make strong predictions about power
+
+Fig. 15. Architecture of the NGDBF decoder. Gaussian-distributed noise
+samples are produced serially at the output of a Random Number Generator
+(RNG). The RNG requires inputs η and N0, and the latter must be generated by a channel parameter estimator (not shown). A shift-register (SR) chain is used
+to distribute the random Gaussian samples that serve as the qk perturbations. The symbol Pi indicates the set of syndrome messages that arrive at symbol node Si, corresponding to the index set N (i). The symbol Xj is the set of messages that arrive at parity-check node Pj , corresponding to the index set M(j).
+
+consumption, throughput, gate count or energy efficiency, but it is possible to make some interesting observations about the algorithms’ comparative features.
+1) Comparison With Previous GDBF Algorithms: Previously reported GDBF algorithms do not depend on the channel SNR, so NGDBF introduces a fixed complexity cost (i.e., the cost is independent of the code’s length) because it requires a channel parameter estimator. At minimum, all GDBF algo-
+
+rithms require dc − 1 XNOR operations in each parity-check
+
+node. At the symbol nodes, they require addition over the dv
+
+single-bit syndromes in each symbol node, which has gate com-
+
+plexity equivalent to a dv-bit adder. A second Q-bit addition is
+
+needed to incorporate the channel information. In the S-GDBF
+
+algorithm, the minimum metric must be found, requiring n − 1
+
+comparisons. Since a comparison can be implemented using
+
+a signed adder, we say that the S-GDBF algorithm requires a
+
+total of 3n − 1 additions and m(dc − 1) XNOR operations. In
+
+the M-GDBF algorithm, the global comparison is not required,
+
+but a comparison must still be made in each symbol node to
+
+implement the threshold operation, hence M-GDBF requires
+
+3n additions. The SM-NGDBF algorithm requires 3n adders,
+
+and also requires an additional 2n counters (a counter requires
+
+fewer gates than an adder). A single RNG module and a
+
+channel parameter estimator are also required, but these are
+
+fixed overhead that does not scale with n.
+
+2) Comparison With the MS Algorithm: The MS algorithm
+
+Fig. 16. Symbol node schematic. F1 is a toggle flip-flop. The si messages are locally indexed. The sgn operator refers to sign-bit extraction. The multiplication ⊗ is binary, as it applies only to the sign bit of y˜k.
+
+does not require channel SNR information. NGDBF again incurs a fixed complexity penalty due to channel parameter estimation. In a single iteration, the MS algorithm requires at
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3396
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+least 2dv additions for every symbol node. For every parity- (LFSR) to generate random bits, and a control circuit to regulate check node, 2dc comparisons and 2dc − 1 XNOR operations the inputs to the TFM adder. are needed. MS decoders typically allow an internal dynamic Tehrani et al. also described a reduced-complexity Majority
+
+range that exceeds the channel quantization of Q bits, so the TFM (MTFM) design which reduces the required additions to
+
+arithmetic is assumed to be quantized on Q + D bits, where approximately 3n [17], making it very close to SM-NGDBF. D ≥ 0 is the number of extra bits to accommodate the larger The MTFM decoder exchanges a total of 2ndv single-bit mesdynamic range. The messages exchanged between symbol and sages per iteration, compared to n + m for GDBF algorithms.
+
+parity-check nodes are also comprised of Q + D bits.
+
+For the PEGReg504x1008 code, SM-NGDBF exchanges about
+
+The gate requirements are clearly less for SM-NGDBF com- 50% fewer single-bit messages than an MTFM stochastic de-
+
+pared to MS. Based on the foregoing analysis, and using the coder for the same code. In terms of total iterations, MTFM-
+
+(3, 6) PEGReg504x1008 code as an example, SM-NGDBF re- based stochastic decoders require about 20–40 iterations at
+
+quires 75% fewer additions and comparisons. In terms of mes- higher SNR [17], whereas SM-NGDBF requires a comparable
+
+sage routing, all GDBF algorithms exchange a total of n + m number at 30–50 iterations for similar SNR values. We may
+
+single-bit signals in each iteration, compared to 2ndv(Q + D) conclude that these algorithms have very similar complexity, for MS. In the example code, assuming channel quantization but SM-NGDBF should require less circuit area due to the
+
+with Q = 5 and D = 3, this means the required signal routing reduced message signal routing, and because fewer XNOR
+
+is reduced by 78.27%. Based on these comparisons, we may operations are required.
+
+conclude that the GDBF algorithms (including SM-NGDBF)
+
+require substantially less circuit area than MS. This analysis is not sufficient to evaluate throughput or power efficiency, since
+
+VI. CONVERGENCE ANALYSIS
+
+those figures depend on a variety of circuit-level considerations The NGDBF algorithms are built on the more general con-
+
+such as critical path delay and average switching activity in cept of noise-perturbed gradient descent optimization. The
+
+combination with the average number of iterations per frame. optimization task is the maximum likelihood (ML) decoding
+
+Another aspect of complexity is the algorithms’ decoding problem specified by (1), with the corresponding objective latency. On first inspection, we observe that the MS algorithm function f (x) defined by (2), as described in Section III-B.
+
+requires much fewer iterations than the SM-NGDBF algorithm. The objective function is a non-linear function and has many
+
+For example, only 4.1 iterations are needed on average for local maxima. For gradient-descent optimization methods, local
+
+MS decoding (assuming T = 10 with stoppping condition) maxima are the major source of sub-optimality. NGDBF rests
+
+on the PEGReg504x1008 code, operating at 3.5 dB. The on the hypothesis that the noisy perturbation is beneficial for
+
+SM-NGDBF algorithm, at the same SNR, requires an average escaping from local maxima, thereby improving the likelihood
+
+of 47 iterations. While it appears that latency is much greater for of obtaining the correct global maximum. This section exam-
+
+SM-NGDBF, we must also account for the latency per iteration ines that hypothesis by analyzing a detailed case example of
+
+in the two algorithms. In typical implementations, MS de- convergence dynamics, in which NGDBF is compared to other
+
+coders utilize multiple clock cycles per iteration; for example, GDBF algorithms. We expect that the algorithms’ comparative
+
+Zhang et al. used 12 clock cycles per iteration [27], which convergence errors should follow the same order as their com-
+
+we use here as a representative value. Due to SM-NGDBF’s parative BER performance.
+
+comparatively low gate and routing complexity, we expect All GDBF and NGDBF algorithms attempt to maximize
+
+an SM-NGDBF decoder to require only one clock cycle per f (x) by iteratively adjusting x. By using the stopping con-
+
+iteration. We may therefore estimate the average latency of MS decoding at 49 clock cycles, compared to 47 clock cycles for SM-NGDBF. We therefore anticipate that an eventual implementation of SM-NGDBF could be comparable to previous MS implementations in terms of total latency.
+3) Comparison With Stochastic Decoders: The M-NGDBF algorithm bears some similarity to stochastic LDPC decoders, as was mentioned in Section II. Stochastic LDPC decoders are known to provide performance within 0.5 dB of BP while exchanging single-bit messages with low-complexity logic processing. Stochastic decoders also require channel SNR estimation, so they share this fixed complexity cost with NGDBF. The most efficient stochastic decoding strategy is the Tracking Forecast Memory (TFM) described by Tehrani et al. [18]. The TFM-based decoder requires 2dc − 1 XOR operations at each parity-check node, nearly twice the number of XNOR
+
+dition requiring that all parity-checks are satisfied—i.e., that im=1(1 + si)/2 = 1—the GDBF algorithms enforce the con-
+straint that candidate solutions are codewords in Cˆ, so long
+as decoding completes before reaching the maximum iteration
+count. For any ML-decodable case, the original transmitted codeword cˆ ∈ Cˆ should also be the ML solution. Then the
+global maximum for f (x) is given by
+
+n
+
+m
+
+fmax = cˆkyk +
+
+cˆj
+
+k=1
+
+i=1 j∈N (i)
+
+n
+= cˆkyk + m.
+k=1
+
+(14)
+
+Fig. 18 shows the behavior of the objective functions evaluated for several algorithms as a function of iterations. Results
+
+operations needed by GDBF algorithms. At each symbol node, are shown for the original GDBF and the proposed S-NGDBF
+
+2dv Q-bit adders and dv comparisons are used, for a total of algorithms for a simulated ML-decodable case with Eb/N0 3ndv equivalent additions. Some additional supporting logic value of 4 dB. In the case of the S-GDBF algorithm, the is also required, including a Linear Feedback Shift Register objective function value gradually increases with the number of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3397
+
+Fig. 18. Convergence behavior of the S-GDBF and S-NGDBF algorithms for a single frame sampled at Eb/N0 = 4 dB. The true maximum is fmax = 1523. The S-GDBF algorithm is able to obtain a maximum value of 1514.
+S-NGDBF obtains the global maximum in this case.
+
+Fig. 20. Average convergence error for several GDBF and NGDBF algo-
+rithms at Eb/N0 = 5 dB. Threshold adaptation is used for M-NGDBF, with λ = 0.99. For all algorithms, the maximum number of iterations is T = 100.
+
+and the superscripted x(i)(T ) indicates the solution obtained
+for the ith frame. The subscript i is added to f and fmax to emphasize their dependence on the received channel samples. For the ith sampled frame, the transmitted message is cˆ(i), the received channel samples are y(i), and the objective function is
+maximized by
+
+n
+
+fmax,i =
+
+cˆ(ki)yk(i) + m.
+
+k=1
+
+(16)
+
+Fig. 19. Convergence behavior of the M-GDBF and M-NGDBF algorithms for a single frame sampled at Eb/N0 = 4 dB. Threshold adaptation is used in the case of M-NGDBF algorithm, with λ = 0.99. The true maximum is fmax = 1508. The M-GDBF algorithm is able to obtain a maximum value of 1502; the AT-GDBF algorithm is able to obtain a value of 1497; M-NGDBF
+obtains the global maximum in this case.
+
+Fig. 20 shows the average convergence error values for the tested algorithms at Eb/N0 of 5 dB. The total number of frames F is 100. From Fig. 20, we see that the average convergence error for the proposed NGDBF algorithms is lower compared to the average error of the previously known GDBF algorithms. This shows that the NGDBF algorithms are more likely, on
+
+iterations. However, after 60 iterations the rise eventually stops average, to arrive in the neighborhood of the correct solution, and the objective function flattens out. This flat part corresponds and are therefore more likely to have a better error correcting to a local maximum. S-NGDBF reaches the global maximum performance than the other GDBF algorithms.
+
+value after 90 iterations, indicating that the S-NGDBF algo-
+
+rithm is able to escape from the spurious local maximum. A similar comparison is shown in Fig. 19 for the M-GDBF
+
+VII. LOCAL MAXIMUM LIKELIHOOD INTERPRETATION
+
+and M-NGDBF algorithms. The figure demonstrates that, for The GDBF and NGDBF algorithms are developed based
+
+this example, M-GDBF is stuck in a local maximum, but on heuristic approaches for combinatorial optimization of the
+
+M-NGDBF is able to escape from the local maximum and global ML objective function. In this section, we provide a
+
+obtain the global solution.
+
+theoretical analysis to motivate the use of threshold adaptation
+
+The results shown in Figs. 18 and 19 represent single cases, and syndrome weighting. To explain the beneficial effects of
+
+and only partially demonstrate the superior convergence of these heuristics, we consider the Local Maximum Likelihood
+
+NGDBF algorithms. To gain more insight into the convergence (LML) bit-flip decision at the symbol node level given the local
+
+properties, we performed statistical analysis on the objective information from the channel and adjacent partial syndrome
+
+functions of several GDBF and NGDBF algorithms over many values. The LML analysis predicts a pattern by which the
+
+frames. For each algorithm, the convergence error was mea- flip decisions should evolve as the decoder converges toward
+
+sured at the final iteration T and averaged over F transmitted an error-free codeword. When using threshold adaptation and
+
+frames. The convergence error is defined by
+
+syndrome weighting heuristics with a GDBF algorithm, the
+
+1F alg = F
+
+fi x(i)(T ) − fmax,i .
+
+i=1
+
+evolution of flip decisions is brought into closer correspondence (15) with the LML decisions. During the initial iterations, LML
+decisions are found to be mainly determined by the channel information. In later iterations, the LML decisions are more
+
+where the subscript “alg” is replaced with the appropriate heavily influenced by the partial syndrome values. We show
+
+algorithm name, i is the index of a unique sample frame, that this behavior is very close to that of GDBF under threshold
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3398
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+adaptation. We further propose that GDBF can be improved by introducing a weight factor to the syndrome components, so that the local flip decisions evolve similarly to the LML decisions.
+In this section, we introduce one minor change in notation. Since only scalar values are considered in this section, boldfaced letters are used to indicate random variables instead of vector quantities. We consider the problem of gradient descent decoding on a local channel sample y˜k and a set of dv adjacent syndromes si, i ∈ M(k). The channel sample is assumed to be quantized using the quantization procedure described in Section IV-E. For a binary-input AWGN channel, we may obtain the probability masses for y˜k conditioned on the transmitted symbol cˆk.
+
+Pr (y˜k|cˆk = −1) = F−1 y˜k+ − F−1 y˜k− ,
+
+(17)
+
+Pr (y˜k|cˆk = +1) = F1 y˜k+ − F1 y˜k− ,
+
+(18)
+
+where y˜k+ and y˜k− are the upper and lower boundary points of the quantization range that contains y˜k, and F−1 and F1 are cumulative Gaussian distribution functions with variance σ2 =
+N0/2 and means −1 and +1, respectively. Initially, the decision xk(t = 0) has error probability p(e0) =
+P (xk = cˆk) given by pe = F1(0). Recalling that the syndrome
+values are given by si = j∈N (i) xj , we have si = xkνik where νik is the partial syndrome at parity-check i, excluding
+the influence of symbol node k. Finally, we define Sk as the
+penalty term Sk = i∈M(k) si. The penalty term can also be expressed as Sk = ( i∈M(k) νik)xk.
+From this we directly obtain the partial syndrome error prob-
+abilities pc = Pr(νik = cˆk) by enumerating over combinations
+in which an odd number of symbol errors has occurred out of
+dc − 1 independent, identically distributed neighbors:
+
+pc =
+
+dc −1 2
+j=1
+
+dc − 1 2j − 1
+
+(1 − pe)dc−2j p2ej−1.
+
+(19)
+
+The probability P (ne) of having ne errors among the partial syndrome values νik is thus:
+
+P (ne) =
+
+dv ne
+
+pnc e (1 − pc)dv−ne .
+
+(20)
+
+If xk = cˆk, then ne errors give a penalty Sk = dv − 2ne (summation of dv − ne syndrome +1 and ne syndromes −1). Symmetrically, if xk = −cˆk, then Sk = 2ne − dv. In other words, knowing the observation Sk, we can deduce:
+
+P (Sk|xk = cˆk) = P (ne = (dv − Sk)/2)
+
+(21)
+
+and
+
+P (Sk|xk = −cˆk) = P (ne = (dv + Sk)/2) (22)
+
+Then the LML decision is
+
+Fig. 21. Example of evolution of the LML flip matrix Φ for a (3, 6) LDPC
+code, with Q = 4 and an Eb/N0 = 3.50 dB. The initial value of Pe is 0.0672. Since Φ is symmetric with Φ(i, j) = Φ(NQ + 1 − i, dv + 2 − j), only the top NQ/2 rows are shown.
+
+To relate the LML result to bit flipping algorithms, it can be expressed as an LML flip decision φ, defined by
+
+φ(xk, y˜k, Sk) = sign log
+
+Pr(y˜k|xk) Pr(Sk|xk) Pr(y˜k| − xk) Pr(Sk| − xk)
+
+.
+
+(24)
+
+If φ = −1, then the optimal decision is to flip xk.
+
+To visualize the LML behavior on a quantized channel,
+
+we arrange the decisions in a flip matrix Φ that expresses
+
+all possible states; the rows of Φ correspond to the possible
+
+channel sample values, and the columns correspond to the
+
+possible values of Sk. There are dv + 1 possible values of
+Sk : −dv, −dv + 2, . . . , dv − 2, dv. We index these values in ascending order as Sk(j), j = 1, 2, . . . , dv + 1. The possible y˜k values are similarly indexed in ascending order as y˜k(i), i = 1, 2, . . . , NQ. Then Φ is an NQ × (dv + 1) matrix with entries
+φi,j = φ(xk, y˜k(i), Sk(j)). For a given locally received y˜k and Sk, if the corresponding φij = −1, then the corresponding decision
+xk should be flipped.
+
+The LML flip decision depends on the partial syndrome
+
+error probabilities, which change in successive iterations. To
+
+understand how the LML decision evolves across iterations,
+
+we suppose that the bit error probability is a function of the
+
+iteration number, t, and that pe(t) is decreasing with successive
+
+iterations. As the error probability decreases, the flip matrix is
+
+found to evolve from an initial pattern in which decisions are
+
+heavily dependent on y˜k, with increasing dependence on Sk in
+
+later iterations as pe(t) decreases toward zero. An example of
+
+this evolution is shown in Fig. 21, for the case xk = 1 with parameters Ymax = 1.5, σ = 0.668, Q = 4, and dv = 3. For a (3, 6) LDPC code, this corresponds to Eb/N0 = 3.50 dB.
+
+With threshold adaptation, the GDBF algorithm’s behavior
+
+is similar to the LML flip matrix. Initially, the threshold θ is
+
+set to a significantly negative value, say θ = −1.0. For a given
+
+set of parameters, we may obtain a matrix E of values for
+
+the inversion function, with members Ei,j = y˜k(i) + Sk(j). By applying the threshold θ to all the elements of E, we obtain
+
+the flip matrix for the GDBF algorithm. As the threshold is
+
+adapted toward zero, the flip matrix evolves to place increased
+
+weight on the syndrome information, similar to the LML flip
+
+matrix evolution. The GDBF flip matrices do not correspond
+
+perfectly to the LML predictions. To bring closer agreement,
+
+a weight factor is introduced, giving a modified weighted
+
+inversion function
+
+xˆk,LML = arg max Pr(y˜k|xk) Pr(Sk|xk).
+
+(23)
+
+xk
+
+E˜k = xky˜k + w
+
+si + q˜k,
+
+i∈M (k)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+(25)
+
+SUNDARARAJAN et al.: NOISY GRADIENT DESCENT BIT-FLIP DECODING FOR LDPC CODES
+
+3399
+
+ACKNOWLEDGMENT
+The authors would like to express his thanks to the anonymous reviewers of IEEE Transactions on Communications for their comments, which helped to improve the quality of the manuscript.
+
+Fig. 22. Evolution of the flip matrix for the weighted GDBF algorithm with threshold adaptation. Use of threshold adaptation and syndrome weighting achieves qualitative agreement with the LML flip decisions in Fig. 21.
+
+REFERENCES
+
+The best value for w is found empirically and may be code dependent. Based on the parameters σ = 0.668, Ymax = 1.5, w = 0.75, and dv = 3, the flip matrix evolution corresponding to E˜k is shown in Fig. 22.
+The relationship between LML and the GDBF heuristics is not an exact correspondence. The LML analysis predicts the desirable behavior of the flip matrix over time during a successful decoding event. When GDBF is augmented by introducing the threshold adapation and syndrome weighting heuristics, its behavior is brought into approximate correspondence with the LML prediction. This provides a new theoretical motivation for using these heuristic methods, which has not been addressed in the previous literature.
+VIII. CONCLUSION
+This paper introduced a collection of novel Noisy GDBF algorithms, based on a noisy gradient descent heuristic, that outperforms existing GBDF algorithms. We found that previous GDBF algorithms, including the S-GDBF, M-GDBF, and AT-GDBF algorithms, are significantly improved when combined with the noise perturbation. Additional heuristic improvements were introduced that achieved a significant performance benefit in comparison to the best known versions of GDBF, achieving performance comparable to the standard minsum algorithm for several LDPC codes. We also provided an architecture for implementing the new algorithm with quantized channel information, and showed that its implementation complexity is quite low compared to min-sum or stochastic decoding. The NGDBF algorithms do require estimation of the channel SNR, which introduces a fixed complexity cost that does not affect the previously known GDBF of MS algorithms.
+The NGDBF decoding algorithms are based on a heuristic approach. To gain additional validation for those heuristics, we examined the convergence characteristics and found that, on average, the NGDBF algorithm converges closer to the global maximum whereas other algorithms are more frequently trapped in suboptimal local maxima. We also examined the approximate local ML solution for bit-flip behavior. From this analysis, we proposed using a weight factor to bring GDBF closer to the LML behavior. As a result of these analyses, we obtained a new bit-flipping decoding algorithm that avoids using any global search or sort operations. The resulting algorithm is feasibly a competitor to the popular min-sum algorithm, since it requires less computational effort while maintaining good BER and FER performance.
+
+[1] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEEE Electron. Lett., vol. 33, no. 6, pp. 457– 458, Mar. 1997.
+[2] Y. Kou, S. Lin, and M. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[3] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. VLSI Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[4] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, “Generic description and synthesis of LDPC decoders,” IEEE Trans. Commun., vol. 55, no. 11, pp. 2084–2091, Nov. 2007.
+[5] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[6] N. Miladinovic and M. P. C. Fossorier, “Improved bit-flipping decoding of low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 51, no. 4, pp. 1594–1606, Apr. 2005.
+[7] X. Wu, C. Zhao, and X. You, “Parallel weighted bit-flipping decoding,” IEEE Commun. Lett., vol. 11, no. 8, pp. 671–673, Aug. 2007.
+[8] X. Wu et al., “New insights into weighted bit-flipping decoding,” IEEE Trans. Commun., vol. 57, no. 8, pp. 2177–2180, Aug. 2009.
+[9] T. Wadayama et al., “Gradient descent bit flipping algorithms for decoding LDPC codes,” IEEE Trans. Commun., vol. 58, no. 6, pp. 1610–1614, Jun. 2010.
+[10] M. Ismail, I. Ahmed, and J. Coon, “Low power decoding of LDPC codes,” ISRN Sensor Netw., vol. 2013, pp. 650740-1–650740-12, 2013.
+[11] T. Phromsa-ard et al., “Improved gradient descent bit flipping algorithms for LDPC decoding,” in Proc. 2nd Int. Conf. DICTAP, 2012, pp. 324–328.
+[12] R. Haga and S. Usami, “Multi-bit flip type gradient descent bit flipping decoding using no thresholds,” in Proc. ISITA, 2012, pp. 6–10.
+[13] V. C. Gaudet and A. C. Rapley, “Iterative decoding using stochastic computation,” Electron. Lett., vol. 39, no. 3, pp. 299–301, Feb. 2003.
+[14] C. Winstead, V. C. Gaudet, A. C. Rapley, and C. Schlegel, “Stochastic iterative decoders,” in Proc. ISIT, 2005, pp. 1116–1120.
+[15] S. Sharifi Tehrani, W. J. Gross, and S. Mannor, “Stochastic decoding of LDPC codes,” IEEE Commun. Lett., vol. 10, no. 10, pp. 716–718, Oct. 2006.
+[16] S. Sharifi Tehrani, S. Mannor, and W. J. Gross, “Fully parallel stochastic LDPC decoders,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5692– 5703, Nov. 2008.
+[17] S. Sharifi Tehrani et al., “Majority-based tracking forecast memories for stochastic LDPC decoding,” IEEE Trans. Signal Process., vol. 58, no. 9, pp. 4883–4896, Sep. 2010.
+[18] S. Sharifi Tehrani, A. Naderi, G.-A. Kamendje, S. Mannor, and W. J. Gross, “Tracking forecast memories for stochastic decoding,” J. Signal Process. Syst., vol. 63, no. 1, pp. 117–127, Apr. 2011.
+[19] S. Sharifi Tehrani et al., “Relaxation dynamics in stochastic iterative decoders,” IEEE Trans. Signal Process., vol. 58, no. 11, pp. 5955–5961, Nov. 2010.
+[20] N. Onizawa, W. J. Gross, T. Hanyu, and V. C. Gaudet, “Clockless stochastic decoding of low-density parity-check codes: Architecture and simulation model,” J. Signal Process. Syst., vol. 76, no. 2, pp. 185–194, Aug. 2014.
+[21] F. Leduc-Primeau, S. Hemati, S. Mannor, and W. Gross, “Dithered belief propagation decoding,” IEEE Trans. Commun., vol. 60, no. 8, pp. 2042– 2047, Aug. 2012.
+[22] C. K. Ngassa, V. Savin, and D. Declercq, “Unconventional behavior of the noisy min-sum decoder over the binary symmetric channel,” in Proc. Int. Workshop ITA, San Diego, CA, USA, Feb. 2014, pp. 1–10.
+[23] C. K. Ngassa, V. Savin, and D. Declercq, “Min-sum-based decoders running on noisy hardware,” in Proc. IEEE GLOBECOM, Dec. 2013, pp. 1879–1884.
+[24] J. Zhang and M. P. C. Fossorier, “A modified weighted bit-flipping decoding of low-density parity-check codes,” IEEE Commun. Lett., vol. 8, no. 3, pp. 165–167, Mar. 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+3400
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 62, NO. 10, OCTOBER 2014
+
+[25] M. Jiang, C. Zhao, Z. Shi, and Y. Chen, “An improvement on the modified weighted bit flipping decoding algorithm for LDPC codes,” IEEE Commun. Lett., vol. 9, no. 9, pp. 814–816, Sep. 2005.
+[26] D. J. C. MacKay, Encyclopedia of Sparse Graph Codes. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html, accessed: 2014-06-20
+[27] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuit, vol. 45, no. 4, pp. 843–855, Apr. 2010.
+
+Chris Winstead (SM’11) received the B.S. degree in electrical and computer engineering from the University of Utah, Salt Lake City, UT, USA, in 2000, and the Ph.D. degree from the University of Alberta, Edmonton, AB, Canada, in 2005. He is currently with the ECE Department at Utah State University, Logan, UT, USA, where he holds the rank of Associate Professor. His research interests include reliable wireless communication systems, implementation of error-correction algorithms, lowpower electronics and fault-tolerant VLSI circuits. Dr. Winstead received the NSF Career award for research in low-energy wireless communication circuits, and is a Fulbright scholar. He is a member of the Tau Beta Pi engineering honor society.
+
+Gopalakrishnan Sundararajan was born in Madras, Chennai, Tamil Nadu, India. He received the B.Eng. degree from Anna University, India, and the M.S. degree in electrical and computer engineering from Oklahoma State University, Stillwater, OK, USA, in 2010. He is currenly working towards the Ph.D. degree in electrical and computer engineering at Utah State University, Logan, UT, USA. His research intersts include novel LDPC decoding algorithms and their VLSI implementation, fault tolerant circuit techniques, low power and process variation tolerant circuit design. Gopalakrishnan received a Sant Graduate Innovation Fellowship from Utah State University’s College of Engineering in 2014.
+
+Emmanuel Boutillon received the Diploma in engineering in 1990 and the Ph.D. degree in 1995, both from the Telecom Paris Tech, Paris, France. From 1995 to 2000, he was an Assistant Professor in Telecom Paris Tech. In 1998, he spent a sabbatical year at the University of Toronto, Toronto, ON, Canada. In 2000, he moved to the University of Bretagne Sud as a Professor. He headed the LESTER lab from 2005 up to end of 2007 and, since 2008, he is the head of CACS department (lab-STICC). In 2011, he had a sabbatical year at INICTEL-UNI, Lima (Peru). His research interests are on the interactions between algorithm and architecture in the field of wireless communications and high speed signal processing. In particular, he works on Turbo Codes and LDPC decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:58:08 UTC from IEEE Xplore. Restrictions apply.
+
+

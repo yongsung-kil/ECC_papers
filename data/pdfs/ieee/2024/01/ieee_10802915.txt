@@ -1,0 +1,734 @@
+Received 25 November 2024, accepted 10 December 2024, date of publication 16 December 2024, date of current version 24 December 2024.
+Digital Object Identifier 10.1109/ACCESS.2024.3517704
+
+Adaptive Sliding Window Decoding of Spatially Coupled Low-Density Parity-Check Codes: Algorithms and Energy Efficient Implementations
+
+OLIVER GRIEBEL ∗, (Graduate Student Member, IEEE), BILAL HAMMOUD AND NORBERT WEHN , (Senior Member, IEEE)
+Microelectronic Systems Design Research Group, University of Kaiserslautern-Landau, 67663 Kaiserslautern, Germany
+Corresponding author: Oliver Griebel (oliver.griebel@rptu.de)
+
+∗, (Member, IEEE),
+
+∗Oliver Griebel and Bilal Hammoud contributed equally to this work.
+
+This work was supported by the Federal Ministry of Education and Research of Germany through the Project ‘‘FACTOR’’ under Grant 16KIS1608 and through the Project ‘‘Open6GHub’’ under Grant 16KISK004.
+
+ABSTRACT In channel coding, reducing power consumption and improving energy efficiency are major challenges in sliding window decoding (SWD) architectures for spatially coupled low-density parity-check (SC-LDPC) codes. In contrast to the well-elaborated literature on energy-efficient decoder implementations of classical LDPC block codes (LDPC-BCs), there is little research on the aforementioned challenges for SC-LDPC codes. Thus, in this paper, we investigate a novel approach for energy-efficient implementation of very high-throughput SWD for SC-LDPC codes. First, our approach proposes an analogy to state-ofthe-art iteration control techniques for LDPC-BC decoders, by dynamically adapting the window size for the decoding of SC-LDPC codes. For this purpose, we derive new algorithms that sequentially activate and/or deactivate the processors inside the window, without loss in error correction performance. Second, we propose an architecture for very high-throughput decoder implementations. Furthermore, to meet the high throughput requirements and improve energy efficiency, we revisit the window-size adaption criteria and slightly relax the derived algorithms in terms of error correction capability. Implementation results of the new revisited full-adaptive decoder in a 12 nm technology show that, at a negligible loss in error correction performance, the proposed adaptive SWD approach improves the energy efficiency by a factor of 1.4 to 3.4 compared to the state-of-the-art in the 4 dB to 7 dB signal-to-noise-ratio (SNR) range. This improvement is further increased up to a factor of 6.5 at higher SNRs.
+
+INDEX TERMS Adaptive sliding window, energy efficiency, forward error correction, high throughput, iterative decoding, spatially-coupled low-density parity-check codes.
+
+I. INTRODUCTION With the emergence of new data-intensive applications, the requirements for higher data rates, lower round-trip latency, massive connectivity, and better communication performance have been driving the evolution of wireless communication systems. While technological advancements are being developed to go beyond the fifth-generation technology standard for cellular networks (B5G) for mobile communications, research is still ongoing to define the era of
+The associate editor coordinating the review of this manuscript and approving it for publication was Zhengmao Li .
+
+the sixth generation of cellular mobile communications (6G) wireless systems with respect to requirements, challenges, and opportunities. One of the sustainability-based key performance indicators (KPIs) for 6G is to achieve very high throughput in the future [1]. For numerous use cases, there exists a growing demand for high-speed data transmission. In the near future, short-range THz systems [2] and optical satellite links [3] are expected to operate with data rates of several hundred Gbit/s. This rate is foreseen to be towards 1 Tbit/s for the 6G wireless systems [4].
+To realize the 6G vision, improving the design of the next-generation physical layer techniques is of high
+
+191140
+
+
+ 2024 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+importance to the progress in data rates. More specifically, channel (de-)coding is a major component in the digital baseband processing chain to ensure the reliability and efficiency of communication systems [5]. Thus, the need for high transmission error detection and correction capabilities challenges the design and implementation of forward error correction (FEC) decoding under silicon implementation constraints [6], [7].
+Low-density parity-check (LDPC) codes [8] are an established class of FEC codes due to their channel-capacityapproaching performance for large code block sizes. LDPC codes are standardized and widely used in multiple practical applications like digital video broadcasting (DVB-S2X) for satellite transmission, 3rd Generation Partnership Project (3GPP) radio access technology for 5G networks (5GNR), and IEEE 802.11n Wireless local area network (LAN) and IEEE 802.16e Mobile worldwide interoperability for microwave access (WiMAX) for communications [5]. The inherent node-level parallelism of LDPC codes makes belief propagation (BP) decoding and its implementation-friendly normalized min-sum (NMS) version particularly interesting for very high throughput [9]. However, under silicon implementation constraints, i.e., fixed area and power budgets, two major factors limit the error correction performance and implementation efficiency of state-of-the-art high-throughput LDPC decoders:
+1) Block size: To achieve good error correction performance, the Tanner graph [10] of the code must be large, of low density, designed with low locality and high irregularity. Thus, large code block sizes are mandatory, and short cycles must be avoided. However, energy-efficient silicon implementation requires locality [9] to reduce the cost of data transfers, the wiring complexity, and routing congestions. Additionally, high throughput decoder implementation requires high regularity to exploit large parallelism. Consequently, this imposes limitations on the code block sizes and the FEC decoding performance is compromised.
+2) Iterations: LDPC code decoding requires a large number of iterations (> 20) to achieve high error correction capability and approach channel capacity. From a silicon implementation perspective, with a larger number of iterations, the latency increases, the throughput decreases, and the energy efficiency gets worse.
+State-of-the-art very high-throughput decoders, e.g., [11] and [12], are limited to small block sizes, i.e., some thousand bits, and a small number of decoding iterations, i.e., ≤ 20, at the cost of a reduced error correction capability.
+Spatially coupled LDPC (SC-LDPC) codes [13] exhibit locality in the Tanner graph by coupling small LDPC block codes (LDPC-BCs). SC-LDPC codes can be considered as a special class of LDPC-BCs, thus enabling the use of standard LDPC-BC decoding techniques. However, the code structure with its locality enables so-called sliding window
+VOLUME 12, 2024
+
+decoding (SWD) schemes. In these schemes, a window of a smaller block size is used for decoding. Since decoding is performed within this window, the block size limiting factor of conventional LDPC-BC decoders can be overcome.
+Different SWD schemes for SC-LDPC codes are presented in the literature. The most straightforward decoding approach uses a standard conventional iterative block decoder inside a window [14]. To improve energy efficiency and reduce latency, iteration control (IC) methods for early termination from standard LDPC-BC decoding can be used in iterative SWD schemes. During decoding, the number of iterations, I , is constrained to a maximum number of iterations, Imax. Depending on the signal-to-noise-ratio (SNR), not all Imax iterations are required for successful decoding. Several techniques have been proposed to reduce I for SWD. These include individual deactivation and reactivation of processors [15], non-uniform schedules [16], stall detection [17], and termination based on a target (sub-block) for the leftmost symbols of a window [18]. These methods are parity check-based, e.g., [15], [19], [20], and [21], or loglikelihood ratio (LLR)-based, e.g., [16], [17], [18], and [22]. Parity check-based IC methods are typically applied due to their small implementation overhead. To further increase the throughput, iteration unrolling was investigated in [23] from an algorithmic perspective only, following the approach of [24].
+The aforementioned iterative SWD schemes are still limited in data rates. Therefore, to achieve very high throughput, state-of-the-art SWD schemes of SC-LDPC codes pursue a different approach. Instead of using a LDPC-BC decoder for the complete window, decoding inside a window is performed by several processors where each processor performs a single decoding iteration on a small sub-block. These sub-blocks can be overlapping or non-overlapping [15]. In this way, the decoding is performed in parallel on sub-blocks of this window, and for one iteration only. Layered (non-overlapping) and compact (overlapping) SWD schedules were investigated in detail in [25]. By exploiting efficient spatial and functional parallelism and appropriate information exchange between the processors, [25] and [26] have shown virtual silicon implementations that exceed 100 Gbit/s.
+Such SWD schemes showed the potential of SC-LDPC codes for very high throughput decoding and good error correction performance compared to LDPC-BCs. However, as opposed to the well-elaborated literature on energyefficient implementations of classical LDPC-BC decoders, power consumption, and energy efficiency are still major challenges in these SWD architectures. While there exist many state-of-the-art IC techniques for LDPC-BC decoders to reduce the power consumption [27], such techniques cannot be applied to very high throughput SWD schemes since processors are performing only one iteration.
+A. CONTRIBUTION Knowing that power consumption is proportional to the number of instantiated processors inside the window, we propose
+191141
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+to reduce the power consumption by using an increasing window-size algorithm. This proposed half-adaptive SWD (HA-SWD) algorithm starts the decoding with one processor. Then, it sequentially increases the number of activated processors, up to the maximum available processors, based on the failure of partial syndrome checks. Next, we extend the HA-SWD algorithm to be full-adaptive by including the possibility of also decreasing back the number of active processors within the window. In this way, only a subset of available processors is activated on demand. Both HASWD and full-adaptive SWD (FA-SWD) algorithms reduce how many times the processors are executed, which is equivalent to the number of decoding iterations for LDPCBC decoders as detailed later, while preserving the error correction capability as to the fixed full window size.
+To increase the potential gain in implementation efficiency of high throughput decoders, a modified version of both algorithms is derived yielding a significant gain in implementation energy efficiency at the cost of a negligible degradation in the error correction performance.
+Thus, the new contributions are summarized as follows: • Analogously to state-of-the-art IC techniques for LDPC-
+BC decoders, which cannot be applied for very high throughput SWD for SC-LDPC codes, we suggest a novel approach in this work that reduces the required processors’ activation and exploits the SNR dependency through an adaptive SWD algorithm for SC-LDPC codes. • We derive two new algorithms, i.e., HA-SWD and FA-SWD, that dynamically adapt the window size by sequentially activating and/or deactivating the processors inside the window based on the evaluation of partial syndrome checks. Both proposed algorithms preserve the same error correction capability of the SWD using the fixed full window size. • We propose a new architecture for the implementation of both algorithms, each with a different activation controller. The presented architecture enables the very high throughput decoding requirement. • We modify both HA-SWD and FA-SWD algorithms and slightly relax them in terms of error correction performance to further improve the implementation efficiency. Our preliminary work [28] covers the relaxed version of the HA-SWD algorithm. This relaxation shows the potential gain in implementation efficiency at the cost of a slight drop in error correction capability. In this work, the FA-SWD algorithm is also relaxed with a comparable loss in error correction but with an additional gain in energy efficiency. The revisited algorithms (also read relaxed) are denoted by revisited HA-SWD (Re-HA-SWD) and revisited FA-SWD (ReFA-SWD). • We perform an in-depth analysis of the error correction performance and implementation efficiency of our approach using adaptive SWD algorithms to stateof-the-art architectures for fixed SWD schemes for
+191142
+
+FIGURE 1. Paper content overview. Energy efficiency vs forward error correction performance trade-off. In yellow, our work is detailed.
+
+SC-LDPC codes and wireless local area network (Wi-Fi) standards using LDPC-BCs decoders (with and without IC techniques) in a 12 nm fin field-effect transistor (FinFET) technology.
+
+B. ORGANIZATION
+The structure and contributions of this paper are graphically presented in Fig. 1. Section II introduces the system model and covers the preliminaries required about SWD of SCLDPC codes. In Sections III and IV we derive HA-SWD and FA-SWD algorithms along with their relaxed versions. Section V presents the architecture for very high throughput decoding. Section VI presents the error correction capability, quantifies the reduced complexity and achieved gains, and shows the implementation efficiency with a focus on energy efficiency of the proposed algorithms compared to the stateof-the-art. Section VII shows the analogy to state-of-the-art IC techniques, discusses the limitations of our approach, and opens the door for future work. Finally, we conclude the work in Section VIII.
+
+II. PRELIMINARIES A. NOTATION
+Throughout this paper, we follow the notations introduced below. Italic letters such as a denote scalars. Boldface small letters such as a denote vectors, where ai refers to the i-th element of a and aT refers to the transposed vector of a. Boldface capital letters such as A denote matrices, where Ai refers to a submatrix of A. R denotes real numbers and F2 denotes the finite field with two elements.
+
+B. SYSTEM MODEL
+
+We define a system for continuous transmission of data over
+
+time t ∈ Z in Fig. 2. An information source generates blocks
+
+of an
+
+information u(t) ∈ F2b encoder to code blocks
+
+of length v(t) ∈ Fc2
+
+b. These are assigned by of length c, where c > b.
+
+The code blocks are modulated, transmitted over a noisy
+
+channel, and bit-level demodulated into blocks of symbols, i.e., LLR values, y(t) ∈ Rc. The corresponding decoder uses
+
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 2. System model of the transmission system.
+
+these values to estimate the initially transmitted information blocks uˆ (t) ∈ Fb2.
+
+C. LOW-DENSITY PARITY-CHECK CODES
+A LDPC code is specified by a parity check matrix H ∈ F2(c−b)×c. The code length is c and the number of parity check equations is c − b. A valid codeword satisfies
+the equation
+
+H · u(t)T = 0.
+
+(1)
+
+To determine whether the received symbols, y(t), contain errors, the syndrome s is calculated. Therefore, the binary hard decision (HD) of the LLR values, i.e., the received codeword r(t), is multiplied by the parity check matrix
+
+s = H · r(t)T .
+
+(2)
+
+A codeword is only valid if the syndrome of the received symbols is zero.
+The Tanner graph of a LDPC code is a bipartite graph. Nodes represent variable nodes (VNs), which are columns of H, and check nodes (CNs), which are rows of H. Edges represent connections from VNs to CNs and vice versa, which are non-zero entries inside H.
+
+D. SPATIALLY-COUPLED LOW-DENSITY PARITY CHECK CODES
+A SC-LDPC code applies coupling of L code blocks over time to improve error correction performance. A codeword u of an SC-LDPC code is defined as [u(t), . . . , u(t + L)]. The coupling of ms blocks is defined as the memory depth of the code. An SC-LDPC code is an LDPC code with a particular diagonal-dominated parity-check matrix structure:
+
+ H0
+
+
+
+ H1 H0
+
+
+
+  
+
+...
+
+H1 . . .
+
+  
+
+ H[1,L] = Hms
+
+...
+
+...
+
+
+
+H0
+
+ 
+
+(3)
+
+ 
+
+Hms
+
+H1
+
+ 
+
+  
+
+...
+
+...
+
+  
+
+Hms (L+ms)×L.
+
+All Hi
+
+∈
+
+(c−b)×c
+F2
+
+with i
+
+∈
+
+[0, ms] and each submatrix
+
+H0 ̸= 0 has to be of full rank. A valid codeword has
+
+to fulfill Eq. (1), where H and u(t) are replaced by H[1,L]
+
+and u, respectively. In this paper, we consider time-invariant
+
+codes. This means that a submatrix Hi does not alter over time. For zero-termination of the codeword, the information
+
+word length K = L · b leads to a codeword length of
+
+VOLUME 12, 2024
+
+N = L · c + ms · (c − b). The code-rate R = K /N for such (c, b)-regular SC-LDPC codes is a strictly monotonic non-decreasing function of L that converges with L → ∞ to b/c.
+E. HIGH THROUGHPUT DECODING Due to the structural characteristics of the SC-LDPC codes, the decoding can be performed with a sliding window W that diagonally moves, i.e., slides, from the upper left to the lower right of H[1,L]. Throughout the decoding process, the window W spans over a sub-matrix of H[1,L], which is a subset of VNs and CNs in the corresponding Tanner graph.
+At each time step t, the SWD completes the decoding of one sub-block in a time Tp. For high-throughput decoding, this window processing time Tp should be less than one clock cycle, which is inversely proportional to the frequency of the decoder implementation. Thus, designing a decoder architecture that can handle large code block lengths c while minimizing Tp is challenging for high-throughput decoding. To address this challenge, state-of-the-art decoding methods divide the decoding window into smaller subwindows, which are then processed individually by dedicated processors in parallel. While there are multiple schemes to divide the window into sub-windows as detailed in [25], this paper focuses on row-wise layered decoding as we describe it next. However, the approach to be proposed is not limited to this decoding scheme.
+F. ROW-WISE LAYERED DECODING A layer is defined as a row of ms + 1 submatrices, i.e., Hms , . . . , H0 , and consists of (c − b) rows of H[1,L]. A SC-LDPC code H[1,L] has L + ms layers, that are enumerated from 1, . . . , l, . . . , L + ms. Following this definition, by horizontally splitting the decoding window W into sub-windows, multiple non-overlapping layers are decoded in parallel using dedicated processors P inside W . Each processor p ∈ [1, . . . , P] processes only one row-layer in H[1,L], i.e., processes a single iteration involving one CN group and (ms +1) VN groups. In row-wise layered decoding, the sliding window is moved layer-wise from layer 1 to layer L + ms over H[1,L]. At every time step, the window slides one layer forward and starts the decoding again. Consequently, when the decoding of a full codeword is complete, each layer has been updated P times. Thus, the number of processors P, which determines the number of CN updates, is equivalent to the number of iterations.
+Fig. 3 shows an example of row-wise layered SWD algorithm with ms = 1 and P = 3, where layers l, l − 2, and l − 4 are decoded in parallel at the time step t. With W sliding diagonally from left to right, in the rest of this paper, the bottom right layer inside W is denoted as the head layer, while the top left layer inside W is denoted as the tail layer.
+The size of the decoding window W depends on the number of processors P and the coupling width ms. In units
+191143
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 3. Window W at layer l of H[1,L] with ms = 1. The width in units of submatrices is six and the respective depth is five.
+
+of submatrices, the window has a width of
+
+Ww = (ms + 1) · P
+
+(4)
+
+and a depth of
+
+Wd = (ms + 1) · (P − 1) + 1.
+
+(5)
+
+When the decoding window size is fixed, as it is the case in state-of-the-art SWD, P also refers to the maximum number of available processors Pmax .
+
+G. ALGORITHMIC COMPLEXITY Designing energy-efficient high-throughput decoders is challenging under silicon implementation constraints [29]. In SWD of SC-LDPC codes, the throughput is limited by the iterative message exchanges between the CNs and VNs over the edges of the Tanner graph. After one decoding iteration, the calculated CN or VN updates are transferred to all other connected nodes via the edges. With each edge, a fixed number of calculations and data transfers is associated. Thus, the number of edges is a good metric to reflect the algorithmic complexity [30].
+Using row-wise layered decoding for a SC-LDPC code with a parity check matrix H[1,L], the number of processed edges is given by dc · (c − b). By including the total number of iterations Imax , which is equivalent to Pmax for the non-overlapping row-wise layered decoding as explained in Section II-F, the complexity of state-of-the-art window decoders is evaluated by
+C = dc · (c − b) · Imax = dc · (c − b) · Pmax . (6)
+The complexity metric C measures the total number of processed and transferred edges for decoding a complete codeword [25].
+With respect to Eqs. (4) and (5), reducing Pmax is equivalent to modifying the decoding window size. Thus, the objective of this work is to reduce the algorithmic complexity of the SWD algorithm while maintaining error correction performance. This is achieved by a novel approach that adaptively changes the size of the decoding window. Furthermore, we will exploit the SNR dependency on the
+
+191144
+
+decoder performance to reduce the average number of active processors P in the SWD, which is comparable to IC for LDPC-BC decoding algorithms. Hence, the complexity of the adaptive SWD decoders presented in this paper can be evaluated as a function of the SNR, represented as
+
+C(SNR) = dc · (c − b) · P(SNR).
+
+(7)
+
+H. SLIDING WINDOW DECODING ALGORITHM
+Algorithm 1 outlines the window decoding process following the row-wise layered decoding scheme. This process uses P processors and is called with the head layer denoted by l. Inside the decoding window, the non-overlapping layers, indexed by l − (p − 1) · (ms + 1) for all p ∈ [1, . . . , P], are processed in parallel (lines 4 - 9). To achieve faster convergence, the on-demand variable node activation (OVA) schedule [15], which involves VN-to-VN (VN2VN) decoding, is employed. Once all processors have completed decoding at the current window position, a partial syndrome check of the SC-LDPC code, z, is performed (lines 10 13). All syndromes within the current window position are evaluated. The outcome of the syndrome for each layer, zi, determines whether all syndrome checks of a row-layer have been completed successfully (zi = 0) or if at least one syndrome check has failed (zi = 1), where i = 1 and i = (ms + 1) · (P − 1) + 1 represent the tail and head layers of the window, respectively.
+
+Algorithm 1 z = Window Decoding(l, P)
+
+1 // l: bottom layer (head) of window
+
+2 // P: number of processors
+
+3 // z: syndrome vector of syndrome check satisfaction
+
+4 for p ← 1 to P do
+
+5 r ← l − (p − 1) · (ms + 1); 6 if r ≤ L + ms then
+
+7
+
+process(r );
+
+8 end
+
+9 end
+
+10 r ← l − (P − 1) · (ms + 1); 11 for i ← 1 to (ms + 1) · (P − 1) + 1 do
+
+12 zi ← syndrome(r + i − 1); 13 end
+
+14 return z;
+
+Applying Algorithm 1 on W in Fig. 3 at time t for the head layer l, it returns z = [z1, . . . , z5], with z1 corresponding to the tail layer.
+III. ADAPTIVE SLIDING WINDOW DECODING ALGORITHMS The proposed adaptive SWD algorithms are motivated by the need to improve the computational and energy efficiency of SWD. By dynamically adjusting the window size during the decoding process, these algorithms aim to omit unnecessary node updates while maintaining error correction
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+performance. This section introduces and discusses two key algorithms: the HA-SWD algorithm and the FA-SWD algorithm. Then, case studies are used to illustrate the differences between the two algorithms.
+A. HALF-ADAPTIVE SLIDING WINDOW DECODING State-of-the-art SWD uses a fixed window size with a fixed number of processors Pmax. These processors are all active during the window decoding. However, in the HASWD algorithm, the window is initialized with a minimum window size that includes one active processor only. Then, depending on the syndrome fails, the window size might monotonically - increase to include up to Pmax active processors.
+Within the window, the decoding process of a layer using a processor p checks if the syndrome for the current layer is zero. If this is the case, then, in principle, no further processing of this layer is necessary in the subsequent steps, which would save computations. Otherwise, this layer must be processed again after ms + 1 time steps. This (re-)processing is performed by the subsequent active processor p + 1.
+Therefore, the HA-SWD algorithm (Algorithm 2) exploits the information of the fulfilled syndrome checks to successively increase the window size, starting with one processor, i.e., P = 1. Following the window decoding (line 4), if a syndrome check of the tail layer in the current window fails (line 5), we increase the window size in the next decoding step by activating an additional processor (line 7). Decoding will then be performed with the increased window size to include the ms left-connected layers of the layer that failed to decode correctly.
+
+Algorithm 2 HA-SWD Algorithm
+
+1 Wh ← (ms + 1) · (Pmax − 1) + 1;
+
+2 P ← 1;
+
+3 for l ← 1 to L + ms + Wh − 1 do 4 z ← Window Decoding(l, P);
+
+5 if z1 ̸= 0 then
+
+6
+
+if P < Pmax then
+
+7
+
+P ← P + 1;
+
+8
+
+end
+
+9 end
+
+10 end
+
+We apply this approach to the window decoding presented in Fig. 4, with ms = 1 and current active processors P = 3. At time step t, the window decoding is performed using W (t), in which the active layers l, l − 2, and l − 4 are decoded by processors #1, #2, and #3, respectively. Following the decoding, the syndrome of the tail (last active) layer l − 4 in the current window, denoted by z1 as returned by Algorithm 1, is checked. If it fails, layer l − 4 should be decoded again. To ensure that, since the window is moving one layer forward in one time step, the window size must increase and an
+VOLUME 12, 2024
+
+FIGURE 4. Example sliding window for decoding l and successively l + 1 with adapted window size.
+additional processor should be included (activated). By doing that, in the next time step when the window moves to the next layer l + 1, the adjusted window W ′(t + 1) will cover layers l − 5 to l + 1 and will include 4 active processors. At time t + 1, the new decoding is performed to the layers l + 1, l − 1, l − 3, and l − 5 using the processors #1, #2, #3, and the newly activated processor #4, respectively. This way, layers l − 5 (the left-connected layer to l − 4 through H0) and l − 3 (the right-connected layer to l − 4 through H1 are decoded again, and corresponding updates at the node level are shared with layer l − 4. Consequently, these updates will help improve the decoding of layer l − 4 with processor #4 in the next time step t + 2.
+This adjustment in the window size is repeated whenever the syndrome of the tail layer in the window fails until the number of active processors reaches its maximum Pmax. The window width P · (ms + 1) monotonically increases during the decoding from (ms + 1) and might get maximally to Pmax · (ms + 1). Thus, the HA-SWD algorithm approach performs fewer computations than the fixed SWD approach, where the window size is fixed to Pmax · (ms + 1).
+B. FULL-ADAPTIVE SLIDING WINDOW DECODING The FA-SWD algorithm exploits the information of the fulfilled syndrome checks not only to increase the window size when required, similar to the HA-SWD algorithm, but also to decrease the window again to reduce unnecessary computations. The decoding starts with the minimum window size that includes one active processor only. Then, the window witnesses an increase in its size followed by multiple increases/decreases depending on the syndrome checks. At least one processor should be active.
+If processor p corrects an error in an active layer l in a decoding window, and if subsequent layers (l + 1, l + 2, . . .) inside the window are also error-free, then no further processing of all these layers is required. This suggests
+191145
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+that it is possible to save unnecessary computations by omitting the reprocessing of these layers, which motivates the approach of reducing the sliding window size in subsequent decoding. However, as noted above, data dependencies require that preceding layers also should satisfy the syndrome check to exclude layer l from updating. Otherwise, the error correction performance will decrease, leading to an early error floor.
+Enabling and disabling processors must not affect the error correction performance. For row-wise layered decoding, VNs are split into upper and lower parts (for ms = 1) or even smaller fragments (for ms > 1). To ensure the same error correction behavior as with fixed window size, a full node update is required in case of a syndrome check failure. Therefore, all connected layers of the layer with a syndrome failure must be updated again.
+
+Algorithm 3 FA-SWD Algorithm
+
+1 Wh ← (ms + 1) · (Pmax − 1) + 1;
+
+2 P ← 1;
+
+3 for l ← 1 to L + ms + Wh − 1 do 4 z ← Window Decoding(l, P);
+
+5 if z1 ̸= 0 then
+
+6
+
+if P < Pmax then
+
+7
+
+P ← P + 1;
+
+8
+
+end
+
+9 else
+
+10
+
+for i ← 1 to (ms + 1) · (P − 1) by ms + 1 do
+
+11
+
+if [zi+1, . . . , zi+ms+1] = 0 then
+
+12
+
+P ← P − 1;
+
+13
+
+else
+
+14
+
+break;
+
+15
+
+end
+
+16
+
+end
+
+17 end
+
+18 end
+
+The FA-SWD algorithm (Algorithm 3) uses the same criterion as the HA-SWD algorithm to increase the window size. Once the decoding of the tail layer inside the window fails, an additional processor should be added to the window decoding in the next time step (lines 5-9). If no additional processor is activated, contrary to the HA-SWD algorithm, it is possible to check for decreasing the window size. For this, the syndromes of the ms right-connected layers to the tail layer in the current window [zi+1, . . . , zi+ms ], as well as the syndrome of their adjacent active layer [zi+ms+1] are evaluated (line 11). If all syndromes are satisfied, then it is allowed to exclude the last processor from further processing, i.e., decrease the window size (line 12). It is important to include the syndrome [zi+ms+1] check of the active layer just before (ahead) the tail layer, i.e., the adjacent-right active layer, to guarantee its (re-)decoding in case its syndrome fails. Another important feature of the FA-SWD algorithm is that it allows the deactivation of multiple processors at the
+191146
+
+same time. The same criteria used for the tail layer can be successively applied to the active layers that are ahead in the window (line 10). This procedure is repeated until at least one faulty syndrome is encountered or when no further processor can be disabled, i.e., P = 1.
+For better understanding, we apply this algorithm again on the window shown in Fig. 4, with ms = 1 and current active processors P = 3, for the decrease case. At time step t, the window decoding is performed, in which the active layers l, l − 2, and l − 4 are decoded by processors #1, #2, and #3, respectively. Following the decoding, the syndromes of all layers in the window are returned by Algorithm 1 (line 12) as [z1, z2, z3, z4, z5] corresponding to layers [l − 4, l − 3, l− 2, l − 1, l] respectively. If the syndrome z1 of the tail layer l − 4 is satisfied, there is no need to increase the window size. Furthermore, if the syndromes of the right-connected layer (z2 of layer l − 3) and the active layer ahead (z3 of layer l − 2) are both satisfied, then it is possible to deactivate processor #3 in the next decoding. Additionally, now by looking at the active layer l − 2, if the syndromes of the right-connected layer (z4 of layer l − 1) and the active layer ahead (z5 of layer l) are both satisfied, then it is also possible to deactivate processor #2 in the next decoding. This scenario will lead to a double decrease in the window size by deactivating two processors in the next time step. In this case, at time t + 1, the window is using only one processor to decode layer l + 1. Finally, to stress the importance of checking the active layer ahead, assume that all layers in the window are decoded correctly except for the head layer l. If we decide to deactivate processors #3 and #2, then at time t + 1, processor #1 will decode layer l + 1. This indicates that layer l will not be processed again and there will be no chance to be correctly decoded, which leads to a decrease in the error correction.
+The FA-SWD algorithm further reduces the number of updates per layer compared to the HA-SWD algorithm. Depending on the syndrome failures, the window width might increase during the decoding to get maximally to Pmax · (ms+ 1), and decrease to get minimally to (ms + 1). Similar to the HA-SWD algorithm, the exact window-size adaptation depends on the SNR. We will show in the results that there is no impact of both algorithms on the error correction performance compared to state-of-the-art SWD using a fixed window size of Pmax.
+C. CASE STUDIES Table 1 shows case studies for the window size adaptation using HA-SWD and FA-SWD algorithms, with ms = 1 and Pmax = 3. The decisions on the window size, i.e., the number of active processors, are based on the syndrome check results. The second column to the left includes the number of currently active processors P in each case. The decoding is performed inside the window shown in Fig. 4 as described in Algorithm 1. The resulting syndrome checks z for each layer [l − 4, . . . , l] are respectively z = [z1, z2, . . . , z5]. This indicates that z1, z3, and z5 are evaluated after the processor update, while the results of the even syndrome checks z2 and
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes TABLE 1. Case studies for the HA-SWD and FA-SWD algorithms using Pmax = 3 and ms = 1.
+
+z4 are carried over from the previous decoding position. In Table 1, the symbol ‘‘✓’’ indicates that the syndrome check for the corresponding layer is successful, while the symbol ‘‘✗’’ indicates a failed syndrome check. Empty entries for the syndrome of zi do not contribute to the decision about activating/deactivating further processors, because they are either not evaluated within the current window, or the result of the syndrome check is not relevant for the decision about the window size on the next position. The last two columns to the right show the window size, i.e., the number of active processors, for the next window decoding position at layer l + 1 using either HA-SWD or FA-SWD algorithm. Note that initialization and termination are not explicitly addressed in Table 1. However, by padding the parity check matrix of the SC-LDPC code with zeros, initialization, and termination are handled equivalently to the presented cases.
+The HA-SWD algorithm only checks the syndrome z1 of the tail layer l − 4. If this layer is correctly decoded (cases 2-7), the window size is kept the same in the next time step. The window decoding will be performed using the same number of active processors P. However, if the decoding of the tail layer fails, as in case 1, a new processor will be activated and the next decoding will be performed using P + 1 processors. This is only feasible if the current window does not include Pmax processors, as in case 8.
+The FA-SWD algorithm increases the window size in the same way as the HA-SWD algorithm in cases 1 and 8. In case 1, at t + 1, layers l − 1 and l + 1 are decoded and the corresponding node updates are shared with layer l to improve its decoding at t +2. Case 8 shows the example of an error source where layer l − 4 cannot be correctly decoded. In addition, the FA-SWD algorithm includes a mechanism for decreasing the window size. When the tail layer is decoded correctly (z1), the syndromes of the right-connected layer (z2) and the active layer ahead (z3) should be both satisfied to decrease the window size. Otherwise, none of the active processors is disabled (cases 2 and 3). However, both conditions are satisfied in cases 4 and 5, thus, a processor can be disabled reducing the number of active processors in the next window decoding to P − 1. Reducing the window size by disabling more than one processor is demonstrated in case 6, where the criterion shown in case 4 is extended. At least, one processor should be always active as shown in case 7. Fig. 5 illustrates the window size adjustment using the FA-SWD algorithm for special cases 1, 3, 4, 6, and 8.
+VOLUME 12, 2024
+
+FIGURE 5. Selected case studies from Table 1 for visual representation.
+IV. REVISITED ADAPTIVE SLIDING WINDOW DECODING ALGORITHMS As already mentioned, power consumption and energy efficiency are major challenges in SWD architectures for very high-throughput decoding. In this section, the HA-SWD and FA-SWD algorithms are modified to increase energy efficiency by trading off error correction performance and energy efficiency. Case studies are used to illustrate the differences between the two revisited algorithms. Furthermore, for selected cases, the differences compared to the original algorithms in Section III are highlighted.
+A. REVISITED HALF-ADAPTIVE SLIDING WINDOW DECODING For high-throughput decoding, the selected clock frequency should be high, i.e., the critical path in the architecture
+191147
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+should be short. Also, maintaining a continuous data flow and avoiding pipeline stalls is very crucial. The original version of the HA-SWD algorithm, as described in Algorithm 2, challenges meeting the above requirements because it disrupts the data flow. This is further explained in Section V. Therefore, we modify the original HA-SWD algorithm to overcome these limitations.
+
+Algorithm 4 Re-HA-SWD Algorithm
+
+1 Wh ← (ms + 1) · (Pmax − 1) + 1;
+
+2 P ← 1;
+
+3 l ← 1;
+
+4 while l < L + ms + Wh do 5 z ← Window Decoding(l, P);
+
+6 if z1 ̸= 0 then
+
+7
+
+if P < Pmax then
+
+8
+
+for ms times do
+
+9
+
+l ← l + 1;
+
+10
+
+Window Decoding(l, P);
+
+11
+
+end
+
+12
+
+P ← P + 1;
+
+13
+
+end
+
+14 end
+
+15 l ← l + 1;
+
+16 end
+
+Algorithm 4 presents the Re-HA-SWD algorithm. The main difference to the original algorithm is highlighted in lines 8-11, which implies the following: if the syndrome check of the tail layer in the current window fails, the window decoding is first performed for ms time steps with the same window size. Then, at the ms + 1 time step, the window size is increased by including a new processor in the decoding window. Decoding will then be performed with the increased window size. This way, the tail layer that failed to decode correctly at time step t will be processed again by another processor at time step t + ms + 1.
+We again apply this approach to the window decoding presented in Fig. 4 to highlight the difference to the HA-SWD algorithm. As before, ms = 1 and current active processors P = 3. Following the decoding at time step t, if z1 is not fulfilled, the tail layer l − 4 should be decoded again. According to the Re-HA-SWD algorithm, in the next time step (ms = 1) at t + 1, the window is moved to the next layer l + 1 (line 9), and the decoding is performed with the current window size W (t + 1) (line 10). I.e., layers l + 1, l − 1, and l − 3 are processed using processors #1, #2, and #3, respectively. More specifically, layer l − 3 (the rightconnected layer to l − 4 through H1) shares corresponding updates at the node level with layer l − 4. Afterward, the window size is increased and an additional processor is activated for the next decoding (line 12). This means that at time t +2, the window decoding is performed for layers l +2, l, l − 2, and l − 4 using 4 processors. At this point in time, layer l − 4 is processed again, i.e., after ms+1 time steps from
+191148
+
+the last decoding failure. As a result, for the Re-HA-SWD, layer l − 4 at time t + 2 will use the exchanged node update messages only from its right-connected layer l −3 to improve the decoding. Whereas for the HA-SWD, additional node updates are exchanged from the left-connected layer l − 5. Even with a very low probability, this missing information increases the chances of not decoding the tail layer l − 4 correctly. This results in a slight degradation in the error correction performance, which we show in the results later.
+In summary, the Re-HA-SWD can exhibit a more efficient implementation than the HA-SWD algorithm. It involves a delayed increase in window size by ms + 1 window positions for improved implementation efficiency at the cost of a minor penalty in error correction performance.
+B. REVISITED FULL-ADAPTIVE SLIDING WINDOW DECODING To further increase the efficiency, we derive the Re-FA-SWD algorithm. The full adaptation can increase and decrease the window size. However, besides the relaxation criteria that differ from the FA-SWD algorithm, only one processor can be deactivated before moving to the next decoding step. Whereas for the FA-SWD algorithm, the window size can decrease by up to P − 1 processors before moving the decoding window. Multiple deactivation of processors is not suitable for high-throughput decoding requirements due to the required connectivity between all processors, which increases the critical path and reduces the operation frequency. As a consequence, the potential gain in energy efficiency due to the window decrease is reduced.
+Algorithm 5 presents the Re-FA-SWD algorithm, which extends the Re-HA-SWD algorithm to dynamically adjust the window size by using the information of the fulfilled syndrome checks. For the window increase, the same relaxed criterion is applied as described for the Re-HASWD algorithm: if the syndrome check of the tail layer fails (line 13, i = 1), the decoding is performed for ms decoding steps with the same window size (lines 15-18) before activating an additional processor (line 19). This ensures a revisit, after ms + 1 time steps, of the tail layer that failed to decode correctly. If the window has the maximum number of available processors Pmax (line 14) and the decoding of the tail layer fails, this error cannot be further corrected.
+To reduce the node updates for correctly decoded layers, the Re-FA-SWD algorithm allows for decreasing the window size (lines 7-12). If follows a similar approach used by the FASWD algorithm with a relaxed criterion that checks only the syndromes of the tail layer and its ms right-connected layers (line 8, [zi=1, . . . , zi+ms ]). If these layers pass the syndrome check, the last processor is excluded from further processing, reducing the window size by one processor (line 9). The criterion for decrease excludes the check of the active layer ahead (zi+ms+1) as is the case for the FA-SWD algorithm. However, this check is performed directly after deciding to decrease the window size (lines 10 and 13, zi ̸= 0 for
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+Algorithm 5 Re-FA-SWD Algorithm
+
+1 Wh ← (ms + 1) · (Pmax − 1) + 1;
+
+2 P ← 1;
+
+3 l ← 1;
+
+4 while l < L + ms + Wh do 5 z ← Window Decoding(l, P);
+
+6 i ← 1;
+
+7 if 1 < P then
+
+8
+
+if [zi, . . . , zi+ms ] = 0 then
+
+9
+
+P ← P − 1;
+
+10
+
+i ← i + (ms + 1);
+
+11
+
+end
+
+12 end
+
+13 if zi ̸= 0 then
+
+14
+
+if P < Pmax then
+
+15
+
+for ms times do
+
+16
+
+l ← l + 1;
+
+17
+
+Window Decoding(l, P);
+
+18
+
+end
+
+19
+
+P ← P + 1;
+
+20
+
+end
+
+21 end
+
+22 l ← l + 1;
+
+23 end
+
+i ← i + (ms + 1)). If the syndrome is satisfied, the next window decoding is performed with the reduced window size. Otherwise, we must increase back the window size after ms + 1 decoding steps. This is why we called it a relaxation criterion in terms of the error correction performance.
+For better understanding, we apply this algorithm again on the window shown in Fig. 4, with ms = 1 and current active processors P = 3, for the decrease case. Following the decoding at time step t, if the syndrome z1 of the tail layer l − 4 is satisfied, there is no need to increase the window size. Furthermore, only the syndrome of the right-connected layer (z2 of layer l − 3) is first checked to decide about the window size in the next decoding. If z2 is zero, then it is possible to deactivate processor #3 in the next decoding at t + 1. But before actually performing the next decoding at t + 1, the syndrome of the active layer ahead (z3 of layer l − 2) is also checked to decide about the window size in the decoding at t + 2. If z3 is not zero, the window size must increase back by including an additional processor at t + 2. If the size does not increase, layer l − 2 which failed to correctly decode at t will not be revisited. In summary, if syndrome checks after window decoding at t are as follows: z1 = 0, z2 = 0, and z3 ̸= 0, then processor #3 will be deactivated at t + 1 and activated again at t + 2.
+The Re-FA-SWD algorithm is less dynamic for enabling and disabling processors compared to the FA-SWD algorithm. For row-wise layered decoding, VNs are divided into upper and lower halves (for ms = 1) or even smaller fragments (for ms > 1). Consequently, delayed enabling
+VOLUME 12, 2024
+
+or disabling and subsequent enabling of processors results in incomplete VN updates, potentially leading to decoding failures.
+The Re-FA-SWD algorithm incorporates either a delayed increase or a decrease in window size by one processor only. Compared to the Re-HA-SWD algorithm, this approach further reduces power consumption by dynamically adjusting the number of active processors based on syndrome checks. Compared to the FA-SWD algorithm, it prevents the simultaneous deactivation of multiple processes to ensure a continuous data flow and support high clock frequency implementation. It also relaxes the adaptation criterion at the cost of a slight decrease in the error correction performance.
+C. CASE STUDIES To show the differences between revisited adaptive SWD algorithms compared to their original versions, Table 2 discusses the same cases as Table 1. Since the revisited adaptive algorithms include delayed adaptation of the window size by ms+1 time steps, the decision outcome for each case is shown for layer l + 1 at t + ms and layer l + 2 at t + ms + 1 (note that ms is assumed to be 1). In certain cases, the decision of the number of active processors at t + ms + 1 depends on the outcome of the syndrome checks for layer l + 1. Thus, a decision cannot be made immediately after decoding layer l. These scenarios are indicated by a ‘‘-’’ symbol in the respective lines.
+The Re-HA-SWD algorithm features a monotonically non-decreasing window size. Instead of activating an additional processor at the next decoding position, the window size increase is delayed ms time steps. If the syndrome check of the tail layer (z1) fails, the decoding is performed with P processors at t + 1, and P + 1 processors at t + ms + 1 = t + 2 (case 1). The only exception to this case is when P reaches Pmax (case 8). Syndrome check results of layers other than the tail layer (z2 - z5) do not affect the window size (cases 2-7).
+For the Re-FA-SWD algorithm, when the syndrome of the tail layer fails at t (case 1), the window size increases to P + 1 at t +2. This is not applied to case 8 when the window is using Pmax. In this case, the window decodes with Pmax at t + 1. Its size at t + 2 depends on the outcomes at t + 1. What is certain in this case is that layer l at t is not correctly decoded and not revisited, which is a source of error.
+In cases 3-6, the syndrome checks of the tail layer (z1) and the connected layer (z2) are correct, resulting in the deactivation of one processor at the subsequent decoding step (t + 1). Two special cases are illustrated in Fig. 6. In case 3 (z3 ̸= 0), the last active processor is deactivated for one decoding step (at t + 1) and subsequently reactivated at t + 2. I.e., the window size first decreases for one decoding step and then increases in the following step. This is in contrast to the FA-SWD algorithm (case 3 in Table 1) that keeps the same number of active processors P at t + 1. Another interesting case to highlight the difference between Re-FA-SWD and FA-SWD algorithms is case 6. Due to constraints of the high-throughput decoding, only one active
+191149
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes TABLE 2. Case studies for the Re-HA-SWD and Re-FA-SWD algorithms using Pmax = 3 and ms = 1.
+
+FIGURE 6. Selected case studies from Table 2 for visual representation.
+
+processor - instead of 2 - is deactivated at t + 1. A further reduction is possible depending on the results of the syndrome check performed after the decoding of layer l + 1. But this reduction is to appear at t + 2.
+D. SUMMARY OF ALGORITHMS Fig. 7 presents the flowchart diagrams of all proposed adaptive SWD algorithms. It better clarifies the decisionmaking process, highlights the differences between proposed algorithms, and marks the steps or blocks that reflect the relaxation effects (in yellow) and full-adaptation feature (in orange). It is worth noting that the diagrams are provided to ease the general understanding of the algorithms, while special and corner cases, such as termination, are omitted.
+Comparing the HA-SWD and Re-HA-SWD algorithms, it is clear how there is a delayed increase in the window size. Comparing the HA-SWD and FA-SWD algorithms, the full-adaptation branch includes the additional feature of the window-size decrease by multiple processors at the same time. The flowchart diagram of the Re-FA-SWD algorithm highlights both, the relaxation and adaptation features. Cases 1-6 from Table 2 are also labeled on corresponding branches of this diagram. As already stated, the decrease of the window size in the Re-FA-SWD algorithm is limited to one processor due to the high-throughput requirement.
+V. ARCHITECTURE FOR HIGH THROUGHPUT DECODING In this section, we present details of the architecture for high-throughput SC-LDPC decoders using adaptive SWD. We introduce all components inside the decoder with a coupling width of ms = 1. We begin with an overview of the architecture by showing how the processors are
+191150
+
+connected to form a complete decoder and highlight the overhead required by adding the Re-HA-SWD and Re-FASWD schedules to the fixed window size SWD architecture. Furthermore, we focus on the logic controller that enables or disables processors as specified by Algorithm 4 and 5. Finally, we show the processors, which are the fundamental building blocks of the decoder.
+A. DECODER The decoder architecture depicted in Fig. 8 consists of a pipeline of Pmax processors for the row-layered decoding schedule which allows adapting the decoding window size. All processors are instantiated individually and pipelined to ensure high throughput. The input LLR values, y(t), are fed into the first processor of the decoder pipeline, while the estimated information, uˆ (t), are output from the last processor in the decoder pipeline.
+The black parts in Fig. 8 illustrate the data flow as the decoding window slides over the parity check matrix of the SC-LDPC code. Each processor operates on a layer inside the decoding window. Each processor in the pipeline has right APP (R-APP) and left APP (L-APP) values and extrinsic (EXTR) messages as both inputs and outputs. The R-APP output of each processor p is fed back into its own L-APP input via an intermediate register. The L-APP output of processor p is passed to the R-APP input of processor p + 1 via an intermediate register. Similarly, EXTR messages are passed from processor p to p + 1 through two intermediate registers. All outputs are connected to registers for synchronization and data flow management. This pipelined data transfer represents the sliding of the decoding
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 7. Flowchart diagrams of different proposed adaptive SWD algorithms.
+
+window, as for each time step the processed data is shifted to subsequent processors.
+To support the window size adaptivity, additional logic, and registers are necessary, as shown by the red highlights in Fig. 8. The parity check output of each processor, i.e., the syndrome check result of each layer, is fed into a central controller. Processor 1 is always active for the initial parity check evaluation. Subsequentially, additional processors are activated by the controller on demand. In parallel to the processor pipeline, a HD pipeline is instantiated. The HD pipeline bypasses decoding decisions for disabled processors such that the output, uˆ (t), is returned in order. To manage the output of uˆ (t) when not all processors are activated, the decoder tracks the order of received data blocks by passing
+
+the HD in parallel to the processors. The controller specifies when to bypass the HD or perform an HD based on L-APP/RAPP values. Furthermore, the enable signal is used for clock gating of registers to activate/deactivate further processors, if required. It should be noted that the clock gating is not explicitly indicated in Fig. 8.
+B. CONTROLLER In this subsection, we show the decoder controller for the adaptive SWD architecture. The controller addresses the specific challenges posed by the Re-HA-SWD and ReFA-SWD algorithms to ensure high-throughput decoding, by preserving a continuous data flow without pipeline stalls and keeping the critical path short.
+
+VOLUME 12, 2024
+
+191151
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 8. Decoder architecture with controller connection. Controller black box for iteration control.
+1) REVISITED HALF-ADAPTIVE SLIDING WINDOW DECODING At the start of decoding a new codeword, all processors except processor 1 are deactivated. The parity check at time t is evaluated with two possible outcomes. First, provided that the syndrome check of processor 1 is successful, the parity check output of the processor will pass a valid signal to the controller. The controller will set the enable signal to a logic zero. Therefore, the L-APP and EXTR registers are disabled through clock gating. Thus, these registers will not propagate signals, and the inputs to processor 2 will not change. Second, if at time t, the syndrome check of layer l fails, the enable signal of the controller will return a logic one. Thus, the registers connected to the L-APP and EXTR output values of processor 1 will propagate signals. Consequently, the L-APP
+191152
+
+and EXTR output values of processor 1 at time t are available at the respective register outputs at time t + 1. The L-APP values are bypassed to the R-APP output register of processor 2, while the EXTR messages are directed to an intermediate register. At time t +2, processor 2 receives valid data at the LAPP, R-APP, and EXTR inputs, and thus processes layer l. Thus, the window size is increased to include processor 2. Further processors can be enabled, up to Pmax.
+The controller shown in Fig. 8 operates as a local controller for each processor, making decisions based on the parity check signal of the directly preceding processor. Based on the parity check signal of processor 1, the decision to enable processor 2 is made. The Re-HA-SWD algorithm describes the algorithmic behavior of the enable signal output of the controller for each processor. Consequently, correctly decoded tail layers are no longer updated, thereby fixing the HD of the left half of the tail layer, corresponding to H1. On successful decoding of the tail layer, the write left (write L) signal is activated for a single clock cycle, which allows to transfer the HDs of the L-APP values to the HD pipeline. The VNs of the right part of a layer (H0) are updated by the same processor again as the left part of the successive layer (H1). Thus, in the Re-HA-SWD algorithm, the write right (write R) signal is always disabled.
+In very high-throughput architectures, all processors are instantiated, which is equivalent to the maximum window size of the sliding window. The window size is proportional to the number of processors inside this window, which in return is proportional to the power consumption. Thus, to minimize the power consumption of high throughput decoders, the number of active processors needs to be minimized. Therefore, the controller uses the parity check of the tail layer of the current window position. Only if this parity check fails, additional node updates are required. Thus, successive processors are enabled with a one-layer delay. Clock gating is applied to disable the processors that are not required which prohibits data toggling of successive processors.
+2) REVISITED FULL-ADAPTIVE SLIDING WINDOW DECODING The Re-FA-SWD architecture extends the Re-HA-SWD architecture described above by adding a mechanism to disable already enabled processors. Suppose that layer l − 1 has been correctly decoded at time t − 1, and that processors 1 and 2 are enabled at time t, performing node updates at layers l and l − 2, respectively. After these node updates, all parity checks are evaluated resulting in successful parity check outputs for both processors that are passed to the controller. Consequently, updates using processor 2 are not required at the subsequent time step t + 1. Thus, the enable signal will disable the registers at the L-APP and EXTR outputs of processor 1, so that the registers connected to those of processor 1 will not propagate signals in the next clock cycle. As a result, the output of these registers at time t + 3 remains identical to that at time t + 2. This indicates that processor 2 is holding the same values and is not performing
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 9. Processor architecture.
+node updates. Thus, the window size is decreased to contain only processor 1.
+The controller shown in Fig. 8 controls the activity of the processors and the HD bypass registers based on the parity check signals of the processors. As for the Re-HA-SWD algorithm, further processors are enabled by the enable signal output of the controller. Moreover, the processor updating the tail layer of the current window position can be disabled by the enable signal outputs of the controller. The write L and write R signals for each processor are activated in order to transfer the HDs of the L-APP and R-APP values, respectively, to the HD pipeline. The write L signal is activated for one clock cycle when the decoder successfully decodes the current tail layer for the first time, or if the processor will be disabled at the next time step. The write R signal is activated for one clock cycle if the processor will be disabled at the next time step.
+The throughput for decoding is proportional to the frequency. Thus, we have to minimize the critical path. For the FA-SWD, communication between each processor is required, which results in a long critical path. To address this issue, the Re-FA-SWD algorithm allows for the enabling or disabling of a single processor at each time step. This approach limits communication to directly adjacent processors, enhancing the locality of the decoder architecture. Consequently, since the critical path is confined between two adjacent processors, high throughput decoding is feasible with the Re-FA-SWD algorithm.
+C. PROCESSOR The processor is the fundamental building block of the SCLDPC decoder, responsible for performing CN and VN updates. Fig. 9 shows the processor architecture, which operates on one sub-matrix row of the parity check matrix of the SC-LDPC code using the NMS algorithm with a single iteration.
+Each processor contains a fully parallel VN2VN unit that performs the node updates. The EXTR, L-APP, and R-APP values inputs are connected to the VN2VN unit. The first
+VOLUME 12, 2024
+
+and last sub-blocks of the SC-LDPC code require special processing that is realized by multiplexers, passing a neutral element and the terminations sequence, respectively. The outputs of the VN2VN unit are forwarded to the output of the processor.
+The VN2VN unit, shown on the right side of Fig. 9, performs one iteration, i.e., one CN and one VN update, using the OVA schedule for faster convergence. Full parallelism is applied at both node- and edge-level. The VN2VN unit comprises three stages: VN functional unit output (VFUo), CN functional unit (CFU), and VN functional unit input (VFUi). The VFUo stage subtracts the exchanged messages, i.e., EXTR messages, from the a posteriori probability (APP) values, the CFU performs a minimum search and scales the extrinsic messages, and the VFUi sums the extrinsic messages to APP values. The Tanner graph, which connects the nodes, is represented by the CN-to-VN (CN2VN) and VN-to-CN (VN2CN) networks.
+Decisions for enabling and/or disabling processors are based on partial syndrome checks, which are evaluated within the VN2VN unit. Each CFU performs a parity check, i.e., one parity check per row in the processed layers, and the parity output of the VN2VN unit is successful if all parity checks are correct. The parity signal is an additional output of the processor indicating the decoding success/failure of the currently updated layer.
+VI. RESULTS In this section, we present the performance of the proposed adaptive SWD approach for SC-LDPC codes, in terms of error correction capability, algorithmic complexity, and implementation efficiency. The difference between derived adaptive SWD algorithms is further explained by investigating the algorithmic complexity through processors’ activation in detail. By implementing the hardware-friendly revisited adaptive SWD algorithms in a 12 nm FinFET technology, we also show the achievable improvement in energy efficiency, depending on the SNR and the adaptation level.
+A. EXPERIMENTAL SETUP This section provides an overview of the experimental setup used to assess the proposed adaptive SWD approach for SC-LDPC codes, following the system model described in Section II-B. The encoding is based on a SC-LDPC codes that use a 4×80 base-graph with a lifting factor Z = 16, resulting in (640, 512) sub-codes. We use weakly coupled SC-LDPC codes with a coupling depth ms = 1. The respective sub-matrices H0 and H1 are derived following [31], where the associated parity-check matrices are publicly available in [32]. Each codeword of the presented SC-LDPC code consists of L = 80 sub-codes, which results in a code rate R = 0.798. Frames are transmitted over an additive white gaussian noise (AWGN) channel using binary phase shift keying (BPSK) modulation. On the receiver side, the decoding is performed based on the NMS algorithm with an extrinsic
+191153
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 10. Error correction performance of SC-LDPC decoder with 8 processors with L = 80. Comparison of different window sizing algorithms and different Z ∈ {16, 24, 32}.
+scaling factor γ = 0.75. The maximum number of available processors for activation using the adaptive SWD approaches is Pmax = 8. For comparison, we also use eight processors for the fixed SWD scheme. As we mentioned before, without loss of generality, the row-wise layered scheduling is applied for both, fixed and adaptive decoding, schedules.
+For a better classification of the results, the performance of the SWD for SC-LDPC codes, with and without adaptation of the window size, is compared to the decoding of standards IEEE 802.11n Wi-Fi LDPC-BC, with and without IC. For a fair comparison, the LDPC-BC is selected to have a comparable block length with a size of (648, 540) and a code rate R = 0.833 [33]. The decoding is also performed using the NMS algorithm with γ = 0.75. A flooding schedule is used with a maximum number of iterations Imax = 8.
+B. ERROR CORRECTION PERFORMANCE To evaluate the FEC performance, we calculate the bit error rate (BER) over different SNR values using Monte-Carlo simulations. At least 100 erroneous frames are simulated at each SNR point. The simulations are conducted using floatingpoint precision, ensuring that the performance differences between algorithms in terms of error correction are attributed solely to their window-size adaptation techniques.
+Fig. 10 shows the BER performance of the proposed HASWD and FA-SWD algorithms for the SC-LDPC code with Z = 16, over the SNR range 2.5 dB to 4 dB. Results show that both algorithms have the same error correction performance over the full SNR range. The performance is also identical to that of SWD with fixed window size. This indicates that, once an active layer is identified as not correctly decoded, both adaptive SWD algorithms properly increase the window size by activating the next successive processor. This way, this same layer is decoded again with the newly activated processor to increase the probability of its correct decoding. In the worst case, both adaptive SWD algorithms must activate all Pmax processors, which is equivalent to the decoding with the fixed full-window
+191154
+
+size. Consequently, if a layer cannot be successfully decoded using HA-SWD and FA-SWD, its decoding also fails with fixed SWD. The same error correction performance for all three algorithms indicates that both adaptive SWD algorithms correctly decode a frame with at most Pmax processors in the worst case. It also shows that both algorithms successively adjust the window size without introducing losses in the error correction performance. The above results indicate that the error correction performance is preserved, without detailing the gain in the reduction of decoding operations. Thus, analyzing only the BER does not tell whether this identical performance is achieved with a smaller number of active processors than Pmax. This is important to highlight the window-size adaptation feature, i.e., by incrementally including additional processors without reaching Pmax as suggested by both HA-SWD and FA-SWD, or by decreasing back the window as additionally featured by FA-SWD. This is what we leave for the detailed discussion in the following section by looking at the difference between HA-SWD and FA-SWD in terms of the number of activated processors for each algorithm at different SNR points.
+To better classify the results with respect to state-of-theart, the decoding performance of the LDPC-BC with block size (648, 540) is included in Fig. 10. This is selected as the codeword length is comparable to (640, 512) SC-LDPC subblock size. Similar to the maximum number of node updates, i.e., processors, used for adaptive SWD of the SC-LDPC code, the decoding of the LDPC-BC with IC is performed with a maximum of 8 updates per node, i.e., iterations. Results show that the SC-LDPC code with lifting factor Z = 16 outperforms the LDPC-BC by around 1.3 dB at a target BER operation point of 10−6, which is required for closeproximity communications. Even for infrastructure-type use applications with more strict BER requirements, the gain in error correction performance increases to more than 2 dB at a target BER of 10−10. This better performance in both, the waterfall and error floor, regions of the BER curve highlights the importance of SC-LDPC codes being able to cover a wide range of applications with extremely different BER requirements in contrast to using the LDPC-BC.
+Fig. 10 additionally includes the performance of the decoding of two other SC-LDPC codes with different lifting factors Z ∈ {24, 32}. Due to the increased codeword length, increasing the lifting factor of the SC-LDPC from 16 to 24 (32) leads to an improved error correction performance by an additional 0.25 dB (0.38 dB) at BER of 10−10. Results also show that for the other two codes, there is a perfect match between the performance of both adaptive SWD algorithms and the fixed SWD. These simulation results suggest that the identical performance for all three decoding algorithms is not limited to the specific code under study with the lifting factor Z = 16. Rather, as proven by simulations, it is the same even for other SC-LDPC codes.
+Fig. 11 adds the decoding performance results obtained under channel conditions different from those of AWGN. For this, we selected a time-varying Rayleigh fading channel
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 11. Error correction performance of SC-LDPC decoder with 8 processors with L = 80 for a Rayleigh fading channel. Comparison of different window sizing algorithms and different Z ∈ {16, 24, 32}.
+
+FIGURE 12. Error correction performance of SC-LDPC decoder with 8 processors with L = 80. Comparison of different window sizing algorithms.
+
+as modeled by the long-term evolution (LTE) standard [34]. Results in Fig. 11 show that the decoding performance of the different adaptive SWD algorithms matches that of the fixed SWD. This clearly highlights the robustness of the proposed approach against more complex and diverse channel conditions. Without loss of generality, the remaining analysis is conducted for AWGN channels.
+To analyze the impact of our relaxation criteria used for the window-size adaption on the error correction performance, Fig. 12 presents the performance of the revisited, implementation-friendly, versions of the proposed algorithms. Results are shown for the SC-LDPC code with Z = 16, decoded in the waterfall region at an SNR range from 3 dB to 4 dB with a granularity of 0.1 dB. Results show that, up to an SNR of 3.9 dB, the BER performance for Re-HASWD and Re-FA-SWD algorithms overlap with the original adaptive algorithms. Only for the Re-FA-SWD algorithm, which introduces multiple relaxation criteria for increasing and decreasing the window size, a slight deviation in the error correction performance starts to appear at 4 dB, introducing less than 0.025 dB loss at BER of 10−10. Additionally, from 3.9 dB to 4 dB, an error floor in the BER curve of the code is indicated. However, this could not be validated due to the enormous number of frames required for the simulation. Overall, results in Fig. 12 show that for applications with a target BER above 10−10, Re-HA-SWD and Re-FA-SWD algorithms preserve the communication performance. Below this BER requirement, the adaptation of the decoding window size with less stringent criteria introduces a negligible degradation in error correction capability. The frame error rate of all presented algorithms is identical.
+C. ALGORITHMIC COMPLEXITY REDUCTION EVALUATION According to Eq. (7), the complexity of the adaptive SWD algorithms is directly proportional to the average number of active processors during the decoding, which is SNR dependent. Therefore, to analyze the effect of the window size adaption on the complexity of different SWD algorithms, we evaluate the average activation of each processor for
+VOLUME 12, 2024
+
+each algorithm as a function of the SNR in this section. We use Monte-Carlo simulation results of the SC-LDPC code with Z = 16. For each evaluated SNR, 10,000 frames are simulated. This results in 800,000 evaluations of each processor with coupling of L = 80 sub-codes. The simulations are performed with floating-point precision.
+1) ALGORITHMIC COMPLEXITY INVESTIGATIONS OVER THE SIGNAL-TO-NOISE-RATIO Fig. 13 shows the average number of active processors inside the sliding window over the SNR for the proposed HASWD and FA-SWD and their respective revisited versions. For each processor, the number of updates performed is accumulated and normalized to one for each SNR point. Then, these average activations are accumulated on the y-axis of the presented graph to stack up to Pmax. For reference, the complexity savings are shown compared to the SWD algorithm with fixed window size, where the number of active processors is Pmax = 8 over the entire SNR range. For each of the adaptive algorithms, the relative complexity compared to the fixed SWD is obtained by dividing the respective number of average active processors at the given SNR by Pmax , see Eqs. (6) and (7).
+For low SNR values below 3 dB, the number of enabled processors is P = 8, which is equal to Pmax, for all presented algorithms, i.e., all algorithms exhibit the same complexity. However, for high SNR values above 11 dB, the number of enabled processors is P = 1 for all presented algorithms. Thus, the average window size for decoding is reduced by up to 7/8 for the shown example, corresponding to a complexity reduction of 87.5 %. This is analogous to the error correction performance, where decoding fails at low SNR and succeeds at high SNR. In the waterfall region of the BER plot, starting around 3 dB, a different behavior is observed for each of the proposed algorithms. Comparing the HA-SWD and FASWD algorithms, we see that the gain of the latter is on average a saving of 0.5 active processors between 3 dB to 4 dB. This difference is due to the additional deactivation of the processors. The revisited algorithms outperform the
+191155
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 13. Complexity reduction over the SNR. Comparison of different adaptive SWD algorithms.
+
+FIGURE 14. Comparison of relative complexity reduction for the different SWD algorithms using relative savings of processor activations.
+
+respective exact algorithms at the cost of a slight loss in error correction performance, as shown in Fig. 12. Notably, the Re-FA-SWD algorithm, which has the steepest slope for increasing SNR, achieves an additional gain of up to one iteration on average. This gain in complexity reduction is due to the early deactivation and late (re-)activation of processors. Depending on the channel noise, corresponding savings are possible while guaranteeing the error correction performance with Pmax, as shown in Fig. 12. For reference, these savings are shown compared to the SWD algorithm with fixed window size, where the number of active processors is P = 8 over the entire SNR range. Thus, the average window size for decoding is reduced by up to 7/8 for the shown example.
+To better quantify the potential gains in reducing the algorithmic complexity, and, thus, power consumption, Fig. 14 shows the relative savings from processor deactivations between different SWD algorithms. Using the FA-SWD over the HA-SWD algorithm (orange plot), the relative saving in the waterfall region of the BER curve, i.e., between 3 dB to 4 dB, reaches around 12 % to 14 %, which is equivalent to saving one processor out of Pmax processors (1/8 = 12.5 %). This percentage gain decreases for higher SNR values (> 4 dB) to less than 10 %. In high SNR regimes (> 8 dB), the FA-SWD is not bringing more savings in reduced activated processors, i.e., there is no difference in the number of activated processors between both algorithms. This is expected because, in this high SNR regime, the sub-blocks are correctly decoded with few processors only, and the window size has not largely increased to be further decreased. Results in Fig. 13 support this analysis by showing that the number of activated processors is less than 2 when the SNR exceeds 8 dB.
+Additionally, Fig. 14 shows the relative gain of the ReFA-SWD over the FA-SWD algorithm (blue plot) due to the relaxation criteria introduced for mapping on the highthroughput architecture. In the waterfall region, between 3 dB to 4 dB, the relative saving significantly increases to more than 20 %, which is equivalent to approximately saving
+191156
+
+2 processors out of Pmax processors (2/8 = 25 %). The gain further increases between 8 dB to 10 dB and gets to more than 40 % at 9 dB. In this SNR regime, the gain is purely coming from the relaxation criteria. Due to the decreased probability of correct received codewords in this SNR regime, there will be no need to increase the window size, and unnecessary active processors for decoding will be deactivated according to the relaxed criterion. Beyond 10 dB, the gain decreases and vanishes when no further processors are allowed to be deactivated, which is also shown in Fig. 13 where only one active processor is used.
+To summarize, results in Fig. 14 show that, (1) introducing the possibility to decrease the window size during decoding and (2) relaxing adaptation criteria for increasing or decreasing, both reduce the number of active processors. Moreover, the observed gain in complexity reduction is higher due to the relaxation criteria and is SNR-dependent.
+2) ALGORITHMIC COMPLEXITY INVESTIGATIONS OVER THE LAYERS In this section, we further investigate how the complexity of the algorithms evolves over the layers of the parity check matrix H[1,L] at a fixed SNR point. As before, the complexity is reflected by P according to Eq. (7), which is the average number of active processors over all layers. Each processor of the sliding window performs a single update to each layer of H[1,L]. By analyzing the number of node updates required for each layer, it is possible to identify the point at which the adaptation of the window size occurs. To demonstrate the required window size for SWD algorithms on the parity check matrix, we show the average number of active processors per layer in Fig. 15. As illustrated in the figure, there are 81 layers due to the diagonal matrix structure, which contains L = 80 layers and ms = 1 termination layers. The SNR is fixed at 3.5 dB. The HA-SWD algorithm and the Re-HA-SWD algorithm are monotonically non-decreasing functions of the layer. The Re-HA-SWD increases to the same number of average active processors as the HA-SWD, delayed by one layer. The FA-SWD algorithm and the
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+FIGURE 15. Average processor activations over the layers. Comparison of different SWD algorithms for an SNR of 3.5 dB.
+Re-FA-SWD algorithm show variations by around 0.5 average active processors across the layers, except close to the initial and termination layers. At the first layer, all SWD algorithms start with P = 1. During the initialization, all algorithms require fewer average active processors due to the irregularity of the code on the left side, which provides improved error correction capabilities. At the termination of the SC-LDPC code, both the HA-SWD and the FASWD algorithms increase the average number of iterations to P = Pmax = 8. This increase is due to the code being terminated by a diagonal identity matrix, leading to degree one VNs which do not contribute to the error correction for the termination bits. For both revisited algorithms, the termination layer is considered correct, resulting in a significant reduction of active processors. Overall, the ReFA-SWD algorithm is the least complex and shows the lowest average number of processor activations over all layers, which is equivalent to the 3.5 dB SNR point shown in Fig. 13. The Re-FA-SWD algorithm performs approximately 0.5 to 0.8 fewer updates per layer compared to FA-SWD algorithm.
+Fig. 16 shows the average number of active processors over the layers for different SNRs for the Re-FA-SWD algorithm. The waterfall region of the error correction performance between 3 dB to 4 dB is investigated in detail. Each colored line represents an SNR value in Fig. 16. For higher SNR, the average number of active processors is decreasing which matches the results presented in Fig. 13. This shows that the achieved reductions in average processor activations are distributed over all layers. The left and right side of the SCLDPC code improve as well. However, gains from the left side of the SC-LDPC code are reduced with increasing SNR.
+D. IMPLEMENTATION RESULTS To access the implementation efficiency of the Re-HASWD and Re-FA-SWD architectures, we use Synopsys Design Compiler and Synopsys IC Compiler in a 12 nm FinFET technology with a super-low Vt transistor library under worst case process, voltage and temperature (PVT) conditions for timing (0.72 V, 125 °C), and nominal case
+VOLUME 12, 2024
+
+FIGURE 16. Average processor activations over the layers of the Re-FA-SWD for different SNR values.
+PVT conditions for power (0.8 V, 25 °C). The power consumption is calculated from post place & route netlists with back-annotated wiring data. To compare the implementation complexity of the implemented architectures, the following metrics are assessed:
+• Core area: A [mm2] • Frequency: f [MHz] • Throughput: Tc = c · f [Gbit/s] • Latency: 17 · 1/f [ns] (all designs have 17 pipeline
+stages) • Area efficiency: Tc/A [Gbit/s/mm2] • Power consumption: PW [W] • Energy efficiency: PW /Tc [pJ/bit] All architectures use 4 bit quantization of the channel values and extrinsic messages and 6 bit quantization of the APP values. All decoders are implemented, using eight processors. Table 3 presents the post place & route results for the ReFA-SWD, the Re-HA-SWD [28], and the fixed SWD [25] architecture implementation for a (640, 512) SC-LDPC code with ms = 1. The upper part of Table 3 mostly shows the implementation overhead compared to the state-of-the-art, while the lower part demonstrates the implementation gains. The adaptive SWD implementations show an increase in the register area by 6.3 % due to the inclusion of additional HD bypass registers compared to the fixed SWD. The combinational logic area shows an increase of 4.9 % for the Re-HA-SWD and 6.9 % for the Re-FA-SWD relative to the fixed SWD. This increase is due to the additional logic required for the HD bypass logic and the processor controllers in the adaptive SWD implementations. Notably, the processor controller in the Re-FA-SWD is more complex, resulting in a 1.9 % higher combinational logic area compared to the Re-HA-SWD. However, the impact of this difference on the total core area is negligible. Overall, the total core area of both adaptive SWD implementations is approximately 1.4 % larger than that of the fixed SWD. The additional logic for the processor controllers for the adaptive SWD implementations yields a slightly longer critical path, leading to a small decrease in the frequency by 1.4 % for the Re-FA-SWD and 6.2 % for the Re-HA-SWD
+191157
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes TABLE 3. Post place & route results for row-wise layered SWD architectures for a (640, 512) SC-LDPC code with ms = 1.
+
+implementation. The decreased frequency and larger area lead to a 1.5 % and 6.5 % increase in latency, a 1.1 % and 5.7 % decrease in throughput, and a 2.3 % and 8.0 % decrease in area efficiency for the Re-FA-SWD and Re-HA-SWD implementations, respectively, compared to the fixed SWD implementation. The variation of the frequency between the SWD implementations is due to the complex designs and within the typical variations of the applied synthesis and place & route design flow. The discrepancy in area between the two adaptive SWD implementations is due to the differences in complexity of the processor controllers.
+Table 3 also shows the algorithmic complexity, the power consumption at a constant frequency, and the energy efficiency of the implemented decoder architectures as a function of the SNR. Approximately 72 % and 78 % of the registers in the Re-HA-SWD and Re-FA-SWD decoders, respectively, are clock-gated. Significant gains in power consumption and energy efficiency are observed in the waterfall region and beyond for both the Re-HASWD and Re-FA-SWD implementations compared to the fixed SWD implementation. This improvement in energy efficiency matches very well the algorithmic complexity reductions based on the metric C(SNR) introduced in Eq. (7). This correlation highlights the relevance of the algorithmic complexity metric as a reliable indicator of implementation efficiency.
+The power consumption of each processor is highlighted in Fig. 17, with each color from green to red representing a different processor. Deactivated processors still consume some power due to leakage, which is indicated by the black sub-bar in the high SNR region. The blue sub-bar represents the power consumption of the processor controller, which is almost constant over the SNR values. A probable operating SNR is between 4 dB to 7 dB. In this range, the Re-FA-SWD implementation achieves improvements in energy efficiency of 29.2 % and 70.7 %, and the Re-HA-SWD implementation achieves improvements in energy efficiency of 16.9 % and 65.6 % over the fixed SWD implementation. At 10 dB, the energy efficiency gain for the Re-FA-SWD implementation increases to 84.6 % compared to the fixed SWD.
+
+FIGURE 17. Evaluation of the power consumption of the SWD decoders over the SNR at 259 MHz.
+Table 4 presents the implementation results for the proposed Re-FA-SWD algorithm compared to high-throughput LDPC decoder implementations from the literature. The ReFA-SWD implementation was chosen for the comparison as it minimizes the energy efficiency among the proposed algorithms. The results from [25] are not included in Table 4 since the row-layered fixed SWD algorithm has already been compared in Table 3.
+A detailed comparison is performed to compare the ReFA-SWD algorithm to an LDPC-BC decoder with IC using the (648, 540) Wi-Fi code, given their comparable code rate and (sub-)block size. To ensure a fair comparison, the LDPC-BC decoders from [27] are implemented using the same 12 nm technology as the SWD implementations. A comparison of the Re-FA-SWD implementation with the LDPC-BC decoder implementation with IC shows an increase in area (66.1 %) and a reduction in frequency (62.5 %). The discrepancy in frequency is primarily due to the different number of pipeline stages used per processor in the SWD implementation (2 stages) and the LDPC-BC decoder (3 stages). Nevertheless, the SWD algorithm shows a 1.29 dB improvement in error correction performance compared to the LDPC-BC decoder. By employing the ReFA-SWD implementation instead of the fixed SWD, the gap in implementation complexity is reduced compared to
+
+191158
+
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes TABLE 4. Comparison with state-of-the-art high-throughput LDPC decoders.
+
+FIGURE 18. Post place & route layouts of three decoder implementations in the same scale. Each color represents one processor/iteration. (a) Re-FA-SWD, area: 2.06 mm2 (b) fixed SWD, area: 2.03 mm2 (c) LDPC-BC with IC, area: 1.24 mm2.
+state-of-the-art LDPC-BC decoders, with a particular focus on energy efficiency gains for higher SNR.
+Fig. 18 shows post place & route layouts of Re-FA-SWD, fixed SWD, and LDPC-BC with IC in the same scale. Each color represents one processor. The black area, especially visible in Fig. 18b, represents memory. It is shown that IC adds additional communication between the processors. Therefore, the fixed SWD implementation has a more regular structure compared to the Re-FA-SWD implementation.
+VII. DISCUSSIONS A. ANALOGY TO ITERATION CONTROL TECHNIQUES Table 5 provides a summary and highlights the analogy of our approach to the IC techniques for LDPC-BC decoders within a typical SNR operating range. IC has been shown to improve the energy efficiency of LDPC-BC decoders by 31.3 % (48.9 %) at 5 dB (6 dB) without any loss in the error correction performance. Similarly, the energy efficiency of SC-LDPC decoders improves by 29.2 %, 52.2 %, and 64.6 % at 4 dB, 5 dB, and 6 dB, respectively, through the adaption of the SWD window size using the Re-FA-SWD algorithm. However, compared to fixed SWD size, this improvement in energy efficiency comes at the cost of an increase in the error at very low BER targets (10−9 to 10−11).
+Our results indicate that the adaptive SWD approach narrows the energy efficiency gap between energy optimized
+VOLUME 12, 2024
+
+unrolled LDPC-BC architectures and SC-LDPC decoders. For instance, at 6 dB, the state-of-the-art fixed SWD outperforms the LDPC-BC decoder in error correction performance by two orders of magnitude (3.1 × 10−9 to 1.8 × 10−11), albeit at 6.9 × worse energy efficiency. However, our adaptive approach reduces this gap between LDPC-BC and SC-LDPC decoders down to 2.4 × with negligible impact on the error correction performance.
+B. LIMITATIONS AND FUTURE WORK The primary goal of this work was to improve the energy efficiency of SWD algorithms for SC-LDPC code decoders while maximizing throughput. This improvement was successfully demonstrated through efficient hardware implementation, showing significant gains as a function of the SNR. However, a limitation of the current work is the absence of a rigorous theoretical analysis to support the negligible effect of the window size adaptation criteria on error correction performance. Currently, the negligible effect has only been validated through empirical evaluations conducted via Monte Carlo simulations. While this is also the case with IC in LDPC-BC decoding, the absence of a formal mathematical proof leaves a gap in fully understanding the underlying decision-making process and limits of the proposed approach. Additionally, the performance analysis of the proposed algorithms was performed for one code only with different lifting factors, which might limit the generalization of our findings.
+Future research should address both of the aforementioned points and establish a formal theoretical foundation to mathematically prove and validate the observed benefits of the proposed adaptive SWD algorithms. Such an analysis would enhance the generalization of the proposed approach and provide deeper insights into adaptive decoding design principles, which trade off implementation complexity and error correction performance. Furthermore, extending the theoretical analysis helps in exploring the performance and
+191159
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes TABLE 5. Gains for SWD processor activation over fixed window size compared to state-of-the-art LDPC-BC decoder gains by application of IC.
+
+robustness of the approach to different codes and more diverse channel conditions.
+Although this work is primarily focused on adapting the window size for the row-wise layered SWD schedule, the underlying concept can be extended in future to other decoding approaches, such as the column-wise layered SWD schedule, as well as, the respective compact SWD schedules. By extending and generalizing this work to encompass different scheduling techniques, the implementation gains, flexibility, and applicability of adaptive window size methods in various decoding scenarios could be further enhanced.
+To achieve maximum throughput, we instantiate Pmax processors, each of which performs one full node update, i.e., one iteration, before the sliding window advances to the next spatial position. Consequently, the total number of updates per node is equal to the product of the number of iterations performed by each processor, which is assumed to be one in this work, and the number of processors updating the same spatial position as the window slides. Although the focus of this approach is on maximizing throughput, it may not be the optimal design principle for other applications with lower throughput requirements. In such cases, it may be advantageous to reduce the number of maximum available processors while increasing the number of iterations per processor. Future research could investigate the joint application of traditional IC techniques with the proposed adaptive window size approach. This exploration could provide deeper insights into the interplay between early termination strategies and dynamic window size adaptation. Additionally, it could quantify the benefits of this hybrid approach, particularly in terms of balancing error correction performance and implementation complexity.
+VIII. CONCLUSION In this paper, we presented an adaptive SWD approach for SC-LDPC codes to improve the energy efficiency of high-throughput decoder implementations. In this approach, only a subset of available processors are activated on demand based on the evaluation of partial syndrome checks. The activation is based on the derived HA-SWD and FA-SWD algorithms that preserve the error correction performance. Then, we modified both algorithms by relaxing the processors’ activation and deactivation criteria for highthroughput decoding. The new Re-HA-SWD and Re-FASWD algorithms further reduce power consumption at a negligible cost in error correction performance. To prove the efficiency of our approach, we presented a full architecture
+191160
+
+for very high-throughput decoding including an activation controller for both modified algorithms. Implementation results in a 12 nm FinFET technology show SNR-dependent improvements in energy efficiency, which gets up to 6.5 × compared to implementations of state-of-the-art techniques. To the best of our knowledge, this energy-efficient adaptive approach for high throughput SWD implementations is unprecedented in the literature.
+ACKNOWLEDGMENT The authors would like to thank Matthias Herrmann for the numerous insightful discussions.
+REFERENCES
+[1] P. P. Ray, ‘‘A perspective on 6G: Requirement, technology, enablers, challenges and future road map,’’ J. Syst. Archit., vol. 118, Sep. 2021, Art. no. 102180.
+[2] H. Elayan, O. Amin, B. Shihada, R. M. Shubair, and M.-S. Alouini, ‘‘Terahertz band: The last piece of RF spectrum puzzle for communication systems,’’ IEEE Open J. Commun. Soc., vol. 1, pp. 1–32, 2020.
+[3] R. J. Aniceto, R. Milanowski, S. McClure, A. Aguilar, S. Moro, E. D. Miller, K. Cahoy, N. Nicholson, and D. Green, ‘‘Heavy ion radiation assessment of a 100G/200G commercial optical coherent DSP ASIC,’’ Proc. SPIE, vol. 4, p. 37, Mar. 2019.
+[4] H. Zhang and W. Tong, ‘‘Channel coding for 6G extreme connectivity—Requirements, capabilities, and fundamental tradeoffs,’’ IEEE BITS Inf. Theory Mag., vol. 3, no. 1, pp. 54–66, Mar. 2023.
+[5] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, ‘‘Channel coding toward 6G: Technical overview and outlook,’’ IEEE Open J. Commun. Soc., vol. 5, pp. 2585–2685, 2024.
+[6] N. Wehn, O. Sahin, and M. Herrmann, ‘‘Forward-error-correction for beyond-5G ultra-high throughput communications,’’ in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[7] M. Mahdavi, S. Weithoffer, M. Herrmann, L. Liu, O. Edfors, N. Wehn, and M. Lentmaier, ‘‘Spatially coupled serially concatenated codes: Performance evaluation and VLSI design tradeoffs,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 1962–1975, May 2022.
+[8] R. G. Gallager, ‘‘Low-density parity-check codes,’’ IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[9] C. Kestel, M. Herrmann, and N. When, ‘‘When channel coding hits the implementation wall,’’ in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–6.
+[10] R. Tanner, ‘‘A recursive approach to low complexity codes,’’ IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[11] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux, ‘‘High-speed LDPC decoders towards 1 Tb/s,’’ IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 68, no. 5, pp. 2224–2233, May 2021.
+[12] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Müller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, ‘‘A 588-Gb/s LDPC decoder based on finite-alphabet message passing,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[13] A. J. Felstrom and K. S. Zigangirov, ‘‘Time-varying periodic convolutional codes with low-density parity-check matrix,’’ IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+VOLUME 12, 2024
+
+O. Griebel et al.: Adaptive Sliding Window Decoding of SC-LDPC Codes
+
+[14] A. R. Iyengar, P. H. Siegel, R. L. Urbanke, and J. K. Wolf, ‘‘Windowed decoding of spatially coupled codes,’’ IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 2277–2292, Apr. 2013.
+[15] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, ‘‘Implementation aspects of LDPC convolutional codes,’’ IEEE Trans. Commun., vol. 56, no. 7, pp. 1060–1069, Jul. 2008.
+[16] N. U. Hassan, A. E. Pusane, M. Lentmaier, G. P. Fettweis, and D. J. Costello, ‘‘Non-uniform window decoding schedules for spatially coupled LDPC codes,’’ IEEE Trans. Commun., vol. 65, no. 2, pp. 501–510, Feb. 2017.
+[17] K. Klaiber, S. Cammerer, L. Schmalen, and S. T. Brink, ‘‘Avoiding burstlike error patterns in windowed decoding of spatially coupled LDPC codes,’’ in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–5.
+[18] S. Mo and L. Chen, ‘‘Improved sliding window decoding of spatially coupled low-density parity-check codes,’’ in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2017, pp. 126–130.
+[19] Z. He, K. Peng, J. Song, and Y. Zhang, ‘‘Sliding window decoding for QC-SC-LDPC codes under the constraint of implementation complexity,’’ IEEE Trans. Broadcast., vol. 68, no. 2, pp. 305–316, Jun. 2022.
+[20] P. Kang, Y. Xie, L. Yang, and J. Yuan, ‘‘Reliability-based windowed decoding for spatially coupled LDPC codes,’’ IEEE Commun. Lett., vol. 22, no. 7, pp. 1322–1325, Jul. 2018.
+[21] J. Frenzel, S. Müller-Weinfurtner, J. Huber, and R. Müller, ‘‘Comparison of windowed-decoder configurations for spatially coupled LDPC codes under equal-complexity constraints,’’ 2020, arXiv:2004.12973.
+[22] I. Ali, J.-H. Kim, S.-H. Kim, H. Kwak, and J.-S. No, ‘‘Improving windowed decoding of SC LDPC codes by effective decoding termination, message reuse, and amplification,’’ IEEE Access, vol. 6, pp. 9336–9346, 2018.
+[23] N. U. Hassan, M. Schlüter, and G. P. Fettweis, ‘‘Fully parallel window decoder architecture for spatially-coupled LDPC codes,’’ in Proc. IEEE Int. Conf. Commun. (ICC), May 2016, pp. 1–6.
+[24] P. Schläfer, N. Wehn, M. Alles, and T. Lehnigk-Emden, ‘‘A new dimension of parallelism in ultra high throughput LDPC decoding,’’ in Proc. SiPS, Oct. 2013, pp. 153–158.
+[25] M. Herrmann and N. Wehn, ‘‘Beyond 100 Gbit/s pipeline decoders for spatially coupled LDPC codes,’’ EURASIP J. Wireless Commun. Netw., vol. 2022, no. 1, p. 90, Sep. 2022, doi: 10.1186/s13638-022-02169-5.
+[26] M. Herrmann, N. Wehn, M. Thalmaier, M. Fehrenz, T. Lehnigk-Emden, and M. Alles, ‘‘A 336 Gbit/s full-parallel window decoder for spatially coupled LDPC codes,’’ in Proc. Joint Eur. Conf. Netw. Commun. 6G Summit (EuCNC/6G Summit), Jun. 2021, pp. 508–513.
+[27] M. Herrmann, C. Kestel, and N. Wehn, ‘‘Energy efficient FEC decoders,’’ in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[28] O. Griebel, M. Herrmann, B. Hammoud, and N. Wehn, ‘‘Energy-efficient decoding of spatially coupled low-density parity-check codes using adaptive window sizes,’’ in Proc. 12th Int. Symp. Topics Coding (ISTC), Sep. 2023, pp. 1–5.
+[29] F. Kienle, N. Wehn, and H. Meyr, ‘‘On complexity, energy- and implementation-efficiency of channel decoders,’’ IEEE Trans. Commun., vol. 59, no. 12, pp. 3301–3310, Dec. 2011.
+[30] M. Baldi, Low-Density Parity-Check Codes. Cham, Switzerland: Springer, 2014, pp. 5–21.
+[31] L. Schmalen, V. Aref, J. Cho, D. Suikat, D. Rösener, and A. Leven, ‘‘Spatially coupled soft-decision error correction for future lightwave systems,’’ J. Lightw. Technol., vol. 33, no. 5, pp. 1109–1116, Mar. 1, 2015.
+[32] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, ‘‘Database of channel codes and ML simulation results,’’ Univ. Kaiserslautern-Landau, Kaiserslautern, Tech. Rep., 2019. Accessed: Dec. 15, 2024. [Online]. Available: http://rptu.de/channel-codes
+[33] IEEE Standard for Information Technology—Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC)and Physical Layer (PHY) Specifications Amendment 5: Enhancements for Higher Throughput, IEEE Standard 802.11n-2009, 2009, p. 565.
+[34] LTE; Evolved Universal Terrestrial Radio Access (E-UTRA); User Equipment (UE) Radio Transmission and Reception, document TS 36.101, version 17.6.0., 2022.
+[35] C.-L. Lin, R.-J. Liu, C.-L. Chen, H.-C. Chang, and C.-Y. Lee, ‘‘A 7.72 Gb/s LDPC-CC decoder with overlapped architecture for pre-5G wireless communications,’’ in Proc. IEEE Asian Solid-State Circuits Conf. (A-SSCC), Nov. 2016, pp. 337–340.
+VOLUME 12, 2024
+
+[36] C.-L. Chen, Y.-C. Lan, H.-C. Chang, and C.-Y. Lee, ‘‘A 3.66Gb/s 275 mW TB-LDPC-CC decoder chip for MIMO broadcasting communications,’’ in Proc. IEEE Asian Solid-State Circuits Conf. (A-SSCC), Nov. 2013, pp. 153–156.
+OLIVER GRIEBEL (Graduate Student Member, IEEE) received the B.Eng. degree in computational engineering from the University of Applied Sciences Kaiserslautern, Germany, and the M.Sc. degree in embedded systems from the University of Kaiserslautern, Germany. He is currently pursuing the Ph.D. degree in microelectronic system design with the Department of Electrical Engineering and Information Technology, University of Kaiserslautern-Landau (RPTU), Germany. His special interest includes the design and implementation of high-throughput channel decoders.
+BILAL HAMMOUD (Member, IEEE) received the M.Sc. degree in communications engineering from the Technical University of Munich (TUM), in 2015, and the double Ph.D. degree in radar systems and microwave remote sensing from the University of Grenoble Alpes (UGA) and Lebanese University (LU), in 2018. After his graduation, he was a Guest Researcher with the Remote Sensing Center, National Council for Scientific Research in Lebanon (CNRS-L). From 2019 to 2021, he was a Lecturer with Lebanese American University (LAU). Currently, he is a Postdoctoral Researcher with the Microelectronic System Design Group, University of Kaiserslautern-Landau (RPTU). His research interests include signal processing and FPGA efficient implementations, with applications in wireless communication, satellite navigation, and radar systems for remote sensing.
+NORBERT WEHN (Senior Member, IEEE) holds the Chair for microelectronic system design with the Department of Electrical Engineering and Information Technology, University of Kaiserslautern-Landau (RPTU), Germany. He has more than 450 publications in various fields of microelectronic system design and holds 21 patents. His research interests include very large-scale integration (VLSI) architectures for mobile communication, forward error correction techniques, low-power techniques, advanced system-on-chip (SoC), memory architectures, reliability issues in SoC, the Internet of Things (IoT), and hardware accelerators for machine learning.
+191161
+
+

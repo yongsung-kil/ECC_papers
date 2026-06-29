@@ -1,0 +1,895 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+6127
+
+Model-Driven DNN Decoder for Turbo Codes: Design, Simulation, and Experimental Results
+Yunfeng He , Jing Zhang , Graduate Student Member, IEEE, Shi Jin , Senior Member, IEEE, Chao-Kai Wen , Member, IEEE, and Geoffrey Ye Li, Fellow, IEEE
+
+Abstract— This paper presents a novel model-driven deep learning (DL) architecture, called TurboNet, for turbo decoding that integrates DL into the traditional max-log-maximum a posteriori (MAP) algorithm. The TurboNet inherits the superiority of the max-log-MAP algorithm and DL tools and thus presents excellent error-correction capability with low training cost. To design the TurboNet, the original iterative structure is unfolded as deep neural network (DNN) decoding units, where trainable weights are introduced to the max-log-MAP algorithm and optimized through supervised learning. To efficiently train the TurboNet, a loss function is carefully designed to prevent tricky gradient vanishing issue. To further reduce the computational complexity and training cost of the TurboNet, we can prune it into TurboNet+. Compared with the existing blackbox DL approaches, the TurboNet+ has considerable advantage in computational complexity and is conducive to significantly reducing the decoding overhead. Furthermore, we also present a simple training strategy to address the overfitting issue, which enable efficient training of the proposed TurboNet+. Simulation results demonstrate TurboNet+’s superiority in error-correction ability, signal-to-noise ratio generalization, and computational overhead. In addition, an experimental system is established for an over-the-air (OTA) test with the help of a 5G rapid prototyping system and demonstrates TurboNet’s strong learning ability and great robustness to various scenarios.
+Index Terms— DL, turbo decoding, max-log-MAP algorithm, network pruning, OTA.
+I. INTRODUCTION
+T O ADDRESS channel distortion and interference, error correction codes (ECC) have been widely used in com-
+munication systems to improve the reliability of data trans-
+Manuscript received February 6, 2020; revised May 9, 2020, June 15, 2020, and July 11, 2020; accepted July 11, 2020. Date of publication July 21, 2020; date of current version October 16, 2020. This work was supported in part by the National Key Research and Development Program 2018YFA0701602, the National Science Foundation of China (NSFC) for Distinguished Young Scholars with Grant 61625106, and the NSFC under Grant 61941104. The work of C.-K. Wen was supported in part by Qualcomm through a Taiwan University Research Collaboration Project. This article was presented at the IEEE Asia Pacific Wireless Communications Symposium 2019. The associate editor coordinating the review of this article and approving it for publication was V. Aggarwal. (Corresponding author: Shi Jin.)
+Yunfeng He, Jing Zhang, and Shi Jin are with the National Mobile Communications Research Laboratory, Southeast University, Nanjing 210096, China (e-mail: heyunfeng@seu.edu.cn; jingzhang@seu.edu.cn; jinshi@seu.edu.cn).
+Chao-Kai Wen is with the Institute of Communications Engineering, National Sun Yat-sen University, Kaohsiung 80424, Taiwan (e-mail: chaokai.wen@mail.nsysu.edu.tw).
+Geoffrey Ye Li is with the School of Electrical and Computer Engineering, Georgia Institute of Technology, Atlanta, GA 30332 USA (e-mail: liye@ece.gatech.edu).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2020.3010964
+
+mission. The overview in [1] provides detail evolution of channel coding from Hamming codes to capacity-approaching codes. The algebraic coding paradigm dominated the field of channel coding for the first few decades. An infinite class of single-error-correcting binary linear codes was proposed in [2]. In 1954, Reed–Muller codes [3] were developed. Later on, some related codes, such as the Bose– Chaudhuri–Hocquenghem and Reed–Solomon codes [4], [5] were invented. Another branch is probabilistic coding. A classic scheme in this field, convolutional codes, was introduced by Peter Elias in 1955 [6]. Two capacity-approaching codes were found a while ago: turbo codes [7] and low-density parity-check codes [8]. Recently, polar codes, the first class of capacity-achieving codes, were invented by Erdal Arikan [9]. Although turbo codes have been successfully applied in 3G and 4G systems due to their high reliability, its latency is too large to meet the low latency requirements of 5G systems. Reducing latency of decoding has always been a tricky task.
+Recently, deep learning (DL) has made remarkable achievements in computer vision and natural language processing. Artificial intelligence has been considered one of the key technologies for the next generation of mobile communication systems and can learn potential models in a data-driven method, thus avoiding an imprecise hypothesis. The intelligent communication community has attained numerous accomplishments [10]–[12], including channel estimation (CE) [13], signal detection (SD) [14], CE and SD combined orthogonal frequency division multiplexing (OFDM) receivers [15]–[17], channel state information feedback [18], [19], autoencoderbased end-to-end communication systems [20], [21], and channel coding [22]–[25], [27]–[31].
+In general, DL-based channel decoding is in the preliminary exploration stage. The data-driven DL approach in [22] converts the decoding task into the pure idea of learning to decode by optimizing the general black-box fully connected deep neural network (FC-DNN). Despite the advantage of oneshot decoding (i.e., no iterations), the FC-DNN based decoder is unable to exploit expert knowledge, a feature, which, in turn, renders the FC-DNN decoder unaccountable, and is fundamentally restricted by its dimensionality. Training any neural network in practice is extremely difficult because the training complexity increases exponentially along with the block length (e.g., for a turbo code with length of K = 40, there are 240 different codewords) [23]. In [24], a recurrent neural network (RNN) architecture, containing two layers of bidirectional gated recurrent units, is adopted to learn the Bahl–Cocke–
+
+0090-6778 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6128
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+Jelinek–Ravi (BCJR) algorithm. A residual neural network decoder is designed in [25] for polar codes where a denoising module based on residual learning is introduced. The proposed residual learning denoiser can remove a remarkable amount of noise from the received signals. The aforementioned datadriven decoding methods depend on a large amount of data to train numerous parameters, thereby converging slowly and suffering from high computational complexity.
+To address the aforementioned issues, the model-driven DL approach can be used instead. Model-driven DL [12] is particularly suitable to iterative approaches in signal precessing and communications. The concept of a “soft” Tanner graph has been introduced in [27], in which weights are assigned to the Tanner graph of the belief propagation (BP) algorithm to obtain a partially connected DNN, that is, weighted BP (WBP) decoding. These weights are learned to facilitate proper weight message transmission in the Tanner graph, thereby improving the performance of the BP algorithm. To reduce the number of multiplications in [27], a min-sum algorithm with trainable offset parameters has been proposed in [28]. The aforementioned DNN-based BP decoder has been transformed into a RNN architecture in [29], named the BP-RNN decoder, by unifying the weights in each iteration and consequently reducing the number of parameters without sacrificing performance, where a trainable relaxation factor has been introduced to improve the performance of this BP-RNN decoder. In [30], active learning has been first applied in the ECC field to improve the WBP decoding.
+In summary, there are two inherent limitations in the existing DL-based decoding methods. First, current datadriven approaches rely on vast training parameters and suffer extremely high computational complexity. Second, it is unknown whether the existing model-driven algorithms could be applied to sequential codes (e.g., turbo codes) for performance improvement, as the aforementioned model-driven decoding methods are all based on BP. Designing a modeldriven decoding algorithm for turbo codes is of great significance for low-latency communications. To address these limitations, this paper introduces a novel model-driven DL architecture, called TurboNet, for turbo decoding, which integrates DL into the traditional max-log-maximum a posteriori (MAP) algorithm. TurboNet is constructed according to the domain knowledge in traditional turbo decoding and employs model-driven DL to address the inherent limitations of the existing methods. Our contributions are listed as follows:
+• The original iterative architecture is unfolded to obtain an “unrolled” (i.e., each iteration is considered separately) structure and the max-log-MAP algorithm is parameterized. Given such structure and a well-designed loss function, the parameters can be optimized via training data more efficiently than with the black-box FC-DNN [23] approach. The proposed network works well for codes with large block length, whereas the FCDNN fails to work.
+• The TurboNet is then pruned into TurboNet+ to reduce computational complexity and further improve the errorcorrection capability. The TurboNet+ exhibits better per-
+
+formance compared with the max-log-MAP algorithm for turbo decoding with different code lengths, code rates, and modulation modes. It also contains considerably fewer parameters compared with the data-driven neural BCJR decoder proposed in [24]. • The overfitting issue of the TurboNet+ is studied in detail and a simple and effective training strategy is developed to train the TurboNet+ better and faster. The trained TurboNet+ decoder shows strong generalization to the signal-to-noise ratio (SNR). • An experimental system for an over-the-air (OTA) test is established and extensive experimental results have demonstrated TurboNet+’s great flexibility and robustness, which facilitate its practical use.
+The rest of this paper is organized as follows. To obtain the model-driven DL architecture for turbo decoding, we briefly describe the system model in Section II, including the turbo encoder structure, channel, and traditional turbo decoder based on the max-log-MAP algorithm. The architecture of the TurboNet is explained in Section III, including a redefined function that evaluates network loss. We investigate network pruning and present detailed training strategy in Section IV. The performance of the TurboNet in simulation and experimental scenarios is demonstrated in Sections V and VI, respectively. Section VII concludes the contributions.
+Notations: Column vectors are denoted by boldface letters. For a vector x of length K, F (x) denotes (F (x1), F (x2), . . . , F (xK )), and F (x|y) denotes (F (x1|y), F (x2|y), . . . , F (xK |y)).
+II. SYSTEM MODEL
+For the convenience of introducing the TurboNet architecture, we briefly describe turbo encoder, channel, and turbo decoder in this section.
+
+A. Turbo Encoder
+
+Denote u = (u1, u2, . . . , uK) as the binary informa-
+
+tion sequence at the transmitter, which is interleaved
+
+into u˜ = (u˜1, u˜2, . . . , u˜K). The sequence, u, is encoded
+
+by a turbo encoder that contains two identical recur-
+
+sive systematic convolutional (RSC) encoders denoted as
+
+E1 and E2 as in Fig. 1. The generator matrix of
+
+E1 is [1, g1(D)/g0(D)], where g0(D) = 1 + D2 + D3 and
+
+g1(D) = 1 + D + D3 [32]. A block of K information bits,
+
+uk for k = 0, 1, . . . , K − 1, is directly passed to
+
+the output of the encoder, as the systematic bit sequence
+
+xs the E2
+
+= (xs1, xs2, . . . , xsK ) parity sequence x1p generates the parity
+
+= (u1, u2, . . . , uK ). E1 generates
+
+= (x11p, x21p, . sequence x2p
+
+.=. ,(xx1K21pp),
+
+from x22p, .
+
+.
+
+u, .,
+
+and x2Kp )
+
+from u˜. Denote SR = {0, 1, . . . , 7} as the set of all 23
+
+encoder states. s ∈ SR is the state of the encoder at time k
+
+and s ∈ SR is the state of the encoder at time k − 1. The
+
+codeword xen = (x1en, xe2n, . . . , xeKn) consisting of N = 3K
+
+bits is then modulated and transmitted over channel, where
+
+xien = {xis, x1i p, x2i p}.
+
+At the receiver, a soft-output detector computes reliability
+
+information in the form of log-likelihood ratios (LLRs) for the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+
+6129
+
+Fig. 1. The structures of turbo encoder and decoder.
+
+TABLE I STATE TRANSITIONS OF RSC ENCODER
+
+transmitted bits, ys = (y1s , y2s, . . . yKs ), which is the reliability information in the form of LLRs for xs and indicates
+
+the probability of the corresponding bits being 1 or 0.
+
+y1p = (y11p, y21p, . . . , yK1p) and y2p = (y12p, y22p, . . . , yK2p) are similarly defined for x1p and x2p, respectively.
+
+The yide = where
+
+LLR sequence yde = (y1de, y2de,
+
+{yyi is=, y{i1ypi,s,yyi2i1pp}}. ,
+
+Denote and then y
+
+=
+
+yab y1K
+
+= =
+
+. . . , yKde), (ya, ya+1,
+(y1, y2, . .
+
+. .
+
+. ,
+
+where
+. , yb), yK ).
+
+B. Channel and Turbo Decoder
+
+The traditional turbo decoder in [7] contains two soft-input soft-output (SISO) decoders (denoted by D1 and D2) that have the same structure. Therefore, we only introduce D1 in detail as follows. The MAP algorithm is used to compute a posteriori LLRs for information bits and can be expressed as:
+
+L
+
+( uk| y)
+
+=
+
+log
+
+P ⎛P
+
+( uk ( uk
+
+= =
+
+1| y) 0| y)
+
+⎞
+
+P (s , s, y)
+
+= log ⎝⎜ (s ,s)∈S1 P (s , s, y) ⎟⎠,
+
+(1)
+
+(s ,s)∈S0
+
+where S1 = {(s , s) : uk = 1} is the set of ordered pairs (s , s) corresponding to all state transitions s → s caused by data input uk = 1 and S0 = {(s , s) : uk = 0} is the set of ordered pairs (s , s) corresponding to all state transitions s → s caused by data input uk = 0. Let S = S1 ∪ S0 denote the set of ordered pairs (s , s) corresponding to all state
+transitions s → s whether data input uk is 1 or 0. A total of 16 possible state transitions in set S and the corresponding parity bit xk1p for input bit uk in E1 are presented in the Table I. A critical step in the turbo decoder is to obtain a posteriori
+LLRs for information bits. In the following, we will present
+the max-log-MAP algorithm [36].
+
+Assume that the additive white Gaussian noise (AWGN) channel is memoryless. Then, the sequence received after time k is only related to the state of the encoder at time k regardless of the previous states. On the basis of the Bayes formula, we obtain
+
+P (s , s, y) = P s , s, y1k−1, yk, ykK+1
+
+= P ykK+1 s P ( yk, s| s ) P s , y1k−1
+
+= βk (s) γk (s , s) αk−1 (s ) ,
+
+(2)
+
+where αk−1(s ) = P (s , y1k−1) and βk(s) = P (ykK+1|s) can be computed through the forward and backward recur-
+sions [33]
+
+αk (s) =
+
+αk−1 (s ) γk (s , s),
+
+(3)
+
+s ∈SR
+
+and
+
+βk−1 (s ) =
+
+βk (s) γk (s , s)
+
+(4)
+
+s∈SR
+
+with initial conditions α0(0) = 1, α0(n) = 0 for n = 0, and βK (0) = 1, βK (n) = 0 for n = 0. (The encoder is expected to end in state 0 after K input bits, implying that the last three
+input bits, called termination bits, are so selected.) Moreover, γk(s , s) = P (yk, s|s ) is computed as follows [34]:
+
+γk (s , s) = exp
+
+1 2
+
+xks yks + x1kpyk1p
+
+1 + 2 ukL (uk)
+
+, (5)
+
+where L (uk) is the a priori probability LLR for bit uk. Given that L( uk| y) is the sum of the systematic bit LLR yks , the a priori probability LLR L(uk), and the extrinsic LLR
+Le (uk), we obtain
+
+Le (uk) = L( uk| y) − yks − L(uk),
+
+(6)
+
+which can be used as the a priori probability LLR input of
+the subsequent SISO D2 after it is interleaved. Let α¯k (s), β¯k (s), and γ¯k (s , s) represent the logarithmic
+values of αk (s), βk (s), and γk (s , s), respectively. The logMAP algorithm [35] evaluates αk−1(s ) and βk(s) in logarithmic terms using the Jacobian logarithmic function:
+
+α¯k
+
+(s)
+
+=
+
+max
+s ∈SR
+
+∗
+
+(α¯k−1
+
+(s
+
+)
+
++
+
+γ¯k
+
+(s
+
+,
+
+s))
+
+(7)
+
+and
+
+β¯k−1
+
+(s
+
+)
+
+=
+
+max∗
+s∈SR
+
+β¯k (s) + γ¯k (s , s) ,
+
+(8)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6130
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+Fig. 2. The TurboNet architecture. Each DNN decoding unit stands for one iteration. The output of the DNN decoding unit M is LM (u|y) rather than LM (u), and a priori probability LLRs L0(uk), the input of DNN decoding unit 1, are initialized to 0, i.e., L0(uk) = 0 for k = 1, 2, . . . , K. The dotted arrow from the deinterleaver denotes the output of the DNN decoding unit m for m = M , otherwise, the solid arrow from the deinterleaver represents the
+output.
+
+where max∗(x, y) = max(x, y) + log(1 + e−|x−y|), and initial conditions α¯0(0) = 0, α¯0(n) = −∞ for n = 0, and β¯K (0) = 0, β¯K (n) = −∞ for n = 0 (A large negative number, e.g., –128, will be used for programming instead of minus infinity). The a posteriori LLRs for information bits are computed by
+
+L ( uk| y)
+
+=
+
+max∗
+(s ,s)∈S1
+
+α¯k−1 (s ) + γ¯k (s , s) + β¯k (s)
+
+− max∗
+(s ,s)∈S0
+
+α¯k−1 (s ) + γ¯k (s , s) + β¯k (s) .(9)
+
+The max-log-MAP algorithm [36] omits the logarithmic term in the Jacobian logarithmic function. Hence, equations (7)–(9) can be approximately written as:
+
+α¯k
+
+(s)
+
+=
+
+max
+s ∈SR
+
+(α¯k−1
+
+(s
+
+)
+
++
+
+γ¯k
+
+(s
+
+, s)) ,
+
+(10)
+
+β¯k−1
+
+(s
+
+)
+
+=
+
+max
+s∈SR
+
+β¯k (s) + γ¯k (s , s)
+
+,
+
+(11)
+
+and
+
+L ( uk| y)
+
+=
+
+max
+(s ,s)∈S1
+
+α¯k−1 (s ) + γ¯k (s , s) + β¯k (s)
+
+− max
+(s ,s)∈S0
+
+α¯k−1 (s ) + γ¯k (s , s) + β¯k (s) .
+
+(12)
+
+III. BASIC DNN DECODER: TURBONET
+The max-log-MAP algorithm [36] introduced in the previous section calculates a posteriori LLRs iteratively, which fits well for model-driven DL framework. This section elaborates the integration of DL into the traditional MAP algorithm, that is, how to obtain an alternative graphical representation to replace the traditional max-log-MAP algorithm and introduce trainable parameters. The TurboNet inherits the superiority of the max-log-MAP algorithm and DL techniques, and thus presents excellent error-correction ability with excessively low training cost.
+
+Fig. 3. Hidden layer 1 architecture. The input neuron represents the input value of the network. The sum neuron implements a weighted summation of the input data without an activation function. The zero neuron represents a constant output value of 0.
+The traditional iterative structure is first unfolded and each iteration is represented by a DNN decoding unit to obtain an “unrolled” structure as in Fig. 2, which is equivalent to M iterations. For each iteration, conventional SISO decoders using the max-log-MAP algorithm and the part of calculating the extrinsic LLRs are replaced by two subnets based on the neural max-log-MAP algorithm. That is, we integrate DNN into the max-log-MAP algorithm but preserve the original architecture, or alternatively, the DNN decoding unit m contains two identical interleavers, two subnets with an identical structure but no shared parameters, and one deinterleaver. Lm(u) denotes the a priori probability LLRs calculated by the max-log-MAP algorithm with m iterations, and LM (u|y) is a posteriori LLRs calculated by the max-log-MAP algorithm with M iterations, where m = 0, 1, . . . , M − 1. For D1, L1m(u|y) and Lm e1(u) repre-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+
+6131
+
+sent the a posteriori probability LLRs and the extrinsic LLRs calculated by the max-log-MAP algorithm with m iterations, respectively. o = (o1, o2, . . . , oK ), where ok indicates the estimated probability of bit uk being a binary 1.
+Subnet 1 (SN1), which is based on a neural max-log-MAP algorithm, contains one input layer, K + 1 hidden layers, and one output layer. Subnet 2 (SN2) has the same structure as SN1. The details of the SN1 architecture in the DNN decoding unit m are elaborated as follows:
+
+A. Input Layer
+The input layer of the proposed subnet consists of 3K neurons and the input of the neurons constitutes set N In = {Ik : k = 1, 2, . . . , K}, where the triplet Ik = {yks , yk1p, Lm−1(uk)}.
+
+B. Hidden Layer 1
+
+The first hidden layer contains 16K neurons and
+
+the output of the neurons in this layer constitutes set
+
+N 1 = {γ¯k(s , s) : (s , s) ∈ S, k = 1, 2, . . . , K}. The neu-
+
+ron corresponding to γ¯k0 (s0, s0) ∈ N 1 in the first hidden
+
+layer is connected to the neurons that yk10p, and Lm−1(uk) in the input layer,
+
+correspond to yks0, where (s0, s0) ∈ S
+
+and k0 ∈ {1, 2, . . . , K}. Fig. 3 shows the connections
+
+between the neurons corresponding to the elements in set
+
+{γk0(s , s) : (s , s) ∈ S} in hidden layer 1 and the neurons corresponding to yks0 , yk10p, and Lm−1(uk) in the input layer. Notably, not all neurons in the first hidden layer need to
+
+be connected to the input neurons. For example, Table I
+shows that if s0 = 2 and uk0 = xsk0 = 0, then x1kp0 = 1, and we obtain
+
+γ¯k0
+
+(2, 5)
+
+=
+
+1 2
+
+wγ3¯,k0
+
+,(2,5)
+
+yk10p
+
+,
+
+(13)
+
+which means that the neuron corresponding to γ¯k0(2, 5) in
+hidden layer 1 is only connected to the neuron corresponding to yk10p in the input layer. Similarly, we can obtain
+
+Fig. 4. Hidden layer z0 architecture: the (a) odd position and (b) even position. The max neuron calculates the maximum sum of the input groups expressed as (17) and (18).
+
+γ¯k0
+
+(2, 1)
+
+=
+
+1 2
+
+wγ1¯,(2,1),k0
+
+Lm−1
+
+(uk0
+
+)
+
++
+
+1 2
+
+wγ2¯
+
+,(2,1),k0
+
+yks 0
+
+,
+
+(14)
+
+and
+
+γ¯k0 (0, 0) = 0.
+
+(15)
+
+Identity (15) shows that the neuron corresponding γ¯k0 (0, 0) is not connected to any neuron in the input layer and can be considered a constant output value of 0. Accordingly, we can obtain a partially connected structure as shown in Fig. 3.
+We assign weights to the edges between the neurons in the input layer and hidden layer 1 shown in Fig. 3. The neuron corresponding to γ¯k0 (s0, s0) calculates the output as (16), as shown at the bottom of the page.
+
+C. Hidden Layer From 2 to K
+Each layer of the following K − 1 hidden layers contains 2 × |SR| = 16 neurons. For the zth hidden layer, the output of all neurons constitutes the set N z = Nozdd ∪ Nezven, where Nozdd = {α¯k(s) : k = z − 1, s ∈ SR} is the set of neuron outputs for all odd positions in the zth hidden layer, Nezven = {β¯k−1(s ) : k = K − z + 2, s ∈ SR} is the set of neuron outputs for all even positions in the zth hidden layer, for z = 2, 3, . . . , K. The hidden layers 2 to K calculate α¯k(s) and β¯k−1(s ) according to (10) and (11), and details are elaborated as follows:
+1) For z0 ∈ {3, 4, . . . , K}: The neuron corresponding to α¯k0 (s0) ∈ Nozd0d in the z0th layer is connected to all neurons corresponding to the elements in set
+
+γ¯k0
+
+(s0, s0)
+
+=
+
+1 2
+
+wγ1¯
+
+,(s0
+
+,s0
+
+),k0
+
+uk0 Lm−1 (uk0 )
+
++
+
+1 2
+
+wγ2¯
+
+,(s0
+
+,s0
+
+),k0
+
+xsk0 yks0
+
++
+
+1 2
+
+wγ3¯,(s
+
+0 ,s0 ),k0
+
+x1kp0 yk10p
+
+.
+
+(16)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6132
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+{α¯k0−1(s ) : (s , s0) ∈ S} in layer z0 − 1 and all neurons corresponding to the elements in set {γ¯k0 (s , s0) : (s , s0) ∈ S} in hidden layer 1, where k0 = z0 − 1 and s0 ∈ SR. The neuron corresponding to β¯k1−1(s0) ∈ Nezv0en in the z0th layer is connected to the neurons corresponding to the elements in set {β¯k1(s) : (s0, s) ∈ S} in layer z0 − 1 and all neurons corresponding to the elements in set {γ¯k1(s0, s) : (s0, s) ∈ S} in the first hidden layer, where k1 = K − z0 + 2 and s0 ∈ SR. Figs. 4(a) and 4(b) show the connections between all neurons
+in the z0th hidden layer and the neurons in the previous hidden layers (i.e., hidden layer 1 and hidden layer z0 − 1).
+Turbo codes usually have a large block size. For example,
+the minimum message bit length of turbo codes in the long-
+term evolution standard is 40, and the maximum is 6144.
+Therefore, parameterizing (10) and (11) will cause the neural
+network in Fig. 6 to be extremely “deep” and may lead to
+gradient vanishing or gradient exploding. Therefore, we will
+not introduce any trainable parameters in these layers. The neurons corresponding to α¯k0 (s0) and β¯k1−1(s0) calculate the output as follows:
+
+α¯k0
+
+(s0)
+
+=
+
+max
+s ∈SR
+
+(α¯k0−1 (s
+
+)+
+
+γ¯k0
+
+(s
+
+, s0))
+
+(17)
+
+and
+
+β¯k1−1
+
+(s0)
+
+=
+
+max
+s∈SR
+
+β¯k1 (s) + γ¯k1 (s0, s) .
+
+(18)
+
+2) z = 2: Given that the initial conditions α¯0(0) = 0, α¯0(n) = −128 for n = 0, and β¯K (0) = 0, β¯K (n) = −128 for n = 0, the neurons in hidden layer 2 are connected to hidden layer 1 and some constant neurons. We employ a small bold line with a black circle to represent a constant input value of –128 in Fig. 6.
+
+D. Hidden Layer K + 1
+
+Hidden layer K + 1, which is the last hidden layer, consists
+
+of K neurons, and the output of all neurons constitutes set N K+1 = {L1m(uk|y) : k = 1, 2, . . . , K}. The neuron corresponding to L1m(uk0 |y) ∈ N K+1 in the last hidden layer is connected to all neurons corresponding to the elements
+
+i{nβ¯ks0e(ts){:α¯sk0∈−1S(Rs}),
+
+: s ∈ SR}, where k0 ∈
+
+{γ¯k0 (s {1, 2,
+
+, s) ...
+
+: ,
+
+(s , s) ∈ S}, and K}. Fig. 5 illus-
+
+trates the connections between the neuron corresponding to
+
+Lm 1 (uk0|y) in the last hidden layer and the neurons in the previous hidden layers (i.e., hidden layer 1, hidden layer k0, and hidden layer K − k0 + 1).
+
+We assign weights to the edges in Fig. 5. The neuron
+
+corresponding to Lm 1 (uk0 |y) calculates the output as (19), as shown at the bottom of the page
+
+Fig. 5. Hidden layer K + 1 architecture. The max-diff neuron realizes that the input data are divided into two categories, and the maximum values of the sum of the groups in both categories are obtained to calculate the difference as shown by (19).
+
+E. Output Layer
+The output layer contains K neurons, and the output of all neurons in this layer constitutes set N Out = {Lm e1(uk) : k = 1, 2, . . . , K}. The neuron corresponding to Lm e1(uk0 ) ∈ N Out is connected to the neuron corresponding to Lm 1 (uk0 |y) in hidden layer K + 1 and the neurons corresponding to yks0 , Lm−1(uk0) in the input layer.
+We assign weights to the edges connected to the neuron corresponding to Lem1(uk0 ) in the output layer and this neuron calculates the output as follows:
+Lem1 (uk0 ) = we1,k0 Lm 1 ( uk0 | y)−we2,k0 yks0 − we3,k0 Lm−1(uk0 ). (20)
+
+The complete structure of the subnet is shown in Fig. 6.
+Given that the output of the Mth DNN decoding unit is LM (uk|y), the sigmoid function σ(x) ≡ (1 + e−x)−1 is added, such that the final network output ok = σ(LM (uk|y)) is in the range of [0, 1]. Generally, the mean-squared error and binary cross-entropy can be used to calculate the network loss with ok and uk. Nevertheless, the magnitude of the a posteriori LLR calculated by the traditional max-log-MAP algorithm is usually greater than 10, whereas the sigmoid function is nearly close to 1 and 0 when |x| > 10. Therefore, gradient vanishing is likely to occur if the loss is calculated with ok. This situation will seriously affect the performance of the network and even prevent the network from converging.
+To overcome this problem, a redefined loss function computed as (21) is used to evaluate the loss of TurboNet
+
+1K Loss =
+K
+
+LM ( uk| y) − LTlog−MAP(uk|y) 2,
+
+(21)
+
+k=1
+
+L1m
+
+( uk0 | y)
+
+=
+
+max
+(s ,s)∈S1
+
+ws1 ,k0 α¯k0−1 (s ) + w(2s ,s),k0 γ¯k0 (s , s) + ws3,k0 β¯k0 (s)
+
+− max
+(s ,s)∈S0
+
+ws4 ,k0 α¯k0−1 (s ) + w(5s ,s),k0 γ¯k0 (s , s) + ws6,k0 β¯k0 (s) .
+
+(19)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+
+6133
+
+Fig. 6. Subnet architecture based on the neural max-log-MAP algorithm. Some of the undrawn connecting lines are plotted as small dotted lines. Note that the neurons representing α¯0(s ) and β¯K (s) are denoted as black circles.
+
+Fig. 7. Weights histogram of DNN decoding unit 1 of the TurboNet for (40, 92) turbo code.
+
+where LM (uk|y) represents the a posteriori LLR obtained by the TurboNet consisting of M decoding units and LlTog−MAP(uk|y) represents the a posteriori LLR calculated by the traditional log-MAP algorithm with T itera-
+tions. Notably, the iteration number T of the target LLR LTlog−MAP(uk|y) can exceed the number of decoding units in the TurboNet and this feature can further help improve error-
+correction capabilities.
+The aforementioned weights will be trained using the
+stochastic gradient descent (SGD) algorithm. The goal is
+to achieve minimal loss of the network by optimizing the trainable parameters {wγi¯,(s ,s),k, wsj ,k, w(js+,1s),k, wsj,+k2, wel ,k}, where i = 1, 2, 3, j = 1, 4, and l = 1, 2, 3. The final
+decoding results can be obtained by a hard decision shown
+below:
+
+uˆk =
+
+1 ok ≥ 0.5 0 ok < 0.5.
+
+(22)
+
+If setting all weights to 1, the results of (16), (19), and (20) will be the same as the original max-log-MAP algorithm. Hence, the performance of the TurboNet will not be inferior to the max-log-MAP algorithm and can improve significantly through training the network parameters. Moreover, the complexity of the TurboNet is similar to that of the turbo decoder using the max-log-MAP algorithm, especially when the code length is not long.
+
+IV. PRUNED DNN DECODER: TURBONET+
+It is worth discussing to effectively reduce the number of parameters without sacrificing error-correction performance, that is, retain the most useful parameters as far as possible. Network pruning can potentially introduce two benefits to neural network compression and acceleration. Fewer parameters means less memory space and lower computing costs. In this section, we first statistically process the weights in (16), (19), and (20). Then, a simplified weight pruning is applied to the TurboNet according to the weights histogram. We obtain a streamlined architecture called TurboNet+, which shows better convergence rate and bit-error rate (BER) performance.
+
+Finally, we study the overfitting issue through extensive simulation and present a training strategy to address the tricky issue.
+A. Weight Pruning
+The following conventions are employed to concisely distinguish different weights in TurboNet:
+• GW: gamma weights defined in (16) • PLW: posterior LLR weights defined in (19) • ELW: extrinsic LLR weights defined in (20)
+Fig. 7 shows the weights histogram of the DNN decoding unit 1 of the trained TurboNet for (40, 92) turbo code.1 Each column in the figure indicates the probability of the corresponding weights value. As shown in Fig. 7, the weights assigned to (16), (19), and (20) in the trained TurboNet are close to normal distribution. The trained TurboNet produces GW in the range from 0.8 to 0.92 while the max-logMAP algorithm only has weights of size 1. The difference between the learned GW and initial values is obvious and the distribution is relatively uniform. Similarly, the ELW are distributed between 0.82 and 0.9 and mainly concentrate at 0.86. Compared with the GW, the distribution of the learned ELW is more concentrated. Different from the GW and the ELW, the PLW vary substantially between 1 and 1.1 and are mainly concentrated around 1.06. Thus, compared with the GW and the ELW, the difference between the PLW and initial values is not so significant. That is, the contribution of the PLW to the TurboNet is relatively small. The irregular activation function in (19) may also have an unknown effect on the process of gradient descent. Therefore, discarding the PLW is rational.
+In addition, we perform simulation to confirm this finding in four scenarios, i.e., (i) only retaining the GW, (ii) only retaining the ELW, (iii) retaining both the GW and the ELW, and (iv) using the GW, the PLW, and the ELW. The number of training samples is 60, 000 and the batch size is 500 for all scenarios. The numbers of training epochs for the scenarios (i), (ii), (iii), and (iv) are 10, 4, 5, and 50, respectively. The
+1The code rate is 1/2, and 12 bits are used to terminate the trellis.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6134
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+which only retains the ELW. The subsequent discussions in this section are all for the TurboNet+ architecture.
+
+Fig. 8. BER performance curve for (40, 92) turbo code using BPSK mapping on different scenarios.
+numerical results shown in Fig. 8 further prove the significance of the ELW.
+As depicted in Fig. 8, the TurboNet has achieved a certain gain compared with the max-log-MAP algorithm in all scenarios. The TurboNet discarding the PLW has obtained a similar gain compared with the one including the PLW at low SNRs. Moreover, the former shows better BER performance at high SNRs. Specifically, the TurboNet without the PLW achieves a gain of approximately 0.4 dB compared with the log-map-MAP algorithm with the same number of iterations, but achieves only approximately 0.3 dB with the PLW. Nevertheless, if we further abandon the ELW (i.e., only retain the GW), the improvement acquired by the TurboNet is not as obvious as before (only approximately 0.1 dB), regardless whether the SNR is low or high. Thus, the existing parameters are not sufficient to achieve satisfactory gains to compensate for the gap. Interestingly, if we further abandon the GW (i.e., only retain the ELW), the TurboNet cannot only acquire similar performance as the case retaining all parameters but can also obtain higher error-correction ability in certain cases. This improvement is most likely because the appropriate reduction in parameters makes the network easier to train. Overall, discarding the GW does not degrade the performance of the TurboNet, or alternatively, the ELW play a crucial role in performance improvement.
+The above result coincides with [38], where extrinsic information scaling is used to improve the decoding performance. From [38], a scaling factor for the extrinsic LLRs, which is exchanged between the constituent SISO decoders, can improve the decoding quality. The reason for this improvement lies in the over-optimistic extrinsic LLR calculation of the max-log-MAP algorithm due to the omission of the logarithmic term. In addition to the above advantages in the BER performance, the numbers of training epochs for different scenarios indicate that the convergence rate of the pruned network is significantly improved, thereby reducing the training overhead by an order of magnitude.
+In summary, the above results demonstrate that the BER performance and convergence rate can be further improved by discarding the GW and the PLW. Therefore, we obtain an improved structure of the TurboNet called TurboNet+,
+
+B. Training Strategy
+
+The SNR for training data affects the performance of the TurboNet+. One might use the same SNR for testing and training. But the accurate SNR is usually unavailable in reality. To balance the performance and robustness, the SNR for training data usually varies within a certain range when training the network. However, this method suffers high complexity in actual implementation. As such, we should find low-complexity and sub-optimal SNR strategy with strong generalization. As in [22], the normalized validation error (NVE) can be used to determine the near optimal training SNR, defined as:
+
+NVE (ρtrain)
+
+=
+
+1 L
+
+L l=1
+
+BERDNN (ρtrain, ρtest,l) BERMAP (ρtest,l)
+
+,
+
+(23)
+
+where ρtest,l represents the lth SNR in a set of L different validation data, BERDNN(ρtrain, ρtest,l) denotes the BER obtained by a DNN trained at ρtrain on the data with ρtest,l, and BERMAP(ρtest,l) is the BER of MAP algorithm at ρtest,l. As indicated in [22], the NVE measures how good a DNN,
+trained at a particular SNR, is relative to the MAP algorithm
+
+over a range of different SNRs. However, the limitation of
+
+NVE is also clear, that is, we need extensive simulation to
+
+determine the SNR value.
+
+It has been founded in [24] that the training SNR obtaining
+
+the best BER for a target testing SNR also depends on the code
+
+rate. Furthermore, an experimental equation for the training of
+
+the neural decoders with binary phase shift keying (BPSK) has
+
+been obtained in [24], which can be expressed as
+
+ρtrain = min ρtest, 10log10 22R − 1 ,
+
+(24)
+
+where R denotes the code rate. Unfortunately, equation (24) is
+no longer applicable to higher order modulation, e.g., M-ary
+quadrature amplitude modulation (QAM). Therefore, the code
+rate is not the only factor to determine the optimal training
+SNR. Modulation orders, perhaps other factors, also affect it.
+Next, we study the influence of the training SNR and present an effective training strategy for the TurboNet+.
+We train the TurboNet+ for (64, 140) turbo code on
+randomly generated training data obtained over an AWGN channel, and ρtrain ranges from –2 dB to 4 dB. The TurboNet+ consists of three DNN decoding units that correspond to three
+full iterations, and the loss function in (21) is used with the target LLR LlTog−MAP(uk|y) being the log-MAP algorithm with T = 6 iterations. The number of training data is 6 × 104 and the batch size is 500. The TurboNet+ is trained on 5 epochs with a learning rate of 8 × 10−4 and the learning curves for the TurboNet+ with ρtest = 3 dB are shown in Fig. 9. The figure indicates that when ρtrain = −2 dB, the TurboNet+ has not been well trained. Even though the TurboNet+’s
+convergence rate is relatively slow when ρtrain increases to −1 dB, it still converges to a near optimal performance. When ρtrain = 0 dB, the TurboNet+ can quickly converge to the optimal value and remain stable. The result obtained
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+
+6135
+
+Fig. 9. Learning curves for the TurboNet+ under different training SNRs.
+when ρtrain = 1 dB is similar to the case when ρtrain = 0 dB. Notably, when ρtrain = 2, 3, and 4 dB, the TurboNet+ still converges to the optimal value quickly, but overfits soon. Consequently, we use early stopping to address the overfitting issue as follows:
+1) Split the training data into a training set and a validation set, e.g. in a 3-to-1 proportion.
+2) Train only on the training set and evaluate the BER performance on the validation set once in a while, e.g. after each epoch,2 and store the parameters if the performance is improved.
+3) Stop training as soon as the BER on the validation set is higher than it was the last time it was evaluated or the predefined maximum number of epochs is met.
+4) Use the latest stored parameters of the TurboNet+ as the result of the training.
+The results obtained according to the aforementioned training strategy are shown in Fig. 10. The figure reveals that when ρtrain = −2 dB, the improvement of the TurboNet+ is insignificant and when ρtrain ≥ −1 dB, the TurboNet+ has been well trained. Notably, when ρtrain ranges from 0 dB to 4 dB, the TurboNet+ obtains a similar performance.
+Although the influence of the ρtrain on the convergence of the TurboNet+ can be ignored with the help of the proposed training strategy, we suggest that ρtrain should neither be too low nor too high. If ρtrain is too low, the TurboNet+ suffers poor performance because the network is very likely to be misled by the wrong information when the training data contain too many error samples. Conversely, if ρtrain is too high and the training does not stop in time, the overfitting issue may be extremely serious. We infer that those training samples that can be correctly decoded by the log-MAP algorithm with T iterations but cannot by the max-log-MAP algorithm with M iterations may be beneficial for improving the performance of the TurboNet+ because we use (21) as the loss function under supervised learning. If ρtrain is too high, most samples can be correctly decoded by both the max-log-MAP algorithm with M iterations and the log-MAP algorithm with T iterations.
+2We do not recommend evaluating the performance after each iteration, because the BER decreases with variations during the training, which may destroy the convergence performance of the TurboNet+.
+
+Fig. 10. BER performance curves for the (64, 140) turbo code under different training SNRs. The training, validation, and testing sets contain 60, 000, 20, 000, and 200, 000 samples, respectively. The predefined maximum number of epochs is 5.
+Consequently, the number of the training samples that meet the aforementioned requirement in the training set is negligible. We infer that this may cause the TurboNet+ easier to overfit when the training SNR is too high. Therefore, we can choose a moderate ρtrain and use early stopping to stop training before overfitting.
+V. SIMULATION RESULTS AND DISCUSSION
+This section provides the simulation results of the TurboNet and the TurboNet+ under different code rates, code lengths, and modulation modes. The BER and complexity of the DL-based turbo decoding algorithms and traditional turbo decoding algorithms will be compared in detail.
+A. Parameter Settings
+The TurboNet and the TurboNet+ are constructed on top of the TensorFlow framework and an NVIDIA GeForce GTX 1080 Ti GPU is used for accelerated training. We train the TurboNet and the TurboNet+ for (40, 132) turbo code on randomly generated training data obtained over an AWGN channel at 0 dB SNR with BPSK modulation. The TurboNet and the TurboNET+ consist of three DNN decoding units, corresponding to three full iterations. The loss function in (21) is used and we set T = 6 to obtain the target LLR LTlog−MAP(uk|y). We train the TurboNet and the TurboNet+ with SGD and the ADAM optimizer [37] with a batch size of 500. The learning rates of the TurboNet and the TurboNet+ are 1 × 10−5 and 8 × 10−4, respectively.
+We also perform simulation on turbo codes with different code lengths at a higher code rate, i.e., R = 1/2, and the training SNR for code lengths of 40 and 120 is 0.5 dB. In addition, we also verify the performance of the TurboNet and the TurboNet+ under higher-order modulation mode, i.e., 16-QAM, and the training SNR for code lengths of 40 and 120 is 6 dB.
+B. BER Performance
+The BER performance curves for the (40, 132) turbo code using different decoding algorithms are shown in Fig. 11. From
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6136
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+Fig. 11. BER performance curves for (40, 132) turbo code with BPSK modulation. The training, validation, and testing sets contain 60, 000, 20, 000, and 2, 000, 000 samples, respectively. The maximum numbers of training epochs for TurboNet and TurboNet+ are 50 and 10, respectively.
+
+Fig. 13. BER performance curves of different turbo decoders. L denotes the information passed to the next stage for one bit position [26].
+
+Fig. 12. BER performance curves for turbo codes with different information bit lengths and modulation modes. The training, validation, and testing sets contain 60, 000, 20, 000, and 2, 000, 000 samples, respectively. The maximum numbers of training epochs for TurboNet and TurboNet+ are 50 and 10, respectively.
+the figure, the MAP algorithm with 18 iterations obtains the best BER performance among all turbo decoding algorithms, which outperforms the max-log-MAP algorithm with three iterations by approximately 0.6 dB. The log-MAP algorithm with six iterations achieves the sub-optimal performance. Next are the TurboNet+ with three decoding units and the TurboNet with three decoding units, which are both supervised by the log-MAP algorithm with six iterations. The TurboNet+ with three decoding units outperforms the max-log-MAP algorithm with the same number of iterations at all SNR ranges and approximates the log-MAP algorithm with six iterations. In addition, Fig. 11 shows that the gap between the TurboNet+ decoder and the traditional max-log-MAP algorithm will gradually increase with the SNR, that is, reaching 0.25 dB at low SNRs and 0.4 dB at high SNRs. The result also indicates that the TurboNet+ could reduce the complexity of the TurboNet without sacrificing the BER performance, which is consistent with the conclusion obtained in Section IV. Fig. 12 compares the BER performance of the DL-based turbo decoders and the traditional max-log-MAP algorithm under different code lengths and modulation modes, where the code rate R = 1/2 and the MAP algorithm with 18 iterations is plotted as the benchmark. The TurboNet+ continues to achieve the best BER performance compared with the TurboNet decoder and the
+
+traditional max-log-MAP algorithm with the same number of iterations, and such outcome is similar to the situation when the code rate R = 1/3. Fig. 12 suggests that even though the TurboNet+ with three decoding units is trained at a single SNR, it can outperform the max-log-MAP algorithm and the TurboNet with the same number of iterations in a wide SNR range. As the code length increases, the advantages of the TurboNet+ over the TurboNet in BER performance are also more obvious. Specifically, as the information bit length, K, increases, the improvement achieved by the TurboNet+ will be more significant, i.e., 0.4 dB for K = 40 and 0.5 dB for K = 120. We speculate that this result arises because the error-correction capability of the max-log-MAP algorithm itself is limited when the information bit length is short and the improvement is not substantial. As the information bit length increases, the error-correction capability of the max-log-MAP algorithm is enhanced, and the improvement of the TurboNet+ is more obvious. Fig. 12 also reveals that when the modulation order increases, the improvement of the TurboNet+ at low SNRs is not as significant as that of BPSK. However, at high SNRs, the TurboNet+ can still achieve distinct gains compared with the max-log-MAP algorithm and reaches 0.5 dB for K = 120. Similarly, the TurboNet+’s gain becomes more pronounced as the information bit length increases.
+Fig. 13 compares the BER performance of the model-driven turbo decoders and the data-driven turbo decoders, where the block length is 100 and the code rate is 1/3. The SISO decoders in the neuralBCJR [24] and DeepTurbo [26] decoders are two bidirectional long short-term memory (LSTM) layers, and the number of hidden units in each LSTM layer is 800. The result suggests that the performance of different DLbased turbo decoders is relatively close in low SNRs. The neuralBCJR algorithm with six iterations obtains the best BER performance and the TurboNet+ decoder with three decoding units has achieved the sub-optimal performance. With the increase of the SNR, the advantages of the model-driven turbo decoder over the data-driven turbo decoders becomes apparent gradually. Notably, the TurboNet+ with three decoding units outperforms the optimal data-driven decoder by approximately 1.5 dB at high SNRs. In general, the gap between the modeldriven and data-driven approaches is significant, which ben-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+TABLE II COMPLEXITY ANALYSIS FOR TURBO DECODERS
+
+6137
+
+efits from the reasonable integration of the TurboNet+ with the max-log-MAP algorithm and DL tools.
+C. Computational Complexity
+For the SN1 in the TurboNet, the number of weights introduced in the hidden layer 1, hidden layer K + 1, and output layer is 24K, 48K, and 3K, respectively. Therefore, a subnet in the TurboNet contains a total of 75K weights, and the TurboNet with M decoding units contains 2M ×75K = 150M K weights (a decoding unit contains two subnets). In addition, the pruned TurboNet, i.e., TurboNet+, contains 3K weights per subnet. We can obtain that the TurboNet+ with M decoding units contains a total of 2M × 3K = 6M K weights. Consequently, TurboNet+ has a small number of weights, which indicates that we can store some weights for different block lengths in advance to meet practical requirements.
+In Table II, we compare the complexities of different turbo decoders in terms of the overall time consumption required to complete a single-forward pass of one codeword. Time comparison is made on a computer with OSX 10.12, i5-6360U 2.9GHz dual-core CPU and 8 GB RAM. We set K = 100 and R = 1/3. As shown in Table II, the computational complexity is increased due to TurboNet’s blind introduction of parameters and this feature may become more distinct when K increases, although the TurboNet can improve the BER performance of the max-log-MAP algorithm. However, the TurboNet+ significantly improves the BER performance of the max-log-MAP algorithm and the introduced computational complexity is negligible. Specifically, the TurboNet+ with three decoding units can approximate the BER performance of the log-MAP algorithm with six iterations, but perform nearly 20 times faster than the log-MAP algorithm with six iterations. Thus, the TurboNet+ can reduce decoding latency significantly, which is of great significance for low-latency communications. Notably, the TurboNet+ benefits from the fact that its parameters are negligible and has a much lower computational cost compared with the data-driven neuralBCJR decoder [24] and DeepTurbo [26]. Given that the TurboNet+ has achieved the best BER performance with low computational overhead in all simulation scenarios, this structure will be used in the subsequent OTA test.
+VI. OTA TEST AND RESULT DISCUSSION
+From the above simulation results, the TurboNet+ offers higher error-correction capability than the traditional max-log-
+
+MAP algorithm. Another aspect of the proposed algorithm is its performance in real environments.
+There have been several prototyping systems to verify the effectiveness and robustness [17], [39]. In [40], a novel fifth-generation rapid prototyping (RaPro) system architecture has been suggested to deploy FPGA-privileged modules on software-defined radio (SDR) platforms and has proven to be highly flexible and scalable. In this section, we use the RaPro system as our testbed to evaluate the BER performance of our TurboNet+ in real channel environments.
+A. System Setup
+As shown in Fig. 14, the real testing system contains a transmitter and a receiver, which offers transmission and reception of radio frames composed of OFDM symbols. We employ two SDR nodes of the universal software radio peripheral reconfigurable I/O (USRP-RIO) series manufactured by National Instruments. Each SDR node includes one RF transceiver of 40 MHz bandwidth and a programmable FPGA responsible for distributed signal processing, such as the reciprocity calibration or OFDM (de)modulation [40]. We perform the OTA indoor test. The details of the test scenarios are discussed in next subsection.
+Fig. 15 illustrates the radio frame structure at the transmitter. One radio frame contains 20 time slots and a frame head. Each time slot corresponds to one OFDM symbol and its corresponding cyclic prefix (CP) and the frame head is added for synchronization. The lengths of each OFDM symbol and CP are 256 and 64, respectively. Each OFDM symbol is obtained by performing 256-point inverse fast Fourier transform (IFFT) on the OFDM symbol in the frequency domain. In the frequency domain, each OFDM symbol contains 256 subcarriers, among which 150 subcarriers are effective for transmitting pilot symbols and data symbols, 105 subcarriers are employed as the guard band, and one subcarrier is the direct current (DC) offset. The 150 effective subcarriers consist of 25 pilot symbols and 125 data symbols. Comb type pilots are used to insert pilot symbols and each pilot symbol is followed by 5 data symbols.
+Since one radio frame contains 20 time slots, each with 125 data symbols, we can transmit 20 × 125 = 2, 500 data symbols in each radio frame. For simplicity, the modulation mode of the quadrature-phase-shift keying (QPSK) is applied in the real testing system. Thus, a total of 2 × 2, 500 = 5, 000 bits, called transmission bits, are transmitted per radio frame.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6138
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+Fig. 14. Real testing system consisting of transmitter and receiver.
+
+Fig. 15.
+
+Frame structure for transmitting data. TABLE III
+BER PERFORMANCE OF TURBO DECODERS FOR OTA TEST
+
+Those transmission bits consist of two frame number blocks, 40 data blocks, and one zero block. We denote 16 bits as a frame number so that the receiver knows which frame is received. Two 16-bit frame numbers and 8 bits of 0 constitute 40-bit information bits, which are passed through a turbo encoder with a code rate of 1/2 to obtain a 92-bit codeword. A frame number block with a length of 100 bits is obtained by zero padding to the codeword. Each data block of 100 bits is similarly obtained from randomly generated
+
+information bits. Specifically, we generate information bits of length 40 randomly and the information bits are passed through a turbo encoder with a code rate of 1/2 to obtain a 92-bit codeword. A data block with a length of 100 bits is obtained by zero padding to the codeword similarly. The zero block contains 800 bits of 0 for noise estimation. At the transmitter side, the transmitting bits are QPSK-modulated and IFFT-based OFDM modulated to obtain OFDM symbols in the time domain. After the CP is added to the corresponding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+HE et al.: MODEL-DRIVEN DNN DECODER FOR TURBO CODES: DESIGN, SIMULATION, AND EXPERIMENTAL RESULTS
+
+6139
+
+OFDM symbol, the radio frame is transmitted by an USRPRIO through a RF antenna whose center frequency is set to 2 GHz. At the receiver side, wireless signals are received by an USRP-RIO through a RF antenna. The receiver first conducts frame detection. After CP removal and FFT-based OFDM demodulation, the USRP-RIO performs least-square channel estimation. Finally, the results are stored into.csv files for future use.
+
+significant advantages in computational complexity compared with the existing RNN decoder, and such a feature is conducive to significantly reducing decoding overhead. We also provided a simple and effective training strategy that could enable the proposed TurboNet+ to be trained better and faster. Simulation results demonstrated TurboNet+’s superiority in errorcorrection ability and computational overhead. The OTA test further proved TurboNet+’s strong robustness.
+
+B. Experimental Results
+The entire OTA test is divided into two phases. The first phase obtains samples in different scenarios with the help of the RaPro system shown in Fig. 14. The second phase employs the network trained under different training sets to verify the robustness of the TurboNet+ in real channels. We chose four different scenarios to evaluate our TurboNet+ in real environments.
+• Scenario 1: fixed indoor scenario. The receiver is 4 meters away from the transmitter in a room with windows, walls, and corridor around;
+• Scenario 2: an indoor scenario. Unlike Scenario 1, the antennas are 5 meters apart and are not facing each other;
+• Scenario 3: a changing indoor scenario. Unlike Scenario 2, pedestrians keep walking between the antennas;
+• Scenario 4: a changing indoor scenario. The only difference from Scenario 3 is that the antennas are 6 meters apart.
+The measured BER is shown in Table III. From the Table III, the models trained in matched scenarios always achieve the best performance, thereby reflecting the TurboNet+’s strong ability to learn new scenarios. Moreover, the training samples obtained at a single transmitting power can help the TurboNet+ to achieve significant improvement over a wide range of transmitting power, a feature that is consistent with the simulation results. Table III shows that the model trained in Scenario 1 can achieve similar performance in new scenarios compared with the retrained model and this outcome indicates the TurboNet+’s strong robustness. Note that the model trained with samples generated by simulation under an AWGN channel can also achieve decent results in the real scenarios. Although the gain obtained cannot meet the above two models, a considerable improvement is achieved compared with the traditional max-log-MAP algorithm. In general, the TurboNet+ exhibits strong learning ability and robustness under real channels.
+VII. CONCLUSION
+In this work, we have proposed the TurboNet, which was obtained by unfolding the original iterative structure of the max-log-MAP algorithm as a DNN decoding unit. In particular, we introduced weights to the max-log-MAP algorithm and trained the weights through a supervised learning algorithm. A loss function was well-designed to efficiently train the TurboNet and prevent tricky gradient vanishing issue. We further reduced the computational complexity and training cost by pruning the TurboNet into the TurboNet+. The TurboNet+ has
+
+REFERENCES
+[1] D. J. Costello and G. D. Forney, “Channel coding: The road to channel capacity,” Proc. IEEE, vol. 95, no. 6, pp. 1150–1177, Jun. 2007.
+[2] R. W. Hamming, “Error detecting and error correcting codes,” Bell Syst. Tech. J., vol. 29, no. 2, pp. 147–160, Apr. 1950.
+[3] D. E. Muller, “Application of Boolean algebra to switching circuit design and to error detection,” Trans. IRE Prof. Group Electron. Comput., vol. EC-3, no. 3, pp. 6–12, Sep. 1954.
+[4] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Inf. Control, vol. 3, no. 1, pp. 68–79, Mar. 1960.
+[5] I. S. Reed and G. Solomon, “Polynomial codes over certain finite fields,” J. Soc. Ind. Appl. Math., vol. 8, no. 2, pp. 300–304, Jun. 1960.
+[6] P. Elias, “Coding for noisy channels,” IRE Conv. Rec., vol. 4, pp. 37–46, Mar. 1955.
+[7] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes,” in Proc. IEEE ICC, Geneva, Switzerland, May 1993, pp. 1064–1070.
+[8] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[9] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[10] T. O’Shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cognit. Commun. Netw., vol. 3, no. 4, pp. 563–575, Dec. 2017.
+[11] T. Wang, C.-K. Wen, H. Wang, F. Gao, T. Jiang, and S. Jin, “Deep learning for wireless physical layer: Opportunities and challenges,” China Commun., vol. 14, no. 11, pp. 92–111, Nov. 2017.
+[12] Z. Qin, H. Ye, G. Y. Li, and B.-H.-F. Juang, “Deep learning in physical layer communications,” IEEE Wireless Commun., vol. 26, no. 2, pp. 93–99, Apr. 2019.
+[13] T. J. O’Shea, T. Roy, and T. C. Clancy, “Over-the-air deep learning based radio signal classification,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 168–179, Feb. 2018.
+[14] H. He, C.-K. Wen, S. Jin, and G. Y. Li, “Model-driven deep learning for MIMO detection,” IEEE Trans. Signal Process., vol. 68, pp. 1702–1715, Feb. 2020.
+[15] H. Ye, G. Y. Li, and B.-H. Juang, “Power of deep learning for channel estimation and signal detection in OFDM systems,” IEEE Wireless Commun. Lett., vol. 7, no. 1, pp. 114–117, Feb. 2018.
+[16] X. Gao, S. Jin, C.-K. Wen, and G. Y. Li, “ComNet: Combination of deep learning and expert knowledge in OFDM receivers,” IEEE Commun. Lett., vol. 22, no. 12, pp. 2627–2630, Oct. 2018.
+[17] J. Zhang, C.-K. Wen, S. Jin, and G. Y. Li, “Artificial intelligenceaided receiver for a CP-free OFDM system: Design, simulation, and experimental test,” IEEE Access, vol. 7, pp. 58901–58914, May 2019.
+[18] C.-K. Wen, W.-T. Shih, and S. Jin, “Deep learning for massive MIMO CSI feedback,” IEEE Wireless Commun. Lett., vol. 7, no. 5, pp. 748–751, Oct. 2018.
+[19] T. Wang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep learningbased CSI feedback approach for time-varying massive MIMO channels,” IEEE Wireless Commun. Lett., vol. 8, no. 2, pp. 416–419, Apr. 2019.
+[20] S. Dörner, S. Cammerer, J. Hoydis, and S. ten Brink, “Deep learning based communication over the air,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 132–143, Feb. 2018.
+[21] H. Ye, L. Liang, G. Y. Li, and B.-H. Juang, “Deep learning-based end-to-end wireless communication systems with conditional GANs as unknown channels,” IEEE Trans. Wireless Commun., vol. 19, no. 5, pp. 3133–3143, May 2020.
+[22] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learningbased channel decoding,” in Proc. IEEE 51st ACISS, Mar. 2017, pp. 1–6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+6140
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 10, OCTOBER 2020
+
+[23] X.-A. Wang and S. B. Wicker, “An artificial neural net viterbi decoder,” IEEE Trans. Commun., vol. 44, no. 2, pp. 165–171, Feb. 1996.
+[24] H. Kim, Y. Jiang, R. B. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in Proc. ICLR, Vancouver, BC, Canada, Apr. 2018, pp. 1–17.
+[25] Z. Cao, H. Zhu, Y. Zhao, and D. Li, “Learning to denoise and decode: A novel residual neural network decoder for polar codes,” 2019, arXiv:1908.00460. [Online]. Available: http://arxiv.org/abs/1908.00460
+[26] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani, and P. Viswanath, “Deepturbo: Deep turbo decoder,” in Proc. SPAWC, Cannes, France, Jul. 2019, pp. 1–5.
+[27] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput., Sep. 2016, pp. 341–346.
+[28] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE ISIT, Jun. 2017, pp. 1361–1365.
+[29] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[30] I. Be’ery, N. Raviv, T. Raviv, and Y. Be’ery, “Active deep decoding of linear codes,” 2019, arXiv:1906.02778. [Online]. Available: http://arxiv.org/abs/1906.02778
+[31] Y. He, J. Zhang, C.-K. Wen, and S. Jin, “A model-driven DNN decoder based on max-log-MAP algorithm for turbo code,” in Proc. IEEE APWCS, Singapore, Singapore, Aug. 2019, pp. 1–5.
+[32] Technical Specification; Evolved Universal Terrestrial Radio Access (EUTRA); Multiplexing and Channel Coding (Release 9) 3GPP Organizational Partners, document TS 36.212, Rev. 8.3.0, 3rd Generation Partnership Project, May 2008.
+[33] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),” IEEE Trans. Inf. Theory, vol. IT-20, no. 2, pp. 284–287, Mar. 1974.
+[34] S. Talakoub, L. Sabeti, B. Shahrrava, and M. Ahmadi, “An improved max-log-MAP algorithm for turbo decoding and turbo equalization,” IEEE Trans. Instrum. Meas., vol. 56, no. 3, pp. 1058–1063, Jun. 2007.
+[35] P. Robertson, P. Hoeher, and E. Villebrun, “Optimal and sub-optimal maximum a posteriori algorithms suitable for turbo decoding,” Eur. Trans. Telecommun., vol. 8, no. 2, pp. 119–125, Mar./Apr. 1997.
+[36] J. Erfanian, S. Pasupathy, and G. Gulak, “Reduced complexity symbol detectors with parallel structure for ISI channels,” IEEE Trans. Commun., vol. 42, nos. 2–4, pp. 1661–1671, Feb./Apr. 1994.
+[37] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014, arXiv:1412.6980. [Online]. Available: http://arxiv.org/abs/1412.6980
+[38] J. Vogt and A. Finger, “Improving the max-log-MAP turbo decoder,” Electron. Lett., vol. 36, no. 23, pp. 1937–1939, Nov. 2000.
+[39] P. Jiang et al., “Artificial intelligence-aided OFDM receiver: Design and experimental results,” 2018, arXiv:1812.06638. [Online]. Available: http://arxiv.org/abs/1812.06638
+[40] X. Yang et al., “RaPro: A novel 5G rapid prototyping system architecture,” IEEE Wireless Commun. Lett., vol. 6, no. 3, pp. 362–365, Jun. 2017.
+Yunfeng He received the B.S. degree from the Nanjing University of Science and Technology, Nanjing, China, in 2018. He is currently pursuing the M.S. degree with the School of Information Science and Engineering, Southeast University. His main research interests include deep learning application in communication, channel coding, and massive MIMO systems.
+Jing Zhang (Graduate Student Member, IEEE) received the B.S. degree in information and telecommunication engineering from the China University of Mining and Technology, Xuzhou, China, in 2015, and the M.S. degree in information and communication engineering from Southeast University, Nanjing, China, in 2018, where she is currently pursuing the Ph.D. degree. Her current research interests include physical layer communication, artificial intelligence, and the design of transceivers.
+
+Shi Jin (Senior Member, IEEE) received the B.S. degree in communications engineering from the Guilin University of Electronic Technology, Guilin, China, in 1996, the M.S. degree from the Nanjing University of Posts and Telecommunications, Nanjing, China, in 2003, and the Ph.D. degree in information and communications engineering from Southeast University, Nanjing, in 2007. From June 2007 to October 2009, he was a Research Fellow with the Adastral Park Research Campus, University College London, London, U.K. He is currently with the faculty of the National Mobile Communications Research Laboratory, Southeast University. His research interests include space time wireless communications, random matrix theory, and information theory. He served as an Associate Editor for IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, IEEE COMMUNICATIONS LETTERS, and IET Communications. He and his coauthors have been awarded the 2011 IEEE Communications Society Stephen O. Rice Prize Paper Award in the field of communication theory and the 2010 Young Author Best Paper Award by the IEEE Signal Processing Society.
+Chao-Kai Wen (Member, IEEE) received the Ph.D. degree from the Institute of Communications Engineering, National Tsing Hua University, Taiwan, in 2004. He was with Industrial Technology Research Institute, Hsinchu, Taiwan, and MediaTek Inc., Hsinchu, from 2004 to 2009, where he was engaged in broadband digital transceiver design. Since 2009, he has been with the Institute of Communications Engineering, National Sun Yat-sen University, Kaohsiung, Taiwan, where he is currently a Professor. His research interest includes optimization in wireless multimedia networks.
+Geoffrey Ye Li (Fellow, IEEE) is currently a Professor with the Georgia Institute of Technology, Atlanta, GA, USA. Before moving to Georgia Tech, he was with AT&T Labs-Research at Red Bank, New Jersey, as a Senior Member and then a Principal Technical Staff Member, from 1996 to 2000, and a Post-Doctoral Research Associate with the University of Maryland at College Park, Maryland, from 1994 to 1996. His general research interests include statistical signal processing and machine learning for wireless communications. In these areas, he has published over 500 journal articles and conference papers in addition to over 40 granted patents. His publications have been cited over 41 000 times. He has been recognized as the World’s Most Influential Scientific Mind, also known as a Highly Cited Researcher, by Thomson Reuters almost every year. Dr. Li was awarded the IEEE Fellow for his contributions to signal processing for wireless communications in 2005. He received several prestigious awards including the Donald G. Fink Overview Paper Award in 2017 from the IEEE Signal Processing Society, the James Evans Avant Garde Award in 2013 and the Jack Neubauer Memorial Award in 2014 from the IEEE Vehicular Technology Society, the Stephen O. Rice Prize Paper Award in 2013, the Award for Advances in Communication in 2017, and the Edwin Howard Armstrong Achievement Award in 2019 from the IEEE Communications Society, and the 2015 Distinguished Faculty Achievement Award from the School of Electrical and Computer Engineering, Georgia Tech. He has been involved in editorial activities for over 20 technical journals, including the founding Editor-in-Chief of the IEEE 5G Tech Focus and IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS (JSAC) Special Series on ML in Communications and Networking. He has organized and chaired many international conferences, including the Technical Program Vice-Chair of IEEE ICC’03, a Technical Program Co-Chair of IEEE SPAWC’11, a General Co-Chair of IEEE GlobalSIP 2014 and IEEE VTC 2019 (Fall), and a Technical Program Co-Chair of IEEE VTC 2016 (Spring) and IEEE SPAWC 2020.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:26:58 UTC from IEEE Xplore. Restrictions apply.
+
+

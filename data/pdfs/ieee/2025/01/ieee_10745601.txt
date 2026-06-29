@@ -1,0 +1,443 @@
+IEEE COMMUNICATIONS LETTERS, VOL. 29, NO. 1, JANUARY 2025
+
+45
+
+Spiking Neural Belief Propagation Decoder for Short Block Length LDPC Codes
+Alexander von Bank , Graduate Student Member, IEEE, Eike-Manuel Edelmann, Graduate Student Member, IEEE, Sisi Miao , Student Member, IEEE, Jonathan Mandelbaum , Graduate Student Member, IEEE, and Laurent Schmalen , Fellow, IEEE
+
+Abstract— Spiking neural networks (SNNs) are neural networks that enable energy-efficient signal processing due to their event-based nature. This letter proposes a novel decoding algorithm for low-density parity-check (LDPC) codes that integrates SNNs into belief propagation (BP) decoding by approximating the check node update equations using SNNs. For the (273,191) and (1023,781) finite-geometry LDPC code, the proposed decoder outperforms sum-product decoder at high signalto-noise ratios (SNRs). The decoder achieves a similar bit error rate to normalized sum-product decoding with successive relaxation. Furthermore, the novel decoding operates without requiring knowledge of the SNR, making it robust to SNR mismatch.
+Index Terms— Spiking neural networks, channel codes, decoder, message passing, belief propagation decoding, LDPC codes, neuromorphic, event-based computing.
+I. INTRODUCTION
+NEUROMORPHIC computing has gained much attention in recent years as CPUs are approaching their physical limits of operation speed and efficiency [1]. Spiking neural networks (SNNs) mimic the behavior of the human brain, which is a highly efficient computational device that consumes only 20 W of power to solve several complex tasks concurrently [2]. Hence, implementing SNNs on neuromorphic hardware is particularly interesting since it promises energy-efficient signal processing due to its event-based computing [3]. Furthermore, SNNs can be implemented on various types of neuromorphic hardware, enabling computation in the analog, digital, or photonic domain [1], [4], [5]. An SNNbased equalizer was emulated on an FPGA and compared to benchmark equalizers in [6], demonstrating the superior energy efficiency of SNNs.
+Low-density parity-check (LDPC) codes are forward error-correcting codes included in various modern communication standards, e.g., 5G and WLAN, due to their outstanding error correction performance with iterative message-passing decoding, typically known as belief propagation (BP)
+Received 15 October 2024; accepted 2 November 2024. Date of publication 6 November 2024; date of current version 10 January 2025. This work has received funding from the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation program (grant agreement No. 101001899). Parts of this work were carried out in the framework of the CELTIC-NEXT project AI-NET-ANTILLAS (C2019/3-3) (grant agreement 16KIS1316) and within the project Open6GHub (grant agreement 16KISK010) funded by the German Federal Ministry of Education and Research (BMBF). The associate editor coordinating the review of this letter and approving it for publication was W. Liu. (Corresponding author: Alexander von Bank.)
+The authors are with the Communications Engineering Laboratory, Karlsruhe Institute of Technology, 76187 Karlsruhe, Germany (e-mail: alexander.bank@kit.edu; eike-manuel.edelmann@kit.edu; sisi.miao@kit.edu; jonathan.mandelbaum@kit.edu; laurent.schmalen@kit.edu).
+Digital Object Identifier 10.1109/LCOMM.2024.3492711
+
+decoding. In particular, close-to-capacity performance is reported when decoding LDPC codes using the sum-product algorithm (SPA). However, the SPA requires the evaluation of computationally intensive check node updates [7]. Therefore, complexity-reduced variants like normalized min-sum (NMS) [8] or differential decoding with binary message passing (DD-BMP) [9] have been introduced.
+It is known that introducing memory to decoding via successive relaxation (SR) enhances its performance for the SPA and the min-sum (MS) algorithm [10]. As pointed out in [11], DD-BMP is also related to SR due to the memory of the decoder. Hence, decoding with memory can reduce the gap between complexity-reduced BP and plain SPA. Furthermore, SPA with SR can outperform classical SPA. In addition, a threshold to suppress small values can also help to improve MS decoding, as the offset MS decoder shows [12].
+A system implementing the BP algorithm with SNNs has the potential to provide energy-efficient decoding. Therefore, BP was implemented with SNNs in [13] by connecting multiple SNNs and exchanging messages via spikes. The deviation of SNN-based BP messages compared to the correct messages was measured for a small graph with six nodes. However, no practical channel code was evaluated in [13].
+In this letter, we propose a novel BP decoder that incorporates SNNs. In contrast to [13], the novel system uses simple SNNs rather than liquid and readout pools. Furthermore, we rely on real-valued/graded spikes, compared to the encoding to a pulse rate of [13]. We optimized SNNs to replace the complex SPA check node update with energy-efficient SNN operations. Two decoding variants are introduced. The simplified variant requires SNNs consisting of only a single neuron. While both outperform NMS and DD-BMP decoding in Monte Carlo simulations, in high signal-to-noise ratio (SNR) regimes, the proposed decoder outperforms SPA, and the simplified variant achieves SPA-like performance. To the best of our knowledge, this is the first work that uses SNNs to improve the energy efficiency of BP for channel decoding of practically relevant channel codes. The implementation of the proposed SNN-based BP decoder and additional results are available at [14].
+II. SPIKING NEURAL NETWORKS
+SNNs consist of multiple layers of spiking neurons. Like classical neural networks, the layers are connected by linear layers. Spiking neurons can be interconnected within a layer, resulting in recurrent connections. Compared to classical neural networks, SNNs exhibit two significant differences: First, they exchange information in short pulses,
+
+© 2024 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+
+46
+
+IEEE COMMUNICATIONS LETTERS, VOL. 29, NO. 1, JANUARY 2025
+
+Fig. 1. Exemplary SNN dynamics. Input spikes sin(t) (illustrated by dots) generate a synaptic current i(t), which charges the membrane potential v(t).
+If v(t) exceeds the firing threshold vth, an output spike sout(t) is generated.
+
+so-called spikes. Second, spiking neurons are state-dependent and exhibit temporal dynamics, mimicking the biological neuron [15]. The membrane potential v(t) of a spiking neuron describes its state. An incoming spike induces a synaptic current i(t), which charges v(t). Concurrently, v(t) decreases over time. If v(t) exceeds the threshold potential vth of the neuron, an output spike is generated and the membrane potential is reset to the resting potential vr. The leaky integrate-and-fire (LIF) model is a simple yet biologically plausible and, therefore, common spiking neuron model. Its dynamics in differential form are [15]
+
+di(t) i(t)
+
+dt
+
+=− + τs
+
+j
+
+wj sin,j (t),
+
+(1)
+
+dv(t) dt
+
+=
+
+((v(t) −
+
+− vr) τm
+
++
+
+i(t))
+
++
+
+sout(t) (vr
+
+−
+
+vth) .
+
+(2)
+
+Hereby, τs ∈ R+ denotes the time constant of the synaptic current, wj ∈ R the weight applied to the j-th incoming sequence of spikes sin,j(t) ∈ R, τm ∈ R+ the time constant of the membrane potential, and sout(t) ∈ {0, 1} the output spike sequence generated by sout(t) = Θ(v(t) − vth), where Θ(·) denotes the Heaviside function. The input spike
+
+sequence sin,j(t) can be either sent from downstream layers (feed-forward) or spiking neurons within the same layer
+
+(recurrent). Fig. 1 provides an example of the dynamics of
+
+a LIF neuron. The leaky integrate (LI) neuron is obtained
+
+by deactivating the spiking functionality. Hence, LI neurons
+
+act as memory with leakage. For simulation and training,
+
+we utilize the PyTorch-based framework Norse [16].
+
+III. BELIEF PROPAGATION DECODING
+We consider the decoding of binary (N, k) LDPC codes, which map k data bits onto N code bits. LDPC codes are defined as the null space of a sparse parity-check matrix (PCM) H ∈ FM 2 ×N . BP decoding is conducted on the Tanner graph, a bipartite graph associated with the respec-
+tive PCM [17, pp. 51-59]. A Tanner graph consists of two types of nodes. First, the check nodes (CNs) cj, with j ∈ {1, 2, . . . , M }, which correspond to the single parity checks, i.e., the rows of the PCM. The second type of nodes are variable nodes (VNs) vi, with i ∈ {1, 2, . . . , N }, where each node is associated with a code bit, i.e., a column of the PCM. An edge between a CN cj and a VN vi in the Tanner graph exists iff Hj,i = 1. A regular (dv, dc) LDPC code possesses dc non-zero entries per row and dv non-zero entries per column in its PCM. The check node degree and variable node degree are denoted by dc and dv, respectively.
+Assume that a random codeword x is binary phase shift keying (BPSK) modulated and transmitted over a binary-input additive white Gaussian noise (AWGN) channel, i.e., yi = (−1)xi + ni, with ni ∼ N (0, σ2).
+
+Fig. 2. Setup of an Elena-SNN SCNU calculating the message Li[c←] j
+
+based dc∗ =
+
+on the dc − 1.
+
+messages The upper
+
+Li[v′→ ] j , i′ and lower
+
+∈ M(j) \ {i} branches realize
+
+=: {i1, . . (5) and (6),
+
+. , idc∗ } with respectively.
+
+The LI neuron implements the memory.
+
+Fig. 3. Setup of the SNN block in Fig. 2 implementing (8) using dc LIF-neurons. If an input value is below θ1, the connected neuron is charged to emit a spike. The upstream neuron combines all incoming spikes and forwards them, leading to a zero output. If all input values are larger than θ1, no neuron is charged, leading to θ2 as output.
+
+The bit-wise log-likelihood ratio (LLR) Li at the channel output w.r.t the i-th code bit is defined as
+
+Li = log
+
+P (Yi = yi|Xi = 0) P (Yi = yi|Xi = 1)
+
+.
+
+(3)
+
+Next, we consider the SPA, in which messages are LLRs
+
+that are iteratively updated in the nodes and passed along the
+
+edges of the Tanner graph. A BP iteration with a flooding schedule includes the parallel updating of all CN messages
+
+and then all VN messages. The variable-to-check-node messages are initialized with L[iv→] j = Li, where Li[v→] j is the variable-to-check-node message sent from vi to cj. First, the check-to-variable-node messages Li[c←] j are evaluated. To this end, we simplify the update equation [17, (2.17)] by splitting it into the absolute value αi[c←] j = L[ic←] j and the sign βi[c←] j =
+sign Li[c←] j , i.e.,
+
+Li[c←] j = αi[c←] j βi[c←] j , ∀i ∈ M(j),
+
+(4)
+
+
+
+
+
+αi[c←] j = 2 · tanh−1 
+
+tanh |Li[v′→ ] j |  , (5) 2
+
+i′ ∈M(j )\{i}
+
+βi[c←] j =
+
+sign Li[v′→ ] j ,
+
+(6)
+
+i′ ∈M(j )\{i}
+
+where M(j) = {i : Hj,i = 1} is the set of indices of VNs connected to CN j.
+Next, we introduce the VN update calculating the variableto-check-node message sent from vi to cj using
+
+Li[v→] j = Li +
+
+L[ic←] j′ , ∀j ∈ N (i) ,
+
+(7)
+
+j′∈N (i)\{j}
+
+where N (i) = {j : Hj,i = 1} is the set of indices of neighboring CNs of vi.
+Note that both the CN and the VN update follow the extrinsic principle, i.e., when updating the message to VN
+
+VON BANK et al.: SPIKING NEURAL BP DECODER FOR SHORT BLOCK LENGTH LDPC CODES
+
+47
+
+Fig. 4. The architecture of the proposed decoder. The SCNU contains the SNN. For i ∈ {1, . . . , N } and j ∈ {1, . . . , M }, we use the notation N (i) := {j1i , . . . , jdiv } and M(j) := {i1j , . . . , ijdv }, respectively.
+
+vi (CN cj), the message originating from vi (CN cj) is
+excluded from the update equation. After reaching a predefined maximum number of iterations, the bit-wise output LLRs L˜i are calculated using L˜i = Li + j∈N (i) L[ic←] j. Finally, the decoded bits ˆbi are obtained by applying a hard decision to L˜i, where ˆbi = 0 if L˜i > 0 and ˆbi = 1 otherwise. For a
+more detailed explanation of message-passing algorithms, the
+interested reader is referred to [17, Ch. 2].
+
+IV. SPIKING NEURAL BELIEF PROPAGATION DECODING
+
+Equation (5) constitutes a significant part of the complexity of the SPA [7]. Therefore, an efficient replacement of the CN update using, e.g., SNNs, can improve the energy efficiency of the decoder. Hence, we propose a novel decoder named Enlarge-Likelihood-Each-Notable-Amplitude Spiking-NeuralNetwork decoder, referred to as Elena-SNN. Elena-SNN uses a so-called SNN CN update (SCNU) substitute for integrating SNNs into the CN update equations (4)-(6). Fig. 2 depicts the setup of an SCNU calculating the message L[ic←] j given the messages Li[v′→ ] j, i′ ∈ M(j) \ {i}. The incoming L[iv′→ ] j are split into their sign and absolute value; both are processed, combined, and afterward integrated over time by an LI neuron, which acts as memory. Therefore, τm and τs of the LI neuron control the behavior of the SCNU memory. The upper branch performs (6), which can be implemented using XOR operations. The lower branch realizes (5), where the computationally complex operations of (5) are replaced by the SNN, shown in Fig. 3. Inspired by the offset MS algorithm [12], which approximates (5) by αi[c←] j ≈ max mini′∈M(j)\{i} L[iv′→ ] j − θ1, 0 , we further simplify the approach by
+
+
+
+αi[c←] j ≈  θ2
+
+if min
+i′ ∈M(j )\{i}
+
+L[iv′→ ] j
+
+> θ1 ,
+
+(8)
+
+ 0 otherwise .
+
+Like the offset MS algorithm, (8) returns zero if the input values are below the threshold θ1 ∈ R+. In contrast to the offset
+MS algorithm, which returns the biased minimum value, (8) returns a fixed value θ2 ∈ R+ if the threshold θ1 is exceeded. Hence, we approximate the term mini′∈M(j)\{i} |L[iv′→ ] j | − θ1 with θ2. Fig. 3 visualizes the implementation of (8) using
+LIF spiking neurons. To implement (8), we emit zero if at least one input value |L[iv′→ ] j| is below the threshold θ1, and
+
+Fig. 5. Simplified Elena-SNN⋆ SCNU. The multiplication of the signs and the LI neuron act similarly to DD-BMP.
+θ2 otherwise. Therefore, the signs of all inputs |Li[v′→ ] j| are inverted, the bias θ1 is added, the signal is amplified and integrated by LIF neurons. If (θ1−|Li[v′→ ] j|) > 0, the connected LIF neuron is charged, an output spike is generated and passed to the combining LIF neuron. If (θ1 − |L[iv′→ ] j|) < 0, the connected LIF neurons are discharged, and no output spike
+is generated. Hence, the multiplications, the adder, and the
+LIF neurons implement the inverted sign function; if a value is below θ1, a spike is emitted. The following combining LIF neuron fires if any of the previous neurons emit a spike.
+If the combining LIF neuron emits a spike, the output turns
+zero. Hence, if the minimum absolute of the input values is above θ1, θ2 is emitted. If at least one value is below θ1, zero is emitted.
+Fig. 4 depicts the overall decoder architecture, integrating
+the SCNUs. All SCNUs share the same parameters. First, for initialization, all L[ic←] j are set to zero, and the VNs are updated according to (7). Next, we start the iterative
+decoding process. The update of each CN consists in allocating the variable-to-check-node messages Li[v→] j to the respective SCNU. Assuming a regular LDPC code, there exist M · dc SCNUs, each performing an extrinsic CN update. Hence, in the allocation, all variable-to-check node messages Li[v′→ ] j with i′ ∈ M(j) \ {i} participating in the update of L[ic←] j are routed to the respective SCNU, which implements (4). Afterward,
+the VNs are updated, and the process is iteratively repeated
+until the hard decision maps the output LLRs to binary values.
+After that, the membrane potentials and synaptic currents of
+all neurons are reset to zero. The memory is, therefore, also
+reset. It is important to note that the decoder uses a flooding
+schedule, i.e., all node updates are performed in parallel. Each SCNU of the Elena-SNN decoder uses dc LIF spiking
+neurons and a single LI neuron. We furthermore propose a simplified version of Elena-SNN, called Elena-SNN⋆. Inspired by the DD-BMP, which only takes the sign of each L[iv→] j into account, the number of neurons per SCNU can be reduced to
+a single LI neuron by omitting the lower path of Fig. 2. Its
+simplified SCNU can be seen in Fig. 5.
+
+48
+
+IEEE COMMUNICATIONS LETTERS, VOL. 29, NO. 1, JANUARY 2025
+
+Fig. 6.
+
+Impact
+
+of
+
+the
+
+parameters
+
+of
+
+the
+
+decoders
+
+on
+
+the
+
+performance.
+
+Both
+
+decoders
+
+are
+
+run
+
+for
+
+20
+
+iterations.
+
+C1
+
+is
+
+run
+
+at
+
+Es N0
+
+=
+
+3.5 dB
+
+and
+
+C2
+
+at
+
+Es N0
+
+= 3.4 dB.
+
+V. RESULTS AND DISCUSSION
+
+We implemented and evaluated the two proposed decoders
+
+for two different finite-geometry (FG) LDPC codes, the
+
+(273,191) and the (1023,781) code [7], in the following called
+
+C1 and C2, respectively. Both FG LDPC codes are regular overcomplete codes, C1 has dc = 17, dv = 17, whereas C2 has dc = 32, dv = 32. FG LDPC codes together with
+
+BP decoding are known to typically possess very low error
+
+floors, which are of interest for, e.g., storage and wireline
+
+applications. Currently, due to the highly irregular structure
+
+of the 5G LDPC code and the presence of low-degree VNs,
+
+Elena-SNN does not yet achieve competitive performance.
+
+Adapting Elena-SNN to perform better with such codes is part
+
+of our ongoing investigation.
+
+For yi, which is the received value corresponding to the i-th
+
+code bit of a codeword, the bit-wise LLRs are Li = yi · Lc,
+
+where Lc is the channel reliability parameter. Usually, for an
+
+AWGN channel, Lc
+
+=
+
+4
+
+Es N0
+
+=
+
+2 σ2
+
+and therefore needs to
+
+be adapted to the channel SNR. However, depending on the
+
+code,
+
+we
+
+optimize
+
+both
+
+decoders
+
+at
+
+a
+
+fixed
+
+Es N0
+
+corresponding
+
+to a BER of approximately 10−4. For evaluation, the value of
+
+Lc is maintained, regardless of the channel SNR. To compare
+
+against the fixed Lc, the Elena-SNN-Lc decoder adjusts Lc to
+
+match the channel SNR.
+
+We
+
+choose
+
+Es N0
+
+=
+
+3.5 dB
+
+for
+
+C1
+
+and
+
+Es N0
+
+=
+
+3.4 dB
+
+for
+
+C2.
+
+For
+
+20
+
+decoding
+
+iterations,
+
+the
+
+proposed
+
+decoders are compared to the following benchmark decoders:
+
+SPA, DD-BMP, MS, NMS, and NMS with SR decoding
+
+(SR-NMS). Further increasing the decoding iterations did not
+
+yield a significant improvement in the decoding performance.
+
+For all benchmark decoders, Lc matches the actual Es/N0.
+
+A. Parameters
+For all LIF spiking neurons of the Elena-SNN decoder, we fix τm = 1 ms, τs = 1 ms and vth = 1. Furthermore, we fix τs = 1 ms of the LI neurons. Hence, the remaining parameters subject to optimization are τm of the LI neurons as well as θ1 and θ2. For the Elena-SNN⋆ decoder, τs = 1 ms of the LI neurons is also fixed. Hence, the set of tuneable parameters is reduced to τm of the LI neuron.
+The membrane time constants τm for the ElenaSNN decoder and Elena-SNN⋆ decoder are determined by a simple line search with θ1 = θ2 = 1. With the obtained τm, another line search yields θ1. The obtained τm and θ1 are fixed to determine θ2 in a final line search. Fig. 6(a) shows the impact of τm on the performance of both decoders
+
+for both codes. For Elena-SNN, small τm yield the best performance, reducing the averaging effect of the LI neuron. Elena-SNN⋆ performs best at larger τm, demonstrating the need for averaging by the LI neuron. For Elena-SNN and C1, Fig. 6(b) shows the effect of the bias θ1 on the BER and the spike rate of the SNN, where the spike rate is the ratio of spikes generated by all LIF spiking neurons to possible spikes of the discrete SNN simulation. Up to a value of θ1 ≈ 2, an increase in θ1 leads to a decreasing BER, while the spike rate increases. Further increasing θ1 yields both a higher BER and a higher spike rate. For C2, a similar behavior was observed. As Fig. 6(c) shows, the output amplitude θ2 significantly impacts the BER. Again, for C2, a similar behavior was observed. For the Elena-SNN decoder we have chosen (τm = 1 ms, θ1 = 2, θ2 = 1.4) for C1 and (τm = 1.667 ms, θ1 = 1.6, θ2 = 1) for C2. For the ElenaSNN⋆ decoder we have chosen τm = 1.639 ms for C1 and τm = 4.167 ms for C2.
+B. Evaluation
+Fig. 7 compares the different decoders for C1 and C2. As expected, the SPA performs best in the low SNR regime for both codes. For higher SNR, the SR-NMS decoder performs best. Comparing the SR-NMS and the NMS decoders reveals that SR decreases the BER for C2. The Elena-SNN⋆ outperforms DD-BMP for both codes. Elena-SNN performs slightly worse than the SR-NMS decoder. At a BER of 10−5, ElenaSNN has a gap of 0.046 dB to the SR-NMS decoder for C1. Elena-SNN yields an SNR gain of 0.35 dB compared to SPA. For C2, Elena-SNN achieves a gap of 0.03 dB to SR-NMS and a gain of 0.28 dB over SPA. The Elena-SNN decoder exhibits an error floor for Eb/N0 greater than 4.9 dB, as Fig. 7(a) shows, resulting in a BER of approximately 10−9. The error floor results from the low resolution of the approximation in (8); future work will investigate an approximation with higher resolution and dynamic range. For the C2 code, we simulated 108 codewords at an Eb/N0 of 4.48 dB and did not observe an error floor. Also, the constant Lc enables decoding without continuous SNR measurement, with improvement at low SNRs and only a slight penalty for high SNRs, as Fig. 7(a) shows.
+C. Discussion
+We want to emphasize three significant points: First, ElenaSNN outperforms the SPA in high SNR regimes. Compared
+
+VON BANK et al.: SPIKING NEURAL BP DECODER FOR SHORT BLOCK LENGTH LDPC CODES
+
+49
+
+FG LDPC codes, BPSK, and an AWGN channel, we have shown that both decoders outperform complexity-reduced versions of the SPA, e.g., MS and DD-BMP. In high SNR regimes, the Elena-SNN decoder outperforms SPA. Both decoders were optimized at a fixed Es/N0 value and have been shown to generalize over the whole range of evaluated Es/N0 values. Hence, the decoder works without knowledge of the Es/N0 of the system, which is an advantage compared to the SPA.
+Future work will test both proposed decoders on neuromorphic hardware and compare their complexity with the benchmark decoders. Furthermore, we will evaluate the proposed decoders for different types of LDPC codes. We are aware that the SNN input of the proposed decoders is realvalued. Thus, the neuromorphic hardware needs to support real-valued input, like, e.g., Intel Loihi [4].
+
+Fig. 7. BER curves of the Elena-SNN , Elena-SNN⋆ and reference decoders.
+to Elena-SNN, the simple Elena-SNN⋆ decoder reduces the computational complexity at the cost of decoding performance. It can only reach SPA performance; however, it solely requires the multiplication of signs and a single LI neuron. Second, Elena-SNN and Elena-SNN⋆ were optimized for a fixed Es/N0 and Lc value. The results show that both approaches can generalize over a broad SNR regime. Thus, the set of applied parameters solely depends on the code, not the channel quality. Third, in high SNR regimes, the variable-to-checknode messages Li[v→] j tend to have large absolute values. Hence, the LIF spiking neurons of the Elena-SNN decoder are not sufficiently charged to generate an output spike. Therefore, at Eb/N0 = 3.5 dB, a spike rate of 0.6% is achieved, whereas, at Eb/N0 = 0 dB, the spike rate is increased to 9% at 0dB. Hence, depending on the SNR, the number of emitted spikes varies for the code C1 between 557 spikes per codeword and 8354 spikes per codeword between 0 dB and 3.5 dB.
+VI. CONCLUSION
+In this work, we introduced Elena-SNN, a novel channel decoder for LDPC codes, which overcomes the complexity of the SPA by replacing its computationally complex calculations with an SNN. We furthermore introduced a simplified version of the Elena-SNN decoder, namely Elena-SNN⋆, which significantly reduces the number of neurons. The number of parameters that need to be optimized are three parameters for the Elena-SNN decoder and one parameter for the Elena-SNN⋆ decoder. For the (273,191) and the (1023,781)
+
+REFERENCES
+[1] T. F. de Lima, B. J. Shastri, A. N. Tait, M. A. Nahmias, and P. R. Prucnal, “Progress in neuromorphic photonics,” Nanophotonics, vol. 6, no. 3, pp. 577–599, Mar. 2017.
+[2] K. Roy, A. Jaiswal, and P. Panda, “Towards spike-based machine intelligence with neuromorphic computing,” Nature, vol. 575, no. 7784, pp. 607–617, Nov. 2019.
+[3] Y. S. Yang and Y. Kim, “Recent trend of neuromorphic computing hardware: Intel’s neuromorphic system perspective,” in Proc. Int. SoC Design Conf. (ISOCC), Yeosu, South Korea, Oct. 2020, pp. 218–219.
+[4] Intel. (2021). Taking Neuromorphic Computing To the Next Level With Loihi 2. Accessed: May 22, 2024. [Online]. Available: https://download. intel.com/newsroom/2021/new-technologies/neuromorphic-computingloihi-2-brief.pdf
+[5] C. Pehle et al., “The BrainScaleS-2 accelerated neuromorphic system with hybrid plasticity,” Frontiers Neurosci., vol. 16, Feb. 2022.
+[6] M. Moursi, J. Ney, B. Hammoud, and N. Wehn, “Efficient FPGA implementation of an optimized SNN-based DFE for optical communications,” in Proc. IEEE Middle East Conf. Commun. Netw. (MECOM), Abu Dhabi, United Arab Emirates, Nov. 2024, pp. 1–6.
+[7] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[8] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low errorfloor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+[9] N. Mobini, A. H. Banihashemi, and S. Hemati, “A differential binary message-passing LDPC decoder,” IEEE Trans. Commun., vol. 57, no. 9, pp. 2518–2523, Sep. 2009.
+[10] H. Xiao, S. Tolouei, and A. H. Banihashemi, “Successive relaxation for decoding of LDPC codes,” in Proc. 24th Biennial Symp. Commun., Kingston, ON, Canada, Jun. 2008, pp. 107–110.
+[11] E. Janulewicz and A. H. Banihashemi, “Performance analysis of iterative decoding algorithms with memory over memoryless channels,” IEEE Trans. Commun., vol. 60, no. 12, pp. 3556–3566, Dec. 2012.
+[12] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[13] A. Steimer, W. Maass, and R. Douglas, “Belief propagation in networks of spiking neurons,” Neural Comput., vol. 21, no. 9, pp. 2502–2523, Sep. 2009.
+[14] A. von Bank. (2024). Enlarge-Likelihood-Each-Notable-Amplitude Spiking-Neural-Network (ELENA-SNN) Decoder. [Online]. Available: https://github.com/kit-cel/ELENA
+[15] E. O. Neftci, H. Mostafa, and F. Zenke, “Surrogate gradient learning in spiking neural networks: Bringing the power of gradient-based optimization to spiking neural networks,” IEEE Signal Process. Mag., vol. 36, no. 6, pp. 51–63, Nov. 2019.
+[16] C. Pehle and J. E. Pedersen. (Jan. 2021). Norse—A Deep Learning Library for Spiking Neural Networks. [Online]. Available: https://norse. ai/docs/
+[17] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+
+

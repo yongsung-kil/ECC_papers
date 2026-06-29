@@ -1,0 +1,607 @@
+A Pure Software LDPC Decoder on a Multi-core Processor Platform with Reduced Inter-processor Communication Cost
+
+Yan Ying, Kaidi You, Liyang Zhou, Heng Quan, Minge Jing, Zhiyi Yu, Xiaoyang Zeng State Key Laboratory of ASIC and System, Department of Microelectronics, Fudan University, China
+
+Abstract - As an error correction code, Low Density Parity Check (LDPC) code has been widely used in various communication standards such as WiMAX and DVB-S2. But these continuously-evolving communication standards and the high development cost and low-flexibility of hardwired ASIC solutions have pushed LDPC researchers to turn to more cost-efficient and flexible implementation, and thus the multi-core processor based implementation of LDPC decoder is gaining increasing attention in the last few years. However, the performance of the multi-core processor based implementation is far below the hardwired ASICs, with one of the key reasons that the cost of communication between processors is very high. Three approaches are proposed in this paper to reduce the communication cost, including: optimized algorithm partitioning to reduce communication traffic, utilizing imbalanced communication between tasks to optimize mapping and reduce overall communication distance, and simplified data sending-receiving mechanism to reduce the cost of identifying received data. By using these approaches, the communication time of the proposed implementation of LDPC decoder only accounts for 12.2% of total decoding time, which generally occupies 50% decoding time in the previously reported LDPC decoders on multi-core processors. And our work can achieve better throughput performance under the same hardware condition compared with other state-of-the-art works.
+I. INTRODUCTION
+During the past decades hardwired ASICs are the most prevalent implementation of LDPC decoder, as it has the advantage of low area and high performance. However, facing the continuously-evolving communication standards, the drawbacks of ASIC design such as high development cost, poor time-to-market, short product life and low-flexibility are increasingly conspicuous. In regard to these shortages, programmable solutions based on multi-core processor were proposed, which have intrinsic flexibility, low cost and improved time-to-market and high parallel computational capability.
+Nevertheless, the implementation of LDPC decoder based on multi-core processor platform is a challenge topic as its performance is still far below ASICs. One restricting factor of the improvement of its performance is the inter-processors communication cost. For example, in [1] and [2], nearly 50% of the decoding time is actually spent on transferring data between processors.
+Reducing communication cost can be implemented in following aspects. The first is to reduce the communication traffic. In section 3, the quantitative
+Sponsors: Science and Technology Commission of Shanghai Municipality 10706200300 and Shanghai Rising-Star Program 11QA1400500, National Significant Science and Technology Projects – 03 Special 2011ZX03003-003-03, NSFC 61103008,Huawei Corporation. Corresponding author: Zhiyi Yu; Email: zhiyiyu@fudan.edu.cn
+
+analysis of the communication traffic under different orientations of algorithm partition is given and the horizontal partition is proved to have least communication traffic for most structures of LDPC codes. The second way is to reduce the overall communication distance. In section 4, this paper proposes the idea that utilizes the imbalance of communication between LDPC tasks to optimize the mapping and reduce the overall communication distance. Last, reducing the cost of identifying the received data is also an effectual way to reduce communication cost as communication cost expends on not only transmitting data but also identifying what the received data are. In section 5, this cost is reduced by half through adding a row-flag into the packet.
+II. LDPC DECODING ALGORITHM
+Quasi-Cyclic LDPC code is the most widely applied LDPC codes as its encoding complexity is directly proportional to the codeword length. Its H matrix is composed of circulant permutation matrix or zero matrix. Each column of H corresponds to a variable-node (VN) and each row of H corresponds to a check-node (CN). The VNs and CNs are linked by none-zero elements of H.
+
+Fig. 1. Parity-check matrix of Quasi-Cyclic LDPC code
+
+The decoding process of LDPC code goes iteratively by
+
+exchanging messages between the VNs and CNs, to
+
+improve the reliability of the received bits. In this work,
+
+turbo-decoding message-passing algorithm (TDMP) is
+
+chosen for its fast convergence. In one iteration the
+
+decoding process consists of the following three steps: •S1: Initialize VNs and CNs.
+
+•S2: For different layers, serially process the following
+
+three steps, and for lines in the same layers, process the
+
+following steps in parallel:
+
+(1)Update prior message:
+
+L(k ) vc
+
+=
+
+S (k −1) v
+
+−
+
+R(k cv
+
+−1)
+
+(1)
+
+(2)Update extrinsic message:
+
+∏ R(k) cv
+
+=η
+
+×
+
+n∈N(c)\v
+
+sgn(L(nkc−1)
+
+)×
+
+min
+n∈N (c)\v
+
+L(k−1) nc
+
+(2)
+
+(3)Update posteriori probabilities:
+
+S(k) v
+
+=
+
+L( k ) vc
+
++
+
+R(k ) cv
+
+(3)
+
+•S3: Parity check;
+
+Here superscript (k) denotes the kth iteration; Lvc is the
+
+prior message sent by VNs to CNs; Rcv is the extrinsic
+
+information passed from CNs to VNs; Sv is the posteriori
+probabilities of VNs;η is the correction factor;
+
+978-1-4673-0219-7/12/$31.00 ©2012 IEEE
+
+2609
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:52:20 UTC from IEEE Xplore. Restrictions apply.
+
+III. ALGORITHM PARTITIONING WITH REDUCED
+COMMUNICATION TRAFFIC
+
+In this section we will analyze different algorithm partition strategies from the viewpoint of the orientation of communication and propose the superior partition strategy. In order to make the following algorithm partition more universal, the following analysis is based on a parameterized LDPC code. The relating parameters are defined as follows. Dimension of submatrix: k; Number of submatrices in one row: N; Number of submatrices in one column: M; Row weight: dc; Column weight: dv; Number
+of “1”s in parity-check matrix: ρ ; Digitalizing bit of
+
+posteriori probability: Bpp; Digitalizing bit of prior message: Bpr; Digitalizing bit of extrinsic message: Bem;
+During the decoding process there are two kinds of message passing between processors, as shown in Fig.2. One is the horizontal information passing: 1) Variable-nodes transmit their prior message to the corresponding check-nodes to update the extrinsic information. 2) The updated extrinsic information is transmitted back to variable-nodes to calculate the posterior probabilities. The other kind of message passing is the vertical passing: the transmitting of updated posterior probabilities between different layers.
+
+{ V0 ,V1,V2
+
+VNk−3, VNk−2, VPNk−1}
+
+N
+
+Fig. 2. Block diagram of the proposed LDPC decoder
+
+According to the two different orientations of message
+
+passing, all partition of LDPC decoding algorithm can be
+
+divided into two ways. The first is horizontal partition.
+
+Horizontal partition incorporates the computation of all
+
+non-zero submatrices in one row into one task. Thereby
+
+for the parameterized LDPC codes defined above, the
+
+whole decoding algorithm will be divided into M*k
+
+small-scale tasks. Under this partition, all horizontal
+
+information passing will be included into tasks and
+
+therefore the message passing between tasks remains only
+
+vertical information passing. Therefore the total bits of
+
+passing message is expressed as
+
+CPB = dv * N * k * Bpp .
+
+(4)
+
+The second algorithm partition is vertical partition, in
+
+which all message passing of vertical orientation (message
+
+passing between the "1"s corresponding to the same
+
+variable-node) is included into tasks and only horizontal
+
+information passing leaves between tasks. The times of
+
+message passing in one iteration under vertical partition
+
+consist (dc −1) × M × k times of the prior message passing and (dc −1) × M × k times of the extrinsic message
+
+passing, thus the total bits of passing message is
+
+LPB = (dc −1) * M * k (Bpr + Bem ) .
+
+(5)
+
+As in almost all implementation of LDPC decoders the
+
+digitalizing bits Bpp, Bpr and Bem are the same, formula (4),
+
+(5) equals to
+
+CPB = dv * N * k * B
+
+(6)
+
+LPB = (dc −1) * M * k * 2B .
+
+(7)
+
+Since dv*N*k =dc*M*k = ρ , (6), (7) can be expressed as:
+
+CPB = ρ * B ,
+
+(8)
+
+LPB = 2 * ρ − 2* M * k = ρ ∗ B + (ρ − 2 * M * k) ∗ B . (9)
+
+Comparing the two formulas above, we can reach the
+
+result:
+
+⎧LPB > CPB dc > 2 .
+
+(10)
+
+⎨ ⎩
+
+LPB
+
+≤
+
+CPB
+
+dc ≤ 2
+
+The result suggests that when dc>2, horizontal partition
+
+has less communication traffic compared with vertical
+
+partition; and when dc<2, vertical partition is better. As the
+
+most row-weight of LDPC codes is great than 2,
+
+horizontal algorithm partition is more superior in most
+
+cases. And the following analyses are all based on
+
+horizontal algorithm partition.
+
+IV. TASK-PROCESSOR MAPPING STRATEGY TO REDUCE
+OVERALL COMMUNICATION DISTANCE
+As mentioned above, when applying horizontal algorithm partition, the communication between tasks remains the vertical message passing. As the distribution of “1”s and the offset of the submatrices are basically irregular, the vertical communication times between each two tasks is random. Therefore previous works all acquiesce that the communication times between different two tasks are almost the same. And hence the mapping of the LDPC decoding tasks in previous works was all random and no optimized mapping was applied.
+Although the vertical message passing is random, we believe that the communication traffic between tasks has little chance to be totally even. To validate our idea, we take LDPC codes in WiMAX system for example and count up the times of the vertical communication between every two tasks, see table I. The statistic results clearly suggest that the vertical communication times between different two tasks differ greatly, which suggests the room for mapping optimization.
+
+TABLE I.
+
+THE MAXIMAL AND MINIMAL COMMUNICATION TIMES
+
+BETWEEN TWO TASKS OF WIMAX LDPC CODES IN ONE ITERATION
+
+Codelength 576 576 960 960 1920
+
+Coderate 1/2 2/3 1/2 2/3 2/3
+
+Maximal communication times
+11 10 7 7 6
+
+Minimal communication times
+2 2 0 1 0
+
+Therefore in this paper, we utilize the imbalance of communication to optimize mapping and reduce communication distance. Branch and bound algorithm [3], which is very efficient by rejecting suboptimal subsets and avoiding exhaustive enumeration, is selected to automatically map the frequently-communicate tasks as closely as possible. Table II respectively compares the overall communication distance of some LDPC codes under random mapping and the proposed mapping. Nearly 20% communication distance could be reduced by the proposed mapping, which proves the effectiveness of our proposed idea—the vertical communication times between different LDPC tasks are imbalanced and can be utilized to reduce communication distance.
+
+2610 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:52:20 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II.
+
+OVERALL COMMUNICATION DISTANCE OF LDPC
+
+CODES OF WIMAX UNDER RANDOM MAPPING AND PROPOSED MAPPING
+
+code code communication communication
+
+reduced
+
+length rate distance under distance
+
+under by
+
+random mapping proposed mapping
+
+576 1/2 4614
+
+3658
+
+20.7%
+
+576 2/3 5448
+
+4528
+
+16.9%
+
+960 1/2 10104
+
+7990
+
+20.9%
+
+960 2/3 12348
+
+9674
+
+21.7%
+
+1920 2/3 35067
+
+27602
+
+21.3%
+
+V. SIMPLIFIED DATA SENDING-RECEIVING MECHANISM
+TO REDUCE THE DATA IDENTIFIED COST
+According to horizontal algorithm partition, before the computation of current row, each “1” of this row should receive the variable-node information updated by the above “1” in the same column. Therefore the task that contains the computation of all “1”s in one row should receive dc variable-node information before the computation, where dc is the row weight. The aim of data receiving mechanism is to judge whether all necessary variable-node information for the computation of current row have been received by the task-processor.
+However, as the running of each LDPC task is asynchronous, it is possible that when a processor is receiving the data for current row, it will also receive the data for the above or following rows, which are sent by the slower-running or faster-running processors. Therefore to judge whether the received data packet is for the computation of current row, the receiving processor should find the source of each received packet, therefore p-1 counters are needed to respectively count the number of the packets sent by other p-1 processors (p is the total number of the occupied processors). As each packet is very likely sent by different processors and corresponds to different counters, the receiving processor has to respectively check dc (row weight) different counters whenever it receives a packet, as shown in the second column of table IV.
+To shorten the receiving time, a more effective sending-receiving mechanism is proposed. Before a packet in sending terminal, a flag is added into the header of the packet. The flag, marked as R-flag, denotes which row’s computation the data packet is for. In receiving terminal, the flag is extracted and the counter of the corresponding row is added by 1. Under this sending-receiving mechanism, M counters are needed to counter the number of received data for M layers (M is the number of layers of the parity-check matrix). When the value of the counter corresponding to current row increments up to the row-weight, all needed data for current row are ready. Therefore, when receiving data for current row, the processor just needs to check the value of the counter corresponding to the current row (see table IV), instead of checking the values of dc counters. Applying the proposed sending-receiving mechanism, the needed number of clock cycles for receiving one packet is reduced by nearly 53%.
+
+VI. EXPERIMENTAL RESULTS
+A. Hardware platform To evaluate the proposed LDPC decoder, a multi-core
+processor platform is set up as a synthesizable Verilog-HDL model. The platform is composed of 4 homogeneous clusters and each cluster consists of 8 homogeneous processors (P-cell in Fig.3) and one local shared memory (M-cell in Fig.3). Each processor is a classic RISC processor core prototype similar with MIPS32 [4] 4KETM. A 2-D mesh NoC (Network-on-Chip) topology is employed. Processors are connected to the network via local router and communicate with each other through a message-passing mechanism.
+
+Fig.3. The architecture of the multi-core processor platform
+B. Results and Comparison The (576,288) LDPC code in WiMAX system is used
+as test object to evaluate the proposed LDPC decoder. The parameters of this code are shown in table III. According to section III, as the average row-weight of this code is 6.25(larger than 2), the horizontal partition has advantage in reducing the communication times over vertical partition. The partition result is shown in Fig4. The optimized mapping result by utilizing the imbalance of communication is presented in Fig.5.
+
+Codelength 576
+
+TABLE III. PARAMETERS OF THE TEST CODE
+
+Code- Average rate row-weight 1/2 6.25
+
+Submatrix dimension 24
+
+No. of Edges
+
+layers
+
+12
+
+1800
+
+L = S − R (k )
+
+(k −1)
+
+(k −1)
+
+vc
+
+v
+
+c (i ,1) v
+
+L =S −R (k) (k−1) (k−1)
+
+vc v
+
+c(i,2)v
+
+∏ η ∏ η R = (k) c(i,1)v
+
+×
+n∈N(c)\v
+
+sgn(L(nkc)
+
+)× min n∈N(c)\v
+
+L(k) nc
+
+R = (k) c(i,2)v
+
+×
+n∈N(c)\v
+
+sgn(L(nkc)
+
+)× min n∈N(c)\v
+
+L(k) nc
+
+S = L + R (k )
+
+(k)
+
+(k )
+
+v
+
+vc
+
+c (i,1) v
+
+S = L + R (k )
+
+(k )
+
+(k )
+
+v
+
+vc
+
+c(i,2)v
+
+L = S − R (k)
+
+(k −1)
+
+(k −1)
+
+vc
+
+v
+
+c ( i , 24 ) v
+
+∏ η R = (k) c(i,24)v
+
+×
+n∈N(c)\v
+
+sgn(L(nkc)
+
+)× min n∈N(c)\v
+
+L(k) nc
+
+S = L + R (k)
+
+(k)
+
+(k)
+
+v
+
+vc
+
+c (i , 24 ) v
+
+Fig. 4 Algorithm partition
+
+TABLE IV.
+
+COMPARISON OF DIFFERENT SENDING-RECEIVING MECHANISMS(TAKING THE 12th LINE OF (576,288) LDPC CODE OF WIMAX FOR INSTANCE)
+
+Sending-Receiving Mechanism
+
+Without R-flag
+
+With R-flag
+
+Program
+
+while(( counter[9] > 3 && counter[21] > 6 && counter[24]
+
+> 2 && counter[15] > 2 && counter[1] > 1 )==0 )
+
+{
+
+Receiving data；
+
+Unpack and get the source address sa;
+
+counter[sa]++; }
+
+While(counter[12]<5)
+
+{
+
+Receiving data；
+
+Unpack and get R-flag;
+
+counter[R-flag]++; }
+
+No. of cycles for receiving one packet
+
+34
+
+16
+
+2611 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:52:20 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 5 Mapping results of (576,288) LDPC code
+The decoding performance is presented in Table V. The communication time in our work only accounts for 12.2% of the total decoding time, which generally occupies 50% decoding time in the previously reported LDPC decoder on multi-core processor[1][2].
+
+TABLE V.
+
+DECODING PERFORMANCE OF THE PROPOSED (576,288) LDPC DECODER
+
+Decoding
+
+time Computation time
+
+(represented in cycles Communication time
+
+per iteration)
+
+Idle time
+
+Total time
+
+No. of iternation
+
+Operating frequency of the platform
+
+Throughput
+
+4200 620 620 5100 10 700M 7.91Mbps
+
+Table VI presents the comparison of our work with
+
+state-of-the-art implementation of LDPC decoder on
+
+different multi-core processor. Considering the strong
+
+influence on decoding performance brought by the
+
+performance of hardware platforms and the number of
+
+occupied processors, TNDC (throughput under normalized
+
+decoding cost) parameter is proposed in order to draw a fair
+
+comparison. TNDC is defined as
+
+TNDC = T ,
+
+(11)
+
+foper × P
+
+Where T is the throughput, foper is the operating frequency of
+
+the multi-core processor and P is the number of occupied
+
+processors. TNDC excludes the influence of hardware
+
+platform from the throughput and therefore gives a fair
+
+comparison of the implementation of LDPC decoder.
+
+The works presented in table VI all use Min-Sum
+
+algorithm to process check-nodes and base on 8 bit
+
+precision except that [7] uses 6 bit precision. And only Our work and [7] use TDMP as decoding algorithm, which has faster convergence speed than TPMP. Therefore compared with others, our work has the best error correction performance under same iteration times. Benefiting from the reduced communication time, the TDNC parameter of our work is the larger than other presented works, which means the proposed LDPC decoder can achieve better throughput performance under the same condition of hardware platform.
+VII. Summary
+This paper presents a software-based LDPC decoder on multi-core processor. To reduce the communication cost, three optimization approaches are proposed respectively from the respect of communication traffic, communication distance and receiving mechanism. The experimental results show that the communication time in our work only accounts for 12.2% of total decoding time, which generally occupies 50% decoding time in the previously published LDPC decoders on multi-core processors. And because of the reduced communication cost, our work can achieve better throughput performance under the same hardware condition compared with other state-of-the-art works.
+References
+[1] W. H. Hu; “Parallel LDPC Decoding on a Network-on-Chip Based Multiprocessor Platform”, 21st International Symposium on Computer Architecture and High Performance Computing, 2009. [2] Wen-Hsiang Hu; “A Spectral-based partitioning algorithm for parallel LDPC decoding on a multiprocessor platform”, 2009 International SoC Design Conference (ISOCC), pp. 245 – 248. [3] Jingcao Hu; “Energy and performance aware mapping for regular NoC architectures”, IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, pp: 551 – 562, 2005. [4] “ MIPS32 4KE™ Processor Core Family Software User’s Manual”, MIPS Technologies Inc (Jan. 2004). [5] Gabriel Falcao, “Massively LDPC Decoding on Multicore Architectures”, IEEE Transactions on Parallel and Distributed Systems,vol.22,issue2, pp. 309 - 322, 2011. [6] G. Falcao, L. Sousa, V. Silva, J. Marinho and I. Polo,“Parallel LDPC decoding on the Cell/BE processor,” in Proceedings of the 4th International Conference on High Performance Embedded Architectures and Compilers, 2008, pp. 389-403. [7] Kiran Kumar Abburi, "A Scalable LDPC Decoder on GPU" vlsid, pp.183-188, 2011 24th International Conference on VLSI Design, 2011.
+
+Our work [2] [5] [5] [6] [7]
+
+TABLE VI. COMPARISON WITH STATE-OF-THE-ART IMPLEMENTATION OF LDPC DECODERS ON MULTI-CORE PLATFORMS
+
+Algorithm and Precision
+
+Decoding algorithm
+
+Check-node processing
+
+Iter.
+
+TDMP
+
+MSA
+
+10
+
+-
+
+MSA
+
+-
+
+TPMP
+
+MSA
+
+10
+
+TPMP
+
+MSA
+
+10
+
+TPMP
+
+MSA
+
+10
+
+TDMP
+
+MSA
+
+5
+
+precision
+8 8 8 8 6
+
+Hardware platform
+
+Platform
+Our Platform NePA[8] x86 CPU
+GeForce 8800 GTX CELL/BE
+GeForce 9800GTX+
+
+f oper
+700MHz -
+2.4GHz 1.35 GHz 3.2GHz 1.836GHz
+
+P (No. of cores) 27 16 8 128
+(1+6)*16 128
+
+T/ foper
+11.2995 0.7072 0.8304 28.0576 21.7168 43.52
+
+TNDC
+0.4185 0.0442 0.1038 0.2192 0.1939 0.34
+
+2612 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:52:20 UTC from IEEE Xplore. Restrictions apply.
+
+

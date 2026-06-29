@@ -1,0 +1,552 @@
+2011 IEEE Information Theory Workshop
+
+Gigabit Rate Low-Power LDPC Decoder
+
+Eran Pisek1, Dinesh Rajan2, Joseph Cleveland2
+
+1Samsung Electronics
+
+2Southern Methodist University
+
+and Southern Methodist University
+
+Dallas, Texas, USA
+
+episek@sta.samsung.com
+
+rajand@lyle.smu.edu, jclevela@lyle.smu.edu
+
+Abstract — LDPC codes are becoming popular in next generation high throughput wireless standards since they can provide a level of parallelism with sufficient performance to support the high gigabit rate. In this paper, we propose a new method for LDPC decoding called Parallel Processing Layered (PPL). The new method aims to optimize the latency and power efficiency of LDPC decoding to enable significant increase of the processing rate, thereby saving battery power for mobile devices. We provide performance results in different channel models using the newly defined WiGig standards, and compare them to the conventional decoding methods. We show that the new proposed LDPC decoding architecture converges 2x faster than conventional (i.e. Flooding) methods.
+Keywords - LDPC Decoder, Low Power Architecture, Flooding,
+Layered, WiGig, Gigabit Communications
+I. INTRODUCTION
+The increased demand for high definition and 3D media, and the shift toward cloud computing emphasizes the need for high throughput wireless communication systems. However, implementing such high data-rate systems poses a number of engineering challenges including the design of a high throughput error control scheme. Low Density Parity Check (LDPC) codes [1] that were originally introduced in the sixties have received a great deal of attention in recent years due to their ability to achieve performance close to the Shannon limit [2]. Additionally, their structure is suitable for fast and efficient parallel decoding [3][4]. Consequently, many of the currently active telecommunication standards, such as IEEE 802.16e [5], WiGig [6], IEEE 802.15.3c [7], and DVB-S2 [8], utilize LDPC codes in their physical layer error control scheme.
+A major challenge in implementing LDPC codes is their decoding which requires high hardware complexity and increased power consumption. The increased power consumption issue is more critical in the case of batterypowered mobile devices. The focus of this paper is the design and implementation of a highly power efficient LDPC decoder with high processing rate and low decoding latency.
+The remainder of this paper is organized as follows. In Section II we review the advantages and disadvantages of various LDPC decoding algorithms in terms of computation complexity, latency and power. In Section III we describe the different hardware architectures of the LDPC decoder and differences between them in terms of hardware complexity,
+
+throughput, latency, and power. In Section IV we describe the proposed decoding method and hardware architecture and highlight its advantages. In Section V we provide numerical results of the proposed decoding architecture and compare it to with conventional methods.
+II. LDPC DECODING ALGORITHMS The three major LDPC decoding methods are:
+1. Maximum Likelihood (Alternative MAP (Maximum A Posteriori probability [1])
+2. Log domain Sum of Products 3. (Scaled) Min-Sum A. Maximum Likelihood The Maximum Likelihood (ML) decoder essentially selects the codeword that maximizes the likelihood of the received signal. However, ML is impractical to implement for large block sizes due to the high computation complexity. The Maximum Likelihood method is represented as:
+where r is the input signal to the decoder and xi , i={0:2N-1} is the set of all possible codes in that satisfy:
+where H is the parity check matrix of the LDPC code (i.e. HMatrix). In the case of transmission over an AWGN channel, the ML can be further simplified to:
+which if all the xi have the same power, is equivalent to
+The search space for (4) is constrained to the set of valid codes that satisfy (2). Maximum likelihood provides the fastest convergence (only a single iteration is required), thereby allowing the highest rate of processing for a given hardware processing capability. However, the hardware (HW)
+
+978-1A-4ut5ho7ri7ze-d0l4ic3en7s-e6d /u1se1l/im$i2te6d.t0o:0Yo©ns2e0i U1n1iv.IEDoEwEnloaded on J5u1n8e 24,2026 at 08:20:44 UTC from IEEE Xplore. Restrictions apply.
+
+2011 IEEE Information Theory Workshop
+
+complexity makes it impractical to implement for block size N bigger than 16 bits.
+B. Sum of Products
+The Sum of Product Algorithm (SPA) and the Log-SPA enable efficient hardware implementation of LDPC decoding. The log-domain SPA is an iterative decoder with messages exchanged between variable nodes and check nodes in a graphical representation of the code [9]. The message passed from check node (CN) j to variable node (VN) i is the Log Likelihood Ratio (LLR):
+
+where CNj:
+
+is the (extrinsic) LLR message sent from VNi to
+
+where
+
+is the LLR of VNi, and:
+
+The HW complexity of implementing (5-7) is still high due to numerous multiplications in each iteration and the large look up tables (tanh). In addition, sum of product decoder may require multiple iterations to converge. The number of iterations dictates the maximum processing rate of the decoder.
+C. (Scaled) Min-Sum
+A lower complexity decoder is the Log-Domain Min-Sum decoder [12] which, as the name suggests, uses the min operation to find the magnitude of the soft bits per check node. The following equation describes the Min-Sum Method.
+The Min-Sum method is much simpler to implement since it only needs to find the two smallest values of each variable node (VN) per check node (CN) and sum all the results per variable node (VN). The resulting hardware complexity of the Min-Sum is much lower than all other methods discussed before. However, the Frame Error Rate (FER) is inferior compared to SPA and ML. It requires more iterations than the other decoding schemes, which leads to a decrease in the effective processing rate at the receiver. To improve the FER, a correction factor is typically used [13] to scale the min values. Empirically, a scale factor A of 0.75 to the min values before adding back to the current extrinsic values seems to provide the best performance. This scaled value A is similar to that was found for Turbo decoders [14]. Nevertheless, the Min-Sum Approach requires high number of iterations which again limits the effective processing rate.
+
+Based on the comparison of the above methods, we summarize that the Scaled Min-Sum approach is the preferable approach for us to further enhance the decoding, even though the ML can provide us the maximal throughput. The Scaled Min-Sum approach allows an enhanced feasibility for HW implementation in terms of low complexity and power. The enhancement that we propose in this work reduces the number of iterations.
+In Section III we discuss hardware architectures to implement the Min-Sum decoder. Subsequently, in Section IV we illustrate the new decoding architecture for Min-Sum decoding. However, the proposed architecture can also be used to increase processing rate and reduce power consumption of other decoding algorithms.
+
+III. SCALED MIN-SUM ARCHITECTURE
+In this section we will describe the different architectures to implement Scaled Min-Sum. The two main approaches that are currently used for LDPC HW architectures are:
+1. Flooding
+2. Layered
+The Flooding approach assigns parallel minimum (min) processors each of which supports different row in the HMatrix. All CN entries per VN are summed to produce the extrinsic information for the next iteration. As an example for an LDPC code, we choose the WiGig LDPC code [6]. The LDPC code used in WiGig [6] supports only one block size of N=672bits with different rates of 1/2, 5/8, 3/4, and 13/16. In WiGig [6], the rows and columns (VNs) are grouped by lifting factor of Z=42. The H-Matrix tables for all rates (1/2, 5/8, ¾, and 13/16) are 4-layer decodable (13/16 rate requires only 3layers), which means for the Flooding Architecture that it can be divided into 4 parallel machines that simultaneously process the whole H-Matrix in one cycle per iteration. Fig. 1 describes the WiGig Rate 1/2 H-Matrix and protograph [10][11]. It can be seen that rows (1,3), (2,4), (5,7), and (6,8) are row pairs that make the LDPC Rate ½ 4-Layer decodable.
+
+40 -1 38 -1 13 -1 5 -1 18 -1 -1 -1 -1 -1 -1 -1 34 -1 35 -1 27 -1 -1 30 2 1 -1 -1 -1 -1 -1 -1 -1 36 -1 31 -1 7 -1 34 -1 10 41 -1 -1 -1 -1 -1 -1 27 -1 18 -1 12 20 -1 -1 -1 15 6 -1 -1 -1 -1 35 -1 41 -1 40 -1 39 -1 28 -1 -1 3 28 -1 -1 -1 29 -1 0 -1 -1 22 -1 4 -1 28 -1 27 -1 23 -1 -1 -1 31 -1 23 -1 21 -1 20 -1 -1 12 -1 -1 0 13 -1
+-1 22 -1 34 31 -1 14 -1 4 -1 -1 -1 13 -1 22 24
+
+Figure 1. WiGig LDPC Rate ½ H-Matrix and Protograph (colored)
+
+A key advantage of the flooding architecture is that the
+
+processing rate per iteration is high. However flooding
+
+requires a large number of iterations to converge since all 4-
+
+parallel processors work on the same extrinsic values from the
+
+previous iteration. Fig. 2 describes the Flooding architecture
+
+designed to support WiGig LDPC Tables [6] at 4.6Gbps rate
+
+(up to MCS-12 [6]) assuming 65nm Low Power (LP) process
+
+and a
+
+clock. For flooding architecture, the
+
+processing rate
+
+, where I is the number of iterations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J5u1n9e 24,2026 at 08:20:44 UTC from IEEE Xplore. Restrictions apply.
+
+2011 IEEE Information Theory Workshop
+
+¼ H-Matrix
+Row Min (Dual) LLR Row Mem Processor
+
+Sum
+
+¼ H-Matrix
+Min (Dual) Row Row LLR
+Processor Mem
+
+Input/Extrinsic Memory
+
+Row Min (Dual) LLR Row Mem Processor
+¼ H-Matrix
+
+Min (Dual) Row Row LLR
+Processor Mem
+¼ H-Matrix
+
+Figure 2. WiGig LDPC Flooding Architecure
+
+In contrast, the Layered Architecture serially processes each row to avoid contention (which can be done in parallel on all independent rows in the H-Matrix) in each group of lifting factor (Z=42) and for all independent grouped rows as well. For example, in the case of WiGig rate ½, as mentioned above, the H-Matrix is 4-layer decodable which means for the Layered approach that even though the number of grouped rows is (1-R)N/Z=8 grouped rows, it is guaranteed that these 8 rows can be further grouped in 4 pairs of rows, each pair includes two independent rows.
+The Layered approach is slower than the Flooding approach in terms of number of cycles per iteration since the processing is done sequentially for each row in the H-Matrix while updating the extrinsic values in each row before proceeding to the next row. Since the Layered approach is slower and updates the extrinsic values of each row, it requires fewer iterations to converge to the same performance as the Flooding approach (typically 33% fewer iterations). In addition, the Layered approach does not need to sum the CNs results per VN since the Layered approach is a contention-free method and only one Check Node (CN) is used at a time per VN thus reducing the critical path and increasing the decoding processing frequency.
+Fig. 3 describes the architecture of the layered machine to support 4.6Gbps assuming 65nmLP and a 100MHz clock.
+
+H-Matrix
+
+H-Matrix
+
+H-Matrix
+
+H-Matrix
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+modulations such as WiGig OFDM 16QAM [6], the whole four blocks are given in the same OFDM symbol. Hence, optimizing the 4-Layered processing by assigning one processor per block will greatly reduce the HW complexity. Future LDPC codes can define bigger blocks sizes that will consume the whole OFDM symbol period for each modulation scheme (2xN block size for QPSK, 4xN for 16QAM and 6xN for 64QAM modulation schemes). Hence, the latency and HW complexity become more an issue for higher modulation schemes as the block size increases.
+For both implementation approaches, in addition to the extrinsic information, there is also a need to save the contribution of each VN from the previous iteration since it needs to be subtracted when processing the same CN in the next iteration. The size of this memory depends on the Wc (which is the maximum number of CNs connected to a single VN) of each VN. Hence, the total (called row LLR) memory is NxWc bytes (assuming 8-bit soft decision precision).
+The following section will describe the proposed LDPC decoder architecture that provides higher throughput with lower latency.
+IV. PARALLEL PROCESSING LAYERED (PPL) APPROACH
+In order to further reduce the LDPC decoding latency, we propose to optimize the decoding architecture to decrease the number of iterations required to converge. We will use the scaled Min-Sum algorithm as our reference. Since scaled Min-Sum algorithm is already optimized to performance and HW implementation due to its relatively low computation complexity, our main goal is to reduce the number of iterations to as low a number as possible. This reduction in the number of iterations will provide the required rate of processing at the receiver to support future LDPC codes with an efficient HW architecture. We will choose the layered approach since it requires fewer number of iterations to converge as a starting point for our iteration reduction optimizations.
+The proposed architecture called Parallel Processing Layered (PPL) is depicted in Fig. 4 for WiGig [6] Rate ½ protograph.
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Figure 3. WiGig LDPC Layered Architecure
+
+In order to support the same 4.6Gbps data rate for WiGig [6] as Flooding, the layered machine is duplicated 4 times and each supports a different block. In this case, both Flooding and Layered machine have the same processing complexity (four Min machines) per iteration. However, layered decoding requires 33% less number of iterations to converge than flooding decoding which reduces the latency by 33%. Decoding in a typical OFDM system with BPSK modulation, with N bits per OFDM symbol, can be supported by both Flooding and Layered approaches. However, for higher order
+
+Figure 4. Proposed Parallel Processing Method for WiGig Rate 1/2
+The PPL architecture is based on the Layered Scaled MinSum approach. However, the architecture is based on K parallel scaled Min-Sum processors (K=4 processors used in the Fig. 4). Each processor is set to start processing a different row (Z-grouped row) of the H-Matrix and continue the processing in a different direction. Hence, the number of possible parallel processors is P = (no. of directions=2)x(number of z-grouped rows). In case of Rate ½ WiGig [6], the number of Z-grouped rows is 8, hence 16
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J5u2n0e 24,2026 at 08:20:44 UTC from IEEE Xplore. Restrictions apply.
+
+2011 IEEE Information Theory Workshop
+
+processors can be used. This method can be further expanded to P = ((1-R)N/Z)! number of parallel processors (all possible orders of the rows) to increase performance. At the end of processing of all rows in parallel, the extrinsic value of the output is given by:
+(9) where:
+
+Rate
+
+P0
+
+P1
+
+P2
+
+P3
+
+1/2
+
+1/up
+
+8/down
+
+5/up
+
+4/down
+
+5/8
+
+1/up
+
+6/down
+
+4/up
+
+3/down
+
+3/4
+
+1/up
+
+4/down
+
+3/up
+
+3/down
+
+13/16
+
+1/up
+
+3/down
+
+2/up
+
+1/down
+
+and:
+
+,
+
+(11)
+
+Note that k is the k-th processor extrinsic result. The output extrinsic per iteration is the maximum value of all possible extrinsic values derived from each processor P0 to PK1. This method can be used either in a single iteration or in multiple iterations. The same Min-Sum equations are valid for use between iterations. However, for one iteration decoding, there is no need to save the row LLR memory which results in substantial savings in gate count and power.
+Fig. 5 describes the architecture to support the next generation high throughput low latency Parallel Processing Layered LDPC Decoder. It shows an example of 4 processors solution supporting rate ½, where each processor is set to start on a different row of the 8 z-group rows and proceed in a different direction:
+1. P0 is set to start at z-group row 1 and count up. 2. P1 is set to start at z-group row 8 and count down. 3. P2 is set to start at z-group row 5 and count up with
+wrap around. 4. P3 is set to start at z-group row 4 and count down with
+wrap around.
+
+H-Matrix
+
+H-Matrix
+
+H-Matrix
+
+H-Matrix
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+Row LLR Mem
+
+Min Layered Processor
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Input/Extrinsic Memory
+
+Max Output Memory
+Figure 5. Proposed Parallel Processing Layered Architecture
+As done for rate ½, the same algorithm can be applied for the other WiGig [6] rates and other LDPC codes. Table I describes the possible parallel processing layered structure:
+
+Table I. PPL Architecture constellation for various WiGig rates. Each value represents the row at which processor Pk starts and the direction in which it continues processing.
+
+FER
+
+In summary, the advantages of the proposed method are:
+1. Higher rate of processing at the receiver due to fewer required iterations compared to other architectures.
+2. At high SNR, when a single iteration provides the desired error rates, the row LLR memory is not required and can be eliminated for instance by disconnecting the voltage supply to the appropriate logic elements. Consequently, the HW complexity and power consumption are reduced.
+3. Since the proposed method requires only a few iterations to converge, it is not required to add an early termination mechanism such as syndrome checking and consequently the power consumption is reduced.
+V. PERFORMANCE RESULTS In this section, simulation results for the LDPC codes specified in WiGig standard [6] are described. First, we test the number of iterations required for the proposed PPL to converge. Fig. 6 illustrates the variation of the FER in an AWGN channel with number of iterations for the three approaches assuming same HW (4 Min processors each) as described in Section IV. It can be seen that the PPL exhibits the fastest convergence of the three.
+1
+Flooding 2dB Layered 2dB PPL 2dB
+0.1
+1.89x
+0.01 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 No. of Iterations
+Figure 6. Performance Comparison WiGig QPSK R=1/2 @2dB
+We also tested the AWGN performance with different modulation schemes. All schemes were tested around FER=0.01 since this is the threshold for packet retransmission.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J5u2n1e 24,2026 at 08:20:44 UTC from IEEE Xplore. Restrictions apply.
+
+2011 IEEE Information Theory Workshop
+
+1
+
+FER
+
+0.1
+
+0.01
+
+0.001
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+SNR[dB]
+
+QPSK Flooding 2 Iter QPSK Layered 2 iter QPSK PPL 2 iter QPSK Flooding 4 iter 16QAM Flooding 2 iter 16QAM Layered 2 iter 16QAM PPL 2 iter 16QAM Flooding 4 iter 64QAM Flooding 2 iter 64QAM Layered 2 iter 64QAM PPL 2 iter 64QAM Flooding 4 iter
+
+Figure 7. Performance Comparison WiGig rate 1/2 LDPC
+
+From Fig. 7 it can be seen that at FER=0.01 in WiGig case [6] (all modulation schemes), the PPL with 2 iterations is 0.4dB better than the Layered approach, and 1.7dB better than the Flooding method. The Flooding method requires 4 iterations to attain the same FER. Thus the PPL algorithm converges twice as fast as the Flooding algorithm.
+
+Table II compares the proposed PPL and current approaches using the WiGig [6] example.
+
+Table II. LDPC Decoding Architecture Comparison
+
+Feature
+
+Flood ing
+
+Layered
+
+PPL
+
+No. of Z-group Processors (gate count)
+
+4 (4Proc/Bloc k)
+
+4 4x(1Proc/Block)
+
+4 (4Proc/Bloc k)
+
+Number of iterations (referenced to Flooding)
+
+I=12
+
+(2/3)I =8
+
+(1/2)I=6
+
+Latency[cyc] (assume 1 block/OFDM symbol) (referenced to Flooding)
+
+L=I= 12
+
+(4x2/3)L= (8/3)L=32
+
+(4x1/2)L= 2L=24
+
+Total Ext. Memory[Bytes]
+
+N(Wc+1) = 672x5=3360
+
+4N(Wc+1) = 4x672x5=
+13440
+
+4N(Wc+1) = 4x672x5=
+13440
+
+Throughput [bits/cyc] (reference to Flooding)
+
+N/I= 672/12=56
+
+3/2(N/I)= 1.5x672/12=84
+
+2(N/I)= 2x672/12=112
+
+In Table II we assume that the PPL is done for the first 2 iterations and then each block is processed as Layered for four additional iterations. The table shows that the PPL approach provides 1.33x the throughput as Layered approach and 2x the throughput as Flooding approach. Fig. 8 compares the processing schedule between the three methods using WiGig 16QAM [6] modulation scheme where there are four 672-bit LDPC blocks per one OFDM symbol (Pn denotes Processor n, and Bm denotes Block m). In order to maintain the low power, the PPL can be used for the first two iterations while the Layered approach is used for the rest of the iterations. Nevertheless, as shown in Fig. 6, the PPL converges faster at higher iterations, which means that the PPL can also be used in the end of the Layered processing to accelerate the Layered convergence. We are currently investigating hybrid approaches that combine the PPL and Layered method to further speed up the processing and reduce the power consumption.
+
+T=4Icyc
+
+P1
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+B8
+
+P2
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+B8
+
+Flooding
+
+P3
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+B8
+
+P4
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+B8
+
+T=(2/3)x(4Icyc)
+
+P1
+
+B1
+
+B5
+
+P2
+
+B2
+
+B6
+
+Layered
+
+P3
+
+B3
+
+B7
+
+P4
+
+B4
+
+B8
+
+T=(1/2)x(4Icyc +ov)
+
+P1 B B B B 1234
+
+B1
+
+BBBB 5678
+
+B5
+
+P2 B B B B 1234
+
+B2
+
+BBBB 5678
+
+B6
+
+PPL P3 B B B B 1234
+
+B3
+
+BBBB 5678
+
+B7
+
+P4 B B B B 1234
+
+B4
+
+BBBB 5678
+
+B8
+
+t
+Figure 8. Comparison of Process Scheduling for 16QAM WiGig
+
+VI. CONCLUDING REMARKS
+In this paper a new Parallel Processing Layered (PPL) LDPC Decoder algorithm and architecture was introduced. This method allows us to increase the LDPC decoder processing rate and decrease the overall decoding latency. Comparison with other conventional decoder architectures clearly shows superior performance of the proposed PPL architecture. Extensions of the PPL architecture to ML decoders and other codes (e.g. Turbo codes) should be investigated in future work.
+
+REFERENCES
+[1] R. G. Gallager, Low-density parity-check codes. Cambridge, MA: MIT Press, 1963.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes”, Electronics Letters, vol. 32, pp. 1645– 1646, August 1996
+[3] E. Boutillon, J. Castura, and F. R. Kschischang, "Decoder-first code design", Proceedings of the 2nd Intl Symposium on Turbo Codes and Related Topics, pp. 459-462, Brest, France, Sept 2000
+[4] T. Zhang, K. K. Parhi, "VLSI implementation-oriented (3,k)-regular low-density parity-check codes", 2001 IEEE Workshop on Signal Processing Systems, pp 25-36, Sept 2001
+[5] IEEE 802.16e-2005 Specification, February 2006
+[6] WiGig MAC and PHY Specification v1.0, April 2010
+[7] IEEE 802.15.3c-2009 Specifications, October 2009
+[8] DVB-S2 Specification, ETSI EN 302 307 V1.2.1, August 2009
+[9] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. on Inform. Theory, vol. 27, pp. 533–547, September 1981.
+[10] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” Tech. Rep. 42-154, IPN Progress Report, August 2003.
+[11] D. Divsalar, S. Dolinar, and C. Jones, “Protograph LDPC codes over burst erasure channels,” IEEE Military Commun. Conf., MILCOM 2006.
+[12] M. Fossorier, M. Mihaljevic and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, pp. 673-680, May 1999.
+[13] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity-check codes,” IEEE Trans. Commun., vol. 50, pp. 406-414, Mar. 2002.
+[14] J. Vogt and A. Finger, “Improving the max-log-MAP turbo decoder,”
+IEE Electronics Letters, vol. 36, no. 23, pp. 1937–1939, 2000.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J5u2n2e 24,2026 at 08:20:44 UTC from IEEE Xplore. Restrictions apply.
+
+

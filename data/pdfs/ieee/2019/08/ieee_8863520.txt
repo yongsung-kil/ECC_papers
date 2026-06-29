@@ -1,0 +1,346 @@
+DIR: Dynamic Request Interleaving for Improving the Read Performance of Aged SSDs
+Shiqiang Nie*, Youtao Zhang**, Weiguo Wu*, Chi Zhang* and Jun Yang**
+*Department of Computer Science and Technology, Xi’an Jiaotong University Email: nsqiang@gmail.com, wgwu@xjtu.edu.cn, chi.zhang@stu.xjtu.edu.cn **Department of Computer Science, University of Pittsburgh Email: zhangyt@cs.pitt.edu, juy9@pitt.edu
+
+Abstract—TLC (Triple-Level Cell) NAND flash is increasingly adopted to build SSDs (Solid-State Drives) for modern computer systems. While TLC NAND flash effectively improves storage density, it faces severe reliability issues, in particular, the pages stored using different bits exhibit different BERs (bit error rates). Integrating strong LDPC (Low-Density Parity-Check code) helps to improve reliability but suffers from long and proportional read latency due to multiple read retries.
+In this paper, we propose DIR, a novel strategy for improving the performance of TLC NAND flash-based SSDs, in particular, the aged ones with large BERs. DIR exploits the observation that the latency of an I/O request is determined, without considering the queuing time, by the access of the slowest device page, i.e., the page that has the highest BER. By grouping consecutive logical pages that have high locality, and interleaving their encoded data in three different types of device pages that have different RBERs, DIR effectively reduces the number of read retries for LDPC. Our experimental results show that adopting DIR in aged SSDs exploits nearly 75% locality from I/O requests, and, on average, reduces 36% read latency over conventional aged SSDs.
+Index Terms—TLC SSD, performance, interleaving data, unbalanced bit error rate
+I. INTRODUCTION
+NAND-based flash has become the primary storage media in modern computer systems, ranging from mobile devices to servers in data centers [1]. TLC (Triple-Level Cell) SSDs (Solid-State Drives) are promising as they meet the capacity demands of modern applications with reduced per-bit cost. TLC SSDs usually have high BERs (bit error rates) as they have much narrow margins between neighboring voltage levels and thus are more vulnerable to programming noises [2]. While LDPC codes are increasingly adopted for TLC SSDs to improve their reliability [3], the extra flash sensing for softdecision decoding is timing-consuming, especially for aged SSDs with high BERs.
+The three different bits of TLC flash cells, referred to as LSB (Least Significant Bit), CSB (Central Significant Bit) and MSB (Most Significant Bit), often exhibit very different BERs,
+This work is supported in part by the National Key Research and Development Program of China under Grant 2016YFB1000303, in part by the National Science Foundation of China under Grant 61672423, in part by NSF under Grant CCF-1718080 and CCF-1617071. The work of S. Nie is supported by the Chinese Scholarship Council under Grant 201806280273.
+978-1-7281-3854-1/19/$31.00 © 2019 IEEE
+
+even when they have the same P/E (Program/Erase) cycle and retention time. This imbalance often leads to unequal read and decode latencies for LDPC-based SSD storage systems. Given a read I/O request that consists of multiple page sub-requests, its completion time is determined by the slowest sub-request, which depends on not only the sub-request queuing length, but also the service time of the sub-request. Prior studies optimize queuing latency [4] [5] and reduce the service time [6] to improve SSD performance. However, for aged SSDs that adopt LDPC, reading a device page that has high BER results in multiple read retries such that page reading remains a significant portion of the I/O request service time.
+The work that is close to our design is the bit-level data layout optimization strategies [7] [8] [9]. These strategies interleaved the data from each logic page into the three types of bits of the same device page. Since the device bits are accessed sequentially, directly integrating these strategies in FTL (Flash Translate Layer) leads to severe read/write amplification and large performance degradation.
+In this paper, we propose DIR, a novel strategy for improving the performance of aged TLC NAND flash based SSDs. We summarize our contributions as follows.
+• We explore page level access locality from modern applications. That is, many logical pages tend to be read and updated simultaneously. Such locality allows us to group and interleave data from consecutive page accesses without severe read/write amplification.
+• We propose to exploit page level access locality and distribute the interleaved data of these pages to device pages of different types at different locations, which amortizes the BERs at the page level. The new data layout effectively reduces the read retries while maintaining the access parallelism.
+• We evaluate the proposed DIR approach and compare it to the state-of-the-art. Our experimental results show that adopting DIR in aged SSDs exploits nearly 75% locality from I/O requests, and, on average, reduces 36% read latency over conventional aged SSDs.
+In the rest of the paper, Section II discusses the SSD background and motivates our DIR design. Section III presents the detailed DIR scheme. Section IV describes the experiment
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+methodology and analyzes the results. Section V concludes the paper.
+II. BACKGROUND AND RESEARCH MOTIVATION
+In this section, we discuss the SSD architecture and the execution workflow of I/O requests. We then motivate our design with uneven BERs among different bits of TLC NAND flash.
+A. SSD Architecture
+Fig.1 shows the internal organization of SSD, which consists of HIL (Host Interface Logic), FTL, FSU (Flash Scheduler Unit) [10]. HIL receives an I/O request from the host, splits it into page-sized sub-requests, and then inserts them into device queues for services. Each sub-request has a specific LPN (Logical Page Number) [11]. The FTL maintains a mapping table to track the current physical location, i.e., PPN (Physical Page Number), of each LPN. Additional components, such as garbage collection, wear leveling, and LDPC encoder/decoder engine, are also included in the FTL.
+The SSD back-end contains multiple channels, where these channels can service I/O sub-request in parallel. Each channel is connected to one or more chips. Each chip consists of one or more dies, where each die contains one or more planes. Each plane can service an I/O sub-request concurrently with the other planes. In this paper, we adopt the static mapping scheme such that the channel, chip, die and plane indices are fixed for a given LPN. Such an organization provides four levels of parallelism for servicing I/O request (channel, chip, die, and plane). The front end manages the back-end resources and issues I/O requests to the back-end channels.
+
+The program/read operations of LSB, CSB and MSB pages are different. As shown in Fig. 2, the value stored in a TLC cell is determined by the threshold voltage or the amount of charge in the cell. TLC cell programming is often performed using ISPP (Incremental Step-Pulse Programming) [12]. It can be divided to three distinct steps for minimizing the inter-page program interference. The LSB page is programmed firstly, which is programmed quickly to the target threshold voltage range, as shown in Fig. 2. If the bit 1 is programmed into the LSB page, the cell threshold voltage is kept in the erased state, marked as Er. If the bit is 0, the cell is charged to make the threshold voltage transfer from the Er state to the temporary state. When the CSB page is programmed, if the bit is 1, the voltage threshold does not change, and the cell remains either in the Er state or the next state, depending on the value of LSB. The same as the MSB page program. During the read operation, when reading LSB page data, if the sensing threshold is lower than V T H1, the cell denotes bit 1; and bit ’0’ otherwise. For CSB and MSB pages, the flash cell needs to be sampled two times and three times, respectively, by changing the sensing voltage levels. This is referred to as hard decision memory sensing, which differentiates one sensing level between two adjacent states.
+When adopting LDPC to improve TLC SSD reliability, we may need to differentiate more than one sensing levels between two adjacent states, referred to as soft-decision flash sensing. LDPC incrementally increases the number of sensing levels so that more errors are likely to be corrected. However, such an approach leads to multiple read tries, which significantly increases flash read latency and degrades the read performance of SSDs, in particular, aged SSDs that have high BERs.
+
+7/& 3URJUDPPLQJ
+0HDVXUHG %(5DX
+
+B. Basic Operations of TLC SSD
+
+C. Motivation
+
+In TLC SSD, each cell uses eight states to represent the three bits of data, and each state uses the stored amount of ( charge, i.e., the threshold voltage, to distinguish itself from the others. Fig. 2 illustrates a typical threshold voltage distribution for TLC SSDs. To reduce the raw bit error probability, TLC ( SSD adopts gray code so that two neighboring levels differ by one bit — the voltage levels Er, P1, P2, P3, P4, P5, P6 and ( P7 denote information bits 111, 011, 001, 101, 100, 000, 010 and 110, respectively.
+
+(
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+ /6% SURJUDPPLQJ
+
+
+
+[[
+
+&6% SURJUDPPLQJ
+
+
+
+[
+
+[
+
+[
+
+06% SURJUDPPLQJ
+
+9WK 9WK
+
+9WK
+
+9WK 9WK 9WK
+
+9WK
+
+       
+
+ORZ (U
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+7KUHVKROG 9ROWDJH
+
+3 KLJK
+
+Fig. 2. Threshold voltage distribution for TLC NAND flash.
+
+Fig. 3. Measured BERs of each state. [9]
+Recent studies revealed that different bits of MLC and TCL flash exhibit significant BERs [8], [9]. Fig. 3 compares the BERs of different device pages for TLC SSDs according to [9]. As shown in the figure, the BERs of MSB pages are significantly higher than those of LSB pages. This is because errors come mainly from cells having their voltage levels shifted across neighboring levels. There is only one bit flipping possibility for LSB pages, i.e., 111↔xx0/x01↔x00/P3↔P4); but four possibilities for MSB page, i.e., Er↔P1, P2↔P3,P4↔P5,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+UH6THXQHGVW
+
+'LH 'LH 'LH 'LH
+%DFN HQG
+7UDQVDFWLRQ 6FKHGXOLQJ /'3& HQFRGHU
+GHFRGHU $GGUHVV 7UDQVODWLRQ
++RVW ,QWHUIDFH
+
++,/
+
+3DJH  5HTXHVW L
+
+/3$
+
+6XE5HTXHVW
+
+3DJH Q 3DJH Q
+
+Q
+
+'HYLFHOHYHO ,2 5HTXHVW 4XHXH
+
+)7 / 33$
+
+ZHDU OHYHOLQJ
+
+*DUEDJH &ROOHFWLRQ
+
+)&& )&&
+
+&KDQQHO  &KDQQHO Q
+
+&KLS  &KLS Q
+
+)ODVK &KLS $UUD\
+
+Fig. 1. A generic architecture of SSD.
+
+and P6↔P7. As another example, the shift between P1 and P2, i.e., P1↔P2 causes CSB bit error but not the LSB and MSB errors. The amount of charges stored in different threshold voltage levels are also different. The charge in P7 state is more likely to leak.
+To address the BER difference, Toshiki [9] and Zhao [8] proposed to store data from one logic page to different types of bits in one device page. While it helps to mitigate the bit error rate at the page level, these designs face a major challenge — one logic page write results in writes to three device pages. Since these writes are done sequentially, the designs face severe read and write amplification and thus large performance degradation.
+
+
+
+
+
+
+Fig. 4. Read locality across workloads.
+We then study the I/O requests in modern applications. An I/O read request typically consists of multiple sub-requests for pages that span across different channels, chips, dies, and planes. Without considering the lengths of different queues, we assume to service these sub-requests at the same time. Due to BER difference across different pages, their read latency vary dramatically — the data from LSB pages tend to be ready much earlier than that from MSB pages. Such scheduling tend to generate sub-optimlal results as the I/O latency is throttled by the time servicing the slowest MSB pages. In this paper, we devise to utilize the data interleaving technology to bridge the read latency gap between different pages with low write and read amplification.
+We conduct an experiment to analyze the page level access locality in modern application, i.e., for pages that are consecutively written to SSDs, the likeness of accessing them simultaneously at a later time. Fig. 4 summarizes the results showing
+
+spatial locality in different applications. For example, 80% pages that are written consecutively are accessed (i.e., read or written) simultaneously at a later time. This result motivates our design of page level data interleaving for mitigating read and write amplification and improving SSD read performance.
+III. DETAILS OF DIR
+In this section, we elaborate the DIR details. When an I/O request arrives at the host interfaces, the HIL splits it to multiple page-sized sub-requests that are sent to the FTL. We assume LDPC is applied to each page for improving data reliability.
+An overview. DIR is designed to exploit access locality to mitigate the long read latency when reading MSB device pages from aged SSDs. It interleaves the data from three consecutive page writes in three different device pages. These device pages are of different types, i.e., LSB/CSB/MSB pages. The interleaving helps to mitigate the BER at the page level such that the number of read retries can be effectively reduced at read time, which greatly improves the read performance in aged SSDs.
+A. Interleaving Data from Write Requests
+The DIR scheme organizes the data from consecutively write sub-requests in an interleaving way. It consists of two components, i.e., sub-requests grouping and device page assignments. Algorithm 1 depicts the main procedure.
+Step 1. Grouping sub-requests. DIR scheme traverses the sub-requests split from the same I/O request and groups any three sub-requests with adjacent LPNs. The sub-requests in the same group are to be written to three different types of device pages. We adopt the heuristics of using adjacent LPNs while high level semantic information may further improve access locality. We always place three sub-requests in a group so that, if the number of sub-requests is not a multiple of three, the remaining one or two sub-requests are left without being placed in any group. The sub-requests in groups and the sub-requests not in any group are referred to as grouped sub-requests and free sub-requests, respectively.
+DIR only interleaves the data from grouped sub-requests. Given one group, DIR saves one-third of each grouped subrequest in LSB device page; one-third in CSB; and one-third in MSB device page. One device page contains one-third
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Interleaving write request in DIR scheme
+
+Input: W Q: the write request delivered by host
+
+subW Q: the sub-requests of W Q 1: subW Q ← split request(W Q)
+
+HW Q: grouped sub-requests
+
+N W Q: free sub-requests 2: HW Q, N W Q ← group(subW Q)
+
+3: while HW Q do
+
+4: for each sub ∈ HW Q do
+
+5:
+
+estimate time(sub)
+
+6:
+
+assign page(sub)
+
+7: end for 8: interleave data(HW Q)
+
+9: end while 10: for each sub ∈ N W Q do 11: assign random(sub)
+
+12: end for
+
+data from each grouped sub-request. As we discuss next, the LSB, CSB, MSB device pages are from different blocks. By interleaving only grouped sub-requested, DIR avoids write amplification with introducing extra write sub-requests. Writing free sub-requested remains the same as that in the baseline.
+Step 2. Device page assignment. DIR assigns the interleaving data in one group to three different types of device pages in blocks from three different planes. Given these blocks tend to have different program/read latency and thus BERs, we propose an assignment strategy based on their expected service time. In this paper, we simplify the time computation based on queue length while more comprehensive strategies [4] can be applied orthogonally.
+We maintain multiple open blocks in each plane and, based on the expected queuing time, choose LSB/CSB/MSB device pages from three different planes such that DIR finishes writing the three pages at about the same time. In this paper, we adopt the relaxed program sequence schemes in [13] to meet the specified page type requirements. For free subrequests, i.e., those not grouped, we first assign LSB or CSB pages such that their response time tend to be low.
+Write sub-requests with update operation. For the page written by free sub-requests, we only invalidate the page and assign another new page to the new coming sub-request. While for updating the page written by grouped sub-requests, the reference count of the page which is initialized to 3 is subtracted by one each time, and the page is invalidated when the reference count is zero. This scheme does not influence the procedure of wear leveling and garbage collection.
+B. Generating dummy read sub-requests
+The page-sized data written by free sub-requests, which is stored on a physical page can be read using the baseline method. While for the page-sized data written by grouped subrequests which are distributed on three pages, it is necessary to deliver three sub-requests generated by host and FTL (Flash Translation Layer) to read and decode the data. The reason is
+
+that DIR is host-transparent, and the host is not aware the data in some LPN is kept in three different pages, so the FTL needs to generate another two read sub-request with the request delivered by the host. For simplicity, we refer to the read request generated by FTL as the dummy sub-requests. The flag of the LPN in the mapping table is used to indicate whether it requires three read sub-requests. Fig.4 shows the locality among requests in those workloads. Because of the locality of the read requests, the dummy read sub-requests may replicate with the other free sub-requests. For example, the host sends read request to read these data ranging from LPN i to i + 2. In the best conditions, the data of LPN i, i + 1 and i + 2 are written by the grouped sub-requests in the same group ago. FTL generates two dummy read sub-requests to read the data of LPN i along with the original sub-request, the same as reading the data of LPN i + 1 and i + 2. In all, nine sub-requests will be generated to read the data from LPN i to i + 2, but six of nine requests replicate each other. As a result, this method improves read performance with no read amplification.
+C. Overhead analysis
+Storage Overhead. Since some LPNs are associated with three physical pages, i.e. the data of some LPNs are stored in three different physical pages, so the mapping table of the FTL needs to trace three PPNs for some specific LPN. Taking 1TB SSD with 4KB page size as an example, the mapping table size of conventional SSD is (1TB /4KB) * (4B + 4B) = 2GB. For SSD with DIR scheme, the maximum size of the mapping table is (1TB /4KB) * (4B + 4B + 4B + 4B + 4B) = 5GB. But for the commercial open-channel SSD, the mapping table of FTL is storage in the memory of the server, and the capacity of the memory may be up to hundreds of gigabyte, so this storage overhead is negligible.
+IV. EXPERIMENTAL EVALUATION
+A. Experimental Setting
+To evaluate the effectiveness of the proposed DIR scheme, we implemented DIR scheme based on SSDsim, which has been validated against hardware platform [14]. In our experiments, the program and read latency of LSB, CSB and MSB pages in TLC SSD and the RBER of pages are adopted from [9] [15]. Table I provides the detailed configuration of the TLC SSD.
+
+Parameters Chips per channel Planes per chip Blocks per plane Pages per block Page size Over-Provision
+
+TABLE I SSD PARAMETERS.
+
+Values 2 2 768 384 4K 10%
+
+Parameters program latency
+read latency
+
+LSB CSB MSB LSB CSB MSB
+
+Vaule 500us 2000us 5500us 50us 80us 100us
+
+Workloads. We used the enterprise servers traces from Microsoft research Cambridge [16] [17] to evaluate the DIR scheme. These workloads are widely used in previous studies.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+B. Experimental Evaluation
+We evaluated the DIR scheme by measuring the average response time, and the percentage of pages that benefit from DIR scheme, and the read amplification rate relative to the baseline. We chose unmodified SSDsim with the same configuration as the baseline.
+
+
+
+%DVHOLQH\RXQJ
+
+',5\RXQJ
+
+
+
+%DVHOLQHDJHG
+
+',5DJHG
+
+
+
+
+
+
+
+
+
+
+
+without introducing extra writes. For the cases that the amount of read requests is larger than that of the baseline, the extra read sub-requests can be serviced between requests. For the workloads with large read ratios, e.g., HM 0, we observed large write performance degradation due to extra read subrequests.
+Sensitivity Analysis. We next studied the sensitivity of DIR by counting the number of pages with and without interleaving data in the mapping table. Fig. 7 illustrates the percentage of the pages with data interleaving. It shows that nearly 75% of the pages of SSD can benefit from DIR. Among all the workloads, HM 1 achieves the highest percentage because the average size of its I/O requests is approximately three times of the page size. On the contrary, for PROJ 4, only 53% of pages in SSD can benefit from DIR scheme; this is because the I/O request size in PROJ 4 is either too small or too large. With most request sizes being 68KB or 2KB, the efficiency is relatively low.
+
+Fig. 5. Normalized read latency comparison.
+
+Read performance comparison. Fig. 5 shows the normalized read response time between the baseline and the DIR scheme. From the figure, the read response time increases between 1% to 6% across all the workloads; this is because the extra read requests cause a decline in read performance. For SSDs in early stages, read requests require few or no soft sensing so that the performance benefits from DIR is negligible. For aged SSDs, we observed large performance improvement over the baseline — 19% to 51% improvement can be achieved, as shown in Fig.5. Due to the higher locality, workloads such as HM 0, PROJ 1, STG 0, USR 0 benefit more from the DIR scheme. We also observed 28%,45% 44% 38%reduction in read response time, respectively.
+
+
+
+%DVHOLQH\RXQJ
+
+',5\RXQJ
+
+
+
+%DVHOLQHDJHG
+
+',5DJHG
+
+
+
+
+
+
+
+
+
+
+
+Fig. 6. Normalized write latency in aged SSD with and without DIR scheme.
+
+         
+
+Fig. 7. The percentage of pages optimized.
+Read amplification Analysis. Next, we evaluated the read amplification in DIR. We compared the number of read requests introduced by DIR across all the workloads and summarized the results in Fig. 8. DIR introduces 3% to 23% (10% average) more read requests. We can see that HM 0 has the most significant increase in the number of read requests and USR 0 has the least read amplification. This is because most read requests in HM 0 range in size from 1KB to 2KB. Therefore its read amplification factor is between 1 and 2, and the effectiveness is 0.75 for HM 0 as mentioned above, so the read amplification factor is larger than others. The average read request size of USR 0 is 66KB such that many read sub-requests replicate each other. In summary, DIR introduces extra reads but its impacts on the lifetime and reliability are negligible.
+
+Write performance comparison. Fig. 6 compares the write performance between DIR and the baseline. Compared to the baseline, the write performance in DIR does not fluctuate significantly except PROJ 4 whose write-read ratio is 99.95%. This is because when BER increases continuously, the decoding time increases as well, and write performance is sensitive to the process time of read requests. DIR scheme only interleaves data among sub-request for a given write request
+
+V. RELATED WORK
+Many studies work on optimizing read performance with LDPC in flash-based SSDs; these works can be categorized into three groups as follows.
+Reduce BER. Zhang et al. proposes to dynamically adjust the sensing voltages to reduce read latency [18]. Wu et al. exploits the error modes of 3D TLC NAND flash to optimize
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+
+
+
+
+
+
+Fig. 8. Normalized read amplification rate.
+LLR information for further enhancing the decoding performance [19]. Zhang et al. proposes to integrate the decoding result of the LSB page into the initial information of LDPC decoding for the MSB page to reduce LDPC decoding latency of the MSB page in NAND Flash [20]. The refresh methods [21] [22] [23] are proposed to periodically correct data with long retention and reprogram them into new blocks, which can reduce retention-induced errors.
+The flash sensing optimizes. Zhao et al. proposes to apply fine-grained levels in LDPC reads progressively. When the read with a lower level fails, the next level with several extra RVs is applied for flash sensing [3]. Tsukasa et al. proposes AEP-LDPC, which consider the effects of program disturb, data retention and floating-gate capacitive coupling, to reduce the times of decode iterations [24]. Li et al. proposes a smart sensing level placement scheme to achieve reduced the LDPC decoding latency [25]. In order to read out correct data with BCH codes, Cai et al. proposes to record the optimal threshold voltages of the last programmed page in each block [26]. Peleato et al. proposes a mathematical model based on the RVs in the last read to estimate the appropriate RVs of current read adaptively [27].
+LDPC decoding algorithm optimizes. Zhao et al. exploits intra-cell error characteristics to speed up LDPC decoding by reducing overall error probability and decoding latency [8]. REAL incorporates numeric-correlation characteristic of different error patterns in both MSB page and LSB page of MLC flash into the message passing process of the decoding [28]. Aslam et al. proposes a two-round LDPC decoding process by reusing the read-back voltages and the decoded results for flash cells from retention-induced failure, which can further improve read performance [29].
+VI. CONCLUSION In this paper, we proposed the DIR scheme which exploits the unbalanced BER among LSB, CSB and MSB page in TLC SSD and the locality in requests to improve the read performance. Experimental results show that DIR can improve read performance by 36% compared to that of the existing aged SSD.
+REFERENCES
+[1] C. Min et al., “Sfs: random write considered harmful in solid state drives.” in FAST, vol. 12, 2012, pp. 1–16.
+
+[2] C. Matsui et al., “Design of hybrid ssds with storage class memory and nand flash memory,” Proceedings of the IEEE, vol. 105, no. 9, pp. 1812–1821, 2017.
+[3] K. Zhao et al., “Ldpc-in-ssd: Making advanced error correction codes work effectively in solid state drives,” in FAST, 2013, pp. 243–256.
+[4] N. Elyasi et al., “Exploiting intra-request slack to improve ssd performance,” in ASPLOS. Association for Computing Machinery, 2017, pp. 375–388.
+[5] J. Cui et al., “Dlv: Exploiting device level latency variations for performance improvement on flash memory storage systems,” TCAD, vol. 37, no. 8, pp. 1546–1559, 2018.
+[6] Y. Du et al., “Laldpc: Latency-aware ldpc for read performance improvement of solid state drives,” in Proc. MSST, 2017, pp. 1–11.
+[7] E. Yaakobi et al., “Characterization and error-correcting codes for tlc flash memories,” in 2012 International Conference on Computing, Networking and Communications (ICNC). IEEE, 2012, pp. 486–491.
+[8] W. Zhao et al., “Improving min-sum LDPC decoding throughput by exploiting intra-cell bit error characteristic in MLC NAND flash memory,” in MSST. IEEE, jun 2014.
+[9] T. Nakamura et al., “AEP-LDPC ECC with error dispersion coding for burst error reduction of 2d and 3d NAND flash memories,” in IMW. IEEE, may 2017.
+[10] N. Agrawal et al., “Design tradeoffs for ssd performance.” in ATC, vol. 57, 2008.
+[11] A. Tavakkol et al., “Mqsim: A framework for enabling realistic studies of modern multi-queue {SSD} devices,” in FAST, 2018, pp. 49–66.
+[12] K.-D. Suh et al., “A 3.3 v 32 mb nand flash memory with incremental step pulse programming scheme,” IEEE Journal of Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, 1995.
+[13] J. Park et al., “Improving performance and lifetime of NAND storage systems using relaxed program sequence,” in DAC. ACM Press, 2016.
+[14] Y. Hu et al., “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in ICS. ACM Press, 2011.
+[15] M. Jung et al., “SimpleSSD: Modeling solid state drives for holistic system simulation,” IEEE Computer Architecture Letters, vol. 17, no. 1, pp. 37–41, jan 2018.
+[16] N. Dushyanth et al., “Write off-loading: Practical power management for enterprise storage,” TOS, vol. 4, no. 3, p. 10, 2008.
+[17] D. Narayanan et al., “Migrating server storage to ssds: analysis of tradeoffs,” in Proceedings of the 4th ACM European conference on Computer systems. ACM, 2009, pp. 145–158.
+[18] M. Zhang et al., “Rber aware multi-sensing for improving read performance of 3d mlc nand flash memory,” IEEE Access, vol. 6, pp. 61 934– 61 947, 2018.
+[19] F. Wu et al., “Using error modes aware LDPC to improve decoding performance of 3d TLC NAND flash,” IEEE Transactions on ComputerAided Design of Integrated Circuits and Systems, pp. 1–1, 2019.
+[20] M. Zhang et al., “Cooecc: A cooperative error correction scheme to reduce ldpc decoding latency in nand flash,” in ICCD. IEEE, 2017, pp. 657–664.
+[21] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in ICCD. IEEE, 2012, pp. 94–101.
+[22] Y. Luo et al., “Warm: Improving nand flash memory lifetime with writehotness aware retention management,” in MSST. IEEE, 2015, pp. 1–14.
+[23] Q. Li et al., “Maximizing io performance via conflict reduction for flash memory storage systems,” in DATE. EDA Consortium, 2015, pp. 904– 907.
+[24] T. Tokutomi et al., “Advanced error prediction ldpc for high-speed reliable tlc nand-based ssds,” in IMW. IEEE, 2014, pp. 1–4.
+[25] Q. Li et al., “Improving ldpc performance via asymmetric sensing level placement on flash memory,” in ASP-DAC. IEEE, 2017, pp. 560–565.
+[26] Y. Cai et al., “Data retention in mlc nand flash memory: Characterization, optimization, and recovery,” in HPCA. IEEE, 2015, pp. 551–563.
+[27] B. Peleato et al., “Adaptive read thresholds for nand flash,” IEEE Transactions on Communications, vol. 63, no. 9, pp. 3069–3081, 2015.
+[28] M. Zhang et al., “Real: A retention error aware ldpc decoding scheme to improve nand flash read performance,” in MSST. IEEE, 2016, pp. 1–13.
+[29] C. A. Aslam et al., “Retention-aware belief-propagation decoding for nand flash memory,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 64, no. 6, pp. 725–729, 2017.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:09:08 UTC from IEEE Xplore. Restrictions apply.
+
+

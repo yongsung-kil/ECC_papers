@@ -1,0 +1,444 @@
+Proceedings of 2006 IEEE Information Theory Workshop (ITW’06)
+
+Single-Scan Min-Sum Algorithms for Fast Decoding of LDPC Codes
+
+Xiaofei Huang
+School of Information Science and Technology Tsinghua University, Beijing, P. R. China, 100084
+Email: huangxiaofei@ieee.org
+
+Abstract— Many implementations for decoding LDPC codes are based on the (normalized/offset) min-sum algorithm due to its satisfactory performance and simplicity in operations. Usually, each iteration of the min-sum algorithm contains two scans, the horizontal scan and the vertical scan. This paper presents a single-scan version of the min-sum algorithm to speed up the decoding process. It can also reduce memory usage or wiring because it only needs the addressing from check nodes to variable nodes while the original min-sum algorithm requires that addressing plus the addressing from variable nodes to check nodes. To cut down memory usage or wiring further, another version of the single-scan min-sum algorithm is presented where the messages of the algorithm are represented by single bit values instead of using fixed point ones. The software implementation has shown that the single-scan min-sum algorithm is more than twice as fast as the original min-sum algorithm.
+I. INTRODUCTION
+The sum-product algorithm [1], [2], also known as the belief propagation algorithm [3], is the most powerful iterative soft decoding algorithm for LDPC (low density parity check) codes [4], [5], [6]. The normalized/offset min-sum algorithm [7], [8], [9], [10] has demonstrated in [9], [10] as a good approximation to the sum-product algorithm. It is a parallel, iterative soft decoding algorithm for LDPC codes. It is simpler in computation than the sum-product algorithm because it uses only minimization and summation operations instead of multiplication and summation operations used by the latter. It is also simpler in computation than the sumproduct algorithm in the log domain because the latter uses non-linear functions. For hardware/software implementations, multiplication operations and non-linear functions are, in general, more expensive than minimization and summation operations.
+Despite of its reduced complexity, we found out, in implementing the normalized/offset min-sum algorithm for China’s HDTV, that the min-sum algorithm is still expensive for hardware/software implementations since two scans are required by the algorithm at each iteration, and its convergence rate is generally not satisfactory. The min-sum algorithm is also not memory efficient. The temporary results of the algorithm are stored in memory as fixed point values. The number of values is proportional to the number of non-zero elements of the parity check matrix of a LDPC code. They require large circuit areas because the number of nonzero elements is not
+
+small in practice. Manipulating those values also takes a lot of system time and consumes much of system power at runtime. We concluded that further simplification of the min-sum algorithm is needed to suit the ever demanding requirements of the next generation communication systems.
+This paper presents two simplified versions of the minsum algorithm to increase its decoding speed and reduce the requirement on memory usage. Those simplifications are based on several obvious observations with some of them already mentioned by other researcher [12]. However, no detail has been offered in the previous literature in the form of algorithms which can be directly used by engineers and practitioners in the communication area. Furthermore, the advantage of the simplifications is not neglectable because the simplified minsum algorithm more than doubles the decoding speed of the standard min-sum algorithm in our software implementation (in C language) for decoding the quasi-cyclic irregular LDPC codes used for China’s HDTV, the irregular LDPC codes used for European digital video broadcasting using satellites (DVBS2), and the regular/irregular LDPC codes from Dr. MacKay’s website. The comparison is fair because both algorithms are simple in operations and can be implemented in software in a straightforward way without much room for further improvement. Our HDTV research group at Tsinghua University has benefited from the simplifications because we most often use software simulations first to test the performance of different LDPC codes for China’s HDTV which could be very timeconsuming and may take hours or even days running on fast Intel-based desktop computers.
+II. DEFINITIONS AND NOTATIONS
+LDPC codes belong to a special class of linear block codes whose parity check matrix H has a low density of ones. LDPC codes were originally introduced by Gallager in his thesis [4]. After the discovery of turbo codes in 1993 by Berrou et al. [11], LDPC codes were rediscovered by Mackay and Neal [5] in 1995. Both classes have excellent performances in terms of error correction close to the Shannon limit. For a binary LDPC code, H is a binary matrix with elements, denoted as hmn in {0, 1}. Let the code word length be N , then H is a M × N matrix, where M is the number of rows. Each row Hi (1 ≤ i ≤ M ) of H introduces one parity check
+
+1-4244-0067-8/06/$20.00 ©2006 IEEE.
+
+140
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:02:53 UTC from IEEE Xplore. Restrictions apply.
+
+constraint on input data x = (x1, x2, . . . , xn), i.e., HixT = 0 mod 2.
+
+So there are M constraints on x in total. Let N (m) be the set of variable nodes that are included in
+the m-th parity check constraint. Let M(n) be the set of check nodes which contain the variable node n. N (m) \ n denotes the set of variable nodes excluding node n that are included in the m-th parity check constraint. M(n) \ m stands for the set of check nodes excluding the check node m which contain the variable node n. The symbol ‘\’ denotes the set minus.
+For an additive white Gaussian noise channel and a binary modulation, let yn be the received data bit at position n,
+yn = (−1)xn + ξn ,
+
+where ξn is the channel noise. The initial Log-likelihood ratio (LLR) for the input data bit n, denoted as Zn(0), is
+
+Zn(0)
+
+≡
+
+ln
+
+p(xn p(xn
+
+= =
+
+0/yn) 1/yn)
+
+=
+
+2yn/σ2
+
+,
+
+where σ2 is the estimated variance of the channel noise. The
+
+performance of the min-sum algorithm does not depend on the channel estimate. We can, thus, set Zn(0) = yn in practice.
+
+III. THE (NORMALIZED/OFFSET) MIN-SUM ALGORITHM
+
+The standard min-sum algorithm [7], [8] for decoding LDPC is a parallel, iterative soft decoding algorithm. At each iteration, messages first are sent from the variable nodes to the check nodes, called the horizontal scan. Then messages are sent from the check nodes back to the variable nodes, called the vertical scan. During each iteration, the a-posteriori probability for each bit is also computed. A hard decoding decision is made for each bit based on the probability, and decoded bits are checked against all parity check constraints to see if they are a valid codeword.
+At iteration k, let Zn(k) be the posteriori LLR for the input data bit n. Let Zm(kn) denote the message sent from variable node n to check node m. Zm(kn) is the log-likelihood ratio that the n-th bit of the input data x has the value 0 versus 1, given the information obtained via the check nodes other than check node m. Let Lm (kn) denote the message sent from check node m to variable node n. Lm (kn) is the log-likelihood ratio that the check node m is satisfied when the input data bit n is fixed to value 0 versus value 1 and the other bits are independent with log-likelihood ratios Zmn , n ∈ N (m) \ n. The pseudo-code for the min-sum algorithm is given as follows. Initialization : For n ∈ {1, 2, . . . , N },
+
+Zm(0n) = Zn(0), for m ∈ M(n).
+
+Iteration
+1) Horizontal scan (check node update rule) : For each m and each n ∈ N (m),
+
+Lm (kn) =
+
+sgn(Zm(kn−1))
+
+·
+
+n
+
+min
+∈N (m)\n
+
+|Zm(kn−1)|
+
+n ∈N (m)\n
+
+(1)
+
+2) Vertical scan (variable node update rule) :
+
+Zm(kn) = Zn(0) +
+
+Lm (k)n .
+
+(2)
+
+m ∈M(n)\m
+
+3) Decoding :
+
+For each bit, compute its posteriori log-likelihood ratio
+
+(LLR)
+
+Zn(k) = Zn(0) +
+
+Lm (k)n .
+
+m ∈M(n)
+
+Then estimate the original codeword xˆ(k) as
+
+xˆn(k) =
+
+0, if Zn(k) > 0; 1, otherwise;
+
+for n = 1, 2, . . . , N .
+
+If H (xˆ(k))T = 0 or the iteration number exceeds some cap, stop the iteration and output xˆ(k) as the decoded codeword.
+One performance improvement to the above standard minsum algorithm is to multiply Lm (kn) computed in (1) by a positive constant λk smaller than 1, i.e.,
+Lm (kn) ⇐ λkLm (kn) ,
+
+The min-sum algorithm with such a modification is referred
+to as the normalized min-sum algorithm [9], [10].
+Another improvement to the standard min-sum algorithm, is to reduce the reliability values Lm (kn) computed in (1) by a positive value βk, i.e.,
+
+Lm (kn) ⇐ max Lm (kn) − βk, 0 ,
+
+The min-sum algorithm with such a modification is referred to as the offset min-sum algorithm [10]. The difference between the standard min-sum algorithm and the normalized/offset one is minor for software/hardware implementations.
+
+IV. THE SINGLE-SCAN MIN-SUM ALGORITHM
+
+It is very straightforward to rewrite the variable node update
+
+rule (2) as
+
+Zm(kn) = Zn(k) − Lm (kn) .
+
+If we have computed Zn(k), the variable node message Zm(kn) can be obtained from the check node message Lm (kn) . Hence, we can
+merge the horizontal scan and the vertical scan into a single horizontal scan where only the check node messages Lm (kn) are computed directly from Zn(k−1) and Lm (kn−1). In summary, the
+single-scan min-sum algorithm consists of the following major
+
+steps. Initialization : L(m0)n = 0. Horizontal scan (check node update rule) :
+
+Zn(k) = Zn(0) ,
+
+Lm (kn) =
+
+sgn(Zn(k−1) − Lm (kn−1)) ×
+
+n ∈N (m)\n
+
+n
+
+min |Zn(k−1)
+∈N (m)\n
+
+−
+
+Lm (kn−1)|
+
+,
+
+(3)
+
+Zn(k) + = Lm (kn) .
+
+1-4244-0067-8/06/$20.00 ©2006 IEEE.
+
+141
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:02:53 UTC from IEEE Xplore. Restrictions apply.
+
+Decoding : xˆn(k) = 0, if Zn(k) > 0; xˆn(k) = 1, otherwise. Compared with the original double-scan min-sum algorithm,
+the single-scan version could not only be possibly faster, but also be more memory efficient. We can save memory by storing Zn(k)s, which are of N items, instead of Zm(kn) , which are of N ·dv (average variable node degree) items. For software implementations, the single-scan version needs only to store the addressing (indexing) from check nodes to variable nodes. However, for the original version, both the addressing from check nodes to variable nodes and the one from variable nodes to check nodes are required. The single-scan version cuts down the amount of memory used for addressing by half. Such memory saving could be important if the min-sum algorithm is implemented in next-generation wireless/mobile computing devices where available memory could be very limited.
+Could the memory saving be directly translated into the saving of wiring for hardware implementations? It has been found that our hardware implementation of the original minsum algorithm for decoding the LDPC codes used for China’s HDTV takes a significant amount of circuit area (sometimes 50%) just for implementing the connections from the variable nodes to the check nodes and the connections from the check nodes to variable nodes. Since the simplified min-sum algorithm has only the horizontal scan, the circuit area could be reduced if only the connections from the check nodes to variable nodes are required. We are now at the stage of verifying this statement in our lab.
+V. FURTHER SIMPLIFICATION FOR THE SINGLE-SCAN ALGORITHM
+The original min-sum algorithm uses a lot of memory for storing the variable node messages Zm(kn) and the check node messages Lm (kn) . Although we can use one memory cell to store both Zm(kn) and Lm (kn) , we still need n |M(n)| memory cells to store them, one for each non-zero element of the parity check matrix H. This statement still holds for the single-scan min-sum algorithm where only the check node messages Lm (kn) are stored.
+If we use b bits (b = 6 ∼ 8 in practice) to store a value (containing its sign), then in total they require b · n |M(n)| bits. For VLSI implementations, that could take a significant amount of circuit area. It also leads to high energy consumption due to the intensive manipulation (reading/writing) of those memory cells at each iteration, two writing operations for each cell by the original min-sum algorithm.
+Our simplification comes from the following observation of the check node messages Lm (kn) computed at the horizontal scan. The check node messages Lm (kn) is computed using (1) or (3). For the check node messages Lm (kn) of the same check node m, all have the same absolute value except one. The first absolute value is the minimal absolute value of |Lm (kn−1)|s, for the same m. The second absolute value is the second minimal absolute value of |Lm (kn−1)|s. This observation is quite obvious. Dr. Guilloud also mentioned in his thesis [12] (section 4.1.2) that two messages need to be saved for each parity-check
+
+equation. This paper offers the detail of exploring this unique
+characteristic to possibly cut down the memory usage of the
+single-scan min-sum algorithm further. To be more specific, for the check node messages L(mkn) of
+the same check node m, let Am (k) be the first absolute value,
+
+Am (k)
+
+≡
+
+min
+n∈N (m)
+
+|Lm (kn)
+
+|
+
+.
+
+From Eq. (1), we have
+
+Am (k)
+
+=
+
+min
+n∈N (m)
+
+|Zm(kn−1)
+
+|
+
+,
+
+which is the minimal value of |Zm(kn−1)|s of the same check node m.
+Let Bm(k) be the second absolute value,
+
+Bm(k)
+
+≡
+
+max
+n∈N (m)
+
+|Lm (kn) |
+
+,
+
+and let n˜m (k) be the position of Lm (kn) of the second minimal absolute value,
+
+n˜m (k)
+
+≡
+
+arg
+
+max
+n∈N (m)
+
+|Lm (kn) |
+
+.
+
+From Eq. (1), we have
+
+n˜m (k)
+
+=
+
+arg
+
+min
+n∈N (m)
+
+|Zm(kn−1)
+
+|
+
+.
+
+That is, the position of Lm (kn) of the second minimal absolute value Bm(k), n˜m (k), is at the position of Zm(kn−1) of the minimal absolute value.
+From Eq. (1), we also have
+
+Bm(k)
+
+=
+
+min
+n∈N (m)\n˜m (k)
+
+|Zm(kn−1)|
+
+,
+
+which is the second minimal value of |Zm(kn) |s of the same
+check node m. Hence, for the check node messages Lm (kn) of the same check
+node, to save memory, we only need to store the two absolute values, the position of the first one, and the signs of Lm (kn) .
+Let the sign of Lm (kn) be sm (kn) , sm (kn) = sgn(Lm (kn) ). Let f (A, B, n, n˜) be a function defined as
+
+f (A, B, n, n˜) =
+
+B, if n = n˜; A, otherwise.
+
+The check node message Lm (kn) can be recovered from its sign sm (kn) , the two absolute values, Am (k) and Bm(k), and the position n˜m (k) as
+Lm (kn) = sm (kn) f (Am (k), Bm(k), n, n˜m (k)) .
+
+In the single-scan min-sum algorithm presented in the previous section, substituting the computation of Lm (kn) by the computation of sm (kn) , Am (k), Bm(k), and n˜(mk), we have a memory
+efficient version of the single-scan min-sum algorithm. Initialization : Am (0) = Bm(0) = n˜(m0) = 0, s(m0)n = sgn(Ln(0)).
+
+1-4244-0067-8/06/$20.00 ©2006 IEEE.
+
+142
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:02:53 UTC from IEEE Xplore. Restrictions apply.
+
+Horizontal scan (check node update rule) :
+
+Zn(k) Lm (kn−1)
+Lm (kn)
+Zn(k) Am (k) Bm(k) n˜m (k) sm (kn)
+
+= = =
++= = = = =
+
+Zn(0) , sm (kn−1)f (Am (k−1), Bm(k−1), n, n˜m (k−1)) ,
+sgn(Zn(k−1) − Lm (kn−1)) ×
+n ∈N (m)\n
+
+n
+
+min |Zn(k−1)
+∈N (m)\n
+
+−
+
+Lm (kn−1)|
+
+,
+
+Lm (kn) ,
+
+min
+n∈N (m)
+
+|Lm (kn) |
+
+,
+
+(4)
+
+max
+n∈N (m)
+
+|Lm (kn) |
+
+,
+
+(5)
+
+arg
+
+max
+n∈N (m)
+
+|Lm (kn) |
+
+,
+
+sgn(Lm (kn) ) .
+
+Decoding : xˆn(k) = 0, if Zn(k) > 0; xˆn(k) = 1, otherwise. In the memory efficient version of the single-scan min-sum
+algorithm, the previous check node messages Lm (kn−1) of the check node m are computed on fly and stored as temporary data during the computation of check node messages Lm (kn) of the same check node m. sm (kn) , Am (k),Bm(k), n˜m (k), and Zn(k) are persistent data stored in memory.
+The single-scan min-sum algorithm is fully equivalent to the original min-sum algorithm. To modify the single-scan minsum algorithm to be equivalent to the normalized min-sum algorithm, Eq. (4) and Eq. (5) should be changed to
+
+Am (k)
+
+=
+
+λk
+
+min
+n∈N (m)
+
+|Lm (kn) |,
+
+Bm(k)
+
+=
+
+λk
+
+max
+n∈N (m)
+
+|Lm (kn) |.
+
+where λk is a constant at iteration k satisfying 0 < λk < 1. To modify the single-scan min-sum algorithm to be equiv-
+alent to the offset min-sum algorithm, Eq. (4) and Eq. (5) should be changed to
+
+Am (k)
+
+=
+
+max( min
+n∈N (m)
+
+|Lm (kn)
+
+|
+
+−
+
+β,
+
+0),
+
+Bm(k)
+
+=
+
+max( max
+n∈N (m)
+
+|Lm (kn) |
+
+−
+
+β,
+
+0)
+
+,
+
+where β is a constant, satisfying β > 0.
+
+VI. SUMMARY
+This paper presents the single-scan min-sum algorithm as a simplified version of the original (normalized/offset) min-sum algorithm for decoding LDPC codes. It merges the horizontal scan and the vertical scan in the original min-sum algorithm into a single horizontal scan. A memory efficient version of the single-scan min-sum algorithm is also presented where the check node messages of each check node are stored using their signs together with two of the messages of the minimal absolute values. All the simplifications are applicable for decoding binary LDPC codes.
+
+REFERENCES
+[1] F. R. Kschischang, B. J. Frey, and H. andrea Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, February 2001.
+[2] S. M. Aji and R. J. McEliece, “The generalized distributive law,” IEEE Transactions on Information Theory, vol. 46, no. 2, pp. 325–343, March 2000.
+[3] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. Morgan Kaufmann, 1988.
+[4] R. G. Gallager, “Low-density parity-check codes,” Ph.D. dissertation, Department of Electrical Engineering, M.I.T., Cambridge, Mass., July 1963.
+[5] D. J. C. MacKay and R. M. Neal, “Good codes based on very sparse matrices,” in Cryptography and Coding, 5th IMA Conference, December 1995.
+[6] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 619–637, February 2001.
+[7] N. Wiberg, “Codes and decoding on general graphs,” Ph.D. dissertation, Department of Electrical Engineering, Linkoping University, Linkoping, Sweden, 1996.
+[8] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, pp. 673–680, May 1999.
+[9] J. Chen and M. Fossorier, “Density evolution of two improved BP-based algorithms for LDPC decoding,” IEEE Communications Letters, vol. 6, pp. 208–210, 2002.
+[10] J. Chen, “Reduced complexity decoding algorithms for low-density parity check codes and turbo codes,” Ph.D. dissertation, University of Hawaii, Dept. of Electrical Engineering, 2003.
+[11] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near shannon limit error-correcting coding and decoding: turbo codes,” in Proceedings of the 1993 IEEE International Conference on Communication, 1993, pp. 1064–1070.
+[12] F. Guilloud, “Generic architecture for LDPC codes decoding,” Ph.D. dissertation, ENST Paris, 2004.
+[13] X. Huang, “Near perfect decoding of LDPC codes,” in Proceedings of IEEE International Symposium on Information Theory (ISIT), 2005, pp. 302–306.
+[14] J. Yedidia, W. Freeman, and Y. Weiss, “Constructing free-energy approximations and generalized belief propagation algorithms,” IEEE Transactions on Information Theory, vol. 51, no. 7, pp. 2282–2312, July 2005.
+[15] S. Aji and R. McEliece, “The generalized distributive law,” IEEE Transactions on Information Theory, vol. 46, pp. 325–343, March 2000.
+[16] E. Boutillon, J. Castura, and F. R. Kschischang, “Decoder-first code design,” in Proceedings of the 2nd International Symposium on Turbo Codes and Related Topics, 2000, pp. 459–462.
+[17] M. M. Mansour and N. R. Shanbhag, “Low-power VLSI decoder architectures for LDPC codes,” in Proceedings of International Symposium on Low Power Electronics and Design, 2002.
+[18] C. Howland and A. Blanksby, “A 220 mW 1 Gb/s 1024-bit rate-1/2 low density parity check code decoder,” in Proceedings of IEEE Conf. Custom Integrated Circuits, 2001, pp. 293–296.
+[19] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proceedings of IEEE GlobalComm, 2001.
+[20] A. Blanksby and C. Howland, “A 690-mW 1-Gbps 1024-b, rate-1/2 lowdensity parity-check code decoder LDPC decoding,” Journal of Solid State Circuits, vol. 37(3), pp. 404–412, 2002.
+[21] S. Kim, G. E. Sobelman, and J. Moon, “Parallel VLSI architectuers for a class of LDPC codes,” ISCAS, 2002.
+[22] D. E. Hocevar, “LDPC code construction with flexible hardware implementation,” in Proceedings of IEEE International Conference on Communications, 2003, pp. 2708–2712.
+[23] Y. Chen and D. Hocevar, “A FPGA and ASIC implementation of rate 1/2 8088-b irregular low density parity check decoder,” in IEEE Global Telecommunications, 2003.
+
+1-4244-0067-8/06/$20.00 ©2006 IEEE.
+
+143
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:02:53 UTC from IEEE Xplore. Restrictions apply.
+
+

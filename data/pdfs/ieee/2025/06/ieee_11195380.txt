@@ -1,0 +1,831 @@
+BF-Max: an Efficient Bit Flipping Decoder with Predictable Decoding Failure Rate
+Alessio Baldelli, Marco Baldi, Franco Chiaraluce and Paolo Santini Dipartimento di Ingegneria dell’Informazione, Università Politecnica delle Marche, Ancona, Italy a.baldelli@pm.univpm.it, {m.baldi, f.chiaraluce, p.santini}@univpm.it
+
+2025 IEEE International Symposium on Information Theory (ISIT) | 979-8-3315-4399-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISIT63088.2025.11195380
+
+Abstract—The Bit-Flipping (BF) decoder, thanks to its very low computational complexity, is widely employed in post-quantum cryptographic schemes based on Moderate Density Parity Check codes in which, ultimately, decryption boils down to syndrome decoding. In such a setting, for security concerns, one must guarantee that the Decoding Failure Rate (DFR) is negligible. Such a condition, however, is very difficult to guarantee, because simulations are of little help and the decoder performance is difficult to model theoretically. In this paper, we introduce a new version of the BF decoder, that we call BF-Max, characterized by the fact that in each iteration only one bit (the least reliable) is flipped. When the number of iterations is equal to the number of errors to be corrected, we are able to develop a theoretical characterization of the DFR that tightly matches with numerical simulations. We also show how BF-Max can be implemented efficiently, achieving low complexity and making it inherently constant time. With our modeling, we are able to accurately predict values of DFR that are remarkably lower than those estimated by applying other approaches.
+Index Terms—Bit-flipping decoder, code-based cryptography, decoding failure rate, LDPC codes, MDPC codes.
+I. INTRODUCTION
+The Bit-Flipping (BF) decoder is probably the simplest decoder for Low-Density Parity-Check (LDPC) codes [1]. Iterative hard-decision decoders of this family have experienced renewed interest in recent years because they are employed in post-quantum, code-based cryptosystems such as LEDAcrypt [2] and BIKE [3]. In such schemes, decryption requires decoding a syndrome through a Moderate-Density Parity-Check (MPDC) code1. In these and other applications, BF decoding often is the preferred choice, thanks to its good trade-off between good error correction, low computational complexity and implementation simplicity. However, as typical in iterative
+This work was partially supported by Agenzia per la Cybersicurezza Nazionale (ACN) under the programme for promotion of XL cycle PhD research in cybersecurity (CUP I32B24001750005), by the Italian Ministry of University and Research (MUR) under the PRIN 2022 program with projects “Mathematical Primitives for Post Quantum Digital Signatures” (CUP I53D23006580001) and “Post quantum Identification and eNcryption primiTives: dEsign and Realization (POINTER)” (CUP I53D23003670006), by project SERICS (PE00000014) under the MUR National Recovery and Resilience Plan, funded by the European Union - Next Generation EU and by MUR under the Italian Fund for Applied Science (FISA 2022), Call for tender No. 1405 published on 13-09-2022 - project title “Quantum-safe cryptographic tools for the protection of national data and information technology assets” (QSAFEIT) - No. FISA 2022-00618 (CUP I33C24000520001), Grant Assignment Decree no. 15461 adopted on 02.08.2024. The views expressed are those of the authors and do not represent the funding institutions
+1An MDPC code can be thought of as an LDPC code with a somewhat denser parity-check matrix. This is necessary to prevent attacks (such as key recoveries and distinguishers) that exploit the sparsity in the secret key.
+
+decoding algorithms of this kind, BF is characterized by some nonzero decoding failure rate (DFR), that is, some nonzero probability that decoding fails even for genuine ciphertexts, and decryption failures may leak information about the secret key [4]. To avoid such a leakage (formally, to achieve Indistinguishability under Adaptively Chosen Ciphertext Attacks (IND-CCA2)), the DFR must be less than 2´λ, with λ being the security parameter (e.g., λ “ 128) [5]. Clearly, such values of DFR cannot be estimated by simulations.
+For this reason, in the last few years research has focused on the development of theoretical models to assess the DFR of BF decoders [6]–[12]. However, all these works are limited by the need for considering decoders that are somewhat non-optimal, e.g., employ a very simple flipping criterion (e.g., majority logic decoding [6]) or a very small number of iterations, say, one as in [6], [8] or two [9]. Indeed, the lowest DFR is achieved when the decoder runs through many iterations, so that erroneous decisions made by the decoder in the earlier iterations can be revised and corrected in subsequent iterations. However, this is also what makes estimating the DFR a rather difficult task, because one cannot assume that the errors to be corrected are uniformly distributed at each iteration, and should instead devise a theoretical model that keeps track of their correlation throughout decoding iterations. To the best of our knowledge, the state of the art in this line of research is the analysis in [9], where the authors derive upper bounds for a two-iteration, out-of-place2 BF decoder.
+Our contribution: In this paper we introduce and analyze BF-Max, a BF decoder that flips only one bit per iteration, namely, the one having the lowest reliability. The intuition is that, by doing this, the decoder reduces as much as possible the odds that wrong flips happen. Under standard heuristic assumptions, we are able to derive a closed form formula for the DFR when the number of iterations equals the number of errors. Numerical simulations show that the DFR formula we provide is tight and reliable. Moreover, we describe a strategy to achieve an efficient implementation of the BFMax decoder. On the negative side, our theoretical model for BF-Max does not take into account the case in which the number of iterations is greater than the number of errors. Hence, we trade some error correction capability for a closed-
+2By out-of-place decoder we refer to a decoder that, in each iteration, first flips all the bits it has to flip, and updates the syndrome only after that, before starting the next iteration. This is opposed to an in-place decoder, which instead updates the syndrome after each bit flip.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+form, simple and reliable formula for estimating the DFR. Still, even with this suboptimal setting, BF-Max outperforms significantly the two-iteration BF decoder studied in [9]: for all parameters considered in [9], our decoder has comparable time complexity and achieves a significantly lower DFR. We remark that, by flipping only one bit at each iteration, BF-Max is inherently constant-time. This, together with the possibility of DFR prediction and its good error correction capability, makes BF-Max an ideal candidate for post-quantum cryptographic schemes based on LDPC and MDPC codes.
+II. NOTATION AND BACKGROUND
+We denote by F2 the binary field. For clarity, we use different operators for the sum: ` and ř when summing over the reals, and ‘ when summing over F2. Vectors (resp., matrices) over F2 are denoted with bold lowercase (resp., uppercase) letters. The null vector of length r is indicated as 0r. For a vector a “ pa1, ¨ ¨ ¨ , anq, we indicate its support as Supppaq. The Hamming weight of a corresponds to the number of its non-zero entries, and is denoted as wtpaq. The set of vectors with length n and weight u is indicated as Sn,u. For a set A, x ÐÝ$ A indicates that x is sampled uniformly at random from A.
+A. LDPC codes
+A linear code with length n and redundancy r ă n is a linear subspace of Fn2 with dimension n ´ r. A code can be represented with a full-rank parity-check matrix H P Fr2ˆn, so that the code is the space of all vectors c P Fn2 for which cHJ “ 0r, where J denotes transposition. Given a vector e P Fn2 , its syndrome is s “ eHJ. If s ‰ 0r, then e is not a codeword; (syndrome) decoding consists in reconstructing e from the pair tH, su. In this paper, we are concerned with LDPC codes, which are characterized by parity-check matrices having low density, i.e., the number of zero entries in H is much less than rn. Among these codes, we focus on those characterized by parity-check matrices having a constant amount v of set entries in each column.
+B. Bit-Flipping decoding
+The BF decoder works by iteratively building an estimate for the error vector; such an estimate is initially null and gets refined through an iterative process. In this process, a key role is played by counters: the i-th counter, noted by σi, corresponds to the number of unsatisfied parity-check equations in which the i-th coordinate participates, namely,
+σi “ | tj P t1, ¨ ¨ ¨ , ru : phj,i “ 1q ^ psj “ 1qu |,
+where hj,i denotes the entry of H in the j-th row and i-th column. Starting from the computation of counters, it is easy to define the out-of-place BF decoding algorithm, which is described in the form of pseudocode in Algorithm 1.
+We summarize the BF operating principle assuming it receives, as input, a syndrome s “ eHJ with e P Sn,t and t being properly low. The decoder either outputs an estimate pe P Fn2 for the error vector, or K whenever decoding fails.
+
+Algorithm 1: BF decoder
+
+Data: parity-check matrix H P Fr2ˆn, maximum number of
+
+iterations IterMax P N, thresholds pb1, ¨ ¨ ¨ , bIterMaxq
+
+Input: syndrome s P Fr2
+
+Output:
+
+decoding
+
+failure
+
+K,
+
+or
+
+vector
+
+e p
+
+P
+
+Fn2
+
+such
+
+that
+
+wtppeq
+
+ď
+
+IterMax
+
+and
+
+s
+
+“
+
+eHJ p
+
+/* Initialize error estimate and number of
+
+performed iterations
+
+*/
+
+1 Set pe “ 0n, Iter “ 1;
+
+2
+
+while
+
+`s
+
+‰
+
+0r ˘
+
+_
+
+` Iter
+
+ď
+
+˘ IterMax
+
+do
+
+3 Compute counters pσ1, ¨ ¨ ¨ , σnq;
+
+/* Update syndrome and error estimate
+
+*/
+
+4 for i such that σi ě bIter do
+
+5
+
+s Ð s ‘ hi;// hi: i-th column of H
+
+6
+
+epi Ð epi ‘ 1;
+
+7 Iter Ð Iter ` 1;
+
+/* Output error estimate or report failure */ 8 if s “ 0r, return pe; else, return K;
+
+In each iteration, the decoder receives as input the current estimate for the error (which is initially set as the null vector 0n) and the syndrome; inside the iteration, the estimate is refined and the syndrome is updated accordingly. Decisions are taken on the basis of the counters: whenever a counter σi is high enough (as large as the threshold value for the iteration), it is very likely that the corresponding entry epi of the error estimate pe is wrong and thus gets flipped. The syndrome is updated accordingly by summing the i-th column of H. After all updates have been applied, the resulting syndrome is pe ‘ peqHJ: if e ‘ pe is a codeword3, then the syndrome is null and decoding stops, otherwise, another BF iteration starts. If, after the maximum number of iterations has been reached, the syndrome is still not null, then pe is guaranteed to be wrong and failure is reported. If, instead, the syndrome is null, then the decoder may have found the true error vector: since the decoder is expected to perform a small number of bit flips, the weight of pe is expected to be low. Hence, it is very likely that indeed pe “ e.
+The term out-of-place stands for the fact that the syndrome is updated and the counters are recomputed only after all the bit flips of each iteration have been executed; actually, other strategies may be pursued. Moreover, there exist variants of BF in which the flipping thresholds are not constant (see e.g. [10]). In this paper, we stick to the choice of constant thresholds, since this is the variant analyzed in [9].
+Computational complexity: In each iteration, the time complexity is dominated by the cost of computing counters and comparing them with the flipping threshold; exploiting sparsity, which holds, although at different levels, for both LDPC and MDPC codes, this can be done in O`n ¨ p1 ` vq ¨ log2pvq˘ operations (here, log2pvq accounts for the fact that counters take values in r0; vs). Each bit flip requires Op1 ` vq operations (one for the error update, v for the syndrome
+3We remind that any linear code includes the all-zero vector among its codewords.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+update). Assuming the number of flips is more or less equal to the number of errors to be corrected, we get that, on average, the time complexity of BF is in
+
+O`IterMax ¨ n ¨ pv ` 1q ¨ log2pvq ` t ¨ p1 ` vq˘,
+
+where, according to Algorithm 1, IterMax represents the
+
+maximum number of iterations. For typical MDPC code pa-
+
+ram?eters, IterMax is a as n, resulting in an
+
+small constant while both t average complexity O`n1.5
+
+and v grow ¨ log2pnq˘.
+
+III. BF-Max: EFFICIENT IMPLEMENTATION
+In this section we introduce the BF-Max decoder and describe how it can be implemented efficiently.
+
+A. Main intuition
+The BF variant we call BF-Max works by flipping a unique bit in each decoding iteration; this bit is selected as the one having the highest counter value among all bits (the case of more counters simultaneously having the highest value is discussed afterwards). Remember that, as a rule of thumb, the larger a counter, the higher the probability that the associated bit is wrongly estimated. By flipping a unique bit, one of those with the largest counter, we “guarantee” that the probability of flipping a wrong bit is reduced to its minimum4. After the bit is selected, both the error estimate and the syndrome get updated: counters are recomputed and a new iteration starts.
+As a little technical caveat, one has to deal with the case in which there are more bits having the largest counter value. Many strategies are possible; in this paper, we deal with this case by selecting one of such positions at random.
+A straightforward implementation of the BF-Max decoder would recompute all counters in each iteration. This would lead to a cost of IterMax ¨ `n ¨ v ¨ log2pvq ` v ` 1˘ operations. When there are t errors, we must set IterMax ě t, which would result in a rather large cost: for typical MDPC code parameters, this would lead to a cost O`n2 ¨ log2pnq˘. In the next section, we describe how one can instead implement BFMax with a much lower complexity by exploiting sparsity: for typical MDPC code parameters, we obtain a complexity O`n1.5¨log2pnq˘, which is in the same order of the complexity of the out-of-place BF.
+
+B. Implementation of BF-Max
+
+We now show how the computational cost of BF-Max can
+
+be significantly decreased through an efficient implementation.
+
+The main intuition, here, lies in the observation that, since BF-
+
+Max flips only one bit in each iteration, the number of counters
+
+that change, with respect to the ones from the previous
+
+iteration, is much less than n. Indeed, every bit participates
+
+in exactly v parity-check equations and, in each equation, we
+
+have
+
+on
+
+average
+
+w s
+
+“
+
+v
+
+¨n{r
+
+set
+
+entries.
+
+Hence,
+
+on
+
+average,
+
+the
+
+number of operations required for updating counters (after one
+
+bit flip) is v¨ws¨log2pvq. Again, considering typical MDPC code parameters, this results in a cost of O`n ¨ log2pnq˘ operations.
+
+4The word guarantee is in quotes since, as we have stressed out, this holds only on the basis of a heuristic reasoning.
+
+Repeating this for approximately t “ Op?nq iterations, we get an overall cost of O`n1.5 ¨ log2pnq˘ operations.
+Full details about how BF-Max can be implemented with this strategy are given in Algorithm 2. Counters are computed at the beginning of the process (lines 2–3) and then get updated at the end of each iteration (lines 12–14). This is done by considering, for each parity-check equation that changes its value due to the syndrome update (line 11), only the counters corresponding to indices that are in the support of the paritycheck equation. The counter update is either d “ ´1, if the parity-check equation becomes satisfied, or d “ 1, if the parity-check equation is unsatisfied. The average time complexity of the algorithm is reported in the next proposition.
+Proposition 3.1. Let H P F2rˆn have constant column weight v and average row weight w. Then, Algorithm 2 runs in average time which is well approximated by
+n ¨ v ¨ log2pvq ` IterMax ¨ `n ¨ log2pvq ` 1 ` v ` vw˘.
+Proof: The term n ¨ v ¨ log2pvq accounts for the initial counters computation. For each iteration, we neglect some costs (e.g., sampling i˚ from C) and consider only the following costs: n ¨ log2pvq for finding the maximum counter (lines 5–7), 1 for updating the error estimate and the syndrome (line 9), v ¨p1`wq for counters and syndrome updates. Indeed, lines 11–14 are repeated for v times, line 11 takes 1 operation while lines 12–14 take on average w operations (since the average size of Zj is w).
+Remark 3.1. A non-constant time implementation of a BF decoder would leak side channel information about the secret key [13], [14]. In particular, in the out-of-place BF, the number of bits that are flipped in each iteration is inherently not constant and needs to be properly masked (e.g., by performing a certain number of fake flips): this normally comes with some non-trivial complexity overhead. Instead, our decoder is inherently constant time. Indeed, when working with pv, wqregular LDPC codes, every iteration flips a unique bit and, moreover, takes the same number v ¨ w ¨ log2pvq of operations for updating the counters.
+IV. BF-Max: MODELING THE DFR
+We now describe how the DFR of the BF-Max decoder can be predicted, at least in the case in which the decoder performs a number of iterations exactly equal to the number of errors.
+A. DFR prediction
+We first model the probability distribution of the counter values, relying on the following assumption.
+Assumption 1. Each counter behaves as the sum of independent Bernoulli variables, all with the same parameter, which depends only on the value of the corresponding error bit (either 1 or 0).
+This assumption has been employed in many other papers about BF decoders, at least for what concerns the first decoding iteration (e.g., [6], [9], [13]), and is largely accepted
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 2: Efficient implementation of the BF-Max decoder exploiting sparsity
+
+Data: columns supports tJ1, ¨ ¨ ¨ , Jnu, rows supports tZ1, ¨ ¨ ¨ , Zru, maximum number of iterations IterMax P N
+
+Input: syndrome s P Fr2
+
+Output:
+
+decoding
+
+failure
+
+K,
+
+or
+
+vector
+
+pe
+
+P
+
+Fn2
+
+such
+
+that
+
+wtppeq
+
+ď
+
+IterMax
+
+and
+
+s
+
+“
+
+eHJ p
+
+1 Set pe “ 0n, Iter “ 1;// Initialize error estimate and number of performed iterations
+
+/* Initial computation of counters
+
+*/
+
+2 for i “ 1, ¨ ¨ ¨ , n do
+
+3
+
+Compute
+
+σi
+
+“
+
+ř
+jPJi
+
+sj //
+
+Integer
+
+sum
+
+of
+
+the
+
+syndrome
+
+bits
+
+indexed
+
+by
+
+Ji
+
+4 while `s ‰ 0rq _ `Iter ď IterMax˘ do
+
+/*
+
+Find
+
+indices
+
+associated
+
+to
+
+maximum
+
+counter
+
+value
+
+σ; r
+
+store
+
+all
+
+indices
+
+in
+
+list
+
+C
+
+*/
+
+5 Set C “ ∅, σr “ 0;
+
+6 for i “ 1, ¨ ¨ ¨ , n do
+
+7
+
+if
+
+σi
+
+“
+
+σr,
+
+update
+
+C
+
+Ð
+
+C
+
+Y
+
+tiu;
+
+else,
+
+overwrite
+
+σ r
+
+Ð
+
+σi
+
+and
+
+C
+
+Ð
+
+tiu;
+
+8
+
+Set i˚ ÐÝ$ C;// Sample at random one of the position with maximum counter
+
+9 Update epi˚ Ð epi˚ ‘ 1;
+
+/* Update syndrome and counters: consider only parity-check equations indexed by Ji˚ (support of
+
+column i˚), for each equation j P Ji˚ update only the counters indexed by Zj (support of row j) */
+
+10
+
+for j P Ji˚ do
+
+11
+
+Update sj Ð sj ‘ 1;// Update of bit j of the syndrome
+
+12
+
+if sj “ 0, set d “ ´1; else set d “ 1;// d is the counter variation
+
+13
+
+for ℓ P Zj do
+
+14
+
+Update σℓ Ð σℓ ` d;// Counter update due to row j changing parity
+
+15 Iter Ð Iter ` 1;// Update number of performed iterations
+
+/* Output error estimate or report failure
+
+*/
+
+16 if s “ 0r, return pe; else, return K;
+
+when the error positions are uncorrelated. It is instrumental in deriving the probability distribution for counters [7], [9], [10].
+Proposition 4.1. Let H P Fr2ˆn with constant column weight v and row weight w. Let e ÐÝ$ Sn,u. Under Assumption 1, we have
+Pr rσi “ x | ei “ 1s “ g1puqpxq “ ˆxv˙ρ1xp1 ´ ρ1qv´x,
+
+Pr rσi “ x | ei “ 0s “ g0puqpxq “ ˆxv˙ρx0 p1 ´ ρ0qv´x,
+
+where
+
+ρ1
+
+“
+
+1
+`n´1˘
+w´1
+
+mintw´1,u´1u
+ÿ
+
+ˆu
+
+´
+
+¨
+
+ℓ
+
+ℓ“0
+
+1˙ˆ
+
+n´u
+
+˙ ,
+
+w´1´ℓ
+
+ℓ even
+
+ρ0
+
+“
+
+1
+`n´1˘
+w´1
+
+¨
+
+mintw´1,uu
+ÿ
+
+ˆu˙ˆn
+
+´
+
+1
+
+´
+
+u˙ .
+
+ℓ“1
+
+ℓ w´1´ℓ
+
+ℓ odd
+
+We model the DFR of BF-Max using the next assumption.
+
+Assumption 2. Assumption 1 holds for any iteration of BF-Max, if in the previous iterations no wrong bit flip has been performed.
+
+Let i˚ be the bit which is flipped and initially assume i˚ R E, where E is the support of the error vector. Then,
+after the first iteration, the vector to be corrected has support E1 “ EYti˚u. While E is chosen uniformly at random among all subsets of t1, ¨ ¨ ¨ , nu of size t, this is not true anymore
+
+for E1: i˚ is correlated with the positions in E (since the positions indexed by E caused its flip). If instead i˚ P E, then the error vector which must be corrected in the second iteration has support E1 “ Ezti˚u. E1 contains t ´ 1 indices which are not correlated, since they have been chosen at the beginning, uniformly at random. The same reasoning can be repeated for all the subsequent iterations: after iteration Iter, if all the bit flips performed were correct, the number of residual errors is t´Iter and their positions are uncorrelated. Thus, for all iterations, Proposition 4.1 is expected to yield valid approximations for the counter distributions. In fact, the rationale of considering a number of iterations exactly equal to the number of errors lies in the ability to separate the case in which all flips performed by the decoder are correct from the case in which at least one flipped bit was not affected by error. In the former case, in fact, the decoder succeeds, while in the latter case it fails, as it cannot perform more iterations than the number of errors to be corrected.
+
+Proposition 4.2. Let H P F2rˆn be a parity-check matrix with
+
+constant column weight v and constant row weight w. Let
+
+e Ð$ Sn,t and consider BF-Max on input s “ eHJ, with
+
+IterMax “ t. Then, under Assumptions 1 and 2, the DFR of
+
+BF-Max f0puqpxq,
+
+wishewreellf1paupqpprxoqx“ima1t´ed´břy zx1“0´g1pśuqtup“zq1¯řu xva´“n10df1puqpxq
+
+¨
+
+’$’`g0puqp0q˘n´u
+
+f0puqpxq
+
+“
+
+& ˜x ÿ
+’ ’
+
+¸n´u g0puqpzq ´
+
+˜x´1 ÿ
+
+¸n´u g0puqpzq
+
+%
+
+z“0
+
+z“0
+
+if x “ 0, if x ą 0.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+Proof: Since IterMax “ t, the decoder will not fail if
+
+and only if the only bit that flips at each iteration is actually
+
+affected by one error. Thus, after iteration u P t1, ¨ ¨ ¨ , tu, the
+
+number of residual errors is t ´ u. Thanks to Assumption
+
+2, we model the error to be corrected in iteration u as a
+
+uniformly random sample from Sn,t`1´u. For iteration u, let
+
+J0puq
+
+and
+
+J1puq
+
+denote
+
+the
+
+sets
+
+of
+
+indices
+
+of
+
+bits
+
+in
+
+which
+
+e p
+
+and e are, respectively, equal and different. Then, in iteration
+
+u, the decoder will surely take a good choice if
+
+! max σj
+
+ˇ ˇj ˇ
+
+P
+
+J0puq )
+
+ă
+
+! max σj
+
+ˇ ˇj ˇ
+
+P
+
+J1puq ) .
+
+looooooooooomooooooooooon looooooooooomooooooooooon
+
+σr0puq
+
+σr1puq
+
+Notice that the decoder can still take a good decision, with some probability, even when the above inequality is actually an equality. For the sake of simplicity, we neglect this possibility (in any case, we expect it happens with low probability).
+Then, the DFR can be approximated as
+
+t
+
+1´
+
+ź
+
+Pr ”σr0puq
+
+ă
+
+σr1puq
+
+ˇ ˇe ˇ
+
+ÐÝ$
+
+ı Sn,t`1´u
+
+u“1
+
+t
+
+“
+
+1
+
+´
+
+ź
+
+Pr ”σr0puq
+
+ă
+
+σr1puq
+
+ˇ ˇe ˇ
+
+$
+ÐÝ
+
+ı Sn,u
+
+u“1
+
+t v´1
+
+“
+
+1´
+
+ź
+
+ÿ
+
+Pr ”pσr0puq
+
+“
+
+xq ^
+
+pσr1puq
+
+ą
+
+xq
+
+ˇ ˇe ˇ
+
+ÐÝ$
+
+ı Sn,u .
+
+u“1 x“0
+
+Under Assumption 1, the counters are independent random variables, hence
+
+Pr
+
+”pσr0puq
+
+“
+
+xq
+
+^
+
+pσr1puq
+
+ą
+
+xq
+
+ˇ ˇ ˇ
+
+e
+
+$
+ÐÝ
+
+Sn,u
+
+ı
+
+“
+
+Pr
+
+”σr0puq
+
+“
+
+x
+
+ˇ ˇ ˇ
+
+e
+
+ÐÝ$
+
+Sn,u
+
+ı
+
+¨
+
+Pr
+
+”σr1puq
+
+ą
+
+x
+
+ˇ ˇ ˇ
+
+e
+
+ÐÝ$
+
+Sn,u
+
+ı
+
+.
+
+looooooooooooooomooooooooooooooon looooooooooooooomooooooooooooooon
+
+f0puq pxq
+
+f1puq pxq
+
+With further probability theory arguments and recalling Proposition 4.1, we obtain the expressions for f0puqpxq and f1puqpxq.
+
+DFR
+
+20
+
+2´4
+
+2´8
+
+2´12
+
+2´16
+
+2´20
+
+2´24
+
+2´28
+
+v “ 9 theoretical empirical
+
+2´32
+
+v “ 17 theoretical empirical
+
+2´36
+
+v “ 35 theoretical empirical
+
+2´4015 20 30 40 50 60 70 80 90 100
+
+t (Number of errors)
+
+Fig. 1: Comparison between theoretical and empirical DFR of the BF-Max decoder, for QC-LDPC codes with fixed r “ 2003, n “ 2r, w “ 2v and several values of v.
+
+20
+
+2´8
+
+2´16
+
+DFR
+
+2´24
+
+2´32 2´40
+
+v“9 v “ 13 v “ 17
+1,000 2,000 3,000 4,000 r (Code redundancy)
+
+5,000
+
+Fig. 2: Comparison between the DFR theoretical models for BF-Max (continuous lines), 2-iteration BF (dashed lines) and 1-iteration BF (dotted lines). For all curves, t “ 18, w “ 2v and n “ 2r; the flipping thresholds for BF have been optimized in order to achieve the lowest DFR. The same color has been used for curves referred to the same tuple pt, v, wq.
+
+B. Numerical results
+To validate Proposition 4.2, we can compare it with estimates obtained by Monte Carlo simulations. In Fig. 1, we compare the DFR of some quasi-cyclic (QC) codes predicted by Proposition 4.2, with the one estimated through numerical simulations 5. As in BIKE and LEDAcrypt, we consider codes whose parity-check matrix is in the form pH1, H2q, with both H1 and H2 being circulant matrices with size rˆr and column weight v. The resulting parity-check matrix has n “ 2r and constant row weight w “ 2v. As can be seen from Fig. 1, the results of the simulations are aligned with the theoretical predictions. In Fig. 2 we compare the DFR resulting from Proposition 4.2 with the theoretical models for the BF decoder, considering one and two iterations [7], [9]. As we can see,
+5The code employed for the simulations, as well as an implementation for the formula in Proposition 4.2, can be found at https://github.com/secomms/ bf-max.
+
+our decoder has a much lower DFR. Moreover, all decoders have comparable computational complexity: for instance, for v “ 9, the complexity of BF-Max is approximately 30% greater than that of the 2-iterations BF, while for v “ 17 they have essentially the same complexity.
+V. CONCLUSION
+We have introduced and analyzed the BF-Max decoder, a BF decoder that flips a unique bit in each iteration choosing that (or one of those) with the highest counter. We have shown that this decoder has low computational complexity and is inherently constant time. We have been able to characterize its DFR theoretically, for the case in which the number of iterations equals the number of errors to be corrected. The DFR predicted through our model closely matches the results of numerical simulations and significantly outperforms the theoretical DFR obtained by other models for BF decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] M. Baldi, A. Barenghi, F. Chiaraluce, G. Pelosi, and P. Santini, “LEDAcrypt,” Second round submission to the NIST post-quantum cryptography call, 2019.
+[3] N. Aragon, P. Barreto, S. Bettaieb, et al., “BIKE,” First round submission to the NIST post-quantum cryptography call, 2017.
+[4] Q. Guo, T. Johansson, and P. Stankovski, “A key recovery attack on MDPC with CCA security using decoding errors,” in Proc. Advances in Cryptology–ASIACRYPT 2016: 22nd International Conference on the Theory and Application of Cryptology and Information Security, Hanoi, Vietnam, Dec. 2016, pp. 789–815.
+[5] D. Hofheinz, K. Hövelmanns, and E. Kiltz, “A modular analysis of the Fujisaki-Okamoto transformation,” in Proc. 15th Theory of Cryptography Conference (TCC ’17), Baltimore, MD, Nov. 2017, pp. 341–371.
+[6] J.-P. Tillich, “The decoding failure probability of MDPC codes,” in Proc. 2018 IEEE International Symposium on Information Theory (ISIT), Vail, CO, Jun. 2018, pp. 941–945.
+[7] P. Santini, M. Battaglioni, M. Baldi, and F. Chiaraluce, “Harddecision iterative decoding of LDPC codes with bounded error rate,” in Proc. 2019 IEEE International Conference on Communications (ICC), Shanghai, China, May 2019.
+[8] P. Santini, M. Battaglioni, M. Baldi, and F. Chiaraluce, “Analysis of the error correction capability of LDPC and MDPC codes under parallel bit-flipping decoding and application to cryptography,” IEEE Transactions on Communications, vol. 68, no. 8, pp. 4648–4660, 2020.
+[9] A. Annechini, A. Barenghi, and G. Pelosi, “Bit-flipping decoder failure rate estimation for (v,w)-regular codes,” in Proc. 2024 IEEE International Symposium on Information Theory (ISIT), Athens, Greece, Jul. 2024, pp. 3375–3379.
+[10] N. Sendrier and V. Vasseur, “On the decoding failure rate of QCMDPC bit-flipping decoders,” in Post-Quantum Cryptography - 10th International Conference (PQCrypto 2019) Revised Selected Papers, Chongqing, China, May 2019, pp. 404–416.
+[11] N. Sendrier and V. Vasseur, “About low DFR for QC-MDPC decoding,” in Proc. International Conference on Post-Quantum Cryptography, Paris, France, Sep. 2020, pp. 20–34.
+[12] M. Baldi, A. Barenghi, F. Chiaraluce, G. Pelosi, and P. Santini, “Analysis of in-place randomized bit-flipping decoders for the design of LDPC and MDPC code-based cryptosystems,” in Proc. 17th International Conference on E-Business and Telecommunications (ICETE 2020), Virtual, Online, Jul. 2020, pp. 151–174.
+[13] P. Santini, M. Battaglioni, F. Chiaraluce, and M. Baldi, “Analysis of reaction and timing attacks against cryptosystems based on sparse paritycheck codes,” in Proc. Code-Based Cryptography - 7th International Workshop (CBC 2019), Revised Selected Papers, Springer, Darmstadt, Germany, May 2019, pp. 115–136.
+[14] E. Eaton, M. Lequesne, A. Parent, and N. Sendrier, “QC-MDPC: A timing attack and a CCA2 KEM,” in Proc. International Conference on Post-Quantum Cryptography, Fort Lauderdale, Florida, Apr. 2018, pp. 47–76.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:30:54 UTC from IEEE Xplore. Restrictions apply.
+
+

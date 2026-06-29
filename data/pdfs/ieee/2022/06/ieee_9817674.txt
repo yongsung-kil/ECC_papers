@@ -1,0 +1,799 @@
+2022 17th Canadian Workshop on Information Theory (CWIT) | 978-1-6654-9908-8/22/$31.00 ©2022 IEEE | DOI: 10.1109/CWIT55308.2022.9817674
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+SAPA: Sparse Affine Projection Algorithm in ADMM-LP Decoding of LDPC Codes
+Amirreza Asadzadeh∗, Masoud Barakatain†, Stark. C. Draper∗, and Jeebak Mitra† ∗Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON, Canada,
+Email: amirreza.asadzadeh@mail.utoronto.ca, stark.draper@utoronto.ca †Huawei Technologies, Ottawa, ON, Canada, Email: masoud.barakatain@huawei.com, jeebak.mitra@huawei.com
+
+Abstract—We present a simplified alternating direction method of multipliers with linear programming (ADMM-LP) decoder for LDPC codes by developing a method of approximate projection onto the parity polytope. The algorithm projects onto the affine hull of the χ closest local codewords for each check of degree d, where χ can be much smaller than d. We name this SAPA, the “sparse affine projection algorithm”. In contrast to exact projection, SAPA does not require a water-filling step and thus can be implemented with lower per-iteration complexity. We present numerical results which demonstrate not only that SAPA’s performance, when used as part of an overall decoder, is close to that of exact projection, but also that the use of SAPA does not incur many additional iterations. This is in contrast to other approximate algorithms. Thus, SAPA is appropriate for use in limited-iteration decoders in high-throughput applications. Moreover, we analyze sparsity of polytope projections in the exact ADMM-LP decoding to explain the suitability of the proposed sparse approximation.
+Index Terms—Alternating Direction Method of Multipliers (ADMM), Low-Density Parity Check (LDPC) Codes, Parity Polytope Projection, Affine Projection Algorithm
+I. INTRODUCTION
+Linear programming (LP) decoding of low-density parity check (LDPC) codes, proposed by Feldman et al. [1], is an alternative to message passing decoding which benefits from many theoretical guarantees. Since solving the LP decoding problem using generic LP solvers is extremely complex, Barman et al. [2] proposed a distributed framework based on the alternating direction method of multipliers (ADMM). When the linear objective of LP decoding is augmented with a penalty to encourage integer solutions, “ADMM-LP” decoding performance reaches the accuracy of message passing algorithms [3]. However, the complexity of the penalized ADMM-LP decoder is not yet comparable to message passing decoders, due to the parity polytope projection step used in the decoding routine.
+Zhang and Siegel [4] reduced the complexity of ADMMLP decoding via a cut-based efficient projection algorithm. Inspired by that, Wasson et al. [5] proposed a hardwarecompatible algorithm. Still, the projection step in [5] involved a complex water-filling routine that included sorting and multiple comparisons with super-linear complexity.
+More recently, two approximate algorithms for parity polytope projections and their enhanced variants were proposed. These algorithms are called the even-vertex algorithm (EVA)
+
+[6], [7] and the line-segment algorithm [8], [9]. They respectively project onto the closest vertex or the line connecting the two closest vertices of the polytope. While these approximation algorithms have demonstrated promising performance, they require many additional iterations to converge. However, in high-throughput applications such as optical communications, the number of iterations is severely limited. In this limited-iteration regime, these approximate algorithms lose their accuracy.
+In this work, we generalize the prior approximate algorithms, and propose SAPA, the “Sparse Affine Projection Algorithm”. SAPA projects onto the affine hull of a small number of vertices of the polytope. SAPA doesn’t involve a water-filling process as in exact projection. And while SAPA has linear complexity, it maintains high performance even when used in conjunction with low-iteration ADMMLP decoders. We also analyze the sparsity characteristics of the exact parity polytope projection routine and validate why sparse approximation is well matched to the ADMM-LP decoding routine.
+The rest of the paper is organized as follows. In Section II we review fundamental background on ADMM-LP decoding and parity polytope projection, and provide a brief review of prior approximate algorithms. Then, in Section III, we propose our approximate algorithm, SAPA. In addition we provide a motivating example explaining the sparsity constraint we assert on the affine projection. In Section IV, we first discuss the sparsity properties of the exact projection routine, and then provide numerical results verifying SAPA’s high-accuracy, and low-complexity characteristics. In Section V, we conclude the paper. Throughout this paper, all vectors are written in bold format, e.g. x. In addition, the all-zero and all-one vectors of length d are respectively denoted by 0d and 1d.
+II. PRELIMINARIES
+A. ADMM-LP Decoding
+Consider an LDPC code C of length N and a corresponding parity check matrix H of size M × N , where M is the number of parity checks (constraints). Let us respectively denote the index set for variable nodes and check nodes as I = {1, · · · , N }, and J = {1, · · · , M }. The neighborhood of a check j is the set of all participating variables nodes, defined as Nc(j) = {i ∈ I|Hj,i = 1}. Similarly, the set of neighbouring checks for a variable node i is defined as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+27
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+Nv(i) = {j ∈ J |Hj,i = 1}. By using |.| as the notation
+
+for the cardinality of a set, the degree of check node j is
+
+dj = |Nc(j)|. A valid codeword is defined as a length-N
+binary sequence x ∈ {0, 1}N if and only if i∈Nc(j) xi has even parity for all checks j ∈ J .
+
+Consider a binary memoryless channel for transmitting
+
+codewords of an LDPC code C. If we denote the noisy received
+
+sequence as x˜, the Maximum-Likelihood (ML) decoding rule
+
+outputs minx{γ T x : x ∈ C}, where γ i = log
+
+W (yi|0) W (yi|1)
+
+is the
+
+log-likelihood ratio of the i-th symbol.
+
+Since ML decoding is an integer-programming problem,
+
+Feldman et. al. [1] proposed a linear programming relaxation,
+
+x∗ = arg min γ T x : xNc(j) ∈ PPdj , ∀j ∈ J . (1)
+x
+In Eq. (1), xNc(j) is a length-dj vector composed of those entries of x with indices in the set Nc(j). Also, PPd is called the “parity polytope” of dimension d, defined as the convex hull of all valid local codewords of a parity check of degree d.
+PPd = conv e ∈ {0, 1}d : 1dT e = 0 (mod 2) . (2)
+
+To solve the LP decoding problem efficiently and in a distibuted manner, Barman et al. [2] proposed an Alternating Direction Method of Multipliers (ADMM) method. Later, Liu and Draper [3] added a penalty term to the objective to avoid “pseudo-codewords”. The addition of this penalty enhanced the performance of the ADMM-LP decoder. The penalized ADMM-LP decoder with an ℓ2-penalty is described in Alg. 1, [3]. The decoder can be equipped with syndrome checking at the end of each iteration to accelerate termination. Moreover, over-relaxation with parameter ρ ∈ (1, 2) helps in accelerating the decoder significantly [10].
+
+B. Parity Polytope Projection
+
+The complexity bottleneck of the ADMM-LP decoder is the projection onto the parity polytope, PPd (line 11, Alg. 1, [3]). The first proposed projection algorithm [2] involved a waterfilling process to solve a constrained quadratic programming. Later, Zhang and Siegel [11] identified a cut-based test for determining whether a point is inside the parity polytope or not, and by utilizing this membership test, they proposed an efficient projection algorithm. Inspired by these efforts, Wasson et. al. [5] introduced a hardware-compatible projection algorithm, described in Alg. 1. To avoid numerical issues and enhance hardware-compatibility, Wasson exploited a centered version of the parity polytope, projection onto which is related to the original (non-centered) polytope as
+
+11
+
+ΠPPd−
+
+1 2
+
+(v )
+
+=
+
+ΠPPd
+
+v+ 2
+
+−, 2
+
+(3)
+
+where
+
+addition
+
+and
+
+subtraction
+
+with
+
+1 2
+
+is
+
+defined
+
+element-wise.
+
+The (centered) polytope projection consists of the following
+
+operations: find the closest odd-vertex (denoted as O, lines
+
+1-7 in Alg. 1), similarity transform to rotate the coordinates
+
+and translate O to the (centered) origin (lines 8-10, 15-17 in
+
+Algorithm 1 Parity Polytope Projection Algorithm
+
+Input: v ∈ Rd
+
+Output:
+
+w
+
+=
+
+ΠPPd−
+
+1 2
+
+(v )
+
+1: for i = 1 to d do
+
+1 2: Oi ← 0
+
+if vi ≥ 0 if vi < 0
+
+3: end for
+
+4: if 1T O is even then
+
+5: i∗ ← arg mini∈{1,··· ,d} |vi|
+
+6: Oi∗ ← 1 − Oi∗
+
+7: end if
+
+8: for i = 1 to d do
+
+9: v˜i ← vi.(−1)Oi
+
+10: end for
+
+11:
+
+if
+
+1T
+
+Π[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v˜)
+
+≥
+
+1
+
+−
+
+d 2
+
+then
+
+12:
+
+w
+
+←
+
+Π[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v
+
+)
+
+13: else
+
+14:
+
+u˜
+
+←
+
+ΠSd
+
+−
+
+1 2
+
+(v˜)
+
+15: for i = 1 to d do
+
+16:
+
+ui ← u˜i.(−1)Oi
+
+17: end for
+
+18: w ← u
+
+19: end if
+
+20: return w
+
+Alg. 1), apply membership test to check whether the point
+
+was initially inside the polytope (line 11 in Alg. 1), and clip
+
+in order to project onto the unit box (line 12 in Alg. 1), or
+
+project
+
+onto
+
+the
+
+(centered)
+
+probability
+
+simplex
+
+Sd −
+
+1 2
+
+(line
+
+14
+
+in Alg. 1). The details of the latter projection can be found in
+
+Alg. 3 in [5].
+
+C. Approximate Projection Algorithms
+Projection onto the parity polytope is considered to be the most complex operation in the ADMM-LP decoding algorithm, as it requires sorting a vector of size d and finding the proper shift to yield a convex combination of the closest even-weight vertices of PPd. Hence, pursuing an approximate parity polytope projection algorithm for the the ADMMLP decoder that does not substantially degrade the overall decoding performance is of great interest. We now briefly describe previously introduced approximate algorithms for parity polytope projection.
+• Even-Vertex Algorithm (EVA) [8] projects onto the closest even-vertex of the parity polytope, while ignoring all other d − 1 neighbouring even-vertices. The process is similar to lines 1-7 of Alg. 1 only by substituting the term “even” with “odd” in line 4.
+• Hybrid Projection Algorithm (HPA) [6] utilizes a predefined schedule to alternate between the exact projection algorithm and EVA in consecutive iterations of the ADMM-LP decoding. It was shown empirically that the optimal mixing ratio (in terms of Frame Error Rate) between the exact projection and EVA is 1:1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+28
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+• Line-Segment Algorithm (LSA) [8] approximates the projection routine by considering only the two closest evenvertices on the polytope and projecting onto the linesegment that connects these.
+Although EVA is the simplest algorithm, it has the worst performance among all the above approximate methods. The performance of both HPA and LSA is almost as good as that of the exact projection when substituted into the ADMM-LP decoding routine. However, LSA may be considered the best candidate as it has a lower average complexity compared to HPA.
+
+III. SPARSE AND AFFINE PROJECTION
+
+Projection
+
+onto
+
+the
+
+(centered)
+
+probability
+
+simplex
+
+Sd
+
+−
+
+1 2
+
+(line 14 of Alg. 1), as a sub-routine for parity polytope
+
+projection, requires sorting a vector of size d and comparing all
+
+d possible shifts to find the proper shift (refer to Alg. 3 in [5]).
+
+This set of operations results in the super-linear complexity in
+
+d, with average complexity O(d log d).
+
+A. Affine Projection Algorithm
+As an alternative and approximate solution, we consider projection onto the extended hyperplane of the probability simplex. Instead of projecting a d-dimensional vector v onto a convex hull of the d closest vertices of the polytope, we project onto the affine hull of those d vertices. While performing affine projection requires computing a sum over all entries, it doesn’t involve sorting the vector initially nor applying multiple comparisons to single out the right amount of shift. As a consequence, this approximation reduces the average complexity significantly, to O(d). This approximate Affine Projection Algorithm (APA) is described in Alg. 2.
+
+Algorithm 2 Affine Projection Algorithm (APA)
+
+Input: v ∈ Rd
+
+Output:
+
+w
+
+≈
+
+ΠSd
+
+−
+
+1 2
+
+(v
+
+)
+
+1:
+
+vshift ←
+
+1 d
+
+d i=1
+
+(vi)
+
+−
+
+1
+
+2: for i = 1 to d do
+
+3:
+
+wi
+
+←
+
+vi
+
+−
+
+vshif t
+
+−
+
+1 2
+
+4: end for
+
+5: return w
+
+B. Motivating Example
+
+To demonstrate the accuracy of this approximate projection
+
+when compared to the previously introduced algorithms, we
+
+consider the following numerical example. Consider projecting
+
+a 4-D vector v = (0.7, 0.1, 1.2, 1.5) onto PP4. The 4 closest
+
+even vertices on the parity polytope to the point v are E 1 =
+
+(0, 0, 1, 1), E 2 = (1, 1, 1, 1), E 3 = (1, 0, 0, 1), and E 4 =
+
+(1, 0, 1, 0); sorted in ascending order. Since result of the mem-
+
+bership test for the point v is negative and the projected point
+
+is necessarily a convex combination of the 4 closest even ver-
+
+tices, we define a coefficient vector
+
+4 i=1
+
+ξiE
+
+i
+
+=
+
+Eξ,
+
+where
+
+E
+
+is
+
+a
+
+ξ such that w = 4-by-4 matrix,
+
+ΠPP4 (v) defined
+
+= as
+
+E
+
+=
+
+[E
+
+T 1
+
+,
+
+E
+
+T 2
+
+,
+
+E
+
+T 3
+
+,
+
+E
+
+T 4
+
+].
+
+By
+
+performing
+
+the
+
+exact
+
+projection
+
+algorithm, we get w = (0.433, 0.366, 0.933, 1) with the corresponding coefficient vector ξT = (0.566, 0.366, 0.067, 0).
+
+While the most naive approximate algorithm, EVA re-
+
+sults in wEV A
+
+=
+
+E1
+
+with
+
+ξ
+
+T EV
+
+A
+
+=
+
+(1, 0, 0, 0), LSA
+
+produces a pretty accurate result wLSA = (0.4, 0.4, 1, 1)
+
+with
+
+ξ
+
+T LS
+
+A
+
+=
+
+(0.6, 0.4, 0, 0).
+
+In
+
+contrast,
+
+the
+
+output
+
+of
+
+APA
+
+is wAP A
+
+=
+
+(0.375, 0.425, 0.875, 1.175)
+
+where
+
+ξ
+
+T AP
+
+A
+
+=
+
+(0.625, 0, 425, 0.125, −0.175). This projection is less accurate
+
+than LSA. To qualify this, the ℓ2 error with respect to the exact projection w is ∥w − wLSA∥2 = 0.08 for LSA, and ∥w − wAP A∥2 = 0.2 for APA. The superiority of LSA can be explained by inspecting the vector ξ, which has two large
+
+entries, the third entry is relevantly small, with the fourth one
+
+being zero. Hence, the projected point w is almost a convex
+
+combination of two of the 4 closest even vertices, so one
+
+can expect LSA’s outcome, which is a convex combination of
+
+exactly two vertices should be quite close to that of the exact
+
+algorithm. Similarly, by inspecting ξAP A one can explain the inability of APA to produce a high-accuracy outcome; the
+
+third entry of such coefficient vector is quite large, and the
+
+fourth must be negative to make the sum of coefficients equal
+
+one. Our observtion is that forcing the projected point to be
+
+an affine combination of all d even vertices may degrade the
+
+approximation efficiency.
+
+C. Sparse Affine Projection Algorithm
+Inspired by the numerical analysis in the previous subsection, we propose another approximate algorithm. We again develop an affine projection routine, but this time only involve a subset of the d closest even-weight vertices. More precisely, we constrain the sparsity (ℓ0-norm) of the coefficient vector ξ to a pre-determined value, denoted by χ. By enforcing this constraint, the novel approximation routine projects the point onto the affine hull of χ closest even vertices, {E 1, · · · , E χ}, and often outperforms LSA with χ > 2. The details of this approximate χ-Sparse Affine Projection Algorithm (χ-SAPA) is provided in Alg. 3.
+For the example in Section III-B, the outcome of 1-SAPA is equal to that of EVA while 2-SAPA results in the same projected point as LSA. Although 4-SAPA reproduces the poor approximation of APA since χ = d = 4, the output of approximate 3-SAPA matches precisely with that of the exact projection. Thus, this family of χ-SAPA algorithms not only can scale up and achieve the performance of the other approximate algorithms as well as the exact projection, but also avoids the complex water-filling process required in the exact projection routine. This follows because affine projection is computationally simpler than convex projection.
+The family of χ-SAPA algorithms, unlike the exact projection routine, doesn’t require sorting, computing all possible shifts, and applying multiple comparisons in the water-filling process. Instead, it involves a partial sorting to find indices of the χ minimum values of the input vector (line 1 in Alg. 3) and computing the sum of the entries with those indices as the affine shift (line 2 in Alg. 3). It is worthwhile to note that there is no clipping of the entries in Alg. 3, since χ-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+29
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+Algorithm 3 χ-Sparse Affine Projection Algorithm (χ-SAPA)
+
+Input: v ∈ Rd, χ
+
+Output:
+
+w
+
+≈
+
+ΠSd
+
+−
+
+1 2
+
+(v
+
+)
+
+1: Iχ ← Index set of the χ minimum values of |vi|
+
+2:
+
+vshift
+
+←
+
+1 χ
+
+i∈Iχ (vi) − 1
+
+3: for i = 1 to d do
+
+4:
+
+wi ←
+
+vi
+
+−
+
+vshift
+
+−
+
+1 2
+
+−
+
+1 2
+
+5: end for
+
+if i ∈ Iχ if i ∈/ Iχ
+
+6: return w
+
+SAPA does not necessarily result in a convex combination of the vertices of the polytope, but only an affine combination of them. However, we have a conjecture, which we are trying to prove, that there exists at least one value χ ∈ {1, · · · , d} for which χ-SAPA will reproduce the exact projected point (and at lower complexity than the exact algorithm). In the following section, we present simulation results that show the superior performance of χ-SAPA compared to previously developed approximate algorithms.
+
+IV. SIMULATION RESULTS
+
+We now present the numerical evidences supporting the
+
+sparsity idea and the accuracy of χ-SAPA. We use binary
+
+phase-shift keying modulation over an additive white gaussian
+
+noise channel. We utilize the ℓ2-penalized ADMM-LP decoder with the following parameters: µ = 3, α = 0.8, ϵ = 10−5, and
+
+ρ = 1.9, as suggested in [12] and [3]. Syndrome-checking is
+
+used at the end of each iteration for early termination. The
+
+maximum number of iterations allowed is code-dependant and
+
+will be discussed in detail in section IV-B.
+
+We present results for three different LDPC codes: the
+
+regular [2640, 1320] rate-1/2 Margulis code (C1) with checkdegree 6; an irregular [26400, 20480] rate-4/5 quasi-cyclic
+
+(QC) LDPC code (C2) with check-degree distribution R(x) = 0.2x16+0.8x17; the [672, 546] WiGig code (C3) from the IEEE
+
+802.16ad (WiGig) standard [13] with check-degree distribution
+
+R(x)
+
+=
+
+1 3
+
+(x14
+
++
+
+x15
+
++
+
+x16).
+
+A. Sparsity Analysis
+
+Before evaluating the performance and complexity of χ-
+
+SAPA, it is worthwhile first to analyze the sparsity of the exact
+
+projection in ADMM-LP decoding. In the parity polytope
+
+projection step (line 11, Alg. 1, [3]), each check variable
+
+projects onto a facet of the polytope (if it did not lie inside
+
+the polytope initially). Each facet of the d-dimensional parity
+
+polytope is the convex hull of the d neighbouring local
+
+codewords. Each local codeword is an even-weight vertex of
+
+the polytope. Each projected point can thus be written as
+
+a convex combination of the d closest even-weight vertices
+
+(whenever the membership test result is negative). By adopting
+
+the notation used in section III-B, the projection of point v can
+
+be written as w = ΠPPd (v) =
+
+d i=1
+
+ξiE
+
+i
+
+where
+
+E1, · · ·
+
+,Ed
+
+are the even-weight vertices closest to v, sorted in ascending
+
+distance.
+
+In this subsection, we empirically analyze the sparsity of the coefficient vector ξ across ADMM-LP decoding iterations. The notion we use for measuring sparsity is the ℓ0-norm of the coefficient vector, i.e., the number of non-zero coefficients in the convex combination. To capture the statistics of the sparsity of such vectors, we record the ℓ0-norm of the coefficient vectors across all M checks and all iterations. Then, in order to track the dynamics of the sparsity, the average, the 80%quantile, and the 90%-quantile of the ℓ0-norm of these vectors over various iterations are computed. In addition, to determine the distribution of the sparsity of coefficient vectors among all checks with negative membership test results in a specific iteration, the cumulative distribution function (CDF) is plotted for different stages of decoding.
+While we collected observations for all three LDPC codes under study, only three representative samples of successful decoding are included in Fig. 1, one for each of the codes C1C3. We did not consider any limit on the number of iterations in this subsection as this is irrelevant to our experiments. The plots on the left of Fig. 1 demonstrate the dynamics of the average and the quantiles of sparsity throughout the iterations of ADMM-LP decoding. The graphs on the right of Fig. 1 illustrate the cumulative distribution of the sparsity at different phases of decoding. For each of the samples, four phases were considered: one for early iterations, two for intermediate phases, and one for the final iteration prior to correct decoding.
+As the plots suggest, in early iterations, more than 80% of the checks are projected to a convex combination of only three local codewords, regardless of the maximum checkdegree. Moreover, starting from halfway through decoding, using three local codewords is sufficient for more than 90% of the checks. In addition, the CDF plots suggest that in early iterations, a significant portion of the probability mass function is associated with highly sparse or highly dense coefficient vectors. In contrast, in intermediate to final iterations, most of the probability mass function is related to reasonably sparse coefficient vectors. The aggregation of these observations suggests that only a few of the closest local codewords (regardless of the code’s degree distribution) suffice for the exact projection of most check variables across most iterations. As a result, sparse projection algorithms can be considered as a potential candidate for an accurate, but simpler, projection algorithm to use in ADMM-LP decoding.
+B. Error-Rate Analysis
+In this subsection, we present Frame Error Rate (FER) results for both APA and χ-SAPA compared to the exact projection algorithm and LSA. We regard LSA as the baseline approximate algorithm. We do not include the results of EVA (or equivalently 1-SAPA), as its performance is significantly worse than that of the other approximations. In addition, since high-throughput applications like optical communication require a low number of decoding iterations to satisfy their high-throughput and low-delay requirements, we consider two different types of decoders in our simulations: low-iteration (LI) and high-iteration (HI) decoders. We limit the maximum
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+30
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+Fig. 2. Frame error rate for LSA, APA, and χ-SAPA approximate projection compared to the exact projection for C1 for both low-iteration (maximum set to 20, abbreviated as “LI”) and high-iteration (maximum set to 100, abbreviated as “HI”) ℓ2-penalized ADMM-LP decoders.
+
+Fig. 1. Sparsity statistics of three successful samples in ADMM-LP decoding for different LDPC codes. Average and quantile statistics (left) and empricial cumulative distribution function (right) of non-zero convex combination coefficients for C1 at Eb/N0 = 2.0 dB (top), C2 at Eb/N0 = 4.2 dB (middle), and C3 at Eb/N0 = 4.0 dB (bottom).
+number of iterations for HI decoders to a fixed maximum of 100 iterations for all LDPC codes C1-C3. In contrast, we use different limits for LI decoders as a function of the blocklength of the LDPC code under study. Such limits for codes C1-C3 are respectively 20, 15, and 25 iterations. At least 100 errors are obtained at each SNR point.
+The frame error rate results for code C1 are illustrated in Fig. 2. Since the check-degree distribution of this code is regular with dc = 6, all χ-SAPA algorithms with χ ∈ {2, ..., 6} are evaluated, with 6-SAPA being equivalent to APA. One can observe that while in high-iteration regime the performance of approximation algorithms are quite close to the exact decoder, significant SNR gaps are present in the low-iteration regime. It is worthwhile to note that 3-SAPA outperforms the other approximate algorithms, including LSA, in both LI and HI regimes. In addition, by increasing χ to values larger than 3, performance deteriorates monotonically. It is worthwhile to note that LSA and 2-SAPA are slightly different. The former
+
+projects onto the convex hull of the two closest local words, while the latter projects onto the affine hull. Despite their difference, the FER curves of both are almost indistinguishable for both LI and HI decoders.
+Similar results were observed for the other codes (C2 and C3), but are not included here due to lack of space. For both LI and HI decoders with code C2, 3-SAPA significantly outperforms the other approximate algorithms. Considering that C2 contains checks of large degrees dc ∈ {16, 17}, it is worthwhile to mention that χ-SAPA with 3 ≤ χ ≤ 5 outperforms LSA and 2-SAPA, as well as other χ-SAPA algorithms for χ ≥ 6. While for code C3, LSA and χ-SAPA with 2 ≤ χ ≤ 5 perform as well as the exact decoder in HI regime, all possible χ-SAPA algorithms with 3 ≤ χ ≤ 14, including APA, outperform LSA and 2-SAPA in the LI regime.
+C. Complexity Analysis
+In this subsection, we present complexity comparison for the family of χ-SAPA algorithms in terms of the average number of iterations. Again, we demonstrate numerical results for both high-iteration (HI) and low-iteration (LI) decoders. We use the same maximum number of iterations as mentioned in Subsection IV-B. Due to lack of enough space, only the numerical results for code C1 are presented here. We briefly discuss results for codes C2 and C3.
+The average number of iterations for the successful decoding samples of code C1 is plotted in Fig. 3. This plot suggests that 3-SAPA converges faster than the other approximate algorithms. Moreover, the convergence speed of 2-SAPA, LSA, and 4-SAPA are quite similar when implemented in both LI and HI decoders. In addition, it is notable that APA (or equivalently 6-SAPA) leads to the slowest convergence. This observation explains the poor performance of APA in Fig. 2. The numerical results for code C2 demonstrate that χ-SAPA with respectively χ ∈ {3, 4, 5} and χ ∈ {3, 4} are the best choices for LI and HI decoders. In contrast, the simulation results for code C3 show that χ-SAPA with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+31
+
+2022 17th Canadian Workshop on Information Theory (CWIT)
+
+χ ≥ 3 (including APA) converges almost as fast as the exact projection algorithm, while decoders using LSA and 2-SAPA are the slowest to converge.
+
+TABLE I
+
+PER-ITERATION COMPLEXITY COMPARISON OF PROJECTION
+
+ALGORITHMS
+
+ON
+
+Sd
+
+−
+
+1 2
+
+Projection Algorithm Exact [5]
+APA χ-SAPA
+
+Number of Operations
+
+Comparisons
+
+Additions
+
+d log d + 2d + η + 1 d + η + 1
+
+0
+
+2d + 2
+
+g(χ) d − (g(χ) − 1)/2 2χ + 2
+
+Multiplications η 1 1
+
+Fig. 3. Average number of iterations in successful decoding samples for LSA, APA, and χ-SAPA approximate projections compared to exact projection for C1 for both low-iteration (maximum set to 20, abbreviated as “LI”) and highiteration (maximum set to 100, abbreviated as “HI”) ℓ2-penalized ADMM-LP decoders.
+It is interesting to note that the average number of iterations of HI decoders, when equipped with either the exact projection algorithm or 3-SAPA, almost match with their LI version at Eb/N0 = 2.2 dB. That said, there exists a gap of about 0.8 dB between the corresponding FER curves, cf., Fig. 2. Inspired by the efforts in [14], we conjecture that the explanation is that the most problematic sequences in high-SNR regime contain trapping sets which force the decoder to iterate for longer than the average case. Limiting the maximum number of iterations results in decoding failures, and consequently creates a significant SNR gap between HI and LI decoders due to the existence of trapping sets in the high-SNR regime.
+It is worthwhile to note that the proposed approximate algorithms, when implemented in the decoder, not only require almost as few iterations as exact projection, but can also be implemented in fewer operations per iteration. The number of operations required per projection is listed in Table I. There, d and η respectively denote the dimension of the polytope, and the ℓ0-norm of the convex coefficients vector in the exact projection routine. By definition, η ≤ d. In addition, g(χ) is defined as min{χ, d−χ}, since finding the χ minimum values of an array of size d is equivalent to searching for the d − χ maximum values. For example, consider 3-SAPA, which is (one of) the best candidate(s) among the proposed approximate algorithms for codes C1 − C3. 3-SAPA requires only 3d − 3 comparisons, 8 additions, and 1 multiplication for d ≥ 6. Also note that the complexity of LSA is slightly higher than that of 2-SAPA, due to some additional comparisons. Therefore, one can verify that the per-iteration complexity of all χ-SAPA algorithms is O(d), i.e., linear in d.
+
+V. CONCLUSION
+We proposed a family of approximate algorithms for parity
+polytope projection in ADMM-LP decoding. These algorithms
+are based on projection onto the affine hull of the closest local
+codewords for each check constraint. Moreover, it is shown for
+different LDPC codes that projection onto the affine hull of the 3 to 5 closest vertices of the polytope (regardless of the
+maximum check degree) suffices to maintain decoding performance. In addition, these χ-sparse affine projection algorithms
+converge almost as fast as the exact projection algorithm with a proper choice of χ, while significantly reducing per-iteration
+complexity when compared to the exact algorithm.
+REFERENCES
+[1] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Transactions on Information Theory, vol. 51, no. 3, pp. 954–972, 2005.
+[2] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Proc. Allerton Conf. Comm. Control Computing, (Monticello, IL), Sept. 2011.
+[3] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Transactions on Information Theory, vol. 62, no. 6, pp. 2966–2984, 2016.
+[4] X. Zhang and P. H. Siegel, “Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes,” IEEE Transactions on Information Theory, vol. 58, no. 10, pp. 6581–6594, 2012.
+[5] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-based linear programming decoding with the alternating direction method of multipliers,” IEEE Trans. Signal Processing, vol. 67, pp. 4976–4991, Oct. 2019.
+[6] Q. Xia, X. Wang, H. Liu, and Q. L. Zhang, “A hybrid check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Communications Letters, vol. 25, no. 1, pp. 108–112, 2020.
+[7] Y. Zheng, Y. Lin, Z. Zhang, Q. Zhang, and Q. Xia, “An enhanced HDPCEVA decoder based on ADMM,” IEICE Transactions on Fundamentals of Electronics, Communications and Computer Sciences, vol. 104, no. 10, pp. 1425–1429, 2021.
+[8] Q. Xia, Y. Lin, S. Tang, and Q. Zhang, “A fast approximate check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Communications Letters, vol. 23, no. 9, pp. 1520–1523, 2019.
+[9] Q. Xia, P. He, X. Wang, H. Liu, and Q. Zhang, “Node-wise scheduling algorithm of ADMM decoding based on line segment projection,” IEEE Communications Letters, 2022.
+[10] S. Boyd, N. Parikh, and E. Chu, Distributed optimization and statistical learning via the alternating direction method of multipliers. Now Publishers Inc, 2011.
+[11] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in Proc. Int. Symp. Inf. Theory, (Istanbul, Turkey), pp. 1501–1505, July 2013.
+[12] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale lp decoding,” IEEE Transactions on Information Theory, vol. 59, no. 12, pp. 7870–7886, 2013.
+[13] IEEE Std 802.11ad-2012 (Amend. to IEEE Std 802.11-2012, as amended by IEEE Std 802.11ae-2012 and 802.11aa-2012), pp. 1–628, Dec 2012.
+[14] X. Liu and S. C. Draper, “ADMM decoding on trapping sets,” in Proc. Int. Symp. Inform. Theory, (Hong Kong), June 2015.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:19:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-9908-8/22/$31.00 ©2022 IEEE
+
+32
+
+

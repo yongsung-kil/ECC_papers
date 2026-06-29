@@ -1,0 +1,519 @@
+Received 10 October 2024; accepted 5 November 2024. Date of publication 7 November 2024; date of current version 21 November 2024. Digital Object Identifier 10.1109/OJCOMS.2024.3494059
+Scalable High-Throughput and Low-Latency DVB-S2(x) LDPC Decoders on SIMD Devices
+BERTRAND LE GAL
+IRISA/Inria Lab., UMR CNRS 6074, University of Rennes, 35042 Rennes, France CORRESPONDING AUTHOR: B. LE GAL (e-mail: bertrand.le-gal@irisa.fr)
+ABSTRACT Low-density parity-check (LDPC) codes are error correction codes (ECC) with near Shannon correction performances limit boosting the reliability of digital communication systems using them. Their efficiency goes hand in hand with their high computational complexity resulting in a computational bottleneck in physical layer processing. Solutions based on multicore and many-core architectures have been proposed to support the development of software-defined radio and virtualized radio access networks (vRANs). Many studies focused on the efficient parallelization of LDPC decoding algorithms. In this study, we propose an efficient SIMD parallelization strategy for DVB-S2(x) LDPC codes. It achieves throughputs from 7 Gbps to 12 Gbps on an INTEL Xeon Gold target when 10 layered decoding iterations are executed. Simultaneously, the latencies are lower than 400 μs. These performances are equivalent to FPGA-based solutions and overclass CPU and GPU related works by factors up to 5×.
+INDEX TERMS LDPC decoding, SIMD, multicore, DVB-S2, DVB-S2x, high-throughput, low-latency, parallelization strategy.
+
+I. INTRODUCTION
+A FTER decades of dominance, specialized circuits such as ASICs and FPGAs are gradually being replaced by CPUs and GPUs in digital communication systems, owing to the flexibility offered by the latter. The use of purely software-based processing solutions also allows offloading and centralizing physical layer processing in data centers, to address scalability and security challenges [1], [2], [3]. However, these strategies face performance issues in terms of throughput and latency in communication systems. Despite the replication of computing units in multicore and manycore architectures, achieving performance levels equivalent to those obtained using ASIC/FPGA solutions remains a challenge for software designers. It is necessary to consider the choice of algorithms and their parallelization strategies in order to match the architectural capabilities of the device.
+Accordingly, numerous research efforts have focused on the efficient implementation of error-correcting code decoding algorithms in programmable architectures. Several code families have been investigated: LDPC [4], [5], NB-LDPC [6], [7], polar codes [8], [9], [10], turbocodes [11], [12], and even Viterbi codes [13]. Recent works on the decoding of LDPC codes have been carried out in the
+
+context of 5G [5], [14], [15], [16], and terrestrial wireless communications [17], [18]. Indeed, the decoding of LDPC codes represents a significant part of the computational complexity of the physical layer, and is generally considered a bottleneck from a system performance point of view. The proposed solutions exploit the properties of LDPC codes to achieve throughputs exceeding 1 Gbps on CPU or GPU targets [5], [14], [18], [19], [20]. Existing strategies cannot be directly applied to satellite communication standards such as DVB-S2(x). However, while the need for performant LDPC implementations has been revived by the demand for high-speed optical and spacial communications [21], [22]. This results from the specific features of the DVB codes to be processed (double-diagonal and irregular degrees). Although generic parallelization strategies are still applicable, they offer (a) high processing latencies [23], (b) low-throughput [24], [25] and (c) do not scale with current programmable architectures [20], [26].
+The contributions of this paper are as follows:
+• We describe a generic and efficient parallelization strategy for decoding LDPC codes on Single Instruction Multiple Data (SIMD) multicore architectures. In contrast to the work presented in [14], [27], this
+
+7216
+
+c 2024 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+VOLUME 5, 2024
+
+parallelization strategy is generic and does not require using a distinct unrolled source code for each H matrix to be processed. Furthermore, it permits the processing of larger matrix sizes (N = 64800) without compilation issues. A new optimization of VN memory mapping at runtime is presented to minimize the impact of generic Z VNs block rotations on performance. • We extended the decoder descriptions using specialized CN kernels to handle CN blocks with double-toquadruple diagonals using a layered decoding approach. This extension is required to support the horizontallayered-based decoding of LDPC codes specified in the DVB-S2(x) standards, which are not supported by the previous works [14], [27]. • We conducted a series of experiments to assess the efficacy of the proposed decoders on three platforms (INTEL and ARM CPUs). These platforms helped us to evaluate the suitability of the proposed parallelization and implementation strategies for various SDR and Cloud-RAN scenarios. The measured performance was compared with multicore SIMD solutions [20], [26] and manycore solutions [23], [24], [25] which support the decoding of LDPC codes from DVB-S2(x) standards. The proposed approach achieves throughputs equivalent to those delivered by hardware implementations [28], up to 5× higher than those of CPU/GPU approaches from the literature, while reducing the decoding latency by up to 40× down to hundreds of μs when 10 layered decoding iterations are executed.
+The remainder of this paper is organized as follows: Section I introduces the LDPC codes and horizontal-layeredbased decoding algorithm used in software implementation. A comparison between related studies and the proposed optimizations is provided in Section III. Section IV summarizes the experimental results obtained using the proposed LDPC decoder implementation and compares them with state-ofthe-art solutions. Finally, the conclusions and future work are presented in Section V.
+
+II. LDPC CODES
+An LDPC code [29], [30], [31] is a linear block code defined in a traditional manner by a binary sparse M × N paritycheck matrix named H as in Equation (1) for N = 8 and M = 5. Table 1 provides a list of all symbols and definitions.
+
+⎛V0 V1 V2 V3 V4 V5 V6 V7 ⎞
+
+C0 1 1 1 1 0 0 0 0
+
+H
+
+=
+
+C1 C2 C3
+
+⎝⎜⎜⎜⎜
+
+0 0 1
+
+0 1 0
+
+0 0 0
+
+1 0 1
+
+1 1 0
+
+1 0 0
+
+0 1 1
+
+0 1 0
+
+⎠⎟⎟⎟⎟
+
+(1)
+
+C4 1 0 1 1 0 0 1 0
+
+In the H matrix, M = N − K rows are associated with parity-check information (CN) and N columns represent received bit-node information (VN) with N as the codeword length and K as the number of information bits in the
+
+TABLE 1. List of symbols.
+
+FIGURE 1. Tanner graph representation of an LDPC code.
+
+transmitted frame. The number of non-zero elements in row i is denoted dc(i). The Tanner graph [32] shown in Figure 1 is a common representation where the edges from the VNs to CNs correspond to one value in the H matrix provided in Equation (1).
+In their general form [31], H matrices are unstructured and irregular making their optimized hardware and software real-time implementations challenging [33], [34], [35], [36]. To solve this issue, a special class of LDPC codes has been proposed [37], [38], [39]. A Quasi-Cyclic (QC) LDPC code was constructed from an M × N base graph matrix H [37], [38], [39], as illustrated in Equation (2).
+
+⎛V0 V1 V2 V3 V4⎞
+
+H
+
+=
+
+C0 C1 C2
+
+⎜⎝⎜
+
+0 ∅ ∅
+
+5 ∅ 0
+
+∅ ∅ 0
+
+∅ 0 ∅
+
+∅
+
+4 1
+
+⎠⎟⎟
+
+(2)
+
+C3 8 ∅ 3 1 ∅
+
+Each hij element in H matrix whose value is not equal to ∅ corresponds to a Z × Z cyclic permutation matrix (CPM) rotated by hij offset. For ∅ elements a null Z × Z matrix is applied. Z parameter is the expansion factor. The M × N parity check matrix H can be constructed by replacing each
+H element with its corresponding CPM. The expansion
+factor Z eases H matrix storage and ensures that Z CN
+
+VOLUME 5, 2024
+
+7217
+
+LE GAL: SCALABLE HIGH-THROUGHPUT AND LOW-LATENCY DVB-S2(x) LDPC DECODERS
+
+elements can be processed in parallel without memory access conflicts and data dependency when decoding algorithms are executed [40], [41], [42]. Consequently, QC-LDPC codes were selected in all modern standards such as WiFi, Wimax and 5G [43], [44], [45], [46], [47].
+The usual approach to decode LDPC codes is to use message-passing algorithms [30]. The most efficient decoding algorithm is the Sum Product Algorithm (SPA), which is typically used to evaluate the H’ matrix performance when designing them. However, the use of transcendental operations has driven researchers to propose approximations to reduce the computational complexity and allow designing energy- and silicon-efficient real-time decoders. The most widely used decoding algorithm is the MinSum (MS) algorithm [48] or one of its variants (OMS, NMS) [49]. The algorithmic formulation initially used for hardware architecture design was based on a flooding scheduling of computations, that exhibited a high degree of computational parallelism. It is also used in most software implementations of LDPC decoders on CPU and GPU targets [4].
+Other formulations that accelerate the convergence speed of the decoding process, halving the number of required decoding iterations were proposed in [50]. Speed improvements were obtained at the expense of the computational parallelism limitations. In the context of QC-LDPC codes, formulations such as horizontal-layered-based (HLS) enables better control of hardware complexity with a memory footprint reduction. The formulation of the MS algorithm using HLS is presented in Algorithm 1. The computation intensive section of this algorithmic formulation (Kernel 2) consists of 3 levels of nested loops. The first level (Kernel 2) ensures that the decoder performs iter_max decoding iterations if no valid codeword is found. For each decoding iteration, Kernel 3 traverses a set of parity nodes (CN). Kernel 4.1 updates the internal state of the selected parity node on the fly. It computes the CN → VN messages (Lnm) of the dc(m) VNn neighbors to CNm from the VN eigenvalues and the previous CN → VN messages. Using these Lnm messages, the CNm parity is computed and the (min1, min2) internal values are updated. Finally, Kernel 4.2 generates CN → VN messages (Lmn) based on the CN state CN → VN messages (Lnm). Kernel 4.2 also directly updates the En values associated with the VN nodes.
+The use of QC-LDPC codes from the hardware and software perspective enables the parallel execution of Kernel 3. The structure of the matrix ensures that Z CNs can be processed in parallel without data dependency. A considerable amount of work has been conducted on the implementation of this decoding algorithm on CPU and GPU targets [4], [20], [51]. Although the Z computational parallelism is much lower than N and K, maximum parallelism achievable using flooding decoding, the increase in convergence speed combined with simplified memory accesses and a reduced memory footprint have enabled much
+
+Algorithm 1 Horizontal-Layered Min-Sum Algorithm
+
+Formulation
+
+1: Kernel 1: Initialization
+
+2: for all m ∈ C, n ∈ (m) do
+3: Lm(0n) = 0
+4: end for
+
+5: Kernel 2: Process iter_max decoding iterations
+
+6: for all t = 1 → (iter_max) do
+
+7: Kernel 3: For each check node in the code
+
+8: for all m ∈ C do
+
+9:
+
+cn_sign = 0;
+
+10:
+
+min1 = min2 = +∞;
+
+11:
+
+Kernel 4.1: Compute Lnm messages an CNm value
+
+12:
+
+for all n ∈ (m) do
+
+13:
+
+msg = Ln(tm) = En − Lm(t−n 1)
+
+14:
+
+cn_sign = cn_sign ⊕ sign(msg)
+
+15:
+
+min2 = min(max(|msg|, min1), min2)
+
+16:
+
+min1 = min(|msg|, min1)
+
+17:
+
+end for
+
+18:
+
+Kernel 4.2: Compute Lmn messages and update VNs
+
+19:
+
+for all n ∈ (m) do
+
+20: 21:
+
+msgs msgv
+
+= =
+
+cnm_sinig2nw⊕hseingn|(LLn(n(tmt)m)|)= min1 otherwise
+
+min1
+
+22: 23:
+
+LEmtn n==Lmnt msg+s
+
+∗ msgv Lmt n
+
+24:
+
+end for
+
+25: end for
+
+26: end for
+
+27: Kernel 5: Hard decision
+
+28: for all n ∈ V do
+
+29: cˆn = 0 if (En ≤ 0), 1 otherwise
+30: end for
+
+higher decoding throughputs to be achieved on GPUs [51], as well as on SIMD multicores [14], [20].
+However, not all QC-LDPC code families have a pure QC structure composed of single-identity matrices. For instance, DVB-S2x codes include a one-bit punctured Z × Z sub-matrix, whereas the DVB-S2 standard also includes double-to-quadruple Z × Z sub-matrices. These particular LDPC codes make it impossible to directly use the effective HLS algorithm proposed for the CPU/GPU decoding of QC-LDPC codes. Indeed, studies reported in the literature mainly use flooding formulations for GPU devices [24], [25] and/or layered formulations that exploit inter-frame parallelism [23], [26]. This latter parallelization strategy decodes several frames in parallel to achieve regular computational parallelism at the cost of a sharp increase (16× → 64×) in memory footprints. In the case of DVB-S2(x) codes with large frame sizes, this leads to rapid congestion of memory bandwidth, limiting solution scalability. This prevents such decoders from achieving the high throughput (≥ 10 Gbps) required for current optical satellite applications [52]. In addition, the parallel processing of tens or hundreds of frames involves latencies from several hundred milliseconds, and even up to seconds, which are often unacceptable. In the remainder of this paper, we present an approach dedicated to decoding DVB-S2(x) codes that
+
+7218
+
+VOLUME 5, 2024
+
+enables efficient exploitation of computational parallelism to achieve scalability and efficiency for decoders deployed on SIMD multicore targets. The approach we have adopted is hardware-inspired, and is derived in particular from solutions proposed for decoding DVB-S2(x) codes in FPGA circuits [53].
+III. IMPLEMENTATION STRATEGY A. MULTICORE CPU OVERVIEW The processing power of multicore architectures has increased significantly over the last few decades, owing to the introduction of several levels of parallelism. First, several physical cores (P) coexist in CPU devices to accelerate application execution. Depending on the nature of the ARM and INTEL platforms considered, the number of physical cores can vary from a few units (P ≈ 4) to several dozens (P = 24 for Intel Xeon Gold 6248R) up to several hundred (288 cores for future INTEL Xeon 6). Second, the physical cores incorporate vector computing units also called SIMD units. These SIMD units enable parallel execution of homogeneous computations on multiple data sets. The widths of these SIMD units generally range from 128 bits to 512 bits. Therefore, they can perform several tens of scalar arithmetic and logical operations per instruction. For example, for data coded on 8 bits, the preferred data format for decoding LDPC codes [4] on software, SIMD units of width {128, 256, 512} bits can process F = {16, 32, 64} data in parallel. Moreover, because current processors are superscalar architectures, execution frontends can carry out several SIMD instructions (load, store, arithmetic or logic) per clock cycle if the required functional units are available. To take full advantage of these different parallelism levels, applications must be tailored to expose task and computation parallelism. The development of frugal data structures that offer reduced and/or regular memory access is essential for GPUs [5], [51]. These transformations enable the C/C++ compilers to use SIMD units automatically. However, the explicit use of SIMD intrinsics adapted to different architectures (INTEL/ARM) may be necessary when patterns to be accelerated are complex.
+To optimize the performance of software implementations, special attention must be paid to memory management (footprint, regularity, and number of accesses). Although the amount of memory in a multicore system can be substantial, it is crucial to use the cache hierarchy efficiently to minimize data access times. L1 and L2 caches, which offer fast access times ranging from a few clock cycles to a few dozen cycles, have modest sizes ranging from a few tens to hundreds of kilobytes. Therefore, it is essential to minimize the size of the data in memory, align them to benefit from prefetch policies, and reduce the amount of temporary data as much as possible.
+In the rest of this section, we present the parallelization strategy we implemented and the various optimizations we applied to maximize performance.
+
+B. MAPPING OF LDPC DECODING ON MULTICORE In this section, we presented an LDPC decoding parallelization strategy and the applied optimization techniques used to efficiently manage DVB-S2(x). As in other related works [4], we selected the Offset Min-Sum algorithm because it offers efficient tradeoff between correction performance and computational complexity. However, contrary to [24], [25], we selected horizontal-layered-based scheduling (Algorithm 1) to halve the number of decoding iterations and to reduce the memory footprint by ≈ 40% as in [20], [51]. In the same way, contrary to [20], [26], we process only a single frame to avoid memory footprint increases and thus memory bandwidth issues, as in [14], [27]. As demonstrated in the experimental section, this strategy scales better on multicore devices. However, contrary to the choices made in [27] and [14], in which dedicated unrolled C/C++ codes were generated for each small-size or medium-size LDPC matrix (N ≤ 2304), we propose a generic formulation for the CN processing kernel. Indeed, applying source code unrolling to DVB-S2(x) LDPC codes produces large binary decoder programs, that involves many instruction cache misses at runtime. The unusability of the computation unrolling technique is related to the fact that the H matrices are too large in the DVB-S2(x) standards (16200 ≤ N ≤ 64800).
+To achieve high throughput on CPU and GPU targets, programmers should pay attention to SIMD VN read-andstore operations. These values are unaligned and require vector rotations to produce aligned vectors of Z data to allow SIMD computations. These rotations depend on the shift values specified in the H matrix. A large part of the SIMD VN accesses (load/store) could be seamlessly executed (at least Z/F − 2), reason why in [14], [27], source codes are unrolled. This dedicated strategy removes most VN load penalties, as implied by more generic approaches. Note that the same procedure is required after CN execution, to store the updated VN accumulators in memory.
+We found a generic way of accessing Z VN data in an interleaved manner, while halving temporal penalties. To achieve this, the storage method of VN in the main memory is modified. When Z VNs are loaded into the software decoder, the N LLRs associated with the VN nodes are grouped in memory into blocks of Z VNs as shown in Figure 2 (in the example, Z = 28). These groups of Z data are stored in a memory array of size Z/F × F, where F is the number of 8-bit data values that can be processed using the SIMD unit (in the Figure, F = 6). The F − (Z mod F) empty memory elements between VN groups were padded with zero values. This memory placement, whose memory footprint overcost is limited to N × (F − (Z mod F)) bytes, will ease memory access at runtime.
+First, to execute a rotated load operation, two SIMD loads in the registers should be combined because of mask operation (ex. blendv), using a mask value [27]. This procedure was applied even if a single SIMD load was sufficient as illustrated in Figure 2. Assuming a shift rotation equals to 17 in H for the Z VN elements, the filling of
+
+VOLUME 5, 2024
+
+7219
+
+LE GAL: SCALABLE HIGH-THROUGHPUT AND LOW-LATENCY DVB-S2(x) LDPC DECODERS
+
+FIGURE 2. SIMD strategy applied to perform VN memory read operations with data rotation.
+
+SIMD register 1 (❶ in Figure 2) was performed with two SIMD load operations of [17, 22] array values, and a blendv operation was applied to select data from the first memoryload. The same procedure was applied to fill registers 3 and 4 (❸ and ❹). In contrast, for register 2, the two memory loads associated with a blendv masking operation concatenate the data coming from the beginning ([0]) and the end ([12, 16]) of the VN group. It reconstitutes the data-aligned buffer in register 2, as shown in Figure 2. This generic procedure provides a uniform VN memory access strategy at the cost of three memory-load operations (two VN sets and a selection mask) and one data selection (i.e., blendv).
+The VN elements loaded into the SIMD registers correspond to En in Algorithm 1. These values are equivalent to the sum of the CN → VN message values of VNn. To produce a CN → VN message, the CN → VN contribution from the previous iteration must be removed. The Lmn values stored in message memory are aligned with the padding elements between groups (Figure 3). Because they do not require rotation at runtime, their accesses are done using a single SIMD memory-load operation. To avoid polluting the cache memory of multicore architectures, the memory space freed up by the Lmn message read is directly reused to store the Lnm values during the CN evaluation.
+Once the computation of the CN node is completed, the Lnm values are read back from the message memory and added to Lmn to generate updated En values. Unlike previous studies [14], [27], these En values were directly copied back into the VN memory without applying rotation, as shown in Figure 3. This choice eliminates the need for loading/storing and masking operations. This dynamic En storage strategy limits the penalties associated with rotated memory accesses to the loading phase only. In parallel with En memory store, the message memory space freed up by Lnm data is reused to store new Lmn messages, again limiting the memory footprint and bandwidth usage.
+Because the VN nodes are stored rotated in memory during the decoding process, it is necessary to recalculate the shifting offsets in H to compensate for the subsequent CN processings. The H transformation detailed bellow is performed once during the LDPC decoder inference. Let’s consider the H matrix provided in
+
+Equation (3).
+
+⎛V0 V1 V2 V3 V4 ⎞
+
+H
+
+=
+
+C0 C1
+
+⎝
+
+1 4
+
+0 −
+
+4 2
+
+6 −
+
+− 5⎠
+
+(3)
+
+C2 − 6 − 2 7
+
+This matrix, expressed in its compressed form, is trans-
+
+formed into two matrices and a vector. The rotations to be
+
+applied in the first decoding iteration, when no deinterleaving
+
+is applied at VN memory write back stage, are specified in
+
+the first H1 matrix, as detailed in Equation (4). We assume that the CN node groups are executed in ascending order. The
+
+rotation status of the VN nodes after each CN computation
+
+is shown in parentheses.
+
+⎛V0 V1 V2 V3 V4 ⎞
+
+H1
+
+=
+
+C0 C1
+
+⎝
+
+1(1) 3(4)
+
+0(0) −
+
+4(4) 6(2)
+
+6(6) −
+
+− 5(5) ⎠
+
+(4)
+
+C2 − 6(6) − 4(2) 2(7)
+
+After the first decoding iteration, the VN nodes are stored
+
+with a rotation status provided by the last CN that processes
+
+them. Therefore, for the next decoding iterations, these
+
+offsets should be considered. Consequently, the rotations to
+
+be applied in the remaining decoding iterations are shown
+
+in the matrix H2 (Equation (5)). In the latter case, only the first rotation coefficient of each VN is different from that of
+
+the (4) matrix.
+
+⎛V0 V1 V2 V3 V4 ⎞
+
+H2
+
+=
+
+C0 C1
+
+⎝
+
+5(1) 3(4)
+
+2(0) −
+
+2(4) 6(2)
+
+4(6) −
+
+− 5(5) ⎠
+
+(5)
+
+C2 − 6(6) − 4(2) 2(7)
+
+The H3 vector (Equation (6)) indicates the rotation coefficients to be applied to the VN groups once decoding
+
+is complete. This step is necessary to reorder the VNs prior to returning them to the system. This last step takes place exclusively at the end of the decoding process.
+
+V0 V1 V2 V3 V4
+
+H3 = 4(0) 2(0) 6(0) 6(0) 1(0)
+
+(6)
+
+The memory alignment of the data obtained in the CN parity node processing enables the efficient use of SIMD
+
+7220
+
+VOLUME 5, 2024
+
+FIGURE 3. Description of the SIMD computation strategy applied, including memory mappings.
+
+units. Indeed, in the case of DVB-S2(x) standards, Z = 360, allows taking advantage of the classic SIMD units of multicores with F = {16, 32, 64}. Thus, when processing Z messages in parallel, the first 360/F iterations use 100% of the F SIMD units, whereas a single iteration only uses 360 mod F units. As described in [20], [27], [54], to achieve high levels of efficiency (IPL, #fired instructions), templatization mechanisms are applied to take advantage, for example, of loop unwinding to remove conditional instructions. This strategy results in compact and efficient computational kernels, as demonstrated in the Experimental section.
+C. DVB-S2(X) CODE MANAGEMENT As previously mentioned, the LDPC codes of the DVBS2 standard are special quasi-cyclic codes. First, unlike the matrices present in other recent standards, they have Z × Z sub-matrices composed of multiple identity matrices (2 → 4), as shown in Figure 4, with the Z × Z sub-matrix at the top right corner. This particular structure prevents direct use of the layered decoding algorithm parallelization scheme presented above. Indeed, it is impossible to update
+the same set of Z VNs using two CN → VN contributions at a time without a complex set of load/store operations as VNs are not shifted identically. This explains why studies in the literature have decided to use the flooding algorithm for decoding DVB-S2 codes [24], [25] or a layered inter-frame approach [20], [23], [26]. The latter approach is equivalent to a sequential decoding of F frames.
+
+FIGURE 4. Example of a QC-LDPC code including a dual diagonal Z × Z sub-matrice.
+To overcome this limitation, we applied a strategy similar to that reported in [28], [53] for the FPGA-based LDPC decoder design. The main idea consists of updating partially the VN nodes at the end of the CN evaluation: a single CN → VN message is considered whereas the other messages are frozen. For instance, let us consider the first set of Z CNs shown in Figure 4. Calculating the Z parity nodes noted C0 requires four CN → VN messages (Lnm) from V0, V2 and V4. In this example, the last VN node (V4) should provide two CN → VN messages resulting from different rotations of its elements. This first step in the parity calculation is depicted at the top-left of Figure 5. The red and blue arrows correspond to the messages on the colored diagonals in Figure 4. During even-numbered iterations, once the CN calculation is complete, node V4 is updated with the new red CN → VN message as shown in the top-right part of Figure 5. The message from the second diagonal is discarded and the values from the previous
+
+VOLUME 5, 2024
+
+7221
+
+LE GAL: SCALABLE HIGH-THROUGHPUT AND LOW-LATENCY DVB-S2(x) LDPC DECODERS
+
+element relating to the VN of index N−1 must be neutralized when calculating the CN. To achieve this, before the parallel calculation of the Z CNs, the value of node N − 1 is saved and the neutral element −∞ is used. This avoids the specific processing of the Z CNs and maintains an optimum level of parallelism. At the end of Z CN processing, the initial value of node N − 1 is restored.
+
+FIGURE 5. Execution of parity nodes for sub-matrices made up of several diagonals - Implementation of periodic updating of variable nodes according to even and odd iterations.
+iteration are reused. During odd-numbered iterations, the process is similar: the four CN → VN messages are used to compute the CN node. However, at the end of the process, the blue CN → VN message is used to update the V4 node, whereas the red message is frozen as shown in the bottom part of Figure 5. This strategy is equivalent for CN nodes involving triple or quadruple diagonals.
+To support this strategy, two main modifications were applied to the previously described decoder implementation:
+• The data storage of the rotated VN elements is different for odd and even iterations. Indeed, in the previous example (Figure 5), during even iterations at the end of C0 execution, V4 values are stored in the memory rotated by the red diagonal offset because the blue contribution is frozen. At the opposite, at the end of C0 execution during odd iterations, the blue rotation offset is applied. Consequently, the H1 matrix should be decomposed into two matrices: H1(odd) and H1(even) for even and odd iterations, respectively.
+• The number of generated CN → VN messages is not equal to the number of CN → VN messages for a CN with multiple-diagonal elements. Indeed, even if for a CN with multiple-diagonals the kernel 4.1 always computes dc(m) CN → VN messages, the second kernel (4.2) produces fewer CN → VN messages, keeping in memory previous iteration values. Consequently, dedicated functions were developed to execute these CN kernels that should discard at the end some CN → VN message updates.
+To fit perfectly with the parallelization strategy presented above, it is necessary to manage the Z × Z punctured sub-matrix present in all DVB-S2(x) codes. The latter is incomplete and contains only Z − 1 elements. The missing
+
+IV. EXPERIMENTAL RESULTS A. EXPERIMENTAL SETTINGS In this section, we present the experimental results obtained using the approaches detailed in previous sections. The first part discusses the efficacy of the proposed multicore decoder implementations, whereas the second part compares their performance with that of prior studies. To facilitate comprehensive evaluation, three multicore platforms were selected according to various SDR and Cloud-RAN contexts [1], [2], [3], [55]. The features of these platforms named P1 to P3 are summarized in Table 2. Note that the working frequencies and the power consumptions were measured on the platforms during the experiments using OS kernel tools. Indeed, the frequency-scaling process changes the working frequency according to the platform load, applying the highest frequency for single-core experiments, whereas it selects the lowest frequency for multithreaded experiments owing to thermal dissipation issues.
+The LDPC decoders are described in the C++ 11 language. They were specifically written to benefit from the auto-vectorization capabilities of the C++ compilers. However, the intrinsics provided by ARM and INTEL are used to optimize loop kernels because compiler autovectorization may fail. The use of templatized functions together with unroll pragma for loops (kernel 4.1 and 4.2) enabled the production of specialized instruction sequences according to CN degrees. These sub-kernels are selected at runtime using a function pointer structure to achieve branchless execution, avoid miss-prediction penalties, and increase ILP. For benchmarking purposes, the simulation of the digital communication system runs for a period of 60 seconds to estimate fairly the coded throughput and latency of the LDPC decoder implementations. All throughput values ( ) reported in the experimental section correspond to coded throughputs.
+B. ABSOLUTE PERFORMANCE LEVELS The results1 measured on the different platforms when 10 layered decoding iterations are executed are reported in Figure 6. It displays the decoding throughputs ( ) depending on K parameters for both DVB-S2 and DVB-S2x codes. These throughput results allowed us to observe trends and measure orders of magnitude for the single-core experiments. First, for the ARM-based P1 platform, the average decoding throughput of the proposed decoders, for all DBV-S2(x)
+1For comparison purposes, the overall data set with precise N, K, throughput and latency values are available here https://github.com/blegal/LDPC-decoders-DVB-S2-S2x-x86.
+
+7222
+
+VOLUME 5, 2024
+
+TABLE 2. Hardware properties of selected platforms.
+
+codes, when F = 16, still reach avg = 214 Mbps ( min = 167 Mbps, max = 295 Mbps). On the INTEL P2 platform, which has two times wider SIMD units (F = 32), the decoding throughputs are approximately doubled as high ( avg = 414 Mbps, min = 281 Mbps, max = 576 Mbps) even if the L1/L2 cache memories are smaller on this
+platform. Finally, the performance level achieved in the 2017 INTEL P3 platform, when using the F = 64, achieves an average decoding throughput of 362 Mbps ( min = 246 Mbps, max = 511 Mbps). As expected, on all platforms, LDPC decoders with N = 16200 offer a slightly higher throughput than those handling long frames. This is because
+of better data contention in the L1 and L2 cache memories.
+These high performance levels in terms of throughput are
+paired with low processing latency feature. Due to the fact
+that SIMD parallelization being applied on the processing of a single frame contrary to [20], [26]. For example, on the P1 platform, decoding latency is lower than 368 μs for all the LDPC codes. On the P3 platform, in F=64 configuration, the processing latency is about 30% lower (min=31 μs, max=263 μs and avg=140 μs).
+A comparative analysis of the impact of the SIMD vector
+width on the throughput performance was carried out on the P3 platform. The Intel Xeon platform supports F ∈ {16, 32, 64}, providing theoretically a four times speed-up between F = 16 and F = 64 configurations. The results of this investigation are shown in Figure 7. This scatter plot
+first confirm that increasing F significantly improves the
+decoding throughputs. The average measured throughputs, drawn in Figure 7, reaches 148 Mbps (F = 16), 250 Mbps (F = 32), and 364 Mbps (F = 64). However, a doubling of F (16 → 32) produced an average throughput acceleration of only 1.7× (min=1.53×, max=1.87×). The explanation lies in the fact that some SIMD instructions, such as load and store ones, are slower in F = 32 configuration than their counterparts when F = 16. Likewise, if logical and arithmetic F = 32 instructions do suffer from drawback, making it impossible to achieve a real
+
+FIGURE 6. Throughput performances of the proposed LDPC decoder implementations for the DVB-S2 and DVB-S2x standards when the turbo boost feature is switched on - Experiments with 10 layered-based decoding iterations. Highest SIMD width is applied for all the platforms. Cross marks are used for single-core experiments, whereas circles are selected for multicore ones.
+doubling of throughput. The same is observed for the F = 64 configuration. When compared to the F = 16 mode, which processes 4× less data per instruction, the measured average speed-up when F = 64 is only 2.46× in average (min = 2.25×, max = 3.05×). Similarly to the F = 32 instruction set, the F = 64 instructions are slower than the F = 16 ones.
+
+VOLUME 5, 2024
+
+7223
+
+LE GAL: SCALABLE HIGH-THROUGHPUT AND LOW-LATENCY DVB-S2(x) LDPC DECODERS
+
+use a frequency of 4.6 GHz when a single-core is activated whereas in multicore setup, the working frequency of all the cores is 2.5× lower (1.8 GHz). Compared to single-core decoders evaluated with disabled turbo boost feature, the acceleration factors are ≈ 10× and ≈ 34×, much closest to the number of activated cores.
+
+FIGURE 7. Throughput performances of the proposed decoder implementations on P3 platform when the turbo boost feature is switched on, for different SIMD width Single-core experiments with 10 layered-based decoding iterations - Horizontal lines give the average throughput of the 3 configurations.
+Moreover, when F = 64, the number of superscalar ports available at runtime is limited on P3. The average ILP is thus reduced, which in turn reduces the achievable acceleration factor.
+The results collected during the single-core experiments indicate that the proposed strategy has characteristics (low latency and high throughput) that are close to the ASIC/FPGA ones and thus meet the Cloud-RAN or Flex-RAN needs. Nevertheless, to achieve real system development, it is necessary that the performance scales with the number of cores (P). Accordingly, we evaluated the effect of parallel execution of LDPC decoders on multiple cores. The multicore results are also presented in Figure 6. The overall physical cores available in 3 platforms are activated. For the simplicity reasons, these multiple decoders instantiated on the P available processor cores use homogeneous parameters (N, K). However, in a real context, the P instantiated intraframe decoders could decode information streams coming from P users with heterogeneous (N, K) values contrary to related works [20], [26]. In this setup, on P1 platform with 8 enabled cores the decoding throughputs reach in average avg = 1590 Mbps ( min = 1172 Mbps, max = 2216 Mbps) and are improved by 7.4× in comparison to single-core experiments. On P2 and P3 platforms, the speedup factors are lower than the number of activated cores: 3.8× and 23× in average, respectively. On P2 platform, the average decoding throughput is avg = 1542 Mbps ( min = 1042 Mbps, max = 2244 Mbps) whereas on P3 it reach avg = 8302 Mbps ( min = 6011 Mbps and max = 11481 Mbps). For these both platforms, it is explained by the working frequency down-scaling applied by devices to maintain acceptable heat dissipation levels. For instance, the power heat dissipation on P2 is limited to 35W, enabling it to
+
+C. RELATIVE PERFORMANCE LEVELS 1) COMPARISON WITH MULTICORE IMPLEMENTATIONS
+To highlight the strengths of the proposed low-latency implementation, we also report the results for the interframe decoders published in [20] and [26]. Both decoder implementations use an inter-frame strategy (i.e., each core decodes F frames in parallel, with F equals SIMD width in byte) to obtain independent and regular computational parallelism at runtime. This strategy increases latency owing to data buffering and generates huge memory footprints that are not cache-friendly when long LDPC codes are processed. The open source availability of related work decoders enabled us to perform identical tests on P1 → P3 platforms. Note that Aff3ct LDPC decoders [26] only process 16 bits values, halving the amount of data processed by each SIMD instruction. Figure 8 reports and compares the throughput and the latency of different decoder implementations. The highest F value was selected for each setup.
+The scatter plot associated with single-core experiments presented for the P1 and P2 platforms show that the intraframe decoders proposed in this study deliver throughputs that are equivalent to those of inter-frame decoders, despite the greater complexity of memory accesses (VN). These similar performance levels reflect the better use of L1 and L2 caches, as the memory footprint of intra-frame decoders is F× lower than that of inter-frame decoders. Thus, more complex memory accesses and slightly lower computational parallelism are compensated by a lower number of cache misses. Latency, meanwhile, is considerably shorter than that of inter-frame decoders. The average latency was divided by F. The findings for the multicore configurations were similar even for the P2 platform with higher decoding throughputs. Finally, gains on the P3 platform were significantly higher. Owing to the low memory footprint of the intra-frame approach, which enables the full advantage of F = 64 (AVX512), an increase in throughput by a factor of 5 was achieved in the multicore configuration. Indeed, in this use case, inter-frame implementations are limited by the external memory bandwidth.
+2) COMPARISON WITH MANYCORE (GPU) IMPLEMENTATIONS
+Few implementations of decoders dedicated to DVB-S2(x) standards have been reported in the literature on GPU targets despite satellite ground infrastructure needs [56], [57]. This limited set of research works is owing to the irregular structure of the H matrix and the double and triple diagonals that involve the execution of flooding-based schedule decoding on a GPU device. Table 3 provides a summary
+
+7224
+
+VOLUME 5, 2024
+
+TABLE 3. Comparison with GPU-based implementations.
+
+proposed solution provides a 27× acceleration compared to that in [25].
+As shown in the table, these works are dated [23], [24], [25] using GPUs with lower performance than those currently available. The latest papers [5], [17] have described LDPC decoders for the 5G standard. They also used horizontal-layered decoding algorithms to decode quasi-cyclic matrices efficiently. Both papers present results for an N = 26112 code. When 5 decoding iterations were applied, the throughput of the solution described in [5] reaches 3964 Mbps with a processing latency of 700 μs on the NVIDIA TITAN RTX GPU. The solution presented in [17], based on an NVIDIA GTX 1660 GPU, reaches 1.8 Gbps (350 μs) when 10 iterations were applied. The strategy presented here for handling DVB-S2(x) codes should be applicable to these GPU implementations; however, the latter combined with 3× larger matrices should generate a drop in performance.
+
+FIGURE 8. Comparison of throughput and latency performance of the proposed LDPC decoder implementations with related work ones. The turboboost feature is switched on - Cross marks are used for single-core experiments whereas, circles are selected for multicore ones - All decoders execute 10 layered-based decoding iterations. The highest SIMD width is used for all the platforms.
+of the performance levels for decoding the N = 64800 and K = 32400 codes when 10 layered decoding iterations were executed. The reported values demonstrated that for P3 a single-core configuration delivers an equivalent throughput to the best GPU solution [25]. In the multicore setup, the
+
+3) COMPARISON WITH FPGA IMPLEMENTATIONS
+The proposed decoders were also compared with hardware decoders designed for DVB-S2(x) codes [28], [53] to estimate the feature differences. Indeed, hardware decoders can be deployed on FPGA targets and included in SDR or CloudRAN communication systems [55], [58]. The hardware architectures detailed in [28] are semi-parallel architectures that execute also an HL-MS based decoding algorithm. The architecture includes 180 dedicated processing elements that efficiently execute CN computations in parallel with a working frequency of 250 MHz. The reported decoding throughput was approximately 1500 Mbps on INTEL Stratix-V FPGA devices. As expected, despite the difference in operating frequencies, the throughput of hardware architectures is higher than that of software decoders when a single-core is used. However, when multiple cores are activated, the throughputs of software solutions becomes more relevant at a higher flexibility level. Directly comparing energy performances of both solutions is not possible, because these data are not provided in [28]. However, the rate should lie between 50× to 100× considering the work reported in [52].
+V. CONCLUSION In this study we describe an efficient parallelization strategy for decoding DVB-S2(x) LDPC codes on multicore devices.
+
+VOLUME 5, 2024
+
+7225
+
+LE GAL: SCALABLE HIGH-THROUGHPUT AND LOW-LATENCY DVB-S2(x) LDPC DECODERS
+
+The proposed approach provides performance and flexibility levels that are in line with SDR and Cloud-RAN. The parallelization strategy deployed and the optimizations performed minimize the processing latency (≤ 500μs) while providing throughputs of up to 500 Mbps when a single-core of an INTEL Xeon Gold multicore platform is solicited to execute
+10 layered decoding iterations. When all the cores of the platform were used simultaneously, throughputs reached up to 11.48 Gbps. High performance levels were also observed
+when using all the INTEL Core-i7 and ARM architectures. Compared to the CPU and GPU literature, our multicore solution is up to 5× more efficient in terms of throughput and reduces processing latency by 64×.
+REFERENCES
+[1] D. Wubben et al., “Benefits and impact of cloud computing on 5G signal processing: Flexible centralization through cloud-RAN,” IEEE Signal Process. Mag., vol. 31, no. 6, pp. 35–44, Nov. 2014.
+[2] A. Checko et al., “Cloud RAN for mobile networks—A technology overview,” IEEE Commun. Surveys Tuts., vol. 17, no. 1, pp. 405–426, 1st Quart., 2015.
+[3] The Benefits of Cloud-RAN Architecture in Mobile Network Expansion, Fujitsu Netw. Commun. Inc., Richardson, TX, USA, 2015.
+[4] J. Andrade, G. Falcao, V. Silva, and L. Sousa, “A survey on programmable LDPC decoders,” IEEE Access, vol. 4, pp. 6704–6718, 2016.
+[5] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang, and J. R. Cavallaro, “GPU-based, LDPC decoding for 5G and beyond,” IEEE Open J. Circuits Syst., vol. 2, pp. 278–290, Jan. 2021, doi: 10.1109/OJCAS.2020.3042448.
+[6] B. Le Gal and C. Jego, “High-throughput FFT-SPA decoder implementation for non-binary LDPC codes on multicore target,” J. Signal Process. Syst., vol. 92, pp. 37–53, Mar. 2019.
+[7] O. Ferraz et al., “A survey on high-throughput non-binary LDPC decoders: ASIC, FPGA, and GPU architectures,” IEEE Commun. Surveys Tuts., vol. 24, no. 1, pp. 524–556, 1st Quart., 2022.
+[8] B. Le Gal, C. Leroux, and C. Jego, “Multi-Gb/s software decoding of polar codes,” IEEE Trans. Signal Process., vol. 63, no. 2, pp. 349–359, Jan. 2015.
+[9] Z. Liu, R. Liu, and H. Zhang, “High-throughput adaptive list decoding architecture for polar codes on GPU,” IEEE Trans. Signal Process., vol. 70, pp. 878–889, Feb. 2022.
+[10] Y. Chen, X. Qiao, K. Deng, S. Song, and Z. Wang, “3.8-Gbps polar belief propagation decoder on GPU,” IEEE Commun. Lett., vol. 27, no. 5, pp. 1247–1251, May 2023.
+[11] B. Le Gal and C. Jego, “Low-latency and high-throughput software turbo-decoders on multi-core architectures,” Ann. Telecommun., vol. 75, pp. 27–42, Aug. 2019.
+[12] Z. Liu, R. Liu, H. Zhang, N. Wang, L. Sun, and J. Wang, “Parallel implementation of the CCSDS turbo decoder on GPU,” China Commun., vol. 21, no. 10, pp. 1–8, Oct. 2024.
+[13] Z. Liu, C. Liu, H. Zhang, and L. Zhao, “76.5-Gbps Viterbi decoder for convolutional codes on GPU,” IEEE Embed. Syst. Lett., early access, Jun. 18, 2024, doi: 10.1109/LES.2024.3416401.
+[14] Y. Xu, W. Wang, Z. Xu, and X. Gao, “AVX-512 based software decoding for 5G LDPC codes,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Nanjing, China, Oct. 2019, pp. 54–59.
+[15] R. Li, X. Zhou, H. Pan, H. Su, and Y. Dou, “A high-throughput LDPC decoder based on GPUs for 5G new radio,” in Proc. IEEE Symp. Comput. Commun. (ISCC), Rennes, France, Jul. 2020, pp. 1–7.
+[16] A. Katyushnyj, A. Krylov, A. Rashich, C. Zhang, and K. Peng, “FPGA implementation of LDPC decoder for 5G NR with parallel layered architecture and adaptive normalization,” in Proc. IEEE Int. Conf. Elect. Eng. Photon. (EExPolytech), St. Petersburg, Russia, Oct. 2020, pp. 34–37.
+[17] J. Ling and P. Cautereels, “Fast LDPC GPU decoder for cloud RAN,” IEEE Embed. Syst. Lett., vol. 13, no. 4, pp. 170–173, Dec. 2021.
+
+[18] J. Dai, H. Yin, Y. Lv, W. Xu, and Z. Yang, “Multi-Gbps LDPC decoder on GPU devices,” Electronics, vol. 11, no. 21, p. 3447, Oct. 2022.
+[19] J. Yuan and J. Sha, “4.7-Gb/s LDPC decoder on GPU,” IEEE Commun. Lett., vol. 22, no. 3, pp. 478–481, Mar. 2018.
+[20] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Trans. Parallel Distrib. Syst., vol. 27, no. 5, pp. 1373–1386, May 2016.
+[21] H. Kaushal and G. Kaddoum, “Optical communication in space: Challenges and mitigation techniques,” IEEE Commun. Surveys Tuts., vol. 19, no. 1, pp. 57–96, 1st Quart., 2017.
+[22] Y. Li, H. Zhang, P. Huang, G. Wan, and Y. Li, “Demonstration of 10 Gbps satellite-to-ground laser communications in engineering,” Innovation, vol. 5, no. 1, 2024, Art. no. 100557.
+[23] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embed. Syst. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014.
+[24] G. Falcao, J. Andrade, V. Silva, and L. Sousa, “GPU-based DVB-S2 LDPC decoder with high throughput and fast error floor detection,” Electron. Lett., vol. 47, no. 9, pp. 542–543, 2011.
+[25] S. Gronroos, K. Nybom, and J. Bjorkqvist, “Efficient GPU and CPUbased LDPC decoders for long codewords,” J. Analog Integr. Circuits Signal Process., vol. 73, pp. 583—595, Jun. 2012.
+[26] A. Cassagne et al., “AFF3CT: A fast forward error correction toolbox!” SoftwareX, vol. 10, Jul–Dec. 2019, Art. no. 100345.
+[27] B. Le Gal and C. Jego, “Low-latency software LDPC decoders for x86 multi-core devices,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Lorient, France, Nov. 2017, pp. 1–6.
+[28] C. Marchand and E. Boutillon, “LDPC decoder architecture for DVBS2 and DVB-S2X standards,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Hangzhou, China, Oct. 2015, pp. 1–5.
+[29] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[30] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1996.
+[31] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[32] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[33] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[34] S. M. E. Hosseini, K. S. Chan, and W. L. Goh, “A reconfigurable FPGA implementation of an LDPC decoder for unstructured codes,” in Proc. Int. Conf. Signals, Circuits Syst., 2008, pp. 1–6.
+[35] C. Beuschel and H.-J. Pfleiderer, “Fully programmable decoder architecture for structured and unstructured LDPC codes,” in Proc. Int. Conf. Wireless Commun., Veh. Technol., Inf. Theory Aerosp. Electron. Syst. Technol., 2009, pp. 747–751.
+[36] B. Le Gal, C. Jego, and C. Leroux, “A flexible NISC-based LDPC decoder,” IEEE Trans. Signal Process., vol. 62, no. 10, pp. 2469–2479, May 2014.
+[37] M. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[38] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, and D. Costello, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004.
+[39] L. Zhang, Q. Huang, S. Lin, K. Abdel-Ghaffar, and I. F. Blake, “Quasicyclic LDPC codes: An algebraic construction, rank analysis, and codes on Latin squares,” IEEE Trans. Commun., vol. 58, no. 11, pp. 3126–3139, Nov. 2010.
+[40] Z. Cui, Z. Wang, and Y. Liu, “High-throughput layered LDPC decoding architecture,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 17, no. 4, pp. 582–587, Apr. 2009.
+[41] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[42] E. A. Papatheofanous, D. Reisis, and K. Nikitopoulos, “LDPC hardware acceleration in 5G open radio access network platforms,” IEEE Access, vol. 9, pp. 152960–152971, 2021.
+
+7226
+
+VOLUME 5, 2024
+
+[43] Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications,IEEE Standard P802.11ad, 2007.
+[44] IEEE Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Broadband Wireless Access Systems, IEEE Standard 802.16TM, 2009.
+[45] Local and Metropolitan Area Networks—Specific Requirements Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.11n, 2009.
+[46] “TM synchronization and channel coding: Blue book,” Consul. Comm. Space Data Syst., NASA, Washington, DC, USA, Rep. CCSDS 131.0B-3, Sep. 2017.
+[47] “Digital Video Broadcasting (DVB)—Part II: S2-extensions (DVBS2X),” ETSI, Sophia Antipolis, France, DVB document A83-2, Mar. 2014.
+[48] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[49] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[50] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Oct. 2004, pp. 107–112.
+[51] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. IEEE GlobalSIP Conf., 2013, pp. 1258–1261.
+[52] V. Pignoly, B. Le Gal, C. Jego, and B. Gadat, “High data rate and flexible hardware QC-LDPC decoder for satellite optical communications,” in Proc. ISTC, Dec. 2018, pp. 1–5.
+[53] C. Marchand, L. Conde-Canencia, and E. Boutillon, “High-speed conflict-free layered LDPC decoder for the DVB-S2,-T2 and-C2 standards,” in Proc. IEEE Workshop Signal Process. Syst. (SIPS), 2013, pp. 118–123.
+[54] P. Giard, G. Sarkis, C. Thibeault, and W. J. Gross, “A fast software polar decoder,” Jun. 2013, arXiv:1306.6311.
+[55] J. Dion, J. Lallet, L. Beaulieu, P. Savelli, and P. Bertin, “Cloud native hardware accelerated 5G virtualized radio access network,” in Proc. IEEE Annu. Int. Symp. Pers., Indoor Mobile Radio Commun. (PIMRC), Sep. 2021, pp. 1061–1066.
+
+[56] T. Ahmed, E. Dubois, J.-B. Dupé, R. Ferrus, P. Gélard, and N. Kuhn, “Software-defined satellite cloud RAN,” Int. J. Satell. Commun. Netw., vol. 36, no. 1, pp. 108–133, Feb. 2018.
+[57] O. Kodheli et al., “Satellite communications in the new space era: A survey and future challenges,” IEEE Commun. Surveys Tuts., vol. 23, no. 1, pp. 70–109, 1st Quart., 2021.
+[58] V. Chamola, S. Patra, N. Kumar, and M. Guizani, “FPGA for 5G: Re-configurable hardware for next generation communication,” IEEE Wireless Commun., vol. 27, no. 3, pp. 140–147, Jun. 2020.
+BERTRAND LE GAL received the M.S. and Ph.D. degrees from the University of South Brittany, Lorient, France, in 2002 and 2005, respectively. In 2005, he joined the IRISA/INRIA Laboratory, University of Rennes 1 and the ENSSAT Graduate Engineering School, Lannion, France, as a Teaching Assistant. From 2006 to 2023, he was an Associate Professor with the IMS Laboratory, ENSEIRB-MATMECA Engineering School, France. He received the accreditation to supervise doctoral research with the University of Bordeaux, France, in 2023. Then, in September 2023, he becomes an Associate Professor with the IRISA/INRIA Laboratory, University of Rennes. He is the author or a co-author of 31 peer-reviewed publications in international journals and more than one hundred peer-reviewed articles in international conferences. His research focused on algorithm-architecturematching of ECC decoders on both hardware (ASIC/FPGA) and software targets (CPU/DSP/GPU). His research topics currently include digital communication system implementation and also RISC-V processor design under performance and security constraints.
+
+VOLUME 5, 2024
+
+7227
+
+

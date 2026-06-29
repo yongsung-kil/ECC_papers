@@ -1,0 +1,621 @@
+Workshop on Computing, Networking and Communications
+
+ASIC Design of a Gbit/s LDPC Decoder for Iterative MIMO Systems
+
+Christina Gimmler, Frank Kienle, Christian Weis, Norbert Wehn Microelectronic Systems Design Research Group University of Kaiserslautern
+Erwin-Schroedinger-Strasse, 67663 Kaiserslautern, Germany Email: gimmler@eit.uni-kl.de
+
+Matthias Alles Creonic GmbH 67663 Kaiserslautern, Germany Email: matthias.alles@creonic.com
+
+Abstract—The design of double-iterative systems like turbo synchronization or iterative demapping and decoding will be one of the big challenges in the next years. The components of such systems need to fulfill stringent conditions on throughput and flexibility thus making a reuse of available standard components difficult.
+We present a high throughput ASIC design for LDPC decoding in iterative MIMO systems with a high flexibility on block sizes (3720 to 14880 bits, granularity 186 bits) and code rates (1/2 to 4/5). After P&R, the ASIC design has an area of 4.588 mm2 and consumes 1271 mW at a clock frequency of 275 MHz. The LDPC decoder has a throughput of 3.5 Gbit/s (@5 iterations) while the resulting iterative MIMO system (4 feedback loops with 5 LDPC iterations each) runs at 275 Mbit/s.
+I. INTRODUCTION
+Double-iterative systems like e.g. turbo synchronization [1] or iterative demapping and channel decoding [2] [3] attract more and more attention due to their high spectral efficiency. In these systems the synchronization or demapping unit works iteratively with the channel decoder which can be iterative itself, e.g. for LDPC or turbo codes. The advantage of those systems is clearly the gain in communications performance (up to several dB). However, the double-iterative scheme poses high demands on the throughput of the component decoders even for relatively low system throughputs. LDPC decoders are well suited for this scenario as they can be easily parallelized to support highest throughputs. Due to OFDM framing structure, decoders have to support long block sizes (up to 15000 bits). Changing channel conditions require different modulation schemes and antenna constellations as well as flexible channel coding rates.
+Recent high-throughput LDPC decoder architecture publications [4] [5] are limited with respect to flexibility and maximum block length. E.g., [4] achieves a throughput of 16 Gbit/s but the decoder supports a single LDPC code only. On the other hand, [5] achieves a throughput of 6.7 Gbit/s and supports different code rates, but the maximum block length is limited to 672 bits. These high-throughput decoders are register-based architectures, which make the usage of longer blocks (e.g., 15.000 bits) prohibitive. Instead, memorybased architectures become mandatory. For instance, DVB-S2 defines block lengths of 16200 and 64800 bits for various code rates. Decoder architectures for these long blocks are memory-
+
+
+
+  
+ 
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+Fig. 1. MIMO-BICM system with feedback loop between MIMO Detector and Channel Decoder
+dominated and target a mid-range throughput of 100 to 200 Mbit/s [6] [7] [8].
+A. New Contributions
+This paper has three main contributions. We analyze the channel decoder as a component of a double-iterative MIMOBICM decoder. We show that even for a moderate system throughput of 200M bit/s the decoder has to work in the Gbit/s range.
+In contrast to the decoder implementations mentioned before, we present a high throughput LDPC decoder architecture for long blocks up to 14880 bits. We show that a system approach including joint code construction and architecture design is mandatory to fulfill all requirements. The decoder supports different block lengths and code rates and the throughput is independent of the block length.
+Additionally, we present implementation results after P&R and a detailed power analysis which includes the LDPC decoder, the channel interleaver and deinterleaver and the interface to the MIMO detector.
+II. SYSTEM MODEL
+In this paper, we focus on a bit interleaved coded modulation (BICM) scheme like shown in Fig. 1. We consider the framing structure and parameter sets as specified in UMIC1. The source generates a random infoword u of length Kc which is encoded by the channel encoder. As channel code we employ an LDPC code because it can be decoded with high throughput for
+1The Microelectronic Systems Design Research Group is a partner of the Nucleus Project of the UMIC Research Centre, RWTH Aachen University.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+978-1-4673-0009-4/12/$26.00 ©2012 IEEE 192
+
+different code rates. The specified block sizes are between
+3720 and 14880 bits and code rates between 1/2 and 7/8. The interleaved codeword XN is mapped directly to com-
+plex symbols s chosen from a 2Q-ary QAM modulation
+scheme. MT symbols are combined in one transmission vector st. The whole modulated sequence is represented by
+
+ST = (s1, s2, . . . , st, . . . , sT )
+
+(1)
+
+T time slots are needed to transmit all symbols of one
+
+codeword. The transmission of vector st in time step t is
+
+modeled by
+
+yt = Ht · st + nt
+
+(2)
+
+with Ht the channel matrix of dimension MT ×MR and nt the noise vector of dimension MR whose entries are zero-mean and unit variance Gaussian variables. The elements of Ht are modeled as independent, complex, zero-mean, Gaussian
+random variables. Real and imaginary part are independent variables each with variance σ2 = N0/2. All received vectors yt are gathered in the matrix Y T
+
+Y T = (y1, y2, . . . , yt, . . . , yT )
+
+(3)
+
+The decoding process is iterative between MIMO detector
+and LDPC decoder. They exchange probability information on
+the codeword. The soft-in-soft-out MIMO detector determines
+the likelihood of the bits for each received vector yt using the a-priori information La from the channel decoder. Only the extrinsic information λe = λ − La is passed on to the LDPC
+decoder.
+The LDPC decoder processes the whole codeword at a time. It uses the interleaved a-priori information λa from the MIMO
+detector for the calculation of the estimated information bit sequence uˆ and the a-posteriori logarithmic likelihood ratios (LLRs) Λ of the codeword. The extrinsic information Le = Λ − λa is returned to the MIMO detector thus closing the
+iterative loop.
+
+III. LOW DENSITY PARITY CHECK CODES
+LDPC codes [9] are linear block codes defined by a sparse parity check matrix H of size M × N , see Fig. 2. For binary LDPC codes a valid codeword x has to satisfy HxT = 0 in a modulo-2 arithmetic. A column in H is associated to a codeword bit, a row corresponds to a parity check. Typically, 2% or less of the elements of H are non-zero.
+The code structure can be visualized by a Tanner graph. Each variable node (VN) represents one code bit, and each check node (CN) represents one parity check, respectively. Edges connect variable and check nodes according to the nonzero elements of the parity check matrix. Fig. 2 shows a small Tanner graph with N = 10 variable nodes and M = 5 check nodes.
+LDPC decoding is an iterative process in which soft information is exchanged between variable and check nodes. Due to the high implementation complexity of the optimal belief propagation algorithm, we use the suboptimal normalized Min-Sum algorithm [10]. Another major advantage of this
+
+N variable nodes (VN)
+
+M check nodes (CN)
+
+Fig. 2. Tanner graph of an irregular LDPC code
+
+algorithm is its stability with respect to signal-to-noise ratio
+
+(SNR) estimation. This is especially important for this double-
+
+iterative system as the channel estimation for MIMO channels
+
+is very complex.
+
+All variable nodes n are initialized with their corresponding
+
+log-likelihood ratio (LLR) of the received bit λnch. Next, messages are propagated from the variable nodes to all connected
+
+check nodes. For the first iteration the messages sent by the
+
+variable node n via its edges to the connected check nodes m
+
+are λn→m = λcnh. The check node m computes new messages
+
+for the variable nodes. ⎛
+
+⎞
+
+λm→n = α × ⎝
+
+sgn (λn →m)⎠ (4)
+
+n ∈N (m)\n
+
+×
+
+min (|λn →m|) ,
+
+n ∈N (m)\n
+
+with N (m) the set of variable nodes connected to the check node m. When using the extrinsic scaling factor α, a communications performance close to the optimal algorithm is achievable. Typically, α is chosen as 0.75 or 0.875, since these values are easy to implement.
+Then, the variable nodes compute an overall estimation of the decoded bit (a posteriori probability, APP) by adding up the extrinsic information of all connected check nodes to the channel value:
+
+Λn = λcnh +
+
+λm →n,
+
+(5)
+
+m ∈M(n)
+
+with M(n) the set of check nodes connected to the variable node n. The sign of Λn can be understood as the hard decision on the decoded bit. New messages λn→m are then computed following the extrinsic principle:
+
+λn→m = λcnh +
+
+λm →n = Λn − λm→n. (6)
+
+m ∈M(n)\m
+
+The decoding process is stopped after a maximum number of iterations or earlier if the parity check is satisfied. To improve the communications performance for a given number of iterations turbo decoding message passing (TDMP) [11], which is also known as layered decoding, shuffled decoding or Gauss-Seidel iterations, is used. With this technique it is possible to reduce the number of iterations by up to 50 % at RC = 1/2 assuming a fixed communications performance.
+
+IV. ARCHITECTURE
+
+A. System Architecture
+
+The system architecture includes three main processing units (see Fig. 3). The Channel Preprocessing Unit processes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+193
+
+Normalized
+
+Open Loop
+
+Throughput Scheduling
+
+P
+
+Closed Loop2
+
+Scheduling
+
+P
+
+1
+
+bit cycle
+
+1 outer - 5 code 32 2 outer - 5 code 128 1 outer - 10 code 64 3 outer - 5 code 192 1 outer - 20 code 128 4 outer - 5 code 256
+
+Fig. 3. System Architecture including Channel Preprocessing, MIMO Detector and Channel Decoder and the system memories. The red dashed line contains all parts of the presented design.
+
+2
+
+bits cycle
+
+1 outer - 5 code 64 2 outer - 5 code 256 1 outer - 10 code 128 3 outer - 5 code 384 1 outer - 20 code 256 4 outer - 5 code 512
+
+TABLE I REQUIRED PARALLELISM P OF THE LDPC DECODER ARCHITECTURE FOR
+DIFFERENT SCHEDULING OF INNER AND OUTER ITERATIONS.
+
+the received channel matrices H (MAT H) and channel values Y (Y VEC) and transforms them into the values Y PRE and MAT PRE which are needed for a simplified MIMO detection. The MIMO Detector stores its vector-based output in DET OUT for the next iteration. The output of the MIMO Detector is deinterleaved and stored in DEC IN inside the LDPC Decoder. The results of the LDPC Decoder are interleaved and stored in the vector-based memory DET IN. The vector-based memories DET IN and DET OUT are dimensioned to support 16-QAM or 64-QAM combined with 2x2 or 4x4 antennas.
+Hardware implementations for channel preprocessing and MIMO detection have been published in [12] and [13]. Channel interleaving/deinterleaving has to be tightly coupled with the interface between MIMO detector and LDPC decoder in order to allow parallel writing/reading of many values. Therefore it is mandatory to combine LDPC decoder, channel interleaver and deinterleaver in a hardware implementation to obtain a high system throughput.
+
+B. LDPC Decoder Parallelism
+
+In this section, we will analyze the required throughput and
+
+degree of parallelism P for an LDPC decoder in a double-
+
+iterative detection-decoding architecture like in Fig. 3. We
+
+distinguish between the closed loop with feedback between
+
+channel decoder and MIMO demapper and the open loop
+
+system without feedback. The communications performance
+
+gain of the closed loop system is about 3dB [14] [3] compared
+
+to an open loop system.
+
+For optimal utilization, the load is equally balanced between
+
+detector and channel decoder, i.e. each component gets the
+
+same number of clock cycles to process one block and thus,
+
+each of them is idle 50 percent of the time.
+
+For the following throughput consideration we use a normal-
+
+ized throughput which is the number of processed information
+
+bits per clock cycle at the output of the double-iterative system.
+
+E.g.
+
+an
+
+LDPC
+
+decoder
+
+architecture
+
+with
+
+2
+
+bits cycle
+
+with
+
+a
+
+typical
+
+frequency of 300M Hz results in a throughput of 600M bit/s.
+
+An architecture can run at different clock frequencies due to
+
+design constraints, different technologies etc. while the nor-
+
+malized throughput is not affected by any of these parameters.
+
+The normalized throughput of an LDPC decoder can be
+
+approximated by:
+
+#bits ≈ P · R
+
+(7)
+
+cycle iter · dV N
+
+Scenario
+Open Loop I 1 outer - 5 code Open Loop II 1 outer - 20 code Closed Loop I2 2 outer - 5 code Closed Loop II2 4 outer - 5 code
+
+#bits cycle
+8
+2
+2
+1
+
+@200 MHz 1,6 Gbit/s 400 Mbit/s 400 Mbit/s 200 Mbit/s
+
+@250 MHz 2,0 Gbit/s 500 Mbit/s 500 Mbit/s 250 Mbit/s
+
+@300 MHz 2,4 Gbit/s 600 Mbit/s 600 Mbit/s 300 Mbit/s
+
+TABLE II THROUGHPUT FOR DIFFERENT APPLICATION SCENARIOS WITH P = 256
+AND CODE RATE RC = 1/2
+
+where iter denotes the total number of iterations the LDPC decoder has to perform, R the coding rate and dV N the average variable node degree.
+The degree of parallelism P for LDPC codes is defined as the number of concurrently processed edges. The presented LDPC design uses a layered architecture where the edges are processed nearly continuously [6] [15]. Thus, no overhead cycles have to be considered within the iterative loop.
+Most LDPC codes have an average variable node degree of dV N ≈ 3.2 e.g. WiMax [16], DVBS2 [17]. To obtain the required degree of parallelism for the LDPC decoder we solve Equation (7) for P.
+
+P
+
+=
+
+#bits cycle
+
+·
+
+3.2 · iter R
+
+(8)
+
+Low code rates have the lowest throughput in LDPC decoding.
+
+The code rate of RC = 0.5 is the worst case for the derivation
+
+of parallelism degrees. Table I shows the required parallelism
+
+for different open and closed loop systems. Two normalized
+
+throughputs
+
+are
+
+considered:
+
+1
+
+bit cycle
+
+and
+
+2
+
+bits cycle
+
+.
+
+The
+
+notation
+
+2 outer - 5 code signifies that the demodulator and channel
+
+decoder are active two times for each block. Furthermore, the
+
+channel code performs 5 (inner LDPC code) iterations each
+
+time it is activated.
+
+A feedback scenario with 4 outer iterations and 5 code iter-
+
+ations will result in a very good communications performance
+
+[2] (3dB gain compared to open loop). The target system
+
+throughput is > 200M bit/s. Assuming a clock frequency of
+
+minimum 200 MHz, we need at least a normalized system
+
+throughput
+
+of
+
+1
+
+bit cycle
+
+.
+
+This
+
+results
+
+in
+
+P
+
+=
+
+256
+
+(see
+
+Table
+
+I).
+
+2Assumption: LDPC decoder is only 50% active in closed loop
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+194
+
+Address RAM 0
+
+APP RAM 0
+
+Address RAM 1
+
+APP RAM 1
+
+Address RAM 2
+
+APP RAM 2
+
+Permutation RAM 0
+
+Network 0
+
+Permutation RAM 1
+
+Network 1
+
+Permutation RAM 2
+
+Network 2
+
+FIFO Message RAM
+
+CNB 0
+
+CNB 91 CNB 92
+
+CFU
+
+Fig. 4. A parity check matrix of size N = 3720 with I = 93 allowing layered decoding with P = 279.
+
+This degree of parallelism allows different application sce-
+
+narios shown in Table II. Open Loop I is a high through-
+
+put scenario for AWGN or MIMO channels with 5 LDPC
+
+iterations only. Open Loop II can also be used with both
+
+AWGN and MIMO channels but with 20 LDPC iterations
+
+to obtain a better communications performance. Closed Loop
+
+I/II are scenarios including feedback from the MIMO detector
+
+which further increase the communications performance. The
+
+throughput
+
+ranges
+
+between
+
+1
+
+and
+
+8
+
+bits cycle
+
+.
+
+Obtaining the required minimum system throughput of 200
+
+Mbit/s in the target application scenario Closed Loop II
+
+requires an LDPC decoder throughput of 1.6 Gbit/s for 5
+
+iterations.
+
+C. Joint code construction and architecture design
+In the previous sections we have derived three important constraints for the LDPC decoder in the context of an iterative MIMO system.
+• Flexibility (II): the decoder architecture has to support block sizes ranging from N = 3720 to N = 14880 while supporting various code rates ranging from RC = 1/2 to RC = 4/5.
+• Throughput (IV-B): due to the MIMO feedback loop the decoder has to provide a throughput within Gbit/s range requiring a minimum parallelism of P = 256.
+• Layered decoding (III): the decoder has to support layered decoding to obtain the best communications performance result at each iteration.
+All three constraints heavily influence the design of the parity check matrix of the LDPC code and the final decoder architecture. Fulfilling the three constraints at the same time is only possible by joint channel code construction and architecture design.
+Typically, numerous parallel check nodes are instantiated in an LDPC decoder to increase its throughput. The memory access patterns to supply all check nodes with data are crucial for the code design to avoid access conflicts. Communications standards define LDPC codes with structured parity check matrices [18]. These check matrices are composed of submatrices of size IxI which are either 0 or cyclically shifted identity matrices, see e.g. Fig. 4. This structure avoids memory
+
+CNB
+
+ 
+ 
+ 
+  
+
+Fig. 5. Layered decoder architecture with partly parallel check nodes processing three submatrices in parallel
+conflicts and simplifies the connectivity network between variable nodes and check nodes.
+Most state-of-the-art LDPC decoders which support long block lengths process up to I parity checks in parallel which belong to the same submatrix, thus P ≤ I, e.g. [6] [7] [19]. In this case, the check nodes work serially, i.e. on one edge per clock cycle. Meeting the target throughput in the Gbit/s range on a standard decoder architecture would require a very high I. However, this contradicts with the given constraints on flexibility and layered decoding: For a small block length like the given N = 3720, a large I results in submatrices with multiple diagonals. These multi-diagonals lead to severe memory access problems for layered decoding architectures which are well-known from literature [20] [8]. Thus, increasing the submatrix size I in order to reach the required parallelism on a standard architecture is infeasible. Instead, we need to process several submatrices in parallel.
+In IV-B, we derived a minimum degree of parallelism of P = 256. Constructing a structured LDPC code for layered decoding and a minimum block length of N = 3720 allows to choose a submatrix size of I = 93. Thus, 3 submatrices have to be processed in parallel, resulting in P = 3 · 93 = 279. The resulting architecture is based on the concepts presented in [15] and shown in Fig. 5. Each set of I Variable Nodes is attributed to one of the three slots. One slot processes one submatrix per clock cycle. In contrast to standard architectures, each of the 93 check node blocks (CNB) reads and writes three edges in parallel, with each edge coming from a different slot. The minimum search within the CFU is performed according to [19]. The variable node operations according to Equation (5) and Equation (6) are processed within the CNBs and do not require an explicit functional unit. This architecture fulfills the constraints on flexibility, throughput and layered decoding.
+However, the architecture imposes hard restrictions on the parity check matrix. In layered decoding, variable nodes are partly updated as soon as a connected check node is processed. Processing is done in a pipeline with 3 stages including one cycle from APP RAM through Network and CNB and back
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+195
+
+to the APP RAM. Writing back the data can only be started after the whole check node has been processed. A variable node can only be accessed again after being updated thus it is blocked for several clock cycles. The length of the blocking interval B does not only depend on the length of the pipeline but also on the check node degree dCN .
+
+B =3+
+
+dCN 3
+
+(9)
+
+The challenge of the code design lies in the placement of nonzero submatrices. Continuous processing has to be ensured which is not delayed by blocked variable node columns, i.e. there always has to be a row of submatrices available which does not contain any of the currently blocked variable node columns.
+For example, consider Fig. 4: We start by processing the first group of 93 check nodes (the first 93 rows of the parity check matrix). In the first clock cycle the three submatrices labeled with ’1’ are processed in parallel. Next, the submatrices ’2’ are processed and all values for the first 93 parity checks have been read. But only 3 clock cycles later the results of the sub-matrices ’1’ will be written back. Thus, all variable node columns containing ’1’ are blocked until clock cycle 6, all columns containing ’2’ until clock cycle 7, see (9). When we select the next group of check nodes, we have to find a row of sub-matrices which does not contain any blocked columns. In the next two clock cycles, the first possible row of check nodes is processed, submatrices labeled ’3’ and ’4’. Now, 11 variable node columns are blocked. The next non-blocked row has to be located and processed and so on. In clock cycle 6, the columns ’1’ are released again making other rows accessible.
+The layered constraint mainly influences the placement of identity matrices for short block sizes. Thus, the maximum variable node degree for the shortest blocks is restricted to V Nmax = 5. Starting from a block size of 7440 bits a maximum VN degree of V Nmax = 15 can be supported. The LDPC codes can then be matched to the MIMO system [14] for closed loop iterations. Different antenna systems (2x2,4x4) and modulation schemes (16-QAM,64-QAM) require different degree distributions of the LDPC code to obtain a good communications performance.
+The permutation of each identity matrix is determined by the progressive edge growth technique [21]. The resulting decoder architecture supports block sizes between 3720 and 14880 bits with a granularity of 186 bits and code rates between 1/2 and 4/5. Due to space limitations we cannot show any simulation results of the communications performance of the constructed codes. However, many publications have shown that iterative demapping and decoding achieves a gain of approximately 3 dB compared to open loop decoding.
+
+V. RESULTS
+LDPC decoder, channel interleaver and deinterleaver as shown in Fig. 3 are implemented on a 65nm low power bulk CMOS library. We considered the following PVT parameters: Worst Case (WC, 1.1V, 125◦C), Nominal Case (NOM, 1.2V,
+
+Fig. 6. Physical design of the LDPC decoder including channel interleaver and deinterleaver. The barrel-shifter networks are in the top middle (0: light yellow, 1: orange, 2: red). The siso unit containing the 93 check node blocks covers the lower half of the chip (olive).
+25◦C) and Best Case (BC, 1.3V, -40◦C). Synthesis was performed with Synopsis Design Compiler in topographical mode, P&R with Synopsys IC Compiler.
+Synthesis as well as P&R were performed with Worst Case PVT settings of the 65nm library. Table III shows the results for area and maximum clock frequency. The differences between Synthesis (2.932 mm2, 322 MHz) and P&R (4.588 mm2, 275 MHz) mainly result from the huge internal bandwidth inside the LDPC decoder (compare Fig. 5). This results in routing congestion problems due to the huge number of wire connections between memory blocks and logic. For Nominal Case, the maximum clock frequency increases to 465 MHz.
+
+Design Step Synthesis P&R
+
+Case
+Worst Worst Nominal
+
+Max. clock freq.
+322 MHz 275 MHz 465 MHz
+
+Area 2.932 mm2 4.588 mm2
+
+TABLE III SYNTHESIS AND P&R RESULTS
+
+The final physical design shown in Fig. 6 contains 59 SRAMs which occupy more than 40% of the area (2.244 mm2). An area utilization (cell/core area ratio) of 67% was achieved.
+We evaluated the power consumption of the physical design with Synopsys PrimeTime-PX. Table IV summarizes the results. At a low frequency of 100 MHz, the implemented design consumes 481 mW. The power consumption scales linearly with the clock frequency.
+
+Clock freq.
+100 MHz 265 MHz 265 MHz 265 MHz
+
+Case
+Nominal Nominal
+Worst Best
+
+Power after P&R
+481 mW 1271 mW 1070 mW 1378 mW
+
+TABLE IV POWER CONSUMPTION OF THE IMPLEMENTED LDPC DECODER AFTER
+P&R
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+196
+
+Throughput in Mbit/s for different PVT settings
+
+Scenario
+
+Case RC = 0.5 RC = 0.8
+
+Open Loop I 1 big - 5 code
+
+Worst Nominal
+
+2200 3720
+
+3520 5952
+
+Open Loop II
+
+Worst
+
+1 big - 20 code Nominal
+
+550
+
+880
+
+930
+
+1488
+
+Closed Loop I2 2 big - 5 code
+
+Worst Nominal
+
+550
+
+880
+
+930
+
+1488
+
+Closed Loop II2 Worst
+
+275
+
+440
+
+4 big - 5 code Nominal
+
+465
+
+744
+
+TABLE V THROUGHPUT FOR DIFFERENT APPLICATION SCENARIOS FOR DIFFERENT CODE RATES AND WORST CASE AND NOMINAL CASE CLOCK FREQUENCY
+AFTER P&R. THE THROUGHPUT IS CONSTANT FOR ALL BLOCK SIZES.
+
+After P&R, the throughput of the design is between 275 Mbit/s and 3.52 Gbit/s for Worst Case and between 465 Mbit/s and 5.95 Gbit/s for Nominal Case depending on the coding rate and the application scenario (defined in IV-B). Table V shows the throughput results in more detail. The target system throughput of 200 Mbit/s for Closed Loop II has been reached even for Worsed Case settings.
+VI. CONCLUSIONS
+We presented an ASIC design of a high throughput LDPC decoder for iterative MIMO systems. Even for moderate system throughputs of a few hundred Mbit/s, the components of an iterative MIMO system have to work in the Gbit/s range. We derived a high throughput architecture with flexible block sizes between 3720 and 14880 bits and code rates from RC = 1/2 to RC = 4/5. The ASIC design after P&R has an area of 4.588 mm2 and consumes 1271 mW at a clock frequency of 275 MHz. The LDPC decoder has a throughput of 3.5 Gbit/s (@5 iterations) while the resulting iterative MIMO system (4 feedback loops with 5 LDPC iterations each) runs only at 275 Mbit/s.
+ACKNOWLEDGMENT
+This work has in parts been supported by the UMIC Research Centre, RWTH Aachen University and by the Deutsche Forschungsgemeinschaft (DFG) within the project ”Entwicklung effizienter und flexibler VLSI-Architekturen fuer die Kanaldecodierung in drahtlosen Multi-GigabitKommunikationssystemen auf Basis von LDPC-Codes”.
+REFERENCES
+[1] M. Tu¨chler, R. Ko¨tter, and A. Singer, “Turbo equalization: principles and new results,” IEEE Transactions on Communications, vol. 50, pp. 754–767, May 2002.
+[2] B. Hochwald and S. ten Brink, “Achieving near-capacity on a multipleantenna channel,” Communications, IEEE Transactions on, vol. 51, no. 3, pp. 389–399, Mar. 2003.
+
+[3] H. Vikalo, B. Hassibi, and T. Kailath, “Iterative decoding for MIMO channels via modified sphere decoding,” Wireless Communications, IEEE Transactions on, vol. 3, no. 6, pp. 2299–2311, Nov. 2004.
+[4] J.-H. Hung, L.-W. Kao, and S.-G. Chen, “A Real-Time High-Throughput LDPC Decoder for IEEE 802.3an Standard,” 2010, pp. 1–5, vehicular Technology Conference (VTC 2010-Spring), 2010 IEEE 71st.
+[5] Z. Chen, X. Peng, X. Zhao, Q. Xie, L. Okamura, D. Zhou, and S. Goto, “A macro-layer level fully parallel layered LDPC decoder SOC for IEEE 802.15.3c application,” 2011, pp. 1–4, vLSI Design, Automation and Test (VLSI-DAT), 2011 International Symposium on.
+[6] S. Mu¨ller, M. Schreger, M. Kabutz, M. Alles, F. Kienle, and N. Wehn, “A novel LDPC decoder for DVB-S2 IP,” in Proc. DATE ’09. Design, Automation. Test in Europe Conference. Exhibition, Apr. 2009, pp. 1308– 1313.
+[7] P. Urard, L. Paumier, V. Heinrich, N. Raina, and N. Chawla, “A 360mW 105Mb/s DVB-S2 Compliant Codec based on 64800b LDPC and BCH Codes enabling Satellite-Transmission Portable Devices,” in Proc. Digest of Technical Papers. IEEE International Solid-State Circuits Conference ISSCC 2008, Feb. 2008, pp. 310–311.
+[8] J. Dielissen, A. Hekstra, and V. Berg, “Low cost LDPC decoder for DVB-S2,” in Proc. 2006 Design, Automation and Test in Europe (DATE ’06), Munich, Germany, Mar. 2006.
+[9] R. G. Gallager, “Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[10] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[11] M. Mansour and N. Shanbhag, “Architecture-Aware Low-Density Parity-Check Codes,” in Proc. 2003 IEEE International Symposium on Circuits and Systems (ISCAS ’03), Bangkok, Thailand, May 2003.
+[12] G. Nazar, C. Gimmler, and N. Wehn, “Implementation Comparisons of the QR decomposition for MIMO detection,” in Proc. 23rd Annual Symposium on Integrated Circuits and System Design, September 2010.
+[13] E. M. Witte, F. Borlenghi, G. Ascheid, R. Leupers, and H. Meyr, “A Scalable VLSI Architecture for Soft-Input Soft-Output Single TreeSearch Sphere Decoding,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 57, no. 9, pp. 706–710, 2010.
+[14] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density parity-check codes for modulation and detection,” Communications, IEEE Transactions on, vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[15] M. Alles, F. Berens, and N. Wehn, “A Synthesizable IP Core for WiMedia 1.5 UWB LDPC Code Decoding,” in Proc. IEEE International Conference on Ultra-Wideband ICUWB 2009, Vancouver, Canada, Sep. 2009, pp. 597–601.
+[16] I. 802.16, Local and metropolitan area networks; Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems; Amendment 2:Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands.
+[17] European Telecommunications Standards Institude (ETSI), “Digital Video Broadcasting (DVB) Second generation framing structure,channel coding and modulation systems for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications; TM 2860r1 DVBS2-74r8,” www.dvb.org.
+[18] E. Boutillon, J. Castura, and F. Kschischang, “Decoder-first code design,” in Proc. 2nd International Symposium on Turbo Codes & Related Topics, Brest, France, Sep. 2000, pp. 459–462.
+[19] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm 52 mW Multi-Mode LDPC Decoder Design for Mobile WiMAX System in 0.13 & CMOS Process,” IEEE Journal of Solid-State Circuits, vol. 43, no. 3, pp. 672–683, Mar. 2008.
+[20] M. Rovini, F. Rossi, P. Ciao, N. Insalata, and L. Fanucci, “Layered Decoding of Non-Layered LDPC Codes,” in Proc. 9th EUROMICRO Conference on Digital System Design (DSD’06), Dubrovnik, Croatia, Sep. 2006, pp. 537–544.
+[21] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Transactions on Information Theory, vol. 51, no. 1, pp. 386–398, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:36:34 UTC from IEEE Xplore. Restrictions apply.
+197
+
+

@@ -1,0 +1,421 @@
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+1167
+
+FlexLevel NAND Flash Storage System Design to Reduce LDPC Latency
+Jie Guo, Wujie Wen, Member, IEEE, Jingtong Hu, Member, IEEE, Danghui Wang, Hai Li, Senior Member, IEEE, and Yiran Chen, Senior Member, IEEE
+
+Abstract—Aggressive technology scaling and adoption of multilevel-cell technique lead to progressive increase of bit error rate (BER) of NAND flash memory. Consequently, conventional error correction code is not adequate to guarantee system reliability. As an alternative, low density parity check (LDPC) code is introduced to provide more powerful error correction capability. However, to achieve better performance, LDPC code demands extra memory sensing operations and more data transfer cycles, directly leading to longer read latency. To achieve both system reliability and read efficiency, we propose the FlexLevel NAND flash storage system design in this paper. FlexLevel consists of two levels of optimization: 1) LevelAdjust and 2) AccessEval. At device level, the LevelAdjust technique is proposed to reduce BER by broadening noise margin via threshold voltage level reduction. With LevelAdjust, BER is greatly reduced and no extra sensing levels are required to protect data integrity. Hence, read performance is improved. However, while LevelAdjust can improve system reliability and read performance, it causes density loss. To balance read performance improvement and density loss, we propose the AccessEval technique at system level. AccessEval identifies data with high LDPC overhead and only applies LevelAdjust technique to these data. The experimental results show that compared with the best existing works, the proposed design can achieve up to 11% read speedup with negligible density loss.
+Index Terms—Bit error rate (BER), low density parity check (LDPC), NAND flash, noise margin, read latency.
+I. INTRODUCTION
+N AND flash memory has emerged as the most competitive storage device in the last decade thanks to its
+Manuscript received January 31, 2016; revised April 12, 2016 and July 4, 2016; accepted September 29, 2016. Date of publication October 21, 2016; date of current version June 16, 2017. This work was supported in part by the NSF under Grant NSF CNS-1253424 and NSF ECCS-1202225, in part by the NSFC under Grant NSFC 61472322 and Grant NSFC 61272122, and in part the Fundamental Research Funds for Central Universities of China under Grant 3102014JSJ0001. This paper was recommended by Associate Editor M.-F. Chang.
+J. Guo, W. Wen, H. Li, and Y. Chen are with the Department of Electrical and Computer Engineering, University of Pittsburgh, Pittsburgh, PA 15213 USA (e-mail: jig26@pitt.edu; wuw2@pitt.edu; hal66@pitt.edu; yic52@pitt.edu).
+J. Hu is with the School of Electrical and Computer Engineering, Oklahoma State University, Stillwater, OK 74078 USA (e-mail: jthu@okstate.edu).
+D. Wang is with the School of Computer Science, Northwestern Polytechnical University, Xi’an 710072, China (e-mail: wangdh@nwpu.edu.cn).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCAD.2016.2619480
+
+excellent scalability and low power consumption. NAND flashbased solid state disk (SSD) has become the most promising alternative to hard disk drive (HDD). Until 2015, the costper-gigabyte of SSD reduces decreases to $1, which is very close to that of HDD [1]. Due to the cost reduction, SSD has aggressively expanded its application: 30% of laptops use SSD in 2015 [1]. Compared with traditional single-level cell (SLC), multilevel cell (MLC) NAND flash has dominated consumer and enterprise storage application due to lower per bit fabrication cost.
+A NAND flash cell is a floating gate transistor with programmable threshold voltage (Vth). The logic bits are represented by different Vth levels. In SLC, two Vth levels are sufficient to represent one bit of information. In contrast, four levels are needed to represent two bits of information in MLC. Due to narrower Vth level gaps, MLC NAND flash memory is subject to intrinsic noises which distort Vth distribution. Previous works reveal that random telegraph noise (RTN), cell-to-cell interference, and retention time noise are three major intrinsic noise sources [2], [3]. RTN broadens Vth distribution and its effect is aggravated with increase of program/erase (P/E) cycle counts. Cell-to-cell interference causes positive Vth shift via parasitic capacitance-coupling. It is identified as the major obstacle of technology scaling down of NAND flash memory [4]. Retention time noise gradually causes Vth reduction and is the dominating contributor to Vth distortion in the post-cycling stage [3], [5], [6].
+A direct result of these noises is bit errors, which reduce memory endurance and reliable data storage time. Hence, error correction code (ECC) is usually deployed to protect data integrity. The selection of ECC is based on error correction capability. The qualified ECC should guarantee that the uncorrectable bit error rate (UBER) of the storage system is under an acceptable level. For example, BER under 3×nm technology node is approximately 10−5 [7]. Hard-decision ECC such as Bose-Chaudhuri-Hocquenghem (BCH) ECC is employed to protect data integrity.
+As the technology node scales down to sub-30 nm, BER significantly increases. Tanakamaru et al. [8] showed that 2×nm MLC NAND flash BER reaches up to 10−2. As a result, conventional hard-decision ECC is no longer sufficient for the next generation SSD. To provide stronger error correction capability, more advanced ECC such as low density parity check (LDPC) code is introduced. LDPC code is soft-decision in nature, i.e., it demands log-likelihood-ratio (LLR) information to achieve supreme error correction performance [9].
+
+0278-0070 c 2016 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1168
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+In the NAND flash storage system, LLR information can be only acquired by fine-grain memory sensing operations, which induce extra sensing and data transfer overhead, leading to 7× longer read latency [8]. Due to this soft-decision characteristics, LDPC is excluded from performance-critical applications.
+In order to provide both high error correction capability and short read latency, we propose a novel NAND flash storage system design called “FlexLevel.” FlexLevel consists of two levels of optimizations. At device level, LevelAdjust technique is proposed to reduce BER by enlarging noise margin via Vth level reduction. With reduced BER, no extra sensing level is required for LDPC to protect data integrity, leading to read performance improvement. However, LevelAdjust may cause considerable storage capacity loss due to Vth level reduction. To balance the read performance improvement and storage capacity loss caused by LevelAdjust, AccessEval technique is proposed at the system level. Only the data with high LDPC overhead are identified by AccessEval and the application of LevelAdjust is constrained to only these data. As such, LDPC overhead can be greatly reduced with only small capacity loss.
+The major contributions of this paper can be summarized as follows.
+1) LevelAdjust technique is first proposed at the device level to reduce BER. In LevelAdjust, the number of Vth levels in NAND flash cells is reduced to extend noise margin. In order to accommodate reduced Vth levels, novel bit mapping technique, bitline structure, and program method are proposed to achieve substantial BER reduction.
+2) To further reduce BER under LevelAdjust, nonuniform noise margin adjustment (NUNMA) technique is also proposed to increase retention time noise margin for the vulnerable Vth levels. With proper NUNMA configuration, BER is further reduced, and LDPC overhead can be minimized.
+3) Additionally, we propose the AccessEval technique at the system level to balance the performance improvement and storage capacity loss introduced by the LevelAdjust technique. One of the main challenges here is to identify data with high LDPC overhead. In this paper, we proposed a novel data identifier which takes both data access patterns and LDPC sensing levels into consideration to identify such data with high accuracy.
+According to the experimental results, FlexLevel can achieve up to 11% read speedup with negligible system capacity loss.
+The rest of this paper is organized as follows. Section II introduces background knowledge; Sections III and IV illustrate the motivation and overview of FlexLevel technique, respectively; Sections V and VI discuss the details of LevelAdjust and AccessEval techniques, respectively; Section VII presents the simulation results and Section VIII concludes this paper.
+II. BACKGROUND
+In this section, we will first present the basics of MLC NAND flash, including NAND flash memory working
+
+mechanism and noises as well as LDPC code. We will then summarize state-of-the-arts in addressing high BER of NAND flash memory and long read latency of soft-decision LDPC.
+
+A. MLC NAND Flash Basics
+A NAND flash cell is a floating gate transistor, whose Vth can be adjusted by electrons on the floating gate. Logic bits are represented by different Vth levels. In MLC NAND flash cell, two bits are denoted by four Vth levels. Following gray code, two bits 11, 10, 00, and 01 are mapped to Vth level 0, 1, 2, and 3, respectively. The left bit of the two bits is defined the most significant bit (MSB), while the right bit is the least significant bit (LSB). An MLC NAND flash chip adopts a block-page structure: A block is a array of flash cells, which is subdivided into multiple pages. Usually, MLC NAND flash block has an even/odd bit-line structure as shown in Fig. 1(a) [5]. A wordline stores two page groups, an even and an odd page group, which are selected by different bitlines. Each page group contains two pages: 1) a lower page and 2) an upper page. The MSB and the LSB in the same cell belong to the lower page and the upper page in one page group, respectively [10]. Operations to a page are realized by selecting corresponding wordlines and bitlines.
+MLC NAND flash supports three operations: 1) program; 2) read; and 3) erase. Program operation realizes injection of predefined amount of electrons to configure Vth. A twostep program operation is performed to each cell via the incremental step pulse program (ISPP) algorithm as shown in Fig. 1(b) [3]. The first program operation stores MSB and the second program operation stores LSB in cells. The logic bits are read out by comparing cell’s Vth with a series of predefined reference voltages [5]. If the even page is read, all the even bitlines are selected and the data stored on the even bitlines are sensed at the same time. Similarly, reading the odd page only requires sensing the data in the odd bitlines [10]. Erase operation removes electrons from a floating gate to reduce the cell to a ready state (Vth level 0) for the upcoming program operations. Unfortunately, P/E cycling gradually wears out NAND flash cells and exposes them to more intrinsic noises. The noises lead to high BER and severely degrade device reliability.
+
+B. Noise in NAND Flash Memory
+Previous works [2], [3], [5] identify RTN, cell-to-cell interference and retention time limit as three major contributors to Vth distortion. RTN develops from electrons capture and emission at charge trap sites. It results in wider threshold voltage distribution and the effect is aggravated over P/E cycling. Assume λ is mean value of Vth shift. RTN induced Vth shift
+Vrtn is modeled by [2]
+
+1 p Vrtn = 2λ exp
+
+| −
+
+Vrtn| λ
+
+.
+
+(1)
+
+Cell-to-cell interference results from parasitic capacitance coupling effect: program operation to one floating gate transistor can increase Vth of its neighboring cells, i.e., victim cells.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+
+1169
+
+Fig. 1. Working mechanism and device noises in NAND flash memory. (a) MLC NAND flash even/odd bit-line structure. (b) Two-step program method to MLC NAND flash memory. (c) Illustration of cell-to-cell interference.
+
+Cell-to-cell interference increases Vth and we define the cellto-cell interference noise margin as in Fig. 1(c). The victim cell Vth shift Vc2c follows [2]:
+
+Vc2c =
+
+Vp(k) × γ (k).
+
+(2)
+
+k=0
+
+Here, Vp(k) denotes the Vth shift of the interfering cell after program operation. γ (k) is coupling ratio. In the even/odd bit structure, there exist coupling ratios on three directions: 1) γy; 2) γx; and 3) γxy [11].
+Retention time noise results from electron detrapping and
+stress induced leakage current [3], [12]. Electrons are trapped
+in transistor tunnel oxide over P/E cycling. These trapped elec-
+trons gradually leak away and assist charges stored on floating
+gate to escape, leading to Vth decrease. The retention time noise margin is shown in Fig. 1(c). According to [2], retention time noise induced Vth shift follows N(μd, σd2), where μd and σd2 can be expressed by:
+
+μd = Ks(x − x0)KdN0.4ln(1 + t/t0) σd2 = Ks(x − x0)KmN0.5ln(1 + t/t0).
+
+Here, Ks, Kd, Km, and t0 are constants. N is P/E cycle count. x0 is Vth of level 0. x is the initial Vth after program operation and t is storage time. Retention time error dominates
+the post-cycling errors. As the technology node scales down to 2×nm, the noise margin of MLC NAND flash memory is greatly narrowed, increasing the BER to 10−2 [8]. As a
+result, the traditional hard-decision ECC, e.g., BCH code, can-
+not satisfy reliability requirement. Therefore, ECC with more
+powerful error correction capability are explored.
+
+C. LDPC Code for NAND Flash Memory
+LDPC code is one of the most promising ECC for next generation NAND flash memory. It has a sparse M×N parity-check matrix. The matrix is represented by a bipartite graph with N variable nodes and M check nodes. Error correction is realized by belief-propagation algorithm [13]: it iteratively computes the decoding messages and exchanges them between variable nodes and check nodes. There are two types of LDPC code: 1) hard-decision and 2) soft-decision LDPC. The former uses binary bits while the latter employs LLR information as the
+
+decoding message. Usually, soft-decision LDPC can achieve better error correction strength due to application of LLR information. The performance of soft-decision LDPC heavily depends on accuracy of LLR information [9].
+In NAND flash memory, only binary information is provided, which severely deteriorates LDPC performance. To enable adoption of soft-decision LDPC, a read retry solution is employed [14]. With this technique, LLR information can be collected by sensing Vth with extra reference voltages or soft sensing levels. More extra soft sensing levels lead to more accurate LLR information. However, the extra memory sensing operation incurs high memory sensing and data transfer overhead, i.e., longer read latency. Read latency of soft-decision LDPC with extra six soft sensing levels is as much as seven times that of hard-decision LDPC [8].
+D. Related Works
+As mentioned in Section II-C, the read overhead of LDPC code is associated with soft sensing levels and memory BER. Reducing soft sensing overhead and BER are two approaches to reduce LDPC induced read latency. Previous works are dedicated to reducing LDPC latency by reducing the soft sensing overhead. Dong et al. [9] and Wang et al. [15] demonstrated the feasibility to adopt nonuniform quantization to reduce the required soft sensing levels. According to the nonuniform quantization, Dong et al. [9] and Zhao et al. [16] proposed a progressive sensing strategy which gradually increases the sensing precision. Dong et al. [17] proposed to adopt entropy coding to reduce the memory-to-controller data transfer latency of the soft sensing operation. Zhao et al. [13] proposed a look-ahead memory sensing scheme to minimize LDPC data transfer overhead. The look-ahead memory sensing scheme is realized by performing soft sensing and decoding in parallel. Wang et al. [18] proposed to reduce soft-sensing levels by increasing the sensing precision. Tanakamaru et al. [8] proposed an error prediction scheme to reduce soft sensing overhead. The error prediction scheme predicts the error type by checking the number of 1s in the stored data. According to the error type, program or erase pulse is applied to correct bit errors and prevent further sensing operations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1170
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+There are also works proposed to reduce the BER in NAND flash memory. Pan et al. [2] proposed refresh schemes to minimize retention time BER. These two schemes periodically move the data stored in NAND flash memory to inhibit increase of retention time errors. However, under high BER, the refresh scheme invokes frequent data migration, directly leading to significant performance degradation. Guo et al. [19] proposed to reduce NAND flash BER by avoiding data patterns that are vulnerable to bit errors. This scheme converts the stored data to reliable patterns by scrambling and decorrelation. However, under high BER, the storage overhead of this scheme becomes prohibitively high. The FlexLevel system proposed in this paper can work together with these previous works to further reduce LDPC overhead.
+The idea of minimizing BER by Vth reduction in this paper is inspired by the approaches in [20] and [21] which minimizes BER in phase change memory. In [20] and [21], reducing four Vth levels to three is enough to reduce BER to an acceptable level. In comparison, due to different device noises, simply reducing the Vth levels is not enough to reduce BER in NAND flash memory to a level that no extra sensing level is incurred. Hence, in our design, we proposed NUNMA to further reduce BER by adjusting noise margins. The proposed work is different from [20] and [21] at the aspect of encoding scheme due to different memory structure. The encoding schemes of [20] and [21] are based on the memory structure that a cell pair is programmed simultaneously. In contrast, NAND flash memory has an even/odd bitline structure where two programming operations can be performed to one cell. Hence, this paper proposes a new page layout and a two-step programming method to accommodate to the even/odd bitline structure. Correspondingly, the proposed encoding scheme in this paper is based on the new programming method. The two cells in a cell pair are separately encoded during the first programming operation while they are encoded together during the second programming operation. Both the two previous works and this paper employ gray coding to reduce BER. A cell pair in phase change memory is programmed at one time. Therefore, [20] and [21] can only consider error transition patterns for encoding. In comparison, due to different memory structure, this paper also consider the programming method in the data encoding design. In addition, high storage overhead of Vth reduction is not addressed in [20]. Yoon et al. [21] handled this problem by a mark-and-spare approach. In this paper, we reduce the storage overhead by selectively applying Vth level reduction to the frequently read data with high BER.
+Some works adopted a similar approach of reducing Vth levels in NAND flash memory. For example, ComboFTL in [22] and FlexFS in [23] proposed to dynamically program MLC cells as SLC cells. Different from this paper which targets improving read performance, ComboFTL and FlexFS aim to improve write performance. FlexFS applies the optimization at file system level while this paper is implemented at firmware and device levels. ComboFTL and FlexFS cannot be directly applied to improve read performance due to different targets. For example, hot/cold data separation, i.e., identifying hot data by write length in ComboFTL or by updating frequency in FlexFS, cannot identify the data with high LDPC overhead.
+
+Cho et al. [24] employed nonuniform margins for two-bit MLC NAND flash memory but the adopted approach is different from our NUNMA technique. [24] adopted different Vth window sizes for different Vth levels to enlarge noise margins of the most vulnerable Vth levels. In contrast, this paper assigns different retention time noise margins to different Vth levels by regulating the verifying voltage without changing Vth window sizes. In addition, different from [24] which simply enlarges margins of both cell-to-cell interface and retention time noises, this paper trades partial retention time noise margin for reduction of cell-to-cell interference bit errors.
+Tanaka et al. [25] adopted the same idea of the 3-level cell. However, it has a different motivation and implementation from this paper. Tanaka et al. [25] proposed to improve programming speed while this paper focuses on BER reduction. In addition, [25] focuses on circuit implementation and ECC encoding to speed up programming operation at the device level. In contrast, this paper focuses on noise margin control and coding to reduce BER at the device level. Also, we propose AccessEval to at the system level to reduce the capacity reduction due to Vth level reduction.
+Hsien et al. [26] adopted nonuniform Vth noise margin allocation. However, its approach is different from that of our NUNMA: [26] only focuses on noise margin optimization of Vth level L1. In comparison, our NUNMA allocates different noise margins to different Vth levels based on the specific error patterns of each Vth level. In addition, the approach of NUNMA is to balance cell-to-cell interference and retention time margins under a fixed Vth window size. In comparison, [26] increases Vth window size to optimize cell-to-cell interference noise margin.
+
+III. MOTIVATIONS
+
+In this section, simulations are conducted to show that softdecision LDPC overhead is closely related to BER. Therefore, LDPC overhead will be reduced if BER can be minimized.
+The estimation of LDPC overhead is based on the reliability index uncorrectable bit error rate (UBER). Assume that a raten/m ECC is employed in NAND flash storage system, where n and m represent information length and total codeword length, respectively. UBER can be estimated by [3]
+
+uber(k) = 1 −
+
+k i=0
+
+Cmi
+
+pic(1 − pc)(m−i) .
+
+(3)
+
+n
+
+Here, pc denotes BER of a single NAND flash cell. k is the correctable bit number. The program errors result from
+
+RTN and cell-to-cell interference. Hence, we employ mod-
+
+els in (1) and (2) to simulate program BER. We employ
+
+models in (3) and (3) to simulate retention time BER. The
+
+distribution of Vth level 0 is modeled by Gaussian distribution N(1.1, 0.35) [11]. The ISPP verify voltages and the
+
+program step voltage are set 2.55, 3.15, 3.75, and 0.15, respectively [11]. RTN λ is set 4.0 × 10−4N0.5 [27]. The coupling
+
+ratios γx, γy, and γxy are set 0.07, 0.09, and 0.005 [4]. By fitting the data in [7] and [28], Ks, Kd, and Km are 0.333, 4 × 10−4, and 2 × 10−6, respectively. MLC NAND flash BER
+
+over P/E cycling is shown in Fig. 2. From the figure, we can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+
+1171
+
+Fig. 2. NAND flash memory BER over P/E cycling.
+TABLE I REQUIRED EXTRA LDPC SOFT SENSING LEVELS
+
+Fig. 3. FlexLevel NAND flash storage system overview.
+
+see that BER increases with both P/E cycling and storage time. BER immediate after program operation (referred as program BER) increases from 6.72 × 10−4 to 2.29 × 10−3 when P/E cycle count reaches 6000.
+Based on simulated NAND flash BER, we estimate overhead of qualified LDPC code. The targeted UBER is set to 10−15 [29]. A rate-8/9 LDPC code is performed to each 4 KB data block. According to LDPC performance in [13], we list the required LDPC extra soft memory sensing levels under different P/E cycle counts and storage time in Table I. 0 means hard-decision LDPC which has no extra soft memory sensing. It is shown that soft-decision LDPC with extra soft memory sensing levels is required after 4000 P/E cycle count. Under 6000 P/E cycle count and 1-month storage time, six extra soft memory sensing levels are necessary to guarantee system reliability, which will lead to considerable performance degradation.
+From the simulation, we can see that soft-decision LDPC overhead mainly results from retention time error and increases with storage time and P/E cycle counts. Therefore, if we can minimize retention time BER, the incurred read latency can be reduced. In next section, we will present the FlexLevel system design, which can improve the LDPC performance while maintaining system reliability.
+IV. FLEXLEVEL NAND FLASH STORAGE SYSTEM OVERVIEW
+In this section, we will present an overview of the FlexLevel technique. The FlexLevel technique minimizes the BER in NAND flash storage system, reduces the LDPC latency and improves the read performance. Fig. 3 shows the overview of FlexLevel design, including two major components: 1) LevelAdjust and 2) AccessEval.
+LevelAdjust technique is proposed to reduce BER at the device level, i.e., adjusting cell noise margin by changing the
+
+number of Vth levels of floating gate transistors. This technique allows one MLC NAND flash cell to have two states: 1) normal state and 2) reduced state. In normal state, the cell has four Vth levels, working as a regular MLC NAND flash cell. In reduced state, the cell has only three Vth levels. In reduced state, the BER of the cell is reduced by allocating a larger noise margin to each Vth level. At early P/E cycling stage, BER is low and all NAND flash cells are in normal state. Following the increase of P/E cycle and storage time, cells may switch to reduced state to control the BER below a threshold. In reduced state, if gray code is still used, each cell can only store one bit. Therefore, half of the capacity is lost. In order to avoid significant capacity loss, we develop new coding scheme and bitline structure to maximize the information storage density of the cells in reduced state. What is more, based on the observation that different Vth levels may be associated with different BER, we propose the NUNMA technique to further reduce the BER that needs to be handled in the design. The reduction of BER results in fewer soft sensing levels needed by LDPC and consequently, improves the system read performance. The details of LevelAdjust will be discussed in Section V.
+After applying LevelAdjust, the system read performance can be boosted. However, even with our newly developed coding scheme, Vth level reduction introduced by LevelAdjust still causes up to (1/4) storage capacity loss. To maximize performance improvement with minimized storage capacity loss, we devise the AccessEval technique to selectively apply LevelAdjust to the NAND flash cells based on need. AccessEval module is implemented in flash translation layer (FTL), which is a software layer emulating NAND flash memory as a block device [5]. AccessEval evaluates LDPC overhead for stored data based on their access patterns. For data with access patterns leading to high LDPC overhead, AccessEval manages to store the data in reduced state cells. On the contrary, data with access patterns that lead to low LDPC overhead will be stored in normal state cells. By integrating LevelAdjust and AccessEval together, LDPC induced read latency can be effectively reduced with minimum storage loss.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1172
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+TABLE II BIT VALUE MAPPING UNDER REDUCECODE
+
+V. LEVELADJUST: Vth LEVEL ADJUSTMENT
+This section presents the details of the LevelAdjust technique: the basic LevelAdjust is presented in Section V-A first, followed by the NUNMA technique in Section V-B. At last, the hardware and capacity overheads of LevelAdjust are evaluated in Section V-C.
+
+(a)
+
+(b)
+
+Fig. 4. (a) ReduceCode bitline. (b) Twostep programming method for ReduceCode bitline structure.
+
+TABLE III Vth TRANSACTION UNDER TWO-STEP PROGRAM OPERATION
+
+A. Basic LevelAdjust Technique
+LevelAdjust minimizes BER of a NAND flash cell through Vth levels reduction. Two states are introduced to the operations of the cell: normal state and reduced state. In normal state, the cell has four Vth levels. It adopts the same even/odd bitline structure and P/E operation as in the regular MLC NAND flash memory. Standard gray code is still deployed to map two bits to the four Vth levels. In reduced state, the cell has only three Vth levels: Vth level 0, 1, and 2. Compared with normal state, the cell in reduced state has enlarged noise margin at each Vth level and therefore can bear higher noise magnitude.
+However, if gray code is still used to map the bits in reduced state cells, each cell can only store one bit. Hence, ReduceCode technique is proposed to maximize the information storage density of each reduced state cell. We observed that each reduced state cell has three Vth levels and two cells indeed can represent nine Vth combinations. Therefore, ReduceCode uses eight out of nine Vth combinations to represent three bits. In this way, two cells can represent three bits instead of just two bits with gray code.
+A mapping scheme between 3-bit value and Vth level combinations in a reduced state cell is shown in Table II. Vth I and Vth II represent the Vth levels of the first cell and second cell, respectively. Similar to gray code, ReduceCode aims to minimize BER when Vth distortion occurs. Take 3-bit value 101 as an example. It is mapped to Vth level 0 in the first cell and Vth level 2 in the second cell. In case of Vth distortion, e.g., the Vth level of the second cell changes from levels 2 to 1, the 3-bit value 101 will change to 001, causing only one-bit error. In summary, one level distortion in any of the two cells will cause only one bit error in ReducedCode. Thus, bit error is effectively minimized.
+A dedicated ReduceCode bitline structure is also designed, as shown in Fig. 4(a). Two neighboring even or odd cells are combined to represent three bits and a pair of even cells or odd cells have one MSB and two LSBs totally. Two LSBs from all even cells on one wordline form a “lower page” while two LSBs from all odd cells on the same wordline form a “middle page.” Also, the MSBs from all cells on the same word line form “upper page.”
+
+In NAND flash memory, program operation is performed in unit of page. Traditional program scheme cannot work with the new bitline structure. Therefore, for the ReduceCode bitline structure, we propose a new two-step program algorithm to program each page: in the first step, two LSBs, i.e., the lower or middle page is programmed; in the second step, the MSBs, i.e., the upper page is programmed.
+The Vth transitions under two program steps are summarized in Table III. Here, Vth I and Vth II denote the Vth level transition of the first and second cells, respectively. Targeted Vth I and targeted Vth II denote the Vth levels that the cells are programmed to. Before program operation, erase operation resets the reduced state cell to Vth level 0. During the first program step, depending on whether the lower or the middle page needs to be programmed, the even or the odd bitlines will be selected accordingly. The Vth level either increases to Vth level 1 or remains in Vth level 0 based on the stored bit value. During the second program step, all bitlines will be selected. Since the MSBs of all cells form the upper page, the MSBs of all pairs of cells will be programmed. Note that the Vth level transition during the second program step depends on the least two significant bit values mapped in the first program step and MSB. If MSB is 0, Vth level transition stops and Vth levels remain the same as that after the first program step. If MSB is 1, Vth level transition follows Table III.
+Due to the different coding method and bitline structure, the read operation of the cell in reduce state is also different from the regular MLC NAND flash cell. As indicated in Table II, the two LSBs that are stored in the lower page and the middle page
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+
+1173
+
+Fig. 5. Bit error occurrence probability at four Vth levels.
+cannot be determined only by values on even or odd bitlines. Hence, during a read operation, both even and odd bitlines are selected. Vth levels of even and odd bitlines are combined to determine the values of the three pages stored in one wordline.
+B. Nonuniform Noise Margin Adjustment
+When NAND flash cells enter post-cycling stage, retention time error starts to dominate the overall BER [5]. Simple Vth level reduction, however, is not adequate to inhibit retention time error. Therefore, our LevelAdjust also adopts the NUNMA technique to maximize BER reduction efficiency.
+To further reduce cell BER, we first analyze the error patterns of MLC NAND flash cells. The error patterns, i.e., bit error occurrence probability, under 1-week/1-month storage time and different P/E cycle counts are shown in Fig. 5. Here, the simulation method and NAND flash parameters are the same as that in Section III. x-Axis shows combinations of P/E cycle count and storage time. y-Axis displays bit error occurrence probability breakdown at each Vth level. The results clearly show that higher Vth levels have larger retention time error occurrence probability: 51% and 30% bit errors occur at Vth level 3 and 2 on average. This implies that Vth in high levels decreases faster than that in low levels. Therefore, allocating Vth noise margins uniformly among all Vth levels may not be an optimal solution as system reliability is only limited by the maximum BER.
+Based on this observation, we propose the NUNMA technique to maximize BER reduction efficiency. The main idea of NUNMA is to optimize the noise margins of different Vth levels globally. A Vth level region is confined by its lower and upper read reference voltages. Originally, the program verify voltage is set to close to the lower read reference voltage and the Vth distribution is placed in the center of its Vth level region, as shown in Fig. 6(a). The decrease in Vth with storage time increase results in retention time errors. In order to improve retention time noise margin, the programmed Vth distribution should be shifted to right by increasing the verify voltage while maintaining the read reference voltages unchanged. As a result, the programmed Vth will be much higher than lower reference voltage, allowing an enlarged noise margin and better tolerance to charge loss, as shown in Fig. 6(b). However, increasing verify voltage may cause the level 1 Vth to exceed its upper read reference voltage,
+
+Fig. 6. NUNMA technique. (a) Vth distribution before NUNMA. (b) Vth distribution after increasing retention time noise margin. (c) Vth distribution after NUNMA.
+introducing cell-to-cell interference errors. As shown in Fig. 5, the retention time BER at low Vth levels is lower than that at high Vth levels. Hence, it is safe to allocate relatively small retention time noise margin to low level Vth’s and large retention time noise margin to high level Vth’s. Therefore, a low verify voltage in Vth level 1 together with a high verify voltage in Vth level 2 can be employed, as shown in Fig. 6(c). In this way, both cell-to-cell interference and retention time BER are reduced. The NUNMA technique can be easily integrated into the existing NAND flash systems as program verifying and read reference voltages are all adjustable [14].
+
+C. LevelAdjust Overhead Evaluation
+The application of LevelAdjust is associated with certain overheads. First, LevelAdjust introduces several hardware overheads. One overhead is the logic gates that are needed to implement ReduceCode circuit. Assume that V11V10 and V21V20 represent Vth levels of two neighboring cells. b2b1b0 denote 3-bit value. The logic expressions of encoding circuit are listed in
+
+V11 = b2b1 + b2b¯0
+
+(4)
+
+V10 = b¯2b1
+
+(5)
+
+V21 = b2b¯1
+
+(6)
+
+V20 = b¯2b0 + b1b0.
+
+(7)
+
+The logic expressions of decoding circuit are listed in
+
+b2 = V11V¯10V¯21 + V¯10V21V¯20
+
+(8)
+
+b1 = V11 V10 V¯21
+
+(9)
+
+b0 = V¯11V¯21V20 + V¯10V¯21V20 + V¯11V¯10V21V¯20. (10)
+
+The circuit only employs less than 100 gates. ReduceCode encoding and decoding overhead is only one clock cycle, e.g., 5 ns for a 200 MHz clock frequency. This overhead is negligible compared with data transfer and sensing latency (up to tens of micro seconds). Another hardware overhead is interface command decoding circuit. Since one cell can have two states, a control logic is needed to configure cells into normal state or reduced state. However, the incurred hardware overhead is also very marginal.
+The major overhead of LevelAdjust is the capacity loss incurred by Vth level reduction. In reduced state, two MLC NAND flash cells are combined to represent three bits, leading to 25% storage density reduction compared to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1174
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+TABLE IV WORKLOADS ACCESS PATTERN CHARACTERIZATION
+
+Fig. 7. AccessEval architecture.
+
+normal state cells. This capacity loss has to be compensated since storage system capacity must be consistent to file systems. Although over-provision space [30] may be used to compensate the capacity loss, it may cause severe write performance degradation. In order to minimize such capacity loss, AccessEval technique is introduced at the system level, as we present in next section.
+VI. ACCESSEVAL: ACCESS PATTERN EVALUATION
+This section will present the details of AccessEval technique. Section VI-A gives an overview of AccessEval; Section VI-B introduces infrequently-write-and-frequentlyread (IWFR) data and its identification technique.
+A. AccessEval Overview
+LevelAdjust introduces inevitable storage capacity loss of NAND flash cells. To reduce the storage overhead, AccessEval restricts the application of LevelAdjust to a minimum number of NAND flash cells. As mentioned above, due to capacity loss in reduced state cell, configuring all NAND flash memory pages to reduced state is a suboptimal option. Therefore, it is only reasonable to configure part of the NAND flash memory to reduced state while the rest are kept in normal state. The key observation here is that not every data contributes equally to the overall LDPC overhead. Therefore, if we can identify the data which contribute to the majority of the LDPC overhead and only apply LevelAdjust to these data, i.e., storing them in reduced state pages, the impacts of LevelAdjust will be limited to a small scale. The LDPC overhead can still be greatly reduced while the incurred system storage capacity loss is minimized. To achieve this goal, we devise the AccessEval technique that can selectively apply LevelAdjust to the data that contribute the most to the overall LDPC overhead.
+The LDPC overhead contributed by a data depends on the LDPC overhead per read and the read frequency of this data. Here the LDPC overhead per read is determined by the number of extra sensing levels needed to decode this data correctly. Based on Table I, the number of extra sensing levels is mainly decided by the retention time BER of this data. When the write frequency of a data is infrequent, the storage time of the data becomes long, causing high retention time BER. Hence, we can conclude that an IWFR data will contribute more to
+
+the overall LDPC overhead. Therefore, the key challenge in AccessEval lies in accurate identification of IWFR data.
+The architecture of the AccessEval design is shown in Fig. 7. The AccessEval module consists of three components: 1) IWFR identifier; 2) ReducedCell pool; and 3) AccessEval controller. IWFR identifier determines the proper data to be stored in reduced state pages. ReducedCell pool is a data structure recording the data stored in reduced state cells. The size of ReducedCell pool limits the maximum number of reduced state pages. AccessEval controller manages the data allocation between reduced state pages and normal state pages. During read operations, once a data is identified as IWFR data, it will be stored in a reduced state page. If the number of reduced state pages exceed the allowed maximum number, ReducedCell pool will first evict the least-recentlyaccessed data from the reduced state pages to normal state pages, and upcoming IWFR data is stored in the reduced state pages.
+Note that in AccessEval, data migration between reduced state pages and normal stage pages incurs extra program and erase operations. Improving the identification accuracy of IWFR data becomes essential to enhance the AccessEval efficiency. More details on the design of IWFR identifier will be discussed in following sections.
+B. High LDPC Overhead Data Identification
+Many techniques have been invented to recognize the frequently read and write data in [33]–[35]. All these techniques adopt only one constraint (e.g., frequently-read or frequently-write) in data identification process. However, our initial analysis shows that IWFR data are not necessarily frequently-read data. Table IV shows access patterns under seven workloads representing both enterprise and consumer applications. In this paper, we mainly focus on the read pattern evaluation and therefore choose the workloads with relatively high read ratios. Fin-2 traces are collected within one day. Websearch-1 and websearch-2 trace are collected within four days. prj-1 and prj-2 traces are collected in the research servers on the university campus for two days. win-1 and win-2 traces are collected on a win-7 desktop for two days. prj-1, prj-2, win-1, and win-2 have relatively high read ratios but different read access patterns from the websearch and fin-2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+TABLE V NONUNIFORM LEVELADJUST CONFIGURATION
+
+1175
+
+Fig. 8. IWFR identification flow.
+We define frequently read data as the read data with 20% highest count [33]. Here, the collected IWFR data includes write-once-multiple-read and read-only data. Table IV also shows the read patterns. The third column shows the ratio of frequently read data among all data. The fourth column shows the ratio of IWFR data among all read frequently data. From the table, we can see that frequently read data is not necessarily IWFR. IWFR data ratio varies a lot with workloads. In the fin-2 workload, there are less than 5% IWFR data in frequently read data. Except workload websearch-1 and websearch-2, less than 70% frequently read data are IWFR. Based on the analysis above, we can conclude that the existing techniques cannot be directly incorporated in AccessEval to identify IWFR data.
+To improve the identification accuracy of IWFR data, we design an IWFR identifier by separating frequently-writefrequently-read (FWFR) data from frequently read data. To realize FWFR data separation, we adopt an IWFR pool and an FWFR pool. A data can be recorded in the IWFR pool, or the FWFR pool, or excluded from both pools. A data cannot exist in the IWFR pool and the FWFR pool at the same time. The IWFR pool only records the block numbers of read data. By adopting an LRU cache replacement policy, the infrequent read data is evicted. Naturally, the data left in the IWFR pool is IWFR data. Newly or frequently written data has low retention time bit errors and incurs no extra sensing levels. Therefore, such a data should be kept away from the IWFR pool. To prevent the newly/frequently written data from entering the IWFR pool, the FWFR pool is adopted. The FWFR pool records the block numbers of both write and read data. If there is a write request, the data block number is recorded in the FWFR pool. If there is a read request and its data block number is already recorded in the FWFR pool, it may be an FWFR data. Hence, the read data should be continuously stored in the FWFR pool. As such, the FWFR data is kept in the FWFR pool and excluded form the IWFR pool. As the read data can be recorded in the FWFR pool, the FWFR pool may record a data that is written once but read frequently. The write-once-read-frequently data can be IWFR data. In such a case, a data should migrate to the IWFR pool if reading the data incurs extra sensing levels. Similar to the IWFR pool, the FWFR pool also adopt LRU cache replacement policy. As such, FWFR data can be left in the FWFR pool.
+
+Based on the rules above, we design an IWFR identification flow in Fig. 8. Upon receiving a write request, IWFR identifier first checks whether the write block number is recorded in the IWFR pool. If so, the write block number should be removed from the IWFR pool. Thereby, no newly written data which has low BER is recorded in the IWFR pool and the IWFR utilization is improved. The write block number will be recorded in the FWFR pool. Upon receiving a read request, we first check whether its data block number has been recorded in the FWFR pool. If so, we need to determine whether the data should migrate to the IWFR pool. This is because the FWFR pool records both read and write data, there may be IWFR data in it (e.g., write-once-read-frequently data). If reading the data in the FWFR pool incurs extra sensing levels for correct decoding, we should move the data to the IWFR pool to determine whether it is an IWFR data. Otherwise, the data should be still kept in the FWFR pool since the data has low BER. If the read data is not in the FWFR pool, its block number needs to be recorded in the IWFR pool if we have not done so.
+To determine an IWFR data, we will check the read frequency of the data recorded in the IWFR pool during read operations. In addition to read frequency, we also take the data storage time into account to estimate LDPC overhead. In IWFR pool, the data may have been stored for different time periods. Some data are recently written while some data are written long time ago. The longer the data have been stored for, the higher extra sensing levels they may need. While recently written data incurs no or a few extra sensing levels, the less recently written data have higher sensing levels. By considering both access patterns and sensing levels, an LDPC overhead estimation rule is constructed as follows: in IWFR pool, the access frequency of a data is divided into N levels (Lf ) while its soft sensing levels are divided into M buckets (Lsensing). LDPC overhead is measured by Lf × Lsensing. Finally, if the LDPC overhead of a data exceeds a predefined threshold, this data will be stored in reduced state pages.
+VII. EXPERIMENTS
+In this section, we will first evaluate LevelAdjust efficiency and then show experimental results of our AccessEval technique.
+A. LevelAdjust Efficiency
+Experiments were performed to evaluate the effectiveness of LevelAdjust in LDPC overhead reduction. The values of BER are obtained from Monte-Carlo simulations. Three NUNMA configurations are explored to find out the optimal device parameters for BER reduction. The program verify and read reference voltages of three NUNMA configurations are listed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1176
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+Fig. 9. Program BER in reduced state cells.
+
+in Table V. Regular MLC NAND flash cell (i.e., the normal state cell) is used as the baseline in our comparison. Parameters adopted in the experiments are the same as that in Section III. We first simulate program BERs and retention time BERs before and after applying LevelAdjust. Then the corresponding LDPC overheads based on the simulated BER is evaluated.
+Program BERs of reduced state cells under different configurations are shown in Fig. 9. We found that compared with the baseline, program BERs can be reduced by up to 6× in NUNMA 1 due to enlarged noise margin. The program BER of NUNMA 3 is 50% and 20% higher than NUNMA 1 and 2, respectively. This is because that the verify voltage in NUNMA 3 is higher than that in NUNMA 1 and 2, causing more prominent cell-to-cell interference. Based on the result in [13], the BER limit that triggers extra sensing levels is 4 × 10−3. Nonetheless, the program BERs of three NUNMA configurations are all lower than the limit. Therefore, none of them incurs extra sensing levels during program operation.
+The simulated retention time BERs of reduced state cells under three NUNMA configurations are shown in Fig. 10. On average, BERs are reduced by 2×, 5×, and 9× under these three NUNMA configurations, respectively. NUNMA 3 achieves the lowest retention time BER because high verify voltage provides more retention time noise margin. The highest retention time BER of NUNMA 3, i.e., 1.51 × 10−3, occurs after one month and 6000 P/E cycles. Again, it is lower than the BER limit that incurs extra sensing levels. Among all NUNMA configurations, NUNMA 3 achieves the lowest combined program and retention time BERs, which correspond to the minimum LDPC overhead. No extra sensing levels will be required.
+
+Fig. 10. Retention time BERs under three NUNMA configurations. (a) Retention time BER at P/E cycle 2000. (b) Retention time BER at P/E cycle 3000. (c) Retention time BER at P/E cycle 4000. (d) Retention time BER at P/E cycle 5000. (e) Retention time BER at P/E cycle 6000.
+
+B. AccessEval Performance Evaluation
+In this section, we will evaluate the effectiveness of the proposed AccessEval design. We will first evaluate the accuracy of IWFR identification technique since AccessEval efficiency heavily depends on IWFR identification. We will compare read and overall performance gain under the systems with and without AccessEval design. In the experiments, we will also investigate how P/E cycle counts affect AccessEval efficiency. Finally, we will evaluate AccessEval’s impact on flash memory endurance.
+
+We assume that the target UBER is 10−15. In the simulated system, a 8/9-rate LDPC (512 B coding redundancy per 4 KB user data) is employed to protect data integrity. The storage system requires that NAND flash be used under 6000 P/E cycle count.
+First we show the IWFR identification technique efficiency by evaluating false identification rate. We adopt MBF [33] as a baseline to identify IWFR data in read-only pool. The MBF size is set to 212. We set two Lf and two Lsensing levels. In IWFR identification experiment, sensing levels of 1–2 and 4–6 belong to Lsensing level 1 and level 2, respectively. We set
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+TABLE VI MLC NAND FLASH SPECIFICATION
+
+1177
+
+Fig. 11. Average false identification rate of IWFR identification technique.
+
+two Lf levels, which are 3 and 4. The predefined soft-decision cost threshold is 4. The simulation result is shown in Fig. 11. The false identification rate of the proposed IWFR identification technique is only 10%. Compared with MBF, the average false identification rate is reduced by 4.5×. The maximum improvement occurs in fin-2 workload since most frequently read data is FRFW in this workload. Under the read-only intensive workloads Web-1 and Web-2, False identification rates achieved by two techniques are similar.
+The achieved performance gain can be obtained by comparing the read and overall average response time of the system before and after LevelAdjust and AccessEval are applied. The simulations on AccessEval performance are performed on the simulator Flashsim [36].
+In this experiment, we adopt a simple page-level FTL. The proposed AccessEval design is incorporated into the simulator with a 256 GB capacity. Flashsim performs response time evaluation by estimating the LDPC decoding read latency. The LDPC decoding latency is the sum of latencies of one read operation and extra sensing operations. The latency of extra sensing operation is the product of timing overhead of one extra sensing level and the extra sensing levels. The timing overhead of each sensing level is set to 8 μs and data transfer time is set to 20 μs [13]. The extra sensing level is determined by cell type (i.e., normal state or reduced state cell), P/E cycle count and data storage time. When data is stored in Flashsim, its write time and the cell type are recorded. The data storage time can be calculated by comparing the read time and the write time. For the regular MLC NAND cell and normal state cell, the extra sensing level is obtained by consulting Table I according to the P/E cycle count and the data storage time. Parameters of regular MLC NAND flash and normal state cells are summarized in Table VI [37], [38]. For reduced state cells, NUNMA 3 configuration is adopted and therefore no extra sensing overhead is introduced when the P/E cycle count is fewer than or equal to 6000. The LDPCSSD scheme [13] is employed as our LDPC design baseline and the UBER and LDPC configuration listed in Section III is used. Two storage system configurations are tested: 1) the one only has LevelAdjust design (LevelAdjust-only) and 2) the one incorporates both LevelAdjust and AccessEval (LevelAdjust+AccessEval). The storage systems are configured with 30% over-provisioning portion. In AccessEval, the
+
+Fig. 12. Read and overall performance under AccessEval design. (a) Normalized read average response time under AccessEval design. (b) Normalized overall average response time under AccessEval design.
+size of storage space that can be used for LevelAdjust is limited to 64 GB. After LevelAdjust, the capacity of this portion is reduced to 48 GB with 16 GB capacity loss. The benchmarks in Table IV are used in the experiments.
+Fig. 12(a) shows the read response time reduction achieved in our simulated two configurations. The P/E cycle count of NAND flash memory is set to 6000. Compared with baseline, LevelAdjust can reduce read latency by 14% on average with 25% capacity loss. The maximum response time reduction occurs at two read-intensive workloads: 1) Web-1 and 2) Web-2. As a comparison, the average read response time reduction in AccessEval+LevelAdjust is 10%. Although the read response time is slightly lower than that achieved in LevelAdjust, AccessEval+LevelAdjust successfully reduces the capacity loss down to 16 GB, or 6.25% of the total NAND flash storage system capacity.
+The reduction of the overall response time in different configurations, including both read and write latencies, is summarized in Fig. 12(b). In order to compensate the capacity loss, part of the over-provisioning space is used as the normal storage capacity in both configurations. In LevelAdjust, if the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1178
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+Fig. 13. Impact of P/E cycles.
+
+25% capacity loss is fully compensated, the remaining overprovisioning space is only 5% of the normal system storage capacity. The significantly reduced over-provisioning space dramatically increases garbage collection frequency and therefore increases the write latency. In the last four benchmarks, for example, the overall system response time of LevelAdjust is even longer than the baseline. It indicates that the incurred write latency increase even exceeds the read latency reduction achieved by LevelAdjust. In AccessEval+LevelAdjust, however, the capacity of over-provisioning space only slightly decreases (i.e., 30% → 23.75%). The impact on garbage collection and write latency is small. The overall system response time is reduced by 8% on average.
+Experiment results also show that the performance gain of AccessEval+LevelAdjust increases with P/E cycle count compared to the baseline system. As shown in Fig. 13, the average response time reduction achieved by AccessEval+LevelAdjust with respect to baseline system increases from 2% to 11% on average when the P/E cycle count increases from 3000 to 6000.
+Finally, we evaluate the impact of our techniques on system endurance. Simulation is carried out at a P/E cycle count of 6000. Fig. 14(a) shows the write count increases with LevelAdjust+AccessEval, which is 6% on average. The write count increase comes from the data migration between normal state cells and reduced state cells. The maximum relative write increase happens in Web-1 and Web-2 workloads simply because their original write numbers are low. Fig. 14(b) shows the erase count increases with LevelAdjust+AccessEval. On average, the erase count increases by 19% across all the simulated workloads. Although Web-1 and Web-2 have high relative increase in write counts, their erase counts almost stay the same. This is because the actual write count is too small to invoke large volume of garbage collections.
+Since LevelAdjust+AccessEval only applies when the system BER is high enough to incur extra sensing levels, its impact on system lifetime is quite marginal. Table I shows that LevelAdjust+AccessEval is needed only when the P/E cycle exceeds 4000. Hence, the average lifetime reduction across all the workloads is only 7%, as shown in Fig. 15.
+The impact of FlexLevel design on system lifetime is estimated in Fig. 15. The lifetime of the FlexLevel system is normalized against the system without FlexLevel. At the early P/E cycling stage, the BER is low and no extra sensing level
+
+Fig. 14. Write count and erase count under FlexLevel technique. (a) Write count increase under LevelAdjust+AccessEval technique. (b) Erase count increase under LevelAdjust+AccessEval technique.
+Fig. 15. Normalized lifetime under the FlexLevel system design.
+is incurred under LDPC decoding. Hence, FlexLevel technique is not needed and no endurance reduction is incurred. At the post P/E cycling stage, extra sensing levels are incurred and the FlexLevel technique is applied. Let Pes and Pmax denote the lowest P/E cycle inducing extra sensing levels and the maximum system P/E cycle count, respectively. Rer denotes the erase count increase rate of FlexLevel. The endurance reduction incurred by FlexLevel can be calculated as [(Pmax − Pes)/Rer + Pes]/Pmax. Table I shows that the FlexLevel technique is needed only when the P/E cycle exceeds 4000 and therefore Pes is set to 4000. Rer can be obtained from Fig. 14. Based on the calculation above, the average lifetime reduction across all the workloads is only 7%.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+GUO et al.: FLEXLEVEL NAND FLASH STORAGE SYSTEM DESIGN TO REDUCE LDPC LATENCY
+
+1179
+
+VIII. CONCLUSION
+In this paper, we propose a FlexLevel system design to reduce LDPC code induced read latency. The proposed devicelevel LevelAdjust technique can dynamically reduce BER via Vth level reduction. By minimizing BER, extra sensing levels can be effectively reduced and read performance is improved. To balance performance improvement and density loss, we propose AccessEval technique at the system level. Instead of employing LevelAdjust to all data stored in NAND flash memory, AccessEval only applies LevelAdjust to the data with high LDPC overhead. As such, LDPC overhead is effectively reduced while the incurred capacity loss is kept at a minimum level. Simulation results show that compared with the best prior works, the proposed design can achieve read speedup by up to 11% with marginal capacity loss.
+REFERENCES
+[1] A. Shilov. SanDisk Is Cautious About Expanding NAND Flash Production Capacities. Accessed on Aug. 1, 2015. [Online]. Available: http://www.kitguru.net/components/memory/anton-shilov/sandisk-iscautious-about-expanding-nand-flash-production-capacities/
+[2] Y. Pan, G. Dong, Q. Wu, and T. Zhang, “Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,” in Proc. IEEE 18th Int. Symp. High Perform. Comput. Architect. (HPCA), New Orleans, LA, USA, 2012, pp. 1–10.
+[3] N. Mielke et al., “Bit error rate in NAND flash memories,” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), Phoenix, AZ, USA, 2008, pp. 9–19.
+[4] K. Prall, “Scaling non-volatile memory below 30nm,” in Proc. IEEE Non Volatile Semicond. Memory Workshop, Monterey, CA, USA, 2007, pp. 5–10.
+[5] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,” in Proc. Design Autom. Test Europe Conf. Exhibit. (DATE), Dresden, Germany, 2012, pp. 521–526.
+[6] D. Wang, J. Guo, K. Bu, and Y. Chen, “Reduction of data prevention cost and improvement of reliability in MLC NAND flash storage system,” in Proc. Int. Conf. Comput. Netw. Commun. (ICNC), Honolulu, HI, USA, 2014, pp. 259–263.
+[7] H. Sun, P. Grayson, and B. Wood, “Quantifying reliability of solidstate storage from multiple aspects,” in Proc. IEEE Workshop Stor. Netw. Architect. Parallel I/O (SNAPI), vol. 11. Denver, CO, USA, 2011, pp. 1–6.
+[8] S. Tanakamaru, M. Doi, and K. Takeuchi, “Error-prediction analyses in 1X, 2X and 3Xnm NAND flash memories for system-level reliability improvement of solid-state drives (SSDs),” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), Monterey, CA, USA, 2013, pp. 3B.3.1–3B.3.6.
+[9] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[10] E. Yaakobi et al., “Error characterization and coding schemes for flash memories,” in Proc. IEEE GLOBECOM Workshops, Miami, FL, USA, 2010, pp. 1856–1860.
+[11] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[12] J. Guo et al., “DA-RAID-5: A disturb aware data protection technique for NAND flash storage systems,” in Proc. Conf. Design Autom. Test Europe (DATE), Grenoble, France, 2013, pp. 380–385.
+[13] K. Zhao et al., “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. USENIX Conf. File Storage Technol. (FAST), San Jose, CA, USA, 2013, pp. 243–256.
+[14] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Conf. Design Autom. Test Europe (DATE), Grenoble, France, 2013, pp. 1285–1290.
+[15] J. Wang, T. A. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. IEEE Glob. Telecommun. Conf. (GLOBECOM), Houston, TX, USA, 2011, pp. 1–6.
+
+[16] W. Zhao, G. Dong, H. Sun, N. Zheng, and T. Zhang, “Reducing latency overhead caused by using LDPC codes in NAND flash memory,” EURASIP J. Adv. Signal Process., no. 1, pp. 1–6, 2012.
+[17] G. Dong, Y. Zou, and T. Zhang, “Reducing data transfer latency of NAND flash memory with soft-decision sensing,” in Proc. IEEE Int. Conf. Commun. (ICC), Ottawa, ON, Canada, 2012, pp. 7024–7028.
+[18] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[19] J. Guo, Z. Chen, D. Wang, Z. Shao, and Y. Chen, “DPA: A data pattern aware error prevention technique for NAND flash lifetime extension,” in Proc. Asia South Pac. Design Autom. Conf. (ASP-DAC), Singapore, 2014, pp. 592–597.
+[20] N. H. Seong, S. Yeo, and H.-H. S. Lee, “Tri-level-cell phase change memory: Toward an efficient and reliable memory system,” in Proc. ISCA, Tel Aviv, Israel, 2013, pp. 440–451.
+[21] D. H. Yoon, J. Chang, R. S. Schreiber, and N. P. Jouppi, “Practical nonvolatile multilevel-cell phase change memory,” in Proc. Int. Conf. High Perform. Comput. Netw. Stor. Anal. (SC), Denver, CO, USA, 2013, pp. 1–12.
+[22] S. Im and D. Shin, “ComboFTL: Improving performance and lifespan of MLC flash memory using SLC flash buffer,” J. Syst. Architect., vol. 56, no. 12, pp. 641–653, 2010.
+[23] S. Lee, K. Ha, K. Zhang, J. Kim, and J. Kim, “FlexFS: A flexible flash file system for MLC NAND flash memory,” in Proc. USENIX Annu. Techn. Conf. (ATC), San Diego, CA, USA, 2009, p. 9.
+[24] T. Cho et al., “A 3.3 V 1 Gb multi-level NAND flash memory with nonuniform threshold voltage distribution,” in IEEE Int. Solid State Circuits Conf. (ISSCC) Dig. Tech. Papers, 2001, pp. 28–29.
+[25] T. Tanaka, T. Tanzawa, and K. Takeuchi, “A 3.4-Mbyte/sec programming 3-level NAND flash memory saving 40% die size per bit,” in Symp. VLSI Circuits Dig. Techn. Papers, 1997, pp. 65–66.
+[26] K. C. Hsien, K. S. Chao, and Y. H. Chen, “Optimal Vth window in endurance and retention enhancement of MLC flash,” in Proc. 20th IEEE Int. Symp. Phys. Failure Anal. Integr. Circuits (IPFA), Suzhou, China, 2013, pp. 650–653.
+[27] K. Fukuda, Y. Shimizu, K. Amemiya, M. Kamoshida, and C. Hu, “Random telegraph noise in flash memories—Model and technology scaling,” in Proc. IEEE Int. Electron Devices Meeting (IEDM), Washington, DC, USA, 2007, pp. 169–172.
+[28] J. Guo et al., “FlexLevel: A novel NAND flash storage system design for LDPC latency reduction,” in Proc. 52nd Annu. Design Autom. Conf. (DAC), San Francisco, CA, USA, 2015, pp. 1–6.
+[29] R.-S. Liu, C.-L. Yang, and W. Wu, “Optimizing NAND flash-based SSDs via retention relaxation,” in Proc. USENIX Conf. File Storage Technol. (FAST), San Jose, CA, USA, 2012, pp. 243–256.
+[30] C. Sun, K. Miyaji, K. Johguchi, and K. Takeuchi, “SCM capacity and NAND over-provisioning requirements for SCM/NAND flash hybrid enterprise SSD,” in Proc. IEEE Int. Memory Workshop (IMW), Monterey, CA, USA, 2013, pp. 64–67.
+[31] OLTP Application I/O and Search Engine I/O. Accessed on Jun. 1, 2007. [Online]. Available: http://traces.cs.umass.edu/index.php/storage/storage
+[32] J. Guo, J. Yang, Y. Zhang, and Y. Chen, “Low cost power failure protection for MLC NAND flash storage systems with PRAM/DRAM hybrid buffer,” in Proc. Design Autom. Test Europe Conf. Exhibit. (DATE), Grenoble, France, 2013, pp. 859–864.
+[33] D. Park and D. H. Du, “Hot and cold data identification for flash memory using multiple bloom filters,” in Proc. USENIX Conf. File Stor. Technol. (FAST), San Jose, CA, USA, 2011, pp. 1–6.
+[34] T. Luo, R. Lee, M. P. Mesnier, F. Chen, and X. Zhang, “hStorageDB: Heterogeneity-aware data management to exploit the full capability of hybrid storage systems,” Proc. Endowment, vol. 5, no. 10, pp. 1076–1087, 2012.
+[35] J.-W. Hsieh, T.-W. Kuo, and L.-P. Chang, “Efficient identification of hot data for flash memory storage systems,” ACM Trans. Stor., vol. 2, no. 1, pp. 22–40, Feb. 2006.
+[36] A Simulator for Various FTL Scheme. Accessed on Jun. 1, 2009. [Online]. Available: http://csl.cse.psu.edu/?q=node/322
+[37] J. Guo, C. Min, T. Cai, H. Li, and Y. Chen, “ObjNandsim: Object-based NAND flash device simulator,” in Proc. 5th Non Volatile Memory Syst. Appl. Symp. (NVMSA), Daegu, South Korea, 2016, pp. 1–6.
+[38] J. Guo, C. Min, T. Cai, and Y. Chen, “A design to reduce write amplification in object-based NAND flash devices,” in Proc. 11th IEEE/ACM/IFIP Int. Conf. Hardware/Software Codesign Syst. Synthesis (CODES+ISSS), 2016, pp. 1–6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+1180
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 36, NO. 7, JULY 2017
+
+Jie Guo received the B.S and M.S. degrees from the University of Electronic Science and Technology of China, Chengdu, China, in 2005 and 2008, and the Ph.D. degree from the University of Pittsburgh, Pittsburgh, PA, USA, in 2016.
+She has three-year industry experience in solid state disk development. Her current research interests include emerging nonvolatile memory, NAND flash memory error patterns, and NAND flash memory-based storage system.
+
+Danghui Wang received the B.S. degree in computer software, the M.S. degree in computer architecture, and the Ph.D. degree in computer application from Northwestern Polytechnical University, Xi’an, China, in 1997, 2000, and 2005, respectively.
+He joined the School of Computer Science and Technology, Northwestern Polytechnical University in 2000, where he is currently an Associate Professor. His current research interests include nonvolatile memory, integrated circuit design, reliability of integrated circuit, and computer architecture.
+
+Wujie Wen (M’15) received the M.S. degree from Tsinghua University, Beijing, China, in 2010, and the Ph.D. degree from the University of Pittsburgh, Pittsburgh, PA, USA, in 2015, both in electronic engineering.
+He is currently an Assistant Professor with ECE Department, Florida International University, Miami, FL, USA. He was with AMD, Sunnyvale, CA, USA, and Broadcom, Irvine, CA, USA, for graph processing unit and wireless communication chip designs. His current research interests include emerging memory, very large scale integration circuit/chip design, neuromorphic computing, and hardware security. Dr. Wen was a recipient of the 49th DAC A. Richard Newton Graduate Scholarship–the Prestigious Ph.D. Scholarship (one awardee per year) in Electronic Design Automation society, the 2014 Bronze Medal of ACM Special Interest Group on Design Automation SRC in ICCAD, the 2014 DAC Best Paper Candidate Nomination, the 2015 DAC Ph.D. Forum Best Poster Presentation, and the 2016 DATE Best Paper Candidate Nomination.
+Jingtong Hu (M’13) received the B.E. degree from the School of Computer Science and Technology, Shandong University, Jinan, China, in 2007, and the Ph.D. degree in computer science from the University of Texas at Dallas, TX, USA in 2013.
+He is currently an Assistant Professor with the School of Electrical and Computer Engineering, Oklahoma State University, OK, USA. His current research interests include emerging nonvolatile memory, embedded systems, field programmable gate array, and cyber-physical systems.
+
+Hai Li (SM’16) received the B.S. and M.S. degrees in microelectronics from Tsinghua University, Beijing, China, and the Ph.D. degree from the Electrical and Computer Engineering Department, Purdue University, West Lafayette, IN, USA, in 2004.
+She is currently an Associate Professor with the Department of Electrical and Computer Engineering, University of Pittsburgh, Pittsburgh, PA, USA. She was with Qualcomm Inc., San Diego, CA, USA, Intel Corporation, Mountain View, CA, USA, Seagate Technology, Cupertino, CA, USA, and the Polytechnic Institute of New York University, Brooklyn, NY, USA. She has over 100 technical papers published in refereed journals and conferences and 61 U.S. patents granted. She authored a book entitled Nonvolatile Memory Design: Magnetic, Resistive, and Phase Changing (CRC Press, 2011). Her current research interests include memory design and architecture, neuromorphic architecture for brain-inspired computing systems, and architecture/circuit/device cross-layer optimization for low power and high performance. Dr. Li is a Senior Member of ACM.
+Yiran Chen (SM’16) received the B.S. (Hons.) and M.S. (Hons.) degrees from Tsinghua University, Beijing, China, and the Ph.D. degree from Purdue University, West Lafayette, IN, USA, in 2005.
+He joined the University of Pittsburgh, Pittsburgh, PA, USA, in 2010, as Assistant Professor with the Electrical and Computer Engineering Department, being then promoted to an Associate Professor in 2014. He is currently holding the Bicentennial Alumni Faculty Fellow and serves as the Co-Director of the Evolutionary Intelligence Laboratory (www.ei-lab.org), where he focuses on the research of nonvolatile memory and storage systems, neuromorphic computing, and mobile applications. He has published one book, a dozen book chapters, and over 250 journal and conference papers. He currently holds 90 U.S. and international patents with 13 other pending applications. Dr. Chen is an Associate Editor of the IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, the IEEE DESIGN & TEST OF COMPUTERS, the IEEE EMBEDDED SYSTEMS LETTERS, ACM Journal of Emerging Technologies in Computing Systems, and ACM Special Interest Group on Design Automation (SIGDA) E-news, and executive committee of ACM SIGDA, and served on the technical and organization committees of over 40 international conferences.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:07:17 UTC from IEEE Xplore. Restrictions apply.
+
+

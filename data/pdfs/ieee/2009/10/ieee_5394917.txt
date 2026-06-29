@@ -1,0 +1,483 @@
+Forty-Seventh Annual Allerton Conference Allerton House, UIUC, Illinois, USA September 30 - October 2, 2009
+
+FPGA-Based Low-Complexity High-Throughput Tri-Mode Decoder for Quasi-Cyclic LDPC Codes
+Xiaoheng Chen, Qin Huang, Shu Lin, and Venkatesh Akella
+
+Abstract— This paper presents an FPGA-based implementation of a tri-mode decoder for decoding the cyclic (4095,3367) Euclidean geometry LDPC code which has minimum distance 65 and no trapping set of size less than 65. The implementation integrates three compatible decoding algorithms in a single decoder. The three decoding algorithms are the onestep majority-logic decoding (OS-MLGD) algorithm and two iterative binary message passing algorithms (IBMP) derived from the OS-MLGD algorithm, one based on soft reliability information and the other on hard reliability information. All three algorithms requires only binary logical operations, integer additions, and single-bit messages, which makes them significantly less complex in terms of hardware requirements than sum-product algorithm, with a very modest loss in performance. The implementation is based on the partially parallel architecture and is optimized to take advantage of the high-speed dual-ported block RAMs in a Xilinx Virtex-4 FPGA. An optimization called memory sharing is introduced to take advantage of the configurable data width (word size) of the block RAMs to accommodate the 262080 edges in the Tanner graph of the (4095,3367) code. A technique is introduced to decode two codewords simultaneously to take advantage of the depth of the block RAMs. As a result, the proposed implementation achieves a throughput of 1.9 Gbps on a Virtex4 LX160 FPGA and supports bit-error rate simulation down to 10−11 in a day or so.
+I. INTRODUCTION
+The growing need for cheaper, faster, and more reliable communication systems have forced many researchers to seek means to attain the ultimate limits of reliable communication. LDPC codes are currently the most promising coding technique to achieve Shannon capacity for a wide range of channels. These codes were first discovered by Gallager in 1962 [1] and then rediscovered in the late 1990s [2], [3]. Ever since their rediscovery, design, construction, encoding, decoding, analysis and applications of LDPC codes have become focal points of research. Over the last 10 years, hundreds of papers have been published on these subjects, many classes of well-performing LDPC codes have been constructed, and various algorithms for decoding these codes have been devised. The decoding algorithms that have been devised provide a wide spectrum of trade-offs between performance, complexity and decoding speed.
+The sum-product algorithm (SPA) [3] provides the best performance but requires the most computational complexity
+This research was supported by NSF under the Grant CCF-0727478, NASA under the Grants NNX07AK50G and NNX09AI21G, and the gift grants from Intel and Northrop Grumman Space Technology.
+Xiaoheng Chen, Qin Huang, Shu Lin, and Venkatesh Akella are with the Department of Electrical and Computer Engineeringis, University of California, Davis, CA 95616, U.S.A. {xhchen, qinhuang, shulin, akella}@ucdavis.edu
+
+among all the decoding algorithms for LDPC codes. The min-sum algorithm (MSA) [4] requires less computational complexity than the SPA; however, it suffers a small performance degradation compared to the SPA. Hard-decision decoding is the simplest in complexity; however, its simplicity results in a significant performance loss compared to the SPA. Recently, two reliability-based iterative decoding algorithms are proposed [5], which provide efficient tradeoffs between performance and decoding complexity. Both algorithms are devised based on the simple concepts of the OSMLGD. The soft reliability-based iterative MLGD (SRBIMLGD) algorithm either outperforms or performs just as well as the existing WBF-algorithms and the newly proposed differential binary message-passing decoding (DBMPD) algorithm [6] in performance, but requires less decoding complexity and has a faster rate of decoding convergence. The hard reliability-based iterative MLGD (HRBI-MLGD) algorithm is devised for communication and storage systems where either soft-input information is not available to the channel decoder or a simple decoder is required. The decoder works under three modes to meet different users’ requirements: OS-MLGD mode is preferred for highest throughput demand and high signal-to-noise (SNR) regime; SRBIMLGD mode is chosen to achieve the best performance among three modes; HRBI-MLGD is selected when softinput information is not available. The proposed decoding algorithms use 1-bit messages and require only logical operations and integer additions. As a result, they can be implemented with simple logic circuits. Besides, given that the width of the messages is only 1-bit, it reduces the interconnect (wiring) complexity significantly, which in turn improves resource utilization on a FPGA and the clock frequency.
+The implementation is based on the partially parallel architecture and is optimized to take advantage of the highspeed dual-ported block RAMs in a Xilinx Virtex-4 FPGA. An optimization called memory sharing is introduced to take advantage of the configurable data width (word size) of the block RAMs to accommodate the 262080 edges in the Tanner graph of the (4095,3367) code. A technique is introduced to decode two code words simultaneously to take advantage of the depth of the block RAMs. As a result, the proposed implementation achieves a throughput of 1.9 Gbps on a Virtex-4 LX160 FPGA and supports bit-error rate simulation up to 10−11 in a day or so.
+The rest of the paper is organized as follows. In Section II we present the technical details of the three decoding algorithms. In Section III we present the baseline architecture
+
+978-1-4244-5871-4/09/$26.00 ©2009 IEEE
+
+600
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+for the integrated tri-mode decoder and the memory sharing optimization to accommodate the large number of edges in the available block RAMs in the Virtex-4 FPGA. In Section IV we present a technique to decode two codewords simultaneously using the same datapath to further improve the throughput and utilization of the FPGA resources. In Section V we present the results and in Section VI we compare the proposed implementation method with related approaches in literature.
+II. A UNIFIED VIEW OF OS-, SRBI-, AND HRBI-MLGD ALGORITHMS
+The SRBI-MLGD and the HRBI-MLGD algorithms are identical in decoding steps in each decoding iteration except for the initialization and reliability measures of received symbols. The OS-MLGD is simply one iteration of the hard reliability information based IBMP. They are summarized in this section in a unified view.
+Let C be a (γ,ρ)-regular LDPC code of length n given by the null space of an m×n matrix H = [hi,j] over GF(2) with column and row weights γ and ρ, respectively. The rows (or columns) of H satisfies the following constraint: no two rows (or two columns) have more than one place where they both have 1-components. This constraint on rows and columns is referred to as the RC-constraint. This RC-constraint ensures that the Tanner graph of the code given H is free of cycles of length 4. An n-tuple v over GF(2) is a codeword in C if and only if vHT = 0. Let v be transmitted over the binary-input AWGN channel with two-sided power spectral density N0/2. Assume transmission using BPSK signaling with unit energy per signal. Then the codeword v is mapped into a sequence of BPSK signals (1 − 2v0, 1 − 2v1, . . . , 1 − 2vn−1) for transmission. Suppose v is transmitted. Let y = (y0, y1, . . . , yn−1) be the sequence of samples at the output of the channel receiver sampler. This sequence is commonly called a soft-decision received sequence. The samples of y are real numbers with yj = (1 − 2vj) + xj for 0 ≤ j < n, where xj is a Gaussian random variable with zero-mean and variance N0/2.
+If each sample of y is quantized in two levels, we obtain a binary hard-decision sequence z = (z0, z1, . . . , zn−1). For soft-reliability based decoding, the samples of y are symmetrically clipped and uniformly quantized into 2b levels, symmetric with respect to the origin. Each interval has a length ∆ and is represented by b bits. For 0 ≤ j < n, let qj denote the quantized value of the sample yj, which is an integer representation of one of the 2b quantization intervals. Therefore, the range of qj is [−(2b−1−1), +(2b−1−1)]. With this quantization, the magnitude |qj| of the quantized sample qj gives a soft measure of the reliability of the hard-decision received bit zj.
+For 0 ≤ i < m and 0 ≤ j < n, we define Ni = {j : 0 ≤ j < n, hi,j = 1}, and Mj = {i : 0 ≤ i < m, hi,j = 1}. Let kmax be the maximum number of iterations to be performed. When mode is OS-MLGD, kmax is fixed at 1; For other modes, kmax is programmable. For 0 ≤ k ≤ kmax, let: 1) z(k) = (z0(k), z1(k), . . . , zn(k−)1) be the hard decision
+
+vector generated in the kth decoding iteration; 2) s(k) = (s(0k), s(1k), . . . , sm (k−) 1) = z(k)HT be the syndrome of z(k); and 3) Rj(k) be the reliability measure of the jth received bit zj(k) of z(k). The range of Rj(k) is [−(2b−1 −1), +(2b−1 −1)] for SRBI-MLGD and [−γ, γ] for HRBI-MLGD. For OSMLGD, Rj(k) is not provided.
+The decoding algorithm can be formulated as below.
+Initialization: Set k = 0, z(0) = z and the maximum
+number of iterations to kmax. When the mode is HRBIMLGD, set Rj(0) = +γ for zj(0) = 0 and Rj(0) = −γ for zj(0) = 1. When the mode is SRBI-MLGD, set Rj(0) = qj.
+
+(1) Compute the syndrome s(k) = z(k)HT of z(k). If s(k) = 0, stop decoding and output z(k) as the decoded
+
+codeword; otherwise, go to Step 2.
+
+(2) If k = kmax, stop decoding and declare a decoding
+
+failure; otherwise, go to Step 3.
+
+(3) For the OS-MLGD mode, compute the the integer sum
+
+Ej(k) by Ej(k) =
+
+(1 − 2si).
+
+i∈Mj
+
+For the S(H)RBI-MLGD mode, compute the integer
+
+sum Ej(k) by Ej(k) =
+
+(1 − 2(s(ik) zj(k))) and
+
+i∈Mj
+
+update the reliability measure of the received bit of
+
+z(k) by Rj(k+1) = Rj(k) + Ej(k), with 0 ≤ j < n.
+
+(4) k ← k + 1. For the OS-MLGD mode, with 0 ≤ j < n,
+
+if Ej(k) < 0, decode zj(k) into its complement zj(k) =
+
+1 + zj(k); otherwise zj(k) = zj(k−1). For the S(H)RBI-
+
+MLGD mode, with 0 ≤ j < n, make the following
+
+hard-decision: 1) zj(k) = 0, if Rj(k) ≥ 0; 2) zj(k) =
+
+1, if Rj(k) < 0. Form a new received vector z(k) =
+
+(z0(k), z1(k), . . . , zn(k−)1). Go to Step 1.
+
+III. A TRI-MODE DECODER FOR THE (4095, 3367) EG CODE
+A. The (4095,3367) Euclidean geometry code
+The (4095,3367) Euclidean geometry code [7] is constructed based on the two-dimensional Euclidean geometry EG(2,26) over GF(26). The parity-check matrix H of this code consists of a single 4095 × 4095 circulant with both column and row weights 64, which is formed by the incidence vectors of the lines of EG(2,26) not passing through the origin. Since the parity-check matrix of this code satisfies the RC-constraint, 64 syndrome-sums orthogonal on any received bit can be formed. The code has a minimum distance of exactly 65. The code has a minimum distance of 65, and does not have trapping sets of size less than 65 [8].
+To implement the code efficiently, first we convert the cyclic (4095, 3367) code to its equivalent quasi-cyclic form
+
+601
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+as below:
+
+ A0,0 · · · A0,4 O0,5 · · · A0,64 
+
+ 
+
+...
+
+...
+
+...
+
+... . . .
+
+...
+
+ 
+
+
+
+H
+
+=
+
+ 
+
+
+
+A59,0 O60,0
+
+··· ···
+
+A59,4 A60,4
+
+A59,5 A60,5
+
+··· ···
+
+O59,64 A59,64
+
+
+
+ 
+
+,
+
+
+
+  
+
+...
+
+...
+
+...
+
+... . . .
+
+...
+
+  
+
+A64,0 · · · O64,4 A64,5 · · · A64,64 (1)
+
+where for 0 ≤ c < 65, 0 ≤ t < 65, Ac,t denotes a 63 × 63 circulant permutation matrix (CPM), Oc,t denotes a 63 × 63
+
+all-zero matrix. Each column has one all-zero sub-matrix, so
+
+there are 65 × 64 × 63 = 262080 edges in the underlying
+
+Tanner graph of this code.
+
+B. Partially Parallel Tri-mode Decoder
+The min-sum and sum-product algorithms to decode quasicyclic LDPC codes can be implemented efficiently using the partially parallel architecture template described in [9], [10]. In a partially parallel architecture, each CPM of the underlying H matrix (such as Ac,t in the above example) is mapped to a memory block, typically realized using a block RAM in a FPGA implementation. In each iteration of the message passing algorithm, the variable node units (VNU) and the check node units (CNU), read and write messages from these block RAMs. The key advantage of the quasi-cyclic code structure is that the VNU and CNU computations can be overlapped without introducing memory access conflicts. However, this requires a specific parameter called the waiting time, which can be calculated statically using the algorithm in [10]. The waiting time is used to schedule the memory accesses to the block RAMs to support overlapped message passing. Though this architecture is simple and efficient it poses a few challenges when we try to implement the trimode decoder for a large and complex code such as the (4095, 3367) code.
+First, the partially parallel architecture has to be modified to implement the SRBI-MLGD, HRBI-MLGD, and OSMLGD algorithms described above. Second, we would need 65 × (64 + 1) = 4225 block RAMs to directly realize the (4095,3367) code. However, even for the Virtex-4 LX160 FPGA we are using, which is the second largest in the Virtex4 FPGA family, this mapping is impractical, since it has less than 300 block RAMs. Finally, the algorithm to calculate the waiting time proposed in [10] is an exponential time algorithm, which makes it impractical for a large code like (4095,3367). The goal of the proposed implementation is to overcome these challenges and maximize the performance on a Virtex-4 FPGA. We do this in two steps. First, we will modify the partially parallel decoder to realize the trimode decoder and use a technique called memory sharing to address the problem of mapping the large number of CPMs using the available block RAM resources in a typical FPGA. We call this the baseline architecture. In Section IV we present a technique to decode two codewords simultaneously, which gives us the benefit of overlapped message passing without having to calculate the waiting time.
+
+in[0]
+
+LUT
+
+in[1]
+
+LUT
+
+in[63]
+
+LUT
+
+LUT LUT
+
+out[0] out[1]
+
+LUT
+
+out[63]
+
+Fig. 2. Check node unit for the sum-product algorithmadapted from [9]
+
+in[0]
+
+SM-2's
+
+in[1]
+
+SM-2's
+
+2's-SM 2's-SM
+
+z out[0] out[1]
+
+in[63]
+
+SM-2's
+
+2's-SM
+
+Fig. 3. Variable node unit for the sum-product algorithm adapted from [9]
+
+out[63]
+
+C. Baseline Tri-mode Decoder
+The tri-mode decoder architecture for the (4095, 3367) code is shown in Figure 1. Note that it is very similar to the partially parallel decoder architecture described above. Our implementation uses ∆ = 0.015625 as the quantization interval and 2 bits for integer and 6 bits to represent the fraction. The signal mode is a three bit input that determines which decoding algorithm is being used at a given time: 1) mode[0] = 1 denotes the OS-MLGD; 2) mode[1] = 1 denotes the SRBI-MLGD; 3) mode[2] =1 denotes the HRBI-MLGD. There are 65 check node units (CNUs) and 65 variable node units (VNUs), which perform step 1 and step 3 described in Section II. The control logic and the address generation logic are not shown here. The intrinsic memory is used to store R0(k), R1(k), . . . , Rn(k−)1 and z(k). The extrinsic memory is used to store s(k) and z(k). The intrinsic messages, extrinsic messages, and hard decision bits are grouped based on the CPM that they belong to and mapped to block RAMs. A modulo-63 counter is associated with each block RAM to generate the memory addresses It always counts from certain initial value (based on the offset within the CPM) and then wraps around to the starting address.
+Next, we describe the specific changes that were made to the partially parallel decoder architecture to realize the baseline tri-mode decoder.
+(1) In the initialization stage, the tri-mode decoder preprocesses the intrinsic messages represented in the sign-magnitude format as follows - when the mode is HRBI-MLGD or OS-MLGD, we set Rj(0) = +γ for zj(0) = 0 and Rj(0) = −γ for zj(0) = 1, and when the mode is SRBI-MLGD, we set Rj(0) = qj.
+
+602
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+mode[2:0]
+in[0][7:0] in[1][7:0]
+...
+in[64][7:0]
+
+mode[1]
+
+{in[64][7],1000000}
+in[64][7:0]
+
+0
+MUX
+1
+
+preprocess
+preprocess
+...
+preprocess
+
+in[0][7]
+in[1][7]
+...
+in[64][7]
+
+VNU0 ...
+
+VNU1 ...
+
+... CNU0
+
+... CNU1
+
+out[64:0]
+
+VNU64 ...
+
+8-bit message
+64 1-bit messages
+
+... CNU64
+
+64 1-bit messages
+
+Fig. 1. The tri-mode partially parallel decoder for the (4095,3367) code
+
+R(k)[7] s0(k)
+R(k)[7] s1(k)
+R(k)[7] s64(k)
+
+mode[0]
+0
+MUX
+1
+mode[0]
+0
+MUX
+1
+mode[0]
+0
+MUX
+1
+
+32
+
+R(k)
+
+R(k)[7]
+
+E(k+1)
+127 64
+E(k+1)[6] -127 -64
+0
+MUX
+1
+
+mode[1]
+0
+MUX
+1
+mode[1]
+0
+MUX
+1
+
+Saturation max min
+
+Fig. 4. Unified variable node unit for tri-mode decoder
+
+R(k+1)[6:0]
+
+mode[0]
+0
+MUX
+1
+
+R(k+1)[7]
+
+In comparison, a SPA-based decoder will load the intrinsic messages represented in two’s complement format directly into the intrinsic memory. (2) The CNU for implementing the sum-product algorithm is quite complex and is shown in Figure 2. The CNU for the tri-mode decoder is just a 64-bit XOR gate. (3) The VNU for implementing sum-product algorithm is showed in Figure 3. For tri-mode decoder, the extrinsic messages passed to and from VNUs are 1-bit, and is generated with much simpler circuits, as shown in Figure 4. For simplicity, the computation of Ej(k) is rewritten as
+
+Ej(k) =
+
+(1 − 2(s(ik) zj(k)))
+
+i∈Mj
+
+(2)
+
+= 2(32 −
+
+(s(ik)
+
+zj(k))).
+
+i∈Mj
+
+When mode is OS-MLGD, the signal si(k) is passed
+
+directly to the 64-input adder, while (si(k) zj(k)) is passed to the 64-input adder for the SRBI-MLGD or the HRBI-MLGD mode. In the saturation stage, the Rj(k) is clipped with different range for SRBIMLGD mode and HRBI-MLGD mode. For the OSMLGD mode, the Rj(k+1)[7] is overridden by the computation result based on Ej(k+1)[7] and Rj(k)[7], since Rj(k+1)[7] represents zj(k+1). During the VNU update stage, Rj(k+1) is written back to the intrinsic memory. (4) In the termination stage, the SPA-based decoder will dump the z from the extrinsic memory, while the tri-mode decoder will dump the z from the intrinsic memory.
+D. Memory Sharing
+The H matrix of a (γ,ρ)-regular QC-LDPC code has γρ c × c CPMs, whose offsets ranges from 0 to c − 1. Usually,
+
+603
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+many CPMs share the same offsets, and c is less than γρ when the matrix size is very large. For example, the H matrix of the (4095, 3367) code has 65 × 64 = 4160 CPMs. The partially parallel decoder as described in [9], [10] would require, 4160 1-bit-wide and 63-bit-deep memory modules for extrinsic memory and 65 8-bit-wide and 63-bit-deep memory modules for intrinsic memory. The number of block RAMs for a FPGA is usually of the order of a few hundred. When γρ is much greater than the number of block RAMs, it is not possible to directly map each intrinsic and extrinsic messages to a block RAM.
+Memory sharing is a technique to cope with this problem. It is based on the following two observations. First, many CPMs in the H matrix of a quasi-cyclic code share the same offset. Therefore, multiple CPMs with the same offset can be mapped to the same physical block RAM. Second, each 18Kb block RAM in a Virtex-4 FPGA can be configured into different aspect ratios such as 16Kx1, 8Kx2 or 512x36. Furthermore, adjacent block RAMs can be cascaded to increase the width or depth of the memory without using FPGA interconnect or logic block resources. Also, the block RAMs are true-dual port memories with two fully independent ports that can support reading and writing simultaneously to any address in the block RAM. So, memory sharing involves, cascading multiple block RAMs horizontally to increase the word size of the resultant memory. For example, using two block RAMs in the 512x36 modes horizontally, one could get a 512x72 memory which can then be used to pack up to 72 single bit messages from CPMs that have the same offsets. Since the memory access pattern is the same for all these CPMs, the address generation logic does not have to be replicated. The only change would be routing the messages to the appropriate functional unit and back. Memory sharing can be used for decoding quasi-cyclic LDPC codes using sum-product algorithm also, but in the case of tri-mode decoder it is even more advantageous because the messages are just 1-bit wide, so many more CPMs can be mapped to the same block RAM. This allows us to implement significantly complex codes such as the (4095, 3367) code on a single FPGA. This would be impossible using the sumproduct algorithm even with memory sharing.
+IV. DECODING TWO CODEWORDS SIMULTANEOUSLY
+In this section we will describe an optimization to improve the throughput of the tri-mode decoder by simultaneously decoding two codewords. This can be viewed as a variation of the overlapped message passing described in [9] without the concomitant difficulties of the need to computing the waiting time and coming up with a conflict-free schedule for VNU and CNU memory accesses. The motivation for this stems from the following two observations. First, the waiting time constraint arises in the overlapped message passing, because there is a cyclic data dependency between the results produced by the CNU and the VNU, and thus a stall of a few cycles between the overlapped CNU and VNU computations is necessary to avoid the inherent data hazard. However, no such dependency exists between CNU and VNU
+
+codeword 1:
+
+Load CNU VNU CNU
+
+...
+
+CNU Load CNU VNU
+
+...
+
+codeword 2:
+
+Idle Load CNU VNU
+
+...
+
+VNU CNU Load CNU
+
+...
+
+Fig. 5. Simultaneously Decoding of Two Codewords - Timing Diagram
+
+computation of two different codewords. So, they can be overlapped without any waiting time. Second, as mentioned in the previous section, even in the widest configuration, each block RAM still has a capacity for 512 words (e.g.: in the 512x36 configuration). So, it is wasteful to just map one 63×63 CPM into a block RAM, because that would use only 63 memory locations. Note that memory sharing described in the previous section just uses a wider word to combine different CPMs with the same offset, it does not change the depth of the memory. So, even with memory sharing only 63 words are used in a given block RAM.
+Overlapped message passing that overlaps the VNU and the CNU computations of two different codewords takes advantage of these unused memory locations in a block RAM. The memory range of the block RAM is divided into two parts - the upper part is reserved for the messages of the first codeword and the lower part is reserved for the messages of the second codeword. Given that the block RAMs are true-dual port memories, one port will be used to read/write messages corresponding to codeword 1 and the second port will be used to read/write messages corresponding to codeword 2. The memories are clocked at twice the clock frequency of the rest of the logic, which allows two reads and two writes per port during each cycle of the logic. This is possible because the block RAMs in Virtex-4 can operate at 400MHz while the critical path of the VNU and the interconnect delay in a FPGA restricts the clock frequency of the processing pipeline to less than 200 MHz.
+Figure 5 shows the high level timing diagram of the proposed technique. Note that when the VNU is processing codeword 1, the CNU is processing messages from codeword 2 and vice versa. It is very similar to the overlapped message passing described in [9] except that during each iteration the VNU and CNU are operating on different codewords instead of the same codeword. So, no waiting time computation is required which simplifies the scheduling and the control logic significantly. The processing time for the CNU computation, VNU computation and loading the new codeword is adjusted (with appropriate stalls) to make sure all stages take the same number of clock cycles. This makes the control logic simple as no explicit data synchronization is necessary.
+V. RESULTS AND DISCUSSIONS
+We use the Xilinx ISE 10.1 for synthesis and implementation. ModelSim 6.3f is used for simulation. The design is verified on the DN8000K10PSX board, which contains two Xilinx Virtex-4 XC4VLX160 FPGAs. We use the Wallace method [11] to generate the additive white Gaussian noises in the experiments.
+The implementation results of the tri-mode decoder are presented in Table I. When the Eb/N0 = 4.9 dB, the tri-mode decoder will converge within an average of 2.0
+
+604
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I THROUGHPUT AND AREA EFFICIENCY COMPARISON OF TRI MODE
+DECODER IMPLEMENTATION
+
+code edges fCLK slices block RAMs edge/cycle edge/sec edge/sec/slice
+
+(4095,3367) 262,080 191 MHz 12,857 153 8320
+7.6 × 1011 6 × 107
+
+BER
+
+10-1
+
+Sum Product
+
+10-2
+
+SRBI-MLGD 50
+
+SRBI-MLGD 5
+
+10-3
+
+HRBI-MLGD 50 OS-MLGD
+
+Shannon Limit 10-4
+
+10-5
+
+10-6
+
+10-7
+
+10-8
+
+10-9
+
+10-10
+
+10-11
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+7
+
+Eb/N0 (dB)
+
+Fig. 6. Error performances of the (4095,3367) EG-LDPC code decoded with the tri-mode decoder (on FPGA) and sum product algorithm. BER is bit error rate, SRBI-MLGD 50 means decoding with the kmax = 50, SRBIMLGD 5 means decoding with kmax = 5, where kmax is the number of iterations. The sum-product algorithm data is from a software simulation with kmax = 50.
+
+iterations for SRBI-MLGD with kmax = 5. The clock frequency is 191 MHz. Let us assume 5 iterations are used and compute the throughput (Tf ) by the following equation
+
+Tf
+
+=
+
+2 · n · fCLK tLoad + tCNU + tVNU
+
+2 × 4095 × 191 MHz =
+68 + 748
+
+= 1.9 Gbps.
+
+Here, the coefficient of 2 is because we are decoding two codewords simultaneously. The time to output the decoded codeword is not counted because it is done simultaneously with loading of the subsequent codewords. Note, that only 153 of the 288 block RAMs and 12857 out of 67584 slices in a Virtex-4 LX160 are being utilized, which means that codes with significantly more number of edges (larger column and row weights) can be realized on the same FPGA. This demonstrates the low complexity of the tri-mode decoder.
+Figure 6 shows the performance results. The sum-product
+
+results are from a software implementation and as expected it is impractical to simulate to very low bit error rates in software. The four lines to the right are real measured data from the FPGA implementation described in this paper. In a about a day we can simulate the bit error rate down to 10−11. The SRBI-MLGD algorithm show about 0.6 dB performance loss compared to the sum-product algorithm at bit error rate equal to about 10−6. The HRBI-MLGD method has worse performance than SRBI-MLGD, so it is suitable where soft information is not available or not reliable. The OS-MLGD approach is the fastest, but have the worst performance and is applicable in a high SNR regime.
+VI. RELATED WORK
+The fully parallel implementation requires large silicon area with high interconnect complexity, thus most hardware implementations are based on partially parallel decoder. They achieve throughput of hundreds of mega-bits per second, due to limited hardware parallelism and memory bandwidth [12]. As mentioned in Section III, partially-parallel decoder implementations can be optimized for quasi-cyclic codes with overlapped message passing as described in [9], [10]. In [13] a technique was proposed to improve the performance of overlapped message passing through vector processing. Liu [14] proposes a sliced message passing method on the register-based decoder, which breaks the sequential tie between the check and variable-node update stages and thus improve the throughput. All the implementations in existing literature are based on sum-product algorithm and its variations. The implementation of a tri-mode decoder has not been addressed in the past.
+VII. CONCLUSION
+In this paper, we have presented a FPGA implementation of a tri-mode decoder for decoding (4095,3367) LDPC code. The decoder works under one-step majority logic decoding algorithm and two iterative reliability-based iterative majority logic decoding algorithms, called the SRBIMLGD- and HRBI-MLGD-algorithms, respectively. Compared to the SPA- and MSA-based implementation of LDPC code decoders, the tri-mode decoder shows low-complexity and high-throughput, and offer effective trade-off between error performance and decoding computational complexity. Even though we focused on just one code to illustrate the architecture and the implementation, the proposed techniques are general enough to handle any quasi-cyclic code and also the optimization techniques such as memory sharing and simultaneously decoding two codewords can be used to realize a sum-product algorithm implementation too.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. MacKay and R. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes,” Electro. Lett., vol. 33, no. 6, pp. 457– 458, Mar 1997.
+[3] D. MacKay, “Good Error-Correcting Codes Based on Very Sparse Matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar 1999.
+
+605
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+[4] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced Complexity Iterative Decoding of Low-Density Parity Check Codes Based on Belief Propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673– 680, May 1999.
+[5] Q. Huang, J. Kang, L. Zhang, S. Lin, and K. Abdel-Ghaffar, “Two Reliability-Based Iterative Majority-Logic Decoding Algorithms for LDPC Codes,” IEEE Trans. Commun., to appear.
+[6] N. Mobini, A. Banihashemi, and S. Hemati, “A Differential Binary Message-Passing LDPC Decoder,” in Proc. Globecom, Nov. 2007, pp. 1561–1565.
+[7] Y. Kou, S. Lin, and M. Fossorier, “Low-Density Parity-Check Codes Based on Finite Geometries: a Rediscovery and New Results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov 2001.
+[8] R. Smarandache and P. Vontobel, “Pseudo-codeword analysis of tanner graphs from projective and euclidean planes,” IEEE Trans. Inf. Theory, vol. 53, no. 7, pp. 2376–2393, July 2007.
+[9] Y. Chen and K. Parhi, “Overlapped message passing for quasi-cyclic low-density parity check codes,” IEEE Trans. Circuits and Syst. I, vol. 51, no. 6, pp. 1106–1113, June 2004.
+[10] Y. Dai, Z. Yan, and N. Chen, “Optimal Overlapped Message Passing Decoding of Quasi-Cyclic LDPC Codes,” IEEE Trans. on VLSI Syst., vol. 16, no. 5, pp. 565–578, May 2008.
+[11] D.-U. Lee, W. Luk, J. Villasenor, G. Zhang, and P. Leong, “A Hardware Gaussian Noise Generator Using the Wallace Method,” IEEE Trans. VLSI Sys., vol. 13, no. 8, pp. 911–920, Aug. 2005.
+[12] Z. Wang and Z. Cui, “Low-Complexity High-Speed Decoder Design for Quasi-Cyclic LDPC Codes,” IEEE Trans. VLSI Syst., vol. 15, no. 1, pp. 104–114, Jan. 2007.
+[13] X. Chen, J. Kang, S. Lin, and V. Akella, “Accelerating FPGA-based Emulation of Quasi-Cyclic LDPC Codes with Vector Processing,” in Proc. Design, Automation and Test in Europe, April 2009.
+[14] L. Liu and C.-J. Shi, “Sliced Message Passing: High Throughput Overlapped Decoding of High-Rate Low-Density Parity-Check Codes,” IEEE Trans. Circuits and Syst. I, vol. 55, no. 11, pp. 3697–3710, Dec. 2008.
+606
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:31:55 UTC from IEEE Xplore. Restrictions apply.
+
+

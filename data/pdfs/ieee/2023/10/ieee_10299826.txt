@@ -1,0 +1,336 @@
+A Memory-Saving Approach for 5G New Radio Low-Density Parity-Check Decoders
+
+2023 International Symposium on Electrical and Electronics Engineering (ISEE) | 979-8-3503-1548-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISEE59483.2023.10299826
+
+Bich Ngoc Tran-Thi1,2,3, Thien Truong Nguyen-Ly1,2, and Trang Hoang1,2
+1Department of Electronics, Faculty of Electrical and Electronics Engineering, Ho Chi Minh City University of Technology (HCMUT), 268 Ly Thuong Kiet Street, District 10, Ho Chi Minh City, Vietnam
+2Vietnam National University Ho Chi Minh City, Linh Trung Ward, Thu Duc City, Ho Chi Minh City, Vietnam 3Faculty of Electrical and Electronics Engineering, Vietnam Aviation Academy, Ho Chi Minh City, Vietnam hoangtrang@hcmut.edu.vn
+
+Abstract—This paper presents a memory efficient design for a Low-Density Parity-Check (LDPC) decoder. The design is based on a combination of two techniques that consists of (i) the proposed Enhanced single minimum Min-Sum (EsmMS) algorithm for check-node update processing, which requires only the first minimum value among variable-to-check input messages and its index instead of two minima, and (ii) the memory split method, which adapts to the varying check-node degree of 5G LDPC codes. The implementation results on Xilinx Kintex UltraScale+ (xcku5p) FPGA show that the proposed decoder requires 37% less storage space than MS-based decoders, provides a decoding throughput of 2.63 Gbps, while yielding a decoding gain up to 0.32 dB at the BER of 10−8 compared to the Min-Sum decoder.
+Index Terms—CN processing unit, FPGA, Low-Density ParityCheck, Min-Sum, QC-LDPC.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes were proposed by R. Gallager in 1962 [1], but they had been long neglected due to significant hardware demands and complex decoding. After the development of Turbo-codes [2], they were rediscovered by MacKay in 1992 [3]. These codes have gained significant attention because of their outstanding performance, lower error floor, and simple decoder design. These excellent characteristics made them suitable for a variety of applications. Actually, they are now used by several standards, including IEEE 802.16e WiMAX [4], DVB-S2 [5], IEEE 802.11 [6], ATSC 3.0 [7] and 5G New Radio (NR) [8].
+The process of LDPC decoding requires repeated calculations the extrinsic messages between two node groups known as Variable-Nodes (VNs) and Check-Nodes (CNs). This task is referred to as Message-Passing (MP) decoding algorithm. At the beginning, the LDPC decoder utilizes the Belief Propagation (BP) algorithm (also known as the Sum-Product (SP) algorithm), which is based on the MP algorithm. Although the BP method delivers outstanding decoding performance close to the Shannon limit [9], it consumes significant hardware resources for implementation. The MS algorithm was introduced to simplify the computation complexity by requiring only comparison and addition operations [10]. Unfortunately,
+
+it has been found that the MS decoder suffers a degradation in the error correction performance.
+To further improve the decoding performance, several versions of the MS-based decoding algorithms such as the Normalized Min-Sum (NMS) and the Offset Min-Sum (OMS) were suggested in [11], [12]. These algorithms had a common technique that modified the check-node update processing. Although these MS-based algorithms provided better decoding performance, they introduced a higher hardware complexity than the original MS algorithm. One of the methods to enhance the hardware usage efficiency is to exploit an approximation calculation for check-node update processing. More precisely, instead of computing two minimum values among input variable-to-check messages, only the first minimum value is calculated. This approach can lead to significant savings in hardware resources. For instance, according to [13], a new approach, namely single minimum Min-Sum (smMS), was proposed. This involves incorporating a weight parameter into the first minimum value to calculate the second minimum. This method seems to be simple, but it results in an error-floor early. The smMS algorithm’s error correction performance can be further improved with the variable weight smMS (vwsmMS) algorithm, which was proposed in [14]. Instead of using a fixed coefficient as in [13], the authors in [14] proposed to use correction factors that vary corresponding to the number of iterations. Although it improved the decoding performance in the water-fall region, determining the weight parameters was quite complex. In practice, almost LDPC applications employ a version of LDPC code, named as Quasi-Cyclic LDPC (QCLDPC) [15]. Such a structure allows great parallelism in decoder implementations, which is essential for providing the high throughput demanded by modern communications. It should be noted that the 5G QC-LDPC codes exhibit significant irregularities [16]–[18]. Specifically, in the BG1 base matrix, the CN degree varies from 3 to 19, and only 4 out of the 46 rows have a degree of 19. Due to the high check node degree of 5G LDPC codes, the decoder operating frequency will be limited due to the large increase in decoder complexity. The author in [19] presented an efficient reordered layered scheduling based on the number of punctured edges
+
+979-8-3503-1548-6/23/$31.00 ©2023 IEEE
+
+52
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+and the check-node degree to reduce memory consumption. However, additional hardware resources are needed.
+In this work, an efficient 5G LDPC decoder architecture is introduced. This paper offers the decoding algorithm based on the smMS algorithm [13] with further enhancements in decoding performance by applying an offset factor in variable-node processing. We refer to this algorithm as the Enhanced single minimum Min Sum (EsmMS). In this proposed algorithm, the Check-Nodes (CNs) processing only needs to find the first minimum and its index among variable-to-check (VTC) input messages instead of the first two minima as in the conventional approach. Additionally, by adopting a split storage technique, the memory space can be decreased up to 37% according to the highly varying CN degree of 5G LDPC.
+The rest of this paper is structured as follows. Section II introduces the fundamental concepts of LDPC codes, the conventional MS algorithm and its hardware architecture. Section III presents the proposed EsmMS algorithm, architecture of a check-node processing unit and check-node memory block. The simulation and hardware implementation results are detailed in Section IV. Section V concludes the paper.
+
+Fig. 1. Base matrix BG1 structure of QC LDPC codes in 5G [8]
+TABLE I CHECK NODE DEGREE DISTRIBUTION OF THE BG1 AND BG2 5G LDPC
+CODES [8]
+Check-node degree 3 4 5 6 7 8 9 10 19 Number of rows in BG1 1 5 18 8 5 2 2 1 4 Number of rows in BG2 6 20 9 3 - 2 - 2 -
+
+II. PRELIMINARIES
+A. The brief concepts of LDPC codes
+Let’s consider an LDPC code with the codeword length and the information bits are N and K, respectively. An LDPC code can be described by using either a sparse parity-check matrix (PCM) H of size M × N where M = N − K or a Tanner graph that introduced by Tanner [22]. In the Tanner graph representation, a codeword is divided into two groups of nodes: Variable-Nodes (VNs) and Check-Nodes (CNs). More precisely, VNs correspond to the columns and CNs correspond to the rows of the PCM H. Let’s use the notation H to represent the Tanner graph of the code. Then, H(m) represents the set of VNs connected to CN m and H(n) represents the set of CNs connected to VN n. The ith check-node (CN) is connected to the jth variable-node (VN) by an edge if the entry H(i, j) (i = 1, · · · , M ; j = 1, · · · , N ) of the parity-check matrix H equals 1. The degree of a variable-node (checknode) is the total number of adjacent edges connecting to it. The variable-node and the check-node degrees are denoted by dv and dc, respectively. An LDPC code is regular when all variable and check nodes have the same degree. Otherwise, it is irregular. It is worth noting that most LDPC codes are irregular in practical applications.
+Let c = (c1, c2, ..., cN ) denote a codeword. For the sake of simplicity, we assume that the codeword c is modulated by Binary Phase Shift Keying (BPSK). Next, the modulated information x = (x1, x2, · · · , xN ) where xn = 1 − 2cn (n ∈ [1, N ]) is passed through an Additive White Gaussian Noise (AWGN) channel. At the receiver, the received signal can be given by y = (y1, y2, · · · , yN ) where yn = xn + zn and zn is an independent Gaussian random variable with zero mean and noise variance σ2.
+As mentioned before, the specific type of LDPC code used in practical applications is Quasi-Cyclic LDPC (QC-LDPC).
+
+QC-LDPC codes typically include a base matrix B with entries bi,j where i and j are the row and column indices of the entry. The base matrix B is extended by a circulant matrix of size Z × Z (where Z is the expansion factor) for each entry to form the PCM H. The extended matrices satisfy the following convention: bi,j = −1 is replaced by an all-zero matrix; bi,j ≥ 0 is used in place with a circulant matrix, which is formed by right-shifting the identity matrix bi,j positions.
+In order to offer rate-compatible and scalable data transmission, in 5G two QC-LDPC base matrices BG1 and BG2 are employed [8]. These matrices have the same structure. BG1 is compatible with long codeword and high code rates, while BG2 is suitable for shorter codeword and lower code rates. In this work, we focus on the BG1 matrix. The structure of the BG1 is depicted in Fig.1. As we can see that the BG1 matrix is divided into four parts: the core, which consists of the submatrices A and B, and the extensions, which include the E, O and I (O is the all-zero matrix and I is the identity matrix). There are three types of base matrix columns: information columns, core parity columns, and extension parity columns. The 5G LDPC codes are extremely irregular [8]. The distribution of check node degrees for BG1 and BG2 is listed in Table I. It can be seen that the check-node degree of BG1 varies from 3 to 19. In particular, only 4 rows have a degree of 19, while the check-node degree is less than 11 in the remaining rows.
+B. The conventional layered Min-Sum decoding algorithm
+Let’s consider the conventional layered Min-Sum (MS) decoding algorithm. The iterative MS decoding consists of four steps: initialization, check-node processing, variable-node processing and AP-update processing. These operations take place in several rounds, which are called iterations.
+
+53
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+First, at initiation, A-Posteriori (AP) information update γ˜n and a priori information γn are generated for each VN n, and check-to-variable (CTV) messages βm,n transmitted from CN m to VN n are set to zero.
+
+γ˜n
+
+=
+
+γn
+
+=
+
+log
+
+Pr Pr
+
+( xn ( xn
+
+= =
+
+0| yn) 1| yn)
+
+(1)
+
+βm,n = 0
+
+(2)
+
+Next, for each iteration: Variable-nodes (VNs) processing: determines the variableto-check (VTC) messages αm,n.
+
+αm,n = γ˜n − βm,n
+
+(3)
+
+Check-nodes (CNs) processing: calculates the check-tovariable (CTV) messages βm,n.
+
+βm,n =
+
+sgn(αm,n′ ) · min |αm,n′ |
+
+n′ ∈H(n)\m
+
+n′ ∈H(n)\m
+
+(4a) Fig. 2. The hardware architecture of the layered scheduling LDPC decoder
+
+where H(n)\m is the set of CNs connected to the VN n except CN m.
+
+In the hardware perspective, the Eq. (4a) can be expressed as:
+
+βm,n = P ·
+
+min2 min1
+
+if position |αm,n′ | = index otherwise
+
+min1
+
+(4b)
+
+where
+
+P=
+
+sgn(αm,n′ )
+
+n′ ∈H(n)\m
+
+and min1, min2 are the first two minimum values among all VTC input messages; index min1 denotes the position of min1. If more than one min1 value exists, the index min1 will be taken as the smallest index.
+AP-update processing: based on the updated extrinsic messages (i.e., αm,n and βm,n) obtained in the previous steps, the AP-update values γn are calculated by:
+
+γ˜n = αm,n + βm,n
+
+(5)
+
+In this work, the decoder stops when it has attained the maximum number of iterations.
+
+C. The conventional layered Min-Sum decoder architecture
+
+In this section, we present the conventional layered LDPC
+
+decoder architecture. We implement a 5G LDPC code using
+
+the BG1 matrix of size mb × nb = 24 × 46. The code has an expansion factor of Z = 192, codeword length of N = 8832
+
+and code rate of 1/2. Each row of BG1 corresponds to one
+
+decoding layer, hence there are L = mb = 24 layers in this
+
+design. Concerning the hardware implementation parameters,
+
+we suppose that a priori information (γn), AP-update
+
+messages (γ˜n) and the VTC messages (αm,n) are quantized
+
+on q˜ bits, while the CTV messages (βm,n) are represented in
+
+q bits (q < q˜). In other word, the messages γn, γ˜n, αm,n ∈
+
+{− 2q˜−1 − 1 , · · · , −1, 0, +1, · · · , + 2q˜−1 − 1 }
+
+and
+
+βm,n ∈ − 2q−1 − 1 , · · · , −1, 0, +1, · · · , + 2q−1 − 1 .
+The overall architecture of the layered LDPC decoder is shown in Fig. 2. Several main functional blocks are described below.
+To store the information, the decoder uses two memory blocks: AP Memory Block (AP-MB) and Check-Node Memory Block (CN-MB). In AP-MB, the decoder input signal γn or the γ˜n messages is stored depending on the decoding processing. Note that the decoder input from the channel is stored only in the initialization step. Thus, MUX is used to select between the priori information γn and a posteriori information update γ˜n messages. In CN-MB, the CTV messages are stored for the next layer processing. The variable-nodes (VNs) and check-nodes (CNs) processing, as described in Eqs. (3) and (4b), are carried out by Variable-Node Units (VNUs) and Check-Node Units (CNUs), respectively. The APB executes the AP-update processing, which is given in Eq. (5). It should be noticed that the varible-to-check (VTC) messages before feeding to the CNU need to saturate from q˜-bits to q-bits by SAT blocks. In this design, the CNU output messages are stored into CN-MB in compressed format for memory saving purposes. Therefore, the DECOM blocks use to convert from compressed to uncompressed messages.
+The connection units are the last set of blocks. They consist of the Read Permutation Units (Read-PUs), which are responsible for arranging the signals in a way that allows the VNUs or CNUs to process them correctly. The Read-Shifter Blocks (R-SBs) have the capability to organize input signals in any order at the output, according to the non-negative elements of the BG1 matrix. In comparison to the ReadPermutation Units (Read-PUs) and the Read-Shifter Blocks (R-SBs), the Write-Permutation Units (Write-PUs) and WriteShifter Blocks (W-SBs) perform a reverse function. Finally, to ensure that the decoder can work properly, it’s essential to implement the controller block. This includes executing blocks
+
+54
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+in the correct sequence, writing to or reading from memory blocks, and other important functions.
+
+III. THE PROPOSED CNU ARCHITECTURE AND CHECK-TO-VARIABLE MEMORY FOR 5G LDPC CODES
+
+A. The proposed Enhanced single minimum Min-Sum (EsmMS) algorithm
+
+Inspired by the smMS algorithm [13], we propose a modified algorithm that aims to provide further decoding gain, as well as memory efficiency. For the Check-Nodes (CNs) processing, we apply the same idea as [13]. It means the CNU just finds the accurate value for first minimum (i.e., min1) and its index (i.e., index min1), while the second minimum (i.e., min2) is approximated based on the min1 value and modified factor ω (also called as a weight parameter) as given in Eq. (6).
+
+βm,n = P · where
+
+min1 + ω if position |αm,n′ | = index min1
+
+min1
+
+otherwise
+
+(6)
+
+P=
+
+sgn(αm,n′ )
+
+n′ ∈H(n)\m
+
+Although the smMS algorithm could achieve high hardware implementation efficiency, the error-correction capacity was significantly decreased (error-floor appeared quite early). To improve the decoding performance, we propose to apply another offset factor to the Variable-Nodes (VNs) processing as follows:
+
+αm,n = γ˜n − sgn(βm,n) · max(|βm,n| − δ, 0) (7) where δ > 0 is the offset factor.
+
+The decoder which applies (6) and (7) will be called as the Enhanced single minimum MS (EsmMS) algorithm. In the proposed EsmMS algorithm, the optimization of ω and δ factors is obtained by simulation methods under the particular LDPC code. Without losing generality, ω is optimized after δ is set to 0.5. The best ω value in this scenario is received. The δ factor is then adjusted through simulation using the value of ω determined in the previous stage to reach an expected target Bit-Error-Rate (BER) threshold. In our case study, the optimal values for the EsmMS algorithm are found by (ω, δ = 0.25, 0.75) for BG1 matrix with the codeword length N of 8832, the code rate of 1/2 and the target BER of 10−8.
+B. The proposed CNU architecture
+Figure 3 depicts CNU architectures of the conventional MS and the proposed EsmMS 5G LDPC decoders. As previously mentioned, the 5G LDPC code is irregular, which means that the number of CNU inputs is implemented to be equal to the maximum check-node degree, represented as dcmax. In this work, dcmax equals 19. Hence, the CNU in both decoders has dcmax = 19 inputs. The “set” signal of 2-to-1 multiplexers is used to deactivate the unnecessary inputs in case the checknode degree is less than dcmax.
+
+The Min & Index Finder component inside the proposed CNU is used to find the smallest values (i.e., min1) and its index (i.e., index min1) among all the VTC messages. This is done by using the Tree Structure (TS) architecture as described in [23]. The CNU output message signs can be determined by utilizing XOR the input message signs. The CNU block generates output messages in a compressed format, known as compressed β-messages, each of them consists of min1 of (q − 1)-bits, index min1 of ⌈log2(dcmax)⌉bits and signs of dcmax-bits. Therefore, the size of each βmessage is (q − 1) + ⌈log2(dcmax)⌉ + dcmax (bits). It’s worth noting that the size of each conventional β-message will be 2 · (q − 1) + ⌈log2(dcmax)⌉ + dcmax (bits).
+C. Check-node memory block (CN-MB): the conventional and the proposed approaches
+In this section, we analyze the check-node memory (CN-MB) usage efficiency between the conventional and the proposed approaches.
+
+CN-MB of the MS decoder. As described before, the output messages of the CNU (compressed β−messages) are stored in CN-MB. With expansion factor Z, the width of the CN-MB is:
+
+W = Z × (2 · (q − 1) + ⌈log2(dcmax)⌉ + dcmax) (8) When dcmax = 19 and q = 4, Eq. (8) can be rewritten as:
+
+W = 30 × Z
+
+(9)
+
+CN-MB of the proposed decoder. For the proposed CNU, only the first minimum value, its index and the signs of check-to-variable messages are determined, hence, the width of the CN-MB is given by:
+
+W = Z × ((q − 1) + ⌈log2(dcmax)⌉ + dcmax)
+
+(10)
+
+In case dcmax = 19 and q = 4, Eq. (10) can be calculated as:
+
+W = 27 × Z
+
+(11)
+
+As shown in Table I, it should be emphasized that the dcmax value of 19 is only utilized in the first four layers, while the remaining layers operate with a check-node degree is less than or equal to 10. As a result, in case we implement the same width for all CN-MBs, i.e., corresponding to dcmax = 19 for all CNUs (see Eq. (10)), this will lead to a substantial waste of memory resources. This motivates us to propose the memory split method, which is flexible with the change of check-node degree. More precisely, the original CN-MB is divided into two sub-memory blocks, named as CN-MB1 and CN-MB2. The CTV messages are stored in CN-MB1 only for the first four layers (i.e., L1 = 4), corresponding to checknode degree of dc = dcmax1 = 19, while the rest of the layers (i.e., L2 = 20) are stored in CN-MB2, which correspond to check-node degree dc ≤ dcmax2 = 10. The detailed structure of the proposed CN-MB is shown in Fig. 4.
+
+55
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. The architecture of the CNU for the conventional MS and proposed decoders
+
+Fig. 4. The detailed structure of CN-MB1 and CN-MB2
+
+by BG1, expansion factor Z of 192, codeword length N of 8832 and code rate R of 1/2. The maximum number of iterations is set to 10. The number of quantization bits for q and q˜ are 4 and 6, respectively. In addition, for comparison purposes, we have included several decoding algorithms such as the Improved OMS (IOMS) (the factors are 0.75 and 0.5) [24], OMS (offset factor is 0.5), NMS (the normalized factor is 0.75), and smMS (the weight parameter ω is 1) [13].
+
+The CN-MB1 is designed for check-node degree of 19. Therefore, the width of CN-MB1 is kept the same as CN-MB that is given in Eq. (11).
+
+W1 = 27 × Z
+
+(12)
+
+The CN-MB2 is dedicated to storing the CTV messages
+
+with check-node degrees less than or equal to 10. For the
+
+sake of simplicity, CN-MB2 is designed to be compatible with
+
+dcmax2 = 10. The width of the CN-MB2 can be determined
+
+by:
+
+W2 = 17 × Z
+
+(13)
+
+Table II provides a comparison between the CN-MB of the conventional MS and the proposed EsmMS decoders. It can be seen that by applying the split memory technique, the proposed CN-MB yields a significant memory reduction up to 37% compared to the conventional CN-MB approach.
+
+TABLE II THE SIZE OF THE CN-MB FOR THE MS AND THE PROPOSED DECODERS
+BEFORE AND AFTER USING THE SPLIT STORAGE TECHNIQUE
+
+The conventional CN-MB
+
+The proposed CN-MB
+
+Before spliting
+
+After spliting
+
+W D Total bits
+
+W D Total bits W D Total bits
+
+30Z 24
+
+720Z
+
+27Z 24
+
+648Z
+
+17Z 20 27Z 4
+
+448Z
+
+Note that W and D are the Width and Depth of the CN-MB, respectively.
+
+IV. SIMULATION RESULTS AND HARDWARE IMPLEMENTATION
+First, we verify the decoding performance of the Enhanced single minimum Min-Sum (EsmMS) algorithm through Monte Carlo simulations. We consider a 5G LDPC code that is given
+
+Fig. 5. BER performance of various algorithms for 5G LDPC decoder, N = 8832, R = 1/2.
+Figure 5 shows that the EsmMS algorithm outperforms the smMS and MS decoders by 0.3 dB and 0.32 dB at BERs of 10−4 and 10−8, respectively. The EsmMS, IOMS, NMS and OMS algorithms give almost the same error correction performance until the BER 10−6.
+Finally, to evaluate the hardware resources, the proposed LDPC decoder is synthesized and implemented for the 5G LDPC code as described above on Xilinx Kintex UltraScale+ (xcku5p) FPGA using Vivado software. The throughput is computed as [25]: T = (N × Fmax) / (L × niter × ncyc) [Mbps], where N is the length of the codeword, Fmax [MHz] is the maximum operational frequency, L is the number of decoding layers, niter is the maximum number of iterations and ncyc is the number of clock cycles required to process each layer (in this work, ncyc = 2).
+
+56
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III FPGA-IMPLEMENTATION RESULTS OF VARIOUS DECODERS
+
+Decoder Max. freq. (MHz) Throughput (Gbps) CN Memory size (kb) Hardw. Utiliz.*
+
+EsmMS 142.8 2.63 86.01 283094
+
+HOMS [25] 153.5 2.82 121.5 314968
+
+OMS 120.1 2.21 138.24 335404
+
+NMS 123.2 2.27 138.24 333346
+
+MS 130.5 2.4 138.24 329333
+
+*Hardware Utilization refers to the total number of Flip-Flops, F7 MUXes, F8 MUXes, LUTs, and BRAM in bits that are utilized in the design of an LDPC decoder. Each bit of BRAM is equivalent to one flip-flop, one MUX, or one LUT.
+
+The implementation results are shown in Table III. It is important to note that the proposed solution can lead to a decrease in CN-MB size by approximately 29-37% with respect to the HOMS, MS and MS-based decoders. The EsmMS provides a decoding throughput of 2.63 Gbps. It gains 19% over the OMS decoder. Although the EsmMS decoder’s decoding throughput is around 7% slower than the HOMS decoder, it yields a hardware utilization reduction of 10% (up to 15% with respect to the OMS decoder).
+V. CONCLUSION
+This paper introduced an effective technique for optimizing memory usage in 5G LDPC decoders. This technique was designed to take into account the unique characteristics of 5G LDPC codes, where the degree of the check-node varies greatly. To prevent unnecessary waste of memory, the stored memory is divided into two sub-memories based on the checknode degree values. Moreover, the check-node processing in the proposed algorithm only involves calculating the first minimum value and its index instead of the two minima. These resulting messages are stored in a compressed format, which also helps to save on storage space. As a result, the CN-MB size of the proposed decoder is lower than that of the MS and MS-based decoders up to 37%.
+VI. ACKNOWLEDGMENTS
+We acknowledge Ho Chi Minh City University of Technology (HCMUT), VNU-HCM for supporting this study.
+REFERENCES
+[1] Gallager, R., Low-density parity-check codes. IRE Transactions on information theory. 8(1),1962, p. 21-28.
+[2] Berrou, C., Glavieux, A., & Thitimajshima, P. (1993, May). Near Shannon limit error-correcting coding and decoding: Turbo-codes. 1. In Proceedings of ICC’93-IEEE International Conference on Communications (Vol. 2, pp. 1064-1070). IEEE.
+[3] D. MacKay and R. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Letters, vol. 32, no. 18, pp. 1645–1646, August 1996.
+[4] Zhang W., S Chen, X Bai, D Zhou, A full layer parallel QC-LDPC decoder for WiMAX and Wi-Fi. in 2015 IEEE 11th International Conference on ASIC (ASICON). IEEE. 2015, pp. 1-4.
+[5] Dielissen, J., A. Hekstra, and V. Berg., Low cost LDPC decoder for DVB-S2. in Proceedings of the Design Automation and Test in Europe Conference. IEEE. 2006, pp. 1-6.
+
+[6] A. Balatsoukas-Stimming, N. Preyss; A. Cevrero, A. Burg; C. Roth, A parallelized layered QC-LDPC decoder for IEEE 802.11 ad. in 2013 IEEE 11th International New Circuits and Systems Conference (NEWCAS). IEEE. 2013, pp. 1-4.
+[7] Kyung-Joong Kim, Seho Myung, Sung-Ik Park, Jae-Young Lee, Makiko Kan, Yuji Shinohara, Jong-Woong Shin, Jinwoo Kim, Low-density parity-check codes for ATSC 3.0. IEEE transactions on broadcasting. 62(1), 2016, p. 189-196.
+[8] Richardson, T. and S. Kudekar,Design of low-density parity check codes for 5G new radio. IEEE Communications Magazine. 56(3),2018.
+[9] Chung, S.-Y., G.D. Forney; T.J. Richardson; R. Urbanke,), On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit. IEEE Communications letters. 5(2), 2001, p. 58-60.
+[10] Fossorier, M.P., M. Mihaljevic, and H. Imai, Reduced complexity iterative decoding of low-density parity-check codes based on belief propagation. IEEE Transactions on Communications. 47(5),1999 p. 673680.
+[11] Declercq, D., M. Fossorier, and E. Biglieri, Channel Coding: Theory, Algorithms, and Applications: Academic Press Library in Mobile and Wireless Communications. Academic Press.2014.
+[12] J. Chen and M. Fossorier. Density evolution for two improved BP-based decoding algorithms of LDPC codes. IEEE Communications Letters, 6(5),2002, pp.:208–210.
+[13] Darabiha, A., Carusone, A. C., & Kschischang, F. R. (2006, May). A bitserial approximate min-sum LDPC decoder and FPGA implementation. In 2006 IEEE International Symposium on Circuits and Systems (pp. 4-pp). IEEE.
+[14] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014
+[15] Fossorier, M.P., Quasicyclic low-density parity-check codes from circulant permutation matrices. IEEE Transactions on information theory. 50(8),2004, p. 1788-1793.
+[16] Thi Bao Nguyen, T., Nguyen Tan, T., & Lee, H. (2021). Low-complexity high-throughput QC-LDPC decoder for 5G new radio wireless communication. Electronics, 10(4), 516.
+[17] Petrovic´, V. L., Markovic´, M. M., El Mezeni, D. M., Saranovac, L. V., & Radosˇevic´, A. (2020). Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization. IEEE Transactions on Circuits and Systems I: Regular Papers, 67(12), 5454-5467.
+[18] Nadal, J., & Baghdadi, A. (2021). Parallel and flexible 5G LDPC decoder architecture targeting FPGA. IEEE Transactions on Very Large Scale Integration (VLSI) Systems, 29(6), 1141-1151.
+[19] Lee, H. C., Li, M. R., Hu, J. K., Chou, P. C., & Ueng, Y. L. (2016). Optimization techniques for the efficient implementation of high-rate layered QC-LDPC decoders. IEEE Transactions on Circuits and Systems I: Regular Papers, 64(2), 457-470.
+[20] Liang, C. Y., Li, M. R., Lee, H. C., Lee, H. Y., & Ueng, Y. L. (2019, May). Hardware-friendly LDPC decoding scheduling for 5G HARQ applications. In ICASSP 2019-2019 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 1418-1422). IEEE.
+[21] Cui, H., Ghaffari, F., Le, K., Declercq, D., Lin, J., & Wang, Z. (2020). Design of high-performance and area-efficient decoder for 5G LDPC codes. IEEE Transactions on Circuits and Systems I: Regular Papers, 68(2), 879-891.
+[22] Tanner, R., A recursive approach to low complexity codes. IEEE Transactions on information theory. 27(5),1981, p. 533-547.
+[23] Wey, C. L., Shieh, M. D., & Lin, S. Y. (2008). Algorithms of finding the first two minimum values and their hardware implementation. IEEE Transactions on Circuits and Systems I: Regular Papers, 55(11), 34303437.
+[24] Tran-Thi, B. N., Nguyen-Ly, T. T., Hong, H. N., & Hoang, T. (2021, April). An improved offset min-sum LDPC decoding algorithm for 5G new radio. In 2021 International Symposium on Electrical and Electronics Engineering (ISEE) (pp. 106-109). IEEE.
+[25] Tran-Thi, B. N., Nguyen-Ly, T. T., & Hoang, T. (2023). An FPGA design with high memory efficiency and decoding performance for 5G LDPC decoder. Electronics, 12(17), 3667.
+
+57
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:43 UTC from IEEE Xplore. Restrictions apply.
+
+

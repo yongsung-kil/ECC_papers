@@ -1,0 +1,789 @@
+2018 IEEE International Symposium on Information Theory (ISIT)
+
+Sparse Graphs for Belief Propagation Decoding of Polar Codes
+Sebastian Cammerer, Moustafa Ebada, Ahmed Elkelesh and Stephan ten Brink Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany
+{cammerer,ebada,elkelesh,tenbrink}@inue.uni-stuttgart.de
+
+Abstract—We describe a novel approach to interpret a polar code as a low-density parity-check (LDPC)-like code with an underlying sparse decoding graph. This sparse graph is based on the encoding factor graph of polar codes and is suitable for conventional belief propagation (BP) decoding. We discuss several pruning techniques based on the check node decoder (CND) and variable node decoder (VND) update equations, significantly reducing the size (i.e., decoding complexity) of the parity-check matrix. As a result, iterative polar decoding can then be conducted on a sparse graph, akin to the traditional well-established LDPC decoding, e.g., using a fully parallel sumproduct algorithm (SPA). This facilitates the systematic analysis and design of polar codes using the well-established tools known from analyzing LDPC codes. We show that the proposed iterative polar decoder has a negligible performance loss for shortto-intermediate codelengths compared to Arıkan’s original BP decoder. Finally, the proposed decoder is shown to benefit from both reduced complexity and reduced memory requirements and, thus, is more suitable for hardware implementations.
+I. INTRODUCTION
+Polar codes introduced in [1] are the first type of channel codes that are theoretically proven to achieve the channel capacity for infinite length codes under successive cancellation (SC) decoding. Unfortunately, finite length polar codes suffer from poor error-rate performance under SC decoding. A belief propagation (BP) decoding algorithm based on [2] was proposed in [3] to enhance the finite length performance. Later, a successive cancellation list (SCL) decoder was proposed achieving the maximum likelihood (ML) bound [4].
+Polar codes have been recently adopted to the 5G standard as a part of the uplink control channel, thus, practical decoding algorithms of polar codes have become a very attractive topic. One major drawback of SC and SCL decoding is a long decoding latency due to its serial decoding nature, in which the information bits are decoded one at a time, reducing the overall throughput of the decoder. Besides, the SCL decoder does not provide soft-in/soft-out information and thus not suitable for iterative decoding and detection. On the other hand, the BP decoder does not suffer from the above mentioned issues, thus it is a good candidate for high data rate demanding applications (i.e., from an implementation perspective).
+The first BP decoder proposed for polar codes is performed over a factor graph corresponding to the generator matrix of the code [3]. A straightforward conversion from the generator matrix-based factor graph to a parity-check matrix-based factor
+This work has been supported by DFG, Germany, under grant BR 3205/5-1.
+
+10−1
+
+10−2
+
+BER
+
+10−3
+
+Original (Arıkan’s) BP, P(256, 128) Naive (non-sparse) BP, P(256, 128)
+
+LDPC-like (sparse) BP, P(256, 128)
+
+10−4
+
+Original (Arıkan’s) BP, P(2048, 1024) Naive (non-sparse) BP, P(2048, 1024)
+
+LDPC-like (sparse) BP, P(2048, 1024)
+
+10−5 1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+Eb/N0
+Fig. 1: BER comparison between Arıkan’s original BP decoder, BP decoder performed over the naive H-based dense factor graph, and our proposed LDPC-like BP decoder performed over the pruned factor graph for P(256, 128) and P(2048, 1024) codes; Nit,max = 200.
+
+graph [5] leads to a dense (i.e., non-sparse) parity-check matrix with many short cycles as shown in Fig. 2. Thus, the traditional BP algorithm as used in low-density parity-check (LDPC) decoding, with variable node decoder (VND) and check node decoder (CND), fails over the dense graph corresponding to the resulting dense parity-check matrix (see Fig. 1). To allow iterative decoding over a suitable parity-check matrix, corresponding graph pruning steps have been reported in [6]. In this work, we propose a novel approach for finding a sparse parity-check matrix1 of a corresponding LDPC code suitable for iterative decoding after pruning the redundant variable nodes (VN) and check nodes (CN). Thus, a polar code can be decoded with a slightly modified generic BP decoder (e.g., an LDPC BP decoder) with negligible bit error rate (BER) performance loss (refer to Fig. 5). By viewing polar codes as an LDPC-like code, the LDPC design methods or analysis tools (e.g., EXIT charts and density evolution) may become applicable in the context of polar codes. This will facilitate the hard task of systematically analyzing polar codes under BP decoding and may be useful in finding the best polar code construction (i.e., the frozen bits) algorithm for polar codes tailored to iterative decoding. This opens door to new and, probably, more efficient hardware implementation, given the latency reduction provided here and given that polar codes can be, surprisingly, decoded iteratively on a sparse H-based factor graph of reduced size using the conventional well-established
+
+1Strictly speaking, the proposed matrix H is not a parity-check matrix of the polar code, as Hx˜ requires an extended codeword x˜. However, for readability and with abuse of some notation we denote H as the parity-check matrix of a corresponding LDPC-like code.
+
+978-1-5386-4780-6/18/$31.00©2018 IEEE
+
+1465
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:26 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE International Symposium on Information Theory (ISIT)
+
+v11 c11 v12 c12 v13 c13 v14 v1 = v14
+
+v21 c21 v22 c22 v23 c23 v24 v2 = v24
+
+v31 c31 v32 c32 v33 c33 v34 v3 = v34
+
+c1
+
+v41 c41 v42 c42 v43 c43 v44 v4 = v44
+
+c2
+
+v51 c51 v52 c52 v53 c53 v54 v5 = v54
+
+c3
+
+v61 c61 v62 c62 v63 c63 v64 v6 = v64
+
+c4
+
+v71 c71 v72 c72 v73 c73 v74 v7 = v74
+
+v81 c81 v82 c82 v83 c83 v84 v8 = v84
+
+Fig. 2: (Left) Original (Arıkan’s) BP decoder factor graph for a P(8, 4)-code with A = {4, 6, 7, 8}. (Right) Corresponding dense factor graph, i.e., non-sparse H, based on [5, Lemma 1].
+LDPC decoders.
+
+II. CONVENTIONAL BP DECODING OF POLAR CODES
+Polar codes are based on the concept of channel polarization in which a set of N identical channels are combined based on a 2 × 2 kernel, and the output of N synthesized bit channels shows a polarization behavior. Then, the best k synthesized bit channels are used for data transmission and the remaining N − k bit channels are set to a frozen known value (w.l.o.g. we assume 0 throughout this work) to both the transmitter and receiver. For the rest of this work, such a polar code is denoted by P(N, k). The information set and the frozen set are denoted by A and A¯ , respectively. Throughout this work, the polar code is constructed based on Arıkan’s Bhattacharyya bounds of bit channels [1] with a design SNR of 0.6 dB. The encoding is based on the generator matrix G, i.e., a polar codeword is x = u · G, where uA contains the useful information bits and the remaining positions of u are frozen. Besides, systematic encoding is also possible with affordable complexity, offering a significant BER improvement [7]. For the rest of this work, systematic polar encoding is used.
+Arıkan’s original BP decoder in [3] is based on Forney’s BP decoder for Reed–Muller (RM) codes using factor graph representations of the generator matrix G [2], where subsequent iterations are conducted on the polar code encoding factor graph [3]. The original polar BP decoder is briefly revisited:
+1) Factor graph: The original polar BP decoder factor graph of a P(8, 4)-code, Fig. 2, consists of n = log2 N stages, where each stage contains two types of nodes. The factor graph contains a set of N · (n + 1) VNs {vij} and a set of N · n CNs {cik}, where 1 ≤ i ≤ N , 1 ≤ j ≤ n + 1, 1 ≤ k ≤ n.
+2) Iterative message passing: For the sake of simplicity, we use the terminology as familiar from LDPC decoding and follow the basic definitions from [8]. We refer the interested reader to [3] for more details. Let xv→c denote the loglikelihood ratios (LLR) message from VN v to CN c and yc→v denote the LLR message from CN c to VN v, respectively. Further, we define Vc as the set of connected VNs to CN c and Cv as the set of connected CNs to VN v. The CN update is computed as
+
+
+
+
+
+yc→v =
+
+sign (xv →c) · φ 
+
+φ (|xv →c|) (1)
+
+v ∈Vc/v
+
+v ∈Vc/v
+
+where φ(x) = φ−1(x) = − log
+
+tanh
+
+x 2
+
+. For the following
+
+part, it is instructive to realize that φ(0) → ∞ and φ(∞) → 0.
+
+The VN update is
+
+xv→c = Livnit +
+
+yc →v.
+
+(2)
+
+c ∈{Cv /c}
+
+where Livnit denotes the a priori knowledge of the VN v.
+
+The VNs at the leftmost stage {vi,1} , 1 ≤ i ≤ N are
+
+initialized
+
+(i.e.,
+
+Linit
+vi,1
+
+is
+
+set
+
+accordingly)
+
+according
+
+to
+
+the
+
+a
+
+priori knowledge available to the decoder (i.e., the frozen bits),
+
+whereas the VNs at the rightmost stage {vi,n+1} , 1 ≤ i ≤ N
+
+are initialized according to the channel output (i.e., the re-
+
+ceived LLRs Lch). All remaining VNs initially have no a priori knowledge, thus Linit = 0.
+
+3) Scheduling, termination and stopping conditions: In-
+
+stead of a fully parallel message update, the nodes are updated
+
+stage-by-stage. A single full decoding iteration, thus, describes
+
+the consecutive activation of stage 1 to n (forward) and from
+
+n to 1 (backward).
+
+Traditionally, BP decoding is terminated when reaching a
+
+pre-defined maximum number of BP iterations Nit,max or
+
+achieving a specific pre-defined stopping criterion, e.g., all
+
+CNs are satisfied (see [9] for details on stopping conditions
+
+of polar BP decoding).
+
+The parity-check matrix H of a polar code with generator
+
+matrix G can be constructed from the columns of G with indices in A¯ , where A¯ denotes the set of frozen indices [5,
+
+Lemma 1]. The resulting H-matrix, shown in Fig. 2, is a highly
+
+dense parity-check matrix (see Table I) with a maximum check
+
+node degree of N . Consequently, this leads to a decoding
+
+failure if traditional decoding algorithms (e.g., sum-product
+
+algorithm (SPA) decoding) are performed on this dense H, as
+
+shown in Fig. 1. The parity-check matrix of the sparse factor
+
+graph was introduced in [5], later termed adjacency matrix in
+
+[10], and was used to construct the Linear Programming (LP)
+
+polytope which defines the LP decoder proposed in [5].
+
+Table I: Density of non-sparse H-matrix of polar codes based on [5].
+
+Code P(256, 128) P(2048, 1024) P(8192, 4096)
+
+den(H) 16.31%
+
+7.11%
+
+4.06%
+
+III. PRUNING TECHNIQUES FOR POLAR FACTOR GRAPHS
+As shown in Fig. 2, Arıkan’s BP decoding graph can be re-drawn into a bipartite graph consisting of VNs V and CNs C [5]. By neglecting the stage-wise decoding scheduling, the graph represents an LDPC-like code structure, or a particularly constrained LDPC code, where the last N bits of the code represent the polar codeword. Besides, there is no channel input over the first |V| − N bits. However, the H-matrix corresponding to the LDPC-like code is quite large (i.e., matrix
+
+1466
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:26 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE International Symposium on Information Theory (ISIT)
+
+c1
+
+c2
+
+c1
+
+c2
+
+y=0
+
+x= 0
+
+0 y=
+
+vh
+
+vch
+
+0
+
+Lch
+
+(a) Degree-2 CN connected to a degree-1 VNCH.
+
+c
+
+c
+
+y
+
+y x=
+
+vh1
+
+vh2
+
+vh3
+
+0
+(b) Degree-1 VNH.
+
+c1
+
+c2
+
+x y=
+
+x
+
+vh
+
+vh2
+
+vh1
+
+0
+
+0
+
+0
+
+(c) Degree-2 VNH. (d) Degree-2 CN connected only to VNH.
+
+Fig. 3: Special cases of polar factor graph nodes.
+size is N · log2N × N · (log2N + 1) compared to N − k × N for the dense H of the original polar code, cf. Table II).
+We now show that, only based on Eq. (1) and (2), effective pruning of this graph can be applied, leading to a reduced LDPC-like code, that can be decoded efficiently with a conventional LDPC BP decoder. Similar ideas exist for LP decoding of polar codes [10]. We define different kinds of VNs, that only differ in the effective underlying channel Lch:
+1) Channel variable nodes (VNCH) vch ∈ Vch which represent a codeword position, i.e., they are initialized with the corresponding Lch (green VNs in Figures 2-4).
+2) Hidden variable nodes (VNH) vh ∈ Vh which define the intermediate nodes without any prior knowledge, i.e., Lch = 0 (black VNs in Figures 2-4).
+3) Frozen VN vf ∈ Vf at frozen positions are assumed to see Lch = ∞ (red VNs in Figures 2-4).
+As we assume systematic encoding2, the estimated information bits uˆ can be directly extracted from the VNCH.
+We identify several common scenarios which occur during the decoding. We want to emphasize that these cases are very specific for the underlying polar code structure and can not be found in LDPC codes (i.e., there are no VNH). However, these observations facilitate finding a compact graph representation.
+1) Frozen nodes: According to Eq. (2), a frozen VN vf always propagates xvf →c = ∞, independently of its received messages. Thus, the corresponding CN update is
+
+yc→v = sign xvf →c ·
+
+sign (xv →c)
+
+=1
+
+v ∈Vc/{v,vf }
+
+
+
+
+
+· φ φ 
+
+|xvf →c|
+
++
+
+·φ (|xv →c|)
+
+→0
+
+v ∈Vc/{v,vf }
+
+2Non-systematic encoding can be applied straightforwardly by an additional re-encoding step after the decoding.
+
+and, as a result, the frozen node can simply be removed from the graph as it never contributes to the decoding process. Based on this observation, the size of the H-matrix may vary depending on the code construction (i.e., A).
+2) Degree-1 CN: The underlying parity-check equation of a degree-1 CN can only be fulfilled if the connected VN represents the bit “0”. From Eq. (1)
+
+yc→v = φ (0) → ∞.
+
+Thus, the degree-1 CNs and the connected VN can be removed from the graph (cf. frozen bits).
+3) Degree-1 VNCH and degree-2 CN: Obviously, a VNCH of degree-1 simply propagates the received Lch into the connected CN and never changes its message x. In case the other connected VN is a VNH, the incoming message at this node is always equal to Lch from the VNCH. Therefore, the CN can be removed and the VNH must be replaced by the corresponding VNCH. This is depicted in Fig. 3a.
+4) Degree-1 VNH: A VNH of degree-1 (vhi ) always returns xvhi →c = 0 to the CN (see Fig. 3b). Using Eq. (1) we find
+
+yc→v = sign 
+
+xvhi →c
+=1
+
+·
+
+sign (xv →c)
+
+v ∈Vc/{v,vhi }
+
+
+
+· φ φ 
+
+|xvhi →c|
+
++
+
+φ (|xv →c|) → 0,
+
+→∞
+
+v ∈Vc/{v,vhi }
+
+and thus, the CN never contributes to the decoding and can be removed from the graph together with the degree-1 VNH.
+5) Degree-2 VNH: From Eq. (2) it follows that VNH of degree-2 are simple feed-forward nodes (cf. Fig. 3c) and the corresponding VNH update equation simplifies to
+
+xvh→c = Livnhit +yc →vh .
+
+=0
+
+Thus, the VNH can be removed by merging the two CNs that are connected to it3.
+6) Degree-2 CN: A CN of degree-2, which is only connected to VNH (see Fig. 3d) defines a forwarding node and can thus be removed by merging the two VNHs into one VNH.
+Based on all that, we define a pruning algorithm (see Algorithm 1), similar to [6], which simplifies the decoding graph without a significant impact on the decoding performance. The algorithm simplifies the graph iteratively until the size of H does not change anymore. It is worth to keep in mind that further pruning opportunities may be possible as we here define the baseline schemes. Fig. 4 illustrates the pruning of a P(8, 4)-code. The H-matrix can be pruned from 24 × 32 to 5 × 9. We provide the source code online to facilitate reproducing the results for further investigation and more pruning ideas [11]. Following this algorithm, the dimensions
+
+3Remark: this slightly changes the scheduling, as the messages are delayed by one iteration through the VNH. However, we did not observe any significant impact due to this effect.
+
+1467
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:26 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE International Symposium on Information Theory (ISIT)
+
+v11
+
+v21
+
+v31
+
+v41
+
+v51
+
+c11
+
+v61
+
+c21
+
+v71
+
+c31
+
+v81
+
+c41
+
+v12
+
+c51
+
+v22
+
+c61
+
+v32
+
+c71
+
+v42
+
+c81
+
+v52
+
+c12
+
+v62
+
+c22
+
+v72
+
+c32
+
+v82
+
+c42
+
+v13
+
+c52
+
+v23
+
+c62
+
+v33
+
+c72
+
+v43
+
+c82
+
+v53
+
+c13
+
+v63
+
+c23
+
+v73
+
+c33
+
+v83
+
+c43
+
+v14
+
+c53
+
+v24
+
+c63
+
+v34
+
+c73
+
+v44
+
+c83
+
+v54
+
+v64
+
+v74
+
+v84
+
+v11
+
+v21
+
+v31
+
+v41
+
+v51
+
+c11
+
+v61
+
+c21
+
+v71
+
+c31
+
+v81
+
+c41
+
+v12
+
+c51
+
+v22
+
+c61
+
+v32
+
+c71
+
+v42
+
+c81
+
+v52
+
+c12
+
+v62
+
+c22
+
+v72
+
+c32
+
+v82
+
+c42
+
+v13
+
+c52
+
+v23
+
+c62
+
+v33
+
+c72
+
+v43
+
+c82
+
+v53
+
+c13
+
+v63
+
+c23
+
+v73
+
+c33
+
+v83
+
+c43
+
+v14
+
+c53
+
+v24
+
+c63
+
+v34
+
+c73
+
+v44
+
+c83
+
+v54
+
+v64
+
+v74
+
+v84
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+(e)
+
+Fig. 4: Pruning of the P(8, 4)-code graph with A = {4, 6, 7, 8}.
+
+(and density) of the sparse H-matrix and the degree profiles before pruning are compared to that after pruning for different code lengths, as given in Table II. It can be observed that the pruning algorithm leads to a significant matrix size, or graph size, reduction (with a reduction factor of ≈ 83 − 85% after pruning), while maintaining the sparsity of the H-matrix.
+One might expect that the pruning process reduces the portion of the degree-1 VNs due to removing the degree1 VNHs. However, while pruning the graph, the degree-1 VNCHs are not all removed/altered and thus become more dominant in the degree profile of the reduced H-matrix, as can be seen from the variable and check degree distribution from an edge-perspective of the H-matrix (λ (Z) and ρ (Z)) as provided in Table II. It is also observed that the portions of degree-2 VNs are reduced due to condensing the degree2 VNHs, while the degree-2 VNCHs remain unchanged. The same can be observed, even more significantly, for degree2 CNs because the condensed degree-2 CNs that are not connected to any VNCH represent a major percentage of the original CNs. Condensing both VNHs and CNs results in much higher degree (i.e., complex) nodes at a relatively low percentage. One could further refine the pruning by a maximum CN degree, which only allows condensing CNs if the resulting CN degree is below a given limit.
+
+IV. RESULTS AND COMPLEXITY ANALYSIS
+The BER performance of polar codes under different decoders, namely SCL, Arıkan’s original BP and our proposed LDPC-like BP over the pruned graph is depicted in Fig. 5. Note that we seek to compare the performance of the different decoding algorithms itself, thus, the SCL does not use an additional Cyclic Redundancy Check (CRC). As can be seen,
+
+Algorithm 1 Prune H-matrix
+Input: Horig .
+Output: Hpruned.
+
+original H-matrix pruned H-matrix
+
+1: Hpruned ← Horig
+
+2: Hpruned ← remove Frozen VN(Hpruned)
+
+3: while true do
+
+4: Hpruned ← prune degree1 CN(Hpruned)
+
+5: Hpruned ← condense degree1 VNCH(Hpruned)
+
+6: Hpruned ← prune degree1 VNH(Hpruned)
+
+7: Hpruned ← condense degree2 VNH(Hpruned)
+
+8: Hpruned ← condense degree2 CN(Hpruned)
+
+9: if size(Hpruned) does not change then
+
+10:
+
+return Hpruned
+
+11: end if
+
+12: end while
+
+short-to-intermediate length polar codes (N = 256, 2048) show a negligible BER performance loss under LDPC-like BP decoding compared to Arıkan’s original BP decoder. One potential reason for a gap is the different scheduling in both decoders. However, we observed that this gap decreases with more BP iterations. Table III: Complexity comparison between Arıkan’s original and our proposed LDPC-like BP decoder at a fixed BER = 10−4 and Nit,max = 200.
+
+Code
+
+BP Decoder
+
+P(256, 128)
+
+Arıkan
+
+LDPC-like
+
+Arıkan P(2048, 1024)
+LDPC-like
+
+Iavg 3.8 10.9 9.5 31.5
+
+cac 1.6 × 104 0.4 × 104 4.2 × 105 1.1 × 105
+
+mcv 3.9 × 104 2.7 × 104 1 × 106 0.1 × 106
+
+ssyn 60.8 21.8 209 63
+
+For complexity comparison, the following criteria are used:
+• Average number of iterations performed Iavg: denotes the average number of iterations conducted, given a maximum threshold Nit,max. For the results shown in Table III, Nit,max = 200 is used.
+• Average number of active CNs cac: denotes the average number of CNs activated over the whole BP iterations.
+• Average number of passed messages mcv: denotes the average number of messages interchanged between different nodes over the whole BP iterations.
+• Average latency / number of time steps ssyn: denotes the average number of time steps required to decode (i.e., synchronization steps in a parallel implementation and, thus, proportional to the latency).
+As depicted in Table III, BP decoding of polar codes over the pruned graphs of the LDPC-like code consumes on average more BP iterations than Arıkan’s original BP decoder of the same polar code. However, as Arıkan’s original BP factor graph is composed of log2N stages, this, still gives our proposed decoder an advantage (i.e., the pruned graph is composed of one stage only). In the original BP decoder,
+
+1468
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:26 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE International Symposium on Information Theory (ISIT)
+
+Table II: Dimensions [and density] of the H-matrix and the degree profiles before and after pruning.
+
+P(2048, 1024) P(256, 128)
+
+Code
+
+dim Hbef ore den Hbef ore dim Haf ter den Haf ter 2048 × 2304
+[≈ 0.11%]
+361 × 489 [≈ 0.71%]
+22528 × 24576 [≈ 0.01%]
+3792 × 4816 [≈ 0.075%]
+
+λ(Z)before (VND)
+λ(Z)after (VND)
+0.075 + 0.4Z1 + 0.525Z2 0.103 + 0.205Z1 + 0.365Z2+ 0.16Z3 + 0.08Z4 + 0.013Z7+ 0.029Z8 + 0.032Z9 + 0.013Z15
+0.054 + 0.4Z1 + 0.546Z2 0.075 + 0.149Z1 + 0.345Z2 + 0.242Z3+ 0.068Z4 + 0.045Z5 + 0.008Z6 + 0.008Z7 0.011Z8 + 0.006Z9 + 0.003Z10 + 0.004Z15+ 0.005Z31 + 0.005Z63 + 0.009Z127 + 0.019Z255
+
+ρ(Z)before (CND)
+ρ(Z)after (CND)
+0.4Z1 + 0.6Z2
+0.103Z1 + 0.404Z2 + 0.308Z3 + 0.08Z4+ 0.019Z7 + 0.029Z8 + 0.032Z9 + 0.026Z15
+0.4Z1 + 0.6Z2 0.075Z1 + 0.399Z2 + 0.242Z3 + 0.164Z4+ 0.049Z5 + 0.01Z6 + 0.007Z7 + 0.012Z15+ 0.005Z16 + 0.005Z17 + 0.009Z31 + 0.005Z63+ 0.019Z 127
+
+10−1 10−2 10−3
+
+SCL, L = 32, P(32768, 16384) Original (Arıkan’s) BP, P(32768, 16384) LDPC-like (sparse) BP, P(32768, 16384)
+SCL, L = 32, P(2048, 1024) Original (Arıkan’s) BP, P(2048, 1024) LDPC-like (sparse) BP, P(2048, 1024)
+SCL, L = 32, P(256, 128) Original (Arıkan’s) BP, P(256, 128) LDPC-like (sparse) BP, P(256, 128)
+
+BER
+
+10−4
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Eb/N0
+Fig. 5: BER comparison between SCL, Arıkan’s original BP and our proposed LDPC-like BP decoder of P(256, 128), P(2048, 1024) and P(32768, 16384) codes; Nit,max = 200; no CRC used. Note: As shown in Table III, one full iteration in Arıkan’s original BP decoder has higher complexity than one iteration of the LDPC-like decoder. When fixing the decoding complexity, we observed that the BER performance gap between both decoders diminishes.
+
+2 · log2N stages need to be synchronized per iteration, thus on average less synchronization steps are needed in our proposed
+
+decoder. Furthermore, the average number of active CNs
+
+throughout the BP iterations is less for our proposed decoder,
+
+as a result of the new view of the factor graph and the
+
+new decoding schedule which made efficient graph pruning
+
+possible. However, one may argue that the CNs in our pruned
+
+graphs are of higher degree (i.e., complexity) than the original
+
+factor graph. To take that into account, the average number
+
+of iterated messages through the graph is compared, and is
+
+shown to be significantly less for our proposed decoder as
+
+well. Thus from an implementation perspective, our proposed
+
+decoder is less demanding in terms of memory requirements,
+
+when compared to Arıkan’s original BP decoder.
+
+V. CONCLUSION We show that polar codes can be decoded by a conventional
+LDPC decoder over a sparse graph of a corresponding LDPClike code. By carefully pruning the resulting H-matrix, we achieve a significant reduction in the size of the H-matrix,
+resulting in a faster convergence behavior. The source code for
+the pruning steps conducted is provided online [11] for testing
+further possible pruning ideas. Furthermore, we show that
+there is only a negligible BER performance loss for short-to-
+intermediate length polar codes, whereas this loss diminishes
+for more BP iterations. We believe that this approach opens up
+many new – theoretical and practical – research directions for
+polar BP decoding, as many tools such as density evolution
+or EXIT charts may be applied much easier. This may also
+open door to new and, probably, more efficient hardware
+implementation, given the latency reduction provided here.
+In a future step, this could help to identify improved frozen
+bit positions (i.e., code design) especially tailored to iterative
+polar decoding. Another possible research area may be to find
+ways of considering the CRC during iterative decoding. REFERENCES
+[1] E. Arıkan, “Channel Polarization: A Method for Constructing CapacityAchieving Codes for Symmetric Binary-Input Memoryless Channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, July 2009.
+[2] G. D. Forney, “Codes on Graphs: Normal Realizations,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 520–548, Feb. 2001.
+[3] E. Arıkan, “Polar codes: A pipelined implementation,” Proc. 4th ISBC, pp. 11–14, 2010.
+[4] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[5] N. Goela, S. B. Korada, and M. Gastpar, “On LP Decoding of Polar Codes,” in IEEE Information Theory Workshop, Aug. 2010, pp. 1–5.
+[6] M. Fossorier, “Polar Codes: Graph Representation and Duality,” IEEE Commun. Lett., vol. 19, no. 9, pp. 1484–1487, Sept. 2015.
+[7] E. Arıkan, “Systematic Polar Coding,” IEEE Commun. Lett., vol. 15, no. 8, pp. 860–862, Aug. 2011.
+[8] W. E. Ryan, “An Introduction to LDPC Codes,” CRC Handbook for Coding and Signal Processing for Recording Systems CRC Press.
+[9] B. Yuan and K. K. Parhi, “Early Stopping Criteria for Energy-Efficient Low-Latency Belief-Propagation Polar Code Decoders,” IEEE Trans. Sig. Process., vol. 62, no. 24, pp. 6496–6506, Dec. 2014.
+[10] V. Taranalli and P. H. Siegel, “Adaptive Linear Programming Decoding of Polar Codes,” in IEEE Int. Sym. Inf. Th., June 2014, pp. 2982–2986.
+[11] “https://github.com/SebastianCa/LDPC-like-Decoding-of-Polar-Codes.”
+
+1469
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:26 UTC from IEEE Xplore. Restrictions apply.
+
+

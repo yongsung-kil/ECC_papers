@@ -1,0 +1,418 @@
+2012 IEEE Workshop on Signal Processing Systems
+
+DESIGN OF AN ASIP LDPC DECODER COMPLIANT WITH DIGITAL COMMUNICATION STANDARDS
+Bertrand LE GAL and Christophe JEGO
+IPB / ENSEIRB-MATMECA, CNRS IMS, UMR 5218 351 Cours de la Libération, 33405 Talence Université de Bordeaux, France firstname.surname@ims-bordeaux.fr
+
+ABSTRACT
+Application Specific Instruction set Processor (ASIP) is a promising approach to design an LDPC decoder that have to be compliant with multi-standards. Indeed, channel decoding is mainly dominated by dedicated hardware implementations that cannot easily support a large variety of digital communication standards.In this paper, an LDPC decoder architecture based on a publicly available MIPS processor core associated with a homogeneous matrix of processing units is presented. The proposed architecture corresponds to an intermediate approach between the creation of an new application specific instruction set processor and a fully dedicated decoder. The design and the FPGA prototyping of the resultant architectures are thus described. Results demonstrate the potential of this ASIP approach to implement efficient flexible LDPC decoders.
+Index Terms— LDPC codes, ASIP architecture, MIPS processor, SIMD matrix, digital communication standards.
+1. INTRODUCTION
+In telecommunication systems, Forward Error Correction (FEC) is used to improve digital communication quality. Error correction encoding consists in the addition of redundancy to the binary information sequence before the transmission over a communication channel. This redundancy allows the FEC decoder to detect and/or to correct the effects of noise and interference encountered during the transmission of the information. If k information bits set a codeword having a length of n bits, the ratio R=k/n is called code rate. Nowadays, more advanced FEC techniques such as LDPC codes [1] closely approach the ultimate limit of channel capacity on a variety of channel models. LDPC codes are a family of FECs that are especially attractive for digital communication standards and have been adopted as part of several channel codings such as WiFi (IEEE802.11n), WiMax (IEEE802.16e), 10GBASE-T (IEEE 802.3an) or Digital Video Broadcasting (DVB-S2, T2 and C2). But, the design of a fully compliant LDPC decoder architecture is still a major challenge. Indeed, the lack of homogeneity in the standardized matrices that defined the LDPC codes leads to an over dimensioned and/or partially compliant decoder.
+LDPC codes can be efficiently decoded using the Belief Propagation (BP) algorithm. This algorithm operates on the bipartite graph representation of the code by iteratively exchanging
+The authors wish to thank Valentin Dorison (Enseirb-Matmeca student) for its significant help during the architecture design of the LDPC decoder.
+
+messages between the variable and parity check nodes along the edges of the graph [2]. The Min-Sum (MS) algorithm, that is an alternative method, can significantly reduce the hardware complexity of the BP algorithm. Moreover, modified versions of MS algorithm such as normalized MS or offset MS using additional correction factors offer comparable decoding performance to the BP algorithm. Based on these different improvements, many LDPC decoders have been described in previous papers ; a brief review can be found in [3]. The schedule defines the order of passing messages between all the nodes of the bipartite graph. Since a bipartite graph contains some cycles, the schedule directly affects the algorithm convergence rate and hence its computational complexity. We recall that a cycle in a bipartite graph refers to a finite set of connected edges that starts and ends at the same node, and satisfies the condition that no node appears more than once. The classical schedule is flooding where decoder iteration is divided into two phases : in the first phase, all the variable nodes send messages to their neighboring parity check nodes, and in the next phase the parity check nodes send messages to their neighboring variable nodes. More efficient layered schedules have been proposed in literature [4]. Indeed, the parity check matrix can be viewed as a horizontal or a vertical layered decoded sequentially. Decoder iteration is then split into sub-layer iterations. The layered schedules enable the decoding convergence to speed up by two. They can also ensure a good matching between decoding algorithms on one hand and decoder architectures on the other hand.
+The most effective way to implement area and power consumption efficient LDPC decoders is to design fully dedicated architectures. But, these architectures are unsuitable for digital receiver that have to support several physical layer specifications such as a base station or a customer premises equipment. Indeed, flexible, adaptive and reconfigurable properties are essential for these applications. Another way to implement applications under flexibility constraints is based on high-end processor usage. Currently, General-Purpose Processors (GPP) and Digital Signal Processors (DSP) provide high computational performance. Moreover, programming languages and compiler tools offer high flexibility degree. However, general processors are unsuitable for embedded systems that have to achieve high performance with low power dissipation. A third type of architecture combines both approaches : dedicated hardware elements to achieve the required performances and low cost processor cores to introduce flexibility in the architecture. It corresponds to flexible architectures with limited programmability and possibility for customization that is targeted to a
+
+978-0-7695-4856-2/12 $26.00 © 2012 IEEE
+
+19
+
+DOI 10.1109/SiPS.2012.62
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+class of applications with high levels of data and instruction parallelism. These architectures are called Application Specific Instruction set Processors [5]. In this paper, we detail a flexible LDPC decoder that gets the benefits of ASIP architectures.
+The remainder of the paper is organized as follows. Section 2 discusses related work about ASIP approaches for FEC decoding. Then, the LDPC decoding algorithm and its simplified versions are recalled in Section 3. The challenging issue of designing ASIP LDPC decoders is detailed in Section 4. Implementation results and BER performance measured for an FPGA target are given in Section 5. Finally, conclusions are drawn in Section 6.
+2. RELATED WORK
+Nowadays, a designer who requires an ASIP in an embedded system has two possibilities : designing a dedicated processor from scratch or reusing an existing flexible softcore processor. The first approach is based on the complete design of a processor core dedicated to a specific application or to an application domain. In such methodology the designer has to identify the required functionalities (instructions, processing resources, memory requirements) and then to fully describe the processor core using a hardware description language. Automated tools - i.e. Processor Designer from Synopsys using LISA language [6] or IP Designer from Target based on nML language [7] - were introduced to facilitate the RTL description of the processor. These tools generate the processor description and its development tool flow. This approach enables efficient dedicated processor implementations. However, it has serious drawbacks : architecture validation, long time design, humanunreadable RTL description.
+A second approach consists in using publicly-available flexible softcore processors. By this way, a designer can benefit from a full support of the processor instruction set, an established design flow and well-documented modular HDL descriptions. Moreover softcore processor descriptions are often done thanks to optimized primitives on current technology targets that provide more efficient implementations. Many flexible softcore processors are available in the literature [8] [9]. The designer can customize the softcore processor by adding application-specifc instructions that are implemented on specifically designed hardware extensions [10]. These extensions are often directly connected to the processor’s data-path. It is also possible to automatically reduce softcore processor functionalities and hardware complexity according to application requirements as explained in [11].
+Some ASIP approaches for FEC decoding can be found in the literature. A first motivation is to propose an architecture that addresses Turbo Codes and LDPC codes for a variety of standards. Several flexible decoder architectures are based on an optimized data path combined with a reduced instruction set [12] [13] [14]. These application-specific processors were described in the LISA language using Processor Designer tool from Synopsys. Other studies are about the ASIP design only optimized for layered decoding of structured LDPC codes [15] [16]. However, all these research works propose a customized processor obtained from scratch. Unfortunately, this practice may be unsuitable with a time to market pressure. To our knowledge, no previous research work explores the reuse of available flexible softcore processors for the design of a flexible LDPC decoder. Moreover, a design flow is also introduced in order to implement
+
+efficient ASIP LDPC decoders. Note that it corresponds to an intermediate approach between the creation of an new softcore processor and a fully dedicated decoder.
+
+3. LDPC DECODING ALGORITHM
+
+Irregular Repeat Accumulate (IRA) codes are a family of LDPC codes which can be encoded/decoded with linear complexity while still keeping good BER performance. An IRA code is characterized by a parity check matrix composed of two sub-matrices : a sparse sub-matrix and a staircase lower triangular sub-matrix. Moreover, periodicity has been introduced in matrix design in order to reduce storage requirements. This family of LDPC codes has been adopted in the current digital communication standards such as DVB-(S2, T2 and C2), WiFi and WiMax. It enables to split a decoding iteration into sublayer iterations. The parity check matrix is viewed as horizontal or vertical layers that can be decoded sequentially.
+In order to decrease the complexity of the standard BP decoding algorithm, simplified versions have been proposed. The best-known is the offset Min-Sum algorithm in which the parity check node processing is replaced by a selection of the minimum value for the magnitude. As previously explained, a layered schedules enable the decoding convergence to speed up for a given number of iterations. In this paper, we employ the horizontal layered decoding strategy because it is favorable in terms of computational complexity and it enjoys fast convergence. The chosen horizontal layered offset Min-Sum decoding algorithm is summed up in Algorithm 1.
+
+Algorithm 1 horizontal layered offset Min-Sum algorithm
+
+init
+
+t = 0, Tn(0)
+
+=
+
+2yn σ2
+
+,
+
+n
+
+[1, .., N ] and Em (0n) = 0
+
+repeat
+
+for all m do
+
+for all n N(m) do Variable to parity check message Tn(tm) processing Tn(tm) = Tn(t) − Em (t)n Parity check node Em (t+1) processing sgn(Em (t+1)) = (n) sgn(Tn(tm) )
+Em (t+1) = M ax M in(n)(Tn(tm) ) − η , 0
+
+end for
+
+for all n N(m) do Parity check to variable message Em (t+n1) processing sgn(Em (t+n1)) = (n N(m)\n) sgn(Tn(t)m) Em (t+n1) = M ax M in(n N(m)\n)(Tn(t)m) − η , 0
+Variable node Tn(t+1) processing Tn(t+1) = Tn(t) + m M (n) Em (t+n 1)
+end for
+
+end for
+
+t=t+1
+
+until t ≤ tmax The decoded bits are estimated through sign(Tn(t))
+
+yn is the channel observation related to the received bit n. Tn(t) denotes a posteriori log-likelihood ratio for the variable node n during the iteration t in the case of a BPSK modula-
+tion over an additive white Gaussian noise (AWGN) channel of variance σ2. The sign of Tn(t) corresponds to a hard decision of the variable node n and the absolute value Tn(t) represents
+the reliability of the decision. Similarly, Em(t) corresponds to the soft value of the parity check node m during the iteration t. Let
+
+20 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+Tn(tm) and Em(t)n denote the messages that are sent from variable node n to parity check node m and from parity check node m to variable node n, respectively. M (n) is the set of all the parity check nodes that are connected to the variable node n. N (m) is the set of all the variable nodes that are connected to the parity check node m. N (m)\n is the set of variable nodes that are connected to the parity check node m without the variable n. In a bipartite graph representation, the degree of a node is the
+number of edges connected to it. The degrees of a variable node n and a parity check node m are noted as dvn and dcm, respectively. η is a factor that is employed in the offset Min-Sum version in order to reduce the effect of the parity check node
+processing simplification.
+
+4. ASIP ARCHITECTURE FOR LDPC CODES
+
+4.1. ASIP architecture model
+In order to address a large variety of LDPC codes specified in existing communication standards, we have designed a decoding architecture from an existing flexible softcore processor. In order to achieve this, we have evaluated several publiclyavailable MIPS processor implementations and selected the Plasma processor. This processor is a public domain 32-bit soft processor designed by Steve Rhoads which implements most of the MIPS-I (TM) instruction set [8]. As it has the same instruction set as a MIPS processor, it can be programmed from the same GNU tool chain. The designed architecture is composed of a Plasma microprocessor controller associated with a homogeneous Single-Instruction Multiple-Data (SIMD) matrix as detailed in Fig. 1. The SIMD matrix is a specialized form of parallel computing, where P Processing Units (PUs) and P block memories compute and store independent data - LLRs Tn -, respectively. All PUs are dedicated to a same specific function. Moreover, a register file is dedicated to each PU to store local data - messages Emn -. A duplication of the PUs provides high computation rates and the SIMD matrix ensures the homogeneous property. The LLR transfers between PUs and block memories are done thanks to an interconnection network that performs the interleave Π and deinterleave Π−1 functions. The communication between the microprocessor core and the SIMD matrix is provided by a system interface that manage data exchanges. The proposed LDPC decoder architecture enables to answer to two challenges :
+– genericity : the computation capacity can be adapted in function of frame size, code rate and throughput,
+– programmability : the architecture can process LDPC codes of different standards (WiFi, WiMAX and DVB).
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+  
+
+
+
+
+
+
+ 
+ 
+
+
+ 
+
+
+Fig. 1: ASIP architecture model
+
+The architecture of the PU is detailed in Fig. 2. It is compo-
+sed of two cascaded blocks that have been designed to operate
+in pipeline mode. As a horizontal layered decoding strategy has
+been adopted, a PU is defined in order to process the calcula-
+tions for a parity check node. The first block is in charge of processing the variable to parity check message Tn(tm) . Then, the sign sgn(Em(t+1)) and the absolute value Em(t+1) of the parity
+check node m is calculated from the message Tn(tm) that corresponds to the variable node n. dcm clock periods are thus necessary to compute the value of the parity check node m in function of its degree dcm. In a second step, the parity check to variable message Em(t+n1) of the parity check node m are updated. This task is performed thanks to the sign sgn(Em(t+1)) and the two minimum values associated to the absolute value Em(t+1) that were previously computed in the first block. This
+message is then stored in a register file allocated to the PU as shown in Fig. 2. The Log-Likelihood Ratio Tn(t+1) value of the variable node n is also recalculated to take account of the new parity check to variable message Em(t+n1). In the second block, dcm clock periods are also necessary to complete all the computations. Moreover, some registers and a FIFO component are
+also present in order to ensure the two stage pipeline of the PU
+architecture.
+
+
+!%   
+ ! &
+&
+
+
+
+ "!  
+!
+
+!
+
+!
+
+"
+
+!
+
+
+
+
+
+$
+
+ 
+
+
+!
+
+"$
+
+#
+
+!
+
+
+
+!
+
+Fig. 2: Processing Unit architecture
+4.2. Benes network
+The LLR Tn transfer between PUs and block memories is a major bottleneck of the proposed ASIP architecture. Indeed, it suffers from PU execution problems because concurrent accesses to LLR values have to be performed without any conflict. One well-known solution consists in employing interconnection networks in order to solve collision problem. A review about this technique can be found in [17]. In the previous sub-section, we have introduced a homogeneous SIMD matrix. This matrix is composed of the same number P of PUs and block memories as detailed in Fig. 3. In order to handle the message exchanges, we proposed to use a multi-stage interconnection network architecture based on a Benes topology. The Benes network [18] is a network suitable for P to P permutation. It offers path diversity where P paths exist for each source/destination couple. Moreover, the latency associated to the Benes topology is constant and corresponds to the network diameter. In contrast, the conflict are avoided if all sources have different destination. Unfortunately, standardized LDPC codes are not designed by taking into account of this type of constraints. Consequently, the executions on the PUs have to be scheduled to process LLR values without
+
+21 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+any bank memory access conflict. Previous works such as [19] [20], proposed methods to map the data in different memory banks without access conflict. In our case, the mapping of LLR values in the P block memories is not constrained. This mapping is just an information that has to be considered during the schedule of the PU execution to know the LLR availability, as explained in the next sub-section.
+
+$ 
+
+
+ 
+
+ 
+
+ 
+
+
+!  #
+
+
+ 
+
+ 
+
+ 
+
+ 
+ $
+
+  
+# 
+
+ 
+
+
+ 
+
+
+ 
+
+ %
+
+ 
+ $
+
+ 
+ $
+
+
+ 
+
+ #
+
+
+ 
+ $
+
+  "  "
+ 
+
+Fig. 3: Homogeneous Single-Instruction Multiple-Data matrix
+
+4.3. Design flow for LDPC decoder generation
+Designing LDPC decoder based on our ASIP architecture model requires a design flow to automatically generate the SIMD matrix, the memory mapping and the PU execution specification. Proposed automatic design methodology is detailed in Fig. 4. A first step is the analysis of the LDPC code and in particular its parity check matrix H. This analysis enables to determine the degrees dvn and dcm of each variable node n and parity check node m, respectively. It also enables to estimate the maximum parallelism level of the SIMD matrix. This information associated to the bipartite graph representation of the LDPC code is required to the construction of a constraint graph over the PU execution. The rest of the design flow is then applied on the constraint graph.
+First, an allocation task is executed for a given parallelism level P . The purpose of the allocation algorithm is to map all the LLR values Tn to the P memory blocks. It means that the size of each memory block is equal to n/P . Three different memory mappings are proposed in our design flow : block by block, data by data modulo P and fixed by the designer. The two first approaches are low cost in terms of control resources because the data accesses are regular. However, they introduce a memory mapping constraint for the scheduling-binding that do not take into account the LDPC code construction.
+The most critical task is the scheduling-binding of the PU executions. This task is performed concurrently in order to take into account the memory mapping. A resource constrained scheduling also called List-Based scheduling is used. This algorithm is a generalization of the ASAP algorithm with the inclusion of memory mapping constraints. A scheduling priority list is provided according to a priority function. Naturally, the efficiency of this algorithm mainly depends on the priority function. In our design flow, this function depends on the mobility of the PU executions and the data availability. Once all the tasks are completed, the VHDL RTL description of the SIMD matrix is generated. Finally, the Plasma processor has to be programmed to execute the corresponding firmware C-code.
+
+ 
+ 
+ 
+
+ 
+
+ 
+ 
+
+ 
+
+ 
+  
+
+ 
+
+
+ !
+
+Fig. 4: Methodology for the generation of the ASIP LDPC decoder
+
+4.4. Firmware C-code dedicated to the ASIP architecture
+The Plasma CPU executes all MIPS I (TM) user mode instructions except unaligned load and store operations. Instructions are divided into three types : R, I and J. As it has the same instruction set as a MIPS processor, a GNU tool chain can be used for its programming. Eleven new instructions have been added to the Plasma CPU instruction set to increase its efficiency in terms of execution cycles. As some of the MIPS I instructions and corresponding hardware resources are useless in our design, we have optimized the softcore processor. To perform this optimization, we have applied an automated methodology described in [11]. The methodology is based on the extraction of the application characteristics from the binary program file to remove useless parts of the processor core. An example of firmware C-code example to illustrate the Plasma CPU programming process is given in Listing 1. The firmware is part of the LDPC decoding that considered loop = 20 iterations and a frame size n. Six instructions have been defined to directly specify the PU execution :
+– First.P-C : register initialization and parity check node – P-C : parity check node – First.Var : register initialization and variable node – Var : variable node – First.P-C&Var : register initialization, parity check node
+and variable node – P-C&Var : parity check node and variable node
+
+void {
+}
+
+ldpc_decoder ()
+
+int loop = 20;
+
+while ( loop )
+
+{
+
+F i r s t . P−C ( 1 ) ;
+
+P−C( n −1);
+
+F i r s t . P−C&Var ( 1 ) ;
+
+P−C&Var ( n −1);
+
+F i r s t . P−C ( 1 ) ;
+
+P−C&Var ( n −1);
+
+// ... ... ... ...
+
+F i r s t . Var ( 1 ) ;
+
+Var (n−1);
+
+l o o p −= 1 ;
+
+}
+
+Listing 1: Firmware C-code example for proposed ASIP architecture
+
+22 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+BER
+
+100
+
+2/5
+
+1/2
+
+3/5
+
+2/3
+
+3/4
+
+4/5
+
+5/6
+
+8/9
+
+9/10
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+10−8
+
+10−9
+
+10−10
+
+10−11
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0
+
+Fig. 5: BER performance for 64K DVB-T2 LDPC codes measured on an ASIP architecture that contains 64 PUs
+
+5. EXPERIMENTAL RESULTS
+Designing ASIP architectures for LDPC decoding is a challenging issue. In this section, implementation results of two LDPC decoders based on the proposed ASIP architecture are detailed. It is presented in [21] that a good trade-off between hardware complexity and decoding performance can be achieved with a 5 bits quantization scheme for LLR values. Let us consider the following notation (x, y, z) where x, y and z refer to bit quantizations of LLR Tn, message Tnm and message Emn, respectively. An uniform quantized with 1 sign bit, 2 magnitude bits and 2 fractional bits has been selected for LLR values in all our investigations. It means that the fixed-version of the LDPC decoding algorithm and the decoder architectures have been implemented with the (5, 7, 5) quantization scheme.
+Two different LDPC decoders have been designed and then implemented onto a Xilinx Virtex-6 LX240T FPGA. The first one is dedicated to the decoding of the smallest WiMAX standard LDPC code : LDPC (567, 288). Another study has been done to demonstrate the potential of our ASIP architecture model to design a flexible efficient decoder that supports all the LDPC code configurations of the DVB-T2 standard. The resulting decoder is more complex in terms of hardware resources. Indeed, the SIMD matrix is made of 64 PUs and 64 blocks me-
+
+Table 1: FPGA implementation results for two ASIP architectures
+
+Virtex-6 LX240T
+PU Quantization Frequency
+Slice Flip-Flop
+LUT RAM 36Kb Throughput
+
+WiMAX (576,288) LDPC code
+P = 24 (5, 7, 5) 100 M Hz 3, 137 (8%) 5, 342 (1%) 8, 685 (5%) 53 (12%) 33 M bps
+
+64K DVB-T2 LDPC codes
+P = 64 (5, 7, 5) 100 M Hz 12, 216 (32%) 12, 336 (4%) 33, 839 (22%) 353 (84%) 62 M bps
+
+mory to exploit the long frame (64800 LLRs) mode. Implementation results after place and route are given in Table 1. Computational resources of the WiMAX decoder take up 5,342 slice Flip-Flops and 8,685 slice LUTs. It means that the occupation rates are only about 1% and 5% of a XC6VLX240T FPGA for slice registers and slice LUTs, respectively. In addition, memory resources for this decoder take up 53 BlockRAMs of 36kbits. For its part, the DVB-T2 decoder occupies 12,807 slice FlipFlops and 41,094 slice LUTs. It is well-known that the major bottelneck of a LDPC decoder that has to support the long frame mode of DVB-T2 standard is the memory usage. It our design 336 BlockRAMs of 36kbits are necessary to support both the two frame modes and all the code rates. The clock frequency has been fixed at 100 MHz and 20 iterations have been chosen for the decoding process. It results in a throughput of 33 Mbps and 65 Mbps for WiMAX (567, 288) LDPC and DVB-T2 (64800, 32400) LDPC decoders, respectively.
+In order to validate the designed ASIP LDPC decoders, BER performance measures have to be carried out. For this reason, we have successively integrated the two LDPC decoder versions into an experimental setup composed of a computer associated with the Virtex-6 FPGA ML605 evaluation kit. The LDPC encoder and an AWGN channel emulator are a software running on the computer. The intrinsic information generated by the channel emulator is truncated and rounded, and is sent to the FPGA board thanks to a PCI express interface. Frame by frame communication is operated into our experimental setup. First, a comparison between floating-point simulated performance, fixed-point simulated performance and experimental setup measured performance in terms of BER of the designed WiMAX LDPC decoder is presented in Fig. 6. For the decoding process, the offset Min-Sum algorithm is employed. 20 iterations has been fixed for all the investigations. Results for the LDPC codes (576, 288) and (2304, 1152) that have a code rate equal to 1/2 over a Gaussian Channel using a BPSK mapping are given. The ASIP decoder prototype shows quasi-identical
+
+23 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+performance when compared to fixed-point simulation. The observed BER performance fulfills the WiMAX standard requirements. Measured BER performance obtained by our experimental setup for 9 code rates of the DVB-T2 standards are plotted in Fig. 5. The error floor produced by the code rate 2/5 can only be solved by implementing a more robust simplified version of the BP algorithm. Fortunately, all other results are compliant with the DVB-T2 standard requirements.
+Fig. 6: BER performance for WiMAX LDPC codes
+6. CONCLUSION
+In this paper, an LDPC decoder architecture based on a publicly available Plasma CPU associated with a homogeneous SIMD matrix of processing units has been detailed. The ASIP architecture model but also a design flow to generate and manage LDPC decoders, have been successively presented. Implementation results and BER performance measured demonstrate the potential of an ASIP approach based on an existing softcore processor. Indeed, the proposed architecture can be easily and rapidly programmed to process any LDPC code. Note that our design approach also enables to implement an LDPC decoder that supports all the LDPC codes of one or more digital communication standards.
+7. REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inform. Theory, vol. IT, pp. 21–28, Jan. 1962.
+[2] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” Information Theory, IEEE Transactions on, vol. 47, no. 2, Feb. 2001.
+[3] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, “Generic description and synthesis of LDPC decoders,” Communications, IEEE Transactions on, vol. 55, no. 11, Nov. 2007.
+[4] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop on Signal Processing Systems, SIPS 2004, Oct. 2004.
+[5] A. Orailoglu and A. Veidenbaum, “Guest editors’ introduction : application-specific microprocessors,” Design Test of Computers, IEEE, vol. 20, no. 1, Jan.-Feb. 2003.
+
+[6] A. Hoffmann, O. Schliebusch, A. Nohl, G. Braun, O. Wahlen, and H. Meyr, “A methodology for the design of application specific instruction set processors (ASIP) using the machine description language LISA,” in Computer Aided Design, 2001. ICCAD 2001. IEEE/ACM International Conference on, 2001, pp. 625 –630.
+[7] A. Fauth, J. Van Praet, and M. Freericks, “Describing instruction set processors using nml,” in European Design and Test Conference, EDTC 1995,, March 1995.
+[8] S. Rhoads, “Plasma 32-bit softcore,” www.plasmacpu.noip.org, Tech. Rep., 2011.
+[9] GRLIB IP Library User’s Manual, Aeroflex Gaisler, 2010.
+[10] R. E. Gonzalez, “Xtensa : A configurable and extensible processor,” IEEE Micro, vol. 20, no. 2, April 2000.
+[11] B. Le Gal and C. Jego, “Improving architecture efficiency of softcore processors,” in Embedded Real Time Software and Systems, ERTS 2012, Feb. 2012.
+[12] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP : A reconfigurable ASIP for convolutional, Turbo, and LDPC code decoding,” in Turbo Codes and Related Topics, 2008 5th International Symposium on, Sept. 2008.
+[13] F. Naessens, B. Bougard, S. Bressinck, L. Hollevoet, P. Raghavan, L. Van der Perre, and F. Catthoor, “A unified instruction set programmable architecture for multi-standard advanced forward error correction,” in IEEE Workshop on Signal Processing Systems, SiPS 2008, Oct. 2008.
+[14] P. Murugappa, R. Al-Khayat, A. Baghdadi, and M. Jezequel, “A flexible high throughput multi-ASIP architecture for LDPC and turbo decoding,” in Design, Automation Test in Europe Conference Exhibition, 2011, March 2011.
+[15] F. Vacca, G. Masera, H. Moussa, A. Baghdadi, and M. Jezequel, “Flexible architectures for LDPC decoders based on network on chip paradigm,” in Digital System Design, Architectures, Methods and Tools, 2009. DSD ’09. 12th Euromicro Conference on, Aug. 2009.
+[16] X. Zhang, Y. Tian, J. Cui, Y. Xu, and Z. Lai, “An multi-rate LDPC decoder based on ASIP for DMB-TH,” in ASICON ’09. IEEE 8th International Conference on, Oct. 2009.
+[17] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” Circuits and Systems II : Express Briefs, IEEE Transactions on, vol. 54, no. 6, June 2007.
+[18] V. E. Benes, Mathematical theory of connecting networks and telephone traffic. Academic Press, New York, 1965.
+[19] A. Tarable, S. Benedetto, and G. Montorsi, “Mapping interleaving laws to parallel turbo and LDPC decoder architectures,” Information Theory, IEEE Transactions on, vol. 50, no. 9, pp. 2002 – 2009, sept. 2004.
+[20] C. Chavet and P. Coussy, “A memory mapping approach for parallel interleaver design with multiples read and write accesses,” in Circuits and Systems (ISCAS), Proceedings of 2010 IEEE International Symposium on, 2010.
+[21] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoders,” Journal of Signal Processing Systems, vol. 65, pp. 185–197, 2011. [Online]. Available : http ://dx.doi.org/10.1007/s11265-011-0604-z
+
+24 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:31:35 UTC from IEEE Xplore. Restrictions apply.
+
+

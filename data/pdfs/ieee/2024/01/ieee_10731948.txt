@@ -1,0 +1,843 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+5040716
+
+WiFaKey: Generating Cryptographic Keys From Face in the Wild
+
+Xingbo Dong , Member, IEEE, Hui Zhang , Graduate Student Member, IEEE, Yen Lung Lai , Zhe Jin , Member, IEEE, Junduan Huang , Member, IEEE, Wenxiong Kang , Member, IEEE,
+and Andrew Beng Jin Teoh , Senior Member, IEEE
+
+Abstract— Deriving a unique cryptographic key from biometric measurements is a challenging task due to the existing noise gap between the biometric measurements and error correction coding. Additionally, privacy and security concerns arise as biometric measurements are inherently linked to the user. Bio-cryptosystems represent a key branch of solutions aimed at addressing these issues. However, many existing bio-cryptosystems rely on handcrafted feature extractors and error correction codes (ECC), often leading to performance degradation. To address these challenges and improve the reliability of biometric measurements, we propose a novel biometric cryptosystem (BC) named WiFaKey, for generating cryptographic keys from face in unconstrained settings. Specifically, WiFaKey first introduces an adaptive random masking-driven feature transformation pipeline, AdaMTrans. AdaMTrans effectively quantizes and binarizes real-valued features and incorporates an adaptive random masking scheme to align the bit error rate (BER) with error correction requirements, thereby mitigating the noise gap. Besides, WiFaKey incorporates a supervised learning-based neural decoding scheme called neural-MS decoder, which delivers a more robust error correction performance with less iteration than nonlearning decoders, thereby alleviating the performance degradation. We evaluated WiFaKey using widely adopted face feature extractors on six large unconstrained and two constrained datasets. On the labeled faces in the wild database (LFW) dataset, WiFaKey achieved an average genuine match rate (GMR) of 85.45% and 85.20% at a 0%
+Received 4 August 2024; revised 11 September 2024; accepted 30 September 2024. Date of publication 23 October 2024; date of current version 13 November 2024. This work was supported in part by the Brain Pool Program through the National Research Foundation of Korea (NRF) funded by the Ministry of Science and ICT under Grant 2021H1D3A2A01099396; in part by the Open Research Fund from the Guangdong Laboratory of Artificial Intelligence and Digital Economy (SZ), under Grant GML-KF-24-29; and in part by the NRF grant funded by the Korean Government [Ministry of Science, ICT and Future Planning (MSIP)] under Grant NRF-2022R1A2C1010710. The Associate Editor coordinating the review process was Dr. Zhen Ren. (Corresponding author: Andrew Beng Jin Teoh.)
+Xingbo Dong was with the School of Electrical and Electronic Engineering, College of Engineering, Yonsei University, Seoul 120749, South Korea. He is now with Anhui Provincial International Joint Research Center for Advanced Technology in Medical Imaging, Anhui Provincial Key Laboratory of Secure Artificial Intelligence, Anhui University, Hefei 230093, China.
+Hui Zhang, Yen Lung Lai, and Zhe Jin are with Anhui Provincial International Joint Research Center for Advanced Technology in Medical Imaging, Anhui Provincial Key Laboratory of Secure Artificial Intelligence, Anhui University, Hefei 230093, China.
+Junduan Huang is with the School of Artificial Intelligence, South China Normal University, Foshan 528225, China.
+Wenxiong Kang is with the School of Automation Science and Engineering and the School of Future Technology, South China University of Technology, Guangzhou 510641, China, and also with the Pazhou Laboratory, Guangzhou 510335, China.
+Andrew Beng Jin Teoh is with the School of Electrical and Electronic Engineering, College of Engineering, Yonsei University, Seoul 120749, South Korea (e-mail: bjteoh@yonsei.ac.kr).
+Digital Object Identifier 10.1109/TIM.2024.3485436
+
+false match rate (FMR) for MagFace and AdaFace features, respectively. Our comprehensive comparative analysis shows a significant performance improvement of WiFaKey. The source code of our work is available at github.com/xingbod/WiFaKey.
+Index Terms— Authentication, bio-cryptosystem, biometric measurements, biometric technology, unconstrained face bio-cryptosystem.
+I. INTRODUCTION
+BIOMETRICS offer reliable identity authentication by measuring unique traits like fingerprints, facial features, iris patterns, voice, and gait, converting these into digital data for analysis and comparison [1], [2]. However, directly using biometric measurements as a cryptographic key presents several challenges: 1) the variability and error rates in biometric measurements, such as iris codes with an error rate of 10%–30% [3] and face features with an error rate of around 30% (see Section IV-C), and 2) the stringent privacy and security policies required by regulations like the general data protection regulation (GDPR) [4].
+Among existing works [5], [6], [7], biometric cryptosystem (BC) [8] is a prominent instrument system devised to generate cryptography keys from biometric measurements. BC can be further classified into key generation and key binding, where key generation BC directly generates a key from the biometric measurements such as fuzzy extractors [9], and key binding BC binds a key to a biometric datum such as fuzzy commitments [10] and fuzzy vaults [11]. Helper or auxiliary data are also generated by the BC and stored in the database simultaneously. Cryptographically, there should be minimal information leakage about original biometric measurements and keys from the helper data, as retrieving the key or the original biometric measurements would be computationally difficult based on the helper data. Instrumentally, biometric measurements of the correct person are required before the key can be released or reconstructed in BC.
+Fuzzy commitment [10] is a typical representative BC scheme used in biometric systems to store and retrieve biometric measurements securely, which has been deployed with a variety of biometric modalities, including iris [12], face [13], fingerprints [14], etc. It generates a codeword from an error correction code (ECC) and computes the difference between the biometric vector and the codeword, which is hashed and stored as a commitment. In the de-commitment step, the user provides their biometric measurements, and a codeword is generated by XOR operation on biometric measurements with
+
+1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+the commitment difference. If the distance between the stored Second, a supervised learning-based fifth-generation (5G)
+
+and input biometric measurements is below a certain threshold, new radio (NR) low-density parity-check (LDPC) neural
+
+the original codeword can be restored using the ECC decoder. decoding scheme, namely neural-MS decoder, is integrated
+
+However, when encountering unconstrained scenarios [15], into WiFaKey to enhance the error tolerance of the instrument
+
+[16] in the wild, there remain several obstacles to fuzzy system. Due to optimized parameters, the neural-MS decoder
+
+commitment.
+
+enabled us to achieve a more robust error correction perfor-
+
+1) Performance Degradation: The fuzzy commitment scheme, which is typically applied to binary biometric measurements such as IrisCode [17], necessitates the conversion of real-valued biometric features into binary vectors. This conversion process inherently involves a loss of information, resulting in degraded performance [18], [19]. Furthermore, most fuzzy commitment schemes are designed and evaluated using controlled biometric datasets, which assume cooperative authentication scenarios [5]. However, in unconstrained environments, where biometric measurements are subject to variations and noise, significant performance degradation is observed [20]. Thus, when the fuzzy commitment scheme is deployed in unconstrained scenarios, the primary issue becomes measurement-induced performance degradation.
+2) Noise Gap: The gap between the biometric measurement noise level and the ECC’s error tolerance capability is a critical issue when using fuzzy commitment in biometrics. The ideal scenario would feature zero intraclass variation and maximum interclass variation in the extracted biometric features, ensuring precise and accurate measurements. In this perfect scenario, the ECC would provide 100% error correction capability for the same user despite any noise in the measurements, while achieving 0% error correction for different users. However, this level of performance is practically unattainable due to inherent noise and variability in biometric measurements. For instance, in the case of binarized face features, intraclass samples often exhibit an error rate of approximately 30% (see Section IV-C). Given a Bose–Chaudhuri–Hocquenghem (BCH) code with parameters (n, k, t), where n = 511, the maximum number of correctable error bits t is 121 bits, and the corresponding secret key length k is only 10 bits, resulting in low secrecy utility. Alternatively, the error rate can be artificially increased by interleaving the binary vector with a constant binary vector, but this significantly increases the processing cost due to the multiple encoding–decoding steps required, which is impractical for real-time biometric authentication systems.
+
+mance with fewer iterations, thereby increasing the reliability and security of the instrument system.
+Our research is pioneering in proposing a random masking scheme that adaptively reduces measurement noise in biocryptosystems. Additionally, we are the first to integrate a supervised learning-based 5G NR LDPC min-sum (MS) neural decoding scheme into a bio-cryptosystem on unconstrained face datasets. Consequently, we tackled the performance degradation and noise gap problems from two directions by reducing the noise level in biometric measurements and improving the neural decoder of the LDPC. The proposed method can address the challenge and ultimately achieve a successful solution effectively. The main contributions of this article are as follows.
+1) We propose a new fuzzy commitment BC system, named WiFaKey. The proposed fuzzy commitment system can handle unconstrained facial biometric measurements, which is more practical for real-world scenarios.
+2) A pipeline called AdaMTrans is proposed for transforming features into binary bits suitable for LDPC coding. AdaMTrans utilizes quantization and binarization techniques, along with a random bit masking scheme, to effectively address the challenge of biometric intraclass variation while preserving LDPC error correction capabilities with minimal impact on accuracy.
+3) A supervised learning-based 5G NR LDPC MS neural decoding scheme on the binary channel, namely neuralMS decoder, is proposed for the fuzzy commitment system. The neural-MS decoder improves error correction performance with less iteration than nonlearning decoders due to optimized parameters.
+Our experiment simulates practical use cases with independent subjects (no identity overlaps the training and testing datasets) and fully validates the performance benefits of the proposed scheme. We employed four widely used face feature extractors (Arcface [21], FaceViT [22], Adaface [23], and Magface [24]) and examined its performance across six large unconstrained datasets (labeled faces in the wild database (LFW) [25], Cross-Age LFW (CALFW) [26], Cross-Pose LFW (CPLFW) [27], celebrities in frontal-profile frontal-toprofile verification (CFPFP) [28], celebrities in frontal-profile frontal-to-frontal verification (CFPFF) [28], and age database
+
+In this study, we propose a neural error-decoder-based bio- (AgeDB) with a 30-year maximum age gap (AgeDB-30)
+
+cryptosystem based on face, named WiFaKey, specifically [29]) and two constrained datasets (carnegie mellon university
+
+designed for handling biometric measurements under uncon- pose, illumination, and expression (PIE) database (CMU-PIE)
+
+strained conditions. WiFaKey first employs an adaptive random [30] and color face recognition technology (FERET) database
+
+masking-driven feature transformation pipeline, AdaMTrans. (colorFERET) [31]). Comparative analysis with existing state-
+
+This pipeline quantizes and binarizes real-valued features of-the-art key generation schemes revealed a significant
+
+extracted from the face image for error correction coding and improvement in the performance of WiFaKey.
+
+introduces an adaptive random masking scheme to align the BER with error correction requirements, thus mitigating the
+
+II. RELATED WORK
+
+noise gap between the biometric measurements and ECC error BC schemes are developed to address the challenges asso-
+
+tolerance.
+
+ciated with the use of biometric measurements directly as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+
+5040716
+
+cryptographic keys. In this section, we first reviewed existing sufficiently robust to distinguish between intraclass and inter-
+
+works on ECC-enabled fuzzy commitment in biometric instru- class variations. However, limitations still exist, as discussed
+
+ments, encompassing various modalities not limited to face in Section I, which hinders the development of biometric key
+
+recognition. The impact of ECCs on key retrieval performance generation.
+
+is discussed subsequently.
+
+First, they require binary biometric vectors of the same
+
+size as the employed codewords, necessitating the conversion
+
+A. ECCs Enabled Fuzzy Commitment
+1) Hadamard and Reed-Solomon ECC: An early application of fuzzy commitment to iris biometrics was demonstrated by Hao et al. [12] using a combination of two ECCs, Hadamard and Reed–Solomon (RS). For implementing the (64, 7) Hadamard ECC, which can correct at least 15 random bit errors and outputs a 7-bit word, the 2048-bit iris template was divided into 32 blocks of 64 bits each. The Reed–Solomon code (32, 20) was used to wipe out errors at the block level (burst), which can correct up to six incorrect 7-bit words. To obtain a 140-bit key, the 7-bit words used 32 input words to decode 20 output words. Rathgeb and Uhl [32] integrated a fuzzy commitment scheme into the iris recognition system and proposed a method to enhance accuracy. They employed Hadamard and Reed–Solomon codes for error correction and improved performance by optimizing the arrangement of iris codes based on global error distribution analysis.
+2) Reed–Muller ECCs: The key recovery rate was found to drop drastically in [12] when tested on a challenging dataset. Bringer et al. [20] proposed an iterative soft decoding ECC as a combination of two Reed–Muller ECCs, (64, 7) and (32, 6), which significantly enhanced the accuracy of the fuzzy commitment scheme.
+3) BCH Codes: In [33], BCH codes were employed to construct a fuzzy commitment scheme for face-ordered feature vectors. Nandakumar [34] applied a fuzzy commitment scheme with turbo codes for securing fingerprint minutiae patterns. Yang et al. [35] utilized a fuzzy commitment scheme
+
+of biometric features into binary vectors (e.g., [14], [33], [36], [37]). This conversion can potentially lead to a loss of discriminability. In unconstrained settings, the variability within intraclass and interclass can be even more pronounced, underscoring the importance of robust error correction mechanisms [15], [16]. For instance, in face recognition, datasets such as face recognition grand challenge (FRGC) [39], FERET [31], PIE [30], and Extended Yale B [40] are commonly used in works like [18], [33], and [37]. As a result, fuzzy commitment schemes for unconstrained settings remain relatively underexplored.
+Second, linear codes such as BCH, Hadamard, RS, LDPC, and their combinations have been extensively studied in the abovementioned literature. However, the error-correcting codes utilized in existing fuzzy commitment schemes for face recognition have not been optimized to their full potential (e.g., nonlearning LDPC in [14], [37], and [38]). Their error correction capability must be sufficiently robust to differentiate between intraclass and interclass variations [41]. Nevertheless, the noise gap, as discussed in Section I, often proves to be substantial. Leveraging known statistics about the differences in the considered biometrics can still prove invaluable in accommodating the high variability inherent in unconstrained scenarios.
+In our work, WiFaKey leverages the proposed AdamTrans and neural-MS decoder to address the limitations above in existing works. We will provide detailed information in Section III.
+
+based on BCH codes to bind finger-vein templates and secret
+
+III. PROPOSED METHOD
+
+keys. The resulting helper data were stored on a smart card. In [36], a palmprint fuzzy commitment system based on deep hashing codes generated by a deep hashing network was proposed, and the system is designed on top of BCH.
+4) LDPC Codes: Li et al. [14] introduced a binary fixed-length feature generation strategy based on minute triplets for fingerprint fuzzy commitment. This work explored using LDPC codes (BCH and Reed–Solomon are also explored). Chen et al. [37] devised a face template protection method employing multilabel learning and LDPC codes. This method involves hashing random binary sequences to create a protected template encoded with an LDPC encoder during training to yield diverse binary codes. The face features of each user are subsequently mapped to a diverse binary code using deep multilabel learning. Finally, the LDPC decoder eliminates noise caused by intravariations from the convolutional neural network (CNN) output. Dong et al. [38] incorporates LDPC coding into a bio-cryptosystem scheme, utilizing it to extract stable cryptographic keys from finger templates.
+
+A. Overview
+An overview of the proposed fuzzy commitment is shown in Fig. 1. At the enrollment stage of a BC scheme, given an input image x ∈ R H∗W∗L where H and W represent the height and width dimensions of x and L represents the number of channels, highly discriminative features can be extracted using popular pretrained face recognition models by v = f (x) ∈ R512, where f (·) is the feature extractor. Then the features are transformed into binary instances by b = g(v) ∈ {0, 1}n, where g(·) is the AdaMTrans consisting of feature quantization, binarization, and random masking. Next, a set of n-bit codewords C is generated from a randomly generated key k using the LDPC coding scheme, and the commitment is computed and stored as {hash(k), δ} where δ = b XOR c, c is a codeword c ∈ C, and hash(·) is a one-way hashing such as secure hash Algorithm 3 (SHA3) [42].
+At the authentication and key retrieval stage, given a query image x′ ∈ R H∗W∗L from the same person, a binary instance b′ can be obtained following the same pipeline, i.e., b′ =
+
+B. Impact of ECCs to FC and Motivations of WiFaKey
+
+g( f (x′)). The stored δ can be de-committed to recover the codeword by c′ = b′ XOR δ. The codeword c′ can be restored
+
+ECCs play a crucial role in handling variations in biometric as c by the EEC system if the distance between b′ and b is
+
+measurements, and their error correction capability must be within the ECC’s error correction capability.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 1. Overview of the WiFaKey. Our proposed feature transformation pipeline, i.e., the AdaMTrans, transforms features generated from extractors into binary templates. The commitment is generated and stored in the database; a neural-MS decoder (the lower block) is trained and serves as the decoder to retrieve the key from the de-committed codewords. (a) Proposed ViFaKey Scheme. (b) Learning-based decoding.
+
+The above task can be optimized along three dimensions, focusing on measurement accuracy and precision: 1) minimize the intraclass variations and maximize the interclass variations of the biometric features; 2) optimize the transformation function g(·) to preserve the discriminative information of the biometric features after binarization; and 3) optimize the error correction to achieve the highest error correction capability for intraclass and lower capability for interclass, ensuring reliable and accurate measurements for identity authentication. The first dimension has been well-explored, and tremendous feature extraction models have been proposed in the literature. However, the second dimension remains under-explored except for a few works such as [18] and [43]. These works mainly focus on transforming floating feature vectors into binary vectors, while the gap between BERs and ECC capability is overlooked. As for the optimization of the ECC, to our best knowledge, there is no existing work using a learning technique to optimize ECC for the bio-cryptosystem. This presents an opportunity for further research to enhance the precision and reliability of biometric measurements in cryptographic applications.
+To bridge the gap between the BERs and ECC capability, we have designed a feature transformation function, AdaMTrans, and a learning-based neural-MS decoder on top of the widely used facial feature extractor. The algorithm flows are illustrated in Algorithms 1 and 2, with detailed discussions in Sections III-B and III-C.
+
+Algorithm 1 AdaMTrans: Adaptive Random Masking-Driven
+
+Feature Transformation 1: Input an input image x, feature extractor f (.), the quanti-
+
+zation scheme Q LuT , the index-permuted LSSC B LuT ,
+
+quantized integer range q, the bit length m = q − 1,
+
+permutation seed ϕ, random mask r ; 2: Preparatory: Extract feature vector v = f (x) ∈ R512;
+
+3: Feature quantization and binarization:
+
+Get
+
+quantized
+
+feature
+
+vector
+
+z
+
+=
+
+Q LuT (v)
+
+∈
+
+{1,
+
+q
+
+512
+}
+
+;
+
+Get binary feature vector preb = B LuTϕ(z) ∈ {0, 1}512∗m;
+
+4: Random masking: Get the masked binary vector b = preb AND r;
+5: Return Masked binary vector b.
+
+Fig. 2. Diagram of the AdaMTrans.
+
+B. Feature Transformation
+The feature transformation by AdaMTrans aims to achieve several measurement-focused has several goals: 1) features
+
+generated by pretrained face models are usually fixed-length and real-valued vectors that must be converted into binary strings suitable for ECC; 2) to preserve the discrimination capability and accuracy in the binary domain; and 3) given
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+
+5040716
+
+Algorithm 2 Key Measurements With Learning-Based NeuralMS Decoder
+1: Input: 2: c′: decommited codeword (size (m × 520), m blocks) 3: max_iter : max number of decoding iterations 4: Output: 5: k′: final key of length m × 100 6: Key Construction: 7: for each block in c′ do 8: Decoding: 9: for iteration i = 1 to max_iter do 10: VN-to-CN Update via Eq. (7) 11: CN-to-VN Update via Eq. (14) 12: end for 13: Estimate subkeys via Eq. (10) 14: end for 15: Concatenate m subkeys to form final key k′ 16: Output: 17: Return final key k′
+
+a specific LDPC code scheme, bridge the gap between BERs from the same user’s binary features and the error correction capabilities of the LDPC.
+In AdaMTrans, since comprehensive studies have already been conducted for the first and second goals in [18] and [43], we adopt the feature quantization and binarization approaches mentioned therein, i.e., the quantization-based on equally probable intervals and the linearly separable subcode binarization (LSSC) [44] to address the first two goals. However, the transformation adopted by Rathgeb et al. [18] and Drozdowski et al. [43] does not consider the requirements of the ECC, and the intraclass errors of the binary features may be beyond the tolerance of the LDPC (see Section IV-C). Therefore, carefully designed random masking bits are applied through bitwise AND operation with the binary features to align with the ECC correction capability.
+1) Feature Quantization and Binarization: The feature quantization and binarization can be represented as two lookup tables (see Fig. 2). Accordingly, the conversion of v to integer z is accomplished with the following equation:
+
+z
+
+=
+
+QLuT(v)
+
+∈
+
+{1,
+
+q
+
+512
+}
+
+(1)
+
+where QLuT refers to the quantization schemes based on equally probable intervals, as suggested by Rathgeb et al. [18] and Drozdowski et al. [43]. Specifically, the feature elements’ probability densities are calculated first. The feature space of each feature element is then divided into q integer-labeled equally probable intervals based on its obtained probability density. Then, each feature vector element is mapped to an integer corresponding to the interval it belongs to (see an example in Fig. 2). Then, the quantized feature vector z is mapped to a binary feature vector preb ∈ {0, 1}512∗m using the second lookup table
+
+preb = BLuTϕ(z) ∈ {0, 1}512∗m
+
+(2)
+
+where BLuT is defined as the index-permuted LSSC [44] similar to [18], and ϕ denotes the permutation seed;
+
+m = q − 1 is the bit length of the binary entries in BLuT (see an example in Fig. 2). Note that the L1 norm of the distance between two binary values generated by LSSC is equivalent to the distance between the two quantized values.
+2) Random Masking: On the other hand, we propose a random masking strategy to decrease the intraclass Hamming distance to bridge the gap between the BER from the intraclass binary features and the error correction capability. Specifically, the masking bits string is generated as a random binary vector r with κ percent of the bits being 0. Next, each binary vector is bitwise AND with the mask r to generate the masked binary vector
+
+b = preb AND r
+
+(3)
+
+where r = sgn(u − κ), u ∈ U (0, 1)512∗m. The distance D between any two samples after masking can be computed as follows:
+
+D = ||(bi AND r) XOR (bj AND r)||1
+
+= ||bi XOR bj||1 − 0.5 × ||r||1
+
+(4)
+
+therefore, the intraclass and interclass Hamming distance can be mediated based on different masks r. A proper mask r should lead to a smaller intraclass distance within the error correction capability but a large interclass distance beyond the error correction capability. To address the latter issue, we iteratively search for the best κ which can lead to 95% of the interclass distance after the masking is larger than a given threshold τ (see Section IV-C), i.e.,
+
+P(||prebi XOR prebj||1 − 0.5 × ||r||1 > τ ) = 0.95 (5)
+where prebi and prebj are from different users. Note that r is determined based on a tenfold cross-validation protocol on each dataset, and r is application-specific in our settings and can be exposed to the public. In practice, r can also be user-specific, and using a user-specific r would improve the performance.
+On the other hand, raising the τ parameters can result in a zero FMR, but this comes with a lower genuine match rate (GMR) or utility. It’s essential to recognize that there is a compromise between the GMR and the FMR, and attaining a zero FMR may not always be practical in real-world scenarios.
+
+C. Learning-Based LDPC Neural Decoding
+LDPC is a linear error correcting code [45], which can nearly reach the Shannon channel capacity and decode in linear time in the data length based on the iterative belief propagation (BP) algorithm. LDPC can be described with a sparse parity-check matrix H, which contains very few ones. The ones in each row from H specify which bits are associated in the corresponding parity equation. H can be used to create the generator matrix G, which encodes a message a with aG mod 2 based on matrix multiplication in modulo two arithmetic.
+LDPC can also be represented as a sparse Tanner graph [46]. A Tanner graph has two sets of nodes: variable nodes (VNs) and check nodes (CNs). Each row of the parity-check matrix (also known as the parity-check equations) represents a CN,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+and each bit in the codeword stands for a VN. In a paritycheck equation, the corresponding VN and CN have an edge connected if a bit is involved.
+BP decoding algorithms have been widely studied, a.k.a. sum-product (SP) decoding algorithms. These iterative decoding algorithms operate on the Tanner graph by passing the bit log-likelihood ratio (LLR) on the graph. Given a noisy received signal vector y corresponding to a transmitted codeword x, the LLR of the vth bit in x is defined as
+
+ℓv
+
+=
+
+ln
+
+Pr(yv Pr(yv
+
+| |
+
+xv xv
+
+= =
+
+0) 1)
+
+(6)
+
+where Pr(yv | xv) denotes the transition probability from xv to yv. Iterative message exchanges between VNs and CNs commonly describe the SP decoding of LDPC codes. During iteration i = 1, . . . , I , the CN messages CN and VN message VN are updated as follows:
+
+ℓv(i→) c = ℓv +
+
+ℓc(i′
+
+−1) →v
+
+(7)
+
+c′∈N (v)\c
+
+
+
+
+
+ℓ(ci→) v = 2 tanh−1
+
+tanh ℓv(i′)→c 
+
+(8)
+
+2
+
+v′∈N (c)\v
+
+where ℓ(vi→) c and ℓc(i→) v denote the message passed along VN-to-CN and CN-to-VN at iteration i, respectively. N (v)
+[mathcal N (c)] represents the neighboring node set of v (c)
+consisting of CNs (VNs) which are adjacent to the VNv
+(CNc); N (v)\c (N (c)\v) denotes the neighboring node-set except the CN c (VNv). Note that ℓc(0→) v is initialized to 0. Note that after I iterations, v − to − c updating is computed
+differently
+
+sv = ℓv +
+
+ℓc(i′
+
+) →v
+
+.
+
+(9)
+
+c′∈N (v)
+
+The estimated code bits can be generated by
+
+xˆ v
+
+=
+
+1
+
+−
+
+sgn(sv ) 2
+
+(10)
+
+where sgn(·) represents the signum function. Hyperbolic tangent functions are used by the SP decoder
+discussed above. To alleviate the computational overhead, the MS algorithm approximates (8) using
+
+
+
+
+
+ℓ(ci→) v = 
+
+sgn
+
+ℓ(vi′)→c
+
+ × min
+v′∈N (c)\v
+
+ℓv(i′)→c
+
+.
+
+v′∈N (c)\v
+
+(11)
+
+The MS decoding algorithm has a much lower computational complexity at the cost of slightly lower performance. To preserve the performance, the normalized MS (NMS) has been proposed to add a normalization scaling factor α
+
+
+
+
+
+ℓc(i→) v = α × 
+
+sgn ℓ(vi′)→c 
+
+v′∈N (c)\v
+
+× max
+
+min
+v′∈N (c)\v
+
+ℓv(i′)→c
+
+,0
+
+(12)
+
+while offset MS (OMS) has been proposed to add an offset correction term β
+
+
+
+
+
+ℓc(i→) v = 
+
+sgn ℓ(vi′)→c 
+
+v′∈N (c)\v
+
+× max
+
+min
+v′∈N (c)\v
+
+ℓv(i′)→c
+
+− β, 0
+
+.
+
+(13)
+
+The normalizing and offset factors listed above can be considered the weights and biases assigned to the graph’s edges. Therefore, constructing a neural network to automatically learn the optimal normalizing and offset parameters automatically is a straightforward strategy to improve the error correction performance. Several examples of this have been proposed recently. For example, an SP decoder is trained in [47] to learn the weight parameters and an OMS decoder is trained in [48] to learn the offset parameters. Our proposed novel fuzzy commitment scheme is adopted from [49]. Dai et al. [49] proposes a neural-MS decoder that considers both the normalizing factors and offset factors for 5G NR LDPC, defined by
+
+
+
+
+
+ℓc(i→) v = 
+
+sgn ℓ(vi′)→c 
+
+v′∈N (c)\v
+
+× max
+
+α
+
+×
+
+min
+v′∈N (c)\v
+
+ℓ(vi′)→c
+
+− β, 0
+
+.
+
+(14)
+
+Here, α and β are the parameters to be optimized. To learn the weight and offset parameters for LDPC codes,
+Dai et al. [49] proposed a sparse neural-MS decoder with a partially connected structure that resembles a trellis during iterative decoding.
+In particular, the neural network input layer is a vector with size N , where N is the length of a code block (i.e., the number of VNs in the Tanner graph). Except for the final layer (i.e., all the hidden layers), the remaining layers in the trellis are all of the size E, where E represents the number of edges in the Tanner graph. The hidden layer i corresponds to the ith iteration in the MS decoding process. Two sublayers, iv and ic, which stand for the updates of VN and CN, respectively, are included in each hidden layer. There are N neurons in the output layer. In the hidden layer i, sublayer iv outputs the message sent from the associated VN to CN along the edge, and sublayer ic outputs the message sent from the associated CN to VN along the edge (refer to [49] for more details).
+The neural network is trained greedily in an iteration-byiteration manner to avoid the gradient vanishing issue [49]. Specifically, the network is optimized one layer at a time. Once a particular layer has been trained, its corresponding weights and biases are fixed for the remainder of the training process. This strategy ensures that the representations learned in earlier layers are preserved during the training of subsequent layers, thereby maintaining the integrity of the information propagated through the network. By doing so, the model avoids the gradual diminishment of gradients, which is a critical issue that arises when training deep networks using traditional backpropagation methods. In this greedy layer-wise training approach, the learning process is highly structured.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+
+5040716
+
+Training begins with a single-layer network, and as each layer completes its optimization phase, the network progressively evolves into a multilayer structure. This incremental growth ensures that each layer contributes effectively and consistently to the model’s learning process.
+We adopt the base code BG2 defined in the 5G standard [50], which has 42 rows and 52 columns in the parity-check matrix H with 197 nonzero elements, and the baseline code rate of the BG2 codes is 0.2. However, the decoder is revised to be suitable for biometric measurements, making it distinct from [49] where the following holds.
+1) The original neural-MS decoder is designed for the additive white Gaussian noise (AWGN) channel. In contrast, our decoder is designed to focus on the binary symmetric channel (BSC) for the binary operation in fuzzy commitment.
+2) We adopt the lifting factor z = 10, therefore the code length is N = 52 × 10 and the message length is K = 10 × 10, which is appropriate for our features length.
+The binary features b are divided into m [from (2)] blocks with a block size of 512. Each block is padded with eight zeros to fit the code length 520, and m codewords will be generated in the encoding process. In consequence, a key length of 100 × m can be achieved. In the implementation, the m subkeys are retrieved from m codewords and then concatenated to form the final key k. We follow the training details as discussed above to train the decoder greedily in an iteration-by-iteration manner.
+IV. EXPERIMENTS AND RESULTS
+A. Experiment Details
+1) Experimental Configurations: For our performance evaluation, we conducted experiments using an Intel Core i9-10900K CPU with ten cores and 20 threads, paired with an NVIDIA GeForce RTX 3090 GPU featuring 24 GB of GDDR6X VRAM. The hyperparameter setting involved in the training process has been thoroughly discussed in Section IV-C. This includes parameters such as LSSC intervals q, the masking threshold τ and different decoder settings, all of which were systematically analyzed to assess their impact on the key retrieval performance.
+2) Unconstrained Datasets: We mainly report the recognition performance on six mainstream benchmarks, including LFW [25], CALFW [26], CPLFW [27], CFPFP [28], CFPFF [28], and AgeDB-30 [29]. These are all unconstrained face datasets and the experimental results based on unconstrained face datasets are beneficial for emphasizing the feasibility of the proposed method in practical applications.
+1) LFW database, a well-known unconstrained face dataset, has 13 233 face images from 5749 identities. LFW was used to build the CALFW and CPLFW databases, which focus on the challenges to face recognition of adversarial robustness and similar-looking faces.
+2) Celebrities in frontal profile (CFP) in the wild contains faces from 500 celebrities in frontal and profile views. This dataset presents two verification protocols: one
+
+comparing only frontal faces (CFP FF) and the other comparing frontal and profile faces (CFP FP). 3) AgeDB is a cross-age database that was manually collected. It contains 16 488 images from 568 celebrities of different ages. AgeDB-30 is a sub-dataset of this, containing identities with an age difference of 30 years, and is the most challenging one.
+CFPFF and CFPFP contain 3500 genuine and 3500 impostor comparisons, and LFW, CALFW, CPLFW, and AgeDB30 have 3000 genuine and 3000 impostor comparisons. In addition, we have conducted a comparison with existing works on two widely used face datasets: colorFERET [31], and CMUPIE [30]. colorFERET consists of face images captured in a semi-controlled environment with 13 different poses, making it a semiconstrained dataset. On the other hand, CMU-PIE also belongs to the semiconstrained category and includes 67 subjects with 42 illumination variations in the database.
+3) Feature Extractors: Four popular pretrained models are adopted in our experiments, including Arcface [21] (resnet100 [51] trained on ms1mv3 [52]), Face vision transformer (ViT) [22] (P8S8 trained on ms1m-retinaface [52] with cosface loss function), Adaface [23] (ir101 on webface12m [53]), and Magface [24] (ir100 trained on MS1MV2 [52]). The details of the adopted pretrained models are summarized in Table A1 in the Supplementary Material. It is worth highlighting that the employed neural-network-based feature extractors are tested on a disjoint dataset of subjects, which falls naturally into open-set and subject-independent recognition settings.
+4) Evaluation Metrics: We measure the key retrieval performance of the system using the absolute key reproduction accuracy for the same object across different face images. In addition, we incorporate the commonly used GMR and FMR to further assess system performance further. Moreover, we employ d’ to quantify the difference between the distribution of genuine subject match scores (mated) and imposter subject match scores (nonmated), as explained in detail in Section IV-C. This combination of metrics provides a comprehensive assessment to ensure a balance between the system’s performance and security.
+B. On the Error Correction Capability
+Due to the inherent complexity associated with determining the decoding radius of LDPC codes—a challenge often equated to the NP-hard problem of identifying the minimum distance of a linear ECC—the performance of iterative decoders, which are employed for the decoding of LDPC codes, is typically evaluated numerically through comprehensive Monte Carlo simulations. Monte Carlo simulations statistically approximate the LDPC code’s performance metrics, such as the BER, under specific conditions like a given signal-to-noise ratio (SNR). The results can be averaged by conducting many simulations under varied conditions to yield a reliable estimate of the LDPC code’s error correction capability.
+In this study, the performance of the SP, MS, and neural-MS decoders is evaluated over a BSC. The BSC experiences different crossover rates, which represent the probabilities
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 3. FER versus crossover rate and number of iterations. (a) Neural-MS. (b) FER versus crossover rate.
+
+of bit-flipping. The methodology adopted involves encoding 10 000 randomly generated data frames (10 000 k) using an LDPC code encoder. After the encoding, varying levels of noise, dictated by the crossover rate, are introduced to the codeword. After introducing noise, the noisy message is decoded using the SP, MS, and neural-MS decoders. The frame error rate (FER), the ratio of received messages containing errors to the total number of transmitted messages, is used in this assessment. Note that a single-bit error within a frame can render the entire frame erroneous, resulting in the FER typically being higher than the BER for a specific code and channel condition. This observation is particularly beneficial for thoroughly evaluating the error correction capacity of the decoders under consideration. Furthermore, it provides the definitive upper limit for decoding error, an essential factor for successful key retrieval.
+Figs. 3(a) and A1(a)–(c) shows the FER under different crossover rates and iterations. Fig. A1 is included in the Supplementary Material. Fig. 3(b) shows the FER versus different crossover rates after 100 iterations. The results show that neural-MS outperforms the handcrafted MS decoder by a large margin yet is comparable to the SP decoder. SP is computationally unfriendly due to the (inverse) hyperbolic tangent function used in its decoding process, whereas neural-MS strikes a balance between computational overhead and accuracy.
+As seen from Fig. 3(b), to achieve a FER less than 5%, MS works favorably up to a 15.5% crossover rate, neuralMS can tolerate a 17.62%, while SP can work well up to an 18.52%. Therefore, it is fair to conclude that an intraclass Hamming distance within 18.52% can be suitable for LDPC coding. However, the intraclass distance is usually larger than this FER (see Table I); this is why we introduce the AdaMTrans, elaborated in Section III-B.
+C. Ablation Studies
+1) Binary Features Recognition Performance on LSSC Intervals q: We first evaluate the recognition performance of the generated binary features under various LSSC intervals q. The comparison scores between pairs of deep face representations are obtained for deep facial features by estimating their cosine distance. The recognition performance is evaluated in terms of accuracy, which represents the probability of
+
+the fuzzy commitment BC correctly identifying the identity,
+Decidability (d′) [54] is also used to indicate the separability of mated and nonmated1 comparison scores. d′ is defined as
+
+d′ = |µm − µnm|
+
+(15)
+
+1 2
+
+σm2 + σn2m
+
+where µm and µnm are the means of the mated and the nonmated comparison trials score distributions, and σm and σnm are their standard deviations, respectively. The larger the decidability values, the better the ability to distinguish between mated and nonmated comparison trial scores.
+As shown in Table I, consistent with [18] and [43], the LSSC can achieve comparable performance to the deep features in terms of accuracy. Dividing the feature space into larger intervals generally leads to better performance. However, the performance reaches a plateau quickly using more
+
+than eight intervals. 2) τ on Different Feature Extractors: The parameter τ
+in (5) is used to control the generation of the masking bits, and we test the accuracy of b after masking with τ = [0.05, 0.5]. As shown in Fig. 4, the accuracy improves according to the increase in τ . It can also be observed that the performance is primarily preserved compared to the original deep features. For example, the bit masking operation on features from Magface and Arcface can achieve an accuracy similar to their deep features counterparts. Applying the masking operation to Adaface and FaceViT only leads to a 0.3% and 0.5% drop in accuracy.
+3) τ on Different Decoders: We must decide which τ is the
+
+best for each decoder (MS, Neural-MS, and SP). Features of CALFW extracted from Magface are adopted as the testing dataset, and the key retrieval performance in GMR [i.e., 1 minus false non-match rate (FNMR)] and FMR is evaluated. The result is shown in Fig. 5(a)–(c).
+It can be seen that FMR drops to zero as τ increases, but the GMR will also degrade. τ that drives FMR just
+
+above 0.1% is selected to balance FMR and GMR. It can be seen that MS can achieve a 0.17% FMR when τ = 0.21, and neural-MS can achieve a 0.27% FMR at τ = 0.235, while SP can earn a 0.13% FMR at τ = 0.24. Those τ are
+adopted for the best parameters for MS, neural-MS, and the
+
+1Mated corresponds to intrauser, nonmated corresponds to interuser, these terms are used interchangeably.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+TABLE I ABLATION STUDY OF FEATURE TRANSFORMATION
+
+5040716
+
+Fig. 4. Ablation study on τ concerning accuracy on transformed binary features (CALFW). (a) MagFace. (b) Adaface. (c) FaceViT. (d) ArcFace.
+
+Fig. 5. Ablation study on τ with respect to key retrieval accuracy (CALFW, 100 iterations). (a) MS. (b) Neural-MS. (c) SP. (d) Acc. versus iter. and intervals with Neural-MS.
+
+SP decoder for all datasets and feature extractors subsequently. Further experiment results are shown in Section A4 in the Supplementary Material.
+4) Key Retrieval Performance on Different LSSC Intervals q: Based on the best parameter of τ , the key retrieval performance under different numbers of intervals (q) in LSSC is evaluated. The result is shown in Fig. 5(d). It can be seen that neural-MS achieves its highest GMR when q = 2, yet the FMR deteriorates to around 1.8%. Its GMR becomes lowest when q = 8, with a perfect FMR. However, a balance between GMR and FMR was achieved when q = 4, with a GMR close to that for q = 2 but a very low FMR close to that for q = 8. Therefore, we adopted q = 4 (m = 3) for the remaining experiments.
+5) Distributions on Different Stages: Fig. 6 shows the distributions, at each stage, of the mated and nonmated Hamming distances. It can be seen that the feature transformation using LSSC and random masking preserves the separation of mated and nonmated distributions. Take AgeDB30 as an example: the mated and nonmated distances are 26.92% and 41.06%, which
+
+has a gap of 14.14%, corresponding to d′ = 4.46, which is comparable to its deep feature counterpart d′ = 4.81. We can also observe that the random masking (+LSSC-4 + mask) can reduce the Hamming distance to comply with the requirements of the LDPC. As a result, the mated distances can be reduced to 15.64% and 17.02% on CALFW and AgeDB30, which is within the error correction capability and suitable for the adopted LDPC. Meanwhile, the nonmated distance is reduced to 26.02% and 25.93% on CALFW and AgeDB30, which is still beyond the error correction capability.
+D. Key Retrieval Performance
+This section evaluates the performance under decoding iterations ranging from 1 to 100. The performance of different decoding strategies is shown in Fig. 7.
+We can observe that the following holds. 1) Both GMR and FMR increase concerning decoding
+iteration. 2) When the decoding iteration reaches 20 and above, the
+GMR and FMR level off.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 6. Distribution of distances across different stages (CALFW, Magface).
+
+Fig. 7. Key retrieval performance in GMR and FMR versus decoding iterations (MagFace).
+
+3) Good performance can be achieved on LFW regardless of the feature extractor, while the other datasets, i.e., CALFW, AgeDB30, and CFPFP, can also achieve around 90% accuracy. Note that all benchmarks are unconstrained face datasets; hence, it is reasonable to infer that the proposed method is feasible in practice for secret key management.
+4) The choice of an appropriate number of decoding iterations can make the system’s accuracy suitable for deployment. The operator can opt for small iteration numbers to avoid a high false accept rate. More iterations are preferred if the system is to achieve a higher GMR without considering the FMR.
+Detailed quantitative results are summarized in Table II. As we can see from the results, MS performs the worst, as it is a handcrafted decoding method. Thanks to the learned weights and offset parameters, neural-MS performs better than the MS decoder and is comparable with the SP decoder. We can observe that both neural-MS and SP achieve a favorable performance on LFW. Specifically, neural-MS can reach 99.17% (99.5%), 99.33% (99.67%), 99.37% (99.70%), 98.77% (99.27%) on Magface, Arcface, Adaface, and FaceVit in terms of GMR@0FMR(deep features). CFP-FF can also achieve a performance similar to that of LFW.
+On the other hand, there is a significant performance drop in CPLFW, AgeDB30, and CFPFP, which can be attributed to the increased variability in these datasets compared to LFW. This increased variability introduces substantial intraclass differences, complicating the key retrieval process and reducing to reduced performance. Additionally, d′ from Table I further support this observation, as they show lower discriminability scores for AgeDB30 and CFPFP compared to LFW (4.81 and 4.43 versus 8.17). This indicates a smaller gap between genuine and imposter match distributions in these datasets, leading to a drop in performance.
+
+We also show the GMR and FMR at 100 iterations in Table II (GMR|FMR@iter100 column). Under this setting, the GMR of CPLFW, AgeDB30, and CFPFP can be improved significantly, only slightly compromising on FMR. For example, Arcface can achieve 76.50% (16.90%) at FMR = 0.17% (0FMR) CPLFW, and 92.33% (86.83%) at FMR = 0.13% (0FMR). Similar observations can also be made for the other feature extractors.
+E. Comparison With Other SOTA Methods
+In this section, following the suggestion from [61], we compared our results with state-of-the-art secure face templates evaluated on constrained face benchmarking datasets, including CMU-PIE and colorFERET, and on unconstrained datasets, including LFW and CFP. We used the CFP-FF dataset, which was adopted by Mai et al. [56]. We used 7140 facial images of 68 subjects for the CMU-PIE dataset. In the case of ColorFERET, we excluded the profile left and right samples and used the remaining samples for evaluation. In the case of LFW, we used the standard protocol of 6000 pairs for assessment.
+Table III shows that the proposed fuzzy commitment scheme outperforms existing works on performance and security on both constrained and unconstrained datasets. Direct comparisons are challenging since many prior works did not release their code or provide unified evaluation results across datasets, making direct comparisons challenging. To address this, we conducted experiments on four different datasets and compared the results with various existing methods. For example, Gilkalaye et al. [60] achieves a 36.94% FNMR at 0.05% FMR, while the method proposed in [58] achieves a top-1 accuracy of 99.9%. Additionally, the fuzzy vault scheme from [18] can achieve a 1% FNMR at 0.01% FMR, and the fuzzy extractor in [59] can reach a 70% FNMR at an FMR of 2.1e−7. Compared to these key generation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+TABLE II ACCURACY OF KEY RETRIEVAL PERFORMANCE
+
+5040716
+
+TABLE III COMPARISON WITH RELEVANT FACE-BASED SECURE SYSTEMS
+
+counterparts, our proposed method can achieve better results while maintaining a higher level of security (detailed in Section V).
+We want to emphasize that the homomorphic encryption approach proposed in [57] is designed to perform matching in the encryption domain. On the other hand, in the CNN approaches offered in [37] and [55], each user is assigned a unique binary code that is used only for training the deep CNN during the enrollment phase. Thus, re-training is needed if a new user is added to the system, making them impractical for deployment. Furthermore, the CNN approach proposed in [56] aims to perform matching in the transformed domain, which differs from ours.
+We attribute the success of our proposed method to two factors: First, the neural LDPC decoder can tolerate errors. LDPC codes themselves are highly efficient error-correcting codes that utilize sparse parity-check matrices to detect and correct errors. By incorporating neural networks, we further enhance this capability, enabling the decoder to handle more complex error patterns and improve overall error correction performance. This advancement is particularly beneficial for addressing noise issues in biometric systems. Second, the random masking scheme bridges the gap between the error correction capability of ECC and the original noise from the input features. By applying random masking, the noise is distributed or diluted, making it more amenable to handling by ECC. In a nutshell, our proposed method generates a key
+
+from the biometric measurements, allowing for a more secure and accurate authentication process.
+V. SECURITY ANALYSIS
+The security risks considered in this article originate from compromising the stored commitment [14], [56]. Under this assumption, the adversary can try inverting the commitment back to the input face image. The successfully inverted face image can access the system as the corresponding enrolled subject. However, directly synthesizing an image based on a brute-force attack is infeasible due to the vast number of combinations of pixel values. Yet the adversary can invert the commitment to the image using learning-based reconstruction methods such as [62], [63], and [64]. These methods usually take the deep face features as the input and output reconstructed images. However, such reconstruction models cannot be learned directly because our proposed commitment depends on the input images x and the subject-specific random keys k. Therefore, the key k should be known first to achieve the reconstruction. However, the key in our scheme is secured using one-way hashing: the adversary needs to guess the key k by directly guessing k, which has a strength of 2100∗m, or guessing the intermediate feature b. Therefore, the security depends on the easier way of guessing k and b. We have formalized the following adversary model to provide a more rigorous security analysis.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+A. Adversary Model
+Given that fuzzy commitment schemes utilize ECC, it is essential to formally define our adversary model using information-theoretic measures, i.e., entropy, as defined by Dodis et al. [9]. We quantify the adversary advantage in terms of the leftover entropy, which captures the remaining randomness or uncertainty in the biometric feature b after the adversary has successfully decommitted the commitment δ. Since knowledge of b implies knowledge of k, this leftover entropy characterizes the randomness of the key that remains given that the adversary can recover the codeword c′ and find a collision such that c′ = c for successful decomitment of δ.
+Within this model, we focus on BSCs, for our adversary model in LDPC decoding. This choice is motivated by three key reasons.
+1) LDPC codes are highly efficient for BSCs because they can correct a high percentage of bit errors at low error rates, low decoding complexity, robustness against channel noise, and flexibility in design with various code rates. This provides significant advantages over other channel types and helps prevent overestimation of system security.
+2) BSCs are a well-established model for communication channels that exhibit noise. They offer transparency when analyzing the impact of noise on the security of fuzzy commitment schemes using information-theoretic measures such as entropy and channel capacity.
+3) BSCs are a valuable reference channel for comparing the security of different schemes, serving as a reliable benchmarking tool. Furthermore, a decoder that performs well on a BSC is likely to perform well in more complex and realistic channels, making BSCs crucial for evaluating the security of a system.
+Based on the above reasons, it can be inferred that the adversary model utilized in our scheme is much more relaxed than the generic security model. This is because we impose more restrictive conditions on the noise in the biometric measurements, specifically, that the noise follows an independent and identically distributed (i.i.d.) distribution. Furthermore, as the security of our scheme assumed the successful decoding and decommitment of δ, it is commonly believed that the decoding problem will be more complex and challenging in a generic channel.
+B. Leftover Entropy Estimation
+To compute the leftover entropy of the biometric feature, it is essential to quantify the randomness or uncertainty of the biometric measurements. This is done by measuring entropy, which is key in designing and evaluating secure biometric systems. To estimate the entropy of a biometric system, we employ a widely used approach that involves comparing the interclass histogram with a Binomial distribution having the same mean EHD and variance VH2D, as commonly done for iris and face biometrics [54], [56]. The similarity between the observed distribution and the Binomial distribution is used to assume that the entropy of the observed distribution is the same as that of the Binomial distribution. Although this
+
+technique is necessarily heuristic, it is effective in practice for noisy biometric measurements where interclass distribution is often well-behaved as normally distributed. As depicted in Fig. 6, it can be seen that the interclass (nonmated) distribution closely resembles the bell shape of a binomial distribution with a particular mean value.
+We utilize the entropy of the Binomial distribution as an approximation for the entropy of the observed distribution. The entropy of the Binomial distribution can be calculated using the following equations for degrees of freedom (DOFs):
+
+DOF =
+
+EHD(1 − EHD) VH2D
+
+(16)
+
+where EHD and VHD are the mean and standard deviation of the impostor Hamming distance generated from the intermediate
+
+feature b.
+
+It is common for the entropy estimate to vary across
+
+different biometric measurement sets, as it captures useful
+
+information about the underlying biological process and noise.
+
+However, simply measuring the DOFs does not provide suf-
+
+ficient information about the effect of noise on the system’s
+
+security. A more thorough approach is to compute the entropy
+
+H , given a particular error rate, which is expected as EHD follows:
+
+H = DOF ∗ ((−EHD) log(EHD) − (1 − EHD) log(1 − EHD)). (17)
+
+The above equation describes the entropy of the biometric feature with i.i.d noise.
+Derivation of Lower Bound Leftover Entropy: As Gallager [45] proves, when the degree of CN and VN of an LDPC code increases, the code rate versus minimum distance trade-off of the code approaches the Gilbert–Varshamov (GV) bound. Viewing that individual biometric feature b as a unique codeword, this implies that one could construct a linear ECC for a fuzzy commitment scheme (in worst case) using b that is capable of achieving minimum
+
+2H
+
+s=
+
+(18)
+
+d−1 H
+
+i=0 i
+
+with d and s denoting a code’s minimum distance and size
+
+(i.e., number of codewords).
+
+Making use of the fact that for d
+
+≤
+
+H 2
+
+:
+
+dH
+i=0 i ≤
+
+2Hh2(d/H), where h2(.) is the binary entropy function. We can
+
+derive a tighter lower bound for the fuzzy commitment scheme
+
+as follows:
+
+2H
+
+2H
+
+s=
+
+≥
+
+(19)
+
+dH
+
+d−1 H
+
+i=0 i
+
+i=0 i
+
+⇒s=
+
+2H
+dH i=0 i
+
+>
+
+2H 2H h2(d/H )
+
+= 2H (1−h2(d/H )).
+
+(20)
+
+It is important to note that explicitly constructing a linear code to achieve the above lower bound on the security of a fuzzy commitment scheme requires precise estimation of the feature entropy H . However, due to the inherent variability
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+
+5040716
+
+Fig. 8. Unlinkability evaluation (Magface).
+
+and noise in biometric measurements, accurately estimating H can be difficult in practice. As a result, we rely on the assumption of the existence of such a linear code rather than explicitly constructing it. Despite this limitation, the lower bound derived from the assumed code offers valuable insights into the minimum achievable security of a fuzzy commitment scheme with the best ECC from a theoretical perspective.
+Given the above result, it is appropriate to designate d/H as the error rate, equivalent to the crossover probability discussed in Section IV-B, which determines the number of errors in the codeword. For a given arbitrary H , the best decoder shall be able to tolerate these errors (e.g., given the sufficient high degree of CN and CN) for an LDPC code; thus, a higher crossover probability signifies that the decoder requires a larger d to tolerate the error while maintaining a desirable FER for reliable key retrieval. This exhibits the notable trade-off between security and the number of tolerable errors in the decoder, derivable from the GV bound, where a stronger security guarantee (higher s) necessitates a smaller d, and vice versa.
+Besides, it is also important to consider the FER to ensure a reliable key retrieval success rate. As depicted in Fig. 3, to achieve a FER of less than 4.58%, it is necessary to consider d such that the condition d/H ≤ 0.1761 is satisfied. The result of the minimum achievable security (s) equivalent to 20.33H .
+Summing up, the security strength of our proposed scheme can be quantitatively defined as
+
+Hsys = min{100 × m, s}.
+
+(21)
+
+In this equation, 100 × m represents the security length of the random key within our neural-MS framework.
+To obtain a more concrete security claim for our proposed scheme, we examine the scenario depicted in Fig. 3, where the achievable FER for the neural-MS decoder is less than 5%. This suggests that the maximum crossover rate must equal d/H = 0.1761. Given that the codeword error must result from a distance between the biometric feature b and b, we can apply the lower bound derived previously to determine the value of s by substituting d = 274 = 1560 × 0.1761. This value corresponds to the maximum permissible feature distance for the neural-MS decoder with an FER below 5%.
+It is crucial to note that we employ a conservative calculation for d, based on the inequality n × 0.1761 ≥ H × 0.1761. This approach prevents the overestimation of the system’s security. Table IV shows the detailed security strength of
+
+TABLE IV SECURITY STRENGTH (HSYS|(s, 100 ∗ m)) OF NEURAL-MS-BASED FUZZY COMMITMENT
+neural-MS on various datasets and feature extractors. The results suggest that Adaface and FaceViT can achieve 100-bit security on most datasets, while Magface and Arcface achieve lower security than Adaface and FaceViT. Take LFW as an example. The proposed fuzzy commitment can achieve 87, 128, 132, and 93 bits when using Magface, Adaface, FaceViT, and Arcface as the extractor.
+C. Unlinkability Evaluation In this section, we focus on the evaluation of unlinkability.
+As we generate a random key for each user per enrollment, unlinkability, and cancellability can be naturally guaranteed. Once the stored commitment is compromised, a new instance can be generated using a different random key. Besides, using different keys for different enrollments ensures that no information will be leaked from a cross-matching attack, which attempts to infer any information by matching two commitments from two other applications.
+We follow a protocol outlined by Gomez-Barrero et al. [65]. Using the neural-MS parameters, the experiments were executed with Magface and on the LFW, Agedb, and CFP datasets. A cross-matching attack can be launched by comparing the binary commitment generated from the same person in different applications (different k). Under this attack, the adversary is assumed to hold the commitments of the other applications. The adversary can exploit the matching score distributions of the commitments to learn whether the commitment is from the same person. Here, we refer to the matching distance of the same subject in different applications as the mated distance. In contrast, the matching distance from other subjects in various applications is the nonmated distance.
+In [65], two distinct measures for linkability are defined, namely a local measure D↔(s) ∈ [0, 1] and a global measure Dsys. Each specific linkage scores s is evaluated by D ↔ (s)
+↔
+on a score-wise level. The unlinkability of the whole system is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+assessed by Dsys ∈ [0, 1], which can be used as a standard for
+↔
+various systems regardless of the score. Dsys = 1 indicates the
+↔
+system is fully linkable for all scores of the mated subjects, while Dsys = 0 suggests the system is fully unlinkable for all
+↔
+scores. A detailed explanation is given in Section A8 in the Supplementary Material.
+The mated and nonmated scores are computed on the selected dataset based on the official protocols among those commitments, and their distributions are illustrated in Figs. 8 and A5 (see the Supplementary Material). It is proved that our scheme can achieve good unlinkability: Dsys can earn 0.01 for
+↔
+all datasets. This indicates that even if an adversary can obtain commitments from different applications, they cannot distinguish whether they originate from the same subject or different subjects.
+VI. DISCUSSION
+A. Measurements Reliability
+Key retrieval performance evaluates the system’s reliability on identity recognition in consistently retrieving the correct key from biometric features. High key retrieval performance indicates not only accuracy and but also the system’s dependability in generating the same key for the same input. To ensure reliable measurement, we assess the system across matched and nonmatched pairs from diverse datasets, gauging its consistency in performance under varying conditions. The experiments showed that, on average, 81.33% of samples were accurately reconstructed, surpassing SP by 0.4% and outperforming the counterpart MS decoder by 3.42%.
+Security analysis involves reliability on security through the evaluation of leftover entropy and unlinkability. Leftover entropy measures the residual uncertainty in the keys after generation, ensuring the system’s robustness against attacks. Unlinkability, crucial for privacy, assesses the system’s ability to consistently prevent biometric data or keys from being linked to the same individual. Both metrics are evaluated to ensure the system’s reliability in maintaining security and protecting privacy across different scenarios. The analysis showed that our proposed scheme has achieved higher security bits and unlinkability measures.
+B. Strengths and Limitations
+The proposed WiFaKey achieved the reliable key measurements from two directions: 1) mitigate the impact of noise in the biometric original measurements by AdaMTrans and 2) improve the error correction capability by neural-MS decoder. Specifically:
+1) Noise Mitigation: AdaMTrans is an adaptive random masking-driven feature transformation pipeline designed to quantize and binarize real-valued biometric features. This method enhances accuracy and reliability by transforming continuous feature values into a binary form, which is more resilient to variations and noise in biometric data. The transformation process ensures that noise from the features is consistently mitigated to the level LDPC can correct, which improves the reliability of feature comparison and matching. Therefore, AdaMTrans contributes to the observed performance boost.
+
+2) Enhanced Error Correction: By integrating a deep face feature extractor with a neural-MS decoder, WiFaKey improves error correction capabilities. The neural-MS decoder is a supervised learning-based neural decoding scheme that learns from data to adjust its decoding strategy adaptively, providing robust mechanisms for processing noisy biometric signals. This capability is crucial for enhancing the accuracy of key retrieval and verification by effectively correcting errors introduced during biometric data acquisition and transformation.
+In addition, the proposed system is designed with practical applications in mind for high utility, including financial services, Internet of Things (IoT) services, and public services. Its enhanced performance and robustness make it suitable for these critical domains.
+Despite the strengths mentioned above, the proposed methodology has limitations. The key generation process is susceptible to variations in pose, hairstyle, lighting, and makeup variations. These factors introduce significant noise, which may impact the robustness of the generated cryptographic keys. Additionally, further research is crucial to quantifying the noise inherent in biometric measurements. Understanding the extent of this noise is essential to improving key retrieval performance and system reliability.
+C. Future Works
+Future efforts will enhance the feature extraction and transformation pipeline to effectively manage variations and noise in biometric measurements. Additionally, there will be a focus on developing new error correction algorithms to improve key retrieval accuracy and minimize FMRs. Another avenue of exploration will be integrating facial biometrics with other modalities, such as fingerprints and palmprints, further to strengthen the robustness and reliability of cryptographic key generation.
+VII. CONCLUSION
+This article presents WiFaKey, a novel fuzzy commitment scheme that combines a deep face feature extractor with a learning-based LDPC decoder. The integration of AdaMTrans for feature transformation further enhances the system’s capability to produce binary features suitable for LDPC coding. Our experiments demonstrate that WiFaKey outperforms existing methods on unconstrained face datasets, proving its effectiveness for various applications.
+REFERENCES
+[1] J. Chen and J. Hu, “Weakly supervised compositional metric learning for face verification,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–8, 2021.
+[2] D. Zhang, Z. Guo, G. Lu, L. Zhang, and W. Zuo, “An online system of multispectral palmprint verification,” IEEE Trans. Instrum. Meas., vol. 59, no. 2, pp. 480–490, Feb. 2010.
+[3] J. Daugman, “How iris recognition works,” in The Essential Guide to Image Processing. Amsterdam, The Netherlands: Elsevier, 2009, pp. 715–739.
+[4] EuropeanParliament. General Data Protection Regulation (GDPR). Accessed: Jun. 1, 2024. [Online]. Available: https://gdpr-info.eu/
+[5] C. Rathgeb and A. Uhl, “A survey on biometric cryptosystems and cancelable biometrics,” EURASIP J. Inf. Secur., vol. 2011, no. 1, p. 3, Dec. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+DONG et al.: WiFaKey: GENERATING CRYPTOGRAPHIC KEYS FROM FACE IN THE WILD
+
+5040716
+
+[6] J. Lei, Q. Pei, Y. Wang, W. Sun, and X. Liu, “PrivFace: Fast privacypreserving face authentication with revocable and reusable biometric credentials,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 5, pp. 3101–3112, Sep. 2022.
+[7] G. S. Walia, K. Aggarwal, K. Singh, and K. Singh, “Design and analysis of adaptive graph-based cancelable multi-biometrics approach,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 1, pp. 54–66, Jan. 2022.
+[8] K. Xi and J. Hu, “Bio-cryptography,” in Handbook of Information and Communication Security. Cham, Switzerland: Springer, 2010, pp. 129–157.
+[9] Y. Dodis, L. Reyzin, and A. Smith, “Fuzzy extractors: How to generate strong keys from biometrics and other noisy data,” in Proc. Int. Conf. Theory Appl. Cryptograph. Techn. Cham, Switzerland: Springer, 2004, pp. 523–540.
+[10] A. Juels and M. Wattenberg, “A fuzzy commitment scheme,” in Proc. 6th ACM Conf. Comput. Commun. Secur., New York, NY, USA, Nov. 1999, pp. 28–36.
+[11] Y.-L. Lai, J. Y. Hwang, Z. Jin, S. Kim, S. Cho, and A. B. J. Teoh, “Secure secret sharing enabled b-band mini vaults bio-cryptosystem for vectorial biometrics,” IEEE Trans. Dependable Secure Comput., vol. 18, no. 1, pp. 58–71, Jan. 2021.
+[12] F. Hao, R. Anderson, and J. Daugman, “Combining crypto with biometrics effectively,” IEEE Trans. Comput., vol. 55, no. 9, pp. 1081–1088, Sep. 2006.
+[13] E. J. Kelkboom, B. Gökberk, T. A. Kevenaar, A. H. Akkermans, and M. van der Veen, “3D face: Biometric template protection for 3D face recognition,” in Proc. Int. Conf. Biometrics. Seoul, South Korea: Springer, Aug. 2007, pp. 566–573.
+[14] P. Li, X. Yang, H. Qiao, K. Cao, E. Liu, and J. Tian, “An effective biometric cryptosystem combining fingerprints with error correction codes,” Expert Syst. Appl., vol. 39, no. 7, pp. 6562–6574, Jun. 2012.
+[15] H. Sellahewa and S. A. Jassim, “Image-quality-based adaptive face recognition,” IEEE Trans. Instrum. Meas., vol. 59, no. 4, pp. 805–813, Apr. 2010.
+[16] D. Rai and S. S. Rajput, “Robust face hallucination algorithm using motion blur embedded nearest proximate patch representation,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–10, 2023.
+[17] J. Daugman, “Probing the uniqueness and randomness of IrisCodes: Results from 200 billion iris pair comparisons,” Proc. IEEE, vol. 94, no. 11, pp. 1927–1935, Nov. 2006.
+[18] C. Rathgeb, J. Merkle, J. Scholz, B. Tams, and V. Nesterowicz, “Deep face fuzzy vault: Implementation and performance,” Comput. Secur., vol. 113, Feb. 2022, Art. no. 102539.
+[19] M. Osadchy and O. Dunkelman, “It is all in the system’s parameters: Privacy and security issues in transforming biometric raw data into binary strings,” IEEE Trans. Dependable Secure Comput., vol. 16, no. 5, pp. 796–804, Sep. 2019.
+[20] J. Bringer, H. Chabanne, G. Cohen, B. Kindarji, and G. Zemor, “Optimal iris fuzzy sketches,” in Proc. 1st IEEE Int. Conf. Biometrics, Theory, Appl., Syst., Sep. 2007, pp. 1–6.
+[21] J. Deng, J. Guo, N. Xue, and S. Zafeiriou, “ArcFace: Additive angular margin loss for deep face recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 4690–4699.
+[22] Y. Zhong and W. Deng, “Face transformer for recognition,” 2021, arXiv:2103.14803.
+[23] M. Kim, A. K. Jain, and X. Liu, “AdaFace: Quality adaptive margin for face recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 18750–18759.
+[24] Q. Meng, S. Zhao, Z. Huang, and F. Zhou, “MagFace: A universal representation for face recognition and quality assessment,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, pp. 14225–14234.
+[25] G. B. Huang, M. Mattar, T. Berg, and E. Learned-Miller, “Labeled faces in the wild: A database for studying face recognition in unconstrained environments,” in Proc. Workshop Faces Real-Life Images, Detection, Alignment, Recognit., 2008, pp. 1–15.
+[26] T. Zheng, W. Deng, and J. Hu, “Cross-age LFW: A database for studying cross-age face recognition in unconstrained environments,” 2017, arXiv:1708.08197.
+[27] T. Zheng and W. Deng, “Cross-pose LFW: A database for studying cross-pose face recognition in unconstrained environments,” Pattern Recognit. Intell. Syst. Lab. (PRIS Lab), Beijing Univ. Posts Telecommun., Beijing, China, Tech. Rep. 18-01, 2018, vol. 5, p. 7.
+
+[28] S. Sengupta, J. Chen, C. Castillo, V. M. Patel, R. Chellappa, and D. W. Jacobs, “Frontal to profile face verification in the wild,” in Proc. IEEE Winter Conf. Appl. Comput. Vis. (WACV), Mar. 2016, pp. 1–9.
+[29] S. Moschoglou, A. Papaioannou, C. Sagonas, J. Deng, I. Kotsia, and S. Zafeiriou, “AgeDB: The first manually collected, in-the-wild age database,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW), Jul. 2017, pp. 51–59.
+[30] T. Sim, S. Baker, and M. Bsat, “The CMU pose, illumination, and expression (PIE) database,” in Proc. 5th IEEE Int. Conf. Autom. Face Gesture Recognit., May 2002, pp. 53–58.
+[31] P. J. Phillips, H. Moon, S. A. Rizvi, and P. J. Rauss, “The FERET evaluation methodology for face-recognition algorithms,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 22, no. 10, pp. 1090–1104, Oct. 2000.
+[32] C. Rathgeb and A. Uhl, “Adaptive fuzzy commitment scheme based on iris-code error analysis,” in Proc. 2nd Eur. Workshop Vis. Inf. Process. (EUVIP), Jul. 2010, pp. 41–44.
+[33] B. Chen and V. Chandran, “Biometric based cryptographic key generation from faces,” in Proc. 9th Biennial Conf. Austral. Pattern Recognit. Soc. Digit. Image Comput. Techn. Appl. (DICTA), Dec. 2007, pp. 394–401.
+[34] K. Nandakumar, “A fingerprint cryptosystem based on minutiae phase spectrum,” in Proc. IEEE Int. Workshop Inf. Forensics Secur., Dec. 2010, pp. 1–6.
+[35] W. Yang et al., “Securing mobile healthcare data: A smart card based cancelable finger-vein bio-cryptosystem,” IEEE Access, vol. 6, pp. 36939–36947, 2018.
+[36] T. Wu, L. Leng, and M. K. Khan, “A multi-spectral palmprint fuzzy commitment based on deep hashing code with discriminative bit selection,” Artif. Intell. Rev., vol. 56, no. 7, pp. 6169–6186, Jul. 2023.
+[37] L. Chen, G. Zhao, J. Zhou, A. T. S. Ho, and L. Cheng, “Face template protection using deep LDPC codes learning,” IET Biometrics, vol. 8, no. 3, pp. 190–197, May 2019.
+[38] X. Dong, Z. Jin, L. Zhao, and Z. Guo, “BioCanCrypto: An LDPC coded bio-cryptosystem on fingerprint cancellable template,” in Proc. IEEE Int. Joint Conf. Biometrics (IJCB), Aug. 2021, pp. 1–8.
+[39] P. J. Phillips et al., “Overview of the face recognition grand challenge,” in Proc. IEEE Comput. Soc. Conf. Comput. Vis. Pattern Recognit. (CVPR), vol. 1, Jun. 2005, pp. 947–954.
+[40] A. S. Georghiades, P. N. Belhumeur, and D. J. Kriegman, “From few to many: Illumination cone models for face recognition under variable lighting and pose,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 23, no. 6, pp. 643–660, Jun. 2001.
+[41] S. Noto, P. L. Correia, and L. D. Soares, “Analysis of error correcting codes for the secure storage of biometric templates,” in Proc. Int. Conf. Comput. Tool, Apr. 2011, pp. 1–4.
+[42] M. J. Dworkin, “SHA-3 standard: Permutation-based hash and extendable-output functions,” Nat. Inst. Standards Technol., Gaithersburg, MD, USA, Tech. Rep. 202, 2015.
+[43] P. Drozdowski, F. Struck, C. Rathgeb, and C. Busch, “Benchmarking binarisation schemes for deep face templates,” in Proc. 25th IEEE Int. Conf. Image Process. (ICIP), Oct. 2018, pp. 191–195.
+[44] M.-H. Lim and A. B. J. Teoh, “A novel encoding scheme for effective biometric discretization: Linearly separable subcode,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35, no. 2, pp. 300–313, Feb. 2013.
+[45] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[46] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[47] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[48] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 1361–1365.
+[49] J. Dai et al., “Learning to decode protograph LDPC codes,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1983–1999, Jul. 2021.
+[50] Multiplexing and Channel Coding, Release 16, Standard TS 38.212, 3GPP, 2019.
+[51] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 770–778.
+[52] J. Deng, J. Guo, D. Zhang, Y. Deng, X. Lu, and S. Shi, “Lightweight face recognition challenge,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. Workshop (ICCVW), Oct. 2019, pp. 2638–2646.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+5040716
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+[53] Z. Zhu et al., “WebFace260M: A benchmark unveiling the power of million-scale deep face recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2021, pp. 10492–10502.
+[54] J. Daugman, “Biometric decision landscapes,” Dept. Comput. Lab., Univ. Cambridge, Cambridge, U.K., Tech. Rep. UCAM-CL-TR-482, 2000.
+[55] A. K. Jindal, S. Chalamala, and S. K. Jami, “Face template protection using deep convolutional neural network,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2018, pp. 462–470.
+[56] G. Mai, K. Cao, X. Lan, and P. C. Yuen, “SecureFace: Face template protection,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 262–277, 2021.
+[57] V. N. Boddeti, “Secure face matching using fully homomorphic encryption,” in Proc. IEEE 9th Int. Conf. Biometrics Theory, Appl. Syst. (BTAS), Oct. 2018, pp. 1–10.
+[58] X. Dong, S. Kim, Z. Jin, J. Y. Hwang, S. Cho, and A. B. J. Teoh, “Secure chaff-less fuzzy vault for face identification systems,” ACM Trans. Multimedia Comput., Commun., Appl., vol. 17, no. 3, pp. 1–22, Aug. 2021.
+[59] K. Zhang, H. Cui, and Y. Yu, “Facial template protection via latticebased fuzzy extractors,” Cryptol. ePrint Arch., vol. 2021, p. 1559, Nov. 2021.
+[60] B. P. Gilkalaye, A. Rattani, and R. Derakhshani, “Euclidean-distance based fuzzy commitment scheme for biometric template security,” in Proc. 7th Int. Workshop Biometrics Forensics (IWBF), May 2019, pp. 1–6.
+[61] V. K. Hahn and S. Marcel, “Biometric template protection for neuralnetwork-based face recognition systems: A survey of methods and evaluation techniques,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 639–666, 2023.
+[62] X. Dong et al., “Reconstruct face from features using GAN generator as a distribution constraint,” 2022, arXiv:2206.04295.
+[63] X. Dong, Z. Jin, Z. Guo, and A. B. Jin Teoh, “Towards generating high definition face images from deep templates,” in Proc. Int. Conf. Biometrics Special Interest Group (BIOSIG), Sep. 2021, pp. 1–11.
+[64] G. Mai, K. Cao, P. C. Yuen, and A. K. Jain, “On the reconstruction of face images from deep face templates,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 41, no. 5, pp. 1188–1202, May 2019.
+[65] M. Gomez-Barrero, J. Galbally, C. Rathgeb, and C. Busch, “General framework to evaluate unlinkability in biometric template protection systems,” IEEE Trans. Inf. Forensics Security, vol. 13, no. 6, pp. 1406–1420, Jun. 2018.
+
+Yen Lung Lai received the B.Sc. degree in physics from the University of Tunku Abdul Rahman (UTAR), Petaling Jaya, Malaysia, in 2015, and the Ph.D. degree from Monash University, Melbourne, VIC, Australia, in 2021.
+He was an Assistant Professor with UTAR in 2022. He currently holds a post-doctoral position with the School of Artificial Intelligence, Anhui University, Hefei, China. His research interests include biometrics security and cryptography.
+Zhe Jin (Member, IEEE) received the Ph.D. degree in engineering from Universiti Tunku Abdul Rahman Malaysia (UTAR), Petaling Jaya, Malaysia, in 2015.
+He visited the University of Salzburg, Salzburg, Austria, and the University of Sassari, Sassari, Italy, as a Visiting Scholar under the EU Project IDENTITY 690907. He is currently a Professor with the School of Artificial Intelligence, Anhui University, Hefei, China. He has authored over 70 refereed journals and conference articles, including IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, IEEE TRANSACTIONS ON SYSTEMS, MAN, AND CYBERNETICS: SYSTEMS (SMCS), IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING (DSC), and Pattern Recognition (PR). His research interests include biometrics, PR, computer vision, and multimedia security. Dr. Jin received the Marie Skłodowska-Curie Research Exchange Fellowship.
+Junduan Huang (Member, IEEE) received the B.S. and M.S. degrees from South China Agriculture University, Guangzhou, China, in 2017 and 2020, respectively, and the Ph.D. degree from the South China University of Technology, Guangzhou, in 2024.
+From 2022 to 2023, he was a Research Intern with the Idiap Research Institute, Martigny, Switzerland. He is currently an Associate Researcher with the School of Artificial Intelligence, South China Normal University, Foshan, China. His research interests include biometrics, computer vision, audio signal processing, deep learning, and agricultural engineering.
+
+Xingbo Dong (Member, IEEE) received the B.S. degree from Huazhong Agriculture University, Wuhan, China, in 2014, and the Ph.D. degree from the Faculty of Information Technology, Monash University, Melbourne, VIC, Australia, in 2021.
+He held a post-doctoral position with Yonsei University, Seoul, South Korea, in 2022. He is currently a Lecturer with Anhui University, Hefei, China. His research interests include biometrics, medical imaging, and image processing.
+Hui Zhang (Graduate Student Member, IEEE) received the M.S. degree from Anhui Normal University, Wuhu, China, in 2022. She is currently pursuing the Ph.D. degree with Anhui University, Hefei, China.
+Her research interests include trustworthy biometrics, biometric template protection, and biometric authentication.
+
+Wenxiong Kang (Member, IEEE) received the M.S. degree from Northwestern Polytechnical University, Xi’an, China, in 2003, and the Ph.D. degree from the South China University of Technology, Guangzhou, China, in 2009.
+He is currently a Professor with the School of Automation Science and Engineering, South China University of Technology. His research interests include biometrics, image processing, PR, and computer vision.
+Andrew Beng Jin Teoh (Senior Member, IEEE) received the B.Eng. (electronic) and Ph.D. degrees from the National University of Malaysia, Bangi, Malaysia, in 1999 and 2003, respectively.
+He is currently a Full Professor with the Electrical and Electronic Engineering Department, College of Engineering, Yonsei University, Seoul, South Korea. He has authored over 300 international refereed journal articles and conference papers, edited several book chapters, and edited book volumes. His research, for which he has received funding, focuses on biometric applications and biometric security. His current research interests include machine learning and information security. Dr. Teoh was a Guest Editor of IEEE Signal Processing Magazine, an Associate Editor of IEEE TRANSACTIONS OF INFORMATION FORENSICS AND SECURITY and IEEE BIOMETRICS COMPENDIUM, and the Editor-in-Chief of the IEEE BIOMETRICS COUNCIL NEWSLETTER.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:15:13 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,524 @@
+Hardware Implementations of Gaussian Elimination over GF(2) for Channel Decoding Algorithms
+
+Stefan Scholl, Christopher Stumm, Norbert Wehn Microelectronic Systems Design Research Group University of Kaiserslautern 67663 Kaiserslautern, Germany
+Email: {scholl, wehn}@eit.uni-kl.de, stumm@rhrk.uni-kl.de
+
+Abstract—In this paper, we investigate hardware implementations for Gaussian elimination of binary matrices. Gaussian elimination over GF(2) is a key operation used in several new channel decoding algorithms, that can provide large improvement of frame error rate over currently used algorithms. We first apply state-of-the-art architectures for binary Gaussian elimination to decoding algorithms. Then, we present a new hardware architecture, that has considerably less resource utilization and a higher throughput than state-of-the-art solutions. The designs have been implemented and compared on a Virtex 7 FPGA.
+I. INTRODUCTION
+Channel coding is an essential part of many communication systems for error correction of transmitted data. Various different channel codes are used today, like LDPC codes, turbo codes and Reed-Solomon codes. Error correction is usually done with decoding heuristics, like the sum-product algorithm (SPA) for LDPC codes or the turbo decoding algorithm for turbo codes [1]. Reed-Solomon codes are mostly decoded by using an algebraic hard decision decoder [1], [2]. These decoding heuristics have been efficiently implemented in hardware, but are suboptimal in terms of achievable frame error rate (FER) [3].
+For turbo and LDPC codes of small to medium block lengths and especially for BCH and Reed-Solomon (RS) codes the standard decoding algorithms perform significantly worse than optimal maximum likelihood (ML) decoding. For transmission over an AWGN channel with BPSK modulation it has been shown that there may be a loss of up to 1.5 dB for standard compliant LDPC and turbo codes, if the SPA or turbo decoding is used [3]. For Reed-Solomon codes up to 3 dB can be gained if hard decision decoding is replaced by sophisticated soft decoding algorithms.
+To improve the FER performance of a channel coding system, numerous new soft decision decoding algorithms have been introduced in the past. Examples are adaptive belief propagation (ABP) [4], ordered statistics decoding (OSD) [5]– [7] and linear programming based approaches [8], [9], to mention just a few of them.
+However, these new algorithms do not only present an improvement in FER, but also arise new challenges for efficient hardware implementations. Hardware implementations can provide a tremendous speed-up in comparison to software implementations. Dedicated hardware implementations
+978-1-4673-5943-6/13/$31.00 c 2013 IEEE
+
+in FPGA or ASIC are often necesary to achieve the throughput requirements of real world applications.
+A key feature of the afore mentioned new decoding algorithms is Gaussian elimination over GF(2) on the binary parity check matrix of the code. In software the elimination operation is straightforward to implement. For dedicated hardware implementations for ASIC or FPGA different architectures have been proposed in literature. Relevant representatives of the state-of-the-art solutions are the so called SMITH architecture [10] and architectures based on systolic arrays [11].
+However these implementations are designed mainly for eliminating matrices of linear systems of equations. They do not take into account the special properties of a parity check matrix. Parity check matrices of codes used in applications (e.g. DVB, WiMAX, etc) are most often characterized by a high aspect ratio, i.e. having more columns than rows. Moreover, the decoding algorithms require the elimination of different parts of the matrix, which can change for every decoding attempt. This demands for additional flexibility.
+In this paper, we propose a new architecture for Gaussian elimination over GF(2) for parity check matrices. Several techniques are applied to reduce the number of clock cycles and to lower resource utilization. We have implemented this architecture on a FPGA to analyze throughput and resource consumption. The architecture is compared to state-of-the-art solutions based systolic arrays and the SMITH architecture. We show that our newly proposed architecture drastically reduces required FPGA resources.
+II. APPLICATION TO CHANNEL DECODING
+In this section, we will show how Gaussian elimination is used in channel coding and what challenges for hardware implementations occur.
+A channel code is defined by a binary parity check matrix H of dimension M × N , where N is the number of code bits and M is the number of parity checks and hij denotes the element in the ith row and the jth column.
+Many new soft decoding algorithms [4]–[9] require to transform the original parity check matrix to an eliminated matrix (in reduced row echelon form), which contains unit column vectors at specific positions. This is depicted in Fig. 1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:58:45 UTC from IEEE Xplore. Restrictions apply.
+
+   
+ 
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+ 
+ 
+
+Fig. 1. Example for Gaussian elimination (M = 3, N = 5) in the context of channel coding
+The eliminated matrix is required for different reasons. In OSD the eliminated matrix allows for parity check matrix based re-encoding procedure. In ABP a belief propagation is carried out and makes use of the advantage, that the bit positions corresponding to the unit vectors are isolated in the eliminated matrix. In linear programming approaches the eliminated matrix is used to efficiently generate cuts.
+The column positions of the M unit vectors are determined by the decoding algorithm in advance. We will call them designated columns (see Fig. 1). Gaussian elimination is performed by adding rows (modulo 2) in such a way, that the M designated columns become unit vectors. Since the codes are linear codes, adding rows does not change the code itself.
+The Gaussian elimination algorithm (Fig. 2) consists of M steps. In every of these column elimination steps first a row (the pivot row) is determined and added onto some other rows to transform the designated column vector into a unit vector. An example of this algorithm is presented in Fig. 3.
+
+1) choose a designated column to eliminate (the pivot column)
+2) find a 1 in this pivot column, whose row has not been a pivot row before. This row is the pivot row. The 1 is called pivot element.
+3) add the pivot row to all other rows having a 1 in the pivot column
+4) if M columns are eliminated: stop, else go to 1 and continue with the next designated column
+Fig. 2. Gaussian elimination algorithm
+Note, that due to the structure of H, linear dependencies of the designated columns may occur, i.e. there are columns where a pivot cannot be found. In this case there are two possibilities: First, skip this column and continue with another column. Second, simply stop the Gaussian elimination and leave the matrix not fully eliminated. In this paper, we assume that full elimination is not necessary. However, if full elimination is needed, it can also be implemented without excessive additional hardware effort.
+When implementing the Gaussian elimination as dedicated hardware, two main tasks can be identified:
+• searching for a 1 (the pivot element) in the pivot column • adding the pivot row onto all other rows containing a 1
+in the pivot column
+In the following we present different architectures, to solve this two tasks.
+
+
+
+
+
+ 
+   
+   
+
+  
+ 
+ 
+
+ 
+
+ 
+ 
+ 
+ 
+   
+  
+ 
+
+ 
+
+   
+  
+    
+
+ 
+
+   
+  
+    
+
+Fig. 3. Gaussian elimination example
+
+III. STATE-OF-THE-ART IMPLEMENTATIONS
+In this section, we will review relevant state-of-the-art hardware architectures for binary Gaussian elimination from literature: the SMITH architecture and a systolic array architecture.
+
+A. The SMITH Architecture
+
+SMITH [10] consists of a rectangular network of locally and
+
+globally connected cells, one for every element in the matrix.
+
+A network for a general M × N matrix is depicted in Fig. 4,
+
+also showing the enumeration scheme for the cells. The pivot
+
+element in the SMITH is always located in the upper left cell,
+
+the pivot column is the leftmost column and the pivot row is
+
+the upper row.
+
+The first step in Gaussian elimination, the pivot search, is
+
+done by cyclically shifting up the entire matrix until the pivot
+
+cell contains a 1. This step requires a variable amount of cycles
+
+depending on the leftmost column, as the first 1 in the column
+
+could be in any cell from “11” to “M1”.
+
+In the second step the pivot row (always uppermost) is
+
+added to all other rows having a 1 in their leftmost element.
+
+This is accomplished in parallel in one clock cycle. After that,
+
+a cyclical shift of the matrix one step up and one step left is
+
+performed, to put a new column in the leftmost cells. The shift
+
+also marks the current pivot row as used, excluding it from
+
+the search for the next pivot elements. This steps are repeated
+
+until M columns have been eliminated.
+
+SMITH needs a variable amount of clock cycles to eliminate
+
+a matrix depending on how many cycles are needed for every
+
+pivot operation. For a matrix, having a density of 50%, in
+
+the average case 2M cycles are needed. The worst case time
+
+however is at
+
+M 2+M 2
+
+cycles
+
+[10].
+
+Note, that
+
+additional clock
+
+cycles are needed to initialize the array, especially to make
+
+sure, that at the beginning the designated columns are located
+
+in the M leftmost columns.
+
+In [12] an improvement over the original SMITH architec-
+
+ture was presented, eliminating a M × N matrix in exactly M
+
+clock cycles. However, this improvement in time complexity
+
+was achieved by increasing parallelism. Therefore resource
+
+utilization is increased about two to three times compared to
+
+the original SMITH architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:58:45 UTC from IEEE Xplore. Restrictions apply.
+
+add 11
+
+add 12
+
+add 13
+
+add 14
+
+add 21
+
+add 22
+
+add 23
+
+add 24
+
+add 31
+
+add 32
+
+add 33
+
+add 34
+
+add 1N
+add 2N
+add 3N
+
+Each cell decides which operation to perform according to the first set of inputs arriving from left and top after initialization. Once the decision for an operation mode of the cell is made, it does not change anymore and the mode is stored in internal registers in the cell. The possible modes are called “ID”, “PERM” and “ADD” and define the cells’ behavior as shown in Fig. 6. For more details please refer to [11].
+
+add M1
+
+add M2
+
+add M3
+
+add M4
+
+add MN
+
+A_IN
+ID 0
+
+B_IN X
+
+B_OUT
+
+A_IN
+PERM 1
+
+B_IN 0
+
+B_OUT
+
+ADD
+
+A_IN 1
+
+B_IN 1
+
+B_OUT
+
+Fig. 4. SMITH architecture
+The major drawback of the SMITH is the high requirement of resources, since for every matrix element one cell has to be instantiated and connected via global signals. For a M × N parity check matrix, N · M cells are required. This leads to huge resource requirements for application relevant codes. For the widely used RS(255,239), whose binary parity check matrix has a dimension of 128 × 2040, SMITH consists of 261,120 cells. Thus, for a hardware implementation we will focus on other approaches, that avoid to save the whole matrix in the array.
+B. The Systolic Array Architecture
+Gaussian elimination can also be implemented as systolic array [11], [13]. Systolic arrays consist of locally connected processing cells. While the cells are only connected to their immediate neighbours, the entire system provides a well defined direction of data flow. The systolic array for Gaussian elimination contains M 2 cells, which are organized in M rows, each containing M cells. In each cell data is input from the top and the left and output to the right and down.
+Fig. 5 depicts an example array for a 3 × 5 matrix, showing three rows with three cells each. Please note the input pattern for the array’s inputs IN(0) to IN(2). As can be seen in Fig. 5, the matrix is fed into the array column by column from the top, while neighbouring rows are delayed by one clock cycle. The matrix is then eliminated in the array and passed from left to right and from top down and finally is outputted at the lower end of the array.
+
+A_OUT
+
+A_OUT
+
+A_OUT
+
+Fig. 6. The three different cell modes
+
+In order to make sure, that the cells initialize themselves at the correct clock cycle while maintaining the local connectivity an init signal is sent through the array to initialize the cell. That signal is the first set of inputs in the input pattern in Fig. 5.
+The main advantage of the systolic array architecture is, that the array size is M 2 and therefore independent of the number of columns N . The required number of iterations is fixed at 3M + N − 2 clock cycles.
+IV. NEW GAUSSIAN ELIMINATION FOR DECODERS
+In this section, we present a new architecture for Gaussian elimination over GF(2), that is more efficient for channel decoding applications than the previously presented SMITH and systolic array architecture. It contains two key features: fixed pivot positions for every designated column and a dynamic setup phase for the array.
+The original algorithm (Fig. 2) performs M steps, in each of which one of the designated columns is eliminated. In our architecture, every single of these M steps is mapped onto a hardware component, which is called a column eliminator. The complete architecture then consists of M column eliminators, arranged in a pipelined array, see Fig. 7.
+
+
+
+
+
+   
+ 
+ 
+
+IN(0) IN(1)
+
+IN(2)
+
+’0’
+
+OUT(0) OUT(1) OUT(2) TEST
+
+0 0 h15 h14 h13 h12 h11 1
+IN(0)
+
+0 h25 h24 h23 h22 h21 0 0
+IN(1)
+
+h35 h34 h33 h32 h31 0 0 0
+IN(2)
+
+Fig. 5. Systolic array based architecture
+
+ 
+ 
+
+
+       
+
+Fig. 7. Proposed gauss elimination array
+
+Each column eliminator performs the matrix operations according to one step in the algorithm (Fig. 2). A column of the original matrix can be passed into the pipelined array and
+
+
+
+ 
+ 
+ 
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:58:45 UTC from IEEE Xplore. Restrictions apply.
+
+after M clock cycles latency the columns of the eliminated matrix are output. To ensure that the column eliminators perform the appropriate operations, the eliminators have to be setup in advance.
+Hence, the elimination array works in two different phases: 1) The Setup Phase: The M columns designated for elim-
+ination are passed into the array to dynamically setup the structure for row adding in the column eliminators. 2) The Elimination Phase: Columns of the original matrix are passed into the array. After a latency of M clock cycles the columns of the eliminated matrix are output. The setup phase is accomplished by passing the M columns, designated for elimination, into the array. Then it is determined for every column eliminator which additions have to be performed. Note, that every eliminator has a fixed position for the pivot element. Fig. 9 shows a detailed description of the algorithm for the setup phase. An example of the setup phase is shown in Fig. 8. In the elimination phase every column eliminator performs the row adding operations, that have been needed to eliminate its designated columns in the setup phase. The remaining columns of the original matrix are transformed into their eliminated version by passing them through the pipeline array.
+
+
+  
+
+
+
+
+
+ 
+  
+       
+
+
+
+  
+ 
+      
+
+
+ 
+
+  
+ 
+      
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+ 
+  
+
+
+
+
+   
+
+Fig. 8. Example for a setup phase
+The presented hardware architecture features two key advantages:
+First, there is no need for a costly search for the pivot element in a designated column during the setup phase. Usually the pivot position had to be chosen by a priority encoder or similar encoder circuit, which is costly especially for large number of rows M . In this architecture every eliminator has a previously fixed pivot position and the pivot element is implicitly searched by the pipelined array. Therefore the need for searching the pivot element by encoder circuits is eliminated.
+Second, the size of the pipelined array structure is only dependent on the number of rows M and not on the number of columns N . This is especially an advantage when N ≫ M . This advantage has also been observed for the systolic arrays.
+
+1) shift all columns in the array one step to the right & input a new designated column
+2) For every eliminator containing a column:
+a) If eliminator not yet setup:
+i) fixed pivot position = 1 (pivot found) setup current eliminator with current column, then discard the current column
+ii) fixed pivot position = 0 (no pivot found) no setup, but keep column
+b) If eliminator is already setup:
+i) eliminate the column and keep this column
+3) terminate, if there are no more columns in the array, else go to step 1
+
+Fig. 9. Setup phase algorithm
+It is especially advantageous, if we deal with matrices having a high aspect ratio, such as the parity check matrices of application relevant Reed-Solomon codes or other high rate codes. Once the array is setup an arbitrary number of columns can be eliminated by the array without affecting hardware resources (this holds also true for the systolic array).
+The constant number of clock cycles needed is required for applications with fixed latency.
+V. FPGA IMPLEMENTATION AND COMPARISON
+In this section, we compare FPGA implementations of the systolic array based architecture and the newly proposed one. FPGA implementations have been done on a Virtex 7 (xc7vx550t-3) device using Xilinx Vivado 2012.4. All results have been obtained after place & route.
+We compare the runtime in clock cycles and resource utilization in terms of look-up-tables (LUTs) and flipflops (FFs). Exemplary results for two channel codes are pointed out: the binary image matrix of the widely used RS(255,239) Reed-Solomon code [4] and the (576, 480) WiMAX LDPC code [14], which have matrix sizes of 128×2040 and 96×576, respectively.
+Recall, that the SMITH architecture is not considered in detail for FPGA implementation, because of its excessive resource requirements and unsteady runtime. However, we provide an estimation for LUTs and FFs based on the implementation of one single SMITH cell.
+Runtime in clock cycles is depicted in Tab. I. Both, the systolic architecture and the proposed one have a fixed runtime. Due to the systolic data flow in the systolic array, it needs more clock cycles than our architecture.
+
+TABLE I
+RUNTIME IN CLOCK CYCLES FOR THE BINARY MATRICES OF THE
+RS(255,239) AND (576,480) WIMAX LDPC CODE
+
+matrix size:
+
+M ×N
+
+systolic array proposed
+
+3M + N − 2 M +N
+
+128 × 2040 RS(255,239)
+2422 2168
+
+96 × 576 WiMAX LDPC
+862 672
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:58:45 UTC from IEEE Xplore. Restrictions apply.
+
+In Tab. II and III implementation results for the systolic array and the proposed architecture for the two example codes are presented. Resource utilization can be found in Fig. 10 for different number of rows M for systolic arrays and the new architecture.
+TABLE II IMPLEMENTATION RESULTS FOR A 128 × 2040 MATRIX (RS(255,239))
+
+LUTs FFs
+
+SMITH (estimated) systolic array proposed
+
+780k 81.7k 16.6k
+
+260k 98.6k 32.9k
+
+fmax (MHz)
+350 370
+
+throughput (matrices/s)
+145k 171k
+
+TABLE III IMPLEMENTATION RESULTS FOR A 96 × 576 MATRIX (WIMAX LDPC)
+
+LUTs FFs
+
+SMITH (estimated) systolic array proposed
+
+166k 45.9k 9.4k
+
+55k 55.5k 18.5k
+
+fmax (MHz)
+470 450
+
+throughput (matrices/s)
+545k 670k
+
+Our proposed architecture requires significant lower FPGA resources and consumes approximately 4-5 times less LUTs and 2-3 times less flipflops than the systolic array.
+The maximum achievable clock frequency for the RS(255,239) code with M = 128 is 350 MHz for the systolic array and 370 MHz for the new architecture. For the WiMAX LDPC code with M = 96 the clock frequencies are 470 and 450 MHz for the systolic array and the new architecture, respectively. In combination with the lower cycles needed for elimination, this also leads to a increased throughput of approximately 20 % for the proposed architecture.
+
+LUTs / FFs
+
+x 104 10
+9
+8
+7
+
+proposed vs systolic array, LUTs and Flipflops
+proposed LUTs proposed FFs systolic array LUTs systolic array FFs
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+M (number of rows)
+
+Fig. 10. FPGA implementation results for different values of M
+
+Note, that for the systolic array and the proposed architecture an external memory is needed to store the matrix. It is of
+
+size M × N for the proposed architecture and M × (N + M ) for the systolic array.
+
+VI. CONCLUSION
+
+In this paper, we proposed a new architecture for binary
+
+Gaussian elimination for use in channel decoding algorithms.
+
+We analyzed the SMITH architecture and systolic arrays
+
+regarding their hardware implementation on a FPGA. Then
+
+we proposed a new architecture and showed, that this new
+
+implementation consumes significant lower FPGA resources
+
+than state-of-the-art architectures while achieving a higher
+
+throughput.
+
+ACKNOWLEDGEMENT
+
+We gratefully acknowledge partially financial support by the DFG (project-ID: KI 1754/1-1) as well as by the Center of Mathematical and Computational Modelling of the University of Kaiserslautern. We thank Frank Kienle for his valuable comments and suggestions.
+
+REFERENCES
+[1] S. Lin and D. C. Jr, Error Control Coding 2nd. Upper Saddle River, New Jersey, USA: Prentice Hall PTR, 2004.
+[2] J. Massey, “Shift-register synthesis and BCH decoding,” IEEE Transactions on Information Theory, vol. 15, no. 1, pp. 122–127, 1969. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1054260
+[3] S. Scholl, F. Kienle, M. Helmling, and S. Ruzika, “Integer Programming as a Tool for Code Analysis,” in 9th International ITG Conference on Systems, Communications and Coding, Jan 2013.
+[4] J. Jiang, “Advanced Channel Coding Techniques using Bit-Level Soft Information,” Dissertation, Texas A&M University, August 2007.
+[5] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Transactions on Information Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[6] A. Ahmed, R. Koetter, and N. R. Shanbhag, “Performance analysis of the adaptive parity check matrix based soft-decision decoding algorithm,” in Proc. Conf Signals, Systems and Computers Record of the Thirty-Eighth Asilomar Conf, vol. 2, 2004, pp. 1995–1999.
+[7] M. Fossorier, “Iterative Reliability-based Decoding of Low-Density Parity Check Codes,” IEEE Journal on selected Areas in Communications, vol. 19, no. 5, pp. 908–917, May 2001.
+[8] X. Zhang and P. H. Siegel, “Adaptive Cut Generation Algorithm for Improved Linear Programming Decoding of Binary Linear Codes,” IEEE Transactions on Information Theory, vol. 58, no. 10, pp. 6581–6594, 2012. [Online]. Available: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6218777
+[9] A. Tanatmis, S. Ruzika, H. W. Hamacher, M. Punekar, F. Kienle, and N. Wehn, “A Separation Algorithm for Improved LP-Decoding of Linear Block Codes,” IEEE Transactions on Information Theory, vol. 56, no. 7, pp. 3277–3289, 2010.
+[10] A. Bogdanov, M. Mertens, C. Paar, J. Pelzl, and A. Rupp, “A Parallel Hardware Architecture for fast Gaussian Elimination over GF(2),” in Field-Programmable Custom Computing Machines, 2006. FCCM ’06. 14th Annual IEEE Symposium on, april 2006, pp. 237 –248.
+[11] B. Hochet, P. Quinton, and Y. Robert, “Systolic solution of linear systems over GF(p) with partial pivoting,” in Computer Arithmetic (ARITH), 1987 IEEE 8th Symposium on, may 1987, pp. 161 –168.
+[12] R. Jasinski, V. Pedroni, A. Gortan, and W. Godoy, “An Improved GF(2) Matrix Inverter with Linear Time Complexity,” in Reconfigurable Computing and FPGAs (ReConFig), 2010 International Conference on, dec. 2010, pp. 322 –327.
+[13] H. T. Kung and W. M. Gentleman, “Matrix triangularization by systolic arrays,” Computer Science Department, Tech. Rep. Paper 1603, 1982. [Online]. Available: http://repository.cmu.edu/compsci/1603
+[14] I. 802.16, Local and metropolitan area networks; Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems; Amendment 2:Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:58:45 UTC from IEEE Xplore. Restrictions apply.
+
+

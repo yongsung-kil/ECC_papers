@@ -1,0 +1,485 @@
+344
+
+IEEE COMMUNICATIONS LETTERS, VOL. 18, NO. 2, FEBRUARY 2014
+
+High Throughput LDPC Decoder on GPU
+Yong Lin and Wensheng Niu
+
+Abstract—The available Lower Density Parity Check (LDPC) decoders on Graphics Processing Unit (GPU) do not simultaneously read and write contiguous data blocks in memory because of the random nature of LDPC codes. One of these two operations has to be performed using noncontiguous accesses, resulting in long access time. To overcome this issue, we designed a multi-codeword parallel decoder with fully coalesced memory access. To test the performance of the method, we applied the method using an 8-bit compact data. The experimental results demonstrated that the method achieved more than 550Mbps throughput on Compute Unified Device Architecture (CUDA) enabled GPU.
+Index Terms—CUDA, decoding, GPU, parallel processing, LDPC code.
+I. INTRODUCTION
+
+multiple codewords to processing cores on GPU in which all data access patterns are coalesced, both in read and write operations. Corresponding parity-check matrix data structure and message data permutation methods were also designed. To hide the memory access latency, we use 8-bit data to represent update message. Compared with a 32-bit decoder, the 8-bit decoder issues more arithmetic instructions without increasing memory latencies. We implemented our approach on a NVIDA GPU and obtained extraordinary results.
+The remaining of the letter is organized as follows: Section 2 briefly introduces the LDPC code and its decoding algorithm; Our new parallel multi-codeword LDPC decoder is presented in Section 3; Section 4 shows our experiment results. Conclusions are presented in Section 5.
+
+L OW Density Parity Check (LDPC) codes, developed by Gallager in 1960 [1] and rediscovered in 1996 [2], are a class of the error-correction codes whose performance is close to the Shannon limit [3]. A commonly used LDPC decoding algorithm is Belief Propagating (BP) algorithm which iteratively exchanges extrinsic messages between variable and check nodes. It is suitable to parallel implementation.
+Nowadays, Graphics Processing Unit (GPU) has been developed into a general purpose multi-core processor. New GPUs can be used not only in traditional graphic processing but also in general data processing. As a parallel processing tool, GPU has been employed in several approaches to accelerate decoding of LDPC codes. These decoders on GPU are less costly but more flexible and scalable than hardware decoders [4-9]. Unfortunately, most of these implementations cannot simultaneously read and write contiguous data in global memory; one of these two operations has to be performed using non-coalesced memory accesses [5-9]. When these noncontiguous memory locations do not fall in a cache line, additional memory transactions are needed and memory access latency is increased. Since arithmetic instructions issued by BP are not sufficient enough to hide global memory latency, the GPU capacity is not fully utilized. Hence, there still is large amount of room to further improve the performance of GPU based decoders by developing a new mapping algorithm with less memory access time.
+Based on NVIDIAs Compute Unified Device Architecture (CUDA) platform, we designed a new strategy to map the
+Manuscript received October 26, 2013. The associate editor coordinating the review of this letter and approving it for publication was E. Paolini.
+This work was supported by the Key Project of the Chinese Ministry of Education under Grant (No.2009241).
+Y. Lin was with the Department of Physics and Information Engineering, Ningxia Normal University, Guyuan 756000 China. He is now with the School of Computer Science and Engineering, Xidian University, Xi’an 710071 China (e-mail: linyong6649@gmail.com).
+W. Niu is with the School of Computer Science and Engineering, Xidian University, Xi’an 710071 China (e-mail: nwsheng@avic.com).
+Digital Object Identifier 10.1109/LCOMM.2014.010214.132406
+
+II. SUM PRODUCTION ALGORITHM
+
+LDPC code can be defined by the equation H · xT = 0, where x is a codeword, and H is the parity-check matrix, which is a sparse matrix with a few of ones in each column and row. Intuitively, the LDPC is also modeled by its Tanner graph [10] in which edges connect the variable and check nodes according whether their corresponding elements in the check matrix are ones. If the number of ones in each row/column is constant, it is called a regular LDPC code, otherwise, an irregular code.
+The most common decoding algorithm for LDPC codes is BP, also known as Sum Product Algorithm (SPA) [10]. SPA iteratively passes the messages between check nodes (CNs) and variable nodes (VNs) along the edges connecting them. We decode BPSK modulated LDPC codes transmitted through Additive White Gaussian Noise (AWGN) channel with zero mean and variance δ2. The SPA applied to the LDPC decoder is illustrated in Algorithm 1, where rm(i)n(1) indicates the probability of CNn being 1 at the ith iteration, qn(im) is the probability of V Nm being 0 or 1. N (m)\n represents VNs connected to CNm excluding V Nn, M (n)\m is the set of CNs connected to V Nn excluding CNm, and knm are chosen to ensure qn(im) (0) + qn(im) (1) = 1. The algorithm is terminated when H ·xT = 0 is satisfied or the maximum iteration number Imax is reached.
+Algorithm 1. Sum Product Algorithm 1: {Initialization.}
+
+qn(0m) (1) = 1/(1 + exp ((2yn)/δ2))
+
+(1)
+
+2: While( H · xT = 0 ∧ i < Imax) do 3: {Compute message sent from V Nn to CNm.}
+
+rm(i)n(1)
+
+=
+
+1 2
+
++
+
+1 2
+
+(1 − 2qn(i−m1)(1))
+
+(2)
+
+n ∈(m)\n)
+
+1089-7798/14$31.00 c 2014 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:28:22 UTC from IEEE Xplore. Restrictions apply.
+
+LIN and NIU: HIGH THROUGHPUT LDPC DECODER ON GPU
+
+345
+
+4: {Compute message from CNmto V Nn.}
+
+qn(im) (1) = kmnpn
+
+rm(i)n (1)
+
+(3)
+
+m ∈M(n)\m
+
+qn(im) (0) = knm(1 − pn)
+
+(1 − rm(i)n(1)) (4)
+
+m ∈M(n)\m
+
+32 codewords 32 codewords 32 codewords
+
+...
+
+...
+
+...
+
+Block0 ...
+
+Block1 ... ...
+
+Blockn-1 ...
+
+w0 w1 w2 w3 w31 T0 T1 T2 T3 ... T31 Warp0
+T0 T1 T.2.. T3 ... T31 Warp1 T0 T1 T2 T3 ... T31 Warpm-1
+
+5: {Compute the posteriori pseudo-probabilities.}
+
+Qn(i)(1) = pn
+
+rm(i)n (1)
+
+(5)
+
+m ∈M(n)
+
+Q(ni)(0) = (1 − pn)
+
+(1 − rm(i)n(1))
+
+(6)
+
+m ∈M(n)
+
+6: {Perform hard decoding.}
+
+x(ni) =
+
+1 ⇐ Qn(i)(1) ≥ Qn(i)(0) 0 ⇐ Q(ni)(1) < Qn(i)(0)
+
+(7)
+
+7: end while
+
+III. CUDA
+NVIDA’s CUDA is a powerful parallel computing platform. CUDA capable GPUs can be used as a Single Instructions Multiple Data (SIMD) system working with CPU as a coprocessor. Kernel threads are organized into blocks and executed by streaming multiprocessors. Only the threads in same block can cooperate via shared memory and be synchronized. CUDA
+
+Fig. 1. Mapping 32 codewords to a block. Every 32 codewords are decoded in a block, and threads in a warp process same sections of different codewords.
+
+cw1 cw2 cw3
+
+cw32
+
+r1,57 r1,57 r1,57 ... r1,57
+
+r1,253 r1,253 r1,253 ... r1,253
+
+r1,384 r1,384 r1,384 ... r1,384 ...
+
+T1 T2 T3 ... T32 ...
+
+q57,1 q57,1 q57,1 ... q57,1 q57,257 q57,257 q57,257 ... q57,257 q57,286 q57,286 q57,286 ... q57,286 q57,488 q57,488 q57,488 ... q64,528 q57,643 q57,643 q57,643 ... q57,643 q57,710 q57,710 q57,710 ... q57,710
+...
+
+cw1 cw2 cw3 (a)
+
+cw32
+
+cwcw1cw2Fr.3.1Z.,5Q7 r1,253 r1,384
+
+r2,33 r2,140 r2,340
+
+r3,133 r3,173 .r..3,349
+
+... r32,130 ... R32,242 ... r32,328
+
+T1 T2 T3 ... T32
+
+ccwwc1w2cw.3..n
+
+...
+
+q33,2 ... q57,1 ... q64,130
+
+q33,184 ... q57,257 ... q64,239
+
+q33,311 ... q57,286 ... q64,353
+
+q33,493 ... q57,488 ... q64,528
+
+q33,556 ... q57,643 ... q64,570
+
+q33,807 ... q5..7.,710 ... q64,738
+
+q129,96 q130,32 ... q133,3 ...
+
+q129,149 q130,174 ... q133,261 ...
+
+q129,294 q130,384 ... q133,351 ...
+
+q129,413 q130,509 ... q133,540 ...
+
+q129,671 q130,635 ... q133,601 ...
+
+q129,720 q130,785 ...... q133,769 ...
+
+(b)
+
+memory is composed of global memory, shared memory, constant memory, as well as registers. The global memory is the largest but the slowest memory, and the shared memory can only be accessed by the threads in same block. An optimized
+
+Fig. 2. Comparison of VN update in a warp between our strategy and strategies in [4-7]. (a) Our strategy: both load and store are coalesced. (b) Strategies in [4-7]: A warp loads data from contiguous locations but the addresses of results (qnm) fall into different cache lines.
+
+global memory access should be a coalesced memory access,
+
+indicating that threads in a warp should access contiguous memory addresses [11]. GPUs with CUDA compute capability 3.0 (CC3.0) have large L2 caches, aligned and non-sequential addresses fall within a cache line (128 bytes) can be accessed in one memory transaction. But if these addresses do not fall within a cache line, extra transactions are needed to load them into a cache. In GPUs of CUDA CC3.0, a CUDA core needs only one clock cycle to complete one 32-bit floating-point add or multiply, but 400-600 clock cycles to access data in global memory [12].
+
+decoded in GPU, in these approaches one node is assigned to one thread, and one codeword will be processed by threads in many blocks. Although they have rearranged the locations of message data, these approaches only ensure that qnm can be coalesced read in CN update and that rmn can be coalesced read in VN update. Considering the random connections between check and variable nodes, the writing is performed with scattered memory locations and more than one memory transaction is needed.
+
+Our strategy is to map a set of codewords to a block. The
+
+IV. PARALLEL MULTI-CODEWORD DECODER ON GPU
+To hide global memory latency, there should be sufficient independent arithmetic instructions issued when waiting for the global memory access to complete. Hence, our approach improves decoding speed in two ways. One is to reduce the global memory access time via a novel mapping method, and the other is to issue more arithmetic instructions for each memory access by using 8-bit data.
+
+set size should be the same as the warp size of the GPU which is 32 in our device. As shown in Fig. 1, every block in our GPU charges 32 codewords. All decoding processes of the 32 codewords will be carried out by threads within a single block. In a block, threads in the same warp process the same sections from different codewords. Since update messages for threads in same warp are stored in contiguous addresses, which will be considered in the next section, all global memory accesses are fully coalesced.
+
+A. Strategy to Map Codewords to Blocks
+
+The Fig. 2 is a schematic example for the mapping strategy. Given an (816,408) codeword, our VN update step and the
+
+There are many available mapping strategies. For example, same step in [5-8] are plotted. In our strategy (Fig 2 (a)),
+
+Chos strategy decodes codewords frame by frame [5], Wangs threads in a warp (T1 to T32) load the same rmn(r1,57) strategy assigns threads in a block to different codewords [6]; from different codewords (cw1 to cw32), and store to the
+
+Falcao’s strategy assigns the same node from many codewords same qnm(q57,1). These qnm belong to different codewords to a thread [7], [8]. Regardless of how many codewords are too. Loading and storing operations are all coalesced. Fig. 2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:28:22 UTC from IEEE Xplore. Restrictions apply.
+
+346
+
+IEEE COMMUNICATIONS LETTERS, VOL. 18, NO. 2, FEBRUARY 2014
+
+codeword0 codeword1 codeword31 codeword32 codeword33 codeword63
+
+...
+
+...
+
+...
+codeword set 0
+
+...
+codeword set 1
+
+VN2CN
+
+1301120303122302
+
+VN0 1
+
+VN1 2 34
+
+VN2
+
+VN3
+
+VN4
+
+VN5
+
+56 7
+
+8 9 10 11 12
+
+VN6
+
+VN7
+
+13 14 15 16
+
+Fig. 3. Message data permutation. Codewords are grouped into many sets. The same elements in a set are stored in contiguous addresses.
+
+CN2VN
+
+CN0
+
+CN1
+
+CN2
+
+CN3
+
+3 7 9 15 1 4 5 11 6 12 13 16 2 8 10 14
+
+Fig. 4. Converting parity-check matrix to 1-D arrays. VN2CN and CN2VN
+(b) shows loading and storing processes in a warp based to store check node numbers of VNs and edge numbers of CNs respectively. the mapping strategy in [5-8]. Owing to their permutation,
+
+rmn(r1,57 to r32,130) required by a warp are stored in contiguous addresses and loaded in a coalesced manner. However, they have to save the result qnm (q57,1 to q130,32) to scattered addresses which fall in many cache lines.
+Our strategy ensures that threads in a warp execute the same functions on the same sections. There is no divergence among them and the thread workloads are balanced for regular LDPC codes. Another advantage of this strategy is that two message passing steps can be integrated into one kernel and coordinated by synchronization. As a result, there is no call overhead during execution, and decoding is further accelerated.
+
+D. Compacted Data Transfer
+The L2 cache line is 128 bytes in the device of CC3.0. If the message data is 32-bit, only one codeword data can be loaded to a thread per transaction. In our work, we use an 8-bit fixed-point number to represent a message. When a warp loads 128 bytes into cache, every thread gets 4-byte data from four codewords. One thread can process sections from four codewords simultaneously without memory latency increasing. The number of codewords for a block would no longer be 32 but 128.
+
+B. Message Data Permutation
+In Algorithm 1, the message qnm and rmn are huge in size and can only be stored in global memory. To ensure that all threads in a warp access contiguous message data, qmn and rmn must be permuted. The permutation method is determined by the mapping strategy. For example, permutation in [7] saves the messages with same index belonging to consecutive nodes of a codeword to contiguous addresses. According to our mapping strategy, we store the same messages from different 32 codewords in contiguous addresses. As depicted in Fig. 3, every 32 codeword message data are grouped into one set. The new message address in global memory can be calculated as:
+
+We pack update data into char4 CUDA built-in vector type. Four 8-bit components in char4 data represent four update data from different codewords. As components in char4 are independent, they need not be disassembled in GPU. Since the direct implementation of the original form of SPA is sensitive to the quantization effect, we use the Parity Likelihood Ratio Algorithm (PLRA) [13]. Although 6-bit is enough for PLRA, we exploit 8-bit data to represent a posteriori information to achieve high accuracy results and empirically clip data to [-50, 49] to save memory space.
+Using PLRA, the CN update step (2) is replaced by some parity likelihood ratio (PLR) functions. To avoid computation of PLR function, we use a size 100 × 100 two-dimensional
+
+addr = (idblock × lencode + idedge) × w + idgroup, (8)
+where idblock and lencode are the index number of the block and the length of the codeword respectively, idedge is the edge number, and w is size of the warp in CUDA which is set to 32 according to the GPU we used. idgroup is the index number of the group which is defined as
+
+look-up table for PLR function which is small enough to be stored in shared memory. Hence, our CN update step involves no computation except some shared memory access for table searching. Our BN update step is similar to (3). After loading char4 type data from global memory, we convert a char4 vector to four 32-bit integer data and process them separately. In the end, the results will be converted to char4 for storing.
+
+idgroup = idthread mod w,
+
+(9)
+
+here, idthread is the thread index number.
+C. Converting Parity-Check Matrix to Simple Form The space complexity of the parity-check matrix is O(n2),
+
+V. EXPERIMENT RESULT
+The experimental setup to evaluate the performance of the proposed parallel decoder consists of a NVIDIA GTX660Ti GPU with seven multiprocessors (MP), 192 CUDA cores per
+
+where n is the number of nodes in Tanner graph. Since the MP, and 2GB DDR global memory. Matrices under test are
+
+parity-check matrix is sparse, two arrays are, thus, used to presented in the left part of Table 1. A to E are regular LDPC
+
+represent it. Fig. 4 shows how we convert an (8, 4) LDPC codes, and F is an irregular code. Wb and Wc are the parity-
+
+code. The VN2CN array successively stores corresponding check matrix column weight and row weight respectively.
+
+check node numbers of variable nodes. In the CN2VN array, In our implementation, the number of codewords depends
+
+edge numbers belonging to the same check node are stored as on the number of blocks. For example, 70 blocks means contiguous elements. To irregular LDPC codes, we add other that 70 × 32 × 4 codewords will be decoded simultaneously.
+
+two arrays to record node positions in CN2VN and VN2CN. If the number of blocks is too large, the message data of
+
+Since threads in the same warp process the same sections of codewords would be too huge in size to be accommodated in
+
+different codewords, only one element of this array is required on-board memory. We did many experiments and found the
+
+by a warp and broadcasted to threads in the warp. Hence, our optimal grid size for A to F are 1120, 560, 196, 35, and 28
+
+array structure is simpler than the arrays in [6], and there is respectively. In our approach, most message data were stored
+
+no permeation needed as [5], [7], [8].
+
+in global memory, and there are few registers required per
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:28:22 UTC from IEEE Xplore. Restrictions apply.
+
+LIN and NIU: HIGH THROUGHPUT LDPC DECODER ON GPU
+
+347
+
+TABLE I DECODING TIME AND THROUGHPUTS AT VARIOUS ITERATIONS (NOT INCLUDNG THE MEMORY DATA TRANSFER TIME BETWEEN CPU AND GPU )
+
+Matrix
+
+Blocks Number of Decoding Time at Different Iterations (ms) Throughputs at Different Iterations (Mbps)
+
+Size
+
+Wb Wc
+
+Codewords 10 20
+
+30
+
+40
+
+50
+
+10 20 30 40
+
+50
+
+A 102 × 204
+
+6 3 1120 143360 53.1 99.6 146.6 194.3 242.1 550.4 293.7 199.5 150.6 120.8
+
+B 408 × 816
+
+6 3 560
+
+71680 108.5 210.8 313.5 417.0 518.8 539.0 277.6 186.6 140.3 112.7
+
+C 2000 × 4000 6 3 196
+
+25088 194.6 381.5 565.5 754.9 937.5 515.6 263.1 177.5 132.9 107.0
+
+D 4000 × 8000 6 3
+
+98
+
+12544 198.0 390.4 576.8 767.3 954.1 506.7 257.0 174.0 130.8 105.2
+
+E 10000 × 20000 6 3
+
+35
+
+4480 183.4 358.3 535.8 712.0 893.8 488.6 250.0 167.2 125.8 100.4
+
+F 4986 × 9972 7 3,9 70
+
+8960 421.5 834.5 1248.5 1664.4 2061.2 212.0 107.1 71.6 53.7 43.3
+
+60
+
+600
+
+100
+
+Iteration
+
+550
+
+50
+
+Throughtput 500
+
+10−2
+
+32−bit 8−bit
+
+Iteration Throughput (Mbps)
+BER
+
+450
+
+40
+
+400
+
+10−4
+
+350
+
+30
+
+300
+
+10−6
+
+250
+
+20
+
+200
+
+10−8
+
+0.6 0.8 1 1.2 1.4 1.6 1.8 2 2.2 2.4 2.6
+
+150
+
+Eb/No(dB)
+
+10
+
+100
+
+50
+
+0
+
+0
+
+0 0.2 0.4 0.6 0.8 1 1.2 1.4 1.6 1.8 2
+
+Eb/No(dB)
+
+Fig. 6. Comparing the performance results of 32-bit SPA and 8-bit PLRA.
+reading and writing operations. By using compact data, our
+
+Fig. 5. Convergence iterations and throughputs of code D (4000 × 8000). When Eb/No(dB) is greater than 2.0, the throughput is greater than 550Mbps (The memory data transfer time between CPU and GPU is not included).
+
+approach can achieve more than 550Mbps throughput. It can dramatically accelerate simulations and software-defined radio (SDR) test-beds. For a real-time system, our decoder is not
+
+thread and less than 10K bytes shared memory needed per block. Therefore, we only need to set the number of threads big enough to hide the latency of the global memory access. By using the NVIDIA analysis tool Visual Profiler, we were able to find that the optimal number of threads is 1024 per
+
+practical because the decoding latency for one codeword is not short enough. The throughput of our scheme is limited by on-board GPU memory size and the number of processing cores. It seems to be scalable to high level GPU devices with more on-board memory and more multiprocessors.
+
+block. We executed our parallel decoder on GPU at 10, 20, 30, 40,
+
+REFERENCES
+
+and 50 iterations respectively. Table 1 shows the decoding time and the throughputs of these codes at different iterations. Code A and B are small in size, and the arrays representing their matrices can be stored in constant memory. Compared to other codes whose matrices information is stored in global memory, throughputs of these two codes are higher. When using Code F, an irregular LDPC code, the workloads of the threads are unbalanced. Hence, the throughput of code F is degraded. We plotted the average iterations needed for different value of Eb/No and the corresponding throughputs of code D in Fig. 5. The maximum throughput is over 550Mbps when Eb/No is greater than 2.0dB and 9 iterations are required.
+We decoded a (4000 × 8000) code using the 8-bits PLRA and the 32-bit SPA respectively. The performance results are compared in Fig. 6. It shows that satisfactory performance(BER ≤ 10−6) can be achieved with the 8-bit decoder. Furthermore, the error floor of 8-bit is much lower than 32-bit. That is because 8-bit implementation quantitates message data with small values to zero and error transmission is avoided.
+VI. CONCLUSION
+We designed a scalable and flexible GPU based parallel LDPC decoder. This approach uses an efficient data structure and mapping strategy which makes sure that global memory
+
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEE Electron. Lett., vol. 32, no. 18, pp. 1645–1646, Aug. 1996.
+[3] S. -Y. Chung, G. D. Forney Jr., T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[4] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. 2013 GlobalSIP.
+[5] H. Ji, J. Cho, and W. Sung, “Memory access optimized implementation of cyclic and quasi-cyclic LDPC codes on a GPGPU,” J. Signal Process. Syst., vol. 64, no. 1, pp. 149–159, Jul. 2011.
+[6] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” in Proc. 2011 SASP, pp. 82–85.
+[7] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC decoding on multicore architectures,” IEEE Trans. Parallel Distrib. Syst., vol. 22, no. 2, pp. 309–322, Feb. 2011.
+[8] G. Falcao, V. Silva, and L. Sousa, “How GPUs can outperform ASICs for fast LDPC decoding,” in Proc. 2009 ICS, pp. 390–399.
+[9] K. K. Abburi, “A scalable LDPC decoder on GPU,” in Proc. 2011 VLSI Design, pp. 183–188.
+[10] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[11] D. B. Kirk and W. H. Wen-mei, Programming Massively Parallel Processors: A Hands-On Approach. Elsevier, 2010, pp. 77–90.
+[12] Compute Unified Device Architecture Programming Guide, Nvidia Inc., Santa Clara, CA, 2007.
+[13] P. Li and W. K. Leung, “Decoding low density parity check codes with finite quantization bits,” IEEE Commun. Lett., vol. 4, no. 2, pp. 62–64, Feb. 2000.
+
+access is completely coalesced global memory access in both
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:28:22 UTC from IEEE Xplore. Restrictions apply.
+
+

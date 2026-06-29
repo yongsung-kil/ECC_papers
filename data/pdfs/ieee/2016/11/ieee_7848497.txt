@@ -1,0 +1,230 @@
+Implementation of an LDPC decoder on a heterogeneous FPGA-CPU platform using SDSoC
+
+Si-Dong Roh, Keol Cho and Ki-Seok Chung
+Department of Electronics and Computer Engineering Hanyang University
+Seoul, Republic of Korea sdroh1027@hanyang.ac.kr, keolman2@gmail.co m, kchung@hanyang.ac.kr
+
+Abstract— As modern hardware architectures are complicated, designing hardware systems is challenging. High level synthesis (HLS ) has emerged as an effective hardware synthesis method that saves the engineering cost and the design time. Meanwhile, field programmable gate array (FPGA) devices have been improved significantly in terms of both performance and power efficiency, and therefore, they are often considered as an alternative hardware implementation to application specific integrated circuits (AS ICs). SDS oC is a C/C++ development environment which enables developers to leverage both configurable hardware and software implementations. This paper introduces a hardware-software co-design of low density parity check (LDPC) decoding synthesized by S DS oC for a heterogeneous FPGA an d central processing unit (CPU) platform. The LDPC code is one of the strongest error correcting codes. In order to optimize performance, the LDPC decoding process is divided into several stages. Then, either software or FPGA implementation is selected based on algorithmic characteristics and data dependencies of each stage. For stages which are implemented on the FPGA device, loop unrolling and loop pipelining techniques are applied. Compared to a pure software decoder, the proposed LDPC decoder achieved a speed-up of 4.41 while maintaining the software decoder’s BER performance and flexibility for various standards.
+Keywords— Error Eorrecting code; LDPC; FPGA; High-level synthesis; SDSoC.
+I. INT RODUCT ION
+Many modern communication and multimedia standards are getting very complicated. Not only a more intelligent system imp lementation is required to process such complicated standards, but also a shorter design time is needed to meet rapidly evolving demands. High level synthesis (HLS), wh ich translates a high level description into a gate-level circuit, has emerged as a convenient and effective method for hardware synthesis. Using HLS tools enables developers to design hardware accelerators supporting multip le standards with the minimum cost and time.
+Traditionally, field-programmable gate arrays (FPGAs) have been used to build a prototype system before an application specific integrated circuit (ASIC) is fabricated. However, as the capacity and speed of FPGA devices enhance while the cost of ASIC fabrication goes up rapidly, FPGA is often considered as an alternative hardware implementation to
+
+ASIC. Further, the major FPGA vendors release the FPGA device integrated with a central processing unit (CPU) to synthesize a hardware and software co-design on a single chip [4].
+Recently, one of the leading FPGA vendors, Xilin x, Inc. announced a high-level synthesis tool called SDSoC with a
+C/C++ development environment to create hardware-software co-designs on a heterogeneous FPGA-CPU platform. One key feature of SDSo C is that an FPGA implementation is synthesized from a C/C++ language description. Also, SDSoC is capable of estimating performance and device utilization before the logic synthesis process, which makes the design time even shorter. Therefore, imp lementing a communication system using SDSo C is an effective way not only because a fast design time can be achieved but also because rapidly evolving various standards can be supported.
+The low density parity check (LDPC) code is one of the strongest error correcting codes . LDPC was originally proposed by Gallager in 1963 [1]. In theory, it was considered as one of the best error correction codes because of its high channel capacity. However, its high computational complexity leading to a high cost implementation had kept itself fro m being regarded as a practical option for decades. Due to huge advances in the semiconductor technology, LDPC has become very popular nowadays for the wireless communication that requires the high data throughput. Currently, LDPC is adopted in various communication standards and applications such as Wi-Fi, WiMAX, and storage systems [2,3].
+In this paper, we propose a hardware-software co-design of low density parity check (LDPC) decoding synthesized by SDSo C for a heterogeneous FPGA-CPU platform. The rest of this paper is organized as follows. Section II gives an overview of the LDPC decoding algorithm. Section III e xpla ins the target platform and the parallelizing optimizat ion methods. Section IV addresses experimental results. Finally, Section V concludes the paper.
+II. LOW DENSIT Y PARIT Y CHECK CODES
+A. Low Density Parity Check Codes
+A regular (N, K) LDPC code has block length N and dimension K, which is commonly represented by parity-check matrix H with M=N–K rows and N columns with the regular
+
+978-1-5090-2597-8/16/$31.00 c 2016 IEEE
+
+2555
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+number of ones in each row and column. The parity-check can be represented using a bipartite graph called Tanner graph where two types of nodes are called check nodes and variable nodes, respectively. The rows and columns of the H matrix can be interpreted to check nodes and variable nodes, respectively and ones in the H matrix correspond to edges which connect a node in the check nodes and the other in the variable nodes . Error corrections are carried out by iteratively generating and exchanging message values between the check nodes and the variable nodes. This iterative message passing, also called belief propagation (BP), is one of the biggest characteristics of the LDPC decoder.
+B. LDPC decoding
+There are several decoding algorithms for the LDPC decoding. The sum-product algorithm (SPA) shows the best BER performance. However, SPA requires message variables to have the floating point type because they have a huge dynamic range. So the decoding requires very complex computation such as floating point multiplications. Therefore, min-sum algorith m (MSA) was proposed, which reduced the computational complexity considerably by exchanging messages as logarithmic likelihood ratios (LLR) and replacing the complex calculations with simp ler operations such as comparisons and additions.
+The entire min-sum decoding algorithm consists of four steps: (1) the initialization process, (2) the check node process (CNP), (3) the variable node process (VNP), and (4) the parity check operation (PC). After the initialization process is carried out, decoding steps (2), (3), and (4) are executed repeatedly until the decoding ends successfully or the max iteration count is reached. The detailed explanation is found in [5].
+
+III. IMPLEMENTATIONOF LDPC DECODER
+
+A. Platform overview
+Fig. 1 shows the target platform. Our experimental platform consists of a processing system (PS) based on a dual-core ARM processor, and a programmab le logic (PL) wh ich consists of block RAMs and reconfigurable logic components. The logic co mponents include look-up tables, flip-flops, and digital signal processors (DSPs), etc. All the LDPC decoding steps fro m the initializat ion step through the parity check process are synthesized by SDSoC and the resulting circuit is mapped to the PL block of the target platform. The control logic circuits for data exchanges between PS and PL are automatically generated by the SDSoC compiler.
+
+Processing System (PS)
+
+Cortex A9
+
+READ H
+ADDR GEN
+
+Host RAM
+
+Programable Logic (PL)
+FPGA Logics INIT
+
+Block RAM
+
+CNP VNP
+
+PC
+
+Fig. 1. LDPC decoding process in embedded FPGA platform.
+
+In PS, the host ARM processor reads an H matrix and generates addresses for the decoding. Then, PS sends the encoded bits and the generated addresses to the block RAM in PL. The four decoding steps are carried out by the circuit mapped in PL iteratively. After the decoding is completed, the decoded bits are sent back to the host RAM in PS.
+B. Optimization by high level synthesis
+To parallelize the LDPC decoding process, the loop unrolling and loop pipelining techniques are applied by adding the high-level synthesis pragmas to the key operations of the min-sum algorithm as shown in Fig. 2 and 3.
+CHECK_SIGN_VAL_DIV: for (k = 0; k < V_NODES*V_DEGREE; k++) { #pragma HLS unroll factor=24
+v_sign[k] = (v_message[k] < 0); v_abs_message[k] = abs(v_message[k]); }
+Fig. 2. Applying loop unrolling to a part of the check node process.
+An example of applying the loop unrolling method is shown in Fig. 2. The pseudo-code is to separate the sign bit and the magnitude, which is a part of the check node computation. With the #HLS UNROLL prag ma, SDSoC co mpiles the unrolled C code. Unro lling a loop by a factor of N basically creates N copies of the loop body and the loop variable is adjusted accordingly.
+VAR_NODE_PROCESS: for (i = 0; i < V_NODES; i++) { #pragma HLS PIPELINE II=1
+Qi = init_value[i] + c_message[v_addr[0]] + c_message[v_addr[1]] \ + c_message[v_addr[2]] ; //manually unrolled inner loop
+DecodedBits[i] = (Qi < 0); for (j = 0; j < V_DEGREE; j++) {
+v_message[i * V_DEGREE + j] = Qi - c_message[v_addr[j]]; } }
+Fig. 3. Applying loop pipelining to the variable node process.
+Fig. 3 shows an example of the loop pipelining method. With the #HLS PIPELINE pragma, each iteration is divided into smaller stages and the pipelined logic, which meets the initiation interval constraint, is generated. The unrolling factor and the initiation interval for the loop unrolling and the pipelining, respectively are selected in order to maximize the throughput. To maximize benefits from these optimization methods, some loops are modified by either changing the memory access patterns or eliminating some inter-iteration data dependencies. Function in-lining is also applied to the inner function for better performance by eliminating the call overhead across function boundaries.
+When a decoding step requires several operations in one loop iteration, and the iteration count is high, loop pipelining should be exploited effectively, where loop iterations are executed in an overlapping fashion to hide the execution latency of each iteration. In SDSoC, when the pipelining pragma is applied to nested loops, the innermost loop is fully unrolled automatically. However, when the unrolled loop has several memory data accesses or complex operations, such a full unrolling may cause some timing violation in the
+
+2556
+
+2016 IEEE Region 10 Conference (TENCON) — Proceedings of the International Conference
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+synthesized circuit. Therefore, the unrolling needs to be attempted with caution. Therefore, we unrolled the inner loops of each decoding step manually. Further, all the floating point operations are eliminated by converting them into acceptably accurate fixed point ones in the proposed decoder architecture. The details will be presented in the next section.
+C. Fixed point implementation
+In the proposed implementation, only the fixed point arith metic operations are employed to achieve faster decoding. However, the fixed point arithmet ic may suffer fro m some BER performance degradation because of the quantization error. We selected 1/16 as the scaling factor because this scaling factor showed an acceptable BER performance loss without any overflow occurrence in arithmetic operations.
+The fixed point imp lementation can be synthesized by the HLS co mpiler in SDSoC. For a fixed point imp lementation, codes for translating floating point mult iplications into fixed point mult iplications have been added before the start of the initialization process. Also, we rewrote the entire LDPC decoding steps with variables of the fixed point (or integer) data types. The HLS co mp iler of SDSo C synthesized the hardware implementation of the min-sum LDPC algorithm.
+IV. RESULT AND ANALYSIS
+This section shows the evaluation results of the min-sum LDPC decoder implementation generated by SDSoC. The H matrix has the code length 816 and the code rate 1/2. We used the Xilin x ZYNC zc7z020 device wh ich contains a dual ARM Cortex A9 core as the PS block and Atrix®-7 based FPGA as the PL block.
+A. Decoding speed
+Table I summarizes the frame decoding time of the proposed LDPC decoder co mpared to a pure software decoder with respect to various signal noise rates (SNRs). In the table, the non-optimized and optimized SDSoCs represent decoders synthesized by SDSo C, where both the ARM processor and the hardware logic b locks in FPGA are utilized. Loop unrolling and loop p ipelining is applied to both non -optimized and optimized SDSo C decoder, but additional optimizat ion techniques such as manual unrolling and fixed point implementation are applied to the optimized decoder. SW represents a pure software decoder which is executed only on the ARM processor. The optimized SDSo C decoder shows speed-ups of up to 4.41 and 9.89 in the decoding time compared to the software decoder and the non-optimized SDSo C decoder, respectively. In general, the execution speedup was higher at low SNRs because more iterations are required in the decoding process for signals with low SNRs .
+There are t wo main reasons why the non-optimized SDSo C decoder is slower than the pure software decoder. First, the target platform spends considerably large amount of t ime to transmit the input data and get the decoded data back between the host RAM and the block RAM in PL. Secondly, the operating frequency of FPGA (142.86MHz) is much lo wer than that of the ARM processor (666MHz).
+
+T ABLE I. FRAME DECODING TIME OF PROPOSED DECODER
+
+S NR
+1 1.5 2 2.5 3 3.5 4
+
+SW
+
+Time (ms) 12.1
+
+Speed up
+4.41
+
+7.24
+
+4.26
+
+3.35
+
+3.82
+
+1.95
+
+3.32
+
+1.40
+
+2.96
+
+1.09
+
+2.70
+
+0.90
+
+2.47
+
+S DS o C
+
+(n o n -o ptimized)
+
+Time (ms)
+
+Speed up
+
+23.54
+
+9.89
+
+14.18
+
+9.42
+
+6.66
+
+8.54
+
+3.95
+
+7.63
+
+2.90
+
+6.97
+
+2.30
+
+6.42
+
+1.93
+
+5.97
+
+S DS o C (o pti mized)
+Time (ms)
+2.38 1.51 0.78 0.52 0.42 0.36 0.32
+
+B. BER performance
+Fig. 4 shows that the BER performance of the proposed decoder. We observe that there are indistinguishable BER differences between the software decoder and the optimized decoder with all data of the fixed point data type. The BER degradation was 1.15% on average.
+SNR (dB) 1 1.2 1.4 1.6 1.8 2 2.2 2.4 2.6 2.8 3 1.E+00
+
+1.E-01
+
+1.E-02
+
+1.E-03
+
+BER
+
+1.E-04
+
+1.E-05
+
+1.E-06
+
+1.E-07
+
+non optimized(float)
+
+optimized (fixed, scaling factor 1/16)
+
+Fig. 4. Bit error rate (BER) comparison between floating point and fixed point min sum decoder (AWGN, code length: 816, rate: 1/2, max iteration: 50, 1,000,000 frames).
+
+C. Hardware utilization
+
+Table II shows the FPGA utilization of the synthesized hardware. When loop unrolling and loop pipelining techniques are applied, the size of the synthesized circu it may increase mainly because more hardware log ic is needed for parallel execution. It turns out that less block RAMs, flip-flops (FFs) and look-up tables (LUTs) were used for optimized decoder because the generated fixed point (or integer) operators have much lower co mplexity than those for floating point numbers in the non-optimized decoder. Therefore, the optimized decoder used 28.9% less block RAMs, 36.9% less FFs, and 37.4% less LUTs than the non-optimized decoder.
+
+T ABLE II. FPGA HARDWARE RESOURCE UTILIZATION
+
+Re s ources Block RAM DSP FF LUT
+
+No n -o ptimized 45 7
+19984 14516
+
+O ptimized 32 0
+12614 9087
+
+Di ffe rence -13 -7
+-7370 -5429
+
+2016 IEEE Region 10 Conference (TENCON) — Proceedings of the International Conference
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2557
+
+V. CONCLUSION
+In this paper, we presented an implementation of a regular min-sum LDPC decoder on a Xilin x ZYNQ heterogeneous FPGA -CPU p latform. The proposed design is synthesized by the high-level synthesis tool called SDSoC. In order to improve the decoding speed of the synthesized hard ware, the proposed LDPC decoder was described with the fixed point data and some loop optimization techniques . The proposed LDPC implementation showed a speed-up of up to 9.89 in the decoding speed with a smaller hardware size and a neglig ible BER d ifference co mpared to the non-optimized one. A lso the proposed design showed a speed-up of up to 4.41 in the decoding time than a pure software decoder. We expect that by using the FPGA device with a h igher clock speed, the speed-up of the proposed design will be much better.
+ACKNOWLEDGMENT
+This research was supported by Basic Science Research Program through the National Research Foundation of
+
+Korea(NRF) funded by the Ministry of Education(NRF2015R1D1A1A09061079)
+REFERENCES
+[1] R. G. Gallager,” Low Density Parity Check Codes,” Cambridge, MA: MIT Press, 1963.
+[2] Y. M. Jung, Y. H. Jung, S. Lee and J. Kim, “Low-complexity multi-way and reconfigurable cyclic shift network of QC-LDPC decoder for WiFi/WIMAX applications,” IEEE Trans. Consumer Electronics, vol 59, pp. 467-475, 2013.
+[3] J. Kim and W. Sung, “ Rate-0.96 LDPC Decoding VLSI for SoftDecision Error Correction of NAND Flash Memory”, IEEE Trans. VLSI syst, 2014.
+[4] Sagheer Ahmad, Vamsi Boppana, Ilya Ganusov, Vinod Kathail, Vidya Rajagopalan, Ralph Wittig, “A 16-nm Multiprocessing System-on-Chip Field-Programmable Gate Array Platform,” IEEE MICRO, vol 36, pp. 38-62, 2016.
+[5] N. Wiberg, Codes and Decoding on General Graphs, PhD thesis. Linkoping: Linkoping University, 1996.
+
+2558
+
+2016 IEEE Region 10 Conference (TENCON) — Proceedings of the International Conference
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1784 @@
+3628
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Efficient Implementation of Low-Density
+Parity-Check Convolutional Code Encoders
+With Built-In Termination
+Zhengang Chen, Student Member, IEEE, Tyler L. Brandon, Stephen Bates, Senior Member, IEEE, Duncan G. Elliott, Member, IEEE, and Bruce F. Cockburn, Member, IEEE
+
+Abstract—Low-density parity-check convolutional codes (LDPC-CCs) have demonstrated comparable error-correcting performance to LDPC block codes (LDPC-BCs). However, the LDPC-CC encoder requires termination when applied to finite-length data frames to ensure that the trailing information bits are fully protected. In this paper, the LDPC-CC encoder design is investigated, and a novel termination scheme is proposed. Starting from any encoder state, the proposed scheme is capable of generating a termination sequence in hardware without padding, thus minimizing the rate loss due to termination. A high-speed architecture for LDPC-CC encoders with built-in termination is proposed. Synthesis results for LDPC-CCs of code memory size up to 512 demonstrate maximum encoding throughputs of around 1 Gb/s for a 90-nm CMOS technology. The implementation cost for such encoders is shown to be reasonably low for average-sized LDPC-CCs.
+Index Terms—Application-specific integrated circuits (ASICs), convolutional codes, error correction coding, high-speed integrated circuits, low-density parity-check (LDPC) codes, trellis termination.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes, first proposed in the early 1960s [1] and then rediscovered in the mid1990s [2], have already attracted much research interest and are now entering emerging communication standards such as IEEE 802.3an (10GBASE-T), IEEE 802.16e, and DVB-S2. LDPC codes, in their original form, are block codes, where the input data sequence has to be segmented into fixed-size blocks to be encoded and decoded. LDPC convolutional codes (LDPC-CCs) are a variation of LDPC codes. They were first proposed as time-varying convolutional codes defined by a low-density parity-check matrix [3]. With the belief propagation decoding algorithm [4], LDPC-CCs can achieve comparable capacity-approaching performance to LDPC block codes (LDPC-BCs). Moreover, the code memory of LDPC-CCs
+Manuscript received July 6, 2007; revised March 21, 2008. First published May 20, 2008; current version published December 12, 2008. This work was supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada and by the Semiconductor Research Corporation under Grant 1170.001. This paper was presented in part at IEEE GLOBECOM, San Francisco, CA, November 2006. This paper was recommended by Associate Editor A.-Y. Wu.
+The authors are with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB, Canada T6G 2V4 (e-mail: zgchen@ece.ualberta.ca; brandon@ece.ualberta.ca; sbates@ece.ualberta.ca; elliott@ece.ualberta.ca; cockburn@ece.ualberta.ca).
+Digital Object Identifier 10.1109/TCSI.2008.925813
+
+is much smaller than the block length of LDPC-BCs [3] with the same performance. In [5], it was shown for a certain ensemble of time-varying LDPC-CCs that the free distance increases linearly with the code memory. LDPC-CCs can operate over arbitrary lengths of data, and data streams can be continuously encoded and decoded. This avoids the requirement to segment data sequences into blocks and makes LDPC-CCs suitable candidates for streaming applications as well as packet-based communication systems with variable-length data frames (e.g., Ethernet). Due to these features, LDPC-CCs are attracting increasing attention to both their theoretical and implementation aspects [6]–[10]. A detailed comparison of code performance and decoding complexity between LDPC-CCs and LDPC-BCs can be found in [11]. Both application-specific integrated circuit (ASIC) and field-programmable gate array implementations of LDPC-CC decoders have been reported [12], [13]. Compared to LDPC-BCs, one major disadvantage of LDPC-CCs is that the coded sequence needs to be properly terminated when applied to finite-length data frames [14]. In this paper, we investigate the encoder design for LDPC-CCs, with built-in hardware that generates appropriate bits for termination.
+The encoding problem for LDPC-BCs has been studied since LDPC codes became a potential rival to turbo codes [15] in the 1990s. Although LDPC-BCs appear to have an encoding complexity that is quadratic in the block length, it has been shown that linear-time encoding is achievable by making the parity-check matrix “approximate triangular” [16], [17]. Some other algebraically constructed LDPC-BCs, such as quasi-cyclic codes, also have linear encoding complexity [18]. These methods all involve constructing the code generator matrix. In contrast, LDPC-CCs can be encoded directly from the parity-check matrix, which is already triangular and sparse. Consequently, LDPC-CCs are linear-time encodable, as shown in [3].
+In packet-based systems, the data bits are organized and transmitted in frames. To apply convolutional codes to finite-length data frames, the encoder has to terminate in a proper manner. Termination (also known as encoder termination or trellis termination [19]) is a problem seen in convolutional codes. Termination means generating tail bits which drive the encoder to a known state, usually the all-zero state, once the end of the frame has been reached. Without correct termination, simply stopping the encoder at the end of the frame leads to less protection for the trailing bits of the frame. Termination causes a slight loss in code rate. An alternative to termination is tail biting, where the
+
+1549-8328/$25.00 © 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3629
+
+encoder is forced to start and end at the same state [20]. This results in a circular trellis. Tail biting does not need tail bits and thus causes zero rate loss. For conventional convolutional codes, tail biting requires a modified decoding algorithm with higher complexity [20], [21]. For LDPC-CCs, a proper way of terminating the encoder is also necessary, but the problem is quite different from and much more difficult than that of a convolutional code encoder [14]. The implementation of termination in hardware is rather complex. A circuit implementation capable of terminating the LDPC-CC encoder was shown in [22]. However, for complexity reasons, this implementation can only terminate the LDPC-CC encoder starting from a predetermined phase (the phase is defined in Section II-B). Padding is required when the encoder ends a frame at a different phase.
+In this paper, we propose a new termination scheme capable of terminating LDPC-CC encoders from all possible states of any phase. Compared to [22], the proposed scheme does not need padding to reach a specific phase, thus reducing the rate loss. It also has lower implementation complexity. Based on the new termination scheme, a high-speed low-latency ASIC architecture for LDPC-CC encoders with built-in termination circuitry is proposed. Two rate-1/2 LDPC-CCs, with code memory sizes of 128 and 512, are implemented and synthesized for a 90-nm CMOS process. Synthesis results show that the proposed encoder architecture achieves gigabit-per-second throughputs. Comparisons between encoders with and without termination show that adding built-in termination increases the encoder area by approximately two and six times, respectively, for the two implemented codes. In practical LDPC-CC encoders, the implementation cost is dominated by built-in termination, which is an essential part in dealing with finite-length frames. However, the encoder with termination is still much smaller than a corresponding decoder for LDPC-CCs of average size (code memory less than 1000). Both the area and throughput results are improved substantially over the design in [22].
+The rest of this paper is organized as follows. In Section II, we give an overview of LDPC-CCs and the encoder structure. The problem of termination and its solution are discussed in Section III. In Section IV, the all-phase termination scheme is proposed and analyzed. Section V presents the proposed encoder architecture with all-phase termination and details the steps for generating the termination circuitry. Synthesis results are also provided in this section. Conclusions are given in Section VI.
+
+II. LDPC-CC OVERVIEW
+
+A. Code Definition
+
+An LDPC-CC is defined by an infinite parity-check matrix .
+
+For convenience, and to conform with the notation in [3], we use
+
+the transposed form (known as the syndrome former). The
+
+code is defined as the null space of , i.e., the set
+
+, where denotes infinite-length row vectors. Here, we only
+
+consider binary codes, and hence, only 0 and 1 define on the
+
+Galois field GF(2) can be elements of and . The infi-
+
+nite parity-check matrix of a rate
+
+LDPC-CC can
+
+be written as see equation (1) at the bottom of the page The
+
+submatrices
+
+are of size
+
+.
+
+Each individual time index specifies a column in , corre-
+
+sponding to
+
+parity-check equations. For practical codes,
+
+the parity-check equations are periodically time-varying. Sup-
+
+pose the period is , then
+
+for any valid
+
+and . When
+
+, the code is a time-invariant LDPC-CC,
+
+whose free distance does not increase linearly with the code
+
+memory [23]. In this paper, we study design problems for gen-
+
+eral time-varying LDPC-CCs.
+
+An important parameter of the code is the (syndrome former)
+
+memory , which determines the maximum number of pre-
+
+vious bits that are involved in encoding the current bit. To differ-
+
+entiate this definition from the term “memory” used in circuits,
+
+we will call the code memory. Obviously the code memory
+
+has to be a finite number, otherwise, infinite memory is required
+
+to encode/decode. A regular LDPC-CC with uniform column
+
+weight (check-node degree) and row weight (variable node
+
+degree) in is referred to as an
+
+LDPC-CC.
+
+B. LDPC-CC Encoder
+
+LDPC-CCs can be directly encoded from the syndrome
+
+former provided the submatrix
+
+is full rank for all possible
+
+’s. Consider rate-1/2 codes where
+
+and
+
+. The infi-
+
+nite codeword can be written as
+
+,
+
+where is a subvector of size 1 2:
+
+, and
+
+denotes an information bit and denotes a parity bit.
+
+The constituent submatrices of are
+
+and
+
+(2)
+
+...
+
+...
+
+...
+
+...
+
+...
+
+(1)
+
+...
+
+...
+
+...
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3630
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+m ; ; Fig. 1. Rate-1/2 ( 3 6) LDPC-CC encoder without termination.
+
+where
+
+for all ’s. From the code definition, we obtain
+
+the following encoding equation for rate-1/2 systematic LDPC-
+
+CCs:
+
+(3)
+
+This is the original encoding equation described in [3]. The co-
+
+efficients
+
+and
+
+in (3) are time-varying with period
+
+. To address this periodicity in the analysis and in the imple-
+
+mentation, a phase parameter is introduced. At time , the co-
+
+efficients in (3) are determined by the phase
+
+,
+
+assuming that the encoder always starts from phase 0 at time
+
+. Due to the sparsity (i.e., low density) of , only a few
+
+of the coefficients are nonzero.
+
+Fig. 2. Parity-check matrix of the (5,2(3),5) LDPC-CC from [3]. The period
+Tis = 4. The time indexes and the phase signal values corresponding to the H parity-check equations (columns in ) are also indicated. On the right are the
+corresponding bits in the codeword vector.
+
+Fig. 1 shows the systematic encoder architecture for a rate-1/2
+
+LDPC-CC. Not shown is a mod- counter that produces the phase signal . The encoder is a finite-state machine (FSM). The encoder state is defined as the set comprising
+
+TABLE I ENCODER OPERATIONS FOR THE (5,2(3),5) LDPC-CC AS DEFINED BY THE
+PARITY-CHECK MATRIX IN FIG. 2
+
+the last information bits
+
+, the last
+
+parity bits
+
+, and the phase .
+
+In Fig. 1, the phase controls the selection of five inputs to
+
+the XOR logic from the delay elements (state bits) and the
+
+current information bit .
+
+In the previous discussion, the input bit sequence starts from
+
+time . One implicit but natural assumption is that all pre-
+
+vious bits are zeros. This implies that, in Fig. 1, the delay ele-
+
+ments are initialized to all-zero. Note that the state bits of
+
+the encoder can be all-zero with the phase taking any value
+
+between 0 and
+
+. Thus, there is a total of all-zero states
+
+with different phases. However, once any of these all-zero
+
+states is reached, a zero input will always lead to another all-zero
+
+state, which means that they are self-perpetuating. Thus, the
+
+different all-zero states have the same effect in the discussion of
+
+termination, and any encoder state with only zeros in the delay
+
+elements will be called an “all-zero state” henceforth.
+
+matrix in (1) because the encoder starts from the all-zero
+
+state, and all bits prior to
+
+are assumed to be zero. To
+
+get the encoding equations for all phases, we need to look
+
+at columns in Fig. 2 with the full height
+
+.
+
+For LDPC-CCs, we use relative positions in the time axis to
+
+denote the parity-check relations (i.e., check-node connec-
+
+tions). For instance, at
+
+, we have
+
+. Referring
+
+to the corresponding codeword vector to the right of
+
+(from
+
+to ), we obtain the encoding equation for
+
+.
+
+Similarly, we can obtain the encoder operations for all phases,
+
+C. Simple LDPC-CC
+
+as shown in Table I. Note that this simple code is for illustration
+
+We use a simple LDPC-CC as an example to demonstrate the purposes only.
+
+encoder design process throughout this paper. This LDPC-CC is a (5,2(3),5) semiregular rate-1/2 LDPC-CC that appeared
+
+III. LDPC-CC ENCODER TERMINATION
+
+in [3]. According to the
+
+nomenclature defined in In most real-world applications, a data frame has a start and
+
+Section II-A, this code has the following parameters: code an end. To apply LDPC-CCs to a finite-length frame, the en-
+
+memory
+
+, variable-node degree
+
+or 3, and coder/decoder has to start and end a frame properly. Using ter-
+
+check-node degree
+
+. In addition, this LDPC-CC has a mination, the encoder starts from the all-zero state and ends at
+
+period of
+
+. The parity-check matrix is shown in Fig. 2 the all-zero state. Correspondingly, the pipelined LDPC-CC de-
+
+as a semi-infinite matrix, which is equivalent to the infinite coder ([9], [10]) initializes all the log-likelihood ratios (LLRs)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3631
+
+in the decoder FIFO delay lines to infinity, representing deterministic zero bits. After channel LLRs of the encoded frame with termination are pushed into the decoder, infinite LLRs must be generated at the decoder input to finish decoding. For details regarding the LDPC-CC decoder architecture and the necessity of termination in LDPC-CCs, please refer to [3] and [14]. Worthy to note here are possible alternatives to the termination approach. Tail biting is known as an alternative to termination. It makes the encoder start and end at the same state, not necessarily the all-zero state. Recently, tailing-biting LDPC-CCs have been proposed in [24]. However, with tail-biting LDPC-CCs, the data input is encoded as a block rather than continuously. In addition, the encoding complexity is quadratic in the frame length, which is much larger than . Another possible alternative is using guard intervals between frames, but it causes too much rate loss, as shown in Appendix A.
+
+A. Problem Definition and Solution
+
+Consider systematic rate-1/2 codes as an example of
+
+the termination problem. Suppose the length of the input
+
+information bit frame is . The encoded frame is then
+
+. At time
+
+, the
+
+last bit of has been sent to the encoder, and the tail bits for
+
+termination start to be fed to the input of the encoder. Although
+
+the tail bits are not necessarily all zeros, the encoder is expected
+
+to reach the all-zero state in finite time, preferably as fast as
+
+possible to minimize the rate loss. At some point during the
+
+termination process, the systematic encoder must reach a par-
+
+tial-zero state, where a zero information bit input will always
+
+generate a zero parity bit output.1 From this partial-zero state,
+
+at most input bits are needed to flush the encoder to the
+
+all-zero state. These zero bits do not need to be transmitted
+
+because they are deterministic zeros. Based on this fact, the
+
+flushing zeros need not be counted in calculating the rate loss
+
+due to termination.
+
+We define the uncoded termination sequence as
+
+, where is the number of un-
+
+coded tail bits required to reach a partial-zero state, called the
+
+termination length. These bits do not contain any user infor-
+
+mation and will be called termination bits. The termination
+
+bits are chosen to drive the encoder to a partial-zero state.
+
+Meanwhile, the encoder generates the corresponding parity
+
+bits:
+
+, which will be called
+
+termination parity bits. The encoded termination sequence
+
+can be written as
+
+, where
+
+and
+
+for
+
+. From the
+
+code definition, we have
+
+(4)
+
+is the coded termination sequence that brings the encoder
+
+to a partial-zero state, and
+
+is the zero vector that flushes
+
+the encoder to the all-zero state. Equation (4) can be rewritten
+
+as follows by partitioning the matrix into submatrices:
+
+(5)
+
+Equation (5) implies that
+
+, which follows
+
+the code definition. From (5), it follows that
+
+(6)
+
+where and (the size subscripts are omitted for easy nota-
+
+tion) are suitably chosen submatrices from
+
+[14].
+
+Both and are determined by the starting phase of
+
+the termination sequence and the termination length . For ex-
+
+ample, starts from the
+
+th column and the
+
+th
+
+row of
+
+, and the corresponding phase is .
+
+The right-hand side of (6) seems to depend on the entire coded
+
+frame . Only the last bits of , i.e., the ending state vector
+
+of the encoder, are relevant because all but the last rows of
+
+are zeros. Let
+
+be the ending state vector, and then
+
+,
+
+where comprises the last rows of .
+
+The termination sequence (before or after encoding) is ob-
+
+tained by solving (6) for . We can obtain a more familiar linear
+
+equation in a column vector form by taking the transpose
+
+(7)
+
+where
+
+and
+
+. The size of
+
+is
+
+. When the number of constraints is no greater
+
+than the number of unknowns (i.e.,
+
+, which matches
+
+with the tail length requirement in convolutional code termina-
+
+tion) and
+
+is full rank (having rank
+
+), this equation
+
+has one or more solutions [25]. Here, we assume that there exists
+
+at least one solution to (7) for phase
+
+and termination
+
+length , and then
+
+(8)
+
+In this solution, the termination sequence is determined by the
+
+ending state vector and the matrix
+
+, which
+
+is called the termination matrix and is also dependent on the
+
+phase and the termination length . Once the equations are
+
+solved, the termination matrix
+
+can be saved and used in
+
+the implementation. This is the method employed in [14] to find
+
+the right termination sequence. Although only rate-1/2 codes are
+
+discussed in this section, the solution can be easily extended to
+
+LDPC-CCs of general rate , as verified in Section IV-B.
+
+where to
+
+denotes the syndrome former from
+
+B. Termination of the (5,2 (3),5) LDPC-CC and Discussion
+
+, taken from the definition in (1). In(4), Consider the termination problem for the (5,2(3),5)
+
+1This can be easily proved: To reach and maintain the all-zero state (i.e., to achieve termination), the input bits to the encoder have to be all-zero from some point on (see Fig. 1). If no partial-zero state is reached, then no all-zero state will be reached because the zero input information bits will generate a nonzero parity bit every now and then.
+
+LDPC-CC. Due to the condition
+
+, the termination
+
+length can be set to
+
+. For the moment, assume that
+
+the encoder is at the first phase
+
+when the termination
+
+starts, i.e.,
+
+. Then, we need to find and to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3632
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Fig. 4. Padding bits need to be added between the data frame and the termination sequence to reach a fixed phase for single-phase termination. Parity bits are not shown in the figure, and the termination sequence is generated by a single-phase termination circuitry.
+
+D P Fig. 3. Example showing how to find the and submatrices in the parity-
+
+= 0 = 5 check matrices for the (5,2(3),5) LDPC-CC. In this case, 
+
+and L .
+
+D P B Note that, in (5),
+
+is below (part of
+
+D = 0 from  due to the periodicity.
+
+). Here, we simply locate
+
+derive the termination matrix . From (5) and Fig. 2, we can
+
+find these two matrices, as shown in Fig. 3.
+
+In this case, the matrix is a square matrix, and it happens
+
+to be full rank. Therefore, it has a unique inverse . Based
+
+on (8), we obtain the following termination matrix for
+
+and
+
+:
+
+are relaxed. When
+
+,
+
+has rank
+
+for all
+
+possible phases, and one or more solutions exist for all phases.
+
+To guarantee that the encoder terminates from all states with
+
+, termination matrices for all phases have to be stored.
+
+In general, there is a total of termination matrices of size
+
+for a fixed . As these matrices are generally
+
+not sparse and both and are usually close to for a typ-
+
+ical time-varying LDPC-CC, the storage requirement becomes
+
+, which is too large for building practical LDPC-CC
+
+encoders.
+
+On the other hand, if only one phase is chosen to be the
+
+starting phase of termination, only a single termination matrix
+
+needs to be saved. Since the data frame can end at any phase,
+
+padding then becomes necessary to reach a specific phase
+
+(phase 0 in this example) before the termination starts, which
+
+will further reduce the effective code rate (shown in Fig. 4).
+
+This is the circuit design approach used in [22]. In this paper,
+
+we call this compromise single-phase termination. Another
+
+issue for the single-phase termination implementation is that it
+
+requires extra storage elements to save the ending state vector.
+
+In the LDPC-CC encoder shown in Fig. 1, even a single input
+
+bit change will change the encoder state. To generate the whole
+
+termination sequence from (8), either the ending state vector
+
+or the termination sequence needs to be saved before the
+
+encoder state changes. In either case, at least extra storage
+
+elements are required and lead to higher implementation cost.
+
+(9)
+
+IV. LDPC-CC ENCODER WITH ALL-PHASE TERMINATION
+
+A. New Termination Approach
+
+An LDPC-CC encoder capable of termination at any phase
+
+without padding is desirable because it would eliminate the rate
+
+loss caused by padding. It was proved in [23] that almost all
+
+With found, whenever the encoder needs to be terminated the
+
+rate-1/2 regular LDPC-CCs can be terminated
+
+from phase
+
+, the corresponding termination sequence with a tail length of no greater than
+
+. We make the
+
+can be obtained by multiplying with a column vector con- assumption that all of the LDPC-CCs of interest can be termi-
+
+taining the last
+
+bits of the encoded data frame, i.e., nated at any phase with a finite termination length (i.e., the
+
+the ending state vector of the encoder.
+
+linear system defined by (7) is consistent for all phases), based
+
+The procedure of finding a termination sequence seems on the conclusion in [23] and the following two reasons.
+
+straightforward mathematically, but it may lead to a few unde- 1) If the code can be terminated at one phase, it can also be
+
+sirable problems in implementation. One difficulty comes from
+
+terminated at any other phase through padding, i.e., at the
+
+the time-varying nature of the encoder. With
+
+, termina-
+
+cost of a larger termination length. It is very unlikely that
+
+tion is always possible at
+
+. However, at
+
+and
+
+,
+
+the system is unsolvable for all phases.
+
+there may be no solution to (7) because and are not 2) If there indeed exists an LDPC-CC that cannot be ter-
+
+full rank, so must be increased to make termination possible
+
+minated at any phase with any finite termination length,
+
+from all encoder states at any phase. By increasing by 1, one
+
+we can simply construct another LDPC-CC which can be
+
+additional degree of freedom is introduced, and the constraints
+
+terminated.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3633
+
+Fig. 5. Termination path through the code trellis using all-phase termination. Circles represent the all-zero state, empty squares represent partial-zero states, and black filled squares represent arbitrary states.
+
+All of the LDPC-CCs used in this paper can be terminated at termination bits are needed and get the first of them. This will
+
+any phase by simply choosing to be slightly larger than : not be a problem if the correct path is unique for all the phases,
+
+,
+
+, as will be shown in Sections IV-B and which naturally forces each state transition to stay on the correct
+
+V-D.
+
+path and thus ensures that the trellis will definitely return to a
+
+As the LDPC-CC encoder is also an FSM, an LDPC-CC can partial-zero state in no more than transitions.
+
+be categorized as a trellis code from the encoding point of view. However, the unique path condition is generally not true. In
+
+The trellis starts from the all-zero state, and termination is sup- (7), the system matrix
+
+is of size
+
+. The ter-
+
+posed to bring it back to the all-zero state (through a partial-zero mination length may need to be chosen to be larger than
+
+state). The single-phase termination solution
+
+cor- to make (7) solvable for all possible phases. Thus, in (7), the
+
+responds to a path in the trellis starting from state and ending number of constraints
+
+is usually smaller than the number
+
+at a partial-zero state.
+
+of variables . When the system is solvable for all possible
+
+Instead of preserving the entire ending state vector, gen- states, must be full rank for all phases, i.e.,
+
+erating the termination bits, and then feeding them to the
+
+. To solve (7), standard Gaussian elimination is used.
+
+encoder, we can perform the process progressively. Given As the rank of is known, Gaussian elimination will lead to
+
+the ending state of the encoder , the first termination bit basic variables and
+
+free variables in the reduced row-ech-
+
+is obtained from (8) using
+
+, the first elon form of , leading to a total of
+
+solutions
+
+row of
+
+, and is then fed to the encoder. After the first to (7)[25]. Thus, there are
+
+paths of length from state
+
+termination parity bit
+
+is generated and the encoder to a partial-zero state. Given this fact, the worst possible case in
+
+state is updated, the second termination bit
+
+is all-phase termination is that one of the solutions to (7) is used
+
+again obtained from (8), with a different state vector
+
+, for the current state transition, but it detours from the path cal-
+
+at a different phase
+
+and, thus, with the first row culated from the previous state, and this detour happens repeat-
+
+of a different termination matrix
+
+. This approach edly so that we are always at most
+
+steps away from a par-
+
+generates termination bits on demand until the termination tial-zero state but can never reach it. We can avoid this problem
+
+length is reached. Therefore, no extra storage is required to by setting all the free variables to zero in solving (7) (or, equiva-
+
+save the encoder state vector at the end of the frame. In the state lently, finding the inverse of ). In this way, no detour from the
+
+trellis, each termination bit fed to the encoder causes one state original -step path will happen, and the all-phase termination
+
+transition. After each state transition, the next termination bit is will always reach a partial-zero state in no more than steps.
+
+recalculated based on the updated state. We call this approach The proof is given in Appendix B.
+
+all-phase termination. All-phase termination also forms a As an independent check on the theoretical proof, we also ver-
+
+termination path through the code trellis, as shown in Fig. 5. ified the correctness of all-phase termination with software. The
+
+proposed all-phase termination scheme was verified on eight
+
+B. Correctness of All-Phase Termination
+
+LDPC-CCs with the code memory size ranging from 128 to 2048 and the code rate ranging from 1/2 to 5/6. The codes
+
+Before applying all-phase termination to the encoder design, were constructed using the algorithms described in [3] and [26].
+
+we need to make sure that it generates the correct termination The termination length was chosen to be just large enough to
+
+sequence of length . In all-phase termination, the termination make the linear system defined by (7) consistent for every phase.
+
+bit is still generated based on (7) and (8). What is different from The choice of is code dependent, but for all of the codes sim-
+
+single-phase termination is that the matrices and and the ulated, is less than 5% larger than (except the (5,2(3),5)
+
+state vector are changing with each state transition. The termi- LDPC-CC used as a toy example). The termination matrices are
+
+nation bit calculation from (8) is based on the assumption of a generated by using Gaussian–Jordan (G–J) elimination with all
+
+fixed termination length . Therefore, in all-phase termination, the free variables set to zero, and only the first row of each ter-
+
+each state transition in the trellis guarantees that a path starting mination matrix is saved. It is not possible to verify termination
+
+with this transition can reach a partial-zero state in no more than from all possible states because the number of encoder states
+
+steps. In each step of all-phase termination, we assume that grows exponentially with . With being at least around
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3634
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+m ; ; Fig. 7. Rate-1/2 ( 3 6) LDPC-CC encoder with all-phase termination.
+
+length 1024 is also included for comparison as it has comparable
+
+error-correcting performance [14]. Note that the LDPC-CC with
+
+all-phase termination has a higher effective code rate compared
+
+with the LDPC-BC for most of the data frame lengths. The con-
+
+trary is true only when the coded frame length is equal to or
+
+slightly smaller than the block length of the LDPC-BC.
+
+Fig. 6. Effective code rate for variable-length frames with rate-1/2 codes.
+
+Although LDPC-CCs have an advantage in handling variable-length frames, very large code memory should be avoided
+
+due to the severe rate loss from termination. As LDPC-CCs
+
+100 for LDPC-CCs of practical interest, the state number is pro- can achieve comparable performance to LDPC-BCs with the hibitively high. Instead of traversing all the states, we used the code memory much less than the block length [3], [11], the following procedure, based on (4), to probabilistically verify the LDPC-CCs that we use usually have below 1000.
+
+all-phase termination for rate- codes.
+
+1) Generate a random length data frame comprised of random V. LDPC-CC ENCODER ARCHITECTURE WITH ALL-PHASE
+
+0s and 1s.
+
+TERMINATION
+
+2) Encode this data frame. 3) Generate the termination bits and feed them to the en- A. LDPC-CC Encoder With Termination
+
+coder, using the all-phase termination method described in
+
+Section IV-A.
+
+4) Drive
+
+more 0s to the encoder input, and check the
+
+corresponding output parity bits. This is the step of flushing
+
+the encoder. If all the
+
+parity bits are zero,
+
+correct termination is verified, and we go back to step 1).
+
+Otherwise, a termination failure is recorded.
+
+For all the codes tested, more than one million frames were
+
+used, and no failures were observed with all-phase termination.
+
+With all-phase termination, once the equations are
+
+solved, only the first row of each termination matrix
+
+(
+
+) needs to be stored in the im-
+
+plementation for rate-1/2 LDPC-CCs. Starting from whatever
+
+phase the encoder is left at after encoding the user information,
+
+the termination bits can be generated on demand while being
+
+fed to the encoder input. Such an encoder with termination is
+
+shown in Fig. 7. Conceptually, the termination circuit comprises
+
+a multiplexer, which selects a number of bits from the
+
+C. Rate Loss Due to Termination
+
+state bits, and an XOR tree that outputs the next termination bit. Note that the termination bits are generated internally, and
+
+The bit error rate (BER) performance of LDPC-CCs with ter- the termination parity bits are still generated by the encoder in
+
+mination was addressed in [11] and [14]. While assuring good the same fashion as when encoding the data frame. The storage
+
+performance near the end of a frame, the encoded termination requirement for the termination matrices is
+
+for
+
+sequence is transmitted and causes a rate loss, depending on the rate- codes (interestingly not dependent on ), making the
+
+length of the data frame [11], [14]: The larger the data frame, the space complexity of termination
+
+. For pure LDPC-CC
+
+smaller the rate loss. Note that an LDPC-CC coded frame with encoding itself, the complexity is
+
+because the parity-
+
+termination experiences better error protection at both the begin- check matrix is sparse. The termination matrix is not sparse.
+
+ning and the end of the frame due to the participation of deter- For example, the density of 1s for the simulated LDPC-CCs is
+
+ministic zeros in decoding [14]. For example, at
+
+dB, nearly 50%.
+
+this enhanced error protection benefits around
+
+bits at two The LDPC-CC encoder with all-phase termination shown in
+
+ends of the frame for 50 decoding iterations ([14, Fig. 5]), which Fig. 7 reveals the complexity of a practical LDPC-CC encoder.
+
+slightly improves the performance but is negligible for large An LDPC-CC is both a special kind of convolutional code
+
+frames. Compared with single-phase termination with padding, and an LDPC code. It has capacity-approaching performance
+
+all-phase termination minimizes the rate loss because the termi- owing to the LDPC decoding. On the other hand, the encoding
+
+nation length is very close to for all phases. Fig. 6 shows looks very much like a convolutional code [see (3)]. For a
+
+the effective rate of the same (128,3,6) LDPC-CC with these two practical LDPC-CC encoder, however, termination has to be
+
+termination methods applied to data frames of different lengths. included, and the all-phase termination approach resembles a
+
+Without any padding, all-phase termination has an advantage generic LDPC encoder in that both need to find the inverse
+
+when handling variable-length frames. An LDPC-BC of block of the parity-check matrix in some way. Without introducing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3635
+
+structures or other techniques in the code construction, a general time-varying LDPC-CC encoder has a practical encoding
+
+TABLE II TERMINATION BIT GENERATION OPERATIONS FOR THE (5,2(3),5) LDPC-CC
+
+complexity of
+
+. In cases of general time-varying
+
+LDPC-CCs, the period is close to and leads to quadratic
+
+complexity. It is therefore not advisable to use LDPC-CCs
+
+with very large . Fortunately, LDPC-CCs can achieve good
+
+performance with only moderate
+
+, and our im-
+
+plementation results in the next few sections show that the
+
+encoder cost is reasonably low. Based on the earlier discussion, certainly, we can expect that a time-invariant LDPC-CC
+has linear complexity in encoding with termination, but the error correction performance will be compromised. On the other hand, LDPC-CCs with small can be constructed to reduce the complexity of termination, and the design approach we present in Sections V-B–D still applies.
+
+where is an
+
+identity matrix, is the
+
+reduced row-echelon form of
+
+after the G–J elimination,
+
+and is the right part of the augmented matrix after the G–J
+
+elimination. If
+
+is a square matrix, i.e.,
+
+, then
+
+is an identity matrix and is the unique inverse of . If
+
+, then contains
+
+columns corresponding
+
+to free variables (see (12) in Appendix B). To ensure that all the
+
+B. Preprocessing: Generating the Encoding and Termination Connections
+Given an LDPC-CC defined by a parity-check matrix , to build the encoding circuit as well as the termination circuit, as shown in Fig. 7, the time-varying connections between the delay elements (state bits) and the two XOR gates have to be found first. This is equivalent to finding the combinational logic of the two multiplexers in Fig. 7. The encoding connections can be determined directly through the parity-check matrix, as shown in Table I. Here, we present the steps for generating the termination connections in all-phase termination for rate-1/2 LDPC-CCs, using the (5,2(3),5) code as an example. This preprocessing pro-
+
+free variables are set to zero, we insert
+
+rows of zeros
+
+to the corresponding locations of , and get a
+
+matrix, which is the right inverse of : .
+
+We also obtain
+
+for all phases from . For the
+
+(5,2(3),5) code, Fig. 3 shows an example for
+
+and
+
+.
+
+Based on (8), we get the termination matrix by multiplication:
+
+. For the (5,2(3),5) code with
+
+, four
+
+12 10 termination matrices (
+
+, and ) are
+
+generated.
+
+3) Step 3: Generate the Termination Connections: The first
+
+row of each termination matrix is taken and combined to form
+
+the all-phase termination matrix . The matrix specifies the
+
+time-varying connections between the encoder state bits and the
+
+cedure is done with software and only needs to be performed XOR gate, shown at the left side of Fig. 7, that generates a termi-
+
+once for each code.
+
+nation bit at every phase. For the (5,2(3),5) code, the all-phase
+
+1) Step 1: Determine the Termination Length : The termi- termination matrix acquired through these steps is
+
+nation length has to be large enough to make (7) solvable at all
+
+phases. The minimum possible value of is . The following
+
+simple algorithm is used to determine .
+
+1) Initialize :
+
+.
+
+2) Obtain
+
+from the infinite syn-
+
+drome former . For the (5,2(3),5) code, Fig. 3 is an
+
+(11)
+
+example with
+
+and
+
+. The common size of
+
+these matrices is
+
+. Check the rank of
+
+these matrices. If all of them have rank
+
+, i.e., full
+
+rank, stop the search and choose the current value of .
+
+Otherwise, go to 3).
+
+3) Increase by 1:
+
+. Then, go to 2).
+
+For the (5,2(3),5) code, when
+
+, is not full rank
+
+In each row of , the 1s represent the state bits to be XOR-ed at each phase. In each column of , the 1s represent the connections from each state bit to the XOR gate at different phases. The columns from left to right correspond to these state bits, respectively:
+. The termination bit generation equations based on this matrix are given in Table II. The all-phase termination
+
+at phases 2 and 3. However, when is increased to
+
+, matrix is of size
+
+, totally independent of , which
+
+, , , and all have rank equaling
+
+, also reflects the code’s periodicity in termination. Note that two
+
+i.e., full rank. Therefore, is chosen to be 6.
+
+columns in are all-zero, indicating that corresponding state
+
+2) Step 2: Find Termination Matrices for All the Phases: For bits (
+
+) are always irrelevant in generating ter-
+
+each phase
+
+, use the following proce- mination bits.
+
+dure to generate the termination matrix : Usually,
+
+is
+
+a nonsquare matrix, and the inverse of
+
+referred to in (8) is C. High-Speed LDPC-CC Encoder Architecture With Built-In
+
+actually the right inverse (a one-sided inverse). We find this in- Termination
+
+verse using G–J elimination. For a given , apply G–J elim- The encoder shown in Fig. 7 uses two phase-controlled mul-
+
+ination to the following augmented matrix:
+
+tiplexers due to the time-varying connections between the delay
+
+elements and the two XOR gates. When becomes large, these
+
+multiplexers also grow in size, and they tend to cause a long crit-
+
+(10) ical path [27].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3636
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+m ; ; Fig. 8. Encoder architecture for rate-1/2( 3 6) regular LDPC-CCs with all-phase termination.
+
+To implement a high-speed LDPC-CC encoder with built-in termination, the new architecture shown in Fig. 8 is proposed. A termination control signal switches the circuit between encoding mode and termination mode. Phase masks are used to
+
+TABLE III AREA AND TIMING PERFORMANCE OF TWO RATE-1/2 (3,6) REGULAR
+LDPC-CC ENCODERS WITH AND WITHOUT TERMINATION FOR A 90-NM CMOS PROCESS
+
+control the connections from the encoder state bits to the XOR
+
+gates. The phase masks are implemented with combinational
+
+logic. The XOR gate for encoding, shown at the right side of
+
+Fig. 7, can be replaced by a pipelinedXOR tree. The inputs to
+
+this XOR tree include all the encoder state bits controlled by the
+
+encoding phase masks. To effectively generate the phase masks,
+
+we use a one-hot encoded shift register FSM to generate
+
+phase signals, of which only one is nonzero at each clock cycle.
+
+The termination circuit is basically the same as the encoding
+
+circuit but with different phase mask control logic. The termi-
+
+nation phase masks are generated based on , using OR gates
+
+(as shown in Fig. 8). Each phase mask controls one state bit and
+
+is the output of an OR gate. The inputs of each OR gate are those
+
+one-hot encoded phase signals that correspond to 1s in the spe-
+
+cific column of which corresponds to the current state bit.
+
+Take the (5,2(3),5) LDPC-CC for example. In (11), the second
+
+column represents the state bit
+
+, and for termination, the
+
+phase mask should be “on” for phases 1 and 2. Thus, the OR gate
+
+inputs for the phase mask of
+
+are and .
+
+and a (512,3,6) LDPC-CC. The periods of these two codes
+
+are 129 and 513, respectively. The (128,3,6) code is the same
+
+as the one used in [22]. The (512,3,6) code can reach a BER
+
+of
+
+at
+
+dB, which is comparable to the
+
+performance of a (3,6) regular LDPC-BC with a block length
+
+of around 8000–10 000. The preprocessing step is performed,
+
+as described in Section V-B for both codes, and takes less than
+
+1 h for either code with a C program. The termination lengths
+
+determined in the preprocessing phase for these two codes
+
+are 134 and 530, respectively. The encoder architecture based
+
+on Fig. 8 is implemented and synthesized for an STM 90-nm
+
+D. Synthesis Results
+
+CMOS process. Three pipeline stages are used for the XOR tree in the (128,3,6) encoder, and nine pipeline stages are used for
+
+Using the proposed algorithm and architecture, we designed the (512,3,6) code. Standard cell synthesis results are shown in
+
+encoders with built-in termination for a (128,3,6) LDPC-CC Table III.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3637
+
+As expected, adding built-in termination circuitry to the en-
+
+coder increases the area. For the (128,3,6) code, the area is
+
+increased by approximately 1.8 times. For the (512,3,6) code,
+
+the increase jumps to 6.4 times. This is due to the intrinsically
+
+quadratic complexity of termination when
+
+. How-
+
+ever, even with termination, the encoder area is still significantly
+
+lower than the decoder area and only takes a very small portion
+
+of the overall codec. For example, on the same 90-nm CMOS
+
+process, a single decoding processor for the (128,3,6) LDPC-CC
+
+takes about thrice the area of the encoder with built-in termina-
+
+tion [28]. For LDPC-CC codec implementation with multiple
+
+decoding processors, the encoder portion is even less. The en-
+
+coding latency of LDPC-CCs is very low, primarily dependent
+
+on the number of pipeline stages. This is one of the advantages
+
+of the continuous encoding of LDPC-CCs.
+
+Compared to the results reported in [22] using single-phase
+
+termination, the proposed architecture can reach higher clock
+
+frequency (1.2 GHz versus 189 MHz) at reduced complexity
+
+(half the number of state bits, implemented as registers). In [22],
+
+the implementation of termination led to around seven times
+
+cost increase for the (128,3,6) code. The single-phase termi-
+
+nation design would lead to very costly encoder design for the
+
+(512,3,6) LDPC-CC. In addition, no padding is required in the
+
+new encoder architecture, improving the effective code rate.
+
+For LDPC-BCs, there have been limited results reported on
+
+the encoder implementation compared with that on decoder im-
+
+plementations. Recently, an LDPC-BC encoder for a rate-7/8
+
+code with block length of 8158 was implemented on a TSMC
+
+0.25- m CMOS process [29]. It was a quasi-cyclic LDPC en-
+
+coder with a highly optimized parallel architecture. The die size
+
+is 6.578 mm 5.2 mm, and the data throughput is 860 Mb/s with
+
+a clock frequency of 54 MHz. Although it is not possible to com-
+
+pare the performance of this LDPC-BC to that of the (512,3,6)
+
+LDPC-CC used in our implementation due to the obvious rate
+
+difference, it was noted earlier that the (512,3,6) LDPC-CC
+
+has comparable performance to rate-1/2 regular LDPC-BCs of
+
+block length around 8000–10 000, and we make the following
+
+few comparisons and discussions based on available results in
+
+[29] and the rightmost column of Table III.
+
+1) The proposed LDPC-CC encoder architecture is purely
+
+serial, while the LDPC-BC encoder in [29] is a parallel
+
+design. To achieve the same throughput, the LDPC-CC
+
+encoder requires higher clock frequency. Encoding a
+
+8158-bit frame takes 511 clock cycles in [29], which will
+
+take the (512,3,6) LDPC-CC encoder around 5000 clock
+
+cycles (including termination). The rate difference is a
+
+significant factor here. For instance, a rate-7/8 LDPC-CC
+
+encoder can generate 8 coded bits per clock cycle.
+
+2) The parallel LDPC-BC encoder architecture in [29] ex-
+
+ploits the quasi-cyclic structure of the LDPC-BC. It has
+
+been shown in [30] that a general time-varying LDPC-CC
+
+encoder can be parallelized. However, with built-in termi-
+
+nation, LDPC-CC encoder parallelization is not so straight-
+
+forward without altering the code itself.
+
+3) The design in [29] was interconnect limited, and the cell
+
+area took about 25% of the core area. As it used a 0.25- m
+
+technology, by rough scaling based on the feature size, the
+
+cell area that it would require in a 90-nm technology is
+
+around 1.11 mm . Considering that the design in [29] contains another short-code encoder, a single LDPC-BC encoder of block length of 8158 would consume somewhat less area. If we take half, the encoder would cost around 0.55 mm , which is almost equal to the area of the (512,3,6) LDPC-CC encoder in this paper. Note that custom design was used in [29], and the results in Table III are based on standard cell design. 4) The total transistor count is not significantly different for the two implementations (420 K versus 350 K) either. The aforementioned comparison is certainly imperfect due to differences in code rate, architecture, CMOS technology, etc. For instance, a rate difference influences the encoder cost. A rate-1/2 LDPC-BC of the same block length would use more transistors at the same throughput simply because more parity bits need to be calculated in the same block. However, comparison to state-of-the-art LDPC-BC encoder implementations indicates that practical LDPC-CC encoders with built-in termination have reasonable low cost for codes of short-to-medium code memory sizes.
+VI. CONCLUSION AND FUTURE WORK
+The encoder design problem of LDPC-CCs was investigated in this paper. We proposed an efficient all-phase termination scheme capable of terminating the LDPC-CC encoder from states of any possible state. A high-speed LDPC-CC encoder architecture with built-in termination was presented based on all-phase termination. Synthesis results have shown substantial improvements in both area and speed over the single-phase termination approach in [22]. In addition, the rate loss is minimized by eliminating padding. Although an LDPC-CC encoder without termination is very easy to implement and takes very little area, our results indicate that a practical LDPC-CC encoder with built-in termination costs a few times more in area. However, due to the relatively small code memory of LDPC-CCs, the encoder with built-in termination is still significantly smaller than the corresponding decoder for average-sized codes. For short-to-medium-sized codes, the proposed architecture can achieve maximum data throughputs of around 1 Gb/s.
+The proposed design involves the problem of solving linear equations defined over GF (2), which may be relevant to other design problems where finding an inverse matrix is necessary. Future work directions include encoder parallelization with built-in termination by introducing structures in the code construction, and using the partial syndrome former encoder with all-phase termination for low-cost implementation of higher rate LDPC-CCs [27].2
+APPENDIX I USING GUARD INTERVALS INSTEAD OF TERMINATION
+A possible alternative to termination is to use guard intervals, i.e., appending arbitrary tail bits to the data frame, encoding the data frame together with guard bits, and transmitting them. The receiver then decodes this expanded frame without termination
+m m 2The encoding throughput is dependent on the frame length. Assuming that
+the frame length is much larger than , e.g., 10 , the encoding throughput is still around 1 Gb/s.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3638
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+and simply throws away the guard bits. In this way, termina-
+
+tion-related circuits are not needed in either the encoder or the
+
+decoder. However, this approach will lead to a much larger rate
+
+loss because the guard bits at the end of the expanded frame
+
+are still much less protected, and the errors affecting them will
+
+propagate to data bits during iterative decoding. Suppose the de-
+
+coder has processors (iterations). To avoid error propagation
+
+and make sure that there is no performance loss, theoretically,
+
+guard bits are required to shield the data frame. For the
+
+(128,3,6) LDPC-CC and 50 iterations (processors), the number
+
+of guard bits required can be as large as
+
+.
+
+At high SNRs, the actual number of guard bits required can be
+
+much less. [14, Fig. 5] shows that more than 500 bits at the end
+
+of a 2560-bit frame suffer higher-than-normal error rates for the
+
+(128,3,6) LDPC-CC decoder with 50 processors at
+
+dB. To offset this weakness, more than 500 guard bits are
+
+needed, i.e., the length of the guard interval is about , ,
+
+200which is still much larger than the tail length of termina-
+
+tion (approximately ). As noted in Section IV-C, LDPC-CC
+
+encoded frames with termination have enhanced error protec-
+
+tion at the end of the frame. Compared to termination, using a
+
+guard interval is wasteful in terms of power consumption and
+
+does not produce a better BER performance. Therefore, using
+
+guard intervals without termination is not considered a practical
+
+solution.
+
+APPENDIX II PROOF OF THE ALL-PHASE TERMINATION
+
+The standard algorithm for solving (7) or calculating the in-
+
+verse of is Gaussian elimination. The GF (2) linear system
+
+defined by in (7) has
+
+constraints and variables.
+
+It is nonhomogeneous because the right-hand side of (7) is not
+
+a zero vector. The assumption made in Section IV-A is that the
+
+system is consistent and has more than one solution. The re-
+
+duced row-echelon form of after Gaussian elimination looks
+
+like
+
+... ... ... ... ... ... ... (12)
+
+where the 1s are pivots and correspond to basic variables. The
+
+columns with ’s correspond to free variables (i.e., can be
+
+0 or 1) [25]. Note that the reduced row-echelon form of
+
+is unique [25]. There are basic variables and
+
+free
+
+variables, assuming that the rank of is (
+
+in
+
+all-phase termination). The general solution of (7) can be written
+
+as
+
+(13)
+
+where is a particular solution,
+
+are free variables,
+
+and are binary coefficient vectors of free variables corre-
+
+sponding to the columns in (12)[25]. Free variables can be set
+
+to either 0 or 1, resulting in different solutions. In such a binary
+
+system, there are exactly
+
+solutions corresponding to the
+
+same number of termination paths in the trellis. In all-phase
+
+termination, when we solve for the first termination bit at
+
+the ending state , there can be
+
+termination paths of
+
+length on the trellis, although the remaining
+
+bits are
+
+not yet solved. These paths are altogether called the original
+
+paths. A detour happens if the solution of (7) results in a state
+
+transition that is not on the original paths. For example, if the
+
+original paths show that can only be 0 (certainly not a free
+
+variable), but when calculating the second termination bit from
+
+state
+
+:
+
+,
+
+a detour happens. We will prove that a detour will not happen
+
+if the free variables are always set to zero when solving (7)
+
+through Gaussian elimination.
+
+A branch happens in the termination paths if the solution for
+
+a termination bit can be either 0 or 1. Branching happens at
+
+if and only if
+
+is either a free variable in (12) or
+
+is associated with one or more free variables in (13):
+
+. Suppose the termination starts from the
+
+state , and the first transition on the termination path leads
+
+it to the state
+
+. From
+
+, we need to solve (7) with
+
+. Consider the following two cases depending
+
+on the original paths starting from .
+
+1) If the original paths branch at
+
+, then
+
+and
+
+will both lead to a state transition remaining on
+
+the original paths, because can be either 0 or 1 on the
+
+original paths. No detour can happen.
+
+2) If the original paths do not branch at
+
+, assume
+
+that only the input
+
+follows the
+
+original path. The linear system at this moment is defined
+
+by
+
+, and the unknown vector starts from
+
+and ends at
+
+, while the original paths in the same
+
+time span starts with and ends at
+
+. Assume
+
+that there are in total original paths or solutions to the
+
+termination equation from the state . These original
+
+paths must all end at partial-zero states after steps from
+
+, i.e.,
+
+must be a partial-zero state and
+
+and
+
+must be both zero. For the current
+
+termination equation starting from
+
+and defined by
+
+, the original paths are a subset of solutions
+
+with
+
+because a zero input to the encoder at a partial-zero state
+
+leads to another partial-zero state. As shown in Fig. 9, if a
+
+detour happens, i.e.,
+
+, an additional set
+
+of solutions (paths) emerges (only one is shown in the
+
+figure), which are called the detour paths. Looking at the
+
+original paths and the detour paths combined, we see that
+
+can be either or , which implies the following two
+
+possibilities.
+
+a)
+
+is a free variable in the termination equa-
+
+tion defined by
+
+. This possibility can
+
+be eliminated because the original paths can be
+
+obtained by solving
+
+while forcing
+
+.
+
+If
+
+is itself a free variable, would be able
+
+to take either 0 or 1 on the original paths, which
+
+conflicts with the assumption that the original paths
+
+do not branch at
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: EFFICIENT IMPLEMENTATION OF LDPC-CC ENCODERS WITH BUILT-IN TERMINATION
+
+3639
+
+Fig. 9. Possible detouring on the termination path. If x(2) = , the solution at the second step of termination (dotted lines) detours from the original path (solid
+path). Circles represent the all-zero state, empty squares represent partial-zero states, and black filled squares represent arbitrary states.
+
+b) As the previous possibility is excluded,
+
+is not
+
+a free variable, and then, it must be associated with
+
+one or more free variables [see the general solution
+
+(13)]. It follows that the free variables associated with
+
+must be
+
+or
+
+or both of
+
+them. This can be proved in the same way as in a):
+
+If
+
+is associated with any free variable
+
+, then must be asso-
+
+ciated with the free variable
+
+, and the original
+
+paths would branch at
+
+.
+
+From the aforesaid analysis, we have the following gen-
+
+eral solution for :
+
+, where is considered a particular solution.
+
+For the detour from
+
+to happen, at least one of
+
+and
+
+must be a free variable, and the
+
+corresponding weight ( or ) must be 1. At this point,
+
+it is clear that by setting all free variables to zero, we have
+
+, and no detour will happen at
+
+.
+
+The proof can be directly extended to all the state transitions
+
+following
+
+in the all-phase termination. It is now proved
+
+that the all-phase termination will always reach a partial-zero
+
+state in no more than state transitions. A similar proof can be
+
+given for the partial syndrome LDPC-CC encoder introduced in
+
+[31], which means that all-phase termination can also be applied
+
+to partial syndrome encoders.
+
+ACKNOWLEDGMENT
+The authors would like to thank Dr. K. Zigangirov and Dr. D. J. Costello Jr. for the discussions on LDPC-CCs and for supplying some of the LDPC-CCs used in this paper, including the (128,3,6) and (512,3,6) codes.
+
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645–1646, Aug. 1996.
+[3] A. Jiménez-Felström and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[4] T. J. Richardson and R. Urbanke, “The capacity of low-density parity-check codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+
+[5] A. Sridharan, D. Truhachev, M. Lentmaier, D. J. Costello, Jr, and K. S. Zigangirov, “Distance bounds for an ensemble of LDPC convolutional codes,” IEEE Trans. Inf. Theory, vol. 53, no. 12, pp. 4537–4555, Dec. 2007.
+[6] K. Engdahl and K. S. Zigangirov, “On the theory of low-density convolutional codes—I,” Probl. Pereda. Inf., vol. 35, no. 4, pp. 12–28, Oct.1/2"Dec. 1999.
+[7] M. Lentmaier, D. Truhachev, and K. S. Zigangirov, “On the theory of low-density convolutional codes—II,” Probl. Pereda. Inf., vol. 37, pp. 15–35, Oct.1/2"Dec. 2001.
+[8] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, Jr, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004.
+[9] S. Bates and G. Block, “A memory based architecture for low-density parity-check convolutional decoders,” in Proc. IEEE Int. Symp. Circuits Syst., Kobe, Japan, May 2005.
+[10] R. Swamy, S. Bates, and T. L. Brandon, “Architectures for ASIC implementations of low-density parity-check convolutional codes,” in Proc. IEEE Int. Symp. Circuits Syst., Kobe, Japan, May 2005.
+[11] D. J. Costello, Jr, A. E. Pusane, S. Bates, and K. S. Zigangirov, “A comparison between LDPC block and convolutional codes,” in Proc. Inform. Theory Appl. Workshop, San Diego, CA, Feb. 2006.
+[12] R. Swamy, S. Bates, T. L. Brandon, B. F. Cockburn, D. G. Elliott, J. C. Koob, and Z. Chen, “Design and test of a 175-Mb/s, rate-1/2 (128,3,6) low-density parity-check convolutional code encoder and decoder,” IEEE J. Solid-State Circuits, vol. 42, no. 10, pp. 2245–2256, Oct. 2007.
+[13] S. Bates, L. Gunthorpe, A. E. Pusane, Z. Chen, K. S. Zigangirov, and D. J. Costello, Jr, “Decoders for low-density parity-check convolutional codes with large memory,” in Proc. IEEE Int. Symp. Circuits Syst., Kos, Greece, May 2006.
+[14] Z. Chen, S. Bates, and X. Dong, “Low-density parity-check convolutional codes applied to packet based communication systems,” in Proc. IEEE Global Telecommun. Conf., St. Louis, MO, 2005, vol. 3, pp. 1250–1254.
+[15] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes (1),” in Proc. IEEE Int. Conf. Commun., Geneva, Switzerland, May 1993, pp. 1064–1070.
+[16] D. J. C. MacKay and S. T. Wilson, “Comparison of constructions of irregular Gallager codes,” IEEE Trans. Commun., vol. 47, no. 10, pp. 1449–1454, Oct. 1999.
+[17] T. J. Richardson and R. Urbanke, “Efficient encoding of low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[18] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 71–81, Jan. 2006.
+[19] S. Lin and D. J. Costello, Jr, Error Control Coding, 2nd ed. Englewood Cliffs, NJ: Prentice-Hall, 2004.
+[20] H. H. Ma and J. K. Wolf, “On tail biting convolutional codes,” IEEE Trans. Commun., vol. COM-34, no. 2, pp. 104–111, Feb. 1986.
+[21] J. B. Anderson and S. M. Hladik, “Tailbiting MAP decoders,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 297–302, Feb. 1998.
+[22] S. Bates, D. G. Elliott, and R. Swamy, “Termination sequence generation circuits for low-density parity-check convolutional codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 53, no. 9, pp. 1909–1917, Sep. 2006.
+[23] A. Sridharan, “Design and analysis of LDPC convolutional codes,” Ph.D. dissertation, Univ. Notre Dame, Notre Dame, IN, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+3640
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+[24] M. B. Tavares, K. S. Zigangirov, and G. P. Fettweis, “Tail-biting LDPC convolutional codes,” in Proc. IEEE Int. Symp. Inform. Theory, Nice, France, Jun. 2007, pp. 1047–1051.
+[25] C. D. Meyer, Matrix Analysis and Applied Linear Algebra. Philadelphia, PA: SIAM, 2001.
+[26] Z. Chen and S. Bates, “Construction of low-density parity-check convolutional codes through progressive edge-growth,” IEEE Commun. Lett., vol. 9, no. 12, pp. 1058–1060, Dec. 2005.
+[27] Z. Chen, R. Swamy, and S. Bates, “A new encoder implementation for low-density parity-check convolutional codes,” in Proc. IEEE Midwest Symp. Circuits Syst., Montreal, QC, Canada, Aug. 2007, pp. 883–886.
+[28] T. Brandon, J. Koob, L. v. d. Berg, Z. Chen, A. Alimohammad, R. Swamy, J. Klaus, S. Bates, V. C. Gaudet, B. F. Cockburn, and D. G. Elliott, “A 600-Mb/s encoder and decoder for low-density parity-check convolutional codes,” in Proc. IEEE Int. Symp. Circuits Syst., Seattle, WA, May 2008, pp. 3090–3093.
+[29] L. Miles, J. W. Gambles, G. K. Maki, W. E. Ryan, and S. R. Whitaker, “An 860-Mb/s (8158,7136) low-density parity-check encoder,” IEEE J. Solid-State Circuits, vol. 41, no. 8, pp. 1686–1691, Aug. 2006.
+[30] S. Bates and R. Swamy, “Parallel encoders for low-density parity-check convolutional codes,” in Proc. IEEE Int. Symp. Circuits Syst., Kos, Greece, May 2006.
+[31] A. E. Pusane, A. J. Felström, A. Sridharan, M. Lentmaier, K. Zigangirov, and D. J. Costello, Jr, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. Commun., vol. 56, no. 7, pp. 1060–1069, Jul. 2008.
+Zhengang Chen (S’01) received the B.S. and M.S. degrees in electronic engineering from Tsinghua University, Beijing, China, in 1999 and 2002, respectively. He is currently working toward the Ph.D. degree in the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB, Canada.
+His research interests include error control coding, communication systems, digital application-specific integrated circuit design, and pattern recognition. He is currently working on VLSI architectures for advanced channel coding schemes such as low-density parity-check codes.
+Tyler L. Brandon received the B.Sc. and M.Sc. degrees in electrical engineering from the University of Alberta, Edmonton, AB, Canada, in 1999 and 2003, respectively, where he is currently working toward the Ph.D. degree in the Department of Electrical and Computer Engineering and toward research in the areas of application-specific integrated circuit architectures for logarithmic-based processing, parallel computing architectures, and low-density parity-check codes.
+He is the holder of five patents in the areas of homogeneous 3-D integrated circuit design, multilevel hybrid ROM and SRAMROM, and IC circuit design.
+
+Stephen Bates (S’94–M’03–SM’06) received the Ph.D. degree from Edinburgh University, Scotland, U.K., in 1997.
+He was then with Massana, an Irish fabless semiconductor company specializing in high-speed Ethernet transceiver design. Since 2003, he has been with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB, Canada, as an Assistant Professor. His research interests include circuits and systems for high-speed wireline communication protocols, circuits for advanced forward error correction schemes, and the use of reconfigurable logic to solve problems related to communications and bioinformatics.
+Duncan G. Elliott (M’97) received the B.A.Sc. degree in engineering science and the M.S. and Ph.D. degrees in electrical and computer engineering from the University of Toronto, Toronto, ON, Canada.
+Previously, he was with Nortel, working in data communications; with MOSAID Technologies as a DRAM Designer; and with IBM Microelectronics as a Contractor in application-specific memory design. He spent his last sabbatical at the MIT Microsystems Technology Laboratories. He is currently an Associate Professor with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB, Canada. His research interests include logic-enhanced memories, computer architecture, 3-D IC architecture, high-speed circuits, and microfluidic systems. Prof. Elliott was the recipient of the Colton Medal in microelectronics in 2001 for his work on computational RAM, which has been commercialized. He is a member of the IEEE Solid-State Circuits Society, the IEEE Circuits and Systems Society, the IEEE Computer Society, the IEEE Communications Society, and the Association for Computing Machinery.
+Bruce F. Cockburn (S’86–M’95) received the B.Sc. degree in engineering physics from Queen’s University, Kingston, ON, Canada, in 1981 and the M.Math. and Ph.D. degrees in computer science from the University of Waterloo, Waterloo, ON, in 1985 and 1990, respectively. His Ph.D. thesis considered the design and analysis of provably optimal test algorithms for classes of faults in semiconductor memories.
+From 1981 to 1983, he was a Test Engineer and a Software Designer with Mitel Corporation, Kanata, ON. He is currently an Associate Professor with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB, Canada. His research interests include VLSI design and test, parallel signal processing algorithms and architectures, iterative decoder architectures, and high-performance fading channel simulators. Dr. Cockburn is a Registered Professional Engineer in the Province of Alberta, Canada. He is a member of the IEEE Computer Society, the IEEE Communications Society, the IEEE Solid-State Circuits Society, the IEEE Signal Processing Society, and the Association for Computing Machinery.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:28:32 UTC from IEEE Xplore. Restrictions apply.
+
+

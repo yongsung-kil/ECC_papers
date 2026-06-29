@@ -1,0 +1,1015 @@
+A Spectral-Based Partitioning Algorithm for Parallel LDPC Decoding on a Multiprocessor Platform
+
+Wen-Hsiang Hu, Chun-Yi Chen and Nader Bagherzadeh
+Department of Electrical Engineering and Computer Science, University of California, Irvine, Irvine, CA 92697, USA {wenhsiah, cchen29, nader} @uci.edu
+
+Abstract—Low Density Parity Check (LDPC) code is an error correction code that has near Shannon limit performance and is inherently suitable for parallel implementation. It has been widely used in several communication standards such as DVB-S2, WiMAX, and Wi-Fi. To address the need for supporting various LDPC codes in an era where diverse applications are integrated onto a single system, a multi-processor based implementation of the LDPC decoder was proposed. However, the heavy message exchange among processors limits the expected performance. In this paper, we present a partitioning algorithm based on graph spectral clustering to reduce the data communication during the decoding process. From the experiments, our approach successfully decreased the amount of inter-processor communication by 33% ~ 52%, as compared to the original sequential mapping approach. Together with the more balanced computation load from our algorithm, an improvement of up to 85% in the overall decoding time was observed.
+Keywords-LDPC, multiprocessor, parallel processing, spectral clustering
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) code was proposed by Gallager in 1962 [1] and has been proven to have a performance close to the Shannon limit. The LDPC code is inherently suitable for parallel implementation, and it is adopted by several data communication systems such as DVBS2, WiMAX (IEEE 802.16e), Wi-Fi (IEEE 802.11n), 10Gigabit Ethernet (IEEE 802.3an) and ITU-T G.hn. It is also being considered for emerging standards for communication and storage applications.
+With the continuing advance of semiconductor technology, multi-processor system-on-chip (MPSoC) and chip multiprocessor (CMP) are considered for building on-chip multicore systems to provide enough computation capabilities for applications requiring intensive computation and large amount of storage. As for the implementation of LDPC decoders, [2][3][6] attempted to use programmable techniques for designing flexible LDPC decoders. [2] implemented LDPC decoding algorithm on Cell/BE processor. In their approach, the Synergistic Processor Element (SPE) is used to decode codewords independently, so the codeword length that can be handled is limited by the local memory size. Applying Graphic Processing Unit (GPU) for LDPC decoding was investigated in [3], but the performance in long codes may still be restricted by the shared memory architecture. [6] used the Network-based Processor Array (NePA), a distributed multi-processor platform interconnected by network-on-chip (NoC), to perform
+
+LDPC decoding. The authors suggested using a linked structure for storing intermediate data and partitioning the computation and data storage of the total decoding task among processors. Thus, the on-chip multiple processors can be used to decode long LDPC codes cooperatively and efficiently. Nevertheless, the speedup from the parallel implementation is constrained by the communication overhead.
+To address this problem, there are two major solutions that can be considered. One way is to reduce the data communication time required for each message exchange by deploying an application specific hardware. For example, a Direct Memory Access (DMA) component can be added to accelerate the data receiving at the message destination node. The other way to tackle the problem is by reducing the number of required data exchanges. To this end, we propose a partitioning algorithm based on the graph spectral theory. The basic idea is that we transform the original partitioning problem into a graph partitioning problem. Then we make use of the spectrum of the graph as clues for performing partitioning. The experimental results from a 16-processor system demonstrate that our approach resulted in a reduction of 33% ~ 52% in the number of inter-processor data exchanges, and the overall LDPC decoding performance is improved by 14% ~ 85%.
+II. BACKGROUND
+A. LDPC decoding algorithm
+LDPC codes are linear block codes characterized by a parity check matrix called H. LDPC codes can also be described by using a bipartite graph, called Tanner graph, in which nodes are divided into two groups: bit nodes (BNs) and check nodes (CNs), and BNs and CNs are linked by bidirectional edges. An edge links the check node m with the bit node n if the Hm,n of the parity check matrix H is 1. A LDPC code is referred to as a (N, K) code if there are N bit nodes and M check nodes in the graph where K = N – M. Fig. 1 shows an example for (8,4) LDPC code and its corresponding Tanner graph. A LDPC code is called regular if each row in H has the same number of 1’s and each column in H also has the same number of 1’s. Otherwise the LDPC code is called irregular.
+The optimal LDPC decoding algorithm, also called the Sum-Product algorithm (SPA), is done by a two-phase message passing algorithm which performs an iterative message exchange along the bidirectional edges in the Tanner graph. The algorithm executes iteratively until a maximum number of
+
+978-1-4244-5035-0/09/$26.00 ©2009 IEEE
+
+-245-
+
+ISOCC 2009
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:36:37 UTC from IEEE Xplore. Restrictions apply.
+
+iterations is reached or a terminating condition is met. The
+
+inputs to the algorithm are the priori information, λn ,
+
+represented in the form of log-likelihood ratio (LLR). λn is
+
+calculated from the received bit and the channel information.
+
+At
+
+the
+
+beginning
+
+of
+
+decoding,
+
+λn
+
+is
+
+used
+
+to
+
+initialize
+
+the
+
+q (i) nm
+
+messages.
+
+At
+
+the
+
+i-th
+
+iteration,
+
+the
+
+BNs
+
+receive
+
+messages
+
+r (i) mn
+
+from its neighboring CNs and send back the updated messages
+
+q (i) nm
+
+to
+
+CNs
+
+calculated
+
+by:
+
+¦ q (i ) nm
+
+=
+
+λn
+
++
+
+r (i−1) kn
+
+(1)
+
+k∈{M n \m}
+
+A refined estimation, referred to as soft output, on the received
+
+bit is computed by:
+
+¦ y(i) n
+
+=
+
+λn
+
++
+
+r (i−1) pn
+
+(2)
+
+p∈M n
+
+After
+
+receiving
+
+q (i) nm
+
+messages
+
+from
+
+neighboring
+
+BNs,
+
+CNs
+
+combine
+
+the
+
+q (i) nm
+
+messages
+
+to
+
+update
+
+r (i) mn
+
+by:
+
+¦ r (i) mn
+
+=ψ
+
+−1
+
+ª «
+
+ψ
+
+( ql(mi )
+
+º )»
+
+•
+
+δ
+
+mn
+
+¬l∈{Nm \n}
+
+¼
+
+(3)
+
+where δ mn is the product of the signs of the input messages:
+
+∏ δ mn = (−1) R[n] • sgn(qnm )
+
+(4)
+
+n
+
+And R[n] is the number of edges connected with CN. In (3),
+
+ψ (x) is a nonlinear function defined as:
+
+ψ
+
+(x)
+
+=ψ
+
+−1 ( x)
+
+=
+
+−
+
+ln§¨¨©
+
+tanh
+
+x 2
+
+¸¹·¸
+
+(5)
+
+q(i) nm
+
+r (i) mn
+
+(a) H matrix
+
+(b) Tanner graph
+
+Figure 1. Two Representations of an (8, 4) LDPC Code
+
+B. Spectral clustering
+Clustering refers to grouping similar objects together. Spectral clustering is a kind of clustering algorithm that utilizes the spectrum of a graph to partition the vertices of the graph. It was first introduced in the 1970s [8] and became popular in the 1990s [10]. It is simple to implement and usually outperforms traditional clustering algorithms. Therefore, it has become one of the most popular clustering algorithms in the machine learning and data mining community [11]. Here we briefly introduce how it works for graph bipartitioning problem, which aims at optimally partitioning the vertices of a graph into two subsets. Given a set of objects and the similarity between object pairs, we can use a weighted undirected graph G = (V, E) to represent the objects and their relations. In G, each vertex corresponds to a data object, and the set of edges {i, j} with edge weight Ei,j are used to denote the similarity between vertex i and j. The adjacency matrix M of G is defined by:
+
+M ij
+
+=
+
+­ ® ¯
+
+Eij 0
+
+if there is an edge {i, j} otherwise.
+
+(6)
+
+Given a partitioning of the vertex set V into two subsets V1 and V2, the cut and Ratio Cut between them is defined as:
+
+¦ cut(V1,V2) =
+
+M ij
+
+(7)
+
+i∈V1 , j∈V2
+
+RatioCut (V1 ,V2
+
+)
+
+=
+
+cut(V1,V2 V1
+
+)
+
++
+
+cut(V2 ,V1) V2
+
+(8)
+
+We now focus on finding a partition that minimizes the Ratio Cut since (8) considers the cluster size and will give a more balanced partition. The Laplacian matrix L of G is defined as:
+
+¦ Lij
+
+=
+
+­ ®°−
+
+k Eik Eij
+
+i= j i ≠ j and there is an edge{i, j}
+
+(9)
+
+¯°0
+
+otherwise.
+
+If we use a partition vector p ∈ R V x1that denotes the partition as:
+
+pi
+
+=
+
+°­+ °¯®−
+
+V2 V1
+
+V1 V2
+
+i ∈V1 i ∈V2.
+
+(10)
+
+By the Rayleigh Quotient (detailed proof can be found in [11]),
+
+we have:
+
+pT Lp = 2 ⋅ V ⋅ RatioCut(V1,V2 )
+
+(11)
+
+So the problem becomes min pT Lp because the |V| in (11) is a p≠0
+
+constant (|V| is the number of vertices in G). This discrete optimization problem has been proven NP-hard as the entries of p only take two real values [4]. If we relax this problem to the continuous domain, the problem is solved by the RayleighRits theorem [9]. The solution of this problem is given by the vector f which is the eigenvector corresponding to the second smallest eigenvalue of L. Then the K-means algorithm [13] is usually applied on f to get the partition V1 and V2. The similar approach can be applied to the k-way partition of G by using the k smallest eigenvectors.
+
+III. PROPOSED PARTITION ALGORITHM
+
+In [6], it has been demonstrated that it is better to parallelize
+
+the LDPC decoding by assigning both BNs and CNs to PEs
+
+because this approach can enhance the PE utilization and
+
+attain more speedups. This approach also has the potential that
+
+the inter-PE message can be reduced by carefully grouping the
+
+BNs and CNs together onto the same PE. For instance, if CN
+
+m and BN n are connected by an edge in the Tanner graph and
+
+they
+
+are
+
+assigned
+
+to
+
+the
+
+same
+
+PE,
+
+then
+
+the
+
+q (i) nm
+
+and
+
+r (i) mn
+
+message exchange between these two nodes can be done by
+
+intra-PE memory access, instead of inter-PE data
+
+communication. This leads to time saving because inter-PE
+
+communication is much more expensive than intra-PE data
+
+exchange. Since the H matrix can be represented as a bipartite
+
+graph, it is natural to a adopt graph clustering technique for
+
+our purpose.
+
+Based on the spectral clustering approach described in
+
+Section 2.B, we propose the following partitioning algorithm:
+
+(a) Given an H matrix, form the Laplacian matrix L. (b) Compute the first k eigenvector of L. (c) Execute the K-means algorithm on the eigenvectors from Step (b) to obtain the k-way partition.
+
+-246-
+
+ISOCC 2009
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:36:37 UTC from IEEE Xplore. Restrictions apply.
+
+In Step (a), the Laplacian matrix L is constructed according to (9). For an LDPC code with M CNs and N BNs, we number the CNs from 0 to (M-1) and the BNs from M to (M+N-1). We designate all the edge weights Eij to be 1. The dimension of L is (M+N) by (M+N). Then, in Step (b), the eigenvectors are computed by Octave [12]. In Step (c), we apply the K-means algorithm on the k eigenvectors corresponding to the k smallest eigenvalues of L to obtain k clusters. When executing the K-means algorithm, we require that each cluster has an equal number of BNs and CNs in order to balance the computation load on each PE.
+IV. EXPERIMENTAL RESULTS
+A. Evaluation environment
+We used the NePA computing platform [7] with 16 processors for evaluation. NePA is a CMP environment which is comprised of an array of processing elements (PE). Each PE consists of an OpenRISC 1000 core, local instruction and data memory, network interface (NI), and a router. PEs are interconnected by a two-dimensional mesh on-chip network which provides inter-PE communication capabilities. The delivery of data among PEs is done by packetized data communication. For example, when PE A needs to send data to PE B, it initiates a data transfer by configuring the control registers in its NI. NI performs packetization to generate packets consisting of header flit and body flit, and injects them into the network. Packets are routed and transmitted to the destination PE and arrive at the NI of PE B. An interrupt is generated by NI to notify the processor core that a packet has arrived. The processor B has to execute an interrupt service routine to instruct the NI to do de-packetization and store the received data into the corresponding memory location. The NePA platform is described in cycle-accurate SystemC codes to perform simulation and measure performance.
+The proposed partitioning algorithm is mainly implemented in C except that the eigenvector calculation is done by Octave. The C program performs the partition and automatically generates the LDPC decoder application codes for each PE. We used GNU tool chain to compile C programs and convert binary executable to hexadecimal codes for simulation. Several classes of LDPC codes were considered for evaluation, including 1) Code A-C: codes generated by the utilities from Radford Neal’s website [5], 2) Code D-G: WiMAX LDPC codes and 3) Code H-K: Wi-Fi LDPC codes. Table 1 lists a summary of the tested LDPC codes, which cover a wide range of code structures, code rates and code lengths. Code A-C are regular, and Code D-K are irregular.
+B. Evaluation results and discussion
+In Table 1, the number of edges and inter-PE data exchanges required for each decoding iteration is presented. The number in the parenthesis is the ratio of the number of inter-PE messages to the number of edges. The sequential mapping approach has about 6% reduction in inter-PE traffic while the spectral clustering approach saves 33% ~ 52% of the traffic. Fig. 1 and Fig. 2 visualize the resulted H matrix of two LDPC codes after spectral clustering by reordering the rows
+
+and columns according to the partition results. In Fig. 2(b), BN 0-63 are mapped to PE 0, BN 64-127 to PE 1, and so on. CNs are mapped in the same way. The 1’s in H matrix are drawn as dots. The concentration of dots demonstrates that our approach can successfully congregate BNs and CNs so that the inter-PE data exchanges are transformed into intra-PE memory access. From Table 1, LDPC codes with lower code rates tend to have more traffic reduction from the spectral clustering approach.
+The overall decoding performance comparison is presented in Table 2. The number in the parenthesis means the speedup compared to the single PE implementation. First of all, decoding time from spectral clustering are 14% ~ 85% less than those from sequential mapping because the time spent on communication are decreased by 22% ~ 51%. As for computation time, irregular codes (Code D-K) also benefit from the spectral clustering and require less computation time because the computation load is more balanced in spectral clustering than in sequential mapping. Computation time in regular codes (Code A-C) is not reduced in spectral clustering due to the fact that the computation load is balanced in regular codes as long as each PE has the same number of BNs and CNs. Therefore, irregular codes gain more performance improvement from the spectral clustering algorithm.
+V. CONCLUSION
+Parallel decoding of LDPC codes can be realized on multiprocessor platforms efficiently. To enhance the scalability of the implementation, we proposed to use a spectral-based partitioning algorithm to parallelize the LDPC decoding. The evaluation results from various LDPC codes including WiMAX and Wi-Fi LDPC codes have shown that our approach can effectively reduce the communication overhead, and the overall decoding performance is improved. As a conclusion, we look forward to additional application of spectral clustering in the parallel computing field.
+REFERENCE
+[1] R. Gallager, “Low-density parity-check codes,” Information Theory, IRE Transactions on, vol. 8, pp. 21-28, 1962.
+[2] G. Falcao, L. Sousa, V. Silva, J. Marinho and I. Polo, “Parallel LDPC decoding on the Cell/BE processor,” in Proceedings of the 4th International Conference on High Performance Embedded Architectures and Compilers, 2008, pp. 389-403.
+[3] G. Falcao, L. Sousa and V. Silva, “Massive parallel LDPC decoding on GPU,” in Proceedings of the 13th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming, 2008, pp. 83-90.
+[4] D. Wagner and F. Wagner, “Between min cut and graph bisection,” in Proceedings of the 18th International Symposium on Mathenmatical Foundations of Computer Science, pp. 744-750, 1993.
+[5] R. M. Neal, “Software for Low Density Parity Check Codes,” http://www.cs.toronto.edu/~radford/ftp/LDPC-2006-02-08/index.html.
+[6] W. H. Hu, J. H. Bahn and N. Bagherzadeh, “Parallel LDPC Decoding on a Network-on-Chip Based Multiprocessor Platform,” To appear at 21st International Symposium on Computer Architecture and High Performance Computing, 2009.
+[7] J. H. Bahn, S. E. Lee, Y. S. Yang, J. S. Yang, and N. Bagherzadeh, “On Design and Application Mapping of a Network-on-Chip Architecture,” Parallel Processing Letters, vol. 18, issue: 2, pp. 239-255, 2008.
+[8] M. Fiedler, “Algebraic connectivity of graphs,” Czechoslovak Mathematical Journal, vol. 23, pp. 298-305, 1973.
+[9] H. Lütkepohl, Handbook of Matrices. Wiley, 1996,
+[10] A. Pothen, H. D. Simon and K. P. Liou, “Partitioning sparse matrices with eigenvectors of graphs,” SIAM Journal on Matrix Analysis and Applications, vol. 11, pp. 430-452, 1990.
+
+-247-
+
+ISOCC 2009
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:36:37 UTC from IEEE Xplore. Restrictions apply.
+
+[11] U. von Luxburg, “A tutorial on spectral clustering,” Statistics and Computing, vol. 17, pp. 395-416, 2007.
+[12] GNU Octave. http://www.gnu.org/software/octave/
+
+[13] M. R. Anderberg, Cluster analysis for applications, Academic Press, 1973.
+
+0 0 48 96 144 192 240 288 336 384 432 480 528 576 624 672 720 768
+
+BN 64 128 192 256 320 384 448 512 576 640 704 768 832 896 960 1024
+
+CN
+
+(a) Original
+
+0 0 48 96 144 192 240 288 336 384 432 480 528 576 624 672 720 768
+
+BN 64 128 192 256 320 384 448 512 576 640 704 768 832 896 960 1024
+
+CN
+
+(b) After spectral clustering Figure 2. The H Matrix of Regular (1024, 256) Code
+
+0 0 48 96 144 192 240 288 336 384 432 480 528 576 624 672 720 768
+
+BN 144 288 432 576 720 864 1008 1152 1296 1440 1584 1728 1872 2016 2160 2304
+
+CN
+
+(a) Original
+
+0 0 48 96 144 192 240 288 336 384 432 480 528 576 624 672 720 768
+
+BN 144 288 432 576 720 864 1008 1152 1296 1440 1584 1728 1872 2016 2160 2304
+
+CN
+
+(b) After spectral clustering Figure 3. The H Matrix of WiMAX RATE23B (2304, 1536) Code
+
+Code
+Code A Code B Code C Code D Code E Code F Code G Code H Code I Code J Code K
+
+Code Rate/Class
+7/8 3/4 1/2 WiMax Rate 5/6 WiMax Rate 3/4 A WiMax Rate 2/3 A WiMax Rate 1/2 WiFi Rate 5/6 WiFi Rate 3/4 WiFi Rate 2/3 WiFi Rate 1/2
+
+TABLE 1. Tested LDPC Codes and the Amount of Inter-PE Data Exchange
+
+Regularity Length
+
+BN Degree
+
+CN Degree
+
+Edges
+
+Inter-PE Messages
+
+Sequential
+
+Spectral
+
+regular 1024/4096
+
+3
+
+24
+
+3072/12288 2865(93%) / 11505(94%)
+
+1822(59%) / 7661(62%)
+
+regular 1024/4096
+
+3
+
+12
+
+3072/12288 2892(94%) / 11554(94%)
+
+1714(56%) / 7333(60%)
+
+regular 1024/4096
+
+3
+
+6
+
+3072/12288 2878(94%) / 11531(94%)
+
+1637(53%) / 6215(51%)
+
+irregular 576/2304
+
+2/3/4
+
+20
+
+1920/7680 1791(93%) / 7199(94%)
+
+1221(63%) / 4737(62%)
+
+irregular 576/2304
+
+2/3/4
+
+14/15
+
+2040/8160 1969(97%) / 7835(96%)
+
+1217(60%) / 5039(62%)
+
+irregular 576/2304
+
+2/3/6
+
+10
+
+1920/7680 1838(96%) / 7318(95%)
+
+1132(59%) / 4297(56%)
+
+irregular 576/2304
+
+2/3/6
+
+6/7
+
+1824/7296 1705(93%) / 6765(93%)
+
+953(52%) / 3532(48%)
+
+irregular 648/1944
+
+2/3/4
+
+19/20/22 2376/6399 2240(94%) / 6035(94%)
+
+1583(67%) / 4043(63%)
+
+irregular 648/1944
+
+2/3/4/6
+
+14/15
+
+2376/6885 2255(95%) / 6559(95%)
+
+1484(62%) / 4236(62%)
+
+irregular 648/1944 2/3/4/6/8
+
+11
+
+2376/7128 2212(93%) / 6796(95%)
+
+1443(61%) / 4414(62%)
+
+irregular 648/1944 2/3/4/11/12
+
+7/8
+
+2376/6966 2259(95%) / 6431(92%)
+
+1338(56%) / 3813(55%)
+
+TABLE 2. Comparison of Decoding Time in Different Parallelization Approach (Decoding time is represented in K cycles per iteration.)
+
+16-PE Sequential Mapping
+
+16-PE Spectral Clustering
+
+Code Class
+
+Code Length
+
+Single PE Computation Communication
+
+Total
+
+Computation Communication Total
+
+Speedup vs. Sequential
+
+Mapping
+
+Code A
+
+1024
+
+1928
+
+129
+
+4096
+
+7689
+
+507
+
+144
+
+273 (7.06X)
+
+129
+
+568
+
+1075 (7.15X)
+
+507
+
+108
+
+237 (8.14X)
+
+1.15
+
+435
+
+942 (8.16X)
+
+1.14
+
+Code B
+
+1024
+
+1048
+
+68
+
+4096
+
+4183
+
+277
+
+136
+
+204 (5.14X)
+
+69
+
+532
+
+809 (5.17X)
+
+278
+
+94
+
+163 (6.43X)
+
+1.25
+
+397
+
+675 (6.20X)
+
+1.20
+
+Code C
+
+1024
+
+612
+
+41
+
+4096
+
+2444
+
+164
+
+128
+
+169 (3.62X)
+
+42
+
+510
+
+674 (3.63X)
+
+162
+
+87
+
+129 (4.74X)
+
+1.31
+
+330
+
+492 (4.97X)
+
+1.37
+
+Code D
+
+576
+
+1017
+
+69
+
+2304
+
+4080
+
+286
+
+93
+
+162 (6.28X)
+
+67
+
+387
+
+673 (6.06X)
+
+269
+
+71
+
+138 (7.37X)
+
+1.17
+
+262
+
+531 (7.68X)
+
+1.27
+
+Code E
+
+576
+
+795
+
+59
+
+2304
+
+3191
+
+239
+
+101
+
+160 (4.97X)
+
+54
+
+423
+
+662 (4.82X)
+
+214
+
+68
+
+122 (6.52X)
+
+1.31
+
+289
+
+503 (6.34X)
+
+1.32
+
+Code F
+
+576
+
+560
+
+48
+
+2304
+
+2247
+
+197
+
+96
+
+144 (3.89X)
+
+39
+
+418
+
+615 (3.65X)
+
+154
+
+62
+
+101 (5.55X)
+
+1.43
+
+261
+
+415 (5.41X)
+
+1.48
+
+Code G
+
+648
+
+377
+
+34
+
+1944
+
+1513
+
+130
+
+87
+
+121 (3.12X)
+
+28
+
+377
+
+507 (2.98X)
+
+118
+
+53
+
+81 (4.65X)
+
+1.49
+
+275
+
+393 (3.85X)
+
+1.29
+
+Code H
+
+648
+
+1367
+
+95
+
+1944
+
+3362
+
+250
+
+116
+
+211 (6.48X)
+
+93
+
+315
+
+565 (5.95X)
+
+226
+
+91
+
+184 (7.43X)
+
+1.15
+
+222
+
+448 (7.50X)
+
+1.26
+
+Code I
+
+648
+
+951
+
+74
+
+1944
+
+2690
+
+215
+
+135
+
+209 (4.55X)
+
+64
+
+394
+
+609 (4.42X)
+
+184
+
+83
+
+147 (6.47X)
+
+1.42
+
+240
+
+424 (6.34X)
+
+1.44
+
+Code J
+
+648
+
+742
+
+62
+
+1944
+
+2240
+
+173
+
+145
+
+207 (3.58X)
+
+54
+
+450
+
+623 (3.60X)
+
+152
+
+84
+
+138 (5.38X)
+
+1.50
+
+239
+
+391 (5.73X)
+
+1.59
+
+Code K
+
+648
+
+538
+
+53
+
+1944
+
+1561
+
+149
+
+152
+
+205 (2.62X)
+
+37
+
+425
+
+574 (2.72X)
+
+106
+
+74
+
+111 (4.85X)
+
+1.85
+
+206
+
+312 (5.00X)
+
+1.84
+
+-248-
+
+ISOCC 2009
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:36:37 UTC from IEEE Xplore. Restrictions apply.
+
+

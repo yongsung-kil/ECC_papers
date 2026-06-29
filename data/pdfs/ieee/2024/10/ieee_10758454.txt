@@ -1,0 +1,650 @@
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON) | 979-8-3315-3202-4/24/$31.00 ©2024 IEEE | DOI: 10.1109/SIBIRCON63777.2024.10758454
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+On Joint Neural Min-Sum Decoding and Quantization Optimization
+Vladimir Kuzurman, Dmitry Artemasov, Kirill Andreev, Alexey Frolov Center for Next Generation Wireless and IoT Skolkovo Institute of Science and Technology Moscow, Russia
+{vladimir.kuzurman, d.artemasov, k.andreev, al.frolov}@skoltech.ru
+
+Abstract—Low-density parity-check (LDPC) codes are integral to modern communication systems, including the 5G standard, which supports a new service type known as massive machine type communications (mMTC). mMTC terminals, typically battery-powered and designed for short message transmissions, may face performance challenges with LDPC codes, which excel at longer lengths but show worse performance at shorter ones. Advanced decoders have been developed to address performance issues. One of the approaches enhances the belief propagation (BP)-based decoders by introducing trainable parameters, resulting in the neural BP decoders. To mitigate the energy consumption caused by the decoding complexity, message quantization is also employed in practice. This paper addresses both issues by proposing the collaborative utilization of a neural min-sum decoder to enhance decoding performance and a neural quantizer to reduce computational and memory demands. We present a joint training strategy that achieves superior performance compared to conventional methods.
+Index Terms—Low-density parity-check codes, channel decoding, deep learning, quantization
+I. INTRODUCTION
+The 5G standard is designed to support diverse use cases, categorized into three primary areas: enhanced mobile broadband (eMBB), ultra-reliable low-latency communications (URLLC), and massive machine-type communications (mMTC). mMTC targets the Internet of Things (IoT), focusing on massive connectivity. IoT devices typically transmit small amounts of data and must operate for a long period of time autonomously. Such scenarios require the use of short codes with robust error-correcting capabilities and low-complexity decoders to reduce devices’ power consumption. In the 5G standard the low-density parity-check (LDPC) codes are used for the data plane [1].
+The LDPC codes, which are linear error correcting codes, were firstly introduced by Gallager [2] in the 1960’s. LDPC codes provide great performance with large block lengths, however, their performance tends to degrade significantly at shorter lengths. The sum-product algorithm (SP) [3] allows the LDPC codes to approach the Shannon limit over the additive white Gaussian noise (AWGN) channel. Despite its
+The research was carried at Skolkovo Institute of Science and Technology and supported by the Russian Science Foundation (project no. 23-11-00340), https://rscf.ru/en/project/23-11-00340/
+
+effectiveness, the SP algorithm is not suitable for hardware implementation due to its high computational complexity.
+As the solution to this problem, the check-node operation approximation can be used to reduce the complexity. The minsum (MS) algorithm approximates SP and achieves significant complexity reduction with only slight performance degradation [4]. For further MS enhancement, modifications such as the normalized min-sum and offset min-sum algorithms can be employed. The normalized min-sum algorithm scales the check node output by a constant factor, while the offset min-sum algorithm improves performance by subtracting a small offset from the minimum values used in the checknode calculations. These modified algorithms improve the decoding efficiency and error correction performance, which makes them more suitable for practical implementations where short code length and low latency are critical.
+The application of machine learning, especially neural networks (NN), in communication systems has shown promising results across various domains [5], [6]. In the multiple-input multiple-output (MIMO) systems, neural networks have been employed for channel estimation [7], [8], beamforming [9], and interference suppression [10]. In signal processing, neural networks are utilized for tasks such as denoising [11], equalization [12], and modulation recognition [13], [14]. In coding theory neural networks have been explored to improve the performance of various decoding algorithms [15].
+In the context of BP-based algorithms, neural networks allow to improve the traditional message-passing techniques by augmenting the classical decoding algorithms with trainable parameters or even replacing parts of the decoder by the trainable functions. These approaches aim to achieve better error correction performance, particularly in scenarios with strict latency and reliability requirements, such as in 5G communication systems.
+To train the BP-based decoders, the Tanner graph [16] is represented in an unfolded form. This approach enables the optimization of trainable parameters at each decoding iteration. By leveraging the strengths of deep learning along with the robustness and sparsity of the traditional min-sum algorithm, these decoders can provide enhanced performance in terms of error correction and computational efficiency.
+The paper [17] introduces a novel approach to decoding al-
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+58
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+gebraic block codes using graph neural networks (GNNs). The authors enhance the traditional BP method by incorporating a hypernetwork that predicts the parameters of sub-networks at each variable node in the Tanner graph. This hypernetwork processes the absolute values of current messages, adding stability with a high-order Taylor approximation of the hyperbolic tangent activation function. The method was validated on diverse families of codes (BCH, LDPC, Polar) and showed superior decoding performance compared to conventional BP.
+The authors of paper [18] propose a fully differentiable GNN architecture for channel decoding, showcasing strong performance on coding schemes like LDPC and BCH. This approach replaces traditional node message updates with trainable functions, allowing the neural network to learn a generalized message passing algorithm over the graph representing the forward error correction code structure. Unlike other deep learning-based decoding methods, this GNN-based decoder scales efficiently to arbitrary block lengths and avoids the curse of dimensionality.
+While the abovementioned studies introduce innovative approaches, they also increase computational complexity and memory requirements. To address these issues, message quantization is often employed. The authors [19] propose a modified quantized min-sum decoding algorithm that applies an adaptive clipping threshold to the variable-node messages based on the number of unsatisfied checks per iteration. Numerical results indicate that the proposed algorithm significantly improves performance compared to the MS algorithm under two-bit precision and achieves performance close to SP algorithm for certain short-length LDPC codes.
+In this paper, we address the mentioned issues of complexity and performance, with a focus on short codes for IoT applications. We start with the Tanner-graph-based neural network decoder [20], which expands the traditional belief propagation graph into a layered structure that can be viewed as a sparse neural network. In this structure, the connections in the neural network correspond directly to the connections in the parity check matrix, ensuring that the neural network maintains the original sparsity of the LDPC code’s Tanner graph. To optimize the decoder performance, we integrate trainable parameters to check and variable node update equations. To ensure a more stable convergence process we consider introducing residual connections with trainable weights to the variable nodes. To reduce the computational complexity and memory requirements, we imply quantization. To enable the training of the neural quantizer, the differentiable soft staircase function [21] is integrated into the neural network decoder. The soft staircase function is differentiable, allowing effective application of backpropagation and optimization of the quantization levels during the training. In this paper we propose to perform training of the neural decoder and quantizer jointly, to tune the quantization levels to the optimized decoder messages distributions. Such an integrated approach allows us to outperform the traditional methods described in the literature.
+The paper is organized as follows. Section II introduces the
+
+0 0 0 1 1
+
+H
+
+=
+
+ 
+
+
+
+0 1
+
+1 0
+
+1 1
+
+0 0
+
+0
+
+1
+
+ 
+
+⇔
+
+11010
+
+Fig. 1: Parity check matrix and corresponding Tanner graph. Squares – check nodes, circles – variable nodes.
+
+system model. Section III describes the proposed quantized neural MS decoder architecture and training process. Section IV presents the obtained numerical results. Finally, section V concludes the paper, discusses the results, and highlights further research directions.
+
+II. SYSTEM MODEL
+Let us describe the system model. We assume that the user intends to transmit a k-bit information word u ∈ {0, 1}k. The system utilizes the binary linear block code C with length n and dimension k. The notations H and G represent the parity-check and generator matrices of the code C, respectively. The information word u is encoded into the codeword c = (c1, . . . , cn) = uG ∈ {0, 1}n. Binary phase-shift keying (BPSK) modulation is then applied, resulting in the following mapping
+
+x = τ (c), τ (c) = (τ (c1), . . . , τ (cn)),
+where τ : {0, 1} → {1, −1}. The modulated codeword x is transmitted over an additive
+white Gaussian noise (AWGN) channel, and the receiver obtains the corrupted codeword
+
+y = x + z,
+
+where y = (y1, . . . , yn) ∈ Rn, z ∼ N (0, σ2In), and In is the identity matrix of size n × n. The signal-to-noise ratio is denoted by Es/N0, where Es/N0 = 1/2σ2.
+As is common practice [22], the decoder’s input is represented as a vector of log-likelihood ratios (LLRs) L = (L1, . . . , Ln), where
+
+Li
+
+=
+
+log
+
+p(yi|ci p(yi|ci
+
+= =
+
+0) 1)
+
+=
+
+2yi σ2
+
+,
+
+i = 1, . . . , n,
+
+wit√h log(·) denoting the natural logarithm and p(x) = 1/ 2πσ2 exp −x2/(2σ2) being the probability density function of a random variable distributed as N (0, σ2).
+To evaluate the decoding performance we use the frame error rate (FER) metric. Let uˆ = (uˆ1, . . . , uˆk) ∈ {0, 1}k be the estimated information word. Then the FER is defined as Pf = Pr[u ̸= uˆ].
+
+III. QUANTIZED NEURAL DECODER ARCHITECTURE
+A. Neural decoder architecture
+The sum-product algorithm operates by iteratively passing messages along the edges of the Tanner graph, which represents each linear code parity check matrix via a bipartite structure [16]. In the graph, variable nodes correspond to
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+59
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+Variable
+
+Check
+
+⇔
+
+⇔
+
+Variable Check
+
+Fig. 2: Tanner graph (left) and corresponding NN (right). NN nodes correspond to messages in a Tanner graph. Two NN vertices are connected if there is a common node in the Tanner graph for corresponding messages.
+
+coded bits, and check nodes correspond to linear parity checks, with edges present between them if a bit is involved in the parity check. An example of the parity check matrix and the corresponding graph structure is illustrated in the Fig.1.
+Each decoding iteration consists of two steps: check node operation and variable node operation. Let us define by Qi→j the message passed from the variable to check node and by Rj→i the message passed from check to variable node ∀i ∈ [1, . . . , n], ∀j ∈ [1, . . . , m], where n is the code length and m is the number of parity checks. The check node and variable node operations are computed using the following rules
+
+
+
+
+
+Rj→i = 2arctanh 
+
+tanh Qi′→j  , (1) 2
+
+i′ ∈Γ(j ),i′ ̸=i
+
+Qi→j = Li +
+
+Rj′→i.
+
+(2)
+
+j ′ ∈Γ(i),j ′ ̸=j
+
+Here, Li represents the LLR of the received bit i, Γ(j) denotes the set of variable nodes connected to check node j, and Γ(i) denotes the set of check nodes connected to variable node i.
+The min-sum algorithm is a simplified version of the sumproduct algorithm, where the hyperbolic tangent and arctangent functions are approximated to reduce computational complexity. The message updates in the min-sum algorithm are given by
+
+Rj→i =
+
+sign(Qi′→j ) min |Qi′→j |, (3)
+
+i′ ∈Γ(j ),i′ ̸=i
+
+i′∈Γ(j),i′≠ i
+
+Qi→j = Li +
+
+Rj′→i.
+
+(4)
+
+j′∈Γ(i),j′≠ j
+
+While the min-sum algorithm is less computationally intensive, it tends to be less accurate than the sum-product algorithm due to the approximation.
+The unfolding procedure of a Tanner graph into a neural network involves translating each edge and node of the Tanner graph into vertices and edges within an NN graph. Each NNgraph vertex corresponds to a message in the original Tanner graph. Edges between these NN-graph vertices represent the necessary input and output data for updating messages during
+
+the decoding process. The Fig.2 illustrates how a single decoding iteration is organized into variable and check layers within the NN, mirroring the original Tanner graph structure.
+The input mapping, shown in the Fig.3, duplicates the channel LLRs to facilitate the Tanner graph unfolding procedure. The output mapping functions as a variable layer without trainable parameters, generating the output LLR vector.
+Unlike the conventional neural networks, which typically feature dense interconnections, the NN derived from a Tanner graph maintains sparse connections that mirror the original graph’s structure, what enhances the computational efficiency of the decoding process, leveraging the graph sparsity.
+To further enhance the performance of the min-sum algorithm, authors of the paper [23] introduce trainable parameters into the message update rules, creating a trainable min-sum algorithm. The trainable weights, or scaling coefficients ω, serve two main purposes: they correct the min-sum approximation and reduce the influence of short girths, present in the initial parity-check matrix, during the decoding process. The trainable min-sum rules can be formulated as follows
+
+Rj→i =
+
+sign(Qi′→j )ωj→i
+
+i′ ∈Γ(j ),i′ ̸=i
+
+(5)
+
+× max[ min {|Qi′→j|} − βj→i, 0],
+i′ ∈Γ(j ),i′ ̸=i
+
+Qi→j = ωic→h j Li +
+
+Rj′→i.
+
+(6)
+
+j′∈Γ(i),j′≠ j
+
+To address the problem of vanishing gradients and improve the convergence we introduce the residual connections into the trainable min-sum algorithm. Residual connections are incorporated into the message update rules to allow for the propagation of information from earlier iterations to later ones
+
+Qil→j = ωic→h j Li +
+
+Rj′→i+
+
+j ′ ∈Γ(i),j ′ ̸=j
+
+D
+
+(7)
+
++
+
+ωi(→ l−jt)Qli−→tj .
+
+t=1
+
+Here Qli→j represents the message from variable node i to check node j at iteration l, and D is the depth of the residual connections. The trainable parameter ωi(→ l−jt) modulates the influence of messages from earlier iterations l−t on the current
+message, enabling the network to leverage information from
+multiple past iterations.
+
+B. Neural quantizer architecture
+In the context of LDPC decoders, quantization of the messages passed between nodes of the decoder is essential for efficient hardware implementation. It reduces power consumption and storage costs by limiting the messages to a finite set of discrete values. However, integrating traditional quantization methods into neural network-based decoders presents challenges due to their non-differentiable nature, which makes it impossible to compute the gradients required for the neural
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+60
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+L1 L2 L3 L4 L5
+Input mapping
+
+L1′
+
+L1
+
+L1
+
+L2′
+
+L2
+
+L2
+
+...
+
+L3′
+
+L3
+
+L3
+
+L4′
+
+L4
+
+L4
+
+L5′
+
+L5
+
+L5
+
+Check CQuant Variable VQuant Output mapping
+
+L-th decoder iteration layer Fig. 3: Sparse NN constructed from the unrolled Tanner graph with trainable quantization blocks
+
+network training. To address this issue, we introduce a neural quantizer with the soft staircase quantization function [21]. This function is fully differentiable, enabling effective gradient calculation during the backpropagation stage. We denote the soft staircase quantization function by f (r; S; σ2). It is defined as
+
+
+
+(r − s)2
+
+       f (r; S; σ2) ≜
+ 
+
+s∈S s exp − 2σ2 (r − s)2
+s∈S exp − 2σ2
+
+, if σ2 > 0
+
+
+
+
+
+ arg mins∈S ∥r − s∥2,
+
+if σ2 = 0.
+
+(8)
+
+Here r represents the quantizer input, S is the set of quantization levels, and σ2 = tη is the temperature parameter which
+
+controls the smoothness of the function through a gradual
+
+annealing process, where η is a negative constant called the cooling factor and t is the current training epoch. As σ2
+
+approaches zero, the soft staircase function (8) transitions to
+
+a hard quantization function, selecting the closest level by the Euclidean distance to the input r. Conversely, as σ2 increases,
+
+the function’s output becomes increasingly smooth and con-
+
+tinuous, enabling a more gradual adjustment of quantization
+
+levels (see Fig.4).
+
+The proposed quantizer is utilized both during the training
+
+and inference phases. During training, the soft quantization
+
+function is applied to enable backpropagation through the
+
+neural decoder. In the inference phase, the quantizer behaves as a hard quantizer, implying σ2 = 0 and selecting the nearest
+
+quantization level for the message passed between nodes. Such
+
+an approach allows the trained neural network to operate
+
+efficiently in hardware with reduced precision, minimizing
+
+complexity while maintaining nearly the same performance.
+
+In our architecture, the messages passed between nodes in
+
+the Tanner graph during the decoding process are quantized.
+
+Specifically, two types of messages are subject to quantization:
+
+outputs from the check nodes and outputs from the variable
+
+nodes on each decoding iteration. Since the messages passed
+
+from the check to variable and from variable to check nodes
+
+2
+
+1
+
+f (r; S; σ2)
+
+0
+
+−1
+σ2 = 0.0
+
+σ2 = 0.1
+
+−2
+
+−2
+
+−1
+
+0
+
+σ2 = 0.5
+
+1
+
+2
+
+r Fig. 4: Plot of soft staircase function f (r; S; σ2) for σ2 =
+
+0, 0.1, 0.5; S = {−1.5, −0.5, 0.5, 1.5}
+
+have different distributions, we utilize two distinct quantizers per iteration (CQuant for check nodes and VQuant for variable nodes) to better represent the initial messages (see Fig.3).
+An overparameterization strategy is utilized to train the quantizer. It is particularly effective in preventing the training process from falling into the local minima, which is a common challenge when the parameter space is too small. This method artificially increases the number of trainable parameters by incorporating hidden state and readout vectors. The inner products of these vectors produce the quantization levels.
+Let K be the hidden state size, v ∈ RK be the readout vector, and hi ∈ RK , ∀i = [1, . . . , |S|] be the set of hidden state vectors, where |S| is cardinality of the set S. Then quantization levels are calculated as follows
+
+si = vT hi, ∀i = [1, . . . , |S|].
+
+(9)
+
+C. Training procedure
+We train the neural decoder jointly with the soft staircase neural quantizer on the [600,120] 5G LDPC code with 40 punctured bits for 20 decoding iterations. All the trainable parameters of the decoder are initialized from the U(0.05, 0.1) distribution. These parameters include: ωj→i and ωic→h j as scaling factors for messages between check and variable nodes; ωi(→ l−jt) for residual connection weights; and βj→i, the offset parameters in the check node update equations.
+In our study, we employ a symmetrical 6/4-bit quantizer configuration, allocating 6 bits for messages from variable nodes and 4 bits for messages from check nodes. We initialize the readout vector v of the neural quantizer as
+
+v ∼ N (1, 1).
+
+(10)
+
+And the hidden state vectors hi as
+
+1
+
+G·i
+
+hi ∼ K · N
+
+, 1 , ∀i = [1, . . . , |S|]. |S|
+
+(11)
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+61
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+100
+
+100
+
+10−1
+
+10−1
+
+FER FER
+
+10−2
+
+SP-20
+
+10−3
+
+MS-20 NMS-20
+
+NN-20
+
+FBL, [24]
+
+10−−4 7.5
+
+−7
+
+−6.5
+
+−6
+
+−5.5
+
+−5
+
+Es/N0, dB
+
+Fig. 5: Decoder performance for 5G LDPC code of length N = 600 and code rate 1/5 (Kb = 6, k = 120) on 20 decoding iterations is analyzed. The decoders considered include sum-product (SP-20), min-sum (MS-20), normalized min-sum (NMS-20), and neural min-sum (NN-20) algorithms. The finite blocklength (FBL) achievability bound is provided as a reference [24].
+
+Here G represents the upper bound calculated as the 90th percentile of the distribution of messages passing through the iteration of decoding on a specific node. The value is determined based on statistics collected during the decoding iterations without quantization. Such initialization strategy produces a set of initial quantization levels in which each level has a slight deviation from the uniform distribution, and drawing initial values from the normal distribution allows the quantizer not to fall into the local minima. For our experiments, we set the hidden size of the quantizer to K = 16, as this has resulted in better performance.
+We follow a two-step training strategy that has proven to be most effective. We start the training procedure with the batch size of 128 codewords and the learning rate of 10−3. Then, after convergence of the first training stage, we lower the batch size to 32 and the learning rate to 10−4. The gradual decrease of these parameters allowed us to precisely fine-tune the neural decoder.
+The quantized neural MS decoder was trained on a zerocodeword in the presence of AWGN. We note that the decoder performance does not depend on the transmitted codeword, what allows us to generate the training data infinitely without the risk of overfitting. During the training, each batch contained codewords corrupted by different noise realizations, with signal-to-noise ratio (SNR) sampled from U(−5.5, −5.0) dB range, which corresponds to the expected FER range of [2 · 10−2, 8 · 10−3]. The binary cross entropy (BCE) loss was utilized for training. It has shown better convergence rate, than both mean squared error (MSE) and a combination of BCE and MSE losses.
+D. Complexity and memory consumption analysis
+The proposed quantized LDPC decoder achieves a significant reduction in memory usage compared to the classical MS
+
+10−2
+
+NN-20
+
+QNN-20
+
+10−3
+
+UQNN-20 NMS-20
+
+QNMS-20
+
+UQNMS-20
+
+10−−4 7.5
+
+−7
+
+−6.5
+
+−6
+
+−5.5
+
+−5
+
+Es/N0, dB
+
+Fig. 6: Decoder performance for 5G LDPC code of length N = 600 and code rate 1/5 (Kb = 6, k = 120) on 20 decoding iterations is analyzed. The decoders considered include the neural min-sum decoder without message quantization (NN20), the normalized min-sum decoder without message quantization (NMS-20), the neural min-sum decoder jointly trained with a neural quantizer (QNN-20), the normalized min-sum decoder with a separately trained quantizer (QNMS-20), the neural min-sum decoder with uniform message quantization (UQNN-20), and the normalized min-sum decoder with uniform message quantization (UQNMS-20).
+
+decoder, with messages on variable and check nodes being quantized to 6 and 4 bits, respectively, rather than the standard 32-bit floating-point representation. This quantization reduces the overall memory footprint by approximately 81.25% (1 − 6/32 bit) for variable nodes and 87.5% (1 − 4/32 bit) for check nodes. Furthermore, although the training phase introduces additional complexity due to overparameterization and the neural network multilayer structure itself, the inference stage remains highly efficient, maintaining a similar computational complexity to the classical MS decoder but with substantially fewer memory requirements. This makes the proposed method ideal for implementation in resourceconstrained environments such as IoT devices, where memory and computational efficiency are critical.
+IV. NUMERICAL RESULTS
+The NN MS decoder performance with residual connections (NN-20), is depicted in the Fig.5 alongside the min-sum (MS20), normalized min-sum with a scaling factor of 0.75 (NMS20) and sum-product (SP-20) algorithms for comparison. The NN decoder achieves a gain of 0.125 dB at FER = 10−2 in comparison to the sum-product algorithm while maintaining the computational efficiency characteristic of the min-sum approach. The performance of these algorithms is also compared against the finite blocklength achievability bound [24].
+The performance of the NN MS decoder (NN-20) and the normalized min-sum decoder (NMS-20), as well as the impact of trainable and uniform quantization, are illustrated in Fig.6. The figure depicts the FER results of the joint quantizer and the decoder training (QNN-20), and of training the quantizer separately for the NMS-20 decoder (QNMS-20).
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+62
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+Count
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+×104 6
+4
+
+×104 4
+
+×104 4
+
+Count
+
+Count
+
+2
+
+2
+
+2
+
+0
+
+−5
+
+0
+
+5
+
+10
+
+Value (a) Variable node, Iteration: 4
+
+×105
+
+2
+
+0
+
+−5
+
+0
+
+5
+
+10
+
+Value (b) Variable node, Iteration: 6
+
+×105
+
+1
+
+0
+
+−5
+
+0
+
+5
+
+10
+
+Value (c) Variable node, Iteration: 8
+
+×105
+
+1
+
+1
+
+Count
+
+Count
+
+Count
+
+0
+
+−2
+
+0
+
+2
+
+4
+
+Value (d) Check node, Iteration: 4
+
+0
+
+−4
+
+0
+
+4
+
+8
+
+Value (e) Check node, Iteration: 6
+
+0
+
+−4
+
+0
+
+4
+
+8
+
+Value (f) Check node, Iteration: 8
+
+Fig. 7: Histograms of messages passed between decoding iterations for the QNN-20 decoder on both check and variable nodes, with quantization levels shown as red lines. The statistics are collected on the zero codeword. The quantization levels are symmetric around zero, with only the positive part displayed.
+
+When employing quantization, the QNN-20 decoder shows a performance gap of less than 0.3 dB at FER = 10−2 compared to the NN-20 decoder. In contrast, a separately trained quantizer for the NMS (QNMS-20) decoder results in a performance gap exceeding 0.3 dB, particularly at higher SNR values. Additionally, uniform quantization introduces a noticeable degradation in performance with an approximate 0.5 dB loss for both the NN (UQNN-20) and NMS (UQNMS20) decoders. This underscores the effectiveness of joint training of the decoder and quantizer in achieving competitive results without increasing the decoder’s message precision for the specified code.
+The distribution of messages passed between decoding iterations (iterations 4, 6, and 8) for the QNN-20 decoder on both check and variable nodes, with overlaid quantization levels determined by the training process, is depicted in the Fig.7. The figure illustrates a gradual alignment of quantization levels with the underlying data, showing denser quantization near the peak of the distribution and sparser quantization in the tails.
+V. CONCLUSIONS
+In this paper, we have addressed the performance and decoding complexity issues of short LDPC codes. To improve de-
+
+coding performance, we employed the neural min-sum decoder with trainable scaling and offset coefficients. The convergence rate of the neural MS decoder was further enhanced using trainable residual connections. To tackle the complexity issue, we implemented a neural quantizer. The overparameterization technique and the gradual annealing of the soft staircase function allowed us to precisely fit the quantization levels to the decoder messages’ distributions during the joint training procedure. The achieved results demonstrate the potential of the developed method.
+As further research, we plan to extend the ideas of joint neural decoding and quantization functions training to the area of finite alphabet iterative decoders.
+REFERENCES
+[1] 3GPP, “5G NR Multiplexing and channel coding,” 3rd Generation Partnership Project (3GPP), Technical Specification (TS) 38.212, 2020, version 16.11.0. [Online]. Available: https://www.3gpp.org/ftp/Specs/ archive/38 series/38.212
+[2] R. G. Gallager, Low-Density Parity-Check Codes. MIT Press, 1963. [3] J. Pearl, “Reverend Bayes on Inference Engines: A Distributed
+Hierarchical Approach,” in Probabilistic and Causal Inference, 1st ed., H. Geffner, R. Dechter, and J. Y. Halpern, Eds. New York, NY, USA: ACM, Feb. 2022, pp. 129–138. [Online]. Available: https://dl.acm.org/doi/10.1145/3501714.3501727
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+63
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Multi-Conference on Engineering, Computer and Information Sciences (SIBIRCON)
+
+[4] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in GLOBECOM’01. IEEE Global Telecommunications Conference (Cat. No.01CH37270), vol. 2. San Antonio, TX, USA: IEEE, 2001, pp. 1021– 1025. [Online]. Available: http://ieeexplore.ieee.org/document/965572/
+[5] H. Huang, S. Guo, G. Gui, Z. Yang, J. Zhang, H. Sari, and F. Adachi, “Deep Learning for Physical-Layer 5G Wireless Techniques: Opportunities, Challenges and Solutions,” IEEE Wireless Communications, vol. 27, no. 1, pp. 214–222, Feb. 2020. [Online]. Available: https://ieeexplore.ieee.org/document/8786074/
+[6] B. S. Khan, S. Jangsher, A. Ahmed, and A. Al-Dweik, “URLLC and eMBB in 5G Industrial IoT: A Survey,” IEEE Open Journal of the Communications Society, vol. 3, pp. 1134–1163, 2022. [Online]. Available: https://ieeexplore.ieee.org/document/9826826/
+[7] Q. Hu, F. Gao, H. Zhang, S. Jin, and G. Y. Li, “Deep Learning for Channel Estimation: Interpretation, Performance, and Comparison,” IEEE Transactions on Wireless Communications, vol. 20, no. 4, pp. 2398–2412, Apr. 2021. [Online]. Available: https: //ieeexplore.ieee.org/document/9288911/
+[8] H. Ye, G. Y. Li, and B.-H. Juang, “Power of Deep Learning for Channel Estimation and Signal Detection in OFDM Systems,” IEEE Wireless Communications Letters, vol. 7, no. 1, pp. 114–117, Feb. 2018. [Online]. Available: http://ieeexplore.ieee.org/document/8052521/
+[9] H. A. Kassir, Z. D. Zaharis, P. I. Lazaridis, N. V. Kantartzis, T. V. Yioultsis, and T. D. Xenos, “A Review of the State of the Art and Future Challenges of Deep Learning-Based Beamforming,” IEEE Access, vol. 10, pp. 80 869–80 882, 2022. [Online]. Available: https://ieeexplore.ieee.org/document/9845394/
+[10] T. Oyedare, V. K. Shah, D. J. Jakubisin, and J. H. Reed, “Interference Suppression Using Deep Learning: Current Approaches and Open Challenges,” IEEE Access, vol. 10, pp. 66 238–66 266, 2022. [Online]. Available: https://ieeexplore.ieee.org/document/9802083/
+[11] E. Almazrouei, G. Gianini, N. Almoosa, and E. Damiani, “A Deep Learning Approach to Radio Signal Denoising,” in 2019 IEEE Wireless Communications and Networking Conference Workshop (WCNCW). Marrakech, Morocco: IEEE, Apr. 2019, pp. 1–8. [Online]. Available: https://ieeexplore.ieee.org/document/8902756/
+[12] X. Cheng, D. Liu, C. Wang, S. Yan, and Z. Zhu, “Deep Learning-Based Channel Estimation and Equalization Scheme for FBMC/OQAM Systems,” IEEE Wireless Communications Letters, vol. 8, no. 3, pp. 881–884, Jun. 2019. [Online]. Available: https://ieeexplore.ieee.org/document/8637720/
+[13] R. Zhou, F. Liu, and C. W. Gravelle, “Deep Learning for Modulation Recognition: A Survey With a Demonstration,” IEEE Access, vol. 8, pp. 67 366–67 376, 2020. [Online]. Available: https: //ieeexplore.ieee.org/document/9058656/
+
+[14] F. Zhang, C. Luo, J. Xu, and Y. Luo, “An Efficient Deep Learning Model for Automatic Modulation Recognition Based on Parameter Estimation and Transformation,” IEEE Communications Letters, vol. 25, no. 10, pp. 3287–3290, Oct. 2021. [Online]. Available: https://ieeexplore.ieee.org/document/9507514/
+[15] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learning-based channel decoding,” Jan. 2017, arXiv:1701.07738 [cs, math]. [Online]. Available: http://arxiv.org/abs/1701.07738
+[16] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981. [Online]. Available: http://ieeexplore.ieee.org/document/1056404/
+[17] E. Nachmani and L. Wolf, “Hyper-Graph-Network Decoders for Block Codes,” Oct. 2019, arXiv:1909.09036 [cs, math, stat]. [Online]. Available: http://arxiv.org/abs/1909.09036
+[18] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph Neural Networks for Channel Decoding,” Oct. 2022, arXiv:2207.14742 [cs, math]. [Online]. Available: http://arxiv.org/abs/2207.14742
+[19] H. He, L. Chu, and R. C. Qiu, “A New Low-Resolution Min-Sum Decoder Based on Dynamic Clipping for LDPC Codes,” in 2019 IEEE/CIC International Conference on Communications in China (ICCC). Changchun, China: IEEE, Aug. 2019, pp. 636–640. [Online]. Available: https://ieeexplore.ieee.org/document/8855823/
+[20] K. Andreev, A. Frolov, G. Svistunov, K. Wu, and J. Liang, “Deep neural network based decoding of short 5g ldpc codes,” in 2021 XVII International Symposium ”Problems of Redundancy in Information and Control Systems” (REDUNDANCY). Moscow, Russian Federation: IEEE, Oct. 2021, pp. 155–160. [Online]. Available: https://ieeexplore.ieee.org/document/9606471/
+[21] T. Wadayama and S. Takabe, “Quantizer Optimization Based on Neural Quantizerfor Sum-Product Decoder,” in 2018 IEEE Global Communications Conference (GLOBECOM). Abu Dhabi, United Arab Emirates: IEEE, Dec. 2018, pp. 1–6. [Online]. Available: https://ieeexplore.ieee.org/document/8647503/
+[22] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009. [Online]. Available: https://books. google.ru/books?id=n9BNngEACAAJ
+[23] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep Learning Methods for Improved Decoding of Linear Codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, Feb. 2018. [Online]. Available: https://ieeexplore.ieee.org/document/8242643/
+[24] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel Coding Rate in the Finite Blocklength Regime,” IEEE Transactions on Information Theory, vol. 56, no. 5, pp. 2307–2359, May 2010. [Online]. Available: http://ieeexplore.ieee.org/document/5452208/
+
+979-8-3315-3202-4/24/$31.00 ©2024 IEEE
+
+64
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:54 UTC from IEEE Xplore. Restrictions apply.
+
+

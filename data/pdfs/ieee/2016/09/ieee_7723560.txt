@@ -1,0 +1,629 @@
+2016 Euromicro Conference on Digital System Design
+
+QC-LDPC Gear-Like Decoder Architecture with Multi-Domain Quantization
+Oana Boncalo University Politehnica Timisoara
+Timisoara, Romania Email: oana.boncalo@cs.upt.ro
+
+Abstract—This paper proposes multi-domain quantization for a partially-parallel QC-LDPC decoder, which allows efficient memory bandwidth utilization. The change of quantization during decoding is dynamic. In addition to this, the proposed decoder targets speedup and energy efficient processing, with negligible error correction capability degradation. From the message storage perspective, it uses 2 quantization modes: a high resolution based q-bit messages, and a low resolution q/2-bit messages. Regarding the lower quantization domain, the variable node units operate on q/2 + 1 resolution, while check node units process q/2-bit messages. In order to evaluate the efficiency of this approach, we have analyzed the decoding performance for both AWGN and BSC channel models. In addition to this, we have implemented the proposed units and evaluated the overhead with respect to the baseline.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes have become interesting during recent years for wireless communication standards such as WiFi and WiMAX [1], as well as a potential solution for forward error correction (FEC) of flash memories [2]. The most natural way to describe them is by means of a bipartite graph, called the Tanner graph, composed of variable nodes and check nodes [3]. Since LDPCs have good error correction capability for codeword lengths of thousands and tens of thousands of bits, it is easy to see that the straight forward translation of the Tanner into a circuit becomes costly, raising a lot of interconnect bottleneck problems. The solution for this problem, are partially-parallel implementations. Furthermore, application domains such as that of mobile devices impose joint power/cost/throughput optimization of these solutions. This triggered research of all aspects related to LDPC decoding: algorithmic [4], architecture [5] [6][7], message and input message quantization [8][9].
+Message quantization is an important decoder parameter directly influencing error correction capability, cost (memory, interconnect and processing units), and energy consumption. Extensive research has been done for analyzing different static and dynamic (i.e. variable) quantization schemes in a bid to optimize one or several parameters: error floor performance [8], throughput [5][10], energy efficiency [11][9], area [6]. In this work we adopt a multi-domain adaptive quantization for a partially-parallel LDPC decoder architecture. For the start and end iterations, a smaller number of bits per message are needed for processing. In order to further reduce it, we employ a dual-quantization domain for the processing units. Our
+
+purpose is to try an limit unnecessary memory accesses, and maximize memory bandwidth. Furthermore, since memory read/write (RD/WR) operations have proved to be a substantial component in the overall decoding power consumption [6], by limiting the number of read bits from q to q/2 during the first and last iterations when messages tend to have extreme values (i.e. either small or converge maximal amplitude), we also target energy savings for decoding. Memory is a very expensive resource in partial-parallel LDPC decoder architectures, being a dominant contributor both to area and energy consumption. According to [6], for a conventional decoder 74% of the total chip power is consumed by continuous memory accesses and Flip-Flop (FF) overturns. Hence, a good design should feature maximum utilization of this resource, while limiting unnecessary accesses. Memory block parameters are width and depth. Hence, it is safe to say that for a fairly optimized architecture, decoder throughput is bounded by the memory access throughput.
+The contributions of this paper are:
+(i) formal description of the memory usage efficiency and analysis of the multi-domain adaptive quantization within an LDPC decoding architecture with single-instruction-multiple-data (SIMD) processing units;
+(ii) decoding performance analysis: Bit Error Rate (BER) and Frame Error Rate (FER) curves for a regular code for Binary Symmetric Channel (BSC), and for an irregular WiMAX code for Additive White Gaussian Noise (AWGN) channel. For both codes we have considered coding rate 1/2;
+(iii) analysis of the proposed scheme regarding the latency, cost, and power consumption for FPGA technologies;
+This paper is organized as follows: Section II provides a brief introduction of QC-LDPC codes and flooded scheduling; Section III presents the proposed adaptive quantization approach; Section IV describes the decoder architecture and SIMD units; Section V presents decoding performance analysis and implementation results; and Section VI provides concluding remarks.
+
+978-1-5090-2817-7/16 $31.00 © 2016 IEEE
+
+244
+
+DOI 10.1109/DSD.2016.49
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+123456
+
+12
+
+⎡
+
+10
+
+H = ⎣⎢⎢01
+
+1 0
+
+01
+
+3
+01 10 10 01
+
+4
+
+⎤ 10
+
+0 0
+
+11⎥⎥⎦
+
+10
+
+Fig. 1. Tanner Graph with equivalent H matrix representation
+
+Symbol
+z V W H (n)
+H (m)
+dpc dm v γn αp,n βm,n ˜∗
+
+TABLE I NOTATIONS
+Description
+circulant size set of all variable nodes of matrix H set of all check nodes of matrix H set of indexes of non-zero entries corresponding
+to column n of matrix H set of indexes of non-zero entries corresponding
+to row m of matrix H check-node p degree variable node m degree AP P -LLRn message variable p to check node n message check m to variable node n message updated message value at iteration i
+
+II. QC-LDPC CODES
+A. Preliminaries
+LDPC codes can be defined either using parity check matrix H or in terms of sparse bipartite graphs called Tanner graph [3]. The Tanner graph has two types of nodes: bit-nodes and check-nodes - denoted with circles, and squares respectively in Fig. 1. The first correspond to the columns of parity check matrix H and coded bits, while check nodes correspond to the rows of H and the parity check equations of coded bits. A bit-node i is connected to a check-node f by an edge if the corresponding entry Hi,j is non-zero. Quasi-Cyclic (QC) LDPC codes are a class of LDPC codes, with structured H matrix, that makes them suitable for efficient hardware decoder implementation. A QC-LDPC codes is defined by a base matrix B, with integer entries bi,j ≥ −1. The parity-check matrix H of the QC-LDPC code is obtained by expanding the base-matrix B by an expansion factor Z. Each entry of B is replaced by a square matrix of size Z × Z, defined as follows: −1 is replaced by the all-zero matrix, and a non-negative entry bi,j ≥ 0 is expanded by a circulant matrix, obtained by right-shifting the identity matrix by bi,j positions [12]. The resulting matrix H can be regarded a layered structure (vertical or horizontal), where each layer is composed by Z consecutive rows (or column), and each bit node participates is a single check equation for each layer. V ariable m node degree equals the number of non-zero entries of column m of matrix H. Check m node degree equals the number of non-zero entries of row m of matrix H. If all VNs and CNs have the same degrees, we will refer to the code as regular, otherwise, the code is irregular.
+LDPC codes can be iteratively decoded using messagepassing (MP) algorithms that exchange messages along the edges of the Tanner graph. Message exchange takes place in several rounds, or iterations. At each iteration, new messages (estimates) are computed in an extrinsic manner, meaning that the message sent on an edge does not depend on the one which has been just received on the same edge. Consequently, bit-nodes collect increasingly more information with every iteration. This allows for improved estimates of the transmitted codeword.
+
+B. Flooding scheduling algorithm
+Several scheduling strategies can be found in practical implementations of LDPC decoders. These define the order in which bit and check-node messages are processed during the MP iterative process. One possibility is that, at each iteration, all check-nodes and subsequently all variable-nodes pass new messages to their neighbors. This message-passing schedule is usually referred to as parallel or flooded scheduling [13].MinSum (MS) algorithm aims at reducing the computational complexity of the check-node messages [14]. It relies solely on simple operations such as additions and comparisons.
+
+Algorithm 1 Flooding Min-Sum
+
+1: Initialization 2: for all n ∈ V do
+
+3: γn = Channeln 4: βm,n = 0 5: αp,n = Channeln, p ∈ H(n) 6: end for
+
+7: Iterative message exchange
+
+8: for it = 0, Itmax do
+
+9: for all m ∈ W do
+
+10:
+
+β˜m,n =
+
+sign (αm,n´ )· min |αm,n´ |
+
+n´ ∈H (m)\n
+
+n´ ∈H (m)\n
+
+{Check node CNm message processing.}
+
+11: end for
+
+12: for all n ∈ V do
+
+13:
+
+α˜p,n = γn +
+
+βp´,n
+
+p´∈H (n)\p
+
+{Variable Node V Nn message processing.}
+
+14: end for
+
+15: for all n ∈ V do
+
+16:
+
+γ˜n = γn +
+
+βm,n
+
+m∈H (n)
+
+{AP − LLRn message update.}
+
+17: end for
+
+18: if Syndromecheck() then
+
+19:
+
+break;
+
+{All Parity Check equations are satisfied}
+
+20: end if
+
+21: end for
+
+245 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+Typically messages are quantized on only a few bits (e.g. 3,4 bits). Check-node (CN) message computation requires the finding of the first and second minimum from the absolute αm,n values, and xor operations for sign computation. Variable-node (VN) message computation is made of add/subtract operations. Decoding process stops when the parity checks are satisfied (Syndromecheck), or if the maximum number of iterations (Itmax) is reached. Please note, that not all decoders implement early termination (i.e. S y ndromecheck ).
+
+III. ADAPTIVE QUANTIZATION
+It can be easily noted from Algorithm 1 that CNU processing of MS decoder is linear. This suggests that scaling of input channel messages will not affect performance. This has also been used by [9] where β messages have been scaled from q bits to q − 1 bits using a function f . This is in fact equivalent to applying the same mapping function to the output of the VNUs (i.e. CNU input). The authors propose a dualquantization domain: a low quantization q − 1 for the CNUs, and a higher quantization q for the VNUs. The mappings are optimized for a given SNR and code rate. The simplest and most implementation friendly mapping is the one proposed in [10], where basically the last message bit is discarded and assumed 0. Another interesting remark of [8] concerning error floor performance of MS algorithm is that the slope of error floors of the same code resulting from uniform quantizations is close to that of Gallagher-B (LDPC decoding based on 1bit messages). This is a consequence of the fact that most MS messages saturate at the same magnitude after several iterations. Hence, MS relies mostly upon the sign bits of the messages.
+
+A. Proposed approach
+
+The observation that during the first iterations, messages have typically small amplitudes, and that during the last iterations, most message amplitudes have converged to the maximum representable values, suggests three operation phases during a codeword decoding:
+P h1 Low quantization domain for both storage and operation - use qR bits;
+P h2 High quantization domain for both storage and operation - use qF ;
+P h3 Low quantization domain for both storage and operation - scale down messages to qR bits;
+
+Definition 1. We define the Memory Usage Efficiency (MUE) of iteration i, denoted with μi, as the ration between the number of cycles needed to access the extrinsic message memory bits for an iteration, and the number of cycles needed to perform the iteration:
+
+μi
+
+=
+
+qi × |V | wM × nicc
+
+,
+
+∀i ∈ {0, . . . , Itcw}
+
+(1)
+
+qi denotes the memory storage quantization of messages during iteration i, wM is the memory width, and nicc is the
+
+total number of clock cycles needed to complete for the corre-
+sponding iteration. Itcw is the number of iteration performed for decoding the codeword, Itcw ≤ Itmax Consequently the MUE for the decoding of a codeword is the average value aver
+all iterations.
+
+μ = i μi , I tcw
+
+∀i ∈ {0, . . . , Itcw}
+
+(2)
+
+Please note that for the ideal case ncic is equal to the number of memory accesses (i.e. read (RD) or write (WR)) clock cycles. This implies that the architecture in question does not have any other stalls introduced due to memory conflicts, synchronization of control signals, or due to the processing units (i.e. scheduling). For the flooded scheduling used in this study, CNUs need to wait for the VNUs to end their processing on all messages and vice-versa. This does not automatically mean that M U E is necessarily decreased. If only one memory is used for storing both α, and β messages, and no other stalls are introduced on the data path, it is in fact 100%. The consequence is that only one type of processing unit is used at a time. Hence, hardware utilization efficiency of VNUs/CNUs is halve. Another conclusion derived from eq. (1) is that 100% M U E is only achievable if wM bits accesses are performed every cycle.
+
+Proposition 1. For a given working frequency of the process-
+ing units f , and message quantization during iteration i, qi, the decoders throughput Tdec for a number of iterations Itmax is upper bounded by μ.
+
+Tdec = ξ(f, wM , qi) × μ, ∀i ∈ {0, . . . , Itcw} (3)
+
+Proof: The processing throughput of the decoder can
+
+be expressed as: Tdec =
+
+. f ×|V |
+i nicc
+
+According
+
+to
+
+Definition
+
+1:
+
+nicc
+
+=
+
+qi×|V | wM ×μi
+
+,
+
+hence,
+
+Tdec
+
+us assume without loss of
+
+= f ×wM qi
+generailiμtyi
+
+. Since μi ∈ (0, 1], qi = q constant for
+
+let all
+
+iterations.
+
+Hence,
+
+Tdec
+
+=
+
+wM q×I tmax
+
+× μ.
+
+B. Message mapping
+
+Our goals are twofold: 1. optimize μ, while 2. preserving
+
+decoding performance with respect to baseline decoder. Typi-
+
+cal message quantizations in practical implementations are of
+
+4 bits [11] [4], up to 6 bits [15]. Since, our aim is to reduce
+
+message updates during P h1, and P h3, the first step is to try
+
+1 bit reduction. This means that we will have for example
+
+qF = 4 bits full quantization, and qR = 3 for the reduced modes ( P h1, P h3). From Definition 1, it is straightforward
+
+to see that this combination does not achieve 100% μ. In fact
+
+the largest value satisfying the later criteria is qR =
+
+qF 2
+
+bits.
+
+Furthermore, 2 messages need to be read and processed by the
+
+VNUs and CNUs at once. Nonetheless, our findings suggested
+
+that utilizing (qR, qF ) = (2, 4) degrades FER, BER statistics. Hence, some further form of reducing storage requirements by
+
+one bit is needed.
+
+We have identified the dual-quantization domain approach
+
+presented in [9], and [10], which relied on a compres-
+
+sion/decompression functions that reduced message storage
+
+246 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II THE MESSAGE MAPPINGS AT A TRANSITION FROM A QUANTIZATION TO
+ANOTHER IN AND BETWEEN PHASES
+
+To → From ↓
+P h1
+P h2
+P h3
+
+P h1
+
+P h2
+
+P h3
+
+γ → γ3γ2γ1γ0 α˜ → α˜2α˜10 NA
+NA
+
+γ → γ3γ2γ1γ0 α˜ → α˜2α˜1α˜0 γ → γ3γ2γ1γ0 α˜ → α˜3α˜2α˜1α˜0
+NA
+
+NA
+γ → γ310 α˜ → α˜3α˜2 γ → γ310 α˜ → α˜2α˜1
+
+by 1 bit while gaining performance as a potential solution
+
+for our problem. Hence, we the need: VNU operating on
+
+qF 2
+
++1
+
+outputs
+
+bits, which processes 2 × β 2 × α messages represented
+
+omnesq2sFagbeists,onduqr2Fingbiptshaasneds
+
+P h1 and P h3, and operateson 1 × β message on qF bits,
+
+with the same output resolution for α messages during P h2.
+
+The CNUs operate either in the
+
+qF 2
+
+bits domain processing
+
+2 messages at a time, or in the qF bits higher quantization
+
+domain processing 1 message at a time. For achieving this
+
+multi-domain quantization (i.e. different quantizations between
+
+iterations, and and during the reduced quantization iterations,
+
+dual-quantization domain) a Single Instruction Multiple Data
+
+(SIMD) design of the processing units is needed. It is worth
+
+emphasizing that this is needed in order to achieve 100%
+
+μ. The message mapping at a transition between different
+
+quantization domains is presented in Table II. In order to
+
+minimize the implementation overhead for SIMD, we have
+
+selected the simplest mapping, also used in [10]. Please note
+
+that we have used ˜ notation for messages updated (outputs
+
+→ memory) during present iteration, while messages inputs
+
+for the processing units (inputs ← memory) are without. The
+
+transition corresponding to P h1 → P h2 suggests that during
+
+the last iteration of P h1 VNU messages are stored on 3 bits to memory. The transition corresponding to P h2 → P h3 should
+
+be interpreted as: γ channel messages are represented as +2 if
+
+the sign of the channel message is +, or -2 if it is equal to -.
+
+Only the most significant 2 bits of α˜ messages from the VNU
+
+output during last iteration of P h2 are saved to memory. The
+
+last is zeroed, hence is a hidden 0 from the memory operation
+
+perspective. CNU operation is performed on the number of α
+
+message bits retrieved from memory. For P h1, P h3 this means
+
+2 bit message processing. P h2 works with 4 bit message.
+
+IV. DECODER ARCHITECTURE
+The idea of gear shift decoder has been proposed first in a theoretical paper [5]. The authors proposed that decoding is split in several sequences and that a different decoding algorithm is selected during each of them. This diversity would in principle allow an increased convergence, as well as decoding performance gain. From the implementation point of view a notable design for a flooded partially-parallel tri-mode architecture has been proposed by (i.e. one algorithm during the entire codeword decoding) [16]. The solution, optimized
+
+for FPGA, supports static selection between 3 algorithms. Energy consumption has been added as a design goal for the fully-parallel flooded decoding architecture presented in [11]. This work has considered bit serial message processing units. This means that 1 bit of each of the dvi input messages per clock cycle is processed inside the VNU, and one bit of the dcj CNU message inputs per clock cycle respectively. Two types of dynamic (during one codeword processing) configurations have been configured: the first one is more powerful and power hungry, and the second one has less decoding performance and smaller energy requirements. Furthermore, since the processing units are bit-serial, the authors also naturally introduced variable quantization.
+We target a partially parallel flooded architecture similar with the one used in [16]. With respect to [16] we implement serial message processing - one q-bit message per clock cycle. This type of approach is flexible in the sense that it can support multi-rate codes. Furthermore, it can be easily be adapted for different codes. Furthermore, we target 100% memory read access bandwidth utilization (i.e. full μ). With respect to the approach [11], the serial processing units proposed in this paper do not support fine grained quantization. On one hand, fine grained message resolution reduction is favorable for preserving performance, on the other hand, it is not favorable for efficient message packaging. Hence, we need to settle for the alternate approach - reducing message resolution in coarser steps (i.e. from 4 to 2 bits). In a bid to preserve the baseline decoding performance (no reduction of the number of message bits used), we have employed the following resolution: (i) use reduced quantization modes only during P h1 and P h3 please note that the user may program this value according to the targeted decoding performance and actual energy budget; (ii) employ dual-domain quantization.
+A. Overview
+The QC-LDPC baseline decoder architecture is presented in Fig. 2, similar to the one from [16][17]. The main building blocks are: (1) VNU block made of z VNU units. z columns from the H matrix, corresponding to one column in B matrix, are processed in parallel. Each unit V N Ui receives 1 βji message during each cc. A total of dvi messages are received per H column. (2) CNU block made of z CNU units. Ech unit corresponds to a row in H matrix. One out of dci messages is inputted every cc. (3) β and α memory blocks. Each memory entry contains the messages needed for the processing units during one cc of operation. This means that a total of z × q bit messages needs to be stored. For WiMAX rate 1/2 decoder with q=4 bit messages, the require width is 4 × 96=384. The depth of the memories is equal to the number of non-zero entries of the B matrix. For this example 76 entries are needed. (4) γ memory where the input channel LLR are stores, and the hard decision bits corresponding to the decoded codeword are stored.
+
+247 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+fact that for the reduced quantization mode, CNU works with 2 bit messages for which conversion from sign-magnitude (SM) to 2’s complement (C2) are not needed. Furthermore, the comparison is trivial. Determining the first minimum can easily be done using an AND gate, while determining the second minimum means in fact the detection of 2 magnitude values of 0 of the |αi| messages. The sel buffer entry component selects the data being saved inside the buffer:
+
+Fig. 2. Flooded scheduling QC-LDPC partially-parallel dual-frame architecture overview
+(5) Interconnect implemented using barrel shifters. These shift with variable shift position (according to the B matrix) one bit from each of the z messages at a time. Before being inputted to the processing units, the messages bits need to be interleaved, and the message assembled. This approach is especially convenient for variable quantization, since clock gating techniques, as well as memory enables can be naturally used to only access the needed amount of information. (6) Control Unit (CU) responsible for generating memory access addresses, and enable signals, shift amounts for the barrel shifters, as well as dic, and dvi information.
+B. Processing units
+From the hardware implementation perspective the simplest mapping is the one used by [10]. The changes needed to implement the CNU and VNU SIMD architectures are highlighted with grey in Fig. 3 and Fig. 4. We will briefly review them next.
+1) Check-Node Unit: For simplicity we have presented the case of q=4, and a maximum dc=7. For the baseline unit the module interface comprises of the following signals: (i)data: alphai input messages belonging to a H matrix row, and βi output messages; (ii) control signals: dci , index of incoming α message, f irstα - signals that the first alpha value from a batch is present at the input, lastα, signals that the last α message has arrived. Please note that the CNU unit allows for messages from a batch to be fetched in any order. Furthermore, the αsgn and αindex are buffered inside the FIFO buffer. This amounts for 4 bits entry for the values considered in this example. The index is used during the minimum selection process at the end. In terms of control 2 extra signals: SIMD[0] and SIMD[1] have been used to select between the two modes. We need 2 bits because we have adopted a one hot encoding: SIMD = 01 - P h2 full quantization mode, one operand at a time, SIMD = 10 - for P h1 and P h3, 2 operands at a time. No extra signals are needed. As it can be noted from Fig. 3 the main advantage of the proposed mapping is the
+
+dataibnuf =
+
+{αindex[2 : 0], αsgn}, SIM D = 01 {αindex[2 : 1], αs1gn, αs2gn}, SIM D = 10
+
+Furthermore, an extra input is needed for the xorasilgl ns computation for αs2ign - α[1] & not(simd[0] & isOdd(dci )). Module IPack acts as:
+
+min1index =
+
+{αindex[2 : 0]}, simd = 01 {αindex[2 : 1], α[0]}, simd = 10
+
+Module CPack selects the correct results: either from the SIMD[0], or SIMD[1] paths.
+
+2) Variable-Node Unit: For the baseline VNU implementation the following saturation policies have been made: the adding of all incoming β messages with the channel input γ is done without saturation, while the subtractions at the end are followed by saturation. Same, as for the CNU, we have added the SIMD control signals. With respect to the baseline two changes have been made: (i) the two 2 bit β’s are added. Please note, that they are stored beforehand in the delay buffer. Also, note that the width of the buffer does not change between VNU operation modes. At the end an additional subcontractor with saturation is needed for the case when 2 operands are retrieved The VPack block deals with correct selection and packaging of the results between the two modes.
+
+C. Control Logic
+The extra control signals have been highlighted in red in Fig. 2. A 2-bit SIM D one-hot-encoding signal is used to differentiate between the two SIMD modes: 10 - for P h1 and P h3, and 01 - during P h2. Furthermore, the α memory width is split in 2 parts. This is needed during the transition from P h2 → P h3, when only the most significant q/2 bits are written to memory. For the rest the signals need to be disabled. This is also the case for the γ memory where only the sign bit is read during P h3. Furthermore, the information read from the control ROM needs to be twice of much (i.e. 2 shift amounts, and memory addresses), meaning that the control ROMs for CNU and VNU read need to be doubled for P h1 and P h3, with respect to P h2.Furthermore, an extra memory entry bit which is used to select the bank for the memory operation is needed. Extra CU logic: one register for programming the ItSIMD value, one 2 bits P hreg, one 2 bit SIMD register and 2 × control ROMs.
+
+248 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+D. Memory and interconnect
+The α and β memories are split in two logic banks with separate enable signals. For the P h2, 2 MSB message bits are accessed from bank1, while the least significant half is accessed from bank0. Since, the barrel shifters shift 1 bit from each message, it is straight forward to adapt them for the SIMD. Instead of having 2 identical indexes, they will have 2 index pairs for P h1 and P h3. For the γ memory, 4 message bits are be read (for AWNG channel, the BSC only requires 1 bit) during the first two phases, while P h3 only requires the sign to be read.
+
+V. RESULTS AND DISCUSSIONS
+
+1) Throughput: Throughput (T) for the SIMD dual-frame architecture is computed as:
+
+T
+
+=
+
+Ni
+
++ No
+
++ (Nv
+
++
+
+2×N ×F Nc)ItSIMD + 2Nnz(Itmax
+
+−
+
+I tSI M D )
+
+Ni, and No are equal to the number of initialization and offloading clock cycles (cc), and are equal to the number
+
+of B matrix columns. Nnz is equal to the number of nonzero entries in the B matrix. The number of VNU and CNU
+
+cc during P h2 is equal to Nnz for an optimized data path (i.e. no other synchronization stalls are present on during data
+
+processing). The number of ccs needed for VNU processing
+
+per iteration during P h1 and P h3.
+
+Nv =
+
+dvi
+
+(4)
+
+i∈cols(H )
+
+Hence, the ideal Nv corresponds to the case when all dv’s are even. A similar expression is derived for the number of cc’s
+needed for a CNU iteration during P h1 and P h3:
+
+Nc =
+
+dic
+
+(5)
+
+i∈rows(H )
+
+Again, the ideal Nc corresponds to the case when all dc’s are even. In order to analyze the latency gain, we compute the
+number of clock cycles needed for a decoding iteration for
+full and reduce quantization modes for WiMAX code [1] -
+3 rates, and 2 regular codes (dv=3, and dv=4, with N=1296 bits, rate 1/2), expressed in cc (see Table III). The most favorable case is that of dv = 4 code. In fact it is the only one achieving 100% μ. The gain from column 6 of Table III refers to the speedup of P h1 and P h3 iterations with respect to baseline P h2 iterations.
+
+2) Error correction capability: To demonstrate the error correction capability of the proposed approach we compare its BER, FER, and average iteration statistics with MS baseline decoder featuring uniform quantization. For our analysis we have considered 3 known LDPC codes: regular dv = 3, rate 1/2 code, and regular dv = 4, both with , with z = 54 and code length 1296 bits [18] for BSC channel, and irregular WiMAX, rate 1/2 code, with z = 96 and code length 2304 bits[1] for AWGN channel. The curves are based on Monte Carlo simulations that have simulated 100 failed decoded codewords
+
+TABLE III LATENCY AND MEMORY UTILIZATION RATIOS μ FOR DIFFERENT CODES
+
+Code
+
+Nv Nc
+
+WiMAX r1/2 42 40
+
+WiMAX r2/3 46 40
+
+WiMAX r3/4 50 46
+
+regular dv3 r1/2 48 36
+
+regular dv4 r1/2 48 48
+
+Nnz μ[%] Gain[%]
+
+76 92.68 46.05
+
+80 93.02 46.25
+
+88 91.66 45.45
+
+72 85.71 41.66
+
+96 100
+
+50
+
+Fig. 3. CNU SIMD architecture. Grey markers are used to denote extra logic needed for the SIMD with respect to the baseline: packaging and selection of the FIFO buffer input based on the SIMD control signal, index packaging for the min1 index, duplication of the index compare and sign generation logic, an extra entry for the case of two operands for computing the xorall signs, results packaging at the output of the unit.
+Fig. 4. VNU SIMD architecture. Grey markers are used to denote extra logic needed for the SIMD with respect to the baseline: an adder for the 2 bit input messages, and VPACK for result packaging and selection.
+within the limit of a maximum of 100000000 simulated codewords for each point in the plot. The maximum number of considered iterations is 20. For a number of 4 SIMD iterations, results show no significant performance degradation. Fig.5 presents the statistics curves for AWGN channel for WiMAX rate 1/2 code. Fig. 6 plots the average iteration number for WiMAX rate 1/2, on AWGN channel on the Y axis, function of FER on the X axis. Furthermore, the same statistics are presented for the regular dv = 3 code over the BSC channel (Fig. 7 and Fig. 8 respectively).
+
+249 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 5. BER/FER statistics for WiMAX rate 1/2 code
+
+Fig. 7. BER/FER statistics for dv = 3 rate 1/2 code
+
+Fig. 6. Average iterations statistics for WiMAX rate 1/2 code
+
+Fig. 8. BER/FER statistics for dv = 4 rate 1/2 code
+
+3) Energy consumption: The Multi-Level quantization
+
+approach
+
+allows
+
+for
+
+a
+
+reduction
+
+of
+
+up
+
+to
+
+I tSI M D I tcw
+
+× 100
+
+reduction in decoding latency for the case of 100% μ. As
+
+shown in [6] energy consumption for a conventional decoder
+
+is proportional to the number of decoding iterations. This is
+
+equivalent to saying that Ecw = Itcw × Eaivg. The average
+
+energy consumed during an iteration processing of a codeword
+
+Eai vg
+
+=
+
+ncic × (Pmem + Pproc) .
+
+Since
+
+nic1c
+
+=
+
+, nic2c
+2
+
+where
+
+i1 ∈ P h1, and i2 ∈ P h2, we can derive that Eai1vg ≈ Eai2vg. A
+
+similar reasoning can be made for P h3. Another important
+
+design decision is the stopping criteria.
+
+Next we will analyze the energy savings for both strategies.
+
+If we stop decoding using an early termination criteria for a
+
+maximum of 20 iterations, we can see from Fig. 6 that for
+
+WiMAX rate 1/2 code over AWGN channel, the average
+
+iteration for the region of interest [10−5, 10−3] is in the range
+
+[7, 10]. Furthermore, performance curves suggested that the
+
+cutoff limit for ItSIMD is 4 out of 20 iterations. This means, that for an average iteration of 10, the first 4, yielding 40% of the cases on average, are performed using the Eai1vg. For the second case, when no syndrome check is performed, and all codeword decodings run for the maximum number of 20 iterations, the conclusions are similar: 40% of the iterations are performed with roughly half the energy budget. Hence, with additional enable control signals, the multi-domain combined with the SIMD processing always yields power and throughput savings.
+4) Synthesis results: Table IV presents synthesis estimates for Virtex 7, Xilinx FPGA board, with synthesis options optimize for area and maximum effort for the processing units: baseline and SIMD implementation. Results from Table IV suggest a small to moderate (up to 36%) cost increase with respect to the baseline. For the VNU this is mainly due to the VPACK block saturates and packs output messages.
+
+250 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE IV AREA AND FREQUENCY COMPARISON OF BASELINE VS. SIMD
+PROCESSING UNITS
+
+CNU baseline VNU baseline CNU SIMD VNU SIMD
+
+LUT-FF pairs
+47 30 55 41
+
+Freq[MHz]
+302 381 313 295
+
+Overhead[%]
+17 36.6
+
+For the CNU, it is consequence of our design choice - we have both conversions (two’s complement → sign magnitude and vice versa) handled inside the CNU, plus some extra logic to accommodate both modes for the comparison and index computation. Furthermore, a number of selection and masking operations are needed. One example is the input for the FIFO buffer, where either two signs and quantindex-1 bits are inputed for the lower quantization mode (SIMD = 10), or 1 sign bit and quantindex bits for the higher quantization mode (SIMD = 01). We estimate that the changes to the baseline architecture from Fig. 2, would yield a 10% increase in logic (i.e. LUT-FF pairs), and approximately the same working frequency for the whole SIMD decoder with respect to the baseline. Furthermore, the proposed approach would yield no memory increase for the message memory. These estimates are based on some preliminary synthesis results obtained for the WiMAX rate 1/2 code. The throughput gain over 20 iterations for ItSIMD=5 is 15% compared to baseline.
+VI. CONCLUSIONS
+We have proposed a multi-domain quantization QC-LDPC decoder that efficiently utilizes memory bandwidth. Our approach is different with respect to state of the art: we try to access the needed amount of message information bits during each iteration, while at the same time using the maximum available memory width. Based on prior work, we have identified 3 phases for processing: first and last iterations which require less message quantization bits, and the middle decoding iterations when full message representation is needed. In order to optimize memory usage efficiency - μ, we have modified the processing units for: (i) using a dual-domain quantization during P h1, and P h3, and processing 2 messages at a time - leading to an up to 50% reduction in decoding latency during these phases; (ii) processing 1 message at a time during P h2. We have presented simulation statistic curves results for cases when up to 50% of the total iterations are reduced quantization iterations. BER/FER performance curves show that there is no visible degradation in the waterfall. Furthermore, there is only a slight (≤ 1 iteration) increase in average iteration count. Synthesis results for the SIMD units present an increase (17% and 36.6% respectively) with respect to the baseline, while working frequencies stay in the same range.
+
+ACKNOWLEDGMENT
+This work has been supported by the Franco-Romanian
+(ANR-UEFISCDI) Joint Research Programme Blanc2013
+project DIAMOND.
+REFERENCES
+[1] “Air interface for fixed and mobile broadband wireless access systems physical and medium access control layers,” IEEE Std 802.16e-2005, 2005.
+[2] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, “Ldpc-in-ssd: Making advanced error correction codes work effectively in solid state drives,” in Proceedings of the 11th USENIX Conference on File and Storage Technologies, ser. FAST’13. Berkeley, CA, USA: USENIX Association, 2013, pp. 243–256. [Online]. Available: http://dl.acm.org/citation.cfm?id=2591272.2591298
+[3] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep 1981.
+[4] C. Zhang, Z. Wang, J. Sha, L. Li, and J. Lin, “Flexible ldpc decoder design for multigigabit-per-second applications,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 57, no. 1, pp. 116–124, Jan 2010.
+[5] M. Ardakani and F. R. Kschischang, “Gear-shift decoding,” IEEE Transactions on Communications, vol. 54, no. 6, pp. 1143–1143, June 2006.
+[6] B. Xiang, R. Shen, A. Pan, D. Bao, and X. Zeng, “An area-efficient and low-power multirate decoder for quasi-cyclic low-density paritycheck codes,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 18, no. 10, pp. 1447–1460, Oct 2010.
+[7] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for ldpc codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 57, no. 1, pp. 105–115, Jan 2010.
+[8] X. Zhang and P. H. Siegel, “Quantized min-sum decoders with low error floor for ldpc codes,” in Information Theory Proceedings (ISIT), 2012 IEEE International Symposium on, July 2012, pp. 2871–2875.
+[9] S. Abu-Surra, E. Pisek, T. Henige, and S. Rajagopal, “Low-power dual quantization-domain decoding for ldpc codes,” in Global Communications Conference (GLOBECOM), 2014 IEEE, Dec 2014, pp. 3151–3156.
+[10] T. Nguyen-Ly, K. Le, F. Ghaffari, A. Amaricai, O. Boncalo, V. Savin, and D. Declercq, “Fpga design of high throughput ldpc decoder based on imprecise offset min-sum decoding,” in New Circuits and Systems Conference (NEWCAS), 2015 IEEE 13th International, June 2015, pp. 1–4.
+[11] K. Cushon, S. Hemati, S. Mannor, and W. J. Gross, “Energy-efficient gear-shift ldpc decoders,” in Application-specific Systems, Architectures and Processors (ASAP), 2014 IEEE 25th International Conference on, June 2014, pp. 219–223.
+[12] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+[13] F. R. Kschischang and B. J. Frey, “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE Journal on Selected Areas in Communications, vol. 16, no. 2, pp. 219–230, Feb 1998.
+[14] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[15] S. Kim, G. E. Sobelman, and H. Lee, “Adaptive quantization in minsum based irregular ldpc decoder,” in Circuits and Systems, 2008. ISCAS 2008. IEEE International Symposium on, May 2008, pp. 536–539.
+[16] X. Chen, Q. Huang, S. Lin, and V. Akella, “Fpga-based low-complexity high-throughput tri-mode decoder for quasi-cyclic ldpc codes,” in Communication, Control, and Computing, 2009. Allerton 2009. 47th Annual Allerton Conference on, Sept 2009, pp. 600–606.
+[17] A. Amaricai, O. Boncalo, and I. Mot, “Memory efficient fpga implementation for flooded ldpc decoder,” in Telecommunications Forum Telfor (TELFOR), 2015 23rd, Nov 2015, pp. 500–503.
+[18] F.-R. project, “Report on reliability aware synthesis and ldpc decoders built with unreliable components,” no. 6.1, 2015, available online:. [Online]. Available: www.i-risc.eu
+
+251 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:16:36 UTC from IEEE Xplore. Restrictions apply.
+
+

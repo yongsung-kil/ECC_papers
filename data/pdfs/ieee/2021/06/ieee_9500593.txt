@@ -1,0 +1,611 @@
+Coarsely Quantized Layered Decoding Using the Information Bottleneck Method
+
+Philipp Mohr, Gerhard Bauch Hamburg University of Technology
+Institute of Communications 21073 Hamburg, Germany Email: {philipp.mohr, bauch}@tuhh.de
+
+Fan Yu, Mo Li Huawei Technologies Transmission and Access Research Department
+Chengdu, China Email: {irene.yufan, mo.li}@huawei.com
+
+ICC 2021 - IEEE International Conference on Communications | 978-1-7281-7122-7/21/$31.00 ©2021 IEEE | DOI: 10.1109/ICC42927.2021.9500593
+
+Abstract—In recent years coarsely quantized LDPC decoding using a flooding schedule has been extensively studied. However, there exist few works addressing coarse quantization for a layered schedule, which enables improved convergence speed of the message passing algorithm. The layered schedule can especially be beneficial for high throughput applications like fiber optical systems. This paper presents innovative layered decoding approaches, where the information bottleneck method is used for the design of different coarsely quantized decoder architectures. The varieties of investigated node implementations include lookup tables, computational domain techniques as well as reduced complexity approximations. All structures are designed offline using a layered discrete density evolution method. The performance of multiple node architectures is investigated in terms of evolution of mutual information in the design phase and in terms of error rates. We focus in this paper on regular quasi-cyclic codes. Our simulations running on GPUs also allow insights into the error floor behavior.
+I. INTRODUCTION
+In modern communication systems low-density parity-check (LDPC) codes play a very important role to mitigate transmission errors. Apart from being capacity approaching, their major advantage over competing techniques is that the decoding process is highly parallelizable enabling high decoding throughput designs.
+An innovative discrete decoder design was proposed in [1] and a similar approach in [2], where mutual-informationpreserving mappings are used for the node operations. Instead of carrying probabilities in log-likelihood ratio format, the nodes exchange integers which encode the underlying probabilities. In [3] the design of this decoder was identified to be an application for the information bottleneck (IB) method. The IB method enables to compress observed messages while preserving relevant information, leading to a reduced space complexity in the decoding process.
+Further complexity reduction can be reached by changing the message passing schedule. One very promising approach is known as layered decoding, where the number of required iterations is approximately reduced by half [4]. This is achieved by performing partial node updates within a single iteration.
+In [5] an unrolled layered decoding architecture has been proposed, where compressed messages are exchanged between variable and check nodes. However, the nodes are not explicitly designed to maximize preserved relevant information, but
+
+Layer 1 ...
+
+Layer 2
+
+Layer dv
+
+... ...
+
+...
+
+tc→v . . .
+
+...
+
+...
+
+...
+
+Routing network
+
+t ...
+v→c
+
+...
+
+x1
+
+x2
+
+...
+
+ych
+
+...
+
+...
+
+...
+xN
+
+Fig. 1: Tanner graph of a quasi-cyclic code with variable nodes (circles) connected to one check node (squares) of each layer.
+
+rather to mimic the behavior of conventional representation value based processing using the framework derived in [6].
+The novel aspect of this paper is that the IB method is used to design LDPC decoders with a layered schedule. In detail this involves the modification of discrete density evolution and its application to different variable and check node architectures. Throughout the design phase we maximize the preserved relevant information. Moreover, we analyze the bit error rate performance down to the error floor for several quasi-cyclic codes with different degree distributions.
+
+II. LAYERED SCHEDULING WITH QUASI-CYCLIC CODES
+The basis for most LDPC decoders is the sum-product algorithm [7], also known as belief propagation, where messages representing probabilities of the code bits x ∈ X = {0, 1} are exchanged over a graph like the one shown in Fig. 1. The exchanged messages are updated in the variable nodes with degree dv and check nodes with degree dc. The variables x = [x1, x2, . . . , xN ]T share information about each other due to the encoding procedure at the transmitter. On a Tanner graph the code constraints are represented by a routing network, whose structure is defined by the parity check matrix H, such that Hx = 0. From an implementation point of view, well structured LDPC codes are preferred over randomly constructed codes, since they offer better routing characteristics leading to decoder designs with much higher decoding throughput. Very common structured codes are quasi-cyclic (QC) codes, which are investigated in this paper. The regular QC parity check matrix is defined as:
+
+978-1-7281-712A2u-7th/2o1ri/z$e3d1l.i0ce0n©se2d02u1seIElimEEited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+yc1 →v
+
+yc2→v
+
+y
+
+→v cdv
+
+Memory ych
+x
+
+t v→c 1 tv→c2 tv→cdv
+
+(a)
+
+...
+
+Memory
+
+Layer j
+
+ycj →v
+
+ych
+
+yc1→v ...
+
+ycdv −2→v
+
+x tv→ck Layer k
+
+(a)
+
+...
+
+Channel ... ... ...
+
+...
+
+...
+
+... ... ...
+
+...
+
+... ... ...
+
+...
+
+... ... ...
+
+Channel
+
+(b)
+Fig. 2: Illustration of a single full variable node update (a) from an unrolled flooding decoding graph in (b).
+
+ I(p11) · · · I(p1dc ) ← Layer 1
+
+ I(p21) · · · I(p2dc ) ← Layer 2
+
+H=  
+
+...
+
+...
+
+...
+
+  
+
+...
+
+(1)
+
+I(pdv1) · · · I(pdvdc ) ← Layer dv
+
+In (1), pij ∈ {0, 1, . . . , Z − 1} are permutation shifts for the cyclic shifted identity matrices I(pij) of size Z ×Z, which are collected by the exponent matrix P . Based on the theorems derived in [8], we implemented a fast construction method for high girth QC codes similar to the one in [9]. For any QC code of structure (1) there exists an isomorphic QC LDPC code [10] with an exponent matrix P defined as
+
+P=
+
+01×1 0dv −1×1
+
+01×dc −1 Pdv −1×dc −1
+
+,
+
+(2)
+
+where P is the inner exponent matrix:
+
+P = [p1T , . . . , pdTv−1]T .
+Notice that for the QC code the parity checks of H can be grouped into dv check node layers, as we have highlighted in the corresponding Tanner graph in Fig. 1. Each variable node receives exactly one check node message from every layer.
+LDPC codes are decoded with lowest decoding latency when using a flooding schedule, where in a single iteration all check node updates and successively all variable node updates are performed in parallel. A single full variable node update is shown in Fig. 2a, where the messages N = {yc1→v, . . . , ycdv →v} from all connected check nodes and the channel message ych are used to generate dv output messages tv→c1 , . . . , tv→cdv .
+The basic idea of a layered schedule is to perform dv partial variable node updates instead of one full variable node update per iteration. Fig. 3a illustrates such a partial variable node update where only one new incoming message ycj→v from the check node of layer j and extrinsic messages from memory are
+
+Layer 1
+
+Layer 2 (b)
+
+Layer dv
+
+Layer 1
+
+Fig. 3: Illustration of a single partial variable node update (a) from an unrolled layered decoding graph in (b).
+
+used to compute a message tv→ck for the check node of layer k with slightly improved reliability for the code bit x. The messages loaded from memory are the remaining extrinsic check node messages {yc1→v, . . . , ycdv−2→v} = N \{ycj→v, yck→v} from previous sub-iterations and the channel message ych. For partial updates in later sub-iterations ycj→v must be stored in memory. Since each check node layer faces messages with improved reliabilities, the convergence speed of the layered algorithm is increased. In contrast, under flooding processing, all check nodes receive messages from the variable node updates of the last iteration, as depicted in Fig. 2.
+
+III. LAYERED IB DECODER DESIGNS
+For hardware implementations messages exchanged over the Tanner graph have low resolutions to reduce the space complexity. Restriction to messages of finite alphabet can be exploited to design node operations, which maximize the mutual information in every update step. We use discrete density evolution [1] and the IB method to achieve this [11]. Compared to the flooding decoder design, the layered decoder design additionally involves tracking the distributions of messages in memory. In combination with the IB method, this is done for the first time to the best of our knowledge.
+Subsequently, we assume a binary input AWGN channel with a symmetrical IB quantizer for all IB decoders, as in [11]. The design Eb/N0 determines the initial joint distribution p(x, ych) used for local optimizations of the node operations.
+
+A. Partial Variable Node Design
+As we consider the design of the variable node (shown in Fig. 3a) to be an IB problem, we define the observed variables as y1 := ych, [y2, . . . , ydv−1] := [yc1→v, . . . , ycdv−2→v] and ydv := ycj→v where yl ∈ Yl = {1, . . . , |Yl|} with l ∈ 1, . . . , dv. Any combination of realizations of those observed variables is represented by the event s ∈ S = {1, . . . , l |Yl|}. The compressed variable is t := tv→ck ∈ T = {1, . . . , |T |} and the relevant variable is the underlying code bit x ∈ X = {0, 1} of the particular node. Then,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+From memory
+
+... ...
+
+From memory
+
+y1
+
+t1
+
+y2
+
+...
+
+ydv −1
+ydv (a)
+
+r t
+
+y1 φ1
+
+y2
+
++
+
+φ2
+
+ydv −1
+
+r˜
+
+φdv −1
+
+s˜ t +
+
+ydv φdv (b)
+
+Q
+
+Fig. 4: Illustration of the partial variable node design using two-input lookup tables (a) or a computational domain approach (b).
+
+maxp(t|s) I(X; T ) leads to the optimal mutual information preserving mapping p(t|s). However, the global optimization of this problem is very challenging due to the large cardinality |S|. For example if dv = 4 with 4-bit messages then |S| = 65536. Since this solution is not useful for a hardware implementation, two possible node structures from literature are summarized, which solve those issues.
+1) Concatenated Two-Input Lookup Table Design: One way to mitigate the huge mapping and optimization space is to split the problem into several sub-problems using two-input lookup tables, as it is shown in Fig. 4a. Each individual lookup table can be designed with the IB method. Let y denote the joint event [y1, y2], which is the input of the first lookup table. Accordingly, the joint input distribution required to apply the IB method is given by
+
+p(x, y) = p(y1|x)p(y2|x)p(x),
+
+(3)
+
+where we assumed independent input messages. Then, the first lookup table is designed to maximize the mutual information maxp(t1|y) I(X; T1). Note, that we restrict p(t1|y) to be a deterministic mapping. The optimization is carried out using the dedicated sequential IB algorithm developed in [11], which allows efficient computation of the clustering by optimizing a set of boundary thresholds. This technique requires the event space of Y to be sorted by LLR such that
+
+L(x|y1) ≤ L(x|y2) ≤ . . . ≤ L(x|y|Y1||Y2|),
+
+(4)
+
+where the LLR is defined as log2 p(x = 0|yi)/p(x = 1|yi). The procedure is recursively applied for all remaining two-
+
+input lookup tables. However, the splitting may lead to perfor-
+
+mance degradation since we optimize only the sub-structures. 2) Computational Domain Processing: The non-optimality
+
+of the two-input splitting was proven in [12]. The authors used
+
+a computational domain approach as shown in Fig. 4b, which is able to preserve slightly more mutual information I(X; T ). Returning to the global optimization of the mapping p(t|s), we can compactly compute the reliability about x conveyed with the event s in terms of
+
+dv
+
+s˜ = L(x|s) = L(x) + L(yl|x).
+
+(5)
+
+l=1
+
+In (5) the computational domain becomes apparent: Compared to the two-input lookup table approach, the two-input operations simplify to addition of the translated messages.
+For the design of the quantizer Q we order the elements of the event space S such that they satisfy
+
+L(x|s1) ≤ L(x|s2) ≤ . . . ≤ L(x|s|S|).
+
+(6)
+
+Since s˜ corresponds to those LLRs in the partial variable node
+
+of Fig. 4b, a threshold quantizer Q(s˜) suffices to perform a
+
+mutual information maximizing mapping. The boundaries are
+
+found with the same IB method used to optimize y in section
+
+III-A1.
+
+In practice, instead of using a real valued number to
+
+represent L(yl|x), we scale to integer valued numbers such
+
+that φl(yl) = sign(L(yl|x)) min(
+
+1 ∆
+
+·|L(yl|x)|+
+
+1 2
+
+, 2w −1−1)
+
+where the resolution ∆ is a parameter we find by optimizing
+
+for max∆ I(X; S) given the bit width w . Then, the maximum internal bit width to represent s˜ is log2(dv · (2w − 1))
+bit. For our configurations, w = 8 bits are sufficient to
+
+avoid performance loss. The quantizer Q(s˜) can be realized
+
+by comparing s˜ to a small threshold set in order to identify
+
+the resulting cluster, which is very efficient from a memory
+
+perspective. When s˜ = 0, we randomly assign either to s˜ = +1
+
+or s˜ = −1 uniformly, to maintain symmetry in p(x, t).
+
+In the computational domain, r˜ can be computed with fewer
+
+operations, using an a-posteriori probability (APP) decoder
+
+structure as in [13]. This approach is not straightforward with
+
+the two-input lookup table structure. However, its design offers
+
+compressed intermediate results, which might be reused in
+
+successive partial updates to reduce the number of operations
+
+and message transfers between the nodes.
+
+B. Check Node Designs
+The check node update for the layered schedule is designed similarly to that in a flooding schedule. In [11] the twoinput lookup table structure was used to break down the global optimization problem. In [12] a computational domain approach is provided, which we have slightly modified to enforce symmetrical distributions in discrete density evolution. Moreover, [2] proposed to replace the check node operation with the min-approximation for reduced hardware complexity.
+
+IV. PERFORMANCE EVALUATION
+A. Flooding vs. Layered Schedule
+In this section, we compare the performance of different node configurations listed in table I when using a flooding or a layered schedule. First, the evolution of mutual information I(X; Tv(→ i) c) of the variable node messages tv(i→) c with 4 bits is analyzed. A code ensemble is assumed with dv = 3 and dc = 10. The design Eb/N0 is set to 2.18 dB such that the mutual information converges after i ≈ 10 iterations for the layered schedule. According to Fig. 5a the flooding schedule requires roughly twice the number of iterations, which agrees with the observations in [4]. The performance difference between different node configurations can be best
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I: Node configurations
+
+(a) Check node Lookup table [11] Comp. domain [12] Min-approximation [2]
+
+(b) Variable node
+Lookup table [11] Comp. domain [12] Lookup table [11] Comp. domain [12] Lookup table [11] Comp. domain [12]
+
+Label: (a)-(b)
+LUT-LUT LUT-comp comp-LUT comp-comp min-LUT min-comp
+
+1 layered
+
+10−2 10−3 10−4 10−5 10−6 10−7
+
+layered C2
+
+flooding C1
+
+bit error rate
+
+I(X; Tv(i)→c)
+
+0.9
+0.8
+layer0ed5 ·10−2 0
+
+flooding
+
+IB comp-comp 2.18 dB IB LUT-comp 2.18 dB IB comp-LUT 2.18 dB IB LUT-LUT 2.18 dB IB min-comp 2.18 dB IB min-LUT 2.18 dB
+
+C2 10
+
+15
+
+Iteration i (a)
+
+20
+
+25
+
+−1
+
+10−8
+
+layered C1
+
+BP
+
+10−9
+
+IB comp-comp 1.80/2.17/2.63 dB
+
+IB LUT-comp 1.80/2.16/2.63 dB
+
+10−10
+
+IB comp-LUT 1.81/2.18/2.63 dB IB LUT-LUT 1.81/2.18/2.63 dB
+
+10−11
+
+IB min-comp 1.83/2.20/2.63 dB IB min-LUT 1.85/2.20/2.63 dB
+
+OMSQ ∆,β= 0.2,1/0.14,1/0.14,1
+
+10−12
+
+1.8 2 2.2 2.4 2.6 2.8 3 3.2
+
+Eb/N0 in dB
+
+Fig. 6: Bit error rate results for code C1 and C2. The IB and OMSQ decoders are restricted to 4 bits for all exchanged messages and a maximum of 10 iterations.
+
+∆I(X; Tv(i)→c)
+
+−2
+
+put. For every simulation point at least 50 frame errors
+
+occurred. As a reference we generated results for a belief
+
+−3
+
+propagation (BP) and quantized offset-min-sum (OMSQ) al-
+
+gorithm. For the belief propagation algorithm we used the
+
+−4
+
+recommended implementation of [14]. The OMSQ algorithm
+
+0
+
+2
+
+4
+
+6
+
+8 10 12
+
+is parameterized with quantization step ∆ and offset β such
+
+Iteration i (b)
+
+that best bit error rate performance is achieved [15]. The implementation is carried out as an APP decoder [13].
+
+Fig. 5: In (a) the mutual information measurements of variable First, we analyze the error rate performance for a QC code
+
+node messages are presented. (b) shows the difference in C1 with rate 7/10, N = 7650, dv = 3, dc = 10, Z = 765 and
+
+mutual information w.r.t. the ’comp-comp’ configuration for the layered decoder.
+seen in Fig. 5b, where we show the difference in mutual
+
+girth 10:
+
+layere p1 =[ 656 76 132 184 233 216 490 714 715 ],
+
+(7)
+
+p2 =[ 22 650 359 587 65 463 635 91 100 ].
+
+information with respect to the ’comp-comp’ configuration. As The corresponding bit error rate results are shown in Fig.
+
+expected the ’min-LUT’ setting preserves the lowest amount of 6. The design Eb/N0 was slightly adjusted for the layered
+
+BP mutual information due to the approximation error done in the
+check node and the compression loss, introduced from multiple concatenated two-input lookup tables in the variable node.
+
+schedule compared to the one used in Fig. 5a to achieve best bit error rate performance at Eb/N0 = 3.0 dB. For the flooding schedule we picked the design Eb/N0 ≈ 2.63 dB because it
+
+The combination ’LUT-comp’ performs better, since the check resulted in best performance for a maximum of 10 iterations.
+
+IB comp-comp 1.80/2.17/2.63 node uses the two-input lookup table concatenation, which The relative differences in mutual information from Fig. 5b
+offers higher mutual information preservation than the min- translate to bit error rate performances, if we take a look at approximation. Moreover, the computational domain approach the magnified area. However, in the low error rate region the
+
+in the variable node introduces further mutual information performance becomes primarily determined by effects which
+
+gain, since only a single compression step is performed. The are not captured with discrete density evolution, like trapping
+
+IB LUT-comp 1.80/2.16/2.63 d computational domain approach in the check node leads to and absorbing sets [10] [16]. The caused error floor close
+
+less significant performance gain.
+
+to 10−10 can be significantly lowered by altering the node
+
+For the error rate simulations we use PyOpenCl in com- configurations. The min-approximation in the check nodes
+
+bination with GPUs of type AMD Radeon VII and NVIDIA seems to be more robust and reduces the error floor to 10−12
+
+IB comp-LUT 1.81/2.18/2.63 d GeForce RTX 2060 SUPER. The all-zero code word and a for the layered schedule. However, for the flooding schedule
+counter based random number generator ensure high through- only the combination ’min-LUT’ is superior. Compared to
+
+IB LUT-LUT 1.81/2.18/2.63 d Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+the 4-bit OMSQ decoder, the IB decoders perform better by 0.06 - 0.14 dB at bit error rate 10−6. The IB decoders using the min-approximation are able to exceed the BP algorithm performance at 10−10. Recently, [16] proposed a modified check node rule for an OMSQ decoder which reduces the error floor caused by trapping sets. Their approach might be combined with the IB decoders to gain further improvements.
+In Fig. 6 we also included the results for the code C2 with R = 1/2, N = 7648, dv = 4, dc = 8, Z = 956 and girth 10:
+
+p1 =[ 50 583 661 694 690 846 51 ],
+
+p2 =[ 103 716 442 816 323 761 768 ],
+
+(8)
+
+p3 =[ 831 234 757 169 97 132 872 ].
+
+For lower code rates like C2 the performance degradation introduced by the min-approximation for the IB decoder is slightly larger than for C1 with higher code rate. Density evolution results also confirm larger differences in mutual information for R = 1/2 than R = 7/10. The ’LUT-comp’ and ’comp-comp’ IB-decoder outperforms the BP algorithm at bit error rate 10−8 despite using only 4 bits for the messages.
+
+B. High Rate Codes for Fiber Optical Systems
+According to [17] code rates R > 0.8 are required for future high throughput optical systems with error floors below 10−15. Since code C1 and C2 do not fulfill these strict requirements, we generated two new codes. One option is the code C3 with R = 5/6, N = 13370, dv = 3, dc = 18, Z = 765 and girth 8:
+p1 =[ 344 125 80 704 9 318 359 460 722 350 604 293 548
+639 348 296 553 ], (9)
+p2 =[ 484 655 736 616 503 355 534 102 247 717 178 633 44
+526 24 730 219 ].
+
+A second option is the code C4 with R = 5/6, N = 18360, dv = 4, dc = 24, Z = 765 and girth 8:
+
+p1 =[ 120 122 482 561 671 17 339 376 71 426 246 222 249 606 583 161 203 54 245 406 495 206 126 ],
+
+p2 =[ 341 271 308 8 46 764 473 480 18 658 154 547 201 57 60 453 552 182 407 615 735 700 720 ],
+
+(10)
+
+p3 =[ 40 704 109 65 405 381 370 49 202 351 447 355 318 235 118 307 176 319 247 78 284 550 529 ].
+
+Fig. 7 presents the bit error rate results for codes C3 and C4. Code C3 reveals an error floor above 10−10. The OMSQ
+decoder has a slightly higher error floor than the 4-bit IB
+decoder. For the code C4 we can show that there is no error floor down to at least 10−12. Indeed [17] demonstrated that a similar code does not have any error floor until 10−15 using
+multiple FPGAs.
+
+C. 3 Bit Coarse Quantization
+Another very hardware-friendly solution would be to use only 3 instead of 4 bits for the messages. Therefore we evaluated the results for all codes with the ’min-comp’ IB
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+bit error rate
+
+10−6
+
+10−7
+
+10−8
+
+10−9
+10−10
+10−11
+10−12 3
+
+C3 BP C3 OMSQ 4 bit ∆=0.12 β=1 C3 IB min-comp 3 bit 3.22 dB C3 IB min-comp 4 bit 3.10 dB C4 BP C4 OMSQ 4 bit ∆=0.11 β=1 C4 IB min-comp 3 bit 3.26 dB C4 IB min-comp 4 bit 3.16 dB
+3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9
+Eb/N0 in dB
+
+Fig. 7: Performance of high rate codes C3 and C4 suitable for fiber optical systems using a maximum of 8 iterations.
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+bit error rate
+
+10−6
+
+10−7
+
+10−8
+
+10−9 10−10 10−11 10−12
+
+C1 BP C1 OMSQ 4 bit ∆=0.14 β=1 C1 IB min-comp 3 bit 2.4 dB C1 IB min-comp 4 bit 2.2 dB C2 BP C2 OMSQ 4 bit ∆=0.2 β=1 C2 IB min-comp 3 bit 1.96 dB C2 IB min-comp 4 bit 1.83 dB
+2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3 3.1 3.2
+Eb/N0 in dB
+
+Fig. 8: Bit error rate results for code C1 and C2 using messages with 3 and 4 bit and a maximum of 10 iterations.
+
+decoder. As can be seen in Fig. 7 and 8, the 3-bit IB-decoder performs only 0.02 − 0.05 dB worse than the 4-bit OMSQ variant, with slightly increased error floor for C1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+V. COMPLEXITY CONSIDERATIONS
+Beside the error rate performance, one very decisive characteristic is the required complexity of each individual solution. The layered schedule reduced the number of required iterations for similar performance approximately by half, compared to the flooding schedule. In contrast, the layered schedule requires additional memory elements to restore previous intermediate results. This amount of additional memory depends on the particular implementation details.
+Accurate estimates concerning the hardware complexity of the flooding and layered IB decoders are part of future research. Especially characteristics like area and energy efficiency of an ASIC or FPGA decoder design are of interest.
+However, we can make some initial considerations when being restricted to w-bit messages for the individual node designs. The first approach for the variable node involves dv − 1 two-input lookup tables as shown in Fig. 4a. Exploiting symmetry, each lookup table requires at maximum w · 2w+(w−1) bits, which are 96 bits if w = 3 and 512 bits if w = 4. In the computational domain approach we consider the structure of Fig. 4b. In each partial variable node update there must be dv messages translated which requires 2(w−1)(w −1) bits per translation table, assuming a symmetrical distribution of messages and w as the internal bit width. We have dv − 1 sum-operations where the largest adder must support up to log2(dv·(2w −1)) bits at the output. Finally, the symmetrical quantizer can be realized by using 2(w−1) thresholds with (w − 1) bits and a comparator like it is shown in [12].
+At the check node we investigated three structures. All approaches share the same hardware required for computing the sign bit. In the two-input lookup table approach we can exploit the symmetries in each two-input lookup table. Then, an upper bound for the complexity in terms of required memory is (w − 1) · 22(w−1) bits, which are 32 bits if w = 3 or 192 bits if w = 4. However, further logic optimization of the lookup tables can reduce these numbers. The lookup table approach with its two-input operation might be arranged such that 3(dc − 2) two-input operations take place. The minapproximation requires only to compute the first and second smallest input magnitude by performing dc + log2(dc) − 2 compare-operations [15]. The OMSQ check node update comprises additionally two comparison and subtraction steps for the offset operation. The computational domain approach in the check node can be implemented using dc translations, dc − 1 additions, dc subtractions and dc quantization steps.
+VI. CONCLUSION
+In this paper, the information bottleneck method has been applied to design the node operations of a layered LDPC decoder. We analyzed the mutual information and error rate performance of multiple node configurations. Above the error floor region all 4-bit IB decoders are able to exceed the performance of conventional 4-bit OMSQ decoding by 0.06 − 0.14 dB. Our results showed that the mutual information tracked during density evolution is a valid performance
+
+indicator for moderate error rate regions. However, when
+getting closer to the error floor region of the code, the
+preserved mutual information is not the dominant performance
+factor since the density evolution model does not take into
+account code properties like trapping sets. Interestingly, the
+min-approximation in the check node was frequently able to
+lower the error floor by 1 to 2 orders of magnitude. The
+3-bit IB-decoder might be a good candidate for future high
+decoding throughput systems with reduced space complexity
+and performance close to conventional 4-bit decoding.
+REFERENCES
+[1] B. M. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise Thresholds for Discrete LDPC Decoding Mappings,” in IEEE GLOBECOM 2008 - 2008 IEEE Global Telecommunications Conference. New Orleans, LA, USA: IEEE, 2008, pp. 1–5.
+[2] M. Meidlinger, A. Balatsoukas-Stimming, A. Burg, and G. Matz, “Quantized message passing for LDPC codes,” in 2015 49th Asilomar Conf. on Signals, Systems and Computers, Nov. 2015, pp. 1606–1610.
+[3] J. Lewandowsky and G. Bauch, “Trellis based node operations for LDPC decoders from the Information Bottleneck method,” in 2015 9th International Conference on Signal Processing and Communication Systems (ICSPCS). Cairns, Australia: IEEE, Dec. 2015, pp. 1–10.
+[4] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of ldpc codes,” in IEEE Workshop onSignal Processing Systems, 2004. SIPS 2004., 2004, pp. 107–112.
+[5] O. Boncalo, V. Savin, and A. Amaricai, “Unrolled layered architectures for non-surjective finite alphabet iterative decoders,” in 2017 IEEE Nordic Circuits and Systems Conference (NORCAS): NORCHIP and International Symposium of System-on-Chip (SoC), Oct. 2017, pp. 1–5.
+[6] T. T. Nguyen-Ly, K. Le, V. Savin, D. Declercq, F. Ghaffari, and O. Boncalo, “Non-surjective finite alphabet iterative decoders,” in 2016 IEEE International Conference on Communications (ICC). Kuala Lumpur, Malaysia: IEEE, May 2016, pp. 1–6.
+[7] F. R. Kschischang, B. J. Frey, and H. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[8] M. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[9] F. C. M. Lau and W. M. Tam, “A fast searching method for the construction of qc-ldpc codes with large girth,” in 2012 IEEE Symposium on Computers and Communications (ISCC), 2012, pp. 000 125–000 128.
+[10] B. Karimi and A. H. Banihashemi, “Construction of QC LDPC Codes With Low Error Floor by Efficient Systematic Search and Elimination of Trapping Sets,” IEEE Transactions on Communications, vol. 68, no. 2, pp. 697–712, Feb. 2020.
+[11] J. Lewandowsky and G. Bauch, “Information-Optimum LDPC Decoders Based on the Information Bottleneck Method,” IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[12] X. He, K. Cai, and Z. Mei, “On Mutual Information-Maximizing Quantized Belief Propagation Decoding of LDPC Codes,” in 2019 IEEE Global Communications Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[13] J. Yuan and J. Sha, “4.7-Gb/s LDPC Decoder on GPU,” IEEE Communications Letters, vol. 22, no. 3, pp. 478–481, Mar. 2018.
+[14] B. K. Butler and P. H. Siegel, “Numerical issues affecting LDPC error floors,” in 2012 IEEE Global Communications Conference (GLOBECOM), Dec. 2012, pp. 3201–3207.
+[15] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[16] H. Hatami, D. G. M. Mitchell, D. J. Costello, and T. E. Fuja, “A Threshold-Based Min-Sum Algorithm to Lower the Error Floors of Quantized LDPC Decoders,” IEEE Transactions on Communications, vol. 68, no. 4, pp. 2005–2015, Apr. 2020.
+[17] D. Chang, F. Yu, Z. Xiao, Y. Li, N. Stojanovic, C. Xie, X. Shi, X. Xu, and Q. Xiong, “FPGA verification of a single QC-LDPC code for 100 Gb/s optical systems without error floor down to BER of 10-15,” in 2011 Optical Fiber Communication Conference and Exposition and the National Fiber Optic Engineers Conference, Mar. 2011, pp. 1–3.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:13:51 UTC from IEEE Xplore. Restrictions apply.
+
+

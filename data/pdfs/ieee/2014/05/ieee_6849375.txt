@@ -1,0 +1,1107 @@
+Advanced Error Prediction LDPC for High-Speed
+Reliable TLC NAND-based SSDs
+Tsukasa Tokutomi1, Shuhei Tanakamaru1,2, Tomoko Ogura Iwasaki1 and Ken Takeuchi1
+1Chuo University, Tokyo, Japan, 2University of Tokyo, Tokyo, Japan tokutomi@takeuchi-lab.org
+
+Abstract—Highly reliable solid-state drives (SSDs) with triplelevel-cell (TLC) NAND flash and Advanced Error-Prediction Low-Density Parity-Check (AEP-LDPC) are proposed. To increase NAND flash’s capacity, bits/cell have been doubled and tripled, which causes reliability to drastically degrade due to narrower VTH margins. Previously proposed Error-Prediction LDPC (EP-LDPC) error-correcting code (ECC) improved reliability for Multi-Level-Cell (MLC) NAND flash [4]. However, in EP-LDPC program disturb is not modeled, so precision is limited, especially in short data retention < 2 days. Here, AEPLDPC is proposed for TLC NAND flash. By considering effects of program disturb, data retention and floating-gate capacitive coupling, the most accurate SSDs can be realized, with high speed read capability. The SSD’s data-retention time increases by more than 12×, decode iterations decrease 57%, and acceptable TLC NAND BER increases by more than 2.8 ×.
+Index Terms—Error correcting code (ECC), low density parity check code (LDPC), triple level cell (TLC) NAND flash, memory controller, reliability, solid state drive (SSD)
+I. INTRODUCTION
+Solid-state drives (SSDs) are fast and durable, but constantly face market pressure to reduce cost. In a typical SSD, several NAND flash chips are managed by a memory controller, which applies software techniques (i.e. wear-leveling, garbage collection) to compensate for technology limitations of NAND flash (i.e. limited write/erase cycles, block erase). ErrorCorrecting Code (ECC) is another major function of the controller. By adding parity bits to the data, ECC algorithms can correct bit errors that occur in the NAND flash. Conventionally, Bose-Chaudhuri-Hocquenghem (BCH) ECC has been used with Multi-Level Cell (MLC) NAND because MLC’s raw Bit Error Rates (BERs) have been acceptably low. However, beyond 20nm, reliability degrades significantly due to stronger neighbor cell coupling/disturb and other interactions [1]. Moreover, the introduction of Triple-Level Cell (TLC) flash [2] substantially reduces cost, but drastically decreases reliability. Therefore, to handle low-cost NAND with high BERs, Low Density Parity Check (LDPC) is considered the most appropriate for next generation ECC [3].
+In LDPC, data is iteratively decoded based on additional soft information, also called, log-likelihood rate of error (LLR). In conventional LDPC, shown in Fig. 1(a), this soft information is obtained by extra reads with intermediate references, which provides ideal error correction, but unacceptably long read times. A faster method, ErrorPrediction LDPC (EP-LDPC) was developed for MLC NAND [4] in Fig. 1b. Instead of multiple reads, soft information is stored in error prediction (EP) tables, which are derived from actual measured error rates during various cycling and data
+
+retention conditions. By describing the log-likelihood of error for each VTH state, acceptable BER and chip lifetime is increased. This paper first describes that, although conventional EP-LDPC is effective for MLC NAND, it is not as effective for TLC NAND. Because VTH differences of programmed states are smaller in TLC NAND compared to MLC NAND, TLC NAND has higher error rates and is more sensitive to program disturb errors. Therefore, this paper proposes Advanced ErrorPrediction LDPC (AEP-LDPC) in Fig. 1c, to correct errors caused by program disturb, data retention, as well as floatinggate capacitive coupling. The advantage of AEP-LDPC is, by precisely describing error phenomena, errors correction is more accurate and efficient, with less speed, power or cost overhead.
+Table I compares conventional soft-decoding LDPC, LDPC-with-BER-only, EP-LDPC, and the proposed AEPLDPC. In TLC, 3 pages are stored in 1 physical page and there are 8 possible VTH states per cell. Page to VTH states mapping is given in Fig. 2 [5]. In Fig. 1a’s conventional LDPC, soft information from 49 Vref’s, requires 49 reads [6]. In contrast, the other three LDPC methods use only 7 reads, and likelihood of error is estimated for each VTH level based on measured error rates, depending on write/erase cycles and retention time. Furthermore, in EP-LDPC and AEP-LDPC, inter-cell coupling effects are included in cell error rates (CERs) to improve error correction precision. A major improvement of the proposed AEP-LDPC over EP-LDPC is that program disturb effects are also modeled. Generally, VTH with data retention over time, whereas in program disturb, VTH increases during program. When both program disturb and data retention are modeled, performance and short-term (<2 days) reliability is improved.
+II. ADVANCED ERROR-PREDICTION (AEP)-LDPC SCHEME
+The proposed AEP-LDPC architecture is shown in Fig. 3. During program, data from the host is encoded by the LDPC encoder. Also, cells associated with the 2nd page, the lowest 3 states NcellA_initial, and the highest state N cellB_initial, are counted and these numbers are added to the user data. It is expected that these counts will change with cycling, retention and disturb.
+Next, read is described (inside dashed line of Fig. 3), and 3 new units are proposed. In AEP-LDPC, first, retention time is estimated in Unit 1. Unit 2 handles short retention cases. Unit 3 calculates CER parameters for the LDPC decoder, by accessing appropriate EP tables based on short/long retention, endurance cycles, and cell coupling. These CER parameter to the LDPC algorithm provide information about which bits are “most likely” to be errors. In LDPC read, decode is iterative, which means that data variations may be tried several times (Decodeiter) before the original data is successfully recovered.
+
+978-1-4799-3596-3/14/$31.00 ©2014 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:33:43 UTC from IEEE Xplore. Restrictions apply.
+
+A key technique of this work is the calculation of CER parameters to the LDPC decoder (Unit 3). In Fig 4, the proposed AEP-LDPC is compared to the conventional EPLDPC. In both methods, the total error rate is divided into individual cell error rates, CERs, and VTH is assumed to shift by only 1 state. However, EP-LDPC assumes that VTH can shift only downwards due to data retention. In reality, immediately after program, the effect of program disturb is stronger than data retention, and VTH is shifted upwards. Therefore, for better accuracy, AEP-LDPC separates data retention into 2 regions, long (when data retention is dominant) and short (which includes both data retention and program disturb possibilities).
+In order to estimate the data’s retention time TRetention, BER2nd_page is calculated by re-counting the 2nd page cells and comparing to the initial counts. In Fig. 5a, retention of BER2nd_page is shown, and short/long term effects can be observed, when the BER2nd_page is below/above the Day0 value, respectively. Therefore, in Fig. 5b, if BER2nd_page > BER2nd_page_Day0, the data is considered to be in long term retention and subsequent calculations follow the conventional EP-LDPC method. If BER2nd_page < BER2nd_page_Day0, the short term retention calculation method is used (Unit 2).
+More details about BER2nd_page calculation formula and program disturb and retention effects are given in Fig. 6. Since the 2nd-page is set by 2 references, BER2nd_page is calculated by summing the shifted cells in both NcellA and NcellB. Immediately after program, program disturb’s tendency to increase VTH is dominant, and retention effect is negligible. Over time, with data retention, VTH shifts towards lower VTH states, so Ncell_A will increase and Ncell_B will decrease. But during short term retention, when program disturb and retention push VTH in opposing directions, the BER2nd_page calculation formula will underestimate actual errors.
+After calculating BER2nd_page, BERTotal, can be estimated, as shown in Fig. 7. In short retention, BERTotal uses the Day0 value. Otherwise, BERs of the other 2 pages are estimated from retention measurements. Fig. 8 shows the relationships of BER3rd_page/BER2nd_page (α) and BER3rd_page / BER2nd_page (β). In Fig. 9, it can be seen that using BERTotal_Day0 as the minimum error rate during short term retention (instead of calculated BERTotal) more closely matches the measured BER.
+After BERTotal is estimated, CERs, to include inter-cell coupling, are estimated from EP-tables, which stores cell error ratios for different neighbor cell VTH’s, as illustrated in Fig. 10. These adjustments improves accuracy (compared to LDPCwith-BER-only), because coupling of high neighbor VTH’s can increase the target-cell VTH, which reduces data retention error.
+III. MEASUREMENT RESULTS AND DISCUSSION
+Fig. 11 shows measured error correction results of conventional BCH ECC, conventional EP-LDPC, and the proposed AEP-LDPC for a code rate of 2/3. Several write/erase NW/E cycles are measured, between 0k to 6k. In Figs. 11b and 11c, Decodeiter shows the iterations needed for successful decode. Clearly, EP-LDPC is more reliable than BCH, but as the cycles increase to 4-6k, errors become uncorrectable. For 6k cycles, AEP-LDPC corrects short retention error more
+
+effectively, due more accurate modeling of VTH shifting up as well as down.
+Fig. 12a shows the measured dependence of Decodeiter iterations on data-retention time after 0.5k cycles. Since the number of errors is relatively low in the low cycles and short retention time condition, both EP- and AEP- LDPC decoding methods correct errors within a similar number of iterations. In Fig. 12b, when cycling is increased to 4k, more errors occur during short term retention and the advantage of AEP-LDPC over EP-LDPC is clearer. Maximum decode iterations can be reduced 57%. In long retention times, AEP-LDPC also corrects errors with fewer decode iterations.
+Fig. 13a shows AEP-LDPC’s measured improvement of the acceptable data-retention time (the longest time for which ECC decoding is successful) is extended as much as 12× and 3.4×, compared with conv. BCH and LDPC-with-BER-only, respectively. Fig. 13b shows the corresponding acceptable BER, defined as the highest BER with successful ECC decoding. Here, acceptable BER is increased by 2.8× and 1.8× compared with conv. BCH and LDPC-with-BER-only, respectively.
+Finally, Fig. 14 shows acceptable BER vs. decode iterations. For less than 8 iterations, AEP-LDPC’s decoding capability is lower than that of BCH, but for more than 8 iterations, AEPLDPC is better than BCH. To evaluate the overhead from iterative decoding, AEP-LDPC decoding time is calculated to be about 8-32μs, assuming a decoding throughput of 10Gbps [7]. Considering TLC-NAND’s access time of 100µs [8] and conventional LDPC’s 49x read requirement (4.9ms), AEPLDPC’s decoding overhead is very reasonable.
+IV. CONCLUSION
+The key features of AEP-LDPC ECC for TLC NAND in SSDs are summarized in Table II. Compared to conv. BCH and LDPC-with-BER-only, data-retention time is extended by 12× and 3.4×, respectively. Similarly, acceptable BER is increased by 2.8×and 1.8×. Furthermore, compared to EP-LDPC, short retention error correction is provided, and maximum decode iterations is reduced 57%. Thus, a highly reliable SSD can be realized with low-cost TLC NAND flash memory.
+ACKNOWLEDGMENT
+This work is supported by CREST/JST.
+REFERENCES
+[1] J-D. Lee et al., “Effects of Floating-Gate Interference on NAND Flash Memory Cell Operation,” EDL, p. 264, May 2002.
+[2] S. Hachiya, et al., “TLC/MLC NAND Flash Mix-and-Match Design with Exchangeable Storage Array,” SSDM, p. 894, 2012.
+[3] K. Zhao, et al., “LDPC-in-SSD: Making Advanced Error Correction Codes,” FAST, p. 243, February 2013
+[4] S. Tanakamaru, et al., “Error-Prediction LDPC and ErrorRecovery Schemes for Highly Reliable Solid-State Drives (SSDs),” JSSC, p. 2920, October 2013.
+[5] I.J. Chang, IEICE ELEX, 9, 23, p. 1775, 2012. [6] C, Kim, et al., “A 21nm High Performance 64Gb MLC NAND
+Flash memory with 400MB/s Asynchronous Toggle DDR Interface,” JSSC, pp. 981–989, April 2012. [7] C. Chen, et al., “A 11.5-Gbps LDPC Decoder Based on CP-PEG Code Construction,” ESSCIRC, p. 412, September. 2009. [8] T. Vali, et al., “NAND a Floating Gate,” presented in 1st Micro and Nano Electronics Workshop, October 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:33:43 UTC from IEEE Xplore. Restrictions apply.
+
+Soft-decoding LDPC [6]
+
+Vref1
+
+Vref49
+
+EP-LDPC [4]
+
+Vref1
+
+Vref7
+
+AEP-LDPC
+
+Vref1
+
+Vref7
+
+VTH
+
+VTH
+
+VTH
+
+More sequential reads (x7) (a)
+
+Less sequential reads (x1) Less accurate error correction in short retention time.
+(b)
+
+Less sequential reads (x1) Accurate error correction in short and long retention times.
+(c)
+
+Fig. 1. Comparison of Error Correcting Code (ECC) Low Density Parity Check (LDPC) schemes in Triple Level Cell (TLC) NAND flash memory.
+
+TABLE I Comparison of 4 LDPC schemes
+
+Soft-decoding LDPC
+
+LDPC with BER only
+
+EP-LDPC
+
+AEP-LDPC
+
+VTH information
+
+x49
+
+x7
+
+x7
+
+x7
+
+Write/erase
+
+cycles
+
+
+
+
+
+
+
+
+
+Retention-
+
+
+
+time
+
+Inter-cell
+
+coupling
+
+
+
+
+
+
+
+
+
+-
+
+
+
+
+
+NcellA
+
+Vref_2nd_1
+
+Vref_2nd_2 NcellB
+
+D.R. error
+
+
+
+P.D. error
+
+
+
+-
+
+
+
+
+
+-
+
+-
+
+
+
+3rd_Page 1
+
+2nd_Page 1
+
+1st_page
+
+0
+
+1
+
+0
+
+0
+
+1
+
+1
+
+0
+
+0
+
+1 1
+
+1
+
+0
+
+0
+
+1
+
+1
+
+1
+
+0 0
+
+0 0
+
+1 0 VTH
+
+Host
+
+LDPC encoder
+
+Program
+Number of cells Counter
+
+TLC NAND flash memory
+
+NcellA : Number of cells in lowest 3 states NcellB : Number of cells in the highest state
+
+Yes
+
+No
+
+Parity check is
+
+Fig. 2. Conceptual TLC mapping between 3 Pages and 8 VTH levels [5].
+
+successful?
+
+Reading
+
+Proposed unit 1
+Retention-time estimation unit
+
+Number of 2nd_page cells = NcellA + NcellB
+
+Data Retention
+
+EP-LDPC
+
+(D.R.) error
+
+Data Retention AEP-LDPC (D.R.) error
+
+DecodeIter ++ LDPC
+decoder
+
+Proposed unit 3
+CER calculation
+
+Long retention time
+
+CER estimation
+unit
+
+Total BER estimation
+unit
+
+Proposed unit 2
+
+VTH
+
+VTH
+
+Unit 3
+
+Program Disturb (P.D.) error
+
+Error mode VTH shift possibility
+Decoding input
+
+EP-LDPC
+D.R. error Down by
+1state CER(*)
+
+AEP-LDPC
+
+D.R. error Down by
+1state
+CER(*)
+
+P.D. and D.R. error Up or down by 1state
+CER(*)
+
+Short retention
+
+time unit
+
+Short retention time
+
+Fig. 3. Proposed Advanced Error Prediction (AEP-) LDPC architecture
+
+10 2Xnm @RT
+
+NW/E: 6k cycles
+
+Measured BER2nd_page_Day0
+
+Unit 1
+
+BER2nd_page calculation
+
+Long retention time
+
+1
+
+CER
+
+Yes Total BER
+
+BER2nd_page >
+
+estimation
+
+estimation
+
+BER2nd_page_Day0?
+
+BER2nd_page (a.u.)
+
+(*) Cell Error Rate: includes inter-cell coupling effects.
+
+Long retention Short retention time time
+
+Fig. 4. (Unit 3) LDPC decoder parameter calculation method
+
+of conv. EP-LDPC vs. proposed AEP-LDPC. In AEP-LDPC,
+
+Measured BER2nd_page
+
+10-1
+
+Calculated BER2nd_page
+
+0.01 0.1
+
+1
+
+10 100
+
+Data-retention time, TRetention (Day)
+
+Short retention time No
+Total BERT0 from BERT0 table (Day0)
+is used
+
+parameters are calculated depending on short/long retention
+
+(a)
+
+(b)
+
+time. Short term retention time includes both program disturb and retention effects
+
+Fig. 5. (Unit 1) (a) Measured and calculated BER2nd_page vs. retention time, (b) To decide Short/Long retention, BER2nd_page is calculated and compared
+
+Program data
+
+Vref_2nd_1 NcellA_initial
+
+Vref_2nd_2
+
+to BER2nd_page_Day0
+NcellB_initial
+
+Just after program Tretention = 0
+
+Vref
+
+Just after program NcellA_initial > NcellA_measured
+(“1” “0” error) NcellB_initial < NcellB_measured
+(“0” “1” error)
+Short retention time
+NcellA_initial = NcellA_measured NcellB_initial = NcellB_measured
+Long retention time
+NcellA_initial < NcellA_measured (“0” “1” error)
+NcellB_initial > NcellB_measured (“1” “0” error)
+
+Vref_2nd_1 NcellA _measured
+
+VTH Vref_2nd_2 NcellB_measured
+
+D.R. error << P.D. error Vref_2nd_1
+NcellA_measured
+
+VTH D.R. error << P.D. error
+Vref_2nd_2 NcellB_measured
+
+D.R. error = P.D. error V NcellA_measured ref_2nd_1
+
+VTH D.R. error = P.D. error
+Vref_2nd_2 NcellB_measured
+
+VTH D.R. error >> P.D. error D.R. error >> P.D. error
+
+BER2nd_page  BER2nd_page_Day0
+
+Total BER can be estimated D.R. error << P.D. error
+
+Short retention time 0 < Tretention < 2 days BER2nd_page < BER2nd_page_Day0
+Total BERT0 from BERT0 table (Day0) is used
+
+Vref D.R. error = P.D. error
+
+Long retention time Tretention > 2 days
+BER2nd_page > BER2nd_page_Day0
+
+Vref
+
+VTH VTH
+
+BER2nd_page = {|NcellA_initial – NcellA_measured | + | NcellB_initial – NcellB_measured |} / NP
+NP : Number of cells in the 2nd-page
+Fig. 6. BER2nd_page calculation formula and program disturb and retention effects. In short term, the program disturb effect masks retention errors and
+
+Total BER can be estimated D.R. error >> P.D. error
+
+VTH
+
+Fig. 7. In long term retention, total bit error rate, BERTotal is derived from BER2nd_page. In short retention times, a minimum
+
+BER2nd_page formula underestimates actual error. In long term, retention
+
+value, BERTotal_Day0 is used.
+
+effect is dominant, formula is effective.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:33:43 UTC from IEEE Xplore. Restrictions apply.
+
+BER1st_page/ BER2nd_page α
+
+2 2Xnm
+1.5
+
+1
+
+BER1st_page= αBER2nd_page
+
+0.5
+
+NW/E : 0k
+
+NW/E : 2k
+
+NW/E : 0.1k
+
+NW/E : 4k
+
+0
+
+NW/E : 0.5k
+
+NW/E : 6k
+
+0.1
+
+1
+
+10
+
+100
+
+Data-retention time, Tretention (Day)
+
+BER3rd_page/ BER1st_page β
+Target cell error ratio
+
+2 2Xnm
+BER3rd_page= βBER2nd_page 1.5
+
+1
+6
+
+0.5
+
+NW/E : 0k
+
+NW/E : 2k
+
+NW/E : 0.1k
+
+NW/E : 4k
+
+0
+
+NW/E : 0.5k
+
+NW/E : 6k
+
+0.1
+
+1
+
+10
+
+100
+
+Data-retention time, Tretention (Day)
+
+2 Left Right
+1.5
+Target x1.086
+1
+
+NW/E: 2k cycles, day 24, Target cell data: “110”
+CER  BERTotal x (adjustment for inter-cell coupling) = BERTotal x (1.086 x 1.187 x 0.991 x 1.006)
+
+x1.187
+
+x0.991
+
+Upper 2Xnm @RT Target Lower
+x1.006
+
+0.5
+
+0 110 111 010 001 101 100 000 010 110 111 010 001 101 100 000 010 110 111 010 001 101 100 000 010 110 111 010 001 101 100 000 010
+
+BERTotal_est= (α+β+1)BER2nd_page / 3
+Fig. 8. Measurements of BERs after 0-6k write/erase
+
+cycling. Relationship of BER2nd_page to BER1st_page and BER3rd_page is fitted by α and β and then BERTotal is calculated.
+
+Unit 2 Short retention time
+
+Long retention time
+
+10 2Xnm @RT
+Measured BERTotal Conv. EP-LDPC BERTotal Proposed BERTotal
+
+NW/E: 6k cycles
+
+1
+
+10-1 0.01
+
+Total BERT0 from BERT0 Estimated BER
+
+table (Day0) is used
+
+is used
+
+0.1
+
+1
+
+10
+
+100
+
+Data-retention time, TRetention (Day)
+
+Fig. 9. Comparison of measured BERTotal vs. estimated BERTotal in conventional EP-LDPC and AEP-LDPC methods.
+
+Left cell data
+
+Right cell data
+
+Upper cell data
+
+Lower cell data
+
+Fig. 10. Error Prediction (EP) Table for NW/E = 2K and TRetention = 24 days. Cell Error
+
+Rates (CERs) model inter-cell VTH coupling effects.
+
+(a) Conventional
+
+(b) Conventional
+
+(C) Proposed
+
+BCH ECC
+
+EP-LDPC ECC
+
+AEP-LDPC ECC
+
+Long retention Short retention
+
+N W/E 0 0.1k 0.5k 2k 4k 6k Day
+
+0.125 Pass Pass Pass Pass Pass Fail
+
+0.25
+
+Pass Pass Pass Pass Pass Fail
+
+1
+
+Pass Pass Pass Pass Pass Fail
+
+1.125 Pass Pass Pass Pass Pass Fail
+
+1.25
+
+Pass Pass Pass Pass Pass Fail
+
+2
+
+Pass Pass Pass Pass Pass Fail
+
+2.25
+
+Pass Pass Pass Pass Fail Fail
+
+3
+
+Pass Pass Pass Pass Fail Fail
+
+4
+
+Pass Pass Pass Pass Fail Fail
+
+6
+
+Pass Pass Pass Pass Fail Fail
+
+7
+
+Pass Pass Pass Pass Fail Fail
+
+13
+
+Pass Pass Pass Pass Fail Fail
+
+17
+
+Pass Pass Pass Pass Fail Fail
+
+24
+
+Pass Pass Pass Fail Fail Fail
+
+30
+
+Pass Pass Pass Pass Fail Fail
+
+34
+
+Pass Pass Pass Fail Fail Fail
+
+38
+
+Pass Pass Pass Fail Fail Fail
+
+41
+
+Pass Pass Pass Fail Fail Fail
+
+45.17 Pass Pass Pass Fail Fail Fail
+
+53
+
+Pass Pass Pass Fail Fail Fail
+
+57.04 Pass Pass Pass Fail Fail Fail
+
+60.04 Pass Pass Pass Fail Fail Fail
+
+62.96 Pass Pass Pass Fail Fail Fail
+
+N W/E 0 0.1k 0.5k 2k 4k 6k Day
+
+0.125
+
+2 2 2 6 13 Fail
+
+0.25
+
+2 2 3 8 14 Fail
+
+1
+
+2 2 3 5 10 Fail
+
+1.125
+
+2 2 3 5 10 Fail
+
+1.25
+
+2 2 3 5 11 26
+
+2
+
+2 2 3 6 9 25
+
+2.25
+
+2 2 3 5 9 Fail
+
+3
+
+2 2 3 6 11 27
+
+4
+
+2 2 3 6 11 Fail
+
+6
+
+2 2 3 6 10 Fail
+
+7
+
+2 2 3 6 11 Fail
+
+13
+
+2 2 3 7 14 Fail
+
+17
+
+2 2 3 7 16 Fail
+
+24
+
+2 2 3 8 19 Fail
+
+30
+
+2 2 3 7 Fail Fail
+
+34
+
+2 2 3 8 20 Fail
+
+38
+
+2 2 4 8 Fail Fail
+
+41
+
+2 2 4 8 30 Fail
+
+45.17
+
+2 2 3 8 Fail Fail
+
+53
+
+2 2 3 9 Fail Fail
+
+57.04
+
+2 2 4 9 Fail Fail
+
+60.04
+
+2 2 4 8 Fail Fail
+
+62.96
+
+2 2 4 11 Fail Fail
+
+N W/E 0 0.1k 0.5k 2k 4k 6k Day
+
+0.125
+
+2 2 2 4 7 10
+
+0.25
+
+2 2 2 4 6 11
+
+1
+
+2 2 2 4 7 11
+
+1.125
+
+2 2 3 4 8 Fail
+
+1.25
+
+2 2 3 4 7 11
+
+2
+
+2 2 3 5 7 12
+
+2.25
+
+2 2 3 5 8 13
+
+3
+
+2 2 3 5 10 17
+
+4
+
+2 2 3 5 10 19
+
+6
+
+2 2 3 5 10 Fail
+
+7
+
+2 2 3 5 10 Fail
+
+13
+
+2 2 3 7 14 Fail
+
+17
+
+2 2 3 7 16 Fail
+
+24
+
+2 2 3 8 19 Fail
+
+30
+
+2 2 3 7 Fail Fail
+
+34
+
+2 2 3 8 20 Fail
+
+38
+
+2 2 4 8 Fail Fail
+
+41
+
+2 2 4 8 30 Fail
+
+45.17
+
+2 2 3 8 Fail Fail
+
+53
+
+2 2 3 9 Fail Fail
+
+57.04
+
+2 2 4 9 Fail Fail
+
+60.04
+
+2 2 4 8 Fail Fail
+
+62.96
+
+2 2 4 11 Fail Fail
+
+Fig. 11. Measured error correction results for BCH, EP-LDPC and AEP-LDPC, with
+
+2/3 code rate. Green/red = successful/unsuccessful error correction. In LDPC, Decodeiter in the green areas is the number of iterations to successful decode the read data, AEP-
+
+LDPC models VTH shift up and down possibilities, which requires less decode iterations and provides better error correction in short term retention (< 2 days).
+
+BERTotal (a.u.)
+
+Decode iterations
+
+30 Code rate: 9/10
+25 NW/E : 0.5k cycles
+20
+
+48 2Xnm @RT 40
+
+-52%
+
+32
+
+15
+
+24
+
+10
+5
+0 0
+
+16
+
+LDPC with BER only
+
+EP-LDPC
+
+8
+
+AEP-LDPC 0
+
+20
+
+40
+
+60
+
+80
+
+Data-retention time, Tretention (Day)
+
+(a)
+
+Decode iterations
+
+Decoding time (μs) Decoding time (μs)
+
+20 Code rate: 2/3 NW/E : 4k cycles
+15
+
+32 2Xnm @RT
+24
+
+10
+
+-57%
+
+16
+
+5
+
+LDPC with BER only 8
+
+EP-LDPC
+
+0 0.1
+
+AEP-LDPC
+
+0
+
+1
+
+10
+
+100
+
+Data-retention time, Tretention (Day)
+
+(b)
+
+Acceptable data-retention time (Day)
+
+100 Code rate: 2/3
+x3.4 10
+
+2Xnm @RT
+x12
+
+1
+0.1 1000
+
+Conventional BCH LDPC with BER only AEP-LDPC
+
+3000
+
+5000
+
+W/E cycles, NW/E (a)
+
+7000
+
+Acceptable BER
+
+0.05 Code rate: 2/3
+0.04
+
+0.03
+
+x1.8
+
+0.02
+
+2Xnm @RT
+x2.8
+
+0.01
+0 1000
+
+Conventional BCH LDPC with BER only AEP-LDPC
+
+3000
+
+5000
+
+W/E cycles, NW/E (b)
+
+7000
+
+Fig. 12. Comparison of measured Decodeiter vs. data retention time at
+
+Fig. 13. Comparison of measured reliability improvements (a)
+
+different conditions (a) 0.5k cycles and 9/10 code rate,(b) 4k cycles and 2/3 Acceptable data retention time improvement (b) Acceptable BER
+
+code rate
+
+Decoding time (μs)
+
+0
+
+6.4
+
+12.8
+
+0.005
+
+Code rate: 9/10
+
+0.004 NW/E : 0.5k cycles
+
+19.2
+
+25.6
+
+2Xnm @RT
+
+0.003 Conventional BCH
+
+AEP-LDPC
+
+improvement
+
+TABLE II
+
+Summary of Results
+
+Conventional LDPC with
+
+BCH
+
+BER only
+
+EP-LDPC
+
+SSD lifetime (Code rate :
+2/3)
+
+NW/E : 4k NW/E : 6k
+
+2 days
+
+7 days
+
+24 days
+
+Fail
+
+1.25 days
+
+Fail
+
+AEP-LDPC
+24 days (x12 vs. BCH) (x3.4 vs. BER only)
+1 days
+
+Acceptable BER
+
+0.002
+
+0.001 BCH > AEP-LDPC BCH < AEP-LDPC
+
+0
+
+0
+
+4
+
+8
+
+12
+
+16
+
+Decode iterations
+
+Fig. 14. Comparison between BCH and AEP-LDPC’s error correction effectiveness vs. decode iterations.
+
+Acceptable BER
+(Code rate : 2/3)
+
+NW/E : 4k NW/E : 6k
+
+Decode iterations
+
+Short retention (Code rate :2/3 NW/E : 4k)
+Long retention (Code rate : 9/10 NW/E : 0.5k)
+
+1.5 % Fail
+-
+-
+
+2.3 %
+
+4.0 %
+
+4.0 % (x2.8 vs. BCH) (x1.8 vs. BER only)
+
+2.2 %
+
+Fail
+
+2.1 %
+
+7 iterations 14 iterations
+
+6 iterations (-14% vs. BER only) (-57% vs. EP-LDPC)
+
+25 iterations 12 iterations
+
+12 iterations (-52% vs. BER only)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:33:43 UTC from IEEE Xplore. Restrictions apply.
+
+

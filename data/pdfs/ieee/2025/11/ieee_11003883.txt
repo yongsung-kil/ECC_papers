@@ -1,0 +1,2340 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+7197
+
+Efficient Schemes and Architectures for Check Node Update in Shuffled Min-Sum Decoding
+of LDPC Codes
+Lisha Luo , Graduate Student Member, IEEE, Xuan He , Member, IEEE, Qin Du , Kaining Han , Member, IEEE, Zhixiong Di , Member, IEEE, and Xiaohu Tang , Fellow, IEEE
+
+Abstract— By dividing Variable Nodes (VNs) into groups and processing groups sequentially, the Shuffled Min-Sum (SMS) decoding of Low-Density Parity-Check (LDPC) codes achieves a good trade-off between hardware resource and throughput. However, under the grouping strategy where at least one Check Node (CN) has multiple VN neighbors in one group, the CN update of State-Of-The-Art (SOTA) SMS decoding has long latency and high complexity. To address the issue, this paper presents two efficient CN update schemes. The first one uses the first two minimum Variable-to-Check (V2C) message magnitudes in each group and a size-λ Monotone Double-ended Queue (λMDQ), leading to an Improved λMDQ (I-λMDQ) scheme. The second one called the Modified λMDQ (M-λMDQ) scheme uses only the minimum in each group. As a result, our schemes reduce the number of Selection Modules (SMs) required by the CN update to only one. Simulation results show that both of our schemes have comparable error-correction performance to the SOTA schemes. Furthermore, we simplify the SM via a decomposition design and also present the detailed hardware architectures for our schemes. Analysis using the 90nm CMOS technology library shows that, compared to the SOTA schemes, our I-λMDQ scheme reduces the area and latency by up to 75% and 72%, respectively, while improving the throughput by up to 254%. Similarly, our M-λMDQ scheme reduces the area and latency by up to 79% and 70%, respectively, and improves the throughput by up to 229%.
+Index Terms— Check node update, hardware implementation, LDPC code, monotone double-ended queue, shuffled min-sum decoding.
+I. INTRODUCTION
+LOW-DENSITY Parity-Check (LDPC) codes [1] have been applied in a wide range of applications [2], [3],
+[4], known for their exceptional decoding performance. The
+widely applied decoding algorithms of LDPC codes are Min-
+Sum Algorithm (MSA) [5] and its variants [6], [7], [8], [9],
+Received 26 January 2025; revised 28 March 2025 and 17 April 2025; accepted 25 April 2025. Date of publication 14 May 2025; date of current version 27 October 2025. This work was supported by the National Natural Science Foundation of China under Grant 62331002, Grant 62374138, Grant 62371099, and Grant 62101462. This article was recommended by Associate Editor L. Gan. (Corresponding author: Xuan He.)
+Lisha Luo, Xuan He, Qin Du, and Xiaohu Tang are with the Information Coding and Transmission Key Laboratory of Sichuan Province, Southwest Jiaotong University, Chengdu 610031, China (e-mail: lisaluo@my.swjtu.edu.cn; xhe@swjtu.edu.cn; 18081884030@163.com; xhutang@swjtu.edu.cn).
+Kaining Han is with the National Key Laboratory of Science and Technology on Communications, University of Electronic Science and Technology of China (UESTC), Chengdu 610054, China (e-mail: knhan@uestc.edu.cn).
+Zhixiong Di is with the School of Integrated Circuits Science and Engineering, Southwest Jiaotong University, Chengdu 610031, China (e-mail: dizhixiong2@126.com).
+Digital Object Identifier 10.1109/TCSI.2025.3565792
+
+[10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20], [21], [22], [23], [24], [25].
+In the traditional MSAs [5], [6], [7], all Variable Nodes (VNs) and Check Nodes (CNs) are updated in parallel during each iteration. This is the fully-parallel schedule, also known
+as the flooding schedule [26]. To accelerate convergence and enhance hardware reuse, several partially-parallel schedules have been proposed, including the layered [8], [9], [10], [11], [12], [13], [14], [15], shuffled [16], [17], [18], [19], [20], [21], [22], [23], [24], [25], and block-by-block [27], [28] schedules, which partition the CNs, VNs, and Quasi-Cyclic (QC) blocks into groups, respectively, and then perform the decoding in parallel within a group and in serial across different groups. A comprehensive survey that compares various architectures and schedules of LDPC decoders is provided by Shao et al.
+[29]. Results in [30] show that the partially-parallel schedules converge twice as fast as the flooding schedule at no additional cost in decoding complexity. Moreover, the shuffled schedule is typically employed in high-throughput and high-rate LDPC decoders since it can shorten the critical path resulting from
+large row degrees [9], [19], [24], [31]. Suppose that a Shuffled MSA (SMSA) partitions the VNs
+into G groups. The grouping strategies (i.e., the choice of G) can be categorised into the following two cases:
+Case 1 (larger G, lower parallelism/throughput): Each CN has at most one VN neighbor in any decoding group.
+Case 2 (smaller G, higher parallelism/throughput): At least one CN has multiple VN neighbors in one decoding group.
+In general, the smaller G is, the more likely Case 2’s grouping strategy is employed, implying a higher parallelism/throughput/hardware cost as well as a worse errorcorrection performance and a lower convergence speed. Thus, different choices of G are suitable for different applications. Under Case 1, some efficient implementations for SMSA were proposed to reduce complexity or improve decoding performance [16], [17], [18], [19], [20], [25], in which the scheme in [18] can achieve excellent performance at very low complexity. This scheme benefits from using a data structure called Monotone Double-ended Queue (MDQ). For convenience, this paper refers it as size-λ MDQ (λMDQ) scheme, where the parameter λ indicates the maximum size of the MDQ. Note that increasing λ results in generally better decoding performance but higher complexity for the λMDQ scheme. Particularly, given the CN degree dc, setting λ = dc and λ = 2 can achieve the optimal decoding performance and
+
+1549-8328 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7198
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+the lowest complexity, respectively. Under Case 2, there are also many research findings [16], [21], [22], [23], [24], which pay special attention to codes with large row degrees. The CN update in both Case 1 and Case 2 dominates the complexity of
+the SMSA [16], [23], [24], [32], [33]. In this paper, we focus on the CN update under Case 2.
+There are two classes of realizations for implementing the CN update in the SMSA. The first class computes accurate Check-to-Variable (C2V) message magnitudes by storing and comparing all incoming Variable-to-Check (V2C) messages of each CN. It is widely employed in layered [8], [9], [10], and shuffled [19], [20], [21] schedules, which is thus referred to as the conventional realization. However, for decoding codes with large row degrees under Case 2, say [21], the conventional realization leads to high complexity in the CN update.
+The second class of realizations computes approximate C2V message magnitudes with lower complexity, as adopted in [16], [22], [23], and [24]. Among them, the so-called column-layered decoding scheme-B in [16] stored λ candidate magnitudes to compute C2V messages, where λ ≥ 2 and λ = 2 is more popular in practical applications. Moreover, in each group, only the smallest V2C message magnitude was used to update these λ candidates. However, this scheme deletes old V2C messages before computing C2V messages, which results in poor accuracy of the C2V messages. In [22], [23], and [24], all schemes were presented using a more appropriate message update principle, i.e., delete old V2C messages after C2V messages have been computed. Specifically, similar to [16], Ueng et al. [22] stored only λ candidates to compute C2V message magnitudes, with the difference being that all V2C messages generated in one group were used to update λ candidates. Detailed hardware architecture for λ = 3 was then presented in [23]. Supposing there are at most dG V2C messages in one decoding group, the schemes in [22] and [23] require dG (λ + 1)-to-λ Selection Modules (SMs) for updating λ candidates. A variant of the previous scheme was presented in [24], where it stores two candidate magnitudes but needs to approximately compute the third candidate magnitude.
+This paper aims to design low-complexity and low-latency CN update schemes for the SMSA under Case 2. The main contributions of this paper are as follows.
+• Based on the fact that only the two minima of V2C message magnitudes in each group may be used for computing C2V message magnitude, we propose an Improved λMDQ (I-λMDQ) scheme to simplify the CN update. Specifically, the I-λMDQ scheme uses two minima, rather than dG messages in one group, to update the λ candidates, reducing the dG (λ+1)-to-λ SM to only a single (λ + 2)-to-λ SM. Moreover, the SM’s realization is optimized based on the property of MDQ. As a result, the I-λMDQ scheme achieves lower complexity and latency than the CN update schemes in [21] and [23].
+• We propose a Modified λMDQ (M-λMDQ) scheme to further reduce the complexity of the I-λMDQ scheme. Specifically, the M-λMDQ employs only the minimum of V2C message magnitudes in each group to update the λ candidates, leading to a single (λ + 1)-to-λ SM. Error rate simulations show that the SMSA under the M-λMDQ scheme incurs at most a 0.2 dB loss compared to the original SMSA.
+
+Fig. 1. Grouping diagram for H in (1), where the solid orange lines correspond G = 3 and the dashed blue lines correspond G = 6.
+
+• We develop a decomposition design for the SM which consists of a Deletion Module (DM) and an Insertion Module (IM). Compared to the conventional design, our decomposition design achieves an area saving of approximately 38%. Based on the decomposition design of SM, we implement the I-λMDQ and M-λMDQ schemes via three modules: one Minima Finding Module (MFM), one DM, and one IM. Extensive simulations on decoding performance and resource consumption show that the I-λMDQ scheme and the M-λMDQ scheme are promising candidates for the SMSA under Case 2.
+The rest of this paper is organized as follows. Section II introduces the SMSA of LDPC codes and its existing realizations. The proposed CN update schemes and simulation results are described in Section III. Detailed architectures and resource consumption of the CN update schemes are presented in Section IV. Finally, conclusions are drawn in Section V.
+II. PRELIMINARIES
+In this section, we first define the notations required for the rest of the paper in Section II-A. Then, we briefly review the SMSA under Case 2 in Section II-B. Finally, we provide an overview of the existing realizations of the CN update in Section II-C and Section II-D.
+
+A. Notations and Basic Definitions
+
+For any positive integer n, define [n] = {1, . . . , n}.
+
+An (N , K ) binary-LDPC code C with code length N and
+
+dimension K can be defined by a sparse parity-check matrix
+
+H = (hi, j )i∈[M], j∈[N], where M ≥ N − K . The i -th row
+and the j-th column of H correspond to the CN ci and VN
+v j of code C respectively, where i ∈ [M], j ∈ [N ]. We say
+the CN ci and the VN v j are connected (neighbors of each
+other) if and only if (iff) hi, j = 1. Denote M( j) = {i : hi, j = 1, i ∈ [M]} as the index set of CNs connected to v j and N (i) = { j : hi, j = 1, j ∈ [N ]} as the index set of VNs connected to ci . Let M( j )\m = {i : hi, j = 1, i ∈ [M], i ̸= m} represent exclusion of m from M( j), and let
+
+N (i)\n = { j : hi, j = 1, j ∈ [N ], j ̸= n} represent exclusion
+
+of n from N (i). Let I j denote the intrinsic (channel) message
+
+of v j . The C2V message passed from ci to v j or the V2C
+
+message passed from v j to ci at the t-th iteration is denoted
+
+as
+
+Ri(,t
+
+) j
+
+or
+
+L
+
+(t i,
+
+) j
+
+,
+
+respectively.
+
+Denote
+
+Tmax
+
+as
+
+the
+
+maximum
+
+number of iterations.
+
+B. Review of Shuffled Min-Sum Algorithm in Case 2
+Assume G is a factor of N and G-group decoding is employed in SMSA, i.e., N VNs are partitioned into G groups, where for g ∈ [G], we use Vg = { j : (g − 1) · N /G < j ≤
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7199
+
+g · N /G} to represent the index set of VNs in the g-th group. Define the number of VNs in each group by NG = N /G. Then Vg = NG holds for any g ∈ [G]. Take the H in (1) as an example,
+
+1 0 0 1 0 1 1 0 1 0 0 1 H = 0 0 1 0 1 0 0 1 0 1 0 0.
+010100100010
+(1)
+
+Consider grouping strategies with G = 3 and G = 6, as depicted in Fig. 1. It is obvious to see that G = 3 belongs to Case 2 and G = 6 corresponds to Case 1. In particular, Case 1 and Case 2 are satisfied at G = N and G = 1 for any
+LDPC code, respectively. For simplicity, we denote the set of indices that appear in both Vg and N (i) by Vg(i) = Vg ∩N (i). A simple example is shown below.
+Example 1: Consider the first row (i.e., ci with i = 1) with G = 3 in (1). We have N (i) = {1, 4, 6, 7, 9, 12}, V1(i) = {1, 4}, V2(i) = {6, 7}, V3(i) = {9, 12}.
+In SMSA, the decoding is performed in serial across different groups. For example, in the case of G = 3 in (1), the
+decoding order of the groups during each iteration is group 1,
+group 2, and group 3, respectively. Meanwhile, messages
+within the same group are processed in parallel. The operations performed for the g, g ∈ [G]-th group at the t, t > 0-th decoding iteration using SMSA are described as follows:
+CN update for group g: for each CN ci , i ∈ [M], compute Ri(,t)j , j ∈ Vg(i ) in parallel according to:
+
+Ri(,t )j
+
+=
+
+Si(,t
+
+) j
+
+·
+
+|
+
+Ri(,t
+
+) j
+
+|,
+
+(2)
+
+Si(,t
+
+) j
+
+=
+
+sgn(L
+
+(t ) i,n
+
+)
+
+·
+
+sgn(Li(,tn−1)), (3)
+
+n∈N (i) n≤(g−1)·NG
+
+n∈N (i)\ j n>(g−1)·NG
+
+
+
+
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+=
+
+min
+
+ min n∈N (i)\ j
+
+L
+
+(t −1) i,n
+
+, min
+n∈N (i)\ j
+
+L
+
+(t ) i,n
+
+, 
+
+(4)
+
+n≥g·NG
+
+n<g·NG
+
+where sgn(x) = 1 when x ≥ 0, otherwise sgn(x) = −1; and
+
+L
+
+(0) i, j
+
+is
+
+initialized
+
+to
+
+Ij.
+
+VN update for group g: for each VN v j , j ∈ Vg, compute
+
+L
+
+(t i,
+
+) j
+
+,
+
+i
+
+∈
+
+M(
+
+j)
+
+in
+
+parallel
+
+according
+
+to:
+
+L
+
+(t i,
+
+) j
+
+=
+
+Ij
+
++
+
+Rm(t,) j .
+
+(5)
+
+m∈M( j)\i
+
+The CN update in (2) can be decomposed as the
+
+sign computation (namely (3)) and magnitude computation
+
+(namely
+
+(4)),
+
+i.e.,
+
+the
+
+computation
+
+of
+
+Si(,t
+
+) j
+
+and
+
+|
+
+Ri(,t
+
+) j
+
+|,
+
+respectively. The former can be easily realized via 1-bit XOR
+
+operations, while the latter requires complex operations which
+
+dominate the complexity of (2). Hereafter, when we refer to as
+
+“CN update”, we really mean the magnitude calculation. The
+
+main purpose of this paper is to develop efficient realizations
+
+for CN update at a given CN ci (as different CNs have the same update process). For convenience, denote dc = |N (i)| as the number of ci ’s neighbours, let N (i) = { j1, j2, . . . , jdc }, and denote dG = maxg∈[G] |Vg(i )| as the maximum number
+of ci ’s neighbours in one group. Moreover, we represent the
+
+incoming message magnitudes of ci in group g at the t-th
+
+iteration by L(gt) =
+
+|
+
+L
+
+(t i,
+
+) j
+
+|
+
+:
+
+j
+
+∈ Vg(i )
+
+.
+
+C. Conventional Realization of CN Update
+
+The conventional realization [8], [9], [10], [19], [20], [21]
+
+stores all the V2C incoming message magnitudes of ci and
+
+computes the first two minima of them so as to obtain the
+
+value of |Ri(,t)j | accurately (i.e., the same as that of (4)). More
+
+specifically, consider using a two-dimensional vector Qi of
+
+fixed length dc to store these magnitudes. For any h ∈ [dc], let
+
+Qi ’s h-th element Qi,h = Qi(,1h), Qi(,2h) store the V2C message
+
+from
+
+the
+
+h-th
+
+neighbor
+
+v jh
+
+of
+
+ci ,
+
+where
+
+Q
+
+(1) i,h
+
+is
+
+the
+
+magnitude
+
+and Qi(,2h) = jh is the column index of v jh .
+
+At the very beginning of the decoding, Qi is initialized by
+
+{|L
+
+(0)
+i, j |
+
+(|
+
+L
+
+(0) i, jdc
+
+: |,
+
+j∈ jdc ).
+
+N (i )} with Qi,1 After that, the CN
+
+=
+
+(|
+
+L
+
+(0) i, j1
+
+|,
+
+j1), . .
+
+update during the
+
+. , Qi,dc = g-th group
+
+at the t-th iteration executes the following three steps for each
+
+g ∈ [G] and t ∈ [Tmax].
+
+The
+
+first
+
+step
+
+is
+
+to
+
+compute
+
+the
+
+minimum
+
+magnitude
+
+m
+
+∗ 1
+
+and its column index p1∗ and the second minimum magnitude
+
+m2∗ from Qi , namely:
+
+m
+
+∗ 1
+
+=
+
+Q
+
+(1) i,h∗
+
+,
+
+p1∗
+
+=
+
+Q
+
+(2) i,h∗
+
+,
+
+m
+
+∗ 2
+
+=
+
+h
+
+min
+∈[dc ],h ̸=h ∗
+
+Q
+
+(1) i,h
+
+,
+
+(6)
+
+where h∗ = arg minh∈[dc] Qi(,1h). The second step is to compute
+
+{|
+
+Ri(,t
+
+)
+j|
+
+:
+
+j
+
+∈ Vg(i )}
+
+as
+
+follows:
+
+Ri(,t
+
+) j
+
+=
+
+m
+
+∗ 1
+
+,
+
+m
+
+∗ 2
+
+,
+
+if j ̸= p1∗, otherwise.
+
+(7)
+
+Note
+
+that
+
+{|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+j
+
+∈
+
+Vg(i )}
+
+are
+
+then
+
+used
+
+to
+
+perform
+
+the
+
+VN
+
+update which generates the latest V2C message magnitudes
+
+L(gt). Finally, the third step replaces the old magnitudes
+
+in Qi with the corresponding latest V2C magnitudes. The
+
+computational complexity of the conventional realization is
+
+dominated by its first step, which is given by O(min(dc, G) ·
+
+dc · Tmax), where min(dc, G) corresponds to the maximum
+
+possible number of times for processing the first step in
+
+one iteration and O(dc) is the computational complexity for
+
+processing the first step once.
+
+D. Simplified Realization of CN Update
+
+A simplified CN update scheme was presented in [23]. In this scheme, elements in Qi are listed in ascending order as follows:
+
+Q
+
+(1) i,h1
+
+≤
+
+Q
+
+(1) i,h2
+
+,
+
+∀1
+
+≤
+
+h1
+
+<
+
+h2
+
+≤
+
+|Qi |,
+
+(8)
+
+where |Qi | denotes the length of |Qi | and |Qi | = λ this case.
+
+At the very beginning of the decoding, Qi is initialized
+
+as the first λ smallest values in
+
+|
+
+L
+
+(0) i, j
+
+|
+
+:
+
+j
+
+∈
+
+N (i)
+
+with
+
+satisfying (8). After that, the CN update during the g-th group
+
+at the t-th iteration executes the following two steps for each
+
+g ∈ [G] and t ∈ [Tmax].
+
+The first step, which we refer to as CN-R, is to compute
+
+{|
+
+Ri(,t
+
+)
+j|
+
+:
+
+j
+
+∈ Vg(i )}
+
+as
+
+below:
+
+Ri(,t
+
+) j
+
+=
+
+Qi(,11), Qi(,12),
+
+if j ̸= Qi(,21), otherwise.
+
+(9)
+
+The second step, which we refer to as CN-Q, completes the Qi update by inserting the latest V2C message magnitudes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7200
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Algorithm 1 CN Update Based on the Simplified Scheme [23]
+
+Input:
+
+L
+
+(0) i, j
+
+:
+
+j ∈ N (i)
+
+,
+
+Qi .
+
+Output:
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+t
+
+∈
+
+[Tmax],
+
+j
+
+∈ N (i)
+
+.
+
+1: Initialize Qi using
+
+L
+
+(0) i, j
+
+:
+
+j
+
+∈ N (i)
+
+.
+
+2: for t = 1 → Tmax do 3: for g = 1 → G do
+
+4:
+
+{CN-R stage}
+
+5:
+
+Compute
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+j
+
+∈ Vg(i )
+
+using (9). (After this
+
+step, L(gt) is computed by (5) during the VN update.)
+
+6:
+
+{CN-Q stage}
+
+7:
+
+for j ∈ Vg(i) do
+
+8:
+
+if j == Qi(,2h) for any h ∈ [λ] then
+
+9:
+
+Set Qi(,1h) =
+
+L
+
+(t i,
+
+) j
+
+.
+
+10:
+
+Adjust Qi to satisfy (8).
+
+11:
+
+else
+
+if
+
+|Li(,t)j |
+
+≤
+
+Q
+
+(1) i,λ
+
+then
+
+12:
+
+Set Qi,λ =
+
+L
+
+(t i,
+
+) j
+
+,j
+
+.
+
+13:
+
+Adjust Qi to satisfy (8).
+
+14:
+
+end if
+
+15:
+
+end for
+
+16: end for
+
+17: end for
+
+Fig. 2. CN-Q architecture under Algorithm 1. Inputs: dG V2C message magnitudes and their indices; Output: the updated Qi with size 2.
+
+L(gt) into Qi while maintaining elements to satisfy (8) and
+
+|Qi | = λ.
+
+Algorithm 1 describes the simplified CN update scheme,
+
+which implements (4) by storing only the first λ (2 ≤ λ ≤
+
+dc) smallest V2C message magnitudes in Qi , resulting in a reduced storage complexity of O(λ). Since for given t and g,
+
+the computational complexity of Lines 7 to 15 is O(λ·|Vg(i)|), the total complexity of Algorithm 1 is O(λ · dc · Tmax).
+Suppose the CN ci has |Vg(i)| = dG . Fig. 2 shows the
+
+CN-Q architecture under Algorithm 1 with λ = 2, where dG
+
+3-to-2 SMs needed for the CN-Q and each of which realizes
+
+Lines 8 to 14 of Algorithm 1. Assume one SM consumes one
+
+Clock Cycle (CC), then dG CCs are required by the CN-Q.
+
+As shown in Line 7 of Algorithm 1 or Fig. 2, all the dG
+
+V2C magnitudes in group g are serially used for updating Qi ,
+
+causing a long latency problem for large dG. With respect to
+
+that, the following natural question arises: Q1 Is there a more efficient way to use L(gt) for updating
+
+Qi ? For example, is it possible to choose only a few rather than all elements from L(gt) for updating Qi without
+
+sacrificing decoding performance?
+
+Under
+
+Algorithm
+
+1,
+
+the
+
+accuracy
+
+of
+
+|
+
+Ri(,t
+
+)
+j|
+
+is
+
+positively
+
+correlated with λ. With λ = dc, Algorithm 1 can achieve
+
+the same accuracy as conventional realization but at the
+
+cost of complexity. In practical applications, λ = 2 is
+
+more commonly used due to low complexity and acceptable
+
+decoding performance. Example 2 illustrates Algorithm 1 with
+
+λ = 2.
+
+Example 2: Continued with Example 1. Suppose |Li(,0j)| : j ∈ N (i ) are {2, 4, 1, 5, 3, 6}. The V2C messages
+
+are updated as
+
+|L
+
+(1)
+i, j |
+
+:
+
+j∈
+
+N (i)
+
+= {5, 6, 4, 4, 7, 3}
+
+after one iteration. Under Algorithm 1 with λ = 2, the
+
+C2V messages are computed as |Ri(,1j)| : j ∈ N (i ) =
+
+{1, 1, 5, Note
+
+1, 4, that
+
+4}, where |Ri(,1j)3 | and |Ri(,1j)6 in Example 2, the element
+
+| are wrong. (2, j1) is impossible
+
+to participate in the computation of |Ri(,t)j | due to the existence
+
+of (1, j3) (more details are explained later in Section III-A).
+
+Thus, there is no need to store (2, j1) in Qi,2, and in fact doing this causes the computation error of |Ri(,1j)3 | in group 2. With respect to that, the following natural question arises:
+
+Q2 Is there a better way than storing the λ smallest
+
+magnitudes in Qi ? For example, the computation
+
+error of {(1, j3),
+
+(3|R, i(j,15j))3}|
+
+can be instead
+
+avoided by initializing Qi of Qi = {(1, j3), (2, j1)}
+
+= in
+
+Example 2.
+
+III. PROPOSED CHECK-NODE UPDATE SCHEMES FOR SMS ALGORITHM
+
+In this section, we focus on answering questions Q1 and
+
+Q2, and would like to develop efficient CN update schemes
+
+under the premise of that Qi can store at most λ magnitudes in
+
+ascending order with respect to (8). We first propose a new CN
+
+update scheme called I-λMDQ in Section III-A, which finds
+
+efficient solutions to questions Q1 and Q2 such that it reduces
+
+the number of SMs from dG to one and improves the accuracy
+
+of
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+compared
+
+to
+
+the
+
+scheme
+
+in
+
+[23].
+
+In
+
+Section
+
+III-B,
+
+we propose M-λMDQ, as a simplified variant of the I-λMDQ,
+
+to further reduce the computational complexity of the I-λMDQ at the cost of lower accuracy of |Ri(,t)j |. Finally, we simulate different CN update schemes in Section III-C.
+
+A. Improved Size-λ Monotone Double-Ended Queue Scheme
+
+1) Solution for Q1: According to (9), the computation of
+
+|Ri(,t)j |
+
+depends
+
+on
+
+only
+
+two
+
+elements
+
+in
+
+Qi ,
+
+namely,
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+is
+
+equal
+
+to
+
+either
+
+Q
+
+(1) i,1
+
+or
+
+Qi(,12).
+
+Meanwhile,
+
+elements
+
+in
+
+Qi
+
+are arranged in ascending order according to (8). As a result,
+
+we provide a solution for Q1 which uses two elements to
+
+update Qi according to the following fact.
+
+Fact 1: Only the first and second minima in L(gt′), t′ ∈
+
+[Tmax], g ∈ [G] may be possible to participate in the
+
+computation
+
+of
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+based
+
+on
+
+(9)
+
+for
+
+some
+
+t
+
+∈
+
+[Tmax]
+
+and
+
+j ∈ N (i).
+
+Consequently, we only need to consider using the first two minima (namely m1 and m2) in L(gt) for updating Qi . This
+
+is the key idea behind our solution for Q1. As a result, the
+
+number of candidates in group g can be reduced from |Vg(i)|
+
+to 2.
+
+2) Solution for Q2: We now turn to answering Q2. First
+
+of all, it is obvious that the element Qi,h from group g
+
+should not be stored in the updated Qi , since the latest
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7201
+
+Algorithm 2 CN Update Based on the I-λMDQ Scheme
+
+Input:
+
+L
+
+(0) i, j
+
+:
+
+j ∈ N (i)
+
+,
+
+Qi .
+
+Output:
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+t
+
+∈
+
+[Tmax],
+
+j
+
+∈ N (i)
+
+.
+
+1: Initialize Qi using
+
+L
+
+(0) i, j
+
+:
+
+j
+
+∈ N (i)
+
+.
+
+2: for t = 1 → Tmax do
+
+3: for g = 1 → G do
+
+4:
+
+{CN-R stage}
+
+5:
+
+Compute
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+j
+
+∈ Vg(i )
+
+using (9). (After this
+
+step, L(gt) is computed by (5) during the VN update.)
+
+6:
+
+{CN-Q stage}
+
+%Find two minimum V2C message magnitudes:
+
+7:
+
+Set (m1, p1) = (∞, ∞), (m2, p2) = (∞, ∞).
+
+8:
+
+for j ∈ Vg(i) do
+
+9:
+
+if
+
+|
+
+L
+
+(t i,
+
+) j
+
+|
+
+<
+
+m1
+
+then
+
+10:
+
+Set
+
+(m2,
+
+p2)
+
+=
+
+(m1,
+
+p1),
+
+(m1,
+
+p1)
+
+=
+
+(|L
+
+(t i,
+
+) j
+
+|,
+
+j ).
+
+11:
+
+else if |Li(,t)j | < m2 then
+
+12:
+
+Set
+
+(m2,
+
+p2)
+
+=
+
+(|
+
+L
+
+(t i,
+
+) j
+
+|,
+
+j ).
+
+13:
+
+end if
+
+14:
+
+end for
+
+%Update Qi :
+
+15:
+
+Repeatedly delete Qi,1 until Qi(,31) ̸= g.
+
+16:
+
+Repeatedly remove Qi,# until |Qi | == 0 or m1 ≥
+
+Qi(,1#).
+
+17:
+
+Insert (m1, p1, g) to the tail of Qi if |Qi | < λ.
+
+18:
+
+Insert (m2, p2, g) to the tail of Qi if |Qi | < λ.
+
+19: end for
+
+20: end for
+
+L(gt) generated by (5) makes Qi,h become invalid. Moreover, recall that the SMSA under Case 1 was investigated in [18].
+
+By connecting the CN update with the Range Minimum Query
+
+(RMQ) problem [34], [35], the CN update in [18] was achieved
+
+using the Monotone Double-ended Queue (MDQ), which is
+
+shown to be excellent in Theorem 2 of [18]. Therefore, in our
+
+new CN update scheme we continue to adopt MDQ. Then,
+
+the elements greater than m1 have to be removed from Qi , otherwise the insertion of m1 into Qi will violate the properties of MDQ. The above discussion motivates us to answer Q2
+
+based on the following fact.
+
+Fact
+
+2:
+
+After
+
+computing
+
+{|
+
+Ri(,t
+
+)
+j|
+
+:
+
+j
+
+∈
+
+Vg(i )},
+
+the
+
+element
+
+Qi,h in Qi is impossible to participate in the subsequent
+
+computations
+
+of
+
+|
+
+Ri(,t
+
+′′
+j
+
+)
+
+|
+
+for
+
+t ′′
+
+≥
+
+t
+
+based
+
+on
+
+(9)
+
+if
+
+Qi,h
+
+satisfies
+
+one of the following conditions:
+
+C1:
+
+Qi,h
+
+comes
+
+from
+
+group
+
+g,
+
+i.e.,
+
+Q
+
+(2) i,h
+
+∈ Vg(i ).
+
+C2: Qi(,1h) ≥ m1.
+
+Consequently, we should remove any element Qi,h from Qi
+
+if C1 or C2 is satisfied, and add m1 and m2 to Qi if Qi is
+
+not full (i.e., |Qi | < λ). For example, elements (2, j1), (4, j2)
+
+in Example 2 satisfy C2 when adding m1 = 1 to Qi ; and the
+
+element (5, j4) in Example 2 also satisfies C2 when adding
+
+m1 = 3 to Qi . As a result, elements (2, j1), (4, j2), (5, j4)
+
+should not be stored in Qi .
+
+3) Flow for the I-λMDQ Scheme: Based on the above
+
+discussions, here we propose the I-λMDQ scheme for the
+
+CN update, whose essential idea is to consider the two
+
+minimum V2C magnitudes in each group as candidates for updating Qi and make Qi work as an MDQ of size λ. Algorithm 2 describes the CN update under the I-λMDQ scheme. Considering C1 of Fact 2, we additionally store the group index of each element in Qi . Specifically, for h ∈ [|Qi |], denote Qi,h = (Qi(,1h), Qi(,2h), Qi(,3h)), where Qi(,1h), Qi(,2h), and Qi(,3h) represent the magnitude, column index, and group index, respectively. Moreover, let Qi,# conveniently represent the last/tail element of Qi as its length may change.
+Focus on the CN-Q stage under the I-λMDQ scheme, i.e., Lines 7 to 18 in Algorithm 2. Among them, Lines 7 to 14 find two minimum V2C magnitudes, which corresponds to Fact 1. This operation ensures that the capacity of Qi is not occupied by unnecessary V2C magnitudes and reduces the number of SMs to 1. Lines 15 to 18 update Qi based on the property of MDQ of size λ, which corresponds to Fact 2. More precisely, Line 15 deletes an element from Qi if it satisfies C1. Since only two elements in each group are considered to update Qi , at most the first two elements in Qi can have group index g. Thus, this deletion operation may be performed at most twice, instead of |Vg(i)| times as in Algorithm 1. Line 16 removes elements that satisfy C2, which ensures higher accuracy for Algorithm 2 than Algorithm 1. The length of Qi may be shortened due to the operations in Line 15 and Line 16. After the operations in Lines 16 to 18, the monotonically increasing property of Qi is guaranteed. Since each element can be inserted into and deleted from Qi at most once, the I-λMDQ scheme has an asymptotic computational complexity of O(dc · Tmax).
+At the very beginning of the decoding, Qi is initialized using the same operations as Lines 7 to 14 and 16 to 18 of Algorithm 2. Taking Example 2 as an example, Qi is initialized to Qi = {(1, j3, 2), (3, j5, 3)} under λ = 2. Detailed initialization and update process of Qi is illustrated in Fig. 3. Clearly, we obtain correct C2V messages, i.e.,
+|Ri(,1j)| : j ∈ N (i ) = {1, 1, 3, 1, 4, 3}. Suppose the CN ci has |Vg(i)| = dG , Fig. 4 shows the CN-Q architecture under the I-λMDQ scheme with λ = 2. As shown in Fig. 4, the CN-Q requires only one dG-to-2 MFM and one 4to-2 λMDQ-based SM. Such an architecture requires log2(dG ) CCs for finding two minima and one CC for updating Qi . As a result, (log2(dG ) + 1) CCs are required, which is less than Algorithm 1 when dG > 2.
+B. Modified Size-λ Monotone Double-Ended Queue Scheme
+In this subsection, we propose the M-λMDQ scheme to further reduce the complexity of the I-λMDQ scheme. The MλMDQ scheme answers Q1 by using only the minimum V2C magnitude in L(gt) to update Qi . Assume |Vg(i )| = dG . The CN-Q architecture under the M-λMDQ scheme with λ = 2 is shown in Fig. 5, leading to lower complexity than the I-λMDQ scheme.
+Algorithm 3 describes the CN update under the M-λMDQ scheme, which differs from the I-λMDQ scheme in Lines 7 to 10 and 11. Specifically, Lines 7 to 10 determine only one minimum from |Vg(i)| messages, corresponding to the dG -to1 MFM in Fig. 5. Lines 11 to 13 update Qi using (λ + 1) elements, corresponding to the (λ + 1)-to-λ λMDQ-based SM in Fig. 5. Since only Qi,1 may belong to group g, Line 11 only considers deleting Qi,1. As a result, the complexity of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7202
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Fig. 3. Initialization and update process of Qi . The minimum (green font) and second minimum (blue font) are obtained via Lines 7-14 of Algorithm 2. Each numbered (15-18) right arrow means to execute the corresponding line of Algorithm 2 (if the execution of a line does not change Qi , it may be omitted from the figure to save space).
+
+Fig. 4. CN-Q architecture under the I-λMDQ scheme. Inputs: dG V2C message magnitudes and their indices. Output: the updated Qi with size 2.
+Fig. 5. CN-Q architecture under the M-λMDQ scheme. Inputs: dG V2C message magnitudes and their indices. Output: the updated Qi with size 2.
+TABLE I COMPLEXITIES OF DIFFERENT CN UPDATE SCHEMES
+
+Algorithm 3 CN Update Based on the M-λMDQ Scheme
+
+Input:
+
+L
+
+(0) i, j
+
+:
+
+j ∈ N (i)
+
+,
+
+Qi .
+
+Output:
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+t
+
+∈ [Tmax], j
+
+∈ N (i)
+
+.
+
+1: Initialize Qi using
+
+L
+
+(0) i, j
+
+:
+
+j ∈ N (i)
+
+.
+
+2: for t = 1 → Tmax do 3: for g = 1 → G do
+
+4:
+
+{CN-R stage}
+
+5:
+
+Compute
+
+|
+
+Ri(,t
+
+) j
+
+|
+
+:
+
+j
+
+∈
+
+Vg(i )
+
+using (9). (After this
+
+step, L(gt) is computed by (5) during the VN update.)
+
+6:
+
+{CN-Q stage}
+
+%Find the minimum V2C message magnitude:
+
+7:
+
+Set (m1, p1) = (∞, ∞).
+
+8:
+
+for j ∈ Vg(i) do
+
+9:
+
+Set
+
+(m1,
+
+p1)
+
+=
+
+(|L
+
+(t i,
+
+) j
+
+|,
+
+j)
+
+if
+
+|Li(,t)j |
+
+<
+
+m1.
+
+10:
+
+end for
+
+%Update Qi :
+
+11:
+
+Delete Qi,1 if Qi(,31) == g.
+
+12:
+
+Repeatedly remove Qi,# until |Qi | == 0 or m1 ≥
+
+Qi(,1#).
+
+13:
+
+Insert (m1, p1, g) to the tail of Qi if |Qi | < λ.
+
+14: end for
+
+15: end for
+
+Algorithm 2 is O(dc ·Tmax). For easy reference, we summarize
+
+the complexities of different CN update schemes in Table I.
+
+Given
+
+|L
+
+(0)
+i, j |
+
+:
+
+j ∈ N (i)
+
+,
+
+Qi
+
+is
+
+initialized
+
+by
+
+using
+
+the
+
+same operations as Lines 7 to 10 and Lines 12 to 13
+
+in Algorithm 2. Taking Example 2 as an example, Qi is initialized to Qi = {(1, j3, 2), (3, j5, 3)} under Algorithm 3 with λ = 2.
+
+Note that although the M-λMDQ scheme further reduces
+
+the complexity of the I-λMDQ scheme, using only the
+
+minimum magnitude causes useful information (e.g., the
+
+second minimum magnitude) to be discarded during the update
+
+of Qi , which degrades the decoding performance, especially when G is small. This highlights the trade-off between
+
+complexity reduction and performance degradation in the MλMDQ scheme.
+C. Simulation Results
+In this subsection, we apply the simplified CN update scheme proposed in [23], the I-λMDQ and M-λMDQ schemes to the SMSA [16]. Then, we simulate the Frame Error Rate (FER) and average number of iterations to reflect the errorcorrection performance and convergence speed of these SMSA variants. We also simulate the original SMSA as a benchmark. Note that the SMSA based on the conventional realization achieves the same performance as the original SMSA.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7203
+
+Fig. 6. Performances under G = 6, where α = 0.75 for all SMSAs. For C1, set (q, ) = (4, 0.125) to all quantized SMSAs; for C2, set (q, ) = (4, 0.075) to all quantized SMSAs.
+
+Fig. 7. Performances under G = 3, where α = 0.75 for all SMSAs. For C1, set (q, ) = (4, 0.1) to M-λMDQ SMSA with λ = 2 and (q, ) = (4, 0.125) to other quantized SMSAs; for C2, set (q, ) = (4, 0.075) to M-λMDQ SMSA with λ = 3 and (q, ) = (4, 0.05) to other quantized SMSAs.
+
+Suppose each codeword is transmitted over an Additive
+
+White Gaussian Noise (AWGN) channel using Binary Phase
+
+Shift Keying (BPSK) modulation. In all simulations, we set
+
+Tmax = 20, but the decoding will be terminated immediately
+
+whenever an iteration outputs a valid codeword. For each
+
+Signal-to-Noise Ratio (SNR), we collect at least 100 frame
+
+errors. Given the power Es = 1 of a transmitted symbol of
+
+an (N , K ) code and the noise variance σ 2, the SNR is given
+
+by
+
+Eb/N0
+
+=
+
+10 · lg
+
+Es ·N 2σ 2·K
+
+.
+
+Assume
+
+each
+
+message
+
+in
+
+quantized
+
+version is composed of a q-bit magnitude and a 1-bit sign. The
+
+quantization step is denoted by . We consider the normalized
+
+version of all SMSAs, i.e., we multiply the right-hand side
+
+of (2) by a normalized factor α. All parameters are efficiently
+
+optimized by computer search.
+
+The SMSA is commonly used for high-rate LDPC codes,
+
+thus we simulate all SMSAs on two high-rate codes:
+
+C1: (1296, 972) LDPC code with code rate 0.75 [4]. C2: (1998, 1776) LDPC code with code rate 0.89 [36].
+
+Consider the grouping strategies with G = 6 and G = 3 on these two codes, where a CN has at most 4 and 8 neighbors
+
+in one decoding group for C1 and at most 6 and 12 neighbors in one decoding group for C2, respectively.
+We simulate all SMSA variants under both λ = 2 and λ = 3. For the I-λMDQ scheme and the scheme in [23], each of them has nearly identical performance under λ = 2 and λ = 3. Therefore, we only present their performances under λ = 2 to maintain visual clarity. Fig. 6 and Fig. 7 show the performances under G = 6 and G = 3, respectively.
+1) FER: Consider C2. Under G = 6 (see Fig. 6a), the errorcorrection performances of the M-λMDQ SMSA, I-λMDQ SMSA, and SMSA in [23] are nearly identical to that of the quantized SMSA. Under G = 3 (see Fig. 7a), the MλMDQ SMSA exhibits some error-correction performance improvement when increasing λ from 2 to 3. Specifically, the M-λMDQ SMSA with λ = 2 shows a 0.05 dB performance loss compared to the quantized SMSA, while the M-λMDQ SMSA with λ = 3 and the I-λMDQ SMSA show almost no degradation. For C1, all SMSAs show a similar trend as for C2, except suffering from a higher error floor. For example, the M-λMDQ SMSA incurs an error floor at FERs ≤ 10−4, with a degradation of about 0.2 dB under λ = 2 and 0.1 dB under
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7204
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+λ = 3, both observed at G = 3. The performance degradation of the M-λMDQ scheme primarily stems from its use of only the minimum magnitude within each group to update Qi .
+2) Average number of iterations: As shown in Fig. 6b and Fig. 7b, the I-λMDQ achieves a convergence speed almost identical to the quantized SMSA and closely approaching the floating-point SMSA. The M-λMDQ SMSA also exhibits convergence speed nearly identical to the SMSA in [23], with both showing a loss of 0.3 iterations compared to the quantized SMSA.
+3) G = 6 v.s. G = 3: From Fig. 6b to Fig. 7b, it can be observed that, under the same Eb/N0, all SMSAs achieve lower FERs and require fewer iterations at G = 6 compared to G = 3. This observation confirms the conclusion presented in Section I, i.e., a smaller G achieves worse error-correction performance and slower convergence.
+IV. PROPOSED CHECK-NODE UPDATE ARCHITECTURES
+This section discusses the hardware architecture of CNQ from a hardware design perspective. Section IV-A first introduces the proposed overall decoder architecture, where we employ a decomposition design to simplify the SM. Subsequently, we describe the rationale behind the decomposition design of the SM in Section IV-B. Then, based on the decomposition design of SM, we provide detailed hardware implementations of CN-Q under the I-λMDQ and M-λMDQ schemes in Section IV-C and Section IV-D, respectively. Finally, the ASIC analysis results are provided in Section IV-E.
+A. Overall Decoder Architecture
+In this subsection, we apply the I-λMDQ and M-λMDQ schemes to an (N , K ) LDPC decoder. The corresponding overall architecture is shown in Fig. 8. Since the SMSA decoder is reused for each group, we focus on the architecture during the g-th group. First, the decoder reads the data stream from Qi memory and Sign maker units. After processing through the CN-R, VN, and CN-Q units, the data stream is finally written back to the Qi memory and Sign maker units for the next decoding group.
+For the CN-Q in Fig. 8, it is implemented via three modules: one MFM, one DM, and one IM. Specifically, the MFM finds one or two minimum V2C message magnitudes. The DM and IM form the SM to update Qi , where the DM deletes the old V2C message and the IM inserts latest V2C messages. We decompose the SM into separate DM and IM to reduce its area. The rationale behind this decomposition design is discussed in Section IV-B. Using the proposed SM, we further implement the I-λMDQ and M-λMDQ schemes in Sections IV-C and IV-D, respectively. Since λ = 2 provides the best trade-off between decoding performance and complexity, we consider λ = 2 in this section. And we represent the magnitude, column index, and group index using q, w = ⌈log2 dc⌉, and v = ⌈log2 G⌉ bits, respectively.
+B. Rationale Behind the Decomposition Design of SM
+The complexity of the CN-Q is directly related to the SM. Taking λ = 2 and the algorithm from [23] as an example, Fig. 9a describes the SM presented in [23]. First, the Index
+
+Selector uses two w-bit Comparators (CMPs) and one OR
+
+gate to compare the indices of elements in order to determine
+
+whether there is an old element in Qi (An element in Qi is
+
+old if its index matches j, where j is the index of the input
+
+element
+
+(|L
+
+(t i,
+
+) j
+
+|,
+
+j )).
+
+Then,
+
+the
+
+outputs
+
+of
+
+the
+
+Index
+
+Selector
+
+serve as a controller for modifying the input element, Qi,1,
+
+and Qi,2. Specifically, if an old element exists in Qi , the
+
+input element replaces the old element and itself is set to
+
+the maximum value; otherwise, both the input element and
+
+Qi remain unchanged. Subsequently, all elements (the input
+
+element, Qi,1, and Qi,2) are compared in pairs to select the
+
+first two minima for updating Qi .
+
+As previously discussed, there are three CMPs in Fig. 9a.
+
+One CMP is employed to reorder Qi,1 and Qi,2 because the
+
+operations before the CMPs may disrupt the ascending order of
+
+Qi . For example, when Qi,1 = {2, j1}, Qi,2 = {3, j2}, and the input element is {4, j1}, we have Qi,1 = {4, j1}, Qi,2 = {3, j2}
+
+before the CMPs. To avoid using additional CMPs and MUXs
+
+to reorder Qi,1 and Qi,2, we propose realizing the SM using
+
+a decomposition design. The core idea of this decomposition
+
+design is to decompose SM into a DM and an IM. Specifically,
+
+the removal of old elements and the insertion of input element
+
+are performed separately, while ensuring that the elements in Qi satisfy Qi(,11) ≤ Qi(,12) during each operation.
+Taking λ = 2 and the algorithm from [23] as an example,
+
+Fig. 9b illustrates the SM under the decomposition design.
+
+First, the DM deletes the old element based on the following
+
+two
+•
+
+cases: If Qi,1
+
+is
+
+old,
+
+i.e.,
+
+Qi(,21)
+
+=
+
+j, let
+
+Qi,1
+
+=
+
+Qi,2
+
+and
+
+set
+
+Qi,2
+
+to the maximum value.
+
+• If Qi,2 is old, i.e., Qi(,22) = j , only set Qi,2 to the
+
+maximum value.
+
+Such a DM requires two w-bit CMPs, one OR gate, and four
+
+MUXs (two q-bit and two w-bit). As a result, the old element
+
+is removed, and elements in Qi remain in ascending order.
+
+Then, the IM inserts the input element into Qi . As a result,
+
+the IM only needs to compare the input element with Qi,1 and
+
+Qi,2, then update Qi based on the comparison results. Such
+
+an IM requires two q-bit CMPs and six MUXs (three q-bit
+
+and three w-bit).
+
+From Fig. 9, it can be observed that our decomposition
+
+design requires fewer hardware resources than that of [23].
+
+More precisely, given q = 4 and w = 4, the decomposition design requires 228 equivalent NAND gates,1 whereas the SM
+
+in [23] needs 368 equivalent NAND gates. This represents a
+
+38% area saving from the decomposition design. Due to this
+
+reason, we implement the CN update scheme in [23] based
+
+on the decomposition design when evaluating the resource
+
+consumption later in Section IV-E. For easy reference, its
+
+required components are summarized in Table II. Note that
+
+the number of components of the scheme in [23] is equal to
+
+the product of dG and the number of components required by
+
+a single SM.
+
+C. Hardware Architecture for CN-Q Under the I-λMDQ Scheme
+Based on the decomposition design of SM, the CN-Q under the I-λMDQ scheme can be implemented through three modules, i.e., one T1-MFM, one T1-DM and one T1-IM. For
+1The equivalent area of a NAND gate is 2.8224 µm2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7205
+
+Fig. 8. Proposed overall architecture during the g-th decoding group.
+
+Fig. 9. Different designs for SM.
+easy reference, we add the prefix “T1” (for Type-1) to the modules of the I-λMDQ scheme.
+Fig. 10 shows the flowchart for CN-Q under the IλMDQ scheme. First, the T1-MFM finds two minima (m1, p1), (m2, p2) from L(gt). Meanwhile, the T1-DM deletes old messages. In the I-λMDQ scheme, the first two elements in Qi may be old. Following the T1-MFM and the T1-DM, the T1-IM is executed to update Qi by comparing each element in Qi with (m1, p1, g) and (m2, p2, g). Based on the flowchart described in Fig. 10, we illustrate the hardware implementation of the CN-Q under the I-λMDQ scheme.
+1) Architecture of T1-MFM: Computing the first two minima from a fixed-length data set is a classic problem. A lot of research results [37], [38], [39], [40] have been conducted on solving this problem. In this paper, we employ the TS approach [37] to realize the T1-MFM, where the two minima are found using a tree architecture. A dG-input
+
+Fig. 10. Flowchart of CN-Q under the I-λMDQ scheme with λ = 2.
+
+T1-MFM architecture is exemplified in Fig. 11, and three
+
+primitive units, C1M2, C1M4, and Connection Unit (CU), are
+
+used to compose the T1-MFM.
+
+As seen from Fig. 11a, the C1M2 unit uses one q-bit CMP
+
+and two MUXs (one q-bit and one w-bit) to select the smaller
+
+one from (X1, Y1) and (X2, Y2). As seen from Fig. 11b, the
+
+C1M4 unit uses one q-bit CMP and four MUXs (two q-bit and
+
+two w-bit) to compare (X1, Y1) with (X2, Y2). As seen from
+
+Fig. 11c, the CU employs three C1M2 units and two MUXs
+
+(one q-bit and one w-bit) to output two smallest values from
+
+its four inputs. In Fig. 11d, dG inputs are first sent to the C1M4
+
+unit
+
+in
+
+pairs,
+
+requiring
+
+⌊
+
+dG 2
+
+⌋
+
+C1M4
+
+units.
+
+Then,
+
+the
+
+outputs
+
+of
+
+all C1M4 units, along with the input that was not sent to the
+
+C1M4 unit when dG is odd, are handled by the CU in groups
+
+of
+
+four,
+
+requiring
+
+(⌈
+
+dG 2
+
+⌉
+
+−
+
+1)
+
+CUs.
+
+As
+
+a
+
+result,
+
+the
+
+T1-MFM
+
+needs
+
+(⌊
+
+dG 2
+
+⌋ + 3⌈
+
+dG 2
+
+⌉ − 3)
+
+q -bit
+
+CMPs,
+
+(2⌊
+
+dG 2
+
+⌋+
+
+4⌈
+
+dG 2
+
+⌉
+
+− 4)
+
+q-
+
+bit
+
+MUXs,
+
+and
+
+(2⌊
+
+dG 2
+
+⌋+4⌈
+
+dG 2
+
+⌉−4)
+
+w-bit
+
+MUXs.
+
+Note
+
+that
+
+the
+
+conventional realization used in [8], [19], [20], and [21] can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7206
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Fig. 11. Hardware architecture of T1-MFM for finding the first two minima in a dataset of length dG .
+
+Fig. 14. Flowchart of CN-Q under the M-λMDQ scheme with λ = 2.
+3) Architecture of T1-IM: After the T1-MFM and T1-DM, Qi′,1, Qi′,2, (m1, p1) and (m2, p2) are fed to the T1-IM. We employ two q-bit CMPs and nine MUXs (three q-bit, three w-bit, and three v-bit) to compose the T1-IM, as shown in Fig. 13.
+Remark 1: The three modules of the CN-Q in the I-λMDQ scheme are implemented within a single clock cycle. Specifically, the outputs of both the T1-MFM and T1-DM are directly fed into the T1-IM by wires, and the outputs of the T1IM are stored in the Qi memory. Thus, no additional registers are needed for the three modules.
+
+Fig. 12. Hardware architecture of T1-DM for deleting old elements from Qi .
+
+Fig. 13. Hardware architecture of T1-IM for inserting (m1, p1, g) and (m2, p2, g) into Qi .
+
+also be implemented using a dc-input T1-MFM, except that
+
+in this case, the C1M4 and CU units do not require additional
+
+MUXs
+
+to
+
+retain
+
+the
+
+index
+
+of
+
+X
+
+′ 2
+
+.
+
+2) Architecture of T1-DM: Given the current decoding
+
+group index g, Qi,1 = (Qi(,11), Qi(,21), Qi(,31)), and Qi,2 =
+
+(Qi(,12), Qi(,22), Qi(,32)), we design a detailed hardware implemen-
+
+tation for the T1-DM, as depicted in Fig. 12. From Fig. 12,
+
+two v-bit CMPs and nine MUXs (three q-bit, three w-bit, and
+
+three v-bit) are need for the T1-DM.
+
+D. Hardware Architecture for CN-Q Under the M-λMDQ Scheme
+Based on the decomposition design of SM, we implement the CN-Q under the M-λMDQ scheme through three modules, i.e., one T2-MFM, one T2-DM and one T2-IM, where the prefix “T2” (for Type-2) is added for easy reference. Fig. 14 shows the flowchart for CN-Q under the M-λMDQ scheme. First, the minimum (m1, p1) from L(gt) is found using the T2-MFM. Meanwhile, the T2-DM is employed to delete the old V2C message magnitude. Under the M-λMDQ scheme, the T2-DM requires only a single v-bit CMP, as this scheme ensures that only Qi,1 may potentially be old. Following the T2-DM, the T2-IM compares each element in Qi with (m1, p1, g). Based on the flowchart described in Fig. 14, we design the detailed hardware implementation for each module.
+1) Architecture of T2-MFM: The XS approach presented in [37] can efficiently find the minimum using a tree architecture. Here we employ it to realize the T2-MFM. A dGinput T2-MFM architecture is exemplified in Fig. 15. As seen from Fig. 15, (dG −1) C1M2 units are needed for the dG -input T2-MFM.
+2) Architecture of T2-DM: The hardware implementation for the T2-DM is shown in Fig. 16. Given the inputs Qi,1 = (Qi(,11), Qi(,21), Qi(,31)), Qi,2 = (Qi(,12), Qi(,22), Qi(,32)), and the current group index g, the T2-DM outputs two three-dimensional
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7207
+
+CMOS technology library using Synopsys Design Compiler and evaluated in terms of maximum frequency ( fmax), area, power, latency, and throughput. For FPGA verification, the CN update schemes are implemented on the Xilinx Zynq-7000 device using Vivado and evaluated in terms of fmax, registers, LUTs, and power consumption. For each scheme, the area and power are measured at the maximum frequency fmax, where fmax is determined based on the critical path. Similar to [41], the latency is defined as
+
+Fig. 15. Hardware architecture of T2-MFM for finding the first minimum in a dataset of length dG .
+Fig. 16. Hardware architecture of T2-DM for deleting the old element from Qi .
+
+Latency = C · G · Iavg ,
+
+(10)
+
+fmax
+
+where C, G, and Iavg denote the number of clock cycles required by one decoding group, the number of groups in
+one iteration, and the average number of iterations required
+to achieve a given FER at a certain SNR. In this paper, we count Iavg for different schemes at FER = 10−3 and Eb/N0 = 3.3 dB. Meanwhile, the throughput is defined as [41]
+
+Throughput = dc · fmax ,
+
+(11)
+
+C · G · Iavg
+
+where dc denotes the CN degree and is the same for different schemes. Moreover, similar to [42] and [43], we introduce the Figure of Merit (FoM) metric to evaluate the overall performance of each scheme. For ASIC implementations, the FoM is defined as
+
+FoM =
+
+fmax
+
+.
+
+(12)
+
+Area · Power
+
+For FPGA implementations, the FOM is defined as
+
+FoM =
+
+fmax
+
+.
+
+(13)
+
+(Register + LUT) · Power
+
+Fig. 17. Hardware architecture of T2-IM for inserting (m1, p1, g) into Qi .
+vectors Qi′,1 and Qi′,2 by comparing Qi(,31) with g. As a result, one v-bit CMP and six MUXs (two q-bit, two w-bit, and two v-bit) are consumed by the T2-DM.
+3) Architecture of T2-IM: We design the T2-IM based on the outputs of the T2-MFM and the T2-DM, as shown in Fig. 17. In Fig. 17, the T2-IM requires two q-bit CMPs and nine MUXs (three q-bit, three w-bit, and three v-bit) to update Qi . For convenience, we summarize the number of components required for the CN-Q under different schemes in Table II.
+Remark 2: Similar to the I-λMDQ scheme, the three modules of the CN-Q in the M-λMDQ scheme are also implemented within a single clock cycle and do not need additional registers.
+E. Implementation Results and Comparison
+In this subsection, we implement the CN-R and CNQ modules for different CN update schemes using two CCs on both ASIC and FPGA platforms. The hardware architectures presented in Section IV-C and Section IV-D are coded with Verilog HDL. For ASIC implementation, the CN update schemes are synthesized with the TSMC90nm
+
+In conjunction with the simulations in Section III-C,
+
+we implement the CN c1 with dc = 15 of C1 [4], where two
+
+grouping strategies, i.e., G = 6 and G = 3, are considered.
+
+Among them, G = 6 and G = 3 result in (q, w, v, dG ) = (4, 4, 3, 4) and (q, w, v, dG) = (4, 4, 2, 8), respectively.
+
+1) ASIC: Table III and Table IV present the ASIC
+
+implementation results under G = 6 and G = 3, respectively.
+
+For a given G, the M-λMDQ and I-λMDQ schemes
+
+consistently achieve the best or second-best performance in
+
+terms of frequency, area, latency, and throughput. The high
+
+frequency and reduced area lead to higher FOM values,
+
+indicating their superior efficiency compared to existing
+
+schemes. Specifically, for G = 6, the M-λMDQ and I-λMDQ
+
+schemes achieve FOM values of 0.92 and 0.87, respectively,
+
+which are more than twice that of [23]. For G = 3, the FOM
+
+values for the M-λMDQ and I-λMDQ schemes are 0.64 and
+
+0.42, respectively, which are approximately three times higher
+
+than those of [23].
+
+Based on the area results in Tables III and IV, as well as
+
+the number of components summarized in Table II, it can
+
+be observed that for each scheme, the area ratio between
+
+G = 6 and G = 3 is approximately equal to the corresponding
+
+components ratio, i.e.,
+
+Area at G=6 Area at G=3
+
+≈
+
+#Components #Components
+
+at at
+
+G G
+
+=6 =3
+
+.
+
+For
+
+instance, for the I-λMDQ scheme under G = 6 (dG = 4)
+
+and G = 3 (dG = 8), the number of components is 43 and
+
+75, respectively, while the area is 2010 and 3464, respectively.
+
+Consequently,
+
+the
+
+relationship
+
+2010 3464
+
+≈
+
+43 75
+
+holds.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7208
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+TABLE II NUMBER OF COMPONENTS FOR THE CN-Q UNDER DIFFERENT SCHEMES
+
+TABLE III
+ASIC IMPLEMENTATION RESULTS OF DIFFERENT CN UPDATE SCHEMES UNDER G = 6
+
+TABLE VI
+FPGA IMPLEMENTATION RESULTS OF DIFFERENT CN UPDATE SCHEMES UNDER G = 3
+
+TABLE IV ASIC IMPLEMENTATION RESULTS OF DIFFERENT CN
+UPDATE SCHEMES UNDER G = 3
+TABLE V FPGA IMPLEMENTATION RESULTS OF DIFFERENT CN
+UPDATE SCHEMES UNDER G = 6
+
+and power consumption. Moreover, the number of registers used for Qi in each scheme is consistent with the theoretical analysis. Specifically, the conventional realization [21] requires dc · (q + w) registers, the scheme in [23] requires λ · (q + w) registers, while both the I-λMDQ and M-λMDQ schemes require λ · (q + w + v) registers. Although the M-λMDQ and I-λMDQ schemes consume slightly more registers than the scheme in [23], they exhibit lower FOM values. For G = 6, the FOM values of the M-λMDQ and I-λMDQ schemes achieve improvements of about twice compared to those of [23]. Meanwhile, for G = 3, the FOM values of the M-λMDQ and I-λMDQ schemes are three times higher than those of [23]. These results further demonstrate the advantages of both the M-λMDQ and I-λMDQ schemes.
+Both ASIC and FPGA implementation results further confirm the conclusion presented in Section I: reducing G generally improves throughput and reduces latency but at the cost of higher hardware resource consumption. Furthermore, at both G = 6 and G = 3, the proposed M-λMDQ scheme has the highest FOM values, followed by the proposed I-λMDQ scheme. Combined with the simulation results in Section IIIC, the I-λMDQ scheme exhibits almost no performance degradation compared to conventional realizations, regardless of whether G = 6 or G = 3. Additionally, the M-λMDQ scheme only has decent error-correction performance under large G. Thus, we confirm that the I-λMDQ scheme and MλMDQ scheme are good CN update schemes of SMSA for Case 2.
+
+2) FPGA: Table V and Table VI present FPGA implementation results under G = 6 and G = 3, respectively. From Tables V and VI, the M-λMDQ and I-λMDQ schemes achieve the best or second-best performance in terms of frequency
+
+V. CONCLUSION
+In this paper, we proposed two novel CN update schemes, namely the I-λMDQ scheme and the M-λMDQ scheme, to reduce the complexity of the SMSA. In addition, we redesigned the SM to achieve a smaller area. Based on the new SM, we presented detailed hardware architectures for the I-λMDQ and M-λMDQ schemes with λ = 2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+LUO et al.: EFFICIENT SCHEMES AND ARCHITECTURES FOR CN UPDATE IN SMS DECODING OF LDPC CODES
+
+7209
+
+Extensive simulations on decoding performance and resource
+consumption showed that, compared to the existing simplified CN update schemes, the I-λMDQ scheme always has the best performance and the M-λMDQ scheme has comparable performance under large G; meanwhile, the M-λMDQ scheme and I-λMDQ scheme respectively have the lowest and second-
+lowest resource consumption.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] IEEE Standard for Information Technology–Telecommunications and Information Exchange Between Systems-Local and Metropolitan Area Networks—Specific Requirements—Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications, Standard 802.3-2005, Sep. 2006.
+[3] NR; Multiplexing and Channel Coding, document (TS) 38.212, 3GPP, 2017.
+[4] IEEE Standard for Information Technology–Telecommunications and Information Exchange Between Systems-Local and Metropolitan Area Networks–Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Standard 802.11-2020, 2009.
+[5] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[6] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[7] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[8] M. Karkooti, P. Radosavljevic, and J. Cavallaro, “Configurable, high throughput, irregular LDPC decoder architecture: Tradeoff analysis and implementation,” in Proc. IEEE 17th Int. Conf. Application-specific Syst., Architectures Processors (ASAP), Sep. 2006, pp. 360–367.
+[9] Y.-C. Liao, C. Lin, H.-C. Chang, and S. Lin, “A (21150, 19050) GCLDPC decoder for NAND flash applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 3, pp. 1219–1230, Mar. 2019.
+[10] B. Jang, H. Jang, S. Kim, K. Choi, and I.-C. Park, “Area-efficient QCLDPC decoding architecture with thermometer code-based sorting and relative quasi-cyclic shifting,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2897–2910, Jun. 2024.
+[11] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[12] H.-C. Lee, M.-R. Li, J.-K. Hu, P.-C. Chou, and Y.-L. Ueng, “Optimization techniques for the efficient implementation of high-rate layered QC-LDPC decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 64, no. 2, pp. 457–470, Feb. 2017.
+[13] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G newradio standard,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2035–2048, May 2022.
+[14] P. Kang, K. Cai, X. He, S. Li, and J. Yuan, “Generalized mutual information-maximizing quantized decoding of LDPC codes with layered scheduling,” IEEE Trans. Veh. Technol., vol. 71, no. 7, pp. 7258–7273, Jul. 2022.
+[15] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2911–2924, Jun. 2024.
+[16] Z. Cui, Z. Wang, X. Zhang, and Q. Jia, “Efficient decoder design for high-throughput LDPC decoding,” in Proc. bIEEE Asia–Pacific Conf. Circuits Syst., Nov. 2008, pp. 1640–1643.
+[17] L. Jun, S. Jin, Z. Wang, and L. Li, “An improved min-sum based columnlayered decoding algorithm for LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2009, pp. 238–242.
+[18] L. Luo, X. He, Y. Wang, J. Xing, and X. Tang, “An efficient scheme for finding minima in shuffled min-sum decoding of LDPC codes,” China Commun., early access, Jun. 2023. [Online]. Available: http://www.cicchinacommunications.cn/EN/10.23919/JCC.ja.2022-0738
+[19] K.-C. Ho, C.-L. Chen, and H.-C. Chang, “A 520k (18900, 17010) array dispersion LDPC decoder architectures for NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 4, pp. 1293–1304, Apr. 2016.
+
+[20] J. Cai and X. Zhang, “Low-complexity parallel min-sum mediumdensity parity-check decoder for McEliece cryptosystem,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 70, no. 12, pp. 5328–5338, Dec. 2023.
+[21] W. Shao, J. Sha, and C. Zhang, “Dispersed array LDPC codes and decoder architecture for NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 65, no. 8, pp. 1014–1018, Aug. 2018.
+[22] Y.-L. Ueng, C.-J. Yang, and C. Chen, “A shuffled message-passing decoding method for memory-based LDPC decoders,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2009, pp. 892–895.
+[23] Y.-L. Ueng, C.-J. Yang, K.-C. Wang, and C.-J. Chen, “A multimode shuffled iterative decoder architecture for high-rate RS-LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2790–2803, Oct. 2010.
+[24] Y.-L. Ueng, B.-J. Yang, C.-J. Yang, H.-C. Lee, and J.-D. Yang, “An efficient multi-standard LDPC decoder design using hardware-friendly shuffled decoding,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 3, pp. 743–756, Mar. 2013.
+[25] K. Vijaya Kumar, R. Shrestha, and R. Paily, “Design and implementation of multi-rate LDPC decoder for IEEE 802.16e wireless standard,” in Proc. Int. Conf. Green Comput. Commun. Electr. Eng. (ICGCCEE), Mar. 2014, pp. 1–5.
+[26] F. R. Kschischang and B. J. Frey, “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 219–230, Feb. 1998.
+[27] Y. Sun, M. Karkooti, and J. R. Cavallaro, “VLSI decoder architecture for high throughput, variable block-size and multi-rate LDPC codes,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2007, pp. 2104–2107.
+[28] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm2 52 mw multi-mode LDPC decoder design for mobile Wimax system in 0.13 µm CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 672–683, Mar. 2008.
+[29] S. Shao et al., “Survey of turbo, LDPC, and polar decoder ASIC implementations,” IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2309–2333, 3rd Quart., 2019.
+[30] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[31] Z. Cui, Z. Wang, and X. Zhang, “Reduced-complexity column-layered decoding and implementation for LDPC codes,” IET Commun., vol. 5, no. 15, pp. 2177–2186, Oct. 2011.
+[32] C.-C. Cheng, J.-D. Yang, H.-C. Lee, C.-H. Yang, and Y.-L. Ueng, “A fully parallel LDPC decoder architecture using probabilistic min-sum algorithm for high-throughput applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 9, pp. 2738–2746, Sep. 2014.
+[33] I. Tsatsaragkos and V. Paliouras, “A reconfigurable LDPC decoder optimized for 802.11n/AC applications,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 1, pp. 182–195, Jan. 2018.
+[34] M. A. Bender and M. Farach-Colton, “The LCA problem revisited,” in Proc. Lat. Am. Theor. Inf., Jan. 2000, pp. 88–94.
+[35] J. C. Na and I. Lee, “A simple heuristic for order-preserving matching,” IEICE Trans. Inf. Syst., vol. 102, no. 3, pp. 502–504, Mar. 2019.
+[36] D. J. MacKay. Encyclopedia of Sparse Graph Codes. Accessed: Feb. 18, 2025. [Online]. Available: http://www.inference.org.uk/mackay/codes/ data.html#l127
+[37] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I, Regular Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[38] Y. Lee, B. Kim, J. Jung, and I.-C. Park, “Low-complexity tree architecture for finding the first two minima,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 62, no. 1, pp. 61–64, Jan. 2015.
+[39] J. H. Lee and M. H. Sunwoo, “Low-complexity first-two-minimumvalues generator for bit-serial LDPC decoding,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 63, no. 5, pp. 483–487, May 2016.
+[40] H. Lopez, H.-W. Chan, K.-L. Chiu, P.-Y. Tsai, and S.-J. J. Jou, “A 75-gb/s/mm2 and energy-efficient LDPC decoder based on a reduced complexity second minimum approximation min-sum algorithm,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 4, pp. 926–939, Apr. 2020.
+[41] C. Zhang, Z. Wang, J. Sha, L. Li, and J. Lin, “Flexible LDPC decoder design for Multigigabit-per-Second applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 116–124, Jan. 2010.
+[42] P.-Y. Chiu and S.-I. Liu, “A 0.07 pJ/b/dB 36-Gb/s PAM-3 receiver using inductor-reused CTLE and one-tap loop-unrolled DFE in 22-nm CMOS,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 72, no. 4, pp. 1522–1532, Apr. 2025.
+[43] X. Zhang, J. Hu, X. Zou, S. Yang, and J. Liu, “A 5-MS/s 93.4-dBDR three-step incremental zoom ADC with single sampling,” IEEE Trans. Circuits Syst. I, Reg. Papers, early access, Feb. 13, 2025, doi: 10.1109/TCSI.2025.3539833.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+7210
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Lisha Luo (Graduate Student Member, IEEE) received the B.E. degree from Nanjing University of Posts and Telecommunications (NJUPT), Nanjing, China, in 2020, and the M.E. degree from Southwest Jiaotong University, Chengdu, China, in 2023, where she is currently pursuing the Ph.D. degree. Her research interests include error correction codes and their VLSI architectures.
+Xuan He (Member, IEEE) received the Ph.D. degree from the University of Electronic Science and Technology of China in 2018. From 2018 to 2020, he was a Post-Doctoral Research Fellow with Singapore University of Technology and Design. He is currently an Associate Professor with the School of Information Science and Technology, Southwest Jiaotong University, China. His main research interests include channel coding and its applications in DNA storage. He won the Best Paper Award from the Information Theory Society, Chinese Institute of Electronics, in 2024. Since October 2024, he has been serving as an Associate Editor for IEEE COMMUNICATIONS LETTERS.
+Qin Du received the B.E. degree from Sichuan Normal University (SICNU), Chengdu, China, in 2022. She is currently pursuing the M.E. degree with Southwest Jiaotong University. Her research interests include channel coding and VLSI architecture design methodology.
+
+Kaining Han (Member, IEEE) was born in 1991. He received the B.E. and Ph.D. degrees in communication systems from the University of Electronic Science and Technology of China (UESTC), Chengdu, China, in 2014 and 2019, respectively. From 2017 to 2018, he was a Visitor Scholar with the Department of Electrical and Computer Engineering, McGill University, Montreal, QC, Canada, collaborated with Prof. Warren. J. Gross. Since 2022, he has been an Associate Professor with the National Key Laboratory of Science and Technology on Communications, UESTC. His research interests include signal processing for communications, high-speed low-power DSP technology with VLSI, and stochastic computing-based system designs.
+Zhixiong Di (Member, IEEE) received the B.S. degree in microelectronics and solid electronics from Fuzhou University, Fuzhou, China, in 2007, and the Ph.D. degree in microelectronics and solid electronics from Xidian University, Xi’an, China, in 2014. He is currently an Associate Professor with the School of Integrated Circuits Science and Engineering, Southwest Jiaotong University, Chengdu, China. His research interests include physical design algorithms and VLSI architecture design methodology.
+Xiaohu Tang (Fellow, IEEE) received the B.S. degree in applied mathematics from Northwest Polytechnic University, Xi’an, China, in 1992, the M.S. degree in applied mathematics from Sichuan University, Chengdu, China, in 1995, and the Ph.D. degree in electronic engineering from Southwest Jiaotong University, Chengdu, in 2001. From 2003 to 2004, he was a Research Associate with the Department of Electrical and Electronic Engineering, The Hong Kong University of Science and Technology. From 2007 to 2008, he was a Visiting Professor with the University of Ulm, Germany. Since 2001, he has been with the School of Information Science and Technology, Southwest Jiaotong University, where he is currently a Professor. His research interests include coding theory, network security, distributed storage, and information processing for big data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:16:25 UTC from IEEE Xplore. Restrictions apply.
+
+

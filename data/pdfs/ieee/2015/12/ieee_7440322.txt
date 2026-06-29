@@ -1,0 +1,397 @@
+Analysis of ADMM-LP algorithm for LDPC decoding, a first step to hardware implementation
+
+Imen DEBBABI1, Bertrand LE GAL2, Nadia KHOUJA1, Fethi TLILI1 and Christophe JEGO2 1. GRESCOM Laboratory, High School of Communications, Carthage University, Tunisia.
+2. Bordeaux INP, Enseirb-Matmeca, CNRS IMS, UMR 5218, University of Bordeaux, Talence, France.
+
+Abstract—The recent interest in linear programming techniques for LDPC decoding showed that these methods are too complex for real applicability. Alternating direction method of multipliers is a classic technique in convex optimization theory. When applied to the linear programming decoding of LDPC codes, the ADMM algorithm acts as a message passing decoding method. In this work, we present a complexity analysis of the ADMM LDPC decoder compared with the sum product approach and we explain the parallelism levels that are explored in the ADMM algorithm. A software implementation by taking advantage of the architectural features of the multi-core processors parallelism is presented. The overall analysis provides a better understanding of the ADMM approach complexity which makes a start to possible hardware implementations.
+I. INTRODUCTION
+Channel coding is an essential part in digital communication systems for its role in forward error correction. LDPC codes are a class of efficient linear block codes. They were adopted for several digital communication standards such as WiFi, Wimax and Digital Video Broadcasting. When teamed up with the sum product message passing (MP) decoding algorithm, LDPC decoding can perform close to the Shannon limit, but it still depends upon intensive calculations. To reduce the complexity issues, other approaches like the Sum Product (SPA) and Min Sum (MS) are preferred [1], despite their error correction impact. With the advance of the linear programming (LP) decoding technique [2], LDPC decoders were imported to the sphere of convex optimization by relaxing the optimal decoding problem into a linear optimization problem. The work [3] shows that LP decoding is better than message passing algorithms in many aspects. First, it has a Maximum Likelihood (ML) certificate property meaning that if the solution of an LP decoder is integral, then it is the ML solution. Then, MP algorithms are not guaranteed to converge and are subject to error floors while LP decoding has not been observed to encounter the same problem for some practical long block length codes. A recent work of Barman et al. [4] came up with a low complexity algorithm based on alternating direction method of multipliers (ADMM) to decode LDPC codes.
+In this article we propose a complexity evaluation of the ADMM algorithm and a comparison with the Sum Product (SPA) decoding approach. Then an analysis of the processing parallelism is provided in order to identify the possibility of performing parallel hardware implementation like for SPA/MS algorithms. Finally, speeding techniques for the ADMM decoder targeting a multi-core implementation are provided. Throughputs experiment shows that for the 576 × 288 LDPC code, it is possible to reach up to 30 Mbps on a processor target which leads the way to a realtime hardware architecture.
+
+The remainder of the paper is organized as the following. In section II, we review the formulation of LP decoding and its ADMM representation and we analyze its complexity compared with conventional MP approaches. In section III, we summarize the algorithm’s optimizations on the target architecture to get software improvements. Section IV presents the performance results.
+II. ADMM ALGORITHM
+A. Introduction
+The LP formulation of an LDPC decoding problem associated with the inefficiency of general-purpose LP solvers gave rise to high computational complexity [5]. To address these issues, the ADDM algorithm is a way to obtain the LP decoding properties with less computations and less memory complexity as demonstrated in [5]–[8]. The description of the ADMM decoding algorithm looks similar to common MP algorithm with flooding based schedule. A simplified version of the ADMM algorithm is provided in Algorithm 1 which is based on three kernels. The first computes the variable nodes (VNs). The second computes the check nodes (CNs) and the third manages the iterative processing. Fundamentally, four mathematical transformations make the ADMM different from the traditional MP formulation. First, the messages transferred from CNs to VNs require the computation of two values called z and λ which are transferred on each edge of the Tanner graph. Second, a projection into the parity polytope (which is the convex hull of all binary vectors of CN degree length with an even number of ones) is needed for computing the CNs update. Third, an over relaxation parameter is introduced in order to improve the algorithm’s convergence. Finally, a penalty term is added to the objective function of the LP formulation to enhance the error rate decoding performances at low signal to noise ratio (SNR) values. The reader can refer to [5] and [6] for a detailed explanation of the ADMM convex problem formulation as well as an analysis of the projection algorithm and its complexity. Details about the parameters choice will be also offered.
+A (dv, dc) LDPC code of block length N and M check equations is described by a parity check matrix H ∈ F2M×N (M ≤ N ) having dv ones at each column and dc ones at each row. It can also be represented by its Tanner graph where the variable nodes are indexed by I = {1...N } and the check nodes are indexed by J = {1...M }. Let Nv(i) be the index of the set of neighbors of variable node vi and Nc(j) be the index of the set of neighbors of check node cj. The dcj × N binary transfer matrix Tj selects from an N -vector the coordinates corresponding to the dj neighboring variables
+
+978-1-5090-0246-7/15/$31.00 ©2015 IEEE
+
+356
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:16 UTC from IEEE Xplore. Restrictions apply.
+
+of check j. The check polytope Pdcj is the convex hull of all binary vectors of length dcj with an even number of ones. The work in [4] demonstrates that the ML decoding problem can
+be reformulated as follows:
+
+minimize γT x
+
+(1)
+
+Stating that Tjx = zj; zj ∈ Pdcj ∀j ∈ J .
+
+The augmented Lagrangian of the LP problem with scaled dual variable is:
+
+Lμ(x,
+
+z,
+
+λ)
+
+=
+
+γT
+
+x
+
++
+
+μ 2
+
+Tj x − zj + λj
+
+2 2
+
+−
+
+μ 2
+
+λj 22.
+
+j∈J
+
+j∈J
+
+(2)
+
+where μ > 0 is the penalty parameter, λ is the scaled dual
+
+variable and γ is the known vector of log-likelihood ratios.
+
+After simplifications, the ADMM-based decoding algorithm
+
+can be expressed in the form of an iterative message passing
+
+algorithm, as shown in Algorithm 1 where the l2 penalized
+
+version is considered [6]. Each variable update computation
+
+(kernel2, lines 8 : 9) consumes the 2dc incoming messages from the neighboring checks. Similarly, each check node com-
+
+putes its 2dc outgoing messages using the received ones from neighboring variables Lji for i ∈ Nj and its locally stored (zj)i and (λj)i from previous iteration (lines 13 : 14). Like
+traditional message-passing decoding algorithms, all variable
+
+updates can be computed simultaneously. This flooding based
+
+computation works out for the check updates as well.
+
+Π[0,1]dv (a) is the Euclidean projection of the vector a on [0, 1]dv . ΠPdc (b) is the Euclidean projection of the vector b on the check polytope Pdcj . In Algorithm 1, the computations are based primarily on
+
+additions, multiplications and divisions except for the projec-
+
+tion ΠPdc which determines the complexity of the ADMM decoding. According to [9], using software implementations
+
+of the SPA and ADMM algorithms, ADMM-l2 is said to be
+
+less complex than the SPA in terms of decoder execution time.
+
+Algorithm 1 Flooding based ADMM-l2 penalized algorithm.
+
+1: Kernel 1: Initialization
+
+2: for all j ∈ J , i ∈ Nc(j) do
+
+3:
+
+(zj(0))i = 0.5, (λj(0))i = 0, L(j0i) = 0.5
+
+4: end for
+
+5: for all k = 1 → (iter max) do
+
+6: Kernel 2: Computation of messages V Ni → CNj
+
+7: for all i ∈ I, j ∈ Nv(i) do
+
+8:
+
+t(ik) =
+
+(L(jki −1))
+
+−
+
+γi μ
+
+j∈Nv (i)
+
+9:
+
+Li(jk)
+
+=
+
+Π[0,1]dv
+
+(
+
+dvi
+
+1 −2
+
+α μ
+
+(ti(k)
+
+−
+
+α μ
+
+))
+
+10: end for
+
+11: Kernel 3: Computation of messages CNj → V Ni
+
+12: for all j ∈ J , i ∈ Nc(j) do
+
+13:
+
+(zj(k))i = ΠPdcj (ρL(ijk) + (1 − ρ)(zj(k−1))i + (λj(k−1))i)
+
+14:
+
+(λj(k))i = (λ(jk−1))i + ρL(ijk) + (1 − ρ)(zj(k−1))i − (zj(k))i
+
+15:
+
+L(jki ) = (zj(k))i − (λj(k))i
+
+16: end for
+
+17: end for
+
+18: Kernel 4: Hard decision from soft-values
+
+19: for all i ∈ I do
+
+20: cˆi =
+
+Lij > 0.5
+
+(j∈Nv (i))
+
+21: end for
+
+TABLE I.
+
+COMPLEXITY COMPARISON OF THE CN AND VN KERNELS.
+
+arithmetic add & sub
+arithmetic multiply & div arctan & arctan−1
+abs, min, max, xor, cm projection∗
+Memory access
+
+SPA Flooding
+
+VN
+
+CN
+
+2dv − 1
+
+4dc
+
+2dc
+
+6dc
+
+2dv + 1 2dc
+
+ADMM-l2
+
+VN
+
+CN
+
+2dv + 3
+
+6dc
+
+2
+
+4dc
+
+2 2dv + 3
+
+2dc 1
+9dc + 1
+
+A well-known test case applied on 576 × 288 LDPC code was presented. These measurements depend on the programming style and the optimization efforts done on the code [10]. In Table I a more formal comparison of both algorithms computation complexity is provided. The numbers in Table I represent the amount of computation of each operation type. Floating point data format is considered by default. Data address computations and data indexing are voluntary ignored. At first sight, the ADMM algorithm’s complexity for VN processing appears similar to SPA. However, the ADMM algorithm has higher VN complexity due to the use of multiplications and divisions required to inject the penalty factor. Regarding the CN processing complexity, ADMM is more complex. In fact, even though SPA needs two transcendental costly functions, ADMM needs only one - but complex - projection operation. Both arctan and projection operations are not atomic which justifies the difficulty to provide fair comparison. However, it is possible to evaluate that the Euclidean projection on the parity polytope when dc is equal to 6 has higher complexity than 2dc multiplications, 2dc additions, 2dc min, 2dc max operations. The complete description of the projection algorithm is provided in [11]. Its description needs a full article column. Due to page length limitation we do not provide it in this article. Moreover, two data sorting of two dc values have to be realized. To retrieve factual information, we measured the average execution time of atanh and projection on a Core-i7 processor core. Using the RDTSC instruction we measured the average number of clock cycles required to execute each of these operations. A projection operation requires in average 504 clock cycles whereas an atanh requires in average 40 clock cycles. On the other hand, ADMM-l2 algorithm has higher memory footprint than the SPA algorithm. In fact, for the SPA algorithm, the memory footprint is equal to N + 2 × m with N the code length and m the number of messages, while for the ADMM-l2 algorithm, it is equal to 2 × (N + m).
+B. Comparison with common LDPC decoding algorithms
+The ADMM algorithm error correction performance is compared to that of SPA and MS for the 576 × 288 LDPC code in Figure 1 which shows the frame error rate (FER) evolution with regards to signal to noise ratio. Two versions of the ADMM decoder are considered and the parameters are those of [7] and [8].
+In order to complete the above evaluation, we also compared the convergence speed. In fact, higher or lower number of iterations to decode a codeword deeply impacts the decoding complexity. The curve for 576 × 288 LDPC code shown in Figure 2 demonstrates that ADMM algorithm converges quickly in the waterfall region, however, the average number of
+
+357
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:16 UTC from IEEE Xplore. Restrictions apply.
+
+F ER
+
+100 10−1 10−2 10−3 10−4 10−5
+
+ADMM l2 PD [7] ADMM [8] SPA MS
+
+1.4
+
+2.4
+
+3.4
+
+SN R(dB)
+
+Fig. 1. Frame error rate performance for the 576 × 288 LDPC code.
+
+Throughput ADMM
+
+iterations ADMM
+
+200
+
+6
+
+iterations MS
+
+iterations SPA
+
+5 150
+
+4
+
+3
+
+100
+
+iterations
+
+Throughput (M bps)
+
+2 50
+1
+
+00.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.50
+
+SN R (dB)
+
+Fig. 2. Average number of iterations for different LDPC decoders Vs ADMM decoder throughput evolution for the 576 × 288 LDPC code.
+
+decoding iterations is three times less than the SPA algorithm. Compared to MS algorithms that are usually implemented in hardware, the convergence is about twice faster.
+C. Analysis of parallelism levels
+To design a high throughput hardware architecture, an analysis of the computation parallelism has to be performed. In fact, high throughputs are achieved in hardware by taking advantage of parallel processing elements. For the ADMM algorithm, similar to conventional SPA or MS algorithm, three distinct parallelism levels can be identified:
+First parallelism level is located inside the CN and VN kernels (Algorithm 1, lines 8 and 11). For each VN processing in the VN kernel, dv set of zj and λj values can be processed in parallel before their reduction (sum). A similar kind of parallelism involving dc set of {Lij, (λj)i, (zj)i} values exists in the CN kernel. Regarding the polytope projection computation, this first parallelism level also exists even though non-parallelizable sections consisting of sorting operations and data dependencies limit the speed acceleration.
+Second parallelism level is located at CN and VN level. In one decoding iteration, all the VN computations can be
+
+executed in parallel (Algorithm 1, lines 7 to 10), then all the CN computations can be also executed in parallel (Algorithm 1, lines 12 to 16) providing regularity for both VN and CN kernels processing. This approach is easily applicable to regular LDPC codes only where all VN/CN nodes have the same degree. It can be hazardous e.g. for irregular codes.
+Third parallelism level is located at the codeword level i.e. the complete Algorithm 1 execution, allowing several consecutive frames to be simultaneously decoded. The same computation sequence is executed over different data sets. This approach provides an efficient parallel processing. However, due to the complexity and the irregularity of the projection operation, a single controller is not enough to manage in an identical way the separate data-path needed for each codeword.
+To recapitulate, ADMM algorithm seems to be an effective candidate to be implemented on architecture similar to the ones that the MP algorithm targeted [1]. Still, some transformations have to be considered. First, the interconnection with the memory banks needs to be modified so that CN and VN receive two messages for each edge. Second, it is necessary to develop efficient processing elements for projection in order to provide high-throughput performance with low hardware complexity. Third, an adjustment to fixed-point values and operations for hardware cost consideration should be made without highly impacting the error correction performances.
+III. MULTI-CORE IMPLEMENTATION
+Based on the parallelism analysis study detailed above, we performed a multi-core implementation of the ADMM algorithm. The purpose of the optimized decoder is to perform further algorithmic simplifications and study the impact of the quantization formats on the decoder performances. Henceforth, using the accelerated version of the decoder, it is possible to evaluate the impact of algorithmic modifications on low FER. As mentioned in [5], extremely exhaustive simulations of large frame numbers are required to guess the suitable overrelaxation parameter for an ADMM decoder.
+Implementing novel algorithms on hardware architectures is a difficult design task which is generally preceded by an assessment of a large set of optimizations that could concern either algorithmic computations and/or parameter evaluation. When we first considered an efficient implementation of the ADMM decoder on a multi-core architecture, we analyzed the different parallelism levels available. In this section, we detail the features of the multi-core targets and the way we speededup the ADMM decoder.
+Our multi-core target is a x86 Core-i7 processor is composed of four physical cores (8 logical cores). It supports both Single Instruction Multiple Data (SIMD) and Multiple Program Multiple Data (MPMD) programming models. SIMD units are equivalent to parallel processing elements in hardware circuits that offer multiple computations on different data simultaneously. Henceforth, a multiple processor core can be used to execute different tasks on different data sets like independent hardware blocs. The challenging task to reach high throughputs for the ADMM decoder by implementing it on to such multi-core devices is to carefully reduce the number of instructions executed, to efficiently manage memory caches
+
+358
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:16 UTC from IEEE Xplore. Restrictions apply.
+
+and to increase the usage rate of SIMD units and processor cores.
+On each SIMD unit, eight identical floating point operations can be performed in parallel. This capability is used to implement the first and second parallelism levels. For instance, dc multiplications are performed in parallel in CN kernel. The processing is accelerated though full usage rate of SIMD unit is not reached. An identical technique is used for VN computations and for the projection operations. The third parallelism level is implemented using the multi-core architecture. F codewords are decoded simultaneously on the different processor cores. This approach is discarded for the first two levels due to the execution time required by the processor core for synchronization.
+IV. EXPERIMENTAL RESULTS
+In this section we illustrate the parallelism levels usage for a software target which enables to reach high throughput performances. Even though this implementation is limited to multi-core capability, it demonstrates that implementing the ADMM decoding algorithm on a hardware architecture may provide throughput compatible with most communication standard requirements (e.g. WiMAX and/or DVB-S2).
+The resulting software runs considerably faster than the original implementation (about ×8). In fact, the original version developed by the authors of [6] available online at [12] was not optimized for performance.
+The first experimentation set reported in Figure 3.a provides the throughput reached on a single processor core for 576 × 288 LDPC code. The throughput increases linearly with the SNR value meanwhile the average number of decoding iterations required for the decoder to converge to a codeword decreases. At 2db, the throughput reaches up 1.7Mbps, while at 3db it is close to 5Mbps. This result illustrates that taking advantage of CN, VN and projection computation parallelism enables us to reach reasonable throughputs on a single processor core. The second experimentation set depicted by Figure 3.b allows to generalize the throughput results to other LDPC codes with longer frames. It demonstrates the efficiency of the proposed ADMM decoder implementation. Finally, an evaluation of the decoder implementation’s scalability was performed. For this purpose a muti-threaded version of the decoder was developed to take advantage of multi-core architecture of the Core-i7 processor using OpenMP directives. Throughputs reached by this decoder version are reported in Figure 3.b. The number of processors switched on was increased from 1 to 8. Speed-up factor for 8 core decoder goes beyond ×8 since the Core-i7 architecture provides only 4 physical cores. The throughput reaches 30 Mbps for the considered LDPC codes, at the 8 core implementation hence it fulfills the 576 × 288 WiMax standard requirement. Similar throughputs are also reached by LDPC codes from Figure 3.a.
+To sum up, even though this processor implementation does not provide hundreds of Mbps required by recent standards like the DVB-S2x, it demonstrates that a real-time hardware implementation of ADDM decoder is possible. Besides, it enables to speed-up the ADMM algorithm’s simulation for research purpose in order to test novel algorithmic simplifications with reasonable times and/or low error rates (< 106).
+
+5
+
+576x288
+
+2304x1152
+
+2640x1320
+
+4
+
+4000x2000
+
+3
+
+1 core
+
+30
+
+2 cores
+
+4 cores
+
+8 cores
+
+20
+
+Throughput (M bps) Throughput (M bps)
+
+2 10
+1
+
+01
+
+1.5
+
+2
+
+2.5
+
+3
+
+01
+
+2
+
+3
+
+4
+
+Eb/N0 (dB)
+
+Eb/N0 (dB)
+
+Fig. 3. Measured throughputs for ADMM decoder (a) Different LDPC codes on an single processor core, (b) 576×288 LDPC code according to the number of processor cores
+
+V. CONCLUSION
+In this paper, we presented the ADMM algorithm and we detailed its behavior then compared it to common SPA decoding method. Analyzing the ADMM’s complexity and exploring its possible parallelism levels pave the way to further hardware implementation. This acknowledgment is reinforced by the speed up achievements that took advantage of the SIMD and multi-core processor’s features.
+REFERENCES
+[1] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 54, no. 6, pp. 542–546, 2007.
+[2] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” Information Theory, IEEE Transactions on, vol. 51, no. 3, pp. 954–972, March 2005.
+[3] J. Feldman., “Decoding Error-Correcting Codes via Linear Programming,” Ph.D. dissertation, Massachussets Institute of Technology, 2003.
+[4] S. D. S. Barman, X. Liu and B. Recht, “Decomposition methods for large scale LP decoding,” in 49th Annual Allerton Conference on in Communication, Control, and Computing (Allerton), 2011.
+[5] X. Zhang, “LDPC Codes Structured Analysis and Decoding Techniques,” Ph.D. dissertation, University of California San Diego, 2012.
+[6] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” CoRR, vol. abs/1409.5140, 2014.
+[7] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM Penalized Decoder for Irregular Low-Density Parity-Check Codes,” IEEE Communications Letters, vol. 19, no. 6, pp. 913–916.
+[8] H. Wei, X. Jiao, and J. Mu, “Reduced-Complexity Linear Programming Decoding Based on ADMM for LDPC Codes,” IEEE Communications Letters, vol. 19, no. 6, pp. 909–912, 2015.
+[9] X. Zhang and P. H.Siegel, “Efficient Iterative LP Decoding of LDPC Codes with Alternating Direction Method of Multipliers,” in IEEE International Symposium on Information Theory (ISIT), 2013.
+[10] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Transactions on Parallel and Distributed Systems, vol. PP, no. 99, pp. 1–1, 2015.
+[11] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition Methods for Large Scale LP Decoding,” IEEE Transactions on Information Theory, vol. 59, no. 12, pp. 7870–7886, 2013.
+[12] “C++ ADMM Decoder by X. Liu,” https://sites.google.com/site/ xishuoliu/codes, accessed: 2015-04-17.
+
+359
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:16 UTC from IEEE Xplore. Restrictions apply.
+
+

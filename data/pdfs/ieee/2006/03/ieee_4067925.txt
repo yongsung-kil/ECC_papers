@@ -1,0 +1,781 @@
+High-Throughput Turbo-Sum-Product Decoding of
+QC LDPC Codes
+Yongmei Dai, Zhiyuan Yan and Ning Chen
+Department of Electrical and Computer Engineering Lehigh University, PA 18015, USA
+E-mail: {yod304, yan, nic6}@lehigh.edu
+
+Abstract— In this paper, we first propose a turbo-sum-product (TSP) decoding algorithm for quasi-cyclic (QC) low-density parity-check (LDPC) codes and show that our proposed algorithm not only achieves faster convergence and better error performances than the sum-product (SP) algorithm, but also needs less memory in implementation. Compared with the turbo decoding algorithm, our TSP algorithm saves the same amount of memory and achieves a better tradeoff between sub-iterations and convergence rate, leading to a higher throughput. We also propose a shuffled-sum-product (SSP) decoding algorithm, which is the dual of the TSP algorithm.
+Index Terms— low-density parity-check (LDPC) codes, quasicyclic (QC) codes, turbo decoding, sum-product decoding.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes [1, 2] and their efficient implementations have been receiving a lot of attention due to their near-capacity performances when decoded iteratively. Various (fully parallel, fully serial, and partly parallel) decoder architectures (see, e.g., [3–8]) have been proposed. In general, random code structure causes problems in the implementation of such codes, whereas regular code structure tends to ease the hardware implementation. Quasi-cyclic (QC) LDPC codes [9–11] not only have relatively good error performances [10] but also are suitable for hardware implementation: they can be encoded efficiently with shift registers (see, e.g., [12]) and decoded with partly parallel decoder architectures, which require simpler address generation mechanisms, less memory, and localized memory access (see, e.g., [6,7]). Thus, QC LDPC codes are of great interest and we focus on the decoding of QC LDPC codes in this paper.
+One of the iterative decoding algorithms for LDPC codes is the sum-product (SP) decoding algorithm (see, e.g., [13]). An LDPC code can be represented by its Tanner graph [14], wherein the codeword bits and the parity check equations are represented as variable and check nodes respectively. Each iteration of the SP algorithm consists of two sequential steps: variable node updates (VNUs) followed by check node updates (CNUs). There is inherent parallelism among the CNUs and VNUs respectively in each iteration of the SP algorithm, but fully parallel decoder architectures require a large number of processing elements and are susceptible to congested routing network. Thus, fully parallel architectures have been considered only for LDPC codes with moderate block lengths [3, 4].
+Other iterative decoding algorithms (see, e.g., [8, 15–23]) have also been proposed for LDPC codes, and some of
+
+these algorithms have been implemented using partly parallel decoder architectures. Lu and Moura [19] proposed to split the bipartite graph into a few trees, with each tree defining a supercode. However, this approach seems difficult to implement efficiently. Prabhakar and Narayanan [18] proposed to split the bipartite graph into two disjoint sub-graphs of approximately the same size, with each sub-graph defining a supercode and to decode each supercode with the SP algorithm while exchanging reliability information between the two supercodes. However, their approach saves memory in implementation at the cost of slower convergence and inferior error performance than the SP algorithm. Shimizu et al. [8] proposed a high-efficiency message-passing algorithm that achieves faster convergence at the expenses of more VNUs and doubling the memory requirement. Mansour and Shanbhag [16] have proposed a turbo decoding algorithm, which essentially changes the order of the CNUs and VNUs in the SP algorithm (see Section II for details). Each iteration of the turbo decoding algorithm consists of J successive subiterations, each of which decodes a supercode of the given LDPC code. The turbo decoding algorithm requires fewer (up to 50%) iterations to converge and achieves better error performance [16] than the SP algorithm while leading to significant memory savings in implementation [16, 17]. A similar idea was proposed in the shuffled decoding algorithm [20–22] as well. One potential drawback of the turbo (or shuffled) decoding algorithm is that the serialization of the decoding of the J supercodes somewhat offsets its advantage in convergence rate. Suppose it takes T clock cycles to decode each supercode and the average number of iterations is Nt, then the average number of clock cycles to decode a frame is Nt × J × T . When applying the turbo decoding algorithm to a QC LDPC code, J is the number of block rows in the parity check matrix, which is at least 3 and greater than 3 in many cases (see [10]). Thus, despite a smaller Nt, the throughput of the turbo decoding algorithm is limited, especially when J is large.
+In this paper, we propose a new hybrid decoding algorithm, referred to as turbo-sum-product (TSP) algorithm: Given any QC LDPC code, the parity check matrix is always split rowwise into two submatrices which define two supercodes; then the two supercodes are decoded sequentially using the SP algorithm while reliability information is exchanged between the two supercodes using the turbo decoding algorithm. Different from [18], our TSP algorithm leads to reduced memory requirement while achieving better error performances and faster
+
+1-4244-0350-2/06/$20.00 ©2006 IEEE
+
+839
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+2
+
+convergence. Since one iteration of the TSP algorithm only consists of sequential decoding of two supercodes, our TSP algorithm achieves better tradeoff between the convergence rate and sub-iterations, and hence higher throughput than the turbo decoding algorithm [16], especially when QC LDPC codes have more than 3 block rows. The implementation of our TSP algorithm can save the same amount of memory as that of the turbo decoding algorithm. Due to the similarity between the turbo and shuffled decoding algorithm [22], we also propose a shuffled-sum-product (SSP) decoding algorithm.
+The rest of the paper is organized as follows. Section II briefly reviews the sum-product, turbo, and shuffled decoding algorithms. Section III first briefly reviews the QC LDPC codes and then proposes the TSP decoding algorithm. In Section IV, we discuss the implementation of the shuffled decoding algorithm and then propose our SSP algorithm. Finally, Section V presents the simulation results.
+II. DECODING ALGORITHMS OF LDPC CODES
+Given an LDPC code represented by a parity check matrix H = {Hl,i}L×N , where N and L denote the block length and the number of parity check equations respectively, we briefly review various decoding algorithms for the given LDPC code.
+
+A. SP Decoding Algorithm
+
+The SP algorithm (see, e.g., [13]) is a multi-iteration pro-
+cedure that iteratively exchanges the extrinsic log likelihood
+ratio (LLR) information between check and variable nodes
+until the stopping criterion is satisfied. Usually, this means
+that either the parity check equations are satisfied or the pre-
+set maximum iteration number is reached. Each iteration of the
+SP algorithm consists of two sequential steps: VNUs followed by CNUs. For i = 1, 2, · · · , N , let ql(,ni) denote the message from variable node i to check node l during the n-th iteration, where l ∈ Qi = {1 ≤ l ≤ L : Hl,i = 1}. Similarly, for l = 1, 2, · · · , L, let rl(,ni) denote the message from check node l to variable node i during the n-th iteration, where i ∈ Rl = {1 ≤ i ≤ N : Hl,i = 1}. Let x = [x1 x2 · · · xN ] denote the codeword, which is then modulated using BPSK
+modulation and transmitted over an additive white Gaussian noise (AWGN) channel, and let y = [y1 y2 · · · yN ] denote the received signals. The standard SP decoding algorithm works
+as follows:
+
+1. Iteration 0 (initialization): For i = 1, 2, · · · , N , calculate
+
+the intrinsic LLR information obtained from channel λi =
+
+ln
+
+p(yi p(yi
+
+|xi =0) |xi =1)
+
+,
+
+and
+
+initialize
+
+rl(,0i)
+
+=
+
+0,
+
+∀l
+
+∈
+
+Qi.
+
+2. Iteration n (n ≥ 1):
+
+1) VNUs: For i = 1, 2, · · · , N and ∀l ∈ Qi,
+
+ql(,ni) = λi +
+
+rl(n,i−1),
+
+(1)
+
+l ∈Qi\l
+
+2) CNUs: For l = 1, · · · , L and ∀i ∈ Rl,
+
+⎛
+
+⎞
+
+rl(,ni) =
+
+sign(ql(,ni)) · Ψ ⎝
+
+Ψ(|ql(,ni)|)⎠ , (2)
+
+i ∈Rl\i
+
+i ∈Rl\i
+
+where
+
+Ψ(x)
+
+=
+
+ln
+
+ex ex
+
++1 −1
+
+.
+
+3) Parity check: For variable node i (i = 1, 2, · · · , N )
+
+compute the a posterior LLR Λi(n) = λi + l∈Qi rl(,ni). Set xˆi(n) either to 0 if Λ(in) > 0 or to 1 otherwise. If either H[xˆ(1n), xˆ2(n), · · · , xˆ(Nn)]T = 0 or the maximum
+
+iteration number is reached, stop the decoding. Other-
+
+wise, start the next iteration (n = n + 1).
+
+Note that the three steps in each iteration are to be carried out sequentially. The ql(,ni) (∀l ∈ Qi) in (1) can be obtained by first summing up all the rl(n,i−1) (∀l ∈ Qi) and then subtracting rl(,ni−1). This simplification leads to a reduced complexity of O(2j) additions per variable node. The same technique can be applied to the computation of (2) and O(2k) additions and O(2k) evaluation of Ψ(·) per check node are required (see,
+
+e.g., [24]).
+
+B. Turbo Decoding Algorithm
+The turbo decoding algorithm [16] splits H into J submatrices row-wise, i.e., H = [H1T HT2 · · · HJT ]T such that for Hi (i = 1, 2, · · · , J) there is at most one 1 in each column. Each submatrix Hi defines a supercode Ci, and C = C1 ∩C2 · · ·∩CJ . Each iteration of the turbo decoding consists of J sequential sub-iterations to decode the J supercodes using the extrinsic information from the other supercodes as a priori information. To decode the supercodes, VNUs concatenated with either the BCJR algorithm or CNUs can be used (see [16] for details). We use the latter approach in this paper. The turbo decoding algorithm can be viewed as a variant of the SP algorithm that arranges the message passing in a different order. Let us denote the sets of variable and check nodes in the Tanner graph of the given code as V and C respectively. In the turbo decoding, the breakup of H partitions C into J disjoint subsets: C = C˜1 ∪ C˜2 ∪ · · · ∪ C˜J , where C˜i denotes the set of check nodes corresponding to Hi. Each iteration of the SP algorithm first computes the messages from V to C˜i (i = 1, 2, · · · , J) in parallel and then calculates the messages from C˜i (i = 1, 2, · · · , J) to V simultaneously as shown in Fig. 1(a). In the turbo decoding, the order of the messages is changed as shown in Fig. 1(b): first computes the messages from V to C˜1 and from C˜1 to V , then computes the messages from V to C˜2 and from C˜2 to V , and so on. Since within one iteration, one supercode can use the updated information from preceding supercodes, the turbo algorithm requires fewer (up to 50%) iterations and achieves better error performance [16] than the SP algorithm. Since the decoding of one supercode only needs information from the other supercodes and the new information can overwrite the old information from the succeeding supercode, this eliminates the need to save the LLR information of one supercode and leads to memory savings.
+
+C. Shuffled Decoding Algorithm
+Shuffled or group shuffled decoding algorithm proposed in [20–22] is essentially a column version of the turbo decoding algorithm [16]. Instead of splitting the parity check matrix row-wise, the group shuffled decoding algorithm splits H into G groups column-wise, i.e., H = H¯ 1 H¯ 2 · · · H¯ G .
+
+840
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+3
+
+V
+
+→
+
+~ C1
+
+~ C1
+
+→V
+
+6XELWHUDLRQ 
+
+V
+
+→
+
+~ C1
+
+V
+
+→
+
+~ C2
+
+
+
+V
+
+→
+
+~ CJ
+
+~ C1
+
+→V
+
+~ C2
+
+→V
+
+
+
+~ CJ
+
+→V
+
+D
+
+V
+
+→
+
+~ C2
+
+~ C2
+
+→V
+
+6XELWHUDLRQ  E
+
+V
+
+→
+
+~ CJ
+
+~ CJ
+
+→
+
+V
+
+6XELWHUDLRQ -
+
+V → C1
+
+C1 → V
+
+V → C2
+
+6XELWHUDLRQ  F
+
+C
+
+→
+
+~ V1
+
+~ V1
+
+→C
+
+6XELWHUDLRQ 
+
+C
+
+→
+
+~ V2
+
+~ V2
+
+→C
+
+6XELWHUDLRQ  G
+
+C2 → V
+6XELWHUDLRQ 
+
+C → V~G
+
+V~G → C
+
+6XELWHUDLRQ *
+
+C → V1
+
+V1 → C
+
+C → V2
+
+6XELWHUDLRQ  H
+
+V2 → C
+6XELWHUDLRQ 
+
+Fig. 1. Message passing during one iteration of various decoding algorithms: (a) SP (b) turbo (c) TSP (d) group shuffled (e) SSP
+
+in (3) defines a (j, k) regular QC LDPC code with L = jm, block length N = km, and rate ≥ 1 − j/k. This code is also referred to as an (m, j, k) SFT code.
+B. Turbo Decoding of QC LDPC Codes
+The turbo decoding algorithm in [16] can be directly used to decode QC LDPC codes. Since for each H˜ s there is exactly one 1 in each column, each H˜ s defines a supercode C˜s+1 (0 ≤ s ≤ j − 1). Totally, there are J = j supercodes, and at any time, only the LLR information of j − 1 supercodes needs to be stored. Thus, the turbo decoding algorithm can save the memory corresponding to one block row in comparison to the SP decoding algorithm. However, due to serialization of the decoding of supercodes, the simplification method to compute (1) cannot be applied and the number of additions per variable node required for the VNUs increases from O(2j) to O(j2). Furthermore, as shown in Figs. 1(a) and 1(b), the serialization of the decoding of the j supercodes limits the throughput compared to the SP algorithm, where the decoding of the j supercodes is completely parallel. This motivates the following two-supercode based TSP algorithm.
+
+Accordingly, the set of variable nodes V in the Tanner graph of the given LDPC code is partitioned into G subsets: V = V˜1 ∪ V˜2 ∪ · · · ∪ V˜G, where V˜i denotes the set of variable nodes corresponding to H¯ i. Each iteration of the shuffled decoding consists of G sub-iterations as shown in Fig. 1(d): first computes the messages from C to V˜1 and from V˜1 to C, then computes the messages from C to V˜2 and from V˜2 to C, and so on. The shuffled decoding algorithm also achieves better error performances and faster convergence than the SP
+algorithm.
+
+III. TSP ALGORITHM OF QC LDPC CODES
+
+A. QC LDPC Codes
+
+A (j, k) regular QC LDPC code1 can be represented by a
+
+parity check matrix of the form
+
+⎡ H = ⎢⎢⎢⎣
+
+H˜ 0 H˜ 1
+...
+
+⎤⎡ ⎥⎥⎦⎥ = ⎣⎢⎢⎢
+
+Id0,0
+Id1,0 ...
+
+⎤
+
+Id0,1
+Id1,1 ...
+
+··· ··· ...
+
+Id0,k−1
+Id1,k−1 ...
+
+⎥⎥⎥⎦ ,
+
+H˜ j−1
+
+I I · · · I dj−1,0
+
+dj −1 ,1
+
+dj−1,k−1
+
+(3)
+
+where H˜ s = [Ids,0 Ids,1 · · · I ] ds,k−1 denotes the s-th (0 ≤ s ≤
+
+j − 1) block row, and Ids,t denotes an m × m identity matrix
+
+with all the rows cyclically shifted to the right by ds,t positions
+
+(0 ≤ s ≤ j − 1, 0 ≤ t ≤ k − 1). There exist various ways to
+
+define the value for ds,t [6,9,10]. For example, the construction
+
+of the SFT codes [10] is based on the multiplicative structure
+
+of finite fields. Assume m is prime, then Zm = {0, 1, · · · , m− 1} is a field under addition and multiplication modulo m. Let
+
+a and b be two non-zero elements in Zm with multiplicative orders k and j respectively. Setting ds,t = bsat (mod m), H
+
+1For ease of presentation, QC LDPC codes in this paper refer to QC LDPC codes whose parity check matrices consist of cyclically shifted identity matrices. There are other methods to construct QC LDPC codes [2].
+
+C. TSP Algorithm of QC LDPC Codes
+
+Given a QC LDPC code, we can view its H as the concatenation of two submatrices: H = [H1T HT2 ]T , where H1 = H˜ 0 has exactly one 1 in each column, and H2 = [H˜ 1T H˜ T2 · · · H˜ jT−1]T . H1 and H2 define two supercodes C1 and C2 respectively, and the original LDPC code C is then C1 ∩ C2. The breakup of H partitions the set of check nodes
+in the Tanner graph of the given LDPC code into two disjoint
+sets C1 and C2, which correspond to C1 and C2 respectively.
+Since there is only one 1 in each column in H1, the decoding of C1 only requires the information from C2. Since there are j − 1 1’s in H2, the decoding of C2 requires extrinsic information not only from C1, but also from the other j − 2 1’s in C2. In order to save memory while exploiting the turbo
+effects introduced by the two supercodes, we perform the
+VNUs for C2 immediately after the VNUs and CNUs for C1. Thus, the new information from C1 is immediately passed to C2, and at the same time, each 1 in C2 also gets the information from the other j − 2 1’s in C2. As illustrated in Fig. 1(c),
+the TSP algorithm essentially changes the order of messages
+passed between V and C1 and C2: first the messages are passed from V to C1, from C1 to V and from V to C2, then the messages are passed from C2 to V .
+Define Qi1 = {1 ≤ l ≤ m : Hl,i = 1} and Q2i = {m + 1 ≤ l ≤ L : Hl,i = 1}, then Qi = Q1i ∪ Q2i . We formulate the TSP decoding algorithm as follows:
+
+1. Iteration 0 (Initialization): For i = 1, 2, · · · , N , calculate
+
+the intrinsic LLR information obtained from channel λi =
+
+ln
+
+p(yi p(yi
+
+|xi |xi
+
+=0) =1)
+
+,
+
+and
+
+initialize
+
+the
+
+check
+
+to
+
+variable
+
+message
+
+rl(,0i) = 0, ∀l ∈ Qi2.
+
+2. Iteration n (n ≥ 1):
+
+i) For l = 1, 2, · · · , m and ∀i ∈ Rl calculate
+
+841
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+4
+
+1) VNUs: 2) CNUs:
+
+ql(,ni) = λi +
+
+rl(n,i−1),
+
+l ∈Q2i
+
+⎛
+
+(4) ⎞
+
+rl(,ni) =
+
+sign(ql(,ni)) · Ψ ⎝
+
+Ψ(|ql(,ni)|)⎠ , (5)
+
+i ∈Rl\i
+
+i ∈Rl\i
+
+3) VNUs: For ˜l ∈ Qi2, compute
+
+q˜l(,ni) = λi +
+
+rl(n,i) +
+
+rl(n,i−1),
+
+(6)
+
+l ∈Qi1
+
+l ∈Q2i \˜l
+
+ii) CNUs: For l = m + 1, m + 2, · · · , L and ∀i ∈ Rl, compute
+
+⎛
+
+⎞
+
+rl(,ni) =
+
+sign(ql(,ni)) · Ψ ⎝
+
+Ψ(|ql(,ni)|)⎠ , (7)
+
+i ∈Rl\i
+
+i ∈Rl\i
+
+iii) Parity check: For i = 1, 2, · · · , N , compute the a posterior
+
+LLR
+
+Λ(in) = λi +
+
+rl(n,i) +
+
+rl(n,i),
+
+(8)
+
+l ∈Qi1
+
+l ∈Q2i
+
+If Λi > 0, then H[xˆ1(n), xˆ2(n), · · ·
+
+,
+
+xxˆˆi(N(nn))]T==00,
+
+otherwise, xˆi(n) or the maximum
+
+= 1. If iteration
+
+either num-
+
+ber is reached, stop the decoding. Otherwise, start the next
+
+iteration (n = n + 1).
+
+Note that since there is exactly one 1 in each column of H1, the VNUs in (4) involve only the check to variable messages from Q2i and the first summations on the right hand side of (6) and (8) respectively have only one term. Furthermore, since the extrinsic LLRs from C1 obtained in (5), rl(,ni) (1 ≤ l ≤ m ∀i ∈ Rl), are immediately utilized in (6), there is no need to save these extrinsic LLRs, saving memory corresponding to one block row. Comparing the SP and TSP algorithms, it is clear that the TSP algorithm has the same computational complexity as the SP algorithm since (5) plus (7) is equivalent to (2), and (4) plus (6) is equivalent to (1).
+Since our TSP algorithm only exploits the turbo effects of two supercodes, it is expected that the convergence rate improvement is less significant than that of [16], where the turbo effects of j supercodes are exploited. However, as shown in Figs. 1(b) and 1(c), one iteration of the TSP algorithm consists of sequential decoding of 2 supercodes, while one iteration of the turbo decoding consists of sequential decoding of j supercodes. As a result, our decoding algorithm can potentially achieve higher throughput than that of [16].
+
+IV. SSP ALGORITHM OF QC LDPC CODES
+A. Shuffled Decoding of QC LDPC Codes
+The group shuffled decoding algorithm [20] can be directly applied to decode a QC LDPC code. The parity check matrix of the QC LDPC code can be arbitrarily partitioned into G groups column-wise. However, similar to the turbo decoding algorithm [16], the group shuffled decoding algorithm can potentially lead to memory savings only when each group has
+
+only one 1 in each row. Thus, the parity check matrix of a QC LDPC code is divided into G = k groups, corresponding to the k block columns. However, the implementation of the group shuffled decoding algorithm leads to a tradeoff between memory and computational complexity. Since the CNUs (2) in each sub-iteration are only for the variable nodes in one block column, we need to either re-evaluate the Ψ(·) functions in (2) in each sub-iteration or save the evaluations of them in memory. The former option saves the memory corresponding to one block column, but the numbers of additions and Ψ(·) function evaluation per check node required for the CNUs both increase from O(2k) to O(k2). The latter option maintains the same number of Ψ(·) evaluations as the standard SP algorithm at the expense of saving k−2 extra LLRs (the check to variable messages after Ψ(·) evaluations) in addition to k −1 LLRs per check node. That is, it actually requires more memory than the SP algorithm! Finally, similar to the turbo decoding algorithm, the throughput of the group shuffled decoding is limited by the serialization of the sub-iterations.
+B. SSP Algorithm of QC LDPC Codes
+Given a QC LDPC code, we can view its H as the concatenation of two submatrices: H = [H¯ 1 H¯ 2], where H¯ 1 is simply the first block column in H. Note that this concatenation ensures that for H¯ 1 there is exactly one 1 in each row. This concatenation of H partitions the set of variable nodes in the Tanner graph of the given LDPC code into two sets V1 and V2, which correspond to H¯ 1 and H¯ 2 respectively. As illustrated in Fig. 1(e), the SSP algorithm essentially changes the order of messages passed between C and V1 and V2: first the messages are passed from C to V1, from V1 to C, and from C to V2, then the messages are passed from V2 to C. However, if we want to have the same computational complexity, whether we can save memory or not depends on the implementation. Also, the time required for each iteration of decoding increases due to the serialization of the CNUs for the two sub-iterations, each of which needs the same amount of time as one CNUs in the standard SP algorithm. Given these problems, the shuffled and SSP decoding algorithms seem to be not as appealing as the turbo and TSP decoding algorithms.
+V. SIMULATION RESULTS AND DISCUSSIONS
+We consider three SFT codes in our simulations: a (211, 3, 5) SFT code with block length N = 1055 and rate of approximately 0.4, a (421, 4, 7) SFT code with block length N = 2947 and rate approximately 0.43, and a (281, 5, 8) SFT code with N = 2248 and rate 0.375. Figs. 2, 3 and 4 show the bit error rate (BER) performance comparisons of the SP, turbo, TSP, group shuffled, and SSP algorithms after 5, 15, and 50 iterations. Figs. 5, 6 and 7 compare the average number of iterations all the algorithms take to converge when the maximum number of iterations is set as 50. For the turbo decoding algorithm, we assume 3, 4, and 5 supercodes, respectively for the three codes. For the group shuffled decoding algorithm, we always assume 3 groups. For the (211, 3, 5) code, the first group consists of the first two block columns, the second group consists of the 3-rd and 4-th
+
+842
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+5
+10−1
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+BER BER
+
+10−4
+
+SP
+
+Turbo
+
+10−5
+
+TSP
+
+Group shuffled
+
+SSP
+
+10−6 1
+
+1.3
+
+1.6
+
+1.9
+
+2.2
+
+2.5
+
+Eb/No (dB)
+
+10−4
+
+SP
+
+Turbo
+
+TSP
+
+Group shuffled
+
+10−5
+
+SSP
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+3.2
+
+Eb/No (dB)
+
+Fig. 2. BER performance comparisons for the (211, 3, 5) SFT code (dash Fig. 4. BER performance comparisons for the (281, 5, 8) SFT code (dash
+
+line: 5 iterations; solid line: 15 iterations; dash-dot line: 50 iterations)
+
+line: 5 iterations; solid line: 15 iterations; dash-dot line: 50 iterations)
+
+block columns, and the third group consists of the 5-th block columns. For the (421, 4, 7) code, the first group consists of the first three block columns, the second group consists of the 4-th and 5-th block columns, and the third group consists of the 6-th and 7-th block columns. For the (281, 5, 8) code, the first group consists of the first three block columns, the second group consists of the 4-th, 5-th and 6-th block columns, and the third group consists of the 7-th and 8-th block columns.
+As can be seen clearly from the figures, our proposed algorithms always achieve better BER performances and faster convergence than the SP algorithm. The turbo decoding algorithm proposed in [16] achieves the fastest convergence and best BER performance among all the schemes in all cases. The convergence rate advantage of the TSP algorithm over the SP algorithm is less significant compared with the turbo decoding algorithm. As we mentioned before, we sacrifice the convergence rate improvement to obtain higher throughput. Also, as can be seen from Figs. 5, 6 and 7, the convergence rate improvement of the SSP algorithm is less significant compared to the TSP algorithm. For the (211, 3, 5) SFT code, at 2.5 dB, the TSP and SSP algorithms require 22.4% and 14.1%
+
+fewer iterations respectively than the SP algorithm. For the (421, 4, 7) SFT code, at 2.4 dB, the TSP and SSP algorithms require 17.6% and 11.7% fewer iterations respectively than the SP algorithm. For the (281, 5, 8) SFT code, at 3.2 dB, the TSP and SSP algorithms require 10.4% and 10.1% fewer iterations respectively than the SP algorithms. It appears that as j and k increase, the convergence rate improvements of the TSP and SSP algorithms both decrease. This can be explained by the weaker turbo effect between the two supercodes since as j and k increase the first supercode compares even weaker to the second supercode. Also, as j and k increase, the convergence rate advantage of the TSP algorithm over the SSP algorithm decreases. However, as mentioned before, in terms of memory saving and computational complexity, the TSP algorithm is more appealing.
+Assume the decoding of each supercode takes time T , using the average number of iterations Nt obtained above, in Table I we compare the average total time needed by the turbo and TSP algorithms, Nt × J × T , to decode a block
+
+10−1 10−2 10−3
+
+35
+
+SP
+
+Turbo
+
+TSP
+
+30
+
+Group shuffled
+
+SSP
+
+25
+
+20
+
+BER No. of iterations to converge
+
+10−4 10−5 10−6
+1.2
+
+SP Turbo TSP Group shuffled SSP
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+Eb/No (dB)
+
+2.2
+
+2.4
+
+15
+
+10
+
+5
+
+0
+
+1
+
+1.3
+
+1.6
+
+1.9
+
+2.2
+
+2.5
+
+Eb/No (dB)
+
+Fig. 3. BER performance comparisons for the (421, 4, 7) SFT code (dash Fig. 5. Comparisons of average number of iterations to converge for the
+
+line: 5 iterations; solid line: 15 iterations; dash-dot line: 50 iterations)
+
+(211, 3, 5) SFT code
+
+843
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+6
+
+40
+
+SP
+
+Turbo
+
+35
+
+TSP
+
+Group shuffled
+
+SSP
+
+30
+
+No. of iterations to converge
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+1.5
+
+1.6
+
+1.7
+
+1.8
+
+1.9
+
+2
+
+Eb/No (dB)
+
+2.1
+
+2.2
+
+2.3
+
+2.4
+
+Fig. 6. Comparisons of average number of iterations to converge for the (421, 4, 7) SFT code
+
+No. of iterations to converge
+
+50
+
+SP
+
+Turbo
+
+45
+
+TSP
+
+Group shuffled
+
+40
+
+SSP
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+3.2
+
+Eb/No (dB)
+
+Fig. 7. Comparisons of average number of iterations to converge for the (281, 5, 8) SFT code
+
+of the three SFT codes2. For the turbo decoding algorithm, J = j = 3, 4, 5 respectively for the three SFT codes. For the TSP algorithm, J = 2 always. The TSP algorithm needs less time and hence achieves a higher throughput than the turbo algorithm. As j increases, the advantage of the TSP decoding algorithm becomes more significant. For the (281, 5, 8) SFT code, the throughput of the TSP algorithm is roughly 45% higher than that of the turbo algorithm. Finally, the memory savings achieved by both the TSP and turbo algorithms are 1/j (33%, 25% and 20% for the (211, 3, 5), (421, 4, 7), (281, 5, 8) SFT codes respectively) of the total memory needed by the SP algorithm.
+
+TABLE I COMPARISONS OF AVERAGE TOTAL TIME NEEDED TO DECODE A BLOCK
+
+(211, 3, 5) at 2.5 dB
+
+Turbo
+
+TSP
+
+10.89T 10.36T
+
+(421, 4, 7) at 2.4 dB
+
+Turbo
+
+TSP
+
+17.64T 13.80T
+
+(281, 5, 8) at 3.2 dB
+
+Turbo
+
+TSP
+
+17.35T 11.9T
+
+REFERENCES
+[1] R. G. Gallager, “Low Density Parity Check Codes,” MIT Press, 1963. [2] Y. Kou, S. Lin and M. P. C. Fossorier, “Low-Density Parity-Check Codes
+Based on Finite Geometries: A Rediscovery and New Results,” IEEE Trans. Info. Theory, vol. 47, pp. 2711–2736, Nov. 2001. [3] A. Blanksby and C. Howland, “A 690-mw 1-Gbps 1024-b rate-1/2 Low-Density Parity-Check Code Decoder,” IEEE Journal of Solid State Circuits, vol. 37, pp. 404–412, March 2002. [4] A. Darabiha, A. C. Carusone and F. R. Kschischang, “Multi-Gbit/sec Low Density Parity Check Decoders with Reduced Interconnect Complexity,” in Proc. IEEE Int. Symp. on Circuits and Systems (ISCAS), vol. 5, pp. 5194–5197, May 2005. [5] E. Yeo, P. Pakzad, B. Nikolic and V. Anantharam, “VLSI Architectures for Iterative Decoders in Magnetic Recording Channels,” IEEE Trans. Magnetics, vol. 37, pp. 748–755, March 2001. [6] M. M. Mansour and N. R. Shanbhag, “Low Power VLSI Decoder Architecture for LDPC Codes,” in Proc. IEEE Int. Symp. on Low Power Electronics and Design (ISLPED), pp. 284–289, Aug. 2002. [7] Y. Chen and K. K. Parhi, “Overlapped Message Passing for Quasi-Cyclic Low Density Parity Check Codes,” IEEE Trans. Circuits and Systems, vol. 51, pp. 1106–1113, June 2004. [8] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga and S. Goto, “PartiallyParallel LDPC Decoder Based on High-Efficiency Message-Passing Algorithm,” in Proc. Int. Conf. on Computer Design (ICCD), pp. 503– 510, Oct. 2005. [9] J. L. Fan, “Array Codes as Low Density Parity Check Codes,” in Proc. Int. Symp. on Turbo Codes and Related Topics, pp. 543–546, Sept. 2000. [10] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja and D. J. Costello, “LDPC Block and Convolutional Codes Based on Circulant Matrices,” IEEE Trans. Info. Theory, vol. 50, pp. 2966–2984, Dec. 2004. [11] M. P. C. Fossorier, “Quasi-Cyclic Low-Density Parity-Check Codes From Circulant Permutation Matrices,” IEEE Trans. Info. Theory, vol. 50, pp. 1788–1793, Aug. 2004. [12] Z. Li, L. Chen, L. Zeng, S. Lin and W. Fong, “Efficient Encoding of Low-Density Parity-Check Codes,” in Proc. Global Telecomun. Conf. (Globecom), vol. 3, pp. 1205–1210, Dec. 2005. [13] F. R. Kschischang, B. J. Frey and H. A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Trans. Info. Theory, vol. 47, pp. 498– 519, Feb. 2001. [14] R. M. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Trans. Info. Theory, vol. IT-27, pp. 533–547, Sept. 1981. [15] E. Yeo, P. Pakzad, B.Nikolic and V. Anantharam, “High Throughput lowdensity parity-check decoder architecture,” in Proc. Global Telecomun. Conf. (Globecom), vol. 5, pp. 3019–3024, Nov. 2001. [16] M. M. Mansour and N. R. Shanbhag, “High Throughput LDPC Decoders,” IEEE Trans. VLSI Systems, vol. 11, pp. 976–996, Dec. 2003. [17] D. E. Hocevar, “A Reduced Compelxity Decoder Architecture Via Layered Decoding of LDPC Codes,” in Proc. IEEE Workshop on Signal Processing Systems (SiPS), pp. 107–112, 2004. [18] H. Sankar and K. Narayanan, “Memory-Efficient Sum-Product Decoding of LDPC Codes,” IEEE Trans. Commun., vol. 52, pp. 1225–1230, Aug. 2004. [19] J. Lu and J. M. F. Moura, “Turbo Like Decoding of LDPC Codes,” in Proc. IEEE Int. Conf. on Magnetics, May 2003. [20] J. Zhang and M. P. C. Fossorier, “Shuffled Belief Propagation Decoding,” in Proc. Asilomar Confe. on Signals, Systems and Computers, vol. 1, pp. 8–15, Nov. 2002. [21] H. Kfir and I. Kanter, “Parallel versus sequential updating for belief propagation decoding,” Physica A, vol. 330, pp. 259–270, Dec. 2003. [22] J. Zhang and M. P. C. Fossorier, “Shuffled Iterative Decoding,” IEEE Trans. Commun., vol. 53, pp. 209–213, Feb. 2005. [23] P. Radosavljevic, A. de Baynast and J. R. Cavallaro, “Optimized Message Passing Schedules for LDPC Decoding,” in Proc. Asilomar Confe. on Signals, Systems and Computers, Nov. 2005. [24] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier and X. Hu, “Reduced-Compelxity Decoding of LDPC Codes,” IEEE Trans. Commun., vol. 53, pp. 1288–1299, Aug. 2005.
+
+2T ultimately depends on the implementation. We are assuming the time to decode each supercode is the same in the implementations of the turbo and TSP algorithms to illustrate our point.
+
+844
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:13:06 UTC from IEEE Xplore. Restrictions apply.
+
+

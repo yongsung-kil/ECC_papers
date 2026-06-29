@@ -1,0 +1,451 @@
+2025 13th International Symposium on Topics in Coding (ISTC) | 979-8-3315-8983-7/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISTC65386.2025.11154588
+
+Action-List Reinforcement Learning Decoders
+Milad Taghipour, Bane Vasic´, Fellow, IEEE Department of Electrical and Computer Engineering, the University of Arizona, Tucson, AZ
+Email: miladt@arizona.edu, vasic@ece.arizona.edu
+
+Abstract—This paper explores the application of reinforcement learning techniques to enhance the performance of decoding based on flipping bits and finding optimal decisions. We begin by providing an overview of bit-flipping based decoders and reinforcement learning algorithms. We then describe the methodology for mapping the iterative decoding process into Markov Decision Processes (MDPs) and propose a general actionlist decoding method for reinforcement learning based decoders irrespective of the class of codes to improve the performance of decoders. We design an action-list decoder based on the Deep-Q network values that substantially enhance performance. We also get benefit of automorphism group of code to further improve the code performance. Finally, we present experimental results for the Binary Symmetric Channel (BSC) to demonstrate the efficiency of the proposed methods.
+Index Terms—Reinforcement Learning, Beam Decoding, Action-list Decoding, Automorphism Group, Iterative Decoders, Linear Block Codes, QC-LDPC Codes.
+I. INTRODUCTION
+E RROR correcting codes are essential for ensuring reliable communication over noisy channels. Advances in coding theory have produced highly efficient codes and decoders. However, Maximum Likelihood (ML) decoding methods, such as the Viterbi [1] and BCJR [2] algorithms, are NP-hard for binary linear block codes, making them computationally infeasible for long-length or low-rate codes. To overcome these limitations, various approximate decoding techniques have been developed that offer lower complexity while approaching ML performance. These include Ordered Statistics Decoding (OSD) [3], Polar Successive Cancellation List (SCL) decoding [4], and message-passing algorithms based on factor graphs [5]. While these methods perform well for long, well-structured LDPC codes, their effectiveness declines for short to moderate block lengths and high-density paritycheck (HDPC) codes. Additionally, decoding strategies for convolutional codes using list decoding have been shown to reduce average complexity while maintaining near-optimal performance, particularly when leveraging techniques such as code decomposition and dual list decoding [6], [7].
+Recent advances in artificial intelligence, particularly in natural language processing and image processing, have led
+The authors acknowledge the support of the National Science Foundation under grants CIF-2420424, CIF-2106189, CCF-2100013, CCSS-2052751, and CCSS-2027844. Bane Vasic´ has disclosed an outside interest in his company Codelucida to The University of Arizona. Conflicts of interest resulting from this interest are being managed by The University of Arizona in accordance with its policies.
+
+to increased interest in designing effective decoders for finitelength codes to enhance their decoding performance. Designing high-performance, fast, and low-complexity decoders for error-correcting codes remains a significant challenge, particularly for short to medium-length codes across general classes of codes. To bridge the gap between existing decoders and maximum likelihood (ML) decoding, one approach involves parameterized belief propagation (BP) decoders [8]– [12], which retain the advantages of BP while improving convergence speed and error performance. Another approach is to view the problem of decoding as a decision-making process, using reinforcement learning (RL) to learn optimal strategies. Some works formulate decoding as a Markov decision process (MDP), where RL guides sequential bit-flipping decisions [13], [14]. In [15], the authors explore the scheduling problem in the belief propagation algorithm, framing it as a MDP and optimizing check-node scheduling policies to improve sequential decoding performance compared to traditional flooding scheduling methods. In this paper, we propose a novel method to enhance the inference performance of a learned Deep QNetwork for general classes of binary linear codes. Due to the approximation of Q-values in the Deep Q-Network, the learned policy may exhibit oscillatory behavior and fail to converge. To address this issue, our proposed method employs a list of candidate solutions to guide the decoder more effectively and reduce the likelihood of convergence failures. Next, we use the automorphism group of the code to further improve the code performance. The remainder of this paper is organized as follows. Section II provides the necessary background on channel coding. Section III introduces the MDP framework and its application to decoding problems. In Section IV, we outline the RL-based bit-flipping strategy, followed by the action-list decoding technique to improve the decoder performance in Section V. The automorphism group structure of QC-LDPC code is presented in Section VI. Numerical results and performance comparisons are presented in Section VII. The paper concludes with a summary of findings in Section VIII.
+II. CHANNEL CODING BACKGROUND
+Let us assume C to be a binary linear code with parameters (n, k, dmin), where n is the code length, k is the code dimension, and dmin is the minimum distance of the code. We define a binary linear code C = {c ∈ Fn2 | cHT = 0}, where H is the parity-check matrix, which is an m × n binary matrix where m/n ≥ 1 − R, R = k/n is the code rate. We also define hci
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+as the i-th column of the parity check matrix H. The error correction capability of a code can be defined on the basis of its minimum distance as t = ⌊(dmin − 1)/2⌋. A codeword c is transmitted through the Binary Symmetric Channel (BSC) as y = (1 − 2c) + z, where y is the received row vector of length n, and z is a row vector of length n generated by i.i.d. Bernoulli random variable with parameter α which is the cross-over probability of the channel.
+
+III. MARKOV DECISION PROCESS
+
+Markov Decision Processes (MDPs) provides a mathe-
+
+matical framework for modeling decision-making problems
+
+where outcomes are random or deterministic under the control
+
+of a decision maker. An MDP can be defined based on
+
+(S, A, P, R, γ), where S is the set of finite states representing
+
+all situations of the environment, A is the set of finite actions that the decision maker, or agent, can take, Psas′ = P (s′ | s, a) ≜ P (St+1 = s′ | St = s, At = a) is the probability
+transition function P : S × A × S → [0, 1] which represents the probability of going to state s′ from state s after taking
+
+action a, R(s, a) is the reward function R : S × A → R which
+
+represents the immediate reward received after taking action a
+
+in state s, and γ ∈ [0, 1] is the discount factor which denotes
+
+the importance of future rewards. A deterministic policy π is
+
+a mapping π : S → A, where π(s) denotes the action to
+
+take in state s. The goal in an MDP is to find an optimal
+
+policy π⋆ that maximizes the expected cumulative reward
+
+π⋆ = arg maxπ Eπ[
+
+∞ t=0
+
+γtR(st,
+
+π(st))
+
+|
+
+s0
+
+=
+
+s],
+
+where
+
+Eπ
+
+is the expectation by taking actions under policy π.
+
+A. Deep Q-learning Algorithm
+
+Deep Q-learning is an extension of Q-learning algorithm that uses deep neural networks to approximate the Q-values [16]. Here, we provide a summary of Deep Q-learning Algorithm, the details are given in the extended version of this paper [17]. We employ a neural network to estimate a lowcomplexity approximation of the Q-table, Q(s, a). We assume Qθ(s, a) represents the estimation of the Q-function with learnable parameters θ. We store transition tuples (s, a, r, s′) obtained from simulating the Markov Decision Process (MDP) in a set B called replay memory. For stable training, we use two neural networks a primary Q-network Qθp(s, a) for selecting actions and a target Q-network Qtθ(s, a) to provide more stable Q-value updates. The agent balances exploration and exploitation using an ϵ-greedy policy with linear decay. Then, we update the parameter θ based on reducing the loss function
+
+L(θ)
+
+=
+
+E(s,a,r,s′ )∈B [r
+
++
+
+γ
+
+max
+a′ ∈A
+
+Qtθ− (s′,
+
+a′)
+
+−
+
+Qθp(s,
+
+a)]2
+
+(1)
+
+where gradient descent based methods are employed to update the parameters θ to minimize the loss function defined in Equation (1). Periodically, after some iterations the target network is updated to match the primary network θ− ← θ, improving the stability of training. The goal is to maximize cumulative rewards by learning an optimal policy over time.
+
+The complete algorithm is described in Algorithm 1, where SE represents the set of terminal states.
+
+Algorithm 1 Deep Q-learning Algorithm
+
+Input: Initialize replay memory B, initialize Q-networks Qpθ(s, a) and Qtθ(s, a) with random weights θ and θ−, and set epo as the number of episodes. Output: Primary Q-network Qpθ(s, a)
+1: for i = 1, 2, . . . , epo do
+2: Sample a random minibatch (s, a, r, s′) of transitions
+
+from B.
+
+r,
+
+if s′ ∈ SE
+
+3:
+
+Set y ←
+
+r
+
++
+
+γ
+
+max
+a′
+
+Qtθ−
+
+(s′,
+
+a′),
+
+otherwise
+
+4: Perform a gradient descent step on (y − Qθp(s, a))2
+
+with respect to θ.
+
+5: if fixed number of steps are reached then
+
+6:
+
+Update Qt ← Qp
+
+7: end if
+
+8: end for
+
+IV. BIT-FLIPPING STRATEGY
+Assuming transmission over independent memoryless channels, hard-decision maximum likelihood decoding of binary linear block codes can be interpreted as finding the minimum number of bit flips in the received word required to obtain the all-zero syndrome.
+A. State and Action Spaces
+Given that the code dimension is n, each of these n bits can be erroneous. In other words, the action space A should be designed to allow the flipping of each bit at any time step. Therefore, we can state A = {1, 2, · · · , n}. The decoding process can be terminated based on the value of the syndrome vector, which indicates the positions of unsatisfied checks in the code. Consequently, the state space can be defined by all possible binary syndromes of length m. The initial state s0 = yHT represents the syndrome of the received vector. Next, we need to define the transition probability function P (s′ | s, a) for an MDP. By taking action a from state s, we transition to state s′ = s + hca with probability 1, indicating that it is a deterministic MDP. Terminal state corresponds to the all-zero syndrome, indicating that a codeword is obtained and that the decoding process should be terminated. We also impose a limit of L steps, which is the maximum length of each episode. If an episode is not terminated within L steps, a new episode begins.
+B. Reward Strategy
+Choosing a reward strategy is crucial in Reinforcement Learning algorithms because it significantly impacts the learning efficiency and the resulting policy. Since the goal of the decoding problem is to find a codeword, we define a positive reward of 1 if an agent reaches the terminal state. It is also necessary to penalize the action of flipping a bit at each step in order to encourage the decoder to find a solution that requires
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+the fewest possible bit flips. This helps identifying the set of least reliable bits to find a codeword, thereby minimizing the probability of word error rate. Thus, we define a reward function as in [13] for the BSC
+
+R(s, a, s′) =
+
+−
+
+1 L
+
++
+
+1,
+
+−
+
+1 L
+
+,
+
+if s′ = 0 otherwise.
+
+(2)
+
+V. ACTION-LIST DECODING BASED ON Q-VALUES
+
+The proposed approach involves determining the optimal policy by leveraging Q-values through greedy action selection. However, due to the nature of the Deep Q-Network as a function approximator, there is no guarantee that it will learn the exact Q-values. Using the optimal policy, the decoder is then executed in an iterative manner to decode the received word. During the decoding phase, the decoder may become trapped in oscillatory behavior due to the limitations of the learned policy. The objective is to develop a robust decoder that can lower the probability of error. To improve decoder performance, we propose a new type of decoder in which, at each state, multiple actions are considered rather than selecting only the best possible action based on the Qvalues. This approach is conceptually similar to beam search optimization [18]. Its purpose is to mitigate the issue of the decoder becoming trapped in oscillatory behavior. We define a deterministic state transition function T : S × A → S such that s′ = T (s, a) = s + hca , which maps the current state to the next state based on the selected action. We have an initial state s0. The Q-values for all actions in s0, denoted by {Q(s0, a) | a ∈ A}, are computed using the Deep-Q Network. We then select the top k actions with the highest Q-values. For each selected action a, we construct a candidate path pi
+
+pi = {s0i , si1 = T (s0, a)}
+
+(3)
+
+where i ∈ [k], and assign a score vi = Q(si0, a) to each candidate path.
+We assume that at depth l, we maintain a list of candidate paths denoted by Bl = {(pi, vi) | i ∈ [k]} where each pi is the sequence of states (s0i , s1i , · · · , sli) and vi is the Q-value of the last action that generated the state sil. In the path expansion stage, for each candidate path (pi, vi) ∈ Bl, we compute the Q-values at the current state sli. A path pi is extended only by actions a satisfying the condition
+
+Q(sli, a) > vi
+
+(4)
+
+which ensures that the Q-value of the new action is strictly
+greater than that of its parent. This criterion enforces the
+selection of improving paths, guiding the decoder toward con-
+vergence to the all-zero syndrome. For all actions that satisfy the condition, a new state is generated as sl+1 = T (sl, a), and an extended path is formed as pˆi = p∪{sl+1}, with an updated score vˆi = Q(sl, a). In the path pruning stage, all extended paths generated from the candidates in Bl are collected into a new set. From this set, the top k paths are selected based on their scores vˆ to form the updated path collection Bl+1, where |Bl+1| ≤ k, or fewer if not enough valid candidates are
+
+available. The search process terminates when at least one candidate path pi satisfies the all-zero syndrome, or when a maximum search depth Dmax is reached. The proposed method outputs the list of candidate paths that reach a valid codeword along with their associated scores which is presented in Algorithm 2. The candidate path with the highest estimated value is selected as the final output.
+
+Algorithm 2 Q-Guided Action-List Decoding
+
+Require: Trained Q-network Q(·, ·),initial syndrome s0, list
+
+size k, maximum iterations Dmax, parity-check matrix H. Ensure: A candidate path p∗ that reaches a valid codeword.
+
+1: Initialize list B0 ← ∅.
+
+2: Compute Q-values for s0: q0(a) ← Q(s0, a), ∀a ∈ A
+
+3: Let A0 ← Topk({q0(a)}a∈A) 4: for each action a ∈ A0 do
+5: s1 ← T (s0, a)
+
+6: Add candidate path p = {s0, s1} with score v =
+
+Q(s0, a) to B0 7: end for
+
+8: i ← 0
+
+9: while i < Dmax and Bi ≠ ∅ do
+
+10: Initialize candidate set T ← ∅
+
+11: for each candidate (p, v) in Bi with last state s do
+
+12:
+
+Compute Q-values: q(s, a) ← Q(s, a), ∀a ∈ A
+
+13:
+
+Let A ← Topk({q(s, a)}a∈A)
+
+14:
+
+for each action a ∈ A do
+
+15:
+
+if q(s, a) > v then
+
+▷ Only extend if
+
+improvement is observed.
+
+16:
+
+s′ ← T (s, a)
+
+17:
+
+p′ ← p ∪ {s′}
+
+18:
+
+Add candidate (p′, q(s, a)) to T
+
+19:
+
+end if
+
+20:
+
+end for
+
+21: end for
+
+22: Sort T in descending order by score.
+
+23: Let Bi+1 ← Topk(T )
+
+24: for each candidate (p′, v′) in Bi+1 do
+
+25:
+
+if Valid(s′) is true, where s′ is the last state in p′
+
+then
+
+26:
+
+return p′
+
+27:
+
+end if
+
+28: end for
+
+29: i ← i + 1
+
+30: end while
+
+31: return Best candidate path from Bi (or null if none
+
+found)
+
+VI. GROUP-STRUCTURED QUASI-CYCLIC LDPC CODES
+Quasi-Cyclic Low Density Parity Check (QC-LDPC) codes play a crucial role in practical settings due to their structured design. Unlike randomly constructed LDPC codes, a quasicyclic LDPC is specified by a parity-check matrix H composed of circulant submatrices. Specifically, H is structured as a j × k array of p × p circulant permutation matrices,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+denoted Hs,t for 1 ≤ s ≤ j and 1 ≤ t ≤ k, where p is prime. The integers a, b ∈ Fp and a ̸= b with orders k and j, respectively, which in turn requires k and j to be divisors of
+p − 1. Each circulant matrix Hs,t can be viewed as an identity matrix cyclically shifted by the amount Ps,t = b(s−1)a(t−1). The matrix H is a (jp) × (kp) matrix whose each row contain
+exactly k ones and each column contain exactly j ones,
+making it a regular (j, k) LDPC code [19].
+
+A. Automorphism Group
+
+Since the optimal policy may be learned for a given syndrome but not for its isomorphic counterpart, the diversity introduced by automorphic mappings can be leveraged to improve decoding performance. An automorphism of a bipartite graph is a permutation of the vertices (i.e., variable nodes and check nodes) that preserves adjacency. In other words, it is a bijection that maps variable nodes to variable nodes and check nodes to check nodes while ensuring that edges remains invariant. The cyclic shift automorphism arises by cyclically shifting each coordinate modulo p. Specifically, if one adds a fixed integer δ (mod) p to a coordinate xi, the value cycle through {0, . . . , p − 1}. Since each row block, or circulant block, of H just shifts its columns modulo p, these additive shifts do not change adjacency structure. Consequently, there exists a group of automorphisms isomorphic to the additive group Zp. We consider two multiplicative subgroups. Define an automorphism π on the set of variable nodes by π : (x1, x2, . . . , xp) → (ax1, ax2, . . . , axp) (mod p), where each xi ∈ {0, 1, . . . , p − 1} and all indexes computed mod p. Automorphism π maps the bits of the t-th block to the bits of the (t mod k) + 1-th block. Similarly, an automorphism ρ can be defined that maps the block of parity checks to the next block of parity checks by ρ : (x1, x2, . . . , xp) → (bx1, bx2, . . . , bxp) (mod p), where each xi ∈ {0, 1, . . . , p − 1} and all indexes computed mod p. These automorphisms, both additive and multiplicative, exploit the inherent symmetry of the quasi-cyclic structure and ensure that the overall adjacency in the Tanner graph of the code is preserved. Let e denote the hard-decision received vector, and let S be the syndrome operator that computes the syndrome s associated with e. Based on this, we define the following automorphism-based strategy
+
+e1
+
+−−S→
+
+s1
+
+
+
+
+
+Γv−1Γv
+
+Γs−1Γs
+
+(5)
+
+
+
+
+
+e2
+
+−−S→
+
+s2
+
+where v2 = Γv(v1), s2 = Γs(s1), S(v1) = s1, and S(v2) = s2. This expression illustrates the property that the syndrome mapping and the automorphism group commute.
+
+S(Γv(e)) = Γs(S(v))
+
+(6)
+
+This property is significant because it implies that the automorphism Γ preserves the syndrome structure of the code. It shows that the symmetry given by the quasi-cyclic structure
+
+extends naturally to both the codeword space and the syndrome space.
+VII. NUMERICAL RESULTS
+In this section, we present numerical results for the Tanner code with parameters (155, 64, 20). We trained Deep-Q network described in Section III-A. In Figure 1, we evaluate the proposed Q-value guided action-list decoder, introduced in Section V, using different list sizes {1, 5, 10, 20, 30, 40} to assess their impact on decoding performance. The results demonstrate a substantial improvement in performance as the number of candidate bit-flips increases, which helps the decoder avoid getting trapped in oscillatory behavior. For comparison, we also include the performance of bounded distance decoding (BDD) with radii 9 and 10 as baselines. In Figure 2, we present the performance of the action-list decoder with varying list sizes, incorporating the automorphism group of the Tanner code as described in Section VI. We only employ p − 1 cyclic permutations from the automorphism group of the tanner code. The syndrome is cyclically shifted until the decoder obtains the zero syndrome. As shown in Figure 2, the performance of the action-list decoder with a list size of 5, combined with the permutation group, closely approaches that of bounded distance decoding (BDD) with radius 10. We additionally present the performance of the beam decoder with beam sizes {10, 20}, incorporating automorphisms. While the frame error rate (FER) performance remains similar through Monte Carlo simulation, the bit error rate (BER) exhibits a slight improvement. For training the Deep Q-learning algorithm, we employ a neural network with one hidden layer consisting of 512 neurons. The maximum number of decoding iterations is set to Dmax = 10. The training process involves 106 episodes, with a batch size of 128, and a discount factor of γ = 0.9. For the exploration-exploitation strategy, an epsilon-greedy approach with linear decay is employed, where ϵ decreases from 0.9 to 0.05. The learning rate is set to 10−4.
+VIII. CONCLUSIONS
+In this paper, we propose a novel action-list decoding strategy aimed at enhancing decoding performance by considering a list of high-probability error patterns, rather than relying on greedy action selection during the inference stage. Additionally, by leveraging the automorphism group, we further improve the effectiveness of the proposed method within the region explored through Monte Carlo simulations.
+REFERENCES
+[1] G. Forney, “The Viterbi Algorithm,” Proceedings of the IEEE, vol. 61, no. 3, pp. 268–278, March 1973.
+[2] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal Decoding of Linear Codes for Minimizing Symbol Error Rate,” IEEE Transactions on Information Theory, vol. 20, no. 2, pp. 284–287, March 1974.
+[3] M. Fossorier and S. Lin, “Soft-Decision Decoding of Linear Block Codes Based on Ordered Statistics,” IEEE Transactions on Information Theory, vol. 41, no. 5, pp. 1379–1396, September 1995.
+[4] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Transactions on Information Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+100
+
+10-2
+
+10-2
+
+FER
+
+10-4 10-6 10-8 10-10
+
+10-2
+
+list size=1 list size=5 list size=10 list size=20 list size=30 list size=40 BDD(w=9) BDD(w=10)
+10-1
+
+BER
+
+10-4 10-6 10-8 10-10
+
+10-2
+
+list size=1 list size=5 list size=10 list size=20 list size=30 list size=40
+10-1
+
+(a)
+
+(b)
+
+Fig. 1: Simulation results for Tanner code with Deep Q-Network decoder and different list sizes {1, 5, 10, 20, 30, 40}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+100
+
+100
+
+10-2
+
+10-2
+
+10-4
+
+10-4
+
+BER
+
+FER
+
+10-6 10-8 10-10
+
+10-2
+
+list size=1, auto list size=5, auto list size=10, auto list size=20, auto BDD(w=10)
+10-1
+
+10-6 10-8 10-10
+
+10-2
+
+list size=1, auto list size=5, auto list size=10, auto list size=20, auto
+10-1
+
+(a)
+
+(b)
+
+Fig. 2: Simulation results for Tanner code with Deep Q-Network decoder and different list sizes {1, 5, 10, 20} with cyclic permutation strategy. (a) Frame Error Rate, (b) Bit Error Rate.
+
+[5] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, February 2001.
+[6] Z. Qu, A. Antonini, W. Sui, E. Min, A. Yang, and R. D. Wesel, “Complementary Exclusion of Full Polynomials to Enable Dual List Decoding of Convolutional Codes,” in IEEE International Symposium on Information Theory (ISIT), July 2024, pp. 1776–1781.
+[7] R. Schiavone, R. Garello, and G. Liva, “Performance Improvement of Space Missions Using Convolutional Codes by CRC-Aided List Viterbi Algorithms,” IEEE Access, vol. 11, pp. 55 925–55 937, January 2023.
+[8] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to Decode Linear Codes Using Deep Learning,” in 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), September 2016, pp. 341–346.
+[9] T. Gruber, S. Cammerer, J. Hoydis, and S. Ten Brink, “On Deep Learning-Based Channel Decoding,” in 51st Annual Conference on Information Sciences and Systems (CISS). IEEE, March 2017, pp. 1–6.
+[10] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep Learning for Decoding of Linear Codes - A Syndrome-Based Approach,” in IEEE International Symposium on Information Theory (ISIT), June 2018, pp. 1595–1599.
+[11] L. Lugosch and W. J. Gross, “Neural Offset Min-Sum Decoding,” in IEEE International Symposium on Information Theory (ISIT), June 2017, pp. 1361–1365.
+
+[12] S. Adiga, X. Xiao, R. Tandon, B. Vasic´, and T. Bose, “Generalization Bounds for Neural Belief Propagation Decoders,” IEEE Transactions on Information Theory, vol. 70, no. 6, pp. 4280–4296, 2024.
+[13] F. Carpi, C. Ha¨ger, M. Martalo`, R. Raheli, and H. D. Pfister, “Reinforcement Learning for Channel Coding: Learned Bit-Flipping Decoding,” in 2019 57th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2019, pp. 922–929.
+[14] M. Taghipour, A. K. Pradhan, and B. Vasic´, “Reinforcement Learning Assisted Decoding,” in International Telemetry Conference 2024, October 2024, pp. 1–5.
+[15] S. Habib, A. Beemer, and J. Kliewer, “Belief Propagation Decoding of Short Graph-Based Channel Codes via Reinforcement Learning,” IEEE Journal on Selected Areas in Information Theory, vol. 2, no. 2, pp. 627–640, April 2021.
+[16] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. MIT Press Cambridge, 2018.
+[17] M. Taghipour and B. Vasic´, “Action-List Reinforcement Learning Syndrome Decoding for Binary Linear Block Codes,” Submitted to arXiv, July 2025. Preprint to appear.
+[18] J. Choo, Y.-D. Kwon, J. Kim, J. Jae, A. Hottung, K. Tierney, and Y. Gwon, “Simulation-Guided Beam Search for Neural Combinatorial Optimization,” in Advances in Neural Information Processing Systems, vol. 35. Curran Associates, Inc., 2022, pp. 8760–8772.
+[19] R. M. Tanner, D. Sridhara, and T. Fuja, “A Class of Group-Structured LDPC Codes,” in Proc. ISTA, July 2001, pp. 365–370.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,914 @@
+2024 5th Information Communication Technologies Conference (ICTC) | 979-8-3503-7352-3/24/$31.00 ©2024 IEEE | DOI: 10.1109/ICTC61510.2024.10601679
+
+2024 5th Information Communication Technologies Conference
+Optimized Layered FAIDs of 5G LDPC Codes With RQNN
+
+Qiushi Xu National Mobile Communications Research Laboratory
+Southeast University Nanjing, China
+220230997@seu.edu.cn
+
+Yanchen Lyu National Mobile Communications Research Laboratory
+Southeast University Nanjing, China
+yanchenlv@seu.edu.cn
+
+Yangming Li National Mobile Communications Research Laboratory
+Southeast University Nanjing, China
+220220911@seu.edu.cn
+
+Ming Jiang National Mobile Communications Research Laboratory
+Southeast University Nanjing, China
+jiang ming@seu.edu.cn
+
+Abstract—In this paper, a recurrent quantized neural network with a layered structure is designed to optimize the look-up table (LUT) in the layered finite a lphabet i terative d ecoders (FAIDs). By using straight-through estimators to soften the backward gradient propagation of some low-precision activation functions, the quantization thresholds and quantization levels in the LUTs are optimized as parameters in the network. Performance evaluations on decoding codewords encoded with quasi-cyclic lowdensity parity-check codes show significant advantages compared to the conventional optimized FAIDs using a generalized flooding structure network. The proposed approach achieves notable performance improvements without increasing the complexity of the decoding algorithm. We also classify the check nodes by row weights of the parity-check matrix, and train different LUTs for different categories of nodes for each iteration. This approach achieves further performance improvements in online decoding and significant c omplexity reduction c ompared t o t he exhaustive search method.
+Index Terms—layered finite a lphabet i terative d ecoders, lowdensity parity-check codes, recurrent quantized neural networks.
+I. INTRODUCTION
+Over the past few years, LDPC codes have been widely used in various applications, including the fifth-generation (5G) networks and the 50G-PON systems. The most classic decoding for LDPC codes was first i ntroduced b y Gallager, known as the belief propagation (BP) decoder [1]. This decoding achieves excellent performance close to the Shannon limit for the LDPC codes with long blocklengths [2], but it comes with high computational complexity. Although researchers have introduced many BP-based simplified a lgorithm, such as the min-sum (MS) decoding to facilitate the hardware implementation of high-speed parallel decoding of LDPC codes, the information transmitted within the decoder is still in the form of high bit width. However, 5G and future 6G wireless systems demand ultra-high decoding throughput in physical layer [3] [4], which leads to a rapidly increasing
+
+of implementation costs for massive information processing within the decoder.
+To further reduce the complexity of decoding without significant performance degradation, the finite alphabet iterative decoder (FAID) is proposed [5], which processes quantized soft information using an alphabet mapping technique, greatly reducing implementation cost of the decoder and enabling high-speed information processing. Usually, the FAID sacrifices the error-correction for low complexity advantages, but there is still substantial room for improvement, especially in optimizing the look-up table (LUT) used for node information mapping.
+Concurrently, the artificial neural network (NN) that combine the decoding network of LDPC codes are proposed to optimize various parameters in the iterative decoder [6] [7]. Inspired by these approaches, we also aim to optimize the LUTs of the FAID using a similar method. However, a general NN can not be directly employed to optimize such a lowprecision decoder since the presence of low-precision activation functions hinders gradient backpropagation. The straightthrough estimators (STE) is introduced to solve the problem of gradient backpropagation being impeded by softening lowprecision activation functions [8]. Following that, a recurrent quantized neural network (RQNN) is specially designed for training the LUTs of FAIDs using regular LDPC codes, achieving significant performance improvements [9] [10].
+However, these works are mainly designed for regular LDPC codes, while in practical applications, especially in 5G, irregular quasi-cyclic LDPC (QC-LDPC) codes are commonly used [11]. For irregular LDPC codes, it is possible to classify check nodes (CNs) with different row weights and use different LUTs to pursue higher performance. Additionally, most of the existing works only focus on flooding iterative schedule and not match the layered updating schedule, which can significantly improve decoding performance and accelerate convergence without increasing complexity [12].
+
+979-8-3503-7352-3/24/$31.00 ©2024 IEEE
+
+139
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+In this paper, a specifically designed RQNN is proposed for the layered FAIDs. The FAIDs trained using our proposed network can be applied to regular or irregular LDPC codes under the additive white gaussian noise (AWGN) channel, particularly for 5G QC-LDPC codes. By introducing STEs, the quantization thresholds and quantization levels can be trained as parameters in the two networks. Utilizing the partially unfolding technique can greatly reduce the complexity of network training while achieving good results. Simulation results demonstrate significant performance improvements compared to conventional FAIDs and the flooding-based optimized FAIDs [13]. Furthermore, during training, we classify the CNs by row weights and trained different LUTs for different categories of nodes. This approach has a clear advantage of lower complexity compared to the exhaustive searching for optimal LUTs, achieving further performance improvements in decoding without increasing complexity.
+
+II. LAYERED FAIDS OF LDPC CODES
+
+The FAID is an improved form of coarsely quantized decod-
+
+ing for LDPC codes. Its iterative decoding process is similar
+
+to the standard BP, where the soft information exchanging
+
+between CNs and variable nodes (VNs) can be represented by
+
+a Tanner graph. The Tanner graph is determined by the parity-
+
+check matrix H and can also be represented as G = (V, C, E),
+
+where C represents CNs, V represents VNs, and E represents
+
+the edges in the graph. To facilitate the description of the
+
+decoding process, the following definitions are made: C and
+
+V are the sets of all CNs and VNs in the Tanner graph,
+
+respectively. The number of elements in set C and V are
+
+m and n, respectively. For a CN ci, N (ci) is defined as its neighboring nodes set. If a VN vj satisfies vj ∈ N (ci), it means that ci and vj are connected by an edge in the Tanner graph. Similarly, N (vj) is defined as the set of all neighboring nodes of VN vj.
+The FAID takes soft information from the channel as
+
+input. Give an n-length output vector from the channel, y =
+
+{y1, y2, ......, yn}. For the AWGN channel with binary phaseshift keying (BPSK) modulation, the received signal vector y
+
+satisfies y = (1 − 2x) + s, where x is the encoded message
+
+vector and s is the Gaussian white noise vector with zero mean
+
+and noise variance σ2. The logarithmic likelihood ratio (LLR)
+
+vector of the channel output is ξrec = {ξ1rec, ξ2rec, ......, ξnrec},
+
+where ξjrec = log
+
+P (yj |vj =0) P (yj |vj =1)
+
+= 2yj/σ2. The soft informa-
+
+tion of the channel output needs to be quantized before being
+
+input into the FAID, and the quantized soft information is denoted as Q ξjrec = ljrec.
+A w (w ≥ 2)-bit FAID, namely FAIDw, can be defined
+
+by a six-tuple (U , M, N , ϕv, ϕc, ϕl), (U , M, N ⊂ Z). U represents the alphabet corresponding to the quantized
+
+soft information input. The quantization bit width of the
+
+input, wu, is generally higher than w (wu > w), and U = {−U2wu−2 , ......, −U0, 0, +U0, ......, +U2wu−2 }. M represents the alphabet corresponding to the exchange of updating mes-
+
+sage between VNs and CNs during iterative decoding. When
+
+w > 2, M = {−M2w−2 , ......, −M0, 0, +M0, ......, +M2w−2 }.
+
+Algorithm 1 The L-FAIDs Algorithm
+
+S 0) Initialize the decoding algorithm: Set the number of iterations t = 0, input ljrec and the message transmitted by CNs to VNs li0→j = 0. S 1) Start decoding iterations: t = t + 1.
+
+for every i in C do
+
+S 2.1) update the message transmitted by VNs to CNs:
+
+for every j in N (ci) do ljt→i = ϕv lit→ −1j , ljt .
+end for
+
+S 2.2) update the message transmitted by CNs to VNs:
+for every j′ in N (ci)\j do lit→j = ϕc ljt′→i; j′ ∈ N (ci)\j .
+end for
+
+S 2.3) update the message in VNs:
+
+for every j in N (ci) do ljt = ϕl lit→j , ljt→i .
+end for
+
+end for
+
+S 3) Hard decision:
+
+for every j in V do
+
+zjt
+
+=
+
+1−sign(ljt
+2
+
+)
+
+.
+
+end for
+
+S 4) Determine if the algorithm is finished:
+zt = {z1t , z2t , ......, znt } if zt · HT == 0 or (t == tmax) then
+Output zt and terminate decoding;
+
+else
+
+Go to S 1).
+
+end if
+
+Specifically, when w = 2, M = {−M1, −M0, +M0, +M1}. N represents the alphabet of all possible LLR outputs at
+each iteration. The output quantization bit width of the de-
+coder is usually higher than the input quantization bit width.
+If the output quantization bit width is wN , then N = {−N2wN −2 , ......, −N0, 0, +N0, ......, +N2wN −2 }.
+ϕc and ϕv correspond to the update rules of CNs and VNs respectively. In the t-th iteration, the message transferred from VN vj to CN ci for update, ljt→i, requires the previous iteration’s message from CN, lit→ −1j, and the current stored output LLR, ljt , then, ljt→i = ϕv lit→ −1j, ljt . The message passed from ci to vj for update, lit→j, requires the message received from part of neighboring VNs, ljt′→i, then, lit→j = ϕc ljt′→i; j′ ∈ N (ci)\j . The decoder updates in a layered manner within each iteration, meaning that in each round of
+updates, only the information stored at the corresponding CN
+and its neighboring nodes, as well as the LLR values output
+by neighboring VNs, are updated. The update of the output LLR values requires both lit→j and ljt→i from the current round of updates, defined as ljt = ϕl lit→j, ljt→i . Algorithm 1 can represent the process of layered FAIDs (L-FAIDs).
+The update function for ϕv (·) can be defined as:
+
+ϕv lit→ −1j , ljt = F SU ljt − lit→ −1j ,
+
+(1)
+
+140
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+where F (x) is a mapping function that maps according to the alphabet M. F (x) can be defined as:
+
+ 
+
+sgn(x)Mk
+
+
+
+
+
+F (x) = 
+
+sgn(x)M2w−2
+
+ 
+
+0
+
+, ηk ≤ |x| < ηk+1 and 0 ≤ k < 2w−2 − 1
+, |x| ≥ η2w−2 , |x| < η0
+
+. (2)
+
+Specially, when w=2, F (x) should be defined as:
+
+F (x) =
+
+sgn(x)M1 , |x| ≥ η0
+
+M0
+
+, |x| < η0
+
+(3)
+
+F (x) can be expressed as a LUT for the mapping process. ηk represent the quantization thresholds, ηk ∈ N and U.
+
+TABLE I MAPPING FUNCTION F (x)
+x 01234567 F (x) 0 1 1 3 3 5 5 5
+
+This is a LUT for a FAID3 that compresses the message transmitted and processed between the CNs and VNs from the set U = {−7, ..., −1, 0, 1, ..., 7} to the set U = {−5, −3, −1, 0, 1, 3, 5} , reducing the bit width from 4 bits to 3 bits. This compression results in significant savings in storage space compared to the 4-bit width operation data used in the quantized MS decoder. Additionally, it leads to resource savings in the decoder’s internal computation components, making it easier to implement large-scale decoders.
+SU (·) is a truncation function that truncates the data in the alphabet U ×M to U , and SU (x) = sgn(x)·min {|x| , L2wl−2 }. At the same time,
+
+ϕc ljt′→i; j′ ∈ N (ci)\j
+
+=
+
+sgn
+
+j′∈N (ci)\j
+
+ljt′→i
+
+· min
+j′∈N (ci)\j
+
+ljt′→i
+
+(4)
+
+ϕl lit→j , ljt→i = SN lit→j + ljt→i
+
+SN (·) is also a truncation function that truncates the data in the alphabet N × M to N .
+
+III. THE STRUCTURE OF RQNN FOR L-FAIDS
+In the paper [14], commonly used LUTs for FAID2 and FAID3 are presented. However, we found that the direct use of these LUTs resulted in a performance loss of over 0.5dB for FAIDs compared to layered NMS (L-NMS) at a frame error rate (FER) of 10−3. Furthermore, for FAID2, significant error floor flattening occurred at a FER of 10−2. The gain from increasing the SNR is not significant, so the LUTs of coarsely quantized FAIDs should be particularly optimized for specific LDPC codes. The iterative decoding of LDPC codes is essentially the mutual propagation of soft information between VNs and CNs. If we consider the soft information exchanging at each iteration as the processing of an NN layer, and the multiple iterations of the decoding have the characteristics of a non-fully connected NN, where the connections between nodes are respectively described by their updating equations.
+
+VNs to CNs
+
+Input
+
+v ()
+
+message Layered
+updating
+
+l1 j→i
+
+l rec
+
+l0 i→ j
+
+=
+
+O
+
+CNs to VNs
+
+c ()
+
+l l 1
+
+1
+
+j→i i→ j
+
+VNs message l ()
+
+The first iteration
+
+Layer 1
+
+Layer 2
+l1 i→ j
+
+Layer 3
+
+l
+
+1 j
+
+VNs to CNs v ()
+l2 j→i
+
+CNs to VNs
+
+c ()
+
+l l 2
+
+2
+
+j→i i→ j
+
+VNs message
+
+l ()
+
+l
+
+2 j
+
+The second iteration
+
+Iteration unfolded
+
+VNs to CNs v () l tmax
+j→i
+
+CNs to VNs c ()
+
+l l tmax
+
+tmax
+
+j→i i→ j
+
+VNs message l ()
+
+The tmax-th iteration
+
+l tmax
+Output message
+
+Fig. 1. The structure of the NN proposed for L-FAIDs.
+
+By utilizing the unfolded NN of the iterative decoding process,
+
+we can train and optimize the LUTs in the L-FAIDs to improve
+
+the decoding performance [15].
+
+In the NN corresponding to the L-FAIDs, there are three
+
+types of soft information, lit→j, ljt→i, and ljt , which constitute
+
+three types of hidden layer nodes in the network. The input
+
+LLRs
+
+ljrec,
+
+li0→j
+
+and
+
+the
+
+output
+
+ltmax
+j
+
+of
+
+the
+
+decoder
+
+serve
+
+as
+
+the
+
+nodes of input layer and output layer, respectively. At the same
+
+time, the updating functions ϕv(·), ϕc(·), ϕl(·) corresponding to these three types of nodes constitute the connection between
+
+hidden layers, the connection between the input layer and
+
+hidden layers, and the connection between hidden layers and
+
+the output layer. The network structure can be represented in
+
+Fig. 1.
+
+For QC-LDPC, bit operations in the decoding process
+
+can be transformed into block operations to simplify the
+
+decoder structure [16]. In this network, we also represent
+
+soft information as higher-dimensional matrices instead of
+
+vectors as nodes in the network. The connections between
+
+nodes are determined by the base matrix of the parity check matrix. The soft information lrec from channel demodulation and initialized l0i→j are used as inputs to the entire network.
+These two pieces of soft information are passed through the update network constructed by Φv(·) to obtain lj1→i and constitute the first hidden layer. Then, l1j→i is passed through the update network constructed by Φc(·) to obtain li1→j, which constitute the second hidden layer. Φc(·) contains LUTs that
+need to be optimized and will be optimized after network backpropagation. Next, l1 is computed from l1i→j and lj1→i through Phil and passed to the next subnetwork, while l1i→j
+is also passed to the subnetwork representing the second
+
+iteration. This process is repeated for all iterations until the network output ltmax is obtained.
+
+When the decoder outputs, the LLRs of VNs need to be
+
+hard-decisioned into binary bits for output. Similarly, in the
+
+output layer of the NN, the output nodes need to be processed
+
+to calculate the loss of the network training. Our optimization
+
+goal is to minimize the bit error rate of the iterative decoder,
+
+so we set the loss function of the network as follows:
+
+loss
+
+ltmax , x
+
+1 =−
+n
+
+n
+(xj · log
+
+1 − sigmoid
+
+ltmax
+j
+
+j=1
+
+(5)
+
++ (1 − xj) · log
+
+sigmoid
+
+ltmax
+j
+
+).
+
+141
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+sigmoid(·) is the activation function, expressed as
+
+sigmoid(x)
+
+=
+
+1 1+e−x
+
+,
+
+which
+
+compresses
+
+the
+
+output
+
+results between 0 and 1. If we substitute the LLR
+
+expression into this function, the result is exactly
+
+sigmoid
+
+ltmax
+j
+
+=
+
+1 1+e−ljtmax
+
+= P (zj = 0|yj), which
+
+represents the posterior probability of the j-th bit being 0.
+
+This feature aligns with the characteristics of NN output
+
+belief results. Here, the vector x, as well as the previous text
+
+represents the transmitted codeword, used as training and
+
+comparison samples.
+
+A. Trainable LUTs
+
+In the updating equation ϕv(·), there exists a mapping function F (·) that compresses ljt→i to a lower bit width based on LUTs. This mapping process can be divided into two parts. The first part involves categorizing ljt→i based on its absolute value and determining which interval it falls into. The second part is multiplying the categorized ljt→i by the corresponding quantization level in the LUT. Accordingly, the optimization
+of LUTs can also be divided into two parts: the quantization thresholds (th) and the quantization levels.
+In [17], the optimization of the quantization thresholds
+are specifically discussed, where convert the selection of the
+quantization thresholds is converted into a one-hot distribution,
+allowing the thresholds to be trainable. Furthermore, the
+trainings of the quantization thresholds and quantization levers
+are combined together in [13], which enables the LUTs to be
+trained jointly.
+Taking a FAID3 as an example, the expression of the function F (x) can be simplified by incorporating the step
+function:
+
+F (x) =M0 · ε (x − η0) + (M1 − M0) · ε (x − η1)
+
++ (M2 − M1) · ε (x − η2) ;
+
+(6)
+
+F (x) = − F (−x).
+
+where ηi and Mi, i = 0, 1, 2 represent the quantization thresholds and quantization levels, respectively. The values of η0, η1, and η2 should also fall within this range of ηi, which is mentioned above, while ensuring that η0 < η1 < η2. So, η0 can be set as {1, 2}, η1 can be set as {3, 4}, and η2 can be set as {5, 6}. At this point, we can further expand the step functions ε (x − η0), ε (x − η1), and ε (x − η2) by converting them into two step functions multiplied by their respective weights and added together. The expression can be written as:
+
+ε (x − ηi−1) = ei,1 · ε (x − 2i + 1) + ei,2 · ε (x − 2i) , (7) i = 1, 2, 3.
+
+Among the weights {ei,1, ei,2}, i=1,2,3, one can be set to 1 while the other must be 0. This transforms the training of quantization thresholds into a one-hot distribution problem. For example, when η0=1, the corresponding weights {e1,1, e1,2} = {1, 0}. Although the existing NN is still unable to directly handle this one-hot distribution problem, we are inspired from the training method used in [13] and introduce sof tmax(·) to address the one-hot distribution. Originally, the
+
+one-hot distribution compares the weights during the training
+
+process and sets the larger one to 1 and the smaller one to 0.
+
+However, directly performing a comparison of magnitudes in
+
+the network would hinder gradient propagation. For example,
+
+the logic statement a > b can be expressed as ε(a − b),
+
+where ε(·) denotes the step function. In this case, the partial
+
+derivative
+
+∂(a>b) ∂a
+
+would
+
+only
+
+take
+
++∞
+
+at
+
+a
+
+=
+
+b
+
+and
+
+be
+
+0
+
+elsewhere. Using the sof tmax(·) to compare two numbers
+
+outputs a probability value:
+
+pi,j
+
+=sof tmax ({gi,1, gi,2})
+
+=
+
+exp (gi,j )
+
+,
+
+exp (gi,1) + exp (gi,2)
+
+(8)
+
+i = 1, 2, 3 and j = 1, 2.
+
+The partial derivative of this function is non-zero everywhere in its domain, so the gradient of the network can be propagated normally. In the above equation, gi,j is the parameter trained during network training, with an initial value of 1,1, while pi,j is the probability value calculated by the function and is a permutation of the weight ei,j. Therefore, the function F (x) corresponding to the network training can be expressed as:
+
+F (x) =M0 · (p1,1 · ε (x − 1) + p1,2 · ε (x − 2)) + (M1 − M0) · (p2,1 · ε (x − 3) + p2,2 · ε (x − 4)) + (M2 − M1) · (p3,1 · ε (x − 5) + p3,2 · ε (x − 6)) ;
+F (x) = − F (−x). (9)
+
+At the end of training, the value of η0, η1, and η2 can also be
+
+determined, which can be obtained by η0 = argmax (g1,j),
+
+j=1,2
+
+η1 = argmax (g2,j) + 2, and η2 = argmax (g3,j) + 4.
+
+j=1,2
+
+j=1,2
+
+In practical training, we observed that setting a common
+
+learning rate often doesn’t result in a significant difference
+
+between the trained parameters gi,j after iterations. As a result, pi,j obtained from the sof tmax(·) doesn’t tend to
+
+approach 0 or 1, leading to lower accuracy in simulating the
+
+mapping function F (·). To address this issue, we introduced
+
+a temperature hyperparameter ζ, which modifies equation (8)
+
+to pi,j = sof tmax ({gi,1/ζ, gi,2/ζ}). When ζ is less than
+
+1, the values of pi,j tend to approach 0 or 1. Moreover,
+
+as
+
+ζ
+
+approaches 0,
+
+∂ pi,j ∂ gi,j
+
+tends to approach +∞ for some
+
+elements and approaches 0 for others. Setting ζ too small is not
+
+beneficial for network training. As a solution, we set ζ to be
+
+initially high during training and gradually decrease it as the
+
+training progresses, forming a process where ζ continuously
+
+decreases from 1 to a value much smaller than 1.
+
+B. Straight-Through Estimators
+The L-FAIDs are quantized algorithm that cannot be effectively trained using conventional floating-point NNs when unfolded. To train the FAIDs, we employ a RQNN. In the RQNN, the values of nodes are integers within a certain range, which is well-suited for the quantization characteristics of LFAIDs. Although the mapping function F (·) is transformed
+
+142
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+into a trainable function F (·), the output of F (·) are floatingpoint numbers. To simulate the mapping effect of F (·), these
+output needs to be rounded, i.e., F (·) = round F (·) .
+round(·), similar to the ε(·) mentioned above, has a derivative that is +∞ only at some discrete points and 0 everywhere else. This hinders gradient propagation, resulting in the network being unable to train properly.
+The STE is a technique that can solve the aforementioned problem and is widely used in various quantized NNs. It ensures the accuracy of forward propagation while modifying the network’s backward propagation function to ensure gradient propagation [8]. For round(·), during backpropagation, sof tround(·) is used to compute gradients instead. The equation for it is as follows:
+
+Input samples
+l rec
+
+Layer v ()
+
+Layer c ()
+
+Layer l ()
+
+...
+
+Layer
+
+v ()
+
+...
+
+Layer c ()
+
+Layer l ()
+
+Partial Unfolded RQNN
+NN 1
+Optimize LUTs
+FAID decoder  iterations
+
+Partial Unfolded RQNN
+NN 2
+Optimize LUTs
+FAID decoder  iterations
+
+Partial Unfolded RQNN
+NN tmax / 
+Optimize LUTs
+FAID decoder  iterations
+
+Output LUTs
+Test Results
+
+Fig. 2. Partial unfolding of the training network structure.
+
+sof tround(x)
+
+=
+
+mround
+
++
+
+tanh
+
+(δ · (x − mround)) . tanh(δ/2) · 2
+
+(10)
+
+100
+
+In the equation(10) mround = f loor(x) + 0.5, where f loor(x) represents the floor function, is used for rounding down the values. δ is a hyperparameter that controls the approximation level of the function’s values. A larger δ results in sof tround(·) being closer to the rounding function. sof tround(·) has non-zero gradients throughout its domain, ensuring normal gradient propagation in the network.
+In the equation for F (·), there is also a step function. Similar to round(·), the sof tstep(·) is used to replace it during backpropagation. The equation for it is as follows:
+
+tanh (δ · x)
+
+sof tstep(x) = 0.5 +
+
+(11)
+
+tanh(δ/2) · 2
+
+FER
+
+10-1
+10-2
+2.75 2.8 2.85 2.9 2.95 3 3.05 3.1 3.15 3.2 3.25 Eb/N0(dB)
+Fig. 3. Network training results of L-FAID3 of 5G LDPC code (R = 0.786 listed in TableII) with different ∆.
+
+During forward propagation, the network still uses the rounding function and step function for computation. This ensures that the network’s output closely approximates the output of the FAIDs to the greatest extent possible.
+
+C. The partial unfolding of RQNNs
+
+In the network designed for training the L-FAIDs, different
+
+iteration factors need to be set for each layer. If too many
+
+layers are unfolded in a single training process, it will lead
+
+to the gradient vanishing problem and the deep network is
+
+also prone to overfitting during training. Experimental results
+
+have shown that unfolding the entire network at once does
+
+not yield good decoding performance [18]. However, using
+
+only one layer would result in overly simplistic and biased
+
+training outcomes, leading to severe performance degradation
+
+in high-rate LDPC decoding. Therefore, we adopt a strategy
+
+of unfolding only a subset of layers at a time, train this subset
+
+of the network with frozen parameters, and input the decoding
+
+results into the next subset of the network for further training.
+
+This training process is illustrated in Fig. 2. The number of
+
+iterations for each unfolded subset is denoted as ∆, and a total
+
+of
+
+tmax ∆
+
+times
+
+of
+
+unfolding
+
+are
+
+needed.
+
+The value of ∆ also significantly impacts the final training
+
+results of the network, as excessively large ∆ can lead to
+
+gradient vanishing problems. Hence, we experimented with
+
+different values of ∆ to evaluate the network training outcomes. As shown in Fig. 3, the results indicate that the network achieves the best training performance when ∆ = 2.
+IV. TRAINING AND SIMULATION RESULTS
+The network is trained using mini-batch gradient descent, where only a small batch of samples is inputted at a time for optimization. This ensures global optimality of the optimization parameters while also speeding up the network training process. The Adam is chosen as the gradient descent algorithm, which adapts the learning rate of the network dynamically for better convergence performance. The training input samples are quantized soft information that has been passed through an AWGN channel and demodulated with BPSK. The sender transmits random codewords. In order to ensure that each unfolded portion of the network receives sufficient training, it is important for the number of average error frames to be greater than 1, which can be achieved by having the product of FER and batch size greater than 1. This requires the AWGN channel signal-to-noise ratio (SNR) to be within a suitable range.
+We trained LUTs for the FAID2 and FAID3 for three types of 5G LDPC codes. These codes are generated using BG1 with the following parameters shown in Table II. All these LDPC codes are irregular codes, and different LUTs are trained for
+
+143
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II
+
+PARAMETERS OF LDPC CODES
+
+100
+
+R= 0.5 R= 0.6875 R= 0.786
+
+Information bit length k 2112
+
+code length n
+
+4416
+
+4224 6528
+
+8448 11520
+
+10-1
+
+expansion factor Zc
+
+96
+
+192
+
+384
+
+FER
+
+10-2
+100 10-3
+
+10-1
+
+10-4
+
+FER
+
+10-2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+3.2
+
+3.4
+
+Eb/N0(dB)
+
+10-3
+Fig. 5. Performance of layered RQNN-trained FAIDs, L-NMS decoding and flood RQNN-trained FAIDs of R = 0.6875 5G LDPC codes with 10 iterations.
+10-4
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+100
+
+Eb/N0(dB)
+
+Fig. 4. Performance of layered RQNN-trained FAIDs, L-NMS decoding and flood RQNN-trained FAIDs of R = 0.5 LDPC codes with 10 iterations.
+10-1
+
+FER
+
+different check nodes based on the row weight range of their protograph matrices. For codes which R =0.5 and 0.6875, four LUTs are trained for each iteration, while for the code which R = 0.786, three LUTs are trained. The input soft information quantization bit-width is set to wu=4, denoted as Q(4), while the corresponding floating-point input is represented as Q(∞). Additionally, the variable nodes’ soft information quantization bit-width is set to wN =6. The batch size is set to 20, and convergence can be achieved after training for 60 batches, with a total of 1200 sample sets.
+The main optimization target is the decoding performance in the FER range of 10−3 to 10−2. In exhaustive searching, distinguishing FER differences in the final unfolded network requires simulation results of at least 103 frames. For FAID3, the quantization level satisfies M0, M1, M2 ∈ N, and 0 < M0 < M1 < M2 ≤ 7. Considering the value of quantization thresholds, each threshold can take two values, resulting in a total of 280 possible LUTs. The same applies to FAID2, where 0 ≤ M0 < M1 ≤ 7, and each threshold can take four values, resulting in a total of 112 possible LUTs. The complexity of two iteration is denoted as E.
+The complexity of forward propagation in a neural network is equivalent to that of iterating the decoder twice, while the complexity of computing gradients during backward propagation is directly proportional to the number of parameters being optimized. Specifically, the computational complexity increases in proportion to the number of parameters being optimized. The comparison between the complexity of training
+
+10-2
+
+10-3
+
+2.8 2.9
+
+3
+
+3.1 3.2 3.3 3.4 3.5 3.6
+
+Eb/N0(dB)
+
+Fig. 6. Performance of layered RQNN-trained FAIDs, L-NMS decoding and flood RQNN-trained FAIDs of R = 0.786 5G LDPC codes with 10 iterations.
+
+the final unfolded network and the exhaustive optimization of LUTs is summarized in Table III.
+Especially when training multiple LUTs in one iteration, the complexity of using RQNNs for training is significantly lower compared to exhaustive methods.
+We apply the trained LUTs to the FAIDs and obtain the FER by computer simulations at different SNRs. Fig. 4, Fig. 5 and Fig. 6 show the performance comparison between the FAIDs and the L-NMS for three types of LDPC codes. The quantized soft information inputs for both L-NMS and FAIDs are 4 bits wide, and the normalization coefficient for L-NMS is set to 0.7. LUT optimized using the flooding method and the layered method are denoted by F-LUT(x) and L-LUT(x) respectively, where x represents how many LUTs are optimized.
+
+144
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III COMPLEXITY ANALYSIS OF RQNNS COMPARED TO EXHAUSTIVE SEARCHING
+
+exhaustive (R=0.5 or 0.6875) (x = 4) exhaustive (R=0.786) (x = 3) RQNNs
+
+FAID2 LUT(1) (·E) 1.25 × 107 1.25 × 107
+4800
+
+FAID2 LUT(x) (·E) 2.47 × 1019 1.97 × 1015
+4800
+
+FAID3 LUT(1) (·E) 7.84 × 107 7.84 × 107
+8400
+
+FAID3 LUT(x) (·E) 3.78 × 1022 4.82 × 1017
+8400
+
+After training, both FAID2 and FAID3 show significant performance improvement compared to FAIDs using the flooding training method [13]. This indicates that the designed RQNNs for the L-FAID has achieved noticeable effects. Furthermore, the performance of FAID3, which utilizes multiple LUTs in each iteration, is now comparable to the quantized L-NMS, and even surpasses it for the case of R =0.6875. All these performance improvements are achieved without an increase in decoding complexity, as the trained LUTs can be used independently from the RQNNs in the FAID decoding process.
+V. CONCLUSION
+In this paper, we have designed a RQNN for the L-FAIDs, which unfolds the network partially based on the number of iterations. By introducing STE, we optimize quantization thresholds and quantization levels of the mapping function within the RQNN to obtain offline-usable LUTs. Compared to the exhaustive method, the RQNN has a clear advantage in optimizing complexity. Furthermore, the optimized FAID3 achieves performance close to or even surpassing the quantized L-NMS without increasing the complexity of the decoding. FAID2 also shows significant performance improvement. Additionally, our designed RQNN is more suitable for the L-FAIDs in terms of training results compared to the optimization with the flooding network structure. It also exhibits performance advantages when used for layered decoding. Finally, our RQNN design is applicable to various LDPC codes in AWGN channels, whether regular or irregular codes, especially 5G QC-LDPC codes. The FAID, as a lowcomplexity decoding, is expected to find more applications in 5G communication systems or fiber optic network systems through such optimizations.
+ACKNOWLEDGEMENT
+This work was supported by the Natural Science Foundation of China (Grant No. 62331002).
+
+[5] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite alphabet iterative decoders—Part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Trans. Commun, vol. 61, no. 10, pp. 4033–4045, 2013.
+[6] A. Balatsoukas-Stimming and C. Studer, “Deep unfolding for communications systems: A survey and some new directions,” in Proc. IEEE Signal Process. Syst. (SiPS). IEEE, 2019, pp. 266–271.
+[7] A. Payani and F. Fekri, “Decoding LDPC codes on binary erasure channels using deep recurrent neural-logic layers,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC). IEEE, 2018, pp. 1–5.
+[8] Y. Bengio, N. Le´onard, and A. Courville, “Estimating or propagating gradients through stochastic neurons for conditional computation,” arXiv preprint arXiv:1308.3432, 2013.
+[9] X. Xiao, B. Vasic´, R. Tandon, and S. Lin, “Designing finite alphabet iterative decoders of LDPC codes via recurrent quantized neural networks,” IEEE Trans. Commun, vol. 68, no. 7, pp. 3963–3974, 2020.
+[10] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Finite alphabet iterative decoding of LDPC codes with coarsely quantized neural networks,” in IEEE Global Commun. Conf. (GLOBECOM). IEEE, 2019, pp. 1–6.
+[11] H. Li, B. Bai, X. Mu, J. Zhang, and H. Xu, “Algebra-assisted construction of quasi-cyclic LDPC codes for 5G new radio,” IEEE Access, vol. 6, pp. 50 229–50 244, 2018.
+[12] N. El Maammar, J. Foshi, S. Bri, S. Oukili, and A. Babaoui, “Performance analysis of layered normalized min-sum for LDPC codes over weibull fading channels,” in Proc. Int. Conf. WirelessTechnol. EmbeddedIntell. Syst. (WITS). IEEE, 2019, pp. 1–6.
+[13] Y. Lyu, M. Jiang, Y. Zhang, C. Zhao, N. Hu, and X. Xu, “Optimized Non-Surjective FAIDs For 5G LDPC Codes With Learnable Quantization,” IEEE Commun. Lett., 2023.
+[14] T. T. Nguyen-Ly, K. Le, V. Savin, D. Declercq, F. Ghaffari, and O. Boncalo, “Non-surjective finite alphabet iterative decoders,” in IEEE Int. Conf. Commun. (ICC). IEEE, 2016, pp. 1–6.
+[15] J. R. Hershey, J. L. Roux, and F. Weninger, “Deep unfolding: Model-based inspiration of novel deep architectures,” arXiv preprint arXiv:1409.2574, 2014.
+[16] J. Nadal and A. Baghdadi, “FPGA based design and prototyping of efficient 5G QC-LDPC channel decoding,” in Proc. Int. Workshop Rapid Syst. Prototyping (RSP). IEEE, 2020, pp. 1–7.
+[17] L. Wang, X. Dong, Y. Wang, L. Liu, W. An, and Y. Guo, “Learnable lookup table for neural network quantization,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), 2022, pp. 12 423–12 433.
+[18] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5G LDPC codes by machine learning,” IEEE Access, vol. 6, pp. 50 179–50 186, 2018.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. J. MacKay and R. M. Neal, “Good codes based on very sparse matrices,” in Proc. 5th IMA Conf. Cryptography and Coding. Springer, 1995, pp. 100–111.
+[3] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, 2018.
+[4] H. Tataria, M. Shafi, A. F. Molisch, M. Dohler, H. Sjo¨land, and F. Tufvesson, “6G wireless systems: Vision, requirements, challenges, insights, and opportunities,” Proc. IEEE, vol. 109, no. 7, pp. 1166–1199, 2021.
+
+145
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:32:49 UTC from IEEE Xplore. Restrictions apply.
+
+

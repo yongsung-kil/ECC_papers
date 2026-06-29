@@ -1,0 +1,923 @@
+1090
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Improving Read Performance of NAND Flash SSDs by Exploiting Error Locality
+
+Ren-Shuo Liu, Meng-Yen Chuang, Chia-Lin Yang, Cheng-Hsuan Li, Kin-Chu Ho, and Hsiang-Pang Li
+
+Abstract—NAND flash-based solid-state drives (SSDs), which can serve as the caches of hard disk drives, have gained popularity in large-scale, high-performance storage. A type of advanced error correction code for SSDs, low-density parity-check (LDPC), is required to mitigate a considerable number of errors in the raw data of NAND flash. However, LDPC imposes read performance overhead due to the complex decoding procedure of LDPC. In this paper, we propose an error-correcting cache (EC-Cache) that exploits “error locality”, a characteristic of NAND flash memory, to improve the read performance of SSDs. We use the term “error locality” to refer to the property that the majority of errors in reads to the same flash page appear at the same positions until the page is erased. By caching detected errors, we can correct a significant portion of errors in the requested flash page prior to the LDPC decoding process. This design significantly reduces LDPC decoding overhead because the latency of LDPC is correlated with the number of errors in the input data. We conduct experiments, including flash characterization, LDPC simulation, and SSD simulation, to evaluate EC-Cache. The experimental results demonstrate that EC-Cache can improve the read performance of LDPC-based SSDs by up to 2:6Â.
+Index Terms—NAND flash memory, solid-state drive (SSD), low-density parity-check (LDPC), bit error, and cache
+Ç
+
+1 INTRODUCTION
+
+NAND flash memory (also known as flash) is an emerging cell or 3-bit multi-level cell) flash has a raw BER up to 10À2 memory technology that enables computer architects to after 2,000 program-and-erase cycles. The adoption of low-
+
+construct large-scale, high-performance storage in enterprise density parity-check (LDPC), a type of advanced error-cor-
+
+servers and datacenters. Both industry and academia rection code (ECC), is a highly accepted solution to handle a
+
+propose the use of flash-based solid-state drives (SSDs) as BER of approximately 10À2 [13], [14], [15], [16], [17]. How-
+
+caches and hard disk drives (HDDs) as the primary storage ever, the complex decoding algorithm of LDPC incurs
+
+media [1], [2], [3], [4], [5], [6], [7], [8], [9]. SSDs and HDDs exhibit complementary characteristics. HDDs are more cost effective than SSDs in offering large capacity, but HDDs exhibit performance shortcomings, such as low I/O operations per second (IOPS) and long response latency, due to the physical limitations of their spinning platters and moving arms. SSDs contain no moving mechanical components and are suitable as storage caches.
+A challenge of SSDs results from flash’s high raw bit error rate (BER), which causes significant error correction latency and offsets the performance advantages of flash [10], [11], [12]. For example, modern 19 nm TLC (triple-level
+
+noticeable latency [10], [11], [12]. The raw BER of flash may increase in the future as the bit density of flash increases. Therefore, designers should aim to alleviate the decoding overhead of LDPC.
+In this paper, we offer the following contributions:
+ We identify and quantify the “error locality” property in flash, i.e., the majority of error bits in reads to the same flash page appear at the same positions until the page is erased because flash cells are nonvolatile and can retain data for a long period of time until the cells are erased. We quantitatively characterize the error locality of real flash chips using a cus-
+
+ R.-S. Liu, M.-Y. Chuang, and C.-H. Li are with the Department of Computer Science and Information Engineering, National Taiwan University, Taipei, Taiwan. E-mail: {renshuo, r00922059, r01922029}@ntu.edu.tw.
+ C.-L. Yang is with the Department of Computer Science and Information Engineering, Graduate Institute of Networking and Multimedia, and Graduate Institute of Electronics Engineering, National Taiwan University, Taipei, Taiwan. E-mail: yangc@csie.ntu.edu.tw.
+ K.-C. Ho is with Macronix International Co., Ltd. and the Department of Electronics Engineering and Institute of Electronics, National Chiao Tung University, Hsinchu, Taiwan. E-mail: andyyho@mxic.com.tw.
+ H.-P. Li is with Macronix International Co., Ltd., Hsinchu, Taiwan. E-mail: sbli@mxic.com.tw.
+
+tomized FPGA platform. The experimental results demonstrate that approximately 80 percent of errors between two reads to the same flash page are identical for the tested flash chips.  We propose an error-correcting cache (EC-Cache) that exploits the error locality property to speed up the decoding latency of LDPC. EC-Cache uses dynamic RAM (DRAM) to cache the detected erroneous bits of recently read flash pages and is queried when an LDPC decoder begins to process the
+
+Manuscript received 4 Feb. 2014; revised 16 May 2014; accepted 16 July 2014.
+
+raw data of a flash page. The cached bit-error infor-
+
+Date of publication 17 Aug. 2014; date of current version 17 Mar. 2016.
+
+mation is used to correct a portion of the erroneous
+
+Recommended for acceptance by H. Asadi, P. Ienne, and H. Sarbazi-Azad. For information on obtaining reprints of this article, please send e-mail to: reprints@ieee.org, and reference the Digital Object Identifier below.
+
+bits if a hit occurs. With fewer errors to be corrected, an LDPC decoder invokes fewer flash sensings
+
+Digital Object Identifier no. 10.1109/TC.2014.2345387
+
+and requires less time in its decoding algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+0018-9340 ß 2014 IEEE. Translations and content mining are permitted for academic research only. Personal use is also permitted, but republication/redistribution
+
+requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1091
+
+To reduce the required DRAM space for storing the NAND flash is organized as blocks of pages. For exambit-error information of each cached flash page, EC- ple, let us consider modern flash. A flash die consists of
+
+Cache records the relative offsets of bit errors instead of their absolute positions. Simulations indicate that if a flash read is a hit in EC-Cache, errors in the read data can be reduced by more than 60 percent prior to the start of LDPC decoding. This reduction in the
+
+2,048 to 4,096 blocks, a block consists of 256 to 512 pages, and a page consists of 73,728 bits (i.e., a physical page size of 9 kB). Within a page, 8 kB of space stores user data (i.e., a logical page size of 8 kB) and the remaining 1 kB stores flash management data and ECC parities. All bits in a
+
+number of errors can significantly reduce the page are read and written concurrently. A written page required flash sensing counts and decoding latency requires an erase before it can be re-written. To erase a
+
+of LDPC. To the best of our knowledge, EC-Cache is page, all pages in the block that contains the page must be
+
+the first work that improves the read performance of simultaneously erased.
+
+LDPC-based SSDs by exploiting the error locality
+
+Flash is prone to errors [18] because the Vth level read out
+
+property of flash.
+
+from a cell can differ from what was written into the cell.
+
+ We design an adaptive storage cache architecture Several nonideal effects, including write disturbs, charge
+
+that can dynamically adjust the available DRAM losses from floating gates, electrical noises, and temperature
+
+resources of a storage cache between the use of ECCache and the use of a data cache. An adaptive scheme is important because the optimal DRAM allocation is dependent on workload behaviors. A data-cache hit yields more performance advantages than an EC-Cache hit because the former completely avoids flash sensings and LDPC decoding. However, given the same DRAM capacity, EC-Cache captures more pages (i.e., a larger footprint) than a data cache because EC-Cache consumes less DRAM space than a data cache for each cached flash page. Therefore, when a data cache only yields a low read hit rate for a workload, it may be beneficial to reallocate a portion of DRAM resources from the data cache to EC-Cache to increase the hit rate. The proposed adaptive scheme can analyze the access locality of workloads at run time and estimate the benefits of different DRAM allocation configurations to render decisions dynamically. Simulations demon-
+
+variations [18], [19], can cause the errors. Write disturbs refer to the Vth increase of a cell when neighboring cells are written. Charge losses from a floating gate gradually decrease the Vth of a cell. Due to electrical noises, if the Vth of a cell is close to the read reference voltages, the read-out Vth level from the cell is unstable. A change in temperature also affects the Vth of a cell.
+Bit errors in flash behave more similarly to transient soft errors compared to permanent hard errors for two reasons. First, the nonideal effects in flash become more apparent when flash experiences an increased number of write and erase cycles; however, each individual cell is not permanently damaged. Previous studies [18], [20] have examined the erratic behavior of flash: a flash bit can be erroneous in one write cycle and recover in another write cycle. Second, several nonideal effects, such as write disturbs and charge losses, exhibit a high correlation with the data pattern written into flash [18], [21]. Therefore, bit errors in flash change in different write cycles as user data change.
+
+strate that with the proposed adaptive scheme, ECCache can significantly improve the read response time of SSDs by up to 2:2Â. The remainder of this paper is organized as follows. Section 2 provides an overview of flash, LDPC codes, and flash in large-scale storage. Section 3 presents the motivation of this study. Section 4 and 5 discuss the proposed ECCache design and adaptive allocation scheme, respectively. Section 6 presents our experimental methodologies, and Section 7 presents the results. Section 8 presents related studies. Section 9 concludes this paper.
+
+2.2 LDPC Codes
+To address the transient soft errors in flash, common practices adopt ECCs in SSDs. LDPC, which is a type of advanced ECC, is emerging in SSDs. LDPC codes (and ECCs) supplement user data with redundant parity bits to form codewords. A codeword with a certain number of error bits can be reconstructed with the parity bits through decoding.
+An LDPC code is constructed based on a sparse paritycheck matrix, H. A matrix with M columns and N rows defines an LDPC code in which the codeword size is M bits and codeword bits satisfy N parity-check equations that are
+
+2 BACKGROUND
+2.1 NAND Flash Memory
+
+specified by the N rows of the matrix. Specifically, a codeword v is valid if and only if
+
+NAND flash is a type of nonvolatile memory that is based on floating-gate transistors. The threshold voltage (Vth) of this type of transistor can be programmed to different levels by injecting a different amount of charge on the floating gates. Different Vth levels represent different data. For example, to store N-bit data in a cell, the cell’s Vth is programmed to one of the 2N different Vth levels. Once a flash cell is programmed, the injected charge is trapped on the floating gate even if power is not applied. This description explains why flash is non-volatile. An erase operation that removes all trapped charge from floating gates is required to change the
+
+vHT ¼ 0 mod 2;
+
+(1)
+
+where HT represents the transposition of H. For example, a sparse parity-check matrix with seven col-
+umns and three rows is shown as follows:
+
+2
+
+3
+
+1110100
+
+H ¼ 4 1 0 1 1 0 1 0 5:
+
+(2)
+
+1101001
+
+Therefore, a valid codeword consists of seven bits and must
+
+data stored in flash.
+
+satisfy three parity-check equations. For example, the first
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1092
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Fig. 1. LDPC decoding using the progressive sensing and decoding strategy.
+
+row of H contains four 1 entries in the first, second, third, and fifth columns, which indicates that the first, second, third, and fifth bits of a valid codeword should contain an even number of 1 entries. Similarly, the second and third rows of H represent two other equations. A codeword that cannot satisfy all three parity-check equations is determined to be corrupted by errors, and LDPC decoding is required to reconstruct the codeword.
+LDPC codes are a type of probability-based ECC. LDPC codes can be decoded using the log-likelihood ratio (LLR) of each codeword bit as inputs. An LLR represents how likely the original value of a bit in a received codeword is 1 versus 0. An LDPC decoder iteratively refines the input LLRs to satisfy as many parity-check equations as possible. Some errors are expected to be corrected in each iteration. The LDPC decoder stops decoding if all parity-check equations are satisfied (i.e., decoding succeeds and a valid codeword is reconstructed) or a predefined maximal-allowable decoding iterations are attained (i.e., decoding does not succeed based on the input LLRs).
+To obtain the LLRs of flash bits, a common practice senses a flash page a minimum of one time with different read reference voltages and assigns different LLRs to each bit based on a predefined sensing-result-to-LLR mapping. The precision of the LLR is improved with additional sensings. For example, if flash cells are sensed one time with a reference voltage set to 0.5 V, the LLR of each cell has two possible values depending on whether the cell’s Vth is <0:5 V or >0:5 V. If these flash cells receive two additional sensings with reference voltages set to 0.4 and 0.6 V, the LLR of each cell has four possible values depending on whether the cell’s Vth is <0:4 V, from 0.4 to 0.5 V, from 0.5 to 0.6 V, or >0:6 V. The precision of the LLRs increases from two- to four-level precision.
+The progressive sensing and decoding strategy [12] illustrated in Fig. 1 is often used to determines the number of flash sensings. When a flash read occurs, the LDPC decoder invokes flash page sensing and attempts to decode the sensing results. If the decoding succeeds, the correct data are output. Otherwise, the LDPC decoder invokes additional flash sensings using different reference voltages, which can improve the LLR precision of the obtained results and increase the likelihood of successfully decoding the data. The decoding procedure continues until correct data are reconstructed or the maximum sensing number is attained.
+
+Fig. 2. PCIe-based SSD.
+A common solution employs HDDs (particularly HDD arrays) as the primary storage, uses flash as the cache of HDDs, and positions flash as close to the CPUs as possible. The key concept of a flash-based cache is that a small fraction of the data (e.g., the top one percent most popular data) of HDDs account for a significant percentage (e.g., 20-40 percent) of read accesses to the HDDs [2]. Therefore, selectively caching these popular data in flash can efficiently reduce HDD I/Os and improve the overall system responsiveness without incurring excessive cost. Previous studies have presented several simple yet effective selectively caching mechanisms, such as SieveStore [2]. SieveStore monitors the I/Os of HDDs and collects the addresses for which the access counts are greater than a predefined threshold (e.g., 10 times within a day) to form the popular set. I/Os to the popular set are cached in the flash for the next day.
+Flash exhibits a short read latency. Therefore, a conventional HDD interface such as serial ATA (SATA), substantially restricts the achievable bandwidth of SSDs. Positioning flash closer to CPUs pushes the available bandwidth for SSDs close to the DRAM level. PCI express (PCIe)-based SSDs are often used to achieve this goal [3], [4], [9], [22], [23]. As shown in Fig. 2, which illustrates the use of a commodity PCIe SSDs, a PCIe interface is integrated in the memory controller hub (i.e., the Northbridge), similar to a DRAM bus, and the system uses its DRAM and CPU cycles to manage the flash [22], [24]. In addition to PCIe-based design, a recent trend places flash on the DRAM bus [25]. As depicted in Fig. 3, a hybrid DIMM consists of flash and DRAM and is connected to a double data rate (DDR) interface. This design can increase the aggregate bandwidth from flash to DRAM.
+3 MOTIVATION
+3.1 Error Locality in NAND Flash
+Flash represents data by injecting different amounts of charge into a cell. Because flash is nonvolatile, a flash cell can retain the injected charge for a long period of time (e.g., three months) unless the cell is erased. Therefore, once a flash cell contains an incorrect amount of charge, which
+
+2.3 Flash in Large-Scale Storage
+Flash and HDDs exhibit complementary characteristics; the former exhibits high performance, and the latter is low cost. Fig. 3. Hybrid (DRAM and flash) DDR-DIMM.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1093
+
+Fig. 4. Errors in a representative flash page.
+
+results in a bit error, the bit error also tends to remain for a
+
+long period of time. For example, write disturbs and charge
+
+losses are the two main reasons that cause flash cells to con-
+
+tain an incorrect amount of charge, which produces bit
+
+errors. The former causes a flash cell to be overprogrammed
+
+to a Vth level that is higher than the intended level, and the
+
+latter causes a flash cell to have a Vth level that is lower than
+
+the intended level [18]. Once flash cells contain erroneous
+
+data due to these two reasons, the majority of the cells
+
+remain erroneous until the cells are erased. Not all cells
+
+remain erroneous because some errors are caused by electri-
+
+cal noises and temperature fluctuation. Cells with Vth close to the read reference voltages are likely to be affected by these effects, and the errors of these cells are unstable.
+
+Fig. 5. Block diagram of a system with EC-Cache. The modified components are shaded.
+
+To demonstrate the abovementioned phenomenon, we
+
+describe a small experiment that analyzes the error posi- portion of errors in each iteration and stops when all errors
+
+tions of a page in a real flash chip in Fig. 4. We perform the are corrected. Therefore, the length of the LDPC decoding
+
+following operations on the flash chip. First, we write and process tends to increase if many errors exist in the input
+
+erase the flash using random data for 2,000 cycles. Then, we data. For these two reasons, the performance overhead of
+
+write known random data into a block (Write1), read a LDPC on SSDs can be mitigated by establishing a simple
+
+physical page (e.g., page i) of the block twice (Read1 and method that reduces a portion of errors in the data prior to
+
+Read2), and record the number and positions of bit errors in the start of the LDPC decoding process.
+
+the readout. The two reads are separated by 1 h. Then we
+
+erase the block, write another random data into the same block (Write2), again read page i twice (Read3 and Read4),
+
+4
+
+EC-CACHE DESIGN
+
+and record the number and positions of the bit errors in the We propose EC-Cache to exploit the observations we
+
+readout. The results indicate that within the physical page, described in Section 3. EC-Cache stores the information of
+
+which consists of 73,728 bits (i.e., 9 kB), 701-725 bit errors detected errors of recently read flash pages, including their
+
+exist in a read. We compare the positions of the errors positions and valid values, to correct error bits in a subse-
+
+between the reads. For Read2, 559 out of the 725 errors are quently requested flash page prior to the start of the associ-
+
+located at the same positions for Read1. We refer to this sim- ated LDPC decoding process.
+
+ilarity as “error locality”. In this case, the error locality is
+
+EC-Cache is designed to speed up an LDPC decoder. As
+
+572559, equal to 77 percent. Similar error-locality behavior between Read3 and Read4 can be identified. Interestingly, the majority (95 percent) of the error positions of Read3 differ from the error positions of Read2 because the page is erased and written with different data. These results suggest that if a flash page is not erased, it displays an error locality of approximately 70-80 percent between two reads. A more comprehensive experiment on quantifying flash error locality is presented in Sections 6.1 and 7.1.
+3.2 LDPC Decoding Speed Versus BER
+
+shown in Fig. 5, EC-Cache adopts a firmware cache (e.g., a hash table) located in the DRAM space and indexed by hashing the logical page addresses. Each line of the ECCache stores EC-entries that correspond to the detected errors of a flash page (EC-entries are subsequently explained). An assisting unit is responsible for interfacing the LDPC decoder and EC-Cache. When a flash read occurs, EC-Cache is queried in parallel for a hit, as shown in Fig. 6. If the corresponding line is located (i.e., a hit in the EC-Cache), the line is acquired and the EC-entries are retrieved and merged into the raw data read from flash.
+
+An LDPC decoder can handle data with a high BER. How- The number of errors in the raw data is reduced, and the
+
+ever, in such situations, the decoding process is lengthened associated LDPC decoding procedure gains speedup. If
+
+and the read latency of SSDs increases for two reasons. First, the corresponding line is not located (i.e., a miss in the EC-
+
+precise LLRs for the data are required to handle excessive Cache), the flash read operation is served without LDPC
+
+errors in the data. As previously mentioned, a flash page is speedup. After a flash page is processed by the LDPC
+
+often sensed multiple times with different read reference decoder, the assisting unit generates new EC-entries based
+
+voltages to increase the precision of LLRs. The overhead in on the errors in the flash page to form a new line, and EC-
+
+increasing LLR precision is that additional sensings cause Cache retains the new line. An evicted line from the EC-
+
+additional flash-read latency and data-transfer latency. Cache is discarded. When a flash write (including garbage
+
+Second, the iterative decoding algorithm of LDPC corrects a collection) occurs, the corresponding line in the EC-Cache
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1094
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Fig. 6. Timeline of reading NAND flash, reading EC-Cache, and LDPC decoding.
+
+is invalidated because a stale EC-Cache line is not applicable to the newly written data.
+The required space of each EC-Cache line should be minimized to ensure that as many lines as possible can be allocated given fixed memory resources. We use offset coding with a fixed offset size (which we set to 8 bits) to record the bit-error information of a flash page. For example, let us consider Fig. 7. The 50th, 200th, and 550th bits in the raw data are erroneous; each EC-entry consists of an 8-bit offset and a 1-bit valid-value field. The first two erroneous bits are recorded using the EC-entries (50, 1) and (150, 0), respectively. The third error (the 550th bit), which is 350 bits from its preceding error (the 200th bit), cannot be directly recorded using the 8-bit offset. To handle this situation, a dummy EC-entry, (255, 1), is employed. This entry is referred to as a dummy because the 455th bit of the raw data is not erroneous. The third error can be recorded using (95, 0) by introducing the dummy entry.
+Fig. 8 presents the assisting unit that interfaces the LDPC decoder and EC-Cache. When raw data are transferred to the input buffer of the LDPC decoder, a circuit merges the acquired EC-entries into the raw data. This merge can be performed by comparing the offset of each EC-entry with the number of data transferred into the input buffer and substituting the raw data with the data stored in the valid value of the EC-entry. The data in the input buffer are processed by the iteratively decoding engine, and the correct data are placed in the output buffer. When the correct data are transmitted from the output buffer, a circuit generates new EC-entries by identifying differences between the raw data and correct data to form an EC-Cache line. If a line becomes full before all EC-entries are recorded, the remaining EC-entries are eliminated. Both circuits for merging EC-entries into raw data and identifying the differences between the two buffers do not incur significant hardware overheads. The main hardware overhead is the RAM for buffering the raw data, in which the size is equivalent to a codeword.
+The cache line number and cache line size are two key parameters of EC-Cache. A larger cache line number results in a higher cache hit rate; a larger cache line size indicates that more EC-entries can be stored for each cached page to increase the number of errors that can be fixed when the
+
+Fig. 8. LDPC decoder assisted by EC-Cache.
+page is re-read. Given fixed memory resources, a tradeoff between the two parameters occurs because a larger cache line number indicates a smaller line size. With the aforementioned offset coding, we experimentally set the line size of EC-Cache as one-ninth (1 kB) of a physical flash page (9 kB). Therefore, given the same memory resource, EC-Cache has 8Â more lines than a data cache (because the size of a data cache line is equivalent to the size of a logical page, i.e., 8 kB).
+5 ADAPTIVE CACHE ALLOCATION SCHEME
+The memory resources that are utilized by EC-Cache can be employed as a data cache, which retains the data of recently accessed flash pages. With the given memory resources, we encounter the design challenge of how to properly allocate the available memory between a data cache and EC-Cache to achieve the optimal performance. The best memory resource allocation between these two types of caches is dependent on workloads and the amount of available memory. A data-cache hit provides more performance advantages than an EC-Cache hit because the former completely prevents flash accesses and LDPC decoding. However, ECCache captures more pages (i.e., a larger footprint) than a data cache given the same memory capacity.
+Fig. 9 analyzes a real-world workload to demonstrate the need for judiciously allocating memory between a data cache and EC-cache. The x-axis presents 17 levels of cache capacities (0, 2k, 4k, ..., and 32k lines), and the y-axis presents the additional hit rates that can be obtained from increasing the cache capacity by one level. This analysis is also known as a stack distance histogram (SDH) analysis [26], which is subsequently explained. The corresponding data cache and EC-Cache capacities for a given cache line number are shown; the sizes of the data-cache and ECCache lines are 8 and 1 kB, respectively. The majority of workload locality can be captured if we have 128 MB of
+
+Fig. 7. Illustration of offset coding.
+
+Fig. 9. Increase in read hit rate from an increase in cache capacity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1095
+
+Fig. 10. SDH definition.
+
+Fig. 11. Approximating the SDH using a shadow cache with set
+
+sampling.
+memory resources; therefore, dedicating the total memory
+
+resources to the data cache is likely to yield higher performance than a combined data and EC-Cache design. However, a 32MB data cache (i.e., 4k lines) can only capture a small portion of locality if we only have 32 MB of memory resources. In this case, partitioning the 32 MB of memory resources between a data cache and EC-Cache may result in improved performance because EC-Cache has eight-fold more lines. For example, the majority of locality can be captured with the given memory resources if 16 MB of resources are allocated to the EC-Cache (i.e., 16,000 lines).
+One way to partition memory resources between a data cache and EC-Cache is to statically set the cache size based on users’ knowledge about the workloads. How-
+
+software updates the shadow cache and accumulates the number of shadow-cache hits in a vector of counters to approximate the SDH. Therefore, the time overhead caused by SDH is moderate and distributed (instead of being a burst of heavy computation).
+The adaptive scheme works in an epoch-based manner. An epoch represents a time interval that consists of a certain number of flash page reads (e.g., one million). At the end of an epoch, several predefined cache allocation configurations are evaluated based on the SDH of the epoch. The benefits of different configurations are estimated using the following metric:
+
+ever, this scheme cannot achieve the optimal performance
+
+Benefit ¼ HitRateData þ a Â HitRateECÀCache;
+
+(3)
+
+if workload behavior is unknown in advance or variable over time. Therefore, we propose an adaptive cache allocation scheme. The scheme monitors workload behaviors using SDH analysis [26], evaluates different cache allocation configurations at run time, and dynamically determines the optimal configuration.
+SDH statistically represents the reuse behavior of an address stream and can be used to estimate the cache hit rate. SDH is defined based on a stack: When an address is accessed, the address is extracted from the stack if the address existed in the stack (i.e., a reuse). Then, the accessed address is pushed onto the stack. The depth at which an address is extracted from the stack is referred to as the stack distance, and the distribution function of the stack distances of an address stream is referred to as the SDH. Fig. 10 illustrates the SDH of an example address stream—a, b, c, c, a, b—in which each alphabet represents an address. After the first three addresses (a, b, and c) are pushed onto the stack, the fourth address (c) is extracted from the stack and the corresponding stack distance is one. Similarly, the fifth and sixth addresses (a and b) both have stack distances of 3. Therefore, the SDH of the
+
+where HitRateData and HitRateECÀCache denote the hit rate of a data cache and the hit rate of EC-Cache, respectively, and a denotes the relative benefit of a hit in EC-Cache compared with the benefit of a hit in a data cache. a should assume a value between zero and one because a hit in ECCache is not as beneficial as the hit in a data cache. If a is set to zero, the proposed scheme is equivalent to the baseline scheme in which all resources are used as a data cache. The value of a should be set based on the performance overhead analysis of LDPC, and we discuss this setting in Section 7.2.
+Given this benefit metric, the proposed scheme can be used to select the configuration that maximizes the metric and re-allocate the memory resources for the next epoch. To avoid clearing all of the cache lines each time the memory resources are re-partitioned, the available memory space is divided into multiple chunks (e.g., eight chunks) and each chunk corresponds to a cache way. The ways can be independently assigned to either the data cache or ECCache. The number of sets in both caches is fixed, whereas the number of ways in a set varies according to the cache allocation.
+
+stream is plotted in the figure. The probability that the
+
+distance is one is 61, and the probability that the distance is
+
+three
+
+is
+
+26.
+
+This
+
+SDH
+
+also
+
+implies
+
+that
+
+a
+
+hit
+
+ratio
+
+of
+
+1 6
+
+can
+
+be achieved if a one-entry cache is employed and that an
+
+additional
+
+2 6
+
+of
+
+hit
+
+ratio
+
+is
+
+available
+
+if
+
+the
+
+cache
+
+size
+
+increases to three entries.
+
+6 EXPERIMENTAL METHODOLOGY
+We conduct experiments in three steps to evaluate the benefits of EC-Cache. The first two experiments are device- and subsystem-level experiments that analyze flash and an LDPC decoder, respectively. Based on the results obtained
+
+SDH analysis can be approximated using a shadow in the first two steps, the third experiment is a system-level
+
+cache and set sampling without significant time and space experiment that evaluates the benefits of EC-Cache on
+
+overhead. As depicted in Fig. 11, a shadow cache (also SSDs. We describe each step as follows:
+
+referred to as a ghost cache) with set sampling [27], [28]
+
+includes sets that are associated with a small portion (typ- 6.1 Error Locality Analysis
+
+ically one percent) of the data-cache sets; each shadow- In the first experiment, we measure real flash chips to
+
+cache set consists of ways that have valid and tag fields quantify the per-page error locality described in Section
+
+(but no data fields). Therefore, the space overhead is 3.1. We build a platform that can directly read, write, and
+
+insignificant compared with a data cache. When the sam- erase flash chips, as depicted in Fig. 12. The core of the
+
+pled data-cache sets are accessed, the flash management platform is a Xilinx Virtex-5 FPGA, which is connected
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1096
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Fig. 12. Diagram of the platform built to measure flash chips. The custom-developed components are shaded.
+
+with a custom-built daughter board that can host flash chips in a test. The FPGA is configured with a CPU, a timer, an interface with a personal computer, and a custom flash controller IP that supports communication to and from the tested flash chips. The tested flash that we use is a 19nm TLC flash chip. We program and erase flash using random data for specific cycles. Then, we write known random data, read data from flash hourly for six hours, and collect the error positions within the read data into trace files.
+The collected traces provide information for per-page error locality, i.e., how many errors appear at the same positions as in the previous read. By performing this test with various program-and-erase cycles, we can establish the relation between the error-reduction rate for a read hit in ECCache, the line size of EC-Cache, and the BER of a page. Here, the error-reduction rate is defined as the percentage of errors in one read that can be fixed by the EC-entries stored in an EC-Cache line given the read hits in EC-Cache. The error-reduction rate is identical to the error locality of flash if the EC-Cache line size is sufficient. Given a reduced EC-Cache line size (e.g., 1 kB), the error-reduction rate is less than the error locality because when the BER of a flash page is high, some EC-entries associated with the page are dropped due to the limited line size.
+6.2 LDPC Simulation
+
+Fig. 13. Illustration of the SSD simulation methodology.
+illustrates our SSD-simulation methodology. We extend SSDSim to capture the system-level characteristics of ECCache (i.e., hit/miss) and an LDPC decoder (i.e., flash sensing counts and decoding latency). The per-page BER of the simulated SSDs follows a page BER model, i.e., a normal distribution with a mean and coefficient of variation. When I/O requests are sent to the simulated SSD, the ECCache model is updated by the requested page addresses, and the simulator can simultaneously determine whether each flash read is an EC-Cache hit. The hit/miss result and BER of the page determine the flash sensing counts and decoding latency for the LDCP decoder. These two factors are incorporated into the scheduling and flash-timing models in the SSD simulator.
+The workloads employed in this paper consist of I/O requests to SSDs in the Microsoft Research Cambridge (MSRC) datacenter [32]. The MSRC datacenter consists of 13 HDD arrays. We test four scenarios, in which an SSD serves as the cache of a group of HDD arrays, as listed in Table 1. The SSDs adopt SieveStore [2], which monitors the I/O requests of one day to predict the popular set, and I/Os to the popular set are cached in the SSD for the next day. I/O requests to the SSDs are obtained based on the simulation
+
+The second experiment quantifies the performance gain of an LDPC decoder given that a certain percentage of errors in data are reduced in advance. The experiment is performed using an extensively used LDPC simulation framework [29], which can simulate a hardware LDPC decoder. The LDPC code that we employ is a representative code constructed by the framework with 9 kb codeword size and 922 b parity size. We extend the framework to model ECCache’s effect, in which a certain percentage of errors are corrected prior to LDPC decoding. Two main LDPC performance metrics are discussed: the required flash sensing counts and required latency for decoding a codeword. Combined with the first experiment, the second experiment establishes the relation between the line size of EC-Cache, the BER of a page, the error-reduction rate, and the two LDPC performance metrics.
+
+Name Data Set
+
+Group1
+
+usr mds prn hm src2 proj wdev
+
+Group2
+
+rsrch prxy src1 stg ts web
+
+TABLE 1 Workload Descriptions
+
+Data Set Function
+User files Media server Print server H/W monitoring Souvce control Project files Test web server
+Research projects Firewall/web proxy Source control Web staging Terminal server Web/SQL server
+
+# of Read # of Write Requests (k) Requests (k)
+
+21,502
+
+12,435
+
+84,829
+
+48,793
+
+6.3 SSD Simulation
+
+Group3 All 13 data sets
+
+106,332
+
+61,228
+
+Based on the experimental results obtained in the first two Group4 The seven data sets in Group1
+
+106,332
+
+steps, we quantify the benefits of EC-Cache on SSDs using SSDSim [30] and DiskSim [31] in the third step. Fig. 13
+
+followed by the six data sets in Group2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+61,228
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1097
+
+TABLE 2 SSD Configurations
+
+Parameter
+Total flash size Channels/dies per channel/planes per die Blocks per plane/pages per block/page size Over-provisioning Flash read/write /erase latency LDPC decoding latency per iteration
+
+Value
+256 GB 8/4/2 2048/256/8KB 15% 150 ms/2.3 ms/3 ms 0.5 ms
+
+of the SieveStore policy with the seven-day-long I/O traces of the MSRC datacenter [32].
+The simulated SSDs are configured as eight channels, in which each channel contains four flash dies and each die is 8 GB. We consider that 32-256 MB of DRAM resources are available for the SSDs. The per-page BER of the simulated SSDs has a mean of 1 Â 10À2, a coefficient of variation of 20 percent, and an upper bound of 0:014. The read, write, and erase latencies of flash are set according to modern TLC NAND flash. According to [17], the LDPC decoding latency per iteration ranges between 0.2 and 2 ms. As an intermediate value, we set this parameter to 0.5 ms. Other parameters are listed in Table 2.
+
+7 EXPERIMENTAL RESULTS
+
+7.1 Error Locality Characterization
+
+Fig. 14. Error locality and error-reduction rate of the tested 19 nm TLC flash.
+
+Fig. 14a plots the error locality of the tested 19 nm TLC
+
+NAND flash. The x-axis is the BER of a page read, and each data point represents the error locality of two reads 7.2 LDPC Overhead vs. Error-Reduction Rate
+
+to the same flash page. The average error locality is Fig. 15a presents the average sensing counts (i.e., the num-
+
+approximately 70-80 percent. The error locality exhibits a ber of flash reads) required by the LDPC decoder to decode
+
+higher variation when the BER of a page is less than a codeword. The baseline is the LDPC decoder with a zero
+
+0:005 because a higher percentage of errors are caused by error-reduction rate. The baseline LDPC decoder requires
+
+electrical noises when the BER is low. In addition to the 19 nm TLC flash, we tested a 25 nm MLC flash from a different flash vendor. Both types of flash exhibit similar error-locality behaviors.
+Fig. 14b presents the error-reduction rate of the tested
+
+an average of one flash sensing when the BER is less than 0:006. However, the average sensing number increases to three when the BER approaches 0:01. With an error-reduction rate of 60 percent, the average required number of flash sensings is one even if the BER reaches 0:015.
+
+19 nm TLC NAND flash considering that the line size of
+
+Fig. 15b presents the required decoding latency for the
+
+the EC-Cache is 1 kB. With a cache line size of 1 kB, the LDPC to decode a codeword. With an error-reduction rate number of EC-entries that can be stored in a line is lim- of 60 percent, the required decoding latency is relatively ited. This creates a lower error-reduction rate than the low for a BER less than 0:015.
+
+error locality, especially when the BER of a page is high.
+
+The line size setting of EC-Cache is dependent on the effec-
+
+We compare two coding schemes. The basic coding uses tiveness of LDPC speedup versus the error-reduction rate. As
+
+17 bits to store the absolute position of each error bit in a presented in Fig. 15, the speedup becomes significant when flash page. The proposed offset coding utilizes 8 bits to the error-reduction rate is approximately 30 percent and satu-
+
+store the relative distance of the errors. For both coding rates at the maximal level when the error-reduction rate
+
+schemes, the error-reduction rate is equivalent to the
+
+error locality of the tested flash when the BER of a flash
+
+page is less than 0:006. However, the error-reduction rate
+
+of the basic coding scheme decreases rapidly to approxi-
+
+mately 35 percent when the page BER approaches 0:015.
+
+The offset coding significantly outperforms the basic cod-
+
+ing. Due to the offset coding, the error-reduction rate
+
+only reduces to an average of approximately 65 percent
+
+when a BER of 0:015 is attained. In subsequent experi-
+
+ments, we adopt 1 kB EC-Cache lines with offset coding
+
+and conservatively consider the error-reduction rate vs.
+
+BER, shown by the dashed line in Fig. 14b.
+
+Fig. 15. LDPC simulation results.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1098
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Fig. 16. SDH analyses: increase in read cache hit rate (in percent) from an increase in cache capacity.
+
+approaches or exceeds 60 percent. These results suggest that Group3 and Group4 are the combinations of the SDHs of
+
+the line size of EC-Cache should be selected to yield an error- Group1 and Group2.
+
+reduction rate of 30-60 percent. A line size that targets an Fig. 17 compares the read hit rates of a data cache and
+
+error-reduction rate greater than 60 percent yields only mar- EC-Cache for different workloads and different available
+
+ginal benefits, and a line size that targets an error-reduction memory resources. Each subfigure is labeled with the work-
+
+rate lower than 30 percent is less effective. In this work, we load name and memory resource size. Within each subfig-
+
+adopt a fixed line size of 1 kB, which achieves an error-reduc- ure are ten bars that are labeled as ‘0’, ‘1’, ‘2’, ..., ‘8’, and ‘A’.
+
+tion rate of 60 percent as shown in Fig. 14. EC-Cache with vari- The former nine bars (‘0’ to ‘8’) correspond to configurations
+
+able line size may be beneficial and we leave exploring this that statically allocate the available memory resources
+
+type of design as a future work.
+
+between a data cache and EC-Cache. Here, ‘0’ corresponds
+
+The a setting in Eq. (3) is also dependent on the effective- to the situation in which no memory resource is allocated to
+
+ness of LDPC speedup. As shown in Fig. 15, LDPC decod- the EC-Cache, and ‘1’ corresponds to the situation in which
+
+ing incurs one to three flash sensings. A data cache hit one-eighth of the available memory resources are allocated
+
+completely eliminates flash sensings (i.e., an average reduc- to the EC-Cache. The right-most bar ‘A’ corresponds to the
+
+tion of two sensings), whereas an EC-Cache hit with an situation in which the memory resources are adaptively
+
+error-reduction rate of 60 percent still incurs one flash sens- allocated between the two caches according to the proposed
+
+ing (i.e., an average reduction of one sensing). The relative adaptive cache allocation scheme.
+
+benefit of an EC-Cache hit is 0.5 in this sense. A data cache The read hits at the storage-cache level come from the fol-
+
+hit totally eliminates the error-correcting loading of the lowing two sources. First, reading shared data by different
+
+LDPC decoder, whereas an EC-Cache hit does not. There- users contribute to reuses in a shared storage cache, which
+
+fore, we empirically set a to 0.4. We find that the proposed potentially turn into hits. The MSRC traces used in this
+
+adaptive cache allocation scheme is robust to some degree paper record I/Os sent to disks by about 100 users [32], [33].
+
+of inaccuracy in a. For example, conservatively setting a to It is reasonable that a large number of reuses exist in these
+
+0.3 is still effective.
+
+traces. Second, storage caches commonly adopt selective-
+
+7.3 SSD Simulation Results
+
+caching policies to intercept disk I/Os. SieveStore [2], which is considered in this study, selectively caches only the top
+
+Fig. 16 presents the SDH analyses of the four tested one percent popular addresses. This caching policy helps
+
+workloads. The x-axis represents the capacity of a cache. storage cache performance by caching only data with high
+
+At the bottom of the figure, we present the cache capac- degrees of reuses, which also decreases the stack distance of
+
+ity in terms of cache line numbers. With the same cache reuses seen by the storage cache.
+
+line number, a data cache consumes 8Â more memory
+
+Let us first analyze Group2 in Fig. 17. Group2 is the
+
+than EC-Cache. The SDH analyses indicate that Group1 workload that we previously discussed in Fig. 9. For
+
+has a relatively low locality. A large portion of the hits Group2-32 MB, configuration ‘0’ and configuration ‘5’
+
+of Group1 is not captured with a 256 MB data cache. exhibit a similar data-cache hit rate but the latter exhibits a
+
+The SDH analyses indicate that Group2 exhibits strong significantly higher EC-cache hit rate. Partitioning five-
+
+locality. For Group2, the majority of hits are captured eighths of the 32 MB memory resource as EC-Cache shows
+
+with a 128 MB data cache. Group3 and Group4 are com- significant potential for performance speedup. For Group2-
+
+binations of Group1 and Group2. Therefore, the SDHs of 128 MB, configuration ‘0’ can achieve a data-cache hit rate
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1099
+
+Fig. 17. Read cache hit rate (in percent) of various workloads.
+
+of 94 percent. Partitioning memory resources from the data Cache design significantly improves the read performance
+
+cache to the EC-Cache is not beneficial due to a significant of SSDs. For the static cache allocation scheme, the best con-
+
+reduction in the data-cache hits. As previously noted, a data- figuration is dependent on the workloads and available
+
+cache hit is more beneficial than an EC-Cache hit. Therefore, memory resources. For example, configuration ‘5’ is optimal
+
+configuration ‘0’ tends to be the best decision for Group2- for Group2-32 MB, whereas configuration ‘0’ is optimal for
+
+128 MB. Regarding the adaptive cache allocation scheme, Group2-128 MB. The adaptive cache allocation scheme
+
+configuration ‘A’ maximizes EC-Cache hits while maintain- exhibits a performance close to the best static configuration
+
+ing as many data-cache hits as possible. For example, for in most cases. In some cases, the adaptive scheme can signifi-
+
+Group2-32 MB, configuration ‘A’ performs close to configu- cantly outperform the static configurations, e.g., Group3-
+
+ration ‘5’, whereas for Group2-128 MB, configuration ‘A’ per- 128 MB, Group3-256 MB, Group4-128 MB, and Group4-
+
+forms close to configuration ‘0’. The adaptive scheme can 256 MB, due to the adaptability to workloads. The proposed
+
+outperform its static counterparts due to the ability to adapt EC-Cache design improves the SSD read performance by up
+
+to workloads, in which the behavior changes at run time. For to 2:6Â for Group1-256 MB with configuration ‘8’ and up to
+
+example, let us consider Group3-256 MB and Group4- 2:2Â for Group1-256 MB with configuration ‘A’.
+
+256 MB. In these two scenarios, configuration ‘A’ exhibits an
+
+additional EC-Cache hit rate but retains a data-cache hit rate that is close to those of configurations ‘0’, ‘1’, ‘2’, and ‘3’.
+
+8
+
+RELATED WORK
+
+To demonstrate the ability of the proposed scheme to LDPC codes are a promising solution for handling the BER
+
+adapt to workloads and workloads’ runtime behaviors, of NAND flash-based SSDs [13], [14], [15], [16], [34], [35],
+
+Fig. 18 plots the cache allocation decisions made by the adap- [36], [37]. Yaakobi et al. [38] survey and compare the effec-
+
+tive scheme. The x-axis represents the epoch number of the tiveness of various LDPC codes for flash applications. Dong
+
+workload, and the y-axis represents the cache allocation deci- et al. [39] and Wang et al. [40] propose methodologies to
+
+sion for each epoch. Here, 0 indicates that no resource is allo- properly determine read reference voltages for sensing flash
+
+cated as EC-Cache, 1-8 indicates that one-eighth to all of memory to improve the information contained in LLRs.
+
+resources are allocated as EC-Cache, respectively. For exam- Zhao et al. [11], [12] propose a progressive sensing and
+
+ple, let us consider Group4-256 MB. From epochs 0 to 150, decoding strategy that incrementally increases the precision
+
+approximately six-eighths to seven-eighths of memory of LLRs in a fail-and-retry manner. Dong et al. [10] reduce
+
+resources are partitioned to EC-Cache; from epochs 150 to memory-to-controller data transferring latency by encoding
+
+260, no memory resource is allocated to EC-Cache.
+
+the sensing results. Tanakamaru et al. [37], [41], [42] increase
+
+Fig. 19 presents the SSD read speedup over the baseline the precision of LLRs according to the estimated write dis-
+
+(the horizontal dashed lines), i.e., all resources are utilized as turbs, charge leakages, and cell wear-out of each bit. These
+
+a data cache. Configuration ‘0’, one of the static configura- previous studies do not exploit error locality; therefore,
+
+tions, is equivalent to the baseline. The y-axes of the subfig- they are predominantly orthogonal to our study and can be
+
+ures are not drawn using the same scale. The proposed EC- successfully combined.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1100
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+Fig. 18. Decisions made by the adaptive cache allocation scheme vs. time epochs.
+
+Error-handling schemes that are non-ECC-based and tailored for semiconductor memory technologies have been recently explored. Based on the property that unreliable static RAM (SRAM) cells under low supply voltage are offline testable, Roberts et al. [43] and Wilkerson et al. [44], [45] propose specialized error tolerating schemes, including paring faulty cache lines into good lines. Similar to SRAM,
+
+unreliable DRAM cells with a low refresh frequency are also testable. Therefore, Lin et al. [46] propose SECRET, which selectively corrects problematic DRAM cells to reduce the refresh energy. Phase-change memory (PCM) can exhibit stuck-at failure due to cell wearout. Schechter et al. [47] propose an error-correcting pointer (ECP) to handle wearout errors in PCM. Qureshi [48] further reduces the memory
+
+Fig. 19. Read performance speedup of various workloads. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+LIU ET AL.: IMPROVING READ PERFORMANCE OF NAND FLASH SSDS BY EXPLOITING ERROR LOCALITY
+
+1101
+
+space overhead of ECP by allocating ECP entries on demand. EC-Cache is different from ECP: EC-Cache can handle not only wearout errors but also other flash errors,
+
+[5] R. Koller, L. Marmol, R. Rangaswami, S. Sundararaman, N. Talagala, and M. Zhao, “Write policies for host-side flash caches,” in Proc. USENIX Conf. File Storage Technol., 2013, pp. 45–58.
+[6] C. Albrecht, A. Merchant, M. Stokely, M. Waliji, F. Labelle,
+
+such as write errors and retention errors, and EC-Cache
+
+N. Coehlo, X. Shi, and C. E. Schrock, “Janus, optimal flash provi-
+
+focuses on improving read performance. Ipek et al. [49] propose dynamically replicated memory (DRM) that pairs two
+
+sioning for cloud storage workloads,” in Proc. USENIX Annu. Tech. Conf., 2013, pp. 91–102. [7] D. A. Holland, E. Angelino, G. Wald, and M. I. Seltzer, “Flash
+
+faulty PCM blocks, which contain disjoint erroneous bits,
+
+caching on the storage client,” in Proc. USENIX Annu. Tech. Conf.,
+
+into one good block. Seong et al. [50] propose SAFER, which hides stuck-at faults by partitioning a PCM block and flipping data bits. Yoon et al. [51] propose FREE-p, which
+
+2013, pp. 127–138. [8] R.-S. Liu, C.-L. Yang, C.-H. Li, and G.-Y. Chen, “DuraCache: A
+durable SSD cache using MLC NAND flash,” in Proc. Des. Autom. Conf., 2013, pp. 1–6.
+
+remaps a faulty PCM block by embedding a remapping [9] J. Ouyang, S. Lin, S. Jiang, Z. Hou, Y. Wang, and Y. Wang, “SDF:
+
+pointer in the faulty block. Wang et al. [52] propose MetaCure, which replicates flash pages that contain critical data to improve SSD reliability. In our previous work [53], we
+
+Software-defined flash for web-scale internet storage systems,” in Proc. Int’l Conf. Archit. Support Program. Lang. Oper. Syst., 2014, pp. 471–484. [10] G. Dong, Y. Zou, and T. Zhang, “Reducing data transfer latency of
+
+quantify flash’s error locality and propose EC-Cache with a
+
+NAND flash memory with soft-decision sensing,” in Proc. IEEE
+
+static cache resource allocation scheme.
+
+Int. Conf. Commun., 2012, pp. 7024–7028. [11] W. Zhao, G. Dong, H. Sun, N. Zheng, and T. Zhang,
+
+9 CONCLUSIONS
+
+“Reducing latency overhead caused by using LDPC codes in NAND flash memory,” EURASIP J. Adv. Sig. Proc., vol. 2012,
+
+This paper focuses on large-scale, high-performance stor-
+
+p. 203, 2012. [12] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng,
+
+age, in which flash-based SSDs serve as the caches of HDD
+
+“LDPC-in-SSD: Making advanced error correction codes work
+
+arrays. We aim to improve the read performance of SSDs
+
+effectively in solid state drives,” in Proc. USENIX Conf. File Storage
+
+by exploiting a flash characteristic, in which the positions of error bits between reads to the same flash page are
+
+Technol., 2013, pp. 243–256. [13] X. Hu, “LDPC codes for flash channel,” presented at the Flash
+Memory Summit, Santa Clara, CA, USA, 2012.
+
+highly similar. Based on this characteristic, we propose EC- [14] E. Yeo, “An LDPC-enabled flash controller in 40 nm CMOS,” pre-
+
+Cache, which records the positions and valid values of errors in recently read flash pages. The cached information is used to reduce a significant portion of error bits in raw
+
+sented at the Flash Memory Summit, Santa Clara, CA, USA, 2012. [15] N. Miladinovic, “LDPC compiler for NAND flash and SSD con-
+trollers,” presented at the Flash Memory Summit, Santa Clara, CA, USA, 2012.
+
+data prior to LDPC decoding. With few errors to correct, [16] J. Yang, “The efficient LDPC DSP system for SSD,” presented at
+
+the LDPC decoding latency is reduced and the read performance of SSDs gains speedup. We also propose an adaptive
+
+the Flash Memory Summit, Santa Clara, CA, USA, 2013. [17] K.-C. Ho, P.-C. Fang, H.-P. Li, C.-Y. M. Wang, and H.-C. Chang,
+“A 45nm 6b/cell charge-trapping flash memory using LDPC-
+
+scheme that can judiciously allocate the available memory
+
+based ECC and drift-immune soft-sensing engine,” in Proc. Int.
+
+resources between a data cache and EC-Cache based on workload run-time behaviors. To evaluate EC-Cache, we conduct experiments that span from the device level to the
+
+Solid-State Circuits Conf., 2013, pp. 222–223. [18] N. Mielke, T. Marquart, N. Wu, J. Kessenich, H. Belgal, E.
+Schares, F. Trivedi, E. Goodness, and L. R. Nevill, “Bit error rate in NAND flash memories,” in Proc. Int. Rel. Physics Symp.,
+
+system level, including flash characterization, LDPC simu-
+
+2008, pp. 9–19.
+
+lation, and SSD simulation. The experimental results illus- [19] R. Micheloni and L. Crippa, “Charge pumps, voltage regula-
+
+trate that EC-Cache can achieve up to 2:6Â speedup in
+
+tors and HV switches,” in Inside NAND Flash Memories. New York, NY, USA: Springer Science+Business Media B.V., 2010,
+
+read response time.
+
+p. 304.
+
+[20] F. Arai, T. Maruyama, and R. Shirota, “Extended data retention
+
+ACKNOWLEDGMENTS
+
+process technology for highly reliable Flash EEPROMs of 106 to 107 W/E cycles,” in Proc. Int. Rel. Physics Symp., 1998, pp. 378–382.
+
+The authors are grateful for the insightful and constructive [21] J.-D. Lee, S.-H. Hur, and J.-D. Choi, “Effects of floating-gate inter-
+
+feedback of the anonymous reviewers. This study was supported in part by research grants from Macronix Interna-
+
+ference on NAND flash memory cell operation,” IEEE Electron Device Lett., vol. 23, no. 5, pp. 264–266, May 2002. [22] M. Jung and M. Kandemir, “Challenges in getting flash drives
+
+tional Co., Ltd. (103-S-C05), the Ministry of Science and
+
+closer to CPU,” in Proc. USENIX Workshop Hot Topics Storage File
+
+Technology of Taiwan (103-2220-E-002-005-, 103-2220-E002-003-, 102-2220-E-002-005-, 102-2220-E-002-001-, and 1002221-E-002-248-MY3), the Excellent Research Projects of
+
+Syst., 2013, p. 13. [23] M. Jung, W. Choi, J. Shalf, and M. T. Kandemir, “Triple-A: A non-
+SSD based autonomic all-flash array for high performance storage systems,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper.
+
+National Taiwan University (103R890822 and 103R8300),
+
+Syst., 2014, pp. 441–454.
+
+Etron Technology Inc. (103R7150), and the Industrial Technology Research Institute of Taiwan (B5-10210-2F-1).
+
+[24] S. Shapiro, “Flash cache best practice guide,” NetApp, Sunnyvale, CA, USA, Tech. Rep. TR-3832, Nov. 2013.
+[25] R. Merritt, “Flash will ride DRAM bus in 2014, says Micron,”
+
+(2013, Feb.). [Online]. Available: http://www.eetimes.com
+
+REFERENCES
+
+[26] R. L. Mattson, J. Gecsei, D. R. Slutz, and I. L. Traiger, “Evaluation techniques for storage hierarchies,” IBM Syst. J., vol. 9, no. 2, pp.
+
+[1] T. Kgil and T. Mudge, “FlashCache: A NAND flash memory file
+
+78–117, 1970.
+
+cache for low power web servers,” in Proc. Int. Conf. Compilers, [27] N. Megiddo and D. S. Modha, “ARC: A self-tuning, low overhead
+
+Arch. Synthesis Embedded Syst., 2006, pp. 103–112.
+
+replacement cache,” in Proc. USENIX Conf. File Storage Technol.,
+
+[2] T. Pritchett and M. Thottethodi, “SieveStore: A highly-selective,
+
+2003, pp. 115–130.
+
+ensemble-level disk cache for cost-performance,” in Proc. Int. [28] M. K. Qureshi and Y. N. Patt, “Utility-based cache partitioning: A
+
+Symp. Comput. Archit., 2010, pp. 163–174.
+
+low-overhead, high-performance, runtime mechanism to partition
+
+[3] NetApp Inc., “NetApp Flash Cache,” NetApp Flash Cache data-
+
+shared caches,” in Proc. Int. Symp. Microarchit., 2006, pp. 423–432.
+
+sheet DS-2811-1211, 2011.
+
+[29] R. M. Neal. (2012). Software for Low Density Parity Check Codes (Ver-
+
+[4] EMC Corp., “EMC VFCache,” EMC VFCache datasheet H9581.1,
+
+sion of 2012-02-11) [Online]. Available: http://www.cs.toronto.
+
+2012.
+
+edu/~radford/ftp/LDPC-2012-02-11/
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+1102
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 4, APRIL 2016
+
+[30] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. Manasse, and R. Panigrahy, “Design tradeoffs for SSD performance,” in Proc. USENIX Annu. Tech. Conf., 2008, pp. 57–70.
+[31] J. S. Bucy, J. Schindler, S. W. Schlosser, G. R. Ganger, and Contributors, “The DiskSim simulation environment version 4.0 reference manual,” Parallel Data Laboratory, Tech. Rep. CMU-PDL-08-101, May 2008. [Online]. Available: http://repository.cmu.edu/pdl/26
+[32] D. Narayanan, A. Donnelly, and A. Rowstron, “Write off-loading: Practical power management for enterprise storage,” in Proc. USENIX Conf. File Storage Technol., 2008, pp. 253–267.
+[33] D. Narayanan, E. Thereska, A. Donnelly, S. Elnikety, and A. Rowstron, “Migrating server storage to SSDs: Analysis of tradeoffs,” in Proc. Eur. Conf. Comput. Syst., 2009, pp. 145–158.
+[34] R. Frickey, “Data integrity on 20nm SSDs,” presented at the Flash Memory Summit, Santa Clara, CA, USA, 2012.
+[35] T. Zhang, “Using LDPC in SSD: Challenges and solutions,” presented at the Flash Memory Summit, Santa Clara, CA, USA, 2012.
+[36] S. Bates, “Using rate-adaptive LDPC codes to maximize the capacity of SSDs,” presented at the Flash Memory Summit, Santa Clara, CA, USA, 2013.
+[37] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “SSDs with errorprediction LDPC (EP-LDPC) and error-recovery schemes,” presented at the Flash Memory Summit, Santa Clara, CA, USA, 2013.
+[38] E. Yaakobi, L. Grupp, P. H. Siegel, S. Swanson, and J. K. Wolf, “Characterization and error-correcting codes for TLC flash memories,” in Proc. Int. Conf. on Computing, Networking and Communications, 2012, pp. 486–491.
+[39] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[40] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. Global Telecommun. Conf., 2011, pp. 1–6.
+[41] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Over-10Âextended-lifetime 76%-reduced-error solid-state drives (SSDs) with error-prediction LDPC architecture and error-recovery scheme,” in Proc. Int. Solid-State Circuits Conf., 2012, pp. 424–426.
+[42] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Highly reliable solid-state drives (SSDs) with error-prediction LDPC (EP-LDPC) architecture and error-recovery scheme,” in Proc. Asia South Pacific Design Autom. Conf., 2013, pp. 83–84.
+[43] D. Roberts, N. S. Kim, and T. Mudge, “On-chip cache device scaling limits and effective fault repair techniques in future nanoscale technology,” in Proc. Euromicro Conf. Digital Syst. Design Archit., Methods Tools, 2007, pp. 570–578.
+[44] C. Wilkerson, H. Gao, A. R. Alameldeen, Z. Chishti, M. Khellah, and S.-L. Lu, “Trading off cache capacity for reliability to enable low voltage operation,” in Proc. Int. Symp. Comput. Archit., 2008, pp. 203–214.
+[45] C. Wilkerson, H. Gao, A. R. Alameldeen, Z. Chishti, M. Khellah, and S.-L. Lu, “Trading off cache capacity for low-voltage operation,” IEEE Micro, vol. 29, no. 1, pp. 96–103, Jan 2009.
+[46] C.-H. Lin, D.-Y. Shen, Y.-J. Chen, C.-L. Yang, and M. Wang, “Secret: Selective error correction for refresh energy reduction in DRAMs,” in Proc. Int. Conf. Comput. Des., 2012, pp. 67–74.
+[47] S. Schechter, G. H. Loh, K. Straus, and D. Burger, “Use ECP, not ECC, for hard failures in resistive memories,” in Proc. Int. Symp. Comput. Archit., 2010, pp. 141–152.
+[48] M. K. Qureshi, “Pay-as-you-go: Low-overhead hard-error correction for phase change memories,” in Proc. Int. Symp. Microarchit., 2011, pp. 318–328.
+[49] E. Ipek, J. Condit, E. B. Nightingale, D. Burger, and T. Moscibroda, “Dynamically replicated memory: Building reliable systems from nanoscale resistive memories,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst., 2010, pp. 3–14.
+[50] N. H. Seong, D. H. Woo, V. Srinivasan, J. A. Rivers, and H.-H. S. Lee, “SAFER: Stuck-at-fault error recovery for memories,” in Proc. Int. Symp. Microarchit., 2010, pp. 115–124.
+[51] D. H. Yoon, N. Muralimanohar, J. Chang, P. Ranganathan, N. P. Jouppi, and M. Erez, “FREE-p: Protecting non-volatile memory against both hard and soft errors,” in Proc. Int. Symp. High Perform. Comput. Archit., 2011, pp. 46–477.
+[52] Y. Wang, L. Bathen, N. Dutt, and Z. Shao, “Meta-Cure: A reliability enhancement strategy for metadata in NAND flash memory storage systems,” in Proc. Des. Autom. Conf., 2012, pp. 214–219.
+[53] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, “EC-Cache: Exploiting error locality to optimize LDPC in NAND flash-based SSDs,” in Proc. Des. Autom. Conf., 2014, pp. 1–6.
+
+Ren-Shuo Liu received the BS and MS degrees in electrical engineering from National Taiwan University in 2001 and 2003, respectively. He is currently working toward the PhD degree in computer science and information engineering at National Taiwan University. He was at ALi Corporation in Taipei, Taiwan, as an R&D engineer from 2003 to 2008. His research interests include computer architecture, memory hierarchy, and nonvolatile memory.
+Meng-Yen Chuang received the BS degree in computer science from the National Chiao Tung University, in Hsinchu, Taiwan, in 2011 and the MS degree in computer science and information engineering from National Taiwan University in 2013. Her research interests include memory system design and nonvolatile memory.
+Chia-Lin Yang received the MS degree from the University of Texas, Austin, in 1992 and the PhD degree from Duke University, Durham, NC, in 2001. From 1993 to 1995, she was with VLSI Technology, Inc. She is currently a professor with the Department of Computer Science and Information Engineering, National Taiwan University, Taipei, Taiwan. Her current research interests include energy-efficient architectures, heterogeneous computing, and storage system in data centers. She has served on the technical program committees of several IEEE/ACM international conferences, such as HPCA, ISLPED, IPDPS, ICCD, ISSS+CODES, DATE, ASP-DAC and the board of distinguished reviewers for ACM TACO. She received the 2005 and 2010 IBM Faculty Award, the Best Paper Award at the ISLPED 2009, and two best paper nominations from the International Conference on Computer-Aided Design and ASP-DAC.
+Cheng-Hsuan Li received the BS degree from the Department of Electrical Engineering at National Taiwan University in Taipei, Taiwan, in 2011. He is currently a graduate student in the Department of Computer Science and Information Engineering at National Taiwan University, where he is currently working toward the MS degree. His research interests include memory system design for CPU-GPU heterogeneous systems, GPU architecture, and nonvolatile memory.
+Kin-Chu Ho received the BS and MS degrees from the National Chiao-Tung University in Hsinchu, Taiwan, in 2008 and 2010, respectively, in electronics engineering, where he is currently working toward the PhD degree in electronics engineering. He is currently at Macronix in the area of error correction code, hardware architecture design, coding algorithm, and flash signal processing for flash memory.
+Hsiang-Pang Li received the BS and MS degrees from Chung-Yuan Christian University, Taiwan, in 1994 and 1996, respectively. He has been with Macronix International Company since 1998. He had many experiences of designing nonvolatile memory, such as EPROM, mask-rom, and flash memory. He is currently in charge of the Macronix emerging system lab. His research interests include memory system architectures, embedded systems, and NVM applications.
+" For more information on this or any other computing topic, please visit our Digital Library at www.computer.org/publications/dlib.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:46:23 UTC from IEEE Xplore. Restrictions apply.
+
+

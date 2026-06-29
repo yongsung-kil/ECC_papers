@@ -1,0 +1,376 @@
+High Speed LDPC Decoder Design Based on General Overlapped Message-Passing Architecture
+
+Baihong Lin∗†, Qi Li∗†, Yukui Pei∗, Liuguo Yin†, and Jianhua Lu∗ ∗Department of Electronic Engineering, Tsinghua University, Beijing, 100084, China †EDA Laboratory, Research Institute of Tsinghua University in Shenzhen, Shenzhen, 518057, China
+qi-li09@mails.tsinghua.edu.cn
+
+Abstract—The design of high speed decoders with traditional partly parallel architecture for non-quasi-cycle (NQC) LDPC codes is a challenging problem due to its high memory-block consumption and the low hardware utilization efficiency. In this paper, a general overlapped message passing (GOMP) decoding algorithm is proposed to improve the hardware utilization efficiency (HUE), which overcomes the limitation of overlapped message passing (OMP) decoders proposed before. On the basis of the given codes, this algorithm nearly doubles the throughput without sacrificing double memory or causing loss in performance compared to BP algorithm. Furthermore, we present a technique called cycle bus to reduce the number of block RAMs in the multi-core decoder. Moreover, an example of a rate-2/3, length15360 irregular LDPC code with 8.43 dB coding gain for BPSK in AWGN channel is given, whose decoders features nearly double throughput, 22.22% increase in memory 8.35% reduction in logic registers cost and more reasonable distribution in block RAMs cost.
+Keywords—Non-quasi-cycle low density parity-check (NQCLDPC) cdes, general overlapped message passing (GOMP) decoding, decoder design, cycle bus technique, high speed decoder architecture.
+I. INTRODUCTION
+Low density parity-check (LDPC) codes are first discovered by Gallager in 1960s [1]. With its excellent performance [2], [3] as well as the acceptable VLSI implementation complexity, the codes have become a hot topic theoretically and practically. Today, the quasi-cycle (QC) LDPC codes have been widely adopted by many communication standards, such as DVB-S2, IEEE 802.16e, and the CCSDS deep-space and near-earth satellite communications. However, for the nonquasi-cycle (NQC) LDPC codes, the implementation of a highspeed decoder is still a challenging problem. In particular, the design of high parallel decoder architecture for NQC LDPC codes is still unsolved, and the scheme with multiple decoder cores greatly increase the circuit cells and block RAMs. Moreover, with traditional partly parallel decoder architectures, the variable-node processing (VNP) and the check-node processing (CNP) perform one after another in every iterative cycle, which is of low hardware utilization efficiency.
+To solve the two problems mentioned above, several techniques are proposed, which includes data interleaving, folding,
+
+overlapped message passing, and vectorization [4], [5], [6], [7]. Data interleaving increases the HUE by letting VNP and CNP work on different block data at the same time alternately. But it requires double memory [7], [5]. Folding is a technique which tries to achieve the optimal depth of memory by combining different block data [4]. Sadly, it sacrifices the throughput of the decoder. Overlapped message passing overlap the time diagrams of VNP and CNP. Unlike data interleaving, the VNP and the CNP works independently at the same time [5], [6]. Unfortunately, doubled throughput only can be reached by the decoder of the given quasi-cycle (QC) LDPC codes; otherwise HUE is largely determined by the design of the codes instead of manual control [5]. Vectorization optimizes the data-width of the memory by packing multiple messages in the same memory word [4]. But in the overlapped message passing (OMP) decoder, four-port RAMs are needed, or it would double the requirement of memory compared to the former decoder.
+In this paper, we first propose an implementation-oriented coset-based construction method for a class of semi-random LDPC codes presented in [8]. To facilitate the implementation, several novel concepts are introduced and mathematical constraints are imposed in the construction. Then, a decoding algorithm called general overlapped message passing (GOMP) algorithm is presented. In this algorithm, the VNP and the CNP work together, and the number of block RAMs used can be compressed effectively. Third, a technique called cycle bus is introduced into the multi-cores decoder. With this technique, block RAMs in different decoder cores can be combined freely by sacrificing one iteration time, which largely cuts down the block RAMs cost in FPGA. Finally, a numerical example for rate-2/3, length-15360 semi-random LDPC codes is presented to show the validness and efficiency of the proposed decoder design scheme.
+The rest of this paper is organized as follows. In Section II, semi-random LDPC codes, decoding algorithm and its original partly parallel decoder are reviewed. In Section III, the cosetbased construction method is descried. In Section IV, the decoder architecture is presented in detail. In Section V, a numerical example on the hardware implementations of a rate 2/3, length-15360 irregular LDPC code is presented. Finally, conclusions of this paper are drawn in Section VI.
+
+978-1-4799-3494-2/14/$31.00 ©2014 IEEE
+
+454
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+ICUFN 2014
+
+II. SEMI-RANDOM LDPC CODES AND THE PARTLY PARALLEL DECODER ARCHITECTURE
+
+A. Semi-random LDPC codes
+
+In this paper, we focus our study on a class of semi-random
+
+LDPC codes proposed in [8], [9], whose parity matrix can be
+
+expressed as:  J
+H =  . . .
+
+Π 1,Mb+1 ...
+
+
+
+··· ...
+
+Π 1,Nb+1 ...
+
+
+
+J Π Mb,Mb+1 · · · Π Mb,Nb+1
+
+wherein J is a Jordan normal matrix as following:
+
+ 1 0 ··· 0 
+
+J = 
+
+1 0
+
+1 ...
+
+··· ...
+
+0 0
+
+
+
+0 ··· 1 1
+
+Πi,j denotes 0L×L or a permutation matrix with size of L×L. Each block column weight is denoted as λj, Mb < j < Nb, and each block row weight is denoted as ρi, 0 ≤ i < Mb.
+In this paper, L = 2n, n ∈ N and Πi,j is defined by the vector (of f seti,j, jumpi,j), where of f seti,j denotes the column position of the ”1” in the first row. The colth column position of ”1” on the rowth row is generated by the equation as following:
+
+colth = (of f seti,j + jumpi,j × rowth) mod L (1)
+
+wherein 0 ≤ i, j, of f seti,j, jumpi,j < L. The Eqn. (1) could
+
+be changed into the equations as following:
+
+
+
+
+
+rowth = (of f set′i,j + jumpi′,j × colth) mod L (of f seti,j + jumpi,j × of f set′i,j) mod L = 0
+
+
+
+(jumpi′,j × jumpi,j) mod L = 1 0 ≤ of f set′i,j , jumpi′,j , of f seti,j , jumpi,j
+
+<L
+
+(2)
+
+where of f seti′,j denotes the row position of the ”1” in the first column and jump′i,j, also called jumping-factor, denotes the column-position relation between row and row.
+
+Apparently, this class of codes is quasi-cycle (QC) LDPC codes [4] when jumpi,j = 1. Therefore, conclusions on semirandom-like codes in this paper can be used in other structured LDPC codes like QC-LDPC codes or DVB-LDPC codes.
+
+B. Traditional partly parallel decoder architecture for semirandom-like LDPC codes
+The original partly parallel decoder architecture for semirandom-like LDPC codes is shown in Fig. 1. For hardware implementation, the matrix Ji, 0 ≤ i < Mb is divided into two matrices, the identity matrix Ii and I′i = Ji − Ii. Then the check-variable messages and variable-check messages of a sub-matrix can be packaged in a group of two RAMs. Region A is the message storage for the groups. The variable node units (VNU) and the check node units (CNU) are design to
+
+Fig. 1. The traditional partly parallel architecture for semi-random-like LDPC codes
+Fig. 2. Timing diagrams of the original partly parallel architecture
+calculate the variable-check messages and the check-variable messages. They’re shown in region C and region B respectively. As this two kinds of units operate on the block columns and the block rows respectively, their calculation are also called column operation and row operation. The LLR block stores the received channel information log-likelihood ratio (LLR) while the Data-Block turns parallel bits from the VNU into serial ones and output information bits from the decoder.
+The timing diagrams of VNU and CNU are shown in Fig. 2. In every cycle of iteration, the VNU and CNU perform alternately and they generate information for each other.
+However, for high speed implementation, there exist problems for this traditional partly parallel architecture. First, It has been pointed out that this decoding sequence is of low efficiency, for every time the VNU or the CNU works, the other is in idle [5], [6]. Second, memory requirement are still not ideal for long length LDPC codes.
+To solute the first problem, the technique proposed by [5], [6] overlapped the timing diagram by changing the sequence of row operations and column operations. It seems that every time the VNU and the CNU work together, the input messages of these two units may not be prepared when they’re working. But for a coset-based quasi-cycle (QC) LDPC codes, the problem above could be easily avoided. Apparently, this scheme is limited to the given codes, or it would not double the HUE.
+
+455
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+III. THE IMPLEMENTATION-ORIENTED COSET-BASED CODE CONSTRUCTION SCHEME
+
+A. The Block-divided Square Matrix
+
+To introduce the construction method, several concepts are shown in the following mathematically.
+
+Definition 1: B is a square matrix with size of L, in which its elements are zero or one and the ith row has ρ none-zero elements whose column positions are denoted as ci,j, 0 ≤ j < ρi.
+
+∃ρ
+
+≥
+
+min
+i
+
+ρi
+
+,
+
+let
+
+γi,j
+
+=
+
+ci,j
+
+(mod)
+
+ρ.
+
+∀i,
+
+0
+
+≤
+
+i
+
+<
+
+L,
+
+if elements in the ith sequence γi,j, 0 ≤ j < ρi are not equal,
+
+then B is defined as a standard ρ-block-divided matrix and
+
+γi,j, 0 ≤ i < L, 0 ≤ j < ρi are its divided factors.
+
+Definition 2: Matrix X = (xi,j) and matrix Y = (yi,j), and the elements in this two matrices are a binary bit. ∨ denotes
+an operation defined as following:
+
+Z = X ∨ Y = (max(xi,j , yi,j ))L×L
+
+Definition 3: There’re ρ square sub-matrices in a block row of the parity-check matrix, which are denoted as Xi,jk , 0 ≤ k < ρ, 0 ≤ jk < Nb. If there exist permutation matrices Pj0 ,Pj1 ,. . .,Pjρ−1 such that
+A = (Xi,j0 Pj0 ) ∨ (Xi,j1 Pj1 ) ∨ . . . ∨ (Xi,jρ−1 Pjρ−1 )
+wherein AT is a standard µ-block-divided matrix, then the block row is defined as a µ-block-divided row. Pjk , 0 ≤ k < ρ are defined as the row-divided permutation (RP) matrices and divided factors of AT are called the block row’s divided factors.
+
+B. Code Construction Method
+The construction method of the coset-based semi-randomlike irregular LDPC codes is as follows:
+
+1) Construct a basic matrix as following:
+
+
+
+
+
+1 H =  . . .
+
+Π1,Mb+1 ...
+
+··· ···
+
+Π1,Nb ...
+
+
+
+1 ΠMb,Mb+1 · · · ΠMb,Nb
+
+wherein Πi,j denotes zero or one. The weight of each block row is ρ as the same.
+2) Generate the sequence randomly as following:
+
+{Yi, 0 ≤ i < Mb, Yi = 2n + 1, n ∈ N, 0 ≤ Yi < µ}
+wherein µ = 2m,m = inf {n, 2n > ρ, n ∈ N}. 3) Generate a sequence for the ith row as following:
+{βi,jk ∈ N, 0 ≤ k < ρ, 0 ≤ βi,jk < µ, βi,j1 = (βi,j0 + 1) mod µ}
+wherein jk denotes the none-zero column position in the basic matrix. Elements in the sequence above should be different from each other.
+
+4) Generate the parameter-vectors-allowed set for each
+
+none-zero sub-matrix by the equations as follows:
+
+
+
+ 
+
+βi,jk Yi =
+
+=juomfpf′is,jekti′m,jok dmoµd, kµ=
+
+0,
+
+1,
+
+.
+
+.
+
+.
+
+,
+
+ρ
+
+−
+
+1
+
+i = 0, 1, 2, . . . , Mb
+
+5) Search the parameter-vectors in the allowed set to expand the based matrix so that the parity matrix has no girth-4. The expanding method is as follows:
+a) The none-zero element on the ith,0 ≤ i < Mb column in the basic matrix is expanded as the matrix J.
+b) The none-zero element on the other column is expanded as the matrix Πi,j which is generate by the parameter-vector in the allowed set.
+
+It’s easy to find that each block row in the parity-check
+matrix constructed by the method above is a µ-block-divided
+row and its RP matrices include Pi,j0 , Ii,j1 ,. . .,Ii,jρ−1 , wherein Pi,j0 = JBi, Bi is a matrix generated by the parameter vector (βi,j0 , Yi), Ii,jk ,1 ≤ k < ρ are identity matrices. But why this construction method facilitate the implementation? This next
+section will show its decoder architecture.
+
+IV. THE PROPOSED DECODER ARCHITECTURE
+In this section, the decoder architecture is shown in detail. An algorithm of general overlapped message passing will be illustrated. On the basis of the algorithm, the construction method in SECTION-III supplies a condition to compress the memory. Finally to further reduce the block RAMs cost, the technique called cycle bus will be given.
+
+A. General Message Passing Algorithm
+From the passage above, it is easy to conclude that the overlapped message passing is a trick to change the formation of BP decoding algorithm [10], [11], [12]. To prepare the message for the decoding process, the decoding sequence has to be changed, or the check matrix should satisfy some constraints [5], [6].
+On the basis of the assumption, the timing diagram is redesigned and the corresponding algorithm is called general message passing algorithm. As is shown in Fig. 3(a), the VNU and the CNU works together. Considering the timing delay caused by memory accessing and the computation of VNU and CNU, two parameters, dv and dc, are introduced. dc denotes the delay of the check-variable message updating process while dv denotes the delay of the variable-check message updating process.
+Unlike the OMP decoders proposed by [5], [6], these two parameter are determined by the hardware implementation and they’re much smaller than L especially for long LDPC codes (L is usually very big). Therefore, the HUE reaches roughly
+
+456
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. Timing diagrams (a) multi-cores decoder without cycle bus (b) multicores decoder with cycle bus
+
+Fig. 3. (a) Timing diagrams of GOMP. (b) Column operation and row operation in GOMP algorithm.
+100%. Moreover, they do not affect the algorithm because of the symmetry in the timing diagrams.
+To explain the algorithm more clearly, the row operation and the column operation are shown in Fig. 3(b), in which the sub-matrix is divided into three parts. As for GOMP, the row operation of the (n − 1)th iteration still works at the (L/2)th row, when the column operation of the nth iteration starts. Thus, in the region III, the check-variable messages updated in the (n − 2)th iteration are used to update variablecheck messages in the nth iteration. However, in region II, the check-variable messages updated in the nth iteration are used to update the variable-check messages in the nth iteration. Apparently, this message passing is not like the original one (Usually the check-variable message updated in (n − 1)th iteration are used to update the variable-check messages in the nth iteration), let alone layer message passing algorithms. Some check-variable messages are passed in low efficiency (Region III); some are passed in a usual way (Region I), while others are passed efficiently (Region II). But this algorithm improves the HUE and the throughput. Thanks to the efficient message passing in some part, the algorithm finally performs without loss under the same condition with BP algorithm.
+It should be pointed out that if the elements in region II and region III are zero, GOMP would turn into OMP. In other word, OMP is a special case of GOMP.
+B. Message Memory Compression
+Although GOMP algorithm improves the hardware utility efficiency, it need double memory for message storage compared to the conventional partly parallel with vectorization. To
+
+cut down the memory needed, offset min-sum algorithm is used to simplify the CNU calculation [10].
+As SECTION-II introduces, each block row is µ-blockdivided in the given parity-check matrix. The RP matrices of the ith block row include Pi,j0 , Ii,j1 ,. . .,Ii,jρ−1 , wherein Pi,j0 = JBi, Biis a matrix generated by the parameter vector (βi,j0 , Yi), Ii,jk , 1 ≤ k < ρ, are identity matrices.
+Construct a sequence for the jth(j < Mb) block column:
+{pl, 0 ≤ l < L, bl,pl = 1}
+wherein Bi = (bi,j)L×L. Assume that the column operation of the jth(j < Mb) block column is executed by the sequence above, while others are is executed from left to right. Let γi,jk , 0 ≤ k < ρ be none-zero elements’ row positions in the ith block row visited by the column operation. It’s easy to prove that elements in the sequence {γi,jk mod µ, 0 ≤ k < ρ} are different from each other with Definition 1 and Definition 3. So divide the rows in a block row into µ groups averagely and label them with 0,1,. . .,µ−1. The γit,hjk row in the ith block row belong to the (γi,jk mod µ)th group of the ith block row.
+As we know, output messages from the CNU can be compressed into the minimum (Q − 1 quantization bits, Q denotes the number of quantization bits for message), the second minimum (Q − 1 quantization bits), the minimum’s position (log2µ quantization bits), and the sign bits in offset min-sum algorithm. Therefore, the message storage unit for output messages from each CNU can be divided into µ Lb×QΛ block RAMs and ρ L × 1 block RAMs, wherein Lb = L/µ, QΛ = 2(Q − 1) + log2µ. Only Mb message storage units are needed in a decoder.
+C. Cycle Bus Technique
+In order to cut down the number of block RAMs, cycle bus combines the same kind of RAMs between decoder cores
+
+457
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I. FPGA IMPLEMENTATION RESULTS FOR THE BP ALGORITHM AND THE GOMP ALGORITHM.*
+
+The conventional The
+
+proposed
+
+BP decoder
+
+GOMP decoder
+
+Clock frequency(MHz)
+
+140
+
+140
+
+The number of decoder core 4
+
+4
+
+Iteration
+
+26
+
+26
+
+The throughput(Mbps)
+
+305.15
+
+597.71
+
+Combinational ALUTs
+
+38,680
+
+51,252
+
+Dedicated logic registers
+
+74,245
+
+68,049
+
+Total block memory bits
+
+2,234,368
+
+2,732,032
+
+The number of M4K block 440
+
+440
+
+RAMs in message storage
+
+The number of M512 block 0
+
+640
+
+RAMs in message storage
+
+M4K RAM utility efficiency 66.67%
+
+77.78%
+
+The delay time(us)
+
+130.22
+
+228.96
+
+*The designs is synthesized under Quartus software with Altera Stratix II EP2S180
+
+FPGA chip.
+
+Fig. 5. BER performance of a rate-2/3, length-15360 irregular LDPC code.
+by enlarging the data width of the RAM. In fact, it’s a technique similar to vectorization. However, unlike vectorization proposed in [4], cycle bus focus on dealing with block RAMs between decoder cores.
+As mentioned in SECTION-II, message storage is composed of many units. Each unit is a L × Q RAM used to store messages in the sub matrix Πi,j , wherein Q is the number of quantization bits. For two decoder cores, if cycle bus is introduced, two message units used for the same sub matrix can be combined into a L × 2Q RAM. In FPGA, large block RAMs like M4K can be configured into different data width and usually the data width is bigger than Q, especially or long LDPC codes. If cycle bus is introduced, block RAMs in FPGA could be used more effectively. Furthermore, the same kind of message unit can share the address generator, which will cut down the used logic cells.
+After combining the same units, timing diagram of different decoder cores turns synchronously (See Fig. 4). Each core has to wait until the nearly coming start of the iteration. In the worst case, each decoder core has to wait for about a cycle time of iteration. Thus, big FIFO is needed to buffer the input data during the waiting time. Nevertheless, this sacrifice is still acceptable compared to the largely cut down block RAMs.
+V. NUMERICAL EXAMPLES
+To prove the validness of the method proposed above, a rate-2/3, length-15360 irregular LDPC codes is constructed by the method proposed in SECTION-III. The parity check matrix is expanded on the based matrix with size of 10 × 30. The size of sub-matrix is 512 × 512. In the parity matrix, the column weights range from 2 to 5 while the row weight range from 10 to 11.
+
+This performance of the irregular LDPC codes is shown in Fig. 5. The maximal number of the simulation frame is 500,000. LLR is calculated by 3y when quantified (y denotes the received channel bit), or it will be calculated by 2y/σ2, where σ denotes the noise power. Eb/N0 ranges from 1.4 dB to 2.3 dB. If the corresponding point is not shown in the coordinate, its BER equals zero.
+From Fig. 5, we can draw the conclusion that the GOMP algorithm has nearly the same performance as that with BP algorithm under the same channel condition. In the high EbN0 range, the GOMP algorithm performs roughly 0.1 dB better than BP, because the former updates the check-variable messages with the offset min-sum algorithm, which causes less loss when quantified.
+The GOMP decoder based on the simulation result above is designed and the source cost is shown in Table I. It’s obvious that the throughput is roughly doubled without introducing extra logic cost after the GOMP algorithm is used. Memory cost rises 22.3% because both variable-check messages and check-variable messages have to be stored. Cycle bus reduces the register cost, cut down the number of block RAMs and increase the RAM utility efficiency. With these method, the optimal decoder features higher performance compared to the standard BP decoder.
+VI. CONCLUSIONS
+In this paper, we focus on the high speed decoder design of NQC LDPC codes. We first put forward a coset-based construction method for semi-random LDPC codes. Then, a general overlapped message passing (GOMP) decoding algorithm is proposed to improve the hardware utilization efficiency (HUE), which overcomes the limitation of overlapped message passing (OMP) decoders proposed before, and nearly double the throughput without sacrificing double memory or causing loss in performance compared to BP algorithm. Furthermore, we present a technique called cycle bus to reduce the number of block RAMs in the multi-core decoder. Moreover, an example of a rate-2/3, length-15360 irregular LDPC code with
+
+458
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+8.43 dB coding gain for BPSK in AWGN channel is given, whose decoders features nearly double throughput, 22.22% increase in memory, 8.35% reduction in logic registers cost and more reasonable distribution in block RAMs cost.
+ACKNOWLEDGMENT
+This work was supported in part by the Natural Science Foundation of China (61101072, 61132002) and the new strategic industries development projects of Shenzhen city (ZDSY20120616141333842).
+REFERENCES
+[1] R. G. Gallager. Low-density parity-check codes. IRE Transactions on Information Theory, 8(1):21–28, 1962.
+[2] Thomas J Richardson, Mohammad Amin Shokrollahi, and Ru¨diger L Urbanke. Design of capacity-approaching irregular low-density paritycheck codes. IEEE Transactions on Information Theory, 47(2):619–637, 2001.
+[3] Sae-Young Chung, G David Forney Jr, Thomas J Richardson, and Ru¨diger Urbanke. On the design of low-density parity-check codes within 0.0045 db of the shannon limit. Communications Letters, IEEE, 5(2):58–60, 2001.
+[4] Xiaoheng Chen, Jingyu Kang, Shu Lin, and Venkatesh Akella. Memory system optimization for fpga-based implementation of quasi-cyclic ldpc codes decoders. IEEE Transactions on Circuits and Systems I: Regular Papers, 58(1):98–111, 2011.
+[5] Yongmei Dai, Zhiyuan Yan, and Ning Chen. Optimal overlapped message passing decoding of quasi-cyclic ldpc codes. IEEE Transactions on Very Large Scale Integration (VLSI) Systems, 16(5):565–578, 2008.
+[6] Yanni Chen and Keshab K Parhi. Overlapped message passing for quasicyclic low-density parity check codes. IEEE Transactions on Circuits and Systems I: Regular Papers, 51(6):1106–1113, 2004.
+[7] Engling Yeo, Payam Pakzad, Borivoje Nikolic, and Venkat Anantharam. Vlsi architectures for iterative decoders in magnetic recording channels. IEEE Transactions on Magnetics, 37(2):748–755, 2001.
+[8] Yukui Pei, Liuguo Yin, and Jianhua Lu. Design of irregular ldpc codec on a single chip fpga. In Proceedings of the IEEE 6th Circuits and Systems Symposium on Emerging Technologies: Frontiers of Mobile and Wireless Communication, volume 1, pages 221–224. IEEE, 2004.
+[9] Ping Li, W. K. Leung, and N. Phamdo. Low density parity check codes with semi-random parity check matrix. Electronics Letters, 35(1):38– 39, 1999.
+[10] Jinghu Chen, Ajay Dholakia, Evangelos Eleftheriou, Marc PC Fossorier, and Xiao-Yu Hu. Reduced-complexity decoding of ldpc codes. IEEE Transactions on Communications, 53(8):1288–1299, 2005.
+[11] Frank R Kschischang, Brendan J Frey, and H-A Loeliger. Factor graphs and the sum-product algorithm. IEEE Transactions on Information Theory, 47(2):498–519, 2001.
+[12] Marc PC Fossorier, Miodrag Mihaljevic, and Hideki Imai. Reduced complexity iterative decoding of low-density parity check codes based on belief propagation. IEEE Transactions on Communications, 47(5):673–680, 1999.
+459
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:14:52 UTC from IEEE Xplore. Restrictions apply.
+
+

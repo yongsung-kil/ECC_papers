@@ -1,0 +1,3496 @@
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+3081
+
+Pruned Bit-Reversal Permutations: Mathematical Characterization, Fast Algorithms and Architectures
+Mohammad M. Mansour, Senior Member, IEEE
+
+Abstract—A mathematical characterization of serially pruned permutations (SPPs) employed in variable-length permuters and their associated fast pruning algorithms and architectures are proposed. Permuters are used in many signal processing systems for shuffling data and in communication systems as an adjunct to coding for error correction. Typically, only a small set of discrete permuter lengths are supported. Serial pruning is a simple technique to alter the length of a permutation to support a wider range of lengths, but results in a serial processing bottleneck. In this paper, parallelizing SPPs is formulated in terms of recursively computing sums involving integer floor functions using integer operations, in a fashion analogous to evaluating Dedekind sums. A mathematical treatment for bit-reversal permutations (BRPs) is presented, and closed-form expressions for BRP statistics including descents/ascents, major index, excedances/descedances, inversions, and serial correlations are derived. It is shown that BRP sequences have weak correlation properties. Moreover, a new statistic called permutation inliers that characterizes the pruning gap of pruned interleavers is proposed. Using this statistic, a recursive algorithm that computes the minimum inliers count of a pruned BR interleaver (PBRI) in logarithmic time is presented. This algorithm enables parallelizing a serial PBRI algorithm by any desired parallelism factor by computing the pruning gap in lookahead rather than a serial fashion, resulting in significant reduction in interleaving latency and memory overhead. Extensions to 2-D block and stream interleavers, as well as applications to pruned fast Fourier transforms and LTE turbo interleavers, are also presented. Moreover, hardware-efficient architectures for the proposed algorithms are developed. Simulation results of interleavers employed in modern communication standards demonstrate three to four orders of magnitude improvement in interleaving time compared to existing approaches.
+Index Terms—Bit-reversal, permutation polynomials, permutation statistics, pruned interleavers, turbo interleavers.
+I. INTRODUCTION AND MOTIVATION
+P ERMUTERS are devices that reorder a sequence of symbols according to some permutation [1]. They have a variety of applications in communication systems, signal processing, networking, and cryptography. In communication systems, permuters are used as an adjunct to coding for error correction [1], [2] and are more commonly known as
+Manuscript received November 11, 2011; revised September 06, 2012 and December 15, 2012; accepted January 30, 2013. Date of publication February 07, 2013; date of current version May 20, 2013. The associate editor coordinating the review of this manuscript and approving it for publication was Dr. Ut-Va Koc.
+The author is with the Department of Electrical and Computer Engineering at the American University of Beirut, Beirut 1107 2020, Lebanon (e-mail: mmansour@aub.edu.lb).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TSP.2013.2245656
+
+interleavers. Interleavers are a subclass of permuters with
+
+carefully chosen permutations to break certain patterns in the
+
+input sequence, and strategically reposition symbols according to their relevance in protecting the overall sequence against
+
+errors. Examples include interleavers in turbo codes [3], edge
+
+permuters in Tanner graphs [4] for low-density-parity check
+
+(LDPC) codes [5], channel interleavers in bit-interleaved coded modulation schemes [6], and carrier interleaving for diversity
+
+gain in multi-carrier wireless systems with frequency-selective
+
+fading and multiple-access interference [7].
+
+In signal processing, permuters are used to shuffle streaming
+
+data [8] into a particular order such as in signal transform (e.g., discrete cosine [9], Hartley [10], and fast Fourier transforms
+
+(FFT) [11], [12]), matrix transposition [13], [14], and matrix
+
+decomposition algorithms [15]. In networking, permuters
+
+are widely used as interconnection and sorting networks for switching and routing [16]. In cryptography, permuters are
+
+commonly used in cipher algorithms for encryption [17].
+
+The theory of interleavers has been established in the classic
+
+papers [1], [2] and more recently in [18]. Interleavers can be im-
+
+plemented using hard-wired connections, reconfigurable inter-
+
+connection networks, or memory buffers with address genera-
+
+tors depending on the desired throughput, reconfigurability, and
+
+resource requirements. A class of computationally efficient in-
+
+terleavers with simple address generation are block interleavers
+
+[18] of power-of-2 length
+
+. They are expressed in closed-
+
+form by
+
+,
+
+where mutations of lengths
+
+and and
+
+are basic per, respectively,
+
+and
+
+. Here the symbols are written row-wise into a
+
+array and read column-wise after permuting the rows by
+
+and the columns by . Example permutations proposed in the literature or adopted in modern communications standards
+
+[19]–[21] include the bit-reversal permutation (BRP)
+
+[20] which reverses the order of bits in , and
+
+polynomial-based permutations
+
+where
+
+is a degree- permutation polynomial (PP) over the ring
+
+[22]. Commonly used polynomials include circular shift by
+
+a constant
+
+(e.g., [23], the parity and column
+
+twist (PCT) interleaver [24]), linear PPs
+
+(e.g.,
+
+[20], [25], almost regular permutations (ARP) [26], dithered relative prime (DRP) interleavers [23]), and quadratic PPs (QPPs)
+
+, where
+
+are appropriately chosen
+
+integers (e.g. [19], [22], [27]).
+
+Many practical interleavers are limited to a small set of discrete lengths. Pruning is a technique used to support more
+
+flexible block lengths [28]–[30]. Communication standards
+
+[19]–[21] typically vary depending on the input data rate
+
+requirements and channel conditions. To support any length , interleaving is done using a mother interleaver with smallest
+
+1053-587X/$31.00 © 2013 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3082
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+such that outlier interleaved addresses
+
+are ex-
+
+cluded. However, pruning alters the spread characteristics of the mother interleaver, and creates a serial bottleneck since in-
+
+terleaved indices become address-dependent. Hence permuting
+
+streaming data in parallel on the fly is no longer practically
+
+feasible [8]. Expensive buffering of the data is required to
+
+maintain a desired system throughput. Hence it is essential
+
+to characterize the pruned permutation structure to study its
+
+spread characteristics, and to parallelize the pruning operation
+
+to reduce latency and memory overhead by interleaving an
+
+address without interleaving all its predecessors. Alternatively, pruning can also be employed to design effi-
+
+cient FFTs by eliminating redundant or vacuous computations
+
+when the input vector has many zeros and/or when the required
+
+outputs may be very sparse compared to the transform length.
+
+Pruning interleavers has motivated the following problem.
+
+Given a set of integers
+
+and a per-
+
+mutation on , determine how many of the first integers in are mapped to indices less than some
+
+in the permuted sequence. For example, for the permutation
+
+, and
+
+, out of the first
+
+five integers only {1,3,4} map to positions less than six. Surpris-
+
+ingly, this problem has largely been unattempted before in the
+
+literature. In [31], a solution for linear PPs based on Dedekind
+
+sums [25], [32] was proposed.
+
+In this paper, we propose a mathematical formulation of this
+
+problem for general permutations using sums involving integer floor and the so-called “saw-tooth” functions (Section II). The
+
+arithmetic properties of these sums are analyzed in Section III,
+
+and a set of mathematical identities used to solve the problem re-
+
+cursively are derived. We specialize to BRPs and give a mathematical characterization of these permutations, which have been
+
+mainly treated before using numerical techniques to speed up
+
+radix-2 FFT computations and related transforms (e.g., see [10],
+
+[33]–[43]). In [44] a combinatorial solution based on bit manip-
+
+ulations was proposed. Here we derive in Section IV closed-
+
+form expressions for BRP statistics including descents/ascents,
+
+major index, excedances/descedances, inversions, serial corre-
+
+lations, and show that BRP sequences have weak correlation
+
+properties (i.e., a permuted index strongly depends on the unpermuted index ). We propose a new statistic called permu-
+
+tation inliers, and prove that it characterizes the pruning gap of
+
+pruned interleavers. Using this statistic, we derive a recursive al-
+
+gorithm in Section V to compute the minimum inliers count in a pruned BR interleaver (PBRI) in logarithmic time, and apply it
+
+to parallelize a serial PBRI and reduce its latency and memory
+
+overhead. In Section VI we extend the discussion to block and
+
+stream interleavers that are composed of two or more permu-
+
+tations. In Section VII, we apply the inliers problem to design
+
+parallel BRPs for pruned FFTs, as well as parallel pruned in-
+
+terleavers for LTE turbo codes. In Section VIII, we consider
+
+implementation aspects of the proposed algorithms and present
+
+hardware-efficient architectures. We perform simulations using several practical examples to demonstrate the advantages of the
+
+proposed algorithms. Finally, Section IX provides concluding
+
+remarks. All proofs are included in the Appendix.
+
+of
+
+, where
+
+and
+
+,
+
+.
+
+The bit-reversal of is defined as
+
+. Note that
+
+and hence
+
+.
+
+The goal is to characterize the so-called permutation statistics of
+
+when is the BRP. The subject of permutation statistics dates
+
+back to Euler [45], but was formally established as a discipline
+
+of mathematics by MacMahon in [46], [47]. We start with some
+
+definitions.
+
+A fixed point of is an integer
+
+such that
+
+. An
+
+excedance [46] of is an integer such that
+
+. Denote by
+
+and
+
+the sets consisting of all fixed points and all
+
+excedances of , respectively, and by
+
+and
+
+the number of fixed points and excedances of (sometimes
+
+called excedance number). An element of a permutation that is
+
+neither a fixed point nor an excedance is called a descedance.
+
+For example, the permutation
+
+has
+
+fixed points
+
+and excedances
+
+, and hence
+
+and
+
+.
+
+We say that
+
+is a descent [46] of if
+
+.
+
+Similarly,
+
+is an ascent of if
+
+. Denote
+
+by
+
+and
+
+the sets of descents and ascents of ,
+
+respectively, and by
+
+and
+
+the number of
+
+descents and ascents of . The major index [46] of ,
+
+,
+
+is the sum of the descents, i.e.
+
+. In our
+
+example, the descents are
+
+and hence
+
+, the ascents are
+
+and
+
+hence
+
+, and the major index is
+
+.
+
+A pair
+
+is called an inversion [46] of if
+
+and
+
+. The set of all inversions is denoted by
+
+and
+
+its size by
+
+. Continuing our example, the inversions
+
+are
+
+{(0,1), (0,3), (0,8), (1,8), (2,3), (2,4), (2,6), (2,7),
+
+(2,8), (3,8), (4,7), (4,8), (5,6), (5,7), (5,8), (6,7), (6,8), (7,8)},
+
+and
+
+.
+
+The spread of entries with span
+
+of mea-
+
+sures how far are spread apart after permuting. The min-
+
+imum spread [48] of all distinct entries of with a span is
+
+defined as
+
+. For our
+
+example, no 2 consecutive entries map into consecutive entries,
+
+but entries 0, 1 map to
+
+, hence
+
+.
+
+Often it is convenient to represent a permutation on by a
+
+array with a cross in each of the squares
+
+. Fig. 1
+
+shows the array representation of the permutation in our ex-
+
+ample. Fixed points correspond to crosses on the main diagonal,
+
+excedances to crosses to the right of this diagonal, while de-
+
+scedances are represented by crosses on the left.
+
+In this paper we introduce a new permutation statistic useful
+
+for analyzing pruned interleavers called permutation inliers. An
+
+integer
+
+is called an
+
+-inlier of if
+
+and
+
+. Let
+
+denote the set of all
+
+-inliers,
+
+(1)
+
+and
+
+the number of
+
+determining
+
+for arbitrary
+
+problem. Similarly, an integer
+
+lier if
+
+and
+
+.
+
+-inliers of . We call
+
+the permutation inliers
+
+is called an
+
+-out-
+
+denotes the set of all
+
+II. PRELIMINARIES AND PROBLEM FORMULATION
+
+Consider the set of integers and let be a permutation on
+
+. Denote by
+
+the -bit binary representation
+
+-outliers, and
+
+their number: , or equivalently
+(2)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3083
+
+the outlier sets ments of each set
+
+, where the eleare paired with :
+(6)
+
+The notation
+
+is the set of pairs
+
+,
+
+.
+
+Lemma 3 (Inversions): The number of inversions is given by
+
+(7)
+
+Fig. 1. Array representation of
+
+.
+
+where ‘ ’ is the set-difference operator. Referring to the
+
+array diagram of in Fig. 1, the
+
+-inliers correspond to the
+
+crosses included in the rectangle with diagonal vertices (0,0)
+
+and
+
+. In the previous example, the (5,7)-inliers are
+
+, while the outliers are the complement
+
+set
+
+.
+
+The more general case of counting inliers in a bounded re-
+
+gion
+
+and
+
+,
+
+Proof: From (6),
+
+is the sum of
+
+for
+
+. Also,
+
+. Summing (4) with
+
+for
+
+, the result follows.
+
+For certain permutations such as
+
+,
+
+, it is possible to obtain closed form expressions for
+
+(3) and (7). First we need the following lemma.
+
+Lemma 4: For any integers , we have
+
+, reduces to the original problem
+
+in (1) by observing that
+
+. Hence without
+
+loss of generality, we focus on (1) in the remainder of this paper.
+
+There are no known number theoretic techniques to analyze
+
+the structure of INL for arbitrary permutations as presented
+
+above. However, with the help of Lemma 1, we can recast
+
+the problem into one of evaluating a summation that involves
+
+integer floors, a device which is well-studied in number theory.
+
+Lemma 1: The number of
+
+-inliers of is given by
+
+Proof: Write
+
+and
+
+, then substitute in summation (8).
+
+Now applying (8) in (3) for
+
+(8) , we have
+
+(3)
+
+Proof: The floor function is the largest integer less
+
+than or equal to the real number . The first floor function in
+
+(3) evaluates to 1 for
+
+and 0 otherwise, while the
+
+second evaluates to 1 for
+
+and 0 otherwise.
+
+Hence the sum of their product counts the number of elements
+
+in
+
+. The outliers count in the complement set is simply
+
+(4)
+
+(9)
+
+since
+
+,
+
+. For example, for
+
+,
+
+,
+
+,
+
+, the number of (15,19)-inliers is
+
+.
+
+To count the inversions, we substitute (9) with
+
+in (4), then (7). It is easy to verify
+
+that
+
+, and that
+
+when
+
+, and 0 otherwise.
+
+Then from (7) and (4)
+
+Lemma 2 (Properties of and hence
+
+): If
+
+, then (5)
+
+Moreover, if
+
+, then
+
+for
+
+,
+
+.
+
+Proof: Since
+
+, if
+
+maps to
+
+,
+
+then
+
+maps to
+
+. Hence the two sums in
+
+(5) count the same elements. For
+
+, substitute
+
+in (3) and use
+
+.
+
+Similarly, we can recast the inversions problem into floor For other types of permutations such as polynomial-based
+
+sums as follows. First observe that inversions are the union of permutations or BRPs, finding a closed form expression for (3)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3084
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+is not as simple due to the presence of the floor functions. Fortunately, such sums can be more conveniently manipulated by replacing with the “saw-tooth” function
+
+(10)
+
+where
+
+if is an integer, and 0 otherwise.
+
+It will be shown in this paper that for any permutation that
+
+fixes the zero element (i.e,
+
+),
+
+with initial conditions
+
+and
+
+, where are
+
+the Bernoulli numbers. Also, since in (16) the order in which
+
+integers are summed is irrelevant and
+
+, we have
+
+.
+
+Corollary 1: For
+
+we have
+
+. For
+
+, 2, we have
+
+(11)
+
+where
+
+is a constant. Hence in the remainder of this paper,
+
+we focus on evaluating summations of the form
+
+(12)
+
+when is the BRP, which are reminiscent of Dedekind sums
+
+[25]. Evaluating (12) for arbitrary permutations is still an open
+
+problem. For BRPs, we show that these sums can be evaluated
+
+recursively in
+
+steps using only integer addition and
+
+shift operations. This result is extended to evaluate sums (3) and
+
+(7) using simple mathematical recursions.
+
+Moreover, for the purposes of characterizing the random-
+
+ness of pseudo-random numbers generated by BRPs, we study
+
+the serial correlations between an entry in the bit-reversed se-
+
+quence and its successors. These correlations require evaluating
+
+related sums of the form
+
+for all
+
+successors. We propose a simple recursive algorithm to evaluate these sums in logarithmic complexity.
+
+(17)
+
+Moreover, the function
+
+possesses many interesting
+
+properties when is a rational number , especially when
+
+is summed over a complete residue system (RS) modulo
+
+. Lemma 5 summarizes some of these identities:
+
+Lemma 5 (Sum of Saw-Fractions Over a Complete RS):
+
+(18)
+
+(19)
+
+(20)
+
+III. RECURSIVE RELATIONSHIPS
+
+In this section, we derive recursive expressions for sums in-
+
+volving
+
+that are useful for computing permutation statis-
+
+tics. The following properties immediately follow from (10):
+
+;
+
+;
+
+;
+
+for integers , real
+
+; and
+
+(13)
+
+(14)
+
+(15)
+
+(21)
+
+Further properties are derived when
+
+or
+
+are summed over half a RS for shift values
+
+.
+
+Lemma 6 (Sum of Saw-Fractions Over Half a RS): Let be
+
+a non-negative integer and set
+
+, then
+
+Next, consider the sum of product of the
+
+and the bit-reversed integers
+
+,
+
+-power integers :
+
+; .
+
+(22)
+
+(16)
+
+(23)
+
+Theorem 1: can be evaluated as
+
+In particular, when
+
+,
+
+.
+
+Sums of
+
+and
+
+involving squared integers
+
+have never been attempted before. Below we derive an inter-
+
+esting identity for these sums over a complete RS.
+
+Lemma 7:
+
+even; odd.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+(24)
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3085
+
+even; (25) odd.
+
+For the arithmetic analysis of BRPs , sums involving
+
+and their variations are of particular in-
+
+terest.
+
+Lemma 8: For
+
+,
+
+We next consider sums of products of saw-fractions involving
+
+and their -th successors
+
+. These sums are used in
+
+studying the serial correlation properties of BRPs.
+
+Lemma 12: Consider
+
+and let
+
+be
+
+the position of the least-significant ‘1’ in . Set
+
+. Then
+
+(26) (32)
+
+More generally, sums of products
+
+for shift integers can also be evaluated efficiently.
+
+Lemma 9: Let
+
+if is odd and
+
+if
+
+is even. Define
+
+and
+
+. Then
+
+For example, when
+
+,
+
+, we have
+
+and
+
+and (33)
+
+odd; even.
+
+(27)
+
+.
+
+(28)
+
+Next, we investigate summations that involve products of differences of saw-functions similar to those in (11):
+
+and when
+
+, we have
+
+and
+
+. An algorithm for computing
+
+using
+
+integer operations is shown below. Note that
+
+is an integer since , , and
+
+are
+
+divisible by 3 since is a power of 2 (proved by induction).
+
+Another related sum is one involving shifted saw-fractions
+
+and their first-successors
+
+, for shift values
+
+. These sums are used in studying the probability of consec-
+
+utive BRP terms falling within specific intervals. Let
+
+(34)
+
+(29) Algorithm 1: Integer Algorithm to Compute
+
+Lemma 10: If
+
+or
+
+, then
+
+. Else, let
+
+, , be as defined in Lemma 9. Then (see (30) at the bottom
+
+of the page). This recursion (and (27)) can be evaluated using
+
+integer arithmetic in at most
+
+steps since
+
+.
+
+Note that the recursive solution in (30) is similar to that for
+
+linear permutation polynomials involving Dedekind sums [31].
+
+Specifically, when
+
+in (29), a closed form expres-
+
+sion for the sum
+
+can be derived. These
+
+sums appear in equations similar to (7) for counting inversions.
+
+Lemma 11:
+
+for
+
+to
+
+end for Lemma 13:
+
+do satisfies the recursion
+
+in (32)
+
+(31)
+
+odd; even.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+(30)
+
+3086
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+where
+
+if is even and
+
+if is odd,
+
+if is
+
+even and
+
+if is odd,
+
+if is even and
+
+if is
+
+odd,
+
+if is even and
+
+if is odd, and
+
+if both
+
+are odd or both even and
+
+otherwise.
+
+Finally, generalizing (34) into products of differences as
+
+given in (35), we have the following lemma:
+
+Proof: From Lemma 15, descents occur at odd indices,
+
+hence the major index is
+
+.
+
+B. Fixed Points, Excedances, and Descedances
+
+The number of fixed points of a BRP is the number of palin-
+
+dromes (when
+
+):
+
+(37)
+
+Lemma 14:
+
+satisfies the recursion
+
+The sum of all fixed points as well as their squares can be evaluated using the following lemma:
+Lemma 17 (Sum of Fixed Points):
+
+(35)
+
+even;
+
+(38)
+
+odd.
+
+even; odd.
+(39)
+
+where
+
+if ,
+, and
+
+is even and 1 if ,
+
+(36)
+is odd, ,
+.
+
+An excedance of is an integer
+
+such that
+
+.
+
+Lemma 18: The excedance number of a BRP is
+
+. The probability that
+
+is
+
+.
+
+Proof: Let
+
+,
+
+. These repre-
+
+sentations can be grouped such that
+
+,
+
+, or
+
+. From (37), the number of palindromes is
+
+.
+
+Since there are equal number of remaining representations cor-
+
+responding to
+
+and
+
+, the number of oc-
+
+currences of
+
+or
+
+is
+
+, and the
+
+probability that
+
+is
+
+.
+
+Corollary 2:
+
+IV. PERMUTATION STATISTICS OF BRPS
+
+We next derive permutation statistics for BRPs and present
+
+a solution for the permutation inliers problem using the results
+
+from Section III. Let
+
+be the sequence
+
+, generated by the BRP on bits, and let
+
+.
+
+Proof: The floor functions
+
+evaluate to 1
+
+when
+
+, hence their sum is the excedance number.
+
+Next we consider the sum of all excedances of ,
+
+.
+
+A. Descents and Major Index
+
+Lemma 19: The sum of excedances
+
+is given by
+
+We start by enumerating descents induced by a BRP.
+
+Lemma 15: The probability that
+
+is and the
+
+number of descents is
+
+. More generally, the
+
+probability that
+
+is 0 for
+
+.
+
+Proof: Let
+
+,
+
+. We enumerate
+
+the occurrences
+
+in
+
+, with taken
+
+. An
+
+even has
+
+while an odd has
+
+. Then
+
+and
+
+when is odd since
+
+and
+
+. Hence
+
+occurs exactly times,
+
+which gives
+
+. When
+
+, then
+
+cannot occur because
+
+is even for at least one
+
+and hence
+
+.
+
+The number of ascents is
+
+. The major index of is the sum of the indices of the first
+
+element in each pair that is a descent.
+
+Lemma 16: The major index of a BRP is
+
+.
+
+Corollary 3: The sum of descedances is given by
+
+even;
+odd (40)
+
+Proof: Apply , and note that which sums all
+
+such that
+
+even; odd.
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3087
+
+In fact the sum of the squares of all excedances similarly evaluated.
+Lemma 20 (Sum of Squares of Excedances):
+
+can be Corollary 5: Specifically, for BRPs,
+
+reduces to (43)
+
+where
+
+is given in (30), and
+
+reduces to
+
+even; odd.
+
+Proof: The proof is similar to Lemma 19. When is even, we obtain the recursion
+
+when
+
+. Similarly, when is
+
+odd, we obtain
+
+when
+
+.
+
+Corollary 4 (Sum of Squares of Descedances):
+
+Proof: The proof is similar to Corollary (3).
+
+C. Minimum Spread Lemma 21: The minimum spread
+
+BRP with
+
+is
+
+even; odd.
+, of a
+
+(44)
+
+Equation (43) can be evaluated recursively in
+
+steps
+
+using (30). Note that since
+
+, only integer shift and add
+
+operations are needed to evaluate (30) and (43), assuming the
+
+product of the constants is computed off-line.
+
+Example 1: Let
+
+,
+
+,
+
+,
+
+. Then
+
+and
+
+since
+
+and
+
+. Using (30), we have
+
+and . Next we have
+
+. These steps are repeated using (30), re-
+
+sulting in
+
+. Therefore, using
+
+(43) we have .
+
+Corollary 6: For BRPs and
+
+,
+
+, it follows that
+
+.
+
+Theorem 3: Let
+
+. Then
+
+the probability that
+
+for
+
+is
+
+Proof: For
+
+,
+
+odd, the minimum occurs when
+
+. For
+
+when
+
+and
+
+, we have
+
+, hence
+
+if is even. For
+
+, in which case
+
+,
+
+. For
+
+,
+
+.
+
+D. Inliers and Outliers
+
+Theorem 2: For any permutation that fixes the zero element
+
+(i.e,
+
+), the number of inliers is given by
+
+where
+
+is given by (43).
+
+Proof:
+
+enumerates all
+
+, while
+
+enumerates all
+
+Hence the difference counts all
+
+. Similarly for
+
+such that
+
+such that
+
+.
+
+such that
+
+. Therefore
+
+counts all
+
+such that
+
+We can similarly enumerate all
+
+inliers, i.e. those such that
+
+and
+
+. that have successive
+: :
+
+(45)
+
+where
+
+is given by
+
+Theorem 4: For ,
+
+,
+
+(41)
+
+reduces to
+
+(42)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+(46)
+
+3088
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+where
+
+is given in (35), (36),
+
+where
+
+are given in (17) and (31), respectively, and
+
+from (44) when
+
+, and 0 oth-
+
+erwise. Substituting (17) and (31) and simplifying terms, (48)
+
+follows.
+
+(47) F. Serial Correlations
+
+, and
+
+. Moreover, if
+
+and
+
+, then
+
+.
+
+Proof: Expand (45) using
+
+similar to Theorem (2),
+
+multiply out terms and then simplify the expression using
+
+(20), (21) to obtain (46) and (47). Further, it is easy to show
+
+that
+
+evaluates to
+
+depending on . The details of the proof are omitted. Fi-
+
+nally,
+
+if both
+
+and
+
+since
+
+either or
+
+is odd which implies either
+
+or
+
+, and hence all
+
+.
+
+Example 2: Continuing Example 1, we have
+
+. Also
+
+;
+
+A necessary condition for the apparent randomness of is the small size of the serial correlation statistic :
+
+(49)
+
+for
+
+, where is the expectation operator.
+
+measures the extent to which depends on its -th successor
+
+. To compute , we first determine the variance
+
+:
+
+, and
+
+. Hence
+
+; fore
+Summing all terms, we get Theorem 5: Let
+the probability that
+
+; . There. Next, using (36) we have
+; ; ;; .
+
+. and
+
+. Therefore
+. Then is
+
+where
+
+is given by (46). This is similar to Theorem 3.
+
+E. Inversions
+
+. The only difficult part of (49) is the covariance:
+Theorem 6 (Covariance):
+(50)
+
+where
+
+is given by (32), and
+
+is the position
+
+of the least-significant one-bit in (starting from 0).
+
+Corollary 7 (Serial Correlations for
+
+):
+
+Proof: Substitute (33) for
+
+and
+
+in (50), then
+
+divide by the variance
+
+.
+
+A correlation coefficient always lies between 1. A small
+
+coefficient indicates that and
+
+are almost independent.
+
+Hence it is desirable to have
+
+. Since
+
+,
+
+it follows that BRPs have weak correlation properties.
+
+Lemma 22 (Inversions): The number of inversions
+
+is
+
+V. SERIALLY-PRUNED BRIS AND MINIMAL INLIERS
+
+The permutation inliers problem is applied to study pruned
+
+bit-reversal interleavers (BRIs). A BRI maps an -bit integer
+
+into -bit integer such that
+
+, where ,
+
+and
+
+is the interleaver size. A serially-pruned BRI (PBRI) of
+
+(48) size by
+
+and pruning length
+
+, with
+
+, is defined , such that: 1)
+
+Proof: Using (3), (41) in (7) with
+
+, we have
+
+, and 2)
+
+is the serial pruning function
+
+where is the pruning gap of defined to be the minimum
+
+such that
+
+(i.e., for
+
+,
+
+is satisfied exactly times). The domain and range
+
+of are
+
+and
+
+. Pruned interleavers are
+
+used when blocks of arbitrary lengths (other than powers-of-2)
+
+are needed. To interleave a block of size , a mother interleaver
+
+whose size is the smallest power-of-2 that is is selected and
+
+pruned. Hence, in the following, we assume that
+
+.
+
+There are several ways to prune addresses from the mother
+
+interleaver. One method is to ignore positions beyond
+
+in the permuted sequence, which we consider in this work (see
+
+also [29], [30]). Other methods prune addresses beyond
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3089
+
+The time complexity to determine is . However, using
+
+the inliers problem formulation, is simply the minimum non-
+
+negative integer to be added to such that
+
+has ex-
+
+actly inliers:
+
+such that
+
+(see
+
+Fig. 2(b)). Out of the first addresses, there are
+
+outliers . Hence
+
+. Next consider the ex-
+
+panded interval of addresses
+
+. This set con-
+
+tains
+
+outliers. Hence again
+
+. This
+
+process is repeated by expanding the interval into
+
+and determining the corresponding number of out-
+
+liers. The process terminates when
+
+at some step when there are no more outliers, and hence
+
+. This process for computing the minimum number
+
+of inliers is implemented in Algorithm 3.
+
+Example 3: Let
+
+. Applying the MI algorithm, we
+
+have
+
+using (2),
+
+(43). Next we expand to
+
+and recompute
+
+. At step 3 we have
+
+. The steps are repeated
+
+until
+
+with
+
+.
+
+Algorithm 3: Minimal Inliers Algorithm:
+
+Fig. 2. (a) Flowchart of the serial pruning algorithm. (b) Smallest interval of
+
+addresses
+
+that has exactly
+
+inliers with respect to .
+
+repeat
+
+in the original sequence, or prune a mixture of addresses from
+
+both the original and permuted sequences [30]. Hence any ad-
+
+dress that maps to an address
+
+is dropped and the next
+
+consecutive address is tried instead. To determine where an ad-
+
+dress is mapped, a serial PBRI (S-PBRI) starts from
+
+and maintains the number of invalid mappings (pruning gap)
+
+that have been skipped along the way (see Fig. 2(a)). If
+
+maps to a valid address (i.e.,
+
+), then is in-
+
+cremented by 1. If
+
+maps to an invalid address (i.e.,
+
+), is incremented by 1. These steps are
+
+repeated until reaches and
+
+, and hence
+
+. Therefore,
+
+. Algorithm
+
+2 shows the pseudo-code of a generic cascadable S-PBRI with
+
+,
+
+,
+
+the pruning
+
+gap up to , and up to . The parameters
+
+are set to
+
+to compute .
+
+Algorithm 2: Serial PBRI Algorithm:
+
+until
+
+The convergence rate of the MI algorithm is
+
+as shown in Theorem 7. The proof is based on deriving exact
+
+expressions for tight lower and upper bounds on . Fig. 3 plots
+
+these bounds and for
+
+when
+
+.
+
+Theorem 7 (Rate of Convergence): The minimal inliers algo-
+
+rithm converges at a rate
+
+.
+
+Using the MI algorithm a parallel PBRI of length with
+
+a parallelism factor of over the S-PBRI can be designed by
+
+employing (or
+
+if
+
+) S-PBRI’s of size
+
+and pruning length as shown in Algorithm 4.
+
+Algorithm 4: Parallel PBRI Algorithm:
+
+while
+
+do
+
+if
+
+then
+
+for all
+
+do
+
+else
+
+end for
+
+if
+
+then
+
+end if end while
+
+end if
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3090
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+Fig. 3. (a) Lower and upper bounds on the pruning gap for
+
+,
+
+, and (b) convergence rate of the MI algorithm for
+
+.
+
+VI. EXTENSIONS TO OTHER INTERLEAVERS
+We extend the discussion in this section to composite interleavers that employ smaller interleavers to construct a larger interleaver, such as 2D block and stream interleavers.
+
+A. 2D Block Interleavers
+
+A 2D block interleaver [18], [28] of size is defined by a per-
+
+mutation composed of two smaller permutations and of
+
+size and , respectively, where
+
+. Let
+
+,
+
+times
+
+for
+
+. These are satisfied if: 1a)
+
+,
+
+or 1b)
+
+and
+
+; and 2a)
+
+, or 2b)
+
+and
+
+. Conditions 1a), 2a) are both satisfied
+
+times. 1a), 2b) count the
+
+-inliers for , which are
+
+. Similarly 1b), 2a) count the
+
+-inliers
+
+for , which are
+
+. Finally, 1b), 2b) are satisfied
+
+once if
+
+and
+
+. Adding the results:
+
+, and
+
+. Then
+
+. Alternatively, we say
+
+is mapped
+
+to
+
+. This is equivalent to writing
+
+the sequence of integers into a
+
+array row-wise, per-
+
+muting the entries in each column by and in each row by ,
+
+then reading the entries from the array column-wise. Such inter-
+
+leaver is referred to as row-by-column. The reversal of dimen-
+
+sions in general improves the spread properties of . If iden-
+
+tical permutations are applied to all columns and identical
+
+applied to all rows, then the order of applying the permuta-
+
+tions does not matter. Otherwise, if is column-specific, say
+
+, and is row-specific, say , then the order matters.
+
+In a row-first block interleaver, an entry
+
+maps to row
+
+then to column
+
+, while in a
+
+column-first interleaver, it maps to column
+
+then
+
+to row
+
+. For simplicity, we assume identical ’s
+
+and identical ’s below.
+
+A pruned 2D block interleaver of size
+
+and pruning length
+
+, with
+
+, is defined
+
+if otherwise.
+
+;
+
+(51)
+
+Example 4: Consider a P2BRI with
+
+,
+
+,
+
+,
+
+. We have
+
+;
+
+,
+
+,
+
+,
+
+,
+
+;
+
+,
+
+;
+
+,
+
+. Using (43), we
+
+compute
+
+,
+
+. Since
+
+, conditions 1b), 2b)
+
+are not satisfied. Hence
+
+.
+
+The minimal inliers algorithm can be applied to compute the
+
+pruning gap of a P2BRI with outliers
+
+computed using (51). A parallel P2BRI can
+
+be realized as well using Algorithm 4. Extensions to multi-di-
+
+mensional hyper-block pruned interleavers can be similarly de-
+
+fined, but the details are omitted due to lack of space.
+
+by the map
+
+where
+
+to a pruned 1D block interleaver. Here,
+
+similar
+
+,
+
+B. Stream Interleavers
+
+,
+
+,
+
+, and the integer
+
+maps to
+
+,
+
+where
+
+,
+
+,
+
+,
+
+and
+
+is a 2D permutation. In a pruned
+
+2D block BRI (P2BRI),
+
+and
+
+are BRPs
+
+on and bits, respectively, and
+
+,
+
+.
+
+In some communication systems (e.g. [20], [49]), a block of information bits is divided into sub-blocks each of which is interleaved independently. Interleaved bits out of each sub-block are treated as streams that are concatenated (or even further interleaved) to form the interleaved bits of the original block. For example, a 2-stream interleaver divides a block of length
+
+To count the
+
+-inliers
+
+into two sub-blocks of size , interleaves sub-block 0 using
+
+in a pruned 2D interleaver, we count the number of and sub-block 1 using , and then combines the outputs bits
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3091
+
+Fig. 4. 8-way parallel contention-free mapping for (a) an unpruned, and (b) a pruned FFT bit-reversal mapping with
+
+,
+
+,
+
+,
+
+.
+
+from both streams in an alternating fashion. The resulting per- exist cases where the input vector has many zeros or the re-
+
+mutation is given by
+
+quired outputs may be very sparse compared to the transform
+
+length. For example, in digital filtering, one may only require
+
+the spectrum corresponding to certain frequency windows of
+
+where
+
+. A 2-stream bit-reversal interleaver
+
+uses bit-reversal maps on bits to interleave the sub-blocks,
+
+i.e.,
+
+. A pruned 2-stream bit-reversal
+
+interleaver is defined similar to a PBRI.
+
+To count the
+
+-inliers
+
+for any pruned
+
+2-stream interleaver, we simply count the
+
+-in-
+
+liers of and the
+
+-inliers of , to obtain
+
+the FFT, or in MCD, only a few carriers out of the overall range of available carriers are needed. In digital image processing, only part of the images are of interest to certain applications. In such cases, most of the FFT outputs are not required. Several FFT pruning algorithms have been proposed [53]–[57] to avoid redundant computations on zero inputs or for unused outputs. However, most of these algorithms do not consider the cost of pruned bit reversal reordering of the inputs or outputs when
+
+performing in-place FFT computations.
+
+For simplicity of exposition, we assume in the following that
+
+In fact, the above formula can be generalized to a pruned
+
+-stream interleaver employing generic constituent permu-
+
+tations
+
+of size , where the output bits from
+
+the streams are permuted according to some permutation
+
+of size . The resulting permutation is given by
+
+only a narrow spectrum is of interest, but the resolution within
+
+that band has to be very high. Hence, the DFT
+
+has
+
+some
+
+input values , but fewer than outputs are
+
+needed. We also assume a radix-2 FFT algorithm with in-place
+
+FFT computations using a set of butterflies that compute the
+
+final outputs in a set of memory banks in bit-reversed order.
+
+A subsequent stage performs BRP re-ordering of the outputs
+
+back to natural order. Note that since a BRP is an involution
+
+for
+
+liers of
+
+for
+
+. To count its
+
+-inliers
+
+, we simply count the
+
+-in-
+
+and add the results:
+
+(i.e.,
+
+), re-ordering a bit-reversed output is analogous
+
+to bit-reversed ordering of the output in natural order. Hence,
+
+we assume that the FFT outputs are written in natural order in
+
+the output memory banks, and the BRP stage does bit-reversal
+
+ordering. Fig. 4(a) illustrates the BRP stage for the unpruned
+
+FFT case, which reads from the FFT memory banks and writes
+
+to the input memory banks at the receiving end. We show next
+
+where
+
+. that this BRP stage (both unpruned or serially pruned) can be parallelized to match the parallelism degree of the FFT, elim-
+
+VII. APPLICATIONS OF SERIALLY-PRUNED PERMUTERS
+In this section, we apply the inliers problem to design parallel bit-reversal permuters for pruned FFTs, as well as parallel pruned interleavers for LTE turbo codes.
+
+inating its serial bottleneck on throughput.
+
+A permutation of length
+
+in general is said to
+
+be contention-free (CF) [58] with degree
+
+if an array
+
+of data elements stored in one set of read memory banks
+
+each of size
+
+can be permuted and written into another
+
+A. Pruned FFT Algorithm
+
+set of write memory banks, such that at each step, data elements are read in parallel from the read banks and written
+
+The FFT algorithm is widely used in signal processing and in parallel into the write banks without reading or writing
+
+communications applications such as digital filtering, spec- more than one element from/to any bank (see Fig. 4(a)). Data
+
+tral analysis, and polyphase filter multicarrier demultiplexing is stored sequentially in the read banks such that linear address
+
+(MCD) [50]–[53]. In some of these FFT applications, there
+
+corresponds to location in bank
+
+, where
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3092
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+and at linear addresses CF property stipulates that
+for all
+
+. To permute any data entries in parallel, the
+
+and
+
+, where
+
+the bank addressing function is either
+
+or
+
+. This is a more general condition than
+
+[58], and effectively uses either the most or least significant
+
+bits (MSBs/LSBs) of
+
+as a permuted bank address.
+
+It is easy to prove that the BRP is contention-free for any
+
+,
+
+,
+
+, where
+
+and
+
+,
+
+using the property
+
+. For any
+
+pair of distinct windows , we have
+
+for
+
+. Hence the LSBs designate a permuted
+
+bank address. Fig. 4(a) illustrates the CF property of the BRP
+
+for a 32-point unpruned FFT block whose outputs are stored in
+
+read memory banks. The BRP stage permutes the 8
+
+banks in
+
+steps and stores the data in the write memory
+
+banks in parallel without any stalls due to address collisions.
+
+An arbitrary pruning of a permutation does not preserve its
+
+CF property. However, serial pruning does, and a CF pruned
+
+permuter can be designed as shown in Theorem 8. First, the se-
+
+rial-pruning map
+
+itself is CF. To show this, take
+
+two addresses
+
+and
+
+that corre-
+
+spond to banks and
+
+. Then
+
+for any
+
+since is mono-
+
+tonically increasing and hence
+
+.
+
+Theorem 8: Any serially-pruned, contention-free permuta-
+
+tion (interleaver) remains contention free.
+
+Proof: One scenario is to insert zero filler bits in the pruned
+
+positions while storing the data sequentially in memory across
+
+the banks. This requires comparing
+
+with serially for
+
+every before writing to memory. Hence the CF property ap-
+
+plies for the pruned interleaver across all the banks if the mother
+
+interleaver is CF.
+
+Another scenario is to store the data across the banks
+
+without filler bits as shown in Fig. 4(b). To interleave prop-
+
+erly, we need to keep track of the inliers that fall within each
+
+window. First, since the number of inliers up to window is
+
+, data located between address
+
+and
+
+are stored sequentially in bank .
+
+We know that addresses
+
+map
+
+to distinct windows under . Address in window , which
+
+might be pruned, actually corresponds to the unpruned address
+
+, where
+
+is defined as:
+
+(52)
+
+Hence a serially-pruned interleaver is CF when the banks are
+
+accessed sequentially using a counter from
+
+,
+
+if the mother interleaver is CF.
+
+The pruning gaps in (52) can be computed efficiently using
+
+Algorithm 3 together with any scheme for enumerating inliers
+
+depending on the permutation. In Fig. 4(b), Theorem 8 is ap-
+
+plied to parallelize a pruned BRP stage of a 32-point FFT al-
+
+gorithm pruned to
+
+points and permute its outputs in
+
+parallel without contention when accessing the memory banks.
+
+Pruned locations are marked as . Each read memory bank is
+
+initialized with the appropriate
+
+using (52), and accessed
+
+by a counter that runs from 0 to
+
+. When reading bank
+
+at step , the actual address corresponds to
+
+.
+
+If
+
+, the read is successful. Otherwise, the lo-
+
+cation is pruned, reading from bank is stalled and
+
+is
+
+incremented. The FFT results are written in parallel in PBRP
+
+order in the write memory banks in 3 steps.
+
+B. Pruned LTE Turbo Interleavers
+
+Serial pruning is also valuable in turbo coding applications because it allows for flexible codeword lengths. In a typical communication system employing adaptive modulation and coding, only a small set of discrete codeword lengths are supported. Bits are either punctured or filled in to match the
+nearest supported length. For a pruned interleaver of length to be useful, it is desirable to have the following characteristics: 1) It does not require extra memory to store the pruned indices, 2) pruning preserves the CF property [58], [59] of its mother interleaver (if present), and 3) its spread factor [60] degrades
+
+gracefully with the number of pruned indices
+
+, and
+
+hence the impact on BER is limited.
+
+Serial pruning satisfies properties 1 and 2 as shown in Section VII-A. The implications are that serially-pruned
+
+contention-free interleavers are parallelizable at a low imple-
+
+mentation cost using the schemes proposed in this work to
+
+enumerate inliers. When coupled with windowing techniques to parallelize the constituent a posteriori probability (APP)
+
+decoders (see Fig. 4(b) with APP decoders instead of FFT
+
+blocks), a turbo decoder can be efficiently parallelized to meet
+
+throughput requirements in 4G wireless standards and beyond. We next show that serial pruning also satisfies the property 3.
+
+The spread factor of an interleaver is a popular measure of
+
+merit for turbo codes [60]. The spread measures of and as-
+
+sociated with two indices are
+
+and
+
+. The minimum spreads of and are defined
+
+as
+
+and
+
+,
+
+. The following the-
+
+orem shows that
+
+remains close to
+
+when is small.
+
+Theorem 9: The minimum spread of a serially-pruned inter-
+
+leaver of length is at least
+
+with initial condition
+
+. Then, for
+
+and
+
+(53)
+
+, we have
+
+where is a small positive constant and
+
+.
+
+The proof relies on the fact that
+
+, where
+
+are such that
+
+. The difference
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3093
+
+Fig. 5. (a) Minimum spread of pruned QPP interleavers in LTE. (b) BER of LTE turbo codes with pruned 2D QPP-BRP interleavers of length
+
+.
+
+is upper bounded as
+
+, assuming
+
+, since
+
+is a monotonically increasing function. Since
+
+cannot
+
+be separated by more than
+
+positions, we need to
+
+find the maximum of
+
+when
+
+. This is
+
+equivalent to finding the maximum expansion of an interval of
+
+length
+
+such that it contains at least
+
+inliers. From
+
+Theorem 2, this expansion leads to finding the minimum
+
+that satisfies
+
+, from
+
+which (53) follows. For example, the QPP interleaver
+
+has
+
+and
+
+Fig. 6. Architecture for computing
+
+in (43) for bit-reversal permuta-
+
+. If tions using the
+
+function in (30).
+
+positions are pruned, then
+
+. In fact, the
+
+actual
+
+is 62.
+
+VIII. PRACTICAL IMPLEMENTATION ASPECTS
+
+Fig. 5(a) plots the minimum spread of serially-pruned QPP
+
+interleavers as a function of , for several mother interleavers. Fig. 6 shows the architecture for computing
+
+in (43)
+
+The lower bound in (53) is also plotted. The length , minimum for BRPs using the
+
+function in (30) using elemen-
+
+spread and constant of the mother interleavers are shown tary logic gates. The block is clocked for
+
+clock cycles
+
+in brackets. As shown,
+
+of the pruned interleavers remains to produce the result. The three shift registers on the left are
+
+very close to
+
+when up to
+
+indices are pruned. initialized with
+
+. The register with symbol % drops out
+
+Hence the bounds predicted by (53) are rather tight.
+
+the MSB every cycle and stores the resulting contents back
+
+To assess the impact of serial pruning on error-correc- in the register, while registers with symbols perform a left
+
+tion performance, the BER of 3GPP LTE turbo codes em- shift by one position every cycle. Block reverses the bits
+
+ploying serially-pruned 2D QPP-BRP interleavers were of or
+
+depending on whether is odd or even.
+
+simulated over an AWGN channel. The 2D mother inter- The multiplexer logic simply selects what the expression in the
+
+leaver of length
+
+is a concatenation of a QPP and
+
+recursion in (30) evaluates to (see proof of Lemma
+
+a BRP defined by
+
+, 10 in Appendix). The block with symbol multiplies by 2 to
+
+where
+
+,
+
+,
+
+,
+
+, and generate
+
+or
+
+. After
+
+. 500,000 frames were simu- clock cycles, the output
+
+is then divided by using
+
+lated assuming BPSK modulation and log-MAP decoding with the
+
+block, and then
+
+(block
+
+divides by )
+
+up to 6 decoding iterations. Fig. 5(b) shows the results using and
+
+are added to generate
+
+.
+
+the 2D mother interleaver and 11 serially-pruned interleavers Fig. 7 shows the implementation of the minimal inliers algo-
+
+of the indicated lengths. Also shown for comparison are results rithm in Algorithm 3. The architecture can be used to compute
+
+for three other 1D QPP interleavers of lengths 2048, 2016 and the minimal inliers of any permutation by using the appropriate
+
+1664 used in LTE (the other 9 lengths from 2016 to 2046 are
+
+block. For the BRP, the block in Fig. 6 is used. For
+
+not supported). In almost all cases, the pruned interleavers linear congruential permutations, the block proposed in [31] can
+
+perform very close to the 2D mother QPP-BRP and 1D QPP be used. For a generic permutation, a table lookup implementa-
+
+interleavers.
+
+tion can be used when the size is small. A parallel pruned in-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3094
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+TABLE I PARAMETERS OF 1D, 2D, AND 2-STREAM INTERLEAVERS CONSIDERED
+
+Fig. 7. Architecture of the minimal inliers algorithm in Algorithm 3.
+
+(odd). The qpp permutation has size 32 and its inliers are implemented using a look-up table. These interleavers are used in practice for example in [19]–[21], [49].
+For the 2-stream case, three combinations of permutations across the two streams are considered: brev across the first dimension and reversed brev across the second, lcs across the first and brev across the second, lcs across both dimensions. The parameters of all interleavers are listed in Table I.
+Fig. 9(a) plots the normalized time of the proposed pruning algorithm for 1D and 2D interleavers as a function of interleaver size. Also shown are the corresponding times of serial pruning algorithms. Fig. 9(b) shows the results for 2-stream interleavers. The plots demonstrate a reduction of 3 to 4 orders of magnitude in pruning time compared to the serial case.
+
+IX. CONCLUSIONS AND REMARKS
+
+A mathematical formulation for analyzing the pruning of bit-
+
+reversal permutations has been presented. Pruning a permuta-
+
+tion has been cast mathematically in terms of evaluating sums
+
+Fig. 8. (a) 1D, (b) 2D block, and (c) 2-stream interleavers.
+
+involving integer floors and saw-tooth functions. Bit-reversal permutations have been characterized in terms of permutation
+
+statistics, and shown to possess weak correlation properties.
+
+terleaver can be realized simply by cascading several minimal Moreover, using a new permutation statistic called permuta-
+
+inliers blocks according to Algorithm 4.
+
+tion inliers that characterizes the pruning gap of BRPs, a com-
+
+A. Practical Examples
+
+putationally efficient algorithm for parallelizing serially-pruned bit-reversal interleavers has been proposed. Extensions to block
+
+To demonstrate the performance advantage of the proposed and stream interleavers have been considered as well. The effi-
+
+schemes in this paper, several pruned interleavers were con- ciency of this algorithm in terms of reducing interleaving la-
+
+structed and simulated using the proposed pruning algorithms tency and memory overhead has been demonstrated in the con-
+
+as well as existing serial pruning algorithms in the literature. text of LTE turbo codes and pruned FFTs. The importance of this
+
+1D, 2D block, and 2-stream interleavers are considered (see algorithm further lies in that it enables flexible and high speed
+
+Fig. 8). For the 1D case, bit-reversal (brev) and linear congruen- implementations of PBRIs and other pruned permutations em-
+
+tial sequence (lcs) [25] are considered (see Table I). For the 2D ployed in communication standards that support multiple data
+
+case, four combinations of permutations across the two dimen- rates and variable-length codewords.
+
+sions are considered: brev across both, brev across the first and The work proposed in this paper can be applied to more
+
+reversed brev across the second, lcs across the first and brev general block interleavers that involve generic permutations.
+
+across the second, lcs across the first and a quadratic permuta- We are investigating the class of interleavers based on permu-
+
+tion polynomial (qpp) across the second. The lcs permutations tation polynomials of general degree [19], [61]. Similar to
+
+vary from column to column by changing (12), these permutations require evaluating sums of the form
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3095
+
+Fig. 9. Normalized pruned interleaving time as a function of interleaver size for (a) 1D and 2D interleavers, and (b) 2-stream interleavers.
+
+with constant coeffi-
+
+cients
+
+, including the class of second-degree QPPs. We
+
+conjecture that there exist recursive Euclidean-like algorithms to evaluate these sums that are analogous to those used for
+
+evaluating sums for linear permutation polynomials based on
+
+generalized Dedekind sums
+
+[25].
+
+APPENDIX PROOF OF THEOREM 1
+
+permutation on
+
+using (14). Since , then
+
+is a by (20).
+
+PROOF OF LEMMA 6
+
+If
+
+, then
+
+and
+
+we assume
+
+. If
+
+reduces to
+
+, it simplifies to following property that relates on bits:
+
+using (14). Hence
+
+, then using (10),
+
+, while if
+
+. For (23), we use the
+
+bits to
+
+on
+
+; .
+
+(54)
+
+Then
+
+which equals zero using (13).
+
+PROOF OF LEMMA 7
+
+Apply the Binomial theorem to expand
+
+, We first show that the sum
+
+in (24)
+
+followed by the Bernoulli expansion
+
+Bernoulli numbers
+
+, where
+
+PROOF OF LEMMA 5
+
+For (18), we have
+
+. For (19), let
+
+teger and real
+
+. Then
+
+are the .
+for in-
+
+satisfies the recursion
+
+for
+
+by
+
+enumerating the quadratic residues modulo , which are
+
+integers of the form
+
+and
+
+.
+
+From number theory, these residue classes are the odd integers
+
+in of the form
+
+,
+
+. Since there
+
+are a total of
+
+odd integers in , and odd integers are
+
+(equally distributed), then the number of
+
+quadratic residues is
+
+. Moreover, if the odd
+
+integer maps to the residue
+
+, then so do
+
+, which follows since
+
+.
+
+For (20),
+
+since the two
+
+sum the same elements but in a different order. The proof of
+
+(21) is similar to (19) by noting that
+
+is a
+
+. Hence, Therefore,
+
+which is independent of . which
+
+permutation and that second part of (18), let
+
+. Finally for the proves
+
+,
+
+,
+
+,
+
+. For
+
+, with initial conditions
+
+,
+
+, this recursion can be rewritten as
+
+then
+
+if is even, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3096
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+otherwise, with
+
+. Solving the recursion, (24) follows.
+
+Finally, substituting (10) in (24), and noting that
+
+when when follows.
+
+, if is even, and if is odd, (25)
+PROOF OF LEMMA 8
+
+Applying (54), we can split
+
+in (26) as follows:
+
+(55)
+
+(56)
+
+Case 1: When is odd, applying (61) again we
+
+obtain
+
+and (15), we get
+
+, where . Adding the two and using
+
+. Simplifying the
+
+saw functions using (10), the first equation in (30) follows.
+
+Moreover, it is easy to show that these saw functions evaluate to
+
+either
+
+depending
+
+on and . Case 2: When is even, still simplifies as shown
+
+above but with
+
+, while becomes
+
+.
+
+Hence
+
+.
+
+Again, simplifying the saw functions, the second equation
+
+in (30) follows. Moreover, it is easy to show that these saw
+
+functions evaluate to either
+
+depending on and .
+
+where in (56), property (15) and (61) with
+
+are applied.
+
+Applying (22) with
+
+and simplifying terms, we obtain
+
+. Solving the recurrence with
+
+yields
+
+.
+
+PROOF OF LEMMA 9
+
+Using (54) we can split set
+
+similar to (55). If is odd, . Then using
+
+(61),
+
+reduces to
+
+even, set reduces to
+
+. Otherwise, if is . Using (61),
+
+. Evaluating the first sum in both cases using (22), (27) and (28) follow.
+
+PROOF OF LEMMA 10
+
+From (29), obviously if
+
+or
+
+, then
+
+. Hence we assume
+
+,
+
+. Using (54) we can split
+
+similar to (55), then apply (61) with
+
+to obtain
+
+PROOF OF LEMMA 11
+
+We split
+
+similar to (55) with respect to both and ,
+
+and then apply (61). First note that for
+
+,
+
+then
+
+is even. Therefore
+
+On the other hand, for
+
+.
+
+, then
+
+is
+
+odd, and hence After applying (61) twice for
+results in
+
+. even and odd, the splitting
+,
+
+where:
+
+;
+
+;
+
+;
+
+; and
+
+;
+
+;
+
+. Substituting
+
+back for
+
+and applying (54) on
+
+plifying terms,
+
+reduces to
+
+Solving the recurrence similar to Lemma 8 with
+
+(31) follows.
+
+, and sim. ,
+
+PROOF OF LEMMA 12
+
+For
+
+, we have
+
+. For
+
+, we split
+
+and apply (54)
+
+to obtain
+
+. Next, for
+
+, we split
+
+and apply (54) to
+
+and
+
+. Similar to earlier proofs, it can be shown that
+
+satisfies the recursion
+
+. Let denote the position of the
+
+least significant ‘1’ in . Then
+
+(57)
+
+Substituting back in the recursion we obtain
+
+. Finally, when
+
+, a similar derivation results in the re-
+
+cursion
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3097
+
+PROOF OF LEMMA 13
+
+The proof is lengthy. Due to lack of space, we outline the
+
+proof only. Assume are both even. Other cases are similar.
+
+We split (34) similar to earlier proofs, apply (54) to
+
+and
+
+, and then adjust the missing terms for
+
+and
+
+. Next, apply Lemma (23) twice, multiply out terms,
+
+and then use property (21).
+
+, where
+
+PROOF OF LEMMA 14
+
+The proof is similar to Lemma 13. The following identity is
+
+also applied:
+
+since both
+
+give 1 when omitted.
+
+. Due to lack of space, details are
+
+PROOF OF LEMMA 17
+
+Consider for we have
+
+. When is even, . When is odd,
+
+. Simplifying both ex-
+
+pressions, (38) follows. Similarly for
+
+, when is
+
+even, we have
+
+. When is
+
+odd,
+
+(58)
+
+and expanding The condition the constant
+
+. Equation (58) can be further simplified by in terms of floor functions, resulting in (42).
+slightly simplifies the expression for but does not make the result less general.
+
+PROOF OF COROLLARY 6
+
+after change of variables. The th term of the 2nd sum is 0
+
+since
+
+. Adding and subtracting the 0th term,
+
+(since
+
+), the result follows.
+
+PROOF OF THEOREM 6
+
+. Simplifying both expressions and using (17), (39) follows.
+
+PROOF OF LEMMA 19
+
+The first equality follows since the floor functions are 1
+
+when
+
+and 0 otherwise. Assume is even and con-
+
+sider the binary representation of . Patterns that lead to ex-
+
+cedances are
+
+,
+
+,
+
+, where in and , the middle patterns are also
+
+excedances. For example,
+
+and
+
+are excedances. The sum of all integers with binary pattern
+
+is
+
+, with pattern
+
+is
+
+, and with pattern is
+
+, where
+
+is the ex-
+
+cedance number in Lemma (18) for . Collecting terms, we
+
+get the recursion
+
+for
+
+, with
+
+. Similarly, when is odd we obtain
+
+for
+
+,
+
+with
+
+. Solving both recursions, (40) follows.
+
+for
+
+. Writing the summand terms using , multi-
+
+plying out terms, and using
+
+in (32), the above sum re-
+
+duces to
+
+. Let
+
+be the position of the least-significant
+
+‘1’ in . Substituting
+
+similar
+
+to (57), (50) follows.
+
+II. PROOF OF THEOREM 7
+
+We first derive bounds on
+
+in (29). Table II lists
+
+the first few terms of the minimum
+
+and maximum
+
+values
+
+of
+
+empirically. It is easy to show
+
+by induction that
+
+and
+
+satisfy the recursions
+
+and
+
+for
+
+with initial
+
+conditions
+
+and
+
+, where and
+
+represent cases when is even/odd. Solving the recursions, we
+
+obtain the bound:
+
+PROOF OF THEOREM 2 First write (3) as
+, then replace with the sum and using (20), (21) we obtain
+
+(59)
+
+. Expanding Let
+
+be the minimum integer added to in Algo-
+
+rithm 3 at iteration . Then at iteration
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+3098
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 61, NO. 12, JUNE 15, 2013
+
+TABLE II MINIMUM AND MAXIMUM VALUES OF
+
+from (2), (43). Substituting the maximum and minimum values
+
+from (59) in this equation, and using the maximum and min-
+
+imum values of
+
+in (44), we obtain
+
+(60)
+
+where
+
+and
+
+. To determine the convergence rate, we study the convergence of the bounds in
+
+(60). The solution of the lower-bound recursion
+
+is the sum of a geometric series which
+
+converges to
+
+at
+
+a rate
+
+. Similar results
+
+hold for the upper bound recursion and with subscripts
+
+replaced by . Hence converges at a rate
+
+.
+
+Lemma 23: Let be even and
+
+. Then for
+
+, we have
+
+odd; even.
+
+(61)
+
+Proof: First write
+
+. Case odd: Then
+
+and
+
+(even). If
+
+or
+
+, so
+
+. Otherwise if
+
+then
+
+. Therefore,
+
+Case 2 even: Then
+
+. If
+
+or
+
+then
+
+. Otherwise, if
+
+and
+
+or
+
+, then
+
+, so
+
+fore,
+
+.
+
+(odd) , then
+,
+. , , . There-
+
+REFERENCES
+[1] J. Ramsey, “Realization of optimum interleavers,” IEEE Trans. Inf. Theory, vol. 16, no. 3, pp. 338–345, May 1970.
+[2] G. D. Forney, Jr., “Burst-correcting codes for the classic bursty channel,” IEEE Trans. Commun. Technol., vol. 19, no. 5, pp. 772–781, Oct. 1971.
+[3] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo codes,” in Proc. IEEE Conf. Commun. (ICC), Geneva, Switzerland, May 1993, vol. 2, pp. 1064–1070.
+
+[4] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, pp. 533–547, Sep. 1981.
+[5] R. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[6] E. Zehavi, “8-PSK trellis codes for a Rayleigh channel,” IEEE Trans. Commun., vol. 40, no. 5, pp. 873–884, May 1992.
+[7] J. Bingham, “Multicarrier modulation for data transmission: An idea whose time has come,” IEEE Commun. Mag., vol. 28, no. 5, pp. 5–14, May 1990.
+[8] A. Parsons, “The symmetric group in data permutation, with applications to high-bandwidth pipelined FFT architectures,” IEEE Signal Process. Lett., vol. 16, no. 6, pp. 477–480, Jun. 2009.
+[9] A. Skodras and A. Constantinides, “Efficient input-reordering algorithms for fast DCT,” IEE Electron. Lett., vol. 27, no. 21, pp. 1973–1975, Oct. 1991.
+[10] D. Evans, “An improved digit-reversal permutation algorithm for the fast Fourier and Hartley transforms,” IEEE Trans. Acoust., Speech, Signal Process., vol. 35, no. 8, pp. 1120–1125, Aug. 1987.
+[11] J. Cooley and J. Tukey, “An algorithm for the machine calculation of complex Fourier series,” Math. Comput., vol. 19, no. 90, pp. 297–301, 1965.
+[12] C. Burrus, “Unscrambling for fast DFT algorithms,” IEEE Trans. Acoust., Speech, Signal Process., vol. 36, no. 7, pp. 1086–1087, Jul. 1988.
+[13] K. Kim, “Shuffle memory system,” in Proc. 13th IEEE Int. Parallel Process. Symp./10th Symp. Parallel Distrib. Process. (IPPS/SPDP), San Juan, Puerto Rico, Apr. 12–16, 1999, pp. 268–272.
+[14] M. Portnoff, “An efficient parallel-processing method for transposing large matrices in place,” IEEE Trans. Image Process., vol. 8, no. 9, pp. 1265–1275, Sep. 1999.
+[15] I. Verbauwhede et al., “In-place memory management of algebraic algorithms on application specific ICs,” J. VLSI Signal Process., vol. 3, pp. 193–200, 1991.
+[16] G. Chang, F. Hwang, and L.-D. Tong, “Characterizing bit permutation networks,” Networks, vol. 33, no. 4, pp. 261–267, 1999.
+[17] R. Lee et al., “On permutation operations in cipher design,” in Proc. IEEE Conf. Inf. Technol., Coding Comput. (ITCC), Los Alamitos, CA, USA, 2004, vol. 2, pp. 569–577.
+[18] R. Garello, G. Montorsi, S. Benedetto, and G. Cancellieri, “Interleaver properties and their applications to the trellis complexity analysis of turbo codes,” IEEE Trans. Commun., vol. 49, no. 5, pp. 793–807, May 2001.
+[19] Evolved Universal Terrestrial Radio Access (E-UTRA): Multiplexing and Channel Coding, 3GPP TS 36.212, 3rd Generation Partnership Project (3GPP), Sep. 2008.
+[20] IEEE Standard For Local And Metropolitan Area Networks—Part 20: Air Interface for Mobile Broadband Wireless Access Systems Supporting Vehicular Mobility, IEEE Standard 802.20, 2008.
+[21] IEEE Standard for Local and Metropolitan Area Networks—Part 16: Air Interface For Broadband Wireless Access Systems, IEEE Standard 802.16, 2009.
+[22] J. Sun and O. Takeshita, “Interleavers for turbo codes using permutation polynomials over integer rings,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 101–119, Jan. 2005.
+[23] S. Crozier and P. Guinand, “High-performance low-memory interleaver banks for turbo-codes,” in Proc. IEEE Veh. Tech. Conf. (VTC), Newark, NJ, USA, Oct. 2001, vol. 4, pp. 2394–2398.
+[24] ETSI Std. EN 302 755 v1.2.1, “Frame structure channel coding and modulation for a second generation digital terrestrial television broadcasting system (DVB-T2),” ETSI, 2011.
+[25] D. Knuth, The Art of Computer Programming, 3rd ed. Reading, MA, USA: Addison-Wesley, 1998, vol. 2.
+[26] C. Berrou, Y. Saouter, C. Douillard, S. Kerouedan, and M. Jezequel, “Designing good permutations for turbo codes: Towards a single model,” in Proc. IEEE Conf. Commun. (ICC), Paris, France, Jun. 2004, vol. 1, pp. 341–345.
+[27] A. Nimbalker, Y. Blankenship, B. Classon, and T. K. Blankenship, “ARP and QPP interleavers for LTE turbo coding,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), Las Vegas, NV, USA, Apr. 2008, pp. 1032–1037.
+[28] M. Eroz and A. R. Hammons, Jr., “On the design of prunable interleavers for turbo codes,” in Proc. IEEE Veh. Tech. Conf. (VTC), Houston, Texas, USA, May 1999, vol. 2, pp. 1669–1673.
+[29] M. Ferrari, F. Scalise, and S. Bellini, “Prunable S-random interleavers,” in Proc. IEEE Conf. Commun. (ICC), New York, NY, USA, Apr. 2002, vol. 3, pp. 1711–1715.
+[30] L. Dinoi and S. Benedetto, “Design of fast-prunable S-random interleavers,” IEEE Trans. Wireless Commun., vol. 4, no. 5, pp. 2540–2548, Sep. 2005.
+[31] M. M. Mansour, “Parallel lookahead algorithms for pruned interleavers,” IEEE Trans. Commun., vol. 57, no. 11, pp. 3188–3194, Nov. 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR: PRUNED BIT-REVERSAL PERMUTATIONS
+
+3099
+
+[32] U. Dieter and J. Ahrens, “An exact determination of serial correlations of pseudo-random numbers,” Numerische Math., vol. 17, pp. 101–123, 1971.
+[33] R. Polge, B. Bhagavan, and J. Carswell, “Fast computational algorithms for bit reversal,” IEEE Trans. Comput., vol. C-23, no. 1, pp. 1–9, Jan. 1974.
+[34] J. Rodriguez, “An improved bit-reversal algorithm for the fast Fourier transform,” in Proc. IEEE Conf. Acoust., Speech, Signal Process. (ICASSP), New York, NY, USA, Apr. 1988, vol. 3, pp. 1407–1410.
+[35] A. Elster, “Fast bit-reversal algorithms,” in Proc. IEEE Conf. Acoust., Speech, Signal Process. (ICASSP), Glasgow, Scotland, U.K., May 1989, vol. 2, pp. 1099–1102.
+[36] A. Biswas, “Bit reversal in FFT from matrix viewpoint,” IEEE Trans. Signal Process., vol. 39, no. 6, pp. 1415–1418, Jun. 1991.
+[37] A. Yong, “A better FFT bit-reversal algorithm without tables,” IEEE Trans. Signal Process., vol. 39, no. 10, pp. 2365–2367, Oct. 1991.
+[38] M. Orchard, “Fast bit-reversal algorithms based on index representations in GF(2b),” IEEE Trans. Signal Process., vol. 40, no. 4, pp. 1004–1008, Apr. 1992.
+[39] J. Jeong and W. Williams, “A unified fast recursive algorithm for data shuffling in various orders,” IEEE Trans. Signal Process., vol. 40, no. 5, pp. 1091–1095, May 1992.
+[40] J. Rius and R. De Porrata-Doria, “New FFT bit-reversal algorithm,” IEEE Trans. Signal Process., vol. 43, no. 4, pp. 991–994, Apr. 1995.
+[41] K. Drouiche, “A new efficient computational algorithm for bit reversal mapping,” IEEE Trans. Signal Process., vol. 49, no. 1, pp. 251–254, Jan. 2001.
+[42] J. Prado, “A new fast bit-reversal permutation algorithm based on a symmetry,” IEEE Signal Process. Lett., vol. 11, no. 12, pp. 933–936, Dec. 2004.
+[43] S.-C. Pei and K.-W. Chang, “Efficient bit and digital reversal algorithm using vector calculation,” IEEE Trans. Signal Process., vol. 55, no. 3, pp. 1173–1175, Mar. 2007.
+[44] M. M. Mansour, “A parallel pruned bit-reversal interleaver,” IEEE Trans. VLSI Syst., vol. 17, no. 8, pp. 1147–1151, Aug. 2009.
+[45] R. Clarke, E. Steingrímsson, and J. Zeng, “New Euler-Mahonian permutation statistics,” Adv. Appl. Math., vol. 18, pp. 237–270, 1997.
+[46] P. MacMahon, Combinatory Analysis. Cambridge, U.K.: Cambridge Univ. Press, 1915, vol. 1–2, (Reprint. by Chelsea, New York, 1955).
+[47] P. MacMahon, “The indices of permutations and the derivation therefrom of functions of a single variable associated with the permutations of any assemblage of objects,” Amer. J. Math., vol. 35, no. 3, pp. 281–322, 1913.
+[48] D. Divsalar and F. Pollara, “Multiple turbo codes,” in Proc. IEEE Mil. Commun. Conf. (MILCOM), San Diego, CA, USA, Nov. 1995, vol. 1, pp. 279–285.
+[49] IEEE Standard for Local and Metropolitan Area Networks—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications: Enhancements for Higher Throughput, IEEE Standard 802.11n, 2009.
+[50] S. Holm, “FFT pruning applied to time domain interpolation and peak localization,” IEEE Trans. Acoust., Speech, Signal Process., vol. 35, no. 12, pp. 1776–1778, Dec. 1987.
+[51] S. He and M. Torkelson, “Computing partial DFT for comb spectrum evaluation,” IEEE Signal Process. Lett., vol. 3, no. 6, pp. 173–175, Jun. 1996.
+[52] T. Sreenivas and P. Rao, “High-resolution narrow-band spectra by FFT pruning,” IEEE Trans. Acoust., Speech, Signal Process., vol. 28, no. 2, pp. 254–257, Apr. 1980.
+[53] Z. Hu and H. Wan, “A novel generic fast Fourier transform pruning technique and complexity analysis,” IEEE Trans. Signal Process., vol. 53, no. 1, pp. 274–282, Jan. 2005.
+[54] J. Markel, “FFT pruning,” IEEE Trans. Audio Electroacoust., vol. 19, no. 4, pp. 305–311, Dec. 1971.
+
+[55] T. Sreenivas and P. Rao, “FFT algorithm for both input and output pruning,” IEEE Trans. Acoust., Speech, Signal Process., vol. 27, no. 3, pp. 291–292, Jun. 1979.
+[56] H. V. Sorensen and C. S. Burrus, “Efficient computation of the DFT with only a subset of input or output points,” IEEE Trans. Signal Process., vol. 41, no. 3, pp. 1184–1200, Mar. 1993.
+[57] L. Wang, X. Zhou, G. E. Sobelman, and R. Liu, “Generic mixed-radix FFT pruning,” IEEE Signal Process. Lett., vol. 19, no. 3, pp. 167–170, Mar. 2012.
+[58] A. Nimbalker, T. K. Blankenship, B. Classon, T. E. Fuja, and D. J. Costello, Jr., “Contention-free interleavers for high-throughput turbo decoding,” IEEE Trans. Commun., vol. 56, no. 8, pp. 1258–1267, Aug. 2008.
+[59] O. Takeshita, “On maximum contention-free interleavers and permutation polynomials over integer rings,” IEEE Trans. Inf. Theory, vol. 52, no. 3, pp. 1249–1253, Mar. 2006.
+[60] S. Dolinar and D. Divsalar, “Weight distributions for turbo codes using random and nonrandom permutations,” JPL TDA Progress Rep. 42-122, Aug. 1995.
+[61] O.Y. Takeshita, “Permutation polynomial interleavers: An algebraicgeometric perspective,” IEEE Trans. Inf. Theory, vol. 53, no. 6, pp. 2116–2132, Jun. 2007.
+Mohammad M. Mansour (SM’08) received the B.E. degree with distinction and the M.E. degree, both in computer and communications engineering, from the American University of Beirut (AUB), Lebanon, in 1996 and 1998, respectively, and the M.S. degree in mathematics and the Ph.D. degree in electrical engineering from the University of Illinois at Urbana-Champaign (UIUC), Urbana, IL, USA, in 2002 and 2003, respectively.
+In 1997, he was a Research Assistant at the Electrical and Computer Engineering (ECE) Department at AUB, and in 1996, he was a Teaching Assistant at the same department. From 1998 to 2003, he was a Research Assistant at the Coordinated Science Laboratory (CSL) at UIUC. During summer 2000, he worked at National Semiconductor Corporation, San Francisco, CA, USA, with the wireless research group. He joined the faculty at AUB in October 2003. He is currently an Associate Professor of electrical and computer engineering with the ECE Department at AUB. From December 2006 to August 2008, he was on research leave with QUALCOMM Flarion Technologies, Bridgewater, NJ, USA, where he worked on modem design and implementation for 3GPP-LTE, 3GPP-UMB, and peer-to-peer wireless networking PHY layer standards. His research interests are VLSI design and implementation for embedded signal processing and wireless communications systems, coding theory and its applications, digital signal processing systems, and general purpose computing systems. Prof. Mansour is a member of the Design and Implementation of Signal Processing Systems Technical Committee of the IEEE Signal Processing Society, and a Senior Member of the IEEE. He has been serving as an Associate Editor (AE) for IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS II since April 2008, AE for the IEEE TRANSACTIONS ON VLSI SYSTEMS since January 2011, and AE for the IEEE SIGNAL PROCESSING LETTERS since January 2012. He served as the Technical Co-Chair of the IEEE Workshop on Signal Processing Systems (SiPS 2011), and as a member of the Technical Program Committee of various international conferences. He is the recipient of the PHI Kappa PHI Honor Society Award twice in 2000 and 2001, and the recipient of the Hewlett Foundation Fellowship Award in March 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:11:35 UTC from IEEE Xplore. Restrictions apply.
+
+

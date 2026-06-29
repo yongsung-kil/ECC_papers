@@ -1,0 +1,541 @@
+1
+Column-Weighted Probabilistic GDBF Decoder for Irregular LDPC Codes
+Changfu He, Keyue Deng, Suwen Song, and Zhongfeng Wang School of Electronic Science and Engineering, Nanjing University, Nanjing, China Email: 191180045@smail.nju.edu.cn, kydeng@smail.nju.edu.cn, suwsong@sina.com, zfwang@nju.edu.cn
+
+2023 IEEE Computer Society Annual Symposium on VLSI (ISVLSI) | 979-8-3503-2769-4/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISVLSI59464.2023.10238556
+
+Abstract—Existing bit-flipping algorithms, when used for irregular low-density parity-check (LDPC) codes, often suffer from performance degradation due to the imbalance caused by the irregular codeword structure. To alleviate this problem, this paper presents a column-weighted probabilistic gradient-descent bit-flipping (CW-PGDBF) decoder for irregular LDPC codes. Different weighting factors are allocated to variable nodes with different column weights to solve the imbalance. Furthermore, a modified probabilistic flipping rule is employed to reduce the hardware complexity while maintaining the error-correction performance. Simulation results demonstrate that the proposed algorithm can achieve significantly improved performance compared with other BF-based algorithms for irregular codes. Additionally, a hardware architecture for the CW-PGDBF decoder is proposed with acceptable hardware overhead compared to the original PGDBF decoder.
+Index Terms—Low-density parity-check codes, irregular codes, bit-flipping, column-wise weighting factor, hardware implementation.
+I. INTRODUCTION
+Low-density parity-check codes have become increasingly popular since the introduction by Gallager in 1962 [1]. Featuring near Shannon limit performance and low hardware overhead under iterative decoding, LDPC codes have been widely used in the field of digital communication and storage applications, such as IEEE802.16e, IEEE802.11n, and DVB-S2 standards. The decoding algorithms can generally be divided into two categories, soft-decision and hard-decision ones. Soft-decision decoding shows great decoding performance, including Belief Propagation (BP) algorithm [1] and its simplified algorithms such as Min-Sum (MS) algorithm [2] and Offset MS (OMS) algorithm [3]. Nevertheless, softdecision decoding algorithms are far more resource-consuming than hard-decision decoding algorithms, such as Bit-Flipping (BF) algorithms [4]–[11], which only utilize binary messages instead of floating-point/quantized messages.
+The BF algorithms lead to less hardware overhead but obvious performance degradation. To mitigate this problem, the gradient descent BF (GDBF) algorithm [7] was proposed by adding an extra term to involve the similarity between the received bit and the current decoded bit into the inversion function. In [8], the probabilistic GDBF (PGDBF) decoder was proposed, in which the bits with the satisfactory inversion value are flipped with a probability, playing a certain role in helping the decoding escape from the trapping sets of LDPC codes. To decrease the critical path while keeping
+
+the performance, the probabilistic parallel BF (PPBF) algorithm [9] was proposed by flipping each bit with different probabilities depending on their reliabilities. Recently, Cui et. al. have proposed the Tabu-list random-penalty GDBF (TRGDBF) algorithm [10], which adds a random penalty to help step out of the trapping sets and a tabu-list to avoid flipping the bits repeatedly, greatly improving the error-correction performance. Furthermore, to shorten the critical path induced by the maximum-finding operation, an information storage BF (ISBF) algorithm [11] was proposed, storing the information of the previous iteration and using them to perform maximumfinding operations in parallel with other operations.
+However, the algorithms mentioned above are all designed for regular codes, instead of irregular codes. The irregular codes were proposed by Luby et. al. and shown the capability of yielding much better performance than regular codes [12], [13]. If the algorithms dedicated to regular codes are directly applied to irregular codes without any changes, there will be a huge performance loss. In [14], the adaptive GDBF diversity decoder (AD-GDBF) was proposed, combining the GDBF-based decoders with different parameters into a unified diversity decoder by using genetic algorithm optimization and outperforming all existing probabilistic bitflipping decoders. Although the AD-GDBF algorithm can be applied to irregular codes, its complex framework demands significant computational resources and time for training and parameter optimization. To design a more lightweight harddecision decoding algorithm for irregular codes, a new GDBF decoder is proposed, which combines column-wise weighting factors and a modified probabilistic flipping rule with the GDBF decoder. The main characteristic of the CW-PGDBF decoder is that a column-degree-based weighting factor is introduced when calculating the inversion values, to make their maximum magnitudes consistent for different codeword bits, so that the regular decoding algorithms can be applied. A modified probabilistic flipping rule is also employed to reduce the hardware overhead while maintaining the errorcorrection performance. Meanwhile, a well-optimized architecture is implemented. The experiment results show that compared with other hard-decision decoders, our proposed decoder performs better in error-correction performance with acceptable hardware overhead.
+The rest of this paper is organized as follows. Section II introduces the notations and the existing PGDBF algorithm. In Section III, we detailedly describe the proposed CW-PGDBF algorithm. Section IV displays the simulation results for our
+
+979-8-3503-2769-4/23/$31.00 ©2023 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+2
+
+algorithm, including the comparison with other algorithms and the selection of parameters. In Section V, the hardware architecture and synthesis results are presented. Finally, we draw a conclusion in Section VI.
+
+II. PRELIMINARIES
+A. Notations
+The M ×N (N > M ) parity-check matrix is denoted as H, where M rows correspond to M parity-check equations and N columns correspond to N channel bits. A codeword is a binary vector vi ∈ {0, 1}, i = 0, 1, · · · , N −1, that satisfies all paritycheck equation, i.e. HvT = 0. Suppose that the decoder is specially designed for Binary Symmetric Channel (BSC), and the output of the channel is yi ∈ {0, 1}, i = 0, 1, · · · , N − 1. A common representation of LDPC codes is the Tanner graph, which is composed of M check nodes (CNs) and N variable nodes (VNs). N (i) is the set of indices of VNs that is connected to the i-th CN, and M(j) is the set of indices of CNs that is connected to the j-th VN. For example, N (i) = {n | hi,n = 1, n ∈ [1, N ]}, and M(j) = {m | hm,j = 1, m ∈ [1, M ]}. |N (i)| denotes the degree of the i-th row and |M(j)| denotes the degree of the j-th column. For clarity, we also use dv to represent the degree of each column in this paper.
+
+B. The PGDBF Algorithm
+
+A BF decoder updates the variable nodes iteratively. Assume
+that the n-th bit in the t-th iteration is vn(t), and the m-th paritycheck value in the t-th iteration is s(mt), which is calculated by:
+
+s(mt) =
+
+vn(t),
+
+(1)
+
+n∈N (i)
+
+where ⊕ means exclusive-OR (XOR) operation on all of the codeword bits. If s(t) satisfies the parity checks, the decoding
+will declare success. Otherwise, the next iteration of decoding will be carried out. The decoding will be terminated when t reaches the pre-defined maximum number of iterations Tmax, and at this time if the parity checks are still not satisfied by s(t), a decoding failure will be declared.
+At the t-th iteration, each VN first calculates the inversion value Ev(ti) using Eq. (2):
+
+Sv(ti) =
+
+s(mt),
+
+m∈M(i)
+
+(2a)
+
+Ev(ti) = vi(t) ⊕ yi + Sv(ti),
+
+(2b)
+
+where the first term in Ev(ti) means the correlation between the updated codeword and the received word and the latter
+
+one is the sum of parity-check values which are connected
+
+to the corresponding VN, regarded as a penalty term that forces v to be a correct codeword. A large Ev(ti) could mean
+that the correlation is weak, or there exist many unsatisfied parity-check equations, so the bits with the maximum Ev(ti), i.e. Em(t)ax = max(Ev(ti)), should be flipped to correct the code.
+In PGDBF, instead of flipping all the bits with inversion value Em(t)ax, only a random fraction of them are flipped,
+depending on the probability p, which is selected before
+
+decoding. After that, the updated values of all VNs are sent to
+
+the next iteration until they satisfy the termination conditions mentioned above.
+However, compared with regular LDPC codes, the structure of irregular LDPC codes is more complex. For variable nodes with different degrees in irregular LDPC codes, the PGDBF algorithm treats them equally, leading to unfair inversion values. Moreover, the decoding of irregular codes requires far more iterations to achieve better decoding performance. Therefore, a huge performance loss will be caused if continuing to use the PGDBF algorithm or other variants to decode irregular LDPC codes.
+III. PROPOSED CW-PGDBF ALGORITHM
+To minimize the performance loss as much as possible, the CW-PGDBF algorithm is proposed for the decoding of irregular LDPC codes in this section. We focus our attention on the different parts of the proposed algorithm from the PGDBF algorithm, including the newly introduced columnwise weighting factor and the modified probabilistic flipping rule.
+
+A. Column-Wise Weighting Factor
+
+Suppose that we are using an irregular H containing
+only two column degrees, i.e. 4986.93xb.329 [15], which has dv1 = 3 in the first 9141 columns and dv2 = 9 in the other 831 columns. If we use a regular decoding algorithm such as PGDBF, the Em(t)ax of dv1 part can only reach a maximum of 4, and the dv2 part reach 10. Thus, as long as the Em(t)ax is larger than 4, the dv1 part can never be flipped. In other words, the dv1 part has less chance of being flipped than the dv2 part, which will cause a huge loss in decoding performance.
+Therefore, we consider multiplying the second term of each
+inversion value by a column-wise weighting factor so that
+the new ones are in the same range. For example, through multiplying the dv1 part by w1 and the dv2 part by w2, the range of the dv1 part is 0 ∼ w1 × dv1 and the dv2 part is 0 ∼ w2 × dv2. Accordingly, the weighted inversion values turn into Eq. (3):
+
+Ev(ti) =
+
+vi(t) ⊕ yi + w1 × Sv(ti) , for dv = dv1, vi(t) ⊕ yi + w2 × Sv(ti) , for dv = dv2.
+
+(3a) (3b)
+
+If we select w1 and w2 appropriately to achieve the equation w1 × dv1 = w2 × dv2, the weighted variable nodes will have a fairer chance to be flipped. For our chosen H 4986.93xb.329,
+
+we have tried different combinations of w1 and w2, and finally, we select w1 = 3 and w2 = 1 to be the weighting factors. For other Hs consisting of two degrees, w1 and w2 can be constructed in the same way.
+
+B. Modified Probabilistic Flipping Rule
+Obviously, after column-weighting, the bit-width of each inversion value may increase, which requires additional hardware overhead when executing the maximum-finding operation. To avoid this problem, we improve our algorithm by finding the maximum value before column-weighting. Moreover, instead of finding the maximum value of Ev(ti), we just
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+3
+
+find the maximum value of its second term for dv1 and dv2 part respectively, as in Eqs. (4-5). This can also save hardware resources to some extent, which will be mentioned in Section V. Then we can find the entire maximum by column-weighting the two maximum values and making comparisons between them, as in Eq. (6).
+
+Sm(t)ax1 = max{Sv(ti)}, i ∈ {i | degreei = dv1}, (4)
+
+Sm(t)ax2 = max{Sv(tj)}, j ∈ {j | degreej = dv2}, (5)
+
+Em(t)ax = max{w1Sm(t)ax1, w2Sm(t)ax2}.
+
+(6)
+
+It should be noted that the Em(t)ax we just attained may
+not be the exact maximum inversion value, on account that we actually ignore the term vi(t) ⊕ yi when finding the maximum values, so the exact maximum inversion value may be equal to or one more than Em(t)ax. Given this, we assign two
+probabilities to control the flipping. • If the inversion value is equal to Em(t)ax, then flip the corresponding bit with probability p1. • If the inversion value is one more than Em(t)ax, then flip the corresponding bit with probability p2. • If the inversion value is smaller than Em(t)ax, then no
+flipping operation is needed.
+
+To get the optimal p1 and p2, we can try different combinations of (p1, p2) and find the best one.
+
+C. Other Irregular Codes
+Up till now, we have considered the H with only two degrees. However, there exist many irregular codes with more than two degrees, such as PEGirReg504x1008 [15], which has degrees of 2, 3, 4, 5, 7, 14, 15. In this case, the weighting factor has to be the degrees’ least common multiple (LCM) divided by each degree. Take the PEGirReg504x1008 code for example, the degrees 2, 3, 4, 5, 7, 14, 15 have LCM = 420, so they are relatively multiplied by 210, 140, 105, 84, 60, 30, 24. The weighting factors are so large that the hardware overhead will be unimaginably huge.
+We solve this problem by dividing the degrees into two groups and treating each degree in the same group equally. For example, we can divide the degrees 2, 3, 4, 5 into the first group and 7, 14, 15 into the other one, accordingly the weighting factors can be 3 and 1 to make the range as close as possible. Similarly, we can also divide the degrees 2, 3 into the first group and 4, 5, 7, 14, 15 into the other one, and the weighting factors are 5 and 1. We finally choose the former one, which shows better decoding performance. For other irregular codes containing more than two degrees, the same idea can also be adopted.
+Finally, the proposed CW-PGDBF algorithm is detailedly described in Alg.1.
+
+IV. SIMULATION RESULTS
+This section presents the decoding performance of the CWPGDBF algorithm and compares it with PGDBF, TRGDBF, and ISBF. The considered irregular LDPC codes are the
+
+Algorithm 1 The CW-PGDBF Algorithm.
+
+Input
+
+y = (y0, y1, · · · , yN−1)
+
+Parameter (w1, w2), (p1, p2), group1, group2
+
+Initialize vn(0) ← yn, n = 0, · · · , N − 1
+
+for t = 0 to Tmax − 1 do
+
+for i = 0 to M − 1 do si = k∈N (i) vk(t)
+end for
+
+if s = 0 then break Generate Rn(t) ∼ B(p1), n = 1, · · · , N Generate Q(nt) ∼ B(p2), n = 1, · · · , N
+
+for i ∈ {i | degreei ∈ group1} do Sv(ti) = m∈M(i) sm (t) Ev(ti) = vi(t) ⊕ yi + w1Sv(ti)
+end for
+for j ∈ {j | degreej ∈ group2} do Sv(tj) = m∈M(j) sm (t) Ev(tj) = vj(t) ⊕ yj + w2Sv(tj)
+end for
+
+Sm(t)ax1 = max{Sv(ti)}, i ∈ {i | degreei ∈ group1} Sm(t)ax2 = max{Sv(tj)}, j ∈ {j | degreej ∈ group2} Em(t)ax = max{w1Sm(t)ax1, w2Sm(t)ax2}
+
+for i = 0 to N − 1 do if Ev(ti) = Em(t)ax then vi(t+1) = vi(t) ⊕ Ri(t) else if Ev(ti) = Em(t)ax + 1 then vi(t+1) = vi(t) ⊕ Q(it) end if
+end for
+end for output v(k)
+
+4986.93xb.329 and PEGirReg504x1008. The Tmax is set to 300, and the optimal p1 and p2 values are found through numerical search. For the 4986.93xb.329 code, we vary both p1 and p2 from 0.1 to 1.0 with a step size of 0.1, and test the error-correction performance under α = 0.035. We mark the total of 100 cases of (p1, p2) with an index i (0 ≤ i ≤ 99), plotted in Fig. 1.
+For the code 4986.93xb.329, the optimal values of the parameters are selected to be p1 = 0.50 and p2 = 1.00. It is worth noting that p2 = 1.00 is also optimal for other codewords, which is not surprising since the maximum inversion bits are expected to be flipped. It eliminates the need for additional hardware resources such as a random generator module. The error-correction performance of the proposed algorithm on the code 4986.93xb.329, using the chosen (p1, p2), is compared with that of the PGDBF, TRGDBF, and ISBF algorithms in Fig. 2. As α decreases, both the TRGDBF and ISBF algorithms experience an error floor phenomenon. In contrast, the CW-PGDBF algorithm shows better errorcorrection performance than other algorithms and does not
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+4
+
+100
+
+100
+
+PGDBF [8]
+
+TRGDBF [10]
+
+10-1
+
+ISBF [11]
+
+CW-PGDBF
+
+10-1
+
+10-2
+
+10-2
+
+10-3
+
+Frame Error Rate (FER)
+
+Frame Error Rate (FER)
+
+10-4 10-3
+10-5 10-4
+10-6
+
+10-5 0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90 100
+
+index
+
+Fig. 1. Numerical search of (p1, p2) for 4986.93xb.329 under α = 0.035.
+
+10-7
+
+10-4
+
+10-3
+
+10-2
+
+10-1
+
+Crossover Probability
+
+Fig. 3. FER of CW-PGDBF over BSC channel using PEGirReg504x1008.
+
+100
+
+PGDBF [8]
+
+TRGDBF [10]
+
+ISBF [11]
+
+10-1
+
+CW-PGDBF
+
+Frame Error Rate (FER)
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+10-3
+
+10-2
+
+10-1
+
+Crossover Probability
+
+Fig. 2. FER of CW-PGDBF over BSC channel using 4986.93xb.329.
+
+experience an error floor, which increases the robustness of the decoding process.
+When decoding irregular LDPC codes with more than two degrees, we select PEGirReg504x1008 as an example. The degrees in this code are 2, 3, 4, 5, 7, 14, 15, and we divided them into two groups: 2, 3, 4, 5 in one and 7, 14, 15 in the other. The optimal (p1, p2) was selected to be (1.00, 1.00). We then compared the performance of CW-PGDBF with PGDBF, TRGDBF, and ISBF on PEGirReg504x1008, as shown in Fig. 3, and found that CW-PGDBF outperformed the other algorithms. As a result, we can say that the CW-PGDBF algorithm is a good choice when decoding irregular LDPC codes.
+V. HARDWARE DECODER ARCHITECTURE
+A. Top-Level Architecture
+The architecture for our proposed CW-PGDBF decoder is shown in Fig. 4, where y is the received noisy codeword and v(t) is the estimated codeword at the current iteration t. The decoding process proceeds as follows. In the initialization stage, the signal init selects the noisy vector as the initial
+
+estimate v(0). The CNUs then calculate the parity-checksum for each row’s connected column through an XOR operation and send the results to the VNUs. In each VNU, the ECUdv1 and ECUdv2 modules calculate the sum of the parity-check results of the connected rows for the corresponding column, which is denoted as S(t). After that is the column-weighting operation, where each Si(t) is multiplied by its weighting factor and added to the term vi(t) ⊕ yi, as shown in Eq.(3). The maximum-finding operation is in parallel with the columnweighting operation. For each degree, the Si(t) values are sent to the corresponding MF (maximum-finding) module to find the temporary maximum value, which is then sent to the MF all module to find the maximum value Em(t)ax, as described in Eq. (6). The last step in each iteration is to compare each bit of Ev(ti) with Em(t)ax’s. If Ev(ti) = Em(t)ax, then vi(t) will be flipped with probability p1 and if Ev(ti) = Em(t)ax + 1, then vi(t) will be flipped with probability p2. To generate random bits with a distribution of B(p1) and B(p2), we implement the random generator (RG) module using a cyclical shifting method during initialization. As p2 is selected to be 1.00 for 4986.93xb.329 and PEGirReg504x1008, we can directly flip the corresponding bits instead of using an RG module, which reduces the hardware overhead. Finally, the updated v(t) is sent to the next iteration until Tmax iterations are spent or all of the checksums from CNUs are equal to zero.
+The ECU (Energy-Value Calculation Unit) modules utilize the Leading Zero Counting Topology, described in [16], to add inputs and convert the result into a modified one-hot code. For instance, an ECU3 has three inputs: s0, s1 and s2. The resulting sum, S, is represented as S3, S2, S1, where Sj = 1 if j is less than or equal to the sum of s0, s1 and s2. To multiply S by a factor of n, we expand each bit of S by n times, resulting in {n{S3}, n{S2}, n{S1}}. For addition operations, we need to calculate the energy value E by adding vi(t) ⊕yi. If vi(t) ⊕ yi is equal to 1, E is {S, 1} and otherwise,E is {0, S}.
+B. Synthesis Results
+In this section, we present the synthesis results for the CWPGDBF decoder, which has been implemented using register
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+5
+
+I2,1 I1,1 y1 D Q
+>clk
+I2,2 I1,2 RG y2 D Q
+>clk
+
+0 DQ
+1 >clk
+0 DQ
+1 >clk
+
+…
+… …
+
+I2,N I1,N yN D Q
+>clk
+
+0 DQ
+1 >clk
+
+Fig. 4. The top-level architecture for CW-PGDBF decoder.
+
+…
+
+1
+
+...
+
+CNU1
+
+2 CNU2
+
+...
+
+……
+
+Connections Network1
+
+...
+
+CNUM-1 CNUM N
+
+...
+
+…
+
+Connections Network2
+
+…
+
+ECU
+
+*w1
+
+1
+
+dv1 Svi
+
+…
+
+MF Smax1
+
+…
+
+2
+
+ECU Svi dv1
+
+*w1
+
+…
+
+dv1
+
+MF_all
+
+…
+
+ECU
+dv2 Svi MF
+
+*w2
+Smax2
+
+…
+
+…
+
+M
+
+ECU Svi dv2
+
+*w2
+
+…
+
+dv2
+
+Early Stop
+
+…
+
+Evi
+
+I1,1
+
+IUdv1 I2,1
+
+…
+
+Evi Emax
+
+I1,2
+IUdv1 I2,2
+
+Evi
+
+I1,...
+
+IUdv2 I2,...
+
+…
+
+Evi
+
+I2,N
+
+IUdv2 I2,N
+
+transfer level (RTL) design and synthesized under both 90nm and 28nm CMOS technologies with DC compiling tools. Since the algorithm is based on PGDBF, our analysis focuses on comparing the hardware resources and timing of CW-PGDBF with that of PGDBF. We evaluated the performance of the CW-PGDBF decoder on two benchmarks, 4986.93xb.329 and PEGirReg504x1008, and summarize the results in Table I.
+
+throughput. The discrepancy in hardware overhead between CW-PGDBF and PGDBF can be attributed to the difference in the area of the IU and ECU modules in the respective decoders, which were synthesized using the 28nm process, as illustrated in Table II. The table shows the hardware resources consumed by one IU module and one ECU in each of the two decoders, as well as the number of such modules in each decoder.
+
+TABLE I THE SYNTHESIS RESULTS OF CW-PGDBF DECODERS
+
+Technology
+fmax(MHz) Area(mm2)
+tave θ(Gbps) AE(Gbps/mm2)
+
+(a) 4986.93xb.329 CW-PGDBF
+
+28nm 1000 0.411 12.6 791.4 1953
+
+90nm 202 2.45 12.6 159.9 65.3
+
+PGDBF
+
+28nm 1000 0.264 9.1 1096 4151
+
+90nm 233 1.61 9.1 255.3 158.6
+
+Technology
+fmax(MHz) Area(mm2)
+tave θ(Gbps) AE(Gbps/mm2)
+
+(b) PEGirReg504x1008 CW-PGDBF
+
+28nm 1000 0.137 3.2 315 2299
+
+90nm 234 0.460 3.2 73.7 160.2
+
+PGDBF
+
+28nm 1000 0.157 19.1 52.8 336.1
+
+90nm 229 0.564 19.1 12.1 21.4
+
+TABLE II THE HARDWARE AREA OF IUS AND ECUS IN CW-PGDBF AND PGDBF
+UNDER 28NM CMOS TECHNOLOGY
+
+IU 3 IU 9 ECU 3 ECU 9
+
+(a) 4986.93xb.329 CW-PGDBF Number
+
+21.042 29.61 3.402 23.94
+
+9141 831 9141 831
+
+PGDBF
+3.402 10.08 5.922 26.082
+
+Number
+9141 831 9141 831
+
+IU ECU 2 ECU 3 ECU 4 ECU 5 ECU 7 ECU 14 ECU 15
+
+(b) PEGirReg504x1008 CW-PGDBF Number
+
+48.74 1.26 2.65 4.03 7.46 12.85 380.65 688.65
+
+1008 481 283 35 98 9 1 101
+
+PGDBF
+17.05 2.65 4.03 7.43 11.34 17.16 632.39 1157.70
+
+Number
+1008 481 283 35 98 9 1 101
+
+In Table I, the parameter fmax represents the maximum
+
+frequency achievable in the decoding process. The average
+
+number of iterations when α is set to 0.005 is denoted by
+
+tave. The parameters θ and AE are respectively calculated as
+
+θ = fmax×N
+tave
+
+and
+
+AE
+
+=
+
+. fmax ×N
+tave ×Area
+
+As shown in Table I, the CW-PGDBF algorithm
+
+demonstrates an obvious performance improvement of
+
+4986.93xb.329. It is worth noting that it also incurs a no-
+
+ticeable increase in hardware overhead. In contrast, such a
+
+phenomenon is not observed in the case of PEGirReg504x1008
+
+using CW-PGDBF. This design incurs even less hardware
+
+overhead than PGDBF while achieving a substantially better
+
+On the one hand, Table II demonstrates that the IUs in CWPGDBF require significantly more hardware resources than those in PGDBF for the same dv. The IUs in PGDBF make comparisons between two one-hot inputs using OR gates on each bit, but CW-PGDBF needs two comparison operations per block, leading to a total of N more modules being needed and causing a substantial overhead. On the other hand, for the same dv, ECUs in CW-PGDBF require fewer hardware resources than those in PGDBF. As explained earlier, the ECUs add up the inputs and convert the sum into the one-hot format, which leads to an exponential increase as the number of inputs grows. However, in CW-PGDBF, the input number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+6
+
+of one ECU is one less than that in PGDBF, which results in a more significant reduction in hardware overhead compared with the increased hardware overhead of the IU module.
+Table II clearly illustrates the impact of the IU and ECU modules on the hardware overhead of the CW-PGDBF and PGDBF decoders for different codewords. This can explain why the two codewords exhibit completely different results in terms of hardware overhead. For instance, for the codeword 4986.93xb.329, the negative impact of the IU module far outweighs the positive impact of the ECU module, resulting in a significantly higher overall hardware overhead for the CWPGDBF decoder than the PGDBF decoder. Conversely, for the codeword PEGirReg504x1008, the increase in overhead caused by the IU module is smaller than the decrease in overhead caused by the ECU module, leading to a surprising reduction in overall hardware overhead for the CW-PGDBF decoder compared with the PGDBF decoder.
+The above analysis indicates that compared with the PGDBF algorithm, the CW-PGDBF algorithm is more suitable for codewords with short code lengths and high column weights. This is due to the fact that under high column weights, the optimized overhead of the ECU modules may exceed the increased overhead of the IU modules that occurs when the code length is short. In such a scenario, the CW-PGDBF algorithm not only improves decoding performance but also reduces hardware complexity, making it a very promising and competitive algorithm.
+VI. CONCLUSION
+This work introduces a new decoder designed specially for irregular LDPC codes, in which a column-wise weighting factor is used for improved performance and a modified probabilistic flipping rule is applied for reduced complexity. Simulation results show that the proposed CW-PGDBF algorithm can achieve a far better performance compared with almost all existing algorithms for irregular LDPC codes. Besides, a hardware implementation is developed for the CW-PGDBF algorithm. The synthesis results demonstrate the effectiveness of the CW-PGDBF decoder, and future work may investigate improvements and optimizations for the CWPGDBF algorithm.
+ACKNOWLEDGMENT
+This work was supported by the National Key R&D Program of China under Grant 2022YFB4400604. (Corresponding
+
+authors: Suwen Song; Zhongfeng Wang.)
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] J. Chen and M. P. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Transactions on communications, vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[3] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[4] V. V. Zyablov and M. S. Pinsker, “Estimation of the error-correction complexity for Gallager low-density codes,” Problemy Peredachi Informatsii, vol. 11, no. 1, pp. 23–36, Jan. 1975.
+[5] Y. Chen, H. Cui, J. Lin, and Z. Wang, “Fine-grained bit-flipping decoding for LDPC codes,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 67, no. 5, pp. 896–900, May 2020.
+[6] K. Deng, H. Cui, J. Lin, and Z. Wang, “Counter random gradient descent bit-flipping decoder for LDPC codes,” in 2021 IEEE Computer Society Annual Symposium on VLSI. IEEE, Jul. 2021, pp. 55–60.
+[7] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding LDPC codes,” IEEE Transactions on Communications, vol. 58, no. 6, pp. 1610– 1614, Jun. 2010.
+[8] O. A. Rasheed, P. Ivanisˇ, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Communications Letters, vol. 18, no. 9, pp. 1487–1490, Sep. 2014.
+[9] K. Le, F. Ghaffari, L. Kessal, D. Declercq, E. Boutillon, C. Winstead, and B. Vasic´, “A probabilistic parallel bit-flipping decoder for lowdensity parity-check codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 66, no. 1, pp. 403–416, Jan. 2019.
+[10] H. Cui, J. Lin, and Z. Wang, “An improved gradient descent bit-flipping decoder for LDPC codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 66, no. 8, pp. 3188–3200, May 2019.
+[11] H. Cui, J. Lin, and Z. Wang, “Information storage bit-flipping decoder for LDPC codes,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 28, no. 11, pp. 2464–2468, Nov. 2020.
+[12] M. Luby, M. Amin Shokrolloahi, M. Mizenmacher, and D. Spielman, “Improved low-density parity-check codes using irregular graphs and belief propagation,” in Proceedings. 1998 IEEE International Symposium on Information Theory, Aug. 1998.
+[13] M. G. Luby, M. Mitzenmacher, M. A. Shokrollahi, and D. A. Spielman, “Improved low-density parity-check codes using irregular graphs,” IEEE Transactions on information Theory, vol. 47, no. 2, pp. 585–598, Feb. 2001.
+[14] S. Brkic, P. Ivanisˇ, and B. Vasic´, “Adaptive gradient descent bit-flipping diversity decoding,” IEEE Communications Letters, vol. 26, no. 10, pp. 2257–2261, Oct. 2022.
+[15] D. MacKay, “David mackay’s Gallager code resources,” 2008, http:// www.inference.org.uk/mackay/CodesFiles.html.
+[16] B. Yuce, H. F. Ugurdag, S. Go¨ren, and G. Du¨ndar, “Fast and efficient circuit topologies for finding the maximum of n k-bit numbers,” IEEE Transactions on Computers, vol. 63, no. 8, pp. 1868–1881, Aug. 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:56 UTC from IEEE Xplore. Restrictions apply.
+
+

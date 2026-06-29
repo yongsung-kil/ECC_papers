@@ -1,0 +1,456 @@
+Equation Based LDPC Decoder for Intersymbol Interference Channels
+
+Zining Wu and Gregory Burd Marvell Semiconductor, 700 First Ave., Sunnyvale, CA 94089
+{zwu,gburd}@marvell.com
+
+Abstract - The application of LDPC code to intersymbol interference (ISI) channels requires efficient soft decoding methods for ISI channel as well as outer LDPC code. We introduce a fully pipelined turbo equalization architecture that combines soft decoders for channel and LDPC code. This equation based LDPC decoder uses signed sum product (SSP) decoding algorithm, and stores soft information for each equation, in contrast to each edge in conventional LDPC decoders. The memory size of LDPC decoder is greatly reduced, and the delay of LDPC decoder is absorbed by the delay of soft channel detector.
+I INTRODUCTION
+The invention of turbo codes [1] and the re-discovery of low-density parity-check (LDPC) codes [2] lead to increased efforts in utilizing iterative system in various applications. Since plenty of communication channels can be modeled as intersymbol interference (ISI) channels, for example the magnetic recording channel, application of iterative codes to ISI channels is of great interest. Combining iterative codes with ISI channels was first introduced in [3] under the name of “turbo equalization”. The key observation in turbo equalization is that ISI channel can be treated as rate-1 convolutional code, therefore it can be easily decoded by soft-input soft-output (SISO) algorithms and iterated with an outer convolutional or LDPC decoder.
+Turbo equalization is well studied and understood (see [4] and references therein). However, hardware implementation of turbo equalizer is a challenging task. Soft decoders for ISI channels, such as BCJR [7], soft-output Viterbi algorithm (SOVA) [8], and decision-aided equalization (DAE) [9], are inherently sequential decoders, while LDPC decoder is preferably implemented in a parallel or semiparallel architecture. Consequently, large memory is required to store intermediate soft information in order to concatenate LDPC decoder with soft channel decoder, making memory access the bottleneck in designing high speed turbo equalizers.
+
+In this paper, we propose a new equation based LDPC decoder that is well suited for concatenation with ISI channels. In contrast to the simplifications in [5] and [6], where memory size is reduced by breaking down each iteration to several “sub-iterations” and storing soft information only for the latest sub-iteration, our method maintains the integrity of each iteration and produces a lower error floor. We consider a typical system as in Fig. 1, where the ISI channel is treated as a rate-1 inner code and its decoder is iterated with the LDPC decoder. The proposed LDPC decoder stores soft information per equation, instead of per edge in the factor graph. This memory arrangement greatly reduces size and access speed requirements. Moreover, equation based LDPC decoder operates in a serial fashion and is fully integrated with soft decoder for ISI channel. Therefore, the LDPC decoder does not incur additional delay.
+The rest of the paper is organized as follows. Section II reviews LDPC decoding algorithms. Section III discusses several candidate soft decoders for ISI channels. Section IV introduces the equation based iterative decoder for ISI channels. Section V provides concluding remarks.
+II LDPC DECODING ALGORITHMS
+LDPC codes can be easily decoded using sum product algorithm, which is summarized below for completeness (Fig. 2).
+Suppose LDPC code is represented by a bi-partite graph. Each information bit corresponds to a bit node, and each check equation corresponds to a check node in the graph. Bit nodes are indexed by l, and check nodes are indexed by m. In the sum product decoding algorithm, there are four types of soft information circulating in the decoder:
+1. llrPl : soft information from the channel a posteriori probability (APP) decoder, one for each bit. Channel APP decoders can be BCJR, SOVA or DAE [7]-[9].
+2. llrQlm : soft information from bit node l to equation node m, one for each edge.
+3. llrRml : extrinsic information from equation node m to bit node l, one for each edge.
+4. llrAPPl : overall soft information after each iteration, one for each bit.
+
+0-7803-8874-7/05/$20.00 ©2005 IEEE
+
+V - 757
+
+ICASSP 2005
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:53:51 UTC from IEEE Xplore. Restrictions apply.
+
+Each iteration of LDPC decoding consists of three steps (superscripts denote iteration numbers):
+
+1. Each bit calculates the information llrQlm that it passes to the connecting equations, which is the sum of the extrinsic information llrRml from the previous iteration
+with the channel information llrPl from the current iteration, excluding the extrinsic information from the same equation, i.e.,
+
+llrQilm = llrPil +
+
+¦
+
+l
+
+l
+
+rRi
+
+–
+
+1 mc
+
+l
+
+.
+
+(1)
+
+mc z m
+
+2. Each check equation (each row in the parity-check matrix) calculates the extrinsic information for each
+
+involved bit. ¦  denotes the “LLRXOR” operation
+
+discussed below.
+
+llrRiml = ¦  llrQilcm .
+
+(2)
+
+lc z l
+
+3. Each bit calculates the overall soft information by sum-
+
+ming up all the llrRml 's and the llrPl 's,
+
+llrAPPil = llrPil + ¦llrRiml .
+
+(3)
+
+m
+
+The LLRXOR operation in (2) is defined as
+
+LLRXOR(y,z) = log ey + ez – log 1 + ey + z
+
+(4)
+
+= maxy z + log 1 + e– y – z 
+
+– maxy + z 0 – log 1 + e– y + z 
+
+where log1 + e– D  can be implemented by a look-up table. The operation in (4) requires five additions, two absolute values and two table look-ups. This procedure is referred to as the “sum product” (SP) algorithm.
+
+The LLRXOR operation can be further simplified by eliminating table look-ups, i.e. omitting the log1 + e– D  term in (4), yielding the following approximation for the LLRXOR operator:
+
+LLRXOR(y,z) | -sign(y)sign(z)min(|y|,|z|).
+
+(5)
+
+(5) requires only absolute value, sign, and comparison operations. The simplification to (5) is referred to as the “signed sum product” (SSP) algorithm.
+
+III APP DECODING ALGORITHMS FOR ISI
+CHANNELS
+
+Soft-input soft-output (SISO) algorithms for ISI channels include the BCJR algorithm [7], SOVA [8], DAE [9], etc. The original BCJR algorithm is a maximum a posteriori probability (MAP) algorithm and requires a forward iteration and a backward iteration, whereas SOVA and DAE are simplified APP decoders and only require sequential processing to obtain the soft information for each bit. In our concatenated systems, we use SOVA and DAE for channel SISO detection. To standardize the notation independent of
+
+the soft channel decoding algorithm, we assume that soft channel detectors take in samples, llrAPPli – 1 's and llrPli – 1 's, and outputs llrPli 's (see Fig. 3).
+IV EQUATION BASED LDPC DECODER
+
+Consider a regular LDPC code with block length L and column weight M. A conventional implementation of SP or SSP requires L units of memory to store llrPl 's and ML units of memory to store llrRml 's. llrQlm 's and llrAPPl 's can be computed on the fly and does not need to be stored. Soft information is updated edge by edge within each iteration [5][6]. We call this implementation the “edge based” decoder, which can be implemented in either serial or parallel manner. Parallel architecture can achieve higher speed while serial architecture minimizes hardware size. For ISI channel serial implementation is preferred because soft information from the channel comes sequentially. At each iteration, edge based decoder computes llrQilm according
+to (1) after channel decoder calculates llrPil . The decoder
+then computes llrRiml according to (2). In a serial implementation, edge based decoder requires roughly L cycles per iteration for soft channel decoding and calculating llrQilm , and another L cycles for calculating llrRiml and
+llrAPPli . Therefore the total delay of channel and LDPC decoders is 2L times the number of iterations. It should be noted that the amount of memory needed to store soft information in a fully pipelined decoder is proportional to the decoder latency.
+When signed sum product algorithm is used to decode LDPC codes, the magnitudes of the extrinsic information conveyed in each equation are determined by the two llrQ's with the smallest amplitudes. Other llrQ's only contribute to the sign of the extrinsic information.
+Based on the observation that only two llrQ magnitudes are needed, we propose an equation based architecture that eliminates the llrR memory and cuts the decoding delay in half. At iteration i, for equation m, there is only a need to store two smallest llrQ magnitudes (denoted min1im and min2im), the signs for all the llrQlm 's, the position of min1im (denoted Iim), and the overall sign of the equations (denoted sim ). Then, llrRiml 's can then be calculated on the fly from the stored information as follows:
+
+llrRiml
+
+=
+
+­ –sim  signllrQilm  min1im, if l z Iim
+
+® ¯
+
+–sim
+
+
+
+signllrQilm
+
+
+
+min2im,
+
+otherwise
+
+,
+
+(6)
+
+where sim = – –signllrQilm is the sign of the mth
+l
+equation at the end of ith iteration.
+
+V - 758
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:53:51 UTC from IEEE Xplore. Restrictions apply.
+
+In the new equation based architecture, time cycles are allocated exclusively for the channel decoding, LDPC decoding is done on the fly. As soon as the first iteration channel SISO decoder outputs llrP1l for a given bit l, it is used to
+obtain llrQ1lm utilizing (1). llrQ1lm in turn is sent to update min11m, min21m, I1m, and s1m for each check node connected to the current bit. Once the channel detector finishes processing the entire codeword, we have all necessary
+information to compute llrR1ml 's, and to perform the second iteration channel decoding. On the second sweep through the bits, iterative decoder first obtains llrR1ml using (6). The result is then immediately sent to the SISO channel detectors as the a priori information. Once llrP2l becomes available (after a small channel detector latency), llrQ2lm is computed using (1) and sent to update min12m, min22m, l2m, and s2m for the connected check nodes. The rest of iterations proceed in a similar fashion.
+The equation based arrangement takes advantage of both the sparseness of the parity-check matrix and the simplicity of the SSP decoding. The memory saving offered by equation based LDPC decoder is proportional to the code rate of LDPC code. This is particularly advantageous for the magnetic recording applications where high rate codes are predominantly used.
+Equation based LDPC decoder architecture is now going to be further illustrated on a simple (L,k) product code whose parity check matrix is given by (7),
+
+½
+
+1}1
+
+°
+
+1}1
+
+° °
+
+1
+
+}
+
+1
+
+° ¾
+
+H= 1
+
+1
+
+1
+
+°L–k+1,
+
+(7)
+
+}
+
+}
+
+}
+
+° °
+
+1
+
+1
+
+1°
+
+¿
+
+°­ ° ° ° ® ° ° ° ° ¯
+
+L
+It is easy to see that H has no short cycles (girth>4), and a column weight of 2. The minimum distance is 4. Fig. 4 shows a fully pipelined architecture for iterative LDPC code decoder. Memories for min1, min2, and llrP are initialized to 0. The equation based SSP circuit performs the following steps for each iteration (starting from “Eq. RAM 0” in Fig 4):
+
+1.
+
+At each time clock,
+
+l
+
+l
+
+r
+
+Ri
+
+–
+
+1 ml
+
+'s are calculated using (6)
+
+by the “llrR calculation” block.
+
+2. Each bit calculates the overall soft information
+
+l
+
+l
+
+rA
+
+P
+
+Pi
+
+–
+
+1 l
+
+by summing up all the
+
+llrRi
+
+–
+
+1 ml
+
+'s
+
+and
+
+l
+
+l
+
+rPi
+
+–
+
+1 l
+
+as an input to
+
+the
+
+channel
+
+SISO
+
+detector.
+
+3.
+
+The
+
+channel
+
+SISO
+
+detector
+
+calculates
+
+l
+
+l
+
+r
+
+P
+
+i l
+
+.
+
+4. Each bit calculates llrQilm that it passes to the connecting equations according to (1).
+
+5. Each bit stores the signs of the llrQilm 's in “llrQ sign RAM”.
+
+6. Each bit updates the equation information (min1, min2, I, and s) for the two equations involving the current bit. This operation is performed by the “Equation update” block.
+It is obvious that steps 1-6 for each iteration can be finished in the L clock cycles that is needed for channel SISO decoding, i.e., there is no additional clock cycles required for LDPC decoding.
+
+Fig. 5 is a block diagram of a memory arrangement of the decoder in accordance with the equation based decoding method. As shown therein, memory has a partition for each equation, and each equation has a partition for storing magnitude data (min1 and min2), index data (I), and sign data (s). The equation memory blocks are arranged into two tiers according to the structure of the parity check matrix (7), one for row parities, and one for column parities. There are two copies of memory for each equation - one for the current iteration and one for the previous iteration. These two copies are used by the “equation update” block and the “llrR calculation” block in a ping-pong fashion. The MUX controls which memory to be read from and which memory to be written into according to an iteration number counter.
+
+Equation based LDPC detector needs L units of memory to
+store llrP 's, ML bits to store the sign of llrQ's, and (L-k) units of memory to store equation based statistics. For high rate codes, (L-k) is small compared to the block size L. Therefore, memory requirement for the equation based decoder is dominated by the channel soft information llrP. Besides, since the turbo equalization latency is reduced from 2L to L clock cycles per iteration, the overall size of equation based LDPC decoder is much smaller than that of conventional edge based decoder.
+
+At the end of each iteration, the parity equations are checked. If all the parity equations are satisfied, we consider the decoding successful and start to output hard decisions that are derived from last iteration’s llrAPPl 's. Checking the equations is easy, because the overall sign for
+an equation, sim , is -1 when equation m is satisfied, and is 1 otherwise. Therefore, there is no additional memory required for equation checking.
+
+V CONCLUSION
+
+The key aspects of our equation based LDPC decoder are storing and updating soft information according to equations, and computing soft information for each edge on the fly. Doing so reduces the memory size of the LDPC decoder, especially when high rate LDPC codes are used.
+
+V - 759
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:53:51 UTC from IEEE Xplore. Restrictions apply.
+
+Moreover, the proposed LDPC decoder does not require additional latency beyond what the channel SISO detector needs. Therefore, the equation based decoder is very efficient for decoding LDPC codes on ISI channels.
+
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo codes,” in Proc. IEEE Int. Conf. on Communications, Geneva, Switzerland, May 1993.
+[2] D. J.C. MacKay, “Good error-correcting codes based on very sparse matrices”, IEEE Trans. Inform.,vol 45, pp. 399-431, Mar. 1999.
+[3] A. Glavieux, C. Laot, and J. Labat, “Turbo equalization over a frequency selective channel,” in Proc. Int. Symp. Turbo codes, Brest, France, Sept. 2000, pp. 371-374.
+[4] M. Tuchler, R. Koetter, and A.C. Singer, “Turbo Equalization: Principles and New Results”, IEEE Trans. Commun., vol 50, pp 754-767, May 2002.
+[5] Y. Engling, P. Pakzad, B. Nikolic, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Mag., vol 37, pp 748 - 755, Mar. 2001.
+[6] M. M. Mansour and N.R. Shanbhag, “High-Throughput LDPC Decoders,” IEEE Trans. VLSI Sys., vol 11, pp 976-996, Dec. 2003.
+[7] L.R.Bahl et al, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Inform., vol. IT-20, pp. 284-287, Mar. 1974.
+[8] J. Hagenauer and P. Hoeher, “A Viterbi algorithm with soft-decision outputs and its applications,” In Proc. IEEE Global Telecomm. Conf.,1989, pp 1680-1686.
+[9] Z. Wu, Coding and Iterative Detection for Magnetic Recording Channels, Kulwer Academic Publishers, 2000.
+[10] Z. Wu and G. Burd, “LDPC Decoder and Method Thereof,” US Patent application, filed 2000.
+
+FIGURE 1. LDPC code with ISI channel
+
+LDPC Enc.
+
+ISI channel
+
+SISO LDPC decoder
+
+SISO Channel decoder
+
+FIGURE 2. Factor graph and sum product decoding
+
+m=1
+
+2
+
+llrQ11
+
+llrQ21
+
+llrR13
+
+l=1
+
+2
+
+3
+
+4
+
+5
+
+llrP
+
+FIGURE 3. Generic channel SISO decoder
+
+samples
+llrPi-1l llrAPPi-1l
+
+Soft Channel Detector
+
+llrPil
+
+FIGURE 4. Equation based LDPC decoder
+
+Equation update
+
+llrQi
+
+llrQ
+
+calculation
+
+Eq. RAM 1 min1, min2
+I, s
+Eq. RAM 0 min1, min2
+I, s
+
+llrQ sign RAM
+
+llrPi
+
+llrPi1 llrP RAM
+
+Channel
+
+SISO
+
+Sample
+
+llrAPP i1 RAM
+
+llrR
+
+llrRi1
+
+calculation
+
+llrAPP calculation llrPi1
+
+FIGURE 5. Equation memory arrangement
+
+1
+
+min1 min2 s I
+
+0
+
+llrR
+
+0
+
+Calc
+
+1
+
+Equation Tier 1
+(row check)
+
+0
+
+1
+
+1 Equation
+
+llrR
+
+0
+
+Calc
+
+1
+
+Tier 2 (column check)
+
+0
+
+0
+
+1
+Iteration number counter
+
+Equation Update
+
+EquationU pdate
+
+V - 760
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:53:51 UTC from IEEE Xplore. Restrictions apply.
+
+

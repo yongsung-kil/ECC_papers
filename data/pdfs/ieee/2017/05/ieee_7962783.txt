@@ -1,0 +1,672 @@
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+High Throughput FPGA Implementation for Regular Non-Surjective Finite Alphabet Iterative Decoders
+Thien Truong Nguyen-Ly∗†, Valentin Savin∗, Xavier Popon∗ and David Declercq† ∗CEA-LETI, MINATEC Campus, Grenoble, France, {thientruong.nguyen-ly, valentin.savin, xavier.popon}@cea.fr
+†ETIS, ENSEA / CNRS UMR-8051 / University of Cergy-Pontoise, France, declercq@ensea.fr
+
+Abstract—This paper deals with the recently introduced class of Non-Surjective Finite Alphabet Iterative Decoders (NS-FAIDs). First, optimization results for an extended class of regular NSFAIDs are presented. They reveal different possible trade-offs between decoding performance and hardware implementation efficiency. To validate the promises of optimized NS-FAIDs in terms of hardware implementation benefits, we propose two high-throughput hardware architectures, integrating NS-FAIDs decoding kernels. Implementation results show that NS-FAIDs allow significant improvements in terms of both throughput and hardware resources consumption, as compared to a baseline MinSum decoder, with even better or only slightly degraded decoding performance.
+I. INTRODUCTION
+The increasing demand of massive data rates in wireless communication systems will require significantly higher processing speed of the baseband signal, as compared to conventional solutions. This is especially challenging for Forward Error Correction (FEC) mechanisms, since FEC decoding is one of the most computationally intensive baseband processing tasks, consuming a large amount of hardware resources and energy. The use of very large bandwidths will also result in stringent, application-specific, requirements in terms of both throughput and latency. The conventional approach to increase throughput is to use massively parallel architectures. In this context, Low-Density Parity-Check (LDPC) codes are recognized as the foremost solution, due to the intrinsic capacity of their decoders to accommodate various degrees of parallelism. They have found extensive applications in modern communication systems, due to their excellent decoding performance, high throughput capabilities [1]–[4], and power efficiency [5], [6], and have been adopted in several recent communication standards.
+In a recent work [7], we have introduced a new theoretical framework, referred to as Non-Surjective Finite Alphabet Iterative Decoders (NS-FAIDs), aimed at exploring the use of imprecise message storage mechanisms in Min-Sum (MS)-based LDPC decoders. It allows storing the exchanged messages using a lower precision than the one used by the processing units, thus facilitating significant reductions of the memory and interconnect blocks, with no or only slight degradation of the error correction performance, as compared to the baseline MS decoder. Since these blocks usually dominate the overall performance of the hardware implementation, NS-FAIDs
+
+emerge as a promising approach to further optimizations of cost-effective, high-throughput designs.
+To validate the promises of the NS-FAID approach, in this paper we propose two different hardware architectures for regular Quasi-Cyclic (QC)-LDPC decoders, with both MS and NS-FAID decoding kernels. The proposed architectures target high-throughput and efficient use of the hardware resources. Both architectures implement layered scheduled decoding with fully parallel processing units. The first architecture is pipelined, so as to increase throughput and ensure an efficient use of the hardware resources, which in turn imposes specific constraints on the decoding layers1, in order to ensure proper execution of the layered decoding process. The second architecture does not make use of pipelining, but allows maximum parallelism to be exploited through the use of full decoding layers2, thus resulting in significant increase in throughput. Both MS and NS-FAID decoding kernels are integrated to each of the two proposed architectures, and compared in terms of throughput and resource consumption. Implementation (post place and route) results on Xilinx Zynq-7000 FPGA device are provided, showing a Hardware Usage Efficiency (HUE) increase by up to 57.78%, when the NS-FAID kernel is used.
+The rest of the paper is organized as follows. In Section II, a brief description of NS-FAIDs is first provided, and then new results on the optimization of regular NS-FAIDs are presented. The proposed hardware architectures are presented in Section III. Implementation results are provided in Section IV, and Section V concludes the paper.
+II. NON-SURJECTIVE FINITE ALPHABET ITERATIVE DECODERS
+A. Preliminaries
+This section briefly presents the definition of NS-FAIDs; for more details, we refer to [7]. We consider an LDPC code defined by a bipartite graph with N variable-nodes (VNs) and M check-nodes (CNs). The quantized Log-Likelihood Ratios (LLRs) supplied to the decoder are denoted by γn, while VN and CN messages are denoted respectively by αm,n and βm,n. All of them are assumed to belong to a finite alphabet denoted by Q = {−Q, . . . , −1, 0, +1, . . . , +Q}, where Q = 2q−1 − 1
+1A decoding layer may consist of one or several rows of the base matrix of the QC-LDPC code, assuming that they do not overlap.
+2A decoding layer is said to be full if each column of the base matrix has one non-negative entry in one of the rows composing the layer.
+
+978-1-5A0u9th0o-r1iz5e2d5li-c2e/n1s7e/d$u3s1e.0li0mi©te2d0to1:7YIoEnEsEei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+
+with q > 0. The A Posteriori (AP-) LLRs are denoted by γ˜n and, as usual, they are assumed to belong to an extended alphabet Q˜ ⊃ Q.
+NS-FAIDs are based on MS decoding update rules, but
+
+further perform a framing operation on VN-messages, as
+
+explained below. Thus, CN-messages are updated by using the same update rule as for MS decoding. Precisely, for a CN m, whose set of neighbor VNs is denoted by N (m), the outgoing βm,n messages (with n ∈ N (m)) are given by:
+
+
+
+
+
+βm,n = 
+
+sgn(αm,n′ ) min |αm,n′ | (1)
+
+n′∈N (m)\n
+
+n′∈N (m)\n
+
+For a VN n, whose set of neighbor CNs is denoted by M(n), the outgoing αm,n (with m ∈ M(n)) messages are given by:
+
+
+
+
+
+αm,n = F γn +
+
+βm′,n 
+
+(2)
+
+m′ ∈M(n)\m
+
+Q
+
+where:
+
+• the sum γn + m′∈M(n)\m βm′,n is assumed to be saturated to Q, prior to applying F on it, which is
+
+indicated by the notation [ ]Q. • F : Q → Q is a non-surjective function (i.e. the image
+set of F is a strict subset of Q), verifying:
+
+(i) F is an odd function, i.e., F (−x) = −F (x), ∀x ∈ Q (ii) F is a non-decreasing function, i.e., F (x) ≤ F (y)
+for any x < y.
+
+We note that the above properties also imply that F (0) = 0 and F (x) ≥ 0, ∀x > 0. In this paper, we further extend the
+
+definition of NS-FAIDs by allowing F (0) to take on non-
+
+zero values. To ensure symmetry of the decoder, we shall write F (0) = ±λ, with λ ≥ 0, meaning that F (0) takes on either −λ or +λ with equal probability. In the following,
+
+using the terminology from [7], F will be referred to as
+
+framing function. Note that F is completely determined by the vector [|F (0)|, F (1), ..., F (Q)], which satisfies the following
+
+inequalities:
+
+0 ≤ |F (0)| ≤ F (1) ≤ · · · ≤ F (Q) ≤ Q
+
+(3)
+
+The weight of F , denoted by W , is the number of distinct entries in the vector [|F (0)|, F (1), ..., F (Q)]. It follows that 1 ≤ W < Q + 1. By a slight abuse of terminology, we shall also refer to W as the weight of the NS-FAID. As shown in [7], for a NS-FAID of weight W , the exchanged messages can be represented by using only w = ⌈log2(W )⌉ + 1 bits (including 1 bit for the sign). The w value is referred to as
+the framing bit-length. As a consequence of the message size
+reduction, the size of the memory and the interconnect network
+that carries the messages from the memory to the processing
+units are also reduced. Table I provides two examples of q = 4-bit NS-FAIDs
+(hence Q = 7), both of which are of weight W = 4. Note that F1 maps 0 to 0, while F2 maps 0 to ±1. The image sets of F1 and F2 are Im(F1) = {0, ±1, ±3, ±7} and Im(F2) = {±1, ±3, ±5, ±6}.
+
+Table I EXAMPLES OF 4-BIT FRAMING FUNCTIONS OF WEIGHT W = 4
+
+m
+F1(m) F2(m)
+
+0 1234567 0 1133777 ±1 1 3 3 5 5 5 6
+
+Table II BEST NS-FAIDS FOR (3, 6)-REGULAR LDPC CODES
+
+w=4 w=3
+w=2
+
+MS
+F (0) = 0 F (0) = ±1 F (0) = ±2 F (0) = ±3 F (0) = 0 F (0) = ±1 F (0) = ±2 F (0) = ±3
+
+F
+[0, 1, 2, 3, 4, 5, 6, 7] [0, 1, 1, 3, 3, 3, 7, 7] [±1, 1, 1, 3, 3, 4, 4, 7] [±2, 2, 2, 3, 3, 3, 4, 7] [±3, 3, 3, 3, 3, 4, 5, 7] [0, 0, 0, 0, 0, 6, 6, 6] [±1, 1, 1, 1, 1, 6, 6, 6] [±2, 2, 2, 2, 2, 2, 2, 7] [±3, 3, 3, 3, 3, 3, 3, 7]
+
+SNR-thres (dB)
+1.643 (µ = 5.6) 1.409 (µ = 3.8) 1.412 (µ = 5.1) 1.712 (µ = 7.1) 2.227 (µ = 10.0) 2.251 (µ = 8.6) 1.834 (µ = 6.4) 1.911 (µ = 8.3) 2.014 (µ = 9.4)
+
+B. Optimization of Regular NS-FAIDs
+In this section, we consider the optimization of regular NSFAIDs for (dv = 3, dc = 6)-regular LDPC codes. To illustrate the trade-off between hardware complexity and decoding performance, we consider q = 4-bit NS-FAIDs (hence, Q = 7), with framing bit-length parameter w ∈ {2, 3}. It can be easily verified that the total number of regular NS-FAIDs is given by NNS-FAID(w = 3) = 2450 and NNS-FAID(w = 2) = 196. All regular NS-FAIDs have been evaluated by using the density evolution (DE) technique. As explained in [7], the DE threshold computation also encompasses the optimization of the gain factor µ, used for input LLR quantization: quantized LLR is obtained by first scaling the soft LLR value by µ, and then rounding the scaled value to the closest integer in Q. Such a quantization method, with µ optimized by DE, has been shown to provide optimal performance in [8].
+Table II summarizes the best NS-FAIDs according to w and F (0) values (for 0 ≤ |F (0)| ≤ 3); DE thresholds and corresponding gain factors (µ) are also reported. Best NSFAIDs for w = 2 and w = 3 are emphasized in bold. For comparison purposes, the DE threshold of the baseline q = 4bit MS decoder is also reported: MS threshold is equal to 1.643 dB, for µ = 5.6. For w = 3, it can be observed that best NS-FAIDs with F (0) = 0 or F (0) = ±1 have better DE thresholds than the MS decoder. The best NS-FAID is given by the framing function F = [0, 1, 1, 3, 3, 3, 7, 7] and its DE threshold is equal to 1.409 dB (µ = 3.8), representing a gain of 0.23 dB compared to MS. For w = 2, the best NS-FAID is given by the framing function F = [±1, 1, 1, 1, 1, 6, 6, 6] and its DE threshold is equal to 1.834 dB (µ = 6.4), which represents a performance loss of only 0.19 dB compared to MS. To emphasize the benefits of the proposed NS-FAIDs extension, we note that that for w = 2, best NS-FAIDs with F (0) = ±1, F (0) = ±2 or F (0) = ±3 have better DE thresholds than the best NS-FAIDs with F (0) = 0. The latter is given by the framing function F = [0, 0, 0, 0, 0, 6, 6, 6] and its DE threshold is equal to 2.251 dB (µ = 8.6), thus resulting in a performance loss of 0.61 dB compared to MS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+
+DE-FRA DCP
+count_layer_write DCP
+
+INPUT buffer (channel data)
+
+BS_INIT
+
+AP-LLR
+
+·
+
+·
+
+·
+
+data_sel
+
+0 DS 1
+
+Hard bits
+
+ࢽ෥̴memory
+
+(codeword)
+
+count_layer_read
+
+‫ܲܣ‬ଵ
+
+‫ܲܣ‬ଶ
+
+‫ܲܣ‬ଷ
+
+…
+
+‫ܲܣ‬஼
+
+: memory units
+
+: interconnection units
+
+: processing units
+
+ࢼ̴memory
+
+1
+
+‫ ݖ‬ൈ ߚ̴me(RssAaMge)_layer_1
+
+2
+
+‫ ݖ‬ൈ ߚ̴message_layer_2
+
+‫ڭ‬
+
+‫ڮ‬
+
+‫ڮڭ ڮ‬
+
+‫ڮ‬
+
+L-1 ‫ ݖ‬ൈ ߚ̴message_layer_L-1 L ‫ ݖ‬ൈ ߚ̴message_layer_L
+
+BതതSതത_തIതNതതതITത ‫ ܥ‬ൈ ‫ ݖ ڭ ݖ‬ൈ ‫ݍ‬෤ ·
+
+·
+
+·
+
+…
+
+● ‫ ݖ‬ൈ ‫ݍ‬෤
+
+count_layer_read shift factor
+
+1
+
+2
+
+PER_R
+
+1
+
+2
+
+·
+
+·
+
+… C-1 …
+
+C ݀௖
+‫ ݖ‬ൈ ‫ݍ‬෤
+
+1
+
+…
+
+2
+
+BS_R_1 BS_R_2
+
+BS_R_ࢊࢉ
+
+‫ڭ‬
+
+·
+
+·
+
+‫ ݖ‬ൈ ‫ݍ‬෤
+
+‫ݖ‬ൈ‫ݍ‬
+
+L-1
+
+L
+
+VNU_1 VNU_2 …
+
+VNU_ࢊࢉ
+
+…
+
+1
+
+2…
+
+PER_W
+
+1
+
+2
+
+AP-LLR_1 AP-LLR_2
+
+‫ ݖ‬ൈ ‫ݍ‬෤
+
+C-1
+
+C
+
+…
+
+݀௖
+
+…
+
+‫ ݖ‬ൈ ‫ݍ‬෤
+
+… AP-LLR_ࢊࢉ
+
+count_layer_write
+
+count_layer_read
+Controller
+clk count_layer_read count_layer_write
+en_decoder data_sel en_mem
+shift factor
+shift factor count_layer_read
+
+registers
+‫ ݖ‬ൈ ‫ݍ‬෤ ·
+SAT_1 ‫ݖ‬ൈ‫ݍ‬
+1
+
+registers
+
+…
+
+registers
+
+‫ ݖ‬ൈ ‫ݍ‬෤
+
+‫ݖ‬ൈ‫ݍ‬
+
+·
+
+·
+
+‫ݖ‬ൈ‫ݍ‬
+
+…
+
+SAT_2 …
+
+SAT_ࢊࢉ
+
+2
+
+… CNU
+
+݀௖
+
+‫ ݖ‬ൈ ߚ̴message
+
+1
+
+2
+
+…
+
+DCP
+
+݀௖
+
+signs, min1, min2, indx_min1
+
+‫ ݖ‬ൈ ሺ݀௖ ൅ ʹ ή ሺ‫ ݍ‬െ ͳሻ ൅ ‫ڿ‬ଶሺ݀௖ሻ‫ۀ‬ሻǡ if “compressed” ‫ ݖ‬ൈ ሺ݀௖ ή ‫ݍ‬ሻ, if “uncompressed”
+
+(a) Detailed HW Architecture with MS-kernel
+
+IN-buffer
+
+BS_INIT DS
+ߛ෤-memory
+
+Hard bits
+
+BS_INIT
+
+PER_R
+
+PER_W
+
+layer κ-1 layer κ ߚ-memory
+
+BS_R VNU REG
+
+AP-LLR
+
+SAT, if MS-kernel FRA, if NS-FAID kernel
+
+SAT/FRA CNU
+
+DE-FRA DCP
+
+1 layer delay due to pipeline
+
+DCP: only if compressed ߚ-messages DE-FRA: only of NS-FAID kernel
+(b) High-Level Description of the HW Architecture with MS and NS-FAID kernels
+
+Figure 1. Block Diagram of the Proposed Pipelined Architecture
+
+III. HARDWARE ARCHITECTURES
+We consider a QC-LDPC code defined by a base matrix B of size R × C, and expansion factor z, corresponding to a parity check matrix H of size M × N , with M = zR and N = zC. A decoding layer consists of one or several consecutive rows of B, assuming that they do not overlap (i.e. each column has at most one non-negative entry within each layer). It is assumed that the same number of rows of B participate in each decoding layer, which is denoted by RPL (rows per layer). Hence, the number of decoding layers is given by L = R/RPL. We further define Z = z × RPL, corresponding to the number of parity checks (rows of H) within one decoding layer, and referred to as the parallelism degree (of the hardware architecture).
+Both hardware architectures proposed in this section assume that all CNs have the same degree, denoted by dc (although they can be easily modified to accommodate irregular CN degrees). No assumptions are made concerning VN degrees. We present each architecture assuming the MS decoding kernel is being implemented, then we discuss the required changes in order to integrate the NS-FAID decoding kernel.
+A. Pipelined architecture
+Proposed architecture with MS decoding kernel is detailed in Figure 1(a). A high-level representation is also shown in Figure 1(b), for both MS and NS-FAID decoding kernels. For the sake of simplicity, in Figure 1(a) we assume that a decoding layer corresponds to a row of the base matrix (hence RPL = 1 and Z = z).
+Input/Output buffers. The input buffer, implemented as a number of Serial Input Parallel Output (SIPO) shift registers,
+
+is used to store the input LLR values (γn) received by the decoder. The output buffer, is used to store the hard bit
+estimates of the decoded word. Input/output buffers allow data
+load/offload operations to take place during the decoding of
+the previous/following codeword.
+Memory blocks. Two memory blocks are used, one for AP-LLR values (γ˜ memory) and one for CN-messages (β memory). γ˜n values are quantized on q˜ bits, while βm,n messages are quantized on q bits, with q˜ > q. γ˜ memory is implemented by registers, in order to allow massively parallel read or write operations. It is organized in C blocks, denoted by APi(i = 1, · · · , C) corresponding to the columns of base matrix, each one consisting of z × q˜ bits. Data are read from/write to blocks corresponding to non-negative entries in the decoding layer being processed. β memory is implemented as a dual port Random Access Memory (RAM),
+in order to support pipelining, as explained below. Each memory word consists of z × β message, corresponding to one decoding layer. Depending on the Check Node Unit (CNU) implementation, β message can be either “uncompressed” (i.e., for a check-node m, the corresponding β message is given by the dc values [βm,n1 , . . . , βm,ndc ], where n1, . . . , ndc denote the variable nodes connected to m) or “compressed” (i.e., for a check-node m, the corresponding β message is given by the signs of the above βm,ni messages, their first and second minimum, denoted by min1 and min2, and the
+index of the first minimum, denoted by indx min1) [9].
+Read and Write Permutations (PER R, PER W).
+PER R permutation is used to rearrange the data read from γ˜ memory, according to the processed layer, so as to ensure processing by the proper VNU/CNU. PER W block operates
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+
+oppositely to PER R. Barrel Shifters (BS INIT, BS R). Barrel shifters are used
+to implement the cyclic (shift) permutations, according to the non-negative entries of the base matrix. The γ˜ memory is initialized from the input LLR values stored in the input buffer. However, input LLR values are shifted by BS INIT block before being written to the γ˜ memory, according to the last non-negative shift factor on the corresponding base matrix column. BS R blocks are then used to shift the LLR values read from the γ˜ memory, such that to properly align them with the right VNU. Note that there are dc BS R blocks, corresponding to the dc columns with non-negative entries in the current layer ℓ. Hence, the cyclic shift implemented by each BS R block is given by −bℓ′ + bℓ, where bℓ′ and bℓ denote respectively the previous and the current non-negative entries of the corresponding column (previous means previous layer with non-negative entry on the corresponding column). These values are computed offline for each layer ℓ. This avoids the use of barrel shifters when the data is written back to the γ˜ memory, thus reducing the critical path of the design. Finally, the BS INIT block operates oppositely to BS INIT, and is used to shift back the hard decision bits into appropriate positions.
+Variable Node Units (VNUs) and AP-LLR Units. These units compute VN-messages (αm,n) and AP-LLR values (γ˜n).
+Saturators (SATs). Prior to CNU processing, αm,n values are saturated to q bits.
+Check Node Units (CNUs). These processing units compute the CN-messages (βm,n). For simplicity, Figure 1(a) shows one CNU block with dc inputs, each one of size z × q bits. Thus, this block actually includes z computing units, used to process in parallel the z check-nodes within one row of the base matrix. The CNU is implemented by using either: (i) the high-speed low-cost tree-structure (TS) approach proposed in [10] for “compressed” CN-messages, or (ii) comparator trees for “uncompressed” CN-messages.
+Decompress (DCP). This block is only used in case that the CN-messages are in compressed format (signs, min1, min2, indx min1). It converts the β messages from compressed to the uncompressed format.
+Pipelining. To increase the operating frequency, the data path is pipelined by adding a set of registers after the VNUblocks. Hence, processing one layer takes 2 clock cycles, but at each clock cycle the two pipeline stages work on two consecutive layers of the base matrix. This imposes specific constraints on the base matrix, as consecutive layers must not overlap, in order to avoid γ˜ memory conflicts (note that memory stall cycles would cancel the pipelining effect). An example of dc = 6 regular base matrix with this property is given in Figure 2 (assuming that each decoding layer corresponds to a row of the base matrix).
+NS-FAID decoding kernel. The changes required to integrate the NS-FAID decoding kernel are shown in Figure 1(b). First, the Saturation (SAT) block used within the MS-decoding kernel is replaced by a Framing (FRA) block. Note that the output of the VNU consists of q˜-bit (unsaturated) VN-
+
+49 -1 -1 -1 -1 43 -1 -1 -1 -1 50 -1 -1 -1 -1 2 -1 27 -1 -1 -1 -1 -1 49 -1 -1 -1 10 41 -1 -1 -1 -1 52 -1 -1 32 -1 -1 -1 -1 -1 50 -1 50 -1 -1 -1 -1 -1 20 -1 -1 -1 -1 20 -1 -1 -1 51 -1 10 -1 -1 47 -1 -1 -1 -1 -1 33 -1 -1 24 -1 -1 -1 -1 22 -1 53 -1 -1 -1 -1 -1 31 -1 -1 -1 -1 18 -1 47 -1 -1 10 -1 -1 -1 15 -1 -1 -1 -1 -1 2 -1 -1 -1 -1 50 -1 13 -1 -1 -1 -1 -1 53 -1 -1 44 -1 -1 6 -1 -1 -1 -1 -1 29 -1 40 -1 -1 16 -1 -1 -1 13 -1 -1 -1 -1 2 -1 -1 -1 -1 -1 13 41 -1 -1 -1 -1 -1 42 -1 -1 -1 -1 48 -1 49 -1 -1 -1 -1 -1 36 -1 -1 24 -1 -1 50 -1 -1 12 -1 -1 -1 -1 -1 10 -1 -1 -1 48 -1 -1 -1 47 -1 50 -1 -1 -1 -1 -1 0 -1 -1 -1 -1 9 -1 7 -1 -1 -1 -1 -1 28 6 -1 -1 -1 -1 -1 5 -1 -1 -1 -1 13 -1 3 -1 -1 29 -1 -1 -1 16 -1 -1 -1 -1 -1 -1 35 -1 16 -1 -1 37 -1 -1 -1 4 -1 -1 -1 -1 -1 24 -1 -1 -1 29 -1 -1 24 -1 -1 -1 -1 -1 51 -1 38 -1 -1 -1 -1 6 -1 -1 -1 -1 23 -1 16 -1 -1
+Figure 2. Base matrix of the (3, 6)-regular QC-LDPC code
+messages. Hence, the FRA block actually implements the concatenation of the following operations:
+[−Q˜, . . . , Q˜] −s→at [−Q, . . . , Q] −F→ Im(F ) −∼→ [−W, . . . , W ],
+where [−Q˜, . . . , Q˜] is the alphabet of unsaturated messages (Q˜ = 2q˜−1−1), F is the framing function being used, Im(F ) is the image of F (which is a subset of [−Q, . . . , Q] according to the framing function definition), and the last operation consists of a re-quantization of the Im(F ) values on a number of wbits, where w = ⌈log2(W )⌉ + 1 is the framing bit-length. The De-framing (DE-FRA) block simply converts back from wbit to q-bit values ([−W, . . . , W ] →∼ Im(F ) ⊂ [−Q, . . . , Q]), i.e. it inverts the re-quantization operation above. Although we have to add the de-framing blocks, the reduction of the CNmessages size may still save significant hardware resources, as compared to MS decoding. This will be discussed in more details in Section IV.
+B. Full layers architecture
+A different possibility to increase throughput is to increase the hardware parallelism, by including several non-overlapping rows of the base matrix in one decoding layer. For instance, for the base matrix in Figure 2, we may consider RPL = 4 consecutive rows per decoding layer, thus the number of decoding layers is L = 3. In this case, each column of the base matrix has one (and only one) non-zero entry in each decoding layer; such a decoding layer is referred to as being full. Full layers correspond to the maximum hardware parallelism that can be exploited by layered architectures, but they also prevent the pipelining of the data path. The architecture proposed in this section, shown in Figure 3, is aimed at providing an effective way to benefit from the increased hardware parallelism enabled by the use of full layers. We discuss below the main changes with respect to the pipelined architecture from the previous section, consisting of the α memory and the barrel shifters blocks (the other blocks are the same as for the pipelined architecture), as well as a complete reorganization of the data path.
+α memory. This memory is used to store the VN-messages for the current decoding layer (unlike the previous architecture, the AP-LLR values are not stored in memory). Since only one q˜-bit (unsaturated) VN-message is stored for each variablenode, this memory has exactly the same size as the γ˜ memory used within the previous pipelined architecture. VN-messages for current layer ℓ are read from the α memory, then saturated or framed depending on the decoding kernel, and supplied
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+
+IN-buffer PER_1 BS_1
+
+DS
+ߙ-memory
+
+Only ߙ-messages for current layer are stored
+
+SAT, if MS-kernel SAT/FRA FRA, if NS-FAID kernel
+
+Hard bits PER_L BS_L
+
+CNU
+DCP DE-FRA
+
+layer κ layer κ+1
+ߚ-memory
+
+AP-LLR
+
+DE-FRA DCP
+
+VNU
+PER_WR BS_WR
+
+sign bit only
+DCP: only if compressed ߚ-messages DE-FRA: only of NS-FAID kernel
+
+Figure 3. Proposed full layer architecture with MS and NS-FAID kernels
+
+Bit Error Rate (BER)
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+MS, (4,6)−quantization
+
+OMS (offset factor = 1)
+
+NS−FAID (w=3, F(0) =0)
+
+10−6
+
+NS−FAID (w=2, F(0) =0)
+
+NS−FAID (w=2, F(0)=±1)
+
+MS, (3,5)−quantization
+
+10−7
+
+MS, (2,4)−quantization
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR (dB)
+
+Figure 4. BER performance of optimized regular NS-FAIDs
+
+to the corresponding CNUs. CN-messages computed by the CNUs are stored in the β memory (location corresponding to layer ℓ), and also forwarded to the AP-LLR unit, through the DCP (decompress) and DE-FRA (de-framing) blocks, according to the CNU implementation (compressed or uncompressed) and the decoding kernel (MS or NS-FAID). The APLLR unit computes the sum of the incoming VN- and CNmessages, which corresponds to the AP-LLR value to be used at layer ℓ + 1 (since already updated by layer ℓ). The AP-LLR value is forwarded to the VNU, through corresponding BS and PER blocks. Eventually, the VN-message for layer ℓ+1 is computed as the difference between the incoming AP-LLR and the corresponding layer-(ℓ + 1) CN-message computed at the previous iteration, the latter being read from the β memory. While the data path is completely reorganized, it can be easily verified that both architectures are logically equivalent, i.e., they both implement the same decoding algorithm.
+PER / BS blocks. PER 1 / BS 1 blocks permute / shift the data read from the input buffer, according to the positions / values of the non-negative entries in the first decoding layer. Similarly, the PER WR / BS WR blocks permute / shift the AP-LLR values, according to the difference between the positions / values of the current layer’s (ℓ) non-negative entries and those of the next layer (ℓ + 1). This way, VN-messages stored in the α memory are already permuted and shifted for the subsequent decoding layer.
+IV. IMPLEMENTATION RESULTS
+Throughout this section we consider the (3, 6)-regular QCLDPC code, with base matrix B of size R × C = 12 × 24, shown in Figure 2. The expansion factor z = 54, thus the codeword length is N = zC = 1296 bits.
+Figure 4 shows the Bit-Error Rate (BER) performance of the MS decoder with quantization parameters (q, q˜) = (4, 6), as well as q = 4-bit NS-FAIDs with w = 2 and w = 3
+
+(framing functions F corresponding to w and F (0) values in the legend are those from Table II). Additive White Gaussian Noise (AWGN) channel model is considered, with 20 decoding iterations. Note that both decoding architectures discussed in the paper have the same decoding performance. It can be seen that the simulation results corroborate the analytic results from Section II-B, in terms of SNR gain / loss provided by NSFAIDs, as compared to MS. For comparison purposes, we have further included simulations results for the Offset MS (OMS) decoder with (4, 6)-quantization and offset factor = 1, as well as the MS decoder with (3, 5) and (2, 4)-quantization.
+Implementation (post place and route) results on Xilinx Zynq-7000 FPGA device are shown in Table III, for the MS(4, 6) decoder and the NS-FAIDs with (w = 3, F (0) = 0) and (w = 2, F (0) = ±1), indicated in the table as NSFAID-3 and NS-FAID-2, respectively. The first (Variant) row in Table III indicates the architecture (pipelined or full layers) and the CNU type (compressed or uncompressed). We also note that for the NS-FAID-2, the assumption that 0 is mapped to either −1 or +1, with equal probability, is only needed for theoretical analysis (the symmetry of the decoder allows reducing the analysis to the all-zero codeword). However, in practical situations one may always map 0 to +1, since random codewords are transmitted (in telecommunications systems, pseudo-randomness of the transmitted data is ensured by a scrambling mechanism).
+Throughput reported in Table III is given by the formula:
+
+
+ Throughput =
+
+, N ×fmax
+L×niter
+
+full layers architecture
+
+(4)
+
+ , N ×fmax
+1+L×niter
+
+pipelined architecture
+
+where N is the codeword length, fmax is the maximum operating frequency (post-place and route), L is the number of decoding layers and niter is the number of decoding iterations (set to 20).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+ICC2017: WT09-Channel Coding for 5G and Future Networks
+
+Table III FPGA POST-PAR IMPLEMENTATION RESULTS ON ZYNQ-7000 (XC7Z045FFG900-1) – 2016.2
+
+Variant Decoder
+
+pipeline.uncompressed
+
+pipeline.compressed
+
+full layers.uncompressed
+
+full layers.compressed
+
+MS(4,6) NS-FAID-3NS-FAID-2 MS(4,6) NS-FAID-3NS-FAID-2 MS(4,6) NS-FAID-3NS-FAID-2 MS(4,6) NS-FAID-3NS-FAID-2
+
+No. occupied slices 9776
+
+(% utilization) (17.89)
+
+Max. freq (MHz) 98
+
+No. layers (L)
+
+12
+
+Throughput (Mbps) 527
+
+9204 (16.84)
+108 12 580
+
+8844 (16.18)
+138 12 742
+
+10163 (18.60)
+95 12 510
+
+10091 (18.46)
+102 12 548
+
+9617 (17.60)
+125 12 672
+
+17578 (32.16)
+69 3 1490
+
+16812 (30.76)
+75 3 1620
+
+15018 (27.48)
+80 3 1728
+
+21317 (39.01)
+58 3 1252
+
+18313 (33.51)
+71 3 1533
+
+17712 (32.41)
+76 3 1641
+
+HUE (Mbps) 2945 3444
+
+4585 2741
+
+±% w.r.t. MS(4,6) 0% +16.94% +55.69% 0%
+
+2968
+
+3818 4633 5266
+
+6288 3209 4574
+
+5063
+
++8.28% +39.29% 0% +13.66% +35.72% 0% +42.53% +57.78%
+
+Table IV COMPARISON OF FPGA IMPLEMENTATIONS FOR (3, 6)-REGULAR LDPC
+CODES
+
+Decoders
+
+Karkooti’04 Chen’11 Vikram’15 This work
+
+[1]
+
+[2]
+
+[3]
+
+NS-FAID-3
+
+Device Codeword length No. occupied slices
+No. BRAMs No. iterations Max. freq (MHz) Throughput (Mbps)
+
+Virtex 2 1536 11352 66 20 121 127
+
+Virtex 2 Virtex 5
+
+1536
+
+2304
+
+6102
+
+8430
+
+24
+
+232
+
+3 (avg) 8 (avg)
+
+149.8
+
+114
+
+830.6 (avg) 1096 (avg)
+
+Zynq-7000 1296 16812 0 20 75 1620
+
+To keep the throughput comparison on an equal basis, we further define the Hardware Usage Efficiency (HUE) metric, as the throughput corresponding to 100% utilization of the hardware resources:
+
+HUE
+
+=
+
+%
+
+Throughput Number of occupied
+
+slices
+
+(5)
+
+While the NS-FAID-3 outperforms the baseline MS(4, 6) decoder by 0.19 dB at BER = 10−5 (Figure 4), it can be seen from Table III that is also exhibits a HUE improvement between 8.28% and 42.53%, depending on the hardware architecture and CNU type. As predicted, the NS-FAID-2 exhibits a performance loss of 0.21 dB compared to MS(4, 6), but yields a significant HUE improvement, by 35.72% to 57.78%.
+To further emphasize the high-throughput characteristic of the proposed architectures, Table IV provides a comparison between state of the art FPGA implementations of (3, 6)-regular LDPC decoders and the uncompressed full layers architecture with NS-FAID-3 decoding kernel, presented in this work. Our implementation achieves a significantly increased throughput, which has also to be reported to the number of decoding iterations.
+
+V. CONCLUSIONS
+This paper first extended the previous definition of NSFAIDs, and presented DE-based optimization results for regular NS-FAIDs. The proposed extension (allowing framing functions with F (0) = ±λ) proved to be particularly useful
+
+for NS-FAIDs with framing bit-length w = 2. Then, two hardware architectures have been presented, making use of either pipelining or increased hardware parallelism in order to increase throughput. Both hardware architectures have been implemented in FPGA, using MS and NS-FAID decoding kernels. Implementation results revealed that NS-FAIDs allow significant improvements in terms of hardware usage efficiency as compared to the baseline MS decoder, with even better or slightly degraded decoding performance.
+ACKNOWLEDGMENT
+This work was supported by the Franco-Romanian (ANRUEFISCDI) Joint Research Programme “Blanc-2013”, project DIAMOND, and the European H2020 Work Programme, project Flex5Gware.
+REFERENCES
+[1] M. Karkooti and J. R. Cavallaro, “Semi-parallel reconfigurable architectures for real-time LDPC decoding,” in Proc. of Int. Conf. on Inf. Technology: Coding and Computing (ITCC), vol. 1, 2004, pp. 579–585.
+[2] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory system optimization for FPGA-based implementation of quasi-cyclic LDPC codes decoders,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 58, no. 1, pp. 98–111, 2011.
+[3] V. A. Chandrasetty and S. M. Aziz, “Resource efficient LDPC decoders for multimedia communication,” INTEGRATION, the VLSI journal, vol. 48, pp. 213–220, 2015.
+[4] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, 2009.
+[5] X. Peng, Z. Chen, X. Zhao, D. Zhou, and S. Goto, “A 115mW 1Gbps QC-LDPC decoder ASIC for WiMAX in 65nm CMOS,” in IEEE Asian Solid State Circuits Conference (A-SSCC), 2011, pp. 317–320.
+[6] B. Xiang and X. Zeng, “A 4.84 mm2 847–955 Mb/s 397 mW dual-path fully-overlapped QC-LDPC decoder for the WiMAX system in 0.13 µm CMOS,” in IEEE Symp. on VLSI Circuits (VLSIC), 2010, pp. 211–212.
+[7] T. T. Nguyen-Ly, K. Le, V. Savin, D. Declercq, F. Ghaffari, and O. Boncalo, “Non-surjective finite alphabet iterative decoders,” in IEEE International Conference on Communications (ICC), 2016, pp. 1–6.
+[8] Z. Mheich, T. Nguyen-Ly, V. Savin, and D. Declercq, “Code-aware quantizer design for finite-precision min-sum decoders,” in IEEE International Black Sea Conference on Communications and Networking (BlackSeaCom), Varna, Bulgaria, June 2016.
+[9] Z. Wang and Z. Cui, “A memory efficient partially parallel decoder architecture for quasi-cyclic LDPC codes,” IEEE Trans. on Very Large Scale Integration (VLSI) Systems, vol. 15, no. 4, pp. 483–488, 2007.
+[10] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 55, no. 11, pp. 3430–3437, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:21:28 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,542 @@
+2025 IEEE International Symposium on Circuits and Systems (ISCAS) | 979-8-3503-5683-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISCAS56072.2025.11043562 Throughput [M bit/s]
+
+Fixed-Throughput GRAND with FIFO Scheduling
+Filippo Christen, Darja Nonaca, and Christoph Studer
+Department of Information Technology and Electrical Engineering, ETH Zurich, Switzerland email: fchrist@student.ethz.ch, dnonaca@iis.ee.ethz.ch, and studer@ethz.ch
+
+Abstract—Guessing random additive noise decoding (GRAND) is a code-agnostic decoding method that iteratively guesses the noise pattern affecting the received codeword. The number of noise sequences to test depends on the noise realization. Thus, GRAND exhibits random runtime which results in nondeterministic throughput. However, real-time systems must process the incoming data at a fixed rate, necessitating a fixed-throughput decoder in order to avoid losing data. We propose a first-in first-out (FIFO) scheduling architecture that enables a fixed throughput while improving the block error rate (BLER) compared to the common approach of imposing a maximum runtime constraint per received codeword. Moreover, we demonstrate that the average throughput metric of GRAND-based hardware implementations typically provided in the literature can be misleading as one needs to operate at approximately one order of magnitude lower throughput to achieve the BLER of an unconstrained decoder.
+I. INTRODUCTION
+Guessing random additive noise decoding (GRAND) [1] is an emerging maximum-likelihood decoding method that iteratively guesses the corrupting noise sequences in descending order of their likelihood. The number of noise sequences to be tested depends on the instantaneous noise realization, which results in a nondeterministic (i.e., random) decoding throughput. However, hardware implementations for real-time applications must operate at a fixed throughput in order to sustain a fixed input data rate without losing data.
+The common approach to achieve constant throughput for GRAND-based hardware implementations is to impose a decoding time limit for each code block. This approach is called GRAND with abandonment (GRANDAB) [1], which can be accomplished by imposing an upper limit on the number of noise sequences to be tested (assuming a constant number of tests is executed per time unit). The choice of this maximum decoding time limit results in a trade-off between achievable throughput and block error rate (BLER), as terminating GRAND early can result in additional decoding errors. To illustrate this trade-off, Fig. 1 shows the average throughput (black ×) achieved at 1% BLER by the hardware design D1 from [2] of ordered reliability bits GRAND (ORBGRAND) [3], assuming that no runtime constraints were imposed. By imposing a hard limit on the number of noise sequences to be tested with the same hardware design (red curve with markers) one can realize a tradeoff between constant throughput and minimum Eb/N0 (in dB) required to reach 1% BLER. From Fig. 1, we observe that a real-time system with constant throughput can achieve
+FC and DN contributed equally to this work. The work of DN and CS was supported in part by an ETH grant, and has received funding from the Swiss State Secretariat for Education, Research, and Innovation (SERI) under the SwissChips initiative. The authors thank Jérémy Guichemerre and Chao Ji for valuable input and feedback.
+
+104
+
+103
+
+102
+
+101
+
+Maximum iteration limit
+
+FIFO scheduling
+
+Average throughput
+
+1040.75
+
+5.25
+
+5.75
+
+6.25
+
+6.75
+
+minimum Eb/N0 [dB] to achieve 1% BLER
+
+Fig. 1. Average throughput of ORBGRAND to achieve 1% BLER versus maximum constant throughput achieved by hardware design D1 from [2] without FIFO scheduling (in red) and with FIFO scheduling (in blue).
+
+a 1% BLER only at an Eb/N0 of 0.57 dB higher than the Eb/N0 predicted by an unconstrained (i.e., without imposing any runtime limit) ORBGRAND implementation. Similarly, to achieve the same Eb/N0 at 1% BLER as that of unconstrained ORBGRAND, a real-time system would suffer a throughput loss of approximately 21×.
+A. Contributions
+In order to achieve constant throughput as required by realtime systems while improving the BLER, we propose a FIFOscheduling architecture that consists of an input first-in first-out (FIFO) buffer, one decoder or an array of parallel decoders, and an output re-order buffer (ROB). The input FIFO buffer stores received codewords and passes those codewords to available decoders. The decoders considered in this paper implement ORBGRAND [3]. The output ROB enables the decoder to store the recently decoded codewords, ready to be fetched in the correct order by the subsequent hardware block. In contrast to naïve approaches that impose a maximum iteration limit per codeword, our FIFO-scheduling architecture achieves (i) constant throughput and (ii) improved BLER by leveraging GRAND’s random runtime which allows for higher runtime
+limits per codeword (see the blue curve with • markers in
+Fig. 1) at the cost of increased decoding latency. In order to demonstrate the efficacy of the proposed FIFO-scheduling architecture, we provide BLER, throughput, dynamic power, and latency results based on simulations with a random linear code and the ORBGRAND hardware design D1 from [2].
+B. Relevant Prior Work
+Several hardware implementations of ORBGRAND have been proposed recently [2], [4]–[7]. Besides reporting the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:00:07 UTC from IEEE Xplore. Restrictions apply.
+
+average throughput, these works also report the worst-case throughput—the true bottleneck for real-time applications. The work in [8] emphasizes the importance of considering the worstcase throughput when evaluating a decoder’s performance, by improving the order of generated noise patterns to reduce the worst-case number of noise queries. In contrast to such ORBGRAND implementations, we propose a FIFO-scheduling architecture that leverages the random runtime of GRAND to improve error-rate performance. Our architecture achieves constant throughput while improving the BLER (see the blue line in Fig. 1) compared naïve solutions with runtime limits per code block. The work in [9] proposes a multicore lowdensity parity check (LDPC) decoder architecture to increase the decoding throughput. In contrast, our architecture combines FIFO-scheduling with multicore processing in order to deal with a constant arrival rate of codewords while delivering a constant throughput (at a cost of increased latency). Our architecture can be used in combination with virtually any iterative decoder implementation that exhibits random runtime, such as (ORB)GRAND-based decoders and LDPC decoders.
+
+C. Notation
+Boldface lowercase and uppercase letters represent column vectors and matrices, respectively. For a vector x, the ith entry is denoted by xi = [x]i. We denote conditional probabilities by P(·|·). For a (n, k) linear block code, n is the code length and k the number of information bits; the code rate is = k/n and the codebook is C. A field of sequences of length n is denoted Fn. Addition in Galois field F2 is denoted by ⊕.
+
+II. PREREQUISITES
+
+We consider forward error correction, where a block of k
+
+information bits at the transmitter are mapped to an n-length
+
+codeword c ∈ F2n selected from a codebook C. Each code bit ci, i = 1, . . . , n, is transmitted over a memoryless additive white
+
+Gaussian noise (AWGN) channel with binary phase-shift keying (BPSK) symbols mapped according to xi = (−1)ci . The input-
+output relation of the AWGN channel is yi = xi + ni, where yi
+is the received signal and ni is real-valued zero-mean Gaussian noise with variance σ2. In what follows, we measure the signalto-noise ratio in terms of Eb/N0 = ( σ2)−1. We consider soft-
+
+input decoding, where the receiver first computes log-likelihood
+
+ratio (LLR) values for each coded bit as in [10]. Each block
+
+of
+
+LLR
+
+values
+
+λi
+
+=
+
+2yi σ2
+
+,
+
+i
+
+=
+
+1, . . . , n,
+
+is
+
+then
+
+passed
+
+to,
+
+e.g.,
+
+ORBGRAND [3] or our FIFO scheduling architecture, which
+
+generates estimates of the transmitted information bits.
+
+ORBGRAND uses blocks of LLR values to iteratively guess
+
+the noise sequence z affecting the hard-demodulated received
+
+sequence
+
+yˆ
+
+=
+
+1 2
+
+(1
+
+−
+
+sign(y)).
+
+More
+
+specifically,
+
+one
+
+generates
+
+noise sequences z in descending order of their likelihood (this
+
+is where the LLR values are being used) and iteratively tests
+
+these noise sequences by computing cˆ = yˆ ⊕ z until a valid
+
+codeword is found, i.e., until cˆ ∈ C.
+
+III. FIXED-THROUGHPUT FIFO SCHEDULING
+Inspired by the FIFO scheduling architecture put forward in [11] in the context of sphere decoding for multi-antenna wireless communication systems, we now propose our FIFO scheduling architecture for GRAND-based decoders.
+
+c)
+
+d)
+
+e)
+
+F
+
+D1
+
+R
+
+b) a)
+...
+
+...
+
+D2 D
+
+f)
+
+...
+
+g)
+
+Dn-1 h)
+
+Dn
+
+Control
+
+j)
+
+i)
+
+Fig. 2. FIFO scheduling architecture overview: a) data source, b) input buffer, c) distribution unit, d) array of decoders, e) collection unit, f) ROB, g) data sink, h) booking mechanism, i) early termination, and j) distribution control.
+A. FIFO Scheduling Architecture Overview
+Fig. 2 illustrates the general structure of our FIFO scheduling architecture. The operating principle is as follows: a)–b) Blocks of LLR values associated with each codeword entering the system are inserted into the input FIFO buffer of size F (i.e., LLR values for up to F received codewords can be stored). c)–d) A distribution unit passes one block of LLR values to an available decoder (chosen among D decoder instances). e)–f) Once a codeword has been decoded (or the decoder was terminated early), a collection unit passes the codeword to the output re-order buffer (ROB), which can store up to R decoded codewords. g) The decoded data is released from the ROB when it is requested by the subsequent hardware block.
+This FIFO scheduling architecture allows a new decoding process to start as soon as a decoder becomes available, thereby reducing the decoders’ idle time compared to an inflexible architecture in which a decoder must wait a fixed number of clock cycles before starting to decode a new codeword or terminating the decoding process early as soon as a new codeblock arrives at its input. Thus, FIFO scheduling exploits the decoder’s random runtime, enabling some codewords to be processed longer than the average runtime, which reduces the BLER while maintaining constant throughput.
+B. ROB Booking Mechanism
+Our FIFO scheduling architecture can be designed with an array of D ≥ 1 decoders operating in parallel. Given the random decoding runtime of GRAND-based decoders, it is possible that the order of decoded codewords no longer corresponds to the same order as they arrived at the FIFO’s input when multiple parallel decoders are employed. In order to preserve the order of the received data, the data ordering within the input FIFO is mapped to the ROB through a process we call ROB booking mechanism. Before leaving the input FIFO, each block of LLR values is assigned to the next available slot in the ROB in a sequential, queued manner. Each time a codeword is decoded, it is inserted into its reserved ROB slot, thereby retaining the original input data order at the output.
+C. Early Termination Mechanism
+In order to avoid data loss at the input, a free FIFO slot must be guaranteed whenever a new block of LLR values enters the input FIFO. Moreover, a processed codeword must be present within the ROB whenever it is expected at the output. We enforce both conditions by an early termination
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:00:07 UTC from IEEE Xplore. Restrictions apply.
+
+no data in the ROB ready to be ejected
+
+OR
+
+new input data and output request
+
+FIFO full all decoders occupied
+longest decoding process terminated
+
+AND
+
+AND
+
+E.T.
+
+free decoder
+
+(a)
+FIFO outputs: available FIFO slot
+
+input possible
+
+E.T.
+
+ROB contains rst codeword in the queue
+
+ROB outputs: available ROB slot
+
+output possible
+
+(b)
+
+Fig. 3. (a) Conditions that trigger an early termination (E. T.) and (b) control flow taking place when an early termination is triggered.
+
+mechanism, which terminates the longest-running decoding process early and forces the associated decoder to output its data. The conditions that lead to such an early termination and the control flow triggered by it are illustrated in Fig. 3.
+IV. RESULTS
+A. Simulation Setup
+We simulate the performance of different configurations of our FIFO scheduling architecture by processing 105 codewords encoded with a random (256,234) linear block code. The simulated configurations vary in FIFO size F , ROB size R with F = R ∈ {1, 2, 4}, and D ∈ {1, 2} parallel decoders. We assume the ORBGRAND decoder design D1 from [2]. We define two simulation parameters: (i) the arrival interval I, measured in clock cycles per codeword, indicating the number of clock cycles after which a new codeword arrives at the decoder’s input, and (ii) the data parallelism P , indicating the number of data vectors processed concurrently by the FIFO scheduling system. In order to limit the parameter space, we recall from Sec. III-B that the input FIFO releases data only when the ROB has available slots. Therefore, the maximum data parallelism is Pmax = F + R. We also ensure R ≥ D to keep all of the decoder cores busy.
+In our system, a codeword is expelled from the ROB in the same clock cycle in which a new codeword arrives in the FIFO, both occurring every I clock cycles. The FIFO scheduling system needs to accumulate some codewords before starting to output them in order to be able to fetch new data from the input FIFO once decoding has finished. Thus, a fixed inputoutput latency is enforced on the system during the initial P · I clock cycles of operation. After this initialization period, codewords are expelled from the ROB every I clock cycles, ensuring constant throughput at the input and output interfaces. As shown in Fig. 4, this strategy results in a constant input-tooutput latency, while internally, the decoding times can vary to accommodate ORBGRAND’s random decoding time.
+B. Performance Metrics
+We assess the efficacy of different architecture configurations by utilizing the algorithm and hardware specifications of the ORBGRAND decoder design D1 from [2]. Concretely, we consider a clock frequency of f = 746 MHz, assume that the
+
+(i)
+
+FIFO
+
+DEC
+
+(i+1)
+
+FIFO
+
+arrival interval (I)
+
+clock cycles
+ROB
+
+random decoding time
+
+DEC
+
+ROB
+
+constant input-output latency
+
+Fig. 4. FIFO scheduling with a single decoder, more than one FIFO/ROB slot (F, R > 1, D = 1), I = 4, and a constant input-output latency of 16 clock cycles. Each row illustrates a hypothetical data flow through our architecture, showing a constant input-output latency for the ith and (i + 1)th codeword λ(i) and λ(i+1), respectively, despite the random decoding time.
+
+number of noise sequences tested by one decoder core per
+
+clock cycle is α = 4, and use a dynamic decoding power of
+
+pdec = 86.1 mW per decoder. In our comparisons, we use the following performance metrics.
+
+1) Error-Rate Performance: The BLER achieved by each
+
+configuration of our FIFO scheduling architecture is computed via 105 Monte–Carlo trials per Eb/N0 value. The 1% BLER operating point is defined as the minimum Eb/N0 (in decibels) required to achieve 1% BLER.1 The Eb/N0 loss is defined as
+the difference (in decibels) between the 1% BLER operating
+
+point achieved by ORBGRAND without imposing a maximum
+
+iteration limit and the 1% BLER operating point achieved by
+
+our FIFO scheduling architecture with a constant throughput.
+
+2) Throughput: The throughput θ of our FIFO scheduling
+
+architecture is computed as θ = kf /I bit/s. The average
+
+throughput θavg refers to the throughput of an ORBGRAND decoder without runtime constraints and is computed as
+
+θavg = αkf /β bit/s, where β is the average number of required iterations to decode a data vector at a given Eb/N0.
+
+3) Latency: The constant input-output latency is an integer
+
+multiple of the arrival interval I, given by = (P I)/f seconds.
+
+4) Dynamic Power: To estimate the decoding power con-
+
+sumption p, we count the number of clock cycles δact(Di)
+
+during which each decoder Di, i = 1, . . . , D is actively
+
+decoding. We then compute the total number of clock cycles
+
+δact,tot =
+
+D i=1
+
+δact
+
+(Di
+
+)
+
+during
+
+which
+
+the
+
+decoders
+
+are
+
+busy.
+
+We define the decoder’s activity factor as ηact = δact,tot/(P I +
+
+I(105 − 1)), where the denominator is the number of clock
+
+cycles necessary to process all of the inputs. Finally, we
+
+estimate the dynamic decoding power as pdyn = ηactpdec by ignoring control and FIFO/ROB power consumption.
+
+C. Results and Discussion
+We now discuss the design trade-offs in terms of BLER, throughput, latency, and power of different configurations of FIFO scheduling architecture.
+Fig. 5(a) shows the BLER for different data parallelisms P and suggests the existence of an optimal Popt that minimizes the BLER for a given configuration of the FIFO scheduling architecture. Low P causes frequent early terminations due to the ROB lacking the required processed codewords when requested; high P leads to input FIFO overflows, which also triggers early terminations. Thus, Popt must be chosen carefully.
+
+1Note that 1% BLER is conservative considering that the 3GPP 5G NR standard deems 2% BLER acceptable [12, Table 8.1.1-1].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:00:07 UTC from IEEE Xplore. Restrictions apply.
+
+BLER
+
+10−1
+
+10−2
+
+10−3
+
+Eb/N0 = 5.6 Eb/N0 = 6
+
+Eb/N0 = 6.4
+
+10−4 1
+
+2
+
+3
+
+4
+
+Eb/N0 = 6.8 5678
+
+P
+
+BLER
+
+100
+
+10−1 I = 100
+
+I = 101 10−2 I = 102
+
+I = 103
+
+10−3
+
+I = 104 I = 105
+
+10−42.5
+
+Unc. 3.5
+
+4.5
+
+5.5
+
+6.5
+
+Eb/N0 [dB]
+
+BLER
+
+100
+
+(2,1) 10−1 (2,2)
+(4,1)
+
+I =1 I = 10
+
+(4,2) 10−2 (1,1)
+(2,1)
+
+(2,2) 10−3 (4,1)
+
+(4,2)
+
+10−42.5
+
+Unc. 3.5
+
+4.5
+
+5.5
+
+6.5
+
+Eb/N0 [dB]
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 5. Influence of data parallelism P on BLER in a (F = R = 4, D = 1) FIFO scheduling architecture, I = 10 clock cycles (a). BLER at different arrival intervals I in a (4,1) configuration and unconstrained (Unc.) ORBGRAND (b). BLER for different FIFO scheduling configurations (F = R = P , D) (c).
+
+Throughput [M bit/s]
+
+104
+
+103
+
+102
+
+(1,1)
+
+(2,1)
+
+101
+
+(2,2) (4,1)
+
+(4,2)
+
+100 0
+
+0.2 0.4 0.6 0.8
+
+1
+
+Unc. 1.2 1.4
+
+Eb/N0 [dB] loss
+
+Latency [ms]
+
+0.32 0.3
+
+(4,1) (4,2)
+
+0.28
+
+Loss 0.05 dB
+
+0.26
+
+Loss 0.1 dB
+
+0.24 (2,1)
+
+0.22
+
+(2,2)
+
+0.2
+
+0.18
+
+0.16 0.14
+
+(1,1) (2,1)(2,2)
+
+(4,1) (4,2)
+
+1.5 2 2.5 3 3.5 4 4.5 5 5.5
+
+Throughput [M bit/s]
+
+Dynamic Power [mW]
+
+8
+
+(4,2)
+
+7
+
+(4,1)
+
+6
+
+(4,1) (4,2)
+
+5
+
+4
+
+(2,1) (2,2)
+
+3 (2,1)(2,2)
+
+2 (1,1) 1
+
+Loss 0.05 dB Loss 0.1 dB
+
+1.5 2 2.5 3 3.5 4 4.5 5 5.5 Throughput [M bit/s]
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 6. Maximum constant throughput achieved by different FIFO scheduling configurations (F = R = P , D) versus Eb/N0 [dB] loss from 1% BLER operating point achieved by an unconstrained ORBGRAND decoder (a). Latency (b) and dynamic power (c) versus throughput achieved by different FIFO
+scheduling configurations for 0.1 dB and 0.05 dB loss from 1% BLER operating point achieved by an unconstrained ORBGRAND decoder.
+
+Fig. 5(b) shows that increasing the arrival interval I improves the BLER as it allows more decoding time per codeword. However, the BLER improvements diminish with larger I, converging to the BLER achieved by unconstrained ORBGRAND at approximately I = 105. Thus, to reach the same BLER achieved by an unconstrained ORBGRAND design, a real-time system using a D1 instance from [2] would need to tolerate latencies on the order of microseconds, which is impractical.
+Fig. 5(c) compares the BLER for different FIFO scheduling architecture configurations with fixed arrival intervals I = 1 and I = 10. For I = 1, adding a second decoder improves the BLER up to 0.3 dB as it lowers the occurrence of a full input FIFO. For I = 10, increasing buffer sizes yields up to 0.2 dB improvement, while a second decoder adds only minor gains as larger FIFO/ROB buffer sizes ensure sufficient processing time for a single decoder. Therefore, when the arrival interval is higher than the average number of iterations needed per codeword, it is more beneficial to increase the FIFO/ROB buffer sizes rather than adding decoder instances.
+Fig. 6(a) shows a constant throughput achievable by different FIFO scheduling architectures (F = R = P , D) and compares them to the ORBGRAND’s average throughput at the 1% BLER operating point (black ×). This comparison is in terms of the Eb/N0 loss, which is the difference in decibels from the × marker and the 1% BLER operating point achievable by a given FIFO scheduling architecture. The simplest configuration (1,1), which is equivalent to the naïve maximum runtime limit per codeword, incurs a 0.6 dB loss; larger buffer sizes
+
+in the (4,1) configuration (reported also in Fig. 1), reduce the loss to 0.35 dB. Moreover, to reach 0 dB loss with a (4,1) configuration, a real-time system would need to operate at a throughput that is 21× lower than the average throughput of an unconstrained decoder.
+Fig. 6(b) highlights the cost to pay in terms of input-output latency to achieve a constant target throughput with a small Eb/N0 loss. Fig. 6(c) shows the dynamic power of one or several decoder(s). We see that at higher throughputs, both the decoding latency and power consumption increase, as both quantities are proportional to the number of decoding iterations.
+V. CONCLUSIONS
+GRAND-based decoder implementations typically exhibit random runtime, but real-world communication systems must provide constant throughput and latency to avoid data loss. In order to address this issue, we have proposed a novel FIFO scheduling architecture that guarantees constant throughput and latency, while outperforming a naïve approach that imposes a maximum decoding time per codeword. While our architecture increases latency and hardware overhead, our results reveal that increasing the input/output buffer sizes improves BLER performance for a wide throughput range, whereas increasing the number of parallel decoders instances only provides notable BLER gains at very high throughput. Furthermore, we have shown that achieving 1% BLER under a constantthroughput requirement results in approximately one order of magnitude lower throughput compared to ORBGRAND’s average throughput, which is typically reported in the literature.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:00:07 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] K. R. Duffy, J. Li, and M. Médard, “Capacity-achieving guessing random additive noise decoding,” IEEE Trans. Inf. Theory, vol. 65, no. 7, pp. 4023–4040, 2019.
+[2] C. Ji, X. You, C. Zhang, and C. Studer, “Efficient ORBGRAND implementation with parallel noise sequence generation,” IEEE Trans. VLSI Syst., pp. 1–14, 2024.
+[3] K. R. Duffy, W. An, and M. Médard, “Ordered reliability bits guessing random additive noise decoding,” IEEE Trans. Signal Process., vol. 70, pp. 4528–4542, 2022.
+[4] S. M. Abbas, T. Tonnellier, F. Ercan, M. Jalaleddine, and W. J. Gross, “High-throughput and energy-efficient VLSI architecture for ordered reliability bits GRAND,” IEEE Trans. VLSI Syst., vol. 30, no. 6, pp. 681–693, 2022.
+[5] S. M. Abbas, M. Jalaleddine, and W. J. Gross, “List-GRAND: A practical way to achieve maximum likelihood decoding,” IEEE Trans. VLSI Syst., vol. 31, no. 1, pp. 43–54, 2023.
+[6] A. Riaz, V. Bansal, A. Solomon, W. An, Q. Liu, K. Galligan, K. R. Duffy, M. Medard, and R. T. Yazicigil, “Multi-code multi-rate universal maximum likelihood decoder using GRAND,” in IEEE Eur. Solid-State Circuits Conf. (ESSCIRC), 2021.
+[7] L. D. Blanc, V. Herrmann, Y. Ren, C. Müller, A. T. Kristensen, A. Levisse, Y. Shen, and A. Burg, “A GRANDAB decoder with 8.48 Gbps worstcase throughput in 65nm CMOS,” in 2024 IEEE European Solid-State Electronics Research Conference (ESSERC), 2024, pp. 685–688.
+[8] C. Condo, “A fixed latency ORBGRAND decoder architecture with LUTaided error-pattern scheduling,” IEEE Trans. Circuits Syst. I, vol. 69, no. 5, pp. 2203–2211, 2022.
+[9] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux, “Highspeed LDPC decoders towards 1 Tb/s,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 68, no. 5, pp. 2224–2233, 2021.
+[10] A. B. Cooper, “Soft decision decoding of block codes,” U. S. Army Lab. Command, Ballistic Res. Lab., Aberdeen Proving Ground, Maryland, 1988.
+[11] C. Studer, “Iterative MIMO decoding algorithms and VLSI implementation aspects,” in ETH Zurich Doctoral Thesis, 2009.
+[12] 3GPP, “Requirements for support of radio resource management,” 3rd Generation Partnership Project (3GPP), Technical Specification (TS) 38.133, Dec. 2024, version 18.8.0.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:00:07 UTC from IEEE Xplore. Restrictions apply.
+
+

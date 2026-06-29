@@ -1,0 +1,474 @@
+600
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 67, NO. 3, MARCH 2020
+
+A Novel Dynamic Detection for Flash Memory
+Amr Ismail and Magnus Sandell , Senior Member, IEEE
+
+Abstract—The incorporation of powerful soft-decision error correction codes (e.g., LDPC) to replace legacy hard-decision codes (e.g., BCH) can boost the reliability of flash memory beyond its current limits at the expense of additional reading latency to generate soft information, namely in the form of log-likelihood ratios (LLRs). Unfortunately, the memory channel varies significantly depending on several factors (e.g., temperature, parasitic coupling, and retention time) which renders the use of precomputed LLR lookup table (LUT) ineffective especially as the device ages. In fact, the estimated LLRs need to be regularly updated to avoid any performance degradation. We provide a dynamic yet low-latency blind detection algorithm which is able to adaptively adjust the hard/soft-decision boundaries and estimate the corresponding LLR codebook. The proposed demodulator offers near-optimal performance with low-complexity overhead.
+Index Terms—Flash memory, soft detection, LLR estimation and error correction.
+
+Fig. 1. Layout of NAND flash memory block.
+
+I. INTRODUCTION
+R ECENTLY, the incorporation of soft-decision ECCs (e.g., LDPC codes) to replace legacy hard-decision ECCs (e.g., BCH codes) led to significant improvement of robustness against flash memory imperfections at the expense of increased complexity. In a first attempt, the cells’ threshold voltage will be compared against the hard-decision boundaries and the detected bits will be mapped into reliability metrics (e.g., 0 → a, 1 → −a) that are then fed to the soft-input decoder. In case of hard decoding failure, the cells’ threshold voltage will be compared against the soft-decision boundaries and a lookup table (LUT) will be used to map the soft-quantized read bits into finer reliability metrics. This process may be repeated several times with increasing precision before decoding is successful. The aforementioned scheme is inherently incapable of capturing the dynamic nature of the memory channel [1] due to its reliance on precomputed LLR values. Our objective is to come up with a simple and dynamic LLR estimation algorithm to replace precomputed LUTs.
+A. Flash Memory Layout
+The storage unit (or a cell) in flash memory is a floating gate transistor where data is stored in the form of trapped charge into the floating gate. Planar flash memories are organized into blocks of two-dimensional arrays of cells (see
+Manuscript received April 9, 2019; accepted May 21, 2019. Date of publication June 3, 2019; date of current version March 4, 2020. This work was supported by the Toshiba Memory Corporation. This brief was recommended by Associate Editor Y. Zhang. (Corresponding author: Amr Ismail.)
+The authors are with the Toshiba Bristol Research and Innovation Laboratory, Toshiba Research Europe Ltd., Bristol BS1 4ND, U.K. (e-mail: amr.ismail@toshiba-trel.com; magnus.sandell@toshiba-trel.com).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSII.2019.2920723
+
+Figure 1), each block is horizontally split into word-lines which can be accessed individually for read/write operations whereas memory erasures are applied blockwise. A word-line to be read is first activated then a voltage is applied to the bit-lines and the source-drain current is sensed. A sourcedrain current indicates whether the threshold voltage is less than the applied gate voltage or not. A word-line to be programmed is first activated and progressively programmed via incremental step pulse program (ISPP) [1]; the electrons are incrementally injected into the floating gate and sensed until the threshold voltage exceeds its intended value. As the electric charges can only be increased, the whole block should be erased prior to subsequent programming. The memory erasure besides being time consuming, deteriorates the memory cells which become unusable after a number of program-erase (P/E) cycles.
+
+B. Problem Statement
+The flash memory cells are subject to various types of impairments that affect their performance, such as inaccurate programming, retention noise, random telegraph noise and more importantly inter-cell interference (ICI) [1]. As a result, the optimal hard/soft boundaries will shift over time.
+The problem of soft demodulation in flash memory is twofold, namely the estimation of the hard/soft-decision boundaries and the corresponding LLRs. Additionally, the dynamic soft demodulation algorithm needs to be as simple as possible to avoid affecting the reading latency. Let the soft quantization bins for the read voltage be noted as {Bj : j = 1, . . . , n}, the LLR value associated to the j-th bin is defined as
+
+Lj
+
+log P b = 0 | Vth ∈ Bj P b = 1 | Vth ∈ Bj
+
+1549-7747 c 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:51:49 UTC from IEEE Xplore. Restrictions apply.
+
+ISMAIL AND SANDELL: NOVEL DYNAMIC DETECTION FOR FLASH MEMORY
+
+601
+
+where Vth represents the threshold voltage. Equivalently, the above can be written as
+
+Lj = (−1)bˆj log 1 − j
+
+(1)
+
+j
+
+where bˆj (resp. j) denotes the hard bit estimate (resp. the BER) for the j-th soft bin. The objective herein is then to jointly estimate Bj, j, ∀j = 1, . . . , n. The terms detection and demodulation are used interchangeably in this brief.
+
+C. Prior Art
+Most of the soft detection algorithms proposed in the literature assume that the memory channel is either perfectly known or can be estimated by the controller in order to calculate the LLRs. In that framework, parametric density estimation has been widely used to estimate the conditional threshold voltage distributions needed for LLRs estimation [2], [3]. Those methods suffer from several drawbacks; the mismatch between the assumed and the actual channel models, the need to carry out a lot of readings to estimate the threshold voltage histograms and finally tuning the model parameters to fit the gathered data via numerical optimization techniques. In [4] the authors optimized the soft reading boundaries by maximizing the mutual information between the input and the quantized output. A heuristic approach has been proposed by the authors in [5]–[7] where more soft boundaries are assigned to the overlapping region between adjacent voltage levels. Although those approaches yielded good performance, they relied on perfect channel knowledge which is unrealistic.
+In fact, the memory controller can reliably obtain the LLRs without explicit estimation of the threshold voltage distribution. In [8] the authors proposed a blind algorithm to dynamically adapt the LLR values to the varying memory channel. The algorithm assumes that an LDPC code is used to encode the data and relies solely on the received syndrome to estimate (in ML sense) the error probability in each quantization bin (and equivalently the LLRs). One drawback of this algorithm is the need to update multiple counters, namely the number of bits in each bin associated with q ∈ {0, . . . , dv} (dv is the variable node degree) violated constrains, and the large computational cost of solving the optimization problem. Additionally, the hard/soft boundaries were assumed known beforehand to the controller.
+
+D. Contribution
+We propose a dynamic yet low-latency blind soft detection algorithm. We assume that each physical page (i.e., word-line) is split into log2 M logical pages where M is the number of threshold voltage levels a cell has. The logical pages are separately LDPC encoded to enable individual access for each logical page and hence reduce the reading latency.
+
+II. PROPOSED ALGORITHM
+The proposed algorithm starts by finding the hard-decision boundaries that minimize the estimated raw bit-error rate (BER) and carries out a first decoding attempt. If the harddecision decoding fails to recover the original data (as indicated by a non-zero syndrome), the algorithm determines the soft-decision boundaries that minimize the uncertainty about
+
+Algorithm 1 Hard-Decision Detection for the SLC
+
+1: 2:
+
+procpee∗d←ure1/H2ARD(tw)
+
+3: for i = 1 : L do
+
+4:
+
+ˆt ← tw + iδ
+
+5:
+
+cˆ ← vth < ˆt
+
+6:
+
+s ← HcˆT(mod 2)
+
+7: 8: 9:
+
+pˆ e if
+
+pˆ←et∗<←1−pe∗ˆt1t−he22wNn(cs)
+
+1/dc
+
+10:
+
+p∗e ← pˆe
+
+11:
+
+end if
+
+12: end for 13: return t∗
+
+14: end procedure
+
+tw: the programming threshold H: the parity-check matrix
+
+Fig. 2. Hard-decision boundary in SLC flash memory.
+
+the input data given the quantized read voltage. This step can be repeated with higher reading precision until decoding is successful where a new LLR codebook is estimated at each round.
+
+A. Single-Level Cell (SLC)
+
+We will first assume the case of SLC for ease of exposition and later extend our discussion to cover denser cells.
+Hard Detection: In order to track the hard-decision boundary (see Figure 2), the memory controller will carry out several readings with varying reference voltages that are typically close to the threshold used for writing. For each reading, the controller can estimate the raw BER as [8]
+
+1− pˆe =
+
+1
+
+−
+
+2w(s) Nc
+
+2
+
+1/dc
+
+(2)
+
+where w(s) denotes the weight of the syndrome s, dc denotes
+
+the check nodes degree (assuming regular LDPC code) and
+
+Nc denotes the number of parity check constraints. Eventually,
+
+the controller will choose the hard boundary that minimizes
+
+the estimated BER (say pe∗) according will denote the estimated boundary by
+
+to equation (2). t∗. This part of
+
+We our
+
+algorithm is summarized in Algorithm 1.
+
+Soft Detection: It is well known that the optimal soft
+
+boundaries are non-uniformly distributed where more bound-
+
+aries are required in the overlap region between adjacent
+
+threshold voltage levels [4], [5], [9]. In our scheme, we
+
+first aim at surrounding each hard boundary with two soft
+
+boundaries as depicted in Figure 3. We seek to optimize
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:51:49 UTC from IEEE Xplore. Restrictions apply.
+
+602
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 67, NO. 3, MARCH 2020
+
+Fig. 3. Soft-decision boundaries in SLC flash memory.
+
+Algorithm 2 Soft-Decision Detection for the SLC
+
+1: 2: 3:
+
+procedure fho∗br←i =1
+
+SOFT(t∗, 1 : L do
+
+p∗e
+
+)
+
+initialize the entropy
+
+4:
+
+ˆtl ← t∗ − iδ
+
+5:
+
+cˆ ← vth < ˆtl
+
+6:
+
+s ← HcˆT(mod 2)
+
+H: the parity-check matrix
+
+7: 8:
+
+pˆ e
+2
+
+← ←
+
+1−
+
+1−
+
+2w(s) Nc
+
+1/dc
+
+1 2
+
+−
+
+Nv (2pˆ e −pe∗ )
+2n2
+
+9:
+
+hˆb ← hb(
+
+2)
+
+n2 Nv
+
++ hb( ¯2)
+
+1−
+
+n2 Nv
+
+10:
+11: 12: 13:
+
+if hˆbhtl∗2∗∗b<←← ←hb∗ˆthlˆ2tbhen
+
+14:
+
+end if
+
+15: end for
+
+16:
+
+return tl∗,
+
+∗ 2
+
+17: end procedure
+
+Fig. 4. SLC with three reads modelled as DMC.
+
+the soft-decision boundaries though maximizing the mutual information between the binary input X and the quantized read voltage Y. Towards that goal we model the SLC with three reads as a discrete memoryless channel (DMC) with binary input and quaternary output representing the quantized voltage reads as depicted in Figure 4. The mutual information between the input and the quantized read voltage is expressed as
+
+I(X; Y) = H(X) − H(X|Y)
+
+(=a) 1 − hb j P Y ∈ Bj
+
+(3)
+
+j
+
+where hb(·) is the binary entropy function. In (a) we assumed
+
+that ‘0’ and ‘1’ are equiprobable. In order to locate the left
+
+svooflttabgoeunagdaairnysttl∗m, tuhletipcloentrreoflelreernccoems p{ta∗re−s
+
+the iδ
+
+cells’ :i=
+
+threshold 1, . . . , L}
+
+then evaluates the resulting syndromes and re-estimates the
+
+raw BER according to (2) and obtains (see the Appendix)
+
+2
+
+=
+
+1 2
+
+−
+
+Nv
+
+pˆe − p∗e 2n2
+
+(4)
+
+where nj denotes the number of cells that falls into Bj, pˆe denotes the estimated BER for the current reference voltage and Nv denotes the codeword length. Recalling that H(X) is a concave functional of p(x) [10], the mutual information in (3)
+can be lower bounded as
+
+I(X; Y) = 1 − hb( 2)P(Y ∈ B2) − hb j P Y ∈ Bj
+j=2
+≥ 1 − hb( 2)P(Y ∈ B2) − hb( ¯2)P(Y ∈/ B2)
+where p∗e = P(Y ∈ B2) 2 + P(Y ∈/ B2) ¯2 and hence the controller will choose the boundary that maximizes the R.H.S
+
+of the above inequality. Similarly, by varying the reference voltage over {t∗ + iδ : i = 1, . . . , L} the controller obtains
+
+3
+
+=
+
+1 2
+
+−
+
+Nv
+
+pˆe − pe∗ 2n3
+
+(5)
+
+and the same criterion is applied to find tr∗. The soft detection algorithm is summarized in Algorithm 2. If only few errors
+
+occur in a soft bin, the proposed algorithm may fail to detect
+
+them and will return a very high magnitude LLR resulting in
+
+decoding failure. To avoid this, we clip the estimated LLRs’
+
+magnitude to ensure that they do not exceed a pre-defined
+
+limit LLRmax. It is worth noting that the bits falling into the outermost regions (i.e., B1 and B4) are the most reliable and hence we set their LLR magnitude to LLRmax. Note that the hard boundary estimation can be seen as a special case of the
+
+soft boundaries estimation as can be verified below
+
+I(X, Xˆ ) = 1 − H(X|Xˆ ) = 1 − hb(α)P(Xˆ = 0) − hb(β)P(Xˆ = 1) ≥ 1 − hb(pe)
+
+with α (resp. β) denotes the probability of error given that the
+hard estimate is equal to 0 (resp. 1). As hb is monotonically increasing for pe < 1/2, the R.H.S of the above inequality can be maximized by minimizing pe.
+
+B. Generalization to Denser Cells
+The aforementioned procedure is naturally generalizable to cover denser cells such as multi-levels cells (MLC), triple-level cells (TLC) and quad-level cells (QLC). This is mainly due to the separate encoding/decoding of logical pages. Without loss of generality, consider a multi-level cell (MLC) flash memory, the hard/soft detection of the MSB page (see Figure 5) is done in a similar manner to the SLC.
+When considering the LSB page, two hard-decision boundaries (t1∗ and t3∗ see Figure 6) need to be estimated compared to only one hard-decision boundary to estimate for the MSB case. Towards that purpose, the controller may start by estimating t1∗ by sensing the cells with multiple reference voltages
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:51:49 UTC from IEEE Xplore. Restrictions apply.
+
+ISMAIL AND SANDELL: NOVEL DYNAMIC DETECTION FOR FLASH MEMORY
+
+603
+
+Fig. 5. Soft-decision bins for the MSB page in MLC flash.
+
+Fig. 7. Soft detection with five reads in SLC flash memory.
+
+Fig. 6. Soft-decision bins for the LSB page in MLC flash.
+
+(typically close to the writing threshold) while fixing ˆt3. For
+
+every voltage reference, the raw BER estimate can be obtained
+
+according to (2), and the voltage reference resulting in the
+
+minimum estimated raw BER will be denoted t1∗. The next
+
+step consists to repeating the same steps but while varying
+
+ˆtB3EaRndpe∗fixairnegavt1∗a.ilaAbtlethteo
+
+end, t1∗ and t3∗ the controller.
+
+and The
+
+the soft
+
+corresponding detection part
+
+follows from the SLC case (see Algorithm 2) where the con-
+
+troller fixes are repeated
+
+tb3∗uat nfdorefistximedatte1∗sto2∗obatnadin
+
+3∗∗.
+5
+
+Next, and
+
+the same steps 6∗. The bits that
+
+fall into the remaining quantization bins are highly unlikely to
+
+be erroneously detected and hence are assigned a large LLR
+
+magnitude.
+
+C. Higher Reading Precision
+The memory controller may need to feed the LDPC iterative
+decoder with a higher-precision LLRs for the decoding to be
+successful. For that purpose, the soft quantization bins in the
+uncertainty region will be further divided into finer ones (e.g., as in Figure 7). Suppose that the quantization bins B2 ∪ B3 and B4 ∪ B5 have been estimated in the previous decoding round and that the objective is now to determine B3 and B4. The controller can estimate the BER corresponding to B3 as shown in (4). As the total BER associated to B2 ∪ B3 (say 23) has been inferred in the previous decoding attempt one has
+
+2=
+
+23
+
+1 + n3 n2
+
+−
+
+3
+
+n3 n2
+
+.
+
+One gets 4, 5 likewise and the blind maximization of the mutual information approach is used to determine B3 and B4.
+
+III. RESULTS The threshold voltage samples are generated as in [6]
+
+Vth =
+
+V +W +I +R V +P+I +R
+
+if V = ve if V = v1, . . . , vM−1
+
+(6)
+
+where ve is the mean of the erased threshold voltage, the programming levels are denoted v1 . . . , vM−1, W is a zero-mean Gaussian random variable, the random variable P represents the programming inaccuracy (uniformly distributed with support equal to the ISPP), I represents the inter-cell interference (proportional to the voltage increments in the aggressor wordline) and R which is a function of the program-erase (P/E) cycles count and the retention time represents the combined random telegraph (Laplace distributed) and data retention noises (Gaussian distributed). It is worth noting that cells left in the erased state are not subject to programming inaccuracy. We consider an MLC flash memory with the nominal threshold voltages set to 1.10, 2.35, 3.05 and 3.75 V. The rest of memory channel parameters are set according to [6].
+We compared the performance of our scheme against the adaptive scheme in [8], hard detection and genie-aided schemes. The genie-aided scheme optimizes the hard/soft boundaries by maximizing the mutual information between the binary input and the quantized read voltage [4] and then counts the actual number of errors in quantization bins which is then used to compute the actual LLR value as in (1). The demodulator in [8] assumes the hard/soft boundaries are predefined and considers only the LLR estimation problem. For fairness of comparison, we tracked the hard boundaries as in Algorithm 1, whereas the soft boundaries were equally spaced around each hard boundary with the separation numerically optimized offline. The employed ECC is a (9216, 8192) regular LDPC (randomly generated) with girth 6. As can be seen from Figure 8 our demodulator performs almost identically to the scheme in [8] with a lower complexity cost.
+
+A. Reading Latency and Complexity Analysis
+The proposed detection algorithm requires sensing the memory cells with varying voltage references in order to update the hard/soft boundaries and the LLR values. The number of readings grows linearly with the number of programming voltage levels M − 1 as shown. Additionally, once the hard boundaries are determined, the different reference voltages and the corresponding estimated raw BER can be stored in a cache memory and used for inferring the soft
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:51:49 UTC from IEEE Xplore. Restrictions apply.
+
+604
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 67, NO. 3, MARCH 2020
+
+Fig. 9. Illustration of how to estimate 2.
+
+Fig. 8. PER versus P/E cycles.
+TABLE I COMPUTATIONAL COMPLEXITY IN FLOPS
+boundaries. Finally, the flash memory channel varies slowly, therefore there is no need to update the hard/soft boundaries and the corresponding LLRs every time the flash memory is read. Instead, our updating algorithm can only be applied when decoding fails using the current LUT.
+To estimate the computational complexity of our demodulator we used the following convention; the cost of addition, subtraction, multiplication and comparison is 1 flop, the cost of a division is 4 flops and the cost of an exponential is 8 flops. The hard boundary tracking for our scheme involves Nc + 20 flops/reading (see Algorithm 1), as the controller needs to repeat this calculation L times, the computational complexity becomes L(Nc + 20) flops. For a cell that stores m bits, the total cost becomes (2m − 1)L(Nc + 20) flops which we denote as O(2mLNc). Likewise, it can be verified from Algorithm 2 that the soft boundary tracking for our scheme involves (2m − 1)2L(Nc + 74) flops which we denote as O(2mLNc). The hard boundaries tracking for the scheme in [8] has the same complexity as in our algorithm, whereas the computational cost of the LLR estimation can be verified to be O(NcNv) where Nv 1. These results are summarized in Table I.
+IV. CONCLUSION Generating good LLR estimates is vital for soft detection, which is challenging in the case of flash memory whose channel depends on several factors not necessarily available to the controller. The soft demodulators in the open literature either rely on unrealistic assumption of perfect channel knowledge or incur high computational complexity. Our demodulator provides a dynamic yet accurate blind estimation of the hard/soft boundaries and the LLRs. The proposed scheme offers near-optimal performance at a low-complexity cost.
+
+APPENDIX
+We show how the BER probability 2 can be directly estimated from hard readings. Let E∗ (resp. Eˆ ) denotes the total number of erroneous bits with hard boundary t∗ (resp. ˆt). According to Figure 9 one has
+
+E∗ = l1 + k1 + k2 Eˆ = l1 + k1 + l2
+hence subtracting E∗ from Eˆ one gets
+
+Eˆ − E∗ = l2 − k2 (=b) n2 − 2k2
+
+where (b) follows from noting that n2 (the total number of bits that fall into B2) is equal to k2 + l2. Therefore we get
+
+2=
+
+k2 n2
+
+= 1 − Eˆ − E∗ 2 2n2
+
+=
+
+1 − Nv 2
+
+pˆe − pe∗ 2n2
+
+.
+
+REFERENCES
+[1] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, “Introduction to flash memory,” Proc. IEEE, vol. 91, no. 4, pp. 489–502, Apr. 2003.
+[2] D.-H. Lee and W. Sung, “Least squares based coupling cancelation for MLC NAND flash memory with a small number of voltage sensing operations,” J. Signal Process. Syst., vol. 71, no. 3, pp. 189–200, 2013.
+[3] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Enabling accurate and practical online flash channel modeling for modern MLC NAND flash memory,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2294–2311, Sep. 2016.
+[4] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[5] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[6] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[7] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[8] E. Sharon and A. Bazarsky, “Dynamic memory error model estimation for read and ECC adaptations,” in Proc. Non Volatile Memories Workshop, San Diego, USA, Mar. 2017. [Online]. Available: http://nvmw.eng.ucsd.edu/2017/assets/slides/38
+[9] C. A. Aslam, Y. L. Guan, and K. Cai, “Detector for MLC NAND flash memory using neighbor-A-priori information,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 9, pp. 2827–2836, Sep. 2016.
+[10] T. Cover and J. Thomas, Elements of Information Theory. Hoboken, NJ, USA: Wiley, 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:51:49 UTC from IEEE Xplore. Restrictions apply.
+
+

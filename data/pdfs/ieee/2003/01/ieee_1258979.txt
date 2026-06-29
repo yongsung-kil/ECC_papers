@@ -1,0 +1,711 @@
+Efficient Encoding for a Family of Quasi-cyclic LDPC Codes
+
+Dale E. Hocevar
+DSP Solutions R&D Center Texas Instruments — Dallas, TX
+
+Abstract– In general, encoding for LDPC codes can be difficult to realize efficiently. This paper presents techniques and architectures for LDPC encoding that are efficient and practical for a particular class of codes. These codes are the irregular partitioned permutation LDPC codes recently introduced by the author at ICC’03, [4]. Since these codes are quasi-cyclic, it is known that a simpler encoding process does exist. This paper goes beyond that basic method by exploiting other structural properties to allow for a simpler and faster encoding process, in both software and hardware. Solutions for some rank deficient codes are also given.
+I. INTRODUCTION
+Much attention has been given to LDPC codes recently due to their excellent performance and the simplicity of iterative decoding [1]. Practical approaches for encoding these codes, however, have not received much attention. Implementing brute force multiplication using the generator matrix is not practical, especially when considering multiple codes. Others have shown that the problem, in general, can be simplified [2], [3], though the results are not as practical as one would like.
+If the code has structure, that structure can be exploited in the encoder. Recently we developed a family of structured LDPC codes called irregular partitioned permutation (IPP) LDPC codes, as well as a related decoding architecture, [4]. This paper shows how to efficiently encode these codes in software and in hardware.
+These IPP-LDPC codes are quasi-cyclic codes with a column and row block structure within their parity check matrices. All block rows and all block columns contain m rows or m columns, respectively. Thus the parity check matrix H can be viewed as an arrangement of m by m submatrices. Such a block structured parity check matrix can be viewed at a simpler level that we call the H macro matrix form, a typical one is shown in Fig. 1. This form represents each submatrix block as a single matrix entry, either a 1 or a 0 signifying if the submatrix block is non-zero or all zeros. If the block is non-zero, then it is a cyclically shifted identity matrix with some particular shift. These H macro matrices are irregular and somewhat sparse.
+Since the underlying codes are quasi-cyclic, there will be a quasi-cyclic generator matrix as well, assuming there is no row rank deficiency. This quasi-cyclic property can be used to reduce the amount of description (storage) necessary for the generator matrix, as well as to reduce the encoding computation. Each cyclic section can be encoded with a simple tapped shift register process, just as is typically done for cyclic codes, [5].
+The above is not new, but we have devised ways to further exploit the simple structure of the IPP-LDPC code matrices to make the encoding even faster and simpler. In addition, we
+
+provide solutions for some rank deficient parity check matrices that allow the quasi-cyclic approaches to still be used.
+There are two main phases to our approach: first is the preimplementation phase involving matrix factorization, and second are the operations and implementations for data encoding. Quasi-cyclic factorization or row reduction at the block level forms the core of the pre-implementation portion and is discussed next in section II. The overall encoding process is presented in section III including approaches for rank deficiency. Section IV presents several specific encoding implementation issues including the simplified cyclic multiplication approach and an architecture for a flexible and comprehensive encoder.
+
+II. FACTORIZATION – ROW REDUCTION
+
+The necessary reduction process on the parity check matrix operates in a block row and block column manner and preserves the quasi-cyclic properties and description. It essentially follows the same procedure as is normally done on the binary matrix H. This factorization can be viewed as operating on an extended H macro matrix description, one in which each entry is a non-negative integer. This integer denotes the number of shifted diagonals or the weight of its submatrix; specifically, the weight1 of any row or column within the cyclic submatrix that this entry represents. Alternatively, each submatrix could be represented by a polynomial as commonly done for cyclic codes, [5], and quasi-cyclic codes, [6].
+The objective of the reduction is to produce a factored extended H macro matrix, H e , with the following form
+f
+
+I A
+
+
+
+He f
+
+= 0
+
+B
+
+R 
+
+(1)
+
+where the contained identity matrix I is as large as possible while keeping the other matrix weights reasonably small.
+The ideal goal for the p by p matrix B is to reduce it to a diagonal matrix where these diagonal entries are small odd integers. A second best goal is to reduce B to an upper triangular matrix with diagonal entries that are small odd integers. If these two goals are not possible, then there’s a row rank deficiency in the parity check matrix. The goal then is to reduce this portion to an upper triangular matrix where only the last diagonal entry is a non-zero even integer and the others are odd integers. The reasons for these goals will become clear later.
+The factorization involves reordering the block rows and columns and performing block row reductions to form the desired result. A simple block row reduction operation involves applying a cyclic shift to all blocks (cyclic submatrices) on a
+
+1 The weight is the number of 1’s in the vector.
+
+GLOBECOM 2003
+
+- 3996 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:22:24 UTC from IEEE Xplore. Restrictions apply.
+
+pivot row and then adding this result to some target row. The pivot block (typically the diagonal block) will have been adjusted so that it cancels one shifted diagonal from the block to which it is added. The weight of the other blocks in the target row will typically increase if the corresponding pivot row blocks had non-zero weight. This is repeated (with different shifts) until the target block has weight zero. At times, the pivot block has weight greater than one in which case we multiply the pivot row the pivot’s inverse so that the pivot block becomes the identity matrix. The row reduction can then be done as above. However, this is typically to be avoided, as the inverse has very high weight and causes other blocks to become high weight.
+The above factorization relies upon doing block row reduction operations in the full parity check matrix. Such operations need not be performed at this binary level but can be done at the extended macro matrix level using shortened descriptions of the cyclic matrices involved using Matlab. Specifically, for each submatrix a list of all shifted diagonals is kept, i.e., a list of the shifts present. The same is true for inverse matrices.
+An example using the macro matrix in Fig. 1 is given to illustrate this method. The columns and rows were reordered as shown in Fig. 2. The final factored, extended macro matrix is shown in Fig. 3. The x values on the left side denote the cancelled or zeroed out positions as can be seen by comparison to Fig. 2. The B matrix portion can be seen as the 2x2 upper triangular matrix in the center of the last rows.
+Submatrices with odd integer weights were the goal in the above factorization because an even weight cyclic submatrix is not invertible, it is singular. This is easily seen since the sum of all its rows or columns would be the zero vector. The cases with deficient row rank create special problems that will be discussed later.
+
+III. ENCODING VIA QUASI-CYCLIC FACTORED H MATRIX
+
+To perform encoding, assume that the codeword vector that
+
+multiplies against the above factored parity check matrix has
+
+the information bits in the lower portion of the vector and the
+
+parity bits in the upper portion as shown below in (2). (The
+
+representations are in terms of the full binary matrix.) With this
+
+arrangement, the known information bits multiply against the
+
+right side of the factored matrix and we can compute this result
+
+and subtract it from both sides of the parity check equation, as
+
+shown in (3).
+
+The matrix I% is block diagonal where each diagonal block
+
+is a weight 1 cyclic matrix; hence, in extended macro matrix
+
+terms, this would be the identity matrix. The matrix B is block
+
+upper triangular and possibly block diagonal.
+
+H f
+
+cP 
+
+
+
+c I
+
+
+
+=
+
+ I% 0
+
+A B
+
+R
+
+
+
+
+
+c P
+
+
+
+ 
+
+
+
+c I
+
+
+
+=
+
+0
+
+(2)
+
+⇑
+
+⇑
+
+H f ,L
+
+H f ,R
+
+H c =H c
+
+f ,L P
+
+f ,R I
+
+(3)
+
+The forming of the right hand side of (3) requires matrixvector multiplication; we will discuss later how simple it is to
+
+implement these cyclic multiplications. Assuming that B exists in (2), i.e. that p>0, means we must
+solve for the corresponding parity bits. These bits correspond to the columns covered by matrices A and B in (2). By simply inverting B, we can solve for these parity bits, since the remaining parity bits are multiplied by all zeros. However, since B is block structured, upper triangular, we will solve this in steps over the blocks. At this point assume H has full row rank; modifications for rank deficiency will be presented later.
+Figure 4 provides a further illustration of this matrix structure that will assist the following solution discussion. Here p is arbitrarily set to 3.
+Starting with the last block row of the factored parity check matrix, let’s say it is block row j, then we can solve for the parity bits associated with block column j. To do this, compute the inverse of the cyclic submatrix in block position (j, j) and multiply this inverse by the appropriate portion of the right hand side vector.2 The result is the portion of parity bits which then can be multiplied times the portion of block column j above the jth block row and subtracted from both sides of the parity check equation.
+This process continues, assuming p > 1, by doing the same operations only using block row j-1 and block column j-1. This is further continued stepping upward until p block row steps have been completed. When finished, all that remains on the left hand side of the equation is the I% portion of the factored H matrix. Thus a solution is immediately obtained for the remaining parity bits.
+A. Approaches for Rank Deficiency
+If there is rank deficiency, it will not be possible for all of the diagonal submatrices in B to have odd weight;3 at least one will be of even weight and so not have an inverse. Hence, the process above cannot be used as described. We will provide a solution for one class of situations that can commonly occur.
+For this desired class, the main assumption is that there is only a row rank deficiency of one in the parity check matrix. Assume that the previous reduction process can be done such that only the last diagonal submatrix in B is of even weight. It should be possible to do this. Then all the submatrices in the last block row of R will be of even weight. If this were not true, we could do a block column swap to get an odd weight submatrix as the last diagonal submatrix in B, this would violate our rank deficiency assumption given our assumed property of these odd weight matrices.
+This means that all the submatrices in the last block row of the entire row reduced matrix have even weight. Consider now the m rows of this last entire block row and replace the last row with the sum of all m rows. This last row will now be all zeros and hence it can be ignored. The other m-1 rows above are unchanged. The main aspects of the previous solution process can now be used with a few modifications.
+First the right side of the matrix can be multiplied by the information bits and moved to the right hand side as described
+2 Note that the inverse of a cyclic matrix is also cyclic, when it exists. 3 We assume without proof that inverses exit for m x m cyclic matrices of odd weight when m is a prime.
+
+GLOBECOM 2003
+
+- 3997 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:22:24 UTC from IEEE Xplore. Restrictions apply.
+
+earlier for (3). The last row is ignored. Then we solve for the parity bits associated with the last block diagonal in B. But first, one of the parity bits is converted into an information bit so the number of information bits is increased by one and the number of parity bits decreased by one and the code rate changes slightly. We arbitrarily choose this bit to be the last bit in the block column. This bit is multiplied by the last column and the result subtracted from the right hand side. Then the remaining m-1 x m-1 sub-problem can now be solved and then the previous solution process is used since the m bits for this block column would then be known.
+The above remaining submatrix is now invertible and the most general approach is to compute and store this inverse. In addition, the submatrix and its inverse are also reverse symmetric; i.e., symmetric if the columns were ordered in reverse. Recall that the inverse of a symmetric matrix is also symmetric. This property can be use to our advantage later.
+An alternate solution, as opposed to computing and storing the inverse above, can be used under some conditions. Specifically, if the last diagonal submatrix in B has weight two, or if any of the remaining block columns can be swapped such that this would become true, the following can be used. Each equation in the sub-problem has only two unknowns, but after converting the last column of this block column to an information bit, the unknowns for either of the two equations connected with this last column can now be solved. Because of the connections in the matrix this sequencing process can be continued to solve for all the parity bits.
+The advantage of this approach is that it does not require storing a matrix inverse in full binary form that would require a nontrivial memory, whether exploiting symmetry or not, and the solution hardware is trivial.
+As mentioned in the introduction, portions of these computations for handling rank deficiency are only required once in the pre-implementation or setup phase. Only the results of these setup portions are used in the actual encoding process or encoder hardware.
+IV. ENCODER IMPLEMENTATION ISSUES
+In this section, implementation issues will be discussed in further detail.
+A. Matrix-Vector Multiplication
+In the previous encoding process, all that was involved was the repeated action of multiplying a cyclic submatrix by a vector and then subtraction of this vector segment from another vector. (Assume all inverses, if any, were precomputed.) All these operations are done using mod 2 arithmetic and hence are very simple. The standard way to implement such operations in hardware would be to use a tapped shift register arrangement as described in elementary error codes textbooks, e.g. [5]. The shift register would initially contain the vector and the tap positions would correspond to the first row of the matrix. The values from the taps are simply exclusive-or’d together (mod 2 addition). This gives the first entry in the result vector; the remaining entries come by circularly shifting the register. The process requires m shifts or cycles where m is the length of the vectors. This is easily generalized to allow any cyclic matrix
+
+by holding the particular first matrix row in a register and using muxes to implement the taps.
+However, our implementation uses a faster method that maintains the simplicity of implementation, and that also can be used in software approaches as opposed to the above standard method. This new method utilizes a property of the cyclic matrices. For the most part, the cyclic matrices in the factored H matrix have very low cyclic weight. Hence, the multiplication of such a matrix by a vector can be understood to be the mod 2 sum of a small number (the row or column weight of the cyclic matrix) of shifted copies of the vector. This can very easily be implemented in software by simply doing the shifts and accumulating the sum. The advantage of this approach is that it requires considerably fewer cycles since typical weight values may be only 1 to 15 whereas m is usually much larger and can be as large as several hundred. Thus, this overall approach can be as much as two orders of magnitude faster.
+The hardware implementation follows the same idea and one such approach is shown in Fig. 5. Here the vector segment to be multiplied is loaded into the register at the top. This data is fed into the Circular Shift Unit, which appropriately shifts the bits by the amount of the incoming shift value. There may be several shift values representing the particular cyclic matrix; let’s say that number is n. The Shift Values Unit provides these n values in sequence while the vector segment is held in the top register. The shifted results emerge from the shifter and are accumulated via mod 2 addition. The associated bitwise XOR and ACC register perform this task.
+After all n shift results for this matrix multiply are accumulated, the bits are stored in some form of memory or register storage. Prior to being stored, a further addition can occur. This addition relates to that of adding this bit segment result to the right hand side of the equation as discussed previously. The appropriate right hand side bit segment is obtained from storage and added to the accumulated multiply result and the final result is stored as shown with the second bitwise XOR and the datapaths.
+When doing many such matrix-vector multiplies in sequence, the effective time required for any one is only the number of shifts required for that matrix. This is much faster than the standard tapped cyclic shift register method when this number is significantly less than the matrix dimension. In addition, the Circular Shift Unit can be pipelined without any penalty to this throughput. Such pipelining eases certain circuit design issues.
+B. Approach for Binary Inverses
+For the row rank deficient case, one method computed the inverse of a reduced matrix. However, this inverse does not have the cyclic structure like the other matrices, hence it cannot be stored and used in the list form. The binary matrix entries must be stored, though symmetry can be exploited.
+It is straightforward to store the full inverse in memory such that it can be quickly accessed by rows. Then it is simple and fast to compute the necessary matrix-vector product that will be the equation solution; obviously these are just ‘Exclusive Or’ operations. Symmetry can be used to reduce the required
+
+GLOBECOM 2003
+
+- 3998 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:22:24 UTC from IEEE Xplore. Restrictions apply.
+
+storage, but then it is not simple to achieve the speed of the above.
+An approach to solve this entails partitioning the matrix into square blocks where each block is stored as a single memory word, typically organized in a row-wise manner within the word. By exploiting this symmetry, only the lower half of the matrix, and the diagonal, has to be stored. The matrix can be read from memory block by block and special hardware can compute the partial products of these against the vector segments with both the normal order and the ‘transposed’ order of the block that represents the other placement of that block within the inverse. Special transpose wiring enables the second product. For each such block these double products could be done in one clock cycle. Other supporting hardware would supply the vector segments and accumulate the resulting products in the correct order.
+
+C. Solving Weight 2 Equations
+
+For the row rank deficient case, an alternate method for the
+
+sub-problem involved solving a weight two only submatrix
+
+equation. This will be described in detail next.
+
+Recall that the last variable in this sub-problem is an infor-
+
+mation bit, hence of known value. The solution concept is to
+
+start with one of the two possible single equations that involve
+
+this last variable (here we don’t need to ignore the last col-
+
+umn). The other variable in this equation can now be deter-
+
+mined. There is another single equation that involves this
+
+newly determined variable; it is solved next. This process re-
+
+peats until all variables have been determined. The method can
+
+be described more clearly with the following equations. As-
+
+sume the index of the last variable is j_last, the index for the
+
+starting single equation is i_start, xj = ‘given bit value’, and initialize as j = j _ last, i = i _ start .
+
+Repeat for m − 1 steps: j′ = j
+
+j = j + s mod m
+
+(4)
+
+x j
+
+=
+
+y i
+
++
+
+x j′
+
+mod 2
+
+i = i + s mod m
+
+In the above equations, the term s is an offset shift value determined by the difference of the two shift values that define the weight 2 cyclic matrix. Arbitrarily label the shifted diagonal that contains the position (i_start, j_last) as diagonal 1 and the other as diagonal 2. Starting from diagonal 1, s determines how far ahead, mod m, that the other shifted diagonal lies in terms of column position for any row; likewise for row positions from diagonal 2 to diagonal 1.
+Hence, the above method can be implemented in software or in hardware. Only a few variables have to be stored to solve the equations; in particular the starting indices and shift offset. One such hardware implementation is shown in Fig. 6 where the simplicity of this approach can be seen. The only difficulty is that the mux and demux blocks may be fairly wide to cover m bits.
+
+D. Overall Encoder Architecture
+
+Figure 7 illustrates a top-level view of an overall implementation for a hardware encoder that incorporates the previous
+
+methods. The blocks labeled Information Bits, R.H.S.4 Values, Parity Bits and Inverse Memory all represent some form of storage. These can be separate storages or some could be combined in various fashions and could be arrangements of memory and/or register storage. The Matrix Shift Values contains the shift values for all the matrices (submatrices in the factored H matrix and including inverse matrices) that are needed. These can be hard-coded in ROM or synthesized logic, or for a more flexible system they could be in memory or registers.
+The operation of this device follows the description given previously. Assuming no rank deficiency, all the non-zero submatrices contained in the R matrix of Fig. 4 are multiplied by the associated information bit segments. The necessary data is fed sequentially, block by block, to the CMU, and the results accumulated in the R.H.S. Values unit. Next, the solution over the Bi’s section of Fig. 4 is done in two phases per block diagonal. In the first phase, the inverse of the matrix Bi is used and the input vectors come from the R.H.S. Values unit and the results are stored in the Parity Bits unit. In the second phase, the remaining block column above is removed via multiplication with this newly determined parity bit segment; here CMU input comes from the Parity Bits unit and results are accumulated in the R.H.S. Values unit. Lastly the solution over the I% matrix portion is done; input vectors come from the R.H.S. Values unit and the results go to the Parity Bits unit.
+For codes with rank deficiency, the shaded blocks in the lower portion of Fig. 7 become important. These are the Weight 2 Solution Unit and the Inverse Multiply Unit with Inverse Memory. When either of these are used, they simply operate in place of the Cyclic Multiply Unit. The Inverse Memory storage block provides the necessary inverse stored in binary form. Depending upon the codes and design, only one of these approaches might be necessary.
+This encoder in Fig. 7 could easily be designed in a semiprogrammable manner via the controller. It could then perform encoding for a great many of these type codes and new codes could be downloaded.
+V. CONCLUSIONS
+An efficient encoding approach, practical for both software and hardware, has been shown for a class of quasi-cyclic LDPC codes. It is much faster, up to two orders of magnitude, and it is simpler, than the standard quasi-cyclic approach that uses cyclic shifting. This was due in part to a simpler method for cyclic matrix-vector multiplication that applies to our low weight matrices. The block row reduction process was described to assist those in using this method. Two approaches and implementations for rank deficiency were also given. A general encoder architecture was shown that makes encoding practical, efficient and flexible for this class of LDPC codes.
+REFERENCES
+[1] T.J. Richardson, M.A. Shokrollahi and R.L. Urbanke, “Design of Capacity–Approaching Irregular Low-Density Parity-Check Codes,” IEEE Trans. on Information Theory, vol.47, no.2, pp. 619-637, Feb. 2001.
+4 R.H.S. means right hand side.
+
+GLOBECOM 2003
+
+- 3999 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:22:24 UTC from IEEE Xplore. Restrictions apply.
+
+[2] T.J. Richardson and R.L. Urbanke, “Efficient encoding of low-density parity-check codes,” IEEE Trans. Inform. Theory, vol.47, no.2, pp. 638656, Feb. 2001.
+[3] D.J.C. MacKay, S.T. Wilson, and M.C. Davey, “Comparison of constructions of irregular Gallager codes,” IEEE Trans. Comm., vol.47, no.10, pp. 1449-1454, Oct. 1999.
+[4] D.E. Hocevar, “LDPC code construction with flexible hardware implementation,” Proc. IEEE Int’l Conf. on Comm. (ICC), Anchorage, AK, pp. 2708-2712, May 2003.
+[5] S. Lin and D.J. Costello, Jr., Error Control Coding: Fundamentals and Applications, Englewood Cliffs, NJ: Prentice Hall, 1983.
+[6] S.J. Johnson and S.R. Weller, “A family of irregular LDPC codes with low encoding complexity,” IEEE Comm. Letters, vol. 7, pp. 79-81, Feb. 2003.
+
+~I R
+
+B1
+
+0
+
+B2
+
+0 B3
+
+Figure 4. Typical structure of factored parity check matrix.
+
+Cyclic Multiply Unit
+
+Vector bit segment to multiply
+
+Circular Shift Unit [0 to (m-1)]
+
+Shift Values
+
+Bitwise XORs
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+1
+
+11
+
+1
+
+1
+
+1
+
+1
+
+1111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+11
+
+1
+
+1
+
+1
+
+1
+
+1111
+
+1
+
+11
+
+11111
+
+Figure 1. Parity check matrix H in macro form, blanks are zeros.
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+11
+
+1
+
+1
+
+1
+
+11
+
+1
+
+1
+
+1
+
+1
+
+1111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+11
+
+1
+
+11
+
+1
+
+1
+
+11
+
+1
+
+111
+
+1
+
+111
+
+1111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+Figure 2. H macro matrix after column and row reordering.
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+1
+
+1
+
+1
+
+1
+
+111
+
+x1
+
+1
+
+2
+
+2
+
+1
+
+1
+
+2
+
+x
+
+1
+
+1
+
+111
+
+11
+
+22
+
+x
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+222
+
+x
+
+x1
+
+11
+
+2
+
+1
+
+2111434
+
+x
+
+x1222221
+
+2212646
+
+x
+
+xx534442
+
+4 4 2 4 12 8 11
+
+x
+
+x
+
+1
+
+1122
+
+121244
+
+Figure 3. Extended H macro matrix after reorderings and factorization.
+
+ACC Register
+
+Memory
+
+Figure 5. Hardware architecture for simplified cyclic matrixvector multiplication.
+
+y: m bits
+
+x: m bits
+
+yi +
+
+xj
+
+All adders are modulo m i
+j
+
+s+
+
+s+
+
+Figure 6. Implementation for solving cyclic weight 2 equations.
+
+Matrix Shift Va lues
+(all matrices)
+
+Information Bits
+
+Contro ller
+
+Cyclic Multiply Unit CMU
+
+R.H.S. Values
+
+Weight 2 Solution Unit
+
+Parity Bits
+
+Inverse Memory
+
+Inverse Multiply Unit
+
+Figure 7. Top level architecture for complete encoder.
+
+GLOBECOM 2003
+
+- 4000 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:22:24 UTC from IEEE Xplore. Restrictions apply.
+
+

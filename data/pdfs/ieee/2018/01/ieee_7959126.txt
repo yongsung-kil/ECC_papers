@@ -1,0 +1,881 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+353
+
+Decision-Directed Retention-Failure Recovery With Channel Update for MLC NAND Flash Memory
+Chaudhry Adnan Aslam, Student Member, IEEE, Yong Liang Guan, Member, IEEE, and Kui Cai, Senior Member, IEEE
+
+Abstract— To recover from the retention noise induced errors in NAND flash memory, a retention-aware beliefpropagation (RABP) decoding scheme for low-density paritycheck codes is introduced. The RABP is a two-stage decoding scheme in which the memory cell’s charge-loss effect is systematically compensated. In RABP decoding, instead of read retries for data recovery, the probable victim cells are first determined with the help of read-back voltage signal and the decoded bit decisions. Then, for such suspected victim cells, their log-likelihood-ratio regions are modified in such a way as to absorb the effect of cell voltage downshift caused by retention noise, and then a second round of belief-propagation (BP) decoding is performed afresh, often with decoding failure recovery. Furthermore, leveraging on the RABP decoded bit-error pattern, an RABP assisted channel update (RABP-CU) algorithm is proposed which re-estimates the latest cell voltage distribution parameters without incurring new memory sensing operations. This is achieved by minimizing the mean squared error between the measured and predicted bit error/erasure values. Through simulations, it is shown that the RABP decoder increases the retention time limit by up to 70% compared with single round of BP decoding. The proposed RABP-CU algorithm further extends the data retention time.
+Index Terms— NAND flash memory, data retention noise, retention-failure recovery, flash channel estimation, voltage distribution, belief-propagation decoding, error-rate performance.
+I. INTRODUCTION
+N AND flash memory has revolutionized the non-volatile data storage industry by offering large storage capacity, high data throughput, fast read-response time and low power consumption. It has been ubiquitously used in a wide range of applications, ranging from portable digital electronic products to high-performance enterprise data centers. However, its further proliferation has been hampered due to the emergence of data retention noise which degrades the flash data reliability [1]. As the memory cell size shrinks employing sub-20 nm process technology, only fewer electrons can be stored over
+Manuscript received February 11, 2017; revised May 2, 2017 and June 8, 2017; accepted June 8, 2017. Date of publication June 26, 2017; date of current version January 5, 2018. This work was supported in part by the NTU Research Scholarship, and in part by the Singapore Agency of Science and Technology (A∗Star) PSF Research Grant and the SUTD-ZJU Joint Research Grant. This paper was recommended by Associate Editor G. Masera. (Corresponding author: Chaudhry Adnan Aslam.)
+C. A. Aslam and Y. L. Guan are with the School of Electrical and Electronics Engineering, Nanyang Technological University, Singapore 639798 (e-mail: ad0001ry@e.ntu.edu.sg; eylguan@ntu.edu.sg).
+K. Cai is with the Science and Math Cluster, Singapore University of Technology and Design, Singapore 487372 (e-mail: cai_kui@sutd.edu.sg).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSI.2017.2714902
+
+memory cell’s floating-gate transistor. Consequently, with the passage of data retention time, only a small amount of charge leakage significantly affects the the threshold voltage level. This problem exacerbates with the multi-level-cell (MLC) technology, where intervals between adjacent voltage levels are increasing small. As a result, the voltage distributions tend to overlap, which leads to high raw bit-error-rate (BER).
+In current design practice, error correction codes (ECCs) are being used to tolerate the increasing raw memory errors. However, the conventional hard-decision decoding codes, such as the Bose-Chaudhri-Hocquenghem (BCH) and Reed-Solomon (RS) codes, are no longer feasible for the application to high-density NAND flash technology. Instead, soft-decision decoding low-density parity-check (LDPC) codes have emerged as a promising candidate [2]–[9]. The beliefpropagation (BP) decoding of an LDPC code requires finegrained memory sensing precision for accurate computation of log-likelihood-ratio (LLR) information of each code-word bit, as the decoding performance heavily depends upon the quality of LLR values.
+In NAND flash memory, however, the default memory sensing (read threshold) levels, and the stored voltage distribution parameters (mean and standard deviation) that are needed to generate the LLR information, tend to become outdated and sub-optimal with increasing data retention time and memory program/erase (PE) cycles. This may lead to ECC decoding failure and thus demand flash channel estimation afresh. Typically, many retention-failure recovery and flash channel estimation algorithms require additional memory sensing operations. Note that the total read latency of NAND flash memory based devices is composed of firmware processing, memory sensing, and DMA (data transfer from controller to NAND flash memory) times, and the most time consuming process is the memory sensing operation. Thus, additional re-reads may compromise the benefits brought by the flash technology. Hence, for the effective implementation of softdecision ECC, we need new system-level solutions which can perform the retention-failure recovery and flash channel estimation without incurring additional read operations.
+A. Literature Review
+To mitigate the retention noise induced errors, memory scrubbing techniques are reported in [10] and [11]. For instance, the flash correct-and-refresh (FCR) technique in [11] periodically read, decode, and re-program the stored flash data
+
+1549-8328 © 2017 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+354
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+before it accumulates large retention noise errors. However, the FCR scheme is only applicable when the flash controller is powered-on. Furthermore, the cell re-programming operation itself may induce more cell-to-cell interference (CCI) which is again a major source of errors in today’s flash memory chips. When the number of retention errors are large and exceed the error-correction capability of ECC decoder, the FCR do not work anymore. In this case, some recent data recovery techniques attending to retention failures, like the error-prediction error-recovery (EPER) [12] and flash-defibrillator (FD) [13], where the charge-reduced cells are recharged by applying recovery pulses, and the retention-optimized-reading (ROR) [14] and read-channeloptimization (RCO) [15], where the failed stored data is recovered by adaptively applying read threshold levels, can be invoked. However, all these methods require extra memory sensing operations which may lead to increase in the read latency and power consumption.
+With regards to flash channel estimation, which involves finding the voltage distribution parameters correspond to each cell state, Cai et al. [16] and Luo et al. [17] present the off-line and on-line voltage modeling schemes (Off-VM) and (On-VM), respectively, which characterize the flash channel using empirical measurements and develop statistical models for threshold voltage distribution. However, both these schemes estimate the flash channel for a given PE count, while ignoring the effect of charge leakage due to increasing data retention time. The adaptive read threshold (ART) [18] is another method for characterizing the voltage distribution while using a limited number of re-reads. Apart from that, a detector parameter estimation (DPE) algorithm, which determines the best-fit voltage distribution parameters by matching the actual and modeled distributions functions, is reported in [19]. When ECC of a memory page fails with initial distribution parameters, these estimation algorithms can be invoked by employing extra memory sensing operations. This is followed by more memory sensing operations for the re-trial of error correction. This whole process results in significant read latency due to excessive memory sensing operations and large amount of memory-to-controller data transfer.
+To preclude the excessive re-reads, a decision-directed estimation (DDE) strategy is presented in [20], in which the decoded bit-error patterns are used to formulate an optimization problem for the adjustment of voltage distribution parameters. However, for the DDE scheme to work, the availability of correctly decoded data is a pre-requisite. Furthermore, the DDE scheme only finds the distribution mean values, whereas the distribution standard deviation values are assumed to be an scaled factor of distribution mean values, which may not be true. Finally, the DDE scheme is also susceptible to large estimation errors and thus may sometimes become unstable.
+Researchers have also proposed some innovative code construction methods which facilitate the memory controller in the selection of read threshold levels, particularly when no prior information of voltage distribution is available. One such example is the balanced modulation which ensures that the code-word contains an equal number of zeros and
+
+ones, hence facilitating the adjustment of dynamic read thresholds [21], [22]. The rank modulation [23], which stores the data contents in the relative voltage order over a set of memory cells, can also tolerate the charge leakage. Since the charge leakage process results in a unidirectional drift of cell voltages, it is likely that the relative order of cell voltages is still preserved after the retention period. However, rank modulation faces some technological issues which need to be addressed before its practical implementation. For instance, rank modulation requires a large number of read operations to learn the voltage level ordering, which may significantly increase the read latency.
+B. Contributions
+In this paper, we perform the retention-failure recovery and flash channel estimation by using the initial read threshold levels, thus avoiding the time and power consuming excessive read operations. In the first half of the paper, we present a novel retention-aware belief-propagation (RABP) decoding scheme for retention-failure recovery, specifically when the memory cells are severely influenced under the retention noise effect. In this scheme, we employ the BP algorithm to decode the stored flash data. In case of decoding failure, we modify the input LLR computation by re-mapping the LLRs of voltage quantization regions, based on the measured read-back voltage signal and the decoded code-word bits, and initialize a second round of BP decoding by using the modified LLR values. The proposed RABP decoding improves the flash channel tolerance against the data retention errors and enables the BP algorithm to successfully decode the flash data for longer period of retention time.
+In the second half of the paper, we propose an RABP assisted channel update (RABP-CU) algorithm for estimating the mean and standard deviation parameters of threshold voltage distribution by using the measured bit error/erasure counts which are obtained after the execution of RABP decoder. Specifically, we iteratively minimize the mean squared error between the measured and predicted bit error/erasure counts, employing the gradient descent method, and determine the best-fit mean and standard deviation values. In case of RABP decoding failure, wherein the measured bit error/erasure counts are unavailable, we compute the approximated values of bit error/erasure counts with the help of detected bit counts, and then invoke the proposed RABP-CU algorithm.
+The overall scheme works as shown in Fig. 1. The flash memory controller first attempts to read the memory page with initial read threshold levels and then executes the conventional BP (CBP) decoding. If the retention noise is weak and the decoding outcome is successful, no further processing is required. Otherwise, the controller attempts to recover the retention-failure data by using the proposed RABP decoding and then proceeds to the RABP-CU algorithm. A prior version of this paper was published in [24], but the work presented here has been significantly extended.
+The remainder of this paper is organized as follows. The flash channel model is presented in Section II. The retentionfailure recovery via the proposed RABP decoding is dis-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+355
+
+The programming noise, np, can be modeled by using the Gaussian distribution function N ,∗ given by
+
+pnp (v) =
+
+N ∗ 0, σe2 , for Vs ∈ {Vs11 } N ∗ 0, σp2 , for Vs ∈ {Vs10∼s01 }
+
+(3)
+
+where σe2 and σp2 are noise variance parameters, with σe > σp. The RTN noise, nw, is emerged due to the recurring PE
+cycles which cause damage to the oxide layer by generating
+the oxide and interface traps [32]. The RTN tends to widen
+the voltage distribution functions by introducing exponential tails around the intended voltage Vs. We model the RTN with Gaussian distribution function, as
+
+Fig. 1. Block diagram of the proposed retention-failure recovery via retention-aware belief-propagation (RABP) decoding and the RABP assisted channel update (RABP-CU) in NAND flash memory.
+
+cussed in Section-III. The flash channel estimation method using the proposed RABP-CU algorithm is presented in Section-IV. The mean estimation error, estimation complexity and error-rate performance under the RABP-CU algorithm are analyzed in Section V. The conclusions are drawn in Section VI.
+
+II. SYSTEM MODEL
+In this paper, without loss of generality, we perform the RABP decoding and RABP-CU based parametric search algorithm over a model-based 2-bit per cell NAND flash memory. However, the work presented in this paper can easily be extended for 3-bit or 4-bit per cell technology. According to [25]–[30], the cell’s threshold voltage, denoted by V , can be formulated with five additive noise components, given by
+
+V = Vs + {nu + np + nw + nr + ni}
+
+(1)
+
+where Vs ∈ {Vs11 , Vs10 , Vs00 , Vs01 } is the set of desired voltage level, nu and np are the state-dependent programming noise
+
+components, nw is the RTN noise which is related with
+
+memory PE cycles in a power-law fashion, nr is the retention
+
+noise scaled with initial voltage, PE cycles and the data
+
+retention time (T ), and ni is the CCI component induced
+
+by the parasitic coupling-capacitance between adjacent mem-
+
+ory cells. Fig. 2 illustrates the noisy NAND flash channel
+
+model.
+
+The state-dependent incremental step pulse program-
+
+ming (ISPP) [31] noise, nu, only affects the programmed state
+
+memory cells. The ISPP programming cause the threshold
+
+voltage of the programmed state memory cells to follow a
+
+uniform distribution model in the interval [0, Vpp], given by
+
+⎧
+
+⎨0, pnu (v) = ⎩ 1 , if 0 ≤ v ≤
+Vpp
+
+for Vs ∈ {Vs11 } Vpp, for Vs ∈ {Vs10∼s01 }
+
+(2)
+
+where Vpp is the ISPP voltage step size.
+
+pnw (v) = N ∗ 0, σw2
+
+(4)
+
+where the noise standard deviation, σw, scales with PE cycles. We set σw = 0.00027(P E)0.62 according to [26].
+The data retention noise, nr, is caused by the continuous charge leakage through cell’s floating-gate. We model the
+retention noise with Gaussian distribution function, as
+
+pnr (v) = N ∗ μrs, σrs2
+
+(5)
+
+where the state-dependent mean, μrs, and standard deviation, σrs, are set according to [27], given by
+
+μrs = (Vs − x0) . At(P E )αi + Bt(P E )αo . log (1 + T ) (6)
+
+σrs = 0.3|μrs|
+
+(7)
+
+The CCI component, ni, linearly adds to the threshold voltage signal. However, the CCI is a deterministic component and thus can be estimated and subsequently neutralized
+either during cell programming via signal predistortion [33]
+or after memory sensing [34]. In this work, we employ the signal predistortion to compensate the CCI component. The
+final voltage distribution function for the erased-state cell, ps11 (v), and the programmed-state cell, ps11 (v), ps11 (v) and ps11 (v), can be computed as the convolution integral of all the noise components. The final voltage distribution can be well approximated by using a Gaussian mixture model, given as
+
+ps11∼s01 (v) ≈ N ∗ μs11∼s01 , σs11∼s01
+
+(8)
+
+where,
+
+μs11 = Vs11 − μrs11
+
+μs10∼s01 = Vs10∼s01 +
+
+Vpp 2
+
+−
+
+μr s10 ∼s01
+
+σs211 = σe2 + σn2 + σr2s11
+
+σs210∼s01 = σp2 + σn2 + σr2s10∼s01
+
+For this work, we set the following flash memory parameters
+according to [26]: Vs11 = 1.4, Vs10 = 2.6, Vs00 = 3.2, Vs01 = 3.93, Vpp = 0.20, σe = 0.35, σp = 0.05, x0 = 1.4, At = 0.000035, Bt = 0.000235, αi = 0.62 and αo = 0.30.
+
+∗The Gaussian distribution function with mean μ and variance σ2 is given
+
+by N
+
+μ, σ 2
+
+=
+
+√1 2π
+
+σ
+
+2
+
+−
+e
+
+(v −μ)2 2σ 2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+356
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+Fig. 2. Noisy NAND flash channel model, incorporating programming noise nu and np, CCI ni, RTN nw and retention noise nr.
+
+Fig. 3. Voltage distribution functions for 2-bit per cell flash memory before (top figure) and after (bottom figure) the data retention noise effect: voltage levels tend to drop gradually with data retention time.
+
+A. Data Retention Effect on Voltage Distribution
+The unremitting charge leakage over increasing data retention time reduces the cell’s threshold voltage level and eventually shifts the memory cell down, into an adjacent (lower) cell state, leading to an incorrect detection of stored data symbol, as shown in Fig. 3. This figure illustrates four voltage distribution functions for 2-bit per cell flash memory. Note that the data retention noise not only shifts the voltage distribution functions towards the erased state s11, but also increases their variance. While the retention noise affects the programmed state voltage distribution functions, it has inconsequential effect on the erased state memory cells [14]. Thus, in the proposed RABP-CU algorithm, we only attempt to find the mean and standard deviation parameters for the programmed state memory cells.
+In Fig. 4, we simulate our 2-bit per cell flash channel model and plot the amount of change in mean and standard deviation values, denoted by μs10∼s01 and σs10∼s01 , respectively, over a range of data retention time, keeping the PE cycles fixed at 5K and 10K. It should be noted that the voltage distribution parameters correspond to the erased state s11 changes very slightly. Thus, we assume the values of μs11 and σs11 to be negligible. We observe that the highest programmed state s01 shows the largest amount of shift, where the mean and standard deviation values change up to 0.4 V and 0.055 V, respectively, by the retention time of 105 hours. This is because the retention shift is proportional to the amount of charged electrons stored over the cell’s floating-gate, thus a higher programmed state shifts faster than a lower programmed state.
+
+Fig. 4. The amount of change in mean μ (top figure) and standard deviation σ (bottom figure) values against increasing data retention time at PE = 5K
+(solid curves) and PE = 10K (dashed curves).
+III. RETENTION-AWARE BELIEF-PROPAGATION (RABP) DECODING ALGORITHM
+As memory cell’s threshold voltage level continuously shifts over the data retention time, the initial voltage distribution parameters yield incorrect LLR information. This may lead to BP decoding failure. In the following section, we will first describe the method for the selection of read threshold levels and then present a retention-failure recovery technique which precludes the new memory sensing operations.
+A. Read Threshold Selection and LLR Calculation for Soft Decision BP Decoding
+For soft decision BP decoding, the read threshold levels can be chosen so as to maximize the mutual information (MMI) between flash channel’s input and output voltage signals, as this can minimize the LDPC error-rate performance [35]. In this regard, it has been found that 6 levels of memory sensing precision are able to approach the performance of fullprecision soft decision BP decoding, while further increase in memory sensing levels starts to produce diminishing returns. To show that, in Fig. 5, we plot the cell storage capacity (S)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+357
+
+Fig. 5. Cell storage capacity (9) plotted against memory PE cycles for 2-bit per cell NAND flash memory: employing different levels of memory sensing precision Q.
+
+versus memory PE cycles for different values of retention
+
+time (T ), given by
+
+⎡
+
+S=1
+
+Q +1
+⎣
+
+4
+
+s∈{s11,...,s01} i=1
+
+Ri
+ps (v )log
+Ri−1
+
+ps (v ) P (v )
+
+⎤ dv⎦
+
+1
+
+P(v) = 4
+
+ps (v )
+
+(9)
+
+s ∈{s11 ,...,s01 }
+
+where Ri are the MMI optimized read threshold levels and Q is the memory sensing precision. The above cell storage
+capacity formula comes from the information-theoretic capacity. As can be seen, 6-level quantization scheme (Q = 6) approaches the performance of soft quantization, which is
+therefore recommended for the flash memory sensing in this paper.
+With 6-level quantization, the LLR values corresponding to the least-significant-bit (Lmsb) and most-significant-bit (Llsb) positions can be computed such that, when Rn−1 < v ≤ Rn for n = 1, 2, 3, 4, 5, 6, 7, where R0 = −∞ and R7 = +∞, we have
+
+Rn
+
+L msb
+
+(n)
+
+=
+
+log Rn−1
+Rn
+
+Rn−1
+
+ps00 (v) + ps01 (v) dv ps10 (v) + ps11 (v) dv
+
+(10)
+
+Rn
+
+ps00 (v) + ps10 (v) dv
+
+L lsb
+
+(n)
+
+=
+
+log Rn−1
+Rn
+
+(11)
+
+ps01 (v) + ps11 (v) dv
+
+Rn−1
+
+where v represents the cell’s read-back voltage signal. These input LLRs are then used to initialize the variable nodes in the LDPC code graph for BP decoding [36]. In (10) and (11), the LLR computation depends upon the optimized read threshold
+
+Fig. 6. Illustration of 6-level quantization scheme for 2-bit per cell flash memory: voltage range is split into 4 data regions (D1, D2, D3, D4, correspond to cell state s11, s10, s00 and s01, respectively) and 3 erasure regions (E1, E2, E3).
+levels Ri , and voltage distribution functions psp . Unfortunately, due to the charge leakage, the initial voltage distribution parameters become outdated and thus produce incorrect LLR values, which may lead to BP decoding failure.
+B. Retention-Failure Recovery via RABP Decoding
+When BP decoding fails due to a large number of retention errors, new memory sensing operations may be performed in order to update the voltage distribution parameters and to subsequently compute a new set of read threshold levels [16]–[20]. This is followed by the re-trial of error correction decoding using these updated parameters to recover the incorrectly decoded code-word. This whole process, however, significantly affects the read-response time of the flash channel as it requires additional read operations not only for the channel estimation but also for the second round of BP decoding.
+To preclude the excessive re-reads necessitated when BP decoding fails, and to counter the escalating effect of data retention errors, we propose the retention-aware beliefpropagation (RABP) decoding which constitutes of 2 rounds of BP decoding. The first round provides a hard-decision estimate of the code-word bits, denoted by {cˆmsb, cˆlsb}, corresponding to the MSB and LSB positions. In case of decoding failure, we will update the LLR information, denoted by Lˆ msb and Lˆ lsb, by reversely exploiting the charge leakage effect, and execute a new (second) round of BP decoding.
+In Fig. 6, we illustrate an example of 6-level non-uniform quantization scheme where the threshold voltage range is split into 4 data regions, denoted by D1, D2, D3 and D4, and 3 erasure regions, denoted by E1, E2 and E3. The quantities NDDii−1 and NEDi−i 1 , which we will refer to as the retention-error and retention-erasure counts, for i ∈ {2, 3, 4}, represent the number of memory cells that were originally programmed to data region Di but appeared into data region Di−1 and erasure region Ei−1, respectively, due to downshifting of cell’s voltage as a result of charge leakage. Noticeably, with increasing retention time, the voltage distribution functions corresponding cell state s10, s00 and s01 will tend to drift into the erasure
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+358
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+Algorithm 1 Retention-Aware Belief-Propagation (RABP) Decoding
+1 Memory sensing to obtain threshold voltage (v); 2 Compute Lmsb, Llsb using (10), (11) at T = 0 (⇒ zero
+retention noise); 3 Perform first round of BP decoding and store {cˆmsb, cˆlsb}; 4 if successful decoding then 5 Proceed to 12;
+6 if (v ∈ E1) OR (v ∈ E2) OR (v ∈ E3) then 7 Compute Lˆ msb and Lˆ lsb using (14) and (15);
+8 if (v ∈ D1) && {cˆmsb, cˆlsb} = {1, 0} OR 9 (v ∈ D2) && {cˆmsb, cˆlsb} = {0, 0} OR 10 (v ∈ D3) && {cˆmsb, cˆlsb} = {0, 1} then 11 Compute Lˆ msb and Lˆ lsb using (17) and (18);
+12 Perform second round of BP decoding; 13 End
+
+Fig. 7. Plot of retention-erasure probability p(NEDi−i 1 ) and retention-error probability p(NDDii−1 ) versus data retention time at PE = 5K (solid curves) and PE = 10K (dashed curves).
+
+region E1, E2 and E3, respectively. Meanwhile, the voltage
+
+distribution functions corresponding cell state s11, s10 and s00 will drift away from the erasure region E1, E2 and E3,
+
+respectively. Equivalently, as the retention time increases, the
+
+tvhaeluveasluoefsNoEDf12N,EDN11ED,23NEaD2n2daNndED34NEwD33illwtielnl dtetnod
+
+increase, whereas to decrease. This
+
+observation is illustrated in Fig. 7, where we plot the retention-
+
+erasure probability as a function of retention time, given by
+
+p NEDi−i 1 for i ∈ {2, 3, 4}, and
+
+=
+
+NEDi−i 1 NEDi−i−11 + NEDi−i 1
+
+(12)
+
+NEDk j
+
+=
+
+N 4
+
+psp (v) dv
+
+(13)
+
+v ∈Ek
+
+where psp ∈ { ps11 , ps10 , ps00 , ps01 } for j ∈ {1, 2, 3, 4},
+
+whereas the value of
+
+N 4
+
+represents the average number of
+
+memory cells that were programmed to cell state sp. It can
+
+be seen that the erasure regions E1, E2 and E3 are dominated
+
+by memory cells belonging to cell state s10, s00 and s01,
+
+respectively. In order to tackle this retention-erasure effect,
+
+we compute new LLR information, Lˆ msb and Lˆ lsb, for all the
+
+erasure-bound memory cells where v ∈ {E1, E2, E3} such that,
+
+when Rn−1 < v ≤ Rn, for n = 2, 4, 6, their new LLR values
+
+become
+
+Lˆ msb (n) ← ζn Lmsb (n + 1)
+
+(14)
+
+Lˆ lsb (n) ← ηn Llsb (n + 1)
+
+(15)
+
+where ζn and ηn are the weighting coefficients in the range of [0, 1] for new MSB and LSB LLR values, respectively. This
+process is referred to as the retention-erasure correction.
+
+Furthermore, after a long retention time, it is also possible that the voltage distribution functions belonging to cell state s10, s00 and s01 may shift past the lower erasure region and into the lower data region D1, D2 and D3, respectively. To see this effect, we plot the retention-error probability versus the retention time in Fig. 7, given by
+
+p NDDii−1
+
+=
+
+NDDii−1 NDDii−−11 + NDDii−1
+
+(16)
+
+for i ∈ {2, 3, 4}. We can notice that the retention-error count, NDDii−1 , tends to increase with retention time. Thus, we also need to identify these charge-depleted retention-error
+memory cells in order to modify their LLR information for the second round of BP decoding. However, in this situation,
+contrary to the retention-erasure correction, it is not possible
+to change the LLR information merely on the basis of readback voltage signal v. To this end, we leverage on the decoded code-word bits for the detection of such charge-loss memory cells. Specifically, if the cells have read-back voltage in the range D1, D2 or D3, but they are decoded into the next higher programmed state D2, D3, or D4, respectively, we mark them as the likely affected memory cells. For instance, when a memory cell is observed in data region D1 and the corresponding pair of bits is decoded to {cˆmsb, cˆlsb} = {1, 0}, it will be marked as a likely charge-loss memory cell. Thus,
+for all such likely charge-loss memory cells, we modify their LLRs such that, when Rn−1 < v ≤ Rn for n = 1, 3, 5, the new LLR values become
+
+Lˆ msb (n) ← ζn Lmsb (n + 2)
+
+(17)
+
+Lˆ lsb (n) ← ηn Llsb (n + 2)
+
+(18)
+
+This step is referred to as the retention-error correction. Using the modified LLR information Lˆ msb and Lˆ lsb, we execute a fresh second round of BP decoding. The detailed
+steps of RABP decoding scheme are outlined in Algorithm 1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+359
+
+Fig. 8. Average errors observed before and after the first round of BP decoding, plotted against retention time T at PE = 5K.
+
+Fig. 10. Average number of iterations required by the RABP decoder, plotted against data retention time at PE = 3K, PE = 3.5K, 4K and 5K.
+
+Fig. 9. Frame-error-rate (FER) performance of LDPC code over a range of data retention time by employing the conventional BP (CBP) decoding (dashed curves) and the proposed RABP decoding (solid curves) at PE = 3K, 4K and 5K: memory sensing precision Q is set to 6.
+C. Error-Rate Performance of RABP Decoder
+To analyze the error-rate improvement under the proposed RABP decoding scheme, we simulate a binary column-weight 5 regular LDPC code, constructed using the progressiveedge-growth (PEG) algorithm [37]. This code has input (K ) and output (N) block length of 7, 200 and 8, 000 bits, respectively, and code-rate of 0.90. This LDPC code is decoded using informed fixed scheduling based shuffled beliefpropagation (BP) algorithm [38], where maximum iteration count is set to 25 per BP decoding round. Note that, besides shuffled BP decoder, the LDPC code can also be decoded via improved layered BP decoder [39], or by employing dynamic BP scheduling schemes [40], [41]. In this work, we set the the LLR weighting coefficients to be equal to one, that is ζn = 1 and ηn = 1 for n = {1, 2, . . . , 6}. We leave the optimization of ζn and ηn as a possible future work.
+In Fig. 8, we first show the average number of bit errors observed before and after the first round of BP decoding (per code-word failure) at PE = 5K. It can be seen that the number of errors are noticeably decreased after the first round of decoding, specifically at smaller values of retention time. This helps the proposed RABP decoding to perform the retention-error correction. In Fig. 9, we plot the
+
+frame-error-rate (FER) performance versus the data retention time with conventional BP decoding and compare with the the proposed RABP decoding scheme, keeping PE cycles fixed at 3K, 4K and 5K. Note that the read threshold levels Ri are selected via MMI quantization [35] as per the given PE count while setting the retention time to zero (T = 0), since the actual data retention age is known. We can observe that the flash channel tolerance against the retention noise induced errors is significantly improved. For instance, considering FER at 10−4, the flash memory can endure up to 1, 000 hours at PE = 5K using the conventional BP decoding without performing flash channel estimation. In contrast, for the same FER performance, the endurance limit can be extended by up to 1, 600 hours (60% improvement) under the proposed RABP decoding. Similarly, we can notice that the RABP decoding improves the FER performance by up to 3 order-of-magnitude at retention time of 1, 500 hours.
+
+D. Average Complexity and Storage Requirement for RABP Decoding
+In terms of overall complexity/latency, the proposed RABP decoding scheme needs to re-run the error correction decoding a second time for the recovery of failed code-word, which is also required by many of the prior-art retention failure recovery schemes [16]–[20]. In Fig. 10, we plot the average number of iterations required by the proposed RABP decoder. The iteration cost increases with retention time and number of PE cycles. The other added complexity is the re-mapping of LLR information which incurs additional binary comparison operations against the decoded code-word bits {cˆmsb, cˆlsb}, which can be upper bounded by Z, given by
+
+Z = 2N
+
+{ ps11 (v) + ps10 (v) + ps00 (v) + ps01 (v)}dv
+
+v ∈{D1 ,D2 ,D3 }
+
+(19)
+
+Despite some increase in decoding complexity, the proposed scheme avoids the additional memory sensing operations for the recovery of retention failure data, which are
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+360
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+otherwise required in the case of many of the prior-art schemes [16]–[20]. In terms of storage requirement, the proposed RABP decoding scheme needs an additional 2N binary storage units to store the decoded code-word bits that are required to perform the retention-error correction.
+
+IV. RABP ASSISTED FLASH CHANNEL UPDATE (RABP-CU) ALGORITHM
+
+The failure of conventional BP decoding due to retention
+
+noise effect clearly indicates the need for new flash channel
+
+estimation as the initial voltage distribution parameters and
+
+the read threshold levels tend to become outdated. The flash
+
+channel re-estimation method updates the voltage distribution
+
+parameters in order to select the optimal read threshold levels,
+
+and hence facilitates more accurate computation of LLR infor-
+
+mation for BP decoding during the subsequent read requests.
+
+This reduces the future possibility of BP decoding failure.
+
+To perform flash channel re-estimation without additional
+
+memory read operations„ we propose the RABP assisted
+
+channel update (RABP-CU) algorithm in which we employ
+
+the error/erasure corrected bit-patterns, which are obtained by
+
+comparing the input and output of RABP decoder, to update
+
+the voltage distribution parameters. Specifically, using the
+
+measured (actual) retention-erasure and retention-error counts, denoted by N˜EDi−i 1 and N˜DDii−1 , respectively, we find the best-fit voltage distribution mean and standard deviation parameters.
+
+In Section IV-A, we will further explore the possibility of flash
+
+channel estimation under decoding failure scenario, wherein
+
+the measured retention-erasure and retention-error counts will
+
+be unavailable. Since this estimation method will not rely
+
+upon the corrected output bits, this algorithm will be invoked
+
+only when the retention noise induced errors exceed the error-
+
+correcting capability of RABP decoder.
+
+To find the updated mean and standard deviation parameters,
+
+we define a cost function which computes the mean squared error between the measured (N˜EDi−i 1 , N˜DDii−1 ) and predicted (NEDi−i 1 , NDDii−1 ) error/erasure counts, given by
+
+C (μ, σ )
+
+=
+
+1 N2
+
+[wDD12
+
+N˜DD12 − NDD12 2 + wED12
+
+N˜ED12 − NED12 2
+
++ wDD23 N˜DD23 − NDD23 2 + wED23 N˜ED23 − NED23 2
+
++ wDD34
+
+N˜DD34 − NDD34 2 + wED34
+
+N˜ED34 − NED34
+
+2
+]
+
+(20)
+
+where μ = {μs10, μs00 , μs01 } and σ the unknown distribution parameters,
+
+=and{σws10DD,iiσ−s100a,nσds01w} EDai−ire1
+
+are the weighting coefficients for the error and erasure counts
+
+in the range of [0, 1], given by
+
+wDDii−1
+
+=
+
+max
+
+N˜ DDii−1 {N˜DD12 , N˜ED12 , N˜DD23 , N˜ED23 , N˜DD34 , N˜ED34 }
+
+wEDi−i 1
+
+=
+
+max
+
+N˜ EDi−i 1 {N˜DD12 , N˜ED12 , N˜DD23 , N˜ED23 , N˜DD34 , N˜ED34 }
+
+(21) (22)
+
+The process of weighting emphasizes the contribution
+
+of larger error/erasure counts, giving them more weight
+
+in the optimization process. The expression for predicted error/erasure counts (NEDi−i 1 , NDDii−1 ) are computed by using the Gaussian distribution based Q-functions,† given as
+
+NDD12 NED12 NDD23 NED23 NDD34 NED34
+
+μs10 , σs10 μs10 , σs10 μs00 , σs00 μs00 , σs00 μs01 , σs01 μs01 , σs01
+
+=N 4
+=N 4
+=N 4
+=N 4
+=N 4
+=N 4
+
+1 − Q R1 − μs10 σs10
+Q R1 − μs10 − Q σs10
+Q R2 − μs00 − Q σs00
+Q R3 − μs00 − Q σs00
+Q R4 − μs01 − Q σs01
+Q R5 − μs01 − Q σs01
+
+R2 − μs10 σs10
+R3 − μs00 σs00
+R4 − μs00 σs00
+R5 − μs01 σs01
+R6 − μs01 σs01
+
+Note that the values of NDDii−1 and NEDi−i 1 in cost function (20) serve as the estimators of N˜DDii−1 and N˜EDi−i 1 , respectively.
+If the cost function is minimized, the estimated values of
+
+error/erasure counts will be close enough to the actual ones,
+
+thus providing the best-fit distribution parameters. Therefore,
+
+we minimize the cost function (20) as
+
+μ∗, σ ∗ = arg min{C(μ, σ )}
+
+(23)
+
+To solve this optimization problem, we make use of the gradient descent (GD) method [42] which iteratively minimizes the cost function by using the following expression
+
+(μk+1, σ k+1) = (μk, σ k ) − α∇C(μk , σ k )
+
+(24)
+
+where ∇C is the gradient of cost function C, α is the iteration step size and k is the iteration index. In (24), the starting mean and standard deviation parameters (μ0, σ 0) are initialized with the previously stored mean and standard deviation values that were optimal for the case of T = 0. The GD algorithm stops once when the value of cost function evaluated at (μk+1, σ k+1) is smaller than β, that is C(μk+1, σ k+1) ≤ β, where β is a predefined threshold level, otherwise the maximum number of
+iteration, denoted by IGD, will be raised and the process will be re-run.
+It should be noted that, we have considered a single
+LDPC codeword to store over both MSB and LSB memory pages. However, the proposed RABP decoder and RABP-CU
+algorithm can be easily employed when two separate LDPC
+codewords are stored over MSB and LSB pages, and thus would require no change in LLR re-mapping or quantization
+regions. In that case, the MSB page read will require 2 memory
+sensing operations at R3 and R4, as shown in Fig. 6. With such 2-level quantization, the proposed RABP decoding scheme
+will perform retention-erasure correction for the MSB position when R3 < v ≤ R4, and retention-error correction when v ≤ R3 and {cˆmsb} = {0}. The outcome of RABP decoder for MSB page will subsequently provide the retention-error count
+
+∞
+
+† Q (x) =
+
+√1 2π
+
+x
+
+exp
+
+u2 2
+
+du.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+361
+
+NDD23 and retention-erasure count NED23 . Similarly, for LSB page read, 4 memory sensing operations will be performed
+
+at R1, R2, R5 and R6. Here, retention-erasure correction will
+
+be performed when R1 < v ≤ R2 or R5 < v ≤ R6, while
+
+retention-error correction will be performed when v ≤ R1 and
+
+{cˆlsb} = {0} or when R2 < v ≤ R5 and {cˆlsb} = {1}. Subse-
+
+quently, we will get the retention-error counts and retention-erasure counts NED12 and NED34
+
+.
+
+NDD12 and Finally,
+
+NDD34 , these
+
+measured retention error/erasure counts will be used in the cost
+
+function (20) to invoke the proposed RABP-CU algorithm.
+
+Thus, there will be no need to change the flash interface while
+
+using the proposed schemes.
+
+Fig. 11. Block diagram of the proposed RABP assisted channel update algorithm invoked after decoding success (RABP-CUS) and decoding failure (RABP-CUF).
+
+A. Channel Update after RABP Decoding Failure
+In case of failure of both conventional and RABP decoding, caused by large number of retention noise induced errors, the measured error/erasure counts which are essential to the RABP-CU algorithm cannot be obtained. To perform channel estimation after failure of decoding, all the prior-art schemes, including [16]–[20], employ additional memory sensing operations. To preclude these additional reads, we strive to obtain the approximated values of retention-erasure and retentionerror counts, denoted by NˆEDi−i 1 and NˆDDii−1 , respectively, which will in turn be used to find the updated mean and standard deviation parameters. We derive these error/erasure count approximations with the help of detected cell counts, denoted by ZDi for i ∈ {1, 2, 3, 4} and ZEj for j ∈ {1, 2, 3}, as shown in Fig. 6. The detected cell counts can be obtained by counting the total number of memory cells observed within each voltage quantization region. Referring to the retentionerasure probability in Fig. 7, we notice that with increasing data retention time, the erasure regions E1, E2 and E3 tend to include majority of cells corresponding to cell state s10, s00 and s01, respectively. This observation leads to the approximated retention-erasure count values, given by
+
+NˆED34 ≈ ZE3
+
+(25)
+
+NˆED23 ≈ ZE2
+
+(26)
+
+NˆED12 ≈ ZE1
+
+(27)
+
+Next, to find the approximated retention-error count values NˆDDii−1 , we assume that each voltage distribution function spans over three adjacent voltage regions. In particular, the distribution function ps10 (v) spans over D1, E1 and D2, ps00 (v) spans over D2, E2 and D3, and ps01 (v) spans over D3, E3 and D4, as illustrated in Fig. 6. This seems to be a reasonable assumption, specifically for longer retention
+time, which can be easily justified by verifying the following
+approximations
+
+Nˆ DDii
+
++ NˆEDi−i 1 + NˆDDii−1
+N
+
+≈1
+
+4
+
+where i ∈ {2, 3, 4}. In view of the above relations, we can now find the approximated retention-error counts as
+
+follows
+
+NˆDD34 + NˆED34 + NˆDD44
+
+≈
+
+N 4
+
+Nˆ DD34
+
+≈
+
+N 4
+
+− NˆED34 − NˆDD44
+
+N
+
+≈ 4 − ZE3 − ZD4
+
+(28)
+
+NˆDD23 + NˆED23 + NˆDD33
+
+≈
+
+N 4
+
+Nˆ DD23
+
+≈
+
+N 4
+
+− NˆED23 − NˆDD33
+
+N ≈ 4 − ZE2 −
+
+ZD3 − NˆDD34
+
+≈
+
+N 2
+
+− ZE2 − ZD3 − ZE3 − ZD4
+
+(29)
+
+NˆDD12 + NˆED12 + NˆDD22
+
+≈
+
+N 4
+
+Nˆ DD12
+
+≈
+
+N 4
+
+− NˆED12 − NˆDD22
+
+N ≈ 4 − ZE1 −
+
+ZD2 − NˆDD23
+
+3N ≈ 4 − ZE1 − ZD2 − ZE2
+
+− ZD3 − ZE3 − ZD4
+
+(30)
+
+The approximated error/erasure count values, given by (25) to (30), will be used in place of the measured error/erasure counts in the cost function (20) to find the best-fit mean and standard deviation parameters. The proposed channel update methods invoked after decoding success and decoding failure will be referred to as the RABP-CUS and RABP-CUF algorithms, respectively, as shown in Fig. 11.
+
+V. PERFORMANCE EVALUATION OF RABP-CU ALGORITHM
+
+A. Average Estimation Error
+
+To analyze the estimation accuracy under the proposed RABP-CU algorithm, we compute the average standard error of the estimated voltage distribution mean and standard deviation parameters, given by
+
+εμs10∼s01 = |μs10∼s01 − μ∗s10∼s01 | εσs10∼s01 = |σs10∼s01 − σs∗10∼s01 |
+
+(31) (32)
+
+In (31) and (32), the values of μs10∼s01 and σs10∼s01 represent the actual mean and standard deviation parameters, whereas
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+362
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+Fig. 12. Average error of the estimated mean (εμ) plotted against data retention time at PE = 5K (top figure) and PE = 10K (bottom figure) by
+employing the RABP-CUS (solid curves) and RABP-CUF (dashed curves)
+algorithms.
+
+Fig. 13. Average error of the estimated standard deviation (εσ ) plotted against data retention time at PE = 5K (top figure) and PE = 10K (bottom figure):
+employing RABP-CUS (solid curves) and RABP-CUF (dashed curves)
+algorithms.
+
+μ∗s10∼s01 and σs∗10∼s01 are the estimated ones. Fig. 12 shows the standard error for the estimated mean values εμs10∼s01 over a range of data retention time, keeping the PE cycles fixed at 5K and 10K. These curves are obtained by employing both the RABP-CUS and RABP-CUF algorithms. It can be observed the total range of estimation errors fall in between 0.02 V to 0.14 V. However, the estimation accuracy improves with increasing retention time. In particular, as the retention time exceeds beyond 104 hours, the estimation errors reduce to 0.02 V, and remain almost constant thereafter. This improving estimation accuracy substantiates the effectiveness of the proposed RABP-CU algorithm. As the longer retention time induces a high raw memory BER, it therefore requires more accurate flash channel estimation which can be achieved by employing the RABP-CU algorithm. Similar performance results are observed for the average error of estimated standard deviation values εσs10∼s01 , as shown in Fig. 13. The total estimation errors are found to be in between 0.02 V to 0.08 V, whereas they tend to decline over increasing retention time.
+
+TABLE I
+THE NUMBER OF ARITHMETIC OPERATIONS OF THE GRADIENT DESCENT (GD) BASED PARAMETER ESTIMATION ALGORITHM (PER ITERATION)
+
+B. Estimation Complexity
+We measure the computational complexity of the proposed RABP-CU algorithm in terms of the arithmetic operations performed for each iteration of GD method, as shown in Table I. The term “LUT” refers to the look-up table implementation for the calculation of exponential and Q-functions. The arithmetic operation complexity includes the computation of expected error/erasure counts (NDDii−1 , NEDi−i 1 ), partial derivatives, gradient of cost function (∇C), and voltage distribution mean and standard deviation updates (μk+1, σ k+1). The total number of arithmetic operations is the sum of the four rows in Table I. Note that the proposed RABP-CU algorithm not only avoids the additional memory reads but also yields a few times lower
+
+Fig. 14. Average number of GD iterations required to achieve convergence versus data retention time, plotted at PE = 5K and 10K.
+computational complexity per iteration compared to that of DPE algorithm [19]. For 6-level quantization, the DPE algorithm requires 153 ADD/SUB, 913 MUL/DIV and 144 LUT operations per iteration, whereas the proposed RABP-CU scheme requires only 34 ADD/SUB, 165 MUL/DIV and 33 LUT operations per iteration. In Fig. 14, we plot the average number of iterations required by the GD algorithm to achieve convergence, where the maximum number of GD iteration IGD is set to 200 and the value of β is set to 20. We can observe the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+363
+
+Fig. 15. Frame-error-rate (FER) performance versus data retention time by employing the RABP-CUS distribution parameters updated at Tupdate = 70, 110 and 600 hours for PE = 6K, 8K and 10K, respectively, compared with non-updated distribution parameters: memory sensing precision Q is set to 6.
+Fig. 16. Frame-error-rate (FER) performance versus data retention time plotted at PE = 10K by employing the RABP-CUF distribution parameters updated at different values of Tupdate, compared with non-updated distribution parameters: memory sensing precision Q is set to 6.
+similar trends of estimation error, where the average iteration count reduces with increasing data retention time.
+C. Error-Rate Performance To simulate the error-rate performance, we employ the
+previously used rate-0.90, (8000,7200) regular LDPC code. In Fig. 15, we plot the FER curves over a range of data retention time while employing the RABP-CUS based updated distribution parameters and compare with that of the nonupdated (initial) distribution parameters. We assume that the distribution parameters are updated within the error-correcting capability of RABP decoder, specifically at Tupdate = 70, 110 and 600 hours, while setting the PE count at PE = 10K, 8K and 6K, respectively. We can notice that updating
+
+the distribution parameters yields significant improvement in the FER performance. For instance, at FER 10−4, the RABP-CUS based flash channel model can tolerate the data retention time by up to 1, 000, 3, 000 and 25, 000 hours, while keeping the PE cycles fixed at 10K, 8K and 6K, respectively. This translates to an improvement in retention time by approximately 14×, 27× and 41× (times), respectively, compared to non-updated flash channel model. To verify the performance of RABP-CUF algorithm, in Fig. 16, we plot the FER performance versus data retention time, assuming that the distribution parameters are updated beyond the error-correcting capability of RABP decoder, in particular, at Tupdate = 100, 200, 500, 1,000, 2,000, 5,000 and 10,000 hours, while keeping the PE cycles fixed at 10K. Comparing at FER 10−4, the proposed RABP-CUF algorithm improves the retention time limit by approximately 18×, 28×, 50×, 78×, 121×, 185× and 285× (times).
+VI. CONCLUSION AND FUTURE WORK
+An innovative retention-aware belief-propagation (RABP) decoding strategy is proposed to mitigate data loss associated with retention noise in NAND flash memory. The proposed RABP decoding exploits the knowledge that the memory cell’s threshold voltage tends to drop gradually with data retention time. Under this effect, the probable charge-loss memory cells are detected by jointly analyzing their readback voltage signal and the corresponding decoded code-word bits. In case of decoding failure, a new set of log-likelihoodratio (LLR) values that enables retention-erasure correction or retention-error correction is computed. Then a fresh round of BP decoding is performed. Simulating a model-based 2-bit per cell NAND flash memory, it is shown that the retention time endurance of the proposed RABP decoding scheme is increased by up to 70% and the error-rate performance is improved by up to 3 order-of-magnitude, when compared to conventional BP decoding. In conjunction with RABP decoder, a flash channel update algorithm (RABP-CU) is proposed to re-estimate the voltage distribution mean and standard deviation parameters, leveraging on the decoded error/erasure patterns. The proposed RABP-CU algorithm finds the bestfit voltage distribution parameters by employing the gradient descent (GD) method. The estimated mean and standard deviation values are shown to improve the channel estimation accuracy over increasing data retention time, with estimation errors below 0.02 V. Meanwhile, the complexity of the proposed estimation algorithm also reduces with increasing data retention time. By virtue of the proposed RABP-CU algorithm, the retention time tolerance is increased by up to 41× (times) at 6K PE cycles. More importantly, this performance gain is achieved without performing additional memory sensing operations which are time and power consuming.
+As a possible future work, the LLR weighting coefficients ζn and ηn can be optimized for more effective retentionerasure correction and retention-error correction. For instance, considering Fig. 7, these values can be designed such that ζ6 > ζ4 > ζ2 > ζ5 > ζ3 > ζ1 and η6 > η4 > η2 > η5 > η3 > η1. Besides, the NAND flash channel model presented in Section II can be build more comprehensive by including the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+364
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 65, NO. 1, JANUARY 2018
+
+effect of other noise sources, such as the program/read disturb
+noise which induces a weak programming effect by injecting
+unwilling electrons into the cell’s floating gate [43], [44].
+Finally, the proposed RABP-CU algorithm can be imple-
+mented over a real NAND flash device to provide empirical
+results based upon silicon measurements.
+REFERENCES
+[1] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,” in Proc. IEEE Des., Autom., Test Eur. Conf. Exhibit. (DATE), Mar. 2012, pp. 521–526.
+[2] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[3] J. Kim, D.-H. Lee, and W. Sung, “Performance of rate 0.96 (68254, 65536) EG-LDPC code for NAND Flash memory error correction,” in Proc. IEEE Int. Conf. Commun., Jun. 2012, pp. 7029–7033.
+[4] K. Zhao et al., “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. 11th USENIX Conf. File Storage Technol. (FAST), San Jose, CA, USA, 2013, pp. 243–256.
+[5] C. A. Aslam, Y. L. Guan, and K. Cai, “Non-binary LDPC code with multiple memory reads for multi-level-cell (MLC) flash,” in Proc. Annu. Summit Conf. Asia–Pacific Signal Inf. Process. Assoc. (APSIPA), Dec. 2014, pp. 1–9.
+[6] Q. Li, H. Chang, A. Jiang, and E. F. Haratsch, “Joint decoding of content-replication codes for flash memories,” in Proc. 53rd Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep./Oct. 2015, pp. 712–719.
+[7] C. A. Aslam, Y. L. Guan, and K. Cai, “Low-complexity quantizationaware belief-propagation (QA-BP) decoding for MLC NAND flash memory,” in Proc. Int. Conf. Inf., Commun. Signal Process. (ICICS), Dec. 2015, pp. 1–5.
+[8] R. Cohen and Y. Cassuto, “Iterative decoding of LDPC codes over the q-ary partial erasure channel,” IEEE Trans. Inf. Theory, vol. 62, no. 5, pp. 2658–2672, May 2016.
+[9] C. A. Aslam, Y. L. Guan, and K. Cai, “Mitigating stuck cell failures in MLC NAND flash memory via inferred erasure decoding,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., to be published.
+[10] A. M. Saleh, J. J. Serrano, and J. H. Patel, “Reliability of scrubbing recovery-techniques for memory systems,” IEEE Trans. Rel., vol. 39, no. 1, pp. 114–122, Apr. 1990.
+[11] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. 30th Int. Conf. Comput. Des., Sep. 2012, pp. 94–101.
+[12] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Error-prediction LDPC and error-recovery schemes for highly reliable solid-state drives (SSDs),” IEEE J. Solid-State Circuits, vol. 48, no. 11, pp. 2920–2933, Nov. 2013.
+[13] J. Jeong, Y. Song, and J. Kim, “Flashdefibrillator: A data recovery technique for retention failures in NAND flash memory,” in Proc. IEEE Symp. Non-Volatile Memory Syst., Appl., Aug. 2015, pp. 1–6.
+[14] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. IEEE 21st Int. Symp. High Perform. Comput. Archit., Feb. 2015, pp. 551–563.
+[15] N. Papandreou et al., “Enhancing the reliability of MLC NAND flash memory systems by read channel optimization,” ACM Trans. Des. Autom. Electron. Syst., vol. 20, no. 4, pp. 62:1–62:24, Sep. 2015.
+[16] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Conf. Design, Autom. Test Eur., Mar. 2013, pp. 1285–1290.
+[17] Y. Luo, S. Ghose, Y. Cai, E. Haratsch, and O. Mutlu, “Enabling accurate and practical online flash channel modeling for modern MLC NAND flash memory,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2294–2311, Sep. 2016.
+[18] B. Peleato, R. Agarwal, J. M. Cioffi, M. Qin, and P. H. Siegel, “Adaptive read thresholds for NAND flash,” IEEE Trans. Commun., vol. 63, no. 9, pp. 3069–3081, Sep. 2015.
+[19] D.-H. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,” IEEE Trans. Signal Process., vol. 61, no. 2, pp. 440–449, Jan. 2013.
+
+[20] D.-H. Lee and W. Sung, “Decision directed estimation of threshold voltage distribution in NAND flash memory,” IEEE Trans. Signal Process., vol. 62, no. 4, pp. 919–927, Feb. 2014.
+[21] F. Sala, R. Gabrys, and L. Dolecek, “Dynamic threshold schemes for multi-level non-volatile memories,” IEEE Trans. Commun., vol. 61, no. 7, pp. 2624–2634, Jul. 2013.
+[22] M. Qin, R. Mateescu, C. Guyot, and Z. Bandic, “Balanced codes for data retention of multi-level flash memories with fast page read,” in Proc. 53rd Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep./Oct. 2015, pp. 704–711.
+[23] A. Jiang, R. Mateescu, M. Schwartz, and J. Bruck, “Rank modulation for flash memories,” IEEE Trans. Inf. Theory, vol. 55, no. 6, pp. 2659–2673, Jun. 2009.
+[24] C. A. Aslam, Y. L. Guan, and K. Cai, “Retention-aware beliefpropagation decoding for NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 64, no. 6, pp. 725–729, Jun. 2017.
+[25] G. Dong, Y. Pan, N. Xie, C. Varanasi, and T. Zhang, “Estimating information-theoretical NAND flash memory storage capacity and its implication to memory system design space exploration,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 20, no. 9, pp. 1705–1714, Sep. 2012.
+[26] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[27] G. Dong, Y. Pan, and T. Zhang, “Using lifetime-aware progressive programming to improve SLC NAND flash memory write endurance,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 6, pp. 1270–1280, Jun. 2014.
+[28] H. Wang, T.-Y. Chen, and R. D. Wesel, “Histogram-based flash channel estimation,” in Proc. IEEE Int. Conf. Commun., Jun. 2015, pp. 283–288.
+[29] Q. Xu, P. Gong, T. M. Chen, J. Michael, and S. Li, “Modelling and characterization of NAND flash memory channels,” Measurement, vol. 70, pp. 225–231, Jun. 2015.
+[30] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[31] K.-D. Suh et al., “A 3.3 V 32 Mb NAND flash memory with incremental step pulse programming scheme,” IEEE J. Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, Nov. 1995.
+[32] C. M. Compagnoni, M. Ghidotti, A. L. Lacaita, A. S. Spinelli, and A. Visconti, “Random telegraph noise effect on the programmed threshold-voltage distribution of flash memories,” IEEE Electron Device Lett., vol. 30, no. 9, pp. 984–986, Sep. 2009.
+[33] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[34] C. A. Aslam, Y. L. Guan, and K. Cai, “Detector for MLC NAND flash memory using neighbor-a-priori information,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 9, pp. 2827–2836, Sep. 2016.
+[35] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[36] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[37] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[38] C. A. Aslam, Y. L. Guan, K. Cai, and G. Han, “Informed fixed scheduling for faster convergence of shuffled belief-propagation decoding,” IEEE Commun. Lett., vol. 21, no. 1, pp. 32–35, Jan. 2017.
+[39] H.-C. Lee, M.-R. Li, J.-K. Hu, P.-C. Chou, and Y.-L. Ueng, “Optimization techniques for the efficient implementation of high-rate layered QC-LDPC decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 64, no. 2, pp. 457–470, Feb. 2017.
+[40] C. A. Aslam, Y. L. Guan, K. Cai, and G. Han, “Low-complexity beliefpropagation decoding via dynamic silent-variable-node-free scheduling,” IEEE Commun. Lett., vol. 21, no. 1, pp. 28–31, Jan. 2017.
+[41] C. A. Aslam, Y. L. Guan, and K. Cai, “Edge-based dynamic scheduling for belief-propagation decoding of LDPC and RS codes,” IEEE Trans. Commun., vol. 65, no. 2, pp. 525–535, Feb. 2017.
+[42] J. A. Snyman, Practical Mathematical Optimization: An Introduction to Basic Optimization Theory and Classical and New Gradient-Based Algorithms (Applied Optimization). New York, NY, USA: Springer, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+ASLAM et al.: DECISION-DIRECTED RETENTION-FAILURE RECOVERY WITH CHANNEL UPDATE FOR MLC NAND FLASH MEMORY
+
+365
+
+[43] R. Shirota et al., “A new programming scheme for the improvement of program disturb characteristics in scaled NAND flash memory,” IEEE Trans. Electron Devices, vol. 59, no. 10, pp. 2767–2773, Oct. 2012.
+[44] Y. Cai, Y. Luo, S. Ghose, and O. Mutlu, “Read disturb errors in MLC NAND flash memory: Characterization, mitigation, and recovery,” in Proc. Annu. IEEE/IFIP Int. Conf. Dependable Syst. Netw., Jun. 2015, pp. 438–449.
+
+Yong Liang Guan (M’99) received the B.E. degree (Hons.) from the National University of Singapore, Singapore, and the Ph.D. degree from the Imperial College of London, London, U.K. He is currently an Associate Professor with the School of Electrical and Electronic Engineering, Nanyang Technological University, Singapore. His current research interests include modulation, coding and signal processing for communication systems, and information security systems.
+
+Chaudhry Adnan Aslam (S’13) received the B.E. degree (Hons.) from the Mehran University of Engineering and Technology, Pakistan, and the M.S. degree from the University of Southern California, Los Angeles, CA, USA, in 2005 and 2009, respectively. He is currently pursuing the Ph.D. degree with the School of Electrical and Electronics Engineering, Nanyang Technological University, Singapore. His current research interests include coding theory and signal processing for data storage and wireless communications systems.
+
+Kui Cai (SM’11) received the B.E. degree in information and control engineering from Shanghai Jiao Tong University, Shanghai, China, the M.Eng. degree in electrical engineering from the National University of Singapore, and the joint Ph.D. degree in electrical engineering from the Technical University of Eindhoven, The Netherlands, and the National University of Singapore. She is currently an Associate Professor with the Singapore University of Technology and Design (SUTD). Before joining SUTD, she had been with the Data Storage Institute, Singapore, since 1999, where she was the Program Leader of Non-Volatile Memory Coding and Signal Processing. Her current research interests include coding theory, communication theory, and signal processing for various data storage systems and digital communications. He is the Vice Chair (Academia) of the IEEE Communications Society, the Data Storage Technical Committee. She was a recipient of 2008 IEEE Communications Society Best Paper Award in Coding and Signal Processing for Data Storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:24:43 UTC from IEEE Xplore. Restrictions apply.
+
+

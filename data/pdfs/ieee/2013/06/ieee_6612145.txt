@@ -1,0 +1,945 @@
+2013 IEEE 14th Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+A Multi-standard Efficient Column-layered LDPC Decoder for Software Defined Radio on GPUs
+
+Rongchun Li†, Jie Zhou, Yong Dou, Song Guo, Dan Zou National Laboratory for Parallel and Distribution Processing National University of Defense Technology Changsha, China, 410073
+Email: {rongchunli,jiezhou,yongdou,songguo,danzou}@nudt.edu.cn † Corresponding author, Tel:(86)13467535838
+
+Shi Wang Wuhan Military Delegate Bureau General Armament Ministry, Wuhan, China.
+Email: shiwang@nudt.edu.cn
+
+Abstract—In this paper, we propose a multi-standard high-throughput column-layered (CL) low-density parity-check (LDPC) decoder for Software-Defined Radio (SDR) on a Graphics Processing Unit (GPU) platform. Multiple columns in the sub-matrix of quasi-cyclic LDPC (QC-LDPC) code are parallel performed inside a block, while multiple codewords are simultaneously decoded among many blocks on the GPU. Several optimization methods are employed to enhance the throughput, such as the compressed matrix structure, memory optimization, codeword packing scheme, two-dimension thread configuration and asynchronous data transfer. The experiment shows that our decoder has low bit error ratio and the peak throughput is 712Mbps, which is about two orders of magnitude faster than that of CPU implementation and comparable to the dedicated hardware solutions. Compared to the existing fastest GPUbased implementation, the presented decoder can achieve a performance improvement of 3.0x times.
+Index Terms—GPU, SDR, LDPC Decoder, column-layered decoding
+I. Introduction
+LDPC code has been considered as one of most promising near-optimal error correcting codes due to its excellent error correcting performance and fast decoding throughput. As a matter of fact, LDPC code has been adopted in many industrial protocols, such as DVB-S2, DVB-T2, WiFi (802.11n) and WiMAX (802.16e) systems. LDPC decoding algorithm is on the basis of belief propagation of messages, which requires very intensive computation. Therefore, in order to reach the throughput required by the standards, dedicated applicationspecific integrated circuit (ASIC) solutions for LDPC decoder have been presented in recent years [1][2]. However, ASIC solutions have high time-to-market, high design cost and fixed functionality.
+Recently, GPUs are widely used for their high computational power, which can execute numerous threads simultaneously and the peak performance can reach up to tera floating operations per second. The NVIDIA corporation presented Compute Unified Device Architecture (CUDA) [3], using C as a high-level programming language, which offers a software environment that facilitates the development of highperformance applications. Compared to ASIC solutions, GPUbased ones are less expensive, scalable and flexible. This
+
+work centralizes on the parallel implementation of the LDPC decoding algorithm on the GPU platform.
+There are three types of LDPC decoding schedules, the two-phase message-passing (TPMP), layered decoding and sequential decoding. In TPMP, the check-to-variable (CV) and variable-to-check (VC) messages are calculated in two separated phases respectively in one iteration. Conversely, in layered decoding algorithm, the check sparse binary H matrix is divided into multiple layers, which are serial processed. In each layer, the CV and VC messages are both computed. Compared to the TPMP, the layered decoding can achieve about twice faster decoding convergence. In the layered decoding, the algorithms can be divided into two categories according to the construction of layers, the row-layered (RL) [4] and CL one [5] [6]. In the CL decoding, the variable nodes (VNs) are divided to be layers, where the check nodes (CNs) do that in RL algorithm. CL decoding can achieve higher decoding speed compared to the RL one due to its lower complexity. In this paper, CL decoding is chosen because of its faster convergence and higher speed.
+Several studies have been devoted to LDPC decoders implemented on GPUs in recent years. Most of these works exploited TPMP as their decoding algorithms [7]-[12]. [8] proposed a scalable RL LDPC decoder using 9800 GTX+ GPU. To our best knowledge, this is the first paper proposing LDPC decoder exploiting CL decoding on GPUs.
+The rest of the paper is organized as follows. Section 2 describes the background on CUDA, QC-LDPC code and CL decoding. We then present the GPU-based parallel CL decoding algorithm in Section 3. Next, series of optimization methods are exploited in Section 4. The performance evaluation is described in Section 5. Section 6 concludes the paper.
+II. Background
+A. CUDA
+In the logical hierarchy, CUDA structure consists of a grid, blocks, and threads. The device program is hierarchically governed as the grid-block-thread step. A grid is constructed as a three-dimension array of blocks. At the same time, each block can be constructed as a three-dimension array of threads as well. In a block, all the threads can share the data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:36:11 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-5577-3/13/$31.00 ©2013 IEEE
+
+724
+
+2013 IEEE 14th Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+Conversely, blocks in a grid must be executed independently. In each block, 32 threads are organized as a warp, which is executed independently. Any remaining issue slots in a warp will be wasted if the block size is not a multiple of 32. When one warp is waiting for the data, a ready warp will be quickly switched to execute to conceal the latency of memory accesses.
+In the physical hierarchy, the CUDA structure consists of memories, as well as multiple stream-multiprocessors (SMs) with several integrated stream-processors (SPs). A SM can simultaneously process multiple blocks if the computing resources are sufficient. In each SM, registers are allocated to each individual thread. At the meantime, threads can access four types of memory. The off-chip global memory, which can be read or written by all the blocks with an access latency of more than 400 GPU clock cycles. Constant or texture memory are cached to eliminate memory latency. All threads In a block can access to the shared memory with the latency of four cycles. It enables threads to communicate with one another within a block.
+
+Algorithm 1 Min-Sum Column-layered Decoding Algorithm
+
+Initialization:
+
+Input: The received sequence y j;
+
+Output: The decoded bits c;
+
+Li, j1
+
+=
+
+yj;
+
+Ri,
+
+1 j
+
+=
+
+0;
+
+Iteration:
+
+1: for iteration k 1 to kmax do 2: for layer l 1 to N do
+
+3: 4:
+
+for each CN i in layer l do
+
+Ri,
+
+l j
+
+=
+
+sign(Li,jl) ×
+
+∏
+j′ ∈Vi\j
+
+sign(Li,j′ (l−1))
+
+×
+
+minj′∈Vi\j (Li,jl, Li,j′ (l−1));
+
+5:
+
+end for
+
+6: for each VN j in layer l do
+
+7:
+
+Li, jl = α × Σi′∈C j\i Ri′, jl + y j;
+
+8:
+
+Lvl = α × Σi∈C j Ri, jl + y j;
+
+9:
+
+end for
+
+10: end for
+
+11: end for
+
+12: Hard decision and generate c;
+
+B. QC-LDPC Code
+
+An LDPC code is linear block code specified by a sparse
+
+M × N parity-check matrix H where M denotes the numbers of
+
+rows and N represents the code length. The code rate can be
+
+calculated
+
+as
+
+r
+
+=
+
+1
+
+−
+
+M N
+
+.
+
+H
+
+also
+
+can
+
+be
+
+expressed
+
+by
+
+a
+
+Tanner
+
+graph, which has m CNs and N VNs, corresponding the M
+
+rows and N columns, respectively. If H(i, j) = 1 then there is
+
+an edge between CNi and V N j in Tanner graph.
+
+For QC-LDPC code, H is constructed by multiple sub-
+
+matrices, each of which has a cyclic shift to the identity
+
+matrix. Many protocols adopt the quasi-cyclic LDPC code,
+
+such as 802.16e [13] and 802.11n [14]. 802.16e supports 6
+
+different code rate and 19 code length ranging from 576 to
+
+2304 bits with granularity of 96 bits, while 802.11n supports
+
+4 different code rate and 3 code length, 648, 1296 and 1944
+
+bits. It is worth noting that the code of the both protocols
+
+can be expressed by a base matrix Hb, which consists of
+
+Nb = 24 columns and Mb = (1 − r)Nb rows. Each element
+
+of Hb is a Z × Z sub-matrix, where Z is the expansion factor
+
+and
+
+can
+
+be
+
+obtained
+
+as
+
+Z
+
+=
+
+N Nb
+
+.
+
+The
+
+parity-check
+
+matrix
+
+H
+
+for
+
+different code length can be obtained by expanding Hb with a
+
+corresponding Z.
+
+C. CL Decoding
+The CL decoding algorithm was proposed by Zhang [5]. Cui [6] presented Min-Sum based CL decoding. In CL decoding algorithm, VNs are divided into layers, which are serially processed. In each layer, the VNs are updated first and followed by the CNs connected to these VNs. the updated CN messages in one layer will feed to the next layers. Same to the RL one, CL decoding can gain fast convergence due to the updated estimates within the same iteration. As a fact, CL decoding algorithm can achieve about twice faster convergence compared to the TPMP algorithm. Min-Sum based CL decoding is adopted in this paper for its less complexity.
+
+Algorithm 1 describes the Min-Sum based CL decoding
+
+algorithm. Assumed that the binary phase shift keying (BPSK)
+
+is adopted as the modulation scheme over the additive white
+
+Gaussian noise (AWGN) channel. Let y = y1, y2, ..., yN be the
+
+received
+
+sequence
+
+added
+
+the
+
+noise
+
+and
+
+Li, j1
+
+and
+
+Ri,
+
+1 j
+
+be
+
+the
+
+Variable-to-Check and Check-to-Variable messages in the edge
+
+Hi, j in the lth layer. The Lv j denotes the final soft output of
+
+VNs.
+
+In
+
+Algorithm
+
+1,
+
+Ri,
+
+l j
+
+is
+
+updated
+
+by
+
+Li, j
+
+in
+
+the
+
+(l − 1)th
+
+and
+
+lth layer. To simplify the sign and magnitude computation
+
+of Ri, jl, a two-step updating for the sorted sequence mil is introduced [6], where mil contains the magnitudes of VC
+
+messages associated to the CN.
+
+S tep−a : remove sign(Li, j(l−1)) and |Li, j(l−1)| from the sorted
+
+sequence mi(l−1) if the |Li, j(l−1)| is in the sequence, forming the
+
+new sequence |m′i (l−1)|.
+
+mi′(l−1).
+
+Ri,
+
+l j
+
+is
+
+obtained
+
+as
+
+Ri, jl
+
+=
+
+sign(mi′(l−1)) ×
+
+S
+
+tep −
+
+b
+
+:
+
+After
+
+Li,
+
+l j
+
+is
+
+generated,
+
+sort
+
+the
+
+magnitude
+
+of
+
+the
+
+new
+
+variable-to-check
+
+message
+
+Li,
+
+l j
+
+and
+
+mi′(l−1)
+
+to
+
+obtain
+
+mil
+
+for layer l + 1.
+
+III. GPU-based CL Decoding Algorithm
+
+From Algorithm 1, we can see that the CL decoding
+
+algorithm is a serially processed column by column, which
+
+has low degree of parallelism. The data dependence between
+
+the
+
+successive
+
+iterations
+
+centralizes
+
+on
+
+the
+
+Li,
+
+(l−1) j
+
+and
+
+Li, jl
+
+.
+
+However, by analyzing the QC-LDPC code, we can find out
+
+that the edges in a sub-matrix are not located on the same
+
+row with each other. The same situation happens among Mb
+
+sub-matrices in the same column in the base matrix Hb. So in
+
+each column of the base matrix Hb, the updated of Li, j in each
+
+sub-matrix can be parallel executed. Based on the above idea,
+
+we partition the matrix H into Nb layers, each of which has Z
+
+columns. The CV and VC messages in each column within a
+
+layer can be parallel updated.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:36:11 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-5577-3/13/$31.00 ©2013 IEEE
+
+725
+
+2013 IEEE 14th Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+Fig. 1 describes the parallel conceptual diagram of CL de-
+
+coding algorithm. The x dimension of a block can be allocated
+
+to parallel process the columns in one layer. Multiple layers are
+
+executed serially due to the data dependence. Assumed that NX is the x dimension size, which can be obtained as NX = Z. At
+
+the meantime, the x dimension of a grid is chosen to execute
+
+multiple codewords simultaneously. Each block processes one
+
+codeword with the length of N. In each thread, five steps are
+
+serially performed. These Ri, jl, Lvl, Li, jl, and mil.
+
+steps are mi′(l−1) is
+
+the the
+
+computation of mi′(l−1), sequence in (l − 1)th
+
+layer which is obtained by the step-a updating. Among these
+
+steps, mi′(l−1) and Ri, jl of all the edges in the corresponding
+
+column are computed serially, following by the computations
+
+of
+
+Lvl,
+
+which
+
+are
+
+obtained
+
+by
+
+adding
+
+Ri,
+
+l j
+
+in
+
+all
+
+edges
+
+in
+
+each
+
+column.
+
+And
+
+then
+
+Li, jl
+
+is
+
+updated
+
+by
+
+subtracting
+
+the
+
+Ri,
+
+l j
+
+from
+
+Lvl.
+
+After
+
+Li,
+
+l j
+
+is
+
+generated,
+
+mil
+
+is
+
+updated
+
+to
+
+have
+
+the
+
+new
+
+sign
+
+and magnitude through the step-b computation. It is noted that m′i and mi are both represented by three variables, sign, min and secmin. The magnitudes of m′i or mi are sorted by updating the values of min and secmin. After all the threads complete
+
+the update for one layer, the syncthreads function is called to
+
+synchronize the threads within a block.
+
+grid.x block.x 1 1 1
+1
+
+Nb Layers
+1 1
+1 1
+
+1 1 1 1
+
+1 1 1 1
+
+1 1
+1 1
+
+1 1
+1 1
+
+L2 L1 L0
+
+Rc0
+
+Rc2
+
+Rc1
+
+block.x
+
+CNodcwewords
+
+CUDA cores m'i(l-1) Ri,jl Lvl Li,jl
+
+grid.x mil
+
+Fig. 1. Conceptual diagram of parallelizing CL decoding algorithm
+
+IV. Optimization Methods on GPU
+A. Compressed Matrix Structure
+CL decoding is based on the iterative message exchange between the VNs and CNs, which are represented by position of non-zero elements in H matrix. However, it is not preferred to store all the H matrix on the GPU because of its huge memory size and low access efficiency. We exploit a compressed matrix structure, which is constituted by four arrays, HVN, HCN, RowNum and ColNum. HVN is scanned the H matrix in a column-major order and mapped the row positions of non-zero elements in each column. HCN is the corresponding permutation array to store the column positions of non-zero elements in each row. RowNum and ColNum describe the number of non-zero elements in each row and column, respectively.
+
+B. Memory Optimization
+1) Texture Memory: The texture memory, instead of constant one, can be updated through the memory copy function from host to device, which is flexible in the multi-standard design. The texture memory is read-only memory, whose access latency is as fast as registers when the data fits in the texture cache. The four arrays in the compressed matrix structure are stored in the texture memory. Furthermore, the input sequence y is also cached in the texture memory. All these structures have small storage amount, which can be hit when read by the threads.
+2) Shared Memory and Registers: In the GPU, the number of resident blocks per SM NBM decides the performance of the application, which is obtained as:
+
+NBM = min(NBR, NBS, NBB)
+
+(1)
+
+where NBR, NBS and NBB are the NBM restricted by the
+
+registers, shared memory and the maximum resident block,
+
+respectively. When shared memory and registers are reason-
+
+ably used, the memory access will happen in the on-chip
+
+memories, instead of the off-chip global memory. The fewer
+
+shared memory and registers used, the larger NBM is. The ideal situation is that NBR = NBS = NBB. In the GPU having the compute capability of less than 3.0, NBB = 8.
+
+In our GPU-based CL decoding, there is no data dependence
+
+among the blocks. So it is preferred to adopt the on-chip shared
+
+memory and registers. We store the sign, min and secmin in the
+
+shared
+
+memory.
+
+Some
+
+intermediate
+
+results,
+
+such
+
+as
+
+Ri,
+
+l j
+
+and
+
+the
+
+sum
+
+of
+
+Ri,
+
+l j
+
+in
+
+each
+
+edges,
+
+are
+
+also
+
+stored
+
+in
+
+the
+
+shared
+
+memory. As mentioned in Section 2, 32 threads are organized
+
+as a warp. For the purpose to eliminate the divergence of
+
+warps, the address of shared memory is organized in serial
+
+manner by the thread identities (IDs). Registers are used for
+
+the exclusive variable in each thread, such as the number of
+
+iteration, the index of the current column and so on. In our
+
+implementation, there are Z × 32 bytes shared memory and
+
+Z × 21 registers used in a block. In GTX580, there are 49152
+
+bytes shared memory and 32768 registers per SM. We can find
+
+out that NBR ≈ NBS . 3) Global Memory: After the usage of shared memory and
+
+registers, there are only two variables stored in the global
+
+memory, Lv and L. The first one only creating a store access
+
+in each layer, while the second one generates a read and write
+
+access from/to global memory per layer. After fetching L from
+
+the global memory, the data can be cached in the registers,
+
+which has no access latency. In Fermi GPUs, the global access
+
+time can be diminished by efficiently utilizing the global
+
+memory bandwidth, merging the access of global memory by
+
+32 threads in a warp into a single memory transaction. The
+
+three accesses can adopt coalesced memory access method,
+
+only needing to organize the address Lv and L in serial manner
+
+by the thread IDs.
+
+C. Codeword Packing Scheme
+In CL decoding, the demand of data precision is not high. So there is no need to adopt floating point data precision due to its
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:36:11 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-5577-3/13/$31.00 ©2013 IEEE
+
+726
+
+2013 IEEE 14th Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+huge memory bandwidth. As a fact, experiments have proved that 8 bits fixed point implementation has the close BER performance to the floating one. In order to increase arithmetic intensity and efficiently utilize the memory bandwidth, we exploit the codeword packing scheme, combining four 8 bit codewords into a 32 bit word. The distinct four codewords are stored in the shared memory, except the Lv and L. When fetching the Li, jl value from the global memory, the messages are unpacked into four 8 bit messages. After computation, we pack the four messages and then write them back to the global memory. Same situation happens to the Lv. Codeword packing scheme reduces the memory copy time and the global memory access time by a factor of four, and enhances the number of codewords processed simultaneously by four times.
+D. Two-dimension Thread Configuration
+As mentioned in optimization of shared memory and registers, the ideal situation is that NBR = NBS = NBB. However, in some GPUs integrating with large computing resources, the situation will be NBR = NBS < NBB. For example, in GTX580, NBR and NBS in our implementation are both equal to 16 if the code length N is 2304 and the Z is 96, which is twice times of NBB, which is 8 in GTX580. In order to fully utilize the computing resources in the GPU, we present a two-dimension thread configuration to achieve maximum utilization. The dimension size of the second dimension NY is obtained as:
+
+signal is delivered to the global memory of the GPU to perform the CL LDPC decoding procedure. The output bits are then delivered to the host computer to calculate the BER. The CPU in the host computer is Intel i3 530 with the frequency of 2.93 GHz, and the GPU is GTX580 with 2.0 compute capacity. The frequency of GTX580 is 1.54 GHz and the size of its global memory is 1.5 GB. There are 16 SMs in GTX580, each of which integrates 49152 bytes shared memory and 32768 registers.
+
+100 TPMP,N=2304,iter=10
+
+TPMP,N=576,iter=10
+
+10-1
+
+Proposed,N=2304,iter=5
+
+Proposed,N=576,iter=5
+
+10-2
+
+10-3
+
+BER
+
+10-4
+
+10-5
+
+10-6
+
+10-7
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+4.0
+
+4.5
+
+Eb/No (dB)
+
+NY
+
+=
+
+min(NBR, NBS) NBB
+
+(2)
+
+Two-dimension thread configuration fully utilizes the on-
+
+chip shared memory and registers, which increases the number
+
+of codewords processed simultaneously on the GPU by NY times.
+
+E. Asynchronous Data Transfer
+CUDA manages the asynchronous data transfer through streams, which are sequences of commands executing in order. By applying the stream execution, the data transfer between host computer and the GPU can be overlapped with the computation procedure. In the non-streamed process, the data transfer and kernel execution are serially processed. However, in the multi-streamed process, all the data transfers are overlapped with the multiple kernel executions except the first host to device data transfer and the last device to host data transfer. In non-streamed implementation, the total memory copy time occupies about 33.6 percent of total time. In contrast, by the 8-streamed implementation, the total memory copy time can be reduced to 6.0%.
+
+V. Performance Evaluation
+A. Experiment Setup
+We lay out the testing scenario as below. The binary data bits are randomly generated by the host computer, encoded by the LDPC encoder and mapped by BPSK modulation and then passed through the AWGN channel. In the receiver, the
+
+Fig. 2. BER performance comparison of TPMP and proposed CL decoding algorithm
+
+B. Decoder BER Performance
+To evaluate the BER performance of proposed decoder, We measure the BER comparison between TPMP and presented CL decoding algorithm. IEEE 802.16e Rate 1/2 LDPC codes with the length of 576 and 2304 are used for comparison. The final BER performance under the AWGN channel is shown in Fig. 2. It clearly depicts that BER performance of the CL decoding algorithm after 5 iterations is close to TPMP algorithm after 10 iterations.
+
+C. Decoder Throughput
+Table. I shows the throughput the proposed GPU-based CL LDPC decoder on various code lengths, five of which are for 802.16e and three are for 802.11n. The number of codeword Ncw is obtained as:
+
+Ncw = NBM × NS M × 4 × NY
+
+(3)
+
+where NS M means the number of SMs in the GPU. In each length, five optimization methods mentioned in Section 4 are employed to enhance the throughput. We also list the optimization process by adding methods one by one. The characters A to E mean the combination of several methods that these characters represent in Section 4. The throughput is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:36:11 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-5577-3/13/$31.00 ©2013 IEEE
+
+727
+
+2013 IEEE 14th Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+TABLE I Throughput of proposed decoder for different code lengths and optimization
+methods
+
+N
+
+Z NY
+
+Ncw
+
+A
+
+Throughput(Mbps) AB ABC ABCD ABCDE
+
+768 32 6 3072 9 78 296 518
+
+704
+
+1152 48 4 2048 9 89 333 508
+
+689
+
+1536 64 3 1536 10 106 386 516
+
+712
+
+1920 80 2 1024 11 102 377 493
+
+695
+
+2304 96 2 1024 13 121 416 507
+
+710
+
+648 27 7 3584 8 69 262 487
+
+633
+
+1296 54 3 1536 9 93 335 505
+
+691
+
+1944 81 2 1024 10 101 365 500
+
+685
+
+TABLE II Performance comparison of various LDPC decoders
+
+ref.
+
+Platform type
+
+Algo.
+
+Code length
+
+Pre. (bits)
+
+Iter.
+
+Thr. (Mbps)
+
+[1]
+
+ASIC
+
+RL 2304 7 15 249
+
+[2]
+
+ASIC
+
+RL 2304 5
+
+7
+
+679
+
+[7] 8800 GTX TPMP 8000 8 10 96.2
+
+[8] 9800 GTX+ RL
+
+2304
+
+6
+
+5 160.0
+
+[9]
+
+GTX260 TPMP 2304 32 20 24.5
+
+[10] GTX470 TPMP 2304 8 10 52.2
+
+[11] GTX570 TPMP 16200 8 20 192.4
+
+[12]
+
+C2050
+
+TPMP 8000
+
+8
+
+10 209.0
+
+9800 GTX+ CL
+
+2304
+
+8
+
+5 235.6
+
+Ours
+
+C2050
+
+CL 2304 8
+
+5 618.3
+
+GTX580
+
+CL 2304 8
+
+5 710.0
+
+computed by dividing the total bits Ncw × N by decoding time t.
+In the table, we can find that optimization methods B, C, D, E can achieve average 9.6x, 3.7x, 1.5x and 1.4x performance improvement. By exploiting the two-dimension thread configuration, NBR/NY = NBS /NY = NBB in GTX580, which is the ideal configuration to achieve maximum throughput. The peak throughput is achieved in code length N = 1536. There are three code lengths obtaining the throughput over 700Mbps, which is because that their block size Z is the multiple of 32, which is the warp size. For comparison, the throughput will be dropped if Z is not the multiple of 32 because of the wastage of issue slots in warps. When decoding a 802.11n or 802.16e frame with fewer codewords, e.g. 128 words, the processing time is less than 1 ms, which falls in the frame duration.
+D. Performance Comparison
+The throughput of CL LDPC decoder on CPUs is 2.6Mbps. So our GPU-based decoder can achieve about 240x to 273x speedup over that. Table. II shows the performance comparison between different LDPC decoders. We can see that our proposed CL LDPC decoder is comparable to ASIC implementations [1][2]. All the other GPU-based LDPC decoder [7]-[12] exploited TPMP algorithm, except RL decoding in [8]. Our decoder is the only one exploiting CL decoding. The maximum throughput of these decoders is 209Mbps in [12]. In order to make comparison fairly, we also run our decoder on their GPU types, 9800 GTX+ and C2050. We can see that our decoder achieves about 1.5 and 3.0x speedup over [8] on 9800 GTX+ and [12] on C2050, respectively. The difference is due to the limited resources on 9800 GTX+, where two-dimension thread configuration cannot be performed.
+VI. Conclusion
+In this paper, an efficient CL QC-LDPC decoder on the GPU has been presented. We propose the GPU-based parallel CL decoding algorithm. Several optimization methods are exploited to enhance the throughput. The throughput of proposed decoder achieves about two orders of magnitude faster than that of CPU implementation. The peak throughput is 712Mbps, which is 3.0x speedup to the existing fastest GPU-based LDPC decoder, and comparable to the dedicated hardware solutions.
+
+The proposed decoder can be employed as a part of GPU-
+based communication system, which is an alternative to the
+hardware solutions.
+Acknowledgment
+This work was supported by National Science Foundation
+of China (61125201).
+References
+[1] M. Awais, A. Singh, E. Boutillon, and G. Masera, ”A Novel Architecture for Scalable, High Throughput, Multi-Standard LDPC Decoder”,in DSD 2011: 14th Euromicro Conference on Digital System Design: Architectures, Methods and Tools, pp. 340-347, Aug. 2011.
+[2] C. Roth, P. Meinerzhagen, C. Studer, and A. Burg, ”A 15.8 pJ/bit/iter Quasi-Cyclic LDPC Decoder for IEEE 802.11n in 90 nm CMOS,” in 2010 IEEE Asian Solid-State Circuits Conference, pp.313-316, Nov. 2010.
+[3] NVIDIA Corporation, ”NVIDIA CUDA Compute Unified Device Architecture Programming Guide version 4.2,” 2012.
+[4] M. M. Mansour, and N. R. Shanbhag, ”High-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, no. 6, pp. 976C996, Dec. 2003.
+[5] J. Zhang, and M. P. C. Fossorier, ”Shuffl ed iterative decoding,” IEEE Trans. Communications, vol. 53, no. 2, pp. 209C213, Feb. 2005.
+[6] Z. Cui, Z. Wang, X. Zhang, and Q. Jia, ”Efficient decoder design for high-throughput LDPC decoding,” in Proc. 2008 IEEE Asia Pacific Conf. Circuits and Systems, pp. 1640C1643, Nov. 2008.
+[7] G. Falcao, V. Silva, and L. Sousa, ”How GPUs can outperform ASICs for fast LDPC decoding,” in the International Conference on Supercomputing, pp. 390-399, June 2009.
+[8] A. K. Kumar, ”A scalable LDPC decoder on GPU,” in 24th International Conference on VLSI Design, pp. 183-188, Jan. 2011.
+[9] J. Cui, Y. Wang, and H. Yu, ”Systematic construction and verification methodology for LDPC codes,” Lecture Notes in Computer Science, vol. 6843 LNCS, pp. 366-379, Aug. 2011.
+[10] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, ”A massively parallel implementation of QC-LDPC decoder on GPU,” in SASP 2011: Proceedings of the 2011 IEEE 9th Symposium on Application Specific Processors, pp. 82-85, June 2011.
+[11] S. Gronroos, K. Nybom, and J. Bjorkqvist, ”Efficient GPU and CPUbased LDPC decoders for long codewords,” Analog Integrated Circuits and Signal Processing, pp. 1-13, Nov. 2012.
+[12] G. Falcao, V. Silva, L. Sousa, and J. Andrade, ”Portable LDPC decoding on multicores using OpenCL,” IEEE Signal Processing Magazine, vol. 29, no. 4, pp. 81-87, April 2012.
+[13] ”Air Interface for Fixed and Mobile Broadband Wireless Access Systems,” IEEE Std 802.16e, Feb. 2006.
+[14] ”Wireless Lan Medium Access Control (MAC) and Physical Layer (PHY) Specifications,” IEEE Std 802.11n, Oct. 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:36:11 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-5577-3/13/$31.00 ©2013 IEEE
+
+728
+
+

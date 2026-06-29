@@ -1,0 +1,1931 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+11
+
+Belief Propagation Algorithms on Noisy Hardware
+Chu-Hsiang Huang, Yao Li, Member, IEEE, and Lara Dolecek, Senior Member, IEEE
+
+Abstract—The wide recognition that emerging nano-devices will be inherently unreliable motivates the evaluation of information processing algorithms running on noisy hardware as well as the design of robust schemes for reliable performance against hardware errors of varied characteristics. In this paper, we investigate the performance of a popular statistical inference algorithm, belief propagation (BP) on probabilistic graphical models, implemented on noisy hardware, and we propose two robust implementations of the BP algorithm targeting different computation noise distributions. We assume that the BP messages are subject to zero-mean transient additive computation noise. We focus on graphical models satisfying the contraction mapping condition that guarantees the convergence of the noise-free BP. We first upper bound the distances between the noisy BP messages and the fixed point of (noise-free) BP as a function of the iteration number. Next, we propose two implementations of BP, namely, censoring BP and averaging BP, that are robust to computation noise. Censoring BP rejects incorrect computations to keep the algorithm on the right track to convergence, while averaging BP takes the average of the messages in all iterations up to date to mitigate the effects of computation noise. Censoring BP works effectively when, with high probability, the computation noise is exactly zero, and averaging BP, although having a slightly larger overhead, works effectively for general zero-mean computation noise distributions. Sufficient conditions on the convergence of censoring BP and averaging BP are derived. Simulations on the Ising model demonstrate that the two proposed implementations successfully converge to the fixed point achieved by noise-free BP. Additionally, we apply averaging BP to a BP-based image denoising algorithm and as a BP decoder for LDPC codes. In the image denoising application, averaging BP successfully denoises an image even when nominal BP fails to do so in the presence of computation noise. In the BP LDPC decoder application, the power of averaging BP is manifested by the reduction in the residual error rates compared with the nominal BP decoder.
+Index Terms—Belief propagation, transient hardware error, hardware error resilience, belief propagation decoder.
+I. INTRODUCTION
+M ODERN CMOS circuits exhibit increasing variations in performance, power consumption, and reliability parameters. The design of digital systems built on such circuits must be aware of these variations. A promising alternative to overdesigning and guardbanding is to develop robust algo-
+Manuscript received June 17, 2014; revised October 9, 2014 and November 19, 2014; accepted November 22, 2014. Date of publication December 10, 2014; date of current version January 14, 2015. The associate editor coordinating the review of this paper and approving it for publication was M. Xiao.
+C.-H. Huang and L. Dolecek are with the Department of Electrical Engineering, University of California, Los Angeles, Los Angeles, CA 90095 USA (e-mail: seanhuang0522@ucla.edu; dolecek@ee.ucla.edu).
+Y. Li is with Akamai Technologies, Inc., Pasadena, CA 91105 USA (e-mail: yli@akamai.com).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2014.2379663
+
+rithms tolerant of hardware errors [1]. One of the first mathematical models for unreliable hardware was proposed in [2], which considered transient errors. In the transient error model, each component fails independently of other components, and a current failure is independent of all the past and future failures. Such a model provided a basis for fault-tolerant computing [3]–[5]. Besides the efforts in fault-tolerant system design, a number of more refined models were proposed for different types of hardware errors, for instance, the soft adder model [6], [7] and the Markov chain model [8]. Stochastic computation [9] was used to design systems tolerant to hardware errors. Under the stochastic computation framework, unreliable devices are interpreted as noisy communication channels or networks; deft use of concepts from communications theory can help guide the designs of inference algorithms with reliable performance under noisy hardware implementation. Hegde and Shanbhag [6] applied linear prediction to develop the first algorithmic noise-tolerance scheme. By transforming the applications to optimization problems, stochastic optimization was successfully used to to mitigate the effects of hardware errors [10].
+In addition to developing robust schemes, characterization of fundamental performance limits is another important problem in the study of digital systems implemented on noisy hardware. Recently, iterative decoders for modern channel codes on noisy hardware have attracted a great deal of attention. In [11], Varshney derived the capacity and certain concentration results of LDPC codes on noisy iterative decoders. Density evolution equations of noisy Gallager B decoders on noisy hardware were derived in [12] and [13]. Tabatabaei Yazdi et al. additionally proposed an optimal resource allocation scheme to lower the decoder error floor induced by noisy hardware implementations in [14] and [15]. Density evolution analysis for the min-sum decoder and one-step majority logic decoder under different hardware error models was investigated in [16]–[18].
+The belief propagation (BP) algorithm on graphical models has found wide spread applications, including image processing, digital communication systems, error correction coding, and bioinformatics [19]. Performance characterization of the BP algorithm, especially the loopy BP for graphs with cycles, was extensively studied in previous work. Various conditions on convergence were proposed [20]–[23] and different modified BP algorithms were developed [24], [25].
+The contribution of this paper is to characterize the BP algorithm on noisy hardware and to propose robust implementations of BP with mathematical guarantees. We begin with a brief review of the BP algorithm on factor graphs in Section II. In Section III, we define the zero-mean transient additive computation noise model and specify the contraction mapping assumption (for convergent BP) on the factor graphs. We then derive an upper bound on the distances between the
+
+0090-6778 © 2014 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. Authorized licenSseeedhuttspe:/l/imwiwtewd.itoee: eY.oonrgs/epiuUbnliivc.atDioonwsn_lsotaadneddarodns/Jpuunbeli2ca4t,i2o0n2s6/raigt h1t7s:/2in7d:4e7x.UhtTmCl ffroormmIEoEreEinXfpolromrea.tiRone.strictions apply.
+
+12
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+noisy BP messages and the fixed point of (noise-free) BP as a function of the iteration number. In Section IV, we offer two implementations of BP, namely, censoring BP and averaging BP, that are able to mitigate the effects of computation noise with different distributions. Censoring BP utilizes the contraction mapping property to reject erroneous computations. Averaging BP reduces the effects of computation noise by averaging messages over all up-to-date iterations. We establish the convergence of censoring BP for the regime where the computation noise is nonzero with some (small) probability. Although averaging BP has a slightly larger overhead than censoring BP, we prove that averaging BP converges to the fixed point (of noise-free BP) for general computation noise with zero-mean. Simulations on the Ising model show that the two proposed algorithms successfully converge to the fixed point (of noise-free BP), which agrees with our analysis.
+Next, we apply the averaging BP algorithm to image denoising and to the BP decoding of LDPC codes. For the image denoising application in Section V, the images recovered by nominal BP and averaging BP (both under noisy hardware) are compared to demonstrate the resilience of averaging BP to hardware errors. For the BP decoder for LDPC codes in Section VI, we first analyze the fundamental performance limits of the nominal BP decoder (on noisy hardware) via Gaussian approximate density evolution. We then derive the decoding thresholds that determine the maximum allowable communication channel and computation noise for reliable communication. We then demonstrate via simulations that the averaging BP decoder (implementing averaging BP) achieves a residual error rate that is 20 times smaller than the nominal BP decoder in the considered example. Section VII concludes this paper.
+
+II. BELIEF PROPAGATION ON FACTOR GRAPHS
+In this section, we review the BP algorithm on factor graphs and introduce necessary notation.
+
+A. Graphical Models
+
+Consider a random vector X = (X1, X2, . . . , XN), with Xi tak-
+ing values in a discrete space X = {1, 2, . . . d}. We are interested
+in a class of factorizable probability distributions defined on
+graphical models such as Markov random fields and Bayesian
+networks. As in the standard literature, we write the probability
+distribution of X as a product of factors (also called potentials)
+
+∏ PX1,...,XN (x1, . . . , xN )
+
+=
+
+1 Z
+
+I∈C
+
+ψI (xI ),
+
+(1)
+
+nodes connected to this factor, and we denote a variable by
+its index i, i ∈ {1, 2, . . . , N}. The variable node i is associated
+with the random variable Xi in X, and each variable node i ∈ V is connected with the factors I ∈ F iff i ∈ I. We denote the neighbors of variable node i by Ni, hence, Ni = {I : i ∈ I}.
+For each variable node i, we denote the set of neighboring
+variable nodes (via connecting factors) as Ψi = I∈Ni I \ {i}. Each variable Xi interacts with its neighboring variables, Xj,
+j ∈ Ψi, through the connecting factors in Ni.
+
+B. Noise-Free Belief Propagation
+
+The BP algorithm computes the approximate or exact
+marginals {PXI (xI)}, I ∈ F and {PXi (xi)}, i ∈ V of the joint
+distribution (1). The computation is conducted by iterative
+message passing on the factor graph: each node updates its mes-
+sages according to the messages received from its neighbors,
+and sends its updated messages back to its neighbors. In BP,
+we have two types of messages: messages from variable nodes to factors, denoted by m˜ (i→)I(xi), and messages from factors to variable nodes, denoted by m˜ (I→) i(xi), where is the iteration number. Each message is associated with a variable node i and
+a factor I on the factor graph.
+The messages are interpreted as proxies of marginal prob-
+abilities and take non-negative values. At iteration , every variable node i computes its messages m˜ (i→)I(xi) from the received messages in the last iteration and sends m˜ i(→)I(xi) to
+its neighboring factors I ∈ Ni, and then factor I computes its
+messages m˜ I(→) i (xi ) by the received messages from neighboring variable nodes and sends the computed messages to its neighboring variable nodes i ∈ I. The noise-free BP update rules are
+summarized as follows. The variable-to-factor message update
+rule is
+
+∏ m˜ (i→)I(xi) ∝
+
+m˜ (J→−i1)(xi).
+
+(2)
+
+J∈Ni\I
+
+The factor-to-variable message update rule is
+
+∑ ∏ m˜ I(→) i (xi ) ∝
+
+ψI (xI )
+
+m˜ (i→)I (xi).
+
+(3)
+
+xI\i ∈X |I|−1
+
+i∈I\i
+
+We combine (2) and (3) into a recursive expression for updates of factor-to-variable messages:
+
+∑ ∏ ∏ m˜ I(→) i (xi ) ∝
+
+ψI (xI )
+
+m˜ (J→−i1)(xi). (4)
+
+xI\i ∈X |I|−1
+
+i∈I\i J∈Ni\I
+
+where C is the set of all maximal cliques in the graph, xI
+is the vector whose elements are in the set {xi|i ∈ I}, I is
+an index set, and Z is the normalization constant to ensure
+
+To simplify the notation, we concatenate the local messages
+m˜ (I→) i (xi ), for all I ∈ F , i ∈ V , and xi ∈ X , to form an
+aggregate message (vector) m˜ ( ). Denote the operations on the
+
+that ∑x∈X N PX (x) = 1, where X N denotes the N-fold Cartesian aggregate message in each iteration by a function f . We then
+
+product of X .
+
+have
+
+The probability distribution (1) can be associated with a factor graph. A factor graph is a bipartite graph with vertex
+
+m˜ ( ) = f m˜ ( −1) .
+
+(5)
+
+set V ∪ F , where F is the set of factors and V is the set
+
+of variable nodes. In the factor graph, we denote a factor by When all the messages have converged to a fixed point (i.e., its associated set I, which is the set of indices of the variable m˜ i(→)I(xi) = m˜ (i→−I1)(xi) and m˜ I(→) i (xi ) = m˜ (I→−i1)(xi ) for all I ∈
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+13
+
+F , i ∈ V , and xi ∈ X ), which we describe by m˜ ∗i→I(xi) and
+m˜ I∗→i (xi ), we compute the approximate marginals or beliefs by
+
+∏ ∏ b˜I(xI) =CIψI(xI) m˜ ∗i→I(xi), b˜i (xi ) =Ci m˜ I∗→i (xi ),
+
+i∈I
+
+I∈Ni
+
+where CI’s and Ci ’s are normalizing constants chosen such that ∑xI∈X |I| b˜I(xI) = 1 and ∑xi ∈X b˜i (xi ) = 1. Then, the proxies of1 marginals PXi (xi ) and PXI (xI) are b˜i (xi ) and b˜I(xI). Note that in the aggregate representation (5), the fixed point is then described by the aggregate message satisfying m˜ ∗ = f (m˜ ∗).
+It is well-known that on a tree-structured graph, BP converges to a unique fixed point. On a general graph (with some mild conditions on the potentials [26]), it is known that BP has at least one fixed point, but it is not necessarily unique. Sufficient convergence conditions based on the contractivity of the message update operations were proposed as guarantees for BP to converge to a unique fixed point [20]–[22].
+
+III. BELIEF PROPAGATION UNDER NOISY HARDWARE
+
+In this paper, we consider the transient error model for the BP algorithm implemented on noisy hardware. Under this model and following von Neumann [2], the message computation in each iteration is subject to transient errors, and the transient errors on different messages are assumed to be independent. Due to the transient errors, the actual message could be different from its prescribed value. We use the noisy computation model proposed in the stochastic computation framework [9], in which the noisy computation is modeled by passing a hypothetical noise-free computation result through a channel that models the effects of transient errors. We further assume that the effect of transient errors is modeled as zero-mean additive noise, and the message update at iteration is
+
+mI(→) i(xi) = mˆ (I→) i(xi) + w(I→) i(xi),
+
+(6)
+
+where w(I→) i(xi) is the additive computation noise due to transient errors and mˆ I(→) i(xi) is the hypothetical noise-free message. Such zero-mean additive computation noise model was also
+considered in related works [10], [11]. Using the aggregate
+representation in (5), we have
+
+m( ) = f m( −1) + w( ).
+
+(7)
+
+Since the transient errors on different messages are independent, the entries in w( ) are independent.
+We assume that the factor graph we consider satisfies the
+following condition:
+
+sup f (u) < 1,
+
+(8)
+
+u∈U
+
+between the fixed point and the noisy BP messages m( ). Note that “fixed point” refers to the fixed point of noise-free BP in the rest of the paper. We first introduce the following lemma from [21], which is a consequence of the well-known Mean Value Theorem.
+Lemma 1: Let g : U → U be a differentiable mapping on a normed space (U, · ). We have
+
+g(u2) − g(u1) ≤ u2 − u1 · sup g (y) , (9)
+y∈[u2,u1]
+
+where [u2, u1] is the segment between u2 and u1, {λu1 + (1 − λ)u2 : λ ∈ [0, 1]}, and u1, u2 ∈ U.
+
+The following lemma gives an upper bound on the distance between the fixed point m∗ and the message m( ) as a function
+
+of . Denote the maximum number of iterations by L.
+
+Lemma 2: Let ξ > 0. Suppose that for all ≤ L, w( ) ≤ ξ.
+
+Let supu∈U f (u) = K. We then have m( ) − m∗ ≤ m(0) −
+
+m∗
+
+K
+
++
+
+(1−K 1−K
+
+)
+
+ξ,
+
+where
+
+m∗
+
+denotes
+
+the
+
+fixed
+
+point.
+
+Proof: We prove this lemma by induction. For = 1, by
+
+applying Lemma 1, we have
+
+m(1) − m∗ = f m(0) + w(1) − m∗ ≤ f m(0) − m∗ + ξ ≤ m(0)−m∗ K+ξ.
+
+Let
+
+m( ) − m∗
+
+≤
+
+m(0) − m∗
+
+K+
+
+1−K 1−K
+
+ξ.
+
+For iteration + 1, by using Lemma 1, we have
+
+m( +1)−m∗ = f m( ) + w( +1) − m∗
+
+≤ f m( ) −m∗ +ξ ≤ m( )−m∗ K+ξ
+
+≤
+
+m(0) − m∗
+
+K +1 +
+
+1 − K +1 1−K
+
+ξ.
+
+Corollary 1: Let ξ and K be as defined in Lemma 2. Then,
+
+when
+
+→ ∞,
+
+m( ) − m∗
+
+is
+
+upper
+
+bounded
+
+by
+
+ξ 1−K
+
+.
+
+Proof: Since K < 1, lim →∞ K = 0, the corollary fol-
+
+lows immediately.
+
+Corollary 1 shows that when we run noisy BP for a large
+
+enough number of iterations, the distance bound depends only
+
+on ξ and K. Although the distance bound is not tight, Corollary
+
+1 has an important implication: since the noisy messages are
+
+confined within this bound in all iterations, we are able to
+
+develop robust implementations to improve BP on noisy hard-
+
+ware, as shown in the following sections.
+
+where U is the domain of the function f (u) and · denotes a vector norm. Under this condition, BP converges to a unique fixed point [21]. This condition is called the contraction map-
+
+IV. ROBUST IMPLEMENTATIONS OF THE BELIEF PROPAGATION ALGORITHM
+
+ping condition. Let supu∈U f (u) = K. We first derive an From Corollary 1, it is seen that with computation noise, the upper bound for the distances (in terms of the vector norm) contraction mapping condition no longer guarantees the conver-
+
+gence of BP. We therefore develop two robust implementations
+
+1In tree-structured graphs, b˜i (xi ) and b˜I(xI) are exact marginals PXi (xi ) and of the BP algorithm, namely, censoring BP and averaging BP.
+
+PXI (xI ), respectively.
+
+Censoring BP has a smaller overhead, but the convergence is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+14
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+guaranteed only when the probability of the computation noise The advantage of this algorithm is that it only requires a small
+
+being zero is sufficiently large. On the other hand, averaging overhead; the only additional noise-free operation in this algoBP, which has a slightly larger overhead, converges to the fixed rithm is testing if m( ) − m( −1) ≤ K m( −1) − m( −2) holds.
+
+point for general zero-mean computation noise distributions. In practice, we could set K = 1 to simplify the computation.
+
+Censoring BP performs well when the hardware noise dis-
+
+A. The Censoring BP Algorithm
+
+tribution (as specified in (10)) has a large mass at zero and has non-negligible masses at some points sufficiently away
+
+We first consider the transient errors with the following distribution
+
+P w( )( j) = φ =
+
+pw h(φ)
+
+if φ = 0, otherwise,
+
+(10)
+
+from zero. Such a distribution is found in, for example, the
+soft adder model [6]. For this noise distribution, censoring BP
+rejects almost all erroneous computations when the current message is close to the fixed point (that is, m( −1) − m( −2) is small when the messages are both from correct computations).
+
+where w( )( j) denotes the jth entry in w( ), h is an arbitrary
+
+function satisfying
+
+∞ −∞
+
+h(z)dz
+
+=
+
+1
+
+−
+
+pw
+
+and
+
+∞ −∞
+
+zh(z)dz
+
+=
+
+0,
+
+and pw is positive. In this case, with probability pw, noisy BP
+
+computes a correct message. If we are able to discard the erro-
+
+However, for a general case, especially when pw is small or zero, censoring BP may fail to converge. In the next section we therefore propose the averaging BP algorithm, which applies to general zero-mean computation noise distributions.
+
+neous computations and replace them by recomputed messages,
+
+noisy BP will converge to the fixed point as noise-free BP.
+
+B. The Averaging BP Algorithm
+
+We observe that under the contraction mapping condition, m( ) − m( −1) is a strictly decreasing function of , and converges to zero as → ∞, when we assume noise-free computation. Hence, by comparing m( ) − m( −1) to m( −1) − m( −2) , and recomputing m( ) when m( ) − m( −1) > K m( −1) − m( −2) , we are able to discard most of the erro-
+neous computations and keep the messages on the right track
+to convergence. However, the problem of this idea is that the
+iterative message update could be trapped in some points other than the fixed point, when w( −1) happens to cause m( −1) to be very close to m( −2). In this situation, even when w( ) is zero, we still have m( ) −m( −1) > K m( −1) −m( −2) , since the small value of m( −1) − m( −2) is the result of detrimental computation noise w( −1). We therefore include a backoff mechanism
+in our algorithm to solve this problem. That is, when the computation results of m( ) are repeatedly rejected (up to τ times, where τ is the recomputation threshold), we recompute m( −1), and based on the recomputed m( −1), we compute m( ).
+We summarize the censoring BP algorithm in Algorithm 1. The BP stopping rule is m( ) − m∗ ≤ KT m(0) − m∗ , where T is
+a positive integer (T is determined by the desired accuracy of
+estimated beliefs). Note that in practice, since we do not know m∗ (and even K) a priori, we can compute m( ) − m( −1) for
+every , and stop when the differences are small for several
+consecutive ’s. We defer the convergence analysis of censoring
+BP to Appendix A.
+
+As we have seen in the preceding Section IV-A, censoring BP is guaranteed to converge when we assume that pw (cf. (10)) is sufficiently large. In this section, we release this assumption, consider the general zero-mean computation noise, and propose the averaging BP algorithm. From Corollary 1 and the simulation results to be discussed in Section IV-C (Fig. 2(b)), we observe that the messages oscillate around the fixed point when zero-mean computation noise is considered. This phenomenon inspires us to propose averaging BP: instead of using m( ) in the final iteration to compute the beliefs of the random variables Xi’s, we use the average over all up-to-date messages
+
+∑ m¯ ( ) = 1 m(i),
+
+(11)
+
+i=1
+
+to compute the beliefs. Although such operation induces a slightly larger overhead than censoring BP, it guarantees the convergence of m¯ ( ) to the fixed point, as we will show later.
+We first intuitively explain the convergence of averaging BP as follows. As observed in the simulation results in Section IVC (Fig. 2(b)), when the iteration number is large enough, the noisy BP messages are approximately the fixed point message plus a noise term due to the computation noise. When the noise has finite variance and is zero-mean and independent across iterations, its effects gradually disappear over subsequent iterations due to the averaging operation. The effects of the
+
+Algorithm 1 Censoring BP
+←0 while m( ) − m∗ > KT m(0) − m∗ do ← + 1, m( ) ← f (m( −1)), i ← 0;
+while m( ) − m( −1) > K m( −1) − m( −2) & i ≤ τ do i ← i + 1, m( ) ← f (m( −1))
+if i = τ then ← − 1 end if end while end while
+
+first few iteration messages, whose distances to the fixed point could be large, also diminish due to the averaging operation as the iteration number grows. Hence the average message m¯ ( ) in (11) converges to the fixed point when → ∞. In fact, the operation in (11) is reminiscent of the averaging method in stochastic optimization, in which the gradient being used in the iterative optimization procedure is noisy. The convergence of the averaging method for stochastic optimization was proved in [27]. The authors in [25] applied the Robbins-Monro algorithm, which is the original form of stochastic optimization, to develop the stochastic message passing scheme, and proved its convergence. Due to the similarity of the underlying mathematical
+
+models, we are able to adapt some of the proof techniques
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+15
+
+used in [25] for our use. The convergence of the averaging BP to store the sum of the messages up to the current iteration. As
+
+algorithm is formally stated in the following. We defer the proof a consequence, the number of additional memory cells required
+
+of the following two propositions to Appendix B and C.
+
+can be kept constant.
+
+Proposition 1: Assume that the averaging operation is noise-
+
+free. Assume the following four conditions are satisfied:
+1) w( ) is upper bounded by a finite constant, 2) E[w( )] = 0, 3) w( )’s are i.i.d, and 4) entries in w( ) are with finite variances for all .
+We then have
+
+C. Experiments: Ising Model
+In this section, we compare the convergence of the proposed algorithms and the nominal BP algorithm under different computation noise models. We use a fully connected, uniform coupling, and uniform local field Ising model. In the Ising model, all the potentials consist of at most two variables, and
+
+∑ 1
+lim
+
+m(i) − m∗ = 0.
+
+→∞ i=1
+
+(12)
+
+That is, the average of the messages over all up-to-date iterations converges to the fixed point.
+
+all the N random variables in the Ising model are binary. Denote
+the set of factors as F = F1 ∪ F2, where F1 = V are the factors connected to one variable node, and F2 ⊆ {(i, j) : i, j ∈ V , i =
+j} are the factors connected to two variable nodes. The joint
+distribution of the variables is
+
+Next, we derive an upper bound on the expectation of the L1 norm of the difference between m¯ ( ) and the fixed point, m¯ ( ) −
+m∗ 1, w.r.t. .
+
+∑ ∑ 1
+PX (x) = Z exp
+
+Ji, jxix j + θixi
+
+(i, j)∈F2
+
+i∈F1
+
+.
+
+(14)
+
+Proposition 2: Assume that the computation noise w( ) ∞ ≤ β, where β > 0. If w( ) satisfies the four conditions in
+Proposition 1, the expectation of the L1 norm of the difference between m¯ ( ) and the fixed point m∗ is upper bounded as
+
+For the uniform coupling and uniform local field Ising models,
+all Ji, j’s are the same (denote their common value by J) and all θi’s are also the same (denote their common value by θ). The J and θ ranges that satisfy the contraction mapping condition for
+
+K(1 − K ) m(0) − m∗
+
+E m¯ ( ) − m∗ ≤
+1
+
+1
+(1 − K)
+
+different N values were derived in [21], and we select N = 4, J = 0.3 and θ = −0.3 in our experiments accordingly.
+1) Censoring BP on Ising Model: For censoring BP, we consider the computation noise model adapted from the soft
+
++βΓ
+
+K2(1 − K −1) (1 − K)2 +
+
+2π K 1−K
+
+,
+
+(13)
+
+where Γ is the dimension2 of w( ). The previous proposition shows that the decay of the upper
+
+adder model proposed in [6]: the computation noise is either
+
+zero or has a large magnitude. To be more specific, the noise
+
+distribution follows (10), with pw = 0.95 and h(φ) being a
+
+mixed
+
+Gaussian
+
+distribution
+
+with
+
+variance
+
+γ 4
+
+and
+
+mean
+
+0.5γ
+
+with probability 0.5 and mean −0.5γ with probability 0.5,
+
+where γ is the magnitude of the message that the noise is
+
+bound for E[ m¯ ( ) − m∗ 1] is roughly 1 for sufficiently large
+. To accelerate the convergence, we can start the averaging operation from i = i∗, i∗ > 1 in (12) instead of i = 1, since the first few messages might be far away from the fixed point, slowing down the convergence in our averaging operations.
+Although the overhead of averaging BP is slightly larger than censoring BP, the overhead of averaging BP is still very small compared to other fault-tolerant computing approaches such as Triple Modular Redundancy [28]. The only required noisefree operation in the averaging BP is the averaging operation. Even the summation operation in (11) is allowed to be noisy, since the noise-free division will help diminish the effects of computation noise in the summation operation. Moreover, the averaging operation is done off-line, that is, the message update does not rely on the average message m¯ ( ). Therefore, instead of performing the averaging operation at every iteration, we can just perform the averaging operation only when we want to compute the beliefs of the variable nodes. Note that m¯ ( ) (see (11)) is computed from the sum of m(i)’s. Therefore, instead of storing the messages in past iterations separately, we only need
+
+added to. Since the messages in BP are always positive, we set the noisy messages to be the absolute values of the sum of the noise-free messages and the computation noise, namely, m( ) = | f (m( −1)) + w( )|.
+We compare the L1 norm distance of the beliefs computed by censoring BP to the beliefs computed by noise-free BP with the L1 norm distance of the beliefs computed by nominal BP to the beliefs computed by noise-free BP. We show the average L1 norm distances in each iteration over 200 simulations in Fig. 1(a). The average distance between censoring BP and noise-free BP decreases to zero as the iteration number grows, while the average distance between nominal BP and noise-free BP remains large even when the maximum iteration number (20 in this example) is reached. We also show the trajectory of the beliefs of variable node 1 w.r.t. the iteration number in a single simulation in Fig. 1(b). We observe that although censoring BP could make mistakes in the first few iterations, as the beliefs get closer to the fixed point, most of the erroneous computations are rejected, and censoring BP successfully converges to the fixed point.
+2) Averaging BP on Ising Model: For averaging BP, we
+
+consider the zero-mean computation noise with pw = 0 (cf.
+
+2Γ = d E , d is the size of X and E is the number of edges in the factor graph.
+
+(10)). To be more specific, we consider the case where the
+
+entries of w( ) are uniformly distributed in
+
+−
+
+γ a
+
+,
+
+γ a
+
+,
+
+where
+
+γ
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+16
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+Fig. 1. Censoring BP: (a) L1 norm distance comparison and (b) belief trajectory comparison.
+
+Fig. 2. Averaging BP: (a) L1 norm distance comparison and (b) belief trajectory comparison (a = 5).
+
+is the magnitude of the message that the noise is added to and a
+
+V. APPLICATION EXAMPLE I: IMAGE DENOISING
+
+is greater than 1 to ensure the message is larger than zero. The BP can be applied to image denoising where we seek to maximum message value is 1. Therefore, the noisy message is recover the original image from the noise-contaminated obexpressed as m( ) = ( f (m( −1)) + w( ) − 1)− + 1, where (ζ)− servation of the image. We briefly explain a simple BP-based
+
+denotes the negative part of ζ, i.e., the message is clipped at 1. image denoising algorithm as follows. Consider a 2-D image.
+
+We compare the L1 norm distance of the beliefs computed by For every color on the image, we assign a unique number to averaging BP to the beliefs computed by noise-free BP with the the color. The value of each pixel on the image is then the
+
+distance of the beliefs computed by nominal BP to the beliefs number corresponding to the pixel’s color. In a 2-D image, our
+
+computed by noise-free BP. We use two different computation observation of each pixel value is contaminated by additive
+
+noise distributions for comparison, namely, a = 5 and a = 10, noise. Assume that the noises added to different pixels are
+
+and show the average L1 distances in each iteration over 200 independent. To recover the image from the contaminated pixel simulations (Fig. 2(a)). We observe that the average distance value observations, we construct a 2-D grid with an appropriate
+
+between averaging BP and noise-free BP is very close to zero choice of potential functions (e.g., Potts model) as our factor
+
+after a sufficiently large number of iterations. The increase in graph. Each pixel in the image is then associated to a variable
+
+computation noise variance only slightly increases the distance node on the factor graph. Each message is a vector representing
+
+to the noise-free BP message for averaging BP. We also show the probabilities of all the possible colors of the associated
+
+that the trajectories of the beliefs of variable node 1 in a sampled pixel. To be more specific, suppose we are on a 256-level
+
+simulation in Fig. 2(b) (up to 20 iterations). We observe that grayscale; a message associated with a variable node is a
+
+the beliefs computed by averaging BP quickly converges to vector with 256 entries. Each entry is the probability that the
+
+the fixed point, while nominal BP beliefs keep oscillating pixel associated with the variable node is at a darkness level
+
+around the fixed point. To test averaging BP under computation corresponding to the entry. We run the BP algorithm on the
+
+noise with different distributions, we also run simulations for factor graph to obtain the most likely value of every pixel based
+
+averaging BP under Gaussian distributed computation noise, on the contaminated observations.
+
+and the results are qualitatively the same as the uniform dis- We use the “penguin” image (with size 179 × 122 and
+
+tributed noise, thus showing that the shape of computation noise 256 gray-scale levels) from [29], and associate the 2-D grid
+
+distribution has limited effect on averaging BP performance. We thus conclude that the proposed algorithms successfully converge to the fixed point, while the nominal BP algorithm fails to do so.
+
+constructed for the image to a Potts model [29] with coefficient ρ = 0.001. In a Potts model, the potential function ψI of a factor connecting two variable nodes is 1 for the two variables with the same value, and ρ for the two variables with different
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+17
+
+Fig. 3. Image denoising via BP: (a) original image, (b) contaminated image, (c) recovered image by noise-free BP, (d) recovered image by nominal BP, and (e) recovered image by averaging BP.
+
+values. We assign the integers 0 to 255 to the 256 gray- On an LDPC code bipartite graph, following the notation
+
+scale levels. Every pixel value in the image is contaminated in Section II (with some modifications to fit the LDPC code
+
+with independent Gaussian noise with zero-mean and standard context), we denote the neighbors of variable (check) node v(c)
+
+deviation 50. The original image and the contaminated image are shown in Fig. 3(a) and (b). We use the computation noise model in Section IV-C2, and run the nominal BP and averaging BP algorithm for 20 iterations to recover the original image from the contaminated one.
+Images recovered by noise-free BP, nominal BP, and averaging BP are shown in Fig. 3(c)–(e), respectively. Comparing Fig. 3(d) and (e), we observe that for the nominal BP, most of the pixels are determined incorrectly and the recovered image is very different from the image recovered using noise-free BP (Fig. 3(c)). On the other hand, the image recovered by averaging BP is very close to the image recovered by noisefree BP (Fig. 3(c)). We then conclude that averaging BP indeed improves the image denoising BP on noisy hardware.
+
+by the set Nv(Nc). Denote the variable-to-check messages (at
+iteration ) by m˜ (v→) c, and the check-to-variable messages by m˜ (c→) v. Let yv be the decoder input at the variable node v, and
+xv ∈ {+1, −1} be the transmitted bit (using binary phase-shift
+keying modulation) corresponding to v. For completeness, let us
+
+summarize the well-known steps of the noise-free BP decoder.
+
+• (Initialization) At iteration = 0, each variable node v
+
+sends
+
+the
+
+message
+
+m˜ (v0→) c
+
+=
+
+ln
+
+P(yv|xv=1) P(yv|xv=−1)
+
+to
+
+each
+
+check
+
+node c, c ∈ Nv.
+
+• (Check node) At each iteration , ≥ 0, each check node
+
+c sends a message m˜ c(→) v to each variable node v, v ∈ Nc:
+
+⎛
+
+⎞
+
+∏ m˜ c(→) v
+
+=
+
+2 tanh−1
+
+⎝
+v
+
+∈Nc\{v}
+
+tanh
+
+m˜ v(
+
+) →c
+
+2
+
+⎠
+
+.
+
+VI. APPLICATION EXAMPLE II: BP DECODERS FOR LDPC CODES
+Study of LDPC decoders implemented on noisy hardware
+
+• (Variable node) At each iteration , ≥ 1, each variable
+node v sends a message m˜ v(→) c to each check node c, c ∈ Nv:
+
+has recently attracted a lot of attention. The density evolution analyses in [12]–[18], [30], focused on simpler decoding algorithms, including Gallager decoders and min-sum decoders. A
+
+∑ m˜ (v→) c = m˜ (v0→) c +
+
+m˜ (c →−1v).
+
+c ∈Nv\{c}
+
+density evolution analysis for BP decoders was derived in [11] Since the messages in the BP decoder are log-likelihood
+
+which considered the constant (worst case) computation noise. ratios, they take values in R. When the decoding process termi-
+
+Following those works, here we derive decoding thresholds of nates at iteration L, the decoded bit of variable node v is decided BP decoders under Gaussian computation noise using Gaussian by the sign of m˜ (vL), where m˜ (vL) = m˜ v(0→) c + ∑c ∈Nv m˜ (cL→−1v). approximate density evolution. In [30], Leduc-Primeau and
+
+Gross proposed a message repetition scheme to improve the performance of Gallager B decoders. In this section, by ap- B. Noisy BP Decoder
+
+plying averaging BP, we additionally design a low-overhead Here we consider a transmission over a Gaussian commu-
+
+robust BP decoder implementation that significantly reduces the nication channel. In addition to receiving a noisy input from a
+
+residual error rate of the noisy BP decoder.
+
+communication channel, the noisy BP decoder is also subject to
+
+errors arising from noisy hardware. Following the computation
+
+A. LDPC Codes and Noise-Free BP Decoder
+
+noise model (6), the messages exchanged in our noisy BP decoder at iteration are represented as:
+
+An LDPC code is a linear code that can be conveniently represented by a sparse bipartite graph composed of variable
+
+m(v→) c = mˆ (v→) c + w˘ v(→) c, m(c→) v = mˆ c(→) v + w˘ (c→) v, (15)
+
+nodes, check nodes (corresponding to the factors), and edges each connecting a variable node to a check node. In a (dv, dc)-
+
+where mˆ v(→) c and mˆ (c→) v are the noise-free messages, and w˘ (v→) c
+
+regular LDPC code, each variable node is connected to dv check and w˘ c(→) v are the computation noises. Note that since the
+
+nodes, and each check node is connected to dc variable nodes. computation noise is additive and the variable node operation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+18
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+is simply the summation of all incoming messages, we can combine the computation noise in check nodes and a variable node into a single term. Then, in our noisy BP decoder, a check node is the same as a check node in the noise-free decoder, and the variable node operation becomes
+
+∑ m(v→) c = m(v0→) c +
+
+mˆ (c
+
+−1) →v
+
++
+
+wv(→) c,
+
+c ∈Nv\{c}
+
+(16)
+
+where
+
+wv(→) c
+
+=
+
+w˘ v(→) c + ∑c
+
+∈Nv\{c} w˘ (c
+
+) →v
+
+is
+
+the
+
+aggregate
+
+com-
+
+putation noise. We assume that all wv(→) c’s are identically dis-
+
+tributed and independent across . Note that mv(0→) c is the same
+
+as m˜ (v0→) c since we have the same communication channel for the
+
+noise-free and noisy decoders.
+
+Fig. 4. Decoding threshold pairs for different regular LDPC codes. The thick black lines are the computation noise range used in Section VI-D simulations.
+
+fact that the sum of independent Gaussian random variables
+
+C. Density Evolution and Decoding Threshold Analysis of the is still a Gaussian random variable, with mean and variance
+
+Noisy BP Decoder
+
+being the sums of the means and variances of the summand
+
+Following the noisy decoder models in [11], [16], [17], we assume that w(v→) c’s are symmetric, and the underlying bipartite graph for our decoder is cycle-free. Since w(v→) c’s are symmet-
+ric, according to [11], the error behavior of a noisy decoder is
+
+variables, the distribution of mv(→) c is then approximated by
+
+a
+
+Gaussian
+
+distribution
+
+with
+
+mean
+
+2 σ2ch
+
++
+
+µ
+
+−1
+
+and
+
+variance
+
+4 σc2h
+
++
+
+σ2−1
+
++
+
+σc2mp.
+
+We adapt the semi-Gaussian method, a variant of the Gaus-
+
+independent of the chosen codeword. We therefore assume that sian approximation method, proposed in [32] to analyze the
+
+the all-zero codeword is transmitted.
+
+density evolution of our noisy BP decoder according to Lemma
+
+We use Gaussian approximate density evolution techniques 3. The quantities µ −1 and σ2−1 in the semi-Gaussian method [31] to analyze the noisy BP decoder. Gaussian approximate are derived by Monte-Carlo simulations, and the residual error
+
+density evolution for the noise-free BP decoders utilizes the rates are derived from the approximated Gaussian distributions.
+
+facts that (a) when dv is sufficiently large, the distribution of Details of the semi-Gaussian method can be found in [32].
+
+the summation of check-to-variable messages is close enough For the noisy BP decoder under Gaussian computation noise
+
+to a Gaussian distribution (by the central limit theorem), and and the infinite-precision hardware (i.e., messages of arbitrarily
+
+(b) when the communication channel noise is Gaussian, the large dynamic range are represented with arbitrarily high pre-
+
+log-likelihood ratios of the decoder input are Gaussian with
+
+mean
+
+2 σc2h
+
+and
+
+variance
+
+4 σc2h
+
+,
+
+where
+
+σ2ch
+
+is
+
+the
+
+variance
+
+of
+
+the
+
+communication channel noise. Experimental results confirm the
+
+validity of such approximation [31]. Applying the Gaussian
+
+approximate density evolution to the noisy BP decoder, we have
+
+the following lemma:
+
+Lemma 3: If dv is sufficiently large, and if one of the two fol-
+
+lowing conditions holds: (c) w˘ (c,v) and w˘ v(,c) in (15) are identically
+
+distributed with zero mean, (d) w˘ v(,c) in (15) is Gaussian with
+
+zero mean, then the distribution of m(v→) c can be approximated
+
+by
+
+the
+
+Gaussian
+
+distribution
+
+with
+
+mean
+
+2 σ2ch
+
++µ
+
+−1
+
+and
+
+variance
+
+4 σc2h
+
++ σ2−1 + σc2mp,
+
+where
+
+σ2cmp
+
+is
+
+the
+
+variance
+
+of
+
+w(v→) c,
+
+and
+
+µ −1 and σ2−1 are mean and variance of ∑c ∈Nv\{c} mˆ (c →−1v),
+
+respectively.
+
+Proof: When dv is sufficiently large and when condition
+
+(c) or (d) holds, by the central limit theorem, the aggregate com-
+
+putation noise, w˘ v(→) c + ∑c ∈Nv\{c} w˘ (c →−1v), can be approximated
+
+by a Gaussian random variable with zero mean and variance
+
+σc2mp. Then, given facts (a) and (b) mentioned in the preceding
+
+paragraph, the initial message m(v0→) c is Gaussian distributed
+
+with
+
+mean
+
+2 σc2h
+
+and
+
+variance
+
+4 σ2ch
+
+,
+
+and
+
+∑c
+
+∈Nv
+
+\{c}
+
+mˆ (c
+
+−1) →v
+
+can
+
+be
+
+approximated by a Gaussian random variable with its mean and
+
+cision), we observe from the density evolution analysis that the decoder approaches zero error probability if the communication channel noise and the computation noise are small. This observation was also made in [11], and is explained as follows. The iterative decoding process is able to raise the message values (log-likelihood ratios) to infinity when the communication channel noise is small enough. Since the magnitude of Gaussian computation noise is finite w.p.1, when the messages are large enough (i.e., close to infinity), the effects of the computation noise diminish.
+Extending the definition of the decoding threshold for the noise-free case (see [33]), we define the decoding threshold for a noisy BP decoder as a curve σch = σ∗ch(σcmp) on the σch − σcmp plane such that perfect decoding is achievable whenever σch < σc∗h(σcmp) and unachievable whenever σch > σ∗ch(σcmp). Reversely, the curve can also be expressed as σcmp = σc∗mp(σch), and perfect decoding is achievable whenever σcmp < σ∗cmp(σch) and unachievable whenever σcmp > σc∗mp(σch).
+In Fig. 4, we plot the decoding threshold curve derived from the Gaussian approximate density evolution for different (dv, dc)-regular LDPC codes. It is clear that σc∗h decreases as σcmp increases. Therefore, we conclude from the decoding threshold analysis that the communication channel noise level must be lowered if the computation noise is large, so that the joint effect of the two types of noises does not prohibit perfect
+
+variance denoted by µ −1 and σ2−1 respectively. Relying on the decoding.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+19
+
+Fig. 6. Residual error rate comparison with σcmp = 3.
+
+number of iterations in our simulations is 30. Note that for finite
+
+length LDPC codes, the bipartite graphs may have cycles. The contraction mapping condition is not satisfied.3
+
+Simulation results are shown in Fig. 5(a) and (b). We observe
+
+that the averaging BP decoder achieves lower residual error
+
+rates than the nominal BP decoder for the whole σcmp interval we simulated and for both communication channel noise
+
+cases. The residual error rate reduction reaches 20X in the low
+
+Fig. 5. Residual error rate comparison (a) σch = 0.7. (b) σch = 0.6.
+
+D. Averaging BP Decoder
+
+Under noise of moderate variance values, the residual error rate is bounded away from zero (i.e., when the (σcmp, σch) pair is above and to the right of the curve in Fig. 4). In this section, we focus on the BP decoder operating under noise of moderate variance values and propose a robust decoder implementation based on averaging BP proposed in Section IV-B. To be more specific, when we terminate the decoding process at the L’th iteration, we compute the average message, m¯ v(L), as
+
+∑ m¯ (vL) = 1 L mv(i).
+
+(17)
+
+i=1
+
+computation noise region with σch = 0.6. We then conclude that averaging BP significantly reduces the residual error rate of the
+noisy BP decoder. When σcmp drops below σc∗mp (with a given σch), with enough
+iterations, we observe that the residual error rates of both the
+nominal and the averaging BP decoders quickly approach zero. Interestingly, with small σcmp, the residual error rate of the nominal BP decoder converges faster to zero than the residual
+error rate of the averaging BP decoder. For example, when σcmp = 1.4 and σch = 0.7, the nominal BP decoder residual error rate drops below 10−8 at iteration 19, while the averaging BP decoder residual error rate goes under 10−8 after iteration 25. In fact, when σcmp is small enough (below σ∗cmp with a given σch), the noisy BP decoder behavior is similar to that of the noise-free BP decoder (all noisy messages approach infinity as L → ∞). In this case, the averaging operation slows
+
+The decoder output is then computed by m¯ v(L). We call this decoder the averaging BP decoder. In fact, since we consider
+binary LDPC codes in this section, the decoded bits are determined only by the signs of m¯ (vL)’s. We therefore can eliminate 1 from (17); the decoded bits are specified only by ∑i=1 m(vi).
+We compare the residual error rates of the averaging BP
+
+down the increase in message magnitudes, and in turn decoder convergence.
+We additionally performed simulations under fixed computation noise (σcmp = 3) as the variance of communication channel noise varies. The results are shown in Fig. 6. We observe that larger communication channel noise results in larger residual error rates, and that the averaging BP decoder outperforms the
+
+decoder with the nominal BP decoder under the noisy decoder
+model (16) by simulations to demonstrate the advantages of the
+averaging BP decoder. We use a (3,6)-regular LDPC code with
+code length 2640 [34]. The Gaussian communication channel noise has zero-mean and variance σc2h. As an example, we consider σch = 0.6 and σch = 0.7. The ranges of σcmp for the chosen code when σch = 0.6 and when σch = 0.7 in the simulations (as shown in Fig. 5(a) and (b)) are marked by the thick black lines in Fig. 4. The range of σcmp is chosen to be an interval starting near σ∗cmp(σch) to show the effects of increasing computation noise on the residual error rates. The
+
+nominal BP decoder in the entire range of σch we considered (similar to what we observed in the cases with fixed σch and varying σcmp).
+
+3Since the derivative of tanh−1 x (part of the check node message update) is
+
+1 1−x2
+
+,
+
+which
+
+approaches
+
+infinity
+
+when
+
+x
+
+is
+
+close
+
+to
+
+1,
+
+the
+
+contraction
+
+mapping
+
+condition (supu∈U f (u) < 1) is not satisfied for BP decoders. Therefore, in
+
+the finite length case, the averaging BP decoder does not necessarily converge
+
+to the noise-free BP decoder. However, in the following simulations, we
+
+demonstrate that even when the contraction mapping condition is not satisfied,
+
+applying averaging BP can still improve the noisy decoder performance by
+
+canceling the effects of computation noise via the averaging operation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+20
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+Fig. 7. Random bit-flipping model: mˆ stands for noise-free variable (check) node messages and m stands for real output messages of variable (check) nodes.
+
+Fig. 8. Residual error comparison under random bit-flipping model.
+
+Next, we use the random bit flipping hardware error model
+
+emulating the noisy memory behavior [17], [35] and evaluate
+
+the averaging BP decoder performance under this model. In this
+
+random bit flipping model, the variable (check) nodes compute hypothetical noise-free messages, and these noise-free messages are quantized and converted to the sign-magnitude binary
+
+Fig. 9. Residual error rate comparison for min-sum decoders (a) σch = 0.7. (b) σch = 0.6.
+
+representation. Each of the bits in the binary representation (including the sign bit) then passes through an independent binary symmetric channel (BSC) with cross-over probability pqt . The BSC models the errors in the memory cells. The outputs of the BSCs are the binary representation of the real outputs of the variable (check) nodes (Fig. 7).
+We compare the residual error rates of the nominal BP
+
+Note that although we consider the BP decoder in this section, we also observe from simulations that applying averaging BP can also reduce the residual error rates of the lower-complexity LDPC decoders, such as the min-sum decoder. Simulations results of min-sum decoders are shown in Fig. 9(a) and (b).
+
+decoder and the averaging BP decoder under the random bit-
+
+flipping model under different pqt values. Assume that the averaging operation of the averaging BP decoder is noise-free. Our
+
+VII. CONCLUSION
+
+quantizers in the simulations use 5 bits to represent the magni- In this paper, we studied the BP algorithm implemented on
+
+tude part, ranging from 0 to 31. To keep the residual error rate noisy hardware. We first analyzed the performance in terms
+
+on the same order as the residual error rates achieved in the pre- of the distance to the fixed point under contraction mapping
+
+vious simulations with Gaussian noise, we choose the commu- condition, and then proposed two low-overhead robust imple-
+
+nication channel noise parameter σch to be 0.75. Here we again mentations of the BP algorithm targeting computation noise use the (3,6)-regular LDPC code with code length 2640 [34]. with different characteristics. Under the contraction mapping
+
+Simulation results are shown in Fig. 8. As in the Gaussian condition, we mathematically derived the sufficient conditions
+
+computation noise case, we have significantly reduced the for computation noise to guarantee the convergence of the
+
+residual error rate by using averaging BP decoder under the two proposed algorithms, namely, censoring BP and averaging
+
+random bit-flipping model. The error rate reduction is attributed BP. Simulations on the Ising model supported the theoretical
+
+to the dominance of the sign bit errors in residual errors. As analysis and demonstrated that the two proposed algorithms
+
+demonstrated in [17], after a few iterations, most of the residual both converge to the fixed point.
+
+errors in the nominal BP decoder are from the sign bit flips In addition, we investigated two important applications of
+
+due to the computation noise. In the averaging BP decoder, the BP: image denoising and a BP decoder for LDPC codes for
+
+effects of sign bit flips are canceled out by the averaging over communication systems. In the image denoising application,
+
+all messages in all up-to-date iterations.
+
+the image recovered by averaging BP has a much better quality
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+21
+
+than the image recovered by nominal BP. For the BP decoder, we first mathematically analyzed the effects of computation noise by a Gaussian approximate density evolution and derived the decoding thresholds. We proposed an averaging BP decoder by applying averaging BP. Simulation results demonstrated that the averaging BP decoder achieves lower residual error rates than the nominal BP decoder under various computation noise conditions. Future work may involve hardware implementation of proposed algorithms and developing robust algorithms for various message passing algorithms, for example, max-product and approximate message passing, and more general probabilistic inference and machine learning algorithms.
+
+APPENDIX
+
+A. Convergence Analysis of Censoring BP
+
+We discuss the convergence of the censoring BP algorithm
+
+in the following. With censoring BP, the distance between the
+
+current message and the fixed point can be modeled as a 1-
+
+D random walk starting at 0 and ending at T . To be more
+specific, we start from position 0, where we have m(0) −m∗ ≤ K0 m(0) − m∗ , and reach position T at the final iteration Λ, where we have m(Λ) − m∗ ≤ KT m(0) − m∗ . When the
+message at the iteration , m( ), is at position t, we have m( ) − m∗ ≤ Kt m(0) − m∗ . A correct computation is equivalent
+
+to one step forward towards T . An erroneous (but accepted)
+
+computation is equivalent to a few steps backwards away
+
+from T . Without detecting the erroneous computations (for example, by checking if m( ) − m( −1) ≤ K m( −1) − m( −2) )
+
+and replacing them with recomputed messages, the number of
+
+steps taken backward is logK
+
+Kt+1 m(0)−m∗ + w( ) Kt m(0)−m∗
+
+when the
+
+current message is at iteration and position t. This number
+
+grows as t increases, and the convergence to the fixed point is
+not guaranteed. However, by ensuring that m( ) − m( −1) ≤ K m( −1) − m( −2) is satisfied, we are able to upper bound
+
+the number of steps backward for the (accepted) erroneous
+
+computations as follows.
+
+To simplify the analysis, we assume that the first computation
+
+is noise-free. This can be achieved by repeated computations and a majority voting. We first derive an upper bound on w( ) in terms of m( ) − m( −1) when m( ) is accepted by our
+
+algorithm in the following:
+
+m( ) − m( −1) = f m( −1) + w( ) − m( −1)
+
+The second term in (19) is upper bounded by f m( −1) −m( −1) ≤ f m( −1) −m∗ + m( −1)−m∗
+≤ (K + 1) m( −1) − m∗ ≤ Kt−1(K + 1) m(0) − m∗ , (21)
+
+where t − 1 is the position of the previous message m( −1) in
+the random walk we described in the previous paragraph, and m( −1) − m∗ ≤ Kt−1 m(0) − m∗ . Therefore, we have
+
+w( ) ≤ 2(K + 1)Kt−1 m(0) − m∗ .
+
+(22)
+
+We used the fact that ≥ t, since at the th iteration, the message cannot go beyond the distance bound K m(0) − m∗ . We then
+have
+
+m( ) − m∗ ≤ K · Kt−1 m(0) − m∗ + w( )
+
+≤ Kt m(0) − m∗ + 2(K + 1)Kt−1 m(0) − m∗
+
+= (3K + 2)Kt−1 m(0) − m∗ .
+
+(23)
+
+Hence, the number of steps backward when we have an (ac-
+cepted) erroneous computation is upper bounded by logK(3K + 2). We denote probability of satisfying m(Λ) − m∗ ≤ KT m(0) − m∗ at the final iteration Λ ≤ L by p f , where L is the maximum number of iterations. Then, p f is lower bounded by the probability of the random walk hitting the destination, position T , within L steps. When (1 − pw) logK(3K + 2) < pw, as L → ∞, censoring BP converges to the fixed point w.p.1.
+For finite but sufficiently large L and pw, we ignore the small probability4 that the algorithm does not stop before the
+iteration number reaches L, i.e., in L steps the random walk
+described previously has not reached position T , and derive
+the expected number of steps (iterations) when the random
+walk reaches position T for the first time in the following. Let
+the position at the th step (corresponding to the th iteration
+in BP) be Z , the displacement of the th step be Y , and A = T − Z . Let η be the stopping time, hence Aη = 0 (the BP messages reach T and stop at iteration η). Denote the expectation of Y by α. According to the previous discussion,
+in the random walk process, the message takes 1-step forward
+with probability pw, and takes logK(3K + 2)-steps backwards with probability 1 − pw (Here we consider the worst case in which all the erroneous computations are accepted). Hence we have α = E[Y ] = pw −(1− pw) logK(3K +2). Let B = A +α . B is a martingale since
+
+≥ w( ) − f m( −1) −m( −1) . (18)
+Since m(i) − m(i−1) ≤ K m(i−1) − m(i−2) for all i ≤ , we have m( ) − m( −1) ≤ K −1 m(1) − m(0) . Therefore, we have the following upper bound for w( ):
+w( ) ≤ K −1 m(1) − m(0) + f m( −1) − m( −1) . (19)
+
+E[B |B −1]
+
+= (A −1 − 1)pw + (A −1 + logK(3K + 2)) (1 − pw) + α
+
+= B −1.
+
+(24)
+
+Then, according to the optional stopping theorem [36], we
+
+have T = E[B0] = E[Bη] = αE[η]. The expected stopping time
+
+is
+
+then
+
+T α
+
+,
+
+which
+
+decreases
+
+as
+
+pw
+
+increases.
+
+To
+
+sum
+
+up,
+
+we
+
+showed that censoring BP converges w.p.1 when L → ∞ and
+
+The first term, K −1 m(1) − m(0) , is upper bounded by
+
+(1 − pw) logK(3K + 2) ≤ pw, and for finite and sufficiently large L and pw, we derived the expected stopping time.
+
+K −1 m(1) − m(0) ≤ K −1 m(1)−m∗ + m(0)−m∗
+
+≤ K −1(K + 1) m(0) − m∗ .
+
+4This probability is small because the probability of hitting T within L steps
+(20) increases with L and pw.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+22
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+B. Proof of Proposition 1 Since m¯ ( ) = 1 ∑i=1 m(i), we have
+
+∑ ∑ m¯ (
+
+) −m∗
+
+1 =
+
+f
+
+m(i−1)
+
+1 +
+
+w(i) − m∗
+
+i=1
+
+i=1
+
+∑ ∑ =1
+
+f m(i−1) −m∗ + 1 w(i).
+
+i=1
+
+i=1
+
+Since f (m(i)) − m∗ ≤ K m(i) − m∗ , let
+
+f m(i) − m∗ = K m(i) − m∗ Ui,
+
+Since we assume that w(i)’s are independent and their entries are with finite variances, the second term on the R.H.S. of (29) also converges to zero. For the third term on the R.H.S. of (29):
+
+∑ ∑ ∏ 1
+
+i−1
+
+j
+
+K jw(i− j) Ui−r
+
+i=2 j=1
+
+r=1
+
+(25)
+
+∑ ∑ ∏ 1 −1
+=
+
+i
+
+j −1
+
+Kj
+
+U −r w( −i )
+
+i =1 j =1 r =0
+
+∑ ∑ ∏ 1
+=
+
+−1
+
+i
+
+j−1
+K j U −rw( −i).
+
+(31)
+
+(26)
+
+i=1 j=1 r=0
+
+where Ui is a rotation matrix multiplied by a positive number
+less than or equal to 1. That is, we shrink and rotate the vector K(m(i) − m∗) to make it equal to the vector f (m(i)) − m∗. Then, for i ≥ 2, we expand the terms f (m(i−1)) − m∗ in (25) in the
+following:
+
+f m(i−1) − m∗ = K m(i−1) − m∗ Ui−1
+
+= K f m(i−2) − m∗ + w(i−1) Ui−1
+
+= K2 f m(i−2) − m∗ Ui−2Ui−1 + Kw(i−1)Ui−1
+
+i−1
+
+i−1
+
+j
+
+∏ ∑ ∏ = Ki m(0)− m∗
+
+U j + K jw(i− j) Ui−r.
+
+(27)
+
+j=0
+
+j=1
+
+r=1
+
+We repeatedly applied (26) to derive the last equality in (27).
+
+m¯ ( ) − m∗
+
+∑ ∏ ∑ ∏ = 1
+
+i−1
+
+i−1
+
+j
+
+Ki m(0)−m∗
+
+U j + K jw(i− j) Ui−r
+
+i=1
+
+j=1
+
+j=0
+
+r=1
+
+∑ 1
++
+
+w(i)
+
+i=1
+= 1 ∑ Ki i=1
+
+m(0) − m∗
+
+∏ ∑ i−1
+
+1
+
+Uj +
+
+w(i)
+
+j=0
+
+i=1
+
+∑ ∑ ∏ 1
++
+
+i−1
+
+j
+
+K jw(i− j) Ui−r.
+
+(28)
+
+i=2 j=0
+
+r=1
+
+The first equality in (31) is derived by collecting w(i− j) terms with the same superscript. The second equality in (31) is derived by replacing i , j , and r by i, j, and r, respectively. Note that
+
+i
+
+j−1
+
+i
+
+∑ ∏ ∑ K j U −rw( −i) ≤ K j w( −i)
+
+j=1 r=0
+
+j=1
+
+K(1 − Ki) =
+1−K
+
+w( −i)
+
+.
+
+(32)
+
+Recall that in (26), we express f (m(i)) − m∗ as K(m(i) − m∗)Ui since f (m(i)) − m∗ ≤ K m(i) − m∗ . Here, since
+
+we have the inequality (32), we can likewise express
+
+∑ij=1 K j ∏rj=−01 U −rw( −i)
+
+as
+
+K
+
+(1−K 1−K
+
+i
+
+)
+
+w(
+
+−i)Ui
+
+,
+
+where
+
+Ui
+
+is a
+
+rotation matrix multiplied by a positive number less than or
+
+equal to 1. We then have
+
+∑ ∑ ∏ ∑ 1 −1 i=1
+
+i
+
+j−1
+
+K j U −rw( −i)
+
+j=1 r=0
+
+=
+
+1
+
+−1 i=1
+
+K
+
+(1−K 1−K
+
+i
+
+)
+
+w(
+
+−i)Ui .
+
+(33)
+
+Therefore,
+
+∑ ∑ 1
+
+−1 i=1
+
+K(1 − Ki) w( 1−K
+
+−i)Ui
+
+=
+
+K (1 − K)
+
+−1
+w(
+i=1
+
+−i)Ui
+
+∑ +
+
+(1
+
+1 −
+
+K)
+
+−1
+Ki+1w(
+i=1
+
+−i)Ui
+
+.
+
+(34)
+
+We then have
+
+The norm of the second term on the R.H.S. of (34) converges to
+
+∑ ∏ m¯ ( ) − m∗ ≤ 1
+
+i−1
+
+Ki m(0) − m∗
+
+Uj
+
+i=1
+
+j=0
+
+∑ ∑ ∑ ∏ + 1
+
+w(i) + 1
+
+i−1
+
+j
+
+K jw(i− j) Ui−r . (29)
+
+i=1
+
+i=2 j=1
+
+r=1
+
+The first term on the R.H.S. of (29) converges to zero as
+
+zero since
+
+∑ lim
+→∞
+
+1 (1 −
+
+K)
+
+−1
+Ki+1w(
+i=1
+
+−i)Ui
+
+K2(1 − K −1) max j w( j)
+
+≤ lim
+→∞
+
+(1 − K)2
+
+= 0.
+
+(35)
+
+approaches infinity since
+
+We used the fact that w( j) is upper bounded. Finally, we
+
+∑ ∏ lim
+→∞
+
+1 Ki
+i=1
+
+m(0) − m∗
+
+i−1
+Uj
+j=0
+
+discuss the convergence of the norm of the first term on the R.H.S. of (34). Here we assume that w( −i)Ui ’s are independent. We cannot rigorously reason the validity of the independence
+
+∑ ≤ lim 1 Ki m(0) − m∗ →∞ i=1
+
+K 1 − K m(0) − m∗
+
+= lim
+→∞
+
+(1 − K)
+
+= 0.
+
+assumption, but we draw support from an argument provided in [20]. In Proposition 17 of [20] (Section 5.5), a similar assumption was made on “message errors”, i.e., the differences between BP messages and the fixed point messages in every (30) iteration. As was mentioned in [20], similar assumptions yield
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: BELIEF PROPAGATION ALGORITHMS ON NOISY HARDWARE
+
+23
+
+useful analysis of the effects of quantization (which can be
+considered as a type of computation noise) in digital pro-
+cessing systems such as digital filters, and empirically such
+systems often behave close to the predictions made under such
+assumptions [37]. In fact, simulation results in Section IV-C
+demonstrate that averaging BP indeed converges to the fixed point, as predicted in this proposition. Since w( −i)Ui ’s are independent, the first term on the R.H.S. of (34) converges to zero as → ∞. Note that even if w( −i)Ui ’s are not independent, as long as they are not “too much positively correlated” and the growth of ∑i=1 w( −i)Ui is slower than linear w.r.t. , the first term on the R.H.S. of (34) still converges to zero as → ∞.
+Therefore, the three terms on the R.H.S. of (29) all converges to zero as → ∞, and this completes our proof.
+
+Their entries then also form a martingale difference sequence. Therefore, by substituting (38) in (39), we have
+
+E m¯ ( ) − m∗
+
+1
+
+K(1 − K ) m(0) − m∗
+
+≤
+
+(1 − K)
+
+1
+
++
+
+K2(1 − K −1)βΓ (1 − K)2
+
++
+
+K 1−K +1
+
+βΓ
+
+2π
+
+K(1 − K ) m(0) − m∗
+
+≤
+
+1
+(1 − K)
+
++ βΓ
+
+K2(1 − K −1) (1 − K)2 +
+
+2π 1 1−K .
+
+(40)
+
+C. Proof of Proposition 2
+
+This completes our proof.
+
+We first show that the sequence {w( )( j)}∞=0 has the mar-
+tingale difference property [36] for every j. Let the σ-field F
+be the σ-field on {w(1)( j), . . . , w( )( j)}. Since we assume that
+the computation noise is zero-mean and independent across
+different iterations, we have E[w( +1)( j)|F ] = 0. We also as-
+
+REFERENCES
+[1] P. Gupta et al., “Underdesigned and opportunistic computing in presence of hardware variability,” IEEE Trans. Comput.-Aided Design, vol. 32, no. 1, pp. 8–23, Jan. 2013.
+
+sume that the entries in w( )’s are bounded. Hence the sequence {w( )( j)}∞=0 forms a bounded martingale difference sequence. Given the assumption that |w(i)( j)| ≤ β (as stated in the proposition), we apply the Azuma-Hoeffding inequality [38] to yield the bound
+
+[2] J. von Neumann, “Probabilistic logic and the synthesis of reliable organisms from unreliable components,” in Automata Studies. Princeton, NJ, USA: Princeton Univ. Press, 1956, pp. 43–98.
+[3] R. Venkatesan, A. Agarwal, K. Roy, and A. Raghunathan, “MACACO: Modeling and analysis of circuits for approximate computing,” in Proc. ICCAD, 2011, pp. 667–673.
+[4] M. Gottscho, A. BanaiyanMofrad, N. Dutt, A. Nicolau, and P. Gupta,
+
+“Power/capacity scaling: Energy savings with simple fault-tolerant
+
+∑ P
+
+1 w(i)( j) > γ
+i=1
+
+≤ 2 exp
+
+−
+
+γ2 2β2
+
+,
+
+(36)
+
+caches,” in ACM/IEEE DAC, 2014, pp. 1–6. [5] Y. Li, C.-H. Huang, and L. Dolecek, “Orthogonal matching pursuit on
+faulty circuits,” IEEE Trans. Commun., submitted for publication. [6] R. Hegde and N. R. Shanbhag, “Soft digital signal processing,” IEEE
+
+for all γ > 0. We upper bound the mean of 1 | ∑i=1 w(i)( j)| by integrating both sides of (36):
+
+Trans. VLSI Syst., vol. 9, no. 6, pp. 813–823, Dec. 2001. [7] R. Abdallah and N. Shanbhag, “An energy-efficient ECG processor in
+45-nm CMOS using statistical error compensation,” IEEE J. Solid-State
+
+Circuits, vol. 48, no. 11, pp. 2882–2893, Nov. 2013.
+
+E 1 ∑ w(i)( j)
+
+=
+
+∞
+P
+
+1 ∑ w(i)( j) > γ dγ
+
+i=1
+
+0
+
+i=1
+
+[8] J. Han, J. Gao, P. Jonker, Y. Qi, and J. A. B. Fortes, “Toward hardwareredundant, fault-tolerant logic for nanoelectronics,” IEEE Des. Test. Comput., vol. 22, no. 4, pp. 328–339, Jul./Aug. 2005.
+[9] N. R. Shanbhag, R. A. Abdallah, R. Kumar, and D. L. Jones, “Stochastic
+
+≤β
+
+2π .
+
+computation,” in Proc. IEEE/ACM DAC, 2010, pp. 859–864.
+(37) [10] J. Sloan, D. Kesler, R. Kumar, and A. Rahimi, “A numerical optimization-
+
+based methodology for application robustification: Transforming applica-
+
+For Γ, the dimension of w(i), we have
+
+tions for error tolerance,” in Proc. IEEE/IFIP DSN, 2010, pp. 161–170. [11] L. R. Varshney, “Performance of LDPC codes under faulty iterative de-
+coding,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4427–4444, Jul. 2011.
+
+∑ E 1
+
+w(i)
+
+≤ βΓ
+
+2π .
+
+i=1
+
+1
+
+(38)
+
+[12] S. M. S. Tabatabaei Yazdi, H. Cho, and L. Dolecek, “Gallager B decoder on noisy hardware,” IEEE Trans. Commun., vol. 61, no. 5, pp. 1660–1673, May 2013.
+[13] C.-H. Huang, Y. Li, and L. Dolecek, “Gallager B LDPC decoder with
+
+From (29), (30), (34), and (35) in the proof of Proposition 1,
+
+transient and permanent errors,” IEEE Trans. Commun., vol. 62, no. 1, pp. 15–28, Jan. 2014.
+
+we have
+
+[14] S. M. S. Tabatabaei Yazdi, C.-H. Huang, and L. Dolecek, “Optimal design
+
+of a Gallager B noisy decoder for irregular LDPC codes,” IEEE Commun.
+
+m¯ ( ) − m∗
+1
+
+Lett., vol. 16, no. 12, pp. 2052–2055, Dec. 2012. [15] C.-H. Huang and L. Dolecek, “Analysis of finite-alphabet iterative
+decoders under processing errors,” in Proc. IEEE ICCASP, 2013,
+
+K(1 − K ) m(0) − m∗
+
+≤
+
+(1 − K)
+
+1
+
++
+
+K2(1 − K −1)βΓ (1 − K)2
+
+pp. 5085–5089. [16] C. K. Ngassa, V. Savin, and D. Declercq, “Min-sum-based decoders run-
+ning on noisy hardware,” in Proc. IEEE Globecom, 2013, pp. 1879–1884. [17] A. Balatsoukas-Stimming and A. Burg, “Density evolution for min-
+
+∑ 1
++
+
+w(i) +
+
+i=1
+
+1
+
+∑ K
+(1 −
+
+K)
+
+−1
+w(
+i=1
+
+−i)Ui
+
+.
+1
+
+(39)
+
+sum decoding of LDPC codes under unreliable message storage,” IEEE Commun. Lett., vol. 18, no. 5, pp. 849–852, May 2014. [18] S. Brkic, P. Ivanis, and B. Vasic, “Analysis of one-step majority logic decoding under correlated data-dependent gate failures,” in Proc. IEEE
+
+As in the proof of Proposition 1, here we also assume that
+
+ISIT, 2014, pp. 2599–2603. [19] M. I. Jordan, “Graphical models,” Statist. Sci., vol. 19, no. 1, pp. 140–155,
+
+the vectors w( −1)U1, w( −2)U2, . . . , w(1)U −1 are independent.
+
+Feb. 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+24
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 1, JANUARY 2015
+
+[20] A. T. Ihler, J. W. Fischer, III, and A. S. Willsky, “Loopy belief propagation: Convergence and effects of message errors,” J. Mach. Learn. Res., vol. 6, no. 5, pp. 905–936, May 2005.
+[21] J. M. Mooij and H. J. Kappen, “Sufficient conditions for convergence of the sum—Product algorithm,” IEEE Trans. Inform. Theory, vol. 53, no. 12, pp. 4422–4437, Dec. 2007.
+[22] S. C. Tatikonda and M. I. Jordan, “Loopy belief propagation and gibbs measures,” in UAI, 2002, pp. 493–500.
+[23] Y. Li and L. Dolecek, “Effects of approximate representation in belief propagation for inference in wireless sensor networks,” in Proc. IEEE ACSSC, 2013, pp. 532–536.
+[24] T. G. Roosta, M. J. Wainwright, and S. S. Sastry, “Convergence analysis of reweighted sum-product algorithms,” IEEE Trans. Signal Process., vol. 56, no. 9, pp. 4293–4305, Sep. 2008.
+[25] N. Noorshams and M. J. Wainwright, “Stochastic belief propagation: A low-complexity alternative to the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 1981–2000, Apr. 2013.
+[26] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Constructing free-energy approximations and generalized belief propagation algorithms,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2282–2312, Jul. 2005.
+[27] B. T. Polyak and A. B. Juditsky, “Acceleration of stochastic approximation by averaging,” SIAM J. Control Optim., vol. 30, no. 4, pp. 838–855, Jul. 1992.
+[28] F. L. Kastensmidt, L. Sterpone, L. Carro, and M. S. Reorda, “On the optimal design of triple modular redundancy logic for SRAM-based FPGAs,” in Proc. DATE, 2005, pp. 1290–1295.
+[29] P. F. Felzenszwalb and D. P. Huttenlocher, “Efficient belief propagation for early vision,” Int. J. Comput. Vision, vol. 70, no. 1, pp. 41–54, Oct. 2006.
+[30] F. Leduc-Primeau and W. J. Gross, “Faulty Gallager-B decoding with optimal message repetition,” in Proc. Allerton Conference, 2012, pp. 549–556.
+[31] S.-Y. Chung, T. J. Richardson, and R. L. Urbanke, “Analysis of sumproduct decoding of low-density parity-check codes using a Gaussian approximation,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 657–670, Feb. 2001.
+[32] M. Ardakani and F. R. Kschischang, “A more accurate one-dimensional analysis and design of irregular LDPC codes,” IEEE Trans. Commun., vol. 52, no. 12, pp. 2106–2114, Dec. 2004.
+[33] T. Richardson and R. Urbanke, “The capacity of low-density parity-check codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[34] D. MacKay, Encyclopedia of Sparse Graph Codes. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+[35] M. May, M. Alles, and N. Wehn, “A case study in reliability-aware design: A resilient LDPC code decoder,” in Proc. DATE, Munich, Germany, Mar. 2008, pp. 456–461.
+[36] D. Williams, Probability With Martingales. Cambridge, U.K.: Cambridge Univ. Press, 1991.
+[37] A. Willsky, “Relationships between digital signal processing and control and estimation theory,” Proceedings of the IEEE, vol. 66, no. 9, pp. 996– 1017, Sep. 1978.
+[38] F. Chung and L. Lu, “Concentration inequalities and martingale inequalities: A survey,” Internet Math., vol. 3, no. 1, pp. 79–127, Jan. 2006.
+
+Chu-Hsiang Huang received the B.S. and M.S. degrees in electrical engineering from National Taiwan University, R.O.C., in 2007 and 2009, respectively. He is pursuing the Ph.D. degree in University of California, Los Angeles. He was a research assistant for NTU-INTEL research center in Taiwan in 2010. He is currently a Graduate Student Researcher in LORIS Lab at UCLA. His research interest includes robust inference on unreliable hardware and probabilistic graphical model.
+
+on noisy hardware.
+
+Yao Li received the B.Eng degree in information engineering and electronics from Tsinghua University, Beijing, China, and her Ph.D degree in electrical and computer engineering from Rutgers, the State University of New Jersey, in 2012. She was a postdoctoral scholar at the Laboratory for Robust Information Systems (LORIS) at University of California, Los Angeles, between 2012 and 2014. She is now with Akamai Technologies, Inc. Her research interests include coding solutions for content distribution, robust inference in sensor networks, and computing
+
+Lara Dolecek (SM’13) received the B.S. (with honors), M.S., and Ph.D. degrees in electrical engineering and computer sciences, and the M.A. degree in statistics, all from the University of California, Berkeley. Prior to joining UCLA, she was a postdoctoral researcher with the Laboratory for Information and Decision Systems at the Massachusetts Institute of Technology. She is currently an Assistant Professor with the Electrical Engineering Department at the University of California, Los Angeles (UCLA). She is an Associate Editor for Coding Theory for IEEE TRANSACTIONS ON COMMUNICATIONS and for IEEE COMMUNICATION LETTERS and is the lead guest editor for IEEE JSAC special issue on emerging data storage. Her research interests span coding and information theory, graphical models, statistical algorithms, and computational methods, with applications to emerging systems for data storage, processing, and communication. Dr. Dolecek received the 2007 David J. Sakrison Memorial Prize for the most outstanding doctoral research in the Department of Electrical Engineering and Computer Sciences at UC Berkeley. She received Northrop Grumman Excellence in Teaching Award, Intel Early Career Faculty Award, University of California Faculty Development Award, and Okawa Research Grant all in 2013, NSF CAREER Award in 2012, and Hellman Fellowship Award in 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:27:47 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1775 @@
+976
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+High-Throughput LDPC Decoders
+Mohammad M. Mansour, Member, IEEE, and Naresh R. Shanbhag, Senior Member, IEEE
+
+Abstract—A high-throughput memory-efficient decoder architecture for low-density parity-check (LDPC) codes is proposed based on a novel turbo decoding algorithm. The architecture benefits from various optimizations performed at three levels of abstraction in system design—namely LDPC code design, decoding algorithm, and decoder architecture. First, the interconnect complexity problem of current decoder implementations is mitigated by designing architecture-aware LDPC codes having embedded structural regularity features that result in a regular and scalable message-transport network with reduced control overhead. Second, the memory overhead problem in current day decoders is reduced by more than 75% by employing a new turbo decoding algorithm for LDPC codes that removes the multiple checkto-bit message update bottleneck of the current algorithm. A new merged-schedule merge-passing algorithm is also proposed that reduces the memory overhead of the current algorithm for low to moderate-throughput decoders. Moreover, a parallel soft-input–soft-output (SISO) message update mechanism is proposed that implements the recursions of the Balh–Cocke–Jelinek–Raviv (BCJR) algorithm in terms of simple “max-quartet” operations that do not require lookup-tables and incur negligible loss in performance compared to the ideal case. Finally, an efficient programmable architecture coupled with a scalable and dynamic transport network for storing and routing messages is proposed, and a full-decoder architecture is presented. Simulations demonstrate that the proposed architecture attains a throughput of 1.92 Gb/s for a frame length of 2304 bits, and achieves savings of 89.13% and 69.83% in power consumption and silicon area over state-of-the-art, with a reduction of 60.5% in interconnect length.
+Index Terms—Low-density parity-check (LDPC) codes, Ramanujan graphs, soft-input soft-output (SISO) decoder, turbo decoding algorithm, VLSI decoder architectures.
+I. INTRODUCTION
+T HE PHENOMENAL success of turbo codes [1] powered by the concept of iterative decoding via message-passing has rekindled the interest in low-density parity-check (LDPC) codes which were first discovered by Gallager in 1961 [2]. Recent breakthroughs to within 0.0045 dB of AWGN-channel capacity were achieved with the introduction of irregular LDPC codes in [3], [4] putting LDPC codes on par with turbo codes. However, efficient hardware implementation techniques of turbo decoders have given turbo codes a clear advantage
+Manuscript received September 10, 2002; revised February 3, 2003. This work was supported by the National Science Foundation under Grant CCR 99-79381 and Grant CCR 00-73490.
+M. M. Mansour was with the University of Illinois at Urbana-Champaign, Urbana, IL 61801 USA. He is now with the Department of Electrical and Computer Engineering, American University of Beirut, Beirut, 1107 2020 Lebanon (e-mail: mmansour@aub.edu.lb).
+N. R. Shanbhag is with the Department of Electrical and Computer Engineering, University of Illinois at Urbana-Champaign, Urbana, IL 61801 USA (e-mail: shanbhag@uiuc.edu).
+Digital Object Identifier 10.1109/TVLSI.2003.817545
+
+over LDPC codes allowing them to occupy mainstream applications ranging from wireless applications to fiber-optics communications. Hence, the quest for efficient LDPC decoder implementation techniques has become a topic of increasing interest, gradually promoting LDPC codes as serious competitors to turbo codes on both fronts.
+The design of LDPC decoder architectures differs from the decoder design for other classes of codes, in particular turbo codes, in that it is intimately related to the structure of the code itself through its parity-check matrix. The iterative decoding process of both codes consists of two main steps [5]: 1) computing independent messages proportional to the a posteriori probability distributions of the code bits and 2) communicating the messages. The complexity incurred in both steps depends on how messages are communicated with respect to the process of computing the messages. In turbo codes, the communication mechanism is defined by a simple pseudorandom message interleaver that is external to the process of computing the messages, while the computational complexity is proportional to the code length and memory. On the other hand, the communication mechanism for LDPC codes is defined by a pseudorandom bipartite graph and is internal with respect to message computation (i.e., an internal interleaver), while the computational complexity is very low ( order of the logarithm of the code length). In both cases, the performance depends on the properties of the interleaver: the scrambling of channel burst errors for turbo codes, and the extremal properties (such as girth and expansion coefficient) of the bipartite graph defining the code for LDPC codes.
+However, unlike turbo codes, the lack of any structural regularity in the message communication mechanism of LDPC codes has far reaching consequences on the decoder implementation such as: 1) complex interconnects that limit the amount of inherent parallelism that can be exploited efficiently in a parallel decoder implementation and 2) stringent memory requirements in a serial decoder implementation that limits the applicability of LDPC codes in latency and power-sensitive applications. The dependence of the decoder architecture on the code properties is depicted in the traditional LDPC design flowgraph in Fig. 1(a), where the dependence of the architecture on the code structure is depicted by a dashed line. All current decoder architectures [6]–[11] apply optimizations at one system abstraction level, and either retain the disadvantages of or introduce further disadvantages at other levels, while the limited code-design optimizations introduced in [12] require significant overhead in terms of network control and source synchronization.
+This paper attempts to break the architectural dependence on the code properties by performing optimizations at three levels of abstraction—code-design level, (decoder) algorithmic
+
+1063-8210/03$17.00 © 2003 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+977
+
+Fig. 2. TDMP algorithm versus the TPMP algorithm.
+
+Fig. 1. LDPC decoder design flowgraph: (a) traditional and (b) proposed.
+level, and architectural level—according to the proposed design flowgraph shown in Fig. 1(b) where the architecture is decoupled from the code structure. In particular, the contributions of the paper are: the concept of structured or architecture-aware LDPC codes to solve the interconnect problem, a new decoding algorithm based on the turbo-decoding principle for LDPC codes along with an efficient message-update mechanism to solve the memory overhead problem and improve the convergence speed of the decoder, and a new programmable and scalable high-throughput turbo-decoder architecture for LDPC codes that achieves savings of 89.13% and 62.8% over existing architectures for frame lengths of 2304, with a reduction of 60.5% in interconnect length.
+First, LDPC codes are essentially random in nature (and hence, require highly irregular hardware interconnectivity), which goes against efficient VLSI implementation paradigms that call for regular and structured design. This immediate difficulty is best addressed by designing good and architecture-aware LDPC codes having regularity features favorable for an efficient decoder implementation. Two classes of high-performance codes based on cyclotomic cosets [13] and Ramanujan graphs [14], [15] targeted for short-to-medium and large code lengths, respectively, are shown to posses these features.
+Second, the memory overhead problem in current decoder implementations is addressed by proposing the concept of turbo-decoding of LDPC codes [5], [13]. The overhead
+
+problem refers to the memory overhead of the two-phase message-passing (TPMP) algorithm [2] commonly employed in current day decoders. Related ideas in the context of optimized two level generalized low-density (GLD) codes were considered in [16]. An LDPC code is viewed as a code concatenated from a number of constituent codes connected through interleavers [5] which are defined by the parity-check matrix of the code. The turbo-decoding message-passing (TDMP) algorithm decodes each of these constituent codes in tandem by passing messages only between adjacent decoders in the pipeline as opposed to all other decoders as is the case with the TPMP algorithm (see Fig. 2). The advantages of the TDMP algorithm are twofold: 1) it eliminates the storage required to save multiple check-to-bit messages and replaces them with a single message corresponding to the most recent check-message update and 2) it exhibits a faster convergence behavior requiring 20%–50% fewer decoding iterations to converge for a given SNR (and hence, higher decoding throughput) compared to the TPMP algorithm.
+Moreover, a new parallel soft-input soft-output (SISO) message update mechanism in the form of a message processing unit (MPU) based on the BCJR algorithm [13], [17] is proposed. The MPU implements the recursions of the BCJR algorithm using metric differences based on simple “max” operations that do not require lookup tables and incur negligible performance loss compared to the ideal case. The proposed update equations perform better than the approximations proposed in [18] both in terms of accuracy and hardware complexity, and, contrary to the observations made in [6], it is shown that the SISO MPU is indeed suitable for high-throughput applications.
+Finally, at the architectural level, an efficient programmable architecture based on the TDMP algorithm is proposed that handles both regular and irregular LDPC codes. A regular and scalable dynamic message-transport network for routing messages to and from the MPUs is proposed. Among other features, the decoder architecture is flexible enough to handle GLD codes [16], [19] as well by simply modifying the MPUs.
+The remainder of the paper is organized as follows. Section II introduces LDPC codes and the standard TPMP algorithm. Section III presents basic and improved LDPC decoder architectures, and identifies their drawbacks in terms of hardware complexity. Architecture-aware LDPC codes are introduced in Section IV. Sections V and VI propose the TDMP algorithm and the SISO MPU for message computation. Section VII presents a programmable TDMP architecture for AA-LDPC codes together with the memory and message-transport network architectures. Finally, Section VIII presents some simulation results, and Section IX concludes the paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+978
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+n m Fig. 3. Bipartite graph of a binary regular (2, 3)-LDPC code of length 9. The
+graph has = 9 bit nodes and = 6 check nodes. The sum of the values of all bit nodes connected to a check node is equal to zero.
+
+II. BACKGROUND
+
+We start with a formal definition of LDPC codes and the stan-
+
+dard iterative decoding algorithm.
+
+Fig. 4. Message updates on the TPMP algorithm. (a) Bit-to-check update and (b) check-to-bit update.
+
+A. LDPC Codes
+
+An LDPC code is a linear block code defined by a sparse
+
+parity-check matrix
+
+and is described by a bi-
+
+partite or factor graph [20] (see Fig. 3) whose reduced adja-
+
+cency matrix is . The graph has on one side check nodes
+
+corresponding to the rows of , and on
+
+the other bit nodes
+
+corresponding to the
+
+columns of . A bit-node is connected to a check node
+
+if the entry of is 1. The rate of the code is at least
+
+. In a regular
+
+-LDPC code, bit nodes have de-
+
+gree and check nodes have degree in the graph. The number
+
+of edges in the corresponding bipartite graph is the Hamming
+
+weight of given by
+
+, and the density of
+
+is defined as
+
+. The minimum
+
+distance of these codes increases linearly with the block length
+
+for a given code rate and node degrees and [2].
+
+In an irregular
+
+-LDPC code, the bit-node and chec-
+
+knode degrees are drawn from the sets and , respectively.
+
+Typically, regular codes are easier to encode and have a sim-
+
+pler decoder architecture than irregular codes, however the latter
+
+achieve higher coding gain (e.g., [3], [4] report a rate-0.5 ir-
+
+regular code that has a threshold of 0.0045 dB from AWGN-
+
+channel capacity, outperforming the best codes known so far in-
+
+cluding turbo codes).
+
+set of check nodes involving bit-node , is the index set of
+
+bit nodes involved in check node :
+
+• Initialization: For
+
+, the check-to-bit messages
+
+from the ith check node to the th bit node are
+
+initialized to zero for all , with
+
+.
+
+• At iteration :
+
+— Phase 1: Compute for each bit node the message
+
+corresponding to each of its check node neigh-
+
+bors according to [see Fig. 4(a)]
+
+(G1)
+
+Note that the check-message
+
+from the pre-
+
+vious iteration is excluded from the summation in
+
+(G1) to eliminate correlation between messages. This
+
+is achieved by removing the index from the index set
+
+of the summation using the notation
+
+, imple-
+
+menting the so-called extrinsic principle.
+
+— Phase 2: Compute for each check node the message
+
+corresponding to each of its bit node neighbors
+
+according to [see Fig. 4(b)]
+
+B. The Standard Message-Passing Algorithm
+
+(G2)
+
+LDPC codes are decoded iteratively using the TPMP algo-
+
+rithm proposed by Gallager [2]. The algorithm computes itera-
+
+tively extrinsic probability values associated with each bit-node
+
+using disjoint parity-check equations that the bit participates in
+
+[2]. Each iteration consists of two phases of computations in
+
+which updates of all bit nodes are done in phase 1 by sending
+
+messages to neighboring checknodes, and then updates of all
+
+check nodes are done in phase 2 by sending messages to neigh-
+
+boring bit nodes (see Fig. 3). Updates in each phase are inde-
+
+pendent and can be parallelized.
+
+The TPMP algorithm [2] consists of the following main steps,
+
+where is the intrinsic channel reliability value of the th bit,
+
+is the check-to-bit message from check node to bit-node
+
+at the th iteration,
+
+is the bit-to-check message from
+
+bit-node to check node at the th iteration, is the index
+
+where
+
+,
+
+and is a sign correction factor that depends on
+
+and the sign of the terms
+
+in (G2). As in (G1),
+
+the message
+
+targeted for check node is left out
+
+of the summation in (G2) to implement the extrinsic
+
+principle.
+
+• Final iteration: Compute for all bit nodes the posterior
+
+reliability quantity given by
+
+(G3)
+
+Hard decisions are then made based on the sign of , and the syndrome of the codeword is checked
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+979
+
+Fig. 5. LDPC decoder architectures: (a) parallel TPMP architecture, (b) serial TPMP architecture, (c) Interconnect-aware TPMP architecture, and (d) memory aware architecture implementing the MSMP algorithm.
+
+for errors. Note that decisions are made using all information known about the bits, and hence all check-to-bit messages are included in the summation of (G3).
+
+III. IMPROVED TPMP-BASED LDPC DECODER ARCHITECTURES
+In this section, we characterize the hardware complexity of conventional LDPC decoder architectures based on the TPMP algorithm. Their drawbacks in terms of interconnect and memory overhead are identified, motivating the need for interconnect-aware and memory-aware architectures that mitigate these problems.
+
+A. Hardware Complexity of Conventional TPMP Architectures
+
+Direct decoder implementation based on the TPMP algorithm
+
+for randomly constructed LDPC codes in the form given in Sec-
+
+tion II-B presents a number of challenges. The check-to-bit mes-
+
+sage update equation (G2) is prone to quantization noise since
+
+it involves the nonlinear function and its inverse. The func-
+
+tion
+
+has a wide dynamic range (it rapidly increases for
+
+small ) which requires the messages to be represented using
+
+a large number of bits to achieve a fine resolution, leading to
+
+an increase in memory size and interconnect complexity (e.g.,
+
+for a regular (3, 6)-LDPC code of length
+
+with 4-bit
+
+messages, an increase of 1 bit increases the memory size and/or
+
+interconnect wires by 25%).
+
+Moreover, a parallel decoder implementation [7], [11] ex-
+
+ploiting the inherent parallelism of the algorithm such as the one
+
+shown Fig. 5(a) is constrained by the complexity of the phys-
+
+ical interconnect required to establish the graph connectivity of
+
+the code and, hence, does not scale well for moderate ( 2K)
+
+to large code lengths. Long on-chip interconnect wires present
+
+implementation challenges in terms of placement, routing, and
+
+buffer-insertion to achieve timing closure. For example, the av-
+
+erage interconnect wire length of the rate-0.5, length
+
+,
+
+4-bit LDPC decoder of [7] is 3 mm using 0.16- m CMOS tech-
+
+nology, and has a chip area of
+
+mm of which only 50%
+
+is utilized due to routing congestion. In Fig. 5(a), the bit func-
+
+tion units (BFUs) implement (G1) and the check function units
+
+(CFUs) implement (G2).
+
+On the other hand, serial architectures [8], [9] in which
+
+computations are distributed among a number of function
+
+units that communicate through memory instead of a complex
+
+interconnect, as shown in Fig. 5(b), require a substantial
+
+memory overhead that amounts to four times the Hamming
+
+weight of the parity-check matrix. Each function unit requires
+
+separate read/write networks with complex control to access
+
+memory, and hence it is practical to use only a small number
+
+of function units compared to the parallel case, resulting in
+
+a low-throughput decoder. A heuristic approach aimed at
+
+simplifying implementation complexity was proposed in [9] by
+
+relaxing the inequality
+
+in (G1). However, this leads to
+
+considerable loss in coding gain due to correlation between the
+
+messages and premature ending of decoding iterations.
+
+B. Interconnect-Aware Decoder Architectures
+An interconnect-aware decoder architecture targeted for moderate- to high-throughput applications was proposed in [13] to solve the interconnect problem of TPMP-based decoders. Fig. 5(c) shows the corresponding architecture. In this approach, structural regularity features are embedded in the parity-check matrix that reduce the complexity of the interconnect in implementation. The matrix is decomposed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+980
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+into
+
+submatrices with separate function units allocated to
+
+process each column and each row of these submatrices. Each
+
+of the function units reads its messages from local memory
+
+controlled by a modulo- counter, and writes its results in
+
+remote memory pertaining to other function units using a
+
+simple static network with the counters serving to synchronize
+
+the memory operations. Compared with the parallel approach,
+
+the complexity of the interconnect due to this approach is
+
+scaled down by a factor of . On the other hand, compared with
+
+the serial approach, it requires only half the amount of memory,
+
+and the switching networks for memory access are eliminated.
+
+In addition, two frames are processed simultaneously by the
+
+decoder [13] LDPC codes constructed using this approach
+
+compare favorably in terms of coding gain with randomly
+
+constructed codes having similar complexity for bit error rates
+
+(BERs) as low as .
+
+C. Memory-Aware Decoder Architectures
+A merged-schedule message-passing (MSMP) algorithm that addresses the memory overhead problem of LDPC decoder architectures targeted for low- to moderate-throughput applications was proposed in [5] In the MSMP algorithm, the computations of both phases of the TPMP algorithm are merged into a single phase as described in the pseudocode listed below in Algorithm 1, resulting in a considerable reduction in memory requirements. An MSMP decoder architecture is shown in Fig. 5(d).
+
+Algorithm 1. Merged-Schedule Message-Passing Algorithm to
+to
+
+MAXITER to
+
+(G4) to
+
+end while
+
+The savings are mainly due to eliminating the storage
+
+required to save the multiple bit-to-check messages computed
+
+using equation (Gl). Since the computations in this equation
+
+are additive in nature, the condition
+
+can be satisfied by
+
+first computing the total sum
+
+and
+
+then subtracting the intrinsic message
+
+. Thus, only
+
+one copy of the total bit-to-check message is maintained
+
+in a buffer for each bit holding this total sum [refer to
+
+Fig. 5(d)]. Updated check-messages to the bit under consider-
+
+ation are accumulated in a temporary buffer having size
+
+and initialized with the intrinsic channel reliabilities . The
+
+buffer maintains a single running sum of the bit-to-check
+
+messages instead of multiple copies pertaining to different
+
+check nodes. Unlike [9], a copy of the intrinsic check-to-bit
+
+messages
+
+is saved in a buffer of size
+
+so that it is subtracted from the cumulative sum in the next
+
+iteration to implement the condition
+
+in (G2). At the end
+
+of each iteration, and are interchanged and is reloaded
+
+with the ’s. The architecture stores
+
+messages
+
+as opposed to , a savings of (75–50/ )%, and hence the
+
+name memory-aware decoder architecture. The CFU block
+
+implements equation (G4) defined in the pseudo-code below
+
+with the -function preeoded in a lookup table (LUT). Multiple
+
+CFU blocks scheduled to operate on distinct bits instead of one
+
+as shown in Fig. 5(d) can be used to increase throughput. Extra
+
+logic must be added to ensure correct operation in case some
+
+conflicts are not removable through scheduling. However, the
+
+complexity of the interconnect is still the bottleneck motivating
+
+the need for further transformations at the code design and
+
+algorithmic levels.
+
+D. Discussion
+The architectures presented so far benefit from optimizations performed at one abstraction level and hence do not achieve simultaneously the desired objectives of reduced memory overhead, reduced interconnect complexity, and scalability while maintaining the code performance promised by randomly constructed LDPC codes. In Sections IV–VI, we address these objectives through combined efforts targeting the code structure, decoding algorithm, and architecture.
+
+IV. ARCHITECTURE-AWARE LDPC CODE DESIGN
+
+In this section, we propose a class of architecture-aware
+
+LDPC codes that solves the interconnect, memory overhead,
+
+and scalability problems associated with LDPC decoders.
+
+Motivated by Gallager’s original construction of LDPC
+
+codes [2], we view the parity-check matrix of a regular
+
+)-LDPC code as a concatenation of parity-check matrices
+
+, corresponding to supercodes
+
+This
+
+in turn enables us to decompose the interconnection network
+
+defined by the overall matrix into smaller networks or
+
+interleavers that connect together adjacent supercodes. This
+
+step transforms the LDPC decoding problem into a turbo
+
+decoding problem [1], with the codes
+
+acting
+
+as constituent codes. Related ideas in the context of GLD
+
+codes concatenated from two supercodes were studied in [16].
+
+To enable efficient implementation of the interleavers, we
+
+propose an architectureaware decomposition of the matrices
+
+into null or pseudo-permutation matrices. The
+
+major advantages of the architecture-aware decomposition and
+
+the associated turbo decoding algorithm as discussed in this
+
+section and Section V, are that they reduce the complexity of the
+
+interconnect by , decrease the memory requirements by at
+
+least 75% compared to serial TPMP architectures, and improve
+
+the decoding throughput due to the faster convergence of the
+
+turbo-decoding algorithm compared to the TPMP algorithm.
+
+We start by introducing the concept of trellis representation
+
+of parity-check codes and their relation to LDPC codes and the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+981
+
+Fig. 6. A Trellis representation of a (4, 3)-SPC code. The 8 codewords shown on the right correspond to all possible eight sequences of edge labels starting from the root and ending in the toor.
+
+TPMP algorithm. The interconnect problem is identified, and then an architecture-aware decomposition of is presented to solve this problem.
+
+A. Trellis Representation of Parity-Check Codes
+
+The rows of a parity-check matrix correspond to par-
+
+itycheck equations constraining the values of the bits in a
+
+codeword. Hence, if the th row contains ones at column
+
+positions
+
+, then this implies that the bits
+
+, of a codeword must have even parity, or
+
+The set of all codewords of length having even parity forms a
+
+code called the single parity-check (SPC) code of length
+
+and dimension
+
+denoted as
+
+-SPC code.
+
+The codewords of an
+
+-SPC code can be represented
+
+conveniently using a trellis of length composed of nodes and
+
+labeled edges as shown in Fig. 6. A node in the trellis is a state
+
+that represents the parity of the edge labels starting from the
+
+leftmost node (called the root) and ending in that node. The
+
+nodes in the top row including the root and the rightmost node
+
+(or toor) correspond to even parity states, while those in the
+
+bottom row correspond to odd parity states. A sequence of edge
+
+labels from the root to the toot defines a codeword of length
+
+having even parity. The set of all such sequences defines
+
+an
+
+-SPC code.
+
+A parity-check matrix
+
+of an LDPC code containing
+
+ones per row,
+
+, can be represented using
+
+trellises corresponding to
+
+-SPC codes. Using this
+
+representation, it is possible to describe an LDPC code and the
+
+corresponding flow of messages of the TPMP algorithm using
+
+an alternative graph based on the bipartite graph of the code. In
+
+this graph, a check node of degree is replaced by the trellis of
+
+an
+
+-SPC code, while the bit nodes are removed. The
+
+edges incident on a check node in the bipartite graph are con-
+
+nected to the appropriate sections of the trellis corresponding to
+
+that check node, and the edges incident on a bit nodeare con-
+
+nected directly to each other. If two rows in overlap in
+
+column positions, then their trellises are connected by edges at
+
+those overlapping positions. Fig. 7 shows a portion of the bipar-
+
+tite graph of Fig. 3 represented using trellises connected through
+
+edges. For a larger random such as the one shown in Fig. 8(a),
+
+the connections between the trellises quickly become congested,
+
+and hence they are represented as a random interleaver as shown
+
+in Fig. 8(b).
+
+The bit-to-check and check-to-bit messages associated with
+
+the nodes of a bipartite graph are replaced by a single type
+
+of message called a SISO message in the trellis flowgraph.
+
+Fig. 7. Trellis representation of a portion of the bipartite graph of Fig. 3.
+
+Section VI describes how these SISO messages are computed using a SISO decoder based on the BCJR algorithm [13] and [17]. This SISO decoder will replace the BFU and CFU blocks of Fig. 5 for message computation in the remainder of the paper.
+
+B. Gallager’s Construction of LDPC Codes
+
+According to the definition given in Section II-A, the parity-
+
+check matrix of a regular
+
+-LDPC need not satisfy any
+
+properties other than the row and column regularity constraints
+
+as shown in Fig. 8(a). We call this construction method the
+
+random construction method. The Gallager [2] or normal con-
+
+struction method constructs ensembles of regular -LDPC
+
+codes of length by defining the parity-check matrix
+
+of
+
+a code as a concatenation of submatrices, each containing
+
+a single 1 in each column as shown in Fig. 8(c) for a regular
+
+(3, 4)-LDPC code of length 16. The first of these submatrices
+
+having size
+
+defines a supercode as the direct
+
+sum of parity-check (
+
+-subcodes. Note that sat-
+
+isfies a subset of the parity-check equations of , and hence
+
+is a subspace of . The other submatrices
+
+, are
+
+pseudorandom permutations of , each of which defines a
+
+supercode on the corresponding subset of the parity-check
+
+equations. Hence, is simply the intersection of the supercodes
+
+.
+
+When the TPMP algorithm is applied to the random
+
+matrix , the message flowgraph takes the form shown in
+
+Fig. 8(b) where the two-state trellises represent the rows of
+
+as even parity-checks, and the random interleaver rep-
+
+resents the flow of messages between the trellises according
+
+to the columns of . This random interleaver creates the
+
+interconnect complexity bottleneck referred to earlier. With
+
+the normal matrix in Fig. 8(c), however, the interleaver
+
+can be factored into constituent interleavers according to
+
+. The corresponding flow of messages can be
+
+modeled naturally as shown in Fig. 8(d) where the short
+
+two state trellises represent SPC subcodes. The analogy
+
+with turbo codes is depicted in Fig. 8(e) where the long
+
+trellises represent convolutional codes with constraint length
+
+2. The rows corresponding to each supercode in
+
+do
+
+not overlap, and hence the constituent SPC subcodes can
+
+be decoded in parallel without exchanging information. But
+
+this decomposition of the parity-check matrix again presents
+
+a problem when it comes to forwarding and retrieving
+
+messages between these decoders and memory. The reason
+
+is that the ones in any row have random column indices
+
+requiring
+
+-multiplexers to read messages corre-
+
+sponding to a row, and then
+
+-demultiplexers to write
+
+the results back in memory in proper order. This solution
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+982
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+2 Fig. 8. Analogy between LDPC and turbo codes: (a) random parity-check matrix of an LDPC code, (b) message flowgraph of the TPMP algorithm when applied
+to a random parity-check matrix, (c) normal parity-check matrix decomposed into r n submatrices, (d) message flowgraph of the TDMP algorithm, (e) message
+flowgraph of a turbo decoder, (f) architecture-aware parity-check matrix, and (g) message flowgraph corresponding to an AA-LDPC code.
+quickly becomes impractical for large code lengths , or mechanism of the (de-)multiplexers which keeps track of the when multiple tows are accessed in parallel to increase column positions of all the ones in the parity-check matrix decoding throughput. Moreover, the overhead of the control becomes too complex to implement.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+983
+
+Fig. 9. Examples of pseudo-random permutation matrices. (a) Matrix with S = 6; S = 5, (b) an acyclic permutation matrix with S = 6, and (c) a cyclic permutation matrix with S = 6. The label denotes a one at column
+position i.
+
+C. Architecture-Aware LDPC Codes
+
+We propose an architecture-aware decomposition of the parity-check matrix that limits the column positions of the ones
+
+in a row, while still yielding LDPC codes with comparable
+
+BER performance to that of randomly constructed codes. In
+
+this method, the parity-check matrix binary submatrices where
+
+is decomposed into are code-independent
+
+parameters such that
+
+. These submatrices, which we
+
+call pseudo-permutation matrices, satisfy the following two
+
+conditions: each column has at most one 1, and each row has at most one 1. For example, binary permutation matrices with
+
+satisfy these conditions. Note that zero columns,
+
+zero rows, and null matrices are allowed under this definition.
+
+Fig. 9 shows three examples of pseudo-permutation matrices.
+
+A regular -LDPC code can be constructed such that its
+
+parity-check matrix has r permutation matrices per block row
+
+and permutation matrices per block column (
+
+,
+
+and is arbitrary). An irregular LDPC code would have these
+
+matrices positioned according to the degree distribution of the
+
+code, with
+
+in general. Note that a normal matrix can
+
+be made architecture-aware by setting
+
+and
+
+,
+
+and permuting the columns in each block row independently to
+
+satisfy the above two conditions. We associate the following two
+
+parameters with
+
+and
+
+. Figs. 8(f)
+
+and 10 show the parity-check matrix of a (3, 4)-regular and an
+
+irregular AA-LDPC code, respectively. The regular code has
+
+and
+
+,
+
+. The irregular code has
+
+and
+
+,
+
+, where the block rows of
+
+contain four or five permutation matrices and the block
+
+columns two to four permutations matrices. Since each row of
+
+the submatrices has at most a single nonzero element, only
+
+instead of
+
+-(de-)multiplexers are needed to access
+
+messages from memory, where
+
+, a reduction of order
+
+Further, these (de-)multiplexers can be controlled by simple sequencers programmed to trace the corresponding permutations, resulting in a reduction in control overhead of
+
+Fig. 8(g) shows the message flowgraph corresponding to an AA-LDPC code where the interleavers are factored into smaller
+
+Fig. 10. An architecture-aware parity-check matrix with parameter S = 6.
+
+interleavers of size for forwarding messages between super-
+
+codes.
+
+While the parity-check matrix shown in Fig. 10 has desirable
+
+architectural properties, LDPC codes having such structure also
+
+provide comparable BER performance to randomly constructed
+
+codes of similar complexity. Fig. 11 (a)–(b) compares the BER
+
+performance of randomly constructed LDPC codes free of 4-cy-
+
+cles and two structured code-design methods: 1) using cyclo-
+
+tomic cosets [13] in Fig. 11(a), and 2) using Ramanujan graphs
+
+[15], [21] in Fig. 11(b). These two methods generate LDPC
+
+codes whose parity-check matrices are architecture-aware [13],
+
+[21], [22]. The figures clearly show that the BER performance
+
+of the structured codes using the techniques in [13], [15], [21],
+
+[22] compares favorably with the randomly generated codes in
+
+the -
+
+regions shown in the figures.
+
+Note that it is also possible to randomly specify the size,
+
+number, structure, and positions of the pseudo-permutation sub-
+
+matrices in an AA-LDPC code. We call this method the gener-
+
+alized pseudo-permutation construction method of AA-LDPC
+
+codes. Fig. 11(c) compares the performance of an AA-LDPC
+
+code with
+
+,
+
+,
+
+and rate 0.5 where
+
+the permutation matrices are chosen and positioned in
+
+such that the girth of its graph is 6, with a randomly constructed
+
+code of the same length, rate, and girth. For code lengths more
+
+than 2K, careful consideration must be made regarding the min-
+
+imum distance of the code to avoid error-floors at high SNR.
+
+D. Discussion
+The interconnect problem was identified by analyzing the message flow between two-state trellises pertaining to the TPMP algorithm. By decomposing the parity-check matrix of an LDPC code in such a way as to restrict the column positions of the ones, the LDPC decoding problem is transformed into a turbo-decoding problem where messages flow in tandem only between the adjacent supercodes as opposed to potentially all the subcodes absent any structure on the parity-check matrix. The interleavers are factored into smaller interleavers that are practical to implement. Fig. 8(e) illustrates the analogy with turbo codes where the supercodes are convolutional codes represented by contiguous trellises as opposed to SPC subcodes, and Fig. 8(g) shows how the interleavers factor out in an AA-LDPC code. Three conclusions can be drawn:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+984
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Fig. 11. Performance of AA-LDPC codes constructed from: (a) cyclotomic cosets [13], (b) Ramanujan graphs [15], [21], and (c) generalized pseudo-permutation matrices.
+
+1) the turbo decoding algorithm is a practical algorithm for decoding AA-LDPC codes resulting in equivalent message communication complexity as that of turbo codes as discussed in Section V; 2) the algorithm processes one type of messages (SISO messages) corresponding to the extrinsic information from each supercode as opposed to bit and check messages in the TPMP algorithm; and 3) the computations of the messages are simpler in the case of LDPC codes compared to convolutional codes since they are based on short and independent trellises as discussed in Section Vl.
+V. TURBO DECODING OF AA-LDPC CODES
+So far, we have established the analogy between LDPC codes and turbo-codes and identified an appropriate structure for the parity-check matrix to solve the interconnect problem. The next step is to solve the memory overhead problem. To this end, we
+
+propose a new turbo-decoding message-passing (TDMP) algorithm [5] for AA-LDPC codes. The throughput and improvement in coding gain of the proposed algorithm over the TPMP algorithm, in addition to its memory advantages, are identified.
+
+A. The Turbo-Decoding Message-Passing (TDMP) Algorithm
+
+In this section, we propose the TDMP algorithm in the context
+
+of regular LDPC codes for simplicity. The algorithm applies to
+
+irregular codes as well with some minor modifications. As be-
+
+fore, assume that an
+
+normal parity-check matrix
+
+defines a regular -LDPC code with structure similar to
+
+that shown in Fig. 8(f) or Fig. 10. The decoding procedure is
+
+described with reference to Fig. 8(f) and Fig. 12. For each bit,
+
+extrinsic reliability values are computed using SISO decoder
+
+assuming that the bit belongs to the first code . This extrinsic
+
+information is fed as a priori information through an interleaver
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+985
+
+Fig. 12. Block diagram of the TDMP algorithm showing the message
+exchange between decoders for the case of three super-codes. P ,  , and D are the memory, interleaver, and decoder blocks of the ith super-code, i = 1; 2; 3:
+
+each sub-iteration. The natural positions are
+
+restored after
+
+iterations.
+
+• Final iteration: — Repeat steps 1–3 for the first — At sub-iteration :
+
+sub-iterations.
+
+1) Compute the posterior reliabilities using
+
+to the SISO decoder for . The second SISO decoder updates the extrinsic reliability values assuming that the bits belong to . The process is repeated for . A single update of messages based on one supercode is referred to as a sub-iteration, and a round of updates across all the supercodes constitutes a single decoding iteration. In the final iteration, hard decisions are made based on the posterior reliability values read (after de-interleaving) from the SISO decoder operating on the last supercode .
+
+• Input: A regular
+
+-LDPC code
+
+of length defined by
+
+;
+
+permutations
+
+; intrinsic channel reliability
+
+values
+
+.
+
+• Output: Codeword such that
+
+.
+
+• Storage: memory buffers of size
+
+denoted by
+
+and initialized to zero. denotes the
+
+th element of . A set of counters
+
+that point
+
+to the head of these buffers.
+
+• At iteration : Carry out decoding sub-iterations corre-
+
+sponding to the supercodes
+
+such that:
+
+— At sub-iteration :
+
+1) Compute the extrinsic reliabilities using the channel values , assuming
+, as prior information that the codeword belongs to all supercodes except the th supercode. This computation can be done using the BCJR algorithm as discussed in Section VI, or using (G2) with a slight modification as
+
+where is the set of column indices of the
+
+bits of the subcode in that contains bit , and
+
+is a sign-correction term that depends on
+
+the size of and the sign of the arguments of
+
+2) Permute according to .
+
+3) Save
+
+in
+
+and advance
+
+for
+
+.
+
+The positions of the messages corresponding to
+
+each supercode rotate across the buffers with
+
+2) Make hard decisions:
+
+B. Throughput Advantage of the TDMP Algorithm
+The BER performance and the rate of convergence of the TDMP algorithm are compared with the TPMP algorithm by simulating two LDPC codes and over a memotyless AWGN channel assuming BPSK modulation. is a regular (3, 5)-LDPC code of length 1200, while is a regular (4, 7)-LDPC code of length 4200. 100 000 frames were simulated using a maximum of 32 decoding iterations. Fig. 13(a) and (c) show the BER plots for and , respectively. The figures demonstrate that at the same SNR and for the same number of iterations, the proposed TDMP algorithm achieves much better BER. In particular, at SNR = 2.5 dB and with five iterations, the TDMP algorithm provides an order of magnitude improvement in the BER.
+The number of iterations required for convergence using both algorithms is plotted in Fig. 13(b) and (d). As shown, the TDMP algorithm requires significantly less iterations to converge, where in some cases it requires close to half the number of iterations to converge compared to the TPMP algorithm. Hence, the decoder throughput can be improved by decreasing the number of iterations in order to achieve the same performance as that of the TPMP algorithm.
+
+C. Memory Advantage of the TDMP Algorithm
+
+In terms of memory, the total storage requirements of the
+
+TDMP algorithm for a general irregular LDPC code having
+
+bit node degrees
+
+, is
+
+,
+
+corresponding to the extrinsic messages of all but one of
+
+the supercodes. On the other hand, a parallel architecture
+
+implementing the TPMP algorithm needs to store
+
+messages, serial and interconnect-aware architectures need
+
+to store
+
+messages, while the MSMP architecture
+
+needs to store
+
+messages. Therefore, the sav-
+
+ings compared to parallel, serial, interconnect-aware TPMP
+
+architectures, and memory-aware MSMP architectures are
+
+,
+
+, and
+
+, respectively. Fig. 14 plots the sav-
+
+ings for regular (3, 6)-LDPC codes of length
+
+and rate
+
+0.5. The plot shows significant savings in memory overhead are
+
+achieved by the TDMP algorithm over state-of-the-art which is
+
+valuable in applications where power is at a premium.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+986
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 13. BER performance of the TDMP algorithm versus the TPMP algorithm for the two codes: (a), (b) C and (c), (d) C .
+
+message update mechanism in the form of a soft-input softoutput message processing unit (MPU) based on the BCJR algorithm [13], [17] is proposed. These MPUs are used in the TDMP decoder architecture to be discussed in the next section, and replace the BFU and CFU blocks of the basic and improved decoder architectures of Fig. 5.
+The check-to-bit message update equation (G2) reproduced below,
+
+Fig. 14. Memory savings of the TDMP architecture compared to parallel serial
+and MSMP architectures for regular (3, 6)-LDPC codes of length n = 2048 and
+rate 0.5.
+VI. REDUCED-COMPLEXITY MESSAGE COMPUTATIONS
+This section presents an algorithmic optimization that addresses the way messages are generated. A reduced-complexity
+
+involves the nonlinear function
+
+and its identical inverse
+
+. Typically,
+
+is imple-
+
+mented in hardware using a lookup table (LUT). This update
+
+equation has two drawbacks:
+
+1) It is prone to quantization noise due to the nonlinearity
+
+of
+
+and its inverse. In [13], it was shown that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+987
+
+and the dynamic range is limited when quantized. These disadvantages translate to algorithmic performance loss where convergence speed is reduced thereby increasing the decoding latency, switching activity and hence the power consumption of the decoder. 2) A typical parallel implementation of (G2) requires LUTs, where is the check node degree. The size of these LUTs becomes significant with increase in precision. Moreover, they tend to increase the minimum clock period since they fall on the critical path, and hence must be pipelined. For large , a parallel implementation becomes impractical to implement, while serial implementations create a throughput bottleneck. An alternative approach for computing the check-to-bit messages was proposed in [13] by using a simplified form of BCJR algorithm [17] tailored to the syndrome trellis of an -SPC code. Related ideas were independently proposed in [6], [18]. The key equations of the algorithm for any section of such trellis reduce to
+(1a)
+(1b)
+(1c)
+where is the input prior and intrinsic channel reliability value of the code bit associated with that trellis section, is the updated output reliability of that code bit, and , are intermediate forward and backward state metrics, respectively. Equations (1a) and (1b) are called the forward and backward state metric recursions, respectively. In the context of LDPC codes, the length of the trellis is the number of bits per check node, or
+for regular -LDPC codes, and is typically very small (3 to 8) compared to K for turbo codes.
+The key equations involve the function which can be approximated using the Jacobian algorithm [23] as
+
+Fig. 15. Approximation of f (x; y) using the correction function in (3). Also shown is the approximation using the principal part only and the error incurred (dashed regions).
+
+approximation without a correction function and the resulting
+
+error between the two (hatched regions). Note that this approx-
+
+imation can be applied in turbo decoders as well.
+
+To minimize the effects of quantization noise on the compu-
+
+tations, (1a)–(1c) can be transformed so that metric differences
+
+and
+
+rather than absolute metrics
+
+are involved. This transformation was independently proposed
+
+in [13] and [18]. Such a transformation maximizes the effec-
+
+tiveness of the limited dynamic range of the metrics and elim-
+
+inates the need for normalization to avoid overflow. Moreover,
+
+only one set of forward and backward state metrics, instead of
+
+two, needs to be processed. The transformed key equation (1a)
+
+becomes
+
+where
+
+(2)
+
+(4)
+
+with regarded as a univariate correction function. This cor-
+
+rection function can be approximated by a LUT or a piecewise-
+
+linear function [6]. Both approximations are not well suited for
+
+high throughput applications since their computation time be-
+
+comes the dominant part in (2).
+
+We propose a simpler approximation of
+
+given
+
+by
+
+(3)
+
+where the factors are easy to implement in hardware. In fact,
+
+using signed-magnitude representation and quantization bits,
+
+can be implemented using logic gates, which is even less
+
+than a full adder which requires
+
+gates. Fig. 15 compares
+
+the ideal
+
+as a function of for two values of with the
+
+proposed approximation in (3). The approximation almost per-
+
+fectly matches the ideal
+
+. Also shown in the figure is the
+
+and
+
+is the principal
+
+part of the approximation, while
+
+is a bivariate correc-
+
+tion function. A similar argument holds for (1b) and (1c). The
+
+simplest approximation of
+
+is to use the principal part
+
+. Although this approximation is very simple to imple-
+
+ment, it incurs a loss of more than 1 dB in coding gain. Another
+
+method is to approximate the correction function
+
+by a
+
+2-D LUT indexed by
+
+and
+
+, or use two copies of a
+
+piecewise linearized univariate correction function . How-
+
+ever, the overhead of these approximations in terms of delay and
+
+area becomes substantial for large .
+
+We propose a simpler (in terms of hardware implementation)
+
+and more accurate approximation of
+
+based on (3) given
+
+by
+
+(5)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+988
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Fig. 16. Approximation of q(x; y) using q (x; y), q (x; y), and Q(x; y).
+
+with the resulting approximation of quartet” function
+
+given by the “max-
+
+Fig. 17. Comparison of the BER performance achieved using versus the constant approximation q (x; y) and the ideal q(x; y).
+
+In [6] and [18],
+
+(6) was approximated using the function
+
+if
+
+and
+
+if
+
+and
+
+otherwise,
+
+(7) Fig. 18. Max-quartet function Q(x; y): (a) Logic circuit, and (b) symbol.
+
+where
+
+is a constant that depends on the channel SNR.
+
+However, there is no constructive method to compute this con-
+
+stant. Moreover, this approximation requires routing the con-
+
+stant to all relevant logic units on chip, which in a parallel imple-
+
+mentation amounts to adding wires more than twice the number
+
+of edges in the bipartite graph defining the code1 .
+
+Fig. 16 compares the ideal function
+
+and the
+
+proposed
+
+, together with the no-correction case
+
+, and the constant-correction case
+
+of
+
+. The plots shown in
+
+the figure are a function of with regarded as a “stretching
+
+factor.” The figure demonstrates that the proposed approxi-
+
+mation
+
+matches the ideal
+
+best. In terms of the
+
+function
+
+, the key equations simplify to
+
+(8)
+0 1More specifically, for a regular (c; r)-LDPC code having m check nodes,
+the number of units that require the constant is m(3r 1) compared to mr edges in the graph.
+
+Fig. 17 compares the BER performance of the TDMP algo-
+
+rithm employing the BCJR key equations using the ideal func-
+
+tion
+
+, the “max-quartet” function
+
+, and the con-
+
+stant approximation function
+
+. The figure demonstrates
+
+that there is negligible loss in coding gain incurred by the pro-
+
+posed approximation compared to the ideal case.
+
+In terms of hardware, the correction function
+
+can be
+
+implemented using (
+
+) gates, assuming signed-magnitude
+
+arithmetic on bits, compared to (
+
+) gates for
+
+.
+
+Fig. 18 shows a logic circuit implementing the function
+
+.
+
+Table I compares the number of gates required to implement
+
+the function
+
+using the above approximations together
+
+with the average approximation error incurred. The proposed
+
+approximation has a clear advantage over
+
+both in terms
+
+of accuracy and hardware complexity. The error incurred using
+
+on the other hand outweighs its advantage in terms of
+
+hardware simplicity.
+
+Fig. 19 shows a trellis and the corresponding parallel dataflow
+
+graph (DFG) aligned below the trellis sections implementing
+
+the key equations. Since this DFG accepts soft messages ( )
+
+and generates update soft messages ( ), we call it a soft-input
+
+soft-output message processing unit (MPU) and designate it
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+989
+
+TABLE I NUMBER OF LOGIC GATES AND PERCENTAGE ERROR INCURRED USING THE
+q FUNCTIONS (x; y), q (x; y), Q(x; y) TO APPROXIMATE q(x; y)
+
+cursions are first performed by traversing the trellis from both
+
+ends, saving the intermediate metrics in the buffers designated
+
+by the grey-shaded rectangles in the figure. When the middle of
+
+the trellis is reached, the and units perform the dual opera-
+
+tion of generating the output reliabilities and then updating the
+
+state metrics. The state metrics are not saved from this point on-
+
+ward. For full throughput operation, skew buffers are provided
+
+to align the input and output metrics. Note that this dataflow
+
+graph is similar to the parallel-window DFG proposed in [24]
+
+in the context of turbo MAP-decoding. The latency of the MPU
+
+is proportional to , where is typically less than eight. The ap-
+
+proach in [6] results in a latency of
+
+, however in order
+
+to achieve comparable performance to our approach, it requires
+
+the use of one or two LUTs for every computation of
+
+which tend to increase the clock period by more than a factor of
+
+2 as well as the area of the MPU.
+
+VII. PROGRAMMABLE TDMP DECODER ARCHITECTURE
+
+Fig. 19. A SISO MPU based on the BCJR algorithm used for message computation: (a) a two-state trellis and (b) a parallel dataflow graph of the
+MPU showing the resource utilization of the  and -recursions with time.
+by the symbol shown in the figure. The function units in the DFG employ the “max-quartet” function of Fig. 18 to implement each of the three key equations in (8). The and re-
+
+In this section, we propose a programmable decoder architec-
+
+ture implementing the TDMP algorithm for both regular and ir-
+
+regular AA-LDPC codes that builds upon the optimizations per-
+
+formed in earlier sections. The architecture is shown in Fig. 20,
+
+and the underlying parity-check matrix of the code is decom-
+
+posed as shown in Fig. 10, and has the following parameters:
+
+1) , the size of the sub-matrix partitions (assuming permuta-
+
+tion matrices); 2)
+
+, the number of submatrices per
+
+block row; 3)
+
+, the number of submatrices per block
+
+column; 4) , the maximum number of permutation matrices
+
+per block row; and 5)
+
+, the number of permuta-
+
+tion matrices in the block columns. The architecture includes
+
+memory modules for storing messages, MPUs that operate
+
+in parallel, and read/write networks for transporting messages
+
+between memory and these MPUs. The parameter acts as a
+
+scaling parameter.
+
+The decoder completes a single decoding iteration by per-
+
+forming a round of updates across the supercodes. An update
+
+corresponding to a single supercode constitutes a subitera-
+
+tion which involves the following steps:
+
+1— The read-network performs read operations from memory, where is the maximum node degree of . It then forwards messages to each of the MPUs.
+2— The MPUs update the messages in parallel as described in Section VI.
+3— The updated messages are routed by the write-network to the appropriate memory modules scheduled to receive messages related to .
+4— The messages are written in the designated memory modules and the address counters are updated.
+
+In the remainder of this section, we describe the memory architecture of the decoder, followed by the architectures of the read and write-networks.
+
+A. Memory Architecture
+The messages of the decoder are assumed to be stored column-wise in memory modules such that the th module stores the messages of the th block column of the parity-check matrix. The memory modules store messages column-wise in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+990
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Fig. 20. Decoder architecture implementing the TDMP algorithm. The last row in the banks of the memory modules store the outputs of the decoder.
+
+shows a snapshot of the memory contents across four decoding sub-iterations (or one iteration) to update the four supercodes of the LDPC code defined by the parity-check matrix in Fig. 10. For simplicity, the contents of the memory modules are labeled with the supercode number, and the stars in the third column denote the most recently updated messages. The horizontal arrows in the middle column point to the locations to be written, while the third column shows the updated positions of the pointers after the write operation.
+
+Fig. 21. Architecture of a memory module.
+
+B. Read-Network Architecture
+
+memory banks as shown in Fig. 21. The first row of each bank
+
+in the th module always stores the intrinsic channel reliability
+
+messages, while the remaining rows store (
+
+) messages
+
+extrinsic with respect to the first target supercode scheduled to
+
+utilize these messages. The extrinsic messages generated earlier
+
+by this supercode are not stored since they will not be used
+
+by the decoder operating on the target supercode to generate
+
+new messages. The contents of the banks in each module are
+
+consumed sequentially from top to bottom. The banks however
+
+are updated row-wise in a circular fashion using a counter
+
+that counts modulo (
+
+) and keeps track of the next row
+
+scheduled to receive messages from the target supercode being
+
+decoded. The use of pointers to update memory constitutes an
+
+improvement targeted for restricting data movement (and hence
+
+reducing power consumption) over our earlier work in [5] and
+
+[21] which employed rotating buffers that physically rotate the
+
+data itself rather than a pointer.
+
+The last row in the banks of the memory modules at the final
+
+iteration contains the output messages of the decoder. These
+
+messages can either be extrinsic messages suitable for an outer
+
+joint iterative equalization and decoding scheme, or posterior
+
+messages otherwise. For the latter case, the MPUs operating on
+
+the last supercode at the final iteration need to add the prior re-
+
+liabilities to their outputs for making hard decisions. Table II
+
+This section presents a dynamic network architecture for transporting messages from memory to the constituent SISO MPUs according to the TDMP algorithm in Section V-A. Fig. 22 shows the architecture of the read-network on the left side, and the right side shows the sequence and order in which the messages are read and processed at different stages of the network. The candidate messages (corresponding to multiple supercodes) to be read are shown as contents of the memory modules directly above the network. The structure of the target supercode that will receive these messages is shown in the lower right part of the figure. The read-network performs the following functions:
+
+a) Block selection: The appropriate messages of the source
+
+supercodes are read from memory using a row of block
+
+selectors. The th block selector selects the th memory
+
+module (permutation matrix) out of the possible blocks
+
+as shown in Fig. 23 using a set of ( )-multiplexers,
+
+where
+
+, controlled by a single se-
+
+quencer (X-SEQ) that keeps track of the position of the
+
+th permutation matrix (if present) in each of the block
+
+rows. Table III summarizes the hardware complexity of
+
+the logic units of the network. The four blocks of the ex-
+
+ample supercode are selected as shown next to the row of
+
+block selectors in Fig. 22.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+991
+
+TABLE II CONTENTS OF THE MEMORY MODULES AS THEY ARE ACCESSED DURING THE FOUR SUB-ITERATIONS TO DECODE THE LDPC CODE OF FIG. 10
+
+Fig. 22. Read-network architecture of the TDMP algorithm. Candidate messages corresponding to multiple supercodes to be read are shown in the memory modules above the network. The right part of the figure shows the action of the network on these messages as they get routed to the decoders.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+992
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Fig. 23. Architecture of a block selector.
+TABLE III MESSAGE-TRANSPORT NETWORK LOGIC AND CONTROL RESOURCES
+
+Fig. 25. Architecture of an S-to-S permuter.
+multiplexers are very cheap to implement in current VLSI technology using transmission gates or pass-transistor logic. The sequencers of the read-network can programmed to implement various instances of a parity-check matrix of an AA-LDPC code for given parameters , , , and . This feature makes the architecture a programmable architecture which is attractive in applications where a single decoder is used to decode multiple AA-LDPC codes of the same parameters , , , and , but with different permutation matrices.
+
+C. Write-Network Architecture
+
+Fig. 24. Architecture of a column accumulator.
+b) Column accumulation: The messages from each block selector are accumulated on top of earlier messages read from previous supercodes (including the intrinsic channel reliabilities of the bits) using a row of column accumulators. Fig. 24 shows the architecture of a column accumulator composed of full adders. This operation does not change the order of the messages as shown in the row of messages next to the row of adders in Fig. 22.
+c) Message permutation: The messages from the blocks are independently permuted to match the structure of the permutation matrices of the target supercode using a row of permuters. A permuter is an -to- mapper that can be implemented using a set of ( )-multiplexers as shown in Fig. 25. The multiplexers are controlled independently by sequencers, where the th sequencer of the th permuter keeps track of the position of the th message of the th permutation matrix in all block rows. The permuter reduces to a simple shift register in the case of cyclic permutation matrices. The order of the messages after permutation according to the target code is shown next to the row of permuters in Fig. 22. Finally, these messages are forwarded to the MPUs such that the th MPU receives the th message from every block as shown in the lower right corner of the figure.
+The resources of the read-network are summarized in Table III. The overall complexity of the read-network in terms of standard library gates is given by
+
+where ), and
+
+1-bit multiplexers (similarly for
+
+gates, with
+
+. Note that
+
+Fig. 26 shows the write-network architecture which performs the reverse operations of the read-network excluding column accumulation. Briefly, it performs the following functions:
+a) Message permutation: The updated messages from the MPUs are restored back to their natural order by inverse permuting them using a row of permuters such as the ones shown in Fig. 25. The restored order of the messages in shown next to the row permuters in Fig. 26.
+b) Block relocation: The messages corresponding to the target supercode are written back to memory using a row of block relocators. A block relocator as shown in Fig. 27 writes the appropriate block to the th. memory module if the th sub-matrix of the target supercode is not the zero matrix, and remains idle otherwise. The lower right part of Fig. 26 shows the result of the block relocation operation.
+The overall complexity of the write-network is given by
+
+where
+
+. Like the read-network, the write-network is also
+
+programmable.
+
+VIII. SIMULATION RESULTS
+To demonstrate the effectiveness of the proposed TDMP algorithm coupled with the reduced-complexity MPUs and the dynamic message-transport networks, a decoder architecture implementing these ideas was synthesized. Power and area characterizations were done using the Synopsys tool suite based on a 0.18- m, 1.8-V standard cell library. During power characterization, a frame consisting of random noise was assumed as input to the decoder. The datapath of the decoder is five bits wide. The target LDPC code is a rate-2/3 irregular LDPC code of length 2304 constructed from Ramanujan graphs [15] The edge merging transformation [21] was used to obtain the factor graph and the parity-check matrix of the code. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+993
+
+Fig. 26. Write-network architecture of the TDMP algorithm. Messages from the target supercode to be written in memory are shown above the network. The action of the network on these messages and the resulting contents of the memory modules are shown on the right part of the figure.
+
+Fig. 27. Architecture of a block relocator.
+
+resulting permutation matrices of the parity-check matrix are
+
+acyclic matrices of size
+
+.
+
+At a clock rate of 200 MHz, the maximum throughput of the
+
+decoder is 1.92 Gbits/s, which corresponds to an iterative de-
+
+coder throughput of 192 Mbits/s assuming ten decoding iter-
+
+ations are performed per frame. The average power consump-
+
+tion is 1,176 mW, and the decoder area is 9.41 mm . The high
+
+throughput is mainly attributed to the fast convergence behavior
+
+of the TDMP algorithm which requires between 20%–50% less
+
+iterations to converge compared to the TPMP algorithm. The
+
+distributed memory architecture which allows for parallel ac-
+
+cess of messages, and the message-transport networks which
+
+keep the follow of these messages into and out of the MPUs
+
+uninterrupted (e.g., due to resource conflicts and scheduling as
+
+is the case in [12]) also contribute to the high throughput of the
+
+decoder.
+
+A. Quantization Effects
+To compare the effects of quantization on the algorithmic performance of the TDMP algorithm using Gallager’s equations and the proposed MPU based on the “max-quartet” approximation, a gate-level simulator was developed for both techniques, and the results are shown in Fig. 28. In [13], a similar experiment was performed considering the TPMP algorithm instead. Fig. 28(a), (d) show the percentage of valid frames decoded and the switching activity of the decoder (the number of iterations required for convergence), respectively, using unquantized Gallager equations, 6-bit quantized Gallager equations, and 6-bit quantized MPUs using the “max-quartet” approximation in (6).
+
+Fig. 28(b), (e) and (c), (f) show the results for 5-bit and 4-bit quantization, respectively. The results demonstrate that the optimized MPU is superior to the Gallager’s equations particularly for 4-bit quantization where it attains more than 1 dB of improvement in coding gain. Moreover, 5-bit quantized MPUs achieve even better performance than 6-bit quantized Gallager equations. The average improvement in coding gain achieved at 6-bit, 5-bit, and 4-bit quantization levels is 6.02%, 12.19%, and 120.92%, respectively. Note also the reduction in switching activity due to the decrease in the number iterations.
+B. Power and Area Distribution
+Fig. 29(a) shows the average power distribution profile as a function of the supercodes in each of the main blocks of the decoder. The vertical bars show (starting from the bottom) the power consumed by memory due to reads, the readnetwork, the MPUs, the write-network, and memory due to writes. The bimodal nature of the profile is due to the structure of the paritycheck matrix and the edge-merging transformation (see [21] for details). The power consumption of the decoder is 1,176 mW. As expected, memory reads consume most of the power (50.42%) followed by the MPUs (20.73%). The remaining blocks of the architecture consume 28.85% of the power.
+Fig. 29(b) shows the area distribution of the decoder among the read and write-networks, memory modules, and MPUs. The area of the decoder is 9.41 mm . The networks (including the peripheral interconnects) occupy 5.17 mm or 54.94% of the area of the decoder. The optimized MPUs occupy a small portion of the area, 1.73 mm (18.38%). More importantly, the reduced memory requirement of the TDMP algorithm is evident in that memory occupies only 2.51 mm or 26.67% of the area.
+C. Comparison with a TPMP Decoder Architecture
+The TDMP decoder architecture was also compared with a decoder architecture implementing the TPMP algorithm and Gallager’s update equations such as [8]. The TDMP decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+994
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Fig. 28. Comparison of quantization effects on the performance of Gallager’s update equations versus the SISO MPU based on the BCJR algorithm for: (a), (d) 6-bit, (b), (e) 5-bit, and (c), (f) 4-bit quantization levels using the TDMP algorithm.
+
+(a)
+
+(b)
+
+Fig. 29. (a) Average power dissipation in the main blocks of the decoder as a function of the super-codes and (b) area of the decoder as distributed amongst the read and write-networks, memory modules, and MPUs.
+
+architecture was designed to deliver the same throughput as the TDMP architecture using also a five bit datapath. Fig. 30(a) compares the power consumed by the transport networks, MPUs (check and bit function units for the TPMP decoder), and memory. The figure demonstrates the power efficiency of the TDMP decoder compared to the TPMP decoder, resulting in a savings of 74.28%, 83.06%, and 93.81% in power consumption in the networks, MPUs, and memory modules, respectively. The overall savings in power consumption is 89.13%. In terms of area, Fig. 30(b) similarly shows significant reduction in the
+
+area of the networks (61.98%), MPUs (63.28%), and memory modules (80.52%), respectively. The overall area savings is 69.83%. Finally, the TDMP decoder requires 60.5% less interconnect wires (including both networks and peripherals) than the TPMP decoder.
+IX. CONCLUSIONS
+The design of high-throughput and memory efficient decoder architectures for regular and irregular LDPC codes has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+MANSOUR AND SHANBHAG: HIGH-THROUGHPUT LDPC DECODERS
+
+995
+
+(a)
+
+(b)
+
+Fig. 30. Comparison of (a) power consumption and (b) area occupied by the transport networks, MPUs, and memory modules of the TDMP architecture versus the TPMP architecture.
+
+been considered at the code-design, decoding algorithm, and architectural levels. Optimizations at the code-design level aim at decoupling the decoder architecture from the code properties by decomposing the parity-check matrix of the code into permutation matrices resulting in architecture-aware LDPC codes. Reducing memory requirements and improving decoder throughput have been addressed algorithmically through a novel turbo decoding algorithm of LDPC codes. Moreover, an efficient message update mechanism has been presented in the form of a message processing unit that reduces the switching activity of the decoder and requires fewer quantization bits than other methods in the literature. Finally, a scalable memory architecture and message-transport networks have been proposed that constitute the main building blocks of a generic LDPC decoder architecture.
+Simulations have demonstrated the effectiveness of the methodology pursued for efficient decoder designs in terms of power consumption, area, and interconnect complexity.
+REFERENCES
+[1] C. Berron, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error correcting coding and decoding: Turbo codes,” in IEEE Int. Conf. on Communications, 1993, pp. 1064–1070.
+[2] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[3] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacity approaching irregular low-density parity-check codes,” IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[4] S.-Y. Chung et al., “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limits,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[5] M. M. Mansour and N. R. Shanbhag, “Turbo decoder architectures for low-density parity-check codes,” in Proc. IEEE GLOBECOM, Taipei, Taiwan, R.O.C., Nov. 2002, pp. 1383–1388.
+[6] X. Y. Hu et al., “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE GLOBECOM, vol. 2, San Antonio, TX, 2001, pp. 1036–1036E.
+[7] C. Howland and A. Blanksby, “Parallel decoding architectures for low density parity check codes,” in Proc. 2001 IEEE Int. Symp. on Circuits and Systems, Sydney, Australia, May 2001, pp. 742–745.
+[8] E. Yeo et al., “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magn., vol. 37, no. 2, pp. 748–755, Mar. 2001.
+
+[9] E. Yeo et al., “High throughput low-density parity-check decoder architectures,” in Proc. IEEE GLOBECOM, San Antonio, TX, Nov. 2001, pp. 3019–3024.
+[10] G. Al-Rawi and J. Cioffi, “A highly efficient domain-programmable parallel architecture for LDPCC decoding,” in Proc. Int. Conf. on Information Technology: Coding and Computing, Apr. 2001, pp. 569–577.
+[11] Vector-LDPCT™ Core Solutions, Flarion Technologies, Feb. 2002. [12] T. Zhang and K. K. Parhi, “VLSI implementation-oriented (3; k)-reg-
+ular low-density parity-check codes,” in Proc. IEEE Workshop on Signal Processing Systems (SIPS), Antwerp, Belgium, Sept. 2001, pp. 25–36. [13] M. M. Mansour and N. R. Shanbhag, “Low-power VLSI decoder architectures for LDPC codes,” in Proc. Int. Symp. on Low Power Electronics and Design (ISLPED), Monterey, CA, Aug. 2002, pp. 284–289. [14] J. Rosenthal and P. O. Vontobel, “Constructions of LDPC codes using Ramanujan graphs and ideas from Margolis,” in Proc. 38th Allerton Conf. on Communication, Control, and Computing, 2000, pp. 248–257. [15] M. M. Mansour and N. R. Shanbhag, “Construction of LDPC codes from Ramanujan graphs,” presented at the 36th Annu. Conf. on Information Sciences and Systems 2002 (CISS’02), Princeton, NJ, Mar. 2002. [16] J. Boutros, O. Pothier, and G. Zemor, “Generalized low density (Tanner) codes,” in Proc. ICC’99, Vancouver, Canada, June 1999, pp. 441–445. [17] L. R. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Inform. Theory, vol. IT-20, pp. 284–287, Mar. 1974. [18] E. Eleftheriou, T. Mittelholzer, and A. Dholakia, “Reduced-complexity decoding for low-density parity-check codes,” Electron. Lett., vol. 37, pp. 102–104, Jan. 2001. [19] M. Lentmaier and K. S. Zigangirov, “Iterative decoding of generalized low-density parity-check codes,” in Proc. ISIT 1998, Aug. 1998, p. 149. [20] F. R. Kshischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inform. Theory, vol. 47, pp. 498–519, Feb. 2001. [21] M. M. Mansour and N. R. Shanbhag, “Memory-efficient turbo decoder architectures for LDPC coding,” presented at the IEEE Workshop on Signal Processing Systems (SiPS’02), Oct. 2002, pp. 159–164. [22] M. M. Mansour and N. R. Shanbhag, “On the architecture-aware structure of LDPC codes from generalized Ramanujan graphs and their decoder architectures,” in Proc. 37th Annu. Conf. Information Sciences and Systems (CISS’03), Baltimore, MD, Mar. 2003, pp. 215–220. [23] P. Roberston, E. Villebrun, and P. Hoeher, “A comparison of optimal and sub-optimal MAP decoding algorithms operatiting in the log domain,” in Proc. IEEE Int. Conf. Communications, 1995, pp. 1009–1013. [24] H. Dawid and H. Meyr, “Real-time algorithms and VLSI architectures for soft output MAP convolutional decoding,” in Proc. Personal, Indoor, and Mobile Radio Communications, (PIMRC). Wireless: Merging onto the Information Superhighway, vol. 1, 1995, pp. 193–197.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+996
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION SYSTEMS, VOL. 11, NO. 6, DECEMBER 2003
+
+Mohammad M. Mansour (S’98–M’03) received the B.E. degree with distinction in 1996 and the M.S. degree in 1998, all in computer and communications engineering, from the American University of Beirut (AUB), Beirut, Lebanon. He received the M.S. degree in mathematics in August 2002, and the Ph.D. degree in electrical engineering in May 2003, from the University of Illinois at Urbana-Champaign (UIUC).
+Currently, he is an Assistant Professor of Electrical Engineering with the Electrical and Computer Engineering Department of AUB. During the summer of 2003, he was a Postdoctoral Research Associate at the Coordinated Science Laboratory (CSL), UIUC. From 1998 to 2003, he was a research assistant at CSL. In 1997, he was a research assistant at the ECE department of AUB, and in 1996 he was as a teaching assistant with the same department. His research interests are VLSI architectures and integrated circuit (IC) design for communications and coding theory applications, digital signal processing systems, and general purpose computing systems. Dr. Mansour received the Harriri Foundation award twice, in 1996 and 1998, the Charli S. Korban award twice, in 1996 and 1998, the Makhzoumi Foundation Award in 1998, and the Phi Kappa Phi awards twice, in 2000 and 2001.
+
+Naresh R. Shanbhag (M’88–SM’00) received the B. Tech. degree from the Indian Institute of Technology, New Delhi, India, in 1988, the M.S. degree fromWright State University, Dayton, OH, in 1990, and the Ph.D. degree from the University of Minnesota, Minneapolis, all in electrical engineering in 1993.
+From July 1993 to August 1995, he was with AT&T Bell Laboratories at Murray Hill, NJ, where he was responsible for the development of VLSI algorithms, architectures, and implementation of broadband data communications transceivers. In particular, he was the lead chip ar chitect for AT&T’s 51.84 Mb/s transceiver chips over twisted-pair wiring for Asynchronous Transfer Mode (ATM)-LAN and broadband access chip-sets. Since August 1995, he has been with the Department of Electrical and Computer Engineering and the Coordinated Science Laboratory, University of Illinois at Urbana-Champaign (UIUC), where he is presently an Associate Professor and the Director of the Illinois Center for Integrated Microsystems. He founded the VLSI Information Processing Systems (ViPS) Group, whose charter is to explore issues related to low-power, high-performance, and reliable integrated circuit implementations of broadband communications and digital signal processing systems at UIUC. He has published numerous journal articles/book chapters/conference publications in this area and holds three U.S. patents. He is also a coauthor of the research monograph Pipelined Adaptive Digital Filters (Norwell, MA: Kluwer, 1994). Dr. Shanbhag received the the 2001 IEEE Transactions on VLSI Systems Best Paper Award, the 1999 IEEE Leon K. Kirchmayer Best Paper Award, the 1999 Xerox Faculty Award, the National Science Foundation CAREER Award in 1996, and the 1994 Darlington best paper award from the IEEE Circuits and Systems society. From July 1997–2001, he was a Distinguished Lecturer for the IEEE Circuits and Systems Society. From 1997 to 1999, he served as an Associate Editor for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS: PART II. He is currently the Associate Editor for the IEEE TRANSACTIONS ON VLSI SYSTEMS. He was the Technical Program Chair of 2002 IEEE Workshop on Signal Processing Systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:45:35 UTC from IEEE Xplore. Restrictions apply.
+
+

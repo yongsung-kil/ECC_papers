@@ -1,0 +1,1683 @@
+A Practical Analysis of Low-Density Parity-Check Erasure Codes for Wide-Area Storage Applications
+James S. Plank and Michael G. Thomason∗
+
+Abstract
+As peer-to-peer and widely distributed storage systems proliferate, the need to perform efficient erasure coding, instead of replication, is crucial to performance and efficiency. Low-Density Parity-Check (LDPC) codes have arisen as alternatives to standard erasure codes, such as Reed-Solomon codes, trading off vastly improved decoding performance for inefficiencies in the amount of data that must be acquired to perform decoding. The scores of papers written on LDPC codes typically analyze their collective and asymptotic behavior. Unfortunately, their practical application requires the generation and analysis of individual codes for finite systems.
+This paper attempts to illuminate the practical considerations of LDPC codes for peer-to-peer and distributed storage systems. The three main types of LDPC codes are detailed, and a huge variety of codes are generated, then analyzed using simulation. This analysis focuses on the performance of individual codes for finite systems, and addresses several important heretofore unanswered questions about employing LDPC codes in real-world systems.
+1 Introduction
+Peer-to-peer and widely distributed file systems typically employ replication to improve both the performance and fault-tolerance of file access. Specifically, consider a file system composed of storage nodes distributed across the wide area, and consider multiple clients, also distributed across the wide area, who desire to access a large file. The standard strategy that file systems employ is one where the file is partitioned into n blocks of a fixed size, and these blocks are replicated and distributed throughout the system. Such a scenario is depicted in Figure 1, where a single file is partitioned into eight blocks numbered one through eight, and each block is replicated on four of eight storage
+∗This material is based upon work supported by the National Science Foundation under grants ACI-0204007, ANI-0222945, and EIA-9972889, and the Department of Energy under grant DE-FC0201ER25465. Department of Computer Science, University of Tennessee, [plank,thomason]@cs.utk.edu.
+
+servers. Three separate clients are shown accessing the file in its entirety by attempting to download each of the eight blocks from a nearby server.
+
+C1
+
+24
+
+13
+
+12
+
+58
+
+46
+
+68
+
+13 67
+
+23
+
+57
+
+25
+
+78
+
+34 67
+14 58
+
+C3 C2
+
+Figure 1: A widely distributed file system hosting a file partitioned into eight blocks, each block replicated four times. Three clients are depicted accessing the file from different network locations.
+
+Replicated systems such as these provide both faulttolerance and improved performance over non-replicated storage systems. However, the costs are high. First, each block must be replicated m times to tolerate the failure of any m − 1 servers. Second, clients must find close copies of each of the file’s blocks, which can be difficult, and the failure or slow access of any particular block can hold up the performance of the entire file’s access [AW03].
+Erasure encoding schemes (schemes originally developed for communication on the binary erasure channel (BEC)) improve both the fault-tolerance and downloading performance of replicated systems [WK02, ZL02]. For example, with Reed-Solomon erasure encoding, instead of storing the blocks of the files themselves, n + m encodings of the blocks are calculated, and these are stored instead. Now the clients need only download any n blocks, and from these, the n blocks of the file may be calculated. Such a scenario is depicted in Figure 2, where 32 encoding blocks, labeled A through Z and a through f are stored, and the clients need only access the eight closest blocks to compute the file.
+Reed-Solomon coding has been employed effectively
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+C1
+
+EF GH
+
+MN OP
+
+UV WX
+
+AB CD
+IJ KL
+
+QR ST
+
+YZ ab
+cd ef
+
+C3 C2
+
+Figure 2: The same system as Figure 1, employing ReedSolomon coding instead of replication. Again the file is partitioned into eight blocks, but now 32 encoding blocks are stored so that clients may employ any eight blocks to calculate the file.
+
+in distributed storage systems [KBC+00, RWE+01], and in related functionalities such as fault-tolerant data structures [LS00], disk arrays [BM93] and checkpointing systems [Pla96]. However, it is not without costs. Specifically, encoding involves breaking each block into words, and each word is calculated as the dot product of two length-n vectors under Galois Field arithmetic, which is more expensive than regular arithmetic. Decoding involves the inversion of an n × n matrix, and then each of the file’s blocks is calculated with dot products as in encoding. Thus, as n grows, the costs of Reed-Solomon coding induce too much overhead [BLMR98].
+In 1997, Luby et al published a landmark paper detailing a coding technique that thrives where Reed-Solomon coding fails [LMS+97]. Their codes, later termed “Tornado Codes,” calculate m coding blocks from the n file blocks in linear time using only cheap exclusive-or (parity) operations. Decoding is also performed in linear time using parity; however, rather than requiring any n blocks for decoding as in Reed-Solomon coding, they require f n blocks, where f is an overhead factor that is greater than one, but approaches one as n approaches infinity. A content-distribution system called “Digital Fountain” was built on Tornado Code technology, and in 1998 its authors formed a company of the same name.
+Tornado Codes are instances of a class of codes called Low-Density Parity-Check (LDPC) codes, which have a long history dating back to the 60’s [Gal63], but have received renewed attention since the 1997 paper. Since 1998, the research on LDPC codes has taken two paths – Academic research has resulted in many publications about LDPC codes [RGCV03, WK03, SS00, RU03], and Digital Fountain has both published papers [BLM99, Lub02, Sho03] and received patents on various aspects of coding
+
+techniques.1 LDPC codes are based on graphs, which are used to
+define codes based solely on parity operations. Nearly all published research on LDPC codes has had the same mission – to define codes that approach “channel capacity” asymptotically. In other words, they define codes where the overhead factor, f , approaches one as n approaches infinity. It has been shown [LMS+97] that codes based on regular graphs – those where each node has a constant incoming and outgoing cardinality – do not have this property. Therefore, the “best” codes are based on randomly generated irregular graphs. A class of irregular graphs is defined, based on probability distributions of node cardinalities, and then properties are proven about the ensemble characteristics of this class. The challenge then becomes to design probability distributions that generate classes of graphs that approach channel capacity. Hundreds of such distributions have been published in the literature and on the web (see Table 1 for 80 examples).
+Although the probabilistic method [ASE92] with random graphs leads to powerful characterizations of LDPC ensembles, generating individual graphs from these probability distributions is a non-asymptotic, non-ensemble activity. In other words, while the properties of infinite collections of infinitely sized graphs is known, and while there has been some work in finite-length analysis [DPT+02], the properties of individual, finite-sized graphs, especially for small values of n, have not been explored to date. Moreover, these properties have profound practical consequences.
+Addressing aspects of these practical consequences is the goal of this paper. Specifically, we detail how three types of LDPC graphs are generated from given probability distributions, and describe a method of simulation to analyze individual LDPC graphs. Then we generate a wide variety of LDPC graphs and analyze their performance in order to answer the following five practical questions:
+1. What kind of overhead factors (f ) can we expect for LDPC codes for small and large values of n?
+2. Are the three types of codes equivalent, or do they perform differently?
+3. How do the published distributions fare in producing good codes for finite values of n?
+4. Is there a great deal of random variation in code generation from a given probability distribution?
+5. How do the codes compare to Reed-Solomon coding?
+1U.S. Patents #6,073,250, #6,081,909, #6,163,870, #6,195,777, #6,320,520 and #6,373,406. Please see Technical Report [PT03] for a thorough discussion of patent infringement issues involved with LDPC codes.
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+In answering each question, we pose a challenge to the community to perform research that helps systems researchers make use of these codes. It is our hope that this paper will spur researchers on LDPC codes to include analyses of the non-asymptotic properties of individual graphs based on their research.
+Additionally, for the entire parameter suite that we test, we publish probability distributions for the best codes, so that other researchers may duplicate and employ our research.
+2 Three Types of LDPC Codes
+Three distinct types of LDPC codes have been described in the academic literature. All are based on bipartite graphs that are randomly generated from probability distributions. We describe them briefly here. For detailed presentations on these codes, and standard encoding/decoding algorithms, please see other sources [LMS+97, JKM00, Sho00, RU03, WK03].
+The graphs have L+R nodes, partitioned into two sets – the left nodes, l1, . . . , lL, and the right nodes, r1, . . . , rR. Edges only connect left nodes to right nodes. A class of graphs G is defined by two probability distributions, Λ and P . These are vectors composed of elements Λ1, Λ2, . . . and P1, P2, . . . such that i Λi = 1 and i P = 1. Let g be a graph in G. Λi is the probability that a left node in g has exactly i outgoing edges, and similarly, Pi is the probability that a right node in g has exactly i incoming edges.2
+Given L, R, Λ and P , generating a graph g is in theory a straightforward task [LMS+97], We describe our generation algorithm in section 4 below. For this section, it suffices that given these four inputs, we can generate bipartite graphs from them.
+To describe the codes below, we assume that we have n equal-sized blocks of data, which we wish to encode into n + m equal-sized blocks, which we will distribute on the network. The nodes of LDPC graphs hold such blocks of data, and therefore we will use the term “node” and “block” interchangeably. Nodes can either initialize their block’s values from data, or they may calculate them from other blocks. The only operation used for these calculations is parity, as is common in RAID Level 5 disk arrays [CLG+94]. Each code generation method uses its graph to define an encoding of the n data blocks into n+m blocks that are distributed on the network.
+To decode, we assume that we download the f n closest blocks, B1, . . . Bfn, in order. From these, we can calculate the original n data blocks.
+2An alternate and more popular definition is to define probability distributions of the edges rather than the nodes using two vectors λ and ρ. The definitions are interchangeable since (Λ, P ) may be converted easily to (λ, ρ) and vice versa.
+
+Systematic Codes: With Systematic codes, L = n and
+
+R = m. Each left node li holds the i-th data block, and each right node ri is calculated to be the exclusive-or of all the left nodes that are connected to it. A very simple
+
+example is depicted in Figure 3(a).
+
+Systematic codes can cascade, by employing d > 1
+
+levels of bipartite graphs, g1, . . . , gd, where the right nodes of gi are also the left nodes of gi+1. The graph of level 1 has L = n, and those nodes contain the n data blocks. The
+
+remaining blocks of the encoding are right-hand nodes of
+
+the d graphs. Thus, m =
+
+d i=1
+
+Ri
+
+.
+
+A
+
+simple
+
+three-level
+
+cascaded Systematic code is depicted in Figure 3(b).
+
+l1 r1 r1 = l1+l3+l4
+l2 r2 r2 = l1+l2+l3
+l3 r3 r3=l2+l3+l4
+l4
+
+(a)
+
+(b)
+
+Figure 3: (a) Example 1-level Systematic code for n = 4, m = 3. (b) Example 3-level Systematic code for n = 8, m = 8.
+Encoding and decoding of both regular and cascading Systematic codes are straightforward operations and are both linear time operations in the number of edges in the graph.
+Gallager (Unsystematic) Codes: Gallager codes were introduced in the early 1960’s [Gal63]. With these codes, L = n + m, and R = m. The first step of creating a Gallager code is to use g to generate a (n + m) × n matrix M . This is employed to calculate the n + m encoding blocks from the original n data blocks. These blocks are stored in the left nodes of g. The right nodes of g do not hold data, but instead are constraint nodes — each ri has the property (guaranteed by the generation of M ) that the exclusive-or of all nodes incident to it is zero. A simple Gallager code is depicted in Figure 4(a).
+Encoding is an expensive operation, involving the generation of M , and calculation of the encoding blocks. Fortunately, if the graph is low density (i.e. the average cardinality of the nodes is small), M is a sparse matrix, and its generation and use for encoding and decoding is not as expensive as a dense matrix (as is the case with ReedSolomon coding). Decoding is linear in the number of edges in the graph. Fortunately, M only needs to be generated once per graph, and then it may be used for all encoding/decoding operations.
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+l1
+
+l1
+
+l2
+
+r1
+
+l3
+
+l2+l4+l5+l7=0
+
+l2
+
+l4
+
+r2
+
+l5
+
+l1+l2+l3+l7=0 l3
+
+l6
+
+r3
+
+l7
+
+l2+l3+l4+l6=0 l4
+
+r1 z1
+r2 z2
+r3 z3
+
+(a)
+
+(b)
+
+Figure 4: (a) Example Gallager code for n = 4, m = 3. Note that the right nodes define constraints between the left nodes, and do not store encoding blocks. (b) Example IRA code for n = 4, m = 3. The left and accumulator nodes are stored as the encoding blocks. The right nodes are just used for calculations.
+
+IRA Codes: Irregular Repeat-Accumulate (IRA) Codes are Systematic codes, as L = n and R = m, and the information blocks are stored in the left nodes. However, an extra set of m nodes, z1, . . . , zm, are added to the graph in the following way. Each node ri has an edge to zi. Additionally, each node zi has an edge to zi+1, for i < m. These extra nodes are called accumulator nodes. For encoding, only blocks in the left and accumulator nodes are stored – the nodes in R are simply used to calculate the encodings and decodings, and these calculations proceed exactly as in the Systematic codes. An example IRA graph is depicted in Figure 4(b).
+
+3 Asymptotic Properties of Codes
+
+All three classes of LDPC codes have undergone asymp-
+
+totic
+
+analyses that proceed as
+
+follows.
+
+A rate
+
+R
+
+=
+
+n n+m
+
+is selected, and then Λ and P vectors are designed. From
+
+these, it may be proven that graphs generated from the distributions in Λ and P can asymptotically achieve capacity. In other words, they may be successfully decoded with f n downloaded blocks, where f approaches 1 from above as n approaches ∞.
+
+Unfortunately, in the real world, developers of wide-
+
+area storage systems cannot break up their data into in-
+
+finitely many pieces. Limitations on the number of phys-
+
+ical devices, plus the fact that small blocks of data do not transmit as efficiently as large blocks, dictate that n may
+
+range from single digits into the thousands. Therefore, a major question about LDPC codes (addressed by Question 1 above) is how well they perform when n is in this range.
+
+Name
+L97A L97B S99 SS00 M00 WK03 RU03 R03 U03
+
+Source
+[LMS+97] [LMS+97] [Sho99] [SS00] [McE00] [WK03] [RU03] [RGCV03] [Urb03]
+
+# of Codes
+2 8 19 3 14 6 2 8 22
+
+Rate:
+
+[
+
+1 3
+
+,
+
+1 2
+
+,
+
+2 3
+
+]
+
+[0,1,1] [0,4,4] [4,7,8] [0,3,0] [0,6,8] [0,6,0] [0,2,0] [0,8,0] [6,9,7]
+
+Name
+L97A L97B S99 SS00 M00 WK03 RU03 R03 U03
+
+Λmax
+1,048,577 8-47 2-3298 9-12 2-20 11-50 8-13 100 6-100
+
+Pmax
+30,050 16-28 6-13 7-16 3-8 8-11 6-7
+8 6-19
+
+Developed for
+Systematic Systematic Gallager Gallager
+IRA Gallager* Gallager
+IRA* Gallager
+
+Table 1: The 80 published probability distributions (Λ and P ) used to generate codes.
+
+4 Assessing Performance
+
+Our experimental methodology is as follows. For each of
+
+the three LDPC codes, we have written a program to randomly generate a bipartite graph g that defines an instance of the code, given n, m, Λ, P , and a seed for a random
+
+number generator. The generation follows the methodology sketched in [LMS+97]:
+
+For each left node li, its number of outgoing edges ξi
+
+is chosen randomly from Λ, and for each right node ri, its
+
+number of incoming edges ιi is chosen randomly from P .
+
+This yields two total number or edges, TL =
+
+L i=1
+
+ξi
+
+and
+
+TR =
+
+R i=1
+
+ιi
+
+which
+
+may
+
+well
+
+differ
+
+by
+
+D
+
+>
+
+0.
+
+Suppose
+
+TL > TR. To rectify this difference, we select a “shift”
+
+factor s such that 0 ≤ s ≤ 1. Then we subtract sD edges
+
+randomly from the left nodes (modifying each ξi accordingly), and add (1−s)D edges randomly to the right nodes
+
+(modifying each ιi accordingly). This yields a total of T
+
+total edges coming from the left nodes and going to the
+
+right nodes.
+
+Now, we define a new graph g with T left nodes, T
+right nodes and a random matching of T edges between
+them. We use g to define g, by having the first ξ1 edges of g define the edges in g coming from l1. The next ξ2 edges in g define the edges coming from l2, and so on. The right edges of g are defined similarly by the right
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+edges of g and ιi. At the end of this process, there is one potential problem
+
+with g — there may be duplicate edges between two nodes,
+
+which serve no useful purpose in coding or decoding. We
+
+deal with this problem by deleting duplicate edges. An
+
+alternative method is to swap edges between nodes until
+
+no duplicate edges exist. We compared these two meth-
+
+ods and found that neither outperformed the other, so we
+
+selected the edge deletion method since it is more efficient.
+
+We evaluate each random graph by performing a Monte
+
+Carlo simulation of over 1000 random downloads, and cal-
+
+culating the average number of blocks required to success-
+
+fully reconstruct the data. This is reported as the overhead
+
+factor f above. In other words, if n = 100, m = 100,
+
+and our simulation reports that f = 1.10, then on average,
+
+110 random blocks of the 200 total blocks are required to
+
+reconstruct the 100 original blocks of data from the graph
+
+in question.
+
+Theoretical work on LDPC codes typically calculates
+
+the
+
+percentage
+
+of
+
+capacity
+
+of
+
+the
+
+code,
+
+which
+
+is
+
+1 f
+
+100%.
+
+We believe that for storage applications, the overhead fac-
+
+tor is a better metric, since it quantifies how many block
+
+downloads are needed on average to acquire a file.
+
+5 Experiments
+Code Generation: The theoretical work on LDPC codes gives little insight into how the Λ and P vectors that they design will perform for smaller values of n. Therefore we have performed a rather wide exploration of LDPC code generation. First, we have employed 80 different sets of Λ and P from published papers on asymptotic codes. We call the codes so generated published codes. These are listed in Table 1, along with the codes and rates for which they were designed. The WK03 distributions are for Gallager codes on AWGN (Additive White Gaussian Noise) channels, and the R03 distributions are for IRA codes on AWGN and binary symmetric channels. In other words, neither is designed for the BEC. We included the former as a curiosity and discovered that they performed very well. We included the latter because distributions for IRA codes are scarce.
+Second, we have written a program that generates random Λ and P vectors, determines the ten best pairs that minimize f , and then goes through a process of picking random Λ’s for the ten best P ’s and picking random P ’s for the ten best Λ’s. This process is repeated, and the ten best Λ/P pairs are retained for subsequent iterations. Such a methodology is suggested by Luby et al [LMS98]. We call the codes generated from this technique Monte Carlo codes.
+Third, we observed that picking codes from some probability distributions resulted in codes with an extremely
+
+wide range of overhead factors (see section 6.4 below).
+
+Thus, our third mode of attack was to take the best per-
+
+forming instances of the published and Monte Carlo codes,
+
+and use their left and right node cardinalities to define
+
+new Λ’s and P ’s. For example, the Systematic code in Fig-
+
+ure 3(a) can be generated from any number of probability
+
+distributions. However, it defines a probability distribution
+
+where Λ =< 0, 0.75, 0.25 > and P =< 0, 0, 1 >. These
+
+new Λ’s and P ’s may then be employed to generate new
+
+codes. We call the codes so generated derived codes.
+
+Tests: The range of potential tests to conduct is colos-
+
+sal. As such, we limited it in the following way. We focus
+
+on m
+
+three rates: R ∈ = n, and m =
+
+{
+n 2
+
+1
+3
+.
+
+,
+
+1 2
+
+,
+
+2 3
+
+}.
+
+These
+
+In are
+
+other words, m = 2n, the rates most studied
+
+in the literature. For each of these rates, we generated the
+
+three types of codes from each of the 80 published distri-
+
+butions for all even n between 2 and 150, and for n ∈ {250, 500, 1250, 2500, 5000, 12500, 25000, 50000, 125000}3. For
+
+Systematic codes, we tested cascading levels from one to
+
+six.
+
+For Monte Carlo codes, we tested all three codes with
+
+all three rates for even n ≤ 50. As shown in section 6.2 be-
+
+low, this code generation method is only useful for small n.
+
+Finally, for each value of n, we used distributions de-
+
+rived the best current codes for all three coding methods
+
+(and all six cascading levels of Systematic codes) to gen-
+
+erate codes for the ten nearest values of n with the same
+
+rate. The hope is that good codes for one value of n can be
+
+employed to generate good codes for nearby values of n.
+
+In sum, this makes for over 100,000 different data
+
+points, each of which was repeated with over 100 differ-
+
+ent random number seeds. The optimal code and overhead
+
+factor for each data point was recorded and the data is di-
+
+gested in the following section.
+
+6 Results
+Our computational engine is composed of 160 machines (Sun workstations running Solaris, Dell Pentium workstations running Linux, and a Macintosh PowerBook running OSX) which ran tests continuously for over a month. We organize our results by answering each of the questions presented in Section 1 above.
+
+6.1 Question 1
+
+What kind of overhead factors can we expect for LDPC codes for small and large values of n?
+
+All of our data is summarized in Figure 5. For each value of n and m, the coding and generation method that
+
+3One
+
+exception
+
+is
+
+n
+
+=
+
+125000
+
+for
+
+R
+
+=
+
+1 3
+
+,
+
+due
+
+to
+
+the
+
+fact
+
+that
+
+these
+
+graphs often exceeded the physical memory of our machines.
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+Overhead Factor Overhead Factor
+
+produces the smallest overhead factor is plotted.
+
+1.20
+
+Rate = 1/3 Rate = 1/2 Rate = 2/3
+
+1.15
+
+1.10
+
+1.05
+
+1.00 1
+
+10
+
+100
+
+1000
+
+10000
+
+100000
+
+n
+
+Figure 5: The best codes for all generation methods for
+
+1
+
+≤
+
+n
+
+≤
+
+125, 000,
+
+and
+
+R
+
+=
+
+1 3
+
+,
+
+1 2
+
+,
+
+2 3
+
+.
+
+All three curves of Figure 5 follow the same pattern. The overhead factor starts at 1 when m = 1 or n = 1, and the Systematic codes become simple replication/parity codes with perfect performance. Then the factor increases with n until n reaches roughly twenty at which point it levels out until n increases to roughly 100. At that point, the factor starts to decrease as n increases, and it appears that it indeed goes to one as n gets infinitely large.
+
+Although we only test three rates, it certainly appears
+
+that the overhead factor grows as the rate approaches zero.
+
+This is intuitive. At one end, any code with a rate of
+
+one will have an overhead factor of one. At the other,
+
+consider a one-level Systematic code with n = 3 and
+
+m = ∞. There are only seven combinations of the left
+
+nodes to which a right node may be connected. Therefore,
+
+the
+
+right
+
+nodes
+
+will
+
+be
+
+partitioned
+
+into
+
+at
+
+most
+
+m 7
+
+groups,
+
+where each node in the group is equivalent. In other words,
+
+any download sequence that contains more than one block
+
+from a node group will result in overhead. Clearly, this
+
+argues for a higher overhead factor.
+
+Challenge for the Community: The shape of the curves in Figure 5 suggests that there is a lower bound for overhead factor as a function of n and m (or alternatively as a function of n and R). It is a challenge to the theoretical community to quantify this lower bound for finite values of n and m, and then to specify exact methods for generating optimal or near optimal codes.
+
+Distributions: So that others may take advantage of our simulations, we publish the Λ and P values used to generate the codes depicted in Figure 5 at http://www. cs.utk.edu/˜plank/ldpc.
+
+6.2 Question 2
+Are the three types of codes equivalent, or do they perform differently?
+
+They perform differently. Figure 6 shows the best per-
+
+forming of the three different codes for R
+
+=
+
+1 2
+
+(the other
+
+rates are similar [PT03], and are omitted for brevity). For
+
+small values of n, Systematic codes perform the best.
+
+However, when n roughly equals 100, the IRA codes start
+
+to outperform the others, and the Gallager codes start to
+
+outperform the Systematic codes. This trend continues to
+
+the maximum values of n.
+
+Systematic
+
+Gallager
+
+1.15
+
+IRA
+
+1.10
+
+1.05
+
+1.00 1
+
+10
+
+100
+
+1000
+
+10000
+
+n
+
+Figure
+
+6:
+
+Comparing
+
+methods,
+
+R
+
+=
+
+1 2
+
+100000
+
+Unfortunately, since the theoretical work on LDPC codes describes only asymptotic properties, little insight can be given as to why this pattern occurs. One curious point is the relationship between one-level Systematic codes and Gallager codes. It is a trivial matter to convert a one-level Systematic code into an equivalent Gallager code by adding m left nodes, ln+1, . . . , ln+m to the Systematic graph, and m edges of the form (ln+i, ri) for 1 ≤ i ≤ m. This fact would seem to imply that overhead factors for one-level Systematic codes would be similar to, or worse than Gallager codes. However, when n < 50, the one-level Systematic codes vastly outperform the others; the Gallager codes perform the worst. To explore this point, we performed this conversion on a Systematic graph where n = m = 20, and the overhead factor is 1.16. The node cardinalities of the equivalent Gallager graph were then used to generate values of Λ and P , which in turn were used to generate 500 new Gallager graphs with the exact same node cardinalities. The minimum overhead factor of these graphs was 1.31 (the average was 1.45, and the maximum was 1.58). This suggests that for smaller graphs, perhaps Λ and P need to be augmented with some other metric so that optimal codes can be generated easily.
+Challenge to the community: A rigorous comparison of the practical utility of the three coding methods needs to be performed. In particular, a computationally attractive method that yields (near) optimal codes for fi-
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+nite n would be exceptionally useful. This is highlighted by the fact that one-level Systematic codes vastly outperform Gallager codes for small n, even though equivalent Gallager codes may be constructed from the Systematic codes.
+
+6.3 Question 3
+How do the published distributions fare in producing good codes for finite values of n?
+
+In
+
+the
+
+next
+
+two
+
+graphs,
+
+we
+
+limit
+
+our scope to
+
+R
+
+=
+
+1 2
+
+,
+
+as the results for the other two rates are similar. First, we
+
+present the performance of the three code generation meth-
+
+ods for the three coding methods for small n in Figure 7.
+
+As in the other graphs, the best performing instance for
+
+each value of n is plotted.
+
+Monte Carlo 1.25
+
+Published
+
+Derived
+
+1.20
+
+1.15
+
+1.10
+
+Overhead Factor
+
+1.05
+
+1.00
+
+150 100 50 0 150 100 50 0 150 100 50 0
+
+n
+
+n
+
+n
+
+Systematic
+
+Gallager
+
+IRA
+
+Figure 7: Performance of various codes for n ≤ 150 when
+
+R
+
+=
+
+1 2
+
+.
+
+In all coding methods, the Monte Carlo generation method produces better codes than the published distributions when n is roughly less than 15. At that point, the exponential number of possible Λ/P combinations drastically reduces the effectiveness of Monte Carlo code generation. From that point until n is in the high doubledigits, the performance of the published codes is worse than the derived codes. As n grows past 100, the derived and published codes perform roughly equally. Thus, for small n(< 100), the answer to Question 3 is clearly inadequately.
+Figure 8 addresses which published distributions perform well in generating small codes. Each graph plots four curves – the best codes generated from distributions designed for the particular code and rate, the best codes generated from distributions designed for the particular code,
+
+Same Code, Same Rate Same Code, Different Rate
+
+Different Code Best instance
+
+1.20
+
+Overhead Factor
+
+1.15
+
+1.10
+
+1.05
+
+1.00
+
+150
+
+100
+
+50
+
+0
+
+150
+
+50
+
+0
+
+150
+
+0
+
+n
+
+n
+
+n
+
+Systematic
+
+Gallager
+
+IRA
+
+Figure 8: Performance of published distributions for n ≤
+
+150
+
+when
+
+R
+
+=
+
+1 2
+
+.
+
+100 10000
+
+100000 100
+10000 50
+1000
+
+but not for the rate, the best codes generated from distributions designed for other codes, and a reference curve showing the best codes from Figure 7.
+In all three graphs, the worst codes were generated from distributions designed for the particular code, but for a different rate. In both the Gallager and IRA codes, the best codes were generated from distributions designed for the code and rate; and in the Systematic codes, the best codes were clearly derived from distributions designed for other codes. Clearly, the derivation of good Systematic codes for small n is not well understood at this point.
+
+1.25
+
+Syst. Published Syst. Derived
+1.15
+
+Gallager Published Gallager Derived
+1.10
+
+IRA Published IRA Derived
+
+Overhead Factor
+
+1.20
+1.10 1.15
+1.05 1.10
+1.05
+1.05
+
+1.00
+
+1.00
+
+1.00
+
+100000
+
+10000
+
+1000
+
+100
+
+100000
+
+1000
+
+100
+
+100
+
+n Rate = 1/3
+
+n Rate = 1/2
+
+n Rate = 2/3
+
+Figure 9: Performance of all codes and rates for large n.
+
+For large n, we plot the best published and derived codes for all rates and coding methods in Figure 9. Note that in each graph, the y-axis has a different scale. There are several interesting features of these graphs. In the
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+middle graph, where R
+
+=
+
+1 2
+
+,
+
+the
+
+published
+
+distributions
+
+perform best relative to the derived distributions. This is
+
+not surprising, since the bulk of the published distribu-
+
+tions (46 of the 80) are for R =
+
+1 2
+
+.
+
+For R
+
+=
+
+2 3
+
+,
+
+all
+
+three coding methods perform similarly in their best in-
+
+stances.
+
+For
+
+R
+
+=
+
+1 3
+
+,
+
+it
+
+is
+
+not
+
+surprising
+
+that
+
+the
+
+published
+
+distributions fare poorly in relation to the derived distribu-
+
+tions, since only 10 of the 80 published distributions are
+
+for R
+
+=
+
+1 3
+
+,
+
+and
+
+these
+
+are
+
+only
+
+for
+
+Gallager
+
+codes.
+
+It is
+
+interesting that given this fact, the derived IRA codes sig-
+
+nificantly outperform the others. It is also interesting that
+
+the
+
+published IRA
+
+codes
+
+for
+
+R
+
+=
+
+2 3
+
+perform so
+
+poorly in
+
+comparison to the derived codes.
+
+As in the results on small n, in analyzing which dis-
+
+tributions produce good graphs for large n, we found that
+
+for IRA and Gallager codes, the best codes are produced
+
+by distributions designed specifically for the code and rate.
+
+For Systematic codes, the best codes are produced by dis-
+
+tributions for other codes. We omit the data here for
+
+brevity. It may be obtained in [PT03].
+
+6.4 Question 4
+Is there a great deal of random variation in code generation from a given probability distribution?
+
+Obviously, this depends on the distribution, and how the distribution is utilized. In Table 2, we select six probability distributions in order to test their variation in code generation. For each of the distributions, we generated over 1000 random codes for n = 125, 000, and present a digest of the results in Figure 10. For each distribution we draw a Tukey plot [Tuf83], which shows the quartiles for the data and its mean.
+
+Source
+S99 S99* RU03 U03 R03 L97A
+
+Code
+Gallager Gallager Gallager Gallager
+IRA Syst.
+
+Rate Designed
+2/3 2/3 1/2 1/2 1/2 1/2
+
+Rate Used 2/3 1/2 1/2 1/2 1/2 2/3
+
+Λ range
+2 2 2-13 2-100 2-100 3-1M
+
+P range
+6 6 7 10-11 8 11-30K
+
+Table 2: Range of code generation for given probability distributions.
+
+The first distribution, S99, from [Sho99], is for a regular graph, where the left nodes each have two outgoing edges, and the right nodes have six incoming edges. As such, we expect little random deviation, which is borne out by the experiments. (We do expect some, because of the random nature of graph generation and of the downloading simulation).
+
+Overhead Factor
+
+2.0
+
+Max
+
+1.9
+
+3rd Quartile
+
+1.8
+
+Mean
+
+1.7
+
+Median
+
+1st Quartile
+
+1.6
+
+Max
+
+1.5
+
+1.4
+
+1.3
+
+1.2
+
+1.1
+
+1.0
+
+L97A R03 U03 RU03 S99* S99
+
+Figure 10: The variation in code generation for six selected distributions, n = 125, 000.
+
+S99* uses the same distribution, but for a different rate.
+
+As described in Section 4, when the total number of edges
+
+generated by the left and right nodes do not match, edges
+
+are added to or subtracted from random nodes until they
+
+do match. Thus, even a regular distribution such as this
+
+one, when employed for the wrong rate as in this instance,
+
+can generate a wide variety of graphs. It is interesting that
+
+this distribution produces better codes for the wrong rate,
+
+both in the best and median case, than the rate for which it
+
+is developed. It is also interesting that this regular graph,
+
+which theoretically should achieve an asymptotic overhead
+
+factor of
+
+1 0.68731
+
+=
+
+1.45 for
+
+R
+
+=
+
+2 3
+
+[Sho99], in actuality
+
+achieves a far better one for both rates.
+
+The next two distributions, RU03 and U03, are for Gal-
+
+lager
+
+graphs
+
+with
+
+rate
+
+1 2
+
+.
+
+RU03
+
+is
+
+right
+
+regular,
+
+meaning
+
+all right-hand nodes have the same number of incoming
+
+edges, which is a desirable property, because it simplifies
+
+code analysis and distribution generation [Sho99, RU03].
+
+U03 is nearly right regular. Both distributions generate
+
+codes with a large spread in performance; however, both
+
+have the desirable quality that their medians are very close
+
+to their minimum values. In other words, one does not
+
+have to generate many codes to get one that performs op-
+
+timally or near optimally.
+
+The next distribution, for IRA graphs, is also right regular, but has far less desirable generation properties, as it has a very large range of overhead factors, and its median is extremely high. The last distribution, for two-level Systematic codes, is one whose nodes have an exceptionally large range of cardinalities – over a million for left nodes (although with n = 125, 000, the range is reduced to 32,769), and over 30,000 for right nodes. Interestingly, though, its range of overhead factors is less than R03, although it is still a large range.
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+While more distributions can be displayed, the bottom line remains the same — some distributions yield good codes with only a few iterations of code generation. Others require a longer time to generate good codes. Clearly, one must generate multiple instances of codes to find one that performs well for given values of n and m.
+Challenge To The Community: Besides asymptotic performance, some measure of how quickly a distribution yields good codes in practice should be developed. While distributions such as R03 for IRA graphs and L97A for Systematic graphs do produce excellent codes, they only do so in relatively rare cases, and thus are difficult to utilize.
+
+6.5 Question 5
+
+How do the codes compare to Reed-Solomon coding?
+
+The Digital Fountain authors have demonstrated that
+
+Tornado codes greatly outperform Reed-Solomon codes
+
+for R
+
+=
+
+1 2
+
+and large n [BLMR98].
+
+On the other end of
+
+the spectrum, the implementers of OceanStore, a highly
+
+distributed file system, selected Reed-Solomon coding for
+
+their erasure-based archival service, employing small val-
+
+ues
+
+of
+
+n
+
+and
+
+a
+
+rate
+
+of
+
+1 4
+
+[RWE+01].
+
+In
+
+the
+
+middle
+
+of
+
+these
+
+two extremes resides a gray area, which is exacerbated by
+
+the fact that the literature on LDPC codes is heavy on the-
+
+ory and light on practice.
+
+Answering this question thoroughly is beyond the scope
+
+of this paper. However, as a “teaser,” we present example
+
+results of a basic simulation, where timings of wide-area
+
+downloads to a client (Dell Precision 330, with an Intel
+
+Pentium 4 processor) on a wireless network were com-
+
+bined with timings of the processor reconstructing those
+
+blocks using both LDPC codes, and a public-domain im-
+
+plementation of Reed-Solomon codes [Pla03]. These tim-
+
+ings were used to calculate the average time to download a
+
+1 GB file using Reed-Solomon coding and the three kinds
+
+of LDPC codes. The results are plotted in Figure 11.
+
+For each value of n, we break the file into n equal size
+
+blocks, and calculate the appropriate number of coding
+
+blocks. We then use our timings and best LDPC codes to
+
+calculate the average download times given that the down-
+
+loaded blocks arrive in random order. We plot results for
+
+all n ≤ 150. We include the “perfect” download time in
+
+these graphs – this is the optimal time to download the file
+
+without coding (or erasures).
+
+For all rates, Reed-Solomon coding outperforms the
+
+LDPC codes for n < 26 for R =
+
+small values
+
+1 2
+
+,
+
+and
+
+n
+
+<
+
+of 12
+
+n (n for R
+
+< =
+
+36 for R
+
+2 3
+
+).
+
+This
+
+=
+
+1 3
+
+,
+
+is due
+
+to the perfect overhead factor of Reed-Solomon codes as
+
+compared to the LDPC codes. However, the performance
+
+of Reed-Solomon coding rapidly deteriorates because of its expensive arithmetic operations and its O(n3) matrix
+
+Reed-Solomon
+
+Systematic
+
+Perfect
+
+IRA
+
+Gallager
+
+Rate = 1/3
+
+Rate = 1/2
+
+Rate = 2/3
+
+1300
+
+1300
+
+1300
+
+1200
+
+1200
+
+1200
+
+Seconds
+
+1100
+
+1100
+
+1100
+
+1000
+
+1000
+
+1000
+
+900
+
+900
+
+900
+
+150 100 50 0 150 100 50 0 150 100 50 0
+
+n
+
+n
+
+n
+
+Figure 11: Example comparison of LDPC and ReedSolomon codes downloading a 1 GB file to a client on a wireless network.
+
+inversion. Focusing solely on the LDPC codes, the Systematic codes outperform the IRA codes, which in turn outperform the Gallager codes. This is due to the fact that the underlying graphs have fewer edges – the Gallager graphs have m more left nodes than the others, and the IRA graphs have an extra 2m − 1 edges for the accumulator nodes.
+The complete simulation (in [PT03]) gives the following insights with regard to Question 5: As download speeds improve, rates increase, and n increases, LDPC codes significantly outperform Reed-Solomon codes. However, when n is small and the download speeds are slow, Reed-Solomon coding can significantly outperform LDPC codes.
+Challenge to the Community: The simulation used to produce this example was simplistic in that it employed simple equations based on average values. In reality, download speeds can vary greatly from block to block, following non-trivial probability distributions. A better analysis of Question 5 needs to be performed, which either performs actual downloads of data on the wide-area network, or employs download traces to simulate downloads. Additionally, Cauchy Reed-Solomon coding [BKK+95] should be evaluated, as it performs arithmetic operations in GF (21) for all values of n and m.
+7 Conclusion
+This paper has performed a practical exploration of the utility of LDPC codes for wide-area network storage applications. While the asymptotic properties of these codes have been well studied, we have attempted to illuminate their performance for finite systems by addressing five
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+questions, whose answers we summarize below:
+
+Question 1: The overhead factor of LDPC codes, while
+
+asymptotically approaching 1, reaches its maximum value
+
+when n is in the range of 10 to 100. This maximum in-
+
+creases as the rate decreases, roughly summarized as 1.20
+
+for
+
+R=
+
+1 3
+
+,
+
+1.15
+
+for
+
+R=
+
+1 2
+
+and 1.10 for
+
+R=
+
+2 3
+
+.
+
+Question 2: The three types of codes perform differ-
+
+ently. Systematic codes perform the best for n < 100.
+
+IRA codes perform the best for n ≥ 100.
+
+Question 3: Codes derived adaptively from other codes
+
+perform better than those derived from published distribu-
+
+tions. Systematic codes in particular do not perform well
+
+from the distributions designed for them.
+
+Question 4: Some distributions produce codes that
+
+vary widely in performance. Others produce codes that
+
+are more consistent with one another. Properties like right-
+
+regularity do not appear to make a difference.
+
+Question 5: While there are practical situations where
+
+Reed-Solomon coding clearly outperforms LDPC codes
+
+for small values of n, as n grows, the LDPC codes vastly
+
+outperform Reed-Solomon coding.
+
+From these questions, we can draw the following bottom
+
+line conclusions:
+
+Conclusion #1: While Λ and P suffice for deriving
+
+codes with asymptotically good performance, their use as
+
+generators of finite codes and indicators of finite code per-
+
+formance is lacking. In the course of this research, we
+
+have compiled a mass of codes which perform well, but
+
+these have come about by brute force Monte Carlo tech-
+
+niques. The theoretical community is challenged to derive
+
+more effective techniques for generating finite codes.
+
+Conclusion #2: Clearly, LDPC codes, even subopti-
+
+mal ones, are very important alternatives to Reed-Solomon
+
+codes. A more thorough analysis comparing the perfor-
+
+mance of these two types of codes needs to be performed,
+
+with the goal of providing storage system users with rec-
+
+ommendations for the optimal coding technique, value
+
+of n, and value of m, given their system’s performance
+
+and failure parameters.
+
+One limitation of the LDPC codes in this paper is that
+
+they have not been designed to adjust to different rates. It
+
+is easy to envision a situation where a file already broken
+
+into n blocks is spread among n + m storage servers, and
+
+then m new servers are added to the system. If the cod-
+
+ing method that stores the original n + m blocks can adapt
+
+efficiently
+
+to
+
+a
+
+rate
+
+of
+
+n n+m+m
+
+,
+
+then
+
+adding
+
+new
+
+coding
+
+blocks to the system is a straightforward and efficient op-
+
+eration. However, if the coding technique must be altered
+
+to accommodate the new rate, then old coding blocks must
+
+be discarded, and new ones calculated in their place, which
+
+will be inefficient. Reed-Solomon codes have the feature
+
+that they adapt to any rate, although the same inefficien-
+
+cies pointed out by section 6.5 apply. New codes called LT codes and Raptor codes, that adapt to any rate with optimal asymptotic performance have been developed by Luby and Shokrollahi [Lub02, Sho03]. It is a subject of future work to perform a practical analysis of these codes.
+
+References
+
+[ASE92] N. Alon, J. W. Spencer, and P. Erdos. The Probabilistic Method. John
+
+Wiley & Sons, New York, 1992.
+
+[AW03] M. S. Allen and R. Wolski. The Livny and Plank-Beck Problems:
+
+Studies in data movement on the computational grid. In SC2003. [BKK+95] J. Blomer et al. An XOR-based erasure-resilient coding scheme. Tech.
+
+Rep. TR-95-048, Int. Computer Science Inst., August 1995.
+
+[BLM99] J. W. Byers et al. Accessing multiple mirror sites in parallel: Using
+
+tornado codes to speed up downloads. In IEEE INFOCOM, 1999.
+
+[BLMR98] J. Byers, M. Luby et al. A digital fountain approach to reliable distri-
+
+bution of bulk data. In ACM SIGCOMM ’98, pages 56–67, 1998.
+
+[BM93] W. A. Burkhard and J. Menon. Disk array storage system reliability.
+
+In 23rd Int. Symp. on Fault-Tolerant Comp., pages 432–441, 1993. [CLG+94] P. M. Chen et al. RAID: High-performance, reliable secondary stor-
+
+age. ACM Computing Surveys, 26(2):145–185, June 1994. [DPT+02] C. Di et al. Finite-length analysis of low-density parity-check codes
+
+on the binary erasure channel. IEEE Trans. Infor. Thy., 48:1570–1579,
+
+2002.
+
+[Gal63] R. G. Gallager. Low-Density Parity-Check Codes. MIT Press, Cam-
+
+bridge, MA, 1963.
+
+[JKM00] H. Jin, A. Khandekar, and R. McEliece. Irregular repeat-accumulate
+
+codes. In 2nd Int. Symp. on Turbo codes and Related Topics, 2000. [KBC+00] J. Kubiatowicz et al. Oceanstore: An architecture for global-scale
+
+persistent storage. In Proceedings of ACM ASPLOS. Nov. 2000. [LMS+97] M. Luby, M. Mitzenmacher, A. Shokrollahi, D. Spielman, and V. Ste-
+
+mann. Practical loss-resilient codes. In 29th Annual ACM Symposium
+
+on Theory of Computing,, pages 150–159, 1997.
+
+[LMS98] M. Luby, M. Mitzenmacher, and A. Shokrollahi. Analysis of random
+
+processes via and-or tree evaluation. In 9th Annual ACM-SIAM Sym-
+
+posium on Discrete Algorithms, January 1998.
+
+[LS00] W. Litwin and T. Schwarz. Lh*rs: a high-availability scalable dis-
+
+tributed data structure using Reed Solomon codes. In 2000 ACM SIG-
+
+MOD, pages 237–248, 2000.
+
+[Lub02] M. Luby. LT codes. In IEEE Symp. on Found. of Comp. Sci., 2002.
+
+[McE00] R. J. McEliece. Achieving the Shannon Limit: A progress report.
+
+Plenary Talk, 38th Allerton Conference, October 2000.
+
+[Pla96] J. S. Plank. Improving the performance of coordinated checkpointers
+
+on networks of workstations using RAID techniques. In 15th Sympo-
+
+sium on Reliable Distributed Systems, pages 76–85, October 1996.
+
+[Pla03] J. S. Plank. GFLIB - C procedures for Galois Field arithmetic and
+
+Reed-Solomon coding. http://www.cs.utk.edu/˜plank/
+
+plank/gflib/index.html, 2003.
+
+[PT03] J. S. Plank and M. G. Thomason. On the practical use of LDPC erasure
+
+codes for distributed storage applications. Technical Report CS-03-
+
+510, University of Tennessee, September 2003.
+
+[RGCV03] A. Roumy et al. Design methods for irregular repeat accumulate
+
+codes. In IEEE Int. Symp. on Information Theory, Yokohoma, 2003.
+
+[RU03] T. Richardson and R. Urbanke. Modern coding theory. Draft from
+
+lthcwww.epfl.ch/papers/ics.ps, August 2003. [RWE+01] S. Rhea et al. Maintenance-free global data storage. IEEE Internet
+
+Computing, 5(5):40–49, 2001.
+
+[Sho99] M. A. Shokrollahi. New sequences of linear time erasure codes ap-
+
+proaching the channel capacity. In Proceedings of AAECC-13, Lecture
+
+Notes in CS 1719, pages 65–76, New York, 1999. Springer-Verlag.
+
+[Sho00] M. A. Shokrollahi. Codes and graphs. Lecture Notes in Computer
+
+Science, 1770, 2000.
+
+[Sho03] A. Shokrollahi. Raptor codes. Technical Report DR2003-06-001, Dig-
+
+[SS00]
+
+ital Fountain, 2003. M. A. Shokrollahi and R. Storn. Design of efficient erasure codes with
+
+differential evolution. In IEEE Int. Symp. on Infor. Theory, 2000.
+
+[Tuf83] E. R. Tufte. The Visual Display of Quantitative Information. Graphics
+
+Press, Cheshire, Connecticut, 1983.
+
+[Urb03] R. Urbanke et al. LdcpOpt - a fast and accurate degree distribution
+
+optimizer for LPDC ensembles. http://lthcwww.epfl.ch/
+
+research/ldpcopt/index.php, 2003.
+
+[WK02] H. Weatherspoon and J. Kubiatowicz. Erasure coding vs. replication:
+
+A quantitative comparison. 1st Int. Work. on Peer-to-Peer Sys., 2002.
+
+[WK03] S. B. Wicker and S. Kim. Fundamentals of Codes, Graphs, and Itera-
+
+tive Decoding. Kluwer Academic Publishers, Norwell, MA, 2003.
+
+[ZL02] Z. Zhang and Q. Lian. Reperasure: Replication protocol using erasure-
+
+code in peer-to-peer storage network. In 21st IEEE Symposium on Re-
+
+liable Distributed Systems (SRDS’02), pages 330–339, October 2002.
+
+Proceedings of the 2004 International Conference on Dependable Systems and Networks (DSN’04) 0-7695-2052-9/04 $ 20A.u0th0o©riz2ed00lic4eInEsEedEuse limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:08:18 UTC from IEEE Xplore. Restrictions apply.
+
+

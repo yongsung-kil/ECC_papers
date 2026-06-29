@@ -1,0 +1,853 @@
+ISITA2014, Melbourne, Australia, October 26-29, 2014
+
+Symbol-Level Synchronization Using Probability Lookup-Table for IDS Error Correction
+
+Haruhiko Kaneko Dept. Computer Science, Graduate School of Information Science and Engineering
+Tokyo Institute of Technology Meguro-ku, Tokyo 152–8552 Email: hkaneko@fuji.cs.titech.ac.jp
+
+Abstract—Insertion/Deletion/Substitution (IDS) error correction will become important for future high-density storage devices, e.g., bit-patterned media. For IDS error correction, concatenated codings of an outer LDPC code and an inner marker code have been proposed. To improve the synchronization capability, marker decoder can employ symbol-level synchronization (SLS) with a large symbol size, while the computational time complexity of the SLS increases exponentially with the symbol size. This paper proposes an SLS using a probability lookup table to reduce the complexity. Probabilities in the table are precomputed for given channel and code parameters, and computationally intensive calculations of the SLS are replaced by table lookups. The proposed method is applicable to both single-path and multipath decodings. The bit error rate (BER) is evaluated for SLS of symbols sizes bS = 1, 2, 4, and 8 bits, and it is confirmed that larger symbol size gives lower BER.
+I. INTRODUCTION
+High-density storage devices and high-speed communication systems often require precise synchronization in data transmission. For example, in write operation of bit-patterned media (BPM), write signal and position of bit island should be synchronized precisely because magnetic grains of the BPM are discontiguous to improve the density. The precise synchronization, however, is difficult because of head vibrations, disk speed variations, and jitter in internal clock [5]. Missynchronization causes insertion/deletion errors in data, which cannot be efficiently corrected by conventional random bit/symbol error correcting codes. Thus these devices/systems require error control coding capable of correcting insertion and deletion errors as well as substitution (random bit) errors.
+To efficiently correct insertion/deletion/substitution (IDS) errors, several coding methods have been proposed. Levenshtein’s code [1] can correct single IDS errors by using a constraint on the weighted sum of codeword bits. For multiple IDS error correction, concatenated codings are extensively studied, where the outer coding is by random error correcting code, e.g., LDPC code and RS code, and the inner coding is marker coding [3], [6] or watermarking [2]. The decoding of inner code employs forward-backward (FB) algorithm to calculate the likelihood of codeword bit/symbol.
+The FB algorithms can be classified into two classes: bit level synchronization (BLS) and symbol level synchronization (SLS), where symbol is a group of bS bits. While the SLS provides much lower bit error rate (BER) compared to the BLS, the computational time complexity of the SLS grows exponentially with symbol size bS, and thus the SLS with a large bS, e,g, bS ≥ 4, has been generally impractical for IDS channels. Table I lists examples of conventional concatenated coding for IDS and deletion channels. For IDS channel, Davey
+
+and MacKay showed a BLS [2], and Wang et al. proposed an SLS [3] with relatively small bS, i.e., bS = 2 and 3. For a segmented deletion channel, Wang et al. presented an SLS [4] with larger symbol size, e.g., bS = 16. To the author’s knowledge, however, SLS with larger symbol size, bS ≥ 4, for IDS channel has not been evaluated.
+To reduce the computational time complexity of the SLS with larger symbol size bS, this paper presents an FB algorithm which uses a probability lookup table. The table stores probabilities which are computationally intensive to be calculated. Since the probabilities are uniquely determined by the channel and inner coding parameters, the table can be reused until the parameters are changed. As shown in Fig. 1, the encoding/decoding flow of the proposed method is the same as that of the conventional concatenated codings except that the SLS uses the lookup table. The lookup table can be used in both single-path (SP) decoding (inner code decoding followed by outer code decoding) and multi-path (MP) decoding (iterative decoding between inner and outer codes).
+This paper is organized as follows. Section II presents fundamentals of marker coding. Section III shows SLS using probability lookup table. Section IV evaluates the decoded BER, execution time of SLS, and size of lookup table, and Section V concludes the paper.
+II. PRELIMINARIES
+A. IDS Channel [2]
+This paper assumes IDS channel presented in [2], where the state transition diagram of the channel is given by Fig. 2.
+
+TABLE I. COMPARISON WITH RELATED WORKS.
+
+Method Channel model Inner coding Synchronization Typical symbol size (bits) Outer LDPC code
+
+[2] IDS Watermark BLS
+1 Nonbinary
+
+[3] IDS Marker SLS ≤3 Binary
+
+[4] Segmented del.
+Marker SLS
+8, 12, 16 Binary
+
+This work IDS
+Marker SLS ≤8
+Nonbinary
+
+Fig. 1. Encoding/decoding flow using lookup table for SLS.
+
+Copyright (C) 2014 by IEICE
+
+531
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:03 UTC from IEEE Xplore. Restrictions apply.
+
+ISITA2014, Melbourne, Australia, October 26-29, 2014
+
+Fig. 2. State transition diagram of IDS channel [2].
+
+TABLE II.
+
+COMBINATIONS IDS ERRORS WITH MAXIMUM INSERTION LENGTH lI [2].
+
+Number of errors
+
+Insertions Deletions Substitutions
+
+0
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+1
+
+-
+
+1
+
+0
+
+0
+
+1
+
+0
+
+1
+
+1
+
+1
+
+-
+
+...
+
+...
+
+...
+
+lI
+
+0
+
+0
+
+lI
+
+0
+
+1
+
+lI
+
+1
+
+-
+
+Probability
+Pt(1 − Ps) Pt Ps Pd
+aI PiPt(1 − Ps) aI PiPtPs aI PiPd ...
+aI PilI Pt(1 − Ps) aI PilI PtPs aI PilI Pd
+
+For the t-th input ut ∈ Z2 = {0, 1} of the channel, a random bit is inserted before ut with probability Pi, the input bit is deleted with probability Pd, and the bit is transmitted with probability Pt = 1 − Pi − Pd. In the transmission of ut, the bit is substituted with probability Ps. Then, the state moves to the next channel input ut+1. The channel is memoryless in a sense that the probabilities of error events on ut do not depend on error events on the other input bits, and thus bit-level FB algorithm is applicable.
+For computational convenience in the FB algorithm, we assume that the maximum insertion length is lI for each channel input bit, that is, we consider 3(lI +1) combinations of transmission events listed in Table II, where aI = 1/(1 − PilI ) is a coefficient to adjust the insertion error probabilities. Due to the coefficient aI , the summation of the probabilities in the last column of Table II is one.
+
+B. Marker coding
+Information word is encoded as a codeword v by an outer random error correcting code CE (e.g., LDPC code), and then marker w of length nS bits is inserted into the every d bits of the codeword v. For simplicity, we assume that the length of v is a multiple of d. Structure of the codeword with markers is given as follows:
+u = (u0, u1, . . . , un−1) = (v0, w, v1, w, . . . , vN−2, w, vN−1), (1)
+where vi is a subword of length d bits, w = (w0, . . . , wnS−1) is a marker of length nS bits, ui ∈ Z2, and n = dN + nS(N − 1). Here, binary vector (v0, · · · vN−1) = v of length dN corresponds to a codeword of CE. The overall code rate is R = RERS, where RE is the code rate of CE and, RS = dN/n is that of the marker coding.
+C. Notation
+Let [a, b] be subset of integers defined as [a, b] = { i |a ≤ i ≤ b}. The set of all vectors of length b over Z2 is denoted
+
+by n,
+
+vZe2bc.toFro[rv{]aji
+
+binary vector is defined as
+
+v
+
+=
+
+(v0, v1, . . . , vn−1)
+
+of
+
+length
+
+[v]ji =
+
+(vi, vi+1, . . . , vj) ε
+
+(0 ≤ i ≤ j ≤ n − 1) (otherwise)
+
+,
+
+where ε is the vector of length 0. The length of vector v is denoted as |v|.
+
+Subsets of bit indices in u of Eq.(1) are defined as follows. Let Tj be the set of bit indices in u corresponding to the j-th bit of vi for i ∈ [0, N − 1], given as follows:
+
+Tj = { t | t ≡ j(mod d + nS), t ∈ [0, n − 1]},
+
+where j ∈ [0, d − 1]. Let TjM be the set of bit indices in u corresponding to the j-th bit of markers, w, given as follows:
+
+TjM = { t | t ≡ d + j(mod d + nS), t ∈ [0, n − 1]},
+
+where to the
+
+j ∈ [0, nS marker bits
+
+− is
+
+1]. The set denoted as
+
+of bit TM =
+
+i∪ndniSc−es1
+j=0
+
+corresponding TjM . For T ⊂
+
+[0, n − 1] and t ∈ [0, n − 1], addition is defined as
+
+T t = {t |t = i + t, i ∈ T }.
+
+Since the inner marker decoder is given values of marker
+
+bits,
+
+the
+
+prior
+
+probability 
+
+of
+
+ut
+
+is
+
+given
+
+as
+
+ 1/2 (t ∈/ T M )
+
+Pr(ut
+
+= x) = 
+
+1 0
+
+(t ∈ TjM , x = wj) . (t ∈ TjM , x = wj)
+
+Here, it is assumed that values of codeword bits of CE are equiprobable, and the inner decoder does not consider the
+dependency of codeword bits of the outer code CE. Let g1(x; y) Pr(y|x) be the probability that channel input bit x is received as vector y = (y0, . . . , yl−1) of length l ≥ 0 ∗, defined as follows:
+
+g1(x; y) = Qins(l−1)PtQsub(x; yl−1)+Qins(l)Pd,
+
+where
+
+
+
+1
+
+Qins(l) = 
+
+aI Pil(1/2)l 0
+
+(l = 0)
+(1 ≤ l ≤ lI ) , (otherwise)
+
+and
+
+{
+
+Qsub(x; y) =
+
+1 − Ps Ps
+
+(x = y) (x = y)
+
+.
+
+D. Bit-level synchronization
+
+The BLS calculates the likelihood Pr(r|ut = x) for a given received word r = (r0, . . . , rn −1). Let Et,s denote an event that t bits are transmitted and s bits are received.
+For t ∈ [1, n − 1] and s ∈ [0, n ], the forward probability α(t, s) Pr([r]0s−1, Et,s) and the backward probability β(t, s) Pr([r]sn −1|Et,s) are calculated as follows:
+
+∑
+
+l∑ I +1
+
+α(t, s) = Pr(ut−1 = x) α(t−1, s−k)g1(x;[r]ss−−1k),
+
+x∈Z2
+
+k=0
+
+(2)
+
+∑
+
+l∑ I +1
+
+β(t, s) = Pr(ut = x) β(t+1, s+k)g1(x;[r]ss+k−1), (3)
+
+x∈Z2
+
+k=0
+
+∗if the length is l = 0, then y is ε.
+
+Copyright (C) 2014 by IEICE
+
+532
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:03 UTC from IEEE Xplore. Restrictions apply.
+
+ISITA2014, Melbourne, Australia, October 26-29, 2014
+
+Fig. 3. Symbol sizes of outer code CE and SLS.
+
+where the initial values of α(0, s) are α(0, 0) = 1 and α(0, s) = 0 for s ∈ [1, n ], and those of β(n, s) are β(n, n ) = 1 and β(n, s) = 0 for s ∈ [0, n − 1].
+
+For each bit ut in u corresponding to codeword bit of CE i.e., for each t ∈ [0, n − 1] \ T M , the likelihood is calculated as
+
+∑ n ∑S
+
+Pr(r|ut = x) =
+
+α(t, s)g1(x; [r]ss −1)β(t + 1, s ),
+
+s=0 s =s
+
+where S = min{s + lI + 1, n }.
+
+III. SYMBOL-LEVEL SYNCHRONIZATION
+
+In the following, we assume that the outer code CE is nonbinary (NB) LDPC code over GF(2bE ), and the symbol
+size of SLS is bS bits, where bE|d and bS|bE. That is, each subword vi of Eq.(1) corresponds to DE = d/bE symbols of the outer LDPC code, and also to DS = d/bS symbols of the SLS. One symbol of the NB-LDPC code corresponds to
+B = bE/bS symbols of the SLS. In the SLS, each subword vi in Eq.(1) is divided into DS = d/bS symbols as follows:
+
+vi = (vi0, vi1, . . . , viDS−1), where vij ∈ Z2bS . In the outer NB-LDPC code, each subword vi is divided into DE = d/bE symbols as follows:
+
+vi = (ui0, ui1, . . . , uDi E−1),
+where uji ∈ Zb2E . Relation between a symbol of NB-LDPC code and symbols of SLS is given as
+
+uji = (vijB , vijB+1, . . . , vi(j+1)B−1).
+
+Figure 3 illustrates the relation between subword vi and
+symbols of CE and SLS. The set of bit indices in u of Eq.(1) corresponding to the k-th bit of vij, for i ∈ [0, N − 1] and j ∈ [0, DS − 1], is given as
+
+∪
+
+TkS =
+
+TlbS +k ,
+
+l∈[0,DS −1]
+
+where k ∈ [0, bS − 1].
+The SLS calculates the likelihood Pr(r|vij = x) for a given received word r = (r0, . . . , rn −1), where i ∈ [0, N − 1] and j ∈ [0, DS − 1].
+
+Fig. 4. FB algorithm for symbol-level synchronization.
+
+A. Naive calculation
+
+Since it is assumed that value of a codeword bit is independent from values of other bits, and also error event on a codeword bit is independent from error events on other bits, the forward and backward probabilities are calculated in bit level using Eqs.(2) and (3), respectively. Then the SLS calculates the symbol likelihood as follows:
+
+Pr(r|vij = x)
+
+∑ n ∑S
+
+=
+
+Pr([r]s0−1, Et,s) Pr([r]ss −1|x) Pr([r]ns −1|Et+bS,s )
+
+s=0s =s
+
+∑ n ∑S
+
+=
+
+α(t, s)g(x; [r]ss −1)β(t + bS, s ),
+
+(4)
+
+s=0 s =s
+
+where t = i(d + nS) + jbS, x ∈ Z2bS , g(x; [r]ss −1) Pr([r]ss −1|x), and S = min{s + bS(lI + 1), n }. The value of g(x; [r]ss −1) = g([x]b0S−1; [r]ss −1) is recursively calculated as
+
+g 
+
+([x]bjS
+
+−1
+
+;
+
+[r]ss10 )
+
+=
+
+
+
+I (∑ s0 ,s1 ) g1(xj ;
+
+[r]ss00+i−1)g([x]bjS+−1 1;
+
+[r]ss01+i)
+
+
+
+i=0
+g1 (xbS −1 ;
+
+[r]ss01 )
+
+(j < bS −1) (j = bS −1)
+
+,
+
+(5)
+
+where I(s0, s1) = min{lI + 1, s1 − s0 + 1}.
+Finally, the likelihood of outer codeword symbol uji is approximated using that of SLS symbol as
+
+Pr(r|uji = (x0, . . . , xB−1))
+
+B∏−1 Pr(r|vijB+l = xl),
+l=0
+
+where i ∈ [0, N −1], j ∈ [0, DE −1], and xl ∈ Zb2S . The above likelihood is accurate when bS = bE (i.e., B = 1). Figure 4
+illustrates the above calculation.
+
+Copyright (C) 2014 by IEICE
+
+533
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:03 UTC from IEEE Xplore. Restrictions apply.
+
+ISITA2014, Melbourne, Australia, October 26-29, 2014
+
+B. Calculation using lookup table
+
+The computational time-complexity for calculating g(x; y)
+
+grows exponentially with the symbol size bS, and infeasible for large symbol sizes. To reduce the time-complexity, the values
+
+of g(x; y) can be precomputed for all possible combinations
+
+of x and y, and stored in the probability lookup table, denoted
+
+as follows:
+
+G(x, y) = g(x; y),
+
+where
+
+x
+
+∈
+
+Z2bS
+
+and
+
+y
+
+∈
+
+∪bS (lI
+i=0
+
++1)
+
+Zi2.
+
+The
+
+table
+
+is
+
+uniquely
+
+determined for a given IDS channel, and is stored in the inner
+
+decoder. Using G(x, y), Eq.(4) is rewritten as
+
+∑ n ∑S
+
+Pr(r|vij = x) =
+
+α(t, s)G(x, [r]ss −1)β(t + bS, s ),
+
+s=0 s =s
+(6)
+
+where S = min{s + bS(lI + 1), n }. The recursive calculation
+
+of g(x; y) in Eq.(5) is replaced by a table lookup.
+
+The
+
+number
+
+of
+
+entries
+
+in
+
+G
+
+is
+
+2bS
+
+×
+
+∑bS (lI
+i=0
+
++1)
+
+2i
+
+=
+
+2bS(lI+2)+1 − 2bS , which would be too large for implementa-
+
+tion. To reduce the memory requirement, we confine the range
+
+of length of y as bS −ωd ≤ |y| ≤ bS +ωi, where 0 ≤ ωd ≤ bS
+
+and 0 ≤ GR(x, y
+
+ωi ≤ )=g
+
+bSlI . That is, (x; y), where
+
+rxed∈uceZd2bSlooankdupyta∈ble∪ibis=Sd+bSeω−fii nωeddZa2is.
+
+The values of lookup table G are approximated by GR as
+
+{
+
+G(x, y)
+
+GR(x, y) 0
+
+(bS − ωd ≤ |y| ≤ bS + ωi) (otherwise)
+
+.
+
+Using the reduced lookup table, the number of entry is decreased to
+
+bS∑ +wi
+
+2bS ×
+
+2i = 22bS−wd (2wd+wi+1 − 1).
+
+(7)
+
+i=bS −wd
+
+C. Multi-path decoding
+
+In the concatenated coding, the decoded BER can be
+lowered by employing multi-path (MP) decoding [2], [3], that
+is, by performing the decodings of inner and outer codes
+iteratively. In the MP decoding, the extrinsic information, Pr(vij = x), is fed back from the variable nodes of outer SPA decoder to the inner FB algorithm, where x ∈ Zb2S . To utilize the symbol level extrinsic information, the forward probability α(t, s) and the backward probability β(t, s) are calculated symbol-by-symbol. The forward probability α(t, s) is calculated for t ∈ (T0S bS) ∪ (T M 1) as
+
+α(t, s) =
+
+
+
+
+
+∑
+x∈Z2
+
+Pr(ut−1
+
+=
+
+x)
+
+∑ lI+1
+k=0
+
+α(t−1,
+
+s−k)g1(x;
+
+[r]ss−−1k ) (t ∈ T M
+
+1)
+
+
+
+∑
+x∈Zb2S
+
+Pr(vij
+
+= x)
+
+b∑ S+ωi
+k=bS−ωd
+
+α(t − bS ,
+
+s−k)GR(x, [r]ss−−k1 ) (t ∈ T0S bS)
+
+,
+
+where i = (t − bS)/(d + nS) , j = ((t − bS) mod (d + nS))/bS, α(0, 0) = 1, and α(0, s) = 0 for s ∈ [1, n ]. The
+
+TABLE III. PARAMETERS OF EVALUATED CODES.
+
+Marker interval: d Marker length: nS Number of subwords: N Length of transmitted word: n Code rate of outer code: RE Code rate of inner code: RS Overall code rate: R = RE RS Symbol size of outer code: bE Symbol size of inner code: bS Decoding path: Channel Maximum insertion length: lI
+
+Case 1 32 3 160
+5597 0.84 0.91 0.77 8-bit 1,2,4,8-bit SP, MP IDS channel
+1
+
+Case 2 32 2 512
+17406 0.87 0.94 0.82 8-bit 1,2,4,8-bit SP Deletion (Pi = Ps = 0)
+-
+
+backward probability β(t, s) is calculated for t ∈ T0S ∪ T M as
+
+β(t, s) =
+
+
+
+
+
+∑
+x∈Z2
+
+Pr(ut
+
+=
+
+x)
+
+∑ lI+1
+k=0
+
+β
+
+(t
+
++
+
+1,
+
+s
+
++
+
+k)g1
+
+(x,
+
+[r
+
+]ss+k−1) (t
+
+∈
+
+T
+
+M
+
+)
+
+
+
+∑
+x∈Z2bS
+
+b∑ S+ωi
+
+Pr(vij = x)
+
+β(t+bS, s+k)GR(x, [r]ss+k−1)
+
+k=bS−ωd
+
+(t ∈ T0S)
+
+,
+
+where i = t/(d+nS) , j = (t mod (d+nS))/bS, β(n, n ) = 1, and β(n, s) = 0 for s ∈ [0, n − 1]. Then, the symbol likelihood Pr(r|vij = x) is calculated using Eq.(6).
+
+IV. EVALUATION
+This section evaluates the decoded BER, the size of the reduced lookup table, and execution time of the SLS.
+
+A. Bit error rate
+The BER of the proposed method is evaluated for two cases shown in Table III. In the evaluation, the reduced lookup table is generated with parameters wi = wd = 1 for bS = 2, and wi = wd = 2 for bS = 4 and 8. The outer code is ultra-sparse nonbinary LDPC code over GF(28), and decoding algorithm of the LDPC code is the FFT-SPA.
+Figure 5 presents the BER of Case 1 with substitution error probability PS = 0, where bS = 1, 2, 4, and 8 for the SP decoding, and bS = 8 for the MP decoding. For comparison, the BER of existing method demonstrated in [3] is also plotted. The method uses MP decoding, where the outer coding is by binary irregular LDPC code whose degree distribution is optimized for the MP decoding, and the inner coding is the BLS. It can be observed that the BER decreases with increasing symbol size bS, and also the BER can be lowered by the MP decoding.
+Figure 6 shows the BER for Ps = 5.0 × 10−3. It can be observed that the SLS with large symbol size can reduce the BER also in the channel with substitution errors. Difference of BERs, however, decreases compared to Fig. 5 due to the substitution errors.
+To evaluate the BER for the deletion channel (Pi = Ps = 0), Fig. 7 presents the BER of the proposed coding for Case2, and that of existing coding using 3-bit SLS and irregular binary LDPC code [3]. Similar to the BERs of Case 1, the BER is lowered with increasing SLS symbol size.
+
+Copyright (C) 2014 by IEICE
+
+534
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:03 UTC from IEEE Xplore. Restrictions apply.
+
+1.0e-01 1.0e-02 1.0e-03
+
+SP(bS=1) (BLS)
+
+SP(bS=2) SP(bS=4) SP(bS=8)
+
+MP[3] (BLS)
+
+MP (bS=8)
+
+ISITA2014, Melbourne, Australia, October 26-29, 2014
+
+1.0e-01 1.0e-02 1.0e-03
+
+SP(b S=1) (BLS)
+
+SP(bS=2)
+
+SP(bS=4)
+
+SP (bS=8)
+
+BER
+
+BER
+
+1.0e-04
+
+1.0e-05
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+Pi=Pd (x10-3 )
+
+Fig. 5. BER: Case 1 (Ps = 0).
+
+1.0e-01 1.0e-02 1.0e-03
+
+SP(b S=1) (BLS)
+
+SP(bS=2) SP(bS=4) SP(bS=8)
+MP (bS =8)
+
+BER
+
+1.0e-04
+
+1.0e-04
+
+SP[3] (bS =3)
+
+1.0e-05
+
+4.0
+
+6.0
+
+8.0
+
+1.0
+
+1.2
+
+1.4
+
+1.6
+
+Pd (x10 -3)
+
+Fig. 7. BER: Case 2 (Pi = Ps = 0).
+
+TABLE V. NORMALIZED EXECUTION TIME OF SLS.
+
+bS
+
+2
+
+4
+
+8
+
+FB algorithm Table GR Naive Table GR Naive Table GR Naive
+
+Time
+
+1.00 17.70 1.37 513.90 5.24 (2.2 × 105)
+
+Table V lists the normalized execution time for Case 1 of
+Table III, where the values are normalized to the execution time for bS = 2 with the reduced probability lookup table. The time of the naive SLS for bS = 8 is estimated by a partial execution of the algorithm because of too long execution time.
+
+1.0e-05
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+Pi=Pd (x10-3 )
+
+Fig. 6. BER: Case 1 (Ps = 5.0 × 10−3).
+
+B. Size of reduced lookup table GR
+The memory overhead induced by the reduced lookup table GR is evaluated by the number of entries (i.e., floating numbers) stored in the table. Using the number given by Eq.(7), Table IV lists the number of entries in GR(x, y) for bS = 4 and 8, where 1 ≤ wi = wd ≤ 4. The number of entries is not small, e.g., more than 500K entries for bS = 8 and wi = wd = 2. This memory requirement, however, is comparable to the required memory size of FFT-SPA decoder of NB-LDPC code.
+C. Execution time of SLS
+To compare the time-complexity of the SLS using lookup table with that of naive SLS, execution time is measured by software simulation. Although the time highly depends on source code and compiler optimizations, the values would reflect the time complexity. The program is executed on Intel Xeon E5620 2.4 GHz processor running CentOS-6.5 (64-bit).
+
+TABLE IV. NUMBER OF ENTRIES IN GR(x, y).
+
+wd = wi
+
+bS
+
+1
+
+2
+
+3
+
+4
+
+4
+
+896
+
+1,984
+
+4,064
+
+8,176
+
+8 229,376 507,904 1,040,384 2,093,056
+
+V. CONCLUSION
+For IDS error correction coding, this paper proposed a symbol-level synchronization (SLS) whose symbol size is larger than the conventional methods. To counter the problem of exponential increase of computational time-complexity with symbol size, a probability lookup table is employed in the SLS, where the table stores the probability, Pr(y|x), of transmitted symbol x being received as y in the IDS channel. This paper also showed a reduced probability lookup table to reduce the size of lookup table. The BER is evaluated for the SP and MP decodings with symbol sizes bS = 1, 2, 4, and 8 bits. The results showed that the BER can be lowered by using larger symbol sizes.
+REFERENCES
+[1] V. I. Levenshtein, “Binary Codes Capable of Correcting Deletions, Insertions, and Reversals,” Soviet Physics-Doklady, Vol.10, pp. 707–710, 1966.
+[2] M. C. Davey and D. J. C. MacKay, “Reliable Communication over Channels with Insertions, Deletions, and Substitutions,” IEEE Trans. Information Theory, Vol. 47, No. 2, pp. 687–698, Feb. 2001.
+[3] F. Wang, D. Fertonani, and T. M. Duman, “Symbol-Level Synchronization and LDPC Code Design for Insertion/Deletion Channels,” IEEE Trans. Communications, Vol. 59, No. 5, pp. 1287–1297, May 2011.
+[4] F. Wang, D. Aktas, and T. M. Duman, “On Capacity and Coding for Segmented Deletion Channels,” Proc. 49th Annual Allerton Conf., pp. 1408–1413, Sept. 2011.
+[5] Y. Tang, K. Moon, and H. J. Lee, “Write Synchronization in Bit-Patterned Media,” IEEE Trans. Magnetics, Vol. 45, No. 2, pp. 822–827, Feb. 2009.
+[6] M. Inoue and H. Kaneko, “Adaptive Marker Coding for Insertion/ Deletion/Substitution Error Correction,” IEICE Trans. Fundamentals, Vol. E97-A, No.2, Feb. 2014.
+
+Copyright (C) 2014 by IEICE
+
+535
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:03 UTC from IEEE Xplore. Restrictions apply.
+
+

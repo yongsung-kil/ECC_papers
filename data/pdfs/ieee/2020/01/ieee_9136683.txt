@@ -1,0 +1,572 @@
+Received June 22, 2020, accepted July 2, 2020, date of publication July 8, 2020, date of current version July 21, 2020. Digital Object Identifier 10.1109/ACCESS.2020.3007923
+An Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+JING KANG 1,2, JUN SHE AN1, AND BINGBING WANG 1,2
+1Key Laboratory of Electronics and Information Technology for Space Systems, National Space Science Center, Chinese Academy of Sciences, Beijing 100190, China 2School of Computer Science and Technology, University of Chinese Academy of Sciences, Beijing 100190, China
+Corresponding author: Jing Kang (k_naive@163.com) This work was supported by the Space Science Leading Satellite Project under Project XDA15320100.
+
+ABSTRACT A powerful forward error correction (FEC) scheme based on the serial concatenation of Bose-Chaudhuri-Hocquenghen (BCH) and low-density parity-check (LDPC) codes has been adopted by the second generation digital video broadcast (DVB-S2) standard due to their near Shannon limit performance. This paper proposes an efficient FEC encoder core to support different DVB-S2 codes for variable coding modulation (VCM) schemes of low earth orbit (LEO) satellite-ground communications. By exploring the properties of different concatenated BCH-LDPC codes and reusing the computation units and memories, the compatibility is achieved and the utilization of hardware resources is improved. Besides, parallel computing is performed to speed up the acquisition of check bits, which allows the encoding throughput to be increased. Hardware architecture implementation on Xilinx XC7K325t field programmable gate array (FPGA) shows that the encoding throughput rate of the proposed FEC encoder core can reach 1.19 Gb/s. And the overall data throughput is improved by 30.9% compared with the constant coding modulation (CCM) schemes.
+INDEX TERMS FEC encoder, LDPC, BCH, VCM, satellite-ground communications, FPGA.
+
+I. INTRODUCTION With relative motion between low earth orbit (LEO) satellite and ground station, the communication link budget varies in the transmission window. Conventional transmitting systems with constant coding modulation (CCM) schemes are normally designed based on the worst link budget (maximum distance and worst environmental conditions) to guarantee a desired transmission quality. However, this results in the waste of link resources [1]. To improve the efficiency of satellite-ground communications, variable coding modulation (VCM) schemes have been proposed and studied [2]–[5].
+The second generation digital video broadcast (DVB-S2) standard [5] has adopted a powerful forward error correction (FEC) code based on the serial concatenation of Bose-Chaudhuri-Hocquenghen (BCH) and low-density parity-check (LDPC) codes for VCM transmitting systems. This new FEC structure, coupled with high order modulations, can provide capacity gains of about 30% over the previous digital video broadcast (DVB-S) standard [6], where
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Yiming Huo .
+
+LDPC codes play a fundamental role in the performance improvement. Nevertheless, the high-speed requirements, long block lengths and adaptive encoding defined in each VCM mode present complex challenges on the implementation of an encoder fully compliant with all code configurations. On the other hand, the encoder is also required to control data flow properly when VCM modes change.
+Implementations of the FEC encoders based on the DVB-S2 standard can be found in [7]–[14]. In [7], [8], silicon implementations of DVB-S2 compliant codec based on 64800b LDPC and BCH codes were present, with a maximum throughput of 135Mb/s. Reference [9] proposed a serial BCH encoder and a parallel LDPC encoder, both of which support 21 different DVB-S2 code configurations, but they are not cascaded for FEC system-level design and validation. Reference [10] designed a BCH-LDPC cascade encoder that supports a single code length 64800 and code rate 1/2, but the data throughput is limited due to its serial-in and serial-out hardware architecture, which cannot meet the requirement of high-speed applications. In [11], parallel implementation of BCH and LDPC encoders was proposed and static random access memory (SRAM) was employed to store check bits, therefore both row and column addresses are required to
+
+125692
+
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/ VOLUME 8, 2020
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+search parity-check bits corresponding to the parallel information bits, which increases the complexity of address management and the controller. References [12], [13] developed efficient LDPC encoders for satellite ground terminals, but large size barrel shifter registers employed in the design increased the power consumption. Reference [14] used a compacted memory mapping of the parity-check equations and performed partial-parallel computation of the parity-check bits to achieve a high throughput LDPC encoder, but the parallel output of the encoder is not in natural order and an interleaver design need to be included, which increases the hardware complexity.
+In this paper, we propose an efficient FEC encoder core for VCM schemes of LEO satellite-ground data transmissions. The contributions are as follows:
+1) Considering the periodicity and similarity of DVB-S2 LDPC codes, we propose a fast accumulate semiparallel recursive (FASPR) LDPC encoding algorithm for efficient hardware implementation, which can compute parallel parity-check bits at a time in natural order.
+2) The powerful control modules are designed that can reuse computation units and memories efficiently. So that the proposed FEC encoder core is compatible with various VCM modes and reduces hardware resources consumption, and correctness is guaranteed when VCM modes change.
+3) Parallel computation of check bits is performed to achieve high throughput.
+The rest of this paper is organized as follows: Section II describes the parallel BCH encoding and the FASPR LDPC encoding algorithm. Section III makes a detail description of the proposed FEC encoder core. The implementation results are reported in section IV. Finally, section V concludes the paper.
+II. ALGORITHMS OF FEC ENCODING A. PARALLEL BCH ENCODING BCH codes are a class of cyclic codes with powerful errorcorrecting capability that widely used in modern communication systems [15], [16].
+The encoding process of a systematic (n, k) BCH code is as follows:
+Step1: Multiply the information polynomial m(x) = mk−1xk−1+mk−2xk−2+. . .+m0 by xn−k . This multiplication is equivalent to shifting the information bits by (n − k) positions to the right.
+Step 2: Obtain the generator polynomial g(x) of the t-error correcting BCH code by g(x) = LCM (g1(x), · · · , gt (x)), where gi(x) is the minimum polynomial of g(x) and LCM represents the least common multiple of these polynomials.
+Step 3: Divide m(x) · xn−k by g(x), and let r(x) = rn−k−1xn−k−1 + . . . + r1x + r0 be the remainder. The coefficients of the remainder stand for the check bits.
+Step 4: Add the computed remainder to m(x)·xn−k to obtain the codeword polynomial c(x) = m(x) · xn−k + r(x).
+VOLUME 8, 2020
+
+FIGURE 1. Basic LFSR architecture.
+
+A systematic binary (n, k) BCH code can be implemented by the serial linear feedback shift register (LFSR) architecture illustrated in Fig.1. The symbol ⊕ indicates an xor operation, and the multiplication ⊗ can be simplified to a connection or disconnection when gi is ‘‘1’’ or ‘‘0’’. Registers r0, r1, · · · , rn−k−1 represent the coefficients of the remainder.
+During the first k clock cycles, k information bits are imported to the LFSR serially with the most significant bit (MSB) first. Meanwhile, the information bits are also sent to the output port to form the systematic part of the codeword. After the k-th clock cycle, the LFSR contains (n − k) coefficients of r(x). They are then shifted out of the registers to form the remaining bits of the codeword.
+While the encoding scheme mentioned above cannot meet the requirement of high-speed applications due to the serial-in and serial-out architecture. Herein, we propose a parallel BCH encoding algorithm based on state-space computation proposed in [17].
+Assuming that a (n − k) dimensional state vector R(t) = [rn−k−1(t), rn−k−2(t) · · · r0(t)]T , where ri(t) represents the state of the i-th remainder register at moment t, then R(t + 1) can be expressed as:
+
+R(t + 1) = F · (R(t) + M(t + 1)) = F · R(t) + mt+1 · G. (1)
+
+where matrix
+
+ gn−k−1 1 0 · · · 0 
+
+ gn−k−2 0 1 · · · 0 
+
+
+
+F=
+
+G|
+
+I 0
+
+= 
+
+...
+
+... ...
+
+...
+
+...
+
+  
+
+,
+
+  g1
+
+0
+
+0
+
+···
+
+1
+
+ 
+
+g0 0 0 0 0
+
+and M(t + 1) = [mt+1 |0, · · · , 0 ]T is a (n − k) dimensional vector with the first element equals to the (t + 1)-th information bit mt+1 and the others are zeros.
+According to (1), R(t + D) can be derived from recursive deductions as:
+
+R(t + D) = FD · (R(t) + M(t + D)).
+
+(2)
+
+125693
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+where M(t + D) = [mt+1, mt+2, · · · , mt+D |0, · · · , 0 ]T is the vector of D information bits, and
+
+
+
+the first(n− 
+
+FD =  FD−1 · G · · · F · G k − D + 1)  . (3)
+
+
+
+
+
+columns ofF
+
+Equation (2) means that R(t + D) can be obtained from R(t) directly, and the ‘‘1’’s in the matrix FD represent xor operations between the remainder registers and the vector of D information bits. By using the parallel BCH encoding algorithm, D information bits can be processed simultaneously by the encoder, therefore only k/D clock cycles are required to obtain the state vector of check bits, which increases the encoding throughput by D times.
+
+B. THE PROPOSED FASPR LDPC ENCODING The DVB-S2 standard has adopted irregular repeat accumulate (IRA)-LDPC codes, which has the linear encoding complexity [18], [19]. IRA-LDPC codes are normally characterized by a parity check matrix H:
+
+H (n−k)×n
+
+= [ A(n−k)×k | B(n−k)×(n−k) ]
+
+ a00
+
+...
+
+a0,k−1 1 0 · · · 0 
+
+ a10
+
+···
+
+
+
+=
+
+ 
+
+...
+
+...
+
+a1,k −1 ...
+
+1 1 ··· 0
+
+...
+
+...
+
+...
+
+  
+
+an−k−2,0 · · · an−k−2,n−k−1 0 0
+
+1
+
+0
+
+ 
+
+an−k−1,0 · · · an−k−1,n−k−1 0 0 0 1
+
+(4)
+
+where B is a staircase lower triangular matrix and A is a sparse matrix.
+The codes defined by (4) are systematic, i.e., the codeword has the following format C = [I | P] , with the information bits I = [i0, i1, · · · , ik−2, ik−1] being associated to the sparse matrix A and the parity-check bits P = [p0, p1, · · · , pn−k−1] being associated to the matrix B.
+Due to the bi-diagonal structure of matrix B, parity-check bits can be calculated recursively:
+
+ p0
+
+=
+
+a00i0
+
+⊕
+
+a01i1
+
+·
+
+··
+
+⊕
+
+a0,k −1 ik −1 ,
+
+
+
+p1 = a10i0 ⊕ a11i1 · · · ⊕ a1,k−1ik−1 ⊕ p0,
+
+...
+
+(5)
+
+
+
+
+
+pn−k−1 = an−k−1,0i0 ⊕ an−k−1,1i1 · · · ⊕ pn−k−2
+
+where ⊕ is the GF(2) addition operator. The design technique of matrix A is based on some peri-
+odicity constraints, which divide the information nodes into groups of 360 consecutive ones. All the information nodes of a group have the same weight v, and indices of parity-check nodes that connected to the j-th(1 ≤ j ≤ 360) information node of the group can be obtained by:
+
+{di + (j − 1) · q} mod (n − k), i ∈ {1, 2, . . . , v} . (6)
+
+125694
+
+where di is the indices of the parity-check nodes that connected to the first information node of the group and q = (n − k)/360.
+By computing (5) and considering the periodicity and similarity of DVB-S2 IRA-LDPC codes, we propose the FASPR LDPC encoding algorithm.
+The indices of the information bits that participate in the parity-check node restriction r can be denoted by IN(r), and the indices of parity-check bits connected to the information node c can be denoted by CN(c). Therefore, (5) can be rewritten as:
+
+p0 = ⊕ iz = S0,
+
+ 
+
+z∈IN(0)
+
+
+
+p1
+
+=
+
+⊕
+z∈IN(1)
+
+iz
+
+⊕
+
+p0
+
+=
+
+S1
+
+⊕
+
+S0,
+
+...
+
+(7)
+
+  pr
+
+=
+
+Sr
+
+⊕ pr−1
+
+=
+
+r
+⊕
+
+Si.
+
+i=0
+
+where Sr = ⊕ iz, r ∈ 0, 1, · · · , n − k − 1 .
+z∈IN (r)
+For each new parallel D information bits received by the
+encoder, the associated Sr can be updated according to:
+
+for c = 0 : D : k-D
+
+for r ∈ CN (c) do
+
+Sr = Sr ⊕ ic
+S(r+q)mod(n−k) = S(r+q)mod(n−k) ⊕ ic+1 ...
+
+Sr+(D−1)qmod(n−k) = Sr+(D−1)qmod(n−k) ⊕ ic+D−1 end
+
+end
+
+(8)
+
+We can simplify Sr by:
+
+Sr =
+
+Sr (ic = 0) Sr (ic = 1)
+
+(9)
+
+where Sr is the bit inversion value of Sr . It indicates that Sr is updated only when the corresponding information bit is ‘‘1’’. And the addition operation is replaced by the inverse operation, which reduces the hardware overhead.
+Once Sr values are known, the parity-check bits can be obtained by (7). Sr can be stored compactly by using the following binary matrix:
+
+ S0
+
+ SD
+
+S=  
+
+...
+
+S1
+
+· · · SD−1 
+
+SD+1
+
+· · · S2D−1
+
+...
+
+...
+
+...
+
+  
+
+(10)
+
+S(L−1)D S(L−1)D+1 · · · SLD−1 L×D
+
+where L = (n − k)/D. Therefore, D parity-check bits
+
+can be accumulated at a time in natural order by using the
+
+procedure (11), as shown at the bottom of the next page.
+
+The proposed FASPR LDPC encoding algorithm explores
+
+the property of the adopted codes and uses a compact memory
+
+to store the simplified Sr . And by performing D parallel
+
+VOLUME 8, 2020
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+FIGURE 2. Block diagram of the FEC encoder core.
+
+parity-check bits at a time in natural order, low encoding latency is achieved.
+
+TABLE 1. Correcting capabilities and generator polynomials supported by DVB-S2 standard.
+
+III. ARCHITECTURE OF THE PROPOSED FEC ENCODER CORE A. OVERALL ARCHITECTURE It is well known that propagation conditions keep changing during the LEO satellite pass above a ground station. When the distance decreases with higher elevation, the free space loss (FSL) decreases and the link budget is improved [20]. The dynamic link budget allows the use of variable modulations and code rates, which increase the download throughput without additional power consumption.
+Herein, we propose a FEC encoder core for VCM schemes based on algorithms described in section II. Fig.2 shows a block diagram of the main blocks of the FEC encoder core.
+The proposed FEC encoder core consists of the outer BCH encoder, inner LDPC encoder, and the bit interleaver, supporting all DVB-S2 code configurations. The frames to be encoded are input to TLK2711 multigigabit transceivers, and the encoded frames are output as symbols for direct connection to the mapper. Besides, the FEC encoder core computes the check bits in a parallel way, and parallel degree D is determined by modulation order, e.g., D = 3 for 8 phase shift keying (8PSK) and D = 4 for 16 amplitude phase shift keying (16APSK).
+B. BCH ENCODER In the DVB-S2 standard, BCH codes have the capability to correct t = {8, 10, 12} errors and have 4 different lengths of
+
+generator polynomial g(x) for different code rates and frame lengths. Table 1 shows the correcting capabilities and generator polynomials supported by DVB-S2 standard. As shown in Table 1, the degree parameter represents the highest power of the generator polynomial g(x). And it is noteworthy that the coefficients of g(x) is expressed in hexadecimal, and the rightmost bit is padded with zeros to allow a hexadecimal number.
+The generator polynomial, i.e., the matrix FD, need to be changed to accommodate the correcting capability of different VCM modes, which leads to change in the hardware architecture. To implement the reconfigurable parallel BCH encoder with variable correcting capacities, we use MATLAB to precompute FD required by each VCM mode. According to (2), the ‘‘1’’s in the matrix FD indicate xor operations
+
+
+
+1
+
+D−1
+
+ 
+
+S0 ⊕ Sr · · · ⊕ Sr = p0 p1 · · · pD−1 ,
+
+ 
+
+r =0
+
+r =0
+
+
+
+
+
+ 
+
+D+1
+
+2D−1
+
+  
+
+D
+
+b{pD−1} ⊕
+
+SD
+
+⊕ Sr · · ·
+
+⊕
+
+Sr
+
+= pD pD+1 · · · p2D−1 ,
+
+r =D
+
+r =D
+
+   
+
+...
+
+
+
+
+
+
+
+
+
+  
+
+D
+
+b{p(L−1)D−1} ⊕
+
+(L−1)D+1
+
+LD−1
+
+S(L−1)D ⊕ Sr · · · ⊕ Sr
+
+r =(L −1)D
+
+r =(L −1)D
+
+= p(L−1)D p(L−1)D+1 · · · pLD−1 .
+
+VOLUME 8, 2020
+
+(11)
+125695
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+FIGURE 3. Architecture of reconfigurable parallel BCH encoder.
+between remainder registers and information vector. Therefore, the BCH encoder can be easily implemented by a combinational logic circuit. Besides, zeros are padded in the most significant bits of the information vector to ensure that it is divisible by D. It is worth noting that the dimension of the matrix F, the length of the remainder registers and the dimension of G need to be designed in the worst case, i.e., equal to the maximum degree of g(x). Fig.3 shows the reconfigurable parallel BCH encoder architecture.
+During the first ceil(kbch/D) clock cycles, the combinational logic circuit operates D parallel information bits with the state vector R(t) and sends the results R(t +D) back to the remainder registers. Meanwhile, the information bits are sent to the output port to form the systematic part of the codeword. After the ceil(kbch/D)-th clock cycle, the remainder registers contain the state vector of check bits, they are then shifted out of the registers to form the remaining bits of the codeword.
+
+C. LDPC ENCODER
+Fig.4 shows the architecture of the proposed LDPC encoder, which composed of four major modules. The address computation module is responsible for computing the addresses and offsets of parity-check bits that corresponding to the information bits (This process can be denoted as Task 1.) The Sr module is responsible for storing and updating the values of Sr (Using Task 2 to represent this process.) The output process module is responsible for computing the parity-check bits (Expressed briefly as Task 3) and exporting the encoded codeword. The control module is designed for controlling the data flow of various VCM modes.
+Dual-port random access memory (RAM) is employed to store and update Sr . To reduce encoding latency, a distributed storage strategy is used, which means v · D Sr RAMs are employed to perform (8). To make the encoder compliant with all VCM modes, vmax · Dmax Sr RAMs with (n − k)max/Dmin depth and Dmax width are needed. The subscript max and min represent the maximum and minimum value of the variables, respectively. Besides, read-only memory (ROM) is employed to store the initial addresses of parity-check bits, which can be easily obtained from the annexes B and C of DVB-S2 standard tables [5]. Furthermore, since the hierarchical storage management is used, the appropriate row of the ROM should be selected based on the VCM mode.
+The control module consists of state machines and control signals, which are used to dynamically reconfigure the encoder and to control the data flow. Fig.5 shows the state machines diagram and the encoding process.
+To perform Task1, address and offset of the parity-check bit corresponding to each bit of D parallel information bits is
+
+FIGURE 4. Architecture of LDPC encoder. 125696
+
+VOLUME 8, 2020
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+FIGURE 5. State machines diagram and encoding process of LDPC encoder.
+
+computed respectively according to:
+
+Vaddr = floor(x/D),
+
+(12)
+
+Voffset = mod(x, D).
+
+(13)
+
+where x is parity-check bit address computed by (6). Task 2 is performed simultaneously with Task 1. Based
+on the operating VCM mode, v · D Sr RAMs are enabled. The read enable signal of the RAM is valid only when the information bit is ‘‘1’’, and the write enable signal is one clock delay of the read enable signal. Controlled by the read/write enable signals, values in the addresses and offsets computed by Task 1 are read out, and inversed values are written back to the same addresses and offsets. Meanwhile, the information bits are also sent to the output port.
+After all the information bits are imported to the encoder, the distributed Sr values are read out and processed by xor operation according to (11). Meanwhile, zero values should be written to the Sr RAMs to ensure that the subsequent data frames can be correctly encoded. Therefore, Task 3 is realized, obtaining D parallel parity-check bits per clock cycle in natural order. Compared with [14], which parallel output is not in natural order, and an interleaver design need to be included, our proposed architecture is more efficient and hardware friendly.
+
+D. BIT INTERLEAVER Channel interleaving is employed in most modern wireless communication systems to protect against burst error. Encoded frames are written into the interleaver column-wise, and read out row-wise to break the temporal correlation between successive bits, the process is depicted in Fig.6.
+Fig.7 shows the architecture of the proposed parallel bit interleaver, with output as symbols that can be directly connected to the mapper.
+The specific implementation steps of the parallel bit interleaver are as follows:
+Step 1. To make the interleaver compliant with all VCM modes, Dmax FIFOs are employed to store data. The size of each FIFO is nmax/Dmin, where nmax is the maximum
+VOLUME 8, 2020
+
+FIGURE 6. Bit interleaving scheme.
+FIGURE 7. Architecture of parallel bit interleaver.
+encoded frame length supported by the standard and Dmin is the minimum parallel degree. The write width is 4 and the read width is 1 of each FIFO.
+Step 2. The encoded frame is sequentially written into D FIFOs, i.e., the first n/D bits of the frame are written in the first FIFO and the subsequent n/D bits are written in the second FIFO, and so on. The write operation is completed when all bits of one encoded frame are written into D FIFOs. It is worth noting that n and D are the encoded frame length and parallel degree for current VCM mode.
+Step 3. Once the write operation is completed, D bits data are read from D FIFOs, i.e., read one bit from each FIFO to form the parallel D bits data. The output port DOUT of the interleaver has width Dmax and provides output as symbols.
+125697
+
+TABLE 2. DOUT ordering for each modulation type.
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+For D<Dmax, pad zeros in the least significant bits (LSB) of DOUT. The ordering of DOUT bits for each modulation type is summarized in Table 2. As shown in Table 2, for example, the symbol output needs only 4 bits when 16APSK is adopted, which means that DOUT (4:1) provides c(4i + 3), c(4i + 2), c(4i + 1), and c(4i) of the encoded frame bits, and DOUT(0) is logic 0. It is noted that c = [c0, c1 · · · cn−2, cn−1] is the encoded frame vector and 0 ≤ i ≤ n/D.
+IV. FPGA IMPLEMENTATION AND ANALYSIS The proposed FEC encoder core is synthesized and implemented on the Xilinx XC7K325t FPGA for a practical LEO satellite-ground data transmission scenario. In addition, it is known that SRAM-based FPGAs suffer from single event effect in radiation environments, therefore we combine scrubbing and triple modular redundancy (TMR) technique to substantially lower the faults in time and increase the reliability of our design. The VCM schedule is shown in Fig.8. As shown in Fig.8, three VCM modes are adopted during the transmission window, when elevation angle is greater than 5-degree and less than 15-degree, VCM mod1 is adopted with frame length n = 16200, code rate R = 2/3, and modulation type 8PSK. When elevation angle is greater than 15-degree and less than 25-degree, VCM mod2 is adopted with frame length n = 16200, code rate R = 2/3, and modulation type 16APSK. And when elevation angle is greater than 25-degree VCM mod3 is adopted with frame length n = 16200, code rate R = 4/5, and modulation type 16APSK.
+
+FIGURE 9. I/O interface of the VCM_encoder. TABLE 3. I/O ports description of top module.
+
+FIGURE 8. VCM schedule of one LEO satellite-ground data transmission scenario.
+A. SIMULATION RESULTS Fig.9 shows the I/O interface of the top FEC encoder core module VCM_encoder. And the detailed descriptions of the I/O ports of the top module are given in Table 3. Fig.10 shows the simulation results of the FEC encoder core.
+In Fig.10, with the mode_in signal changes during the simulation time, the proposed FEC encoder core is dynamically
+125698
+
+reconstructed and operated. The uncoded information bits are imported to the FEC encoder core via tlk_rxdata0 port through TLK2711 multigigabit transceivers. After BCH encoding, LDPC encoding, and bit interleaving stages, the encoded frame is output on dout as symbols, along with parameter identification modcode for current output frame. The valid signal is asserted to indicate that data on dout is valid. The frame synchronization signal frame_syn_out is asserted for a clock cycle when the first item of the encoded frame is presented on dout.
+B. HARDWARE UTILIZATION Table 4 presents hardware utilization of the proposed FEC encoder modules and comparison of this work with other state-of-art designs in [9], [12].
+VOLUME 8, 2020
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+FIGURE 10. Simulation results of the FEC Encoder core. TABLE 4. Hardware utilization and comparison of this work with existing designs.
+
+As shown in Table 4, the proposed FEC encoder core occupies slice registers at 2%, slice look-up-tables (LUTs) at 4%, block RAMs (BRAMs) at 11%. Compared with the serial BCH encoder described in [9], which supports only one mode, our proposed parallel BCH encoder can support three VCM modes and reduce the LUTs consumption by 41%. The BRAMs requirements increase due to the distributed storage strategy employed in our design. As the proposed LDPC encoder is compatible with three VCM modes, the overall hardware complexity increases slightly compared with the LDPC encoder in [9], [12], which supports a single mode. It shows that the proposed FEC encoder core reaches an excellent compromise between flexibility and hardware utilization.
+C. PERFORMANCE ANALYSIS The timing analysis results show that it is possible to operate the FEC encoder core at a maximum clock frequency fclk =389.5MHz, the encoding throughput rate for each VCM
+VOLUME 8, 2020
+
+mode is given by:
+
+T = n · η · fclk .
+
+(14)
+
+Cp
+
+where n is the encoded frame length, η = kbch/n is the efficiency of the FEC encoder core, and Cp is the number of clock cycles that it takes to process a frame at a particular VCM mode. Cp can be calculated by:
+
+Cp = n/D + cdelay.
+
+(15)
+
+where D is parallel degree determined by modulation order, cdelay is a constant delay equals to 26 for initializing and configuring.
+For VCM satellite-ground data transmission systems, the overall data throughput TVCM , i.e., the total amount of data transmitted by the satellite to the ground during the transmission window, can be calculated as:
+
+TVCM = Tmodi · tmodi.
+
+(16)
+
+i
+
+125699
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+
+where Tmodi and tmodi is the throughput rate and the lasting time for each VCM mode.
+According to the STK simulation results, the transmission window lasts 1080s, with tmod1= 380s, tmod2 = 280s,
+tmod3 = 420s. Fig.11 summarizes the throughput rate of each VCM mode and the overall data throughput of VCM and CCM systems.
+FIGURE 11. Summary of the FEC encoder core performance.
+As it can be seen from Fig.11, the proposed FEC encoder core can obtain an encoding throughput rate up to 1.19 Gb/s. The overall data throughput of the CCM system adopting a single mod1 mode is 820.8 Gb, while that of the VCM system is 1074.2 Gb, with an improvement of 30.9%.
+V. CONCLUSION This paper proposed an efficient FEC encoder core based on the DVB-S2 standard. Benefitting from the well-designed encoder structure and reuse of computation units and memories, the FEC encoder core is compatible with various VCM modes and lower hardware resources consumed, which represents an excellent compromise between flexibility and hardware utilization. By using parallel architectures of BCH encoder, LDPC encoder, and bit interleaver, low latency and high throughput are achieved. The implementation results show that the FEC encoder core can obtain an encoding throughput rate up to 1.19Gb/s, and the overall data throughput is improved by 30.9% compared with the CCM system, which makes this FEC encoder core a very attractive solution for future VCM-based LEO satellite-ground data transmission systems.
+REFERENCES
+[1] A. Payandeh, M. Ahmadian, and M. R. Aref, ‘‘A secure channel coding scheme for efficient transmission of remote sensing data over the LEO satellite channels,’’ in Proc. 3rd Int. Conf. Recent Adv. Space Technol., Istanbul, Turkey, Jun. 2007, pp. 510–514.
+[2] Variable Coded Modulation Protocol, document CCSDS 131.5-M-1.4, 2016.
+[3] J. Li, W. Xiong, G. Sun, Z. Wang, Y. Huang, and M. Shen, ‘‘Dopplerrobust high-spectrum-efficiency VCM-OFDM scheme for low Earth orbit satellites broadband data transmission,’’ IET Commun., vol. 12, no. 1, pp. 35–43, Dec. 2018.
+125700
+
+[4] D. Capirone, S. Benedetto, G. Montorsi, M. Cossu, R. Roscigno, A. Lupi, M. L’Abbate, C. Riva, and A. Paraboni, ‘‘Variable coding and modulation schemes for maximization of low-earth orbit satellite communications,’’ in Proc. ESA-TTC, Noordwijk, The Netherlands, Sep. 2010, pp. 1–5.
+[5] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, New Gathering and Other Broadband Satellite Applications, document EN ETSI 302 307 V1.4.1, 2014.
+[6] A. Morello and V. Mignone, ‘‘DVB-S2: The second generation standard for satellite broad-band services,’’ Proc. IEEE, vol. 94, no. 1, pp. 210–227, Jan. 2006.
+[7] P. Urard, L. Paumier, V. Heinrich, N. Raina, and N. Chawla, ‘‘A 360 mW 105Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes enabling satellite-transmission portable devices,’’ in IEEE ISSCC Dig. Tech. Papers, Feb. 2008, pp. 310–311.
+[8] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lantreibecq, and B. Gupta, ‘‘A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes,’’ in IEEE ISSCC Dig. Tech. Papers, San Francisco, CA, USA, Feb. 2005, pp. 446–447.
+[9] M. Gomes, G. Falcao, V. Silva, V. Ferreira, A. Sengo, L. Silva, N. Marques, and M. Falcao, ‘‘Scalable and parallel codec architectures for the DVB-S2 FEC system,’’ in Proc. APCCAS, Macao, China, Nov. 2008, pp. 1506–1509.
+[10] D. Digdarsini, D. Mishra, S. Mehta, and T. V. S. Ram, ‘‘FPGA implementation of FEC encoder with BCH & LDPC codes for DVB S2 system,’’ in Proc. 6th Conf. SPIN, Noida, India, Mar. 2019, pp. 78–81.
+[11] T. Van Nghia, ‘‘Development of the parallel BCH and LDPC encoders architecture for the second generation digital video broadcasting standards with adjustable encoding parameters on FPGA,’’ in Proc. Conf. EnT, Moscow, Russia, Nov. 2016, pp. 104–109.
+[12] N. Kumar, C. Prakash, S. N. Satashia, V. Kumar, and K. S. Parikh, ‘‘Efficient implementation of low density parity check codes for satellite ground terminals,’’ in Proc. Conf. ICACCI, New Delhi, India, Sep. 2014, pp. 689–695.
+[13] I. Lee, M. Kim, D. Oh, and J. Jung, ‘‘High-speed LDPC encoder architecture for digital video broadcasting systems,’’ in Proc. Conf. ICTCI, Jeju-do, South Korea, vol. 2013, pp. 606–607.
+[14] M. Gomes, G. Falcao, A. Sengo, V. Ferreira, V. Silva, and M. Falcao, ‘‘High throughput encoder architecture for DVB-S2 LDPC-IRA codes,’’ in Proc. Conf. ICM, Cairo, Egypt, Dec. 2007, pp. 271–274.
+[15] X. Liu and Q. Hu, ‘‘10Gb/s orthogonally concatenated BCH encoder for fiber communications,’’ in Proc. 2nd Conf. IMSNA, Toronto, ON, Canada, Dec. 2013, pp. 1018–1021.
+[16] D. Kim, K. R. Narayanan, and J. Ha, ‘‘Symmetric block-wise concatenated BCH codes for NAND flash memories,’’ IEEE Trans. Commun., vol. 66, no. 10, pp. 4365–4380, Oct. 2018.
+[17] G. Hu, J. Sha, and Z. Wang, ‘‘High-speed parallel LFSR architectures based on improved state-space transformations,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 25, no. 3, pp. 1159–1163, Mar. 2017.
+[18] H. Jin, A. Khandekar, and R. McEliece, ‘‘Irregular repeat-accumulate codes,’’ in Proc. 2nd Conf. ISTC, Brest, France, Sep. 2000, pp. 1–8.
+[19] M. Eroz, F.-W. Sun, and L.-N. Lee, ‘‘DVB-S2 low density parity check codes with near Shannon limit performance,’’ Int. J. Satell. Commun. Netw., vol. 22, no. 3, pp. 269–279, May 2004.
+[20] CCSDS Protocols Over DVB-S2-Summary of Definition, Implementation, and Performance, document CCSDS 130.12-G-1, 2016.
+JING KANG received the B.S. degree in electronic information science and technology from the Shandong University of Science and Technology, Qingdao, China, in 2016. She is currently pursuing the Ph.D. degree in computer application technology with the University of Chinese Academy of Sciences, Beijing, China. Her primary research interests include channel coding, satellite communications, 5G, and FPGA implementation.
+VOLUME 8, 2020
+
+J. Kang et al.: Efficient FEC Encoder Core for VCM LEO Satellite-Ground Communications
+JUN SHE AN received the Ph.D. degree in computer software and theory from Northwestern Polytechnical University, Xi’an, China, in 2004. In 1995, he joined the National Space Science Center, Chinese Academy of Sciences, where he is currently a Professor with the Key Laboratory of Electronics and Information Technology for Space Systems. His current research interests include space integrated electronic technology, space computer hardware and software, system architecture, and data processing technology.
+
+BINGBING WANG received the B.S. degree in communication engineering from Zhengzhou University, Henan, China, in 2018. He is currently pursuing the master’s degree in computer application technology with the University of Chinese Academy of Sciences, Beijing, China. His primary research interests include channel coding, satellite communications, and 5G.
+
+VOLUME 8, 2020
+
+125701
+
+

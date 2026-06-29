@@ -1,0 +1,268 @@
+Parallel Decoding of LDPC Convolutional Codes Using OpenMP and GPU
+Chi H. Chan and Francis C. M. Lau Department of Electronic and Information Engineering, The Hong Kong Polytechnic University, Hong Kong
+Email: andyjv5433@gmail.com & encmlau@polyu.edu.hk
+
+Abstract—Recently, there have been different applications, namely 10GBase-T Ethernet, video broadcasting and satellite communication, utilizing low-density parity-check (LDPC) codes as the forward-error-correction codes. The main reason is that the error performance of LDPC codes can be very close to the Shannon limit. LDPC codes can be further categorized into LDPC block codes (LDPC-BCs) and LDPC convolutional codes (LDPC-CCs). It has also been discovered that LDPC-CCs usually outperform LDPC-BCs. Simulation of LDPC-BCs and LDPCCCs can take a lot of time because the decoding algorithms are relatively complex. Fortunately, the decoding steps can be performed in parallel. In this paper, we create three different platforms for simulating the error performance of LDPC-CCs. The first two platforms are run on a Central Processing Unit (CPU) while the third one involves the use of a Graphics Processing Unit (GPU). We show that using GPU can improve the simulation speed substantially.
+Index Terms—CPU, error performance, GPU, LDPC code, LDPC convolutional code.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes were invented in 1963 [1]. The challenge on their implementation at that time lied in the requirement to decompose a large iterative decoding algorithm into multiple computations. Hence LDPC codes had remained un-noticed for a few decades compared to other channel coding methods. With the advance of the Very Large Scale Integration (VLSI) technology, it has become more feasible to implement algorithms involving intensive computations. In 1996, LDPC codes were rediscovered [2] and were shown to achieve error-correction performance very close to the Shannon limit [3]. Subsequently, LDPC codes have been adopted by several standards such as DVB-S2, WiMAX(IEEE 802.16e) and 10G Ethernet (IEEE 802.3an).
+LDPC codes can be further categorized into LDPC block code (LDPC-BC) [3]–[5] and LDPC convolutional code (LDPC-CC) [6]. LDPC-BCs have a fixed code length while LDPC-CCs have variable code lengths. LDPC-CCs are found to have lower error floors compared with LDPC-BCs. In this paper, we simulate the sum-product algorithm (SPA) [1] and the min-sum algorithm (MSA) [7] for decoding LDPC-CCs based on the OpenMP and CUDA programming platforms. The algorithms are executed by a multi-core CPU and a GPU. We further record and compare the simulation times.
+The work described in this paper was partially supported by a grant from the RGC of the Hong Kong SAR, China (Project No. PolyU 521809).
+
+Compared with using a single-core CPU, a significant increase in computation speed can be observed by using a multi-core CPU or a GPU.
+
+II. REVIEW OF LDPC CONVOLUTIONAL CODES
+
+The parity-check matrix H of a (ms, J, K) LDPC-CC is
+
+frequently represented as
+
+ HT0 (0) HT = 
+
+··· ...
+
+Hm T s (ms) HT0 (t)
+
+···
+
+ HTms(t + ms) 
+
+...
+
+...
+
+(1)
+
+where
+
+ hi1,1(t) · · · h1i ,c−b(t) 
+
+HiT(t) =  ...
+
+...
+
+
+
+(2)
+
+hci,1(t) · · · hci,c−b(t)
+
+for a rate R = b/c code. Moreover, ms denotes the syndrome former memory, J represents the row weight and K is the column weight of HT.
+The LDPC-CC is time-invariant if the elements HiT(t) are the same for all t. Otherwise, the LDPC-CC is time-variant.
+Furthermore, the LDPC-CC is periodic with a period of τ if the elements HiT(t) = HTi (t+τ ) for all t. Figure 1 illustrates a simple way to construct a periodic LDPC-CC. The constraint
+length of the LDPC-CC, denoted by vs, equals (ms + 1) × c and is proportional to ms. The corresponding LDPC-CC codeword can be denoted as v = (. . . v0 v1 v2 . . . vt . . .) where vt = (vt,1 vt,2 · · · vt,c).
+
+III. IMPLEMENTATION LDPC-CC DECODERS
+An LDPC-CC decoder usually consists of a number of processors in concatenation. The channel messages are input to the first processor, and the outputs of the first processor are input to the second processor, and so on. For the last processor, hard decisions are made on its outputs to form the decoded codeword. Each processor can therefore be treated as performing one decoding iteration on the LDPC-CC.
+The flow chart of an LDPC-CC decoder is shown in Fig. 2. The major steps are: (a) reading the parity-check matrix; (b) generating the Gaussian noise samples (assuming an additive white Gaussian noise channel); (c) evaluating
+
+978-1-4673-2713-8/12/$31.00 ©2012 IEEE
+
+000225
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:59:27 UTC from IEEE Xplore. Restrictions apply.
+
+147 258 369
+(a) Each block numbered 1 to 9 denotes a HTi (t).
+
+147 582 936
+(b) Moving the blocks below the diagonal to the right
+
+147 582 936 147 582 936 147 582 936
+!
+(c) Duplicate the structure and stack them up in a zig-zag way.
+
+Fig. 1. Formation of a periodic LDPC-CC.
+
+Start
+
+Read Parity Check Matrix
+Text File
+
+Noise Generation
+
+Initialization of channel message
+
+End
+
+Enter Next Processor
+
+No
+
+LLR Computation in Hard Decision
+
+Yes
+
+Last Iteration?
+
+Updating message from
+VNs to CNs
+
+Updating message from
+CNs to VNs
+Register Shift
+
+Fig. 2. Flow Chart of an LDPC-CC decoder.
+
+Decoding throughput in kbits/second
+
+SPA - CPU MSA - CPU
+80 70 60 50 40 30 20 10
+0 2532 X 422
+
+SPA - OpenMP MSA - OpenMP
+
+SPA - CUDA MSA - CUDA
+
+4608 X 768 Size of subblock in HT
+
+6144 X 1024
+
+the initial channel messages; (d) updating the check-node-tovariable-node (CN-to-VN) messages; (e) updating the VN-toCN messages; (f) computing the log-likelihood-ratio (LLR) values for the VNs at the output of the last processor, making hard decisions and determining the decoded codeword. Details of the algorithms can be found at [8].
+For a single-core CPU, all the instructions are executed sequentially. For a multi-core CPU, we make use of the OpenMP application programming interface (API) to carry out each of the instructions (b)–(f) across different cores at the same time. When a GPU is available, we use the CUDA platform to carry out each of the instructions (b)–(f) in parallel using the cores in the GPU. Note that data have to copied between the CPU and GPU when the GPU is used.
+IV. SIMULATION RESULTS
+We perform the simulations using a PC with a quad-core AMD CPU operating at a clock frequency of 3.0 GHz. Further, the GPU we use is a Nvidia GTX 460 which possesses 336 cores. The parameters used in the LDPC-CC are ms = 3, J = 4, K = 24. Moreover, the sizes of the block HTi (t) are 2532× 422, 4608 × 768 and 6144 × 1024.
+Table I shows the time taken to complete the simulations
+
+Fig. 3. Throughput of different simulation platforms.
+for different sizes of parity-check matrix H iT(t) using the SPA and the MSA decoding algorithms. We observe that the GPU always outperforms the single-threading CPU. The GPU also outperforms the multi-threading CPU except when H iT(t) = 2532×422 and MSA are used. The simplicity of the MSA and the small block size (HTi (t) = 2532 × 422) probably makes the multi-threading CPU more efficiently compared with the GPU. In Fig. 3, we further plot the decoding throughput of the different simulation platforms. It can be easily seen that the CUDA platform outperforms the other platforms except in the special case mentioned above.
+When we compare the bit-error-rate (BER) results produced by the three different platforms, we find that the BERs are very similar regardless of the platform being used. Finally, we use the GPU platform to evaluate the BER of different LDPCCCs when 10000 encoded blocks are sent. In each scenario, we find the error rate when 10 and 20 decoding iterations are, respectively, performed. In Figs. 4 to 6, the BERs are plotted. As we have expected, lower BERs are obtained (i) when 20 iterations are performed instead of 10 iterations and/or (ii) when SPA is used instead of MSA.
+
+978-1-4673-2713-8/12/$31.00 ©2012 IEEE
+
+000226
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:59:27 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I PERFORMANCE COMPARISON BETWEEN THE SINGLE-THREADING CPU, THE OPENMP AND THE CUDA SIMULATION PLATFORMS. 10 ITERATIONS ARE
+USED IN DECODING LDPC-CCS.
+
+Number of blocks sent
+100 100 1000 1000 100 100 1000 1000 100 100 1000 1000
+
+Size of HiT (t) (i.e., c × (c − b))
+2532 × 422 2532 × 422 2532 × 422 2532 × 422 4608 × 768 4608 × 768 4608 × 768 4608 × 768 6144 × 1024 6144 × 1024 6144 × 1024 6144 × 1024
+
+Decoding Algorithm
+SPA MSA SPA MSA SPA MSA SPA MSA SPA MSA SPA MSA
+
+CPU Simulation Time (s) 50.349 14.135 435.862 122.139 107.858 42.756 934.721 376.273 165.336 78.607 1391.707 632.613
+
+OpenMP Simulation Time (s) 13.796 4.156 122.874 36.912 30.501 12.668 271.374 112.117 45.834 22.948 402.838 189.217
+
+CUDA Simulation Time (s) 6.692 6.645 60.497 60.138 10.249 10.187 90.964 90.263 12.511 12.418 110.994 110.292
+
+Bit Error Rate (BER)
+
+(2532 X 422) - SPA - 10 Iterations (2532 X 422) - MSA - 10 Iterations 1.0E+00
+
+(2532 X 422) - SPA - 20 Iterations (2532 X 422) - MSA - 20 Iterations
+
+1.0E-01
+
+1.0E-02
+
+1.0E-03
+
+1.0E-04
+
+1.0E-05
+
+1.0E-06 0
+
+1
+
+2
+
+3
+
+signal-to-noise ratio in dB
+
+Bit Error Rate (BER)
+
+(6144 X 1024) - SPA - 10 Iterations
+(6144 X 1024) - MSA - 10 Iterations 1.0E+00
+
+(6144 X 1024) - SPA - 20 Iterations (6144 X 1024) - MSA - 20 Iterations
+
+1.0E-01
+
+1.0E-02
+
+1.0E-03
+
+1.0E-04
+
+1.0E-05
+
+1.0E-06
+
+1.0E-07 0
+
+1
+
+2
+
+3
+
+signal-to-noise ratio in dB
+
+(a)
+
+(a)
+
+Fig. 4. Bit error rates (BERs) for the LDPC-CC based on the GPU simulations when 10000 blocks are sent. ms = 3, J = 4, K = 24 and the size of HiT(t) equals 2532 × 422. 10 and 20 decoding iterations are, respectively, performed. SNR ranges from 0 to 3.6 dB.
+
+Fig. 6. Bit error rates (BERs) for the LDPC-CC based on the GPU simulations when 10000 blocks are sent. ms = 3, J = 4, K = 24 and the size of HTi (t) equals 6144 × 1024. 10 and 20 decoding iterations are, respectively, performed. SNR ranges from 0 to 3.6 dB.
+
+Bit Error Rate (BER)
+
+(4608 X 768) - SPA - 10 Iterations (4608 X 768) - MSA - 10 Iterations 1.0E+00
+
+(4608 X 768) - SPA - 20 Iterations (4608 X 768) - MSA - 20 Iterations
+
+1.0E-01
+
+1.0E-02
+
+1.0E-03
+
+1.0E-04
+
+1.0E-05
+
+1.0E-06 0
+
+1
+
+2
+
+3
+
+signal-to-noise ratio in dB
+
+(b)
+
+Fig. 5. Bit error rates (BERs) for the LDPC-CC based on the GPU simulations when 10000 blocks are sent. ms = 3, J = 4, K = 24 and the size of HTi (t) equals 4608 × 768. 10 and 20 decoding iterations are, respectively, performed. SNR ranges from 0 to 3.6 dB.
+
+V. CONCLUSION
+Programs based on the OpenMP and CUDA platforms have been written to simulate LDPC-CC decoders. Compared with using a single-core CPU, using a multi-core CPU (OpenMP
+
+platform) or a GPU (CUDA platform) can improve the simulation speed. In most cases, the GPU-based decoder outperforms the multi-core CPU-based decoder. Moreover, all simulation platforms produce very similar BER results.
+REFERENCES
+[1] R. G. Gallager, “Low-density Parity-check Codes,” M.I.T. Press, Cambridge, Massachusetts, 1963.
+[2] D. J. MacKay and R. M. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes,” Elect. Lett., vol. 32, pp. 1645–1646, July, 1996.
+[3] S.-Y. Chung, “On the Design of Low-Density Parity-Check Codes within 0.0045 dB of the Shannon Limit,” IEEE Commun. Lett., vol. 5, pp. 58–60, Feb 2001.
+[4] X. Zheng, F. C. M. Lau, and C. K. Tse, “Constructing Short-Length Irregular LDPC Codes with Low Error Floor,” IEEE Trans. on Commun., vol. 58, no. 10, pp. 2823–2834, Oct. 2010.
+[5] W. M. Tam, F. C. M. Lau, and C. K. Tse, “A class of QC-LDPC codes with low encoding complexity and good error performance,” IEEE Commun. Lett., vol. 14, no. 2, pp. 169–171, Feb. 2010.
+[6] A. Jimenez-Feltstrom and K. Sh. Zigangirov, “Time-varying Periodic Convolutional Codes with Low-density Parity-check Matrix,” IEEE Trans. Inform. Theory, vol. IT-45, pp. 2181–2191, Sept 1999.
+[7] J. Chen, A. Dholakia, and E. Eleftheriou, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Tran. on Commun., vol. 53, pp. 1288–1299, 2005.
+[8] Chi-ho Chan, Decoding of LDPC Convolutional Codes, MSc dissertation, The Hong Kong Polytechnic University, 2012.
+
+978-1-4673-2713-8/12/$31.00 ©2012 IEEE
+
+000227
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:59:27 UTC from IEEE Xplore. Restrictions apply.
+
+

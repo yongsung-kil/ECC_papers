@@ -1,0 +1,693 @@
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+ADMM Hardware Decoder for Regular LDPC Codes Using a NISC-Based Architecture
+Imen DEBBABI1, Bertrand LE GAL2, Nadia KHOUJA1, Fethi TLILI1 and Christophe JEGO2 1. GRESCOM Laboratory, High School of Communications, Carthage University, Tunisia.
+2. Bordeaux INP, Enseirb-Matmeca, CNRS IMS, UMR 5218, University of Bordeaux, Talence, France.
+
+Abstract—The Alternate Direction Method of Multipliers (ADMM) approach is an original method for LDPC decoding based on the linear programming (LP) technique. It introduces a novelty at the error correction performance level. Nevertheless, this method can be toughly implemented due to its high computational complexity. In this paper, an implementation of the ADMM LP decoding algorithm on an FPGA target is presented. Its hardware resource cost is evaluated and compared with the state of the art LDPC decoders using the belief propagation (BP) decoding approach. The preliminary logic synthesis results show that an LP based hardware decoder for LDPC codes should be viable for applications with tough error correction requirements. However, additional research works are required to reach equivalent hardware complexity and throughput performances that are similar to traditional BP based LDPC decoders.
+I. INTRODUCTION
+Linear programming (LP) technique was proposed by Feldman in [1] as an alternative to belief propagation (BP) decoding algorithm for LDPC codes. It improves the frame error rate (FER) performance in comparison with the usual BP decoding based on the sum-product (SPA) algorithm and its simplified formulations: Min-Sum (MS), Normalized MS (NMS), etc. [2]. With the recent optimizations of the LP decoding thanks to the Alternate Direction Method of Multipliers (ADMM) technique [3], LP LDPC decoding has become viable for practical implementations.
+In [4], a first analysis of the ADMM decoding algorithm complexity compared with the commonly-used SPA and MS decoding techniques is presented. It showed that the ADMM approach is likely to be implemented in hardware unlike the previously proposed LP decoding techniques based on solvers. Although the algorithm complexity seems comparable to BP SPA decoding approaches, its implementation remains a challenging task due to the complicated check node computation which needs an intricate Euclidean projection operation. A recent work given in [5] provides a reduced complexity Euclidean projection algorithm. As such, the hardware implementation of the ADMM approach has become feasible. The work in [6] describes the first FPGA implementation of an ADMM decoder for quasi-cyclic LDPC codes using the Euclidean projection in [5] and a partially parallel architecture.
+This paper aims to describe the hardware design of the ADMM l2 decoder based on the horizontal layered scheduling [7] which helps improving the decoding convergence speed as for the BP algorithms [8]. It builds upon the LDPC
+
+decoder described in [9] which was initially designed for the MS decoding algorithm using a non-symmetric NISC-based architecture (No Instruction Set Computing) [10]. First, we describe the partially parallel architecture. Then, we focus on the design of the check node processor unit (CNU) for the ADMM l2 decoder for regular codes. We describe the different quantization formats and the storage elements organization. Furthermore, the hardware implementation results on an FPGA device and the throughput performance are further discussed while a comparison with equivalent NMS decoders on FPGAs is detailed. Conclusions and future works are finally provided.
+
+II. LINEAR PROGRAMMING DECODING OF LDPC CODES
+An LDPC code C of block length N is described by a parity check matrix H. It is composed of M check equations with (M ≤ N ). The code rate of C is defined by r = (N − M )/N . The matrix H can also be represented by its Tanner graph where the variable nodes (VN) are indexed by I = {1, ..., N } and the check nodes (CN) are indexed by J = {1, ..., M }. Each one in H at the position (i,j) corresponds to an edge in the Tanner graph connecting VNi to CNj. Let dvi and dcj be the VNi and CNj respective degrees, being regular or irregular depending on H. To facilitate the algorithmic formulation of the decoding process, let Nv(i) be the index of the set of neighbors of vi and Nc(j) be the index of the set of neighbors of cj.
+The check polytope Pdcj is the convex hull of all binary vectors of length dcj with an even number of ones. Suppose that a codeword x ∈ C is transmitted over a noisy channel and that the received codeword is r, Barman et al. [3] demonstrated that the maximum likelihood (ML) decoding problem given in [1] can be reformulated as follows:
+
+minimize γT x
+
+(1)
+
+subject to Tjx = zj; zj ∈ Pdcj ∀j ∈ J ,
+
+where γ is the vector of log-likelihood channel information
+
+whose
+
+ith
+
+entry
+
+is
+
+defined
+
+as:
+
+γi
+
+=
+
+log
+
+P P
+
+r(ri r(ri
+
+|xi |xi
+
+=0) =1)
+
+.
+
+The description of the LP problem with scaled dual variable
+
+and its resolution steps are detailed in [2], [3]. One can
+
+observe that the ADMM-based LP decoder has worse error
+
+performance than the BP SPA decoder at low signal to noise
+
+ratio (SNR) values [11]. To resolve this issue, Liu et al. [12]
+
+proposed a penalized ADMM l2 decoder which adds a penalty
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-1734-2/18/$31.00 ©2018 IEEE
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Algorithm 1 Three-phase Horizontal Layered based ADMM
+
+l2 Algorithm.
+
+1:
+
+Initialize
+
+k
+
+=
+
+0, Ti(0)
+
+=
+
+1.5 −
+
+γi µ
+
+−
+
+α µ
+
+,
+
+i
+
+∈
+
+[1, N ], λj(0i)
+
+=
+
+0, zj(0i)
+
+=
+
+0.5, j
+
+∈
+
+[1, M ]
+
+2: repeat
+
+3: for all j do
+
+4:
+
+STEP −φ1−
+
+5:
+
+for all i ∈ N (j) : do
+
+6:
+
+Variable to parity check message Ti(jk) processing
+
+7:
+
+Ti(jk) = Ti(k) − (zj(ki ) + λj(ki ))
+
+8:
+
+Input projection Pji computing
+
+9:
+
+Pji
+
+=
+
+ρΠ[0,1]
+
+(
+
+dvi
+
+1 −2
+
+α µ
+
+Ti(jk) )
+
++
+
+(1
+
+−
+
+ρ)zj(ki )
+
+−
+
+λj(ki )
+
+10:
+
+end for
+
+11:
+
+STEP −φ2−
+
+12:
+
+Euclidean projection of a the dc-length vector P
+
+13:
+
+w = ΠPdc (P )
+
+14:
+
+STEP −φ3−
+
+15:
+
+for all i ∈ N (j) : do
+
+16:
+
+Parity check to variable messages zj(ki +1) and λ(jki +1) processing
+
+17:
+
+zj(ki +1) = wji
+
+18:
+
+λj(ki +1) = wji − Pji
+
+19:
+
+Variable node Ti(k+1) update
+
+20:
+
+Ti(k+1) = Ti(jk+1) + (zj(ki +1) + λ(jki +1))
+
+21:
+
+end for
+
+22: end for
+
+23: k = k + 1
+
+24: until k ≤ kmax
+
+25:
+
+The
+
+decoded
+
+bits
+
+are
+
+estimated
+
+by
+
+Π[0,1]
+
+(
+
+dvi
+
+1 −2
+
+α µ
+
+Ti )
+
+term to the objective function of the LP formulation so that it
+
+becomes
+
+γT x − α
+
+x − 0.5
+
+2 2
+
+with
+
+α
+
+a
+
+penalty
+
+parameter
+
+that
+
+should be code optimized [13].
+
+III. ADMM l2 DECODING ALGORITHM
+The first ADMMl2 algorithmic formulation [12] is based on a flooding scheduling computation. To reduce the computational complexity of the ADMM l2 decoding algorithm that is essential for an implementation, a layered scheduling has been proposed in [7]. Similar to BP-based decoding algorithm, it approximatively halves the computation complexity of the decoding process while reducing the memory requirement by 30%. This horizontal layered formulation of the ADMM l2 algorithm looks similar to the usual BP-based algorithm in CN and VN computation scheduling. The horizontal layered scheduling offers interesting features for a hardware based implementation. Consequently most of the recent BP LDPC decoder implementations [8], [9], [14] have focused on this CN centric scheduling. However, it is important to notice that the computations involved in VN and CN for ADMM l2 decoding differ, to a great extent, from BP ones.
+A formalized description of the ADMM l2 algorithm based on the horizontal layered scheduling is provided in Algorithm 1. It is composed of three main steps: variable to check message processing, Euclidean projection and parity check to variable message processing. In this paper, we consider a simplified version of the Euclidean projection algorithm provided in [5]. Compared with the one proposed in [3], it minimizes the control dependencies as well as the computational complexity which facilitates its parallelization and thus its implementation.
+
+IV. NISC-BASED ADMM l2 LDPC DECODER The design of LDPC decoders is an arduous task. Different techniques were proposed to reduce the design cycle of such architectures. One way is to generate the control part and the memory mapping of LDPC decoder from the parity check matrix on a generic architecture thanks to an automated flow [9]. In such case, the hardware architecture is partially parallel. Therefore, only a subset of nodes in the Tanner graph is instantiated as check node functional units (CNU). An overview of the architecture proposed in [9] is provided in Figure 1. To facilitate the design of hardware ADMM l2 decoders and to make fair complexity and throughput comparisons with NMS decoders, we decided to reuse this generic architecture and its associated design methodology. However, as detailed below, the CNU design of the ADMM decoder is very different from the NMS CNU in [9]. The variable to check message processing is more complex since the high computational complexity Euclidean projection block is introduced. Moreover, additional memory elements are necessary for the messages storage. In fact, the global decoder architecture looks similar. It includes Mu memory modules for storing the VNs (Ti) and P CNUs that process the CN computation in parallel and store the z and λ messages as well. Besides, two Benes networks [15] are dedicated to interleave and deinterleave functions to route VN values both at the beginning and at the end of the CNUs processing according to the H matrix structure. A controller unit is in charge of the control signal generation and also of the address generation for data-path and memories. PUs and MUs numbers may vary. Indeed, the number of memory units can be higher than the number of processing units in order to help the memory access conflict resolution. Finally, a system interface monitors the data exchanges with the rest of the system.
+A. Check node unit for the ADMM l2 decoder The processing unit architecture developed for the ADMM
+l2 algorithm is detailed in Figure 2. Contrarily to the NMS CNU in [8], [9] that is composed of two phases, the current ADMM CNU is composed of three cascaded data-paths designed to process in a pipeline mode. These blocks correspond
+Fig. 1. NISC based LDPC decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Fig. 2. Proposed CNU architecture for the ADMM l2 decoder.
+
+to the three steps φ1, φ2 and φ3 of Algorithm 1. The first part of the architecture computes the variable to check message Tikj from VNi to CNj. In order to get the dcj components of the Euclidean projection input vector, dcj cycles are necessary. As these components are generated serially, they need to be parallelized in one vector to be sent to the Euclidean projection. The vector output from the projection is serialized so as to get dcj values of zjki+1. The datapath of the projection module that is based on [5] is depicted in Figure 3. It instantiates the block depicted in Figure 4.
+The inputs values of the projection block, already computed in the first block, are stored in a FIFO module. Then, they are subtracted from the serial output of the projection to get the new λkji+1 (Algorithm 1 line 20). The update values of λkji+1 and zjki+1 are then stored in the message memories. The new Tik+1 is got by adding the previously stored value Tikj to the new λjki+1 and zjki+1 (Algorithm 1 line 22).
+In the proposed architecture, it is possible to process one edge per clock cycle per CNU. The CN computation datapath computes a new CN of degree dc after dc clock cycles and the results (VNs) are stored in memory during 2dc cycles. Processing one edge per clock cycle should provide high throughput such as in [8], [9]. Indeed, 2dc-cycle latency is necessary to avoid any potential overlap in computing check nodes sharing VN values. CN computation binding on CNUs and memory access conflict resolution are performed offline using the technique described in [9].
+B. Quantization formats
+Like in all communication systems design flows, the ADMM l2 decoder’s design started at a behavioural level where all numeric formats in the system model are in a floating-point format. In a hardware implementation, fixed-point numeric formats are used exclusively since they offer significant savings
+
+in terms of silicon area cost and processing latency. Hence, conversion from floating-point to fixed-point numeric formats is an essential step. To this end, we consider the range and the precision of each data in the design as well as the overflow and the induced errors. Thus, a trade-off between performance and hardware complexity is optimized through finding the lowest implementation cost which gives an acceptable level of performance.
+The fixed-point conversion of the CNU is split into two steps. First, the number of bits for the integer part is fixed after a dynamic range evaluation. This number of bits is minimized while ensuring that no overflow nor a limited number of overflow occurs. Second, the number of bits for the fractional part is determined. The limited number of bits used to represent the data generates an error between the infinite and finite precision values. This error must be precisely estimated and controlled. Indeed, the ADMM l2 decoding includes multiplication and division operations that are not used in Min-Sum based decoding algorithm.
+According to the top level data path of the CNU depicted in Figure 2, three data widths are mandatory for the CNU block:
+• wv: the width of the variable to check message used to get the MU data size.
+• wλ and wz: the widths of the check to variable messages which are used to get the message RAM data size wm.
+In the remainder of this paper, the following notation is considered: Ql.fr format refers to a quantization format on l bits, where f r bits are used for the fractional part.
+1) Dynamic range evaluation of CNU interface data: Optimum integer values of data lengths can be selected from the distribution graphs. Large values reduce quantization errors but increase implementation costs. On the other hand, small values decrease hardware complexity costs but increase quantization errors. Figure 5 shows the simulation results for a floating-point ADMM l2 horizontal layered decoder, with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+TABLE I. PARAMETERS OF GALLAGER LDPC CODES.
+
+LDPC Code
+
+dv dc density of H number of messages
+
+C0: 96 × 48
+
+36
+
+C1: 2640 × 1320 3 6
+
+C2: 4000 × 2000 3 6
+
+C3: 9216 × 4608 3 6
+
+C4: 8000 × 4000 3 6
+
+6.25% 0.23% 0.15% 0.065% 0.08%
+
+288 7920 12000 27648 24000
+
+show that:
+
+• the channel values Ti are in the interval [−3, 5], • the messages z from check to variable vary from 0 to 1, • the check to variable messages λ range from −2 to 2.
+
+Therefore, the required number of integer bits can be deduced
+
+and hence the saturation values of these variables. The integer
+
+part is as the following: 4 bits for λ and Ti and 2 bits for z.
+
+2) Fractional bits estimation: The number of bits for the
+
+fractional part has to be minimized so as to keep the same error
+
+correction performance as the floating-point decoder. Figure 6
+
+shows FER results for the 2640 × 1320 and 96 × 48 regular
+
+LDPC codes with different number of bits for the fractional
+
+part of λ, z and Ti and in the same conditions as in Figure
+
+5. These simulation results show that the quantization which
+
+gives an error performance equivalent to floating-point decoder
+
+is the one using 8 bits for the fractional part of the data. A
+
+reduction of the quantization bits leads to drastic performance
+
+loss. Eventually, the selected quantization scheme is Q12.8 for
+
+Ti, Q10.8 for z and Q11.8 for λ. In addition, 8 bits were used
+
+for
+
+the
+
+finite
+
+precision
+
+of
+
+all
+
+the
+
+parameters
+
+(ρ,
+
+1 − ρ,
+
+α µ
+
+,
+
+1
+
+dv
+
+−2
+
+α µ
+
+).
+
+Finally,
+
+the
+
+projection
+
+inputs
+
+are
+
+on
+
+10
+
+bits
+
+with
+
+6
+
+bits dedicated to the fractional part.
+
+Fig. 3. Data-path of the projection block which implements the Euclidean projection algorithm in [5].
+Fig. 4. Computing the indicator vector fodd for the projection.
+a maximum of 200 iterations, over an AWGN channel using BPSK modulation, for different SNR values. These statistics
+
+V. EXPERIMENTAL RESULTS
+The architectures were synthesized using Xilinx ISE 14.7 tool targeting a Xilinx Virtex6 FPGA device (xc6vlx240t3ff1156). NISC-based ADMM l2 decoders dedicated to the decoding of the LDPC codes in Table I were synthesized. Quantization format presented in previous section were used.
+One can notice that the three decoders for LDPC codes C1, C2 and C4 have comparable logic and registers costs as they seem to have almost the same configuration P |Mu in terms of processing units (P ) and LLR memories (Mu). The two decoders having the same P |Mu configuration need the same memory amount (C1 and C2).
+Concerning the longest considered code C3, the corresponding decoder has an increased hardware resources requirement. This can be due to the fact that the number of processor units is different from the number of memory units. An other point is about its configuration that has 30% more memory units than the other considered long codes. In addition, all the synthesised decoders assign DSP blocks. They are to be likely dedicated to the division operations used in the Euclidean projection inputs which increase with the number of CNU configured.
+Regarding the frequency, only the short LDPC code C0 succeeds to reach 100 MHz. The other selected LDPC codes are below the target frequency. The path is slowed not only because of the complex Euclidean projection block, but because of the large data widths too.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Probability Probability Probability
+
+@0.5 dB
+
+@0.5 dB
+
+@0.5 dB
+
+0.4
+
+@1 dB
+
+@1 dB
+
+0.3
+
+@1 dB
+
+@1.5 dB
+
+0.2
+
+@1.5 dB
+
+@1.5 dB
+
+@2 dB
+
+@2 dB
+
+@2 dB
+
+0.2
+
+0.2
+
+0.1
+
+0.1
+
+0
+
+0
+
+0.5
+
+1
+
+z
+
+0
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+λ
+
+0
+
+−4 −2 0
+
+2
+
+4
+
+Ti
+
+Fig. 5. Dynamic range distribution of z, λ and Ti, for 2640 × 1320 LDPC code at different SNR values using floating-point HL decoder.
+
+TABLE II.
+
+IMPLEMENTATION RESULTS OF ADMM l2 BASED AND NMS BASED LDPC DECODERS ON A XILINX VIRTEX6 FPGA (XC6VLX240T-3FF1156). THE DATA RATES ARE OBTAINED FOR 100 DECODING ITERATIONS.
+
+LDPC Code Parallelism P |Mu nbre Frames Decoder LUTs
+Flip Flops
+Slices
+18k Block RAMs
+DSP48
+Frequency (MHz) Critical path (ns) cycles/iteration Data Rate (Mbps)
+
+96 × 48 4—4 1
+ADMM l2 NMS
+
+8634 (5%) 6344 (2%) 3757 (9%)
+9 (1%)
+12 (1%)
+
+1152 (1%) 1119 (1%) 594 (1%)
+9 (1%)
+− −
+
+102.09 9.797 144 0.68
+
+153.77 6.503 138 1.07
+
+2640 × 1320 22—22 2
+ADMM l2 NMS
+
+48795 (32%) 29119 (9%) 17571 (46%)
+100 (12%)
+66 (8%)
+
+7947 (5%) 5635 (1%) 3044 (8%)
+78 (9.3%)
+− −
+
+92.38 10.820
+444 11
+
+157.52 6.348 438
+19
+
+4000 × 2000 22—22 1
+ADMM l2 NMS
+
+48451 (32%) 29149 (9%) 16216 (43%)
+100 (12%)
+66 (8%)
+
+7957 (5%) 5637 (1%) 3151 (8%)
+78 (9.3%)
+− −
+
+81.52 12.266
+660 4.94
+
+157.52 6.348 654
+9.6
+
+8000 × 4000 21—21 1
+ADMM l2 NMS
+
+45223 (30%) 27897 (9%) 14305 (37%)
+125 (15%)
+63 (8%)
+
+7760 (5%) 5457 (1%) 2918 (7%)
+73 (10%)
+− −
+
+84.67 10.050 1308
+6.08
+
+148.06 6.754 1302
+9.1
+
+9216 × 4608 24—32 1
+ADMM l2 NMS
+
+67888 (45%) 43310 (14%) 22288 (59%)
+180 (21%)
+96 (12%)
+
+11650 (12%) 7960 (2%) 4587 (12%)
+116 (14%)
+− −
+
+84.67 10.699 1116
+7.72
+
+151.00 6.622 1110 12.54
+
+100 100
+10−1
+
+FER for C0 code FER for C1 code
+FER
+
+10−2 10−4
+
+10−3 10−5
+
+10−6
+123456 SNR float
+λ : Q7.10 − z : Q7.9 − Ti : Q7.11
+
+10−7
+
+0.5
+
+1.5
+
+SNR
+
+λ : Q8.11 − z : Q8.10 − Ti : Q8.12 λ : Q6.9 − z : Q6.8 − Ti : Q6.10
+
+10−2 10−4 10−6 10−8
+0.5
+
+C0 ADMM l2 C0 NMS
+C1 ADMM l2 C1 NMS
+C2 ADMM l2 C2 NMS
+C3 ADMM l2 C3 NMS
+C4 ADMM l2 C4 NMS
+
+1.5
+
+2.5
+
+3.5
+
+SNR
+
+Fig. 6. FER performance of horizontal layered ADMM l2 decoders: Floatpoint decoder Vs Fixed point representation for C0 and C1 LDPC codes with different variable quantization schemes.
+
+Fig. 7. FER performance of the ADMM l2 decoder compared with the NMS decoder: fixed point decoders with maximum decoding iterations=100 and horizontal layered scheduling.
+
+A. Comparison with related works
+In order to compare the proposed ADMM l2 decoder to the one in [9], five decoders using an NMS (α = 0.75 as
+
+in [8]) algorithm and a horizontal layered scheduling were generated. The selected quantization format was 6 bits for messages and 8 bits for VNs to maintain NMS floating
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+TABLE III. IMPLEMENTATION RESULTS OF THE ADMM l2 CNU AND THE NMS 0.75 CNU ON A XILINX VIRTEX6 FPGA (XC6VLX240T-3FF1156).
+
+LUTs Flip Flops Slices
+Frequency (MHz) Critical path (ns)
+
+ADMM l2 CNU
+2213 1299 844
+118.6 8.434
+
+NMS CNU
+174 132 86
+247.8 5.348
+
+point performance. These decoders were synthesised using the same logical synthesis options on the same FPGA target. The hardware resources and the throughput estimations are provided in Table II.
+All the NMS decoders succeed to reach around 150 MHz as frequency and their throughputs are ×1.5 to ×2 higher than those of the ADMM l2 decoders. This difference is mainly due to the decoders’ frequency. Indeed, a difference of dc cycles per iteration is detected between the two decoders. For the five synthesized decoders, the ADMM l2 decoder consumes between 6 and 7.5 times more LUTs and 5.5 times more flip flops than the NMS decoder. Meanwhile, the ADMM l2 decoder consumes between ×1.2 and ×1.7 more block RAMs than the NMS decoder. In addition, the NMS hardware decoders do not use any DSP modules since the operations in the NMS algorithm have a low complexity. The hardware complexity increase of the ADMM l2 decoder, when compared with the NMS is due to many factors. First, the quantization format used for ADMM l2 decoding is higher than the NMS decoder. In fact, the quantization scheme in the NMS decoder is 8 bits for Ti and 6 bits for check messages. These data lengths are a key factor to determine the memory footprint of the decoder. Also, Ti’s length impacts the hardware complexity. For instance, the adder complexity doubles in accordance with Ti length. Second, the computational complexity of the CN data-path is high due to the Euclidean projection implementation. Finally, as stated previously, the ADMM l2 decoding process requires the storage of two (z and λ) message elements which doubles the message memory cost in comparison with the NMS decoder.
+To show the high impact of all these factors, we synthesised the ADMM l2 CNU. Hardware complexity and timing results are provided in Table III which includes also the synthesis results of the NMS processing unit. Additional synthesis results show that the Euclidean projection consumes 40% of the logic resources of the ADMM l2 CNU block and 10% of its registers. The critical path is between the output of the stage φ1 and the output of the Euclidean projection in the second stage φ2. Additional pipeline stages are necessary to solve this limitation. To sum up, these synthesis results show that the hardware cost of the ADMM l2 architecture is higher compared with the NMS one. However, it is counterbalanced by the peerless error correction performance as shown in Figure 7.
+VI. CONCLUSION
+In this paper, an ADMM l2 decoder based on a NISC architecture is described. The proposed decoder is based on a partially parallel architecture. It implements a horizontal layered decoding algorithm. It can be used for regular LDPC
+
+codes. Implementation results demonstrate the applicability of the ADMM l2 algorithm for a hardware FPGA target though the implementation cost is found to be higher than the NMS decoder with the same NISC-based architecture. This cost can be further reduced if we succeed to decrease the data widths in the decoder’s data-path without impacting the error correction performance. In addition, the timing results can be enhanced by modifying the data flows of the NISC. The results demonstrate that LP based hardware LDPC decoders are realizable, while still requiring a great deal of optimizations in order to reduce the decoder hardware complexity.
+REFERENCES
+[1] J. Feldman., Decoding Error-Correcting Codes via Linear Programming, Ph.D. thesis, Massachussets Institute of Technology, 2003.
+[2] Xiaojie Zhang, LDPC Codes: Structured Analysis and Decoding Techniques, Ph.D. thesis, University of California San Diego, 2012.
+[3] Siddharth Barman, Xishuo Liu, Stark C. Draper, and Benjamin Recht, “Decomposition methods for large scale LP decoding,” IEEE Transactions on Information Theory, vol. 59, no. 12, 2013.
+[4] I. Debbabi, N. Khouja, F. Tlili, B. Le Gal, and C. Jego, “Evaluation of the hardware complexity of the admm approach for ldpc decoding,” in 2016 IEEE Wireless Communications and Networking Conference, April 2016.
+[5] Mitchell Wasson and Stark C. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in 49th Asilomar Conference on Signals, Systems and Computers, November 2015.
+[6] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-based linear programming decoding via the alternating direction method of multipliers,” in IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), 2017.
+[7] I. Debbabi, B. Le Gal, N. Khouja, F. Tlili, and C. Jego, “Fast Converging ADMM Penalized Algorithm for LDPC Decoding,” IEEE Communication Letters, vol. 20, no. 4, February 2016.
+[8] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoders,” Journal of Signal Processing Systems, vol. 65, pp. 185–197, 2011.
+[9] Bertrand Le Gal, Christophe Jego, and Camille Leroux, “A flexible NISC-based LDPC decoder,” IEEE Transactions on Signal Processing, vol. 62, no. 10.
+[10] Mohammad Reshadi, No-instruction-set-computer (Nisc) Technology Modeling and Compilation, Ph.D. thesis, California State University at Long Beach, 2007.
+[11] Haoyuan Wei, Xiaopeng Jiao, and Jianjun Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett, vol. 19, no. 6, June 2015.
+[12] Xishuo Liu, S.C. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” in Proceedings of the IEEE Information Theory Workshop (ITW), September 2012.
+[13] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM penalized decoder for irregular low-density parity-check codes,” IEEE Communication Letters, vol. 19, no. 6, pp. 913—916, June 2015.
+[14] C. Condo, M. Martina, and G. Masera, “VLSI Implementation of a Multi-Mode Turbo/LDPC Decoder Architecture,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 60, no. 6, pp. 1441– 1454, June 2013.
+[15] Va´clav E Benesˇ, Mathematical theory of connecting networks and telephone traffic, vol. 17, Academic press, 1965.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:03:56 UTC from IEEE Xplore. Restrictions apply.
+
+

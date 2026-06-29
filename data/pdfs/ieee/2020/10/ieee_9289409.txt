@@ -1,0 +1,469 @@
+Intelligent Error Recovery Flow Prediction for Low Latency NAND Flash Memory System
+Bogyeong Kang, Jeongju Jee, and Hyuncheol Park School of Electrical Engineering
+Korea Advanced Institute of Science and Technology (KAIST) Daejeon, South Korea
+{gyeong27, ji1718, and hcpark}@kaist.ac.kr
+
+Abstract—To alleviate the reliability requirement of NAND flash memory due to the increased capacity, the importance of error management has been brought up. The current error recovery flow can cause a high latency because it performs error recovery techniques sequentially regardless of the memory status. In this paper, we propose a machine learning based error recovery flow prediction method that can select the appropriate start point of error recovery which results in minimum latency with successful decoding. In addition to finding the optimal starting point that achieves minimal latency, we carefully consider input features that can be obtained during the reading process and without additional overhead. By simulation, we show that the proposed prediction method can achieve highly improved latency performance compared to the conventional scheme.
+Index Terms—NAND flash memory system, error management, error-correction codes, machine learning, latency minimization
+I. INTRODUCTION
+By the advance of scaling and multi-leveling technologies, the storage capacity of NAND flash memory has been continuously increased. However, these technologies cause NAND flash memory vulnerable to the effect of noise and the reliability of the memory has been considerably degraded.
+For this reason, error-recovery techniques such as errorcorrection codes (ECC) and read-retry have been applied to NAND flash memory to maintain reliability. Low-density parity-check (LDPC) codes are generally used for the NAND flash system due to its high error correcting capability using soft information. However, excessive sensing latency is resulted because multiple sensings are required to obtain precise soft information. Read-retry method is to modify read voltages when the decoder fails to recover read data [1]. Likewise, the read-retry method requires high read latency due to multiple sensing operations. Because of its high latency, error recovery techniques with high reliability cannot be used consistently during the lifetime of NAND flash memory.
+Therefore, conventional NAND flash memory tries to recover errors by using these techniques sequentially. However, recovering errors in a fixed sequential order is inefficient in terms of overall latency because it repeats fixed sensing and decoding procedure until decoding succeeds regardless of the degradation status.
+This work was supported by Samsung electronics (KAIST-Samsung Electronics’ device solutions (DS) Division, Strategic Industrial Project, 2020).
+
+The current error recovery flow (ERF) which uses a fixed order introduces the problem of high latency as described above. If it is possible to predict the sensing/decoding mode that succeeds in advance, overall read latency can be reduced significantly by skipping redundant procedures that are expected to fail. For predicting an appropriate sensing/decoding mode, we should estimate the current cell state in terms of reliability degradation.
+Recent studies try to predict the raw-bit error rate (RBER) of NAND flash memory to analyze the current state of degradation of NAND flash memory [2]–[4]. RBER is the most important metric for error management because it means how much the memory cells have been degraded. However, these studies include retention time as an input feature, which is difficult to obtain accurately. The authors in [5] proposed a method for prediction of decoding success by machine-learning (ML) and operating read-retry if decoding fails. However, soft-decision (SD) sensing/decoding which are necessary to maintain the reliability is not considered. In addition, the latency overhead to acquire the feature should be considered.
+In this paper, we propose a prediction method of successful ERF by trained ML model, which leads to latency minimization and higher throughput. In order to offer a general solution for various type NAND flash using LDPC ECC, we consider input features that are easy to obtain during the data reading process such as sensing output or decoding output. The performance of the proposed ERF prediction method is evaluated by simulation in terms of prediction accuracy and average read latency improvement. In addition, we compare the latency overhead required to acquire the input features.
+II. NAND FLASH MEMORY SYSTEM
+In this chapter, the basic operation and channel model of the NAND Flash memory system are introduced. NAND flash memory stores bit information by injecting electrons in a transistor named a cell. The symbol of data stored in memory cells is determined by threshold voltages (Vth) and read by applying read voltages. As NAND flash memory wears out due to increasing program/erase (PE) cycles and data retention time, and interferences from other cell data, the distribution of threshold voltages varies, which causes deterioration of the reliability.
+
+978-1-7281-6758-9/20/$31.00 ©2020 IEEE
+
+1367
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+ICTC 2020
+
+A. Basic Operation
+We consider a triple-level cell (TLC) NAND flash memory as illustrated in Fig. 1. TLC NAND stores 3 bits in each cell making one data symbol corresponding to one of 23 states. A page consists of multiple cells sharing a word-line (WL).
+
+LDPC Encoder
+LDPC Decoder
+
+Programming Sensing
+
+Additive Noise
+TLC Channel
+
+Fig. 1. System model
+
+The detailed explanation of the operations in Fig. 1 is as follows.
+1) Programming: Injecting electrons in a cell for writing data is called programming. The programming procedure is described as follows. Data bits are saved in a page as the form of codeword after passing through the LDPC encoder, and bits stored in 3 pages mapped as symbols are programmed in cells. The threshold voltage distribution of the cells programmed in the ith state can be modeled as a Gaussian distribution [6]:
+
+pp(x)
+
+=
+
+1 √ σp 2π
+
+e , 0 −
+
+(x−µpi 2σp2
+
+)2
+
+≤
+
+i
+
+≤
+
+7
+
+(1)
+
+where µpi and σp are the mean and standard deviation of the ith programmed state, respectively
+2) Sensing: Data stored in cells is read by applying read voltages and decided by voltage window including the threshold voltage of each cell. Applying read voltages for getting data is named sensing. The unit of sensing operation is one WL. Fig. 2 illustrates the hard-decision (HD) sensing operation of TLC which needs 7 read voltages.
+
+CSB LSB
+
+MSB
+
+LSB
+
+LSB
+
+CSB LSB
+
+10 10
+
+01
+
+01
+
+10
+
+01 01
+
+ܸ௧௛
+
+Fig. 2. Hard-decision sensing of TLC NAND
+
+B. Channel Model
+During the lifetime of NAND flash memory, the noise generated by several factors changes the Vth distribution. Additive noise mainly consists of random telegraph noise (RTN) and data retention noise which are induced by increasing PE cycles and data retention time. The probability density function of RTN pr(x) and data retention noise pt(x) can be modeled as a Laplace distribution and a Gaussian distribution, respectively [7]:
+
+pr (x)
+
+=
+
+1 2λr
+
+e , −
+
+|x−mr λr
+
+|
+
+(2)
+
+pt(x)
+
+=
+
+1 √ σd 2π
+
+e , −
+
+(x−µd 2σd2
+
+)2
+
+(3)
+
+where λr Kr ·N 0.5, mr Cr +Ar ·N 0.62, N is the number
+of PE cycles, and Kr, Cr, Ar is constant. The mean µd and variance σd2 of retention shift which are functions of retention time t can be defined as
+
+µd = Ks(x − x0)KdN 0.5ln(1 + t/t0),
+
+(4)
+
+and
+
+σd2 = Ks(x − x0)KmN 0.6ln(1 + t/t0),
+
+(5)
+
+respectively, where x is the initial threshold voltage, and x0, Ks, Kd, t0 and Km are constant.
+The final threshold voltage distribution distorted by impairments can be expressed as follows:
+
+p(x) = pp(x) ∗ pr(x) ∗ pt(x).
+
+(6)
+
+Fig. 3 shows the Vth distributions using the introduced noise models at different retention times under 104 PE cycles. As
+the retention time increases, Vth distribution shifts to the left
+and widens, indicating the effects of additive noise.
+
+pdf
+
+7
+1 day
+
+6
+
+100 days
+
+1000 days
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Threshold voltage
+
+Fig. 3. Vth distribution after 104 P/E cycling
+
+III. ERROR RECOVERY FOR NAND FLASH MEMORY
+In Section II, we introduced the basic NAND flash memory system and degradation due to physical effects. In this chapter, we present techniques to improve reliability.
+A. Error-correction codes
+To maintain reliability, LDPC codes are widely used in NAND flash memory because of its strong error correction capability using SD decoding. However, precise soft information to calculate log likelihood ratio is difficult to obtain in NAND flash. NAND flash memory can acquire soft information by quantizing voltage regions of each intersection, which is called SD sensing. SD sensing generally aims to acquire 2-bit soft
+
+1368
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+information which demands two additional sensings at each intersection of Vth distribution after HD sensing [8]. Fig. 4 shows SD sensing operation at an intersection of two adjacent distributions.
+
+HD sensing
+
+2 additional sensings for SD
+
+of Optimal HD is larger than that of Default SD. By these considerations, this ERF in Fig. 6 arranges sensing/decoding mode in the order of low latency.
+
+Error recovery
+start
+
+ODWHQF\Ĺ5%(5Ĺ
+
+Default fail Default fail Optimal fail
+
+HD
+
+SD
+
+HD
+
+success
+
+success
+
+success
+
+Error recovery complete
+
+Optimal
+
+Error
+
+SD
+
+recovery
+
+fail
+
+success
+
+Fig. 4. Soft-decision sensing of TLC NAND
+
+Fig. 6. Conventional fixed error recovery flow
+
+B. Read-retry If SD decoding fails, the controller should move read
+voltages to the shifted cross point as illustrated in Fig. 5, which is called read retry. It is difficult to find the new valley point because the controller doesn’t know the accurate current threshold voltage distribution. Therefore, read retry operation commonly needs multiple sensing to get information about current cell distribution, which results in high sensing latency [9], [10].
+initial
+ܸ୭୮୲ ܸୢୣ୤
+Fig. 5. Example of a shifted cross point
+
+IV. ML BASED ERF PREDICTION METHOD
+Using a proper ERF is necessary for an efficient NAND flash system to successfully recover data with low latency. Fixed ERF described in Section III-C can relieve latency at low RBER using a low latency decoding procedure. However, at high RBER, the unnecessary process which fails with high probability has to be done until the successful recovery of data. If we put the priority on a procedure that has higher reliability to make sure the decoding success, latency at high RBER can be reduced by skipping redundant procedures. However, it is inefficient at low RBER.
+Therefore, it is essential to choose an appropriate sensing/decoding mode depending on the current memory state to decrease latency. We aim to design a method to minimize latency by predicting the optimal start point of the ERF using supervised learning. Fig. 7 shows our proposed ML based error recovery flow.
+
+C. Error Recovery Flow
+As shown in Section III-A and III-B, error recovery techniques with high reliability introduce high read latency. It means that using the high-reliability method such as SD sensing and read voltage update scheme consistently is harmful to the overall latency. Therefore, we need to design the error recovery flow considering the proper operation for the current memory state of degradation. RBER is defined as uncoded BER, which can be used as a measure of degradation of the memory system. During the lifespan of memory, RBER continuously increases, and NAND flash needs a stronger error correction capability at higher RBER. Fig. 6 represents the conventional ERF aiming to achieve latency-efficient processing in NAND flash. In this ERF, HD sensing/decoding is firstly applied with initial read voltages Vdef , and if decoding fails, SD sensing and decoding are operated. We name these two error recovery steps Default HD and Default SD respectively. When the decoder fails to recover original data with initial read voltages, HD sensing/decoding and SD sensing/decoding are sequentially operated again after controller update read voltages close to optimal read voltages Vopt by read-retry. These two steps are called Optimal HD and Optimal SD. We consider 2-bit SD sensing and assume that the latency
+
+Error recovery complete
+
+Input feature
+
+1
+
+ML-based classifier
+
+4-class 2 3
+
+if recovery fails by a wrong prediction
+
+4
+
+Default HD Default SD Optimal HD Optimal SD
+
+Fig. 7. Proposed ML based error recovery flow
+
+A. Dataset generation
+1) input features: In order to predict the optimal sensing/decoding mode, we should consider input features that can represent the current cell state because it is directly related to the degree of degradation. As shown in II-B, the probability distribution of the additive noise is a function of PE cycles and retention time. Because of the wear leveling method that enables balanced use of memory cells, the controller collects the number of PE cycles [1]. However, it is difficult to obtain an accurate retention time because it is easily affected by the change in temperature or physical state. Therefore, an alternative to the retention time must be considered. We
+
+1369
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+take advantage of the following features as an alternative to retention time.
+• Sensing output: We use the number of ON-cell when applied Vdef divided by the number of entire cells as the sensing output feature. It contains 7 elements since TLC NAND has 7 read voltages.
+• Decoding output: HD decoding output with Vdef sensing is used. It consists of a frame error rate (FER) and average iteration number for each page which can be calculated with the decoding output of 1 WL data.
+2) labeling: Our goal is to predict a sensing/decoding mode that can recover data successfully while achieving minimum latency. Since the read operation unit of NAND flash memory is one WL, decoding success is defined as the complete recovery of all codewords in one WL data. The label of each data is defined as a sensing/decoding mode which can minimize the read latency while recovering data successfully. The four-class labels are represented in Fig. 7.
+For each data sample, we apply four sensing/decoding modes and determine the label which has the lowest latency among the successful decoding modes. The latency of each mode is calculated as shown in Table I where tHDsen, tSDsen represent latency of HD sensing, SD sensing respectively, tHDdec, tSDdec is latency for decoding one WL, and tRR is the latency required for read-retry. See section III for the detail on the derivation of the latency in Table I.
+
+TABLE I LATENCY OF EACH CLASS
+
+Label class 1 class 2 class 3 class 4
+
+Latency tHDsen + tHDdec tHDsen + tSDsen + tSDdec tRR + tHDsen + tHDdec tRR + tHDsen + tSDsen + tSDdec
+
+B. Training phase
+To predict the best ERF from the observable features, we adopt classification methods based on supervised learning. We use three types of classifiers and the details and training parameters are as follows.
+• Artificial Neural Network (ANN): The ANN, which consists of an input and an output layer and hidden layers that can be composed of multiple layers, is the most commonly used classifier in various fields with excellent classification performance. We use only input and output layers that have a node size corresponding to input and output size respectively, without hidden layer. To improve the classification performance, we set the activation function as softmax in the output layer, cost function as a cross-entropy.
+• Support Vector Machine (SVM): A SVM is a binary classifier that generates a hyperplane that can separate the data given a label.
+
+We choose the linear function as the kernel function, and for multi-class classification, we use binary complete coding design which partitions the classes into all binary combinations [11]. • Decision Tree (DT): The DT is branched from each node until information about a class remains, or classified to a specific standard. Specifically, criteria are set based on how much the impurity decreases when a specific feature is selected. We train DT as the CART algorithm [12] and use the Gini index as the impurity indicator. To prevent overfitting, the Maximum number of splits is limited by 40.
+C. Prediction phase
+The classifier is trained in order to generate the desired label when the corresponding feature is given as input. The model is trained and tested with the dataset demonstrated in Section IV-A for each ML scheme in Section IV-B. After training is complete, the model predicts the label of the test set and decides that label as the starting point for the ERF.
+If the model predicts an accurate label, the ERF succeeds at the start point set so that it can achieve minimum latency. However, if the prediction fails, then the ERF may not succeed at the start point. In that case, data can be recovered by applying sensing/decoding mode with higher reliability than the starting point as shown in the dashed line in Fig. 7. Though, this generates latency overhead because redundant procedures that must fail are operated due to the wrong prediction. If the prediction fails, but in a stronger decoding mode than the true label, decoding can succeed with a high probability. Nevertheless, as the stronger decoding needs more sensing latency, it is not an optimistic decision and generates latency overhead compared to the true labels that can have optimal latency.
+D. Latency overhead of input feature acquisition
+In our proposed model, we should note the fact that the process after selecting the label using the classifier is HD sensing/decoding, SD sensing/decoding, or read-retry. SD sensing includes HD sensing, and current many read-retry methods include multiple sensings with initial read voltages [9], [10]. Accordingly, assuming that one or more HD sensing operations are included in the read-retry, HD sensing with Vdef is essential regardless of any classification result.
+Therefore, if only the sensing output information is used as an input feature, there is no overhead for getting input feature because at least one sensing have to be operated in the reading process. In other words, when the sensing output is used as an input feature, this can be used again for read operation without additional sensing after the classification. This can be explained as shown in Fig. 8 where tinfer means the latency for calculation of predicted label. However, when the decoding output is used as an input feature, HD decoding is added at every trial even it is unnecessary in the reading process, resulting in latency overhead for input feature acquisition.
+
+1370
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+‫ݐ‬ୌୈୱୣ୬
+
+1 ‫ݐ‬ୌୈୢୣୡ
+
+‫ڮ‬
+
+can be separated linearly, and the performance of using ANN can be similar to that of using SVM.
+
+‫ݐ‬୧୬୤ୣ୰
+
+2 ‫ݐ‬ୗୈୱୣ୬ + ‫ݐ‬ୗୈୢୣୡ
+
+‫ڮ‬
+
+3 (‫ ୖୖݐ‬െ ‫ݐ‬ୌୈୱୣ୬) + ‫ݐ‬ୌୈୱୣ୬ + ‫ݐ‬ୌୈୢୣୡ
+
+‫ڮ‬
+
+4 (‫ ୖୖݐ‬െ ‫ݐ‬ୌୈୱୣ୬) + ‫ݐ‬ୌୈୱୣ୬ + ‫ݐ‬ୗୈୱୣ୬ + ‫ݐ‬ୗୈୢୣୡ
+
+‫ڮ‬
+
+TABLE IV ACCURACY OF PROPOSED ERF PREDICTION MODEL
+
+ML scheme
+
+ANN SVM DT
+
+Input
+
+Sen, PE 80.1 % 80.0 % 79.3 %
+
+features Sen, PE, Dec 90.7 % 90.7 % 90.5 %
+
+Fig. 8. operation flow when using Sen, PE as input features
+
+The latency overhead required in our proposed ERF prediction method is as shown in Table II. Sen, PE, and Dec in tables denote sensing output, the number of PE cycles, and decoding output, respectively.
+
+TABLE II LATENCY OVERHEAD FOR USING PROPOSED ERF METHOD
+
+Input features Sen, PE
+Sen, PE, Dec
+
+Latency before ERF tinfer
+tHDdec + tinfer
+
+V. EXPERIMENTAL RESULTS
+In this chapter, the classification accuracy, and an average latency of the proposed machine learning based ERF prediction method are evaluated through simulation.
+A. Simulation settings
+The data extraction environment is a MATLAB simulator that implements the TLC NAND settings in section II. We set the page size as 16 KB, and the LDPC code with codeword length 1 KB with code rate 0.9 is adopted. We generate our dataset with 800, 900, 1000, 1100, 1200 PE cycles and 5, 10, 15, 25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700 days of retention time. Table III shows the distribution of the training/test set for each class.
+
+TABLE III DISTRIBUTION OF CLASS LABELS
+
+Class Label
+
+1
+
+2
+
+3
+
+4
+
+Number training 1977 5497 1019 7524
+
+of samples test 979 2753 481 3768
+
+B. Prediction Accuracy
+First, we evaluate the accuracy of the proposed classifier. Table IV shows the prediction accuracy of each ML method and type of input features. We can find out that all three classifiers classified test data with similar accuracy, and all showed an accuracy higher than 79 %. In all three methods, the accuracies are improved by about 10% when the decoder output is used as a feature. In the case of ANN, there was no significant difference in prediction performance between using and not using hidden layers. This means that the class labels
+
+C. Average Latency
+In this section, the average read latency of for reading one WL when the trained classifier is adopted to select the starting point of the ERF is evaluated. We assume that tHDsen = 100 µs, tSDsen = 200 µs, and the decoding latency is set to 0.5 µs per iteration [13]. We assume that read-retry demands tRR = 300 µs and finds the value of the shifted optimal read voltages Vopt [9]. The data transfer latency is not considered. Since the class labels of the proposed model can be separated by a simple ML scheme, we assume tinfer ≈ 0. For comparison, the latencies of the following baselines are evaluated.
+• Default ERF (DEF): The default ERF indicates the case where the entire process of ERF is fixed and used until decoding succeeds as shown in Fig. 6.
+• Optimal ERF (OPT): Optimal ERF is the ERF when the Genie-aided classifier that can classify 4 classes perfectly is applied. The read latency of the optimal ERF is a lowerbound performance of the classifiers.
+The average latencies of the two baseline schemes introduced above and the proposed ML-based ERF prediction method are shown in Fig. 9. The blue lines are the latency performance of the proposed ERF prediction method using sensing output and PE cycles as input features, and the green line represents the latency of that using decoding output additionally as an input feature.
+In Fig. 9, we can find that the difference between the latencies of default ERF and optimal ERF increases with increasing RBER. Especially, the default ERF has significantly higher latency at the high RBER region. This is because the order of applying the sensing/decoding modes of the default ERF is arranged in the low latency order. Initially, the latency of optimal ERF and default ERF coincide, but as RBER increases, unnecessary sensing/decoding processes are repeatedly performed at the default ERF so that the latency performance is significantly degraded compared to optimal ERF.
+All three classifiers (ANN, SVM, DT) of the proposed ERF prediction method using sensing output, PE cycles as input features can achieve an average latency close to optimal latency in most RBER, improving average latency by up to 85 %. However, in some areas, there exists a gap between the latency of the optimal ERF and the proposed scheme. This is because the classification accuracy is degraded in this region since features generated from each class are ambiguous in
+
+1371
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+Average Latency [us]
+
+4500 DEF
+
+4000
+
+ANN
+
+SVM
+
+DT
+
+3500
+
+ANN w/decoder
+
+OPT
+
+3000
+
+2500
+
+2000
+
+1500
+
+1000
+
+500
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+RBER
+
+10-3
+
+Fig. 9. Comparisons of average latency of proposed and baseline schemes
+
+the corresponding region, but we can find that the proposed classifier can achieve at least 41 % lower latency than the default ERF even that region.
+As shown in Table IV, when the decoding output is used as input feature, it can achieve about 10 % higher accuracy, but the average latency performance is degraded compared to a classifier without decoding output. This is because, unlike sensing output that does not require an additional latency to acquire, decoding output generates an additional latency overhead. After all, an unnecessary HD decoding is always consumed to obtain the information.
+From this result, we conclude that using the decoding output as an input feature enables an accurate classification, but the overhead required to obtain features generates higher average latency. Therefore, better latency performance can be achieved by the proposed ERF prediction method using only the sensing output and PE cycles as input features.
+
+REFERENCES
+[1] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proceedings of the IEEE, vol. 105, no. 9, pp. 1666–1704, 2017.
+[2] D. Wei, L. Qiao, X. Chen, H. Feng, and X. Peng, “Prediction models of bit errors for NAND flash memory using 200 days of measured data,” Review of Scientific Instruments, vol. 90, no. 6, p. 064702, 2019.
+[3] R. Ma, F. Wu, M. Zhang, Z. Lu, J. Wan, and C. Xie, “RBER-Aware Lifetime Prediction Scheme for 3D-TLC NAND Flash Memory,” IEEE Access, vol. 7, pp. 44 696–44 708, 2019.
+[4] T. Nakamura, Y. Deguchi, and K. Takeuchi, “Adaptive Artificial Neural Network-Coupled LDPC ECC as Universal Solution for 3-D and 2-D, Charge-Trap and Floating-Gate NAND Flash Memories,” IEEE Journal of Solid-State Circuits, vol. 54, no. 3, pp. 745–754, 2019.
+[5] Y.-C. Liao, C.-H. Huang, C. Zeng, and H.-C. Chang, “Data Analysis and Prediction for NAND Flash Decoding Status,” in 2017 IEEE International Memory Workshop (IMW). IEEE, 2017, pp. 1–4.
+[6] G. Dong, Y. Zou, and T. Zhang, “Reducing data transfer latency of NAND flash memory with soft-decision sensing,” in 2012 IEEE International Conference on Communications (ICC). IEEE, 2012, pp. 7024–7028.
+[7] Y. Pan, G. Dong, Q. Wu, and T. Zhang, “Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,” in IEEE International Symposium on HighPerformance Comp Architecture. IEEE, 2012, pp. 1–10.
+[8] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Transactions on Circuits and Systems I: regular papers, vol. 60, no. 9, pp. 2412–2421, 2013.
+[9] C. Kim, D.-H. Kim, W. Jeong, H.-J. Kim, I. H. Park, H.-W. Park, J. Lee, J. Park, Y.-L. Ahn, J. Y. Lee et al., “A 512-gb 3-b/cell 64-stacked wl 3-d-nand flash memory,” IEEE Journal of Solid-State Circuits, vol. 53, no. 1, pp. 124–133, 2017.
+[10] Y. Wu, E. F. Haratsch, Y. Cai, and A.-H. Alhussien, “Flash memory read retry using histograms,” Feb. 10 2015, uS Patent 8,953,373.
+[11] S. Escalera, O. Pujol, and P. Radeva, “Separability of ternary codes for sparse designs of error-correcting output codes,” Pattern Recognition Letters, vol. 30, no. 3, pp. 285–297, 2009.
+[12] S. L. Crawford, “Extensions to the CART algorithm,” International Journal of Man-Machine Studies, vol. 31, no. 2, pp. 197–217, 1989.
+[13] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, “Improving read performance of NAND flash SSDs by exploiting error locality,” IEEE Transactions on Computers, vol. 65, no. 4, pp. 1090–1102, 2014.
+
+VI. CONCLUSIONS
+In this paper, we propose a machine learning based ERF prediction method for NAND flash memory system. We investigate the alternative information to represent the deterioration state of the flash memory and find out that the sensing output information can be utilized without additional latency overhead by perform sensing in advance. Utilizing the alternative information, we propose an ERF prediction method based on the supervised-learning approach. By simulation, we show that the proposed ERF prediction method can achieve high accuracy by using the sensing output and decoding output information. In addition, the proposed method can achieve near-optimal and significantly improved latency performance compared with the conventional ERF.
+
+1372
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:27:19 UTC from IEEE Xplore. Restrictions apply.
+
+

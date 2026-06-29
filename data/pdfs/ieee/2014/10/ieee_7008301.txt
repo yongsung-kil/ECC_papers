@@ -1,0 +1,705 @@
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+Matrix Reordering Techniques for Memory Conflict Reduction for Pipelined QC-LDPC Decoder
+Zhenzhi Wu1,2, Dake Liu1,2, and Yanjun Zhang1
+1School of Information and Electronics, Beijing Institute of Technology, Beijing, 100081, China 2Department of Electrical Engineering, Linko¨ping University, Linko¨ping, SE-58183, Sweden
+
+Abstract—Layered Decoding (LD) algorithm is widely applied in high throughput QC-LDPC decoders. Among all check node update algorithms in LD, Turbo-Decoding Message-Passing (TDMP) is adopted by many proposals. A-posteriori memory access conflict under pipelined TDMP decoder incurs serious throughput decline. In this paper, several matrix reordering techniques are introduced to reduce the conflict occurrences without incurring the performance loss, which includes Row Exchange method, element Sequence Reordering method, and a conflict detector with pipeline stall insertion. They are integrated in a joint recursive deep-first searching procedure. Test results show that the efficiency improvement reaches up to 60% compared to non-optimized scenarios for 802.11n and 802.16e standards.
+Index Terms—QC-LDPC, Conflict reduction, Matrix reordering.
+I. INTRODUCTION
+Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) codes are adopted in several high speed wireless standards, including 802.11n and 802.16e. TDMP [1] and Min-Sum (MS) [2] are two Check Node Update (CNU) algorithms applied in the Layered Decoding for QC-LDPC codes. Although MS has lower computational complexity, it only accept low accuracy approximation function (Min-Sum or Offset-MinSum, Scaled-Min-Sum) which slows down the convergence speed. TDMP also called Bahl-Cocke-Jelinek-Raviv (BCJR) [3] enables the adaptation of more accurate approximation functions [4], [5], [6]. It also advantages in Turbo and LDPC duo-mode architecture [6], [7]. The drawback of TDMP is the a-posteriori message access conflict caused by the forwardbackward recursion, which results in serious write-after-read conflicts. To resolve the conflicts, matrix reordering is a low cost and efficient method, where the elements of the base matrix are rescheduled to avoid the conflict happen.
+Matrix reordering techniques are investigated in [8], [9] for conventional Two Phase Message Passing (TPMP) LDPC decoding. By arranging more blank area at the lower-left part and the upper-right part of the parity check matrix, the Check Node Update (CNU) and Variable Node Update (VNU) in overlapped schedule may suffer less conflict, and therefore less pipeline stalls are required. However, these methods can not be adopted in LD decoders. For pipelined LD decoders, the conflicts between consecutive layer and inter-layer are analyzed in [10], where the matrix reordering problem is summarized as ’Traveling Salesman Problem’ and the genetic algorithm is proposed. In [11], the consecutive layer conflict
+
+problems are formulated. The reverse output method and layer reordering method are proposed.
+Based on these previous work, we propose an off-line joint matrix reordering method for BCJR based LD, which has minor hardware change while brings to dramatic throughput improvement. Three conflict reduction methods including layer exchange, elements sequence reordering, and a conflict detector are integrated in a searching algorithm. The maximum efficiency (lowest amount of NOP insertions) is taken as the criteria for finding the best optimized result.
+
+II. DECODING ALGORITHM AND HARDWARE ARCHITECTURE
+
+A. BCJR Based Layered Decoding
+
+In the following illustration, R(·) and C(·) denote the
+
+number of rows and columns in the matrix or vector. D(·)
+
+denotes the set of indexes (positions) of non-zero elements in
+
+row vectors, and F(·) denotes the vector reverse operation.
+
+A QC-LDPC code is a special class of LDPC codes,
+
+where the parity check matrix HM×N can be obtained from expanding a base parity check matrix BJ×K by sub-matrices.
+
+The sub-matrices are either shifted identity matrices or blank
+
+matrices of size z × z, where M = z × J, N = z × K,
+
+J = R(B) and K = C(B). Let Xj = D(Bj) represent
+
+the index set of non-zero elements (NZE) in Bj (the jth row of B), X = [X1T X2T · · · XJT ]T . Pj = Bj,Xj denotes as the corresponding shift value of NZE, and P = [P1T P2T · · · PKT ]T .
+Note that the term ’layer’ refers to the ’row’ in base matrix,
+
+and one layer contains z sub-layers in H.
+
+Let LLRn denote the A-Posteriori Probability Log-
+
+Likelihood Ratio (APP-LLR) of variable node n, initialized by
+
+LLRn
+
+=
+
+log
+
+(
+
+P P
+
+(xn (xn
+
+=0) =1)
+
+).
+
+Let
+
+Li
+
+denote
+
+the
+
+cyclic-shift
+
+version
+
+of ith z-group data in LLRn, Li = Shif t(LLRi·z:(i+1)·z−1),
+
+with the shift value given by P. The parallel layered decoding
+
+can be described as following three steps operated on each
+
+row. The phrase ’parallel’ indicates that z sub-layers can be
+
+processed simultaneously.
+
+Step1, Get variable node messages. For each layer, only
+
+NZEs are considered
+
+λj,k = LXj,k − Λj,k, k ∈ [0, mj ].
+
+(1)
+
+Step2, Check node updates
+
+Λnj,ekw =
+
+λj,i,
+
+(2)
+
+i∈[0,mj ] k
+
+978-1-4799-4146-9/14/$31.00 ©2014 IEEE
+
+354
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+Fig. 2. BCJR sequence reordering
+
+In which x
+
+y
+
+=
+
+log
+
+1+ex ey ex +ey
+
+,
+
+and
+
+mj
+
+=
+
+C(Xj )
+
+−
+
+1.
+
+Step3, update a-posteriori messages
+
+Lnew
+Xj,k
+
+=
+
+λj,k
+
++
+
+Λjn,ekw .
+
+(3)
+
+For each row, repeating (1)-(3). Several iterations are performed until stop criteria is attained. In the future discussion we drop the index notation j which indicates the current layer being processed.
+The BCJR algorithm [1] [12] [13] is applied to efficiently drop the unnecessary element with index k. It contains three stages, including forward recursion for updating αk, backward recursion for updating βk and APP-LLR calculation for Λk, described as
+
+αk = λ0 λ1 · · · λk−1
+
+(4)
+
+βk = λm · · · λk+1 λk
+
+(5)
+
+Λk = αk βk+1 = λ0 λ1 · · · λk−1 λk+1 · · · λm (6)
+
+In MS, the sequence of write back messages is flexible, however, in BCJR the write back (backward recursion) sequence is the inverse from that of input (forward recursion) messages.
+Memory conflict occurs when APP-LLR messages for the current layer are read before the updated messages from previous layer are written back. The first three rows in the base matrix of 802.16e are shown as an example in Fig. 1. Without any optimization, there are six conflicts denoted by different colors.
+Because there is no order for the rows (layers), they are exchangeable without performance loss. Related work concerning on Row Exchange can be found in [9], [10].
+Within each row, the elements can also be reordered. Because operation is commutative, if the order of λk is changed, the order of Λk is changed accordingly. Fig. 2 shows a BCJR chain which consists of seven nodes, corresponding to the NZEs. After the input sequence is reordered as (λ2, λ1, λ5, λ3, λ4, λ6, λ0), the results are reordered as (Λ0, Λ6, Λ4, Λ3, Λ5, Λ1, Λ2). Note that there is no decoding performance loss since the value is unaltered.
+
+Fig. 3. The proposed decoder hardware architecture
+B. Proposed Hardware Architecture
+In order to verify the methods proposed, a hardware prototype is established. The decoder architecture is shown in Fig. 3. Similar architectures using BCJR decoding are discussed in [5], [6], [7], [14], [15]. X and P are obtained by the reordered B. After serialization, the read address sequence Xr = [X1T X2T · · · XRT ]T and write address sequence Xw = [F (X1)T F (X2)T · · · F (XR)T ]T are obtained. The read/write sequence and corresponding shifting value P are stored in a Look-Up Table (LUT). The non-zero sub-matrices are recursively scanned. In the forward recursion (FR), (1) and (4) are processed. The APP-LLR messages are read by the address X and cyclic-shifted with P. The results including α and λ are stored in First-In-Last-Out (FILO) buffer. After FR is finished, the backward recursion starts. In which β, Λ are calculated and then the outgoing messages L are calculated, following (5), (6), (3). Λ is stored in local buffers, and shifted L is written back at the same time. The access conflicts happen in Memory Banks where APP-LLR is stored.
+III. PROPOSED METHODS
+A. Searching Method for Row Exchange
+The searching scope is restricted by the maximum allowable consecutive layer conflicts c in order to reduce the computational complexity. The constraint c needs to be set as small as possible, which can be increased from zero and progressively increase until the optimized result is obtained, and then the searching algorithm stops. It calls sub-function FindNextRow with each c, shown in Algorithm 1.
+The algorithm FindNextRow is executed in Depth-First Traversal (DFT), which is shown in Algorithm 2.
+
+355
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+Fig. 1. Demonstration on APP-LLR message access conflicts
+
+Algorithm 1: RowExchange
+
+1 (B, X, P) := RowExchange(B)
+
+2 Nmin := ∞
+
+3 for c := 0 to ∞ do
+
+4 (B, succeed, Nmin) := FindNextRow(B, 1, c, Nmin)
+
+5 if succeed then
+
+6
+
+load B, X, P
+
+7
+
+exit
+
+8 end
+
+9 end
+
+Algorithm 2: FindNextRow
+
+1 (B, succeed, Nmin) := FindNextRow(B, r, c, Nmin)
+
+2 succeed := f alse
+
+3 if r == J then
+
+4 if C(D(Bj) ∩ D(B1)) ≤ c then
+
+5
+
+succeed := true
+
+6
+
+(X, P) := SequenceReordering(B)
+
+7
+
+N := ConflictTest(X)
+
+8
+
+if N < Nmin then
+
+9
+
+Nmin := N
+
+10
+
+dump B, X, P
+
+11
+
+end
+
+12 end
+
+13 end
+
+14 for rn := r + 1 to J do 15 B := RowExchange(B, r + 1, rn)
+
+16 if C(D(Br) ∩ D(Br+1)) ≤ c then
+
+17
+
+(B, succeed, Nmin) :=
+
+FindNextRow(B, r + 1, c, Nmin)
+
+18 end
+
+19 end
+
+In Algorithm 2, we denote the amount of NOPs as N and the minimum N as Nmin. The row index is counted from one.
+It tries to exchange each following row Brn with its next row Br+1, and test whether the amount of consecutive layer conflict is less or equal to c. If satisfied, the next row would become the current row, and the recursion proceeds. When the
+
+last row is attained and successfully verified with the first row, an admissible optimized base matrix is formed. The procedure SequenceReordering and ConflictTest are called immediately. By comparing the number of NOPs with the minimum NOPs recorded before, the newly generated B is recorded only when it has less NOPs. The recursion continues until all possible matrices are tested, and then the most minimum number of NOPs is obtained with the corresponding B generated.
+When the number of rows is large, the algorithm can be accelerated by quitting ’for’ loop when succeed is obtained or the searching time limit is attained. In such occasion, only one or several possible matrices are obtained. It reaches the same throughput (NOPs) in most cases, or obtains a slightly worse result.
+B. Sequence Reordering Method
+Firstly we propose two metrics called ’read distance’ and ’write distance’. In Fig. 4, the common elements between current layer and adjacent four layers are demonstrated. dj,θ represents the clock cycles between the write and read operation, called distance, where θ is the offset from current row. Conflict occurs when dj,θ < 0. Because the following rows are un-arranged, the distance can not be calculated directly. However, the larger distance for all layers, the less conflicts will happen in global perspective, which is formulated as maxdj,θ, θ = [−2, −1, 1, 2], for all j ∈ [1, J ]. The maxdj,θ can be optimized by carefully rescheduling the position of common elements in table X.
+For the current row r, the common elements between row r and r + 1 are required to be written as early as possible for maxdj,1, while the common elements between row r and r −1 need to be read as late as possible for maxdj,−1. Similar requirements also exist for maxdj,±2. Writing early also refers to reading lately. In conclusion, all the requirements equal to one rule: common elements need to be read as late as possible. In addition, the consecutive layers r + 1 and r − 1 should be considered firstly because they have less distance than row r + 2 and r − 2.
+According to the requirement, all the conflict related elements need to be placed at the right-hand side of the current row of read sequence (Xj). The common elements between r and r ± 1 are placed firstly, followed by common elements
+
+356
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+Fig. 4. Conflict distance and reordering strategy
+
+between r and r ± 2. In the end, the conflict-free elements are placed. Because there may exist several common elements among multiple layers, the already placed elements will not be placed again. The placement is shown in Fig. 4. Note that the whole mapping procedure is in linear computational complexity, without the need of recursion or iteration. If more than one common element in each layer pair need to be assigned, the sequence of them is demanded to be considered. In Fig. 4, the triangle direction indicates the sequence is either in the original sequence or in the reversed sequence. It shows that using original and reversed sequence alternately can increase the distance.
+The reorder procedure can be formalized as Algorithm 3 and Algorithm 4.
+
+Algorithm 3: SequenceReordering
+
+1 (X, P) := SequenceReordering(B)
+
+2 Lmax := maxC(D(Bj)), for all j
+
+3 for j := 1 to J do
+
+4 L := Lmax 5 R := ∅
+
+6 for θ := [1, −1, 2, −2] do
+
+7
+
+(Xj, Pj, R, L) := FillRow(j, Bj, Bj+θ, R, L,
+
+Xj , Pj ) 8 end
+
+9 (Xj, Pj, R, L) := FillRow(j, Bj, Bj, R, L, Xj, Pj)
+
+10 end
+
+In SequenceReordering algorithm, maxC(D(Bj)) represents the maximum number of non-zero elements among all rows in matrix B. Note that if j +θ > J, or j +θ < 1, modulo operation is needed. For example, the first row is the J + 1th row. After all the conflict related elements are placed in Xj, conflict-free elements are placed in the left space. After all the rows finished reorder, X is obtained. Then the read sequence Xr and write sequence Xw are derived.
+In FillRow, the common elements between row j and row j + θ are collected as a set K. The elements to be placed U are obtained by the complement of R in K. F(U ) is used for flipping the sequence of elements in U . In order to place the elements to the right-hand side next to the already assigned elements R, the location needs to be recorded. Finally, the assigned index and shift value vector for the current row are
+
+Algorithm 4: FillRow
+
+1 (x, p, R, L) := FillRow(j, Bj, Bk, R, L, x, p)
+
+2 K := D(Bj) ∩ D(Bk)
+
+3 U := K R
+
+4 l := C(U )
+
+5 L := L − l
+
+6 if j is odd then
+
+7
+
+xL+1:L+l := U
+
+8
+
+pL+1:L+l := Bj,U
+
+9 end
+
+10 else
+
+11
+
+xL+1:L+l := F(U )
+
+12
+
+pL+1:L+l := Bj,F(U)
+
+13 end
+
+14 R := R ∪ U
+
+obtained.
+C. Conflict Test and NOP Insertion
+The remaining conflicts need to be detected and NOPs are inserted for decoding correctly. Two NOP inserting methods are proposed: Column NOP Inserting (CNI) and Single NOP Inserting (SNI).
+In CNI approach, if one row encounters conflict, one NOP cycle will be inserted in front of all the rows, which means a whole column of NOPs are added to X.
+Another approach is adding a single NOP at the exact row position in read sequence Xr and write sequence Xw when conflict is occurred in this row. NOPs are added in front of the row border in Xr, and added to the end of the row border in Xw. It performs best efficiency with least NOP cost.
+Although SNI performs better or the same as CNI, we still take interest in CNI because it has no hardware modification, except that the base matrix LUT is filled with more NOP columns. It can also be implemented by a control flow which is able to stall several clock cycles for each row. Compared to SNI, which needs a table to distinguish different NOP value among different layers, it is easier to realize. For the study purpose, both of the methods are investigated.
+A conflict test and NOP inserting program called ConflictTest is developed which returns the minimum inserted NOPs needed to make sure of the pipeline be conflict-free. The
+
+357
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+program generates Xr and Xw, and calculated the dependency of the elements, with similar procedure shown in Fig. 1.
+
+IV. CASE STUDY FOR 802.11N AND 802.16E
+The base matrices of all the modes in 802.11n and 802.16e are tested as a case study, assuming that the hardware can process z layers belonging to one layer in parallel. The maximum z is 81 in 802.11n and 96 in 802.16e. In simulation results, curve ’original’ refers to the results using the original base matrix without optimization, while ’RE’ refers to the Row Exchange method and ’SE’ the Sequence Reordering method. 802.11n contains 12 different base matrices for the 12 modes. In 802.16e, 19 modes share the same base matrix, and there are six base matrices providing different coding rates. ’Mode’ here represents for the different coding rates without distinguishing the 19 modes. All the following results provided are under the assumption of = 4. If hardware read/write pipeline latency is larger than 4, extra latency will contribute more NOPs added to N0, which means N = N0 + − 4. An exception is the conflict free occasions, which may still be conflict free.
+
+A. Efficiency Analysis
+
+For single-step recursion, the total number of cycles for each
+
+recursion is equal to the number of NZEs in the base matrix
+
+without pipeline stall. Because of the irregular property of H
+
+in 802.11n and 802.16e, a NOP is inserted in read sequence
+
+(denoted as -1 in X) when odd/even layers have different
+
+amount of NZEs. Considering that the amount of NZEs differ-
+
+ence is at most one and hardware implement is only available
+
+with aligned layers, we omit the efficiency decreasing caused
+
+by the alignment pipeline stall. Therefore the efficiency is
+
+calculated
+
+as
+
+E
+
+=
+
+N
+
+NZE OP +N
+
+ZE
+
+.
+
+Let
+
+COL
+
+=
+
+maxC(D(Bj )),
+
+for all j, and N ZE = J · COL.
+
+The efficiency is evaluated both for CNI method and for
+
+SNI method, as shown in Fig. 5 and Fig. 6. The efficiency
+
+increases greatly when it is optimized by SE and RE. For the
+
+code rate R = 1/2 codes (Mode 1, 5, 9) in 802.11n, all the
+
+conflicts can be eliminated after applying both SE and RE. For
+
+the code rate 1/2 and 2/3B in 802.16e, conflict free can also
+
+be obtained. CNI method has slightly better efficiency than
+
+SNI. For high code rate occasions, such as R = 5/6 (Mode
+
+4, 8, 12) in 802.11n, there still exist large number of NOPs
+
+which leads to the efficiency loss because the base matrix
+
+has too many inter-layer common elements. The SNI usually
+
+outperforms CNI 10% approximately in 802.11n. In another
+
+aspect, the results are much better when combining RE and
+
+SE methods together than using SE only.
+
+B. Throughput Analysis
+The throughput of the decoder is evaluated by the decoded bits K along with the clock cycles consumed. The normalized throughput is defined as Tn = K/(N OP +N ZE)(bits/cycle), with one iteration. Throughput can be calculated by T = Tn/Iterations · Clockf req. In Fig. 7 and Fig. 8, the normalized throughputs of the original and the optimized matrix are shown within one bar graph. The percentage marked on
+
+Effiency
+
+1
+
+orginal
+
+0.9
+
+RE SE & RE
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0 1 2 3 4 5 6 7 8 9 10 11 12 Mode
+
+Fig. 5. 802.11n efficiency improvement
+
+1
+
+orginal
+
+0.9
+
+RE
+
+RE & SE
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0
+
+1/2
+
+2/3A
+
+2/3B
+
+3/4A
+
+3/4B
+
+4/5
+
+Mode
+
+Fig. 6. 802.16e efficiency improvement
+
+Effiency
+
+the top of each bar represents the throughput improvement part versus the throughput of the original system. For some cases, such as mode 1, 5, 9 in 802.11n (Corresponding parameters are listed in Table I) and R = 1/2 mode in 802.16e, the throughput improvement can be 140% around. All the modes with different base matrices have throughput improvement after matrix reordering.
+C. Performance Comparison Between CNI and SNI
+The efficiency discrepancy between CNI and SNI is investigated. In Table I, results of both 802.11n and 802.16e are presented, where ’Eff.’ represents the efficiency after optimization, and ’Inc.’ denotes the improvement part. The discrepancy between CNI and SNI is listed. The results show that both SNI and CNI benefit from matrix reordering, and in most cases SNI gains more than CNI. For all cases listed, less than 20% efficiency loss is expected from SNI to CNI.
+
+358
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+IEEE/CIC ICCC 2014 Symposium on Signal Processing for Communications
+
+Normalized Throughput (decoded bits/cycles), 1 iter.
+
+12 orginal RE SE
+10
+
+57% 19%
+67%
+137%
+
+8
+
+65% 79%
+
+138%
+
+12%
+
+6
+
+92%
+
+4
+
+57%
+
+138% 4%
+
+2
+
+0 1 2 3 4 5 6 7 8 9 10 11 12 Mode
+Fig. 7. 802.11n throughput improvement
+
+TABLE I EFFICIENCY DISCREPANCY BETWEEN CNI AND SNI
+
+Mode
+
+CNI
+
+SNI
+
+Diff.
+
+Std. Modes Eff. Inc. Eff. Inc. Eff. Inc.
+
+11n 1/2 Z=27 100% 58% 100% 58% 0% 0%
+
+11n 2/3 Z=27 85% 41% 92% 48% 7% 7%
+
+11n 3/4 Z=27 71% 26% 87% 41% 15% 15%
+
+11n 5/6 Z=27 49% 2% 65% 18% 16% 16%
+
+11n 1/2 Z=54 100% 58% 100% 57% 0% -1%
+
+11n 2/3 Z=54 79% 35% 96% 52% 17% 17%
+
+11n 3/4 Z=54 75% 30% 89% 44% 14% 14%
+
+11n 5/6 Z=54 52% 6% 66% 19% 13% 13%
+
+11n 1/2 Z=81 100% 58% 100% 57% 0% -1%
+
+11n 2/3 Z=81 73% 29% 93% 49% 19% 20%
+
+11n 3/4 Z=81 71% 26% 85% 39% 13% 13%
+
+11n 5/6 Z=81 56% 9% 67% 20% 11% 11%
+
+16e
+
+1/2
+
+100% 59% 100% 37% 0% -22%
+
+16e
+
+2/3A
+
+91% 47% 98% 51% 7% 4%
+
+16e 2/3B 100% 15% 100% 15% 0% 0%
+
+16e
+
+3/4A
+
+83% 38% 87% 40% 4% 2%
+
+16e 3/4B
+
+65% 18% 83% 31% 17% 13%
+
+16e
+
+4/5
+
+56% 9% 60% 13% 5% 4%
+
+Note:11n stands for IEEE 802.11n, and 16e stands for IEEE 802.16e.
+
+Throughput (decoded bits/cycles), 1 iter.
+
+18
+
+109%
+
+18%
+
+16
+
+83%
+
+orginal RE SE
+
+14
+
+143%
+
+12
+
+39%
+
+19%
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+1/2
+
+2/3A
+
+2/3B
+
+3/4A
+
+3/4B
+
+4/5
+
+Mode
+
+Fig. 8. 802.16e throughput improvement
+
+V. CONCLUSION
+In this paper, a joint low complexity searching technique for QC-LDPC base matrix reordering is proposed. Reordering techniques including RE and SE contribute to BCJR pipeline efficiency improvement dramatically. The proposed method requires minor hardware modification and negligible on-the-fly computational complexity.
+VI. ACKNOWLEDGEMENTS
+This work was supported by the National Natural Science Foundation of China (No. 61201182). The authors would like to thank to Kai Cao for his suggestions on this paper.
+REFERENCES
+[1] M. Mansour, “A Turbo-Decoding Message-Passing Algorithm for Sparse Parity-Check Matrix Codes,” Signal Processing, IEEE Transactions on, vol. 54, no. 11, pp. 4376–4392, 2006.
+
+[2] M. Awais and C. Condo, “Flexible LDPC decoder architectures,” VLSI Design, vol. 2012, 2012.
+[3] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),” Information Theory, IEEE Transactions on, vol. 20, no. 2, pp. 284–287, Mar 1974.
+[4] F. Guilloud, E. Boutillon, and J. luc Danger, “-Min Decoding Algorithm of Regular and Irregular LDPC Codes,” in Proc. of 3 rd Int. Sym. on Turbo Codes (ISTC 03, 2003, pp. 451–454.
+[5] M. Mansour and N. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” Solid-State Circuits, IEEE Journal of, vol. 41, no. 3, pp. 684–698, 2006.
+[6] Y. Sun and J. R. Cavallaro, “A flexible LDPC/Turbo decoder architecture,” Journal of Signal Processing Systems, vol. 64, no. 1, pp. 1–16, 2011.
+[7] G. Gentile, M. Rovini, and L. Fanucci, “A multi-standard flexible turbo/LDPC decoder via ASIC design,” in Turbo Codes and Iterative Information Processing (ISTC), 2010 6th International Symposium on, Sept 2010, pp. 294–298.
+[8] Y. Chen and K. Parhi, “Overlapped message passing for quasi-cyclic low-density parity check codes,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 51, no. 6, pp. 1106–1113, 2004.
+[9] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm2 52 mW Multi-Mode LDPC Decoder Design for Mobile WiMAX System in 0.13 um CMOS Process,” Solid-State Circuits, IEEE Journal of, vol. 43, no. 3, pp. 672–683, 2008.
+[10] C. Marchand, J.-B. Dore, L. Conde-Canencia, and E. Boutillon, “Conflict resolution for pipelined layered LDPC decoders,” in Signal Processing Systems, 2009. SiPS 2009. IEEE Workshop on, 2009, pp. 220–225.
+[11] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A Scalable Decoder Architecture for IEEE 802.11n LDPC Codes,” in Global Telecommunications Conference, 2007. GLOBECOM ’07. IEEE, 2007, pp. 3270– 3274.
+[12] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Global Telecommunications Conference, 2001. GLOBECOM ’01. IEEE, vol. 2, 2001, pp. 1036–1036E vol.2.
+[13] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” Communications, IEEE Transactions on, vol. 53, no. 8, pp. 1288–1299, 2005.
+[14] Y. Sun and J. Cavallaro, “A low-power 1-Gbps reconfigurable LDPC decoder design for multiple 4G wireless standards,” in SOC Conference, 2008 IEEE International, 2008, pp. 367–370.
+[15] T. chieh Kuo and J. Willson, A.N., “A flexible decoder IC for WiMAX QC-LDPC codes,” in Custom Integrated Circuits Conference, 2008. CICC 2008. IEEE, 2008, pp. 527–530.
+
+359
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:57:30 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,722 @@
+Rapid Design and Prototyping of a Reconfigurable Decoder Architecture for QC-LDPC Codes
+Purushotham Murugappa∗, Vianney Lapotre†∗, Amer Baghdadi∗, Michel Jezequel∗ ∗Institut Mines-Telecom; Telecom Bretagne; CNRS UMR 6285 Lab-STICC, Brest, France
+†Univ. Bretagne Sud; CNRS UMR 6285 Lab-STICC, Lorient, France Email: {purushotham.murugappa,amer.baghdadi,michel.jezequel}@telecom-bretagne.eu {vianney.lapotre}@univ-ubs.fr
+
+Abstract—Many modern and emerging designs require having efficient dynamically reconfigurable and reprogrammable processors. However, when the implemented design needs an upgrade, newly added features have to be quickly supported and validated. This is clearly noticed in modern receivers of recent wireless communication standards that feature continuously different frame lengths and code rates for the channel decoder. This paper explores with an example the possibility of realizing a flexible channel decoder to implement and validate new/incremental algorithm changes with fast turnaround time in design. An application specific instruction-set processor (ASIP) is proposed as flexible core that can decode low-density parity-check (LDPC) codes with the various block sizes and code rates as specified in WiFi and WiMAX standards. Furthermore, the proposed architecture enables quick support of other Quasi-Cyclic LDPC (QCLDPC) codes, e.g. DVB-S2, with simple incremental hardware changes at design time.
+I. INTRODUCTION Many efforts are being made since the past decade towards the proposal of efficient dynamically reconfigurable and reprogrammable systems and components optimized for specific applications [1]. In this context ASIP design approach [2] is being widely explored to preserve implementation efficiency while allowing limited flexibility. Such flexibility becomes a major requirement of many emerging applications to support at run time different execution modes, data formats or even complete standards. Nevertheless, flexibility at design-time becomes equally crucial as new features are usually proposed as an extension to an existing design. Sometimes these features need to be targeted, customized or even optimized for specific design metric catering to an application domain or market sector. To that end there is a need to have run-time and designtime flexibility considered in the process of architecture specification, such that new features can be adopted incrementally as needs arise. In this paper we illustrate how this need can be satisfied using an ASIP design flow with a design example of a flexible LDPC decoder. In fact, digital communication domain is very representative of such requirement where many flexible designs have been recently proposed as solutions for LDPC decoding [3][4]. For this application, there are large variety of coding options specified in existing and future digital communication standards, besides the increasing throughput requirement (Table I). Several architectures have been proposed targeting to meet the throughput requirements specified in these standards, among which the notable ones are [5][6][7]. The architectures
+978-1-4799-2409-7/13$31.00 c 2013 IEEE
+
+Standard WiFi WiMax DVB-S2
+
+Rates 1/2 - 5/6 1/2 - 3/4 1/4 - 9/10
+
+Z 27, 54, 81 24, 28, ..96
+360
+
+Block size .. 1944 .. 2304
+16200, 64800
+
+Channel Throughput .. 450 Mbps .. 75 Mbps .. 90 Mbps
+
+TABLE I SELECTION OF WIRELESS COMMUNICATION STANDARDS SPECIFYING
+LDPC CODES
+
+proposed in [5][6] can dynamically support any block sizes and code rates specified in the WiMAX standard. On the other hand, the architecture proposed in [7] produce dedicated cores to decode a specific code rate of a block size of either WiMAX or WiFi, thus giving optimized design time reconfigurable architecture solutions.
+The LDPC codes specified in the wireless digital video broadcasting standards (DVB-S2) are characterized by two main differences with respect to those specified in WiMAX and WiFi: (1) very large frame sizes of 16200 bits and 64800 bits and (2) existence of double diagonal permutation matrices in the definition of check matrix. These parameters impact considerably the decoder architecture, memory requirements, and error rate performances. Several dedicated architectures have been proposed [8][9][10]. As an example, the architecture proposed in [8] processes 360 check nodes in parallel achieving a throughput of 91 Mbps (at 300 MHz for rate 1/2) and occupying an area of 11 mm2 in 90nm CMOS technology. [9] solves the well known problem of super-positions of permutation matrices. The enhanced convergence speed of Gauss-Seidel decoding is used to reduce area and power consumption. Furthermore, it proposes a modified version of the lambda-Min algorithm which allows to further decrease the memory requirements of the decoder by compressing the extrinsic information. However inspite of these efforts, studies proposing architecture templates for rapid design for LDPC decoding targeting WiFi and WiMAX standards with possible extensions to DVB-S2 standard are still unexplored.
+The contribution of the presented work in this paper is twofold: (1) investigate the maximum attainable architecture efficiency for ASIP-based LDPC decoding and (2) explore the possibility of realizing a flexible decoder that allows to implement and validate new/incremental algorithm changes with fast turnaround time in design. The idea of this last objective is to enhance the ASIP-based LDPC decoder with
+
+87
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+a design-time feature enabling incremental changes for future support of other QC-LDPC codes (e.g. DVB-S2 with high expansion factor Z = 360). Furthermore, the proposed design is validated through an FPGA prototype based on hardwarein-the-loop approach. The rest of the paper is organized as follows: Section II introduces briefly the LDPC decoding algorithm and the processing schedule adopted in this work. Section III describes the architecture of the proposed ASIP and how each computation of the algorithm is mapped onto hardware components supporting WiFi and WiMAX standards [11][12]. Section IV illustrates the hardware prototype and how incremental additions can be achieved to support DVBS2 standard [13]. Section V discusses the key performance results and the comparisons with recent related state-of-the-art contributions. Finally, Section VI summarizes the conclusions of this work.
+
+II. BACKGROUND AND ALGORITHM
+Fig. 1a shows the typical format of the check matrix Hbase specified to define Quasi-Cyclic LDPC (QC-LDPC) check matrix. Most wireless communication standards specify this popular class of structured LDPC codes as it is hardware aware; facilitating decoder implementation. However, each standard specifies different code rates and block lengths usually expressed through different expansion factors Z ( Table I). The check matrix Hbase (e.g. Fig. 1a) consists of N block columns and M block rows wherein each of the non-negative values is replaced by a cyclic permutation matrix of size Z×Z. The negative values are replaced by zero square matrix of size Z. The expanded LDPC check matrix Hexpanded thus obtained is as shown in Fig. 1b. The LDPC check matrix can also be represented in a graphical form with a bipartite tanner graph (Fig. 1c) where each column and row in Hexpanded represents a variable node and a check node, respectively. In this figure, CN Gx ∀ x = 0..(M − 1) are groups of check nodes of size Z connected to V N Gy ∀ y = 0..(N − 1) groups of variable nodes. The lines connecting the variable and check node groups are representative of the ones in the check matrix Hexpanded (Fig. 1b).
+We utilize hardware efficient version of the belief propagation algorithm [14] called the Normalized 2-Min-Sum LDPC decoding algorithm [15] with layered decoding schedule, which consists of iterative exchange of messages (soft values) between the check and variable nodes as described below.
+Let the apriori probability (APP) log-likelihood ratio (LLR) of input bit n at the decoder interface be given as:
+
+L(n)
+
+=
+
+log
+
+P r(n P r(n
+
+= =
+
+0) 1)
+
+,
+
+n∀ {0..(N − 1) ∗ Z}
+
+(1)
+
+Further, N (m) and M (n) represent the set of all the nodes connected to check node m and variable node n respectively. Every decoding iteration i, consists of M sub-iterations corresponding to the M check node groups in the Hbase. Representing Lext(m, n) as the normalized check node message from check node m to variable node n and L(n, m) as the variable message from variable node n to check node m. The structure
+
+I1 I25 I55
+
+I47 I4
+
+I91 I84 I8 I86 I52 I82 I33 I5 I0 I36 I20 I4 I77 I80 I0
+
+I6
+
+I36 I40 I47 I12 I79 I47
+
+I41 I21 I12 I71 I14 I72 I0 I44 I49 I0 I0 I0 I0
+
+I51 I81 I83 I4 I67
+
+I21
+
+I31 I24 I91 I61 I81 I9 I86 I78 I60 I88 I67 I15
+
+I0 I0
+
+I50
+
+I50 I15
+
+I36 I13 I10 I11 I20 I53 I90 I29 I92 I57 I30 I84 I92 I11 I66 I80
+
+I0
+
+(a) Hbase
+
+sublayer
+Hexpanded=
+VNG0
+
+(b) Hexpanded form of Hbase
+
+Z Layer0 Layer1 Layer2 Layer3
+
+VNG1
+
+Variable node groups VNG2
+
+VNG(N-2)
+
+VNG(N-1)
+
+Permutation n/w
+
+Permutation Permutation
+
+n/w
+
+n/w
+
+Permutation n/w
+
+Permutation n/w
+
+Check
+
+CNG0
+
+CNG1
+
+CNG(M-1) node groups
+
+(c) Generalised Tanner graph representation of LDPC H-matrix
+
+Fig. 1. LDPC check matrix representations
+
+of the check matrix permits to execute the decoding process over M check node groups (layers) sequentially without conflicts in M sub-iterations. The following steps are therefore executed for each check node group:
+1) Check Node (CN) Update: all the variable nodes send extrinsic messages to their corresponding check nodes, given by:
+
+Li(n, m) = Li−1(n) − Lie−xt1(m, n)
+
+(2)
+
+2) Variable Node (VN) Update: Each check node in the group sends an update message given below:
+
+Li(m, n) = sgnm × min(n , m)
+
+(3)
+
+where,
+
+sgnm =
+
+sgn(Li(n, m))
+
+(4)
+
+n∈N (m)
+
+min(n , m) = min {|Li(n , m)|} (5)
+n ∈N (m)\n
+
+min(n , m) indicates the minimum of the absolute values of all the variable to check node messages sent to the check node m except from the variable node n to which the message is sent. It is to be noted that only the two least minimums (i.e. the minimum min(n , m)0 and the second least minimum min(n , m)1) are to be found by check node m of a sub-iteration. The over all aposteriori channel value is given by:
+
+Li(n) = Li(n, m) + Lei xt(m, n)
+
+(6)
+
+where the normalized (by factor α) check to variable node message Liext(m, n) is given as
+
+Liext(m, n) = α × sgn(Li(n, m)) × Li(m, n) (7)
+
+88
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+It is to be noted that at the beginning of the first iteration
+
+(i.e. i=0), the aposteriori channel LLRs present in the variable
+
+nodes are initialized to the channel input LLR L(n) while
+
+Le0xt(m, n) are initialized to zero. Similarly, at the end of each
+
+iteration the parity check equations are computed i.e. sgnm =
+
+pronc∈eNss(mo)r
+
+sgn(Li(n, m) performing a
+
+to decide on new iteration.
+
+stopping
+
+the
+
+iterative
+
+III. PROPOSED RECONFIGURABLE DECODER
+ARCHITECTURE
+Table I shows various specifications of Z for different standards namely 24 to 96 for WiMAX standard and 27, 54 or 81 for WiFi standard. On the other hand high throughputs are imposed. In this context, the design of high throughput decoder requires an implementation strategy that enables the re-configurability at run time to support WiFi and WiMAX, and at design time for future support of other QC-LDPC codes (e.g. DVB-S2 with Z = 360). These expansion factors are indicative of the possible parallelism degree in processing of check nodes allowed by the standard without degradation of error rate performance. Supporting the maximum best case parallelism degree of 360 leads to inefficient use of hardware when lower parallelism degrees are permitted (e.g. Z=24). Further, the VN update and CN update steps of the decoding algorithm can be parallelized and pipelined as long as there are no conflicts in simultaneous updates of the variable nodes. Moreover, simulation studies show that maximum number of iterations required for decoding is in the range of 20 (for WiMAX and WiFi) to 25 (for DVB-S2).
+Considering the above factors and the throughput requirements, we present a flexible LDPC ASIP decoder architecture (Fig. 2) with maximum parallelism degree PDMeagx=48, i.e. maximum of 48 check nodes are processed in parallel by the ASIP. Two flexible barrel shifters of size 48 are used to implement the cyclic shifts of any permutation (related to the standards): one for reading and one for writing channel LLRs in the input memory banks. With this parallelism degree, decoding LDPC frames with Z > 48 are supported by dividing the layer of check nodes into two sub-layers (refer Fig. 1b). Each sublayer is scheduled for processing in two phases by applying the layered decoding schedule as explained in previous section. In fact, all expansion factors for Z > 48 are multiple of ”2” except for Z = 81 in WiFi standard. For this particular case, the layer is split into two sub-layers containing 40 and 41 check nodes. In this context, barrel shifter flexibility covers all specified expansion factors Z < 48: 24, 26,28,30,32...48, besides the support of Z=27 and 41.
+The proposed ASIP architecture has 8 pipeline stages and only 4 instructions. The configuration parameters regarding check matrix definition and the decoding instructions are stored in a single 17 bit wide instruction/config memory. The first part of this memory stores the configuration parameters specifying the key characteristics of the check matrix namely the number of parallelism degree, the depth of the instruction memory, number of sub-layers, number of iterations and the lookup table containing the scaled 4-bit CN to VN message
+
+Instruction fetch
+
+Instruction Decode
+
+Input
+Mem (48x7)
+x48
+
+Addr Generate DataFetch
+
+Barrelshift
+
+Barrel Shifter (size 48)
+
+0
+
+x48
+
+L(n)
+
+MUX
+
+FIFO
+(96x32)
+
+MinFind
+
+x4
+
+L(n,m)
+
+Subtractor
+
+Saturate to 5 bits
+
+x48 Abs
+
+Min Finder
+
+Instruction/ Config
+Mem (256x17)
+L(m.n)
+Extrinsic
+mem (256x30)
+x8
+
+Min1 Min0 Sgn
+Min1 Min0 Sgn
+
+Update x48
+
+Min select
+
+Scale
+
++
+
+Saturate to 7 bits
+
+InvBarrelShift
+
+L(n)
+
+Barrel
+
+Shifter
+
+(size 48)
+
+L(m.n)
+
+Fig. 2. Proposed ASIP pipeline architecture for QC-LDPC decoding
+
+Li(m, n). In fact, based on simulation studies, quantization of 7 bits for channel LLR Li(n) and 5 bits for Leixt(m, n) were found to be good with acceptable performance losses. The rest of the memory carries the instructions that control the execution and have the format shown in Fig. 3.
+
+16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+
+Opcode SubLayer Rowstatus
+
+Hcol
+
+Permutation
+
+Fig. 3. Instruction format
+
+Each instruction is composed of 5 fields where Hcol and Permutation specify the column number of the LDPC check matrix Hbase and associated cyclic permutation value respectively. The permutation value specified here is given after taking into account the available parallelism degree. RowStatus indicates if the Hcol corresponds to beginning, middle or end of a row. SubLayer = 0 or 1 depending upon if the Permutation value fetched is above or below PDeg respectively. The Hcol and SubLayer are used to determine the read addresses for the
+
+89
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+Emitter
+
+LDPC Encoder
+
+C simulation functional modules on host computer
+
+Modulation Channel
+
+Demodulation
+
+Hw-equivalent C function
+LDPC Decoder
+
+USB
+USB LDecASIP
+FPGA
+
+Error performance evaluation and validation
+
+Fig. 4. FPGA prototyping environment using a hardware-in-the-loop approach
+
+input channel memories which are calculated as:
+
+(f etch address)banknum = Hcol ∗ 2 + (SubLayer+ (8)
+
+(banknum + P ermutation) Z
+
+)%2
+
+where banknum = 0...PDeg − 1 is the number of the bank that is being accessed. The fifth field of the instruction format is the Opcode. This field can have one of the four values namely: CNupdt, VNupdt, CombinedVNnCNupt or NOP corresponding to the execution of CN update, VN update, combined VN and CN updates or idle cycle respectively.
+CNupdt instruction initiates the variable to check node messages calculated according to equation (2) by using the output of the barrel shifter and the check node to variable node message of the previous iteration Lie−xt1(m, n) fetched from the extrinsic memory banks. The 8 bit intermediate values namely Li(n, m) are stored in a FIFO memory along with Permutation, Hcol and SubLayer values to be used to generate addresses and barrel shift values during update step. The MinFind pipeline stage (Fig. 2) serially calculates the 2 least absolute minimums min(n , m)0,1 and sgnm of the variable to check node messages corresponding to a check node of the sub-layer under processing.
+Once the variable node group corresponding to the last column of the sub-layer/layer connected to check node group is read, the Update and InvBarrelShift stages of the pipeline is activated. This done by CNupdt or CombinedVNnCNupt instructions depending on if one or more sub-layers are present per layer. Li(n, m) is read from the FIFO and aposteriori LLRs are calculated according to equations (6) and (7). The InvBarrelShift pipeline stage (in Fig. 2) shifts the newly calculated aposteriori LLRs to the original order and writes them back to the channel memories. The check node to variable node update messages Liext(m, n) are stored in the extrinsic memory banks.
+When more than one sub-layers are present, the CombinedVNnCNupt instruction is used to execute the VN update step for the current sub-layer while the Update and Inverse Barrel Shifter pipeline stages execute the VN update for the previous sub-layer. This implies the use of dual-port memories for input and extrinsic, however it allows a perfect usage of all pipeline stages.
+
+IV. PROTOTYPE AND INCREMENTAL FEATURE ADDITION The above described architecture is prototyped on an FPGA platform and controlled via graphical user interface on a host computer. A hardware-in-the-loop strategy is used to validate the design under test, with LDPC encoder and hardware equivalent decoder as shown in Fig. 4. Such an approach is simpler and faster than building a full hardware prototype of the communication system including a flexible hardware emitter and an accurate hardware channel model [16]. Furthermore, as the barrel shifter description is also included in the LISA modeling, the generated VHDL needs only addition of memory modules and input interface to realize a complete decoder system. The input configuration parameters and the channel memories are written through the USB interface from the host computer running the C based simulation program and can be modified at run time.
+Row end
+
+|L(m,n)|5bits
+
+A>B X>C
+
+Enable
+
+min0 min1 min2 Latch min2
+min1
+min0
+
+Z>C
+
+Fig. 5. Min calculator unit for DVB-S2
+The LDPC hardware chosen can be modified to include 3λ-min algorithm [10], which is shown to be more performant when the LDPC code rates are less than 1/2 as in the case of DVB-S2 standard. This is done by modifying the MinFind pipeline stage to find 3 least minimum absolute values of the variable to check node messages connected to a check node as shown in Fig. 5. Similarly, the Update pipeline stage is also modified accordingly. As these changes can be realised easily in LISA description language used in Processor Designer tool, fast turn-around in design can be ensured. Furthermore, DVBS2 specifies frame sizes of length 64800 bits and 16200 bits. These huge codeword lengths correspond to sub-matrix size of Z=360, which can be supported by dividing into 9 sub-groups with each sub-group containing 40 check nodes. It also implies
+
+90
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+that the input memory banks and correspondingly the extrinsic memory banks need to be extended. The input memory depth for each bank is given by (Max. frame length)/PDeg and the maximum number of banks remains PDMeagx=48. Similarly, given the width of the extrinsic memory W and the number of banks Pext (in the proposed architecture it is chosen to be Pext=8), the depth of an extrinsic memory bank is given by:
+
+Extr. mem. depth =
+
+all CNs check node degree (9) W × Pext
+
+Resulting memory cuts are summarized in Table II for WiFi
+
+and WiMAX standards along with DVB-S2 support (shown in
+
+brackets). Furthermore, the DVB-S2 standard specifies check
+
+matrices that have few double diagonal permutation matri-
+
+ces (superposed sub-matrices) instead of the single diagonal
+
+permutation matrix as in WiFi and WiMAX standards. This
+
+implies that the current update mechanism would result in
+
+overwriting of the Li(n) (equation (6)) by a second update
+
+in the same sub-iteration. This problem can be resolved by
+
+differential update mechanism as proposed in [10], where the
+
+difference of the extrinsic messages from the check nodes
+
+involved in the update of the variable node is used as the
+
+final update value.
+
+Memory Channel Extrinsic
+FIFO Instruction
+
+width (bits) 7 5x6 128 17
+
+depth 48 (1620a) 256 (4860a)
+32 256
+
+a for DVB-S2 b Dual port (dp) / Single port (sp)
+
+# 48 (40a)
+8 4 1
+
+typeb dp dp dp sp
+
+TABLE II MEMORY BANK PARTITION FOR WIFI AND WIMAX STANDARD
+
+V. FPGA AND ASIC SYNTHESIS RESULTS
+
+The proposed architecture was modeled with Processor Designer tool through which an RTL VHDL description has been generated. Table III summarizes the synthesis results for both ASIC and FPGA implementation on Xilinx Virtex5 (xc5vlx330-1ff1760) device. The design synthesized currently features the support of WiMAX and WiFi standards. Targeting general purpose CMOS 65nm technology (worst case 0.9V, 125C), the logic area occupies around 0.15 mm2 while the memory occupies 0.43 mm2 with maximum operating clock frequency being 500 MHz. The total area of the design postsynthesis is given 0.58 mm2.
+In order to evaluate the effectiveness of the obtained results and to be able to compare with state-of-the-art implementations, we define the Architecture efficiency (AE) metric as follows [17]:
+
+AE
+
+=
+
+T hroughput × Niter AreaNorm × fclk
+
+(10)
+
+Its unit of measure is bits/cycle/iteration/mm2 and it represents the number of decoded bits per clock cycle per iteration per mm2 that the proposed iterative channel decoder implementation is able to deliver. A high architecture
+
+Hierarchical Unit
+MemoryInterface RegisterFile InstrFetch InstrDecode AddrGenerate DataFetch BarrelShift MinFind Update InvBarrelShift
+Total logic area Total memory area
+Total Area
+
+CMOS 65nm (um2)
+29836 27742
+552 591 5964 2433 19530 23317 29105 15094 154328 427886 582215
+
+FPGA (Xilinx Virtex-5 LX330)
+
+Slice regs. LUTs
+
+BRAMs
+
+1245
+
+3891
+
+0
+
+1890
+
+1890
+
+0
+
+11
+
+47
+
+0
+
+20
+
+61
+
+0
+
+22
+
+294
+
+0
+
+18
+
+373
+
+0
+
+5
+
+2508
+
+0
+
+685
+
+2087
+
+0
+
+95
+
+2389
+
+0
+
+0
+
+2370
+
+0
+
+3991
+
+15807
+
+0
+
+0
+
+0
+
+60
+
+3991
+
+15807
+
+60
+
+TABLE III ASIC AND FPGA SYNTHESIS RESULTS
+
+efficiency indicates an optimized design which exploits efficiently its hardware resources during its execution time. An interesting point in the above expression of the AE concerns the normalization of the throughput achieved with respect to the considered clock frequency (fclk) which increases the fairness when comparisons are done between different decoding architectures running at different clock frequencies. Published results in this context consider either the maximum achievable clock frequency by the proposed architecture or a lower operational clock frequency which is sufficient to achieve the target throughput. Thus, normalizing the presented throughput by the considered clock frequency enables to better exhibit the efficiency of the proposed architectural choices. Towards the same objective, the above expression of the AE normalizes the throughput by the considered number of decoding iterations (Niter) as the published results can use slightly different values which impact the overall throughput. In most of these works, the same low complexity decoding algorithms, with identical convergence speed, are used. Similarly, the AE expression uses a normalized area measure (AreaNorm) as the published decoders are often based on different technology nodes (e.g. 180nm, 130nm, 65nm, etc.). In addition, when the published design area is given post-place and route a downscaling factor of 2 is applied to obtain a reasonable estimate of the post-synthesis area. This factor is not very accurate as it depends to many parameters (technology node, CAD tools, operating conditions, etc.), but it gives a reasonable idea as it corresponds to the usually (or even worst case) observed ratio.
+
+Standard supported
+
+This work WiMAX & WiFi
+
+[5] WiMAX
+
+[6] WiMAX
+
+Tech. (nm) Core area (mm2) AreaNorm @65nm (mm2) Throughput (Mbps)
+
+65 0.58 0.58 73- 475
+
+180 3.39a 0.44b 68
+
+65 3.36a 1.68b 1056
+
+fclk (MHz) AE (bit/cycle/iter/mm2)
+
+500
+
+100
+
+110
+
+5-13.6
+
+15
+
+14.29
+
+a (post-layout area) b (scaled down by factor 2 to get an estimated post synthesis area)
+
+[7] WiMAX & WiFi
+130 2.744 0.3430 141-249 300 20-36.3
+
+TABLE IV RESULTS COMPARISON WITH RECENT RELATED STATE OF THE ART WORKS
+
+The achieved results of the proposed design are summarized and compared along with some recent related works in Table IV.
+
+91
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+Z
+24 - 48 52 - 96
+27 54 81
+
+1/2
+
+@20 iter
+
+L
+
+thru.
+
+87 82 - 165 163 95 - 176
+
+110
+
+73
+
+192
+
+84
+
+200
+
+121
+
+2/3(A)
+
+@17 iter
+
+L
+
+thru.
+
+89 126 - 253 169 144- 267
+
+2/3(B)
+
+3/4(A)
+
+@17 iter
+
+@15 iter
+
+L
+
+thru.
+
+L
+
+thru.
+
+WiMAX Mode
+
+91 124 - 248 98 146 - 293
+
+173 141 - 261 183 170 - 314
+
+WiFi Mode
+
+100
+
+127
+
+196
+
+129
+
+190
+
+200
+
+3/4(B)
+
+@15 iter
+
+L
+
+thru.
+
+101 142 - 285 189 165 - 304
+
+110
+
+147
+
+193
+
+167
+
+185
+
+262
+
+5/6
+
+@10 iter
+
+L
+
+thru.
+
+114 210 - 421 202 257- 475
+
+104
+
+259
+
+185
+
+291
+
+172
+
+470
+
+TABLE V THROUGHPUT (IN MBPS) AND LATENCY L (IN CLOCK CYCLES PER ITERATION) FOR WIMAX AND WIFI MODE @500MHZ
+
+Code rates Latency
+Throughput
+
+1/4 2430 133
+
+1/3 3240 133
+
+2/5 3888 133
+
+1/2 4050 160
+
+3/5 5832 133
+
+2/3 4320 200
+
+3/4 4860 200
+
+4/5 5184 200
+
+5/6 5346 202
+
+8/9 4500 256
+
+9/10 4536 257
+
+TABLE VI EXPECTED DVB-S2 LATENCY L (IN CLOCK CYCLES PER ITERATION) AND THROUGHPUTS (IN MBPS) AT 25 ITERATIONS @500MHZ
+
+As it can be seen from this table, the resulting best case AE of the proposed ASIP is 13.6 bits/cycle/iter/mm2, which is comparable to the other cited architectures. However, there still room for further optimizations in order to reach the maximum achievable AE of 36.3 obtained in [7]. In fact, such high AE can be explained by the lack of run-time flexibility to support different frame sizes [7]. The architectures presented in [5] and [6] support only WiMAX LDPC codes which have better organization for parallelism than those specified in WiFi standard.
+Similarly, synthesis on Virtex-5 (xc5vlx330-1ff1760) FPGA resulted in a design utilization of 3991 slice registers, 15807 LUTs and 60 BRAMs and occupying about 10% of the FPGA logic resources with maximum clock frequency of 90MHz. The core latency in terms of numbers of clock cycles per iteration required during the decoding process is as shown in Table V. We can notice that the decoding latency is approximately twice for frames with Z > 48 than when compared to Z < 48 due to the sub-group decoding strategy. Yet the maximum throughput that can be achieved is more than 470Mbps for both WiFi and WiMAX standards. The negligible loss in error rate performance of the implemented design compared with the C-simulation performance is illustrated by Fig. 6.
+Furthermore, the expected throughput for DVB-S2 standard with 25 iterations is given in Table VI with a maximum reaching 257 Mbps. As only slight incremental changes are expected during design time in the logic structure of the hardware, the memories are the major contributor for area increase.
+VI. CONCLUSION
+In this paper we have presented a flexible and optimized ASIP-based architecture for multi-standard LDPC decoding. The proposed architecture was designed to maximize the architecture efficiency, which was achieved by increasing the parallelism degree and the memory bandwidth with flexible barrel shifters. It exploits a maximum parallelism degree of
+
+Fig. 6. Hardware measured and C-simulated (floating point) BER curves for WiMAX LDPC code with Z=96 and code rate=1/2
+48, i.e. 48 check nodes are processed in parallel, achieving a maximum throughput of 475 Mbps and an architecture efficiency of 13.6 bit/cycle/iteration/mm2. It supports all LDPC codes and related parameters specified in WiFi and WiMAX standards. The other main contribution of this work concerns the design time flexibility feature which allows to prototype new/incremental algorithm changes with fast turnaround time in design. The proposed architecture enables through incremental changes the future support of other QC-LDPC codes, such as those specified in DVB-S2 with high expansion factor Z = 360. This illustrates how the ASIP-based design approach can be used as a way to achieve both design-time and runtime flexibility features. Finally, the proposed architecture has been fully validated through an FPGA prototype based on a hardware-in-the-loop approach.
+
+92
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] A. Jerraya, A. Baghdadi, W. Cesrio, L. Gauthier, D. Lyonnard, G. Nicolescu, Y. Paviot, and S. Yoo, “Application-Specific Multiprocessor Systems-on-Chip,” in Proc. of the Workshop on Synthesis And System Integration of MIxed technologies (SASIMI), Nara, Japan, 2001.
+[2] A. Hoffmann, O. Schliebusch, A. Nohl, G. Braun, O. Wahlen, and H. Meyr, “A methodology for the design of application specific instruction set processors (ASIP) using the machine description language LISA,” in Proc. of the IEEE/ACM International Conference Computer Aided Design (ICCAD), 2001, pp. 625–630.
+[3] F. Vacca, G. Masera, H. Moussa, A. Baghdadi, and M. Je´ze´quel, “Flexible Architectures for LDPC Decoders Based on Network on Chip Paradigm,” in Proc. of the 12th Euromicro Conf. Digital System Design, Architectures, Methods and Tools (DSD), 2009, pp. 582–589.
+[4] P. Murugappa, R. AlKhayat, A. Baghdadi, and M. Je´ze´quel, “A Flexible High Throughput Multi-ASIP Architecture for LDPC and Turbo Decoding,” in Proc. of the Design, Automation and Test in Europe Conference and Exhibition (DATE), 2011.
+[5] T.-C. Kuo and A. Willson, “A flexible decoder IC for WiMAX QCLDPC codes,” in Proc. of the IEEE Custom Integrated Circuits Conference (CICC) , Sept. 2008, pp. 527 –530.
+[6] X. Peng, Z. Chen, X. Zhao, D. Zhou, and S. Goto, “A 115mW 1Gbps QC-LDPC decoder ASIC for WiMAX in 65nm CMOS,” in Proc. of the IEEE Asian Solid State Circuits Conference (A-SSCC), Nov. 2011, pp. 317 –320.
+[7] M. Awais, A. Singh, E. Boutillon, and G. Masera, “A Novel Architecture for Scalable, High Throughput, Multi-standard LDPC Decoder,” in Proc. of the 14th Euromicro Conference on Digital System Design (DSD), Sept. 2011, pp. 340 –347.
+[8] A. Segard, F. Verdier, D. Declercq, and P. Urard, “A DVB-S2 compliant LDPC decoder integrating the Horizontal Shuffle Scheduling,” in Proc. of the International Symposium on Intelligent Signal Processing and Communications (ISPACS’06), Dec. 2006, pp. 1013 –1016.
+[9] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lantreibecq, and B. Gupta, “A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes,” in Proc. of the Digest of Technical Papers IEEE International Solid-State Circuits Conference, (ISSCC), vol. 1, Feb. 2005, pp. 446 –609.
+[10] S. Muller, M. Schreger, M. Kabutz, M. Alles, F. Kienle, and N. Wehn, “A novel LDPC decoder for DVB-S2 IP,” in Proc. of the Design, Automation Test in Europe Conference and Exhibition (DATE), 2009.
+[11] 802.11n Local and metropolitan area networks,Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Std., 2009.
+[12] 802.16 IEEE Standard for Local and metropolitan area networks, Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems, Std., 2005.
+[13] ETSI. Digital Video Broadcasting (DVB), Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Application, EN 302 307 V1.1.1, Std., 2004.
+[14] R. Gallager, Low-Density Parity-Check Codes. Cambridge, MIT Press, 1963.
+[15] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288 – 1299, Aug. 2005.
+[16] P. Murugappa, J.-N. Bazin, A. Baghdadi, and M. Je´ze´quel, “FPGA Prototyping and Performance Evaluation of Multi-standard Turbo/LDPC Encoding and Decoding,” in Proc. of the 23nd IEEE International Symposium on Rapid System Prototyping (RSP), 2012.
+[17] P. Murugappa, A. Baghdadi, and A. Jezequel, “Parameterized AreaEfficient Multi-standard Turbo Decoder,” in Proc. of the Design, Automation Test in Europe Conference and Exhibition (DATE), 2013.
+93
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:25:46 UTC from IEEE Xplore. Restrictions apply.
+
+

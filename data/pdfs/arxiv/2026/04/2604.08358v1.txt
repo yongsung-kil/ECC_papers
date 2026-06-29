@@ -1,0 +1,1206 @@
+Scalable Neural Decoders for Practical Fault-Tolerant Quantum Computation
+Andi Gu,1,2,∗ J. Pablo Bonilla Ataides,1,2 Mikhail D. Lukin,1,2 and Susanne F. Yelin1,2 1Department of Physics, Harvard University, Cambridge, MA 02138, USA
+2Harvard Quantum Initiative, Harvard University, Cambridge, MA 02138, USA ∗andigu@g.harvard.edu
+Quantum error correction (QEC) is essential for scalable quantum computing. However, it requires classical decoders that are fast and accurate enough to keep pace with quantum hardware. While quantum low-density parity-check codes have recently emerged as a promising route to efficient fault tolerance [1–3], current decoding algorithms do not allow one to realize the full potential of these codes in practical settings [4–6]. Here, we introduce a convolutional neural network decoder that exploits the geometric structure of QEC codes, and use it to probe a novel “waterfall” regime of error suppression, demonstrating that the logical error rates required for large-scale fault-tolerant algorithms [7, 8] are attainable with modest code sizes at current physical error rates [9–11], and with latencies within the real-time budgets of several leading hardware platforms. For example, for the 144, 12, 12 Gross code [3], the decoder achieves logical error rates up to ∼17× below existing decoders [5, 6, 12]—reaching logical error rates ∼ 10−10 at physical error p = 0.1%—with 3-5 orders of magnitude higher throughput. This decoder also produces well-calibrated confidence estimates that can significantly reduce the time overhead of repeat-until-success protocols [13, 14]. Taken together, these results suggest that the space-time costs associated with fault-tolerant quantum computation may be significantly lower than previously anticipated.
+
+arXiv:2604.08358v1 [quant-ph] 9 Apr 2026
+
+Quantum computers promise to solve problems beyond the reach of classical machines [7, 16–18]. However, this is possible only if the inherent fragility of large scale quantum systems can be circumvented through the use of error correction. Quantum error correction (QEC) codes suppress errors exponentially as the code size increases—provided the physical error rate lies below a critical threshold [19, 20]. Recent experiments have demonstrated this error suppression on superconducting hardware [21, 22], neutral atom platforms [23, 24], and trapped-ion systems [25], marking significant progress toward fault-tolerant quantum computation. However, achieving the logical error rates required for realization of utility-scale quantum algorithms [7, 13] remains a major challenge.
+While recent experiments have used topological QEC codes such as surface and color codes [26, 27], a new generation of quantum LDPC codes have recently emerged that feature a combination of high encoding rates and large distances [1–3, 28] and offer a path toward more efficient fault tolerance. Deploying these codes in practice requires a classical decoder that is simultaneously fast and accurate, interpreting syndrome measurements and identifying corrections in real time. For quantum LDPC codes, no existing decoder currently meets both requirements. Belief propagation, the standard iterative algorithm, suffers from convergence failures due to trapping sets [4, 29] (patterns that cause it to converge to incorrect solutions), leaving logical error rates orders of magnitude worse than what can be achieved theoretically; on the other hand, the most accurate methods are far too slow for real-time use [5, 6, 30, 31]. A similar gap emerged in classical error correction, where Gallager’s LDPC codes achieved near-Shannon-limit performance in theory but remained largely unused for three decades until practi-
+
+cal iterative decoders transformed them into the foundation of modern communications [32, 33]. Moreover, the absence of an efficient decoder may also obscure the potential power of these codes. While the resource estimates for fault-tolerant quantum computation widely model logical error rates using QEC threshold and the code distance d, using the assumption that minimumweight uncorrectable errors dominate [7, 8, 13, 34, 35], in classical error correction high-rate codes can sometimes suppress errors more effectively than suggested by this worst-case bound [36, 37].
+Here we introduce Cascade, a convolutional neural network decoder, that exploits the geometric regularity of QEC codes. Unlike belief propagation, whose fixed update rules cause it to converge to incorrect solutions on degenerate error patterns, the neural decoder learns flexible message-passing rules that can circumvent these failure modes. Using this decoder, we show that, rather remarkably, error suppression on both bivariate bicycle (BB) codes [3] and surface codes can significantly exceed the naive distance scaling. This is because the code distance d identifies the lowest weight uncorrectable error, but says nothing about how likely such an error is; minimum-weight uncorrectable patterns are typically very rare, so that below threshold, higher-weight failure modes, individually less probable but vastly more numerous, dominate the failure rate. The resulting tworegime structure, with a steep “waterfall” in error rate below threshold that reverts to distance-limited scaling at very low noise, is well established for classical LDPC codes [36, 37]. Indications of similar behavior have appeared in quantum codes [38–40], but existing decoders lack the accuracy to resolve it in the practically relevant regime below threshold. Our results demonstrate that quantum LDPC codes exhibit a dramatic waterfall scal-
+
+(a) Errors Accumulate
+
+Stabilizers Detect
+
+Decoder
+
+2 Errors Corrected
+
+Measure
+
+Decode Did an error Correct occur?
+
+Neural Network Decoder
+Embed → RH Geometry-Aware Convolution (×L) Aggregate
+or: BB code
+
+Classify
+error?
+
+Logical error rate PL Logical error rate PL
+SC qubits Ions/atoms
+
+(b) 10−3 10−4 10−5 10−6 10−7 10−8 10−9 10−10 10−11 0.06
+
+Cascade BP+OSD
+Distance-limited floor
+Few low-weight errors w ∼ d/2
+
+(c) 10−4
+
+10−5
+
+Waterfall
+Many highweight errors
+w d/2
+
+10−6 10−7 10−8
+
+L = 10 L = 12 L = 14 H = 128 H = 256 H = 512
+
+Blue et al.
+
+BP+OSD
+
+PL ∝ t−0.77(±0.06)
+
+Relay
+
+Tesseract
+
+0.1
+
+0.2
+
+0.3 0.4 0.5
+
+Physical error rate p (%)
+
+10−190−1 100 101 102 103 104 105 106 Amortized latency t (µs/cycle)
+
+FIG. 1. Structure-aware neural decoding for quantum error correction. (a) Top: errors accumulate on data qubits; stabilizer measurements produce a spacetime syndrome (pattern of detection events); a decoder determines whether a logical error occurred; the logical state is protected. Bottom (neural network decoder): syndromes are embedded into H-dimensional representations and processed by L convolutional layers whose local structure respects the code geometry—3D convolutions for surface codes, generalized convolutions on the torus for bivariate bicycle (BB) codes—followed by a final convolution scattering to data qubits, pooling over the data qubits in each logical operator’s support, and a prediction head applied independently to each logical observable. (b) Error suppression on the 144, 12, 12 BB code (R = d rounds). The logical error rate per logical qubit per cycle, PL ≈ ∑w N (w) pw, where N (w) is the number of minimal failure modes of weight w, decomposes into two regimes: a steep waterfall (∼ p10.8) where the numerous high-weight failure modes dominate at moderate physical error rates p, transitioning to a distance-limited floor (∼ p6.4) at very low noise. BP+OSD (orange, ∼ p5.4) misses the waterfall entirely. (c) Accuracy–latency tradeoff at p = 0.2%: Cascade (GPU inference on NVIDIA H200) spans a range of (amortized) latencies while achieving lower logical error rates than prior decoders (single-threaded CPU). Diamond markers show the reported singleshot latencies of BP+OSD [5], Relay [12], Tesseract [6], and the ML decoder of [15]. Error bars indicate 95% credible intervals.
+
+ing. For instance, we find that for the 144, 12, 12 Gross
+code, the logical error rate is well described by two powerlaw contributions: a steep waterfall term PL ∼ p11 and a distance-limited term PL ∼ p6.4 ≈ p⌊(d+1)/2⌋ (Fig. 1(b)). The large gap between these exponents reflects proper-
+ties of the code’s error structure beyond the minimum
+distance, suggesting that distance alone is an incomplete
+
+predictor of practical performance. Moreover, Cascade achieves near-optimal accuracy at a fraction of the computational cost, surpassing all practical decoders by orders of magnitude on the Gross code at p = 0.1%, while achieving near-optimal performance on surface codes. This decoding method is also very practical. Its local, feed-forward architecture is well suited to hardware accel-
+
+3
+
+eration, with GPU latencies already within the budgets for trapped-ion and neutral-atom platforms [23]. Models trained at a single high noise level generalize reliably across seven orders of magnitude in logical error rate, with no error floor—exponential error suppression persists to PL ≈ 10−11. This generalization extends to the decoder’s confidence estimates, which remain wellcalibrated across noise levels. Together, these results reduce both the space and time costs of fault-tolerant quantum computation: the steep waterfall implies that the required code size grows substantially more slowly with target logical error rate than the standard formula predicts, while calibrated confidence estimates reduce the time overhead of repeat-until-success protocols [14, 41, 42] such as magic state distillation [13].
+Structure-aware neural decoding
+In a QEC memory experiment, errors accumulate on data qubits during repeated rounds of stabilizer measurement, producing a spacetime syndrome—the pattern of detection events that the decoder must interpret to determine whether a logical error has occurred (Fig. 1(a)). The decoding problem is to infer, from this syndrome, the equivalence class of the error: many distinct physical error patterns produce the same syndrome, so the decoder need only determine whether the net effect is a logical error, not reconstruct the exact error.
+The QEC codes we consider—surface codes and bivariate bicycle (BB) codes—possess geometric structure that a decoder can exploit. Both code families arrange stabilizers in a regular spatial lattice (a 2D grid for surface codes; a torus Zℓ × Zm for BB codes), which under repeated rounds of syndrome measurement extends into a spatiotemporal structure where every stabilizer has the same local connectivity up to translation. This regularity motivates the three design principles of Cascade. First, locality: errors produce spatially localized syndrome patterns that can be progressively resolved by layers of local processing. Second, translation equivariance: the identical local structure at every site means the same decoding rules should apply everywhere. Third, anisotropy: information arriving from different directions carries distinct meaning—for instance, a surface code stabilizer’s horizontal and diagonal neighbors are of different type (X versus Z), and the temporal direction encodes measurement errors rather than data qubit errors. While we focus on surface codes and BB codes, these three properties hold for any stabilizer code whose checks share a common local structure up to spatial symmetries, encompassing a broad class of codes including color codes [27], toric codes, hyperbolic surface codes [43], and other quantum LDPC codes defined on periodic lattices or Cayley graphs. For codes with less regularity, stabilizers can be grouped into equivalence classes that share weights, reducing to a stan-
+
+dard graph neural network in the fully irregular limit. Belief propagation satisfies the first of these properties
+but not the others: it performs local message passing with fixed update rules that treat the graph structure symmetrically, causing it to converge to incorrect solutions on degenerate quantum error patterns [4, 29]. Our decoder replaces these fixed rules with learned convolutional operations that satisfy all three properties simultaneously (Fig. 1(a)). Binary detection events are first embedded into H-dimensional representations at each syndrome location. These representations are then processed by L convolutional layers, where each layer performs learned, direction-dependent message passing between neighboring sites—for surface codes, a standard 3D convolution over the spacetime lattice; for BB codes, a generalized convolution on the torus with weights indexed by the relative offset between stabilizers. Because the convolutional weights are shared across all positions, the decoder applies identical learned rules at every site, exploiting the translation symmetry of the code while using direction-specific weights to distinguish information arriving from different neighbors. Successive layers expand the receptive field, so that after L ∼ d layers the network integrates information across the full code distance—resolving first local error patterns, then progressively larger-scale correlations, and finally the global topological ambiguity that determines the logical error class. After the final layer, the representations are scattered to data qubits, pooled over the support of each logical operator, and passed to a prediction head that outputs a probability for each logical observable. The model is trained end-to-end with binary cross-entropy loss at a high physical error rate, requiring no auxiliary losses, multi-stage fine-tuning, or labeled data at low noise levels. Full architectural and training details are given in Methods.
+Error suppression, speed and accuracy
+Figure 1(b) shows the logical error rate per logical qubit per cycle for the 144, 12, 12 Gross code under circuit-level depolarizing noise. Our largest model (L = 14, H = 512) achieves logical error rates orders of magnitude below belief propagation with ordered statistics decoding (BP+OSD) [5] and Relay [12] across the full noise range [44]. Below threshold, the logical error rate drops far more steeply than the naive distance scaling PL ∼ p⌊(d+1)/2⌋ would predict. For this code (d = 12), the logical error rate decomposes into two power-law contributions (Fig. 1(b)): a steep ‘waterfall’ term ∼ p11 that dominates at moderate error rates, and a distance-limited floor ∼ p6.4 ≈ p⌊(d+1)/2⌋ that emerges at very low noise. The origin of this decomposition lies in the structure of the code’s failure modes. A minimal failure mode of weight w is a set of w errors that causes a logical failure,
+
+Logical error rate PL
+
+4
+
+10−3
+
+(a) [[72, 12, 6]]
+
+10−4
+
+10−5
+
+10−6
+
+0.1
+
+0.2 0.3 0.4 0.5
+
+Physical error rate p (%)
+
+10−3
+
+10−3 10−5 10−7
+
+(b) [[144, 12, 12]]
+
+10−3 10−5 10−7
+
+(c) [[288, 12, 18]]
+Cascade Tesseract Relay BP+OSD
+
+10−9
+
+10−9
+
+10−11
+0.06 0.1
+
+0.2 0.3 0.4 0.5
+
+Physical error rate p (%)
+
+0.2
+
+0.3 0.4 0.5
+
+Physical error rate p (%)
+
+(d) Latency vs accuracy at p = 0.2%
+
+Logical error rate PL
+Superconducting
+
+10−5
+
+[[72, 12, 6]]
+
+10−7
+
+10−9
+
+10−11
+
+100
+
+[[144, 12, 12]]
+
+Ions/atoms
+
+[[288, 12, 18]]
+
+101
+
+102
+
+103
+
+104
+
+Latency (µs/cycle)
+
+[[72, 12, 6]] [[144, 12, 12]] [[288, 12, 18]] Cascade Tesseract Relay BP+OSD Blue et al. ML
+
+105
+
+106
+
+FIG. 2. Distance scaling of BB code decoders under circuit-level depolarizing noise. (a–c) Logical error rate per logical qubit per round (R = d rounds) versus physical error rate for the 72, 12, 6 , 144, 12, 12 , and 288, 12, 18 bivariate bicycle codes, respectively. Cascade achieves lower logical error rates than BP+OSD, Relay, and (where evaluable) Tesseract across all code sizes. (d) Accuracy vs. latency at p = 0.2% for all three BB codes (timing reported for BB codes is amortized latency). We include the published results of a different ML decoder [15] for the 72, 12, 6 and 144, 12, 12 codes. For the 288, 12, 18 code, we are unable to evaluate Tesseract due to its computational cost; BP+OSD is similarly intractable at lower noise levels.
+
+with no failing proper subset; to leading order, the logical error rate decomposes as PL ≈ ∑w N (w) pw, where N (w) counts the number of such modes. The standard scaling formula PL ∼ p⌊(d+1)/2⌋ implicitly assumes that the minimum-weight failure modes dominate—and at sufficiently low noise they do, because pw decreases so steeply
+with w that the lowest-weight term always wins eventu-
+ally. However, for the codes studied here, N (w) is heavily concentrated at weights well above ⌊d/2 + 1⌋: the code admits very few minimal failure modes near the mini-
+mum weight, but many more at higher weight. At mod-
+erate physical error rates below threshold, the product N (w) pw is therefore dominated by these higher-weight modes, whose large multiplicity more than compensates for the additional suppression from pw. The result is two
+distinct regimes: a steep waterfall where the abundant
+high-weight failure modes dominate the logical error rate,
+
+and a distance-limited floor that only emerges once the physical error rate is low enough for the rare minimumweight modes to take over. This two-regime structure is well characterized for classical LDPC codes [36, 37], but had not previously been studied in quantum codes, because the existing quantum decoders are not accurate enough to probe it. Crucially, the set of minimal failure modes depends on the decoder: a more powerful decoder eliminates failure modes at low weight, exposing the regime where the numerous high-weight modes dominate; decoders like BP+OSD fail on too many lowweight errors, so the steep suppression is never exposed. As a consequence, our decoder achieves logical error rates ∼4000× below BP+OSD [5] and ∼17× below Relay [12] on the Gross code at p = 0.1%, with accuracy comparable to Tesseract [6]. We observe no error floor: exponential error suppression persists to the lowest physical error rates
+
+5
+
+Logical error rate per round PL
+Superconducting Ions/atoms
+Λ
+
+(a) Error suppression at p = 0.2% (b) Latency vs accuracy at p = 0.2%
+
+10−5
+
+d=7
+
+10−6
+
+10−7
+
+10−8
+
+10−9
+
+10−10 10−11
+7
+
+MWPM Corr. MWPM Tesseract Cascade
+
+11
+
+15
+
+Code distance d
+
+d = 11 d = 15
+
+Batched Unbatched
+
+d = 19
+
+19
+
+100
+
+101
+
+102
+
+103
+
+104
+
+Latency (µs/cycle)
+
+(c) Error suppression factor Λ
+Λ = 9.06
+9
+Λ = 8.38
+
+8
+
+Λ = 7.78
+
+7
+
+6
+Λ = 4.99
+5
+MWPM Corr. Tesseract Cascade MWPM
+
+FIG. 3. Distance scaling of surface code decoders at p = 0.2% under circuit-level depolarizing noise. (a) Logical error rate per round versus code distance d for MWPM, correlated MWPM, Tesseract, and Cascade. All decoders exhibit exponential error suppression (PL ∝ Λ−⌊(d+1)/2⌋), with Cascade and Tesseract achieving the steepest slopes. (b) Accuracy– latency trade-off across code distances (GPU inference on NVIDIA H200). Amortized latency (dashed lines, batched inference) is significantly lower than the single-shot latency (solid lines, unbatched inference). (c) Error suppression factor Λ extracted from exponential fits to panel (a).
+
+tested (PL ≈ 2 × 10−11). Unlike matching decoders, which provably correct all errors below weight ⌊(d−1)/2⌋, neural decoders offer no such guarantee—systematic misclassification of specific low-weight error patterns could create an irreducible floor analogous to trapping sets in classical BP decoding. The absence of any floor down to PL ≈ 2 × 10−11 provides strong evidence that the learned decoding rules avoid such failure modes. Figure 2(a– c) extends this analysis to three BB codes— 72, 12, 6 , 144, 12, 12 , and 288, 12, 18 —showing that error suppression improves with code distance from d = 6 to d = 18, with our decoder consistently outperforming reference decoders across all three code sizes. On the largest code ( 288, 12, 18 ), the decoder achieves PL ∼ 10−10 per logical qubit per cycle at a physical error rate p = 0.2%.
+The waterfall is not specific to quantum LDPC codes. On surface codes, the standard model PL ∼ (p/pth)⌊(d+1)/2⌋ predicts that error suppression is characterized by a single error suppression factor Λ = pth/p, determined entirely by the decoder’s threshold. Fitting PL ∝ Λ−⌊(d+1)/2⌋ across distances d = 7 to 19 at p = 0.2% (Fig. 3), our decoder achieves the nominal value Λ ≈ 8.4, substantially exceeding both uncorrelated minimumweight perfect matching (MWPM, Λ ≈ 5.0) and correlated MWPM (Λ ≈ 7.8), and approaching Tesseract (Λ ≈ 9.1), a near-optimal decoder whose computational cost (up to 1 s per shot) makes it impractical for real-time use but serves as a useful performance benchmark. The nearly twofold variation—from 5.0 for MWPM to 9.1 for Tesseract—exceeds what threshold differences alone can
+
+account for. The excess suppression is also a signature of the waterfall: at moderate code distances, the effective error suppression is steeper than ⌊(d + 1)/2⌋ because minimum-weight uncorrectable errors are rare, and it is the decoder’s ability to correctly handle the more numerous higher-weight errors that determines how much of this steeper suppression is realized. We note that the fit PL ∝ Λ−⌊(d+1)/2⌋ remains well-defined because the effective slope is well-approximated by a constant multiple of ⌊(d + 1)/2⌋ across the distances tested; this multiplicative factor is absorbed into the extracted Λ, which therefore captures the decoder’s total error suppression per unit distance.
+These observations have direct implications for resource estimation. The projections of Refs. [7, 8, 34] assume Λ ≈ 10 at p = 0.1%, a value calibrated to MWPMclass decoders; a decoder that achieves Λ significantly above this value at the same physical error rate would reduce the code distance—and therefore the physical qubit count—needed to reach any given target logical error rate. Concretely, our decoder reaches a target logical error rate of ∼ 10−9 at code distance d = 15, compared to d = 19 for MWPM—a ∼40% reduction in physical qubit count on the code family that underpins current hardware experiments [22, 23]. Moreover, this advantage grows with stricter targets: because the waterfall gives steeper-than-distance scaling, the gap between waterfallaware and conventional resource estimates widens as the target logical error rate decreases toward the 10−10–10−12 regime required for large-scale algorithms [7, 13].
+
+6
+
+Logical error rate PL Error suppression exponent m
+
+10−2 10−3
+
+(a) Error suppression at d = 15
+
+H = 16 H = 24 H = 32 H = 48 H = 64
+
+H = 128 H = 256 MWPM Correlated MWPM Tesseract
+
+(b) Scaling of error suppression 8.0 7.5
+
+10−4
+
+7.0
+
+10−5 10−6
+4
+
+5
+
+6
+
+7 8 9 10
+
+Memory error rate pmem (%)
+
+6.5
+6.0 16
+
+MWPM Correlated MWPM Tesseract
+
+32
+
+64
+
+128
+
+256
+
+Hidden dimension H
+
+FIG. 4. Error suppression improves with model capacity. (a) Logical error rate versus memory error rate pmem at distance d = 15 for surface code models with varying hidden dimension H (data-level depolarizing noise, used here for training
+efficiency). Larger models achieve lower error rates across the full range of noise levels. (b) Error suppression exponent m for memory errors (from fitting PL ∝ pm) versus hidden dimension. Small models (H ≲ 64) exhibit poor scaling exponents well below reference decoders (MWPM, correlated matching), while large models (H ≥ 64) approach optimal performance.
+
+These accuracy gains are only practically relevant if the decoder is fast enough for real-time operation. Figure 1(c) and Figure 2(d) show the accuracy–latency tradeoff at p = 0.2% for BB codes, while Figure 3(b) shows how latency scales with code distance for surface codes. Our models have single-shot latencies of ∼ 40 µs per cycle on a single NVIDIA H200 GPU; batched inference achieves amortized latencies up to two orders of magnitude lower at comparable accuracy, for an overall throughput 3,000–100,000× higher than existing decoders (single-threaded CPU) [45]. Which metric matters depends on the computational setting: single-shot latency is the constraint when mid-circuit measurements gate subsequent operations, while amortized latency is the relevant figure of merit when syndrome rounds can be buffered and decoded in parallel [46, 47], as in memory experiments or deep Clifford circuits. These latencies are well within the decoding budgets for trapped-ion and neutral-atom platforms (∼ 1 ms) [23], but above the ∼ 1 µs required for superconducting qubits. We note that the architecture’s local, regular computational structure is well-suited to hardware acceleration and roofline estimates suggest that FLOP-efficient variants on dedicated hardware could approach the superconducting budget (Supplementary Information).
+Robustness and generalization
+How well a decoder exploits a code’s error-correcting capability depends strongly on its capacity. To investigate this dependence, we trained surface code decoders of varying width H at a single noise level under data-level depolarizing noise and evaluated across a range of phys-
+
+ical error rates (Fig. 4). Small models (H ≲ 64) achieve error suppression worse than uncorrelated MWPM. As capacity increases, the suppression exponent m (from PL ∝ pm) rises continuously, saturating at m ≈ 8 for H ≳ 64—near the optimal value. Under data-level noise, this optimum coincides with the distance bound; under circuit-level noise, the same capacity dependence applies, but optimal performance includes the steep waterfall regime observed above. This distinction reflects the combinatorial structure of failure modes: under datalevel noise, minimum-weight logical failures correspond to the many shortest paths across the lattice, so these modes dominate and the distance bound is tight; under circuit-level noise, a minimum-weight failure requires a specific alignment of faults in spacetime, making such modes rare relative to the more numerous higher-weight failures that drive the waterfall. These considerations indicate that insufficient capacity is thus a key reason existing decoders fail to access the waterfall regime: as the model’s expressive capacity grows, it gains the ability to recognize and correctly classify increasingly complex error patterns—patterns that simpler decoders systematically mishandle.
+All models are trained at a single high physical error rate, yet generalize reliably across seven orders of magnitude in logical error rate—a generalization that extends beyond accuracy to the network’s uncertainty estimates. Although trained at a single noise level, the decoder’s predicted probabilities remain well-calibrated across physical error rates far below the training distribution (Fig. 5(c)). This is not guaranteed a priori: the posterior probability of a logical error given a syndrome depends on the physical error rate, which varies across the evaluation range. A possible explanation is that the
+
+7
+
+Logical error rate per cycle Logical error rate per cycle
+Actual flip rate
+
+(a) Error vs acceptance at p = 0.55%
+
+10−1 10−2 10−3 10−4
+
+Post-selection [LEB 2025] Cascade
+
+10−3 10−4 10−5
+
+10−5
+
+10−6
+
+10−6
+
+10−1 Acceptance rate
+
+10−7 100
+
+(b) Error rate vs p
+
+Discard rate (per cycle)
+0.0% 0.5% 1.0% 1.5% 2.0% 2.5%
+
+0.3
+
+0.4
+
+0.5
+
+Physical error rate p (%)
+
+(c) Reliability diagram
+
+1.0 Physical error rate
+
+0.55% (training level)
+
+0.8
+
+0.50%
+
+0.45%
+
+0.40%
+
+0.35%
+
+0.6
+
+0.30%
+
+Perfect calibration
+
+0.4
+
+0.2
+
+0.0 0.0 0.2 0.4 0.6 0.8 1.0 Predicted flip probability
+
+FIG. 5. Confidence-aware decoding with the ML decoder on the 72, 12, 6 bivariate bicycle code. (a) Logical error rate per cycle as a function of acceptance rate at p = 0.55%. Our decoder (blue) achieves much steeper error suppression (as a function of acceptance rate) compared to cluster-based post-selection methods [48] (pink). (b) Logical error rate versus physical error rate for different discard rates. (c) Reliability diagram showing calibration across physical error rates (color scale); alignment with the diagonal indicates well-calibrated predictions.
+
+syndrome’s local structure—the density and clustering of detection events—provides an implicit signal for error severity that scales consistently with the physical error rate, allowing the network’s confidence estimates to remain meaningful even far from the training distribution. Calibration enables post-selection: by discarding low-confidence predictions (measured by the output confidence), we achieve lower logical error rates at the cost of reduced acceptance rate (Fig. 5(a)). While the waterfall effect reduces the number of qubits needed for a given target error rate, calibrated post-selection reduces the time overhead. On the 72, 12, 6 code at high noise level p = 0.55%, our decoder reaches an error rate ∼ 2 × 10−3 with an acceptance rate of ∼95%, compared to ∼5% for cluster-based post-selection methods [48]—a roughly 20× reduction in the number of retries required by repeatuntil-success protocols [14, 41, 42]. In Fig. 5(b), we show that even a modest 0.5% per-cycle discard rate can yield up to two orders-of-magnitude reduction in PL. Such confidence-aware decoding could reduce the overhead of distillation protocols—including magic state distillation [13] and entanglement distillation [41]—that rely on post-selected operations.
+Discussion and outlook
+These results have several implications for faulttolerant quantum computation. First, code design and resource estimation should move beyond distance as the sole figure of merit. The sparsity of low-weight uncorrectable errors, the weight distribution of logical operators, and decoder accuracy all shape effective error suppression and can differ dramatically between codes with identical n, k, d parameters. Code-specific models that
+
+capture these structural properties will yield more favorable resource estimates than the standard distance-based formula.
+Second, the decoder should be treated as an integral component of fault-tolerant architecture co-design rather than an independent subsystem. The capacity scaling results (Fig. 4) reveal a sharp threshold in expressive capacity: below it, decoders cannot represent the complex error patterns that dominate at moderate noise; above it, near-optimal performance emerges. This explains why existing decoders miss the waterfall and underscores that decoder power directly determines how much of a code’s error-correcting capability is realized in practice.
+Third, our decoder’s geometric inductive bias (locality, translation equivariance, and anisotropy) makes it a general framework, not a code-specific solution. The same architecture achieves near-optimal accuracy on both surface codes and bivariate bicycle codes, code families with fundamentally different connectivity and encoding rates that have historically required entirely different decoding strategies [5, 49–53]. Since these inductive biases apply to any code whose checks share a common local structure, we expect Cascade to extend to other high-rate qLDPC code families, including lifted-product codes [54], Kasai codes [55], and other codes with analogous geometric regularity [30], where the waterfall effect should be even more pronounced at larger code sizes. The convolutional structure is also inherently hardware-friendly: its sparse, local connectivity, feed-forward computation, and deterministic latency enable spatial mapping onto FPGAs and ASICs, with roofline estimates suggesting lightweight variants could approach the ∼1 µs budget for superconducting qubits (Supplementary Information).
+Finally, we note that these results are particularly timely since trapped-ion [9], superconducting [10], and
+
+8
+
+neutral-atom [11] systems have all reached entangling error rates around ∼0.1%, placing current hardware systems in the regime where the waterfall effect can enable logical error rates sufficient for the realization of practical fault-tolerant quantum algorithms.
+[1] Leverrier, A. & Zemor, G. Quantum Tanner codes. In 2022 IEEE 63rd Annual Symposium on Foundations of Computer Science (FOCS), 872–883 (IEEE, 2022).
+[2] Panteleev, P. & Kalachev, G. Quantum ldpc codes with almost linear minimum distance. IEEE Transactions on Information Theory 68, 213–229 (2022).
+[3] Bravyi, S. et al. High-threshold and low-overhead faulttolerant quantum memory. Nature 627, 778–782 (2024).
+[4] Poulin, D. & Chung, Y. On the iterative decoding of sparse quantum codes. Quantum Information and Computation 8, 986–1000 (2008).
+[5] Roffe, J., White, D. R., Burton, S. & Campbell, E. Decoding across the quantum low-density parity-check code landscape. Physical Review Research 2, 043423 (2020).
+[6] Beni, L. A., Higgott, O. & Shutty, N. Tesseract: A search-based decoder for quantum error correction. Preprint at https://arxiv.org/abs/2503.10988 (2025).
+[7] Gidney, C. & Eker˚a, M. How to factor 2048 bit RSA integers in 8 hours using 20 million noisy qubits. Quantum 5, 433 (2021).
+[8] Beverland, M. E. et al. Assessing requirements to scale to practical quantum advantage. Preprint at https://arxiv.org/abs/2211.07629 (2022).
+[9] Ballance, C. J., Harty, T. P., Linke, N. M., Sepiol, M. A. & Lucas, D. M. High-fidelity quantum logic gates using trapped-ion hyperfine qubits. Physical Review Letters 117, 060504 (2016).
+[10] Li, R. et al. Realization of high-fidelity cz gate based on a double-transmon coupler. Physical Review X 14, 041050 (2024).
+[11] Evered, S. J. et al. High-fidelity entangling gates and nonlocal circuits with neutral atoms. In preparation (2025).
+[12] Mu¨ller, T. et al. Improved belief propagation is sufficient for real-time decoding of quantum memory. Preprint at https://arxiv.org/abs/2506.01779 (2025).
+[13] Campbell, E. T., Terhal, B. M. & Vuillot, C. Roads towards fault-tolerant universal quantum computation. Nature 549, 172–179 (2017).
+[14] Smith, S. C., Brown, B. J. & Bartlett, S. D. Mitigating errors in logical qubits. Communications Physics 7 (2024).
+[15] Blue, J., Avlani, H., He, Z., Ziyin, L. & Chuang, I. L. Machine learning decoding of circuit-level noise for bivariate bicycle codes. Preprint at https://arxiv.org/abs/2504.13043 (2025).
+[16] Feynman, R. P. Simulating physics with computers. International Journal of Theoretical Physics 21, 467–488 (1982).
+[17] Shor, P. W. Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer. SIAM Journal on Computing 26, 1484–1509 (1997).
+[18] Aspuru-Guzik, A., Dutoi, A. D., Love, P. J. & Head-
+
+Gordon, M. Simulated quantum computation of molecular energies. Science 309, 1704–1707 (2005). [19] Aharonov, D. & Ben-Or, M. Fault-Tolerant Quantum Computation with Constant Error Rate. SIAM Journal on Computing 38, 1207–1282 (2008). [20] Knill, E., Laflamme, R. & Zurek, W. H. Resilient quantum computation: error models and thresholds. Proceedings of the Royal Society of London. Series A: Mathematical, Physical and Engineering Sciences 454, 365–384 (1998). [21] Google Quantum AI. Exponential suppression of bit or phase errors with cyclic error correction. Nature 595, 383–387 (2021). [22] Google Quantum AI and Collaborators. Quantum error correction below the surface code threshold. Nature 638, 920–926 (2025). [23] Bluvstein, D. et al. Logical quantum processor based on reconfigurable atom arrays. Nature 626, 58–65 (2024). [24] Bluvstein, D. et al. A fault-tolerant neutral-atom architecture for universal quantum computation. Nature 649, 39–46 (2026). [25] Paetznick, A. et al. Demonstration of logical qubits and repeated error correction with better-than-physical error rates. Preprint at https://arxiv.org/abs/2404.02280 (2024). [26] Fowler, A. G., Mariantoni, M., Martinis, J. M. & Cleland, A. N. Surface codes: Towards practical large-scale quantum computation. Physical Review A 86, 032324 (2012). [27] Bombin, H. & Martin-Delgado, M. A. Topological quantum distillation. Physical Review Letters 97, 180501 (2006). [28] Panteleev, P. & Kalachev, G. Asymptotically good Quantum and locally testable classical LDPC codes. In Proceedings of the 54th Annual ACM SIGACT Symposium on Theory of Computing, 375–388 (ACM, 2022). [29] Raveendran, N. & Vasi´c, B. Trapping sets of quantum ldpc codes. Quantum 5, 562 (2021). [30] Panteleev, P. & Kalachev, G. Degenerate Quantum LDPC Codes With Good Finite Length Performance. Quantum 5, 585 (2021). [31] Gu, S., Wang, L. & Kubica, A. The color code, the surface code, and the transversal cnot: Nphardness of minimum-weight decoding (2026). URL https://arxiv.org/abs/2603.22064. Preprint at https://arxiv.org/abs/2603.22064. [32] Gallager, R. Low-density parity-check codes. IEEE Transactions on Information Theory 8, 21–28 (1962). [33] MacKay, D. J. C. & Neal, R. M. Near Shannon limit performance of low density parity check codes. Electronics Letters 32, 1645–1646 (1996). [34] Litinski, D. A game of surface codes: Large-scale quantum computing with lattice surgery. Quantum 3, 128 (2019). [35] Zhou, H. et al. Resource analysis of low-overhead transversal architectures for reconfigurable atom arrays. In Proceedings of the 52nd Annual International Symposium on Computer Architecture (SIGARCH ’25), 1432– 1448 (ACM, 2025). [36] Richardson, T. J. & Urbanke, R. L. The capacity of low-density parity-check codes under message-passing decoding. IEEE Transactions on Information Theory 47, 599–618 (2001). [37] Richardson, T. J. & Urbanke, R. L. Modern coding theory
+
+(Cambridge University Press, Cambridge, 2009).
+
+[38] Watson, F. H. E. & Barrett, S. D. Logical error rate
+
+scaling of the toric code. New Journal of Physics 16,
+
+093045 (2014).
+
+[39] Kasai, K., Hagiwara, M., Imai, H. & Sakaniwa, K. Quan-
+
+tum error correction beyond the bounded distance decod-
+
+ing limit. IEEE Transactions on Information Theory 58,
+
+1223–1230 (2012).
+
+[40] Komoto, D. & Kasai, K. Quantum error correc-
+
+tion near the coding theoretical bound. Preprint at
+
+https://arxiv.org/abs/2412.21171 (2025).
+
+[41] Zhou, Z., Pexton, S., Kubica, A. & Ding, Y. Error mit-
+
+igation of fault-tolerant quantum circuits with soft in-
+
+formation. Preprint at https://arxiv.org/abs/2512.09863
+
+(2025).
+
+[42] Menon, V. et al. Magic tricycles: Efficient magic state
+
+generation with finite block-length quantum ldpc codes.
+
+Preprint at https://arxiv.org/abs/2508.10714 (2025).
+
+[43] Breuckmann, N. P. & Eberhardt, J. N. Quantum low-
+
+density parity-check codes. PRX Quantum 2 (2021).
+
+[44] For all reference decoders, we use BP+OSD with de-
+
+fault stimbposd settings (product-sum BP, 30 iterations,
+
+combination-sweep OSD of order 60) [5], Relay with
+
+hyperparameters tuned following the authors’ recom-
+
+mended procedure [12], and Tesseract in the short-beam
+
+configuration [6].
+
+[45] Reported amortized latencies are computed as total wall-
+
+clock time divided by (batch size × syndrome rounds).
+
+This includes per-invocation overhead amortized across
+
+rounds.
+
+[46] Terhal, B. M. Quantum error correction for quantum
+
+memories. Reviews of Modern Physics 87, 307–346
+
+(2015).
+
+[47] Skoric, L., Browne, D. E., Barnes, K. M., Gillespie, N. I.
+
+& Campbell, E. T. Parallel window decoding enables
+
+scalable fault tolerant quantum computation. Nature
+
+Communications 14, 7040 (2023).
+
+[48] Lee, S.-H., English, L. & Bartlett, S. D. Efficient post-
+
+selection for general quantum ldpc codes. Preprint at
+
+https://arxiv.org/abs/2510.05795 (2025).
+
+[49] Bausch, J. et al. Learning high-accuracy error decoding
+
+for quantum processors. Nature 635, 834–840 (2024).
+
+[50] Senior, A. W. et al. A scalable and real-time neu-
+
+ral decoder for topological quantum codes. Preprint at
+
+https://arxiv.org/abs/2512.07737 (2025).
+
+[51] Higgott, O. & Gidney, C. Sparse Blossom: correcting
+
+a million errors per core second with minimum-weight
+
+matching. Quantum 9, 1600 (2025).
+
+[52] Maurer, T. et al. Real-time decoding of the
+
+gross code memory with FPGAs. Preprint at
+
+https://arxiv.org/abs/2510.21600 (2025).
+
+[53] Fowler, A. G. Optimal complexity correction of
+
+correlated errors in the surface code. Preprint at
+
+https://arxiv.org/abs/1310.0863 (2013).
+
+[54] Xu, Q. et al. Constant-overhead fault-tolerant quantum
+
+computation with reconfigurable atom arrays. Nature
+
+Physics 20, 1084–1090 (2024).
+
+[55] Kasai, K.
+
+Breaking the orthogonality bar-
+
+rier in quantum ldpc codes.
+
+Preprint at
+
+https://arxiv.org/abs/2601.08824 (2026).
+
+[56] Gottesman, D. Stabilizer codes and quantum error cor-
+
+rection. Ph.D. thesis, California Institute of Technology,
+
+Pasadena, CA (1997).
+
+9
+
+[57]
+
+PL
+
+is
+
+defined
+
+by
+
+inverting
+
+Pblock
+
+=
+
+1
+
+−
+
+(
+
+1+(1−2PL 2
+
+)R
+
+k
+)
+
+,
+
+the
+
+block error rate of k independent qubits each failing with
+
+odd-parity
+
+probability
+
+[1
+
+−
+
+(1
+
+−
+
+2PL
+
+R
+)
+
+]/2
+
+over
+
+R
+
+rounds.
+
+[58] Dennis, E., Kitaev, A., Landahl, A. & Preskill, J.
+
+Topological quantum memory. Journal of Mathematical
+
+Physics 43, 4452–4505 (2002).
+
+[59] Higgott, O. PyMatching: A Python Package for De-
+
+coding Quantum Codes with Minimum-Weight Perfect
+
+Matching. ACM Transactions on Quantum Computing
+
+3, 1–16 (2022).
+
+[60] Higgott, O., Bohdanowicz, T. C., Kubica, A., Flammia,
+
+S. T. & Campbell, E. T. Improved Decoding of Circuit
+
+Noise and Fragile Boundaries of Tailored Surface Codes.
+
+Physical Review X 13, 031007 (2023).
+
+[61] Delfosse, N. & Nickerson, N. H. Almost-linear time de-
+
+coding algorithm for topological codes. Quantum 5, 595
+
+(2021).
+
+[62] Hillmann, T. et al. Localized statistics decoding for quan-
+
+tum low-density parity-check codes. Nature Communica-
+
+tions 16 (2025).
+
+[63] Nachmani, E. et al. Deep learning methods for improved
+
+decoding of linear codes. IEEE Journal of Selected Topics
+
+in Signal Processing 12, 119–131 (2018).
+
+[64] Gong, A., Cammerer, S. & Renes, J. M. Graph neural
+
+networks for enhanced decoding of quantum ldpc codes.
+
+In 2024 IEEE International Symposium on Information
+
+Theory (ISIT), 2700–2705 (2024).
+
+[65] Ninkovic, V., Kundacina, O., Vukobratovic, D., Ha¨ger,
+
+C. & i Amat, A. G. Decoding quantum ldpc
+
+codes using graph neural networks. Preprint at
+
+https://arxiv.org/abs/2408.05170 (2024).
+
+[66] Duclos-Cianci, G. & Poulin, D. Fast decoders for topolog-
+
+ical quantum codes. Physical Review Letters 104 (2010).
+
+[67] Lake, E. Local active error correction from simulated con-
+
+finement. Preprint at https://arxiv.org/abs/2510.08056
+
+(2025).
+
+[68] Schlichtkrull, M. et al. Modeling Relational Data with
+
+Graph Convolutional Networks. In The Semantic Web,
+
+593–607 (Springer International Publishing, 2018).
+
+[69] Hassani, A., Walton, S., Li, J., Li, S. & Shi, H. Neighbor-
+
+hood attention transformer. In 2023 IEEE/CVF Con-
+
+ference on Computer Vision and Pattern Recognition
+
+(CVPR), 6185–6194 (2023).
+
+[70] He, K., Zhang, X., Ren, S. & Sun, J. Deep residual
+
+learning for image recognition. In 2016 IEEE Conference
+
+on Computer Vision and Pattern Recognition (CVPR),
+
+770–778 (2016).
+
+[71] Howard, A. G. et al. Mobilenets: Efficient convolutional
+
+neural networks for mobile vision applications. Preprint
+
+at https://arxiv.org/abs/1704.04861 (2017).
+
+[72] Liu, Z. et al. A ConvNet for the 2020s. In 2022
+
+IEEE/CVF Conference on Computer Vision and Pattern
+
+Recognition (CVPR), 11966–11976 (IEEE, 2022).
+
+[73] Yang, G. et al. Tuning large neural networks via zero-shot
+
+hyperparameter transfer. In Advances in Neural Infor-
+
+mation Processing Systems, vol. 34, 17084–17097 (Curran
+
+Associates, Inc., 2021).
+
+[74] Gidney, C. Stim: a fast stabilizer circuit simulator.
+
+Quantum 5, 497 (2021).
+
+[75] Jordan, K. et al. Muon: An optimizer for hidden layers
+
+in neural networks. https://kellerjordan.github.io/
+
+posts/muon/ (2024).
+
+[76] Chen, X. et al. Symbolic discovery of optimization al-
+
+gorithms. Preprint at https://arxiv.org/abs/2302.06675
+
+10
+(2023). [77] Izmailov, P., Podoprikhin, D., Garipov, T., Vetrov,
+D. P. & Wilson, A. G. Averaging weights leads to wider optima and better generalization. Preprint at https://arxiv.org/abs/1803.05407 (2018). [78] Power, A., Burda, Y., Edwards, H., Babuschkin, I. & Misra, V. Grokking: Generalization beyond overfitting on small algorithmic datasets. Preprint at https://arxiv.org/abs/2201.02177 (2022). [79] Liu, Z. et al. Towards understanding grokking: An effective theory of representation learning. In Advances in Neural Information Processing Systems (2022). [80] Maskara, N., Kubica, A. & Jochym-O’Connor, T. Advantages of versatile neural-network decoding for topological codes. Phys. Rev. A 99, 052351 (2019). [81] torchao. Torchao: Pytorch-native training-to-serving model optimization. https://github.com/pytorch/ao (2024). BSD-3-Clause license. [82] Vaswani, A. et al. Attention is all you need. In Proceedings of the 31st International Conference on Neural Information Processing Systems (NIPS’17), 6000–6010 (Curran Associates Inc., 2017). [83] Bonilla Ataides, J. P., Gu, A., Yelin, S. F. & Lukin, M. D. Neural decoders for universal quantum algorithms. Preprint at https://arxiv.org/abs/2509.11370 (2025). [84] AMD. Versal architecture and product data sheet: Overview (DS950). https://docs.amd.com/v/u/en-US/ ds950-versal-overview (2024). [85] Jouppi, N. P. et al. In-datacenter performance analysis of a tensor processing unit. SIGARCH Computer Architecture News 45, 1–12 (2017).
+
+11
+
+METHODS
+
+Stabilizer codes and the decoding problem A stabilizer code encodes k logical qubits into n physical qubits, protecting against errors up to weight ⌊(d − 1)/2⌋, where d is the code distance [56]. The code is defined by a set of commuting Pauli operators called stabilizers, which are measured repeatedly to detect errors. In a memory experiment, a logical state is initialized, stabilizer measurements are performed for R rounds, and the logical state is then measured. Errors occurring during this process—on gates, idle qubits, and measurements—cause stabilizer outcomes to change between rounds. These changes, called detection events, form the syndrome that the decoder must interpret.
+The decoding problem is to infer, from the syndrome, whether a logical error has occurred. Because many different physical error patterns can produce the same syndrome (degeneracy), the decoder need only identify the equivalence class of the error, not the exact error. The key metric is the logical error rate PL: the probability that the decoder’s correction, combined with the actual errors, results in a logical bit flip. Throughout this paper, we report PL per cycle per logical qubit, extracted from the block error rate Pblock over the full syndrome volume as
+
+PL
+
+=
+
+1
+
+−
+
+(2(1
+
+−
+
+Pblock)1/k 2
+
+−
+
+1)1/R ,
+
+(1)
+
+where R is the number of rounds and k is the number of logical qubits [57]. Below the code’s threshold error rate, PL decreases exponentially with code distance, characterized by the error suppression factor Λ > 1 such that PL ∼ Λ−⌊(d+1)/2⌋.
+We focus on two code families with geometric structure. The surface code arranges data qubits on a 2D grid with X-type and Z-type stabilizers on alternating faces [26]. A distance-d surface code uses d2 data qubits to encode one logical qubit. With R rounds of syndrome measurement, the syndrome forms a 3D structure: two spatial dimensions plus time. Crucially, the surface code exhibits spatiotemporal translation symmetry in the bulk : the local structure around any stabilizer is identical up to a spatial shift.
+Bivariate bicycle (BB) codes are quantum LDPC codes constructed on a torus Zℓ × Zm [3]. An n, k, d BB code encodes k logical qubits into n physical qubits with distance d. For example, the 144, 12, 12 code (with ℓ = 12, m = 6) encodes 12 logical qubits—a significantly higher rate than surface codes. Like surface codes, BB codes have X-type and Z-type stabilizers, but with a different connectivity pattern defined by polynomials over the torus. The key property for our purposes is that BB codes also exhibit translation symmetry: all X-stabilizers
+
+(and separately, all Z-stabilizers) have identical local neighborhoods up to translation on the torus. This regularity enables weight-sharing across the code, just as for surface codes.
+Prior decoding algorithms For surface codes, minimum-weight perfect matching (MWPM) is the dominant decoding approach [51, 58, 59]. Variants such as correlated matching [53] and belief matching [60] incorporate correlations between error types, improving accuracy at modest computational cost. Union-find decoders offer a faster alternative with simpler operations, though with somewhat lower accuracy [61].
+For quantum LDPC codes, matching-based decoders do not directly apply due to the hypergraph structure. Belief propagation (BP) is a natural choice but often fails on quantum codes: under BP’s fixed update rules, quantum degeneracy induces symmetric trapping sets [4, 29], causing messages to oscillate or converge to incorrect solutions. BP with ordered statistics decoding (BP+OSD) follows unconverged BP with Gaussian elimination [5, 30], improving accuracy at significant computational cost. Variants such as localized statistics decoding (BP+LSD) reduce this cost somewhat [62]. Relay [12] introduces learnable scalar memory terms that break trapping-set symmetries, similar to neural BP approaches for classical LDPC codes [63]. The success of these methods demonstrates that the problem is algorithmic, arising from BP’s rigid update rules, rather than fundamental to degeneracy itself. Graph neural network decoders [64, 65] replace BP’s update rules with learned functions but treat all neighbors symmetrically rather than exploiting geometric regularity. AlphaQubit [49, 50] uses a transformer architecture with global attention, achieving near-optimal accuracy on surface codes and colour codes but with higher training cost and without application to high-rate quantum LDPC codes.
+Geometric structure and convolution QEC codes exhibit three geometric regularities that provide a natural guide for decoder design: translation equivariance, locality, and anisotropy.
+Translation equivariance follows from the regularity of the code. Consider the bivariate bicycle codes, which are defined on a torus Zℓ × Zm with stabilizers arranged in a periodic lattice. Since every stabilizer has the same local connectivity, a spatial shift of the syndrome by (∆ℓ, ∆m) shifts the posterior distribution over data-qubit errors correspondingly. A translation-equivariant decoder respects this symmetry, producing correspondingly shifted outputs from shifted inputs. For surface codes, boundaries break this symmetry locally, but the bulk of the decoding problem remains translation-invariant.
+Locality is less obvious. Errors manifest as local syndrome patterns, but the decoding problem itself is global: the decoder must determine the equivalence class of the
+
+12
+
+error, which depends on the error’s topology across the entire code. What makes locality viable is a natural hierarchy of scales in the error structure. Small-scale errors produce local syndrome patterns that can be identified from nearby information alone; once these are resolved, the remaining error landscape is effectively coarser. Successive layers of local operations thus implement a form of coarse-graining [66], where each layer absorbs errors at its characteristic scale. After L ∼ d layers, the receptive field spans the full code distance, and only the global topological ambiguity remains to be resolved.
+Finally, anisotropy: the decoder should learn to transmit messages differently in different directions. In the surface code’s checkerboard structure, a stabilizer’s horizontal neighbor is of opposite type (X↔Z) while its diagonal neighbor is of the same type—information arriving from these directions has fundamentally different meaning. The temporal direction carries distinct structure as well: measurement errors produce isolated detection events in time, while data qubit errors produce correlated pairs across consecutive rounds.
+Existing decoders already satisfy some of these properties with fixed update rules: belief propagation performs local message passing on the bipartite Tanner graph, and the cellular automaton decoder [67] adds anisotropy, labeling messages by coordinate direction to distinguish between different spatial neighbors—indeed, Ref. [67] proves that these three structural priors are fully compatible with fault-tolerant decoding of the surface code. The remaining question is how to make the update rules learned while preserving all three properties. Consider a graph neural network on the check graph, where nodes are stabilizers connected when their supports overlap. At each layer, every node aggregates messages from its neighbors and updates its state. A standard GNN treats all neighbors symmetrically (permutation equivariance), losing the directional structure that anisotropy requires. A relational GNN [68] fixes this by assigning different weight matrices to different edge types. For codes with translation symmetry, the geometric offset between two stabilizers provides a natural edge typing, since the relation “neighbor at offset δ” is consistently defined across the code. Adding weight sharing across positions—the same learned rules at every site—then gives a convolution: learned, local, directional message passing with translation equivariance. This is the same structure as the cellular automaton decoder, but with learned update rules operating in a high-dimensional embedding space rather than hand-designed rules in probability space.
+A natural question is whether attention-based architectures—which have achieved state-of-the-art results on surface codes [50]—might learn faster or more effectively than convolutions when training compute is held fixed. Using the same setting as the scaling study (data-level noise, d = 15), we compare three architectures with identical model size (L = 8 layers, H = 256 hidden
+
+dimension): standard convolution, local (neighborhood) attention [69], and full global attention. To ensure a fair comparison across architectures with different per-step computational costs, we plot logical error rate as a function of training compute rather than training steps. The results (Extended Data Fig. 2b) show that convolution achieves the lowest final error rate, reaching parity with the Tesseract decoder, while local attention saturates at a higher error rate. Full attention performs worst: not only does it saturate at an even higher error rate than local attention, but its entire learning curve is shifted rightward, requiring more total training compute to reach any given accuracy level.
+These results decompose the contribution of the three geometric properties (Extended Data Fig. 2a). The largest gain comes from locality: restricting attention to local neighborhoods (full → local attention) substantially improves both final accuracy and compute efficiency. The further improvement from local attention to convolution reflects the addition of translation equivariance and anisotropy—convolutions apply identical directionspecific rules at every position, whereas local attention learns position-dependent weights that treat neighbors symmetrically. That adding flexibility (local → global attention) degrades rather than helps performance confirms that these structural priors are not merely convenient but essential.
+The specific form of the convolution depends on the code. For surface codes, the syndrome is a 3D tensor of shape (R, d + 1, d + 1) (time plus two spatial dimensions), and the convolution is a standard 3D convolution with zero padding at boundaries. For BB codes on a torus Zℓ× Zm, the spatial neighborhood of each stabilizer is defined by the Tanner graph rather than a grid stencil, while the temporal direction uses a standard 1D convolution over adjacent time steps. The update for hidden state hv at position v is
+
+hv(l+1) = ∑ Wδ((lu) ,v)h(ul) + Ws(ell)fh(vl),
+
+(2)
+
+u∈N (v)
+
+where N (v) is the full spatiotemporal neighborhood of v
+and δ(u, v) is the relative position of u with respect to
+v (spatial offset on the torus and temporal offset). The weight matrix Wδ(l) depends only on the relative position δ, not on the absolute position v.
+
+Architecture Our architecture follows a standard encoder-readout structure, with the convolutional operator as the only code-specific component. The input is the syndrome: a tensor of binary detection events indicating where stabilizer measurements changed between rounds. We embed each detection event into a hidden representation of dimension H using a learned embedding layer.
+The backbone consists of L identically-structured pro-
+
+13
+
+cessing blocks stacked sequentially, each with independent learned parameters, following a bottleneck residual design [70] (Extended Data Fig. 1). In each block, the Hdimensional representation is first projected down to H/4 dimensions, processed by the code-specific convolution, and then projected back to H dimensions. Because the expensive convolution operates in the lower-dimensional space, this reduces its cost by roughly 16× while preserving expressive capacity. Each projection and convolution is preceded by batch normalization (which standardizes activations to zero mean and unit variance, stabilizing training) and a SiLU nonlinearity (a smooth activation function that enables the network to learn nonlinear relationships). A residual connection adds each block’s input directly to its output, so the block only needs to learn a correction to the identity mapping rather than reconstructing the full representation—a standard technique that enables stable training of deep networks. The hidden dimension H is constant throughout the backbone.
+The code-specific convolution operates on the check graph, where the network maintains hidden state at each syndrome location. Two checks are neighbors if and only if they share a data qubit; for codes with high-weight stabilizers, this neighborhood can be large. Any such checkto-check convolution can be factored into two bipartite steps—check → data → check—each with a smaller kernel defined by the Tanner graph’s local connectivity. This admits a natural interpretation as message passing on the bipartite Tanner graph, and reduces the number of learned relations per step while preserving the same receptive field per layer. For BB codes, the savings are substantial: each check has 22 spatial neighbors in the check-to-check graph across 3 temporal offsets, giving 66 distinct relations per layer, while each bipartite step involves only 6 spatial neighbors across 2 temporal offsets (12 relations)—an over 5× reduction in kernel size. We implement these bipartite convolutions using custom Triton kernels that exploit the regular structure for efficient memory access. For surface codes, the direct 3 × 3 × 3 kernel is already small, and factorization offers insufficient savings to justify the overhead. A further reduction is possible via depthwise convolution [71, 72], which processes each channel independently in the spatial operation, reducing the spatial cost from O(K(H/b)2) to O(KH/b) per layer.
+A key architectural consideration is the relationship between network depth L and code distance d. For surface codes, error correlations extend over spatial scales ∼ d, requiring the network’s receptive field to grow with distance. With typical 3 × 3 × 3 convolutional kernels, each layer increases the receptive field by 2 in space and time, giving a receptive field of ∼ 2L after L layers. To ensure sufficient spatial context for decoding, we scale depth with distance, using L ∼ d for our experiments.
+After the final convolutional block, a convolution scatters the check-node representations to data qubits. We
+
+then aggregate information for each logical observable by average pooling over the data qubits in that observable’s support. The pooled representation is passed through a two-layer multilayer perceptron (with hidden dimension 2H) to produce a logit for each logical observable. For surface codes, which encode a single logical qubit, the output is a single logit predicting whether an XL or ZL error occurred. For BB codes, which encode multiple logical qubits, the output is a vector of logits, one per logical observable.
+The architecture is parameterized by depth L and width H. We train a separate model for each (H, L) configuration. To ensure stable training across different widths, we use Maximal Update Parameterization (MuP) [73], which adjusts learning rates and initialization scales as a function of width so that a single set of training hyperparameters works across all model sizes without per-configuration tuning.
+
+Training
+
+We generate training data using Stim [74], simulating
+
+memory experiments with R = d rounds of syndrome
+
+extraction under circuit-level depolarizing noise. Each
+
+training example consists of a syndrome (the detection
+
+events across all R rounds) and a label (whether a logi-
+
+cal error occurred). Data is generated on-the-fly during
+
+training, providing an effectively unlimited dataset; in practice, our models converge within 3 × 108 training ex-
+
+amples. We train with binary cross-entropy loss on the
+
+logical error prediction. For codes with multiple logical
+
+observables, we average the cross-entropy losses across all
+
+observables.
+
+We use the Muon optimizer [75], which applies
+
+Newton-Schulz orthogonalization to gradient updates for
+
+matrix-valued parameters (convolution weights), with
+
+Lion [76] for scalar parameters (biases, normalization pa-
+
+rameters, embeddings, and readout layers). Peak learning rates are 3 × 10−3 for Muon and 2 × 10−4 for Lion,
+
+following a cosine schedule over 50000 steps (decaying to
+
+a110woefigphetakd)ecwaiythofli3ne×ar10w−a3rmanudp
+
+over 1000 steps. We use maintain an exponential
+
+moving average (EMA) of model weights [77] with de-
+
+cay rate β = 0.9998. All reported results use the EMA
+
+weights. We train in mixed precision (bfloat16) with
+
+gradient norm clipping, a batch size of 3328, for 80000
+
+steps. The largest model we train (for the d = 19 surface
+
+code decoder) converges in approximately 200 H200 GPU
+
+hours; the largest BB code model converges in under 100.
+
+While we ultimately want to train at high physical er-
+
+ror rates (where gradient signal is plentiful), we find em-
+
+pirically that training from random initialization directly
+
+at high p leads to prolonged periods where the network
+
+fails to learn better than random—a phenomenon rem-
+
+iniscent of “grokking” [78, 79]. We address this with
+
+a simple three-stage curriculum (similar to the one used
+
+in [80]) that bootstraps the network from easier to harder
+
+14
+
+problems. First, we train briefly at a low noise level p1 where errors are sparse and the network quickly achieves better-than-random performance. Second, we linearly anneal the noise level from p1 to the target p2 over a fixed number of steps. Third, we continue training at the target noise level p2 until convergence. The first two stages are brief, accounting for at most 2% of the total training steps; the vast majority of training occurs at the target noise level.
+We train at a single, relatively high physical error rate—p = 0.7% for surface codes and p = 0.55% for BB codes under circuit-level noise—and evaluate across a range of error rates extending to much lower values, avoiding the cost of generating rare low-error-rate samples. For the scaling study (Fig. 4), we trained surface code decoders of varying width H with fixed depth L = 8 under data-level depolarizing noise at p = 13%; we use data-level noise for this experiment because it enables faster training of the many model configurations needed for a systematic study. The error suppression exponent m (from PL ∝ pm) saturates at m ≈ 8 for H ≳ 64; beyond this point, further increases in width continue to reduce logical error rates through the prefactor while the exponent remains roughly constant.
+Data Availability The data that supports the findings of this study are available from the corresponding author on request.
+
+All authors discussed the results and contributed to the manuscript.
+Competing interests: M.D.L. is a co-founder, shareholder and Chief Scientist of QuEra Computing. S.F.Y. is a spouse of a shareholder of QuEra Computing. A.G. and J.P.B.A. have served as consultants for QuEra Computing.
+Correspondence and requests for materials should be addressed to M.D.L and S.F.Y.
+
+Acknowledgments We acknowledge helpful discussions with Varun Menon and Nazli Ugur Koyluoglu. We thank Hengyun (Harry) Zhou, Nishad Maskara, and Johannes Bausch for providing feedback on earlier versions of this manuscript. A.G. and J.P.B.A. acknowledge support from the Unitary Foundation. The computations in this paper were run on the FASRC Cannon cluster supported by the FAS Division of Science Research Computing Group at Harvard University. This research used resources of the National Energy Research Scientific Computing Center (NERSC), a Department of Energy Office of Science User Facility under Contract No. DE-AC02-05CH11231 using NERSC award DDR-ERCAP0038713. We acknowledge support from the National Science Foundation (PHY-2012023 and CCF-2313084) and through the CUA Physics Frontiers Center (PHY-2317134) and NVQL (PHY-2410716) and from DOE through the QUACQ collaboration (DE-SC0025572), Quantum Systems Accelerator Center (DE-AC02-05CH11231), IARPA and the Army Research Office, under the Entangled Logical Qubits program (W911NF-23-2-0219), the DARPA MeasQuIT program (HR0011-24-9-0359).
+
+Author contributions A.G. and J.P.B.A. conceived the method. A.G. implemented and performed numerical simulations. M.D.L. and S.F.Y. supervised the project.
+
+15
+
+h(l)
+BN → SiLU
+reduce
+Project down (H → H/4)
+
+BN → SiLU
+message passing
+Code-specific convolution
+
+√ × 1/ 2L
+
+BN → SiLU
+restore
+Project up (H/4 → H)
++ h(l+1)
+
+Extended Data Fig. 1. Bottleneck residual block. The network backbone consists of L identically-structured blocks with
+
+independent learned parameters, each processing a hidden representation of dimension H at every syndrome location. First,
+
+the representation is projected from H to H/4 dimensions (reduce); the code-specific convolution then operates in this lower-
+
+dimensional space (message passing), after which the representation is projected back to H dimensions (restore). The bottleneck
+
+reduces the cost of the convolution by roughly 16× while preserving expressive capacity. Each projection and convolution is
+
+preceded by batch normalization (BN), which standardizes activations to zero mean and unit variance, and a SiLU nonlinearity.
+
+A
+
+scaled
+
+residual
+
+connection
+
+adds
+
+the
+
+block
+
+input
+
+h(l)
+
+directly
+
+to
+
+the
+
+output,
+
+weighted
+
+by
+
+√ 1/ 2L,
+
+so
+
+that
+
+each
+
+block
+
+learns
+
+a
+
+correction to the identity mapping rather than reconstructing the full representation—a standard technique for stable training
+
+of deep networks.
+
+Convolution
+
+Local Attention
+
+10−2
+
+Architecture ablation at d = 15, pmem = 8%
+Convolution Local Attention Attention
+
+Logical error rate PL
+
+Full Attention
+10−3
+
+100
+
+101
+
+102
+
+Training compute (petaflops)
+
+Extended Data Fig. 2. Architectural ablation on surface codes. (a) Architectural inductive biases visualized on 2D syndrome grids. Convolution: Arrows from two different positions show identical directional patterns (colors encode directionspecific learned weights), demonstrating translation equivariance combined with learned anisotropy. Local attention: Arrow thickness represents learned attention weights; different thickness patterns at different positions show the architecture is positiondependent rather than translation-equivariant. Full attention: Global all-to-all connectivity with position-dependent learned weights. (b) Logical error rate versus training compute (PFLOPs) for three architectures with fixed depth (L = 8) and width (H = 256) at distance d = 15, evaluated at physical error rate p = 8%. Convolution achieves the lowest error rate, while local attention and full attention saturate at higher error rates despite equal or greater training compute. Existing decoders (MWPM, Correlated MWPM, Tesseract) shown for reference.
+
+16
+
+SUPPLEMENTARY INFORMATION: TOWARD REAL-TIME DECODING ON DEDICATED HARDWARE
+
+The main text argues that convolutional decoders are well-suited to hardware implementation due to their local connectivity, regular computation patterns, and translation-equivariant structure. This section provides supporting analysis, combining one experimentally validated result—post-training quantization to FP8 with no accuracy loss—with projections and design considerations that have not yet been implemented in hardware: a computational cost comparison of architectural variants, roofline latency estimates, and a dataflow architecture outline.
+
+Quantization and inference optimization Deploying neural decoders on FPGA or ASIC hardware requires low-precision arithmetic: the area and power consumption of a multiply-accumulate (MAC) unit— which computes a ← a + b × c in a single operation— scale roughly quadratically with operand bit width, so reducing precision from FP32 to FP8 yields an approximately 16× reduction in multiplier area and power. We use MACs rather than floating-point operations (FLOPs) as our complexity measure because a MAC is the atomic hardware primitive: each MAC corresponds to exactly one multiplier circuit, making MAC counts a direct proxy for chip area, power, and latency on dedicated hardware.
+
+We find that our convolutional decoders tolerate ag-
+
+gressive post-training quantization with no measurable
+
+accuracy degradation. At inference time, we first fold
+
+batch normalization parameters into the preceding con-
+
+volution
+
+weights:
+
+the
+
+affine
+
+transformation
+
+y
+
+=
+
+γ
+
+x−µ √
+
++β
+
+is
+
+absorbed
+
+into
+
+modified
+
+weights
+
+Wfold
+
+=
+
+γ √
+
+σ 2 +ϵ
+W and
+
+σ 2 +ϵ
+
+biases
+
+bfold
+
+=
+
+γ
+
+b−µ √
+
+σ 2 +ϵ
+
++ β.
+
+This eliminates all normal-
+
+ization layers from the inference graph, leaving a pure
+
+sequence of convolutions, pointwise nonlinearities, global
+
+pooling, and a linear head. We then use 8-bit floating
+
+point (FP8) inference with torchao [81]. The resulting
+
+model achieves logical error rates indistinguishable from
+
+the full-precision model across all physical error rates
+
+tested, with no quantization-aware retraining required.
+
+We attribute this robustness to properties of the convolutional architecture: (i) convolution weights have regular, well-behaved distributions without the outlier channels that complicate quantization of attention projections, (ii) the absence of softmax eliminates the extreme dynamic range that necessitates high precision in transformer architectures, and (iii) SiLU activations have smooth, well-behaved output distributions without the extreme values that arise in attention layers. These properties make post-training quantization straightforward, in contrast to transformer-based decoders where quantization typically requires specialized techniques.
+
+The combination of FP8 arithmetic with the depthwise convolution variant yields a compound reduction in hardware cost: ∼ 4× from depthwise factorization (reducing spatial convolution FLOPs) and ∼ 16× from FP8 versus FP32 precision, for an overall ∼ 60× reduction in multiplier area relative to a standard FP32 convolution baseline. Further reduction to INT4 via quantizationaware training is a natural direction for future work.
+
+Computational cost and roofline latency The architectural ablation in the main text compares
+convolution, local attention, and full attention at fixed model size. Here we analyze the per-layer computational costs to contextualize the accuracy–compute trade-off and estimate achievable latencies on dedicated hardware.
+Each bottleneck block with hidden dimension H, bottleneck factor b, kernel size K, and n syndrome positions consists of two pointwise projections (H → H/b and H/b → H) plus a spatial operation. We measure cost in multiply-accumulate operations (MACs), since each MAC maps to exactly one multiplier circuit on dedicated hardware, making it a direct proxy for chip area, power, and latency. The per-block MAC counts for each architectural variant are:
+
+Convolution: ∼ 2nH2/b + nK(H/b)2
+
+Depthwise conv.: ∼ 2nH2/b + nK(H/b)
+
+Local attention: ∼ 2nH2/b + nK(H/b)
+
++ 3n(H/b)2
+
+(3)
+
+Full attention: ∼ 2nH2/b + n2(H/b)
+
++ 3n(H/b)2
+
+In each case, the first term is the shared pointwise projection cost; the remaining terms are the spatial operation, which varies across architectures. Both convolution and local attention scale linearly in n; full attention scales quadratically. These decompositions are not specific to our bottleneck design: ConvNeXt blocks [72] and transformer blocks [50, 82] admit the same decomposition into two pointwise projections and one spatial operation, yielding identical MAC formulas under the relabeling H → Hb (Extended Data Fig. 3).
+For a network of depth L, the total MACs per round is L times the per-block cost. At representative parameters (H = 256, b = 4, K = 27, distance-19 surface code with n = 6840), the spatial term dominates standard convolution (∼ 77% of MACs), so depthwise factorization—which reduces the spatial term from nK(H/b)2 to nK(H/b)— yields a net ∼ 4× speedup rather than the ∼ 64× reduction in spatial cost alone, because the pointwise projections (unchanged) become the bottleneck. Local attention costs roughly 1/3 that of standard convolution, while full attention costs ∼3.4× more. Convolution provides the strongest inductive bias (achieving the best accuracy in our ablation) at higher per-step cost, while local atten-
+
+17
+
+Bottleneck [70]
+(Used in this work) H
+1×1: H → H/b
+
+ConvNeXt [72]
+H
+DW Conv (H)
+
+Transformer [82]
+(Used in [49, 50, 83]) H
+MHA (H)
+
+Conv (H/b)
+
+1×1: H → bH
+
+1×1: H → bH
+
+1×1: H/b → H
++
+H
+
+1×1: bH → H
++
+H Pointwise
+
+1×1: bH → H
++
+H Spatial
+
+Extended Data Fig. 3. Block decomposition across architectures. Every block decomposes into two pointwise projections (grey) and one spatial operation (orange), differing only in their ordering and the dimension at which each operates. Trapezoids indicate dimension changes; rectangles indicate same-dimension operations; shape width encodes the channel dimension at each stage. The bottleneck contracts to H/b before the spatial step; ConvNeXt and transformer blocks apply the spatial operation at full width H followed by an expand–contract MLP. Under the relabeling H → Hb, all three variants yield the same MAC cost structure (Eq. (3)). Pointwise nonlinearities and normalizations are omitted from the diagram as their cost is negligible compared to the linear projections and spatial operations.
+
+tion offers substantially reduced MACs with degraded accuracy at fixed model size. A practical limitation of local attention is the lack of highly optimized CUDA kernels, making it slower to train and evaluate in practice despite its lower theoretical cost; as this ecosystem matures, local attention may become a compelling alternative for latency-constrained deployment.
+Extended Data Fig. 4 shows the roofline latency per round as a function of hidden dimension H for both surface codes and bivariate bicycle codes, assuming the peak throughput of an AMD Versal AI Core FPGA (133 TOPS—tera MACs per second—in INT8 precision) [84]. FP8 and INT8 throughput are often comparable on modern tensor engines, so we use published INT8 throughput as a rough proxy for FP8 roofline estimates. For reference, a Google TPU v1 provides 92 TOPS [85] and a Google Edge TPU provides 4 TOPS at only ∼ 2 W; latency scales inversely with throughput.
+Even the largest models are comfortably within the ∼ 1 ms decoding budget for trapped-ion and neutralatom platforms. For superconducting qubits (∼ 1 µs budget), standard convolutions at H = 256 require ∼ 10 µs per round—roughly one order of magnitude too slow. However, depthwise convolutions at moderate widths (H ≤ 128) approach the 1 µs target, and further reduction via lower precision (INT4) or smaller models could close the remaining gap. BB codes have substantially lower latency than surface codes at the same hidden dimension, because both n and L are smaller: n = 144 versus n = d2 = 361 at d = 19, and L = 12 versus L = 19.
+We emphasize that these are roofline estimates assuming 100% hardware utilization. On GPUs, single-sample (unbatched) inference is dominated by kernel launch overhead and memory transfers rather than compute, making GPU latency a poor proxy for dedicated hard-
+
+ware performance. On FPGAs and ASICs, where the computation graph can be spatially mapped and weights stored on-chip, utilization approaching the roofline is achievable for regular, feed-forward architectures like ours.
+Dataflow architecture The regularity of the convolutional architecture enables a spatial dataflow implementation in which the entire network is physically unrolled onto the FPGA or ASIC fabric. Each layer is mapped to a dedicated hardware block, and data flows through the pipeline without dynamic scheduling or control flow—a direct consequence of the feed-forward, fixed-depth architecture.
+Unlike the standard GPU execution model, where all n detectors are processed through layer l before layer l + 1 begins, a spatially pipelined design maps each layer to a dedicated circuit block: as soon as a spatial tile exits layer l, layer l + 1 begins processing it while layer l handles the next tile. Locality makes this possible—layer l + 1 requires only a bounded neighborhood of layer l’s output (the halo, one position wide for a 3 × 3 × 3 kernel), not the entire activation tensor. Within each stage, the residual connection requires buffering the block’s input until the output is ready for the addition; at n = 361 positions and H = 128 in FP8, this is ∼ 46 KB per block, or ∼ 0.9 MB total for L = 19 layers. With FP8 weights and batch normalization folded into the convolution parameters, weight storage is K × (H/b)2 + 2H2/b bytes per layer for a standard bottleneck convolution or K ×H/b+2H2/b bytes for the depthwise variant: ∼ 0.7 MB or ∼ 0.2 MB total for a deployment-sized model (H = 128, K = 27, b = 4, L = 19). Modern FPGAs provide 10–50 MB of on-chip block RAM, so the entire model—weights, halos, and residual buffers—fits on-chip without external
+
+d=7
+
+d = 11
+
+101
+
+d = 15 d = 19
+
+(a) Surface code
+
+1 µs (supercond.) 100
+
+18
+
+[[72, 12, 6]] [[144, 12, 12]] [[288, 12, 18]]
+
+(b) BB code
+
+Roofline latency per round (µs)
+
+10−1
+
+10−2 32
+
+64
+
+128
+
+256
+
+Hidden dimension H
+
+512
+
+32
+
+64
+
+128
+
+256
+
+512
+
+Hidden dimension H
+
+Extended Data Fig. 4. Roofline latency per syndrome round on an AMD Versal AI Core FPGA (133 TOPS INT8). Solid lines: standard convolution; dashed lines: depthwise convolution. Both panels assume network depth L = d and bottleneck factor b = 4. (a) Surface codes with K = 27 (3 × 3 × 3 kernel) and n = d2 detectors per round. (b) Bivariate bicycle codes with K = 24 (two bipartite steps of 12 neighbors each) and n equal to the number of physical qubits. The horizontal dotted line marks the 1 µs-per-round budget for superconducting qubits. Latency scales as 1/T for other hardware targets: a TPU v1 (92 TOPS) or Edge TPU (4 TOPS) would shift all curves upward by 1.4× or 33×, respectively.
+
+memory access, eliminating the memory bandwidth bottleneck that dominates GPU inference.
+A further advantage over iterative decoders is deterministic latency. Unlike belief propagation (which may require a variable number of iterations) or match-
+
+ing (which involves data-dependent graph traversal), the convolutional decoder has fixed-depth computation: every input traverses exactly the same computational path in the same number of clock cycles. This is critical for real-time QEC systems, which are more sensitive to worst-case latency than average-case latency.
+
+

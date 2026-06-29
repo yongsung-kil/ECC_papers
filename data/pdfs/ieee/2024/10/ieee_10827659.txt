@@ -1,0 +1,764 @@
+2024 16th International Conference on Wireless Communications and Signal Processing
+
+Low-Latency High-Throughput Decoder of QC-LDPC Codes by Matrix Splitting
+
+1st Xinyu Zhong Southeast University 220220782@seu.edu.cn
+
+2nd Shuaicong Gong Southeast University 220220744@seu.edu.cn
+
+3rd Ming Jiang Southeast University jiang ming@seu.edu.cn
+
+4th Chunming Zhao Southeast University cmzhao@seu.edu.cn
+
+2024 16th International Conference on Wireless Communications and Signal Processing (WCSP) | 979-8-3503-9064-3/24/$31.00 ©2024 IEEE | DOI: 10.1109/WCSP62071.2024.10827659
+
+Abstract—As the continuously increasing demand of high data rate and lower transmission, many modern communication systems employ the LDPC coding scheme with ultra-high throughput decoder to achieve these challenging requirements. However, due to the implementation complexity of decoding algorithm, designing an ultra-high throughput decoder of LDPC codes still suffers many difficulties. Therefore, we propose a FPGAbased LDPC decoder with partial parallel decoding, which splits and virtually supplements the parity-check matrix to achieve higher throughput and lower latency. Our proposed FPGA-based decoder can achieve a throughput of 6.072Gbps in 10 iterations for the highest rate 5G-LDPC code.
+Index Terms—high-throughput LDPC decoder, FPGA, partially parallel decoding, NMS algorithm, matrix splitting.
+I. INTRODUCTION
+Low-Density parity-check (LDPC) codes were first introduced by Dr. Gallager in 1962 [1] and rediscovered by MacKay and others in 1996 [2]. They are a type of errorcorrecting codes (ECC) that can approach the Shannon limit. LDPC codes offer several advantages including inherent parallelism, lower hardware complexity, high throughput, and no error floor at high signal-to-noise ratios. LDPC codes are currently used in many digital communication systems such as WiMAX (802.16e) [3], WiFi (802.11n) [4], DVB-S2 [5], and 5G NR.
+LDPC codes have various decoding algorithms, and the belief-propagation (BP) algorithm is the classic one of them [6]. However, the drawback of the BP algorithm is its high complexity, making hardware implementation for higher throughput more challenging. To address this, a simplified algorithm called the min sum (MS) algorithm was proposed [7]. To mitigate this performance loss caused by MS simplification, some modified algorithms like the offset min sum (OMS) and normalized min sum (NMS) were introduced [8]. These modified algorithms successfully improve the performance of the original MS algorithm, striking a better balance between algorithm complexity and performance.
+With the increasing demand for higher data rate and lower delay in transmission applications, addressing the demand for ultra-high throughput and lower delay, several studies have proposed innovative decoder architectures. For instance, [9] introduces a flexible high throughput LDPC decoder that resolves pipeline conflicts efficiently and utilizes hardware resources effectively. This architecture incorporates both layered and flooding schedules to avoid stall cycles caused by pipeline
+
+hazards, achieving a throughput of up to 4.92 Gbps. Additionally, [10] demonstrates the high-throughput and low-latency capabilities of GPU-based LDPC decoding for 5G and beyond. By sufficiently exploiting the parallel computing power of GPUs, this decoder achieves nearly 4 Gbps throughput on a Titan RTX GPU, providing a high-performance softwarebased solution suitable for virtualized radio access networks (vRAN).
+Compared to recent state-of-the-art solutions, this FPGA prototype achieves a higher processing rate per hardware resource for most configurations. The architecture proposed in [11] targets FPGA devices, offering a highly parallel and flexible decoder for 5G-LDPC codes. This design supports frame parallelism and efficient data scheduling, significantly improving processing rates. [12] presents an FPGA-based LDPC accelerator integrated with a complete software platform, achieving over 1.6 Gbps decoding throughput. It is noteworthy that the decoding implementations mentioned above all focus on quasi-cyclic (QC) LDPC codes, which have been gaining popularity in emerging communication standards. For QC-LDPC codes, a synchronous partially parallel (SPP) decoder structure has been proposed [13]. In this decoder, the check nodes and variable nodes simultaneously process data in parallel, allowing newly generated soft information to be used earlier in the iteration process, thus speeding up convergence.
+
+II. LOW-LATENCY DECODING OF LDPC CODES
+
+A. QC-LDPC Codes and NMS Algorithm
+
+As one of the linear block codes, an LDPC code usually can be determined by a sparse parity-check matrix H with size of M × N . Assuming c = [c0, c1, ..., cN−1] is a length N codeword of the LDPC code, the parity-check matrix must satisfy the constraint HcT = θM , where the θM is an allzero column vector of length M . For the QC-LDPC codes, the parity-check matrix H can be further denoted by a small size base-matrix Hb, which are shown below:
+
+
+ H=
+ 
+
+I (p0,0 )
+I (p1,0 ) ...
+
+I(p0,1) · · · I(p0,nb−1) 
+
+I(p1,1) · · · I(p1,nb−1) 
+
+...
+
+...
+
+...
+
+  
+
+I(pmb−1,0) I(pmb−1,1) · · · I(pmb−1,nb−1) (1)
+
+979-8-3503-9064-3/24/$31.00
+Authorized licensed
+
+©2024 IEEE
+use limited to: Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+J1un3e
+
+24,2026
+
+at
+
+16:02:02
+
+UTC
+
+from
+
+IEEE
+
+Xplore.
+
+Restrictions apply.
+
+ p0,0
+
+ p1,0
+
+Hb
+
+=
+
+ 
+
+
+
+...
+
+p0,1
+
+···
+
+p0,nb−1 
+
+p1,1 · · · p1,nb−1 
+
+...
+
+...
+
+...
+
+ (2)  
+
+pmb−1,0 pmb−1,1 · · · pmb−1,nb−1
+
+where I(pm,n) is a Z × Z cyclic permutation matrix (CPM) with respect to the identity matrix. The cyclic shift size for
+
+each row is pm,n. If there are all zeros in I(pm,n), then pm,n = −1. For a QC-LDPC code, each row and each column have ρm and γn CPMs, respectively. Combining the number of elements in each CPM yields ρm × Z elements per row and γn × Z elements per column of the base-matrix.
+An example of base-matrix Hb for LDPC codes is shown below,
+
+ 0 7 0 −1 
+
+Hb =  −1 0 5 1 
+
+(3)
+
+2 3 −1 0
+
+The number of non-zero elements in each row of the H matrix
+
+is also called row weight ρm = 3, m = 0, 1, 2, while the number of non-zero elements in each column is called column
+
+weight , γ0 = γ2 = γ3 = 2, γ1 = 3. The NMS algorithm is a low-complexity decoding method
+
+of LDPC codes, suitable for hardware implementation. The
+
+decoder in this paper is designed based on the NMS algorithm.
+
+We first define the following terms, cn represents the n-th bit of a codeword, yn is the received value after channel transmission, rmn[k] is the information from the m-th check node to the n-th variable node at the k-th iteration (check-
+
+to-variable, C2V ), qmn[k] is the information from the n-th variable node to the m-th check node at the k-th iteration
+
+(variable-to-check, V 2C). N (m) and M (n) represent the sets
+
+of neighboring variable nodes and check nodes of the m-th
+
+check node and n-th variable node, respectively. N (m)\n and
+
+M (n)\m represent these sets excluding specific nodes. Qn[k] is the sum of check node information for the n-th variable node
+
+at the k-th iteration. For transmission, cn is modulated using BPSK, with mapping xn = 1 − 2cn. After passing through an AWGN channel, the received signal is yn = xn + wn, where wn ∼ η(0, σ2).
+The first step of the NMS algorithm is to initialize qmn[0] and Qn[0]:
+
+qmn
+
+[0]
+
+=
+
+Qn [0]
+
+=
+
+log
+
+P P
+
+(yn|cn (yn|cn
+
+= =
+
+0) 1)
+
+=
+
+2yn σ2
+
+(4)
+
+After initialization, the C2V information is updated:
+
+
+
+
+
+rmn [k] = 
+
+sign (qmn′ [k − 1])
+
+n′∈N (m)\n
+
+(5)
+
+×α × min |qmn′ [k − 1]|
+n′∈N (m)\n
+
+where α is a normalization factor. Next, update the V 2C information:
+
+qmn[k] =
+
+rm′n[k] + Qn [0]
+
+(6)
+
+m′∈M (n)\m
+
+Calculate the sum of C2V information for each variable node:
+
+Qn[k] =
+
+rm′n[k] + Qn [0]
+
+(7)
+
+m′∈M (n)
+
+Finally, make a decision based on Qn[k]. If Qn[k] < 0, then
+cˆn = 1, otherwise cˆn = 0. The decoding output sequence cˆ is obtained. If HˆcT = θM , the NMS decoding is successful; otherwise, repeat from C2V information update until HˆcT =
+θM or the maximum number of iterations is reached.
+
+B. SPP NMS decoding and FPGA Implementation
+
+Considering the FPGA implementation, we use a synchronous partially parallel (SPP) decoding architecture based on NMS algorithm. After initializing qmn [k] and Qn, updating the C2V and V 2C information occupies most of the decoding time. The decoder needs to perform mb × Z C2V calculations and nb × Z V 2C calculations. The SPP NMS decoding leverages the block-structure of QC-LDPC codes, allowing parallel calculation of C2V and V 2C information within blocks mb and nb times, respectively, while using a pipeline structure to handle Z times serially in each block. According to the NMS algorithm, when C2V information is updaing, V 2C information cannot be accessed, and vice versa, leading to low efficient utilization of hardware resource. The SSP NMS decoding can significantly improves hardware utilization by updating C2V and V 2C information simultaneously, achieving lower decoding delay and higher throughput.
+In this algorithm, one iteration is divided into Z clock cycles. During the Z clock cycles of the k-th iteration, mb check-node processing units (CNPUs) and nb variable-node processing units (VNPUs) work simultaneously to update C2V and V 2C information, respectively. Define rmn [k, b] as the C2V information starting in the b-th clock cycle of the k-th iteration and qmn [k, b] as the V 2C information starting in the same cycle. The initialization and hard decision of this algorithm are consistent with those of the NMS algorithm. While, the iterative decoding process of our proposed SPP decoding is as follows:
+In the b-th (b = 0, 1, · · · , Z − 1) clock cycle, there are mb CNPUs updating C2V information simultaneously:
+
+
+
+
+
+rmn [k, b] = 
+
+sign (qmn′ [k − 1, b − 1])
+
+n′∈N (m)\n
+
+(8)
+
+×α × min |qmn′ [k − 1, b − 1]|
+n′∈N (m)\n
+
+The V 2C information are updating for nb VNPUs at the b-th cycle simultaneously
+
+qmn [k, b] =
+
+rm′n [k, b − 1] + Qn [0] (9)
+
+m′∈M (n)\m
+
+This synchronous updating for SSP decoding method efficiently utilizes all the CNPUs and VNPUs, reducing the decoding delay to half of the original NMS algorithm, which takes 2Z clock cycles for one iteration.
+Fig. 1 shows the structure of SPP NMS decoder, using the base-matrix of (3) as an example. In this figure, Qn,m(x)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1un4e 24,2026 at 16:02:02 UTC from IEEE Xplore. Restrictions apply.
+
+1 bit
+VNPU0
+(0) CNPU0
+(0)
+
+1 bit
+VNPU1
+(7) (7)
+
+1 bit
+VNPU2
+(0) (0)
+
+1 bit
+VNPU3
+
+Splitting
+
+Padding
+
+(a) s = 2.
+
+CNPU1
+
+(0)
+
+(5)
+
+(1)
+
+(0)
+
+(5)
+
+(1)
+
+(2)
+
+(3)
+
+(0)
+
+CNPU2
+
+(2)
+
+(3)
+
+(0)
+
+Fig. 1. The Architecture of The Decoder based on equation (3).
+
+(b) s = 4.
+Fig. 2. The process of block splitting and padding for base matrix with different values of s = 2, 4.
+
+and Rm,n(x) represent the output memory of the n-th VNPU to the m-th CNPU and the m-th CNPU to the n-th VNPU,
+
+which also is denoted by Q-RAM and R-RAM. The decoder
+
+leverages the block structure of the QC-LDPC codes, where
+
+x represents the cyclic shift value of the non-zero block
+
+in the base matrix. When CNPUs and VNPUs read and
+
+write addresses, the addresses are cyclically shifted by the
+
+corresponding values x = 0, 1, · · · , Z. The number of Q-
+
+RAMs (R-RAMs) equals the number of non-zero elements in
+
+the base matrix, which is E = ρm = γn, and E = 9 in
+
+this example.
+
+Dn, n = 0, 1, · · · , nb, represents the decoding output
+
+message memory (D-RAM) for storing hard decision results,
+
+and Yn, n = 0, 1, · · · , nb, represents the received message
+
+memory (Y-RAM). The Y-RAMs store the channel infor-
+
+mation and output it to the corresponding VNPUs, which
+
+process initial channel information with the data from Q-
+
+RAMs and output the results to R-RAMs. The CNPUs find
+
+the minimum and sub-minimum values within R-RAMs and
+
+transfer the results to the Q-RAMs. Simultaneously, Q-RAMs
+
+deliver the decoding results to D-RAMs. The operations of
+
+CNPUs and VNPUs are synchronously carried out, enabling
+
+iterative decoding.
+
+Due to the fact that this parallel decoder is serially per-
+
+formed by a pipelined proccessing approach within each block,
+
+the decoding latency for a single iteration is Z clock cycles,
+
+where Z is the block size. Therefore, the decoding delay for a
+
+single
+
+codeword
+
+is
+
+τdelay
+
+=
+
+, (kmax +1)×τiter
+fclk
+
+where
+
+fclk
+
+refers
+
+to the main frequency of the decoder, τiter represents the
+
+duration of a single iteration, which is Z, and kmax denotes
+
+the maximum number of iterations. Using the core-matrix of
+
+5G-LDPC codes defined by BG1 as an example, the length of
+
+the information bits for the BG1 matrix is 22 × Z, thus the
+
+throughput η is calculated as follows,
+
+η = 22 × Z × fclk = 22 × fclk
+
+(10)
+
+(kmax + 1) × τiter (kmax + 1)
+
+From the equation, we can see that the throughput of SPP NMS decoder only depends on the main frequency and the maximum number of iterations, and is independent of the blocklength. This provides a throughput advantage for long blocklength codes, but the throughput cannot be further improved for the short blocklength codes..
+
+III. MATRIX SPLITTING OF LDPC DECODER
+
+The decoder used in this design has a structure that is
+
+serial within each block and parallel between different blocks.
+
+Therefore, the data in each block is not read simultaneously,
+
+and each block can be accessed using RAM to store its data.
+
+Since each block of the matrix is a shifted unit matrix, RAM
+
+addressing becomes simpler, and data can be stored directly
+
+in the order of the shift values.
+
+As the numbers of rows and columns in the base-matrix are
+
+fixed, increasing the value of Z leads to longer blocklength
+
+of codeword and larger decoding delay. However, due to the
+
+fact that the single iteration time of this decoder is also
+
+proportion to the value of Z, increasing Z does not lead
+
+to higher throughput but larger decoding delay. To increase
+
+throughput and reduce delay, a straightforward approach is
+
+to transform the serial processing within blocks into partial
+
+parallel processing. Since the R/Q-RAM can only read one
+
+data item at a time, it becomes necessary to split the data
+
+and store it in different R/Q-RAMs with smaller size. This
+
+process could potentially disrupt the cyclic shifting structure
+
+based on CPMs and affect the mapping relationships in the
+
+NMS algorithm.
+
+To ensure that the algorithm structure remains unchanged,
+
+this paper proposes a method called matrix splitting. The basematrix can be splitted into s2 small matrices. The splitted matrix can also be viewed as a matrix divided into s2 blocks,
+
+allowing the original serial schedule inner blocks and parallel
+
+process inter blocks in the decoder architecture to be retained.
+
+After
+
+splitting,
+
+the
+
+size
+
+of
+
+each
+
+block
+
+becomes
+
+Z s
+
+,
+
+which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1un5e 24,2026 at 16:02:02 UTC from IEEE Xplore. Restrictions apply.
+
+1 bit
+
+1 bit
+
+1 bit
+
+1 bit
+
+1 bit
+
+1 bit
+
+1 bit
+
+1 bit
+
+(x)
+
+(x)
+
+(0)
+
+(3)
+
+(0)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(y)
+
+(0)
+
+(1)
+
+(1)
+
+(2)
+
+(3)
+
+(0)
+
+(a) The process of Q/R-RAM splitting
+with s=2.
+
+(b) The overall decoder structure using matrix splitting.
+Fig. 3. RAM splitting and decoder structure using matrix splitting.
+
+consequently
+
+reduces
+
+τiter
+
+to
+
+Z s
+
+.
+
+This
+
+ultimately
+
+increased
+
+the throughput and reduces delay to half. Similarly, the more
+
+times splitting is applied, the greater the throughput and lower
+
+decoding delay of this decoder can be achieved.
+
+Fig. 2a illustrates the process of block splitting for the matrix, whose s = 2 in this example. A cyclic shift matrix has a total of 8 × 8 elements. In the figure, black blocks represent element ones, and white blocks represent zeros. The cyclic shift value is 3, so the black blocks start from the position 3. After being splitted into s2=4 matrices, each small block no longer possesses a circular shift structure. Therefore, matrix padding is applied, with red blocks representing the padded elements. When the CNPUs read the padded element values from the Q-RAMs, they are set to the maximum value to ensure they do not affect the minimum value calculation of CNPUs. Similarly, when the VNPUs read the padded element values from the R-RAMs, they are set to zero to avoid affecting the summation calculation of VNPUs. Fig. 2b illustrates the splitting scenario with s = 4. Among the 16 splitted matrices, 8 matrices can be padded to form cyclic shift matrices, while the remaining 8 matrices are all-zero matrices.
+
+Fig. 3a shows the process of RAM splitting. The original Q-RAMs and R-RAMs are each divided into s2 = 4 parts.
+
+As shown in Fig. 3a, the cyclic shift value of the divided
+
+RAM
+
+becomes
+
+y
+
+=
+
+x
+
+mod
+
+(
+
+z s
+
+).
+
+Next,
+
+the
+
+8
+
+RAM
+
+parts
+
+are packaged and combined into a single QR-RAM module
+
+QRm,n(y). The 8 splitted RAMs in the Fig. 3a are connected by 2s multiplexed lines, with each multiplexed line connecting
+
+to 2s lines. Fig. 3b illustrates the decoder structure using ma-
+
+trix splitting. The number of CNPUs and VNPUs is doubled,
+
+and thus the resources of Y-RAMs and D-RAMs are also
+
+doubled. Each QR-RAM module is connected to two CNPUs
+
+and two VNPUs via 4-bit buses. The delay for a single iteration
+
+ultimately
+
+becomes
+
+z 2
+
+.
+
+If
+
+the
+
+base
+
+matrix
+
+is
+
+divided
+
+into
+
+s
+
+equal
+
+parts,
+
+then
+
+the
+
+delay
+
+for
+
+a
+
+single
+
+iteration
+
+changes
+
+to
+
+z s
+
+,
+
+and
+
+the throughput becomes:
+
+η = 22 × s × fclk
+
+(11)
+
+(kmax + 1)
+
+Through multiple splitting iterations, the decoder’s throughput can be increased without altering the synchronous partially parallel decoder architecture. To achieve higher throughput in this design, each block is divided into 12 parts. Taking the core-matrix of 5G-LDPC codes defined by BG1 with Z=384 as an example, the core matrix expands from a 4 × 26 matrix to a 48 × 312 matrix, reducing Z to 32, resulting in a 12-fold increase in throughput.
+
+IV. IMPLEMENTATION AND DISCUSSIONS
+The FPGA used in this design is the Virtex-7 series VC709 development board, with the model being Virtex7, XC7VX690T-2FFG1761C. The decoder employs a 6-bit quantization method. Due to the matrix splitting, Z becomes 32, resulting in relatively small memory depths. Using Block RAM directly would waste resources, so Distributed RAM is partially employed in the design.
+Table I shows a comparison of resource utilization and throughput for different decoders, where the PipeShift Decoder is a decoder using multiple shift register to avoid memory conflict, which was proposed in [14]. The SPP Decoder is the decoder architecture described in Section II, and the Splitting Decoder is a decoder that has undergone matrix splitting. It is important to note that the throughput figures
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1un6e 24,2026 at 16:02:02 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I THE COMPARISON OF RESOURCE OCCUPANCY FOR DIFFERENT DECODERS
+
+SPP Decoder Splitting
+Decoder (s=4) Splitting
+Decoder (s=12) PipeShift Decoder
+
+LUTs FF 41k 44k 61k 64k
+
+F7 Block Muxes RAM 246 351
+538 549
+
+131k 142k 726 1211
+
+194k 252k 24k
+
+0
+
+η(Gbps) τ (µs) 0.506 16.7 2.024 4.2 6.072 1.4 2.65 2.7
+
+Gbps
+
+7
+
+throughput
+
+6
+
+LUTs
+
+5
+
+4
+
+3
+
+2
+
+1
+
+140k 120k 100k 80k 60k 40k 20k
+
+for all three decoders—PipeShift Decoder, SPP Decoder, and Splitting Decoder—were obtained under the same conditions, with each decoder operating at 10 iterations and a clock frequency of 253 MHz. Compared to the PipeShift Decoder, although the Splitting Decoder requires more Block RAMs, its throughput, which is more than double that of the PipeShift Decoder, is achieved with significantly fewer other resources, clearly demonstrating the significant throughput gains brought by matrix splitting.
+Fig. 4 illustrates the relationship between throughput and the number of LUTs with respect to splitting times s. From this figure, it is evident that matrix splitting significantly enhances the throughput of the decoder. The throughput is directly proportional to s, and the throughput of the Splitting Decoder is s times that of the SPP Decoder, while the increase in resources does not linearly follow the increase in throughput. In the case where the throughput of the Splitting Decoder is 12 times that of the SPP Decoder, the overall resources are only 3-4 times the original. Therefore, the throughput and latency improvement achieved through matrix splitting proves to be advantageous on the whole.
+V. CONCLUSION
+This paper presents an implementation approach for a high-throughput LDPC code decoder, realized on an FPGA platform. Unlike typical decoders based on the NMS algorithm, this decoder employs a synchronous iterative decoding method, achieving decoding speeds twice that of conventional algorithms. In practice, it attains better performance within the same iteration time. Additionally, to significantly enhance the decoder’s throughput without altering its architecture, matrix splitting and element padding methods were employed.This paper analyzes the specific implementation of the NMS synchronous high-throughput decoder on the VC709 board, and also provides an analysis of the decoding timing and resource consumption of different FPGA decoders. In the end, the decoder achieves a throughput of 6.072 Gbps at a clock frequency of 253MHz.
+ACKNOWLEDGMENT
+
+0
+
+0k
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10 12
+
+splitting times s
+
+Fig. 4. The relationship between throughput and the number of LUTs with respect to the splitting.
+
+REFERENCES
+[1] R. Gallager, “Low-Density Parity-Check Codes,” IRE Tans. Inf. Theory, vol. 7, pp. 21 – 28, 1962.
+[2] D. MacKay and R. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645 –, Aug. 1996.
+[3] S. Hu, Y. L. Guan, C. L. Law, Y. Yan, S. Li, and S. Li, “Development and performance evaluation of mobile WiMAX testbed,” in 2007 IEEE Mobile WiMAX Symposium, March. 2007, pp. 104–107.
+[4] P. D. Mahajan and S. Panbude, “Performance evaluation of different routing protocols for 802.11b and 802.11n,” in 2017 Int. Conf. on Trends in Electron. and Informatics, ICEI, May. 2017, pp. 990–995.
+[5] G. Avdeyenko, “Application of Nuand BladeRF x40 SDR Transceiver for Generating Television Signals of DVB-S2 Standard,” in Int. Conf. on Infor.and Telecomm. Techn. and Radio Elec., Sept. 2019, pp. 1–5.
+[6] K. Chung and J. Heo, “Improved Belief Propagation (BP) Decoding for LDPC Codes with a large number of short cycles,” in VTC Spring, vol. 3, May. 2006, pp. 1464–1466.
+[7] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May. 1999.
+[8] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, August. 2005.
+[9] V. L. Petrovic´, M. M. Markovic´, D. M. E. Mezeni, L. V. Saranovac, and A. Radosˇevic´, “Flexible High Throughput QC-LDPC Decoder With Perfect Pipeline Conflicts Resolution and Efficient Hardware Utilization,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467, August. 2020.
+[10] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang, and J. R. Cavallaro, “GPU-Based, LDPC Decoding for 5G and Beyond,” IEEE Open Journal of Circuits and Systems, vol. 2, pp. 278–290, January. 2021.
+[11] J. Nadal and A. Baghdadi, “Parallel and Flexible 5G LDPC Decoder Architecture Targeting FPGA,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 6, pp. 1141–1151, April. 2021.
+[12] E. A. Papatheofanous, D. Reisis, and K. Nikitopoulos, “LDPC Hardware Acceleration in 5G Open Radio Access Network Platforms,” IEEE Access, vol. 9, pp. 152 960–152 971, November. 2021.
+[13] E.-y. Xu, M. Jiang, and C.-m. Zhao, “A Synchro Partially Parallel Architecture for Quasi-Cyclic LDPC Codes,” J. Electron. Inf. Technol., vol. 30, no. 7, pp. 1630–1634, Jan. 2008.
+[14] K. M. Sankar Nampoothiri, K. N. Menon, S. Muhsin, S. Manoj, S. P, D. K J, and D. P P, “A High Throughput QC-LDPC Decoder Architecture for Near-Earth Satellite Communication,” in 2021 4th Int. Conf. Circuits, Syst. Simulation, ICCSS, June. 2021, pp. 23–27.
+
+This work was supported by the National Natural Science Foundation of China (NSFC) (Grant No. 62331002).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1un7e 24,2026 at 16:02:02 UTC from IEEE Xplore. Restrictions apply.
+
+

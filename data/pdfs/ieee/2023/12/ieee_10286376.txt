@@ -1,0 +1,820 @@
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+2089
+
+A Reusable and Efficient Architecture for QC-LDPC Encoder With Less Expansion Factors
+
+Jiuxin Gong , Zhaoming Lu , Luhan Wang , Xinghe Chu , and Xiangming Wen , Senior Member, IEEE
+
+Abstract— Based on the Richardson and Urbanke (RU) algorithm, the widely used quasi-cyclic low-density parity-check (QC-LDPC) code encodes the parity check matrix (PCM) in blocks, making hardware implementation possible. However, in a QC-LDPC encoding system with multiple expansion factors, storing information bits in excessive register bit widths would reduce the flexibility and throughput of the encoder when the RU algorithm is used. Therefore, this article proposes a novel architecture to reduce the complexity of the encoder by decreasing the number of expansion factors. This architecture optimizes the storage structure of the PCM and the pipeline structure of the encoding core, which obviously improves the flexibility and throughput of the encoder. In addition, this article presents two algorithms to optimize the pipeline structure, decreasing the latency for information bits to enter the encoder and ensuring that the pipeline of the encoding core would not stall. Moreover, the proposed architecture can be applied to encoding systems with multiple expansion factors, such as 5G and IEEE 802.11, and it has been verified on field-programmable gate array (FPGA). Compared with the most advanced solution, the proposed encoder achieves a 77% increase in resource utilization. As a case study, this encoder improves the performance of the soft base station by 2.59 times.
+Index Terms— Field-programmable gate array (FPGA), high resource utilization, high throughput, reusable quasicyclic low-density parity-check (QC-LDPC) encoder, wireless communication.
+
+Notation A
+[E D]
+O I B x(u) w
+
+NOMENCLATURE Meaning Cyclic permutation matrix or all-zero matrix in base graph (BG). Cyclic permutation matrix or all-zero matrix in BG. All-zero matrix in BG. Identity matrix in BG. Double-diagonal structure in BG. Channel input information bits. Channel input information blocks in communication system.
+
+Manuscript received 1 June 2023; revised 27 August 2023; accepted 18 September 2023. Date of publication 16 October 2023; date of current version 28 November 2023. This work was supported in part by the Beijing Natural Science Foundation under Grant JO21035 and in part by the Beijing Natural Science Foundation (BNSF) under Grant L222003. (Corresponding author: Zhaoming Lu.)
+The authors are with the Beijing Key Laboratory of Network System Architecture and Convergence, Beijing Laboratory of Advanced Information Networks, Beijing University of Posts and Telecommunications, Beijing 100876, China (e-mail: Jiuxin_Gong@bupt.edu.cn; lzy0372@bupt.edu.cn; wluhan@bupt.edu.cn; chuxinghe@bupt.edu.cn; xiangmw@bupt.edu.cn).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TVLSI.2023.3318852.
+Digital Object Identifier 10.1109/TVLSI.2023.3318852
+
+m s(u) s pb
+po
+Z Zc S(u) c po1 po2 Pal σ Hx bg H Aa H Ea H Da Cnum Ad Ed Dd H Ao H Eo H Do
+
+Length of information blocks. uth information bits. Information bits. Corresponding to the parity bits of B and D. Corresponding to the parity bits of O and I. Set of zc. Quantized zc. Quantized information bits. Code word. First part of po. Second part of po. Parallelism of QSN. Column index of A. Index of PCM(Hx ∈ [0, 101]). Index of BG (0 or 1). Storage base address index of A. Storage base address index of E. Storage base address index of D. Number of QSN. ROM depth of memory A. ROM depth of memory E. ROM depth of memory D. Index address of A. Index address of E. Index address of D.
+
+I. INTRODUCTION
+LOW-DENSITY parity-check (LDPC) codes are a class of linear block codes with performance approaching the Shannon’s theoretical limit, invented by Gallager [1] and rediscovered by MacKay [2], which is characterized by sparse parity check matrices (PCMs). Although the error-correction performance of LDPC codes is superior to other encoding schemes, implementing them efficiently on hardware remains challenging. A direct encoding method is to convert the PCM into a generator matrix through the linear transformation. However, the high implementation complexity and high generator matrix density make this direct encoding method unrealistic. To address this problem, Richardson and Urbanke (RU) [3] and Kou et al. [4] propose to use the PCM for encoding directly, which has lower complexity. As a result, most hardware encoding algorithms are researched based on the RU algorithm [5], [6].
+The original PCM for LDPC codes is random, which complicates the design of the encoding and decoding pro-
+
+1063-8210 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2090
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+cess, making it challenging to apply in reality. Tanner is the first to study structured LDPC codes [7], featured by lower storage. These structured codes have enabled the use of encoder architectures consisting of shift registers to realize the encoding process with linear complexity [8], [9], [10]. Moreover, these architectures support both full-parallel and partial-parallel fast decoding [11], [12], [13]. Well-designed PCM owns the same admirable performance as random codes. These structured codes are referred to as quasi-cyclic LDPC (QC-LDPC) codes. Compared with general LDPC in terms of structure, PCM of QC-LDPC can be divided into circulant subsquare matrices. Owing to their brilliant error-correcting performance, suitability for highly parallel decoders and low storage, QC-LDPC codes have gradually been selected by many modern communication standards, such as 5G new radio (NR), digital video broadcasting satellite second generation (DVB-S2), consultative committee for space data systems (CCSDSs), and IEEE 802.11 and 802.16, among others.
+Li et al. [9] propose a method that is formulating from generator matrix to PCM and designing simple shift registers to encode. The conversion process needs to use the matrix block in PCM to multiply with code words. Although PCM is sparse, the inverse matrix of subsquare matrices can be dense, and designing this encoder needs a large number of hardware resources, including shift registers, AND gates, and OR gates. To solve this problem, researchers began to use PCM for encoding. Lee et al. [14] implement the lower–upper (LU) decomposition based on a field-programmable gate array (FPGA), and the process of transforming PCM into an approximate lower triangular form is processed through software, which simplifies the complexity of the encoder. However, some block matrices of the PCM require nonsingular matrices during the encoding process. This process requires constant switching of the columns of the matrix, causing the encoding to be nonsystematic. Moreover, the multiplication of dense matrices is also involved [15], inevitably leading to the nonlinear complexity of encoding, which also influences the encoder’s performance. To break the limitation of the singular matrix in PCM, Cohen and Parhi [10] propose a hybrid encoder that does not require row–column swapping and uses a generator matrix to derive a subset of parity bits, while the rest of the parity bits uses the RU algorithm to calculate. The advantage of this method is that it has a shorter critical path and less memory [16], but it is not suitable for the structured LDPC encoder.
+Previous works in [17] design PCM with a similar structure to the RU algorithm and implement a partially parallel encoder, which can increase the flexibility and throughput, but the encoding complexity remains high. He et al. [18] optimize the PCM structure to a double-diagonal structure, with a complexity reaching O(n), but he does not optimize the throughput. Jung et al. [19] propose a parallel architecture and perform forward and reverse encoding in one clock cycle, achieving a high throughput of 7.7 Gb/s. To further increase the throughput of the QC-LDPC encoder, a fully parallel encoder architecture based on XOR trees is proposed [20], but this architecture is only suitable for supporting QC-LDPC systems with less
+
+code length and poor reconfiguration ability. A general design method for the encoder that is flexible regarding code length is presented in [6]. In [6], [21], [22], [23], and [24], the QC-LDPC architecture proposed by communication systems solves the problem of the high complexity of specific LDPC encoding systems and meets performance requirements. However, the PCM architecture for a specific communication system may not apply to 5G.
+Wu and Wang [25] propose to adjust the encoding scheme dynamically according to the modulation and coding scheme (MCS) in 5G. When the code rate is greater than the mother code rate, the throughput of the encoder is increased by trimming the size of the PCM. However, this method does not apply to fully and partially parallel hardware encoder architectures, limiting its feasibility for actual communication systems. Sampath et al. [26] propose a high-level synthesis (HLS) approach for designing the encoder and implementing it on FPGA, but it requires more FPGA logic resources and lower throughput. Nguyen et al. [27] propose an encoder architecture for the physical layer of 5G, but it only supports five expansion factors and does not mention encoding methods that support all expansion factors. In summary, although many works have focused on the implementation of LDPC decoders, to the best of our knowledge, no previous work has proposed a complete 5G-LDPC decoder design.
+This article proposes an innovative QC-LDPC encoder architecture that considers all codes as a whole, rather than targets each code independently. The proposed rearrangement algorithm of information bits (RAIBs) groups and compresses expansion factors, which reduces the register bit widths of stored information bits and improves the encoder’s reconfiguration ability. This design also enhances the flexibility of interaction between the control module of the encoder and the encoding core. It should be noted that the encoding control module is pipelined, and the quantized information bits do not require pipeline pauses through its control. Overall, the proposed work is innovative and owns the capability to calculate parity bits for any of the 102 QC-LDPC codes required by the 5G standard.
+1) The RAIB algorithm groups the expansion factors, reduces the register bit width for storing information bits, and eliminates wiring congestion caused by high register density.
+2) The encoding core algorithm is implemented with a two-stage pipeline that optimizes the parity check bits calculation mechanism. This allows the encoding core module to avoid waiting for the pipeline during parity check bits calculation, leading to high resource utilization.
+3) The hybrid scheduling strategy of pipeline and state machine combines and stores information bits of different expansion factors, and designs an efficient PCM access mechanism according to the rearranged information bits structure, so that multiple information bit blocks can be shifted in a single cycle.
+4) To accommodate different expansion factors, a unified grouping method is employed to enter the cyclic shift
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2091
+TABLE I PARAMETERS OF BG0 AND BG1
+
+Fig. 1. Structure of 5G PCM. The number of columns with a high-bit-rate knocked out is two.
+
+TABLE II VALUE OF 5G QC-LDPC EXPANSION FACTOR
+
+network with consistent parallelism. Consequently, the encoder architecture is highly flexible, offering low latency for short codes and high throughput for long codes. This flexibility makes it particularly suitable for enhanced mobile broadband (eMBB) scenarios in 5G.
+The remainder of this article is organized as follows. Section II presents the necessary background on 5G codes. Section III describes the introduced algorithm. In Section IV, encoder architectures are proposed, which can realize all the code lengths in 5G. This article shows the results of the hardware implementation and compares them with the existing work, while verifying the performance of the proposed encoder based on OpenAirInterface (OAI) in Section V. Section VI concludes this article.
+
+II. 5G QC-LDPC CHARACTERISTICS
+The 5G standard defines the PCM with a double-diagonal structure composed of six component matrices, as shown in Fig. 1. The PCM of 5G is extended from the BGs, and the standard determines two rate-compatible BGs, BG0 and BG1, respectively. Table I shows the BG parameters defined by 5G. In terms of specific expansion of code length and code rate, 5G adopts the method of using different expansion factors (Z ) for BG to obtain different information bits lengths through the matrix dispersion, which can support flexible sequence lengths. The value of the Z is determined as follows:
+zc = i · 2 j , i ∈ {2, 3, 5, 7, 9, 11, 13, 15}, j ∈ [0, 7], j ∈ Z
+(1)
+
+where i is the row index and j is the column index, as shown in Table II. The following is to expand BG based on zc to obtain PCM, each element in BG is the identity matrix or zero matrix whose order is zc × zc, and this matrix is shifted cyclically by pi, j positions to the right. It should be noted that the square matrix does not need to be shifted when the element is a zero matrix. Then, the pi, j can be represented by the following equation:
+
+pi, j =
+
+−1, mod vi, j , zc ,
+
+vi, j = −1 others
+
+(2)
+
+where mod(vi, j , zc) represents taking the remainder of vi, j from zc and vi j represents the shift coefficient of the ith
+
+row and the jth column of the BG. For quick reference, the summary of notations used throughout this article and in this section is given in Nomenclature.
+
+III. PROPOSED ALGORITHM
+
+From the hardware standpoint, computing the cyclic shift of information bits in the RU algorithm for 5G presents several challenges. With 102 code lengths and 51 required bit widths to encode in units of Z , the RU algorithm results in prohibitively high complexity, particularly in storage and partitioning. In addition, the multibit-width storage requirement consumes many registers and routing resources. Also, register files connect to a single or a small number of quasicyclic LDPC shift network (QSN), which results in congestion of FPGA internal wiring resources and excessive fan-out of registers within the QSN. To address these problems, RAIB is proposed in this article to quantize Z and rearrange the information bits, as well as an encoding core algorithm is proposed to realize a flexible and efficient hardware encoder.
+To provide necessary context, a brief description of the information bits in the communication system is presented before introducing the algorithm. The length of the output transmission blocks in the communication system is divided into w information blocks according to the rule of equal length as much as possible. At this point, the channel input information bits satisfy m ≤ k. To limit the complexity, a discrete set Z of possible values of zc has been defined in Table II, and the optimal value zc is calculated according to
+
+m
+
+zc = min
+Z∈Z
+
+Z≥ kb
+
+.
+
+(3)
+
+Equation (3) holds the same purpose as RAIB, and both are to reduce the number of zc. So, the information bits are calculated to satisfy the following:
+
+s(u) = kb · zc, u ∈ [1, w].
+
+(4)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2092
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+The low bits of s(u) are effective bits, and the high bits of padding can be given by
+
+Lw(u) = s(u) − x(u), u ∈ [1, w].
+
+(5)
+
+Among them, Lw(u) represents the length of the uth effective information bits that need to be filled with zeros among the w effective information bits. According to (3), the Zc is
+expressed as follows:
+
+Zc =
+
+1,..., e,...,1
+
+d
+
+d
+
+· max(zc) ,
+
+e ∈ [1, kb]
+
+(6)
+
+where d represents the quantity after quantization of zc, which is related to the bit width of the memory, target throughput, and hardware resources overhead. The quantization process only needs a d-to-1 data selector on the hardware circuit level, and the complexity is extremely low. Subsequently, the number of quantized bits is expressed as follows:
+
+S(u) = kb · Zc, u ∈ [1, w].
+
+(7)
+
+Furthermore, the offset of each code block with zc as the unit depends on the quantized Zc. The low bits of the zc unit are s(u), and the high bits use the method of zero padding
+
+Kw(u) = kb · (Zc − zc), u ∈ [1, w]
+
+(8)
+
+where Kw(u) represents the length of the uth code block that needs to be filled with zeros in the w code blocks. The RAIB
+
+increases redundancy and improves hardware resources and
+
+throughput, which will be elaborated on in Section V. Con-
+
+sequently, the bit number offset of the rearranged information
+
+bits input to the encoder can be calculated as follows:
+
+Owσ = w · S(u) + σ · Zc, σ ∈ [1, kb].
+
+(9)
+
+The algorithm output is determined by the type of zc, mainly including two output formats. The basis of judgment of the two types of outputs is whether the value of C is 0, and C is defined as follows:
+
+C = mod(zc, 8), zc ∈ Z.
+
+(10)
+
+If C = 0, according to byte index and offset controlling, the output format can complete the conversion of s(u). If C ̸= 0, use zc and padding bits as the index block to rearrange and zero fill the s(u) output by the input algorithm based on (8). As summarized in Algorithm 1. ≫ represents the right circular shift of the vector, ≪ represents the left circular shift of the vector, and |, &, and ! represent bitwise XOR, bitwise AND, and bitwise negation, respectively. During the design process, this algorithm takes the complexity of software and hardware implementation into full consideration. Except that w adopts serial encoding, the index of kb and Loop can be implemented in parallel. It is shown in Section IV that the hardware architecture based on Algorithm 1 can completely avoid wiring congestion and the waste of register resources.
+According to the S(u) format proposed in Algorithm 1, the proposed encoding core algorithm can be implemented by a two-stage pipeline, which reduces the pipeline waiting time in the RU algorithm and improves the resources utilization of the entire encoder architecture. To match code blocks structured with Z , the c is evenly divided into blocks with zc as a unit.
+
+Algorithm 1 RAIB
+
+Each element in c represents a code word of size zc. Based on Fig. 1, c is divided into three parts, denoted as follows:
+
+c = s| pb| po .
+
+(11)
+
+s in (11) is S(u), and the parity bits pb and po can be expressed as follows:
+
+pb = po =
+
+pb0 , pb1 , pb2 , pb3 po0 , po1 , . . . , po(mb−5) .
+
+(12)
+
+It is worth noting that the proposed pb and po are check bits after code word rearrangement. Furthermore, the division of
+pb and po is based on Zc, and each part of the parity bits has zc effective information bits and Kw(u) padding bits, and the filling process is completed in Algorithm 1. Similarly, the part
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2093
+
+containing pb and po is expressed as follows:
+
+A · sT + B · pbT = 0
+
+(13)
+
+E · sT + D · pbT + poT = 0.
+
+(14)
+
+Initially, the step in the encoding core algorithm is to calculate the parity bits pb, and A·sT can be written as follows:
+
+kb −1
+
+Ar,0 · srT + · · · + Ar,kb−1 · skTb−1 =
+
+Ar,i si ,
+
+i =r
+
+r ∈ [0, 3]. (15)
+
+Equation (15) is implemented through shifters and accumula-
+tors, which is a complete two-stage pipeline architecture. In the process of calculating the parity bits pb, B is directly multiplied by pbT in order to prevent solving B−1. For example, B is one of four double-diagonal structure matrices
+
+B=
+
+1 −1
+
+0 −1
+
+−1 0
+
+−1 0
+
+; ;
+
+0 1
+
+0 −1
+
+0 −1
+
+−1 0
+
+.
+
+(16)
+
+So, B · pbT can be written as follows:
+
+p(b10) + pb(01) = 0, pb(02) + p(b03) = 0,
+
+pb(00) + p(b01) + p(b02) = 0 pb(10) + pb(03) = 0.
+
+(17)
+
+pb(ij) means that the high zc bits of pbi cyclic shift j bits to the left. Equation (17) needs to be calculated separately from
+
+(15), and it has independent logical resources. At the same
+
+time, it needs to wait for (15) to be calculated before the
+
+logical resources block becomes valid. Then, (13) is written
+
+as follows:
+
+kb −1
+A0,i si + p(b10) + pb(01) = 0
+i =0
+kb −1
+A1,i si + pb(00) + p(b01) + pb(02) = 0
+i =0
+kb −1
+A2,i si + pb(02) + pb(03) = 0
+i =0
+kb −1
+A3,i si + pb(10) + p(b03) = 0.
+i =0
+
+(18)
+
+Subsequently, according to (15) and (18), it can be calculated, pb, as follows:
+
+3 kb−1
+
+pb0 =
+
+Ai, j si
+
+j=0 i=0
+
+kb −1
+
+pb1 =
+
+A0,i si + pb0 ≪ 1
+
+i =0
+
+kb −1
+
+kb −1
+
+pb2 =
+
+A2,i si +
+
+A3,i si + pb0 ≪ 1
+
+i =0
+
+i =0
+
+kb −1
+
+pb3 =
+
+A3,i si + pb0 ≪ 1.
+
+i =0
+
+(19)
+
+Since B owns a double-diagonal structure, the two sides of (19) are added under GF(2), and pb0 − pb3 can be calculated, respectively, using the elimination method. Ultimately, (14)
+can be calculated from (19) for po, and it can be expressed as follows:
+
+kb −1
+
+3
+
+pox =
+
+Ex,i si +
+
+Dx,i pbi ,
+
+i =0
+
+i =0
+
+x ∈ [0, mb − 5]. (20)
+
+In the process of calculating po, there are two processes. First, po1 is calculated, and this part is calculated at the same time as pb. Second, po2 is calculated, and this part is calculated after pb is obtained.
+In summary, calculating pb and po, the left and right cyclic shifts of the information bits block and the parity bits block,
+and the accumulation process is involved. The calculation formula in (20) that is unrelated to pb is started simultaneously with the calculation of pb in (19). In addition, an efficient and flexible PCM retrieval method is combined. Set the A and E as the calculation method of the row index, and set D
+as the column index. Based on Algorithm 1, a fully parallel
+pipeline encoding algorithm is proposed. As summarized in
+Algorithm 2, the ≪ and ≫ in the algorithm use the QSN
+of the second-level pipeline, and the PCM input to the QSN reads the base address (R Aidx , R Didx , and R Eidx ) of the ROM in accordance with the parallelism of the QSN. At the same
+time, the intermediate calculation process does not require
+pipeline waiting, and the resource utilization of the encoder
+is significantly improved. There are detailed design methods
+in Section IV.
+
+IV. PROPOSED QC-LDPC ENCODER ARCHITECTURE
+In this section, we describe the proposed fully parallel pipeline encoder architecture based on Algorithms 1 and 2, as well as the design method of the hardware unit. First, a joint scheduling mechanism of PCM and information bits is proposed. The elements in PCM are stored in ROM according to the rule of encoding core algorithm, and this can be completed in a single-clock cycle at the same time as other encoding parameters, effectively reducing the parameter calculation latency of the encoder. Second, to address the problem of pipeline waiting during the encoding process, an encoding control module with a hybrid control strategy of state machine and pipeline is proposed, which is responsible for information bits rearrangement and control of the encoding core. Finally, we describe the fully parallel pipelined encoder architecture and demonstrate the flexibility and high throughput performance of this architecture using QSN.
+
+A. Efficient Scheduling Mechanism for PCM and Information Bits
+During the generation of PCM, directly storing the 14 BGs given in the standard and calculating the PCM corresponding to all zc values using (2) require a large number of barrel shifters to be implemented on the FPGA, and each element in the BGs needs to be calculated, resulting in a long calculation latency. Therefore, this design uses the extended storage method of PCM to store the PCM corresponding to each zc in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2094
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+Algorithm 2 Encoding Core Algorithm
+
+Fig. 2. PCM memory is the ROM corresponding to all zc, and the size of each block represents the retrieval depth of different submatrices. Matrix A memory, matrix E memory, and matrix D memory are ROMs of A, E, and D, respectively, with the size of each block being 8 bits. It is worth noting that the addresses of the latter three ROMs are all marked from 0 and do not correspond to the actual PCM addresses.
+
+col ∈ [0, Ad − 1], and the range of col values for matrix E being col ∈ [0, Ed − 1]. Similarly, for matrix D, the value range of col is col ∈ [0, Ddep −1]. In this case, the relationship between the base address (HXa) and offset address (HXo) of
+each submatrix can be expressed as follows:
+
+HXo = HXa + Xd · Hx + col
+
+(21)
+
+where Xd represents the depth of the A, E, or D. This storage method satisfies the parallel encoder structure in Algorithm 2.
+The principle of this efficient scheduling mechanism is jointly analyzed from the perspective of information bit storage and PCM storage, as shown in Fig. 3. When calculating A · sT , the encoding control module loads the information bits in units of zc and simultaneously loads the elements in four A. Accessing to E and D is similar to that of A. So, the advantage of this retrieval method is that shift and accumulation operations form a two-stage pipeline, and encoder performance can be reconstructed by changing the parallelism of the calculation.
+The proposed PCM retrieval method achieves extremely low complexity on FPGA. Initially, the encoding control module determines the base address of each ROM for PCM retrieval, which enters the 3-to-1 data selector. The row index is performed, namely, finding the value of Hx after passing through the multiplier. Subsequently, the offset address is determined by the following:
+
+ROM. The ROM is divided into three blocks, each storing a submatrix A, D, or E. BG0 and BG1 need to store 102 PCMs, with each PCM storing the corresponding A, D, and E. At the same time, A and E are stored in columns, with the retrieval depth of A and E being Ad = kb and Ed = kb, respectively. Matrix D is stored in rows, and the storage depth of each row is Dd = mb − 4. Fig. 2 shows the storage structure of ROM. For matrix A and matrix E, col represents the col-th column of a PCM, with the range of col values for A being
+
+HAo = HAa + Hx · kb + col
+
+HDo = HDa + Hx · (nb − kb) + col
+
+HEo = HEa + Hx · (nb − kb) + col.
+
+(22)
+
+col is performed after finding the row where the ROM is located. Finally, the offset address of each matrix is determined. Regarding accessing ROM efficiency, kb and mb are two constants determined by the larger number of BG0 and BG1, respectively. As a result, the multiplier to calculate Hx is implemented by a combinational logic circuit, taking only one
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2095
+
+Fig. 5. Si is the quantized information bits, and the other input to QSN is the ROM address. The size of the left cyclic shift of the QSN is the specific value in the ROM.
+
+Fig. 3. Scheduling relationship between memory access and storage structures uses the example of information bits before quantization. Specifically, the process of converting matrix multiplication into shifting using this storage structure is illustrated for the case of zc = 8.
+Fig. 4. Process of generating the PCM index address, where At , Et , and Dt are intermediate calculation results.
+clock cycle to determine the base address of each submatrix. In summary, determining the base address of matrix A and matrix E requires kb clock cycles, and matrix D needs nb −kb clock cycles, as illustrated in Fig. 4. When using the pipeline architecture for encoding, the memory access time can be interleaved with the encoding time, ensuring time utilization.
+B. Encoding Control Module for Hybrid Scheduling The control module is responsible for reading and caching
+S(u), acquiring encoding parameters, and scheduling the encoding core module to ensure that the pipeline does not stall, and hardware modules are not idle. Under the above-guaranteed conditions, this design adopts the hybrid scheduling strategy of state machine and pipeline, and the entire encoding process can be completed with three main states. The operations that need to be calculated for the first
+
+state (Sta1) are as follows:
+
+kb −1
+
+Ay,i · si = Asy, (y ∈ [0, 3])
+
+(23)
+
+i =0
+
+kb −1
+
+Ex,i si = Esx , (x ∈ [0, mb − 5]).
+
+(24)
+
+i =0
+
+This calculation process is designed as a two-stage pipeline,
+with a QSN of parallelism four and an accumulation network
+of parallelism 4. For (23), the first stage of the pipeline involves multiplying the submatrix of A and si with a cyclic shift of si , and the other one calculates Ay,i · si and the sum of Ay,i−1 · si−1, after which the calculation result is recorded as Asy. For (24), the first stage pipeline is multiplying the submatrix of E and pbi , that is, the cyclic shift of pbi , and the other pipeline is responsible for calculating the sum of Ex,i · si (Esx ). Then, the addressing counter range for cnt1 is set to [0, kb −1]. The process of Sta1 is shown in Fig. 5. Symbol information in the figure is mentioned in Section IV-A. QSN0–QSN3 calculate the shift of Ay,i · si , XOR0–XOR3 accumulate the value after each shift, another set of shift and accumulation network is responsible for calculating Ex,i · si (Esx ), and QSN and XOR form a two-stage pipeline.
+In the second stage (Sta2), pb is calculated by substituting the four types of B into both (17) and (18) to extract a common
+expression
+
+
+
+
+
+3 kb−1
+
+
+
+Ai, j si  ≪ f ( f ∈ {1, zc − 1, mod(zc, 105)}). (25)
+
+j=0 i=0
+
+This common expression is delineated as the first-stage pipeline, which is calculated by a QSN with a parallelism of 3. Subsequently, (19) is used to determine the accumulated variable for bg and the i index from Table II. The additional operation can be completed in a single clock without any control signal, using only a control counter cnt2 with a size of tauQSN + tauadd.
+The third state (Sta3) calculates po and is divided into two states to complete. The first state Sta31 calculates as the following:
+
+3
+
+Dx,i pbi = D pz(z ∈ [0, mb − 5]).
+
+(26)
+
+i =0
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2096
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+Fig. 6. State machine structure of the encoder control unit.
+
+Fig. 7. S(u) enters the pipeline structure of the encoding core.
+
+The parallelism of the QSN is set to four, and the multiplexing
+
+of the QSN is realized by state switching, and the number of
+
+state switching cnt31 ∈ [0, mb − 5]. The second state (Sta32) is
+
+calculated by (20). The calculation result of
+
+kb −1 i =0
+
+Ex,i si
+
+is
+
+obtained from Sta1. During the calculation and accumulation
+
+process, the operation only starts once the QSN value becomes
+
+valid. The operation flow of the state machine is shown in
+
+Fig. 6.
+
+C. Fully Parallel Encoder Architecture
+
+In this design, d in (6) is set to 3, and the fifth-one expansion
+factors given by 5G are quantized into three parts. Therefore,
+the bit width of dual-port RAM is set to 128. According to Algorithm 1, S(u) is rearranged and divided into three states to read the dual-port RAM. When Zc = 128, the S(u) can be input to the encoding core module within one clock cycle. S1(u) is placed in the high 128 bits, and the low bits of Oc are filled with zeros. When Zc = 384, the input is divided into three clock cycles. The S3(u) entered in the last clock cycle is placed in the lowest bit of Oc. As shown in Fig. 7, Oc can be expressed as follows:
+
+  S1(u), 256′d0 , 
+
+Zc = 128
+
+Oc = S1(u), S2(u), 128′d0 , Zc = 256
+
+(27)
+
+ 
+
+{
+
+S1(u
+
+),
+
+S2(u
+
+),
+
+S3
+
+(u)},
+
+Zc = 384.
+
+Although zc spanning 128 bits adds one clock cycle to the latency when zc > 128, it still has an advantage in terms of
+
+throughput compared with the method without quantizing zc,
+
+which will be analyzed in detail in Section V. The encoding
+
+control module reads the value of the PCM in the ROM and
+
+will read pi, j to the core module of the encoder at the same
+
+time that Oc enters the encoding core.
+
+For optimal encoding efficiency, the encoding core module’s
+
+maximum parallelism should be set to Pal = 384, as the bit width of Oc is max(Zc). The encoding process has been
+
+explained in the encoding control module. So, this section
+
+mainly focuses on the internal structure of the encoding core
+
+module. In Sta1, a two-stage pipeline architecture of QSN
+
+and XOR is used to complete a shift operation in each clock
+
+cycle and accumulate As and Es simultaneously. The add
+
+unit calculates
+
+3 j =0
+
+kb −1 i =0
+
+Ai, j si .
+
+QSNc1–QSNc3
+
+calculate
+
+the shift part in (25). In Sta2, Add1–Add4 calculate (18), since
+
+B has four structures, so this part requires 16 adders. Sta31 is
+
+similar to the structure, and the QSN in Sta1 can be reused.
+
+Note that the dual-port RAM in Sta32 stores the cache value of
+
+Es, and the calculation of po is completed through the add
+
+unit when the result of Dp arrives. Fig. 8 shows the fully
+
+parallel encoder architecture. It is worth noting that this design
+
+reduces the number of bit widths of stored information bits by
+
+quantizing Z between the memory module and the encoding
+
+control module, which significantly reduces the complexity of
+
+wiring between the two modules.
+
+In the whole encoder architecture, QSN is the main hard-
+
+ware part. QSN consists of three networks: the left-shift
+
+network, the right-shift network, and the merge network.
+
+Meanwhile, we also set the parallelism of the QSN to Pal. Based on Algorithm 2, the S(u) input to the QSN is divided
+
+into three groups of 128 bits each. The high bits are used as
+
+the shift network of the S(u) first, and the low bits are zero-
+
+filled. The control part of the QSN enters the shifted pi, j , and the input of the left-shift network and right-shift network is
+
+I [0] − I [Pal − 1] = Oc[0] − Oc[Pal − 1]. The shift value of the left-shift network is pi, j , and the zero padding in S(u) is L[Pal −zc −1:0]. Therefore, in the process of QSN performing a left shift on Oc, only L[Pal − 1:Pal − zc − pi, j − 1] is a nonzero information bit. The size of the right-shift network is
+
+zc − pi, j , and the zero padding in S(u) is R[Pal − zc − 1:0]. So, in the right-shift network part of the QSN, only R[Pal − (zc − pi, j ) − 1:Pal − zc − 1] is a nonzero information bit. Both networks are shifted simultaneously and are done in the same
+
+clock cycle, and the shift results of the left-shift network and
+
+the right-shift network enter the merge network. The merging
+
+network performs the XOR operation on the valid information
+
+bits, which can be completed within one clock cycle. The
+
+result of the cyclic shift is Cres, and the operation process is expressed as follows:
+
+Cres = L[Pal − zc − 1:0] ⊕ R[Pal − zc − 1:0] (28)
+where ⊕ represents the addition of G(2). The cyclic shift network adopts a two-stage pipeline architecture in the shifting process, and except for the cyclic shift of the first Oc, which requires two clock cycles, the rest can be completed in one clock cycle. Fig. 9 depicts the processing of the QSN.
+The encoding control module inputs Oc and pi, j into the encoding core simultaneously and uses a combination
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2097
+
+Fig. 8. Overview of the full-parallel encoder architecture. Other situations in Sta2 refer to the other three structures of B matrices in 5G.
+
+combination network. The second part is the padding bits after the quantization of zc, which is the inverse process of Algorithm 1.
+V. IMPLEMENTATION RESULTS
+The proposed encoding algorithm is designed for highthroughput, low-latency, and reconfigurable QC-LDPC applications. The architecture of the encoder reflects the flexibility of the BGs and expansion factors. It owns low latency for short codes and high throughput for long codes, meeting the performance requirements of modern communication systems. Meanwhile, the encoder supports 102 code lengths of BG1 and BG2 in the 5G standard and outputs the corresponding code rates according to the MCS. In this section, the optimization results of the pipeline structure are elaborated on, and the latency generated by the encoder is counted in detail.
+
+A. Implementation Results of Pipeline Optimization
+
+Fig. 9. Specific structure of the QSN network.
+
+The hybrid scheduling strategy of state machine and pipeline can effectively avoid pipeline stall and improve
+
+of pipeline and state machine for encoding. The specific encoder throughput. In the encoding core module, part of
+
+process is described in detail in the encoding control module optimizing the pipeline is to insert (17) and (20) into the
+
+section. The S(u) output by the encoding core module has pipeline encoding process. Still, this process does not consume
+
+two redundant bits. The first part is O[Pal − zc − 1:0], which new QSN hardware resources. This process is described in is the invalid bit in the QSN shift method and the inverse Section IV. Resource multiplexing and encoder parallelism
+
+of the xilinx direct memory access (XDMA) controller input optimize the pipeline, yielding high resource utilization and
+
+process. The parallelism of the encoding core is changed efficient processing. This method allows optimized informa-
+
+from a fully parallel QSN to a 128-bit parallel code word tion bits to proceed through the pipeline without waiting,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2098
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+
+Fig. 10. Optimized instructions for encoding core modules are provided below for the case of u = 1. The latency caused by the quantization process of z is denoted by ①. Denote ② as the clock interval between two valid code word inputs. ③ represents the clock interval from the start of the encoding core module to the output of the first valid code word. ④ needs to traverse kb information bits for the entire encoding core module.
+
+which is a significant advantage. As shown in Fig. 10, we tested the timing of multiple encoder parameters by pin testing the XCKU-115 chip through Vivado’s logic analyzer (ILA). There is a waiting process of 11 clock cycles to make the pipeline fully effective. The rest of the information bits can be calculated in three clock cycles. It is worth noting that it is completed in three cycles, because the main reason for the information bits of a unit is to balance the throughput and resources of the encoder, and the quantization bit width coefficient d in (6) is set to 3.
+In terms of clock frequency, the overall performance of the encoder is improved by optimizing the control path and data path of QSN. The data path is in the QSN network. The specific design of the QSN network is implemented in Section IV-C. Because the QSN network built by the lookup table (LUT) inside the FPGA is quite different from the circuit diagram, this article does not directly use the circuit diagram of the QSN network. Instead, the encoder inserts pipeline registers and calculates resource utilization, so that the encoder can achieve better performance. The specific calculation method is (33). Finally, through the performance evaluation, the clock frequency of the encoder is set to 200 MHz. The signals that control the expansion factors and shift factors will connect multiple QSN hardware units, so the maximum fan-out (MAX_FAN-OUT = 50) of the control signal is set in the layout and routing, because different FPGAs, different logic designs, and different performance indicators will affect the parameter of the maximum fan-out, so setting MAX_FAN-OUT = 50 is an optimal parameter that makes the encoder reach 200 MHz.
+B. Encoder Performance Analysis
+This section will analyze the encoder’s performance in terms of its throughput, latency, and resource utilization. First, all encoder parameters can be set within one clock cycle, and the clock cycle required for information bits rearrangement is τr = 1, 2, or 3, depending on the size of the input block. The parameter control and information bits rearrangement can be executed in parallel, and the total number of clock cycles is based on τr . Regarding ROM retrieval, the retrieval time for matrices A and E is kb, and for matrix D, it is nb − kb. Since this architecture optimizes the calculation of po using a pipeline structure, the encoder starts matrix retrieval while
+
+Fig. 11. Throughput that BG0 and BG1 can achieve under different zc values. When zc = 384, the maximum throughput reaches 12.43 Gb/s.
+
+calculating pb and then calculates po. As a two-stage pipeline architecture is used, the matrix retrieval time is equivalent to τm = 2. We calculate the hardware structure related to matrix B in pb and reuse the hardware structure related to the calculation of A. Since the accumulation and shift in the calculation of AsT are composed of a pipeline, the pipeline congestion does not occur in the whole process, as explained
+in Section V-A. So, the number of clock cycles required to calculate pb is τpb = kb. Similarly, when calculating po, shifting and accumulation are performed simultaneously. This
+part is explained in Figs. 4 and 5 and mentioned in (27). So, the clock cycle for calculating po is τpo = nb − kb. The total clock cycles required for the encoder to complete an operation is cc
+(in nanoseconds), the clock frequency is cf (in megahertz), and the total latency is τ
+
+τ = τr · kb + τm + τpb + τpo · cf .
+
+(29)
+
+cc
+
+Thereby, the throughput of the encoder is calculated as follows:
+
+τh
+
+=
+
+(kb · τ
+
+zc) .
+
+(30)
+
+In conclusion, the throughput of this encoder has a positive correlation with different zc values. Fig. 11 illustrates the throughput achieved by the encoder before rate matching, with zc values of zc = {52, 104, 176, 208, 288, 320, 384}.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2099
+
+Fig. 12. Latency achieved by BG0 and BG1 for different zc values. The maximum latency of the encoder is 680 ns, and when kb = 7, the latency of the encoder reaches its lowest point, which is 385 ns.
+
+Fig. 13. Throughput that BG0 can achieve under different zc values after rate matching. For r = 8/9, only three sets of check bits need to be calculated.
+As zc increases, the latency of information bits entering the encoder also increases, leading to an alternate increase in the encoder’s throughput.
+
+Fig. 12 shows the corresponding encoding latency of BG1 and BG2. For the long codes corresponding to BG0, there is an obvious advantage in the throughput of the encoder. At the same time, Fig. 12 shows the corresponding encoding latency of BG1 and BG2. The encoder has a clear advantage in throughput for the long codes corresponding to BG0. Meanwhile, for the short codes corresponding to BG1, there is an obvious advantage in the calculation latency of the encoder.
+Then, we evaluate the performance of this encoder after rate matching. Since the number of check bits can be reduced after rate matching, the reduced latency is mainly concentrated in calculating of pb and po. Therefore, we can use τbo to represent the time required for calculating pb and po
+
+τbo
+
+=
+
+(1
+
+−
+
+r ) · kb · τpb + r · (nb − kb)
+
+τpo
+
+.
+
+(31)
+
+According to the r range of BG0 in Table I, for BG0, r = {8/9, 2/3, 1/2, 1/3} and kb = 22, and for BG1, we choose r = {2/3, 8/15, 2/5, 1/5} and kb = 10. The calculation method to determine the throughput achievable by different zc is as follows:
+
+τhr
+
+=
+
+(τr
+
+·
+
+kb
+
++
+
+τm + cc
+
+τbo)
+
+·
+
+cf .
+
+(32)
+
+Consequently, the relationship between the throughput
+
+and expansion factor of BG0 and BG1 is shown in Figs. 13 and 14.
+The above evaluates the encoder’s performance based on this architecture design, specifically regarding latency and throughput. To assess resource utilization (Resu), we measure the hardware resource usage of the encoder in LUTs, flip-flops (FFs), and block RAMs (BRAM), and calculate Resu(Mb/s/Re) using the following formula:
+
+Rs =
+
+τhr
+
+· 103.
+
+(33)
+
+LUT + FF + BRAM
+
+It is worth noting that in the design process of the encoder core, we do not use BRAM to store data but directly use registers to store code words and temporary data. Since this design supports 102 code lengths, we calculate the average throughput of these code lengths to obtain the value of τhr. After calculation, the value of Resu is 3.57.
+
+Fig. 14. Throughput that BG1 can achieve under different zc values after rate matching. As BG1 is designated as a low-bit-rate code in the standard, deleting certain information bits significantly reduces the computation latency for the parity bits. Therefore, the encoder throughput of BG1 is greatly improved compared with its performance before rate matching.
+C. Comparison With Previous Works
+Table III compares the QC-LDPC encoder designed in this article and the existing research. In this study, mainstream encoding methods mainly include straightforward multiplication by the generator matrix and RU. Direct encoding based on the generator matrix G in [28] consumes many hardware resources because of the high density of matrix multiplication, resulting in much lower throughput than our proposed encoder architecture. Wang et al. [29] introduce a large number of XOR structures but require the calculation of the inverse of the matrix, leading to low resource utilization in the multicode length 5G system. In [31], the DVB-S2/S2X encoding method is proposed, which can realize 51 code lengths and is a flexible and general-purpose architecture. However, the LUT resource used by the encoder implemented under this architecture is twice that of this architecture, resulting in significantly higher resource usage. To reduce the complexity and improve the throughput, Theodoropoulos et al. [21] proposed advanced scheduling methods and processing units based on the RU algorithm. The performance’s improvement in throughput and resources is noticeable, but the resource utilization of this design is 1.77 times that of it. At the same time, there are obvious disadvantages in resource utilization.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+2100
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 31, NO. 12, DECEMBER 2023
+TABLE III FPGA IMPLEMENTATION
+
+Fig. 15. Select different BGs and expansion factors values to compare the throughput of the FPGA encoder and i7-10700 processor processing information bits. As the value of zc increases, the number of code blocks also increases, making the advantage of the FPGA encoder in terms of throughput more significant.
+
+D. Verify Encoder Performance Based on OAI
+To further verify the performance and function of the encoder, the XCKU-115 chip pins are indirectly tested through the XDMA IP core of Xilinx, and the FPGA encoder is connected to the OAI soft base station through the peripheral component interconnect express (PCIe) 3.0 × 8 interface. At the same time, the QC-LDPC encoding function in the soft base station is replaced by an FPGA encoder to test the function, and the encoder’s performance is tested by taking the average value of multiple measurements. Compared with the QC-LDPC encoding run by the i7-10700 processor, the implementation of the QC-LDPC encoder based on the FPGA has been significantly improved. Fig. 15 selects zc = {86, 192, 288, 384} corresponding to BG0 and BG1. When zc = 384, the performance of the FPGA encoder is 2.59 times that of the I7-10700 processor. For the FPGA encoder, the longer the code length, the greater the number of code blocks, and the more pronounced the acceleration effect. Due to the use of multithreaded processing, this rule also exists for
+
+software encoding, but the performance improvement rate is lower than that of the FPGA encoder. Compared with Fig. 13, the acceleration effect in OAI is not obvious. First, because the code word used in OAI is not Algorithm 1, the encoding and decoding of code words occupy part of the latency. The second is the transmission latency of PCIe.
+VI. CONCLUSION
+As mobile cellular systems continue to develop, there is a growing demand for achieving higher throughput and lower latency at the physical layer. In addition, high-throughput devices need to consider hardware resources and the high reconfigurability of architecture to meet cost considerations. This article propose a QC-LDPC encoder implemented on UltraScale XCKU-115, which satisfies the performance requirements of 5G while demonstrating significant advantages in throughput, resource utilization, and reconfigurability. Compared with the existing QC-LDPC encoders based on FPGA, this proposed encoder improves resource utilization by a factor
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+GONG et al.: REUSABLE AND EFFICIENT ARCHITECTURE FOR QC-LDPC ENCODER
+
+2101
+
+of 1.77 while maintaining performance. When the largest
+expansion factor is selected, the physical layer throughput
+of OAI is increased by 2.59 times. By modifying the PCM
+matrix and the scheduling process of the state machine, our
+encoder can be extended to support QC-LDPC encoding for
+other communication systems.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[3] T. J. Richardson and R. L. Urbanke, “Efficient encoding of lowdensity parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[4] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[5] T. Zhang and K. K. Parhi, “Joint (3,k)-regular LDPC code and decoder/encoder design,” IEEE Trans. Signal Process., vol. 52, no. 4, pp. 1065–1079, Apr. 2004.
+[6] S. Kopparthi and D. M. Gruenbacher, “Implementation of a flexible encoder for structured low-density parity-check codes,” in Proc. IEEE Pacific Rim Conf. Commun., Comput. Signal Process., Aug. 2007, pp. 438–441.
+[7] R. M. Tanner, “Spectral graphs for quasi-cyclic LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory, Jun. 2001, p. 226.
+[8] H. Fujita, “Some classes of quasi-cyclic LDPC codes: Properties and efficient encoding method,” IEICE Trans. Fundamentals Electron., Commun. Comput. Sci., vol. 88, no. 12, pp. 3627–3635, Dec. 2005.
+[9] Z. Li, L. Chen, L. Zeng, S. Lin, and W. H. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 71–81, Jan. 2006.
+[10] A. E. Cohen and K. K. Parhi, “A low-complexity hybrid LDPC code encoder for IEEE 802.3an (10GBase-T) Ethernet,” IEEE Trans. Signal Process., vol. 57, no. 10, pp. 4085–4094, Oct. 2009.
+[11] M. Li et al., “An area and energy efficient half-row-paralleled layer LDPC decoder for the 802.11AD standard,” in Proc. SiPS, Oct. 2013, pp. 112–117.
+[12] O. Boncalo and A. Amaricai, “Ultra high throughput unrolled layered architecture for QC-LDPC decoders,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), Jul. 2017, pp. 225–230.
+[13] A. Verma and R. Shrestha, “A new partially-parallel VLSI-architecture of quasi-cyclic LDPC decoder for 5G new-radio,” in Proc. 33rd Int. Conf. VLSI Design 19th Int. Conf. Embedded Syst. (VLSID), Jan. 2020, pp. 1–6.
+[14] D.-U. Lee, W. Luk, C. Wang, C. Jones, M. Smith, and J. Villasenor, “A flexible hardware encoder for low-density parity-check codes,” in Proc. 12th Annu. IEEE Symp. Field-Programmable Custom Comput., Mar. 2004, pp. 101–111.
+[15] P. Wang, L. Yin, and J. Lu, “Efficient helicopter–satellite communication scheme based on check-hybrid LDPC coding,” Tsinghua Sci. Technol., vol. 23, no. 3, pp. 323–332, Jun. 2018.
+
+[16] A. Mahdi and V. Paliouras, “Simplified multi-level quasi-cyclic LDPC codes for low-complexity encoders,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2012, pp. 1–6.
+[17] C. P. Fewer, M. F. Flanagan, and A. D. Fagan, “A versatile variable rate LDPC codec architecture,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 54, no. 10, pp. 2240–2251, Oct. 2007.
+[18] Z. He, S. Roy, and P. Fortier, “Encoder architecture with throughput over 10 Gbit/sec for quasi-cyclic LDPC codes,” in Proc. IEEE Int. Symp. Circuits Syst., May 2006, p. 4.
+[19] Y. Jung, C. Chung, J. Kim, and Y. Jung, “7.7Gbps encoder design for IEEE 802.11n/AC QC-LDPC codes,” in Proc. Int. SoC Design Conf. (ISOCC), Nov. 2012, pp. 215–218.
+[20] A. Mahdi, N. Kanistras, and V. Paliouras, “A multirate fully parallel LDPC encoder for the IEEE 802.11n/AC/ax QC-LDPC codes based on reduced complexity XOR trees,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 1, pp. 51–64, Jan. 2021.
+[21] D. Theodoropoulos, N. Kranitis, A. Tsigkanos, and A. Paschalis, “Efficient architectures for multigigabit CCSDS LDPC encoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 5, pp. 1118–1127, May 2020.
+[22] J. Liu and Q. Feng, “A miniaturized LDPC encoder: Two-layer architecture for CCSDS near-Earth standard,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 7, pp. 2384–2388, Jul. 2021.
+[23] G. Tzimpragos, C. Kachris, D. Soudris, and I. Tomkos, “A lowcomplexity implementation of QC-LDPC encoder in reconfigurable logic,” in Proc. 23rd Int. Conf. Field Program. Log. Appl., Sep. 2013, pp. 1–4.
+[24] X. Wang, T. Ge, J. Li, C. Su, and F. Hong, “Efficient multi-rate encoder of QC-LDPC codes based on FPGA for Wimax standard,” Chin. J. Electron., vol. 26, no. 2, pp. 250–255, Mar. 2017.
+[25] H. Wu and H. Wang, “A high throughput implementation of QCLDPC codes for 5G NR,” IEEE Access, vol. 7, pp. 185373–185384, 2019.
+[26] K. J. Sampath, N. K. Kumar, K. Yeswanth, K. Snehith, B. Anooja, and B. B. T. Sundari, “An efficient channel coding architecture for 5G wireless using high-level synthesis,” in Proc. 5th Int. Conf. Trends Electron. Informat. (ICOEI), Jun. 2021, pp. 674–680.
+[27] T. T. B. Nguyen, T. Nguyen Tan, and H. Lee, “Efficient QC-LDPC encoder for 5G new radio,” Electronics, vol. 8, no. 6, p. 668, Jun. 2019.
+[28] D. Theodoropoulos, N. Kranitis, and A. Paschalis, “An efficient LDPC encoder architecture for space applications,” in Proc. IEEE 22nd Int. Symp. On-Line Test. Robust Syst. Design (IOLTS), Jul. 2016, pp. 149–154.
+[29] Z. Wang, X. Hao, C. Lin, and Q. Wu, “An efficient hardware LDPC encoder based on partial parallel structure for CCSDS,” in Proc. IEEE 18th Int. Conf. Commun. Technol. (ICCT), Oct. 2018, pp. 136–139.
+[30] D. Chen, P. Chen, and Y. Fang, “Low-complexity high-performance lowdensity parity-check encoder design for China digital radio standard,” IEEE Access, vol. 5, pp. 20880–20886, 2017.
+[31] A. V. Lazarenko, “FPGA design and implementation of DVB-S2/S2X LDPC encoder,” in Proc. IEEE Int. Conf. Electr. Eng. Photon. (EExPolytech), Oct. 2019, pp. 98–102.
+[32] J. Perez and V. Fernandez, “Low-cost encoding of IEEE 802.11n,” Electron. Lett., vol. 44, no. 4, pp. 307–308, Feb. 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:12 UTC from IEEE Xplore. Restrictions apply.
+
+

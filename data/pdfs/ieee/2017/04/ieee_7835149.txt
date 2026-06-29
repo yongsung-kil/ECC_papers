@@ -1,0 +1,1292 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+1425
+
+Efficient ADMM Decoding of LDPC Codes Using Lookup Tables
+Xiaopeng Jiao, Jianjun Mu, Yu-Cheng He, and Chao Chen
+
+Abstract— Linear programming decoding with the alternating direction method of multipliers (ADMM) is a promising decoding technique for low-density parity-check (LDPC) codes, where the computational complexity of Euclidean projections onto check polytopes becomes a prominent problem. In this paper, the problem is circumvented by building lookup tables (LUTs) and quantizing the inputs to approach approximate Euclidean projections at low computational complexities. To challenge the huge memory cost of LUTs, we first propose two commutative compositions of Euclidean projection and self-map, and show the existence of a small quantization range which does not alter the Euclidean projection. Then, we investigate the design and simplification of the LUTs by exploiting the commutative compositions and check node decomposition techniques. An efficient algorithm for the LUT-based projection is demonstrated by using one simplification method. Simulation results show that for both the regular and irregular LDPC codes, the ADMM decoding using LUT-based projection can substantially reduce the decoding time while maintaining the error rate performance at a comparatively large memory cost.
+Index Terms— Alternating direction method of multipliers (ADMM), check polytope, Euclidean projection, look-up table, low-density parity-check (LDPC) codes.
+I. INTRODUCTION
+L INEAR programming (LP) decoding for error-correcting codes has been studied extensively in coding theory
+since Feldman et al. published their seminal paper [1]. The maximum-likelihood (ML) decoding for binary linear codes
+is relaxed to be an LP problem by converting the convex
+hull of all codewords into a fundamental polytope [2]. For low-density parity-check (LDPC) codes, the fundamental poly-
+tope of LP decoding is established as the intersection of a
+group of small polytopes, called check polytopes, which can easily be described by linear inequalities [1].
+The existing results on LP decoding are focused on three aspects: theoretical analysis of LP decoding problems [3]–[5],
+Manuscript received July 18, 2016; revised November 22, 2016; accepted January 21, 2017. Date of publication January 26, 2017; date of current version April 14, 2017. This work is supported by the National Natural Science Foundation of China (No. 61471286, No. 61271004, No. 61671342) and the Natural Science Foundation of Fujian Province (2014J01243).The associate editor coordinating the review of this paper and approving it for publication was K. A.-Ghaffar.
+X. Jiao and J. Mu are with the School of Computer Science and Technology, Xidian University, Xi’an 710071, China (e-mail: jiaozi1216@126.com;jjmu@xidian.edu.cn).
+Y.-C. He is with the School of Information Science and Engineering, National Huaqiao University, Xiamen 361021, China, and also with the State Key Laboratory of Integrated Services Networks, Xidian University, Xi’an 710071, China (e-mail: yucheng.he@hqu.edu.cn).
+C. Chen is with the School of Electronic Engineering, Xidian University, Xi’an 710071, China (e-mail: cchen@xidian.edu.cn).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2017.2659733
+
+reduction of decoding complexity [6]–[8], and improvements on error performances [9]–[11]. A comprehensive review on LP decoding can be found in [12]. The decoding complexity is the main concern for practical applications of LP decoding. Recently, Barman et al. proposed an efficient LP decoding algorithm for LDPC codes based on alternating direction method of multipliers (ADMM) [8]. Roughly stated, ADMM presents a distributed framework of convex optimization problems by a decomposition-coordination procedure, in which a large-scale optimization problem is decomposed into small local subproblems, and a solution to the primal problem is found by coordinating the subproblems [13]. In virtue of the distributed nature, a multicore implementation of ADMM decoding is proposed in [14].
+In the ADMM decoding for LDPC codes, Euclidean projections onto check polytopes constitute a key component which dominates the computational complexity of decoding [14]. For a check node of degree d, the check polytope is the convex hull of the binary vectors with length d and any even number of 1’s. In [8], a “two-slice” lemma is developed for describing the check polytopes, and thus an efficient Euclidean projection algorithm is proposed. Later, in [15], a more efficient Euclidean projection algorithm is presented based on the cut search algorithm of [11]. In [16], the Euclidean projection is further simplified based on an efficient simplex projection algorithm. By integrating the ideas in [15] and [16], a hardware compatible projection algorithm is proposed in [17]. In addition to the work on projection simplification, Wei et al. considered in [18] projection reduction technique to reduce the number of Euclidean projections in ADMM decoding. Then, Debbabi et al. investigated in [19] a layered scheduling for ADMM decoding and showed a significant decoding speedup by combining the layered scheduling with the projection reduction method of [18].
+It has been shown that the ADMM decoding for LDPC codes performs faster than the ordinary LP decoding and is comparable to belief propagation (BP) decoding [15]. Unfortunately, it suffers from a significant error rate performance loss over the waterfall region compared with BP decoding [8]. To recover the loss, Liu et al. proposed an ADMM penalized decoding method by introducing a penalty term into the objective function in the LP decoding problem [20]–[22]. The penalty term makes the pseudo-codewords more costly than true codewords so that the ADMM penalized decoding can achieve comparable error rate performances to that of BP decoding. Then, Jiao et al. improved the ADMM penalized decoding in respect of irregular LDPC codes by optimizing the penalty parameters to match the degrees of variable
+
+0090-6778 © 2017 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1426
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+nodes [23]. The ADMM decoding has also been extended to decode non-binary LDPC codes [24] and multi-permutation codes [25], [26], respectively.
+Efficient hardware implementation is often indispensable to practical applications of LDPC codes. In [27], hardware complexity of ADMM decoding is evaluated and compared with that of the sum-product algorithm (SPA) and the min-sum algorithm (MSA), respectively. In [28], fixed-point implementation of the ADMM decoding is investigated based on the hardware compatible projection algorithm of [17]. However, in these works, the computational complexity of Euclidean projections remains a bottleneck problem.
+In this paper, we investigate the implementation of Euclidean projections using look-up tables (LUTs) to challenge the computational complexity problem for the ADMM decoding of LDPC codes. The contributions of the work lie mainly in the following aspects:
+1) To facilitate the simplification of LUTs, two commutative compositions of projection and self-map are developed on the analysis of Euclidean projections onto check polytopes.
+2) The concept of approximate Euclidean projection based on LUTs is defined as a cascade of vector quantization and table lookup. We show that a) there exists a small quantization range that covers mostly the real-valued inputs and allows the LUT-based projection to approach exact Euclidean projection by using a few discrete values; and b) a symmetric quantization condition can satisfy the all-zero assumption for the LUT-based ADMM decoding.
+3) To reduce memory requirements, we start the design of LUTs in a linear addressing manner. Then, we explore the simplification of LUTs in two directions: a) the number of table items is reduced exponentially by exploiting the two commutative compositions; and b) the number of components in table items is reduced by incorporating check node decompositions.
+4) Since the LUTs become nonlinearly addressed due to the removal of table items, an efficient algorithm for table lookup in LUT-based projection is proposed.
+5) In support of simulation results, we analyze the impacts of quantization parameters on the LUT-based ADMM penalized decoding for both regular and irregular LDPC codes.
+6) By simulations, we show that the LUT-based ADMM decoding can be improved in time efficiency by incorporating the complexity reduction techniques in [18] and [19].
+The remainder of the paper is organized as follows. In Section II, we briefly review the ADMM decoding for LDPC codes. In Section III, we explore several properties of Euclidean projection. In Section IV, we investigate the design and simplification of LUTs. In Section V, we present the LUTbased projection algorithm together with the computational complexity analysis. In Section VI, we provide the simulation results. Finally, we conclude the paper by Section VII.
+
+and j ∈ M ≡ {1, 2, · · · , M}. An edge (vi , c j ) connects the variable node vi and the check node c j if and only if H ji = 1. Let Nv (i ) = { j ∈ M : H ji = 1} be the index set of the neighbors of vi , and Nc( j ) = {i ∈ N : H ji = 1} be the index set of the neighbors of c j . Then, the degrees of nodes vi and c j are given by di = |Nv (i )| and d j = |Nc( j )|, respectively. Given two positive integers dv and dc, if di = dv for all i ∈ N and d j = dc for all j ∈ M , then the code is called a regular LDPC code. Otherwise, it is an irregular LDPC code.
+Let y = (y1, y2, · · · , yN ) be the received codeword from a binary-input symmetric-output memoryless channel. Then, the
+LP decoding problem can be formulated as
+
+min γ T x
+x
+
+subject to T j x ∈ PPd j , ∀ j ∈ M
+
+(1)
+
+where x = (x1, x2, · · · , xN )T ∈ [0, 1]N is the vector to be optimized with 0 ≤ xi ≤ 1 for all i ∈ N , γ = (γ1, γ2, · · · , γN )T is the log-likelihood ratios (LLR) vector in the Euclidean space RN given by γi ≡ log Pr (yi |0) Pr (yi |1) , i ∈ N , and T j is the d j × N binary matrix which selects the d j components of x that participate in the j th check node. The check polytope
+PPd j is the convex hull of all the length-d j binary vectors with any even number of 1’s [15].
+To fit the ADMM template, the LP decoding problem is
+rewritten as
+
+min γ T x
+x
+subject to T j x = z j , z j ∈ PPd j , ∀ j ∈ M (2)
+where z j is called “replica” variables [8]. By introducing a group of scaled dual vectors λ j ∈ Rd j ,
+the constraint in the above problem can be decoupled using the augmented Lagrangian function below
+
+Lρ(x, z, λ)
+
+= γTx + ρ 2 j∈M
+
+Tjx − zj + λj
+
+2 2
+
+−
+
+ρ 2
+
+j ∈M
+
+λj
+
+22,
+
+(3)
+
+where ρ > 0 is the penalty parameter, and
+
+v
+
+2 2
+
+denotes the
+
+squared 2-norm of a vector v.
+
+Then, the ADMM decoding for LDPC codes is described
+
+by the iterative update rules [15]
+
+x[k] := arg min γ T x + ρ
+
+x
+
+2
+j ∈M
+
+z[jk] := PPd j T j x[k] + λ[jk−1]
+
+T j x − z[jk−1] + λ[jk−1]
+
+2 2
+
+(4)
+
+(5)
+
+λ[jk] := λ[jk−1] + T j x[k] − z[jk]
+
+(6)
+
+II. PRELIMINARIES
+An LDPC code with a parity-check matrix H = (H ji)M×N can be represented by a Tanner graph composed of N variable nodes vi and M check nodes c j , where i ∈ N ≡ {1, 2, · · · , N},
+
+where k ≥ 1 denotes the iteration number, and PPd j (v) denotes the Euclidean projection of a vector v ∈ Rd j onto the check polytope PPd j , which is a minimum distance problem
+
+PPd
+
+j
+
+(v)
+
+=
+
+arg min
+z ∈ PPd j
+
+v−z
+
+2 2
+
+.
+
+(7)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1427
+
+The ADMM penalized decoding is obtained from (2) by adding a penalty as follows
+
+min γ T x +
+x
+
+g (xi)
+
+i ∈N
+
+subject to T j x = z j , z j ∈ PPd j , ∀ j ∈ M (8)
+
+where g(x) is a specified penalty function. Thus, the iterations of the ADMM penalized decoding can be obtained
+accordingly.
+Remark 1: To speed up the ADMM decoding, the over-
+relaxation technique may be incorporated simply by replacing T j x[k] in (5) and (6) by θ T j x[k] + (1 − θ )z[jk−1], where θ > 1 is the over-relaxation parameter [8], [13]. In our simulations, we specify θ = 1.9.
+Remark 2: Two often used penalty functions in (8) are the l1-function g1(x) = −η |x − 0.5| and the l2-function g2(x) = −η(x − 0.5)2, where the parameter η is optimized to achieve the best error performances [21], [22]. In our simulations, we employ g2(x) as the penalty function.
+
+holds for all subsets S of D with odd cardinality |S|, where D\S denotes the difference set.
+Based on (10), we define a componentwise mapping function for u in Rd below
+
+φV (ui ) =
+
+1 − ui ui
+
+for i ∈ V for i ∈ D\V
+
+(11)
+
+where V is a subset of D with |V | ≥ 0. We simply use φV (u) to denote the mapped vector.
+Lemma 2: For |V | even, if u ∈ PPd , then φV (u) ∈ PPd . Proof: Let u = φV (u). Since u ∈ PPd , it follows that
+u ∈ [0, 1]d by Lemma 1 and hence u ∈ [0, 1]d by (11). We now need to verify that for any arbitrary subset S of D with |S| odd, the condition (10) can always be satisfied by u .
+Denote S = D\S. The subset V can be partitioned into two disjoint parts VS = V ∩ S and VS = V \VS. Then, we can obtain two further partitions S = VS ∪ S VS and S = VS ∪ S VS , respectively. Clearly, the four subsets VS, S VS, VS, and S VS are disjoint, and they constitute a partition of the index set D. Therefore, by (11), we have
+
+III. BASIC PROPERTIES OF EUCLIDEAN PROJECTION
+
+In this section, we investigate two compositions of Euclid-
+
+ean projection and self-map operations that can be exploited
+
+to reduce the number of items in the designed LUTs. For
+
+simplicity of notation, we denote the check polytopes in the
+
+general form of PPd with integer d > 0, and define the set
+D ≡ {1, 2, · · · , d} to index the components of vectors in both Rd and PPd . For consistency of notation, we use v to denote a vector in Rd to be projected, z to denote a projection
+
+vector in PPd , and u to denote a temporary vector in either Rd or PPd .
+Proposition 1: Let σ (·) be a permutation operation of
+
+a length-d vector. Then, PPd [σ (v)] = σ PPd (v) for ∀v ∈ Rd .
+
+Proof: Given any v ∈ Rd , let z = PPd (v). By (7),
+
+we have
+
+v−z
+
+2 2
+
+≤
+
+v − z˜
+
+2 2
+
+for
+
+∀z˜
+
+∈
+
+PPd .
+
+Note
+
+that
+
+for
+
+∀a, ∀b ∈ Rd , it always holds that
+
+σ (a − b)
+
+2 2
+
+=
+
+a−b
+
+2 2
+
+and σ (a − b) = σ (a) − σ (b), whereas for ∀c ∈ PPd , we must
+
+have σ (c) ∈ PPd [8, Proposition 2]. Thus, the above inequality
+
+can be transformed into
+
+σ (v) − σ (z)
+
+2 2
+
+≤
+
+σ (v) − σ (z˜)
+
+2 2
+
+(9)
+
+with σ (v) ∈ Rd , and σ (z), σ (z˜) ∈ PPd . Due to the one-toone correspondence between σ (z˜) and the arbitrary vector z˜, (9) implies that σ (z) = PPd [σ (v)] again by (7). Substituting z = PPd (v) yields the statement.
+Note that Proposition 1 indicates that the concatenated
+Euclidean projection and permutation on real vectors is com-
+mutative, which can be implied from the permutation invari-
+ance property of check polytopes discovered in [8]. Similarly,
+the lemma below can be implied from the parity inequalities
+derived in [1], [10], and [11]. Lemma 1: u ∈ PPd if and only if u ∈ [0, 1]d and
+
+ui +
+
+(1 − ui ) ≤ d − 1
+
+(10)
+
+i∈ S
+
+i∈ D\S
+
+ui +
+
+1 − ui
+
+i∈ S
+
+i∈ D\S
+
+=
+
+ui +
+
+ui + (1 − ui ) +
+
+(1 − ui )
+
+i∈ VS
+
+i∈ S\VS
+
+i∈ VS
+
+i∈ S \VS
+
+= (1 − ui ) +
+
+ui + ui +
+
+(1 − ui )
+
+i∈ VS
+
+i∈ S\VS
+
+i∈ VS
+
+i∈ S \VS
+
+=
+
+ui +
+
+(1 − ui ).
+
+(12)
+
+i∈ (S\VS)∪VS
+
+i∈ VS ∪(S \VS)
+
+Let S = S VS ∪ VS, and hence D\S = VS ∪ S VS . Following the partitions above, we have S = |S|−|VS|+ VS and |VS| = |VS|+ VS . Thus, for |V | even, |VS| and VS must be both even or both odd. In either case, S remains odd. By Lemma 1, we can rewrite (12) as
+
+ui +
+
+1 − ui = ui +
+
+(1 − ui ) ≤ d − 1
+
+i∈ S
+
+i∈ D\S
+
+i∈ S
+
+i∈ D\S
+
+which implies that u ∈ PPd .
+Proposition 2: For any subset V of D with |V | even, it must hold that PPd [φV (v)] = φV PPd (v) for ∀v ∈ Rd .
+Proof: For any given v ∈ Rd , let z = PPd (v). According to (7), we know that
+
+v−z
+
+2 2
+
+≤
+
+v − z˜
+
+2 2
+
+,
+
+∀z˜ ∈ PPd .
+
+(13)
+
+Let v = φV (v) and z = φV (z) = φV PPd (v) . According to (11), we have
+
+v −z
+
+2 2
+
+=
+
+vi − z i 2 +
+
+vi − z i 2
+
+i∈V
+
+i∈ D\V
+
+= [(1 − vi ) − (1 − z i )]2 +
+
+(vi − z i )2
+
+i∈V
+
+i∈ D\V
+
+=
+
+(vi − z i )2 =
+
+v−z
+
+2 2
+
+.
+
+(14)
+
+i∈ D
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1428
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+Clearly, for ∀z˜ ∈ PPd , let z˜ = φV (z˜). Eq. (14) also implies
+
+that v − z˜
+
+2 2
+
+=
+
+v − z˜
+
+2 2
+
+.
+
+Since
+
+z,
+
+z˜
+
+∈
+
+PPd ,
+
+we
+
+know
+
+that
+
+z , z˜ ∈ PPd by Lemma 2. Note that z˜ is in one-to-one
+
+correspondence with the arbitrary vector z˜. Therefore, (13) can
+
+be converted into v − z
+
+2 2
+
+≤
+
+v − z˜
+
+2 2
+
+for
+
+∀z˜
+
+∈ PPd ,
+
+which implies that z = PPd (v ).
+
+In summary, Proposition 1 reveals the commutativity of
+
+composition PPd and σ , and Proposition 2 reveals the commutativity of composition PPd and φV for |V | even
+positive, where σ and φV (for even |V |) are both self-maps whether in Rd or PPd .
+
+IV. LUT DESIGN FOR APPROXIMATE EUCLIDEAN PROJECTION
+In this section, we investigate the design of LUTs to implement the Euclidean projection by table lookup. Following the conceptual model of approximate projection with input quantization, we show there exists a small quantization range for the inputs to the LUT-based projection. Then, we simplify the LUTs by exploiting the properties proved above to achieve an efficient implementation. We also discuss the potential of check node decomposition techniques in further reducing the memory requirements of LUTs.
+
+A. Approximate Projection Based on Table Lookup
+
+Consider L-level uniform quantization in range [a, b] with
+
+interval τ = (b − a)/(L − 1) and mapping function
+
+⎧
+
+⎪⎪⎨a Q(v) = ⎪⎪⎩a +
+b
+
+v − a + 0.5 τ
+
+τ
+
+if v ≤ a if a < v < b if v ≥ b
+
+(15)
+
+where a, b ∈ R, and x gives the largest integer less than or
+
+equal to x. The quantization scheme has discrete real-valued
+
+outputs qk = a + (k − 1)τ , k = 1, 2, · · · , L.
+For convenience, we define a one-to-one mapping ϕ(qk) = k from the set of levels QLV = {q1, q2, · · · , qL } to the set of
+indices QI D = {1, 2, · · · , L}. Let Q(v) denote the quantization of a vector v ∈ Rd , which we specify as the componentwise
+
+application of Q(v) to v. Similarly, the quantized vectors v¯
+
+in QLdV are in one-to-one correspondences with the index
+
+vectors, denoted ϕ (v¯ ), in QIdD, where
+
+Q
+
+d LV
+
+=
+
+QIdD
+
+= Ld.
+
+For each check polytope PPd , we construct one table, noted
+
+LUTd , with items being the Euclidean projection results of all quantized vectors in QLdV . Without simplification, LUTd contains initially a total of Ld items that can be linearly
+addressed by the corresponding index vectors in QIdD. Thus, the Euclidean projection operation is converted into a con-
+
+catenated operation of vector quantization and table lookup. Given v ∈ Rd , it is first quantized to obtain v¯ = Q(v). Then,
+
+the item identified by ϕ (v¯ ) is searched in LUTd . Finally,
+the item content PPd (v¯ ) is returned as the projection result with respect to v. Due to the quantized inputs, we refer
+
+to the LUT-based projection as the approximate Euclidean
+
+projection.
+
+Next, we need to analyze the approximate Euclidean
+
+projection for ADMM decoding in the following aspects:
+
+1) Show the existence of a small quantization range [a, b]; 2) Prove the all-zero assumption [22] for the LUT-based ADMM decoding; 3) Simplify the LUTs to reduce memory requirements.
+
+B. Determination of Quantization Range
+
+The quantization range [a, b] is an important parameter
+for uniform quantization. By the propositions and observa-
+tion below, we show that there exists a small quantization range [a, b] throughout the iterative ADMM decoding process.
+Geometrically, the Euclidean projection of a vector onto a given check polytope is unique. For v ∈ Rd and z = PPd (v), the minimum distance condition in (7) can be rewritten as
+
+v−z
+
+2 2
+
+<
+
+v − z˜
+
+2 2
+
+,
+
+∀z˜ ∈ PPd , z˜ = z.
+
+(16)
+
+Lemma 3: Let v = (v1, v2, · · · , vd ) and v = (v1, v2, · · · , vd ) be two vectors in Rd with different first component. Suppose that z = (z1, z2, · · · , zd ) = PPd (v) and z = (z1, z2, · · · , zd ) = PPd (v ). If z = z and v1 > v1, then z1 > z1.
+Proof: By (16), two inequalities are obtained from
+z = PPd (v) and z = PPd (v ) as
+
+d
+
+d
+
+(zi − vi )2 <
+
+zi − vi 2
+
+i =1
+
+i =1
+
+(17)
+
+d
+
+d
+
+z1 − v1 2 + zi − vi 2 < z1 − v1 2 + (zi − vi)2 .
+
+i =2
+
+i =2
+
+(18)
+
+By adding (17) and (18) on both sides and then removing the common items, we obtain
+
+(z1 − v1)2 + (z1 − v1)2 < z1 − v1 2 + z1 − v1 2 (19)
+
+which implies (v1 − v1)(z1 − z1) > 0. Since v1 > v1, we must have z1 > z1.
+Note that z ∈ PPd implies that 0 ≤ z1 ≤ 1 by Lemma 1. Therefore, Lemma 3 implies that for any given v ∈ Rd , there
+
+must exist a pair of values a and b with a < b such that
+
+z1 = 0 if v1 ≤ a and z1 = 1 if v1 ≥ b, respectively. Proposition 3: Given v = (v1, v2, · · · , vd ) ∈ Rd , let va =
+(a, v2, · · · , vd ) and vb = (b, v2, · · · , vd ), where a is the largest value such that the first component of PPd (va) is
+equal to 0, and b is the smallest value such that the first
+
+component of PPd (vb) is equal to 1. Then, 1) If v1 < a, then PPd (v) = PPd (va); 2) If v1 > b, then PPd (v) = PPd (vb). Proof: We prove the second statement as example. Denote
+
+z = (z1, z2, · · · , zd ) =
+
+PPd (v)
+
+and
+
+zb
+
+=
+
+(z
+
+b 1
+
+,
+
+z 2b ,
+
+·
+
+·
+
+·
+
+, zdb )
+
+=
+
+PPd (vb), where z1b = 1 as assumed. Suppose that v1 > b
+
+and z = zb. By Lemma 3, it should hold that z1 > z1b and
+
+hence z1 > 1, which contradicts the condition 0 ≤ z1 ≤ 1 for
+
+z ∈ PPd in Lemma 1. Thus, we must have z = zb.
+
+Example 1: Suppose that d = 6 and b = 1.03.
+
+Let v0
+
+=
+
+(1.02, 0.32, 0.55, 0.04, −0.11, −0.36),
+
+v1 = (1.03, 0.32, 0.55, 0.04, −0.11, −0.36), and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1429
+
+TABLE I PERCENTAGES OF INPUT SAMPLES IN SPECIFIED RANGES
+
+v2 = (1.53, 0.32, 0.55, 0.04, −0.11, −0.36). Then,
+
+we compute the projections as z0 = PP6 (v0) =
+
+(0.99, 0.35, 0.58, 0.068, 0, 0), z1 =
+
+PP6 (v1) =
+
+(1.00, 0.35, 0.58, 0.070, 0, 0), and z2 = PP6 (v2) =
+
+(1.00, 0.35, 0.58, 0.070, 0, 0), where z2 = z1.
+
+Consider a truncation operation on v1 as follows: if v1 < a,
+
+then v1 is clipped to a; and if v1 > b, then v1 is clipped
+
+to b. The truncation makes v1 lie in the range [a, b].
+
+By Proposition 3, the projection of v remains unchanged when
+
+v1 is truncated. It is straightforward to extend the conclusion to include all components of v. Therefore, Proposition 3 reveals
+
+the existence of a universal truncation range [a, b], with which
+
+the componentwise truncation does not change the Euclidean
+
+projection. However, the determination of this range has to
+
+resort to simulations of the ADMM decoding for considered
+
+LDPC codes.
+
+Observation 1: The values of all components of the vectors
+
+that need to be projected during ADMM decoding lie mostly
+
+in a small range [a, b], a, b ∈ R.
+
+To illustrate the observation, we consider two codes: the
+
+Margulis (N = 2640, M = 1320)-regular LDPC code, noted
+
+C1 [29]; and the IEEE 802.16e (N = 576, M = 288)-irregular LDPC code, noted C2 [30]. The ADMM penalized decoding using the l2-function g2(x) is simulated with calling the
+
+Euclidean projection algorithm in [15]. At each simulated signal-to-noise ratio (SNR) value, we collect 5 × 107 samples
+
+of inputs to the Euclidean projection onto the polytopes.
+
+Table I presents the percentage results of input samples
+
+within the range [−1.0, 2.0] for C1 and [−1.5, 2.5] for C2,
+
+respectively. It is seen that more than 96% of input values
+
+resides in a small range. We also observed similar results by
+
+simulations for other LDPC codes. Therefore, for any specific
+
+LDPC code, there exists a small quantization range [a, b].
+
+Remark 3: By (4)–(6), the quantization range [a, b] is, in
+
+general, code-dependent since different degree distributions of
+
+codes yield distinct statistics of the projection inputs. Further
+
+by (8), this range is also affected by the choice of penalty
+
+function.
+
+C. Symmetry Condition for the All-Zero Assumption
+The all-zero assumption for the ADMM penalized decoding was proved, i.e., the probability of decoding failure is independent of the codeword transmitted in a symmetric channel [22]. We need to show when the all-zero assumption holds under quantization of inputs to the projection.
+As shown in Observation 1, the quantization range [a, b] is determined with a < 0 and b > 0. Consider a condition a + b = 1 such that the quantization range is centered at (a + b)/2 = 0.5. It is easy to derive qL−k+1 = 1 − qk for all k ∈ QI D, which we refer to as the odd symmetry with respect to the centroid 0.5 in the form of qL−k+1 − 0.5 = −(qk − 0.5).
+
+The odd symmetry can be expressed as Q(1−v) = 1− Q(v) for v ∈ R, which states the symmetry of Q(v) around the centroid (0.5, 0.5) in the input-output square plane. If L is even, v = 0.5 locates the boundary between intervals L/2 and L/2 + 1, where Q(0.5) = 1 − Q(0.5). If L is odd, v = 0.5 points to the middle of interval (L + 1)/2 with Q(0.5) = 1 − Q(0.5) = 0.5.
+Proposition 4 (All-Zero Assumption): If the quantization is symmetric by Q(1 − v) = 1 − Q(v) for v ∈ R, the probability that the LUT-based ADMM decoding fails is independent of the codeword that was transmitted over the additive white
+Gaussian noise (AWGN) channel with binary phase shift
+keying (BPSK) modulation. Proof: To prove the all-zero assumption for the LUT-based
+ADMM penalized decoding, it is sufficient to show if
+[22, Lemma 18] can hold under the symmetric quantization of the inputs to the Euclidean projection in (5). For simplicity,
+we drop the iteration notation below. Let c be a given non-zero codeword and y be the received
+vector from the AWGN channel with BPSK. Denote by y0 the vector mapped from y as if the all-zero codeword 0N was transmitted [22, Lemma 16] [31, p. 178]. Let v j represent the input vectors to the Euclidean projection in (5) for decoding y, and v0j for decoding y0. By [22, Lemma 18], there exists a relationship v0j = Rc v j defined by
+
+v
+
+0 j
+
+[i
+
+]
+
+=
+
+v j [i ] 1 − v j [i ]
+
+if c[ni ] = 0 if c[ni ] = 1
+
+where i ∈ D j = {1, 2, · · · , d j } identifies the entries in
+
+vj
+
+and
+
+v
+
+0 j
+
+,
+
+and
+
+ni
+
+∈
+
+Nc( j )
+
+=
+
+{n1, n2, · · · , nd j }
+
+identifies
+
+the entries in the codeword c that participate in the j th check
+
+node.
+
+Consider the quantization in (15) that features the symmetry
+
+Q(1 − v) = 1 − Q(v) for v ∈ R. Let u¯ j = Q v j and u¯ 0j = Q v0j . For i ∈ D j , if c[ni ] = 0, it simply follows that
+
+u¯0j [i ] = Q v0j [i ] = Q v j [i ] = u¯ j [i ];
+
+if c[ni ] = 1, the quantized component is changed to
+
+u¯
+
+0 j
+
+[i
+
+]
+
+=
+
+Q
+
+v
+
+0 j
+
+[i
+
+]
+
+= Q 1 − v j [i ] = 1 − Q v j [i ] = 1 − u¯ j [i ].
+
+Clearly, the relationship between the quantized input vectors remains identically as u¯ 0j = Rc u¯ j . Therefore, under the symmetric quantization, [22, Lemma 18] still holds with
+respect to the LUT-based ADMM penalized decoding.
+Remark 4: To reduce the floating-point rounding error in
+numerical computations, we may slightly adjust the quantization range under the symmetry condition a + b = 1 such that the interval length τ has some fixed precision. The precision can be measured in either bits or decimal digits depending
+upon the number system for implementation. Example 2: Suppose that [a, b] = [−1.0, 2.0]. If L = 11,16,
+or 31, then τ is accordingly given by 0.3, 0.2, or 0.1. However, if L = 8, then τ becomes a repeating decimal 0.428571 · · · . In this case, the adjustment of [a, b] = [−0.9, 1.9] gives out τ = 0.4 with a better decimal precision.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1430
+TABLE II CONSTRUCTION OF LUT FOR CHECK POLYTOPE PPd
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+D. Simplification of LUTs by Propositions 1 and 2
+
+Let T be the number of items in LUTd . Without simplification, T = Ld . Thus, LUTd may become too large to implement
+
+for large L and d values. Table II shows the construction of
+
+LUTd which comprises the projection vectors. Clearly, LUTd can be treated as a data array of size T × d. Likewise, the
+
+index vectors that identify the table items can be viewed as
+
+an index array of the same size. Table II lists the quantized
+
+vectors for ease of description below. Suppose that the table
+
+items are organized by sorting the index vectors in ascending
+
+order of the first component, then the second component, and
+
+so on.
+
+By Proposition 1, if we know the projection z = PPd (v¯ ) for v¯ ∈ QLdV , then we can simply obtain σ (z) as the projection
+
+of a permuted vector σ (v¯ ). It is important to mention that the
+
+set QLdV , as well as QIdD, is closed under arbitrary permutation,
+
+i.e.,
+
+σ (v¯ )
+
+∈
+
+QLdV
+
+for
+
+∀v¯
+
+∈
+
+Q
+
+d LV
+
+.
+
+Thus,
+
+we
+
+can
+
+remove
+
+from
+
+LUTd all permuted projections σ (z) except for the original
+
+one z. Suppose that the simplification is processed from the
+
+top to the bottom in Table II. Then, the index vectors w of the
+
+remaining items can have components w1 ≤ w2 ≤ · · · ≤ wd in
+
+ascending order, and the number of items in LUTd is exactly
+
+reduced to
+
+LL
+
+L
+
+T=
+
+···
+
+1.
+
+w1=1 w2=w1 wd =wd−1
+
+(20)
+
+By Proposition 2, if we know the projection z = PPd (v¯ ) for v¯ ∈ QLdV , then we can easily obtain φV (z) as the projection
+
+vector of φV (v¯) for arbitrary subset V ⊆ D with even positive
+
+cardinality. To remove the mapped projections φV (z), we show
+
+that
+
+when
+
+Q (v )
+
+is
+
+symmetric,
+
+the
+
+set
+
+Q
+
+d LV
+
+is
+
+closed
+
+under
+
+the
+
+componentwise mapping φV in (11). Suppose that v¯ is indexed
+
+by w. By the odd symmetry of quantization, qL−k+1 = 1 − qk
+
+for all k ∈ QI D, we know that φV (v¯) is indexed by w
+
+with components wi = L − wi + 1 for i ∈ V and wi = wi for i ∈ D\V , respectively. Denote w = φVI D(w). Then, the set QIdD must also be closed under φVI D for even |V |.
+
+Based on Table II, a simplification by Proposition 2 can start
+
+from the first item. Let w be the index vector of the current item. Remove the items indexed by φVI D(w) for all subsets V ⊆ D with even |V | > 0. Continue the removal with respect
+
+to next available item until the end of the table is reached.
+
+Since it is somehow complicated to express the patterns for
+
+the index vectors in the simplified LUTd , we present a lower
+
+Fig. 1. Efficiency comparison for the simplification methods with different d values and L = 16.
+
+bound below
+
+Ld
+
+T ≥ 2d−1
+
+(21)
+
+which
+
+is
+
+explained
+
+as
+
+follows.
+
+Given
+
+any
+
+w
+
+∈
+
+Q
+
+d ID
+
+,
+
+the
+
+maximum number of removable items is given by
+
+d 2
+
++
+
+d 4
+
++ ··· +
+
+d d
+
+if d is even or
+
+d 2
+
++
+
+d 4
+
++ ··· +
+
+d d −1
+
+if
+
+d is odd, respectively. In both cases, the maximum number
+
+turns out to be 2d−1 − 1.
+
+More precisely, when L is even, the lower bound gives
+
+the exact number of remaining items. However, for L odd,
+
+the number of removable items is reduced when two or more
+
+components wi identically take the middle index (L + 1)/2
+which causes a self-mapping wi = L − wi + 1 = wi . Example 3: Suppose that L = 5 and d = 3. There exist
+totally 2d−1 − 1 = 3 subsets of D with even positive cardinal-
+
+ity, noted as V1 = {1, 2}, V2 = {1, 3}, and V3 = {2, 3}. Let w =
+(3, 3, 2), where w1 and w2 take the middle index 3. Then, we must have φVI 1D(w) = w and φVI 2D(w) = φVI 3D(w) = (3, 3, 4). Clearly, only the item indexed by w = (3, 3, 4) can be
+
+removed, which reduces the number of removable items by 2.
+
+Fig. 1 compares the simplification efficiency by plotting three curves from (20), (21), and Ld for L = 16 and d =
+
+3 . . . 12. Since L is even, the three curves represent the exact
+
+number of table items. The simplification method by Proposi-
+
+tion 1 is obviously superior to that by Proposition 2, while both
+
+methods reduce exponentially the table size. By Proposition 1,
+
+as d increases from 3 to 12, the number of table items for
+
+L = 16 is reduced from 4K, 64K, · · · , 256T to approximately
+
+0.8K, 4K, · · · , 16M in terms of memory units. Here, the
+
+memory unit describes the memory block that is required to
+
+store an item of d real-valued numbers as discussed below.
+
+Remark 5: The memory requirements of simplified LUTs
+
+are determined by the chosen number system since floating-
+
+point numbers of arbitrary precision can be designed in
+
+software. If IEEE754 32-bit floating-point standard is
+
+employed, then LUTd requires a memory allocation of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1431
+
+Algorithm 1 The LUT-Based Projection Algorithm
+Input: v = (v1, v2, · · · , vd ), LUT[ j ] (1 ≤ j ≤ T ) Output: Approximate Euclidean projection of v 1: for i = 1 to d do 2: if vi ≤ a then 3: wi = 1 4: else if vi ≥ b then 5: wi = L 6: else 7: wi = (vi − a)/τ + 1.5 8: end if
+9: end for 10: sort w = (w1, w2, · · · , wd ) in ascending order and record the
+resulting permutation σ 11: obtain index by calling Algorithm 2 with input σ (w) 12: return σ −1 (LUT[index])
+
+Fig. 2. Three types of decomposition for a degree-12 check node.
+4d T bytes. Since the points on check polytopes have components taking values within the range [0, 1], it is more practical to store table items using the 8-bit unsigned integer representation p = 28z for z ∈ [0, 1], where p is constrained from 0 to 255. During table lookup, the integer p is transformed into a floating-point number p 28. It is promising that by simulations we found no evident performance loss with the 8-bit representation. Therefore, a small cost of number transformations trades for a memory reduction by a factor of 4.
+E. Simplification of LUTs for High Dimensional Polytopes
+For large d values, the simplified LUTs still require a huge amount of memory. To circumvent this problem, we can consider the use of check node decomposition techniques in [6], [32], and [33]. It was proved that the descriptive complexity of LP in [1] can be reduced by decomposing each high-degree check node into several check nodes with degree 3 or smaller. In [6], a cascaded LP (C-LP) was thus proposed. In [33], it was shown that the descriptive complexity of C-LP can further be reduced by decomposition with degrees larger than 3.
+Without loss of generality, we use a degree-12 check node to illustrate three types of decomposition in Fig. 2. In the figure, the circles represent original variable nodes, the double circles represent auxiliary variable nodes, and the squares represent check nodes. By the degree-3 decomposition in Fig. 2(a), the degree-12 check node is decomposed into 10 check nodes of degree 3 by adding 9 auxiliary variable nodes. This implies a way to approach the projection onto PP12 by performing 10 times the projection onto PP3 in three layers. Similarly, the degree-6 decomposition in Fig. 2(b) shows the way of using twice the projection onto PP6 plus one projection onto PP4. Instead, the degree-7 decomposition in Fig. 2(c) gives a way of twice the projection onto PP7 plus one projection onto PP2.
+The decomposition of a high-degree check node essentially converts a high dimensional projection into a serial of layered lower dimensional projections. By choosing proper decompositions for LDPC codes with high-degree check nodes, we can implement the ADMM decoding with LUTs designed for only a few small d values.
+
+Algorithm 2 Search for a Given Item in LUT6 as Example
+Input: w = (w1, w2, w3, w4, w5, w6) Output: The item position indexed by w in the LUT6 1: index = T1[w1] − 1 2: for i = w1 to w2 − 1 do 3: index = index + T2[i] 4: end for 5: for i = w2 to w3 − 1 do 6: index = index + T3[i] 7: end for 8: for i = w3 to w4 − 1 do 9: index = index + T4[i] 10: end for 11: for i = w4 to w5 − 1 do 12: index = index + T5[i] 13: end for 14: index = index + w6 − w5 + 1 15: return index
+
+V. LUT-BASED PROJECTION ALGORITHM
+In this section, we focus on the design of LUT-based projection algorithm by Proposition 1 and the computational complexity analysis.
+
+A. Projection Algorithm by Proposition 1
+
+The LUT-based Euclidean projection of a given vector v in Rd onto PPd is retrieved by table lookup in the simplified LUTd . Let w be the index vector of the quantized vector Q (v). Then, w is sorted to form an intermediate index vector w with
+
+components w1 ≤ w2 ≤ · · · ≤ wd in ascending order. Denote the resulting permutation as w = σ (w). There must exist an
+
+item in LUTd that is identified by w and stores the projec-
+
+tion vector z permutation,
+
+= we
+
+PPd
+obtain
+
+(σ z
+
+(Q =
+
+(v))). σ −1
+
+Finally, z=
+
+by using inverse PPd (Q (v)). The
+
+LUT-based projection algorithm is presented in Algorithm 1.
+
+The index vector w is directly generated in lines 1–9 by quan-
+
+tizing the input vector v, the variable index in line 11 repre-
+
+sents the location identified by the sorted w, and LUT[index] in
+
+line 12 represents the projection vector z with d components
+
+LUT[index]1, · · · , LUT[index]d .
+
+Algorithm 2 is the core of the LUT-based projection
+
+algorithm. Note that the simplified LUTs are organized non-
+
+linearly with respect to index vectors. Thus, there is by no
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1432
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+TABLE III NUMBER OF OPERATIONS REQUIRED BY FOUR PROJECTION ALGORITHMS FOR PPd
+
+means an exhaustive search method to complete the task.
+In Algorithm 2, we illustrate an efficient table search with the aid of simple auxiliary LUTs for d = 6. Suppose that five (or exactly d − 1) auxiliary LUTs of length L are designed with names T1,T2,T3,T4, and T5. For i = 1, 2, · · ·, L, the i th item of T1 stores the location identified by (i, i, i, i, i, i ) in LUT6. The i th item of T2 stores the number of consecutive index vectors with suffix subvectors from (i, i, i, i, i ) to (i, L, L, L, L). Similarly, the i th item of T3, T4, and T5 stores the number of consecutive index vectors with suffix subvectors from (i, i, i, i ) to (i, L, L, L), from (i, i, i ) to (i, L, L), and from (i, i ) to (i, L), respectively. Based on the auxiliary LUTs, Algorithm 2 computes incrementally the offset to the target location from the ascending components of the sorted index vector w. Clearly, the design of auxiliary LUTs and the search method can easily be extended to include all d values.
+To explain Algorithm 2, it is necessary to analyze the
+structure of index array in the simplified LUT6: given an integer i ∈ [1..L], there must exist a block of consecutive index vectors from (k, i, i, i, i, i ) to (k, i, L, L, L, L) for each fixed k in [1..i ]. It is readily proved that each such block has an identical size that is independent of k. By construction, the
+i th item in T2 just records this block size. Similar explanations can be extended to T3, T4, and T5. In this sense, the i th item in T1 record exactly the block size for (1, 1, 1, 1, 1, 1) to (i, i, i, i, i, i ).
+Example 4: Let w = (2, 4, 7, 8, 11, 14) for d = 6 and L = 16. The block from (1, 1, 1, 1, 1, 1) to (1, 16, 16, 16, 16, 16) is counted as T1[w1] − 1. Two succeeding blocks from (2, 2, 2, 2, 2, 2) to (2, 2, 16, 16, 16, 16) and (2, 3, 3, 3, 3, 3) to (2, 3, 16, 16, 16, 16) are counted as T2[2] + T2[3]. Similarly, three succeeding blocks comprising (2, 4, 4, 4, 4, 4) to (2, 4, 6, 16, 16, 16) are counted as T3[4] + T3[5] + T3[6], and the succeeding blocks from (2, 4, 7, 7, 7, 7) to (2, 4, 7, 8, 10, 16) are counted by T4 and T5. Finally, the remaining index vectors from (2, 4, 7, 8, 11, 11) to (2, 4, 7, 8, 11, 14) is counted by the last two components w5 = 11 and w6 = 14.
+Remark 6: Though the LUT simplified by the combination of Proposition 1 and Proposition 2 is expected to further reduce
+the memory requirements, the items in the LUT becomes more
+irregular than that of the LUT simplified by Proposition 1. This irregularity makes the design of an efficient item searching
+algorithm difficult. Therefore, we only consider the LUT-based projection algorithm simplified by Proposition 1.
+
+TABLE IV ESTIMATED PARAMETERS IN TABLE II FOR C2
+B. Computational Complexity In this subsection, we evaluate the computational com-
+plexity of the proposed LUT-based projection. Table III summarizes the number of operations required for comparisons, additions/subtractions (noted additions), and multiplications/divisions (noted multiplications), respectively. This table also provides the results of the projection algorithms in [15]–[17]. Several parameters are used in three columns labeled “General”, where sˆ is related to L, and others depend upon codes and SNRs. Table IV presents the estimated parameters for C2 at SNRs in a range of practical interest, where the LUTs are designed with L = 16. Note that the average degree of check nodes for C2 is 6.33. By substituting the averaged values into Table III, the advantage of the LUT-based projection is explicitly shown in the columns labeled “Code C2”. In the following, we explain the general results in Table III.
+The LUT-based projection starts with Algorithm 1. In lines 1–9, the index vector is generated using 2d comparisons, 2d additions, and d multiplications in the worst case that a ≤ vi ≤ b for all i . In line 10, the index vector is sorted using d log d comparisons in average. In line 11, Algorithm 2 is called for table lookup using an average of sˆ additions, where sˆ is mainly related to L. Then, the LUT-based projection algorithm requires a total of 2d + d log d comparisons, 2d + sˆ additions, and d multiplications.
+The projection algorithm in [15] involves three algorithms. We use several notations thereof in the analysis below. Initially, [15, Algorithm 4] performs 2d comparisons. Then, [15, Algorithm 2] is called to perform approximately 3d + 1 comparisons and 2d + 2 additions if the set P = {i : θi > 0} has even cardinality |P |, or d + 1 comparisons and d + 1 additions if |P | is odd. If the cut is not found, [15, Algorithm 4] terminates with returning the projection result; otherwise, [15, Algorithm 3] is called. Suppose that in [15, Algorithm 3], the average number of elements in T is λ. Then, in the worst
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1433
+
+case, [15, Algorithm 3] requires 2d + λ + λ log λ comparisons, 2d + 2λ + 2 additions, and λ multiplications. Upon exiting [15, Algorithm 3], [15, Algorithm 4] needs further 2d comparisons and d + 1 additions in line 4. Let p f denote the probability that the cut is found. The involved operations are listed in Table III for |P | even or odd, respectively.
+The projection algorithm, [16, Algorithm 1], comprises three branches, where the third one is most time-consuming and undertaken with probability approaching one as found in our simulations. In this branch, lines 1–2 involve 2d comparisons and d additions, lines 8–10 involve respectively 3d +1 comparisons in average and at most 2d −2 additions, and line 14 needs at most d−2 additions. If the condition in line 10 is unsatisfied, then linearProjection2simplex in line 13 calls the algorithm of [34, Figure 2]. Suppose that [34, Figure 2] is called with probability pns and the “While” clause is performed μ times on average. Then, lines 10 and 13 in [16, Algorithm 1] result, with probability pns, in μ(2d + 1) comparisons, μ(2d + 4) additions, and 2μ multiplications. The required operations for [16, Algorithm 1] are shown in Table III.
+For [17, Algorithm 1], the operations are counted for the value of 1T f in line 3 being even or odd, respectively. Let pw be the probability that the condition in line 8 is unsatisfied. Then, the required operations for this algorithm are given by the last two rows of Table III.
+As validated by code C2, we may claim that the LUT-based projection algorithm has the least computational complexity, although it is subject to a slight increase in the number of divisions for large d values. This is also demonstrated by the simulation results on the average decoding time per frame required by the ADMM decoding for both example codes.
+
+TABLE V PARAMETERS OF QUANTIZATION FOR SIMULATIONS
+
+VI. SIMULATION RESULTS
+In this section, we illustrate the frame error rate (FER) performance and efficiency of the ADMM penalized decoding using the LUT-based projection algorithm. The length-2640 Margulis code C1 [29] and the length-576 IEEE 802.16e code C2 [30], both mentioned in Subsection IV-B, are chosen as examples of regular and irregular LDPC codes, respectively. Note that C1 has the variable node degree dv = 3 and the check node degree dc = 6, and C2 has the check node degrees dc = 6 and 7, both with rate 1/2. In addition, a length-1000 and rate-3/4 regular LDPC code C3 with dv = 3 and dc = 12 is employed to illustrate the performance of combined LUT and check node decomposition schemes. The AWGN channels with BPSK modulation are assumed. The penalty parameters ρ in (4) and η in (8) are optimized to achieve the best FER performances with respect to different setups of quantization parameters, including range [a, b], interval τ , and levels L. Table V elaborates several cases of combinations of the parameters for each code. For C3, the setups in cases 1, 2 and 3 are employed for the degree-3, degree-6, and degree-7 decompositions, respectively. The simulation results on the original ADMM penalized decoding are also provided with the penalty parameters optimized. In all simulations, we use the overrelaxed ADMM technique with parameter θ = 1.9 to speed up the decoding, and set the maximum number of iterations to be 1000.
+
+Fig. 3. FER Comparison between the ADMM decoding methods for C1 over the AWGN channel.
+A. Regular LDPC Code C1
+Fig. 3 compares the FER performances between the original and LUT-based ADMM decoding for C1 with early termination (ET) [8] employed. The results on the normalized min-sum decoding (NMS) [35] with an optimized factor of 0.8 are provided for comparison. Note that the original ADMM decoding is optimized with ρ = 3.0 and η = 0.8 [22]. It is observed that in cases 1, 2, and 4, the LUT-based decoding suffers significant FER performance losses and error floors above 10−6 in relatively high SNR region. Clearly, case 4 with the smallest range [−0.9, 1.9] and the largest interval τ = 0.4 corresponds to the worst performance. In the range [−1.0, 2.0], τ = 0.2 in case 1 makes no obvious FER improvement compared with τ = 0.3 in case 2. However, when the range is increased to [−1.3, 2.3] for cases 3 and 5, the LUT-based decoding can obtain comparable FER performances to that of the original ADMM decoding, where the finer interval τ = 0.3 makes no obvious FER improvement than τ = 0.4. Therefore, for the LUT-based decoding of C1, the quantization range plays a more important role than the interval in improving the FER performance.
+Fig. 4 compares the average number of decoding iterations at SNRs of practical interest, where only cases 3 and 5
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1434
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+Fig. 4. Comparison of average number of iterations for C1, where “+” means Fig. 5. Comparison of average decoding time per frame for C1. the combined schemes.
+
+for the LUT-based decoding are considered according to Fig. 3. For comparison, the results with incorporating early termination (ET), projection reduction (PR) [18], and layered scheduling (Layered) [19] are also respectively provided. Note that Fig. 3 does not provide the curves related to the PR and layered techniques since they have no obvious impacts on the FER performances. From Fig. 4, it is observed that the LUT-based decoding converges more slowly than the original ADMM decoding. However, this gap can be reduced by early termination and becomes marginal as SNR increases. This may be explained mainly by the fact that truncation of the most reliable LLR messages outside the quantization range degrades the convergence performance of the LUT-based decoding, especially at lower SNRs. Intuitively, a smaller τ can make the approximate Euclidean projection closer to the exact projection, though it implies more quantization levels and increases the memory cost. Obviously, the smaller τ = 0.3 does improve the convergence performance than τ = 0.4. When further combined with the PR and Layered techniques, the LUT-based decoding has a significantly improved convergence performance which tends to become closer to that of the original ADMM decoding.
+Fig. 5 shows the decoding time in seconds averaged from 106 frames at each SNR value, where all simulations are performed with C++ programming on a 3.2GHz desktop processor. Note that Figs. 3 and 4 plot only one curve, labeled “Original ADMM”, for the ADMM decoding methods in [15]–[17] since they make no differences therein. However, Fig. 5 plots three curves in respect of their different computational complexities as shown in Table III. In this figure, representative results related to the combined schemes with the ET, PR, and Layered techniques are presented in order to clearly illustrate the impacts of these techniques.
+From Fig. 5, we see that the LUT-based decoding in either case 3 or 5 consumes much less time than all the original ADMM decoding methods. Thus, the LUT-based decoding
+
+Fig. 6. FER comparison between the ADMM decoding methods for C2 over the AWGN channel.
+protrudes its advantage in computational complexity versus its slower convergence performance. Compared with the more efficient original ADMM decoding in [15], the LUT-based decoding in case 3 can save the decoding time by approximately 24% to 33% over the given SNR range. Under early termination, the LUT-based decoding can save a significant amount of decoding time similar to that of the original ADMM decoding. When further combined with the PR and Layered techniques, the LUT-based decoding receives more benefits in time efficiency. Note that similar tendencies in other decoding cases under these techniques have been found in our simulations.
+B. Irregular LDPC Code C2 Fig. 6 compares the FER performances among the ADMM
+decoding methods for C2 with early termination employed,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1435
+
+Fig. 7. Comparison of average number of iterations for C2.
+
+Fig. 9. FER comparison between the ADMM decoding methods for C3 over the AWGN channel.
+
+and average decoding time, respectively. For example, by comparing the LUT-based decoding in case 1 with the original ADMM decoding in [16], a reduction of approximately 36% to 39% average decoding time per frame can be computed from Fig. 8. For the LUT-based decoding in case 2, the combined PR-Layered technique can further save the average decoding time by approximately 25% to 33%.
+
+Fig. 8. Comparison of average decoding time per frame for C2.
+where the original ADMM decoding in [15]–[17] is optimized with ρ = 4.0 and η = 2.2, and the min-sum decoding is again normalized with 0.8 [35]. Roughly stated, the LUT-based decoding for C2 presents a similar tendency to that for C1 in regards of the impacts of quantization parameters on the FER performance. The quantization range [−1.6, 2.6] could be considered appropriate since no more evident FER improvement can be made by further extending the range. This is validated in case 4 which has a setup of the largest range [−2.2, 3.2] and the finest interval τ = 0.2. However, a different phenomenon for C2 is observed that, in the appropriate range [−1.6, 2.6], tuning the interval τ from 0.3 to 0.2 can achieve a gain of around 0.1dB. This may be explained by the difference in iterative decoding convergence conditions for regular and irregular LDPC codes.
+Fig. 7 and Fig. 8 show similar tendencies of the LUT-based decoding for C2 to that for C1 in average number of iterations
+
+C. Regular LDPC Code C3 With High-Degree Check Nodes
+Fig. 9 compares the FER performances among the ADMM decoding methods for C3 under the degree-3, degree-6, and degree-7 decompositions, respectively. The results on the NMS decoding for the same code are also provided. It is observed in Fig. 9 that the original ADMM decoding suffers FER performance losses of less than 0.04dB from the check node decompositions, among which the degree-3 decomposition corresponds to the worst case while the degree-6 and degree-7 decompositions yield similar FER curves. One reason for the losses is that the ADMM decoding converges slower after check node decompositions, as shown in Fig. 10. This implies a more probably erroneous termination when the fixed maximum number of iterations is reached. Compared with the original ADMM decoding, the LUT-based ADMM decoding combined with the check node decompositions is subject to a loss of less than 0.08dB, whereas having coding gains of more than 0.1dB over the NMS decoding.
+Fig. 10 and Fig. 11 compare the average number of iterations and the average decoding time, respectively, for code C3 with the same check node decompositions. Fig. 10 shows that under the check node decompositions, the original ADMM decoding requires a nearly doubled to tripled number of iterations over the given SNR range, whereby the LUT-based decoding needs a slight further increase in iterations. However, Fig. 11 shows that the LUT-based decoding can recover the loss in decoding time by approximately 25% to 30% that of the original ADMM decoding with decompositions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+1436
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 65, NO. 4, APRIL 2017
+
+Fig. 10. Comparison of average number of iterations for C3.
+
+Euclidean projections. As proved theoretically and supported by simulation results, it is promising to choose a small quantization range so as to reduce the memory cost of LUTs while maintaining the FER performance of the ADMM decoding of LDPC codes. The efficiency advantage of the LUT-based ADMM decoding may be viewed as a tradeoff against the memory cost. For LDPC codes with high-degree check nodes, the huge memory cost of the LUT-based ADMM decoding can be reduced by incorporating check node decomposition techniques in the way of regulating the dimensions of polytopes. Simulation results have shown that the use of check node decomposition techniques yields various performance losses in order to reduce the memory cost of the LUT-based decoding. Furthermore, simulation results have shown that the LUT-based decoding of LDPC codes can also be improved to different extents by combining with other complexity reduction techniques, including early termination [8], projection reduction [18], and layered scheduling [19].
+Finally, the work on the LUT-based ADMM decoding may be extended to: a) global fixed-point implementation, b) check node decomposition combined with parallel implementation, and c) low-complexity LUT-based projection algorithm based on the simplification of LUTs by both Propositions 1 and 2. The results on these directions may make the LUT-based ADMM decoding technique more competitive in high speed communications at low to moderate SNR values.
+
+ACKNOWLEDGMENT
+The authors would like to thank the Editor and the anonymous reviewers for their constructive comments which helped improve the quality of this paper.
+
+REFERENCES
+
+Fig. 11. Comparison of average decoding time per frame for C3.
+Although the combination of LUT-based projection and check node decompositions results in a degraded ADMM decoding, it provides a way to implement the LUT-based ADMM decoding for LDPC codes with high-degree check nodes at a reduced memory cost. For the example code C3 with check degree dc = 12, the LUT has T = 9, 657, 700 items after simplification by Proposition 1 and requires to store dc × T = 115, 892, 400 real numbers for L = 15. When combing the degree-7 decomposition, the number of items in the LUT can be reduced to T = 116, 280, and the number of real numbers to be stored is reduced to 7 × T = 813, 960.
+Note that the above simulation results are obtained in serial computing models. However, the disadvantage of check node decompositions in decoding time may be expected to overcome by parallel computing due to its layered nature.
+VII. CONCLUSION
+In this paper, we have investigated the design and simplification of LUTs for efficient implementation of approximate
+
+[1] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[2] P. O. Vontobel and R. Koetter. (Dec. 2005). “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes.” [Online]. Available: http://arxiv.org/pdf/cs/0512078
+[3] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 82–89, Jan. 2007.
+[4] C. Daskalakis, A. G. Dimakis, R. M. Karp, and M. J. Wainwright, “Probabilistic analysis of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 8, pp. 3565–3578, Aug. 2008.
+[5] S. Arora, C. Daskalakis, and D. Steurer, “Message-passing algorithms and improved LP decoding,” IEEE Trans. Inf. Theory, vol. 58, no. 12, pp. 7260–7271, Dec. 2012.
+[6] K. Yang, X. Wang, and J. Feldman, “A new linear programming approach to decoding linear block codes,” IEEE Trans. Inf. Theory, vol. 54, no. 3, pp. 1061–1072, Mar. 2008.
+[7] M. Taghavi and P. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[8] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[9] A. Dimakis, A. Gohari, and M. J. Wainwright, “Guessing facets: Polytope struture and improved LP decoder,” IEEE Trans. Inf. Theory, vol. 55, no. 8, pp. 3479–3487, Aug. 2009.
+[10] A. Tanatmis, S. Ruzika, H. Hamacher, M. Punekar, F. Kienle, and N. Wehn, “A seperation algorithm for improved LP decoding of linear block codes,” IEEE Trans. Inf. Theory, vol. 56, no. 7, pp. 3277–3289, Jul. 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+JIAO et al.: EFFICIENT ADMM DECODING OF LDPC CODES USING LOOKUP TABLES
+
+1437
+
+[11] X. Zhang and P. H. Siegel, “Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes,” IEEE Trans. Inf. Theory, vol. 58, no. 10, pp. 6581–6594, Oct. 2012.
+[12] M. Helmling, S. Ruzika, and A. Tanatmis, “Mathematical programming decoding of binary linear codes: Theory and Algorithms,” IEEE Trans. Inf. Theory, vol. 58, no. 7, pp. 4753–4769, Jul. 2012.
+[13] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn., vol. 3, no. 1, pp. 1–122, Jan. 2011.
+[14] I. Debbabi, N. Khouja, F. Tlili, B. L. Gal, and C. Jego, “Multicore implementation of LDPC decoders based on ADMM algorithm,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Shanghai, China, Mar. 2016, pp. 971–975.
+[15] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in Proc. IEEE Int. Symp. Inf. Theory, Istanbul, Turkey, Jul. 2013, pp. 1501–1505.
+[16] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large scale LP decoding with low complexity,” IEEE Commun. Lett., vol. 17, no. 11, pp. 2152–2155, Nov. 2013.
+[17] M. Wasson and S. C. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in Proc. 49th Asilomar Conf. Singals, Systemes, Comput., Pacific Grove, CA, USA, Nov. 2015, pp. 1015–1020.
+[18] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 909–912, Jun. 2015.
+[19] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast converging ADMM penalized algorithm for LDPC decoding,” IEEE Commun. Lett., vol. 20, no. 4, pp. 644–647, Apr. 2016.
+[20] X. Liu, S. C. Draper, and B. Recht, “The l1 penalized decoder and its reweighted LP,” in Proc. 15th Annu. Allerton Conf. Commun., Control, Comput., Monticello, IL, USA, Oct. 2012, pp. 1572–1579.
+[21] X. Liu, S. C. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” in Proc. IEEE Inf. Theory Workshop (ITW), Sep. 2012, pp. 367–371.
+[22] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[23] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM penalized decoder for irregular low-density parity-check codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 913–916, Jun. 2015.
+[24] X. Liu and S. C. Draper, “ADMM LP decoding of non-binary LDPC codes in F2m ,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2985–3010, Jun. 2016.
+[25] X. Liu and S. C. Draper, “Encoding and decoding algorithms for LP-decodable multipermutation codes,” in Proc. IEEE Inf. Theory Workshop, Jerusalem, Israel, Apr. 2015, pp. 1–5.
+[26] X. Liu and S. C. Draper, “LP-decodable multipermutation codes,” IEEE Trans. Inf. Theory, vol. 62, no. 4, pp. 1631–1648, Apr. 2016.
+[27] I. Debbabi, N. Khouja, F. Tlili, B. L. Gal, and C. Jego, “Evaluation of the hardware coomplexity of the ADMM approach for LDPC decoding,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), Doha, Qatar, Apr. 2016, pp. 1–6.
+[28] M. Wasson, M. Milicevic, S. C. Draper, and G. Fulak. (May 2016). “Hardware-based ADMM-LP decoding.” [Online]. Available: https://arxiv.org/abs/1605.06134
+[29] D. J. C. MacKay. Encyclopedia of Sparse Graph Codes, accessed on Apr. 2016. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+[30] IEEE 802.16 Broadband Wireless Access Project, LDPC Coding for OFDMA PHY, IEEE Standard C802.16e-05/066r3, Jan. 2005.
+[31] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[32] M. Chertkov and M. Stepanov, “Pseudo-codeword landscape,” in Proc. IEEE Int. Symp. Inf. Theory, Nice, France, Jun. 2007, pp. 1546–1550.
+[33] X. Jiao and J. Mu, “Improved check node decomposition for linear programming decoding,” IEEE Commun. Lett., vol. 17, no. 2, pp. 377–380, Feb. 2013.
+
+[34] J. Duchi, S. Shalev-Shwartz, Y. Singer, and T. Chandra, “Efficient projections onto the L1-ball for learning in high dimensions,” in Proc. Int. Conf. Mach. Learn., Helsinki, Finland, Jul. 2008, pp. 272–279.
+[35] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity-check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+Xiaopeng Jiao received the B.Sc. and Ph.D. degrees from Xidian University, China, in 2004 and 2009, respectively. He is currently an Associate Professor with the School of Computer Science and Technology, Xidian University. His research interests include information and coding theory.
+Jianjun Mu received the M.Sc. degree in applied mathematics and the Ph.D. degree in communication and information systems from Xidian University, Xi’an, China, in 1997 and 2002, respectively. He is currently a Professor with the School of Computer Science and Technology, Xidian University. His major research interests include error-correcting coding, information theory, cryptography, and optimization methods for error correcting codes.
+Yu-Cheng He (M’05) received the B.Sc., M.Sc., and Ph.D. degrees from Xidian University, Xian, China, in 1986, 1989, and 2002, respectively, all in information and communications engineering. From 1999 to 2000, he was an Exchange Student working on the Ph.D. degree with Shizuoka University, Hamamatsu, Japan. He was an Associate Professor of Communications Engineering with Xidian University. From 2003 to 2005, he completed a two-year Post-Doctoral Fellowship with the École Polytechnique de Montréal, Montréal, QC, Canada. Since 2012, he has been a Professor of Communications Engineering with Huaqiao University, Xiamen, China. He has authored or co-authored a number of journal and conference papers in these areas. His research interests include channel coding and modulation, wireless communications, and digital communications systems.
+Chao Chen received the Ph.D. degree from Xidian University in 2010. He is currently with the School of Electronic Engineering, Xidian University. His research interests include information theory, channel coding, and network coding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:19 UTC from IEEE Xplore. Restrictions apply.
+
+

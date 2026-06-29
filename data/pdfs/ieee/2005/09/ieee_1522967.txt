@@ -1,0 +1,373 @@
+Reduced complexity, FPGA implementation of quasi-cyclic LDPC decoder
+
+Christian Spagnol, William Marnane, Emanuel Popovici
+
+Abstract— This paper describes an FPGA implementation of a decoder for a particular family of low density parity check (LDPC) codes, the quasi-cyclic LDPC codes. The structure of a quasi-cyclic code is well known and allows us to reduce the complexity of the interconnections between bit nodes and check nodes. The decoder has a semi-parallel architecture and it takes full advantage of the structure of the code and the hardware resources present in an FPGA. We achieve simple memory controller resulting in an efficient use of the memory. The decoder is implemented based on the parameters that characterize a quasi-cyclic LDPC code. This makes it easily adaptable for a class of quasi-cyclic codes. We evaluate the performance of our codes and present some FPGA design trade-off.
+I. INTRODUCTION
+Introduced by Gallager in 1963 [1] Low Density Parity Check Codes were neglected until the work of MacKay [2] in 1995; these codes yield high performance on the binary symmetric channel (BSC) as well as on the additive white Gaussian noise (AWGN) channel, and can outperform the Turbo codes in many applications. The algorithm used for the decoding is called belief propagation, known also as the sum-product algorithm, it uses a graphical representation of the code, the Tanner Graph. Unfortunately the hardware implementation of this algorithm involves making a number of design choices that have a trade off between the BER performance and the complexity. One of the dominant problems of any implementation of a LDPC decoder depends on the level of messages passing between variable nodes and check nodes. Every edge of the Tanner graph represents a connection that must be implemented in some way, leading to the classical area versus time design problem. By choosing a code with some degree of regularity this problem can be alleviated. One group of codes that possess this quality is the quasi-cyclic codes family. These codes were first introduced by Townsend in [3] and have seen recent interest both for the mathematic characteristics [4] and for the possibility of efficient encoding[5]. This paper presents an FPGA implementation of a decoder that achieves simplified interconnections and memory control in comparison with standard decoders, and has a parameterization that makes it easy to generalize for a large family of quasi-cyclic codes.
+Christian Spagnol, William Marnane are with the Dept. of Electrical Electronic Engineering, University College Cork, Ireland
+Emanuel Popovici is with the Department of Microelectronics Engineering, University College Cork, Cork, Ireland
+This project is supported by The Embark Initiative operated by IRCSET.
+
+Check Nodes
+
+S
+
+S
+
+S
+
+S
+
+1
+
+2
+
+3
+
+4
+
+X
+
+X
+
+X
+
+X
+
+X
+
+X
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Bit Nodes
+
+Fig. 1. Tanner graph from parity check matrix
+
+II. LOW DENSITY PARITY CHECK CODES
+LDPC codes are linear block codes and so they are defined as the null space of a parity check matrix H. Their characteristic is the sparseness of this matrix. For block codes a vector c is a codeword if (and only if ) it satisfies: cHT = 0
+LDPC codes can be represented by a Tanner Graph, see figure 1, that is drawn from the matrix H.This is drawn from the matrix by mapping the rows of the matrix to the check nodes and the columns to the bit nodes. The ’1’s of the matrix form the edges of the graph. This representation of the code allows us to understand the meaning of the belief propagation algorithm as a special case of the message passing algorithm[2]. If any check node computes the value rij(b) as the probability of the check i been satisfied given that the value of node j is b, and any bit node computes the value qij(b) as the probability of that bit to be b given the event that all the check nodes involving bit i except check j are satisfied, then all the messages relative to the bit nodes must be computed and have to be passed to the check nodes they are connected to before these can compute their messages; and vice versa. The belief propagation algorithm starts initializing the bit nodes with values calculated from the data received, keeps updating alternatively check nodes and bit nodes, and sends the messages calculated between the nodes until a codeword is found or other exit criterions are matched. It is demonstrated that under the hypothesis of no cycle in the graph this algorithm converges to the correct codeword, and that even if this hypothesis is not achieved this algorithm performs well.
+III. QUASI-CYCLIC LDPC CODES
+A quasi-cyclic code of index t is a linear block code C in which a cyclic shift of any codeword in C by t positions is also a codeword. The generator matrix G for these codes is a matrix where every row is a t circular shift of the previous row. It can be shown that every generator matrix
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:37:02 UTC from IEEE Xplore. Restrictions apply.
+
+for a quasi-cyclic code can be decomposed in t circulant matrices where circulant matrix A is defined as square p×p matrix in which each row of A is one right cyclic shift of the previous row. This property makes the encoding suitable for low cost hardware implementation[5]. If the generator matrix G is a generator matrix for the quasicyclic code C then the parity check matrix associated with the code is also composed of circulant matrices. A parity check matrix H, of dimension m × n can be constructed by horizontally concatenating t circulant submatrices, each of dimension p × p . This type of codes has shown to have numerous advantages due to the possibility to represent the circulant submatrices by polynomials, thus allowing easier computation of the generator matrix from the parity check matrix, and vice versa. It is also possible to generate the circulant submatrices such that the matrix H has some chosen properties. Here we consider a particular family of quasi-cyclic matrices that have the form :
+
+ H11 0 ··· 0 I
+
+H = 
+
+I
+0
+...
+
+H21 0 ···
+I ... ... ... ... ...
+
+0
+...
+0
+
+0 ··· 0 I Hα1
+
+H12 I 0 ··· 0 
+
+0
+...
+0
+
+H22 I . . .
+0 ... ... ... ... ...
+
+0
+...
+I
+
+
+
+I 0 ··· 0 Hα2
+
+(1)
+
+The matrices Hic with c ∈ {1, 2} and i ∈ {0, 1, · · · , α} are circulant square matrices of dimension n × n generated by a binomial pci = xaic + xbci .
+By Fixing the value of m the dimension of the code can be
+
+changed by changing the value of α.
+
+This family of matrices H has been chosen because if the
+
+construction of the circulant submatrices satisfies certain
+
+conditions then the Tanner graph does not contain any
+
+cycle of length less than eight, as demonstrated in [6], thus
+
+performing better than other quasi-cyclic codes.
+
+IV. DECODER ARCHITECTURES
+A. General architectures
+The computations of the messages for the check nodes and bit nodes carried out in the belief propagation algorithm are independent from each other for each iteration, suggesting that a parallel architecture can be implemented. As mentioned earlier, the Tanner graph associated with the parity check matrix of the code dictates the complexity of the connections network in between nodes. In a full parallel architecture, the number and complexity of the interconnections results in implementations where up to 80% of the area is dominated by the routing. The problem can be partially mitigated through reducing the parallelism (eventually reaching a complete serial architecture) and using memory elements to store the intermediate messages passed along the edges of the Tanner graph. This solution reduces complexity of the routing but introduces new complexity in the memory control and in the routing between memories and node elements. Another drawback of this
+
+solution is the reduction of the throughput of the decoder because every iterations of the belief propagation algorithm has now to be carried on in more than a single clock cycle. This can be alleviated by pipelining several blocks.
+B. Quasi-cyclic codes architectures
+A possible way to reduce the overall complexity of the decoder is to find a good parity check matrix that constitutes a good trade off between performance of the code and complexity of the hardware. The quasi-cyclic codes are some of the best candidates due to the structure of the parity check matrix and the good performances they have displayed. As seen in section III a quasi-cyclic parity check matrix structure is represented by two parameters m and α. Following from this, two types of architectures can be thought of from a quasi-cyclic code. The first is based on the parameter α and the second on m. Since m is much bigger than α, one architecture is close to a serial implementation and the other is close to a full parallel one. Both of these architectures have advantages and disadvantages. This paper deals mainly with the α-based architecture in comparison with a semi-parallel architecture. In particular the architecture here implemented is called α2 architecture because both the number of bit nodes and check nodes instantiated depend on the parameter α.
+V. α2 ARCHITECTURE
+Considering a (3,6) LDPC code, the problem that afflicts a serial implementation of the decoder is the structure of the address control logic. This is because the complexity of the interconnections in the Tanner graph is reflected in the randomness of the accesses in memory. If a (3,6) regular LDPC code, described by the matrix (1), is considered then full advantage of the structure can be taken by to instantiating a number of check nodes equal to α and a number of bit nodes equal to 2α. It will be shown how the α2 architecture reduces the complex memory control to a small number of adders and multiplexes, and allows full advantage to be taken of some features typical of the FPGA memory. Fig 2 shows the general architecture of this type of implementation.
+
+mbiot2dnαuoldeess qb_lmocekms
+
+Π1
+
+Π2
+
+mcnohαodeducelkes rb_mloecmks
+
+Fig. 2. General architecture of a α − α implementation
+The first bit node module computes the calculations relative to all the bit nodes that are in the first matrix H11,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:37:02 UTC from IEEE Xplore. Restrictions apply.
+
+so the second bit node module is related to the H21 and so on. Every check node module is responsible for performing the computations related to all the check nodes in each row of matrix (1), therefore α check node modules are needed. This solution allows all the q messages and r messages to be calculated in the same number of clock cycles, m. It is also advantageous because the messages coming from one of the bit node modules are used only by two check node modules, thus every q mem block is connected with only two check node modules so that the shuffle network Π1 in Fig. 2 can be split in 2α smaller networks. The same is true for the check nodes, the messages coming from each of the modules are used by four bit node modules, again reducing the complexity of the shuffle network Π2.
+
+A. q mem and r mem architectures
+
+We aim to reduce the address control to a single counter
+
+common to all the memories in the design. This is possible because every Hij is a circulant matrix generated from a binomial that can be described by two parameters {e(1), e(2)}
+
+representing the positions of the two ones, or alternatively
+
+by {e(1), s}, where the second is the separation between
+
+the two. This particular structure allows us to know exactly
+
+where the required messages are located in the memory
+
+and, most important, the relationships that describes where
+
+to find the next message are fixed for every submatrix Hij.
+
+Consider the matrix:
+
+
+
+
+
+0101000
+
+Hij
+
+=
+
+
+
+0 0 0 1
+
+0 0 0 0
+
+1 0 0 0
+
+0 1 0 0
+
+1 0 1 0
+
+0 1 0 1
+
+0 0 1 0
+
+
+
+(2)
+
+0100001
+
+1010000
+
+This is defined by the parameters ejj(1) = 1, ejj(2) = 3 or equivalently by ejj(1) = 1, sjj = 2.
+1) Design of q memory : The parity check relation relative to the first row of (2) requires the messages coming from the bit node number one and bit node number three, the second check needs the messages coming from the bit nodes two and four, so the n-th check needs the messages coming form the bit number n−1+ejj(1) and n−1+ejj(2). The −1 is necessary only because the first check (bit) is called check (bit) zero and not check (bit) one. Alternately if is decided to call bit node zero the first that has a one in the first row then the messages coming form the bit number n − 1 and n − 1 + sji are required by the n-th check. Sequentially the architecture in fig 3 is created. Every message coming from a bit node is copied in the same position of the three different memories. Every memory is m x 4, because the number of messages that are to be stored are m and each is 4 bits wide. During the writing phase (update q messages phase) the addresses presented in the ADDR bus are the output of a 0 to m − 1 counter. After m clocks all the messages have been updated and written in memory so the update r messages phase begins (reading phase for the q mem). The first memory output is the value stored in position n and the second memory output is the
+
+12 DATA_IN
+|log m| ADDR
+r/w
+
+4
+
+in
+
+out
+
+addr
+
+mem0
+
+4 in
+
+r/w out
+
+mem1
+
+addr
+
+r/w
+
+s
+
+j i
+
+4
+
+out
+
+in
+
+mem2
+
+addr
+
+e
+
+j i
+
+r/w
+
+q_mem block i-j
+
+Fig. 3. q mem block architecture
+
+value stored in position n + sij, both of these are needed by the (n + 1)-th check node as discussed earlier. Both these
+outputs are required by the check nodes in the i-th row of
+the matrix (1), so they are connected with the same check
+node module. The output of the third memory is related
+to the value required from the check nodes that are in the
+(i + 1)-th row. This is due to the presence of the identity
+submatrices in matrix (1). These connect a bit node with two separated rows. The subtraction of the value eji (1) has to be carried out because it has been decided to call bit node zero the bit node that occupies position eji (1).Figure 4 shows all the interconnections that interest the i-th check
+node module.
+The q memory block names are defined by the two
+
+(bqi-l-mo1c)ek-m1 qbi -l-mo1cekm bqi --lmo2cekm (qbi+-lmo1c)ek-m2
+
+cmheocdkulneoide
+
+Fig. 4. In/out connections for a check node module
+parameters that identify the submatrices Hij and the check node module names only by the index i. This convention allows to represent how the connections differ from the first α q mem blocks and the second, reflecting the two different structures of the matrix (1).
+2) Design of r memory : By calling the bit node which has a one in the first row bit node zero, the first bit node is the second column of matrix (2). This node needs to receive the messages arriving from the first check node, the check node m − sij and a third one coming from the eij
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:37:02 UTC from IEEE Xplore. Restrictions apply.
+
+check node of the row where the identity matrix is located.
+So the n-th bit node needs the messages coming from the check nodes n − 1, n − 1 + m − sij, and n − 1 + eji . Figure 5 shows an architecture for the r mem block.
+
+br-lmoicekm br-ilm+o1cekm
+
+mbiiot-dn1uoldee
+
+24 DATA_IN
+|log m| ADDR
+r/w
+
+m-s1i
+
+e
+
+1 i-1
+
+4 in
+
+mem0
+
+out
+
+4 in 4 in
+
+4
+
+in
+
+out mem 1
+
+mem2 out
+
+mem 3
+
+out
+
+4
+
+in
+
+mem4
+
+out
+
+m-s
+
+2 i
+
+4
+
+in mem5
+
+out
+
+e
+
+2 i+1
+
+r_mem block i
+
+Fig. 5. r mem block architecture
+Every one of the α r mem block contains six m x 4 memories and each one of the six messages coming from a check node module is stored in a different memory. As in the q mem block the ADDR bus is the output of the 0 to m−1 counter and the writing/reading phases alternate every m clocks. During the writing phase, which corresponds with the update r messages phase, the messages coming from the bit node module are stored in the same positions of the six memories. Considering the reading phase, the first memory gives the message related to the first bit node in Hi1, the second memory the one related to the second bit node in the same matrix, so both these messages are connected with the same bit node module. The third input of this bit node module is connected to a third memory of the r mem block, identified by the position of the identity submatrix for that column. A similar discussion is valid for the others three memories. Figure6 shows all the interconnections that interest the i - 1 bit node module and the i - 2 bit node modules. It is important to note that the decision to represent the circular matrix with the parameters {e(1), s} instead of {e(1), e(2)} does not achieve any reduction in the number of components, but it simplifies the interconnections. This is because, with this solution, any bit node module (or check node module) always refers to the first element of the binomial as the first message to compute, even if the shifting has made it the second (see row 5 or column 4 of matrix (2) ) and independently from the position of the relative identity submatrix.
+VI. IMPLEMENTATION ASPECTS
+We use a Xilinx VirtexE XCV2000-6 FPGA chip to map our design. We use Block SelectRAM+ which are
+
+rb-lmio-1cekm rb-lmoicekm
+
+bmiiot-dn2uoldee
+
+Fig. 6. In/out connections for a bit node module
+
+dedicated blocks of memory that are integrated on-chip. The possibility of accessing the memory in configurations that vary from 1-bit wide to 16-bit wide allows the design to store the 4-bit wide messages without any waste of resources. For values of m < 512 it is possible to take full advantage of the dual port architecture of the memory and implement two memories in the same port allowing other parameters of the code to grow. The construction of the architecture of the decoder is completely parameterized with the parameters of the codes allowing the architecture to be used for a large family of codes.
+VII. CONCLUSIONS
+In this contribution a novel architecture for a quasi-cyclic LDPC decoder has been proposed. The architecture takes full advantage of the structure of parity check matrix of quasi-cyclic codes and translates it to a simplified memory control that allows the reduction of the area and of the power consumed by the FPGA implementation of the decoder. Table I shows the results of the implementation in comparison with other architectures.
+
+Slices 4 Inp LUTs Block Ram Min Period (ns) Throughput (Mbps)
+
+serial
+302 (1.5%) 522 (1.3%)
+10 (6%) 43.48 0.538
+
+semi-paral
+2188 1703 32 41.67 11.7
+
+α2
+994 1689
+24 37.04
+15
+
+Parallel
+16843 (87%) 29031 (75%)
+0 (0%) 33.3
+186.64
+
+TABLE I SYNTHESIS RESULTS COMPARISON.
+
+REFERENCES
+[1] R.G.Gallager. Low density parity check codes, 1963. [2] D.J.C.MacKay and R.M.Neal. Good codes base on very sparse
+matrices. Cryptography and Coding, 5th IMA Conference, DEC, 1995. [3] R.L.Townsend and Jr. E.J.Weldon. Self-orthogonal quasi-cyclic codes.
+IEEETIT: IEEE Transactions on Information Theory, Vol. 13 No.2, pp 183-195, 1967. [4] K.Lally and P.Fitzpatrick. Algebraic structure of quasi-cyclic codes. Discrete Applied Mathematics, vol. 111, No. 1-2, pp. 157-175, 2001. [5] S.J.Johnson and S.R.Weller. A family of irregular ldpc codes with low encoding complexity. IEEE Communications Letters, Vol. 7, No.2, pp. 79-81, 2003. [6] M.Rossi and M.Sala. On a class of quasi-cyclic codes. To appear in MEGA 2005, Download from http://www.bcri.ucc.ie.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:37:02 UTC from IEEE Xplore. Restrictions apply.
+
+

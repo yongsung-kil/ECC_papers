@@ -1,0 +1,409 @@
+2017 IEEE International Symposium on Information Theory (ISIT)
+Neural Offset Min-Sum Decoding
+
+Loren Lugosch and Warren J. Gross Department of Electrical and Computer Engineering
+McGill University Email: loren.lugosch@mail.mcgill.ca, warren.gross@mcgill.ca
+
+Abstract—Recently, it was shown that if multiplicative weights are assigned to the edges of a Tanner graph used in belief propagation decoding, it is possible to use deep learning techniques to find values for the weights which improve the error-correction performance of the decoder. Unfortunately, this approach requires many multiplications, which are generally expensive operations. In this paper, we suggest a more hardwarefriendly approach in which offset min-sum decoding is augmented with learnable offset parameters. Our method uses no multiplications and has a parameter count less than half that of the multiplicative algorithm. This both speeds up training and provides a feasible path to hardware architectures. After describing our method, we compare the performance of the two neural decoding algorithms and show that our method achieves error-correction performance within 0.1 dB of the multiplicative approach and as much as 1 dB better than traditional belief propagation for the codes under consideration.
+I. INTRODUCTION
+Deep learning has enabled great improvement in the last few years in many inference and modelling tasks, such as speech recognition [1], object identification in images [2], and game playing [3]. One of the more recent applications for which deep learning has shown promise is the design of belief propagation (BP) decoders for error-correcting codes. BP is a decoding method which proceeds in iterations of message passing. In [4], Nachmani et al. showed that if the Tanner graph (the graph on which messages are passed) is “unrolled” (that is, each iteration is considered separately) and multiplicative weights are placed on the edges of the graph, the resulting decoder is a neural network that can be trained using gradient-based methods. Such “neural decoders” outperform traditional BP, as they learn to use their weights to mitigate the detrimental effect of cycles in the code structure. Neural decoders also require many fewer iterations and in some cases achieve a bit error rate close to that of the maximum likelihood decoder for certain high-density codes that normally decode poorly using belief propagation.
+The approach presented in [4] requires numerous multiplications: the cost of these operations can be high and prevents efficient implementation of these decoders in complexitycritical frameworks, such as real-time hardware implementations. In this paper, we present a modification to offset min-sum decoding (an approximation to BP decoding [5]) in which check nodes learn an additive offset parameter for each edge, rather than a multiplicative weight. Our decoding method achieves error-correction performance similar to the multiplicative weight approach in [4] yet uses no multiplications. It can be optimized using machine learning techniques but requires comparatively few parameters. Moreover, it incurs no extra arithmetic operations, making it fast to train.
+
+The remainder of the paper is structured as follows. Section II describes BP and neural BP. Section III describes the proposed technique, which is validated through a set of experiments in Section IV. We compare our technique with related work in the literature in Section V, and we conclude with Section VI.
+
+II. BELIEF PROPAGATION DECODING
+Before describing our contribution, we review the existing methods for belief propagation decoding of linear errorcorrecting codes.
+
+A. Traditional Belief Propagation
+
+Consider a communication system that uses a binary code and binary phase shift keying (BPSK) modulation. The transmitter sends a random vector X ∈ {−1, +1}n, where n is the code length. The random vector received from the communication channel is Y = X + Z, where Z ∈ Rn is the channel noise vector. If the channel noise is additive white Gaussian noise (AWGN), then the log-likelihood ratio (LLR) of the v’th received value is computed using
+
+lv = log
+
+p(Yv = yv|Xv = −1) p(Yv = yv|Xv = +1)
+
+=
+
+2yv σ2
+
+,
+
+(1)
+
+where σ2 is the variance of the channel noise and y is the observed vector of received values.
+
+In BP decoding, probability messages are exchanged between processing nodes to compute the posterior LLRs of the received vector in an iterative fashion. At each iteration t, the decoder produces a “soft output” vector st that converges to the posterior LLRs over the iterations. The recovered binary word can be extracted from st using a hard decision:
+
+xˆtv =
+
+1, 0,
+
+if stv > 0 otherwise.
+
+The Tanner graph, a bipartite graph derived from the parity check matrix of the code [6], defines a set of variable nodes (VNs) and check nodes (CNs) used to compute the soft output. If the (i,j)-th element of the parity check matrix is a 1, then the i’th CN is connected to the j’th VN. The message μtv,c from VN v to CN c for iteration t is computed using
+
+μvt ,c = lv +
+
+μtc−,v1,
+
+(2)
+
+c ∈N (v)\c
+
+where N (v) is the set of CNs connected to VN v, and μc0,v = 0.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:14:30 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5090-4096-4/17/$31.00 ©2017 IEEE
+
+1361
+
+2017 IEEE International Symposium on Information Theory (ISIT)
+
+The message μtc,v from CN c to VN v for iteration t is computed using
+
+⎛
+
+⎞
+
+μtc,v = 2tanh−1 ⎝
+
+tanh
+
+μvt ,c 2
+
+⎠,
+
+(3)
+
+v ∈M(c)\v
+
+where M(c) is the set of VNs connected to CN c.
+
+Finally, the soft output for iteration t is computed using
+
+svt = lv +
+
+μct ,v.
+
+(4)
+
+c ∈N (v)
+
+The algorithm obtained from iteratively computing messages and outputs using Equations (2) to (4) is an instance of the sum-product algorithm (SPA) described in [7] and hence is referred to as “SPA decoding”. CNs in SPA decoding must perform multiplications and hyperbolic functions to implement Equation (3). To simplify the CN message computation, Equation (3) can be replaced with the “min-sum” approximation [7]:
+
+μtc,v = v ∈mMi(nc)\v(|μtv ,c|)
+
+sign(μtv ,c). (5)
+
+v ∈M(c)\v
+
+The min-sum approximation causes non-negligible degradation in bit error rate (BER) compared to SPA. Different techniques have been proposed to overcome this issue: one of the most effective is the offset min-sum (OMS) technique [5], in which (5) is replaced with Equation (6):
+
+μtc,v = max v ∈mMi(nc)\v(|μvt ,c|) − β, 0
+
+·
+
+sign(μvt ,c),
+
+(6)
+
+v ∈M(c)\v
+
+where β is the correction offset. Proper selection of β allows OMS to yield error-correction performance close to that of SPA decoding.
+
+B. Neural Belief Propagation
+If there are no cycles in the Tanner graph, then SPA exactly computes the posterior LLRs, and a hard decision on the soft output gives the optimal error-correction performance for that code. However, cycle-less codes have poor optimal performance, so codes with cycles are used in practice [8]. BP decoding often performs well for codes with cycles, but it is not guaranteed to be optimal. High-density parity check (HDPC) codes, which have many short cycles, have poor BER when decoded using traditional SPA [9].
+A novel method for bringing the performance of BP closer to the optimal performance was introduced in [4]. In this method, the input LLRs and the messages sent between nodes are weighted using multiplicative parameters. Thus, to compute messages and outputs, Equations (2), (3), and (4) are replaced with Equations (7), (8), and (9), respectively:
+
+⎛⎛
+
+⎞⎞
+
+μtv,c
+
+=
+
+tanh
+
+⎝
+
+1 2
+
+⎝wvt ,inlv
+
++
+
+wct ,v,cμtc−,v1⎠⎠ (7)
+
+c ∈N (v)\c
+
+⎛
+
+⎞
+
+μtc,v = 2tanh−1 ⎝
+
+μvt
+
+⎠
+,c
+
+(8)
+
+v ∈M(c)\v
+
+stv = wv,outlv +
+
+wc ,v,c,outμct ,v,
+
+(9)
+
+c ∈N (v)
+
+where wvt ,in, wct ,v,c, wv,out, and wc ,v,c,out are the aforementioned multiplicative weights. Note that if these weights are equal to 1, then this approach, which we will refer to as “neural SPA”, is equivalent to SPA decoding. While [4] uses SPA as the underlying BP algorithm, we have found that min-sum decoding also achieves excellent results with multiplicative weights, with minimal BER degradation compared to SPA.
+
+A neural SPA decoder is a composition of affine functions and nonlinear functions parametrized by a set of weights, and hence can be considered a kind of neural network. Neural networks are trained using some form of gradient descent: the gradient of the “training loss” (a measure of how poorly the network models the training data) is computed, and the gradient is used to update the weight vector. The updates continue until the training loss is minimized or acceptably low. The gradient is calculated efficiently using backpropagation, an algorithm in which the partial derivatives (informally referred to as the “gradients”) with respect to each layer of the network are calculated recursively using the chain rule. Typically, minibatch stochastic optimization is used: instead of using all training data available, an estimate of the gradient is computed using a small minibatch of examples drawn at random from the training dataset.
+
+The work in [4] shows that it is possible to use minibatch stochastic gradient descent to find weights that improve the error-correction performance of a neural SPA decoder in an offline training phase. Let w be the multiplicative weight vector, and let J(w), the training loss to be minimized, equal
+
+J(w) = E[H(X, S)],
+
+(10)
+
+that is, the expected cross-entropy between the decoder output S and the transmitted codeword in binary format X. The crossentropy, H(X, S), is defined as
+
+H (X,
+
+S)
+
+=
+
+−
+
+1 n
+
+v
+
+Xvlog(σ(Sv)) + (1 − Xv)log(1 − σ(Sv)),
+
+(11)
+
+where σ(), the sigmoid nonlinearity, is a soft, differentiable
+
+version of the hard decision,
+
+σ(x)
+
+=
+
+1
+
+1 + e−x .
+
+(12)
+
+The value of J(w) for a particular w can be estimated by computing the average cross-entropy across a minibatch of training codewords. Since every operation in neural SPA is differentiable, it is possible to compute the gradient of J with respect to the parameters, ∇wJ, using backpropagation. The parameters can then be incrementally updated using the gradient descent update rule or a variant thereof [10].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:14:30 UTC from IEEE Xplore. Restrictions apply.
+1362
+
+2017 IEEE International Symposium on Information Theory (ISIT)
+
+Since CN and VN operations in neural SPA satisfy the message passing symmetry conditions in [11], the probability of error is independent of the transmitted codeword. Thus, training data can be formed by adding AWGN to the all-zeros codeword.
+
+III. NEURAL OFFSET MIN-SUM DECODING
+In this section, we introduce neural offset min-sum (NOMS) decoding, a learning algorithm which achieves performance similar to that of neural SPA but is more efficient and potentially easier to implement in hardware. NOMS is a generalization of OMS; unlike OMS, which uses a single global offset, NOMS uses multiple learnable offset parameters. The learnable offsets serve the dual purpose of reducing error caused by the min-sum approximation and attenuating cycles in the Tanner graph. In this section, we describe how decoding and training proceed in NOMS.
+
+A. Decoding
+Let ReLU(), the “rectifier” activation function commonly used in deep learning [12], be defined as
+
+ReLU(x) = max(x, 0).
+
+(13)
+
+Thus, it is possible to rewrite Equation (6) more compactly as
+
+μct,v = ReLU mvin(|μvt ,c|) − β
+
+sign(μtv ,c) (14)
+
+v
+
+for v ∈ M(c)\v.
+
+Messages between VNs and CNs in NOMS are computed using the same equations as OMS, except Equation (14) is replaced with
+
+μct,v = ReLU mvin(|μvt ,c|) − βct,v
+
+sign(μtv ,c), (15)
+
+v
+
+where βct,v is a learnable offset parameter for the edge connecting CN c to VN v during iteration t. As is the case for neural SPA decoders, the error-correction performance of a NOMS decoder is independent of the transmitted codeword.
+
+B. Training
+Since all of the operations used in NOMS decoding are differentiable, the offset parameters can be learned using minibatch stochastic gradient descent in an offline phase, as described in Section II. A potential problem for backpropagation arises in that some of the constituent operations (ReLU(), min(), abs(), and sign()) are not differentiable at certain points. Deep learning frameworks such as TensorFlow overcome this problem by simply choosing one of the subgradients at the points of non-differentiability in order to backpropagate through piecewise differentiable operations [13]. This is the approach we take to train NOMS decoders. (Note that since the derivative of sign() is equal to 0 almost everywhere, gradients in the NOMS decoder effectively only flow through the ReLU() branch of the CN.)
+
+C. Implementation Cost
+NOMS can achieve good performance while using substantially fewer operations and parameters than the version of neural SPA presented above. For an (n, k) code with E edges in the Tanner graph and check nodes of degree dc, with T iterations of BP unrolled, neural SPA requires nT + ET (dc − 1) + n + nE parameters, whereas our approach requires only ET parameters. Likewise, decoding a received vector using neural SPA requires nT + ET (dc − 1) + n + nE additional multiplications, while our approach, like OMS, requires ET additions compared to pure min-sum decoding (and therefore no additional arithmetic operations compared to OMS).
+D. Constraining Offset Count
+While we only present results in this paper for the case when each edge has its own learnable offset, the number of offsets used by the decoder can be reduced by constraining multiple edges to using the same offset. In particular, if the decoder is constrained to use a single offset for all edges, then NOMS reverts to OMS. Indeed, constraining the decoder to learning a single offset yields a new way to choose the offset for OMS, in addition to the existing methods of simulation and density evolution.
+IV. EXPERIMENTS
+A. Experimental Setup
+We compared the performance of NOMS decoding with both traditional SPA and neural SPA, unrolled to 5 iterations. The codes we tested were the same codes as were used in [4], namely, BCH(63,36), BCH(63,45), and BCH(127,106). BCH codes typically do not decode well using traditional BP algorithms, and are therefore a good test case for highlighting the improvement due to learnable parameters. Note that we reduced the number of weights in the neural SPA decoder for the BCH(127,106) code.
+To evaluate the performance of the decoders, we performed Monte-Carlo simulation. We created test data by generating random binary messages, encoding them using the BCH generator matrices, modulating the codewords using BPSK, and adding AWGN channel noise. To minimize the variance of the BER estimates, we required a minimum of 100 frame errors to be detected and 100,000 frames to be simulated for each signal-to-noise ratio (SNR).
+To train the decoders, we used 20,000 minibatches of 120 received words drawn uniformly from each SNR to simulate and using only the all-zeros codeword as the transmitted codeword. We initialized the offsets to random values drawn from the standard normal distribution. To update the offsets after calculating the gradients, we used the Adam optimizer [14] with a learning rate of 0.1.
+B. Results
+Fig. 1-3 show the performance of the different decoding methods. At low SNRs, both neural decoding methods have roughly the same BER as SPA decoding. At higher SNRs, the neural decoders outperform SPA by as much as 1 dB. NOMS performs close to neural SPA until the highest SNRs simulated.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:14:30 UTC from IEEE Xplore. Restrictions apply.
+1363
+
+2017 IEEE International Symposium on Information Theory (ISIT)
+
+10−1 10−2
+
+SPA [4] NOMS
+
+10−1 10−2
+
+SPA [4] NOMS
+
+BER
+
+BER
+
+10−3
+
+10−3
+
+10−4
+
+10−4
+
+10−5
+
+12345678 Eb/N0
+Fig. 1. BER for BCH (63,36) code.
+
+10−1 10−2
+
+SPA [4] NOMS
+
+10−3
+
+BER
+
+10−4
+
+10−5
+
+10−5
+12345678 Eb/N0
+Fig. 3. BER for BCH (127,106) code.
+
+80
+
+Iteration 1
+
+Iteration 2
+
+Iteration 3
+
+Iteration 4
+
+60
+
+Iteration 5
+
+40
+
+20
+
+Frequency
+
+12345678 Eb/N0
+Fig. 2. BER for BCH (63,45) code.
+Another noteworthy aspect of the decoder is the offset distribution. Fig. 4 and Fig. 5 show 20-bin histograms of the offsets for different iterations after the decoder has been trained on 100 minibatches and 3,000 minibatches, respectively. Early in the training process (Fig. 4), the range of values which the offsets are shown to take on remains for the most part close to the standard normal distribution to which all offsets are initialized. Offsets for the third, fourth, and fifth iterations take on values consistent with common values for β reported in the OMS literature (see e.g. [15]), suggesting that early in training, the network has at least partly learned to correct
+
+0
+−3 −2 −1 0 1 2 3 4 5 Offset value
+Fig. 4. Offset histogram for BCH (63,45) decoder after 100 minibatches.
+the min-sum approximation. Later (Fig. 5), a second mode appears in the histogram for each iteration in a much higher range (at a value of around 7). This occurs when the BER curve of the NOMS decoder starts to match the BER curve of the neural SPA decoder, meaning that after this much training, the NOMS decoder is now no longer only correcting the minsum approximation, but has also discovered a way to attenuate cycles.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:14:30 UTC from IEEE Xplore. Restrictions apply.
+1364
+
+2017 IEEE International Symposium on Information Theory (ISIT)
+
+Iteration 1
+
+100
+
+Iteration 2
+
+Iteration 3
+
+80
+
+Iteration 4 Iteration 5
+
+60
+
+Frequency
+
+40
+
+20
+
+0
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+Offset value
+
+Fig. 5. Offset histogram for BCH (63,45) decoder after 3,000 minibatches.
+
+V. RELATED WORK
+In [16], Zhang et al. note that for irregular LDPC codes, OMS can incur a significant BER degradation compared to SPA decoding. To fight this effect, they suggest having each CN of degree d use offset βd, rather than a global β. The authors use a genetic algorithm to choose the offsets for each degree and, interestingly, find that this offsetting scheme not only matches the performance of SPA but can also lower the BER error floor exhibited by some codes.
+The approach given in [16] is similar to NOMS in that it uses more than just one global offset. The main difference between this approach and NOMS is that the offsets found by [16] do not depend on particular paths through the Tanner graph, and thus in general may have difficulty overcoming the effect of short cycles, especially if the code has only a few different check node degrees. For the BCH codes considered in this work, for example, every check node has the same degree, so the approach in [16] would yield a single βd, thus reverting to OMS. NOMS, on the contrary, has the potential to improve performance even for regular codes. Finally, the genetic algorithm used to learn the offsets in [16] is a random heuristic method, which, unlike gradient-based optimization methods, has been found to perform poorly as the size of the optimization problem increases [17].
+VI. CONCLUSION
+In this work, we proposed NOMS, a new decoding algorithm which generalizes OMS decoding using additive offsets optimized by treating the decoder as a deep neural network. NOMS grants substantial error-correction performance improvements (up to 1 dB for the codes considered here) at a small cost in complexity. In the future, we plan to explore the effect of constraining the number of offsets on BER compared
+
+to unconstrained NOMS. We also plan to test NOMS on various other types of codes, such as LDPC codes.
+ACKNOWLEDGMENT
+The authors would like to thank NVIDIA’s Academic Grant Program for providing the GPU we used for training and testing the decoders. We would also like to thank Dr. Carlo Condo for his helpful comments in the preparation of this paper.
+REFERENCES
+[1] G. Hinton, L. Deng, D. Yu, G. E. Dahl, A.-r. Mohamed, N. Jaitly, A. Senior, V. Vanhoucke, P. Nguyen, T. N. Sainath et al., “Deep neural networks for acoustic modeling in speech recognition: The shared views of four research groups,” IEEE Signal Processing Magazine, vol. 29, no. 6, pp. 82–97, 2012.
+[2] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classification with deep convolutional neural networks,” in Advances in neural information processing systems, 2012, pp. 1097–1105.
+[3] D. Silver, A. Huang, C. J. Maddison, A. Guez, L. Sifre, G. Van Den Driessche, J. Schrittwieser, I. Antonoglou, V. Panneershelvam, M. Lanctot et al., “Mastering the game of Go with deep neural networks and tree search,” Nature, vol. 529, no. 7587, pp. 484–489, 2016.
+[4] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” 54th Annual Allerton Conf. on Communication, Control and Computing, 2016.
+[5] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, 2005.
+[6] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep 1981.
+[7] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, 2001.
+[8] T. Etzion, A. Trachtenberg, and A. Vardy, “Which codes have cyclefree Tanner graphs?” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2173–2181, 1999.
+[9] I. Dimnik and Y. Be’ery, “Improved random redundant iterative HDPC decoding,” IEEE Transactions on Communications, vol. 57, no. 7, pp. 1982–1985, 2009.
+[10] J. Ngiam, A. Coates, A. Lahiri, B. Prochnow, Q. V. Le, and A. Y. Ng, “On optimization methods for deep learning,” in Proceedings of the 28th International Conference on Machine Learning (ICML-11), 2011, pp. 265–272.
+[11] T. Richardson and R. Urbanke, Modern coding theory. Cambridge University Press, 2008.
+[12] V. Nair and G. E. Hinton, “Rectified linear units improve restricted Boltzmann machines,” in Proceedings of the 27th International Conference on Machine Learning (ICML-10), 2010, pp. 807–814.
+[13] M. Abadi, A. Agarwal, P. Barham, E. Brevdo, Z. Chen, C. Citro, G. S. Corrado, A. Davis, J. Dean, M. Devin et al., “TensorFlow: Large-scale machine learning on heterogeneous systems,” 2015, software available from tensorflow.org. [Online]. Available: http://tensorflow.org/
+[14] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,” International Conference on Learning Representations, 2015.
+[15] S. Hemati, F. Leduc-Primeau, and W. J. Gross, “A relaxed min-sum LDPC decoder with simplified check nodes,” IEEE Communications Letters, vol. 20, no. 3, pp. 422–425, March 2016.
+[16] J. Zhang, M. Fossorier, D. Gu, and J. Zhang, “Two-dimensional correction for min-sum decoding of irregular LDPC codes,” IEEE Communications Letters, vol. 10, no. 3, pp. 180–182, 2006.
+[17] L. M. Rios and N. V. Sahinidis, “Derivative-free optimization: a review of algorithms and comparison of software implementations,” Journal of Global Optimization, vol. 56, no. 3, pp. 1247–1293, 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:14:30 UTC from IEEE Xplore. Restrictions apply.
+1365
+
+

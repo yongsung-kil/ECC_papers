@@ -1,0 +1,546 @@
+2021 6th International Conference on Image, Vision and Computing (ICIVC) | 978-1-6654-4368-5/21/$31.00 ©2021 IEEE | DOI: 10.1109/ICIVC52351.2021.9527002
+
+2021 6th International Conference on Image, Vision and Computing
+
+AVX-512 Based, High-Throughput LDPC Decoders
+Jingxin Dai, Hang Yin*, Sihan Liu, Yansong Lv Engineering Center of Digital Audio and Video
+Communication University of China Beijing, China
+e-mail: daijingxin@cuc.edu.cn, yinhang@cuc.edu.cn, liusihan@cuc.edu.cn, lys_communication@cuc.edu.cn
+
+Abstract—Low Density Parity Check (LDPC) codes can approach the Shannon limit in digital communication systems and have good error correction performance. At present, with the continuous development of communication technology, the demand for the throughput of the communication system is also increasing. In order to further improve the throughput of the LDPC decoder, this paper uses the AVX512 instruction set based on the parallel structure of the LDPC codes decoding algorithm, and proposes a design scheme based on the layered OMS-LDPC decoding algorithm. This solution can be implemented on a general-purpose processor (GPP) and achieve higher throughput. The experimental results show that, in the case of 10 iterations, the decoder based on the X86 processor supporting AVX512 can reach a throughput of 53Mbps to 131Mbps.
+Keywords—LDPC decoding,SIMD,GPP, SDR,throughput
+I. INTRODUCTION
+LDPC codes have the advantages of approaching Shannon limit, low decoding complexity, parallel decoding and detection of decoding errors. They have been widely used in wireless communication, optical fiber communication, satellite digital video, audio broadcasting and other fields. Nowadays, LDPC codes have been adopted by 3GPP as the long code coding scheme of the fifth generation mobile communication technology(5G). And due to the inherent parallel coding and decoding structure of LDPC codes and low bit error rate(BER), LDPC codes are also considered to be one of the most promising error checking codes (ECC) in 5G ultra-reliable and low-latency communication(uRLLC).
+In the past few decades, the computing performance of the general purpose processor (GPP) has also been continuously enhanced, the computing model of the processor has been continuously updated, and the processing frequency has also been continuously improved. With the continuous upgrade and update of the GPP hardware level, it has driven the development of software platforms based on GPP design, such as GPP-based software radio design platform OpenAirInterface (OAI), Amarisoft LTE and srsRAN, etc. However, the performance improvement achieved by increasing the clock frequency has reached its limit. In order to maintain the speed of performance improvement, GPP has extended the performance of parallel processing, for example: Single Instruction Multiple Data(SIMD), Single Program Multiple Data(SPMD), Single Instruction Multiple Thread(SIMT), etc. At present, these parallel processing technologies have been widely integrated in GPP equipment, but there are still many difficulties in how to efficiently combine these technologies with specific algorithms.
+Hang Yin is the corresponding author (e-mail: yinhang@cuc.edu.cn).
+
+The decoding algorithm of LDPC code is complex, but it has a well parallel structure, so the parallel design of LDPC decoder can get higher throughput. There have been many papers on the implementation of LDPC decoder on GPP. For example, in the literature [6], Intel’s SIMD extended instruction set (SSE4.2) and advanced vector extended instruction set 2 (AVX2) are used to achieve data frame-level parallel offset minimum sum (OMS) and normalized minimum sum (NMS) LDPC decoder design. In the literature [8], for the QC-LDPC of the 5G NR standard, Intel's AVX512 instruction set is used to realize the data framelevel parallel offset minimum sum (OMS) LDPC decoder design on multi-core GPP devices. But there is still a blank in the design of LDPC general-purpose decoder based on AVX512 instruction set, which is also the core of the work of this article.
+The main work of this paper is as follows: A software LDPC decoder design scheme based on AVX512 instruction set is proposed. The solution uses the OMS-LDPC decoding algorithm based on TDMP scheduling, and optimizes the algorithm implementation process based on the newly added features of the AVX512 instruction set. At the same time, this paper designs and implements the SSE and AVX2 version of the decoder program, and compares the performance with the AVX512 version. The test data proves that compared with the traditional SSE and AVX2 decoders, the throughput of the LDPC decoder designed in this paper based on AVX512 has been effectively improved.
+II. LDPC DECODING ALGORITHM
+A. Development of LDPC Decoding Algorithm
+Dr. Robert Gallager proposed the LDPC code in 1962 [1]. In 1996, MacKay and Neal re-studied the value of LDPC codes and proposed a reliable decoding algorithm [2]. LDPC codes have reached the error performance of Turbo codes, and both are codes approaching the Shannon limit, but the computational complexity of LDPC codes is much lower than that of Turbo codes.
+The LDPC code is composed of a linear block code C and a parity check matrix H . The parity check matrix H is a matrix of M ∗ N size, and the code C is determined by the check matrix H . In the check matrix H , (n − k) rows are
+related to check information (CN ) , and n columns are related
+to channel acceptance bit information (VN ) . The code length of
+the linear block code C is n , the number of information bits is k , and (n − k) represents the number of redundant bits after
+encoding. As shown in Figure 1, the Tanner graph of the LDPC code is mainly composed of two parts: an information node VN
+
+978-1-6654-4368-5/21/$31.00 ©2021 IEEE
+
+431
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:17:18 UTC from IEEE Xplore. Restrictions apply.
+
+and a check node CN . In the process of LDPC decoding, the VN node is associated with the input codeword, and the CN
+
+|
+
+Rmi n
+
+|=
+
+ (
+
+n
+
+min
+'∈Ψ (m)
+
+/
+
+n)
+
+|
+
+Q(i −1) n'm
+
+|
+
+(3)
+
+node is used to verify the correctness of the received data. In the literature [4], the iterative information transfer algorithm is
+
+= | Rmi n |
+
+max
+
+
+
+ 
+
+(
+
+n
+
+min
+'∈Ψ (m)
+
+/
+
+n)
+
+|
+
+Q(i −1) n'm
+
+|
+
+−
+
+α ,0
+
+(4)
+
+applied to LDPC codes. Its characteristic is that in the decoding process, the information of the CN node and the VN node will
+
+|
+
+Rmi n
+
+|=
+
+β
+
+*
+
+ (
+
+n
+
+min
+'∈Ψ (m)
+
+/
+
+n)
+
+|
+
+Q(i −1) n'm
+
+|
+
+(5)
+
+be exchanged and updated through the connection lines in the
+
+It can be known from the literature [3] that the improved MS
+
+Tanner graph.
+
+algorithm not only reduces the complexity of the decoding
+
+algorithm, but also has a negligible impact on the BER.
+
+Fig.1 Tanner graph representation.
+
+At present, the LDPC decoding algorithm with the highest error correction efficiency is the sum product decoding algorithm (SPA). The sum-product decoding algorithm can be divided into two parts: calculations related to CN node and calculations related to VN node. The calculations related to the CN node are complicated. As shown in Figure 1, the value of the VN node needs to be updated according to the information received by the channel, and then the received message from the VN node to the CN node is calculated, and the value of the CN node is updated. Formulas (1) and (2) are related calculations for CN nodes.
+
+∏ sign(Rmi n ) = [
+
+sign(Qn(t'
+
+−1) m
+
+)]
+
+(1)
+
+n '∈Ψ (m) / n
+
+∏ |
+
+Rmi n
+
+|=
+
+2*
+
+tanh −1
+
+  n '∈Ψ (m)/ n
+
+ tanh 
+
+
+|
+
+Q(i −1) n'm 2
+
+|
+
+  
+
+(2)
+
+In formulas (1) and (2), Rmi n is the information transmitted
+
+from CNm to VNn for the i-th time, and Qnim is the information
+
+transmitted from VNn to CNm for the i-th time. ψ (x) is the set
+
+of CN nodes connected to the VNn nodes, and ψ (x) / y
+
+represents other elements in the ψ (x) set except for x = y .
+
+In order to simplify the complexity of the SPA algorithm, scholars have done a lot of work in recent years. Initially, it was considered that the relevant calculations of CN nodes were
+transformed into the logarithmic domain, and the multiplication and division operations were removed, but the computational complexity was still very high. Therefore, in order to further simplify the complexity of the SPA algorithm, the minimum sum (MS) algorithm similar to the formula (1) (2) is proposed in the literature [3], as shown in the formula (3). Formula (3) does not require log and tanh operations, but the decoding method
+that calculates the minimum sum will affect the performance of the bit error rate. In order to solve this problem, a further optimization scheme is proposed in the literature [4]. The offset minimum sum algorithm (OMS) and the normalized minimum sum algorithm (NMS) are respectively proposed, such as formulas (4) (5) shown. In formulas (4) and (5), α ∈[0,1] is the
+offset factor and β ∈[0,1] is the normalization factor.
+
+B. Comparison of Decoding Algorithms
+The classic scheduling method of LDPC decoder is called flooding scheduling. This message scheduling is mainly composed of iterative calculations related to CN and VN . There is a description of MS algorithm based on Flooding scheduling in literature [7]. Flooding scheduling exhibits high computational parallelism, mainly because there is no data dependency between the relevant calculations of the CN nodes and the relevant calculations of the VN nodes. This feature makes the LDPC decoding algorithms based on flooding scheduling more suitable for running on parallel devices, which is why most of the previous parallel design work uses flooding scheduling.
+Literature [5] proposed a hierarchical decoding algorithm for LDPC. By analyzing the parity check matrix H , a hierarchical Tanner graph that can be decoded sequentially was proposed, and then the decoder iteration was split into hierarchical iterations. The hierarchical decoding algorithm is also called Turbo Decoding Message Passing (TDMP) algorithm, through which the convergence speed of decoding can be doubled. In the literature [10], the method of layered decoding was analyzed and researched, and a new hierarchical decoding algorithm is proposed, which is called horizontal hierarchical scheduling. In this article, we use the horizontal scheduling decoding algorithm because it is easier to implement by software and hardware than vertical scheduling.
+Algorithm 1 provides a simple block diagram of the MS decoding algorithm based on TDMP scheduling. In the block diagram, Ln is the information received by the decoder after
+passing through the channel, and the information will be updated with the number of decoding iterations, and CNn is the final
+decoding information obtained after hard decision. TDMP scheduling combines the CN processing loop and VN processing loop based on flooding scheduling into one loop (line 6 in Algorithm 1). It can be seen from Algorithm 1 that the algorithm operation is centered on the CN node, and in the loop process, the latest state information of the CN node and its linked VN node is calculated at the same time each time.
+Compared with flooding scheduling, TDMP scheduling has some unique advantages. First of all, the number of decoding iterations required for the TDMP scheduling algorithm to obtain correction performance similar to that of the flooding scheduling algorithm is 1/2 of the flooding algorithm [10]. Therefore, the number of memory accesses and computational complexity of the algorithm in the design and implementation are also divided by two. Second, the memory footprint (MF) of the TDMP scheduling algorithm is reduced by about 40% [10]. This is
+
+432
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:17:18 UTC from IEEE Xplore. Restrictions apply.
+
+because in the TDMP scheduling algorithm, the Qnim message
+may not be stored separately in the memory, but is obtained by performing real-time subtraction of Ln during the decoding
+process. Based on the above advantages, this article adopts the OMS-LDPC decoding algorithm based on TDMP scheduling as the design scheme.
+
+Algorithm 1: LLR horizontal TDMP decoding algorithm
+
+Input: Input _ llr ,logarithm of received information.
+
+Output: Ct ,hard decision codeword.
+
+1: Step1:Initialization 2: for each n ∈[0, N −1], m ∈[0, M −1] do
+
+3:
+
+Rm0n = 0
+
+4: endfor
+
+5: for i < iter _ number do
+
+6:
+
+for each m ∈[0, M −1] do
+
+7:
+
+Step2:Update Qmi n
+
+8:
+
+for each n ∈[0, N −1] do
+
+9:
+
+Qni=m
+
+Ln
+
+−
+
+Ri −1 mn
+
+10:
+
+endfor
+
+11:
+
+Step3:Update Rmi n
+
+12:
+
+for each n ∈[0, N −1] do
+
+13:
+
+∏ sign(Rmi n ) =
+
+sign(Qni 'm )
+
+n '∈N \ n
+
+14:
+
+|
+
+Rmi n
+
+|=
+
+min(n '∈N
+
+\n)
+
+(|
+
+Qi n'm
+
+|)
+
+15:
+
+endfor
+
+16:
+
+Step4:Update LLR for VNn
+
+17:
+
+for each n ∈[0, N −1] do
+
+18:
+
+= Ln Qnim + Rmi n
+
+19:
+
+endfor
+
+20: endfor 21: endfor 22: Step5:Hard decision
+
+23: for each n ∈[0, N −1] do
+
+24:
+
+Cn
+
+=
+
+0, {
+
+Ln
+
+1, Ln
+
+≤0 >0
+
+25: endfor
+
+III. IMPLEMENTATION OF LDPC DECODER
+A. Analysis on the Degree of Parallelism of LDPC Decoding Algorithm
+
+Fig.2 Flow chart of LDPC decoder.
+
+In this design, the OMS-LDPC decoding algorithm based on TDMP scheduling is selected. TDMP scheduling also has shortcomings. The scheduling algorithm based on flooding can execute the calculations involved in the kernel completely in parallel because there is no data dependency. However, in TDMP scheduling, there is data dependence between successive loop iterations, which makes it difficult to parallelize the algorithm based on TDMP scheduling. This is also a problem that this article needs to further analyze and solve.
+In order to achieve the goal of increasing the throughput of the LDPC decoder, the LDPC decoder based on GPP must be able to make full use of the parallel structure of the LPDC decoding algorithm itself, and it is also necessary to improve the efficiency of memory reading and storage. The design flow chart of the LDPC decoder is shown in Figure 2. According to the analysis of the LDPC decoder in literature [6], the parallel level of the LDPC decoder based on hierarchical scheduling can be divided into the following three levels:
+The first level of parallelism is at the data frame level. Multiple frames of data can be decoded at the same time to increase the throughput of the decoder. Through SIMD operation, the same calculation operation can be implemented on different data sets at the software design level. However, frame parallelism also has the following disadvantages: First, the delay increases, and multiple frames of data need to be waited for in real-time processing, so the data decoding delay will increase. The second is to increase the demand for data storage. Need to store multiple frames of data at the same time, so it takes up more buffer space.
+The second level of parallelism is located in the relevant computing part of each message node ( CN ). Theoretically, the calculation for each CN can be executed in parallel, but the difference from flooding scheduling is that there are constraints in the calculation of hierarchical scheduling, and it can be performed in parallel only when there is no data dependency between two CN calculations. Therefore, it is difficult to optimize parallel LDPC decoding algorithms based on hierarchical scheduling.
+The third level of parallelism is located inside the CN calculation, for calculating the Rmn and Qnm values of each
+iteration and the update part of Ln . After analyzing a large
+number of check matrices, it is found that the degree of each CN node of most check matrices H may be lower than the parallel degree of SIMD. Therefore, this kind of fine-grained parallelization is difficult to use, and the utilization efficiency will be very low.
+
+Table1. Parameter table of different instruction sets
+
+SIMD instruction
+
+Register
+
+Number of Register
+
+SSE4
+
+128bit
+
+8
+
+AVX2
+
+256bit
+
+16
+
+AVX512
+
+512bit
+
+32
+
+After analyzing the three levels of parallelism, it was finally
+
+decided to implement the parallel design of the LDPC decoder
+
+by using the solution of computing multiple data frames in
+
+parallel. This is mainly because LDPC codes with different code
+
+rates and code lengths lack the regularity of the parallel structure
+
+433
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:17:18 UTC from IEEE Xplore. Restrictions apply.
+
+for the calculation of CN nodes, and it is difficult for unstructured LDPC codes to achieve fine-grained parallelism.
+
+The SIMD instruction set can realize spatial parallelism for the parts that perform the same operation in the data. Therefore, the data frame-level parallel processing can be realized through the SIMD instruction set. Based on the previous analysis, using the SIMD instruction set can greatly improve the decoding performance of the LDPC decoder. After investigating the current market, statistics found that there are three commonly used instruction sets: SSE4, AVX2 and AVX512. The parameters of different SIMD instruction sets are shown in Table 1.
+
+This article finally chooses AVX512 instruction set to complete the design of high throughput LDPC decoder. There are two main reasons for choosing the AVX512 instruction set: First, it can be seen from Table 1 that the AVX512 instruction set can process 512bits data at the same time, that is, it can process 32 float data or 64 char data at the same time. The use of AVX512 instruction set can maximize the parallelism of the decoder. The second is that the AVX512 instruction set supports mask operations, which can control the specific locations of data participate in instruction operations, thereby reducing the operation time and the occupation of cache space.
+
+B. Implementation and Optimization of Decoder
+In the process of implementing the LDPC decoder based on the SIMD instruction set, this article specifically optimized the decoder in the following three parts: 1. Perform fixed-point operations on the input data to reduce storage space. 2. Count the check matrix information and reorder the check matrix. 3. Based on the structure of Algorithm 1, some instructions have been replaced and optimized according to the characteristics of AVX512 itself.
+
+The first part of the optimization performed a fixed-point operation on the input data. This is because after analyzing the LDPC decoding program, it is found that the data size usually does not exceed 26 during processing. Therefore, performing fixed-point operations before iterative decoding can store data as 8-byte variables, thereby saving a lot of cache space. In the paper [6], the performance of LDPC decoding algorithms under floating-point number and fixed-point number is compared. Experimental data shows that fixed-point operations have only a weak impact on the performance of the bit error rate, and the performance degradation is very slight.
+
+= δ 0 = δ1 = δ 2
+
+322= = =  100 110 110 110 ⇒ δδδ021
+
+20
+
+2
+
+ 
+
+0
+
+31 
+
+1 1 0
+
+1 0 0
+
+0
+
+1
+
+ 
+
+1 
+
+(6)
+
+= δ3 3=  1 1 1 0  δ3 3 1 1 1 0 
+
+The second part of the work is to count the parameters of the check matrix H and perform reordering operations. The number of elements 1 in each row of the check matrix H is defined as the row weight dc (x) , the number of elements 1 in each column
+is defined as the column weight dv (x) , and x ∈ (n − k )
+represents the row number in the check matrix. Reference [2], through the statistics of the H check matrix, calculate the row weight of each row, and reselect the check node calculation unit
+
+according to different row weights. The specific operation steps are shown in formula (6).
+The third part of the optimization mainly includes the following work: First, some instructions called during the operation are replaced. For example, in the iterative decoding process of LDPC, sign and prod operations will be performed
+for the data calculation of part Rmn . This design simplifies the workload of this part of the algorithm by calling vpandd and vpxord instructions. Secondly, according to the unique mask function of AVX512, the original data processing part is optimized to reduce the calculation time. Taking the calculation of min(n∈N \m) (| Qnim |) as an example, it can be realized by the
+combination of vpcmb , vpblendmb and vpxord instructions. The specific operation steps are shown in Figure 3.
+
+Fig.3 Software implementation of min(n∈N \m) (| Qnim |) based on AVX-
+512 instruction set.
+
+IV. IMPLEMENTATION RESULTS
+A. Data Set Parameters and Compilation Environment In this design, in order to test the performance of the
+AVX512-based LDPC decoder, the data set shown in Table 2 is used for testing. In Table 2, k represents the length of the information bit, and Rate represents the bit rate.
+
+Table2. Specific parameters of the test data set
+
+Code type
+
+k
+
+Rate
+
+H
+
+C1
+
+1040
+
+[1040,5408]
+
+4368x5408
+
+C2
+
+560
+
+[560,1120]
+
+560x1120
+
+C3
+
+1040
+
+[1040,2288]
+
+1248x2288
+
+The test was conducted on a server equipped with Intel's i9-
+
+10920X CPU. The processor clocked at 3.5GHz, has 12 cores
+
+and can support up to 24 threads. The CPU has 19.25Mb of L3
+
+cache space and supports the AVX512 instruction set.
+
+In order to ensure the efficiency of the program, this design compiles the program through the ICC compiler, and optimizes the program through the # pragma instruction. The running
+platform of the test program is based on the server version of the Ubuntu 18.04 operating system, and the kernel is configured as a low-latency kernel. When testing the program throughput performance, set the priority of the program process to the highest through the command line and close other programs.
+
+434
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:17:18 UTC from IEEE Xplore. Restrictions apply.
+
+B. Design Performance
+In order to facilitate the comparison of the performance improvement level of the LDPC decoder based on the AVX512 instruction set, this design also implements the LDPC decoder based on the SSE and AVX2 instruction set. In the test, the number of iterations of different decoders is set to 10, and the average throughput is taken after 10,000 runs of each decoder. The test results obtained are shown in Table 3.
+
+Table3. Test results based on different instruction sets
+
+Code type
+
+SSE
+
+AVX2
+
+AVX512
+
+C1
+
+33.43
+
+52.09
+
+84.89
+
+C2
+
+45.88
+
+61.54
+
+109.01
+
+C3
+
+53.86
+
+69.39
+
+131.76
+
+The formula for calculating the throughput performance of
+
+the LDPC decoder in this paper is shown in equation (7). In
+
+formula (7), q represents the number of parallel frames.
+
+Throughput(Mbps) = k * q / (time for LDPC decoder in seconds) / 106 (7)
+By analyzing the data in Table 3, it can be concluded that the LDPC decoder based on AVX512 has a maximum improvement of 60% and 20% compared with SSE and AVX2, respectively.
+
+V. CONCLUSION
+This paper presents a design scheme of TDMP scheduling LDPC decoder based on AVX512 instruction set. The decoder is suitable for regular or irregular LDPC codes, and the code length and code rate can be adjusted arbitrarily. In this design, the characteristics of the AVX512 instruction set itself are used as much as possible to optimize the program. When the LDPC decoder runs for 10 iterations, the throughput rate of the Intel i9 processor is between 53 Mbps and 131 Mbps under the test of the data set selected in the article. Compared with the current GPU-based LDPC decoder, the decoder based on GPP also shows good throughput performance and has the advantage of low power consumption.
+
+ACKNOWLEDGMENT
+This work is supported by the Fundamental Research Funds for the Central Universities. The authors would like to thank the reviewers and the associate editor for their assistance with improving this paper by their valuable feedback on our manuscript.
+REFERENCES
+[1] R. G. Gallager, "Low density parity check codes, " IRE Trans. Inform.Theory, vol.8, no.1, pp.21-28, 1962.
+[2] D. J. C. MacKay and R.M.Neal, "Near shannon limit performance of low density parity check codes, "Electron.lett., vol.33, pp.457-458, 1996.
+[3] J. Chen and M. Fossorier, "Near optimum universal belief propagation based decoding of low-density parity check codes," IEEE Trans.Commun., vol. 50 no. 3, pp. 406-414, Mar. 2002.
+[4] M. P. C. Fossorier, M. Mihaljevic, and H. Imai., "Reduced complexity iterative decoding of low-density parity check codes based on belief propagation," IEEE Trans. Commun., vol. 47, no. 5, pp. 673.-680, May 1999.
+[5] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, "Generic description and synthesis of LDPC decoders," IEEE Trans. Commun., vol. 55, no. 11, pp. 2048-2091, Nov. 2007.
+[6] B. Le Gal, C. Jego and J.Crenne, "High-Throughput Multi-Core LDPC Decoders Based on X86 Processor, "IEEE Trans.Parallel Distrib.Syst., vol.27, no.5, pp.1373-1386, May.2016.
+[7] B. Le Gal, C.Jego and J. Crenne, "Low-latency software LDPC decoders for x86 multi-core devices, "in proc. IEEE Workshop on SiPS, Oct.2017, pp.1-6.
+[8] Y. Xu, W. Wang, Z. Xu and X. Gao, "AVX-512 Based Software Decoding for 5G LDPC Codes," 2019 IEEE International Workshop on Signal Processing Systems (SiPS), 2019, pp. 54-59.
+[9] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang and J. R. Cavallaro, "GPU-Based, LDPC Decoding for 5G and Beyond," in IEEE Open Journal of Circuits and Systems, vol. 2, pp. 278-290, 2021.
+[10] D. E. Hocevar, "A reduced complexity decoder architecture via layered decoding of LDPC codes,"in prc. Signal Process. Syst. Workshop, 2004, pp.107-112.
+[11] M. Li, C. A. Nour, C. Jego, and C. Douillard, "Design and FPGA prototyping of a bit-interleaved coded modulation receiver for the DVBt2 standard,"in ProcSignal Process. Syst. Conf., 2010, pp. 162-167.
+
+435
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:17:18 UTC from IEEE Xplore. Restrictions apply.
+
+

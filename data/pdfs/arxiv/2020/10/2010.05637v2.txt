@@ -1,0 +1,779 @@
+arXiv:2010.05637v2 [cs.IT] 17 Oct 2020
+
+Learning to Decode: Reinforcement Learning for Decoding of Sparse Graph-Based Channel Codes
+Salman Habib†, Allison Beemer∗, and Jo¨rg Kliewer† †Helen and John C. Hartmann Dept. of Electrical and Computer Engineering,
+New Jersey Institute of Technology, Newark, NJ 07102 ∗Dept. of Mathematics, University of Wisconsin-Eau Claire, Eau Claire, WI 54701
+sh383@njit.edu,beemera@uwec.edu,jkliewer@njit.edu
+Abstract
+We show in this work that reinforcement learning can be successfully applied to decoding short to moderate length sparse graph-based channel codes. Specifically, we focus on low-density parity check (LDPC) codes, which for example have been standardized in the context of 5G cellular communication systems due to their excellent error correcting performance. These codes are typically decoded via belief propagation iterative decoding on the corresponding bipartite (Tanner) graph of the code via flooding, i.e., all check and variable nodes in the Tanner graph are updated at once. In contrast, in this paper we utilize a sequential update policy which selects the optimum check node (CN) scheduling in order to improve decoding performance. In particular, we model the CN update process as a multiarmed bandit process with dependent arms and employ a Q-learning scheme for optimizing the CN scheduling policy. In order to reduce the learning complexity, we propose a novel graph-induced CN clustering approach to partition the state space in such a way that dependencies between clusters are minimized. Our results show that compared to other decoding approaches from the literature, the proposed reinforcement learning scheme not only significantly improves the decoding performance, but also reduces the decoding complexity dramatically once the scheduling policy is learned.
+1 Introduction
+Binary low-density parity-check (LDPC) codes [1] are sparse graph-based channel codes that have recently been standardized for data communication in the 5G cellular new radio standard due to their excellent error correcting performance [2, 3]. In practice, LDPC codes are iteratively decoded via belief propagation (BP), an algorithm that operates on the Tanner graph of the code [4]. Tanner graphs of LDPC codes are sparse bipartite graphs whose vertex sets are partitioned into two types: check nodes (CNs) and variable nodes (VNs). Typically, iterative decoding on a Tanner graph is carried out via flooding, i.e., all CNs and VNs are updated simultaneously [5]. However, in [6], a sequential CN scheduling scheme, so-called node-wise scheduling (NS), was proposed. In this scheme, messages are sent from a single CN at a time, and successive CNs are scheduled based on their residuals, i.e., the magnitude of the difference between subsequent messages emanating from the CN.
+NS of an iterative decoder can lead to improved performance, as was shown in [6]. The implementation relies on the intuition that in loopy BP, the higher the residual of a CN, the further away that portion of the graph is from convergence. Hence, scheduling CNs with higher residuals is expected to lead to faster decoder convergence. Although the NS method converges faster than the flooding scheme, the computation of provisional messages for updating the CN residuals in real-time is 34th Conference on Neural Information Processing Systems (NeurIPS 2020), Vancouver, Canada
+
+required, rendering it more computationally intensive than flooding for the same total number of messages propagated.
+To mitigate the computational complexity inherent in NS, we propose a multi-armed bandit-based NS (MAB-NS) scheme for sequential iterative decoding of short LDPC codes.1 Rather than computing residuals, MAB-NS evaluates an action-value function prior to scheduling, which determines how beneficial an action is for maximizing convergence speed and performance of the decoder. An action is defined here as selecting a single CN to convey its outgoing messages to its adjacent variable nodes. The NS algorithm is modeled as a Markov decision process (MDP) [11], where the Tanner graph is viewed as an m-armed slot machine with m CNs (arms), and an agent learns to schedule CNs that elicit the highest reward. Repeated scheduling in the learning phase enables the agent to estimate the action-value function, where the optimal scheduling order is the one that yields a codeword output by propagating the smallest number of CN to VN messages.
+Neural network assisted decoding of linear codes codes has been addressed in, e.g., [12, 13, 14, 15], aiming to learn the noise on the communication channel. However, these methods have not been applied to sparse graph-based codes and, due to their high learning complexity, are suited only for codes with short block lengths. Reinforcement learning (RL) has been applied recently for hard decision based iterative decoding in [16]. Further, a deep learning framework based on hyper-networks was used for BP decoding of short block length LDPC codes in [17], where the hidden layers of the network unfold to represent factor graphs executing successive message passing iterations. However, to the best of our knowledge, reinforcement learning (RL) has not been successfully applied to iterative decoding of LDPC codes in the open literature so far.
+The main ingredient for the proposed RL decoder is Q-learning [18, 19]. Q-learning is a Monte Carlo approach for estimating the action-value function without explicit assumptions on the distribution of the bandit processes [9]. However, a major drawback of applying Q-learning to the sequential CN scheduling problem at hand is that the learning complexity grows exponentially with the number of CNs. A straightforward way to select the underlying state space of the Q-learning problem would be to consider the vector of quantized CN values. However, for practical LDPC codes, the number of CNs ranges in the hundreds, and even for a binary quantization of each CN value the cardinality of the state space is not computationally manageable in the learning process. A multitude of methods for reducing the learning complexity in RL have been proposed in the literature: for example, complexity may be reduced by partitioning the state space (see, e.g., [20, 21]), imposing a state hierarchy (see, e.g., [22]), or by dimensionality reduction (see, e.g., [23, 24]).
+In this work, we follow a similar avenue, albeit tailored to the problem at hand. In extension of our previous work [25], for Q-learning we propose grouping the CNs into clusters, each with a separate state and action space. While this approach has the potential to make learning tractable, it also assumes independence of the clusters; this assumption cannot hold due to the presence of cycles in the Tanner graph. In order to mitigate the detrimental effect of clustering on the learning performance, we propose to leverage the structure of the Tanner graph of the code. In particular, we aim to optimize the clusters in such a way that dependencies between them are minimized. Note that as NS follows a fixed greedy schedule, there exists a non-zero probability that initially correct, but unreliable, bits are wrongly corrected into an error that is propagated in subsequent iterations. In contrast, our proposed scheme based on Q-learning allows some room for exploration by scheduling the CN with the highest expected long-term residual, mitigating such a potential error propagation.
+To this end, we define novel graphical substructures in the Tanner graph termed cluster connecting sets, which capture the connectivity between CN clusters, and analyze their graph-theoretic properties. Numerical results show that RL in combination with sequential scheduling provides a significant improvement in the performance of LDPC decoders for short codes, superior to existing approaches in the literature.
+1Note that, in recent literature such as [7, 8], MAB refers to a problem where actions do not change the state of the environment. However, in this paper, we refer to MAB as the traditional bandit problem discussed in [9, 10] where an agent’s action does indeed change the state of the environment.
+2
+
+2 Preliminaries
+
+2.1 Low-density parity-check codes
+
+An nel
+
+[n, of
+
+k] binary linear a (non-unique)
+
+bciondareyispaarikty-d-cimheecnksimonaatrlixsuHbspa∈ceFom 2f ×Fn2n,,
+
+and may where m
+
+be ≥
+
+defined as the kern − k. The Tan-
+
+ner graph of a linear code with parity-check matrix H is the bipartite graph GH = (V ∪ C, E),
+
+where V = {v0, . . . , vn−1} is a set of variable nodes (VNs) corresponding to the columns of H,
+
+C = {c0, . . . , cm−1} is a set of check nodes (CNs) corresponding to the rows of H, and edges in
+
+E correspond to the 1’s in H [4] (see an example in Fig. 1 below). That is, H is the (simplified)
+
+adjacency matrix of GH. LDPC codes are a class of highly competitive linear codes defined via
+
+sparse parity-check matrices or, equivalently, sparse Tanner graphs [1]. Due to this sparsity, LDPC
+
+codes are amenable to low-complexity graph-based message-passing decoding algorithms, making
+
+them ideal for practical applications. BP iterative decoding, considered here, is one such algorithm.
+
+In this work, we present experimental results for two particular classes of LDPC codes: (j, k)regular and array-based (AB-) LDPC codes. A (j, k)-regular LDPC code is defined by a paritycheck matrix with constant column and row weights equal to j and k, respectively [1]. A (γ, p) AB-LDPC code, where p is prime, is a (γ, p)-regular LDPC code with additional structure in its parity-check matrix, H(γ, p) [26]. In particular,
+
+I I
+
+I ···
+
+I
+
+Iσ
+
+σ2 · · ·
+
+σp−1
+
+H(γ
+
+,
+
+p)
+
+=
+
+  
+
+...
+
+...
+
+...
+
+···
+
+...
+
+ 
+
+,
+
+
+
+(1)
+
+I σγ−1 σ2(γ−1) · · · σ(γ−1)(p−1)
+
+where σz denotes the circulant matrix obtained by cyclically left-shifting the entries of the p × p identity matrix I by z (mod p) positions. Notice that σ0 = I. Each row (resp. column) of submatrices of H(γ, p) forms a row (resp. column) group. Observe that there are a total of p (resp. p2)
+column groups (resp. columns) and γ (resp. γp) row groups (resp. rows) in H(γ, p).
+
+2.2 Multi-armed bandits
+The MAB problem is a special RL problem where in each time step, a gambler must decide which arm of an m-armed slot machine to pull in order to maximize the total reward in a series of pulls. We model the m-armed slot machine as a MDP. In an MDP, a learner must decide which action to take at each time step by observing only the current state of its environment. This decision-making process leads to a future state and expected reward that are contingent only on the current state and action. For finite state and action spaces, the process is called a finite MDP [11], and the optimized scheduling of arms (CNs in our case) is obtained by solving the MAB problem.
+In the remainder of the paper, let [[x]] {0, . . . , x − 1}, where x is a positive integer. In an marmed bandit problem, let St(0), . . . , St(m−1) represent m bandit processes (arms) at time t, where each random variable (r.v.) St(j), j ∈ [[m]], can take M possible real values. Let a state space S(M) contain all M m possible realizations of the sequence St(0), . . . , St(m−1), and let the r.v. St, with realization s ∈ [[M m]] represent the index of realization st(0), . . . , s(tm−1). Since each index corresponds to a unique realization, we also refer to St as the state of the m-armed slot machine at time t. If the arms are modeled as independent bandit processes, we define a r.v. Sˆ, with realization sˆ ∈ [[M m]], as the realization s(tj) of a particular arm j. Let At represent an action, with realization a ∈ A := [[m]], indicating the index of an arm that has been pulled by the gambler at time t. Let St+1 represent the new state of the MDP after pulling arm At, and let s′ denote its realization. Also, let a r.v. Rt(St, At, St+1), with realization r be the reward yielded at time t after playing arm At, in state St that yields state St+1.
+3
+
+2.3 MAB-NS scheme
+
+In the following, we propose a MAB-NS scheme as a sequential BP decoding algorithm. Specifically, a single message passing iteration is given by messages sent from a single CN to all its neighboring VNs, and subsequent messages sent from these VNs to their remaining CN neighbors. Sequential CN scheduling is carried out until a stopping condition is reached, or an iteration threshold is exceeded. The MAB-NS decoder applies a scheduling policy, based on an action-value function, avoiding the computationally costly real-time calculation of residuals.
+The NS algorithm informs an imaginary agent of the current state of the decoder and the reward obtained after performing an action (scheduling a CN). Based on these observations, the agent takes future actions, to enhance the total reward earned, which alters the state of the environment as well as the future reward. In MAB-NS, the reward Ra obtained by the agent after scheduling CN a is defined by Ra = maxv∈NV (a) ra→v, where the residual ra→v is computed according to
+
+ra→v |ma′ →v − ma→v|.
+
+(2)
+
+Here, ma→v is the message sent by CN a to its neighboring VN v in the previous iteration, and m′a→v is the message that CN a would send to VN v in the current iteration, if scheduled.
+
+In the proposed MAB problem, the decoder iteration ℓ is analogous to a time step t. Let x =
+
+[x0, . . . , xn−1] and y = [y0, . . . , yn−1] represent the transmitted and the received codeword, resp.,
+
+where xi ∈ {0, 1}, and yi = (−1)xi + z with z ∼ N (0, σ2). Let xˆ ∈ F2n be the reconstructed
+
+codeword by the decoder. The posterior log-likelihood ratio (LLR) of xi is expressed as Li =
+
+log
+
+Pr(xi=1|yi Pr(xi=0|yi
+
+) )
+
+.
+
+The soft channel information input to the MAB-NS algorithm is a vector L
+
+=
+
+[L0, . . . , Ln−1] comprised of LLRs. In the MAB-NS scheme, the state of CN j at the end of iteration
+
+ℓ is given by sˆ(ℓj) =
+
+n−1 i=0
+
+Hj,i
+
+Lˆ ℓ(i) ,
+
+where Lˆ(ℓi)
+
+=
+
+c∈N (vi) mc→vi + Li is the posterior LLR
+
+computed by VN vi at the end of iteration ℓ, and mc→vi is the message received by VN vi from
+
+neighboring CN c. Let Sˆℓ = Sˆℓ(0), . . . , Sˆℓ(m−1), with realization ˆsℓ = sˆℓ(0), . . . , sˆ(ℓm−1), represent a soft syndrome vector of the MAB-NS scheme obtained at the end of iteration ℓ. This soft syndrome
+
+vector represents the state of the decoder in each iteration.
+
+It is necessary to quantize each CN state in order to obtain a finite-cardinality state space. Let gM (·) denote an M -level scalar quantization function that maps a real number to any of the closest M possible representation points set by the quantizer. Then, Sℓ = Sℓ(0), . . . , Sℓ(m−1) is the quantized syndrome vector, where a realization is given as sℓ(j) = gM (sˆ(ℓj)).
+The proposed MAB-NS scheme is shown in Algorithm 1, omitted here for space reasons, but stated in the supplementary material Section S.2. The algorithm inputs are a soft channel information vector L and a parity-check matrix H; the output is the estimated (decoded) codeword xˆ. Note that the time complexity for selecting a CN in line 12 of Algorithm 1 grows linearly with the total number of CNs, as opposed to being zero for flooding BP.
+
+We also note that the MAB-NS algorithm is dynamic and depends both on the graph structure and on received channel values: thus, the scheduling order adapts with subsequent transmissions, and will outperform a scheduling order which is fixed in advance.
+
+2.4 Solving the MAB problem using clustered Q-learning
+
+Q-learning is an adaptive algorithm for computing optimal policies for MDPs that does not rely on
+
+explicit assumptions on the distribution of the bandit processes. As discussed above, in a traditional
+
+Q-learning approach, the state space observed by the agent grows exponentially with the number of
+
+arms, m. In order to reduce both the state space and the learning complexity, we propose a novel
+
+clustering strategy in the following. A cluster is defined as a set of arms with its own state and action
+
+spaces. Let z represent the size of (number of arms in) a cluster. The state of a cluster with index
+
+u ∈ [[
+
+m z
+
+]] at iteration ℓ is a sub-syndrome S(ℓu,z) = Sℓ(uz), . . . , Sℓ(uz+z−1) of the syndrome Sℓ =
+
+Sℓ(0), . . . , Sℓ(m−1), with a state space Su(M) containing all possible M z sub-syndromes S(ℓu,z). Hence,
+
+4
+
+the total number of states that may be observed by the agent is upper-bounded by
+
+m z
+
+|Su(M ) |.
+
+Notice that as long as z ≪ m, |Su(M)|≪ |S(M)|. The action space of cluster u is defined as
+
+Au = [[z]]. The action-value function for cluster u in the (ℓ + 1)st iteration is given by
+
+Qℓ+1(su, au) = (1−α)Qℓ(su, au)+α Rℓ(su, au, f (su, au))+β max Qℓ(f (su′ , au′ ), au′ ) , (3)
+u′ ,au′
+where su ∈ [[M z]] and au ∈ Au are the state and action indices, respectively, for cluster u, f (su, au) represents the new cluster state s′u ∈ [[M z]] as a function of su and au, Rℓ(su, au, s′u) is the reward obtained after taking action au in state su, and 0 ≤ α ≤ 1 is the learning rate. In clustered Q-learning, the action au in time step ℓ is selected via an ǫ-greedy approach according to
+
+au =
+
+u and Au selected uniformly at random w.p. ǫ, πQ(ℓ) selected w.p. 1 − ǫ,
+
+(4)
+
+where
+
+πQ(ℓ)
+
+=
+
+arg maxau
+
+s.t.
+
+u∈[[⌈
+
+m z
+
+⌉]]
+
+Qℓ(su, au).
+
+The
+
+action-value
+
+function
+
+is
+
+recursively
+
+updated
+
+ℓmax times according to (3), where ℓmax is the maximum number of times a CN is scheduled. The
+
+detailed proposed clustered Q-learning scheme is given in Algorithm 2 in the supplementary material
+
+Section S.3.
+
+The input to Algorithm 2 is a set L = {L0, . . . , L|L |−1} containing |L | realizations of L over which clustered Q-learning is performed, and a parity-check matrix H. This algorithm trains an agent to learn the optimum CN scheduling policy for a given H. In each optimization step ℓ, the agent performs NS for a given L. As a result, clustered Q-learning can be viewed as a recursive
+Monte Carlo estimation approach with L as the source of randomness.
+
+3 Cluster-connecting Sets
+
+In clustered Q-learning, the total number of states observed by the agent is upper-bounded by
+
+m z
+
+|Su(M)|≪ |S(M)|. Note that the learning complexity in clustered Q-learning is O(zM ), whereas
+
+in standard Q-learning the complexity scales as O(mM ), with the cluster size z ≪ m. Consequently,
+
+clustering enables a tractable RL task for sequential scheduling of short LDPC codes.
+
+On the other hand, the larger the size of the cluster, the greater the ability of the agent to take into account any dependencies between CN log-likelihood ratios (LLRs). Hence, there exists a tradeoff between the effectiveness of clustered Q-learning and the learning complexity. Indeed, cluster size should be large enough to accommodate the dependencies between CN messages as much as possible, without being so large that learning is infeasible. We note that clustered Q-learning serves as an approximation for standard Q-learning, but suffers from a performance loss due to the existence of dependencies between CN messages emanating from separate clusters.
+
+To better understand this loss in performance, we introduce a critical sub-structure in the Tanner graph GH of an LDPC code. Let Cu = {c1, . . . , cz} denote the set of CNs belonging to the cluster of index u, and let C¯u = C \ Cu be the remaining CNs in the Tanner graph. Let NV (Cu) be the set of all neighbors of Cu in V . For W ⊆ NV (Cu), let NC (W ) be the set of all neighbors of W in C.
+Definition 1. Fix a CN cluster Cu, and let W ⊆ NV (Cu). We say that W is the cluster-connecting set (CCS) corresponding to Cu if the following holds: v ∈ W if and only if NCu(v) and NC¯u(v) are both nonempty. If |W |= A, and |NCu(W )|= B, we say that W is an (A, B) CCS.
+CCSs induce dependencies between the messages generated by the CNs in Cu and those in C¯u. Roughly speaking, the number of edges in a Tanner graph that connect Cu to C¯u grows with the size of Cu’s CCS. That is, on average, the larger the size of the CCS corresponding to Cu, the greater the dependence between Cu and C¯u. This holds absolutely for Tanner graphs in which all VNs have the same degree.
+
+Fig. 1 depicts an example of a Tanner graph GH containing a cluster of CNs whose corresponding CCS, W , is a (3, 3) CCS. Note that in this example there are no cycles in the subgraph induced by W ∪NCu(W ). However, there are multiple 4-cycles in the subgraph induced by (NV (Cu)\W )∪Cu.
+In the remainder of the paper, we assume all Tanner graphs are connected and contain cycles. We first show that any choice of cluster that is a proper subset of the CNs has a nonempty CCS.
+
+5
+
+Figure 1: Depiction of the (3, 3) CCS (shown using solid red circles) corresponding to cluster Cu (red squares). The dashed edges connect Cu to neighboring VNs (dashed red) which do not belong to the CCS. Arrows highlight the cycles incident to the cluster.
+Proposition 1. Consider a Tanner graph with m CNs, and choose a cluster Cu with z = m CNs. Then, the CCS corresponding to Cu is nonempty.
+Proof. Consider the set of VNs given by NV (Cu). If every variable node in this set is only adjacent to CNs in Cu, then the Tanner graph is not connected, a contradiction to our assumption of connectedness. We conclude that the CCS corresponding to Cu has at least one element.
+
+Recall that our experimental results will focus on (j, k)-regular and AB-LDPC codes. In the next section, we will be interested in optimizing clusters based on the number of edges incident to the corresponding CCSs. However, since (j, k)-regular and AB-LDPC codes have regular VN degree, examining the size of a CCS for these classes is equivalent to examining the number of edges adjacent to a CCS. We present below results on the size of a CCS for each class of LDPC codes.
+
+Theorem 1. Let j, k ≥ 2, and z ≥ 1 be integers. Suppose G is a (j, k)-regular Tanner graph, and
+let Cu be a cluster of CNs of size |Cu|= z in G. If |NV (Cu)|= v, then the number of variable nodes in W , the CCS corresponding to Cu, is bounded as follows.
+
+v−
+
+kz j
+
+≤ |W |≤ min {jv − kz, v} .
+
+Proof. It is straightforward to see that there are jv − kz edges in G that are incident to NV (Cu) but not to Cu. In other words, there are jv − kz edges exiting the subgraph induced by Cu ∪ NV (Cu).
+Consider the CCS W , the subset of NV (Cu) comprised of all variable nodes incident to an exiting edge. The minimum size of W corresponds to the case in which the exiting edges are concentrated at a few variable nodes in NV (Cu). That is, |W |≥ ⌈(jv − kz)/j⌉ = ⌈v − (kz/j)⌉ = v − ⌊kz/j⌋. On the other hand, the maximum size of W corresponds to the case where the exiting edges are spread across as many variable nodes as possible: |W |≤ min {jv − kz, v}.
+
+Remark 1. For fixed j, k, and z, the upper and lower bounds given in Theorem 1 are increasing functions of v. In other words, the more neighbors a cluster has, the larger the maximum possible size of W (and resulting j|W | CCS edges), and the larger the minimum possible size of W (and j|W |). It is important to note that we are not claiming that a higher number of neighbors necessitates a larger CCS. Rather, the shifting window of possible CCS sizes suggests a trend, even if a strict increase does not hold universally.
+Because they are (3, p)-regular, Theorem 1 gives bounds on the size of CCSs in (3, p) AB-LDPC codes as well. However, given the added structure of an AB-LDPC code Tanner graph, we may conclude more, as shown in the following theorem, whose proof is provided in the supplementary material Section S.1.
+Theorem 2. Consider an AB-LDPC code defined by a parity-check matrix H(3, p), let Cu be a cluster of size 1 ≤ z ≤ p, and let W be the CCS corresponding to Cu. (i) |W |≥ ((1 + 2p)z − z2)/4. (ii) If all CNs in Cu belong to the same row group of H(3, p), |W |= zp. (iii) If 3 ≤ z < p and every CN in Cu belongs to at least one 6-cycle such that the other two CNs
+in the 6-cycle also belong to Cu, |W |≤ zp − z.
+6
+
+The bounds in Theorem 2 should be compared with those of Theorem 1. Indeed, we find that Theorem 2(i) gives a tighter lower bound for smaller values of NV (Cu), and Theorem 2(iii) is a tighter upper bound for a particular type of cluster and larger values of NV (Cu). Theorem 2(ii), as an exact result, gives a clear improvement on Theorem 1 for a particular type of cluster.
+The CNs of the cluster discussed in Theorem 2(ii) belong to the same row group in the corresponding parity-check matrix; we call CNs that are given by subsequent rows in the parity-check matrix contiguous. In comparison, not all CNs of the cluster discussed in Theorem 2(iii) are contiguous, since a 6-cycle must span three distinct row groups of a H(3, p) AB-LDPC code [27, 28]. By comparing the bounds on CCSs given in Theorem 2(ii) and (iii), we see that choosing non-contiguous CNs that comprise 6-cycles is guaranteed to lower the size of the corresponding CCS. Observing that the number of edges incident to a CCS W in a (3, p)-regular graph is equal to 3|W |, we conclude that in case of (3, p) AB-LDPC codes, any cluster selection scheme should ensure that clustered CNs are not contiguous.
+
+4 Cluster Optimization
+
+In this section, we propose a cluster optimization strategy, with the goal of minimizing the number
+
+of edges connected to each CCS in a Tanner graph. Indeed, these edges are responsible for the
+
+propagation of messages between clusters, and consequently for the resulting dependencies between clusters. Let E(Cu, W ) be the set of edges that connect Cu to its CCS W , E(C¯u, W ) the set of edges
+connecting C¯u to W , and ζ(Cu) |E(C¯u, W )|+|E(Cu, W )| the total number of edges by which Cu is connected to C¯u via W . Recall from Section 3 that in the case of (j, k)-regular Tanner graphs, minimizing ζ(Cu) is equivalent to minimizing the size of a CCS, since ζ(Cu) = j|W |. We cluster the set of CNs of a Tanner graph via a greedy iterative process: the z CNs of the first cluster, C1∗, are chosen optimally from the set of all CNs. Each subsequent cluster is then chosen optimally from the
+
+set
+
+of
+
+remaining
+
+check
+
+nodes,
+
+with
+
+the
+
+last
+
+cluster
+
+consisting
+
+of
+
+the
+
+leftover
+
+CNs.
+
+Let
+
+1,
+
+.
+
+.
+
+.
+
+,
+
+u⌈
+
+m z
+
+⌉
+
+denote the indices of the clusters. Formally, this multi-step optimization is given by
+
+Ce∗ =
+
+arg min
+
+ζ (Ce ),
+
+Ce⊆C\Ce∗−1∪···∪C1∗, |Ce|=z
+
+(5)
+
+where e ∈ 1, . . . with index e, and
+
+,Ce∗mz den−ot1esdtehneootepstitmheal
+
+index of the optimization cluster obtained in step e.
+
+step, The
+
+Ce represents final cluster is
+
+a cluster obtained
+
+automatically, and hence excluded from (5).
+
+Note that the complexity of the optimization in (5) grows exponentially with m, as we need to
+
+search over
+
+m−z(e−1) z
+
+possible cluster choices in each optimization step. To overcome this, we
+
+propose a more computationally feasible cluster optimization approach based on our observation
+
+that the lower bounds in Theorems 1 and 2 corresponds to a maximization of cluster-internal cycles:
+
+indeed, suppose that in each step, we cluster CNs so that the subgraph induced by the cluster and its
+
+neighbors contains as many cycles as possible. Such a cluster will have fewer neighbors compared to
+
+one that does not induce cycles. In turn, the maximum possible size of the corresponding CCS (and
+
+the number of exiting edges) will likely be reduced (see Remark 1). Thus, the cluster optimization
+
+approach based on cycle maximization is given by
+
+C˜e∗ =
+
+arg max
+
+ηκ(Ce),
+
+Ce⊆C\C˜e∗−1∪...∪C˜1∗, |Ce|=z
+
+(6)
+
+where C˜e∗ denotes a cycle-maximized cluster, and ηκ(Ce) denotes the number of length-κ cycles in the graph induced by NV (Ce) ∪ Ce. The possible choices of κ depends on the girth of the family of codes considered; the smaller the choice of κ, the lower the optimization complexity, as larger
+cycles are more difficult to enumerate. In case of LDPC codes, optimized cycle detection algorithms based on message-passing have complexity of O(gE2), where g is Tanner graph’s girth and E is the total number of edges [29]. In a (3, p) AB-LDPC code, whose graph has girth 6, we choose κ = 6.
+We present Algorithm 3 as a method for generating cycle-maximized clusters.
+
+The algorithm inputs are a parity-check matrix H, the cluster size z and the length κ of the cycles
+to be detected. Let T be the total number of κ-cycles in GH. For each x ∈ {1, . . . , T }, let Sx = {c1, . . . , cκ/2} denote the set of κ/2 CNs in the κ-cycle indexed by x, and define C = {S1, . . . , ST }.
+
+7
+
+Algorithm 3: Optimized clustering via cycle maximization
+
+Input : H, z, κ Output: Set of cycle-maximized clusters C˜1∗, . . . , C˜⌈∗m/z⌉
+1 Initialize C ← ∅, x ← 1
+
+2 Run a suitable cycle detection algorithm on GH 3 for each detected κ-cycle in GH do 4 Determine Sx 5 Store Sx in C 6 x←x+1
+
+7 end
+
+8 for κ-cycles 1, . . . , T do
+
+9 Determine the CN c∗ ∈ C \ C˜e∗−1 ∪ . . . ∪ C˜1∗ appearing most frequently in C 10 Find the K sets S1, . . . , SK ∈ C containing c∗
+
+11
+
+C ← S1 ∪ · · · ∪ SK \ C˜e∗−1 ∪ . . . ∪ C˜1∗
+
+12 if |C|≥ z then
+
+13
+
+Select z CNs including c∗ from C and store them in C˜e∗
+
+14
+
+end
+
+15 else
+
+16
+
+Select z − |C| CNs randomly from C \ C˜e∗−1 ∪ · · · ∪ C˜1∗ ∪ C and store them in C′
+
+17
+
+C˜e∗ ← C ∪ C′
+
+18
+
+end
+
+19 end
+
+In Line 13, the algorithm selects z distinct CNs, including c∗, appearing in S1, . . . , SK , where K is the total number of sets Sx containing c∗. Note from Algorithm 3 that the optimization complexity
+
+depends on T , which is expected to be much smaller than
+
+m−z(e−1) z
+
+for sparse H. For example, in
+
+a (3, p) AB-LDPC code, there are only T = p2(p−1) 6-cycles in the Tanner graph [28]. In Section 5
+
+we consider the case where p ≥ 5 and z = 7. For these parameters and for e = 1, the number of
+
+cluster choices using the optimization in (5) is
+
+γp z
+
+= O(pz) as opposed to p2(p − 1) using (6).
+
+5 Experimental Results
+In this section, we perform learned sequential decoding by employing cluster-based Q-learning with contiguous, random, and (cycle-)optimized clusters.
+The resulting schemes are denoted by MQC, MQR, and MQO, respectively. As a benchmark, we compare these three schemes to that wherein the MAB problem is solved by letting the actionvalue function be equal to the Gittins index (GI): roughly speaking, the GI represents the long-term expected reward for taking a particular action in a particular state under the assumption that the arms are independent bandit processes [11, 10]. We denote this benchmark scheme by MGI. We then utilize each of these schemes for sequential decoding of both (3, 7) AB-LDPC and random (3, 6)-regular LDPC codes. Specifically, Algorithm 2 is used to implement the three cluster-based learning approaches mentioned above.
+As a first step towards other RL approaches, we have implemented a NS decoder based on Thompson Sampling [30], NS-TS, which performs better than flooding, but worse than our proposed Q-learning scheme. Our NS-TS scheme tracks the densities of the messages via a Gaussian approximation and uses the MSE (m′a→v − ma→v)2 as a non-central chi-square distributed reward, sampled in each sequential decoding step.
+For both considered codes, we let the learning parameters be as follows: α = 0.1, β = 0.9, ǫ = 0.6, z = 7, M = 4, ℓmax = 25, and |L |= 1.25 × 106. We note that this choice of |L | is sufficiently large in order to accurately estimate the action-value function. For clustered Q-learning, training is accomplished by appropriately updating the CN scheduling step of Algorithm 2 for each code, and the corresponding action-value functions are used to perform MQC, MQR, and MQO. We compare the performances of these MAB-NS schemes with the existing non-Q-learning-based BP decoding schemes of flooding, MGI, and NS for ℓmax = 25.
+8
+
+10 -1
+
+10 -1
+
+10 -2
+
+10 -2
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Figure 2: BER results using different BP decoding schemes for a (3, 6)-regular LDPC (left figure) and (3, 7) AB-LDPC code (right figure, code is lifted), with block length n = 196.
+The bit error rate (BER), given by Pr[xˆi = xi], i ∈ [[n − 1]], vs. channel signal-to-noise ratio (SNR) Eb/N0 in dB of (3, 6)-regular and (3, 7) AB-LDPC codes using these decoding techniques are shown in Fig. 2 on the left- and right-hand side, respectively.
+The experimental results reveal that MQO is superior to the other decoding schemes in terms of BER performance for both codes. In Table 1, we compare the average number of CN to VN messages propagated in the considered decoding schemes to attain the results in Fig. 2. The numbers without (resp. with) parentheses correspond to the (3, 6)-regular (resp. (3, 7) AB-) LDPC code. We note that the MQO scheme, on average, generates a lower number of CN to VN messages when compared to the other decoding schemes.
+Moreover, in contrast to NS, RL-based schemes avoid the computation of residuals in real-time, providing a significant reduction in message-passing complexity for short LDPC codes.
+
+Table 1: Average number of CN to VN messages propagated in various decoding schemes for a (3, 6)-regular ((3, 7) AB-) LDPC code to attain the results shown in Fig. 2.
+
+SNR (dB) flooding MGI NS MQC MQR MQO
+
+0.5 27040 (27913) 308 (365) 293 (362) 351 (411) 310 (368) 264 (367)
+
+1 21716 (24532) 275 (324) 266 (332) 299 (369) 275 (326) 237 (333)
+
+1.5 13327 (16098) 234 (281) 229 (279) 266 (313) 235 (286) 209 (283)
+
+2 6316 (8117) 210 (247) 203 (245) 218 (264) 214 (244) 181 (243)
+
+2.5 2500 (3064) 174 (205) 173 (203) 190 (215) 182 (214) 163 (208)
+
+6 Conclusions
+We presented a novel RL-based decoding framework to optimize the scheduling of BP decoders for short-to-moderate length LDPC codes. The main ingredient is a new state space clustering approach to significantly reduce the learning complexity. Experimental results show that optimizing the cluster structure by maximizing cluster-internal short cycles provides marked performance gains when compared with both previous scheduling schemes and clustered Q-learning with nonoptimized clusters. These gains include lowering both BER and message-passing complexity. As Bayesian inference over graphical models is at the core of many machine learning applications, ongoing work includes extending our RL approach to other applications involving BP-based message passing over a factor graph defined by an underlying probabilistic model.
+
+9
+
+Broader Impact
+The proposed approach outlines a comprehensive RL framework for low-complexity, low-latency, decoding of short-to-moderate length LDPC codes. This approach has broader technological and societal impacts through several complementary mechanisms, elaborated on as follows. One broader impact is on the advancement of information technology – and its benefits to society – through newly established theory and practice in the area of RL-based error correction for linear graph-based codes. As global per-capita information usage continues to grow significantly over the next decade, considerable improvements in error correcting codes will be required in order to satisfy the highthroughput, low-latency requirements of emerging communication systems, while ensuring scalable service requirements for a host of heterogeneous devices. Our application of RL provides a significant gain in performance while reducing decoding complexity for linear graph-based codes. As a consequence, the results of this work have the potential to materially impact our daily lives. In addition, the results presented in this work have the potential to have a significant transformative impact on other critical applications employing low-latency, reliable networked communication. Among many others, these include applications in the fields of healthcare, environmental monitoring, and finance.
+Acknowledgment
+Funding in direct support of this work: NSF grant ECCS-1711056 and by the Combat Capabilities Development Command Army Research Laboratory under Cooperative Agreement Number W911NF-17-2-0183. We thank the anonymous reviewers and the meta reviewer for their comments and suggestions to improve the paper.
+References
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, Jan 1962.
+[2] S. Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the Shannon limit,” IEEE Communications Letters, vol. 5, pp. 58–60, Feb. 2001.
+[3] Y. Kou, S. Lin, and M. Fossorier, “Low density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Transactions on Information Theory, vol. 47, pp. 2711– 2736, Nov. 2001.
+[4] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 553–547, Sep 1981.
+[5] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, pp. 673–680, May 1999.
+[6] A. V. Casado, M. Griot, and R. D. Wesel, “LDPC decoders with informed dynamic scheduling,” IEEE Trans. of Comm., vol. 58, no. 12, pp. 3470–3479, Dec 2010.
+[7] T. Lattimore and C. Sepesvari, Bandit Algorithms. Cambridge University Press, 2020.
+[8] L. Zhou, “A survey on contextual multi-armed bandits,” [Online]. Available: arXiv.org, arXiv:1508.03326v2 [cs.IT], 2016.
+[9] M. O. Duff, Q-Learning for Bandit Problems. CMPSCI Technical Report 95-26, 1995.
+[10] J. C. Gittins, “Bandit processes and dynamic allocation indices,” J. R. Statistics Soc. B, vol. 41, no. 2, pp. 148–163, 1979.
+[11] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. The MIT Press Cambridge, 2015.
+10
+
+[12] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[13] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: Feedback codes via deep learning,” in Advances in Neural Information Processing Systems, 2018, pp. 9436–9446.
+[14] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-to-point communication channels,” in Advances in Neural Information Processing Systems, 2019, pp. 2758–2768.
+[15] I. Be’ery, N. Raviv, T. Raviv, and Y. Be’ery, “Active deep decoding of linear codes,” IEEE Transactions on Communications, vol. 68, no. 2, pp. 728–736, 2020.
+[16] F. Carpi, C. Hager, M. Martalo, R. Raheli, and H. D. Pfister, “Reinforcement learning for channel coding: Learned bit-flipping decoding,” Proceedings of 57th Allerton Conf. on Communication, Control and Computing.
+[17] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block codes,” in Advances in Neural Information Processing Systems, 2019, pp. 2329–2339.
+[18] C. J. C. H. Watkins, “Learning from delayed rewards,” Ph.D. dissertation, King’s College, 1989.
+[19] C. J. C. H. Watkins and P. Dayan, “Q-learning,” Machine Learning, vol. 8, no. 3-4, pp. 279– 292, 1992.
+[20] O¨ . S¸ ims¸ek, A. P. Wolfe, and A. G. Barto, “Identifying useful subgoals in reinforcement learning by local graph partitioning,” in Proceedings of the 22nd International Conference on Machine Learning, 2005, pp. 816–823.
+[21] S. Mannor, I. Menache, A. Hoze, and U. Klein, “Dynamic abstraction in reinforcement learning via clustering,” in Proceedings of the Twenty-First International Conference on Machine Learning, 2004, pp. 71–78.
+[22] R. Parr and S. J. Russell, “Reinforcement learning with hierarchies of machines,” in Advances in Neural Information Processing Systems, 1998, pp. 1043–1049.
+[23] S. Bitzer, M. Howard, and S. Vijayakumar, “Using dimensionality reduction to exploit constraints in reinforcement learning,” in 2010 IEEE/RSJ International Conference on Intelligent Robots and Systems, 2010, pp. 3219–3225.
+[24] D. Shah and Q. Xie, “Q-learning with nearest neighbors,” in Advances in Neural Information Processing Systems, 2018, pp. 3111–3121.
+[25] S. Habib, A. Beemer, and J. Kliewer, “Learned scheduling of LDPC decoders based on multiarmed bandits,” in Proceedings of the IEEE Intl. Symp. on Inf. Theory, 2020, pp. 2789–2794.
+[26] J. L. Fan, “Array codes as low-density parity-check codes,” in Proceedings of International Symposium on Turbo Codes and Rel. Topics, 2000, pp. 543–546.
+[27] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, Jr., “LDPC block and convolutional codes based on circulant matrices,” IEEE Transactions on Information Theory, vol. 50, no. 12, pp. 2966–2984, Dec 2004.
+[28] L. Dolecek, Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Transactions on Information Theory, vol. 56, pp. 181–201, Jan. 2010.
+[29] J. Li, S. Lin, and K. Abdel-Ghaffar, “Improved message-passing algorithm for counting short cycles in bipartite graphs,” in Proceedings of the IEEE International Symposium on Information Theory, 2015, pp. 416–420.
+[30] D. Russo, B. V. Roy, A. Kazerouni, I. Osband, and Z. Wen, “A tutorial on Thompson Sampling,” in Foundations and Trends in Machine Learning. NOW Publishers, 2018.
+11
+
+Supplementary Material S.1 Proof of Theorem 1
+The proofs are ordered according to the claims in the theorem as follows. 1. There are p VN neighbors of a CN c ∈ Cu, and none of these VN neighbors can share another
+CN neighbor due to the absence of 4-cycles. Thus, the number of VNs in NV (c) that have no neighbors outside of Cu is at most (z − 1)/2 (each of these VNs has two other neighbors in the remaining z − 1 CNs of Cu, and all are distinct). Thus, there are at least p − (z − 1)/2 VNs adjacent to c that have at least one neighbor outside of Cu. This is true for all choices of c. Since we may be counting each of these VNs up to two times, there are at least (p − [(z − 1)/2])z/2 VNs in W . The result follows. 2. If all the rows corresponding to the CNs of cluster Cu are in the same row group, then no two CNs in Cu will have any VNs in common. Hence, each VN in NV (Cu) must also be adjacent to C¯u, implying that NV (Cu) is a CCS with |NV (Cu)|= |Cu|p = zp. 3. Suppose that the CNs in Cu form triples, and let φ = {{c1, c2, c3}, . . . , {cz−2, cz−1, cz}}, |φ|= z/3, be a set of all these triples. Suppose that each CN triple in φ is associated to a non-overlapping 6-cycle. Since, in this case, there will be |φ| non-overlapping 6-cycles in the Tanner graph induced by Cu ∪ NV (Cu), and each 6-cycle has 3 VNs, the number of VNs that have degree 2 with respect to Cu will be |φ|×3 = z. Note that there are zp edges emanating from Cu since each CN degree is p. Hence, in the worst case, there will be zp − z distinct VNs in NV (Cu), which is also a CCS since each of these degree 3 VNs are also connected to C¯u.
+12
+
+S.2 Algorithm 1
+
+Algorithm 4: MAB-NS for LDPC codes
+
+Input : L, H
+
+Output: reconstructed codeword
+
+1 Initialization:
+
+2 ℓ←0
+
+3 mc→v ← 0 4 mv→c ← Lv
+
+5 Lˆ ℓ ← L
+
+6 Sˆℓ ← HLˆ ℓ 7 foreach a ∈ [[m]] do
+
+8
+
+s(ℓa) ← gM (sˆℓ(a))
+
+9 end
+
+// decoding starts
+
+10 if stopping condition not satisfied or ℓ < ℓmax then 11 s ← index of Sℓ
+12 select CN a according to an optimum scheduling policy
+
+13 foreach VN v ∈ N (a) do
+
+14
+
+compute and propagate ma→v
+
+15
+
+foreach CN c ∈ N (v) \ a do
+
+16
+
+compute and propagate mv→c
+
+17
+
+end
+
+18
+
+Lˆ(ℓv) ← c∈N (v) mc→v + Lv // update LLR of v
+
+19 end
+
+20 foreach CN j that is a neighbor of v ∈ N (a) do
+
+21
+
+sˆ(ℓj) ← v′∈N (j) Lˆ ℓ(v′)
+
+22
+
+s(ℓj) ← gM (sˆℓ(j))
+
+23 end
+
+24 ℓ ← ℓ + 1
+
+25 end
+
+// for all CN to VN messages // for all VN to CN messages
+// M -level quantization
+// update syndrome Sℓ // update iteration
+
+13
+
+S.3 Details of Algorithm 2
+
+Algorithm 5: Clustered Q-learning
+
+Input : L , H
+
+Output: Estimated Qℓmax(su, au) for all u 1 scene14
+
+2 Initialization: Q0(su, au) ← 0 for all su, au and u 3 for each L ∈ L do
+
+4 ℓ←0
+
+5 Lˆ ℓ ← L
+6 Sˆℓ ← HLˆ ℓ 7 foreach a ∈ [[m]] do
+
+8
+
+s(ℓa) ← gM (sˆ(ℓa))
+
+9 end
+
+// M -level quantization
+
+10 while ℓ < ℓmax do
+
+11
+
+schedule CN au according to an ǫ-greedy approach
+
+12
+
+select u as cluster index of CN au
+
+13
+
+S(ℓu,z) ← s(ℓj1), sℓ(j2), . . . , sℓ(jz)// CN indices j1, j2, . . . , jz ∈ {0, . . . , m − 1} are in
+
+ascending order for MQC, and randomly ordered for MQR. For MQO, their
+
+ordering depends on the underlying cluster C˜u∗
+
+14
+
+su ← index of S(ℓu,z)
+
+15
+
+foreach VN v ∈ N (au) do
+
+16
+
+compute and propagate mau→v
+
+17
+
+foreach CN c ∈ N (v) \ au do
+
+18
+
+compute and propagate mv→c
+
+19
+
+end
+
+20
+
+Lˆ(ℓv) ← c∈N (v) mc→v + Lv // update LLR of v
+
+21
+
+end
+
+22
+
+foreach CN j that is a neighbor of v ∈ N (au) do
+
+23
+
+sˆ(ℓj) ← v′∈N (j) Lˆℓ(v′)
+
+24
+
+sℓ(j) ← gM (sˆℓ(j))
+
+25
+
+end
+
+// update syndrome Sℓ
+
+26 27
+
+sRu′ℓ(←sui,nadue,xs′uo)f
+
+updated S(ℓu,z) ← highest residual
+
+of
+
+CN
+
+au
+
+28
+
+compute Qℓ+1(su, au)
+
+29
+
+ℓ←ℓ+1
+
+// update iteration
+
+30 end
+
+31 end
+
+14
+
+

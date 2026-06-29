@@ -1,0 +1,538 @@
+50
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+High-Throughput Software-Defined LDPC Encoder and Decoder With x86-Based Data-Level Parallelism
+Sangbu Yun , Graduate Student Member, IEEE, Jeongwon Choe , Student Member, IEEE, and Youngjoo Lee , Senior Member, IEEE
+
+Abstract—In order to realize the high-throughput softwaredefined low-density parity-check (SD-LDPC) encoder and decoder for 5G communication systems, this paper presents various algorithm-software co-optimization techniques allowing advanced data-level parallelism. We first develop efficient mapping schemes to describe the contemporary 5G LDPC processing with recent x86 single instruction multiple data (SIMD) instructions. Then, the data rate of 5G SD-LDPC processing is remarkably improved by introducing SIMD-aware algorithm-level innovations, e.g., parallel efficient encoding, minimizing branch instructions, approximate check-node processing, and latency-oriented optimization. Compared with the state-of-the-art approaches, experimental results show that the proposed techniques successfully enhance the speed of encoding and decoding operations by 8.1 and 1.5 times, respectively, leading to the high-speed and fully-flexible software-defined radio (SDR) solutions for 5G systems.
+Index Terms—Error-correction code, LDPC decoding, 5G new radio, SIMD, SDR, wireless communication.
+I. INTRODUCTION
+D UE to the superior error-correcting capability, the lowdensity parity-check (LDPC) code [1] has been widely considered as the practical candidate of error-correction codes (ECCs) in various communication and storage systems including the recent 5G new radio (NR) specification [2], [3], [4]. For achieving high-throughput ECC operations, the dedicated encoder and decoder hardware designs have been actively reported with massive-parallel computation units [5], [6], [7]. Due to the fixed functionality, however, it is extremely hard to immediately adjust the processing configurations to reflect the up-to-date system requirements with hardware-based LDPC solutions. Like the other ECC cases [8], [9], [10], therefore, there have been numerous researches to implement the software-defined LDPC
+Received 31 October 2023; revised 11 March 2024; accepted 18 August 2024. Date of publication 18 September 2024; date of current version 16 January 2025. This work was supported in part by the Institute of Information & communications Technology Planning & Evaluation(IITP) under Grant 2021-0-00165, in part by the Development of 5G+ Intelligent Basestation Software Modem; under Grant RS-2024-00398449, in part by the Network Research Center: Advanced Channel Coding and Channel Estimation Technologies for Wireless Communication Evolution, and in part by the National Research Foundation of Korea(NRF) under Grant 2022R1A2C2092521. The review of this article was coordinated by Dr. Zilong Liu. (Sangbu Yun and Jeongwon Choe contributed equally to this work.) (Corresponding author: Youngjoo Lee)
+The authors are with the Department of Electrical Engineering, Pohang University of Science and Technology (POSTECH), Pohang 37673, South Korea (e-mail: sb9767@postech.ac.kr; jwchoe@postech.ac.kr; youngjoo. lee@postech.ac.kr).
+Digital Object Identifier 10.1109/TVT.2024.3452718
+
+(SD-LDPC) decoder by using the advanced general-purposed
+
+multi-core processors, supporting both the high-throughput and
+
+fully-flexible operations [11], [12], [13]. At the same time,
+
+numerous software-defined radio (SDR) projects have been
+
+launched, including [14], [15], [16]. Among various SD-LDPC
+
+decoder designs, the x86-based approach has been regarded as
+
+the promising option for realizing the high-speed flexible base-
+
+band architecture by utilizing single instruction multiple data
+
+(SIMD) instructions such as Intel streaming SIMD extensions
+
+(SSE) [11], advanced vector extensions (AVX, AVX2) [12],
+
+and the most recent AVX-512 [13]. However, the prior studies
+
+still offer limited scalability and system throughput. Even if
+
+the optimization for memory access pattern proposed in [12]
+
+significantly reduces decoding latency, this method can only be
+
+applied to predefined code specifications, which is unsuitable
+
+for 5G NR standard, which covers a wide range of coderate and
+
+codelength. Moreover, utilizing the most recent SIMD ISA was
+
+introduced in [13], facilitating data-level parallelisms (DLP) us-
+
+ing the largest vector container to process internal messages dur-
+
+ing message passing decoding. Although the decoder achieved
+
+the near-optimal DLP within iterative processing, the system
+
+throughput is still limited to the inherent decoding procedure.
+
+In this paper, to the best of our knowledge, we propose the
+
+very first 5G SD-LDPC encoder system accelerated by SIMD
+
+ISA with novel standard-dedicated optimizations. Moreover,
+
+motivated by the current limitations, we propose a novel high-
+
+throughput 5G SD-LDPC decoder by 1) minimizing the time-
+
+consuming branch operations and 2) re-designing the message
+
+passing algorithm itself to excel inherent throughput limita-
+
+tion. Several algorithm-software co-optimization approaches are
+
+newly presented to allow more parallel operations suitable for
+
+5G SD-LDPC processing, remarkably increasing the processing
+
+speed compared with the existing studies. The main contribu-
+
+tionrs
+
+of this paper The very first
+
+are 5G
+
+summarized as follows. SD-LDPC encoder design
+
+is
+
+presented
+
+by
+
+exploiting unique properties of 5G specification by modi-
+
+fying the previous hardware-oriented schemes to maximize
+
+the performance improvement with AVX-512 instructions,
+
+enhancing the encoding throughput up to 8.06 times com-
+
+pared with the software-mapped implementation of previ-
+
+r
+
+ous efficient encoding [17]. The decoding steps are also modified to minimize control
+
+hazard, remarkably reducing the decoding latency while
+
+supporting every code defined in the 5G NR. We also intro-
+
+duce optimized data flow of the internal messages, which
+
+0018-9545 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+YUN et al.: HIGH-THROUGHPUT SOFTWARE-DEFINED LDPC ENCODER AND DECODER WITH X86-BASED DATA-LEVEL PARALLELISM
+
+51
+
+TABLE I LIFTING SIZE SET OF 5G NR LDPC CODE
+
+enables the surpassing of intrinsic decoding throughput
+
+limitation. Moreover, several processing-wise optimiza-
+
+tions thoroughly improve the layered scheduling algorithm
+
+with 8b-quantization, resulting in up to 1.5 times faster
+
+r
+
+decoding than the previous work [13]. We also newly present the fast SD-LDPC
+
+decoding
+
+al-
+
+gorithm, which actively introduces approximation of the
+
+conventional processing to reduce the effective number of
+
+instructions required. Remark that the method provides
+
+an acceptable error-correcting performance for 5G SDR
+
+systems, while reduces decoding latency up to 38% from
+
+the state-of-the-art SD-LDPC solution [13].
+
+II. BACKGROUNDS
+A. 5G NR LDPC Code
+An (N, K) LDPC codeword protects K-bit user data by appending M (= N − K) parity bits, where the iterative decoding steps are schematized by a bipartite graph that connects N variable nodes (VNs) and M check nodes (CNs) according to the parity check matrix (PCM) H [1]. Multiple PCMs are used for raptor-like quasi-cyclic LDPC (RL-QC-LDPC) codes in 5G NR specification [18], where each PCM H is defined by an MBG × NBG base matrix, i.e., an array of shifted identity matrices of lifting size Z whose options are defined by eight sets shown in Table I. Two base graphs BG1 with MBG = 46, NBG = 68 and BG2 with MBG = 42, NBG = 52 are specified to support different LDPC configurations. More precisely, BG1 is suitable for constructing the long-length high-rate codes, and BG2 is used for the opposite short-length low-rate cases. Therefore, it is surely required to design dedicated encoder and decoder architectures for efficiently supporting the 5G NR systems by exploiting the distinctive characteristics.
+
+B. Baseline LDPC Encoding Algorithm
+For the given PCM H, the straightforward encoding process is based on the well-known Gaussian elimination, constructing the generator matrix G, where the codeword c for the input message s is obtained by c = GT × s [1]. However, this naive method generally suffers from a long processing delay by performing numerous element-wise matrix-vector multiplications associated with impractical memory requirements for storing all the 5G NR generator matrices. To minimize cost overheads, the efficient encoding method from [17], which is the baseline
+
+encoding method in this work, presents the low-complexity and
+
+memory-reduced processing steps by investigating several prop-
+
+erties of 5G PCMs of BG1. More specifically, we can represent
+
+the parity-check equation for evaluating the error-free codeword
+
+as follows.
+
+⎡⎤
+
+s
+
+Hc = A C
+
+B C
+
+O I
+
+⎣⎢pa⎥⎦ = 0
+
+(1)
+
+pb
+
+where s, pa, and pb denote information, core-parity, extensionparity sequences, respectively. Then, the parity-check equation can be simply divided into two sub-equations as follows.
+
+As + Bpa = 0
+
+(2)
+
+C s + C pa + pb = 0
+
+(3)
+
+Targeting the general H structure for BG1, except the exponent matrix of set 7, the first equation (2) can be reformulated by
+
+utilizing Z × Z shifted identity matrices as follows.
+
+⎡
+
+⎤⎡
+
+⎤
+
+⎣⎢⎢A...0,0
+
+··· ...
+
+A0,KBG ...
+
+−1
+
+⎥⎥⎦
+
+×
+
+⎢⎣⎢
+
+s0 ...
+
+⎥⎥⎦
+
+A3,0 · · · A3,KBG−1
+
+sKBG −1
+
+⎡
+
+⎤⎡ ⎤
+
+P1 + ⎢⎢⎢⎣PO0
+
+P0 P0 O
+
+O P0 P0
+
+O
+
+O P0
+
+⎥⎦⎥⎥
+
+×
+
+⎣⎢⎢⎢pppaaa201
+
+⎥⎦⎥⎥
+
+=
+
+0
+
+(4)
+
+P1 O O P0
+
+pa3
+
+where KBG is set to 22 for the case of BG1. Then, the core-parity sequence pa = [pa0 pa1 pa2 pa3 ] can be partially computed with the following equations:
+
+3 KBG−1
+
+pa0 =
+
+Ai,j sj
+
+i=0 j=0
+
+KBG −1
+
+pa1 =
+
+A0,j sj + p(a0−1)
+
+j=0
+
+KBG −1
+
+pa2 =
+
+A2,j sj + pa3
+
+j=0
+
+KBG −1
+
+pa3 =
+
+A3,j sj + p(a0−1) (5)
+
+j=0
+
+where p(ai) denotes i-th cyclic shifted vector of pa. After obtaining pa, the extension-parity sequence pb is simply computed by using (3), finally constructing the codeword c by appending two parity sequences to the information sequence s. With the previous efficient encoding method, we mainly multiply vectors with Z × Z shifted identity matrices, utilizing low-cost shift-and-add operations without performing the compute-intensive matrixvector multiplication in the conventional encoding method. However, the state-of-the-art efficient encoding only considers the hardware costs for ASIC-level implementations, and there are some intrinsic limitations for developing a high-speed SDLDPC encoder with given SIMD instructions.
+
+C. Baseline LDPC Decoding Algorithm
+Substituting the comparison networks for complex nonlinear functions at the theoretical belief propagation (BP) decoding [19], the cost-effective min-sum (MS) based algorithms have
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+52
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+been prevalently adopted in contemporary decoders [20], [21],
+[22]. To define the baseline MS decoding in this work, we use
+αp,q and βq,p to denote the message from the p-th VN to the q-th CN and that from the q-th CN to the p-th VN, respectively. V (q) is the set of VNs related to the q-th CN, and V (q)\p is V (q) excluding the p-th VN. Similarly, C(p) stands for the set of CNs related to the p-th VN, and C(p)\q is the set excluding the q-th CN from C(p). The baseline MS algorithm starts by initializing αp,q as the log-likelihood ratio (LLR) of the p-th received bit, γp. Then, the CN processing (CNP) calculates check-to-variable messages βq,p as
+
+TABLE II EXTENSION OF EFFICIENT ENCODING EQUATIONS
+
+βq,p =
+
+sgn (αp ,q) × min |αp ,q|
+
+(6)
+
+p ∈V (q)\p
+
+p ∈V (q)\p
+
+where sgn(·) returns the sign of the input value. The following VN processing (VNP) updates variable-to-check messages αp,q by properly adding the received messages to initial LLRs, which can be formulated as follows.
+
+αp,q = γp +
+
+βq ,p
+
+(7)
+
+q ∈C(p)\q
+
+Similarly, a posteriori probability (APP) of each VN, denoted as γ˜p, can be computed in parallel to the VNP as follows.
+
+γ˜p = γp +
+
+βq,p
+
+(8)
+
+q∈C(p)
+
+The decision vector xˆ = [xˆ0, xˆ1, . . ., xˆN−1]T is then obtained by setting xˆp = 1 if γ˜p > 0, and xˆp = 0 otherwise. In the baseline MS decoding [19], a series of CNP and VNP is repeated until the stopping criteria is fulfilled: 1) the parity-check condition in (1) is satisfied, or 2) the number of iterations reaches its maximum Imax.
+MS-based decoding has several variations, such as the normalized-MS (nMS) [19], offset-MS (oMS) [19], and reweighed-MS (rMS) [22] algorithms, which basically relaxing overconfident messages caused by short cycles within a factor graph. Although the traditional flood scheduling technique can achieve full parallelism given sufficient computational resources, for SD-LDPC decoders, layered scheduling is deemed superior due to the constraints in the parallelism capacity of general purpose processors (GPP). Notably, layered scheduling can cut the decoding iterations needed to attain a comparable error rate by approximately 50% against the traditional flood method, attributed to its increased internal message exchange frequency [23]. This also results in roughly a 40% reduction in memory footprints. Consequently, most recent high-throughput software decoders lean towards the Turbo decoding message passing (TDMP) algorithm [12], [13], or layered scheduling. Building on established research, our methodology incorporates layered scheduling.
+III. HIGH-SPEED 5G SD-LDPC ENCODER DESIGN
+A. Generalized Efficient Encoding
+To guarantee the scalability of our SD-LDPC encoding framework, we first design the generalized software encoding
+
+Fig. 1. Packed data format for data-level parallelism.
+procedures for the target 5G specification. Depending on the basegraph type as well as the CPM size Z, as detailed in Table II, we newly formulate four cases of partial core-parity calculations (pax) by extending the previous efficient encoding approach [17], which can now fully support any kind of 5G parameters. Note that the partial core-parity sequences are reused as many as possible for computing the other sequences, basically reducing the number of operations in our SD-LDPC encoding framework. Similar to the baseline work, the extension-parity sequence (pb) is sequentially obtained by utilizing the core-parity sequence as expressed in (3).
+B. Mapping SD-LDPC Encoding Using AVX-512 Instructions
+To realize the generalized efficient encoding shown in Table II at our SD-LDPC encoding framework, we first rearrange the input user data into Z-bit vector, denoted as e, making a packed data format as described in Fig. 1. The Z-bit vector can be stored in a 512-bit register with 512 − Z zero-padding bits, where the largest value of Z is 384 as described in Table I. Then, a series of bit-wise AVX-512 operations are applied to the registers, maximizing data-level parallelism. Meanwhile, due to the absence of 512-bit shift instructions, it is difficult
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+YUN et al.: HIGH-THROUGHPUT SOFTWARE-DEFINED LDPC ENCODER AND DECODER WITH X86-BASED DATA-LEVEL PARALLELISM
+
+53
+
+Fig. 2. Implementation of bit-level shift operation when (a) Z ≥ 64 and (b) Z < 64.
+
+to support bit-level rotations on e vectors in parallel, which are the inevitable encoding steps as depicted in Table II.
+Utilizing the byte-level parallelism, the proposed work newly introduces an efficient way for utilizing AVX-512 instructions for handling the bit-level rotations for the cases of Z ≥ 64, which always guarantee Z%8 = 0 according to Table I. Supposing that the arbitrary shift amount is k(= 8j + t) bits, where j = k/8 and t = k%8, as detailed in Fig. 2(a), the given e vector is represented with u(= Z/8) byte-sized data bi. Then, byte-level pre-rotations are performed by multiple vector_mask_load/store instructions with proper byte addressing of e. According to the value of j, note that we place two shifted Z-length vectors into 512-bit registers. Then, vector_right_shift and vector_left_shift instructions are applied to make two shifted patterns with t, and the following vector_or finally constructs the target bitlevel rotation result as shown in Fig. 2(a). For the small Z values less than 64, we simply utilize ordinary instructions with 64-bit registers as depicted in Fig. 2(b), which are based on the masked load/store and bit-wise shift instructions. In fact, it is no longer possible to use the byte-level parallelism with AVX-512 instructions due to the arbitrarily small Z values; therefore, directly handling a whole e vector with 64-bit registers is more applicable for reducing the SD-LDPC encoding latency.
+In order to accelerate the rotate operation in the encoding procedure, we also present the look-up-table-based rotate operations that can totally remove the shift instructions shown in Fig. 2(a). More specifically, as described in Fig. 3, we simply pre-calculate all the possible 8 b-level rotated patterns e(t) of each Z-bit vector e. Then, we can directly construct the target k-bit rotated result from the stored t -bit rotated patterns by only performing vector_mask_load/store instructions associated with proper memory addressing, additionally reducing the SDencoding latency, e.g., enhancing the encoding speed by 2.2 times for handling (25344, 8448) 5G codes.
+
+Fig. 3. Acceleration of shift operation with pre-calculation.
+Fig. 4. Byte-level rotated pattern in twin-aligned architecture.
+C. Twin-Aligned Data Arrangement Conventionally, the encoding process handles an LDPC code-
+word by serially storing Z-bit vectors. To perform the rotation operations on a Z-bit vector e, therefore, we should utilize internal buffers to temporally keep the partial results of the byte-level pre-rotation steps with multiple vector load/store instructions as described in Fig. 2(a). To further optimize the SD-encoding procedures, we additionally introduce the twin-aligned data arrangement that can perform the pre-rotation operations on e vectors by only utilizing two vector_mask_load instructions. More specifically, as shown in Fig. 4, we duplicate each e vector and keep two identical vectors serially in the memory. Then, we simply adjust the accessing to capture the internal Z-bit pattern
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+54
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+TABLE III SUMMARY OF THE FUNCTIONS USED IN ALGORITHMS
+
+the DLP capability of the AVX-512 instructions, we quantize the channel inputs to 6 bits and the internal values to 8 bits. This quantization ensures that the error-correcting performance remains nearly equivalent to the baseline floating-point decoder. As a result, the majority of processing values in our SD-LDPC decoder are managed using packed data forms, enabling the storage of up to 64 8-bit values in a serial manner and facilitating the effective use of AVX-512 instructions. The proposed highspeed SD-LDPC decoder introduces two major optimization strategies, including alleviating control hazards by minimizing branch operations and optimization techniques for the intrinsic message passing algorithm, known as the MS algorithm. In this section, we introduce each optimization strategy in detail. A summary of the functions utilized in this paper’s algorithmic descriptions can be found in Table III.
+
+Fig. 5. Generation of (a) byte-level rotated pattern and (b) permutation indices with support of AVX-512 VBMI instructions.
+of 2Z -bit data, directly obtaining the byte-level rotated patterns. As a result, the time-consuming byte-level rotation procedures are totally removed, greatly reducing the overall encoding time, e.g., achieving 1.35 times faster encoding speed for handling (25344, 8448) 5G codes.
+With the latest processors supporting AVX-512 VBMI, the byte-level rotation can be performed with the specialized instruction, vector_mask_permute, which shuffles 8-bit data with the specific permutation indices as shown in Fig. 5(a). From the initial vector f (0), storing 0 to u − 1 in sequence, the generation of the permutation indices f (j) can be accelerated with the vector instructions as illustrated in Fig. 5(b), where f (j) stores the corresponding indices for generating j -byte rotated pattern. Although the utilization of VBMI instructions is revealed to be faster than the twin-aligned arrangement, the VBMI instructions are only supported on limited processors.
+IV. HIGH-SPEED 5G SD-LDPC DECODER DESIGN
+The 5G SD-LDPC decoder that we propose operates based on the well-known layered min-sum (LMS) decoding algorithm [23], primarily comprised of the CNP, VNP, and APP update processes as demonstrated in Section II-C. To fully utilize
+
+A. Unrolled Decoding Functions
+Overall control hazard occurrences can be significantly reduced using the unrolling technique, which stands out as one of the most potent optimization strategies [24], [25] by mitigating the time-consuming branching operations. The primary objective is to augment vectorization capabilities by incorporating inlining techniques, thereby mitigating branch-related overheads in the resultant LDPC decoder. The 5G NR LDPC code is an irregular quasi-cyclic code comprising varying CN and VN degrees, dc and dv, respectively, across a given parity check matrix, H. Given that the set of CN degrees becomes deterministic once the code configurations are fixed, internal loop-based operations can be unrolled following the set. Furthermore, when the lifting size exceeds the maximum capacity of a vector container, it becomes essential to perform multiple vector arithmetic within a single node processing. The usage of multiple vector containers allows for an additional opportunity to unroll multiple computations. Therefore, each of the two nested loops can be unrolled by utilizing the precomputed information during compile time. Outer-loop unrolling ensures that the layer-wise deterministic decoding function is invoked based on the corresponding row degree dc. In contrast, the inner loop executes a deterministic subroutine predicated on the predefined number of vector buffers designated for the target lifting size. The structure of the unrolled decoder is depicted in Fig. 6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+YUN et al.: HIGH-THROUGHPUT SOFTWARE-DEFINED LDPC ENCODER AND DECODER WITH X86-BASED DATA-LEVEL PARALLELISM
+
+55
+
+Algorithm 1: Square-Time CNP Implementation.
+
+Fig. 6. The proposed unrolled decoder architecture, consisting of unrolling by the row degree dc (outer) and the number of SIMD vectors Nv (inner).
+
+the partial-shuffle network requires only 29% of the operating latency compared to the conventional LMS. Hence, inherent constraints of the conventional LMS algorithm can be relaxed by optimizing the data flow.
+
+Fig. 7. SD-LDPC shuffle network optimization by partial-shuffling technique.
+B. Shuffle Network Optimization
+The LMS algorithm necessitates shuffle and de-shuffle operations with every layer update, which is one the most time consuming part in overall processing. Consequently, refining the implementation of the shuffle network is essential to facilitate decoding throughput. In every decoding layer, a cyclic shift operation is executed on Z-sized blocks, each with a unique shift value predetermined by its configuration. The resulting block is then realigned to its original sequence upon the corresponding decoding iteration’s termination, denoted as de-shuffling. By accumulating shift operations for consecutive blocks, the de-shuffling can be carried out only once at the last iteration. In detail, cyclic shifting of the next block by the difference of the next and current shifting values results in an equivalent operation. Remark that Z should be added to the difference when its value is negative. The optimization of the shuffle network through our proposed partial-shuffling technique is illustrated in Fig. 7. For instance, consider a block with a lifting size of Z = 384 and shift values V2,1 = 240 and V2,2 = 80. This block undergoes an initial shift of 240, followed by another shift of 240 − 80 = 160 for the subsequent layer. As a result, the partial-shuffle network substantially reduces the time needed to update the APP memory. According to our numerical analysis,
+
+C. Single-Loop CNP Implementation
+In the hardware domain, instead of individually computing the minimum values for each connected VN, a search module (SM) is leveraged to identify the first two minimum values from incoming V2C messages in a single operation. The second minimum value is only utilized if the message being considered is associated with the index of the first minimum value [26]. In contrast, within a software system, a straightforward implementation of CNP, as in [15], necessitates both an inner and an outer loop to determine the magnitudes and sign-bits of the relevant messages, as in equation (6). The time complexity of CNP stands at O(dc2), which notably contributes to the overall decoding latency. The CN computation kernel using the Square-time algorithm is presented in Algorithm 1.
+By finding the two-minima search operation as in the hardware decoding system, CNP can be substituted by a linear time operation as described in Algorithm 2. The initial loop in the linear-time CNP determines the first and second minimum vectors by navigating over dc Z -sized blocks. Concurrently, it also computes the product of the sign of the check node messages. On the other hand, the subsequent loop calculates the respective sign for each check node position using an XOR operation. It then saves the first and second minimums, each multiplied by the sign vector, utilizing the generated mask. As a result, this enhanced linear-time CNP reduces the CN update latency by 90% from the naive implementation.
+D. Zero Product Elimination
+In both AVX and AVX2 architectures, packed integer operations supported byte-type sign operations, which set the sign of each element in a magnitude vector by a sign vector. This functionality was harnessed in prior research when calculating
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+56
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+TABLE IV OPCODE AND LATENCY FOR AVX-512 CUSTOM SIGN FUNCTION
+
+Algorithm 4: Iteration-Based Pseudo Second-min CNP.
+
+Algorithm 2: Linear-Time CNP Implementation.
+
+Algorithm 3: Function with Zero Product Eliminated.
+the expression p ∈V (q)\p sgn(αp ,q) within the CNP [12], [27]. However, with the transition to AVX-512, this native function is no longer supported. To address this, a user-defined C-style function was crafted to replicate the behavior of the vectored-sign operation. In a conventional vector-sign function, zero-product was supported, which computes 0x00 if the input sign vector at the analogous position is zero. However, the CNP consists of two distinctive operations: one is to determine the product of signs, and the other is to find the minimum value, meaning that zero-product is not necessary for the CNP as described in Algorithm 3. Therefore, eliminating the unnecessary exception handling can reduce cycles per instruction (CPI) by half, as listed in Table IV.
+E. Low-Latency CNP Algorithm The two-minima searching operation in the conventional CNP
+requires a significant fraction of the overall decoding latency. Several past studies have probed into the impact of approximating the second minimum to cut down on implementation
+
+costs and boost the operational speed of FPGA or ASIC-based systems [28]. Similarly, approximating the second minimum in software decoding frameworks can expedite the decoding process by eliminating certain instructions within the CNP step. In detail, a total CPI can be reduced by 33.4% for each check node set since one vpmaxub and one vpminub instructions can be removed for every CNP iteration.
+However, a direct approximation strategy can lead to undesirable performance degradation in a high signal-to-noise ratio (SNR) region. Our simulations indicate that a simplistic approach to second minimum approximation results in an error floor at a bit error rate (BER) of approximately 1E-4. To alleviate the problem, we introduce an advanced pseudo smin approximation algorithm, which adeptly avoids performance drop by calibrating based on the current iteration number.
+To be specific, as iterations progress, accumulated internal messages tend to converge to their upper limits, defined by the resolution of a decoder system. Consequently, wrongful propagation becomes more frequent in this message saturation phase, which incurs performance loss. To alleviate this problem, the proposed iteration-based pseudo second-min min-sum (IPMS) algorithm initially employs approximations for the second minimum values to alleviate computational complexity. It then calculates the accurate values in later iterations to rectify the inaccuracies introduced by earlier approximations. These earlier errors are prevented from further propagation and rectified by subsequent precise CNP computations, leading to a significant reduction in error occurrence. The error floor was observed at a BER of less than 1E-8 by employing the suggested processswitching criteria. Simultaneously, most decoding iterations benefit from the speed offered by the approximation method. The traditional CNP, as given in (6), is substituted with the method presented in Algorithm 4.
+F. SIMD Early Stopping
+To enhance the average performance of the LDPC decoder, a syndrome check can be conducted after each iteration, halting the decoding process once the estimation is in the column space of the PCM. This approach, commonly termed early stopping, can notably diminish the average latency, especially under high-SNR conditions where messages tend to converge
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+YUN et al.: HIGH-THROUGHPUT SOFTWARE-DEFINED LDPC ENCODER AND DECODER WITH X86-BASED DATA-LEVEL PARALLELISM
+
+57
+
+TABLE V LDPC CODES SCHEMES USED FOR THE EVALUATION OF THE PROPOSED
+SOFTWARE-DEFINED ENCODER AND DECODER
+
+Fig. 8. The proposed fast SIMD early-stopping system.
+
+rapidly. Hence, the average number of required iterations reduces without sacrificing error correction performance by iterate sufficiently for unreliable codewords. On the other hand, naively reducing the number of maximum iterations limits decoding performance as some codewords would terminate after insufficient iterations, regardless of reliability. A straightforward implementation of early-stopping criteria requires significant latency overhead since the syndrome check is based on matrix-vector multiplication. To alleviate the speed limits, we designed a fast SIMD early-stopping system by exploiting exponent matrixvector XOR multiplication.
+Specifically, an estimated codeword is initially duplicated in a twin-aligned format, then cyclic-shifted by a set of lifting sizes of a corresponding row. Subsequently, the rotated buffer undergoes iterative XOR operations with the previous results. Remark that XOR operations can substitute both additions and multiplications for the Galois field (GF) with order 2. Therefore, the proposed system further accelerates early stopping by accumulating multiplication results with XOR operations to perform dot product. Eventually, the proposed system can terminate the syndrome check right after the dot-product of each layer. The overall process of the proposed SIMD early-stopping is depicted in Fig. 8. For instance, considering a configuration with K = 8, 448 and R = 1/2 in basegraph 1, the proposed SIMD early-stopping shows 69.1% faster processing speed than the serialized implementation.
+V. SIMULATION AND IMPLEMENTATION RESULTS
+A server with Intel Xeon Gold 5218 processors was adopted to evaluate the throughput and latency performance of the software LDPC decoder implementation. The processor has a 2.3 GHz main frequency, 16 physical cores sharing 22.5MB of L3 cache memory, and supports the AVX-512 instruction set. For all the experiments, C-style INTEL intrinsic was used to produce the optimized C99 decoder source codes. Then, these RC-QC-LDPC decoder descriptions were compiled with the intel compiler ICC 2021.4.0 toolchain. The compilation flags that were applied to the toolchain are: -march=native -mtune=native -O3. Note that the inherent accelerating options, such as hyperthreading and turbo-boost, are turned off in the following test for a fair comparison. For our experiments, we adopted seven LDPC code schemes associated with 5G NR, each characterized by distinct code lengths N and code rates R. These schemes are comprehensively detailed in Table V.
+
+Fig. 9. BER Comparison of the conventional layered min-sum decoding algorithm and the proposed IPMS algorithm.
+A. Error Correcting Performance
+To validate the error-correcting performance of the proposed SD-LDPC optimization schemes, we conducted simulations of the baseline floating-point decoder and the proposed vectorized decoders. Our simulations involved transmitting sufficient code blocks through an AWGN channel, utilizing BPSK modulation. Both input LLR messages and internal processing messages were quantized using 6-bit and 8-bit integers, respectively. We limited the number of maximum decoding iterations, Imax, to 5 and refrained from applying any supplementary relaxation schemes. The results highlight that our proposed IPMS algorithm leads to a marginal performance drop, with some showing a degradation of up to 0.3 dB. A BER performance evaluation between the baseline algorithm and our proposed IPMS algorithm is depicted in Fig. 9.
+In layered decoding, the coderate is inversely proportional to the number of processing layers. As the coderate decreases, the number of layers rises, which subsequently leads to an increase in the number of appropriate CNP instances. Consequently, the efficiency of the proposed approximation algorithm is amplified in scenarios with lower coderates. This is attributed to the heightened number of accurate CNPs, which compensate for any approximation error, even if the approximation ratio
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+58
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+TABLE VI PERFORMANCE COMPARISON OF 5G LDPC ENCODERS
+
+TABLE VII PERFORMANCE COMPARISON OF 5G LDPC DECODERS
+
+remains consistent across different coderates. Therefore, any degradation in performance becomes increasingly negligible with diminishing coderate values, as evidenced in cases like CS3 and CS4. This underscores the adaptability and robustness of our approximation, especially in low-coderate scenarios.
+
+TABLE VIII DECODING THROUGHPUT COMPARISON WITH OTHER ECC DECODERS
+
+B. Encoding Throughput
+To evaluate the effects of encoder acceleration techniques illustrated in Section III, the performance comparison of various implementations of LDPC encoders has been made in Table VI, where the proposed schemes gradually improve the encoding speed. Note that a sufficient number of code blocks were encoded when evaluating encoding latency. With the adoption of AVX512 instructions, the proposed work improves the encoding speed by 2.72 times compared to the baseline work [17] for the CS4 code. The encoding speed is further fastened by 2.2 times with the LUT-based rotate operations by pre-calculating the bit-level rotated patterns with additional storage utilization. Moreover, the twin-aligned data arrangement enhances the encoding throughput by 1.35 times compared to the single-aligned architecture by reducing the latency for the byte-level shift operations. Consequently, the fully optimized encoder we propose outperforms the baseline encoding method, achieving a speedup of up to 8.06 times.
+C. Decoding Throughput
+We compared the performance of our 5G LDPC decoder with previously established decoders, as summarized in Table VII. The maximum decoding iteration, Imax, was set at 5 for layered decoders and 10 for flood-scheduled decoders to align errorcorrecting performance. After decoding a sufficient number of frames, we measured the average decoding latencies of both our proposed decoder and the referenced alternatives. The findings illustrate that our proposed optimization strategies have indeed significantly curtailed decoding latency. Specifically, our optimized decoder, denoted as LMSO, outperforms the baseline layered decoder, LMSN, by a notable 327.4%. Furthermore, compared with the state-of-the-art as presented in [13], the proposed method excels by up to 50.8% By accepting a slight compromise on error performance, the decoding throughput can
+
+be enhanced by up to 59.3% when we integrate the proposed IPMS algorithm.
+Furthermore, decoding throughput analysis compared to other ECC decoders [8], [32], [33], [34] is analyzed in Table. VIII. The result shows that the proposed SD-LDPC decoder offers the most attractive decoding performance in terms of throughput thanks to its algorithmic parallel nature. On the other hand, successive cancellation-based decoders for Polar code and MAP-based Turbo code provide limited throughput for a single core decoding, mainly because of the inherent serialized characteristics of the decoding algorithms.
+Moreover, utilizing the proposed SIMD early stopping mechanism increases the system’s throughput substantially, specifically achieving up to 2.26 Gbps without BER loss for the codescheme 1. A comparative analysis of throughputs considering decoders both with and without the SIMD early stopping criterion is presented in Fig. 10.
+Present-day GPPs typically support the utilization of multiple cores in a single unit. To further achieve faster decoding throughput, the proposed SD-LDPC decoder has been optimized for multi-core systems. Taking into account that the Intel Xeon Gold 5218 processor is equipped with 16 physical cores, throughput was measured by increasing the number of cores activated within a single GPP as represented in Fig. 11. The simulation result verifies that the throughput exhibited a linear correlation with the core count for each LDPC code. When the decoding process is activated across all 16 cores, an impressive throughput, peaking at 5.1 Gbps, is achieved.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+YUN et al.: HIGH-THROUGHPUT SOFTWARE-DEFINED LDPC ENCODER AND DECODER WITH X86-BASED DATA-LEVEL PARALLELISM
+
+59
+
+Fig. 10. Throughput performances of LDPC decoder implementations when the proposed SIMD early stopping system is applied.
+Fig. 11. Throughput comparison of the proposed SD-LDPC decoder with different number of processing cores.
+VI. CONCLUSION In this paper, we introduce an innovative low-latency software framework for both 5G LDPC encoder and decoder, augmented with SIMD acceleration through the latest AVX-512 instruction set. The proposed high-speed encoder fully utilizes distinctive features of the 5G NR specification to accelerate throughput, surpassing the baseline implementation by an eight-fold enhancement. Moreover, the proposed decoder achieves remarkable speed, peaking at 391 Mbps by minimizing branches and resolving inherent algorithmic constraints, achieving a 59.3% improvement from the state-of-the-art. Furthermore, when maximizing all available computational resources, the throughput can be accelerated to 5.1 Gbps.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+
+[2] IEEE Computer Society LAN MAN Standards Committee and Others, “Wireless LAN medium access control (MAC) and physical layer (PHY) specifications” ANSI/IEEE Std.802.11-1999, 1999.
+[3] IEEE 802.16 Working Group and others, “IEEE standard for local and metropolitan area networks-part 16: Air interface for fixed broad-band wireless access systems,” IEEE Std.802.16-2004, 2004.
+[4] Y. Fang et al., “Design guidelines of low-density parity-check codes for magnetic recording systems,” IEEE Commun. Surveys Tut., vol. 20, no. 2, pp. 1574–1606, Secondquarter 2018.
+[5] M. Li, V. Derudder, K. Bertrand, C. Desset, and A. Bourdoux, “High-speed LDPC decoders towards 1 tb/s,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 68, no. 5, pp. 2224–2233, May 2021.
+[6] J. Choe and Y. Lee, “High-throughput non-binary LDPC decoder architecture using parallel EMS algorithm,” IEEE J. Solid-State Circuits, vol. 57, no. 10, pp. 2969–2978, Oct. 2022.
+[7] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting FPGA,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 6, pp. 1141–1151, Jun. 2021.
+[8] L. Xiang, S. Zhong, R. G. Maunder, and L. Hanzo, “Reduced-complexity low-latency logarithmic successive cancellation stack polar decoding for 5G new radio and its software implementation,” IEEE Trans. Veh. Technol., vol. 69, no. 11, pp. 12449–12458, Nov. 2020..
+[9] L. Xiang, Y. Liu, R. G. Maunder, L.-L. Yang, and L. Hanzo, “Soft-output successive cancellation stack polar decoder,” IEEE Trans. Veh. Technol., vol. 70, no. 6, pp. 6238–6243, Jun. 2021.
+[10] H. Zhou et al., “An improved software list sphere polar decoder with synchronous determination,” IEEE Trans. Veh. Technol., vol. 68, no. 6, pp. 5236–5245, Jun. 2019.
+[11] S. Grönroos, K. Nybom, and J. Björkqvist, “Efficient GPU and CPU-based LDPC decoders for long codewords,” Analog Integr. Circuits Sig. Process., vol. 73, no. 2, pp. 583–595, 2012.
+[12] B. L. Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Trans. Parallel Distrib. Syst., vol. 27, no. 5, pp. 1373–1386, May 2016.
+[13] Y. Xu, W. Wang, Z. Xu, and X. Gao, “AVX-512 based software decoding for 5G LDPC codes,” in 2019 IEEE Int. Workshop Signal Process. Syst., 2019, pp. 54–59.
+[14] I. Gomez-Miguelez et al., “srsLTE: An open-source platform for LTE evolution and experimentation,” in Proc. 10th ACM Int. Workshop Wireless Netw. Testbeds, Exp. Eval., Characterization, 2016, pp. 25–32.
+[15] F. Kaltenberger, A. P. Silva, A. Gosain, L. Wang, and T.-T. Nguyen, “OpenAirInterface: Democratizing innovation in the 5G era,” Comput. Netw., vol. 176, 2020, Art. no. 107284. [Online]. Available: https://www. sciencedirect.com/science/article/pii/S1389128619314410
+[16] A. de Javel et al., “Towards a new open-source 5G development framework: An introduction to free5GRAN,” in Proc. IEEE 93rd Veh. Tech. Conf., 2021, pp. 1–5.
+[17] T. T. B. Nguyen, T. N. Tan, and H. Lee, “Efficient QC-LDPC encoder for 5G new radio,” Electronics, vol. 8, no. 668, pp. 1–15, Jun. 2019.
+[18] 3GPP, “5G NR; multiplexing and channel coding (release 15),” 3GPP Tech. Rep. TS 38.212, v15. 2.0, 2018. .
+[19] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[20] Y. Liu, W. Tang, and D. G. M. Mitchell, “Efficient implementation of a threshold modified min-sum algorithm for LDPC decoders,” IEEE Trans. Circuits Syst. II: Expr. Briefs, vol. 67, no. 9, pp. 1599–1603, Sep. 2020.
+[21] H. Cui, J. Lin, and Z. Wang, “An efficient post-processor for lowering the error floor of LDPC codes,” IEEE Trans. Circuits Syst. II: Expr. Briefs, vol. 66, no. 3, pp. 397–401, Mar. 2019.
+[22] S. Yun, D. Kam, J. Choe, B. Y. Kong, and Y. Lee, “Ultra-low-latency LDPC decoding architecture using reweighted offset min-sum algorithm,” in Proc. IEEE Int. Symp. Circuits Syst., 2020, pp. 1–5.
+[23] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[24] G. Sarkis et al., “Fast list decoders for polar codes,” IEEE J. Sel. Areas Commun., vol. 34, no. 2, pp. 318–328, Feb. 2016.
+[25] P. Giard, C. Thibeault, and W. J. Gross, “High-speed decoders for polar codes,” 2017. [Online]. Available: https://doi.org/10.1007/978-3-31959782-9
+[26] Y. Lee, B. Kim, J. Jung, and I.-C. Park, “Low-complexity tree architecture for finding the first two minima,” IEEE Trans. Circuits Syst. II: Exp. Briefs, vol. 62, no. 1, pp. 61–64, Jan. 2015.
+[27] H. D. Tiwari, H. N. Bao, and Y. B. Cho, “Flexible LDPC decoder using stream data processing for 802.11n and 802.16e,” IEEE Trans. Consum. Electron., vol. 57, no. 4, pp. 1505–1512, Nov. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+60
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+
+[28] H. Lopez et al., “A 75-Gb/s/mm2 and energy-efficient LDPC decoder based on a reduced complexity second minimum approximation min-sum algorithm,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 4, pp. 926–939, Apr. 2020.
+[29] M. Sy, “Optimization strategies for low-latency 5G NR LDPC decoding on general purpose processor,” in Proc. IEEE Int. Conf. Control, Commun. Comput., 2023, pp. 1–6.
+[30] R. Li, X. Zhou, H. Pan, H. Su, and Y. Dou, “A high-throughput LDPC decoder based on GPUs for 5G new radio,” in Proc. IEEE Symp. Comput. Commun., 2020, pp. 1–7.
+[31] C. Tarver et al., “GPU-based, LDPC decoding for 5G and beyond,” IEEE Open J. Circuits Syst., vol. 2, pp. 278–290, 2021.
+[32] M. Léonardon et al., “Fast and flexible software polar list decoders,” J. Sig. Proc. Syst., vol. 91, pp. 937–952, 2019.
+[33] Y. Shen et al., “Low-latency segmented list-pruning software polar list decoder,” IEEE Trans. Veh. Technol., vol. 69, no. 4, pp. 3575–3589, Apr. 2020.
+[34] B. L. Gal and C. Jego, “Low-latency and high-throughput software turbo decoders on multi-core architectures,” Ann. Telecommun., vol. 75, pp. 27–42, 2020.
+Sangbu Yun (Graduate Student Member, IEEE) received the B.S. degree in electrical engineering from Pohang University of Science and Technology, Pohang, South Korea, in 2021, where he is currently working toward the Ph.D. degree. His research interests include error-correction codes for communication systems, digital signal processing hardware, and AI-driven baseband processing algorithm and its accelerator ASIC.
+
+Jeongwon Choe (Student Member, IEEE) received the B.S. and M.S. degrees in electrical engineering from Pohang University of Science and Technology, Pohang, Korea, in 2020 and 2022, respectively, where he is currently working toward the Ph.D. degree. His research interests include advanced error-correction codes, iterative decoding, and next-generation storage system.
+Youngjoo Lee (Senior Member, IEEE) received the B.S., M.S., and Ph.D. degrees in electrical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2008, 2010, and 2014, respectively. Since 2017, he has been with the Department of Electrical Engineering, Pohang University of Science and Technology, Pohang, Korea, where he is currently an Associate Professor. PFrom 2014 to 2015, he was with Interuniversity Microelectronics Center, Leuven, Belgium where he researched reconfigurable SoC platforms for software-defined radio systems. From 2015 to 2017, he was with the Faculty of the Department of Electronic Engineering, Kwangwoon University, Seoul, Korea. His research interests include the algorithms and architectures for embedded processors, intelligent multimedia systems, advanced error-correction codes, and next-generation wireless systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:52:42 UTC from IEEE Xplore. Restrictions apply.
+
+

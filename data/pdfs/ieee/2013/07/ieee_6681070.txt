@@ -1,0 +1,415 @@
+2013 12th IEEE International Conference on Trust, Security and Privacy in Computing and Communications
+
+An Optimizing Strategy Research of LDPC Decoding Based on GPGPU
+
+Luechao Yuan, Zuocheng Xing, Yang Zhang, Xiaobao Chen
+Department of Computer National University of Defense Technology
+Changsha, Hunan, China zhuangyillm@gmail.com, {zcxing, zyang, chenxb} @nudt.edu.cn
+
+Abstract— As powerful error correcting codes, Low-Density Parity-Check (LDPC) codes have been adopted as a fundamental building block by dirty paper coding (DPC), which indicates that lossless precoding is theoretically possible at any signal-to-noise ratio (SNR), and is a promising strategy in future communication systems. However, to achieve this performance gain demands huge computation complexity. For its lower cost and better flexibility, the GPU-based LDPC decoder is an emerging research subject. Based on the perspective of GPU hardware architecture, a multi-stage optimizing mapping strategy (MSOMS) is proposed and implemented to accelerate LDPC decoding. The performance is boosted significantly by balancing the memory access and computation load, optimizing execution configuration and the memory access pattern, and fully utilizing the on-chip high speed resources. Proposed decoders can achieve 383- and 442speedup compared to CPU-based decoder for LDPC and RA code (another ensemble of LDCP code), and the achieved throughput is comparable to existed GPU-based decoders, which confirm the efficiency of the MSOMS strategy.
+Keywords-Dirty Paper Coding, Low Density Parity Code, Repeat Accumulate Code, Graphic Process Unit
+I. INTRODUCTION
+Recently, multiuser networks equipped with multipleinput multiple-output (MIMO) antennas have gained much attention. Tremendous capacity benefits can be achieved by simultaneously transmitting to multiple users or having multiple users simultaneously transmit without any separation in time, frequency, or code domain [1]. The optimal transmit strategy that can make such benefits available is DPC [2]. It has been shown that DPC can achieve the full capacity region of the Gaussian MIMO broadcast channel[3], cognitive radio [4] and digital watermark [5]. However, the main drawback of DPC is its high complexity, which makes it hard to implement. The most computational parts of DPC are the decoding algorithm of LDPC or RA and the BCJR algorithm [6-13].
+Low-Density Parity-Check (LDPC) codes are proposed by Robert Gallager [14] in 1962, and Mackay and Neal [15] rediscovered it in 1996. Recently, it have been adopted by new emerging standards for digital communication and storage applications, such as the DVB-S2 standard, WiMAX, Wi-Fi (802.11n) and others. RA codes [16] are a subset of both LDPC and Turbo, which is an ensemble of codes with (a) linear-time encoding algorithm and (b) can be decoded reliably in linear time [17]. Both of LDPC and RA can be decoded based on sum-product algorithm (SPA).
+
+SPA is based on message-passing algorithm and demands very intensive computation. Several dedicated hardware implementations of the LDPC decoder have been proposed in the last few years[18]. However, hardware solutions are expensive, non-flexible, and have long time-tomarket. Its low-precision representation compromises the capacity several decibels away. Compared to hardware approach, the GPU-based decoder is a recently active research subject for its lower cost and better flexibility.
+The earliest implementation of LDPC decoding on GPU was challenged by Falcao et al.[8, 19]. Falcao presented a detailed GPU-based SPA and achieved hundreds speedup compared to CPU-based decoder, but they focused only on off-chip memory. Chang et al. [6] employed CUDA stream to overlap computation and data transfer. Soonyoung Kang [11] proposed the unbalanced memory coalescing (UMC) scheme and optimized the performance by utilizing on-chip high speed memory. We will explain more thoroughly about UMC and show how to fully utilize those hardware resources.
+In this paper, we proposed a systematic optimizing mapping strategy (MSOMS) to accelerate LDPC and RA decoding by fully utilizing resources integrated on the NAVIDIA GTX280 GPU. We implement LDPC and RA codes with different length based on MSOMS. A GPU-based BCJR algorithm has been implemented in [12], but the discuss about BCJR is out of the scope of this work, we will present it in our later report.
+This paper is organized as follows. Section ė briefly introduces DPC and its practical schemes. In section Ę, detailed decoding algorithms of LDPC and RA code are described. The optimizing strategy is presented in section ę. The main results and discussions are given in section Ě. We conclude this paper in section ě.
+II. BASIC DPC MODEL AND PRACTICAL DPC SCHEMES
+Figure 1. The dirty paper channel.
+Consider the communication problem depicted in Fig.1.The transmitter wishes to send a message W to the receiver over a memoryless channel p(y|x,s). The state S can be viewed as arbitrary interference non-causally known to the transmitter only, the channel noise N is a statistically
+
+978-0-7695-5022-0/13 $26.00 © 2013 IEEE
+
+1901
+
+DOI 10.1109/TrustCom.2013.233
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+independent Gaussian random variable with variance PN, and the channel input X is selected based on W and S to satisfy the power constraint PX. Costa[2] studied the DPC with Gaussian S and showed that the interference does not incur any loss in capacity, although S is unknown to the decoder. This result was extended to arbitrary distributed interference S in [21]. Some sophisticated DPC schemes were designed[22-26]. Those practical DPC schemes share some common features as drawn in Fig.2. They choose LDPC or RA as channel coding and TCQ[27] as source coding and adopt almost the same decoder. Rich parallelism existed in DPC and several GPU-based paralleled LDPC and BCJR decoders have been proposed [6-12]. The latest proposed practical DPC schemes [26] induce more parallel property and achieve better performance.
+
+Algorithm1: log-SPA for LDPC decoding
+
+Initialization: Compute the channel L-value
+
+Lch (i)
+
+4Es N0
+
+ri
+
+(3)
+
+Horizontal processing: Compute the message from
+
+every CN to BNs
+
+L(k) c2v
+
+F
+
+§ ¨©
+
+L(k-1) v2c L(m)\n
+
+· ¹¸
+
+(4)
+
+Vertical processing: Compute the message from every
+
+BN to CNs
+
+¦ L(k) v2c
+
+Lch (i) 
+
+L(k) c2v
+
+(5)
+
+M (l)\m
+
+Hard decision: Compute the posterior L-value and make
+
+hard decision
+
+¦ L(k) (vi ) Lch (i) 
+
+L(k) c2v
+
+(6)
+
+M (l)
+
+vˆi 0 if L(k) (vn ) ! 0 or 1 if L(k) (vn )  0 (7) Early termination: Check HvˆT 0 satisfied or not, then
+
+terminate the iteration or continue until the maximum iteration number is reached.
+
+B. RA decoding
+
+Figure 2. The framework of DPC scheme.
+III. LDPC AND RA DECODING A. LDPC Decoding
+
+Figure 3. Tanner graph
+
+LDPCs are usually represented by Tanner grapha [28]
+
+formed by Bit Nodes (BN) and Check Nodes (CN) and
+
+linked by bidirectional edges. Fig.3. is a Tanner graph and its
+
+corresponding parity-check matrix H. LDPC decoding
+
+algorithm [29] is based on iteratively exchanging
+
+probabilistic message between BNs and CNs along the edges
+
+of Tanner graph. Let the notation L(m)={l:hml=1} stand for all the BNs connected to m-th CN and M(l)={m:hml=1} stand for all the CNs connected to l-th BN. Assuming Lv2c stands for the message from BN to CN and Lc2v stands for the message from CN to BN. Here we define two functions f(x)
+
+and F(X):
+
+x
+
+f (x) ln(tanh( ))
+
+(1)
+
+2
+
+F (x1,! xn )  sign(x) x f ( ¦ f (x))
+
+(2)
+
+x1 ,!xn
+
+x1 ,!xn
+
+The entire log-SPA algorithm is given as follows.
+
+Figure 4. The transformation from interleaver to parity-check matrix
+
+RA codes consist of an outer code that is a mixture of
+
+repetition codes, an inner code that consists of parity checks,
+
+and an accumulator [16]. RA code can be viewed as an
+
+ensemble of LDPC codes and its parity-check matrix H is
+
+represented as
+
+H [H1, H2 ]
+
+(8)
+
+where H1 is determined by the interleaver and H2 is a regular lower triangular matrix.
+
+The matrix can be generated when interleaver is given. The
+
+transformation scheme from interleaver to parity-check
+
+matrix is depicted in Fig.4. The right number column is the
+
+interleaved version of the left one, which contains the suffix
+
+of their original BN, and labels indicate the position of ‘1’s
+
+in the row corresponding to a CN. The corresponding
+
+interleaver of Fig.4 is Ȇ=[1,7,4,10, 2,5,8,11,3,9,6,12], and its
+
+parity-check matrix is shown in Fig.5. Based on the parity-
+
+check matrix representation of RA codes, we can apply the
+
+1902 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+similar decoding algorithm to decode RA codes as LDPC. Actually, only H1 is necessary to store in memory which defines the exchanging pattern between VNs and CNs.
+
+Figure 5. parity-check matrix
+
+C. Parallized SPA algorithm
+The horizontal processing stage scans the H matrix in a row major order and maps only the BN edges associated with non-zero elements in H used by a CN equation. The vertical stage operates similarly except for scanning by column. The message updating iteration is depicted in Fig.6. It is obvious that there is no data dependence among different CNs in horizontal stage or different BNs in vertical stage. So we can launch thousands threads to accelerate the message propagation process of SPA simultaneously.
+
+Figure 7. An interleaver presentation of Tanner graph
+
+IV. OPTIMIZATION STRATEGY OF SPA ON GPU A. LDPC and RA codes’ configuration
+
+TABLE I.
+
+PARAMETERS OF LDPC CODES
+
+Matrix A
+
+Size (N×M) 4000x2000
+
+Edges (wc×M)
+12000
+
+B
+
+8000x4000
+
+24000
+
+C
+
+20000x10000
+
+60000
+
+TABLE II.
+
+PARAMETER OF RA CODES
+
+SNR 1.8 1.6 1.45
+
+Figure 6. Parallelized SPA message updating diagram
+However, to store the data with the H matrix-like structure requires a huge amount of memory, especially for long length codes. To save the memory, we construct two data-arrays to store the updating messages corresponding to only non-zero elements in matrix H in a row-major order and a column-major order, respectively. However, an irregular memory access pattern emerges when kernels load data from each other. In fact, the message exchanging pattern defined by the Tanner graph can be represented by an interleaver, which is similar with the translating array used in [7, 9, 11]. Firstly, we label edges in the Tanner graph sequentially for CNs and BNs, respectively; then, each edge link a pair of labels between BN and CN, see Fig.7. This pair of labels represents indexes between the two arrays.
+We pack the entire SPA into three kernels. For LDPC, the first kernel denoted as c2v_kernel compute the message send to BN from CN corresponding to the horizontal processing stage in Algorithm1; the second kernel denoted as v2c_kernel corresponds to the vertical processing stage; the last kernel is check_kernel corresponds to the hard decision stage and the early termination stage. For RA, the three kernels are c2vp_kernel, vp2c_kernel and the check_kernel, respectively.
+
+Matrix
+
+(a, q)
+
+k
+
+r
+
+Edges
+
+SNR
+
+D
+
+(3,2)
+
+4096
+
+6144
+
+12288
+
+1.5
+
+E
+
+(3,2)
+
+8192
+
+12288
+
+24576
+
+1.5
+
+F
+
+(3,2)
+
+16384
+
+24576
+
+49152
+
+1.5
+
+The parameters of our simulated regular (3,6) LDPC codes [30] and RA codes are presented in Table Ėand ė. The maximum iteration number of which is set 50 times. The chosen configurations of SNR and iteration take account of the inferior operation condition of DPC to achieve the codes’ SNR limit. Interleavers used to generate those RA codes are designed along the S-Random[31] method with MATLAB.
+
+B. Unbalanced memory coalescing (UMC)
+To save the transfer time between CPU (the host) and GPU (the device), the same type data such as float or integer is packed and transferred together rather than separately. At the beginning of our optimization, experimental results show that the speedup of GPU versus CPU is improved linearly with the codes scale.
+But, the execute time percentage of v2c_kernel is around 30%, which does not match its computation load since c2v_kernel take the most computation task. The reason that leads to this situation lies in the memory access. In the
+
+1903 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+original implementation, both of them load irregularly (long delay) but store regularly, while assign most of the computational load to c2v_kernel who computes the f(x) function. The mismatch between memory access and computation leads to a situation that v2c_kernel waits for its operator to be ready while c2v_kernel waits for its computation results to be stored, which leads to an inefficient computation and memory access overlapping pattern.
+A method named unbalanced memory coalescing (UMC) [11] can be adopted to balance this load mismatch. It means that make consecutive memory access pattern in both load and store operation for v2c_kernel and assign irregular memory access via the interleaver in both directions for c2v_kernel. Thus, c2v_kernel takes the major memory access and computation load and both memory access delay and computation delay can be overlapped efficiently. Regular memory access pattern alleviates the bottleneck of the load latency of v2c_kernel. Experimental results show that the execution time of v2c_kernel decreases 40+%, while c2v_kernel increase less than 20%. The overall execution time decreases 10+%. The performance gain increases with larger matrix scale.
+C. Block-size optimization The employed GPU device contains 30 stream multi-
+cores (SM), each SM consists of 8 scalar processors (SP). It is the key element of GPU that there are sufficient threads or blocks ready to be scheduled at any time to achieve the best performance. Since the number of blocks counteracts threads number contained per block, so that we should make some compromise between block-level parallelism and threadlevel parallelism. We test different block-size configurations and the experimental results show that the best block-size for matrix A, B and C are 16, 32 and64 or 128, respectively. For RA code D, E and F, 128 are the best.
+D. On chip resources
+Figure 8. GPU memory hierachy
+To release the bandwidth shortage of global memory, multi-level memory spaces are integrated on GPU to fully utilize the locality property of memory accesses, including shared memory, registers, texture and constant memory, as shown in Fig.8. In the rest of this section, we focus on how to utilize those on-chip resources to speed up SPA decoding.
+Since the size of shard memory is limited, it is not suitable to handle large data. Therefore we only store the
+
+interleaver into shared memory which will be used twice in c2v_kernel. Besides, another important property that can benefit from shared memory is that it can transform the access pattern to global memory from strided into coalesced which can improve the effective bandwidth significantly. Strided access occurs when successive threads access memory locations that have non-unit strides, which appears in v2c_kernel. In our experiment with shared memory, the decrease of v2c_kernel is more significant than c2v_kernel, which achieves more than 50% for matrix C.
+The texture memory space resides in off-chip memory and is cached in the texture cache. It is optimized for 2D spatial locality, which benefit irregular memory access pattern. A texture load costs one memory read from off-chip memory only when a cache miss occurs; otherwise it just costs one read from texture cache, which can reduce the access load of global memory. The shortage of texture memory is that its data cannot be modified during a kernel call. Since there is no data reuse within SPA kernels, so it doesn’t affect kernel execution. We put c2v_array and v2c_array into texture memory. Our experiment results show that both of the execution time of c2v_kernel and v2c_kernel decrease, but the schedule time increases impressively which cancels out the benefit obtained from two kernels for matrix A, B and D. The reason why the schedule time increase may be that the data located in the on-chip cache have to be updated among kernel calls, which consumes the additional schedule time, to keep the macro-consistency of the entire algorithm. Consequently, only large-scale data can benefit from texture memory such as matrix C.
+It is widely recommended that higher occupancy is beneficial to hide arithmetic and memory latencies. However, Vasily Volkov [32] find that to allocate more registers for each thread can achieve better performance rather than to optimize occupancy. Under this enlightenment, we try to decode multi-word simultaneously with aggressive usage of register. The best performance obtained when to decode 2word simultaneously for all matrices except D (4 is the best). In this case, matrix C uses 39 registers per thread rather than 13 as before, and achieve 19% performance enhancement, while the corresponding occupancy is 0.375 compared to 0.625 as before for c2v_kernel. The performance gain achieved is around 30% for other matrices. The insight of this significant performance gain is that the instruction level parallelism (ILP) per thread can be improved by decoding multi-word simultaneously.
+E. Early termination
+The early termination stage can avoid unnecessary computation, which can improve the throughput performance. However, the early termination stage of SPA is a multiplication-addition-reduction algorithm, which is not as efficient as horizontal and vertical processing stages for its low computation to memory access ratio. We adopt a similar early termination scheme described in [9] and an optimal reduction algorithm[33] is implemented to achieve the best performance. The experimental results show that the throughput increase while the speedup decreases for LDPC, but for RA, it does not bring out any performance gain.
+
+1904 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+V. EXPREMENTAL RESULTS AND DISCUSSION
+Experiments platforms are listed in Table Ę. The CPU code is written in C and uses single precision floating-point arithmetic operations without stream SIMD instructions[8]. The GPU code is programmed using CUDA and adopts single precision floating-point representation as well. The programs run on CPU are also modified every time when the GPU versions are optimized. All the experimental results are summarized in Fig.9 and Fig.10. It shows that UMC, shared memory and multiword decoding bring about most of the performance improvement. For matrices A and D, since there are not enough threads can be scheduled, the performance gain is limited.
+In Ref.[7], since they did not utilize on-chip memory, performance declines when a certain dimension of LDPC code is over passed because of the bandwidth bottleneck between CPU and GPU. Although UMC was first proposed in [11], they did not point out the relation between the performance improvement and latency overlapping scheme.
+
+Table ě lists comparison of the MSOMS strategy with other works. Different from those works, this paper is inspired by the research of DPC which operates close to SNR infimum. Therefore, we focus on low SNR region and achieve an inferior throughput performance. The low-SNR performance of those existing works is not good as well as shown in Table ę. In low SNR region, they can only achieve 22.5 and 24.5Mbps in 1.5dB and 2.7dB, respectively. The more powerful devices GTX470 [9] and GTX480 [11] they used is also contribution to their high throughput. The achieved throughput is 15, 24 and 29.3Mbps for LDPC A, B and C in this work. Additionally, we can achieve better throughput performance on RA than LDPC.
+
+TABLE III.
+
+DEVICES FOR EXPERIMENTS
+
+CPU
+Intel Core i7 (2.67GHz+2GB)
+
+GPU
+GTX280 (1.3GHz×240 +
+1GB)
+
+Mother board GIGABYTE EX58-UD4 (PCIe 2.0 x16)
+
+OS
+Ubuntu10.10 + CUDA4.0
+
+Figure 9. Summary of LDPC codes.
+
+Figure 10. Summary of RA codes
+
+TABLE IV. CROSS-COMPARISONS AMONG RELATED WORKS OF LDPC DECODING
+
+Item
+Device (n, k) LDPC type Algorithm Early termination SNR/dB Speedup vs. CPU(Iter=25) Throughput /Mbps
+
+Falco. G[7]
+GTX8800 (20000,10000) (3,6) SPA No -
+-
+11.3
+
+Cheng-chun Chang [6] TESLA C1060 (8000,4000) ˄4,8˅ SPA No -
+271
+2.39
+
+H.Ji [10]
+GTX285 (1944,972) ˄3.6,7.2˅ SPA Yes 1.5
+10
+1.75
+
+G.wang [9]
+GTX470 (1944,972) ˄3.6,7.2˅ SPA Yes 1.5-5
+-
+22.5-100.3
+
+S. Kang [11]
+GTX480 (2048,1723) ˄6,32˅ SPA Yes 2.7-5.5
+234
+24.5-146.6
+
+This work
+GTX280 (20000,10000) ˄3,6˅ SPA Yes 1.45
+383
+29.3
+
+1905 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+VI. CONCLUSION
+Based on the analysis of DPC, parts of its computation intensive algorithms including LDPC and RA decoding are implemented in this paper. An efficient MSOMS strategy is presented to fully utilize GPU resource. The experimental results show that maximum speedups achieved are 383-x and 442-x for LDPC and RA decoding. Compared to existed methods, our strategy achieves comparable throughput performance in low SNR region on an inferior device, which confirms the efficiency of the proposed MSOMS strategy. Actually, the chosen LDPC and RA codes are simplified ones compared to those codes employed in DPC [22-26]. To achieve the promised benefit of DPC on GPU, some compromises have to be made between performance and feasibility. How to design a feasible practical DPC scheme based on GPU with acceptable performance is a big challenge in our future work.
+REFERENCES
+[1] Goldsmith, A., S.A. Jafar, N. Jindal, and S. Vishwanath, Capacity limits of MIMO channels. IEEE Journal on Selected Areas in Communications, 21(5), 2003, pp. 684-702.
+[2] Costa, M., Writing on dirty paper (Corresp.). IEEE Transactions on Information Theory, 29(3), 1983, pp. 439-441.
+[3] Weingarten, H., Y. Steinberg, and S. Shamai, The capacity region of the Gaussian multiple-input multiple-output broadcast channel. IEEE Transactions on Information Theory, 52(9), 2006, pp. 3936-3964, doi: 10.1109/tit.2006.880064.
+[4] Jovicic, A. and P. Viswanath, Cognitive Radio: An InformationTheoretic Perspective. IEEE Transactions on Information Theory, 55(9), 2009, pp. 3945-3958, doi: 10.1109/tit.2009.2025539.
+[5] Eggers, J.J., R. Bauml, R. Tzschoppe, and B. Girod, Scalar Costa scheme for information embedding. IEEE Transactions on Signal Processing, 51(4), 2003, pp. 1003-1019.
+[6] Cheng-Chun, C., C. Yang-Lang, H. Min-Yu, and H. Bormin, Accelerating Regular LDPC Code Decoders on GPUs. IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing, 4(3), 2011, pp. 653-659, doi: 10.1109/jstars.2011.2142295.
+[7] Falcao, G., L. Sousa, and V. Silva, Massively LDPC Decoding on Multicore Architectures. IEEE Transactions on Parallel and Distributed Systems, 22(2), 2011, pp. 309-322, doi: 10.1109/tpds.2010.66.
+[8] Falcão, G., S. Yamagiwa, V. Silva, and L. Sousa, Parallel LDPC Decoding on GPUs Using a Stream-Based Computing Approach. Journal of Computer Science and Technology, 24(5), 2009, pp. 913924, doi: 10.1007/s11390-009-9266-8.
+[9] Guohui, W., M. Wu, S. Yang, and J.R. Cavallaro. A massively parallel implementation of QC-LDPC decoder on GPU, Application Specific Processors (SASP), 2011 IEEE 9th Symposium on, 2011, pp. 82-85|.
+[10] Ji, H., J. Cho, and W. Sung, Memory Access Optimized Implementation of Cyclic and Quasi-Cyclic LDPC Codes on a GPGPU. Journal of Signal Processing Systems, 64(1), 2010, pp. 149159, doi: 10.1007/s11265-010-0547-9.
+[11] Kang, S. and J. Moon, Parallel LDPC Decoder Implementation on GPU Based on Unbalanced Memory Coalescing, 2012 IEEE International Conference on Communications (ICC). 2012.
+[12] Wu, M., Y. Sun, G. Wang, and J. Cavallaro, Implementation of a High Throughput 3GPP Turbo Decoder on GPU. Journal of Signal
+
+Processing Systems, 65(2), 2011, pp. 171-183, doi: 10.1007/s11265011-0617-7.
+
+[13] Wang, G., M. Wu, Y. Sun, and J.R. Cavallaro. GPU Accelerated Scalable Parallel Decoding of LDPC Codes, 2011 the 45th Asilomar Conference on Signals, Systems and Computers, 2011
+
+[14] Gallager, R.G., Low desity parity check codes. IRE Trans. Inf. Theory, IT:81962, pp. 21-28.
+
+[15] Mackay, D.J.C., Near Shannon Limit Performance of Low Density Parity Check Codes. IEE Electronics Letters, 32(18), 1996, pp. 16451646.
+
+[16] Hui, J., Analysis and design of turbo-like codes. 2001, California Institude of Technology.
+
+[17] Hui, J., K. Aamod, and M. Robert, Irregular Repeat-Accumulate Codes 1, the Second International Conference on Turbo Codes. 2000.
+
+[18] Shih, X.Y., C.Z. Zhan, C.H. Lin, and A.Y. Wu, An 8.29mm2 52mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13um CMOS process. IEEE J. Solid-State CIrcuits, 43(3), 2008, pp. 672-683.
+
+[19] Falcao, G., L. Sousa, and V. Silva, Massive parallel LDPC decoding on GPU, 2008 Proceedings of the 13th ACM SIGPLAN Symposium on Principles and practice of parallel programming. 2008, ACM.
+
+[20] NAVIDIA, NVIDIA CUDA C Programming Guide Version 4.0. 2011.
+
+[21] Erez, U., S. Shamai, and R. Zamir, Capacity and lattice strategies for canceling known interference. IEEE Transactions on Information Theory, 51(11), 2005, pp. 3820-3833, doi: 10.1109/tit.2005.856935.
+
+[22] Erez, U. and S. ten Brink, A close-to-capacity dirty paper coding scheme. IEEE Transactions on Information Theory, 51(10), 2005, pp. 3417-3432, doi: 10.1109/tit.2005.855586.
+
+[23] Yong, S., Y. Yang, A.D. Liveris, V. Stankovic, and X. Zixiang, NearCapacity Dirty-Paper Code Design: A Source-Channel Coding Approach. IEEE Transactions on Information Theory, 55(7), 2009, pp. 3013-3031.
+
+[24] Bennatan, A., D. Burshtein, G. Caire, and S. Shamai, Superposition coding for side-information channels. IEEE Transactions on Information Theory, 52(5), 2006, pp. 1872-1889, doi: 10.1109/tit.2006.872985.
+
+[25] Uppal, M., Y. Guosen, X. Yan, W. Xiaodong, and X. Zixiang. A Multi-Level Design for Dirty-Paper Coding with Applications to the Cognitive Radio Channel, IEEE Global Telecommunications Conference (GLOBECOM 2011), 2011, pp. 1-5.
+
+[26] Yang, Y., X. Zixiang, Y.-c. Wu, and P. Zhang. A density evolution based framework for dirty paper code design using TCQ and multilevel LDPC codes, Communications (ICC), 2012 IEEE International Conference on, 2012, pp. 2596-2600.
+
+[27] Marcellin, M.W. and T.R. Fischer, Trellis coded quantization of memoryless and Gauss-Markov sources. IEEE Transactions on Communications, 38(1), 1990, pp. 82-93.
+
+[28] Tanner, R.M., A Recursive Approach to Low Complexity Codes. IEEE Trans. Inform. Theory, 271981, pp. 533-547.
+
+[29] Lin, S. and D.J. Costello, Error Control Coding: 2nd Edition. 2004: Prentice Hall.
+
+[30] Mackay, D.J. Encyclopedia of Sparse Graph Codes. 2012; Available from: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+
+[31] List, N.B., Low-Complexity Interleaver Design for Turbo Codes, School of Electrical and Computer Engineering. 2004, Georgia Institute of Technology.
+
+[32] Vasily, V. Vasily Volkov.
+
+2012; Available from:
+
+http://www.cs.berkeley.edu/~volkov/.
+
+[33] Harris, M. Optimizing parallel reduction in CUDA. 2012; Available from: http://developer.download.nvidia.com/compute/cuda/1_1/Website/pro jects/reduction/doc/reduction.pdf.
+
+1906 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:45:50 UTC from IEEE Xplore. Restrictions apply.
+
+

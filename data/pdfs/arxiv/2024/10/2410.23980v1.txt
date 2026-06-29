@@ -1,0 +1,552 @@
+A Comparative Study of Ensemble Decoding Methods for Short Length LDPC Codes
+Felix Krieg, Jannis Clausius, Marvin Geiselhart, and Stephan ten Brink Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany
+{krieg,clausius,geiselhart,tenbrink}@inue.uni-stuttgart.de
+
+arXiv:2410.23980v1 [cs.IT] 31 Oct 2024 ˆc = argmin P (Lch|ˆcj) ˆcj ,j∈{1,...,M }
+
+Abstract—To alleviate the suboptimal performance of belief propagation (BP) decoding of short low-density parity-check (LDPC) codes, a plethora of improved decoding algorithms has been proposed over the last two decades. Many of these methods can be described using the same general framework, which we call ensemble decoding: A set of independent constituent decoders works in parallel on the received sequence, each proposing a codeword candidate. From this list, the maximum likelihood (ML) decision is designated as the decoder output. In this paper, we qualitatively and quantitatively compare different realizations of the ensemble decoder, namely multiple-bases belief propagation (MBBP), automorphism ensemble decoding (AED), scheduling ensemble decoding (SED), noise-aided ensemble decoding (NED) and saturated belief propagation (SBP). While all algorithms can provide gains over traditional BP decoding, ensemble methods that exploit the code structure, such as MBBP and AED, typically show greater performance improvements.
+I. INTRODUCTION
+The need to meet the requirements of hyper-reliable lowlatency communications (HRLLC) [1] renewed the interest in short block-length coding. As a result, performance limits for the non-asymptotic regime were derived in [2], and since then the search for codes and decoders that reach the limit has begun. A survey on this topic was conducted in [3]. With (near) maximum likelihood (ML) decoders, convolutional codes and polar codes were shown to perform near the optimum. In contrast, a class of codes that has not reached its potential are low-density parity-check (LDPC) codes [4] [5]. Good shortlength performance of LDPC codes is especially desirable considering efforts to unify channel coding for next-generation communication systems [6]. While other classes are limited by the ML performance of the code, LDPC decoders usually do not even perform close to the optimum of the code for short block lengths. In particular, belief propagation (BP) decoding is sub-optimal due to non-avoidable short cycles in their Tanner graph. To alleviate this deficit, various improvements over standard BP decoding have been proposed. However, these methods in turn have other drawbacks: For example, ordered statistic decoding (OSD) [7] is highly complex and even OSD post-processing after BP typically exceeds acceptable latency limits. Methods to avoid trapping sets face the same issues and are specific to a single code [8].
+One way forward may be the framework of ensemble decoding, as depicted in Fig. 1 [9]. Here, multiple constituent
+This work is supported by the German Federal Ministry of Education and Research (BMBF) within the project Open6GHub (grant no. 16KISK019).
+
+Dec1 cˆ1
+
+cˆ1 · HT = 0?
+
+cˆ1
+
+no
+
+Dec2
+
+cˆ2
+
+cˆ2 · HT = 0?
+
+cˆ2
+
+cˆ
+
+Lch
+
+no
+
+DecM
+
+cˆM
+
+cˆM ·HT = 0?
+
+cˆM
+
+no
+
+Fig. 1: Block diagram of ensemble decoding of the channel Log-likelihood
+ratios (LLRs) Lch with M constituent hard-output decoders. Only valid codeword candidates are considered in the final ML-in-the-list decision.
+
+decoders run in parallel and the best codeword candidate is chosen afterwards. As a result, low latency is ensured, reliability is improved, and error floors are reduced. Moreover, the independence of each decoder allows for hardware implementations with limited control signal overhead compared to, e.g., successive cancellation list (SCL) decoding of polar codes [10].
+In this paper, we discuss numerous ensemble schemes for LDPC codes, i.e., multiple-bases belief propagation (MBBP) [9], automorphism ensemble decoding (AED) [11], scheduling ensemble decoding (SED), noise-aided ensemble decoding (NED) [12], and saturated belief propagation (SBP) [13]. We aim at giving an intuition of the inner workings of each method and discuss their benefits and limitations. Using Monte-Carlo simulations, we compare their performance for low, medium, and high rate codes. From this, we can conclude that ensemble decoding benefits enormously from appropriate code design.
+Our contributions are outlined as follows:
+• We give a comprehensive review of ensemble decoding methods, their requirements, and how they are adapted to BP decoding of LDPC codes.
+• We provide intuitive explanations for the different mechanisms for constructing decoding ensembles.
+• Using Monte-Carlo simulations, we quantitatively compare the regarded algorithms in terms of error-rate performance. For this purpose, we introduce the ensemble recovery probability as a measure for the ensemble gain.
+
+II. PRELIMINARIES
+A. LDPC Codes and Belief Propagation Decoding
+LDPC codes are a family of linear codes characterized by their sparse parity-check matrix H [4] [5]. From the codedefining parity-check matrix, the Tanner graph [14] can be build. This bipartite graph consists of check nodes (CNs) and variable nodes (VNs) where CN ci is connected to VN vj, if Hij = 1. Exploiting the sparse connectivity of the graph, the iterative message passing algorithm BP can be used to efficiently decode LDPC code. In BP, the update equation for the VNs is
+
+Lvi→cj = Lch,i +
+
+Lcj′ →vi ,
+
+(1)
+
+j′≠ j
+
+where Lch,i is the channel LLR and Lcj′ →vi is the incoming message from CN cj′ . Similarly, the update for the CNs is
+
+
+
+
+
+Lcj→vi = 2 · tanh−1 
+
+tanh Lvi′ →cj  . 2
+
+(2)
+
+i′ ̸=i
+
+After Nit iterations the final output is calculated by
+
+Lvi = Lch,i +
+
+Lcj →vi .
+
+(3)
+
+j
+
+The BP algorithm allows for different schedules. Here, we cover the flooding and the layered schedule called layered BP (LBP). A single iteration looks as follows for both cases, respectively. For the flooding schedule, all CNs are updated and subsequently all VNs are updated. In contrast, for the layered schedule, only a subset of CNs Ri ⊆ R of size NL is updated, followed by the update of their connected VNs. Subsequently, the next set Rj ⊆ R \ Ri is updated, until all CNs are updated once. Typically, layered decoding reduces the number of required decoding iterations by the factor two, however, at an increased latency due to the sequential processing schedule [15] [16].
+For long LDPC codes, BP decoding usually yields near ML performance. However, this is only guaranteed if the Tanner graph does not contain cycles, or few cycles with large girth. For short block lengths, this condition is not fulfilled and thus, the performance is compromised.
+
+B. Ensemble Decoding
+Ensemble decoding [9] helps approaching near ML performance with low latency for short block lengths. Fig. 1 shows the general block diagram of ensemble decoding. The idea is to have M constituent decoders, working independent and in parallel, leading to possibly different candidates. The best candidate is chosen according to the ML-in-the-list criterion
+
+cˆ = DecE(Lch) = argmin P (Lch|cˆj)
+cˆj ,j∈{1,...,M }
+
+= argmin LcTh · (−1)cˆj ,
+
+(4)
+
+cˆj ,j∈{1,...,M }
+
+where cˆj is the jth candidate and Lch are the channel
+LLRs. Note that only valid candidates with syndrome sj = cˆjHT = 0 are considered in the decision process afterwards.
+
+If the constituent decoders output different valid candidates (or convergence behavior), we can observe an ensemble gain. That means, the ensemble needs diversity in order to work.
+
+C. Automorphisms of (Quasi-) Cyclic Codes
+The automorphism group of a code C is Aut(C) = {π : π(c) ∈ C ∀c ∈ C}, meaning the set of permutations that lead from one codeword to another for all codewords [17]. By definition, cyclic and quasi-cyclic (QC) codes have automorphisms of the form
+
+πdQ,CZ (i) =
+
+i+d−Z i+d
+
+if i mod Z + d ≥ Z else,
+
+(5)
+
+with 0 ≤ d < Z. For cyclic codes, we can set Z = N and get the so-called S0 group πdS,0Z (i). Furthermore, the automorphism group of cyclic codes contain the S1 group [17, Ch. 8 §5] as permutations defined by πdS1(j) = (j · 2d) mod N with d = 0, ..., NS1, where NS1 = min k k ∈ N+, 2k ≡ 1 mod N .
+
+III. ENSEMBLE METHODS
+A. Multiple Bases Belief Propagation (MBBP)
+For MBBP [9], the ensemble is generated from BP decoding based on different parity-check matrices Hj, thus, cˆj = DecHj (Lch). Note that each decoder still operates on a valid parity-check matrix for the code. The different matrices should be constructed from low-weight parity-checks (i.e., low-weight codewords of the dual code). As a result, the constructed matrix is sparse and suitable for BP decoding. In general, however, these low-weight codewords are hard to find. Some code families, such as cyclic codes simplify this task, as each parity-check matrix can be constructed from a single low weight parity-check and its cyclic shifts. In general, the quality of the candidates might vary, since some matrices are better suited than others for BP.
+
+B. Automorphism Ensemble Decoding (AED)
+AED [18] exploits symmetries in the code, allowing to feed the decoder permuted variants of the observation y. In other words, each decoder perceives y from a different perspective, possibly leading to different candidates, as long as the decoder is not invariant to this transformation. This invariance is called the symmetry of the decoder. Thus, the code needs to have more symmetries than the decoder for AED to work. Each constituent decoder pre-processes Lch with a different permutation and decodes it. After decoding, the permutation is reversed and, thus, a candidate is calculated by cˆj = πj−1 (Dec(πj(Lch))).
+While being attractive due to their known automorphism group, AED cannot be directly applied to QC LDPC codes. This is because the circulant structure of the parity-check matrix imposes an invariance of BP decoding with respect to QC permutations [11], [19]. Therefore, [11] proposes to break the symmetry of the parity-check matrix in either of three ways, namely the deletion of rows, the addition of rows, or
+
+π
+
+π
+
+Decπ
+
+Dec1 Dec2
+
+Dec1
+
+Dec1
+
+c0
+
+c1 = π(c0)
+
+c0
+
+c0
+
+c0
+
+Dec1
+
+Dec1
+
+(a) Transformation π applied to the received vector y, as (b) Transformation π applied (c) Deformation applied to the (d) Translation of received
+
+realized by AED. The black line marks the Voronoi cell border to the decoder, as in MBBP, decoder, as realized by MBBP vector y, as realized by NED
+
+of the individual codewords.
+
+e.g., from automorphisms. and SED.
+
+and SBP.
+
+Fig. 2: Illustration of how the decoding regions interact with the received vector (×) for different ensemble decoding variants. In each scenario, the initial
+decoder Dec1 fails, but the ensemble of two decoders can successfully decode.
+
+the summation of rows. If the code contains more symmetries, e.g., is cyclic, AED can be directly applied [19].
+Instead of permuting y, applying the automorphism to the decoder leads to an equivalent decoding behavior. This form of AED is a special case of MBBP, where the parity-check matrices are column permutations of each other. The advantage of AED over general MBBP is that on average, all candidates perform equally well, with similar latency.
+Very recently, two generalizations of AED have been proposed. The first, called generalized AED, considers code automorphisms that are arbitrary linear, bijective maps, rather than just permutations [20]. The second, namely endomorphism ensemble decoding (EED), further generalizes this to transformations that are not even bijective [21]. Both decoding algorithms, however, require specially tailored codes or only work for very short codes, so they are not yet universally applicable, and thus, are not considered in this paper.
+
+C. Scheduling Ensemble Decoding (SED)
+
+SED is based on different schedules for the CN processing.
+
+Neither the inputs nor the outputs of the constituent decoders
+
+are altered. The diversity comes from the order of processing
+
+of
+
+the
+
+the
+
+CN
+
+subsets
+
+Ri
+
+with
+
+i
+
+=
+
+0, ...,
+
+N NL
+
+− 1.
+
+The
+
+number
+
+of
+
+different
+
+schedules
+
+is
+
+N NL
+
+!.
+
+The
+
+parameter
+
+NL
+
+dictates
+
+the
+
+level of parallelism in the decoder. Considering contention free
+
+memory access, the maximum for QC LDPC codes is NL =
+
+Z. For non-QC codes, the maximum is non-trivial. Note that
+
+the performance per branch might vary, i.e., some schedules
+
+may be inherently better suited than others. In particular, for
+
+the 5G LDPC code, a na¨ıve top-to-bottom schedule of the
+
+rows is highly suboptimal in performance. For polar codes,
+
+BP scheduling ensembles are proposed in [22]. However, to
+
+the best of our knowledge, SED for LDPC codes has not yet
+
+been published in literature.1
+
+D. Noise-aided Ensemble Decoding (NED)
+For NED, identical constituent BP decoders based on the unaltered parity-check matrix are used. The ensemble diversity comes from an alteration of the channel LLRs Lch. For all
+1This idea originated from a discussion with Tom Richardson at the Munich Workshop on Shannon Coding Techniques 2024.
+
+constituent decoder but the first one, Gaussian noise is added as Lj,ch = Lch + nj, where n ∼ N (0, σN2 ED). Note that σN2 ED is a hyper parameter and must be optimized. Furthermore, adding noise leads to a degradation in performance per constituent decoder, which is, however, almost negligible.
+E. Saturated Belief Propagation (SBP)
+While originally proposed as an “afterburner” that is only applied when conventional BP decoding fails [13], SBP can be applied directly as an ensemble decoder. Similarly to NED, SBP alters the decoder inputs rather than the constituent decoders themselves. Here, the log2(M ) most unreliable positions of Lch are saturated (set to ±∞), according to all M possibilities. These are then the input to the different branches in the ensemble, where the decoding continues.
+IV. INTUITIONS OF ENSEMBLE DECODING
+To give an intuition on the workings of the different ensemble decoding methods, Fig. 2 visualizes the effects of changing the constituent decoders or their inputs on the decoding outcome. The advantage of an ensemble decoder arises from the varied decoding patterns exhibited by its suboptimal constituent decoders. Each of these imperfect (nonML) decoders has a unique decoding region that does not align with the Voronoi cell (i.e., the decoding region of an ML decoder) of a codeword. Within this abstract region, the decoder is assumed to successfully converge to its associated codeword. In particular, for BP-based decoders, the majority of errors stems from the algorithm not converging at all, rather than to a erroneous codeword. In Appendix A, we demonstrate this property by Monte-Carlo simulation. Therefore, the decoding region is typically significantly smaller than the Voronoi cell. It is important to note that these decoding regions can be highly asymmetrical and even discontinuous. By applying the ML metric to the resulting candidate list of the ensemble, the decoding region of the ensemble decoder can be interpreted as the union of the individual decoding regions. If the received vector y (marked by × in Fig. 2) falls within the decoding region of any of the constituent decoders, the ensemble is considered to have successfully estimated the correct codeword. Whereas in general a decoder with a smaller decoding region would result in worse block
+
+error rate (BLER) performance, even a “bad” decoder can be beneficial to an ensemble, as long as it covers a region that is not already covered. Concluding, the larger the area covered by the ensemble compared to any single decoder, the larger the diversity.
+Fig. 2a illustrates an ensemble of size two and the effect of a transformation of a codeword, e.g., a permutation (π : C → C) of a codeword c1 onto another codeword c2 = π(c1). Due to the asymmetrical decoding regions of the constituent decoder, the noise pattern around c1 leads to no convergence. However, the transformed channel observation is correctable by the other decoder. Note that the second decoder can only decode this observation because its decoding region is not invariant under the transformation π.
+The same ensemble can also be constructed by applying the transformation directly to the decoder. For example, AED can be realized as MBBP by permuting the columns of the paritycheck matrix according to the automorphisms π (rather than the observation y). Fig. 2b illustrates the decoding regions of both the original decoder and the transformed decoder. The decoding region of the ensemble decoder is the union of these two regions.
+Similarly, Fig. 2c shows the deformation of a decoding region for two different decoders, as realized by general MBBP or SED. Since the second decoder (Dec2) covers areas where the initial decoder would fail, the ensemble gains in performance.
+Lastly, translation-based decoding schemes such as NED and SBP are presented in Fig. 2d. They also provide the ensemble with additional gain, as they may nudge y into a decoding region.
+
+V. RESULTS
+A. Code Parameters
+To compare the different ensemble decoding algorithms, we consider a variety of short LDPC and LDPC-like codes, listed in Tab. I. The first code is a short, low-rate (63, 6) simplex code, i.e., the dual of the (63, 57) Hamming code. Due to this property, it is easy to find suitable low-weight parity-checks and also, its automorphism group is large. The second code is the (132, 66) 5G LDPC code. It is quasi cyclic with Z = 11. Finally, we consider the relatively high-rate, cyclic (273, 191) LDPC code constructed from a projective geometry (PG) [23]. Due to its construction, there are 273 minimum weight parity-checks, from which suitable subsets can be selected for decoding. For a fair comparison in terms of complexity, we restrict decoders to have full-rank paritycheck matrices with the same number of checks, i.e., we do not consider overcomplete parity-check matrices. An exception is AED for the 5G LDPC code, which uses an undercomplete
+
+Table I: Considered LDPC(-like) codes and their parameters
+
+Code
+
+NKR
+
+Automorphisms
+
+Simplex 63 6 0.1 general linear, cyclic
+
+5G LDPC 132 66 0.5
+
+quasi-cyclic
+
+PG LDPC 273 191 0.7
+
+cyclic
+
+100
+
+BLER
+
+10−1
+
+LBP-4
+
+BP-8
+
+10−2
+
+NED-8 BP-8 SBP-8 BP-8
+
+MBBP-8 BP-8
+
+10−3
+
+SED-8 LBP-4 Hsys AED-8 BP-8 Hsys
+
+ML
+
+10−4 0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+Eb/N0 in dB
+
+Fig. 3: BLER performance comparison for the (63, 6) simplex code. Hsys
+indicates the use of the systematic parity-check matrix.
+100
+
+BLER
+
+10−1
+
+LBP-4
+
+BP-8
+
+10−2
+
+NED-8 BP-8 SBP-8 BP-8
+
+SED-8 LBP-4
+
+10−3
+
+AED-8 BP-8 MBBP-8 BP-8
+
+ML lower bound
+
+10−41.5 2 2.5 3 3.5 4 4.5 5
+
+Eb/N0 in dB
+
+Fig. 4: BLER performance comparison for the (273, 191) PG LDPC Code.
+
+H matrix obtained from removing the first three parity-checks to break the symmetries of the decoder [11].
+All decoders use the same ensemble size of M = 8 with each decoder using 8 flooding or 4 layered iterations, respectively. For the NED we optimized the noise variance, resulting in σN2 ED = 0.64 for M = 4 and σN2 ED = 0.25 for M = 8. For the layered BP decoder without an ensemble, we chose a top-to-bottom schedule of the check node sets. Further, we set NL = 1 for the cyclic codes and NL = Z = 11 for the 5G LDPC code. The schedules in the SED are chosen randomly and are not optimized.
+B. Error-Rate Performance
+Fig. 3 shows the BLER for several decoders for the lowrate (63, 6) code. For simulation, we used a systematic paritycheck matrix Hsys and a parity-check matrix containing random minimum weight checks. In the results we only show the better of the two for the ensembles, respectively; indicated by Hsys in the legend. Notably, the ensembles deforming or transforming decoding regions (SED and AED) perform best with the systematic matrix. In contrast, the ensembles adding
+
+BLER ρ = P[ˆc = c| Dec1(Lch) ̸= c]
+
+100
+
+1
+
+SED-8 LBP-4
+
+10−1 10−2
+
+LBP-4 BP-8 NED-8 BP-8 AED-8 BP-8
+
+0.8
+
+SED-4 LBP-4
+
+AED-8-8
+
+AED-4-8
+
+0.6
+
+NED-8 BP-8
+
+NED-4 BP-8
+
+0.4
+
+10−3
+
+SBP-8 BP-8 SED-8 LBP-4
+
+0.2
+
+OSD-4 ≈ ML
+
+10−4 1
+
+2
+
+3
+
+4
+
+0
+
+5
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 in dB
+
+Eb/N0 in dB
+
+Fig. 5: BLER performance comparison for the (132, 66) 5G LDPC code.
+noise (translating the observation) (SBP and NED) prefer the random matrix. Only AED achieves near ML performance. Note that AED uses for simplicity only the cyclic subgroup of the full automorphism group of the code, which is the general linear group [17].
+Fig. 4 demonstrates the performance of the ensembles on the (273, 191) PG LDPC code, i.e., another cyclic, thus, highly symmetrical code. Again, we observe that the ensembles perform best that leverage the code structure (AED, MBBP). Similarly, the code-agnostic SED performs the second best, while the translation-based ensembles perform the worst.
+Furthermore, Fig. 5 depicts the BLER for the 5G LDPC code with parameters (132, 66). The only useful code property for the ensembles is that it is quasi-cyclic. Note that MBBP cannot be shown here, since the minimum weight checks are unknown. The best performing ensemble is the SED. In contrast to the highly symmetric codes before, here, the AED gain is relatively small and comparable to the translation-based ensembles. The reason is the interplay between constituent decoder symmetries and code symmetries. Remember that BP is invariant to QC permutations. Thus, the diversity comes only from a small deformation (deletion of 3 checks) resulting in small diversity. Further, we observe that for all codes SBP outperforms NED. This leads to the conclusion that the directed injection of noise (saturation of the least reliable positions) seems superior to undirected addition of noise, independent of the reliability, as in NED.
+
+C. Ensemble Gain
+To better grasp the gain provided by the ensemble, we analyze the probability that the ensemble successfully recovers the correct codeword in the cases that the first decoder (or in general, any single decoder) fails. Mathematically, this ensemble recovery probability can be written as
+
+ρ = P[cˆ = c| Dec1(Lch) ≠ c].
+
+(6)
+
+Fig. 6: Ensemble recovery probability P[cˆ = c| dec0(y) ≠ c] for the
+(132,66) 5G LDPC code for different ensemble decoding algorithms, i.e., the probability that an ensemble will decode correctly in a case where a nonensemble decoder would fail.
+
+Intuitively, ρ can be approximated by a ratio of the BLERs of the ensemble decoder and the single decoder
+
+ρ
+
+≈
+
+1
+
+−
+
+P[DecE(Lch)
+
+≠
+
+c] .
+
+(7)
+
+P[Dec1(Lch) ̸= c]
+
+It is only an approximation, as ML errors are not considered. However, it is accurate if the performance is sufficiently far away from ML. Fig. 6 shows the value of the ensemble recovery probability ρ with respect to Eb/N0 for the (132, 66) 5G LDPC code for SED, AED and NED with ensemble sizes M = 4 and M = 8, respectively. Note that for SBP, this metric does not make sense, as the first decoder path already uses a highly distorted version of Lch. As can be seen, for all ensembles, ρ increases with the signal-to-noise-ratio (SNR), i.e., the ensemble gain becomes more prominent for lower error rates. Moreover, the difference in ρ from ensemble size 4 to 8 is largest for AED, indicating that it profits the most from increasing the ensemble size. However, in the particular case for the 5G LDPC code, SED is the only one that achieves a value of ρ close to one in the regarded SNR range.
+
+VI. CONCLUSION AND OUTLOOK
+In this paper, we compared numerous ensemble decoding schemes qualitatively and quantitatively. We showcased different mechanisms that can be leveraged to form an ensemble, i.e., transformation of the observation (AED), transformation of the decoding region (MBBP), deformation of the decoding region (SED and MBBP), and translation the observation (SBP and NED).
+
+Table II: Requirements and qualitative comparison of the considered ensemble
+decoding methods.
+
+Decoder
+
+Code Requirements Decoder Requirements Gain
+
+MBBP ≫ m Min. Weight Checks
+
+-
+
+++
+
+AED
+
+Code Automorphisms
+
+Non-Equivariance ++
+
+SED
+
+-
+
+Layered Decoder ++
+
+NED, SBP
+
+-
+
+-
+
++
+
+All ensembles improve the error-rate performance compared to BP decoding and have a similar complexity at the same ensemble size. However, each comes with its own benefits and limitations. In particular, the high-gain ensembles MBBP, AED and SED pose constraints on the used codes and/or decoding algorithms. These requirements are summarized in Tab. II. MBBP requires the access to a large number of low weight parity-checks to construct suitable parity-check matrices, which are usually found only in algebraic constructions. AED requires the code to have more symmetries (automorphism) than the decoder, and hence, is also best suited for algebraicly constructed codes. SED in contrast only requires the use of a decoder that enables scheduling, such as a layered decoder. This comes at the cost of an increased latency due to the sequential rather than parallel processing of each iteration. In contrast, the translation-based ensembles are applicable for any code and any constituent decoder, however, at a smaller error-rate performance gain. Comparing the translation-base ensembles, we observed that directed noise, instead of undirected noise, leads to superior performance.
+In total, we can conclude that code structure-based ensembles, like AED, perform the best for codes with large symmetry groups, while for codes without non-equivariant symmetries, SED is the best choice.
+APPENDIX A
+Only rarely the BP decoder converges to a valid, but incorrect codeword. This is a so-called an undetected error. Fig. 7 shows the undetected error rate (UER) and the BLER for several codes for 8 and 32 flooding decoding iterations. Note that the larger the number of decoding iterations, the larger the UER.
+100
+
+BLER/UER
+
+10−2
+
+5G LDPC
+(132, 66)
+
+PG LDPC
+(273, 191)
+
+10−4 10−6
+
+BLER UER BP-8 BP-32
+
+1 1.5 2 2.5 3 3.5 4 Eb/N0 in dB
+
+Fig. 7: BLER and UER performance comparison for the (132, 66) 5G LDPC
+code and the (273, 191) PG LDPC code.
+
+[2] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel Coding Rate in the Finite Blocklength Regime,” IEEE Transactions on Information Theory, vol. 56, no. 5, pp. 2307–2359, 2010.
+[3] M. Cos¸kun, G. Durisi, T. Jerkovits, G. Liva, W. Ryan, B. Stein, and F. Steiner, “Efficient Error-Correcting Codes in the Short Blocklength Regime,” Physical Communication, vol. 34, 03 2019.
+[4] R. Gallager, “Low-density Parity-check Codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[5] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[6] M. Geiselhart, F. Krieg, J. Clausius, D. Tandler, and S. ten Brink, “6G: A Welcome Chance to Unify Channel Coding?” IEEE BITS the Information Theory Magazine, vol. 3, no. 1, pp. 67–80, 2023.
+[7] M. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Transactions on Information Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[8] Y. Han and W. E. Ryan, “Low-floor decoders for LDPC codes,” IEEE Transactions on Communications, vol. 57, no. 6, pp. 1663–1673, 2009.
+[9] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiplebases belief-propagation decoding of high-density cyclic codes,” IEEE Transactions on Communications, vol. 58, no. 1, 2010.
+[10] C. Kestel, M. Geiselhart, L. Johannsen, S. ten Brink, and N. Wehn, “Automorphism Ensemble Polar Code Decoders for 6G URLLC,” in 13th ITG International Conference on Systems, Communications, and Coding (SCC), February 2023.
+[11] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. ten Brink, “Automorphism Ensemble Decoding of Quasi-Cyclic LDPC Codes by Breaking Graph Symmetries,” IEEE Communications Letters, vol. 26, no. 8, pp. 1705–1709, 2022.
+[12] A. C¸ ag˘rı Arlı and O. Gazi, “Noise-Aided Belief Propagation List Decoding of Polar Codes,” IEEE Communications Letters, vol. 23, no. 8, pp. 1285–1288, 2019.
+[13] P. Schla¨fer, S. Scholl, E. Leonardi, and N. Wehn, “A new LDPC decoder hardware implementation with improved error rates,” in 2015 IEEE Jordan Conference on Applied Electrical Engineering and Computing Technologies (AEECT), 2015, pp. 1–6.
+[14] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, 1981.
+[15] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop on Signal Processing Systems, 2004. SIPS 2004., 2004, pp. 107–112.
+[16] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-passing schedules for LDPC decoding,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4076–4091, 2007.
+[17] F. J. MacWilliams and N. J. A. Sloane, The Theory of Error-Correcting Codes, ser. North-Holland Mathematical Library. North-Holland Pub. Co., 1977, no. 16.
+[18] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism Ensemble Decoding of Reed–Muller Codes,” IEEE Trans. Commun., 2021.
+[19] C. Chen, B. Bai, X. Yang, L. Li, and Y. Yang, “Enhancing Iterative Decoding of Cyclic LDPC Codes Using Their Automorphism Groups,” IEEE Transactions on Communications, vol. 61, no. 6, pp. 2128–2137, 2013.
+[20] J. Mandelbaum, H. Ja¨kel, and L. Schmalen, “Generalized Automorphisms of Channel Codes: Properties, Code Design, and a Decoder,” in 2023 12th International Symposium on Topics in Coding (ISTC), 2023, pp. 1–5.
+[21] J. Mandelbaum, S. Miao, H. Ja¨kel, and L. Schmalen, “Endomorphisms of Linear Block Codes,” in IEEE International Symposium on Information Theory (ISIT), 2024.
+[22] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “CRC-Aided Belief Propagation List Decoding of Polar Codes,” in IEEE Inter. Symp. Inf. Theory (ISIT), Jun. 2020.
+[23] Y. Kou, S. Lin, and M. P. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Transactions on Information theory, vol. 47, no. 7, pp. 2711–2736, 2001.
+
+REFERENCES
+[1] International Telecommunication Union Radiocommunication Sector, “Recommendation ITU-R M. 2160-0 Framework and overall objectives of the future development of IMT for 2030 and beyond,” Tech. Rep., 2023.
+
+

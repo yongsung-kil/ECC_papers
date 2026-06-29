@@ -1,0 +1,241 @@
+Memory Size Reduction for LDPC Layered Decoders
+Shuang Zhao1, Xiaofang Zhou2, Fanglong Ying 3 and Gerald E. Sobelman4
+1, 2State Key Lab of ASIC and System, Fudan University Shanghai, China
+xiaofangzhou@fudan.edu.cn 3Institute of Circuits and System, Ningbo University
+Ningbo, China 4Department of Electrical and Computer Engineering, University of Minnesota
+Minneapolis, MN USA
+
+Abstract— LDPC coding has attracted much attention due to its high performance, and it has been widely used in telecommunication systems. This paper focuses on the decoder hardware architecture, especially on memory size reduction, which is an important part of the entire area cost. The design has been post-layout simulated using a UMC 0.18 micron technology at a clock speed of 74 MHz. Using the proposed 3level memory structure together with the described control logic, the required number of bits of memory can be reduced by up to 34.9% compared to prior approaches.
+Keywords— LDPC, low density parity check code, decoder, layered decoding, hierarchical memory organization.
+I. INTRODUCTION
+LDPC codes are among the most powerful forward error correcting codes available due to their near Shannon limit performance. Thus, they have been widely adopted by several communication standards, including IEEE 802.11n, 802.16e, UWB and DVB-S. Layered decoding [1, 2] is typically implemented using a partially parallel architecture and gives a good balance between hardware complexity and decoding throughput. Generally speaking, LDPC codes with long code-length (N ³ 1Kbits) [3] can achieve excellent performance, but this requires a very large memory which dominates the decoder’s area. Therefore, memory size reduction becomes an important factor in achieving both low power and low area cost.
+This paper proposes the following three techniques for optimizing the design of an LDPC decoder: 1) a layered decoding architecture with medium-grained functional units; 2) a three-level memory organization; 3) a mechanism for the overall signal routing controls. We abstract the basic processing elements to merge them into a new execute unit (EU) as part of a reconfigurable baseband platform [4]. The three-level memory structure along with the signal control
+2Corresponding author. This research supported by National Natural Science Foundation of China, grant 60876016, State Key Lab of ASIC and System, Fudan Univ., grants GF20080306, ZD20080103 & 09ZD002 and NSF of Ningbo, China, grant 2009A610059.
+
+mechanism leads to a reduction in the total memory size compared to previous designs. With these design aspects, this LDPC decoder supports 22 different sub-matrix sizes and up to a 2304 bit code-length, according to the specifications in IEEE 802.11n [5] and 802.16e [6].
+
+II. CODE CONSTRUCTION AND ALGORITHM OVERVIEW
+The parity check matrix of an LDPC code in IEEE 802.11n and IEEE 802.16e is partitioned into several smaller sub-matrices, in which an extension factor zf determines the sub-matrix size, and a total of 22 modes are defined [5, 6]. The extension factor value ranges from 24 to 96, with a maximum code length of 2304 bits, and the supported code rates are from 1/2 to 5/6. Those sub-matrices are either the zero-matrix or a cyclically-shifted identity matrix.
+
+The basic LDPC decoding algorithm, the sum-product algorithm (SPA) [7], is a bi-directional iterative message passing process between variable nodes and check nodes based on the Tanner graph. In order to reduce the required number of multiplications, the SPA is normally mapped into the log-domain [8] to achieve a more practical hardware implementation. Successive multiplications are replaced by accumulations, and the signal update calculations are
+described as follows (given HM ´N ; yi is the received code, s is the channel variance value; aij and bij are the sign and
+absolute value of check node information respectively).
+
+Initialization: (AWGN channel)
+
+L(ci ) = 2 yi / s 2
+Variable node update: (i Î[1, M ], j Î[1, N ])
+
+Õ L(rji
+
+)
+
+=
+
+(a ij
+
+^
+
+iÎVi
+
+a
+
+ij
+
+)
+
+×
+
+min(bij
+
+,
+
+min
+iÎVi
+
+bij
+
+)
+
+(aij = sign[L(qij )] , bij = L(qij ) )
+
+Check node update: (i Î[1, M ], j Î[1, N ])
+
+å L(qij ) = L(ci ) + L(rji ) - L(rji ) iÎVi
+In this case, the hardware design follows four steps:
+
+978-1-4244-7456-1/10/$26.00 ©2010 IEEE
+
+426
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:30:48 UTC from IEEE Xplore. Restrictions apply.
+
+· Check node pre-processing: obtain the minimal value, the 2nd minimal value and the position of the minimal value in the current processed row;
+· Check node post-processing: compare the current processed position with the position of the minimal value of the row; if the current processed position is the position of the minimal value, replace it with the 2nd minimal value, otherwise, with the minimal value;
+· Variable node pre-processing: accumulate all the values
+in the current processed column; · Variable node post-processing: subtract the current
+processed position from the summation of the same column.
+III. PROPOSED LDPC DECODER ARCHITECTURE In order to support the maximum code size parameters, we arrange the parity check matrix H into 12 sub-matrix rows and 24 sub-matrix columns. Each sub-matrix has 96 rows and columns; two sub-matrix columns are considered to be one processing column, while each sub-matrix row is one processing row, as shown in Figure 1. In order to reduce the initial idle time, we use the layered decoding method starting from sub-matrix column processing. Since the minimal coding rate is 1/2, the number of rows is no more than half of the number of columns.
+Figure 1. Row/column processing terminology used in this paper.
+A. BNP/CNP Structure A BNP (bit node processor) and CNP (check node
+processor) handle variable node updates and check node updates, respectively. A BNP accumulates a new value for the current common column which operates row by row until the current column is completed. As shown in Figure 2, the basic element in the BNP is a (3, 2) compressor with a local register which holds the processed value. The input of the compressor is statically configured by the controller either from the local register or from an external input value. For maximal support of the required coding lengths in these two standards, 12 clock cycles are needed for a column constraint by one BNP.
+One CNP compares the two new values in the same row with the previous result to select the minimum value during one clock cycle, and this operation is handled column by
+
+column until the current row is completed. As shown in Figure 3, there are two basic elements for the absolute value calculation, multiplexer A with a subtraction result condition and multiplexer B with an equality condition. The 3-input XOR functions as the basic element for computing the signs, with any empty input positions filled by zeros. There are also local registers for the storage of the processed signs, and for the minimal and the second minimal values. The inputs of both of the multiplexers and the XORs come from controller, and 12 clock cycles are required for a row constraint by one CNP cell.
+
+L(ci ) 2' s
+
+c
+
+ci
+
+ci -1
+Figure 2. BNP structure for variable node update.
+B. Memory Organization
+A hierarchical memory organization is proposed which helps to optimize the data storage and improve the decoding throughput. The 3-level memory structure is composed of local registers in the processing cells (i.e., the BNP/CNP cells), a register file and a main memory. Figure 4 presents the proposed LDPC decoder architecture. We use a total of 2x96 BNP and 96 CNP cells in order to process two submatrices at once, which allows simultaneous row and column updates.
+The register file facilitates data transfer between BNPs and CNPs, and holds data for the current processing column (i.e., two sub-matrix columns). We use 7 bits to represent each value in a sign-magnitude format, which was determined to be sufficient from Matlab modeling. Data in the register file will be updated immediately after the current processing column is processed by the BNPs (including variable node pre-processing and post-processing), and the updated values in the register file will then be used in the CNPs for check node pre-processing. Therefore, the data used by the BNPs and CNPs is largely provided by the register file.
+The main memory stores the signs of the H matrix values (Si), the minimum (min) and its position (index) of each row, the 2nd minimum (min2), and a flag signal (0/1) to indicate a zero/non-zero sub-matrix ( fij ) , (i=0,…95; j=0,…95), as illustrated in Figure 5. Main memory access occurs when check node post-processing is enabled, that is after all the processing columns have been operated on by BNPs and CNPs within the same decoding iteration.
+C. Control Mechanism
+The decoding process can be divided into four states: variable node pre-processing (ITER1_V_A/LOOP_V_A), variable node post-processing (ITER1_V_P/LOOP_V_P),
+
+427 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:30:48 UTC from IEEE Xplore. Restrictions apply.
+
+MSBv1
+MSBv2
+
+v1 v2 v i -1
+sign(vi-1)
+
+A A
+A B
+
+v1
+
+v1
+
+v2
+
+vi
+
+v2
+
+v1 v2 sign(vi )
+Figure 3. CNP structure for check nodes update
+
+… Figure 4. Proposed LDPC decoder architecture.
+
+… …
+
+Figure 5. Main memory storage.
+
+check node pre-processing (ITER1_H_A/LOOP_H_A) and check node post-processing (H_P). They are iteratively triggered by the enable signals bnp_a_en, bnp_p_en, cnp_a_en, and cnp_p_en, but are terminated by the associated counters, bnp_a_count, bnp_p_count, cnp_a_count, and cnp_p_count respectively. The enable signals for the next state are generated by the counter of the previous state. There is likely to be more than one state running at the same time, since the start conditions are not the same for different states. Figure 6 illustrates the state transitions and the enable signals, as well as their relationships (N=number of sub-matrix rows; M= number of sub-matrix columns). The ITER1_V_P/ LOOP_V_P state and the ITER1_H_A/LOOP_H_A state exist at the same time, because one clock cycle after entering ITER1_V_P or LOOP_V_P, ITER1_H_A or LOOP_H_A will be started,
+
+while state ITER1_V_P or LOOP_V_P will not be completed until M cycles have occurred.
+IV. PERFORMANCE AND COMPARISON
+The proposed LDPC decoder has been synthesized and laid out using a UMC 0.18 micron CMOS technology; a clock frequency of 74 MHz has been achieved with a postlayout area of 21.16 mm2. (A reduction in this area could be achieved if SRAM macros were used.) With this architecture, both IEEE 802.11n and WiMax systems can be implemented, as the supported code lengths are from 576 to 2304 bits with a wide range of sub-matrix sizes (from 24 to 96 bits) under various coding rates (1/2, 2/3, 4/5, 5/6). Furthermore, using the proposed hierarchical memory organization and the signal routing control, a total of 58.5K register bits are required. Table I gives comparisons with
+
+428 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:30:48 UTC from IEEE Xplore. Restrictions apply.
+
+State transiton
+
+bnp_p_count=M
+
+bnp_p_en=1
+
+ITER1_V_P
+
+cnp_a_en=1
+
+ITER1_V_A
+
+bnp_a_en=1
+
+IDLE
+
+iter_num=ITERATION proc_col_num==N cnp_p_count==M
+H_P
+bnp_a_en=1
+
+ITER1_H_A
+cnp_p_en=1
+
+cnp_p_count=M
+
+LOOP_V_A
+
+LOOP_H_A
+
+bnp_p_en=1
+
+LOOP_V_P
+
+cnp_a_en=1
+
+Enable signal generation
+
+bnp_a_count=M
+bnp_a_en
+start
+1 cycle
+
+bnp_p_en
+
+1 cycle
+cnp_a_en
+
+IDLE
+iter_num=ITERATION proc_col_num==N cnp_p_count==M
+cnp_p_en
+
+bnp_p_count=M
+Figure 6. Controller and its triggered enable signals.
+
+two recently proposed LDPC decoders for IEEE 802.16e [9, 10] for which their memory size characteristics are available. As shown in the table, our proposed architecture requires 13.4% or 34.9% fewer total memory bits than what is required in [9] or [10], respectively.
+
+TABLE I.
+
+COMPARISONS WITH OTHER ARCHITECTURES DESIGNED FOR IEEE 802.16E SYSTEM
+
+[9] Max. clk freq.(MHz) 50
+
+[10] 150 (layout)
+
+Proposed Design
+74 (layout)
+
+Block size (bits) Sub-matrix size (bits)
+Operating modes
+
+2304 N/A N/A
+
+576~2304 24~96 19
+
+576~2304 24~96 22
+
+Memory bits (kbits) Throughput (Mbps)
+Logic Gates Technology
+
+67.524 138 168k 180nm
+
+89.856 105@20iter 380k 90nm
+
+58.5 118 @10iter 373k 180nm
+
+V. CONCLUSIONS
+This paper has presented a flexible LDPC decoder which provides support for the codes specified in both IEEE 802.11n and IEEE 802.16e. Using a hierarchical memory structure together with signal routing control, this architecture requires fewer memory bits than other approaches. Our future work will seek to expand the flexibility of the architecture by supporting an even wider range of parity check matrices.
+
+REFERENCES
+[1] Yanni Chen and K. K. Parhi, “Overlapped message passing for quasicyclic low-density parity check codes,” IEEE Trans. on Circuits and Systems I: Regular Papers, Vol. 51, Issue 6, pp. 1106-1113, June 2004.
+[2] T. Brack, M. Alles, F. Kienle and N. When, “A Synthesizable IP Core for WIMAX 802.16E LDPC Code Decoding,” 17th IEEE International Symposium on Personal, Indoor and Mobile Radio Communications, pp. 1-5, Sept., 2006.
+[3] M. Karkooti and J. R. Cavallaro, “Semi-parallel reconfigurable architectures for real-time LDPC decoding,” International Conference on Information Technology: Coding and Computing, Vol. 1, pp. 579 – 585, 2004.
+[4] X. Zhou, S. Zhao, W. Lu, C. Lu and G. E. Sobelman; “Reconfigurable baseband processing platform for communication systems”, IEEE Asia Pacific Conference on Circuit and Systems, pp. 29-32, Dec., 2008.
+[5] “Wireless LAN medium access control (MAC) and physical layer (PHY), amendment 4: Enhancements for higher throughput,” 2007.
+[6] “Air interface for fixed and mobile broadband wireless access system, amendment 2: Physical and medium access control layers for combined fixed and mobile operation in licensed bands,” 2005.
+[7] Robert G. Gallager, Low Density Parity-Check Codes (doctoral thesis), Massachusettes Institute of Technology, Cambridge, MA, 1963.
+[8] William E. Ryan, “An Introduction to LDPC Codes,” report of research funded by NSF and NASA grants, August 19, 2003.
+[9] Bo Xiang Bao, Rui Shen, An Pan, Yun Chen and Xiao-Yang Zeng, “A 179-mW 2304-bit flexible LDPC decoder for Wireless-MAN applications,” 9th International Conference on Solid-State and Integrated-Circuit Technology, pp. 1625-1628, Oct., 2008.
+[10] Chih-Hao Liu et al, “An LDPC Decoder Chip Based on Self-Routing Network for IEEE 802.16e Applications,” IEEE Journal of Solid State Circuits, Vol. 43, Issue 3, pp. 684-694, March, 2008.
+
+429 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:30:48 UTC from IEEE Xplore. Restrictions apply.
+
+

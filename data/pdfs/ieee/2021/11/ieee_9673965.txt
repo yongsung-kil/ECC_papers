@@ -1,0 +1,490 @@
+A Method of Soft-Sensing Log-Likelihood Ratios 
+Based on Broad Learning System for NAND Flash 
+Memories  
+Kainan Ma  
+Institute of Semiconductors, 
+Chinese Academy of Sciences 
+University of Chinese Academy 
+of Sciences  
+Beijing, P. R. China 
+makainan@semi.ac.cn 
+Tao Li 
+Institute of Semiconductors, 
+Chinese Academy of Sciences 
+University of Chinese Academy 
+of Sciences  
+Beijing, P. R. China 
+litao@semi.ac.cn 
+Yibo Yin 
+Institute of Semiconductors, 
+Chinese Academy of Sciences 
+University of Chinese Academy 
+of Sciences  
+Beijing, P. R. China 
+yyb2018@semi.ac.cn 
+Sitao Zhang 
+Institute of Semiconductors, 
+Chinese Academy of Sciences 
+University of Chinese Academy 
+of Sciences  
+Beijing, P. R. China 
+zhangsitao@semi.ac.cn 
+Ming Liu 
+Institute of Semiconductors, 
+Chinese Academy of Sciences 
+University of Chinese Academy 
+of Sciences  
+Beijing, P. R. China 
+liuming@semi.ac.cn 
+Abstract—To accelerate the convergence of the soft-decision 
+decoder and improve the reading performance of the NAND flash 
+memory, a multi-level reading method is usually adopted to sense 
+precise log-likelihood ratios (LLR). However, multi-level readings 
+interfere with the threshold voltage in the cells, increasing the 
+probability of bit errors and accelerating cells wear. To solve this 
+problem, this paper proposed an LLR soft-sensing method based 
+on a broad learning system (BLS) to replace multi-level reading, 
+which improves accuracy of sensing from 97.1% to 97.3% by using 
+the raw bit error rate (RBER) as one of the inputs. The output 
+classification probabilities of the network model are used to 
+calculate the LLR. Compared with the multilayer perceptron 
+model, the adoption of BLS hugely decreases the computation 
+amount of network training from 113 epochs to 5, making on-chip 
+retraining feasible. The proposed BLS-based LLR soft-sensing 
+method will be of great application potential in the intelligent 
+error control of non-volatile memories.  
+Keywords—NAND flash memory; neural network; broad 
+learning system; low-density parity-check code. 
+I. INTRODUCTION
+The NAND flash memory has become the main data storage 
+medium due to its high-speed reading performance. However, 
+compared with hard drive disks, the data in the NAND flash 
+memory are more vulnerable to noise interference, resulting in a 
+higher bit error rate (BER). Error control codes are usually used 
+to detect and correct bit errors. The most commonly used one is 
+the low-density parity-check (LDPC) code. The data are 
+encoded through LDPC codes before programmed into the 
+NAND flash memory and decoded to detect and correct errors 
+during the reading operation. The hard decision decoding (HDD) 
+algorithms are usually used when the BER is low, and the soft 
+decision decoding (SDD) algorithms with stronger error 
+correction capability are used when the BER is high, such as 
+sum-product decoding algorithm (SPA) and minimum sum 
+decoding algorithm (MSA). The error correction capability of 
+the SDD algorithm is related to the accuracy of the input log-
+likelihood ratios (LLRs). The precise LLRs can speed up the 
+decoding convergence, improving the reading speed, whereas 
+inaccurate LLRs may even cause the decoder to fail to converge 
+within the maximum number of iterations, resulting in decoding 
+failure and bringing the NAND flash into a re-read state, which 
+will cause serious read speed drop. A hard-sensing method that 
+directly “read” the LLR called multi-level reading [1, 6] is 
+usually adopted to obtain input LLRs for the SDD, as shown in 
+Fig. 1, where the 𝑉𝑉𝑡𝑡ℎ continues to be compared with 𝑉𝑉𝑎𝑎𝑎𝑎 or 𝑉𝑉𝑏𝑏𝑏𝑏 
+to obtain a precise probability of being “0” or “1” after it is 
+compared with the primary read reference voltage 𝑉𝑉𝑟𝑟𝑟𝑟. The 
+farther the subdivided region is from 𝑉𝑉𝑟𝑟𝑟𝑟, the greater the 
+probability is. Usually, 7 voltage levels (a reference voltage 
+level with 3 arithmetic levels on its left and right) are assigned 
+to sense the LLR of 1 bit, which is equivalent to 4 times readings 
+for 1 bit’s LLR. However, the data retention errors [4] and other 
+noises caused by repeated read operation will make 𝑉𝑉𝑡𝑡ℎ more 
+probable to shift and thus increase the probability of data errors 
+or even lead to data corruption. Also, the repeated read 
+operations will sharply accelerate the wear level of the cells and 
+shorten the service life of the NAND flash memory. 
+Consequently, the read performance will be degraded. Increased 
+risk of data damage, shortened service life, and degraded read 
+performance brought by multi-level reading are fatal to NAND 
+431
+2021 IEEE 9th International Conference on Information, Communication and Networks
+2021 IEEE 9th International Conference on Information, Communication and Networks (ICICN) | 978-1-6654-3861-2/21/$31.00 ©2021 IEEE | DOI: 10.1109/ICICN52636.2021.9673965
+978-1-6654-3861-2/21/$31.00 ©2021 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:03 UTC from IEEE Xplore.  Restrictions apply. 
+flash memories, so a method that can replace it to sense LLRs is 
+very necessary. 
+ 
+Fig. 1. Schematic diagram of multi-level reading. 
+Nakamura et al, 2019 [7] use data retention times and 
+program/erase (P/E) cycles as two of the inputs of an artificial 
+neural network (ANN) and the output classification probabilities 
+as results for precise LLR calculation. However, data retention 
+times and P/E cycles can not completely reflect the noise in the 
+NAND flash memory, so there is still room for improvement in 
+the accuracy of the network. Also, the ANN models are pre-
+trained before leaving the factory and they can not be adjusted 
+once it is deployed to chips. However, the noise environment of 
+each flash memory chip may be different due to the impact of 
+operating temperature, peripheral equipment, reading and 
+writing frequency, etc. Therefore, the trained model can hardly 
+maintain its accuracy when the noise environment changes, 
+especially after a period of use as the cells are wearing. Hence, 
+on-chip retraining which updates the network model of the 
+individual chip is necessary, but there is no mechanism in 
+NAND flash memories for collecting the noisy data in the new 
+working environment for retraining and the computation amount 
+of training an ANN is huge. Hence, this paper proposed an 
+improved model for LLR soft-sensing based on broad learning 
+system (BLS), combined with the RBER estimated in the 
+method from Ma et al, 2020 [9]. The proposed model improved 
+the accuracy of the classification and is feasible to on-chip 
+retraining. 
+The rest of the paper is divided into the following parts: 
+section II introduces principles of the LLR sensing task by 
+taking a multi-level cell (MLC) NAND flash as an example, 
+section III proposes three optional models of multilayer 
+perceptron (MLP) network and broad learning system (BLS) 
+network to sense LLR and compares the performance of them, 
+Section IV proposed an error control framework used in 
+conjunction with the proposed method, and section IV draws a 
+conclusion. 
+II. PRICIPLES 
+Cells in the NAND flash are made of floating gate or charge-
+trap metal oxide semiconductors (MOS). To program data into 
+a cell, the data is first modulated to the corresponding voltage 
+level 𝐿𝐿𝑖𝑖 with Gray coding data mapping, as shown in Table I. 
+The symbol of all “1” represents the erased state, and the other 
+symbols present the programmed states. The cells are charged 
+with programming voltages PVs by using incremental step pulse 
+programming (ISPP) technology [8]. The voltage retained in the 
+cell is called the threshold voltage, 𝑉𝑉𝑡𝑡ℎ. PV and 𝑉𝑉𝑡𝑡ℎ have some 
+fluctuations in practice due to factors such as process and circuit 
+interference, as shown in Fig. 2. The read operation in the 
+NAND flash is to compare the 𝑉𝑉𝑡𝑡ℎ in the cell with the read 
+reference voltages 𝑉𝑉𝑟𝑟s on each page, as shown in Table II. For 
+example, to read the data on the lower page, 𝑉𝑉𝑡𝑡ℎ should be 
+compared with 𝑉𝑉𝑟𝑟2. If 𝑉𝑉𝑡𝑡ℎ> 𝑉𝑉𝑟𝑟2, it is determined that the data 
+stored on the page is “0”, otherwise it is “1”. However, in 
+practice, 𝑉𝑉𝑡𝑡ℎs are interfered with by a variety of noises, so they 
+are not exactly separated by the read reference voltages, as 
+shown in Fig. 3. In this case, multi-level reading is used to sense 
+how likely the data mapped by 𝑉𝑉𝑡𝑡ℎ is “0” or “1” to provide SDD 
+with LLR input. 
+Data program and read in the NAND flash memory is 
+equivalent to data transmission through a noisy channel model 
+[10] which inputs programmed threshold voltage signal and 
+outputs a noise-disturbed one. 𝑉𝑉𝑡𝑡ℎ is mainly affected by 
+incremental step pulse programming (ISPP) noise [10], random 
+telegram noise (RTN) [2], data retention noise [4], and cell-to-
+cell interference (CCI). We use the parameter provided by [5, 6, 
+11] to simulate a noise channel model of an MLC NAND flash 
+and add a small random disturbance to simulate how 𝑉𝑉𝑡𝑡ℎ is 
+disturbed when the working environment changes. 
+ 
+TABLE I.  
+DATA MODULATION IN AN MLC NAND FLASH WITH GRAY 
+CODING MAPPING 
+ 
+Data Modulation 
+Voltage 
+level 
+L0 
+L1 
+L2 
+L3 
+Bit[0]→ 
+lower 
+page 
+1 
+1 
+0 
+0 
+Bit[1] 
+→ 
+upper 
+page 
+1 
+0 
+0 
+1 
+States 
+Erased 
+Programmed 
+ 
+ 
+Fig. 2. The distribution of threshold voltages in an MLC NAND flash of ideal 
+wearing level. 
+ 
+Fig. 3. The threshold voltage distribution affected by noise and wear. 
+432
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:03 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE II.  
+DATA DEMODULATION IN AN MLC NAND FLASH 
+ 
+Read reference 
+volt 
+e.g. 𝑽𝑽𝒕𝒕𝒕𝒕= 𝑳𝑳𝟐𝟐 
+Data 
+Read 
+Lower Page 
+𝑉𝑉𝑟𝑟2 
+𝑉𝑉𝑡𝑡ℎ> 𝑉𝑉𝑟𝑟2 
+0 
+Upper Page 
+𝑉𝑉𝑟𝑟1 −𝑉𝑉𝑟𝑟3 
+𝑉𝑉𝑟𝑟1 < 𝑉𝑉𝑡𝑡ℎ< 𝑉𝑉𝑟𝑟3 
+0 
+ 
+III. NETWORK TRAINING 
+TABLE III.  
+CLASSIFICATION PERFORMANCE AND REQUIRED COMPUTING 
+POWER OF EACH CASE 
+Method 
+Accuracy 
+Multiplications 
+per bit 
+Epochs 
+Case1: MLP 
+97.1% 
+30 
+75 
+Case 2: MLP with RBER 
+97.3% 
+18 
+113 
+Case 3: BLS with RBER 
+97.3% 
+36 
+5 
+ 
+ 
+Fig. 4. The MLP model used in CASE 1, consisting of an input layer, a hidden 
+layer, and an output layer, where the input layer has 8 nodes, the hidden layer 
+has 3 nodes, and the output layer has 2 nodes. 
+ 
+Fig. 5. The training loss of the MLP-based soft sensing for each epoch in 
+CASE 1. 
+200,000 sets of MLC noisy read data are generated, where 
+70% of them are used as the train set, 15% as the test set, and 
+15% as the validation set. In the dataset, 5.68% of the 𝑉𝑉𝑡𝑡ℎs were 
+shifted out of the region between 𝑉𝑉𝑟𝑟s and thus were misjudged. 
+Namely, the bit error rate of the dataset is 0.0568, considering 
+that the Gray codes between two adjacent regions have only a 
+one-bit difference. 
+ 
+Fig. 6. The MLP model after the input format is improved and BER is 
+introduced in. 
+ 
+Fig. 7. The training loss of the MLP-based soft sensing for each epoch in 
+CASE 2. 
+Three optional cases are illustrated in Table III. Case 1 uses 
+input parameters shown in Table IV, which is also adopted in 
+reference [7], where Data retention time and the number of P/E 
+cycles are to reflect the noise environment in the NAND flash 
+memory, Page type indicates which page the read bit is on, and 
+the output of the model is the probability that the data is 
+classified as “0” and “1”. The log-likelihood ratio of the read bit 
+is calculated with LLR = log
+Pr(y=0)
+Pr(y=1), where Pr(y = 0) is the 
+probability of being “0” and Pr(y = 1) is the probability of 
+being “1”. The model of Case 1 is a single-hidden-layer multi-
+layer MLP, as shown in Fig. 4. It takes 75 epochs of training to 
+converge to the best performance, as shown in Fig. 5, reaching 
+the classification accuracy rate of 97.1% under the validation set, 
+which is equivalent to reducing the BER by 48.9% to 0.029, 
+greatly easing the error correction pressure of the decoder. The 
+Case 1 model takes 8 × 3 + 3 × 2 = 30  multiplications to 
+sense an LLR of 1 bit of data. In engineering practice, fixed-
+point multipliers in parallel operations can be used to speed up 
+the calculations to reduce the delay caused by the MLP sensing 
+LLR.  
+TABLE IV.  
+DATA FORMAT FOR CASE 1 
+Input Parameters 
+Output 
+Parameters 
+Data 
+retention 
+times 
+P/E 
+cycles 
+State[1:4] 
+Page type[1:2] 
+y = 
+0? 
+y = 
+1? 
+ 
+Case 2 replaces data retention time and the number of P/E 
+cycles with raw bit error rate (RBER), as shown in Table V, 
+because the two parameters can not cover noises irrelated to 
+them, such as ISPP noise, process deviation, etc. RBER can 
+describe the noise situation more accurately, instead. It is 
+obtained with the method in reference [9], where known 
+sequences are inserted into data frames and the read ones are 
+compared with their actual values to estimate the RBER. The 
+433
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:03 UTC from IEEE Xplore.  Restrictions apply. 
+contaminated data of sequences and their actual values can be 
+collected to update the network model when the accuracy gets 
+decreased. Also, State is represented by only one input node to 
+reduce the size. The improved MLP model, as shown in Fig. 6, 
+converges to the best performance after 113 epochs of training, 
+and the introduced RBER improves the classification accuracy 
+to 97.3% under the validation set, as shown in Fig. 7. It takes 
+4 × 3 + 3 × 2 = 18 multiplications to sense an LLR of 1 bit of 
+data, reducing the number of multiplications required by 40%, 
+compared to Case 1. However, more epochs are needed for 
+model convergence due to the reduction of input nodes. 
+TABLE V.  
+IMPROVED INPUT AND OUTPUT DATA FORMAT FOR CASE 2 
+Input Parameters 
+Output 
+Parameters 
+BER 
+State 
+Page 
+type 
+y = 
+0? 
+y = 
+1? 
+ 
+MLPs require too many epochs for training, which will be a 
+huge cost of computing time and power for on-chip retraining, 
+so the broad learning system (BLS) [3] is adopted. BLS consists 
+of feature nodes, hidden enhancement nodes, and output nodes, 
+where the feature nodes 𝒁𝒁(𝑿𝑿) are the mapping of the input 𝑿𝑿=
+[𝒙𝒙𝟏𝟏, 𝒙𝒙𝟐𝟐, … , 𝒙𝒙𝒏𝒏] and the hidden enhancement nodes 𝑯𝑯(𝒁𝒁) are the 
+mapping of the feature nodes. The BLS network can be 
+expressed as 𝒀𝒀= [𝒁𝒁|𝑯𝑯]𝑾𝑾, where 𝑾𝑾 is the connection weight 
+matrix. BLS obtains connection weights through fast learning 
+that generating random weights first and then pruning nodes 
+with smaller weights, so it takes less time to train and is suitable 
+for on-chip training. The mathematical form of BLS is similar 
+to a neural network with two hidden layers. The BLS model, as 
+shown in Fig. 8, achieves an accuracy of 97.3% after up to only 
+5 epochs of training with the same dataset format as Case 2, 
+hugely reducing the computation amount of training by 95.6%. 
+It takes 4 × 2 + 2 × 6 + (2 + 6) × 2 = 36  multiplication 
+operations to calculate the LLR of 1-bit data. From the 
+perspective of hardware implementation, the side effect of the 
+increased number of multiplication operations can be alleviated 
+because the calculation can be done in one clock cycle via 
+parallel computing due to the flat structure of BLS, whereas the 
+MLP with a hidden layer requires at least two clock cycles. 
+ 
+Fig. 8. 
+1A BLS structure for CASE 3. 
+In summary, although all the three models can reduce the 
+number of reads required to sense LLR from 4 to 1 and reduce 
+the bit error rate of the read data by about 50%, the BLS model 
+is more suitable for LLR soft-sensing and on-chip retraining 
+because of the least computation amount of training and little 
+latency to read operation. Noteworthily, although the LLR soft-
+sensing method effectively reduces the number of reads, it 
+increases the hardware complexity of the error control system as 
+a tradeoff.  
+IV. A FRAMEWORK 
+An error control framework is proposed where the multi-
+level read is replaced with BLS-based LLR sensing, as shown in 
+Fig. 9. In the programming operation, a small number of known 
+sequences are inserted into the input data frame, which is then 
+encoded with LDPC codes. The codewords are interleaved 
+before written into the memory for accurate RBER estimation. 
+In the reading operation, the demodulated codeword is first to 
+recover to original orders via deinterleaving, and then the known 
+sequences in codewords are compared with their actual values 
+to estimate RBER. Meanwhile, the sequences are also collected 
+during backfilling for the network model retraining. Hard-
+decision decoding (HDD) is selected when the RBER is low, 
+and soft-decision decoding (SDD) is used with the input of 
+LLRs obtained through the BLS model in Case 3 when HDD 
+fails or the RBER is high. Subsequently, the known sequences 
+in the data frame are removed from the output. 
+ 
+Fig. 9. The data flow of the error control framework with BLS-based LLR-
+sensing module is introduced when soft-decision decoding is used, where the 
+black arrows the normal program and read operation with RBER estimation 
+embedded, red arrows indicate the flow of BLS-based soft-decision decoding, 
+and blue arrows indicate data collecting for retraining. 
+V. CONCLUSION 
+This paper has proposed a BLS-based LLR soft-sensing 
+method to replace the multi-level read for sensing LLR, which 
+can reduce the interference of multi-level reading with 𝑉𝑉𝑡𝑡ℎ and 
+thus extend the service life of the memory. The RBER of the 
+NAND flash memory is used as one of the input nodes to 
+improve the classification accuracy of the models from 97.1% 
+to 97.3%. Also, the known data introduced by the RBER 
+estimation can be collected for retraining the models. The model 
+also has a small computation amount of training, so it is suitable 
+for on-chip retaining to update models when the accuracy 
+degrades. It takes only up to 5 epochs of training to obtain the 
+same accuracy as MLP models training for 113 epochs. 
+Additionally, its flat structure can make the hardware parallel 
+computing takes only need a few clock cycles to obtain results, 
+which helps maintain the read performance of NAND flash 
+memories. The paper then proposes an error control framework 
+that senses LLRs with BLS model and is capable to on-chip 
+retraining, which further advances the realization of on-chip 
+training of the neural networks for the intelligent error control 
+system in NAND flash memories. However, at a cost, the 
+434
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:03 UTC from IEEE Xplore.  Restrictions apply. 
+proposed method has increased the hardware complexity of the 
+controller, so our nest-step work will focus on hardware 
+optimization to reduce the hardware complexity as much as 
+possible. Considering that the noise situation in NAND flash 
+memories will be more complicated and the service life will be 
+shorter as storage density goes high, the 𝑉𝑉𝑡𝑡ℎs in cells will be 
+more sensitive to noise interference consequently. Therefore, the 
+proposed LLR soft-sensing method that can reduce data 
+retention errors caused by repeated readings will be of great 
+application value.  
+ACKNOWLEDGMENT 
+This research was funded by the National Key Technologies 
+RD Program, grant number 2017YFB0405604, the Key 
+Research Program of Frontier Science, Chinese Academy of 
+Sciences, grant number QYZDY-SSW-JSC004. 
+REFERENCES 
+[1] S. Liu, X. Zou, and B. Wang, "Quad-Level Cell NAND Design and Soft-
+Bit Generation for Low-Density Parity-Check Decoding in System-Level 
+Application," (in English), Wuhan University Journal of Natural Sciences, 
+Article vol. 23, no. 1, pp. 70-78, 2018, Art. no. 1007-
+1202(2018)23:1<70:qlcnda>2.0.tx;2-c. 
+[2] K. L. Wang, G. Du, Z. Y. Lun, W. Y. Chen, and X. Y. Liu, "Modeling of 
+program Vth distribution for 3-D TLC NAND flash memory," (in 
+English), Science China-Information Sciences, Article vol. 62, no. 4, p. 
+10, Apr 2019, Art. no. 042401. 
+[3] C. P. Chen and Z. Liu, "Broad learning system: An effective and efficient 
+incremental learning system without the need for deep architecture," 
+IEEE transactions on neural networks and learning systems, vol. 29, no. 
+1, pp. 10-24, 2017. 
+[4] C. A. Aslam, Y. L. Guan, and K. Cai, "Read and write voltage signal 
+optimization for multi-level-cell (MLC) NAND flash memory," IEEE 
+transactions on communications, vol. 64, no. 4, pp. 1613-1623, 2016. 
+[5] Z. Mei, K. Cai, and X. He, "Deep Learning-Aided Dynamic Read 
+Thresholds Design For Multi-Level-Cell Flash Memories," IEEE 
+Transactions on Communications, vol. 68, no. 5, pp. 2850-2862, 2020. 
+[6] G. Dong, N. Xie, and T. Zhang, "Enabling NAND flash memory use soft-
+decision error correction codes at minimal read latency overhead," IEEE 
+Transactions on Circuits and Systems I: regular papers, vol. 60, no. 9, pp. 
+2412-2421, 2013. 
+[7] T. Nakamura, Y. Deguchi, and K. Takeuchi, "Adaptive Artificial Neural 
+Network-Coupled LDPC ECC as Universal Solution for 3-D and 2-D, 
+Charge-Trap and Floating-Gate NAND Flash Memories," (in English), 
+Ieee Journal of Solid-State Circuits, Article vol. 54, no. 3, pp. 745-754, 
+Mar 2019. 
+[8] K.-D. Suh et al., "A 3.3 V 32 Mb NAND flash memory with incremental 
+step pulse programming scheme," IEEE Journal of Solid-State Circuits, 
+vol. 30, no. 11, pp. 1149-1156, 1995. 
+[9] K. Ma, M. Liu, T. Li, Y. Yin, and H. Chen, "A Low-Cost Improved 
+Method of Raw Bit Error Rate Estimation for NAND Flash Memory of 
+High Storage Density," Electronics, vol. 9, no. 11, p. 1900, 2020. 
+[10] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, "Threshold voltage 
+distribution in MLC NAND flash memory: Characterization, analysis, 
+and modeling," in 2013 Design, Automation & Test in Europe Conference 
+& Exhibition (DATE), 2013, pp. 1285-1290: IEEE. 
+[11] H. Yang et al., "Reliability issues and models of sub-90nm NAND Flash 
+memory cells," in 2006 8th International Conference on Solid-State and 
+Integrated Circuit Technology Proceedings, 2006, pp. 760-762: IEEE. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+435
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:03 UTC from IEEE Xplore.  Restrictions apply. 

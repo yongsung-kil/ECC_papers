@@ -1,0 +1,2438 @@
+886
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Breaking the Computational Bottleneck: Probabilistic Optimization of High-Memory
+Spatially-Coupled Codes
+Siyi Yang , Member, IEEE, Ahmed Hareedy , Member, IEEE, Robert Calderbank , Life Fellow, IEEE, and Lara Dolecek , Senior Member, IEEE
+
+Abstract— Spatially-coupled (SC) codes, known for their threshold saturation phenomenon and low-latency windowed decoding algorithms, are ideal for streaming applications and data storage systems. SC codes are constructed by partitioning an underlying block code, followed by rearranging and concatenating the partitioned components in a convolutional manner. The number of partitioned components determines the memory of SC codes. In this paper, we investigate the relation between the performance of SC codes and the density distribution of partitioning matrices. While adopting higher memories results in improved SC code performance, obtaining finite-length, highperformance SC codes with high memory is known to be computationally challenging. We break this computational bottleneck by developing a novel probabilistic framework that obtains (locally) optimal density distributions via gradient descent. Starting from random partitioning matrices abiding by the obtained distribution, we perform low-complexity optimization algorithms that minimize the number of detrimental objects to construct highmemory, high-performance quasi-cyclic SC codes. We apply our framework to various objects of interest, from the simplest short cycles, to more sophisticated objects such as concatenated cycles aiming at finer-grained optimization. Simulation results show that codes obtained through our proposed method notably outperform state-of-the-art SC codes with the same constraint length and optimized SC codes with uniform partitioning. The performance gain is shown to be universal over a variety of channels, from
+Manuscript received 18 September 2021; revised 17 July 2022; accepted 5 September 2022. Date of publication 16 September 2022; date of current version 20 January 2023. This work was supported in part by the University of California, Los Angeles (UCLA) Dissertation Year Fellowship, in part by the Air Force Office of Scientific Research (AFOSR) under Grant FA 9550-20-1-0266, and in part by the National Science Foundation (NSF) under Grant CCF-FET 2008728 and Grant CCF 2106213. An earlier version of this paper was presented at the 2021 IEEE International Symposium on Information Theory (ISIT) [DOI: 10.1109/ISIT45174.2021.9517931]. (Corresponding author: Siyi Yang.)
+Siyi Yang was with the University of California at Los Angeles, Los Angeles, CA 90095 USA. She is now with the Department of Electrical and Computer Engineering, Duke University, Durham, NC 27708 USA (e-mail: siyi.yang@duke.edu).
+Ahmed Hareedy is with the Department of Electrical and Electronics Engineering, Middle East Technical University (METU), 06800 Ankara, Turkey (e-mail: ahareedy@metu.edu.tr).
+Robert Calderbank is with the Department of Electrical and Computer Engineering, Duke University, Durham, NC 27708 USA (e-mail: robert.calderbank@duke.edu).
+Lara Dolecek is with the Department of Electrical and Computer Engineering, University of California at Los Angeles, Los Angeles, CA 90095 USA (e-mail: dolecek@ee.ucla.edu).
+Communicated by D. Mitchell, Associate Editor for Coding Theory. Color versions of one or more figures in this article are available at https://doi.org/10.1109/TIT.2022.3207321. Digital Object Identifier 10.1109/TIT.2022.3207321
+
+canonical channels such as additive white Gaussian noise and binary symmetric channels, to practical channels underlying flash memory and magnetic recording systems.
+Index Terms— LDPC codes, spatially-coupled codes, absorbing sets, edge distribution, gradient descent, near-optimal partitioning, data storage, flash memories, magnetic recording, communications.
+I. INTRODUCTION
+S PATIALLY-COUPLED (SC) codes, also known as lowdensity parity-check (LDPC) codes with convolutional structures, are an ideal choice for streaming applications and data storage devices thanks to their threshold saturation phenomenon [2], [3], [4], [5], [6] and amenability to low-latency windowed decoding [7]. SC codes are constructed by partitioning the parity-check matrix of an underlying block code, followed by rearranging the component matrices in a convolutional manner. In particular, component matrices are vertically concatenated into a replica, and then multiple replicas are horizontally placed together, resulting in a coupled code. The number of component matrices minus one is referred to as the memory of the SC code [8], [9], [10], [11].
+It is known that the performance of an SC code improves as its memory increases. This is a byproduct of improved node expansion and additional degrees of freedom that can be utilized to decrease the number of short cycles and detrimental objects [9], [10], [12], [13], [14]. Mitchell and Rosnes demonstrated that SC codes designed using non-contiguous partitioning outperform codes designed using contiguous partitioning in [15], which was also demonstrated in [16]. A plethora of existing works [9], [10], [13], [17], [18], [19], [20] focus on minimizing the number of short cycles in the graph of the SC code. Although the optimization problem of designing SC codes with memory less than 4 has been efficiently solved [9], [10], there is still an absence of efficient algorithms that construct good enough SC codes with high memories systematically. Esfahanizadeh et al. [9] proposed a combinatorial framework to develop optimal quasi-cyclic (QC) SC codes, comprising so-called optimal overlap (OO) to search for the optimal partitioning matrices, and lifting optimization (CPO) to optimize the lifting parameters, which was extended by Hareedy et al. [10]. However, this method is hard to execute in practice for high-memory codes due to the increasing computational complexity. Efficient algorithms designing SC
+
+0018-9448 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+887
+
+codes with high memories have been investigated in [13], [17], [18], and [20]. Naseri. et al. [13] and Battaglioni et al. [17] presented lower bounds for the constraint lengths that enable SC codes free of small cycles. Beemer et al. [20] considered both partitioning (edge spreading in the paper) and lifting in tail-biting SC codes, which lead to QC-SC codes and allow the enumeration and elimination of small cycles efficiently, starting from small base matrices. Mo et al. [18] proposed to perform optimization over partitioning and lifting in a twostage fashion, yielding a greater flexibility in designing QC-SC codes with a large girth. Codes designed in the aforementioned literature are typically based on enumeration of detrimental objects of interest followed by algorithmic optimization that eliminates these objects, e.g., exhaustive search and integer programming in [17] that removes short cycles, and a limited exhaustive search with iterative backtracking in [20] that enumerate (3, 3)-absorbing sets in regular VN degree 3 codes. A more advanced technique based on the parent/child relationship between trapping sets (TSs) that efficiently enumerates TSs by expanding short cycles and successively removes the most harmful ones was devised in [13]. Exclusive focus on algorithmic optimization, i.e., lack of theoretical guidance, in the design of SC codes in existing works can lead to search spaces that are away from the optimal solution; several of the codes produced by these works can be outperformed by optimally designed QC-SC codes with lower memories under the same constraint length [18]. We therefore establish a theoretically supported step that systematically targets an optimal search space for the algorithmic elimination step coming afterwards, universally reducing the expected number of different objects of interest and leading to better performance.
+Inspired by the excellent performance and the low computational complexity offered by approaches comprising theoretical analysis guiding heuristic methods, such as degree distribution optimization followed by progressive edge-growth (PEG) algorithms in designing irregular codes, we propose a two-step hybrid optimization framework that has these advantages. The framework first specifies a search subspace that is theoretically proved to be locally optimal, followed by a semi-greedy algorithm within this targeted search space. By analogy with threshold optimization approaches that search for LDPC ensembles with the optimal degree distribution, our first step is to obtain an SC ensemble with the optimal edge distribution (i.e., density distribution of component matrices). The associated metric is the expected number of targeted detrimental objects in the protograph of the code. Having reached a locally optimal edge distribution through gradient descent, we then apply a semi-greedy algorithm to search for a locally optimal partitioning matrix that satisfies this edge distribution. Our probabilistic framework is referred to as gradient-descent distributor, algorithmic optimizer (GRADE-AO).
+Preliminary version of this work was presented in [1], where we focused only on the minimization of the number of short cycles. In this work, we develop a broadly applicable framework that handles more sophisticated objects. While cycles are detrimental in codes with low variable node (VN) degrees, such as regular codes with VN degree 2 or 3, objects that dominate the error profiles in higher-degree codes and
+
+irregular codes are typically more advanced. In particular, we focus on the concatenation of two short cycles in this paper. These concatenated cycles are common subgraphs of the detrimental objects, which are absorbing sets (ASs) [12], that govern the performance of LDPC codes with VN degree ≥ 3 in error floor region. These detrimental objects are also the major source of undesirable dependencies that undermine the performance in the waterfall region. While focusing on cycles for simplicity, which is the case for the majority of existing works, unnecessary degrees of freedom could be exhausted on isolated cycles that are much less problematic. Prior work aiming at eliminating objects instead of cycles in binary codes, which is important for a variety of applications including storage systems, includes [14] by Naseri and Banihashemi along with [21] by Hareedy et al.. While [14] adopts a greedy algorithm to remove the TSs and [21] focuses on a different class of codes, the multi-dimensional LDPC codes, our framework offers additional mathematical guidance and leads to systematic design of high-performance SC codes that do not floor over the storage channels. Hareedy et al. [22], [23] proposed the so-called weight consistency matrix (WCM) framework to search for edge-weight assignments that minimize the number of ASs in non-binary (NB) LDPC codes with a given underlying topology, and demonstrated performance gains in data storage systems. Simulation results show that our framework leads to codes with excellent performance in flash memory and magnetic recording systems. The proposed GRADE-AO framework not only opens a door to fine-grained optimization over detrimental objects in SC codes, but also can be applied in optimizing the unweighted graphs of non-binary (NB) SC codes, which can lead to excellent NB-SC codes when combined with the WCM framework. Because of the improved threshold and waterfall performance, GRADE-AO has potential to produce SC codes for communication systems as well.
+In this paper, we propose a probabilistic framework that efficiently searches for near-optimal SC codes with high memories. In Section II, we introduce preliminaries of SC codes and the performance-related metrics. In Section III, we develop the theoretical basis of GRADE, which derives an edge distribution that determines a locally optimal SC ensemble. In Section IV, we introduce the theoretical details of how GRADE is generalized to more sophisticated objects. The distribution obtained through GRADE leads to effective initialization and specifies the search space of the semi-greedy algorithm adopted in AO afterwards. In Section V, we introduce two examples of GRADE-AO that result in near-optimal SC codes: the so-called gradient-descent (GD) codes and topologically-coupled (TC) codes. In summary, we generalize GRADE to a rich class of relevant objects and present examples of GRADE-AO that focus on concatenated cycles. Our proposed framework is supported in Section VI by simulation results of seven groups of codes, with the best code in each obtained from GRADE-AO. Finally, we make concluding remarks and introduce possible future work in Section VII.
+II. PRELIMINARIES
+In this section, we recall the typical construction of SC codes with quasi-cyclic (QC) structure. Any QC code with a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+888
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+protograph if and only if the following condition follows [17]:
+
+g
+
+g
+
+k=1 P(ik, jk) = k=1 P(ik, jk+1).
+
+(1)
+
+This cycle candidate becomes a cycle in the Tanner graph if
+
+and only if [24]:
+
+g
+k=1 L(ik, jk) ≡
+
+g
+k=1 L(ik, jk+1) mod z. (2)
+
+As shown in Fig. 1, a cycle-6 candidate and a cycle-
+
+8 candidate in the partitioning matrix with assignments satis-
+
+fying condition (1), and their corresponding cycle candidates
+
+in the protograph are marked by red and blue, respectively.
+
+An optimization of a QC-SC code is typically divided into
+
+two major steps: optimizing P to minimize the number of
+
+Fig. 1. Cycle candidates in the protograph (right panel) and their corresponding cycle candidates in the partitioning matrices (left panel).
+
+cycle candidates in the protograph, and optimizing L to further reduce that number in the Tanner graph given the optimized P [9], [10]. The latter goal has been achieved in [9] and [10],
+
+parity-check matrix H is obtained by replacing each nonzero (zero) entry of some binary matrix HP with a circulant (zero) matrix of size z, z ∈ N. The matrix HP and z are referred to as
+the protograph and the circulant size of the code, respectively. In particular, the protograph HPSC of an SC code has a convolutional structure composed of L replicas, as presented
+in Fig. 1. Each replica is obtained by stacking the disjoint component matrices {HiP}m i=0, where m is the memory and Π = HP0 + H1P + · · ·+ HPm is the protograph of the underlying block code.
+In this paper, we constrain Π to be an all-one matrix of size γ × κ, γ, κ ∈ N. An SC code is then uniquely represented
+by its partitioning matrix P and lifting matrix L, where P and L are all γ × κ matrices. The matrix P has (P)i,j = a if (HPa)i,j = 1. The matrix L is determined by replacing each circulant matrix by its associated exponent. Here, this exponent represents the power to which the matrix σ defined by (σ)i,i+1 = 1 is raised, where (σ)z,z+1 = (σ)z,1. The number of replicas is referred to as the coupling length and
+denoted by L. Under this notation, the parameters of an SC
+
+using an algorithmic method called lifting optimization (CPO), while the former goal is yet to be achieved for large m. We note that the step separation highlighted above notably reduces the overall optimization complexity.
+In the remainder of this paper, we first focus on QC-SC codes for the additive white Gaussian noise (AWGN) channel, where the most detrimental objects are the low weight absorbing sets (ASs) [9]. The ASs are defined in Definition 1.
+Definition 1 (Absorbing Sets): Consider a subgraph induced by a subset V of VNs in the Tanner graph of a code. The set V is said to be an (a, b) absorbing set (AS) over GF(q) if the size of V is a, the number of unsatisfied neighboring CNs of V is b, and each VN in V is connected to strictly more satisfied than unsatisfied neighboring CNs, for some set of VN values in GF(q) \ {0}, assuming that the values of all other VNs in the Tanner graph are zeros.
+An (a, b) elementary AS V over GF(q) is an (a, b) AS with the additional property that all the satisfied (resp., unsatisfied (if any)) neighboring CNs of V have degree 2 (resp., degree 1); otherwise the AS is referred to as an (a, b)
+
+code are described by (γ, κ, m, z, L). The performance of finite-length LDPC codes is strongly
+affected by the number of detrimental objects that are subgraphs with certain structures in the Tanner graphs of those codes. Two major classes of detrimental objects are trapping
+
+non-elementary AS. Consider a subgraph induced by a subset V of VNs in the
+Tanner graph of a binary code. The set V is said to be an (a, b) binary AS if the size of V is a, the number of odd-degree neighboring CNs of V is b, and each VN in V is connected to
+
+sets and absorbing sets. Since enumerating and minimizing the strictly more even-degree than odd-degree neighboring CNs.
+
+number of detrimental objects is complicated, existing work
+typically focuses on common substructures of these objects: the short cycles [9], [10], [17]. A cycle-2g candidate in HSPC (Π) is a path of traversing a structure to generate cycles of length 2g after lifting (partitioning) [10]. In an SC code, each
+cycle in the Tanner graph corresponds to a cycle candidate in the protograph HSPC, and each cycle candidate in HPSC corresponds to a cycle candidate C in the base matrix Π.
+Lemma 1 specifies a necessary and sufficient condition for a cycle candidate in Π to become a cycle candidate in the
+protograph and then a cycle in the final Tanner graph.
+
+Observe that the unlabeled configuration (all edge weights set to 1) underlying an (a, b) non-binary elementary AS is itself an (a, b) binary elementary AS.
+Consequently, a simplified optimization focuses on cycle candidates of lengths 4, 6, and 8 [9], [10]. Existing literature, e.g., [9], that searches for the optimal P for an SC code with m ≤ 2 typically assumes balanced (uniform) edge distribution among component matrices for reducing the complexity. However, in the remaining sections, we show that the edge distribution for optimal SC codes with large m is not uniform, and we propose the GRADE-AO framework that
+
+Lemma 1: Let C be a cycle-2g candidate in the base matrix, where g ∈ N, g ≥ 2. Denote C by (j1, i1, j2, i2, . . . , jg, ig), where (ik, jk), (ik, jk+1), 1 ≤ k ≤ g, jg+1 = j1, are nodes of C in Π, P, and L. Then C becomes a cycle candidate in the
+
+explores a locally optimal solution. With the success in cycle optimization, we step forward to a finer-grained optimization over more advanced objects, which can be applied in higher degree codes and irregular codes. While GRADE can be
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+889
+
+generalized for arbitrary objects, we present constructions obtained though GRADE-AO focusing on concatenated cycles. Simulation results show that our proposed codes have excellent performance on practical channel models derived from flash memories and magnetic recording (MR), in both the waterfall and error floor regions.
+III. A PROBABILISTIC OPTIMIZATION FRAMEWORK
+In this section, we present a probabilistic framework that searches for a locally optimal edge distribution for the partitioning matrices of SC codes with given memories through the gradient-descent algorithm.
+Definition 2: Let γ, κ, m, mt ∈ N and a = (a0, a1, . . . , amt), where 0 = a0 < a1 < · · · < amt = m. A (γ, κ) SC code with memory m is said to have coupling pattern a if and only if HiP = 0γ×κ, for all i ∈ {a0, a1, . . . , amt}, and HiP = 0γ×κ, otherwise. The value mt is called the pseudo-memory of the SC code.
+A. Probabilistic Metric
+In this subsection, we define metrics relating the edge distribution to the expected number of cycle candidates in the protograph in Theorem 1 and Theorem 2. While Schmalen et al. have shown in [25] that nonuniform coupling (nonuniform edge distribution in our paper) yields an improved threshold, our work differs in two areas: 1) Explicit optimal coupling graphs were exhaustively searched and were restricted to small memories in [25], whereas our method produces near-optimal SC protographs for arbitrary memories. 2) Work [25] focused on the asymptotic analysis for the threshold region, while our framework is dedicated to the finite-length construction and has additional demonstrable gains in the error floor region.
+
+Then,
+
+P6(a, p) = P
+
+3
+k=1 P(ik, jk) =
+
+3
+k=1 P(ik, jk+1)
+
+3
+
+=È È
+
+P [P(ik, jk) = xk, P(ik, jk+1) = yk]
+
+3 k=1
+
+xk =
+
+3 k=1
+
+yk
+
+k=1
+
+=È
+
+È
+
+px1 px2 px3 py1 py2 py3
+
+⎡3 k=1
+
+xk =
+
+3 k=1
+
+yk
+
+⎤
+
+=⎣
+
+px1 px2 px3 py1 py2 py3 X x1+x2+x3−y1−y2−y3 ⎦
+
+xk ,yk ∈vals(a)
+
+0
+
+= f 3(X)f 3(X−1) 0 ,
+
+where vals(a) is the set {a0, a1, . . . , amt}. Thus, the theorem is proved.
+
+A similar approach of adopting generating functions to assist deriving the probability of breaking a cycle-6 was also presented the [26, Theorem 3.4.1], for the special case of a uniform edge distribution.
+
+Example 1: Consider SC codes with full memories and
+
+uniform
+
+partition,
+
+i.e.,
+
+a
+
+=
+
+(0, 1, . . . , m)
+
+and
+
+p
+
+=
+
+1 m+1
+
+1m+1.
+
+When m = 2, P6(a, p) = 0.1934; when m = 4, P6(a, p) =
+
+0.1121.
+
+Example 2: First, consider SC codes with m = mt = 2.
+Let a1 = (0, 1, 2) and p1 = (2/5, 1/5, 2/5). According to Theorem 1, f (X) = (2 + X + 2X2)/5, f 3(X)f 3(X−1) = 0.0041(X6 + X−6) + 0.0123(X5 + X−5) + 0.0399(X4 + X−4)+0.0717(X3+X−3)+0.1267(X2+X−2)+0.1544(X + X−1)+0.1818. Therefore, P6(a1, p1) = 0.1818. Second, consider SC codes with m = mt = 4. Let a2 = (0, 1, 2, 3, 4) and p2 = (0.31, 0.13, 0.12, 0.13, 0.31). According to Theorem 1, P6(a2, p2) = 0.0986.
+
+Definition 3: Let m, mt ∈ N and a = (a0, a1, . . . , amt), where 0 = a0 < a1 < · · · < amt = m. Let p = (p0, p1 . . . , pmt), where 0 < pi ≤ 1, p0 + p1 + · · · + pmt = 1: each pi specifies the probability of a ‘1’ in Π going to the component matrix HaPi, thus p is referred to as edge distribution under random partition later on. Then, the following
+f (X; a, p), which is abbreviated to f (X) when the context is
+clear, is called the coupling polynomial of an SC code with
+coupling pattern a, associated with probability distribution p:
+
+f (X; a, p)
+
+0≤i≤mt piX ai .
+
+(3)
+
+Theorem 1: Let [·]i denote the coefficient of Xi of a polynomial. Denote by P6(a, p) the probability of a cycle6 candidate in the base matrix becoming a cycle-6 candidate
+in the protograph under random partitioning with edge distri-
+bution p. Then,
+
+P6(a, p) = f 3(X)f 3(X−1) 0 .
+
+(4)
+
+Proof: According to Lemma 1, suppose the cycle-6 candidate in the base matrix is represented by C(j1, i1, j2, i2, j3, i3).
+
+After we have derived the metric for cycle-6 candidates in the protograph, we now turn to the case of cycle-8 candidates. As shown in Fig. 2, cycle candidates in the base matrix that result in cycle-8 candidates in the protograph can be categorized into 6 different structures, labeled S1, . . . , S6. Different cases are differentiated by the number of rows and columns (without order) the structures span in the partitioning matrix [10]. Specifically, S1, . . . , S6 denote the structures that span submatrices of size 2 × 2, 2 × 3 or 3 × 2, 3 × 3, 2 × 4 or 4 × 2, 3 × 4 or 4 × 3, and 4 × 4, respectively. Any structure that belongs to S2, S4, S5 has multiple cycle-8 candidates, and these distinct candidates are marked by blue in Fig. 2.
+Lemma 2: Let P8;i(a, p), 1 ≤ i ≤ 6, denote the probability of a cycle-8 candidate of structure Si in the base matrix becoming a cycle-8 candidate in the protograph, under random partition with edge distribution p. Then,
+P8;1(a, p) = f 2(X)f 2(X−1) 0 , P8;2(a, p) = f (X2)f (X−2)f 2(X)f 2(X−1) 0 , P8;3(a, p) = f (X2)f 2(X)f 4(X−1) 0 , and P8;4(a, p) = P8;5(a, p) = P8;6(a, p) = f 4(X)f 4(X−1) 0 .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+890
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 2. Structures and cycle candidates for cycle-8. Note that structures Si, i ∈ {2, 4, 5}, also include the transpose of each cycle candidate shown in the figure, which are omitted for simplicity. Permutations of rows and/or columns give equivalent arrangements.
+
+Proof: For structures where the nodes of the cycle-8 candi-
+dates are pairwise different, namely, S4, S5, S6, the result can be derived by following the logic in the proof of Theorem 1.
+For S1, suppose the indices of the rows and columns are i1, i2, and j1, j2, respectively. Then, the cycle condition in Lemma 1 is P(i1, j1) + P(i2, j2) = P(i1, j2) + P(i2, j1).
+For S2, suppose the indices of the rows and columns are i1, i2, and j1, j2, j3, respectively. Then, the cycle condition in Lemma 1 is 2P(i1, j1) − 2P(i2, j1) + P(i2, j2) + P(i2, j3) − P(i1, j2) − P(i1, j3) = 0.
+For S3, suppose the indices of the rows and columns are i1, i2, i3, and j1, j2, j3, respectively. Then, the cycle condition in Lemma 1 is 2P(i1, j1)+P(i2, j2)+P(i3, j3)−P(i1, j2)− P(i2, j1) − P(i1, j3) − P(i3, j1) = 0.
+Following the logic in the proof of Theorem 1, the case for
+S1, S2, S3 can be proved.
+
+Theorem 2: Denote N8(a, p) as the expectation of the number of cycle-8 candidates in the protograph. Then,
+
+N8(a, p) =w1 f 2(X)f 2(X−1) 0
+
++ w2 f (X2)f (X−2)f 2(X)f 2(X−1) 0
+
++ w3 f (X2)f 2(X)f 4(X−1) 0
+
++ w4 f 4(X)f 4(X−1) 0 ,
+
+(5)
+
+where
+
+18 24
+
+γ γ3 4
+
+w1 =
+
+κ κ3 4
+
+, .
+
+w4
+
+=
+
+γ 2
+6
+
+κ γ2 2
+
+,
+κ
+4
+
+w2 +6
+
+=
+γ
+4
+
+3
+κ
+2
+
+γκ 23
++ 36
+
++
+γ
+3
+
+3
+κ
+4
+
+γ 3
++
+
+κ 2
+36
+
+,
+γ
+4
+
+w3
+κ 3
+
+= +
+
+cycle candidates in the protograph; the multiplicative factor
+
+is determined by its width, i.e., the number of replicas each
+
+resultant cycle candidate spans in the protograph. We ignore
+the number of replicas a cycle candidate spans in HPSC. This is because L m typically holds (for small rate
+
+loss), which means that the multiplicative factor of each
+
+cycle-6 and each cycles-8 are in the ranges [L − m, L] and
+
+[L − 2m, L], respectively. Therefore, the deviation of the
+
+number of cycles derived while ignoring the multiplicative
+
+factor from the accurate number is upper bounded by a
+
+fraction of O
+
+m L
+
+, which approaches zero when L
+
+m,
+
+and its effect is negligible on the constructions obtained from
+
+our optimization framework. We address this number in the
+
+CPO stage.
+
+B. Gradient-Descent Distributor
+By contrasting Examples 1 and 2 it is clear that for a given coupling pattern, an optimal edge distribution is not necessarily reached by a uniform partition. In this subsection, we develop an algorithm that obtains a locally optimal distribution by gradient descent.
+
+Lemma 3: Given mt ∈ N and a = (a0, a1, . . . , amt ), a necessary condition for P6(a, p) to reach its minimum value is that the following equation holds for some
+
+c0 ∈ R:
+
+f 3(X)f 2(X−1) ai = c0, ∀i, 0 ≤ i ≤ mt.
+
+(6)
+
+Proof: Provided the results in Lemma 2, we just need
+
+to prove that the numbers of cycle candidates of structures
+
+S1, S2, . . . , S6
+
+3
+
+γ 3
+
+and
+
+κ 2
+24
+
+,
+γ
+4
+
+18
+κ
+4
+
+γ
+3
+,
+
+in a γ × κ base matrix are
+
+κ 3
+
+,
+
+6
+
+γ 2
+
+κ 4
+
++6
+
+γ 4
+
+κ 2
+
+,
+
+36
+
+respectively.
+
+γ γ2 3
+
+κ κ2 4
+
+,
+
+3
+
+γ 2
+
++ 36
+
+γ 4
+
+κ 3
+
++
+
+κ 3
+
+,
+
+Take i = 5 as an example. We first count the number
+
+of cycle candidates of structure S5 in any 3 × 4 (4 × 3)
+
+matrix. We first choose the only row (column) that contains
+
+four edges of S5, which has 3 ways in a 3 × 4 (4 × 3) matrix.
+
+Then, we choose the edge combination of the other two rows
+
+(columns), which has
+
+4 2
+
+ways. There are 2 different ways to
+
+connect the four edges in the remaining row. Therefore, the
+
+number is 3 ·
+
+4 2
+
+· 2 = 36. The
+
+4 × 3 matrices in a γ × κ base
+
+total number
+
+matrix is
+
+γ 3
+
+of
+κ
+4
+
+3 +
+
+×
+γ 4
+
+4 or
+
+κ 3
+
+.
+
+Therefore, the total number of cycle candidates of structure
+
+S5
+
+is
+
+36
+
+γ 3
+
+κ 4
+
++ 36
+
+γ 4
+
+κ 3
+
+.
+
+By
+
+a
+
+similar
+
+logic,
+
+we
+
+can
+
+prove
+
+the result for the remaining structures.
+
+Proof: Our objective is to minimize P6(a, p), under the constraint p0 + p1 + · · · + pmt = 1. Therefore, we consider the Lagrangian L6(a, p) = P6(a, p) + c(1 − p0 − p1 − · · · − pmt ) and compute its gradient.
+∇pL6(a, p)
+=∇p (P6(a, p) + c(1 − p0 − p1 − · · · − pmt)) =∇p f 3(X )f 3(X −1) 0 − c1mt+1 = ∇p f 3(X )f 3(X −1) 0 − c1mt+1 =3 f 2(X)f 2(X−1)f (X)∇pf (X−1) 0
++ 3 f 2(X)f 2(X−1)f (X−1)∇pf (X) 0 − c1mt+1 =6 f 3(X )f 2(X −1) X −a0 , X −a1 , . . . , X −amt 0 −c1mt+1.
+(7)
+When P6(a, p) reaches its minimum, ∇p [L6(a, p)] = 0mt+1, which is equivalent to (6) by defining c0 = c/6.
+
+Remark 1: Note that each cycle candidate satisfying the Lemma 4: Given γ, κ, mt ∈ N and a = (a0, a1, . . . , amt ), cycle condition in the partitioning matrix can result in multiple a necessary condition for N8(a, p) to reach its minimum value
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+891
+
+is that the following equation holds for some c0 ∈ R:
+
+4f 2(X)f (X−1) )ai + w¯2 2f (X2)f 2(X)f 2(X−1) 2ai +w¯2 4f (X2)f (X−2)f 2(X)f (X−1) ai +w¯3 f 2(X)f 4(X−1) −2ai +w¯3 2f (X2)f (X)f 4(X−1) −ai +w¯3 4f (X2)f 2(X)f 3(X−1) ai +w¯4 8f 4(X)f 3(X−1) ai = c0, ∀i, 0 ≤ i ≤ mt,
+
+where w¯2 = γ + κ − 4, w¯3 = 2(γ − 2)(κ − 2), and w¯4 =
+
+1 2
+
+[(γ
+
+6) +
+
+− 2)(γ − 3) + (κ − 2)(κ − 3)] +
+
+1 6
+
+(γ
+
+−
+
+2)(γ
+
+−
+
+3)(κ
+
+−
+
+2)(κ
+
+−
+
+3).
+
+(γ
+
+−
+
+2)(κ
+
+−
+
+2)(γ
+
++
+
+κ
+
+−
+
+Proof: Consider the gradient of L8(a, p) = N8(a, p) +
+
+c(1 − p0 − p1 − · · · − pmt ).
+
+∇pL8(a, p) = ∇p (N8(a, p)+c(1 − p0 − p1 − · · · − pmt)) =w1 ∇p f 2(X)f 2(X−1) 0
++ w2 ∇p f (X2)f (X−2)f 2(X)f 2(X−1) 0 + w3 ∇p f (X2)f 2(X)f 4(X−1) 0 + w4 ∇p f 4(X )f 4(X −1) 0 − c1mt+1 =w1{ 4f 2(X )f (X −1)(X −a0 , X −a1 , . . . , X−amt ) )0
+
++ w¯2 2f (X 2)f 2(X )f 2(X −1)(X −2a0 , . . . , X−2amt ) 0 + w¯2 4f (X2)f (X−2)f 2(X)f (X−1)(X−a0 , . . . , X−amt) 0 + w¯3 f 2(X )f 4(X −1)(X 2a0 , X 2a1 , . . . , X 2amt ) 0 + w¯3 2f (X2)f (X)f 4(X−1)(Xa0 , Xa1 , . . . , Xamt ) 0 + w¯3 4f (X 2)f 2(X )f 3(X −1)(X −a0 , X −a1 , . . . , X−amt) 0 + w¯4 8f 4(X )f 3(X −1)(X −a0 , X −a1 , . . . , X −amt ) 0}
+
+− c1mt+1.
+
+(8)
+
+When P8(a, p) reaches its minimum, ∇p [L8(a, p)] = 0mt+1, which is equivalent to (8) by defining c0 = c/w1.
+
+Based on Lemma 3 and Lemma 4, we adopt the
+
+gradient-descent algorithm to obtain a locally optimal edge
+
+distribution for SC codes with coupling pattern a, starting from
+
+the uniform distribution inside P as presented in Algorithm 1. Note that conv(·) and flip(·) refer to convolution and reverse
+
+of vectors, respectively. The weight 1 of cycles-8 is a normal-
+
+ized weight, while we let w to be the weight of cycles-6. Say if cycles-8 and cycles-6 are of weights w8 and w6, respectively, then it is equivalent to the case where their weights are 1 and
+
+w = w6/w8, respectively. Typically, cycles of shorter lengths are more problematic than cycles of larger lengths, thus we
+
+always choose w > 1 in the optimization algorithm.
+
+The total number of cycle-6 candidates in the base matrix
+
+is in
+
+6
+
+γ 3
+
+the
+
+κ 3
+
+,
+
+thus
+
+the
+
+protograph is
+
+expected N6(a, p)
+
+number of
+
+= w1
+
+6
+
+γ 3
+
+cycle-6 candidates
+
+κ 3
+
+P6(a, p)
+
+.
+
+Our
+
+objective is to minimize the weighted sum wN6(a, p) +
+
+N8(a, p)
+
+=
+
+w1
+
+6
+
+γ 3
+
+κ 3
+
+w w1
+
+P6
+
+(a,
+
+p)
+
++
+
+1 w1
+
+N8(a,
+
+p)
+
+=
+
+w1
+
+2w 3
+
+(γ
+
+−
+
+2)(κ
+
+−
+
+2)P6(a,
+
+p)
+
++
+
+1 w1
+
+N8(a,
+
+p)
+
+.
+
+Therefore,
+
+we let the following equation be the objective function of the
+
+gradient-descent algorithm:
+
+2w (γ 3
+
+−
+
+2)(κ
+
+−
+
+2)P6(a,
+
+p)
+
++
+
+1 w1
+
+N8(a,
+
+p)
+
+= 2w (γ −2)(κ−2) 3
+
+f 3(X)f 3(X−1) 0 +
+
+f 2(X)f 2(X−1) 0
+
+Algorithm 1 Gradient-Descent Distributor (GRADE) for
+
+Cycle Optimization
+
+Inputs and Parameters:
+
+γ, κ, mt, m, a: parameters of the SC code; w: weight of each cycle-6 candidate assuming that of a
+
+cycle-8 is 1;
+
+, α: accuracy and step size of gradient descent;
+
+Outputs and Intermediate Variables:
+
+p: a locally optimal edge distribution over vals(a)
+
+vprev, vcur: the value of the objective function in (9) at the previous and the current iterations;
+
+g: the gradient of the objective function;
+
+1:
+
+w¯1
+
+←
+
+2w 3
+
+(γ
+
+−
+
+2)(κ
+
+−
+
+2),
+
+obtain
+
+{w¯i}i4=2
+
+in
+
+Lemma
+
+4;
+
+2: vprev = 1; vcur = 1;
+
+3: p
+
+←
+
+1 mt+1
+
+1mt
+
++1
+
+,
+
+g
+
+←
+
+0mt+1,
+
+f , ¯f
+
+←
+
+0m+1,
+
+f2, ¯f2
+
+←
+
+02m+1;
+
+4: f [a0, . . . , amt ] ← p, ¯f ← flip(f ); //f , flip(f ): the coeffi-
+
+cients of f (X), f (X−1)
+
+5: f2 [1, 3, . . . , 2m + 1] ← f , ¯f2 ← flip(f2); //f2, flip(f2): the
+
+coefficients of f (X2), f (X−2)
+
+//The coefficients of the product of polynomials can be
+
+computed as the convolution of the coefficients of all the
+
+polynomials. In MATLAB, a convolution is performed by
+
+using the “conv(·)” command
+
+//We classify each term in the characteristic polynomials
+
+and their gradients by a degree pair (d+, d−), where d+, d− refer to the degree of the positive component (product of f ’s and f2’s) and the negative component (product of f¯’s and f¯2’s), respectively //Compute and update the value of the objective function.
+
+The sum of all terms with d+ being 3m, 2m, and 4m in
+
+the objective function is represented by q1, q2, and q3,
+
+respectively.
+
+6: q1 ← w¯1conv(f , f , f , ¯f , ¯f , ¯f ), q2 ← conv(f , f , ¯f , ¯f );
+
+7: q3
+
+←
+
+w¯2conv(f2, ¯f2, f , f , ¯f , ¯f ) +
+
+w¯3conv(f2, f , f , ¯f , ¯f , ¯f , ¯f ) + w¯4conv(f , f , f , f , ¯f , ¯f , ¯f , ¯f );
+
+8: vprev = vcur, vcur = q1 [3m] + q2 [2m] + q3 [4m];
+
+//Compute and update the gradient of the objective func-
+
+tion. The sum of all terms of degree pairs (3m, −2m),
+
+(2m, −m), (4m, −3m), and (4m, −2m) in the gradient is
+
+represented by g1, g2, g3, and g4, respectively. 9: g1 ← 6w¯1conv(f , f , f , ¯f , ¯f ), g2 ← 4conv(f , f , ¯f ); 10: g3 ← 4w¯2conv(f2, ¯f2, f , f , ¯f ) + 2w¯3conv(¯f2, f , f , f , f , ¯f ) +
+
+4w¯3conv(f2, f , f , ¯f , ¯f , ¯f ) + 8w¯4conv(f , f , f , f , ¯f , ¯f , ¯f ); 11: g4 ← 2w¯2conv(f2, f , f , ¯f , ¯f ) + w¯3conv(f , f , f , f , ¯f , ¯f );
+
+12: g ← g1 [2m + a] + g2 [m + a] + g3 [3m + a] +
+
+g4 [2m + 2a], g ← g − mean(g);
+
+13: if |vprev − vcur| > then
+
+14:
+
+p
+
+←
+
+p
+
+−
+
+α
+
+g ||g||
+
+;
+
+15: goto step 4;
+
+16: return p;
+
++ w¯2 f (X2)f (X−2)f 2(X)f 2(X−1) 0 + w¯3 f (X2)f 2(X)f 4(X−1) 0 + w¯4 f 4(X)f 4(X−1) 0 .
+(9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+892
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 3. The cycle basis of a typical (6, 0) ((6, 6))-AS in SC codes with γ = 3 (γ = 4) and their corresponding cycle candidates while pulled back to the base matrix. The cycle basis has 4 fundamental cycles as shown in the top 4 panels; each cycle decides a cycle candidate in the base matrix and an
+independent variable in the characteristic polynomial, as shown in the bottom panels.
+
+IV. GENERALIZATION OF GRADE
+We have explained the basic idea of GRADE in optimizing the edge distribution of SC code ensembles with respect to the expected number of cycles. Cycles have been studied extensively in related literature (see e.g., [27], [28], [29]) due to their simplicity and presence in problematic objects. However, cycles alone do not always account for typical decoding failures; for example, isolated cycles are not as harmful as concentrated cycles in codes with VN degree 4 since single cycles on their own do not lead to decoding failures (as captured by e.g., ASs [10]), rather concatenated cycles do. An excessive focus on the removal of isolated cycles can lead to remarkably fewer degrees of freedom for the removal of dominant problematic objects. In this section, we therefore extend the theory of GRADE to arbitrary subgraphs.
+A. Probabilistic Metric
+In this subsection, we generalize the results presented in Section III-A to obtain closed-form representations of the expected number of objects with arbitrary topologies. The key idea is that the dependency among nodes within each object can be fully described by a minimal set of fundamental cycles (or basic cycles), which is referred to as the cycle basis of the object (see Definition 4) [21], [30], [31].
+
+of which, each cycle in the object can be obtained; we call the cycles in this set fundamental cycles.2
+In the remainder of this paper, we define a prototype of an object, for simplicity, as an assignment of the indices of its variable nodes (VNs) and its check nodes (CNs) in the base matrix. Prototype is a natural extension of pattern, i.e., a prototype of an object is exactly a pattern (discussed in [10]) when the object is a cycle. According to [21], we call a prototype active if all the fundamental cycles satisfy the cycle condition simultaneously, which means the detrimental object will be created in the protograph after partitioning the base matrix. The probability of a prototype becoming active under a random partition is proved to be represented by the constant term of a multi-variate polynomial, where each variable is associated with a cycle in the cycle basis: we refer to this polynomial as the characteristic polynomial of the object associated with fixed prototype. The overall characteristic polynomial of the object without specifying the prototype is then obtained as an average over the characteristic polynomials associated with all possible prototypes.
+We start with a motivating example.
+Example 3: Take the object (AS) with the node assignment shown in the top panel of Fig. 3 as an example.3 Consider the cycle basis consisting of the 4 cycles highlighted in Fig. 3 and
+
+Definition 4: (Cycle Basis) A cycle basis of an object is a minimum-cardinality set of cycles using disjunctive unions1
+1Disjunctive union of cycles refers to the subgraph consisting of all the edges contained in an odd number of cycles along with their neighboring vertices (VNs and CNs).
+
+2While it is always possible to find a cycle basis for an object, some non-elementary configurations could possibly require different processing in order to enumerate the number of and specify the fundamental cycles, as explained in [21, Section VI].
+3Note that we only keep nodes with intrinsic connections, i.e., we ignored the degree 1 CNs as they are not involved in any cycles and thus do not affect the probability of a prototype becoming active.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+893
+
+Fig. 4. The matrix representation of the characteristic polynomial of the AS in Fig. 3. The monomial in each entry corresponds to a factor in the characteristic polynomial in (10).
+
+their associated variables Xi, 1 ≤ i ≤ 4. We refer to the cycle associated with Xi, 1 ≤ i ≤ 4, as cycle i. In the bottom panel of Fig. 3, the labels Xi and Xi−1 are placed alternately on the cycle candidate corresponding to cycle i in the base matrix.
+We next briefly and intuitively explain how the characteristic
+polynomial of the object is specified as follows:
+
+h(X) =f (X2−1X32X4−1)f (X1X2X3−1)f (X1X3−1X4)
+
+f (X1−1X3X4)f (X1X2−1)f (X1−1X2)f 2(X1−1X3)
+
+f (X1X4−1)f (X2−1X4−1)f (X3−1X4)f (X1−1)
+
+f (X2)f (X3−1),
+
+(10)
+
+where f (·) is the coupling polynomial of a cycle as specified in Definition 3.
+As shown in Fig. 4, we place the labels on all the cycle candidates (see Fig. 3) altogether in the base matrix. Then, each entry of the matrix becomes associated with the product of all the labels contained in it. Take the entry at the intersection of row c3 and column v2 as an example. This entry is labeled with X1, X3−1, X4 on the cycle candidates for cycles 1, 3, and 4, respectively. Therefore, the entry is associated with X1X3−1X4. Each product is the monomial corresponding to the matrix entry. The characteristic polynomial in (10) is exactly the product of all the factors obtained by replacing the variable in the coupling polynomial by the monomials corresponding to each entry.
+In a way similar to the process described in the proof of Theorem 1, expanding the right-hand side (RHS) of (10) results in terms of the form qiX1k1 X2k2 X3k3 X4k4 for each, where qi is the probability of a unique assignment to edges, i.e., matrix entries, on the prototype of the AS such that the alternating sum of entries on cycle i associated with Xi in the cycle basis is ki, 1 ≤ i ≤ 4. Therefore, the constant term is exactly the sum of the probabilities of all possible assignments (of the partitioning matrix) such that the cycle candidates of all the fundamental cycles satisfy their cycle conditions (all ki’s are zeros). In other words, the constant term is exactly the probability of the prototype becoming active in the Tanner graph.
+In Example 3, we have briefly introduced the idea of how we define the characteristic polynomial of an object associated with a fixed prototype. However, as shown in the case of
+
+cycle-8 candidates, an object is typically associated with
+
+multiple prototypes (referred to as cycle candidates when the
+
+object is a cycle). We next present an efficient method to obtain
+
+the expected number of all possible prototypes corresponding
+
+to an object.
+
+The major idea is described as follows. Each prototype of
+
+an object leads to an equivalence relation on the CNs and
+
+VNs of the object, in which nodes with identical indices are
+
+regarded as being equivalent. The set consisting of all the
+
+prototypes describing the same equivalence relation is referred
+
+to as a prototype class. The characteristic polynomials of the
+
+prototypes belonging to the same prototype class are identical,
+
+and the cardinality of each prototype class is determined
+
+by their associated equivalence relation. Therefore, the key
+
+steps to obtain the characteristic polynomial of an object are:
+
+1) to enumerate all the possible prototype classes of (or non-
+
+isomorphic equivalence relations on) a given object, and then
+
+2) to obtain their associated characteristic polynomials and
+
+cardinalities.
+
+For example, consider the prototype class described by the
+
+graph in the left panel of Fig. 5. Throughout this paper, we use
+
+[n] to represent the set {1, 2, . . . , n} for any n ∈ N. Any
+
+assignment of c1, c2, c3, c4 ∈ [γ] and v1, v2, v3, v4 ∈ [κ] such that c1, c2, c3, c4 are mutually different, v1, v2, v3, v4 are also mutually different belongs to a unique prototype in
+
+the prototype class described by the graph. Note that the
+
+uniqueness follows from the fact that the automorphism
+
+group of the prototype class has only the identity element,
+
+thus
+
+the
+
+cardinality
+
+of
+
+this
+
+prototype
+
+class
+
+is
+
+4!
+
+γ 4
+
+4!
+
+κ 4
+
+.
+
+The
+
+automorphism group of a prototype is defined later in Def-
+
+inition 6; however, the aforementioned cardinality intuitively
+
+implies that each row/column permutation results in a unique
+
+prototype. We then move on to obtain the characteristic poly-
+
+nomial directly through the prototype class. The equivalence
+
+relation on CNs and VNs induces an equivalence relation
+
+on edges, in which edges with VNs and CNs all from the
+
+same equivalence class are referred to as being equivalent.
+
+As shown in Fig. 5, edges from the same equivalence class
+
+are highlighted by identical markers.
+
+Note that each equivalence class on edges corresponds to
+
+a unique entry in the base matrix. Recall that each entry
+
+is associated with the product of all labels contained in it,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+894
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 5. The graph representation of the characteristic polynomial of the AS in Fig. 3. Edges in the same equivalence class are labeled with identical marks. The product of monomials at all the edges belonging to each equivalence class corresponds to a factor in the characteristic polynomial in (10).
+
+which corresponds to a separate factor in the characteristic
+
+polynomial. In a similar way, if we represent each equivalence
+
+class by the product of all labels on all edges contained
+
+in it, the resultant product will be exactly the monomial
+
+associated with the entry corresponding to this equivalence
+
+class. Therefore, each factor of the characteristic polynomial
+
+in (10) is associated with an equivalence class on edges. For
+
+example, in Fig. 5, the two edges highlighted by red triangles
+
+belong to the same equivalence class and are labeled with
+
+Xto1thaendfaXcto2Xr f3−(1X, 1reXsp2eXc3t−iv1e)lyin;
+
+and the
+
+they altogether correspond characteristic polynomial.
+
+In the remaining text, we represent the equivalence relation
+
+by ∼.
+
+Let S denote the cycle basis of G. Define δ :
+E × S → {−1, 0, 1} as follows: for any s ∈ S, s = (v1, c1, v2, c2, . . . , vg, cg), and e ∈ E, δe,s = 1 if e = evi,ci for some i ∈ [g], δe,s = −1 if e = evi+1,ci for some i ∈ [g], otherwise δe,s = 0.
+Define h(X; G|V, C) as a polynomial of G associated with P(V, C) and given by:
+
+h(X; G|V, C) =
+
+f
+
+X δe,s
+s
+
+.
+
+e¯∈E(V,C) e∈e¯ s∈S
+
+(11)
+
+Then, the constant term of h(X; G|V, C) is the probability that a prototype belonging to the class P(V, C) is active in the Tanner graph after partitioning.
+
+Definition 5 (Prototype Class): Let γ, κ ∈ N. Consider an object represented by the bipartite graph G(V, C, E), where V and C denote the set of VNs and CNs, respectively. The set E is the set of all edges, where each edge is represented by ei,j, for some i ∈ V , j ∈ C, connecting nodes i and j. Let V, C represent equivalence classes on V and C, respectively. A prototype is an assignment P = (f, g), where f : V → [κ], g : C → [γ] such that:
+1) For any c ∈ C and v1, v2 ∈ V such that ev1,c, ev2,c ∈ E, f (v1) = f (v2);
+2) For any v ∈ V and c1, c2 ∈ C such that ev,c1 , ev,c2 ∈ E, g(c1) = g(c2).
+The set consisting of all the prototypes P = (f, g) that
+satisfy the following conditions is referred to as the prototype class associated with (V, C), denoted by P(V, C):
+1) For any v1, v2 ∈ V , f (v1) = f (v2) iff. v1 ∼ v2 in V (same column in the matrix);
+2) For any c1, c2 ∈ C, g(c1) = g(c2) iff. c1 ∼ c2 in C (same row in the matrix).
+Denote the equivalence class induced by the relation: ev1,c1 ∼ ev2,c2 iff. v1 ∼ v2 and c1 ∼ c2, for all v1, v2 ∈ V and c1, c2 ∈ C, by E(V, C), which is referred to as the equivalence class induced by V and C.
+
+Proof: For simplicity, we write E instead of E(V, C) in the proof. Any assignment on the set of edges E can be represented by x ∈ (x1, x2, . . . , x|E|) ∈ vals(a)|E| (vals(a) is defined in Theorem 1 as the set {a0, a1, . . . , amt}), where xe denotes the assignment on edge e for any e ∈ E. Consider that all the edges belonging to the same equivalence class in E correspond to the same entry in the base matrix (and
+the partitioning matrix); these edges need to be assigned with
+an identical number in the partitioning matrix. Therefore, the
+assignment on the set of edges is essentially an assignment on the equivalence classes. Let i ∈ {0, 1, . . . , mt}|E| denote an assignment on the equivalence classes E, where each element of i is represented by ie¯ for some e¯ ∈ E; all the edges in the equivalence class e¯ are assigned with aie¯ in the partitioning matrix, for any e¯ ∈ E.
+We know that
+h(X; G|V, C)
+
+=f
+e¯∈E
+
+X δe,s
+s e∈e¯ s∈S
+
+=
+i∈{0,1,...,mt}|E| e¯∈E
+
+pie¯
+
+X δe,s
+s
+
+aie¯
+
+e∈e¯ s∈S
+
+Lemma 5: (Characteristic Polynomial of Prototypes)
+
+Consider the bipartite graph G(V, C, E) of an object and the prototype class P(V, C). Suppose E(V, C) is the equivalence class on edges induced by V and C.
+
+=
+i∈{0,1,...,mt}|E|
+
+pie¯
+e¯∈E
+
+Xsδe,saie¯
+e¯∈E e∈e¯ s∈S
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+895
+
+Fig. 6. A matrix representation (left panel) of the characteristic polynomial of the AS (right panel) in Remark 2.
+
+=
+i∈{0,1,...,mt}|E|
+
+pie¯
+e¯∈E
+
+ÈÈ
+
+Xs e¯∈E aie¯
+
+e∈e¯ δe,s
+
+s∈S
+
+In combination with the WCM framework proposed in [23] that optimizes the edge weights of NB-LDPC codes on fixed unweighted graphs, our method can open a door to system-
+
+=
+i∈{0,1,...,mt}|E|
+
+pie¯
+e¯∈E
+
+Xsls(i),
+s∈S
+
+(12)
+
+where ls(i) = e¯∈E aie¯ e∈e¯ δe,s = e∈s,e∈e¯ δe,saie¯ is exactly the alternating sum of the assignment i on cycle s.
+
+atically optimizing NB-SC codes with high memories, which have potential to be adopted in storage systems among other applications.
+After obtaining the characteristic polynomial of any object
+
+Denote by Z(G) the set of assignments of the prototype in associated with a fixed prototype class, we proceed to obtain
+
+the partitioning matrix such that this prototype becomes active the expectation of the number of active prototypes over all
+
+in the Tanner graph of the code after partitioning. Then,
+
+prototype classes. The essential step here is to calculate the
+
+[h(X; G|V, C)]0
+
+cardinality of each prototype class. A natural property here is that each prototype from a specific class corresponds to
+
+=
+
+pie¯
+
+i∈{0,1,...,mt}|E|:ls(i)=0,∀s∈S e¯∈E
+
+assigning non-repeated elements with order from [κ] and [γ] to the equivalence classes in V and C, respectively. However,
+
+=
+
+P [xe = aie¯, ∀e¯ ∈ E, e ∈ e¯]
+
+i∈{0,1,...,mt }|E | :ls (i)=0,∀s∈S
+
+=P [Z(G)] ,
+
+(13)
+
+specific permutations of values assigned to the nodes can lead to some other assignments that are isomorphic to each other because of the intrinsic symmetry of the prototypes. For example, in Fig. 7(a), the assignment that exchanges values
+
+which indicates that the constant term of h(X; G|V, C) is the v1 and v2 while keeping values on remaining VNs as they are
+
+probability we are seeking.
+
+is equivalent to the original assignment. We call this exchange
+
+In fact, the coefficients of other terms of h(X; G|V, C) also specify the probabilities of partitioning assignments other than Z(G). Consequently, h(X; G|V, C) in (11) represents the
+
+operation an automorphism over G under P(V, C) and denote it by (v1v2). The automorphisms over G under each prototype class form a group, which is defined in Definition 6.
+
+characteristic polynomial of G associated with P(V, C).
+
+Definition 6 (Automorphism Group of an Object Under
+
+While elementary objects (absorbing sets in particular) a Prototype Class): For any object represented by a bipar-
+
+dominate the error floor of binary LDPC codes and NB-LDPC tite graph G(V, C, E), let P(V, C) be a prototype class of
+
+codes over the AWGN channel, non-elementary objects are G. An automorphism over G under P(V, C) is a pair of
+
+observed to notably contribute to the error floor of NB-LDPC bijections (πV , πC ) written as πV πC , where πV : V → V codes over non-canonical channels, e.g., practical magnetic and πC : C → C are bijections such that
+
+recording and Flash channels [22], [23], [32].
+
+Remark 2: [Non-Elementary Objects] Note that Lemma 5 extends beyond elementary objects. Fig. 6 shows a prototype of a non-elementary object. This prototype can still
+
+1) ∀v ∈ V , c ∈ C, ev,c ∈ E iff. eπV (v),πC (c) ∈ E; 2) ∀v1, v2 ∈ V , v1 ∼ v2 iff. πV (v1) ∼ πV (v2);
+3) ∀c1, c2 ∈ C, c1 ∼ c2 iff. πC (c1) ∼ πC (c2).
+
+be described by a set of 3 elementary cycles, as shown in Fig. 6 via colors. According to Lemma 5, the characteristic polynomial of the prototype is:
+h(X; G|V, C) =f (X1X2−1)f (X2X3−1)f (X3X1−1)f (X1X3)f (X1−1X2)
+f (X2−1X3−1)f (X1)f (X1−1)f (X2)f (X2−1)f (X3)f (X3−1).
+
+The set containing all automorphisms over G under P(V, C) is closed under permutation compositions, and is referred to as the automorphism group of G under P(V, C).
+Remark 3: From Definition 6, we know that any automorphism over G under P(V, C) is a graph isomorphism that preserves the equivalence relation specified by (V, C), i.e.,
+
+(14) {πV (v¯), ∀v¯ ∈ V} = V, {πC (c¯), ∀c¯ ∈ C} = C. Therefore,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+896
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 7. The 4 prototype classes of 2 concatenated cycles-6 and their corresponding topologies.
+
+each automorphism can be simply represented as a pair of permutations over V and C.
+
+Lemma 6: Given the bipartite graph G(V, C, E) of an object, let B(G) denote the set consisting of all prototype classes of G. Define the characteristic polynomial h(X; G) of object G as follows:
+
+|V |!|C |!
+
+κ
+
+h(X; G) =
+
+|Aut(G|V, C)| |V|
+
+P (V ,C )∈B(G)
+
+γ |C|
+
+h(X; G|V, C),
+
+(15)
+
+where Aut(G|V, C) denotes the automorphism group of the bipartite graph G under prototype class P(V, C). Then,
+[h(X; G)]0 is exactly the expected number of active prototypes of object G.
+
+Proof:
+
+There are |V|!|C|!
+
+κ |V |
+
+γ |C|
+
+assignments on indices
+
+of nodes in G in the base matrix that satisfy the equivalence
+
+relation specified by (V, C). Among these assignments, each
+
+one has been counted exactly |Aut(G|V, C)| times. Therefore,
+
+the cardinality of the prototype class P(V, C) is exactly
+
+|V|!|C|! κ |Aut(G|V,C)| |V|
+
+γ |C|
+
+.
+
+For any prototype P of G, define a Bernoulli random vari-
+
+able XP , where P [XP = 1] = P [P is active], P [XP = 0] =
+
+P [P is not active]. Let X = P XP denote the summation of XP over all possible prototypes of G. Then,
+
+E [X] = E [XP ] =
+
+E [XP ]
+
+P
+
+P(V,C)∈B(G) P ∈P(V,C)
+
+=
+
+P [XP = 1]
+
+P(V,C)∈B(G) P ∈P(V,C)
+
+=
+
+[h(X; G|V, C)]0
+
+P(V,C)∈B(G) P ∈P(V,C)
+
+|V|!|C|! κ γ
+
+=
+
+|Aut(G|V, C)| |V| |C|
+
+P (V ,C )∈B(G)
+
+= [h(X; G)]0 .
+
+[h(X; G|V, C)]0 (16)
+
+Thus, the lemma is proved.
+
+Example 4: Suppose γ ∈ {3, 4}. Take the graph G of two concatenated cycles-6 as an example; there are 4 different possible prototype classes (Vi, Ci), 1 ≤ i ≤ 4, as shown in Fig. 7. The automorphism groups corresponding to the 4 prototype classes, denote by Aut(G|Vi, Ci), 1 ≤ i ≤ 4,
+
+respectively, are:
+
+Aut(G|V1, C1) = {e, (v1v2), (c2c3), (v1v2)(c1c3)},
+
+Aut(G|V2, C2) = {e, (v1v2)(c2c3), (v3v4)(c2c3), (v1v2)(v3v4)},
+
+Aut(G|V3, C3) = {e, (v1v2)(c2c4)},
+
+Aut(G|V4, C4) = {e, (v1v2)(v3v4)(c2c4)},
+
+(17)
+
+where the element e in these groups is the identity element
+(no permutations). Therefore, the cardinality of the automorphism groups corresponding to the 4 prototype classes are |Aut(G|V1, C1)| = 4, |Aut(G|V2, C2)| = 4, |Aut(G|V3, C3)| = 2, and |Aut(G|V4, C4)| = 2, respectively. Moreover, the characteristic polynomials for G corresponding to each prototype class are:
+
+h(X; G|V1, C1) =f (X1X2)f (X1−1X2−1)f (X1X2−1)
+
+f (X1−1X2)f (X1)f (X1−1)f (X2)f (X2−1),
+
+h(X; G|V3, C3) =f (X1X2)f (X1−1X2−1)
+
+f (X1−1X2)f 2(X1)f (X1−1)f (X2)f 2(X2−1),
+
+h(X; G|V2, C2) =h(X; G|V4, C4) = f (X1X2)f (X1−1X2−1)
+
+f 2(X1)f 2(X1−1)f 2(X2)f 2(X2−1).
+
+(18)
+
+According to Lemma 6, when γ = 3, the characteristic polynomial h(X; G) is derived in (19), shown at the bottom of the next page.
+When γ = 4, the characteristic polynomial h(X; G) is derived in (20), shown at the bottom of the next page.
+
+Remark 4: Observe that in Example 4, the number of
+assignments such that all edges are distinct dominates among all the cases, especially when κ is large enough; we refer to such dominant assignments as the typical assignments. Therefore, it is normally sufficiently
+accurate to optimize over the characteristic polynomial
+corresponding to the typical assignments only. Specifically, for 2 concatenated cycles of length 2i and 2j, suppose the number of edges in common is 2k. Then, the characteristic polynomial can be well approximated by h˜(X; G) = fCjf−kk((XX12−X12))ffokr(Xso1−m1eXc2−on1s)tfain−tkC(X∈1)Nf.i−k(X1−1)f j−k(X2)
+
+B. Gradient-Descent Distributor
+Theorem 3: Given the bipartite graph G(V, C, E) of an object and the prototype class P(V, C). Suppose E(V, C) is the equivalence class induced by V and C. Let (v)t be the t-th
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+897
+
+entry of the vector v. Following the notation in Lemma 5, the gradient of [h(X; G|V, C)]0 with respect to p is given by:
+
+È (⎡∇p [h(X; G|V, C)]0)t
+
+=⎣
+
+X at
+s
+
+e∈e¯ δe,s
+
+f
+
+e¯∈E s∈S
+
+e¯ ∈E\{e¯}
+
+⎤
+
+X δe,s
+s e∈e¯ s∈S
+
+⎦.
+0
+(21)
+
+Proof: We obtain the gradient with respect to p as follows:
+
+(∇ph(X; G|V, C))t
+
+=
+e¯∈E
+
+∇pf
+
+X δe,s
+s e∈e¯ s∈S
+
+f
+t e¯ ∈E\{e¯}
+
+X δe,s
+s e∈e¯ s∈S
+
+=
+
+∇pf
+
+X δe,s
+s
+
+f
+
+X δe,s
+s
+
+e¯∈E
+=
+
+∇pf
+
+È s∈S e∈e¯ X e∈e¯ δe,s s
+
+t e¯ ∈E\{e¯} e∈e¯ s∈S
+f
+
+X δe,s
+s
+
+e¯∈E
+=
+
+Ès∈S
+
+X at
+s
+
+e∈e¯ δe,s
+
+t e¯ ∈E\{e¯} e∈e¯ s∈S
+
+f
+
+X δe,s
+s
+
+.
+
+(22)
+
+e¯∈E s∈S
+
+e¯ ∈E\{e¯} e∈e¯ s∈S
+
+Therefore,
+
+È ⎡(∇p [h(X; G|V, C)]0)t = (∇ph(X; G|V, C))t 0
+
+=⎣
+
+X at
+s
+
+e∈e¯ δe,s
+
+f
+
+X δe,s
+s
+
+e¯∈E s∈S
+
+e¯ ∈E\{e¯} e∈e¯ s∈S
+
+⎤ ⎦.
+0
+(23)
+
+Provided the explicit expression of h(X; G) and its gradient, one can easily apply the gradient-descent algorithm to obtain an edge distribution that locally minimizes the expected
+
+Fig. 8. The targeted object consisting of two concatenated cycle-8 in Example 5 and Example 6.
+number of active prototypes of the object specified by G. In Example 5 and Example 6, we apply GRADE to two concatenated cycles-8 as shown in Fig. 8, under any prototype class P(V, C) such that V and C induce no equivalent edges in E. Denote by P8−8(a, p|V, C) the probability that a prototype of this object becomes active after partitioning in an SC ensemble with coupling pattern a and edge distribution p.
+
+Example 5: Consider the following three cases of SC ensembles with m = 6:
+
+1) Full-memory codes with uniform edge distribution:
+
+mt
+
+=
+
+m
+
+=
+
+6,
+
+a
+
+=
+
+(0, 1, . . . , 6)
+
+and
+
+p
+
+=
+
+1 7
+
+17.
+
+Then,
+
+P8−8(a, p|V, C) = 0.0049;
+
+2) Full-memory codes with distribution obtained from
+
+GRADE: mt = m = 6, a = (0, 1, . . . , 6) and
+
+p = (0.2991, 0.0899, 0.0749, 0.0733, 0.0749, 0.0896,
+
+0.2984). Then, P8−8(a, p|V, C) = 0.0032;
+
+3) Non-full-memory codes with distribution obtained
+
+from GRADE: mt = 3, a = (0, 1, 4, 6)
+
+and p = (0.2604, 0.2063, 0.2219, 0.3114). Then,
+
+P8−8(a, p|V, C) = 0.0035.
+
+Example 6: Consider the following three cases of SC ensembles with m = 9:
+
+1) Full-memory codes with uniform edge distribution:
+
+mt
+
+=
+
+m
+
+=
+
+9,
+
+a
+
+=
+
+(0, 1, . . . , 9)
+
+and
+
+p
+
+=
+
+1 10
+
+110.
+
+Then,
+
+P8−8(a, p|V, C) = 0.0024;
+
+h(X;
+
+G)
+
+= 4(κ
+
+−
+
+κ!γ! 3)!(γ
+
+−
+
+3)!
+
+f (X1X2)f (X1−1X2−1)f (X1X2−1)f
+
+(X1−1X2)f (X1)f (X1−1)f (X2)f
+
+(X2−1)
+
++
+
+4(κ
+
+−
+
+κ!γ! 4)!(γ
+
+−
+
+3)! f (X1X2)f (X1−1X2−1)f 2(X1)f 2(X1−1)f 2(X2)f 2(X2−1)
+
+3κ! = 2(κ − 4)!
+
+f (X1X2)f (X1−1X2−1)f 2(X1)f 2(X1−1)f 2(X2)f 2(X2−1)
+
++
+
+κ
+
+1 −
+
+3 f (X1X2)f (X1−1X2−1)f (X1X2−1)f (X1−1X2)f (X1)f (X1−1)f (X2)f (X2−1)
+
+.
+
+(19)
+
+h(X;
+
+G)
+
+= 4(κ
+
+−
+
+κ!γ! 3)!(γ
+
+−
+
+3)!
+
+f (X1X2)f (X1−1X2−1)f (X1X2−1)f
+
+(X1−1X2)f (X1)f (X1−1)f (X2)f
+
+(X2−1)
+
++
+
+2(κ
+
+−
+
+κ!γ! 3)!(γ
+
+−
+
+4)! f (X1X2)f (X1−1X2−1)f (X1−1X2)f 2(X1)f (X1−1)f (X2)f 2(X2−1)
+
++
+
+κ!γ!
+
+κ!γ!
+
+4(κ − 4)!(γ − 3)! + 2(κ − 4)!(γ − 4)!
+
+f (X1X2)f (X1−1X2−1)f 2(X1)f 2(X1−1)f 2(X2)f 2(X2−1)
+
+18κ! = (κ − 4)!
+
+f (X1X2)f (X1−1X2−1)f 2(X1)f 2(X1−1)f 2(X2)f 2(X2−1)
+
++
+
+2 3(κ −
+
+3) f (X1X2)f (X1−1X2−1)f (X1−1X2)f 2(X1)f (X1−1)f (X2)f 2(X2−1)
+
++
+
+1 3(κ −
+
+3) f (X1X2)f (X1−1X2−1)f (X1X2−1)f (X1−1X2)f (X1)f (X1−1)f (X2)f (X2−1)
+
+.
+
+(20)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+898
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+2) Full-memory codes with distribution obtained from GRADE: mt = m = 9, a = (0, 1, . . . , 9) and p = (0.2648, 0.0803, 0.0509, 0.0526, 0.0519, 0.0519, 0.0525, 0.0508, 0.0801, 0.2644). Then, P8−8(a, p|V, C) = 0.0015;
+3) Non-full-memory codes with distribution obtained from GRADE: mt = 4, a = (0, 1, 4, 7, 9) and p = (0.2479, 0.1799, 0.1262, 0.1645, 0.2814). Then, P8−8(a, p|V, C) = 0.0016.
+
+Remark 5: In contrast to what we have shown regarding applying GRADE to single cycles, the gains obtained from applying GRADE to concatenated cycles are much more evident. As shown in Example 5 and Example 6, for m = 6 and m = 9, the local minima obtained for full memory codes are quite close to the gains obtained for codes with coupling patterns (0, 1, 4, 6) and (0, 1, 4, 7, 9), respectively (referred to as topologically-coupled (TC) codes later on).
+Note that some probabilities can approach 0 directly in the GRADE algorithm without a brute-force search on all possible coupling patterns if the objective function is modified by adding a regularization term with some finely tuned β ∈ R, β > 0, n ∈ N∗ as follows:
+m
+h0(X; G) = [h(X; G)]0 + β (1 + tanh(npi)) . (24)
+i=0
+The corresponding gradient changes as follows:
+
+∇ph0(X; G) = ∇p [h(X; G)]0 + nβ sech2(np0), sech2(np1), . . . , sech2(npm) .
+(25)
+
+The term β
+
+m i=0
+
+(1
+
++
+
+tanh(npi))
+
+is
+
+a
+
+differentiable
+
+approx-
+
+imation of the truncated gradient proposed in [33], and is
+
+adopted as a regularization term to help constrain the number
+
+of entries that are bounded away from zero.
+
+We show next in Section V and Section VI that TC codes
+
+have close performance to GD codes with full-memories,
+
+where both are obtained from applying GRADE-AO followed
+
+by CPO to concatenated cycles.
+
+Remark 6: Note that although we focus on non-tail-
+
+biting SC codes throughout this paper, this condition is
+
+by no means necessary. To extend our method to tail-
+
+biting codes, one just needs to change the cycle condi-
+
+tion in (1) from “
+
+“
+
+g k=1
+
+P(ik ,
+
+jk )
+
+≡
+
+gk=kg =1 1PP(i(ki,kj, kjk) +=1 )
+
+g k=1
+
+P(ik
+
+,
+
+jk+1)”
+
+to
+
+mod L”, as presented
+
+in [20]. If L > m + 1, which is the typical case, the resultant
+
+optimal distribution is still very likely to be nonuniform
+
+because of the asymmetry among components indexed by
+
+{0, 1, . . . , m}. This fact is important since while constructing
+
+non-tail-biting codes with large κ and m, a large L is typically
+
+desired due to the notable rate loss resulting from a small L.
+
+However, in certain practical applications, codes are typically
+
+of moderate length, which implies that a moderate L is
+
+desirable. In such situations where κ and m are large, tail-
+
+biting codes do not suffer the same rate loss, and they can
+
+offer high error floor performance despite limiting the gain
+
+obtained from threshold saturation.
+
+V. ALGORITHMIC OPTIMIZATION
+We have developed the theory and the algorithm to obtain edge distributions that locally minimize the number of short cycles in Section III-B and generalized the results from cycles to more sophisticated objects in Section IV-B. In this section, we investigate algorithmic optimizers (AO) that search for excellent partitioning matrices under the guidance of GRADE. In particular, the edge distribution popt obtained through GRADE confines the search space to only contain matrices that have edge distributions near popt.
+We discuss both heuristic AOs based on semi-greedy algorithms and globally-optimal AOs based on variations of the OO technique proposed in [9] and [10]. The heuristic AOs require low computational complexity and are applicable to a rich set of objects and any code parameters, but are only locally optimal. The OO-based AOs obtain the globallyoptimal solutions, but currently only work on short cycles in SC codes with small pseudo-memories; we refer to these codes as topologically-coupled (TC) codes. The reason behind the nomenclature “TC codes” is the topological degrees of freedom they offer the code designer via the selection of the non-zero component matrices.
+A. Heuristic AO In this subsection, we consider AOs that are based on heuris-
+tic methods. In this case, our proposed GRADE algorithm obtains an edge distribution to guide the AO. Starting from a random partitioning matrix P with the derived distribution, one can perform a semi-greedy algorithm that searches for partitioning matrix near the initial P that locally minimizes the number of targeted objects. Constraining the search space to contain P’s that have distributions within small L1 and L∞ distances from that of the original P, and adopting the CPO next, significantly reduces the computational complexity to find a strong high-memory code. GRADE-guided heuristic AO has advantages in two aspects: 1) low complexity by reduced search space, and 2) higher probability of arriving at superior solution by providing a good enough initialization to AO that can avoid undesirable local minima.
+1) Cycle-Based Optimization: Based on the GRADE specified in Algorithm 1, we first present in Algorithm 2 a corresponding AO that focuses on minimizing the weighted sum of the number of cycles-6 and cycles-8. We refer to codes obtained from GRADE-AO as gradient-descent (GD) codes. By replacing the initial distribution p with the uniform distribution, we obtain the so-called uniform (UNF) codes. In the special cases where the SC codes are not of full memory, i.e., the pseudo-memory is not identical with the memory, we refer to the codes obtained from GRADE-AO as topologically-coupled (TC) codes. We show in Section VI by simulation that the distribution obtained by GRADE results in constructions that are better than those adopting uniform distribution and in existing literature.
+2) Finer-Grained Optimization: We next develop a finer-grained optimizer in Algorithm 3, in which the targeted objects are two concatenated cycles where each of them is a cycle-6 or a cycle-8, as discussed in the examples of Section IV-B. The critical part of the algorithm is enumerating
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+899
+
+Algorithm 2 Cycle-Based GRADE-A Optimizer (AO)
+
+Inputs and Parameters:
+
+γ, κ, m, mt, a: parameters of an SC ensemble;
+
+p: edge distribution obtained from Algorithm 1;
+
+w: weight of each cycle-6 assuming that of a cycle-8 is 1;
+
+d1, d2: parameters indicating the size of the search space;
+
+Outputs and Intermediate Variables:
+
+P: a locally optimal partitioning matrix;
+
+1: Obtain the lists L6(i, j), L8(i, j) of cycles-6 candidates and cycle-
+
+8 candidates in the base matrix that contain node (i, j), 1 ≤ i ≤ γ,
+
+1 ≤ j ≤ κ;
+
+2:
+
+Obtain
+
+u
+
+=
+
+arg minx∈{0,1,...,γκ}m+1,||x||1=γκ
+
+||
+
+1 γκ
+
+x
+
+−
+
+p||2
+
+;
+
+3: for i ∈ {0, 1, . . . , m} do
+
+4: Place u [i + 1] i’s into P randomly;
+
+5: d ← 0m+1; 6: noptimal ← False; 7: for i ∈ {1, 2, . . . , γ}, j ∈ {1, 2, . . . , κ} do
+
+c) L3(i3, i4, j1, j2): all type-3 paths connecting (i3, j1) and
+
+(i4, j2) in the base matrix;
+
+2: Obtain the sets I212, I213, I222, and I313 as follows:
+
+a) I212 ← {(i, i1, i2, i3, i4) : 1 ≤ i, i1, i2, i3, i4 ≤ γ, i1 <
+
+i3, i1 = i2, i3 = i4};
+
+b) I213 ← {(i, i1, i2, i3, i4) : 1 ≤ i, i1, i2, i3, i4 ≤ γ, i1 =
+
+i2};
+
+c) I222 ← {(i1, i2, i3, i4, i5, i6) : 1 ≤ i1, i2, i3, i4, i5, i6 ≤
+
+γ, i1 < i3 < i5, i1 = i2, i3 = i4, i5 = i6};
+
+d) I313 ← {(i, i1, i2, i3, i4) : 1 ≤ i, i1, i2, i3, i4 ≤ γ, i1 <
+
+i3};
+
+3: Obtain
+
+u
+
+=
+
+arg
+
+minx∈{0,1,2,...,γ κ}m+1 ,||x||1=γ κ
+
+||
+
+1 γκ
+
+x
+
+−
+
+p||2;
+
+4: for i ∈ {0, 1, . . . , m} do
+
+5: Place u [i + 1] i’s into P randomly;
+
+8: n6 ← |L6(i, j)|, n8 ← |L8(i, j)|, n ← wn6 + n8;
+
+9: for v ∈ {0, 1, . . . , m} do
+
+10:
+
+d = d, d [v + 1] ← d [v + 1] + 1, p ← P(i, j);
+
+11:
+
+if ||d ||1 ≤ d1 and ||d ||∞ ≤ d2 then
+
+12:
+
+P(i, j) ← v;
+
+13:
+
+t6 ← |L6(i, j)|, t8 ← |L8(i, j)|, t ← wt6 + t8;
+
+14:
+
+if t < n then
+
+15:
+
+noptimal ← True, n ← t, d ← d , P(i, j) ← v;
+
+6: d ← 0m+1; 7: n ← M ; //M is some very large constant 8: noptimal ← False; 9: for i ∈ {1, 2, . . . , γ}, j ∈ {1, 2, . . . , κ} do
+
+10: for v ∈ {0, 1, . . . , m} do
+
+11:
+
+d = d, d [v + 1] ← d [v + 1] + 1, p ← P(i, j);
+
+12:
+
+if ||d ||1 ≤ d1 and ||d ||∞ ≤ d2 then
+
+16: if noptimal then
+
+13:
+
+P(i, j) ← v;
+
+17: goto step 6; 18: return P;
+
+//Compute the number vt,l of Type-t paths with alternating sum l in matrix P, where 1 ≤ t ≤ 3
+
+14:
+
+for 1 ≤ j1 < j2 ≤ κ, 1 ≤ i0, i1, i2, i3, i4 ≤ γ,
+
+all the objects of interest efficiently. Since we focus on concatenated cycles of length 6 or 8, the key idea is to characterize concatenated cycles by the positions of the two degree 3 VNs
+and the three paths connecting them. Here, we only consider objects that are elementary ASs. We call a path P = v1-c1v2-· · · -cl-vl+1 a type-l path connecting (c1, v1) and (cl, vl+1) and denote it by L(P) = l. Paths of type-1, type-2, and type3 are shown in Fig. 9. Each concatenation of two cycles can be referred to as an i-j-k object, where i, j, k are the types of the three paths connecting the degree 3 nodes in this object. Our targeted objects, where each of the two cycles is either a cycle-
+
+i1 = i2 do
+
+15:
+
+v1,l(i0, j1, j2) ← |{P|S(P; P) = l, P ∈
+
+L1(i0, j1, j2)}|, −m ≤ l ≤ m;
+
+16:
+
+v2,l(i1, i2, j1, j2) ← |{P|S(P; P) = l, P ∈
+
+L2(i1, i2, j1, j2)}|, −2m ≤ l ≤ 2m;
+
+17:
+
+v3,l(i3, i4, j1, j2) ← |{P|S(P; P) = l, P ∈
+
+L3(i3, i4, j1, j2)}|, −m ≤ l ≤ m;
+
+//Compute the number tijk of prototypes that result in i-j-k
+
+objects in the protograph
+
+18:
+
+t ← 212
+
+1≤j1<j2≤κ (i0,i1,i2,i3,i4)∈I212
+
+−m≤l≤m v1,l(i0,j1,j2)v2,l(i1, i2,j1,j2)v2,l(i3, i4, j1, j2);
+
+6 or a cycle-8, can only be 2-1-2, 2-1-3, 2-2-2, or 3-1-3 objects. 19:
+Steps 1-5 in Algorithm 3 are aimed at listing the paths of
+type 1–3, and all the possible combinations of indices of the 20: beginning and the ending CNs on each path.
+
+t ← 213
+
+1≤j1<j2≤κ (i0,i1,i2,i3,i4)∈I213
+
+−m≤l≤m v1,l(i0,j1,j2)v2,l(i1, i2, j1, j2)v3,l(i3,i4,j1, j2);
+
+t ← 222
+
+1≤j1<j2≤κ (i1,i2,i3,i4,i5,i6)∈I222
+
+−2m≤l≤2m v2,l (i1 ,i2 ,j1 ,j2)v2,l (i3 ,i4 ,j1 ,j2)v2,l (i5 ,i6 ,j1 ,j2);
+
+Algorithm 3 Fine-Grained GRADE-A Optimizer (AO) Inputs and Parameters:
+
+21:
+
+t ← 313
+
+1≤j1<j2≤κ (i0,i1,i2,i3,i4)∈I313
+
+−m≤l≤m v1,l(i0, j1, j2)v3,l(i1, i2,j1,j2)v3,l(i3,i4,j1, j2);
+
+γ, κ, m, mt, a: parameters of an SC code with full memory; p: edge distribution obtained from Algorithm 1; w = (w1, w2, w3, w4): the weights of 2-1-2, 2-1-3, 2-2-2, 3-1-3 objects, respectively. d1, d2: parameters indicating the size of the search space; Outputs and Intermediate Variables:
+
+22:
+
+t ← w1t212 + w2t213 + w3t222 + w4t313;
+
+23:
+
+if t < n then
+
+24:
+
+noptimal ← True, n ← t;
+
+25:
+
+d ← d , P(i, j) ← v;
+
+26: if noptimal then
+
+P: a locally optimal partitioning matrix;
+
+27: goto step 8;
+
+1: Obtain the lists L1(i, j1, j2), L2(i1, i2, j1, j2), and 28: return P; L3(i3, i4, j1, j2), 1 ≤ j1 < j2 ≤ κ, 1 ≤ i, i1, i2, i3, i4 ≤ γ,
+
+i1 = i2, where the lists are specified as follows:
+
+Based on the aforementioned notations, a prototype of an
+
+a) L1(i, j1, j2): all type-1 paths connecting (i, j1) and i-j-k object consists of three paths of type-i,j,k, where all
+
+(i, j2) in the base matrix;
+
+paths connect two entries with column indices j1, j2, 1 ≤
+
+b) L2(i1, i2, j1, j2): all type-2 paths connecting (i1, j1) and j1 < j2 ≤ κ. Denote by Iijk the set containing all possible
+
+(i2, j2) inAutthhoerizbeadsleicemnsaetdriuxse; limited to: Yonsei Univ. Downloaded on Junec2o4m,20b2i6naatti1o4n:1s3:o01f UroTwC frionmdiIEcEesE oXpflothree. Renesdtrpicotiionntssaoppflyp. aths in i-j-k
+
+900
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+GD-TC ensembles with pseudo-memory 3 and coupling pat-
+
+tern (0, 1, 4, 6); memory 9 GD ensembles can be approximated
+
+by GD-TC ensembles with pseudo-memory 4 and coupling
+
+pattern (0, 1, 4, 7, 9). This leads to the conjecture that the
+
+performance of GD-TC codes and the performance of GD
+
+codes are quite close, which is somewhat surprising provided
+
+that they differ a lot in edge distribution, and the impact of
+
+concatenated cycles on waterfall performance is not strictly
+
+characterized. In Section VI-B, Monte-Carlo simulations sup-
+
+Fig. 9. Type 1-3 paths mentioned in Algorithm 3: L1(i, j1, j2) (bottom left panel), L2(i1, i2, j1, j2) (top left panel), and L3(i3, i4, j1, j2) (the rightmost 6 panels), 1 ≤ j1 < j2 ≤ κ, 1 ≤ i, i1, i2, i3, i4 ≤ γ, i1 = i2. A type-k (1 ≤ k ≤ 3) path is a length 2i path in the base matrix that traverses between
+entries from two different columns, which depicts all possible assignments on
+the non-overlapping part of each cycle in the prototype of a concatenated-cycle
+pair connecting cycles of lengths 6 or 8.
+
+port our conjecture, which enables more possibilities in TC codes. For example, TC codes can be globally-optimized given that their pseudo-memories are low; details will be discussed later on in Section V-B.
+Remark 8: Despite that both Algorithm 2 and Algorithm 3 assume all-one base matrices in this paper, while extending to
+
+object. The only constraint is that endpoints belonging to the generalized base matrices, the only part that may increase the
+
+same column are pairwise different. Take j = 2 as an example, complexity is the enumeration of the cycles and concatenated
+
+only 2-2-2 objects are under our discussion. The set I222 has parameters (i1, i2, i3, i4, i5, i6), where entries (i2t−1, j1), (i2t, j2), 1 ≤ t ≤ 3, are the endpoints of the three paths
+comprising the object. Fig. 9 indicates that i2t−1 = i2t, 1 ≤ t ≤ 3. Therefore, I222 = {(i1, i2, i3, i4, i5, i6) : 1 ≤ i1, i2, i3, i4, i5, i6 ≤ γ, i1 < i3 < i5, i1 = i2, i3 = i4, i5 = i6}. Other cases are specified in Step 2 in Algorithm 3.4
+The other major step in Algorithm 3 is to count the total
+
+cycles in each algorithm.
+The complexity is primarily controlled by the degrees of the
+nodes rather than the sizes of the base matrices. In particular,
+the major strategy of enumerating concatenated cycles is based on enumerating the type-i paths, 1 ≤ i ≤ 3, which requires complexity O(γκdiv−1dic), where dv and dc represent the average VN degree and CN degree, respectively. Moreover,
+the individual cycle enumeration can also be performed uti-
+
+number tijk of prototypes that result in i-j-k objects in the lizing the idea of paths adopted in the concatenated-cycles protograph. Given a partitioning matrix P, denote by S(P; P) enumeration. Each cycle-6 candidate is composed of a type-
+
+the alternating sum of the entries along the path P. Then, 1 path and a type-2 path. Each cycle-8 of structure S1 in Fig. 2 we are able to count the number of Type-t paths, 1 ≤ t ≤ 3, is composed of two type-1 paths, while each of the others
+
+with alternating sum l, which is denoted by vt,l in Steps 1417 in Algorithm 3. Therefore, tijk is the sum of vi,lvj,lvk,l over all possible combinations of l, row indices from Iijk, and column indices 1 ≤ j1 < j2 ≤ κ, as shown in Steps 18-21 in Algorithm 3.
+
+is composed of two type-2 paths. Therefore, the complexity
+of enumerating the cycles and the concatenated-cycles are O(γκdvdc2) and O(γκdv2d3c), respectively.
+As for the part that calculates the total number of concate-
+nated cycles, the number of multiplications performed at each
+
+Remark 7: Note that in the finer-grained optimization, the condition of a concatenated-cycle pair in the protograph becoming a pair of concatenated cycles in the Tanner graph after lifting is that the two cycle candidates contained in this prototype all satisfy the cycle condition on lifting parameters specified in Lemma 1. Therefore, after applying AO to minimize the number of concatenated-cycle pairs, instead of using the original CPO designed for cycle optimization in [9], we adopt a modified version that is tailored for optimization over the number of pairs of concatenated cycles accordingly.
+In a way similar to what we have done with approaches eliminating cycles, we define GD codes, UNF codes, and TC codes here. Moreover, as shown in Section IV-B, the expected number of concatenated-cycle pairs in GD codes (with full memories) is close to that of GD-TC codes with carefully chosen pseudo-memories and coupling patterns.5 In
+
+iteration is shown to be dominated by twice the number of
+type-3 paths in the base matrix as presented in (26), shown at
+the bottom of the next page.
+Therefore, the number of operations at each iteration is also bounded by O(γκd2vd3c). While we are not able to estimate the number of iterations at which the algorithm stops (despite that,
+experimentally it is typically small), we can stop the algorithm when the number of iterations reaches K, for some big enough K ∈ N.6 Under this modification, the complexity of Algorithm 3 is O(Kmγκd2vdc3). A similar result can be applied to estimate the complexity of Algorithm 2 as O(Kmγκdvd2c ).
+Compared with the complexity of the OO technique
+described in [10] that is governed by discrete optimization on ((m + 1)γ − 1) independent parameters, which also grows with κ, the complexity of the GRADE-AO method grows
+much slower with the size of the base matrix and the memory
+of the SC code. The GRADE-AO algorithm has been adopted
+
+particular, memory 6 GD ensembles can be approximated by 6Note that specifying a closed form relation between m and the number
+
+of iterations is hard: despite that increasing m can enlarge the search space
+
+4Note that here we ignored the case where j1 = j2 for 2-2-2 objects, which does not happen when j = 1, and it leads to 3 pairwise concatenated cycle-
+
+in the AO step and thus can increase the number of iterations, it also allows the algorithm to converge faster thanks to the additional degrees of freedom and thus can reduce the number of iterations. Having said that, the number of
+
+4 candidates. Objects resulting from these prototypes will be removed in the iterations depends not only on m but also on the initialization of the algorithm.
+
+CPO stage by removing cycles-4 when the circulant size is odd.
+
+Since the GRADE step provides a locally-optimal initialization, it leads to
+
+5We refer to the prototype of a pair of concatenated cycles as a concatenated- fast convergence and allows us to assume that the number of iterations is
+
+cycle pair.
+
+sufficiently small. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+901
+
+Fig. 10. The first 5 replicas of the protograph of a TC code with coupling pattern (0, 1, 4) (the right panel), and the first 3 replicas of the protograph of its corresponding SC code with memomry 2 (the left panel). Three cycle candidates (colored by green, blue, and red, respectively) in the base matrix and their
+corresponding paths in the two protographs are marked out.
+
+to construct SC-IRA codes, i.e., SC codes with base matrices being irregular-repeat-accumulate (IRA) codes in the thesis of Yang in [34].
+B. Globally-Optimal AO
+In this subsection, we explore globally-optimal constructions of TC codes with small pseudo-memories. The motivation behind this task is to construct an SC code with memory m under the same computational complexity needed to construct a full memory mt code, where mt < m. Given mt and m, we first find the optimal a, in terms of the minimum number of prototypes of interest, with length mt + 1 in a brute-force manner. Taking m = 4 and mt = 2 as an example, the optimal coupling pattern with respect to the number of cycles is a = (0, 1, 4) and the corresponding optimal distribution is almost uniform. Moreover, we already know from Section IV-B that regarding the optimal coupling pattern with respect to the number of concatenated-cycle pairs, a = (0, 1, 4, 6) and a = (0, 1, 4, 7, 9) are not only the optimal coupling patterns for (m, mt) = (6, 3) and (m, mt) = (9, 4), respectively, but also approximate the optimal full memory GD ensembles quite closely in terms of performance.
+Given the optimal coupling pattern a, we then obtain an optimal partitioning matrix by the OO method proposed in [9] and [10]. We extend the OO method for memory m0 SC codes to any TC code with pseudo-memory mt = m0, which does not increase the complexity of the approach. Note that despite the current OO works only on cycles, future steps can be taken towards the extension of OO into concatenated cycles, which has potential to lead to TC codes with excellent performance
+
+that is even better than the GD codes with full memories, provided that it is much harder to obtain globally-optimal solutions for GD codes with full memories.
+Optimal TC codes with pseudo-memory mt have strictly fewer cycle candidates in their protographs than optimal SC codes with full memory m = mt. Take m = 4 and mt = 2 as an example. Suppose the optimal SC code has the partition Π = HP0 + H1P + H2P. Consider the TC code with partition Π = HP0 + H1P + HP4 such that HP2 = HP4 . Then, any cycle-6 candidate resulting from a cycle candidate in the base matrix assigned with 0-1-0-1-2-0, 1-2-1-2-2-0, or 0-1-2-1-x-x, x ∈ {0, 1, 2}, in P no longer has a counterpart in the TC code, since by replacing 2’s with 4’s, assignments 0-1-0-14-0, 1-4-1-4-4-0, and 0-1-4-1-x-x, x ∈ {0, 1, 4}, no longer satisfy the cycle condition in Lemma 1. Moreover, there exists a bijection between the remaining candidates in the SC code and all candidates in the TC code through the replacement of 2’s with 4’s.
+Fig. 10 presents part of the protograph of a TC code with coupling pattern (0, 1, 4) and that of its corresponding SC code with full memory 2. The cycle-6 candidate colored by blue is assigned with 0-1-2-1-1-1 in the SC code, which satisfies the cycle condition cycle candidates are generated in the protograph. However, the assignment becomes 0-1-4-1-1-1 in the TC code, which no longer satisfies the cycle condition and no cycle candidates are generated in the protograph. The cycle-6 candidate colored by green corresponds to one that results in cycle-6 candidates in both the SC and the TC codes shown in the figure. We also marked out a cycle-8 candidate (colored by red) that only leads to cycle candidates in the SC code.
+
+1≤j1 <j2 ≤κ
+
+(i0 ,i1 ,i2 ,i3 ,i4 )∈I313
+
+−m≤l≤m 2½ (v1,l(i0, j1, j2) > 0) ½ (v3,l(i1, i2, j1, j2) > 0) ½ (v3,l(i3, i4, j1, j2) > 0)
+
+≤
+
+1≤j1 <j2 ≤κ
+
+(i0 ,i1 ,i2 ,i3 ,i4 )∈I313
+
+−m≤l≤m 2½ (v3,l(i1, i2, j1, j2) > 0)
+
+≤
+
+1≤j1 <j2 ≤κ
+
+(i0 ,i1 ,i2 ,i3 ,i4 )∈I313
+
+−m≤l≤m 2v3,l(i1, i2, j1, j2).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+(26)
+
+902
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+TABLE I STATISTICS OF THE NUMBER OF CYCLES
+
+According to the aforementioned discussion, TC codes are better (have less cycles) than SC codes with the same circulant size and m = mt. In Section VI, we present simulation results of such codes and show that they can also outperform SC codes with the same constraint length (larger circulant size) and m = mt.
+
+VI. SIMULATION RESULTS
+In this section, we show the frame error rate/uncorrectable bit error rate (FER/UBER) curves of seven groups of SC codes designed by the GRADE-AO methods presented in Section V. We demonstrate that codes constructed by the GRADE-AO methods offer significant performance gains compared with codes with uniform edge distributions and codes constructed through purely algorithmic methods. Note that all the codes constructed in this paper have no cycles-4.
+A. Optimization Over Cycles
+In this subsection, we simulate codes constructed based on optimizing the number of cycles using GRADE-AO specified in Section III over the AWGN channel. Out of these three plots, Fig. 11 and Fig. 12 compare GD codes with UNF codes designed as in Section V-A. Fig. 13 compares a TC code designed as in Section V-B with optimal SC codes constructed through the OO-CPO method proposed in [9]. The GD/UNF codes have parameters (γ, κ, m, z, L) = (3, 7, 5, 13, 100), (3, 17, 9, 7, 100), and (4, 29, 19, 29, 20). We also compare our (3, 17) codes with the code presented by Battaglioni et al. in [17]. For fair comparison, we choose the partitioning matrix PC2 in [17], which has memory m = 70 and z = 1 (similar constraint length to our codes). Therefore, we choose L = 700 to let the code have a rate and overall length that are close to those of our proposed codes. In particular, both codes have length 11900. The code in [17] has constraint length (70 + 1) × 1 = 71 and rate 1 − (1 + 70/700) × (3/17) 0.8059, while our codes have constraint length (9 + 1) × 7 = 70 and rate 1 − (1 + 9/100) × (3/17) 0.8076.
+The TC code has parameters (γ, κ, mt, z, L) = (4, 17, 2, 17, 50) with the coupling pattern a = (0, 1, 4). For a fair comparison, we have selected two SC codes: one with a similar constraint length (m + 1)z and the other with an identical circulant power z. To ensure that the SC codes and the TC code have close rates and codelengths, the two SC codes have parameters (γ, κ, m, z, L) = (4, 17, 2, 28, 30) and (4, 17, 2, 17, 50), respectively. The TC code has codeword length 17 × 17 × 50 = 14450, constraint length
+
+Fig. 11. FER curves of GD/UNF codes with γ = 3 over the AWGN channel. The leftmost two FER curves correspond to GD/UNF codes with parameters (γ, κ, m, z, L) = (3, 7, 5, 13, 100). The rightmost curves colored with red and blue correspond to GD/UNF codes with parameters (γ, κ, m, z, L) = (3, 17, 9, 7, 100). The green curve corresponds to the code with parameters (γ, κ, m, z, L) = (3, 17, 70, 1, 700), the partitioning matrix of which is PC2 from [17, Equation (46)].
+(4+1) × 17 = 85, and rate 1−(1+4/50) × (4/17) 0.7459. The SC code with matched constraint length has codeword length 17 × 28 × 30 = 14280, constraint length (2+1) × 28 = 84, and rate 1−(1+2/30) × (4/17) 0.7490; the SC code with matched circulant size has codeword length 17 × 17 × 50 = 14450, constraint length (2 + 1) × 17 = 51, and rate 1 − (1 + 2/50) × (4/17) 0.7553. The statistics regarding the number of cycles of each code are presented in Table I.
+Fig. 11 shows FER curves of our GD/UNF comparisons with (γ, κ) = (3, 7) and (3, 17). The partitioning matrices and the lifting matrices of the codes are specified in Appendix A and Appendix B. When γ = 3, cycles-6 are easily removed by the CPO. Therefore, we perform joint optimization on the number of cycles-6 and cycles-8 candidates by assigning different weights to cycle candidates in Algorithm 2. We observe a performance gain for the GD code with respect to the UNF code in both the waterfall region and the error floor region. The FER curve of the code [17] is shown to lay between FER curves of the GD and UNF codes in the waterfall region, and close to the UNF codes in the error floor region. Moreover, the number of cycles-8 in the (3, 17) GD code is reduced by 29% and 12% compared with the UNF code and the code constructed by Battaglioni et al. in [17], respectively. In addition, the (3, 17) GD code has no weight-6 absorbing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+903
+
+TABLE II STATISTICS OF THE NUMBER OF CONCATENATED CYCLES
+
+Fig. 12. FER curves of GD/UNF codes with (γ, κ, m, z, L) = (4, 29, 19, 29, 20) over the AWGN channel.
+sets (ASs) and 133 weight-7 ASs, whereas the UNF code has 6 weight-6 ASs and 361 weight-7 ASs. As for the (3, 7) GD code, all cycles-6 and cycles-8 are removed, while the (3, 7) UNF code still has 6292 cycles-8. Thus, the gain of the GD code compared with the UNF code exceeds the gain observed in the (3, 17) codes.
+Fig. 12 shows FER curves of the GD/UNF comparison with (γ, κ) = (4, 29). The partitioning matrices and the lifting matrices of the codes are specified in Appendix C. Cycles6 in the GD code and the UNF code are both removed, and the number of cycles-8 in the GD code demonstrates a 51.4% reduction from the count observed in the UNF code. It is worth mentioning that both codes have no ASs of weights up to 8, which is reflected in their FER curves via the sharp waterfall regions and the non-existing error floor regions. The FER of the GD/UNF codes decreases with a rate exceeding 12 orders of magnitude per 0.5 dB signal-to-noise ratio (SNR) increase. Moreover, the GD code has a significant gain of about 0.25 dB over the UNF code.
+Fig. 13 shows the FER curves of the TC/SC codes with (γ, κ) = (4, 17). The partitioning matrices and the lifting matrices of the codes are specified in Appendix D. The number of cycles-6 in the (4, 17) TC code demonstrates a 79% and a 20% reduction from the counts observed in the SC codes with a matched constraint length and a matched circulant size, respectively. Moreover, the TC code has no weight-6 nor weight-8 ASs. It is shown that the TC code outperforms the optimal SC code with a matched constraint length, and that the gain is of greater magnitude when compared with the SC code of identical circulant size.
+
+Fig. 13. FER curves of TC/SC codes with (γ, κ) = (4, 17) over the AWGN channel. The red curve corresponds to a TC code with parameters (γ, κ, m, z, L) = (4, 17, 4, 17, 50) and a = (0, 1, 4). The green and blue curves correspond to SC codes with a similar constraint length ((γ, κ, m, z, L) = (4, 17, 2, 28, 30)) and an identical circulant size ((γ, κ, m, z, L) = (4, 17, 2, 17, 50)), respectively.
+Remark 9: Note that although TC codes have higher memories and thus larger constraint lengths than SC codes of matched circulant sizes, they possess the same number of nonzero component matrices, and thus the same degrees of freedom in construction. This fact makes TC codes even more promising if we can devise for them windowed decoding algorithms with window sizes that are comparable to the corresponding SC codes of matched circulant sizes.
+B. Optimization Over Concatenated Cycles
+In this subsection, we simulate codes constructed based on minimizing the number of concatenated-cycle pairs using the GRADE-AO specified in Section IV and Section V-A. We compare GD/UNF codes with m = 6 in addition to TC codes with mt = 3 and a = (0, 1, 4, 6) on the binary symmetric channel (BSC), Flash channel, and magnetic recording channel. There are two groups of GD/TC/UNF codes that have parameters (γ, κ, m, z, L) = (4, 24, 6, 17, 40) and (4, 20, 6, 13, 20), respectively. The statistics regarding the number of cycles of each code are presented in Table II.
+Fig. 14 shows UBER curves of the GD/TC/UNF codes with (γ, κ) = (4, 24) on a Flash channel.7 The Flash channel used in this section is a practical, asymmetric Flash channel, which is the normal-Laplace mixture (NLM) Flash channel [37].
+7Note that although we only provide simulation results on some typical channels for brevity in this paper, our approach is generally applicable to many other channels, such as the ones underlying three-dimensional cross point (3D XPoint) [35] and two-dimensional magnetic recording (TDMR) [36] systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+904
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 14. UBER curves of GD/TC/UNF codes with (γ, κ, m, z, L) = (4, 24, 6, 17, 40) over the NLM channel, where the TC code has the coupling pattern a = (0, 1, 4, 6) and the edge distribution obtained in Example 5. The codes are non-binary codes on GF(4).
+
+Fig. 15. UBER curves of GD/TC/UNF codes with (γ, κ, m, z, L) = (4, 24, 6, 17, 40) over the BSC. The partitioning matrices of these codes are identical with partitioning matrices of GD/TC/UNF codes simulated over the
+NLM channel in Fig. 14.
+
+In the NLM channel, the threshold voltage distribution of sub-20nm multi-level cell (MLC) Flash memories is carefully modeled. The four levels are modeled as different NLM distributions, incorporating several sources of error due to wear-out effects, e.g., programming/erasing problems, thereby resulting in significant asymmetry. Furthermore, the authors of [37] provided accurate fitting results of their model for program/erase (P/E) cycles up to 10 times the manufacturer’s endurance specification (up to 30,000 P/E cycles). We implemented the NLM channel based on the parameters described in [37]. Here, we use 3 threshold voltage reads, and the sector size is 512 bytes. For decoding, we use a finite-precision (FP) fast Fourier transform based q-ary sum-product algorithm (FFT-QSPA) LDPC decoder [38]. The decoder performs a maximum of 50 iterations, and it stops if a codeword is reached sooner.
+The partitioning matrices and the lifting matrices of the codes are specified in Appendix F. The non-binary edge weights are set as in [39] and [40]. The codes can be further optimized by applying the more advanced WCM framework presented in [22] and [23]. The first row of Table II shows the statistics of unlabeled cycles and concatenated cycles in each code. The number of objects in GD/TC codes are reduced by around 40% compared with the UNF code. No error floors are observed in any one of the UBER curves. The UBER of the GD/TC codes decreases with a rate exceeding 14 orders of magnitude per 0.01 RBER decrease. Moreover, the GD/TC codes have a significant gain of about 2 orders of magnitude over the UNF code at RBER 0.0235. It is worth mentioning that the UBER curves of the GD/TC codes nearly overlap, which is in accordance with the closeness of the statistics of objects in them.
+While NB codes are adopted in the simulations over the NLM channel, independent coding are more widely applied in practical Flash solutions in order to preserve high access speed. Therefore, we next present in Fig. 15 the UBER curves of the GD/TC/UNF codes with (γ, κ) = (4, 24) over the BSC, as a simplified model of single-level cell (SLC) channel with 1 threshold voltage read.
+
+Fig. 16. FER curves of GD/TC/UNF codes with (γ, κ, m, z, L) = (4, 20, 6, 13, 20) over the MR channel.
+The partitioning matrices and the lifting matrices of the codes are specified in Appendix E. While partitioning matrices of the (4, 24) NB codes constructed for the NLM channels are adopted as they are here, we have modified the lifting parameters slightly in order to remove all unlabeled ASs with weights less than or equal to 7 in the GD/TC codes: this is achieved by changing one entry in each lifting matrix. According to Table II, the number of objects in the GD/TC codes has not changed dramatically, and they still demonstrate a 40% reduction compared with the count observed in the UNF code. As shown in Fig. 15, the UBER curves of GD/TC codes are still close in the early waterfall region like they are over the NLM channel simulations; however, they start to deviate at RBER less than 0.014. The TC code has no observed error floor in its performance curve as expected, and it has a 2 orders of magnitude gain over the UNF code at RBER 0.013. The GD code curve surprisingly floors despite that there are no ASs with weight less than 8 in it: error profile analysis shows that the error floor at RBER 0.013 results from only 2 different large weight errors (one of weight 78 and another of weight 168) instead of structured small weight errors.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+905
+
+Fig. 17. Partitioning matrices (left) and lifting matrices (right) of GD/UNF codes with (γ, κ, m, z, L) = (3, 7, 5, 13, 100).
+
+Fig. 18. Partitioning matrices (top) and lifting matrices (bottom) of GD/UNF codes with (γ, κ, m, z, L) = (3, 17, 9, 7, 100).
+
+Remark 10: While the reason why the large weight errors observed in the error profile of the GD code are detrimental over the BSC simulations remains unexplored and is left for future investigation, the TC code is observed to be robust against these errors, which is specifically intriguing. Moreover, the fact that the waterfall performance of GD/TC codes is remarkably superior to that of UNF codes calls for an asymptotic analysis that takes edge distribution into consideration. The significant gain achieved by TC codes substantiates the potential of TC codes in Flash memories.
+Fig. 16 shows FER curves of the GD/TC/UNF codes with (γ, κ) = (4, 20) over the MR channel. The MR system adopts the partial-response (PR) channel presented in [32] and sequence detection. This PR channel incorporates the MR channel effects: inter-symbol interference (intrinsic memory), jitter, and electronic noise. The normalized channel density [32], [41] is 1.4, and the PR equalization target is (8, 14, 2). The filtering units are followed by a BahlCocke-Jelinek-Raviv (BCJR) detector [42], which is based on pattern-dependent noise prediction (PDNP) [43], and again an FP FFT-QSPA (q = 2) LDPC decoder [24]. The number of global (detect-decoder) iterations is 10, and the number of local (decoder only) iterations is 20. Unless a codeword is reached, the decoder performs its prescribed number of local iterations for each global iteration. More details can be found in [32].
+The partitioning matrices and the lifting matrices of the codes are specified in Appendix G. The number of targeted objects (concatenated-cycle pairs) observed in the GD code demonstrates an approximate 40% reduction from the count observed in the UNF code. The FER of the GD/TC codes decreases with a rate that is approximately 13 orders of magnitude per 1 dB SNR increase. Moreover, the GD code has a significant gain of about one order of magnitude over the UNF code at SNR 13.375 dB. These results substantiate the remarkable impact of the GRADE-AO method in constructing SC codes with superior performance for storage devices, with potential usage in further applications including wireless communication systems.
+VII. CONCLUSION
+Discrete optimization of the constructions of spatiallycoupled (SC) codes with high memories is known to be
+
+computationally expensive. Heuristic algorithms are efficient, but their lack of theoretical guidance makes it difficult to guarantee satisfactory performance. In this paper, we proposed the so-called GRADE-AO method, a probabilistic framework that efficiently searches for locally optimal QC-SC codes with arbitrary memories. We obtained a locally optimal edge distribution that minimizes the expected number of the most detrimental objects via gradient descent. Starting from a random partitioning matrix with the derived edge distribution, we then applied a semi-greedy algorithm to find a locally optimal partitioning matrix near it. While the application of GRADE-AO in optimizing the number of short cycles has shown noticeable gains, we focused in this paper on minimizing the number of more detrimental objects, the concatenated cycles. This finer-grained optimization avoids unnecessary attention on individual cycles which are typically not problematic on their own, especially in codes with high VN degrees and irregular codes. Simulation results show that our proposed constructions have a significant performance gain over state-of-the-art codes; this gain is shown to be universal in both waterfall and error floor regions, as well as on channels underlying various practical systems. Future work includes extending the framework to other classes of underlying block codes.
+APPENDIX A PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(3, 7) CODES ON AWGN CHANNEL
+See Fig. 17.
+APPENDIX B PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(3, 17) CODES ON AWGN CHANNEL
+See Fig. 18.
+APPENDIX C PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(4, 29) CODES ON AWGN CHANNEL
+See Figs. 19 and 20.
+APPENDIX D PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(4, 17) CODES ON AWGN CHANNEL
+See Fig. 21.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+906
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+Fig. 19. Partitioning matrix (top) and lifting matrix (bottom) for GD code with (γ, κ, m, z, L) = (4, 29, 19, 29, 20). Fig. 20. Partitioning matrix (top) and lifting matrix (bottom) for UNF code with (γ, κ, m, z, L) = (4, 29, 19, 29, 20).
+
+Fig. 21. Partitioning matrices (top) and lifting matrices (bottom) for TC/SC codes with (γ, κ, mt) = (4, 17, 2). Fig. 22. Partitioning matrix (top) and lifting matrix (bottom) for GD Code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40). Fig. 23. Partitioning matrix (top) and lifting matrix (bottom) for TC code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40). Fig. 24. Partitioning matrix (top) and lifting matrix (bottom) for UNF code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40).
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+907
+
+Fig. 25. Partitioning matrix (top) and lifting matrix (bottom) for GD code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40). Fig. 26. Partitioning matrix (top) and lifting matrix (bottom) for TC code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40). Fig. 27. Partitioning matrix (top) and lifting matrix (bottom) for UNF code with (γ, κ, m, z, L) = (4, 24, 6, 17, 40).
+
+Fig. 28. Partitioning matrix (top) and lifting matrix (bottom) for GD code with (γ, κ, m, z, L) = (4, 20, 6, 13, 20).
+
+Fig. 29. Partitioning matrix (top) and lifting matrix (bottom) for TC code with (γ, κ, m, z, L) = (4, 20, 6, 13, 20).
+
+Fig. 30. Partitioning matrix (top) and lifting matrix (bottom) for UNF code with (γ, κ, m, z, L) = (4, 20, 6, 13, 20).
+
+APPENDIX E PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(4, 24) CODES IN SIMULATIONS ON BSC
+
+APPENDIX F PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(4, 24) CODES IN SIMULATIONS ON NLM CHANNEL
+
+See Figs. 22–24.
+
+See Figs. 25–27.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+908
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 69, NO. 2, FEBRUARY 2023
+
+APPENDIX G PARTITIONING MATRICES AND LIFTING MATRICES FOR
+(4, 20) CODES ON MR CHANNEL
+See Figs. 28–30.
+ACKNOWLEDGMENT
+The authors would like to thank the Associate Editor Dr. David Mitchell and the anonymous reviewers for their careful reading of our manuscript and their insightful comments and suggestions, also would like to thank Shyam Venkatasubramanian for his assistance in carrying out part of the simulations in this research, and also would like to thank Christopher Cannella and Arnab Kar for useful discussions regarding probabilistic optimization on SC code constructions while being at Duke University.
+REFERENCES
+[1] S. Yang, A. Hareedy, S. Venkatasubramanian, R. Calderbank, and L. Dolecek, “GRADE-AO: Towards near-optimal spatially-coupled codes with high memories,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2021, pp. 587–592.
+[2] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over the BEC,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 803–834, Feb. 2011.
+[3] S. Kumar, A. J. Young, N. Macris, and H. D. Pfister, “Threshold saturation for spatially coupled LDPC and LDGM codes on BMS channels,” IEEE Trans. Inf. Theory, vol. 60, no. 12, pp. 7389–7415, Dec. 2014.
+[4] P. M. Olmos and R. L. Urbanke, “A scaling law to predict the finitelength performance of spatially-coupled LDPC codes,” IEEE Trans. Inf. Theory, vol. 61, no. 6, pp. 3164–3184, Jun. 2015.
+[5] A. Hareedy, H. Esfahanizadeh, and L. Dolecek, “High performance nonbinary spatially-coupled codes for flash memories,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2017, pp. 229–233.
+[6] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov, “Iterative decoding threshold analysis for LDPC convolutional codes,” IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 5274–5289, Oct. 2010.
+[7] A. R. Iyengar, P. H. Siegel, R. L. Urbanke, and J. K. Wolf, “Windowed decoding of spatially coupled codes,” IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 2277–2292, Apr. 2013.
+[8] D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “Spatially coupled LDPC codes constructed from protographs,” IEEE Trans. Inf. Theory, vol. 61, no. 9, pp. 4866–4889, Sep. 2015.
+[9] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Finite-length construction of high performance spatially-coupled codes via optimized partitioning and lifting,” IEEE Trans. Communications, vol. 67, no. 1, pp. 3–16, Jan. 2018.
+[10] A. Hareedy, R. Wu, and L. Dolecek, “A channel-aware combinatorial approach to design high performance spatially-coupled codes,” IEEE Trans. Inf. Theory, vol. 66, no. 8, pp. 4834–4852, Aug. 2020.
+[11] A. E. Pusane, R. Smarandache, P. O. Vontobel, and D. J. Costello, “Deriving good LDPC convolutional codes from LDPC block codes,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 835–857, Feb. 2011.
+[12] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201, Jan. 2010.
+[13] S. Naseri and A. H. Banihashemi, “Spatially coupled LDPC codes with small constraint length and low error floor,” IEEE Commun. Lett., vol. 24, no. 2, pp. 254–258, Feb. 2020.
+[14] S. Naseri and A. H. Banihashemi, “Construction of time invariant spatially coupled LDPC codes free of small trapping sets,” IEEE Trans. Commun., vol. 69, no. 6, pp. 3485–3501, Jun. 2021.
+[15] D. G. M. Mitchell and E. Rosnes, “Edge spreading design of high rate array-based SC-LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 2940–2944.
+[16] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “A novel combinatorial framework to construct spatially-coupled codes: Minimum overlap partitioning,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 1693–1697.
+
+[17] M. Battaglioni, A. Tasdighi, G. Cancellieri, F. Chiaraluce, and M. Baldi, “Design and analysis of time-invariant SC-LDPC convolutional codes with small constraint length,” IEEE Trans. Commun., vol. 66, no. 3, pp. 918–931, Mar. 2018.
+[18] S. Mo, L. Chen, D. J. Costello, D. G. M. Mitchell, R. Smarandache, and J. Qiu, “Designing protograph-based quasi-cyclic spatially coupled LDPC codes with large girth,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5326–5337, Jun. 2020.
+[19] M. Battaglioni, F. Chiaraluce, M. Baldi, and D. G. M. Mitchell, “Efficient search and elimination of harmful objects for the optimization of QC-SC-LDPC codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[20] A. Beemer, S. Habib, C. A. Kelley, and J. Kliewer, “A generalized algebraic approach to optimizing SC-LDPC codes,” in Proc. 55th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), 2017, pp. 672–679.
+[21] A. Hareedy, R. Kuditipudi, and R. Calderbank, “Minimizing the number of detrimental objects in multi-dimensional graph-based codes,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5299–5312, Sep. 2020.
+[22] A. Hareedy, C. Lanka, and L. Dolecek, “A general non-binary LDPC code optimization framework suitable for dense flash memory and magnetic storage,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2402–2415, Sep. 2016.
+[23] A. Hareedy, C. Lanka, N. Guo, and L. Dolecek, “A combinatorial methodology for optimizing non-binary graph-based codes: Theoretical analysis and applications in data storage,” IEEE Trans. Inf. Theory, vol. 65, no. 4, pp. 2128–2154, Apr. 2019.
+[24] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[25] L. Schmalen, V. Aref, and F. Jardel, “Non-uniformly coupled LDPC codes: Better thresholds, smaller rate-loss, and less complexity,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 376–380.
+[26] A. Beemer, “Design and analysis of graph-based codes using algebraic lifts and decoding networks,” Ph.D. dissertation, Dept. Math., Univ. Nebraska-Lincoln, Lincoln, NE, USA, 2018.
+[27] Y. Wang, Y. Wang, J. S. Yedidia, and S. C. Draper, “Construction of high-girth QC-LDPC codes,” in Proc. 5th Int. Symp. Turbo Codes Rel. Topics, Sep. 2008, pp. 180–185.
+[28] I. E. Bocharova, R. Johannesson, F. Hug, B. D. Kudryashov, and R. V. Satyukov, “Searching for voltage graph-based LDPC tailbiting codes with large girth,” IEEE Trans. Inf. Theory, vol. 58, no. 4, pp. 2265–2279, Apr. 2012.
+[29] A. Tasdighi, A. H. Banihashemi, and M. R. Sadeghi, “Efficient search of girth-optimal QC-LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 4, pp. 1552–1564, Feb. 2016.
+[30] J. Wang, L. Dolecek, and R. D. Wesel, “The cycle consistency matrix approach to absorbing sets in separable circulant-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 2293–2314, Apr. 2013.
+[31] B. Amiri, J. Kliewer, and L. Dolecek, “Analysis and enumeration of absorbing sets for non-binary graph-based codes,” IEEE Trans. Commun., vol. 62, no. 2, pp. 398–409, Feb. 2014.
+[32] A. Hareedy, B. Amiri, R. Galbraith, and L. Dolecek, “Non-binary LDPC codes for magnetic recording channels: Error floor analysis and optimized code design,” IEEE Trans. Commun., vol. 64, no. 8, pp. 3194–3207, Aug. 2016.
+[33] J. Langford, L. Li, and T. Zhang, “Sparse online learning via truncated gradient,” J. Mach. Learn. Res., vol. 10, no. 3, pp. 1–25, 2009.
+[34] S. Yang, Application-Driven Coding Techniques: From Cloud Storage to Quantum Communications. Los Angeles, CA, USA: University of California, Los Angeles, CA, USA, 2021.
+[35] F. T. Hady, A. Foong, B. Veal, and D. Williams, “Platform storage performance with 3D XPoint technology,” Proc. IEEE, vol. 105, no. 9, pp. 1822–1833, Sep. 2017.
+[36] R. Wood, M. Williams, A. Kavcic, and J. Miles, “The feasibility of magnetic recording at 10 Terabits per square inch on conventional media,” IEEE Trans. Magn., vol. 45, no. 2, pp. 917–923, Feb. 2009.
+[37] T. Parnell, N. Papandreou, T. Mittelholzer, and H. Pozidis, “Modelling of the threshold voltage distributions of sub-20nm NAND flash memory,” in Proc. IEEE Global Commun. Conf., Dec. 2014, pp. 2351–2356.
+[38] D. Declercq and M. Fossorier, “Decoding algorithms for nonbinary LDPC codes over GF(q),” IEEE Trans. Commun., vol. 55, no. 4, pp. 633–643, Apr. 2007.
+[39] L. Dolecek, D. Divsalar, Y. Sun, and B. Amiri, “Non-binary protographbased LDPC codes: Enumerators, analysis, and designs,” IEEE Trans. Inf. Theory, vol. 60, no. 7, pp. 3913–3941, Jul. 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: BREAKING THE COMPUTATIONAL BOTTLENECK: PROBABILISTIC OPTIMIZATION
+
+909
+
+[40] A. Bazarsky, N. Presman, and S. Litsyn, “Design of non-binary quasicyclic LDPC codes by ACE optimization,” in Proc. IEEE Inf. Theory Workshop (ITW), Sep. 2013, pp. 1–5.
+[41] S. G. Srinivasa, Y. Chen, and S. Dahandeh, “A communication-theoretic framework for 2-D MR channel modeling: Performance evaluation of coding and signal processing methods,” IEEE Trans. Magn., vol. 50, no. 3, pp. 6–12, Mar. 2014.
+[42] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),” IEEE Trans. Inf. Theory, vol. IT-20, no. 2, pp. 284–287, Mar. 1974.
+[43] J. Moon and J. Park, “Pattern-dependent noise prediction in signaldependent noise,” IEEE J. Sel. Areas Commun., vol. 19, no. 4, pp. 730–743, Apr. 2001.
+Siyi Yang (Member, IEEE) received the B.S. degree in electrical engineering from Tsinghua University, Beijing, China, in 2016, and the M.S. and Ph.D. degrees in electrical and computer engineering from the University of California at Los Angeles (UCLA), in 2018 and 2021, respectively. She is currently a Post-Doctoral Associate with the Electrical and Computer Engineering Department, Duke University. She is broadly interested in error correction codes that are tailored for modern storage devices, communication systems, and quantum computing. She worked at Intel Corporation, NonVolatile Memory Solution (NSG) Group, as a System on Chip (SoC) Design Engineer, in Summer 2020. She won the (2020–2021) Dissertation Year Fellowship (DYF) at UCLA.
+
+Robert Calderbank (Life Fellow, IEEE) received the B.S. degree in mathematics from Warwick University, U.K., in 1975, the M.S. degree in mathematics from Oxford University, U.K., in 1976, and the Ph.D. degree in mathematics from the California Institute of Technology in 1980.
+He is currently a Professor in electrical and computer engineering at Duke University, where he directs the Rhodes Information Initiative at Duke (iiD). Prior to joining Duke in 2010, he was a Professor in electrical engineering and mathematics at Princeton University, where he directed the Program in applied and computational mathematics. Prior to joining Princeton in 2004, he was the Vice President of Research at AT&T, responsible for directing the first industrial research laboratory in the world where the primary focus is data at scale. At the start of his career at the Bell Laboratories, innovations by him were incorporated in a progression of voiceband modem standards that moved communications practice close to the Shannon limit. Together with Peter Shor and colleagues at the AT&T Laboratories, he developed the mathematical framework for quantum error correction. He is also a co-inventor of space-time codes for wireless communication, where correlation of signals across different transmit antennas is the key to reliable transmission.
+Dr. Calderbank served as the Editor-in-Chief of the IEEE TRANSACTIONS ON INFORMATION THEORY from 1995 to 1998 and as an Associate Editor for Coding Techniques from 1986 to 1989. He was a member of the Board of Governors of the IEEE Information Theory Society from 1991 to 1996 and from 2006 to 2008. He was honored by the IEEE Information Theory Prize Paper Award in 1995 for his work on the Z4 linearity of Kerdock and Preparata Codes (joint with A. R. Hammons Jr., P. V. Kumar, N. J. A. Sloane, and P. Sole), and again in 1999 for the invention of space-time codes (joint with V. Tarokh and N. Seshadri). He has received the 2006 IEEE Donald G. Fink Prize Paper Award, the IEEE Millennium Medal, the 2013 IEEE Richard W. Hamming Medal, and the 2015 Shannon Award. He was elected to the U.S. National Academy of Engineering in 2005.
+
+Ahmed Hareedy (Member, IEEE) received the bachelor’s and M.S. degrees in electronics and communications engineering from Cairo University, Egypt, in 2006 and 2011, respectively, and the Ph.D. degree in electrical and computer engineering from the University of California at Los Angeles (UCLA) in 2018. He is currently an Assistant Professor with the Electrical and Electronics Engineering Department, Middle East Technical University (METU), Turkey. He is interested in questions in coding/information theory that are fundamental to opportunities created by the current, unparalleled access to data and computing. He was a Post-Doctoral Associate with the Electrical and Computer Engineering Department, Duke University, between 2018 and 2021. He worked with Mentor Graphics Corporation (currently, Siemens EDA) between 2006 and 2014. He worked as an Error-Correction Coding Architect with Intel Corporation in Summer 2015 and Summer 2017.
+He was a recipient of the Best Paper Award from the 2015 IEEE Global Communications Conference (GLOBECOM), Selected Areas in Communications, Data Storage Track. He won the (2016–2017) Electrical Engineering Henry Samueli Excellence in Teaching Award for teaching Probability and Statistics at UCLA, where he won the (2017–2018) Dissertation Year Fellowship (DYF). He won the (2018–2019) Distinguished Ph.D. Dissertation Award in Signals and Systems from the Electrical and Computer Engineering Department, UCLA. He was also a recipient of the Memorable Paper Award from the 2018 Non-Volatile Memories Workshop (NVMW) in the area of devices, coding, and information theory. He was also a recipient of the (2018–2019) Best Student Paper Award from the IEEE Data Storage Technical Committee (DSTC). He has been recently awarded the TÜBI˙TAK 2232-B International Fellowship for Early Stage Researchers in 2022.
+
+Lara Dolecek (Senior Member, IEEE) received the B.S. (Hons.), M.S., and Ph.D. degrees in electrical engineering and computer sciences and the M.A. degree in statistics from the University of California at Berkeley. She is currently a Full Professor with the Electrical and Computer Engineering Department and Mathematics Department (courtesy), University of California at Los Angeles (UCLA). She received the 2007 David J. Sakrison Memorial Prize for the Most Outstanding Doctoral Research with the Department of Electrical Engineering and Computer Sciences, UC Berkeley. Prior to joining UCLA, she was a Post-Doctoral Researcher with the Laboratory for Information and Decision Systems, Massachusetts Institute of Technology. She received IBM Faculty Award (2014), Northrop Grumman Excellence in Teaching Award (2013), Intel Early Career Faculty Award (2013), University of California Faculty Development Award (2013), Okawa Research Grant (2013), NSF Career Award (2012), and Hellman Fellowship Award (2011). With her research group and collaborators, she received numerous best paper awards. Her research interests span coding and information theory, graphical models, statistical methods, and algorithms, with applications to emerging systems for data storage and computing. She currently serves as an Associate Editor for IEEE TRANSACTIONS ON INFORMATION THEORY and as the Secretary of the IEEE Information Theory Society. She is a (2021–2022) Distinguished Lecturer of the IEEE Information Theory Society. She has served as a consultant for a number of companies specializing in data communications and storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:13:01 UTC from IEEE Xplore. Restrictions apply.
+
+

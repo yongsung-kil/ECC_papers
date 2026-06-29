@@ -1,0 +1,493 @@
+ISIT 2010, Austin, Texas, U.S.A., June 13 - 18, 2010
+Exhaustive Search for Small Fully Absorbing Sets and The Corresponding Low Error-Floor Decoder
+Gyu Bum Kyung and Chih-Chun Wang School of Electrical and Computer Engineering Purdue University, West Lafayette, IN 47907, USA
+E-mail: {gkyung, chihw}@purdue.edu
+
+Abstract—This work provides an exhaustive search algorithm for finding small fully absorbing sets (FASs) of arbitrary lowdensity parity-check (LDPC) codes. In particular, given any LDPC code, the problem of finding all FASs of size less than t is formulated as an integer programming problem, for which a new branch-&-bound algorithm is devised. New node selection and the tree-trimming mechanisms are designed to further enhance the efficiency of the algorithm. The proposed algorithm is capable of finding all FASs of size ≤ 11 with no larger than 2 induced odd-degree check nodes for LDPC codes of length ≤ 1000.
+The resulting exhaustive list of small FASs is then used to devise a new post-processing decoder. Numerical results show that by taking advantage of the exhaustive list of small FASs, the proposed decoder significantly lowers the error floor for codes of practical lengths and outperforms the state-of-the-art low-errorfloor decoders.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes [1] have received much attention thanks to their near Shannon limit performance and to the efficient belief propagation (BP) decoders. When compared to the prohibitively costly optimal maximum likelihood decoders, the suboptimality of BP leads to the performance gaps both in the waterfall region and in the error-floor region. Generally, the error floor of LDPC codes is at around 10−5 to 10−7, which is detrimental to many important applications that require very low error floor (10−12 to 10−15) such as the digital storage devices. The errorfloor performance of LDPC codes is affected by error-prone substructures (EPSs) such as stopping sets (SSs) [2], nearcodewords [3], trapping sets (TSs) [4], pseudocodewords [5], and absorbing sets (ASs) [6]. Since the EPSs of LDPC codes are generally not valid codewords, the error floor can be lowered with improved BP decoders [7], [8].
+The characterization and enumeration of EPSs are important for estimating the error floor of LDPC codes using importance sampling [4], [9]. Recent results show that even a partial list of EPSs can be used to significantly lower the error floor [9]. However, the problem of searching all small EPSs turns out to be a non-trivial task. The problems of determining the minimum size of the SSs are proven to be an NP-complete problem [10]. This result is extended for the k-out TSs in [11]. Furthermore, [12] generalized this NP-hardness result and showed that even approximating the size of the “cover SSs” and different kinds of TSs is also NP-hard. On the other hand, it is still possible to develop an efficient algorithm
+
+that can reduce the coefficient of exponential complexity so that we can identify the minimum size of EPSs and also find the exhaustive list of them for codes of practical length (1000 ∼ 10000). Moreover, like any NP-hardness results, [12] focuses on the worst case analysis with asymptotically large codeword length, and thus may not describe the average behavior when focusing on practical LDPC codes of special structures (say Quasi-Cyclic LDPC codes). In spite of the hardness of finding the minimum Hamming distance, some practical efficient algorithms have been proposed recently to find the minimum distance of LDPC codes of moderate lengths ≤ 2000 [13]. These results are very encouraging especially considering the fact that the minimum size of EPSs is much smaller than the minimum Hamming distance, which, in principle, makes the problem of exhaustively searching for small EPSs easier (i.e., with smaller coefficients or with smaller exponential growth rate) than the problem of finding the minimum Hamming distance. There are recently some results on finding the minimal EPSs. [11] proposed the first such exhaustive search algorithm of small SSs and k-out TSs based on tree-pruning techniques. An even more efficient exhaustive SS search algorithm was proposed in [14] based on extended iterative decoding and linear programming techniques.
+Several works were proposed to lower the error floor by improving the suboptimal BP decoder. One such approach is to directly modify the BP decoder: [15] suggested averaged BP decoding to prevent the errors being trapped during decoding. Another approach is based on post-processing decoding. [9] used the bit pattern subtraction after BP decoding by checking whether the unsatisfied check nodes after BP decoding match those of a TS in an inexhaustive TS list. A bit-guessing approach after the decoding failure is developed to lower the error floor in [16], and is refined in [7]. [8] proposed a bi-mode syndrome-erasure decoder and a generalized LDPC decoder, which combined several problematic check nodes to a generalized constraint node and applied the corresponding BCJR algorithm. [17] used post-processing decoding which lowers the error floor by increasing the reliability of the messages from unsatisfied check nodes and decreasing the reliability of the messages from mis-satisfied check nodes.
+In this work, we first propose an efficient algorithm to find all small fully ASs (FASs), originally defined in [6], for arbitrary LDPC codes. We then use the exhaustive list to develop a new post-processing decoder that substantially
+
+978-1-4244-7892-7/10/$26.00 ©2010 IEEE
+
+739
+
+ISIT 2010
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:44:05 UTC from IEEE Xplore. Restrictions apply.
+
+ISIT 2010, Austin, Texas, U.S.A., June 13 - 18, 2010
+
+lowers the error floor. Our exhaustive search is based on the branch-&-bound principle, which was previously used in [11] and [14] for exhaustively finding SSs. During the bounding step, we formulate a new integer programming (IP) problem to decide the minimum size of FASs under given constraints and solve the problem using the branch-&-cut algorithm, which can be viewed as a generalization of [13] that finds the minimum Hamming distance using IP problems. Note that the IP approach was also used by [18] to approximate the minimum Hamming distance, which is conceptually quite different from the exact/exhaustive determination in this work and in [11], [13], [14]. A new branching policy and other techniques are used to further improve the efficiency. For practical codes of length ≤ 1000, our algorithm is able to find all small FASs with size ≤ 11 and no larger than 2 induced odd-degree check nodes. We also propose a new postprocessing decoder which takes advantage of the exhaustive list of small FASs and is based on new soft log-likelihood ratio (LLR) manipulation and joint identification of problematic variable and check nodes. Numerical results on the PEGR504 and the Margulis2640 codes [19] show that the error floor can be lowered by a couple of orders of magnitude when compared to the BP decoder, and the proposed decoder outperforms the state-of-the-art low-error-floor decoders.
+II. NOTATION AND DEFINITION
+We define a code by an m×n sparse parity check matrix H where n is the codeword length and m is the number of parity check equations. For convenience, we denote a code by its H matrix. Also, the code H can be represented by its bipartite Tanner graph which has two sets of nodes: the variable nodes V = {v1, . . . , vn} and the check nodes C = {c1, . . . , cm}. Let N (v) and N (c) be the sets of neighboring nodes of a variable node v and a check node c, respectively. Also, let dv = |N (v)| and dc = |N (c)| be the corresponding node degrees.
+The definitions of the AS and its variants follow from [6]. For any A ⊆ V , let EA ⊆ C and OA ⊆ C be the sets of check nodes that are connected to A for an even number (≥ 0) and an odd number of times, respectively. We also define EA(v) as the set of check nodes in EA which are connected to v. OA(v) can be defined similarly.
+Definition 1 (AS and FAS [6]): A subset A ⊆ V is called an AS if |EA(v)| > |OA(v)| for all v ∈ A and a subset A ⊆ V is called a FAS if |EA(v)| > |OA(v)| for all v ∈ V .
+An AS A of size s is also called an (s, t) AS if s = |A| is its size and t = |OA|. An AS is different from the operational definitions of TSs [4] and is also different from the graphical definitions of SSs [2], k-out TSs [11], and near-codewords [3]. For the following, we will exhaustively search all small FASs of a given LDPC code.
+III. A NEW EXHAUSTIVE SEARCH ALGORITHM FOR SMALL FASS
+A. Main Branch-&-Bound Algorithm
+Let S ⊆ {0, 1, ∗}n be a collection of strings where ∗ is the “unconstrained” symbol that is not fixed to “0” or “1.” We say
+
+that a binary string s1 = (s11, · · · , s1n) is compatible to s0 = (s01, · · · , s0n) ∈ S if s1i = s0i for all i satisfying s0i = ∗. Let Supp(s0) be the set of variable nodes corresponding to the 1’s in a string s0 ∈ S. Conversely, Inc(A) is a binary incidence vector which has 1’s in the positions for all v ∈ A and 0’s in the other positions V \A. In addition, we use A to denote
+a collection of FASs. The main branch-&-bound algorithm is
+described as follows.
+Algorithm 1 An exhaustive search algorithm for FASs.
+
+1: Input: the parity check matrix H , two integers smax, and
+
+tmax.
+
+2: Set S ← {(∗, ∗, · · · , ∗)} and set A ← ∅.
+
+3: while S = ∅ do
+
+4: Take one string s0 from S, and let S ← S\s0.
+
+5: if |Supp(s0)| ≤ smax then
+
+6:
+
+if Supp(s0) is a FAS and |OSupp(s0)| ≤ tmax then
+
+7:
+
+A ← A ∪ {Supp(s0)}.
+
+8:
+
+end if
+
+9: Compute a lower bound b such that b ≤ |A| for all
+
+A ⊆ V such that A is a FAS, |OA| ≤ tmax, and
+
+Inc(A) is compatible to s0.
+
+10:
+
+if b ≤ smax then
+
+11:
+
+Choose one unconstrained location of s0 and gen-
+
+erate two new strings s1 and s2 by setting the
+
+unconstrained location to 1 and 0, respectively.
+
+12:
+
+S ← S ∪ {s1, s2}.
+
+13:
+
+end if
+
+14: end if
+
+15: end while
+
+16: Output: A is the exhaustive list of all (s, t) FASs with
+
+s ≤ smax and t ≤ tmax.
+
+B. Bounding Step in Line 9
+We use an IP solver to find a lower bound b in Line 9. In our IP problem, the integer variables are denoted by xvi , wcj , and zcj where the subscripts vi ∈ V and cj ∈ C. For notational simplicity, we often use xi, wj, and zj as shorthand.
+
+Minimize subject to
+
+xi
+
+(1)
+
+vi ∈V
+
+xi = 2wj + zj for all cj ∈ C (2)
+
+vi∈N (cj )
+
+zj ≤
+
+dvi 2
+
+for all vi ∈ V
+
+(3)
+
+cj ∈N (vi)
+
+xi ≥ 1, and
+
+zj ≤ tmax
+
+(4)
+
+vi ∈V
+
+cj ∈C
+
+xi, zj ∈ {0, 1} for all vi ∈ V and cj ∈ C
+
+wj is a non-negative integer for all cj ∈ C.
+
+In this IP problem, xi decides whether vi is part of a FAS. (2) uses zj to capture the resulted parity of cj. (3) follows from the definition of FASs. (4) is used for eliminating the all-zero codeword and for limiting the number of the check codes of odd degree in a FAS. The objective function (1) minimizes the size of the FAS satisfying the given constraints. When a
+
+740
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:44:05 UTC from IEEE Xplore. Restrictions apply.
+
+ISIT 2010, Austin, Texas, U.S.A., June 13 - 18, 2010
+
+constraint string s0 is given, we hardwire the corresponding positions of xi to be 0 or 1 depending on the locations of 0’s and 1’s in s0. The IP program can be solved by linear programming (LP) relaxation and the branch-&-cut principle. In our implementation, we used CPLEX 10.2 [20] with the additional user-defined cuts proposed in [13] to reduce the number of branching nodes.
+It is worth noting that during the LP relaxation, there is no need to identify the optimal integer solution as we are only interested in a lower bound b as in Line 9. Therefore, any LPrelaxed minimal objective value (1) during the branch-&-cut process can be used as a lower bound b. By solving a relaxed LP problem instead of an IP problem, we avoid spending too much time on a single IP problem and the efficiency of the exhaustive search algorithm is greatly improved. In our implementation, we also define the “branch node limit.” That is, if the number of branching nodes is over the predefined node limit, we stop the branch-&-cut process of the current IP problem, use the optimized objective value of the LP relaxation as our lower bound b, and proceed to Line 11.
+
+C. Further Enhancing The Efficiency
+
+As with any branch-&-bound algorithm, the efficiency de-
+
+pends dramatically on the branching policy in Line 11. We use
+
+the following branching policy that significantly improves the
+
+efficiency of the branch-&-bound algorithm. During the LP
+
+relaxation, the values of xi are chosen from the interval [0, 1]
+
+rather than from {0, 1}. For any soft xi values found in the LP
+
+relaxation, let zj be the distance of sumj
+
+vi∈N (cj ) xi to
+
+the closest even number, i.e. zj = |sumj − 2 0.5 + 0.5sumj |.
+
+Let N (A) be vi∈A N (vi), and let B be the set of variable nodes corresponding to the unconstrained positions in s0. For
+
+each vk ∈ N (N (A)) ∩ B, compute
+
+⎛ ⎛⎛
+
+⎞
+
+⎞
+
+ξk min ⎝max ⎝⎝
+
+zj,xk=0⎠ −
+
+dvk 2
+
+, 0⎠ ,
+
+⎛⎛ cj ∈N (vk)
+
+⎞
+
+⎞⎞
+
+max ⎝⎝
+
+zj,xk=1⎠ −
+
+dvk 2
+
+, 0⎠⎠ , (5)
+
+cj ∈N (vk)
+
+where zj,xk=0 and zj,xk=1 are the zj values computed when hardwiring the xk value to 0 and 1, respectively. The larger value of ξk means that it is more likely that using xk as a branching choice is going to violate (3), which means that the IP solver can quickly refine the solution. Among all vk ∈ N (N (A)) ∩ B, we choose the one with the largest ξk as the branching position in Line 11.
+For comparison, in our implementation, if we choose the
+branch location randomly, it takes 45 hours 43 minutes to find all FASs with smax = tmax = 5 of the PEGR504 code [19]. However, it only takes 6 hours 55 minutes using the branching
+policy described in this subsection.
+
+IV. LOW ERROR-FLOOR POST-PROCESSING DECODING
+In this section, we propose new post-processing decoding using the exhaustive list of FASs obtained from the algorithm
+
+in Section III to lower the error floor under the additive white Gaussian noise (AWGN) channel. Let L(0) and L(l) denote
+the initial LLR vector of the output of the AWGN channel
+and the final LLR vector after l iterations of BP, respectively. Let Y (0) and Y (l) denote the hard decisions based on L(0) and L(l), respectively. The main idea is to generate a new
+LLR vector L based on the exhaustive list of small FASs and Y (0) and Y (l). L is then used as new initial LLR messages to
+rerun the BP decoder. The construction of L can be fine tuned by changing the values of the parameters (βth, d, α, Δα, l ). The new post-processing decoder works as follows.
+Algorithm 2 A post-processing decoding algorithm.
+1: Input: the parity check matrix H , the exhaustive list of FASs A, (L(0), L(l)), (Y (0), Y (l)), and the tuning parameters (βth, d, α, Δα, l )
+2: if |OSupp(Y | (l)) > 0 then 3: Set the binary vector U ← Y (0). 4: Run BP for 1 iteration based on L(0) and denote the
+resulting check-to-variable message as mc(1j)→vi . 5: Calculate the soft parity message mcj for all cj ∈ C
+after the 1-iteration BP decoding.
+6: For each A ∈ A, compute
+
+βA =
+
+cj ∈OA
+
+1 + 1 ( ) ( ) {cj
+
+∈O
+Supp
+
+Y (0)
+
+∩O
+Supp
+
+Y (l)
+
+}
+
+mcj ,
+
+where 1{·} is the indicator function.
+
+7: Sort A according to βA in the ascending order, that is,
+
+βA1 ≤ βA2 ≤ · · · . And set k ← 1
+
+8: while βAk < βth do
+
+9:
+
+Set the LLR vector L ← L(0).
+
+10:
+
+Seikt=+Akd−←1 OAiki=.+kd−1 Ai, E ←
+
+k+d−1 i=k
+
+EAi
+
+,
+
+and
+
+O
+
+=
+
+11: Compute the following message scaling function
+
+f (cj, vi). In the case that vi ∈ Ak+h for some1
+
+h ∈ {0, · · · , d − 1}, we set f (cj, vi) = α − hΔα
+
+if cj
+
+∈ O ∩ OSupp(U)
+
+and set f (cj, vi) =
+
+1 α−hΔα
+
+if
+
+cj ∈ E\OSupp(U). Otherwise, set f (cj, vi) = 1.
+
+12:
+
+Denote the i-th component of L by mvi . For those
+
+vi ∈ A, replace the corresponding mvi by L(0) vi +
+
+cj ∈N (vi) f (cj , vi)m(c1j)→vi .
+
+13: Using the final L vector as the initial LLR, run BP
+
+decoding for l iterations and let Y¯ be the binary
+
+decision after l iterations.
+
+14:
+
+If Y¯ is a valid codeword, then RETURN Y¯ as the
+
+final output.
+
+15:
+
+k ← k + 1.
+
+16: end while
+
+17: end if
+
+The detailed explanation of the above algorithm is as follows. Line 2 focuses only on the case that the BP decoder fails
+
+to generate a valid codeword, in which we perform postprocessing decoding. Lines 3 and 9 state that we use the initial messages as the starting points: the L and U vectors. Line 4 prepares some mc(1j)→vi values that will be used later in the
+
+1If vi is in several Ak+h’s with different h’s, then we use the smallest h for computing f (cj , vi).
+
+741
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:44:05 UTC from IEEE Xplore. Restrictions apply.
+
+ISIT 2010, Austin, Texas, U.S.A., June 13 - 18, 2010
+
+algorithm. The soft parity message in Line 5 is computed by
+
+mcj = 2 tanh−1
+
+vk∈N (cj ) tanh
+
+mvk →cj 2
+
+. In Line 6, we
+
+sum up the mcj values for cj ∈ OA. The more negative
+
+is the sum, the more likely that those odd parity cj’s are
+
+caused by errors in the given FAS. To emphasize the repeated
+
+observations from both Y (0) and Y (l), those cj ∈ OSupp(Y ∩ (0))
+
+OSupp(Y (l)) are emphasized by assigning a weight of 2 instead
+
+of 1 when computing βA. This βA is then used to sort the
+
+exhaustive FAS list A. A1, having the smallest (the most
+
+negative) βA1 , is then the most likely FAS candidate in our
+
+post-processing decoder. We then search over a sliding window
+
+of d Ai’s, from Ak to Ak+d−1. To limit the number of trials, we require βAk < βth to avoid searching over too many FASs. For each window, we use an algorithm that is modified from
+
+the increase and decrease (ID) algorithm proposed in [17].
+
+The main idea of the ID algorithm is to increase the check-
+
+to-variable (cj-to-vi) LLR that contains the correcting power (emitting from an unsatisfied check node) while decreasing
+
+the cj-to-vi LLR that emits from a mis-satisfied check node. However, without the knowledge of the exhaustive FAS list,
+
+the method in [17] has only the knowledge about which cj is unsatisfied but does not know which vi ∈ N (cj) needs a stronger correcting power. In our scheme, we take advantage
+
+of both the cj and the vi information from our exhaustive FAS
+
+list. In Line 11, our scaling factor takes into account both vi
+
+and cj by comparing it to the FAS in the exhaustive list. The
+
+scaling factor f (cj, vi) depends on h because we want to use
+
+stronger f (cj, vi) for those vi ∈ Ak+h with more negative
+
+βAk+h and use weaker f (cj, vi) for FASs with more positive
+
+βAk+h . In Line LLR values for
+
+12, we vi. Line
+
+use L(0) vi to 12 then replaces
+
+denote part of
+
+the the
+
+received L vector
+
+by the newly increased/decreased messages.
+
+Note that the proposed algorithm is based on the initial LLR L(0). One can easily extend the proposed algorithm by considering the final LLR L(l) as well. That is, we replace the Line 3 by U ← Y (l), replace Line 9 by L ← L(l),
+
+delete Line 4, and compute Lines 5 and 12 directly from the m(clj)→vi messages after l BP iterations. In our implementation, we concatenate these two algorithms (one based on L(0) and one based on L(l), respectively) in sequence, i.e., we run the L(0)-based scheme first and if it succeeds, then stop. If it does not succeed, we then continue to run the L(l)-based scheme to further lower the error floor of the original L(0)-based scheme.
+
+V. NUMERICAL RESULTS
+A. Results of The Exhaustive FAS Search Algorithm
+1) Randomly constructed regular LDPC codes: Due to the space limit, we only report results on two randomly generated regular (3, 6) LDPC codes from [19]. PEGR504 is of length 504 and is constructed by the PEG algorithm [21]. M1008 is also a regular (3, 6) LDPC code constructed by MacKay. For these two codes, our algorithm is capable of finding all small FASs when setting the search range (smax, tmax) to (6, 6) and to (5, 5), respectively. Moreover, if we use a smaller tmax = 2, we find all FASs of size ≤ 13 for PEGR504 and size ≤ 11
+
+PEGR504 PEGI504
+
+(4, 4) (6, 4) (7, 5) (9, 1) (12, 2) (3, 2) (4, 2) (4, 5) (6, 2)
+
+760 849 22430 1 26 219 208 5131 205
+
+(5, 3) (6, 6) (8, 2) (9, 3) (13, 1) (3, 3) (4, 3) (5, 2) (7, 2)
+
+14 66352
+4 146
+1 1517 3870 198 274
+
+(5, 5) (7, 3) (8, 4) (10, 2)
+
+10156 47
+2270 6
+
+(3, 4) (4, 4) (5, 3) (8, 2)
+
+380 27968 6913
+468
+
+TABLE I THE NUMBER OF (s, t) FASS FOR DIFFERENT LDPC CODES. IN EACH SUPER COLUMN, THE VECTOR IN THE FIRST SUB-COLUMN REPRESENTS THE (s, t) VALUE AND THE SECOND SUBCOLUMN CORRESPONDS TO THE
+NUMBER OF SUCH FASS.
+
+for M1008. For example, there are exactly 12 different types of FAS in PEGR504 with s + t ≤ 12 (See Table I). We can also find more FASs of larger sizes using our algorithm. For example, there are 111 (7, 3) FASs in M1008.
+Without taking advantage of special structures of the codes, our algorithm is actually computationally slower than the result in [22] when searching for small FASs with smax ≤ 5. However, our scheme can easily find much larger FASs (see Table I) for which there are no analytical search results in the existing literature. Moreover, this computational search can avoid derivation mistakes. For example, [22] finds FASs exhaustively based on counting cycles and discussing the relationship between different cycles. Some very small derivation mistakes2 in [22] lead to incorrect conclusion that the numbers of (3, 3), (4, 4), and (5, 3) FASs of M1008 are 165, 1215, and 14, while our search algorithm shows that the actual numbers2 should be 153, 1130, and 92, respectively, with additional 6 (4, 2) FASs that are previously not discovered in [22].
+2) Algebraically Constructed LDPC Codes: We also apply our exhaustive algorithm to the algebraically constructed (155, 64, 20) Tanner code (Tanner155) [23] and Margulis2640 of p = 11 and length 2640 [24]. Our algorithm exhaustively find all FASs with the search range (smax, tmax) set to (7, 7) and to (5, 5), respectively. In addition, if we use a smaller tmax = 2, we find all FASs of size ≤ 15 for Tanner155 and size ≤ 9 for Margulis2640. Our algorithm also exhaustively finds FASs of larger (s, t) values that were not reported (as a 2-out TSs) in [11]. For example, there are 930 (12, 2) FASs in Tanner155 and there is no (9, 1) FASs in Margulis2640.
+3) Irregular LDPC codes: The proposed algorithm can also be applied to irregular LDPC codes. Nonetheless, for irregular LDPC codes, there exist usually a lot of variable nodes of degree 2. By the definition of FASs, a degree-2 variable node v in a FAS must satisfy |OA(v)| < 0.5dv = 1, which implies |OA(v)| = 0. This constraint that no degree-2 variable node can be connected to an unsatisfied check node is too strong for a meaningful error-prone pattern. For irregular LDPC codes, we thus relax the definition of a FAS to |EA(v)| ≥ |OA(v)| for all v ∈ V of degree 2 and keep the original constraint |EA(v)| > |OA(v)| for all v of degree ≥ 3. We then apply our algorithm to PEGI504, a randomly constructed irregular LDPC code in [19]. Table I lists all its FASs of with s+t ≤ 8.
+2We thank Dr. S. K. Chilappagari of University of Arizona for valuable discussion.
+
+742
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:44:05 UTC from IEEE Xplore. Restrictions apply.
+
+ISIT 2010, Austin, Texas, U.S.A., June 13 - 18, 2010
+
+FER FER
+
+10-2 10-3 10-4 10-5 10-26.0
+
+2.5 3.0 Eb/No
+
+R,BP R,[7] R,New I,BP I,New
+3.5
+
+10-4 10-5 10-6 10-27.1
+
+2.2Eb/No2.3
+
+BP [8] Bi [8] G1 [8] G3 New
+2.4
+
+(a) PEGR504 and PEGI504
+
+(b) Margulis2640
+
+Fig. 1. The FER curves of the proposed decoder compared to decoders in [7], [8]. In (a), we use ‘R’ and ‘I’ as shorthand for ‘PEGR504’ and ‘PEGI504’. ‘R,BP’ is the performance of standard BP for PEGR504. ‘R, [7]’ is the performance of [7] on PEGR504. ‘R,New’ and ‘I,New’ are the results of our proposed decoder. In (b), we use ‘Bi’, ‘G1’, and ‘G3’ as shorthand for the ‘Bimode’ and the two ‘Generalized’ decoders in [8]. The results of our proposed decoder are denoted by ‘New’.
+
+B. Post-processing decoding
+In Fig. 1(a), we show the frame error rate (FER) performance of our new post-processing decoder for PEGR504 and PEGI504 over the AWGN channel. For comparison, we also plot the best existing result on PEGR504 [7]. We use l = 200 and the additional l = 20 iterations for post-processing decoding. In addition, we use Algorithm 2 with βth = 3, d = 4, α = 1.5, and Δα = 0.1. We employ all FASs obtained from smax = tmax = 7 except the (7, 7) FASs for PEGR504 and from smax = 4 and tmax = 5 for PEGRI504 as the input A. Our performance for PEGR504 is better than the best bit guessing scheme in [7]. Moreover, the proposed decoder lowers the error floor by orders of magnitude for both PEG-type LDPC codes. The performance enhancement is especially significant in the high signal-to-noise ratio (SNR) regime.
+We also apply our decoder to Margulis2640, which were also used to evaluate the performance of the three existing post-processing decoders in [8]. For this code, we use l = 50 and l = 20 iterations of BP decoding. We use βth = 3, d = 5, α = 1.5, and Δα = 0.1 in Algorithm 2. We employ all FASs of Margulis2640 with smax = tmax = 5. The performance of the proposed decoder outperforms the state-of-the-art bi-mode and generalized-LDPC decoders in [8]. It is worth mentioning that with the sorting step in Line 7 of Algorithm 2, often we do not need to go through the entire FAS list, which means that the complexity of Algorithm 2 is kept low. In our experiments, the average number of FASs used in Algorithm 2 is 13.56 at 2.3 dB for Margulis2640. Half of the time, the number of FASs used by Algorithm 2 is only 1, which shows the efficiency of the proposed decoder when compared to the results in [8].
+VI. CONCLUSIONS
+We have proposed an efficient algorithm to find all small FASs of any given LDPC code using a branch-&-bound algorithm. We have then used the resulting exhaustive list to design a new post-processing decoder that substantially lowers the error floor of any LDPC code. By taking advantage of the exhaustive FAS list, the post-processing decoder can be made very effective and results on example LDPC codes show that
+
+our approach lowers the error floor by orders of magnitude
+and outperforms the state-of-the-art post-processing decoders.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] C. Di, D. Proietti, E. Telatar, T. Richardson, and R. Urbanke, “Finite length analysis of low-density parity-check codes,” IEEE Trans. Inform. Theory, vol. 48, no. 6, pp. 1570–1579, Jun. 2002.
+[3] D. MacKay and M. Postol, “Weakness of Margulis and RamanujanMargulis low-density parity-check codes,” Electronic Notes in Theoretical Computer Science, vol. 74, 2003.
+[4] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Annu. Allerton Conf. on Commun. Contr. and Computing. Monticello, IL, Oct. 2003.
+[5] P. Vontobel and R. Koetter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” IEEE Trans. Inform. Theory, preprint-arXiv:cs.IT/0512078, to be published.
+[6] L. Dolecek, Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inform. Theory, vol. 56, no. 1, pp. 181– 201, Jan. 2010.
+[7] N. Varnica, M. P. C. Fossorier, and A. Kavcic, “Augmented belief propagation decoding of low-density parity-check codes,” IEEE Trans. Commun., vol. 55, no. 7, pp. 1308–1317, Jul. 2007.
+[8] Y. Han and W. E. Ryan, “Low-floor decoders for LDPC codes,” IEEE Trans. Commun., vol. 57, no. 6, pp. 1663–1673, Jun. 2009.
+[9] E. Cavus and B. Daneshrad, “A performance improvement and error floor avoidance technique for belief propagation decoding of LDPC codes,” in Proc. IEEE Int’l. Symp. on Pers., Indoor and Mobile Radio Comm. Berlin, Germany, Sept. 2005, pp. 2386–2390.
+[10] K. Krishnan and P. Shankar, “On the complexity of finding stopping set size in Tanner graphs,” in Proc. 40th Conf. Inform. Sciences and Systems. Princeton, NJ, Mar. 2006.
+[11] C.-C. Wang, S. R. Kulkarni, and H. V. Poor, “Finding all small errorprone substructures in LDPC codes,” IEEE Trans. Inform. Theory, vol. 55, no. 5, pp. 1976–1998, May 2009.
+[12] A. McGregor and O. Milenkovic, “On the hardness of approximating stopping and trapping sets,” IEEE Trans. Inform. Theory, vol. 56, no. 4, pp. 1640–1650, Apr. 2010.
+[13] A. Keha and T. M. Duman, “Minimum distance computation of LDPC codes using a branch and cut algorithm,” IEEE Trans. Commun., vol. 58, no. 4, pp. 1072–1079, Apr. 2010.
+[14] E. Rosnes and Ø. Ytrehus, “An efficient algorithm to find all small-size stopping sets of low-density parity-check matrices,” IEEE Trans. Inform. Theory, vol. 55, no. 9, pp. 4167–4178, Sept. 2009.
+[15] S. La¨ndner and O. Milenkovic, “Algorithmic and combinatorial analysis of trapping sets in structured LDPC codes,” in Proc. 2005 Int’l. Conf. Wireless Networks, Commun., Mobile Comp., Jun. 2005, pp. 630–635.
+[16] H. Pishro-Nik and F. Fekri, “Improved decoding algorithms for lowdensity parity-check codes,” in Proc. 3rd Int’l. Symp. Turbo Codes and Related Topics. Brest, France, Aug. 2003.
+[17] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright, “Lowering LDPC error floors by postprocessing,” in Proc. IEEE Glob. Telecom. Conf. Cannes, France, Dec. 2008, pp. 1–6.
+[18] X. Y. Hu, M. P. C. Fossorier, and E. Eleftheriou, “On the computation of the minimum distance of low-density parity-check codes,” in Proc. IEEE Int’l. Conf. on Commun. Paris, France, Jun. 2004, pp. 767–771.
+[19] D. J. C. MacKay, “Encyclopedia of spase graph codes,” [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+[20] ILOG CPLEX 10.2 User’s Manual. Sunnyvale, CA: ILOG SA, 2007. [21] X. Hu, M. Fossorier, and E. Eleftheriou, “Regular and irregular progres-
+sive edge-growth Tanner graph,” IEEE Trans. Inform. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005. [22] S. K. Chilappagari, S. Sankaranarayanan, and B. Vasic, “Error floors of LDPC codes on the binary symmetric channel,” in Proc. IEEE Int’l. Conf. on Commun. Istanbul, Turkey, Jun. 2006, pp. 1089–1094. [23] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, and D. Costello, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inform. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004. [24] G. A. Margulis, “Explicit constructions of graphs without short cycles,” Combinatorica, vol. 2, no. 1, pp. 71–78, 1982.
+
+743
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:44:05 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1453 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+415
+
+Processing-Task Arrangement for a Low-Complexity Full-Mode WiMAX LDPC Codec
+Yu-Luen Wang, Yeong-Luh Ueng, Member, IEEE, Chien-Lien Peng, and Chung-Jay Yang
+
+Abstract—In this paper, we propose dividing the decoding operations of a variety of irregular quasi-cyclic (QC) low-density paritycheck (LDPC) codes into several smaller tasks. An algorithm is devised in order to arrange these tasks in a similar form such that a highly reusable multimode architecture can be designed to process these tasks. For this task-based decoder, the associated memory access can be accomplished with the help of the proposed address generators. Using this approach, the difficulty of designing a lowcomplexity multimode decoder, which is capable of supporting a variety of irregular QC-LDPC codes, can be overcome. Layered encoding that enables the routing networks and memory for decoding to be reused for the encoding is also proposed. Using these techniques, a multimode codec which can support all 114 WiMAX LDPC codes is designed and implemented in a 90-nm process. The full-mode WiMAX codec achieves a moderate encoding (decoding) throughput of 800 Mb/s (200 Mb/s) and occupies an area of only 0.679 mm2.
+Index Terms—Channel coding, decoder, early termination, encoder, low-density parity-check (LDPC) codes, WiMAX.
+I. INTRODUCTION
+L OW-DENSITY PARITY-CHECK (LDPC) codes [1], [2] are appealing as a result of their powerful error correction capability and have been included in many standards, such as WiMAX [3]. LDPC codes have the potential for highly parallel decoder implementation, and many high-throughput LDPC decoders were reported in [4]–[6]. For a channel decoder used in mobile communications, the ability to support various levels of correction capabilities and code rates is a mandatory requirement. However, in the WiMAX standard, LDPC codes with various code rates are individually specified using different parity-check matrices (PCMs), which are arrays of weight-1 and weight-0 circulant matrices, where is defined as the expansion factor. In the WiMAX standard, there are 19 different expansion factors ranging from 24 to 96, six code classes, and a total of 114 LDPC codes. Consequently, designing a full-mode low-complexity architecture for WiMAX applications is a challenge [7]–[12]. On the other hand, efficient implementation of
+Manuscript received May 19, 2010; revised August 11, 2010; accepted August 13, 2010. Date of publication October 11, 2010; date of current version January 28, 2011. This paper was recommended by Associate Editor Antonio Strollo.
+Y.-L. Wang was with the Department of Electrical Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan, R.O.C.. He is now with ZyFLEX Technologies Incorporation, Science Park, Hsinchu 30075, Taiwan, R.O.C. (e-mail: d9561620@oz.nthu.tw).
+Y.-L. Ueng is with the Department of Electrical Engineering and the Institute of Communications Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan, R.O.C. (e-mail: ylueng@ee.nthu.edu.tw).
+C.-L. Peng and C.-J. Yang are with the Department of Electrical Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan, R.O.C. (e-mail: kfsh70126@hotmail.com; r91942083@ntu.eud.tw).
+Digital Object Identifier 10.1109/TCSI.2010.2071910
+
+a multimode LDPC encoder is also a challenge. To reduce the computational complexity, PCMs with a lower triangular form were developed [13], [14]. Furthermore, LDPC codes with a dual-diagonal structure are widely adopted, such as those in the WiMAX standard. In [15] and [16], the dual-diagonal structure in the PCM is used for efficient low-complexity encoding.
+When designing an efficient multimode decoder, we must first find the similarity among different modes and then implement the common parts as reusable hardware components. Flexibility can be achieved by controlling the data flow through these reusable components. Since it is difficult to design a flexible architecture such that most hardware resources can be reused in different modes using a fully parallel architecture, a memorybased partially parallel architecture is widely adopted in multimode LDPC decoder designs [7]–[11].
+A partially parallel architecture can be combined with layered message-passing decoding (LMPD) [17], [18], or LMPD using an identical core matrix (LMPD-ICM) [19], [20] in order to increase the throughput by increasing the convergence speed in bit-error-rate (BER) performance. In LMPD or LMPD-ICM, the PCM is partitioned into several layers, and the decoding operations are partitioned accordingly such that LDPC codes can be decoded layer by layer. When applying LMPD to the QC-LDPC codes in WiMAX, the message (data) processing in the decoder can be circulant-based [7]. In other words, the messages associated with a circulant matrix are processed as a whole, and the entire decoding operation can be accomplished by sequentially processing messages associated with different circulant matrices. Flexibility can be achieved if the decoder can handle circulant matrices which are different in both size and shift index. The associated memory access can be accomplished using variable-length cyclic shifters, which can then provide an arbitrary cyclic shift. The circulant-based layered decoder architecture is efficient when a single code length (or equivalently circulant size) is supported, and can achieve high throughput when a high level of decoding parallelism is adopted. However, when using the circulant-based architecture to implement low-parallelism decoders, there are difficulties in realizing efficient memory access, since the shift indices are irregular and the step size of the expansion factors (circulant matrices) is only four for WiMAX LDPC codes.
+When applying the LMPD-ICM presented in [19], [20] to a QC-LDPC code, the resultant layers have properties where the core matrices, which consist of nonzero columns in each layer, are column-permuted versions of each other. Due to the similarity of the core matrices, not only among different layers in a single code, but also among different codes in the same WiMAX code class, the hardware can be fully utilized despite the variation of the code length in the same code class [20]. Hence, an advantage of LMPD-ICM is that variable-length flexible cyclic shifters can be avoided. Register-based single-rate WiMAX
+
+1549-8328/$26.00 © 2010 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+416
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+LDPC decoders using LMPD-ICM were reported in [20], [21]. However, designing a low-complexity memory-based multirate WiMAX decoder using LMPD-ICM remains a challenge, since different code classes have different classes of PCMs and, hence, core matrices. In addition, complex address generation is required in order to access the messages stored in the distributed memory blocks [12].
+In this paper, a task-arrangement algorithm is proposed in order to divide the decoding operations associated with each LMPD-ICM layer (core matrix) into several smaller and similar tasks. The difficulty in accommodating different core matrices for different QC-LDPC codes can be overcome, since the difference in decoding different codes can be minimized after arranging the decoding operations into similar tasks. Consequently, a multimode decoder can be realized by designing a task processor which is capable of sequentially handling these tasks. With the help of the proposed address generators and routing networks with fixed interconnections, we can accomplish the associated memory access of the required messages for the task processor in order to accomplish the desired decoding operations. Using these techniques, a full-mode WiMAX decoder that supports all 114 LDPC codes was designed. The complexity of this decoder is low, since the task size is very small and each module in the decoder is highly reusable. In addition, we reveal that for QC-LDPC codes with a dual-diagonal structure, such as WiMAX codes, the encoding can be accomplished through task-based layered encoding. Early termination, which can share hardware resources with the encoder, is also proposed in order to reduce energy consumption with a minimal increase in complexity. The proposed full-mode codec, which is implemented in a 90-nm process, achieves an encoding (decoding) throughput of 800 Mbps (200 Mbps) and occupies an area of 0.679 mm . If the early termination function is enabled, the power consumption is 57.8 mW.
+The remainder of this paper is organized as follows: In Section II, the QC-LDPC codes, the LMPD, and the LMPD-ICM are reviewed. In Section III, the task-arrangement algorithm and the memory-access method are introduced. In Section IV, the design for a low-complexity full-mode task-based LDPC codec with early termination for WiMAX applications is discussed. Implementation results are also included. Finally, conclusions are made in Section V.
+
+Fig. 1. Example for QC-LDPC codes. (a) Prototype matrix. (b) PCM.
+
+partite graph consisting of variable nodes and check nodes. If
+
+we let denote the check-to-variable (C2V) message from
+
+check node to variable node produced at the th iteration,
+
+and, similarly, let denote the variable-to-check (V2C) mes-
+
+sage from variable node to check node produced at the th
+
+iteration, LMPD using the offset min-sum algorithm (OMSA)
+
+presented in [23] can be performed by dividing the check nodes
+
+(or, equivalently, the rows of the PCM) into groups (layers),
+
+where the size of each group is check nodes (rows), and
+
+where
+
+. First, the C2V messages are initial-
+
+ized at zero for all and all
+
+values, where
+
+denotes the index set of the variable nodes connected to the
+
+check node . Then, check-node and variable-node operations
+
+for
+
+, are performed sequentially
+
+to complete a single iteration. The extrinsic values are then ex-
+
+changed among the layers. At the th iteration, the operations
+
+performed at the variable and check nodes for layer are de-
+
+scribed as follows:
+
+Operations at Variable Nodes for Layer : For each variable
+
+node associated with check nodes in layer , i.e.,
+
+, compute messages corresponding to each
+
+of its check node neighbors according to
+
+II. PRELIMINARIES
+
+(1)
+
+A. Parity-Check Matrix (PCM) for QC-LDPC Codes
+
+The PCM for the QC-LDPC code considered in this paper
+
+can be written as an array of circulant matrices. The PCM
+
+is constructed by respectively substituting each-1 and each non-
+
+negative integer in an
+
+prototype matrix with a
+
+zero matrix and a
+
+weight-1 circulant matrix with a
+
+shift index , which can be obtained by cyclically shifting the
+
+identity matrix to the right by positions. Consequently,
+
+for the PCM, the dimensions are
+
+, and there are
+
+block rows and block columns. Fig. 1(a) and 1(b), respec-
+
+tively, show an example of the prototype matrix and the corre-
+
+sponding bit-wise PCM where ,
+
+, and
+
+.
+
+B. Layered Message Passing Decoding (LMPD)
+An LDPC code can be decoded using message-passing decoding (MPD) through its Tanner graph [22], which is a bi-
+
+where is the channel (reliability) value of variable node ,
+
+and
+
+denotes the index set of check nodes connected to
+
+variable node .
+
+Operations at Check Nodes for Layer : For each check node
+
+in layer , compute corresponding to each of its variable
+
+node neighbors according to
+
+(2)
+
+where is a positive constant, and (3)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+417
+
+At the end of the th iteration, the APP (a posteriori probability) value of the th bit (variable node) is
+(4)
+
+whose hard decision is an estimate of the th code bit. By substituting (4) into (1), we have
+(5)
+
+If we let be written as
+
+, (5) can (6)
+
+H = 0 Fig. 2. Matrices related to LMPD-ICM. (a) Matrices , ` , 1, 2. (b) core H H matrix ; (c) base matrix .
+
+We will now describe a form of LMPD that is usually used in hardware implementation. The variable-node operations and check-node operations for layer are performed according to (6) and (2), (3), respectively. At the end of the processing of the
+th layer for the th iteration, values are updated according to
+
+H H Fig. 3. Core matrices and their associated APP values. (a) . (b) .
+
+(7) be concluded that the number of 1 s in any core matrix is equal to the number of nonnegative entries in .
+
+III. TASK ARRANGEMENT FOR LMPD-ICM
+
+If variable node connects to only one check node in layer ,
+
+then (7) can be simplified as
+
+A. Memory-Based Decoders Using LMPD-ICM
+
+(8)
+Similarly, if variable node connects to only two check nodes and in layer , then (7) can be written as
+(9)
+
+C. LMPD Using an Identical Core Matrix (LMPD-ICM)
+
+Instead of the layer partition method presented in [17], [18],
+
+the PCM of a QC-LDPC code can be partitioned according
+
+to the proposal presented in [20]. In [20], the rows of are di-
+
+vided into layers, in which the th layer, denoted as , con-
+
+sists of the
+
+rows in
+
+for
+
+. It is apparent that each block row contributes
+
+one row to a single layer. The nonzero columns of form the
+
+core matrix for layer which can then be used as a PCM
+
+for a shorter code whose code bits come from those of . It is
+
+worth noting that performing decoding based on is equiv-
+
+alent to performing decoding based on if the related bits
+
+are chosen from . It has been demonstrated in [20] that these
+
+core matrices ,
+
+, are column-permutated versions
+
+of each other. Consequently, LMPD based on this kind of layer
+
+definition is called LMPD-ICM. Fig. 2(a) and 2(b), respectively,
+
+show the matrices , , 1, 2, and for the PCM given in
+
+Fig. 1(b). Fig. 2(c) shows the base matrix of the PCM which
+
+is obtained by replacing each nonnegative element in with 1
+
+and replacing the negative elements with 0. Since any value of 1
+
+in represents a nonzero circulant matrix in the PCM, it can
+
+Using the LMPD-ICM, we can design a single-rate register-
+
+based WiMAX decoder with a high hardware utilization effi-
+
+ciency [20], [21]. In the LMPD-ICM-based decoder presented
+
+in [12], the APP values are stored in a memory bank com-
+
+pared to the register-based storage used in [20], [21] in order
+
+to achieve a smaller area. The APP memory bank consists of
+
+memory blocks, where each memory block is used to store
+
+the APP values corresponding to a block column in the PCM.
+
+For the PCM shown in Fig. 1, the associated APP memory bank
+
+consists of nine APP memory blocks and each memory block
+
+consists of three words, as shown in Fig. 3(a). The association
+
+between the stored APP values and 1 s in the core matrix is
+
+also shown in Fig. 3(a), where the APP values associated with
+
+one 1 and two 1 s in the core matrix are, respectively, marked
+
+in gray and in black. An APP value marked in black denotes
+
+that the associated variable node connects to two check nodes
+
+in the same layer (core matrix). Fig. 3(b) shows the association
+
+for the core matrix . It can be seen from Figs. 2(c) and 3
+
+that for either or , the number of 1 s associated with the
+
+same APP memory block is equal to the column weight of the
+
+corresponding column in the base matrix . In addition, the
+
+memory positions of the APP values associated with
+
+can be obtained by cyclically shifting those memory positions
+
+corresponding to
+
+downward by one position. This
+
+implies that we can use counters to generate the addresses of
+
+the APP values associated with ,
+
+, from the
+
+addresses for .
+
+Suppose that the maximum column weight of the considered
+
+PCM is four. Fig. 4(a) shows a decoding schedule for the PCM
+
+using LMPD-ICM. It can be seen that it takes four cycles to read
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+418
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+matrix (layer) into smaller tasks which can be sequentially processed using a schedule similar to that given in Fig. 4(b).
+
+B. Task Arrangement Concept
+
+Fig. 5 shows how the decoding operations associated with
+
+the core matrix given in Fig. 3(a) can be divided into four
+
+tasks. As shown in Fig. 5(a), the matrix is partitioned into
+
+two submatrices (sublayers) (sublayer 0) and (sublayer
+
+1), where and consist of the first two rows and the last
+
+two rows of , respectively. Sublayer 0 is decomposed
+
+into two matrices and , where
+
+, and
+
+each row in and has a weight of 2. Sublayer 1 can be
+
+further decomposed in a similar manner, as shown in Fig. 5(d).
+
+If we let the decoding operations associated with those in
+
+Fig. 4. Decoding schedules for memory-based decoders using LMPD-ICM. (a) be performed in Task , where
+
+, 1 and
+
+, 1, we
+
+Original schedule [12]. (b) proposed task-based schedule.
+
+can accomplish the decoding operations associated with core
+
+matrix by sequentially executing Tasks , , , and
+
+all of the APP values associated with the same core matrix from the memory bank, since each memory block can be accessed only once in a single cycle. After being read, all the APP values related to a single core matrix are permutated by a routing network and then processed by the check-node units (CNUs) and variable-node units (VNUs). After these APP values are updated and permutated, they can be written back to the APP memory bank in four cycles. In this architecture, an enormous number of buffers are required for storing the read APP values before they can be processed. In addition, the processing latency for each APP value, i.e., the time difference between when it is read and when it is written back, is quite large, which results in a large number of data hazards. Since different prototype matrices are adopted in different code classes, the memory read/write and core-matrix-based permutation procedures for different classes differ significantly and, hence, the complexity of the control logic increases proportionally to the number of code classes supported by the decoder. In addition, since there are different numbers of check nodes contained in a single layer for different code classes, it is also difficult to efficiently reuse the CNUs in different modes. Consequently, it is difficult to design an efficient multirate WiMAX decoder using the LMPD-ICM.
+If we are able to divide the operations associated with a single core matrix into four smaller tasks, and access the APP values associated with the same task simultaneously, we can permute, and then process, a task directly after it is read from the memory, as per the decoding schedule shown in Fig. 4(b). In this task-based schedule, we do not need to perform the
+
+. In addition, all the associated APP values for each task can
+
+be accessed from the memory bank for each task within a single
+
+cycle, as shown in Fig. 5(c) and 5(d), where each related APP
+
+value is marked in gray. Finally, only two CNUs, where each
+
+CNU is capable of dealing with two V2C messages, are needed
+
+to perform the operations associated with an individual task.
+
+It is worth remembering that each 1 in each core matrix is re-
+
+lated to a nonnegative element in the prototype matrix. Fig. 5(b)
+
+shows the prototype matrix, which is the same as that shown in
+
+Fig. 1(a) except that the negative elements in are ignored
+
+and each nonnegative element is labeled with the associated
+
+row index and column index of . Based on the arrange-
+
+ment of the four tasks , , , and , the nonnegative
+
+elements in the prototype matrix can accordingly be divided into
+
+four groups, as shown in Fig. 5(c) and 5(d), where each group is
+
+represented by a 2 2 array called the prototype task. It can
+
+be seen that for each prototype task, each element in the same
+
+row come from the same row in the original prototype matrix.
+
+Once we have the four prototype tasks, we can form the four
+
+tasks for each of the three layers as shown in Fig. 5, where Task
+
+for the th layer is denoted as . Each element in these
+
+tasks is denoted as
+
+, where is the index of the asso-
+
+ciated APP memory block, and is the address at which the
+
+APP value is stored. The task
+
+can be obtained by copying
+
+the prototype task , discarding , and computing the address
+
+according to
+
+. That is, we can accom-
+
+plish task arrangement for different layers using the prototype
+
+tasks.
+
+check-node and variable-node operations after all the APP values in the same core matrix (layer) are read. Consequently, C. Algorithm for Task Arrangement
+
+the number of buffers required at the output of the APP memory We now consider how to determine prototype tasks. The ar-
+
+bank can be reduced. In addition, in a multimode decoder, the rangement of prototype tasks is difficult due to the hardware
+
+permutation networks are task-based and easily reconfigured limitations described below. Since the APP values associated
+
+for different code rates since each task is similar. Compared with a task are accessed simultaneously, and a memory block
+
+to the decoding schedule shown in Fig. 4(a), the throughput can only be accessed once in a single cycle, at most, only one
+
+of this task-based decoder remains the same, while the pro- APP value from a single memory block can be involved in a
+
+cessing latency for each APP value is smaller. In addition, we single task. However, since some columns in a base matrix have
+
+can arrange the decoding operations for a variety of irregular a column weight of more than one, we must distribute the non-
+
+QC-LDPC codes into several similar tasks such that these tasks negative elements belonging to the same column of the proto-
+
+can be processed in a highly reusable task processor and, hence, type matrix across distinct tasks. In other words, each element
+
+a higher mode compatibility can be achieved. In the following in a task must come from distinct columns of the prototype ma-
+
+subsections, we will present details of how to divide the de- trix. In addition, the size of each prototype task should be the
+
+coding operations associated with a single LMPD-ICM core same, since we want to process all tasks in a unified processor.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+419
+
+We now propose an algorithm that can be used to arrange
+
+the prototype tasks under these hardware constraints. First, we
+
+should decide the task size based on the desired throughput
+
+and complexity. In general, we need to partition a layer into
+
+several sublayers. Accordingly, the prototype matrix is
+
+divided into several
+
+submatrices . Then, the
+
+nonnegative elements in matrix are divided into tasks,
+
+respectively denoted as
+
+, where each task can
+
+be represented by an
+
+array. Similarly, the base matrix
+
+is divided into several
+
+submatrices , where
+
+the maximum column weight of cannot be larger than the
+
+value of . In addition, let
+
+be an
+
+binary
+
+matrix, i.e.,
+
+, where
+
+if and only if
+
+two nonnegative elements
+
+and
+
+in the
+
+th column of satisfy
+
+. It is worth mentioning
+
+that
+
+,
+
+, and
+
+.
+
+The two nonnegative elements
+
+and
+
+are called a collision pair. A collision pair indicates that
+
+two check nodes in a single sublayer acquire the same APP
+
+value and update this APP value in parallel, according to
+
+(9). Consequently, collision pairs will result in data hazards
+
+(type-III hazards), which will be discussed in Section IV-E.
+
+In the following task-arrangement procedure, we will assign
+
+the two associated elements of each collision pair to two
+
+adjacent tasks such that the associated data hazard can be
+
+handled at the expense of a minimal increase in complexity.
+
+Fig. 7(a) shows , , and for sublayer 0 in the ex-
+
+ample given in Fig. 5. In addition, let denote a set which con-
+
+tains the indices of the APP memory blocks which have been in-
+
+volved in the th task,
+
+, and let denote a counter
+
+which indicates the number of APP values that have been as-
+
+signed to the th row of the th task, where
+
+, and
+
+. The task-arrangement algorithm is described as
+
+follows:
+
+Step 1) [Initialization] Set
+
+and
+
+,
+
+,
+
+, where is the null set.
+
+Step 2) Find a collision pair
+
+and
+
+respec-
+
+tively from the th row and the th row of .
+
+Note that the corresponding elements and
+
+in are 1.
+
+Step 3) Find two consecutive tasks and ,
+
+, where
+
+and
+
+. Assign the
+
+collision pair
+
+and
+
+of to the
+
+Step 7) Randomly choose a task denoted as from those
+
+obtained in Step 6 with the smallest .
+
+Step 8) Assign
+
+to the th row of . Set
+
+and increase by 1. Set the element at
+
+the th row and th column of to 0.
+
+Step 9) If is a zero matrix, the task arrangement is fin-
+
+ished. Otherwise, go to Step 5.
+
+Applying the task-arrangement algorithm to the first subpro-
+
+totype matrix in Fig. 5, the results at the end of Steps 1, 4, and
+
+9 are shown in Fig. 7(a), (b), and (c), respectively. The other
+
+prototype tasks for sublayer 1 can be arranged similarly. Con-
+
+sequently, we can obtain a total of four prototype tasks, which
+
+are given in Fig. 6 for the QC-LDPC code given in Fig. 1. The
+
+tasks for each layer can then be derived from the prototype tasks
+
+as shown in Fig. 6.
+
+In Section IV, we will apply the task-arrangement algorithm
+
+to the WiMAX LDPC codes. Besides the WiMAX codes, the al-
+
+gorithm can also be applied to other kinds of QC-LDPC codes
+
+if the following criteria are satisfied: 1) the value of
+
+is
+
+not less than the maximum row weight of the PCM and 2) the
+
+maximum column weight of each matrix cannot be larger
+
+than the value of . Note that not only a single collision pair, but
+
+also multiple distinct collision pairs in a single column of the sub-
+
+prototype matrix, can be arranged according to Steps 2, 3, and 4,
+
+although the example given in Fig. 7 only demonstrates the case
+
+of a single collision pair. Finally, if more than two nonnegative
+
+elements in a single column of the subprototype matrix have the
+
+same shift index, these elements will also result in a collision. By
+
+appropriately modifying Steps 2, 3, and 4, these elements can also
+
+be handled, since the second criterion ensures that the number of
+
+tasks required for arranging these elements is enough.
+
+D. APP Memory Access
+We now introduce the concept of address generators for the APP memory blocks in the proposed task-based decoder. With the help of address generators, the APP values required for task processing can be accessed easily and regularly. Fig. 8(a) shows how to access APP values stored in the nine memory blocks for the PCM given in Fig. 1(b). It can be seen that each APP memory block is controlled by a 4-stage shifter register, which is called an address generator. Since the decoding operations associated with a single layer is divided into four tasks, each address generator contains four stages, which are, respectively, denoted as ST0, ST1, ST2, and ST3, where the output of ST3 is used to
+
+the th row of Task and th row of Task , control the associated APP memory block. Initially, we should
+
+respectively. Then set
+
+,
+
+, and increase both and
+
+by
+
+one. Set the element at the th row and th column
+
+of , i.e., ( , ) entry of , to 0. Similarly, set
+
+the ( , ) entry of to 0. Accordingly, set the
+
+corresponding entries of to 0.
+
+Step 4) If is a zero matrix, go to Step 5, otherwise go to
+
+Step 2.
+
+Step 5) Randomly chose a column denoted as with the
+
+maximum column weight of .
+
+Step 6) Randomly choose a nonnegative element from the
+
+th column of . Suppose that the chosen ele-
+
+ment is
+
+, which is at the th row of ,
+
+then find tasks with
+
+,
+
+.
+
+load the addresses for the first layer. For example, the necessary
+
+addresses for the first task of the first layer, i.e.,
+
+, are 1,
+
+2, 1, and 0 at the 0th, 1st, 2nd, and 6th memory blocks, respec-
+
+tively. Consequently, these addresses are respectively stored in
+
+ST3 of the 0th, 1st, 2nd, and 6th address generators. The ad-
+
+dresses for Tasks
+
+are also initially stored
+
+in ST2, ST1, and ST0 of the corresponding address generators,
+
+respectively. Thus, we can access the APP values for the first
+
+layer by shifting the registers right task by task.
+
+It has been demonstrated in Fig. 6 that the first task of the
+
+second layer, i.e.,
+
+, has a simple relationship with
+
+.
+
+This means that the associated APP memory blocks for
+
+and
+
+are the same, and any address of an APP value in
+
+can be calculated according to
+
+, if is an
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+420
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+Fig. 5. An example of task arrangement. (a) A core matrix and the two associated sublayers. (b) A prototype matrix and the two associated subprototype matrices. (c) Decompose sublayer 0 into two tasks, and the corresponding two prototype tasks. (d) Decompose sublayer 1 into two tasks, and the corresponding two prototype tasks.
+
+Fig. 6. Illustration of task arrangement for each layer using prototype tasks.
+
+Fig. 7. Arrangement of prototype tasks for sublayer 0. (a) Initialization. (b) Arrangement of a collision pair. (c) Final results.
+
+address in
+
+. So in the address generators, the outputs of
+
+ST3 are also fed back to ST0 through a functional unit denoted seen that only the prototype tasks need to be stored in a ROM
+
+as
+
+, in order to obtain the addresses for the next table in order to initialize the address generators.
+
+layer. The behavior of address generators is conceptually shown Since the number of elements in a task array is 4, the routing
+
+in Fig. 8(b). During the first four clock cycles, the APP addresses network includes four multiplexors. In addition, each multi-
+
+required for four tasks of Layer 0 are sequentially generated by plexor is 4-to-1, since the decoding operations associated with
+
+the address generators. When the addresses for task
+
+are at one layer is divided into four tasks and hence each multiplexor
+
+the outputs of ST3, they will be fed back to ST0 through the
+
+has four possible input APP values. In addition, each core matrix
+
+module and become addresses for
+
+, which will (layer) can use the same routing network whose complexity
+
+arrive at ST3 four clock cycles later when Layer 1 is processed. is determined by the prototype tasks.
+
+At the end of an iteration, the addresses for task
+
+will also The proposed memory access is suitable for multimode de-
+
+be fed back to ST0 and then become addresses for
+
+, and coders and is very effective for multimode applications such
+
+the next iteration can be processed. From the above, it can be as WiMAX. If we use dedicated address generators for each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+421
+
+5 Fig. 8. (a) Address generators and routing network . (b) Behavior of address generators.
+
+= 24 Fig. 9. Prototype matrix and prototype tasks for the rate-5/6 WiMAX LDPC code when z
+
+. (a) Prototype matrix. (b) Prototype tasks.
+
+mode, the memory access will be very complex for multimode 19 different codes and there are
+
+QC-LDPC
+
+decoders, and the complexity increases linearly with the number codes specified in WiMAX. In a manner similar to the example
+
+of modes. Using the proposed architecture, we simply need to given in Fig. 1, the PCM of each QC-LDPC code in WiMAX
+
+enlarge the ROM table to store the associated information about can be obtained through the associated prototype matrix. For
+
+the prototype tasks for all supported modes. Although a total of a rate- LDPC code, the dimensions of the prototype matrix
+
+114 codes are supported by WiMAX, only six prototype ma- and the PCM are
+
+and
+
+,
+
+trices need to be stored in the ROM table, which will be demon- respectively, and there are 24 block columns and
+
+strated in Section IV.
+
+block rows in the PCM. We now use the rate-5/6 code class
+
+to illustrate how to obtain prototype matrices for the other
+
+IV. A LOW-COMPLEXITY FULL-MODE WiMAX CODEC
+
+codes in the same class. The prototype matrices for other rate-5/6 codes are the same as that of the rate-5/6 code where
+
+A. Review of QC-LDPC Codes in WiMAX
+
+, except that the nonnegative element at the th row
+
+and th column, i.e.,
+
+, is calculated according to
+
+In WiMAX, there are six code classes, respectively denoted
+
+, where
+
+is
+
+as 1/2, 2/3A, 2/3B, 3/4A, 3/4B, and 5/6. Codes in the same the nonnegative element at the th row and th column in
+
+class have the same code rate, but with different code lengths the prototype matrix of the rate-5/6 code where
+
+. For
+
+(or equivalently expansion factor ), where the value of can example, we can obtain the rate-5/6 prototype matrix when
+
+be 24, 28, , 96. Consequently, each code class consists of
+
+, as shown in Fig. 9(a).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+422
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+Fig. 10. The relationship between the layer, sublayer, task and processing sequences for different code classes.
+
+TABLE I PARAMETERS FOR DIFFERENT CODE CLASSES
+
+sequence of
+
+, as shown in Fig. 10,
+
+where ,
+
+, denotes the th task. of the th layer
+
+is followed by of the
+
+th layer. To complete a single
+
+iteration for a rate-5/6 code with an expansion factor , we need
+
+to process tasks, which takes cycles if a pipeline architec-
+
+ture is adopted.
+
+C. An Overview of the Unified Architecture (Task Processor)
+
+The proposed task-based decoder architecture for the rate-5/6
+
+code class is illustrated in Fig. 11. The Address ROM is used to
+
+B. Parameters Related to Task Arrangement
+
+For an efficient full-mode WiMAX decoder, it is desired that
+
+all tasks derived from the 114 LDPC codes are similar, and each
+
+of the tasks can be processed in a unified processor called a task
+
+processor. In order to accommodate all six WiMAX LDPC code
+
+classes in the decoder, the size of the prototype tasks, which can
+
+be represented by
+
+arrays, must be determined be-
+
+forehand. First, the number of check nodes involved in a task,
+
+i.e., , is determined. Since a value of 4 divides the number
+
+of check nodes in a layer (core matrix) given in Table I for most
+
+code classes, we chose
+
+and implement four CNUs in
+
+the task processor. Under this constraint, a layer should be parti-
+
+tioned into several sublayers in the rate-1/2, 2/3, and 3/4 classes,
+
+as shown in Fig. 10. Next, the parameter , which is also the
+
+number of V2C messages that should be handled by a CNU,
+
+is determined. Under the constraint of four CNUs, the value of
+
+chosen is 4 in order to achieve the desired throughput and
+
+to balance the hardware utilization efficiency among different
+
+code classes. Fig. 9(b) shows the five prototype tasks determined
+
+by the task-arrangement algorithm for the rate-5/6 code when
+
+, where and in
+
+of each 4 4 task array
+
+denotes the shift index and the associated column index of the
+
+original prototype matrix (or the APP memory block), respec-
+
+tively. Fig. 10 shows the task arrangement for each code class
+
+store the prototype matrix (or, equivalently, the prototype tasks)
+
+for
+
+. The Index Calculators in the address generators are
+
+used to calculate the nonnegative elements (shift indices) from
+
+the prototype matrix, where
+
+. To initialize the address
+
+generators, the addresses for the first layer are loaded from the
+
+outputs of the Index Calculators into the five stages ST0, ST1,
+
+, ST4 of the registers, in a manner similar to the example
+
+shown in Fig. 8. For WiMAX LDPC codes belonging to the
+
+same class, the core matrices are almost the same. Consequently,
+
+by changing the parameter , the address generators can support
+
+all codes in the rate-5/6 class. In addition, the 19 codes in the
+
+same class can share the same routing network .
+
+When a task is about to be processed, the associated APP
+
+values
+
+are read from the APP memory bank with the help
+
+of the address generators. The routing network then permu-
+
+tates the APP values into a task form, and feeds them into the
+
+four VNUs. The 16 V2C messages are calculated in the
+
+VNUs after reading the associated 16 C2V messages
+
+from the C2V memory bank. The magnitudes of these V2C
+
+messages are compared in the four four-input CNUs. Since a
+
+layer is divided into five tasks, i.e.,
+
+, the CNUs recur-
+
+sively compare the magnitudes of V2C messages until the two
+
+smallest values associated with each row are found. The C2V
+
+messages calculated in the CNUs are used to update the
+
+based on the task size of 4 4. In addition, several parameters APP values . Then, the C2V messages are written back
+
+related to task arrangement are summarized in Table I.
+
+to the C2V memory bank in a compressed form [24]. Finally, the
+
+The proposed multimode decoder is designed to be able to updated APP values are written back to the APP memory bank
+
+sequentially process different task sequences. For example, pro- through the routing network . Since a pipeline latency
+
+cessing the tasks for the th layer of rate-5/6 codes follows the of 12 clock cycles exists in the VNUs and CNUs, the number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+423
+
+Fig. 11. The block diagram for the proposed codec architecture, where the number of messages is labeled on the buses.
+
+of write addresses must be fewer than the number of read ad-
+
+dresses by 12 cycles. A 12-cycle delayed address can be ob-
+
+tained by choosing the address stored in ST1 of the address
+
+generator and performing a
+
+calculation, which
+
+is also shown in Fig. 11. The subtrahend 3 is determined ac-
+
+cording to
+
+. The stage index, which is 1
+
+in this case, is determined according to
+
+.
+
+Since LMPD-ICM partitions the PCMs of WiMAX codes in
+
+the same class into core matrices which are equal in size no
+
+matter how long the code length is, the hardware resources can
+
+be fully utilized for all 19 codes in the same class. The effect of different expansion factors is on the number of layers or Fig. 12. Architecture for a multirate address generator.
+
+the number of tasks needed to be processed in a single iteration. Consequently, the decoding latency varies with , while the decoding throughput is almost independent of .
+
+Instead of using the efficient algorithms presented in [25], we adopt a two-stage sorting architecture in the CNUs which can be highly reused among different code classes. Fig. 13(a) shows
+
+the proposed two-stage sorting architecture. In the first stage,
+
+D. Multirate Functionality in Address Generators and CNUs the four V2C messages
+
+are sent to a 4-input compare
+
+In order to support the multirate functionality, the address generators can be modified as shown in Fig. 12, where the number of stages in the shift register is extended to the max-
+
+(CMP4) unit, since each task involves, at most, four APP values
+
+(or, equivalently,
+
+) related to the calculation of C2V mes-
+
+sages
+
+for a single check node . The CMP4 unit, which
+
+imum number of processing tasks per layer, i.e., , among consists of
+
+2-input comparators, is used to choose the
+
+the six code classes, i.e., eight, which happens when decoding two smallest values among the four inputs. In the second stage, a
+
+the rate-3/4 codes. In order to support other code classes, we simplified-CMP4 (S-CMP4) unit, which consists of only three
+
+can select an appropriate stage of the eight-stage shift register 2-input comparators, is used to locate the two smallest values
+
+as the output of the address generator using a multiplexor. among the four inputs, where two of the four inputs are from
+
+Finally, when the decoding class changes, the initial addresses the output of the S-CMP4 unit. The number of comparators in
+
+are loaded from different parts of the ROM.
+
+the S-CMP4 unit is smaller than that of CMP4, since the four
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+424
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+Fig. 14. Pipeline processing and the three types of hazards.
+
+For a variable node connected to more than one check node,
+
+data dependency exists between two associated tasks. So long as
+
+the two dependent tasks are not in the pipeline simultaneously,
+
+data hazards will not occur and we can use (6) and (8) to update
+
+the associated APP values. However, a data hazard occurs if the
+
+two dependent tasks are in the pipeline at the same time. These
+
+hazards should be overcome in order to ensure decoding con-
+
+vergence. Dependent on the countermeasures, data hazards are
+
+classified as type-I, type-II, and type-III hazards, respectively.
+
+If the difference in the initiation times of the two dependent
+
+tasks is large enough such that the latter task is in the memory
+
+Fig. 13. (a) Architecture for the two-stage sorter in the task processor. (b) Processing sequence for the rate-5/6 code class.
+
+read stage and the earlier task has been updated, as shown in Fig. 14, this kind of hazard is referred to as a type-I hazard, which can be overcome by establishing a forwarding path be-
+
+input values of the S-CMP4 unit are partially ordered. Since the
+
+V2C messages
+
+related to the calculation of C2V mes-
+
+sages
+
+are distributed across, at most, tasks, we can
+
+use the two-stage sorter shown in Fig. 13(a) to recursively lo-
+
+cate the two smallest values among the
+
+values of
+
+within cycles if pipeline processing is adopted. Fig. 13(b)
+
+shows the sorting process for the rate-5/6 code class, where we
+
+can obtain the two smallest values when the counter controller
+
+reaches the value of
+
+. In order to accommodate dif-
+
+ferent code classes with different values of , the maximum
+
+value for the counter controller should be set to
+
+. It is ob-
+
+vious that the two-stage sorter shown in Fig. 13(a) can support
+
+the six code classes in the proposed task-based architecture.
+
+tween the two tasks. The forwarding path enables the later task to directly utilize the updated APP value from the earlier task. In other words, the memory read of the later task and the memory write of the earlier task are skipped in passing the updated APP value from the earlier task to the later task, where (6) and (8) are utilized to update the messages.
+Type-II hazards occur when the two dependent tasks are not in the same sublayer and the difference in the initiation times of the two dependent tasks is not large enough such that the forwarding technique can be adopted. This kind of hazard can be overcome using a feedback path from the earlier updated task to the latter task which is still in the execution stage, as shown in Fig. 14. Equation (9) can be used to update the messages. Type-III hazards occur when the two dependent tasks are in the
+
+E. Pipeline Processing
+
+same sublayer. In Steps 2 and 3 of the task-arrangement algorithm, we assign each collision pair to two adjacent tasks, where
+
+The processing of a task can be roughly divided into four stages: memory read (including the permutation performed through ), execution (the computation of V2C messages and C2V messages), updating of APP values, and memory write (including the inverse permutation performed through ). In order to increase decoding throughput, a pipeline architecture is used to process the tasks, as shown in Fig. 14. For the proposed decoder, the total latency
+and net throughput can be calculated according to and ,
+
+two 1 s in a core matrix is called a collision pair if the associated variable node connects to two check nodes within the same sublayer. Since the two dependent tasks are adjacent, Type-III hazards can be overcome by exchanging information at the update stage according to (9). In Fig. 14, the path from an update stage to another update stage indicates the exchange of information between the two dependent tasks. It is worth noting that this type of hazard only occurs in any two adjacent tasks and the hardware resources used to overcome these hazards can be efficiently reused. Consequently, the associated increase in complexity is minor.
+
+respectively, where is the clock frequency. It can be seen that the decoding latency is almost proportional to (or code F. Early Termination (ET) and Encoder
+
+length), while the decoding throughput is almost independent We will now use the rate-5/6 codes to illustrate the proposed
+
+of . These phenomena are resultant from the fact that, as the early termination method. Using the four Row-Sum Calcula-
+
+code length varies, the hardware utilization efficiency remains tors and the Zero-Check unit shown in Fig. 11, the signs for the
+
+the same.
+
+updated APP values, which are temporally stored in the FIFO
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+425
+
+buffer of the VNUs, can be checked to see whether the parity-
+
+check constraints are satisfied or not. If these four parity-check
+
+constraints are all satisfied, this layer is viewed as a valid layer.
+
+The accumulator shown in Fig. 11 is used to count the number of
+
+successive valid layers. If there are successive valid layers, the
+
+decoded codeword is assumed to be correct, and the decoder will
+
+be terminated. Thanks to the regularity inherent in the layers,
+
+each layer can share the same row-sum calculators. In addition,
+
+all the layers of the other LDPC codes in the same class also
+
+share the same hardware resources used for early termination.
+
+We will now use the PCM introduced in Fig. 1 to illustrate the
+
+proposed layered encoding for QC-LDPC codes with dual-diag-
+
+onal prototype matrices. As shown in Fig. 1(b), the columns of
+
+the PCM can be partitioned into Parts A, B, and C. The columns
+
+in Part A correspond to information bits, while the columns in
+
+Parts B and C correspond to parity bits. It can be seen from
+
+Fig. 1(b) that there are two identical nonzero circulant matrices
+
+in Part B. Accordingly, the columns of a core matrix can be clas-
+
+sified into three parts, as shown in Fig. 2(b). It can be seen from
+
+Fig. 2(b) that the columns in Part C and the last column in Part
+
+B form a dual-diagonal structure, which can be utilized for effi-
+
+cient encoding.
+
+The 12 code bits ,
+
+, associated with the
+
+core matrix satisfy the four parity check equations given by
+
+. If we let denote the entry at the th row and th column
+
+of the core matrix , we have
+
+Fig. 15. BER of length-2304 codes. (FLO: floating point; FIX: fixed point.)
+TABLE II LATENCY AND THROUGHPUT (TP) VALUES FOR THE PROPOSED CODEC
+
+(10) the parity bits
+
+. In the encoding modes, the infor-
+
+mation bits are firstly stored in the APP memory bank, while
+
+By summing the four parity-check equations, we have
+
+the APP memory blocks corresponding to the parity bits are initialized to zero. In a manner similar to the decoding modes, the
+
+(11)
+
+information bits can be read from (written to) the APP memory bank task by task with the help of the address generators and
+
+the routing networks. Through the encoding procedure intro-
+
+Since the second term and the third term on the left-hand side duced earlier, the parity bits can be calculated and written into
+
+of (11) equal and 0, respectively, (11) becomes
+
+the associated APP memory blocks. Since the majority of the
+
+encoder reuses the hardware resources in the decoder, the extra
+
+(12) cost of the encoding function is negligible. In addition, these task-based encoding and early termination methods are suitable
+
+for a low-complexity multimode codec. Note that the right-hand side of (12) only involves message bits.
+Consequently, the parity bit can be calculated according to G. Implementation Results
+
+(12). Repeating the same procedure for the other
+
+layers
+
+(or core matrices), all the parity bits corresponding to columns
+
+in Part B of the PCM shown in Fig. 1(b) can be obtained. Since
+
+the bits and in each core matrix come from the same block
+
+column, is also known. The other four parity bits involved in
+
+the core matrix can then be obtained by summing a number
+
+of parity-check equations defined by (10). Specifically,
+
+,
+
+,
+
+Based on the proposed task-based architecture, a full-mode WiMAX LDPC codec with early termination has been implemented using a 90-nm CMOS process with nine metal layers. The codec was synthesized using the synopsys design compiler, and placed and routed using SOC Encounter. The power estimates are obtained using the power analysis tool, Synopsys PrimeTime PX. The APP values and V2C messages are quantized into 7 bits, and the C2V messages are quantized into 5 bits.
+
+. By repeating the same procedure for Fig. 15 shows the BER results for the proposed decoder, where
+
+the other
+
+layers, all the parity bits corresponding to the the number of iterations adopted is shown in Table II. To
+
+columns in Part C of the PCM can be obtained.
+
+simplify the presentation, only the results of length-2304 codes
+
+The row-sum calculators, which are used for early termina- are shown in the figure, where both fixed-point and floating-
+
+tion in the decoding modes, can also be used in the encoding point results are given. The proposed decoder using given
+
+modes. From the arrangement of the tasks, we can know the po- in Table II achieves a satisfactory error performance.
+
+sition of each parity bit. By forcing the sign bits corresponding Fig. 16 shows the layout plot for a codec chip which occupies
+
+to all the parity bits to be zero, we can calculate the values of a core area of 0.679 mm . Post-layout simulation shows that
+
+,
+
+used for encoding. These values are the proposed codec can be operated at a clock frequency of
+
+then sent to the Parity-bit Calculator shown in Fig. 11 to obtain 400 MHz. For rate-1/2, 2/3A (B), 3/4A (B), and 5/6 codes,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+426
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+TABLE IV HARDWARE UTILIZATION RATIOS FOR DIFFERENT CODE CLASSES
+
+Fig. 16. Layout plot.
+TABLE III SUMMARY OF DECODER POWER CONSUMPTION
+
+This part includes the four Row-Sum Calculators, the Zero-Check unit, the
+
+SNR to achieve BER = 10 . The maximum number of iterations is set
+
+Accumulator and the Parity-bit Calculator shown in Fig. 11.
+
+according to the value given in Table II.
+
+In [7], a flexible-shifter-based decoder was proposed. The
+
+decoding parallelism of this decoder ranges from 24 to 96
+
+the encoding energy per bit is 101.1, 103.3 (104.7), 121.7
+
+(120.6), and 90.6 pJ/bit, respectively. Table II summarizes the
+
+throughput values for both the encoder and decoder. In order
+
+to minimize the power consumption, the proposed termination
+
+technique is used, since unnecessary iterations and operations
+
+can be avoided. Table III summarizes the power consumption
+
+for codes where
+
+. The average power consumption is
+
+significantly reduced when early termination is enabled.
+
+Table IV shows the estimated utilization of each functional
+
+block for different code classes. For example, since six stages
+
+of the eight-stage shift register in an address generator are uti-
+
+lized, the utilization ratio is 75% in decoding a rate-1/2 code. It
+
+can be seen that the ratio of each single-rate complexity to the
+
+total multirate complexity is not less than 80%. Thus the pro-
+
+posed multimode architecture is quite efficient. Note that the
+
+additional logic gate count for the encoding and the early termi-
+
+nation functions is only 0.87 K.
+
+according to the code length (or equivalently ). The synthesis results show that the area of the memory-based decoder is 0.55 mm using a 65-nm process. The decoding throughput could be up to 497 Mbps, but it decreases as the expansion factor decreases. The synthesis results show that the area of the decoder presented in [8] is 1.337 mm in a 65-nm process. The decoding parallelism in this decoder also varies from 24 to 96. In [9], a programable ASIP (application-specific instruction-set processor) design that can support WiMAX LDPC codes was presented, where the area involving the resources for LDPC codes is 0.5 mm based on a 65-nm technology. In [10], the authors presented a rate-1/2 19-mode decoder with early termination. In this work, overlapped decoding is employed with a decoding parallelism of four. In addition, a memory-access method is used to access values from a total of 100 memory blocks in this low-parallelism decoder. A full-mode WiMAX decoder design was presented in [11] and employs shift-routing networks in order to achieve the multilength shifting func-
+
+H. Comparison With Other Related Works
+
+tion. The maximum parallelism in this decoder is 192, which is two times larger than the maximum expansion factor in
+
+Table V compares the proposed work with the WiMAX the WiMAX standard. In [12], a single-mode decoder using
+
+LDPC decoders presented in [7]–[12], where the results in modified LMPD-ICM, was presented, however, the proposed
+
+[7]–[9], [12] are synthesis results. Since a very low decoding task-arrangement concept is not employed. This single-mode
+
+parallelism, which is four, is employed in the proposed codec, decoder utilizes 105 K gates and achieves a throughput of 106
+
+only four highly reusable VNUs and CNUs are implemented. Mbps. To simplify the comparison, the area of each decoder
+
+With the help of the proposed address generators and the two has been scaled up or down to the 90-nm process with a scaling
+
+low-complexity routing networks, we can access the messages factor of 2 or 0.5 for 65-nm or 130-nm processes, respectively.
+
+required for the processing in the VNUs and CNUs for different A parameter named throughput-to-area ratio (TAR) defined
+
+tasks in different modes.
+
+by
+
+Throughput/Area is exploited. Since the work
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: PROCESSING-TASK ARRANGEMENT FOR A LOW-COMPLEXITY FULL-MODE WiMAX LDPC CODEC
+
+427
+
+TABLE V COMPARING-TABLE
+
+The comparison is based on the WiMAX (2304,1152) LDPC code. For decoder. Post-layout estimation.
+
+is targeted at consumer and portable applications, the area and power consumption should be as small as possible. As shown in Table V, the proposed codec achieves the smallest (scaled) area compared to the decoders presented in [7]–[11]. In addition, compared to a state-of-the-art turbo decoder [26], which occupies 2.1 mm in a 90 nm process, and achieves a maximum throughput of 130.6 Mb/s at 277 MHz with power consumption of 149.03 mW, the proposed codec architecture provides an alternative solution for error-control coding in mobile communications.
+V. CONCLUSION
+Based on LMPD-ICM, an algorithm has been devised in order to arrange the processing tasks for a variety of QC-LDPC codes in a similar form such that the decoding operations can be performed in a unified task processor. With the help of the proposed memory address generators, the control of processing tasks for different codes is quite simple. Hence, the difficulties in realizing a low-complexity multimode decoder can be overcome. Using these techniques, a low-complexity full-mode WiMAX LDPC codec has been designed. The proposed design also provides an encoding function which reuses the memory and the access networks required for the decoding. Although the parallelism is low, the proposed codec can achieve a throughput of up to hundreds of Mbit/s. In addition, the throughput of this codec is nearly independent of code length. Early termination, which utilizes the resources used for encoding, is also provided by this codec in order to reduce power consumption. Implementation results from postlayout simulation show that the proposed codec achieves the smallest (scaled) area compared to the WiMAX LDPC decoders described in previous literature.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. IT-7, pp. 21–28, Jan. 1962.
+
+[2] D.-J.-C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[3] IEEE 802.16e WiMAX standard, IEEE P802.16e-2005, Oct. 2005. [4] A.-J. Blanksby and C.-J. Howland, “A 690-mW 1-Gb/s 1024-b,
+rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002. [5] L. Liu and C.-J. Shi, “Sliced message passing: High throughput overlapped decoding of high-rate low-density parity-check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3697–3710, Dec. 2008. [6] Y.-L. Ueng, C.-J. Yang, K.-C. Wang, and C.-J. Chen, “A multimode shuffled iterative decoder architecture for high-rate RS-LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, 10.1109/TCSI.2010.2046964. [7] G. Gentile, M. Rovini, and L. Fanucci, “Low-complexity architectures of a decoder for IEEE 802.16e LDPC codes,” in Proc. Euromicro Conf. Digital Syst. Des. Archit., Methods Tools (DSD), Aug. 2007, pp. 369–375. [8] T. Brack, M. Alles, T. Lehnigk-Emden, F. Kienle, N. Wehn, N.-E. L’Insalata, F. Rossi, M. Rovini, and L. Fanucci, “Low complexity LDPC code decoders for next generation standards,” in Proc. Design, Autom. Test Eur. Conf. Exhib., Apr. 2007, pp. 16–20. [9] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” in Proc. Turbo Codes Related Topics, Sep. 2008, pp. 84–89. [10] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm 52
+m mW multi-mode LDPC decoder design for mobile WiMAX system in
+0.13  CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3,
+pp. 672–683, Mar. 2008. [11] C.-H. Liu, S.-W. Yen, C.-L. Chen, H.-C. Chang, C.-Y. Lee, Y.-S. Hsu,
+and S.-J. Jou, “An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 684–694, Mar. 2008. [12] Y.-L. Ueng, C.-J. Yang, Z.-C. Wu, C.-E. Wu, and Y.-L. Wang, “VLSI decoding architecture with improved convergence speed and reduced decoding latency for irregular LDPC codes in WiMAX,” in Proc. IEEE ISCAS, Seattle, WA, May 18–21, 2008. [13] T.-J. Richardson and R.-L. Urbanke, “Efficient encoding of low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001. [14] H. Zhong and T. Zhang, “Block-LDPC: A practical LDPC coding system design approach,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 52, no. 4, pp. 766–775, Apr. 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+428
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 58, NO. 2, FEBRUARY 2011
+
+[15] C. Yoon, E. Choi, M. Cheong, and S.-K. Lee, “Arbitrary bit generation and correction technique for encoding QC-LDPC codes with dual-diagonal parity structure,” in Proc. IEEE Wireless Commun. and Networking Conf. (WCNC), Mar. 2007, pp. 662–666.
+[16] C.-Y. Lin, C.-C. Wei, and M.-K. Ku, “Efficient encoding for dual-diagonal structured LDPC codes based on parity bit prediction and correction,” in Proc. IEEE Asia Pacific Conf. Circuits Syst. (APCCAS), Nov. 2008, pp. 1648–1651.
+[17] M.-M. Mansour and N.-R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[18] D.-E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SIPS), Oct. 2004, pp. 107–112.
+[19] Y. Dai, N. Chen, and Z. Yan, “Memory efficient decoder architectures for quasi-cyclic LDPC codes,” IEEE Trans. Circuit Syst. I, Reg. Papers, vol. 55, no. 9, pp. 2898–2911, Oct. 2008.
+[20] Y.-L. Ueng and C.-C. Cheng, “A fast-convergence decoding method and memory-efficient VLSI decoder architecture for irregular LDPC codes in the IEEE 802.16e standards,” in Proc. IEEE Semiannu. Veh. Technol. Conf., Oct. 2007, pp. 1255–1259.
+[21] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[22] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf.. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[23] J. Chen and M.-P.-C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commum. Lett., vol. 6, pp. 208–210, May 2002.
+[24] M. Cocco, J. Dielissen, M. Heijligers, A. Hekstra, and J. Huisken, “A scalable architecture for LDPC decoding,” in Proc. Design, Autom. Test Eur. Conf. Exhib., Feb. 2004, vol. 3, pp. 88–93.
+[25] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuit Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[26] C.-C. Wong, Y.-Y. Lee, and H.-C. Chang, “A 188-size 2.1 mm reconfigurable turbo decoder chip with parallel architecture for 3GPP LTE system,” in Proc. Symp. VLSI Circuits, Jun. 2009, pp. 288–289.
+Yu-Luen Wang received the B.S. degree in electrical engineering from the National Dong Hwa University, Hualien, Taiwan, R.O.C., in 2004 and the M.S. degree in electrical engineering from the National Tsing Hua University, Hsinchu, Taiwan, R.O.C., in 2010.
+He is now with ZyFLEX Technologies Incorporation. His research interests include error control coding and related VLSI designs.
+
+Yeong-Luh Ueng received the Ph.D. degree in communication engineering from the National Taiwan University, Taipei, Taiwan, R.O.C., in 2001.
+From 2001 to 2005, he was with a private communication technology company, where he focused on the design and development of various wireless chips. Since December 2005, he has been a member of the faculty of the National Tsing Hua University, Hsinchu, Taiwan, where he is currently an Assistant Professor with the Department of Electrical Engineering and the Institute of Communications Engineering. His research interests include coding theory, wireless communications, and communication ICs.
+Chien-Lien Peng received the B.S. degree in electrical engineering from Yuan Ze University, Taoyuan, Taiwan, R.O.C., in 2008. He is currently working toward the M.S. degree in electrical engineering at the National Tsing Hua University, Hsinchu, Taiwan, R.O.C.
+His research interests include error control coding and related VLSI designs.
+
+tems.
+
+Chung-Jay Yang received the B.S. degree in electrical engineering from the National Chung Cheng University, Chiayi, Taiwan, R.O.C., in 2002 and the M.S. degree in communication engineering from the National Taiwan University, Taipei, Taiwan, R.O.C., in 2004. He is currently working toward the Ph.D. degree in electrical engineering at the National Tsing Hua University, Hsinchu, Taiwan, R.O.C..
+From 2004 to 2008, he was with Realtek Semiconductor Corporation. His research interests include VLSI designs for channel coding and storage sys-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:07:20 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,595 @@
+Enhancing Proximal Decoding for LDPC Codes
+through Deep Unfolding
+Asahi Ito
+Nagoya Institute of Technology
+a.ito.625@nitech.jp
+Lantian Wei
+Nagoya Institute of Technology
+wei.lantian@nitech.ac.jp
+Tadashi Wadayama
+Nagoya Institute of Technology
+wadayama@nitech.ac.jp
+Abstract—This paper introduces a deep unfolding-assisted
+proximal decoding for low-density parity-check (LDPC) codes.
+Proximal decoding method is a decoding algorithm based on
+the proximal gradient method. Our proposal, deep unfolding-
+assisted proximal (DU-Proximal) decoding, is obtained by ap-
+plying deep unfolding to the proximal decoding. We especially
+focus on the decoding performance in multiple-input multiple-
+output (MIMO) channels. In numerical experiments, we compare
+the error correcting capability of the proposed algorithm with
+the minimum mean squared error (MMSE) signal detection
+method, the tanh signal detection method, and the MMSE jointly
+with belief propagation (BP) algorithm for LDPC decoding. The
+experimental results demonstrate that parameter optimization
+via DU yields significant performance gains, especially at high
+signal-to-noise ratio levels.
+I. INTRODUCTION
+The need for wireless communication continues to grow,
+making it necessary to move towards the fifth-generation
+(5G) mobile communication system. Concurrently, with the
+escalating requirements for wireless communication, there
+emerges an urgent need for formulating networks that surpass
+the reliability and capacity of 5G infrastructures. In response
+to these evolving needs, research and development initiatives
+targeting the eventual realization of the sixth-generation (6G)
+mobile communication system by approximately 2030 are
+actively progressing [1].
+To construct large-capacity networks, it is essential to utilize
+communication transmission technologies that improve fre-
+quency efficiency. An example of such technology is multiple-
+input multiple-output (MIMO) transmission technology [2].
+In MIMO transmission, there are multiple antennas on the
+sender and receiver. Owing to the spatial multiplexing, MIMO
+transmission has high spectrum efficiency and communication
+capacity. Recently, research on massive MIMO channels has
+been drawing strong attention [3].
+To ensure high reliability in noisy environments, powerful
+error-correcting codes capable of repairing corrupted signals
+are essential. An example of such codes is low-density parity-
+check (LDPC) codes [4]. LDPC codes have error-correcting
+capabilities that approach the theoretical limit established by
+Shannon. Currently, they are employed in various fields of
+communication systems.
+Among the decoding methods for LDPC codes, the belief
+propagation (BP) algorithm and the bit-flipping decoding
+This work was supported by JSPS KAKENHI Grant Number JP22H00514.
+method are well-known [5]. The BP method is a decoding
+approach based on probabilistic inference, which efficiently
+calculates the marginal posterior probabilities of the trans-
+mitted signals from received words by representing the com-
+munication channel as a graph. Meanwhile, the bit-flipping
+decoding method formulates the decoding problem as an opti-
+mization problem and employs an iterative algorithm aimed at
+minimizing a nonlinear objective function to perform the de-
+coding. Recent researches on LDPC code decoding continues
+to be conducted. Proximal decoding method was proposed for
+detection and decoding in massive MIMO channels [5].
+Proximal decoding is a decoding algorithm based on the
+mathematical optimization technique known as the proximal
+gradient method. It has been reported that the proximal decod-
+ing method exhibits superior decoding performance in LDPC-
+coded MIMO channels [5]. The proximal decoding method de-
+codes LDPC codes by alternating between a gradient descent
+step and a code-proximal step. Each kind of step has its own
+adjustable step size. In study [5], the decoding performance
+of the proximal decoding strongly depends on the step size
+which needs to be adjusted manually.
+Deep unfolding (DU) has recently attracted substantial
+attention in many studies [6] [7]. DU is a deep learning-
+based method that unfolds the steps of iterative algorithms
+in the time direction. Then each iteration could be regarded as
+a distinct layer of a neural network. This approach enables
+the application of deep learning methods to optimize the
+internal parameters of the algorithm, thereby enhancing its
+performance. Specifically, it has been demonstrated that this
+approach is highly effective when used together with iterative
+mathematical optimization techniques. For example, there is
+evidence that the convergence of the projected gradient descent
+method can be significantly enhanced by treating the step
+size as a trainable parameter [8]. This finding underscores the
+practical value of deep learning in optimizing mathematical
+processes. The exploration of DU in the context of proximal
+decoding remains an unexplored area, despite the intuitive
+appeal of using DU to refine and enhance the performance
+of proximal decoding algorithms.
+This paper assesses the application of DU to proximal
+decoding. We first explain the existing proximal decoding, then
+introduce the DU-Proximal decoding approach. Numerical
+experiments evaluate the error correction and convergence per-
+formance of the proposed method and confirm the performance
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+227
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 
+N Transit 
+antennas
+M Received 
+antennas
+⋮
+⋮
+⋮
+⋮
+"𝑥!
+"𝑥"
+"𝑥#
+"𝑎!!
+"𝑎$!
+"𝑎%#
+"𝑎$#
+%𝑤!
+%𝑤%
+%𝑤$
+"𝑦!
+"𝑦%
+"𝑦$
+⊕
+⊕
+⊕
+Fig. 1: MIMO communication system model assumed in this
+study
+gain from DU.
+II. PRELIMINARIES
+A. MIMO Communication Systems
+Figure 1 shows the MIMO communication system assumed
+in this paper. There are 𝑁and 𝑀antennas at a transmitter
+and a receiver, respectively. The received signal vector ˜𝒚=
+[ ˜𝑦1, ˜𝑦2, . . . , ˜𝑦𝑀]T ∈C𝑀×1 is expressed as
+˜𝒚= ˜𝑨˜𝒙+ ˜𝒘,
+(1)
+where ˜𝒙= [ ˜𝑥1, ˜𝑥2, . . . , ˜𝑥𝑁]T ∈C𝑁×1 denotes the vector
+consisting of transmitted symbols,
+˜𝑨= { ˜𝑎𝑖, 𝑗} ∈C𝑀×𝑁
+denotes the channel matrix, ˜𝒘∈C𝑁×1 denotes the noise vector
+consisting of i.i.d. random variables following a complex
+Gaussian distribution with zero mean and variance 𝜎2.
+In this paper, a comparable real-valued channel model is
+used, which is defined by
+𝒚= 𝑨𝒙+ 𝒘,
+(2)
+where
+𝒚=
+Re( ˜𝒚)
+Im( ˜𝒚)
+
+∈R𝜇×1,
+(3)
+𝑨=
+Re( ˜𝑨)
+−Im( ˜𝑨)
+Im( ˜𝑨)
+Re( ˜𝑨)
+
+∈R𝜇×𝑛,
+(4)
+𝒙=
+Re( ˜𝒙)
+Im( ˜𝒙)
+
+∈R𝑛×1,
+(5)
+𝒘=
+Re( ˜𝒘)
+Im( ˜𝒘)
+
+∈R𝜇×1,
+(6)
+and 𝜇= 2𝑀, 𝑛= 2𝑁. The noise 𝒘follows an i.i.d Gaussian
+PDF with mean 0 and variance 𝜎2/2. In this model, the signal-
+to-noise ratio (SNR) is defined as
+SNR = 10 log10
+2𝑁
+𝜎2 .
+(7)
+B. LDPC Codes
+LDPC codes are linear binary error-correcting codes pro-
+posed by Gallager in 1963 [4]. LDPC codes are capa-
+ble of high-speed decoding due to the sparse properties of
+their parity-check matrix, making them practical and widely
+adopted in information and communication devices. Further-
+more, when combined with the belief propagation algorithm,
+LDPC codes are known for their high error-correcting capa-
+bilities [9].
+Given a sparse parity-check matrix 𝑯∈F𝑚×𝑛
+2
+. The LDPC
+code 𝐶is defined by
+𝐶= {𝒙∈F𝑛
+2 |𝑯𝒙= 0}.
+(8)
+C. Proximal Decoding
+The Proximal decoding is an algorithm based on the proxi-
+mal gradient method, a mathematical optimization technique,
+and employs the approximate maximum a posteriori (Approx-
+imate MAP) decoding rule [5] for decoding. The objective
+function is given by
+𝑓(𝒙) = 𝐿(𝒙; 𝒚) + 𝛾ℎ(𝒙)
+(9)
+using the negative log-likelihood function 𝐿(𝒙; 𝒚) and a code
+constraint polynomial ℎ(𝒙). The proximal decoding obtains
+the estimated signal ˆ𝒙based on the gradient descent step and
+the code-proximal step. The gradient descent step is defined
+as
+𝒓(𝑘+1) = 𝒔(𝑘) −𝜔∇𝐿(𝒔(𝑘); 𝒚),
+(10)
+and the code-proximal step is defined as
+𝒔(𝑘+1) = 𝒓(𝑘+1) −𝛾∇ℎ(𝒓(𝑘+1)).
+(11)
+The decoding is performed by iteratively repeating the gradient
+descent step and the code-proximal step from the initial
+value 𝒔(0) = 0. Finally, the estimated signal is obtained by
+ˆ𝒙= sign(𝒔(𝐾)), where 𝐾denotes the maximum number of
+iterations.
+D. Baseline schemes
+Among the signal detection methods for MIMO systems,
+the minimum mean squared error (MMSE) signal detection
+method, and the tanh signal detection method are well-known.
+We thus use them as baselines. Furthermore, the MMSE+BP
+algorithm, which employs Belief Propagation (BP) for decod-
+ing LDPC codes, is used as the baseline. The estimated signal
+ˆ𝒙in the MMSE signal detection method is obtained as
+ˆ𝒙= 𝑨𝑇(𝑨𝑨𝑇+ 𝜎2𝑰)−1𝒚.
+(12)
+The tanh signal detection method involves replacing the
+code-proximal step of the Proximal decoding method with a
+tanh function, given by
+𝒓(𝑘+1) = 𝒔(𝑘) −𝜔𝑨𝑇(𝑨𝒙−𝒚)
+(13)
+𝒔(𝑘+1) = tanh (𝜖𝒓(𝑘+1)),
+(14)
+where 𝜖is a positive constant.
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+228
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 
+The MMSE+BP algorithm is a combination of the MMSE
+signal detection method and the BP algorithm for LDPC
+decoding, where the estimated signal obtained by the MMSE
+signal detection method is input into the BP algorithm for
+decoding. Here, the MMSE+BP algorithm is implemented by
+applying a scaling parameter 𝜉to the output ˆ𝒙from the MMSE
+signal detection method and using the input 𝜉ˆ𝒙for the BP
+algorithm. It is known that setting the scaling parameter is
+effective for achieving optimal performance.
+E. Deep Unfolding
+DU is a method that unfolds iterative algorithms in the time
+direction, optimizing learnable parameters at each iteration
+[6]. By optimizing these parameters, an improvement in the
+performance of the iterative algorithm is anticipated.
+1) Updating Learnable Parameters: Let 𝜽denote the set
+of adjustable parameters possessed by the iterative algorithm.
+The index of iterations within the algorithm is denoted as
+𝑘= 1, 2, . . . , 𝐾, and the learnable parameters at the 𝑘th
+iteration are denoted as 𝜽(𝑘). These parameters are optimized
+using techniques from deep learning such as stochastic gra-
+dient descent and backpropagation. During training, mini-
+batches comprising pairs of input and output are prepared
+as training data, and supervised learning is conducted. The
+gradient ∇𝐿(𝜽) with respect to the loss function 𝐿(𝜽) is
+calculated, and parameters 𝜽are updated to reduce the error
+between the outputs of the model and the target data.
+2) Incremental Learning: Within deep unfolding, the tech-
+nique known as incremental learning is recognized for its
+beneficial properties. Unlike the conventional approach in deep
+learning where parameters across all layers are updated con-
+currently, incremental learning adopts a sequential approach.
+During the initial iteration, the learnable parameters 𝜽(1)
+undergo optimization. Subsequently, in the second iteration,
+both sets of learnable parameters 𝜽(1) and 𝜽(2) are subject
+to optimization. Progressing in this method, the collection of
+learnable parameters expands with the iteration count, result-
+ing in the enhancement of optimization 𝜽(1), 𝜽(2), . . . , 𝜽(𝐾)
+by the 𝐾th iteration. This approach enables a targeted opti-
+mization of newly incorporated learnable parameters at each
+iteration, and is known as an effective strategy for addressing
+the challenge of the vanishing gradient problem.
+III. PROPOSED METHOD
+A. Weighted Proximal Decoding
+In Section II-C, we introduced the proximal decoding
+method, which is based on mathematical optimization tech-
+niques. This method decodes by formulating the optimization
+problem using the code constraint polynomials and aims to
+minimize the non-linear objective function. However, it is
+possible that the importance of the terms in the code constraint
+polynomial changes with the SNR and the characteristics
+of the channel. Thus, the importance of the code constraint
+polynomials could be adjusted, by assigning weight parameters
+to each term of the code constraint polynomials used in the
+proximal decoding, hoping to improve the error correction
+Algorithm 1 DU-Proximal Method
+1: 𝒔(0) B 0
+2: for 𝑘B 0 to 𝑲−1 do
+3:
+𝒓(𝑘+1) B 𝒔(𝑘) −𝜔(𝑘)∇𝐿(𝒔(𝑘); 𝒚)
+4:
+𝒔(𝑘+1) B 𝒓(𝑘+1) −𝛾(𝑘)∇ℎ(𝒓(𝑘+1); {𝛼, 𝛽})
+5:
+ˆ𝒙B sign(𝒔(𝑘+1))
+6:
+if ˆ𝒙∈𝐶(𝑯) then
+7:
+break
+8:
+end if
+9: end for
+10: Output ˆ𝒙
+capability of the proximal decoding. The introduction of this
+parameter has been proposed in the Gradient Flow (GF)
+decoding [10] as a decoding algorithm that uses the code
+constraint polynomial with weight parameters. The weighted
+code constraint polynomial is defined as
+ℎ(𝒙) ≡𝛼
+𝑛
+Õ
+𝑗=1
+(𝑥2
+𝑗−1)2 + 𝛽
+𝑚
+Õ
+𝑖=1
+©­
+«
+©­
+«
+Ö
+𝑗∈𝐴(𝑖)
+𝑥𝑗ª®
+¬
+−1ª®
+¬
+2
+,
+(15)
+where 𝛼is the weight parameter representing the importance
+of the bipolar constraint, and 𝛽is the weight parameter repre-
+senting the importance of the parity constraint. This enhanced
+proximal decoding based on the weighted code constraint
+polynomial (15) is called the weighted proximal decoding.
+B. DU-Proximal Decoding
+The proximal decoding contains two adjustable step sizes
+𝜔, 𝛾, which are believed to significantly affect the error
+correction capability and convergence properties, necessi-
+tating proper adjustment. Therefore, we propose a method
+to learn the step size parameters 𝜔, 𝛾through DU. We
+treat the step size parameters 𝜔, 𝛾as learnable parameters
+𝜔(𝑘), 𝛾(𝑘). Then, we learn the set of learnable parameters
+{(𝜔(1), 𝛾(1)), (𝜔(2), 𝛾(2)), . . . , (𝜔(𝐾), 𝛾(𝐾))} where 𝐾denotes
+the number of iterations of the algorithm. This proximal
+decoding using the optimized parameters obtained through
+deep unfolding is referred to as the DU-Proximal (Deep
+Unfolding Proximal) decoding. This procedure is summarized
+in Algorithm 1.
+The learning procedure for the learnable parameters is
+based on mini-batches. The mini-batch consists of a set of
+randomly generated training data pairs of the transmit vector
+and the receive vector {(𝒙1, 𝒚1), (𝒙2, 𝒚2), . . . , (𝒙𝑆, 𝒚𝑆)}, where
+𝑆denotes the size of the mini-batch, 𝒙𝑖denotes the true
+transmit signal, and 𝒚𝑖denotes the received signal obtained
+by passing 𝒙𝑖through the MIMO channel. For the received
+signals {𝒚1, 𝒚2, . . . , 𝒚𝑆}, the proximal decoding with deep
+unfolding using the learnable parameters 𝜔(𝑘), 𝛾(𝑘) is exe-
+cuted, and the estimated vectors { ˆ𝒙1, ˆ𝒙2, . . . , ˆ𝒙𝑆} are obtained.
+The error between these estimated vectors and the transmit
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+229
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE I: Experimental Conditions
+Experiment No.
+Number of Receive Antennas 𝑀
+Number of Transmit Antennas 𝑁
+Learning Rate for 𝜔(𝑘) , 𝛾(𝑘)
+SNR during Learning
+1
+102
+102
+10−4
+6dB
+2
+120
+102
+10−4
+6dB
+3
+90
+102
+10−5
+6dB
+Fig. 2: BER v.s. SNR (Exp.1)
+Fig. 3: BER v.s. SNR (Exp.2)
+Fig. 4: BER v.s. SNR (Exp.3)
+Fig. 5: BER v.s. Iteration (Exp.1)
+Fig. 6: BER v.s. Iteration (Exp.2)
+Fig. 7: BER v.s. Iteration (Exp.3)
+vectors {𝒙1, 𝒙2, . . . , 𝒙𝑆} is calculated using a loss function.
+The learnable parameters 𝜔(𝑘), 𝛾(𝑘) are optimized using the
+incremental learning method. In this study, the mean squared
+error (MSE)
+𝐸= 1
+𝑆
+𝑆
+Õ
+𝑖=1
+||𝒙𝑖−ˆ𝒙𝑖||2
+𝑛
+(16)
+is used as the loss function.
+IV. NUMERICAL EXPERIMENTS
+A. Experimental Setup
+In our numerical experiments, a (3, 6)-regular LDPC with
+𝑛= 204, 𝑚= 102 referenced from the RPTU database is used
+[11]. The codeword is generated using the generator matrix
+and a random 𝑚-length message vector. Furthermore, the code-
+words undergo binary bipolar conversion in the transmission
+channel, resulting in the transmission vector 𝒙∈{+1, −1}𝑛.
+The complex channel matrix ˜𝑨∈C𝑀×𝑁is randomly gener-
+ated from a complex Gaussian distribution with mean 0 and
+variance 1. Then, the equivalent real-valued channel matrix
+𝑨is obtained by (4). The Proximal decoding, tanh detection
+method, the MMSE detection method, and the MMSE+BP
+method, are used as baselines for comparison by calculating
+the bit error rate (BER) through Monte Carlo simulations with
+20, 000 trials.
+In our proposed method, the initial values of the learnable
+parameters are set as
+𝜔(0) = 2.0/(𝜆min + 𝜆max),
+(17)
+where 𝛾(0) = 0.05, with weight parameters fixed at 𝛼=
+0.7, 𝛽= 1. Here, 𝜆min, 𝜆max are the minimum and maximum
+eigenvalues of the channel matrix 𝑨. These values provided
+reasonable performance in preliminary experiments. Mini-
+batch optimization was used for the optimization of learnable
+parameters with a mini-batch size of 200 and the number of
+training iterations set to 30. Adam method [12] was used in
+the learning procedure. Moreover, the SNR was fixed at 6dB
+for calculating learning and BER convergence characteristics.
+The number of iterations 𝐾set to 50. In the tanh signal
+detection method, the parameter 𝜖= 2, and for the MMSE+BP
+algorithm, the scaling parameter 𝜉= 5, which was adjusted
+heuristically. The number of iterations for the BP algorithm
+was set to 20.
+In this numerical experiment, three environments were pre-
+pared. Experiment 1 considers the case where the number of
+receive antennas equals the number of transmit antennas, with
+𝑀= 𝑁= 102. Experiment 2 involved more receive antennas
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+230
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 
+than transmit antennas, with 𝑀= 120, 𝑁= 102. Experiment
+3 involved fewer receive antennas than transmit antennas, with
+𝑀= 90, 𝑁= 102. By varying the number of receive antennas
+relative to the number of transmit antennas, the characteristics
+of the MIMO channel are altered, thus examining the impact
+of applying deep unfolding on decoding performance. The
+learning rates were adjusted for each experiment. Table I
+shows the experimental conditions. These hyperparameters
+were chosen based on values that demonstrated good BER
+performance in preliminary experiments.
+B. Experimental Results
+In this section, we demonstrate the superior error correction
+capability of DU-Proximal, especially in higher SNR regimes
+facilitated by assigning weights to the code constraints.
+Figure 2 shows the BER performance versus SNR for
+Experiment 1 where 𝑀= 𝑁= 102. At a BER of 10−5, the
+DU-Proximal achieves an SNR gain of around 2dB compared
+to the proximal decoding. Moreover, the performance gap
+expands as SNR increases. When SNR = 1dB , both methods
+exhibit similar BERs around 10−1. However, at 8dB, while
+the proximal decoding has a BER greater than 10−4, the
+DU-Proximal achieves a BER below 10−5, over an order
+of magnitude improvement. Fig. 5 presents the relationship
+between BER and the number of algorithm iterations in
+Experiment 1. Proximal decoding exhibits a decrease in BER
+values as the number of iterations increases, but the decrease
+becomes gradual, stabilizing around 10−2 once the number of
+iterations exceeds 30. On the other hand, in the DU-Proximal,
+there is a sharp increase in BER at the ninth iteration, but
+from the tenth iteration onward, BER falls below those of the
+existing method, continuing to decrease.
+Figure 3 illustrates the relationship between SNR and BER
+in Experiment 2. As conditions are more favorable in Experi-
+ment 2 compared to Experiment 1, all methods achieve smaller
+BER. The DU-Proximal achieves the smallest BER value.
+Furthermore, with the DU-Proximal, a BER value of 10−5
+is reached around an SNR of 7dB, whereas for the proximal
+decoding, a BER value of 10−5 is achieved around an SNR
+of 9.3dB. This indicates a significant improvement through
+the application of deep unfolding compared to Experiment 1.
+In the BER convergence characteristics shown in Fig. 6, the
+DU-Proximal shows an increase in BER at the 9th and 14th
+iterations, but after surpassing the 15th iteration, there is a
+rapid decrease, falling below 10−3.
+Figure 4 displays the relationship between SNR and BER
+in Experiment 3. Due to less favorable conditions compared to
+Experiment 1, all methods exhibit increased BER. Although
+the performance of the DU-Proximal improves over the prox-
+imal decoding, the difference between the DU-Proximal and
+the proximal decoding is smaller in Experiments 1 and 2. The
+BER convergence characteristics in Fig. 7 clearly show that
+the DU-Proximal consistently achieves smaller BER compared
+to the proximal decoding.
+Figure 8 shows the values of the learnable parameters
+𝛾(𝑘), 𝜔(𝑘) with respect to the number of iterations in Ex-
+Fig. 8: The values of the learnable parameters 𝛾(𝑘), 𝜔(𝑘) at
+iteration 𝑘
+periment 1. The value of 𝛾(𝑘) increases until the 9th iteration
+but decreases from the 10th iteration onwards. On the other
+hand, the value of 𝜔(𝑘) fluctuates significantly before the
+20th iteration and gradually decreases after surpassing 20
+iterations. These changes suggest that the learnable parameters
+are optimized with each iteration, which may lead to an
+improvement in the BER convergence characteristics as shown
+in Fig. 5. However, the details of this effect remain unclear.
+From these results, it is evident that the DU-Proximal
+optimizes the step size parameters according to the number
+of iterations, resulting in a lower BER compared to the prox-
+imal decoding, thereby confirming an enhancement in error
+correction capability. Furthermore, the relationship between
+BER and the number of iterations of the algorithm indicates a
+significant improvement in the convergence characteristics of
+the DU-Proximal through the application of deep unfolding.
+V. CONCLUSION
+In this study, we applied deep unfolding to the weighted
+proximal decoding. In the weighted proximal decoding, we
+introduced weight parameters 𝛼, 𝛽to the code constraint
+polynomials. Furthermore, by applying deep unfolding to
+make the step size parameters 𝜔(𝑘), 𝛾(𝑘) of the proximal
+decoding learnable, we proposed the DU-Proximal decoding.
+The results of the numerical experiments demonstrated that the
+DU-Proximal achieved a lower BER than the original proxi-
+mal decoding, confirming an improvement in error correction
+capability due to the application of deep unfolding. Moreover,
+an analysis of the relationship between BER and the number
+of algorithm iterations confirmed that the DU-Proximal signif-
+icantly improved convergence characteristics. This confirmed
+the effectiveness of applying deep unfolding in enhancing the
+performance of the existing proximal decoding. Additionally,
+the error correction capability of the DU-Proximal was found
+to improve more noticeably in regions of high SNR and also
+enhanced when the number of receive antennas was large.
+In the future, we are aiming to establish methods that avoid
+getting trapped in local optima during the decoding process of
+the proposed method.
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+231
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 
+REFERENCES
+[1] Z. Qadir, H. S. Munawar, N. Saeed, and K. Le, “Towards 6G internet
+of things: Recent advances, use cases, and open challenges,” 2021.
+[2] E. Telatar, “Capacity of multi-antenna gaussian channels,” European
+transactions on telecommunications, vol. 10, no. 6, pp. 585–595, 1999.
+[3] E. G. Larsson, O. Edfors, F. Tufvesson, and T. L. Marzetta, “Massive
+MIMO for next generation wireless systems,” IEEE Communications
+Magazine, vol. 52, no. 2, pp. 186–195, 2014.
+[4] R. Gallager, “Low-density parity-check codes,” IRE Transactions on
+Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[5] T. Wadayama and S. Takabe, “Proximal decoding for LDPC codes,”
+IEICE Transactions on Fundamentals of Electronics, Communications
+and Computer Sciences, vol. E106.A, no. 3, pp. 359–367, 2023.
+[6] J. R. Hershey, J. L. Roux, and F. Weninger, “Deep unfolding: Model-
+based inspiration of novel deep architectures,” 2014.
+[7] K. Gregor and Y. LeCun, “Learning fast approximations of sparse
+coding,” in Proceedings of the 27th International Conference on In-
+ternational Conference on Machine Learning, ser. ICML’10.
+Madison,
+WI, USA: Omnipress, 2010, p. 399–406.
+[8] N. Parikh and S. Boyd, “Proximal algorithms,” Foundations and
+Trends® in Optimization, vol. 1, no. 3, pp. 127–239, 2014. [Online].
+Available: http://dx.doi.org/10.1561/2400000003
+[9] S.-Y. Chung, G. Forney, T. Richardson, and R. Urbanke, “On the design
+of low-density parity-check codes within 0.0045 dB of the Shannon
+limit,” IEEE Communications Letters, vol. 5, no. 2, pp. 58–60, 2001.
+[10] T. Wadayama, K. Nakajima, and A. Nakai-Kasai, “Gradient flow de-
+coding for LDPC codes,” in 2023 International Symposium on Topics
+in Coding (ISTC), Brest, France, 2023, pp. 1–5.
+[11] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika,
+and N. Wehn, “Database of channel codes and ML simulation results,”
+www.uni-kl.de/channel-codes, 2019.
+[12] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+2017.
+ISITA2024, Taipei, Taiwan, November 10-13, 2024
+Copyright (C) 2024 by IEICE
+232
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:11:12 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,2836 @@
+12172
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+Trainable Joint Channel Estimation, Detection, and Decoding for MIMO URLLC Systems
+
+Yi Sun , Student Member, IEEE, Hong Shen , Member, IEEE, Bingqing Li , Student Member, IEEE, Wei Xu , Senior Member, IEEE, Pengcheng Zhu , Member, IEEE, Nan Hu , and Chunming Zhao , Member, IEEE
+
+Abstract— The receiver design for multi-input multi-output (MIMO) ultra-reliable and low-latency communication (URLLC) systems can be a tough task due to the use of short channel codes and few pilot symbols. Consequently, error propagation can occur in traditional turbo receivers, leading to performance degradation. Moreover, the processing delay induced by information exchange between different modules may also be undesirable for URLLC. To address the issues, we advocate to perform joint channel estimation, detection, and decoding (JCDD) for MIMO URLLC systems encoded by short low-density paritycheck (LDPC) codes. Specifically, we develop two novel JCDD problem formulations based on the maximum a posteriori (MAP) criterion for Gaussian MIMO channels and sparse mmWave MIMO channels, respectively, which integrate the pilots, the bitto-symbol mapping, the LDPC code constraints, as well as the channel statistical information. Both the challenging large-scale non-convex problems are then solved based on the alternating direction method of multipliers (ADMM) algorithms, where closed-form solutions are achieved in each ADMM iteration. Furthermore, two JCDD neural networks, called JCDDNet-G and JCDDNet-S, are built by unfolding the derived ADMM algorithms and introducing trainable parameters. It is interesting to find via simulations that the proposed trainable JCDD receivers can outperform the turbo receivers with affordable computational complexities.
+Index Terms— Joint channel estimation, detection and decoding (JCDD), alternating direction method of multipliers (ADMM), coded multi-input multi-output (MIMO), ultra-reliable and low-latency communication (URLLC), deep unfolding.
+I. INTRODUCTION
+ULTRA-RELIABLE low-latency communications (URLLC), as a key enabler of the fifth generation (5G)
+Manuscript received 25 June 2023; revised 27 November 2023 and 17 March 2024; accepted 10 April 2024. Date of publication 22 April 2024; date of current version 12 September 2024. This work was supported in part by the National Key Research and Development Program of China under Grant 2021YFB2900300, in part by the National Natural Science Foundation of China under Grant 62271137, and in part by the Southeast University China Mobile Research Institute Joint Innovation Center. The associate editor coordinating the review of this article and approving it for publication was I. Bergel. (Corresponding author: Hong Shen.)
+Yi Sun, Hong Shen, and Bingqing Li are with the National Mobile Communications Research Laboratory, Southeast University, Nanjing 210096, China (e-mail: sun_yi@seu.edu.cn; shhseu@seu.edu.cn; libingqing@seu.edu.cn).
+Wei Xu, Pengcheng Zhu, and Chunming Zhao are with the National Mobile Communications Research Laboratory, Southeast University, Nanjing 210096, China, and also with the Purple Mountain Laboratories, Nanjing 211111, China (e-mail: wxu@seu.edu.cn; p.zhu@seu.edu.cn; cmzhao@seu.edu.cn).
+Nan Hu is with the Institute of Wireless and Terminal Technology, China Mobile Research Institute, Beijing 100000, China (e-mail: hunan@ chinamobile.com).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TWC.2024.3388603.
+Digital Object Identifier 10.1109/TWC.2024.3388603
+
+and beyond 5G systems, are expected to support some mission-critical applications with stringent requirements, such as remote surgery, intelligent transport, and factory automation [1], [2], [3]. For example, the reliability is required to be no smaller than 99.999% with the end-to-end latency limited to within 1 millisecond (ms) [1]. To achieve high reliability of URLLC, multi-input multi-output (MIMO) techniques can be a promising solution by fully exploiting the spatial diversity gain and the antenna array gain. On the other hand, short packet transmission can be adopted to meet the latency requirement of URLLC, which has also been extensively studied in literature [4], [5], and [6]. Taking advantages of both techniques, short packet MIMO transmission has emerged as an attractive topic in the context of URLLC.
+The classical information-theoretical metrics, such as the ergodic capacity and the outage capacity, are established based on the Shannon theory under the assumption of infinite blocklength, which are no longer suitable for URLLC systems with short packets. To overcome the limitation, a new performance metric, namely the maximal channel coding rate with given blocklength and error probability, was introduced in [7]. Followed by this, the performance analysis for short packet transmissions over quasi-static MIMO fading channels was studied in [5] and [8], and the extension to massive MIMO systems was further presented in [9]. Although these works have ascertained the theoretical limits for MIMO URLLC systems, the receiver designs approaching such limits have not been thoroughly investigated. In fact, only short channel codes are allowed to match the short packet transmission, which can cause performance deterioration due to their relatively weak error correction capabilities [10]. On the other hand, the reliability of a receiver relies on the quality of channel state information (CSI), which is generally acquired based on the pilot-aided channel estimation. However, the number of pilots should be small to guarantee a low transmission delay, leading to inaccurate CSI. Therefore, how to design an efficient MIMO URLLC receiver in the presence of short codes and few pilots remains a critical and challenging issue. To be clear, Fig. 1 provides the motivation of our work.
+In traditional MIMO receivers, the channel estimation, the signal detection, and the channel decoding are performed in a decoupled and sequential manner. Although the three modules have been extensively studied in previous literature [11], [12], the overall receiver performance can be far from the optimum due to the disjoint nature. Alternatively, iterative detection and decoding (IDD), also known as the turbo receiver, was
+
+1536-1276 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12173
+
+Fig. 1. The motivation of the proposed receiver design.
+Fig. 2. Block diagrams of (a) traditional turbo receivers and (b) proposed trainable JCDD receivers.
+proposed to achieve near-optimal performance [13], [14], [15]. As depicted in the red block in Fig. 2(a), in each turbo iteration, the extrinsic soft information is exchanged between the detector and the decoder to enhance the performance. Nevertheless, the inaccurate channel estimates caused by the limited number of pilot symbols can result in an unreliable information exchange in IDD and, furthermore, performance degradation. To handle this, a more generalized turbo receiver was developed by including the channel estimation into the loop [16], which is also shown in the blue block in Fig. 2(a). Specifically, the feedback of the decoder is available to both the detector and the channel estimator to enable the iterative channel estimation, detection, and decoding (ICDD), so as to refine the CSI quality as well as the subsequent detection and decoding performance.
+Despite the empirical successes of turbo receivers under long packet transmissions, the performance can deteriorate in MIMO URLLC systems encoded by short low-density parity-check (LDPC) codes, where the belief propagation (BP) decoder may suffer from undesirable positive feedback due to the short cycles in the Tanner graph, leading to severe error propagation. In order to mitigate the impacts of decoding errors during turbo iterations, a mean squared error (MSE) based virtual pilot selection strategy was designed in [17] to utilize part of the most reliable data symbols for iterative channel estimation. However, non-negligible processing delay can be introduced by the iterative information exchange between receiver modules, which does not conform to the requirement of URLLC. To address these concerns, a new type of receivers were developed for coded MIMO systems by integrating the detection and the decoding in a linear programming (LP) formulation [18], [19]. Furthermore, the authors extended the studies by additionally incorporating the pilot symbol constraints and the noise subspace constraints in [20]. However,
+
+the L1-norm based objective function and constraints used in these works to adapt to the LP framework are suboptimal in terms of the receiver performance. Besides, these LP receivers entail high computational complexity, which thus hinders their practicality. On the other hand, inspired by the great potential of deep learning-based communications [21], [22], a fully convolutional neural network (CNN)-based receiver DeepRx was proposed for orthogonal frequency division multiplexing (OFDM) systems [23]. Furthermore, the authors of [24] also leveraged CNN to enhance the traditional MIMO-OFDM receivers. Similar ideas were studied in [25] to combat the power amplifier-induced nonlinear distortion. Nevertheless, these learning-aided receivers are unable to exploit the decoding information due to the absence of the feedback links. An end-to-end autoencoder was developed in [26] for joint detection, equalization and decoding in short-packet transmissions. Albeit with considerable performance improvement, the work can hardly be extended to MIMO systems due to the excessively large network scale. Additionally, the coding and modulation at the transmitter were totally replaced by data-driven structures in the autoencoder, rendering it incompatible with the existing communication systems.
+In this paper, we propose two trainable joint channel estimation, detection, and decoding (JCDD) receivers for Gaussian MIMO channels and sparse mmWave MIMO channels, respectively, which are fundamentally distinct from previous efforts in the following aspects. First, the proposed receivers integrate the functions of different modules, which can effectively avoid the error propagation and the processing delay in the turbo receivers. Second, a unified maximum a posteriori (MAP)based formulation is considered, which can promise a better receiver performance than the LP-based formulation with the L1-norm metrics. Third, instead of the end-to-end structure in a fully data-driven manner, we only focus on the receiver design and build a model-driven JCDD network based on the popular deep unfolding technique [27], [28], which can inherit the expert knowledge and also relieve the training burden. Our main contributions include:
+• Following the MAP criterion and embracing the channel statistical information as well as the constraints imposed on pilots, data symbols, and LDPC codes, two JCDD problems are formulated for Gaussian MIMO channels and sparse mmWave MIMO channels, respectively, which, to the best of our knowledge, have not been investigated in previous works.
+• Motivated by the wide applications of the alternating direction method of multipliers (ADMM) in solving large-scale optimization problems [29], especially for LDPC decoding [30], we derive two ADMM-based algorithms to solve the considered JCDD problems, which only requires the calculations of closed-form expressions in each ADMM iteration.
+• By unfolding the ADMM iterations, two model-driven JCDD networks, i.e., JCDDNet-G and JCDDNet-S, are constructed as shown in Fig. 2(b), where the involved parameters can be optimized via offline training. Furthermore, a relaxed and accelerated ADMM (R-A-ADMM) structure is utilized to improve the ADMM convergence. Besides, we adopt a multi-stage multi-layer training
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12174
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+strategy to strike a tradeoff between the training complexity and the overall performance, which is also friendly to the early-termination mechanism. The rest of this paper is organized as follows. Section II describes the system model. In Section III and Section IV, we establish two JCDD receivers for Gaussian MIMO channels and sparse mmWave MIMO channels, respectively, wherein their corresponding deep unfolding networks are also developed. The extension for the multiuser case is studied in Section V. Section VI presents the numerical results. Finally, we conclude this work in Section VII.
+
+II. SYSTEM MODEL
+
+Consider a coded single-carrier MIMO system equipped with Nt transmit antennas and Nr receive antennas, which can also be regarded as an OFDM system where the channel
+is relatively flat in time and frequency domains as in [16]. The
+channel coefficients are assumed to be constant within a transmission block that occupies T = TP +TD time slots, where TP and TD time slots are assigned for the transmission of pilot and data symbols, respectively. For the data transmission, we first encode K information bits by a binary encoder with code length N . Specifically, in this paper, we adopt the widely-used
+LDPC code for its excellent error correction performance. Let H ∈ [0, 1]M×N be the corresponding binary parity-check matrix of an LDPC code, where M is the number of paritycheck nodes. Then, a valid codeword b = [b1, b2, · · · , bN ]T can be specified by
+
+N
+
+Hjibi = 0, j = 1, 2, · · · , M,
+
+(1)
+
+i=1
+
+2
+
+b ∈ {0, 1}N ,
+
+(2)
+
+where [·]2 denotes the modular-2 operator. After the LDPC
+encoding is performed, every Q coded bits are mapped into a 2Q-quadrature amplitude modulation (QAM) symbol, resulting in a transmit vector x = [x1, x2, · · · , xN/Q]T . Finally, these modulated symbols are demultiplexed into Nt data streams
+of length TD = N/Nt/Q and sent over the MIMO channel G ∈ CNr×Nt . Denote the pilot matrix and the data matrix by SP ∈ CNt×TP and SD ∈ CNt×TD , respectively. Then, the
+received signals can be expressed by
+
+[YP , YD] = G [SP , SD] + N,
+
+(3)
+
+where YP ∈ CNr×TP and YD ∈ CNr×TD are the received pilot matrix and data matrix, respectively, and N ∈ CNr×T is the additive white Gaussian noise (AWGN) matrix whose ele-
+ments follow the independently identically distributed (i.i.d.) Gaussian distribution with zero mean and variance σ2. Note that the (k, t)-th entry of SD, i.e., sDkt, corresponds to the QAM symbol xit,k , where it,k ≜ Nt(t − 1) + k.
+The ultimate goal of the receiver is to recover the infor-
+mation bits based on the received signals in (3) with a given pilot matrix P, which is challenging since both G and D are
+unknown to the receiver. As mentioned in the introduction part,
+although turbo receivers can boost the performance via infor-
+mation exchange between different modules, they suffer from
+error propagation especially for short codes with relatively low
+error correction capabilities. To overcome this shortcoming,
+
+we establish a MAP based JCDD receiver framework that unifies the channel estimation, the data detection, and the LDPC decoding. The details of the proposed receiver designs for Gaussian MIMO channels and mmWave MIMO channels are elaborated in the following two sections, respectively.
+III. JCDD FOR GAUSSIAN MIMO CHANNELS
+A JCDD receiver for Gaussian MIMO channels is developed in this section. We first formulate a JCDD problem using the MAP criterion and then derive an ADMM-based solution to solve this difficult mixed-integer problem. Based on this, we further present a model-driven network JCDDNet-G to facilitate the optimization of the involved parameters.
+
+A. Problem Formulation
+With the received signals YP and YD available, we first formulate a MAP based joint channel estimation and detection (JCD) problem as follows:
+
+[G, SD] = arg max p (G, SD |YP , YD, SP )
+G,SD ∈ΩNt×TD
+(=a) arg max p ([YP , YD] |G, [SP , SD] ) p (G) ,
+G,SD ∈ΩNt×TD
+(4)
+
+where (a) is based on the Bayes’ theorem and the assumption that each entry of SD is equally drawn from a discrete QAM constellation set Ω. Letting Y ≜ [YP , YD] and S ≜ [SP , SD], the likelihood probability in (4) is given by
+
+1 p (Y |G, S ) = (πσ2)NrT exp
+
+−
+
+y−
+
+ST ⊗ INr σ2
+
+g2
+2
+
+,
+
+(5)
+
+where y ≜ yPT , yDT T , yP ∈ CNrTP ×1, yD ∈ CNrTD×1, and g ∈ CNrNt×1 are the vectorized form of YP , YD, and G, respectively, and ∥·∥2 denotes the L2 norm of the input vector. Assume that g follows a zero-mean Gaussian distribution with
+covariance Cg. Then, we have
+
+p (g) =
+
+1
+
+e−gH C− g 1g.
+
+πNrNt |Cg|
+
+(6)
+
+By substituting (5) and (6) into (4) and performing some mathematical manipulations, we obtain the following MAP-JCD problem:
+
+min
+g,SD ∈ΩNt×TD
+
+y−
+
+ST ⊗ INr
+
+g
+
+2 2
+
++
+
+σ2gH
+
+Cg−1g.
+
+(7)
+
+To further achieve JCDD, we need to formulate a bit-level receiver by incorporating the code constraints into (7). Specifically, we first introduce a bit-to-symbol mapping function SD = f (b), which can be element-wisely expressed as
+
+sDkt = f (b˜t,k), k = 1, 2, · · · , Nt, t = 1, 2, · · · , TD, (8)
+
+where b˜t,k = [bQ(it,k−1)+1, bQ(it,k−1)+2, · · · , bQit,k ] ∈ {0, 1}Q with it,k ≜ Nt(t−1)+k. We adopt the Gray mapping
+functions according to [31], which are given in Appendix A.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12175
+
+By plugging (8) into the objective function of (7) and including the LDPC code constraints, we achieve the following MAP-JCDD formulation:
+
+min
+g,b
+
+y−
+
+[SP , f (b)]T ⊗ INr
+
+2
+g 2 + σ2gH C−g 1g
+
+s.t. (1), (2).
+
+(9)
+
+Unfortunately, it is difficult to solve problem (9). First, the objective function is non-convex due to the coupled variables. Second, the optimization variables are of high dimensions. Third, the parity check constraints in (1) and the discrete constraints in (2) are hard to handle. In the following subsection, we provide an efficient ADMM-based solution to this problem.
+
+B. ADMM-Based Solution
+To make problem (9) more tractable, we first relax the LDPC code constraints using the corresponding fundamental parity polytopes, which can be characterized by the following inequalities [32]1
+
+bi −
+
+bi ≤ |F (j)| − 1,
+
+i∈F (j)
+
+i∈Nc(j)\F (j)
+
+∀F(j) ⊆ S(j), j = 1, 2, · · · , M, (10)
+
+and the boxed constraints
+
+b ∈ [0, 1]N ,
+
+(11)
+
+where Nc(j) stands for the set of bit variables involved in the j-th parity check constraint, and S(j) is defined as the union set of all Nc(j)’s subsets with odd cardinalities. It can be inferred that the number of inequalities corresponding to the j-th parity check constraint is 2|Nc(j)|−1. For ease of the
+subsequent derivation, we further rewrite (10) into a matrix
+form as
+
+Ab ≤ θ,
+
+(12)
+
+where A = and θ =
+
+[W1Q1]T , [W2Q2]T , · · · , [WM QM ]T T
+
+θT1 , θ2T , · · · , θM T
+
+T
+,
+
+with
+
+Wj
+
+∈
+
+{−1, 1}2|Nc(j)|−1×|Nc(j)|,
+
+Qj
+
+∈
+
+{0, 1}|Nc(j)|×N ,
+
+and θj ∈ R2|Nc(j)|−1 being the weight matrix, the
+
+variable-selection matrix used for extracting the corresponding
+
+bit variables, and the bias matrix related to the j-th parity check constraint, respectively.2 Here we abuse the use of
+
+the notation “≤” to represent that each element of the
+
+left-side vector is no larger than that of the right-side vector.
+
+Moreover, we also mention that A is sparse and column-wise
+
+orthogonal, whose elements are either 0, −1 or 1 [34].
+
+1The well-known polar codes with dense parity check matrices can also
+be used by following the idea in [33], which utilizes the recursive nature of polar codes to obtain a sparse graph representation with O (N log N ) auxiliary variables. Based on the graph, new polytopes with a relatively small number of constraints can be defined.
+2To be clear, we take a 3-variable parity check constraint for example. Assume that the j-th parity check constraint is [b2 + b10 + b36]2 = 0, b2, b10, b36 ∈ {0, 1}. Then the corresponding Wj = [1, −1, −1; −1, 1, −1; −1, −1, 1; 1, 1, 1], Qj is the all-zeros matrix of size 3 × N except the (1, 2)-th, (2, 10)-th and (3, 36)-th entries being 1, and θj = [0, 0, 0, 2]T .
+
+Furthermore, we additionally impose a quadratic penalty term −α ∥b − 0.5N ∥22 to the objective function of (9) to encourage the integer solution of each element of b and therefore tighten the boxed constraints in (11), where α > 0 is the corresponding penalty parameter and 0.5N represents the vector of length N with each element being 0.5. Consequently,
+we are able to reformulate problem (9) by
+
+min
+g,b
+
+∥y − Xbg∥22 + σ2gH Cg−1g − α ∥b − 0.5N ∥22
+
+s.t. (13), (14),
+
+(13)
+
+where Xb ≜ STb ⊗ INr , Sb ≜ [SP , f (b)]. Thanks to the continuous variables and the introduced quadratic penalty
+term, the reformulation gets easier to handle and can be equivalent to problem (9) for a sufficiently large α. However, due to the non-convexity of −α ∥b − 0.5N ∥22, a large α might yield a poor local minimum, while a small α leads to a less
+accurate approximation of the original binary problem [35]. Hence, the value of α should be carefully selected.
+Note that problem (13) is convex quadratic with respect to (w.r.t.) g. Thus, the optimal solution to g can be obtained as
+
+gˆ = XbH Xb + σ2Cg−1 −1XbH y.
+
+(14)
+
+Then, by substituting (14) back to the objective function in (13) and safely dropping the constant term, problem (13) can be equivalently simplified to a problem dependent on b as
+
+min
+b
+
+−yH Xb XHb Xb +σ2Cg−1 −1XHb y − α ∥b − 0.5N ∥22
+
+s.t. (13), (14).
+
+(15)
+
+Now we develop an ADMM-based solution to problem (15).
+
+First, we introduce an auxiliary variable z ∈ RΓc with Γc =
+
+M j=1
+
+2|Nc (j )|−1
+
+and
+
+recast
+
+problem
+
+(15)
+
+by
+
+min
+b∈[0,1]N ×1
+
+Φ(b) − α ∥b − 0.5N ∥22
+
+s.t. Ab + z = θ, z ≥ 0,
+
+(16)
+
+where Φ(b) = −yH Xb XbH Xb + σ2Cg−1 −1XbH y. Based on this representation, the corresponding scaled augmented
+Lagrangian function can be constructed as
+
+Lµ (b, z, η) = Φ(b) − α ∥b − 0.5N ∥22
+
++
+
+µ ∥Ab
+2
+
++
+
+z
+
+−
+
+θ
+
++
+
+η∥22
+
+−
+
+µ 2
+
+∥η∥22,
+
+(17)
+
+where η ∈ RΓc and µ > 0 denote the scaled dual variables and the penalty parameter, respectively. Accordingly, the n-th ADMM iteration can be described as follows [29]:
+
+bn = arg min Φ(b) − α ∥b − 0.5N ∥22
+b∈[0,1]N
+
+µ +
+2
+
+Ab + zn−1 − θ + ηn−1
+
+2 2
+
+,
+
+zn = [0,∞)Γc θ − Abn − ηn−1 ,
+
+ηn = ηn−1 + Abn + zn − θ,
+
+(18a) (18b) (18c)
+
+where [0,∞)Γc (·) represents projecting each element of the input vector onto the interval [0, ∞).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12176
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+The remaining task is to tackle subproblem (18a), where
+the challenge mainly lies in the non-trivial term Φ(b) = −yH Xb XbH Xb + σ2Cg−1 −1XHb y. To handle this, we propose to establish an appropriate upper bound to the function
+Φ(b) and then solve the corresponding surrogate problem in
+each ADMM iteration. Proposition 1: Letting wb ≜ XbH y and Rb ≜
+XHb Xb + σ2C−g 1, a surrogate problem of subproblem (18a) is given by
+
+bn = arg min λn−1 ∥f (b)∥F2 − 2Re tr f (b)H Dn−1
+b∈[0,1]N
+
+−
+
+α
+
+∥b
+
+−
+
+0.5N
+
+∥22
+
++
+
+µ 2
+
+Ab + zn−1 − θ + ηn−1
+
+2 2
+
+,
+
+(19)
+
+where Dn−1 =
+
+λn−1INt
+
+−
+
+V V H
+bn−1 bn−1
+
+f (bn−1)
+
++
+
+VH
+bn−1
+
+YD
+
+and
+
+Vbn−1
+
+=
+
+unvec
+
+R w −1
+bn−1 bn−1
+
+with
+
+unvec(·) denoting the inverse vectorization operation.
+
+Proof: See Appendix B.
+
+Recall that A is column-wise orthogonal, which indicates
+
+that AT A is a diagonal matrix. Denote the i-th diagonal ele-
+
+ment of AT A by Λi. Thus, problem (19) can be equivalently
+
+decomposed into NtTD parallel subproblems, which take the forms of (20), shown at the bottom of the page, where dnkt−1 is the (k, t)-th entry of Dn−1, bit,k,q is the q-th element of b˜t,k with it,k,q ≜ Q[Nt(t − 1) + k − 1] + q, and ait,k,q is the it,k,q-th column of A. We notice that each of the resulting
+
+subproblems only involves Q variables and can therefore be
+
+readily tackled based on the block coordinate descent (BCD)
+
+method. Concretely, by regarding other variables as constants,
+
+we take the derivative of the objective function in (20) w.r.t.
+
+each bit,k,q and set it to zero, which yields
+
+∂ ϕ(b˜ t,k ) ∂bit,k,q − α (2bit,k,q − 1) + µ Λ b it,k,q it,k,q
+
++ aT
+it,k,q
+
+zn−1 − θ + ηn−1
+
+= 0,
+
+(21)
+
+where ϕ(b˜t,k) = λn−1 f (b˜t,k) 2 − 2Re
+
+f (b˜t,k)
+
+∗
+dknt−1
+
+.
+
+βFointr−,ks1,qimbitp,kli,cq i+ty,γwint−,ek1,tqe,mwphoerraeritlhyeddeentoatieled∂∂ϕbe(ixbt˜,ptk,r,kqe)ssiinonthseoffoβrmint−,ko1,qf
+
+and
+
+γ n−1
+it,k,q
+
+for
+
+QPSK
+
+and
+
+16QAM
+
+are
+
+provided
+
+in
+
+Appendix
+
+C.
+
+Consequently, a closed-form solution to each bit,k,q can be
+
+obtained as
+
+b = n
+it,k,q
+
+[0,1]
+
+µaT
+it,k,q
+
+θ − zn−1 − ηn−1
+
+−γn−1
+it,k,q
+
+−
+
+α
+
+µΛit,k,q
+
++
+
+βn−1
+it,k,q
+
+−
+
+2α
+
+,
+
+(22)
+
+where [0,1](·) means projecting the input onto the interval [0, 1]. We note that for QPSK, the Q = 2 bit variables in
+
+Algorithm 1 JCDD Receiving Algorithm for Gaussian MIMO
+
+Channels
+
+Input: P, YP , YD, A, θ, H, and Imax. 1: Initialize: b0, z0, η0, n = 0.
+
+2: repeat
+
+3: n ← n + 1.
+
+4: for k = 1, 2, · · · , Nt, t = 1, 2, · · · , TD do
+
+5:
+
+Sequentially
+
+update
+
+bn it,k,q
+
+for
+
+q
+
+= 1, 2, · · ·
+
+,Q
+
+via
+
+(22).
+
+6: end for
+
+7: Update zn via (18b).
+
+8: Update ηn via (18c).
+
+9: ˆbi ← 0 if bin < 0.5, or ˆbi ← 1 otherwise, for i =
+
+1, 2, · · · , N .
+
+N
+
+10: until
+
+Hjiˆbi = 0 for j = 1, 2, · · · , M orn = Imax.
+
+i=1
+
+2
+
+Output: bˆ and gˆ = XbHˆ Xbˆ + σ2C−g 1 −1XbHˆ y, where Xbˆ =
+
+P, f (bˆ) T ⊗ INr .
+
+subproblem (20) can be perfectly decoupled by invoking the bit-to-symbol mapping function in (53), which means that (22) is the optimal solution to subproblem (20).
+Overall, the proposed ADMM-based JCDD receiving algorithm is summarized in Algorithm 1. Specifically, line 10 means early terminating the iterations once the parity check constraints are all satisfied. Note that to avoid the high computational cost required in a complete BCD process, we only perform (22) once for each bit,k,q in each ADMM iteration. Although this results in an inexact solution to problem (18a) and thus renders the convergence analysis of ADMM quite challenging, the empirical results suggest that Algorithm 1 can still converge with a satisfactory performance.
+
+C. Network Design
+
+For
+
+Algorithm
+
+1,
+
+the
+
+matrix
+
+inversion
+
+R−1
+bn−1
+
+involved
+
+in
+
+the update of bn via (22) requires a high complexity up to
+
+O Nr3Nt3 in each ADMM iteration, which is unfavorable to the design of an efficient neural network. Fortunately,
+
+it is worthwhile noting that when the channel coefficients are
+
+i.i.d. Gaussian distributed with zero mean and variance σg2, i.e., Cg = σg2INrNt , we have
+
+R−1
+bn−1
+
+(a)
+=
+
+S S ∗
+
+T
+
+bn−1 bn−1
+
++
+
+σ2 σg2 INt
+
+−1
+⊗ INr ,
+
+(23)
+
+where Sbn−1 = SP , f (bn−1) , (a) is achieved by utilizing
+
+(A ⊗ B) (C ⊗ D) = (AC) ⊗ (BD), (A ⊗ B) + (C ⊗ B) =
+
+(A + C)⊗B, and (A ⊗ B)−1 = A−1 ⊗B−1. In this way, the
+
+complexity
+
+of
+
+calculating
+
+R−1
+bn−1
+
+can
+
+be
+
+reduced
+
+to
+
+O
+
+Nt3
+
+.
+
+b˜ t,k
+
+n
+=
+
+arg min
+
+λn−1 f (b˜t,k) 2 − 2Re
+
+b˜t,k ∈[0,1]Q
+
+f (b˜t,k)
+
+∗
+sknt−1
+
+Q
+−α
+q=1
+
+b − b 2
+it,k,q
+
+it,k,q
+
+µQ +
+2
+q=1
+
+Λ b + 2a 2
+it,k,q it,k,q
+
+T it,k,q
+
+zn−1 − θ + ηn−1
+
+b , it,k,q
+
+(20)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12177
+
+Moreover, it follows from (23) that
+
+vbn−1
+
+=
+
+R w −1
+bn−1 bn−1
+
+=
+
+S S ∗
+
+T
+
+bn−1 bn−1
+
++
+
+σ2 σg2 INt
+
+−1
+⊗ INr
+
+(Sb∗ n−1 ⊗ INr ) y
+
+(=a)
+
+S S ∗
+
+T
+
+bn−1 bn−1
+
++
+
+σ2 σg2 INt
+
+−1
+S∗
+bn−1
+
+⊗ INr
+
+y,
+
+(24)
+
+where (a) is also obtained based on (A ⊗ B) (C ⊗ D) =
+
+(AC) ⊗ (BD). Then, by inversely applying vec (ABC) = CT ⊗ A vec (B), it further yields a more concise expression
+
+of Vbn−1 = unvec (vbn−1 ) as
+
+Vbn−1 = YSbHn−1
+
+S SH
+bn−1 bn−1
+
++
+
+σ2 σg2 INt
+
+−1
+,
+
+(25)
+
+which therefore simplifies the calculation of Dn−1 and, furthermore, the update of bn.
+Inspired by the complexity advantage of the abovementioned i.i.d. case, we consider to construct an upper bound to Φ(b) in an i.i.d.-like form by
+
+Φ(b) = −yH Xb XbH Xb + σ2C−g 1 −1XHb y
+
+≤ −yH Xb XHb Xb + υINrNt −1XbH y,
+
+(26)
+
+which holds when υ satisfies υINrNt ⪰ σ2Cg−1. Note that we can set υ = λmax σ2Cg−1 . Thus, after replacing Rb in (55) with R˙ b ≜ XHb Xb + υINrNt , we can directly follow
+the previous derivation and finally arrive at a similar result
+
+to (22).
+
+It is known that the performance and the convergence
+
+rate of the ADMM algorithm highly depend on the penalty
+
+parameters. To avoid an exhaustive search, we unfold the
+
+ADMM iterations of Algorithm 1 into Lmax network layers
+
+and set the involved penalty parameters to be trainable so
+
+that they can be optimized via offline training. Specifically,
+
+we use different penalty parameters for each layer, denoted
+
+by
+
+{µl
+
+,
+
+αl
+
+}Lmax
+l=1
+
+,
+
+to
+
+provide
+
+more
+
+degrees
+
+of
+
+freedom
+
+and
+
+enhance the expressiveness of the network. In addition, note
+
+that
+
+although
+
+λn−1
+
+involved
+
+in
+
+the
+
+calculation
+
+of
+
+βn−1
+it,k,q
+
+and
+
+γ n−1
+it,k,q
+
+in
+
+(22)
+
+and
+
+υ
+
+introduced
+
+in
+
+(26)
+
+can
+
+be
+
+determined
+
+using
+
+some traditional
+
+ways,
+
+e.g.,
+
+λn−1
+
+=
+
+λmax
+
+V V H
+bn−1 bn−1
+
+and υ = λmax σ2C−g 1 , the operation of extracting the
+
+maximum eigenvalue is nondifferentiable, which impedes the
+
+training process. Therefore, they are also recast into layer-wise
+
+trainable parameters. In particular, instead of directly shar-
+
+ing the same parameters for different channel realizations,
+
+we incorporate the channel information into λl and υl by
+
+rewriting them as olλλmax VbH0 Vb0 and olυλmax σ2Cg−1 ,
+
+respectively. In this way, only the corresponding adjustment
+
+factors
+
+{oλl
+
+}Lmax
+l=1
+
+and
+
+{olυ
+
+}Lmax
+l=1
+
+need
+
+to
+
+be
+
+trained,
+
+which
+
+can
+
+lower the training difficulty as well as improving the adaptivity
+
+of the network. Accordingly, the l-th layer of the proposed
+
+network can be constructed by
+
+Vbl−1 = YSHbn−1
+
+S SH
+bn−1 bn−1
+
++
+
+oυl λmax
+
+σ2C−g 1
+
+−1
+INt ,
+
+(27a)
+
+Sl−1 =
+
+oλl λmax
+
+VbH0 Vb0
+
+INt
+
+−
+
+V V H
+bl−1 bl−1
+
+f (bl−1)
+
++
+
+VH
+bl−1
+
+YD
+
+,
+
+(27b)
+
+bl [Iq] = [0,1]N/Q µlA [:, Iq]T θ − zl−1 − ηl−1
+
+− γl−1 [Iq] − αl1N/Q ⊘ δl [Iq] , ∀q,
+
+(27c)
+
+bl = Concat bl [Iq] , ∀q , zl = ReLU θ − Abl − ηl−1 ,
+
+(27d) (27e)
+
+ηl = ηl−1 + Abl + zl − θ,
+
+(27f)
+
+where δl = µldiag AT A + βl−1 − 2αl1N with diag(·) being the diagonal vector of the input matrix, ⊘ denotes the element-wise division, and Iq is defined as the index set of the q-th bit variables corresponding to all symbols, i.e, Iq ≜ {it,k,q |∀t, ∀k } with it,k,q ≜ Q[Nt(t − 1) + k − 1] + q. Note that βl−1 and γl−1 involved in (27c) can be obtained using λl−1 = olλ−1λmax VbH0 Vb0 , Sl−1, and f (bl−1) according to Appendix C. Besides, ReLU(·) and Concat(·) represent
+the rectified linear unit (ReLU) activation function and the concatenating function, respectively. [0,1]N/Q (·) means projecting each entry of the input vector onto the interval [0, 1].
+Note that some variants of ADMM can enjoy a faster
+convergence rate, such as the relaxed and accelerated ADMM
+(R-A-ADMM) in [36], which combines the over-relaxation
+scheme with a predictor-corrector-type acceleration step.
+Inspired by this, we improve the network structure and addi-
+tionally introduce trainable parameters for each layer, which takes the form:
+
+(27a), (27b), (27c), (27d),
+
+(28a)
+
+z¯l = ReLU θ − orl Abl − 1 − orl θ − zl−1 − ηl−1 ,
+
+(28b)
+
+η¯l = ηl−1 + orl Abl + 1 − orl zl = z¯l + opl z¯l − z¯l−1 , ηl = η¯l + olp η¯l − η¯l−1 ,
+
+θ − zl−1 + z¯l − θ, (28c) (28d) (28e)
+
+where orl and olp denote the trainable relaxation parameter and predictor-corrector parameter, respectively. Furthermore, to simplify the expressions, we let wl = θ − olrAbl − 1 − olr θ − zl−1 − ηl−1 and recast (28b)-(28e) by
+
+zl = ReLU wl + olp ReLU wl − ReLU wl−1 ,
+
+(29a)
+
+ηl = zl − 1 + opl wl + opl wl−1.
+
+(29b)
+
+The block diagram of the l-th layer of the proposed JCDDNet-G is illustrated in Fig. 3.
+
+IV. JCDD FOR SPARSE MMWAVE MIMO CHANNELS
+The mmWave MIMO systems can promise low transmission latency owing to the massive bandwidth, which are thereby attractive for URLLC. However, it has been verified that the energy of an mmWave MIMO channel is mainly dominated by a limited number of scattering clusters, resulting in its non-Gaussian distribution and the sparsity in the beamspace domain. Therefore, the previously proposed JCDDNet-G is no longer suitable. To fill the gap, we establish another
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12178
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+B. ADMM-Based Solution
+Similarly to Section III-B, we also derive an ADMM-based algorithm to address problem (33). Following the reformulation of problem (16), problem (33) can be further relaxed to
+
+min
+Gs ,b∈[0,1]N
+
+Ψ(Gs, b) − κ ∥b − 0.5N ∥22
+
+s.t. Ab + u = θ, u ≥ 0,
+
+(34)
+
+Fig. 3. Block diagram of the l-th layer of JCDDNet-G.
+JCDD receiver for sparse mmWave MIMO channels in this section. Similarly to Section III, we also start by formulating a MAP-JCDD problem and then solve it based on the ADMM framework. Furthermore, the corresponding deep unfolding network JCDDNet-S is provided.
+
+A. Problem Formulation
+
+We consider the uniform planar array (UPA) of size N y and N z and use the subscripts r and t to distinguish the receive
+
+and transmit antennas. To exploit the sparsity of mmWave
+
+MIMO channels, we first rewrite the channel matrix G using
+
+the beamspace-domain representation by
+
+G = FrGsFtH ,
+
+(30)
+
+CCwNNhetrzyr××eNNFtrzy ,raFr=eNurzFnNi∈taryrCy⊗NdFrzis×NcNrrzerztae, nFfdoNuFtyrite∈r=trCaFNnNstyfty×orN⊗mty
+
+FNtz , FNry ∈ , and FNtz ∈ (DFT) matri-
+
+ces. Gs ∈ CNr×Nr denotes the sparse beamspace-domain
+
+channel matrix. Since the number of channel clusters Ncl is
+
+relatively small in the mmWave band, i.e., Ncl ≪ NrNt, there
+
+are only a few groups of large-amplitude entries in Gs, each
+
+group corresponding to one channel cluster. We note that Gs is
+
+not perfectly “sparse” due to the power leakage, which means
+
+that other entries of Gs are of small amplitude but not exactly
+
+zero [37]. Therefore, we can assume that Gs follows a Laplace
+
+distribution, i.e.,
+
+ε2 NrNt
+
+p(Gs) = 2π
+
+exp (−ε∥Gs∥1) ,
+
+(31)
+
+where ε > 0 is the sparsity parameter and ∥·∥1 denotes the sum of the absolute value of each entry of the input matrix.
+Let us plug (30) into (5) and obtain
+
+1 p (Y |G, S ) = (πσ2)NrT exp
+
+−
+
+FHr Y − GsFtH S σ2
+
+2 F
+
+,
+
+(32)
+
+where ∥·∥F denotes the Frobenius norm of the input matrix and we utilize the fact that Fr is a unitary matrix and the unitary invariance of the Frobenius norm. Then, by substituting (31) and (32) into (4) with some algebraic simplifications and considering the bit-to-symbol mapping function as well as the LDPC code constraints, the MAP-JCDD problem for sparse mmWave MIMO channels can be formulated by
+
+min
+Gs ,b
+
+FHr Y − GsFHt Sb
+
+2 F
+
++ σ2ε∥Gs∥1
+
+s.t. (1), (2).
+
+(33)
+
+where u∈
+
+Ψ(Gs, b) = RΓc denotes
+
+the
+
+FrH Y − Gs introduced
+
+FHt Sb
+
+2 F
+
+auxiliary
+
++ σ2ε∥Gs∥1, variable, and
+
+−κ ∥b − 0.5N ∥22 is the penalty term with κ > 0 being the
+
+penalty parameter. Then, regarding [Gs, b] as a block, the
+
+augmented Lagrangian function w.r.t. (34) is given by
+
+Lρ ([Gs, b] , u, ω) = Ψ(Gs, b) − κ ∥b − 0.5N ∥22
+
++
+
+ρ ∥Ab
+2
+
++
+
+u
+
+−
+
+θ
+
++
+
+ω∥22
+
+−
+
+ρ 2
+
+∥ω∥22
+
+,
+
+(35)
+
+where ω ∈ RΓc and ρ > 0 represent the scaled dual variables and the penalty parameter, respectively. Thus, the n-th ADMM iteration can be written as [29]
+
+[Gs, b]n = arg min Ψ(Gs, b) − κ ∥b − 0.5N ∥22
+
+Gs ,b∈[0,1]N
+
+ρ +
+2
+
+Ab + un−1 − θ + ωn−1
+
+22,
+
+(36a)
+
+un = [0,∞)Γc θ − Abn − ωn−1 ,
+
+(36b)
+
+ωn = ωn−1 + Abn + un − θ.
+
+(36c)
+
+Note that subproblem (36a) is non-convex w.r.t. [Gs, b] with Gs and b coupled in the objective function. To handle this, we adopt the BCD method to solve this subproblem by
+alternatively optimizing Gs and b. 1) Optimization of Gs: For the n-th ADMM iteration,
+by fixing b with the last update bn−1, subproblem (36a)
+becomes
+
+Gns = arg min
+
+FrH Y − GsFHt Sbn−1
+
+2 F
+
++
+
+σ2ε∥Gs∥1,
+
+Gs
+
+(37)
+
+where Sbn−1 = P, f (bn−1) . (37) is convex w.r.t. Gs but its optimal closed-form solution is hard to be obtained. Considering that the term σ2ε∥Gs∥1 is non-differentiable, we propose to employ the proximal gradient descent (PGD)
+algorithm to iteratively solve problem (37). Specifically, for a
+problem in the form of xˆ = arg min r(x) + q(x), where p(x)
+x
+is smooth, differentiable and convex while q(x) is convex but
+not necessarily differentiable, the PGD algorithm iteratively
+updates x by [38]
+
+xi = proxq xi−1 − τ ∇r (x∗)i−1 ; τ , i = 1, 2, · · · (38)
+
+where proxq(·) and τ denote the proximal operator of the function q(x) and the stepsize, respectively. We emphasize
+that the conjugate gradient ∇r (x∗)i−1 in (38) is considered
+
+since the variables are complex-valued. Accordingly, let-
+
+ting r(Gs) ≜
+
+FrH [YP , YD] − GsFHt P, f (bn−1)
+
+2 F
+
+and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12179
+
+q(Gs) ≜ σ2ε∥Gs∥1, the solution to problem (37) can be obtained as
+Gns = proxq Gns −1 −τ ∇r (Gs∗)n−1 ; τ ≜ proxq G¯ s; τ ,
+(39)
+
+where ∇r (Gs∗)n−1 = Gns −1FHt Sbn−1 − FrH Y
+
+FtH Sbn−1 H , (40)
+
+and
+
+proxq G¯ s; τ
+
+= arg min σ2ε
+X
+
+G¯ s
+
+1 1 + 2τ
+
+X − G¯ s
+
+2 F
+
+,
+
+(41)
+
+Algorithm 2 JCDD Receiving Algorithm for Sparse MmWave
+
+MIMO Channels
+
+Input: P, YP , YD, A, θ, H, and Imax. 1: Initialize: G0s, b0, u0, ω0, n = 0. 2: repeat
+
+3: n ← n + 1.
+
+4: Update Gns via (39) and calculate Gn = FrGns FtH .
+
+5: for k = 1, 2, · · · , Nt, t = 1, 2, · · · , TD do
+
+6:
+
+Sequentially
+
+update
+
+bn it,k,q
+
+for
+
+q
+
+= 1, 2, · · ·
+
+,Q
+
+via
+
+(46).
+
+7: end for
+
+8: Update un via (36b).
+
+9: Update ωn via (36c).
+
+10: ˆbi ← 0 if bni < 0.5, or ˆbi ← 1 otherwise, for i =
+
+1, 2, · · · , N .
+
+N
+
+11: until
+
+Hjiˆbi = 0 for j = 1, 2, · · · , M orn = Imax.
+
+i=1
+
+2
+
+Output: bˆ and Gˆ = Gn.
+
+whose solution can be expressed using the shrinkage operator as hsk G¯ s; σ2ετ , which can be further rewritten in an
+element-wise form as
+
+hsk
+
+g¯s; σ2ετ
+
+= g¯s max |g¯s|
+
+|g¯s| − σ2ετ, 0
+
+,
+
+(42)
+
+where g¯s represents each entry of G¯ s. Note that we also only perform a one-step PGD update instead of iterating until
+convergence in each ADMM iteration. 2) Optimization of b: Given Gsn and some mathematical
+manipulations, we can obtain the following problem w.r.t. b:
+
+bn = arg min ∥YD − Gnf (b)∥F2 − κ ∥b − 0.5N ∥22
+b∈[0,1]N
+
+ρ +
+2
+
+Ab + un−1 − θ + ωn−1
+
+2 2
+
+,
+
+(43)
+
+where Gn = FrGns FHt . Furthermore, to make problem (43) more tractable, we replace ∥YD − Gnf (b)∥2F in the objective function with an upperbound surrogate function, which can be
+constructed by performing the same operations as the steps (c),
+(d), and (e) in (56). As a result, we have
+
+∥YD − Gnf (b)∥2F = tr f (b)H (Gn)H Gnf (b)
+
+− 2Re tr f (b)H (Gn)H YD + tr YDH YD
+
+(a)
+≤ χn−1
+
+∥f (b)∥F2
+
+−
+
+2Re
+
+tr
+
+f (b)H Ξn−1
+
++ constant, (44)
+
+where Ξn−1 =
+
+χn−1INt − (Gn)H Gn f (bn−1) +
+
+(Gn)H YD, and χn−1 is a parameter satisfying χn−1INt ⪰ (Gn)H Gn, which can be readily chosen as χn−1 =
+
+λmax (Gn)H Gn . Consequently, the surrogate form of prob-
+
+lem (43) can be expressed as
+
+bn = arg min χn−1 ∥f (b)∥2F − 2Re tr f (b)H Ξn−1
+b∈[0,1]N
+
+−
+
+κ
+
+∥b
+
+−
+
+0.5N
+
+∥22
+
++
+
+ρ 2
+
+Ab + un−1 − θ + ωn−1
+
+22,
+
+(45)
+
+which takes almost the same form as problem (19) and therefore the solution can be similarly achieved by
+
+b = n
+it,k,q
+
+[0,1]
+
+ρaT
+it,k,q
+
+θ − un−1 −ωn−1
+
+−
+
+cn−1
+it,k,q
+
+−
+
+κ
+
+ρΛ +e it,k,q
+
+n−1 it,k,q
+
+−
+
+2κ
+
+,
+
+(46)
+
+where
+
+the
+
+expressions
+
+of
+
+en−1
+it,k,q
+
+and
+
+cn−1
+it,k,q
+
+can
+
+be
+
+accordingly
+
+obtained
+
+like
+
+βn−1
+it,k,q
+
+and
+
+γ n−1
+it,k,q
+
+in
+
+(59b)
+
+or
+
+(60d),
+
+as
+
+long
+
+as we replace λn−1 and dknt−1 by χn−1 and ξknt−1, i.e., the
+
+(k, t)-th entry of Ξn−1, respectively.
+
+To be clear, we summarize the above JCDD procedure in
+
+Algorithm 2.
+
+C. Network Design
+
+In the following, we develop another JCDD receiv-
+
+ing network for sparse mmWave MIMO channels, referred
+
+to as JCDDNet-S. Akin to JCDDNet-G in Section III-C,
+
+JCDDNet-S is built by unfolding the ADMM iterations
+
+of Algorithm 2 and utilizing the structure of the vari-
+
+ant R-A-ADMM to improve the convergence. In the
+
+proposed network, the penalty parameters, the sparsity
+
+parameter, and the stepsize involved in the ADMM iter-
+
+ations are set to be layer-wise trainable parameters,
+
+i.e.,
+
+{ρl
+
+,
+
+κl
+
+,
+
+εl
+
+,
+
+τ
+
+l
+
+}Lmax
+l=1
+
+.
+
+Besides,
+
+we
+
+reexpress
+
+χn−1
+
+involved
+
+in (46) as ϱχl λmax G0 H G0 so that only the fac-
+
+tors
+
+{ϱlχ
+
+}Lmax
+l=1
+
+need
+
+to
+
+be
+
+trained.
+
+Furthermore,
+
+we
+
+also
+
+add
+
+the
+
+trainable
+
+relaxation
+
+parameters
+
+{ϱrl
+
+}Lmax
+l=1
+
+and
+
+the
+
+predictor-corrector
+
+parameters
+
+{ϱpl
+
+}Lmax
+l=1
+
+to
+
+fit
+
+the
+
+R-A-ADMM
+
+structure. Thus, as shown in Fig. 4 at the top of the next page,
+
+the l-th layer of the proposed network is formulated as follows:
+
+G¯ ls = Gls−1 − τ l Gsl−1FtH Sbn−1 −FHr [Y]
+
+FHt Sbn−1 H ,
+
+(47a)
+
+Gls = hsk G¯ ls; σ2εlτ l , Gl = FrGlsFHt , Ξl−1 = ϱχlrλmax G0 H G0
+
+INt −
+
+Gl H Gl
+
+(47b) (47c) f (bl−1)
+
++ Gl H YD,
+
+(47d)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12180
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+Fig. 4. Block diagram of the l-th layer of JCDDNet-S.
+
+bl [Iq] = [0,1]N/Q ρlA [:, Iq]T θ − ul−1 − ωl−1
+
+− cl−1 [Iq] − κl1N/Q ⊘ ζl [Iq] , ∀q,
+
+(47e)
+
+bl = Concat bl [Iq] , ∀q ,
+
+(47f)
+
+ςl = θ − ϱlrAbl − 1 − ϱlr θ − ul−1 − ωl−1, (47g) ul = ReLU ςl + ϱlp ReLU ςl − ReLU ςl−1 ,
+
+(47h)
+
+ωl = ul − 1 + ϱlp ςl + ϱpl ςl−1,
+
+(47i)
+
+where ζl = ρldiag AT A + el−1 − 2κl1N and Iq is
+defined in (27) as Iq ≜ {it,k,q |∀t, ∀k }. el−1 and cl−1 involved in (47e) can be calculated similarly to βl−1 and
+γl−1 in (27c) by replacing λl−1 and Sl−1 with χl−1 = ϱlχ−1λmax G0 H G0 and Ξl−1, respectively.
+
+V. EXTENSION FOR MULTIUSER CASE
+
+Although the proposed two JCDD receivers for Gaussian
+
+MIMO channels and sparse mmWave MIMO channels are
+
+both derived for the single-user scenario, both of them can
+
+be easily extended to address the multiuser case. Specifically,
+
+we consider a K-user uplink MIMO system, where each user has Nt transmit antennas. Let Hk ∈ [0, 1]Mk×Nk denote the
+
+parity-check matrix corresponding to the LDPC code adopted
+
+by the k-th user, where Mk and Nk represent the number of
+
+parity-check nodes and the code length, respectively. For the k-th user, the codeword bk = [bk1, bk2, · · · , bkNk ]T is mapped into 2Qk -QAM symbols xk = xk1, xk2, · · · , xk(Nk/Qk) T
+and then evenly allocated to each transmit antenna for spatial
+
+multiplexing transmission. For convenience, we still keep
+
+Nk/Nt/Qk = TD for different users. The pilot matrix and
+
+data matrix become SP ∈ CKNt×TP and SD = f (b) ∈
+
+CKNt×TD , respectively, where b = b1T , bT2 , · · · , bTK T ∈
+
+K
+
+[0, 1]N with N = Nk, and f (·) is the bit-to-symbol
+
+k=1
+
+mapping function. Then, for Gaussian MIMO channels,
+
+by introducing the auxiliary variables zk ∈ RΓck with Γck =
+
+Mk j=1
+
+2|Nc(j)|−1,
+
+problem
+
+(16)
+
+can
+
+be
+
+updated
+
+by
+
+min
+b∈[0,1]N
+
+Φ(b) − α
+
+b − 0.5N
+
+2 2
+
+s.t. Akbk + zk = θk, zk ≥ 0, k = 1, 2, · · · , K, (48)
+
+−1
+where Φ(b) = −yH Xb XbH Xb + σ2Cg−1 XbH y and Xb ≜ [SP , f (b)]T ⊗ INr . Note that Ak and θk can be easily obtained according to Hk by following (10)-(12).
+Similarly, for sparse mmWave MIMO channels, the mul-
+tiuser extension of problem (34) can be expressed by
+
+min
+Gs ,b∈{0,1}N
+
+Ψ(Gs, b) − κ
+
+b − 0.5N
+
+2 2
+
+s.t. Akbk + uk = θk, uk ≥ 0, k = 1, 2, · · · , K, (49)
+
+where Ψ(Gs, b) σ2ε∥Gs∥1 and uk
+
+= FHr Y − GsFHt [SP , f (b)] denotes the auxiliary variable.
+
+2 F
+
++
+
+Algorithms 1 and 2 for problems (16) and (34) can be
+
+adopted to address problems (48) and (49) with minor modi-
+
+fications. Furthermore, the corresponding neural networks can
+
+also be readily designed by adaptively revising previous steps.
+
+VI. NUMERICAL RESULTS
+
+In order to match the short packet transmission for URLLC, a short (3,6)-regular LDPC code C1 constructed by the progressive edge-growth (PEG) algorithm with code rate R = 1/2 and code length N = 288 is used, and the number of pilot symbols is limited to Tp = Nt. For JCDDNet-G, we set Nr = 8 and Nt = 4. Both i.i.d. Gaussian channels Hi.i.d and spatially correlated Gaussian channels generated by the Kronecker model [39], i.e., Hcor = Rr1/2Hi.i.dR1t /2, are considered. Each entry of Hi.i.d follows a Gaussian distribution with zero mean and unit variance, Rt and Rr are the exponential correlation matrices of the transmitter and the receiver, which can be characterized by the correlation coefficients ρt and ρr, respectively. For JCDDNet-S, the Saleh-Valenzuela model is
+used to generate the mmWave MIMO channel, which can be characterized by Ncl clusters with Np paths per cluster as
+follows [40]:
+
+G=
+
+NtNr NclNp
+
+Ncl Np
+αc,par
+c=1 p=1
+
+φcr,p, ϑcr,p
+
+aHt
+
+φct,p, ϑct,p ,
+
+(50)
+
+where αc,p, φrc,p(ϑcr,p), and φct,p(ϑct,p) denote the complex gain, the azimuth (elevation) angle of arrival (AoA), and the azimuth (elevation) angle of departure (AoD) of the p-th path in the c-th cluster, respectively, and ar and at are the receive and transmit array response vectors, respectively. In this work, we consider a half-wavelength spaced UPA of size N y × N z,
+the array response vector of which can be expressed by
+
+a(φ, ϑ) = √ 1
+
+1, · · · , eȷπ(y sin φ sin ϑ+zcosϑ), · · · ,
+
+NyNz
+
+eȷπ((N y−1) sin φ sin ϑ+(N z−1) cos ϑ) T ,
+
+y = 1, 2, · · · , N y, z = 1, 2, · · · , N z,
+
+(51)
+
+where the subscripts r and t are temporarily omitted for the
+simplicity of the expression. Specifically, we assume that the transmitter and the receiver are equipped with a 2×2 UPA and an 8 × 8 UPA, respectively, and there exist Ncl = 8 clusters with Np = 10 paths per cluster. The channel gains of the line-of-sight (LoS) paths and other paths are distributed as CN (0, 1) and CN 0, 10−0.5 , respectively. Besides, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12181
+
+azimuth and elevation AoAs and AoDs in each cluster are
+
+randomly generated with a mean cluster angle uniformly
+
+distributed
+
+over
+
+[−
+
+π 2
+
+,
+
+π 2
+
+]
+
+and
+
+the
+
+angular
+
+spread
+
+of
+
+7.5
+
+degrees.
+
+The traditional decoupled and turbo receivers, includ-
+
+ing the IDD [14], [15] and the ICDD [16], are adopted
+
+for performance comparison, where the minimum mean
+
+squared error (MMSE), the generalized approximate mes-
+
+sage passing (GAMP) [41], and the maximum a posterior
+
+probability (MAP)-based MIMO detectors are taken into
+
+account for each kind of receiver. Specifically, the linear
+
+MMSE (LMMSE)-based channel estimation method is used
+
+for Gaussian MIMO channels, while the iterative shrinkage
+
+thresholding algorithm (ISTA) [42] is used to deal with the
+
+convex Lasso channel estimation problem for sparse mmWave
+
+MIMO channels. For simplicity, we denote these baselines
+
+as MMSE/MAP-Decouple, MMSE/GAMP/MAP-IDD, and
+
+MMSE/GAMP/MAP-ICDD. Specifically, the channel estima-
+
+tion MSE-based virtual pilot selection method proposed in [17]
+
+is also considered as a baseline for the Gaussian channels
+
+and denoted by MMSE-ICDD (Selected), where the number
+
+of the selected symbols TV
+
+are set to
+
+3 4
+
+TD
+
+and
+
+2 3
+
+TD
+
+for
+
+the QPSK and the 16QAM cases, respectively. Moreover, the
+
+maximum number of GAMP iterations, the maximum number
+
+of BP iterations for LDPC decoding, the maximum number of
+
+turbo iterations, and the maximum number of ISTA iterations
+
+are set to 10, 100, 10 and 100, respectively. Note that the
+
+early termination mechanism is also applied in these baseline receivers.3
+
+A. Training Strategy
+The proposed networks are trained offline with 10000 training samples under a specific SNR point where the block error rate (BLER) of the original ADMM algorithm reaches 1e-2, which can provide enough error patterns to learn the underlying decoding philosophy. Then, we test the networks under different SNRs using continuously generated samples until 100 error blocks are collected. Note that the training and the validation datasets are generated under different channel realizations with a consistent channel statistical distribution. After the offline training, the learned networks can be directly used for a new channel realization and there is no need for retraining as long as the channel statistics remains unchanged. However, the early-termination mechanism can not be easily incorporated into the training process since the number of network layers should be fixed. On the other hand, although we can predefine a sufficiently large number of layers to ensure the convergence, the training of such a large-scale network is quite challenging. Specifically, the traditional end-to-end training can suffer from a high training complexity and the vanishing gradient problem, and the layer-by-layer training can lead to a noticeable performance loss.
+3Source code: https://github.com/sunyi0101/JCDDNet
+
+To address the training issue, we present a multi-stage multilayer training strategy, which means dividing the network training into several stages. For the s-th stage, we only need to train the current Lpart layers with the parameters of the preceding (s − 1) Lpart layers frozen. By taking all the layers into account, we define the loss function in (52) shown at the bottom of the page, where Υl denotes the trainable parameters of the l-th layer, T is the set of training samples, and tanh (ς (·)) with ς being a large number, e.g., 200, is used to approximate the sign function while promising the differentiability. By minimizing (52), the output of each layer is considered to approach the labels, which is friendly to the early termination mechanism in the online phase. According to the simulation results, We fix the number of network layers to 100 for an efficient training. Note that it is allowed to set Lmax to be larger than 100 for online prediction, where the parameters of the networks are loaded with the well-trained values in the first 100 layers and remain to be the default values4 in the subsequent layers. In addition, we empirically set Lpart = 20 for a reasonable tradeoff between the training complexity and the overall performance. The Adam optimizer is applied, where the batchsize, the number of epochs, and the learning rate are set to 200, 100, and 0.01 for each stage, respectively.
+B. Performance Evaluation
+We first compare the proposed JCDDNet-G with its corresponding ADMM algorithm to verify the effectiveness of the training. Fig. 5(a) shows their BLER performances in each stage under i.i.d Gaussian MIMO channels with QPSK modulation, where we also provide the results with Lmax = 200 and Lmax = 300 for reference. It can be seen that, benefiting from the well-trained parameters, JCDDNet-G can always outperform the original ADMM algorithm JCDD-G and the performance advantage is more obvious for a higher SNR point. On the other hand, we also count the average number of iterations/layers and time required per codeword of the two considered receivers when using the early termination mechanism, and the results at SNR = 4 dB are provided for an intuitive illustration in Fig. 5(b). We can observe that, JCDDNet-G only requires an average of around 13 iteration, which is much less than the counterpart, indicating a faster convergence rate. The corresponding average time also shows a consistent behavior. Meanwhile, increasing Lmax to 300 can bring limited performance gains and negligible complexity burdens, since only a very few tasks need hundreds of iterations. A similar trend can be found for JCDDNet-S and its
+4We use a coarse grid search to optimize the penalty parameters involved in the ADMM algorithms, which are also regarded as the default values of the corresponding parameters in the network. On the other hand, for the additional introduced parameters in the network, the default values are set as orl = 1, olp = 0, oλl = 1, and olυ = 1 for each layer of JCDDNet-G. The default values of the parameters of JCDDNet-S are determined in a similar way.
+
+L
+
+{Υl
+
+}sLpart
+l=(s−1)Lpart
+
++1
+
+1 =
+|T |
+
+sLpart
+
+tanh ς bl − 0.5N
+
+T l=(s−1)Lpart+1
+
+− (2b − 1N )
+
+2 2
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+(52)
+
+12182
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+Fig. 5. Comparison of JCDDNet-G and its corresponding ADMM algorithm in terms of (a) BLER performance and (b) average number of iterations/layers and time per codeword under i.i.d. Gaussian MIMO channels with QPSK modulation.
+
+Fig. 6. BLER performances of different receivers under (a) i.i.d. and (b) correlated Gaussian channels with QPSK modulation.
+
+corresponding ADMM algorithm, which is not presented due to the space limitation.
+1) Gaussian MIMO Channels: We now investigate the performances of the proposed JCDDNet-G and turbo receivers under i.i.d and correlated Gaussian channels with ρt = ρr = 0.5, respectively. Fig. 6 compares the performances of different receivers under QPSK modulation. As shown in Fig. 6(a), the IDD receivers can obtain a performance gain over the decoupled receivers by iteratively exchanging information between the detector and the decoder. However, the gain is relatively limited owing to the coarse CSI acquired based on the few pilot symbols, leading to severe error propagation. As an improved alternative, the ICDD receivers utilize the decoding output to generate virtual pilots to aid the channel estimation, which can therefore yield a much better performance than IDD receivers. Furthermore, the selection of virtual pilots can only bring limited performance gains while introducing additional complexities of calculating the MSE metric for each soft data symbol and sorting, making the method less cost-efficient. On the other hand, by directly integrating the functions of different modules and optimizing the involved parameters via offline training, the proposed JCDDNet-G is immune to the error propagation and also endowed with robustness. Consequently, it can considerably outperform MAP-ICDD. In fact, we mention that even without the deep learning-based optimization, JCDD-G with the fixed parameters determined based on a coarse grid search method can also outperform the turbo receivers, suggesting the
+
+superiority of the proposed JCDD framework. It is also interesting to note that the GAMP-ICDD can sometimes perform slightly better than the MAP-ICDD, since the local optimality of sub-modules does not necessarily guarantee global optimality. Moreover, the information exchanged in turbo iterative algorithms relies heavily on empirical principles, which might suffer from some uncertainties in theory, whereas our proposed JCDD algorithms are based on theoretical formulations. In Fig. 6(b), the gains achieved by the turbo receivers under correlated Gaussian MIMO channels are similar to those in Fig. 6(a), while the GAMP-based receivers derived for i.i.d. Gaussian channels suffer from dramatic performance degradation in presence of channel correlation. Fortunately, JCDDNet-G can still maintain a comparable performance to MAP-ICDD.
+The performances of JCDDNet-G under Gaussian MIMO channels with 16QAM modulation are illustrated in Fig. 7. Concerning the inferior performances of IDD receivers as discussed above, we do not plot their results for the simplicity of the curves. We can see that, JCDDNet-G performs better than the decoupled receivers with Lmax = 100 and can approach the high-complexity MAP-ICDD with Lmax = 500. It is also noteworthy that the performance improvement by increasing Lmax is more obvious than that in the QPSK case, especially for correlated Gaussian channels considered in Fig. 7(b), demonstrating a slower convergence rate for a higher-order modulation. This can be attributed to the fact that the solution (22) to subproblem (20) is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12183
+
+Fig. 7. BLER performances of different receivers under (a) i.i.d. and (b) correlated Gaussian channels with 16QAM modulation.
+
+Fig. 8. BLER performances of different receivers under sparse mmWave channels with different modulation orders.
+
+optimal in the QPSK case but suboptimal in the 16QAM case.
+2) Sparse mmWave MIMO Channels: The performances of the other designed network JCDDNet-S under sparse mmWave MIMO channels with different modulation orders are given in Fig. 8. Due to the partially known channel distribution and the low-rank and highly correlated nature of mmWave MIMO channels, it can be found that all the considered receivers suffer from slowly descending BLER curves versus SNR (Note that the SNR interval between two plotted points is 2 dB here), where the GAMP-based receivers can even hardly work. Meanwhile, the turbo gains obtained by the ICDD receivers compared to the decoupled receivers also become limited in the 16QAM case as a result of the severe error propagation. As illustrated in Fig. 8(a), our proposed JCDDNet-S can always remarkably outperform MMSE-ICDD and approach MAP-ICDD with Lmax = 100 in the QPSK case. However, for 16QAM considered in Fig. 8(b), there is still an evident gap from the MAP-based receivers even when Lmax is increased to 500. Nevertheless, JCDDNet-S enjoys a much lower complexity, as will be analyzed in the next subsection.
+3) Multiuser Case: This part provides some results to validate the adaptability of the proposed networks to multiuser cases. Note that the network scale is directly related to the total number of bit variables, which can greatly influence the required computational resources and training time. For a convenient verification, we only consider a small-scale scenario with K = 2 users, where each Nt = 4-antenna user uses a
+
+short (3,6)-code C2 with code rate R = 1/2 and code length N = 144 and adopts the QPSK modulation. Fig. 9(a) presents
+
+the performances of JCDDNet-G for the considered multiuser
+
+scenario. We can observe that, JCDDNet-G can not reach
+
+convergence with 100 layers as in the single-user scenario,
+
+which suggests that it requires more layers to decode more
+
+data streams. Moreover, a 0.5 dB performance gain beyond
+
+MAP-ICDD can be attained with Lmax = 200. On the other hand, we mention that the low-rank mmWave
+
+MIMO channels can not support a reliable transmission of full
+
+data streams in the multiuser case. Therefore, we reduce the
+
+number of streams for each user to Ns = 2 and use a precoding
+
+matrix W ∈ CNt×Ns to map the streams onto Nt = 4 transmit
+
+antennas.
+
+In
+
+the
+
+simulation,
+
+we
+
+fix
+
+W
+
+=
+
+1 2
+
+[1,
+
+0;
+
+0,
+
+1;
+
+1,
+
+0;
+
+0,
+
+ȷ],
+
+which is selected from [31]. The corresponding results are
+
+plotted in Fig. 9(b). Thanks to the array gain provided by
+
+W, the considered receivers can behave well in the multiuser
+
+mmWave scenario, where JCDDNet-S can still show a satis-
+
+fying performance that is better than MMSE-ICDD and also
+
+comparable to MAP-ICDD.
+
+4) Generalization Ability: Note that the proposed JCDD
+
+networks are model-driven and developed by unfolding the
+
+ADMM iterations of the derived receiving algorithms, which
+
+only involve a few trainable parameters and can be naturally
+
+less prone to overfitting. The previous results have verified the
+
+generalization ability of the proposed JCDD network under
+
+mismatched SNRs. Furthermore, we conduct simulations to
+
+test the robustness against mismatched channel distributions
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12184
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+Fig. 9. BLER performances of (a) JCDDNet-G and (b) JCDDNet-S for a 2-user system using code C2 and QPSK modulation.
+
+Fig. 10. BLER performance of JCDDNet-G under correlated Gaussian channels with ρt = ρr = 0.3 by using the parameters trained under i.i.d. Gaussian channels.
+
+Fig. 12. BLER performances of different receivers under i.i.d. Gaussian channels with QPSK modulation using CCSDS codes C3 and C4.
+
+Fig. 11. BLER performance of JCDDNet-G under i.i.d Gaussian channels with QPSK modulation and C2 of codelength N = 144 by using the parameters trained with C1 of codelength N = 288.
+
+to generalize for a significantly deviated channel distribution or a code with mismatched distributions of variable degrees. Fortunately, it is feasible to train the networks for different spatial correlation levels or different codes in advance and then pre-store look-up tables for online applications.
+5) Other Codes: We also test the proposed JCDD receivers using the commonly used consultative committee for space data systems (CCSDS) codes, i.e., C3 of codelength N = 128 and code rate 1/2, and C4 of codelength N = 256 and code rate 1/2 [43]. It can be seen from Fig. 12 that, the proposed JCDDNet-G can still obviously outperform MMSE-ICDD, while the performance advantage over MAP-ICDD becomes limited when the codelength increases from 128 to 256. Similar trends can be also found for 5G codes, which are not presented due to the strict page limit.
+
+and mismatched codelengths. Fig. 10 presents the performance of JCDDNet-G by directly applying the parameters trained under i.i.d. Gaussian channels for correlated Gaussian channels ρt = ρr = 0.3. It can be observed that the mismatched network exhibits robustness to the low correlated Gaussian channels and can still outperform the MMSE-based and MAPbased turbo receivers. Additionally, in Fig. 11, JCDDNet-G is directly loaded with the parameters trained for C1 of codelength N = 288 and evaluated with C2 of codelength N = 144, where the superiority over MAP-ICDD is also maintained. We also admit that the proposed networks fail
+
+C. Complexity Analysis
+The computational complexities of different receivers are analyzed. For clarity, both the concrete number of real-valued operations of different receivers and that of each module in traditional receivers are listed in Table I, where the number of layers of the proposed JCDD receivers, the number of turbo iterations, the number of ISTA iterations, the number of GAMP iterations, and the number of BP iterations, are denoted by LJCDDNet-G/S, IIDD/ICDD, IISTA, IGAMP, and IBP, respectively. In addition, CCInhiE and CCItherE are the complexities of the initial channel estimation based on the pilot symbols
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+TABLE I COMPLEXITY PER CODEWORD OF DIFFERENT MODULES/RECEIVERS
+
+12185
+
+TABLE II AVERAGE CPU TIME PER CODEWORD OF DIFFERENT RECEIVERS
+
+and the iterative channel estimation that utilizes the soft data symbols, CDIneit and CDIteert are the complexities of the initial data detection without any prior information and the softin soft-output detection, while CDec represents the decoding complexity with dc defined as the degree of check nodes. Note that compared with MMSE-ICDD, MMSE-ICDD (selcted) requires additional complexities of O (TP + 1)3 TD and
+O Nr3 (TP + 1)3 TD for calculating the selection metrics
+corresponding to i.i.d. and correlated Gaussian channels,
+respectively, and a complexity of O (TV TD) for sorting. As can be seen, the complexities of turbo receivers can be relatively high for a high modulation order or a large number of antennas, especially for MAP-ICDD of exponential complexity, while the complexities per layer of both the proposed JCDDNet-G and JCDDNet-S are almost linear with the codelength and independent of the modulation order, since Nr, Nt ≪ N , T and M scale linearly with N , and dc is relatively small for LDPC codes. Taking a Gaussian correlated MIMO channel with Nr = 8 and Nt = 4 for example, the LMMSE-based channel estimator requires 5.4e5 and 1.8e6 operations for CCInhiE and CCItherE, respectively, and the MAP-based detector requires 2.8e6 and 2.9e6 operations
+
+for CDIneit and CDIteert in the QPSK case, respectively, while the numbers of operations can be up to 3.8e8 and 4.0e8 in the 16QAM case. On the other hand, the proposed JCDD networks require only 1.1e5 operations per layer and a few layers can be sufficient for most receiving tasks as shown in Fig. 5(b).
+To be more intuitive, the average central processing unit (CPU) time per codeword of the receivers with comparable performances is also listed in Table II, where the proposed JCDD networks are evaluated by loading the trained parameters into the corresponding ADMM algorithms implemented on the MATLAB platform. Note that for the QPSK cases, the required CPU time of MMSE-ICDD can be even longer than that of MAP-ICDD, since the complexity is dominated by the BP decoding for QPSK and MMSE-ICDD takes more turbo iterations, leading to a higher decoding complexity. We can also find that MMSE-ICDD (Selected) requires more time than MMSE-ICDD due to the introduced data selection steps. Moreover, although GAMP-ICDD runs relatively fast under i.i.d. Gaussian channels as expected, the required CPU time can be long under both correlated Gaussian channels and sparse mmWave channels, since it can barely benefit from the early-stopping criterion and takes almost the maximum number of turbo iterations in presence of channel correlation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12186
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+On the other hand, the proposed JCDDNet-G and JCDDNet-S mainly involve linear multiplication/addition operations and are able to directly recover the bit variables within a few layers, which results in the shortest CPU time. For the 16QAM cases, we observe that MAP-ICDD needs an unbearably long CPU time due to the exponentially growing complexity with the modulation order. Note that the less required time of MMSE-ICDD for 16QAM can be attributed to the early stopping mechanism and the fact that the number of symbols to detect is half of that in the QPSK case. Additionally, the convergence rates of the JCDD networks become slower, which thus require a slightly longer CPU time than MMSE-ICDD. However, concerning the BLER performances, the proposed JCDD networks can always outperform MMSE-ICDD and even approach the time-consuming MAP-ICDD, indicating a better tradeoff between the performance and the complexity. In fact, the proposed receiver design does not require the iterative soft information exchange between different modules, therefore avoiding the feedback delay. Moreover, most calculations involved in each layer of the proposed networks can be efficiently performed in parallel, making the proposed designs promising in the context of URLLC.
+
+VII. CONCLUSION
+In this paper, by simultaneously incorporating the channel statistical information as well as the constraints imposed on pilots, data symbols, and LDPC codes, we proposed a unified MAP-based JCDD receiver framework to directly estimate the information bits. Specifically, two novel JCDD receivers for Gaussian MIMO channels and sparse mmWave MIMO channels were developed based on the ADMM algorithms, respectively, where closed-form solutions were derived for each ADMM iteration. Furthermore, the corresponding deep unfolding networks JCDDNet-G and JCDDNet-S were established to facilitate the optimization of the involved parameters. Simulation results validated that, both the proposed trainable receivers can always exhibit performance advantages over the MMSE-based turbo receivers and even achieve comparable performances to the MAP-based turbo receivers, while with a lower complexity per layer that is almost linear with the codelength and independent of the modulation order.
+
+1) QPSK:
+
+APPENDIX A GRAY MAPPING FUNCTIONS
+
+f (b˜t,k)
+
+=
+
+1 √
+2
+
+1
+
+(1
+
+−
+
+2b2it,k −1 )
+
++
+
+ȷ
+
+√ 2
+
+(1 − 2b2it,k ) ,
+
+(53)
+
+2) 16QAM:
+
+f (b˜t,k)
+
+=
+
+1
+
+√ 10
+
+(1
+
+−
+
+2b4it,k −3 )
+
+(1
+
++
+
+2b4it,k −1 )
+
+1
+
++
+
+ȷ
+
+√ 10
+
+(1
+
+−
+
+2b4it,k −2 )
+
+(1
+
++
+
+2b4it,k
+
+),
+
+(54)
+
+√
+
+where ȷ ≜ −1.
+
+APPENDIX B PROOF OF PROPOSITION 1 To begin with, we define wb ≜ XHb y and Rb ≜ XbH Xb + σ2C−g 1, which gives
+
+Φ(b) = −wbH R−b 1wb
+
+(a)
+
+≤
+
+tr
+
+R w w R R −1
+
+H
+
+−1
+
+bn−1 bn−1 bn−1 bn−1 b
+
+−
+
+2Re{wbHn−1
+
+R−1
+bn−1
+
+wb}
+
+−
+
+wH
+bn−1
+
+R−1
+bn−1
+
+wbn−1
+
+(b)
+=
+
+tr
+
+vbn−1
+
+vH
+bn−1
+
+XbH
+
+Xb
+
+− 2Re{tr yvbHn−1 XbH } + constant,
+
+(55)
+
+where (a) is obtained by exploiting the fact that −wbH Rb−1wb
+
+is jointly concave in wb and Rb and therefore upperbounded
+
+by its first-order Taylor expansion, and (b) uses the def-
+
+initions of wb and Rb with vbn−1
+
+≜
+
+R w −1
+bn−1 bn−1
+
+=
+
+X X H
+bn−1 bn−1
+
++
+
+σ2C−g 1
+
+−1
+
+XH
+bn−1
+
+y.
+
+Furthermore,
+
+for
+
+the
+
+first term in (55), we have (56), shown at the bottom of
+
+the page, where Sb = [SP , f (b)], (a) is acquired based on the definition of Xb = STb ⊗ INr , tr (AB) = tr (BA), and (A ⊗ B) (C ⊗ D) = (AC) ⊗ (BD), (b), (c), and (e)
+are derived using vec (ABC) = CT ⊗ A vec (B) and
+tr AH B = vecH (A)vec (B), Vbn−1 = unvec (vbn−1 ) ∈ CNr×Nt with unvec(·) denoting the inverse vectorization
+
+operation, and (d) is achieved by following Example 13 in [44]
+
+with λn−1INt
+
+⪰
+
+VH
+bn−1
+
+Vbn−1
+
+.
+
+Note
+
+that
+
+an
+
+appropriate
+
+choice is to set λn−1 to λmax
+
+V V H
+bn−1 bn−1
+
+. Similarly, the
+
+second term in (55) can be rewritten as
+
+− 2Re{tr yvbHn−1 XbH }
+
+= −2Re{tr
+
+f
+
+(b)H
+
+VH
+bn−1
+
+YD
+
+} + constant.
+
+(57)
+
+Thus, we can arrive at a second majorization to Φ(b) as
+
+Φ(b) ≤ λn−1 ∥f (b)∥2F − 2Re tr f (b)H Dn−1
+
++ constant, (58)
+
+where Dn−1 =
+
+λn−1INt
+
+−
+
+V V H
+bn−1 bn−1
+
+f (bn−1)
+
++
+
+VH
+bn−1
+
+YD
+
+.
+
+Hence,
+
+subproblem
+
+(18a)
+
+boils
+
+down
+
+to
+
+the
+
+desired
+
+problem given in Proposition 1.
+
+tr
+
+vbn−1
+
+vH
+bn−1
+
+XHb
+
+Xb
+
+(=a)vbHn−1
+
+SbSbH T ⊗ INr
+
+(b)
+vbn−1 = tr
+
+Vbn−1
+
+Sb
+
+SbH
+
+VH
+bn−1
+
+(c)
+=
+
+vecH (Sb)
+
+IT ⊗
+
+V V H
+bn−1 bn−1
+
+vec (Sb)
+
+(d)
+≤ vecH (Sb) (λn−1INtT )vec (Sb)
+
+− 2Re
+
+vecH (Sb)
+
+INtT ⊗
+
+λn−1INt
+
+−
+
+V V H
+bn−1 bn−1
+
+vec (Sbn−1 )
+
++ vecH (Sbn−1 )
+
+INtT ⊗
+
+λn−1INt
+
+−
+
+V V H
+bn−1 bn−1
+
+vec (Sbn−1 )
+
+(e)
+=
+
+λn−1 ∥f (b)∥2F
+
+− 2Re
+
+tr
+
+f (b)H
+
+λn−1INt
+
+−
+
+V V H
+bn−1 bn−1
+
+f (bn−1)
+
++ constant,
+
+(56)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: TRAINABLE JOINT CHANNEL ESTIMATION, DETECTION, AND DECODING
+
+12187
+
+APPENDIX C
+
+DETAILED
+
+EXPRESSIONS
+
+OF
+
+βn−1
+it,k,q
+
+AND
+
+γ n−1
+it,k,q
+
+The
+
+expressions
+
+of
+
+βn−1
+it,k,q
+
+and
+
+γ n−1
+it,k,q
+
+in
+
+(22)
+
+for
+
+QPSK
+
+and
+
+16QAM are provided as follows:
+
+1) QPSK:
+
+√
+
+βn−1
+it,k,1
+
+=
+
+4λn−1
+
+,
+
+γ n−1
+it,k,1
+
+=
+
+2
+
+2Re{dknt−1} − 2λn−1,
+
+(59a)
+
+√
+
+βn−1
+it,k,2
+
+=
+
+4λn−1
+
+,
+
+γ n−1
+it,k,2
+
+=
+
+2
+
+2Im{dnkt−1} − 2λn−1.
+
+(59b)
+
+2) 16QAM:
+
+βn−1
+it,k,1
+
+=
+
+4 5
+
+λn−1(1
+
++
+
+2bn−1
+it,k,3
+
+)2,
+
+γ n−1
+it,k,1
+
+=
+
+4 √
+10
+
+Re{dnkt−1}(1
+
++
+
+2bn−1
+it,k,3
+
+)
+
+−
+
+2 λn−1(1 5
+
++
+
+2bn−1
+it,k,3
+
+)2
+
+,
+
+βn−1
+it,k,2
+
+=
+
+4 5
+
+λn−1(1
+
++
+
+2bn−1
+it,k,4
+
+)2,
+
+γ n−1
+it,k,2
+
+=
+
+4 √
+10
+
+Im{dnkt−1}(1
+
++
+
+2bn−1
+it,k,4
+
+)
+
+−
+
+2 λn−1(1 5
+
++
+
+2bn−1
+it,k,4
+
+)2
+
+,
+
+βn−1
+it,k,3
+
+=
+
+4 5
+
+λn−1(1
+
+−
+
+2bn
+it,k,1
+
+)2,
+
+γ n−1
+it,k,3
+
+=
+
+−
+
+√4 10
+
+Re{dnkt−1}(1
+
+−
+
+2bn
+it,k,1
+
+)
+
++
+
+2 λn−1(1 5
+
+−
+
+2bn
+it,k,1
+
+)2
+
+,
+
+βn−1
+it,k,4
+
+=
+
+4 5
+
+λn−1(1
+
+−
+
+2bn
+it,k,2
+
+)2,
+
+γ n−1
+it,k,4
+
+=
+
+−
+
+4 √
+10
+
+Im{dknt−1
+
+}(1
+
+−
+
+2bn
+it,k,2
+
+)
+
++
+
+2 λn−1(1 5
+
+−
+
+2bn
+it,k,2
+
+)2
+
+.
+
+(60a) (60b) (60c) (60d)
+
+REFERENCES
+[1] H. Ji, S. Park, J. Yeo, Y. Kim, J. Lee, and B. Shim, “Ultra-reliable and low-latency communications in 5G downlink: Physical layer aspects,” IEEE Wireless Commun., vol. 25, no. 3, pp. 124–130, Jul. 2018.
+[2] G. J. Sutton et al., “Enabling technologies for ultra-reliable and low latency communications: From PHY and MAC layer perspectives,” IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2488–2524, 3rd Quart., 2019.
+[3] H. Chen et al., “Ultra-reliable low latency cellular networks: Use cases, challenges and approaches,” IEEE Commun. Mag., vol. 56, no. 12, pp. 119–125, Dec. 2018.
+[4] G. Durisi, T. Koch, and P. Popovski, “Toward massive, ultrareliable, and low-latency wireless communication with short packets,” Proc. IEEE, vol. 104, no. 9, pp. 1711–1726, Aug. 2016.
+[5] G. Durisi, T. Koch, J. Östman, Y. Polyanskiy, and W. Yang, “Shortpacket communications over multiple-antenna Rayleigh-fading channels,” IEEE Trans. Commun., vol. 64, no. 2, pp. 618–629, Feb. 2016.
+[6] X. Sun et al., “Short-packet downlink transmission with non-orthogonal multiple access,” IEEE Trans. Wireless Commun., vol. 17, no. 7, pp. 4550–4564, Jul. 2018.
+[7] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+[8] W. Yang, G. Durisi, T. Koch, and Y. Polyanskiy, “Quasi-static multipleantenna fading channels at finite blocklength,” IEEE Trans. Inf. Theory, vol. 60, no. 7, pp. 4232–4265, Jul. 2014.
+
+[9] J. Ostman, A. Lancho, G. Durisi, and L. Sanguinetti, “URLLC with massive MIMO: Analysis and design at finite blocklength,” IEEE Trans. Wireless Commun., vol. 20, no. 10, pp. 6387–6401, Oct. 2021.
+[10] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[11] L. Lu, G. Y. Li, A. L. Swindlehurst, A. Ashikhmin, and R. Zhang, “An overview of massive MIMO: Benefits and challenges,” IEEE J. Sel. Topics Signal Process., vol. 8, no. 5, pp. 742–758, Oct. 2014.
+[12] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge U.K.: Cambridge Univ. Press, 2008.
+[13] M. Tuchler, R. Koetter, and A. C. Singer, “Turbo equalization: Principles and new results,” IEEE Trans. Commun., vol. 50, no. 5, pp. 754–767, May 2002.
+[14] C. Studer, S. Fateh, and D. Seethaler, “ASIC implementation of soft-input soft-output MIMO detection using MMSE parallel interference cancellation,” IEEE J. Solid-State Circuits, vol. 46, no. 7, pp. 1754–1765, Jul. 2011.
+[15] B. M. Hochwald and S. T. Brink, “Achieving near-capacity on a multiple-antenna channel,” IEEE Trans. Commun., vol. 51, no. 3, pp. 389–399, Apr. 2003.
+[16] D. Verenzuela, E. Björnson, X. Wang, M. Arnold, and S. T. Brink, “Massive-MIMO iterative channel estimation and decoding (MICED) in the uplink,” IEEE Trans. Commun., vol. 68, no. 2, pp. 854–870, Feb. 2020.
+[17] B. Lee, S. Park, D. Love, H. Ji, and B. Shim, “Packet structure and receiver design for low latency wireless communications with ultra-short packets,” IEEE Trans. Commun., vol. 66, no. 2, pp. 796–807, Feb. 2018.
+[18] Y. Li, L. Wang, and Z. Ding, “An integrated linear programming receiver for LDPC coded MIMO-OFDM signals,” IEEE Trans. Commun., vol. 61, no. 7, pp. 2816–2827, Jul. 2013.
+[19] A. Jalali and Z. Ding, “Joint detection and decoding of polar coded 5G control channels,” IEEE Trans. Wireless Commun., vol. 19, no. 3, pp. 2066–2078, Mar. 2020.
+[20] K. Wang, H. Shen, W. Wu, and Z. Ding, “Joint detection and decoding in LDPC-based space-time coded MIMO-OFDM systems via linear programming,” IEEE Trans. Signal Process., vol. 63, no. 13, pp. 3411–3424, Jul. 2015.
+[21] S. Cammerer, F. A. Aoudia, S. Dörner, M. Stark, J. Hoydis, and S. T. Brink, “Trainable communication systems: Concepts and prototype,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5489–5503, Sep. 2020.
+[22] F. A. Aoudia and J. Hoydis, “Model-free training of end-to-end communication systems,” IEEE J. Sel. Areas Commun., vol. 37, no. 11, pp. 2503–2516, Nov. 2019.
+[23] M. Honkala, D. Korpi, and J. M. J. Huttunen, “DeepRx: Fully convolutional deep learning receiver,” IEEE Trans. Wireless Commun., vol. 20, no. 6, pp. 3925–3940, Jun. 2021.
+[24] M. Goutay, F. A. Aoudia, J. Hoydis, and J.-M. Gorce, “Machine learning for MU-MIMO receive processing in OFDM systems,” IEEE J. Sel. Areas Commun., vol. 39, no. 8, pp. 2318–2332, Aug. 2021.
+[25] J. Pihlajasalo et al., “Deep learning OFDM receivers for improved power efficiency and coverage,” IEEE Trans. Wireless Commun., vol. 22, no. 8, pp. 5518–5535, Aug. 2023.
+[26] S. Dörner, J. Clausius, S. Cammerer, and S. T. Brink, “Learning joint detection, equalization and decoding for short-packet communications,” IEEE Trans. Wireless Commun., vol. 71, no. 2, pp. 837–850, Feb. 2023.
+[27] H. He, S. Jin, C.-K. Wen, F. Gao, G. Y. Li, and Z. Xu, “Modeldriven deep learning for physical layer communications,” IEEE Wireless Commun., vol. 26, no. 5, pp. 77–83, Oct. 2019.
+[28] V. Monga, Y. Li, and Y. C. Eldar, “Algorithm unrolling: Interpretable, efficient deep learning for signal and image processing,” IEEE Signal Process. Mag., vol. 38, no. 2, pp. 18–44, Mar. 2021.
+[29] S. Boyd et al., “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn., vol. 3, no. 1, pp. 1–122, Jan. 2011.
+[30] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[31] NR Physical Channels and Modulation, document TS38.211, V15.6.0, 3GPP, 2019.
+[32] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+12188
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 23, NO. 9, SEPTEMBER 2024
+
+[33] N. Goela, S. B. Korada, and M. Gastpar, “On LP decoding of polar codes,” in Proc. IEEE Inf. Theory Workshop (ITW), Dublin, Ireland, Aug. 2010, pp. 1–5.
+[34] J. Bai, Y. Wang, and F. C. M. Lau, “Minimum-polytope-based linear programming decoder for LDPC codes via ADMM approach,” IEEE Wireless Commun. Lett., vol. 8, no. 4, pp. 1032–1035, Aug. 2019.
+[35] M. Shao and W.-K. Ma, “Binary MIMO detection via homotopy optimization and its deep adaptation,” IEEE Trans. Signal Process., vol. 69, pp. 781–796, 2021.
+[36] T. Goldstein, B. O’Donoghue, S. Setzer, and R. Baraniuk, “Fast alternating direction optimization methods,” SIAM J. Imag. Sci., vol. 7, no. 3, pp. 1588–1623, Jul. 2014.
+[37] J. Mo, P. Schniter, and R. W. Heath, “Channel estimation in broadband millimeter wave MIMO systems with few-bit ADCs,” IEEE Trans. Signal Process., vol. 66, no. 5, pp. 1141–1154, Mar. 2018.
+[38] N. Parikh and S. Boyd, “Proximal algorithms,” Found. Trends Optim., vol. 1, no. 3, pp. 127–239, Nov. 2014.
+[39] S. L. Loyka, “Channel capacity of MIMO architecture using the exponential correlation matrix,” IEEE Commun. Lett., vol. 5, no. 9, pp. 369–371, Sep. 2001.
+[40] O. El. Ayach, S. Rajagopal, S. Abu-Surra, Z. Pi, and R. W. Heath, “Spatially sparse precoding in millimeter wave MIMO systems,” IEEE Trans. Wireless Commun., vol. 13, no. 3, pp. 1499–1513, Jan. 2014.
+[41] Y. Xiong, N. Wei, and Z. Zhang, “A low-complexity iterative GAMPbased detection for massive MIMO with low-resolution ADCs,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), San Francisco, CA, USA, Mar. 2017, pp. 1–6.
+[42] I. Daubechies, M. Defrise, and C. De Mol, “An iterative thresholding algorithm for linear inverse problems with a sparsity constraint,” Commun. Pure Appl. Math., vol. 57, no. 11, pp. 1413–1457, 2004.
+[43] M. Helmling et al. (2019). Database of Channel Codes and ML Simulation Results. [Online]. Available: https://www.uni-kl.de/channelcodes
+[44] Y. Sun, P. Babu, and D. P. Palomar, “Majorization-minimization algorithms in signal processing, communications, and machine learning,” IEEE Trans. Signal Process., vol. 65, no. 3, pp. 794–816, Feb. 2017.
+Yi Sun (Student Member, IEEE) received the B.E. and Ph.D. degrees in information and communication engineering from Southeast University, Nanjing, China, in 2017 and 2024, respectively. Her research interests include physical layer communications and machine learning aided communications.
+Hong Shen (Member, IEEE) received the B.E., M.S., and Ph.D. degrees in information and communication engineering from Southeast University, Nanjing, China, in 2009, 2011, and 2014, respectively. During the Ph.D. studies, he has conducted cooperative research with the Department of Electrical and Computer Engineering, University of California at Davis, Davis, CA, USA. He is currently an Associate Professor with the National Mobile Communications Research Laboratory, Southeast University. His research interests include integrated sensing and communications, deep learning aided communications, and short packet communications. He received IEEE WCSP Best Paper Award in 2023.
+Bingqing Li (Student Member, IEEE) received the B.E. degree in communication engineering from Nanjing University of Science and Technology, Nanjing, China, in 2021. She is currently pursuing the master’s degree in information and communication engineering with the National Mobile Communications Research Laboratory, Southeast University, Nanjing. Her research interests include signal processing and machine learning in wireless communications.
+
+Wei Xu (Senior Member, IEEE) received the B.Sc. degree in electrical engineering and the M.S. and Ph.D. degrees in communication and information engineering from Southeast University, Nanjing, China, in 2003, 2006, and 2009, respectively. Between 2009 and 2010, he was a Post-Doctoral Research Fellow with the University of Victoria, Canada, where he was an Adjunct Professor from 2017 to 2020 and a Distinguished Visiting Fellow of the Royal Academy of Engineering, U.K., in 2019. He is currently a Professor with Southeast University. His research interests include information theory, signal processing, and machine learning for wireless communications. He is a fellow of IET. He received the Youth Science and Technology Award of China Institute of Communications in 2018; the Science and Technology Award of Chinese Institute of Electronics (Second Prize) in 2019; the National Natural Science Foundation of China for Outstanding Young Scholars in 2020; the IEEE Communications Society Heinrich Hertz Award in 2023; and the Best Paper Awards at IEEE Globecom 2014, IEEE ICCC 2014, ISWCS 2018, and WCSP 2017 and 2021. He served as an Editor for IEEE COMMUNICATIONS LETTERS from 2012 to 2017 and an Editor for IEEE TRANSACTIONS ON COMMUNICATIONS from 2018 to 2023. He is a Senior Editor of IEEE COMMUNICATIONS LETTERS.
+Pengcheng Zhu (Member, IEEE) received the B.S. and M.S. degrees in electrical engineering from Shandong University, Jinan, China, in 2001 and 2004, respectively, and the Ph.D. degree in communication and information science from Southeast University, Nanjing, China, in 2009. He is currently a Professor with the National Mobile Communications Research Laboratory, Southeast University. His research interests include wireless communications and mobile networks, including 5G/6G mobile communication systems, massive MIMO, ultra-reliable and low latency communications (URLLC), and mmWave communications.
+Nan Hu received the Ph.D. degree from Beijing University of Posts and Telecommunications. He joined China Mobile in 2008. He is currently the Deputy Director of the Department of Wireless and Device Technology Research, China Mobile Research Institute, and also the Vice Chair of 3GPP RAN Plenary. He is mainly responsible for 4G/5G wireless access network technology research and standardization in CMCC.
+Chunming Zhao (Member, IEEE) received the B.Sc. and M.S. degrees from Nanjing Institute of Posts and Telecommunications in 1982 and 1984, respectively, and the Ph.D. degree from the Department of Electrical and Electronic Engineering, University of Kaiserslautern, Germany, in 1993. He has been a Post-Doctoral Researcher with the National Mobile Communications Research Laboratory, Southeast University, where he is currently a Professor and the Vice Director of the Laboratory. He has managed several key projects of Chinese Communications High-Tech Program. His research interests include communication theory, coding/decoding, mobile communications, and VLSI design. He received the First Prize of National Technique Invention of China in 2011 and the Excellent Researcher Award from the Ministry of Science and Technology, China.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:59:54 UTC from IEEE Xplore. Restrictions apply.
+
+

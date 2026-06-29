@@ -1,0 +1,597 @@
+Timing Errors in LDPC Decoding Computations with Overscaled Supply Voltage
+
+∗
+Behnam Sedighi
+University of Notre Dame Notre Dame, IN 46556, USA
+bsedighi@nd.edu
+
+N. Prasanth Anthapadmanabhan
+Bell Labs, Alcatel-Lucent Murray Hill, NJ 07974,USA
+prasanth.anthap@alcatellucent.com
+
+Dusan Suvakovic
+Bell Labs, Alcatel-Lucent Murray Hill, NJ 07974,USA
+dusan.suvakovic@alcatellucent.com
+
+ABSTRACT
+Decoders for Low Density Parity Check (LDPC) codes, used commonly in communication networks, possess inherent tolerance to random internal computation errors. Consequently, it is possible to apply voltage over-scaling (VOS) in their implementation to save energy. In this paper, the impact of VOS on timing errors is characterized for a typical minsum LDPC decoder architecture using circuit simulations. Failure modes are analyzed for arithmetic circuits performing variable and check node computations. It is shown that a rather unconventional register placement in the variable node unit is beneficial for voltage scaling, and that the check node unit may be designed such that only the least significant bits are more likely to experience errors. Insights into timing error characteristics obtained through this analysis can be used to estimate the limits of voltage scaling and associated energy saving in practical LDPC decoder designs.
+Categories and Subject Descriptors
+B.8.1 [Performance and Reliability]: Reliability, Testing, and Fault-Tolerance; B.7.1 [Integrated Circuits]: Types and Design Styles—advanced technologies, algorithms implemented in hardware
+Keywords
+Voltage over-scaling; Error-resilience; Computation errors; Arithmetic and signal processing circuits; Noisy decoder
+1. INTRODUCTION
+Voltage scaling is an effective power-saving method [1, 2]. However, digital circuits are more prone to the fabrication process variations and variations in operating conditions [2]
+∗This work was completed when B. Sedighi was with CEET, University of Melbourne, Melbourne, VIC 3010, Australia.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. ISLPED’14, August 11–13, 2014, La Jolla, CA, USA. Copyright 2014 ACM 978-1-4503-2975-0/14/08 ...$15.00. http://dx.doi.org/10.1145/2627369.2627638.
+
+when operated at low voltages. The mainstream industry approach to this problem is to design for the worst-case condition and to use sufficiently large design margins to avoid logic faults. However, despite the reliability and ease of design, such over-designed circuits are not optimal from the power dissipation and throughput perspective. An alternate approach, when the application can tolerate some errors, is to employ error-resilient design [4, 5, 6, 7], where the circuit is designed with small margins and the supply voltage is scaled below the critical level thus allowing for some errors resulting from timing violations to occur. This method requires overhead circuitry for detection and correction of the errors, or for monitoring the circuit performance and adjusting the operating conditions appropriately. Error-resilient designs require a full analysis of the impact of the timing errors [1] which is the subject of this paper.
+A low-density parity-check (LDPC) decoder (cf. Sec. 2) is a complex and power hungry circuit implementing an iterative algorithm. In [8], it is shown that LDPC decoders show error-tolerance by analyzing the error-correction performance of the decoder under a given rate of random errors. Previous works have proposed error-resilient designs of LDPC decoders using different error mitigation circuitry such as replication (e.g., triple modular redundancy) [13], algorithmic noise tolerance (e.g., using a reduced precision replica) [9, 10], RAZOR flip-flop [11], and convergence damping [14]. A theoretical analysis based on density evolution of an error-prone LDPC decoder along with an error mitigation mechanism is provided in [20]. However, the aforementioned studies focus mainly on the system design, and a thorough understanding of the characteristics of internal timing errors in LDPC decoder computations has so far been lacking. The error generation probability and error magnitudes need to be understood in a low-voltage decoder in order to efficiently design the error mitigation circuits.
+This paper focuses on the timing errors in voltage-overscaled LDPC decoders. We show that both the smart placement of the pipelining registers (D-flip-flops) and proper gate-level implementation of a functional block play an important role in the error generation and resiliency in the decoder. Examples of data-dependent timing error with respect to voltage over-scaling (VOS) are presented for different parts of an LDPC decoder. The impact of the error-aware design and process variations on the total power saving are also discussed. Thus, the results in this paper complement the previous works allowing an improved error-resilient design that accounts for the internal error model.
+
+201
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+The paper is organized as follows. A brief introduction to LDPC decoding is provided in Sec. 2. Our method of analysis is explained in Sec. 3. Sec. 4 describes a simple and intuitive error model which is useful in understanding the simulation results presented in Sec. 5. Finally, some guidelines and conclusions are provided in Sec. 6 and Sec. 7.
+
+2. LDPC MIN-SUM DECODING
+A common method for decoding LDPC codes is using the min-sum algorithm [16] due to it’s reduced complexity. A small correction term is typically used with min-sum to obtain an improved decoder performance and the particular instance considered in this paper employs a scaling (or attenuation) factor denoted by S below. The decoder of an LDPC code of length N and dimension K consists of N variable node units (VNUs) and N −K check node units (CNUs) which are interconnected in the form of a bipartite graph, exchanging messages in an iterative manner until the decoding converges. Each message represents a log-likelihood ratio (LLR), i.e., the logarithm of the ratio of the probabilities of a particular bit being 1 vs. being 0. The operations within a VNU of degree L and CNU of degree M are given by the following equations.
+
+VNU: βi = αchannel +
+
+αj, ∀i ∈ [L],
+
+(1)
+
+j∈[L]\i
+
+CNU: αj =
+
+sign(βi) · S · min |βi|, ∀j ∈ [M ] (2)
+
+i∈[M ]\j
+
+i∈[M ]\j
+
+where αj (resp. βi) denotes the input messages to the VNU (resp. CNU), which corresponds to the output messages from the CNU (resp. VNU), αchannel is the LLR calculated based on the observed value over the channel, and the shorthand [n] := {1, . . . , n} is used for convenience.
+
+3. METHOD
+As a representative candidate for our study, we consider a VNU with degree 3 and a CNU with degree 6. The messages αj and βi are assumed to be in sign-magnitude (SM) format with a word-length of 4 bits. The hardware architecture of the VNU is shown in Fig. 1(a) [15]. The SM inputs are first converted to 2’s complement (2sC) format and then added together. After calculating the sum, three subtractions are performed to find three 6-bit 2sC outputs OUTi. Finally, the OUTi are saturated to 4 bits and converted back to SM format. The saturation operation checks if the 6-bit number is higher than +7 or lower than -7, in which case it is saturated to either +7 or -7, respectively. The CNU shown in Fig. 1(b) has two parts: (i) magnitude calculation which mainly consists of finding the minimum among the input magnitudes; (ii) sign calculation which may be accomplished using XOR gates. The minimum computation in (2) essentially reduces to finding the first and second minimums (Min1 and Min2), and also a scaling factor of S = 0.75 is used here. It is quite clear, and simulations have confirmed as well, that the sign calculation has a significantly smaller propagation delay and essentially does not experience timing errors in the range of VOS considered here. At least one set of pipelining registers is needed in the VNU/CNU loop. For the moment, we assume one set of registers at the outputs of VNUs and another set at the outputs of CNUs. The impact of the location of the VNU registers (see Fig. 1(a)) is discussed later.
+
+a1
+
+SM/2sC IN1
+
+4+
+
+a2
+
+SM/2sC
+
+5
+
+a3
+
+SM/2sC IN3
+
++
+
+SM/2sC Channel_
+LLR
+
+I_N1
++ Reg
+OUT1
+
+Sat. & 2sC/SM
+
+b1
+Reg
+
++
+
+_
++
+
+Reg
+
+Sat. &
+
+b2
+Reg
+
+2sC/SM
+
+6
+
+I_N3
++ OUT3 Reg 6
+
+Sat. & 2sC/SM
+
+b3
+Reg
+4
+
+(a) Only one set of Registers needed
+
+IndA IndB
+
+1 Ind
+0
+
+A B
+
+A<B
+
+1 Min
+
+0
+
+0 Max
+1
+
+IndA IndB
+Min1A Min1B
+
+1 q-1 0
+A<B
+1 0
+
+0 1
+
+Min2A
+
+1
+
+Min2B
+
+0
+
+Ind[q-1]..Ind[1] Ind[q] Min1
+A<B 1 Min2 0
+
+|b1| Min n-1
+
+Max Min1
+
+Min
+
+Min2
+
+Max
+
+Min
+|bM| Max
+Sign(b1)
+Sign(bM)
+
+Min1 Min2
+
+Finding minimums
+
+Min1
+Min1 Min2
+Min2 Ind1
+log2M
+
+-+
+1/4
+-+
+1/4
+
+Calculating sign
+
+Sign(b1)
+
+Sign(bM) (b)
+
+n-1
+
+0 1
+
+|a1|
+
+!= 1
+
+0 1
+
+|aM|
+
+!= M
+
+Sign(a1) Sign(aM)
+
+Figure 1: (a) Variable node unit. (b) Check node unit.
+
+In order to study the effects of VOS, the VNU and CNU are each first implemented in Verilog and then synthesized in 90 nm CMOS using Design Compiler. The resulting gatelevel netlist is transferred into SPICE netlist. The transistorlevel simulation in presence of VOS is carried out in SPICE using BSIM3 model for MOSFETs. The simulation results are finally processed in MATLAB to analyze the errors.
+The relationship of the propagation delay and dynamic power dissipation against supply voltage (VDD) in the 90 nm technology used here is expressed as [17]
+
+TD = k1VDD/(VDD − VT H )1.6
+
+and
+
+E = k2VD2D (3)
+
+where k1 and k2 are constants that depend on the circuit. VT H is the threshold voltage and is about 0.3 V in this technology. The exponent 1.6 was found by curve fitting on the simulation results. Fig. 2 shows the close match between equation (3) and the simulation results. Note that equation (3) is provided only to give insight, while the simulation results shown later make direct use of the transistor models.
+
+4. SIMPLE ERROR MODEL
+In order to provide some insight into the computation errors produced in the circuits, a simple and intuitive error
+
+202
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized prop. delay Normalized energy diss.
+
+5 Simulation
+Model 4
+
+3
+
+2
+
+1 0.6 0.8
+
+1
+
+1.2
+
+Supply voltage(V)
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+Simulation
+
+Model
+
+0 0.6 0.8
+
+1
+
+1.2
+
+Supply voltage(V)
+
+Figure 2: Delay and energy dissipation as a function of supply voltage in 90 nm CMOS (for a ring oscillator consisting of NAND gates).
+
+s0
+
+s1
+
+s4
+
+s5
+
+HA
+
+FA
+
+FA
+
+FA
+
+FA
+
+d0
+
+HA
+
+FA
+
+a0 b0
+1 Tp=TCKd@VDD2
+0.5
+
+FA (a)
+
+FA a3 b3
+
+d4 FA:d
+Full-adder
+HA:d Half-adder
+
+1 Tp,.min=TCKd @VDD1 Tp,.max=TCKd @VDD2
+0.5
+
+BERdofdsi BERdofdsi
+
+0
+
+VDD2VDD
+
+(b)
+
+0
+
+VDD1VDDVDD2
+
+(c)
+
+Figure 3: (a) Cascaded adders with dashed lines showing the propagation paths. (b) Simple error model. (c) Error model considering different propagation paths.
+
+model is described here. Fig. 3(a) shows a circuit with cascaded additions where two 4-b numbers A = a3 . . . a0 and B = b3 . . . b0 are added and the result is then added to a 5-b number D = d4 . . . d0. This is illustrative of the operations inside a VNU. Furthermore, similar observations would also apply to the CNU if the comparison operations involved in finding the minimum magnitude are performed using subtractions. It is worth pointing out that the objective here is not to provide an optimal circuit, but rather to analyze a simple and tractable circuit to later aid understanding of the simulation results presented in Sec. 5. Nevertheless, the simulations in Sec. 5 indeed use the optimal circuits synthesized by Design Compiler.
+The inputs and outputs are registered with a given clock period TCK which dictates the time available for the signal to propagate. For every output bit si in Fig. 3(a), there are several propagation paths from the inputs. The maximum
+
+propagation delay Tsi for each bit si is given by
+
+Ts0 = 2TA, Ts1 = 3TA, . . . Ts5 = 7TA,
+
+(4)
+
+where we assume the same delay TA for both a half-adder (HA) cell and a full-adder (FA) cell for simplicity. If VDD is large enough, then Tsi < TCK for all output bits and there will be no errors. However, as VDD is reduced, the circuit becomes slower and below a certain voltage denoted by VDD2, we will have Tsi > TCK . To obtain a simple error model, shown in Fig. 3(b), we assume the bit-error rate (BER) is 50% below VDD2.
+The above simplification considers only the worst-case path; however, there are indeed several propagation paths from the inputs to every output bit. For example, in Fig. 3(a), a transition in s5 may be caused by a change in a0 or d4, with the latter having a significantly lower delay. Consequently, not all the transitions of s5 will result in a timing violation when 7TA > TCK . Thus, the BER transition as VDD is reduced may not be as sharp as shown in Fig. 3(b). In principle, one can compute the probability of an output change caused by a signal propagating along a certain path [1, 18, 19, 20]. For the purpose of our discussion, an approximation suffices and so we omit this detailed computation. For a given output bit, let Tp,min and Tp,max denote the minimum and maximum propagation delays along two different paths. For example, for the output bit s5, we have Tp,min = TA and Tp,max = 7TA. The error rate is taken as 50% if Tp,min > TCK , whereas the error rate is zero if Tp,max < TCK . The BER is then linearly interpolated for the delay values between Tp,min and Tp,max. The delay is then related to the voltage supply using (3) to obtain an error model as shown in Fig. 3(c). This simple model is useful in interpreting the simulation results in the next section.
+
+5. SIMULATION RESULTS
+The circuits are simulated with uniformly random inputs in every clock period. The outputs are observed 1.8 ns after the inputs change, corresponding to a clock frequency of 500 MHz and 0.2 ns for the setup/hold times for DFFs. The output bits are compared to VDD/2 to decide for logic 0 or 1. We study the bit-wise error probability as well as the probability mass function (pmf) on the error magnitude as this captures the dependence across bits. Due to the long duration taken by SPICE simulations, we capture errors with probability up to about 10−4, with the justification that errors with even smaller probability will not be a dominant influence on decoder performance. In fact, high-level decoder simulations in [8, 11] show that internal error probabilities around 0.1% result in negligible SNR penalties provided that proper error mitigation schemes (e.g, protecting the sign of the messages) are employed.
+5.1 VNU with registers before saturation
+Due to the cascaded additions/subtractions involved in computing OUTi in Fig. 1(a), we expect that the LSBs have a relatively lower delay and therefore less prone to errors. Indeed, Fig. 4(a) confirms that LSBs have a lower BER and also shows a fast roll-off. The error magnitude pmf at VDD = 0.6 V is shown in 4(b). As only bits 3–5 experience any errors at this VDD, the error magnitude is a multiple of 8.
+Next, we compare and interpret the results using the simple error model in Sec. 4. Using SPICE simulation, the propagation delay of a FA cell TA is found as 260 ps at
+
+203
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+Error rate
+
+100 Total
+
+Bit0
+
+10-1
+
+Bit1
+
+Bit2
+
+Bit3
+
+10-2
+
+Bit4
+
+Bit5(MSB)
+
+10-3
+
+10-4 0.5
+100
+
+0.52 0.54 0.56 0.58 0.6 0.62 0.64 0.66 0.68 Supply voltage (V)
+(a)
+
+10-1
+
+10-2
+
+10-3
+
+-40 -30 -20 -10
+
+0
+
+10 20 30 40
+
+Error Magnitude
+
+(b)
+
+Probability
+
+Figure 4: VNU with registers placed before saturation. (a) Probability of bit errors. (b) Probability mass function of error magnitude at VDD=0.6 V.
+
+Table 1: Maximum propagation delay in VNU for
+
+OUTi at VDD = 0.6 V
+
+Bit0 Bit1 Bit2 Bit3
+
+Bit4
+
+Bit5
+
+4TA 5TA 6TA
+
+7TA
+
+8TA
+
+9TA
+
+1.04 ns 1.3 ns 1.56 ns 1.82 ns 2.08 ns 2.34 ns
+
+Error rate
+
+100
+
+10-1
+
+10-2
+
+10-3
+
+Bit3
+
+Bit4
+
+Bit5(MSB)
+
+10-04.5
+
+0.55
+
+0.6
+
+0.65
+
+0.7
+
+Supply voltage (V)
+
+Figure 5: Error rate estimate using the simple model for the VNU with registers placed before saturation.
+
+VDD = 0.6 V in this technology. The maximum propagation delay for each bit of OUTi is calculated in Table 1. For bits 0–2, the worst-case delay is less than 1.8 ns, and hence no error is observed, which is in agreement with the SPICE simulation result in Fig. 4. At VDD = 0.7 V, we find TA = 180 ps. Therefore, even the delay for the MSB of 9TA is only 1.62 ns. So, none of the output bits are expected to face errors at VDD = 0.7 V, which is again consistent with Fig. 4. Fig. 5 illustrates the complete result of the simple error modeling for bits 3–5 and it captures the general behavior of the VNU before saturation.
+5.2 VNU with registers after saturation
+On the other hand, placing the registers after the saturation operation yields contrasting results. Interestingly,
+
+Error rate
+
+100 10-1 10-2 10-3 100-4.55
+100 10-1 10-2 10-3
+-15
+
+Total Bit0 Bit1 Bit2 Bit3 (MSB)
+
+0.6
+
+0.65
+
+0.7
+
+Supply voltage (V)
+
+(a)
+
+-10
+
+-5
+
+0
+
+5
+
+10
+
+Error Magnitude
+
+(b)
+
+0.75 15
+
+Probability
+
+Figure 6: VNU with registers placed after saturation. (a) Probability of bit errors. (b) Probability mass function of error magnitude at VDD=0.67 V.
+
+Fig. 6(a) shows that the MSB of βi has the lowest error rate whereas all the remaining bits have almost similar error rates. The pmf of the error magnitude in Fig. 6(b) reaffirms that the errors are almost equally likely in all the bits except for the MSB. The reason for this contrast is as follows. As observed earlier, the MSBs of the OUTi have larger delay. However, the saturation operation can be performed only when the MSBs of OUTi are determined. Once this is done, the saturation operation itself is relatively simple and has a small delay. Therefore, the overall delay from αi to βi in Fig. 1(a) is dominated by the delay to OUTi. Moreover, the MSB (i.e. sign) of βi is simply the MSB of OUTi resulting in no delay for the MSB in the saturation block.
+5.3 CNU
+Recall from Fig. 1(b) that the calculation of sign(αi) involves XOR operations only and does not contribute to the timing errors. Considering the calculation of the magnitude |αi|, we again study whether the timing errors are more likely to occur in the MSBs or LSBs. The simulation results given in Fig. 7 show in fact that the LSBs have higher bit-error rate. This is explained as follows.
+The main operations in the magnitude calculation are the comparisons (COMPs) which in turn dictates the error performance of the CNU. Each input experiences a propagation delay of (1 + log2 M ) COMPs. There are two possible ways of implementing a COMP operation: (i) using bit-wise comparisons proceeding from the MSB to LSB, (ii) using a subtraction. We use the first approach here for reasons that will be clear soon. Indeed, in this case, a COMP has the lowest delay if MSBs of its two input words are different. If the MSBs are the same, then MSB-1 bits determine the results, and so on. As a result, the most likely case for a timing violation occurs when only LSBs of the two inputs are different. Therefore, we expect the LSBs of the outputs to have the largest error rate. Furthermore, this also implies that the errors occur when the inputs have close values
+
+204
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+Error rate
+
+100
+
+10-1
+
+10-2
+
+Total
+
+10-3
+
+Bit0
+
+Bit1
+
+Bit2 (MSB)
+
+10
+
+-4
+0.5
+
+0.55
+
+0.6
+
+0.65
+
+0.7
+
+Supply voltage (V)
+
+(a)
+
+100
+
+10-1
+
+10-2
+
+10-3 -15 -10
+
+-5
+
+0
+
+5
+
+Error Magnitude
+
+(b)
+
+10
+
+15
+
+Probability
+
+Figure 7: CNU. (a) Probability of bit errors. (b) Probability mass function of error at VDD=0.65 V.
+
+meaning that the error magnitudes are small as shown in Fig. 7(b). Compared to the VNU, observe also in Fig. 7(a) that the error rate increase is gradual as the supply voltage is reduced. This indicates the presence of several propagation paths with varying delays from the inputs to the output. On the contrary, with the second COMP implementation using a subtraction, the signal propagates from LSB to MSB and so, the MSBs are more likely to have errors. Hence, the first implementation using bit-wise comparisons is in fact better in the presence of timing errors.
+6. DISCUSSION
+Fig. 4 and Fig. 6 illustrate that in the VNU, the MSBs face a longer propagation until the point OUTi before saturation, but in fact the LSBs constrain the delay beyond this point. Thus, placing the registers after saturation (βi) does not allow for the best possible voltage scaling. Indeed, comparing the error rates at supply voltage around 0.65 V, we see that an incorrect MSB at OUTi already ripples to corrupt all bits of βi. Therefore, an efficient error-resilient design requires that the pipelining registers be placed before the saturation and 2sC-SM operations in the VNU. An undesired by-product of this is that the number of DFFs in the VNU increases. However, the benefits of better voltage scaling should outweigh the power consumed by the small number of additional registers in most application scenarios. Moreover, the number of interconnects between VNUs and CNUs can remain the same by physically placing the saturation and 2sC-SM conversion block within the VNUs. In the CNU, we know from Fig. 7 that LSBs constrain the delay. Thus, combining the LSB-constrained and relatively simple saturation/2sC-SM block in the VNU into the pipeline with the CNU still results in shorter paths for MSBs, with errors more likely in LSBs similar to Fig. 7.
+
+With the above architecture, the MSB (sign bit) has the highest error rate in the VNUs. Since an error in the sign bit significantly deteriorates the performance of the LDPC decoder [8], additional error detection and correction circuitry are necessary preventing the error from propagating to the CNUs. On the other hand, in the CNUs, since errors are more likely in the LSBs and the error rate changes gradually with supply voltage, we may do away without a specific error mitigation mechanism.
+A toolbox of such error mitigation mechanisms is already available from schemes previously proposed in the literature. Such techniques include simple replication (e.g., triple modular redundancy) [13], algorithmic noise tolerance (e.g., using a reduced precision replica) [9, 10], RAZOR flip-flop [11, 5], and convergence damping [14]. The error models provided in this paper are useful in customizing the error mitigation by highlighting the areas where such mitigation is necessary, and by comparing the performance of different schemes. Additionally, by incorporating these error models in BER vs. SNR simulations (together with the error-mitigation mechanism), it is possible to determine the computation error rates that can be tolerated, and thus the amount of tolerable VOS, for a given acceptable SNR penalty (e.g., 0.1–0.2 dB) in achieving a specified BER.
+Let VDD denote the supply voltage in the conventional error-free design and ∆VDD denote the amount of supply voltage reduction, giving the new supply voltage of the system as VDD = VDD − ∆VDD. For example, in the 90 nm CMOS technology that we consider, VDD is determined from
+
+0.9k1,minVDD (0.9VDD − VT H,max)1.6
+
+= Ttarget
+
+(5)
+
+where Ttarget is the desired delay. The coefficient 0.9 is introduced as the minimum supply voltage is often 10% lower that the typical value. k1,min and VT H,max are the worst case values and a function of process variations.
+The total dynamic energy dissipation E for a decoding operation in the conventional design is given by
+
+E = NiterEiter = Niter (N EVNU + (N − K)ECNU) ,
+where Niter is the number of decoding iterations and Eiter := Niter(N EVNU + (N − K)ECNU) is the energy dissipation per iteration in a decoder with N VNUs and N − K CNUs. The new total dynamic energy dissipation E with VOS is calculated as
+E = Niter VDD/VDD 2 Eiter + Eiter,oh ,
+
+where Eiter,oh is the energy dissipation overhead (per iter-
+ation) of the error mitigation scheme and Niter is the new number of decoding iterations. Consequently, with Niter = ρiterNiter and Eiter,oh = ρohEiter, we obtain
+
+E = ρiter VDD/VDD 2 + ρoh E.
+
+(6)
+
+The exact value of the power saving depends on several factors including the LDPC code that is chosen, clock frequency, process technology, the error mitigation scheme and its overhead. The effectiveness of the new design depends on the supply voltage in the original error-free design VDD and the amount of the supply voltage reduction ∆VDD, which is the sum of two components ∆VDD,pv and ∆VDD,data. ∆VDD,pv comes from allowing some of the VNUs and CNUs to have a small error-rate in presence of transistor variations.
+
+205
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+Addressing process variation through statistical analysis is well understood by designers and the only difference here is the more relaxed requirement on the probability of timing errors. ∆VDD,data is obtained by permitting the inputdata dependent errors. For complicated circuits, when the number of gates in the signal propagation paths is large, ∆VDD,pv will be smaller since the local process variations will be averaged out. On the other hand, such circuits are likely to have a large number of signal propagation paths and hence a larger ∆VDD,data.
+Assuming computation error rates of 10−3 are tolerable [8, 11], we estimate VDD = 0.65 V using Figs. 4 and 7. Using (6), this leads to an estimated power savings of 50.8%, i.e., about 2× assuming VDD = 1.2 V, the number of iterations increases by 25% (i.e., ρiter = 1.25) and the error mitigation overhead is 10% of Eiter (i.e., ρoh = 0.1). It should be added that using a different CMOS process other than 90 nm will change the exact relationship between delay and VDD, but it will not change the observed trends and provided guidelines which are more general. Furthermore, since the analysis in this paper is by nature circuit-dependent, it is beyond the scope of the paper to address all possible LDPC decoding algorithms and decoder architectures. Nevertheless, the similarity in the decoder structure can be exploited to draw similar guidelines, and the analysis methodology developed here can also be similarly applied to other circuits.
+7. CONCLUSIONS
+The timing error behavior under voltage over-scaling of the main computation circuits, namely the variable node unit and the check node unit, of a min-sum LDPC decoder have been studied. The results complement the previous works, enabling an improved error-resilient design that accounts for the internal error model.
+It has been shown that, in the VNU, a rather unconventional placement of the pipelining registers before the saturation operation and 2sC-SM conversion results in more efficient voltage scaling than their natural placement. However, such an architecture results in the the MSB (sign bit) having the highest error rate. Therefore, it is necessary to include an additional circuitry that detects/corrects the error preventing it from propagating further to the CNUs. In the CNUs, comparison (COMP) operations mainly dictate the error performance. With an appropriate implementation of the COMP operations, we show that timing errors are more likely in the LSBs and the error rate increases gradually as supply voltage is reduced. Hence, we may do away without a specific error mitigation mechanism in CNUs. As a future step, the computation error models studied here can be incorporated in a high-level decoder simulation to obtain a more accurate picture of the BER performance and convergence behavior under different error mitigation mechanisms.
+8. REFERENCES
+[1] Y. Liu, T. Zhang, and K. K. Parhi. Computation error analysis in digital signal processing systems with overscaled supply voltage. IEEE Trans. Very Large Scale Integ. Syst., 18(4):517–526, Apr. 2010.
+[2] M. E. Sinangil et al. Design of low-voltage digital building blocks and ADCs for energy-efficient systems. IEEE Trans Circuits Syst.-II, 59(9):533–537, Sep. 2012.
+[3] Y.-H. Lee et al. A near-optimum dynamic voltage scaling in 65-nm energy-efficient power management
+
+with frequency-based control for SoC system. IEEE J. Solid-State Cir., 47(11):2563–2575, Nov. 2012. [4] G. Karakonstantis, N. Banerjee, and K. Roy. Process-variation resilient and voltage-scalable DCT architecture for robust low-power computing. IEEE Trans. Very Large Scale Integ. Syst., 18(10):1461–1470, Oct. 2010. [5] S. Das et al. A self-tuning DVS processor using delay-error detection and correction. IEEE J. Solid-State Cir., 41(4):792–804, Apr. 2006. [6] N. R. Shanbhag, R. A. Abdallah, R. Kumar, and D. L. Jones. Stochastic computation. ACM/IEEE Design Automation Conf. (DAC), 859–864, Jun. 2010. [7] R. A. Abdallah and N. R. Shanbhag. Minimum-energy operation via error resiliency. IEEE Embedded Syst. Lett., 2(4):115–118, Dec. 2010. [8] V. C. Gaudet. Low-power LDPC decoding by exploiting the fault-tolerance of the Sum-Product algorithm. Contemporary Mathematics, 523:165-172, 2010. [9] J. Cho, N. R. Shanbhag, and W. Sung. Low-power implementation of a high-throughput LDPC decoder for IEEE 802.11n standard. IEEE Workshop on Signal Processing Systems (SiPS), 40–45, Oct. 2009. [10] E. P. Kim and N. R. Shanbhag. Energy-efficient LDPC decoders based on error-resiliency. IEEE Workshop on Signal Processing Systems (SiPS), 149–154, Oct. 2012. [11] M. Alles, T. Brack, and N. Wehn. A Reliability-Aware LDPC Code Decoding Algorithm. IEEE Vehicular Technology Conference-Spring, 1544–1548, Apr. 2007. [12] A. M. A. Hussien et al. A class of low power error compensation iterative decoders. IEEE GLOBECOM, 1–6, Dec. 2011. [13] M. May, M. Alles, and N. Wehn. A case study in reliability-aware design:a resilient LDPC code decoder. Proc. Design Automation Test Europe, 456–461, 2008. [14] H. Cho, L. Leem, and S. Mitra. ERSA: Error Resilient System Architecture for Probabilistic Applications. IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., 31(4):546–558, Apr. 2012. [15] A. J. Blanksby and C. J. Howland. A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder. IEEE J. Solid-State Circuits, 37(3):404–412, Mar. 2002. [16] J. Chen and M. Fossorier. Near optimum universal belief propagation based decoding of low-density parity check codes. IEEE Trans. Commun., 50(3):406-414, Mar. 2002. [17] L. Yan, J. Luo, and N. K. Jha. Joint dynamic voltage scaling and adaptive body biasing for heterogeneous distributed real-time embedded Systems. IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., 24(7):1030–1041, Jul. 2005. [18] T. Rejimon, K. Lingasubramanian, and S. Bhanja. Probabilistic error modeling for nano-domain logic circuits. IEEE Trans. Very Large Scale Integ. Syst., 17(1):55–65, Jan. 2009. [19] J. Huang, J. Lach, and G. Robins. Analytic error modeling for imprecise arithmetic circuits. Silicon Errors in Logic - System Effects (SELSE), 2011. [20] C-H Huang, Y. Li, and L. Dolecek. Gallager B LDPC Decoder with Transient and Permanent Errors. IEEE Trans. Commun., 62(1):15–28, Jan. 2014.
+
+206
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:12:47 UTC from IEEE Xplore. Restrictions apply.
+
+

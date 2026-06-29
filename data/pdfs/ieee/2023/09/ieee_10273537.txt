@@ -1,0 +1,472 @@
+2023 12th International Symposium on Topics in Coding (ISTC) | 979-8-3503-2611-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISTC57237.2023.10273537
+
+Sets of complementary LLRs to improve OSD
+post-processing of BP decoding
+Joachim Rosseel∗†, Vale´rian Mannoni∗, Valentin Savin∗, Inbar Fijalkow† ∗CEA-Leti, Universite´ Grenoble Alpes, F-38000 Grenoble, France {Joachim.Rosseel, Valerian.Mannoni, Valentin.Savin}@cea.fr †ETIS, CY Cergy Paris Univ., ENSEA, CNRS F-95000, France {Joachim.Rosseel, Inbar.Fijalkow}@ensea.fr
+
+Abstract—This article deals with Ordered Statistics Decoding (OSD) applied to the soft outputs of the Belief Propagation (BP) algorithm. We first model the weighted sum of the a posteriori LLRs across BP decoding iterations into a neuron. The neuron is then trained with the focal loss to compute for each BP decoding failure a set of accumulated Log Likelihood Ratios (LLRs) suited for OSD post-processing. Then, we propose a recursive selection procedure of LLRs sets, for multiple OSD post-processing. This selection is carried out from the sets of a posteriori LLRs calculated at each BP iteration, and from the accumulated LLRs optimized for the OSD, based on their joint probabilities of failure with OSD post-processing. An OSD is then applied to each set of LLRs belonging to the selection. In addition, we propose to reduce the OSD post-processing decoding complexity without significantly degrading its performance. Our results show that this new decoding method provides an effective way to bridge the gap to maximum likelihood decoding for short and long Low Density Parity Check (LDPC) codes.
+Index Terms—LDPC, belief propagation, ordered statistics decoding post-processing
+I. INTRODUCTION
+The emergence of communication systems for the Internet of Things (IoT), with the requirement of short-packet transmissions, has revitalized interest in research and practice of efficient error correcting codes for messages ranging from a few tens up to a few hundred bits. While important progress has been made over the last years in understanding the limits of coding at short block lengths [1], the design of efficient short codes and decoding algorithms still raises many challenges [2].
+Low-Density Parity-Check (LDPC) codes [3] are a class of error correcting codes defined by sparse bipartite graphs [4]. They are well-known for their excellent error correction performance at suitably large blocklengths, achieving near Shannon channel capacity performance under iterative belief propagation (BP) decoding [5]. For codes defined by cycle-free bipartite graphs, BP decoding outputs maximum a posteriori estimates of the coded bits [6]. However, finite length codes are actually defined by graphs with cycles, in which case BP decoding is known to be sub-optimal.
+In order to improve the error correction capability of short LDPC codes, the BP can be associated with an Ordered Statistics Decoding (OSD) [7]. A first combination strategy,
+This work was supported by the French Agence Nationale de la Recherche (ANR), under grant number ANR-21-CE25-0006 (AI4CODE project).
+
+introduced in [8] and used in [9], effectively improves the performance by applying a low order OSD at the end of each BP iteration. However, the resulting complexity is increased significantly due to the use of the OSD at each iteration. To limit the added complexity, the OSD can be applied as a postprocessing step, exploiting the BP soft output only when the latter fails to converge to a codeword. As such, the authors of [10] propose an OSD post-processing step for shortened LDPC codes, by considering that some of the information bit values are fixed and known by the receiver. In [11], the accumulation of the Log Likelihood Ratios (LLRs) during BP decoding iterations is used as a new reliability measure of variable-nodes for the OSD. Employing directly the observed LLRs for the reliability measure has been investigated as well in [12]. The OSD post-processing is also carried out in [13] after a decoding diversity composed of several BP modeled with recurrent neural networks (BP-RNNs), each being trained to decode a different kind of error events.
+In this paper, we aim firstly at improving the OSD postprocessing on the BP outputs for short LDPC codes decoding. Our approach first consists in modeling a weighted sum based on the approach of [11] into a neuron. This neuron is optimized with the focal loss [14] in order to compute for each noisy codeword intended for post-processing a set of accumulated LLRs suited for OSD. Then, we propose to recursively construct a selection of LLRs sets from the sets of a posteriori LLRs computed at each BP decoding iteration, and from the set of the accumulated and optimized LLRs for OSD. To carry out this selection, the complementarity of the considered LLRs sets is measured with their joint probability of failure with OSD post-processing. We thus introduce a new decoding method, where an OSD post-processing is applied to each set of LLRs belonging to the selection. We also show that the proposed decoding strategy above is scalable for longer LDPC codes. Furthermore, reducing the complexity induced by OSD becomes necessary since the number of calculated codewords during OSD tends to be computationally too costly, in particular for medium or large LDPC codes. For this reason, we also propose to reduce the number of candidate codewords computed during the OSD post-processing step.
+The paper is organized as follows. Section II introduces the notations, recalls the OSD algorithm and describes the approach of [11]. The training of the neuron modeling the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:16 UTC from IEEE Xplore. Restrictions apply.
+
+accumulated LLR with the focal loss, the procedure to select complementary sets of LLRs, and the complexity reduction technique are then explained in Section III. Finally, Section IV presents the numerical results, and Section V concludes the paper.
+
+II. OSD POST-PROCESSING ON THE A POSTERIORI LLRS OF BP DECODING
+
+We consider an LDPC code defined by a Tanner (bipartite)
+
+graph [4] with N variable-nodes, M check-nodes, denoted
+
+respectively by n ∈ {1, . . . , N } and m ∈ {1, . . . , M }, and
+
+with K = N − M information bits. BP decoding then consists
+
+of an iterative exchange of messages along the Tanner graph
+
+edges, where each message provides an LLR estimate of the
+
+incident variable-node [5].
+
+We also consider the OSD [7], a decoding algorithm capable
+
+of approaching the Maximum Likelihood (ML) decoding
+
+performance for medium block length linear codes, with poly-
+
+nomial complexity. It can be used as a stand-alone decoder,
+
+exploiting the soft channel output, or as post-processing step
+
+exploiting the output of a soft decision decoder such as the
+
+BP. The first step of the OSD consists to sort the variable-
+
+nodes according to a reliability measure, that is the absolute
+
+value of the corresponding soft decision. In the case of OSD
+
+post-processing for BP, the soft output, and thus the reliability
+
+depends of the a posteriori LLR given during BP decoding.
+
+The parity check matrix of the code is then brought into
+
+a systematic form, denoted by Hsyst, so that to ensure the K first columns corresponds to the most possible reliable
+
+variable-nodes. In OSD-0, the hard decision is taken on
+
+the most reliable variable-nodes, and the least reliable ones
+
+are determined by solving a linear system given by Hsyst. Therefore, the decoding is successful if and only if the most
+
+reliable variable-nodes are error-free. To deal with cases where
+
+these bits contain errors, OSD-p considers all the possible
+
+choices of at most p errors among them. For each choice,
+
+the initial hard-decision of the corresponding variable-nodes
+
+is flipped, and the least reliable variable-nodes are determined
+
+again by solving the linear system given by Hsyst. A list of
+
+pK i=0 i
+
+codewords, noted by S, is thus computed by this
+
+procedure. The most likely codeword in S is then selected
+
+thanks to the ML criterion:
+
+ˆc = arg max P (ˆcs|y)
+
+(1)
+
+ˆcs ∈S
+
+where ˆcs represents a codeword determined by OSD-p and y = {y1, . . . , yN } the observed (channel) noisy codeword. OSD-p may closely approach the ML decoding performance, assuming the p value (referred to as OSD order) is suitably large.
+In order to improve the performance of OSD postprocessing with BP soft outputs, the authors of [11] propose to measure the reliability of the variable-nodes for OSD-p with the accumulation of the a posteriori LLRs during BP decoding iterations. More precisely, if the BP fails to obtain a codeword
+
+after a maximum number of I iterations, the reliability of a variable-node n is computed as follows:
+
+I
+
+Lˆ(nS) = Lˆn(i), n ∈ [1, N ]
+
+(2)
+
+i=0
+
+where Lˆn(0) corresponds to the observed LLR of bit n, and Lˆ(ni) to its a posteriori LLR calculated at iteration i of BP, for
+i ∈ [1, I].
+Intuitively, the reliability measure described in equation (2)
+allows to obtain a stronger reliability for variable-nodes whose Lˆ(ni) keep the same sign across BP iterations than those whose Lˆ(ni) sign change. Hence, the set Lˆ(S) := Lˆ1(S), . . . , LˆN(S) ensures that the most reliable variable-nodes and thus fixed
+by the OSD corresponds to bits for whose BP decoding is
+”certain” of their values.
+
+III. MULTIPLE OSD POST-PROCESSING
+
+A. Accumulated and optimized LLR for OSD post-processing
+
+In this section, we are interested in determining an LLR accumulated during BP iterations as suited as possible for OSD post-processing. To do so, we introduce the weights w(i) ≥ 0, i ∈ [0, I], in equation (2). We thus propose to compute the reliability of a variable-node n by the following accumulated LLR of I iterations:
+
+I
+
+Lˆ(nNS) = w(i)Lˆ(ni), n ∈ [1, N ]
+
+(3)
+
+i=0
+
+This equation is then modeled by a simple neuron. To create the neuron training set, we first generate a set TBP of noisy codewords by considering a binary-input AWGN channel, with a BPSK alphabet (±1) inputs, and a fixed noise variance σ2. TBP is then decoded by the BP. Since the AWGN channel and BP are symmetrical, only the all-zero codeword is transmitted. We subsequently denote by TBP-OSD the subset of noisy codewords of TBP for which the BP does not find a codeword after I iterations. The sets Lˆn := Lˆn(0), . . . , Lˆ(nI) , (with n ∈ [1, N ]) of each noisy codeword belonging to TBP-OSD then constitute the training set of the neuron. This training set allows the neuron to be trained only in cases where the BP does not converge to a codeword.
+To optimize the neural weights, we propose to utilize the focal loss, first introduced in [14], and defined by:
+
+FL bn, Lˆ(nNS) = −bnσ Lˆn(NS) γ log 1 − σ Lˆn(NS)
+
+γ
+
+− (1 − bn) 1 − σ Lˆ(nNS) log σ Lˆn(NS)
+
+(4)
+
+where bn is the expected value of bit n, σ(x) = (1 + e−x)−1 is the sigmoid function converting the LLR value into the probability that the decoded bit is equal to zero, and γ ≥ 0 is an an adjustable hyper-parameter. By assuming that the allzero word is transmitted, that is bn = 0 for n ∈ [1, N ], (4) simplifies to:
+
+FL Lˆ(nNS) = − 1 − σ Lˆn(NS)
+
+γ
+log
+
+σ Lˆ(nNS)
+
+(5)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:16 UTC from IEEE Xplore. Restrictions apply.
+
+The focal loss enables to focus the training on the hardest
+elements to classify in the training set, by affecting them
+higher penalties. In our case, the most difficult vectors to classify are the Lˆn possessing Lˆn(i) with larges amplitudes and incorrect signs, since it will result in a Lˆn(NS) with the same characteristics. Minimizing the focal loss therefore optimizes the weights to reduce the impact of such Lˆn(i) on the computation of Lˆ(nNS). Moreover, resulting Lˆ(nNS) with large amplitudes and incorrect signs induce erroneous bits, which
+will be potentially selected among the K most reliable ones
+during OSD. Consequently, minimizing the focal loss reduces
+the probability of having erroneous bits among the K the most reliable bits. Lˆ(NS) is thus effectively optimized for OSD post-
+processing. To the best of our knowledge, it is the first time the
+focal loss [14] is used in decoding. We noticed that training an LLR Lˆ(NS) with a focal cost γ > 0 outperforms the training
+with a binary cross entropy (that is γ = 0) when OSD post-
+processing is applied.
+
+B. Selecting sets of LLRs
+In order to get closer to the ML decoding performance, we propose here a decoding method where an OSD postprocessing is applied after each LLRs set of an ordered list LZ of Z LLRs sets, with Z ∈ [1, I + 2]. To construct this list, the complementarity of Lˆ(i) := Lˆ1(i), . . . , LˆN(i) , i ∈ [0, I], and of Lˆ(NS) with OSD is evaluated with the number of errors remaining after OSD post-processing.
+We first generate a test set TBP-OSD, according to the procedure described in the previous section. The decoding performance of the OSD post-processing is then assessed on TBP-OSD with each Lˆ(i) and with Lˆ(NS). We denote by F (i) ⊂ TBP-OSD (resp. F (NS) ⊂ TBP-OSD) the subset of noisy words on which Lˆ(i) (resp. Lˆ(NS)) leads to a failure during OSD-p decoding. Then, we recursively construct an ordered list of LLRs sets, noted L. This list is initialized with Lˆ(NS), L = Lˆ(NS) , since Lˆ(NS) is optimized for OSD post-
+processing. To add a new LLRs set Lˆnew to L, we propose to apply the following rule:
+
+Lˆnew =
+
+arg min
+
+FL ∩ F (i) ,
+
+(6)
+
+Lˆ (i) ∈{Lˆ (0) ,...,Lˆ (I) }\L
+
+where FL := F (NS) if L = Lˆ(NS) , FL := F (NS) ∩ ∩Lˆ(i)∈L F (i) otherwise. The above rule is applied I + 1 times, until L contains all the LLRs sets. If the minimum argument of (6) is not unique, an arbitrary choice is made among these values.
+For Z ≤ I + 2, LZ is defined as the sub-list of the Z first LLRs sets of L. LZ is thus an ordered list of LLRs sets, representing Z complementary levels of reliability with respect to OSD post-processing. As the OSD post-processing is applied to each element of LZ, an ML rule such as defined in (1) is used to choose the final codeword among the Z candidate codewords. In the following, we note this decoding method by BP-LZ -OSD-p.
+Finally, we point out that neither the neural modeling of the weighted sum, nor the construction of LZ, depend of the
+
+dimensions N and K of the considered LDPC code. As a result, the methodology presented in this paper is reproducible for any LDPC code.
+
+C. Complexity reduction
+
+A main practical limitation for the OSD implementation is
+
+its decoding complexity [15], since a list of
+
+pK i=0 i
+
+candi-
+
+date codewords has to be calculated at each OSD utilisation.
+
+Hence, the OSD post-processing complexity tends to be espe-
+
+cially costly for medium or long LDPC codes with K > 100
+
+and for OSD-p with p ≥ 2. To address this issue, the number
+
+of candidate codewords is thus usually limited by flipping only
+
+some of the most reliable variable-nodes. As such, a procedure
+
+to compute a list of positions to be flipped during OSD-p was
+
+introduced in [15]. This list is notably determined thanks to the
+
+computation of joint error probabilities for the most reliable
+
+bits, and allows to process only the most probable candidate
+
+codewords. In [16], the most reliable bits are partitioned into
+
+segments according to reliability thresholds depending of the
+
+received noisy codeword. Only some of the segments are then
+
+selected for flipping. Both previously described methods can
+
+require a high computational cost, due in particular to the
+
+threshold computations. The authors of [17] propose for each
+
+noisy codeword to flip only the most reliable variable-nodes
+
+for which soft values do not respect amplitude thresholds.
+
+Here, we propose a strategy to reduce the computational
+
+complexity, which does not depend of the noisy codeword.
+
+More precisely, we first put a limitation to the decoding
+
+complexity by restricting our study to OSD-2. We then reduce
+
+the complexity of OSD-2, and by extension of BP-LZ-OSD-2, by limiting the choices to a maximum of two errors according
+
+to their level of reliability. We thus introduce two positions
+
+thresholds, T1 and T2, with T1 < T2. For simplicity, the most reliable bits are also numbered from 0 to K in ascending order
+
+of reliability. For a linear code, we thus consider only up to
+
+two flips between [0, T2], with at least one flip in [0, T1] in the case of two flips. Note that the bits with sorting positions
+
+in the segment [T2 + 1, K] correspond to bits with the highest
+reliability, and thus with the lowest probability of error. In addition, a couple of errors in [T1 + 1, T2]2 is less probable than a couple of errors in [0, T1]2 or in [0, T1] × [0, T2].
+Therefore, the proposed method limits the number of candidate
+
+codewords for OSD-2 by processing only error events with the
+
+highest probability of occurrence. The number of candidate
+
+codewords NC is obtained with the following formula:
+
+NC = 1 +
+
+T2 1
+
++
+
+T1 2
+
++ (T2 − T1)T1
+
+(7)
+
+The optimal choice of T1 and T2 is then determined by a complexity/performance evaluation thanks to (7) . Indeed, for a fixed number of candidate codewords Nc, all the couples satisfying (7) are determined. We then assessed the FER of BPLZ-OSD-2 at a fixed SNR with each found couple. The couple for which the reduced complexity BP-LZ-OSD-2 obtains the best FER performance is thus selected.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:16 UTC from IEEE Xplore. Restrictions apply.
+
+Finally, note that for BP-LZ-OSD-p, the number of tested
+
+codewords when the BP fails is equal to Z×
+
+p i=0
+
+K i
+
+since Z
+
+OSD-p are performed. Therefore, the value of Z may also be
+
+limited for complexity reasons as it directly impact the number
+
+of tested codewords and the number of system resolutions.
+
+IV. NUMERICAL RESULTS
+A. Simulation settings
+Three LDPC codes have been considered in our simulations. Their parameters are provided in Table I, where Rc := K/N denotes the coding rate, dv the variable-nodes degree, and dc the check-nodes degree.
+
+TABLE I LDPC codes parameters
+
+N
+
+K Rc dv dc
+
+CCSDS code [18] 128 64 0.5 3-5 8
+
+Tanner code [19] 155 64 0.41 3 5
+
+MacKay code [20] 1008 504 0.5 3 6
+
+The number of BP decoding iterations was set to 25 for the CCSDS and Tanner codes, and to 10 for the MacKay code. The OSD-p post-processing was evaluated for p = 0, 1, 2 in order to limit the number of tested combinations. Concerning the neuron introduced in Section III-A, a set TBP-OSD of 10000 noisy codewords was generated to create the training set. The weights, all initialized to one, were then optimized over 50 epochs, so that the focal loss converge towards a limit. Furthermore, we assessed the Frame Error Rate (FER) of the OSD-p with Lˆ(NS) according to the hyper-parameter γ, and we determined empirically γ = 10 as being a good choice to penalize the misclassified LLRs. Finally, the neuron was trained for each SNR value ranging from 2.5 dB to 4.5 dB (resp. from 1.5 dB to 3.5 dB), with a step of 0.5 dB for the CCSDS code (resp. Tanner code/MacKay code). In addition, for each SNR value, a test set TBP-OSD of 10000 noisy codewords was generated, and a list L was thereby constructed according to the procedure described in section III-B. We compare then the different decoding strategies proposed in this paper for the three codes, in terms of FER. Reported SNR gains are evaluated at a FER of 10−4.
+B. CCSDS Code
+On Fig. 1, the performance of CCSDS decoding for an OSD-p post processing with Lˆ(NS) is compared with the performance of an OSD-p post processing using Lˆ(S) as a reliability measure. We observe with Lˆ(NS) a slightly better performance than Lˆ(S) for p = 1 (similar for p = 0). For an order p = 2, Lˆ(NS) allows to obtain a gain of 0.16 dB with respect to Lˆ(S). As a result, Lˆ(NS) becomes more and more suited to OSD when the OSD order increases.
+In the following, we consider a maximum budget of 3 OSDp post-processing. To start with, the set L3 is determined from L, as explained in section III-B. The performance of OSD-p post-processing with L3 and with Lˆ(NS) alone are illustrated in Fig. 2. We notice that applying an OSD-p after each LLRs
+
+BP(I = 25)
+
+BP-L(S)-OSD-0
+
+10 2
+
+BP-L(NS)-OSD-0 BP-L(S)-OSD-1
+
+BP-L(NS)-OSD-1
+
+BP-L(S)-OSD-2
+
+10 3
+
+BP-L(NS)-OSD-2 ML[21]
+
+10 4
+
+FER
+
+10 25.5
+
+3.0 SNR3.(5dB) 4.0
+
+4.5
+
+Fig. 1. FER for CCSDS code, Lˆ(S) vs Lˆ(NS).
+
+BP (I = 25)
+
+BP-L(NS)-OSD-0
+
+10 2
+
+BBPP3[--L1(33N-]OS-L)S-(ODNSS-0)D-O-1SD-0
+
+10 3
+
+BBPP3[--L1(33N-]OS-L)S-(ODNSS-1)D-O-2SD-1
+
+10 4
+
+BMP3L[-[12331-]]O-LS(DNS-2)-OSD-2
+
+FER
+
+10 25.5
+10 2 10 3 10 4
+
+3.0 SNR3.(5dB) 4.0
+
+4.5
+
+Fig. 2. FER for CCSDS code.
+
+BP (I = 25) BP-L(NS)-OSD-0 BBPP--L(3N-OS)S-ODS-0D-1 BBPP--L(3N-OS)S-ODS-1D-2 B(BCPPo--m33p--OOleSSxDDit-2y2,= 50%) ML[21]
+
+FER
+
+10 15.5 100 10 1 10 2 10 3
+
+2.0 SNR2.(5dB) 3.0
+
+3.5
+
+Fig. 3. FER for Tanner code.
+
+BP(I = 10) BP-L(NS)-OSD-0 BBPP--L(3N-OS)S-ODS-0D-1 BBPP--L(3N-OS)S-ODS-1D-2 (BBCPPo--m33p--OOleSSxDDit--y22=, 50%)
+
+FER
+
+10 4 1.50 1.75 2.00 SN2R.2(5dB) 2.50 2.75 3.00
+Fig. 4. FER for MacKay code.
+set of L3 provides an increasing gain with respect to the order p. Indeed, the gain is respectively of 0.12 dB, 0.22 dB, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:16 UTC from IEEE Xplore. Restrictions apply.
+
+0.27 dB for p = 0, 1, 2. In addition, it can be observed that BP-L3-OSD-2 achieves a FER performance at only 0.17 dB from ML decoding [21].
+Finally, OSD-p post-processing is applied after a decoding diversity of 3 BP-RNNs, denoted D3. The construction method of this decoding diversity is detailed in [13]. For each BPRNN of D3, a single neuron is optimized with the parameters described in section IV-A. Three Lˆ(NS) reliability are thus computed and assessed with an OSD-p post-processing. An ML rule decides of the the final codeword. We note this diversity approach by D3-Lˆ(NS)-OSD-p, and the corresponding results are shown in Fig. 2. It can be observed that BP-L3OSD-0 provides a slight improvement over D3-Lˆ(NS)-OSD0. The gain increases to 0.1 dB for p = 1, and then to 0.12 dB for p = 2. As a result, using the BP decoder alone and constructing a list of complementary LLRs sets is a better strategy in term of FER performance with OSD-p postprocessing.
+
+C. Tanner Code
+
+The simulation results obtained with the Tanner code are
+
+presented on Fig. 3, with the same methodology. The decoding
+
+by BP-L3-OSD-0 provides a gain of 0.16 dB with respect to BP-Lˆ(NS)-OSD-0. This gain remains similar when the OSD
+
+order is 1 or 2. Furthermore, we observe that BP-L3-OSD-2
+
+nearly reaches the ML decoding performance.
+
+For this code, we also consider a decoder BP-L3-OSD-2
+
+operating with a complexity reduced by 50%, as described in
+
+Section III-C. This complexity reduction amounts to NC =
+
+3121 instead of the BP-L3-OSD-2 3 ×
+
+2 64 i=0 i
+
+= 6243
+
+codewords tested at each BP decoding failure. An optimal
+
+threshold couple (T1, T2) for BP-L3-OSD-2 is thus determined
+
+for each SNR value. The corresponding performance is illus-
+
+trated in Fig. 3. We notice that the complexity reduction of
+
+50% induces a degradation of only 0.08 dB with respect to
+
+BP-L3-OSD-2 with no reduction.
+
+D. Extension to longer code: MacKay code
+Fig. 4 shows the simulations results for the MacKay code. This code possesses higher dimensions N and K than both previously discussed codes, but as explained in Section III-B, the methodology is reproducible. It can be observed that BPL3-OSD-p exhibits small improvements with respect to BPLˆ(NS)-OSD-p, up to 0.1 dB for an order p = 2.
+However, since K = 504, Nc = 381783 candidate codewords are computed at each BP decoding failure for BPL3-OSD-2. Consequently, a complexity reduction becomes mandatory for the MacKay code. As such, the decoder BP-L3OSD-2 with a complexity reduction of 50% is assessed. An optimal threshold couple is hence calculated for each SNR value. We observe that the decoder BP-L3-OSD-2 with a complexity reduction of 50% tends to be almost as efficient than the standard BP-L3-OSD-2 decoder.
+
+V. CONCLUSION
+In this article, we addressed the problem of enhancing LDPC codes decoding with an OSD post-processing on the
+
+BP outputs. To this end, we optimized an accumulated LLR
+for OSD post-processing using the focal loss. We then built
+recursively an ordered list of complementary LLRs sets with
+respect to the OSD algorithm. This list allowed us to propose
+a new decoding strategy, where an OSD post-processing is
+applied after each LLRs set of the list. Finally, we showed
+that this methodology can be reproduced for any codeword
+length, provided that the complexity of the OSD is limited.
+This work also opens new perspectives on the utilisation of
+the focal loss for decoding with neural networks.
+REFERENCES
+[1] Y. Polyanskiy, H. V. Poor, and S. Verdu´, “Channel coding rate in the finite blocklength regime,” IEEE Trans. on Inf. Theory, vol. 56, no. 5, pp. 2307–2359, 2010.
+[2] M. C. Cos¸kun, G. Durisi, T. Jerkovits, G. Liva, W. Ryan, B. Stein, and F. Steiner, “Efficient error-correcting codes in the short blocklength regime,” Physical Communication, vol. 34, pp. 66–79, 2019.
+[3] R. G. Gallager, “Low density parity check codes,” MIT Press, Cambridge, 1963, research Monograph series.
+[4] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. on Inf. Theory, vol. 27, no. 5, pp. 533–547, 1981.
+[5] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” IEEE Trans. on Inf. Theory, vol. 47, no. 2, pp. 619–637, 2001.
+[6] N. Wiberg, “Codes and decoding on general graphs,” Ph.D. dissertation, Department of Electrical Engineering, Linko¨ping University, Sweden, 1996.
+[7] M. Fossorier and S. L., “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. on Inf. Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[8] M. Fossorier, “Iterative reliability-based decoding of low-density parity check codes,” IEEE Journal on Selected Areas in Com., vol. 19, no. 5, pp. 908–917, 2001.
+[9] W. Zhou and M. Lentmaier, “Improving short-length LDPC codes with a CRC and iterative ordered statistic decoding,” in CISS, 2019, pp. 1–6.
+[10] K. Watanabe, R. Kaguchi, and T. Shinoda, “Shortened LDPC codes accelerate OSD decoding performance,” EURASIP Journal on Wireless Com. and Networking, vol. 2021, no. 1, pp. 1–18, 2021.
+[11] M. Jiang, C. Zhao, E. Xu, and L. Zhang, “Reliability-based iterative decoding of LDPC codes using likelihood accumulation,” IEEE Com. letters, vol. 11, no. 8, pp. 677–679, 2007.
+[12] M. Baldi, N. Maturo, E. Paolini, and F. Chiaraluce, “On the applicability of the most reliable basis algorithm for ldpc decoding in telecommand links,” in Int. Conference on Inf. and Com. Systems (ICICS). IEEE, 2015, pp. 1–6.
+[13] J. Rosseel, V. Mannoni, I. Fijalkow, and V. Savin, “Decoding short LDPC codes via BP-RNN diversity and reliability-based post-processing,” IEEE Trans. on Com., vol. 70, no. 12, pp. 7830–7842, 2022.
+[14] T. Lin, P. Goyal, R. Girshick, K. He, and P. Dolla´r, “Focal loss for dense object detection,” in Proceedings of the IEEE international conference on computer vision, 2017, pp. 2980–2988.
+[15] M. P. C. Fossorier and S. Lin, “Computationally efficient soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. on Inf. Theory, vol. 42, no. 3, pp. 738–750, 1996.
+[16] C. Yue, M. Shirvanimoghaddam, Y. Li, and B. Vucetic, “Segmentationdiscarding ordered-statistic decoding for linear block codes,” in 2019 IEEE GLOBECOM. IEEE, 2019, pp. 1–6.
+[17] D. Wu, Y. Li, X. Guo, and Y. Sun, “Ordered statistic decoding for short polar codes,” IEEE Com. Letters, vol. 20, no. 6, 2016.
+[18] “Short block length LDPC codes for TC synchronization and channel codding (CCSDS 231.1-O-1),” Consultative Committee for Space Data Systems (CCSDS), Techical Report, April 2015.
+[19] R. Tanner, D. Sridhara, and T. Fuja, “A class of group-structured LDPC codes,” in Proc. ISTA. Citeseer, 2001, pp. 365–370.
+[20] D. J. C. MacKay, “Encyclopedia of sparse graph codes,” http://www.inference.org.uk/mackay/codes/data.html, 2008.
+[21] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of channel codes and ML simulation results,” www.uni-kl.de/channel-codes, 2019.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:16 UTC from IEEE Xplore. Restrictions apply.
+
+

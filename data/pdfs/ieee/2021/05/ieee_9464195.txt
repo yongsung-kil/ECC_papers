@@ -1,0 +1,609 @@
+A High Throughput QC-LDPC Decoder Architecture for Near-Earth Satellite 
+Communication
+K. M. Sankar Nampoothiri, Kalyani N Menon, Sayed Muhsin, Senna Manoj, Sooraj P, Dhanaraj K J, Deepthi P P  
+Department of Electronics and Communication Engineering 
+National Institute of Technology Calicut 
+Kerala, India 
+e-mail: {9193sankar, kalyaninmenon23, sdmuhsin, sennamanoj, soorajp1992}@gmail.com, {dhanaraj, deepthi}@nitc.ac.in  
+ 
+ 
+Abstract—This paper presents a high throughput decoder 
+architecture for the (8176,7154) quasi-cyclic (QC) low density 
+parity check (LDPC) code (C2) recommended by the 
+Consultative Committee for Space Data Systems (CCSDS) for 
+near-earth applications. The architecture avoids memory 
+conflict through the use of multiple shift register based 
+memory circuits and a pipe stage forwarding mechanism, thus 
+allowing for heavy pipelining of the core processing unit. The 
+decoder is implemented on the Xilinx XCVU9P FPGA 
+platform and achieves a throughput of 2.65 Gbps at 10 
+iterations at a clock frequency of 253 MHz. 
+Keywords-QC-LDPC, CCSDS, FPGA, NMSA, Memory 
+Conflict, High Throughput 
+I. 
+ INTRODUCTION 
+Low-Density-Parity-Check 
+(LDPC) 
+codes 
+were 
+discovered by Gallager in 1962 [1] and were shown to 
+approach Shannon capacity in the late 1990s. A subclass of 
+LDPC codes, quasi-cyclic (QC) LDPC codes, have hardware 
+efficient, high-speed decoder implementations, owing to the 
+regularity of their parity check matrices and are hence 
+selected 
+as 
+the 
+recommended 
+standard 
+for 
+space 
+communication by the consultative committee for space data 
+systems (CCSDS) [2]. For near-earth satellite applications, 
+CCSDS recommends a special class of QC-LDPC codes 
+termed type-II QC-LDPC codes [3]. 
+Originally, 
+two phase message 
+passing 
+(TPMP) 
+algorithm was used for decoding QC LDPC codes. Multiple 
+high throughput TPMP decoder architectures have been 
+proposed [4]. However, the TPMP algorithm suffers from 
+low convergence speeds [5], demanding a large number of 
+iterations for low BER. Thus, turbo decoding message 
+passing (TDMP) decoding of LDPC codes was proposed as a 
+faster alternative to TPMP [5]. 
+TDMP architectures which make use of the Normalized 
+Min Sum (NMSA) algorithm have been traditionally used 
+for high throughput applications [6]. These are primarily 
+used for decoding LDPC codes with circulant weight 1 and 
+hence do not take into consideration the possibility of 
+memory conflicts. Multiple TDMP decoders have been 
+proposed [7], [8] for multi-weight circulants. These, however, 
+fail to achieve throughput of the order of Gbps despite high 
+clock frequencies. 
+Liao et al. has proposed an architecture that achieves a 
+throughput of the order of Gbps at relatively low clock 
+frequencies. Liao et al. do so by analyzing the best degree of 
+parallelism that avoids memory conflict. However, their 
+memory architecture is such that there exists a trade-off 
+between pipelining depth of the row calculation unit and 
+degree of parallelism, making their architecture unsuitable 
+for high frequency operations, thus limiting a further 
+increase in throughput. 
+This paper proposes a method to overcome the memory 
+conflict through shift register based memory circuits, thereby 
+removing the constraint on pipelining depth of the core 
+processing unit. For fair comparison, the decoder is 
+implemented with the same degree of parallelism as that of 
+Liao’s, achieving a much higher decoding throughput of 2.65 
+Gbps at 10 iterations at a clock frequency of 253 MHz. 
+II. 
+BACKGROUND 
+A. QC-LDPC Codes 
+LDPC codes are linear block codes characterized by the 
+sparseness of their parity check matrix 𝐻. QC LDPC codes 
+are a subclass of LDPC codes, where the 𝑚× 𝑛 𝐻 matrix is 
+made of an array of 𝑍× 𝑍 cyclic circulant matrices. The 𝐻 
+matrix is thus vertically divided into 
+𝑚
+𝑍 layers and 
+horizontally into 
+𝑛
+𝑍 blocks. The cyclic nature of the circulants 
+allows efficient decoder implementations. 
+The decoding of LDPC codes can be visualized using the 
+tanner graph, which consists of n check nodes corresponding 
+to the columns and m bit nodes corresponding to H matrix 
+rows. Check node i is connected to bit node j if ith row’s jth 
+column in the H matrix is unity. Each bit node maintains a 
+soft 
+log 
+likelihood 
+ratio 
+(LLR) 
+𝐿𝑗=
+𝑙𝑜𝑔(𝑃(𝑥𝑗=0))
+𝑙𝑜𝑔(𝑃(𝑥𝑗=1))  
+corresponding to the jth bit of the codeword. The n check 
+nodes use these values to generate extrinsic beliefs for each 
+connected bit node. Multiple extrinsic beliefs arriving from 
+the check nodes are consolidated at the bit node to update its 
+belief. Thus, the beliefs are passed back and forth between 
+check nodes and bit nodes to iteratively improve each bit’s 
+belief using information from other bits. 
+B. TDMP Algorithm 
+To increase the convergence speed of decoding, 
+Mansour et al. has proposed TDMP algorithm for LDPC 
+codes. For an m×n 𝐻 divided into 𝑙𝑦 layers, the algorithm 
+runs for multiple iterations, where one iteration implies 
+processing of all rows of 𝐻. As per the TDMP algorithm, 
+23
+2021 4th International Conference on Circuits, Systems and Simulation
+978-1-7281-6752-7/21/$31.00 ©2021 IEEE
+2021 4th International Conference on Circuits, Systems and Simulation (ICCSS) | 978-1-7281-6752-7/20/$31.00 ©2021 IEEE | DOI: 10.1109/ICCSS51193.2021.9464195
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:05:31 UTC from IEEE Xplore.  Restrictions apply. 
+for an H matrix constructed through submatrices of circulant 
+weight Wt, each symbol is updated Wt times in a layer. This 
+update rule is given by 
+ 
+𝐿𝑙,𝑟
+𝑖 = 
+{  
+  𝐿𝑙𝑦,𝑊𝑡
+𝑖−1
+−𝐸𝑙,𝑟
+𝑖−1 + 𝐸𝑙,𝑟
+𝑖    𝑖𝑓  𝑟 =  1, 𝑙 =  1 
+𝐿𝑙−1,𝑊𝑡
+𝑖−1
+−𝐸𝑙,𝑟
+𝑖−1 + 𝐸𝑙,𝑟
+𝑖  𝑖𝑓  𝑟 =  1, 𝑙 > 1 
+𝐿𝑙,𝑟
+𝑖
+−𝐸𝑙,𝑟
+𝑖−1 + 𝐸𝑙,𝑟
+𝑖       𝑖𝑓   𝑟>  1               
+ 
+}  
+  
+   (1) 
+where 𝐿𝑙,𝑟
+𝑖 and 𝐸𝑙,𝑟
+𝑖 are the output LLR and extrinsic message 
+corresponding to a symbol for the 𝑟𝑡ℎ update of the 𝑙𝑡ℎ layer 
+in the 𝑖𝑡ℎ iteration. Note that the first updated LLR of a layer 
+𝑙 takes the last (𝑟= 𝑊𝑡
+𝑡ℎ) updated LLR of the previous layer 
+as input and the first update of an iteration takes the previous 
+(𝑖−1)𝑡ℎ iteration’s last layer’s (𝑙= 𝑙𝑦) final updated LLR 
+as input. 
+C. Memory conflict 
+The direct implementation of row-wise TDMP, 
+described in (1), cannot provide high throughput. This is 
+because, for H matrices with Wt > 1, the rth  update requires 
+the (r − 1)th updated LLR as input. This results in a memory 
+conflict that limits the degree of parallelism and pipeline 
+depth of the decoder. Liao et al. [9] derives the relationship 
+between pipelining depth and degree of parallelism as 
+ 
+                             P x DepthP  ≤  Omin                                (2) 
+ 
+where Omin is the smallest row distance between 1s in a 
+column of a layer of H, and DepthP is the depth of 
+pipelining. For an (8176, 7154) decoder, Omin = 104 and 
+thus for P = 26, Liao’s Row Calculation Unit (RCU) 
+pipelining depth cannot exceed 
+𝑂𝑚𝑖𝑛
+𝑃
+ =  4, thus severely 
+limiting the maximum operable frequency of the decoder, 
+thereby making the architecture unsuitable for further 
+throughput improvement. 
+III. 
+PROPOSED ARCHITECTURE 
+To overcome the aforementioned limitation, we have 
+modified the implementation of layered decoding proposed 
+in [10] by incorporating a single parsing phase to update both 
+check nodes and bit nodes for near-earth code. In this 
+method, the rth update of a symbol is given by 
+ 
+                        𝐿𝑙,𝑟
+𝑖
+= 𝑄𝑙,𝑟
+𝑖−1 + 𝐸𝑙,𝑟
+𝑖+ 𝐷𝑙,𝑟−1
+𝑖
+                           (3) 
+ 
+where 𝑄𝑙,𝑟
+𝑖−1 = 𝐿𝑙−1,𝑊𝑡
+𝑖−1
+−𝐸𝑙,𝑟
+𝑖−1and 𝐷𝑙,𝑟
+𝑖= 𝐸𝑙,𝑟
+𝑖−𝐸𝑙,𝑟
+𝑖−1 + 𝐷𝑙,𝑟−1
+𝑖
+ 
+is generated during the rth update. Since Wt = 2, Di
+l,1 is 
+simply Ei
+l,1 − Ei−1
+l,1 and is generated during the first update to 
+be used during the second update. With this update rule, only 
+the 2nd update of LLR is written to memory. This method 
+eliminates the need for a separate phase to consolidate 
+extrinsic messages to update LLR as in [10]. 
+To implement this update rule, the proposed architecture 
+(Fig. 1) contains the following modules: a row calculation 
+unit (RCU) where (3) is implemented, a supporting pipe 
+stage forwarding mechanism for forwarding of D values( D 
+memory), a shift register based bit node memory for storing 
+LLR values( L-memory) and RAM-based storage for 
+extrinsic messages( E-memory). Each module is designed to 
+achieve low critical path delay and to avoid memory conflict 
+mentioned in II-C.  
+ 
+Figure 1. Near-earth decoder block diagram 
+A. Row Calculation Unit 
+The Row Calculation Unit is the main processing unit of 
+the decoder and it carries out bit node as well as check node 
+processing using NMSA. The RCU in the proposed 
+architecture is a modified version of the RCU proposed in [9], 
+with necessary changes made to incorporate D memory 
+pipestage forwarding mechanism. The RCU computes𝐸, 𝐷 
+24
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:05:31 UTC from IEEE Xplore.  Restrictions apply. 
+and updated 𝐿 corresponding to a check node using 
+algorithm 2. 
+ 
+Figure 2. Row calculation unit 
+The delay bottleneck of the row calculation unit was 
+observed to be with the min finder module, which finds the 
+first two minimums and index of the first minimum of a list 
+of LLRs. Hence, to reduce the critical path delay while 
+implementing the min-finding algorithm, the min-finder is 
+designed in a tree-like structure as proposed by Wey et al. 
+[11] with additional pipeline stages added after every stage 
+of comparison. Additionally, pipelining is done at each 
+submodule to achieve the least possible critical delay as 
+shown in Fig. 2, where each FF block indicates a pipeline 
+register. The input to the RCU comes from 3 different 
+memory modules, the LLR input is taken from L-memory, 
+the extrinsic message value is accessed from E-memory and 
+the intermediate D value is provided by the pipe stage 
+forwarding circuit. The RCU used by Liao et al. [9] already 
+takes in LLR as well as extrinsic messages as input, and 
+therefore necessary modifications only need to be made for 
+accommodating the D memory. The D values are generated 
+during the processing of the first update of bit node symbols 
+and are read for their second update. The RCU hence sends a 
+reaccess request to the D memory to fetch the required D 
+value, at exactly one cycle before it is required for the row 
+processing operation. 
+ 
+Algorithm 1 Decompress Algorithm 
+  Input: Ecomp  // Compressed Extrinsic message 
+  Output: Erec  // Uncompressed Extrinsic message 
+  {min1, min2, indexmin1, S} ← Ecomp // Unpack 
+  Erec ← Array of length S.length 
+  for i = 1 to S.length do 
+        if i = indexmin1 then 
+             Erec[i] = S[i] x min2 
+        else 
+              Erec[i] = S[i] x min2 
+         end 
+   end 
+ 
+ 
+   Algorithm 2 NMSA Algorithm 
+    
+   Input: Lin, Din, Ein 
+   Output: Lout, Eout, Dout 
+1.  α  ← 0.75 
+2. {min1, min2, indexmin1, S} ← Ecomp // Unpack 
+3. Erecin  ← Decompress (Ein) 
+4. Q ← Lin – Erecin 
+5. Qabs ← α x |Q| 
+6. Qsigns  ← sgn(Q) 
+7. Q’signs ← ∏k
+k
+=
+=
+N
+1 Qsigns[k] x Qsigns 
+8. {min1, min2} ← First two minima of Q 
+9. Eout = {min1, min2, indexmin1, Q’signs} 
+10. Erecov = Decompress(Eout) 
+11. Dout = Erecov – Erecin 
+12. Lout = Q + Erecov + Din  
+ 
+The proposed design also employs parallelism for 
+achieving higher throughput and hence, a set of P RCUs 
+operate simultaneously for the processing of P rows in a slice. 
+The total number of cycles required for the processing of one 
+entire layer is thus⌈(
+511
+𝑃)⌉. With this RCU, the degree of 
+parallelism constraint can now be obtained as 
+ 
+                                     𝑃× 𝐾≤𝑂𝑚𝑖𝑛                                    (4)  
+ 
+where K is the number of cycles taken for the 𝐷𝑙,𝑟
+𝑖value to be 
+available for reading after it is written to the memory. The 
+above pipeline constraint is only applicable to the path 
+between production and consumption of D value. By making 
+sure that this K value is small, the design ensures that 
+memory conflict is successfully avoided as shown in Fig. 3 
+enough to satisfy (4). 
+ 
+Figure 3. Memory conflict avoidance 
+25
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:05:31 UTC from IEEE Xplore.  Restrictions apply. 
+B. E-memory 
+Each RCU generates Wt × Bl values based on the output 
+of the minfinder, where Bl represents the total number of 
+circulant blocks in a single layer of the H matrix. Since the 
+extrinsic messages of each row need to be stored for 
+computations in the next iteration, RAMs were found to be 
+the ideal choice for storage. Due to the nature of the min-
+sum algorithm, rather than storing all Wt × Bl symbols, 
+storing the output of min-finder and the sign updater is 
+sufficient as this compressed form can be converted back to 
+extrinsic message values as and when required. This reduces 
+the memory requirement for E-memory. As P rows are 
+processed in parallel, P separate memory elements are used 
+to store the compressed extrinsic values, as one memory 
+element stores the data output from a single RCU. 
+C. L-memory 
+ 
+ 
+Figure 4. Bit node memory 
+The given H-matrix is divided into ly = 2 layers, layer 0 
+and layer 1. The output data pattern after the processing of a 
+layer is different from the input data pattern of the next 
+layer’s processing. Hence, having just one memory location 
+for each symbol would require both a read alignment and 
+write alignment circuits, which would be resource 
+inefficient for large P. Additionally, conventional memory 
+elements like RAMs which are available in FPGA are not 
+suited for this type of storage. Thus, it is proposed to use 
+shift register based memory, where only read alignment 
+circuits are required and all data can be accessed in any 
+pattern required. Furthermore, the use of 2 separate memory 
+circuits, L_01 and L_10 is proposed as shown in Fig. 4. 
+During the processing of layer 0, the RCU reads the input 
+LLRs from L_10 and parallely writes the output LLRs to 
+L_01. The roles of L_01 and L_10 are swapped when layer 
+1 is processed. This system allows some symbols to be 
+updated (without write alignment) while other symbols are 
+still being read. 
+For layer 0 processing, the symbols are read in layer 0 
+pattern from L_10, which contains the required data in layer 
+1 pattern. Thus, a multiplexer based selection network is 
+used to align data from one pattern to another. This selection 
+network fetches symbols required at each clock cycle 
+(corresponding to a slice being processed), through 
+hardwired connections generated through a matlab script 
+that analyses the H matrix. The shift register memory is of 
+dimensions (Wt × P × W) × FD ×Bl , where W is the number 
+of bits used for representing D value and FD is the depth of 
+the shift register memory. The write and read ports are of 
+data width (Wt × P × W). Since LLR is only updated after 
+the second access, the depth FD of the shift register depends 
+on the slice that generates the first symbol after reaccess 
+begins. 
+D. Shift Register Based D Memory Forwarding Mechanism 
+Implementing the update rule given by (3) requires 𝐷𝑙,1
+𝑖 
+values generated during the first processing of a symbol to be 
+stored. The stored D value is then read back into the RCU 
+during the second processing of the same symbol within the 
+same layer. For Wt = 2 matrices, the first access write pattern 
+and second access read pattern are different. Therefore, for 
+reading the required intermediate value, a multiplexer based 
+selection network, similar to the L-memory selection 
+network is used. The read operation is done in the required 
+read 
+pattern 
+by 
+hard-wiring 
+the 
+multiplexer 
+input 
+connections using a matlab script that generates these 
+connections based on the analysis of input and output pattern 
+of each slice row from H-matrix. Since D values need not be 
+saved for later processing of layers or iterations, the same 
+shift register network can be used for both the layers by 
+using two separate selection networks. This results in lower 
+resource utilization. 
+IV. 
+IMPLEMENTATION 
+For the (8176, 7154) code used for near-earth satellite 
+communication, the H matrix comprises of two layers with 
+16 circulants each of dimensions 511 × 511 and weight Wt = 
+2. The degree of parallelism P for the current implementation 
+is fixed to be 26, same as that of [9], in order to provide a fair 
+comparison with the same. The row calculation unit is 
+implemented with maximum pipelining of 13 stages as 
+shown in Fig. 2 (where each FF block corresponds to one 
+pipeline register) owing to which the least possible critical 
+delay is achieved for the row processing unit, thus enabling 
+the use of high-frequency clock, thereby improving the 
+decoding throughput. The write-to-read latency K for the D 
+memory forwarding mechanism is fixed as 3 for the current 
+26
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:05:31 UTC from IEEE Xplore.  Restrictions apply. 
+implementation, and the implemented design successfully 
+overcomes 
+memory 
+conflict. 
+Since 
+shift 
+register 
+continuously shifts the data while it is being read, long 
+sections of the shift register end up being un-accessed by the 
+multiplexer selection network. As such, significant portions 
+of the shift register are implemented as shift register LUT 
+primitives rather than flip flops, making the D memory 
+resource-efficient. For the proposed layer to layer shift 
+register based memory, the dynamic power consumed by the 
+circuit is reduced to an extent by designing the LLR memory 
+in such a way that shift operation is paused during reading 
+and is resumed during the write operation. The proposed 
+decoder is implemented on a Xilinx XCVU9P FPGA board. 
+Heavy pipelining of the row compute unit resulted in a 
+critical path delay of 3.95 ns after place and route, thus 
+allowing the decoder to operate at a frequency of 253 MHz. 
+The decoding throughput of the decoder is computed as 
+𝑇ℎ𝑟𝑜𝑢𝑔ℎ𝑝𝑢𝑡= 
+𝑙𝑒𝑛
+𝐷𝑒𝑐𝑜𝑑𝑒𝑐𝑙𝑘𝑐𝑦𝑐𝑙𝑒𝑠× iter × Tclk
+     (5) 
+where decodeclkcycles is the number of cycles per iteration, 
+iter is the number of iterations, and len = 7136 is the length 
+of the decoded codeword excluding the first 18 bits, which 
+have an apriori known result (zero). 
+V. 
+RESULTS 
+Table I shows the comparison of the proposed decoder to 
+existing decoder architectures. The proposed architecture is 
+able to achieve a throughput of 2.65 Gbps at 10 iterations at 
+a clock frequency of 253 MHz, which is much higher than 
+that of [9], with the same degree of parallelism. This increase 
+in the throughput came at the expense of LUT and FF as 
+shown in Table II, but at the same time reduces the amount 
+of BRAMs used. This architecture could remove the 
+constraint on the pipeline stages by modifying the LLR 
+update steps. 
+TABLE I.  
+PERFORMANCE COMPARISON WITH EXISTING 
+ARCHITECTURES 
+Parameter 
+Wang 
+[8] 
+Xiang 
+[12] 
+Chen 
+[13] 
+Liao 
+[9] 
+Proposed 
+Resources/
+Technology 
+Virtex-
+II 
+CMOS 
+XC4VL
+X-160 
+Kintex
+7 
+XCVU9P 
+Clock 
+frequency 
+(MHz) 
+193 
+214 
+212.2 
+105 
+253 
+Degree 
+of 
+parallelism 
+2 
+2 
+4 
+26 
+26 
+Iteration 
+15 
+10 
+15 
+10 
+10 
+Throughput
+(Mbps) 
+199.2 
+728 
+713.8 
+1600 
+2650 
+TABLE II.  
+RESOURCE  UTILIZATION OF THE PROPOSED DECODER  ON 
+THE XILINX XCVU9P FPGA PLATFORM 
+Resource 
+Utilization 
+Available 
+Utilization% 
+LUT 
+194479 
+1182240 
+16.450045 
+FF 
+252306 
+2364480 
+10.67 
+F7 Mux 
+24332 
+591120 
+4.12 
+F8 Mux 
+27 
+295560 
+<0.01 
+VI. 
+CONCLUSION 
+In this paper, a QC-LDPC decoder architecture that is 
+compliant with the CCSDS specifications prescribed for 
+near-earth 
+applications 
+is 
+presented. 
+The 
+FPGA 
+implementation of the proposed architecture validates that it 
+is highly suitable for high throughput applications. The 
+design can be potentially further improved by eliminating 
+post-layer stall cycles due to the partitioning of LLR memory. 
+Additionally, it is feasible to achieve higher throughput by 
+increasing the degree of parallelism. 
+REFERENCES 
+[1] Gallager, R.G, ”Low-density parity-check codes”. IRE Trans. Inf. 
+Theory 8(1), 21–28 (1962). 
+[2] ”Low Density Parity Check Codes for Use in Near-Earth and Deep 
+Space Applications”, Orange Book, Issue 2, Consultative Committee 
+for Space Data Systems (CCSDS) Experimental Specification 131.1-
+O-2, 2007. 
+[3] G. Zhang, Y. Hu, Y. Fang and J. Wang, ”Constructions of Type-II 
+QC-LDPC Codes With Girth Eight from Sidon Sequence,” in IEEE 
+Trans. on Comm., vol. 67, no. 6, pp. 3865-3878, June 2019. 
+[4] W. Ren and H. Liu, ”The Design and Implementation of High-Speed 
+Codec Based on FPGA,” 2018 10th International Conf. on Comm. 
+Software and Networks (ICCSN), Chengdu, China, 2018, pp. 427-532. 
+[5] M. M. Mansour and N. R. Shanbhag, “Turbo decoder architectures 
+for low-density parity-check codes,” Global Telecommunications 
+Conference, 2002. GLOBECOM ’02. IEEE, Taipei, Taiwan, 2002, pp. 
+1383-1388 vol.2. 
+[6] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder 
+implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas 
+Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009. 
+[7] C. Zhou, Y. Ge, X. Chen, Y. Chen and X. Zeng, ”An area-Efficient 
+LDPC decoder for multi-standard with conflict resolution,” ASAP 
+2011 - 22nd IEEE Int. Conf. on Application-specific Syst., 
+Architectures and Processors, Santa Monica, CA, USA, 2011. 
+[8] Z. Wang and Z. Cui, “Low-Complexity High-Speed Decoder Design 
+for Quasi-Cyclic LDPC Codes,” IEEE Trans. on Very Large Scale 
+Integr. (VLSI) Syst., vol. 15, No. 1, pp. 104-114, 2007. 
+[9] Liao R., Fu Y., Liu T. (2016) “FPGA-Based High Throughput TDMP 
+LDPC Decoder.” In: Xu W., Xiao L., Li J., Zhang C., Zhu Z. (eds) 
+Computer 
+Engineering 
+and 
+Technology. 
+NCCET 
+2016. 
+Communications in Computer and Information Science, vol 666. 
+Springer, Singapore. 
+[10] S. A. A. Zaidi, M. Awais, C. Condo, M. Martina and G. 
+Masera, ”FPGA accelerator of quasi-cyclic EG-LDPC codes decoder 
+for NAND flash memories,” 2013 Conf. on Design and Architectures 
+for Signal and Image Processing, Cagliari, Italy, 2013, pp. 190-195. 
+[11] C. Wey, M. Shieh and S. Lin, ”Algorithms of Finding the First Two 
+Minimum Values and Their Hardware Implementation,” in IEEE 
+Trans. on Circuits and Syst. I: Regular Papers, vol. 55, no. 11, pp. 
+3430-3437, Dec. 2008. 
+[12] B. Xiang and X. Zeng, ”A 4.84 mm2 847–955 Mb/s 397 mW dual-
+path fully-overlapped QC-LDPC decoder for the WiMAX system in 
+0.13 µm CMOS,” 2010 Symp. on VLSI Circuits, Honolulu, HI, USA, 
+2010, pp. 211-212. 
+[13] X. Chen, J. Kang, S. Lin and V. Akella, ”Memory System 
+Optimization for FPGA-Based Implementation of Quasi-Cyclic 
+LDPC Codes Decoders,” in IEEE Trans. on Circuits and Syst. I: 
+Regular Papers, vol. 58, no. 1, pp. 98-111, Jan. 2011. 
+ 
+27
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:05:31 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,402 @@
+ADMM decoding of error correction codes: from geometries to algorithms
+
+Xishuo Liu Dept. of Electrical & Computer Eng.
+University of Wisconsin-Madison Madison, WI, USA
+Email: xishuo.liu@wisc.edu
+
+Stark C. Draper Dept. of Electrical & Computer Eng.
+University of Toronto Toronto, ON, Canada Email: stark.draper@utoronto.ca
+
+Abstract—Many code constraints can be represented using factor graphs. By relaxing these factorable coding constraints to linear constraints, it is straightforward to form a decoding optimization problem. Furthermore, by pairing these factor graphs with the alternating directions method of multipliers (ADMM) technique of large-scale optimization, one can develop distributed algorithms to solve the decoding optimization problems. However, the non-trivial part has always been developing an efficient algorithm for the subroutines of ADMM, which directly relates to the geometries of the relaxed coding constraints. In this paper, we focus on summarizing existing results and distilling insights to these problems. First, we review the ADMM formulation and geometries involved in the subroutines. Next, we present a linear time algorithm for projecting onto an ℓ1 ball with box constraints.
+I. INTRODUCTION
+Linear programming (LP) decoding of low-density paritycheck (LDPC) codes is proposed by Feldman et al. in [1], and is shown to have many performance guarantees (e.g. [2]–[5]). Moreover, LP decoding is observed to have better high-SNR performance than belief propagation (BP) decoding (e.g. [6], [7]). However, generic LP solvers are not efficient because they do not exploit the structure of the decoding problem. Therefore, reducing the complexity of LP decoding has been an important research direction. Related studies include [7]– [12].
+In this paper, we focus on using the alternating direction method of multipliers (ADMM) to decode error correction codes. ADMM LP decoding of binary LDPC codes is first proposed by Barman et al. in [13]. A subroutine of this algorithm – projection onto the parity polytope – is further improved in [14] and [15] in terms of computational complexity. In [16], ADMM LP decoding is extended to ADMM decoding of a penalized LP decoding problem, which empirically improves the error performance and reduces the computational complexity. An extension to non-binary codes in F2m is developed in [17]. Furthermore, modifications of ADMM decoding for high-density parity-check codes are proposed in [18]. Last but not least, ADMM decoding for LP-decodable multipermutation codes is developed in [19].
+This work was supported by the National Science Foundation (NSF) under Grant CCF-1217058 and by a Natural Science and Engineering Research Council of Canada (NSERC) Discovery Research Grant.
+
+ADMM decoding and BP decoding have many features in common: Both algorithms are iterative and distributed; both algorithms adopt a plain scheduling; and both algorithms scale linearly with block length. However, since ADMM is guaranteed to converge for convex optimization problems, it naturally keeps the provable guarantees and the high-SNR behaviors of LP decoding. Furthermore, due to the penalized LP technique, ADMM decoding can outperform BP decoding in terms of error performance at all SNRs. Therefore, we think ADMM decoding is competitive against BP decoding.
+Although the subtitle of this paper is “from geometries to algorithms”, the complete phrasing should be “from ADMM to geometries to algorithms”, because we choose the ADMM algorithm in the first place. Due to this relationship, the structure of the paper is as follows. We first review a generic ADMM formulation with a particular focus on factor graphs. Based on factor graphs, ADMM decomposes decoding problems into subproblems. Due to the augmented Lagrangian in the ADMM formulation, the non-trivial subproblems in most cases are Euclidean projections onto some polytopes. Consequently, characterizing these geometries is important for developing efficient projection algorithms. We summarize geometries that have been used in decoding problems and point out the corresponding projection algorithms. Among these algorithms, we focus on the projection onto the ℓ1 ball with box constraints. We explain this algorithm in details and point out some insights to such problems.
+II. FROM ADMM TO GEOMETRIES
+A. Transform decoding problems to optimization problems
+Before applying optimization techniques to decoding, one has to bring decoding problems to the realm of optimization. This process often consists of three steps. Step 1: Embed codes in R where optimization is performed. For codes in F2, a straightforward embedding is F2 → {0, 1} ⊂ R. For codes with a non-binary alphabet A, e.g., non-binary LDPC codes [20] or permutation codes [21], each symbol of A is represented by a binary indicator vector that admits (at most) one 1, where the index of the 1 uniquely maps to that symbol. After embedding a codeword, we obtain variables u ∈ {0, 1}N . Here N equals to the block length only for binary codes, and equals to |A| or (|A| − 1) times block
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:04:59 UTC from IEEE Xplore. Restrictions apply.
+
+length for non-binary codes. By relaxing {0, 1} to [0, 1], we can use variables x ∈ [0, 1]N in the optimization problem. Step 2: Choose a decoding objective. A linear objective that is equivalent to the maximum likelihood (ML) objective is well known [1], [19]–[21]. We note that some useful penalized LP objectives are studied in [16], [17]. Global solutions to the penalized LP objectives agree with solutions to the ML objective, but the penalties increase the cost of fractional solutions, which is introduced by the relaxation in Step 3. Step 3: Relax integer constraints of codes to linear constraints. For example, parity-check constraints can be relaxed to parity polytopes [1], and permutations can be relaxed to Birkhoff polytopes [21]. In particular, we exploit the fact that most code constraints can be factored into local constraints. Factoring these constraints reduces the complexity of describing the optimization problem, which subsequently decreases the decoding complexity. However, these factored constraints may introduce fractional solutions that do not correspond to any codeword, and hence are treated as decoding failures (e.g. [1]).
+
+B. ADMM formulations
+ADMM is a classic distributed optimization algorithm originally proposed in 1970s [22], [23]. Recently, ADMM received renewed interests due to its applications in large-scale distributed convex optimization related to “big data” [24]. We refer readers to [24], [25] for more details on ADMM and related algorithms.
+In this subsection, we review the ADMM algorithm by applying it to a generic decoding optimization problem. This problem has real valued constraints that are described using factor graphs. We note that this description can be considered as a proximal minimization problem, and applies to most decoding problems in [13], [16], [17], [19]. The only exception is the LP decoding problem of non-binary LDPC codes in [17, Sec. 5.4]. For simplicity, we skip this problem and the following formulation cannot be applied to it directly.
+Consider a factor graph with N variable nodes and M constraint nodes, where each variable node represents a variable xi ∈ [0, 1], i = 1, . . . , N , and each constraint node represents a (convex) polytope Cj ⊂ Rdj , j = 1, . . . , M . At this point, we may assume that Cj are different from each other. By connecting variable nodes and constraint nodes, the graph specifies M local constraints that the variables x should satisfy. We represent this connection by selection matrices P j, j = 1, . . . , M : P j is a dj × N matrix such that P jx is a length-dj vector containing all variables that connect to the j-th constraint node. Given such a graph, we are interested in the following optimization problem:
+
+min f (x) s. t. P jx ∈ Cj , ∀j = 1, . . . , M.
+
+(1)
+
+To solve (1) using ADMM, we first create “replicas” zj, each representing a “local” copy of x. In other words, P jx = zj. Then, we use Cj to constrain zj instead of x. As a result, (1) can be reformulated as follows.
+
+min f (x) s. t. P jx = zj, zj ∈ Cj, ∀j = 1, . . . , M.
+
+ADMM works on the augmented Lagrangian [24] of the problem above, which is
+
+Lµ(x, z, λ) = f (x)+
+
+λj
+
+(P
+
+j
+
+x−
+
+zj
+
+)
+
++
+
+µ 2
+
+P j x−zj 22,
+
+j
+
+j
+
+where µ is a constant. The quadratic term is the “augmented” part. It significantly improves convergence of ADMM decoding (cf. [13, Appendix]). However, as we will see in Section II-B2, it creates the necessity of studying the geometries of Cj. The ADMM algorithm iterates the following updates until the stopping criteria are met.
+
+x-update: xk+1 = argminx∈[0,1]N Lµ(x, zk, λk), (2)
+
+z-update: zk+1 = argminz∈Cj Lµ(xk+1, z, λk), (3)
+
+λ-update: λk+1 = λkj + µ P jxk+1 − zkj +1 .
+
+(4)
+
+Here, ·k denotes the variable of the k-th iteration. 1) x-update and λ-update: The x-update is usually easy
+to perform due to the simple box constraints on x. Note that although f (·) may not be convex, Lµ(x, zk, λk) has to be convex. Then, xk+1 can be calculated by letting the gradient of Lµ(x, zk, λk) be the all-zeros vector. The resulting xupdate can be considered as containing two parts: i) the bias introduced by f (·) that relates to the channel outputs and ii) the average over all copies of xi, which are particular entries in zj for all j neighboring i. Furthermore, the x-update is element-wise and has linear complexity with respect to the number of edges in the factor graph. In addition, we note that although the x-update is non-trivial for the problem in [17, Sec. 5.4] due to the linear combinations of x variables, it can still be performed in linear complexity with respect to the number of edges [17, Appendix 11].
+The λ-update is simple and can be performed in linear time with respect to the number of edges in the graph.
+2) z-update: Since zj do not enter the objective function f (·), one can neglect f (·) in Lµ(xk+1, z, λk) and then complete the square. The minimization problem then becomes the Euclidean projection onto Cj. For different problems, [13], [17], [19], Cj are different. Furthermore, since this projection routine is executed M times per ADMM iteration, it is extremely important to develop an efficient algorithm for it. We focus on this problem in Section III and IV.
+3) Practical aspects of ADMM: We briefly summarize some practical aspects related to ADMM decoding.
+• The over-relaxation method has been applied to both ADMM decoding of binary and non-binary codes [13], [16], [17]. It reduces the number of iterations significantly in all these cases.
+• Early termination is useful for decoders. In other words, we can stop ADMM whenever a codeword is found. We observed that this technique creates observable effects on error rates for some non-binary LDPC codes. Thus, one should examine this scheme before using it in practice.
+• The initialization of ADMM affects the “all-zero” assumption for the penalized decoders in [16], [17].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:04:59 UTC from IEEE Xplore. Restrictions apply.
+
+Finally, we encourage interested readers to explore variants algorithm developed in [15] transforms projecting onto Pd to
+
+of ADMM for decoding problems. Some related works in- projecting onto Sd, which can be solved in linear complexity.
+
+clude [24]–[27].
+
+We illustrate L3,2 and P3 in Figure 1.
+
+III. FROM GEOMETRIES TO ALGORITHMS
+In this section, we first review polytopes that have appeared in decoding problems. For each polytope, we point out the algorithms that project onto it. We then summarize these geometries by discussing an interesting insight on permutations.
+1) The standard-d simplex: Let Sd denote the standard dsimplex,
+
+d
+Sd := (x1, . . . , xd) ∈ Rd xi = 1, and ∀i, xi ≥ 0 . (5)
+i=1
+This polytope can be considered as a basic building block to other polytopes that will be discussed next. Furthermore, a relaxed code polytope of non-binary single parity-check (SPC) codes in F2m is related to the standard-d simplex [17]. Consequently, as shown in [17], the ADMM decoding algorithm consists of subroutines that project onto Sd. We further note that the standard orthogonal simplex, i.e., the corner of [0, 1]d is closely related to Sd, and is also important in the ADMM algorithm proposed in [17]. Projections onto both simplexes can be done in linear time with respect to d by leveraging the algorithm proposed in [28].
+2) ℓ1 ball with box constraints: By slightly changing the equality constraint in (5), we obtain the following polytope.
+
+d
+Ld,r := (x1, . . . , xd) ∈ Rd xi = r, and ∀i, 1 ≥ xi ≥ 0 .
+i=1
+This polytope appears in the convex hull of multipermutation matrices [19]. Unsurprisingly, the ADMM decoding algorithm in [19] consists of the subroutines that project onto Ld,r. This projection problem is first studied by [29]. Although the key idea in [29] is useful, the presentation in [29] has some errors. We clarify this algorithm in Section IV, and use it as an example to illustrate some insights on developing projection algorithms.
+3) The parity polytope: The parity polytope appears in LP decoding of LDPC codes [1]. It is defined as
+
+Pd := conv({e ∈ {0, 1}d| e 1 is even}).
+
+(6)
+
+Note that Pd can be obtained through Ld,r.
+
+Pd = conv({Ld,r|r even and r ≤ d}).
+
+Barman et al. showed in [13] that the parity polytope has a “two-slice” property: A vector x ∈ Pd if and only if
+
+x ∈ conv(Ld,r, Ld,r+2),
+
+where r = ⌊ x 1⌋even. 1 By leveraging the “two-slice” property, Barman et al. developed an O(d log d) algorithm that projects onto Pd in [13]. More recently, more efficient projection algorithms are proposed in [14] and [15]. In particular, the
+
+1⌊x⌋even obtains the largest even integer less than or equal to x.
+
+(a) L3,2
+
+(b) P3 = conv(L3,0, L3,2)
+
+Fig. 1. Two polytopes in R3.
+
+4) Polytopes of embeddings: As mentioned in Section II-A, non-binary codes are embedded to binary vectors. The convex hull of embedded vectors is often hard to characterize. However, it is possible to factor constraints on embeddings to local constraints that consist of previously discussed polytopes. For example, LP-decodable permutation codes proposed in [21] are based on the Birkhoff polytopes, which can be defined by (e.g., [30])
+
+d
+Bd := X ∈ Rd×d xij = 1, ∀j;
+
+i=1
+
+
+d
+
+xij = 1, ∀i; and ∀i, j, xij ≥ 0 .
+
+j=1
+
+
+
+Note that the constraints above can be factored into 2d standard d-simplices, and thus can be fit into our ADMM framework. Similarly, for non-binary SPC codes in F2m, one can factor the polytope using S and P [17]. Finally, for LP-decodable multipermutation codes proposed in [19], the convex hull of multipermutation matrices can be factored using S and L.
+5) Permutation property: We note that all above polytopes are related to permutations in some way. S, L and P all have a vector permutation invariant property. In other words, if x is in one of the three polytopes, then all permutations of x are contained in that polytope. This allows us to use majorization tools to study polytopes as the authors did in [13]. Furthermore, this means that we can use sorting when developing a projection algorithm, which turned out to be a good first step in [13], [28], [29].
+For non-binary codes that use embeddings, permutations of vectors become column-permutations of matrices. The convex hull of permutation matrices, i.e., the Birkhoff polytope, has a column-permutation invariant property, a property that also holds for the convex hull of multipermutation matrices (cf. [19]). Furthermore, polytopes related to non-binary SPC codes in F2m can be rotated to obtain the column-permutations invariant property [17]. We have not been successful in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:04:59 UTC from IEEE Xplore. Restrictions apply.
+
+leveraging these insights in developing projection algorithms. However, we think this open problem is an important research direction.
+
+IV. PROJECTION ONTO THE ℓ1 BALL WITH BOX
+CONSTRAINTS
+
+In this section, we show a linear time projection algorithm onto Ld,r. There are two key ideas in this algorithm. First, using Karush-Kuhn-Tucker (KKT) conditions, the projection problem can be transformed to a waterfilling type problem, wherein one needs to perform a binary search over 2d possible points. Second, although one can first sort these points and then perform a binary search, the sorting operation is O(d log d) and is expensive. Instead, the binary search can be done based on linear time median finding algorithms (e.g., [31, Sec. 8.5]). These two key ideas are used in both [28], [29].
+Algorithm 1 in this section is modified from [29, Algorithm 1] and hence is not new. We intend to show this algorithm as an example of the above two ideas. Furthermore, we correct some errors in [29, Algorithm 1].2 We note that Barman et al. also worked on the problem and present their algorithm in [32]. However, their algorithm is based on sorting instead of median finding. Due to these previous works, we only briefly describe the derivations. We refer readers to [32] for a nice waterfilling interpretation of the algorithm. Also note that switching from sorting to median finding requires tracking partial sums in each iteration, which is described in [29].
+Projection onto Ld,r is equivalent to the following optimization problem.
+
+min
+
+1 2
+
+v−x
+
+2 2
+
+d
+s. t. 0 ≤ xi ≤ 1, for all i; xi = r. (7)
+
+i=1
+
+We introduce multipliers θ, ηi and νi, and write the Lagrangian of (7) as
+
+L(x, µ, η, ν) =
+
+1 2
+
+(vi
+
+−
+
+xi)2
+
++
+
+θ
+
+r−
+
+xi
+
+i
+
+i
+
+− ηi(1 − xi) − νixi.
+
+i
+
+i
+
+Denote by x∗ an optimal solution and denote by θ∗, ηi∗, and νi∗ the corresponding multipliers. The KKT conditions imply ∇L(x∗) = 0, vi − xi∗ = θ∗ + ηi∗ − νi∗, ηi∗(1 − x∗i ) = 0, and νi∗xi∗ = 0. This means that for all 0 < x∗i < 1, vi − xi∗ = θ∗. In other words, for a fixed θ, the indices {1, . . . , d} are divided into three sets. An active set SA such that for i ∈ SA, 0 < vi − θ < 1 and xi = vi − θ. A clipped set SC such that for i ∈ SC , vi − θ > 1 and xi = 1. A zero set SZ such that for i ∈ SZ , vi − θ < 0 and xi = 0.
+When θ varies in the range that does not change the three
+
+sets, i xi becomes a linear function with respect to θ. On the other hand, there are some values of θ at which these
+
+2The geometry described in [29] corresponds to the inequality constraint
+
+d i=1
+
+xi
+
+≤
+
+r. However,
+
+[29,
+
+Algorithm 1] actually
+
+projects
+
+onto
+
+the
+
+geometry with the equality constraint. In addition, there are several minor
+
+errors with [29, Algorithm 1].
+
+sets change, and hence we term them break points. The set of break points is easy to identify, it can be defined by B :=
+i=1,...,d({vi, vi − 1}). In Algorithm 1, we perform a binary search over all break points, each corresponds to a triple of active, clipped, and zero sets. In addition, the pivot for binary search is determined by median finding algorithms.
+Remarks on Algorithm 1:
+• Step 8 calculates the ℓ1 norm of the current projection vector determined by θp (cf. [29, Eq. (11)]).
+• Taking the median of the first few entries of B can be good enough in practice (e.g, first 50). This avoids taking the median of a huge set of numbers and thus can accelerate the algorithm for large values of d.
+
+Algorithm 1 Project vector v onto Ld,r
+
+1: Construct the set B := i=1,...,d({vi, vi − 1}). 2: Construct the set Vuncertain := {v1, . . . , vd}.
+
+3: nclip ← 0, nzero ← 0; sclip ← 0, szero ← 0, sall ← i vi. 4: while |B| > 2 do
+
+5: θp ←median(B).
+
+6: Partition Vuncertain into active set SA′ , clipped set SC′ ,
+
+and zero set SZ′ using θp.
+
+7:
+
+n′clip ← |SC′ |, |SZ′ |, s′zero ←
+
+ssc′ulimp (←VSusZn′ cuemrt(aVinSu)Cn′. certain) − n′clip.
+
+nz′ ero
+
+←
+
+8: Evaluate
+
+rcurrent =sall − szero − sclip − θp(d − nclip − nzero)
+
+− s′clip − s′zero + θp(n′clip + nz′ ero)
+
+9: if rcurrent > r then
+
+{Increase θp. Fix the current zero set.}
+
+10:
+
+szero ← szero + s′zero, nzero ← nzero + n′zero.
+
+11:
+
+Remove SZ′ entries from Vuncertain.
+
+12:
+
+Update B by deleting elements less than θp.
+
+13: else if rcurrent < r then
+
+{Decrease θp. Fix the current clipped set.}
+
+14:
+
+sclip ← sclip + sc′ lip, nclip ← nclip + nc′ lip.
+
+15:
+
+Remove SC′ entries from Vuncertain.
+
+16:
+
+Update B by deleting elements greater than θp.
+
+17: else
+
+18:
+
+θ∗ ← θp. {Success.}
+
+19:
+
+Determine the projection by applying θ∗ to the KKT
+
+conditions. Return.
+
+20: end if
+
+21: end while{B has two elements.}
+
+22: Using max B, evaluate SA, SC , and SZ for v.
+
+23:
+
+θ∗ ← applying
+
+|SC
+θ∗
+
+|+sum(vSA )−r |SA|
+to the KKT
+
+. Determine the projection conditions. Return.
+
+by
+
+V. CONCLUSIONS
+In this paper, we review some tools and results on ADMM decoding of error correction codes. By embedding codes in reals and relaxing integer constraints to convex constraints, we first rewrite decoding problems as optimization problems. Next, we can use ADMM to decompose these optimization
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:04:59 UTC from IEEE Xplore. Restrictions apply.
+
+problems because many of them have factorable constraints. After the ADMM decomposition, we only need to develop efficient algorithms for the subproblems, which means that we need to study the geometries of the local constraints. We summarize some polytopes of interests and algorithms for projecting onto these polytopes. Finally, we discuss key ideas of developing algorithms based on the characterizations of the geometries.
+As a concluding remark, we list the tools used in ADMM decoding of binary LDPC codes, non-binary LDPC codes, and LP-decodable multipermutation codes in Table I, II, and III respectively. We note that the results in these works show that ADMM decoding is promising. We would like to encourage interested readers to further explore the possibilities of ADMM decoding.
+
+Embedding Objective(s)
+Related polytope(s) Subroutine(s)
+
+F2 → [0, 1] ML decoding [1] (+ penalty [16]) Reweighted LP [16] Parity polytope [1], P Projection onto P
+
+TABLE I ADMM DECODING OF BINARY LDPC CODES.
+
+Embedding
+Objective(s) Related polytope(s)
+Subroutine(s)
+
+F2m → [0, 1]2m−1 [20] or F2m → [0, 1]2m [33] ML decoding [20] (+ penalty [17]) i) Convex hull of embeddings [20] ii) A relaxation for codes in F2m [33] i) Projection onto P and S ii) Linear time x-update algorithm [17]
+
+TABLE II ADMM DECODING OF NON-BINARY LDPC CODES.
+
+Embedding Objective(s)
+Related Polytope(s) Subroutine(s)
+
+{1, . . . , m}n → [0, 1]m×n [19] i) ML decoding [19] ii) Chebyshev distance decoding [19]3 Convex hull of multipermutation matrices [19] Projection onto L and S
+
+TABLE III ADMM DECODING OF LP-DECODABLE MULTIPERMUTATION CODES.
+
+REFERENCES
+[1] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[2] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 82–89, Jan. 2007.
+[3] C. Daskalakis, A. Dimakis, R. Karp, and M. Wainwright, “Probabilistic analysis of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 8, pp. 3565–3578, Aug. 2008.
+[4] S. Arora, C. Daskalakis, and D. Steurer, “Message-passing algorithms and improved LP decoding,” IEEE Trans. Inf. Theory, vol. 58, no. 12, pp. 7260–7271, Dec. 2012.
+[5] L. Bazzi, B. Ghazi, and R. Urbanke, “Linear programming decoding of spatially coupled codes,” IEEE Trans. Inf. Theory, vol. 60, no. 8, pp. 4677–4698, Aug. 2014.
+[6] Y. Wang, J. S. Yedidia, and S. C. Draper, “Multi-stage decoding of LDPC codes,” in IEEE Int. Symp. Inf. Theory (ISIT), Seoul, Korea, July 2009.
+3There has been no ADMM algorithms for this optimization problem.
+
+[7] D. Burshtein, “Iterative approximate linear programming decoding of LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 55, no. 11, pp. 4835–4859, Nov. 2009.
+[8] P. O. Vontobel and R. Koetter, “On low-complexity linear-programming decoding of LDPC codes,” European Trans. Telecommun., vol. 18, no. 5, pp. 509–517, 2007.
+[9] M.-H. Taghavi and P. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[10] M. Taghavi, A. Shokrollahi, and P. Siegel, “Efficient implementation of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 9, pp. 5960–5982, Sept. 2011.
+[11] M. Punekar, P. Vontobel, and M. Flanagan, “Low-complexity LP decoding of nonbinary linear codes,” IEEE Trans. Commun., vol. 61, no. 8, pp. 3073–3085, Aug. 2013.
+[12] D. Goldin and D. Burshtein, “Iterative linear programming decoding of nonbinary LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 59, no. 1, pp. 282–300, Jan. 2013.
+[13] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[14] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in IEEE Int. Symp. Inf. Theory (ISIT), Istanbul, Turkey, July 2013, pp. 1501–1505.
+[15] G. Zhang, R. Heusdens, and W. Kleijn, “Large scale LP decoding with low complexity,” IEEE Commun. Lett., vol. 17, no. 11, pp. 2152–2155, Oct. 2013.
+[16] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” ArXiv preprint 1409.5140, Sept. 2014.
+[17] ——, “ADMM LP decoding of non-binary LDPC codes in F2m ,” ArXiv preprint 1409.5141, Sept. 2014.
+[18] A. Yufit, “On efficient linear programming decoding of HDPC codes,” Master’s thesis, Tel-Aviv University, 2014.
+[19] X. Liu and S. C. Draper, “LP-decodable multipermutation codes,” In preparation, to be submitted to IEEE Trans. Inf. Theory, 2015.
+[20] M. Flanagan, V. Skachek, E. Byrne, and M. Greferath, “Linearprogramming decoding of nonbinary linear codes,” IEEE Trans. Inf. Theory, vol. 55, no. 9, pp. 4134–4154, Sept. 2009.
+[21] T. Wadayama and M. Hagiwara, “LP-decodable permutation codes based on linearly constrained permutation matrices,” IEEE Trans. Inf. Theory, vol. 58, no. 8, pp. 5454–5470, Aug. 2012.
+[22] D. Gabay and B. Mercier, “A dual algorithm for the solution of nonlinear variational problems via finite element approximation,” Computers & Mathematics with Applications, vol. 2, no. 1, pp. 17–40, 1976.
+[23] R. Glowinski and A. Marrocco, “Sur l’approximation, par e´le´ments finis d’ordre un, et la re´solution, par pe´nalisation-dualite´ d’une classe de proble`mes de dirichlet non line´aires,” Revue franc¸aise d’automatique, informatique, recherche ope´rationnelle, vol. 9, no. 2, pp. 41–76, 1975.
+[24] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Foundations and Trends in Machine Learning, vol. 3, no. 1, pp. 1–122, July 2011.
+[25] N. Parikh and S. Boyd, “Proximal algorithms,” Foundations and Trends in Optimization, vol. 1, no. 3, pp. 127–239, Jan. 2014.
+[26] T. Goldstein, B. O’Donoghue, and S. Setzer, “Fast alternating direction optimization methods,” CAM report, pp. 12–35, 2012.
+[27] N. Derbinsky, J. Bento, V. Elser, and J. S. Yedidia, “An improved threeweight message-passing algorithm,” ArXiv 1305.1961, May 2013.
+[28] J. Duchi, S. Shalev-Shwartz, Y. Singer, and T. Chandra, “Efficient projections onto the ℓ1-ball for learning in high dimensions,” in Proc. Int. Conf. on Machine learning, Helsinki, Finland, July 2008, pp. 272– 279.
+[29] M. Gupta, S. Kumar, and J. Xiao, “L1 projections with box constraints,” ArXiv 1010.0141, Oct. 2010.
+[30] A. W. Marshall, I. Olkin, and B. C. Arnold, Inequalities: theory of majorization and its applications. Springer, 2009.
+[31] W. H. Press, Numerical recipes 3rd edition: The art of scientific computing. Cambridge university press, 2007.
+[32] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Proc. Allerton Conf. on Comm., Control and Computing, Monticello, IL, USA, Sept. 2011, pp. 253–260.
+[33] J. Honda and H. Yamamoto, “Fast linear-programming decoding of LDPC codes over GF (2m),” in Int. Symp. Inf. Theory and its Apps. (ISITA), Honolulu, HI, USA, Oct. 2012, pp. 754–758.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:04:59 UTC from IEEE Xplore. Restrictions apply.
+
+

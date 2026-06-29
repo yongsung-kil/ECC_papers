@@ -1,0 +1,495 @@
+Received February 10, 2017, accepted March 1, 2017, date of publication March 3, 2017, date of current version October 25, 2017. Digital Object Identifier 10.1109/ACCESS.2017.2678103
+A Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+PETER HAILES1, LEI XU2, ROBERT G. MAUNDER1, (Senior Member, IEEE), BASHIR M. AL-HASHIMI1, (Fellow, IEEE), AND LAJOS HANZO1, (Fellow, IEEE)
+1School of Electronics and Computer Science, University of Southampton, Southampton SO17 1BJ, U.K. 2Programmable Solution Group, Intel Corporation, San Jose, CA 95134, USA
+Corresponding author: Lajos Hanzo (lh@ecs.soton.ac.uk) This work was supported in part by the Ph.D. Studentship provided by Altera, CA, USA, in part by EPSRC, Swindon, U.K., under Grant EP/J015520/1 and Grant EP/L010550/1, in part by Innovate UK, Swindon, U.K., under grant TS/L009390/1, and in part by the Advanced Fellow Grant through the European Research Council. The research data for this paper is available at http://doi.org/10.5258/SOTON/405769.
+
+ABSTRACT Low-density parity check (LDPC) error correction decoders have become popular in diverse communications systems, owing to their strong error correction performance and their suitability to parallel hardware implementation. A great deal of research effort has been invested into the implementation of LDPC decoder designs on field-programmable gate array (FPGA) devices, in order to exploit their high processing speed, parallelism, and re-programmability. Meanwhile, a variety of application-specific integrated circuit implementations of multi-mode LDPC decoders exhibiting both inter-standard and intrastandard reconfiguration flexibility are available in the open literature. However, the high complexity of the adaptable routing and processing elements that are required by a flexible LDPC decoder has resulted in a lack of viable FPGA-based implementations. Hence in this paper, we propose a parameterisable FPGAbased LDPC decoder architecture, which supports run-time flexibility over any set of one or more quasicyclic LDPC codes. Additionally, we propose an off-line design flow, which may be used to automatically generate an optimized HDL description of our decoder, having support for a chosen selection of codes. Our implementation results show that the proposed architecture achieves a high level of design-time and run-time flexibility, whilst maintaining a reasonable processing throughput, hardware resource requirement, and error correction performance.
+
+INDEX TERMS Digital communication, error correction codes, low-density parity check (LDPC) codes, field-programmable gate array, iterative decoding.
+
+GLOSSARY AWGN Additive White Gaussian Noise
+
+BER Bit Error Rate
+
+BPSK Binary Phase-Shift Keying
+
+BRAM Block RAM
+
+BS
+
+Barrel Shifter
+
+CMEM CND Memory
+
+CN
+
+Check Node
+
+CND Check Node Decoder
+
+CNPU Check Node Processing Unit
+
+ELB Equivalent Logic Block
+
+FEC Forward Error Correction
+
+FF
+
+Flip-Flop
+
+FPGA Field-Programmable Gate Array
+
+HDL Hardware Description Language
+
+IDS
+
+Informed Dynamic Scheduling
+
+IMMB LBP LDPC LLR NPU PCM QC VMEM VN VND VNPU
+
+Intrinsic Message Memory Bank Layered Belief Propagation Low-Density Parity Check Logarithmic-Likelihood Ratio Node Processing Unit Parity-Check Matrix Quasi-Cyclic VND Memory Variable Node Variable Node Decoder Variable Node Processing Unit
+
+NOMENCLATURE H Full PCM
+Hb QC base PCM m Number of CNs/rows in H
+
+VOLUME 5, 2017 This work is licensed under a Creative Commons Attribution 3.0 License. For more information, see http://creativecommons.org/licenses/by/3.0/
+
+20965
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+M Largest value of m in supported PCM set
+
+mb Number of rows in Hb MB Largest value of mb in supported PCM set
+
+n
+
+Number of VNs/columns in H
+
+N Largest value of n in supported PCM set
+
+nb Number of columns in Hb
+
+NB Largest value of nb in supported PCM set
+
+dc CN/row degree
+
+DC Largest value of dc in supported PCM set
+
+dv VN/column degree
+
+DV Largest value of dv in supported PCM set
+
+z
+
+QC block expansion factor
+
+Z Largest value of z in supported PCM set
+
+R Coding rate
+
+s
+
+Circular shift value
+
+P Number of parallel VNPUs
+
+Pc Number of parallel CNPUs Q Parallelism reduction factor
+
+G Ratio of VNs to CNs
+
+Gmin Smallest value of G in supported PCM set W Bit-width of LLRs
+
+L Employment of linked CNs for the current PCM
+
+F Requirement for linked CNs for the PCM set
+
+fmax Maximum clock frequency
+
+tv
+
+Clock cycles per VN
+
+tvp Clock cycles per P VNs
+
+tvb Clock cycles per Z VNs
+
+tc
+
+Clock cycles per CN
+
+tcp Clock cycles per P CNs
+
+tcb Clock cycles per Z CNs
+
+ti
+
+Clock cycles per iteration
+
+Ia Average number of iterations required
+
+I. INTRODUCTION LDPC codes [1] constitute a class of Forward Error Correction (FEC) block codes that have been the focus of much research in the communications community over the past two decades. The parametrisation of a particular LDPC code is completely defined by its Parity-Check Matrix (PCM), which describes the specific logical combination of the transmitted message bits into parity checks. These PCMs are sparse matrices having far more zero entries than non-zero, which allows LDPC codes to be iteratively decoded using a distributed low-complexity message-passing algorithm [2]. This iterative decoding process has been shown to facilitate information rates very close to the Shannon limit [3], which has motivated the inclusion of LDPC codes in many modern communications standards such as IEEE 802.11 (WiFi) [4], IEEE 802.16 (WiMAX) [5], and DVB-S2 [6]. Owing to this, hundreds of FPGA-based LDPC decoder designs have been published over the last two decades, which are comprehensively surveyed and compared in [7]. Of the many conclusions drawn by this survey, one of the most compelling is the absence of a fully flexible FPGA-based LDPC decoder architecture, which can be designed to support run-time switching
+20966
+
+between any given set of one or more LDPC codes, having diverse PCMs.
+Run-time flexibility is particularly advantageous for commercial applications, since it is a requirement for a decoder to dynamically support the variety of different PCMs within a targeted communications standard [8], without requiring the extra time and technical intervention that is involved in re-programming an FPGA. Furthermore, commercial devices typically support more than one standard and run-time flexibility can allow the corresponding LDPC codes to be supported on the same FPGA [9]. Further to this, flexible decoders can adapt automatically depending on the channel conditions [10], allowing reliable communications to be maintained by dynamically adapting the code rate. Run-time flexibility can also be useful for research purposes [11], eliminating the requirement for an FPGA to be re-synthesised when testing multiple different LDPC PCMs. It is therefore desirable to have a decoder design that exhibits runtime flexibility over a selection of PCMs, within one code family or among several different families. A variety of Application-Specific Integrated Circuit (ASIC) implementations of multi-mode LDPC decoders are available in the open literature [9], [12]–[14], however, the high complexity of the adaptable routing and processing elements that are required by a flexible LDPC decoder has resulted in a lack of viable FPGA-based implementations.
+The survey presented in [7] characterises the complex interactions amongst the numerous parameters that must be selected for an FPGA-based LDPC decoder design, as well as with the characteristics that are manifested for the resultant implementation. These interactions complicate the process of designing an FPGA-based LDPC decoder [15], which is exacerbated when the decoder must be designed to flexibly support multiple PCMs at run-time. However, in this paper we show that if the architecture of the decoder design is proposed in a generalised form that is not specific to any one PCM, much of this design process may be automated. In this work, we demonstrate this concept by presenting a novel generalised FPGA-based LDPC decoder architecture that can flexibly support any set of one or more Quasi-Cyclic (QC) PCMs [16] at design time, with the ability to switch between them within a single clock cycle at run time. We also present a novel offline design flow, which automates the design of a decoder that adopts the proposed architecture, without requiring the user to have in-depth knowledge of the architectural decisions involved. The chosen PCMs may originate from one family or several different families, and may vary in terms of any of their parameters.
+The structure of this paper is as follows. We commence in Section II by providing the required background information regarding both general and QC LDPC codes, along with some of the key features of LDPC decoder designs. Section III then presents our novel flexible FPGA-based LDPC decoder architecture, paying particular attention to the features that enable run-time switching of PCMs. Following this, Section IV then describes our novel offline
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+design process, which grants automated design-time flexibility and generates an efficient decoder design with minimal user input. Section V then presents the characteristics of several implementations of the proposed architecture, comparing their performance with benchmarkers, where possible. Finally, Section VI provides some concluding remarks. This structure is depicted in Fig. 1.
+FIGURE 1. Structure of this paper.
+II. BACKGROUND Before commencing the discussion of our flexible FPGA-based LDPC decoder architecture and design flow, this section presents a brief introduction to the key concepts that motivate some of the design decisions. We begin in Section II-A with a brief description of general LDPC codes, including their characteristics and the manner in which they are decoded, before Section II-B discusses the QC codes targeted in this work. Following this, Section II-C provides a discussion of some of the key features of LDPC decoders, including the optimisations that can be achieved by targeting QC codes. A. LDPC CODES The parametrisation of any LDPC code can be completely defined by its sparse PCM H. The number of rows in a PCM is denoted by m, which also represents the number of parity bits
+VOLUME 5, 2017
+
+employed by the code. Meanwhile, the number of columns in a PCM is denoted by n, which quantifies the encoded frame length in bits, where n > m. The coding rate R of the PCM is given by R = 1 − m/n, where 0 < R < 1. Each row and column contains a number of non-zero elements, where that number is referred to as the degree of the row or column. If the row degree dc is the same for every row, and the column degree dv is the same for every column, then the PCM is said to be regular. Otherwise, the PCM is irregular and the notations dc and dv may be used to represent the average row and column degrees, respectively. Since the number of non-zero elements must be the same when viewed from the perspective of the columns or rows, we have m × dc = n × dv, giving dc > dv. To illustrate the above, an example PCM H associated with n = 18 and m = 9 is given in Fig. 2a. Note that H in Fig. 2a is irregular, with an average row degree of dc = 4.33 and an average column degree of dv = 2.17.
+During the LDPC decoding process, computations are formed on the basis of the rows and columns of the PCM. The computations for the i-th row ci take inputs from the results of the computations performed previously by the set of columns vj for which Hij = 1, and vice versa. In this way, the rows and columns are processed in an iterative manner in an order dictated by a particular schedule, examples of which include flooding [17], Layered Belief Propagation (LBP) [18], and Informed Dynamic Scheduling (IDS) [19]. The results of the row and column calculations are extrinsic messages, which are commonly represented in the form of LogarithmicLikelihood Ratios (LLRs) [20], which provide soft information regarding the likelihood of the corresponding bit being a 0 or 1. When using the factor graph representation of a PCM proposed by Tanner [21], each row is represented by a Check Node (CN) and each column is represented by a Variable Node (VN), with an edge linking the i-th CN to the j-th VN wherever Hij = 1. The decoding process can therefore be pictured as the iterative exchange of extrinsic LLRs along the edges between VNs and CNs, where new extrinsic LLRs are calculated within the VNs (which perform the PCM column calculations) and the CNs (which perform the PCM row calculations). Fig. 3 presents the factor graph representation of the PCM given in Fig. 2a, where vj represents the j-th VN, and ci represents the i-th CN. The connections labelled P˜ j above the VNs in Fig. 3 pertain to the intrinsic LLR associated with the j-th codeword bit.
+B. QUASI-CYCLIC CODES The majority of LDPC codes employed in communications standards adopt a Quasi-Cyclic (QC) construction [22], which possesses several properties that facilitate the design of hardware-efficient decoder architectures, as will be discussed in Section II-C.
+The PCM of a QC LDPC code is a specially structured realisation of the generalised unstructured PCM H, which is defined by a base matrix Hb, where each element of Hb
+20967
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 2. Example parity-check matrices. (a) Expanded binary PCM exhibiting QC construction. (b) QC base matrix representation.
+
+FIGURE 3. Factor graph for the example QC LDPC code of Fig. 2a.
+
+represents a square submatrix in H of dimensions z × z [23]. Accordingly, Hb contains nb columns and mb rows, where nb×z = n and mb×z = m. Similarly to the expanded PCM H, the coding rate is given by R = 1 − / mb nb, where nb > mb. Each of the submatrices formed from the elements of Hb are either null matrices, containing all zeroes, or circularlyshifted identity matrices, having precisely one non-zero entry in each row and column. It can hence be seen that the PCM H presented in Fig. 2a is quasi-cyclic, since it is composed of a 3×6 grid of 3×3 submatrices, which are all either null matrices or circularly-shifted identity matrices. Fig. 2b presents the corresponding QC base matrix Hb, having z = 3, nb = 6, and mb = 3. Note that a value of −1 in Hb corresponds to a null submatrix, whereas a non-negative value represents the number of positions s that the elements of the identity matrix are circularly shifted to the right in the corresponding submatrix. Groups of z rows or z columns of H corresponding to one row or column of Hb are henceforth referred to as block-rows or block-columns, respectively.
+C. LDPC DECODER ARCHITECTURES One of the many LDPC decoder parameters discussed in [7] is the level of processing parallelism, which is defined by the number of parallel Node Processing Units (NPUs) that are utilised to simultaneously process rows or columns of the PCM. The level of parallelism employed can have a large
+20968
+
+effect on the decoder’s hardware resource requirement, processing throughput, as well as its potential to have run-time flexibility [9]. A decoder’s level of parallelism may broadly be categorised as fully-parallel, partially-parallel or serial.
+Fully-parallel decoders [24]–[26] implement every CN and VN within an LDPC code’s factor graph separately in dedicated hardware units. This extremely high level of parallelism can facilitate a high processing throughput and low processing latency, though this is achieved at the cost of a high hardware resource requirement [27]. Furthermore, the connections between each processing unit must either be fixed, thereby rendering the decoder only suitable for a single PCM, or require significant further hardware resources to implement flexible routing, for example by utilising a Beneš network [12]. These factors render the concept of a fullyparallel decoder architecture featuring run-time flexibility highly impractical.
+Conversely, serial decoders [11], [28] implement only a single Check Node Processing Unit (CNPU) and a single Variable Node Processing Unit (VNPU) in hardware, thereby requiring a small amount of hardware resources. These NPUs must be used multiple times per decoding iteration in a timemultiplexed manner, where internal memories are utilised to temporarily store the extrinsic LLRs for each row and column calculated by the NPUs over the course of the iterative decoding process [24]. In an FPGA-based decoder implementation, it is common to use the FPGA’s built-in
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+Block RAMs (BRAMs) to store these messages [29], using addresses dictated by the positions of the non-zero entries in the PCM H and stored in lookup tables. Accordingly, serial decoders can naturally offer full run-time flexibility simply by changing the stored memory address values. However, due to the large number of operations required for each decoding iteration, serial decoders suffer from very low processing throughputs, which typically do not meet the requirements of modern communication standards.
+Partially-parallel decoder architectures strike a compromise between serial and fully-parallel architectures by implementing a number P of parallel NPUs, where 1 < P < n. Each decoding iteration is then split into several stages, wherein P VNs or CNs are processed simultaneously. This facilitates higher processing throughputs than are possible with serial architectures, while avoiding the excessive hardware resource requirements of fully-parallel architectures. Similarly to serial architectures, FPGA-based partially-parallel decoders utilise BRAMs to store interim calculation results, facilitating run-time flexibility through changing address lookup tables. However, the increased level of parallelism means that the distribution of values into BRAMs must be chosen carefully, such that when processing P rows (or columns) simultaneously, no more than one location within each column (or row) BRAM is required [30]. For unstructured codes there is no way of guaranteeing that it will be possible to avoid contention for the BRAMs in this way [31].
+The semi-structured nature of QC codes described in Section II-B above may be used to optimise the design of a partially-parallel decoder in a number of ways, particularly when the parallelism P of the decoder is chosen to match the width z of the block-rows and block-columns of the PCM. Firstly, the in-memory representation of each PCM is substantially simplified by using the reduced PCM Hb, rather than the full PCM H. In particular, the position of all non-zero entries in the full PCM H can be calculated from the locations and values of the shift values in the reduced PCM Hb [23]. Secondly, by processing block-rows or block-columns in parallel, every row or column that is processed simultaneously will always have the same degree. For irregular codes, this reduces the total number of degrees that must be stored by a factor of z, while permitting the sharing of control signals for each NPU. Additionally, since every non-zero element within a submatrix is situated on its own row and column, it can be ensured that there will never be an occasion in which more than one location of any BRAM is contended for at the same time. These properties form the basis of the proposed flexible partially-parallel LDPC decoder architecture to be detailed in Section III.
+III. THE PROPOSED FLEXIBLE LDPC DECODER ARCHITECTURE In this section, we detail the proposed FPGA-based LDPC decoder architecture, which has both run-time and designtime flexibility. More specifically, the architecture proposed
+VOLUME 5, 2017
+
+here represents a framework for a decoder capable of decoding any chosen set of one or more QC LDPC PCMs, as outlined in Section I. Owing to this, the discussion of this section is presented in generalised terms, where the number of blockcolumns and block-rows nb and mb, the expansion factor z and the regularity and node degrees dc and dv are considered as variable parameters. Section IV will present a design flow that takes this general architecture and a set of one or more PCMs as inputs, in order to generate a specific LDPC decoder design by selecting desirable values for the parameters described in this section.
+For the reasons stated in Section II, the architecture proposed in this section is partially-parallel in nature. This facilitates a great deal of design-time flexibility in terms of the trade-off between the processing throughput and the hardware resource requirements.
+FIGURE 4. Block diagram of the proposed flexible LDPC decoder architecture.
+A top-level block diagram of the proposed architecture is presented in Fig. 4. The decisions motivating the various aspects of this design are discussed in the following subsections. More specifically, the parallelism and decoding schedule are discussed in Section III-A, while the memory organisation is discussed in Section III-B. Following this, the datapath, programmable barrel shifters, node processing units, and controller are discussed in Sections III-C, III-D, III-E, and III-F, respectively.
+A. PARALLELISM AND DECODING SCHEDULE In order to strike a favourable trade-off between the processing throughput and the hardware resource requirements, the proposed architecture is designed to minimise the amount of time that any processing element spends in a state where it is not producing usable results. Accordingly, the proposed decoder implements a modified flooding schedule, in which every VN and CN is processed once per iteration. However, unlike traditional flooding [17], groups of VNs and CNs are processed simultaneously, with adjacent groups within the PCM processed sequentially. In order to do so, as shown in Fig. 4, the decoder has a separate Variable Node Decoder (VND) and Check Node Decoder (CND). These
+20969
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+may be operated in parallel, using the separate datapaths of Section III-C, along with the separate memories VMEM and CMEM of Section III-B.
+The VND contains P VNPUs, each of which processes one column of the PCM in tv = 1 clock cycle, with the result that P VNPUs can process P columns of the PCM in tvp = 1 clock cycle. Each VNPU has a number of inputs and outputs equal to DV + 1, where DV is the largest column degree within the set of supported PCMs, while the additional input and output are used for intrinsic messages from the channel and the estimation of the decoded bit, respectively [32]. Implementing this maximum number of inputs and outputs is essential to ensure that each VNPU can be used to decode any column in the set of supported PCMs. Similarly, the CND contains Pc CNPUs, where Pc ≤ P as explained below. Each CNPU has DC inputs and outputs, where DC is the maximum row degree within the set of supported PCMs. This allows each CNPU to process any one row of any of the supported PCMs in tc = 1 clock cycle.
+Motivated by the discussion in Section II, the parallelism of the proposed partially-parallel architecture reflects the dimension z of the submatrices within the target QC PCMs. Accordingly, the parallelism factor P is given by
+
+P= Z ,
+
+(1)
+
+Q
+
+where Z represents the maximum submatrix dimension z from the set of supported PCMs. Here, Q is an optional integer parallelism reduction factor, where 1 ≤ Q ≤ Z . The value of Q can be chosen at design-time, allowing the decoder’s tradeoff between processing throughput and hardware resource usage to be controlled. When Q = 1, we have P = Z , allowing the decoder to process an entire block-column in tvb = tvp = 1 clock cycle. Decoders having larger values of Q require a higher number of clock cycles per block-column, according to tvb = Q. Note that selecting a value of Q = Z leads to a parallelism factor of P = 1, which results in a fullyserial decoder architecture.
+The value of Pc is calculated as a factor of P, according to the relative numbers of rows and columns in the PCM within the supported set having the lowest ratio of /nb mb. Note that each block-column is processed using tvb = Q clock cycles as described above. Since the number of block-columns nb is larger than the number of block-rows mb, the minimum number of clock cycles required for an entire decoding iteration ti is given by ti = nb × Q. Since the block-rows and blockcolumns are processed simultaneously, the total number of clock cycles tcb available for the processing of each blockrow is equal to tcb = Q × Gmin. Here, Gmin is the minimum value of G within the set of supported PCMs, where
+
+G = /nb mb .
+
+(2)
+
+In cases where Gmin ≥ 2, the required number Pc of CNPUs within the CND may be reduced according to
+
+Pc =
+
+P, Gmin
+
+(3)
+
+20970
+
+without increasing the number ti of clock cycles required per iteration. More explicitly, when using Pc CNPUs, a group of P rows of the PCM may be calculated in tcp = Gmin clock cycles. This reduction in the required number of CNPUs is particularly valuable, since the average row degree dc of a PCM is always larger than the average column degree dv, meaning that the maximum row degree DC within a set of PCMs is typically larger than the maximum column degree DV . Since CNPUs have DC inputs and outputs while VNPUs have DV +1 inputs and outputs, the typical hardware resource requirement of a CNPU is much larger than that of a VNPU. Due to this, a reduction in Pc can lead to a significant reduction in a decoder’s overall hardware resource usage.
+B. MEMORY ORGANISATION
+As discussed in Section II-C, FPGA-based partially-parallel LDPC decoders may take advantage of the FPGA’s built-in BRAMs, in order to store the extrinsic LLRs calculated by the VND until they are needed by the CND, and vice versa. The diagram seen in Fig. 4 shows that the proposed architecture splits this extrinsic memory into two sections, named VMEM and CMEM. During each clock cycle, the VND will read up to P × DV number of W -bit values from the VMEM and write the same number back into the CMEM. At the same time, the CMEM will read up to Pc × DC number of W -bit values from the CMEM and write the same number back into the VMEM. This implies the requirement for a large memory bandwidth, which would restrict the achievable degree of parallelism without the careful attention to the memory management, to be described below. Note that the proposed architecture represents all LLRs using W = 4-bit two’s complement integers, as recommended in [33].
+In the proposed architecture, we denote the maximum value of nb within the set of supported PCMs as NB, while the maximum value of mb within the set of supported PCMs is denoted as MB. Note that the values of NB and MB do not necessarily have to originate from the same PCM. The VMEM and CMEM both then comprise NB distinct BRAMs, each having MB × Q address locations of width P × W . The rationale for this is as follows. The number of available BRAMs on an FPGA is typically smaller than the number of rows and columns within a typical PCM H, necessitating the grouping of extrinsic LLRs from multiple rows or columns into each BRAM word [29]. In the simplified case where Pc = P, it may be observed that the P extrinsic LLRs in a PCM submatrix will always be read or written simultaneously, whenever that submatrix is in the active blockrow or block-column. This motivates the concatenation of P adjacent LLRs into one BRAM word, so that each set of Q words within a BRAM stores the LLRs of one complete submatrix of H.
+Using this approach, the number of BRAMs required is equal to the maximum number of PCM submatrices that may be required at once, namely Dmax . Here, the maximum possible column degree DVmax would occur when a column in the base PCM Hb contains entirely non-null values, giving
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+DVmax = MB. By the same logic, we have DCmax = NB. Since NB > MB, we have Dmax = NB, which results in both the VMEM and CMEM requiring NB BRAMs, as stated previously. This ensures compatibility with any QC PCM, since the CND requires the ability to simultaneously read NB submatrices from the CMEM and write NB submatrices to the VMEM. Note that this arrangement assumes the availability of dual-port BRAMs, which support simultaneous read and write operations at two separate memory addresses, as can be found on most modern FPGAs [34].
+FIGURE 5. VMEM and CMEM locations of the submatrices of an example QC PCM.
+Since the PCM is read in a row-centric manner by the CND and in a column-centric manner by the VND, the extrinsic LLRs must be stored within the BRAMs in a non-linear fashion, to avoid situations in which more than one address of any BRAM is required at any one time. In order to address this, we propose the layout of Fig. 5, which exemplifies one of the memories for a decoder designed to support the example PCM of Fig. 2. Here, the notation for each submatrix BA indicates that the extrinsic LLRs associated with that submatrix are stored at address A of BRAM B. In this example we have Q = 1, which results in each BRAM containing MB × Q = 3 locations, each storing Z × W bits. For Q > 1, the distribution of submatrices and BRAMs would remain unchanged, although each submatrix would be split into Q adjacent memory locations.
+C. DATAPATH In the following discussions, we detail the VND and CND datapaths.
+1) VND The input to the VND datapath is provided by the NB groups of P W -bit LLRs gleaned from the VMEM, as described in Section III-B. These must be routed into the P VNPUs, which each have DV inputs. The datapath must then take the P groups of DV outputs from the VND and route them back into NB groups of P messages for writing into the CMEM. The proposed VND datapath is exemplified in Fig. 6, for the case of a decoder designed to support a single example code, having parameters of Q = 1, P = 8, NB = 7, and DV = 4. The flow of data is from the VMEM on the left, through the VND in the middle, to the CMEM on the right. The eight different colours each represent the P = 8 columns
+VOLUME 5, 2017
+
+of the active block-column, with each line representing one LLR. The total number of W -bit LLRs passed by each stage is displayed at the top of Fig. 6. Note that the intrinsic LLR inputs and the decoded bit outputs for each VNPU have been omitted for simplicity. These will be detailed during the discussion of the VNPU architecture in Section III-E.
+Using the memory organisation system of Section III-B, it can be seen that the third block-column within the PCM is being processed in Fig. 6, since BRAMs 3, 4, 5, and 6 of the VMEM and CMEM contain the active submatrices. The programmable multiplexer, labelled Mux in Fig. 6, ensures that only these DV groups are passed to the next stage. Additionally, it can be seen that the degree of the active blockcolumn is 3, since a null submatrix is stored in BRAM 5, as represented by the dashed lines at its output. Instead of forwarding the unwanted BRAM contents to the VND, the multiplexer instead provides the corresponding wires with a value that represents the input LLRs being ‘‘turned off.’’ For a VNPU, this ‘‘off’’ value is equal to LLR values of 0, as will be explained further in Section III-E. In Fig. 6, this is represented by the black lines emanating from the third output group of the multiplexer.
+Subsequently, the DV groups of P LLRs output from the multiplexer are distributed into P groups of DV LLRs on a per-VNPU basis by the Distributor. Note that the action of the Distributor is only shown in Fig. 6 for three VNPUs, for the sake of avoiding obfuscation. Due to the action of the multiplexer described above, this distributor unit does not require any run-time programmability in the VND datapath. These messages are then processed by the VNPUs, as described in more detail in Section III-E.
+Once processed by the VNPUs, the messages are re-distributed to their original DV groups by the Re-distributor, which performs the inverse operation of the Distributor. They are then cyclically-shifted by DV programmable Barrel Shifters (BSs) in the Interleaver, as will be described in Section III-D. Finally, a programmable demultiplexer (labelled De-mux) then performs the inverse operation to the multiplexer at the start of the datapath, to place the output values at the input ports for the correct DV BRAMs within the CMEM.
+2) CND The datapath for the CND performs largely the same functions as the VND datapath, albeit with some additional complexities. As described in Section III-A, Pc CNPUs are employed to process P rows over tcp = Gmin clock cycles, where Gmin and Pc are defined in (2) and (3), respectively. The spread of the operation over tcp = Gmin clock cycles is achieved through the use of Flip-Flops (FFs) and additional multiplexers embedded in the datapath between the CMEM and the CND, in order to ensure the CND is only presented with Pc inputs at a time. De-multiplexers and additional FFs are then employed between the CND and the VMEM so that all P messages are available during the same clock cycle for writing back into the VMEM.
+20971
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 6. Example of a VND datapath.
+
+An additional optimisation is performed in the proposed architecture to reduce the hardware resource usage of decoders designed to have run-time flexibility over a set of PCMs having a wide variety of coding rates R. The reasoning behind this is as follows. Many standardised LDPC code families (such as those in WiFi [4], WiMAX [5], and WiGig [35]) vary the coding rates R = 1 − / mb nb of different related codes by changing mb, while leaving nb unchanged. Since mb × dc = nb × dv, PCMs with lower values of mb will hence typically have larger row degrees dc. More specifically, highrate codes tend to have a low number of rows, each having high degrees; by contrast, low-rate codes tend to have a high number of rows, each having low degrees. In order to address this, the proposed architecture allows two low-degree CNPUs to be combined to process one high-degree row. Doing so doubles the number of clock cycles tcb required per blockrow, although this cost is offset by the smaller number mb of block-rows present in these high-rate PCMs. This optimisation halves the number of inputs and outputs that may be required by each CNPU within the proposed architecture. The internal operation of two low-degree CNPUs that have been linked in order to provide the functionality of one high-degree CNPU is detailed in Section III-E.
+In order to support this functionality in the CND datapath, an additional Boolean parameter L is introduced for each supported PCM, as well as an additional Boolean decoder parameter F. For each PCM i, the parameter Li = 1 indicates that each row should be processed using two linked CNPUs. It is calculated according to
+
+Li = 1, if Gi ≥ Gmin × 2
+
+(4)
+
+0, otherwise,
+
+20972
+
+where Gmin is defined in Section III-A as the minimum value of Gi for all PCMs i within the chosen set. However, as will be shown in Section III-E, the hardware required to facilitate the linking of two CNPUs slightly increases the hardware resource requirement and the critical path length of the CNPU. For this reason, these flexible CNPUs should not be synthesised unless the chosen PCM set necessitates it. More specifically, flexible CNPUs are only synthesised at design-time if at least one of the PCMs has a value Li = 1, in which case we set the Boolean decoder parameter F = 1.
+An example of these optimisations is presented in the flexible CND datapath of Fig. 7 for a decoder with F = 1, when used to implement both a low-rate and a high-rate code. Here, both codes have nb = 7 and the minimum value of G is calculated from the low-rate code, giving Gmin = 2. The selection of Q = 1 leads to P = Z = 8, and thus Pc = 4, according to (3). Fig. 7a represents the lower R = 1/2-rate code where Li = 0, meaning that Pc = 4 CNPUs of degree / DC 2 = 3 are employed to process the P = 8 rows within tcb = tcp = G = 2 clock cycles. Conversely, Fig. 7b represents the higher R = 3/4-rate code, where Li = 1, meaning that the Pc = 4 CNPUs are combined to form / Pc 2 = 2 linked CNPUs of degree DC = 6, requiring tcb = 2tcp = 2G = 4 clock cycles to process the block-row. However, as this high-rate code also has half the number of block-rows mb of the lowrate code, this does not produce any change in the number of clock cycles ti required per decoding iteration.
+Looking firstly at the low-rate configuration of Fig. 7a, it may be observed that only / DC 2 = 3 of the NB = 7 BRAMs in the CMEM contain non-null submatrices for the active block-row, namely those representing block-columns 2, 5, and 6. In this configuration, the first multiplexer, labelled
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 7. Example of a CND datapath with conditional CNPU sharing. (a) Low-rate codes with L = 0, (b) High-rate codes with L = 1.
+
+Mux in Fig. 7, must ensure that these inputs form the top half of its DC = 6 outputs, while its bottom / DC 2 = 3 outputs are effectively ‘‘don’t care’’ values, represented by dashed grey lines in Fig. 7a. Similarly to the VND datapath explained previously, when the active block-row has a degree less than / DC 2 this multiplexer would also ‘‘turn off’’ the outputs from the extra null submatrices. For a CNPU, this ‘‘off’’ value
+
+corresponds to an output LLR value equal to (2W −1 − 1), as will be explained further in Section III-E.
+In this configuration, the operation of the Distributor is the same as that in the VND datapath, with each of its P output groups of DC = 6 LLRs comprised of / DC 2 = 3 extrinsic messages (or ‘‘off’’ values) followed by / DC 2 ‘‘don’t care’’ values. Note that the action of the Distributor is only shown
+
+VOLUME 5, 2017
+
+20973
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+in Fig. 7 for two CNPUs, for the sake of avoiding obfuscation. The first FFs and multiplexer after the distributor perform the function of reducing the P = 8 groups by a factor of Gmin = 2 to form Pc = /P Gmin = 4 groups. It can be seen that in the first clock cycle, the multiplexer will select the top Pc = 4 rows (red, light green, orange, and blue), which will be processed and then latched by the FFs before the redistributor. In the second clock cycle, the multiplexer will select the latched values of the following Pc = 4 rows (dark green, purple, yellow, and pink), which will then be processed and re-distributed alongside the top values. The multiplexers at the input and output of the CND select the top / DC 2 lines from each Pc group, presenting Pc groups of / DC 2 values to each CNPU as required. The rest of the datapath operates identically to the VND datapath described previously, including the DC = 6 programmable BSs that rotate the messages, and the de-multiplexer to provide the VMEM inputs.
+The high-rate configuration shown in Fig. 7b behaves slightly differently in several distinctive ways. Firstly, due to the fact that up to DC = 6 input submatrices contain non-zero elements, the initial multiplexer no longer provides ‘‘don’t care’’ data on any of its outputs (although it may still provide ‘‘off’’ values, when the active row degree is less than DC ). The action of the distributor also changes to divide each group of DC = 6 messages across two outputs, in order to simplify the routing and control later in the datapath. The first set of FFs and multiplexer after the distributor perform the equivalent function to their counterparts in Fig. 7a, namely reducing the P = 8 groups to Pc = 4 groups. The following FFs and multiplexer act in a similar way to route the top / DC 2 = 3 messages to the top half of the merged CNPU, while routing the bottom / DC 2 = 3 messages of the same row to the bottom half of the merged CNPU. It can therefore be seen that the first and third rows (red and orange) will be processed in the first clock cycle, followed by the second and fourth rows (light green and blue) in the second clock cycle, and so on. These FFs are avoided in the low-rate configuration using extra multiplexers, which are not shown in Fig. 7 for simplicity.
+D. PROGRAMMABLE BARREL SHIFTERS
+Once a group of P messages has been processed by the VND (or CND), they must be converted from a column- (or row-) centric representation to a row- (or column-) centric representation, before being written into the CMEM (or VMEM). This ensures that the messages are in the correct order to be read by the CND (or VND). This may be performed by cyclically shifting the messages for each submatrix by the corresponding shift value s in Hb, which is performed by the programmable BSs in the interleaver, as mentioned in Section III-C.
+Since the shift value s may be any integer 0 ≤ s < Z , each BS must have Z inputs and outputs. This means that when the parallelism reduction factor Q is utilised to employ a reduced number P < Z of NPUs, additional FFs must be used at the BS inputs to hold each group of P NPU outputs until
+20974
+
+all z outputs have arrived and the shifting can be completed. Similarly, additional FFs are employed to hold the Z BS outputs after they have been shifted, so that groups of P outputs may be presented to the memories in each clock cycle.
+The design of a BS that supports only a single submatrix size z = Z is trivial compared to that of one which can programmatically adapt to multiple submatrix sizes at runtime [9]. Accordingly, several competing designs have been proposed in the literature [14], [36]–[40], each with their own strengths and weaknesses. The design proposed in [39] offers a straightforward solution with a short critical path length, although its ability to support any value of z ≤ Z at run-time results in a significantly higher hardware resource requirement than is necessary, when the fixed subset of supported z values is known at design time. Accordingly, this work employs a modified version of the fine cyclic shift network proposed in [40], whereby each BS is optimally designed for the specific set of z values it is intended to support. In this design, the Z inputs are cyclically shifted by s, regardless of the current value of z. Each output Be, 0 ≤ e < Z , may then be selected from this shifted input according to the current value of z, using a u-to-1 multiplexer, where u is the number of supported z values greater than e. In order to optimise the synthesis for FPGA implementation, the specific Hardware Description Language (HDL) description of the BSs employed in the proposed decoder is automatically tailored for the PCM set specified at design time, using the software described in Section IV.
+E. NPU DESIGNS The design of the VNPUs and CNPUs can also have a significant effect on the overall hardware resource requirements of an LDPC decoder, as well as its critical path, and hence maximum clock frequency (fmax ), processing throughput, and latency. In addition, this effect may be influenced further by the manner in which the HDL description of each NPU is written and inferred into hardware. In order to investigate this, various structures and implementations of VNPUs and CNPUs were synthesised and compared in order to find a design with an optimised combination of low critical path length and low hardware resource requirements. The chosen designs are summarised in this section.
+1) VNPU DESIGN The VNPU has DV a priori LLR inputs and one intrinsic LLR input provided by the channel. It also has DV extrinsic LLR outputs and one a posteriori LLR output used as the basis of a decision for the corresponding LDPC-encoded bit. Each of the DV a priori LLR inputs to the VNPU architecture corresponds to one of the DV extrinsic LLR outputs, which is vertically aligned in Fig. 8. For each of its DV extrinsic LLR outputs, the VNPU is required to calculate the sum of the intrinsic LLR input and all a priori LLR inputs besides the corresponding one. The a posteriori LLR output is obtained as the sum of the intrinsic LLR input and all a priori LLR inputs. As described in Section III-C, when a VNPU is used
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 8. The chosen VNPU structure, shown with DV = 12.
+to calculate a PCM column having a degree less than DV , the unused inputs can be ‘‘turned off’’ by supplying an input LLR value of 0, since this does not affect the abovementioned summations.
+As shown in Fig. 8, the chosen architecture generates the total sum of all DV + 1 W -bit LLR inputs using a tree structure of additions in order to ensure the shortest critical path, as will be described in more detail in Section IV-C. Once this has been calculated, the inverse (minus) operation is used to calculate each output as the total sum without its corresponding input. Note that the result of each addition requires the expansion of the bit width by one bit in order to avoid overflow, although each output is saturated back down to W bits following the subtraction.
+Through extensive simulations, it was found that manually defining each internal addition in the HDL code yielded an NPU associated with a lower critical path than that of a functionally-identical design that was specified using highlevel coding structures (i.e. nested ‘‘for’’ loops). The method conceived for automatically generating this HDL code for VNPUs having any number of inputs and outputs is discussed in Section IV.
+2) CNPU DESIGN The CNPU has DC a priori LLR inputs, each of which correspond to one of its DC extrinsic LLR outputs. In order to simplify the decoding hardware, the CN operation from the min-sum algorithm [41] is employed in the proposed decoder. More specifically, this algorithm calculates each of the DC extrinsic LLR outputs as the minimum of all a priori LLR inputs besides the corresponding one, multiplied by the sign of their cumulative product. Similarly to the VNPU, when using a CNPU to process a PCM column having a degree that is lower than DC , the extra LLR inputs can be ‘‘turned off’’ by supplying an LLR value of (2W −1 − 1), which is the maximum positive value that can be represented by a W -bit two’s complement integer. These inputs will not affect the outputs, since their magnitude will not uniquely represent a minimum, while their positive sign will not affect the cumulative sign product.
+The function of a CNPU is more complex than that of a VNPU, since the min operation cannot be inverted. Owing to this, the chosen CNPU architecture of Fig. 9 calculates each output separately, employing DC tree structures to find
+VOLUME 5, 2017
+
+FIGURE 9. The chosen CNPU structure, shown with DC = 4.
+the minimum of the magnitudes of each combination of DC −1 inputs. However, to reduce the total hardware resource requirements, these tree structures are linked together to make the maximum possible re-use of the already calculated minima between trees, as in [42]. At the same time, the total cumulative sign of all DC inputs is calculated. Each output is then calculated as its corresponding minimum value multiplied both by the total sign and by the sign of its original input. Note that in Fig. 9 the mag operation returns the magnitude of the input, while a bus width of W * represents W unsigned bits having a range 0 to (2W − 1). The signed W -bit outputs are saturated in the range (−2W −1) to (2W −1 − 1) as normal.
+3) FLEXIBLE CNPUs Section III-C demonstrates the need for two low-degree CNPUs to have the capability to optionally link together, in order to form one high-degree CNPU. This functionality may be added to the chosen CNPU architecture by including additional outputs representing the minimum magnitude of all DC inputs, along with their cumulative sign. These outputs are then used in an optional additional stage within the linked node, such that each output is based on the minimum of its own DC − 1 inputs and the DC inputs from the paired node. This arrangement is shown in Fig. 10, which is similar to Fig. 9 but with the additional stages listed here. The additional inputs from the linked node are shown in red, while the additional outputs are shown in blue. The value of L for the current PCM is used as a control signal to dictate whether the CNPU is operating as part of a pair or not. Note that these additions slightly increase both the hardware resource usage and the critical path of each CNPU, hence they are only synthesised in the proposed architecture if the decoder parameter of F = 1 indicates that they are needed by at least one of the supported PCMs, as detailed in Section III-C.
+F. CONTROLLER The controller, depicted in the bottom-left of Fig. 4, controls the progress of the overall iterative decoding process. This must provide external control signals for starting, stopping, and reseting the decoding process, as well as for selecting which of the supported PCMs to use. The controller also
+20975
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 10. Flexible CNPU structure, shown with DC = 4. Inputs from a paired CNPU are shown in red, while outputs to the paired CNPU are shown in blue.
+has to determine whether the decoding process has led to a legitimate codeword. These aspects are described in turn in the following discussions.
+1) CONTROL SIGNALS The load input signal may be used to indicate that a new set of input intrinsic LLRs should be loaded into the Intrinsic Message Memory Bank (IMMB). Once this has been performed, the reset input signal may be used to reset all internal components to their initial values, before asserting the start input signal to commence the iterative decoding process.
+2) EARLY STOPPING DETECTION The proposed architecture includes an early stopping detection unit for determining when a valid codeword has been found. This module comprises M parity-check registers, which are reset at the beginning of each decoding iteration. During the iterative decoding process, the i-th register is exclusive-OR’d with the decision provided by the VNPU that processes column j if Hij = 1. At the end of each decoding iteration, if the first m parity check registers (where m ≤ M relates to the number of parity checks in the currently active PCM) all contain 0, the decoding process is deemed to have been successful and the success output is set. Otherwise, the parity check registers are reset and another decoding iteration begins. The total number of decoding iterations performed is recorded and output on the iterations signal of Fig. 4. This allows the operator of the decoder to determine at run-time when to terminate a decoding process, using the start and reset control signals described previously.
+3) PCM SELECTION One of the key features of the proposed decoder design is its ability to switch the specific PCM it is currently using to decode the message stored in the IMMB within a single clock cycle. In order to implement this level of flexibility, the supported PCMs are fully characterised in a hardware-optimised form at compile-time, and written into ROMs. These PCM ROMs are used extensively within the datapaths for the VND
+20976
+
+and CND described in Section III-C to control the routing and shifting of a priori and extrinsic LLRs between memory banks and NPUs. The value of the multi-bit PCM input signal is used to select which ROMs are currently in use at any given time. For each PCM, there are two parallel sets of PCM ROMs, namely one for the VND, which views the base PCM Hb as nb columns of dv values, as well as one for the CND, which views the base PCM as mb rows of dc values. Within each set, there are multiple ROMs, which are used to store the values and locations of the non-null entries of Hb.
+IV. THE PROPOSED OFFLINE DESIGN FLOW In this section, we detail the proposed design flow, which facilitates the automated design-time flexibility of the proposed LDPC decoder architecture. Our design flow automatically generates all of the HDL files required to implement an LDPC decoder having run-time flexibility over a set of one or more QC PCMs selected by the user. This design flow involves extracting the key parameters and values from the set of PCMs, generating optimised NPU structures and automatically producing a robust HDL description from which we can then synthesise the hardware. A flowchart depicting this design flow is presented in Fig. 11.
+We begin in Section IV-A with a discussion of how the parameters may be extracted from a user-specified set of PCMs, before Section IV-B discusses the generation of a correspondingly optimised HDL description for the architecture of Section III. A particular aspect of this process is described in Section IV-C, namely the NPU tree generation.
+A. PCM INTERPRETATION Before the HDL of the proposed design can be generated, a small amount of offline computation is required to extract the required data from the PCM(s) chosen by the user, as well as to convert the elements within each PCM into an optimised format for storage in the decoder’s ROMs.
+As depicted at the top of Fig. 11, the first role of our PCM interpretation software is to calculate the decoder’s parameters based on the characteristics of the user-specified PCM set and the selected parallelism reduction factor Q. These parameters, along with their derivations, were enumerated throughout the description of the proposed architecture in Section III. Specifically, these are: the parallelism factors P and Pc; the maxima of the various PCM parameters NB, MB, Z , DC , and DV ; the ratio of VNPUs to CNPUs Gmin; the flexibility parameter F; and an additional per-PCM flexibility parameter L.
+The second task of the PCM interpretation software depicted in Fig. 11 is to extract the locations and shift values of the non-null submatrices in each PCM Hb and arrange them in a format compatible with the ROMs introduced in Section III-F. Here, each row ri, where i ∈ [1, mb], in each Hb must be cyclic-shifted to the right by i − 1 places, to ensure that all addresses reflect the manner in which the extrinsic LLRs associated with each submatrix are stored in the VMEM and CMEM, as described in Section III-B. The
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 11. The design and implementation stages involved in the generation of an FPGA-based LDPC decoder having run-time flexibility.
+ROMs are then populated with values regarding the presence, location, and value of the non-null entries in the shifted Hb.
+B. HDL GENERATION In order to programmatically generate SystemVerilog code within a custom application, a complete SystemVerilog generation library has been written in C++. In this way, the offline design flow can generate the complete SystemVerilog description of an LDPC decoder having the proposed architecture, using the parameters and values calculated in the previous stage, as depicted in Fig. 11. In addition to automatically generating robust code using the appropriate parameters, this approach permits the optional inclusion of
+VOLUME 5, 2017
+
+certain elements which may not be required in all applications. These elements include the PCM selection input signal, which is not required when the decoder is designed to only support a single PCM, as well as the flexible CNPUs, which are not required when the decoder flexibility parameter has the value F = 0. Additionally, as described in Section III-D, the design of the programmable BSs employed by the decoder may be optimised for the specific set of supported submatrix sizes z. The output files generated by this library may be read and edited manually if desired, before being used by any synthesis tool that supports SystemVerilog HDL. As shown in Fig. 11, synthesis of these files by an appropriate tool will produce a measurement of the hardware requirements of the resultant decoder, while its processing throughput and error correction performance may be characterised through Bit Error Rate (BER) simulations on an FPGA test device. These characteristics may be used to guide the selection of a different value for the parallelism reduction factor Q if desired, which will then require the design-flow to be repeated, as depicted in Fig. 11.
+C. NPU TREE GENERATION It was observed in Section III-E that fully specifying the desired tree structures within the nodes resulted in hardware with a preferred combination of resource usage and operating frequency, when compared to structures determined entirely by the synthesis tool. However, in order to implement this in the proposed automated design flow, the design of this tree structure must be algorithmically defined.
+A minimum-depth tree structure may be formed by exploiting the observation that any positive integer y can be calculated as the sum of two positive integers x1 and x2, where x1 is the highest power of two less than y. This process may then be applied recursively by using x1 or x2 as y, generating a tree of 2-input functions having a critical path containing at most log2 (y) additions. In this manner, the internal structure of the VNPUs can be programmatically defined by setting y = DV + 1, yielding the result depicted in Fig. 8 for DV = 12. This structure may also be used repeatedly in the CNPUs, where the min function is used instead of additions. However, rather than creating a single tree for the combination of DC elements, instead DC trees of (DC − 1) elements are required. In order to reduce excessive hardware usage, the nodes are designed to re-use calculated results as many times as possible, using the method described in [42]. The HDL generation application mentioned previously uses this technique to generate the complete precise description of the required hardware for NPUs of any degree, without relying on the variable results which may be produced by synthesis tools.
+Note that an alternative structure proposed in [43] would further reduce the number of min operations required to 3 × (DC − 2). However, for most values of DC , this structure also produces a longer critical path than the repeated tree structure of [42], thereby reducing the maximum operating frequency fmax . Since the hardware requirement of each
+20977
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+individual min operation is small compared to the hardware requirement of the decoder as a whole, it may be expected that the repeated tree structure of [42] yields a greater hardware efficiency.
+V. IMPLEMENTATION RESULTS In this section, we characterise several instances of the proposed decoder, having a variety of configurations, which we compare to relevant benchmarkers, where possible. In order to highlight the practicality of the proposed decoder, our comparisons focus on the QC PCMs of four major wireless communications standards, namely IEEE 802.11n/ac (WiFi) [4], IEEE 802.16e (WiMAX) [5], IEEE 802.15.3c (Wireless Personal Area Network, henceforth referred to as WPAN) [44], and IEEE 802.11ad (WiGig) [35].
+The remainder of this section is structured as follows. Firstly, Section V-A discusses the methods employed for quantifying the characteristics of the proposed decoder, in order to be comparable with the survey of [7]. Following this, parametrisations of the proposed decoder that are targeted at PCMs from the WiFi family are characterised in Section V-B. Finally, Section V-C characterises parametrisations of the proposed decoder that are targeted at PCMs from more than one family simultaneously. It should be noted that, since the proposed architecture has a very high degree of flexibility, it would be impractical to characterise every combination of PCMs that it can be configured to support. Owing to this, the results presented here are selected as representative samples of possible combinations, in order to highlight key features and issues related to the proposed architecture’s performance in practical applications.
+A. METHOD For each chosen set of QC PCMs, a value was selected for the parallelism reduction factor Q, and then the offline design process presented in Section IV was utilised to produce a SystemVerilog description of a decoder having the architecture presented in Section III. This description was then synthesised using Altera Quartus II for an Altera Stratix IV EP4SGX530 FPGA. In this way, we were able to quantify both the maximum operating frequency fmax and the hardware resource usage. More specifically, we use the Equivalent Logic Blocks (ELBs) metric proposed in [7] for characterising the hardware resource usage of each synthesised decoder, in order to facilitate a comparison with the results of that survey.
+In addition to this, bit-accurate C++ BER simulations were performed, in order to characterise the error-correction performance of the synthesised decoder for each of its target PCMs. These simulations assumed Binary Phase-Shift Keying (BPSK) transmission over an Additive White Gaussian Noise (AWGN) channel, in common with the majority of previous FPGA implementations of LDPC decoders [7]. Our simulations considered a maximum of 18 decoding iterations per frame and a minimum of 100 frame errors per
+20978
+
+BER measurement, in order to ensure statistical significance.
+Using these results, the transmission energy efficiency may
+be characterised as the value of the channel’s signal to noise power ratio per bit Eb/N0 at which a desirable target BER of 10−4 is achieved, as employed in [7]. Finally, the average
+number of decoding iterations Ia required to achieve this BER performance at this Eb/N0 value was characterised and used to calculate the decoded processing throughput T , accord-
+ing to
+
+T = fmax × n × R ,
+
+(5)
+
+ti × Ia
+
+where n is the encoded frame length, R is the coding rate, and ti is the number of clock cycles required per decoding iteration. Since the proposed architecture processes one frame at a time, the processing latency can be calculated as the ratio of
+
+the message word length k = n−m to the decoded processing throughput T . An example BER plot for the eight WiFi PCMs
+
+having the shortest and longest block lengths is presented in Fig. 12a. The accompanying plot of the average number of iterations required per frame is presented in Fig. 12b.
+
+B. DECODERS TARGETED AT WiFi LDPC PCMs
+The standard on which WiFi is based, namely IEEE 802.11n/ac [4], defines 12 QC LDPC PCMs, based on each combination of three different frame lengths (n1 = 648, n2 = 1296, and n3 = 1944) and four different coding rates (R1 = 1/2, R2 = 2/3, R3 = 3/4, and R4 = 5/6). All 12 of the PCMs have nb = 24 block-columns, resulting in three different values of z = /n nb corresponding to the three frame lengths. Furthermore, the number of block-rows mb employed by each PCM may be calculated according to mb = nb × (1 − R).
+The FPGA-based LDPC decoder presented in [45] employs a parameterised architecture and an offline design flow similar to those proposed in Sections III and IV. The authors state that the decoder parameters are ‘‘limited run-time reconfigurable by over allocation and selective enabling’’, however no further elaboration is provided. The only characteristics presented in [45] for the WiFi LDPC code correspond to a non-flexible decoder parametrisation, which was designed for the single PCM having n = n3 = 1944 and R = R1 = 1/2. In the survey of [7], the design of [46] provided the only other FPGA-based LDPC decoder that supports run-time flexibility across all 12 of the WiFi PCMs. However, [46] only quantifies the processing throughput, hardware resource requirements and transmission energy efficiency for this decoder when the PCM associated with n = n2 = 1296 and R = R2 = 2/3 is active.
+In order to facilitate comparisons with the FPGA-based LDPC decoders of [45] and [46], four separate instances of the decoder proposed in this work were implemented and characterised for WiFi PCMs. We refer to our first instance as decoder F1, which targets the single PCM with the largest frame length n3 = 1944 and lowest coding rate R1 = 1/2, facilitating a direct comparison with the results from [45].
+
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 12. Simulation results for codes from the WiFi family having frame lengths n1 = 648 bits and n3 = 1944 bits, with decoding rates R1 = 1/2, R2 = 2/3, R3 = 3/4, and R4 = 5/6. (a) BER results, assuming BPSK transmission over an AWGN channel, with a maximum of 18 decoding iterations per frame. (b) Average number of decoding iterations required per frame for finding a legitimate codeword.
+
+Our second decoder F2 targets the three PCMs with R = R1 = 1/2, having frame lengths n1 = 648 to n3 = 1944. Thirdly, decoder F3 targets the four PCMs with frame length n1 = 648, having rates R1 = 1/2 to R4 = 5/6. Finally, decoder F4 targets all 12 PCMs in the WiFi family, facilitating a direct comparison to the results of [46].
+Table 1 characterises F1, F2, F3, and F4, as well as the designs of [45] and [46]. Note that without the use of the parallelism reduction factor Q, the large values of z in the WiFi LDPC code family would result in extremely high hardware resource requirements for F1, F2, and F4. Accordingly, we selected values of Q for each of these decoders such that they all employ P = 27 VNPUs, as shown in Table 1. Furthermore, the results of Table 1 are plotted in Fig. 13, together with the results of the survey conducted in [7].
+As described above, decoder F1 may be directly compared to the benchmarker of [45], since neither of them possess run-time flexibility and since they both target the same PCM having a frame length of n3 = 1944 and a coding rate of R1 = 1/2. As shown in Table 1, decoder F1 suffers from a 63% lower processing throughput than the benchmarker of [45], but requires 17% fewer hardware resources and achieves the target BER with a 0.6 dB lower transmission energy requirement. Additionally, the throughput presented in [45] is achieved by simultaneously decoding four frames using four parallel decoder copies, which does not improve the associated processing latency. Owing to this, we may infer that the processing latency of decoder F1 is 33% lower than that of [45]. Furthermore, [45] does not detail the impact of introducing run-time flexibility upon any of its measured characteristics, whereas the architecture of
+
+decoder F1 includes an overhead that is associated with being completely generalisable to any number of QC PCMs.
+Similarly, decoder F4 may be directly compared to the design of [46], which offers run-time flexibility for any PCM in the WiFi family. However, in order to maintain a fair comparison, we must consider the PCM having the same coding rate R2 = 2/3 and frame length n2 = 1296 as was used in [46]. The characteristics of decoder F4 when using this frame length and coding rate are indicated accordingly in Fig. 13. Table 1 shows that for this PCM, decoder F4 achieves a processing throughput that is 167% higher than that of [46], while the error correction performance of the two decoders is similar. However, decoder F4 suffers from a 7.3 times larger hardware resource usage than that of [46]. This cost may be attributed to the fully-flexible QC routing networks employed by the proposed architecture, which may be generalised to multiple code families with a wider variety of submatrix sizes and node degrees than those of the WiFi family, as discussed in Section III-D. By contrast, the design of [46] is specialised for the WiFi family of PCMs and exploits several of their common features in order to minimise the routing hardware resource usage.
+By comparing the characteristics of decoders F2 and F3, it may be observed that supporting run-time flexibility for a selection of frame lengths n in conjunction with a single coding rate R incurs a greater hardware resource usage cost than supporting one frame length for multiple coding rates. This may be attributed to the programmable BSs, which always require Z inputs and outputs, regardless of the node-level parallelism P. Supporting multiple frame lengths requires support for a larger number of submatrix sizes z, which causes the internal arrangement of each BS to become increasingly
+
+VOLUME 5, 2017
+
+20979
+
+TABLE 1. Characteristics of decoders targeted at PCMs from the WiFi family.
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+FIGURE 13. Trade-offs of decoders targeted at PCMs from the WiFi family.
+
+complex, as will be demonstrated further in Section V-C. This problem is exacerbated by the limitations imposed by FPGA synthesis, in which the programmable routing networks and logic elements must be utilised to implement hundreds of multiplexers per BS. The comparatively low hardware resource requirement of decoder F3 also demonstrates the effectiveness of the methods discussed in Section III-C and Section III-E, which reduce the potential impact of increasing the number of CNPU inputs DC , as required when supporting higher-rate codes.
+A further analysis of the proposed design is presented in Fig. 14, wherein the main characteristics of decoders F1, F2, and F4 are plotted radially with respect to the characteristics of [45], for the case of decoding the same PCM with frame length n3 = 1944 and coding rate R1 = 1/2. Here,
+20980
+
+FIGURE 14. Comparison of decoders targeted at PCMs from the WiFi family. Characteristics are normalised relative to the benchmarker from [45].
+superior values for each characteristic are plotted outwards on a logarithmic scale. Fig. 14 shows that each of the decoders presented in this section attain a lower processing throughput than that of [45], but with a smaller latency, greater error correction performance, and equal or greater run-time flexibility. Fig. 14 also illustrates the trade-off between flexibility and hardware resource usage, showing that decoders that support a greater number of PCMs at run-time suffer from a higher resource requirement, and vice versa.
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+C. DECODERS TARGETED AT PCMs FROM MULTIPLE FAMILIES
+In addition to providing run-time flexible support for multiple PCMs from within the same LDPC code family, the architecture presented in Section III is also capable of supporting PCMs from multiple different code families. Furthermore, the automated design flow presented in Section IV ensures that the design process is no more complicated than that of one which supports codes from only a single family.
+In order to demonstrate this key feature, multiple instances of the proposed decoder were again implemented and characterised using the methods described in Section V-A. Firstly, decoder S1 targets the PCMs having the lowest frame length and coding rate from each of the WiFi, WiMAX, WiGig, and WPAN families. In order to maximise the throughput, this decoder employs Q = 1, which gives a parallelism of P = 42 due to the large submatrix size of z = 42 in the WiGig code family. However, this high degree of parallelism results in unused hardware resources when decoding the supported WiFi, WiMAX, and WPAN PCMs, whose submatrix sizes z are 27, 24, and 21, respectively. In order to investigate the impact of this, decoder S2 targets the PCMs with the lowest frame length and coding rate from only the WiFi, WiMAX, and WPAN families. Here, the parallelism P is reduced to 27. Thirdly, decoder S3 was designed to support the PCMs from both the WiGig and WPAN families having the two highest coding rates, with a parallelism of P = 11. Furthermore, we implemented two additional decoders to target all 134 of the PCMs from the four families mentioned previously, namely 12 from the WiFi family, 114 from the WiMAX family, 4 from the WiGig family, and 4 from the WPAN family. More specifically, decoder S4 employs Q = 24, which results in a parallelism of P = 4, since Z = 96 is the maximum submatrix size among this selection of PCMs. Finally, decoder S5 supports this same set of 134 PCMs, but adopts Q = 8, which leads to P = 12.
+Throughout the survey of [7], only [11] and [31] were identified as offering LDPC decoder designs having run-time flexibility for more than one family of codes. In particular, these two designs are capable of supporting full run-time flexibility over any LDPC code, regardless of structure. Note that [31] does not detail the specific PCM used to generate its results, instead providing an approximate average result for several PCMs. Furthermore, while the processing throughput measurements presented in [31] were calculated using 15 decoding iterations, the only BER results it presents were generated using 100 decoding iterations, hence they cannot be considered as part of a fair comparison. Additionally, the results presented in [11] were not generated using one of the standardised codes described previously either.
+Table 2 and Fig. 15 compare the processing throughputs, hardware resource requirements, and error correction capabilities of the benchmarkers discussed above, as well as those for a representative subset of the PCMs supported in each of the proposed decoders S1 to S5. These results show that the
+
+FIGURE 15. Trade-offs of decoders targeted at PCMs from multiple families.
+proposed decoders offer similar processing throughputs to the majority of FPGA-based LDPC decoders considered in [7], while offering a very high degree of run-time flexibility, albeit with a larger hardware resource requirement which will be discussed below.
+As anticipated, the reduced parallelism of decoder S2 compared to S1 leads to a reduction in the hardware resource usage, without decreasing the throughput for its supported WiFi, WiMAX or WPAN PCMs. More specifically, the ability of decoder S1 to decode a WiGig PCM in addition to those supported by decoder S2 causes it to require a greater quantity of hardware, without increasing the throughput. Meanwhile, the complementary aspects of the WiGig and WPAN PCMs can be observed in the characteristics of decoder S3, which offers a high throughput at a relatively low hardware resource usage.
+Finally, decoders S4 and S5 offer a much higher degree of run-time flexibility, at the cost of higher hardware resource requirements. This increased hardware usage is mainly due to the increased complexity of the programmable BSs, which must handle shift values of up to s = 95, with 24 possible values of z, namely 19 from the WiMAX family, 3 from the WiFi family, and one each from the WPAN and WiGig families. The impact of this may be observed by comparing decoders S4 and S5, where decoder S4 has 3 times fewer NPUs than S5, but its hardware resource requirement is only 1.1 times smaller. This may be explained by the domination of the overall hardware resource requirement by the BSs, which are used in equal number in both S4 and S5. Flexible partiallyparallel LDPC decoders that are designed to support codes from a variety of communications standards have an inherent requirement to employ a large quantity of highly-complex flexible routing, such as the programmable BSs proposed here. This is caused by the requirement to support a large range of submatrix sizes z with a fine granularity, which are often ill-suited to the parallelism of the decoder. For this reason, this issue has received particular attention during the design of the LDPC code for enhanced Mobile BroadBand (eMBB) data in the 3GPP 5G New Radio (NR) [47], which is
+
+VOLUME 5, 2017
+
+20981
+
+TABLE 2. Characteristics of decoders targeted at PCMs from multiple families.
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+required to have a much greater of flexibility than the LDPC codes of previous standards. More specifically, it has been proposed that the submatrix sizes z should be multiples of powers of two, since this would permit the use of a Banyan network [36] to alleviate some of the routing complexity, and would ensure that a level of parallelism could be chosen that is suitable for all supported submatrix sizes. These improvements would significantly reduce the dominance of the routing components on the hardware resource requirement of the proposed decoder, which would in turn increase the maximum operating frequency and hence throughput.
+The results of Table 2 and Fig. 15 show that all of the proposed decoders offer much higher processing throughputs than those of [11] and [31], albeit using more hardware resources. Although these previous designs offer a higher degree of run-time flexibility than the solutions proposed here, this is achieved at the cost of particularly low pro-
+
+cessing throughputs. This may be explained by the fullyserial architecture employed by the design of [11], which results in the very low hardware resource requirements and processing throughput shown here. Conversely, [31] proposes a partially-parallel implementation of a decoder which supports any regular or irregular code by compiling the PCM into a hardware-optimised form before loading it onto the FPGA. However, the cost of this degree of flexibility is a large number of clock cycles per iteration, resulting in a low processing throughput. Additionally, depending on how well the target PCMs comply with the compilation process of [31], up to 23% of its parallel processing components remain idle for some of its PCMs, resulting in a large hardware resource requirement with respect to the resultant processing throughput. Finally, the decoder of [31] also requires numerous clock cycles and manual intervention in order to load a new PCM representation onto the FPGA, at run time. This
+
+20982
+
+VOLUME 5, 2017
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+would not facilitate the dynamic switching of PCMs to adapt to changing channel conditions, for example. By contrast, the proposed architecture stores every supported PCM in ROM after compilation, which allows the active PCM to be switched within a single clock cycle. This is facilitated while achieving a higher processing throughput overall, with manageable hardware resource requirements and without sacrificing error correction performance.
+VI. CONCLUSIONS This paper has presented the design and implementation of an FPGA-based LDPC decoder having the run-time flexibility to switch between a set of QC PCMs within a single clock cycle. We have also proposed an automated design flow, which gives the proposed architecture the design-time flexibility to support any set of QC PCMs. Furthermore, this design flow automatically generates the HDL description of the decoder, which may be synthesised onto an FPGA. The implementation results presented in Section V indicate that the proposed design achieves a high level of designtime and run-time flexibility, whilst maintaining reasonable performance in terms of processing throughput, processing latency, error correction capability, and hardware resource usage. This paper has presented the design and implementation of an FPGA-based LDPC decoder having the run-time flexibility to switch between a set of QC PCMs within a single clock cycle. We have also proposed an automated design flow, which gives the proposed architecture the design-time flexibility to support any set of QC PCMs. Furthermore, this design flow automatically generates the HDL description of the decoder, which may be synthesised onto an FPGA. The implementation results presented in Section V indicate that the proposed design achieves a high level of designtime and run-time flexibility, whilst maintaining reasonable performance in terms of processing throughput, processing latency, error correction capability, and hardware resource usage.
+REFERENCES
+[1] R. G. Gallager, ‘‘Low-density parity-check codes,’’ IRE Trans. Inf. Theory, vol. IT-8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, ‘‘Near Shannon limit performance of low density parity check codes,’’ Electron. Lett., vol. 32, no. 18, pp. 1645, Aug. 1996.
+[3] S.-Y. Chung, G. D. Forney, Jr., T. J. Richardson, and R. Urbanke, ‘‘On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,’’ IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[4] Standard for Information Technology—Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.11n-2009, 2009.
+[5] Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed Broadband Wireless Access Systems, IEEE Standard 802.16-2004, 2004.
+[6] ETSI. (2013). ETSI EN 302 307 v1.3.1 Digital Video Broadcasting (DVB); Second Generation. [Online]. Available: https://www.dvb. org/standards/dvb-s2
+[7] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, ‘‘A survey of FPGA-based LDPC decoders,’’ IEEE Commun. Surveys Tuts., vol. 18, no. 2, pp. 1098–1122, 2nd Quart., 2016.
+[8] T. H. Tran, Y. Nagao, H. Ochi, and M. Kurosaki, ‘‘ASIC design of 7.7 Gbps multi-mode LDPC decoder for IEEE 802.11ac,’’ in Proc. 14th Int. Symp. Commun. Inf. Technol., Sep. 2014, pp. 259–263.
+VOLUME 5, 2017
+
+[9] M. Awais and C. Condo, Flexible LDPC Decoder Architectures. Cairo, Egypt: Hindawi Publishing Corporation, 2012.
+[10] C. Zhang, Z. Wang, J. Sha, L. Li, and J. Lin, ‘‘Flexible LDPC decoder design for multigigabit-per-second applications,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 116–124, Jan. 2010.
+[11] S. M. E. Hosseini, K. S. Chan, and W. L. Goh, ‘‘A reconfigurable FPGA implementation of an LDPC decoder for unstructured codes,’’ in Proc. Int. Conf. Signals Circuits Syst., Nabeul, Tunisia, Nov. 2008, pp. 1–6.
+[12] G. Masera, F. Quaglio, and F. Vacca, ‘‘Implementation of a flexible LDPC decoder,’’ IEEE Trans. Circuits Syst. II, Express Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[13] P. Schläfer, C. Weis, N. Wehn, and M. Alles, Design Space of Flexible multigigabit LDPC Decoders. Cairo, Egypt: Hindawi Publishing Corporation, 2012.
+[14] C.-H. Liu et al., ‘‘An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,’’ IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 684–694, Mar. 2008.
+[15] T. Brack, F. Kienle, and N. Wehn, ‘‘Disclosing the LDPC code decoder design space,’’ in Proc. Conf. Design Autom. Test Eur., vol. 1. Munich, Germany, Mar. 2006, pp. 200–205.
+[16] M. P. C. Fossorier, ‘‘Quasicyclic low-density parity-check codes from circulant permutation matrices,’’ IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[17] E. Sharon, S. Litsyn, and J. Goldberger, ‘‘Efficient serial message-passing schedules for LDPC decoding,’’ IEEE Trans. Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[18] Y.-M. Chang, A. I. V. Casado, M.-C. F. Chang, and R. D. Wesel, ‘‘Lowercomplexity layered belief-propagation decoding of LDPC codes,’’ in Proc. IEEE Int. Conf. Commun., Beijing, China, May 2008, pp. 1155–1160.
+[19] A. I. V. Casado, M. Griot, and R. D. Wesel, ‘‘Informed dynamic scheduling for belief-propagation decoding of LDPC codes,’’ in Proc. IEEE Int. Conf. Commun., Glasgow, Scotland, Jun. 2007, pp. 932–937.
+[20] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, ‘‘High throughput low-density parity-check decoder architectures,’’ in Proc. IEEE Global Telecommun. Conf., vol. 3. San Antonio, TX, USA, Nov. 2001, pp. 3019–3024.
+[21] R. M. Tanner, ‘‘A recursive approach to low complexity codes,’’ IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[22] K. Zhang, X. Huang, and Z. Wang, ‘‘High-throughput layered decoder implementation for quasi-cyclic LDPC codes,’’ IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[23] S. Myung, K. Yang, and J. Kim, ‘‘Quasi-cyclic LDPC codes for fast encoding,’’ IEEE Trans. Inf. Theory, vol. 51, no. 8, pp. 2894–2901, Aug. 2005.
+[24] E. Yeo, B. Nikolic, and V. Anantharam, ‘‘Architectures and implementations of low-density parity check decoding algorithms,’’ in Proc. Midwest Symp. Circuits Syst., Tulsa, OK, USA, Aug. 2002, pp. 437–440.
+[25] R. Zarubica, S. G. Wilson, and E. Hall, ‘‘Multi-Gbps FPGA-based low density parity check (LDPC) decoder design,’’ in Proc. IEEE Global Telecommun. Conf., vol. 1. Washington, DC, USA, Nov. 2007, pp. 548–552.
+[26] V. A. Chandrasetty and S. M. Aziz, ‘‘An area efficient LDPC decoder using a reduced complexity min-sum algorithm,’’ Integr. VLSI J., vol. 45, no. 2, pp. 141–148, Mar. 2012.
+[27] S. S. Tehrani, S. Mannor, and W. J. Gross, ‘‘Fully parallel stochastic LDPC decoders,’’ IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5692–5703, Nov. 2008.
+[28] L. Xiong, Z. Tan, and D. Yao, ‘‘The moderate-throughput and memoryefficient LDPC decoder,’’ in Proc. 8th Int. Conf. Signal Process., Beijing, China, Nov. 2006, pp. 1–4.
+[29] X. Chen, J. Kang, S. Lin, and V. Akella, ‘‘Memory system optimization for FPGA-based implementation of quasi-cyclic LDPC codes decoders,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 1, pp. 98–111, Jan. 2011.
+[30] R. Zarubica and S. G. Wilson, ‘‘A solution for memory collision in semi-parallel FPGA-based LDPC decoder design,’’ in Proc. IEEE Asilomar Conf. Signals Syst. Comput., Pacific Grove, CA, USA, Nov. 2007, pp. 982–986.
+[31] C. Beuschel and H.-J. Pfleiderer, ‘‘FPGA implementation of a flexible decoder for long LDPC codes,’’ in Proc. Int. Conf. Field Program. Logic Appl., Heidelberg, Germany, Sep. 2008, pp. 185–190.
+[32] Y. Chen and K. K. Parhi, ‘‘Overlapped message passing for quasi-cyclic low-density parity check codes,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+20983
+
+P. Hailes et al.: Flexible FPGA-Based Quasi-Cyclic LDPC Decoder
+
+[33] V. A. Chandrasetty and S. M. Aziz, ‘‘A highly flexible LDPC decoder using hierarchical quasi-cyclic matrix with layered permutation,’’ J. Netw., vol. 7, no. 3, pp. 441–450, Mar. 2012.
+[34] I. Kuon, R. Tessier, and J. Rose, ‘‘FPGA architecture: Survey and challenges,’’ Found. Trends Electron. Design Autom., vol. 2, no. 2, pp. 135–253, 2008.
+[35] Standard for Information Technology—Telecommunications and Information Exchange between Systems—Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.11ad-2012, Dec. 2012.
+[36] M. Rovini, G. Gentile, and L. Fanucci, ‘‘Multi-size circular shifting networks for decoders of structured LDPC codes,’’ Electron. Lett., vol. 43, no. 17, pp. 938–940, Aug. 2007. [Online]. Available: http://digitallibrary.theiet.org/content/journals/10.1049/el_20071157
+[37] J. Lin, Z. Wang, L. Li, J. Sha, and M. Gao, ‘‘Efficient shuffle network architecture and application for WiMAX LDPC decoders,’’ IEEE Trans. Circuits Syst. II, Express Briefs, vol. 56, no. 3, pp. 215–219, Mar. 2009.
+[38] D. Oh and K. K. Parhi, ‘‘Low-complexity switch network for reconfigurable LDPC decoders,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 18, no. 1, pp. 85–94, Jan. 2010.
+[39] X. Chen, S. Lin, and V. Akella, ‘‘QSN—A simple circular-shift network for reconfigurable quasi-cyclic LDPC decoders,’’ IEEE Trans. Circuits Syst. II, Express Briefs, vol. 57, no. 10, pp. 782–786, Oct. 2010. [Online]. Available: http://ieeexplore.ieee.org/document/5587879/
+[40] Y. Jung, Y. Jung, S. Lee, and J. Kim, ‘‘Low-complexity multi-way and reconfigurable cyclic shift network of QC-LDPC decoder for Wi-Fi/WIMAX applications,’’ IEEE Trans. Consum. Electron., vol. 59, no. 3, pp. 467–475, Aug. 2013.
+[41] F. Angarita, J. Valls, V. Almenar, and V. Torres, ‘‘Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+[42] X. Zuo, ‘‘Fully parallel implementation of timing-error-tolerant LDPC decoders,’’ Ph.D. dissertation, Faculty Phys. Sci. Eng., Univ. Southampton, Southampton, U.K., 2016.
+[43] S. S. Tehrani, ‘‘Stochastic decoding of low-density parity-check codes,’’ Ph.D. dissertation, Dept. Elect. Comput. Eng., McGill Univ., Montreal, QC, Canada, 2011.
+[44] Standard for Information Technology—Local and Metropolitan Area Networks—Specific Requirements—Part 15.3: Wireless Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.15.3c-2009, 2009.
+[45] H. Li, Y. S. Park, and Z. Zhang, ‘‘Reconfigurable architecture and automated design flow for rapid FPGA-based LDPC code emulation,’’ in Proc. ACM/SIGDA Int. Symp. Field Program. Gate Arrays, Monterey, CA, USA, Feb. 2012, pp. 167–170.
+[46] M. Karkooti, P. Radosavljevic, and J. R. Cavallaro, ‘‘Configurable LDPC decoder architectures for regular and irregular codes,’’ J. Signal Process. Syst., vol. 53, no. 1, pp. 73–88, Nov. 2008.
+[47] Further Consideration of Flexibility of LDPC Codes for NR, document R1-1701598, 3GPP TSG RAN WG1 Meeting #88, ZTE, Athens, Greece, Feb. 2017.
+[48] N. Bonello, S. Chen, and L. Hanzo, ‘‘Multilevel-structured low-density parity-check codes for AWGN and Rayleigh channels,’’ IEEE Trans. Veh. Technol., vol. 59, no. 7, pp. 3311–3320, Sep. 2010.
+[49] F. Guo and L. Hanzo, ‘‘Reliability ratio based weighted bit-flipping decoding for low-density parity-check codes,’’ Electron. Lett., vol. 40, no. 21, pp. 1356–1358, Oct. 2004.
+PETER HAILES received the degree in electronic engineering with Mobile and Secure Systems from the Department of Electronics and Computer Science, University of Southampton, and the master’s degree (Hons.) in 2013. He then stayed on to undertake research toward the Ph.D. degree in advanced hardware implementations of LDPC decoders. His other research interests include field-programmable gate arrays, error correction coding, embedded hardware/software design, and high-level software development.
+
+LEI XU received the B.S.E.E. and M.S.E.E. degrees from Tsinghua University, China, and the Ph.D. degree in wireless communication from the University of Southampton, U.K. He has been with Altera for over seven years within system solution engineering and marketing. His current role is Wireless System Architect, instrumental to define and drive strategic direction and solution roadmap of Wireless Business Unit, Altera. He has been involved in various wireless system solutions with Altera, such as DPD, MIMO, and Turbo SIC. He has been the System Algorithmic/Architecture Expert with VIA technology and Agilent technology on various wireless and broadcasting systems, such as DAB, DVB, GSM/WCDMA, WiFi, and LTE. He has authored over 20 leading journal and conference papers and holds 11 patents.
+ROBERT G. MAUNDER (S’03–M’08–SM’12) received the B.Eng. degree (Hons.) in electronic engineering in 2003, and the Ph.D. degree in wireless communications in 2007. He has been with the Department of Electronics and Computer Science, University of Southampton, U.K., since 2000. He became a Lecturer in 2007 and an Associate Professor in 2013. His research interests include joint source/channel coding, iterative decoding, irregular coding, and modulation techniques.
+BASHIR M. AL-HASHIMI (M’99–SM’01–F’09) is currently a Professor of Computer Engineering and the Dean of the Faculty of Physical Sciences and Engineering, University of Southampton, U.K. He is also an ARM Professor of Computer Engineering and the Co-Director of the ARM-ECS Research Centre. He has authored over 300 technical papers, authored or co-authored five books and has graduated 31 Ph.D. students. His research interests include methods, algorithms, and design automation tools for energy efficient of embedded computing systems.
+LAJOS HANZO (M’89–SM’91–F’04) received the D.Sc. degree in electronics in 1976 and the Ph.D. degree in 1983. During his 38-year career in telecommunications, he has held various research and academic posts in Hungary, Germany, and the U.K. Since 1986, he has been with the School of Electronics and Computer Science, University of Southampton, U.K., where he holds the Chair in telecommunications. He has successfully supervised about 100 Ph.D. students. He is currently directing a 60-strong academic research team, involving in a range of research projects in the field of wireless multimedia communications sponsored by industry, the Engineering and Physical Sciences Research Council, U.K., the European Research Council’s Advanced Fellow Grant, and the Royal Society’s Wolfson Research Merit Award. He is an Enthusiastic Supporter of industrial and academic liaison, and he offers a range of industrial courses. He has co-authored 20 John Wiley/IEEE Press books on mobile radio communications totaling in excess of 10 000 pages and published over 1500 research entries at the IEEE Xplore. His research is funded by the European Research Council’s Senior Research Fellow Grant. He has 22,000+ citations. He was a fellow of REng, IET, and EURASIP. In 2009, he was received an honorary doctorate by the Technical University of Budapest, while in 2015 by The University of Edinburgh. He served as the TPC Chair and the General Chair of IEEE conferences, presented keynote lectures, and has been received a number of distinctions. He is also a Governor of the IEEE VTS. From 2008 to 2012, he was the Editor-in-Chief of the IEEE Press and a Chaired Professor at Tsinghua University, Beijing.
+
+20984
+
+VOLUME 5, 2017
+
+

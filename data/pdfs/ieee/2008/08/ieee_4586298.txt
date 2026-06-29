@@ -1,0 +1,1467 @@
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+1003
+
+Design Tradeoffs and Hardware Architecture for Real-Time Iterative MIMO Detection using Sphere
+Decoding and LDPC Coding
+Hyungjin Kim, Student Member, IEEE, Dong-U Lee, Member, IEEE, and John D. Villasenor, Senior Member, IEEE
+
+Abstract— We explore the performance and hardware complexity tradeoffs associated with performing iterative multipleinput multiple-output (MIMO) detection using a sphere decoder and a low-density parity-check (LDPC) decoder. Iterations are performed both within the LDPC decoder as well as via an outer iteration loop through which refined soft information is fed back from the LDPC decoder to a MIMO detector. A hardware architecture and associated implementation results on Xilinx Virtex-5 field programmable gate array for a 4x4 QPSK MIMO system are presented. The system offers a performance improvement of approximately 1 dB over systems without the outer iteration loop, and provides an information bit throughput that ranges from 60 to 300 megabits per second when a length 1944 rate 1/2 LDPC code is used.
+Index Terms— Field programmable gate arrays, Maximum likelihood decoding, Tree searching, Channel coding.
+I. INTRODUCTION
+T HE BENEFITS of multiple-input multiple-output (MIMO) communications systems are well established. Recent wireless communication standards such as IEEE 802.11n include MIMO techniques in combination with lowdensity parity-check (LDPC) coding [1], and it is certain that the MIMO/LDPC combination will be used in an increasing number of communications environments in coming years. While there is a very large and rapidly growing body of literature on many issues related to MIMO generally and its use in conjunction with LDPC codes specifically, there has been proportionally much less work addressing the real-time hardware challenges of such systems.
+The most common method for MIMO detection is to use minimum mean square error (MMSE) detection [2], [3], which has the advantage of being quite efficient computationally, and is thus the basis for most of the early-generation commercial systems for decoding of MIMO/LDPC in IEEE 802.11n. It is well established, however, that at the cost of increasing
+Manuscript received July 1, 2007; revised November 30, 2007. This work was supported in part by the Office of Naval Research (Contract number N00014-06-1-0253) and in part by the National Science Foundation (Grant number CCR-0120778 and CCF-0541453).
+Hyungjin Kim and John D. Villasenor are with the Electrical Engineering Department, University of California, Los Angeles, CA, 90095-1594, USA (e-mail: hjkimnov@ee.ucla.edu; villa@icsl.ucla.edu).
+Dong-U Lee was with the Electrical Engineering Department, University of California, Los Angeles, CA, USA when the work was conducted. He is now with Mojix, Inc., 11075 Santa Monica Blvd., Suite 350, Los Angeles, CA 90025 (e-mail: dongu@mojix.com).
+Digital Object Identifier 10.1109/JSAC.2008.080816.
+
+computational complexity, methods based on sphere decoding can offer significant performance advantages over MMSE. For example, it has been shown in [4] that sphere decoding outperforms MMSE by approximately 5 dB at a frame error rate (FER) of 0.1 and a greater amount at lower FERs. The overwhelming majority of the work on sphere decoding has been in the context of non-iterative detection, in which the received signal information is processed in a MIMO detector and then by a channel decoder, but is not fed back again to the MIMO detector.
+Many variations on soft-output sphere decoding have been proposed which aim, among other things, to reduce the algorithmic complexity while minimizing performance degradation. These include list sphere decoding (LSD) [4], single tree search [5], K-best sphere decoding [6], relaxed K-best sphere decoding [7], and soft sphere detection with bounded search [8].
+Garret et al. [4] implemented LSD where the tree search is bounded to provide constant throughput. The design in [4] for 4 × 4 16-QAM MIMO achieves 38.8 megabits per second (Mbps) using 10 mm2 in a 0.18 μm CMOS process. Studer et al. [5] examined various optimizations for non-iterative MIMO detection. The single tree search in [5] allows concurrent searching for the ML solution and all counter-hypotheses, which results in significant speed-ups over conventional noniterative MIMO detection methods. Guo and Nilsson [6] were the first to implement a soft-output K-best detector. Their design achieves over 100 Mbps for 4 × 4 16-QAM MIMO using 0.56 mm2 in a 0.13 μm CMOS process. Recently, Chen et al. [7] described a soft-output K-best detector for a 4 × 4 64QAM MIMO system. Sorting, which is often the bottleneck in K-best detectors, is approximated by performing coarse granularity sorting. That design has an average throughput of 8 Mbps while occupying 2.38 mm2 in a 0.13 μm process. It is estimated that in order to achieve 100 Mbps, approximately 31 mm2 will be required.
+One of the most interesting open questions, both from a hardware and performance standpoint, concerns the extent to which soft information generated by a channel decoder can be iteratively fed back to a MIMO detector in order to increase the overall performance of the system. Such iterative MIMO detection was first proposed by Hochwald and Brink [9], who described information exchange between a soft-output sphere decoder and a channel decoder (a turbo decoder in the case of
+
+0733-8716/08/$25.00 c 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+1004
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+Source
+
+LDPC encoder
+
+MIMO symbol vector mapper
+
+Channel
+
+Hard
+
+decision
+
+LE
+
+MIMO detector
+
+LDPC decoder
+
+Sink
+
+LA Information bits
+Coded bits
+
+Fig. 1. Block diagram of an LDPC-coded MIMO system employing outer iterations.
+
+antennas scaled by the complex channel gain and augmented with noise. The MIMO detector generates soft outputs from the received signal and feeds them to the LDPC decoder, which in turn provides refined soft data back to the MIMO detector. This process is known as an “outer iteration”, in contrast with the “LDPC decoding iterations” performed within the LDPC decoder. The outer iteration can be repeated until all check nodes in the LDPC decoder have been satisfied,
+
+until a given number of maximum outer iterations have been
+
+[9]). The simulation results in [9] indicate that performance gains of several dBs can be obtained by using such information exchange. Iterative MIMO detection using LDPC codes as opposed to turbo codes was described by ten Brink, Kramer and Ashikhmin in [10] and Lu, Yue, and Wang in [11].
+While the implementations above considered non-iterative systems, Radosavljevic and Cavallaro [8] examined the it-
+
+executed, or until some other stopping criterion is met. Finally, hard decisions are performed on the soft outputs to generate the decoded bits. A more detailed diagram of such an iterative MIMO detection system can be found in Figure 5 of [10].
+In a MIMO system with nT transmit and nR receive antennas, the received signal vector can be written in the customary manner as
+
+erative case and the associated hardware implications. The approach in [8] is based on a K-best tree search where K is
+
+y = Hs + n
+
+(1)
+
+variable across different levels. Though the hardware architecture and computational complexity issues of the iterative case are discussed, actual hardware implementation results are not given.
+Thus, one of the critical questions in iterative MIMO detection concerns the increase in performance that can be obtained by introducing the feedback and the specific associated cost in hardware. The present paper represents the first detailed exploration of the hardware architecture and implementation issues that arise when outer iterations are introduced, and thus provides a set of quantitative and experimental results that can be useful in the design of emerging and future systems. The main contributions of this paper include:
+• Modification on the extrinsic log-likelihood ratio (LLR) equation, which halves computational complexity.
+
+where y is an nR × 1 complex vector whose elements are signals from receive antennas. H is an nR × nT complex channel matrix, in which the real and imaginary components
+of each element follow a Gaussian distribution with zeromean and variance 1/2. s is an nT × 1 complex vector whose elements are signals from transmit antennas. s is obtained
+by modulating the LDPC encoded bits x. The length of x is given by nB = nT × mC where mC is the number of bits per symbol. n is a complex vector of independent zeromean complex Gaussian noise entries with variance σ2 per real
+component. In this work, we assume that the channel matrix H and the noise variance σ2 are known at the receiver, but
+unknown at the transmitter.
+
+• Parameter exploration and optimization of iterative
+
+MIMO detection based on the K-best tree search.
+
+B. MAP Bit Detection
+
+• Hardware architecture for iterative MIMO detection. • Implementation on a Xilinx Virtex-5 field-programmable
+gate array (FPGA), capable of a peak throughput of 300 Mbps information bit rate. To the best of our knowledge, this is the first hardware realization of an iterative MIMO detector.
+
+To perform maximum a posteriori probability (MAP) bit detection, extrinsic information is used, which is generally expressed as an LLR. The extrinsic LLR of the ith bit in x, LE(xi|y), can be approximated using the max-log approximation as
+
+The rest of this paper is organized as follows. Section II discusses algorithms of MIMO iterative detection and their performance. Section III explores design parameters and an algorithm of MIMO detector which allow good decoding performance and reduce complexity. Section IV describes the hardware architecture. Section V provides implementation results and concluding remarks are given in Section VI.
+II. ITERATIVE MIMO DETECTION
+
+LE (xi |y)
+
+≈
+
+1 2
+
+max
+x∈Xi,+1
+
+−
+
+1 σ2
+
+y − Hs 2 + xT[i] · LA,[i]
+
+−
+
+1 2
+
+max
+x∈Xi,−1
+
+−
+
+1 σ2
+
+y − Hs 2 + xT[i] · LA,[i]
+
+(2)
+
+where Xi,+1 and Xi,−1 are the sets of 2nB−1 bit vectors whose
+
+ith bit is +1 and −1, respectively. x[i] is the subvector of x
+
+obtained by omitting its ith element and LA,[i] is the vector of
+
+a priori LLRs without its ith element. Derivations of Eqn. (2)
+
+can be found in [9]. In Eqn. (2), x[Ti] · LA,[i] can be written as
+
+A. System Model
+Fig. 1 shows a block diagram of the MIMO system considered in this work. At the transmitter side, the information bits are encoded using an LDPC encoder. The MIMO symbol
+
+xT[i] · LA,[i] = xT · LA − xiLA (xi)
+
+=
+
+nB −1
+xj LA (xj ) − xiLA (xi) .
+
+(3)
+
+j=0
+
+vector mapper maps the LDPC-coded bits to multiple transmit
+
+antennas and performs modulation. At the receiver side, each where xi is the ith bit of x and LA(xi) is the a priori LLR
+
+receive antenna receives the sum of signals from all transmit of xi.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+KIM et al.: DESIGN TRADEOFFS AND HARDWARE ARCHITECTURE FOR REAL-TIME ITERATIVE MIMO DETECTION
+
+1005
+
+MIMO detector
+
+Preprocessor
+
+Sphere decoder
+
+d in Eqn. (5) will more likely maximize each “max” term in
+
+H
+
+QR decomposition
+
+LLR update
+
+LE LDPC decoder
+
+Hard decision
+
+Eqn. (4), for a given size of L, denoted here by K, one should consider the smallest K distances and their corresponding bit
+
+vectors.
+
+Q, R
+
+Candidate list
+
+LA
+
+An efficient approach to obtaining L is to perform QR
+
+σ y
+
+Scale
+
+Tree search
+
+decomposition on H according to H = QR where Q is an unitary matrix and R is an upper triangular matrix. By
+
+substituting QR with H in Eqn. (5), we obtain
+
+Fig. 2. Block diagram of the MIMO detector.
+
+1 σ2
+
+y − QRs 2 =
+
+y −Rs 2
+
+(6)
+
+Substituting Eqn. (3) into Eqn. (2), we obtain
+
+LE (xi |y)
+
+≈
+
+1 2
+
+max
+x∈Xi,+1
+
+−
+
+1 σ2
+
+y − Hs 2 + xT · LA
+
+−
+
+1 2
+
+max
+x∈Xi,−1
+
+−
+
+1 σ2
+
+y − Hs 2 + xT · LA
+
+(4)
+
+−LA (xi)
+
+which is more amendable for implementation purposes than Eqn. (2) since the terms for the max operation need to be
+
+where y = QH y/σ, R = R/σ, and (.)H denotes conjugate-
+
+transpose. Assume that yi is the ith element of the vector y and rij is the element at the intersection of the ith row and the jth column of the matrix R . Eqn. (6) can thus be written
+
+as
+
+2
+
+nR −1
+
+nR −1
+
+y −Rs 2 =
+
+yi −
+
+rij sj .
+
+(7)
+
+i=0
+
+j=i
+
+computed once per bit vector instead of nB times. This essentially halves the amount of computation.
+Fig. 2 shows the block diagram of the MIMO detector used here, which consists of a preprocessor and sphere decoder that
+
+Note that the index of summation inside · 2 starts with i because matrix R is an upper triangular matrix. By defining real coefficients ai and bij as
+
+perform the MAP bit detection explained above. Preprocessor passes scaled QR decomposition results to the sphere decoder. The sphere decoder computes the extrinsic LLR as given in Eqn. (4), which requires the distance
+
+d
+
+=
+
+1 σ2
+
+y − Hs 2
+
+(5)
+
+and xT · LA for all possible bit vectors. Eqn. (5) is generally obtained through a tree search and the remaining calculations in Eqn. (4) are performed in the LLR update unit.
+
+C. Tree search
+In order to provide an LDPC coder with the extrinsic LLRs (Fig. 2), a sphere decoder is required to generate a list of bit vectors and the corresponding distances d to the received signal y in order to approximate Eqn. (4). The original (hard output detection) sphere decoder computes s which minimizes Eqn. (5) to provide the maximum-likelihood (ML) symbol vector estimate. It avoids an exhaustive search of 2nB different hypotheses by utilizing QR decomposition of the channel matrix. Modification of the original sphere decoder enables soft output detection by providing a list of symbol vectors and corresponding bit vectors and distances [9]. Since the generation of the complete list of bit vectors and the distances is generally too complex for real-time hardware implementations, a subset of the complete list, L, can be generated instead as noted earlier with respect to references [6], [9]. The list size directly impacts the hardware complexity because
+
+a2i = Re{yi}
+
+(8)
+
+a2i+1 = Im{yi}
+
+(9)
+
+b2i,2j = b2i+1,2j+1 = Re{rij }
+
+(10)
+
+b2i,2j+1 = −b2i+1,2j = −Im{rij }
+
+(11)
+
+s2j = Re{sj}
+
+(12)
+
+s2j+1 = Im{sj}.
+
+(13)
+
+Eqn. (7) can be written as
+
+2
+
+⎛
+
+⎞2
+
+nR −1
+
+nR −1
+
+2nR −1
+
+2nR −1
+
+yi −
+
+rij sj =
+
+⎝ai −
+
+bijsj⎠ , (14)
+
+i=0
+
+j=i
+
+i=0
+
+j=i
+
+where all the coefficients of the term at the right side are real.
+
+Note that b2i,2i+1 = 0 because rii is real. Assume that the accumulated distances of Eqn. (14) from i = m to (2nR − 1)
+
+is denoted as dm, in other words,
+
+⎛
+
+⎞2
+
+2nR −1
+
+2nR −1
+
+dm =
+
+⎝ai −
+
+bij sj ⎠ .
+
+(15)
+
+i=m
+
+j=i
+
+Because dm is involved with only a subvector of s , sm · · · s2nR−1 T from m = (2nR − 1), .., 0, it can
+be interpreted as a tree structure as illustrated for the case of an nT = nR = 4 system using QPSK modulation in Fig. 3. In
+Fig. 3, due to use of real coefficients, there are eight levels for four receive antennas. dm (k) denotes the accumulated distances corresponding to the kth subvector of s at the mth level. A
+
+the tree search and the LLR update computations increase tree structure such as the one shown in Fig. 3 makes it possible
+
+approximately linearly with the list size. If the size of L is too to efficiently perform tree search and pruning in order to find
+
+small, large degradations in detection performance can result. the smallest K distances [12], [13].
+
+Thus, one of the design goals is to identify a size for L that is LSD [9] and K-best decoding [6] have been widely used to
+
+large enough to deliver minimal performance loss relative to find a good subset L based on tree search and pruning. LSD
+
+an ideal system, while being small enough to facilitate real- gives the best L in the sense that it provides the smallest K
+
+time computation. Since bit vectors that lead to small distances using depth-first tree search whose search time (or throughput)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+1006
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+Level 7 Level 6 Level 5
+
+s7/ =-1
+
+d(0) 7
+
+s6/ =-1
+
+s6/ =1
+
+s5/ =-1
+
+d(0) 6 1
+
+d(1) 6
+-1 1
+
+d(0) 5
+
+d(1) 5
+
+d(2) 5
+
+d(3) 5
+
+s/7=1
+
+d(1) 7
+
+s6/ =-1
+
+s/6=1
+
+d(2) 6
+-1 1
+
+d(3) 6
+-1 1
+
+d(4) 5
+
+d(5) 5
+
+d(6) 5
+
+d(7) 5
+
+FER
+
+100 10−1 10−2
+
+(0, 10) (0, 15) (0, 20) (0, 75) (0,1000) (2, 10) (2, 15) (2, 20) (4, 10) (4, 15) (4, 20) (6, 10) (6, 15) (6, 20)
+
+Fig. 3. Tree structure for calculation of Eqn. (14) for the case of 4 by 4 antennas with QPSK constellation.
+
+can greatly vary with channel conditions. By limiting the number of tree search steps, the variation of tree search time can be
+
+10−3 3 3.5 4 4.5 5 5.5 6 E /N [dB]
+b0
+
+greatly reduced at the expense of detection performance [4]. On the other hand, a K-best decoder uses breadth-first tree search. In this approach, at each level, the branches associated with the smallest K accumulated distances are retained and the other branches are pruned. Since the amount of computation is
+
+Fig. 4. FER performance of different combinations of outer and LDPC decoding iterations. QPSK with K = 256 (complete list) over a 4×4 MIMO channel is used. (m,n) refers to m outer iterations and n LDPC decoding iterations per outer iteration. Decoding begins and ends with n LDPC decoding iterations, so the total number of LDPC iterations is (m + 1)n.
+
+fixed at each level, a K-best detector can potentially provide
+
+constant throughput in a hardware implementation. In the work presented here, we use the K-best detector due to its constant throughput characteristics.
+The tree search can be performed more efficiently by using a sorted QR-decomposition where the conventional QR-decomposition is preceded by a column permutation of H [5], [14]. Discussions of implementation issues of QRdecomposition for MIMO detector can be found in [15], [16].
+
+For the system considered here, four outer iterations were chosen for the detector, since the performance gain obtained in going from four to six outer iterations is insignificant (∼0.1dB). The dB gain of performing four outer iterations opposed to performing zero outer iterations varies between 0.7 dB to 1.6 dB depending on the number of LDPC iterations. The number of LDPC decoding iterations is set at 15, since the figure indicates that the performance gain from 15 to 20
+
+III. OPTIMIZING K-BEST SPHERE DECODING
+In the K-best sphere decoder, it is obviously of high interest to identify the optimal design parameters. We consider this design goal in the context of a 4 × 4 MIMO channel modulated via QPSK and 16-QAM. Throughout this paper, the (1944,972) quasi-cyclic irregular LDPC code (a rate R = 1/2) proposed for the IEEE 802.11n standard [1] is used. In the plots following, Eb/N0 is defined as
+
+LDPC iterations is negligible. Thus, the full system, which uses four outer iterations and 15 LDPC iterations is able to achieve an SNR gain of about 1 dB compared to a system using 15 LDPC iterations and no outer iterations. In [9], it was observed that the gain due to iteration was several dB, while in the results presented here the gain is 1 dB. This difference is due to the fact that the block size used in the present work is approximately ten times smaller than that used in [9]. As shown in Fig. 4, the performance improvement
+
+Eb = Es + C
+
+(16)
+
+N0 dB N0 dB
+
+where C = 0 for QPSK, C E s 2, and N0 = 2σ2 [9].
+
+=
+
+−10log102
+
+for
+
+16-QAM,
+
+Es
+
+=
+
+of (4,15) over (0,75), both of which utilize a total of 75 LDPC decoding iterations, is approximately 0.4 dB. It can be seen that even (0,1000) (in other words, 1000 LDPC iterations) leads to a marginal further dB gain (the 0.4 dB gap still exists), suggesting outer iterations are necessary to
+
+A. Number of Outer and LDPC Decoding Iterations
+
+obtain substantial performance improvements. The complexity differences associated with this tradeoff will be discussed in
+
+Fig. 4 shows the FER performance of iterative MIMO Section V.
+
+detection (Eqn. (4)) using different numbers of outer and Given that there will be 75 LDPC iterations performed, it is
+
+LDPC decoding iterations. QPSK with K = 256 (complete of interest to confirm that evenly distributing these iterations
+
+list) over a 4×4 MIMO channel is used. We consider the over the outer iteration loops gives the best performance.
+
+complete list of candidates exclude the effects of L size. For Fig. 5 shows the FER performance of different allocation
+
+each frame, zero, two, four and six outer iterations and 10, of 75 LDPC iterations under one potential set of variation
+
+15, and 20 LDPC decoding iterations are performed. While in which the zeroth to third outer iterations are associated
+
+the general trend that increasing numbers of outer and/or with p LDPC iterations each and the fourth outer iteration
+
+LDPC decoding iterations improves performance is expected, is associated with q LDPC iterations. The figure shows that
+
+the more interesting aspect of these results is the ability to when LDPC decoding iterations are evenly allocated across
+
+identify specific tradeoffs in complexity versus performance, the outer iterations (p = 15, q = 15), the best performance is
+
+particularly for higher numbers of iterations.
+
+achieved. By contrast, the (p = 5, q = 55) case illustrates that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+KIM et al.: DESIGN TRADEOFFS AND HARDWARE ARCHITECTURE FOR REAL-TIME ITERATIVE MIMO DETECTION
+
+100 10−1
+
+p= 5,q=55 p=10,q=35 p=15,q=15 p=17,q= 7
+
+100 10−1
+
+1007
+K= 64 K= 128 K= 256 K= 512 K=1024
+
+FER
+
+FER
+
+10−2
+
+10−2
+
+10−3
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+E /N [dB]
+b0
+
+10−3 7 7.5 8 8.5 9 9.5 10 E /N [dB]
+b0
+
+Fig. 5. FER performance of different allocations of 75 LDPC iterations. QPSK with K = 256 (complete list) over a 4×4 MIMO channel is used. The zeroth to third outer iterations use p LDPC iterations each, and the fourth outer iteration uses q LDPC iterations.
+
+100 10−1
+
+K= 16 K= 32 K= 64 K=128 K=256
+
+Fig. 7. FER performance of different list sizes K using 16-QAM. Four outer and fifteen LDPC decoding iterations over a 4×4 MIMO channel are used.
+is discussed further in Section V. An analogous plot for 16QAM is shown in Fig. 7. As in the QPSK case, four outer iterations and fifteen LDPC decoding iterations are used, since simulations showed that they led to good performance for 16QAM as well. The figure indicates that K = 512 is a good choice for 16-QAM.
+
+FER
+
+C. Best K Selection
+
+The two main computational challenges in the K-best
+
+10−2
+
+detector are to compute accumulated distances dm at each
+
+level (Eqn. (14)) and to select the best K candidates with
+
+the smallest distances (often referred as “sorting” in the
+
+literature). This selection process is required when the number
+
+10−3
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+Eb/N0 [dB]
+
+of candidates becomes greater than K. For example in 4 × 4 MIMO, the best K selection process starts at level 1 for QPSK with K = 64, and at level 3 for 16-QAM with K = 512.
+For small K, the best K selection is a relatively simple
+
+Fig. 6. FER performance of different list sizes K using QPSK. Four outer process. However as was noted above, effective MIMO deand fifteen LDPC decoding iterations over a 4×4 MIMO channel are used. tection requires a large K (K = 64 for QPSK and K =
+
+512 for 16-QAM). The complexity of the best K selection
+
+when the number of LDPC decoding iterations is too small in the zeroth to third outer iterations, an error floor is observed.
+
+increases quadratically with K [17]. Therefore, although using real coefficients over complex coefficients for the tree search (Eqn. (14)) doubles the depth of the tree, real coefficients help
+
+B. List Size K
+
+to reduce the complexity of the best K selection approximately by half.
+
+Because the computational complexity increases approxi- An approximate approach for performing best K selection
+
+mately linearly with the list size K, it is very important to find is to partition the elements (2K elements for QPSK and 4K
+
+a K that is small while providing good detection performance. elements for 16-QAM) into M groups (N elements per group)
+
+Fig. 6 compares the FER performance of different list sizes and to select the best K/M in each group. This approximate
+
+K using QPSK. Four outer iterations and 15 LDPC decoding best K selection reduces complexity considerably as will be
+
+iterations (as found in Section III-A) are performed. As the discussed further in Section IV.
+
+figure shows that K = 64 achieves essentially the same Neighboring candidates are likely to have similar distances,
+
+performance as K = 256 (complete list), K = 64 is used since they originated from the same parent node as shown in
+
+for the remainder of this paper for QPSK. Although K = Fig. 3. This is undesirable since a group of small distances
+
+256 would yield a simpler tree search implementation over will prune small “good” candidates, while a group of large
+
+K = 64 due to its regularity, the complexity of its LLR distances will keep large “bad” candidates. In order to avoid
+
+update increases considerably, making a K = 256 system this problem, we permute the candidates before allocating
+
+computationally less efficient than a K = 64 system. This them to groups. The same permutation is applied to all frames.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+FER
+
+1008 100 10−1 10−2
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+N= 32, No perm N= 64, No perm N= 4, Perm N= 8, Perm N= 16, Perm N= 32, Perm N= 64, Perm N=128, No perm
+
+100 10−1
+
+1 bit 2 bits 3 bits 4 bits 5 bits Float
+
+FER
+
+10−2
+
+10−3
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+E /N [dB]
+b0
+
+10−3
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+E /N [dB]
+b0
+
+Fig. 8. FER performance of different group size N for selecting the best 64 elements from a pool of 128 elements (K = 64, QPSK). Four outer and fifteen LDPC decoding iterations over a 4×4 MIMO channel are used.
+“Perm” means that random permutations are performed before grouping.
+
+Fig. 10. FER performance of different numbers of fractional bits for the signals when QPSK is used. The integer parts for the distances is set to unsigned eight bits and the rest are set to signed five bits. Four outer iterations, fifteen LDPC decoding iterations, and best K group size N = 8 over a 4×4 MIMO channel are used.
+
+100
+
+N= 128, No perm
+
+N= 512, No perm is almost 16 times that of QPSK per search tree level. As will
+
+N= 4, Perm N= 8, Perm N= 32, Perm
+
+be discussed in Section V, the best K selection for QPSK occupies a significant portion of the device area of a recent-
+
+10−1
+
+N= 128, Perm N= 512, Perm N=2048, No perm
+
+generation FPGA, while the best K selection for 16-QAM exceed the capacity of currently available FPGAs. Therefore
+
+for the subsequent sections, we shall focus on the 4 × 4 QPSK
+
+case, though the methods can be generalized to larger FPGA
+
+devices when they become available (or of course could be
+
+10−2
+
+applied to ASIC design).
+
+FER
+
+D. Fixed-Point Arithmetic
+
+10−3
+
+7
+
+7.5
+
+8
+
+8.5
+
+9
+
+E /N [dB]
+b0
+
+Fig. 9. FER performance of different group sizes N for selecting the best 512 elements from a pool of 2,048 elements (K = 512, 16-QAM). Four outer and fifteen LDPC decoding iterations over a 4×4 MIMO channel are used.
+“Perm” means that random permutations are performed before grouping.
+
+Since the iterative MIMO detector will be implemented in hardware using fixed-point arithmetic, the required bit-widths for the fixed-point signals must be examined. In order to determine the required integer bits, the dynamic ranges of the inputs ai and bij, and the intermediate signals have been identified through simulation. The simulation results indicated that 8 unsigned integer bits are required for the distance d(mk) and 5 signed bits are required for the inputs and all other
+
+signals.
+
+Fig. 8 and Fig. 9 show the results of performing the approximate best K selection using different group sizes N with and without permutation, for selecting 64 from 128 elements and 512 from 2,048 elements respectively. Though the approximate best K leads to a different selection than to the ideal best K (thick lines in the figures), in both plots, the detection performance loss is very small when N ≥ 8 is used with permutation. The figures indicate that permutation
+
+Regarding the fractional bits, we assume that all signals share the same fractional bit-width and that truncation is performed at all times for quantization. Fig. 10 examines the FER performance variation when using different numbers of fractional bits. The integer bit-widths are set as determined above (except the floating point results). The figure shows that using 3 fractional bits is sufficient to provide comparable FER performance to floating-point arithmetic.
+
+has a very large impact on the detection performance. Thus
+
+in hardware implementation for the QPSK case, 16 computa-
+
+IV. HARDWARE ARCHITECTURE
+
+tional modules that pick the best four from eight candidates are required. For the 16-QAM case, 256 modules that pick the A. Speed Requirements of Units
+
+best two from eight candidates are required. As the selection In order to minimize idle time of the tree search, LLR
+
+module in 16-QAM is only marginally smaller than the one update, and LDPC decoder units (Fig. 2), we utilize the
+
+in QPSK [17], the best K selection complexity for 16-QAM following processing strategy.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+KIM et al.: DESIGN TRADEOFFS AND HARDWARE ARCHITECTURE FOR REAL-TIME ITERATIVE MIMO DETECTION
+
+1009
+
+Level 7 a7 b77
+
+PE0
+
+( )2 ( )2
+
+d
+
+(0)
+7
+
+d7(1)
+
+Level 6 a6 b66
+PE0
+( )2 ( )2
+
+Level 5 a5 b57 b56 b55
+PE0
+PE0 PE0
+
+PE1 PE1 d6(0) d6(1) d6(2) d6(3)
+
+PE0 PE0 PE0 PE0
+( )2 ( )2 ( )2 ( )2 ( )2 ( )2 ( )2 ( )2
+
+PE1 PE1 PE1 PE1
+
+d5(0)
+
+d5(1)
+
+d
+
+(2)
+5
+
+d5(3) d5(4)
+
+d
+
+(5)
+5
+
+d5(6)
+
+d
+
+(7)
+5
+
+Level 1
+
+a1
+
+b11
+
+Level 0
+
+a0
+
+b00
+
+d1(0)
+
+d (127) 1
+
+Append x
+
+c1(0)
+
+c (127) 1
+
+Best-64
+
+c1(0)
+
+c1(63)
+
+d0(0)
+
+d (127) 0
+
+Append x
+
+c0(0)
+
+c (127) 0
+
+Best-64
+
+c0(0)
+
+c0(63)
+
+Fig. 11. Tree search unit architecture.
+
+A
+
+B
+
+ABC
+
+B. Tree Search
+
+Fig. 11 depicts the hardware architecture of the tree search unit. Using Eqn. (15) and noting that b2i,2i+1 = 0, it computes the distances of each level in the following manner
+
+A+B A-B
+(a) PE0
+Fig. 12. Structures of PE0 and PE1.
+
+A+B
+
+A+C
+
+(b) PE1
+
+d7 = (a7 − b77s7)2 d6 = d7 + (a6 − b66s6)2 d5 = d6 + (a5 − b57s7 − b56s6 − b55s5)2 d4 = d5 + (a4 − b47s7 − b46s6 − b44s4)2
+...
+d0 = d1 + (a0 − b07s7 − b06s6 − · · · − b00s0)2 .
+
+• The LLR update generates LE of frame i while the LDPC decoder generates LA of frame j. This implies that LLR update should have a similar throughput to LDPC decoding.
+• The tree search should supply candidate lists at a sufficiently high speed such that it does not become the bottleneck of the LLR update. In the worst channel conditions, the MIMO detector will require the full four outer iterations. However, in the best channel conditions, the MIMO detector will require zero outer iterations where one LLR update is followed by zero LDPC decoding iterations (LDPC decoder terminates with a syndrome check). Thus, the tree search should achieve similar throughput to one LLR update.
+
+The structures of the two processing elements used in the tree
+
+search unit are shown in Fig. 11. PE0 subtracts the term A
+
+which corresponds to ai or the partial sum ai −
+
+n j=i
+
+bij
+
+sj
+
+with the term B which corresponds to bi(j−1)sj−1. Since
+
+sj−1 ∈ {−1, 1}, PE0 produces A + B and A − B. PE1 adds
+
+the accumulated parent distance A to the child distances B
+
+and C.
+
+The distances of all nodes are computed up to level 1, where
+
+it is necessary to identify the best 64 candidates from the
+
+resulting 128 candidates. The binary bit-vector xˆ = (x + 1)/2 corresponding to the ith node is appended to the distance d1(i) to create the candidate c1(i). The candidates are fed to the Best64 unit which picks the best 64 candidates in groups of 8 as
+
+discussed in Section III-C. The Best-64 unit comprises of 16
+
+Best-4 units, which chooses the best 4 candidates from a set
+
+of 8 candidates. The Best-4 unit can be based on a variety of
+
+Recent hardware-based LDPC decoders are capable of in- sorting methods. Multi-cycle sorting algorithms such as the
+
+formation bit throughputs of hundreds of megabits per second bubble sort employed in [6] and the approximate sort in [7]
+
+(Mbps). For instance, the FPGA-based LPDC decoder imple- are less suitable for this system due to its high throughput
+
+mentation in [18] is able to perform 15 decoding iterations requirements. Instead, the Best-4 unit is based on the bitonic
+
+with the (1944,972) code at around 300 Mbps. Noting the sorter [17] which allows single cycle sorting. Furthermore,
+
+two processing strategies above, this implies that both the LLR since the goal is to choose the smallest 4 elements from a
+
+update and tree search need to achieve 300 Mbps information set of 8 elements, some logic required for a full 8 bitonic
+
+bit rate.
+
+sorter can be removed. Note that the permutations discussed in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+1010
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+a0 b07 b06 b05 b04 b03 b02 b00
+
+LLRs from the LDPC decoder every K cycles. Initially the
+
+c1(k)
+
+[6:0]
+
+x (k) 17
+[6]
+x (k) 16
+[5]
+
+sub sub
+
+module computes the inner product xT · LA. For the zeroth outer iteration, LA is set to zero. For subsequent iterations, it is obtained from the LDPC decoder. Since xi, the ith bit of x, is either −1 or 1, the inner product becomes additions of
+
+x (k) 15
+[4]
+x (k)
+[3] 14
+x (k)
+[2] 13
+x (k)
+[1] 12
+
+[17:7]
+
+d
+
+(k)
+1
+
+sub sub sub sub
+PE0
+( )2 ( )2
+
+±LA (xi) where the sign of LA(xi) is determined by xi. As
+shown in Fig. 14, this can be realized by a tree of adders, where the sign of LA(xi) is determined by xˆ0(ki) which is the ith bit of the kth bit vector in the list L. The result of the inner product is subtracted by the distance d0(k) (the distance corresponding to the bit vector xˆ(0k)). The result of the subtraction p(k) together with the bit xˆ(0ki) is fed to PE2, which is depicted in Fig. 15. It finds the maximum p(k) for the cases when xˆ(0ki) = 0 and xˆ0(ki) = 1. The two maximum values are subtracted and divided by two via a right shift. LA(xi) is subtracted from q(k) to produce the extrinsic LLR LE(xi).
+The LLR update module produces extrinsic LLRs LE every
+K cycles. Multiple instances of the module can be used to
+
+0
+
+1 d0(2k) PE1
+
+improve throughput characteristics.
+
+concat
+
+concat
+
+d (2k+1) 0
+
+D. Scheduling and Interfacing
+
+c0(2k)
+
+c(2k+1) 0
+
+Fig. 13. Structure of the processing element used in level 0. “[m:n]” selects the mth to nth bit of the incoming signal. “concat” concatenates the incoming
+signals into a signal.
+
+Section III-C are simply random interconnections in hardware, which requires no hardware logic resources.
+Levels 7 to 1 enumerate all possible bit vectors and find their distances. However, this is not the case with level 0, since part of the tree has been pruned in the Best-64 unit of level 1. Thus, a different structure for computing the candidates and their distances is used in level 0. Fig. 13 shows the processing element used in level 0 for computing the final candidates. A candidate from level 1 cˆ1(k) holds the distance d1(k) in the leading 11 bits (eight integer bits and three fractional bits (Section III-D)) the corresponding bit vector ˆx(1k) in the remaining 7 bits. The processing element uses each bit in the bit vector as a control signal to the Add/Sub module and finds the distances of the two child nodes. The level 0 bit xˆ(0k0) is appended at the end of each candidate.
+The computation of the tree search architecture in Fig. 11 flows from top to bottom where a significant amount of parallelism can be exploited. For instance, the computation of d(6i) and the computation of the child distances of level 5 can be performed in parallel because there are no data dependencies. Moreover, since there are no feedbacks present in the system, it can be fully pipelined while providing a constant throughput of one list L per clock cycle.
+C. LLR Update
+Fig. 14 illustrates the hardware architecture of the LLR update module which computes Eqn. (4) except the distance computation which is performed by the tree search. First, the LLR update module reads one candidate every cycle and eight
+
+Table I illustrates the task scheduling between the tree search, LLR update, and LDPC decoder units. The interfacing between these units is shown in Fig. 16. In Table I, it is assumed that the incoming frames are indexed from the letter A, and that frames A, B, C, and D require 4, 2, 0, and 3 outer iterations respectively. Each column in the table represents the time taken for an LLR update or 15 LDPC decoding iterations. Xi refers to the LLR update or LDPC decoding in the i outer iteration of frame X. The figure shows that the LLR update and LDPC decoder units are always utilized, while the utilization of the tree search is dependent on the number of outer iterations.
+Fig. 16 shows that triple buffering is used between the tree search and LLR update (interface 0). Each RAM holds the candidate lists of a single frame. As mentioned in Section IV-A, the LLR update and LDPC decoder operate in an interleaved manner, where each unit operates on two different frames concurrently. Thus, the two frames required by the LLR update must be available in interface 0. The third RAM can be written with a new frame by the tree search. The LLR update and LDPC decoder are linked via interface 1, which uses two dual buffers, one for write and one for read. These dual buffers ensure smooth operation of the scheduling in Table I. The data flow shown in the dashed and dotted lines switches every outer iteration.
+V. IMPLEMENTATION RESULTS
+The iterative MIMO detector has been implemented on a 65 nm Xilinx Virtex-5 XC5VLX330T-2 FPGA. Virtex-5 FPGAs contain the following three main types of resources: (1) user configurable elements known as “slices”, (2) storage elements known as “block RAMs”, and (3) multiply-and-add units known as “DSP slices”. A slice comprises of two 6-input lookup tables (LUTs), four flip-flops, and some additional logic. Each block RAM can store 36 kbits of data and a DSP slice can perform a 25-bit by 18-bit multiplication followed by a 48-bit addition. The Xilinx Virtex-5 XC5VLX330T-2 device
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+KIM et al.: DESIGN TRADEOFFS AND HARDWARE ARCHITECTURE FOR REAL-TIME ITERATIVE MIMO DETECTION
+
+c0(k)
+
+[7:0]
+
+x (k)
+[7] 07
+
+x (k)
+[6] 06
+
+x (k)
+[5] 05
+
+x (k)
+[4] 04
+
+x (k)
+[3] 03
+
+x (k)
+[2] 02
+
+x (k)
+[1] 01
+
+x (k)
+[0] 00
+
+[18:8]
+
+d0(k)
+
+LA(x0)
+
+LA(x1)
+
+LA(x2)
+
+LA(x3)
+
+LA(x4)
+
+LA(x5)
+
+LA(x6)
+
+LA(x7)
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+Negate 01
+
+PE2
+
+PE2
+
+PE2
+
+PE2
+
+PE2
+
+PE2
+
+PE2
+
+PE2
+
+1011
+
+LE(x0)
+
+LE(x1)
+
+LE(x2)
+
+LE(x3)
+
+LE(x4)
+
+LE(x5)
+
+LE(x6)
+
+LE(x7)
+
+Fig. 14. LLR update module architecture.
+TABLE I TASK SCHEDULING OF THE MIMO DETECTOR UNITS ASSUMING THAT FRAMES A , B, C , AND D REQUIRE 4, 2, 0, AND 3 OUTER ITERATIONS
+R E S P E C T I V E LY.
+
+Tree Search LLR Update LDPC Decoder
+
+A B C - - - - - D - E F - ···
+
+- A0 B0 A1 B1 A2 B2 A3 C0 A4 D0 E0 D1 · · ·
+
+-
+
+- A0 B0 A1 B1 A2 B2 A3 C0 A4 D0 E0 · · ·
+
+x (k) 0i
+
+t (k)
+d
+Reg
+en
+d
+Reg
+en
+
+10
+
+a
+a>b
+b
+
+Tree Search
+
+Interface 0
+List RAM 0
+List RAM 1
+List RAM 2
+
+LLR Update
+
+Interface 1
+LLR RAM 0
+LLR RAM 1
+LLR RAM 2
+LLR RAM 3
+
+Fig. 16. Interfacing MIMO detector units.
+
+LDPC Decoder
+
+s(k)
+Fig. 15. PE2 used in the LLR update module.
+
+TABLE II COMPUTATIONAL COMPLEXITIES AND COMBINATORIAL DELAYS OF VARIOUS UNITS FOR CHOOSING THE BEST 64 SAMPLES FROM A POOL OF 128 SAMPLES IN M GROUPS OF N SAMPLES. WHEN M > 1, THE
+APPROXIMATE BEST 64 SAMPLES ARE CHOSEN.
+
+M N Comparators Multiplexors
+
+Delay
+
+contains 51,840 slices, 324 block RAMs, and 192 DSP slices. Synplicity Synplify 8.8.0.4 has been used for synthesis, and
+
+16 8
+
+256
+
+8 16
+
+448
+
+448
+
+4 comp, 4 mux
+
+832
+
+7 comp, 7 mux
+
+Xilinx ISE 9.1.03i has been used for placement and routing.
+
+4 32
+
+704
+
+1,344
+
+11 comp, 11 mux
+
+Table II compares the computational complexities and delays of various units for choosing the best 64 samples from a pool of 128 samples in M groups of N samples. M = 16 which is used in this work, requires about six times fewer
+
+2 64 1 128
+
+1,024 1,408
+
+1,984 2,752
+
+16 comp, 16 mux 22 comp, 22 mux
+
+comparators and multiplexors and half the delay compared to the M = 1 case, while providing no discernible detection performance loss as observed in Fig. 8.
+Table III examines the computational complexity and hardware resource requirements for each level of the tree search unit. Note that the comparators and multiplexors in level 1 and
+
+0 are occupied by the Best-64 modules. In both level 1 and 0, around 2300 slices are occupied by the Best-64 modules. 192 of the squaring operations are executed via DSP slices in level 3, 2, and 0. As 192 is the total number of DSP slices available in the FPGA considered here, squaring for the other five levels are realized via table lookups. The operands of each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+1012
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+TABLE III COMPUTATIONAL COMPLEXITY AND HARDWARE RESOURCE REQUIREMENTS FOR EACH LEVEL OF THE TREE SEARCH UNIT.
+
+Level 7 6 5 4 3 2 1 0
+Total
+
+Adders 2 6 22 30 94 126 382 640
+1,302
+
+Squarers 2 2 8 8 32 32
+128 128 340
+
+Comparators -
+256 256 512
+
+Multiplexors -
+448 448 896
+
+Slices 26 57 131 185 274 395
+4,480 5,524 11,074
+
+Block RAMs 1 1 4 4 64 74
+
+DSP Slices 32 64 -
+128 192
+
+squarer are 7-bit unsigned numbers (four integer bits and three
+fractional bits) and the output is 11 bits wide, so a table of 27 × 11 = 1408 bits is required. We store these tables in block
+RAMs. Since a block RAM can be dual-ported, two squaring
+operations can be performed per cycle using a single block
+
+TABLE IV HARDWARE AREA REQUIREMENTS AND SPEEDS OF THE UNITS INSIDE THE ITERATIVE MIMO DETECTOR. THE LLR UPDATE COMPRISES OF 24 INSTANCES OF THE LLR UPDATE MODULE (FIG. 14). THROUGHPUTS ARE
+GIVEN IN TERMS OF THE INFORMATION BIT RATE.
+
+RAM. There are a total of 340 squaring operations involved in the detector of which 192 are implemented via 192 DSP slices, and the remaining 148 squaring operations are implemented via 74 block RAMs.
+Table IV shows the hardware area requirements of the units inside the MIMO detector. The maximum clock speeds and throughputs that can be supported by each unit are shown. The tree search is fully pipelined into 38 pipeline stages, generating one symbol vector candidate list L per clock cycle. Its maximum clock speed is 350 MHz which leads to a
+
+Unit
+Tree Search Interface 0 LLR Update Interface 1 LDPC Decoder
+Total Utilization
+
+Slices
+11,074 608
+10,656 1,408 10,055 33,801 65%
+
+Block RAMs
+74 36 1 4 123 238 73%
+
+DSP Slices 192
+192 100%
+
+Clock Speed 350 MHz 350 MHz 200 MHz 350 MHz 160 MHz
+-
+
+Throughput
+1.4 Gbps -
+300 Mbps -
+300 Mbps -
+
+constant throughput of 1.4 Gbps information bit rate. Each
+
+LLR update module (Fig. 14) is pipelined into 4 stages, the LDPC decoder. The tree search for instance, is clocked at
+
+feedback shown in Fig. 15 being the critical path. Since each 75 MHz to give a throughput of 300 Mbps. The different
+
+LLR update module can generate 4 information bits every 64 clocks for the three units are generated via the discrete clock
+
+cycles, a single module can achieve 12.5 Mbps at 200 MHz. managers available in the FPGA. The latency of the detector
+
+Since, we need to match the 300 Mbps throughput of the ranges from 30 μs (zero outer iterations) to 82 μs (four
+
+LDPC decoder, we use 24 instances of the LLR update module outer iterations), while the throughput ranges from 60 Mbps
+
+to perform LLR update. For the LDPC decoder, the pipelined (four outer iterations) to 300 Mbps (zero outer iterations).
+
+implementation in [18] is adopted, which is capable of 300 The throughput is bottlenecked by the LDPC decoder. If
+
+Mbps information bit rate at 15 LDPC decoding iterations for a faster LDPC decoder is employed, the tree search and
+
+the (1944,972) code. The LDPC decoder uses 8 bits for the update LLR units can be scaled by increasing the clock speed
+
+internal nodes. Note that the slice count of the LDPC decoder and using more instances, respectively. For instance, if the
+
+is lower than the one reported in [18], because the Virtex- (1944,1620) LDPC decoder described in [18] is used, which
+
+5 FPGA employs 6-input LUTs versus the 4-input LUTs has a throughput of 900 Mbps, the tree search unit would need
+
+employed by the Virtex-4 FPGA used in [18].
+
+to be clocked at 225 MHz and 72 instances of the update LLR
+
+The slices in interface 0 and 1 are used to multiplex the dual module would be required.
+
+and triple buffers respectively. Since there are 1944/nB = 243 It is also of interest to compare the complexity of our Ksymbol vectors in a frame, K = 64, and each candidate is 19 best (K = 64) decoder against a direct implementation which
+
+bits wide (11 bits for distance and 8 bits for bit vector), we generates the complete list (K = 256). We assume that a
+
+need a total of 295,488 bits for each list RAM in interface 0. 1-bit adder, a 1-bit negate, a 1-bit comparator, and a 1-bit
+
+We partition the data into 12 dual-ported block RAMs such multiplexer consist of 5, 5, 5, and 3 gates, respectively, and that the 24 LLR update modules can read a candidate every that an n-bit squarer consists of n2/2 1-bit adders. Using this
+
+cycle. In interface 1, since each LLR is 11 bits wide and estimation methodology, the complexity of our K = 64 tree
+
+there are 1944 LLRs in the frame, each LLR RAM must hold search at 1.4 Gbps is approximately 252,000 gates. The same 11 × 1944 = 21, 384 bits which comfortably fit into a single tree search unit at 300 Mbps can be considered to exhibit an
+
+block RAM.
+
+equivalent complexity of 54,000 gates (252, 000×300/1, 400).
+
+When the units in Table IV are integrated to perform MIMO Similarly, our 300 Mbps LLR update unit can be estimated at
+
+detection, the tree search, interface 0, and interface 1 are 66,000 gates, which is slightly larger than the tree search at
+
+down-clocked to match the speeds of the LLR update and 300 Mbps.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+KIM et al.: DESIGN TRADEOFFS AND HARDWARE ARCHITECTURE FOR REAL-TIME ITERATIVE MIMO DETECTION
+
+100 10−1
+
+300
+
+0 outer iterations
+
+2 outer iterations
+
+4 outer iterations
+
+6 outer iterations
+
+250
+
+200
+
+1013
+
+FER Average Throughput [Mbps]
+
+150 10−2
+100
+
+10−3 0
+
+5
+
+10
+
+complexity (gates)
+
+15 x 105
+
+50
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+E /N [dB]
+b0
+
+Fig. 17. Variation in FER performance with complexity at Eb/N0 = 4 dB over a 4×4 MIMO channel with QPSK and K = 64. The curves are plotted using different numbers of outer iterations and the LDPC iterations used in Fig. 4 (5, 10, 15, 20, 75, and 1000 LDPC iterations. 75 and 1000 are only for 0 outer iterations.)
+
+Fig. 18. Average information bit throughput variation with SNR of the 4×4 iterative QPSK MIMO detector. The (1944,972) LDPC code is used.
+The detector uses a maximum of four outer iterations with fifteen LDPC iterations for each outer iteration. K is set to 64 and the Best-64 group size
+is set to eight.
+
+By contrast, a direct implementation requires the LLR update unit to process K = 256, which leads to a factor of four increase in complexity over the K = 64 case, i.e. 264,000 gates. Considering that the complexity of the LLR update unit in the direct implementation is much larger than the sum of our tree search and LLR update (264,000 vs 120,000), and the fact that the FER performance gap between our tree search and the direct implementation is very small (as seen in Fig. 6), we believe that it is more computationally efficient to use the K-best tree search as opposed to direct implementation for iterative MIMO detection. When mapped on to a 0.13 μm custom ASIC, where a two-input NAND gate is assumed to be 4.5 μm2 and the cell area of one-port memory is assumed to be 3.6 μm2 [8], our iterative decoder excluding the LDPC decoder is projected to occupy 1.08 mm2 (including consideration of a 30% routing overhead).
+Using the complexity estimation approach above, the complexity of a 4 × 4 16-QAM iterative MIMO detector is approximately nine times greater than that of QPSK (1,230,000 gates versus 131,000 gates). This large complexity increase is primarily due to the K = 512 requirement of 16-QAM (Fig. 7). Therefore a 16-QAM iterative detector would not fit even on the largest FPGA available today and will likely occupy a prohibitive amount of area on custom ASICs. That said, the exponential growth of transistor density will make such implementations economically feasible in the near future.
+The complexity of the receiver Crecv can be expressed by Crecv (m, n) = Cts + (CLLR + CLDP C (n)) (m + 1) for m = 0 and Crecv (m, n) = Cts + CLDP C (n) for m = 0 where Cts, CLLR, and CLDP C are the complexity of tree search, LLR update and n LDPC iterations, respectively, and
+
+Fig. 17 examines the variation in FER with complexity at Eb/N0 = 4 dB with K = 64. The curves are plotted using different numbers of outer iterations and the LDPC iterations used in Fig. 4 (5, 10, 15, 20, 75, and 1000). For a given number of outer iterations, the FER performance gain diminishes rapidly with complexity. Furthermore, the performance improvement decreases with increasing numbers of outer iterations.
+Fig. 18 characterizes the average throughput variation with SNR of our iterative MIMO detector. At low SNRs the detector approaches the lower bound of 60 Mbps, while the upper bound of 300 Mbps can be achieved at high SNRs. A non-iterative detector (zero outer iterations) would provide a constant throughput of 300 Mbps, which is one to five times faster than that of the iterative detector. Alternatively, from a complexity view point, since Table IV indicates that the complexities of the tree search, LLR update, and LDPC decoder are similar in terms of logic, the complexity of iterative detector ranges from one to four times than that of the non-iterative detector, depending on the SNR. In return for that complexity increase, the iterative detector achieves a 1 dB gain in SNR as discussed Section III-A. There will be many applications in which this tradeoff will be well worth making, particularly given that the cost of computations will continue to decrease as hardware technologies continue to evolve, while bandwidth will always remain a scarce and fundamentally limited resource.
+VI. CONCLUSIONS
+We have presented a hardware architecture and associated implementation for MIMO iterative detection utilizing feed-
+
+m is the number of outer iterations. For the case when no back between a sphere decoder and LDPC decoder. The pa-
+
+outer iterations are performed (i.e., m = 0), the LLR update rameters associated with the K-best sphere decoder have been
+
+module can be simplified since there is no feedback from the optimized for hardware implementation, while exhibiting neg-
+
+LDPC decoder, and for simplicity, the complexity of LLR ligible performance loss. The system delivers approximately
+
+computation for the no outer iteration case can be ignored. 1 dB of performance improvement over systems without such
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+1014
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 26, NO. 6, AUGUST 2008
+
+feedback for a 4 × 4 QPSK MIMO. The iterative detector uses a (1944,972) LDPC code and has been realized on a Xilinx Virtex-5 FPGA. The design is capable of a peak throughput of 300 Mbps information bit rate.
+REFERENCES
+[1] “IEEE P802.11n/D1.10,” Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) specifications, Jan. 2007.
+[2] A. Zanella, M. Chiani, and M. Z. Win, “MMSE reception and successive interference cancellation for MIMO systems with high spectral efficiency,” IEEE Trans. Wireless Commun., vol. 4, no. 3, pp. 1244– 1253, May 2005.
+[3] A. Matache, C. Jones, and R. Wesel, “Reduced complexity MIMO detectors for LDPC coded systems,” in IEEE Military Communications Conf., 2004, pp. 1073–1079.
+[4] D. Garrett, L. Davis, S. ten Brink, B. Hochwald, and G. Knagge, “Silicon complexity for maximum likelihood MIMO detection using sphere decoding,” IEEE J. Solid-State Circuits, vol. 39, no. 9, pp. 1544– 1552, Sept. 2004.
+[5] C. Studer, M. Wenk, A. Burg, and H. Bo¨lcskei, “Soft-output sphere decoding: performance and implementation aspects,” in Proc. IEEE Asilomar Conf. on Signals, Systems and Computers, 2006, pp. 2071– 2076.
+[6] Z. Guo and P. Nilsson, “Algorithm and implementation of the K-best sphere decoding for MIMO detection,” IEEE J. Sel. Areas Commun., vol. 24, no. 3, pp. 491–503, Mar. 2006.
+[7] S. Chen, T. Zhang, and Y. Xin, “Relaxed K-best MIMO signal detector design and VLSI implementation,” IEEE Trans. VLSI Syst., vol. 15, no. 3, pp. 328–337, Mar. 2007.
+[8] P. Radosavljevic and J. R. Cavallaro, “Soft sphere detection with bounded search for high-throughput MIMO receivers,” in Proc. IEEE Asilomar Conf. Signals, Systems and Computers, 2006, pp. 1175–1179.
+[9] B. M. Hochwald and S. ten Brink, “Achieving near-capacity on a multiple-antenna channel,” IEEE Trans. Commun., vol. 51, no. 3, pp. 389–399, Mar. 2003.
+[10] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density parity-check codes for modulation and detection,” IEEE Trans. Commun., vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[11] B. Lu, G. Yue, and X. Wang, “Performance analysis and design optimization of LDPC-coded MIMO OFDM systems,” IEEE Trans. Signal Processing, vol. 52, no. 2, pp. 348–361, Feb. 2004.
+[12] U. Fincke and M. Pohst, “Improved methods for calculating vectors of short length in a lattice, including a complexity analysis,” vol. 44, pp. 463–471, 1985.
+[13] C. P. Schnorr and M. Euchner, “Lattice basis reduction: Improved practical algorithms and solving subset sum problems,” Math. Programming, vol. 66, pp. 181–191, 1994.
+[14] D. Wu¨bben, R. Bo¨hnke, J. Rinas, V. Ku¨hn, and K. Kammeyer, “Efficient algorithm for decoding layered space-time codes,” IEE Electronics Letters, vol. 37, no. 22, pp. 1348–1350, Oct. 2001.
+[15] B. Cerato, G. Masera, and P. Nilsson, “Hardware architecture for matrix factorization in MIMO receivers,” in Proc. Great Lakes Symposium on VLSI, 2007, pp. 196–199.
+
+[16] L. M. Davis, “Scaled and decoupled Cholesky and QR decompositions with application to spherical MIMO detection,” in Proc. IEEE Wireless Communications and Networking Conf., 2003, pp. 326–331.
+[17] K. E. Batcher, “Sorting networks and their applications,” in Spring Joint Computer Conf., AFIPS Proc. vol. 32, 1968, pp. 307–314.
+[18] M. Karkooti, P. Radosavljevic, and J. R. Cavallaro, “Configurable, high throughput, irregular LDPC decoder architecture: tradeoff analysis and implementation,” in Proc. IEEE Int’l Conf. Application-specific Systems, Architectures and Processors, 2006, pp. 360–367.
+Hyungjin Kim received the BS degree and the MS both in Electrical Engineering Department from Seoul National University in 1997 and 1999, respectively. He is currently a PhD student at the Electrical Engineering Department, University of California, Los Angeles (UCLA). His research interests include MIMO communications, channel coding, sensor networks, compression and encryption algorithms, video/image processing and signal processing. He is a student member of the IEEE.
+Dong-U Lee received the BEng degree in Information Systems Engineering and the PhD degree in Computing, both from Imperial College London in 2001 and 2004, respectively. From 2005 to 2007, he was a postdoctoral researcher at the Electrical Engineering Department, University of California, Los Angeles (UCLA), where developed highperformance hardware designs for wireless communications and mathematical function evaluations. He is now a research scientist at Mojix, Inc., Los Angeles, CA, where he is specializing in hardware implementation aspects of RFID receivers. His research interests include computer arithmetic, communications, design automation, reconfigurable computing, and video image processing. He is a member of the IEEE.
+John D. Villasenor received the BS degree in 1985 from the University of Virginia, the MS in 1986 from Stanford University, and the PhD degree in 1989 from Stanford, all in Electrical Engineering. From 1990 to 1992, he was with the Radar Science and Engineering section of the Jet Propulsion Laboratory in Pasadena, California, where he developed methods for imaging the earth from space. He joined the Electrical Engineering Department at the University of California, Los Angeles (UCLA) in 1992, and is currently Professor. He served as Vice Chair of the Department from 1996 to 2002. At UCLA, his research efforts lie in communications, computing, imaging and video compression, and networking. He is a senior member of the IEEE.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:57:45 UTC from IEEE Xplore. Restrictions apply.
+
+

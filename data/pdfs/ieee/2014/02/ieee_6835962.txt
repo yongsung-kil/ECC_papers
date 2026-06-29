@@ -1,0 +1,1236 @@
+Over-Clocked SSD: Safely Running Beyond Flash Memory Chip 110 Clock Specs 
+Kai Zhao*, Kalyana s. Venkataraman t, Xuebin Zhang*, Jiangpeng Lit, Ning Zheng*, and Tong Zhang* 
+*ECSE Department, Rensselaer Polytechnic Institute, USA 
+t Cavium, USA 
+:j: Shanghai Jiaotong University, P.R.China 
+Abstract 
+This paper presents a design strategy that enables aggres­
+sive use offlash memory chip I/O link over-clocking in solid­
+state drives (SSDs) without sacrificing storage reliability. The 
+gradual wear-out and process variation of NAND flash mem­
+ory makes the worst-case oriented error correction code (ECC) 
+in SSDs largely under-utilized most of the time. This work 
+proposes to opportunistically leverage under-utilized error 
+correction strength to allow error-prone flash memory I/O 
+link over-clocking. Its rationale and key design issues are 
+presented and studied in this paper, and its potential effec­
+tiveness has been verified through hardware experiments and 
+system simulations. Using sub-22nm NAND flash memory 
+chips with I/O specs of 166MBps, we carried out extensive 
+experiments and show that the proposed design strategy can 
+enable SSDs safely operate with error-prone I/O link running 
+at 275MBps. Trace-driven SSD simulations over a variety of 
+workload traces show the system read response time can be 
+reduced by over 20%. 
+1. Introduction 
+Technology scaling continuously degrades the raw storage 
+reliability of NAND flash memory [9], which demands the use 
+of increasingly stronger error correction codes (ECC) in solid­
+state drives (SSDs) to ensure the data storage integrity. It is 
+well known that NAND flash memory cells gradually wear out 
+with the program/erase (PIE) cycling [5], which is reflected as 
+gradual degradation of raw storage reliability throughout the 
+flash memory lifetime. To meet a target PIE cycling endurance 
+limit, each flash memory page must contain enough redundant 
+memory cells to support a sufficiently strong ECC that can 
+tolerate the worst-case raw storage reliability at the end of 
+memory lifetime. The gradual flash memory wear-out makes 
+the worst-case oriented ECC largely under-utilized most of the 
+time. In addition, technology scaling widens process variations 
+among flash memory blocks/chips, leading to a significant 
+variation of flash memory raw storage reliability even under 
+the same PIE cycles. This further contributes to ECC under­
+utilization in solid-state data storage systems. 
+The speed performance of SSDs depends on both the flash 
+memory operational latency (e.g., read and programming la­
+tency) and the latency of data transfer between the controller 
+and flash memory chips. Since all the bits in each page are 
+read from and progranuned to flash memory cells in parallel, 
+flash memory read/progranuning latency has a very weak de­
+pendency on the page size. In contrast, controller-flash data 
+transfer latency is linearly proportional to the page size. As 
+978-1-4799-3097-5/14/$31.00 ©2014 IEEE 
+technology continues to scale down, flash memory page size 
+keeps increasing. As a result, controller-flash data transfer 
+latency plays a more and more important role in determin­
+ing the overall speed performance. Therefore, the industry 
+has been constantly pushing the flash memory I/O link data 
+transfer rate (e.g., the series of Open NAND Flash Interface 
+(ONPI) [2] standards). NAND flash memory chip I/O circuits 
+and specs are designed with the objective of guaranteeing 
+virtually error-free data transfer (e.g., bit error rate of lO-15 
+and below). Nevertheless, memory chips with a higher-speed 
+I/O link spec are typically more expensive and more energy­
+hungry because of the use of high-performance 110 circuitry 
+and more accurate impedance-matching mechanism. 
+In this work, we propose a design strategy that can safely 
+over-clock (i.e., boost the clock frequency beyond specifica­
+tion) NAND flash memory chip I/O links without sacrificing 
+the data storage integrity. As discussed above, in order to 
+ensure the absolute data storage reliability, SSDs must em­
+ploy worst-case oriented ECC which is nevertheless largely 
+under-utilized most of the time. As a result, there exists a 
+certain amount of residual error correction strength available 
+in the runtime. Instead of leaving the residual error correc­
+tion strength unused, we propose to dynamically leverage it 
+to allow error-prone over-clocking of flash memory chip I/O 
+links, which can directly translate into higher system speed 
+performance. In this design framework, ECC becomes re­
+sponsible for bit errors caused by both flash memory storage 
+and controller-flash data transfer. In spite of the simple con­
+cept, its practical realization involves several issues, including 
+over-clocking on data read path vs. over-clocking on data 
+write path, and dynamic adaptation of over-clocking over flash 
+memory lifetime. In addition, the impact of over-clocking 
+on I/O data transfer error rate should be carefully character­
+ized. Using ONPI 2.2 compliant sub-22nm flash memory 
+chips with 166MBps I/O specs as a test vehicle, we carried 
+out extensive experiments to characterize the effects of vari­
+ous I/O over-clocking configurations. The experiments also 
+reveal an unexpected phenomenon that, under the same I/O 
+clocking, different planes on the same flash memory die may 
+be subject to largely different data transfer error rates. This 
+leads to more opportunities for optimizing the dynamic adap­
+tation of I/O over-clocking. To evaluate the etlectiveness of 
+the proposed design strategy, we carried out trace-driven SSD 
+simulations assuming the use of advanced low-density parity­
+check (LDPC) codes for error correction. Results show that 
+SSDs can safely operate with error-prone memory chip I/O 
+running at up to 275MBps, and over 20% of SSD read re-
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+sponse time reduction can be achieved. The experiment and 
+simulation results also show that over-clocking on the read 
+path is much more effective and favorable than over-clocking 
+on the write path, and clearly demonstrate that appropriate 
+over-clocking dynamic adaptation can noticeably improve the 
+overall effectiveness. 
+2. Background 
+2.1. Error Correction in SSDs 
+Reliability is an essential issue for data storage systems, and 
+physical data storage devices are typically required to achieve 
+an extremely low uncorrectable bit error rate (BER), e.g., 
+10-15 and below. 
+Until now, solid-state data storage de­
+vices primarily rely on BCH (Bose-Chaudhuri-Hocquenghem) 
+codes [14] to ensure the target uncorrectable BER. As technol­
+ogy scaling continuously degrades the raw storage reliability 
+of flash memory [9], we have to use stronger and stronger 
+BCH codes. This significantly increases the amount of re­
+quired BCH coding redundancy (e.g., when protecting lkB 
+data, we need to add 14 bits of redundancy in order to cor­
+rect one more error), which directly leads to significant flash 
+memory bit cost penalty. This forces the industry to search 
+for alternative ECCs that achieve stronger error correction 
+strength given the same amount of redundancy. 
+Due to their superior error correction strength and recent 
+success in commercial hard disk drives, low-density parity­
+check (LDPC) codes [8] attracted much recent interest [21, 10, 
+22] and will evidently replace BCH in next-generation solid­
+state data storage devices. LDPC code decoding is an iterative 
+belief propagation process and the error correction strength 
+depends on the accuracy of the input probability information 
+that is directly determined by the NAND flash memory on­
+chip sensing precision. As a result, latest commercial NAND 
+flash memory chips start to provide direct support of soft­
+decision memory sensing, e.g., Samsung 21nm MLC NAND 
+flash memory chips can support at least seven quantization 
+levels [13]. Fig. 1 presents simulation results to illustrate the 
+advantage of LDPC codes over existing BCH codes and the 
+impact of memory sensing precision on LDPC code decoding 
+performance, where LDPC code and BCH code have the same 
+code rate of 8/9 and same code length of 4kB. The LDPC 
+decoding uses layered min-sum decoding algorithm. From the 
+simulation results, we can see that the LDPC code can tolerate 
+a much higher raw BER than its BCH counterpart. 
+2.2. Flash Memory Organization and Interface 
+A NAND flash memory chip package contains one or more 
+memory dies that share an 8-bit VO bus and a number of 
+common control signals. Each memory die contains a few 
+logical units (LUNs) which is the minimum unit that can 
+execute commands and report status independently from the 
+others. Flash memory cells within an LUN are organized 
+in a plane=}block=}page hierarchy: each LUN contains few 
+2 
+..... BCH code 
+-+-LOPC code (hard-decision sensing) 
+--LOPC code (six extra sensing levels) 
+10.15 1--:--c-:-:,--,:-:,-:-=--=-=2"-:":,-:-:--:-,:-,--,-=-=-=-=--=-=---:!3 
+0.02 
+0.D18 
+0.016 
+0.014 
+0.012 
+0.01 
+0.008 
+0.006 
+0.004 
+Raw Bit Error Rate 
+Figure 1: Simulation results comparing LOPC and BCH codes 
+and showing the impact of memory sensing preci­
+sion on LOPC code decoding performance. 
+independent planes, each plane consists of a large number 
+(e.g., a few thousand) of blocks, each block contains a number 
+(e.g., 128 or 256) of pages. NAND flash memory handles 
+data programming and read in the unit of page, and each page 
+typically stores 4kB, 8kB or 16kB user data and associated 
+redundancy. Each LUN has at least one page register, though 
+in most cases each plane has its own page register. A page 
+register is used for the temporary storage of data before the 
+data are programmed to a page or after they are sensed out 
+from a page. 
+Industry has spent a great effort in unifying and improving 
+the data transfer interface standards, in order to simplify the 
+controller design and provide fast data transfer. Today there 
+are two specifications, Open NAND Flash Interface (ONFI) [2] 
+and Toggle Mode interface, both of which use the synchronous 
+double data rate (DDR) scheme to achieve high data transfer 
+rate. NAND flash memory chips with a higher VO link data 
+transfer rate spec are typically more expensive because of the 
+use of higher-performance VO circuitry and more accurate 
+impedance-matching mechanism such as on-die termination. 
+Therefore, although the most advanced VO specs are ONFI 3.x 
+or Toggle 2.x, majority of NAND flash memory chips today 
+are still ONFI 2.x or Toggle l.x compliant (i.e., the specified 
+VO data transfer rate is 166MBps or 200MBps). 
+3. Proposed Design Strategy 
+The physical access time of an SSD can be expressed as 
+'rphy-acc = 'rop + 'rxjer + 'rECC, 
+(1) 
+where 'rop is the flash memory data access operational latency, 
+such as the read and programming latency, 'rxjer is the data 
+transfer latency, and 'rECC is the ECC encoding/decoding la­
+tency. For latest MLC NAND flash memory chips, typical 
+read latency is around SOilS and typical prograrmning latency 
+is around Ims. A well-designed ECC codec can easily achieve 
+a throughput over IGBps, hence 'rECC for each page (typically 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+storing 4kB, 8kB, or 16kB user data) is only a few f.1s. The 
+data transfer latency 'rxjer can be calculated by 
+Page Size 
+'rxjer 
+= Data Transfer Rate 
+(2) 
+For example, when using NAND flash memory with 8kB 
+page size and I/O data transfer rate of 166MBps (as specified 
+in ONFI 2.2), it takes around 48f.1s to transfer one page of 
+data between the controller and flash memory chips. Raising 
+the data transfer rate can directly reduce the data transfer 
+latency. For example, if we increase the data transfer rate 
+from 166MBps to 220MBps for reading a 8kB page, we can 
+reduce the data transfer latency from 48f.1s to 36f.1s. This could 
+bring a significant reduction to the physical read access time 
+and hence improve the overall system speed performance. As 
+discussed in Section 2.2, modern NAND flash memory chips 
+use synchronous DDR I/O interface for which the data transfer 
+rate solely depends on the clock frequency set by the interface 
+specification (e.g., ONFI 2.0 specifies up to 83MHz clock 
+frequency, corresponding to maximum 166MBps data transfer 
+rate). In this work, we propose a design strategy that exploits 
+the characteristics of flash memory and solid-state data storage 
+devices to safely enable over-clocking of flash memory chip 
+I/O in order to improve the storage system speed performance 
+without causing any reliability issue. 
+3.1. Rationale and Basic Idea 
+With the technology scaling, the impact of process variation 
+and various storage noise sources becomes more significant. 
+As a result, the raw BER of NAND flash memory varies dra­
+matically under different PIE cycles with different retention 
+time. Even for chips from the same fabrication batch, their raw 
+BER still could have a large variance from blocks to blocks 
+and from chips to chips. To show these effects, we carried out 
+extensive experiments using several sub-22nm MLC NAND 
+flash memory chips, and Fig. 2 shows the measurement results. 
+Figure 2 (a) shows the average raw BER over all the chips with 
+respect to the number of PIE cycles. With 1000 PIE cycles and 
+a short retention time, the average raw BER is only 6 x 10-5. 
+In comparison, the average raw BER increases to 2 x 10-3 
+with 5000 PIE cycles and a longer retention time. Figure 2 (b) 
+further shows the raw BER variations among different pages 
+for the two cases, where we randomly chose total 8192 pages 
+over all the chips and measured the numbers of errors within 
+each page to obtain the statistical histograms. The raw BER of 
+the best and the worst pages is marked in Fig. 2(a) as well. The 
+measurement results clearly show that raw BER of flash mem­
+ory pages strongly depends on PIE cycles and has a significant 
+variation. 
+Since ECC should ensure the data storage integrity under 
+the worst-case scenario, the above results clearly suggest that 
+the error correction strength of worst-case oriented ECC can 
+be largely more-than-enough most of the time for most pages. 
+Equivalently, in most of the time, majority of flash memory 
+3 
+A 
+10-50>a--?----'10@--1 L5 ___ 2
+l
+0--A25B----C3LO
+---' 
+Retention Time (day) 
+(a) 
+I2:a 1 k PIE cycles, 2 days retention 
+0.15 
+X 5k PIE cycles, 30 days retention 
+g-
+" g 0.10 
+,t 
+C 
+0.15 
+0.10 
+8 0.05 
+Point B 0.05 
+Point C 
+PointD 
+ 
+1 
+1 
+Il. 0.00 ..I..---''I''-'"''''r''-..... 'T'''''"''';=- 0.00 +-'YZ..>..L.:f'-'-L.L:J..t>.L>i:"'9-[ 
+10 
+15 
+0 
+200 
+Number of page errors 
+(b) 
+400 
+Figure 2: Sub-22nm MLC NAND flash memory chips measure­
+ment results of (a) raw BER vs. data retention time 
+under different PIE cycles, and (b) per-page bit er­
+rors histogram. 
+pages have a much better-than-worst-case reliability and hence 
+are over-protected by the ECC. 
+Meanwhile, as the industry keeps pushing the NAND flash 
+memory I/O interface data transfer rate, it always ensures a vir­
+tually error-free data link (e.g., BER of 10-15 and below). This 
+simply follows the conventional high-speed data link design 
+practice. However, in sharp contrast to other high-speed data 
+links (e.g., in SDRAM and PCI), the data being transferred 
+through NAND flash memory I/O are already protected by 
+very strong ECCs for handling worst-case flash memory data 
+storage reliability. As discussed above, the worst-case oriented 
+ECC is largely under-utilized for most of the time. This di­
+rectly motivates us to propose a design strategy as illustrated in 
+Fig. 3: The key is a transition from conventional normal-speed 
+error-free data transfer to higher-speed error-prone data trans­
+fer by adaptively applying residual error correction strength 
+to tolerate data transfer errors caused by aggressive I/O link 
+over-clocking. The existing ECC is used to handle the errors 
+from both NAND flash memory data storage and over-clocked 
+data I/O data transfer. The higher-speed flash memory I/O 
+data link can directly contribute to improving the overall data 
+storage system speed performance. In addition, as pointed 
+out above, in order to support newer-version higher-speed 
+link specs (such as ONFI 3.x over ONFI 2.x), NAND flash 
+memory chips tend to be noticeably more expensive. Using 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+Controller 
+Error-prone 
+,----------------
+, 0 0 0 0 0 
+r Error-free 
+,,: 
+ECC Engine  Data Bus  NAND Flash 
+Normal-clocking: 
+Memory Chip 
+0 0 0 
+, 
+, ----------------
+I
+---------------------------------\ 
+I 
+,---------------------------------
+Significant ECC under-utilization 
+(a) 
+Controller 
+Error-prone 
+--------------------------------
+r--::==::l r 
+ECC Engine 
+o o 
+: 
+,,11 
+< Data"Bs  
+i Adapfive over-
+i 
+clocking 
+L.:::===:J \ 
+NAND Flash 
+Memory Chip 
+, 
+_
+______ J----
+o o o o o 
+(lJ 
+o 
+ 
+o
+"'  
+0
+0: 
+o 
+ 
+: e 
+:liJ 
+o o o 
+t, ____________________________  
+____ , 
+Reduced ECC under-utilization 
+(b) 
+Figure 3: Illustration of (a) conventional design practice that keeps data bus error-free and results in significant ECC under­
+utilization over the lifetime, and (b) proposed design solution that exploits available ECC error correction strength to 
+enable aggressive and adaptive over-clocking on data bus to improve overall system speed performance. 
+this proposed design strategy, we could approach a similar 
+overall system speed performance while using lower-cost flash 
+memory chips. 
+3.2. Practical Realization 
+In spite of the simple concept of the above presented design 
+strategy, its practical implementation is not necessarily trivial 
+and can involve various issues and trade-offs. In particular, we 
+should carefully address the following three issues. 
+1. Characterizing the over-clocking: Since we move away 
+from error-free to error-prone I/O link through over-clocking, 
+we should accurately characterize the impact of over-clock 
+and quantify the link error rates under various frequencies. 
+In this context, the most reliable and straightforward way is 
+to carry out sufficient physical experiments using real flash 
+memory chips. During the experiments, we can first search 
+for the maximum allowable clock frequency. Given the error 
+correction strength of ECC (e.g., the BCH code shown in 
+figure 1 can tolerate around 4 x 10-3), we can accordingly 
+determine the maximum allowable clock frequency that will 
+not cause an error rate exceeding this error correction strength. 
+During the very early lifetime of NAND flash memory chips, 
+very few errors may occur in the flash memory operations, 
+hence we could aggressively transport the data at this rate. 
+Throughout the flash memory lifetime, raw storage reliabil­
+ity gradually degrades, hence the allowable I/O link error rate 
+accordingly reduces. Therefore, we should carefully deter­
+mine the appropriate I/O link clock frequency given different 
+allowable I/O link error rates. In Section 4, we will present an 
+example on characterizing the over-clocking using commercial 
+NAND flash memory chips. 
+2. Over-clocking on read and/or write path: This proposed 
+design strategy can be applied to either read path or write path, 
+4 
+or even both. When applying this strategy to the read path, 
+we only over-clock the data transfer from the flash memory 
+chips to the controller, and apply normal clock frequency for 
+the data transfer from the controller to the flash memory chips, 
+and vice versa for over-clocking on write path. 
+Although 
+over-clocking may introduce the same amount of bit errors for 
+both read and write path, the impact could be largely different. 
+When being applied to the read path, the 110 link bit errors do 
+not cause pennanent data storage errors. If the over-clocking 
+introduces too many errors that the ECC may not be able to 
+tolerate, we can simply re-transfer the data with the nonnal 
+clock frequency (or less aggressive over-clocking). However, 
+when being applied to the write path, the 110 link bit errors 
+directly result in permanent data storage errors. Therefore, 
+we should be much more conservative on using over-clocking 
+on the write path in order to ensure that overall data storage 
+integrity is not sacrificed. 
+3. Adaptation of over-clocking: 
+As discussed above, the 
+over-clocked frequency should be adaptively adjusted in re­
+sponse to the gradual flash memory raw storage reliability 
+degradation. 
+Straightforwardly, one may adapt the over­
+clocking in the worst-case oriented manner, i.e., the present 
+clock frequency should not generate more bit errors than 
+what can be tolerated by the worst-case pages. Under this 
+straightforward approach, the controller on-the-fly monitors 
+the raw storage reliability of the worst-case pages, and accord­
+ingly sets the I/O link clock frequency for all the subsequent 
+110 data transfer operations. Nevertheless, such a worst-case 
+oriented over-clocking adaptation could result in significant 
+under-utilization of over-clocking, and we propose the fol­
+lowing two adaptation schemes to improve the utilization of 
+over-clocking: 
+(i) Aggressive over-clocking adaptation with read retry: From 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+the discussion and measurement results presented in Sec­
+tion 3.1, we know that the page BER has a wide distribution. 
+Under the same number of PIE cycles, only a small portion 
+of pages could challenge the limit of ECC. Therefore, we 
+can very aggressively set the over-clocking, especially on 
+the read path. Once an ECC decoding failure occurs, we 
+simply lower the transfer rate and read again. Note that we 
+may not need to sense the flash memory array again if the 
+data are still being held by the flash memory page register. 
+(ii) Multiple data transfer rate with heterogeneous over­
+clocking: The VO link errors under over-clocking may 
+originate from cross-wire interference or on-chip VO cir­
+cuit under-driving. I/O circuits on different dies or planes 
+may suffer from different under-driving due to factors such 
+as process variation. As a result, once we capture such 
+variations, we can adaptively configure the over-clocking 
+for different dies or planes in order to better match to the 
+memory chip variations and hence improve the overall ef­
+fectiveness of the proposed design strategy. 
+4. Experiment Setting and Results 
+To quantitatively evaluate and demonstrate the above presented 
+over-clocking design strategy, we use an FPGA-based experi­
+mental platform to characterize the effects of memory chip VO 
+link over-clocking. These experimental results were further 
+used in trace-driven SSD simulations, which will be described 
+in Section 5. 
+4.1. Hardware Platform 
+Our hardware platform is built based upon an Altera Stratix 
+IV GX FPGA PCle development board connected with a mez­
+zanine board holding NAND flash memory chips. The FPGA 
+device handles all the flash memory interface and commands, 
+and can directly configure the flash memory VO link clock 
+frequency. It reads data from flash memory chips and transfers 
+the data through PCle interface to the host PC for bit error 
+statistics analysis. 
+4.2. Experiment Setting 
+Because our purpose is to measure the data transfer I/O link 
+BER caused by over-clocking, we use NAND flash memory 
+chips with only few PIE cycles to avoid the interference from 
+bit errors inside the flash memory cell array. The chip has one 
+LUN consisting of two planes. The flash memory chips are 
+ONFI 2.2 compliant and support a synchronous data transfer 
+rate up to 166MBps as specified by the datasheet. 
+In order to evaluate the use of over-clocking on read and 
+write path separately, the experiment encompasses the follow­
+ing two parts: 
+(i) Over-clocking on read path: A set of random data are 
+first programmed into some blocks in the flash memory 
+chip at the normal data rate of 166MBps Then the data 
+are read out and transferred from the flash memory chip 
+5 
+to the FPGA device at various data rates over 166MBps to 
+characterize the impact of over-clocking on the read path. 
+(ii) Over-clocking on write path: Random data are trans­
+ferred from the FPGA device to the NAND flash memory 
+chip at different data rates over 166MBps and progranuned 
+into some blocks. Then these data are read out at the nor­
+mal transfer rate of 166MBps. Since the flash memory 
+chips only went through a few PIE cycles, the flash mem­
+ory array will not contribute noticeable amount of bit errors. 
+Hence, we can use the readback data to evaluate the effect 
+of over-clocking on the write path. 
+4.3. Experiment Results 
+Fig. 4 shows the measured I/O link raw BER under different 
+over-clocked frequencies. Very few link errors were captured 
+on both read and write path when the data transfer rate is below 
+237.5MBps. As shown in Fig. 4, the VO link bit errors become 
+increasingly noticeable as we further increase the data transfer 
+rate. The link bit errors on the write path increases slightly 
+faster than those on the read path, which we expect is due to 
+the difference between flash memory on-chip I/O circuits on 
+the read and write path. The BER reaches over 10-3 under the 
+over-clocked transfer rate of 275MBps. 
+Figure 4: Measured 1/0 link raw BER on the write and read 
+path under over-clocking. 
+As discussed above, each page of user data is protected 
+by individual ECC. Therefore, the VO link error statistics 
+associated with each individual page is as important as the 
+overall average I/O link raw BER. Fig. 5 shows the histograms 
+of measured VO link errors per page when using 275MBps 
+transfer rate on the read path and 262.5MBps transfer rate 
+on the write path. From the histograms, we can observe that 
+there is a small variance of link VO bit errors for write over­
+clocking, while the variation is relatively significant for read 
+over-clocking. As pointed out above, each LUN in the test 
+chips contains two planes, hence we further investigated the 
+dependency of the VO link error statistics on different plane. 
+Fig. 6 plots the measured link raw BER for the two planes 
+separately, which clearly shows a strong dependency of the 
+VO link errors on the plane, especially for the read path. We 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+believe this is mainly due to the difference between the flash 
+memory on-chip VO circuits in the two planes. We further 
+investigated the 1/0 link errors among different blocks within 
+the plane, and did not observe noticeable difference. This 
+further verifies our conjecture since all the memory blocks in 
+the same plane share the same 1/0 circuits, while each plane 
+could have its own VO circuits. 
+0.35 
+Read Overclocking 
+275 MBps 
+is 0.30 
+c 
+2 0.25 
+a' 
+at 0.20 
+§ 0.15 
+o 
+ 0.10 
+Ol 
+&. 0.05 
+0.00 +-,"'4""'--.-{|--.}-~--f"""'I''''''IF"''4'''''4-
+-
+o 
+0.25 
+is 
+c 0.20 
+Q) 
+:J 
+a' 
+z 0.15 
+LL 
+C 0.10 
+:J 
+0 
+U 
+Q) 0.05 
+Ol 
+co 
+a. 0.00 
+200 
+100 
+200 
+Number of Errors in One Page 
+(a) 
+Write Overclocking 
+262.5 MBps 
+250 
+300 
+350 
+Number of Errors in One Page 
+(b) 
+400 
+Figure 5: Histograms of the 1/0 link BER per page when the 
+data transfer rate is (a) 275M Bps on the read path, 
+and (b) 262.5MBps on the write path. 
+10., r;::::;::=:;::===::::===:;r------,-------,----=:::til 
++ Read Overclocking: Plane 0 
+_ ••• - Read Overclocking: Plane 1 
+10" 
+-e- Write Overclocking: Plane 0 
+-0- Write Overclocking: Plane 1 
+Figure 6: Measured 1/0 link raw BER for different planes under 
+over-clocking. 
+6 
+5. Simulation Results 
+Using the above experiment results on the VO link bit error 
+statistics, we further carried out trace-driven simulations to 
+evaluate the effectiveness of VO link over-clocking on the 
+overall system-level speed performance. 
+5.1. Simulation Setup 
+We use the SSD module [4] in DiskSim [6] to carry out trace­
+driven simulations. We use a set of different workload traces 
+including the synthetic workload in DiskSim, Iozone and Post­
+mark [4], Financal, WebSearch, from [3], and the traces re­
+leased by MSR-Cambridge [17]. 
+The SSD has 8 channels and each channel contains 8 MLC 
+NAND flash memory chips. Each flash memory chip contains 
+2 dies that share an 8-bit 1/0 bus and a number of common 
+control signals, and each die contains 2 planes, each of which 
+contains 2048 blocks. Based on our measurements with sub-
+22nm MLC NAND flash memory chips, we set the block 
+erase latency as 3.24ms, page programming latency as 1.45ms 
+(upper page) and 121J.ls (lower page), and page read latency 
+as 55J.ls (upper page) and 41J.ls (lower page). 
+In the simulation, the maximum data transfer rate is set as 
+275MBps and 250MBps for read and write path, respectively, 
+based on the experimental results presented in Section 4.3. We 
+consider 3 different page size configurations, including 4kB, 
+8kB and 16kB. In each case, the average VO request response 
+time at the data transfer rate of 166MBps is set as the baseline 
+scenario. 
+5.2. Write Over-clocking 
+We first evaluate the SSD average write response time when 
+using over-clocking on the write path. Traces used in this 
+simulations have a large portion of write requests, varying 
+from 70% to 100%. Fig. 7 shows the average write response 
+time at the data transfer rate of 250MBps, which is normalized 
+with respect to the baseline scenario with 166MBps. 
+The results show that write over-clocking slightly reduces 
+the average write response time. This could be explained 
+according to Eq. 1. The page programming latency 'rarray_op 
+for upper pages is quite large and dominates the total physical 
+access latency 'rphy_acc. While it takes only 66J.ls to transfer 
+16kB data to the NAND flash memory chip, programming 
+these data into the flash memory cell array costs over Ims. 
+Hence, write over-clocking can only improve the system write 
+performance modestly. Our simulations show that moving 
+beyond 250MBps will not noticeably improve the response 
+time. In addition, as pointed out in Section 3.2, we should be 
+very conservative about using over-clocking on the write path 
+since the bit errors will directly result in permanent data loss. 
+Therefore, even with a very strong ECC, it is highly desirable 
+to limit the write over-clocking not exceeding 250MBps. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+Q) 
+E 
+ELZI Data transfer rate 166 MBps 
+ Data transfer rate 250 MBps 
+ELZI Data transfer rate 166 MBps 
+ Data transfer rate 250 MBps 
+Q) 
+E 
+ELZI Data transfer rate 166 MBps 
+ Data transfer rate 250 MBps 
+ 1.04-,""'c---­
+'" 
+c 
+g, 
+'" 
+&. 
+ 0.9 
+C 
+'0 
+.  
+(ij g O.S -'-'''-''.J''''L..-''-'-'-=''---'-'-''-==---'-'E
+''''­
+ 1.0 
+'" 
+c 
+g, 
+'" 
+&. 
+ 0.9 -t-I"'T/Dl----I"T/EF----
+C 
+'0 
+.  
+(ij g O.S -'-'-'-"-""'L..--'-"-'''''''''---'-'-''-'''''-
+--'-''''-
+Z 
+postmark IOzone 
+Financial 
+Page Size 4kB 
+mds 
+postmark IOzone 
+Financial 
+Page Size SkB 
+mds 
+Z 
+postmark 
+IOzone 
+Financial 
+mds 
+Page Size 16kB 
+(a) 
+(b) 
+(c) 
+Figure 7: Simulated SSD average write response time under over-clocking with respect to the 166MBps specification when the 
+page size is (a) 4kB, (b) 8kB, and (c) 16kB. 
+5.3. Read Over-clocking 
+We carry out simulations over 5 different traces in which the 
+portions of read requests are between 25% to lOO%. In the sim­
+ulations, the data transfer rate is set as 166MBps, 200MBps, 
+250MBps and 275MBps. The case of 166MBps data transfer 
+rate is used as the baseline scenario to which the read response 
+time of the other cases is normalized for each workload trace. 
+Fig. 8 shows the simulation results over different traces. The 
+average read response time noticeably reduces with the in­
+creasing of data transfer rate, which clearly demonstrates the 
+potential effectiveness of VO link over-clocking. As shown 
+in Fig. 9, the etlectiveness of over-clock also depends on the 
+page size, i.e., the larger the page size is, the more the read 
+response time can be reduced. For example, when using the 
+over-clocking of 275MBps, the average read response time re­
+duction is around lO% for 4kB page size, while it will improve 
+to 20% for 16kB page size. As NAND flash memory chips con­
+tinue to increase the page size with technology scaling (from 
+4kB several years ago to 16kB today, and it is expected to 
+increase to 32kB in a few years), this over-clocking approach 
+tends to be more and more appealing. 
+From the results shown in Fig. 9, we can see a noticeably 
+different effectiveness of link I/O over-clocking among differ­
+ent traces. The effects of the read over-clocking on WebSearch, 
+mds and hm are very close to each other. Trace Financial ex­
+periences the least improvement, while trace prj can benefit 
+from read over-clocking more than all the other traces. This 
+discrepancy reveals two factors that affect the effectiveness of 
+read over-clocking, including (i) the intensity of read requests, 
+and (ii) interference from write requests, which are further 
+studied in the following. 
+Though prj is a one-week trace with relatively low overall 
+lOPS, some part of this trace actually has very intensive read 
+requests. Hence, it could suffer from a relatively long request 
+queue, for which a higher data transfer rate is more beneficial. 
+Based on the simulation results, the instantaneous average 
+queue length is 20.7 for trace prj (16kB page size), compared 
+7 
+Q) 
+E 1.5 
+i= 
+Q) 
+"' 
+" 
+ 1.0 
+Q) 
+[l: 
+'0 
+til 
+Q)  0.5 
+.t:! 
+OJ 
+E  0.0 WebSearch 
+Q) 1.5 
+E 
+i= 
+il 
+" 
+ 1.0 
+Q) 
+[l: 
+'0 
+til 
+Q)  0.5 
+.t:! 
+OJ 
+E  0.0 WebSearch 
+Q) 1.5 
+E 
+i= 
+il 
+" 
+0 
+iF 1.0 
+Q) 
+[l: 
+'0 
+til 
+Q)  0.5 
+. 
+OJ 
+E  0.0 WebSearch 
+_166MBps 
+8250MBps 
+prj 
+mds 
+(a) Page size: 4kB 
+_166MBps 
+9250MBps 
+prj 
+mds 
+(b) Page size: 8kB 
+_166MBpS 
+8250MBps 
+prj 
+mds 
+(c) Page size: 16kB 
+lIlIIm200MBps 
+a275MBps 
+hm 
+Financial 
+lIlIIm200MBps 
+a275MBps 
+hm 
+Financial 
+lIlIIm200MBpS 
+a275MBps 
+hm 
+Financial 
+Figure 8: Simulated SSD average read response time under 
+over-clocking with respect to the 166M Bps specifi­
+cation when the page size is (a) 4kB, (b) 8kB, and (c) 
+16kB. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+c: 
+o g 0.25 
+"0 
+& 0.20 
+Q)  0.15 
+Q) :g 0.10 t- ' IMN,<'t 
+o 
+a. 
+m 0.05 
+c:: 
+_4kB 
+ 0.00 L..t:$%>I....J
+= 
+& 
+WebSearch prj 
+;mSkB 
+16kB 
+mds 
+hm 
+Financial 
+Figure 9: Comparison of average read response time reduc­
+tion of different traces when over-clocking the data 
+transfer rate to 275M Bps. 
+to less than 5 for all the other traces. As a result, read over­
+clocking can largely reduce the read response time of trace 
+prj, e.g., increasing the read transfer rate from 166MBps to 
+275MBps reduces the average read response time by 26.1 % for 
+trace prj. In comparison, trace Financial has a large portion of 
+intensive write requests, which directly results in the longest 
+request waiting time. As a result, the benefit of using read over­
+clocking is not significant, e.g., increasing the read transfer 
+rate from 166MBps to 275MBps reduces the average read 
+response time by only 14.7% for trace Financial. 
+To better illustrate the impact of these factors, we run further 
+simulations using synthetic traces with the page size of 16kB. 
+Different synthetic traces differ at the average inter-arrival 
+time and read request percentage. With a higher read intensity, 
+queueing becomes even more severe and hence causes further 
+deterioration in read performance. Hence, read over-clocking 
+in this case could more significantly reduce read response time. 
+Fig. lO(a) shows the simulation results when 99% of requests 
+are read requests. At the inter-arrival time of 15,us, the read 
+over-clocking of 275MBps could substantially improve the 
+read performance. As we increase the percentage of write 
+requests, e.g., 75% of read requests as shown in Fig. lOeb), 
+the effectiveness of read over-clocking noticeably drops, since 
+the write requests causes a longer wait time due to the long 
+flash memory prograrmning latency. 
+5.4. Over-clocking Adaptation 
+This subsection presents the results on adapting over-clocking 
+throughout flash memory lifetime. As discussed in Section 3, 
+we can realize dynamic 110 link over-clocking adaptation with 
+two different strategies, including aggressive over-clocking 
+with read retry and multiple data transfer rate with heteroge­
+neous over-clocking. We only considered the over-clocking 
+on the read path. Fig. 11 shows the simulated read response 
+time results with page size of 16kB when using these two 
+adaptation schemes, which are normalized with the scenario 
+of maintaining 250MBps I/O. In the read-retry strategy, the 
+110 link over-clocking is aggressively configured as 275MBps, 
+8 
+ 1.2 
+i= 
+Q) 
+tJ) 
+§ 1.0 
+a. 
+tJ) 
+ 
+-g 0.8 
+ 
+"0 . 0.6 
+ti 
+E  0.4 
+ 1.2 
+i= 
+Q) 
+tJ) 
+§ 1.0 
+a. 
+tJ) 
+ 
+-g 0.8 
+ 
+"0 . 0.6 
+ti 
+E 
+30 
+R 166 MBps m 200 MBps 
+§ 250 MBps S 275 MBps 
+20 
+15 
+Average Inter-arrival Time (us) 
+(a) 
+R 166 MBps m 200 MBps 
+§ 250 MBps S 275 MBps 
+ 0.4 L...L=="""-__ --""""""'"""'" __ --""'" 
+200 
+100 
+50 
+Average Inter-arrival Time (us) 
+(b) 
+Figure 10: Average read response time reduction using (a) 
+synthetic trace with 99% read requests, and (b) 75% 
+read requests. 
+and when ECC decoding fails due to too many errors caused 
+by aggressive over-clocking, the 110 link clock is reduced and 
+data are re-transferred from the flash memory to the controller. 
+Therefore, the overall effectiveness strongly depends on the 
+first-time ECC decoding failure rate. In the simulations, we 
+considered two first-time ECC decoding failure rate, 10% and 
+5%. The case of 10% first-time decoding failure rate repre­
+sents a worse flash memory reliability (i.e., at a later lifetime 
+of flash memory) compared with the case of 5% first-time 
+decoding failure rate. Note that most these first-time ECC 
+decoding failures are caused by the memory plane O. In the 
+multi-transfer-rate strategy, we set the data transfer rate as 
+250MBps for plane 0, while for plane 1 it is 275MBps. The 
+results show that, at the 5% of first-time decoding failure rate, 
+the read-retry strategy can achieve a reasonable performance, 
+which however severely degrades as flash memory further de­
+grades (i.e., 10% first-time decoding failure rate). For a very 
+low first-time ECC decoding failure rate (e.g., 1 % and below), 
+the read-retry strategy will achieve almost the same perfor­
+mance as shown in Fig. 8, hence have a less read response 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+time than the multi-transfer-rate strategy. In practice, we can 
+combine these strategies: We always use the read-retry strat­
+egy, and while the ECC first-time decoding failure rate reaches 
+a certain threshold multi-transfer-rate strategy is invoked and 
+different data transfer rates are used for different planes. 
+Q) E 
+i= 
+Q) 9 1.05 
+o 
+a. 
+'" 
+& 1.00 
+-0 
+'" 
+Q) 
+0: 0.95 
+-0 
+. 
+ 0.90 
+5 
+z 
+ELZj250 MBps 
+_ Read-Retry, 10% retry probability 
+§ Read-Retry, 5% retry probability) 
+' Multi-Transfer-Rate 
+WebSearch 
+p( 
+mds 
+hm 
+Financial 
+Figure 11: Simulated read response time under different over­
+clocking adaptation strategies. 
++WebSearch 
+8 1.1 -e-Financial 
+i= 
+""'V-h m 
+il 
+-9-prj 
+g 1.0Sf.'--'-'---..J· 
+a. 
+V> 
+Q) 
+0: 
+'0 
+co 
+Q) 
+0: 
+'0 
+.9  09::===---+-----Y 
+5 
+z 
+0.9 
+2s'coc---=-=':-:--=---:-:':-::--c:':-=---=-='SOOO 
+Figure 12: Read response time over the late memory lifetime 
+when using read-retry only, normalized to the sce­
+nario of constantly maintaining 250M Bps I/O data 
+transfer rate. 
+We have measured the page raw BER distribution histogram 
+under different PIE cycles with a retention time of 30 days 
+using the sub-22nm NAND flash memory chips, as shown 
+in Fig. 2 for two cases of lk and 5k PIE cycles. Combining 
+these results with the rate-8/9 length-4kB LDPC decoding 
+performance shown in Fig. 1, we can directly estimate the 
+first-time LDPC decoding failure rate at different stages of 
+the SSD's lifetime. The read-retry probability is only 0.5% 
+at PIE cycles of 3k and reaches over 15% at PIE cycles of 
+5k. Then we can run simulations to further evaluate these 
+strategies over the memory lifetime. All the simulation results 
+are normalized with respect to the average read response time 
+at 250MBps of VO link transfer rate. 
+Fig. 12 shows that 
+the performance of read-retry strategy becomes less and less 
+effective as the number of PIE cycle increases. We note that 
+9 
+the simulation results of the trace mds is very close to that of 
+WebSearch, hence the trace mds is not included. Table 1 shows 
+the number of PIE cycles when multi-transfer-rate strategy 
+should be invoked based on our simulations. Fig. 13 shows 
+the simulated read response time when combining read-retry 
+and multi-transfer-rate strategies where we set that the multi­
+transfer-rate is invoked when the number of PIE cycles reaches 
+4000. The results clearly show that the combination of these 
+two schemes can noticeably improve the etlectiveness and 
+maintain a relatively consistent SSD speed performance even 
+at the very end of memory lifetime. 
+Trace 
+Number of PIE cycles 
+prj 
+between 4000 and 4500 
+hm 
+between 3500 and 4000 
+Financial 
+around 4500 
+Websearch 
+between 4000 and 4500 
+Table 1: Number of PIE cycles for different traces when multi­
+transfer-rate outperforms read-retry. 
+1.0S,--------_, 
+Q) 
+E 
+i= 
+Q) 
+V> 
+C 
+o 
+a. 
+V> 
+Q) 
+0: 
+'0 
+:.'l 
++WebSearch 
+-e-Financial 
+""'V-hm 
+-9-prj 
+ 09sG---
+Q) 
+.!:! 
+'ii 
+§ 
+o 
+Z 0.9 
+2S00 
+SOOO 
+Figure 13: Read response time over the late memory lifetime 
+when combining read-retry and multi-transfer-rate 
+strategies, normalized to the scenario of constantly 
+maintaining 250M Bps I/O data transfer rate. 
+6. Related Work 
+A large body of prior work has been done on improving the 
+speed performance of flash-based solid-state data storage sys­
+tems. Most prior work focused on how to exploit internal 
+parallelism in SSD. Chen et al. [7] carried out comprehen­
+sive study on the importance and potential by exploiting vari­
+ous internal parallelism for speed performance optimization. 
+Agrawal et al. [4] analyzed the effect of page size, striping 
+and interleaving policy on the memory system performance. 
+The authors of [15] developed several SSD speed performance 
+enhancement techniques such as write request interleaving. 
+Seong et al. [19] applied bus-level and chip-level interleaving 
+to exploit the inherent parallelism in multiple flash memory 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 
+chips to improve the SSD speed performance. In [11, 12], the 
+impact of page allocation on system speed performance has 
+been thoroughly analyzed. All these existing solutions are 
+completely orthogonal to this work. 
+ECC for flash memory storage systems has been widely 
+studied as well. 
+As the most promising next-generation 
+ECC, LDPC receives the most attentions from the indus­
+try [21, 10, 22]. The authors of 
+[23] investigated how to 
+make LDPC work effectively in SSDs. Tanakamaru et al. [20] 
+have shown that LDPC codes can improve SSD lifetime by 
+lOx. LDPC decoding strategy optimized for flash memory 
+was proposed in [16]. The authors of [i8] observed the ECC 
+under-utilization and proposed techniques that exploit it to 
+dynamically improve flash memory programming speed and 
+defect tolerance. Nevertheless, to the best of our knowledge, 
+no prior work has been carried out to exploit strong ECC in 
+SSDs for improving data transfer rate. 
+Recently, Intel demonstrated its SSD over-clocking technol­
+ogy at IDF' l3 [1]. Its approach mainly over-clocks the SSD 
+controller (i.e., from 400MHz to 625MHz) and modestly over­
+clocks flash memory 110 link data rate (i.e., from 166MBps 
+to only 200MBps) without causing any 110 link errors, which 
+is fundamentally different from our proposed approach. Such 
+an error-free over-clocking can achieve 10% improvement of 
+overall system speed performance [1]. 
+7. Conclusions 
+This paper investigates the potential of leveraging strong and 
+typically under-utilized error correction strength in SSDs 
+to improve flash memory 110 data transfer rate. 
+In this 
+work, we propose an over-clocked SSD design framework 
+that opportunistically trade under-utilized error correction 
+strength for enabling aggressive error-prone flash memory 
+chip 110 link over-clocking. Under this design framework, 
+ECC is explicitly responsible for bit errors caused by 
+both flash memory storage and data transfer. 
+Under this 
+design framework, we further present different schemes 
+on dynamically adapting the 110 link over-clocking over 
+the flash memory lifetime. 
+To quantitatively evaluate the 
+effectiveness of the proposed design solution, we carried out 
+extensive experiments using ONFI 2.2 compliant sub-22nm 
+flash memory chips with 166MBps 110 specs, and performed 
+trace-driven SSD simulations over a variety of workload 
+traces. The results show that the flash memory 110 link data 
+transfer rate can be significantly over-clocked without any 
+penalty of data storage integrity, which can translate into over 
+20% of SSD read response time reduction. 
+Acknowledgments 
+We thank the anonymous reviewers and our shepherd Yuan 
+Xie for their insightful comments and feedback. This work 
+was supported by the NSF grant CSR-1162152. 
+10 
+References 
+[1] 
+"Intel 
+developer 
+forum 
+(idf) 
+2013," 
+http://www.intel.com/ 
+contentlwww/us/enlintel-developer-forum-idf/san- francisco/20 l31 
+idf-20 13-san-francisco.html. 
+[2] 
+"Open NAND flash interface specification," hup:llwww.onfi.orgl. 
+[3] 
+"SPC 
+Trace 
+File 
+Format 
+Specification. 
+http://traces.cs.umass.edulindex.php/Storage/Storage, 
+Last 
+ac-
+cessed on June 6, 2010," Storage Performance Council, Tech. Rep. 
+Revision 1.0.1,2002. 
+[4] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. Manasse, and 
+R. Panigrahy, "Design tradeoffs for SSD performance," in Proc. of 
+USENIX Annual Technical Coriference, 200S, pp. 57-70. 
+[5] 
+R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, "Introduction to 
+flash memory," Proceedings oflhe IEEE, vol. 91, no. 4, pp. 4S9-502, 
+2003. 
+[6] J. S. Bucy, J. Schindler, S. W. Schlosser, and G. R. Ganger, 'The 
+DiskSim Simulation Environment Version 4.0 Reference Manual," 
+Carnegie Mellon University Parallel Data Lab, Tech. Rep. CMU-PDL­
+OS-101, May 200S. 
+[7] F. Chen, R. Lee, and X. Zhang, "Essential roles of exploiting internal 
+parallelism of flash memory based solid state drives in high-speed data 
+processing," in Proc. of International Symposium on High Performance 
+Computer Architecture (HPCA), 2011. 
+[S] R. G. Gallager, "Low-density parity-check codes," IRE Transactions 
+on lriformation T heory, vol. IT-S, pp. 21-2S, Jan. 1962. 
+[9] L. M. Grupp, J. D. Davis, and S. Swanson, "The bleak future of NAND 
+flash memory," in Proc. of USENIX conference on file and storage 
+technologies (FAST), 2012. 
+[10] X. Hu, "LDPC codes for flash channel," in Proc. of Flash Memory 
+Summit, Aug. 2012. 
+[11] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, "Performance 
+impact and interplay of ssd parallelism through advanced commands, 
+allocation strategy and data granularity," in Proceedings of the Interna­
+tional Conference on Supercomputing, 2011, pp. 96-107. 
+[12] M. Jung and M. Kandemir, "An evaluation of different page allocation 
+strategies on high-speed SSDs," in Proc. of HotStorage, 2012. 
+[13] c. Kim, J. Ryu, T. Lee, H. Kim, J. Lim, J. leong, S. Seo, H. Jeon, 
+B. Kim, I. Lee, D. Lee, P. Kwak, S. Cho, Y. Yim, C. Cho, W. Jeong, 
+K. Park, l.-M. Han, D. Song, K. Kyung, Y-H. Lim, and Y-H. Jun, 
+"A 21 nm high performance 64 Gb MLC N AND flash memory with 
+400 MB/s asynchronous Toggle DDR interface," IEEE Journal of 
+Solid-State Circuits, vol. 47, no. 4, pp. 9S1-9S9, April 2012. 
+[14] S. Lin and D. J. Costello, Error Control Coding: Fundamentals and 
+Applications (2nd Ed.). 
+Prentice Hall, 2004. 
+[15] S. L. Min and E. H. Nam, "Current Trends in Flash Memory Technol­
+ogy," Proc. of Asia and South Pacific Conference on Design Automa­
+tion., p. 2., Jan. 2006. 
+[16] R. Motwani and C. Ong, "Robust decoder architecture for multi-level 
+flash memory storage channels," in International Coriference on Com­
+puting, Networking and Communications (ICNC), Feb. 2012, pp. 492-
+496. 
+[17] D. Narayanan, A. Donnelly, and A. Rowstron, "Write off-loading: Prac­
+tical power management for enterprise storage," in Proc. of USENIX 
+coriference onfile and storage technologies (FAST), 200S. 
+[IS] Y. Pan, G. Dong, and T. Zhang, "Exploiting memory device wear-out 
+dynamics to improve nand flash memory system performance," in Proc. 
+of USENIX conference on File and Stroage Technologies (FAST), 2011. 
+[19] Y. J. Seong, E. H. Nam, J. H. Yoon, H. Kim, J. Choi, S. Lee, Y H. 
+Bae, J. Lee, Y. Cho, and S. L. Min, "Hydra: A Block-Mapped Parallel 
+Flash Memory Solid-State Disk Architecture," IEEE Transactions on 
+Computers, vol. 59, no. 7, pp. 905 -921, Jul. 2010. 
+[20] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, "Over-lOx-extended­
+lifetime 76%-reduced-error solid-state drives (SSDs) with error­
+prediction LDPC architecture and error-recovery scheme," in IEEE 
+International Solid-State Circuits Coriference (ISSCC), Feb. 2012, pp. 
+424-426. 
+[21] J. Yang, "Novel ECC architecture enhances storage system reliability," 
+in Proc. of Flash Memory Summit, Aug. 2012. 
+[22] E. Yeo, "An LDPC-enabled flash controller in 40nm CMOS," in Proc. 
+of Flash Memory Summit, Aug. 2012. 
+[23] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, "LDPe­
+in-SSD: Making Advanced Error Correction Codes Work Effectively 
+in Solid State Drives," in Proc. of USENIX coriference on File and 
+Stroage Technologies (FAST), 2013. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:49:16 UTC from IEEE Xplore.  Restrictions apply. 

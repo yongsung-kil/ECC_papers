@@ -1,0 +1,463 @@
+Cost-effective Resilient FPGA-based LDPC Decoder Architecture
+Eduardo N. de Souza and Gabriel L. Nazar Instituto de Informa´tica
+Universidade Federal do Rio Grande do Sul Porto Alegre, Brazil
+{ensouza, glnazar}@inf.ufrgs.br
+
+Abstract—Low-Density Parity-Check (LDPC) codes have been used in many communication standards due to their capacityapproaching performance with feasible decoding architectures. Field-Programmable Gate Arrays (FPGAs) have been shown to be appropriate for the implementation of LDPC decoders, due to their ability to exploit the fine-grained parallelism found in such codes, as well as due to their reconfigurability, which allows to easily adapt the decoder to different codes. The susceptibility of FPGAs to faults affecting their configuration memories, however, demands specific fault tolerance strategies when these devices are used in harsh environments, such as aerospace applications, or even in ground-level critical systems. Thus, in this work we present a characterization of the behavior of LDPC decoders when subject to configuration errors and show that a single error can substantially degrade decoding performance, differently from what is observed in applicationspecific circuits. Based on this characterization, we propose a cost-effective fault tolerance scheme able to cope with faults in the FPGA fabric. Identifying the most critical components allowed reducing performance degradation by 89 % while only covering 55 % of their area.
+Index Terms—FPGA, LDPC, fault tolerance
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes, first proposed in [1], have been widely used in communication standards since their rediscovery in the 1990’s [2]. Their capacity-approaching performance drew much attention from researchers, leading to substantial improvement on how to design such codes, as well as on how encode and, most importantly, decode them. Decoders are most often investigated due to their increased complexity when compared to encoders, a property shared with most channel codes.
+Most LDPC decoders exploit the parallelism in the code’s structure. As such codes are composed of parity bits that cover different subsets of the codeword bits, multiple parity equations can be evaluated in parallel to provide lower latency and higher throughput. Field-Programmable Gate Arrays (FPGAs) have been shown to be suitable for this task, due to their ability to exploit this fine-grained parallelism and also due to their reconfigurability, which enables their use for different codes, for instance with different block sizes and code
+This study was financed in part by the Coordenac¸a˜o de Aperfeic¸oamento de Pessoal de N´ıvel Superior - Brasil (CAPES) - Finance Code 001, the Fundac¸a˜o de Amparo a` Pesquisa do Estado do RS (FAPERGS) and the Conselho Nacional de Desenvolvimento Cient´ıfico e Tecnolo´gico (CNPq).
+
+rates. Enabled by the advances on decoding algorithms and on manufacturing processes, many FPGA-based LDPC decoders have been proposed, as surveyed in [3], aiming to keep up with the demand for higher communication rates and lower energy consumption.
+The same advances in transistor technology that fueled the FPGA industry and enabled the use of LDPC codes, however, also introduced dependability threats. Radiation-induced single event effects such as Single Event Upsets (SEUs) are a concern especially for devices in harsh environments [4], but can also affect ground-level systems [5]. Specifically for SRAM-based FPGAs, the configuration memory is a major dependability concern, as it stores the bitstream that defines the circuit to be implemented by the FPGA and comprises the vast majority of memory cells in the device. In a typical FPGA system, the bitstream is uploaded once and remains static during the system’s operation. Thus, unwanted modifications in the contents of the configuration memory can alter the circuit’s function persistently, i.e., until repair procedures are carried out. As this fault model differs from that found in traditional Application-Specific Integrated Circuits (ASICs), fault tolerance techniques developed for ASICs are frequently inappropriate for FPGAs, requiring dedicated strategies to provide the desired resiliency with minimum costs.
+Since SEUs are soft errors, they can be repaired by overwriting the corrupted cells with their correct contents, a procedure typically known as scrubbing [6]. Scrubbing is usually coupled with redundancy at the user-circuit level, typically in the form of Dual or Triple Modular Redundancy (DMR and TMR, respectively), as in [7], [8]. Moreover, it can be performed in a preventive and periodic manner, or triggered by some error detection mechanism. For periodic scrubbing, as the error may be present for a longer period of time (up to the scrubbing period), a technique able to mask the error, such as Triple Modular Redundancy (TMR) may be used. Conversely, triggered scrubbing requires a mechanism able to quickly detect the error and, in this case, Dual Modular Redundancy (DMR) can be used. DMR presents ~2× costs in area and power, thus being less costly than TMR (~3×), but introduces a brief period of unavailability between detection and repair.
+As channel codes are inherently redundant, previous works have attempted to exploit this redundancy to improve resilience to hardware faults [9]–[13]. In other words, the same redun-
+
+978-1-7281-2490-2/19/$31.00 c 2019 IEEE
+
+84
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+Noise
+
+m LDPC c Encoder
+
+Mod
+
+x AWGN y Channel
+
+cˆ Demod
+
+LDPC mˆ Decoder
+
+Fig. 1. Communication system model.
+
+⎡
+
+⎤
+
+100101
+
+H =⎣1 1 0 0 1 0⎦
+
+001011
+
+(a)
+
+c0 v0 v1
+
+c1
+v2 v3
+(b)
+
+c2 v4 v5
+
+dancy that corrects errors caused by channel noise can also be used to alleviate the costs of mitigating errors in the hardware. Proposed approaches, however, address different fault models that do not consider the persistence of configuration memory errors. Thus, in this work we: 1) present the first characterization of the behavior of an LDPC decoder when subject to FPGA configuration errors; 2) propose a fault-tolerant LDPC decoder architecture especially designed to cope with FPGA faults. It exploits the greatly different sensitivity of the decoder to faults in different structures to selectively protect those that most severely affect its operation. The structures are ranked according to a metric that was specifically devised to take into account both area costs and the probabilistic performance degradation induced by faults in each structure. Thereby, a range of designs with varying area and resiliency properties can be provided for designers to choose the one that better satisfies application constraints.
+The remainder of this work is structured as follows. Section II presents the basics of LDPC codes and related work on resilient LDPC decoders. Section III describes the LDPC decoder used in this work. Section IV presents the proposed approach to apply redundancy to the decoder. Section V details the setup to conduct the experiments and section VI discusses experimental results. Finally, section VII concludes the work.
+II. BACKGROUND
+A. Communication System Model
+The typical communication system considered in this work is shown in Fig. 1. The K-bit input message m is encoded into an N -bit codeword c, i.e., the code has a rate R = K/N . Codeword c is modulated with Binary Phase-Shift Keying (BPSK) into symbol vector x, with energy per bit Eb, and transmitted through an Additive White Gaussian Noise (AWGN) channel with noise spectral density N0. The noisy vector y is received and demodulation recovers vector cˆ, which contains soft information, i.e., each position in cˆ denotes not only a bit value, but also a measure of likelihood, expressed in the form Log-Likelihood Ratios (LLRs). LLRs encode bit value in sign (positive for 0) and a belief for the bit value in magnitude. Vector cˆ is input to the decoder, which uses the code’s redundancy to recover mˆ , its approximation of m.
+B. LDPC Codes
+An (N, K) LDPC code is defined by its (N − K) × N binary parity-check matrix H. Each column of H is associated with one bit of a codeword and each row with a parity check. A one in Hi,j means that the j-th bit participates in the i-th parity check. The defining property of LDPC codes is that H is sparse, i.e., it has proportionally few entries with one.
+
+Fig. 2. Parity-check matrix H (a) and corresponding Tanner graph (b).
+An alternative representation of LDPC codes is through Tanner graphs [14], in which each codeword bit is represented by a variable node (VN) and each parity check by a check node (CN). An edge exists between a VN vj and a CN ci iff Hi,j = 1. Fig. 2(a) shows an example H matrix with its corresponding Tanner graph on Fig. 2(b).
+Most decoders are based on the Tanner graph, with specific structures implementing CNs, VNs, and the connection between them. VNs and CNs iteratively exchange messages typically in the form of LLRs. CNs receive LLRs from their connected VNs and reply with LLR updates to each VN based on the values of the other VNs. Before the first iteration, VNs are initialized with LLRs calculated from the AWGN channel’s output. After a certain number of iterations (or other criterion, such as finding a valid codeword), the algorithm stops and a hard decision determines the output bits based on the sign of each VN. The code’s performance can then be measured in terms of its Bit-Error Rate (BER) vs. Eb/N0.
+C. Resilient LDPC Decoding
+Due to their inherently redundant behavior, LDPC decoders can withstand up to a certain rate of hardware errors without substantial performance degradation. Previous works have investigated thresholds up to which good decoding performance can be attained, both for the discrete binary symmetric channel [15], [16] and for the AWGN channel [15], [17]. Most focus is devoted to unreliable memories, as these are error-prone components within the decoder architecture. Additionally, resilience to certain error rates has been explored to reduce energy consumption by voltage overscaling [13], [18].
+When the goal is to introduce redundancy in the decoder hardware to improve resiliency, as memories can be more easily protected with Error Correction Codes (ECC), the resilience of computing components must be evaluated [9], [10], [19]. Moreover, previous works have noted that not all components are equally critical. The sign bit has been identified as critical, as it designates the most likely value of each bit [9]–[11]. Other works noted that each decoding iteration has a different impact on the overall decoding performance. Thus, when the fault rate can be dynamically controlled, each iteration can be computed with the minimum required resilience, in order to improve energy efficiency [12], [13].
+Common to all previous works is that errors are assumed to be transient. As discussed previously, this assumption does not hold for FPGA configuration memories. Thus, while a single SEU can usually be neglected in an ASIC decoder, it can cause
+
+25th International Symposium on On-Line Testing and Robust System Design (IOLTS 2019)
+
+85
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+severe degradation in FPGAs, as will be seen in sec. VI. In this work we present the first characterization of the effects of configuration errors in LDPC decoding and propose a costeffective redundancy mechanism to mitigate errors in the most critical components.
+III. LDPC DECODER ARCHITECTURE
+A. Implemented Algorithm
+LDPC decoding algorithms and hardware implementations have been studied in depth in numerous previous works. Hailes et al. [3] provide a good overview of the theory and FPGAbased implementations. The main variations among LDPC decoders are scheduling and check node computation.
+Scheduling refers to the order in which nodes are activated to read inputs and produce outputs. Flooding activates all CNs in parallel, processing VN values from the previous iteration. Then, all VNs are activated in parallel to compute LLRs for the next iteration. The main alternative is Layered Belief Propagation (LBP) [20], in which CNs (rows of H) are grouped into layers and CNs in a same layer operate in parallel, while layers are processed sequentially. Compared to flooding, LBP provides reduced parallelism, but tends to converge to good outputs in fewer iterations.
+The maximum column weight T (number of ones) in a layer determines how many CNs share a same VN, at most. If T = 1, then no VNs are shared within a layer, which means that a single iteration can be used within each layer, before proceeding to the next. Quasi-Cyclic (QC) LDPC codes can be obtained with H matrices built by tiling multiple Z × Z cyclically shifted identity matrices and null matrices. Thus, when using layers of Z CNs, T = 1. To take advantage of this property, many standards, such as IEEE 802.11 [21] and 3GPP 5G (Release 15) [22], use such QC-LDPC codes.
+Check node computation refers to how the CNs compute their output LLRs based on their inputs. CN computation has been deeply investigated since the alternatives with best decoding performance are very costly. In this work we use a Modified Min-Sum (MMS) algorithm with constant correcting factor [23]. This combination of LBP and MMS offers a good trade-off between complexity and performance and, as seen in [3], it is representative of many FPGA-based LDPC decoders.
+Algorithm 1 shows the implemented LBP-MMS algorithm. The algorithm iterates sequentially over the L layers (line 3) and in parallel over the set of Z check node indexes Al in each layer l (line 4). Let Bj denote the set of VN indexes adjacent to CN j, i.e., the set of column indexes with one on the j-th row of H. On line 6, the message Mi,j from each VN i to CN j is determined by subtracting from ri the previous message Ej,i from CN j to VN i. Then, on line 8 the new Ej,i to VN i is computed with the MMS algorithm: the product of all signs from incoming VN messages (excluding Mi,j) determines the message sign and the minimum magnitude (excluding Mi,j) determines the magnitude, limited to 0. A correcting offset factor β is subtracted, as this improves the decoder’s BER performance [23]. Since VN i is always excluded, the algorithm only computes two message magnitudes, using the
+
+Algorithm 1 Layered Belief Propagation with Modified Min-
+
+Sum.
+
+Input: r, It
+
+Output: mˆ
+
+1: E = {0}
+
+2: for it = 0 to It − 1 do
+
+3: for l = 0 to L − 1 do
+
+// sequentially
+
+4:
+
+for all j ∈ Al do
+
+// in parallel
+
+5:
+
+for all i ∈ Bj do
+
+6:
+
+Mi,j = ri − Ej,i
+
+7:
+
+for all i ∈ Bj do
+
+8:
+
+Ej,i = ( i ∈Bj\{i} sign(Mi ,j ))∗
+
+max(mini ∈Bj\{i}( Mi ,j ) − β, 0)
+
+9:
+
+ri = Mi,j + Ej,i
+
+10: for i = 0 to K − 1 do
+
+11: mˆ i = sign(ri)
+
+two lowest magnitudes. For the VN with lowest magnitude, the second lowest is used; for all others, the lowest is used. On line 9 the new Ej,i is incorporated into ri. After It iterations (outermost loop on line 2), each output bit mˆ i is determined based on the sign of ri (line 11).
+B. Top-Level Architecture
+The decoder architecture developed in this work uses Z parallel processing elements (PEs) to implement the Z LLR updates performed by a layer of the code, as shown in Fig. 3. It uses W -bit fixed-point sign-magnitude numbers.
+It starts decoding a block by initializing the bit memory with LLRs from the channel’s output. Z memories blocks are used, allowing Z parallel accesses. Then, the algorithm evaluates the CNs in each layer. For each non-null sub-matrix in the layer, the H ROM stores what is the cyclic shift to be applied. The cyclic shifter routes the Z values from the memories to the appropriate PEs. Once the last non-null sub-matrix in the layer is processed, the PEs output the new LLRs for each VN, which are stored in the bit memories. In order to reduce delay, the cyclic shift is not undone, i.e., the outputs are written shifted in the bit memories. Thus, the values stored in the H ROM are the difference between the last time that sub-matrix was shifted and the desired current shift. Only after processing the last layer, the cyclic shifter is used to rearrange the values in
+
+Hard Decision
+
+Bit Memory W*Z
+
+W*Z W*Z
+Cyclic Shifter
+
+Z*1 Data out
+H ROM
+
+W W W*Z W
+W
+
+PE0 PE1 PE2 ... PEZ-1
+
+Data in
+W W W
+W
+
+Fig. 3. LDPC decoder top-level architecture.
+
+86
+
+25th International Symposium on On-Line Testing and Robust System Design (IOLTS 2019)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+the correct order. After the last iteration, the hard decision is made based on the sign of each LLR in the bit memory.
+C. Processing Elements
+PEs compute both VN and CN functions using the structure shown in Fig. 4. Continuous lines denote magnitude or complete LLR (sign and magnitude) connections. Dashed lines denote single sign bits. The ri values are the PE input, sequentially accessed from the bit memory. SUB subtracts the Ej,i for this CN-VN pair (line 6 in Alg. 1). To allow for this operation, EMagMem and ESignMem store the Ej,i computed in the last iteration in this PE. Note that only the two smallest magnitudes (per layer) need to be stored in EMagMem, while one sign bit per VN in Bj is stored in ESignMem. IdxMem stores in which position each sign and magnitude is stored, as the PE needs to keep track of which VN had the Ej,i with smallest magnitude. As each Mi,j is computed, MMem stores their values and also the product of all Mi,j signs, which will define the sign of Ej,i, once the sign of each Mi,j is excluded. The magnitude of Ej,i can have two different values, from the two smallest Mi,j magnitudes, which are identified by Smallest2. Once all VNs in Bj have been processed, SUB β and Max0 can compute the magnitudes for Ej,i. SUM then adds each Mi,j to the appropriate Ej,i. The new values for Ej,i are also stored in EMagMem and ESignMem, for use in the next iteration. The new ri values will be stored back in the bit memory to be used in other layers, by other PEs.
+IV. FAULT-TOLERANT LDPC DECODING
+As discussed previously, most fault tolerance approaches for FPGAs include both a repair procedure to remove errors from the configuration memory, such as scrubbing, and mechanisms to either maintain the system operating properly in the presence of error, such as TMR, or to quickly detect the error and to trigger the scrubbing procedure, such as DMR [8]. The methodology herein proposed aims to guide the application of such techniques to the components of PEs, in order attain maximum resilience improvement with minimum overheads. We focus on PEs as they comprise 87 % of the total decoder area, thus being the units most susceptible to faults. Moreover, memories and interconnection, which constitute most of the other components, have more efficient mechanisms of mitigation than modular redundancy.
+The metric used to classify components measures the tradeoff between how likely a certain component is to substantially degrade the decoder’s performance and how much does it cost
+
+Input ri
+
+SUB Mi,j
+
+Sign
+
+IdxMem EMagMem
+
+ESignMem
+
+Smallest2 MMem
+
+SUB ȕ SUB ȕ
+Ej,i
+
+Max0
+Max0 Mag.
+SUM ri Output
+
+Fig. 4. Processing element architecture.
+
+to apply redundancy to it. Firstly, we define the Weighted Performance Degradation (WPD) of a component c as
+
+W P D(c) =
+
+c
+
+C B (c) ∈C CB(c
+
+)
+
+∗
+
+BER(c) BERF F
+
+(1)
+
+where CB(c) is the amount of critical bits in c, C is the set of all components, BER(c) is the average BER attained when c is subject to a fault and BERF F is the fault-free BER of the decoder. Critical bits are those configuration bits that cause a deviation in the component’s behavior when flipped. Thus, W P D(c) is the product of the fraction of critical bits that are in c and by how much the performance, in terms of BER, is degraded when c is subject to a fault.
+Using the WPD as a measure of how critical a certain component is to the overall decoder’s performance, one still needs to account for the costs of applying redundancy to c. We consider the use of modular redundancy and, regardless whether DMR or TMR is used, the component’s area is directly proportional to the cost. Thus, we use the sum of the amount of lookup tables (LUTs) and flip-flops (FFs) occupied by c as a measure of its area, although designs that are particularly constrained by one of these resources may use different approaches to measure area. Thus, the figure of merit used to rank components in this work is the WPDA (WPD per Area), defined as
+
+W P DA(c)
+
+=
+
+W P D(c) LU T s(c) + F F s(c)
+
+(2)
+
+where LU T s(c) and F F s(c) are the amounts of LUTs and FFs used by c, respectively. Components with high WPDA are, thus, more likely to be subject to faults, degrade performance severely when subject to faults or use few resources and, thus, can be replicated with a low cost. Note that in this work we do not focus on memory-based components (those suffixed with Mem in sec. III-C). These components can be more efficiently covered by the ECC already embedded in block memories. Moreover, faults affecting such memories have similar effects to those observed in ASIC-based decoders, already shown to be negligible up to high rates [9], [11], [15], [17].
+
+V. EXPERIMENTAL SETUP
+The experimental setup used in this work, shown in Fig. 5, was developed to measure the metrics discussed in sec. IV. The decoder architecture detailed in sec. III was described in VHDL and per-component resource occupation was obtained using the default configurations of Xilinx ISE 14.7 for a Kintex-7 XC7K325T device.
+Fault injection was conducted using the platform presented in [24], which was adapted to the XC7K325T device on the NetFPGA 1G-CML board. It injects single bit flips in the configuration memory of the Area Under Test (AUT) defined in the FPGA fabric through the Internal Configuration Access Port (ICAP). In the AUT, the PE under test is placed and, by tracking which frames map to each component, the amount of critical bits in each component can be determined. Due to the short configuration times with ICAP and at-speed operation
+
+25th International Symposium on On-Line Testing and Robust System Design (IOLTS 2019)
+
+87
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+VHDL
+
+ISE
+
+Decoder
+
+Resource occupation
+
+100
+
+10−1
+
+VHDL
+
+Fault
+
+ISE
+
+Inj
+
+FPGA
+
+Faulty behavior
+
+SW
+
+BER
+
+and sensitive bits
+
+Decoder
+
+10−2
+
+BER
+
+Fig. 5. Experimental setup.
+
+10−3
+
+SUB SUM Smallest2 SUB β
+0
+Max0
+0
+SUB β
+1
+Max0
+1
+BER
+FF
+
+TABLE I
+
+PE OUTPUT BEHAVIOR UNDER FAULTS
+
+10−4
+
+Module
+SUB SUM Smallest2 SUB β0 Max00 SUB β1 Max01
+
+Change of sign 31.9% 53.2% 16.8% 28.3% 29.7% 17.2% 39.9%
+
+Inc. in magnitude
+37.2% 1.1%
+43.6% 32.6% 26.6% 31.6% 28.0%
+
+Dec. in magnitude
+4.6% 44.6% 19.3% 24.1% 32.2% 31.6% 28.2%
+
+Control errors 33.6% 23.3%
+5.2% 10.3% 6.3% 10.7% 13.6%
+
+Correct outputs 22.3% 14.8% 24.3% 30.8% 31.0% 24.1% 29.5%
+
+of the PE, it is possible to sequentially flip all configuration bits in the AUT. For each injected fault, 10,500 outputs of the PE are collected, which are sent through PCIe to the host computer for further analysis.
+In the host computer, the frequencies of the following effects are measured in comparison with the expected PE outputs, for each critical bit: correct output; change of sign; increase and decrease magnitude; control errors. For magnitude modifications, the mean and standard deviation are also determined. All the measured effects are then replicated in a bit-accurate software implementation of the decoder. It randomly corrupts the outputs of a PE with the same statistics measured in the fault injection campaign and allows to easily evaluate the effects on all PEs and to measure the resulting BER for a large number of blocks. All PEs are evaluated sequentially, but only one per simulation, therefore estimating the average effect of a single SEU affecting a critical bit.
+VI. EXPERIMENTAL RESULTS
+The experimental results reported in this section were obtained using, as case study, the (648, 324) code with z = 27 from the IEEE 802.11 standard [21]. LLRs are represented with 5 integer and 2 fractional bits, although more bits can be used if better decoding performance is required.
+A. PE behavior under faults
+Table I shows the distribution of effects for each component when a critical bit is flipped. The rows do not sum 100 % as there are outputs that fall under two categories, namely change of sign coupled with a change in magnitude. Control errors occur when interface control signals behave erratically, e.g., failing to indicate the completion of computation. These are frequently caused by errors affecting clock signals.
+B. BER per faulty component
+Using the characterization reported in sec. VI-A, we evaluated the overall decoder performance under faults in each
+
+10−5
+
+2
+
+2.25
+
+2.5
+
+2.75
+
+3
+
+Eb/N0 (dB)
+
+Fig. 6. BER vs. Eb/N0 for each faulty component.
+
+component. Moreover, the WPD, defined on (1), and consequently the WPDA on (2), depend on the ratio of the faulty BER(c) and the fault-free BERF F . As both these figures potentially depend on the current signal-to-noise ratio, it can be the case that the most critical components are not the same for all Eb/N0 values.
+Fig. 6 shows the BER for each component, as well as BERF F . This Eb/N0 range was used as it is the one with steepest decrease in BERF F . It can be seen that, although BERF F shows a significant reduction within this Eb/N0 range, faulty behavior is nearly constant for all components, suggesting that, in these cases, fault-induced bit errors dominate the overall BER. Note that both SUB β0 and Max00 present introduce higher BER than their counterparts. This is because they process the lowest magnitude of Mi,j, which is sent to more VNs, while the second lowest, processed by their counterparts, are used by a single VN. Also, although BERF F affects the absolute W P D(c), the relative values between components are not affected, since BER(c) remained nearly constant for all c. Moreover, there is a significant difference among components, ranging from ~0.0018 up to ~0.24.
+C. Applying redundancy according to WPDA
+Table II shows each component according to the WPDA, as well as resource usage and number of critical bits, for Eb/N0 = 2.5 dB. The WPDA is used to rank components according to their impact on overall performance and cost to apply redundancy, which is proportional to its area. Note that, e.g., Max00 and SUB β1 would have been ordered inversely if SUB β1’s larger area were not taken into account.
+Fig. 7 shows the attained BER, BER reduction (compared to no redundancy) and the covered area in terms of LUTs and FFs in each component. The actual area overheads will be approximately the covered area for DMR and twice that for TMR. Components in the x axis are sorted in ascending WPDA and redundancy is applied cumulatively, i.e., at any point all preceding components are also covered. Thus, different design choices with varying area vs. BER reduction
+
+88
+
+25th International Symposium on On-Line Testing and Robust System Design (IOLTS 2019)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II AREA, CRITICAL BITS, WPD AND WPDA PER MODULE
+
+Module LUTs FFs CB WPD WPDA
+
+SUM
+
+50 17 5422 492.56
+
+7.35
+
+SUB
+
+50 17 4929 448.95
+
+6.70
+
+Smallest2
+
+22 23 3076 267.47
+
+5.94
+
+SUB β0 Max00 SUB β1 Max01
+
+50 17 2793 119.56
+
+1.78
+
+7 0 529 9.57
+
+1.37
+
+50 17 3267 13.36
+
+0.20
+
+7 0 104 0.07
+
+0.01
+
+% (Covered Area, BER Reduction) BER
+
+100
+
+100
+
+80
+
+10−1
+
+60
+
+10−2
+
+40
+
+10−3
+
+20
+
+10−4
+
+0
+
+10−5
+
+None
+
+SUM
+
+SUB Smallest2 SUB β 0 Max0 0 SUB β 1 Max0 1
+
+Covered components (cumulative)
+
+Covered area BER reduction BER
+
+Fig. 7. Covered area, BER reduction and absolute BER for cumulative coverage of components for Eb/N0 = 2.5 dB.
+
+trade-offs are offered. Covering the first three components, e.g., provides 89 % BER reduction while covering only 55 % of the components’ area.
+VII. CONCLUSION
+In this work we have characterized the effects of SEUs affecting the configuration memory of FPGA-based LDPC decoders. Contrary to what is observed in ASICs, a single SEU can introduce severe degradation in FPGA-based LDPC decoders and thus cannot be ignored in systems with stringent dependability constraints.
+The internal components of the processing elements in the decoder were individually evaluated, measuring their impact of the overall decoder’s performance. Using a metric to evaluate the ratio between probabilistic performance degradation and area, components were ranked to identify those with better trade-off, i.e., that allow greater improvement in performance under faults with minimum cost. Using this approach provides different design choices with different area and BER.
+Future works include coupling different forms of mitigation, such as redundancy at the PE level (spare PEs) and using selective scrubbing at specific time intervals to explore the different susceptibility of each decoding iteration. Such approaches may further improve decoder resiliency and reduce costs.
+[2] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 32, no. 18, pp. 1645–, Aug 1996.
+REFERENCES
+[1] R. G. Gallager, “Low Density Parity Check Codes,” Ph.D. dissertation, Massachusetts Institute of Technology, 1960.
+
+[3] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, “A survey of fpga-based ldpc decoders,” IEEE Communications Surveys Tutorials, vol. 18, no. 2, pp. 1098–1122, Secondquarter 2016.
+[4] H. Quinn, D. Roussel-Dupre, M. Caffrey, P. Graham, M. Wirthlin, K. Morgan, A. Salazar, T. Nelson, W. Howes, E. Johnson, J. Johnson, B. Pratt, N. Rollins, and J. Krone, “The cibola flight experiment,” ACM Trans. Reconf. Technol. Syst., vol. 8, no. 1, pp. 3:1–3:22, Mar. 2015.
+[5] A. Lesea, S. Drimer, J. J. Fabula, C. Carmichael, and P. Alfke, “The rosetta experiment: atmospheric soft error rate testing in differing technology fpgas,” IEEE Transactions on Device and Materials Reliability, vol. 5, no. 3, pp. 317–328, Sept 2005.
+[6] C. Carmichael, M. Caffrey, and A. Salazar, “Correcting Single-Event Upsets Through Virtex Partial Configuration,” Xilinx Inc., Tech. Rep., July 2000.
+[7] C. Bolchini, A. Miele, and C. Sandionigi, “A novel design methodology for implementing reliability-aware systems on sram-based fpgas,” IEEE Transactions on Computers, vol. 60, no. 12, pp. 1744–1758, Dec 2011.
+[8] M. S. Reorda, L. Sterpone, and A. Ullah, “An error-detection and selfrepairing method for dynamically and partially reconfigurable systems,” IEEE Trans. on Computers, vol. 66, no. 6, pp. 1022–1033, June 2017.
+[9] M. May, M. Alles, and N. Wehn, “A case study in reliability-aware design: A resilient ldpc code decoder,” in 2008 Design, Automation and Test in Europe, March 2008, pp. 456–461.
+[10] H. Li, D. Lee, K. Chen, and A. A. Wu, “An algorithmic error-resilient scheme for robust ldpc decoding,” in VLSI Design, Automation and Test(VLSI-DAT), April 2015, pp. 1–4.
+[11] G. Ge, L. Yin, and Q. Huang, “Ldpc decoder with embedded coding on unreliable memories,” in GLOBECOM 2017 - 2017 IEEE Global Communications Conference, Dec 2017, pp. 1–6.
+[12] S. Brkic, O. A. Rasheed, P. Ivanisˇ, and B. Vasic´, “On fault tolerance of the gallager b decoder under data-dependent gate failures,” IEEE Communications Letters, vol. 19, no. 8, pp. 1299–1302, Aug 2015.
+[13] P. Schla¨fer, C. Huang, C. Schoeny, C. Weis, Y. Li, N. Wehn, and L. Dolecek, “Error resilience and energy efficiency: An ldpc decoder design study,” in 2016 Design, Automation Test in Europe Conference Exhibition (DATE), March 2016, pp. 588–593.
+[14] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, September 1981.
+[15] L. R. Varshney, “Performance of ldpc codes under faulty iterative decoding,” IEEE Transactions on Information Theory, vol. 57, no. 7, pp. 4427–4444, July 2011.
+[16] F. Sala, C. Schoeny, S. Kabir, D. Divsalar, and L. Dolecek, “On nonuniform noisy decoding for ldpc codes with application to radiationinduced errors,” IEEE Transactions on Communications, vol. 65, no. 4, pp. 1438–1450, April 2017.
+[17] A. Balatsoukas-Stimming and A. Burg, “Density evolution for minsum decoding of ldpc codes under unreliable message storage,” IEEE Communications Letters, vol. 18, no. 5, pp. 849–852, May 2014.
+[18] A. M. A. Hussien, W. M. Elsharkasy, A. M. Eltawil, F. Kurdahi, and A. Khajeh, “Low overhead correction scheme for unreliable ldpc buffering,” in 2013 IEEE Global Conference on Signal and Information Processing, Dec 2013, pp. 667–670.
+[19] B. Li, Y. Pei, and N. Ge, “Area-efficient fault-tolerant design for lowdensity parity-check decoders,” in 2016 IEEE 84th Vehicular Technology Conference (VTC-Fall), Sept 2016, pp. 1–5.
+[20] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of ldpc codes,” in IEEE Workshop onSignal Processing Systems, 2004. SIPS 2004., Oct 2004, pp. 107–112.
+[21] IEEE, “IEEE Std 802.11-2016,” pp. 1–3534, Dec 2016.
+[22] 3GPP, “Multiplexing and channel coding,” 3GPP, Tech. Rep., Sep 2018. [Online]. Available: https://portal.3gpp.org/desktopmodules/ Specifications/SpecificationDetails.aspx?specificationId=3214
+[23] E. Eleftheriou, T. Mittelholzer, and A. Dholakia, “Reduced-complexity decoding algorithm for low-density parity-check codes,” Electronics Letters, vol. 37, no. 2, pp. 102–104, Jan 2001.
+[24] M. T. Leipnitz, L. H. Geferson, and G. L. Nazar, “A fault injection platform for fpga-based communication systems,” in 2016 IEEE 7th Latin American Symposium on Circuits Systems (LASCAS), Feb 2016, pp. 59–62.
+
+25th International Symposium on On-Line Testing and Robust System Design (IOLTS 2019)
+
+89
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:13:41 UTC from IEEE Xplore. Restrictions apply.
+
+

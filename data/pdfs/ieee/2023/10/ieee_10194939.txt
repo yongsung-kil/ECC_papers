@@ -1,0 +1,590 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+5675
+
+Enhanced Error Correction Employing Natural Redundancy of Sensor Data
+Yair Mazal and Hugo Guterman , Life Member, IEEE
+
+Abstract— Standard error correction codes (ECC) assume good data compression, thus expecting uniform apriori distribution of data. This assumption does not allow the exploitation of actual non-uniform priors, which may exist, to improve the threshold at which ECC decoding fails. This work presents a new scheme that builds a probabilistic model for data and uses this model to enhance ECC decoding performance. The approach is flexible because training is done online and does not assume any specific data type or structure but only the existence of some temporal correlation between codewords. This scheme can be helpful for a large class of systems, such as wireless sensors and autonomous platforms. The method was tested via simulation using standard ECC from the IEEE802.11 standard and in experiments in which an autonomous platform transmitted data to the base station. The results show significant improvement in decoding performance. Additionally, the article explains the nature of the performance gain.
+Index Terms— LDPC, error correction, probabilistic models, natural redundancy.
+I. INTRODUCTION
+THE reliability of sensor networks is of paramount importance. To overcome the challenges of physical communication channels, the standard approach uses error correction codes (ECC), often in tandem with source coding used to compress the data beforehand and remove inherent redundancy before transmission. Albeit having huge success for decades, this approach has shortcomings, mainly the reduced information rate and the fact that removing all the redundancy via source coding is challenging (due to complexity issues or a lacking model for the data). Consequently, previous works [1], [2], [3], [4], [5], [6], [7] considered schemes that attempt to exploit these shortcomings as a complement to ECC, and this research follows these footsteps.
+When discussing natural redundancy (NR), we refer to the redundancy that naturally exists within the data representation and is not artificially added. In comparison, ECC adds artificial redundancy (in a carefully planned way) specifically for
+Manuscript received 12 December 2022; revised 9 June 2023; accepted 15 July 2023. Date of publication 26 July 2023; date of current version 18 October 2023. The associate editor coordinating the review of this article and approving it for publication was A. E. Pusane. (Corresponding author: Yair Mazal.)
+The authors are with the School of Electrical Engineering, Ben-Gurion University of the Negev, Be’er Sheva 84105, Israel (e-mail: mazaly@post.bgu.ac.il).
+The code used in this work is publicly available on GitHub: https://github.com/YairMZ/NR_telemetry_ECC.
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2023.3298977.
+Digital Object Identifier 10.1109/TCOMM.2023.3298977
+
+error correction. Natural redundancy occurs in many types of data, such as natural language, images, and files [7]. It also appears while transmitting sensor data due to the underlying physics or communication protocols. Our study considers the latter example, which is becoming more prevalent these days with the plethora of sensor data being transmitted both in the context of the internet of things and robotic systems. Such redundancy may stem from the structural nature of the protocols used to transmit the data and/or from the data itself. For example, consider an autonomous vehicle reporting its location in latitude-longitude coordinates. The most significant digits describing its latitude in the area where our experiments occurred would be 29.5. For it to change to 28.5, the vehicle would have to traverse about 1000km. If a vehicle currently operates in a particular area, regardless of how the decimal values are encoded to binary, some bits representing the most significant digits would change slowly. Simply put, some temporal correlation is expected along subsequent messages for the most significant bits of sensor readings due to the vehicle’s physics.
+The suggested approach complements an ECC-based decoder with an NR estimator based on the distribution of transmitted data. The estimator improves error correction performance without additional overhead in terms of communication channel resources, as it only relies on NR for correction. The proposed estimator apprises the apriori statistics and feeds the information to the ECC decoder, which implies that it can be utilized regardless of the ECC used. Furthermore, the proposed decoder is trained online, only during data reception and does not require a-priori training, thus providing the ability to adapt to changes in the model.
+A. Background and Related Work
+An attempt to exploit natural redundancy instead of removing it by source coding was attempted first by [8]. Here, instead of using NR to correct errors, the authors focus on ensuring that errors (in the context of text transmission) will be detectable and thus create encoders that will propagate errors instead of correcting them. More work was done in the context of English text. Li et al. [1] suggest a content-assisted decoder that can decode English text and correct errors, otherwise uncorrectable by a standard belief propagation decoder, with a low-density parity-check (LDPC) code. By decoding with both decoders iteratively, they are able to reduce the bit error rate (BER) by orders of magnitude. Even though the performance
+
+0090-6778 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+5676
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+gain is impressive, their algorithm is tailored to English text and cannot be applied to other data. Jiang et al. [2] attempted to improve the decoding performance of English text encoded with an LDPC code. Here, data is passed through a content-based decoder before being fed through the ECC decoder. The content-based decoder partitions the input into what the authors term as “stable” and “unstable” parts, where the partition is based on the likelihood of a sequence of characters being valid English text (therefore, stable parts are more likely to be correct than unstable parts). Then, the input fed into the ECC decoder is rectified such that error probabilities differ for stable and unstable regions. The authors show significant performance gain over standard ECC within the simulation while still limited to English text. Lou et al. follow a similar concept [3], where a different algorithm is used to rectify the log-likelihood ratio (LLR), and iterative feedback between both decoders is explored.
+Upadhyaya and Jiang consider an erasure channel in [5] and extend beyond English to consider the correction of images. They use a convolutional neural network and a filter to decode pictures using NR. The latter work then extends [4] to a binary symmetric channel (BSC) and discusses the channel capacity. An interesting conclusion is that by considering a compound communication channel consisting of the original channel and an NR decoder, the compound capacity viewed by the ECC decoder is larger, assuming the NR decoder makes erroneous decoding decisions at a probability smaller than the bit flip probability of the original BSC. In [7], the authors exploit NR to correct errors in files, namely HTML, LaTex, PDF, and JPEG files. They trained several neural nets to enable this correction, one for classifying file segments to infer the file type and others to perform soft decoding of noisy file segments per file type. The soft decoder then produces an LLR estimate per bit, which is added to the channel-based LLR, and fed as an input to the belief propagation (BP) decoder. The problem of denoising is also related to the problem of ECC decoding. Denoisers can improve ECC decoding in a manner agnostic of data type. Weissman et al. [9] suggest a discrete universal denoiser named DUDE. It is universal in the sense that asymptotically, it performs as well as an optimal denoiser (which is aware of the input signal statistics), while the DUDE is oblivious to it. This work is then extended to obtain improved performance for ECC decoding of uncompressed sources in [10].
+B. Area of Focus and Work Significance
+This article focuses on sensor data transmitted over a wireless communication channel and protected using an LDPC code. The setup is relevant for either sensor networks or autonomous platforms. Typically, autonomous platforms transmit telemetry data regularly. Such telemetry data contains sensor data (such as location, attitude, and other physical measurements) and data indicating the health of sensors, among other status messages. Consequently, we can consider two sources of redundancy. First, the data itself contains redundancy. For example, if the data involves the location of an autonomous platform sent in GPS coordinates, we may expect
+
+temporal correlation among subsequent messages, resulting from the dynamics of the platform. Another source of NR might be the protocol used, such as the MAVLink protocol [11], which is prevalent for unmanned vehicles.
+By exploiting the NR in the data, the performance of the LDPC decoder improves, and the threshold for successful decoding increases. Results are verified experimentally by sending telemetry data from an autonomous underwater vehicle (AUV) [12], which implements a proprietary LDPC code, and via simulation, which uses a code from the IEEE802.11 standard as a benchmark.
+Our approach differs from previous works in two aspects:
+1) The context is different as the errors originate from sensor data transmitted by an autonomous platform. This difference is essential as the fundamentally different data requires a new scheme to exploit the NR. The resulting scheme may be easily applied to other setups, and we believe it may be applicable in many similar scenarios.
+2) While previous works provide impressive gains, their results rely on a previously trained decoder to construct the NR decoder. In contrast, our scheme does not require training beforehand, so it can quickly adapt to changes. Moreover, as the model is trained online, there is no need for prior training data, which could otherwise limit applicability.
+This paper is organized as follows; Section II presents the suggested decoding scheme; Section III details the setup used and presents the results; Conclusions are presented in section IV. Additionally, the paper includes three appendices. Appendix A includes an analysis of the estimator used. Appendix B discusses extensions of this work to other channel models. Appendix C describes the clustering algorithm used within the decoder.
+II. NR ASSISTED DECODER
+A. NR in Telemetry Data
+The data considered in this work is telemetry data sent by an AUV. It includes readings of many sensors such as depth, altitude, latitude & longitude, battery voltage, etc. It also includes status flags indicating the health of sensors, various modes affecting the AUV operation, and more. Although the data changes (or there would be no motivation to transmit it), some data changes slowly due to the AUV dynamics. For example, one may expect the most significant digits describing the vehicle’s battery level to change slowly. Although modeling the temporal correlation of each sensor reading may be feasible to predict plausible values or for efficient source coding, we wish to avoid following this path as this may render the results too “case-specific”. Instead, we use the fact that such a correlation exists to provide a practical and straightforward means for exploiting it.
+Another source of redundancy is the protocol used. The MAVLink protocol enforces a strict structure regarding what is considered valid data. Aside from CRC bytes added to each message, a vehicle using the protocol must use a predefined dialect known beforehand to both the sender and receiver. The dialect dictates a specific structure for each message used and,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+MAZAL AND GUTERMAN: ENHANCED ERROR CORRECTION EMPLOYING NATURAL REDUNDANCY OF SENSOR DATA
+
+5677
+
+Fig. 1. Fig. 1a shows an LDPC codeword encoded using a systematic encoder. The codeword contains four MAVLink messages. Fig. 1b shows the MAVLink (v1) message structure, taken from [11].
+
+as such, adds more redundancy to transmitted data. As a simple example, consider an LDPC codeword whose information bits contain four MAVLink messages (as shown in Fig. 1a), where each of these messages follows the structure of the MAVLink protocol shown in Fig. 1b.
+B. NR Aided Decoder for Telemetry Data
+We aim for an improved decoding performance of a BP decoder decoding an LDPC code using NR based on telemetry data. To exploit NR, we propose a joint decoder in which each word received from the channel passes through an NR estimator and a BP decoder in a sequential scheme (Fig. 2a).
+The decoder aims to exploit both the redundancy of the data and the protocol and is trained online from received messages. The decoder assumes that all transmissions use the same structure, i.e., each codeword contains several MAVLink messages sent in the same order in each transmission. This assumption may be relaxed by assuming beforehand that multiple structures exist and employing a separate estimator for each of these structures, as shown in Fig. 2b and using a classifier prior to estimation. While the classification problem is not the main topic of our work, we developed a classifier that is trained online for this task. Details about the classifier appear in appendix C. It is important to note that even though we assume that such a structure exists, the proposed decoder does not have apriori knowledge about it and learns it from received codewords. Additionally, since the suggested decoder has a finite memory, the decoder could adapt to such changes even if the structure changes over time.
+1) Distribution Estimation: The estimator learns the distributions of bits in the codeword to infer their underlying structure. Consider a case where N codewords are sent over a channel, each of which contains k information bits. Since each codeword follows the same structure, the distribution of the bits {bi}ik=1 will change only if the data itself changes. Obviously, it happens, but the distribution might be quasi-stationary for some bits, such as status bits or MSBs of various physical quantities. Moreover, the distribution of bits might be biased for such bits, thus creating the discussed NR, and therefore, estimating the distribution pi = Pr(bi = 1) for 1 ≤ i ≤ k is useful to exploit NR.
+Each of the information bits bi is modeled as a Bernoulli random variable distributed using a specific pi such that bi ∼ B(pi). This modeling choice is an approximation, as it ignores the correlation which most likely exists between some bits.
+
+Fig. 2. Fig. 2a shows the sequential decoder structure, in which a BP decoder is used after NR estimator to exploit its knowledge. Fig. 2b shows a scenario where multiple structures are considered, and multiple estimators are trained.
+
+For instance, consider a reading of a physical sensor encoded into a 32-bit integer and transmitted as part of the codeword. The distributions of bits within this 32-bit value are correlated. However, modeling these correlations will make the proposed approach more cumbersome and case-specific, while we aim for a simple and generic solution that will utilize a simple model that can be trained online.
+Assume that bits are transmitted via a BSC with bit flip probability f , such that received bit yi is expressed as:
+
+yi = bi ⊕ wi,
+
+(1)
+
+with wi ∼ B(f ). The probability mass function of yi is:
+
+fyi (yi = y|pi, f )= (1 − f ) pyi (1 − pi)1−y + f p1i −y (1 − pi)y
+
+= 1 − (pi − f (2pi − 1)) y = 0 .
+
+pi − f (2pi − 1)
+
+y=1
+
+(2)
+
+Thus, yi ∼ B (vi), such that vi = pi − f (2pi − 1). If N
+
+codewords are used to estimate each of the distributions, a
+
+maximum likelihood estimator for vi is vˆi =
+
+N j=1
+
+yi(j)/N
+
+[13], where yi(j) is the observed i-th bit in the j-th reception
+
+used for estimation. For pi the estimator is:
+
+pˆi
+
+=
+
+vˆi − f 1 − 2f
+
+.
+
+(3)
+
+An analysis of the estimator’s characteristics and of the effects of the sample size N appear in Appendix A.
+2) NR Aided Decoder: The decoder calculates the entropy of each bit using the estimated distribution. Then, all bits whose entropy is smaller than a pre-determined threshold Hthr are determined structural bits. For structural bits, the estimated distribution is deemed as a prior. Therefore, instead of initializing the BP decoder with only channel LLR LLRc, the model-based LLR LLRm = log ((1 − pˆi)/pˆi) is added to it, such that for structural bits, the BP decoder is given LLRc + LLRm. Algorithm 1 describes the decoder. The variables in rows 2-3 are static and are initialized to zero only once. The decode function receives a vector of LLRs and returns a hard bits estimate. The “BP Decode” function in line 5 is the standard belief propagation decoder used to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+5678
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Algorithm 1 NR Aided Decoder Input: y a vector of LLR from channel parameters: m, k, Hthr, f
+
+TABLE I CODE RATES AND CODEWORD LENGTHS USED IN SIMULATION
+
+1: function DECODE(y) ▷ Decode channel received LLR
+
+2: size ← 0
+
+▷ static variable
+
+3: pˆ ← 0
+
+▷ static variable
+
+4: llr ← PREDICT(y, pˆ, size)
+
+5: estimate, success ← BP DECODE(llr)
+
+6: if success then
+
+7:
+
+pˆ ← UPDATE MODEL(estimate, pˆ, size)
+
+8: else
+
+9:
+
+N ← len(y)
+
+10:
+
+for i = 1, 2, . . . , N do
+
+11:
+
+bi ← 1yi<0
+
+12:
+
+end for
+
+13:
+
+pˆ ← UPDATE MODEL(b, pˆ, size)
+
+14: end if
+
+15: size ← size + 1
+
+16: return estimate
+
+17: end function
+
+18: function PREDICT(y, pˆ, size)▷ Rectify LLR by model pˆ
+
+19: N ← len(y)
+
+20: c ← LOGISTIC(size, m, k)
+
+21: for i = 1, 2, . . . , N do
+
+22:
+
+hi ← −pˆi log2 pˆi − (1 − pˆi) log2(1 − pˆi)
+
+23:
+
+if hi < Hthr then
+
+24:
+
+yi ← yi + c · log ((1 − pˆi)/pˆi)
+
+25:
+
+end if
+
+26: end for
+
+27: return y
+
+28: end function
+
+29: function UPDATE MODEL(y, pˆ, size) ▷ Update estimator
+
+30: N ← len(y)
+
+31: for i = 1, 2, . . . , N do
+
+32:
+
+vˆi ← (size · pˆi + yi)/(size + 1)
+
+33:
+
+pˆi ← (vˆi − f )/(1 − 2f )
+
+34: end for
+
+35: return pˆ
+
+36: end function
+
+decode LDPC [14], [15], [16]. In line 20, c designates the model confidence, which is expressed by a logistic function and depends on the number of previous distribution samples. The function is parameterized by two hyper-parameters, m, which designates its center, and k, its slope. Another two parameters are Hthr, which designates the threshold entropy below which bits are deemed structural, and f , the assumed bit flip probability of the channel. Additionally, instead of using all previous samples, a sliding window of finite length consisting of the N last samples can allow for finite memory, thus letting the estimator adapt to distribution changes. A discussion regarding guidelines for the choice of parameters appears in Appendix A.
+
+III. RESULTS AND DISCUSSION
+A. Simulation
+The decoder was tested using a simulation, in which actual telemetry recorded by the HydroCamel II AUV [12] developed at the Laboratory for Autonomous Robotics (LAR) was transmitted. Within the simulation, data was transmitted via a BSC channel. Each transmission was encoded using LDPC codes from the IEEE802.11 standard [17]. Several code rates were tested. Table I shows the rates and corresponding codeword lengths. For r = 2/3, the transmission fitted in a single codeword, while for others, each transmission was broken into two or three codewords to fit all the information bits. During the simulation for each bit flip probability f , 1400 telemetry transmissions (codewords) were encoded using the IIEEE802.11 codes and transmitted without the decoder having a predetermined model for the data. The simulation compared decoding performance for each f between standard BP decoding and an NR-aided decoder termed BP+NR. The BP+NR decoder then trained and later rectified LLRs received from the channel. The transition from training to rectifying phase is gradual and is controlled by the parameters of the confidence metric discussed above. For rates at which there was a need to break down the transmissions into multiple codewords, several models were trained in parallel (one for each codeword structure). The topology for this decoder is seen in Fig. 2b. The decoder parameters in simulations were set to N = 50, Hthr = 0.35, m = 40, and k = 0.35.
+Fig. 3 shows the frame error rate (FER) of the NR-assisted decoder and the standard BP decoder versus the bit flip probability introduced by the channel for various code rates from the IEEE802.11 standard [17]. As seen, for all code rates, there is an improvement in the FER. The improvement varies between code rates, most likely resulting from the intrinsics of each code. The results in the figure include the training phase of the simulation (when the model confidence is low), during which the NR estimator does not contribute to the performance.
+The fraction of structural bits inferred can give some intuition regarding performance enhancement. Fig. 4a shows the percentage of bits inferred as structural as the simulation progresses. The figure shows a simulation that used code rate r = 3/4, for which each transmission was broken down to 3 codewords to fit all data, and therefore, three estimators are used. Each color indicates a different estimator. The graph corresponds to a bit flip probability f = 0.042, for which the FER is 0.53 for the NR-assisted decoder, and 1 for the standard BP decoder. Initially, too many bits are inferred as structural since the estimation uses only a few codewords. Note that even though the estimate is initially wrong, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+MAZAL AND GUTERMAN: ENHANCED ERROR CORRECTION EMPLOYING NATURAL REDUNDANCY OF SENSOR DATA
+
+5679
+
+Fig. 3. Frame error rate vs. bit flip probability. Each color is a different code rate, and markers differ for BP decoders and NR assisted BP decoders.
+
+confidence attributed to the model is low. Therefore, its impact on the performance is negligible at this stage. However, the number of inferred structural bits quickly decreases, and the confidence increases. Eventually, after training, 26% of the bits are deemed structural on average, and the LLR is rectified for these bits. The number of structural bits exhibits some variance even after training, but this is a natural consequence of the initial assumption that the process is only quasi-stationary. The fraction of structural bits is also plotted in Fig. 4b for a different working point where FER is 0.04. As shown, the percentage of structural bits is similar, demonstrating the fact that even for a challenging channel, when NR-assisted decoder has a significant FER, and standard BP cannot cope, there is a non-negligible fraction of structural bits inferred, which can be used.
+Even when the decoder cannot decode successfully, the structural bits reduce the bit error rate as they are easily corrected. This reduction is shown in Fig. 5a, which shows the post-decoding BER pe,out, divided by the channel bit flip probability f (various error rates as specified in Fig. 2a). As seen, for all code rates, even for values of f for which successful decoding is impossible, the BER is lower as structural bits are still corrected.
+The NR estimator effect manifests to a large degree as a shift to the operating point of the BP decoder. To further understand this, we consider the BER at the BP decoder output versus the input. Fig. 5b shows the post-decoding BER pe,out normalized by the BP decoder input BER pe,in for different code rates. The x-axis and the normalization are different for the BP vs. BP+NR curves, as for the BP curves pe,in = f due to the absence of the NR estimator, while for the BP+NR pe,in < f . This normalization induces both scaling and a shift to the BP+NR curves when comparing figures 5a and 5b, which demonstrates the effect the NR estimator has on the system.
+Since the model used by the estimator is trained online, one could ask how it performs compared to a pre-trained model. To that end, we trained an estimator on all of the transmissions used for simulation. Then, a simulation was ran where three decoders tried to decode the same receptions, a BP
+
+Fig. 4. Fraction of inferred structural bits by the models as the simulation progresses. In the simulation, for this rate, there were three kinds of codewords, and therefore three estimators. Each color shows the evolution of a different estimator. Fig 4a corresponds to channel with FER of 0.53, and Fig. 4b corresponds to FER of 0.06.
+decoder and two BP+NR decoders, one learned the model online, and the other used the pre-trained one. The FER of the three decoders is plotted in Fig. 6 vs. the channel bit flip probability. As shown, while using the online estimator shows some degradation, above FER of 0.04 most of the possible gain is achievable also by online training.
+B. Experiments
+The algorithm was also tested in actual sea experiments. While submerged, the HydroCamel II AUV [12] transmitted data using an acoustic modem. The modem was developed by RAFAEL Advanced Defense Systems Ltd. [18], [19], [20], [21]. The LDPC code used in the experiment was an (4098, 984) proprietary code developed by RAFAEL. During the experiment, the HydroCamel II AUV transmitted codewords at distances ranging from hundreds of meters to several kilometers and depths ranging from a few meters up to approximately 100 meters deep. A modem
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+5680
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Fig. 6. FER vs. bit flip probability, for the benchmark BP decoder, and two BP+NR decoders. One of the BP+NR decoders is trained online, while the other is pre-trained.
+TABLE II FER IN EXPERIMENT VERSUS SIMULATION
+
+Fig. 5. Fig. 5a shows the post-decoding BER pe,out normalized by the channel bit flip probability f for different code rates. Fig. 5b shows the post-decoding BER pe,out normalized by the BP decoder input BER pe,in for different code rates.
+onboard a surface ship received the transmissions, and the LLRs were passed to a standard BP decoder [15], [16] and a BP+NR decoder. The decoder parameters in the experiment were set to N = 50, Hthr = 0.35, m = 40, and k = 0.35. The experiments took place in the Red Sea near Eilat in February 2022 and January 2023. Table II summarizes the FER from experiments compared to the simulation. The column termed recovery rate specifies the percentage of corrupted codewords (which cannot be decoded using BP decoding alone) that are recovered using the BP+NR decoding scheme.
+1) 2022 Experiment: In the 2022 experiment, 775 codewords were transmitted. 21% of the codewords unrecoverable using BP decoding alone were recovered using BP+NR. One must note some critical differences when comparing the experimental results to the simulation. Within the simulation, the error rate induced by the channel is controllable, and for each error rate, the same number of codewords were considered. In reality, however, the number of errors per codeword follows
+
+some distribution that affects the recovery rate, as only some error rates benefit from the suggested decoder. Fig. 7a shows the distribution of errors per codeword at the decoder input within the experiment. Fig. 7b shows the FER of both decoders versus input BER for the same experiment.
+Another area in which the simulation and experiment differ is the rates of codes used. While both the simulated and experimental data contain telemetry transmissions by the same platform, the fraction of structural bits within each codeword is significantly different since the ECC used in the experiment had a much lower rate. Correspondingly, the rightmost column of table II shows the percentage of inferred structural bits (at an error rate that allows BP+NR decoding success rate of 50%) compared to the percent inferred in the experiments. It is relevant for analyzing the decoders as more structural bits imply more NR and, therefore, more significant gain. Since parity bits, by design, are supposed to have much higher entropy, or else they are futile, lower-rated codes possess relatively less NR. Fig. 8a shows the entropy of each bit within the codeword calculated across all transmissions. The vertical line separates information bits to its left and parity bits to its right. It is readily seen that parity bits as a whole have higher entropy. It explains the lower fraction of structural bits inferred by the decoder as shown in Fig. 8b compared with the simulation in Fig. 4a. This observation implies that codes with higher rates will benefit more from exploiting NR in their decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+MAZAL AND GUTERMAN: ENHANCED ERROR CORRECTION EMPLOYING NATURAL REDUNDANCY OF SENSOR DATA
+
+5681
+
+Fig. 7. Fig. 7a shows the distribution of errors per codeword at the decoder input, as measured in the experiment 2022. Fig. 7b shows the FER vs. input BER at the 2022 experiment for both BP and BP+NR decoders.
+2) 2023 Experiment: In the 2023 experiment, 877 codewords were transmitted. The main difference between the 2022 and 2023 experiments is the FER of the BP decoder. In 2023 the modem used four transducers instead of a single one, which helped it to reduce the raw BER at the input of the ECC decoder. That said, the NR-aided decoder still maintains its merit, as it attains a recovery rate of 20%, i.e., it corrects 20% of the codewords in which the BP decoder fails. Fig. 9a shows the distribution of errors per codeword at the decoder input within the experiment. Fig. 9b shows the FER of both decoders versus input BER for the same experiment.
+IV. CONCLUSION
+This paper explores using natural redundancy in data complementary to error correction codes. For systems that transmit structured data, such as sensor networks or autonomous platforms, exploiting natural redundancy can significantly improve reliability. Moreover, since the model used in the decoder is trained online, the system can adapt to structure changes
+
+Fig. 8. Fig. 8a shows the distribution of errors per codeword at the decoder input, as measured in the 2022 experiment. Fig. 8b shows fraction of inferred structural bits in the 2022 experiment.
+and remain oblivious to the nature of the data. Both the simulations and experimental data verify the effectiveness of the proposed decoder. Additionally, they offer an intuitive explanation regarding the enhancement in terms of a shift to the operating point. Lastly, we show that the suggested scheme is more beneficial for higher-rated codes. This phenomenon is due to the essential function of ECC, which transforms inputs with a lower distance to codewords with a significant distance. Thus, while the assumption regarding temporal correlation implies that some information bits do not change in subsequent transmissions, the related parity bits still change by design. For this reason, modeling the parity bits is less effective, and higher-rated codes benefit more from the NR estimator.
+APPENDIX A ESTIMATOR ANALYSIS & DECODER PARAMETERS
+The estimator in eq. 3 is a maximum-likelihood estimator for pi. To verify this, consider the log-likelihood of pi given channel received bits (based on the probability mass function
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+5682
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Fig. 10. Estimator MSE as a function of the channel bit flip probability f and distribution of noiseless bits pi for N = 50.
+
+Fig. 9. Fig. 9a shows the distribution of errors per codeword at the decoder input, as measured in the 2023 experiment. Fig. 9b shows the FER vs. input BER at the 2023 experiment for both BP and BP+NR decoders.
+
+in eq. 2):
+
+N
+LL(pi) = log f (yi(j)|f, pi) =
+j=1
+N
+yi(j) log(vi) + (1 − yi(j)) log(1 − vi). (4)
+j=1
+
+By denoting Yi =
+
+N j=1
+
+yi(j),
+
+and
+
+maximizing
+
+with
+
+respect
+
+to
+
+pi:
+
+∂LL = Yi(1 − 2f ) + (Yi − N )(1 − 2f ) = 0
+
+∂pi
+
+vi
+
+1 − vi
+
+Yi(1
+
+−
+
+vi)
+
++
+
+(Yi
+
+−
+
+N )vi
+
+=
+
+0
+
+⇒
+
+pˆi
+
+=
+
+vˆi − f 1 − 2f
+
+(5)
+
+The estimator is unbiased and has a mean square error (MSE) of:
+
+M SE(pˆi)
+
+=
+
+vi(1 − vi) N (1 − 2f )2
+
+.
+
+(6)
+
+Intuitively, the estimation uncertainty grows as the channel worsens (larger f ), such that it explodes for a channel with 50% to flip the value (f = 0.5). Considering the added estimation uncertainty due to the channel is also informative. The difference in MSE between a noisy and a noiseless (f = 0) channel is:
+(1 − f )f M SE(pˆi) − M SE(pˆi, f = 0) = N (1 − 2f )2 . (7)
+Thus, the enhanced error which stems from estimating the noiseless distribution based on noisy bits also scales with the sample size N . In a practical communication system, eq. 6 can be used to choose the desired sample size N based on system performance considerations. Since the BP decoder receives soft information from the demodulator, as long as the estimation error is small with respect to the receiver’s sensitivity (resulting from self-noise, analog to digital converter resolution, etc.), it will not degrade performance. Note that the preceding analysis assumes the distribution is stationary when it is not, as the basic assumption is that distributions of structural bits are quasi-stationary. The question over which time frames the distribution can be considered stationary might not have a straight forward answer as it depends on our ability to model the data beforehand. Given that uncertainty, we are motivated to choose the smallest N , which achieves an acceptable MSE, as the memory of the estimator is limited to the last N receptions.
+Fig. 10 shows the estimation error as a function of the channel bit flip probability f and distribution of noiseless bits pi for N = 50. As shown, estimation error grows as channel conditions worsen and pi gets closer to 0.5 (the latter being true even for noiseless samples due to finite sample size). Therefore, in a practical system, if one desires to limit the estimator MSE without succumbing to a large N , the threshold Hthr used in the prediction part of the assisted decoder can limit the use of estimates to values for which the estimate is deemed sufficiently reliable. These reliable estimates, which tend to have more skewed distributions, will then be deemed the structural bits. Thus, there is a tradeoff between estimation error (requires large N ) and the ability to adapt to changes in distribution (requires small N ), which can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+MAZAL AND GUTERMAN: ENHANCED ERROR CORRECTION EMPLOYING NATURAL REDUNDANCY OF SENSOR DATA
+
+5683
+
+be somewhat mitigated by the threshold Hthr at the expense of not using some estimates. Another way to choose Hthr could be according to some prior. For instance, by looking at Fig. 8a, we see that the entropy of information bits can be separated into values above or below 0.4. If such prior knowledge is available, it can classify structural bits and dictate the choice of Hthr.
+An attempt to further improve performance can be made using the decoder parameters m and k, which affect the transition of the decoder from the training to predicting phase. This choice does not affect results fundamentally but allows some limited prediction ability (weighted to reflect the lower confidence) during training.
+
+APPENDIX B EXTENSION TO CHANNELS BEYOND THE BSC
+The extension of the suggested approach to other channels is simple and only requires that the ECC used is a binary ECC, i.e., that it operates at the bit level. One could replace the estimator in eq. 3 by an estimator which accounts for the physical model of the channel. However, we wish to suggest a second approach that maintains the simplicity of the BP+NR decoder and the decoupling of the decoder from the physical channel.
+Given a channel model and an estimated SNR, The theoretical probability of bit flip can be calculated. For instance, for a BPSK signal, the probability of erroneous demodulation under maximum-likelihood criteria is given by [22]:
+
+Pe = Q( 2Eb/N0)
+
+(8)
+
+The setup was tested using the same simulation used before, only instead of a BSC corrupting binary values, we consider a BPSK signal transmitted over an AWGN channel. The same estimator (eq. 3) was used by plugging the bit error probability of the physical channel instead of the bit flip probability f of the BSC. Fig. 11a shows the FER of the BP and BP+NR decoders vs. Eb/N0 and 11b shows the BER at the decoder output. As shown, the suggested approach shows merit in this setup too.
+APPENDIX C CLUSTERING OF CODEWORDS
+For the NR decoder to work with more than one codeword model, a clustering algorithm was developed to separate received codewords into different models. The algorithm assumes that the number of clusters is known beforehand. As the classifier is trained online, an initial training phase is performed. Each cluster is characterized by a multivariate distribution (one for each bit in the codeword being zero or one), which is inferred during training. The algorithm treats received bits as originating from a Bernoulli mixture model (BMM). Such models have been used for classification with binary features before [23], [24], [25], [26], [27]. However, we chose not to follow the standard expectation-maximization approach as the suggested algorithm outperforms it.
+During training, a predetermined amount of buffers are initially collected to obtain a population sample. Then, all
+
+Fig. 11. Fig. 11a shows the frame error rate vs. Eb/N0. Fig. 11b shows the bit error rate vs. Eb/N0.
+
+buffers are considered clusters with a single sample, and from all possible pairs, the closest ones merge into a single cluster. This process repeats until the desired amount of clusters is obtained. The distance metric used for training is the mean value of the Hellinger distance (a multi-dimensional distribution characterizes each cluster) multiplied by a weight:
+
+d (c1, c2)
+
+=
+
+w
+
+(c1, c2) n
+
+·
+
+n
+
+Hellinger (c1i, c2i) ,
+
+(9)
+
+i=1
+
+where n is the length of each LDPC codeword. The weight w (c1, c2) is needed for the following reason. Consider the initial state with a cluster containing a single sample. The distribution it describes holds probabilities of solely 0 or 1. Once it merges with the closest sample, its distributions will not be as skewed, and therefore it will be much more likely to absorb another sample. This feedback creates a situation where clusters tend to grow, and eventually, there is one large cluster, and other small ones, regardless of the samples. To resolve this issue w (c1, c2) was added. It adds a penalty for growing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+5684
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Algorithm 2 Buffer Clustering Algorithm
+
+parameters: k
+
+▷ number of clusters
+
+1: function TRAIN
+
+2: while len(clusters) > k do
+
+3:
+
+closest ← ∞
+
+4:
+
+for each c1, c2 ∈ S do
+
+cluster pairs
+
+▷ S is the set of all
+
+5:
+
+dist ← d (c1, c2)
+
+6:
+
+if dist < closest then
+
+7:
+
+closest ← dist
+
+8:
+
+pair ← c1, c2
+
+9:
+
+end if
+
+10:
+
+end for
+
+11:
+
+clusters.remove(pair [0])
+
+12:
+
+pair [1] .merge(pair [0])
+
+13: end while
+
+14: return clusters
+
+15: end function
+
+TABLE III CLASSIFICATION ACCURACY OF SUGGESTED ALGORITHM AND BMM
+
+16: function CLASSIFY(y)
+
+17: closest ← 0
+
+18: for each p ∈ clusters do
+
+19:
+
+likellihood ← ll(p)
+
+20:
+
+if likellihood > closest then
+
+21:
+
+closest ← likellihood
+
+22:
+
+c←p
+
+23:
+
+end if
+
+24: end for
+
+25: c.add(y)
+
+26: return c.label
+
+27: end function
+
+clusters that already contain more samples than others, such that clusters tend to grow at the same pace, at least at the beginning. In a sense, what this strategy achieves is similar to what is done in hierarchical clustering, only it is done smoothly. The weight is simply the mean number of samples absorbed into each of the clusters
+
+w (c1, c2)
+
+=
+
+size(c1)
+
++ size(c2) . 2
+
+(10)
+
+After training, c clusters remain, each characterized by a multi-dimensional distribution p. Then, as another sample y arrives, the likelihood of its originating from each of the clusters is evaluated as the mean likelihood:
+
+1
+
+ll(p) = n
+
+yi log (pi) + (1 − yi) log (1 − pi) .
+
+(11)
+
+i
+
+The sample is allocated to the most likely cluster. As we want the distributions to evolve with time, as a sample is allocated to a cluster, its underlying distribution is updated by the sample. Algorithm 2 outlines the clustering algorithm. The suggested algorithm is closely related to the work by Alalyan et al. [28]. The main differences are the distance metric used and, more importantly, we omit the expectation maximization and instead use only the hierarchical growing of clusters, which is regularized by the added weight.
+
+Fig. 12. The confusion matrix of the compared classifiers. In the left column the suggested algorithm is shown, and on the right, the results of the BMM. In the first row there are no flips at all. In the second row the bit flip probability is f = 0.07, and in the bottom row it is increased to f = 0.15.
+Since our algorithm bases its classification (after training) on likelihood, we compared it against a Bernoulli mixture model (BMM) classifier to evaluate its performance. The BMM classifier is appropriate as received codewords, can naturally be formulated as a Bernoulli mixture model, and since the classifier is used in classification problems with binary features. Information bits from all transmissions of the 2023 experiment were considered for testing. Since long codewords (with a single buffer model) were used in the experiment, each codeword was broken into three smaller buffers to obtain three classes for clustering. Thus we have 2631 buffers for both training and testing. As our goal is to train online, we wish to train fast. Thus, training was done only on 150 buffers, while the rest were used for testing. The train test cycle was done for several channel bit flip probabilities, and 150 train-test cycles were performed for each. This repetition provides statistical reproducibility, where cycles differ by data partition to train and test datasets, samples (received buffers) are shuffled, and simulated channel errors
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+MAZAL AND GUTERMAN: ENHANCED ERROR CORRECTION EMPLOYING NATURAL REDUNDANCY OF SENSOR DATA
+
+5685
+
+are drawn randomly for each cycle. Table III shows the classification accuracy for each case. The suggested algorithm outperforms BMM for all bit flip probabilities. Fig. 12 shows the confusion matrices of classified codewords. Since this is done in simulation, we know the proper labels, yet both algorithms do not receive any labels during training. In the left column, our algorithm is shown, and the BMM is on the right. Different rows have varying bit flip probabilities.
+ACKNOWLEDGMENT
+The authors would like to thank Azriel Sinai of RAFAEL Advanced Defense Systems Ltd., for his support throughout the experiments and for the access to the data needed to perform them.
+REFERENCES
+[1] Y. Li, Y. Wang, A. Jiang, and J. Bruck, “Content-assisted file decoding for nonvolatile memories,” in Proc. Conf. Rec. 46th Asilomar Conf. Signals, Syst. Comput. (ASILOMAR), Nov. 2012, pp. 937–941.
+[2] A. Jiang, Y. Li, and J. Bruck, “Error correction through language processing,” in Proc. IEEE Inf. Theory Workshop (ITW), Apr. 2015, pp. 1–5.
+[3] J. Luo, Q. Huang, S. Wang, and Z. Wang, “Error control coding combined with content recognition,” in Proc. 8th Int. Conf. Wireless Commun. Signal Process. (WCSP), Oct. 2016, pp. 1–5.
+[4] A. Jiang, P. Upadhyaya, E. F. Haratsch, and J. Bruck, “Correcting errors by natural redundancy,” in Proc. Inf. Theory Appl. Workshop (ITA), Feb. 2017, pp. 1–8.
+[5] P. Upadhyaya and A. A. Jiang, “On LDPC decoding with natural redundancy,” in Proc. 55th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Oct. 2017, pp. 680–687.
+[6] A. A. Jiang, “Machine learning and algorithmic techniques for error correction,” in Proc. Inf. Theory Appl. Workshop (ITA), Feb. 2018, pp. 1–9.
+[7] P. Upadhyaya and A. A. Jiang, “Representation-oblivious error correction by natural redundancy,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2019, pp. 1–7.
+[8] M. Hellman, “On using natural redundancy for error detection,” IEEE Trans. Commun., vol. COM-22, no. 10, pp. 1690–1693, Oct. 1974.
+[9] T. Weissman, E. Ordentlich, G. Seroussi, S. Verdu, and M. J. Weinberger, “Universal discrete denoising: Known channel,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 5–28, Jan. 2005.
+[10] E. Ordentlich, G. Seroussi, S. Verdu, and K. Viswanathan, “Universal algorithms for channel decoding of uncompressed sources,” IEEE Trans. Inf. Theory, vol. 54, no. 5, pp. 2243–2262, May 2008.
+[11] A. Koubâa, A. Allouch, M. Alajlan, Y. Javed, A. Belghith, and M. Khalgui, “Micro air vehicle link (MAVlink) in a nutshell: A survey,” IEEE Access, vol. 7, pp. 87658–87680, 2019.
+[12] B. Braginsky, A. Baruch, and H. Guterman, “Correction of DVL error caused by seafloor gradient,” IEEE Sensors J., vol. 20, no. 19, pp. 11652–11659, Oct. 2020.
+[13] G. Casella and R. L. Berger, Statistical Inference, 2nd ed. Boston, MA, USA: Cengage, 2002.
+[14] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[15] D. J. C. MacKay and R. M. Neal, “Good codes based on very sparse matrices,” in Proc. Cryptogr. Coding 5th IMA Conf., C. Boyd, Ed. Berlin, Germany: Springer, 1995, pp. 100–111.
+[16] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[17] IEEE Standard for Information Technology–Telecommunications and Information Exchange between Systems—Local and Metropolitan Area Networks–Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Standard IEEE 802.11-2020, 2021.
+[18] Rafael. Deep Link. Accessed: Dec. 11, 2022. [Online]. Available: https://www.rafael.co.il/wp-content/uploads/2019/03/Deeplink-1.pdf
+
+[19] G. Avrashi, A. Amar, and I. Cohen, “Time-varying carrier frequency offset estimation in OFDM underwater acoustic communication,” Signal Process., vol. 190, Jan. 2022, Art. no. 108299.
+[20] A. Amar, Y. Buchris, and M. Stojanovic, “Angle-of-arrival-based detection of underwater acoustic OFDM signals,” in Proc. IEEE 16th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jun. 2015, pp. 326–330.
+[21] A. Sinai, Y. Buchris, and A. Amar, “Frequency and code modulations for underwater acoustic spread spectrum communication,” in Proc. 11th Annu. IEEE Int. Conf. Sens., Commun., Netw. (SECON), Jun. 2014, pp. 408–413.
+[22] U. Madhow, Fundamentals of Digital Communication. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[23] G. Celeux and G. Govaert, “Clustering criteria for discrete data and latent class models,” J. Classification, vol. 8, no. 2, pp. 157–176, Dec. 1991.
+[24] A. Juan and E. Vidal, “On the use of Bernoulli mixture models for text classification,” Pattern Recognit., vol. 35, no. 12, pp. 2705–2710, Dec. 2002.
+[25] C. M. Bishop, Pattern Recognition and Machine Learning. New York, NY, USA: Springer, 2006.
+[26] C. Li, B. Wang, V. Pavlu, and J. Aslam, “Conditional Bernoulli mixtures for multi-label classification,” in Proc. 33rd Int. Conf. Mach. Learn., vol. 48, M. F. Balcan and K. Q. Weinberger, Eds. New York, NY, USA, Jun. 2016, pp. 2482–2491.
+[27] N. S. Grantham, “Clustering binary data with Bernoulli mixture models,” 2014.
+[28] F. Alalyan, N. Zamzami, and N. Bouguila, “Model-based hierarchical clustering for categorical data,” in Proc. IEEE 28th Int. Symp. Ind. Electron. (ISIE), Jun. 2019, pp. 1424–1429.
+Yair Mazal received the B.Sc. degree in physics, the B.Sc. degree in mechanical engineering, and the M.Sc. degree in physics from Ben-Gurion University of the Negev in 2015, 2015, and 2018, respectively, where he is currently pursuing the Ph.D. degree with the Laboratory for Autonomous Robotics, School of Computer and Electrical Engineering. His current research interests include underwater acoustic communication, error correction, signal processing, and autonomous platforms.
+Hugo Guterman (Life Member, IEEE) received the degree in electronic engineering from the National Technological University of Buenos Aires, Argentina, in 1978, and the M.Sc. and Ph.D. degrees in computer and electrical engineering from Ben-Gurion University of the Negev, Be’er-Sheva, Israel, in 1982 and 1988, respectively. From 1988 to 1990, he was a Post-Doctoral Fellow with MIT. Since 1990, he has been with the School of Computer and Electrical Engineering, Ben-Gurion University of the Negev. He is currently the Head of the Laboratory of Autonomous Robotics (LAR) and the Israel Section of IEEE RAS. His current research interests include autonomous platforms, computer architecture, control, image and signal processing, neural networks and fuzzy logic, electrochemical processes, robotics, biomedicine, biotechnology, and biosensors.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:50:51 UTC from IEEE Xplore. Restrictions apply.
+
+

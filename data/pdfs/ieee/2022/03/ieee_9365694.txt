@@ -1,0 +1,631 @@
+544
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+Tail Latency Optimization for LDPC-Based High-Density and Low-Cost Flash Memory Devices
+Yina Lv, Liang Shi , Member, IEEE, Longfei Luo , Changlong Li , Chun Jason Xue , Senior Member, IEEE, and Edwin H.-M. Sha, Senior Member, IEEE
+
+Abstract—Flash memory has been developed with bit density improvement, technology scaling, and 3-D stacking. With this trend, its reliability has been significantly degraded. Error correction code (ECC), such as low-density parity code (LDPC), which has strong error correction capability, has been deployed to solve this problem. However, one of the critical issues of LDPC is that it would introduce a long decoding latency on devices with low reliability. In this case, tail latency would happen, which will significantly impact the quality of service. In this work, a set of smart refresh schemes is proposed to optimize the tail latency. The basic idea of the work is to refresh data when the accessed data have a long decoding latency. Two smart refresh schemes are proposed for this work. The first refresh scheme is designed to refresh data with a long access latency when they are accessed several times. The second refresh scheme is designed to periodically check data with an extremely long access latency and refresh them. To further optimize the refresh overhead caused by the above refresh schemes, a dual-ECC-based refresh scheme is proposed. Besides, a mathematical model for all proposed schemes is constructed to clarify the benefit of each scheme. The experimental results show that the proposed schemes can significantly improve the tail latency with acceptable overhead. What is more, the access performance is well maintained compared with the state-of-the-art work.
+Index Terms—Low-density parity code (LDPC), NAND flash memory, refresh, tail latency.
+I. INTRODUCTION
+N AND flash memory has been widely deployed as secondary storage for its advantages, such as high performance, low cost, and light form factors [1], [2]. During the last decades, flash memory has been developed with several schemes. First, the bit density is increased from 1 bit per cell to the most recent 4 bits per cell [3], [4]. Second, the technology size is reduced to the most recent 10 nm [5]. Third,
+Manuscript received August 31, 2020; revised December 22, 2020; accepted February 6, 2021. Date of publication March 1, 2021; date of current version February 21, 2022. This work was supported in part by the Natural Science Foundation of China (NSFC) under Grant 62072177 , Grant 61772092, and Grant 61972154; and in part by the Shanghai Science and Technology Project under Grant 20ZR1417200. This article was recommended by Associate Editor J. Xu. (Corresponding author: Liang Shi.)
+Yina Lv, Liang Shi, Longfei Luo, Changlong Li, and Edwin H.-M. Sha are with the Software/Hardware Co-design Engineering Research Center, Ministry of Education, East China Normal University, Shanghai 200062, China, and also with the School of Computer Science and Technology, East China Normal University, Shanghai 200062, China (e-mail: shi.liang.hk@gmail.com).
+Chun Jason Xue is with the College of Computer Science, City University of Hong Kong, Hong Kong.
+Digital Object Identifier 10.1109/TCAD.2021.3062768
+
+3-D NAND flash is designed to stack storage cell from 24 layers to the most recent 128 layers [2], [3], [6]. In prediction, the number of layers will hit more than 256 in the next few years [7]. However, one of the critical challenges with the development is the degraded reliability of flash memory [8]. In addition, the reliability is impacted by many factors, such as process variation [9], [10], retention time [11], program/erase cycles [12], and temperature [13]. From the past decade, Bose, Ray-Chaudhuri and Hocquenghem (BCH), which is a constant error correction code (ECC), is used to be adopted to solve the reliability issue [14]. Recently, low-density parity code (LDPC), which has strong error correction capability but high cost, has been the default ECC scheme for the state-ofthe-art flash memory-based storage devices [15]. One of the distinct characteristics of LDPC is that it is a probability-based ECC, which needs a long decoding latency when the device has a low reliability [16]–[18]. In this case, it would induce flash memory to be low performance devices and sacrifice the quality of service (QoS). This article will propose approaches to improve the tail latency on LDPC-based storage systems.
+The reason that LDPC needs a long decoding latency is as follows: LDPC is a probability-based ECC. When the reliability is low, the data will be retried multiple times to acquire an accurate input information for decoding [15], [17]. In order to solve this issue, several approaches have been proposed to improve the access performance [15]–[19]. These approaches can be classified into two types: 1) optimize the error correction capability of LDPC [15], [19], [20] and 2) improve the reliability of flash memory [16]–[18]. For the first type, most of them proposed to retry the data as accurate as possible with well selected sensing voltages during retry [19]. However, with the reliability degradation, the access performance will become worse and the long access latency will happen. For the second type, most of them proposed to refresh the data by in-place charging [14] or out-of-place updates [11], [18]. With this approach, the data will be recovered to a fresh state with low bit error rates. One of the critical challenges for the refresh scheme is its cost, which not only introduces additional read and write cost but also takes in wearing to the memory. Most of refresh schemes are proposed to only refresh the data that has high benefit to the overall performance or to the overall lifetime [11], [18]. For example, Cai et al. [14] proposed to refresh data when it is approaching the error correction capability of ECC to improve lifetime. Du et al. [18] proposed to refresh data with both long access latency and high access frequency for read performance improvement. However, this
+
+1937-4151 c 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+545
+
+work cannot avoid the long access latency to the data with low access frequency, which will introduce tail latency. Thus, our work will also exploit refresh scheme for LDPC-based flash memory. Differently, we propose to use refresh to avoid the long access latency and improve the tail latency of flash memory. Previously, there are also several works proposed to optimize tail latency. For example, Yan et al. [21] proposed to optimize the garbage collection (GC) process to achieve tiny tail. Different from existing works, we are the first on optimizing reliability induced tail latency on flash memory.
+In this work, a smart refresh framework is proposed to improve the tail latency of LDPC-based flash. The basic idea is to refresh data before it causes a long access latency. In order to achieve this goal, we first need to define the long access latency. For example, if a large amount of data are frequently accessed with a long access latency, tail latency may happen due to the introduced bad performance. In another aspect, if some data are accessed with extremely long latency, tail latency will happen on their accesses. Based on these two understandings, the proposed refresh scheme includes two parts. The first is to refresh data with a long access latency and high access frequency. The second is to refresh data with an extremely long access latency. To identify the long access latency, we conducted a set of experiments and found that when the number of retries is higher than a limit, average read latency will be increased. When the number of retries is higher than another limit, significant tail latency happens, which means that the latency of some requests is extremely long. Then, the proposed refresh scheme is designed to refresh the data based on the two studied limits. It may still introduce tail latency due to the first time identification of extremely long access latency. To solve this issue, we further propose a periodic refresh scheme, which is designed to periodically check the data with extremely long access latency. With the above scheme, the reliability induced tail latency will be reduced.
+However, one problem is overlooked: the refresh cost. The refresh operation includes flash reads and writes. A large amount of refresh operations will introduce additional cost and impact lifetime. In this work, we found that refresh operations will be significantly increased for high-density and low-cost flash memory. This is because these devices are always low reliable. To solve this issue, a dual-ECC-based refresh method is proposed. This basic idea is to adopt different ECC for data with different features. For data with low (high) bit error rates, the ECC with low (high) error correction capability, called weak-ECC (strong-ECC) in this work, is adopted. The dual-ECC scheme is closely combined with the above smart refresh framework. First, for the data with extremely long access latency and low access frequency, it is encoded with strong-ECC. Otherwise, it is encoded with weak-ECC during refresh. With this approach, the refresh cost can be reduced. The framework is implemented in a widely used solid state drive (SSD) simulator with significant extension to add the reliability functions. The experiments on several real workloads show that the proposed framework is not only able to improve the tail latency but also improve the average access latency with little overhead. The following contributions are made in this work.
+
+1) It is demonstrated that LDPC with multiple read retries introduces tail latency.
+2) A refresh framework is proposed, including a thresholdbased refresh scheme and a periodic checking refresh scheme, which is designed to improve the tail latency.
+3) A dual-ECC method is proposed to solve the refresh overhead caused by the above proposed refresh schemes.
+4) A mathematical model is constructed for the proposed schemes to clarify the benefit of each scheme.
+5) An evaluation is presented for the proposed framework, showing encouraging tail latency optimization with little cost.
+In the following, Section II presents the background. Section III presents the motivation of the work. Section IV presents the design of the proposed dual-ECC enabled refresh framework. Experiments are presented in Section VII. Section VIII presents the related work. Finally, Section IX concludes the article.
+II. BACKGROUND
+A. Reliability Characteristics of Flash Memory
+Flash memory is designed with floating gate (FG) or charge trapping (CT)-based memory cell [3]. FG has been widely employed in planar NAND flash memory [1] and CT has been widely employed in 3-D NAND flash memory [4]. Both FG and CT are designed to store data based on the amount of electrons stored in the cell. To store more data bits in a cell, the number of stored electrons should be differentiated into multiple levels. Based on the number of bits per cell, flash memory can be grouped into SLC (single level cell—1 bit in a cell with 2 voltage levels), MLC (multiple level cell—2 bits in a cell with 4 voltage levels), TLC (triple level cell—3 bits in a cell with 8 voltage levels) [2], and QLC (quota level cell—4 bits in a cell with 16 voltage levels) [4]. In addition to add more bits per cell, the cell size is reduced to improve the density. In this case, the number of electrons stored in a cell is reduced. During the last decade, 3-D stacking NAND flash memory is developed to improve the memory density by stacking cell vertically [2], [3], [6]. With these approaches, the density of NAND flash memory has approaching several tera bits per chip and its cost has approached the hard disk drives.
+Even with the significant improvement, the reliability of NAND flash memory has been degraded especially for the high density memory. The critical issue of FG or CT-based memory cell is that they are prone to errors [15]. As stated above, the data in the memory cell are represented by the amount of electrons. Different numbers of electrons will induce different sensed voltages. If there are some electrons leaking from the cell or charging to the cell, the data may be wrong. Take Fig. 1 as an example, which shows a voltage distribution for a TLC flash cell. For the cell, there are eight voltage ranges for different data and seven reference voltages are used to differentiate these data. The above simple model can be impacted by many factors in real life [8], [11], [12]. For example, retention time and temperature can introduce electronic leakage, and program/erase (P/E) cycling, read disturb, write disturb, and cell-to-cell interference can introduce electronic charging.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+546
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+Fig. 1. Threshold voltage distribution of flash cell with 3 bits per cell and eight states.
+
+Fig. 2. Sensing voltage placement for a TLC cell, where there are seven levels between two states.
+
+In this case, the voltage distribution will cross the reference voltage and overlap with their neighbors. In Fig. 1, the green line represents the electronic leakage and the red line represents the electronic charging. For retention time, it represents the time that the data can be reliably stored. During retention time, the electrons can be leaked from the cell, which has been identified as one of the main leakage factors. This is especially true for 3-D NAND flash, due to the characteristic of CT [3]. Previously, there are many schemes proposed to optimize the errors during retention time [11], [17]. Other critical impact factors include P/E cycling and disturb, which can introduce cell charging [8], [12]. All of these impact factors will widen the voltage distributions and introduce errors.
+The above issues can be amplified with the bit density improvement, especially by increasing the number of bits per cell and cell size scaling. In Fig. 1, the maximal threshold voltage is fixed due to the size of the cell. With eight voltage states, the noise margin among voltage levels are compressed. In this case, once there are a little number of electrons leaked or charged to the cell, the state will be covered with its neighbors. If there are 4 bits per cell for QLC, the noise margin will be further compressed and the reliability will be further degraded. From this discussion, the critical issue for NAND flash development is to solve its reliability issue.
+B. LDPC in Flash Memory
+In order to solve the reliability issue of flash memory, ECC has been employed. Previously, BCH code, which has high performance and pretty good error correction capability, has been adopted [14]. However, with the degradation of reliability, more parity bits are needed and approaching the theoretical error correction capability of BCH. The benefit is diminishing and the cost is exponentially increasing. In order to satisfy the reliability requirement of the state-of-the-art flash, LDPC has been suggested [15]. Different from BCH, LDPC is a probability-based ECC, which has error correction capability approaching the Shannon limit. In the following, LDPC is discussed to show its process.
+LDPC uses iterative belief propagation to decode the input information. With multiple iterations, if the decoding failed, the input information should be retried from the memory. Fig. 2 shows the retry voltage distribution. As shown in the figure, there are seven voltage levels between two states. With adding more retry voltages, the input information can be more accurate. Then, the decoding process can succeed with a higher probability. However, with several times of retry, the decoding latency will be significantly increased. As shown in the
+
+previous work, the number of sensing level can be increased by 21 times for MLC, 49× for TLC, and 105× for QLC [22].
+C. Refresh Operation in Flash Memory
+In order to ensure that the data are reliably read and improve the read performance, the refresh method is applied to data with low reliability. The basic refresh operation is divided into two steps. First, it can be read out before data conclude uncorrectable bit errors, which will be checked by the ECC module. Second, according to the out-of-place updating, the corrected data will be written to a new storage cell for future read. To reduce the overhead of periodic remapping, new refresh technique is proposed [14]. The key idea is to monitor the right-shift error count in each block. If the value is below a certain threshold, in-place reprogramming is used to correct the retention errors. Otherwise, it means that the block has accumulated too many program errors, then data will be remapped to another location like the basic refresh process. Based on the observation, the retention error rate increases as the number of P/E cycles increases. They further proposed to adapt the refresh rate to the number of P/E cycles to avoid the unnecessary refresh operations. Unlike the above method, whether the data need to be refreshed is according to the retry count of reads using LDPC. Because the error rate of data reads is related to the retry number of LDPC. If data with high reliability, then it can be correctly read out for few retry times. Otherwise, more retry number is needed.
+III. MOTIVATION
+As presented above, LDPC is designed to decode data based on the input information from sensing. Table I shows the latency with different numbers of retries. The decoding process of LDPC can be differentiated into two stages: 1) hard decoding and 2) soft decoding. The read latency includes the cell sensing latency, transfer latency, and decoding latency. As shown in the table, the sensing latency is increased with the number of sensing levels. The transfer latency is highly correlated with the size of input information used during decoding. The decoding latency is the firmware latency for LDPC processing, which is set to 8us based on the core in the storage controller. The data show that with the increasing of sensing levels, the total read latency is significantly increased. The data presented is used for seven sensing levels. If there are more sensing levels used, especially for QLC, which cause much longer read latency. With the increasing number of retries, the access performance will be significantly increased and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+547
+
+TABLE I LATENCY WITH DIFFERENT NUMBERS OF RETRIES [10], [19]
+
+Fig. 3. Normalized average read response time.
+
+Fig. 4. CDF of latency. The y-axis shows 95–100th percentiles.
+
+tail latency may happen. In this section, the latency induced performance degradation and tail latency are discussed.
+Using the data in the table, we have done experiments to show the average access latency and the tail latency (95%). To evaluate the characteristics, the access latency of flash is set with different levels. For example, Level 1 means that the read latency of all flash pages is set to 108, and so on. Eight representative workloads from Microsoft Research (MSR) Cambridge [23] and two SSD workloads from [24] are evaluated. Fig. 3 shows the average read performance for the ten evaluated cases, ranging from Level 1 to Level 7 using the data in Table I. From the results, we can find that with the increasing of decoding levels, the average read response time is increased significantly. For example, the average latency of HM_1 is increased by 8.2 times from Level 1 to Level 7. For the worst case, the read latency of USR_0 is increased by 13.5 times. The first observation from the results is that reducing the decoding level is critical to the read response time of applications. Fig. 4 shows the cumulative distribution function (CDF) of latency at 95th percentile for the 4 evaluated cases. The results show that with the increasing of sensing levels, the tail latency is significantly increased. For example, the read latency of HM_1 is increased by 12.6 times at 95th and 11.4 times at 99th percentile. This is more significant with larger sensing levels. The second observation is that reducing from large sensing levels is critical to the tail latency optimization. To solve the above issues, this article proposes a smart refresh framework to improve the tail latency and slightly improve the average performance.
+IV. SMART REFRESH FOR TAIL LATENCY OPTIMIZATION
+A. Overview
+Fig. 5 shows the organization of the proposed refresh framework. Based on the above observations, the proposed framework includes two refresh schemes. As shown in the figure, two refresh schemes are implemented in the controller:
+
+Fig. 5. Organization of the proposed framework.
+1) one for access performance optimization and 2) one for tail latency optimization. Both these two refresh schemes are designed by acquiring the number of retries from LDPC to determine the refresh operation. During data decoding, once the data are successfully decoded, the number of retries is sent to the refresh framework. For the threshold-based refresh scheme, if the retry number is higher than a threshold and the data are read for several times, it is refreshed. Otherwise, if the retry number is higher than another threshold, the data are refreshed immediately. For the periodic refresh scheme, it is designed to periodically check data that have an extremely long access latency, and refresh them. In this follow, the above two schemes will be discussed in detail.
+B. Threshold-Based Refresh Scheme
+The threshold-based refresh scheme uses two thresholds to determine the timing of refresh. Fig. 6 shows the process flow of the threshold-based refresh scheme. There are two retry thresholds R1 and R2, and one access frequency threshold T. During a page reading, the data are decoded by LDPC. Then, the number of retries R can be acquired. If R is larger than R2, it means that data with extremely long access latency need to be refreshed immediately. Otherwise, R is compared to R1 and the access number of the data during its lifetime F is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+548
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+Fig. 6. Organization of the threshold-based refresh scheme.
+compared with T. If both conditions are satisfied, the data are also refreshed for performance optimization. If none of the above happens, the access number is updated. The above scheme can improve the access performance and tail latency. However, there are several challenges to achieve the goals.
+1) Determine the First Threshold, R1: The R1 threshold is critical on the performance improvement. If R1 is set to a small retry number, then most of the data will be accessed with a high reliability and the access performance will be improved. However, there are two problems for a small R1. First, if R1 is set too small, data will be refreshed frequently. As discussed in the background section, with the development of flash memory, reliability is degraded especially for the charge leakage during retention time and P/E cycling. In this case, it is easy that data need soft decoding with several retries. The frequent refresh not only introduces additional read and write operations but also introduces wearing, which would further worse the reliability. However, if R1 is set too large, data with long access latency would impact performance, especially for the frequently accessed data. Based on the above discussions, the optional values of R1 are 2, 3, and 4. The retry number of data reads is from level 1 to 7 when using LDPC. Thereby, the design rules can be considered as follows. First, in the motivation section, when the retry number of data reads is level 1 and level 2, the average read response time is close. Second, the mutation in average performance occurs at levels 2–4. To achieve both performance optimization and cost minimization, R1 is selected and studied from levels 2 to 4.
+Another critical parameter used during R1 is T, which represents the access frequency of the data. T also has important impact to the cost and performance. A large T means a small cost and a small T means better performance. Many previous work proposed to identify the hot access data with some complex data structures, such as the bloom filter, least recently used (LRU) algorithm, and so on. Differently, this work adopts a simple counter to determine it based on one of previous works from Li et al. [16]. They found that once data are accessed 2 or more times, the data will be accessed with read only in the future. In this work, we set T to 2 for simplicity.
+2) Determine the Second Threshold R2: Different from the first retry threshold, the second threshold R2 is set for tail latency optimization. If the data are decoded with a large number of retries, it will not only need a long access latency but also if it is accessed next time, longer access latency will happen. This type of data should be refreshed immediately without
+
+checking its frequency. Different from R1, the selection of R2 is more sensitive. If it is refreshed due to the one access, there will be only cost without benefit. Since the first threshold R1 has been designed for performance optimization, R2 should be set only for extremely long access latency. The optional values of R2 are 4, 5, and 6. The selected rules of R2 are different from R1, and aim to optimize the tail latency. It is clear that the tail latency increases from level 4 in the motivation section. Therefore, we study the tail latency variation from level 4 to level 6 to determine the value of R2. In this work, R2 is set to 5 due to its effects on the tail latency. In the experiment, R2 will be studied to show its characteristics.
+Based on above design, there is still a problem that is not solved. Since R2 is set for the case when data are detected with an extremely long access latency, which may introduce tail latency. It means that R2 is only able to solve the case when data have been accessed with extremely long access latency. If these data are the main part, the tail latency will still exist due to the first time access. To solve this issue, a second refresh scheme, periodic refresh, is proposed in the next section.
+C. Periodic Checking for Refreshing
+The design of periodic refresh is to check data with extremely long latency and refresh them on demand. The basic process is to periodically check the reliability of all data in the storage device. In LDPC, the retry number can be used to measure the reliability of data. If the retry number is higher than a limit, it means data with low reliability and will be refreshed immediately. The limit setting is consistent with R2. From the basic process, we can find that there are at least two problems. First, periodic refresh needs to read all the data in the flash device. This is high cost especially when the device is busy. Second, if data with extremely long latency are never accessed after refresh, there will be no benefit but only cost.
+To solve the above issues, several optimization schemes are proposed. First, for the checking process, we propose to only read the first wordline of a flash block. In high-density and low-cost flash, one wordline covers pages of different reliability. For example, there are three types of page in TLC flash, such as LSB page, CSB page, and MSB page. For the state-ofthe-art flash memory, there are always hundreds to thousands of pages in a block. For example, for the current 3-D NAND flash [2], [4], the number of pages is 1536. Additionally, the reliability of wordline in a block is variable from top to bottom. The top wordline is greatly affected by internal interference. Thereby, the reliability of such wordline is relatively lower than other wordlines in the same block [25], [26]. Based on this feature among wordlines, it is reasonable to read the first wordline in each block to measure whether the entire block needs to be refreshed. If the detected access latency for the first wordline is smaller than the predefined threshold, the whole block will be skipped. Otherwise, all the valid pages in the block are candidates for refresh. This is because the data in the entire block have probably poor reliability. To ensure the correct reading of data and ensure good performance, the valid pages in this block will be refreshed. With this approach, the detecting cost can be reduced compared to the basic process.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+549
+
+For the second issue on no benefit page refreshing, we propose a benefit supported refresh scheme. The basic idea is to refresh the data that will be accessed in the future. To realize this, we need to record whether the data were accessed after the last refresh. If it is accessed, then refreshing is beneficial and the current periodic refresh will be processed. Otherwise, the data will be saved for future access. To do this, the refresh overhead can be reduced. However, if the data are not accessed but the error rate is close to uncorrectable bit errors, we still need to refresh it. According to previous works, the read count in each block can be recorded. If the total read count of a block exceeds a limit, then the total pages in this block should be checked [27], [28]. If the retry number of the detected pages is 7, then refresh it immediately for correct reading.
+In addition to the above discussion, the refresh operation is similar to GC. Both of them are designed to read data and update them to a new place. With this characteristic, GC and refresh can be combined for cost minimization. For example, if data in a page are collected multiple times, the accumulated errors can be large. Additionally, the execution speed of GC largely depends on the number of migrated pages. If the valid pages reclaimed in the GC process can be migrated by refreshing in advance, the execution time of GC execution will be shortened. However, this article is designed for read-intensive scenarios, thereby, GC in flash memory has little effect on the performance. Since GC will be an inevitably problem in writeintensive scenarios, we will specifically study how to design refresh strategies to solve the tail latency problem in writeintensive scenarios as our future work. For the design of wear leveling (WL), we just use the normal WL method to ensure lifetime.
+V. DUAL-ECC ENABLED REFRESH
+A. Problem Statement and Motivation
+With the above refresh schemes, the tail latency can be well improved. However, the above scheme has one problem overlooked: refresh may introduce tail latency. One page refresh operation includes at least one page read and one page write operations. If the refresh cost is high, the write operation in refresh may induce tail latency. This is especially the case with the advance of flash memory. The development of stateof-the-art flash memory is to achieve high density and low cost. They are designed to store 4 or 5 bits in a flash cell and stack up to 128 layers in a 3-D NAND flash chip. With this trend, several problems will be worse. First, write latency is significantly increased. In this case, the write operation during refresh may conflict with host requests. Second, due to the degraded reliability, refresh will be frequently activated. Third, the lifetime of high-density and low-cost flash memory is also significantly reduced. With this trend, refresh will be a new challenge for high-density and low-cost flash memory.
+B. Design of Dual-ECC
+To solve above issues, a dual-ECC scheme is proposed. The basic idea is to use two ECCs with different error correction capabilities for different types of data. Different from previous multi-ECC schemes [29], the object of dual-ECC
+
+Fig. 7. Design of the dual-ECC-enabled refresh.
+is to reduce refresh operations. Fig. 5 shows the extended refresh framework with dual-ECC. Basically, a weak-ECC and a strong-ECC are separately deployed. For data with high bit error rates, the strong-ECC is adopted to avoid frequent refresh operations. For data with low bit error rates, the weakECC is adopted to maintain the access performance. With this approach, the refresh operations due to low reliability will be reduced. However, this simple idea has several challenges. First, the determination on the adoption of ECC during first write is unknown. Second, during accesses, identifying the error rates of data is a challenge. Third, data may be encoded with strong-ECC and weak-ECC at different time, which may introduce cost. For example, if data are encoded with weakECC, but with a high error rate during its retention time and not accessed for a long time, it should be refreshed and encoded with the strong-ECC. On the other hand, if data are encoded with strong-ECC, but accessed frequently during its following accesses, it should be refreshed and encoded with the weak-ECC. Finally, combining the dual-ECC scheme with the above smart refresh framework is also important. Fig. 7 shows the flow of the dual-ECC combined with the basic refresh framework. In the following, the design of weak-ECC and strong-ECC-enabled refresh optimization is discussed.
+1) Weak-ECC Enabled Refresh: The design of weak-ECC is similar to the proposed framework. Initially, data are encoded with weak-ECC during its first write (case 1 in Fig. 7). During data accesses, we adopt the same scheme of the basic refresh framework to determine the error rates of data. If their retry number is larger than R2, it means the data have not been accessed for a long time with a high error rate (case 2). In this case, it will be refreshed and encoded with the strong-ECC, presented as follows. Otherwise, it is compared against R1 and accesses frequency Tf . Then, it is refreshed and encoded with weak-ECC or not refreshed (cases 3 and 4). These cases are presented in Fig. 7. The reason for above design is as follows. First, the initial weak-ECC encoding is to make sure the efficient accesses of data. The difference between weak-ECC and strong-ECC is their power consumption and latency. Initially, data are unknown with their characteristics. In this case, to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+550
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+support power efficiency and high performance, weak-ECC framework. First, the design of the weak-ECC is same
+
+encoding is a good choice. Second, once the data are identified to the basic framework, which is for access performance
+
+with a high error rate, it will be changed to the strong-ECC. optimization. It does not introduce any cost. Most importantly,
+
+This cost is acceptable. Because the changes are one time cost, it is only used for a limited volume of data, which is critical to
+
+especially for the data that are rarely or totally not accessed. the performance of data. Second, the design of the strong-ECC
+
+More importantly, for the data with low error rates and high is the main contribution of the dual-ECC, which is designed
+
+access frequency, which are critical to the performance, they for refresh minimization. As presented above, the strong-ECC
+
+are encoded with the weak-ECC. Based on the above design, is for data, which are rarely or totally not accessed during the
+
+the weak-ECC is able to provide good tail latency, which is period. In this case, it is adopted only for cold read data and
+
+the same to the basic refresh framework.
+
+introduce little cost. In addition, it can be well combined with
+
+2) Strong-ECC-Enabled Refresh: The most important con- the basic framework since it does not need any new modules.
+
+tribution of the dual-ECC is the design of the strong-ECC
+
+supported refresh optimization scheme. As presented above, weak-ECC is adopted initially for the first time when data are written to the flash memory. Once the data are not accessed or rarely accessed, its error rates will be increased with its retention time. In this case, strong-ECC will be adopted to avoid
+
+VI. IMPLEMENTATION AND ANALYSIS
+In this section, the implementation of the proposed refresh framework is first discussed. Then, a comprehensive analysis compared with state-of-the-arts is presented.
+
+the high refresh cost (cases 2 and 5). As shown in Fig. 7, once the data are accessed with read retry number larger than A. Implementation and Overhead
+
+R2, it will be encoded with the strong-ECC no matter its Fig. 5 shows the implementation, where there are two current ECC type. Note that the accesses can be from host components implemented in the flash controller. For the
+
+accesses or periodic refresh induced data reading. With this threshold-based refresh scheme, the number of retries needs
+
+approach, the refresh cost will be minimized, because data to be acquired for each access. In addition, each page needs
+
+with high error rates are encoded with strong-ECC. Unlike to maintain an access counter F. To maintain the counter, we
+
+previous works on multiple ECCs, the design of dual-ECC is need to extend the mapping table of flash translation layer
+
+adopted to reduce refresh cost. For example, Liu et al. [29] (FTL). In this work, we assume page mapping as the default
+
+proposed to adopt a strong-ECC for data accessed during GC. mapping scheme. Then, we use 2 bits as the counter for each
+
+However, it cannot reduce the refresh cost on the data with entry, which can record four accesses to the page. Note that
+
+rare accesses. Because their design is for the data with low in order to avoid data with multiple accesses during a long
+
+write frequency. Our proposed dual-ECC is designed to use time identified as frequent data, the counter is cleaned during
+
+strong-ECC for data with low read frequency. This is critical refresh or update. For the periodic refresh scheme, all the first
+
+for refresh optimization.
+
+wordlines of all flash blocks are periodically read and decoded
+
+One additional concern for the above scheme is that the reli- by LDPC. If the retry number of the first wordline is smaller
+
+ability of data may change online. In this case, if some rarely than R2, the whole block is skipped. Otherwise, the benefit bits accessed data are accessed frequently, it will be encoded with are checked. The benefit bit represents if the data are accessed
+
+the weak-ECC once its access times are larger than the thresh- from last refresh. Thereby, the access counter can be reused
+
+old, defined in the framework (case 6). On the other hand, if as the benefit bit. If the access counter is 00, it means that
+
+some frequently accessed data are not accessed any more, it data are not accessed after last refresh. Otherwise, data are
+
+will be encoded with strong-ECC once its retry number is accessed.
+
+larger than R2 (case 7). Cases 6 and 7 presented in Fig. 7 The dual-ECC is designed with two ECC modules in the show the conversion between these two types of ECCs. Note flash controller. In order to implement the dual-ECC scheme,
+
+that this cost is negligible for the following reasons. First, ini- we add another bit in the mapping table to indicate the type
+
+tially, data are encoded with the weak-ECC. In this case, only of adopted ECC. 1 represents strong-ECC and 0 represents
+
+the data that are rarely accessed are changed to the strong- weak-ECC. Once data are programmed to the flash memory
+
+ECC. They are one time cost. Second, many cold data are initially, it is encoded with weak-ECC. During data accesses,
+
+not accessed in the storage. Once data encoding is converted, the encoding process will be checked against the retry num-
+
+no further conversion is needed. More importantly, the pro- ber threshold and its access frequency. Once the checking is
+
+cess of conversion has little cost. It only needs to use another matched, it will be refreshed and encoded. Otherwise, it is not
+
+LDPC code to encode the data. The cost is similar to that of processed. Based on this design, the dual-ECC can be well
+
+refresh operations. Another issue is the process variation in combined with the previous proposed refresh framework.
+
+flash memory, which plays a certain impact on the reliability There are two types of overhead in this design: 1) firmware
+
+of data stored in such storage cell. There are some state-of- and 2) storage overhead. First, the firmware overhead mainly
+
+the-art works to solve this problem. For example, if the hot comes from the comparison between thresholds, the acquired
+
+data are placed in a weak block, then it can be migrated to retry number, and the remark strength of ECC, which is sim-
+
+another place during refreshing [9], [30].
+
+ple comparing operation with negligible overhead. Second, the
+
+C. Combining With the Basic Refresh Framework
+
+storage overhead includes the storage of access counter using during threshold-based refresh, and remark bit used during
+
+Based on above design, we can find that the proposed encoding. For implementation, there are two bits for access
+
+dual-ECC scheme can be well combined with the refresh counter, and one bit for remark strength of ECC maintained
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+551
+
+in the mapping entry. Since benefit bit represents that data are accessed from last refresh, the access counter can be used as benefit bit. Therefore, the storage overhead is negligible overhead by extending the mapping entry with three bits.
+
+B. Comparative Analysis and Discussion
+
+To better understand the performance improvement brought
+by refresh, we will analyze and discuss the above-mentioned
+four refresh schemes, including the state-of-the-art method
+Du et al. and three proposed approaches, namely, Threshold, Threshold+Periodic, and Dual-ECC. Here, are some symbols we defined: R1 and R2 represent the two retry thresholds to distinguish data with different decoding latency. Tf indicates the predefined access frequency. We divided footprint of work-
+loads into four parts: 1) footprint1; 2) footprint2; 3) footprint3; and 4) footprint4. footprint1 represents the footprint where data are accessed more than Tf . footprint2 represents the footprint where data are accessed no more than Tf but at least one time. footprint3 represents the footprint where data are accessed only once. footprint4 represents the footprint where data are never accessed from the last periodic refresh. read1, read2, and read3 are the corresponding read accesses to the footprint.
+1) Du et al.: This work found that data with long access
+latency have significant impact to performance. They proposed
+to refresh the data, which has two characteristics: 1) long
+access latency and 2) a predefined access frequency, such as
+Tf . Equation (1) shows the benefit of the scheme
+
+benefit = α ∗
+
+read1 footprint1
+
+−
+
+Tf
+
+− β ∗ footprint1
+
+(1)
+
+where α and β are the parameters for refresh benefit
+
+and refresh cost. Since footprint1 is small in general, the refresh cost is small. Then, benefit represents the potential
+
+optimization to the access performance. However, there are at
+
+least two problems for their scheme. First, the refresh opera-
+
+tions happen when long access latency happens. In this case,
+
+tail latency may happen. Second, data are refreshed only when
+
+they are accessed with long access latency for Tf times. In this
+
+case, performance may be impacted.
+
+2) Threshold: To solve the above issue, the threshold
+
+scheme is designed to refresh data-based two retry thresholds
+
+R1 and R2, and one access frequency threshold Tf . Tf is same to the frequency threshold used in Du et al. When data are
+
+retried for R1 times and accessed by more than Tf times, it is refreshed for performance improvement. Different, R2 is set
+
+for data with long access latency and low access frequency.
+
+Equation (2) shows the benefit of the scheme
+
+benefit = α ∗
+
+read1 footprint1
+
+−
+
+Tf
+
++
+
+read2 footprint2
+
+−
+
+1
+
+− β ∗ footprint1 + footprint2 .
+
+(2)
+
+Compared with the benefit presented in (1), the threshold scheme has more benefit, especially when read2 is larger. However, there are still has a problem not considered. If data are accessed with only one time, they may be accessed with an extremely long latency. In this case, tail latency may happen. Making thing even worse, the previous work stated that there are a large amount of data accessed with only one time [16].
+
+3) Threshold+Periodic: To solve above the issue, the threshold+periodic method is designed to improve the data with long access latency when first accessed. Thereby, data with long access latency can be checked in advance and refreshed immediately. Then, its benefit can be expressed as follows:
+
+benefit = α ∗
+
+read1 footprint1
+
+−
+
+Tf
+
++
+
+read2 footprint2
+
+−
+
+1
+
++ read3 footprint3
+
+− β ∗ footprint1 + footprint2
+
+− γ ∗ footprint3 + footprint4
+
+(3)
+
+where γ represents the refresh overhead in the periodic refresh, which is correlated to the reliability of flash memory. According to the equation, there are more benefits compared with the threshold method when the footprint3 is larger. However, if the footprint3 and footprint4, especially footprint4, are larger, the refresh induced cost will be significant. Especially, when periodic refresh is applied on highdensity and low-cost NAND flash, the cost will be amplified due to the reduced reliability. Our experiment also shows that with high-density and low-cost NAND flash, periodic refresh did have the impact to performance and tail latency for many workloads.
+4) Dual-ECC: To solve the overhead issue caused by periodic refresh, the dual-ECC scheme is proposed. Unlike threshold+periodic refresh, a strong-ECC is adopted for the data with extremely long access latency. In this method, weak-ECC and strong-ECC are both adopted. Among them, weak-ECC is used to decoding data with read retry number lower than R2 in the threshold refresh scheme. Strong-ECC is used to decoding data with read retry number higher than R2. With this method, the reliability of data will be improved and the number of periodic refresh will be decreased. The parameter γ in 3 is reduced. Then, the refresh overhead can be optimized. More importantly, the adoption of strong-ECC has little impact to the overall system cost since it is rarely activated in the dual-ECC scheme. Because the reliability of data encoded by strong-ECC is relatively better than weak-ECC, the refresh number of data in the periodic refresh scheme will be decreased.
+
+VII. EXPERIMENTAL ANALYSIS
+In this section, we first present the experimental methodology and setup. Then, experimental results are presented with the analysis of the significantly improved tail latency, sightly improved average performance, and sensitive studies.
+
+A. Experimental Setup
+A trace-driven simulator, SSDsim [31], is used to evaluate the proposed framework. To simulate a state-of-the-art SSD, the storage system is configured with eight channels, eight chips per channel, and four planes per chip. There are 2048 blocks in each chip and 64 4 KB pages in each block. The capacity of DRAM is set to cache 16K entries at most. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+552
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+TABLE II CHARACTERISTICS OF EVALUATED WORKLOADS
+read access latency is configured with seven sensing levels. In the controller, default page mapping, and GC and WL schemes are adopted.
+The workloads used in this work include ten real-world traces. Eight traces are from MSR [23], which are widely used in previous works in the studies of SSD performance [16], [18]. All these traces are collected from the disk. Therefore, we compress ten times as close to the SSD scenario. Two SSD traces are from [24], which are collected from RockDB running on EXT4. Table II shows the characteristic of workloads, where the footprint, read size, write size, and the read ratio of each workloads are listed. The footprint represents the size of the space for data accesses; the read ratio represents the percentages of read operations. Additionally, both data and metadata are considered in all simulated schemes. The design of metadata management is the same as DFTL [32].
+ECC Configuration: For the configuration of ECC, except for dual-ECC, single LDPC is adopted for the other schemes. For the dual-ECC scheme, the weak-ECC is similar to the single LDPC adopted in other schemes while strong-ECC is configurable. However, the configuration is not simple. ECC that is over strong may introduce additional cost, including decoding cost, energy consumption, and storage overhead. What is more, it introduces little benefit. ECC that is not strong enough may not reduce refresh cost. The refresh cycle used in periodic refresh is a good metric to show the strength of ECC, we use different refresh cycles to represent the strength of LDPC. For the single LDPC in other schemes and the weakECC, its refresh cycle is set to three days. For the strong-ECC, its refresh cycle is set to one month. What is more, in the sensitive study, refresh cycles are evaluated to show their benefit for the proposed schemes.
+To evaluate the benefit of the proposed framework, five schemes are evaluated in the experiment.
+1) Traditional: The traditional scheme is designed without the refresh scheme. The reliability of data is low due to retention time and other interference, then the retry number of data is set to level 7 initially. For written or updated data, the sensing level is set to 1. This is same for metadata.
+2) Du et al.: This scheme is similar to Du et al. [18]. Differently, we did not use the LRU algorithm to identify the hotness of read data. We assume data are read hot when it is accessed two times for simplicity. After that,
+
+the data are refreshed for future fast accessing. It is reasonable based on the workload analysis from previous work [16]. This is same for metadata. 3) Threshold: This scheme is evaluated to show the advantage of the proposed threshold-based refresh scheme in Section IV-B. In default, R1 is set to 3 and R2 is set to 5. Initially, data are set with seven sensing levels. Once it is refreshed, its sensing level is set to 3. 4) Threshold+Periodic: This scheme includes thresholdbased refresh and periodic refresh. During periodic refresh, data with long access latency are refreshed, and their sensing level is set to 5 conservatively. In addition, this scheme simulates a scenario where all the data use weak-ECC and the cycle of periodic refresh is once per three days. 5) Dual-ECC: This scheme is based on the above approach to add a dual-ECC method. The difference from the threshold+periodic scheme is that stronger ECC is used for encoding the data. In this scheme, when data need read retry number higher than the threshold, especially during the periodic refresh process, strong-ECC is used. After refreshing, the sensing level is set to 5 consistently. For metadata, the sensing level is set to 3 for frequently accessing and encoded with weak-ECC. The periodic refresh is triggered every month. In the following, the tail latency and average performance are first evaluated. Then, sensitive studies on the two thresholds and refresh cycles are given. If there are no special indications, the data mentioned below include data and metadata.
+B. Results Analysis
+1) Tail Latency Optimization: Fig. 8 shows the CDF of read latency of the ten workloads at 95–100th percentiles. The proposed schemes, threshold, threshold+periodic, and dualECC, are able to significantly improve the tail latency. Four conclusions can be drawn from the results.
+First, similar to the motivation section, the traditional scheme has significant long tail latency for all workloads. Compared with 95th and 99th percentiles, the latency is increased by 1.2–85.2 times. Three types of cases can be analyzed from the results. The first case is that the latency at 99th is much higher than average read response time and the tail is dragged very long as well. For example, the latency of HM_0 at 99th is 41.8 ms while the latency at 95th is 3.02 ms, which is increased by 13.8 times. The latency of HM_0 is 231.5 ms at 99.9th, which is further increased by 5.5 times. Similar workloads include SSDTrace_00 and WDEV_0. The second case is that the latency at 99th percentile is not very high but the tail is still long, such as PRXY_0 and STG_0, PROJ_0. For example, the latency of PRXY_0 at 99th is about 4.68 ms while the latency at 95th is 2.54 ms. The ratio between two is 1.84 times. The ratio is 54.4 times compared to the latency at 99th with 99.9th percentile. The third case is that the tail is not too long but the latency at 99th percentile is extremely high. For example, the latency of USR_0 at 99th percentile is approximately 63.1 ms and the latency at 95th percentile is 54.7 ms. Both are very close so that the tail is short, and the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+553
+
+Fig. 8. CDF of read latency of the ten workloads for 95–100th percentiles.
+
+Next, the threshold+periodic scheme improves the tail
+
+latency in some cases, such as STG_0, SSDTrace_00, and
+
+SSDTrace_01. The reason is that the periodic refresh is able
+
+to refresh data with long access latency in advance. But there
+
+are some workloads that are worse than the threshold scheme,
+
+such as HM_1 and WDEV_0. This is because the refresh cost shown in Fig. 12 in the threshold+periodic scheme is very
+
+large. So the latency of read may be influenced by additional
+
+Fig. 9. Distribution of accessed levels. A: Traditional. B: Du et al.. C: Threshold. D: Threshold+periodic. E: Dual-ECC.
+
+read and write requests produced by the process of refresh. Here are the details of the analysis. We will combine the write ratio in Table II to explain the results with four cases.
+
+1) Less Write and More Refresh: The characteristics of
+
+same for SSDTrace_01. The ideal situation is that the tail is
+
+these workloads are that the number of write requests is
+
+very short and the latency is low as well.
+
+small but the number of refresh operations is very large.
+
+Second, the most recent work of Du et al. did have benefit
+
+Therefore, the impact of refresh on read performance
+
+on improving the tail latency. The reason is that data with
+
+will take the dominate part. For example, the tail latency
+
+long access latency will be refreshed when accessed some
+
+of HM_1 is worse than the threshold method. The
+
+times. To understand the characteristic of the accesses, the accessed levels of decoding latency are collected. In Fig. 9,
+
+number of accesses to footprint3 is small so that the benefit brought by periodic refresh is low. However,
+
+the y-axis represents the distribution of accessed levels. Due to the experimental limitation, we just simulate four accessed
+
+the footprint4 is large so that the refresh overhead during periodic refresh is considerable. In this case, just a
+
+levels for simplicity. The accessed level of traditional scheme
+
+simple refresh is enough to gain a good performance.
+
+in all workloads is high. Compared with traditional, the dis- 2) Less Write and Less Refresh: For USR_0, the number of
+
+tribution of accessed levels can be classified into two cases
+
+write requests is small, as well as the number of refresh
+
+according to the number of accesses to level 7 in Du et al.
+
+operations in this workload is few. The impact of few
+
+If the value is small, such as HM_1, it means that most of
+
+refreshes is acceptable. Thus, the tail latency is further
+
+the accesses are hot. Then, the hot accesses will bring large
+
+improved due to that the reliability of data with long
+
+benefit according to 1. For the 99th percentile, the latency
+
+access latency is optimized through refresh in advance.
+
+is improved by 2.7–5.0 times. For example, the latency of 3) More Write and More Refresh: The characteristic of
+
+HM_1 is 15.91 ms at the 99th percentile in the traditional
+
+the case is that there are many write requests and the
+
+method while it is 3.18 ms in Du et al., which is improved
+
+refresh overhead is also high. The improvement of tail
+
+by five times. However, the number of accesses in level 7 of
+
+latency depends on whether the refreshed data are hot
+
+the latter six workloads is large. It means that the number of
+
+data. As for PROJ_0 and STG_0, most of the refreshed
+
+data accesses with long access latency is high, which may still
+
+data in periodic refresh will be accessed soon, thereby
+
+cause tail latency.
+
+the tail latency is improved by 1.02–1.76 at the 99th per-
+
+Third, compared with Du et al., the threshold-based scheme
+
+centile through refresh in advance. But for WDEV_0, the
+
+is generally slight better. This is because the threshold scheme
+
+refreshed data in periodic refresh are so cold that these
+
+is able to improve the latency of data with low reliability at the
+
+data will not be accessed after a long time. Therefore,
+
+first time access, while the number of accesses on footprint2 is not much, just 0.28%–8.96%, the benefit brought by threshold
+
+the refresh overhead will cause more influence than the benefit brought by refresh and the result of tail latency
+
+is smaller compared with Du et al.
+
+is worse than the threshold scheme. That is, to say, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+554
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+Fig. 10. Normalized average read response time.
+
+Fig. 11. Normalized average write response time.
+
+tradeoff between the costs of refresh and the benefit from refresh is very important for performance improvement. For HM_0, the result of tail latency in all methods is similar because the characteristic of accesses is so cold that there is just little benefit through refreshing. 4) More Write and Less Refresh: The characteristics of the case are that the number of writes is large but the number of refresh operations is small. The few refresh overhead in these workloads can be negligible and the tail latency will be improved, such as PRXY_0. Finally, the dual-ECC scheme further improves the tail latency in some cases, especially for WDEV_0. The reason is that refresh frequency is decreased while the reliability of data is improved by strong-ECC. In some workloads, using weak-ECC is good enough, such as PRXY_0, STG_0, and USR_0. However, for HM_1, the tail latency is optimized a lot compared with the threshold+periodic scheme. At the same time, this workload is sensitive to the write operations produced by periodic refresh because there are 96.1% of read requests according to Table II. For this type of workload, stronger ECC is needed to encode the data and can further optimize the performance. Overall, the dual-ECC scheme has a better effect on improving tail latency with little overhead.
+2) Read Performance Evaluation: Fig. 10 shows the normalized read response time for the evaluated five schemes. First, Du et al. can improve the average read performance by 37.4%. However, for SSDTrace_00 and SSDTrace_01, the performance is just improved a little. Because the footprint is similar to the total read, which means the accessed data is cold. For these scenarios, simple refresh cannot improve the performance. Second, the threshold scheme is always slightly better than Du et al., due to that it may reduce the first long access latency. Third, the average performance in the threshold+periodic refresh scheme is increased by 1.96% on average compared with the threshold scheme. The reason is that too much refresh caused by periodic refresh may influence the performance. Here, the analysis is as follows. For HM_1, the impact of refresh overhead on performance is extremely serious. Write operations caused by refreshing may have a significant impact on read dominate workloads. Despite the refresh overhead, the average performance is still improved under most workloads, such as HM_0, PROJ_0, STG_0, etc. Because refresh data with long access latency in advance are effective. In addition, for RSRCH, USR_0, and WDEV_0, the performance is similar to the Du et al. Because the accesses in these workloads are hot in Fig. 9,
+
+(a)
+
+(b)
+
+Fig. 12. Normalized of refresh counts: (a) Comparison between Du et al. and threshold. (b) Comparison during periodic refresh.
+
+simple refresh can significantly optimize the performance. For SSDTrace_00 and SSDTrace_01, most data are only accessed once. Then, the refresh operation can only cause overhead but no benefit. Finally, the dual-ECC further improves the performance by 6.2% on average compared with threshold refresh scheme. Because the reliability of data is improved, as shown in Fig. 12, the refresh overhead is decreased a lot.
+3) Write Performance Evaluation: Fig. 11 shows the normalized write response time for the evaluated five schemes. Several observations can be concluded. First, the experiment results show that the proposed schemes have no impact to the write performance. Second, Du et al. is able to slightly improve the write performance by 3.37% on average. This is because their scheme is able to reduce most of the long read accesses. The proposed threshold scheme has similar results to their results due to the same reason. Third, one critical observation from the results is that the threshold+periodic scheme did have impact to write performance. The reason is from that this scheme introduces significant amount of refresh operations. To reduce the amount of refresh operations, dual-ECC is proposed. Finally, the results did show that dual-ECC achieves similar results to that of Du et al. and threshold.
+4) Refresh Cost Analysis: One important challenge for the refresh schemes is the refresh cost, which would not only produce additional operations but also produce wearing to flash memory. In this part, the number of refresh operations is collected. Fig. 12 shows the normalized refresh counts, Fig. 12(a) shows the refresh cost comparison between Du at el. and Threshold, and Fig. 12(b) shows the refresh cost comparison during periodic refresh. The number of additional refreshes increased by 1.73 times on average compared with Du at el., because of its first refresh to data with long access latency. Fig. 13 shows the refresh benefits in threshold, which collects the ratio of accessed data after refresh. In Fig. 12(b), the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+555
+
+Fig. 13. Refresh benefits.
+
+Fig. 15. Sensitive study on R2: the y-axis is CDF of latency.
+
+Fig. 14. Sensitive study on R1.
+TABLE III REFRESH FREQUENCY OF DIFFERENT CYCLES
+
+refresh overhead of Dual-ECC is reduced by 84.2% on average compared with Threshold+Periodic. In conclusion, the proposed scheme reduced the refresh overhead significantly.
+5) Sensitive Studies: In this part, we first present sensitive studies on the two critical parameters: 1) R1 and 2) R2. Then, we present the sensitive studies on the refresh cycle.
+First, for the study on R1, it is set from levels 2 to 4. Fig. 14 shows the normalized read response time on R1. The results show that R1 does have important impacts to the average read response time, especially for some workloads, such as USR_0. This is because USR_0 is more intensive. In this case, the sensing latency would be very important for its performance optimization. When R1 is set to level 3, the average read response time in most workloads has been improved, and in the worst case, it has little deteriorated. In order to avoid high cost on refresh, R1 is set to 3 in this work.
+Fig. 15 shows the tail latency for four workloads on R2. The results show that the proposed scheme is insensitive to R2 for some workloads, such as HM_1. But for some other workloads, it is sensitive, such as STG_0. For PRXY_0 and WDEV_0, the tail latency is very close between level 4 and level 5. When the retry number of data reads is 6, the tail latency is increased. The reason for the different sensitiveness is due to their access characteristics. In order to avoid high cost on refresh, R2 is set to 5 in this work.
+Then, we did a sensitive study on the refresh cycle, which is set to three months, one month, one week, three days, and two days. Ideal is the best case with no refresh overhead. Table III lists the refresh frequency for each refresh cycle. We take the 256 GB SSD using in the experiment as an example.
+
+Fig. 16. Sensitive study on refresh cycle: the y-axis is CDF of latency.
+The parameters are consistent with the experimental settings. We can find that using stronger ECC is critical to reduce the refresh cost. Fig. 16 shows the CDF of latency at the 95–100th percentiles. The results show that the refresh cycle is sensitive for some workloads, such as HM_1. When refresh cycle is larger than one month, the result is almost same for all workloads. In addition, refresh has little effect on part of the workloads, such as PRXY_0. To this end, the refresh cycle is set to one month, which will bring acceptable refresh overhead and low power consumption caused by ECC.
+VIII. RELATED WORK
+This work proposes to optimize the tail latency induced by LDPC. It means that with the multiple retries during LDPC decoding, the access latency will be extended. Then, the related works can be first classified into two groups: 1) LDPC optimization and 2) tail latency optimization. In addition, we improve the refresh overhead, thereby the second related works will introduce the works of dual-ECC.
+Since LDPC has significant impact on the access latency of flash memory, there are a large amount of LDPC optimization schemes [15]–[20]. These works can be classified into two groups: 1) optimize the reliability of flash to improve LDPC and 2) optimize LDPC to improve the reliability. For the first group, the straightforward scheme is to reduce the raw bit error rates (RBER) of flash memory [17], [18]. For the dominate errors induced from retention time, several refresh schemes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+556
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 3, MARCH 2022
+
+have been proposed in previous works [9], [11], [14], [18]. For example, Cai et al. [14] proposed to remove the errors from flash memory when the employed ECC was not able to correct the errors. Then, the lifetime of flash memory can be improved. Du et al. [18] proposed to refresh the data with both long latency and high access frequency to improve the access performance. Shi et al. [11] proposed to use fix refresh scheme for data with predefined retention time. Some other schemes are also proposed to reduce RBER, such as using fine-grained program scheme [16]. Then, during the reading process, RBER will be much smaller. However, none of these work are able to optimize the tail latency of flash memory. Because the retry will happen for LDPC even for the above schemes. For example, for the refresh scheme, if the data are not frequently accessed, it will need a long latency once it is accessed. For the second group, there are a large number of works proposed to combine the reliability characteristics of flash with the decoding process of LDPC to optimize the performance [15], [17], [20]. For example, Wu et al. [20] proposed to exploit the write interference, retention time to optimize the decoding process of LDPC. Du et al. [17] proposed to carefully select the sensing voltage for LDPC. Li et al. [19] proposed to smartly place the sensing voltage of LDPC. All these works can reduce the decoding latency of LDPC by improving the quality of input information. However, for the data with low reliability, especially for flash memory with QLC and 3-D stacking, the long access latency cannot be avoided.
+Tail latency is a hot topic in the computer system. The most representative work is from Yan et al. [21]. They found that GC in flash will introduce tail latency. Then, they proposed a set of schemes, including recomputing, round-robin GC, and so on, to optimize the tail latency. Some other works also proposed to improve the tail latency from the view of access fairness [33], [34]. However, none of these works took the reliability into consideration. The most correlated work is from Kim et al. [34]. They found that the reliability issue in the SSDs may introduce QoS issue. They proposed a holistic approach to selectively employ different types of reliability optimization schemes for QoS optimization. Another correlated work is from Cui et al. [35]. They proposed a latency variation-aware scheduling scheme to optimize performance. However, none of these works focus on the tail latency induced from LDPC.
+There are some works about dual ECC [36], [37]. The basic work is from [37], which proposed a decoder with two modes and different modes have different power consumption. The first operating mode with the first power consumption while the second operating mode has the second power consumption. At the same time, the second power consumption is lower than the first power consumption. The control unit is configured to evaluate the criteria for the input code word to decide whether to select the first or second operation mode, and use the selected operation mode to decode the input code word. Another work is from [36]. They proposed to detect the data content for computing the amount of errors in data content to determine whether the value is beyond a predetermined threshold. If fewer than a limit, the first mode is used to decode.
+
+Otherwise, the second mode will be used. In this work, we apply the above technique to improve the refresh cost.
+The most state-of-the-art work of using dual-ECC is Liu et al. [29], which is proposed to improve the write performance. The BCH code is used to decoding data from host while the LDPC is used for background writes, such as GC. However, the read performance of frequently accessed data will be degraded when using ECC with high error correction capability.
+IX. SUMMARY AND CONCLUSION
+LDPC, as one of the strong error correction capability ECC, has been the default configuration for the state-of-the-art flash memory. However, one problem of LDPC is high decoding cost when the reliability is low, which would introduce extremely long access latency to the flash system. In order to solve this issue, this article proposed a smart refresh framework, which includes two refresh schemes: 1) the thresholdbased refresh scheme is designed to improve performance and 2) the periodic refresh scheme is designed to optimize tail latency. To reduce the overall refresh overhead in largecapacity flash memory, we further proposed a dual-ECC scheme based on different bits error data. Besides, a mathematical model is constructed to clarify the benefit of each scheme. The proposed framework is implemented in a popular simulator. The experiment with several real workloads shows that the proposed schemes not only significantly improve the tail latency but also have sightly improvement on average read response time.
+ACKNOWLEDGMENT
+The authors would like to thank the anonymous reviewers for their comments and suggestions.
+REFERENCES
+[1] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. S. Manasse, and R. Panigrahy, “Design tradeoffs for SSD performance,” in Proc. ATC, vol. 57, 2008, pp. 57–70.
+[2] D. Kang et al., “256 GB 3b/cell V-NAND flash memory with 48 stacked WL layers,” IEEE J. Solid-State Circuits, vol. 52, no. 1, pp. 210–217, Oct. 2017.
+[3] J. W. Im, W. P. Jeong, and D. H. Kim, “7.2 A 128Gb 3b/cell V-NAND flash memory with 1Gb/s I/O rate,” in Proc. ISSCC, Feb. 2015, pp. 1–3.
+[4] N. Shibata et al., “13.1 a 1.33 TB 4-bit/cell 3D-flash memory on a 96-word-line-layer technology,” in Proc. ISSCC, 2019, pp. 210–212.
+[5] (2017). Intel Announces Nand Flash Memory Under 10nm. [Online]. Available: https://www.eetimes.com/author.asp?section_id=36&doc _id=1332422#
+[6] K.-T. Park et al., “Three-dimensional 128 GB MLC vertical nand flash memory with 24-WL stacked layers and 50 Mb/s high-speed programming,” IEEE J. Solid-State Circuits, vol. 50, no. 1, pp. 204–213, Jan. 2015.
+[7] (2017). Limitations of 3D Nand Scaling. [Online]. Available: https://tech4gamers.com/intelannouncesnandflashmemoryunder10nm
+[8] Y.-M. Chang, Y.-H. Chang, and T.-W. Kuo, “Disturbance relaxation for 3D flash memory,” IEEE Trans. Comput., vol. 65, no. 5, pp. 1467–1483, May 2016.
+[9] Y. Di, L. Shi, K. Wu, and C. J. Xue, “Exploiting process variation for retention induced refresh minimization on flash memory,” in Proc. DATE, 2016, pp. 391–396.
+[10] Q. Li et al., “Process variation aware read performance improvement for LDPC-based nand flash memory,” IEEE Trans. Rel., vol. 69, no. 1, pp. 310–321, Mar. 2020.
+[11] L. Shi et al., “Retention trimming for lifetime improvement of flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 35, no. 1, pp. 58–71, Jan. 2016.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+LV et al.: TAIL LATENCY OPTIMIZATION FOR LDPC-BASED HIGH-DENSITY AND LOW-COST FLASH MEMORY DEVICES
+
+557
+
+[12] Y.-M. Chang, Y.-C. Li, and Y.-H. Chang, “On relaxing page program disturbance over 3D MLC flash memory,” in Proc. ICCAD, 2015, pp. 479–486.
+[13] Y. Wang, J. Huang, J. Yang, and T. Li, “A temperature-aware reliability enhancement strategy for 3-D charge-trap flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 38, no. 2, pp. 234–244, Feb. 2019.
+[14] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. ICCD, 2012, pp. 94–101.
+[15] K. Zhao, W. Zhao, and H. Sun, “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. FAST, 2013, pp. 243–256.
+[16] Q. Li, L. Shi, and C. J. Xue, “Access characteristic guided read and write cost regulation for performance improvement on flash memory,” in Proc. USENIX FAST, 2016, pp. 125–132.
+[17] Y. Du, D. Zou, Q. Li, L. Shi, H. Jin, and C. J. Xue, “LALDPC: Latencyaware LDPC for read performance improvement of solid state drives,” in Proc. MSST, 2017, pp. 1–11.
+[18] Y. Du, Q. Li, L. Shi, D. Zou, H. Jin, and C. J. Xue, “Reducing LDPC soft sensing latency by lightweight data refresh for flash read performance improvement,” in Proc. DAC, 2017, pp. 1–6.
+[19] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. ASP-DAC, 2017, pp. 560–565.
+[20] F. Wu et al., “Using error modes aware LDPC to improve decoding performance of 3D TLC nand flash,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 4, pp. 909–921, Apr. 2020.
+[21] S. Yan et al., “Tiny-tail flash: Near-perfect elimination of garbage collection tail latencies in nand SSDs,” ACM Trans. Storage, vol. 13, no. 3, p. 22, 2017.
+[22] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Error-prediction LDPC and error-recovery schemes for highly reliable solid-state drives (SSDs),” IEEE J. Solid-State Circuits, vol. 48, no. 11, pp. 2920–2933, Nov. 2013.
+[23] D. Narayanan, E. Thereska, and A. Donnelly, “Migrating server storage to SSDs: Analysis of tradeoffs,” in Proc. Eursys, 2009, pp. 145–158.
+[24] G. Yadgar, M. Gabel, S. Jaffer, and B. Schroeder, “SSD-based workload characteristics and their performance implications,” ACM Trans. Storage, vol. 17, no. 1, p. 8, Sep. 2020. [Online]. Available: https://doi.org/10.5281/zenodo.4031745
+[25] Y. Di, L. Shi, S.-H. Chen, C. J. Xue, and E. H.-M. Sha, “1+1>2: Variation-aware lifetime enhancement for embedded 3D nand flash systems,” in Proc. 20th ACM SIGPLAN/SIGBED Int. Conf. Lang. Compilers Tools Embedded Syst. (LCTES), 2019, pp. 45–56. [Online]. Available: https://doi.org/10.1145/3316482.3326359
+[26] S.-H. Chen, Y.-T. Chen, H.-W. Wei, and W.-K. Shih, “Boosting the performance of 3D charge trap nand flash with asymmetric feature process size characteristic,” in Proc. 54th ACM/EDAC/IEEE Design Autom. Conf. (DAC), 2017, pp. 1–6.
+[27] K. Ha, J. Jeong, and J. Kim, “An integrated approach for managing read disturbs in high-density nand flash memory,” IEEE Trans. Comput.Aided Design Integr. Circuits Syst., vol. 35, no. 7, pp. 1079–1091, Jul. 2016.
+[28] C.-Y. Liu, Y.-M. Chang, and Y.-H. Chang, “Read leveling for flash storage systems,” in Proc. 8th ACM Int. Syst. Storage Conf. (SYSTOR), 2015, pp. 1–10. [Online]. Available: https://doi.org/10.1145/2757667.2757679
+[29] R.-S. Liu, C.-L. Yang, and W. Wu, “Optimizing nand flash-based SSDs via retention relaxation,” in Proc. USENIX FAST, vol. 11, no. 10, 2012, pp. 1–11.
+[30] Q. Li, L. Shi, Y. Di, Y. Du, C. J. Xue, and H. Edwin, “Exploiting process variation for read performance improvement on LDPC based flash memory storage systems,” in Proc. IEEE Int. Conf. Comput. Design (ICCD), 2017, pp. 681–684.
+[31] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. ICS, 2011, pp. 96–107.
+[32] A. Gupta, Y. Kim, and B. Urgaonkar, “DFTL: A flash translation layer employing demand-based selective caching of page-level address mappings,” ACM SIGPLAN Notices, vol. 44, no. 3, pp. 229–240, 2009.
+[33] B. S. Kim and S. L. Min, “QoS-aware flash memory controller,” in Proc. RTAS, 2017, pp. 51–62.
+[34] B. S. Kim, J. Choi, and S. L. Min, “Design tradeoffs for {SSD} reliability,” in Proc. USENIX FAST, 2019, pp. 281–294.
+[35] J. Cui, Y. Zhang, W. Wu, J. Yang, Y. Wang, and J. Huang, “DLV: Exploiting device level latency variations for performance improvement on flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 8, pp. 1546–1559, Aug. 2018.
+[36] J. P. Chen, “Dual mode error correction code (ECC) apparatus for flash memory and method thereof,” U.S. Patent Appl. 12/252, 454, Apr. 2010.
+[37] M. Anholt, N. Sommer, R. Dar, U. Perlmutter, and T. Inbar, “Dual ECC decoder,” U.S. Patent 8 429 498, Apr. 23, 2013.
+
+Yina Lv received the B.S. degree in computer science from Ningbo University, Ningbo, China, in July 2018. She is currently pursuing the Ph.D. degree in computer science and technology with East China Normal University, Shanghai, China.
+Her research interests include NAND flash memory and computer architecture.
+Liang Shi (Member, IEEE) received the B.S. degree in computer science from the Xi’an University of Post and Telecommunication, Xi’an, China, in July 2008, and the Ph.D. degree from the University of Science and Technology of China, Hefei, China, in June 2013.
+Since 2013, he has been an Associate Professor with the College of Computer Science, Chongqing University, Chongqing, China. Since 2018, he has been a Full Professor with the School of Computer Science and Technology, East China Normal University, Shanghai, China. His research interests include flash memory, embedded systems, and emerging nonvolatile memory technology.
+Longfei Luo received the B.S. degree in computer science and technology from Hefei University, Hefei, China, in July 2019. He is currently pursuing the postgraduate degree in computer science and technology with the East China Normal University of China, Shanghai, China.
+His research interests include hybrid SSD, NAND flash memory, and computer architecture.
+Changlong Li received B.S. and Ph.D degrees in of computer science from University of Science and Technology of China, Hefei, China, in 2012 and 2018 respectively.
+He was a visiting scholar with the University of California at Los Angeles, Los Angeles, CA, USA, in 2015 and 2016. He joined the department of computer science and technolgoy, East China Normal Unversity in 2021. His research interests include memory management, storage, mobile devices, and distributed systems.
+Chun Jason Xue (Senior Member, IEEE) received the B.S. degree in computer science and engineering from the University of Texas at Arlington, Arlington, TX, USA, in 1997, and the M.S. and Ph.D. degrees in computer science from the University of Texas at Dallas, Richardson, TX, USA, in 2002 and 2007, respectively.
+He is currently an Associate Professor with the Department of Computer Science, City University of Hong Kong, Hong Kong. His current research interests include memory and parallelism optimization for embedded systems, software/hardware co-design, real-time systems, and computer security.
+Edwin H.-M. Sha (Senior Member, IEEE) received the Ph.D. degree from the Department of Computer Science, Princeton University, Princeton, NJ, USA, in 1992.
+From 1992 to 2000, he was with the Department of Computer Science and Engineering, University of Notre Dame, Notre Dame, IN, USA. Since 2000, he has been a Tenured Full Professor with the Department of Computer Science, University of Texas at Dallas, Richardson, TX, USA. Since 2012, he has been serving as the Dean for the College of Computer Science, Chongqing University, Chongqing, China. Since 2018, he has been a Distinguished Professor with East China Normal University, Shanghai, China.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:07:12 UTC from IEEE Xplore. Restrictions apply.
+
+

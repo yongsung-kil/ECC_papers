@@ -1,0 +1,1335 @@
+Fiftieth Annual Allerton Conference Allerton House, UIUC, Illinois, USA October 1 - 5, 2012
+The 1 penalized decoder and its reweighted LP
+
+Xishuo Liu Department of Electrical and
+Computer Engineering University of Wisconsin - Madison
+Madison, WI 53706 Email: xliu94@wisc.edu
+
+Stark C. Draper Department of Electrical and
+Computer Engineering University of Wisconsin - Madison
+Madison, WI 53706 Email: sdraper@ece.wisc.edu
+
+Benjamin Recht Department of Computer Sciences University of Wisconsin - Madison
+Madison, WI 53706 Email: brecht@cs.wisc.edu
+
+Abstract—Linear programming (LP) decoding for low density parity check (LDPC) codes proposed by Feldman et al. has attracted considerable attention in recent years. Despite having theoretical guarantees in some regimes, at low SNRs LP decoding is observed to have worse error performance than belief propagation (BP) decoding. In this paper, we present a novel decoding algorithm obtained by trying to solve a non-convex optimization problem using the alternating direction method of multipliers (ADMM). This non-convex problem is constructed by adding an 1 penalty term to the LP decoding objective. The goal of the penalty term is to make “pseudocodewords”, which are the non-integer vertices of the LP relaxation to which the LP decoder fails, more costly. We name this the “ 1 penalized decoder”. We also develop a reweighted LP decoding algorithm base on this 1 penalized objective. We show that this reweighted LP has an improved theoretical recovery threshold compared to the original LP. In addition, simulations show that, in comparison to LP decoding, these two decoders both achieve significantly lower error rates and are not observed to have an “error floor”. In particular, the 1 penalized decoder meets or outperforms the BP decoder at all SNRs.
+I. INTRODUCTION
+Linear Programming (LP) decoding for low density parity check (LDPC) codes was proposed by Feldman et al. in [1]. LP decoder is better than message passing decoders in many aspects. First, the LP decoder has an “ML certificate” property. That is, if the solution of the LP is an integral solution, it is the maximum likelihood (ML) solution. Second, the LP decoder provides better theoretical guarantees. Message passing algorithms such as belief propagation (BP) are not guaranteed to converge and are observed to suffer from an “error floor”. The LP decoding, on the other hand, is guaranteed to correct some fraction of errors in bit flipping channels (see e.g. [2]– [4]) and, empirically, has not been observed to suffer from an error floor. Third, adding redundant parity checks improves error performance of the LP decoder because it tightens the LP relaxation. Doing this would degrade the performance of BP decoders.
+Despite having these advantages, LP decoder is not efficient using generic LP solvers. This crucial problem was addressed by Barman et al. in [5]. The authors in [5] develop an efficient distributed algorithm for LP decoding. With this improvement, computational complexity is no longer a bottleneck for implementing LP decoding in practical applications. However the simulation results therein show
+
+that the LP decoder has worse error performance compared to BP at low SNRs. This suggests that an ideal decoder should perform like BP at low SNRs and have no error floor effects at high SNRs.
+We note that some prior works have sought to improve the error performance of LP decoding. These works can roughly be classified into two categories: (a) change the constraint set of LP decoding by tightening the relaxation, e.g. [6], [7] or (b) change the objective functions, e.g. [8]. Our work is partially inspired by [8], where the authors propose solving a second reweighted LP if the LP decoder fails. This reweighted LP is constructed using the fractional output of the LP decoder, i.e., the pseudocodeword solution. However this technique only applies to binary symmetric channel (BSC). We seek a method that applies to other channels such as the additive white Gaussian noise (AWGN) channel. To achieve this goal, we introduce an 1 penalty in this work. Namely, we add an 1 penalty term to the linear objective to penalize fractional solutions. The result is that the output of the problem is more likely to be an integral solution. Base on the 1 penalized objective, we develop a new reweighted LP algorithm that meets our goal. Our reweighted LP algorithm has two advantages compared to the algorithm in [8]. First, our algorithm applies to both BSC and AWGN channel. Second, our algorithm allows multiple rounds of reweighting and thus has the potential to achieve better error performance. In addition, similar to [8] we show that the two-round reweighted LP decoding has an improved theoretical recovery threshold compared to the LP decoding of Feldman et al.
+The paper is organized as follows. Section II introduces the background of the LP decoding using the ADMM. Section III introduces decoding algorithm that incorporates 1 penalty term. Section IV describe reweighted LP algorithm and provide theoretical proof for the two-round reweighted LP decoding. Simulation results are presented in Section V. Conclusions are drawn in Section VI.
+II. PRELIMINARY
+A. LP decoding of LDPC codes
+Through out this paper, we consider LDPC codes of length n each specified by an n × m parity check matrix H. Let I := {1, 2, . . . , n} denote the index set of codeword
+
+978-1-4673-4539-2/12/$31.00 ©2012 IEEE
+
+1572
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+symbol J := {1, 2, . . . , m} be the index set of checks. Let
+
+di, i ∈ I and dj , j ∈ J be the degree of codeword symbol i and check node j respectively. Let Nv(i) and Nc(j) be the sets of neighbors of variable node i and check node j
+
+respectively. Consider memoryless binary-input symmetric-
+
+output (MBIOS) channels, let X = {0, 1} be the input
+
+space and Σ the output space. Let W : X × Σ → R≥0 be the channel law defined by conditional probability W (y|x),
+
+where y ∈ Σ, x ∈ X . Since the channel is memoryless,
+
+pY |X (y|x) =
+
+n i=1
+
+W
+
+(yi
+
+|xi)
+
+for
+
+x
+
+∈
+
+Xn, y
+
+∈
+
+Σn.
+
+The
+
+ML decoding can be stated as
+
+minimize γT x subject to x ∈ C,
+
+where γ is the negative log-likelihood ratio, defined by
+
+γi = log
+
+W (yi|0) W (yi|1)
+
+and C is the set of possible codewords.
+
+Feldman et al. relax this integer program to the following
+
+linear program [1]
+
+minimize γT x
+subject to x ∈ P := conv(Cj),
+j∈J
+
+where conv(·) is the operation of taking convex hull and conv(Cj) is the convex hull of codewords of the single-parity check code defined by the jth row of parity check matrix H. P is called the fundamental polytope. An equivalent
+
+We now generalize the above objective function as
+
+minimize f (x)
+
+subject to ∀j ∈ J , P jx = zj,
+
+zj ∈ PPdj .
+
+The augmented Lagrangian [10] for the above problem is
+
+μ Lμ(x, z, λ) = f (x)+ λj(P jx−zj)+ 2
+
+P jx−zj
+
+2 2
+
+,
+
+j
+
+j
+
+where μ is some constant. The ADMM update rules are
+
+x-update: xk+1 = argmin Lμ(x, zk, λk),
+
+(2)
+
+x
+
+z-update: zk+1 = argmin Lμ(xk+1, z, λk),
+
+(3)
+
+z
+
+λ-update: λk+1 = λkj + μ P j xk+1 − zkj +1 . (4)
+
+Note that (3) is minimization over zj and therefore f (x) can be considered as a constant that does not affect the
+
+solution to the problem. Hence the solution is identical to
+
+that in [5]. Eq. (4) is also not related to f (x). Therefore
+
+when dealing with arbitrary objective function f (·), we need
+
+only modify the x-update, vis-a`-vis [5], [9].
+
+Rephrasing (2) as a coordinate-wise update rule for x, we
+
+get:
+
+⎛
+
+⎞
+
+xi =
+
+1⎝ di
+
+j
+
+z(ji)
+
+−
+
+λ(ji) μ
+
+−
+
+1 μ
+
+(∇xf )i⎠
+
+,
+
+compact expression is
+LPD : minimize γT x (1)
+subject to P jx ∈ PPdj , ∀j ∈ J .
+Here P j is the operation of selecting the sub-vector of x that participates the jth check. PPdj is the parity polytope of degree dj. It is define as the convex hull of all even-parity binary vectors of length dj, in other words, the convex hull of all codewords of the length-dj single-parity check code.
+Efficient description of P is crucial in order to develop an efficient decoding algorithm. Barman et al. characterize the geometry of PPdj in [5] and develop an efficient algorithm for projecting onto this object. That algorithm is the starting point for our 1 penalized decoder.
+
+where the superscript (i) denotes the entries in zj, λj that are associated with variable i. For any objective function f (·), we can derive ∇xf to determine the update rule.
+Example 1: (Reweighted LP decoding in [8]) Khajehnejad et al. propose reweighted LP scheme in [8] to improve performance of LP decoding. This decoder is constructed by concatenating an LPD with a second LP. We denote this reweighted LP as RLPD-KDHVB (Khajehnejad-DimakisHassibi-Vigoda-Bradley).
+
+RLPD-KDHVB minimize subject to
+
+c1 (x − y)L 1 + c2 (x − y)Lc 1
+P jx ∈ PPdj , ∀j ∈ J . (5)
+
+B. ADMM formulation for general optimization decoding problem
+
+where c1 < 0 and c2 > 0 are constants, L ⊂ {1, 2, ..., n} is a fixed subset and Lc is the compliment of L.
+
+We now review the ADMM formulation for LP decoding presented in [9] and introduce a generalized optimization problem over the fundamental polytope P. We refer the readers to [10] for a comprehensive description of ADMM. To cast the LP decoding problem into the framework of ADMM, the key is to introduce replica vectors zj, j ∈ J and write (1) in the following, equivalent, form:
+
+minimize subject to
+
+γT x ∀j ∈ J , P jx = zj, zj ∈ PPdj .
+
+Note that this is an LP since for a given fixed y, the objective
+
+is affine linear with respect to x. Let f (x) be the objective
+
+in (5), then (∇xf )i = cv sgn(xi − yi), where v = 1 if i ∈ L and v = 2 if i ∈ Lc. Note that xi ∈ [0, 1] and yi ∈ {0, 1}.
+
+Therefore sgn(xi − yi) = 1 if yi = 0 and sgn(xi − yi) = −1 if yi = 1. Combining the two cases, we obtain the x-update
+
+rule in (6).
+
+⎧
+
+⎨⎪⎪
+
+1 di
+
+xi
+
+=
+
+⎩⎪⎪
+
+1 di
+
+j
+
+zj(i)
+
+−
+
+λ(ji) μ
+
+j
+
+zj(i)
+
+−
+
+λ(ji) μ
+
+−
+
+cv μ
+
++
+
+cv μ
+
+if yi = 0, (6)
+if yi = 1.
+
+1573
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+Since ADMM is not restricted to linear programs, we are able to (try to) decode using any objective function on P. This means that we have the freedom to choose a good decoding objective. We leverage this observation in the next section and develop decoding methods that incorporate an 1 penalty term into the original linear objective.
+
+For a given ti, there can be two solutions for xi. We update
+
+xi with the one that is farthest from 0.5. So the threshold is
+
+ti
+
+=
+
+di 2
+
+.
+
+The
+
+x-update ⎧
+
+rule
+
+is
+
+summarized
+
+in
+
+(8).
+
+xi
+
+=
+
+⎨Π[0,1] ⎩Π[0,1]
+
+1 di
+1 di
+
+ti
+
++
+
+α μ
+
+ti
+
+−
+
+α μ
+
+if ti ≥ di/2, if ti < di/2.
+
+(8)
+
+III. USING 1 PENALTY FUNCTION FOR DECODING
+LP decoding has an “ML certificate”, thus the LP decoding fails whenever it outputs a fractional solution. This solution is called a pseudocodeword. Since these pseudocodewords are directly related to the fractional vertices of fundamental polytope P, it is not surprising that error performance can be improved by tightening the relaxation of P. “Cutting plane” and “branch-and-bound” are two types of techniques that are used to improve error performance of LP decoding [11].
+In this work, we seek for a different angle to improve LP decoding. We are partially inspired by [8] because the authors improve LP decoding not by tightening the constraints, but by properly changing the objective. Following this observation, we propose a method that penalize pseudocodewords using the 1 norm. Namely, we add an 1 penalty to the linear objective of LP decoding, which makes integral solutions more favorable than fractional solutions. This approach is similar to the well known Lasso scheme [12]: the 1 penalty in our approach can be considered as a regularizer. However there is one critical difference: the objective in our approach is non-convex. We show in Sec. IV that we can approximate this non-convex problem using reweighted LP which has theoretical guarantees. We also show in Sec. V that this nonconvex problem performs well in simulations.
+A. Using 1 penalty for decoding
+
+The whole ADMM update steps are summarized in Algorithm 1.
+
+Algorithm 1 Given y ∈ ΣN , parity check matrix H, and
+
+parameters μ and , run ADMM on problem specified in (7)
+
+1: Construct the negative log-likelihood vector γ based on
+
+received word y.
+
+2: Construct the dj × N matrix P j for all j ∈ J . 3: Initialize λj as the all-zeros vector and zj as the all 0.5
+vector for all j ∈ J .
+
+4: repeat
+
+5: for all i ∈ I do
+
+6:
+
+Set ti =
+
+j∈Nv (i)
+
+zj(i)
+
+−
+
+1 μ
+
+λ(ji)
+
+−
+
+1 μ
+
+γi.
+
+7:
+
+if ti ≥ di/2 then
+
+8:
+
+Update xi ←
+
+1 [0,1] di
+
+ti
+
++
+
+α μ
+
+9:
+
+else
+
+10:
+
+Update xi ←
+
+1 [0,1] di
+
+ti
+
+−
+
+α μ
+
+11:
+
+end if
+
+12: end for
+
+13: for all j ∈ J do
+
+14:
+
+Set vj = P jx + λj/μ.
+
+15:
+
+Update zj ← ΠPPdj (vj ) where ΠPPdj (·) means
+
+project onto the parity polytope.
+
+16:
+
+Update λj ← λj + μ (P jx − zj).
+
+17: end for
+
+18: until maxj P jx − zj ∞ < return x.
+
+We now formally state our decoding algorithm. We
+
+use ADMM to try to solve the following problem: Proposition 2: If the output from Algorithm 1 is the global
+
+minimizer of (7) and it is also an integral solution, then it is
+
+L1PD :
+
+minimize γT x − α x − 0.5 1 (7)
+
+subject to P jx ∈ PPd.
+
+Note that introducing the penalty term turns the LP into a nonlinear and non-convex program. Thus one should not expect to always find the global solution. However we can still perform ADMM updates to obtain a local minimal. More discussions on solving non-convex problems using ADMM is found in [10, Sec. 9].
+In the ADMM x-updates we solve for local solutions by calculating the stationary points. Note that g(x) = −|x−0.5|
+
+the ML solution. Conversely, the ML solution is the global
+
+minimizer to (7). Proof: Prove by contradiction: Let f (x) = γT x−α x−
+0.5 1. Suppose decoder output an integral solution x∗ and is not equal to the ML solution x˜. Then
+
+f (x∗) = γT x∗ − α
+
+x∗ − 0.5
+
+1 = γT x∗ −
+
+αn ,
+2
+
+f (x˜) = γT x˜ − α
+
+x˜ − 0.5
+
+1 = γT x˜ −
+
+αn .
+2
+
+Since x˜ is the ML solution, γT x˜ < γT x∗, therefore f (x˜) < f (x∗), contradict with the assumption that x∗ is the global
+
+is increasing function on (0, 1/2) and decreasing function minimizer.
+
+on (1/2, 1). Thus, if there are multiple stationary points, we The converse proof follows directly that the ML solution
+
+always choose the one that is farthest from 0.5. Let f (x) =
+
+γT x − α x − 0.5 1. Then (∇xf )i = γi − α sgn(xi − 0.5).
+
+Let ti :=
+
+j
+
+zj(i)
+
+−
+
+λ(ji) μ
+
+− γi/μ, we need to solve the
+
+update
+
+is the minimizer of the LP problem (1). In general, we cannot always obtain the global minimizer
+of a non-convex optimization problem. But Proposition 2 is an indicator that the 1-penalized objective is reasonable. Even if we cannot tell whether the output from decoder is
+
+1
+
+α
+
+xi = di ti + μ sgn(xi − 0.5) .
+
+global minimum or not, we can use ML certificate of LP decoding to test if the solution is the ML solution. Namely,
+
+1574
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+if we find an integral solution, we can run ADMM on the original LP problem, (1), using this integral solution as initial point, thereby testing whether or not this integral solution is ML.
+Theorem 3: Decoding failures for Algorithm 1 are independent of the codeword that was transmitted.
+Proof: (Sketch) Let 0n denote the length n all-zeros vector. We need to prove Pr[error|0n] = Pr[error|c], where c is any fixed codeword. Let
+
+B(c) := {y|Decoder fails to recover c if y is received}.
+
+Then Pr[error|c] = y∈B(c) Pr[y|c]. We show in Lemma 4 that for any codeword c, there exist 1 − 1 mapping from received vector y to a vector y[0], such that the following two statements hold:
+1) Pr[y|c] = Pr[y[0]|0n], 2) y ∈ B(c) if and only if y[0] ∈ B(0n).
+Then
+
+Pr[error|c] =
+
+Pr[y|c]
+
+y∈B(c)
+
+=
+
+Pr[y[0]|c] = Pr[error|0n]
+
+y[0] ∈B (0n )
+
+# rounds of reweighting recovery guarantees BSC
+AWGN & general MBISO
+
+RLPD
+≥2 Yes2 Yes Yes
+
+RLPD-KDHVB
+2 Yes Yes No
+
+TABLE I COMPARISONS BETWEEN RLPD AND RLPD-KDHVB.
+
+IV. REWEIGHTED LP DECODING
+In this section, we introduce a reweighted LP decoding algorithm derived from L1PD. We denote this reweighted LP algorithm as RLPD. Note that this reweighted LP is different from that in [8]. As a reminder, a comparison is listed in Table I.
+A. A reweighted LP approximation for L1PD
+The general reweighted LP scheme is well known in the compressed sensing (CS) community [14]. We are interested in reweighted LP because it approximates a nonlinear program using linear programs and therefore bring a non-convex problem to convex problems. We show that the two-round reweighted LP for problem (7) has theoretical guarantees. That is, this reweighted LP provides better recovery threshold than original LP under the same setting as in [2].
+We briefly summarize the reweighted LP idea in [14]. Consider optimization problem of the following general form:
+
+Lemma 4: Let c, y and B(c) be defined the same way as above. Let Z : Σn → Σn, y[0] = Z(y) defined by
+
+yi[0] =
+
+yi yi
+
+if ci = 0, if ci = 1,
+
+where yi is the symmetric symbol of yi with respect to symmetric channel1 W . Then
+1) Pr[y|c] = Pr[y[0]|0n], 2) y ∈ B(c) if and only if y[0] ∈ B(0n).
+
+minimize φ(v) subject to v ∈ C
+v
+where C is some convex set. The reweighted scheme start from feasible solution v(0) and iteratively solves
+
+v(k+1) = argmin φ(v(k)) + ∇φ(v(k)) v − v(k)
+
+v
+
+(9)
+
+subject to v ∈ C
+
+where k denotes the number of iteration. Applying (9) to L1PD, we get reweighted LP algorithm
+RLPD.
+
+Proof: Omitted. Before proceeding, we make one important remark on Theorem 3. Step 3 in Algorithm 1 is crucial for Theorem 3. The intuition is that problem (7) is non-convex and therefore the
+
+RLPD
+
+minimize γ(k)(α)T x (10)
+subject to P jx ∈ PPdj , ∀j ∈ J .
+
+where x(0) is some initialization and
+
+output from the decoder should be different when initialized at different points. Initialization in Step 3 is “symmetric” for
+
+γ(k)(α)i = γi − α sgn(x(ik−1) − 0.5), ∀i
+
+all codewords. It is desirable to find the best initialization for We consider a simple case for our decoding problem: we
+
+Algorithm 1. One possibility is the pseudocodeword of LPD. consider just the two-round version of RLPD. That is, we
+In other words, L1PD can be treated as a post processing step first solve LPD and initialize x(0) with pseudocodeword to LPD. This two-stage decoder costs roughly double the x(p), then we solve for x(1). This scheme is summarized in
+
+complexity of LPD. Although we gain an “ML certificate” Algorithm 2. From a theoretical point of view, we show that
+
+from the first LP, we found from simulation results that this two-round RLPD has a better recovery threshold compared to
+
+two-stage decoder does not have observable gain upon L1PD LPD. From a practical point of view, the decoding algorithm
+
+.
+
+should be fast in order to perform real time decoding.
+
+The cost in terms of efficiency for using multiple-round
+
+1Following definition of symmetric channel in [13, p. 178], yi = −yi in general. For example in AWGN channel with BPSK modulation, yi = −yi. However in BSC and BEC when we consider only code without modulation, yi = 0 if yi = 1 and vice versa.
+
+reweighting could be unacceptable. But, when efficiency is
+2This guarantee is for the two-round case in BSC, which is the same case for [8].
+
+1575
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+not a bottleneck, multiple-rounds could be used to obtain lower error rates. This is demonstrated in Fig. 4.
+Algorithm 2 Two-round RLPD 1: Solve the LPD. 2: if Solution x∗ is an integral solution then 3: Stop. return solution x∗. 4: else 5: Save pseudocodeword x(p) = x∗ and proceed. 6: end if 7: for all i ∈ I do 8: Update γi ← γi − α sgn(x(ip) − 0.5) 9: end for 10: Solve
+minimize γ T x subject to P jx ∈ PPd.
+
+Using Lemma. 8, we show our main theorem for the two-
+
+round RLPD.
+
+Theorem 9: Consider bit flipping channels, for a code C
+
+such that F CP (psdn, θ) holds for some θ > 1 and for all
+
+0<
+
+<
+
+θ−1 4(θ+1)
+
+,
+
+every
+
+error
+
+set
+
+of
+
+size
+
+(1
+
++
+
+)psdn can be
+
+corrected by Algorithm 2.
+
+Proof: Assume that the all-zeros codeword is transmit-
+
+ted. Suppose the received vector y has (1 + )psdn errors. Let F ⊂ {1, 2, . . . , n} be the set of these flipped bits. By
+
+Lemma 8,
+
+x(p)
+
+1
+
+<
+
+2θ θ
+
++ −
+
+1 1
+
+psdn.
+
+Let T := {i|xi(p) < 0.5}, then
+
+|T
+
+c|
+
+<
+
+4
+
+θ θ
+
++ −
+
+1 1
+
+psdn.
+
+(12)
+
+Theorem 5: Decoding failures for Algorithm 2 are independent of the codeword that was transmitted.
+Proof: Omitted. The idea is identical to the proof of Theorem 3.
+B. Theoretical guarantees for two-round RLPD
+The second LP problem in Algorithm 2 is
+minimize γ T x (11)
+subject to P jx ∈ PPd,
+where γi = γi − α sgn(x(ip) − 0.5) and α > 0 is a constant. Using techniques similar to those introduced in [8], we show that this scheme corrects more errors than LPD.
+Lemma 6: (Lemma 26 in [15]) The fundamental cone K := K(H) of parity check matrix H is the set of all vectors w ∈ Rn that satisfy
+
+Let
+
+<
+
+θ−1 4(θ+1)
+
+,
+
+then
+
+|T c|
+
+<
+
+psdn.
+
+Then
+
+C
+
+has
+
+F CP (T c, θ).
+
+Now rewrite γ as
+
+⎧
+
+γi
+
+⎪⎪⎨ = ⎪⎩⎪
+
+1 + α, 1 − α, −1 − α, −1 + α,
+
+i ∈ T ∩Fc
+
+i ∈ Tc ∩Fc i ∈ Tc ∩F
+
+.
+
+i∈T ∩F
+
+(13)
+
+Let α > 1, then α − 1 < 0. Therefore ∀w ∈ K,
+
+γiwi =
+
+(1 + α)wi +
+
+(1 − α)wi
+
+i
+
+i∈T ∩F c
+
+i∈T c∩F c
+
++
+
+(−1 − α)wi +
+
+(−1 + α)wi
+
+i∈T c∩F
+
+i∈T ∩F
+
+>
+
+(−1 + α)wi +
+
+(−1 + α)wi
+
+i∈T ∩F c
+
+i∈T ∩F
+
++
+
+(−1 − α)wi +
+
+(−1 − α)wi
+
+wi ≥ 0,
+
+∀i ∈ I,
+
+wi ≤
+
+wi ,
+
+∀j ∈ J , ∀i ∈ I.
+
+i∈T c∩F
+
+i∈T c∩F c
+
+= (−1 + α)wi + (−1 − α)wi
+
+i∈T
+
+i∈T c
+
+i ∈Nc(j)\i
+Definition 7: (Fundamental Cone Property [8]) Let F ⊂ {1, 2, . . . , n} and θ ≥ 1 be fixed. A code C with parity check matrix H is said to have the fundamental cone property F CP (F, θ), if for every nonzero vector w ∈ K the following
+
+α+1
+
+= (α − 1)
+
+wi − α − 1
+
+wi
+
+i∈T
+
+i∈T c
+
+α+1 = (α − 1) wT 1 − α − 1 wT c 1 .
+
+holds:
+
+θ wF 1 < wF c .
+
+If for every index set F of size k, C has the F CP (F, θ), then we say that C has F CP (k, θ).
+
+Since
+
+C
+
+has
+
+F CP (T c, θ),
+
+pick
+
+α
+
+>
+
+θ+1 θ−1
+
+,
+
+then
+
+1
+
+<
+
+α+1 α−1
+
+<
+
+θ,
+
+α+1 wT 1 − α − 1 wT c 1 > wT 1 − θ wT c 1 > 0.
+
+The key insight of F CP is that when θ > 1, even if LPD Therefore i γiwi > 0 for all w ∈ K. This implies that the fails, the pseudocodewords have the nice property described all-zeros solution is the minimal in the fundamental polytope.
+
+in Lemma 8. This turns out to be crucial for reweighted LPs. Then LP problem (11) recovers the all-zeros codeword.
+
+Lemma 8: (Lemma 4.1 in [8]) Let C be a code that has the F CP (F, θ) for some index set F and some θ ≥ 1. Suppose that a codeword x from C is transmitted through a bit flipping channel, and the received codeword is y. If the pseudocodeword x(p) is the output of the LP decoder for the received codeword y, then the following holds:
+
+x(p) − x
+
+θ+1 1 < 2θ − 1
+
+(y − x)F c
+
+1.
+
+Corollary 10: Let G be the factor graph of a code C of
+
+length
+
+n
+
+and
+
+the
+
+rate
+
+R
+
+=
+
+m n
+
+,
+
+and
+
+let
+
+δ
+
+>
+
+2/3 + 1/c.
+
+If
+
+G is a bipartite (αn, δc) expander graph, then algorithm 1
+
+succeeds, as long as at most t(1 + )n bits are flipped by the
+
+channel,
+
+where
+
+t
+
+=
+
+3δ−2 2δ−1
+
+α
+
+and
+
+=
+
+1 16δc−8c−4
+
+.
+
+Proof: By Theorem 5.1 in [8], F CP (tn, θ) holds, where
+
+θ=
+
+2δ−1 2δ−1−1/c
+
+.
+
+Then
+
+by
+
+Theorem
+
+9,
+
+we
+
+can
+
+correct
+
+(1
+
++
+
+)tn
+
+errors.
+
+1576
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+C. A special case for two-round RLPD
+We examine a special case for reweighted LP: we let the α go to infinity. This corresponds to the case when the linear term is negligible. The algorithm is summarized in Algorithm 3. We can consider the LP problem (14) as the LP decoding under new bit flipping channel, where the output of the channel is determined solely by penalizing pseudocodewords.
+
+Tmax. Other parameters in Algorithm 1 are set to be μ = 5.5, = 10−5 and over-relaxation parameter ρ = 1.8 (cf. [5]). In
+Fig. 3, we simulate RLPD for the AWGN channel with the same settings.
+We make three comments regarding L1PD. First, the choice of α has a strong effect on performance. WER decreases significantly as we start to penalize pseudocodewords. However, after reaching the minimum, the WER curve bounces quickly. Second, the optimal values for α for
+
+Algorithm 3 Two-round RLPD, α = +∞
+1: Solve the LPD. 2: if Solution x(0) is an integral solution then 3: Stop. return solution x(0). 4: else 5: Save pseudocodeword x(p) = x(0) and proceed. 6: end if 7: for all i ∈ I do 8: Update γi = −α sgn(xi(p) − 0.5). 9: end for
+10: Solve
+minimize γ T x (14)
+subject to P jx ∈ PPd.
+
+different SNRs are similar. α = 0.6 is a common optimal parameter for three different SNRs presented. However, further study is needed at high SNRs where the WER is 10−7 or lower. Third, the WER behaviors for the AWGN channel and the BSC are similar.
+The curves for two-round RLPD reveal different behaviors compared to L1PD. First, different values for Tmax show similar WER performance in RLPD, which is not the case for L1PD. We observe that Tmax does not effect error performance much for LPD (case when α = 0). Note that RLPD are constructed by LPs, therefore it is not surprising that the performance for RLPD is relatively constant across Tmax. Second, the WER does not bounce as much as in L1PD case. Again since RLPD is constructed by successive LPs,
+
+the WER performance is bounded by LPD. In fact, even if
+
+Theorem 11: Theorem 9 also holds for Algorithm 3.
+
+Proof: The only difference between this proof and proof
+
+for Theorem 9 is the values for γ in (13). The new values
+
+are
+
+γi =
+
+α, −α,
+
+i∈T i ∈ Tc
+
+.
+
+we let α = +∞ (cf. Sec. IV-C), the error performance of Algorithm 3 is still better than LPD. This error performance is shown in Fig. 5.
+We also study the impact of allowing multiple rounds for RLPD. In Fig. 4, we plot the WER performance as a function of the number of rounds allowed for RLPD. From this experiment, we conclude that by allowing multiple rounds
+
+Then we can normalize the objective and let α = ±1. Using for RLPD, we can achieve better error performance. However
+
+F CP , we immediately deduce that this LP recovers all-zeros the gain from every additional round of reweighting decreases
+
+codeword.
+
+as the number of round increases. The reasonable number of
+
+Note that Theorem 9 is conservative since the proof consid- rounds for RLPD in this case is 3 or 4.
+
+ers the worst case scenario. Probabilistic analyses introduced In short, L1PD achieves better error performance and cost
+
+in [3] and [4] cannot be applied directly to this case because less complexity compared to RLPD. However RLPD is more
+
+the second LP takes the pseudocodeword that results from the stable in the choice of Tmax and α. first LP as part of its input. The probabilistic properties for
+
+pseudocodewords should not be considered to be the same B. WER performance as the received vectors from memoryless channel. Thus, the
+
+probabilistic analysis for reweighted LP remains open.
+
+We again simulate the Margulis code in the AWGN
+
+V. NUMERICAL RESULTS
+
+channel and the BSC with same μ, and ρ settings as before. Here we set Tmax = 1000 and use optimal α = 0.6.
+
+In this section, we present numerical results for L1PD In Fig. 5, we plot the WER as a function of SNR for the
+
+and two-round RLPD. In Section V-A, we study the effect AWGN channel. We note that the Margulis code is well know
+
+of choosing different parameters α for (7) and (10). In for its error floor in the AWGN channel [16]. The “non-
+
+Section V-B, we present word-error-rate (WER) comparison saturating BP” is a robust BP implementation that avoids
+
+between different decoders.
+
+saturating the log-likelihood ratios of the sum-product BP
+
+A. Choice of parameters
+
+decoder (see [17] for details), thereby improving decoding performance in the error floor regime. Note that the LPD
+
+We study the effect of choosing different α for L1PD displays worse performance than BP at low SNRs. However
+
+and two-round RLPD. We pick the [2640, 1320] “Margulis” BP has an error floor at high SNRs. Even with the non-
+
+LDPC code in our simulations. In Fig. 1 and Fig. 2, we plot saturating BP implementation, the slope of WER tends to be a
+
+the WER of L1PD for the AWGN channel and the BSC constant at high SNRs (Eb/N0 = 2.3, 2.4, 2.5). However the
+
+respectively. We present results for different signal-to-noise slope of the WER corresponding to LPD decoder continues
+
+(SNR) ratios with different maximum number of iterations to increase at Eb/N0 = 2.5 and 2.8.
+
+1577
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+100
+
+word-error-rate (WER)
+
+10−1
+
+10−2
+
+10−3
+
+Tmax = 200, 1.4dB
+
+10−4
+
+Tmax = 1000, 1.4dB Tmax = 200, 1.6dB
+
+Tmax = 1000, 1.6dB
+
+Tmax = 200, 2dB
+
+Tmax = 1000, 2dB
+
+10−5
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+α
+
+word-error-rate (WER)
+
+10−1
+
+Tmax = 200, 1.4dB
+
+Tmax = 1000, 1.4dB
+
+Tmax = 200, 1.6dB
+
+Tmax = 1000, 1.6dB
+
+10−2
+
+Tmax = 200, 2dB Tmax = 1000, 2dB
+
+10−3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+α
+
+Fig. 1. L1PD word-error-rate (WER) of the [2640, 1320] “Margulis” code Fig. 3. RLPD word-error-rate (WER) of the [2640, 1320] “Margulis” code
+
+for the AWGN channel plotted as a function of the choice of α.
+
+for the AWGN channel plotted as a function of the choice of α.
+
+word-error-rate (WER)
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+Tmax = 200, 3.2dB
+
+10−4
+
+Tmax = 1000, 3.2dB Tmax = 200, 3.5dB
+
+Tmax = 1000, 3.5dB
+
+Tmax = 200, 3.8dB
+
+Tmax = 1000, 3.8dB
+
+10−5
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+α
+
+word-error-rate (WER)
+
+10−2
+LPD RLPD, α = 0.6 Non-saturating BP L1PD, α = 0.6 10−3
+
+10−4
+
+10−5
+
+10−6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+# of rounds for RLPD
+
+Fig. 2. L1PD word-error-rate (WER) of the [2640, 1320] “Margulis” code for the BSC plotted as a function of the choice of α.
+
+Fig. 4. Effects of multiple-round reweighting. The word-error-rate (WER)
+performance of the [2640, 1320] “Margulis” code for AWGN channel is plotted versus the number of rounds of reweightings. Simulated Eb/N0 = 2.2dB.
+
+L1PD combines the good characteristics of both LP and
+
+BP decoders. It performs as well as BP decoder at low L1PD makes it a strong competitor against BP.
+
+SNRs. In addition, the slope of the WER curve continues to increase at high SNRs similar to LPD. The two-round
+
+VI. CONCLUSION
+
+RLPD at different α all perform better than LPD. Although In this paper, we demonstrate an efficient solution to the
+
+the theoretical improvement shown in Sec. IV-B is small, the error floor problem. In contrast to other techniques that mod-
+
+empirical improvement from simulation is significant.
+
+ify message passing algorithms, we start from LP decoding
+
+For the BSC, we also plot the WER performance of which is not observed to have an error floor. We target
+
+RLPD-KDHVB from [8]. Note that there are two parameters improved low SNR performance of LP decoding by adding
+
+in RLPD-KDHVB and are optimized in a similar way as in an 1 penalty term to the regular linear objective. The 1
+
+Sec. V-A. We observe that RLPD and RLPD-KDHVB are penalized decoder greatly improves the error performance of
+
+similar in error performance. On the other hand, Similar to LP decoding at low SNRs. In order to be competitive against
+
+the AWGN channel case, L1PD performs similar to BP at BP in terms of efficiency, we leverage the ADMM technique
+
+low SNRs, but outperforms BP at Eb/N0 = 4.1dB. We also and efficient projection algorithm previously developed by
+
+observe that the execution time for L1PD is similar to BP in Barman et al. In our simulation of the Margulis LDPC code,
+
+our implementation, thus the no-error-floor characteristic of the 1 penalized decoder outperforms BP at all SNRs.
+
+1578
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+10−2
+
+word-error-rate (WER)
+
+10−4
+
+10−6
+
+LPD
+
+2-round RLPD, α = +∞
+
+2-round RLPD, α = 0.6
+
+10−8
+
+BP, data from [18] Non-saturating BP
+
+L1PD, α = 0.6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb /N0 (dB )
+
+Fig. 5. Word-error-rate (WER) performance of the [2640, 1320] “Margulis” code for AWGN channel.
+
+word-error-rate (WER)
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+LPD
+
+RLPD-KDHVB
+
+10−6
+
+RLPD, α = 0.6
+
+Non-saturating BP
+
+L1PD, α = 0.6
+
+10−7
+
+3.2
+
+3.4
+
+3.6
+
+3.8
+
+4
+
+4.2
+
+Eb /N0 (dB )
+
+Fig. 6. Word-error-rate (WER) performance of the [2640, 1320] “Margulis” code for BSC.
+
+To address theoretical issues, we approximate the nonconvex 1 penalized objective using reweighted LPs. The reweighted LP decoder itself is another new decoder constructed by successive LPs. We prove that the two-round reweighted LP decoding has stronger recovery threshold compared to the original LP. That is, it corrects a higher fraction of errors compared to original LP for bit-flipping channels. These theoretical results are conservative due to the adversarial model. However, empirical simulation results show that reweighted LP decoding achieves much better error performance when compared to LP decoding. Although more time consuming, the reweighted LP decoder is less sensitive to the choice of parameter settings than the 1 penalized decoder due to its convex objective nature.
+
+results. It would be interesting to characterize probabilistic
+results for reweighted LPs. The key is the following problem:
+what is the distribution of pseudocodewords? This charac-
+terization can give much tighter bound on (12) and thus
+improve the recovery threshold. Note that the reweighted LP
+developed in this paper also applies to the AWGN channel.
+Therefore it would also be interesting to develop theoretical
+guarantees for reweighted LP in AWGN channels. Since the
+simulation results for the 1 penalized decoder is not observed to have an error floor, theoretical results on this decoder could
+be relevant to practical applications.
+REFERENCES
+[1] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” Information Theory, IEEE Transactions on, vol. 51, pp. 954 – 972, Mar. 2005.
+[2] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” Information Theory, IEEE Transactions on, vol. 53, pp. 82 –89, Jan. 2007.
+[3] C. Daskalakis, A. Dimakis, R. Karp, and M. Wainwright, “Probabilistic analysis of linear programming decoding,” Information Theory, IEEE Transactions on, vol. 54, pp. 3565 –3578, Aug. 2008.
+[4] S. Arora, C. Daskalakis, and D. Steurer, “Message passing algorithms and improved LP decoding,” in Proceedings of the 41st annual ACM symposium on Theory of computing, pp. 3–12, ACM, 2009.
+[5] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” Arxiv preprint 1204.0556, 2012.
+[6] A. Tanatmis, S. Ruzika, H. Hamacher, M. Punekar, F. Kienle, and N. Wehn, “A separation algorithm for improved LP-decoding of linear block codes,” Information Theory, IEEE Transactions on, vol. 56, pp. 3277 –3289, July 2010.
+[7] A. Dimakis, A. Gohari, and M. Wainwright, “Guessing facets: Polytope structure and improved LP decoder,” Information Theory, IEEE Transactions on, vol. 55, pp. 3479 –3487, Aug. 2009.
+[8] A. Khajehnejad, A. Dimakis, B. Hassibi, B. Vigoda, and W. Bradley, “Reweighted LP decoding for LDPC codes,” Information Theory, IEEE Transactions on, vol. 58, pp. 5972 –5984, Sep. 2012.
+[9] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Communication, Control, and Computing (Allerton), 2011 49th Annual Allerton Conference on, pp. 253 –260, Sep. 2011.
+[10] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the Alternating Direction Method of Multipliers,” Machine Learning, vol. 3, no. 1, pp. 1–123, 2010.
+[11] M. Helmling, S. Ruzika, and A. Tanatmis, “Mathematical programming decoding of binary linear codes: Theory and algorithms,” Information Theory, IEEE Transactions on, vol. 58, pp. 4753 – 4769, July. 2012.
+[12] R. Tibshirani, “Regression shrinkage and selection via the Lasso,” Journal of the Royal Statistical Society. Series B (Methodological), pp. 267–288, 1996.
+[13] T. Richardson and R. Urbanke, Modern coding theory. Cambridge Univ Pr, 2008.
+[14] E. Cande`s, M. Wakin, and S. Boyd, “Enhancing sparsity by reweighted 1 minimization,” Journal of Fourier Analysis and Applications, vol. 14, pp. 877–905, 2008. 10.1007/s00041-008-9045-x.
+[15] P. O. Vontobel and R. Koetter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” Arxiv preprint, vol. abs/cs/0512078, 2005.
+[16] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009.
+[17] B. K. Butler and P. H. Siegel, “Error floor approximation for LDPC codes in the AWGN channel,” Arxiv preprint 1202.2826, 2012.
+[18] D. J. C. MacKay, “Encyclopedia of sparse graph codes.” Available online at http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+
+Several problems remain open. For example, the empirical results for reweighted LP are much better than theoretical
+
+1579
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:36:23 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,592 @@
+Learning to Decode LDPC Codes with
+Finite-Alphabet Message Passing
+Bane Vasic´1, Xin Xiao1, and Shu Lin2 1Dept. of Electrical and Computer Engineering, University of Arizona 2Dept. of Electrical and Computer Engineering, University of California, Davis
+Email:1{vasic, 7xinxiao7}@email.arizona.edu 2 shulin@ucdavis.edu
+
+Abstract—In this paper, we discuss the perspectives of utilizing deep neural networks (DNN) to decode Low-Density Parity Check (LDPC) codes. The main idea is to build a neural network to learn and optimize a conventional iterative decoder of LDPC codes. A DNN is based on Tanner graph, and the activation functions emulate message update functions in variable and check nodes. We impose a symmetry on weight matrices which makes it possible to train the DNN on a single codeword and noise realizations only. Based on the trained weights and the bias, we further quantize messages in such DNN-based decoder with 3-bit precision while maintaining no loss in error performance compared to the min-sum algorithm. We use examples to present that the DNN framework can be applied to various code lengths. The simulation results show that, the trained weights and bias make the iterative DNN decoder converge faster and thus achieve higher throughput at the cost of trivial additional decoding complexity.
+I. INTRODUCTION
+The concept of designing neural networks (NN) with the functionality of a decoding algorithm for error correction codes has been proposed in the early nineties. One type of NNs is proposed for convolutional codes, which adopts Recurrent Neural Network (RNN) [1]–[3] to implement the Viterbi algorithm. The other type of NNs is designed for linear block codes [4]–[6]. The common feature of this approach is that decoding is treated as a classification problem, and the NN learns how to classify the channel output words, and thus forms the decision region for each codeword. As a typical classification problem, the training set had to include all codewords in a code space, making the sizes of both training set and neural network exponential in the dimension of code. As a result, these method becomes intractable except for very short codes. Recently, Nachmani et al. [7], Lugosch and Gross [8] and Nachmani et al. [9] proposed using Deep Neural Networks (DNNs) to improve the Belief Propagation (BP) decoding of High Density Parity Check (HDPC) codes on the Additive White Gaussian Noise Channel (AWGNC). These DNNs are constructed based on Tanner graph, with various structures including Multi-Layer Perceptrons Neural Network (MLPNN) and RNN. One common but key characteristic among them is that the activation functions over hidden layers enforce the equality of weights of a given neuron, which translates to ensuring symmetry of the node update functions. This allows the training to be performed on a single codeword and its noise
+
+realizations rather than on the entire code space. The proposed DNN decoders for HDPC codes can be viewed as weighted BP decoders, where the trainable weights and bias are assigned over edges in the Tanner graph of HDPC codes. Applying learning methods such as Stochastic Gradient Descent (SGD) and Adam [10] to find the weights and the bias allows such NN decoders to compensate for short cycles (4-cycles) in the Tanner graph of HDPC codes, and to improve the BP decoding performance. In the same spirit, Xu at al. [11] used the DNN to improve the BP decoding for Polar codes, while Gruber at al. [12] showed that for very short length, decoders of structured codes are indeed easier to learn than that of random codes, and that the training based on all possible codewords results in a NN decoder that has performance approaching maximum a posteriori (MAP) decoding.
+In this paper, we propose to use MLPNN to learn and optimize iterative decoders of finite length LDPC codes. Once the weight values are determined, the NN is translated back to a conventional description of variable and check node update functions. Our focus is on the update functions defined on finite-precision messages which lead to Finite-Alphabet Iterative Decoders (FAIDs) [13]. The BP decoders with messages quantized using 6-7 bits [14]–[16] has been shown not to suffer significant performance degradation compared to floating BP or BP-based algorithms on the AWGNC. On the other hand, it is know that for the Binary Symmetric Channel (BSC) a FAID with only 3-bit precision outperforms the BP and all other message passing decoders [13], [17]. This is achieved by designing the FAID message update rules that correct trapping sets with a dominant contribution to the error floor. Recently, Nguyen-Ly at al. [18] and Meidlinger at al. [19] used density evolution to optimize the FAID over the AWGNC. In this paper, we also consider the AWGNC, where traditional iterative decoders take longer to converge to a valid codeword. The goal is to achieve comparable performance with a small maximum number of iterations. More precisely, we utilize NN to optimize a FAID on the AWGNC to achieve a desired trade-off between the error performance and decoding latency. In particular, we are interested in improving the waterfall performance while restricting the maximal number of iterations to a very small value.
+A MLPNN is constructed based on Tanner graph of the LDPC code and defines a set of activation functions according
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+to “proto” message update functions such as min-sum or an exiting FAID. Instead of training different weights over distinct edges in each iteration as in [9], [11], we impose the constraints over weights and biases to direct the learning process, while keeping small number of parameters. This results in a faster learning, lower decoding complexity and memory requirements while preserving good error performance.
+The rest of the paper is organized as follows. Section II gives the necessary background. Section III presents the framework of iterative MLPNN decoder. Section IV introduces DE and the quantization based on the trained parameters. Section V demonstrates the examples and simulation results. Section VI concludes the paper.
+
+II. PRELIMINARIES
+
+Let C be a LDPC code and G = (V, C, E) be its Tanner
+
+graph, where V /C is the set of variable /check nodes, and E
+
+is the set of edges. If the code length is N , the number of
+
+parity check equations is M , and the number of edges is I,
+
+then |V | = N , |C| = M , and |E| = I. Let the i-th variable
+
+node be vi, j-th check node be cj, then the edge connecting vi and cj is denoted by (vi, cj), 1 ≤ i ≤ N, 1 ≤ j ≤ M .
+
+Let x = (x1, x2, ...xN ) be the transmitted codeword and
+y = (y1, y2, ...yN ) be the received channel output vector. i.e., yi = (−1)xi + zi for 1 ≤ i ≤ N where zi is gaussian noise
+with standard deviation σ. The likelihood message is defined
+
+by the log likelihood ratios (LLR): Λ = (λ1, λ2, ..., λN ),
+
+where
+
+λi
+
+=
+
+log
+
+Pr(xi Pr(xi
+
+=0|yi =0|yi
+
+) )
+
+.
+
+Let
+
+Dproto
+
+be
+
+the
+
+given
+
+conven-
+
+tional iterative decoder (such as bit-flipping (BF), Gallager-
+
+B, min-sum algorithm (MSA), sum-product algorithm (SPA),
+
+etc.) to be learned and optimized. Suppose that the messages in
+
+-th iteration in Dproto are computed using the following up-
+
+dating
+
+rules:
+
+νv(i
+
+) →cj
+
+=
+
+Φ(yi, m(i
+
+))
+
+and
+
+µ(cj)→vi
+
+=
+
+Ψ(nj(
+
+−1)),
+
+where mi( ) (n(j )) denote the incoming messages to a variable
+
+node vi (check node cj). Let Lmax be the maximum number of
+
+iterations in Dproto. The proposed iterative MLPNN decoder is
+
+defined by a 3-tuple Dnn = (G, Φ(op)t, Ψo(p)t), where Φ(op)t (Ψ(op)t)
+
+is the optimized decoding rule based on Φ (Ψ) to update the
+
+messages passing from variable nodes (check nodes) to check
+
+nodes (variable nodes) in the -th iteration.
+
+The MLPNN consists of one input layer, K hidden layers
+
+and one output layer. Let r0 (rK+1) be the output of input (output) layer, and rk, 1 ≤ k ≤ K be the output of the k-th hidden layer. In particular, rk = (rk,1, rk,2, ...rk,Jk ), where Jk is the number of neurons in k-th layer, and rk,t is the the output value of the t-th neuron in k-th layer, 0 ≤ k ≤
+
+K + 1, 1 ≤ t ≤ Jk. For the input and output layer, we have
+
+J0 = JK+1 = N . The (k − 1)-th layer and k-th layer are
+
+connected
+
+by
+
+a
+
+trainable
+
+neuron
+
+weight
+
+matrix
+
+W(k)
+Jk ×Jk−1
+
+,
+
+and the bias vector in the k-th layer is denoted by b(k).
+
+III. A MLPNN DECODING FRAMEWORK
+To obtain the proposed iterative Dnn, we first construct a MLPNN based on G. Our network will be initialized by the
+
+knowledge of Φ and Ψ and will perform learning with a given optimality criterion.
+
+A. The MLPNN structure
+
+The constructed network corresponds to an “unwrapped” Tanner graph where every two hidden layers correspond to one iteration in Dproto. The first hidden layer corresponds to the initialization in Dproto. In total, there are K = 2Lmax + 1 hidden layers in MLPNN. Except for the first hidden layer, the activation functions over odd (even) hidden layers perform in a manner similar to Φ (Ψ). Based on Dproto, this framework includes the following two classes of MLPNNs: (1) edge-based and (2) node based. In an edge-based MLPNN, each neuron in every hidden layer represents the message over an edge in E in a corresponding iteration of Dproto. All hidden layers have the same number of neurons, which is e.
+In a node-based MLPNN, there are two types of neurons representing messages over variable and check nodes in the corresponding iteration of Dproto, respectively. Each hidden layer contains only one type of neurons and has size of either N or M .
+More specifically, consider an edge-based MLPNN, the activation function in the k-th layer is defined as follows
+
+Φ(b(
+
+k−1 2
+
+)
+
+y,
+
+W(
+
+k+1 2
+
+)
+
+rk−1
+
+),
+
+if k is odd,
+
+rk =
+
+(1)
+
+Ψ(rk−1),
+
+if k is even.
+
+In Eq. 1, r0 = Λ. Furthermore, all nonzero entries in W(k) are forced to have the same value, i.e., W(k)(i, j) = w(k) if W(k)(i, j) is a nonzero entry in W(k). Since Φ and Ψ in
+Dproto satisfy symmetric conditions [13], Eq. (1) preserves
+them as well.
+
+Fig. 1: MLPNN of PG(7,3)
+Fig. 1 illustrates the MLPNN structure of the Projective Geometry (PG) code PG(7,3). This PG code has code length N = 7, rate 0.429, and its parity check matrix has M = 7 rows and both column and row weight of 3. We consider Dproto as the conventional MSA running for maximum of Lmax iterations, and therefore the corresponding MLPNN is edgebased. All its hidden layers have 21 neurons corresponding to the messages over the 21 edges. The t-th neuron in the first (last) hidden layer is connected to a single input node vi in the input (output) layer if vi is incident to edge (t). The rest hidden layers are connected as follows: for an odd (even) hidden layer, if edge (t) = (vi, cj), then the t-th neuron
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+in this layer is connected to all neurons (except t-th neuron) in previous layer whose corresponding edges in Tanner graph are incident to vi (cj). The constructed MLPNN consists of 11 hidden layers, which corresponds to Lmax = 5 iterations of MSA. Note that the arrows in the odd hidden layers in Fig. 1 indicate the biased channel values.
+
+B. Learning
+
+Since the channel is output-symmetric, we can assume that the all-zero codeword is transmitted, i.e., x = 0, thus y = x + z = z. With the symmetry conditions on the
+weight matrices, it is sufficient to use a database composed of the realizations of the noise vector z = (z1, z2, . . . , zN ). Let r0 = Λ and u = rK+1 be the perceptron values in the input and output layer, respectively. Both r0 and u have length J0 = JK+1 = N , with r0 receiving likelihood message Λ. When Dproto is the MSA, instead of using the likelihood message, it is sufficient to feed the noise patterns z into the MLPNN for learning, i.e., r0 = z. This is because the MSA is insensitive to the noise variance. We take account of nonlinear activation functions over u, which convert likelihood
+messages into probability. A common nonlinear activation function is the sigmoid function σ(x) = 1 + x−1 −1. Since Pr (xi = 0|yi) = 1 + e−λi −1 = σ (λi) and u is the estimate of likelihood message Λ, σ(u) is the estimate of probability Pr (xi = 0|yi). There are several candidates for loss function as listed in [9], and we consider the following cross-entropy
+loss function:
+
+1N
+
+Γ (u, x) = − N
+
+(1 − xi) log(σ(ui)) + xi log(1 − σ(ui)).
+
+i=1
+
+(2)
+
+We use Adam with mini-batches for training. The optimized
+
+decoding rules of Dnn (with floating point precision) are derived based on the trained {w( )} and {b( )}:
+
+Φo(p)t = Φ(b( )y, w( )m(i )), Ψ(op)t = Ψ(n(j −1)). (3)
+
+Especially, the weight and bias of output layer are used in hard-decision in all iterations.
+
+C. Quantization of neuron outputs in Dnn
+Now we explain how to quantize Dnn based on trained parameters w( ) and b( ) for implementation in hardware. A decoder with quantized messages is denoted by Dnn,Q.
+Let Ann,Lmax = {−Hl, ..., −H2, −H1, 0, H1, H2, ...Hl} be the finite message alphabet consisting of 2l + 1 levels, where Hi ∈ R+ and Hi > Hj for any i > j. The quantization function Q(.) of messages of Dnn is defined based on a threshold set T = {Ti : 1 ≤ i ≤ l + 1} as follows:
+
+sgn(x)Hi if Ti ≤ x < Ti+1
+
+Q(x) =
+
+(4)
+
+0
+
+if |x| < T1
+
+where Ti ∈ R+ and Ti > Tj for any i > j, and Tl+1 = ∞. Conventionally, we can define the quantizer thresholds as: T1 = α1H1, Ti = αiHi−1 + (1 − αi)Hi for 2 ≤ i ≤ l, based
+
+on the set of scalars Sl = {α1, α2, ..., αl} that controls the relative distance between two consecutive levels.
+The quantization of the channel output vector y should
+maximize the mutual information between channel input and
+the quantizer output. But for simplicity, the same quantizer is used for messages. The vector y received from the channel is first quantized into yQ using the above rules. When Dnn,Q starts, Ψ(op)t is the same as that in Dnn except that messages nj( −1) are quantized, and their elements belong to Ann,Lmax . Based on {w( )}, {b( )} and above rules, for every -th iteration, the quantized decoder Dnn,Q performs the following:
+
+Φo( p)t,Q
+
+=
+
+Q ÄΦ(b(
+
+)yQ, w(
+
+)mi(
+
+)
+
+ä )
+
+.
+
+(5)
+
+IV. EXPERIMENTS AND NUMERICAL RESULTS
+
+The simulation of Dnn with floating point is carried out as Dproto with additional w( ) and b( ), while the test simulation of Dnn,Q in finite alphabet is carried out with the quantizer. The measure of performance is bit-error-rate (BER) or frameerror-rate (FER). We compared the performance of Dnn Dnn,Q, and Dproto with same Lmax.
+We built MLPNNs in Python3.6 and used Tensorflow [20] library for training. The training set has size of 5000, and the NN is optimized by Adam. The training set consists of realizations of Gaussian noise vectors. We consider the conventional MSA as Dproto, with maximum number of iteration Lmax set to 5. In another words, we want to use MLPNN to learn conventional MSA. We constructed two MLPNNs to show the flexibility in terms of code length, one for a short code, Tanner code (155, 64), and the other for a medium length code, QC-LDPC code (1296, 972). For each MLPNN, based on the its trained weights and bias, we further give a finite alphabet Ann,5 of 7 levels and a threshold set T , whose quantization function is equivalently interpreted into a collection of 3-bit variable node update LUTs.
+
+A. Tanner code experiment
+The Tanner code has column and row weight of 3 and 5, respectively, thus the MLPNN consists of 11 hidden layers of size 465 = 3 × 155. Batch size was set to 500, with varying SNRs = {5.5, 6, 6.5, 7, 7.5} and 1000 samples per SNR. The number of epochs is 30. The learning rate of Adam is 0.09, and the trained weights {w( )} are
+{1.1388, 0.8541, 0.8565, 0.8726, 0.9464, 1.0603, 0.9712}.
+The distribution of b( ) in different iterations is shown in Fig. 2. The bias distribution has a high variance at the first two iterations, and it gets narrower as the iteration grows. The variance of bias comes from the training, which has only 30 epochs.
+Fig.3 gives the BER performance of Dnn, Dproto, and the normalized MSA (NMSA) with the scaling factor of 0.75. Dnn outperforms both NMSA and Dproto, and at BER of 10−9, within 5 iterations, the Dnn achieves coding gain of 0.4 dB over Dproto. The Dnn with 5 iterations has similar performance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+(a) Fig. 2: Bias distribution in different iterations of Tanner code (155,64).
+(b)
+
+(c)
+
+Fig. 3: BER Performance of Dnn, Dnn,Q, Dproto and Dproto,Q of Tanner code (155,64).
+
+with Dproto with 10 iterations. In other words, the Dnn can
+
+achieve faster convergence than Dproto.
+
+Based on {w( )} and {b( )}, we obtain a 7-
+
+level Ann,5 and a set of scalars S3. In particular,
+
+Ann,5 = {−1.5, −0.8, −0.35, 0, 0.35, 0.8, 1.5} and
+
+S3 = {0.4, 0.4, 0.2}. This results in a 7-level quantizer
+
+(d)
+
+Q(.), i.e., messages are in 3-bit precision. Quantizing
+
+both Dnn and Dproto by Q(.), we obtain a 3-bit precision
+
+NN decoder Dnn,Q and 3-bit precision conventional MSA
+
+Dproto,Q. Their performance with 5 iterations are given
+
+in Fig.3 as well. The simulation results show that with 5
+
+iterations, Dnn,Q outperforms NMSA, conventional MSA,
+
+and Dproto,Q. The improvement of both Dnn and Dnn,Q
+comes from the additional {w( )} and {b( )}. Equivalently, Φ(op)t,Q in different iterations can be mapped into a collection of 3-dimensional look up tables (LUTs), which describe the
+
+(e) Fig. 4: Φd( i)ff in different iterations of Tanner code (155,64).
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+variable node updating rules. Based on Φ(op)t,Q, we obtain four distinct LUTs, with the first and second iteration sharing
+
+the same LUT. These four distinct LUTs only differ in a few
+
+entries. One approach to illustrate how the quantized MLPNN
+
+decoder benefits from {w( )} and {b( )} is to observe how
+
+these LUTs change with iterantion number and how they are
+
+different from Dproto,Q. The difference table between LUTs
+
+corresponding to Dnn,Q and Dproto,Q in the -th iteration is
+
+defined by:
+
+Φ(di)ff = Φo( p)t,Q − ΦQ,
+
+where ΦQ = Q (Φ(·, ·))). Φd( i)ff of degree-3 Tanner code in different iterations have size of 7 × 7 × 7, and are shown in Fig 4, where the x, y-axes represent the two incoming messages from the check node neighbors and the z axis indicates the channel value. In the first two iterations, Dnn,Q is very different from Dproto,Q due to the {w( )} and {b( )}. As the iteration grows, the difference between LUTs becomes smaller. In the 5-th iteration, Dnn,Q and Dproto,Q are almost the same. More specifically, Φd( i)ff tells us how Dnn,Q improves decoding from Dproto,Q. For example, at the first two iterations, when the channel value is −H3 (corresponding to the bottom flat) and m1 = m2 = H3, the output of Dnn,Q is less than that of Dproto,Q (which is H3 + H3 − H3 = H3), meaning that Dnn,Q attenuates the magnitude of the likelihood messages, thus preventing its fast growth. Similar attenuation
+behavior can be observed in the case of the channel value is H3 (corresponding to the top flat) and m1 = m2 = −H3, when the output of Dnn,Q is greater than that of Dproto,Q (which is −(H3 + H3) + H3 = −H3). As the LUTs of Dnn,Q and Dproto,Q almost merge in the end, their BER curves do not diverge far away from each other. We note that the similar
+effect of message attenuation is observed in FAID for the BSC,
+although these decoders are derived using completely different
+methodology that relies on trapping set harmfulness [17].
+
+Fig. 5: Bias distribution in different iterations of QC LDPC code (1296, 972).
+
+B. Column-weight 4, medium-length code experiment
+In the second experiment, we consider the QC LDPC code (1296, 972) of column and row weights equal 4 and 16, respectively. The MLPNN of this code consists of 11 hidden layers of size 5184 = 4 × 1296. The batch size was set to 300, with one SNR = 4.5dB and 5000 samples for this SNR. The number of epochs is 100. The learning rate of Adam is 0.001, and the trained weights {w( )} are:
+{0.9755, 0.7316, 0.7664, 0.7790, 0.7799, 0.7791, 0.7801}.
+The distribution of b( ) in different iterations is shown in Fig. 5. Similar to the Tanner code, the variance of bias distribution becomes smaller as the iteration number grows. Since the training for this MLPNN has 100 epochs, the variance becomes very small.
+The BER curves of Dnn, Dproto and normalized MSA with scalar of 0.75 is given in Fig.6. Simulation results show that Dnn outperforms by 0.3dB the NMSA and by 0.45dB the Dproto at BER of 10−8 within 5 iterations. The Dnn with 5
+
+Fig. 6: BER Performance of Dnn, Dnn,Q, Dproto and Dproto,Q of QC LDPC code (1296, 972).
+iterations performs better than Dproto with 10 iterations, i.e., the Dnn converges faster than Dproto.
+Based on {w( )} and {b( )}, we obtain a 7-level Ann,5 and a set of scalars S3. In particular, Ann,5 = {−1.0, −0.5, −0.2, 0, 0.2, 0.5, 1.0} and S3 = {0.4, 0.5, 0.6}. This results in a 7-level quantizer Q(.), i.e., messages have 3-bit precision. Quantizing both Dnn and Dproto by Q(.), we obtain a 3-bit precision NN decoder Dnn,Q and 3-bit precision conventional MSA Dproto,Q. Their BER curves with 5 iterations are present in Fig.6 as well. The simulation results show that with 5 iterations, Dnn,Q outperforms NMSA by 0.13dB and conventional MSA by 0.3dB at BER of 10−8, and it can achieve 0.3 dB coding gain over Dproto,Q. The improvement of both Dnn and Dnn,Q again comes from the additional {w( )} and {b( )}.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+Similarly, Φo(p)t,Q in different iterations can be mapped into five 4-dimensional LUTs. Based on Φ(op)t,Q, we obtain
+3 different LUTs, with the last 3 iterations having the same
+
+LUT. These 3 distinct LUTs only differ in a few entries. For channel value of −H3, Φd( i)ff of degree-4 QC LDPC code
+(1296, 972) in different iterations are shown in Fig 7, where
+
+the x, y, z-axes represent the three incoming messages from
+
+CN neighbors. For all 5 iterations, Dnn,Q update rules are
+
+different from that of Dproto,Q. Again, Φd( i)ff tells us how
+
+(a)
+
+Dnn,Q improves decoding compared to Dproto,Q. For example,
+
+in the last three iterations, when m3 = H3 (corresponding to
+
+the top flat) a nd m 1 = m 2 = H 1, t he o utput o f D nn,Q i s less
+
+than that of Dproto,Q (which is H1 + H1 + H3 − H3 = 2H1),
+
+meaning that Dnn,Q again attenuates the message magnitudes.
+
+The quantization function in (4) is symmetric, thus all of
+
+Φ(di)ff , Φo(p)t,Q, ΦQ satisfy symmetry condition. The “mirror”
+
+of Φ(di)ff with channel value of −H3 in 5 iterations is given in Fig 8, whose channel value is +H3. Similarly, in the last three
+
+iterations, when m3 = −H3 (corresponding to the bottom flat)
+
+and m1 = m2 = −H1, the output of Dnn,Q is greater than that of
+
+Dproto,Q (which is −H1 − H1 − H3 + H3 = −2H1), showing
+
+that Dnn,Q attenuates the message magnitudes.Φ( )
+
+dif f
+
+(b)
+
+is almost stable in all iterations, which results in the BER
+
+performance difference between Dnn,Q and Dproto,Q. This Φ(di)ff comes from {w( )} and {b( )}, resulting in an improved
+error performance. As we have shown in [21], a decoder sup-
+
+porting multiple decoding rules can be efficiently implemented
+
+in hardware, thus an iteration-dependent decoding rule requires
+
+only a small hardware overhead.
+
+For Dnn with floating point, since the training can be conducted offline, the increased decoding computational com-
+
+plexity comes from the additional floating-point multiplica-
+
+tions, which is just 2n per iteration. For Dnn,Q with finite
+
+(c)
+
+precision, especially in 3-bit precision, the memory as well as
+
+the computational complexity can be significantly reduced.
+
+V. CONCLUSION
+
+In this paper, we explore a potential of MLPNN to learn
+
+a finite-alphabet iterative message-passing decoding rule of
+
+LDPC codes. In the training, we impose additional constraints
+
+on weight matrix to control the direction of weight changes
+
+and accelerate training. Based on the trained weights and bias,
+
+we further quantize the MLPNN decoder messages to 3-bit
+
+precision. Examples and simulation results show that within
+
+(d)
+
+5 iterations, the MLPNN decoder can achieve at least 0.4 dB
+
+over conventional floating point MSA at trivial increase of
+
+decoding complexity, and perform no worse than conventional
+
+MSA with 10 iterations. Furthermore, the quantized MLPNN
+
+decoder with 3-bit precision performs better than both NMSA
+
+and conventional MSA. We use the difference between the
+
+decoder’s LUTs to show how the quantized MLPNN decoder
+
+benefits from the trained weights and bias and how it improves
+
+decoding compared to the quantized MSA. Numerous open
+
+questions are left for future research, such as the dependence
+
+(e)
+Fig. 7: Φd( i)ff in different iterations of QC LDPC code (1296,972) with Authorized licensed use limited to: Yonsei Univ. Downloaded on Junec2h4a,n2n0e2l6oauttp13u:t1−2:5H03U. TC from IEEE Xplore. Restrictions apply.
+
+of weight matrices on the code structure, effects of number of iterations and quantizer optimization.
+
+ACKNOWLEDGMENT
+
+This work is funded by the NSF under grant NSF ECCS1500170 and is supported in part by the Indo-US Science and Technology Forum (IUSSTF) through the Joint Networked Center for Data Storage Research (JC-16-2014-US).
+(a)
+REFERENCES
+
+[1] A. Hamalainen and J. Henriksson, “Convolutional decoding using
+
+recurrent neural networks,” in Neural Networks, 1999. IJCNN ’99.
+
+International Joint Conference on, vol. 5, 1999, pp. 3323–3327.
+
+[2] S. M. Berber and V. Kecman, “Convolutional decoders based on artificial
+
+neural networks,” in 2004 IEEE International Joint Conference on
+
+Neural Networks, vol. 2, July 2004, pp. 1551–1556 vol.2.
+
+[3] P. J. Secker, S. M. Berber, and Z. A. Salcic, “A generalised framework
+
+for convolutional decoding using a recurrent neural network,” in Fourth
+
+International Conference on Information, Communications and Signal
+
+Processing, 2003 and the Fourth Pacific Rim Conference on Multimedia.
+
+Proceedings of the 2003 Joint, vol. 3, Dec 2003, pp. 1502–1506.
+
+[4] J. Bruck and M. Blaum, “Neural networks, error-correcting codes, and
+
+polynomials over the binary n-cube,” IEEE Transactions on Information
+
+(b)
+
+Theory, vol. 35, no. 5, pp. 976–987, Sept. 1989.
+
+[5] Y.-H. Tseng and J.-L. Wu, “High-order perceptrons for decoding error-
+
+correcting codes,” in Neural Networks, 1992. IJCNN., International Joint
+
+Conference on, vol. 3, Jun 1992, pp. 24–29.
+
+[6] J.-L. Wu, Y.-H. Tseng, and Y.-M. Huang, “Neural network decoders for
+
+linear block codes,” International Journal of Computational Engineering
+
+Science, vol. 3, pp. 235–256, 09 2002.
+
+[7] E. Nachmani, Y. Bee´ry, and D. Burshtein, “Learning to decode linear
+
+codes using deep learning,” in Communication, Control, and Computing
+
+(Allerton), 2016 54th Annual Allerton Conference, 2016, pp. 341–346.
+
+[8] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” 2017.
+
+[Online]. Available: https://arxiv.org/abs/1701.05931
+
+[9] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein,
+
+and Y. Bee´ry, “Deep learning methods for improved decoding of linear
+
+codes,” 2017. [Online]. Available: https://arxiv.org/abs/1706.07043
+
+[10] D. P. Kingma and J. Ba, “Adam: A method for stochastic
+
+(c)
+
+optimization,” CoRR, vol. abs/1412.6980, 2014. [Online]. Available:
+
+http://arxiv.org/abs/1412.6980
+
+[11] W. Xu, Z. Wu, Y. L. Ueng, X. You, and C. Zhang, “Improved polar
+
+decoder based on deep learning,” in 2017 IEEE International Workshop
+
+on Signal Processing Systems (SiPS), Oct 2017, pp. 1–6.
+
+[12] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep
+
+learning-based channel decoding,” CoRR, vol. abs/1701.07738, 2017.
+
+[Online]. Available: http://arxiv.org/abs/1701.07738
+
+[13] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic´, “Finite alphabet
+
+iterative decoders, Part I: Decoding beyond belief propagation on the
+
+binary symmetric channel,” IEEE Trans. Commun., vol. 61, no. 10, pp.
+
+4033–4045, Nov. 2013.
+
+[14] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu,
+
+“Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun.,
+
+vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+
+[15] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation
+
+(d)
+
+of min-sum algorithm and its modifications for decoding low-density
+
+parity-check (ldpc) codes,” IEEE Transactions on Communications,
+
+vol. 53, no. 4, pp. 549–554, April 2005.
+
+[16] X. Zhang and P. H. Siegel, “Quantized iterative message passing
+
+decoders with low error floor for ldpc codes,” IEEE Transactions on
+
+Communications, vol. 62, no. 1, pp. 1–14, January 2014.
+
+[17] D. Declercq, B. Vasic´, S. K. Planjery, and E. Li, “Finite alphabet iterative
+
+decoders, Part II: Improved guaranteed error correction of LDPC codes
+
+via iterative decoder diversity,” IEEE Trans. Commun., vol. 61, no. 10,
+
+pp. 4046–4057, Nov. 2013.
+
+[18] T. T. Nguyen-Ly, V. Savin, K. Le, D. Declercq, F. Ghaffari, and
+
+O. Boncalo, “Analysis and design of cost-effective, high-throughput
+
+LDPC decoders,” IEEE Transactions on Very Large Scale Integration
+
+(VLSI) Systems, vol. PP, no. 99, pp. 1–14, Dec 2017.
+
+(e)
+Fig. 8: Φd( i)ff in different iterations of QC LDPC code (1296,972) with channel output AHut3h.orized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+[19] M. Meidlinger, A. Balatsoukas-Stimming, A. Burg, and G. Matz, “Quantized message passing for LDPC codes,” in 2015 49th Asilomar Conference on Signals, Systems and Computers, Nov 2015, pp. 1606– 1610.
+[20] M. Abadi, P. Barham, J. Chen, and et al, “Tensorflow: A system for large-scale machine learning,” in 12th USENIX Symposium on Operating Systems Design and Implementation (OSDI 16), 2016, pp. 265–283.
+[21] F. Cai, X. Zhang, D. Declercq, B. Vasic´, and S. K. Planjery, “Lowcomplexity finite alphabet iterative decoders for LDPC codes,” IEEE Transactions on Circuits and Systems - Part I: Regular Papers, 2014.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:50 UTC from IEEE Xplore. Restrictions apply.
+
+

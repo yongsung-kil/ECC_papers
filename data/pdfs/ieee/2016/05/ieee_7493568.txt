@@ -1,0 +1,898 @@
+Application Optimized Adaptive ECC with Advanced LDPCs to Resolve Trade-off among Reliability, Performance, and Cost of Solid-State Drives
+
+Yusuke Yamaga, Chihiro Matsui, Shogo Hachiya and Ken Takeuchi Chuo University, Tokyo, Japan, E-mail: yamaga@takeuchi-lab.org
+
+Abstract—The performance of NAND flash based solid-state drives (SSDs) is highly dependent on the application’s read and write characteristics [3], where “intensity” is defined as ratio of read:write requests, and “write-hot/cold” considers the write frequency. Moreover, NAND flash memory’s reliability degrades with write/erase (W/E) cycling. To optimize performance and reliability, conventional error-correcting code (ECC) scheme switches from fast conventional Bose-Chaudhuri-Hocquenghem (BCH) to slower conventional Low Density Parity Check (LDPC), when the page error rate exceeds BCH’s decoding capability. However, advanced LDPCs have been reported, called QuickLDPC [8] and Error-Prediction (EP-) LDPC without (w/o) upper/lower cells [8], which have (i) higher error correction capability compared to conventional BCH and (ii) shorter decoding time than conventional soft-decoding LDPC. Therefore, this paper proposes an application optimized adaptive (AOA-) ECC for Multi-Level-Cell (MLC) NAND flash-based enterprise SSDs. AOA-ECC includes a new algorithm to efficiently combine the two advanced LDPCs, considering the application’s characteristics and memory’s W/E cycles. A firmware in the proposed SSD system chooses the optimal advanced LDPC, based on whether the application is read/write-intensive and/or writehot/cold. Using the proposed AOA-ECC SSD with MLC NAND flash, performance improves by up to 3-times, the reliability improves by 57% and the ECC decoder area decreases by 25%.
+Index Terms—solid-state drive (SSD), NAND flash memory, error-correcting code (ECC), low density parity check (LDPC).
+I. INTRODUCTION
+In big data applications, there is a wide variety in the read and write characteristics of the storage access patterns. Since NAND flash has fast read and slow write times (40-62 us vs 400-1800 us for Multi-Level-Cell (MLC) [1]), the performance of the SSD performance of NAND flash-based solid-state drives (SSDs) fluctuates depending on the ratio of reads to writes in the application. Additionally, error correcting code (ECC) improves system reliability, but the relatively long ECC decoding time during read has a direct impact on read performance. ECC decoding time also affects write performance due to NAND flash’s inability overwrite-in-place, because ECC decode is needed in internal memory operations such as read-modify-write and garbage collection (GC) to reclaim free space [2]. Write-intensive applications trigger GC more often, and also increase error correction time because increasing write/erase (W/E) cycles degrades the cells reliability. Thus, SSD performance strongly depends on the application characteristics, and the SSD controller design should be optimized for the application characteristics [3].
+In SSDs shown in Fig. 1, ECC is applied to recover memory cell errors. ECC encodes data when writing data to NAND flash, and this data is ECC decoded when the data is read from the NAND flash. Generally, ECC decoding time is longer than the encoding time [1, 2]. For example, the decoding time in conventional soft-decoding Low Density Parity Check (LDPC) [4] (Fig. 1a), is 47.5 us with 30-iterative decoding (Fig. 6), compared to the encoding time is less than 1.0 us [5]. As a result, the time to
+
+read access a memory cell is approximately doubled by ECC decoding. In contrast, ECC encoding time is insignificant because it is less than 100× of the NAND flash cell write time. Therefore, total read time and total write time of the SSD workload is formulated as Equation 1 and 2, respectively.
+
+Total read time = ECC latency × # of cell reads (ECC latency = cell read time + ECC decoding time)
+
+(1)
+
+Total write time ≅ cell write time × # of cell writes
+
+(2)
+
+“Cell read time” is the time to read a memory cell (in an upper/lower page), and similarly, “cell write time” is the time to write a memory cell. In Eq. 1, ECC latency is defined as cell read time and ECC decoding time. This paper first describes that in read-intensive applications, the ECC latency degrades the SSD performance. Then, a system and algorithm is proposed for adaptive ECC with advanced LDPCs (Fig. 1a), which is optimized based on the application characteristics. Previous works by the authors [1, 2, 6] have considered only ECC latency impact on SSD write performance. To our knowledge, this is the first comprehensive analysis that considers the effects of the ECC latency on the overall SSD performance for both read and writemixed applications.
+
+II. APPLICATION OPTIMIZED ADAPTIVE ECC WITH LDPCS Table 1 summarizes the proposed application optimized adaptive (AOA-) ECC based on application characteristics and W/E cycles of NAND flash. Applications [7] are classified into four categories (Fig. 2) based on write frequency (write-hot/cold) and amount of read data (read/write-intensive). Conventionally (Fig. 3), as errors increase, Bose-Chaudhuri-Hocquenghem (BCH) is switched to soft-decoding LDPC [4]. On the other hand, the proposed AOAECC combines two advanced LDPCs (Fig. 4) - Quick-LDPC [8] and Error-Prediction (EP-) LDPC without (w/o) upper/lower cells [8]. These two advanced LDPCs have two benefits. First, they are highly reliable. Acceptable W/E cycles of Quick-LDPC and EPLDPC w/o upper/lower cells is 1.29-times and 1.57-times larger than the conventional BCH. Second, the two advanced LDPCs decrease cell read time by 86% compared with the conventional soft-decoding LDPC [4]. Therefore, AOA-ECC considers these feature of the advanced LDPCs and chooses the optimal LDPC based on the application characteristics. As shown in Table 1, for the read-intensive workloads, AOA-ECC dynamically switches from Quick-LDPC to EP-LDPC w/o upper/lower cells as the W/E cycles increase. For the write-intensive workloads, EP-LDPC w/o upper/lower cells is applied. In addition to the performance and reliability improvement, the proposed AOA-ECC has a controller chip cost advantage because it requires only the LDPC encoder/decoder which is 13-25% smaller than the conventional BCH & soft-decoding LDPC ECC [9, 10].
+
+III. CONVENTIONAL AND ADVANCED ECCS In MLC NAND flash memory, 2 pages are stored in one physical page, and there are 4 possible VTH states per cell. Table 2 shows conventional ECC. In BCH decoding, 1 or 2 VRef’s are read to make a hard decision, and the cell read time takes 40-62 us [1].
+
+978-1-4673-8833-7/16/$31.00 ©2016 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:43:20 UTC from IEEE Xplore. Restrictions apply.
+
+In the example of Fig. 5, BCH decoding time is 3.86 us [11]. Conventionally, when the errors cannot be corrected by BCH, softdecoding LDPC is applied [4]. To calculate log-likelihood rate (LLR), the soft-decoding LDPC requires 21 VRef’s reads (714 us [4]). As shown in Fig. 6, LDPC decoding time is 1.58 us for one LLR update [12], and then LDPC decoding time iteratively increases to estimate LLR more precisely.
+Table 3 shows the two advanced LDPC which have been proposed to decrease the LDPC cell read time. One is QuickLDPC [8], and the other is EP-LDPC w/o upper/lower cells [8]. These two LDPCs have 40-62 us and 102 us cell read times, respectively. Indeed, Quick-LDPC reads 1 (lower page) or 2 (upper page) VRef’s, depending on the target page. LLR is estimated by considering the 2 VTH information, W/E cycles, data retention time, and inter-cell capacitive coupling. On the other hand, 3 VRef’s are read in the decoding of EP-LDPC w/o upper/lower cells. Compared with Quick-LDPC, EP-LDPC w/o upper/lower cells estimates LLR more accurately, and the acceptable W/E cycles is 22% higher than Quick-LDPC as shown in later Fig. 10b. Quick-LDPC has 61% shorter cell read time than EP-LDPC w/o upper/lower cells.
+IV. IMPACT OF ECC DECODING LATENCY ON SSD PERFORMANCE The effects of ECC decoding latency to the SSD performance
+depends on the application characteristics. When reading a NAND flash page, tdecode of ECC decoding time is added to the cell read time, tread, as the total read latency. In the case of soft-decoding LDPC, the sum of tread 714 us, and tdecode 1.58 us, multiplied by the number of decoding iterations [4]. In addition to the read request from the host, two internal operations also involve cell read and ECC decoding. The first operation is read-modify-write (Fig. 7a). When overwriting data, the old data in a NAND flash page is read out to the SSD controller, merged with the new data and finally written to the empty memory cells. The second operation is garbage collection (GC) (Fig. 7b). GC is triggered when the SSD free space becomes small. Valid pages in an old block are read out to the SSD controller and then re-written to a new NAND flash block. In cases of both read read-modify-write and GC, ECC decoding and encoding are required, which impacts the SSD performance. If the old block in GC has more valid pages, the SSD performance is further reduced more by the extra ECC decoding.
+By using transaction-level modeling [1-3, 6], the SSD performance is evaluated to analyze the effects of the ECC decoding and application characteristics. Table 4 shows MLC NAND flash memory characteristics [1] used in the evaluations.
+As shown in Fig. 8, the read time (tread and tdecode) increases when more read requests are included in the read-intensive workloads. The read time occupies 61% of the SSD access time with the read-intensive workload (proj_3) when the SSD free space is 20% (Fig. 8a). SSD free space also affects the ECC latency because if SSD free space is small, more GC occurs. For the write-intensive workloads, the ECC latency is enlarged with the SSD free space 20% (Fig. 8a) compared with the free space 80% (Fig. 8b).
+Fig. 9 shows that the optimal advanced LDPCs depends on the workload characteristics. As shown in Fig. 9a, for the writeintensive workloads, the highly reliable EP-LDPC w/o upper/lower cells is suitable because the acceptable W/E cycles is large. The performance degradation is only 10% or less because there are fewer reads in the write-intensive workloads. On the other hand, EP-LDPC w/o upper/lower cells decreases the SSD performance by 27% in case of the read-intensive workloads because of frequent ECC decoding and long decoding latency. In contrast, even for the read-intensive workloads, there is no performance degradation with Quick-LDPC (Fig. 9b). Therefore,
+
+Quick-LDPC is the optimal solution for the read-intensive workloads which have small W/E cycles.
+Moreover, W/E cycles should be considered to choose the optimal advanced LDPC. Fig. 10a shows write-hot/cold classification based on the average retention time of data. The write-hot workloads have less than 1-day retention time while the write-cold workloads require more than 1-day data retention. From the measurement results, Fig. 10b shows the optimal advanced LDPC over the data retention time. Quick-LDPC with the writehot applications (1-day data retention) has 2.3-times larger acceptable W/E cycles than write-cold applications (7-day data retention). The firmware in the SSD controller observes writehot/cold characteristics and switches from Quick-LDPC to EPLDPC w/o upper/lower cells. Note that the same LDPC encoders/decoders are used for both Quick-LDPC and EP-LDPC w/o upper/lower cells. Thus, there is no circuit area overhead to implement these two ECCs. Since the encoders/decoders of BCH code are unnecessary, the ECC circuit size is decreased by 25%.
+V. EVALUATION AND DISCUSSION Fig. 11 shows the SSD performance improvement with the proposed AOA-ECC. The conventional soft-decoding LDPC degrades the SSD performance by 32%, more than the BCH (baseline). In contrast, the performance of the proposed AOA-ECC is almost equal to BCH. The SSD performance of the writeintensive workload (web_1) improves by 1.5-times. Moreover, the SSD performance of the read-intensive workload (proj_3) improves by 3-times when Quick-LDPC is applied. For more detailed analysis, Fig. 12 shows the SSD performance change over the evaluation time of three typical workloads. Because the writeintensive workload (Fig. 12a) has large W/E cycles, the more capable EP-LDPC w/o upper/lower cells is applied for the whole evaluation time. The SSD performance decrease by less than 10%. For the read-intensive and write-hot workload (Fig. 12b), the performance of the proposal improves by 2.1-times compared to the conventional soft-decoding ECC. For the read-intensive and write-cold workload (Fig. 12c), W/E cycles are small. Thus, Quick-LDPC is applied for the whole evaluation time. Fig. 13 shows the SSD performance comparison. With the conventional soft-decoding LDPC, the performance decreases by 70% because of frequent reading and ECC decoding with softsensing. With Quick-LDPC, the SSD performance degradation of the read-intensive workloads is less than 7% compared with BCH.
+VI. CONCLUSION This paper proposes the application optimized adaptive ECC (AOA-ECC) with advanced LDPCs to realize the best balance of reliability, performance and cost. The proposed scheme efficiently combines Quick-LDPC and EP-LDPC w/o upper/lower cells. Table 5 summarizes this work. The SSD performance of the writeintensive workload (web_1) improves by 1.5-times with EP-LDPC w/o upper/lower cells. The performance of the read-intensive workload (proj_3) also improves by 3-times with Quick-LDPC. The reliability improves up to 57% compared to BCH. Moreover, the ECC decoder cost decreases by 25%.
+REFERENCES [1] S. Tanakamaru, et al., IMW, pp. 154-157, 2014. [2] S. Tanakamaru, et al., TVLSI, 2015, in-press. [3] S. Okamoto, et al., IMW, pp. 157-160, 2015. [4] C. Kim, et al., JSSC, pp. 981–989, 2012. [5] S. Anggraeni, et al., MWSCAS, pp. 948-951, 2013. [6] H. Takishita, et al., SNW, pp 14-15, 2015. [7] MSR Cambridge Traces, http://iotta.snia.org/traces/338. [8] T. Tokutomi, et al., ISSCC, pp. 140-141, 2015. [9] Y. Lee, et al., ASP-DAC, pp. 85-86, 2013. [10] B. Xiang, et al., VLSI Circ., pp. 211-212, 2010. [11] Y. Lee, et al., ISSCC, pp. 426-427, 2012. [12] C. Chen, et al., ESSCIRC, p. 412, 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:43:20 UTC from IEEE Xplore. Restrictions apply.
+
+Host
+
+SSD interface
+
+SSD controller
+
+Flash
+
+ECC1
+
+translation layer
+・ECC ・Interleaving ・Addr. translation
+
+enBcCodHer, decoder
+
+・Wear leveling etc.
+
+LDPC encoder, decoder
+
+ECC16
+
+Host
+
+SSD interface
+
+Short latency
+
+SSD controller ・Quick-LDPC
+
+・EP-LDPC w/o
+
+Flash translation layer
+・Proposed application optimized adaptive
+
+upper/lower cells
+
+ECC1
+
+ECC16
+
+Long latency
+
+ECC (Fig. 4)
+
+・Interleaving ・Addr. translation ・Wear leveling etc.
+
+LDPC encoder, decoder
+
+DRAM I/F
+DRAM
+Tables for ・Addr. translation ・Wear leveling
+
+Channel1
+NAND flash (a)
+
+Channel16
+
+DRAM I/F
+DRAM
+Tables for ・Addr. translation ・Wear leveling
+
+Channel1
+
+Channel16
+
+NAND flash (b)
+
+Table 1 Proposed optimal advanced LDPC selection based on application characteristics and W/E cycles of NAND flash memory. For write-intensive workloads, highly reliable EP-LDPC w/o upper/lower cells is applied. For read-intensive workload, high performance Quick-LDPC is applied first, and then EP-LDPC w/o upper/lower cells is applied when W/E cycles increase.
+
+Workload categories
+Read-intensive
+
+Write-Hot
+Quick-LDPC→ EP-LDPC w/o upper/lower cells
+ECC is switched at large W/E cycles.
+
+Write-Cold
+Quick-LDPC→ EP-LDPC w/o upper/lower cells
+ECC is switched at small W/E cycles.
+
+Write-intensive EP-LDPC w/o upper/lower cells EP-LDPC w/o upper/lower cells
+
+Fig. 1 SSD architecture with (a) conventional ECC [4] and (b) proposed application
+
+optimized adaptive (AOA-) ECC with advanced LDPCs.
+
+Proposed AOA-ECC with advanced LDPCs scheme.
+
+Average overwrite
+
+Write-hot 110000
+
+prxy_0 proj_0
+
+prxy_1
+
+Read data ratio: Read data size divided
+
+Conventional ECC scheme [4].
+
+Read from NAND
+
+flash memory
+
+Both BCH and LDPC decoders are required.
+
+(Decoder gate count: 629K [9,10])
+
+#coofrreercrotarbsl>e bBiCt?H Yes
+
+Read from NAND flash memory
+
+This work adaptively selects optimal ECCs based on the application and W/E cycles.
+
+Read intensive Yes workload?
+
+NW/E table
+Acceptable W/E cycles?
+
+Read-intensive Yes Decode with
+Quick-LDPC
+
+1010 hm_0
+
+by total access size.
+
+No
+
+Decode with
+
+1 Write-cold
+
+1 0
+
+Write-
+
+src2_1
+
+Average overwrite:
+
+web_1
+
+proj_3 Total write data size divided by user data siz
+
+220 440 660 800 11000 Read data ratio (%) Read-
+
+Soft sensing
+
+BCH
+
+Decode with LDPC
+Soft-decoding
+
+Output decoded data to the host
+
+intensive
+
+intensive
+
+Fig. 3 ConveLDnPtCional ECC algorithm [4].
+
+No Writeintensive
+
+Read- No intensive
+
+Decode with EP-LDPC w/o
+
+upper/lower cells
+
+(Within acceptable W/E cycles for Quick-LDPC)
+Output decoded data to the host
+
+Only one LDPC decoder is required in the proposed. Decoder cost decreases by 25% (decoder gate count: 470K [10])
+Fig. 4 Algorithm of proposed AOA-ECC with advanced LDPCs. Quick-LDPC or EP-LDPC w/o upper/lower cells is selected
+
+Fig. 2 Workload classifications according The stronger soft-decoding LDPC is based on application characteristics and W/E cycles of NAND
+
+to write-hot/cold and read/write-intensive applied if errors exceed the acceptable flash memory.
+
+characteristics [7].
+
+BER of BCH ECC.
+
+Table 2 Conventional ECCs.
+
+Table 3 Advanced ECCs [8] utilized in the proposal.
+
+Method Concept
+
+Conventional soft-decoding LDPC [4]
+VRef1・・・・・・・・VRef21
+VTH
+
+Conventional BCH
+
+Lower page VRef2
+
+Upper page VRef1
+
+VRef3
+
+VTH
+
+Method Concept
+
+EP-LDPC w/o upper/lower cells [8]
+VRef1 VRef2 VRef3
+VTH
+
+Quick-LDPC [8] 12
+Lower page VRef2
+
+Upper page VRef1
+
+VRef3
+
+VTH
+
+Read operation
+Required information for decoding
+
+x7 sequential reads i.e. 21VRef sensing (714 us)
+VTH information(7 x 3(VRef1-3 ))
+
+VTH Read one of Upper/Lower pages i.e. 1 or 2VRef sensing (40 - 62 us)
+VTH information(“0” or “1”)
+
+Read data (From NAND)
+n: ECC code word = 9102 bit p: Parllelism = 32
+
+mt/p
+Parallel syndrome generator
+
+(t+1)f/2 + t-1
+Folded BM
+processing
+
+n/p
+Parallel Chien search
+
+t: Number of correctable bits = 65 bit
+
+f: Folding factor = 12
+
+F: Operation frequency
+
+FIFO buffer
+
+= 200 MByte/s [11] With these parameters,
+
+Decoded data
++ (To the host)
+
+BCH decoding time = {mt/p + (t+1)f/2 + t - 1 + n/p}/F
+
+Fig. 5 Structure of BCH decoder. BCH decoder=is3.c8o6musp.osed of Syndrome generator,
+
+BM processing and Chein search. The ECC decoding time, tdecode, is 3.86 us [11].
+
+Read operation
+Required information for decoding
+
+VTH
+
+Performance
+
+< One word-line read(two pages) i.e. 3VRef sensing (102 us)
+
+Read one of Upper/Lower pages i.e. 1 or 2VRef sensing (40 - 62 us)
+
+> ・VTH information(“00”,“01”,“10”,“11”) ・Inter-cell coupling ・W/E cycles ・Retention time
+
+・VTH information(“0” or “1”) ・W/E cycles ・Retention time
+
+Reliability
+
+Read data (From NAND) Initialization
+L=0
+
+Sum-product L = L+1
+
+Decoded data Parity check (To the host)
+S = 0 or L = Lmax
+
+L : Number of iteration
+
+S: Syndrome
+
+S ≠ 0 and L < Lmax
+
+LDPC decoding time = L x 1.58 us.
+
+Fig. 6 Structure of LDPC decoder. In LDPC decoding, the ECC decoding time, tdecode, increases with iterative LLR update [12].
+
+ECC decoding time degrades the SSD performance during the write operation.
+
+ECC latency of
+
+Host
+
+SSD
+
+(1)
+
+(4)
+
+Data
+
+(3)
+
+merge
+
+Overwrite data
+
+ECC encoder
+
+ECC decoder
+
+tdecode
+
+twrite (5) (2) tread
+
+NAND flash memory
+
+Already written data
+
+Host
+
+soft-decoding LDPC
+Valid page
+
+=
+
+SSD
+
+ECC encoder
+
+(2)
+
+ECC decoder
+
+tdecode
+
+twrite
+
+tread
+
+Invalid page tdecode: # of iteration x 1.58 us
+
+ECC decoding time
+
+Blank page
+
++
+
+tread: 714 us Cell read time
+
+Table 4 Characteristics of 2Xnm MLC NAND flash memory [1].
+
+SSD capacity
+
+Workload user data size / (1 – SSD free space)
+
+(3) NAND flash (1)
+
+memory
+
+(4)Erase block
+
+Block size
+
+4 MB
+
+:Page :Sector (a) Read-modify-write
+
+:Block (b) Garbage collection (GC)
+
+twrite: 400 - 1800 us Cell write time.
+
+Page size Cell read time
+
+16 KB
+Lower page: 40 us Upper page: 62 us
+
+Fig. 7 Two operations with unintended read from NAND flash during the write access from the host. In case of the soft-decoding LDPC, the ECC latency (the total read time) increases by the extra VREF sensing and degrades the SSD performance. (a) Read-modify-write operation which is required because the in-place overwrite is prohibited. Reading old data from NAND flash to the SSD controller, ECC decoding, merged
+
+Cell write time Cell erase time
+
+Lower page: 400 us Upper page: 1800 us
+3800 us
+
+with new data, ECC encoding and writing data to a new NAND flash page. (b) Garbage collection (GC).
+
+Reading valid pages to the SSD controller, ECC decoding and encoding, re-writing to a new block.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:43:20 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized access time Normalized access time
+Normalized IOPS Normalized IOPS
+
+100%1 800%.8
+
+ECC latency of GC
+
+ECC latency of Read-modify-write
+
+ECC latency of read request
+
+Read time
+
+Write time of write access and GC twrite 100%1
+
+Erase time
+
+800%.8
+
+11
+
+00..99 prxy_0 hm_0 web_1 -27%
+
+00..88 Effective in write-
+
+intensive workload
+
+00..77
+
+prxy_1
+
+11 00..99 prxy_0 hm_0web_1 proj_3
+prxy_1
+
+00..88
+
+Effective in read-
+
+00..77
+
+intensive workload
+
+600%.6
+
+600%.6
+
+00..66
+
+Baseline: BCH # of iterations: 15
+
+proj_3
+
+00..66
+
+Baseline : BCH # of iterations: 15
+
+400%.4 200%.2
+
+61% 42%
+
+400%.4 200%.2
+
+47%
+
+69%
+
+00..55 SSD free space 20％
+
+00
+
+20.02 40.04 60.06 80.08
+
+Read data ratio (%)
+
+00..55 SSD free space 20％
+
+00
+
+20.02 40.04 60.06 80.08
+
+Read data ratio (%)
+
+0 0% prporojj0_0 prpxrxyy0_0 prpxrxyy1_1 prporojj3_3
+Write-intensive Read-intensive
+(a) SSD free space 20%
+
+0 0% prprooj0j_0 prpxrxyy0_0 prpxrxyy1_1 prporojj3_3 W(rbite)-SinSteDnsfivreeeRsepaad-cinete8n0s%ive
+
+(a) EP-LDPC w/o upper/lower cells (b) Quick-LDPC (Higher performance) (Higher reliability)
+Fig. 9 Performance comparison of advanced LDPCs. (a) High reliable EPLDPC w/o upper/lower cells is suitable for write-intensive workloads because
+
+Fig.
+
+8
+
+Workload
+
+(cthdaecroadcete+rtisretaidcs)
+
+x number of
+dependency
+
+page reads
+on the SSD
+
+performance with
+
+the performance degradation is less than 10% from BCH. It is not suitable for read-intensive workloads because the performance is degraded by 27%. (b)
+
+conventional soft-decoding LDPC. With read-intensive workloads, ECC Quick-LDPC is suitable for read-intensive workloads because it prevents the
+
+latency of the read request from the host is dominant in performance. With write-intensive workloads, (a) ECC decoding GC dominates with SSD free space 20% and (b) ECC decoding read-modify-write dominates with SSD free space 80%.
+ECC should be switched
+
+the SSD latency of latency of
+based on the
+
+SSD performance degradation.
+
+write-hot/cold and W/E cycles.
+
+11.2.2
+
+proj_0 prxy_0 hm_0
+
+web_1
+
+prxy_1 src2_1 proj_3
+
+Writeintensive
+
+Readintensive
+BCH (Baseline)
+
+6000
+
+11
+
+Normalized IOPS
+
+Acceptable W/E cycles
+
+Workload
+
+Writehot/cold
+
+Average retention time (Day)
+
+proj_0 Write-hot
+
+0.16
+
+5000 4000
+3000
+
+Measurement @85degC 1Xnm MLC
+EP-LDPC w/o upper/lower cells is suitable. EP-LDPC w/o
+
+0.08.8 0.06.6
+
+32%
+
+3.0×
+
+1.5×
+
+prxy_0 Write-hot
+
+0.13
+
+hm_0 Write-hot
+
+0.82
+
+web_1 Write-cold
+
+6.14
+
+2000
+Large W/E
+
+2.3×
+
+upper/lower cells
+Quick-LDPC BCH
+
+0.04.4
+
+prxy_1 Write-hot
+
+0.13
+
+src2_1 Write-cold
+
+6.93
+
+proj_3 Write-cold
+
+6.14
+
+1-week workload Average retention time = 7 / # of average overwrite.
+
+1000 cycles
+
+60000
+
+Quick-LDPC suitable.
+
+is Small
+W/E cycles
+
++57％ +29％
+
+00 Write-hot
+workload has short
+
+55 Write-cold
+
+1100
+
+workload has long retention time.
+
+1155
+
+(a)
+
+(b) retention time. Data-retention time (Day)
+
+Fig. 10 (a) Write-hot/cold classification with average data retention time. (b) Measured acceptable
+
+Write/Erase cycles of MLC NAND flash with Quick-LDPC and EP-LDPC w/o upper/lower cells. EP-
+
+LDPC w/o upper/lower cells shows the best error correction capability at large W/E cycles.
+
+0.02.2
+
+00
+
+PropProop. sed
+
+ConveConnv. SLtional
+
+AOA-ECC with advanced LDPCs
+
+BCH →Soft-LdDePcCoding
+
+Fig. 11 SSD performance improvement with the
+
+proposed scheme. SSD performance of write-intensive
+
+(web_1) and read-intensive (proj_3) workloads
+
+improves by 1.5-times and 3-times, respectively.
+
+Normalized IOPS
+
+11.2.2 11
+
+21000000
+BCH (Baseline)
+1755000
+
+1.12.2 11
+
+Quick-LDPC
+
+EP-LDPC w/o 50250000
+upper/lower cells
+40200000
+
+11.2.2 11
+
+Normalized IOPS
+
+Normalized IOPS
+
+00.8.8
+
+EP-LDPC w/o
+
+upper/lower cells
+
+00.6.6 Only 9% degradation
+
+00.4.4 compared to BCH.
+
+1500000
+
+0.08.8 0.06.6 0.04.4
+
+2.1× 1.8×
+
+3015000 21000000
+
+00.8.8 00.6.6 00.4.4
+
+00.2.2
+
+520500
+
+0.02.2
+
+BCH →SLDofPt-Cdecoding 1500000
+
+00.2.2
+
+4020
+BCH (Baseline)
+
+Quick-LDPC
+
+3105
+
+2010
+
+105
+
+Erase count / block Erase count / block Erase count / block
+
+0000
+
+00..22 T00im..44e (0a0...66u.) 00..88 1100
+
+0 000
+
+00..22 Ti00m..44e (a00...u66.) 00..88 1100
+
+0000
+
+00..22 T0i0m..44e (a00...u66.) 00..88 11 00
+
+(a) hm_0 (Write-intensive and write-hot)
+
+(b) prxy_1 (Read-intensive and write-hot)
+
+(c) proj_3 (Read-intensive and write-cold)
+
+Fig. 12 SSD performance change with the proposed AOA-ECC with advanced LDPCs over evaluation time. (a) With write-intensive and write-hot workload
+
+(hm_0), EP-LDPC w/o upper/lower cells is applied for the whole evaluation time. Only 10% performance degradation compared to conventional BCH. (b)
+
+With read-intensive and write-hot workload (prxy_1), performance of the proposal improves by 2.1-times compared to conventional BCH. (c) With read-
+
+intensive and write-cold workload (proj_3), Quick-LDPC is applied for the whole evaluation time because of small W/E cycles.
+
+SSD free space 20%
+
+proj_0 11 00.8.8
+
+prxy_0 hm_0 7%
+
+00.6.6
+
+00.4.4
+
+web_1
+
+prxy_1 src2_1 proj_3
+
+BCH(Baseline)
+
+Code rate 9/10
+
+Codeword 8KByte Write-
+intensive
+
+70% Read-
+
+intensive
+
+Table 5 Summary of this work. SSD performance of write-intensive and read-intensive workloads improves by 1.5-times and 3-times, respectively. The proposal is most effective for read-intensive and write-cold applications. The reliability improves by 57%. The ECC decoder cost decreases by 25%.
+
+SSD performance in each workload category
+
+ECC Reliability decoder
+cost
+
+Normalized IOPS
+
+00.2.2 00
+Quick-LDPC Quick-LDPC
+
+EP-LDPC
+
+EP-LDPC Soft-decoding Soft-decoding
+
+ECC
+
+Write-intensive
+
+Read-intensive
+
+Write-hot (proj_0)
+
+Write-hot (hm_0)
+
+Write-cold (web_1)
+
+Acceptable Write-hot Write-cold Write-cold W/E cycles (prxy_1) (src2_1) (proj_3)
+
+ECC decoder gate count
+
+Fig. 13 Detailed SSD performance comparison. With the conventional soft- iteration=5
+
+iteration=20 woUpper/LowerwoUpper/Lower LDPC
+
+LDPC
+
+cells
+
+cells
+
+7Vref sensing 7Vref sensing
+
+iteration=5 iteration=20 iteration=5 iteration=20
+
+Proposed AOA-ECC with advanced LDPCs
+
+0.93× (EP-LDPC
+
+1.5× 0.91× 0.91×
+w/o upper/lower cells)
+
+0.99×
+
+1.03×
+
+3.0× 57% 1.05× improved
+
+(Quick-LDPC)
+
+25% reduction (470k [10])
+
+decoding LDPC, the SSD performance of the read-intensive workloads decreases by 70% due to frequent memory cell reads to obtain the analog VTH information. The SSD performance of the write-intensive workloads degrades because of the extra read during the read-modify-write (Fig. 7(a)) or the garbage collection (Fig. 7(b)).
+
+Conventional BCH Baseline Baseline
+
+BCH → Soft-decoding Soft-
+LDPC decoding LDPC
+
+0.68×
+
+0.62×
+
+Baseline 0.59×
+
+Baseline Baseline 0.48× 0.47×
+
+Baseline 0.35×
+
+Baseline -
+
+Baseline (159k [9] +470k [10])
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:43:20 UTC from IEEE Xplore. Restrictions apply.
+
+

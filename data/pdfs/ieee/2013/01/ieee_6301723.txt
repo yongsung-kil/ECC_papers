@@ -1,0 +1,1958 @@
+588
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+Merging Belief Propagation and the Mean Field Approximation: A Free Energy Approach
+Erwin Riegler, Member, IEEE, Gunvor Elisabeth Kirkelund, Carles Navarro Manchón, Mihai-Alin Badiu, and Bernard Henri Fleury, Senior Member, IEEE
+
+Abstract—We present a joint message passing approach that combines belief propagation and the mean field approximation. Our analysis is based on the region-based free energy approximation method proposed by Yedidia et al. We show that the message passing fixed-point equations obtained with this combination correspond to stationary points of a constrained region-based free energy approximation. Moreover, we present a convergent implementation of these message passing fixed-point equations provided that the underlying factor graph fulfills certain technical conditions. In addition, we show how to include hard constraints in the part of the factor graph corresponding to belief propagation. Finally, we demonstrate an application of our method to iterative channel estimation and decoding in an orthogonal frequency division multiplexing system.
+Index Terms—Belief propagation (BP), iterative algorithms, iterative decoding, message passing, parameter estimation.
+I. INTRODUCTION
+V ARIATIONAL techniques have been used for decades in quantum and statistical physics, where they are referred to as the mean field (MF) approximation [2]. Later, they found their way to the area of machine learning or statistical inference, see, e.g., [3]–[6]. The basic idea of variational inference is to derive the statistics of “hidden” random variables given the knowledge of “visible” random variables of a certain probability density function (pdf). In the MF approximation, this pdf is approximated by some “simpler,” e.g., (fully) factorized pdf and the Kullback–Leibler divergence between the approximating and the true pdf is minimized, which can be done in
+Manuscript received January 05, 2012; accepted May 09, 2012. Date of publication September 12, 2012; date of current version December 19, 2012. This work was supported in part by the WWTF under Grant ICT10-066, in part by the FWF under Grant S10603-N13 within the National Research Network SISE, in part by Renesas Mobile Corporation, in part by the 4GMCT cooperative research project funded by Intel Mobile Communications, Agilent Technologies, Aalborg University and the Danish National Advanced Technology Foundation, in part by the project ICT-248894 Wireless Hybrid Enhanced Mobile Radio Estimators 2, and in part by the project SIDOC under Contract POSDRU/88/1.5/S/ 60078. This paper was presented in part at the 2010 IEEE International Symposium on Turbo Codes.
+E. Riegler is with the Institute of Telecommunications, Vienna University of Technology, 1040 Vienna, Austria (e-mail: erwin.riegler@nt.tuwien.ac.at).
+G. E. Kirkelund, C. N. Manchón, and B. H. Fleury are with the Department of Electronic Systems, Aalborg University, 9220 Aalborg, Denmark (e-mail: gunvor@es.aau.dk; cnm@es.aau.dk; bfl@es.aau.dk).
+M.-A. Badiu is with the Communications Department, Technical University of Cluj-Napoca, Cluj-Napoca 3400, Romania (e-mail: mihai.badiu@com.utcluj.ro).
+Communicated by A. Moustakas, Associate Editor for Detection and Estimation.
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TIT.2012.2218573
+
+an iterative, i.e., message passing like way. Apart from being fully factorized, the approximating pdf typically fulfills additional constraints that allow for messages with a simple structure, which can be updated in a simple way. For example, additional exponential conjugacy constraints result in messages propagating along the edges of the underlying Bayesian network that are described by a small number of parameters [5]. Variational inference methods were recently applied in [7] to the channel state estimation/interference cancellation part of a class of multiple-input multiple-output (MIMO) orthogonal frequency division multiplexing (OFDM) receivers that iterate between detection, channel estimation, and decoding.
+An approach different from the MF approximation is belief propagation (BP) [8]. Roughly speaking, with BP one tries to find local approximations, which are—exactly or approximately—the marginals of a certain pdf.1 This can also be done in an iterative way, where messages are passed along the edges of a factor graph [10]. A typical application of BP is decoding of turbo or low-density parity-check codes. Based on the excellent performance of BP, a lot of variations have been derived in order to improve the performance of this algorithm even further. For example, minimizing an upper bound on the log partition function of a pdf leads to the powerful tree reweighted BP algorithm [11]. An offspring of this idea is the recently developed uniformly tree reweighted BP algorithm [12]. Another example is [13], where methods from information geometry are used to compute correction terms for the beliefs obtained by loopy BP. An alternative approach for turbo decoding that uses projections (that are dual in the sense of [14, Ch. 3] to the one used in [13]) on constraint subsets can be found in [15]. A combination of the approaches used in [13] and [15] can be found in [16].
+Both methods, BP and the MF approximation, have their own virtues and disadvantages. For example, the MF approximation:
++ always admits a convergent implementation; + has simple message passing update rules, in particular
+for conjugate-exponential models; is not compatible with hard constraints; and BP: + yields a good approximation of the marginal distributions if the factor graph has no short cycles; + is compatible with hard constraints like, e.g., code constraints; may have a high complexity, especially when applied to probabilistic models involving both discrete and continuous random variables.
+1Following the convention used in [9], we use the name BP also for loopy BP.
+
+0018-9448/$31.00 © 2012 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+589
+
+Hence, it is of great benefit to apply BP and the MF approximation on the same factor graph in such a combination that their respective virtues can be exploited while circumventing their drawbacks. To this end, a unified message passing algorithm is needed that allows for combining both approaches.
+The fixed-point equations of both BP and the MF approximation can be obtained by minimizing an approximation of the Kullback–Leibler divergence, called region-based free energy approximation. This approach differs from other methods, see, e.g., [17],2 because the starting point for the derivation of the corresponding message passing fixed-point equations is the same objective function for both BP and the MF approximation. The main technical result of our work is Theorem 2, where we show that the message passing fixed-point equations for such a combination of BP and the MF approximation correspond to stationary points of one single constrained region-based free energy approximation and provide a clear rule stating how to couple the messages propagating in the BP and MF part. In fact, based on the factor graph corresponding to a factorization of a probability mass function (pmf) and a choice for a separation of this factorization into BP and MF factors, Theorem 2 gives the message passing fixed-point equations for the factor graph representing the whole factorization of the pmf. One example of an application of Theorem 2 is joint channel estimation, interference cancellation, and decoding. Typically, these tasks are considered separately and the coupling between them is described in a heuristic way. As an example of this problematic, there has been a debate in the research community on whether a posteriori probabilities (APP) or extrinsic values should be fed back from the decoder to the rest of the receiver components; several authors coincide in proposing the use of extrinsic values for MIMO detection [18]–[20] while using APP values for channel estimation [19], [20], but no thorough justification for this choice is given apart from the achieved superior performance shown by simulation results. Despite having a clear rule to update the messages for the whole factor graph representing a factorization of a pmf, an additional advantage is the fact that solutions of fixed-point equations for the messages are related to the stationary points of the corresponding constrained region-based free energy approximation. This correspondence is important because it yields an interpretation of the computed beliefs for arbitrary factor graphs similar to the case of solely BP, where solutions of the message passing fixed-point equations do in general not correspond to the true marginals if the factor graph has cycles but always correspond to stationary points of the constrained Bethe free energy [9]. Moreover, this observation allows us to present a systematic way of updating the messages, namely, Algorithm 1, that is guaranteed to converge provided that the factor graph representing the factorization of the pmf fulfills certain technical conditions.
+This paper is organized as follows. In the remainder of this section, we fix our notation. Section II is devoted to the introduction of the region-based free energy approximations proposed by [9] and to recall how BP, the MF approximation, and the EM algorithm [21] can be obtained by this method. Since
+2An information geometric interpretation of the different objective functions used in [17] can be found in [14, Ch. 2].
+
+the MF approximation is typically used for parameter estimation, we briefly show how to extend it to the case of continuous random variables using an approach presented already in [22, pp. 36–38] that avoids complicated methods from variational calculus. Section III is the main part of this study. There we state our main result, namely, Theorem 2, and show how the message passing fixed-point equations of a combination of BP and the MF approximation can be related to the stationary points of the corresponding constrained region-based free energy approximation. We then 1) prove Lemma 2, which generalizes Theorem 2 to the case where the factors of the pmf in the BP part are no longer restricted to be strictly positive real-valued functions, and 2) present Algorithm 1 that is a convergent implementation of the message passing update equations presented in Theorem 2 provided that the factor graph representing the factorization of the pmf fulfills certain technical conditions. As a byproduct, 1) gives insights into solely BP (which is a special case of the combination of BP and the MF approximation) with hard constraints, where only conjectures are formulated in [9]. In Section IV, we apply Algorithm 1 to joint channel estimation and decoding in an OFDM system. More advanced receiver architectures together with numerical simulations and a comparison with other state-of-the-art receivers can be found in [23] and an additional application of the algorithm in a cooperative communications scenario is presented in [24]. Finally, we conclude in Section V and present an outlook for further research directions.
+
+A. Notation
+
+Capital calligraphic letters
+
+denote finite sets. The
+
+cardinality of a set is denoted by . If
+
+, we write
+
+for
+
+. We use the convention that
+
+, where
+
+denotes the empty set. For any finite set , denotes the indi-
+
+cator function on , i.e.,
+
+if
+
+and
+
+else.
+
+We denote by capital letters discrete random variables with a
+
+finite number of realizations and pmf . For a random variable
+
+, we use the convention that is a representative for all pos-
+
+sible realizations of , i.e., serves as a running variable, and
+
+denote a particular realization by . For example,
+
+runs
+
+through all possible realizations of and for two functions
+
+and depending on all realizations of ,
+
+means
+
+that
+
+for each particular realization of . If is a
+
+functional of a pmf of a random variable and is a func-
+
+tion depending on all realizations of X, then
+
+means that
+
+is well defined and holds for each par-
+
+ticular realization of . We write
+
+for the re-
+
+alizations of the vector of random variables
+
+.
+
+If , then
+
+runs through all possible realizations
+
+of but . For any nonnegative real-valued function with
+
+argument
+
+and
+
+,
+
+denotes with
+
+fixed argument
+
+. If a function is identically zero, we
+
+write
+
+and
+
+means that it is not identically zero. For
+
+two real-valued functions and with the same domain and
+
+argument , we write
+
+if
+
+for some real pos-
+
+itive constant
+
+. We use the convention that
+
+,
+
+if
+
+, and
+
+[25, p. 31]. For
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+590
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+Fig. 1. Factor graph corresponding to the factorization of the pdf in (28) with
+
+and
+
+part is chosen in such a way that utilizes most of the advantages of BP and the MF approximation.
+
+. The splitting of the factor graph into BP and MF
+
+if
+
+and zero else. Matrices are denoted by cap-
+
+ital boldface Greek letters. The superscripts and stand for
+
+transposition and Hermitian transposition, respectively. For a
+
+matrix
+
+, the entry in the row and column is
+
+denoted by
+
+. For two vectors
+
+and
+
+,
+
+denotes
+
+the Hadamard product of and . Finally,
+
+stands
+
+for the pdf of a jointly proper complex Gaussian random vector
+
+with mean and covariance matrix .
+
+II. KNOWN RESULTS
+
+factors. The factorization in (1) can be visualized in a factor
+
+graph.4 In a factor graph,
+
+is the set of all variable nodes
+
+connected to a factor node
+
+and
+
+represents the set of
+
+all factor nodes connected to a variable node . An example
+
+of a factor graph is depicted in Fig. 1.
+
+A region
+
+consists of subsets of indices
+
+and
+
+with the restriction that
+
+implies that
+
+. To each region , we associate a counting number
+
+. A set
+
+of regions and associated counting
+
+numbers is called valid if
+
+A. Region-Based Free Energy Approximations [9]
+
+Let be a certain positive pmf of a vector of random
+
+variables
+
+that factorizes as
+
+(1)
+
+for all
+
+.
+
+For a positive function approximating
+
+variational free energy [9]5
+
+, we define the
+
+where
+
+and
+
+with
+
+for all
+
+. Without loss of generality, we assume
+
+that
+
+, which can always be achieved by renaming
+
+indices.3 Since is a strictly positive pmf, we can assume
+
+without loss of generality that all the factors of in (1)
+
+are real-valued positive functions. Later in Section III, we shall
+
+show how to relax the positivity constraint for some of these
+
+3For example, we can write
+
+(2)
+
+In (2),
+
+denotes the entropy [25, p.5] of and
+
+is called
+
+average energy of . Note that
+
+is the Kullback–Leibler
+
+divergence [25, p. 19], between and , i.e.,
+
+. For a set of regions and associated counting numbers,
+
+the region-based free energy approximation is defined as [9]
+
+with
+
+This implies that any function that is defined pointwise on and defined. For example, if in addition to the definition of the sets
+
+we set
+
+for all
+
+, the function
+
+is well
+
+with because
+
+4Throughout the paper, we work with Tanner factor graphs as opposed to Forney factor graphs.
+
+denoting the collection of all subsets of
+
+for all
+
+.
+
+is well defined
+
+5If is not normalized to one, the definition of the variational free energy contains an additional normalization constant, called Helmholtz free energy [9, pp. 4–5].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+591
+
+Here, each is defined locally on a region . Instead of min- with
+
+imizing with respect to , we minimize with respect to
+
+all
+
+, where the have to fulfill certain con-
+
+straints. The quantities are called beliefs. We give two exam-
+
+(6)
+
+ples of valid sets of regions and associated counting numbers.
+
+Example 2.1: The trivial example
+
+. It
+
+leads to the MF fixed-point equations, as will be shown in
+
+Section II-C.
+
+Example 2.2: We define two types of regions:
+
+1) large regions: ;
+
+, with
+
+for all
+
+2) small regions: .
+
+, with
+
+for all
+
+Note that this definition is well defined due to our assumption
+
+that
+
+. The region-based free energy approximation
+
+corresponding to the valid set of regions and associated counting
+
+numbers
+
+is called the Bethe free energy [9], [26]. It leads to the BP fixedpoint equations, as will be shown in Section II-B. The Bethe free energy is equal to the variational free energy when the factor graph has no cycles [9].
+B. BP Fixed-Point Equations
+The fixed-point equations for BP can be obtained from the Bethe free energy by imposing additional marginalization and normalization constraints and computing the stationary points of the corresponding Lagrangian function [9], [27]. The Bethe free energy reads
+
+(3)
+
+with
+
+for all
+
+,
+
+for all
+
+, and
+
+. The normalization constraints for the beliefs
+
+and the marginalization constraints for the beliefs
+
+and
+
+can be included in the Lagrangian
+
+[28, Sec. 3.1.3]
+
+for all
+
+and vice versa. Here,
+
+are
+
+positive constants that ensure that the beliefs
+
+are
+
+normalized to one.
+
+Often, the following alternative system of fixed-point equa-
+
+tions is solved instead of (6):
+
+(7)
+
+for all
+
+, where
+
+are ar-
+
+bitrary positive constants. The reason for this is that for a fixed
+
+scheduling, the messages computed in (6) differ from the mes-
+
+sages computed in (7) only by positive constants, which drop
+
+out when the beliefs are normalized. See also [9, eqs. (68) and
+
+(69)], where the
+
+symbol is used in the update equations
+
+indicating that the normalization constants are irrelevant. A so-
+
+lution of (7) can be obtained, e.g., by updating corresponding
+
+likelihood ratios of the messages in (6) or by updating the mes-
+
+sages according to (6) but ignoring the normalization constants
+
+. The algorithm converges if the normalized beliefs
+
+do not change any more. Therefore, a rescaling of the messages
+
+is irrelevant and a solution of (7) is obtained. However, we note
+
+that a rescaled solution of (7) is not necessarily a solution of (6).
+
+Hence, the beliefs obtained by solving (7) need not be stationary
+
+points of the Lagrangian in (4). To the best of our knowledge,
+
+this elementary insight is not published yet in the literature and
+
+we state a necessary and sufficient condition when a solution of
+
+(7) can be rescaled to a solution of (6) in the following lemma.
+
+Lemma 1: Suppose that is a solution of (7) and set
+
+(8)
+
+Then, this solution can be rescaled to a solution of (6) if and
+
+only if there exist positive constants
+
+such that
+
+(9) (4)
+Proof: See Section A in the Appendix.
+
+The stationary points of the Lagrangian in (4) are then related to the BP fixed-point equations by the following theorem.
+Theorem 1 [9, Th. 2]: Stationary points of the Lagrangian in (4) must be BP fixed points with positive beliefs fulfilling
+
+Remark 2.1: Note that for factor graphs that have a tree struc-
+
+ture, the messages obtained by running the forward–backward
+
+algorithm [10] always fulfill (9) because we have
+
+and
+
+in this case.
+
+C. Fixed-Point Equations for the MF Approximation
+
+A message passing interpretation of the MF approximation was derived in [5] and [29]. In this section, we briefly show how (5) the corresponding fixed-point equations can be obtained by the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+592
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+free energy approach. To this end, we use 1 together with the factorization constraint6
+
+from Example (10)
+
+Plugging (10) into the expression for the region-based free energy approximation corresponding to the trivial approximation
+, we get
+
+D. Expectation Maximization (EM)
+
+Message passing interpretations for EM [21] were derived in
+
+[31] and [32]. It can be shown that EM is a special instance of the
+
+MF approximation [33, Sec. 2.3.1], which can be summarized
+
+as follows. Suppose that we apply the MF approximation to
+
+in (1) as described previously. In addition, we assume that for
+
+all
+
+, the beliefs fulfill the constraints that
+
+. Using the fact that
+
+, we can rewrite
+
+in (11) as
+
+(11)
+
+with
+
+. Assuming that all the beliefs
+
+have
+
+to fulfill a normalization constraint, the stationary points of the corresponding Lagrangian for the MF approximation can easily
+
+be evaluated to be
+
+(14)
+
+For all
+
+, the stationary points of
+
+in (14) have
+
+the same analytical expression as the one obtained in (12). For
+
+, minimizing in (14) with respect to yields
+
+(12)
+
+for all
+
+, where the positive constants
+
+are such
+
+that is normalized to one for all
+
+.7
+
+For the MF approximation, there always exists a convergent
+
+algorithm that computes beliefs
+
+solving (12) by
+
+simply using (12) as an iterative update equation for the beliefs.
+
+Since for all
+
+Setting
+
+for all
+
+, we get the
+
+message passing update equations defined in (13) except that
+
+we have to replace the messages
+
+for all
+
+and
+
+by
+
+and the set of all beliefs satisfying the normalization con-
+
+straint
+
+is a convex set, the objective function
+
+in (11) cannot increase and the algorithm is guaranteed to
+
+converge. Note that in order to derive a particular update
+
+, we need all previous updates with
+
+.
+
+By setting
+
+for all
+
+, the
+
+fixed-point equations in (12) are transformed into the message
+
+passing fixed-point equations
+
+with
+
+for all
+
+.
+
+III. COMBINED BP/MF APPROXIMATION FIXED-POINT EQUATIONS
+Let (15)
+
+(13)
+
+for all
+
+. The MF approximation can be ex-
+
+tended to the case where is a pdf, as shown in Section B
+
+in the Appendix. Formally, each sum over (
+
+) in (12)
+
+and (13) has to be replaced by a Lebesgue integral whenever the
+
+corresponding random variable is continuous.
+
+be a partially factorized pmf with
+
+and
+
+. As earlier, we have
+
+,
+
+, with
+
+for all
+
+, and
+
+for all . We refer to the factor
+
+graph representing the factorization
+
+in (15) as
+
+“BP part” and to the factor graph representing the factorization
+
+in (15) as “MF part.” Furthermore, we set
+
+6For binary random variables with pmf in an exponential family, it was shown
+
+in [30] that this gives a good approximation whenever the truncation of the
+
+Plefka expansion does not introduce a significant error. 7The Lagrange multiplier [28, p. 283] for each belief
+
+corre- and
+
+sponding to the normalization constraint can be absorbed into the positive con-
+
+stant
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+593
+
+Next, we define the following regions and counting numbers:
+
+1) one MF region
+
+, with
+
+;
+
+2) small regions for all
+
+, with ;
+
+3) large regions
+
+, with
+
+for all
+
+.
+
+This yields the valid set of regions and associated counting num-
+
+bers
+
+We will show in Lemma 2 that the region-based free energy
+
+approximation in (17) fulfilling the constraints (18) and (19) is
+
+a finite quantity, i.e.,
+
+.
+
+The constraints (18) and (19) can be included in the La-
+
+grangian [28, Sec. 3.1.3]
+
+(16)
+
+The additional terms
+
+in the counting numbers of the
+
+small regions
+
+defined in 2) compared to the
+
+counting numbers of the small regions for the Bethe approxi-
+
+mation (see Example 2.2) guarantee that
+
+is indeed a
+
+valid set of regions and associated counting numbers. The valid
+
+set of regions and associated counting numbers in (16) gives the
+
+region-based free energy approximation
+
+(17)
+
+(20)
+
+The stationary points of the Lagrangian
+
+in (20) are then
+
+obtained by setting the derivatives of
+
+with respect to
+
+the beliefs and the Lagrange multipliers equal to zero. The fol-
+
+lowing theorem relates the stationary points of the Lagrangian
+
+to solutions of fixed-point equations for the beliefs.
+
+Theorem 2: Stationary points of the Lagrangian in (20) in the combined BP-MF approach must be fixed points with positive beliefs fulfilling
+
+with
+
+. In (17), we have already plugged in
+
+(21)
+
+the factorization constraint
+
+with
+
+with and
+tion constraints
+
+and
+
+. The beliefs
+
+have to fulfill the normaliza-
+
+(18)
+
+and the marginalization constraints
+
+and vice versa. Here,
+
+and
+
+(19)
+
+constants that ensure that the beliefs
+
+are normalized to one with
+
+for all
+
+Proof: See Section C in the Appendix.
+
+(22) are positive and .
+
+Remark 3.1: Note that there is no need to introduce normal-
+
+ization constraints for the beliefs
+
+. If
+
+,
+
+then it follows from the normalization constraint for the belief
+
+and marginalization constraint for the beliefs and that
+
+Remark 3.2: Note that for each
+
+, Theorem 2 can
+
+be generalized to the case where is a continuous random
+
+variable following the derivation presented in Section B in the
+
+Appendix. Formally, each sum over with
+
+in the
+
+third identity in (22) has to be replaced by a Lebesgue integral
+
+whenever the corresponding random variable is continuous.
+
+Remark 3.3: Note that Theorem 2 clearly states whether “ex-
+
+trinsic” values or “APPs” should be passed. In fact, the first
+
+equation in (22) implies that each message
+
+is an “extrinsic” value when
+
+and an “APP”
+
+when
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+594
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+A. Hard Constraints for BP
+Some suggestions on how to generalize Theorem 1 ([9, Th. 2]) to hard constraints, i.e., to the case where the factors of the pmf are not restricted to be strictly positive real-valued functions, can be found in [9, Sec. VI.D]. An example of hard constraints are deterministic functions like, e.g., code constraints. However, the statements formulated there are only conjectures and are based on the assumption that we can always compute the derivative of the Lagrange function with respect to the beliefs. This is not always possible because
+
+with from (3). In the sequel, we show how to generalize
+
+Theorem 2 to the case where
+
+for all
+
+based on
+
+the simple observation that we are interested in solutions where
+
+the region-based free energy approximation is not plus infinity
+
+(recall that we want to minimize this quantity). As a byproduct,
+
+this also yields an extension of Theorem 1 ([9, Th. 2]) to hard
+
+constraints by simply setting
+
+.
+
+Lemma 2: Suppose that
+
+(23) (24)
+
+then there exists a convergent implementation of the combined
+
+message passing equations in (22). In fact, we can iterate be-
+
+tween updating the beliefs with
+
+and the for-
+
+ward backward algorithm in the BP part, as outlined in the fol-
+
+lowing algorithm.
+
+Algorithm 1: If the BP part has no cycle and (26) is fulfilled,
+
+the following implementation of the fixed-point equations in
+
+(22) is guaranteed to converge.
+
+1) Initialize for all
+
+and send the corre-
+
+sponding messages
+
+to all factor nodes
+
+.
+
+2) Use all messages
+
+with
+
+and
+
+as fixed input for the BP part and run the forward/
+
+backward algorithm [10]. The fact that the resulting beliefs
+
+with
+
+cannot increase the region-based free
+
+energy approximation in (17) is proved in Section E in the
+
+Appendix.
+
+3) For each
+
+and
+
+, the message
+
+is now available and can be used for further up-
+
+dates in the MF part.
+
+4) For each
+
+, successively recompute the mes-
+
+sage
+
+and send it to all
+
+. Note that for
+
+all indices
+
+and
+
+for all
+
+and each realization of .8
+
+Furthermore, we assume that
+
+and
+
+fulfill the constraints (18) and (19). Then
+
+1)
+
+;
+
+2) the condition
+
+and the set of all beliefs satisfying the normalization con-
+
+straint (first equation in (18)) is a convex set. This implies
+
+that for each
+
+, we are solving a convex opti-
+
+mization problem. Therefore, the region-based free energy
+
+(25)
+
+approximation in (17) cannot increase.
+
+5) Proceed as described in 2).
+
+is necessary and sufficient for
+
+;
+
+3) if (25) is fulfilled, the remaining stationary points
+
+( ) and
+
+excluding all from (25) (
+
+)
+
+of the Lagrangian in (20) are positive beliefs fulfilling (21)
+
+and (22) excluding all from (25) and vice versa.
+
+Remark 3.5: If the factor graph representing the BP part is not cycle free, then Algorithm 1 can be modified by running loopy BP in step 2). However, in this case, the algorithm is not guaranteed to converge.
+
+4) Moreover, (21) and (22) hold for all realizations (in-
+
+cluding all from (25)) and, therefore, (21) contains (25)
+
+IV. APPLICATION TO ITERATIVE CHANNEL
+
+as a special case.
+
+ESTIMATION AND DECODING
+
+Proof: See Section D in the Appendix.
+
+In this section, we present an example where we show how
+
+Remark 3.4: At first sight, it seems to be a contradiction to to compute the updates of the messages in (22) based on Algo-
+
+the marginalization constraints (19) that (25) holds and all the rithm 1. We choose a simple communication model where the
+
+beliefs (
+
+) are strictly positive functions. To illustrate updates of the messages are simple enough in order to avoid
+
+that this is indeed the case, let
+
+,
+
+, and fix one overstressed notation. A class of more complex MIMO-OFDM
+
+realization of . Since
+
+, we also have
+
+. receiver architectures together with numerical simulations can
+
+This implies that
+
+for at least one realization
+
+be found in [23]. In our example, we use BP for modulation and
+
+with
+
+and, therefore,
+
+. decoding and the MF approximation for estimating the param-
+
+The marginalization constraints (19) together with the fact that eters of the a posteriori distribution of the channel gains. This
+
+the belief must be a nonnegative function then implies that splitting is convenient because BP works well with hard con-
+
+we have indeed
+
+.
+
+straints and the MF approximation yields very simple message
+
+B. Convergence and Main Algorithm If the BP part has no cycle and
+
+passing update equations due to the fact that the MF part in our example is a conjugate-exponential model [5]. Applying BP to all factor nodes would be intractable because the complexity is
+
+(26)
+
+too high; (cf., the discussion in Section IV-C). Specifically, we consider an OFDM system with
+
+ac-
+
+8If
+
+, then we can simply remove this realization of .
+
+tive subcarriers. We denote by
+
+and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+595
+
+the sets of subcarrier indices for the data and pilot sym-
+
+bols, respectively, with
+
+,
+
+, and
+
+.
+
+In the transmitter, a random vector
+
+representing the information bits is encoded and interleaved
+
+using a rate
+
+encoder and a random interleaver,
+
+respectively, into the random vector
+
+TABLE I PARAMETERS OF THE OFDM SYSTEM
+
+of length representing the coded and interleaved bits. Each
+
+random subvector mapped, i.e., modulated, to
+
+of length is then Now define with
+
+, where is a complex modulation alphabet of size
+
+.
+
+(31)
+
+After removing the cyclic prefix in the receiver, we get the
+
+following input–output relationship in the frequency domain:
+
+(27)
+
+where
+
+is the random vector corresponding
+
+to the transmitted data symbols,
+
+is the vector
+
+containing the transmitted pilot symbols, and
+
+and
+
+are random vectors representing
+
+the multiplicative action of the channel, while
+
+and
+
+are random vectors representing
+
+additive Gaussian noise with
+
+and
+
+. Note that (27) is very general and
+
+can also be used to model, e.g., a time-varying frequency-flat
+
+channel.
+
+Setting
+
+and
+
+,
+
+the pdf
+
+admits the factorization
+
+(28)
+where we used the fact that is independent of , , and and is independent of and conditioned on . Note that
+
+(32)
+
+and set
+
+for all
+
+. For example, we have
+
+. We choose a splitting of into
+
+and
+
+with
+
+(33) With this selection
+
+which implies that
+
+. The factor graph
+
+corresponding to the factorization in (28) with the splitting of
+
+into
+
+and
+
+as in (33) is depicted in Fig. 1.
+
+We now show how to apply the variant of Algorithm 1 re-
+
+ferred to in Remark 3.5 to the factor graph depicted in Fig. 1.
+
+Note that (26) is fulfilled in this example; however, cycles occur
+
+in the BP part of the factor graph due to the combination of
+
+(convolutional) coding, interleaving, and high-order modula-
+
+tion (see Table I).
+
+Algorithm 2:
+
+1) Initialize
+
+by setting
+
+(29)
+
+with
+
+We choose for the prior distribution of
+
+(30)
+
+and
+
+and set
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+596
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+2) Using the particular form of the distributions
+
+in (29) and
+
+in (30),
+
+compute
+
+for all
+
+. Here, we used Lemma 3 in Section F in the
+
+Appendix to get the updated parameters
+
+(34) with
+
+and
+
+The update for the belief is
+
+for all
+
+with
+
+.
+
+3) Use the messages
+
+as fixed
+
+input for the BP part and run BP.
+
+4) After running BP in the BP part, compute the messages
+
+and update the messages in
+
+the MF part. Namely, after setting
+
+for all
+
+, compute the messages
+
+i.e.,
+
+.
+
+5) Proceed as described in 2).
+
+A. “Extrinsic” Values Versus “App”
+
+In consideration of Remark 3.3, it is instructive to analyze
+
+the messages coming from the variable nodes
+
+, which are contained in the BP and MF part of
+
+the factor graph depicted in Fig. 1. Whether a message passing
+
+from a variable node to a factor node is an “extrinsic” value or
+
+an “APP” depends on whether the corresponding factor node is
+
+in the BP or the MF part. Thus, for all
+
+, the messages
+
+which are passed into the BP part, are “extrinsic” values, whereas the messages
+
+for all
+for all and
+
+which are passed into the MF part, are “APPs.” Note that this result is aligned with the strategies proposed in [19] and [20], where “APPs” are used for channel estimation and “extrinsic values” for detection.
+
+B. Level of MF Approximation
+
+Note that there is an ambiguity in the choice of variable nodes
+
+in the MF part. This ambiguity reflects the “level of the MF
+
+approximation” and results in a family of different algorithms.
+
+For example, instead of choosing as a single random variable,
+
+we could have chosen
+
+to be separate
+
+variable nodes in the factor graph. In this case, we make the
+
+assumption that the random variables
+
+are
+
+independent and the set of indices in (31) has to be replaced
+
+by
+
+Since this is an additional approximation, the performance of the receiver is expected to decrease compared to the case where
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+597
+
+factor graph like, e.g., expectation propagation (EP). A comparison between EP and BP-MF can be found in [36] where it was shown that BP-MF yields the best performance-complexity tradeoff and does not suffer from numerical instability.
+
+D. Estimation of Noise Precision
+
+Fig. 2. Bit error rate as a function of signal-to-noise ratio for Algorithm 2 (BP-
+
+MF), BP combined with Gaussian approximation as described in Section IV-C,
+
+and BP with perfect CSI at the receiver. Pilot spacing
+
+and
+
+.
+
+Algorithm 2 can be easily extended to the case where the
+
+noise precision is a realization of a random variable . In
+
+fact, since
+
+and
+
+are
+
+linear in , we can replace any dependence on in the existing
+
+messages in Algorithm 2 by the expected value of and get
+
+simple expressions for the additional messages using a Gamma
+
+prior distribution for , reflecting the powerfulness of exploiting
+
+the conjugate-exponential model property in the MF part for
+
+parameter estimation. See [23] for further details on the explicit
+
+form of the additional messages.
+
+V. CONCLUSION AND OUTLOOK
+
+we choose as a single random variable. However, it is possible that the complexity reduces by applying an additional MF approximation. See [23] for further discussions on this ambiguity for a class of MIMO-OFDM receivers.
+
+We showed that the message passing fixed-point equations of a combination of BP and the MF approximation correspond to stationary points of one single constrained region-based free energy approximation. These stationary points are in one-to-one correspondence to solutions of a coupled system of message
+
+C. Comparison With BP Combined With Gaussian
+
+passing fixed-point equations. For an arbitrary factor graph and
+
+Approximation
+
+a choice of a splitting of the factor nodes into a set of MF and
+
+The example makes evident how the complexity of the
+
+message passing algorithm can be simplified by exploiting
+
+the conjugate-exponential property of the MF part, which
+
+leads to simple update equations of the belief . In fact, at
+
+each iteration in the algorithm, we only have to update the
+
+parameters of a Gaussian distribution (34). In comparison,
+
+let us consider an alternative split of by moving the factor
+
+nodes
+
+in (29) and
+
+in (30)
+
+to the BP part. This is equivalent to applying BP to the whole
+
+factor graph in Fig. 1 because
+
+. Doing
+
+so, each message
+
+does no longer
+
+admit a closed-form expression in terms of the mean and the
+
+variance of the random variable and becomes a mixture
+
+of Gaussian pdfs with components; in consequence, each
+
+message
+
+becomes a sum of
+
+terms. To keep the complexity of computing these messages
+
+tractable, one has to rely on additional approximations.
+
+As suggested in [34] and [35], we can approximate each mes-
+
+sage
+
+by a Gaussian pdf. BP com-
+
+bined with this approximation is comparable in terms of com-
+
+plexity to Algorithm 2, since the computations of the updates
+
+of the messages are equally complex. However, Algorithm 2
+
+clearly outperforms this alternative, as can be seen in Fig. 2.
+
+It can also be noticed that the performance of Algorithm 2 is
+
+close to the case with perfect channel state information (CSI)
+
+at the receiver, even with a low density of pilots, i.e., such that
+
+the spacing between any two consecutive pilots
+
+approxi-
+
+mately equals the coherence bandwidth9
+
+of the channel
+
+or twice of it.
+
+To circumvent the intractability of the BP-based receiver, one
+
+BP factor nodes, our result gives immediately the corresponding message passing fixed-point equations and yields an interpretation of the computed beliefs as stationary points. Moreover, we presented an algorithm for updating the messages that is guaranteed to converge provided that the factor graph fulfills certain technical conditions. We also showed how to extend the MF part in the factor graph to continuous random variables and to include hard constraints in the BP part of the factor graph. Finally, we illustrated the computation of the messages of our algorithm in a simple example. This example demonstrates the efficiency of the combined scheme in models in which BP messages are computationally intractable. The proposed algorithm performs significantly better than the commonly used approach of using BP combined with a Gaussian approximation of computationally demanding messages. An interesting extension of our result would be to generalize the BP part to contain also continuous random variables. The results in [37] provide a promising approach. Indeed, they could be used to generalize the Lagrange multiplier for the marginalization constraints to the continuous case. However, these methods are based on the assumption that the objective function is Fréchet differentiable [38, p. 172]. In general a region-based free energy approximation is neither Fréchet differentiable nor Gateaux differentiable, at least not without any modification of the definitions used in standard text books [38, pp. 171–172].10 An extension to continuous random variables in the BP part would allow to apply a combination of BP with the MF approximation, e.g., for sensor self-localization, where both methods are used [39], [40]. Another interesting extension could be to generalize the region-based free energy approximation such that the
+
+could also apply other approximate inference algorithms to the 10For a positive real-valued function ,
+
+might fail to be a positive
+
+9Calculated as the reciprocal of the maximum excess delay.
+
+real-valued function for arbitrary perturbations with sufficiently small norm .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+598
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+messages in the BP part are equivalent to the messages passed in tree reweighted BP or to include second-order correction terms in the MF approximation that are similar to the Onsager reaction term [30].
+APPENDIX
+
+A. Proof of Lemma 1
+
+Suppose that
+
+is
+
+a solution of (7) and set
+
+(35)
+
+with
+
+. Plugging (35) into (7),
+
+we obtain the following fixed-point equations for the messages
+
+:
+
+and reversing all the steps finishes the proof.
+
+B. Extension of the MF Approximation to Continuous Random Variables
+
+Suppose that is a pdf of the vector of random variables .
+
+In this section, we assume that all integrals in the region-based
+
+free energy approximation are Lebesgue integrals and have fi-
+
+nite values, which can be verified by inspection of the factors
+
+(
+
+) and the analytic expressions of the computed beliefs
+
+(
+
+). An example where the MF approximation is applied
+
+to continuous random variables and combined with BP is dis-
+
+cussed in Section IV.
+
+For each
+
+, we can rewrite
+
+in (11) as
+
+with
+
+for all only if
+
+(36) . Now, (36) is equivalent to (6) if and
+(37)
+
+It follows from [22, Th. 2.1] that
+
+to
+
+if and only if
+
+is minimized subject
+
+(38)
+
+where the positive constants
+
+are such that the beliefs
+
+in (5) are normalized to one. This normalization of
+
+the beliefs
+
+in (5) gives
+
+(40)
+
+up to sets of Lebesgue measure zero. Formally, in (40) differs from in (12) by replacing sums with Lebesgue integrals.
+
+C. Proof of Theorem 2
+
+The proof of Theorem 2 is based on the ideas of the proof of
+
+[9, Th. 2]. However, we will see that we get a significant simpli-
+
+fication by augmenting it with some of the arguments originally
+
+used in [11] for Markov random fields and adopted to factor
+
+graphs in [12]. In particular, we shall make use of the following
+
+observation. Recall the expression for
+
+in (17)
+
+(39)
+
+where we used (35) in the second step and (8) in the last step.
+
+Combining (37)–(39), we obtain
+
+(41)
+
+the marginalization constraints
+
+(42) with
+
+Now, suppose that (9) is fulfilled. Setting
+
+and the normalization constraints
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+(43)
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+599
+
+Using the marginalization constraints (42), we see that
+
+Setting
+
+(48) we can rewrite (47) as
+(44)
+Combining (44) with (41), we further get (49)
+where
+
+with the mutual information [25, p. 19]
+
+(45)
+are such that the normalization constraints in (43) are fulfilled. Finally, we define
+
+Next, we shall compute the stationary points of the Lagrangian
+
+(50)
+
+for all
+
+. Plugging the expression for
+
+in (50) into the expression for
+
+in (49), we find that
+
+(46)
+
+using the expression for
+
+in (45). The particular form
+
+of
+
+in (45) is convenient because the marginalization
+
+constraints in (42) imply that for all
+
+and
+
+, we
+
+have
+
+. Setting the derivative of
+
+in (46) with respect to
+
+and
+
+equal to zero for all
+
+and
+
+, we get the following fixed-point equations
+
+for the stationary points:
+
+(51)
+
+Using the marginalization constraints in (42) in combination
+
+with (51) and noting that
+
+for all
+
+, we further
+
+find that
+
+(52)
+
+for all gives
+
+. Dividing both sides of (52) by
+
+(47)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+(53)
+
+600
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+for all for all
+
+and in (48) as
+
+. Noting that , we can write the messages
+
+(54)
+
+for all
+
+. Now, (50), (53), and (54) are
+
+equivalent to (22) and (51) is equivalent to (21). This completes
+
+the proof that stationary points of the Lagrangian in (20) must
+
+be fixed points with positive beliefs fulfilling (21). Since all the
+
+steps are reversible, this also completes the proof of Theorem
+
+C.
+
+D. Proof of Lemma 2
+
+We rewrite
+
+in (17) as
+
+with
+
+implies that (25) is a special case of the first equation in (21), which proves 4) and, therefore, finishes the proof of Lemma 2.
+E. Proof of Convergence
+In order to finish the proof of convergence for the algorithm presented in Section III-B, we need to show that running the forward/backward algorithm in the BP part in step 2) of Algorithm 1 cannot increase the region-based free energy approximation
+in (17). To this end we analyze the factorization
+(55)
+
+with
+
+. The factorization in (55) is the
+
+product of the factorization of the BP part in (15) and the in-
+
+coming messages from the MF part. The Bethe free energy (3)
+
+corresponding to the factorization in (55) is
+
+and set
+
+Then
+
+(56)
+
+We now show that minimizing in (56) is equivalent to mini-
+
+mizing
+
+in (17) with respect to and for all
+
+and
+
+. Obviously
+
+and
+
+This follows from the fact that
+
+differs from
+
+by
+
+This proves 1). Now (23) implies that
+
+terms that depend only on with
+
+. Now suppose that
+
+, (24) implies that
+
+, and
+
+. In this case, we find that
+
+if and only if (25) is fulfilled, which
+
+proves 2).
+
+Suppose that we have fixed all
+
+(
+
+) from (25).
+
+Then, the analysis for the remaining
+
+and
+
+excluding all from (25)
+
+is the same as in the
+
+proof of Theorem 2 and the resulting fixed-point equations are
+
+(57)
+
+identical to (21) and (22) excluding all from (25) and vice
+
+versa, which proves 3). We can reintroduce the realizations
+
+and
+
+with
+
+(
+
+) from (25) in (22) because they
+
+do not contribute to the message passing update equations, as
+
+can be seen immediately from the definition of the messages
+
+in (22). The same argument
+
+(58)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+RIEGLER et al.: MERGING BELIEF PROPAGATION AND THE MEAN FIELD APPROXIMATION: A FREE ENERGY APPROACH
+
+601
+
+From (22), we see that
+
+Then
+
+for all
+
+(59) . Note that, according to step 2) in Algorithm with
+
+1, the messages
+
+in (59) are fixed inputs for the BP
+
+part. Therefore, we are not allowed to plug the expressions for
+
+the messages
+
+in (59) into (58) in general. However,
+
+since
+
+and
+
+, condition (26) implies that
+
+and guarantees that
+
+Proof: Follows from direct computation.
+
+is constant in step 2) of Algorithm 1 for all
+
+. Therefore, we are indeed allowed to plug the expressions
+
+of the messages
+
+in (59) into (58) and finally see also
+
+that
+
+ACKNOWLEDGMENT
+The authors wish to thank Prof. Ralf R. Müller for his comments on a previous draft of this paper.
+
+REFERENCES
+
+Hence, minimizing
+
+in (56) is equivalent to minimizing
+
+in (17).
+
+By assumption, the factor graph in the BP part has a tree struc-
+
+ture. Therefore, [9, Prop. 3] implies that
+
+1)
+
+;
+
+2)
+
+if and only if the beliefs
+
+in (56) are the
+
+marginals of the factorization in (55).
+
+Hence, for fixed with
+
+, we see that
+
+in
+
+(17) is minimized by the marginals of the factorization in (55).
+
+It remains to show that running the forward/backward algo-
+
+rithm in the BP part as described in step 2) in Algorithm 1 in-
+
+deed computes the marginals of the factorization in (55). Ap-
+
+plying Theorem 1 to the factorization in (55) yields the message
+
+passing fixed-point equations
+
+(60)
+
+for all
+
+. The message passing fixed-point
+
+equations in (60) are the same as the message passing fixed-
+
+point equations for the BP part in (22) with fixed-input mes-
+
+sages
+
+for all
+
+and
+
+. Hence,
+
+running the forward/backward algorithm in the BP part indeed
+
+computes the marginals of the factorization in (55) and Algo-
+
+rithm 1 is guaranteed to converge.
+
+F. Product of Gaussian Distributions Lemma 3: Let
+
+[1] E. Riegler, G. E. Kirkelund, C. N. Manchón, and B. H. Fleury, “Merging belief propagation and the mean field approximation: A free energy approach,” in Proc. IEEE Symp. Turbo Codes, Brest, France, Sep. 2010, pp. 256–260.
+[2] P. Parisi, Statistical Field Theory. Oxford, U.K.: Perseus, 1988. [3] Z. Ghahramani and M. J. Beal, Graphical Models and Variational
+Methods, D. Saad and M. Opper, Eds. Cambridge, MA: MIT Press, 2000. [4] M. I. Jordan, Z. Ghahramani, T. S. Jaakola, and L. K. Saul, “An introduction to variational methods for graphical models,” J. Mach. Learn., vol. 37, no. 2, pp. 183–233, 1999. [5] J. Winn and C. Bishop, “Variational message passing,” J. Mach. Learn., vol. 6, no. 6, pp. 661–694, 2005. [6] C. M. Bishop, Pattern Recognition and Machine Learning. New York: Springer-Verlag, 2006. [7] G. E. Kirkelund, C. N. Manchón, L. P. B. Christensen, E. Riegler, and B. H. Fleury, “Variational message-passing for joint channel estimation and decoding in MIMO-OFDM,” in Proc. IEEE Global Telecom. Conf., Miami, FL, Dec. 2010, pp. 1–6. [8] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. San Francisco, CA: Morgan Kaufmann, 1998. [9] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Constructing free-energy approximations and generalized belief propagation algorithms,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2282–2312, Jul. 2005. [10] F. R. Kschischang, J. F. Brendan, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001. [11] M. J. Wainwright, T. S. Jaakkola, and A. S. Willsky, “A new class of upper bounds on the log partition function,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2313–2335, Jul. 2005. [12] H. Wymeersch, F. Penna, and V. Savic, “Uniformly reweighted belief propagation: A factor graph approach,” in Proc. IEEE Int. Symp. Inf. Theory, St. Petersburg, Russia, Jul./Aug. 2011, pp. 2000–2004. [13] S. Ikeda, T. Tanaka, and S.-I. Amari, “Information geometry of turbo and low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 50, no. 6, pp. 1097–1114, Jun. 2004. [14] S.-I. Amari and H. Nagaoka, Methods of Information Geometry. Oxford, U.K.: Oxford Univ. Press, 2000. [15] M. Moher and T. A. Gulliver, “Cross-entropy and iterative decoding,” IEEE Trans. Inf. Theory, vol. 44, no. 7, pp. 3097–3104, Nov. 1998. [16] J. M. Walsh, C. R. Johnson, and P. A. Regalia, “A refined information geometric interpretation of turbo decoding,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process., Philadelphia, PA, Mar. 2005, pp. 481–484. [17] T. Minka, Divergence measures and message passing 2005, Microsoft Res. Tech. Rep. MSR-TR-2005-173. [18] X. Wang and H. V. Poor, “Iterative (turbo) soft interference cancellation and decoding for coded CDMA,” IEEE Trans. Commun., vol. 47, no. 7, pp. 1046–1061, Jul. 1999.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+602
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 1, JANUARY 2013
+
+[19] J. Wehinger and C. F. Mecklenbrauker, “Iterative CDMA multiuser receiver with soft decision-directed channel estimation,” IEEE Trans. Signal Process., vol. 54, no. 10, pp. 3922–3934, Oct. 2006.
+[20] S. P. Rossi and R. R. Müller, “Joint twofold-iterative channel estimation and multiuser detection for MIMO-OFDM systems,” IEEE Trans. Wireless Commun., vol. 7, no. 11, pp. 4719–4729, Nov. 2008.
+[21] A. P. Dempster, N. M. Laird, and D. B. Rubin, “Maximum-likelihood from incomplete data via the EM algorithm,” J. Roy. Statist. Soc., vol. 39, no. 1, pp. 1–38, 1977.
+[22] S. Kullback, Information Theory and Statistics. New York: Wiley, 1978.
+[23] C. N. Manchón, G. E. Kirkelund, E. Riegler, L. Christensen, and B. H. Fleury, Receiver architectures for MIMO-OFDM based on a combined VMP-SP algorithm 2011, arXiv: 1111.5848.
+[24] M.-A Badiu, C. N. Manchón, V. Bota, and B. H. Fleury, “Distributed iterative processing for interference channels with receiver cooperation,” in Proc. IEEE Symp. Turbo Codes, Gothenburg, Sweden, Aug. 2012, pp. 1–5.
+[25] T. M. Cover and J. A. Thomas, Elements of Information Theory, 2nd ed. New York: Wiley, 2006.
+[26] H. A. Bethe, “Statistical theory of superlattices,” Proc. Roy. Soc. London, ser. A, vol. 150, no. 871, pp. 552–575, 1935.
+[27] T. Heskes, “Stable fixed points of loopy belief propagation are minima of the Bethe free energy,” in Advances in Neural Information Processing Systems. Cambridge, MA: MIT Press, 2003, pp. 343–350.
+[28] D. P. Bertsekas, Nonlinear Programming, 2nd ed. Belmont, MA: Athena Scientific, 2003.
+[29] J. Dauwels, “On variational message passing on factor graphs,” in Proc. IEEE Int. Symp. Inf. Theory, Nice, France, Jun. 2007, pp. 2546–2550.
+[30] T. Tanaka, “Information geometry of mean-field approximation,” Neural Comput., vol. 12, pp. 1951–1968, 2000.
+[31] A. W. Eckford, “The factor graph EM algorithm: Applications for LDPC codes,” in Proc. IEEE SPAWC, New York, Jun. 2005, pp. 910–914.
+[32] J. Dauwels, S. Korl, and H.-A. Loeliger, “Expectation maximization as message passing,” in Proc. IEEE Int. Symp. Inf. Theory, Adelaide, Australia, Sep. 2005, pp. 1–4.
+[33] B. Hu, “A variational Bayesian framework divergence minimization and its application in CDMA receivers,” Ph.D. dissertation, Dept. Electron. Syst., Aalborg Univ., Aalborg, Denmark, 2010.
+[34] C. Knievel, P. A. Hoeher, A. Tyrrell, and G. Auer, “Multi-dimensional graph-based soft iterative receiver for MIMO-OFDM,” IEEE Trans. Commun., vol. 60, no. 6, pp. 1599–1609, Jun. 2012.
+[35] X. Xu and R. Mathar, “Low complexity joint channel estimation and detection for LDPC coded MIMO-OFDM systems,” in Proc. IEEE Veh. Technol. Conf., Budapest, Hungary, May 2011, pp. 1–5.
+[36] M.-A. Badiu, G. E. Kirkelund, C. N. Manchón, E. Riegler, and B. H. Fleury, “Message-passing algorithms for channel estimation and decoding using approximate inference,” in Proc. IEEE Int. Symp. Inf. Theory, Cambridge, MA, Jul. 2012, pp. 1–5.
+[37] B. D. Craven, “A generalization of Lagrange multipliers,” Bull. Austral. Math. Soc., vol. 3, pp. 353–362, 1970.
+[38] D. G. Luenberger, Optimization by Vector Space Methods. New York: Wiley, 1997.
+[39] H. Wymeersch, J. Lien, and M. Z. Win, “Cooperative localization in wireless networks,” Proc. IEEE, vol. 97, no. 2, pp. 427–450, Feb. 2009.
+[40] C. Pedersen, T. Pedersen, and B. H. Fleury, “A variational message passing algorithm for sensor self-localization in wireless networks,” in Proc. IEEE Int. Symp. Inf. Theory, St. Petersburg, Russia, Jul.–Aug. 2011, pp. 2158–2162.
+Erwin Riegler (M’07) received the Dipl-Ing. degree in Technical Physics (with distinction) in 2001 and the Dr. techn. degree in Technical Physics (with distinction) in 2004 from Vienna University of Technology.
+He was a visiting researcher at the Max Planck Institute for Mathematics in the Sciences in Leipzig, Germany (Sep. 2004–Feb. 2005), the Communication Theory Group at ETH Zürich, Switzerland (Sep. 2010–Feb. 2011), and the Department of Electrical and Computer Engineering at The Ohio State University in Columbus, Ohio (Mar. 2012). From 2005–2006, he was a post-doc at the Institute for Analysis and Scientific Computing, Vienna University of Technology. From 2007–2010, he was a senior researcher at the Telecommunications Research Center Vienna (FTW). Since 2010, he has been a post-doc at the Institute of Telecommunications at Vienna University of Technology.
+His research interests include noncoherent communications, machine learning, interference management, large system analysis, and transceiver design.
+
+Gunvor Elisabeth Kirkelund received her master degree (cum laude) in Wireless Communication from Aalborg University, Denmark, in 2008.
+Since 2008 she has been pursuing a Ph.D. degree at the Section Navigation and Communications, Department of Electronic Systems, Aalborg University. Her research interests lie within the field of statistical signal processing, message-passing techniques and design of iterative algorithms for wireless receivers.
+Carles Navarro Manchón received the degree in telecommunications engineering from the University Miguel Hernández of Elx, Spain, in 2006 and the PhD degree in wireless communications from Aalborg University, Denmark, in 2011.
+Since 2006 he has been with Aalborg University, where he is currently an Assistant Professor in the Section Navigation and Communications, Department of Electronic Systems. His research interests lie within the area of statistical signal processing for wireless communications, including joint channel estimation and decoding, distributed signal processing for cooperative communications and estimation and reconstruction of sparse signals.
+Mihai-Alin Badiu received the Dipl.-Ing. degree in electrical engineering in June 2008 and the Master degree in telecommunications in June 2010 from the Technical University of Cluj-Napoca, Romania. Since Oct. 2009, he is pursuing a Ph.D. degree at the Communications Department of the same university.
+From Nov. 2008 to May 2010, he was a Research Assistant at the Technical University of Cluj-Napoca, Romania. In 2011 he spent an 8-month stay as a Visiting Researcher with the Section Navigation and Communications of the Department of Electronic Systems, Aalborg University, Denmark. Since Feb. 2012 he is affiliated with this Section as a Research Assistant. His research interests include advanced wireless receiver design based on message-passing algorithms and cooperative communications.
+Bernard Henri Fleury (M’97–SM’99) received the Diploma in electrical engineering and mathematics in 1978 and 1990, respectively, and the Ph.D. degree in electrical engineering from the Swiss Federal Institute of Technology Zurich (ETHZ), Switzerland, in 1990.
+Since 1997, he has been with the Department of Electronic Systems, Aalborg University, Denmark, as a Professor of communication theory. He is the Head of the Section Navigation and Communications, which is one of the eleven laboratories of this Department. From 2006 to 2009, he was a Key Researcher with the Telecommunications Research Center Vienna (FTW), Austria. During 1978–1985 and 1992–1996, he was a Teaching Assistant and a Senior Research Associate, respectively, with the Communication Technology Laboratory, ETHZ. Between 1988 and 1992, he was a Research Assistant with the Statistical Seminar at ETHZ.
+Prof. Fleury’s research interests cover numerous aspects within communication theory, signal processing, and machine learning mainly for wireless communications. His current scientific activities include stochastic modeling and estimation of the radio channel especially for MIMO systems operating in harsh conditions, iterative message-passing processing with focus on the design of efficient feasible architectures for wireless receivers, localization techniques in wireless terrestrial systems, and radar signal processing. He has authored and co-authored more than 120 publications in these areas. He has developed with his staff a high-resolution method for the estimation of radio channel parameters that has found a wide application and has inspired similar estimation techniques both in academia and in industry.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:05:05 UTC from IEEE Xplore. Restrictions apply.
+
+

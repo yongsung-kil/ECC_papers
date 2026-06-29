@@ -1,0 +1,565 @@
+2021 11th International Symposium on Topics in Coding
+Towards Fully Pipelined Decoding of Spatially Coupled Serially Concatenated Codes
+Mojtaba Mahdavi∗, Liang Liu∗, Ove Edfors∗, Michael Lentmaier∗, Norbert Wehn†, Stefan Weithoffer‡ ∗Department of Electrical and Information Technology (EIT), Lund University, Lund, Sweden †Department of Electrical and Computer Engineering, Technische Universita¨t Kaiserslautern ‡IMT Atlantique, Lab-STICC, UMR CNRS 6285, F-29238 Brest, France
+Email: ∗firstname.lastname@eit.lth.se, †wehn@eit.uni-kl.de, ‡stefan.weithoffer@imt-atlantique.fr
+
+2021 11th International Symposium on Topics in Coding (ISTC) | 978-1-6654-0943-8/21/$31.00 ©2021 IEEE | DOI: 10.1109/ISTC49272.2021.9594185
+
+Abstract—Having close-to-capacity performance and low error floor, even for small block lengths, make spatially coupled serially concatenated codes (SC-SCCs) a very promising class of codes. However, classical window decoding of SC-SCCs either limits the minimum block length or requires a large number of iterations, which increases the complexity and constrains the degree to which an SC-SCC decoder architecture can be parallelized. In this paper we propose jumping window decoding (JWD), an algorithmic modification to the scheduling of decoding such that it enables pipelined implementation of SC-SCCs decoder. Also, it provides flexibility in terms of block length and number of iterations and makes them independent of each other. Simulation results show that our scheme outperforms classical window decoding of both SC-SCCs and uncoupled SCCs, in terms of performance. Furthermore, we present a fully pipelined hardware architecture to realize JWD of SC-SCCs along with area estimates in 12 nm technology for the respective case study.
+I. INTRODUCTION Support for extreme data rates in wireless systems beyond 5G (B5G) is essential for many new applications, such as data kiosks, high capacity wireless backhauls, and wireless virtual and augmented reality [1]. These demanding throughput requirements directly translate to the digital baseband signal processing where channel coding is a main contributor of computational complexity [2] and is subject to major restrictions in terms of silicon area. Achieving Tbps throughputs with FEC schemes that rely on soft decoding require highly parallel and deeply pipelined decoder hardware architectures. Although fully pipelined turbo decoders are expected to reach Tbps for medium block sizes and low number of iterations, they suffer from a large silicon area for block sizes above 100 bits [3], [4]. Spatially coupled schemes, allowing construction of a larger code of almost arbitrary length from a much smaller code, may offer a way around this block size limitation. From a code design perspective, it has been shown that spatial coupling improves the decoding threshold of LDPC codes [5], [6]. Similarly, the concept of spatial coupling has been applied to turbo-like codes, where threshold saturation has also been proven [7]. It has been shown that the performance improvement through spatial coupling is more pronounced in serially concatenated codes (SCCs) compared to the parallel concatenated codes (PCCs) [8]. Due to closeto-capacity performance and low error floor, spatially coupled SCCs (SC-SCCs) are selected as the focus of this paper. From a hardware design perspective, it is worth mentioning that decoding of spatially coupled codes can be done block-
+
+K Outer Encoder
+
+Info. Bits
+
+Info.
+
+Π
+
+Bits Interleaver
+
+2K Inner Encoder
+(a)
+
+D
+
+D
+
+(b)
+
+Parity Bits
+
+Fig. 1. (a) Compact graph representation of SCC. (b) Structure of RSC encoder, which is used for the inner and outer encoders.
+
+wise using window decoding [9], [10], which allows the decoder to be constructed from a set of traditional decoders working on the block size of the smaller code, called subdecoders. These sub-decoders are then chained together and coupled accordingly. This streaming-like decoding has the potential to combine good error correction performance with high throughput and lends itself to a pipelined implementation.
+However, limitations for fully pipelined hardware architectures with the highest throughput, that already exist for the uncoupled case, such as maximum block size and maximum number of iterations also exist for the coupled case. On the other hand, classical window decoding for spatially coupled turbo-like codes either imposes a minimum block size or a large number of decoding iterations per sub-block of each window. Both may render an implementation ineffective.
+In this work we present jumping window decoding (JWD), a new decoding schedule for window decoding of SC-SCC turbo codes that enables, for the first time, fully pipelined implementation. We discuss a conceptual hardware architecture and give implementation estimates for the 12 nm technology node based on a characterization of the compute kernels. The remainder of this paper is structured as follows: Section II gives background on SC-SCCs and Section III discusses the classical window decoding and its applicability to fully pipelined decoder hardware architectures. Then, Section IV introduces the proposed JWD, along with a detailed performance evaluation for hardware friendly code design and decoding schedule parameters, as well as 12 nm implementation estimates for a fully pipelined decoder hardware architecture with JWD scheduling.
+II.SPATIALLY COUPLED SERIALLY CONCATENATED CODES A. Serially Concatenated Codes (SCCs)
+SCCs can be described by a compact graph [11] as shown in Fig. 1(a), where the information and parity sequences are rep-
+
+978-1-6654-0943-8/21/$31.00 c 2021 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:32:02 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+K
+
+K
+
+K
+
+K
+
+K
+
+K
+
+Π1
+
+Π1
+
+Π1
+
+Π1
+
+Π1
+
+Π1
+
+W =4
+
+W =8
+
+Iterative
+
+K
+
+(a)
+
+K/2 K/2
+
+(b)
+
+Π2
+
+Π2
+
+Π2
+
+Π2
+
+Π2
+
+Π2
+
+Fig. 3. Classical window decoding (WD) for SC-SCC with a latency of 4K
+
+2K
+
+2K
+
+2K
+
+2K
+
+2K
+
+2K
+
+bits. (a) {W = 4, K, L = 4K} and (b) {W = 8, K = K/2, L = 4K}.
+
+W=4
+
+W=4
+
+Fig. 2. Compact graph representation of an infinite chain of SC-SCC for m= 1 and block length of K. Two decoding windows with W =4 are shown.
+
+resented by black circles (variable nodes). The convolutional
+
+codes are shown by squares (factor nodes) and labeled by the
+
+corresponding trellis lengths. The SCC encoder consists of two
+
+convolutional encoders, called outer and inner encoders, that
+
+are connected in series with an interleaver. These encoders
+
+are realized by a recursive systematic convolutional (RSC)
+
+encoder with generator polynomial (1, 5/7) (see Fig. 1(b)).
+
+The outer encoder receives the information sequence, ut, of length K bits and produces the K-bit outer parity sequence,
+
+pretOor. dTerheedn,bythteheininfoterrmleaatvioenr,
+
+and outer parity Π, to generate
+
+sequences
+
+are
+
+qtO = Π(ut, ptO).
+
+(1)
+
+The inner encoder gets the 2K-bit sequence qtO and produces
+
+the inner parity sequence, pIt , of length 2K bits. Finally, the
+
+output of the called a code
+
+SCC block
+
+encoder and will
+
+is be
+
+vtrtan=sm(iuttetd, poOtv,epr tIth),e
+
+which is channel.
+
+To decode the inner and outer trellises the BCJR algorithm
+
+can be employed. To support efficient hardware implemen-
+
+tation, the BCJR counterpart in the logarithmic domain, the
+
+Log-MAP algorithm, and its simplified version max-Log MAP
+
+(MLM) algorithm [3], [4] are typically used.
+
+B. Spatially Coupled Serially Concatenated Codes (SC-SCCs) The SC-SCC encoder is constructed by coupling m + 1
+component encoders, where m is the coupling memory. Fig. 2 illustrates the compact graph representation of an SC-SCC with coupling memory m = 1. Each component encoder consists of an outer encoder, an inner encoder, a demultiplexer, and two interleavers, which are connected together as follows.
+At time instant t the outer encoder receives a block of information bits, ut, and generates the outer parity sequence, ptO. Then, the pair of (ut, ptO) are permuted by Interleaver 1 to generate a 2K-bit sequence, qtO = Π1(ut, pOt ). For coupling memory m, this sequence is divided into m + 1 subsequences of equal length, i.e., qtO,0, qtO,1, . . . , qtO,m. The first subsequence, i.e. qtO,0, is used as a part of the input of the inner encoder at time t and the other ones, qtO,1, . . . , qtO,m, are used to generate the input of the next inner encoders at time t + 1, . . . , t + m, respectively. Therefore, at time t the sequence
+
+q˜tO = (qtO,0, qtO−1,1, . . . , qtO−m,m)
+
+(2)
+
+is produced by the current and previous m component en-
+
+coders, which will be permuted using Interleaver 2 (Π2). The permuted sequence is sent to the inner encoder at time t to
+
+produce the inner parity sequence, pIt (see Fig. 2). Finally, the
+
+output of the SC-SCC encoder at Since the RSC encoder in Fig.
+
+time 1(b)
+
+t is has
+
+vt = (ut the code
+
+,rpattOe,RptI=).
+
+1/2, the overall rate of the SCC and SC-SCC encoders is
+
+R = 1/4. To achieve R = 1/3, which is considered in the
+
+nfoolnlo-twerinmgi,naatepdaret nocfopdIter,isinpuwnhcitcuhretdh.eMfionraelosvteart,eswoefcionnnseirdearnda
+
+outer encoders at time t are used as the initial states of the
+
+inner and outer encoders at time t+1. This concept is shown
+
+by double circles (state variable nodes) in Fig. 2.
+
+III. FULLY PIPELINED WINDOW DECODING A. Window Decoding
+To decode a stream of spatially coupled code-blocks, the window decoding (WD) approach has been proposed [10], [12]. To give an example, we consider a decoding window of length W =4 code blocks, which starts at time t and ends at t+W −1, as shown by a solid rectangle in Fig. 2. The leftmost block in the window is referred to as the target block. For all blocks with indices t = t, · · · , t + W − 1, first the inner, then the outer decoder perform decoding as follows.
+The inner decoder at time t is fed by three sequences: the LLRs of the inner parity bits, the LLRs of the sequence defined in (2), and the a-priori LLRs. The inner decoder then produces the extrinsic LLRs and sends them back to the connected outer decoders. Similarly, the outer decoder receives three sequences: the LLRs of information bits, the LLRs of outer parity bits, and a-priori LLRs. It produces extrinsic LLRs and sends them to the connected inner decoders. Here, the a-priori LLRs of inner(outer) decoder are obtained using extrinsic LLRs of its coupled outer(inner) decoders (for simplicity, the extrinsic LLR exchange is not shown in Fig. 2). This process is repeated IWD times for the current window, to decode the target block, ut, where IWD is the number of iterations per window position. Then, the window is moved by one block to decode the target block ut+1 (see dashed rectangle in Fig. 2).
+In the literature, most evaluations of the finite length performance have considered only coupling memory m = 1 [10], [11], although the asymptotic thresholds are slightly improved for larger m [7]. We have demonstrated in [12] how to use higher coupling memories without increasing the complexity and latency. To this end, for a certain coupling memory, m, the window size should be chosen as W = 2(m + 1), which as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:32:02 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+Π1
+
+Π2
+
+-1
+
+-1
+
+Π2
+
+Π1
+
+Π1
+
+Π2
+
+-1
+
+-1
+
+Π2
+
+Π1
+
+Π1
+
+Π2
+
+-1
+
+-1
+
+Π2
+
+Π1
+
+Π1
+
+Π2
+
+-1
+
+-1
+
+Π2
+
+Π1
+
+to be decoded
+
+K
+
+W =8
+
+K
+
+already decoded
+
+Fig. 4. High-level schematic of a decoder pipeline for fully pipelined decoding of SC-SCCs with alternating HI pipelines functioning as inner- and outer decoders connected through interleavers, Π, and deinterleavers, Π−1. In this example, nHI = 8, Ieff = 4 are considered and the code blocks are color coded.
+
+we have shown in [12], leads to the best possible performance
+
+in the corresponding latency of
+
+L = K · W = K · 2(m + 1),
+
+(bits). (3)
+
+This enables us to trade between coupling memory and block
+
+length in a fixed latency without sacrificing the code strength.
+
+Thus, a given latency can be achieved by either large or small
+
+blocks. Fig. 3(a) and (b) illustrate this concept for two cases
+
+with {W = 4, K} and {W = 8, K = K/2}, which both
+
+have the same latency of L = 4K and their optimal coupling
+
+memories are determined by (3).Since there is W − 1 blocks
+
+overlap between successive windows, the larger window size,
+
+e.g., Fig. 3(b), leads to a larger complexity if the same IWD is used. We define an effective number of iterations,
+
+Ieff = W · IWD,
+
+(4)
+
+which specifies how often the BCJR is run to decode a certain block. As a result, to have the same complexity in different SC-SCC scenarios, the same Ieff should be used, which can be achieved by either small W and large IWD or large W and small IWD as imposed by (4). B. Fully Pipelined Iteration Unrolled Hardware Architecture
+Decoding at more than 100 Gbps has been demonstrated for PCCs in a fully pipelined iteration unrolled XMAP decoder architecture (UXMAP) [3], [4]. In this architecture the decoding of the PCC is unrolled onto a pipeline with several halfiteration (HI) stages corresponding to the iterative processing. The HI stages themselves are pipelined implementations of the MLM algorithm. Assuming a completely filled pipeline, this leads to one decoded block per clock cycle at the output. In [3], the HI stages were implemented not as monolithic pipelines, but as P parallel pipelines, each processing subblocks of K/P for K = 128, and [4] investigated optimal sizes for K/P for K ≤ 512.
+In contrast to [3], [4], a UXMAP decoder architecture for SC-SCCs needs two different types of HI stages. One for the inner decoder, which processes 2K bits, and one for the outer decoder, processing K bits. Consequently, for a given K, the area complexity of an SCC-UXMAP decoder can be expected to be at least 1.5× that of a PCC-UXMAP, which further limits the maximum block size and the number of iterations. Due the unevenness in the trellis length of the inner and outer decoder iteration stages, the inner decoder iteration stages must, in addition, be implemented with different degrees of parallelism (i.e., via [3]) for full pipeline utilization.
+Moreover, in order to realize the spatial coupling, the feedback connections need to be introduced between the HI
+
+Iterative
+
+W =8
+
+K/2 K/2
+
+Fig. 5. Proposed JWD for SC-SCC in Fig. 3(b) with {W = 8, K = K/2}.
+
+stages, as illustrated in Fig. 4. For simplicity, there is no distinction made in Fig. 4 between connections for extrinsic, parity, and channel values and, a coupling depth of m = 1 is assumed. The lower bound on the required number of HI stages, nHI, is given by (4) to Ieff = W · IWD, provided m ≤ Ieff = W · IWD. Thus, at least Ieff sub-blocks of an SCSCC encoded data stream are present in the decoder pipeline with nHI HI stages. In order to fully utilize the pipeline, while preserving the spatial coupling, the number of independently coupled streams fed to the decoder must equal to the pipeline depth of the HI stages. C. Challenges for Fully Pipelined Classical Window Decoding
+In summary, the classical window decoding of SC-SCCs in a fully pipelined decoder architecture is even more constrained in terms of block size, K, and effective number of iterations, Ieff, than in the PCC case. Moreover, in case of large decoding windows, W , constraining Ieff leads to a very low number of iterations within each decoding window, IWD, following from (4), which results in a poor error correcting performance. To avoid this, larger IWD and consequently larger Ieff should be used, which in turn increases the complexity. On the other hand, limiting the decoder to smaller values of W , which would allow for larger IWD, would require larger blocks to benefit from a larger overlap between decoding windows and to keep latency unchanged according to (3). However, the larger block lengths increase the silicon area significantly, as discussed in Section IV-B. Also, according to (3) small window sizes prevent from employing higher coupling memories.
+Moreover, since IWD depends on W and consequently the block length (see (4)), the architecture of WD has to be flexible to adjust IWD according to K, which increases hardware cost. To overcome these challenges, we propose below jumping window decoding, a schedule that enables a fixed Ieff without sacrificing IWD or requiring large K.
+IV. PROPOSED JUMPING WINDOW DECODING (JWD) The key idea of jumping window decoding (JWD) is to move the decoding window such that the same number of iterations
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:32:02 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+BER
+
+JWD, Ieff =16 WD, Ieff =16
+=1024,K=256, W=4 =2048,K=256, W=8 =4096,K=256,W=16
+
+SC-SCC =1024 =2048 =4096
+K=1024 K=2048 K=4096
+SCC
+
+=1024
+
+=2048
+
+Ieff = 8 Ieff =12 Ieff =16
+
+K=256,W=4 K=128,W=8 K=64,W=16 K=32,W=32
+
+Ieff = 8 Ieff =12 Ieff =16
+K=256,W=8 K=128,W=16 K=64, W=32 K=32, W=64
+
+=4096
+Ieff = 8 Ieff =12 Ieff =16 K=256,W=16 K=128,W=32 K=64, W=64 K=32,W=128
+
+Threshold(SC-SCC) Threshold(SCC)
+
+1.5
+
+(a) Eb/N0 (dB)
+
+(b) Eb/N0 (dB)
+
+(c) Eb/N0 (dB)
+
+(d) Eb/N0 (dB)
+
+(e) Eb/N0 (dB)
+
+Fig. 6. (a) Performance comparison between proposed JWD and traditional WD. (b) Performance comparison of SC-SCC (with JWD) and uncoupled SCCs. Performance evaluation of JWD for different values of Ieff, W , and K in latency of (c) L = 1024, (d) L = 2048, and (e) L = 4096 bits.
+
+per window position is used for any SC-SCC scenario, regardless of its block length, window size, and latency. This scheme demonstrates that employing small block lengths in a certain latency does not imply that the window has to be moved by small steps, which as stated in (4) leads to a large Ieff.
+We consider the classical window decoding for the SCSCCs with the smallest coupling memory, i.e., m = 1, as the reference design where the decoding window is moved by one block. According to (3) for a given latency this is corresponding to the smallest window size, i.e., Wref = 4, and the biggest block and consequently the largest step size for shifting the window (see Fig. 3(a)). Our scheme makes it possible to perform the same number of iterations per window position, IJWD, for an SC-SCC with arbitrary W and K, where
+
+IJWD
+
+=
+
+Ieff Wref
+
+.
+
+(5)
+
+Accordingly, after IJWD iterations, the window is moved by
+
+∆
+
+=
+
+W Wref
+
+×
+
+K
+
+(bits).
+
+(6)
+
+Thus, in case of equal latencies in the JWD the window is
+
+moved by the same step size, ∆, which is not necessarily equal
+
+to one block and can be flexible while in the classical WD it is
+
+moved by one block, i.e, ∆ = K bits. The processing flow of
+
+JWD is illustrated in Fig. 5, where the same SC-SCC scenario
+
+as the one in Fig. 3(b) is used. We will show in Section IV-B,
+
+a reduced Ieff without loss in error correcting performance, which reduces the silicon area of a pipelined architecture.
+
+To clarify the concept of JWD, we present three groups of
+
+SC-SCCs in Table I, corresponding to L = 1024, 2048, 4096,
+
+where each group includes several combinations of K and W .
+
+As an example, Ieff = 16, 12, and 8 are assumed to fix the complexity. It can be seen that the number of iterations per
+
+window in the traditional scheme, obtained from (4), is very
+
+low for small blocks. Also, IWD should be rounded to the nearest integer, which leads to unequal complexity. Moreover,
+
+in many cases like the ones with K = 32 and 64 the traditional
+
+WD becomes impractical since IWD < 1, which means the complexity budget has to be increased. By employing JWD,
+
+the number of iterations per window will be independent of
+
+K and W and thus the same number of iterations per window,
+
+IJWD, is used for all scenarios in Table I. In this table, IWD, IJWD, and ∆ are calculated using (4), (5), and (6), respectively
+
+L = 1024
+
+L = 2048
+
+TABLE I
+
+SC-SCC SCENARIOS WITH FIXED LATENCY AND COMPLEXITY.
+
+Ieff
+
+16, 12, 8
+
+16, 12, 8
+
+16, 12, 8 16, 12, 8
+
+K (bits) W m IWD
+IJWD ∆ (bits)
+
+256 4 1 4, 3, 2 4, 3, 2 256
+
+128 8 3 2, 1.5, 1 4, 3, 2 256
+
+64 16 7 1, 0.75, 0.5 4, 3, 2 256
+
+32 32 15 0.5, 0, 0 4, 3, 2 256
+
+K (bits) W m IWD
+IJWD ∆ (bits)
+
+256 8 3 2, 1.5, 1 4, 3, 2 512
+
+128 16 7 1, 0.75, 0.5 4, 3, 2 512
+
+64 32 15 0.5, 0, 0 4, 3, 2 512
+
+32 64 31 0, 0, 0 4, 3, 2 512
+
+K (bits) W m IWD
+IJWD ∆ (bits)
+
+256 16 7 1, 0.75, 0.5 4, 3, 2 1024
+
+128 32 15 0.5, 0, 0 4, 3, 2 1024
+
+64 64 31 0, 0, 0 4, 3, 2 1024
+
+32 128 63 0, 0, 0 4, 3, 2 1024
+
+L = 4096
+
+by considering Wref = 4 as the reference. However, other window sizes can alternatively be considered as the reference.
+A. Performance Evaluation We have evaluated the performance of JWD in the SC-
+SCC scenarios listed in Table I. In each scenario, we use a coupling memory of m = W/2 − 1, which has been shown to give the best performance for a given {K, W } [12]. Fig. 6(a) depicts the BER performance of a JWD and a traditional WD for the SC-SCCs in the first column of Table I. In case of L = 1024 the BER curves of WD and JWD are exactly the same since W = Wref and therefore ∆ = K for both cases. Also, Fig. 6(a) shows that JWD improves the performance by 0.5-0.9 dB and lowers the error floor, e.g., from 10−3 to lower than 10−6 in L = 4096. However, it is worth noting that the performance improvement is not the only benefit of using JWD. As discussed in Section III-C, employing the traditional WD for small K is not possible if Ieff < W , i.e., low to moderate complexity budget. In such cases, even the lowest number of iterations, IWD =1, results in a large Ieff =W , which increases the complexity significantly, prohibiting efficient hardware implementation and achieving high throughput. The proposed scheme, on the other hand, makes it possible to perform decoding for very short block lengths with a lower Ieff, i.e., lower complexity, while the performance is equal to or better than the traditional WD approach.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:32:02 UTC from IEEE Xplore. Restrictions apply.
+
+2021 11th International Symposium on Topics in Coding
+
+TABLE II
+
+PLACE & ROUTE RESULTS OF THE MLM COMPUTE KERNELS.
+
+BMU RU SOUI SOUO
+
+Technology
+
+12 nm FINFET LP
+
+Vdd (V) / T (°C) / Freq. (MHz)
+
+0.72 / 125 / 1000
+
+Area (µm2)
+
+572
+
+784 2025 2550
+
+Fig. 6(b) illustrates the performance of the proposed scheme and the uncoupled codes, SCCs, for different latencies. Also, the corresponding decoding thresholds, i.e., theoretical limit on the performance [11], are shown by vertical lines. It can be seen that in all cases the proposed scheme outperforms the SCCs by 0.2-0.8 dB. Note, that to have a fair comparison the same complexity is assumed by employing Ieff =16 for coupled and uncoupled codes and also the same latency is considered by adjusting K in the SCC equal to L in the SC-SCC.
+We have investigated the impact of Ieff on the performance of JWD for the scenarios listed in Table I. Fig. 6(c), (d), and (e) illustrate the BER curves for L = 1024, 2048, and 4096, respectively. It can be seen that the performance gap between Ieff = 8 and Ieff = 12 is larger than the gap between Ieff = 12 and Ieff = 16. Also, as expected, the performance is improved by increasing the latency. Note that the reason of the performance gap between different block lengths at a given latency is the poor performance of short interleavers. This gap could be smaller if the interleavers are designed jointly. The effective number of iterations trades between performance and silicon area, i.e., number of pipeline stages in Fig. 4. Thus, depending on the application, the most efficient value of Ieff is specified by considering a performance-area tradeoff.
+B. Area Complexity Estimations To illustrate this tradeoff and demonstrate the impact of
+JWD, we give hardware estimations for fully pipelined SCSCCs. It is well established, that the area of fully pipelined implementations for the MLM is dominated by the compute kernels of the MLM [3], [4], [13]: The branch metric unit (BMU), recursion unit (RU) and the soft output unit (SOU) largely determine the area of the inner and outer HI stages:
+AHinIner =(2 · K/ log2 r) · (ABMU + 2 · ARU + ASOUI ) + AFIFO, AoHuIter =(K/ log2 r) · (ABMU + 2 · ARU + ASOUO ) + AFIFO (7) where the outer decoder stages use SOUs that generate extrinsic information on parities as well (SOUO) and the inner decoder stages use SOUs, which only generate extrinsics on the information bits (SOUI). Table II gives placed and route results for radix-4 (r = 4) compute kernels of a UXMAP decoder in 12 nm technology for a target frequency of 1000 MHz. The overall area estimate for selected coding scenarios is given in Table III calculated from (7) and the total number of HI stages nHI = 2 · Ieff. Note, that for this qualitative estimate, AFIFO is not taken into account. However, together with the error correcting performance results for the proposed JWD these qualitative estimates indicate, that the area consumption for a fully pipelined SC-SCC decoder can be drastically reduced through a reduction in Ieff without loss in BER performance.
+V. CONCLUSION In this paper, we highlighted the challenges of employing classical WD for the SC-SCCs. We proposed a new decoding
+
+TABLE III
+
+AREA AND THROUGHPUT OF PIPELINES FOR DIFFERENT Ieff .
+
+Block Size (K)
+
+256 128 64 32
+
+Ieff
+
+Area (mm2)‡
+
+16
+
+26.66 13.33 6.66 3.33
+
+12
+
+20.00 10.00 5.00 2.50
+
+8
+
+13.33 6.66 3.33 1.66
+
+Throughput† (Gbps) 204.8 102.4 51.2 25.6
+
+‡ Area estimated based on Table II and (7), †: K/Freq.
+
+approach, called jumping window decoding (JWD), which opens the door for the practical pipelined implementation of the SC-SCCs. We discussed the necessary modifications to the UXMAP architecture and gave area estimates derived for different SC-SCCs based on PnR results in 12 nm technology. Moreover, BER results show that our scheme achieves better performance compared to the classical WD of SC-SCCs and uncoupled SCCs. As such, JWD enables fully pipelined implementation for high throughput decoding of SC-SCCs.
+ACKNOWLEDGMENTS This work was partially funded by the French National Research Agency TurboLEAP project (ANR-20-CE25-0007). The simulations were performed on resources provided by the Swedish National Infrastructure for Computing (SNIC) at the center for scientific and technical computing at Lund University (LUNARC).
+REFERENCES
+[1] EPIC Project, “Enabling Practical Wireless Tb/s Communications with Next Generation Channel Coding (EPIC),” 2020, https://epic-h2020.eu/.
+[2] C. Kestel, M. Herrmann, and N. Wehn, “When channel coding hits the implementation wall,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), 2018, pp. 1–6.
+[3] S. Weithoffer, O. Griebel, R. Klaimi, C. A. Nour, and N. Wehn, “Advanced hardware architectures for turbo code decoding beyond 100 Gb/s,” in IEEE Wireless Comm. and Netw. Conf.(WCNC), 2020, pp. 1–6.
+[4] S. Weithoffer, R. Klaimi, C. A. Nour, N. Wehn, and C. Douillard, “Fully pipelined iteration unrolled decoders the road to TB/S turbo decoding,” in ICASSP 2020 - 2020 IEEE Int. Conf. on Acoustics, Speech and Signal Pr. (ICASSP), 2020, pp. 5115–5119.
+[5] S. Kudekar et al., “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over the BEC,” IEEE Trans. on Inf. Theory, vol. 57, no. 2, pp. 803–834, Feb 2011.
+[6] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov, “Iterative decoding threshold analysis for LDPC convolutional codes,” IEEE Trans. on Inf. Theory, vol. 56, no. 10, pp. 5274–5289, Oct 2010.
+[7] S. Moloudi, M. Lentmaier, and A. Graell i Amat, “Spatially coupled turbo-like codes,” IEEE Trans. on Inf. Theory, vol. 63, no. 10, pp. 6199– 6215, Oct 2017.
+[8] S. Moloudi, M. Lentmaier, and A.Graell i Amat, “Spatially coupled turbo codes,” in 2014 8th Int. Symp. on Turbo Codes and Iterative Inf. Pr. (ISTC), Aug 2014, pp. 82–86.
+[9] N. U. Hassan, M. Schlu¨ter, and G. P. Fettweis, “Fully parallel window decoder architecture for spatially-coupled LDPC codes,” in 2016 IEEE Int. Conf. on Commun. (ICC), 2016, pp. 1–6.
+[10] M. Zhu, D. G. M. Mitchell, M. Lentmaier, D. J. Costello, and B. Bai, “Braided convolutional codes with sliding window decoding,” IEEE Trans. on Commun., vol. 65, no. 9, pp. 3645–3658, 2017.
+[11] S. Moloudi, M. Lentmaier, and A.Graell i Amat, “Spatially coupled turbo-like codes: A new trade-off between waterfall and error floor,” IEEE Trans. on Comm., vol. 67, no. 5, pp. 3114–3123, May 2019.
+[12] M. Mahdavi, M. Farooq, L. Liu, O. Edfors, V. O¨ wall, and M. Lentmaier, “The effect of coupling memory and block length on spatially coupled serially concatenated codes,” in 2021 IEEE 93rd Vehicular Technology Conference (VTC), 2021.
+[13] S. Weithoffer, M. Herrmann, C. Kestel, and N. Wehn, “Advanced wireless digital baseband signal processing beyond 100 Gbit/s,” in 2017 IEEE Int. Workshop on Signal Pr. Systems (SiPS), 2017, pp. 1–6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:32:02 UTC from IEEE Xplore. Restrictions apply.
+
+

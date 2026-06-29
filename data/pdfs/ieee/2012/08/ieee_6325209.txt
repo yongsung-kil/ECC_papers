@@ -1,0 +1,309 @@
+2012 7th International Symposium on Turbo Codes and Iterative Information Processing (ISTC)
+
+Adapted scheduling of QC-LDPC decoding for multistandard receivers
+
+Jean DION, Marie-Helene HAMON, Pierre PÉNARD France Telecom, Orange Labs
+4, rue du Clos Courtel, B.P. 91226 35512 Cesson Sévigné Cedex, France
+Email: { jean.dion, mhelene.hamon,
+pierre.penard } @orange.com
+
+Matthieu ARZEL, Michel JEZEQUEL TELECOM Bretagne
+Technopôle Brest-Iroise - CS 83818 29238 Brest, France
+Email:{ matthieu.arzel, michel.jezequel } @telecom-bretagne.eu
+
+Abstract—Wireless and PLC standards have to cope with noisy channels. The advanced FEC codes like LDPC and turbo codes are the most competitive ones. Multi-standards devices (such as mobile phones with cellular and WiFi) are becoming more and more attractive but raise the issue of duplicating hardware. Trellis decoding is a good solution to share material and to achieve good throughputs on FEC multi-standard decoders. Such a technique added with natural parallelism underlines access memory conflicts on the LDPC decoding process, which decreases the decoding performance. This paper presents an optimized trellis design to avoid these access conflicts with no loss in decoding performance.
+Index Terms—Architecture, FEC decoding, hardware implementation, iterative decoding, LDPC codes, turbo codes, parallelism, trellis decoding.
+I. INTRODUCTION
+The discovery of turbo codes by C. Berrou [1] in 1993 has promoted the research of codes able to reach the Shannon limit. Turbo codes have been improved to increase throughputs and to decrease the error floor. Nowadays, such solutions are selected in standards: 8-state binary turbo codes (bTC) in UMTS and Advanced-LTE [2] or 8-state double-binary turbo codes (dbTC) in DVB-RCS and the PLC standard HomePlugAV [3]. In the meantime, Mackay has rediscovered the Low-Density Parity -Check (LDPC) codes which are the best concurrent for TC. Quasi-Cyclic LDPC (QC-LDPC) codes are standardized in IEEE802.11n [4] as well as IEEE802.16m [5]. This family is especially interesting from the viewpoint of implementation. Both codes show great performance and low decoding complexity.
+Current devices communicate more and more through several media, and so, have to deal with several Forward Error Correction (FEC) strategies. For a constructor, the easier way to meet specifications in FEC decoding is to include several specific decoding chipsets. Several teams are studying methods to save chipset area by mutualizing functions. The Radix-4 [6] method is particularly interesting to implement a bTC/dbTC dual mode chipset with high throughputs (appx. 100 Mbps at 140 MHz). Other teams [7] [8] are working on an ASIP chipset able to decode LDPC, bTC and dbTC but requiring to
+
+be reconfigured between different usages. [9] proposes a turbodecoding architecture to merge a LDPC and a bTC decoder.
+Our interest here is focused on a generic decoder, able to decode both the LDPC codes from WiFi and the bTCs from LTE, or both the LDPC codes from WiFi and the dbTCs from HPAV. These architectures should be optimized in terms of complexity, but should also be competitive compared with a single-standard decoder solution. Contrary to TCs, LDPC decoding updates variables several times during an iteration of the process. The LDPC decoding structure needs this result with a delay called the reuse delay in the following. The purpose of this paper is to define a scheduling which improves this reuse delay and so avoids memory access conflicts, with no impact on the performance.
+This paper is structured as follows. Section II will describe the generic decoding architecture trellis. Section III will focus on the way to optimize the LDPC scheduling without any loss of performance. Section IV will optimize the scheduling applied to a WiFi LDPC matrix and will describe the impact in performance. Section V will conclude the paper.
+
+II. TC/LDPC GENERIC TRELLIS
+A. QC-LDPC Trellis
+LDPC codes are defined by a sparse parity check matrix H with M rows and N columns. Each row of the matrix corresponds to a parity check equation with dc variables. N (m) defines the set of variables associated with the parity equation m. The full parity equations system is given by (1).
+
+∀{c0, ...cN−1} ∈ C,
+
+∀m ∈ [[0, M − 1]],
+
+Hi,m.ci = 0
+
+(1)
+
+i∈N (m)
+
+A parity equation is a Markov chain with two states S0 and S1. The transition events {e0, e1} are given by each variable ci, i ∈ N (m) associated with the equation. The hard result of the parity equation at the time i is given by the state. As the
+chain is initialized by S0, and as the addition of variables shall be equal to 0, the ending state is S0. The parity equation has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:08:41 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4577-2115-1/12/$31.00 ©2012 IEEE
+
+111
+
+a structure of a micro-trellis with dc sections, two states and no parity is produced.
+
+a.
+
+b.
+
+Fig. 1: a. 2-state Markov chain - b. its trellis representation
+
+As it is shown in Fig.1, a 2-state trellis diagram shows the events between two trellis sections. Only two events allow a transition. If ci = 0, the result of the equation stays and so, the state is not changed. This event is represented in Fig.1-b by e0. Else, the state is inverted (e1). By the way, each parity equation can be decoded with trellis decoding algorithms such as BCJR.
+
+S1out can be reached with events (e0, p0) or (e1, p1). In this case, the group Gl is represented by Fig.1-b and defined by the following properties:
+• If the next event is e0, then the state goes from S0in to S0out or from S1in to S1out.
+• If the next event is e1, then the state switches. • If the next event is e0, then the output shall be p0
+independently from the state. • If the next event is e1, then the output shall be p1
+independently from the state.
+The structure of the LTE CC depicts four independent
+groups sharing these properties. The trellis structure is given
+by Fig.3-b. This structure indicates that it is possible to
+parallelize the 8-state decoding process into four 2-state de-
+coding processes working in parallel. This property allows
+increasing the decoding throughputs, but also exhibits a natural
+parallelism to decode any LDPC structure.
+
+Fig. 2: Wifi LDPC Matrix - N = 648, R = 1/2
+
+QC-LDPC matrices, as given in Fig.2, are split into z × z null or shifted identity matrices with z the expansion factor. This structure shows that the system of parity check equations is the union of (M/z) subgroups noted Lj in the following. All the parity equations m from the same subgroup Lj share the same Check-Node degree dm c = dLc j . Besides, each equation is independent. This means that a variable ci steps in one equation from Lj at most. These properties allow decoding in parallel all the equations contained in one subgroup. Each trellis has the same size dLc j .
+B. TC/LDPC common trellis
+A hardware generic decoder shall decode both LDPC and TC codes on the fly. Reconfiguration is not possible because it requires too much time (a few microseconds). This kind of architecture shall switch from one application to another without reconfiguration, and so, the routing of the decoder shall be optimized according to the codes. Here is proposed an architecture according to the 802.11n matrix given by Fig.2 (N = 648, R = 1/2) and LTE 8-state bTC.
+The Convolutional Code (CC) associated with the LTE bTC is a Markov chain with 8 states. Each section uses variable ci ∈ {0, 1}. From each state only 2 paths are possible in accordance with the possibility of ci. A trellis section gives exactly 16 paths.
+Matrices define a group of transitions Gl with the following properties. From states S0in and S1in, only two states S0out and
+
+a.
+
+b.
+
+Fig. 3: a. LTE trellis diagram - b. 4 × 2-state arrangement
+
+The LDPC code represented by Fig.2 is defined by a set of twelve independent subgroups of z = 27 parity equations. As depicted in subsection II-A, the 27 parity equations can be decoded in parallel. A generic trellis core can decode in parallel either a LTE CC trellis section or four Wifi parity check equations. The corresponding LDPC trellis associated with the independent parity equations subgroup Lj is defined as follows. The function BVk is defined as a routing function which gives the variable indexed by k in the equation m of the subgroup. Furthermore
+∀m ∈ [[1, ..., z]], BV0 (m), ..., BVdc−1(m) = N (m)
+Let Xk be a b-tuple which includes all variables studied by the trellis at the section k, and defined by:
+
+Xk = Xk0 ... Xkb−1 = cBVk (m0) ... cBVk (mb−1)
+
+(2)
+
+For an easier routing, successive parity equations are regrouped into ⌈z/b⌉ 2.b-state trellises so, ∀x ∈ [[0, ..., ⌈z/b⌉]], ∀t ∈ [[1, ..., b − 1]],
+
+mt = (b × x + t)[z]
+
+(3)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:08:41 UTC from IEEE Xplore. Restrictions apply.
+112
+
+where x is the index of the trellis. The trellis processing of
+equation set {m0, m1, ..., mb−1} is done through the trellis section sets X0, ..., Xdc−1. Fig.4 shows an instance of trellis with the parallelism b = 4.
+
+N K R Trellis Size - 1 it. Typical Throughputs (bits per trellis-core and clk cycle)
+
+LTE
+960 320 1/3 646 0.12 (4 it.)
+
+802.11n
+648 324 1/2 616 0.06 (9 it.)
+
+LTE
+1644 544 1/3 1094 0.12 (4 it.)
+
+802.11n
+648 540 5/6 616 0.10 (9 it.)
+
+TABLE II: Comparison of several usages
+
+Fig. 4: Four variables 2-state multi-trellis representation
+
+C. Hardware overview of the dual mode decoder
+A merging decoding structure shall reuse the unavoidable resources required to decode the LTE TCs. The Table I represents the complexity of decoding a trellis section. It shows that there are few additive costs to decode a LDPC structure.
+
+Additions Subtractions Comparisons Multiplexers Divisions by 2 Sign Inversions
+
+2-state LDPC
+22 5 6 14 2 2
+
+4×2-state LDPC
+88 20 24 56 8 8
+
+8-state bTC
+86 9 30 62 4 6
+
+TABLE I: Trellis section decoding complexity
+
+The decoding latency is proportional to one iteration equivalent trellis size and the number of iterations. Table II shows several modulation coding scheme from LTE and WiFi specifications. It compares the size of the equivalent trellis by iteration decoding. Note that the rate of a TC has no impact on the trellis size. The LDPC matrix structure is different from one rate to an other which explains the small complexity for high rate. This table shows that the latency is equal or higher to decode one iteration TC word than to decode one iteration LDPC word.
+
+trellis decoding puts end to end several micro-trellises whose
+sizes depend on the parity degree of the LDPC matrix as
+depicted in the previous section. Each trellis uses only once each variable ci by subgroup Lj at the time tALj (ci) after the beginning of the trellis processing. The result of this process is accessible at the time tLWj (ci). So the full duration of a trellis processing respects (4) with equality when ci ∈ X1. ∀m ∈ Lj, ∀ci ∈ N (m),
+
+tLWj (ci) − tALj (ci) ≤ ∆
+
+(4)
+
+In a classical forward/backward scheduling as shown in Fig.5, the trellis is covered from the beginning to the end. So the access time tLAj (ci) is given by equation (5).
+
+tLAj (ci) =
+
+m[z] b
+
+.djc + kj
+
+(5)
+
+where djc defines the parity degree associated with subgroup Lj and k the position of the variable in the trellis (note that kj ∈ [[0, djc − 1]] and i = BVkj (m)). In the same classical forward/backward scheduling, the trellis is fully processed
+after Tj clock cycles defined by (6).
+
+Tj =
+
+z b
+
+.djc + ∆
+
+(6)
+
+Subgroups are using at most once each variable. In the case of an Horizontal Layered Belief Propagation scheduling (HLBP), any variable can be reused during the same iteration into subgroups Lj and Ll. In such a case, let the reuse delay δ(ci) be defined by:
+
+
+l−1
+
+δ(ci) =  Tu + tALl (ci) − tALj (ci)
+
+(7)
+
+u=j
+
+In order to avoid RAM access conflicts and for a full pipelining architecture, this delay shall verify (8).
+
+III. LDPC REORDERING
+A. Problematic
+The duration for processing parity equations depends on the size of the associated trellis and the decoding architecture. This delay is ∆ = 2.dc+ǫ clock cycles, with ǫ a constant amount of clock cycles required to empty pipe-lines. Indeed, the LDPC
+
+∀ (mj, ml) ∈ Lj × Ll,
+
+(ci ∈ N (mj) ∩ N (ml)) ⇔ (∆ ≤ δ(ci))
+
+(8)
+
+A LDPC trellis scheduling shall be studied in order to maximize this reuse delay δ(ci) for all variables and all subgroup transitions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:08:41 UTC from IEEE Xplore. Restrictions apply.
+113
+
+The set ΩSv represents then the Image subset of the function δS, and mSΩ its minimum value.
+The maximum delay LDPC trellis scheduling shall optimize for each transition the permutation S in order to reach the constraint
+mΩS ≥ ∆
+The natural parallelism consists in handling equations mt defined by (3). This solution has a low addressing complexity. A shift permutation order keeps this property. In this case, the shift term u defines the row permutation of the subgroups Lj+1 and the new equation index mt is defined as follow:
+
+∀t ∈ [[1, ..., b − 1]], mt = (b × x + u + t)[z]
+
+(13)
+
+Fig. 5: Trellis decoding chronograph
+
+B. Maximum delay LDPC trellis scheduling
+
+The reuse delay defined by (7) directly depends on the parallelism b, the expanding factor z and the matrix protograph. Optimizing the parallelism is a necessary step to increase
+throughputs. Let Vc be the set of variables used in two successive
+subgroups Lj and Lj+1. For each variable in Vc, it exists two and only two equations m1 and m2 where this variable is used. So it is possible for each variable ci ∈ Vc to define the reuse delay δ(ci). It represents the delay between the first access by subgroup j and the first access by subgroup j + 1
+of the variable. In order to avoid memory conflict access, all
+delays shall respect (8). Let now Ωv refer to the Image subset of the function δ.
+This subset gives the reuse delay associated with the variable set Vc, and so
+
+Ωv = {δ(ci), ci ∈ Vc} ⊂ N∗+
+
+(9)
+
+For each set Vc = ∅, the value min (Ωv) exists and represents the minimal reuse delay noted mΩ in the following.
+Let S be a permutation. S is a bijective function from Lj+1. The previous definition can then be extended with its function. As long as S is bijective, the invert function S−1 exists and
+so:
+
+∀m2 ∈ Lj+1, ∃!m2 ∈ Lj+1, m2 = S(m2)
+
+(10)
+
+So it is possible to extend the reuse delay function defined by (7) with (11).
+
+δS (ci )
+
+=
+
+tLj+1
+S
+
+(ci
+
+)
+
++
+
+Tj
+
+−
+
+tLAj (ci)
+
+(11)
+
+with
+
+tLj+1
+S
+
+(ci
+
+)
+
+=
+
+S(m)[z] b
+
+.dcj+1 + kj+1
+
+(12)
+
+The best scheduling shall be a compromise between the maximum delay LDPC trellis scheduling and its routing complexity. In the following section, the shift permutation solution is preferred.
+IV. A WIFI/LTE USE CASE
+The architecture defined in Section II allows a few number of parity equations to be decoded in parallel. In a context of WiFi/3G convergence (LDPC and bTC trellis structure), the trellis core can decode four equations in parallel. IEEE802.11n standard defines 12 different QC-LDPC matrices with an expanding factor z = {27, 54, 81} and parity degrees from 7 to 22. Each matrix row of an LDPC matrix is an independent subgroup. The following part focuses on optimizing the scheduling of the first Wifi LDPC matrix illustrated in Fig.2 for a codelength of 648 bits and a rate 1/2.
+The LDPC code is made up of 12 successive independent subgroups with dcL = 7 or dcL = 8. This means that an iterative decoding step with the generic decoder will decode a generic trellis composed by 12 subgroups. Update messages will be transferred from one place to an other during each iteration. No update message is reused during the processing of one subgroup, but it is reused between subgroups. Border effects shows that the end to end trellis will reuse some variables with delay mΩ = 5. It means that the micro-trellis processing delay shall be ∆ ≤ 5. This delay is not possible to reach due to the micro-trellis length, and so the scheduling of this matrix has to be optimized to avoid latency and memory conflicts.
+The shift permutation order defined by (13) is favored, because it has no impact on the message address calculation complexity and it guarantees no performance loss.
+Between subgroups L1 and L2, there are four common variable groups, named V1, V5, V9 and V14. With the trellis configuration defined in section II, two variables (c24 and c25) are distant by mΩ = 7 trellis sections. The optimal repartition of the delay is obtained when u = 15. In this case, the minimal trellis distance is mSΩ = 21 and is reached by three variables (c367, c368 and c369). The scheduling of the subgroup L2 is replaced by its optimal permutation. From this new scheduling, the permutation between subgroups L2 and L3 shall be optimized.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:08:41 UTC from IEEE Xplore. Restrictions apply.
+114
+
+The complete process leads to the matrix H′ defined by Fig.6.
+Note that only parity equations are permuted. The code has not been modified and still respects (1). The reuse delay repartition in Fig.7 shows that there are few transitions with a small reuse delay and so that a bigger processing delay ∆ will have less impact on the decoding performance than the natural scheduling.
+
+Fig. 6: Scheduling optimized LDPC Matrix
+
+Fig. 8: Decoding Performance for LDPC scheduling
+
+provide better services at a low cost. The trellis representation helps to define a specific FEC decoding architecture suited for the convergence of two different standards. The choice of Wifi/LTE has been preferred as case study as it is relevant for mobile communications.
+This paper has put in light a question about the data reusing access due to the topography of LDPC codes. Small rescheduling shows no impact on the performance, but largely reduces the latency between micro-trellis decoding and avoids memory access conflicts. By shifting lines with a circular permutation in independent QC-LDPC subgroups, the new scheduling has no impact on the memory address computation, but still improves the decoder efficiency.
+
+Fig. 7: Natural and optimized scheduling delay repartition
+This permutation algorithm is interesting because in one part, the reuse delay is improved so that memory conflicts are avoided but, as shown by Fig.8, it has no impact on the decoding performance. Besides a shift permutation keeps the QC-LDPC architecture and so has no impact in term of routing.
+The LDPC decoding of this LDPC code for the processing of one iteration corresponds with a 308 bTC trellis length in term of complexity. Such a dual-mode decoder, processing with 8 cores at 400 MHz (ASIC) with 9 iterations in case of LDPC decoding should reach approximately 185 Mbps.
+V. CONCLUSION
+This paper has shown a merging trellis interpretation in order to provide a generic multi-standard decoder. Several papers have studied a way to reuse TC algorithms to decode LDPC codes, or the LDPC Belief-Propagation algorithm applied to convolutional decoding. The purpose of constructors is to implement several technologies in the same equipment to
+
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit errorcorrecting coding and decoding: Turbo-codes,” in IEEE International Conference on Communications. ICC 93.
+[2] Group Radio Access Network; Evolved Universal Terrestrial Radio Access (E-UTRA); Multiplexing and channel coding (Release 10), 3rd Generation Partnership Project (3GPP) - TS 36.212 - V10.0.0, Dec. 2010.
+[3] Draft HomePlug AV Specification, Version 1.1, HomePlug AV Specification, May 2007.
+[4] IEEE Standard for Information technology – Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications – Amendment 5: Enhancementss for Higher Throughput, IEEE Computer Society, Oct. 2009.
+[5] IEEE Standard for Local and metropolitan area networks – Part 16: Air Interface for Broadband Wireless Access Systems, IEEE Computer Society, May 2009.
+[6] J. Kim and I. C. Park, “A unified parallel radix-4 turbo decoder for mobile WiMAX and 3GPP-LTE,” Custom Integrated Circuits Conference, 2009. CICC ’09. IEEE, pp. 487 –490, Sep. 2009.
+[7] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” pp. 84 –89, Sep. 2008.
+[8] P. Murugappa, R. Al-Khayat, A. Baghdadi, and M. Jezequel, “A flexible high throughput multi-ASIP architecture for LDPC and turbo decoding,” in Design, Automation Test in Europe Conference Exhibition (DATE), 2011, Mar. 2011, pp. 1 – 6.
+[9] Y. Sun and J. Cavallaro, “Unified decoder architecture for LDPC/turbo codes,” in IEEE Workshop on Signal Processing Systems, 2008. SiPS 2008, vol. 2, Oct. 2008, pp. 13 –18.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:08:41 UTC from IEEE Xplore. Restrictions apply.
+115
+
+

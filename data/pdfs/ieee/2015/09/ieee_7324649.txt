@@ -1,0 +1,307 @@
+2015 36th IEEE Sarnoff Symposium
+
+A 2.48Gb/s FPGA-based QC-LDPC Decoder:
+An Algorithmic Compiler Implementation
+Swapnil Mhaske∗†, David Uliana†, Hojin Kee†, Tai Ly†, Ahsan Aziz†, Predrag Spasojevic∗ ∗Wireless Information Network Laboratory, Rutgers University, New Brunswick, NJ, USA Email:{swapnil.mhaske@rutgers.edu, spasojev@winlab.rutgers.edu} †National Instruments Corporation, Austin, TX, USA Email:{david.uliana, hojin.kee, tai.ly, ahsan.aziz}@ni.com
+
+Abstract—The increasing data rates expected to be of the order of Gb/s for future wireless systems directly impact the throughput requirements of the modulation and coding systems of the physical layer. In an effort to design a suitable channel coding solution for 5G wireless systems, in this brief we present two approaches to improve the throughput of a Quasi-Cyclic LowDensity Parity-Check (QC-LDPC) decoder architecture. While providing an algorithmic method to enhance parallel processing within the decoder in the first approach, in the second approach we apply the decoder architecture to achieve another highlyparallel architecture. We have successfully validated the second approach to get a 2.48Gb/s QC-LDPC decoder implementation operating at 200MHz on the Xilinx Kintex-7 FPGA in the NI USRP-2953R. For rapid-prototyping our research findings, the high-level description of the entire decoder was translated to a Hardware Description Language (HDL), namely VHDL, using the algorithmic compiler in the National Instruments LabVIEWTM Communication System Design Suite (CSDSTM). As per our knowledge, at the time of writing this paper, this is the fastest FPGA-based implementation of a standard compliant QC-LDPC decoder on a USRP using an algorithmic compiler.
+Index Terms—5G, mm-wave, Software-defined Radio (SDR), Universal Software Radio Peripheral (USRP), massively-parallel, QC-LDPC, layered decoding, algorithmic compiler, Kintex-7.
+I. INTRODUCTION
+Wireless data traffic is expected to increase by a 1000 fold [1] by the year 2020 with more than 50 billion devices connected to these networks with peak data rates upto ten Gb/s [2]. To address these challenges, the next generation of wireless cellular technology being envisioned and researched today is collectively termed as Beyond-4G (B-4G) and 5G. However, the envisioned operation of 5G systems in the mmwave (30-300GHz) spectrum comes with challenges such as, reliance on line of sight (LOS) communication, short range of communication, significantly increased shadowing loss and rapid fading in time, necessitating techniques such as large antenna arrays and rapidly adaptive beamsteering. From a physical layer perspective, the processing budget (especially time) available to the channel encoder and decoder will further decrease (relative to current generation systems such as 4G LTE).
+With this in mind, in our ongoing research we focus on high-throughput and low-latency error control coding solutions (primarily based on Low-Density Parity-Check (LDPC) [3] family of codes) specially suited to 5G mm-wave systems.
+
+At the time of writing this paper, a detailed progress report focusing on the algorithmic innovations for high-throughput and a subsequent case study leading to a 608Mb/s (at 260MHz) standard compliant Quasi-Cyclic (QC) LDPC decoder is presented in [4].
+To adapt to the evolving specifications for 5G technology, the intermediate stages of our implementation must be reconfigurable and scalable. FPGAs provide ease of validating algorithmic modifications. Owing to the growing adoption of FPGA technology in industry and academia alike, developing hardware on a general enough platform like the FPGA enables the use of our research results for a wide range of applications. The Universal Software Radio Peripheral (USRP) is one such application. It is a widely used Software Defined Radio (SDR) system that is a flexible and an affordable transceiver with the potential to turn a standard host (such as a PC) into a powerful wireless prototyping system. The availability of FPGAs on the USRP has opened up a huge space for implementing theoretical algorithms at high-speeds, crucial for systems such as those required by 5G wireless.
+This work also features the use of an algorithmic compiler [5]. This compiler translated the entire high-level description (done in a graphical algorithmic dataflow language) to VHDL and further generated an optimized hardware implementation from the algorithmic description. Thus, by simply modifying the algorithmic parameters designers can swiftly get new hardware implementations with updated FPGA resource and performance estimates. This enables designers to easily evaluate their current design model and constraints for further algorithmic exploration, thus saving significant time and cost.
+In this brief we present an algorithmic technique to enhance parallel processing within the decoder, and a method to parallelize the architecture resulting in an application that achieves 2.48Gb/s throughput on the NI USRP-2953R (which has the Xilinx Kintex-7 (410t) FPGA) using the FPGA IP compiler in LabVIEWTM CSDSTM. Massive-parallelization was accomplished by employing 6 decoder cores in parallel without any modification at the HDL level. The main contributions of this work are: (1) two approaches to increase throughput by enhancing parallel processing (2) demonstration of the scalability of our decoder architecture in [4] (3) an implementation that operates multiple decoders in parallel without the need for a complex handshaking and buffering mechanism and, (4) the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-8042-3/15/$31.00 ©2015 IEEE
+
+88
+
+2015 36th IEEE Sarnoff Symposium
+
+ability of the algorithmic compiler to rapidly prototype highlevel algorithmic description onto FPGA hardware.
+The remainder of this paper is organized as follows. Section II outlines the construction of QC-LDPC codes. The strategies to achieve massive-parallelism are described in Section III. The case study validating the proposed strategy for the 2.48Gb/s decoder is discussed in Sections IV, and finally we conclude with Section V. Also included in this paper is an appendix that provides an overview of the 2-layer pipelining employed in the decoder core in [4].
+
+II. QUASI-CYCLIC LDPC CODES AND DECODING
+
+Mathematically, given k message bits, an LDPC code is a null-space of its m × n PCM H, where m denotes the number of parity-check equations or parity-bits and n (= k + m)
+denotes the number of variable nodes or code bits [6]. In the Tanner graph representation (due to Tanner [7]), H is the
+incidence matrix of a bipartite graph comprising of two sets: the check node (CN) set of m parity-check equations and the variable node (VN) set of n variable or bit nodes; the ith CN is connected to the jth VN if H(i, j) = 1, 1 ≤ i ≤ m and 1 ≤ j ≤ n.
+QC-LDPC codes are represented by an mb ×nb base matrix Hb which comprises of cyclically right-shifted identity and zero submatrices both of size z × z where, z ∈ Z+, 1 ≤ ib ≤ mb and 1 ≤ jb ≤ nb, the shift value,s = Hb(ib, jb) ∈ S = {−1} ∪ {0, . . . z − 1} The PCM matrix H is obtained by expanding Hb using the mapping,
+
+s −→
+
+Is, s ∈ S\{−1} 0, s ∈ {−1}
+
+where, Is is an identity matrix of size z which is cyclically right-shifted by s = Hb(ib, jb) and 0 is the all-zero matrix of size z × z. Owing to this structure provided by QC-LDPC codes, the decoding of these codes becomes much simpler in hardware (mainly due to the simplified interconnect complexity) compared to unstructured LDPC codes. We believe that the family of structured LDPC codes are highly likely candidates for 5G systems. Thus, to demonstrate the initial phase of our FPGA decoder architecture [4], we provide a case study based on the QC-LDPC code specified in the IEEE 802.11n (2012) standard [8], the throughput of which well surpasses the requirement of the standard.
+LDPC codes can be decoded using message passing (MP) or belief propagation (BP) [3], [9] on the bipartite Tanner graph where, the CNs and VNs communicate with each other, successively passing revised estimates of the log-likelihood ratio (LLR) associated, in every decoding iteration. The decoder in [4] employs the efficient decoding algorithm in [10], with pipelined processing of layers based on the row-layered decoding technique in [11]. A stepwise description of the version of the algorithm we have employed is given in [4].
+
+III. STRATEGIES FOR MASSIVE-PARALLELIZATION
+In the context of this work, we proposed two approaches to massively-parallelize the decoding operation to achieve
+
+throughput of the order of Gb/s. The first approach of software pipelining relies on exploiting the inherent parallelism provided by the layering method [11] of decoding detailed in [4] and is thus an algorithmic approach. The second method relies on an implementation strategy that aims to operate multiple decoder cores in parallel on a given FPGA device.
+A. Software Pipelined Decoder Architecture
+The decoder architecture proposed in [4] is based on the layered decoding method [11], two versions of which were implemented in the case study. The non-pipelined (1x) or the Baseline version and the Pipelined (2x) version.
+Definition 1. In the context of this work, a core is defined as a standalone Min-Sum Algorithm (MSA)-based decoder for decoding circulant-1 identity matrix construction based QC-LDPC codes implemented on an FPGA using 2-layer pipelining. A detailed discussion of the complete decoder architecture is available in [4].
+In [4] it was concluded that, increasing the number of layers to more than two layers in the pipeline provides diminishing returns in efficiency of the pipelining scheme. To gain further throughput improvement, in this approach we take advantage of the following fact. There is no message exchange across the blocks of a particular layer. In other words, message exchange (and hence dependency) happens only in the vertical direction in βI , where, ∀u ∈ {1, 2, . . . , I} and ∀w, w ∈ {1, 2, . . . , J},
+βI (u, w) = βI (u, w ).
+The matrix βI is defined in the Appendix. In the Pipelined version, the NPU array processes each block (within a layer) sequentially as shown in Fig. 1. However, if we split the blocks into two sets and process each set independent of the other (requiring 2 NPU arrays), we can double the throughput. Owing to this fact, we call this version as the 4x version. Similarly, by employing 4 NPU arrays we have the 8x version and finally, if we employ 8 NPU arrays we have the 16x version. To understand how software-pipelining was accomplished for a single core (amongst the 6 parallel cores in this implementation) and for the sake of continuity and completeness, we provide an overview of the layer decoder architecture from [4] in the Appendix.
+B. Multi-core Decoder Architecture
+On account of the scalability and reconfigurability of the decoder architecture in [4], it is possible to achieve high throughput by employing multiple decoder cores in parallel. As shown in Fig. 3, the encoded bit stream is packetized into frames of equal size and distributed for decoding in a roundrobin manner to the cores operating in parallel. The timing diagram for the same is shown in Fig. 2.
+The main contribution of this approach is the elimination of a complicated buffering and handshake mechanism which slows rapid-prototyping and adds hardware overhead. This is due to:
+1) Fixed latency of decoding the frames across all cores,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+89
+
+2015 36th IEEE Sarnoff Symposium
+
+Figure 1: Pipeline timing diagram from the block processing perspective for (a) the 2x version and (b) the 4x version of
+the massively-parallel decoder architecture. Note that, the ordering of βI (u, w) blocks, where, ∀u ∈ {1, 2, . . . , I} and ∀w ∈ {1, 2, . . . , J} shown here is not unique, owing to the independence of the blocks as shown earlier.
+
+been fully described in software. Moreover, the algorithm was described in a high-level language - graphical code in LabVIEWTM (i.e. not in a hardware description language). The algorithmic compiler in LabVIEWTM CSDSTM translated the high-level description into a VHDL description.
+Fig. 4 shows the top-level multi-core decoder virtual instrument (VI), where 6 cores are deployed on a single Xilinx Kintex-7 FPGA (410t). The high-level operation of the decoder is described in the steps below (corresponding to the highlighted sections in Fig. 4):
+
+Figure 2: Timing diagram showing the round-robin distribution of frames to the 6 decoding cores.
+
+2) Time-staggered operation of cores as illustrated in Fig. 2, 3) Tightly controlled execution of the round-robin serial-
+parallel-serial conversion process.
+
+IV. CASE STUDY: A 2.48 Gb/s QC-LDPC DECODER ON THE Xilinx Kintex-7 FPGA
+
+At the time of writing this paper, we have successfully
+
+implemented the Multi-core Decoder Architecture strategy
+
+described in Section III-B. The 4x version described in Section
+
+III-A of the massively-parallel decoder is currently being
+
+developed. To validate the multi-core decoder architecture, in
+
+this case study we chose the IEEE 802.11n (2012) QC-LDPC
+
+code for which, mb×nb = 12×24, z = 27, 54 and 81 resulting
+
+in code lengths of n = 24 × z = 648, 1296 and 1944 bits
+
+respectively
+
+and
+
+a
+
+code
+
+rate
+
+R
+
+=
+
+1 2
+
+.
+
+The
+
+core
+
+was
+
+compiled
+
+for a clock rate of 200MHz and achieves a throughput of
+
+420Mb/s. We would like to emphasize that, pipelining has
+
+1) Serial stream of the encoded data is read as frames from the host-to-target Direct Memory Access (DMA) mechanism. Here, host may be an arbitrary processing platform such as a PC or a real-time controller and target is the Xilinx Kintex-7 FPGA (410t) on the NI USRP2953R. Packetization prepads dummy bits if needed and packs bits to a size that is suitable for Dynamic Random Access Memory (DRAM) of the FPGA target. This data is subsequently stored in the DRAM.
+2) Request frames from the DRAM. 3) Read and buffer frames from the DRAM. 4) Distribute incoming frames to the cores in a round-robin
+manner. 5) Perform decoding with fixed-latency, parallel processing
+of frames staggered with respect to time. Buffer the decoded frames. 6) Collect the decoded frames and serialize them with respect to the round-robin manner used in step (3). 7) Write frames to the target-to-host DMA mechanism.
+The performance and resource utilization of the Baseline and the Pipelined version is compared in Table I. The resources consumed by the Pipelined decoder are almost the same as that of the Baseline decoder, in spite of the 1.5x increase in throughput performance. The 2.48Gb/s decoder was developed in stages, where at each stage a core was added (except for stage 3) and the performance and resource figures were recorded. The results of each stage are compared in Table II. The Bit Error Rate (BER) performance of the 2.48Gb/s version
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+90
+
+2015 36th IEEE Sarnoff Symposium
+
+Figure 3: High-level system schematic illustrating the fixed-latency, parallel processing of the decoder cores.
+
+Baseline
+
+Throughput (Mb/s)
+
+290
+
+Clock Rate (MHz)
+
+200
+
+Time to generate VHDL (min) 2.02
+
+Total Compile Time (min)
+
+≈ 36
+
+Total Slice (%)
+
+26
+
+LUT (%)
+
+16
+
+FF (%)
+
+9
+
+DSP (%)
+
+5
+
+BRAM (%)
+
+11
+
+Pipelined 420 200 2.08 ≈ 36 28 18 10 5 11
+
+Figure 5: Bit Error Rate (BER) performance comparison between uncoded BPSK (green) and the 2.48Gb/s, rate=1/2, QC-LDPC decoder (red) on the NI USRP-2953R containing the Xilinx Kintex-7 (410t) FPGA.
+(with 6 cores) is shown in Fig. 5. We have successfully demonstrated this work in IEEE
+GLOBECOM’14 [12] where an overall throughput of 2.06Gb/s was achieved. This throughput is lesser than the reported throughput of 2.48Gb/s in this brief as only five decoder cores were employed in parallel on the Xilinx Kintex-7 (410t) FPGA in the NI USRP-2953R.
+V. CONCLUSION
+This work presents an algorithmic method to enhance parallel processing within the decoder and the application of the decoder architecture to achieve another highly-parallel architecture. It validates the scalability of our decoder architecture by deploying multiple decoder cores in parallel. The development was done using an algorithmic compiler that translated the high-level description of the decoding algorithm
+
+Table I: Performance and resource utilization comparison for the Baseline architecture with the Pipelined architecture of the QC-LDPC decoder on the NI USRP-2953R containing the Xilinx Kintex-7 (410t) FPGA.
+into an HDL. The standalone standard compliant decoder achieves an overall throughput of 2.48Gb/s at an operating frequency of 200MHz on the Xilinx Kintex-7 FPGA in the NI USRP-2953R. With little or no modification this decoder can be applied to a large family of standard compliant QC-LDPC codes such as those specified in IEEE 802.16e and Digital Video Broadcast (DVB).
+ACKNOWLEDGMENT
+The authors would like to thank the Department of Electrical & Computer Engineering, Rutgers University for their continual support for this research work and the LabVIEWTM FPGA R&D and the Advanced Wireless Research team in National Instruments for their valuable feedback and support.
+REFERENCES
+[1] B. Raaf, W. Zirwas, K.-J. Friederichs, E. Tiirola, M. Laitila, P. Marsch, and R. Wichman, “Vision for Beyond 4G broadband radio systems,”
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+91
+
+2015 36th IEEE Sarnoff Symposium
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+92
+
+Figure 4: Top-level VI describing the parallelization of the QC-LDPC decoder [4] on the NI USRP-2953R containing the Xilinx Kintex-7 (410t) FPGA. All Graphical Virtual Instruments (GVIs) except the readily available ones for standard DMA R/W interface etc. were developed for this work.
+
+2015 36th IEEE Sarnoff Symposium
+
+Cores
+
+12
+
+4
+
+5
+
+6
+
+Throughput (Mb/s) 420 830 1650 2060 2476
+
+Clock Rate (MHz) 200 200 200 200 200
+
+Time to VHDL (min) 2.08 2.08 2.08 2.02 2.04
+
+Total Compile (min) ≈ 36 ≈ 60 ≈ 104 ≈ 132 ≈ 145
+
+Total Slice (%)
+
+28 44 77 85 97
+
+LUT (%)
+
+18 28 51 62 73
+
+FF (%)
+
+10 16 28 33 39
+
+DSP (%)
+
+5 11 21 26 32
+
+BRAM (%)
+
+11 18 31 38 44
+
+Table II: Performance and resource utilization comparison for versions with varying number of cores of the QC-LDPC decoder implemented on the NI USRP-2953R containing the Xilinx Kintex-7 (410t) FPGA.
+
+in Personal Indoor and Mobile Radio Communications (PIMRC), 2011 IEEE 22nd International Symposium on, Sept 2011, pp. 2369–2373. [2] M. Cudak, A. Ghosh, T. Kovarik, R. Ratasuk, T. Thomas, F. Vook, and P. Moorut, “Moving Towards Mmwave-Based Beyond-4G (B-4G) Technology,” in Vehicular Technology Conference (VTC Spring), 2013 IEEE 77th, June 2013, pp. 1–5. [3] R. G. Gallager, “Low-density parity-check codes,” Information Theory, IRE Transactions on, vol. 8, no. 1, pp. 21–28, 1962. [4] S. Mhaske, H. Kee, T. Ly, A. Aziz, and P. Spasojevic, “High-Throughput FPGA-based QC-LDPC Decoder Architecture,” in Vehicular Technology Conference (VTC Fall), 2015 IEEE 82nd, Sep 2015, pp. 1–5. [5] H. Kee, S. Mhaske, D. Uliana, A. Arnesen, N. Petersen, T. L. Riche, D. Blasig, and T. Ly, “Rapid and high-level constraint-driven prototyping using LabVIEW FPGA,” in 2014 IEEE , GlobalSIP 2014, 2014. [6] D. Costello and S. Lin, Error control coding. Pearson, 2004. [7] R. Tanner, “A recursive approach to low complexity codes,” Information Theory, IEEE Transactions on, vol. 27, no. 5, pp. 533–547, Sep 1981. [8] “IEEE Std. for Information Technology–Telecommunications and information exchange between LAN and MAN–Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications,” IEEE P802.11-REVmb/D12, Nov 2011, pp. 1–2910, 2012 Mar. [9] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor graphs and the sumproduct algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, Feb 2001. [10] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient Serial MessagePassing Schedules for LDPC Decoding,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4076–4091, Nov 2007. [11] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Transactions on VLSI Systems, vol. 11, no. 6, pp. 976–996, Dec 2003. [12] H. Kee, D. Uliana, A. Arnesen, N. Petersen, T. Ly, A. Aziz, S. Mhaske, and P. Spasojevic, “Demonstration of a 2.06Gb/s LDPC Decoder,” in IEEE GLOBECOM ’14, Dec 2014, https://www.youtube.com/watch?v= o58keq-eP1A.
+APPENDIX DECODER Core: 2-LAYER PIPELINING [4]
+From the perspective of CN processing, two or more CNs
+can be processed at the same time (i.e. they are independent
+of each other) if they do not have one or more VNs (code bits) in common. In terms of H, an arbitrary subset of rows can
+be processed at the same time provided that, no two or more rows have a 1 in the same column of H. This subset of rows is termed as a row-layer (hereafter referred to as a layer). In other words, given a set L = {L1, L2, . . . , LI } of I layers in H,
+
+Figure 6: Illustration of software pipelining of layers for the case study. (a) Layer-level processing view for the Baseline architecture showing the cascade of the GNPU and LNPU for-loops (b) Layer-level processing view for the Pipelined architecture showing the two for-loops operating in parallel for half of a decoding iteration. Note that, GNPU (LNPU) array refers to a collection of z GNPUs (LNPUs) which operate in parallel so as to exploit the structure provided by QC-LDPC codes as shown in [4].
+
+∀u ∈ {1, 2, . . . , I} and ∀i, i ∈ Lu, then, N (i) ∩ N (i ) = φ. Owing to the structure of QC-LDPC codes, |Lu| = z. From the VN or column perspective, |Lu| = z, ∀u = {1, 2, . . . , I} implies that, the columns of H are also divided into subsets
+
+of size z (hereafter referred to as block columns) given by the
+
+set
+
+B
+
+=
+
+{B1, B2, . . . , BJ },
+
+J
+
+=
+
+n z
+
+=
+
+nb.
+
+Since,
+
+VNs
+
+in
+
+a
+
+block column may participate in CN equations across several
+
+layers, we further divide the block columns into blocks, where
+
+a block is the intersection of a layer and a block column.
+
+The 0 submatrices in H are defined as invalid blocks, where
+
+there are no edges between the corresponding CNs and VNs,
+
+and the submatrices Is as valid blocks. In a conventional ap-
+
+proach to scheduling, message computation is done for all the
+
+valid and invalid blocks. To avoid processing invalid blocks,
+
+we propose an alternate representation of Hb in the form of two matrices: βI , the block index matrix and βS, the block shift matrix which hold the index locations (column number
+
+of each block in a row or layer) and the shift values (defining
+
+the connections between the CNs and VNs) corresponding to
+
+only the valid blocks in Hb, respectively.
+
+Fact 1. In the decoder architecture, CN and VN processing is performed by a single processing unit termed as the Node Processing Unit (NPU). The NPU is further split into two units namely, the Local NPU (LNPU) and the Global NPU (GNPU) to reduce the decoding complexity [4].
+
+A naive way to schedule the layer-level processing is shown in Fig. 6(a). The outer for-loop executes I times, processing node metrics over all the layers. In the first inner for-loop, the GNPU output is first computed over the J blocks in each layer, as per the algorithm in [4] and is then fed to the second for-loop where the LNPU produces the respective metrics for the same set of blocks. We call this the 1x or the Baseline architecture. It is evident that one of the NPU idles while the other processes. To avoid idling, we use Fact 1 and process the GNPU and LNPU in a pipeline as shown in Fig. 6. This version is called as the 2x or the Pipelined architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:32:15 UTC from IEEE Xplore. Restrictions apply.
+93
+
+

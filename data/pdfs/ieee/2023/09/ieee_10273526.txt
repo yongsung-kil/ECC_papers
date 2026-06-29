@@ -1,0 +1,448 @@
+Learning to Decode Trapping Sets in QLDPC Codes
+Asit Kumar Pradhan, Nithin Raveendran, Narayanan Rengaswamy, Xin Xiao, and Bane Vasic´ Department of Electrical and Computer Engineering, The University of Arizona, Tucson, AZ, 85721 USA
+Email: {asitpradhan, nithin , narayananr , 7xinxiao7 }@arizona.edu, vasic@ece.arizona.edu
+
+2023 12th International Symposium on Topics in Coding (ISTC) | 979-8-3503-2611-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISTC57237.2023.10273526
+
+Abstract—Quantum low-density parity-check (QLDPC) codes with asymptotically nonzero rates are promising candidates for fault-tolerant quantum computation. Belief propagation (BP) based iterative decoding algorithms, a primary choice for classical LDPC codes, perform poorly for QLDPC codes due to stabilizerinduced trapping sets, resulting in a high error floor. Several decoding algorithms, like post-processing decoders, normalized BP decoders, and neural decoders, have been proposed to increase the performance in the error-floor region. However, this improvement comes at the expense of an increase in the execution time of the decoder. This paper proposes a general framework for error correction for a class of QLDPC codes called liftedproduct codes using recurrent neural networks (RNNs). The RNN is employed to learn message-passing rules that can decode quantum-trapping sets. Then the standard message-passing rules are used with the learned rules to improve the error floor. While training the RNN, the quasi-cyclic property of the lifted product codes is exploited to reduce the size of the training set and the number of parameters in the network. This reduction in the number of parameters makes these decoders amenable to hardware implementation. Simulation results show that the proposed decoder performs better than the existing decoders in the literature.
+I. INTRODUCTION
+Quantum low-density parity-check (QLDPC) codes are a promising candidate for both quantum computing and communications, with a history of success in classical LDPC codes in admitting low-complexity decoding and near-capacity performance. As pointed out by Gottesman [1] and Kovalev and Pryadko [2], QLDPC codes are the only known class of quantum error correction (QEC) codes that permit faulttolerant error correction with asymptotically nonzero rate. In [3], Panteleev and Kalachev propose a family of QLDPC codes with linear minimum distance and constant rate, known as lifted-product codes. QLDPC codes [4] based on the stabilizer formalism [5] rely on classical decoding algorithms with the syndrome measurements. In addition to the excellent distance properties of QLDPC codes, these codes have lowweight stabilizer generators; hence, their syndrome-extraction circuits have low depth, making them lucrative for faulttolerant quantum computation.
+For fault-tolerant computation, in addition to having good codes, designing low-complexity decoders is paramount. The low-complexity iterative message-passing algorithms do not perform well on the QLDPC codes, unlike their classical counterparts. This is mainly due to two types of trapping sets. First, since most of the QLDPC codes are constructed using tensor products, their corresponding Tanner graphs have inevitable short cycles, resulting in trapping sets (TSs) [6].
+
+Second, QLDPC codes can be thought of as two dualcontaining classical LDPC codes. This dual-containing property leads to a special type of trapping sets known as symmetric stabilizer TSs [6]. Several decoders have been proposed to address the decoder convergence due to the issues mentioned above [7]–[11]. Poulin and Chung [7] investigated heuristic methods to break the symmetric input channel values to improve decoding performance. In [12], the authors use a postprocessing decoder called an ordered statistics decoder (OSD) after running a few iterations of the message-passing decoder to improve the decoding performance. In another work [9], the authors use the message-passing decoder in parts of the Tanner graph where TSs are absent and use a post-processing step to correct errors in the rest of the graph. In both approaches [9], [12], the respective post-processing step involves inverting a matrix, which may lead to high decoding complexity in some cases. In [10], authors show that normalized beliefpropagation decoders with a serial schedule can avoid TSs when the normalization constant is chosen carefully. In a recent work, [13], Poulin’s group used a neural network-based decoder with a different loss function instead of the generally used binary cross entropy to tackle the TSs. In [11], the authors use an overcomplete parity-check matrix to avoid decoding failures due to short cycle-related trapping sets. Both these neural network-based approaches use different message-update rules over decoding iterations, hence, are not easily amenable to hardware implementation. Also, the neural network-based approaches are unsuitable for decoding moderate-length codes (around a few thousand) due to the high training time required.
+This paper focuses on designing parallel, TS-aware, message-passing decoders for QLDPC codes that do not require post-processing. The TSs corresponding to a standard message-passing decoder are collected to do so. Then, a sequence of decoders specialized in correcting error patterns that form TS is learned using recurrent neural networks (RNNs). Since our approach uses the same message-update rules across iterations, it is amenable to hardware implementation. Also, using the knowledge of TSs reduces training time, an essential criterion for learning decoders for code with moderate blocklength, and helps us to achieve better performance without any post-processing step.
+A. Notations
+We use bold face capital letters to denote matrices and bold face small letters to vector variables. We denote cardinality of set A by |A|. We will assume that vectors without transposes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:03 UTC from IEEE Xplore. Restrictions apply.
+
+are row vectors unless stated otherwise. We represent the absolute value of a scalar variable by | · |.
+
+II. PRELIMINARIES
+A. Depolarizing Channel
+We focus on the widely studied channel model called depolarizing channel (memoryless Pauli channel), characterized by the depolarizing probability p in which the error E on each qubit is a Pauli operator, and error on a qubit is independent of the error on other qubits. The set of Pauli operators is given by P = {I, X, Y, Z}. In particular, Pr(E = X) = Pr(E = Y) = Pr(E = Z) = p/3, Pr(E = I) = 1 − p. A Pauli error vector on the n qubits can be expressed as a binary error vector of length 2n by mapping the Pauli operators to binary tuples as follows: I → (0, 0), X → (1, 0), Z → (0, 1), Y → (1, 1).
+
+B. Stabilizer Formalism
+Let us denote the n-qubit Pauli group by Pn = il{I, X, Y, Z}⊗n, 0 ≤ l ≤ 3, where ⊗n is the n-fold tensor product, X, Y, and Z are the Pauli matrices, I is the 2 × 2 identity matrix, and il is the phase factor. Let S = ⟨S1, S2, ..., Sm⟩, −1 ∈/ S, be an Abelian subgroup of Pn with generators Si, 1 ≤ i ≤ m. A (n, k) quantum stabilizer code [14] is a 2k-dimensional subspace C of the Hilbert space (C2)⊗n given by the common +1 eigenspace of stabilizer group S:
+
+C = {|ψ⟩ , s.t. Si |ψ⟩ = |ψ⟩ , ∀i}.
+
+(1)
+
+Every element of stabilizer group S is mapped to a binary tuple as follows: I → (0, 0), X → (1, 0), Z → (0, 1), Y → (1, 1). This mapping gives a matrix representation of the stabilizer generators called parity-check matrix, H, which is given by H = HX | HZ , where HX and HZ represent binary matrices for bit flip and phase flip operators, respectively. Note that H is a m × 2n matrix. Similar to the Pauli representation, the stabilizers also commute with respect to the symplectic inner product in binary representation [15].
+
+C. Protograph representation of lifted-product QLDPC codes
+
+Lifted product codes are constructed using two classical protograph-based LDPC codes. In the next section, we briefly introduce protograph ensemble of LDPC codes.
+1) Protograph LDPC codes: A protograph G = (V ∪C, E) is a bipartite graph, where V (C) is the set of variable (respectively, check) nodes, and E is the set of edges that connect a variable node in V to a check node in C. The nodes and edges in the protograph are ordered, and the ith variable node, check node, and edge in the protograph are denoted, respectively, by vi, ci, and ei. The variable and check nodes connected by an edge ei are denoted v(ei) and c(ei), respectively. A protograph can be represented by a base matrix B of dimension |C| × |V |, whose (i, j)-th element B(i, j) is the number of edges between ci and vj. For example, consider a base matrix
+
+B=
+
+1 1
+
+1 0
+
+0 1
+
+.
+
+(2)
+
+v1
+
+v2
+
+132
+
+c1
+
+v3
+4 c2
+
+Fig. 1. Protograph for base matrix in (2).
+
+The 4 different edges in this example are numbered, as shown in Fig. 1. The parity-check matrix of a quasi-cyclic LDPC code can be obtained from base graph B by replacing its entries with l × l- circulants, which can be represented by the elements of quotient polynomial ring R[x]/(xl − 1). This procedure is known as lifting. We denote the Tanner graph and parity-check matrix of the quasi-cyclic LDPC code obtained by lifting protograph G by G′ and H, respectively. Recall that the entries of a base (parity-check) matrix represent the edges in the corresponding protograph (Tanner graph). In the Tanner graph, the group of edges obtained by replacing the entry corresponding to edge ei in protograph G with a l × l circulant is said to be of type ei or, simply, type i.
+2) Lifted-product codes: Given two classical base matrices B1 and B2, respectively, of size mB1 × nB1 and mB2 × nB2 , two base matrices are constructed [3] as
+
+Bx = B1 ⊗ ImB2 Bz = InB1 ⊗ BT2
+
+ImB1 ⊗ B2 B1T ⊗ InB2 .
+
+These two base matrices Bx and Bz can be lifted as described in Section II-C1 to obtain two parity-check matrices Hx and Hz, respectively. Similar to classical protograph-based LDPC codes, the edges of Hx and Hz can be classified into different types, as described in Section II-C1. Then, H is the
+set of stabilizer generators of a lifted-product QLDPC code constructed from two classical base matrices B1 and B2. If the number of columns in H is N , and the number of paritycheck equations is M , then n = l(nAnB + mAmB) and m = l(mAnA + mBnB). Assuming that Hx and Hz are full rank, we have a (n, n − m)-QLDPC code. The protograph corresponding to Bx is shown in Fig. 2 when B1 and B2 are chosen as B given in Eq. (2).
+
+III. MESSAGE-PASSING DECODER
+In what follows, we assume that X and Z errors are independent. We describe only the decoding of Z errors for
+ease of exposition. Let us consider the standard message-
+passing decoder over a depolarizing channel with depolarizing probability p run on Tanner graph Gx′ (V ′ ∪ C′, E′) derived from a protograph Gx = (V ∪ C, E). Given an error vector x, the syndrome vector σ = (σ1, σ2, ..., σ|C′|) can be obtained by σ = xHTx , where x denotes the error pattern. We define a distinct message-passing rule for each group of edges in the lifted graph G′x. Since the lifted graph Gx′ is lifted from protograph Gx = (V ∪ C, E), Gx′ has |E| edge types, one for each edge in the protograph Gx = (V ∪ C, E). Therefore, we have |E| message-passing rules, one for each edge type. Let
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:03 UTC from IEEE Xplore. Restrictions apply.
+
+v1
+
+v2
+
+1 2
+
+c1
+
+v3
+
+v4
+
+v5
+
+v6
+
+v7
+
+v8
+
+v9
+
+v10
+
+v11
+
+v12
+
+3
+
+6
+
+7
+
+4
+
+5 c2 8
+
+9 10 11 12 c3
+
+14 15 16
+
+13
+
+c4
+
+Fig. 2. Protograph for base matrix Bx when B1 and B2 are chosen as the base matrix in (2). Since the protograph has 16 edges, the LDPC code lifted from it will have 16 types of edges.
+
+Ei′, i ∈ {1, 2, . . . , |E|}, denote the set of type-i edges in the
+
+lifted graph Gx′ (V ′ ∪ C′, E′). Note that E′ =
+
+|E| i=1
+
+Ei′.
+
+Let mtv→c(e) be the message from variable node to check
+
+node along edge e for e ∈ Ei′, i ∈ {1, 2, . . . , |E|}, in the
+
+t-th iteration. Similarly, let mtc→v(e) be the message from
+
+check node to variable node in the t-th iteration. The message-
+
+passing recursion is given by
+
+mct+→1v (e)
+
+=
+
+σce
+
+e′ ∈Ec (e)
+
+mvt →c(e′)
+
+min
+e′ ∈Ec (e)
+
+|mv→c(e′)|,
+
+(3)
+
+
+
+
+
+mvt+→1c(e) = bi + w 
+
+mtc+→1v(j) ,
+
+(4)
+
+e′∈Ev (e)
+
+for t ≥ 0, where Ec(e) = {e′ : c(e) = c(e′), e ̸= e′} and Ev(e) = {e′ : v(e) = v(e′), e ̸= e′} are the set of neighboring
+edges incident to the same check node and variable node,
+
+respectively, as the edge e, bi, for 1 ≤ i ≤ |E|, is the bias corresponding to edge type i, and w is the normalization
+
+constant. Note that we have a different update rule for each
+
+edge type at the variable node, while the update rule at the
+
+check nodes is the same for all edge types. We can recover the
+
+min-sum
+
+decoder
+
+by
+
+choosing
+
+bi
+
+=
+
+log
+
+1−p p
+
+and
+
+w
+
+=
+
+1.
+
+After
+
+a pre-defined number of iterations, tmax, of iterative syndrome
+
+decoding, we declare that the decoder failed for a particular
+
+input syndrome or error pattern if the decoder cannot find an
+
+error pattern matching the input syndrome. More precisely, a
+
+decoder failure is said to have occurred if there does not exist t ≤ tmax such that (σˆ (t)+σ) = 0, where σˆ (t) is the syndrome
+after the t-th iteration.
+
+A. Quantum-trapping sets
+In this section, we introduce the notion of TSs and describe how their knowledge can be used to design better decoders. During the iterative decoding, check node c is satisfied if there exists a positive integer Ij such that for all t ≥ Ij, σˆj(t) = σj. We say that variable node vi has converged if there exists a positive integer Ii such that for all t ≥ Ii, xˆi(t) = xˆi(t−1). Note that the xˆ(it) is not necessarily the correct estimate of error on the i − th variable node. With these definitions, we define quantum TS (QTS) as follows:
+Definition 1. A trapping set Ts for a syndrome-based iterative decoder Ds is a non-empty set of variable nodes in a Tanner graph G′ which have not converged or are neighbors of the check nodes that are not satisfied.
+
+If the sub-graph G(T s) induced by such a set of variable nodes has a variable nodes and b unsatisfied check nodes, then Ts is classified as an (a, b) trapping set.
+The QTSs, which are similar to the TSs in classical LDPC codes, are called classical-type trapping sets [6]. The second class of trapping sets is the harmful degenerate errors observed in the support of the stabilizers, called symmetric stabilizer trapping sets or stabilizer splitting errors. In such trapping sets, even though the variable nodes eventually converge to some error pattern, there exist check nodes that are not satisfied. Next, we briefly describe such trapping sets. To appreciate the behavior of symmetric stabilizer trapping sets, we first describe the subtle difference in decoding classical codes and quantum codes. In the classical case, the estimate of error pattern xˆ must be equal to the actual error pattern x, whereas in quantum error-correction, the modulo-2 sum of the actual and estimated error pattern, x ⊕ xˆ, must be a stabilizer- the space spanned by the rows of the parity-check matrix. This is because the error patterns that only differ by a stabilizer have the same effect on the codespace. Therefore, while decoding Hx, the decoder needs to identify any recovery operator such that xˆ ⊕ x ∈ rowspace(Hz). In decoding of quantum codes, we say error vectors x and y are degenerate if x ⊕ y is a stabilizer; hence, for successful decoding, it is sufficient to output any one of the degenerate errors as the candidate error pattern. However, some degenerate errors can be detrimental to the iterative decoding of QLDPC codes, especially when the minimum distance of the code is higher than its stabilizer weight. For example, if the stabilizer-induced sub-graph contains degenerate error patterns x and y of equal weight and has a symmetric topology, then the iterative decoder oscillates between x and y, thus not matching the input syndrome. This failure can be attributed to the symmetry in the stabilizer and message-passing rules. Hence, such errors are referred to as symmetric degenerate errors, and corresponding sets of variable nodes as symmetric stabilizer trapping sets or in short, symmetric stabilizers. Although degenerate errors are typically classified as harmless while decoding quantum codes, from the above discussion, it follows that some (not all) degenerate error patterns in a symmetric stabilizer are harmful to iterative decoders.
+B. Decoder Diversity
+We follow the decoder diversity from [16]. Consider a set of decoders D = {Dk : k = 1, 2, . . . , ND} to decode a QLDPC code defined by the Tanner graph G′(V ′ ∪ C′, E)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:03 UTC from IEEE Xplore. Restrictions apply.
+
+with |E| types of edges. Since the decoders in D are designed to decode a QLDPC code with |E| types of edges, each Dk ∈ D is parameterized by bk = {b1, b2, . . . , b|E|}, where bis, 1 ≤ i ≤ |E|, are biases corresponding to different edge types, as defined in Eq. (4). Given the number of decoders ND, the objective is to design a set of decoders, D, that minimizes the logical error rate. These decoders can be used in a parallel or sequential fashion, depending on the memory and throughput constraints. In the next section, we employ RNNs to learn asymmetries in the message-passing rules to decode symmetric stabilizer trapping sets.
+IV. DECODER DIVERSITY BY RNNS
+A. A sequential framework
+In this section, we describe a framework to choose a decoder set D that minimizes the logical-error rate when the decoders in D are used sequentially. We start by choosing D0 as the min-sum decoder. Let us denote the set of error patterns, with weight equal to or less than w, on which the min-sum decoder fails by Pw. These error patterns can be obtained efficiently by employing the expansion-contraction method in [17], without fully simulating the min-sum decoder. To learn biases, b1, corresponding to decoder D1, the error patterns in set Pw are used as the training set, with the objective of correcting as many error patterns as possible from Pw. Let us denote by Pk the set of error patterns from Pw on which decoders D1, D2, . . . , Dk−1 fail. Let PDk denote the set of error patterns from Pw that decoder Dk can correct. Define Pk+1 = Pk \ PDk . Then, Pk+1 is used as the training set for decoder Dk+1. This process continues for k = 1, 2, . . . , ND − 1.
+Because of the sequential training strategy, the decoders in D are used in the same order as they are determined. Specifically, assume that the predefined maximum number of iterations corresponding to decoder Dk is Ik. To decode the error pattern corresponding to syndrome σ, D0 with I0 iterations is first applied. If D0 decodes successfully, the decoding process terminates, otherwise the syndrome is reinitialized to σ and the process switches to decoder D1. This process continues until a decoder Dk ∈ D converges. Otherwise, all the decoders in D fail, and a decoding failure is declared.
+B. Training RNNs
+We use recurrent-neural networks with three hidden layers and depth Ik to learn decoder Dk in D, where Ik is the pre-defined number of iterations for decoder Dk. The activation function of three hidden layers represents the message-updating rules at variable nodes, check nodes, and bit-likelihood estimators, respectively. The Tanner graph of the code determines the connections between the hidden layers. To imitate the update rules of the min-sum decoder, the activation functions at variable nodes and check nodes are chosen to be of the same form as in Eq. (3)-(4). Note that the message-passing rules at check nodes are not parameterized; hence, they are fixed for all the edges and iterations. While training, the bias
+
+vector bk, which defines the update rules at the variable nodes,
+
+is optimized to increase error-correction capability. For a fixed
+
+edge, the re-usage of message-updating rules over iteration
+
+leads to the recurrent structure of the neural network. This
+
+is different from most of the existing NN-based decoders,
+
+wherein the update rules vary across iterations.
+
+While training, we exploit the quasi-cyclic nature of the
+
+lifted-product codes to reduce the size of the training set and
+
+the number of parameters in the RNN-based decoder. Consider
+
+the Tanner graph G′(V ′ ∪ C′, E′) corresponding to a lifted-
+
+product code lifted from protograph G using l×l-circulants. If
+
+a weight-w error pattern on variable nodes in {vi1 , vi2 , . . . viw } can be estimated by decoder Dk in Ik iterations, then it can
+
+also decode the error pattern {vi1+1, vi2+1, . . . viw+1} in the same number of iterations, where the additions in the subscript
+
+are in modulo-l. To see the above statement, consider the
+
+depth-Ik computation graphs Cik and Cik+1 with vik and vik+1, for k ∈ {1, 2, . . . w} , respectively, as their root nodes. Due to the quasi-cyclic nature of lifted-product codes, it can
+
+be concluded that Cik and Cik+1 are isomorphic. Also, observe that message-passing rules at the nodes in computation graph
+
+Cik and its isomorphic copy Cik+1 are the same. Therefore, the above statement is true. As a consequence, the training
+
+set of each decoder can be reduced by a factor l without
+
+compromising their error correction capability. Also, note that
+
+the training methodology reduces the number of parameters
+
+to be learnt by a factor of l, i.e., instead of learning |E′|
+
+parameters, now, it is required to learn the parameter vector
+
+bk
+
+with
+
+|E|
+
+=
+
+|E ′ | l
+
+elements.
+
+Since
+
+the
+
+channel
+
+is
+
+output-
+
+symmetric, and the RNN’s activations preserve symmetry
+
+conditions, the all-zero codeword is assumed to be transmitted
+
+while training. The syndrome σ corresponding to error pattern
+
+x is fed into the RNN as input. All the biases are initialized
+
+to 1.
+
+C. Loss function
+
+We use the loss function from [13]. Define
+σˆ x = (x + xˆ)H⊥T ,
+where H⊥ is the orthogonal complement of H, x is the actual error pattern, and xˆ is the estimated error pattern. With these notations, the loss function is given by
+
+L(σˆx) = sin (0.5πσˆix).
+
+(5)
+
+i
+
+Observe that the loss function gives zero when the actual and
+
+estimated error pattern sums to a stabilizer. Hence, unlike other
+
+popular loss functions like binary-cross entropy, the above loss
+
+function accounts for degenerate errors. Also note that the
+
+reduction in Hamming weight of the estimated syndrome, an
+
+indicator of decoder convergence, leads to decrease in loss.
+
+The loss function is averaged over a minibatch, denoted by
+
+M, as follows
+
+1 Lavg = |M|
+
+L(σˆx),
+
+(6)
+
+x∈M
+
+where M is obtained by uniformly sampling the training set.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:03 UTC from IEEE Xplore. Restrictions apply.
+
+Decoder Number of uncorrectable errors
+
+weight-5
+
+weight-6
+
+D0
+
+136811
+
+D1
+
+10300
+
+D2
+
+1125
+
+D3
+
+46
+
+D4
+
+6
+
+80354 14327 8561 4856 3904
+
+TABLE I THE NUMBER OF UNCORRECTABLE ERROR PATTERNS WHEN EACH
+DECODER IS RUN FOR MAXIMUM 20 ITERATIONS.
+
+Logical error rate
+
+100 10−1 10−2 10−3 10−4 10−5 10−6
+0
+
+Proposed NN Decoder Normalized minsum
+
+0.02
+
+0.04
+
+0.06
+
+Depolarizing probability
+
+Fig. 3. This figure plots the performance of the proposed decoder and normalized min-sum decoder for 100 iterations. In the sequential approach, a decoder is used when the previous decoders fail.
+
+V. NUMERICAL RESULTS
+In this section, we consider the [[1054, 124, 20]] liftedproduct code constructed from the classical (155, 62) Tanner code to demonstrate the superior performance of the proposed diversity-based decoder compared to the normalized minsum decoder. We use the sub-graph expansion-contraction algorithm in [17] to find out 136811 weight five and 80321 weight six error patterns that the min-sum decoder fails to decode. We follow the sequential framework described in Section III-B to design four RNN decoders that can decode as many error patterns as possible from this list. Since the circulant size for the considered code is 31, each error pattern has 31 isomorphic copies. In the training process, we use only the non-isomorphic copies of the error patterns, which reduces the training set’s size and the training duration. While training, the learning rate is set to 0.05, and the size of each minibatch is set to 200. The number of uncorrectable error patterns corresponding to the trained RNN-based decoders is given in Table I. Note that all the decoders can be run in parallel even though they are trained in a sequential fashion. When multiple decoders converge, we choose the error estimate with the lowest Hamming weight.
+In 3, the logical error of the proposed decoder is compared to that of the normalized min-sum decoder when both decoders are run for 100 iterations. It can be observed that the RNN-
+
+based proposed decoder outperforms the normalized min-sum
+decoder and hence shows the efficacy of the proposed trapping
+set aware training procedure.
+ACKNOWLEDGMENT
+B. Vasic´ acknowledges the support of the NSF under grants
+CCF-1855879, CCF-2100013, CIF-2106189, CCSS-2027844,
+and CCSS-2052751. This work was also funded in part by
+Jet Propulsion Laboratory, California Institute of Technology,
+under a contract with the National Aeronautics and Space
+Administration and funded through JPL’s Strategic University
+Research Partnerships (SURP) program. B. Vasic´ has disclosed
+an outside interest in Codelucida to the University of Arizona.
+Conflicts of interest resulting from this interest are being
+managed by The University of Arizona in accordance with
+its policies. The work of Xin Xiao was done while she was at
+the University of Arizona.
+REFERENCES
+[1] D. Gottesman, “Fault-tolerant quantum computation with constant overhead,” Quantum Information and Computation, vol. 14, no. 15–16, pp. 1338–1372, Nov. 2014.
+[2] A. A. Kovalev and L. P. Pryadko, “Fault tolerance of quantum lowdensity parity check codes with sublinear distance scaling,” Phys. Rev. A, vol. 87, p. 020304, Feb. 2013.
+[3] P. Panteleev and G. Kalachev, “Quantum LDPC codes with almost linear minimum distance,” IEEE Transactions on Information Theory, vol. 68, no. 1, pp. 213–229, 2022.
+[4] D. MacKay, G. Mitchison, and P. McFadden, “Sparse-graph codes for quantum error correction,” IEEE Transactions on Information Theory, vol. 50, no. 10, pp. 2315–2330, Oct. 2004.
+[5] D. Gottesman, “Stabilizer codes and quantum error correction,” Ph.D. dissertation, California Institute of Technology, 1997.
+[6] N. Raveendran and B. Vasic´, “Trapping sets of quantum LDPC codes,” Quantum, vol. 5, p. 562, Oct. 2021.
+[7] D. Poulin and Y. Chung, “On the iterative decoding of sparse quantum codes,” Quantum Information and Computation, vol. 8, no. 10, pp. 987– 1000, Nov. 2008.
+[8] N. Raveendran, P. J. Nadkarni, S. S. Garani, and B. Vasic´, “Stochastic resonance decoding for quantum LDPC codes,” in 2017 IEEE Intl. Conf. on Commun. (ICC), May 2017, pp. 1–6.
+[9] J. D. Crest, M. Mhalla, and V. Savin, “Stabilizer inactivation for message-passing decoding of quantum LDPC codes,” in 2022 IEEE Information Theory Workshop (ITW), 2022, pp. 488–493.
+[10] K.-Y. Kuo and C.-Y. Lai, “Refined belief propagation decoding of sparse-graph quantum codes,” IEEE Journal on Selected Areas in Information Theory, vol. 1, no. 2, pp. 487–498, 2020.
+[11] S. Miao, A. Schnerring, H. Li, and L. Schmalen, “Neural belief propagation decoding of quantum ldpc codes using overcomplete check matrices,” 2023.
+[12] J. Roffe, D. R. White, S. Burton, and E. Campbell, “Decoding across the quantum low-density parity-check code landscape,” Phys. Rev. Res., vol. 2, Dec 2020.
+[13] Y.-H. Liu and D. Poulin, “Neural belief-propagation decoders for quantum error-correcting codes,” Phys. Rev. Lett., vol. 122, p. 200501, May 2019.
+[14] D. Gottesman, “Class of quantum error-correcting codes saturating the quantum Hamming bound,” Phys. Rev. A, vol. 54, no. 3, pp. 1862–1868, Sept. 1996.
+[15] M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information: 10th Anniversary Edition, 10th ed. New York, NY, USA: Cambridge University Press, 2011.
+[16] D. Declercq, B. Vasic, S. K. Planjery, and E. Li, “Finite alphabet iterative decoders—part ii: Towards guaranteed error correction of ldpc codes via iterative decoder diversity,” IEEE Transactions on Communications, vol. 61, no. 10, pp. 4046–4057, 2013.
+[17] N. Raveendran, D. Declercq, and B. Vasic´, “A sub-graph expansioncontraction method for error floor computation,” IEEE Transactions on Communications, vol. 68, no. 7, pp. 3984–3995, 2020.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:45:03 UTC from IEEE Xplore. Restrictions apply.
+
+

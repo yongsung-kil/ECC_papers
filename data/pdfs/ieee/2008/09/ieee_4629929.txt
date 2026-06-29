@@ -1,0 +1,496 @@
+FPGA IMPLEMENTATION OF A FLEXIBLE DECODER FOR LONG LDPC CODES
+Christiane Beuschel, Hans-Jo¨rg Pfleiderer
+Institute of Microelectronics, University of Ulm Albert-Einstein-Allee 43, 89081 Ulm, Germany email: christiane.beuschel@uni-ulm.de, hans-joerg.pfleiderer@uni-ulm.de
+
+ABSTRACT
+Over the last years LDPC codes became more and more popular because of their near Shannon limit error correcting performance. Structured code classes which ease decoder design have already been standardized for DVB-S2, IEEE WiMax 802.16e or WiFi. In this paper we introduce a flexible decoder architecture which can decode any structured or unstructured LDPC code using the identical hardware. Furthermore we present a mapping algorithm which ”compiles” the parity-check matrix of the desired LDPC code. This concept allows adaption of the decoder controller to different LDPC codes without requiring a new synthesis run.
+We implemented the proposed decoder on a XILINX XC4LX160 FPGA and give bit error rates to verify design and mapping algorithm. In contrast to previously presented flexible implementations our design is able to decode LDPC codes of 30 times longer codeword lengths up to N = 65, 000.
+1. INTRODUCTION
+In the last years a lot of research was done to design structured LDPC codes that fit to certain hardware decoder architectures. This so-called decoder-aware code design is also used for the LDPC codes in recent digital communication standards, e.g. DVB-S2 [1], WiMax [2], WiFi, or CDVB-T.
+Examples for decoder-aware code design are quasi-cyclic codes as in [2] or codes based on protographs as discussed in [3]. For both code classes there exist partly-parallel decoder structures which allow several codes of the same structure to be decoded with the same hardware decoder. However, optimum hardware decoders are only possible for codes with the same constituent matrix size or, in case of quasi-cyclic codes, for codes which have a common divisor of the constituent matrix size. In [4] a decoder approach for quasicyclic codes is presented which needs some extra clock cycles but can decode also codes which have no common divisor of their constituent matrix size. However, all these approaches have few degrees of freedom in choosing the degree of parallelism and furthermore code design is severely limited through the constraints imposed on the parity-check matrix during decoder-aware code design.
+
+All these drawbacks can be circumvented by the approach to develop a decoder architecture which can decode any structured or unstructured LDPC code as in [5]. The price for the full flexibility is a more complex hardware architecture. Furthermore memory access conflicts are likely to occur when the extrinsic messages are assigned linearly to memory addresses as it is done for structured codes. Thus a more sophisticated mapping algorithm is needed.
+In this paper we present a new fully programmable LDPC decoder architecture together with an appropriate mapping algorithm and an FPGA implementation which is capable of decoding codes with 30 times longer codewords as existing flexible implementations.
+The structure of this paper is as follows: Section 2 shortly introduces decoding of LDPC codes, Section 3 presents our flexible decoder architecture and a mapping algorithm, Section 4 discusses the FPGA implementation of the decoder and finally Section 5 gives the conclusion.
+
+2. LDPC CODES
+
+A binary (N , K) LDPC code [6] is defined by a sparse M x N parity-check matrix H. Equivalently the LDPC code can be described by a bipartite graph with M check nodes corresponding to the rows and N variable nodes corresponding to the columns of H. Check node m is connected to variable node n if hmn = 1. M (n) is the set of check nodes that are connected to variable node n and N (m) is the set of variable nodes that are connected to check node m. The vector y is the transmitted codeword with yi ∈ {−1, +1} and r is the received codeword.
+The iterative belief propagation (BP) decoding algorithm can be described by passing the messages Rm→n and Qn→m in two half-iterations between the nodes in the bipartite graph.
+1. Initialization, l = 0
+
+• intrinsic (channel) values for each n
+
+In
+
+=
+
+ln
+
+P P
+
+(yn (yn
+
+= =
+
++1|rn) −1|rn)
+
+(1)
+
+978-1-4244-1961-6/08/$25.00 ©2008 IEEE.
+185 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+• for each (m, n) ∈ {(i, j)|hij = 1}
+
+Q(nl→ ) m = In
+
+(2)
+
+2. Iteration l = l + 1
+
+• check node update for each (m, n) ∈ {(i, j)|hij = 1}
+
+Rm (l)→n = 2 · tanh−1
+
+tanh(
+
+Qj(l→−m1) 2
+
+)
+
+j∈N (m),j=n
+
+(3)
+
+• variable node update for each (m, n) ∈ {(i, j)|hij = 1}
+
+Qn(l→ ) m = In +
+
+Ri(→ l) n (4)
+
+i∈M (n),i=m
+
+3. Decision
+
+• if the maximum number of iterations is reached,
+
+decode for each n
+
+⎛
+
+⎞
+
+Qn = sign ⎝In +
+
+Ri(→ l) n⎠ (5)
+
+i∈M (n)
+
+• else continue with 2
+In each iteration 2E messages have to be updated where E is the number of ones in the parity-check matrix H or the number of edges in the bipartite graph. The degree of a variable node is defined as dV and the degree of a check node as dC , the maximum node degrees are dV,max and dC,max.
+
+3. FLEXIBLE LDPC DECODER ARCHITECTURE
+In this section we introduce a flexible hardware architecture that can decode any LDPC code and a mapping algorithm to determine the memory addresses and locations of the extrinsic messages. The mapping algorithm corresponds to a ”compilation” of the parity-check matrix before decoding starts.
+
+3.1. Architecture
+In Fig. 1 the architecture of the proposed flexible decoder is shown for a degree of parallelism p = 3. The architecture consists of p extrinsic memory banks EMi, each of these banks has an input and output wordlength of p extrinsic messages. In the intrinsic memory IM always p input values and in the decoded memory DM always p symbols of the decoded codeword are stored at the same address. All memories are dual-port memories allowing simultaneous and independent read and write access on two data entries.
+
+The p variable node functional units VFUi and p check node functional units CFUi perform the node computations alternately in two half-iterations. The two permutation networks π and π−1 as well as the 2p multiplexers p : 1 are needed to route the required extrinsic messages to the corresponding node computation units. The central control unit determines the configuration of the multiplexers, the permutation networks, the addressing of the memories and the processing of the variable and check functional units. The control signals depend on the compiled LDPC code and are read linearly from the memory HM. The compilation can be performed offline before decoding starts using the mapping algorithm as described in Section 3.3.
+During check node processing p extrinsic messages are read from each memory bank EMi. The p subsequent multiplexers p : 1 choose p extrinsic input messages which are sent over the fully programmable permutation network π to the CFUs. Each of the CFUs processes several check nodes sequentially and receives one extrinsic input message in each clock cycle. After a delay of dC + 2 cycles the updated corresponding extrinsic messages appear sequentially at the outputs of the check nodes. They are permuted using the inverse permutation network π−1 and then written back into the extrinsic memory banks to the same addresses and positions as they were read from. Altogether each CFUi processes sequentially approximately M /p check nodes of the code.
+In the other half-iteration the variable nodes are processed. In each clock cycle t, p messages are read from the extrinsic memory bank EMt mod p. The subsequent multiplexers are configured in a way that these p messages are sent to the p VFUs. Together with the first extrinsic message of each variable node the intrinsic values are read from the intrinsic memory and sent to the VFUs. After a delay of dV + 2 cycles the corresponding updated extrinsic messages appear sequentially at the output of each VFU. The messages are then written back to the same extrinsic memory bank and to the same address as they were read from. Altogether each VFUi processes sequentially approximately N /p variable nodes of the code.
+Decoding of a codeword is started by writing the received values sequentially to the intrinsic memory IM. Then the extrinsic memory banks EMi are initialized with the intrinsic values using the same data flow as during variable node processing except that all extrinsic input messages to the variable nodes are set to zero. Decoding of the current codeword is stopped as soon as a maximum number of iterations is reached or a valid codeword is detected.
+3.2. Node computations
+Since the exact implementation of the BP algorithm is not feasible in hardware, many approximations were developed as they are discussed in [7], [8], [9]. For our implementa-
+
+186 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+p+1:p EM0
+
+p+1:p EM1
+
+p+1:p EM2
+
+control
+
+HM
+
+compiled
+
+H
+
+2:1
+
+2:1
+
+p:1
+
+p:1
+
+p:1
+
+p:1
+
+p:1
+
+p:1
+
+In
+
+2:1 p+1:p
+
+p
+
+IM
+
+CFU0
+
+CFU1
+
+CFU2
+
+VFU0
+
+VFU1
+
+VFU2
+
+p-1
+
+DM
+
+Qn
+
+Fig. 1. Overview of the proposed flexible decoder architecture (p = 3): Solid lines represent data signals and dashed lines represent control signals.
+
+tion we use the normalized BP-based decoding algorithm [8] where the check node update in (3) is significantly simplified to
+
+Rm (l)→n
+
+=
+
+α
+
+· min
+j∈N (m),j=n
+
+Qj(l→−m1) ·
+
+sign
+
+j∈N (m),j=n
+
+Qj(l→−m1) (6)
+
+with 0 < α ≤ 1.
+
+While we implemented check node computations with
+
+the normalized BP-based approximation, our architecture is
+
+not limited to this approximation and any other approxima-
+
+tion can be used instead.
+
+3.3. Mapping and Scheduling
+For each LDPC code the mapping of the extrinsic messages Qn→m resp. Rm→n in (4) and (6) to the extrinsic memories EMi is determined. The goal is a mapping algorithm which yields conflict-free memory access and an optimum of p processed messages in each clock cycle. However, the average degree of parallelism pa, which is in general smaller than p, depends on how good the current LDPC code can be mapped onto the decoder architecture.
+During the variable node half-iteration the extrinsic messages are mapped linearly to the extrinsic memory banks. In each clock cycle the multiplexers before the VFUs select the next extrinsic memory bank. After p clock cycles the address is increased by one. At each time instant all p VFUs process nodes of the same degree to ease controlling. Therefore the average degree of parallelism during variable node processing is equal to or almost p.
+
+During the check node half-iteration the addresses of the p extrinsic memory banks are accessed in a rather stochastic order which is determined by the biparite graph and the mapping algorithm. In each clock cycle one message is chosen from each extrinsic memory bank and sent to the CFUs. Depending on the current code the average degree of parallelism during check node processing can be smaller than p.
+The mapping algorithm assigns a control vector mi,k = (addr, pos, mem) to each edge in the bipartite graph where mem is the memory bank number, addr the address and pos the position within the p values at the same address. The algorithm and can be formulated as follows:
+1. Generate variable node groups: Assign always p variable nodes of the same degree to one variable node group.
+2. Generate preliminary variable node subgroups: Combine always p edges from p different variable nodes of one group to one variable node subgroup and assign preliminary values to mi,k = (addr, pos, mem):
+mem: All entries in a variable node subgroup get the same value for mem. The values are assigned in ascending order modulo p.
+addr: All entries in a variable node subgroup get the same value for addr. The value is increased by one every pth subgroup.
+pos: All entries in a variable node subgroup get different values for pos.
+3. Generate check node groups:
+
+187 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+a) If all check nodes already have been assigned to a check node group go to 4.
+b) Start with s = p.
+c) Define a preliminary check node group by s check nodes of the same degree dC which do not yet belong to a check node group and the control vectors corresponding to their edges.
+d) Count the number of occurrences for mem = i in the control vectors of the current current check node group. If each occurrence is ≤ dC a valid check node group of size g = s was found, go to 3a).
+e) Try to exchange a value for mem which appears > dC times against a value which appears < dC times by exchanging control vector mi,k against mi,l. If it was successful go to 3d), otherwise continue.
+f) Exchange one check node of the group against another one which is not yet used in a check node group and go back to 3d) or continue if there are no more nodes left.
+g) Set s = s − 1 and got back to 3c).
+
+4. Generate check node subgroups: Combine always g edges from different check nodes of the same check node group. In each subgroup all values of mem of the control vectors have to be different. Because of the condition in 3d) such subgroups always can be found.
+
+The resulting average degree of parallelism pa of this heuris-
+
+tic
+
+mapping
+
+algorithm
+
+is
+
+calculated
+
+by
+
+pa
+
+=
+
+1 2
+
+E NV
+
++
+
+E NC
+
+where NV and NC are the number of variable and check
+
+node groups. In Table 1 we have listed the average degree
+
+of parallelism pa ≤ p for a set of benchmark codes for p = 16. Codes C1 and C2 where collected from MacKay’s website [10], codes C3 and C4 are standardized codes from WiMax [2] and C5 to C8 are from DVB-S2 [1]. Column
+
+six shows the efficiency of the mapping algorithm in terms
+
+of the average percentage of active FUs in each clock cycle
+
+with eact
+
+=
+
+pa p
+
+· 100.
+
+The efficiency of
+
+the mapping
+
+algo-
+
+rithm is especially high for the high-rate codes C7 and C8
+
+where in each clock cycle an average of 96% of the FUs is
+
+active whereas the efficiency is lower for codes C3 to C5
+
+where about 78% of the FUs are active.
+
+3.4. Information Throughput
+
+The number of clock cycles needed for one decoding iteration can be determined by
+
+E
+
+E
+
+Titer
+
+=
+
+2·
+
+pa
+
++ dV,max
+
++ dC,max
+
++4
+
+≈
+
+2·
+
+. pa
+
+(7)
+
+Table 1. Mapping results for a set of LDPC codes.
+
+eact Dinf o
+
+N, M R
+
+E pa (%) (Mbps)
+
+C1 8,000, 4,000 0.50 24,000 14.68 92 6.04 C2 9,972, 4,986 0.50 34,902 14.66 92 5.17
+
+C3 1,728, 864 0.50 5,472 12.42 78 4.84 C4 2,304, 1,152 0.50 7,296 12.68 79 4.94
+
+C5 16,200, 9,000 0.44 48,599 12.29 77 C6 16,200, 6,480 0.60 71,279 14.84 93 C7 64,800, 12,960 0.80 233,279 15.36 96 C8 64,800, 6,480 0.90 194,399 15.34 96
+
+4.45 4.99 8.42 11.35
+
+The approximation is valid for E >> dV,max + dC,max. The information throughput of the decoder is
+
+Dinf o
+
+=
+
+Diter I
+
+=
+
+R·N ·f I · Titer
+
+≈
+
+R · N · f · pa I ·2·E
+
+(8)
+
+with the information throughput per iteration Diter, an average number of I iterations for each codeword, code rate R, codeword length N and clock frequency f of the design.
+In the last column of Table 1 we have listed the information throughput Dinfo in Mbps for a clock frequency of 74 MHz and an average number of 15 iterations per codeword. Depending on pa and the code rate we can achieve an information throughput from 4 to 11 Mbps.
+
+4. FPGA IMPLEMENTATION
+We described our flexible decoder architecture with VHDL and implemented it on a XILINX Virtex4 FPGA. Special attention was payed on a scalable design where parameters can be easily changed before synthesis. These parameters are for example the wordlength of the intrinsic and extrinsic messages and the depth of the extrinsic, intrinsic and decoded memories. Furthermore the degree of parallelism p, which is not limited to powers of two but can be any natural number. The compiled parity-check matrix is stored in the external SSRAM memory HM. After synthesis the parameter α in (6) can be adjusted to the values 0.71875, 0.75, 0l78125, 0.8125, 0.84375, 0.875 or 0.90625 where each value can be represented using 4 binary digits.
+Table 2 shows the synthesis results for different parameter configurations for XC4LX160-11. The degree of parallelism of the design is given by p, the wordlength of the messages by W , the depth of the intrinsic and extrinsic memories by dintr and dextr. The overall number of slices on this FPGA is 67,584 and the overall number of block RAMs is 288 with a size of 18,432 bit each.
+It can be seen that for all four configurations a clock frequency ≥ 73 MHz can be achieved. The largest codes with
+
+188 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+Table 2. Synthesis results for XC4LX160-11 and different parameter configurations p = 12, W = 7 p = 16, W = 8 p = 16, W = 6 p = 18, W = 8
+
+dextr = 1, 024 dintr = 4, 096
+
+dextr = 1, 024 dintr = 4, 096
+
+dextr = 2, 048 dintr = 2, 048
+
+dextr = 1, 024 dintr = 4, 096
+
+slices
+
+9,877
+
+18,483
+
+17,248
+
+19,575
+
+block RAMs
+
+122
+
+202
+
+286
+
+263
+
+fmax [MHz] Nmax Emax
+
+79 40,960 147,456
+
+74 65,536 262,144
+
+73 32,768 524,288
+
+73 73,728 331,776
+
+a codeword length of up to Nmax = 73, 728 can be decoded with configuration four. All these example configurations use no more than 30% of the slices of the FPGA whereas the third configuration uses almost all available memory on the FPGA. Thus the limiting factor of our architecture is the amount of available memory.
+After synthesis of the design and download on the FPGA, any regular or irregular LDPC code can be decoded as soon as the corresponding compiled parity-check matrix was loaded into memory HM.
+4.1. Simulation Results
+In Fig. 2 the simulation results for the bit error rate are displayed for codes C2, C5 and C7. Simulations on the PC (dashed lines) are compared with finite-wordlength simulations on the FPGA (solid lines). While the software simulations were performed using floating-point and the optimum BP algorithm, the FPGA implementation uses the normalized BP-based approximation as described in Section 3.2. The total wordlength for all intrinsic and extrinsic messages is 8 bit consisting of 1 sign bit, 5 bits for the integer part and 2 bits for the fractional part. For C2 a maximum number of 50 iterations and for C5 and C7 a maximum number of 100 iterations is used for all simulations.
+As discussed in [8] the performance loss for the floatingpoint normalized BP-based approximation compared to the optimum BP algorithm is 0.05 to 0.1 dB. In Fig. 2 it can be seen that the approximation of the decoding algorithm, truncation and finite wordlengths of our FPGA implementation yield 0.1-0.15 dB performance loss. To show that our decoder is not restricted to structured codes like C5 or C7 we also simulated the bit error rate for C2 which was decoded with the identical hardware as the other two codes. With these simulations we are able to show the principle correctness of the architecture implementation and the mapping algorithm.
+4.2. Comparison with existing Implementations
+In Table 3 we compare our architecture with the flexible decoder implementation in [5] and the DVB-S2 decoder imple-
+
+100
+
+10-1
+
+10-2
+
+bit error rate
+
+10-3
+
+10-4
+
+10-5
+
+C2 SW C2 FPGA
+
+C5 SW
+
+10-6
+
+C5 FPGA C7 SW
+
+C7 FPGA
+
+10-7
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0 [dB]
+
+Fig. 2. Bit error rate for C2, C5 and C7. Dashed lines: floating-point software simulations, BP; solid lines: FPGA simulations, normalized BP-based.
+
+mentation in [11]. It should be noted that in contrast to our proposed flexible architecture the implementation in [11] can only decode a special class of structured LDPC codes.
+While [11] implements the decoder with p = 360 and [5] with p = 32, we choose the hardware implementation corresponding to the second configuration in Table 2 with p = 16. This means that our design uses only half as many node functional units as [5].
+In [11] the structure of the DVB-S2 codes is exploited in a way that in each clock cycle 100% of the node functional units (FUs) are active, e.g. pa = p. On the contrary our proposed architecture as well as [5] can decode any code and thus use an heuristic algorithm for mapping where the performance is different for each LDPC code. Therefore we can only give a range for the average percentage of active FUs in each clock cycle. In the fourth line of Table 3 it can be seen that compared to [5] the percentage of active FUs is about twice as high for our decoder. This means that although our decoder has only half as many instantiated FUs, the average number of updated messages pa in each clock cycle is approximately the same. To further prove this state-
+
+189 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+Table 3. Comparison with other implementations.
+
+[11]
+
+[5] this work
+
+flexible p eact pa implementation fmax Diter extr. mem. size interconnect different node approx. possible Nmax Emax
+
+DVB-S2 360
+100% 360
+ASIC 270 MHz ∼10 Gbps
+E 1,620
+
+yes 32 28%-52% 11.3-16.7 ASIC 245 MHz ∼500 Mbps 4E 288
+
+yes 16 77%-96% 12.4-15.3 FPGA 74 MHz ∼75 Mbps E 720
+
+yes 64,800 285,119
+
+no 2,000 7,000
+
+yes 65,536 262,144
+
+ment we compare directly codes C1 and C3 from Table 1. For C1 92% of our node functional units are active in each clock cycle while in [5] only 52% are active, for C3 our result is 78% compared to 28 %in [5].
+Since we use an FPGA implementation our maximum clock frequency is less than one third of the two ASIC implementations. The information throughput per iteration Diter for a code with R = 0.5 is about 75 Mbps for our design compared to about 500 Mbps in [5] and 10 Gbps in [11].
+As the wordlength for the intrinsic and extrinsic messages is flexible and can be set to an arbitrary value, in our design we compare only the number of intrinsic and extrinsic messages that are stored in a memory. While the number of messages stored in the intrinsic memory is the same for all designs, [5] needs a memory for 4E messages to store the extrinsic and sum values whereas our design and [11] only need one fourth of this memory.
+For the interconnection between the memories and the node computation units our architecture uses two Benesˇ networks with p = 16 in/out values and additional multiplexers, which accumulate to an overall number of 720 W x(2 : 1) multiplexers where W is the wordlength of the messages. In [5] one Benesˇ network with 32 in/out values is used which leads to a total of 288 W x(2 : 1) multiplexers and in [11] a 360 input/output shifter network is used which yields 1,620 W x(2 : 1) multiplexers.
+While we implemented the decoding algorithm using the normalized BP-based approximation (6), our design is not limited to this implementation and the node computation units can be easily exchanged against any other approximation. Also in [11] the architecture does not restrict the node computations to a certain approximation. In [5] the decoder architecture always requires a total-sum first implementation for both check and variable node computations.
+
+Looking at codes with maximum size that can be decoded with the architecture our limits for the maximum codeword length Nmax and maximum number of ones Emax in H are similar to [11]. Compared to the flexible decoder implementation in [5] we are able to decode any LDPC with 30 times longer codeword length and 30 time more ones in the parity-check matrix.
+5. CONCLUSION
+In this paper we presented a flexible LDPC decoder architecture which can decode any structured or unstructured LDPC code. Furthermore we implemented the proposed decoder architecture on an FPGA and showed simulation results for several codes. Compared to existing flexible decoder implementations our architecture has only half as many idle node functional units, uses 75% less memory for the extrinsic messages and can decode LDPC codes with 30 times longer codewords.
+6. REFERENCES
+[1] European Telecommunications Standards Institute (ETSI): DVB Second generation, EN 302 307 V1.1.1, www.dvb.org
+[2] IEEE 802.16e. Air interface for fixed and mobile broadband wireless access systems, 2005.
+[3] K. Andrews, D. Divsalar, S. Dolinar, J. Hamkins, C. Jones, and F. Pollara, “The development of turbo and LDPC codes for deep-space applications,” Proceedings of the IEEE, vol. 95 (11), pp. 2142–56, 2007.
+[4] J. Dielissen and A. Hekstra, “Non-fractional parallelism in ldpc decoder implementations,” in Design, Automation and Test in Europe, pp. 337–342, 2007.
+[5] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 54 (6), pp. 542–546, 2007.
+[6] R. Gallager, “Low density parity check codes,” Ph.D. dissertation, Cambridge, Mass., 1963.
+[7] F. Guilloud, E. Boutillon, and J. Danger, “Lambda-min decoding algorithm of regular and irregular LDPC codes,” in 3rd International Symposium on Turbo Codes & Related Topics, Brest, France, pp. 451–454, September 2003.
+[8] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and H. Xiao-Yu, “Reduced-complexity decoding of LDPC codes,” IEEE Transactions on Communications, vol. 53 (8), pp. 1288–99, 2005.
+[9] J. Rauscher, “VHDL-Implementierung eines Decodieralgorithmus fu¨r LDPC Codes,” Diplomarbeit, University of Ulm, Germany, 2002.
+[10] D. MacKay, “Encyclopedia of sparse graph codes” available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+[11] F. Kienle, T. Brack, and N. Wehn, “A synthesizable IP core for DVB-S2 LDPC code decoding,” in Design, Automation and Test in Europe, DATE ’05, 2005, pp. 100–105.
+
+190 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:06:31 UTC from IEEE Xplore. Restrictions apply.
+
+

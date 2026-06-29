@@ -1,0 +1,282 @@
+Optimizing Schedulers for Layered BP Decoding: From Code-Specific to Universal Decoding
+Ahmed Elkelesh and Jonathan Ling Nokia Bell Labs
+ahmed.elkelesh@nokia-bell-labs.com, jonathan.ling@nokia-bell-labs.com
+
+2025 13th International Symposium on Topics in Coding (ISTC) | 979-8-3315-8983-7/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISTC65386.2025.11154636
+
+Abstract—We show that optimized message update scheduling can enhance both the error-rate performance and the throughput of layered BP decoding of LDPC codes. As an exemplary attempt, optimized scheduling accelerates BP decoding and leads to approximately 2× throughput enhancement when compared to top-to-bottom row-layered BP decoding of 5G LDPC codes. Furthermore, scheduling enhances the error-rate performance of short-length LDPC codes via ensemble decoding. For shortlength 5G LDPC codes, coding gains of up to 0.7 dB and 1.6 dB at BLER of 10−3–10−4 for both AWGN and Rayleigh fading channels can be achieved when compared to conventional BP decoders. Additionally, we show that the same concept applies to general linear block codes (e.g., polar/RM codes) facilitating a unified decoding architecture based on row-layered BP decoders (“one-silicon fits all”).
+Index Terms—LDPC Codes, Polar Codes, Layered BP Decoding, Scheduling, Ensemble Decoding, Universal Decoding.
+I. INTRODUCTION
+Error-correcting codes are the workhorse of modern communication systems, enabling reliable transmissions close to theoretical limits. In other words, error-correcting codes are an essential must in all (wireless and optical) communication systems. Furthermore, emerging applications like industry automation, autonomous driving, remote surgery, and many more require ultra-reliable communication with low latency.
+Most of the complexity at the receiver side is attributed to the channel decoder operations. Typically, in channel coding, for every channel code we have a tailored decoder. For example: Low-Density Parity-Check (LDPC) codes are decoded with an iterative belief propagation (BP) decoder and polar codes are decoded with a successive cancellation list (SCL) decoder. This requires a custom decoding hardware (i.e., decoder chip) per channel code, which increases the hardware cost/area. Besides low error-rate performance, nowadays digital receiver implementations are mostly driven by highthroughput/low-latency requirements which might motivate the usage of BP decoders. Thus, we focus on BP-based unified decoding schemes.
+In this work, we focus on enhancing the iterative channel decoder via scheduling. We propose optimized scheduling for 5G LDPC codes, based on ideas in [1]. Furthermore, building on ideas in [2], we use scheduling as an enabler to build an ensemble decoder which is applicable to general linear block codes (e.g., including LDPC and polar codes), eliminating the need for custom decoding hardware.
+
+II. PRELIMINARIES
+A. LDPC Codes
+LDPC codes are omnipresent in most of the state-of-the-art communication standards such as 5G mobile communications, CCSDS, WLAN, DVB-S2/T2/C2 and WiMAX standards. An LDPC code can be fully described by an (M ×N ) parity-check matrix H, where N represents the number of variable nodes (VNs) (i.e., also the code block length) and M represents the number of check nodes (CNs) the code has.
+For mobile communication data channels 3GPP has defined quasi-cyclic irregular LDPC codes [3], [4]. Two Base Graphs (BGs) are specified, that is BG 1 and BG 2 whose selection depends on rate and codeword size. BG 1 is used for larger codewords and higher rates. Various length codewords are achieved through the lifting factor Z, which defines the submatrix size in the parity-check matrix HBG. The number of information bits per codeword is K = Z · KBG, where KBG is the number of information base graph columns. The code rate, defined as the ratio of information bits to the total number of code bits is R = K/N , where R controls the error correcting capability, and different rates are achieved by specifying a certain number of base graph rows. For a base graph with MBG rows, then the total number of coded bits N = Z · (KBG + MBG). Rows within the submatrix H are independent and can be performed in parallel. Thus, rows of HBG are scheduled, each consisting of Z actual rows. The first four rows of HBG have high degree and are called core rows, while the remaining rows have lower degree and are called extension rows.
+B. Polar Codes
+Polar codes are conventionally decoded in a serial fashion (i.e., bit-by-bit). The original decoding method is the successive cancellation (SC) decoder [5] and the state-ofthe-art decoding algorithm is a list decoding version called SCL decoding [6]. Note that Reed–Muller (RM) codes can be considered as a polar code with a different frozen/non-frozen pattern, thus, RM codes can be decoded with the same polar decoders as well.
+Short polar codes of length up to N = 1024 are chosen to protect the control channel in the 5G standard [4] and they are decoded with the hard-output SCL decoder. Furthermore, polar codes might be a good channel coding candidate for future communication standards (e.g., 6G and others).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:41 UTC from IEEE Xplore. Restrictions apply.
+
+Average number of iterations
+
+E< T4
+
+20
+
+E< T1
+
+T2 < E < T3
+
+E< T5
+
+Ec==0
+
+EO
+
+EC
+
+ECC
+
+CO
+
+15
+
+SlowConv
+10 Fig. 1: State diagram of our proposed dynamic scheduling scheme.
+
+Forward Reverse EC/CO EO/EC/CO EO/EC/CO + SlowConv
+
+C. BP Decoding
+LDPC codes are typically decoded by an iterative message passing decoder, i.e. Sum Product Algorithm (SPA), which is a modified version of the BP algorithm introduced by Gallager. The soft messages, in form of log-likelihood ratios (LLRs), are exchanged over the Tanner graph of the code, which is a bipartite graph that divides nodes into N VNs and M CNs. A hardware-popular approximation called min-sum can be used to reduce the computational cost. The above-mentioned decoding algorithm can be realized with different variants differing in the schedule of message update inside the decoder.
+1) Flooding BP Decoding: LLR messages are flooded from the N VNs to the M CNs in parallel and vice versa.
+2) Layered BP Decoding: An implementation-friendly variant is so-called “row-layered” decoding [7], where CNs are processed sequentially, incorporating the output of previous CNs already within the same iteration, resulting in faster convergence (i.e., operates on rows of a parity-check matrix of the LDPC code and processes each row separately, decode row-byrow, e.g., top-to-bottom approach). Another variant (“columnlayered” decoding [8]) processes the VNs sequentially (i.e., decode column-by-column, e.g., left-to-right approach). LDPC decoders are commonly implemented based on the row-layered BP decoder with the min-sum approximation.
+Conventional row-layered BP decoder implementation executes the check node update equation row-by-row (or check node-by-check node) in the following order: check node 1 then check node 2 and so on till check node M , i.e., from top-to-bottom. This schedule can be represented by a vector π = {1, 2, 3, . . . , M }. An alternative implementation can change the order of check node updates. There exist almost an unlimited number of schedules (i.e., M !). Per noise realization those schedules will perform differently (i.e., different convergence behavior: converge to a valid codeword or not, number of iterations needed for convergence, correct or wrong convergence). Those schedules can be generated/represented by the vector π = randperm(M ), i.e., random permutations of the vector {1, 2, 3, . . . , M }. Numerical example: For a code of length N = 128 and code dimension K = 64, we have M ! = 64! = 1.2688693 × 1089 different check node update order (or schedules). A straightforward way of implementing such a check node-shuffled row-layered BP decoder is to permute the rows of the H-matrix according to the generated vector π (i.e., H′ = H(π, :)) and then apply the normal topto-bottom row-layered BP algorithm. Using this definition, we can generate almost an unlimited number of diverse/different BP decoders all based on the same algorithm.
+
+5
+
+0
+
+1
+
+2
+
+3
+
+Eb/N0 in dB
+
+Fig. 2: Eb/N0 vs. average number of performed iterations. Maximum number of allowed BP iterations Nit,max = 20. 5G LDPC code (BG 1,
+R = 1/2, Z = 384, N = 8448).
+
+III. 5G LDPC CODES: OPTIMIZED SCHEDULING
+Decoder scheduling of 5G LDPC codes is considered due to their ubiquitous usage in cellular networks. Discussed first are improvements reported in the literature due to static scheduling, followed by a description of our dynamic scheduling algorithm along with numerical results.
+
+A. Static Scheduling
+A decoder running a top-to-bottom static schedule evaluates core rows followed by extension rows. This fixed order repeats until early termination or the maximum number of iterations Nit,max is reached. By applying a different static schedule, modest improvement is possible (e.g., see [9], [10]).
+In [9] a bottom-to-top static schedule along with core-only early termination was shown to reduce the average number of iterations (ANI) by 15%. The increase in mutual information for an isolated parity-check equation was derived. Parity check equations with fewer variables were shown to be more effective at lower SNR. Applying this knowledge, extension checks should be run before core checks. The bottom-to-top schedule reduces the ANI by one, but ordering by row degree did not improve performance over bottom-to-top.
+In [10] improved static schedules gave 14% to 19% complexity reduction over the baseline flooding decoder. A 3D EXtrinsic Information Transfer (EXIT) chart analysis of the decoder was performed where they observed that when the decoder is 99.99% converged the extension rows contribute little. Applying this knowledge, they propose a static schedule, whereby the last few iterations omit the extension rows. They propose that the number of iterations to be performed before switching to the core-only mode be stored in a look-up table as a function of SNR and R.
+
+B. Proposed Dynamic Scheduling
+We describe a dynamic scheduling algorithm [1] that is suitable for hardware implementation. The algorithm dynamically switches between states to realize a codeword- or noise realization-specific schedule. State transitions are triggered by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:41 UTC from IEEE Xplore. Restrictions apply.
+
+20
+
+100
+
+Forward
+
+EO/EC/CO + SlowConv
+
+EO/EC/ECC/CO + SlowConv
+
+15
+
+10−1
+
+Forward: Nit,max = 10 Reverse: Nit,max = 10 Forward: Nit,max = 11
+
+Average number of iterations BLER
+
+10
+
+5
+
+−1
+
+0
+
+1
+
+2
+
+Eb/N0 in dB
+
+Fig. 3: Eb/N0 vs. average number of performed iterations. Maximum number of allowed BP iterations Nit,max = 20. 5G LDPC code (BG 1,
+R = 1/3, Z = 384, N = 8448).
+
+simple metrics (typical for early termination [11]) such as LLR magnitude, parity-check errors, or number of bit flips. For example, Fig. 1 shows transitions based on the number of parity-check errors, where T1, T2, T3, T4 and T5 represent a threshold on the number of check errors. Fig. 1 illustrates the state diagram and each state is described in the following:
+1) EO state consists of repetitions of extension base graph rows executed in bottom-to-top order. The core basegraph rows are removed from the schedule because their mutual information gain is minimal at low internal SNR [9]. Accordingly, the EO state transitions to the EC state when an internal metric is satisfied. When the decoder cannot converge, it usually remains in the EO state.
+2) EC state consists of repetitions of both the extension and core basegarph rows executed in a bottom-to-top order. Alternatively, core rows could be interspersed rather than run strictly at the end. Core rows function to spread mutual information to different extension rows in addition to contributing to the mutual information in core parity columns. This state can transition to the ECC state or CO state.
+3) ECC state consists of repetitions of extension and core basegraph rows (running the core rows twice). This improves convergence around the waterfall region.
+4) CO state consists of repetitions of core rows only. These continue until the maximum iterations have been reached or early termination. When the decoder is in this state it should converge. We observe that the core rows form a high-rate code that efficiently corrects errors when there are very few errors (i.e., core checks are useful at high internal SNR).
+Early termination can occur in the EC, ECC, or CO state. In our experiments, we use an aggressive CO parity-check satisfaction criterion (all core checks satisfied: Ec == 0) similar to [9]. For slow convergence (SlowConv) a paritycheck satisfaction criterion is also utilized. The threshold is set conservatively to reduce the number of early termination errors. Additional throughput and energy savings are possible at the expense of missed decoding.
+
+10−2
+0.3 0.35 0.4 0.45 0.5 0.55
+Eb/N0 in dB
+Fig. 4: BLER comparison between SPA decoders employing different schedules. 5G LDPC code (BG 1, R = 1/3, Z = 384, N = 8448).
+C. Numerical Experiments
+Our dynamic scheduling is compared to the baseline top-tobottom schedule using a layered SPA decoder. Similar results can be achieved with the low complexity min-sum decoder. Simulation gains of up to 2× in throughput are demonstrated. The Nit,max-limited error-rate performance is maintained.
+Timing tests were performed on a GPU implementation, where it was found that the core rows take 20% of the execution time for R = 1/3. When the dynamic algorithm skips or repeats core rows this value is used to compute the ANI. The thresholds T1 to T5 were set to obtain generally good performance. The transition from EO to EC occurs when the LLR magnitude exceeds T1 = 6.0. The other transitions are based on percent parity-check error with T2 = T4 = T5 = 15% and T3 = 35%.
+Throughput performance is given in Fig. 2, which shows the average number of iterations vs. SNR for R = 1/2 with the largest codeword Z = 384. Compared to forward, the reverse schedule contributes approximately one ANI reduction at high SNR. The CO states further reduce the ANI by about 1.5. While at low SNR the EO state reduces ANI by up to 6.4. The combination of these states improves the ANI over the entire SNR range. Slow convergence further brings down ANI when decoding is unlikely. Although the decoder is allowed to reach Nit,max = 20, the ANI is always much lower, even in the waterfall region due to the CO state. Fig. 2 shows a reduction in ANI of 66% at −0.4 dB, 32% at 1 dB, 44% at 2 dB and 52% at 3 dB. At 2 dB, this corresponds to a throughput improvement of 1.8×.
+For R = 1/3 code in Fig. 3, the longest decoding latency, we make similar observations. The benefit of the ECC state is demonstrated, which provides up to 1 ANI reduction in the waterfall region. Fig. 3 shows a reduction in ANI of 76% at −1 dB, 37% at 0 dB, 52% at 1 dB and 62% at 2 dB. At 2 dB, this corresponds to a throughput improvement of 2.6×.
+We demonstrate that scheduling can enhance the error-rate performance under a limited number of iterations. Error-rate performance is compared for the top-to-bottom schedule and the bottom-to-top schedule when the number of iterations is limited to 10. Fig. 4 shows that there is approximately 0.08 dB performance gain using a bottom-to-top schedule. The reason for the gap is the small number of iterations. If the top-todown schedule is allowed an additional iteration, it matches that of the reverse schedule.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:41 UTC from IEEE Xplore. Restrictions apply.
+
+ˆx = arg min ∥y − ˆxi∥
+ˆxi ,i∈{1,...,L}
+BLER
+
+y xˆ1 yes xˆ1 · HT = 0?
+no
+
+xˆ1
+
+BP(H(π1, :))
+
+xˆ
+
+xˆ2 yes xˆ2 · HT = 0?
+
+xˆ2
+
+BP(H(π2, :))
+
+no
+
+y
+
+xˆL yes xˆL · HT = 0?
+
+xˆL
+
+BP(H(πL, :))
+
+no
+
+Fig. 5: Block diagram of the proposed ensemble decoding employing L parallel decoders. Inputs: 1-) received noisy codeword y, 2-) parity-check
+matrix H, 3-) ensemble (list) size L, and 4-) maximum number of BP iterations per component decoder Nit,max. Output: codeword estimate xˆ.
+
+IV. UNIVERSAL DECODING VIA SCHEDULING
+We make use of the existing LDPC BP decoders (e.g., flooding or row-layered) in an ensemble decoding fashion and make them suitable for general linear block codes [2]. The key advantage is that those LDPC decoders are already implemented on chip (i.e., used in CCSDS, 5G and many other communication standards) which makes it straightforward to realize. We reuse those already implemented decoders to build a unified decoding architecture to be used for general channel decoding purposes (i.e., not limited to LDPC codes).
+We use the concept of ensemble decoding [12], [13] to decode linear block codes. We have L parallel independent decoders yielding L estimated words. Then we have a decision block which picks one estimated codeword, based on some predefined metric, and declares it as the final output xˆ. Note that typically in an ensemble decoder the “picking” device only considers the valid codewords (i.e., all parity-check equations are satisfied, syndrome is zero, xˆ.HT = 0). An optimal decision block is used to pick the most probable codeword using an “ML-in-the-list” rule. For an additive white Gaussian noise (AWGN) channel, this boils down to picking the codeword estimate which is closest to the received noisy codeword y in terms of Euclidean distance (see Fig. 5). If no valid codeword is available, the decoder can directly declare a decoding failure (i.e., block error) and, if needed, picks the output xˆ according to a predefined metric, hoping to reduce the number of bits in error.
+In this work, we limit our algorithm to L parallel decoders such that L is a user-defined parameter which leads to a performance-complexity trade-off (i.e., increasing L leads to a better error-rate performance but with a higher complexity). The decoding latency is unchanged since we assume that all L decoders are independent and running in parallel.
+We realize this by having L parallel independent decoders where: decoder 1 is a flooding BP, decoder 2 is a row-layered BP with a top-to-bottom order of CN updates, and decoders {3, 4, . . . , L} employs row-layered BP with randomly permuted CN update orders. Note that any other LLR update schedule can be used (e.g., bottom-to-top schedule or columnlayered BP decoding). The aim is to increase the list diversity via scheduling which will enhance the decoder error-rate performance (“enhanced BP decoding by scheduling”). How-
+
+100 10−1 10−2 10−3 10−4
+
+AWGN channel
+
+Flooding BP Row-layered BP
+Ensemble Decoding (L = 8, Nit,max = 20)
+Rayleigh fading channel
+
+10−5 1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+Eb/N0 in dB
+
+Fig. 6: BLER results for the (N = 128, K = 64) 5G LDPC code (BG 2). All considered BP decoders use a maximum of 20 iterations each (Nit,max = 20), however, an early stopping condition is applied.
+
+ever, it might be worth to explore more optimized scheduling strategies. Furthermore, list diversity can be obtained by using any other decoder as a component decoder.
+The key idea is how to generate “diverse” codeword estimates from the L parallel decoders. We achieve this by changing the check node update order. Typically, a top-tobottom (row-by-row) update is employed. For a specific noise realization a specific update order might be better, and this is the property our proposed decoder is trying to exploit. Eventually, this means that one CN update schedule might be better for a specific noise realization than another. From a slightly different perspective, the individual CN update schedule performance per noise realization is different due to the different order of processing in the decoding graph. In other words, whenever decoding fails using a specific schedule, another schedule can be used until reaching a specific stopping condition [14]. This way, we can leverage a gain in errorcorrecting performance using an ensemble of BP decoders, without increasing the worst-case decoding latency.
+This ensemble decoding idea can be utilized in 1-) a serial fashion where a new decoder is invoked when the current decoder fails to converge to a valid codeword (i.e., we declare the first converged decoder output as the final decoder output) and 2-) an “afterburner” approach where multiple parallel decoders are invoked if and only if a single decoder with a single scheduling realization failed to converge to a valid codeword (i.e., start with a low-complexity decoder and trigger a higher complexity decoder “afterburner”, if and only if the low complexity decoder fails to converge). The previously mentioned approaches yields a performance-latencycomplexity tradeoff when compared to Fig. 5 approach.
+To highlight the performance gains due to the proposed enhanced decoding scheme, we restrict ourselves to conventional standardized code structures (or designs). All the presented error-rate performance gains are due to the proposed enhanced decoding algorithm, not to be confused with gains due to better code design which is not the focus of this work.
+We show some Monte-Carlo simulation results to highlight the error-rate performance enhancements due to applying the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:41 UTC from IEEE Xplore. Restrictions apply.
+
+proposed ensemble decoder when compared to the traditional decoding approaches. All BP decoders (with different schedules) are implemented as floating point SPA. The decoding iterations stops when all M check node equations are satisfied (i.e., xˆ.HT = 0) or when reaching the maximum number of allowed iterations Nit,max. However, other early stopping conditions can be applied straightforwardly.
+The proposed ensemble decoder reduces the error-rate performance gap between BP decoding and maximum likelihood (ML) decoding of the considered channel code. Fig. 6 shows the error-rate performance comparison for the considered BPSK-modulated (N = 128, K = 64) 5G LDPC code over:
+• an AWGN channel: up to 0.7 dB net coding gain is achieved at BLER of 10−3 when compared to conventional BP decoding;
+• an ergodic Rayleigh fading channel: up to 1.6 dB net coding gain is achieved at BLER of 10−4 when compared to conventional BP decoding.
+Along the lines of building a receiver with only one decoder hardware chip which can decode multiple different channel codes, we show results for the 5G polar code over an AWGN channel. First we find a sparse graph representation of the polar code which is suitable for BP decoding using the algorithms from [15]. We compare with the state-of-the-art decoder (i.e., SCL decoder with different list sizes). As shown in Fig. 7, for the considered 5G polar code, the error-rate performance of the proposed ensemble decoder (which is based on conventional BP/LDPC decoders) approaches the state-of-the-art (SCL) decoder performance (i.e., reducing the error-rate performance gap between BP decoding and ML decoding). Note that the proposed algorithm is directly applicable to any other Hadamard-based code (e.g., RM codes and polar codes with different frozen/non-frozen bit selection strategy). Obviously, the sparse graph representation (or decoding graph or Hmatrix) depends on the choice of the frozen/non-frozen bit pattern. Moreover, the proposed decoder is a soft-input/softoutput decoder which is optimal in an iterative receiver setup (e.g., iterative detection and decoding loops).
+The proposed decoder does not require a specific H-matrix structure, thus, can be applied to other linear block codes after finding a sparse graph representation. Examples include structured/unstructured LDPC codes (i.e., quasi-cyclic LDPC versus random sparse H-matrices), polar codes and RM codes. Note that LDPC and polar/RM codes co-exist in the 5G standard which renders the problem very relevant and attractive. Besides, future communication standards will rely on multiple channel codes and co-exist with the current standards, thus, receivers should support multiple systems (with multiple errorcorrecting codes) simultaneously. Thus, it might be preferable to work with a unified decoding hardware.
+V. CONCLUSIONS
+We propose a new scheduler to enhance BP decoding. Approximately 2× throughput is achieved via dynamic scheduling as compared to static scheduling. Furthermore, scheduling can enhance the error-rate performance of short-length LDPC codes, potentially paving the way for future research into
+
+10−1
+
+Flooding BP: Nit,max = 20
+Ensemble Decoding (L = 8, Nit,max = 200)
+
+BLER
+
+10−2
+
+SCL (L = 8)
+
+SCL (L = 32) ≈ ML bound
+
+10−3 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 in dB
+
+Fig. 7: BLER results for the (N = 128, K = 64) 5G polar code (no CRC is applied) over an AWGN channel. All considered BP decoders apply an
+early stopping condition.
+
+unified decoders for broader classes of linear block codes. This might be interesting in terms of reducing the hardware cost/area. Further investigations in the context of unified decoding are left as avenues for future research, including feasibility, complexity, scalability, and other challenges.
+
+REFERENCES
+[1] J. Ling and P. Cautereels, “Accelerating low-density paritycheck decoding via scheduling, and related devices, methods and computer programs,” Patent US 12,170,529 B1, May, 2023. [Online]. Available: https://patentimages.storage.googleapis.com/5b/02/ d2/fe532ff95f88b9/US12170529.pdf
+[2] A. Elkelesh, “Apparatus, method, and computer program,” Patent US 2025/0 070 813 A1, Aug., 2023. [Online]. Available: https://patentimages.storage.googleapis.com/06/88/b3/ 12256cfbf73533/US20250070813A1.pdf
+[3] T. Richardson and S. Kudekar, “Design of Low-Density Parity Check Codes for 5G New Radio,” IEEE Commun. Mag., Mar. 2018.
+[4] “Technical Specification Group Radio Access Network,” 3GPP, TS 38.212 V.15.1.1., 2018.
+[5] E. Arıkan, “Channel Polarization: A Method for Constructing CapacityAchieving Codes for Symmetric Binary-Input Memoryless Channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[6] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[7] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. Signal Processing Systems SIPS, Oct. 2004, p. 107–112.
+[8] L. Schmalen, “LDPC decoder,” EP European Patent Specification EP 2 833 553 B1, Mar., 2021. [Online]. Available: https://patentimages. storage.googleapis.com/4c/40/23/35f4d22eba280a/EP2833553B1.pdf
+[9] J. Frenzel, S. Mueller-Weinfurtner, J. Huber, and R. Mueller, “Static layered schedules and core-only parity check for the 5G new radio LDPC codes,” in ITG Conf. on Syst., Commun. and Coding (SCC), 2019.
+[10] S. Shao, Y. Zhang, R. G. Maunder, and L. Hanzo, “3D EXIT charts for analyzing the 5G 3GPP new radio LDPC decoder,” IEEE Access, 2020.
+[11] M. Ferrari, S. Bellini, and A. Tomasoni, “Safe early stopping for layered LDPC decoding,” IEEE Communications Letters, 2015.
+[12] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-Bases Belief-Propagation for Decoding of Short Block Codes,” in IEEE Inter. Symp. Inf. Theory (ISIT), Jun. 2007, pp. 311–315.
+[13] F. Krieg, J. Clausius, M. Ru¨benacke, and S. ten Brink, “A Comparative Study of Ensemble Decoding Methods for Short Length LDPC Codes,” in ITG Conf. on Syst., Commun. and Coding (SCC), 2025.
+[14] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “CRC-Aided Belief Propagation List Decoding of Polar Codes,” in IEEE Inter. Symp. Inf. Theory (ISIT), Jun. 2020.
+[15] S. Cammerer, M. Ebada, A. Elkelesh, and S. ten Brink, “Sparse Graphs for Belief Propagation Decoding of Polar Codes,” in IEEE Inter. Symp. Inf. Theory (ISIT), Jun. 2018, pp. 1465–1469.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:41 UTC from IEEE Xplore. Restrictions apply.
+
+

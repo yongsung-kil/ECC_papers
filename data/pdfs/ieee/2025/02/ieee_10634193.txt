@@ -1,0 +1,558 @@
+1100
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+Flash-Gen: Spatio-Temporal Generator for Flash Memory Systems
+Simeng Zheng , Student Member, IEEE, Chih-Hui Ho, Student Member, IEEE, Wenyu Peng, Student Member, IEEE, and Paul H. Siegel , Life Fellow, IEEE
+
+Abstract— Modeling spatio-temporal read voltages with complex distortions arising from the write and read mechanisms in flash memory devices is essential for the design of signal processing and coding algorithms. In this work, we propose Flash-Gen, a data-driven approach to generating flash memory read voltages in both space and time using conditional generative networks. This generative modeling method reconstructs read voltages from an individual memory cell based on the program levels of the cell and its surrounding cells, as well as the time stamp, in a time-efficient, resource-saving, and functioncomprehensive manner. We evaluate the model over a range of time stamps using the read voltage distributions, the cell level error rates, and the relative frequency of errors for patterns most susceptible to inter-cell interference (ICI) effects. We propose a flash system optimization procedure, referred to as the Flash-Gen coding workflow, that leverages reconstructed read voltages for the development of error correction codes (ECCs) and constrained codes. Experimental results demonstrate that the model accurately captures the complex spatial and temporal features of the flash memory channel. Flash-Gen coding workflow can effectively address a range of important tasks, including threshold determination, coding performance estimation, and pattern characterization.
+Index Terms— Flash memory system, generative modeling, spatio-temporal analysis, error-correction codes.
+I. INTRODUCTION
+NAND flash memory is a non-volatile data storage medium, widely utilized in consumer electronics and large-scale data centers [3]. The steady reduction in technology feature size and the increase in cell bit-density have been accompanied by diminished memory reliability and reduced device endurance. The distribution of read voltage levels corresponding to a program level is influenced by a variety of distortions. The distortions in NAND flash memory are manifold, including programming errors, inter-cell interference (ICI) due to parasitic capacitance coupling between adjacent
+Manuscript received 3 February 2024; revised 22 June 2024; accepted 2 August 2024. Date of publication 12 August 2024; date of current version 19 February 2025. An earlier version of this paper was presented in part at the 2023 Design, Automation & Test in Europe Conference & Exhibition (DATE) [DOI: 10.23919/DATE56975.2023.10137015]. The associate editor coordinating the review of this article and approving it for publication was J. Chen. (Corresponding author: Simeng Zheng.)
+The authors are with the Department of Electrical and Computer Engineering, University of California at San Diego (UCSD), La Jolla, CA 92093 USA (e-mail: sizheng@ucsd.edu; chh279@ucsd.edu; w6peng@ucsd.edu; psiegel@ucsd.edu).
+Digital Object Identifier 10.1109/TCOMM.2024.3442691
+
+cells, cell wear during program/erase (P/E) cycling, cell charge loss due to data retention, and program/read disturb effects.
+In order to compensate for the sophisticated noise and recover the stored bits in each cell, solid-state drives (SSDs), composed of a number of flash chips, incorporate advanced coding schemes within their controllers. Commonly used coding schemes in SSD controllers are error-correction codes (ECCs). Typical ECCs employed in flash controllers are Bose-Chaudhuri-Hocquenghem (BCH) codes and low-density parity-check (LDPC) codes [3], [14]. When bit error rate (BER) exceeds the maximum number of errors that ECC can correct, it becomes impossible to fully recover the read information, resulting in data loss. The endurance of an SSD is determined by the number of program/erase (P/E) cycles that can be performed without uncorrectable errors.
+Constrained codes are another type of coding scheme, which avoids patterns prone to errors caused by inter-cell interference (ICI) effects [9], [11], [12]. The primary cause of ICI stems from the charge propagation from cells programmed with high levels to neighboring cells programmed with lower levels.
+The characterization of complicated flash errors and the design of these reliability-enhancing coding algorithms rely upon a comprehensive understanding of the flash memory system. An accurate model of the channel is therefore an indispensable tool. Moreover, such a model can potentially obviate the need for hardware- and time-intensive data collection for use in evaluating and optimizing the coding algorithms.
+Several mathematical and machine learning models supported by empirical measurements or simulated voltages in flash memory have appeared in the literature. Cai et al. [4] model the voltage distribution in 2-bit per cell MLC flash devices as a Gaussian distribution. Parnell et al. [30] proposed a parameterized Normal-Laplace mixture model that more accurately describes MLC flash read voltage distributions. Luo et al. [25] proposed another accurate and computationally more efficient model for MLC flash, based on a modified version of the Student’s t-distribution and a temporal power law. Dong et al. [7] develop a mathematical model for the voltage distribution of a victim cell in the presence of ICI from neighbor cells. Statistical analysis of hard bit errors in [28] and [34] and characterization of dominant error patterns in [5] and [19] offer additional empirical understanding of flash memories.
+Machine learning has been exploited to model flash memory channels. Liu et al. [24] used a neural network (NN) to
+
+0090-6778 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1101
+
+model simulated read voltages as a function of P/E cycles for one individual program level in isolated MLC flash cells. Liu et al. [22] provided flash memory conditions to an NN to model voltage distributions for 3D NAND flash. Liu et al. [23] used a time-dependent NN to predict page error counts in TLC flash. Liu et al. [20] generated errors in 3D NAND flash using a conditional generative adversarial network (GAN) architecture.
+However, as effective as these mathematical or machine learning models have been in the scenarios to which they have been applied, none has provided an accurate model of both spatial and temporal characteristics of flash memory read voltages and none could serve as the basis for read channel design tasks such as read threshold optimization, error-prone pattern ranking, and performance evaluation of ECCs and constrained codes.
+Generative modeling has now become an important tool for analyzing both wireless communication systems and DNA storage systems. For example, Generative Adversarial Network (GAN) has been applied to capture the channel impulse response distribution in multi-input and multi-output (MIMO) wireless communication channel [27] and Variational AutoEncoder (VAE) is an essential model to reconstruct authentic communication signals [2]. GAN has also been used to learn the error statistics of a DNA storage channel and to provide a simulation tool for developing improved error-correction coding and DNA sequence recovery algorithms [16].
+In view of the demonstrated power of neural networks in learning complex multidimensional distributions, we propose the use of conditional generative nets as an approach to modeling flash memory read voltages in both space and time. The read voltages of each cell can be regenerated by the learned model from an array of program levels. We refer to this generative modeling method as Flash-Gen. We summarize our contributions in this work as follows:
+1) We propose a comprehensive, flexible, and data-driven Flash-Gen model to accurately reconstruct soft read voltages at each individual cell unit of flash memory. This machine learning approach can be flexibly applied to flash memories of any technology generation and chip feature size.
+2) We formulate a temporally controllable, conditional VAE-GAN network to regenerate cell read voltages from the program levels of an array of flash memory cells and a time stamp representing the P/E cycle count and the retention time.
+3) We propose the Flash-Gen coding workflow. This workflow simulates the “realistic” error correction environment with LDPC codes in an SSD controller and emulates multiple necessary steps in hard-decision and soft-decision decoding. It also estimates the relative frequencies of spatially-dependent and pattern-dependent ICI-induced hard read errors to help the design of constrained codes.
+4) We validate the proposed Flash-Gen on a 1X-nm, 3-bit per cell (TLC) NAND flash chip across various wear conditions. The evaluation metrics used to compare the model outputs to measurements include the read voltage
+
+Fig. 1. (Left) Example mapping of cell program levels to binary representations in TLC flash. (Right) Schematic diagram of a TLC flash memory block showing the 2-D array of cells connected in the horizontal direction by wordlines (WLs) and in the vertical direction by bitlines (BLs).
+distributions at different time stamps, the measure of central dispersion of different program levels, and the error counts of different program levels.
+II. FLASH MEMORY AND SPATIO-TEMPORAL NOISE
+A. Flash Memory Basics
+We start from the basic unit cell in a flash chip. Today’s flash memories are capable of storing single or multiple bits (e.g., 2 to 5 bits) per cell, where the n-bit strings correspond to q = 2n program levels. The cells are organized into an interconnected two-dimensional (2D) array, called a block, via horizontal wordlines (WLs) and vertical bitlines (BLs). The flash memory chip is composed of a collection of such blocks. In 3D NAND flash, these 2D arrays are stacked vertically to achieve larger volumetric density [21], [28]. Fig. 1 depicts a schematic diagram of a planar TLC flash memory block and an example of a Gray mapping from the q = 8 program levels to the corresponding data words of n = 3 binary digits.
+The basic unit of write (i.e., program) and read operations in flash memory is a page, corresponding to a logical bit position in a wordline of a block. We refer to the program level as PL and the soft read voltage level as VL. On the other hand, the basic unit of an erase operation is an entire block.
+In the program operation, we refer to the PLs of three consecutive cells along WLs or BLs as a pattern. As an example, in Fig. 1, the programmed levels PLi−1,jPLi,jPLi+1,j in WLs (i − 1), i, (i + 1) of BL j, correspond to bit strings “011”, “111”, “011”, which we associate with the pattern 707 in the vertical (BL) direction.
+B. Spatio-Temporal Characteristics
+Flash memory channels suffer from distortions of a spatiotemporal nature, where ICI effects correspond to spatial characteristics, P/E cycling noise and retention noise correspond to temporal characteristics.
+Spatial Effects: ICI refers to the phenomenon where programming of a cell induces changes in the voltage levels of neighboring cells within its block. In particular, the read voltage level of a cell programmed to a low level may
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1102
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+Fig. 4. Flash-Gen architecture: encoder, generator, and discriminator constitute the generative modeling architecture. Here, z is the latent vector; Time is the corresponding time stamp (P/E cycle count and retention time discussed in this project); PL is the array of program levels, VL is the array of measured read voltage levels, and VL is the reconstructed array of read voltage levels.
+
+Fig. 2. PDF visualizations of a 3D TLC NAND flash memory for measured voltage levels at no retention time, 3 months retention, and 1 year retention time when P/E cycle count is 10, 000 P/E. Solid curves, dotted curves, and dashed curves correspond to distributions of retention time 0 day, 3 months, and 1 year, respectively. Three brown vertical lines are the optimal read threshold between program level 6 (color black) and program level 7 (color orange).
+
+the optimal read thresholds between program levels 6 and 7 at the three retention timestamps are shown as brown vertical lines.
+The integrated distortions of spatial ICI and temporal P/E cycling errors can be observed in Fig. 3. As the P/E cycle count increases, the error rate is increasing. For an individual P/E cycle count, the cell errors are clearly affected by neighboring program levels. Pattern 707 in the BL direction is the most severely affected by ICI. Moreover, patterns 707, 706, and 607 in the BL direction are more error-prone than those in the WL direction.
+
+Fig. 3. Count of top error-prone patterns and level error rate at selected P/E cycles without retention. The error pattern counts are normalized by the count of pattern 707 in BL direction at 4000 P/E cycles.
+be inadvertently increased if its adjacent cells are programmed to high levels, i.e., when the programming pattern is high-low-high. As an example in Fig. 1, if we program a pattern PLi,j−1PLi,jPLi,j+1 = 707 in WL i or PLi−1,jPLi,jPLi+1,j = 707 in BL j in a TLC chip, the read voltage VLi,j may be increased by its high adjacent cells. During data detection, the recovered program level of the central “victim” cell may therefore be erroneously interpreted as an incorrect level. ICI typically differs in the WL and BL directions.
+Temporal Effects: P/E cycling gradually wears out the oxide layer of a cell. Data retention causes the programmed cell to diffuse electrons over time. As a result of these effects, the information stored in a cell can be misread. Fig. 2 shows the read voltage distributions of a commercial 3D TLC NAND flash memory corresponding to three retention timestamps at 10,000 P/E cycles. The retention noise systematically shifts the distributions for non-zero program levels and, therefore, the optimal read thresholds separating them, to lower normalized voltage values as the retention time increases. For example,
+
+III. FLASH-GEN FORMULATION
+We define the flash memory system as a communication channel. Program level PL is from channel input domain P and voltage level VL is from channel output domain V. The relationship between PL and VL can be represented as VL = F M (PL), where F M (·) : P → V denotes the flash memory channel.
+When program level PL is given, voltage level VLi,j will be corrupted by both temporal and spatial factors. Temporal distortions arise from repeated program and erase operations, as well as from the time delay between program and read operations. Spatial distortions are caused by problematic program patterns giving rise to ICI.
+In this section, we present the framework of our FlashGen model. As program levels from flash blocks and specific time stamps are provided, voltage levels can be sampled from Flash-Gen efficiently and accurately. We adopt a conditional VAE-GAN (cVAE-GAN) architecture [18] as the basis for our architecture. The network architecture is depicted in Fig. 4, where the fusion of the VAE [17] and GAN [8] can leverage the information from the latent space to produce high-quality and guarantee accurate reconstruction with the help of the discriminator. The spatio-temporal combination module incorporates temporal information, i.e., P/E cycles and retention into the voltage reconstruction. Our goal is to learn a mapping F M (·) between program levels and soft read voltage levels at various time stamps, where the reconstructed voltage levels accurately reflect the spatial and temporal nature of the channel.
+A. Flash-Gen Architecture Formulation
+Given program level PL ∈ P, read voltage level VL ∈ V, temporal factor time stamp representing P/E cycle count TP/E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1103
+
+and the retention time Tγ, we aim to learn the analytically intractable likelihood P (VL|PL, TP/E, Tγ), with the goal of capturing the spatio-temporal nature of the flash memory channel.
+Fig. 4 summarizes the architecture of our Flash-Gen. The conditional VAE-GAN architecture consists of three components: an encoder (Enc), a generator (Gen), and a discriminator (Dis). The encoder maps the read voltages to the latent vector z at a specific TP/E cycle count and retention time Tγ and replaces the prior distribution P (z) in the GAN with the learned posterior distribution P (z|VL, TP/E, Tγ). The decoder in the VAE shares its weights with the GAN generator [8]. In the conditional setting, the variational lower bound of P (VL|TP/E, Tγ) can be derived as
+log P (VL|TP/E, Tγ )
+≥ −DKL(Q(z|VL, TP/E, Tγ )||P (z|TP/E, Tγ ))
++ EQ(z|VL,TP/E,Tγ )[log(P (VL|z, TP/E, Tγ ))],
+where DKL represents the Kullback-Leibler (KL) divergence. The distribution Q(z|VL, TP/E, Tγ) of the latent vector z is trained to approach P (z|TP/E, Tγ) via the KL loss LKL, where P (z|TP/E, Tγ) is assumed to be a multivariate Gaussian distribution.
+Generator will take both the learned latent vector and PL as input and generate a “fake” VL. The latent vectors are sampled from Q(z|VL, TP/E, Tγ) using the re-parameterization trick [17]. When sampling different latent vectors z from the same distribution, we can generate multiple arrays of plausible voltages levels. The variations in these output arrays for a given array of program levels reflect the stochasticity of the channel. The discriminator measures the difference between PL and VL. The loss in the conditional GAN part is
+
+LGAN = log(1 − Dis(PL, Gen(PL, TP/E, Tγ, z))) + log(Dis(PL, VL)).
+
+Similar to VAE-GAN [18], we encourage the reconstructed voltage levels to match the authentic voltage levels, using the ℓ2-norm to measure the reconstruction loss
+
+Lrecon = ||VL − Gen(PL, TP/E, Tγ , z)||2.
+
+Combining these equations, we formulate the loss function of the cVAE-GAN architecture as
+
+min max LGAN + αLrecon + βLKL.
+
+(1)
+
+Gen,Enc Dis
+
+B. Spatio-Temporal Fusion
+To capture the spatial ICI effects in the channel model, we implement the generator using a convolutional neural network (CNN), where VL is reconstructed from the PL values in its cell and neighboring cells. To generate VL at an explicit time stamp, we control the generator with an additional temporal factor and incorporate the time stamp into generator Gen.
+In order for generator to be aware of time stamps, we inject some encoded information about the time inputs. There are many choices of value expressions. We represent the time inputs as a d-dimensional vector using powers or exponential
+
+values. We encode the expressive powers, e.g.,
+
+TnP2o/Erm, √aliTzPe/dE,
+
+P/E etc.
+
+cycle count using The d-dimensional
+
+vector of P/E cycle can be formulated as [TP0/.E5, TP1/E, TP1/.E5, . . .].
+
+Inspired by the modeling of retention noise in [19], we repre-
+
+sent the normalized retention time using various exponential values e−νTγ , where ν is a constant parameter. The encoded vector can be presented as [e−1Tγ , e−0.75 Tγ , e−0.5 Tγ , . . .].
+
+We illustrate the fusion mechanism in generator using
+
+controllable P/E cycle count. We first encode the normalized
+
+P/E cycle count into a d-dimensional P/E vector, which
+
+contains expressive powers of the normalized P/E cycle. Then,
+
+we spatially replicate the d-dimensional P/E vector to the
+
+feature map with appropriate size H × W × d and concatenate
+
+it with the H × W × C feature from each layer in Gen, where
+
+H × W is the spatial dimension of the feature from each
+
+convolutional layer and C is the number of channels in the
+
+CNN. The channel-wise fusion produces the final feature with
+
+size H ×W ×(C +d) of each layer. The fusion of the features
+
+from the program levels and the P/E feature maps guarantees
+
+the spatial-temporal characteristics of the reconstructed voltage
+
+levels. The controllable retention time shares the same fusion
+
+architecture with different encoded time vectors.
+
+C. Implementation Details
+Datasets: We validate the proposed Flash-Gen using datasets collected from one commercial 1X-nm TLC flash chip. We prepare two datasets for verification: P/E cycling dataset and retention dataset. We conduct the P/E cycling experiment by erasing a block, programming pseudo-random data, and reading voltage levels at selected P/E cycle counts with fixed retention time. We record the {PL, VL} dataset at selected P/E cycles 4000, 7000, and 10000 with immediate reads. For the retention datasets, we repeatedly erase and program blocks with pseudo-random data to predefined P/E cycle counts, and read voltage levels after a certain retention time at room temperature. We record the {PL, VL} dataset at 4000 P/E cycles with 0 retention time, τ retention time, and 2τ retention time.
+In order to fit blocks of recorded data into the network architecture, we crop the {PL, VL} pairs of the recorded blocks into non-overlapping 64×64 2-D arrays. In P/E cycling dataset, the number of 2-D arrays in the training set is 1.5×105 (5 × 104 for each P/E cycle) and the size of the evaluation dataset is 2.1 × 104 (7 × 103 for each P/E cycle). In retention dataset, the number of 2-D arrays in the training set is 9 × 104 (3 × 104 for each retention time) and the size of the evaluation dataset is 2.1 × 104 (7 × 103 for each retention time).
+Network: The three network modules in Fig. 4 refer to: ResNet [13] (Enc), U-net [32] (Gen), and PatchGAN [15] (Dis). The dimensions of latent vector z and time vector are both set to 6. The following descriptions of the modules exploit the terminologies in the corresponding references.
+1) Encoder: We use the two residual blocks, each of which contains two 3×3 convolutional layers with stride 1 and padding 1. We then add two linear layers, which map output features to mean and variance for the latent vector.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1104
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+2) Generator: Ck denotes a Convolution-BatchNorm-ReLU layer with k output channels. All convolutions are 4 × 4 kernels applied with stride 2 and padding 1. The network architecture before spatio-temporal fusion can be described as
+
+(Down Part) C64, C128, C256, C512, C512, C512, (Up Part) C512, C512, C256, C128, C64, C1.
+
+where we inject latent vector z by replication and concatenation into every layer in the “Down” part [39], and each layer in the “Up” part receives skip connections from the corresponding layer in the “Down” part [32]. 3) Discriminator Dis: The input to the discriminator is the concatenation of fake voltage levels and program levels. With the same naming convention as in the generator, we express the discriminator as C64, C128, C1.
+We compared the cVAE-GAN model to other popular generative modeling architectures: conditional GAN [15], conditional VAE [33], and Bicycle GAN [39]. When we compare the total variational distance of voltage distributions between measured data and sampled data from the evaluation dataset, the cVAE-GAN model reconstructs the read voltage levels with the highest quality. The numerical results of comparison are not included due to the space limitation.
+Remark 1: Flash-Gen can be generalized to any multilevel flash device, including 3D NAND flash. Like planar NAND flash, 3D NAND flash suffers severe distortions, including P/E cycling, retention noise, and ICI, as well as layer-to-layer interference [20], [28]. When programming data in one layer, the neighbor top/bottom layer suffers a significant threshold voltage shift [29], [36]. In order to characterize this layer-tolayer interference in 3D flash, we can crop the 3D arrays of collected {PL, VL} pairs and modify the Flash-Gen network realization to include 3D convolutional networks in all of the modules.
+Learning: We trained Flash-Gen models given dataset from scratch. We settled upon the training parameters after several experiments. Adam optimizer is used with learning rate 2 × 10−4. Parameters in the loss function (1) are set to α = 10 and β = 0.01. The P/E cycling Flash-Gen is trained with recorded {PL, VL} dataset at P/E cycle counts 4000, 7000, and 10000. The total number of iterations is 5.25 × 105 for P/E cycling Flash-Gen and the batch size is 2. The retention Flash-Gen is trained with a dataset reflecting retention times 0, τ , and 2τ , where τ is chosen to observe noticeable differences in level distributions at the three time stamps. The total number of iterations number is 6.3 × 105 and the batch size is again 2.
+During evaluation, we use program levels and latent vector z sampled from a standard multivariate Gaussian distribution. For each program level array, we sample 10 different latent vectors to evaluate the learned model.
+Time: A major benefit of Flash-Gen is observed by comparing the measurement time from the real chip and the inference time of Flash-Gen. When we collect one block of data at selected P/E cycles with no retention age, it requires approximately 4 hours on our FPGA-based platform and the block cannot store information for further usage due to the
+
+Fig. 5. Flash-Gen coding workflow: Flash-Gen serves as a database to provide unlimited accurate {PL, VL} pairs for coding techniques. We propose error correction coding flow with both hard-decision decoding mode and soft-decision decoding mode and constrained coding flow.
+high error rates. The retention datasets require waiting time to record voltage levels. However, in the Flash-Gen, the data generation of one block can be completed within 400 seconds under CPU mode (Intel i7-9700K, 3.60GHz×8) and no flash block is wasted.
+IV. FLASH-GEN CODING WORKFLOW
+Preserving data integrity in NAND flash involves dealing with temporal and spatial distortions. Coding is a powerful technique for mitigating, detecting, and correcting errors in data storage. Designing appropriate coding schemes takes several factors into consideration, like error correction capability, storage overhead, and read latency. To search for optimal coding design, a large number of experiments regarding threshold determination and code optimization are needed, which consumes excessive time and hardware resources. Read voltages sampled from classical mathematical distributions or generated by machine learning-based models do not accurately reflect the spatio-temporal characteristics of flash memory channels.
+Therefore, we propose the Flash-Gen coding procedure. Flash-Gen coding workflow simulates three practical coding applications: hard-decision decoding of LDPC codes, soft-decision decoding of LDPC codes, and optimization of constrained codes. The detailed task modules are illustrated in Fig. 5. Our applications are not limited to these three coding tasks and can be extended to other signal-processing scenarios. For example, reconstructed {PL, VL} containing spatio-temporal information can help the design of maximum a posteriori (MAP) and Gaussian approximation (GA) detectors [1].
+A. Flash-Gen LDPC Coding Workflow
+We first discuss the use of Flash-Gen in the evaluation of ECCs, specifically, LDPC codes. Modern flash devices employ advanced ECCs within their controllers to detect and correct a number of errors when data is read out from flash memory. A stronger ECC can tolerate more errors but consumes more power and latency.
+We briefly overview the two stages of error correction and their related data recovery tasks [3]: 1) Hard-decision decoding: The flash chip reads each page using the set of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1105
+
+hard thresholds, where the flash chip compares the read voltage with thresholds and determines the read bit for each page. Then ECC decoder performs the hard-decision decoding process on the read bits. If the decoder succeeds in correcting all errors, the controller transmits the data to the host. Otherwise, the SSD controller steps into the more powerful second stage, which is soft-decision decoding. The main tasks in hard-decision decoding include threshold determination and decoding performance estimation; 2) Soft-decision decoding: The chip employs multiple thresholds between adjacent program levels during the read process, yielding soft information for each cell. The soft information, referred to as a log-likelihood ratio (LLR), estimates the posterior probability of a specified page bit being 0 or 1, given the read voltage. Since more read threshold comparisons lead to more fine-grained read information, the strength of soft-decision decoding relies on the number of read thresholds. The main tasks consist of LLR value computation, soft-decision threshold determination, and decoding performance estimation.
+These ECC-related tasks rely on prior information regarding the flash memory channel and research on ECCs requires a huge amount of realistic readback signals. The Flash-Gen model is a natural candidate to assist and supplement the coding optimization functions, including estimating the complicated channel information and reducing heavy measurement workloads.
+We now describe the Flash-Gen LDPC coding workflow to simulate the LDPC decoding procedure in flash devices, as represented schematically in Fig. 5. We formulate our approach using a TLC flash chip with q = 8 program levels. The learned Flash-Gen can generate unlimited pairs of {PL, VL}. We concatenate those 64 × 64 2-D arrays and reconstruct the flash blocks. The probabilities at the cell level can be expressed as
+
+P (PL = pl, VL = vl) = P (PL = pl) =
+P (VL = vl|PL = pl) =
+
+N (pl, vl) ,
+pl∈P vl∈V N (pl, vl) vl∈V N (pl, vl) ,
+pl∈P vl∈V N (pl, vl) N (pl, vl)
+, vl∈V N (pl, vl)
+
+where N (pl, vl) counts the number of cells with the program level pl and voltage level vl and pl∈P vl∈V N (pl, vl) represents the total number of reconstructed cells. Conditional probability P (VL|PL) is calculated from the first two probabilities.
+In the hard-decision decoding stage, we design the read simulator to perform read threshold optimization and process operation for each cell. The hard read bits are determined by comparing the voltage level VL to the thresholds. The set of hard read thresholds is presented as THH = {THH,k : k = 0, 1, . . . , q − 2} ⊆ V, where THH,k is the threshold to distinguish read bit between program level k and k + 1. For instance, there is an error if a voltage level of 1 lies below THH,0 or above THH,1. We compute the level error probability LER of PL = 7 and PL = 1 as
+
+LER(THH , PL = 1)
+
+= P (VL < THH,0|PL = 1) + P (VL > THH,1|PL = 1)
+
+= vl<THH,0 N (PL = 1, vl) + vl>THH,1 N (PL = 1, vl) .
+
+vl∈V N (PL = 1, vl)
+
+vl∈V N (PL = 1, vl)
+
+We can compute the total level error rate as LER(THH ) = pl∈P LER(THH , PL = pl). The bit error rate BER(THH )
+will be converted from level errors by the label mapping in
+Fig. 1. To find the optimal read threshold for hard-decision
+decoding, we minimize the bit error rate of the read operation
+
+TH∗H = arg min BER(THH ).
+
+(2)
+
+THH
+
+Using the optimal read threshold, data are read from each
+
+cell and controller performs hard-decision decoding on the
+
+noisy data.
+
+In the soft-decision decoding phase, we formulate the
+
+modules of LLR processor and LLR mapper. LLR processor
+
+determines the number of thresholds between two adjacent
+
+program levels and optimizes the threshold positions. The set of soft read thresholds can be denoted as THS = {THS,k : k = 0, 1, . . . , (q − 1) ∗ l − 1} ⊆ V, where l is the number of
+
+reads between two program levels. If the number of reads is 1,
+
+the soft read voltage VLS is equal to the hard read voltage VLH . The additional number of reads l adds more accurate information about the program level and enhances the power
+
+of the LDPC decoder. We present the transition probability
+
+between two soft thresholds as
+
+P (THS,k ≤ VL < THS,k+1|PL = pl) = THS,k≤vl<THS,k+1 N (PL = pl, vl) .
+vl∈V N (PL = pl, vl)
+We find the optimal placement of the soft threshold by maximizing the mutual information of the flash memory channel [31], [35]. The mutual information between program level PL and voltage level VL is given by
+
+MI(THS) = I(PL, VL) = H(VL) − H(VL|PL)
+
+(q−1)∗l
+
+(q−1)∗l
+
+(q−1)∗l
+
+= H(
+
+p0,k ,
+
+p1,k, . . . ,
+
+pq−1,k )
+
+k=0
+
+k=0
+
+k=0
+
+−
+
+q−1 pl=0
+
+pplH
+
+(
+
+ppl,0 ppl
+
+,
+
+ppl,1 ppl
+
+,
+
+.
+
+..
+
+,
+
+ppl,(q−1)∗l ppl
+
+),
+
+where H is the entropy function. the transition probability ppl,k represents P (THS,k ≤ VL < THS,k+1|PL = pl) and ppl,(q−1)∗l is P (THS,(q−1)∗l−1 ≤ VL|PL = pl). The probability of each level ppl is expressed as P (PL = pl).
+The optimization of soft thresholds THS can be formulated as
+
+TH∗S = arg max MI(THS).
+
+(3)
+
+THS
+
+After determining the positions of soft thresholds, we need
+
+to compute the LLR values for each cell based on its voltage
+
+region. SSD controllers commonly establish an LLR table
+
+by utilizing either previously collected data or mathematical
+
+modeling distributions like the Gaussian model. However, LLR
+
+tables might not provide a precise and timely representation
+
+of the channel information. In the LLR mapper module, the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1106
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+Flash-Gen model can be used to compute the LLR values at runtime,
+
+P (B(P L) = 0|VL) LLR(vl) = log
+P (B(P L) = 1|VL)
+
+= log B(pl)=0 N (PL = pl, vl) ,
+
+(4)
+
+B(pl)=1 N (PL = pl, vl)
+
+where B(.) maps the program level to the information bit on the corresponding page.
+According to our designed soft-decision decoding procedures, we process streaming {PL, VL} pairs to generate soft LLRs. In the LDPC decoding module, we assume the LDPC codeword is all 0. We then rewrite (4) as
+
+P (0 + B(P L)|VL)
+
+LLR(vl) = log
+
+.
+
+P (1 + B(P L)|VL)
+
+If the bit value for a page is 1, denoted as B(P L) = 1, then the LLR for the cell is −LLR(vl). If B(P L) = 0, the LLR for the cell is LLR(vl). The computed LLRs for each cell are computed and sent to the LDPC decoder as the flash memory channel output. If the output of the LDPC decoder is all 0 within a specified number of decoding iterations, we declare the decoding process successful; otherwise, we declare a decoding failure. We evaluate the LDPC coding workflow using both measured datasets and generated datasets in Section VI-A, where we use both measured and reconstructed sequences for read threshold determination, hard and soft information calculation, and LDPC decoder simulation.
+Remark 2: The complexity of computing optimal read thresholds is an exponential function of the number of possible quantized voltage levels, where the exponent depends on the number of program levels. In practice, we simplify the calculation of read thresholds for both hard-decision and soft-decision detection and decoding. First, we optimize thresholds for each page separately. For example, in the mapping of Fig. 1, for the middle page, we optimize the hard-decision thresholds between program levels 5 and 6, and program levels 1 and 2. Second, we narrow down the search space. Specifically, we search over only the voltage levels near the default hard-read thresholds (provided by the vendor) for each page. The reduced search range around each default threshold is substantially smaller than the whole range of possible threshold values. For soft-decision decoding, we exploit the observation that soft-decision thresholds are typically symmetrically positioned on the two sides of the hard-decision threshold. Experiments show that this procedure yields threshold sets that almost match those obtained by joint optimization of all thresholds over the entire range of quantized voltages.
+We summarize the advantages of the Flash-Gen LDPC coding workflow as follows: 1) Flash-Gen greatly saves time and hardware resources in ECC performance evaluation and optimization. An essentially unlimited supply of {PL, VL} pairs provides the opportunity to optimize code designs, read strategies, and decoding algorithms without any on-device operations. 2) “Realistic” {PL, VL} pairs for each cell provide more authentic simulations for coding schemes than read voltages generated using mathematical models or previously proposed machine-learning models.
+
+B. Flash-Gen Constrained Coding Workflow
+ECC schemes have been employed to ensure the reliability of flash memory. However, spatio-temporal distortions of flash memory channels possess an asymmetric nature. ECC schemes assuming an underlying symmetric noise distribution may not be the most efficient approach. According to the spatio-temporal understanding of the dominant errors by Flash-Gen, it is crucial to design targeted coding schemes to combat dominant errors in flash memory. Constrained coding, by forbidding severe error-prone patterns, is an ideal candidate to mitigate the ICI effects. The key step of designing constrained codes is to determine the set of patterns that need to be forbidden. However, as the wear condition changes in the flash device and the binary representation of program levels is vendor-dependent, it is hard to design a universal constrained code suitable for the entire lifetime of a flash device.
+We propose the Flash-Gen constrained coding workflow to address this design problem. We first apply the pattern ranker module, which arranges the pattern-dependent probabilities in descending order. Then, the constraint designer module will select the most error-prone patterns to formulate coding schemes. Based on the two-dimensional structure in Fig. 1, we examine the errors associated with program level patterns PLi,j−1PLi,jPLi,j+1 in the WL direction and PLi−1,jPLi,jPLi+1,j in the BL direction. As we observed from our experiments, severe ICI errors follow the highlow-high program level pattern. We consider the problematic patterns with a central victim cell as 0 and calculate the pattern-dependent error probabilities in WL and BL directions as
+
+P (PLi,j−1, PLi,j = 0, PLi,j+1|VLi,j > THH,0, PLi,j = 0)
+
+=
+
+vl>THH,0
+
+N (PLi,j
+
+=
+
+0, vl|PLi,j−1, PLi,j+1) ,
+
+vl>THH,0 N (PLi,j = 0, vl)
+
+P (PLi−1,j , PLi,j = 0, PLi+1,j |VLi,j > THH,0, PLi,j = 0)
+
+=
+
+vl>THH,0
+
+N (PLi,j
+
+=
+
+0, vl|PLi−1,j , PLi+1,j ) ,
+
+(5)
+
+vl>THH,0 N (PLi,j = 0, vl)
+
+where N (PLi,j = 0, vl|PLi,j−1, PLi,j+1) and N (PLi,j = 0, vl|PLi−1,j, PLi+1,j) count the number of cells with program level 0 and voltage level vl given the condition on the program levels on its neighboring cells.
+We illustrate the pattern-dependent probabilities using our TLC flash device. We have 64 combinations of neighboring program levels of a given cell in both the WL and BL directions. Once we rank the pattern-dependent probabilities, we can summarize the most severe patterns and propose targeted constrained coding scheme for flash device. Examples illustrating the determination of problematic patterns and the design of constrained codes can be found in [10] and [11].
+
+V. STATISTICAL ANALYSIS OF FLASH-GEN
+During the inference process using the evaluation dataset, we denote recorded pairs {PL, VL} from the flash device as our measured data and denote the reconstructed pairs {PL, VL} from Flash-Gen as the generated data. To evaluate the quality of the reconstructed voltage levels and analyze the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1107
+
+spatio-temporal nature of flash memory system, we discuss the regenerated VL using the following statistical metrics:
+1) Distribution: The frequency of occurrence of each voltage level given the program level, P/E cycle count, and retention time is used to estimate the conditional probability of that level and time stamp. We visualize the PDFs for measured data and reconstructed data. In addition, we analyze the time variations in the mean and standard deviation values with respect to some program levels.
+2) Error count: We compare the generated read voltages with fixed thresholds to determine the read levels and then compute the level error rate for each program level. For quantitative comparison, we compare the read voltages generated by our data-driven method with three statistical fitting methods [25], using the metric of level error rate LER for both the P/E cycling dataset and the retention dataset.
+A. Distribution Analysis
+As we evaluate our learned model using input arrays of program levels, we collect regenerated voltage levels and count the frequency of occurrence of voltage levels over the voltage range. We then estimate the PDFs P (PL = pl, VL = vl) of voltages associated with each program level and given P/E cycle and retention time.
+Fig. 6 shows the conditional PDFs for measured data and regenerated data in two evaluation datasets at six different time stamps. The x-axis represents the soft read voltages spanning a certain voltage level range. The y-axis represents the conditional PDF. We only show conditional PDFs from program level 1 to 7 since all the read voltages below the first program threshold are mapped to a fixed value. Despite that fact, we are still able to discuss pattern-dependent errors involving program level 0 in Section VI-B.
+We obtain three findings from Fig. 6. First, our regenerated data (dashed curves) generally fit the measured data (triangle markers) in PDF views and capture the dependence on both temporal factors. The occasional discrepancies in the peak, especially in the plot of 4000 P/E cycles and 0 retention time, do not affect the error analysis of tails in the following parts. The fitted distributions of generated data over higher P/E cycles or larger retention time indicate the precise control of temporal characteristics in Flash-Gen. Second, the peak of the distribution in each program state drops and the distribution becomes wider as the wear condition becomes severe. The wider distributions indicate that more voltage levels exceed the read thresholds and then more errors will be detected. Increasing the number of P/E cycles and increasing the delay between program and read operations lead to an increase in the probability of error. Device lifetime and reliability are both adversely affected. Third, under retention disturbance, the distributions of high program levels shift to lower values of voltage level, and the read voltage distributions of all levels become wider.
+In Fig. 7, we explore the statistical performance of those measured and learned distributions. We plot the means and
+
+standard deviations of distributions P (PL = pl, VL = vl) of three program levels as time stamps increase. In all subfigures, we find that trends of Flash-Gen almost match the changes in measured distributions, with some discrepancies in specific values. These matching changes reflect how our Flash-Gen captures the temporal variations in each program level.
+The mean values in the first row of subfigures represent the centers of the distributions for the corresponding program levels and time stamps. For all three program levels, the mean values fall within a voltage interval of width 20, with distinct endpoints for each program level. The mean values remain the same as the P/E cycling increases. However, the average values drop significantly under retention noise, which is consistent with our observations in distribution curves in Fig. 6. The mean values in high program levels like PL = 7 experience a greater decrease compared to those in low program levels like PL = 2. The reason is that the high program levels experience a more rapid leakage of electrons present in the floating gate than the low program levels. As we set a longer retention time, voltages in high program levels leak faster than those in low program levels and we find a larger drop in those mean values.
+The standard deviation of each program level reflects the width of each distribution. As the curve becomes wider and wider, more voltage levels will exceed the read thresholds and will be designated as errors. In the second row of Fig. 7, we can find that the standard deviation of each program level increases monotonically with both P/E cycle count and retention time. In the next subsection, we will explore how error rates change as timestamps vary.
+B. Error Rate Estimation
+Accurate estimation of error count is essential in the design of wear leveling and ECC algorithms for NAND flash. For a more quantitative assessment of error count, we compare our generative model with measured data and three stateof-the-art statistical models using the metric of error count: Gaussian model [4], Normal-Laplace model [30], and Student’s t-distribution model [25]. As far as we know, our proposed machine learning method is the first approach to provide accurate estimation of two-dimensional pattern-dependent and time-dependent errors. Following the optimization process used in [25] for an MLC flash device, we fit those statistical distributions to our TLC measured distributions. We minimize the KL divergence between real distribution Preal and fake distribution Pfake by using the Nelder-Mead simplex method [26], where the KL divergence is denoted as DKL(Preal, Pfake). We obtain the best-fit parameters for all program levels, except PL = 0, with each of the statistical distributions.
+We then compute the level error counts under each of the distributions and quantitatively compare those fake distributions with real distributions, where the error count is a measure of the reliability and endurance of the flash memory. To calculate the level error rates from distributions, we fix 7 default read thresholds, as shown by the dash-dotted vertical lines in Fig. 6. The hard read voltages are determined by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1108
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+Fig. 6. PDF visualizations for measured and Flash-Gen generated voltage levels at various time stamps: 4000, 7000, and 10000 P/E cycles; 0, τ , and 2τ retention time. The first row of subfigures corresponds to the P/E cycling dataset and the second row corresponds to the retention dataset. In each subfigure, dashed curves represent the Flash-Gen modeled distribution, and triangle markers represent the measured distribution, where the plots are in linear scale. Vertical dash-dotted lines are fixed default voltage thresholds.
+
+Fig. 7. Change in mean and standard deviation values for PL at 2, 5, and 7 when P/E cycle count or retention time increases. The first row of subplots presents the mean changes on increasing time stamps and the second row presents the standard deviation values on increasing time stamps. The first two columns are statistics for PL = 2, the middle two columns are PL = 5, and the last two columns are PL = 7. The odd column depicts the variations in P/E cycles and the even column depicts the variations in retention data. In each plot, solid curves with triangle or circle markers are measured data and dashed curves with square or star markers are Flash-Gen data.
+
+Fig. 8. Total error rates of measured (‘M’), Flash-Gen (‘F-G’), Gaussian (‘G’), Normal-Laplace (‘NL’), Student’s t (‘S-t’) model. The left subfigure is error rates versus P/E cycle count and the right subfigure is error rates versus retention time. In each bar, we stack the errors from program level 1 to program level 7. We normalize the error counts of measured data at 4000 P/E cycle as 1.
+comparing soft voltages to these thresholds. We follow the procedure for the computation of LER in Section IV-A and represent the LER of the five models in Fig. 8.
+In Fig. 8, the x-axis represents the chosen P/E cycle count or retention time, and the label directly under each bar represents
+
+the corresponding model name. The y-axis corresponds to the normalized error count. At each timestamp, for each model, the errors from 7 program levels are stacked as one individual bar. The stacked bar represents the total level error rate. We first discuss the measured distributions. Under P/E cycling noise, the total level error rate at 10000 P/E cycles is around 2.5× that at 4000 P/E cycles. LER is increasing when more P/E operations are performed, aligning with our observations in distribution curves and standard deviation. PL = 1 has the highest error rate. Under retention noise, the total LER has a substantial increase. LER at τ retention is about 5× larger than that at zero retention and at 2τ retention it is nearly 7× larger than that at zero retention. In the bar plots, high program levels produce more errors than low program levels. These observations can be explained by the shifted and wider distributions in Fig. 6. The high error rates observed due to retention distortion confirm that a static set of read thresholds may not be the optimal choice over the entire lifetime of SSDs. These observations on level error rate motivate the investigation of optimal threshold determination and LDPC decoding performance under different P/E cycle counts and retention times.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1109
+
+For the statistical distributions, we observe that the Gaussian model underestimates the error rates in each time stamp; this is because the tails in the actual distribution are becoming heavier as the operating conditions of the device become more severe. The Normal-Laplace model, on the other hand, takes the heavier tails into consideration and provides accurate estimations of error counts at each P/E cycle. Under retention noise, the Normal-Laplace model performs well for retention time τ but does not estimate well for retention time 2τ . Student’s t-distribution, the best mathematical model under retention distortion, still underestimates at the retention time 2τ .
+For the machine learning approach, Flash-Gen produces more errors than the measured data at 4000 P/E cycles and slightly overestimates the wear conditions in 7000 and 10000 P/E cycles. Flash-Gen can provide accurate estimations of errors under retention distortions, even if the model comes with a slightly higher LER. In conclusion, Normal-Laplace is the best statistical model to capture the distributions of flash devices, except when dealing with high retention time. Our Flash-Gen works better than Normal-Laplace at 7000, 10000 P/E cycles, and τ , 2τ retention time but overestimates the errors at 4000 P/E cycles. A key observation is that the data-driven approach can effectively model channels under severe wear conditions, like 2τ retention time, an advantage not typically presented by mathematical models.
+VI. PERFORMANCE OF FLASH-GEN CODING WORKFLOW
+In this section, we discuss the performance of the Flash-Gen coding workflow when we employ practical LDPC codes and determine problematic patterns in flash devices. We will present the result of simulations of frame error rates (FERs) under multiple scenarios and pattern-dependent ratios by utilizing our Flash-Gen coding workflow.
+A. LDPC Decoding Performance
+In our experiments, we generate around 10 MB of data from our Flash-Gen with selected time stamps and measure about 4 MB of data from the flash chip with more time stamps. We first find the optimal hard thresholds THH∗ by minimizing BER of generated distributions from Flash-Gen and measured distributions from chips. We then select the optimal soft read thresholds TH∗S and process LLR information for each cell using LLR Processor and LLR Mapper in our LDPC coding procedure. In the following experiments, we use two read thresholds per program level in soft-decision decoding. We then feed the acquired information to the LDPC decoder and observe the decoding performance.
+The two LDPC codes are designed based on [14], where the coding rates are approximately 0.94 and 0.90. The length of both codes is 8192. We set the number of decoding iterations to 50. If, after 50 iterations, the LDPC decoder does not decode to the all 0 codeword, we declare a decoding failure. The reconstruction of each cell ensures the authenticity of experiments, setting apart our Flash-Gen from other distribution-based modeling approaches. We map the real or fake voltage levels to their binary representations on three
+
+pages and divide each page into several frames based on the code length. The decoder is based upon the belief-propagation decoding algorithm, implemented in software as the floatingpoint sum-product decoding method.
+The FER performance in all three pages regarding measured data and Flash-Gen reconstructed data is shown in Fig. 9, where the left figure shows the results for P/E cycling and the right figure shows the results for retention. We first discuss measured data under stressful P/E cycling noise. The rate0.90 LDPC code performs better than the rate-0.94 code and soft-decision decoding extends the lifetime compared to harddecision decoding. High-rate codes use fewer parity check bits in error correction and thus provide relatively worse FER performance. The soft-decision decoder utilizes more accurate information regarding voltage levels and produces lower FER compared to hard-decision decoding. Specifically, when FER = 4 × 10−1, rate-0.94 code in soft-decision decoding achieves a gain of about 2800 P/E cycle compared to the same code in hard decoding mode. At the same FER, the rate-0.90 code achieves a gain of about 2700 P/E cycles over the rate-0.94 code under soft-decision decoding. For the rate0.90 code, soft-decision decoding provides a gain of about 1500 P/E cycles over hard-decision decoding. Flash-Gen FER values are not shown in Fig. 9 for the combinations of code rate, type of decoding, and P/E cycle count for which we found that the FER was essentially equal to 1 with measured and generated frames, or for which we could not obtain a statistically significant number of frame errors with the amount of measured and/or generated data that was within our means to produce.
+We now discuss the FER results under retention distortions. If we optimize soft thresholds THS∗ using the correct retention distributions, we can obtain slightly better performance using rate-0.94 LDPC codes than soft decoding from 6500 P/E cycles to 10000 P/E cycles. This is consistent with the similar standard deviation in Fig. 7. However, when we use inappropriate soft thresholds THS (corresponding to PE = 4000, retention = 0), we are barely able to decode any frame successfully. When retention time is τ , FER with inappropriate thresholds is almost 2.5× that with correct thresholds. The huge gap in retention FER underscores the critical significance of read thresholds.
+The Flash-Gen model trained with data from selected time stamps can accurately estimate the FER. We optimize the thresholds using the learned distributions and feed reconstructions to LDPC decoders. As shown in Fig. 9, Flash-Gen produces slightly higher FER than measured data in most experiments, the exception being soft-decision decoding under P/E cycling.
+We also studied the effectiveness of Flash-Gen in read threshold optimization using commonly used metrics. We adopt channel BER in (2) as the metric in hard-decision threshold determination and MI in (3) as the metric in soft-decision threshold determination. Fig. 10 illustrates how decoder FER and the respective metrics vary with threshold placement under hard-decision and soft-decision decoding for measured data and Flash-Gen recosntructed data at 7000 P/E cycles. The “step” represented in the x-axis is interpreted as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1110
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+Fig. 9. Frame error rate (FER) comparison with LDPC codes of measured data and Flash-Gen reconstructed dataset. The time stamp of the left subfigure is P/E cycle count and the time stamp of the right subfigure is retention time. Solid lines correspond to measured data from the flash device and dashed lines present Flash-Gen reconstructed data. Black curves and markers correspond to decoding using rate-0.94 LDPC codes and right curves and markers represent decoding using rate-0.90 LDPC codes. Markers with white fills in the retention plot indicate the sub-optimal thresholds used in decoding.
+
+Fig. 10. Variations in the hard-decision decoding threshold and soft-decision decoding thresholds change the decoding performance and the metric values. The first row shows FER (red) and BER (orange) versus the step change in the hard read threshold position, for measured data (left) and Flash-Gen data (right). The second row shows FER (black) and MI (gray) versus the step change in the soft read threshold positions. In each subplot, the x-axis reflects the step applied to the threshold position(s). The left y-axis is the decoding FER and the right y-axis is the metric value.
+
+follows. In the hard experiments, the threshold THH,0 between PL 0 and PL 1 is moved to position (THH,0 + step). In the soft experiments, the two read thresholds THS,2 and THS,3 between PL 1 and PL 2 are moved to (THH∗ ,1 − step) and (TH∗H,1 + step), respectively.
+In the hard-decision decoding experiments, the BER met-
+ric will increase as we increase the gap from the optimal
+threshold. The threshold that generates the lowest FER closely
+matches the optimal threshold for achieving the lowest BER.
+The Flash-Gen model correctly captures the sensitivity to
+the variations of threshold placement as reflected in the
+
+convex shape of both FER and BER curves. The optimal threshold in the Flash-Gen model leads to the near-optimal decoding FER.
+In the soft-decision experiments, the MI curves have similar concave shapes. The step with the highest MI aligns closely with the optimal FER in both the measured plot and the FlashGen plot. Since soft-decision decoding requires a longer read time and has a higher decoding complexity than hard-decision decoding, the Flash-Gen model, capable of accomplishing similar tasks, can alleviate the heavy measurement workload on flash controllers.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1111
+
+Fig. 11. Pie charts showing pattern-dependent error probabilities for measured and Flash-Gen generated voltages at 7000 P/E cycles. The sector labeled others combines 41 less harmful patterns. In measured data, 97921 total errors are observed at PL = 0. In reconstructed data, we sample 10 different latent vectors for inference and 989565 total errors are observed at PL = 0.
+
+B. Design of Constrained Codes
+Generating voltage levels with ICI effects is complicated due to pattern-dependent and direction-dependent distortions. We remark that classical statistical models such as [7] and [25] and other machine learning techniques focus on regeneration of victim cell PDFs that average over all possible neighbor cell patterns and, as such, are not expected to be effective in predicting pattern-dependent ICI effects. The mathematical modeling of ICI-induced voltage shifts in [7] could in principle be used to generate pattern-specific PDF expressions, but the number of such expressions would exceed 16 million for a TLC victim cell in the erased state and would therefore be prohibitive. Moreover, the model requires a detailed knowledge of the cell-to-cell coupling ratios, which may be hard to determine, and the resulting Gaussian-based approximations may not accurately capture the tail characteristics of the real distribution.
+We evaluate how well the generative model learns spatial ICI properties by examining errors associated with program level patterns PLi,j−1 PLi,j PLi,j+1 and PLi−1,j PLi,j PLi+1,j in the WL and BL directions, respectively. We calculated pattern error probabilities according to (5) in Section IV-B in both directions of the P/E cycling dataset. The pattern error probability measures the relative frequency of occurrence of the WL and BL patterns when an error occurs in the victim cell.
+The probabilities for measured and regenerated data at 7000 P/E cycle counts are visualized as pie charts in Fig. 11. When we program an interior cell to level 0, there are 64 such patterns of program levels for the pair of adjacent cells in both WL and BL directions. Without ICI effects, the errors would occur randomly for all possible patterns. Indeed, we analyze the ICI effects along diagonal directions associated with patterns PLi−1,j−1 PLi,j PLi+1,j+1 and PLi−1,j+1 PLi,j PLi+1,j−1. In the 2D TLC flash chip, the ICI effects along diagonal directions are not as severe as along horizontal/vertical directions.
+We present 23 dominant patterns as individual sectors and combine other less harmful patterns in one sector. In the measured data, the 23 listed patterns account for 55% of the errors in the WL direction and around 70% of the errors in
+
+the BL direction. The dominant error pattern in both WL and BL directions is 707. Comparing the area of pattern 707 in WL and BL, we find that pattern 707 in the WL direction is less severe than that in the BL direction.
+As shown in Fig. 11, for the prevalent error patterns at 7000 P/E cycles, probabilities observed in the data generated by Flash-Gen with 10 sampled latent vectors during evaluation are very similar to those seen in the measured data. The only substantial discrepancy we observed is that the generative model underestimates the fraction of the pattern 707 in the WL direction. At 4000 (resp., 10000) P/E cycles, the model underestimates (resp., overestimates) the fraction of the 707 pattern in both directions. However, at all P/E cycles, Flash-Gen generates the same rank ordering of pattern fractions as the measured data in both directions.
+We prioritize severe ICI patterns in both directions, enabling the design of constrained codes to mitigate ICI effects. As constrained codes lack the ability to correct errors in flash memory, there is an interesting direction of integrating LDPC codes with constrained codes in the future.
+C. Discussion
+According to our discussion in Section V and Section VI-B, we demonstrated that the Flash-Gen model can capture complex spatial and temporal characteristics of flash memory devices. Moreover, the Flash-Gen coding workflows provide accurate simulations of flash memory controller operations and provide a helpful tool for analyzing and optimizing the design of LDPC codes and constrained codes.
+The proposed Flash-Gen model learns the spatial and temporal properties of flash memory systems when trained on pseudo-random datasets collected from 2D TLC NAND flash devices. However, the learned model cannot be applied to other wear conditions and training the Flash-Gen model from scrath for these other wear conditions requires significant time and resource investments. Fortunately, exploiting transfer learning [38], the learned generative model pre-trained with pseudo-random datasets can be efficiently fine-tuned to code-constrained flash systems using much smaller datasets. Utilizing this transfer learning approach, we have the capability to fine-tune existing models, initially trained on P/E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+1112
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 2, FEBRUARY 2025
+
+cycling datasets or retention datasets, for use with other target datasets, where the target datasets are from similar domains of the source datasets. The Flash-Gen coding workflows can then be applied to these new models.
+In this paper, we analyze P/E cycling errors, retention errors, and ICI effects. Other types of errors occur during the program, erase, and read process, e.g., programming error and read disturb. By collecting appropriate datasets and processing them using the methods in Section III-C, we envision that the data-driven modeling approach can be generalized to model more complex and severe device conditions within flash chips.
+REFERENCES
+[1] M. Asadi, X. Huang, A. Kavcic, and N. P. Santhanam, “Optimal detector for multilevel NAND flash memory channels with intercell interference,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 825–835, May 2014.
+[2] A. Behboodi, S. Zheng, J. B. Soriaga, M. Welling, and T. Orekondy, “Data-driven probabilistic modeling of wireless channels using conditional variational auto-encoders,” U.S. Patent 0 123 966, Apr. 21, 2022.
+[3] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solid-state drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[4] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Grenoble, France, Mar. 2013, pp. 1285–1290.
+[5] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Dresden, Germany, Mar. 2012, pp. 521–526.
+[6] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. IEEE 21st Int. Symp. High Perform. Comput. Archit. (HPCA), Burlingame, CA, USA, Feb. 2015, pp. 551–563.
+[7] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[8] I. J. Goodfellow et al., “Generative adversarial nets,” in Proc. Neural Inf. Process. Syst. (NIPS), Montreal, QC, Canada, Dec. 2014, pp. 2672–2680.
+[9] A. Hareedy and R. Calderbank, “LOCO codes: Lexicographicallyordered constrained codes,” IEEE Trans. Inf. Theory, vol. 66, no. 6, pp. 3572–3589, Jun. 2020.
+[10] A. Hareedy, B. Dabak, and R. Calderbank, “Managing device lifecycle: Reconfigurable constrained codes for M/T/Q/P-LC flash memories,” IEEE Trans. Inf. Theory, vol. 67, no. 1, pp. 282–295, Jan. 2021.
+[11] A. Hareedy, S. Zheng, P. H. Siegel, and R. Calderbank, “Efficient constrained codes that enable page separation in modern Flash memories,” IEEE Trans. Commun., vol. 71, no. 12, pp. 6834–6848, Dec. 2023.
+[12] A. Hareedy, S. Zheng, P. Siegel, and R. Calderbank, “Readand-run constrained coding for modern flash devices,” in Proc. IEEE Int. Conf. Commun. (ICC), Seoul, South Korea, May 2022, pp. 3466–3471.
+[13] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Las Vegas, NV, USA, Jun. 2016, pp. 770–778.
+[14] P. Huang, Y. Liu, X. Zhang, P. H. Siegel, and E. F. Haratsch, “Syndromecoupled rate-compatible error-correcting codes: Theory and application,” IEEE Trans. Inf. Theory, vol. 66, no. 4, pp. 2311–2330, Apr. 2020.
+[15] P. Isola, J.-Y. Zhu, T. Zhou, and A. A. Efros, “Image-to-image translation with conditional adversarial networks,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., Honolulu, HI, USA, Jul. 2017, pp. 1125–1134.
+[16] S. Kang et al., “Generative adversarial networks for DNA storage channel simulator,” IEEE Access, vol. 11, pp. 3781–3793, 2023.
+
+[17] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in Proc. Int. Conf. Represent. Learn. (ICLR), Banff, AB, Canada, Apr. 2014.
+[18] A. B. L. Larsen, S. K. Sønderby, H. Larochelle, and O. Winther, “Autoencoding beyond pixels using a learned similarity metric,” in Proc. Int. Conf. Mach. Learn. (ICML), New York, NY, USA, Jun. 2016, pp. 1–9.
+[19] Q. Li, A. Jiang, and E. F. Haratsch, “Noise modeling and capacity analysis for NAND flash memories,” in Proc. IEEE Int. Symp. Inf. Theory, Honolulu, HI, USA, Jun. 2014, pp. 2262–2266.
+[20] W. Liu, F. Wu, S. Meng, X. Chen, and C. Xie, “Error generation for 3D NAND flash memory,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Antwerp, Belgium, Mar. 2022, pp. 56–59.
+[21] W. Liu et al., “Characterizing the reliability and threshold voltage shifting of 3D charge trap NAND flash,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Florence, Italy, Mar. 2019, pp. 312–315.
+[22] W. Liu et al., “Modeling of threshold voltage distribution in 3D NAND flash memory,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Grenoble, France, Feb. 2021, pp. 1729–1732.
+[23] Y. Liu, S. Wu, and P. H. Siegel, “Bad page detector for NAND flash memory,” in Proc. 11th Annu. Non-Volatile Memories Workshop (NVMW), La Jolla, CA, USA, Mar. 2020.
+[24] Z. Liu, Y. Liu, and P. H. Siegel, “Generative modeling of NAND flash memory voltage level,” in Proc. Annu. Non-Volatile Memories Workshop (NVMW), La Jolla, CA, USA, Mar. 2021, pp. 1–10.
+[25] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Enabling accurate and practical online flash channel modeling for modern MLC NAND flash memory,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2294–2311, Sep. 2016.
+[26] J. A. Nelder and R. Mead, “A simplex method for function minimization,” Comput. J., vol. 7, no. 4, pp. 308–313, 1965.
+[27] T. Orekondy, A. Behboodi, and J. B. Soriaga, “MIMO-GAN: Generative MIMO channel modeling,” in Proc. ICC - IEEE Int. Conf. Commun., Seoul, South Korea, May 2022, pp. 5322–5328.
+[28] N. Papandreou et al., “Characterization and analysis of bit errors in 3D TLC NAND flash memory,” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), Monterey, CA, USA, Mar. 2019, pp. 1–6.
+[29] S. K. Park and J. Moon, “Characterization of inter-cell interference in 3D NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 3, pp. 1183–1192, Mar. 2021.
+[30] T. Parnell, N. Papandreou, T. Mittelholzer, and H. Pozidis, “Modelling of the threshold voltage distributions of sub-20nm NAND flash memory,” in Proc. IEEE Global Commun. Conf., Austin, TX, USA, Dec. 2014, pp. 2351–2356.
+[31] B. Peleato, R. Agarwal, J. M. Cioffi, M. Qin, and P. H. Siegel, “Adaptive read thresholds for NAND flash,” IEEE Trans. Commun., vol. 63, no. 9, pp. 3069–3081, Sep. 2015.
+[32] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional networks for biomedical image segmentation,” in Proc. Int. Conf. Med. Image Comput. Comput.-Assist. Intervent. (MICCAI). Cham, Switzerland: Springer, 2015, pp. 234–241.
+[33] K. Sohn, H. Lee, and X. Yan, “Learning structured output representation using deep conditional generative models,” in Proc. Neural Inf. Process. Syst. (NIPS), Montreal, QC, Canada, Dec. 2015.
+[34] V. Taranalli, H. Uchikawa, and P. H. Siegel, “Channel models for multilevel cell flash memories based on empirical error analysis,” IEEE Trans. Commun., vol. 64, no. 8, pp. 3169–3181, Aug. 2016.
+[35] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), Houston, TX, USA, Dec. 2011, pp. 1–6.
+[36] T. Yeh et al., “Z-interference and Z-disturbance in vertical gate-type 3-D NAND,” IEEE Trans. Electron Devices, vol. 63, no. 3, pp. 1047–1053, Feb. 2016.
+[37] S. Zheng, C. Ho, W. Peng, and P. H. Siegel, “Spatio-temporal modeling for flash memory channels using conditional generative nets,” in Proc. Design, Automat. Test Eur. Conf. Exhib., Antwerp, Belgium, Apr. 2023, pp. 1–6.
+[38] S. Zheng and P. H. Siegel, “Code-aware storage channel modeling via machine learning,” in Proc. IEEE Inf. Theory Workshop (ITW), Mumbai, India, Nov. 2022, pp. 196–201.
+[39] J-Y. Zhu et al., “Toward multimodal image-to-image translation,” in Proc. Neural Inf. Process. Syst. (NIPS), Montreal, QC, Canada, Dec. 2017, pp. 465–476.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+ZHENG et al.: FLASH-GEN: SPATIO-TEMPORAL GENERATOR FOR FLASH MEMORY SYSTEMS
+
+1113
+
+Simeng Zheng (Student Member, IEEE) received the B.E. degree in electronic and information engineering from Beihang University, Beijing, China, in 2018, and the M.S. and Ph.D. degrees in electrical and computer engineering from the University of California at San Diego, La Jolla, CA, USA, in 2020 and 2024, respectively. From 2019 to 2024, he was affiliated with the Center for Memory and Recording Research.
+Chih-Hui Ho (Student Member, IEEE) received the B.S. degree in EECS from National Chiao Tung University, Taiwan, in 2016, and the M.S. degree in computer science and engineering and the Ph.D. degree in electrical and computer engineering from the University of California at San Diego, USA, in 2019 and 2024, respectively. His research interests include machine learning and computer vision. This work was done when he was a Ph.D. student with the University of California at San Diego.
+Wenyu Peng (Student Member, IEEE) received the B.E. degree in software engineering from Dalian University of Technology, China, in 2019, and the M.S. degree in computer science from San Diego State University, USA, in 2021. He is currently pursuing the Ph.D. degree through a joint program between San Diego State University and the University of California at San Diego. Additionally, he is a Researcher with the Center for Memory and Recording Research, University of California at San Diego.
+
+Paul H. Siegel (Life Fellow, IEEE) received the S.B. and Ph.D. degrees in mathematics from Massachusetts Institute of Technology, Cambridge, MA, USA, in 1975 and 1979, respectively. He held a Chaim Weizmann Post-Doctoral Fellowship with the Courant Institute, New York University, New York, NY, USA. He was with the IBM Research Division, San Jose, CA, USA, from 1980 to 1995. He joined the University of California at San Diego (UCSD), La Jolla, CA, USA, in 1995, as a Faculty Member, where he is currently a Distinguished Professor of electrical and computer engineering with the Jacobs School of Engineering. He was affiliated with the Center for Memory and Recording Research, where he holds an Endowed Chair and the Director from 2000 to 2011. His research interests include information theory, coding techniques, and machine learning, with applications to digital data storage and transmission. He was a member of the Board of Governors of the IEEE Information Theory Society from 1991 to 1996 and from 2009 to 2014. He is a member of the National Academy of Engineering. He was a co-recipient of the 1992 IEEE Information Theory Society Paper Award, the 1993 IEEE Communications Society Leonard G. Abraham Prize Paper Award, and the 2007 Best Paper Award in Signal Processing and Coding for Data Storage from the Data Storage Technical Committee of the IEEE Communications Society. He served as an Associate Editor for Coding Techniques of IEEE TRANSACTIONS ON INFORMATION THEORY from 1992 to 1995 and the Editor-in-Chief from 2001 to 2004. He served as the Co-Guest Editor for the 1991 Special Issue on Coding for Storage Devices of IEEE TRANSACTIONS ON INFORMATION THEORY. He was also the Co-Guest Editor of the 2001 two-part Special Issue on The Turbo Principle: From Theory to Practice and the 2016 Special Issue on Recent Advances in Capacity Approaching Codes of IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS. More recently, he was the Co-Lead Guest Editor of the 2023 Special Issue on Dimensions of Channel Coding (Special Issue in Memory of Alexander Vardy) of IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY and a Co-Guest Editor of the 2024 Special Issue on Plenty of Room at Bottom: Ten Years of DNA-Based Data Storage of IEEE TRANSACTIONS ON MOLECULAR, BIOLOGICAL AND MULTI-SCALE COMMUNICATIONS. He is the Lead Guest Editor of the two-part Special Issue on Information Theory and Data Storage of IEEE BITS and Information Theory Magazine. He was the 2015 Padovani Lecturer of the IEEE Information Theory Society.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:05:26 UTC from IEEE Xplore. Restrictions apply.
+
+

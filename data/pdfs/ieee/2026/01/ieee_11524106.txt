@@ -1,0 +1,724 @@
+IEEE PHOTONICS SOCIETY SECTION
+Received 18 April 2026, accepted 12 May 2026, date of publication 19 May 2026, date of current version 22 May 2026. Digital Object Identifier 10.1109/ACCESS.2026.3694705
+
+Soft-Decision Forward Error Correction for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+KAITO GESHI1, RYOTARO HARADA1, TAKUMI MOTOMURA2, (Member, IEEE), DAISUKE HISANO 1, (Member, IEEE), TSUYOSHI YOSHIDA 3, (Member, IEEE), AKIHIRO MARUTA 1, (Member, IEEE), AND KEN MISHINA 1, (Member, IEEE)
+1Graduate School of Engineering, The University of Osaka, Suita 565-0871, Japan 2National Institute of Technology, Nara College, Yamatokoriyama 639-1080, Japan 3Information Technology Research and Development Center, Mitsubishi Electric Corporation, Kamakura 247-8501, Japan
+Corresponding author: Ken Mishina (mishina@comm.eng.osaka-u.ac.jp)
+This work was supported in part by the Commissioned Research of National Institute of Information and Communications Technology (NICT), Japan, under Project J012368C08401; in part by the KDDI Foundation, Japan; in part by the Shimadzu Science Foundation, Japan; and in part by the Japan Society for the Promotion of Science (JSPS) KAKENHI, Japan under Grant JP26K02900.
+ABSTRACT Inverse scattering transform (IST)-based transmission utilizing scattering coefficient modulation has gained attention owing to its capability to facilitate multilevel modulation that avoids Kerr nonlinearity distortions in optical fiber communication systems. However, the application of soft-decision forward error correction (SD-FEC) presents challenges in accurately computing the logarithmic ratio of a posteriori probabilities (L-value) because the noise statistics of the scattering coefficient deviate from the Gaussian distribution in long-haul transmission systems. Consequently, the conventional method of approximating L-values by Gaussian distribution significantly degrades the error correction performance and constrains the practical deployment of scattering coefficient modulation. To address this limitation, we propose an L-value calculation method based on a t-distribution approximation of the noise distribution on the converted plane and introduce a neural network-based demodulation scheme as another approach. Numerical simulations indicate that the proposed t-distribution-based method substantially enhances L-value accuracy compared with the Gaussian approximation in the scattering coefficient plane, thereby achieving error-free transmission of a 64-ary amplitude-phase shift keying scattering coefficient-modulated signal with two eigenvalues at 17.1 Gbps over 2,500 km through non-zero dispersion-shifted fiber. In addition, the neural network-based demodulator extends the transmission distance to approximately 3,000 km. These findings demonstrate that appropriate statistical and machine-learning-based demodulation enables SD-FEC to exploit the potential of IST-based scattering coefficient modulation.
+INDEX TERMS Fiber nonlinear optics, forward error correction, inverse scattering transform, neural networks, optical fiber communication.
+
+I. INTRODUCTION The recent increase in communication traffic brought forth by the proliferation of various Internet-based services necessitates an enhancement in the capacity of optical fiber transmission systems. Although technologies such as multicore fibers and multiband transmission are being regarded
+The associate editor coordinating the review of this manuscript and approving it for publication was David Caplan.
+
+as potential approaches to augment transmission capacity, further expansion necessitates an increase in the optical power launched into the fiber to enhance signal-to-noise ratio and spectral efficiency. However, the Kerr nonlinearity causes signal distortion and thereby results in signal degradation at higher optical powers [1], which constrains the transmission capacity. To address this limitation, nonlinear compensation techniques such as digital backpropagation [2] have been proposed. However, the practical implementation of these
+
+VOLUME 14, 2026
+
+
+ 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+
+76675
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+techniques remains elusive owing to challenges such as high computational complexity.
+Recent advancements in transmission schemes utilizing the inverse scattering transform (IST) [3] have attracted attention as a novel approach for overcoming the Kerr nonlinearity limit. The IST, often referred to as the nonlinear Fourier transform (NFT), enables information transmission via the eigenvalue ζ [4], [5], scattering coefficient [6], [7], or nonlinear spectrum amplitude. These parameters are derived from the eigenvalue equations associated with the nonlinear Schrödinger equation (NLSE), which describes the behavior of the complex envelope amplitude of a lightwave within an optical fiber. Notably, the eigenvalue remains invariant during optical fiber transmission, whereas the scattering coefficient evolves linearly and is unaffected by nonlinear distortion.
+In recent years, several transmission schemes based on the IST have been proposed and demonstrated. To enhance the transmission capacity, a 4096-ary eigenvalue modulation utilizing on-off encoding of 12 eigenvalues has been experimentally demonstrated [8]. Another approach involves the scattering coefficient, which achieves multilevel modulation by altering the phase and amplitude of the scattering coefficient [9]. An additional technique [10] has been introduced to further enhance the capacity, which mitigates interaction effects by allowing adjacent pulses to exchange positions along the transmission path.
+To enhance receiver sensitivity in multilevel modulation and long-haul transmission, machine learning-based methodologies such as equalization [13], [14] and regression [15] have proven effective in IST-based transmission. The deviations in the eigenvalue and scattering coefficient caused by amplified spontaneous emission (ASE) noise do not follow an independent and identically distributed (i.i.d.) circular Gaussian distribution process, particularly in multieigenvalue transmission scenarios [16], [17]. Furthermore, the statistical properties of the eigenvalues and scattering coefficients remain inadequately understood when additive white Gaussian noise (AWGN) is introduced into the timedomain signals of multi-eigenvalue systems. Additionally, in polarization-multiplexed signals, nonlinear correlations emerge not only between eigenvalues but also between each polarization. Consequently, machine learning-based approaches are particularly effective for demodulation in ISTbased transmission systems. Neural network (NN) receivers, which utilize the time-domain waveform as input [15] or operate on the scattering coefficient plane [13], [14], have demonstrated superior performance compared to conventional demodulation methods without NNs, particularly in terms of bit error rate (BER) characteristics and transmission distance.
+The implementation of soft-decision forward error correction (SD-FEC) represents an efficacious strategy for augmenting transmission capacity and extending the transmission distance in optical fiber communication systems
+
+[18], [19]. Typically, the logarithmic ratio of a posteriori probability (L-value) is derived from the received signal and employed for SD-FEC decoding. However, the statistical characteristics of the eigenvalue ζ and scattering coefficient utilized in IST-based transmission are intricate, and the behavior of these scattering parameters, particularly in multi-eigenvalue transmission, remains poorly understood. Consequently, it is inappropriate to compute the L-value by assuming that their distributions adhere to a Gaussian distribution in IST-based transmission. Most prior investigations on IST-based transmission have assessed the bit error rate (BER) performance prior to FEC using the FEC limit, assuming the application of either hard-decision (HD) FEC or SD-FEC. The proposed method calculates the L-value using an NN demodulator and applies SD-FEC in eigenvalue modulation [20]. Although NN demodulators can accommodate complex distributions and calculate L-values with high precision in eigenvalue modulation, their use in scattering coefficient modulation remains unexplored.
+In this paper, we examine the applicability of SD-FEC to scattering coefficient modulation by analyzing the distribution of the scattering coefficient. We propose an L-value calculation method based on t-distribution approximation (t-DA) and NN-based demodulation to demonstrate an enhancement in the BER characteristics post-SD-FEC in comparison to the Gaussian approximation. In the proposed method, the scattering coefficient b on the complex plane is transformed into the parameters ln |b|/2ℑ[ζ ] and arg[b], which correspond to the center position and phase of each soliton component, respectively, and the L-value is computed using these parameters. As an extension of our previous study [21], this paper provides a detailed description of the demodulation method, along with theoretical and numerical investigations of the basic characteristics and their applicability to 64-QAM scattering coefficient-modulated signals. Through numerical simulations, we demonstrate that the proposed method improves the post-SD-FEC BER characteristics compared with the Gaussian distribution approximation for the scattering coefficient. Furthermore, we discuss the rationale behind the effectiveness of the t-DA and NN-based methods in accurately computing the L-value. Additionally, we show in simulation that by integrating the proposed method with SD-FEC, the achievable transmission distance of a 17.1 Gbps signal modulated with 64-ary amplitude-phase shift keying (64-APSK) using two eigenvalues can be extended to approximately 3, 000 km.
+This paper expands and differs from the work in [20] and [21] in the following manners:
+• We conducted an analysis of the distribution of the scattering coefficient b following transmission. Our findings indicate that the distribution of the transformed parameters ln |b|/2ℑ[ζ ] and arg[b] approaches a Gaussian distribution in the context of a 1-soliton solution, whereas it approximates a t-distribution in the context of a 2-soliton solution.
+
+76676
+
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+• We propose a method which employs a t-distribution approximation to calculate the L-value of scattering coefficient modulation with multiple eigenvalues based on the distribution of the transformed parameters after transmission. We demonstrate that this proposed method facilitates more precise L-value calculations compared to the Gaussian approximation. We further compare the proposed t-distribution approximation with other heavy-tailed models, including the generalized Gaussian distribution and α-stable distribution.
+• This advanced approach utilizes an NN to enhance the accuracy in calculating the L-value. In contrast to previous studies [21] which directly input the scattering coefficient b into the NN, this paper proposes the transformed parameters as the NN input. Moreover, we investigate the generalization capability and computational complexity of the NN-based demodulator.
+The structure of this paper is as follows: Section II elucidates the scattering coefficient modulation, which denotes a communication technique grounded in the IST. Section III details the distribution of the scattering coefficient and the L-value calculation method for the SD-FEC proposed in this study. In Section IV, we present numerical simulations along with a discussion on the distribution of the scattering coefficient and the fitting function. In addition, we evaluate the applicability of the proposed method to a 64-APSKmodulated signal utilizing two eigenvalues through the numerical simulations. In Section V, we discuss the challenges related to implementation, such as the generalization performance of the NN-based method and computational complexity. Finally, Section VI delineates the principal conclusions derived from this study.
+
+II. SCATTERING COEFFICIENT MODULATION A. NONLINEAR SCHRÖDINGER EQUATION Lightwave propagation in dispersive and nonlinear fiber is described by the following equation:
+
+∂E i ∂z
+
+−
+
+β2 2
+
+∂2E ∂t2
+
++ γ |E|2E
+
+=
+
+−iαE ,
+
+(1)
+
+where z, t, E(z, t), β2, γ , and α denote the propagation distance, time moving with average group velocity, complex envelope amplitude of the electric field, group velocity dispersion (GVD) parameter, nonlinear parameter, and loss coefficient, respectively. Equation (1) assumes that the thirdorder dispersion and Raman scattering effects are negligible for a pulse width > 1 ps. Here, we introduce the normalized distance Z , time T , and complex envelope amplitude q using reference time t0 as defined below:
+
+T= t, t0
+
+Z
+
+=
+
+|β2| t02
+
+z,
+
+q = t0
+
+γ E.
+|β2|
+
+(2)
+
+Considering the case of anomalous dispersion (β2 < 0), the normalized complex envelope amplitude q(Z , T ) satisfies
+
+VOLUME 14, 2026
+
+the following equation:
+
+∂q i∂Z
+
++
+
+1 2
+
+∂2q ∂T2
+
++ |q|2q
+
+=
+
+−i
+
+q,
+
+(3)
+
+where = αt02/|β2|. For a lossless fiber ( = 0), (3) can be analytically solved
+by IST. However, for ̸= 0, we applied an approximation
+of the guiding-center soliton [22]. Considering the loss effect
+and periodic amplification, q is transformed as follows:
+
+q = a0(Z ) exp(− Z )u, a0 =
+
+2 La
+
+,
+
+1 − exp(−2 La)
+
+(4)
+
+where La is the normalized amplifier spacing. When La is sufficiently small, that is, La ≪ 1, the loss effect is negligible. Therefore, the normalized NLSE for u(Z , T ) is obtained as:
+
+∂u i∂Z
+
++
+
+1 2
+
+∂2u ∂T2
+
++
+
+|u|2u
+
+=
+
+0,
+
+(5)
+
+which can be solved analytically using IST, as in the case of lossless similarly.
+
+B. INVERSE SCATTERING TRANSFORM Using the Ablowitz-Kaup-Newell-Segur (AKNS) formula, the scattering problem of the NLSE in (5) is expressed as [3]:
+
+  
+ 
+
+∂ φ1 ∂∂φT2 ∂T
+
+= =
+
+−iζ φ1 + iuφ1 iu∗φ1 + iζ φ2,
+
+(6)
+
+where ζ and φl(T , Z ) (l = 1, 2) denote the complex eigenvalue and eigenfunctions, respectively. The evolution of φl(T , Z ) with distance Z is expressed as
+
+
+  
+
+∂ φ1 ∂Z
+
+=
+
+i
+
+|u|2 − ζ 2 2
+
+φ1 +
+
+iζ u
+
+−
+
+1 2
+
+∂u ∂T
+
+φ2
+
+ ∂φ2
+
+  ∂Z
+
+=
+
+iζ u∗
+
++
+
+1 2
+
+∂ u∗ ∂T
+
+φ1−i
+
+|u|2 − ζ 2 2
+
+φ2.
+
+(7)
+
+Equations (6) and (7) are referred to as the Zakharov-Shabat
+problem (ZSP) [23].
+First, we consider the direct-scattering problem in (6) by treating u(Z , T ) as a potential function. As shown in Fig. 1, this problem implies that the reflected and transmitted waves
+are derived from the incident wave for T = ∞. We assume that u(0, T ) damps faster than any exponential function as |T | → ∞ (vanishing boundary condition). For ζ = ξ ∈ R, we define the Jost functions ψ and χ as solutions to (6), where ψ = (ψ1, ψ2)T and χ = (χ1, χ2)T . ψ and χ satisfy the following boundary conditions:
+
+
+
+   
+
+ψ (ξ ,
+
+T
+
+)
+
+=
+
+
+
+1 0
+
+exp(−iξ T ) (T → −∞)
+
+(8)
+
+   
+
+ψ¯ (ξ,
+
+T
+
+)
+
+=
+
+
+
+0 −1
+
+exp(iξ T ) (T → −∞),
+
+76677
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+FIGURE 1. Direct scattering problem.
+
+
+
+  
+
+χ
+
+(ξ ,
+
+T
+
+)
+
+=
+
+0
+
+exp(iξ T ) (T → ∞)
+
+ 
+
+1
+
+(9)
+
+  
+
+χ¯
+
+(ξ ,
+
+T
+
+)
+
+=
+
+1
+
+exp(−iξ T ) (T → ∞),
+
+ 
+
+0
+
+The pair of solutions, ψ and χ, forms a complete system of solutions. Therefore, by introducing appropriate coefficients a(ξ ) and b(ξ ), ψ and χ can be expressed as
+
+ψ(ξ, T ) = a(ξ )χ¯ (ξ, T ) + b(ξ )χ(ξ, T ),
+
+(10)
+
+ψ¯ (ξ, T ) = −a∗(ξ )χ (ξ, T ) + b∗(ξ )χ¯ (ξ, T ). (11)
+
+The solutions ψ and χ are analytic continuations into the upper half-plane ℑ[ζ ] > 0(C+). Therefore, the scattering coefficients can be obtained as follows:
+
+
+  
+
+a(ζ
+
+)
+
+=
+
+lim
+T →∞
+
+ψ1(ζ
+
+,
+
+T
+
+)
+
+exp(iζ
+
+T
+
+)
+
+(12)
+
+  
+
+b(ζ
+
+)
+
+=
+
+lim
+
+φ2(ζ, T ) exp(−iζ T ).
+
+T →∞
+
+The evolution of scattering coefficients a(ζ, Z ) and b(ζ, Z )
+
+with distance Z is expressed as follows:
+
+ 
+
+a(ζ ,
+
+Z
+
+)
+
+=
+
+a(ζ ,
+
+0)
+
+
+
+(13)
+
+ 
+
+b(ζ
+
+,
+
+Z
+
+)
+
+=
+
+b(ζ
+
+,
+
+0)
+
+exp(2iζ
+
+2Z
+
+).
+
+Solutions to (6) with N discrete eigenvalues are called N soliton solutions. When N = 1, the solution corresponds to a fundamental soliton:
+
+u(Z , T ) = ηsech[ηT − Tc(Z )] exp[−iκT − iθ0(Z )], (14)
+
+where ζ = (κ + iη)/2. The imaginary part η and real part κ of the eigenvalue correspond to the soliton amplitude (pulse width) and center frequency, respectively. The center position of pulse Tc and phase of pulse θ0 correspond to the amplitude and phase of scattering coefficient b, respectively, and are described as follows:
+
+Tc = log |b|/η, θ0 = arg[b].
+
+(15)
+
+According to (13), the scattering parameters evolve linearly with Z . Consequently, the transmitted scattering parameter can be readily obtained by compensating for spatial evolution at the receiver. These transmission schemes
+
+76678
+
+based on ζ , b, and nonlinear spectral amplitudes are referred to as IST-based transmissions. In essence, IST-based transmissions, including scattering coefficient modulation and nonlinear spectral amplitude modulation, enable the transmission of information without being affected by nonlinear distortion due to the Kerr nonlinearity. These methods are promising for future technologies aimed at overcoming the Kerr nonlinearity limit.
+In the past decade, various IST-based transmission schemes have been proposed and demonstrated [8], [9], [10], [20]. In [20], transmission of 11.75 Gbps over 1,200 km of a 4096-ary modulation signal utilizing on-off encoding of 12 eigenvalues was experimentally demonstrated by combining an NN demodulator with SD-FEC. In [10], singlepolarization discrete eigenvalue transmission of 54 Gbps over 1,200 km was experimentally demonstrated using solitons modulated with two eigenvalues ζ in 16QAM and scattering coefficient b in 16APSK.
+C. TRANSMISSION SCHEME USING SCATTERING COEFFICIENT B This study utilizes the scattering coefficient modulation transmission which is hereafter referred to simply as b-modulation. Fig. 2 illustrates an overview of the b-modulation transmission system. As described in Section II-A, the amplitude and phase of the scattering coefficient b correspond to the center position and phase of the pulse, respectively, and can be modulated independently with distinct degrees of freedom. Consequently, in b-modulation, multilevel modulation is achievable by assigning bit patterns to the scattering coefficient b arranged in an APSK or quadrature amplitude modulation (QAM) constellation. Furthermore, scattering coefficients b are independently assigned for each eigenvalue to facilitate straightforward multiplexing. Therefore, 64-QAM b-modulation using two eigenvalues (two scattering coefficients b) is equivalent to a 4096-ary modulation.
+Fig. 2 illustrates an example of 64-APSK b-modulation using two eigenvalues. Initially, a sequence of 12 bits is mapped onto each b-plane at the transmitter. Subsequently, the pattern of the scattering coefficients b, characterized by two eigenvalues, is transformed into a pulse using the IST. Connecting these pulses in the time domain produces the b-modulated signal. The optical signal is then generated by an IQ modulator and transmitted through a fiber transmission line. At the receiver, the scattering coefficients b are detected using the IST from the complex envelope amplitude which is obtained using a coherent receiver. Finally, the transmitted scattering coefficients b(0, ζn) are estimated using (13), and are decoded into a bit sequence.
+In our previous work [21], we modulated the scattering coefficients b using 64-QAM. However, as shown in (15), because the logarithm of the amplitude and phase of the scattering coefficients b correspond to the physical parameters of the pulse, the arrangement on the b-plane is unsuitable. Therefore, this study employed a 4096-ary b-modulated
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+FIGURE 2. Overview of transmission system based on scattering coefficient modulation (b-modulation).
+
+FIGURE 3. Constellation diagram on the Tc -θ0-plane.
+
+signal using 64-QAM with an optimized arrangement on the Tc-θ0-plane. Fig. 3 shows the constellation diagram of b and Tc-θ0-plane. The interval on the Tc-θ0-plane was set to be equidistant, which corresponds to an unequal interval APSK
+on the b-plane.
+
+III. L-VALUE CALCULATION A. DISTRIBUTION OF SCATTERING COEFFICIENT B
+SD-FEC decoding requires the computation of the a posteriori probability because error correction is conducted using the L-value used as the input. The spatial evolution of the scattering coefficients b, as described in (13), is governed by the normalized distance Z and eigenvalue ζ . However, the eigenvalue is subject to deviation because of the addition of ASE noise from the optical amplifiers in the transmission line. Consequently, the scattering coefficients b evolve in accordance with the deviated eigenvalues. In an optical fiber link comprising M spans, each with a span length La, the scattering coefficients b at the receiver are expressed as
+
+M
+
+b(ζn) = b(0, ζn) exp[2i(ζn(j))2La],
+
+(16)
+
+j=1
+
+where ζn(j) is the eigenvalue of j-th span. When soliton pulses in the time domain are transformed
+into scattering parameters via IST, an interaction is induced between noise components at multiple sampling points
+
+VOLUME 14, 2026
+
+comprising the pulses. Specifically, the noise of the scattering parameter derived from the soliton pulse, which includes ASE noise characterized by an independent and identically distributed (i.i.d.) Gaussian process yields a non-Gaussian distribution [17]. This phenomenon is particularly complex in multi-eigenvalue transmission systems, where eigenvalue deviations are correlated with adjacent eigenvalues [25]. Consequently, the deviation of the scattering coefficients b assumes an unknown distribution because of the interaction of each soliton component, as dictated by the correlation between eigenvalue shifts.
+In multi-eigenvalue systems, the interaction among eigenvalues and the accumulation of perturbations across spans introduce correlations and fluctuations in the effective noise variance of transformed parameters. From a statistical perspective, this behavior can be interpreted as a superposition of Gaussian-like processes containing randomly varying variances, which is known to produce heavy-tailed distributions. Consequently, the t-distribution can be regarded as a phenomenological model that captures these effects.
+In addition, applying NLSE to the guiding center theorybased approximation, as described in Section II, yields the scattering parameters. The condition satisfying the guiding center approximation is La ≪ 1, which corresponds to la ≪ t02/|β2|, where la is the actual amplifier spacing. Selecting the parameters that do not sufficiently satisfy the condition for the guiding center theory emphasizes the eigenvalue deviation, which affects the distribution of the scattering coefficients b.
+B. METHODS FOR CALCULATING L-VALUES In this study, we examine the applicability of SD-FEC to b-modulation by employing four distinct methods, labeled (i) through (iv), to compute the L-values from the detected scattering coefficients b, as illustrated in Fig. 4.
+In the most straightforward approach (i), the L-values are computed by assuming that the distribution of b can be approximated by a Gaussian distribution (GA on b). However, the deviation of the scattering coefficients b determined by IST does not precisely adhere to a Gaussian distribution.
+76679
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform TABLE 1. Simulation parameters.
+
+FIGURE 4. Methods for calculating L-value.
+
+In method (ii), the L-values are calculated under the assumption that the distributions of Tc and θ0, derived from the scattering coefficients b, can be approximated by a Gaussian distribution (GA on Tc − θ0). In the back-to-back (B-to-B) simulation, the addition of white Gaussian noise to the soliton pulses is anticipated to yield a good approximation, as discussed in Section II. However, during longdistance transmission, the deviation of the eigenvalues results in a shift from a Gaussian to a heavier-tailed distribution. This shift impedes method (ii) from accurately calculating the L-values.
+Therefore, we propose method (iii) to calculate the L-values, which is predicated on the assumption that the distributions of Tc and θ0 can be approximated by a t-distribution (t-DA on Tc − θ0). Given that a t-distribution is a composite of the Lorentzian and Gaussian distributions, capable of accommodating heavy-tailed distributions, this approach enables the calculation of L-values with a high degree of accuracy.
+In method (iv), a multilabel neural network (NN) demodulator is utilized. We input br , a vector comprising the real and imaginary components of the detected scattering coefficients, along with Tc = [Tc(ζ1), Tc(ζ2)] into the NN. The number of output units is 12, corresponding to the number of bits used for mapping in the context of 2 × 64-APSK. The output and loss functions are the logistic sigmoid and cross-entropy error functions, respectively. The input data are associated with each bit, that is, the a posteriori probability of 1 for the jth bit (Bj) is p(Bj = 1|br , Tc) [27]. The bitwise L-value Lj can be calculated as follows:
+
+Lj
+
+=
+
+log
+
+p(Bj p(Bj
+
+= =
+
+1|br , 0|br ,
+
+Tc) Tc)
+
+=
+
+log
+
+1
+
+p(Bj = − p(Bj
+
+1|br , Tc) = 1|br , Tc
+
+)
+
+.
+
+(17)
+
+Although the NN method (iv) does not require distributional changes based on transmission distance, it requires additional computational resources and time for both learning and calculating the L-value compared to methods (i)–(iii).
+The L-value, derived using one of the four distinct methodologies, was subsequently used as the input for
+
+76680
+
+the SD-FEC decoder. Numerous studies have documented the implementation of neural network-based demodulators for the computation of the L-value or log-likelihood ratio (LLR) in SD-FEC in various optical communication systems. These systems include coherent fiber-optic transmissions employing QAM [28] and visible light communication (VLC) [29].
+IV. SIMULATIONS The distribution of the scattering coefficients b was evaluated using numerical simulations. To demonstrate the feasibility of the proposed L-value calculation method, we show the results of B-to-B and transmission simulations applying SD-FEC to a b-modulated signal with two scattering coefficients b.
+A. SIMULATION MODEL Fig. 5 shows the simulation model used in this study. In b-modulation, we used 64-APSK with two scattering coefficients b corresponding to two eigenvalues 0.15i, 0.3i. The 64-APSK consisted of 8 levels of amplitude and 8 levels of phase, designed such that in the Tc-θ0-plane, the normalized interval of Tc was 1 and the θ0 interval was 2π/8. The reference time t0 and normalized time window size Tw were set to 17.5 ps and 40, respectively. The modulation was performed at 120 GSa/s, using symbol period 0.7 ns, 84 sampling points per pulse, and bit rate of 17.14 Gb/s. The b-modulated pulse was generated using the Darboux transform [24].
+The generated optical signal was transmitted through an optical fiber link consisting of a 50-km non-zero dispersionshifted fiber (NZ-DSF) and an erbium-doped fiber amplifier (EDFA). The NZ-DSF parameters, amplifier interval, and EDFA noise figure are listed in Table 1. The propagation of optical signals in the fiber was simulated using the split-step Fourier method [30]. The dispersion length LD was 54.57 at a wavelength of 1550 nm. The launch power was 8.73 mW. For the B-to-B simulation, we added AWGN for an optical signalto-noise ratio (OSNR) of 5 to 11 dB to the b-modulated signal. At the receiver end, the scattering coefficient b was detected from the received signal at 120 GSa/s and demodulated
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform FIGURE 5. Simulation model.
+
+FIGURE 6. Constellation diagrams and distributions: (a) B-to-B configuration for an OSNR of 9 dB and (b) after 2,500 km transmission.
+
+using the Fourier collocation method. Subsequently, b was compensated using (13).
+The bitwise L-values were computed using the four methods discussed in Section III. In the NN-based demodulator, a three-layer perceptron configuration was employed using the hyperbolic tangent function as the activation function,
+
+and the number of hidden units was set to 1024. A total of 32,760 received symbols were divided into separate sequences of 5,000 and 27,760 symbols for training and BER test, respectively. Subsequently, the NN was trained using the adaptive moment estimation (Adam) optimizer [31]. The Adam optimizer was configured with a step size of
+
+VOLUME 14, 2026
+
+76681
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+FIGURE 7. Degree of freedom ν when varying t0 (2,500 km transmission).
+
+α = 0.001, exponential decay rates of β1 = 0.9 and β2 = 0.999, and a coefficient of ϵ = 10−8. The training data were uniformly extracted from available datasets corresponding to each OSNR value or transmission distance. To mitigate overfitting, a dropout layer with an inclusion probability of 0.6 was incorporated after the final hidden layer during training. Furthermore, the training process was terminated when the validation results, assessed every 50 epochs, showed no further improvement [32]. Different sequences were used for the training and BER test.
+For SD-FEC, a simulation was performed using a random bit sequence, assuming the use of scramblers and descramblers at transmitter and receiver, respectively [33]. We used the DVB-S2 low-density parity check code (LDPC) [34] with an overhead (OH) of 16.7%. The number of decoding iterations for SD-FEC was optimized in the range of 1 to 10. While this simulation utilized the L-values of the 333,120 bits data for the BER test, the position and combination of the bits was randomly changed during decoding [33].
+The Gaussian, Lorentzian, and t-distributions were used as fitting functions to evaluate the distribution of the scattering coefficients. The Lorentzian distribution is characterized by sharper peaks and heavier tails than the Gaussian distribution. The t-distribution is a composite of the Gaussian and Lorentzian distributions. A degree of freedom of ν = 1 corresponds to a Lorentzian distribution, whereas a Gaussian distribution is characterized by ν → ∞. The parameters of each distribution function were determined using the maximum likelihood estimation (MLE). To assess the noise distribution, we utilized the Jensen-Shannon (JS) divergence [26] between the histogram of the noise distribution and each distribution function.
+B. SIMULATION RESULTS 1) DISTRIBUTION OF SCATTERING COEFFICIENT B Initially, we conducted a B-to-B simulation that incorporate a noise corresponding to an OSNR of 9 dB, alongside
+76682
+
+FIGURE 8. Noise distribution with the vertical axis presented on a logarithmic scale (2,500 km transmission).
+a 2,500 km transmission simulation. Fig. 6 shows the constellation diagrams of the received scattering coefficients b and the distributions of b, Tc, and θ0. Table 2 lists the JensenShannon (JS) divergence values between the histogram and each distribution function. In the b-plane, the distribution deviated significantly from the Gaussian distribution, even in the B-to-B scenario. Conversely, upon conversion to the Tc − θ0 plane, the distribution approached a Gaussian distribution, as evidenced by the small JS divergence value in the B-to-B context. The distribution also generally approached a Gaussian distribution after the 2,500-km transmission. However, upon examining the shape of the histogram, the distribution revealed a sharper peak and heavier tails than the Gaussian distribution fitting curves, thereby resembling a Lorentzian distribution. Consequently, when employing a t-distribution, the JS divergence values post-2,500 km transmission were smaller than those obtained using a Gaussian distribution, which yielded a more accurate fit. Furthermore, the degree of freedom ν of the t-distribution fitting decreased after transmission compared to the B-to-B case, which means that the distribution more closely resembled the Lorentzian type.
+Subsequently, we examined the distribution with variations in t0. For t0 = 17.5, 50, 100 ps, the normalized amplifier spacings were calculated for 0.92, 0.11, 0.03, respectively, and it was considered that a smaller t0 yields a larger error in the approximation based on the guiding center theory. In this simulation, the normalized time window size Tw and the sampling points per pulse were set to 45 and 210, respectively, to ensure sufficient demodulation performance. Fig. 7 shows the degree of freedom ν for the t-distribution with varying values of t0 after transmission over 2,500 km. When t0 was 16.75 ps, the normalized amplifier spacing was 1. Under this condition, the guiding center theory is not fully met, which
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform TABLE 2. The JS divergence between the distribution of Tc and θ0, and the fitting function (ν: degree of freedom).
+
+FIGURE 9. Constellation diagram of b and distribution for 1-soliton solution: (a) ζ = 0.15i and (b) ζ = 0.3i (after 2,500 km transmission).
+
+began to resemble a Lorentzian distribution for small values of ν. For Tc(ζ1) and θ0(ζ2), the ν values increased with t0 and approached a Gaussian distribution. In contrast, for Tc(ζ2) and θ0(ζ1), the value of ν did not change significantly even when t0 was varied.
+These results demonstrate that the t-distribution approximation on the Tc-θ0 plane is anticipated to produce more accurate outcomes than the Gaussian distribution approx-
+imation for the L-value calculation in the b-modulation.
+Nonetheless, there are persisting concerns that even the
+t-distribution approximation may not facilitate precise
+L-value calculations. Fig. 8 shows the noise distribution
+
+and fitting curves with the vertical axis presented on a logarithmic scale after the 2,500-km transmission. Although the distribution of Tc closely aligns with the t-distribution, θ0 demonstrates an asymmetric distribution with a probability distribution that sharply declines in its tail. This asymmetry arises from the effect of the eigenvalue variance on the evolution of b, as expressed in (16). This characteristic is likely to introduce errors in the calculation of the L-value of the t-distribution.
+Moreover, we examined the distribution of Tc and θ0 of a 1-soliton solution characterized by an eigenvalue. Fig. 9 shows the constellation diagrams and distributions of Tc
+
+VOLUME 14, 2026
+
+76683
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+TABLE 3. The JS divergence for 1-soliton solution (After 2,500 km transmission, ν: degree of freedom).
+
+TABLE 4. The JS divergence between the distribution of Tc and θ0, and the fitting function (ν: degree of freedom).
+
+and θ0 following transmission over a distance of 2,500 km. Table 3 lists the JS divergence values for ζ = 0.15i. Under the condition of t0 = 50 ps, the approximation of the guidingcenter theory was adequately satisfied, thus allowing the Gaussian distribution to accurately represent the histogram. Furthermore, even under the condition of t0 = 16.75 ps, which does not fulfill the guiding center approximation, the deviations of Tc and θ0 were larger than those in the case of t0 = 50 ps; however, both still conformed to the Gaussian distribution with high precision. This result indicates that Tc and θ0 of the 1-soliton solution align with the Gaussian distribution with high accuracy, independent of the guidingcenter approximation condition. The deviation was smaller for an eigenvalue of 0.15i as compared to 0.3i, which is attributed to the fact that smaller eigenvalues result in a smaller deviation in the scattering coefficient b.
+These results indicate that in the propagation of a 2-soliton solution with two vertically arranged eigenvalues, the interaction between the eigenvalues caused the distributions of Tc and θ0 to deviate from a Gaussian distribution and tend toward a Lorentzian distribution. Notably, when t0 is short, indicating that the guiding center approximation condition is not adequately satisfied, the distribution deviates significantly from a Gaussian distribution. Consequently, in actual transmission systems, calculating L-values using non-Gaussian approaches such as the t-distribution and NN is effective.
+C. APPLICATION OF SD-FEC Figs. 10(a) and (b) show the BER characteristics for the B-to-B configuration and after the transmission, respectively. For the B-to-B configuration, the BER was significantly improved by SD-FEC for methods (ii), (iii), and (iv). The distribution on the b-plane deviated significantly from a Gaussian distribution, which obscured the application of SD-FEC using method (i). In the B-to-B configuration, the BER for methods (ii)—(iv) demonstrated similar outcomes following SD-FEC, which is attributed to the distributions of Tc and θ0 being approximately Gaussian.
+After the transmission, minimal variation was observed in the BER before applying SD-FEC across methods (ii)–(iv). However, the BER varied amongst the different methods following SD-FEC. In methods (ii) and (iii), assuming the exclusive use of Hard-decision forward error correction (HD-FEC) with an overhead (OH) of 7%, the feasible transmission distance was approximately 1, 000 km.
+76684
+
+The implementation of SD-FEC extended this distance to approximately 2,500 km. The t-distribution approximation (iii) yielded better results than the Gaussian approximation (ii) although the difference was slight. As discussed in Section III, this observation is attributed to the asymmetry of the θ0 distribution shape, which decreases sharply at the tails. In contrast, method (iv) based on NN yielded more accurate L-value calculations, thereby significantly extending the transmission distance to approximately 3, 000 km. The results indicate that the NN–based method (iv) successfully implemented an accurate L-value calculation model while accounting for the asymmetric distribution shape of θ0.
+V. DISCUSSION A. FITTING WITH OTHER DISTRIBUTION MODEL In this paper, a t-distribution was adopted based on the distributions obtained by the simulations. However, other heavy-tailed distributions might offer better performance. Therefore, we compared the performance with the generalized Gaussian distribution (GGD) and the α-stable distribution as alternative candidates. Table 4 summarizes the JS divergence between each distribution function and histogram after 2,500 km transmission. Fig. 11 shows the noise distribution and fitting curves of the three distribution approximations after the 2,500-km transmission. Although the GGD demonstrated superior performance compared to the t-distribution in modeling the θ0 distribution, a deviation from the actual distribution near the peak was observed during the fitting of the Tc distribution, which increased the JS divergence value. Conversely, when employing the α-stable distribution, the JS divergence observed during the fitting of the Tc distribution was similar to that of the t-distribution; however, a deviation from the actual distribution was noted during the fitting of the θ0 distribution.
+Fig. 12 shows the BER characteristics after the transmission for three L-value calculation based on distribution approximation: t-distribution, GGD, and α-stable distribution. Among three distributions, the t-distribution approximation exhibited the most favorable BER performance after SD-FEC, as it effectively balanced the fitting of both the Tc and θ0 distributions.
+B. GENERALIZATION PERFORMANCE We discuss the generalization performance of the NN-based demodulator. In the preceding section, the NN was trained using data corresponding to each OSNR or transmission distance relevant to the test condition. In this section, we investigated the generalization performance as a function
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform FIGURE 10. Simulation results: BER characteristics (a) for the B-to-B configuration and (b) after the transmission.
+
+FIGURE 12. BER characteristics after the transmission when using four L-value calculation based on distribution approximation: t -distribution, GGD, and α-stable distribution.
+
+FIGURE 11. Noise distribution and fitting curves of the three distribution approximation (2,500 km transmission).
+of OSNR and transmission distances by utilizing an NN trained with data under a fixed condition. Fig. 13(a) shows the BER characteristics with varying OSNR values for the B-to-B configuration. When the NN was trained using data within an OSNR range of 6–10 dB, no significant difference was observed in the BER characteristics before and after SD-FEC. Within this OSNR range, the BER prior to FEC was approximately 10−2 or higher, thus indicating that the training data exhibited the high variability necessary for effective NN training. Note that when employing training data from high OSNR conditions, the lack of training data from regions distant from the ideal signal point impairs the handling of outliers. Consequently, there is a risk that the BER may become unstable following FEC [20].
+Fig. 13(b) shows the BER characteristics after SSMF transmission. When the NN was trained using data obtained after a 1,000 km transmission, it demonstrated favorable BER characteristics at transmission distances of up to 2,000 km.
+VOLUME 14, 2026
+
+However, the achievable transmission distance after SD-FEC was restricted to approximately 2,500 km. Conversely, when the NN was trained with data after a 3,000 km transmission, although the pre-FEC BER at shorter distances experienced a slight deterioration, it remained within a range where SD-FEC could be effectively applied, which yields a stable post-FEC BER. Consequently, it was demonstrated that longhaul transmission was feasible for up to approximately 3,500 km, similar to the results observed when the NN was trained with data specific to each transmission distance.
+These results indicate that employing data that is characterized by a transmission distance which exceeds the target distance or data that deliberately introduces noise for training purposes can enhance the generalized performance of the NN demodulator in terms of the OSNR and transmission distances.
+C. COMPUTATIONAL COMPLEXITY We discuss the computational complexity associated with each method for calculating the L-values. In methods (i) and (ii), the L-value is determined by assuming that the noise
+76685
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+FIGURE 13. Simulation results of the investigation of the generalization performance: BER characteristics (a) for the B-to-B configuration and (b) after the transmission.
+
+distribution on the b-plane or Tc-θ0-plane follows a Gaussian distribution. In calculating the L-value, the probability is determined based on the difference between the received and reference symbols, which adheres to a Gaussian distribution. Given that the complexity of the exponential function is O(1), the complexity required for the L-value calculation is O(NM ) when modulating the scattering coefficient b using M -ary APSK and N eigenvalues.
+In method (iii), the L-value is calculated by approximating the noise distribution on the Tc-θ0-plane as a t-distribution. The t-distribution pdf is described as follows:
+
+p(x, µ, σ, ν)
+
+(
+
+ν+1 2
+
+)
+
+= σ √νπ
+
+(
+
+ν 2
+
+)
+
+1
+
++
+
+1x ν(
+
+− σ
+
+µ )2
+
+−(
+
+ν
+
++1 2
+
+)
+
+=
+
+(
+
+ν+1 2
+
+)
+
+σ √νπ
+
+(
+
+ν 2
+
+)
+
+exp
+
+ν+1
+
+−
+
+log
+
+2
+
+1
+
++
+
+1 ν
+
+x (
+
+− σ
+
+µ )2
+
+(18)
+
+where µ, σ , and ν denote the location parameter, scale parameter, and degree of freedom, respectively. Assuming that the computational complexities of the exponential, logarithmic, and gamma functions are O(1), the complexity required for the L-value calculation is O(NM ). However, it should be noted that the execution time is more than twice as long as that of methods (i) and (ii) because of the inclusion of the logarithmic and gamma functions.
+In method (iv), the computational complexity is determined by the NN structure. Denoting the number of input units, output units, hidden layers, and hidden layer units as ni, no, L, and nh, respectively, the complexity for a single forward pass is expressed as O([ni + (L − 1)nh + No]nh) ≈ O(n2h). Consequently, the complexity required for the L-value calculation is O(n2hN ). Given that this complexity depends on the square of the number of hidden layer units and the volume of data, significantly greater computational resources are required compared to the other methods for cases in which the number of hidden layers reaches eight or more.
+We investigated the actual runtime for L-value computation using methods (ii)–(iv) under identical conditions. The L-value was computed utilizing an Intel Core i910980XE processor and MATLAB R2025b. NN computation was executed within the MATLAB R2025 Deep Learning
+
+Toolbox. The average runtime for the bit-wise L-value calculation of 12 bits across 27,760 test symbols was 73.9, 100.4, and 316.0 ms for methods (ii)–(iv), respectively. As previously discussed, the NN-based method (iv) necessitated a longer computational time than the other methods. Employing parallel computing with GPUs or similar technologies is effective in reducing computational time.
+VI. CONCLUSION In this study, we examined the applicability of SD-FEC for the scattering coefficient b-modulation by comparing four L-value calculation methods through numerical simulations. Initially, we described the theory of b-modulation, the design of the b-modulated signal, and the conceptual framework of the proposed method. Furthermore, the rationale for the superiority of t-distribution approximation-based demodulator on Tc-θ -plane in b-modulation systems was elucidated, particularly for a minimum reference time, t0. Through simulations, the proposed method was validated for 64-APSK b-modulated signals using two eigenvalues. Results demonstrated that the t-distribution approximation for L-value calculation enhances the BER characteristics post-SD-FEC compared to the Gaussian approximation on the b-plane. Consequently, we numerically demonstrated a transmission over a 2,500-km optical fiber for a 17.1 Gbps b-modulated signal, achieving a transmission distance of 3,000 km using an NN-based demodulator. These findings affirm that statistical modeling and machine learning-based demodulation are pivotal for optimizing the performance of b-modulation for long-haul transmission. It is important to note that the results presented herein are derived from numerical simulations conducted under idealized conditions. Experimental validation, discussion regarding statistical analysis of BER performance, robustness analysis against parameter variations, such as OSNR and launch power, and hardware implementation considerations remain future work toward practical deployment.
+REFERENCES
+[1] A. D. Ellis, J. Zhao, and D. Cotter, ‘‘Approaching the non-linear Shannon limit,’’ J. Lightw. Technol., vol. 28, no. 4, pp. 423–433, Feb. 15, 2010.
+[2] E. Ip and J. M. Kahn, ‘‘Compensation of dispersion and nonlinear impairments using digital backpropagation,’’ J. Lightw. Technol., vol. 26, no. 20, pp. 3416–3425, Oct. 15, 2008.
+
+76686
+
+VOLUME 14, 2026
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+[3] M. J. Ablowitz and H. Segur, Solitons and the Inverse Scattering Transform. Philadelphia, PA, USA: SIAM, 1981.
+[4] A. Hasegawa and T. Nyu, ‘‘Eigenvalue communication,’’ J. Lightw. Technol., vol. 11, no. 3, pp. 395–399, Mar. 1993.
+[5] H. Terauchi and A. Maruta, ‘‘Eigenvalue modulated optical transmission system digital coherence technology,’’ in Proc. 10th Conf. Lasers ElectroOpt. Pacific Rim, 18th Opto-Electron. Commun. Conf./Internaltional Conf. Photon. Switching (CLEO-PR& OECC/PS), Kyoto, Japan, Jul. 2013, pp. 1–3, Paper WR2-5.
+[6] S. K. Turitsyn, J. E. Prilepsky, S. T. Le, S. Wahls, L. L. Frumin, M. Kamalian, and S. A. Derevyanko, ‘‘Nonlinear Fourier transform for optical data processing and transmission: Advances and perspectives,’’ Optica, vol. 4, no. 3, pp. 307–322, Mar. 2017.
+[7] S. T. Le, V. Aref, and H. Buelow, ‘‘Nonlinear signal multiplexing for communication beyond the Kerr nonlinearity limit,’’ Nature Photon., vol. 11, no. 9, pp. 570–577, Sep. 2017.
+[8] K. Mishina, H. Takeuchi, T. Kodama, Y. Yoshida, D. Hisano, and A. Maruta, ‘‘4096-ary eigenvalue modulation using 12 triangular-latticeshaped eigenvalues,’’ in Proc. Opt. Fiber Commun. Conf. Exhib. (OFC), Washington, DC, USA, Jun. 2021, pp. 1–3, Paper M3I.1.
+[9] T. Gui, T. H. Chan, C. Lu, A. P. T. Lau, and P. A. Wai, ‘‘Alternative decoding methods for optical communications based on nonlinear Fourier transform,’’ J. Lightw. Technol., vol. 35, no. 9, pp. 1542–1550, May 1, 2017.
+[10] G. Zhou, L. Sun, C. Lu, and A. P. T. Lau, ‘‘Multi-symbol digital signal processing techniques for discrete eigenvalue transmissions based on nonlinear Fourier transform,’’ J. Lightw. Technol., vol. 39, no. 17, pp. 5459–5467, Sep. 1, 2021.
+[11] T. Chino, T. Motomura, T. Maeda, A. Maruta, and K. Mishina, ‘‘Twostage carrier frequency offset estimation using eigenvalue and scattering coefficient b in inverse scattering transform,’’ J. Lightw. Technol., vol. 43, no. 14, pp. 6484–6494, Jul. 15, 2025.
+[12] J. Chen, Z. Yang, Y. Chen, Z. Hu, M. Zhang, W. Li, Y. Wang, D. Liu, and M. Tang, ‘‘Blind SOP recovery of eigenvalue communication system based on a nonlinear Fourier transform,’’ Opt. Exp., vol. 31, no. 4, pp. 5155–5467, Feb. 2023.
+[13] J. Koch, K. Chan, C. G. Schaeffer, and S. Pachnicke, ‘‘Signal processing techniques for optical transmission based on eigenvalue communication,’’ IEEE J. Sel. Topics Quantum Electron., vol. 27, no. 3, pp. 1–14, May 2021.
+[14] Y. Chen, D. Ding, Q. Liao, X. Fang, and L. Zhang, ‘‘Neural network-based noise suppression method for NFT-based multi-eigenvalue transmission,’’ IEEE Commun. Lett., vol. 25, no. 9, pp. 3027–3030, Sep. 2021.
+[15] Y. Wu, L. Xi, X. Zhang, Z. Zheng, J. Wei, S. Du, W. Zhang, and X. Zhang, ‘‘Robust neural network receiver for multiple-eigenvalue modulated nonlinear frequency division multiplexing system,’’ Opt. Exp., vol. 28, no. 12, pp. 18304–18316, Jun. 2020.
+[16] S. Wahls, ‘‘Second order statistics of the scattering vector defined the D-T nonlinear Fourier transform,’’ in Proc. 11th Int. ITG Conf. Syst. Commun. Coding (SCC), Jun. 2017, pp. 1–6.
+[17] F. J. García-Gómez and V. Aref, ‘‘Statistics of the nonlinear discrete spectrum of a noisy pulse,’’ J. Lightw. Technol., vol. 37, no. 14, pp. 3563–3570, Jul. 15, 2019.
+[18] K. Sugihara, K. Ishii, K. Dohi, K. Kubo, T. Sugihara, and W. Matsumoto, ‘‘Scalable SD-FEC for efficient next-generation optical networks,’’ in Proc. ECOC ; 42nd Eur. Conf. Opt. Commun., Germany, Sep. 2016, pp. 1–3, Paper W.2.C.3.
+[19] K. Onohara, T. Sugihara, Y. Konishi, Y. Miyata, T. Inoue, S. Kametani, K. Sugihara, K. Kubo, H. Yoshida, and T. Mizuochi, ‘‘Soft-decision-based forward error correction for 100 Gb/s transport systems,’’ IEEE J. Sel. Topics Quantum Electron., vol. 16, no. 5, pp. 1258–1267, Sep. 2010.
+[20] K. Mishina, R. Harada, T. Yoshida, D. Hisano, and A. Maruta, ‘‘Long-haul optical-eigenvalue transmission using a neural network demodulator and SD-FEC,’’ IEEE J. Sel. Areas Commun., vol. 43, no. 5, pp. 1498–1511, May 2025.
+[21] K. Geshi, R. Harada, T. Motomura, D. Hisano, T. Yoshida, A. Maruta, and K. Mishina, ‘‘Application of SD-FEC to b-modulation based on inverse scattering transform,’’ in Proc. 30th OptoElectronics Commun. Conf. (OECC) Int. Conf. Photon. Switching Comput. (PSC), Sapporo, Japan, Jun. 2025, pp. 1–4, Paper WP-F-3.
+[22] A. Hasegawa and Y. Kodama, ‘‘Guiding-center soliton in optical fibers,’’ Opt. Lett., vol. 15, no. 24, pp. 1443–1445, Dec. 1990.
+VOLUME 14, 2026
+
+[23] V. E. Zakharov and A. B. Shabat, ‘‘Exact theory of 2-dimensional selffocusing and one dimensional self-modulation of waves in nonlinear media,’’ Sov. Phys.-JETP, vol. 34, pp. 62–69, Jan. 1972.
+[24] V. Aref, ‘‘Control and detection of discrete spec-tral amplitudes in nonlinear Fourier spectrum,’’ 2016, arXiv:1605.06328.
+[25] W. Q. Zhang, T. Gui, Q. Zhang, C. Lu, T. M. Monro, T. H. Chan, A. P. T. Lau, and V. S. Afshar, ‘‘Correlated eigenvalues of multi-soliton optical communications,’’ Sci. Rep., vol. 9, no. 1, pp. 1–17, Apr. 2019.
+[26] J. Lin, ‘‘Divergence measures based on the Shannon entropy,’’ IEEE Trans. Inf. Theory, vol. 37, no. 1, pp. 145–151, Jan. 1991.
+[27] O. Shental and J. Hoydis, ‘‘Machine LLRning: Learning to softly demodulate,’’ in Proc. IEEE Globecom Workshops, San Diego, CA, USA, Dec. 2019, pp. 1–7, Paper Th3F.3.
+[28] T. Koike-Akino, Y. Wang, D. S. Millar, K. Kojima, and K. Parsons, ‘‘Neural turbo equalization: Deep learning for fiber-optic nonlinearity compensation,’’ J. Lightw. Technol., vol. 38, no. 11, pp. 3059–3066, Jun. 1, 2020.
+[29] Y. Onodera, D. Hisano, K. Maruta, and Y. Nakayama, ‘‘First demonstration of 512-color shift keying signal demodulation using neural equalization for optical camera communication,’’ in Proc. Opt. Fiber Commun. Conf. (OFC), San Diego, CA, USA, Mar. 2023, pp. 1–3, Paper Th3H.7.
+[30] G. Agrawal, Nonlinear Fiber Optics. Cambridge, MA, USA: Academic Press, 2019.
+[31] D. Kingma and J. Ba, ‘‘Adam: A Method for Stochastic Optimization,’’ in Proc. ICLR, May 2015, pp. 1–15.
+[32] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, MA, USA: MIT Press, 2016.
+[33] T. Yoshida, M. Karlsson, and E. Agrell, ‘‘Efficient offline evaluation of FEC codes based on captured data with probabilistic shaping,’’ in Proc. Opt. Fiber Commun. Conf., San Diego, CA, USA, Mar. 2018, pp. 1–3, Paper M4E.5.
+[34] ETSI, Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding, and Modulation. Systems for Broadcasting, Interactive Services and News Gathering and Other Broadband Satellite Applications Part 1: DVB-S2, Standard EN 302 307, 2014.
+KAITO GESHI received the B.E. and M. E. degrees in electrical, electronic and information engineering from The University of Osaka, Osaka, Japan, in 2024 and 2026, respectively. He is currently with NEC Corporation, Abiko, Japan. He is a member of IEICE, Japan.
+RYOTARO HARADA received the B.E. degree in the major in electrical and electronic engineering, Kobe City College of Technology. Kobe, Japan, in 2023, and the M.E. degree in electrical, electronic, and infocommunication engineering from The Osaka University, Osaka, Japan, in 2025. He is currently with NTT Network Service Systems Laboratories, Musashino, Japan. He is a member of IEICE, Japan.
+TAKUMI MOTOMURA (Member, IEEE) received the B.S. and M.S. degrees in 2020 and 2022, respectively, the Ph.D. degree in electrical, electronic, and infocommunications engineering from The University of Osaka, Osaka, Japan, in 2015. From 2025 to 2026, he was an Assistant Professor with the National Institute of Technology, Nara College. Since 2026, he has been a Researcher with the Network Research Institute, National Institute of Information and Communications Technology (NICT), Tokyo, Japan.
+76687
+
+K. Geshi et al.: SD-FEC for Scattering Coefficient-Modulated Signal in Inverse Scattering Transform
+
+DAISUKE HISANO (Member, IEEE) received B.E., M.E., and Ph.D. degrees in electrical, electronic, and information engineering from The Osaka University, Osaka, Japan, in 2012, 2014, and 2018, respectively. In 2014, he joined NTT Access Network Service Systems Laboratories, Yokosuka, Japan. Since 2018, he has been an Assistant Professor with the Department of Information and Communications Technology, Division of Electrical, Electronic, and Information Engineering, Graduate School of Engineering, The Osaka University. His research interests include optical-wireless converged networks, optical communications, and all-optical signal processing. He is a member of the IEICE, Japan.
+
+AKIHIRO MARUTA (Member, IEEE) received the B.E., and M.E., and Ph.D. degrees in communication engineering with The Osaka University, in 1988, 1990, and 1993, respectively. He joined the Department of Communications Engineering, The Osaka University, in 1993. Since 2016, he has been a Professor with the Department of Information and Communication Technologies, The Osaka University. His current research interests include optical fiber communication systems and all-optical signal processing. He is a member of the IEEE Photonics Society and Optica and a senior member of IEICE, Japan.
+
+TSUYOSHI YOSHIDA (Member, IEEE) received the B.Sc. degree in electrical and electronic engineering and the M.Sc. degree in communications and computer engineering from Kyoto University, Kyoto, Japan, in 2005 and 2007, respectively, and the Ph.D. degree in electrical, electronic, and information engineering from The Osaka University, Osaka, Japan, in 2022. Since 2007, he has been with the Mitsubishi Electric Corporation, Kamakura, Japan, where he has been engaged in the research and development of high-speed optical transmission, coding and modulation, digital signal processing, and algorithms for classic and quantum hybrid systems. From 2016 to 2017, he visited the Fiber-Optic Communications Research Center with Chalmers University of Technology, Gothenburg, Sweden. He is a member of Optica and IEICE, Japan.
+
+KEN MISHINA (Member, IEEE) received the B.E., M.E., and Ph.D. degrees in electrical, electronic, and information engineering from The Osaka University, Osaka, Japan, in 2005, 2007, and 2012, respectively. In 2007, he joined Shimadzu Corporation, Kyoto, Japan. Since 2018, he has been an Associate Professor with the Department of Information and Communication Technology, Division of Electrical, Electronic, and Information Engineering, Graduate School of Engineering, The Osaka University. His research interests include optical fiber communications systems, all-optical signal processing, and photovoltaics. He is a member of the IEEE Photonics Society and IEICE, Japan.
+
+76688
+
+VOLUME 14, 2026
+
+

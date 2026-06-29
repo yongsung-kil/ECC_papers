@@ -1,0 +1,464 @@
+Configurable High-Throughput Decoder Architecture for Quasi-Cyclic LDPC Codes
+C. Studer∗, N. Preyss, C. Roth, and A. Burg∗ ∗Integrated Systems Laboratory
+ETH Zurich, 8092 Zurich, Switzerland email: {studer, apburg}@iis.ee.ethz.ch
+
+Abstract— We describe a fully reconfigurable low-density parity check (LDPC) decoder for quasi-cyclic (QC) codes. The proposed hardware architecture is able to decode virtually any QC-LDPC code that fits into the allocated memories while achieving high decoding throughput. Our VLSI implementation has been optimized for the IEEE 802.11n standard and achieves a throughput of 780 Mbit/s with a core area of 3.39 mm2 in 0.18 μm CMOS technology.
+I. INTRODUCTION
+The quality-of-service and throughput requirements of modern wireless communication systems require high-performance error-correction schemes. Low-density parity check (LDPC) codes [1] are promising candidates for next-generation wireless communication standards due to the excellent errorcorrection capabilities. In particular, quasi-cyclic (QC) LDPC codes [2], [3] offer high decoding throughput at low implementation complexity, e.g., [4]–[6], and have been considered in different wireless standards, e.g., DVB-S2 [7], IEEE 802.16 [8], and IEEE 802.11n [9]. The growing use of QC-LDPC codes asks for a single configurable decoder architecture that can easily be scaled (at compile time) to different performance and complexity requirements.
+Contributions: In this paper, we describe a configurable high-throughput QC-LDPC decoder architecture based on layered message passing [10]. We present a novel technique to trade memory consumption for (error-rate) performance at design-time of the decoder and propose a parallel decoder architecture that employs flexible cyclic shifters in combination with a configurable sequencer, which enables to decode virtually any QC-LDPC code that fits into the allocated memories. This feature renders the design suitable for multi-standard radio applications, but the specific implementation reported in this paper has been optimized for IEEE 802.11n [9]. The ASIC was fabricated in 0.18 μm CMOS technology. We provide power-efficiency measurement results and compare our ASIC implementation with existing QC-LDPC decoders.
+Outline: The remainder of this paper is organized as follows. Section II describes QC-LDPC codes and the employed LDPC decoding algorithm. The configurable VLSI architecture is described in Section III, corresponding implementation results are given in Section IV, and we conclude in Section V.
+
+II. QUASI-CYCLIC LDPC CODES AND DECODING LDPC [1] codes are linear block codes satisfying
+
+Hx = 0M×1
+
+(1)
+
+in GF(2), where x is the N -dimensional binary-valued data
+
+vector, 0M×1 denotes an M -dimensional all-zero vector,
+
+and H is a sparse binary-valued M × N parity check matrix.
+
+QC-LDPC codes are described by a Mp × Np LDPC matrix
+
+prototype Hp. The parity check matrix in (1) is constructed
+
+from Hp by replacing each entry by a Z × Z cyclic-shift
+
+matrix Pc (i.e., M = MpZ and N = NpZ), where c is equal
+
+to the corresponding entries in Hp. The cyclic-shift matrices
+
+are defined as Pc =
+
+c i=1
+
+P1
+
+(for
+
+c
+
+>
+
+0)
+
+with
+
+P1 i,j =
+
+1, (i mod Z) + 1 = j 0, otherwise
+
+P0 = IZ , and P− = 0Z×Z. Note that all entries of Hp satisfy [Hp]m,n < Z (∀m, n). For example, the rate-5/6, Z = 81 QC-LDPC matrix prototype of the IEEE 802.11n standard [9]
+is defined as
+
+.
+
+A. Decoding of LDPC Codes
+
+The parity check in (1) can be represented as a bipartite graph consisting of N variable nodes and M check nodes. Variable nodes are associated with transmitted bits xn (n = 1, 2, . . . , N ). The mth parity check node is connected to the nth variable node if [H]m,n = 1. LDPC decoding can be represented as message passing (MP) on the bipartite graph [11]. The standard MP schedule consists of two phases and is also known as flooding MP [10]. In the first phase, all messages from the variable to the check nodes (denoted by Qmessages) are computed with the aid of log-likelihood ratios (LLRs)
+
+Ln
+
+log
+
+P[xn = 0|y] , P[xn = 1|y]
+
+n = 1, 2, . . . , N
+
+(2)
+
+where y denotes the channel observation. In the second phase, all messages from the check to the variable nodes (denoted by R-messages) are computed. Both phases are repeated until (1) is satisfied (i.e., the algorithm converges to a valid code-word)
+
+978-1-4244-2941-7/08/$25.00 ©2008 IEEE
+
+1137
+
+Asilomar 2008
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+or a maximum number of iterations I has been reached. Note that flooding MP is frequently used in the literature, e.g., [12], [13], but has three major disadvantages: i) both phases require a different set of arithmetic operations, ii) both message types (Q and R) as well as the input LLRs (2) need to be stored, and iii) the convergence behavior is relatively slow [10].
+
+B. Layered Offset Min-Sum LDPC Decoding
+
+The decoding algorithm used in this paper avoids the drawbacks of flooding MP and is based on layered LDPC decoding [10], [14] with offset min-sum (OMS) MP [15]. Furthermore, the implemented decoding algorithm exploits the
+value-reuse properties of OMS as described in [5], [6] and employs a novel technique called message clipping (MC), which allows to trade memory requirements for (error-rate) performance.
+The algorithm described in the following is summarized in Alg. 1. Note that layered QC-LDPC decoding only requires memory for two message types [10], [14], denoted by the Z-dimensional vectors qin (i.e., the Q-values at the variable nodes) and the R-messages from check to variable nodes rm i ,n. All vector operations in Alg. 1 are performed element-wise, except for the cyclic shifts (i.e., all matrix-vector multiplications).
+Initialization: On lines 1-2 of Alg. 1, the q0n (∀n) values are initialized by the LLRs (2) and all messages rm 0 ,n (∀m, n) are set to zero. Note that no separate storage for the input LLRs is needed for layered LDPC decoding. The algorithm performs a maximum number of I iterations (lines 3-19) and operates row-wise (for each row m of Hp). Message computation is then performed iteratively for the columns n ∈ Nm of Hp for which Hp m,n = − (see line 6 and 12 Alg. 1), i.e.,
+
+Nm = n ∈ Z | Hp m,n = − .
+
+(3)
+
+Message computation of layered MP can be divided into two
+phases: the first is called MIN phase (lines 6-11) and the
+second is called SEL phase (lines 12-17). MIN Phase: The rm i−,1n-message is subtracted from a
+cyclically-shifted version (by c = Hp m,n) of qin−1 and stored in a temporary vector tn (cf. line 6). OMS [15] and its value-reuse properties [5], [6] only require to compute
+the minimum m1 and the second minimum m2 for each entry of tn (∀n). Both minima are being computed iteratively as shown on lines 8 and 9, where the minimum on line 8 returns the minimum of m1 or tn, a temporary vector x which contains the values not corresponding to the minimum (i.e., the second-lowest values), and an index vector where [v]k is set to the current index n if a new minimum (i.e., corresponding to [tn]k) has been found. The vector s contains Z signs, which are used in the SEL phase.
+SEL Phase: In this phase, the new Q and R messages are computed iteratively for n = 1, 2, . . . , Nb. To this end, the temporary vector tn = Pcqkn−1 − rkm−,n1 is computed first (line 14). Then, the sel-function (line 14) compares each of the Z indices [v]k (for k = 1, 2, . . . , Z) with n and yields the corresponding entry of [m1]k if vk = n and [m2]k
+
+otherwise. The new rim,n-vector is computed by using OMS MP [15] (cf. line 15) with β = β · IZ×1, where only one offset value β is used for all Z entries. The new qim,n vector is computed on line 17 and cyclically shifted using the inverse rotation c = Z − c, such that PcPc = IZ×Z .
+C. Message Clipping
+Since layered LDPC decoding performs updates of the qm i ,n-vector using the results of the previous iteration (cf. line 16), the dynamic range of the Q-messages is, in general, very large. In order to reduce the amount of bits required to store all qim,n-vectors (∀n, m), the maximum magnitude of the Q-values can be clipped. Unfortunately, this straightforward approach yields poor error-rate performance. In order to combat this problem, we propose a novel approach referred to as message clipping (MC) in the following. Instead of clipping the Q-values, the R-messages are clipped (on line 15) according to
+clip(r, t) = max min{r, Qmax − t}, −Qmax − t
+which ensures that that [qni ]k ≤ Qmax (∀n, k) and Qmax denotes the MC parameter. This approach offers a trade-off between memory consumption (to store the Q-messages) and error-rate performance (corresponding simulation results are shown in Section III-E).
+III. VLSI ARCHITECTURE
+An overview of the configurable QC-LDPC decoder architecture is shown in Fig. 1. The architecture consists of two memories, i.e., one for the Q-values and one for the Rmessages, a cyclic shifter (CS), and a pool of node computation units (NCUs). To enable reconfigurability for different LDPC matrix prototypes, the architecture contains a configurable control unit and a sequence (SEQ) memory.
+
+Algorithm 1 QC L-OMS LDPC decoder with MC
+
+1: r0m,n ← 0Z×1, n = 1, 2, . . . , Nb, m = 1, 2, . . . , Mb 2: q0n ← L(n−1)Z+1 L(n−1)Z+2 · · · LnZ T , ∀n 3: for i = 1, 2, . . . , I do
+
+4: for m = 1, 2, . . . , Mb do
+
+5:
+
+m1 ← ∞ · IZ×1, m2 ← ∞ · IZ×1, s ← IZ×1
+
+6:
+
+for n ∈ Nm do
+
+7:
+
+c = Hp m,n, tn ← Pcqni−1 − rim−,1n
+
+8:
+
+[m1, x, v] ← min m1, |tn|
+
+9:
+
+m2 ← min{m2, x}
+
+10:
+
+s ← s · sign(t)
+
+11:
+
+end for
+
+12:
+
+for n ∈ Nm do
+
+13:
+
+c = Hp m,n, tn ← Pcqin−1 − rim−,1n
+
+14:
+
+m ← sel(m1, m2, v, n)
+
+15:
+
+rm i ,n ← clip s · sign tn · max m − β, 0 , tn
+
+16:
+
+qni ← Pc tn + rim,n , c = Z − Hp m,n
+
+17:
+
+end for
+
+18: end for
+
+19: end for
+
+1138
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Configurable QC-LDPC decoder architecture overview.
+In order to maximize the throughput, the decoder operates on Z elements in a parallel manner (using Z NCUs). The architecture computes one entry of Hp per clock cycle, so that at most Nb clock cycles are required per row of the LDPC matrix prototype. The throughput is further increased by parallel computation of the MIN and SEL phases (line 6-12 and 12-17, respectively) of Alg. 1. This parallel computation requires that the MIN and SEL phases do not access the same data at the same time. To avoid memory access conflicts, the MIN phase is performed on row m + 1, whereas the SEL phase operates on row m. Furthermore, the SEL phase never accesses the nth column before it will be used in the MIN phase, to maintain convergence of layered LDPC decoding. These memory access constraints are enforced by the control unit (see Section III-D).
+A. Node Computation Units
+To enable parallel computation of the SEL and MIN phases, each of the Z NCUs is divided into a SEL unit and MIN unit by an intermediate pipeline stage as shown in Fig. 2.
+MIN Unit: The kth MIN unit (k = 1, 2, . . . , Z) iteratively computes [m1]k, [m2]k, [v]k, and [s]k for all n ∈ Nm+1 on row m + 1 (cf. lines 5-11 of Alg. 1) by using the inputs rim−+11,n k and Pcqni−1 k. When the MIN phase of row m+1 has finished, both minima (i.e., m1 and m2), the index vector v, and the sign-vector s are passed from the MIN to the SEL units.
+SEL Unit: The SEL units iteratively compute the new clipped output messages rim,n and t + rm i ,n as shown on lines 12-17 of Alg. 1 using m1, m2, v, and s from the MIN unit and rm i−+11,n as well as Pcqni−1 from the R- and Q-memory, respectively.
+Partial Parity Check: During computation of the new Q-values and R-messages, each SEL unit performs a partial parity check (PPC) of (1), i.e., the SEL units check whether hm T xˆ = 0, where hTm stands for the m th row (for m = 1, 2, . . . , M ) of H in (1) and xˆ corresponds to the binary-valued estimates obtained from the sign-bits of qin (for n ∈ Nm). After processing all m rows of H, the
+
+Fig. 2. Architectural details and decoding schedule of the QC-LDPC decoder for Z = 2 and Nb = Mb = 2.
+decoding procedure is terminated prematurely if all PPCs are satisfied. It is important to note that combining all PPCs does, in general, not correspond to the parity check in (1), since the evaluation of the PPCs are done sequentially and some estimates (since they result from the qin-values) might change during computation of all rows. We emphasize, however, that the proposed approach never terminates the decoder if (1) is not satisfied, but situations occur, where (1) is satisfied but the combination of all PPCs is not. Hence, the presented approach is slightly sub-optimal (in terms of number of decoding iterations) but the average number of iterations is still reduced significantly for medium to high SNRs, which leads to an improvement in terms of energy-efficiency in these SNR regimes (corresponding measurement results are provided in Section IV-B).
+B. Cyclic Shifter
+Cyclic shifts according to the entries of Hp are required when the MIN and SEL units read data from the Q-memory and when the SEL unit writes new data to the Q-memory (see Fig. 2). These cyclic shifts are performed in the CS unit, which consists of three subset cyclic shifters (SCSs). Since Z ≤ Zmax (where Zmax denotes the maximum subblock size supported by the architecture) can be different for each LDPC matrix prototype (i.e., depending on the codeblock size) a flexible unit is required that is able to perform an arbitrary cyclic shift 0 ≤ c < Z. Several architectures that perform cyclic shifts of a subset of Zmax have been described in the literature. A corresponding survey can be found in [16]. However, most of the proposed architectures lead to either irregular structures, result in large circuit and interconnection area, or are only suited for a small number of different Zvalues.
+In order to attain reconfigurability of the QC-LDPC decoder, we designed a simple and efficient subset cyclic shifter (SCS) that is able to perform shifts for any subset of Zmax by an arbitrary shift amount 0 ≤ c < Z. The SCS architecture is depicted in Fig. 3. Each SCS consists of a shifter control
+
+1139
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+100 SPA (fp)
+
+OMS (fp)
+
+10-1
+
+OMS 7bit OMS 5bit
+
+10-2
+
+FER
+
+10-3
+
+Fig. 3. Subset cyclic shifter architecture a) overview, b) barrel rotator (BR), and c) operation principle for Zmax = 8, Z = 6, and c = 1.
+(SC) unit, two barrel rotators (denoted by BR 1 and BR 2), and an output multiplexer stage. The first barrel rotator (BR 1) performs a cyclic left-shift by c1 = Zmax − Z + c, while BR 2 left-shifts the input by c2 = c. The shift amounts c1 and c2 are computed in the SC unit. The output multiplexer stage selects the outputs 1, 2, . . . , Z − c from BR 2 and the outputs Z − c + 1, Z − c + 2, . . . , Z from BR 1.
+The key advantages of the proposed SCS are i) the low circuit area and ii) its fast operation. The total number of 2-to-1 multiplexers required in each SCS corresponds to
+Bq 2Zmax log2(Zmax) + Zmax
+where Bq denotes the number of bits required for each entry of q. Furthermore, each SCS only consists of log2(Zmax) + 1 multiplexer stages, which, thanks to its regular structure, enables pipelining.
+C. Memories for Q and R
+Since the Q-memory and the R-memory require two write operations and one read operation per clock cycle for all Z messages, the memories have been designed such that one (read or write) address corresponds to Zmax messages. To increase the memory bandwidth without (significantly) increasing the area, we used a double-clocking strategy, i.e., both memories operate at twice the clock frequency of the remaining logic, i.e., fmem = 2fclk. Since the timing characteristics of the memories available in our process technology are sufficiently fast, this double-clocking approach offers a two-fold increase in terms of memory bandwidth without leading to a significant area overhead.
+D. Control Unit
+The control unit consists of the SEQ memory and a simple controller, which generates all control signals for the decoder architecture. During the initialization phase of the LDPC decoder, the control unit can be configured with the OMS scaling parameter β, the sub-block size Z, and the maximum number of iterations I. Additionally, a control sequence needs to be loaded into the sequence (SEQ) memory prior to decoding. This control sequence contains all necessary information on Hp in combination with the decoding schedule (i.e., memory addresses, cyclic shifts etc.). During operation,
+
+10-4 0.5 1 1.5 2 2.5 3 3.5 4 SNR [dB]
+Fig. 4. Frame error rate (FER) comparison using the R = 1/2, Z = 81 code [9] in an AWGN channel.
+the control words are being translated to corresponding signals and addresses. The key advantages of the proposed approach is that the decoder remains fully configurable, i.e., all possible QC-LDPC matrices that fit into the allocated memories can be processed, and the complexity of the control unit is significantly reduced.
+The process of transforming Hp into a control sequence is done off-line. Each sequence consists of L control words using Bs bit. Note that only the information for one iteration is stored in the control sequence. The number of clock cycles required for one iteration corresponds to L, which determines the throughput of the LDPC decoder for a particular Hp. Obtaining a short sequence is therefore a major goal of the sequence construction. The length of a sequence is determined by the number of entries in the LDPC matrix prototype Hp that are not equal to ’-’ and by the constraint that columns used by the SEL unit operating on row m and the MIN unit operating on row m + 1 must always be accessed first by the MIN unit (cf. Section III). The decoder is able to process the columns of Hp in an arbitrary ordering (as it is done in [6]), which can be exploited (during sequence construction) to reduce L.
+E. Optimization for IEEE 802.11n
+So far, the configurable QC-LDPC decoder architecture has been described independent of a particular standard. The steps described in the following have been performed to optimize the architecture for IEEE 802.11n [9], which is used for setting the design parameters for the ASIC implementation shown in Section IV.
+Architectural Optimizations: The decoder has been designed to support at least all QC-LDPC matrix prototypes of IEEE 802.11n [9] while achieving a decoding throughput higher than 600 Mbit/s. To this end, we instantiated Zmax = 81 NCUs, since the standard only requires Z ∈ {27, 54, 81}. To reduce the power consumption, we divided the NCU pool into three blocks consisting of 27 NCUs. Each of the three NCU blocks can be switched off using clock gating, which is used to reduce the power consumption for the modes Z ∈ {27, 54}. Corresponding power measurement results are shown in Section IV-B.
+
+1140
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+R memory
+
+Q memory
+
+NCU pool
+
+cyclic shifter
+ctrl
+
+Fig. 5. Die photo of the QC-LDPC decoder in 0.18 μm CMOS technology. Note that there is unused circuit area on both sides of the ASIC.
+
+TABLE I DETAILED AREA BREAKDOWN
+
+Unit
+Control unit NCU pool Q memory R memory Cyclic shifter Miscellaneousb Total
+
+mm2 kGEa %
+0.10 10.3 3.0 0.59 60.8 17.4 0.83 85.6 24.5 1.16 119.6 34.2 0.45 46.4 13.3 0.26 26.8 7.6 3.39 349.5 100
+
+aOne gate equivalent (GE) corresponds to the area of a two-input drive-one NAND gate of size 9.7 μm2. bDenotes remaining logic, i.e., pipeline registers, logic required for the input/output interface, etc.
+
+Numeric Precision Optimization: Since IEEE 802.11n supports many different modulation and coding schemes, the numeric precision requirements have been evaluated using frame error rate (FER) simulations in an AWGN channel. Fig. 4 compares the FER of layered message passing using the floating-point (fp) sum-product algorithm (SPA) with layered OMS (β = 0.15). Note that OMS only loses approximately 0.2 dB to the SPA. The impact of MC is shown by using 7 bits and 5 bits. Note that both OMS simulations include early termination based on the PPCs described in Section III-A. MC to 5 bits leads to a 0.45 dB SNR loss compared to MC using 7 bits (at 10−3 FER) but reduces the amount of bits required in the Q-memory by 28%. Thus, we decided to limit the Qvalues to Bq = 5 bit. The R-messages require Br = 5 bit and the input LLRs have been quantized to 5 bit according to [15]. The curve associated with OMS 5 bit in Fig. 4 corresponds to the FER performance of the final implementation.
+Q- and R-Memory Design: IEEE 802.11n requires at most Nb,maxZmax = 24 · 81 Q-values and the R-memory requires at most 88 · 81 R-messages, where 88 corresponds to the maximum number of sub-blocks not equal to ’-’ in IEEE 802.11n [9]. Therefore, we instantiated eight 64 × 102 single-port SRAMs (total 52’224 bit) for the R-memory and three 32 × 135 two-port SRAMs (total 12’960 bit) for the Qmemory. The number of bits per sequence word is Bs = 42 bit and memory for a maximum of 128 sequence words has been allocated.
+
+TABLE II SEQUENCE LENGTH L AND THROUGHPUT Θ
+
+Z Rate
+
+1/2
+
+27
+
+2/3 3/4
+
+5/6
+
+1/2
+
+54
+
+2/3 3/4
+
+5/6
+
+1/2
+
+81
+
+2/3 3/4
+
+5/6
+
+L Θ [Mbit/s]
+
+94
+
+134
+
+88
+
+190
+
+89
+
+212
+
+95
+
+222
+
+88
+
+286
+
+90
+
+373
+
+90
+
+419
+
+89
+
+471
+
+91
+
+415
+
+89
+
+565
+
+86
+
+656
+
+80
+
+780
+
+A. Sequence Lengths and Throughput
+
+Tbl. II shows the sequence lengths for all possible codes in IEEE 802.11n [9] as well as the resulting throughput for fclk = 208 MHz using a maximum of I = 5 iterations. The throughput of the decoder can be computed as
+
+Θ
+
+=
+
+Z L
+
+· Nb · R · I + 32
+
+fclk
+
+where 32 additional clock cycles are required to load and flush the pipeline. The maximum achievable throughput for the R = 5/6, Z = 81 code corresponds to 780 Mbit/s and exceeds the throughput requirements of IEEE 802.11n.
+
+IV. IMPLEMENTATION RESULTS
+Fig. 5 shows a die photo of the fabricated QC-LDPC decoder ASIC in 0.18 μm (1P/6M) CMOS technology. The ASIC has been characterized using speed and power measurements. The key figures of the QC-LDPC decoder implementation are summarized in Tbl. IV. The implementation requires 3.39 mm2 core area and achieves 208 MHz and 416 MHz for the slow logic clock and for the fast memory clock, respectively. Tbl. I shows a detailed area breakdown of the QC-LDPC decoder. It can clearly be observed that most of the circuit area is occupied by the Q- and R-memories. The NCU Pool and the cyclic shifter require approximately a third of the decoder’s area and the circuit complexity of the configurable control unit is low.
+
+B. Energy-Efficiency Measurements
+Tbl. III shows energy-per-data-bit measurement results of the implemented ASIC. The impact of early-termination using PPCs, as well as the impact of clock gating is shown at different SNRs for different R = 1/2 codes [9]. For higher SNRs, the energy-efficiency improves significantly, since it becomes more likely that the PPCs are satisfied after a few iterations. For small block sizes (i.e., Z = 27), the power consumption can be dramatically reduced if clock gating is used, since part of the NCUs can be disabled during decoding of the smaller block-sizes (i.e., for Z = {27, 54}). Note that for Z = 27, clock-gating combined with the PPCs improves the energy-efficiency up to 63% at high SNRs, whereas in the low-SNR regime, still up to 48% improvement can be achieved.
+
+1141
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III ENERGY-EFFICIENCY MEASUREMENTS FOR RATE-1/2 CODES
+
+Z SNR
+1 27 3
+7
+1 54 3
+7
+1 81 3
+7
+
+no power save nJ/bit %
+11.5 100 11.9 100 11.6 100
+5.6 100 5.8 100 5.6 100
+3.8 100 4.0 100 3.9 100
+
+clk–gate nJ/bit %
+6.0 52 6.2 52 6.1 53
+4.4 79 4.5 79 4.4 79
+3.8 100 4.0 100 3.9 100
+
+clk–gate & PPC nJ/bit %
+
+6.0
+
+52
+
+5.6
+
+47
+
+3.1
+
+27
+
+4.4
+
+79
+
+4.2
+
+73
+
+2.2
+
+40
+
+3.8
+
+100
+
+3.7
+
+92
+
+1.9
+
+49
+
+CMOS technology. Measurement results and comparison with dedicated LDPC decoders for IEEE 802.11n demonstrate that the flexibility of our architecture not necessarily leads to a significant performance penalty in terms of area, throughput, and energy-efficiency.
+ACKNOWLEDGMENT
+The authors want to thank M. Braendli for his support during the back-end design. Furthermore, we would like to thank Prof. W. Fichtner, Dr. N. Felber, and Dr. H. Kaeslin for their support during design and testing of the QC-LDPC decoder ASIC.
+
+TABLE IV COMPARISON OF LDPC DECODERS FOR IEEE 802.11N
+
+Technology [nm] Core area [mm2] Memory area [mm2] Cell area [kGE] Max. clock freq. [MHz]
+Max. throughput [Mbps]
+
+This work
+180 3.39 1.99 144.3c 208 780
+
+[6]
+130 1.85 1.04 99.9 500 1618
+
+[4]a
+130 1.9 – 195 400 1000d
+
+[17]b
+65 0.74 0.26 217 240 410
+
+aCorresponding to the pipelined version [4].
+bCorresponding to the K = 4, Nc2v = 5, and NSO = 8 decoder [17]. cThe memory area has been excluded (cf. Tbl. I).
+dThe maximum throughput is given for 2.2 dB SNR.
+
+C. Comparison
+In Tbl. IV,the presented implementation is compared with dedicated QC-LDPC decoders for IEEE 802.11n, i.e., the designs of Gunnam et al. [6], Sun et al. [4], and Rovini et al. [17]. Due to differences in process technologies, fair area, speed, and power comparisons are difficult to state. The circuit complexity and memory area of all four designs is comparable when considering technology scaling. Note that the implementation described in this paper achieves the lowest clock frequency, which is mainly due to the process technology and the detrimental input/output timing of the off-chip drivers. Nevertheless, our implementation achieves a throughput of up to 780 Mbps, which is sufficient to fulfill the requirements of the standard. Additionally, the achieved throughput is comparable to that of [4] and even higher than that of [17]. Therefore, we can conclude that configurability of our architecture does not come at a (significant) performance penalty.
+V. CONCLUSION
+We presented a fully reconfigurable LDPC decoder architecture for quasi-cyclic codes based on layered offset-min-sum message passing. Thanks to the subset cyclic shifter and the reconfigurable control unit, the proposed architecture is able to decode virtually any QC-LDPC code that fits into the allocated memories. The memory requirements have been significantly reduced by clipping of the decoder-internal messages, which has shown to enable a trade-off between error rate performance and circuit area at design-time. The QC-LDPC decoder has been optimized for IEEE 802.11n and fabricated in 0.18 μm
+
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” Trans. of the IRE Professional Group on Inf. Theory, vol. IT-8, pp. 21–28, Jan. 1962.
+[2] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. on Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[3] H. Zhong and T. Zhang, “Block-LDPC: a practical LDPC coding system design approach,” IEEE Trans. on Circuits and Systems I, vol. 52, no. 4, pp. 766–775, Apr. 2005.
+[4] Y. Sun, M. Karkooti, and J. R. Cavallaro, “High throughput, parallel, scalable LDPC encoder/decoder architecture for OFDM systems,” in Proc. IEEE Dallas/CAS Workshop on Design, Applications, Integration and Software, Oct. 2006, pp. 39–42.
+[5] K. K. Gunnam, G. S. Choi, W. Wang, E. Kim, and M. B. Yeary, “Decoding of quasi-cyclic LDPC codes using an on-the-fly computation,” in Proc. Fortieth Asilomar Conference on Signals, Systems and Computers, Oct. 2006, pp. 1192–1199.
+[6] K. K. Gunnam, G. S. Choi, W. Wang, and M. B. Yeary, “Multi-rate layered decoder architecture for block ldpc codes of the ieee 802.11n wireless standard,” in Proc. IEEE International Symposium on Circuits and Systems, May 2007, pp. 1645–1648.
+[7] Digital Video Broadcasting (DVB) User guidelines for the second generation system for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications (DVB-S2), ETSI TR 102 376, Feb. 2005.
+[8] IEEE P802.16e, Part 16, “Air Interface for Fixed and Mobile Broadband Wireless Access Systems,” Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, and Corrigendum 1, Feb. 2006.
+[9] IEEE P802.11n/D5.02, Part 11, “Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) specifications: Enhancements for Higher Throughput”, July 2008.
+[10] S. Sharon, J. Litsyn, and J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” in Proc. 23rd IEEE Convention of Electrical and Electronics Engineers in Israel, Sept. 2004, pp. 223–226.
+[11] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. on Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[12] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[13] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29mm2 52mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13um CMOS process,” vol. 43, no. 3, pp. 672–683, Mar. 2008.
+[14] S. Sharon, J. Litsyn, and J. Goldberger, “Efficient serial message-passing schedulers for LDPC decoding,” IEEE Trans. on Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[15] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. on Comm., vol. 53, no. 7, pp. 1288–1299, Aug. 2005.
+[16] C.-H. Liu, C.-C. Lin, H.-C. Chang, C.-Y. Lee, and Y. Hsua, “Multi-mode message passing switch networks applied for QC-LDPC decoder,” in IEEE International Symposium on Circuits and Systems, May 2008, pp. 752–755.
+[17] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A scalable decoder architecture for IEEE 802.11n LDPC codes,” in Proc. IEEE GLOBECOM, Nov. 2007, pp. 3270–3274.
+
+1142
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:17:23 UTC from IEEE Xplore. Restrictions apply.
+
+

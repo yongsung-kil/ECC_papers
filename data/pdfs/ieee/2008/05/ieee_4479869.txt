@@ -1,0 +1,2404 @@
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+565
+
+Optimal Overlapped Message Passing Decoding of Quasi-Cyclic LDPC Codes
+Yongmei Dai, Student Member, IEEE, Zhiyuan Yan, Member, IEEE, and Ning Chen, Student Member, IEEE
+
+Abstract—Efficient hardware implementation of low-density parity-check (LDPC) codes is of great interest since LDPC codes are being considered for a wide range of applications. Recently, overlapped message passing (OMP) decoding has been proposed to improve the throughput and hardware utilization efficiency (HUE) of decoder architectures for LDPC codes. In this paper, we first study the scheduling for the OMP decoding of LDPC codes, and show that maximizing the throughput gain amounts to minimizing the intra- and inter-iteration waiting times. We then focus on the OMP decoding of quasi-cyclic (QC) LDPC codes. We propose a partly parallel OMP decoder architecture and implement it using FPGA. For any QC LDPC code, our OMP decoder achieves the maximum throughput gain and HUE due to overlapping, hence has higher throughput and HUE than previously proposed OMP decoders while maintaining the same hardware requirements. We also show that the maximum throughput gain and HUE achieved by our OMP decoder are ultimately determined by the given code. Thus, we propose a coset-based construction method, which results in QC LDPC codes that allow our optimal OMP decoder to achieve higher throughput and HUE.
+Index Terms—Hardware utilization efficiency (HUE), low-density parity-check (LDPC) codes, message passing, quasi-cyclic (QC) codes, throughput.
+I. INTRODUCTION
+DISCOVERED first by Gallager in the early 1960s [1], low-density parity-check (LDPC) codes were mostly ignored for over three decades by coding researchers. Among notable exceptions, Tanner [2] introduced a graphical interpretation of LDPC codes, wherein the codeword bits and the parity check equations were represented as variable and check nodes respectively in a bipartite graph. Since their rediscovery in the mid-1990s, LDPC codes have attracted a lot of attention (see, e.g., [3]–[27]) because, when decoded with the iterative message passing (MP) algorithm (see, e.g., [4]), long LDPC codes can achieve error performances within a small fraction of the Shannon limit (see, e.g., [5]).
+In addition to code design, efficient hardware implementation of LDPC decoders has also been an active research area, and various (fully parallel, fully serial, and partly parallel) decoder architectures have been proposed [7]–[17], [27]–[29]. However, various challenging issues still remain. One such issue is
+Manuscript received August 30, 2005; revised September 24, 2006 and March 25, 2007. This work was supported by a grant from the Department of Community and Economic Development, Commonwealth of Pennsylvania, through the Pennsylvania Infrastructure Technology Alliance (PITA). The material in this paper was presented in part at Globecom 2005 and SiPS 2005.
+The authors are with the Department of Electrical and Computer Engineering, Lehigh University, Bethlehem, PA 18015 USA (e-mail: yod304@lehigh.edu; yan@lehigh.edu; nic6@lehigh.edu).
+Digital Object Identifier 10.1109/TVLSI.2008.917540
+
+with regard to the code structure of LDPC codes. In general, random code structure—often used to enhance error performances—causes problems in the implementation of such codes [30], whereas regular code structure facilitates the hardware implementation. One subclass of LDPC codes with regular structure is quasi-cyclic (QC) LDPC codes1 [9], [19]–[24]. Due to their regular structure, QC LDPC codes lend themselves conveniently to efficient hardware implementations [9]–[11], [14] since the decoder architectures for QC LDPC codes require less memory and simpler logic control. Construction of QC LDPC codes with good error performances is therefore of both theoretical and practical interest. Various construction methods of QC LDPC codes (see, e.g., [9], [19]–[22], [25]) have been proposed.
+For partly parallel LDPC decoder architectures [9], [10], [27], [28], another issue is the low throughput and hardware utilization efficiency (HUE) due to the data dependencies inherent in the multi-iteration MP decoding [10], [26]. Each iteration of the MP decoding consists of two sequential sub-iterations: check node updates followed by variable node updates. Two types—intra- and inter-iteration—of data dependencies exist since the variable (check respectively) node updates of any iteration utilize the results of the check (variable, respectively) node updates of the same (previous respectively) iteration. Hence, check node function units (CNFUs) and variable node function units (VNFUs)—the two kinds of hardware units that implement the check and variable node updates, respectively—often work one after another, resulting in under-utilization of hardware and low throughput. On the architectural level, two techniques are often used to improve HUE: folding (processor sharing) and data interleaving. Folding the check and variable node updates improves HUE, but not throughput [26]. Data interleaving, i.e., letting the CNFUs and VNFUs operate alternately on two different blocks of data at the same time, improves both throughput and HUE, but also doubles the memory requirements [8], [9], [27]. A more efficient solution to this issue exists on the algorithmic level. Recently, overlapped message passing (OMP) decoding, which overlaps the check and variable node updates, has been proposed for QC LDPC codes [10] and LDPC codes in general [11], [13]. The OMP decoding takes advantage of the concurrency between the check and variable node updates, and improves both throughput and HUE while using the same amount of memory and introducing no error performance degradation. However, only a partial and sub-optimal solution to the OMP decoding of QC LDPC codes has been proposed in [10]: the update schedule and addressing scheme proposed in [10] do not apply to all QC LDPC codes,
+1QC LDPC codes in this paper refer to the regular QC LDPC codes that are defined by parity check matrices consisting of cyclically shifted identity matrices. There are other constructions for QC LDPC codes (see, e.g., [6]).
+
+1063-8210/$25.00 © 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+566
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+and cannot guarantee to achieve the maximum throughput gain and HUE of OMP decoding.
+In this paper, we study the OMP decoding of LDPC codes on both decoder algorithmic and code-design levels, and propose a complete and optimal solution to the OMP decoding of QC LDPC codes. The main contributions of this paper are as follows.
+• We propose an OMP decoder that achieves the maximum throughput gain and HUE of OMP decoding for any QC LDPC code. In comparison to the decoder in [10], our decoder requires the same hardware components, but has different update schedules for all the CNFUs and VNFUs and different addressing scheme for accessing the memory banks, and achieves higher throughput and HUE.
+• To verify that our update schedules and addressing scheme work correctly, we implement our OMP decoder using FPGA and compare it with previously implemented decoder architectures in [27] and [31], which use the same FPGA and the same QC LDPC code.
+• We also propose a new construction method leading to QC LDPC codes that allow our optimal OMP decoder to achieve higher throughput and HUE than the SFT codes while maintaining similar error performance.
+The details of the results in this paper are as follows. We first present the scheduling for the OMP decoding of
+LDPC codes, and show that maximizing the throughput gain amounts to minimizing the intra- and inter-iteration waiting times. Using a partly parallel decoder architecture similar to those in [9], [10], and [28], we then focus on the OMP decoding of QC LDPC codes and show that maximizing the throughput gain is a maximization problem subject to the data dependency and hardware constraints, imposed by the decoding algorithm and the partly parallel decoder architecture respectively. Furthermore, with the data dependency constraints alone, the minimum intra- and inter-iteration waiting times are not only iteration invariant but also equal to each other. Using this property, we solve the maximization problem with both the data dependency and hardware constraints, and show that the maximum throughput gain achieved by OMP decoders is completely determined by the minimum (intra- or inter-iteration) waiting time and is bounded above by 2. We also propose a reduced-complexity procedure that obtains the minimum waiting time, and an addressing scheme for OMP decoders to achieve the maximum throughput gain and HUE for any QC LDPC code. We then implement our OMP decoder architecture using FPGA. Pipeline schemes and the implementation of parity check are investigated to improve the performance of our OMP decoder.
+Although the OMP decoding algorithm is applicable to any QC LDPC code, previous studies have focused mostly on the SFT codes [10]. However, the upper bound of 2 on the maximum throughput gain of OMP decoders is not always achieved by the SFT codes. In order to achieve this upper bound, we propose a new construction method based on cosets. We show that the QC LDPC codes so constructed have similar girth and minimum Hamming distance bounds to those in [22] for the SFT codes. Furthermore, when the design parameters are fixed, our coset-based QC LDPC codes include the SFT codes [20], [22] as subsets. Hence, given any SFT code, there exists a group of coset-based QC LDPC codes (including the given SFT code)
+
+with the same parameters and similar error performances as opposed to the given SFT code. Replacing the given SFT code with the code among the group that allows our OMP decoder to achieve higher throughput gain improves both throughput and HUE while maintaining similar error performances.
+The rest of the paper is organized as follows. Section II presents the scheduling for the OMP decoding of LDPC codes. In Section III, we first briefly review QC LDPC codes, and then propose an OMP decoder architecture that achieves the maximum throughput gain and HUE. Section IV presents our FPGA implementation results. In Section V, we propose our coset-based construction of QC LDPC codes. Some concluding remarks are given in Section VI.
+
+II. SCHEDULING FOR OMP DECODING
+
+MP decoding (see, e.g., [4]) of LDPC codes is a multi-itera-
+
+tion procedure that iteratively exchanges the extrinsic log likeli-
+
+hood ratio (LLR) information between check and variable nodes
+
+until the stopping criterion is satisfied. Usually, this means ei-
+
+ther the parity check equations are satisfied or the pre-set itera-
+
+tion number is reached. Each iteration of MP decoding consists
+
+of two sequential sub-iterations: check node updates followed
+
+by variable node updates. Due to the intra- and inter-iteration
+
+data dependencies, as shown in Fig. 1(a), check node updates
+
+and variable node updates are performed one after another con-
+
+ventionally. This is not necessary, as pointed out in [10], [11],
+
+since overlapping of check and variable node updates is possible
+
+via proper scheduling.
+
+An overlapped scheduling of the check and variable node up-
+
+dates is shown in Fig. 1(b), where and represent the
+
+intra- and the inter-iteration waiting time at the -th iteration,
+
+respectively, and denotes the total number of iterations. The
+
+intra-iteration waiting time, , is used to ensure that when
+
+the VNFUs start the variable node updates of the -th iteration,
+
+the data operated on by the VNFUs are the results of the check
+
+node updates of the -th iteration. Similarly, the inter-iteration
+
+waiting time,
+
+, is used to ensure that when the CNFUs
+
+start the check node updates of the
+
+-th iteration, the data
+
+operated on by the CNFUs are the results of the variable node
+
+updates of the -th iteration.
+
+Suppose the amount of time the check and variable node
+
+updates of each iteration take is and respectively, then
+
+and
+
+for all ’s. The worst
+
+case scenario occurs when
+
+, for all
+
+and
+
+, for all
+
+, and the overlapped scheduling in
+
+Fig. 1(b) degenerates to the conventional non-overlapped sched-
+
+uling in Fig. 1(a). The throughput in this worst case scenario
+
+will be used as a reference when calculating the throughput
+
+gain achieved by OMP decoders. If iterations are performed,
+
+are needed for the non-overlapped decoding as op-
+
+posed to
+
+for the OMP decoding,
+
+and the throughput gain is given by
+
+(1)
+
+When and are fixed, the maximum throughput gain is
+
+achieved when the sum
+
+is minimized.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+567
+
+Fig. 1. Non-overlapped versus overlapped scheduling. (a) Non-overlapped scheduling. (b) Overlapped scheduling.
+
+For ease of implementation, it is desirable that the waiting
+
+times are iteration invariant. That is,
+
+for
+
+and
+
+for all
+
+.
+
+III. OPTIMAL OMP DECODING OF QC LDPC CODES
+QC LDPC codes not only have relatively good error performances, but can also be encoded efficiently with shift registers [23] and decoded with partly parallel decoder architectures. Thus, in this paper, we focus on the OMP decoding of QC LDPC codes using partly parallel decoder architectures.
+
+A. QC LDPC Codes
+
+The parity check matrix defining a code can be expressed as
+
+regular QC LDPC Fig. 2. Partly parallel decoder architecture for (2, 3) regular QC LDPC codes.
+
+the memory banks for intrinsic and extrinsic information de-
+
+...
+
+...
+
+...
+
+...
+
+...
+
+pends on quantization schemes. Fig. 2 illustrates our OMP de(2) coder architecture for (2, 3) regular QC LDPC codes.
+In OMP decoding, the CNFUs and VNFUs access the
+
+memory banks for extrinsic information simultaneously.
+
+where denotes an
+
+identity matrix with all the rows
+
+cyclically shifted to the right by positions (
+
+,
+
+). There exist various ways to define the value for
+
+[9], [19]–[22]. For example, construction of the SFT codes
+
+[20], [22] is based on the multiplicative structure of group.
+
+Hence, as shown in Fig. 2, the memory banks for extrinsic
+
+information are dual-port: as assumed in [10] each port is
+
+both readable and writable but not at the same time; Each
+
+port is dedicated to either CNFUs or VNFUs. The units
+
+in the memory bank for extrinsic information correspond to
+
+the 1’s in . Each 1 in
+
+has a row number and
+
+B. Partly Parallel OMP Decoder Architecture
+
+a column number. Since the 1 in the -th row is also in
+
+the -th column
+
+, and
+
+We consider a partly parallel decoder architecture similar to
+
+respectively are called the row and column addresses
+
+those in [9], [10], [28]. Our partly parallel OMP decoder ar- of the -th memory unit. During the check node updates,
+
+chitecture requires CNFUs, VNFUs, parity check func- the -th (for all
+
+) CNFU operates on the
+
+tion units (PCFUs), memory banks for extrinsic informa- memory banks corresponding to the -th block row of ,
+
+tion, memory banks for intrinsic information from channel, i.e.,
+
+, and simultaneously updates the
+
+and memory banks for hard decisions. The three types of memory units with the same row address in these memory
+
+memory banks differ in the number of ports and wordlength. banks, one row per step.2 It starts with the memory units with
+
+The memory banks for extrinsic information and hard decisions
+
+are dual-port while the memory banks for intrinsic information
+
+are single-port. Each memory bank has units, labelled with
+
+addresses
+
+. Each unit of the memory banks
+
+for hard decisions has exactly one bit, while the wordlength for
+
+memory address in each memory bank, and goes through
+2We measure the time in terms of steps henceforth in this paper. Each step is the amount of the time for the function units to complete one check or variable node update. Each step typically consists of multiple clock cycles, and the number of clock cycles depends on the implementation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+568
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+the memory units in a cyclically increasing order. During the LDPC codes always starts from the check node updates. Thus,
+
+variable node updates, the -th (for all
+
+) VNFU during the first iteration, the CNFUs can choose the starting
+
+operates on the memory banks corresponding to the -th block row addresses to be any address between 0 and
+
+so as
+
+column of , i.e.,
+
+, and simultane- to minimize . For the subsequent check and variable node
+
+ously updates the memory units with the same column address updates, the choices of the starting addresses of the CNFUs and
+
+in these memory banks, one column per step. It starts with VNFUs are restricted by the preceding updates due to the data
+
+the memory units with column address in each memory dependency constraints. The range of the choices of the row and
+
+bank and updates the memory units in a cyclically increasing the column addresses is, therefore, limited when minimizing
+
+order. Hence, steps are needed for the CNFUs (VNFUs) to finish one iteration of the check (variable) node updates, i.e.,
+. Similarly, the PCFUs and the VNFUs access the hard decision memory banks simultaneously. The memory banks for hard decisions are also dual-port: one port is read only and dedicated to the PCFUs for parity check, and the other port is write only and dedicated to the VNFUs for writing the hard decisions. The -th PCFU checks the parity check equations in the -th block row, one row per step. The PCFUs operate in parallel with the CNFUs. The PCFUs and VNFUs operate on the hard decision memory banks in a similar fashion as the CNFUs and VNFUs operate on the extrinsic memory banks.
+In order for the CNFUs and VNFUs to work concurrently, new update schedules for the CNFUs and VNFUs and new addressing scheme for accessing the memory banks are required. These two aspects are the key of an OMP decoder and we will focus on the design of the update schedules and addressing scheme henceforth. For ease of implementation, we also assume that all the CNFUs (or VNFUs) always start the check (or variable) node updates at the same time.
+
+and for
+
+. Hence, it would seem that the
+
+minimum waiting times for each iteration are different. However, as shown below, the minimum intra- and inter-iteration
+
+waiting times are iteration invariant. To facilitate our analysis,
+
+assume that the VNFUs can also choose the starting column
+
+addresses to be any address between 0 and
+
+without
+
+being affected by the preceding updates and define as the corresponding inter-iteration waiting time that the VNFUs need
+
+to minimize. Let and denote the minimum values of
+
+and for
+
+respectively, the following lemma
+
+shows that the minimum intra- and inter-iteration waiting times are equal and iteration invariant.
+
+Lemma 1: Given the partly parallel architecture in Fig. 2,
+
+the data dependency constraints alone determine that the min-
+
+imum intra- and inter-iteration waiting times satisfy
+
+for
+
+. That is, they
+
+are equal and iteration invariant. Furthermore, any sequence
+
+that satisfies
+
+and
+
+for
+
+is achievable.
+
+See Appendix A for the proof of Lemma 1. Since the min-
+
+C. Data Dependency Only
+
+imum intra- and inter-iteration waiting times are equal to each other, is simply called the minimum waiting time henceforth.
+
+Since the data dependencies are inherent in the multi-iteration MP algorithm, in this subsection, we study the maximization of D. Hardware and Data Dependency Constrained throughput gain , i.e., minimization of the intra- and inter-it- Maximization
+
+eration waiting times subject to only the data dependency con-
+
+straints.
+
+Based on the partly parallel architecture in Fig. 2, data depen-
+
+dencies manifest themselves as follows.
+
+• Due to the cyclic fashion in which each CNFU (or VNFU)
+
+operates on the memory units of every memory bank, satis-
+
+faction of the data dependencies at the start of the check or
+
+variable node updates guarantees that the data dependen-
+
+cies will be satisfied for the whole iteration.
+
+• Intra-iteration data dependency: when any VNFU starts op-
+
+erating on the memory units with column address for
+
+the variable node updates of the -th iteration, all these
+
+memory units have been processed by the check node up-
+
+dates of the -th iteration.
+
+• Inter-iteration data dependency: when any CNFU starts op-
+
+erating on the memory units with row address for the
+
+check node updates of the
+
+-th iteration, all these
+
+The partly parallel decoder architecture described
+
+in Section III-B imposes extra hardware constraints
+
+and
+
+for
+
+to the maximization problem. This is
+
+because the CNFUs (or VNFUs) cannot start the updates of
+
+any iteration until the updates of the previous iteration are
+
+completed, which take steps. It is clear that the waiting
+
+times satisfying only the hardware constraints can also be
+
+iteration invariant. Therefore, the waiting times that maximize
+
+the throughput gain subject to both the data dependency and
+
+hardware constraints can be iteration invariant. Henceforth,
+
+we use and to denote the intra- and inter-iteration
+
+waiting times, respectively. The throughput gain defined in
+
+(1) becomes
+
+. Maximizing with both the
+
+data dependency and hardware constraints thus reduces to
+
+determining and subject to
+
+memory units have been processed by the variable node updates of the -th iteration. For the -th iteration, let
+
+and
+
+(3)
+
+(4)
+
+denote the starting row addresses of the CNFUs, and Let us denote the maximum throughput achieved as . Since
+
+denote the starting column ad-
+
+due to the hardware con-
+
+dresses of the VNFUs. Then and (for all
+
+) straint in (4), we always have
+
+. This upper bound on
+
+are the parameters that we optimize to minimize the intra- and is consistent with intuition: given the hardware constraint in (4),
+
+inter-iteration waiting times. Assume that the extrinsic memory the best case scenario is for the CNFUs and VNFUs to work con-
+
+banks are pre-loaded with intrinsic LLRs, the MP decoding of currently and continuously, which doubles the throughput and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+569
+
+the -th
+
+and -th
+
+CNFUs
+
+start from the row addresses and , respectively, whose
+
+corresponding column addresses are
+
+and
+
+for the -th VNFU. The difference between
+
+the column addresses, given by
+
+(5)
+
+Fig. 3. Update schedules for our optimal OMP decoder when: (a) fully over-
+
+b c  b c lsacphpeedduluepwdahteenswched>ule
+
+mwh=e2n
+
+w
+.
+
+m=2 . (b) Partially overlapped update
+
+HUE of the worst case scenario where the CNFUs and VNFUs
+
+work alternately.
+
+Now we can easily solve the above maximization problem by
+
+inspection. The solution and the value of depend on whether
+
+is satisfied. The two possible solutions are dis-
+
+cussed below.
+
+• When
+
+, the throughput gain is maximized by
+
+and
+
+, and
+
+, which is
+
+approximately 2 when is large. The hardware constraint
+
+in (4) is indeed met with equality. The fully overlapped
+
+update schedule for the CNFUs and VNFUs in this case
+
+is shown in Fig. 3(a). Since the CNFUs and VNFUs work
+
+continuously, the HUE for this case is 100%.
+
+• When
+
+, the throughput gain is maximized by
+
+, and
+
+, which is ap-
+
+proximately
+
+when is large. Since
+
+,
+
+the hardware constraint in (4) is not met with equality.
+
+The partially overlapped update schedule for the CNFUs
+
+and VNFUs in this case is depicted in Fig. 3(b). After
+
+finishing the check (variable) node updates of any itera-
+
+tion, the CNFUs (VNFUs) have to wait
+
+steps before they can start the check
+
+(variable) node updates of the next iteration. The HUE is
+
+given by
+
+, which is smaller than 1.
+
+We stress that given above for both cases is the maximum
+
+throughput gain that can be achieved by any OMP decoder using
+
+the partly parallel decoder architecture shown in Fig. 2. We also
+
+observe that achieved by OMP decoders for any QC LDPC
+
+code is ultimately determined by the code itself via . Thus,
+
+is in a sense a measure of inherent concurrency of the code.
+
+It is clear that only when
+
+, the HUE of 100%
+
+and
+
+can be achieved. The condition
+
+does not hold in general. However, as explained in Section III-E,
+
+always holds when
+
+.
+
+implies that it takes steps for the -th CNFU to reach a
+
+column address that has been processed by the -th CNFU.
+
+The -th block row is referred to as the reference block row.
+
+We abuse the notation slightly here since, as will be shown
+
+in Section III-F, the reference block rows can be iteration in-
+
+variant. Let
+
+denote the reference block
+
+rows for all the VNFUs. With and fixed, we obtain a
+
+column address difference matrix
+
+.
+
+For the given and , the maximum column address differ-
+
+ence,
+
+, gives the maximum difference between
+
+the column addresses of the chosen reference block rows and the other block rows for all the VNFUs. This maximum column address difference can be minimized over all possible , i.e., choosing the best reference block rows for all the VNFUs, and this produces the minimized maximum column address difference for the given . Since the intra-iteration waiting time for the given is the number of steps needed for each of the VNFUs to have at least one column address that has been processed by all the CNFUs, the intra-iteration waiting time is the minimized maximum column address difference plus one, i.e.,
+. Finally, by minimizing the intra-itera-
+
+tion waiting times over all possible , we obtain the minimum waiting time. To summarize
+
+(6)
+
+Obviously, in (6) can be found by an exhaustive search over all possible , and for each , we need to test all possible
+to find the best reference block rows. Due to the cyclic nature
+
+of the row addresses, one of the starting row addresses, say ,
+
+can be fixed to zero. Thus, there are
+
+possible combi-
+
+nations.
+
+Since each of the VNFUs can choose its reference block row
+
+independently, the complexity of the search can be reduced by
+
+adopting the following alternative procedure:
+
+1) For the -th VNFU, it takes
+
+steps for
+
+the -th CNFU to reach a column address that has been
+
+processed by all the other CNFUs, which means the -th
+
+VNFU cannot start until
+
+steps after the CNFUs have
+
+started if we use -th block row as the reference.
+
+2) Since we can use any block row as the reference for the -th
+
+VNFU, let
+
+and let be the minimizing
+
+E. Minimum Waiting Time
+As seen above, obtaining is vital to achieving the maximum throughput gain and HUE. Since Lemma 1 implies that
+, can be obtained by minimizing the intra-iteration waiting time over all possible starting row addresses
+for the CNFUs. First, we need to
+
+reference block row, then the -th VNFU needs to wait a
+
+minimum of
+
+steps after the CNFUs have started.
+
+3) Let
+
+, the maximum waiting time among all
+
+the VNFUs is then .
+
+4) Repeat steps 1)–3) for all the possible starting addresses
+
+. Let
+
+and be the minimizing starting
+
+find the intra-iteration waiting time for one given . Assume
+
+row addresses.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+570
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+This procedure essentially produce
+
+addresses are unique for some of the CNFUs, and we can use the
+
+addresses
+
+for all the CNFUs.
+
+Note that these row addresses are the only addresses that can be
+
+(7) applied to all the CNFUs in this case. When
+
+and
+
+, which is
+
+steps
+
+and we can show that:
+
+more than what is needed for data dependency, all the addresses
+
+Lemma 2:
+
+.
+
+See Appendix B for the proof of Lemma 2. in (7) can
+
+be obtained via an exhaustive search over
+
+combina-
+
+tions. Since is usually small for QC LDPC codes, the com-
+
+plexity—on the order
+
+—is affordable. For example,
+
+to find for a (4, 7) regular QC LDPC code with
+
+takes approximately 14 min on a PC with 2.8 GHz Pentium IV
+
+CPU. Furthermore, needs to be pre-computed only once, and
+
+the pre-computation requires no extra hardware in the decoder
+
+architecture. Note that the optimal starting row addresses are not
+
+unique.
+
+Finally, since
+
+are ready for all the
+
+CNFUs. For ease of implementation, in both cases, we choose
+
+to use
+
+for all
+
+the CNFUs to start the check node updates of the second iter-
+
+ation. Since is obtained by shifting by , the column
+
+address difference defined in (5) remains the same in the second
+
+iteration. The best reference block rows also remain the same
+
+and indeed leads to in the second iteration. Since the
+
+starting column addresses of all the VNFUs are determined by
+
+the starting row addresses of the CNFUs and the reference block
+
+rows, can also be obtained by shifting by . Thus, by
+
+simply shifting the starting row and column addresses by at
+
+when
+
+, we always have each iteration, the intra- and inter-iteration waiting times that
+
+.
+
+maximize the throughput gain can always be achieved.
+
+In summary, for both update schedules depicted in
+
+F. Addressing Scheme
+
+We have determined the intra- and inter-iteration waiting
+
+times that maximize the throughput gain above. Depending on
+
+whether
+
+is satisfied, one of the two update sched-
+
+ules for the CNFUs and VNFUs as depicted in Fig. 3(a) and (b)
+
+is uniquely determined. For each iteration, the CNFUs and
+
+VNFUs start on given addresses and process all the extrinsic
+
+information in the memory banks by cyclically increasing the
+
+addresses. Hence, we need to determine the starting row and
+
+Fig. 3(a) and (b), we can use the same addressing scheme.
+
+The optimal starting addresses for the CNFUs and VNFUs are
+
+generated as follows.
+
+1) During the first iteration, the -th CNFU starts from
+
+for
+
+, which is obtained from (7), and the -th
+
+VNFU starts from
+
+for
+
+.
+
+2) During the
+
+-th iteration
+
+, the -th CNFU
+
+starts from
+
+for
+
+,
+
+column addresses of the CNFUs and VNFUs for each iteration.
+
+For the -th iteration, let
+
+and
+
+and the -th VNFU starts from
+
+for
+
+.
+
+denote the optimal starting row Note that the optimal starting addresses for the CNFUs and
+
+and column addresses of the CNFUs and the VNFUs, respec- VNFUs are also pre-computed, and the pre-computation re-
+
+tively, and let
+
+denote the best reference quires no extra hardware in the decoder architecture.
+
+block rows of all the VNFUs. Since is obtained by setting the starting row addresses of G. Results and Discussions
+
+the CNFUs as , steps after the CNFUs start the check
+
+node updates of the first iteration, each VNFU can find at least
+
+one column address in its own block column that has already
+
+been updated by the CNFUs. As shown above, for the -th
+
+VNFU (for all
+
+), the -th block row is the
+
+best reference block row given . Thus, after
+
+steps,
+
+is the only column address the -th
+
+VNFU can update. After steps, all the column addresses
+
+are ready for the -th VNFU,
+
+where
+
+denotes the set of cyclically increasing addresses
+
+. Clearly, the
+
+starting column addresses are unique for those VNFUs whose
+
+waiting times are . For ease of implementation, we choose to
+
+use addresses
+
+for all the VNFUs to start the variable node updates of the first
+
+In [10], Chen et al. proposed a procedure to determine the
+
+waiting time, and an update schedule and addressing scheme
+
+for OMP decoding of QC LDPC codes. In this subsection, we
+
+discuss the differences between our procedure and that in [10],
+
+and also use examples to illustrate the differences of the update
+
+schedules and addressing schemes of the two decoders.
+
+In our procedure, the reference block row of each VNFU is
+
+chosen independently, whereas in [10] all the VNFUs use the
+
+same -th block row as the reference block row. As opposed
+
+to in (6), the waiting time obtained in [10], denoted as ,
+
+is given by
+
+. It can be
+
+easily shown that is the result of the minimization of (6) over and all possible , that is, . Since is
+
+iteration.
+
+obtained over all possible , whereas is obtained over a subset
+
+After the VNFUs start the variable node updates of the first of values for , we have
+
+, i.e., the waiting time obtained
+
+iteration for steps, each CNFU can find at least one row ad- using our proposed procedure is no larger than that produced by
+
+dress in its own block row that has already been updated by the the procedure in [10].
+
+VNFUs. This row address is determined by the data dependency The following example is used to illustrate how our sched-
+
+constraint rather than the hardware constraint. Therefore, when uling scheme works and also show that the update schedules
+
+and
+
+, similar as above, the starting row and addressing scheme in [10] do not apply to all QC LDPC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+571
+
+Fig. 4. Memory states after CNFUs complete the first iteration using [10].
+
+codes. Suppose
+
+,
+
+and
+
+have multiplicative
+
+orders
+
+and
+
+in respectively. The parity check
+
+matrix corresponding to these parameters is given by
+
+(8)
+
+A decoder for the code defined by above consists of two
+
+CNFUs, five VNFUs, and ten dual-port memory banks of
+
+units for extrinsic information. In Figs. 4 and 5, the
+
+ten memory banks, each of which is shown as a block inside
+
+the bold black box, are arranged as a 2 5 array. CNFU
+
+communicates with the memory banks in the -th block row,
+
+and VNFU communicates with the memory banks in the
+
+-th block column. The memory (row) addresses of the memory
+
+units in each memory bank are
+
+from the top
+
+to the bottom, not shown in Figs. 4 and 5. The corresponding
+
+column address of each memory unit is shown inside the
+
+Fig. 5. Memory states (a) after CNFUs complete the first iteration (b) after VNFUs complete the first iteration using our update schedules.
+
+memory unit in Figs. 4 and 5. As mentioned above, CNFUs
+
+update the memory units with the same row addresses in their
+
+respective block rows, while VNFUs update the memory units
+
+with the same column addresses in their respective block
+
+columns. Therefore, in Figs. 4 and 5, the two CNFUs work
+
+on the memory units in the same row in their respective block
+
+rows and the five VNFUs work on the memory units with the
+
+same numbers inside the memory units in their respective block
+
+columns.
+
+The procedure proposed in [10] leads to
+
+no matter which block row is used as the reference
+
+block row. Without loss of generality, assume the zeroth block
+
+row is used as the reference, i.e.,
+
+, and then
+
+and
+
+. After eight steps, the
+
+five VNFUs can start the variable node updates of the first it-
+
+eration from the column addresses
+
+, which are {8, 10, 5, 1, 0}. Thereafter, the CNFUs
+
+and VNFUs are working concurrently on different memory ad-
+
+dresses of the same memory banks. Fig. 4 shows the memory
+
+by the VNFUs, and hence cannot start the check node updates
+
+of the second iteration immediately. The fully overlapped up-
+
+date schedule and the addressing scheme proposed in [10] thus
+
+cannot be applied. In this case, the partially overlapped schedule depicted in Fig. 3(b) should be applied, and the CNFUs need to
+
+wait
+
+5 steps. Similarly, the VNFUs also need to wait
+
+5 steps before they can start the variable node updates
+
+of the second iteration. The HUE in this case is 68.75% and
+
+a throughput gain of
+
+is achieved. Unless otherwise
+
+stated, the total number of iterations is set to
+
+when cal-
+
+culating the throughput gain of OMP decoding.
+
+We now apply our proposed procedure to the same code.
+
+Without loss of generality, we fix
+
+. For VNFU 0,
+
+is given by
+
+if the zeroth block row is used
+
+as the reference or
+
+if the 1-st block row
+
+is used as the reference. Hence, we have
+
+. Following the same approach, we have
+
+,
+
+,
+
+states when the two CNFUs complete the check node updates
+
+and
+
+.
+
+of the first iteration. As shown in Fig. 4, CNFU 1 cannot find a Note that all the calculations are carried out in and we omit
+
+row in its own block row where all the data have been updated
+
+to simplify notation. Then
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+572
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+and the is achieved when is minimized over all possible
+
+. Let vary from 0 to 10, we obtain the optimal starting
+
+address
+
+, and
+
+,
+
+,
+
+,
+
+and
+
+. Hence, we have
+
+and
+
+.
+
+As
+
+, the CNFUs and VNFUs can work contin-
+
+uously. The reduction in the waiting time is due to the use of
+
+the best reference block row for every VNFU, and here we use
+
+TABLE I
+
+WAITING TIME AND THROUGHPUT GAIN COMPARISON FOR ALL THE DESIGN
+
+PARAMETERS IN [22, Table I]. FOR THE FIVE SETS OF DESIGN PARAMETERS
+
+w  bm= c m FOR WHICH SFT CODES DO NOT SATISFY
+
+2 , THE VALUES
+
+y w G ARE MARKED BY AND AND INSIDE AND OUTSIDE () IN THE TWO
+
+w  bm= c RIGHTMOST COLUMNS ARE FOR OUR COSET-BASED CODES, WHICH SATISFY 2 , AND SFT CODES RESPECTIVELY. FOR THE OTHER SETS OF
+w G DESIGN PARAMETERS, AND IN THE TWO RIGHTMOST COLUMNS ARE
+
+FOR SFT CODES
+
+. After five steps, the VNFUs can start the
+
+variable node updates of the first iteration from the column ad-
+
+dresses
+
+, which are
+
+, respectively. Six steps after the VNFUs start, the
+
+CNFUs finish the check node updates of the first iteration. The
+
+memory states of this moment are shown in Fig. 5(a). It can be
+
+seen that all the data at memory address
+
+for
+
+CNFU 0 and the data at memory address
+
+for
+
+CNFU 1 have already been updated by the VNFUs. The CNFUs
+
+can therefore start the check node updates of the second iteration
+
+right away. Similarly, as shown in Fig. 5(b), when the VNFUs
+
+finish the variable node updates of the first iteration, the variable
+
+node updates of the next iteration can start immediately from
+
+the column addresses
+
+, which are their previous
+
+starting addresses plus modulo . The decoding process can
+
+proceed in this way until the desired number of iterations are
+
+performed. The HUE in this case is 100% and a throughput gain
+
+of
+
+is achieved.
+
+In Table I, we compare the waiting time and the throughput
+
+gain attained by our decoder with those obtained using the
+
+method proposed in [10] for all the SFT codes listed in [22,
+
+Table I]. In all cases, the waiting times obtained using the
+
+procedure in [10] are greater than
+
+. Hence, the CNFUs
+
+and VNFUs cannot work continuously, and the maximum
+
+throughput gain of roughly 2 and HUE of 100% are achieved
+
+for none of the SFT codes. The waiting times generated by
+
+our procedure are all smaller than their respective counterparts
+
+generated using the procedure in [10], and thus the throughput
+
+gains, as well as the HUE attained using our decoder are all LDPC code with
+
+used in [27], [31], although it can be
+
+greater than those attained using the decoder in [10].
+
+easily adapted to any QC LDPC code.
+
+We find that in all cases except those where is marked by
+
+,
+
+and hence the throughput gain of roughly 2 and
+
+HUE of 100% are achieved using our decoder. For the cases
+
+where is marked by , we still have
+
+. In these
+
+cases, extra waiting times are needed between consecutive itera-
+
+tions of the check (variable) node updates. This example shows
+
+that the SFT codes, even with our optimal OMP decoder, do not
+
+always achieve the upper bound of roughly 2 on the throughput
+
+gain, and motivates new design methods for QC LDPC codes
+
+that not only allow our optimal OMP decoder to achieve higher
+
+throughput gain but also have similar parameters and error per-
+
+formances to those of the SFT codes.
+
+A. Pipeline Scheme
+Since the OMP decoding is a multi-iteration procedure and each iteration consists of CNFU or VNFU steps, the decoding throughput is mostly determined by three factors: the average iteration number, the number of clock cycles per step, and the clock period. Since each CNFU or VNFU step involves one memory read and one memory write, the number of clock cycles per step is constrained by memory access throughput, and at least two clock cycles are required per step. In the following, we propose our pipeline scheme that achieves exactly two clock cycles per step while reducing the critical path delay.
+To implement the MS algorithm, each CNFU needs to
+
+IV. FPGA IMPLEMENTATION
+
+find the minimum and the second minimum among LLRs. This can be efficiently implemented by finding the minimum
+
+To verify that our update schedules and addressing scheme among every
+
+LLRs simultaneously. Hence, for this (3, 6)
+
+work correctly, we have implemented our OMP decoder archi- regular QC LDPC code, each CNFU consists of a comparator
+
+tecture in FPGA. Since the implementation results of the OMP and XOR-gate tree of
+
+levels.
+
+decoder in [10] are unavailable, we compare our OMP decoder The implementation of the VNFUs is straightforward and
+
+architecture with the decoder architectures in [27], [31]. In order only involves adders. In [31], a 3-stage pipeline scheme (see
+
+to make a fair comparison, our OMP decoder also implements [31, Fig. 2]) is used for the CNFUs and VNFUs. To achieve
+
+the min-sum (MS) algorithm for the same (3, 6) regular QC higher decoding throughput, we consider a 6-stage pipeline
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+573
+
+m = 256 TABLE II
+IMPLEMENTATION RESULTS OF THE (3, 6) REGULAR QC LDPC CODE WITH
+
+ON XILINX VIRTEXII xc2v6000-5ff1152 FPGA
+
+Fig. 6. Pipeline scheme for the CNFUs and VNFUs.
+
+the parity check for one row is finished in one clock cycle on average after pipelining. The parity check for the two rows CNFU 0 and CNFU 1 are updating is carried out by PCFU 0 one after another by accessing the same hard decision memory banks twice. The PCFUs run in parallel with the CNFUs and share the same addresses with the CNFUs, thus requiring no extra address generation units.
+
+C. FPGA Implementation Results
+
+We have implemented our OMP decoder architecture using
+
+the 6-stage pipeline scheme described above as well as a
+
+non-OMP decoder architecture using the same pipeline scheme
+
+Fig. 7. Pipeline scheme for PCFU 0.
+
+for reference purpose. We use the same FPGA as in [27], [31]: a Xilinx Vertex II xc2v6000-5ff1152 FPGA, which has 33792
+
+slices and 144 block RAMs. The synthesis and implementation
+
+scheme in this paper. Our 6-stage pipeline scheme for the
+
+CNFUs and VNFUs is shown in Fig. 6, where the datapath in
+
+the CNFUs or VNFUs are split into four stages, denoted as
+
+(
+
+). The computations required in all four stages
+
+are roughly balanced in terms of delays. Each CNFU or VNFU
+
+step takes 6 clock cycles as shown in Fig. 6, where
+
+,
+
+for
+
+and
+
+denote the memory
+
+read, computations required in for
+
+and the
+
+memory write, respectively, at the -th step. As can be seen from
+
+Fig. 6, each clock cycle is occupied with either memory read
+
+or memory write after pipelining, hence the memory access
+
+throughput is maximized and each step takes two clock cycles
+
+on average, ignoring the time to fill and to drain the pipeline.
+
+are carried out using Xilinx ISE Version 8.1. In Table II, we compare the numbers of occupied slices, flip flops, 4-input look-up tables (LUTs), and block RAMs as well as critical path delays, average iteration numbers, and estimated decoding throughput of our decoder architectures with those from [27], [31]. The implementation details of the two decoder architectures in [27], referred to as MS and high efficiency MS (HEMS) architectures, respectively, are reproduced from [27, Table I]. The implementation details of our OMP decoder using the 3-stage pipeline scheme are reproduced from [31, Table I]. The last two rows of Table II present our implementation results for our OMP and non-OMP decoders using the 6-stage pipeline scheme. For our non-OMP decoder, the starting addresses of the CNFUs and VNFUs are all set to 0. For our OMP decoders,
+
+B. PCFUs and Hard Decision Memory
+
+Our OMP decoder stops when either the parity check equa-
+
+tions are all satisfied or the maximum iteration number is
+
+reached. Since each step of parity check only accesses memory
+
+once, it can be finished in one clock cycle after pipelining.
+
+Hence, one step of parity check is twice as fast as one CNFU
+
+or VNFU step. This enables us to pipeline the parity check
+
+for every pair of adjacent block rows, thereby reducing the
+
+numbers of PCFUs and hard decision memory banks from
+
+and
+
+to
+
+and
+
+, respectively. For this (3,
+
+6) regular QC LDPC code, our implementation requires two
+
+PCFUs and hard decision memory banks. PCFU 0 accesses
+
+the first hard decision memory banks for the parity check
+
+of the top two block rows, and PCFU 1 accesses the other
+
+hard decision memory banks for the parity check of the second
+
+block row. The pipeline scheme for PCFU 0 is shown in Fig. 7,
+
+where Read- and PC- denote the memory read and
+
+parity check operation for the -th step in the -th block row.
+
+we have
+
+, hence the fully overlapped update schedule
+
+depicted in Fig. 3(a) is applied. The optimal starting addresses
+
+are
+
+and
+
+for the CNFUs and VNFUs respectively. Note that all five
+
+decoder architectures in Table II are implemented using the
+
+same FPGA, and are all based on the MS algorithm with the
+
+same 8-bit uniform quantization scheme [27], [31].
+
+As shown in Table II, our three decoders all require 36
+
+memory banks:
+
+,
+
+, and
+
+memory
+
+banks for extrinsic LLRs, hard decisions, and intrinsic LLRs re-
+
+spectively. Each memory bank for intrinsic and extrinsic LLRs
+
+requires
+
+Kbits, and each memory bank
+
+for hard decisions is
+
+256 bits. In comparison to the two
+
+decoder architectures in [27], our OMP decoders require much
+
+less memory since the MS and HEMS decoder architectures
+
+double the number of extrinsic memory banks to improve the
+
+decoding throughput and the convergence rate, respectively.
+
+As in [27], the decoding throughput is estimated by
+
+Since for each clock cycle the memory is occupied by a read
+
+operation, the memory access throughput is maximized, and
+
+(9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+574
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+where is the clock frequency, is the average iteration
+
+number, is the average number of clock cycles per step after
+
+pipelining, and and clock cycles in the denominator are
+
+for initializing the memory banks and finishing parity checks,
+
+respectively. is approximated by the inverse of the critical
+
+path delay as assumed in [27], [31]. Since the CNFUs and
+
+VNFUs work alternately in our non-OMP decoder and concur-
+
+rently in our OMP decoders, we use
+
+and
+
+for our
+
+non-OMP and OMP decoders, respectively. The parity checks
+
+require
+
+clock cycles for all our decoder architectures.
+
+For the MS and HEMS decoders in [27],
+
+and the parity
+
+checks are assumed to finish in
+
+clock cycles. From
+
+Table II, it can be seen that our OMP decoder architecture
+
+using the 6-stage pipeline scheme achieves higher throughput
+
+than all the other decoder architectures. Comparing our OMP
+
+and non-OMP decoder architectures using the same 6-stage
+
+pipeline scheme, the OMP decoder requires slightly more
+
+hardware than the non-OMP decoder to implement the update
+
+schedules and addressing scheme and achieves a throughput
+
+gain of roughly 1.69. This somewhat diluted throughput gain
+
+is due to the overhead of initializing the memory banks and
+
+finishing parity checks and small value for . If is so large
+
+so as to render the overhead negligible, then the throughput
+
+gain is indeed approximately 2.
+
+Finally, the decoding throughput of all five decoder architec-
+
+tures is limited by their number of CNFUs and VNFUs. Since
+
+our OMP decoding is carried out on the algorithmic level, fur-
+
+ther architecture-level techniques such as parallel processing
+
+(see, e.g., [16], [29], [32]) can be carried out separately to fur-
+
+ther increase the decoding throughput. Our OMP decoding al-
+
+gorithm can be readily extended to such partly parallel decoder
+
+architectures with more CNFUs and VNFUs since parallel pro-
+
+cessing does not change the cyclic fashion in which the CNFUs
+
+and VNFUs operate on the memory banks, which is the founda-
+
+tion of the OMP decoding.
+
+V. COSET-BASED QC LDPC CODES
+As shown in Section III-D, the upper bound for is approximately 2. However, as seen in Table I, the SFT codes do not always achieve the upper bound. In order to achieve the upper bound, we propose a coset-based method to construct QC LDPC codes.
+
+A. Coset-Based Construction
+
+Suppose is prime, then
+
+is a mul-
+
+tiplicative group under multiplication modulo . Let
+
+be an element with multiplicative order , denoted as
+
+,
+
+i.e., is the smallest positive integer such that
+
+.
+
+It can be shown that
+
+and
+
+forms a multiplicative subgroup of . can be partitioned,
+
+with respect to , into
+
+disjoint cosets [33]:
+
+, where
+
+(10)
+
+Suppose we use
+
+as the coset
+
+leader of , then
+
+can be obtained by cyclically shifting the elements in to the
+
+left by positions.
+
+Any distinct coset leaders can be used to construct a
+
+parity check matrix: first choose distinct coset leaders
+
+; then the corresponding cosets can be
+
+used to define a
+
+regular QC LDPC code by setting in
+
+(2) to . The resultant parity check matrix is given by
+
+...
+
+...
+
+...
+
+...
+
+...
+
+Let us denote the code defined by
+
+as
+
+. Clearly, this code
+
+has length
+
+and code rate
+
+since there are
+
+at least
+
+redundant rows in . Furthermore, we define the
+
+ensemble of the coset-based QC LDPC codes with the set of
+
+design parameters
+
+as
+
+and
+
+are distinct in
+
+The cardinality of
+
+, denoted as
+
+, is
+
+, where
+
+is the Euler function [34] and
+
+denotes the number of
+
+ways of obtaining an ordered subset of elements from a set
+
+of
+
+elements. Note that some of the codes in
+
+may be the same or equivalent to each other.
+
+B. Relation to Other Constructions
+
+The coset-based construction is a generalization of both the
+
+construction for the SFT codes and that based on cyclotomic
+
+cosets. To understand the differences between these construc-
+
+tion methods, the effects of three types of operations on the
+
+parity check matrix have to be discussed. The first two
+
+types of operations are permutations of the block rows and
+
+block columns in . Block row permutations simply change
+
+the order of parity check equations and the code remains the
+
+same. Block column permutations permute the coordinates of
+
+the code, and hence result in equivalent codes. Thus, neither
+
+type of operations affects the minimum waiting time . The
+
+third type of operations is cyclic shifts of one or more block
+
+rows of . Notice the difference between the operations of
+
+this type and block column permutations. In the coset-based
+
+construction, the operations of this type amount to choosing
+
+different coset leaders in the chosen cosets, and yield different
+
+codes and hence can change the minimum waiting time .
+
+The construction for the SFT codes first chooses
+
+, an
+
+element with order , and then sets in (2) to . Let us
+
+denote this code as
+
+and define the ensemble of
+
+the SFT codes with design parameters
+
+Note that all the multiplications carried out in are modulo , which is omitted for simplicity of notation. By convention,
+
+and
+
+in
+
+is called the coset leader of . Note that any element in
+
+Since there are
+
+and
+
+elements with orders and
+
+can be the leader of the coset, and switching to a different coset respectively in , the cardinality of
+
+, denoted as
+
+leader amounts to cyclically shifting the elements in the coset.
+
+, is
+
+. The parity check matrices of all the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+575
+
+codes in
+
+are block row and block column permuta- cyclotomic cosets over additive white Gaussian noise (AWGN)
+
+tions of each other. Hence these codes are the same or equiva- channels with BPSK modulation. We use floating-point stan-
+
+lent to each other, and have the same . Since
+
+dard MP algorithm and the maximum iteration number is 50.
+
+is essentially a coset-based code with
+
+as Fig. 8 shows the BER performance of a family of (4, 9) regular
+
+the coset leaders, we have
+
+. Thus, the QC LDPC codes constructed using the three different methods.
+
+coset-based construction is less restrictive and leads to a larger The three groups of curves shown in Fig. 8 correspond to
+
+class of codes.
+
+, 181, and 397 (block length
+
+and ), re-
+
+In [9], Mansour et al. proposed a construction method that is spectively. Note that in each group the codes constructed using
+
+based on cyclotomic cosets for QC LDPC codes. Cyclotomic cyclotomic cosets and cosets use different coset leaders. All
+
+cosets are the same as cosets as defined in (10) except that these codes have roughly the same rate of 0.56. For the given
+
+they require to be a prime power. This is because cyclotomic length and rate, the BER performances of the three codes in each
+
+cosets are defined with respect to
+
+[34, page 62]. Since group are almost the same. Therefore, the SFT or the cyclo-
+
+there are elements of order in , some of them may be tomic-coset-based codes do not appear to be advantageous in
+
+prime powers. Suppose both and are of order , and is a terms of BER performances over the coset-based codes.
+
+prime power while is not. Then
+
+is a permuted version of
+
+. With
+
+the same coset leader , the coset with respect to is D. Results and Discussions
+
+also a permuted version of with respect to . When the
+
+same set of coset leaders
+
+are used, the Given the design parameters
+
+, the definition for SFT
+
+parity check matrix for
+
+codes is rather restrictive, and cyclotomic-coset-based construc-
+
+is simply a block column permuted version of the for tion requires an element
+
+with order to be a prime
+
+. Thus, when cyclotomic power. In contrast, our coset-based construction is less restric-
+
+cosets exist, the cyclotomic-coset-based and our coset-based tive and leads to a larger class of codes. Since our coset-based
+
+constructions lead to the same class of codes. However, some- codes include the SFT codes and cyclotomic-coset-based codes
+
+times none of the
+
+elements with order is a prime (if exist) with the same design parameters as subsets, the min-
+
+power. Hence, cyclotomic cosets cannot be defined and cy- imum waiting time for our coset-based codes is always no
+
+clotomic-coset-based QC LDPC codes cannot be constructed. larger than those for the SFT and cyclotomic-coset-based codes.
+
+Thus, our coset-based construction is less restrictive than Thus, when SFT codes do not satisfy
+
+, our coset-
+
+cyclotomic-coset-based construction as well.
+
+based construction can be used to improve the throughput gain.
+
+Note that all the codes in the ensemble
+
+have the
+
+same , and hence it is easy to test whether SFT codes sat-
+
+C. Properties of Coset-Based QC LDPC Codes
+
+isfy
+
+for given
+
+examples to show our points.
+
+. In the following, we use
+
+For any LDPC code, its girth and minimum Hamming
+
+distance are two very important measures of error per-
+
+formances. It has been shown that
+
+regular SFT codes
+
+(
+
+and
+
+) have girth
+
+[20], [22] and their
+
+Let
+
+,
+
+, and
+
+. There are 6 elements, {16,
+
+38, 27, 105, 66, 75}, with multiplicative order 9 in . Since
+
+has order 9,
+
+can be partitioned
+
+into 12 disjoint cosets
+
+minimum Hamming distance is lower bounded by for
+
+odd or for even [23] and is upper bounded by
+
+[24]. Our coset-based QC LDPC codes have similar girth and
+
+minimum Hamming distance bounds to the SFT codes, given
+
+by the following two lemmas:
+
+Lemma 3: A regular QC LDPC code constructed based
+
+on cosets has an even girth
+
+.
+
+Lemma 4: The minimum Hamming distance of a
+
+reg-
+
+ular QC LDPC code constructed based on cosets satisfies
+
+. Furthermore, all codewords have even Hamming
+
+weights and hence
+
+for even .
+
+The proofs of Lemmas 3 and 4 are similar to those in [20],
+
+[22]–[24] and are hence omitted. We remark that Lemmas 3 and
+
+4 are not affected by the three types of operations described in
+
+Section V-B. For any given SFT code
+
+, all the
+
+codes in
+
+have the same design parameters
+
+,
+
+and hence, similar code parameters (block length and code rate).
+
+Since
+
+, there exists a set of codes in with respect to
+
+. Any
+
+with similar error performances to the given SFT distinct coset leaders can be used to construct a QC LDPC
+
+code, and we conjecture that this set contains more than one code. Suppose
+
+is an element in with order
+
+,
+
+coset-based QC LDPC code besides the given SFT code. We and consider the cosets with
+
+as
+
+have simulated the bit error rate (BER) performances of the SFT the coset leaders. Note that , , and can be obtained
+
+codes and the QC LDPC codes constructed using cosets and by cyclically shifting , and to the left by 6, 4, and 2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+576
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+positions, respectively. Using , , the parity check matrix
+
+, and , we get
+
+which defines an SFT code with
+
+and
+
+. For this
+
+code, we have
+
+. Since
+
+, extra waiting
+
+time is needed between consecutive iterations of check (or vari-
+
+able) node updates. A throughput gain of
+
+can be
+
+achieved by all the codes in
+
+. Hence, SFT codes
+
+cannot achieve the maximum throughput gain of roughly 2.
+
+If we choose the cosets , , , and with respect to
+
+, the parity check matrix is then given by
+
+which defines a coset-based QC LDPC code. Note that , , , and are also cyclotomic cosets modulo 109 with respect
+to GF(16) and hence the code defined by is also a cyclo-
+
+Fig. 8. BER performance comparisons. For the SFT codes, (a; b) = (16; 33), (39, 19), and (14, 63) for m = 109, 181, and 397 respectively. For the codes based on cyclotomic cosets, a = 16, 43, and 79 for m = 109; 181; and 397,
+respectively, and the coset leaders are {1, 6, 8, 11}, {1, 90, 144, 166} and {1,
+20, 133, 306} for m = 109; 181; and 397, respectively. For our coset-based codes, a = 38; 39; and 14 for m = 109; 181; and 397, respectively, and
+the coset leaders are {1, 2, 3, 4}, {1, 58, 97, 153} and {1, 59, 111, 355} for
+m = 109; 181; and 397, respectively.
+
+tomic-coset-based QC LDPC code.
+
+For
+
+with order 9,
+
+. Using
+
+,
+
+,
+
+and with respect to , we can construct the following
+
+parity check matrix
+
+throughput gain of roughly 2. The minimum waiting time
+
+and maximum throughput gain of our coset-based codes for
+
+these five sets of design parameters are also given in Table I.
+
+Among these five sets, for three sets of design parameters
+
+[
+
+and
+
+], cyclo-
+
+tomic cosets do not exist. Hence, for these three sets of design
+
+parameters, neither SFT nor cyclotomic-coset-based construc-
+
+tion can lead to QC LDPC codes that satisfy
+
+,
+
+while our coset-based construction indeed leads to QC LDPC
+
+which defines a coset-based QC LDPC code.
+
+For the QC LDPC codes defined by and , are
+
+49 and 52, respectively. In both cases,
+
+and the
+
+CNFUs and VNFUs can work continuously. Thus, a throughput
+
+gain of
+
+and 100% HUE can be achieved for both
+
+codes. These three codes all have the same codeword length of
+
+and code rate of
+
+. The BER performances
+
+of the three QC LDPC codes, defined by , , and , re-
+
+spectively, are shown in Fig. 8. While the BER performances of
+
+these three codes are almost the same, the codes defined by
+
+and allow our optimal OMP decoder to achieve higher HUE
+
+and greater throughput gain than the SFT code defined by .
+
+Although we have not been able to prove that coset-based
+
+codes that satisfy
+
+. For example, given the
+
+design parameter
+
+, is 146 for the
+
+ensemble of the SFT codes
+
+. Since it is greater
+
+than
+
+, SFT codes cannot achieve the maximum
+
+throughput gain of roughly 2. There are four elements in
+
+with multiplicative order
+
+. Since
+
+none of them are prime powers, cyclotomic cosets do not
+
+exist and cyclotomic-coset-based QC LDPC codes cannot
+
+be constructed. In this case, using cosets with respect to
+
+and coset leaders
+
+, we construct a coset-based QC LDPC code
+
+that has
+
+and achieves the maximum throughput gain
+
+of roughly 2.
+
+QC LDPC codes that satisfy
+
+always exist for
+
+any given
+
+, we have been able to construct coset-based
+
+QC LDPC codes that satisfy
+
+in all the cases
+
+VI. CONCLUSION
+
+we have tried so far as shown below, including cases for In this paper, we study the OMP decoding of LDPC codes.
+
+which SFT codes do not satisfy
+
+and cyclo- Exploiting the inherent concurrency between the check and vari-
+
+tomic-coset-based codes do not exist. For all but five sets of able node updates, OMP decoders improve both throughput and
+
+design parameters listed in [22, Table I], SFT codes satisfy HUE while introducing no BER performance degradation and
+
+, and so do our coset-based codes. For the five no extra hardware requirement. We proposed and implemented
+
+sets of design parameters (their values are marked by in an optimal OMP decoder architecture for QC LDPC codes that
+
+Table I) for which SFT codes do not satisfy
+
+, achieves the maximum throughput gain and HUE due to over-
+
+we have constructed coset-based QC LDPC codes that sat- lapping. We also proposed a new construction method leading to
+
+isfy
+
+and hence can achieve the maximum QC LDPC codes that allow our optimal OMP decoder to achieve
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: OPTIMAL OMP DECODING OF QUASI-CYCLIC LDPC CODES
+
+577
+
+higher throughput and HUE than the SFT codes while maintaining similar error performances.
+APPENDIX
+
+A. Proof of Lemma 1
+
+Proof: Assume that the CNFUs start the check node updates of the -th iteration from row addresses
+, and let us consider the sce-
+
+nario steps later.
+
+First, we show that
+
+for
+
+. Note that now all the data stored in the memory addresses
+
+(for all
+
+) have been updated
+
+by the CNFUs, from which the VNFUs can then start the vari-
+
+able node updates of the -th iteration. Suppose the -th VNFU
+
+starts from the column address , whose cor-
+
+responding row addresses are
+
+, then
+
+we have
+
+(for all
+
+and
+
+). That is, for the -th block row, the cor-
+
+responding starting row addresses for all VNFUs fall in the in-
+
+terval
+
+. Since the maximum difference be-
+
+tween any two addresses within this interval is
+
+, at most
+
+steps are necessary before there is one row address that all
+
+VNFUs have finished updating for the -th iteration. That is, the
+
+-th CNFU needs to wait for at most steps before it can start
+
+the check node updates for the
+
+-th iteration. Since this
+
+holds for every block row and CNFU, the minimum inter-itera-
+
+tion waiting time
+
+, which is the maximum of the waiting
+
+time among all the CNFUs, satisfies
+
+for
+
+(11)
+
+Next, we claim that there exists at least one block row within
+
+which the maximum difference among the corresponding row
+
+addresses of the starting column addresses of all the VNFUs is
+
+indeed
+
+. This claim implies that for at least one CNFU,
+
+the waiting time is steps. Since
+
+is the maximum of
+
+the waiting time among all the CNFUs, we have
+
+we increase the starting row addresses of the CNFUs for these
+
+block rows by one. These new starting row addresses for the
+
+CNFUs then ensure that for every block row the high address in
+
+the intervals does not correspond to a starting column address of
+
+a VNFU. Note that the high address in the intervals gets updated
+
+by the CNFUs during the -th step. Thus, the row addresses
+
+corresponding to the starting column addresses of the VNFUs
+
+are in fact available after
+
+steps, and the VNFUs could
+
+have started then. This clearly contradicts the fact that is
+
+the minimum waiting time for the VNFUs.
+
+Combining (11) and (12), we have
+
+for
+
+. Using a similar approach, we can also show
+
+for
+
+by establishing first
+
+and then
+
+. Hence, we have
+
+.
+
+It remains to show that
+
+. First, we show
+
+. Since is the minimum inter-iteration waiting time
+
+obtained when the VNFUs start first and hence their choices
+
+of starting addresses are not restricted by previous updates, we
+
+have
+
+. Next, we show
+
+. After
+
+the VNFUs start for steps, the CNFUs can start and let
+
+denote the minimum intra-iteration waiting time for the variable
+
+node updates of the next iteration. Using the same logic as above
+
+proof, we know
+
+. Since is obtained with the
+
+starting addresses limited by previous updates, we know
+
+. Hence, we have
+
+, and thus
+
+.
+
+In summary, the minimum intra- and inter-iteration waiting
+
+times satisfy
+
+for
+
+. Furthermore, our proof is constructive and
+
+any sequence
+
+that satisfies
+
+and
+
+for
+
+can satisfy the
+
+data dependency constraints.
+
+B. Proof of Lemma 2 Proof: First, we have
+
+for
+
+(12)
+
+(13)
+
+Now we prove the above claim. Since for the -th block row, the
+
+(14)
+
+corresponding starting row addresses for all VNFUs fall in the
+
+interval
+
+, the above claim is equivalent to
+
+(15)
+
+saying that there exists at least one block row, say the -th block
+
+row, that both and
+
+correspond to
+
+the starting column addresses of the VNFUs. This can be shown by contradiction. Contrary to the claim, let us assume for all
+
+the block rows, the low address of the interval , the high
+
+address
+
+, or both do not correspond to
+
+the starting column addresses of the VNFUs. If the low address
+
+does not correspond to the starting column addresses of
+
+the VNFUs, we can start the -th CNFU at the address
+
+, and after steps the interval of row addresses becomes
+
+. That is, the high address of the interval
+
+does not correspond to the starting column address of a VNFU.
+
+For all the block rows for which the low address of the interval
+
+The inequality in (13) is due to the swap of the order of mini-
+
+mization and maximization. The equality in (14) is because each
+
+VNFU is allowed to choose its own reference block row inde-
+
+pendently, and the equality in (15) is because
+
+are independent and only depends on .
+
+Hence,
+
+. Meanwhile, assume and are
+
+the starting row addresses and the reference block rows that
+
+minimize (6), and and are the starting row addresses
+
+and the reference block rows that minimize (7). Since
+
+and minimize (6), we have
+
+.
+
+does not correspond to a starting column address of a VNFU, Hence, we have
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+578
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 16, NO. 5, MAY 2008
+
+ACKNOWLEDGMENT
+
+The authors wish to thank the authors of [27] for providing
+
+the parity check matrix of the (3, 6) regular QC LDPC code used
+
+in [27].
+
+REFERENCES
+
+[1] R. G. Gallager, Low Density Parity Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[3] D. J. C. Mackay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, pp. 1645–1646, Aug. 1996.
+[4] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[5] S. Y. Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[6] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 6, pp. 2711–2736, Nov. 2001.
+[7] C. Howland and A. Blanksby, “Parallel decoding architecture for low density parity check codes,” in Proc. IEEE Int. Symp. on Circuits Syst. (ISCAS), May 2001, pp. 742–745.
+[8] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magn., vol. 37, no. 3, pp. 748–755, Mar. 2001.
+[9] M. M. Mansour and N. R. Shanbhag, “Low power VLSI decoder architecture for LDPC codes,” in Proc. IEEE Int. Symp. on Low Power Electron. Design (ISLPED), Aug. 2002, pp. 284–289.
+[10] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic low density parity check codes,” IEEE Trans. Circuits Syst. I, Fundam. Theory Appl., vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+[11] S. Kim and K. K. Parhi, “Overlapped decoding for a class of quasicyclic codes,” in Proc. IEEE Workshop on Signal Process. Syst. (SiPS), Oct. 2004, pp. 113–117.
+[12] T. Zhang and K. K. Parhi, “Joint (3,k)-regular LDPC code and decoder/encoder design,” IEEE Trans. Signal Process., vol. 52, no. 4, pp. 1065–1079, Apr. 2004.
+[13] I. Park and S. Kang, “Scheduling algorithm for partially parallel architecture of LDPC decoder by matrix permutation,” in Proc. IEEE Int. Symp. on Circuits Syst. (ISCAS), May 2005, vol. 6, pp. 5778–5781.
+[14] S. Olcer, “Decoder architecture for array-code-based LDPC codes,” in Proc. Global Telecommun. Conf. (Globecom), Dec. 2003, vol. 4, pp. 2046–2050.
+[15] E. Liao, E. Yeo, and B. Nikolic, “Low-density parity-check code constructions for hardware implementation,” in Proc. IEEE Int. Conf. on Commun. (ICC), June 2004, vol. 5, pp. 2573–2577.
+[16] D. E. Hocevar, “LDPC code construction with flexible hardware implementation,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2003, vol. 4, pp. 2708–2712.
+[17] M. M. Mansour and N. R. Shanbhag, “High throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[18] E. Boutillon, J. Castura, and F. R. Kschischang, “Decoder-first code design,” in Proc. Int. Symp. on Turbo Codes and Related Topics, Sep. 2000, pp. 459–462.
+[19] J. L. Fan, “Array codes as low density parity check codes,” in Proc. Int. Symp. on Turbo Codes and Related Topics, Sep. 2000, pp. 543–546.
+[20] R. M. Tanner, D. Sridhara, and T. Fuja, “A class of group structured LDPC codes,” in Proc. Int. Symp. Commun. Theory and Appl., July 2001.
+[21] O. Milenkovic, I. B. Djordjevic, and B. Vasic, “Block-circulant lowdensity parity-check codes for optical communication systems,” IEEE J. Sel. Topics Quantum Electron., vol. 10, no. 2, pp. 294–299, Mar./Apr. 2004.
+[22] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 6, pp. 2966–2984, Dec. 2004.
+[23] H. Fujita and K. Sakaniwa, “Some classes of quasi-cyclic LDPC codes: Properties and efficient encoding method,” IEICE Trans. Fundam., vol. E88-A, no. 12, pp. 3627–3635, 2005.
+[24] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 4, pp. 1788–1793, Aug. 2004.
+
+[25] R. Smarandache and P. O. Vontobel, “On regular quasi-cyclic LDPC codes from binomials,” in Proc. IEEE Int. Symp. on Inf. Theory, June/ July 2004, p. 277.
+[26] Z. Wang, Y. Chen, and K. K. Parhi, “Area efficient decoding of qausicyclic low density parity check codes,” in Proc. IEEE Int. Conf. on Acoust., Speech, Signal Process. (ICASSP), May 2004, pp. V49–V52.
+[27] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Partially-parallel LDPC decoder based on high-efficiency message-passing algorithm,” in Proc. Int. Conf. on Computer Design (ICCD), Oct. 2005, pp. 503–510.
+[28] T. Zhang and K. K. Parhi, “A 54 Mbps (3,6)-regular FPGA LDPC decoder,” in Proc. IEEE Workshop on Signal Process. Syst. (SiPS), Oct. 2002, pp. 127–132.
+[29] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Partially-parallel LDPC decoder achieving high-efficiency message-passing schedule,” IEICE Trans. Fundam., vol. E89-A, pp. 969–978, Apr. 2006.
+[30] E. Yeo, B. Nikolic, and V. Anantharam, “Iterative decoder architectures,” IEEE Commun. Mag., vol. 41, pp. 132–140, Aug. 2003.
+[31] N. Chen, Y. Dai, and Z. Yan, “Partly parallel overlapped sum-product decoder architectures for quasi-cyclic LDPC codes,” in Proc. IEEE Workshop on Signal Process. Syst. (SiPS), Oct. 2006.
+[32] Z. Wang and Q. Jia, “Low complexity, high speed decoder architecture for quasi-cyclic LDPC codes,” in Proc. IEEE Int. Symp. on Circuits Syst. (ISCAS), May 2005, vol. 6, pp. 5786–5789.
+[33] D. S. Dummit and R. M. Foote, Abstract Algebra, 3rd ed. Upper Saddle River, NJ: Prentice Hall, 2003.
+[34] S. B. Wicker, Error Control Systems for Digital Communication and Storage. Upper Saddle River, NJ: Prentice Hall, 1995.
+[35] Y. Dai and Z. Yan, “Optimal overlapped message passing decoding for quasi-cyclic low-density parity-check codes,” in Proc. Global Telecomun. Conf. (Globecom), Dec. 2005, vol. 4, pp. 2395–2399.
+[36] Y. Dai and Z. Yan, “Coset-based quasi-cyclic LDPC codes for optimal overlapped message passing decoding,” in Proc. IEEE Workshop on Signal Process. Syst. (SiPS), Nov. 2005, pp. 762–767.
+Yongmei Dai (S’05) received the B.S. degree from Peking University, Beijing, China, in 1998, and the M.Eng. degree from National University of Singapore in 2001. She is currently working toward the Ph.D degree at Lehigh University, Bethlehem, PA.
+From 2001 to 2004, she was with the Institute for Infocomm Research (I2R), Singapore, working on MIMO-OFDM systems. Her research interest lies in error control coding and signal processing for wireless communication systems.
+Zhiyuan Yan (S’00–M’03) received the B.E. degree in electronic engineering from Tsinghua University, Beijing, China, in 1995 and the M.S. and Ph.D. degrees, both in electrical engineering, from the University of Illinois, Urbana, in 1999 and 2003, respectively.
+During summer 2000 and 2002, He was a Research Intern with Nokia Research Center, Irving, TX. He joined the Electrical and Computer Engineering Department of Lehigh University, Bethlehem, PA, as an Assistant Professor in August 2003. His current research interests are in coding theory, cryptography, wireless communications, and VLSI implementations of communication and signal processing systems. Dr. Yan is a member of the IEEE Information Theory, Communications, and Computer Societies.
+Ning Chen (S’07) received the B.E. and M.E. degrees in electrical engineering from Tsinghua University, Beijing, China, in 2001 and 2004, respectively. Currently, he is working toward the Ph.D. degree in electrical engineering at Lehigh University, Bethlehem, PA.
+His research interests include design of VLSI architectures and circuits of digital signal processing and communication systems, with the emphasis on error-correcting coding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:52:40 UTC from IEEE Xplore. Restrictions apply.
+
+

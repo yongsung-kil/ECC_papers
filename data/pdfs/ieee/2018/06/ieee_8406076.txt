@@ -1,0 +1,144 @@
+2018 7th MEDITERRANEAN CONFERENCE ON EMBEDDED COMPUTING (MECO), 11-14 JUNE 2018, BUDVA, MONTENEGRO
+LDPC Decoder Implementation on DSP+ARM Platform with OpenCL
+
+Aleksei Kharin, Sergey Vityazev, Senior Member, IEEE, Evgeny Likhobabin, and Vladimir Vityazev, Member, IEEE
+The Department of Telecommunications and Radio Engineering Foundations Ryazan State Radio Engineering University, RSREU Ryazan, Russian Federation vityazev.s.v@tor.rsreu.ru
+
+Abstract—Low-density parity-check (LDPC) codes are now widely used in telecommunication systems due to their outstanding performance. LDPC decoding is a very computational intensive procedure and its implementation in real-time and as a part of embedded system is an actual problem. FPGA, GPP or GPU platforms are usually used. In this paper an LDPC belief propagation (BP) decoder is implemented on a DSP+ARM platform. It is shown that the porting of OpenCL software from a GPU or GPP to a DSP+ARM platform requires minimal effort. Additional code modifications to improve the DSP+ARM performance are described. The effectiveness of the platform is demonstrated, with up to 2 decoding iterations executing in real time.
+Keywords-LDPC; DSP; Keystone; belief propagation
+I. INTRODUCTION
+Low-density parity-check codes (LDPC) are widely used in many modern communication systems due to their outstanding performance and Shannon limit efficiency [1]. LDPC decoding schemes, however, have high computational complexity and therefore LDPC decoder implementation becomes a very important problem.
+Traditionally, LDPC decoders are implemented on field programmable gate array (FPGA) platforms due to their computational efficiency and re-programmability [2, 3]. The known drawbacks of this approach are a long development time, development costs and difficulty of code modification, notwithstanding the fact that efficient C/C++ compilers and over high-level tools are developed recently for FPGAs [2]. At the same time modern general purpose processors (GPPs) demonstrate high computational throughput and suitability for massively parallel computations with multi-core architectures and long registers for sub-word parallelism. In [2-7] LDPC decoder implementations on ARM and x86 GPP platforms are considered. But as it is stated in [2], GPP implementation is still not practical. GPU+GPP implementation is currently the most promising approach [2, 8, 9]. GPUs in conjunction with a GPP (usually ARM) host processor demonstrate unprecedented computational performance. GPU architectures are natively massive parallel with hundreds of processing elements working simultaneously on a large number of work items. This unique
+
+computational power leveraged by standard and high-level software development tools like CUDA or OpenCL make GPUs or GPU+GPP platforms very efficient in LDPC decoding implementation.
+However, the choice of a hardware platform for LDPC decoding is still not a trivial challenge. GPUs work really well only in cases when the length of code is large enough. Moreover, power consumption for GPU platforms is usually high.
+Digital signal processors (DSPs) are well-known lowpower solutions typically used in real-time embedded communication systems. DSPs were used in the past to implement LDPC decoding [10, 11]. Modern DSP-based products use not only data- and instruction-level parallelism but also a multi-core approach. In [12] LDPC decoder implementation on a TMS320C6678 8-core DSP is considered. This homogeneous processor, however, is not state-of-the-art technology. The Keystone II platform from Texas Instruments with 8 DSP- and 4 ARM-cores is able to demonstrate much higher flexibility and efficiency in signal processing tasks.
+In this paper LDPC decoder implementation on an AK66H14 Keystone II DSP+ARM multicore system on chip (SoC) is considered. A Belief Propagation (BP) LDPC decoding algorithm is chosen to investigate the efficiency of the platform. The OpenCL software is ported from a GPU+GPP platform. It is modified to get more performance. The efficiency of the solution is measured with a number of decoding iterations executed in real time.
+The paper is organized as follows. LDPC basics and BP algorithm details are described in Section II. An introduction to the Keystone DSP+ARM hardware platform and OpenCL software is given in Section III. The details of software porting and improvements are considered in Section IV. The experimental environment and the results of investigations are given in Section V.
+II. LDPC DECODING AND BP ALGORITHM
+LDPC codes and decoding algorithms were proposed by R. Gallager in 1963. The most powerful of the proposed decoding
+
+This work was supported by Russian Science Foundation under Grant 17-79-20302
+
+978-1-5386-5683-9/18/$31.00 ©2018 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:12 UTC from IEEE Xplore. Restrictions apply.
+
+2018 7th MEDITERRANEAN CONFERENCE ON EMBEDDED COMPUTING (MECO), 11-14 JUNE 2018, BUDVA, MONTENEGRO
+
+algorithms is the near optimum probabilistic belief-propagation algorithm, also known as the sum-product algorithm (SPA) [1].
+In this work we used several LDPC decoding algorithms. All of them are based on the logarithmic interpretation of the BP algorithm with the numerical approximation of the box-plus operator using the Jacobi logarithm called the LLR Jacobi BP decoding algorithm. The brief formalization of those algorithms is presented in Algorithm 1. A detailed description can be found in [13, 14].
+Algorithm 1 Generalized form of considered algorithms
+1: Decoder initialization: for each variable node perform initialization.
+2: Check nodes updating: for each check node for each connected variable node compute messages using box-plus operator.
+3: Variable nodes updating: for each variable node for each connected check node compute messages.
+4: The a posteriori LLR calculation: for each variable node compute a posteriori LLR.
+5: Hard decision making: for each variable node find hard decision.
+6: Decoding termination check.
+A logarithmic interpretation of the BP algorithm is easier in implementation than the SPA algorithm but still has high computational complexity. In addition to the LLR Jacobi BP algorithm, a number of its simplified modifications were also implemented. All these modifications can be described using Algorithm 1 formalization. The difference among them is in the box-plus operator implementation on the check nodes updating step. The following implementations of the box-plus operator were considered: approximation with a Look Up Table (LLR Jacobi LUT BP), piecewise-linear approximation (LLR Jacobi PL BP), approximation with single line (LLR Jacobi Line BP), approximation with simplified surface (LLR Jacobi S BP) and min-sum decoding algorithm (MSA) [13, 14].
+III. HARDWARE AND SOFTWARE PLATFORM
+A. 66AK2H14 DSP+ARM Platform
+The EVMK2H evaluation module based on the 66AK2H14 multicore DSP+ARM Keystone II SoC from Texas Instruments is used in the research as a hardware platform. The SoC includes 4 ARM-cores for general purpose operations and 8 DSP-cores to accelerate computationally intensive signal processing calculations. Each DSP-core works at 1.2 GHz clock frequency and demonstrates up to 38.4 GMACS performance for fixed-point operations and up to 19.2 GFLOPS for floating-point operations. The platform is supported by a wide set of development tools, including
+
+efficient optimizing C/C++ compilers for DSPs; Linux operating system for ARMs and inter-processor communication framework for ARM-DSP cooperative functionality. OpenCL framework is also supported by the platform [15, 16].
+B. OpenCL
+OpenCL is an open framework for massively parallel software development primarily targeted GPU+GPP hardware platforms. The OpenCL concept considers hardware consisting of two parts: a host and a device or several devices. A host generates tasks. These tasks consist of many work-items – small parts of work which can be executed in parallel. Workitems are combined in work-groups in a way which depends on a device architecture.
+A device is a hardware which executes work-items. One GPU board is a device in a typical case. A device consists of some number of processing units and each processing unit consists of many processing elements. One work-group is executed on one processing unit, and all work-items from this work-group are executed on processing elements of this processing unit in parallel in single-instruction multiple-data (SIMD) manner. So it is desirable to choose the number of work-items in one work-group equal to or multiple of a number or processing elements in one processing unit.
+OpenCL projects are well porting to different hardware platforms. They are easily scaled to various device numbers or types.
+IV. SOFTWARE IMPLEMENTATION
+An OpenCL project developed and debugged previously for the GPU+GPP platform [14] was used in this research as a starting point. This software was ported to the DSP+GPP platform. Switching from GPU to ACCCELERATOR device definition was the only modification required to build and run the project on the Keystone II. However, this first solution had a poor performance in terms of processing time. Some improvements were required to make the code run efficiently. These improvements are described below.
+Unlike GPU processing units DSP processing units are not capable of executing a set of tasks in a parallel manner due to their iterative nature. When a work-group consists of several work-items an outer cycle is organized to execute them on one processing unit (DSP core) which affects the overall application performance. That is why in the case of DSP it is strictly recommended to have one work-item per work-group [15]. Also dispatching tasks among processing units costs some processing time. So it is better when the whole computational task is divided into 8 equal parts, one for each DSP core. Rewriting the code to have larger kernels was the first step to improve its execution on the DSP+GPP platform.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:12 UTC from IEEE Xplore. Restrictions apply.
+
+2018 7th MEDITERRANEAN CONFERENCE ON EMBEDDED COMPUTING (MECO), 11-14 JUNE 2018, BUDVA, MONTENEGRO
+
+Figure 1. Illustration of OpenCL software porting from GPU+GPP to DSP+GPP platform
+
+An illustration of OpenCL software porting from a GPU+GPP to a DSP+GPP platform is illustrated in Fig. 1. A procedure bit2chk() in Fig. 1 corresponds to step 2 of Algorithm 1. Other steps of Algorithm 1 are implemented in a similar way. In Fig. 1 N is the number of work-items to be executed. This number is large enough (tens of thousands). On the GPU+GPP platform all this workload is divided into N/M work-groups with M work-items executed as one work-group. On the DSP+GPP platform we have L = 8 cores. The workload is divided into L work-groups and work-items become larger and only one work-item is executed in each work-group.
+Proper memory allocation was the second step of improvement. Only global memory was used in the GPU OpenCL project to store all data [14]. In the case of the Keystone platform there are two physical areas for global memory allocation: DDR3 external memory or internal multicore shared memory (MSM). The MSM has a limited size (4 MB) but is much faster than external memory. Parity-check matrices and input data were stored in the MSM. Also, some arrays with intermediate results were moved to local memory to increase the performance.
+Another software improvement dealt with mathematical library inclusion. Calculation of logarithmic and exponential functions is the most time consuming operation in the BP algorithm. This operation has hardware and software support on GPU platforms but additional code modification was required in the case of the DSP+GPP platform. MATHLIB library from Texas Instruments was used with its logsp() and expsp() optimized functions to get better performance.
+V. EFFICIENCY ESTIMATION
+An approach described in [17] was used to estimate the efficiency of the decoder implementation. A simulation model was used to generate input data for the decoder. This model was executed on ARM-cores of the Keystone II SoC. DVB-T2 Lite standard was chosen to test the solution and a LDPC code length of 16200 was used. An acceptable processing time was
+
+calculated with the DVB-T2 Data-Rate Calculator [17, 18]. It gave 7 ms time slot to process one code word in real-time. The goal of efficiency estimation then is to measure the number of decoding iterations which the platform may execute in an acceptable time slot. This number of iterations directly depends on one iteration execution time. On the other hand, it causes an achievable error correction performance.
+One iteration processing time and the number of iterations executed in real-time for a set of decoding algorithms are given in Table 1. The LLR Jacobi BP algorithm is the most complex one and is executed in 7.4 ms. It cannot be implemented on the platform in real-time without additional code improvements. For other decoding algorithms from 1 to 2 iterations are executed in real-time allowing the platform to be used in the considered application. The achievable error correction performance measured in terms of bit error rates is illustrated in Fig. 2.
+Also, Table 1 contains information about DSPs utilization. The DSP load was measured with the dsptop utility provided by Texas Instruments [19]. It can be seen that simplified decoding algorithms do not use all the available DSP performance. This is due to time spent for dispatching computations from the host to OpenCL devices which is referred to as the overhead.
+
+Iteration time, ms Number of iterations DSP load,
+%
+
+TABLE I.
+
+EFFICIENCY ESTIMATION
+
+Jacobi BP
+7.4
+
+Decoding algorithm Jacobi S Jacobi Jacobi Jacobi
+BP Line BP LUT BP PL BP
+
+2.95
+
+3.15
+
+3.5
+
+3.6
+
+0
+
+2
+
+2
+
+2
+
+1
+
+74
+
+38
+
+39
+
+44
+
+48
+
+Min Sum 2.75 2 32
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:12 UTC from IEEE Xplore. Restrictions apply.
+
+2018 7th MEDITERRANEAN CONFERENCE ON EMBEDDED COMPUTING (MECO), 11-14 JUNE 2018, BUDVA, MONTENEGRO
+
+Figure 2. Bit error rates for different decoding algorithms DVB-T2/S2 (16200, 7200)
+With simplified algorithms we reduced the OpenCL kernel execution time, but the overhead remains the same across all implementations. For a better performance Texas Instruments recommends to have the overhead below 10% of the total execution time [15]. Results in the table show that in our case the overhead can achieve about 70% for the min-sum algorithm.
+With these results we may say that min-sum approximation of the BP-algorithm is the best choice for the considered platform because it has the smallest processing time and error correction performance comparable to other algorithms. Also with further code improvements it should be the first algorithm capable of calculating 3 iterations in a required time limits, that will give huge advantage in performance.
+VI. CONCLUSION AND FUTURE WORK
+In this paper the portability of LDPC decoder implementation from a GPU+GPP to a DSP+GPP platform is demonstrated. OpenCL framework is used. The required software modifications which improve the DSP+GPP platform performance are described. Up to 2 decoding iterations are executed in real-time with the min-sum BP algorithm approximation. Additional code modifications can be implemented to improve the error correction performance further. Moving to higher levels of parallelization we can reduce the number of dispatch operations per codeword that can allow us to utilize DSPs fully and achieve better overall performance.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes, Cambridge, MIT Press, 1963.
+
+[2] J. Andrade, G. Falcao, V. Silva, and L. Sousa, “A survey on programmable LDPC decoders,” IEEE Access, vol. 4, pp. 6704-6718, November 2016.
+[3] B. L. Gal, and C. Jego, “Low-latency software LDPC decoders for x86 multi-core devices,” Signal Processing Systems, IEEE International Workshop on, 2017.
+[4] B. L. Gal, and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Transactions on Parallel and Distributed Systems, 2015, pp. 1-14.
+[5] S. Gronroos and J. Bjorkqvist, ”Performance Evaluation of LDPC Decoding on a General Purpose Mobile CPU”, Proceedings of IEEE Global Conference on Signal and Information Processing (GlobalSIP2013), Austin, TX, USA, 2013, pp. 1278-1281.
+[6] B. L. Gal, C. Jego, ”High-throughput LDPC decoder on low-power embedded processors”, IEEE Comm. Lett., vol. 19, no. 11, Nov. 2015, pp. 1861-1864.
+[7] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. 42nd Asilomar Conf. Signals, Syst. Comput., Oct. 2008, pp. 11371142.
+[8] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC Decoding on Multicore Architectures,” IEEE Transactions on Parallel and Distributed Systems, vol. 22, 2011, pp. 309-322.
+[9] S. Cammerer, B. Leible, M. Stahl, J. Hoydisz, and S. Brink, “Combining belief propagation and successive cancellation list decoding of polar codes on GPU platforms,” IEEE ICASSP Conf. Proceedings, 2017, pp. 3664-3668.
+[10] M. Gomes, V. Silva, C. Neves, and R. Marques, “Serial LDPC decoding on a SIMD DSP using horizontal scheduling,” 14th European Signal Processing Conference (EUSIPCO 2006), Florence, Italy, September 48, 2006.
+[11] G. Lechner, J. Sayir, and M. Rupp, “Efficient DSP implementation of an LDPC decoder,” IEEE ICASSP Conf. Proceedings, 2004, pp. IV-665 – IV-668.
+[12] M. Sever, A. Rehis, and E. Cavus, “Parallelizing LDPC Decoding using OpenMP on Multicore Digital Signal Processors,” IEEE International Conference on Parallel Processing Workshops, 2016, pp. 46-51.
+[13] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, X.Y. Hu, “NearOptimal Reduced-Complexity Decoding Algorithms for LDPC Codes”, Proceedings of IEEE International Symposium on Information Theory, Lausanne, Switzerland, July, 2002
+[14] I. Volkov, A. Kharin, A. Dryakhlov, E. Mirokhin, K. Terekhov, K. Zavertkin, A. Ovinnikov, E. Likhobabin, V. Vityazev, "Flexible parallel implementation of LLR BP decoding simulation on multicores using OpenCL", Telecommunication Forum (TELFOR) 2017 25th, pp. 1-4, 2017.
+[15] “TI OpenCL™ Runtime Documentation” [Online]. Available: http://downloads.ti.com/mctools/esd/docs/opencl/index.html.
+[16] N. Dahnoun, Multicore DSP: from algorithms to real-time implementation on the TMS320C66x SoC, Wiley, 2018.
+[17] A. Kharin, I. Volkov, E. Mirokhin, K. Terekhov, A. Dryakhlov, K. Zavertkin, A. Ovinnikov, E. Likhobabin, V. Vityazev, "Parallel LDPC decoder implementation on a mobile GPU", Telecommunication Forum (TELFOR) 2017 25th, pp. 1-4, 2017.
+[18] EDB Datenbankgesellschaft Hanel mbH, “DVB-T2 Data-Rate Calculator” [Online]. Available: http://www.dtvtools.com/dvb-t2-datarate-calculator/.
+[19] Texas Instruments Wiki, “Dsptop” [Online]. Available: http://www.processor.wiki.ti.com/index.php/Dsptop
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:12 UTC from IEEE Xplore. Restrictions apply.
+
+

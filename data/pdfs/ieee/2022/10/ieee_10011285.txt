@@ -1,0 +1,448 @@
+2022 The 7th International Conference on Integrated Circuits and Microsystems
+Design and Implementation of Hard-Decision LDPC Decoder
+
+2022 7th International Conference on Integrated Circuits and Microsystems (ICICM) | 978-1-6654-6043-9/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICICM56102.2022.10011285
+
+Yi Dong School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi
+dongyi_yd9295@163.com
+
+Huimin Du School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi fv@xupt.edu.cn
+
+Shengfei Bai School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi baishfei@126.com
+
+Xinyi Wang School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi 735549769@qq.com
+
+Kai Li School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi likai54524@126.com
+
+Chuang Cheng School of Electronic Engineering
+Xi’an University of Posts & Telecommunications Xi'an, Shaanxi 1658977151@qq.com
+
+Abstract—Hard-decision LDPC decoders are widely used in communication and storage systems due to their simple circuits. However, existing hard decision LDPC decoding circuits lead to slow decoding convergence due to flipping according to the maximum energy value, reducing decoding performance. This paper proposes the Dual-Energy Probabilistic Gradient Descent Bit-Flipping (DPGDBF) hard-decision algorithm. If the energy value of the variable node reaches the threshold, all nodes with the threshold energy will be flipped, and the node with the submaximum threshold energy will be flipped with a certain probability. otherwise, only all variable nodes with the maximum energy value are flipped. The simulation results show that, in a limited iterative range, compared with Tabu-list RandomPenalty Gradient Descent Bit-Flipping (TRGDBF), for (2048, 1024) codes, the average number of decoding iterations of the algorithm is reduced by 12%, and the decoding performance is improved to a certain extent; for (9216,7680) codes, the average number of decoding iterations of the DPGDBF algorithm is reduced by 18%, and the decoding performance is improved by 4 times. In addition, this paper proposes a hardware implementation of the DPGDBF algorithm for (2048, 1024) codes, with a maximum clock frequency of 305.53MHz and a through-put of 19.52Gbps.
+Keywords—low-density parity-check codes, Gradient descent bit-flipping, iterative decoding, Double-Energy value
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) is a high-performance channel coding proposed by Gallager in the 1960s [1]. Because its performance is close to the Shannon limit, the decoding is simple, and the structure is flexible. LDPC codes have been applied to communication standards such as WiMax, DVB-S2, IEEE802.16e, IEEE802.11, and the latest 5G air interface.
+The LDPC decoder achieves decoding by iteratively exchanging information between the variable nodes and the check nodes. The LDPC decoding algorithm is divided into a soft-decision algorithm and a hard-decision algorithm accord-
+
+ing to the different types of exchanged information. Softdecision algorithms exchange decoding probability information and include Belief Propagation BP [2], Min-Sum MS [3], and Offset Min-Sum OMS [4]. Hard-decision algorithms exchange binary messages, classical algorithms such as the Bit-Flipping BF [5] and the Gallager-B [6] algorithms. The soft-decision algorithm has better performance than the hard-decision algorithm. However, the calculation is complicated due to the large number of messages passed between nodes. The calculation time is long, the hard-decision decoding performance is poor, but only one bit of information is passed between any two nodes, which is easy to implement in hardware. Therefore, the hard-decision algorithm is mostly used to implement LDPC in communication systems. Many variants of BF algorithms have been proposed in academia, such as Weighted Bit-Flipping BF (WBF) algorithm [7], Improved Bit-Flipping BF algorithm (IBF) [8], Gradient Descent Bit-Flipping (GDBF) [9], TRGDBF [10].
+GDBF is a hard-decision algorithm proposed by academia in recent years. The algorithm defines a nonlinear objective function, converts the decoding processing into solving the maximum value of this function processing, calculates the energy value of the variable node according to the inversion function, finds the maximum energy value among all variable nodes (VNs), and the VNs with the maximum energy value are flipped. To improve the decoding performance of the GDBF algorithm, The random-penalty term of the TRGDBF algorithm is introduced when calculating the energy value to prevent the decoder from entering the trap set; In addition, the tabu-list is defined by the TRGDBF algorithm to avoid continuously repeated flipping, thereby improving the decoding efficiency. However, these two algorithms both flip according to the maximum energy value, resulting in slow decoding convergence speed and low probability of escaping from trap sets, reducing decoding performance.
+
+978-1-6654-6043-9/22/$31.00 ©2022 IEEE
+
+208
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+In order to improve the convergence speed of LDPC decoding, this paper proposes the Dual-Energy Probabilistic Gradient Descent Bit-Flipping (DPGDBF) hard-decision algorithm. The core of the algorithm is to set the maximum threshold of the energy value. If the energy value of the variable node reaches the threshold, all nodes with the threshold energy will be flipped, and the node with the submaximum threshold energy will be flipped with a certain probability otherwise, only all variable nodes with the maximum energy value are flipped. The simulation results show that, compared with TRGDBF, for (2048, 1024) codes, the average number of decoding iterations of the algorithm is reduced by 12%, and a certain extent improves the decoding performance; for (9216,7680) codes, the average number of decoding iterations of the DPGDBF algorithm is reduced by 18%, and the decoding performance is improved by 4 times. In addition, this paper proposes a hardware implementation of the DPGDBF algorithm for (2048, 1024) codes, with a maximum clock frequency of 305.53MHz and a throughput rate of 19.52Gbps.
+The rest of this paper is as follows. The second part introduces the work related to LDPC code and TRGDBF decoding. Section III describes the DPGDBF in detail, and Section IV presents the simulation results, including performance comparisons and parameter selection. In section V, the relevant hardware architecture is introduced. Section VI is the conclusion.
+II. PRELIMINARIES
+A. Notations
+In this paper, the GF(2) LDPC codeword of length n is
+adopted, where GF(2) is a binary Galois field. H is an mn
+binary sparse parity-check matrix, where n  m  1. An LDPC code can be represented by a Tanner graph consisting of two types of nodes, in which there are n variable nodes (VNs) and
+m check nodes (CNs) .if hi, j  1 ,check node ci will be
+connected to variable node v j by an edge in the tanner graph, i ∈ [1,m], j∈ [1,n]. Vc (i) = { j | hi, j  1} represents the set of
+variable nodes connecting the i-th check node. Similarly, Cv ( j)  {i | hi, j  1} represents the set of check nodes
+connecting the j-th variable node. The degree of the i-th CN dci | Vc (i) | and the degree of the j-th VN dvj | Cv ( j) | . For a regular LDPC code, the degree of each CN and VN are constant. u is the codeword that is passed into the channel after encoding, and r is the codeword that is output after passing through the channel.
+The decoder proposed in this paper is suitable for regular LDPC codes with binary symmetric channel(BSC), each bit will be transmitted incorrectly with a crossover probability  , i.e. P(rj  u j )  1  and P(rj  1 u j )   .
+B. The TRGDBF Algorithm
+In each decoding iteration of the TRGDBF algorithm, the probability of bit error is calculated by the inversion function. The value of this function is the energy value. The larger the
+
+energy value, the greater the probability of bit error. The inversion function of TRGDBF is given by
+
+  (kt) (v)  vk(t)  rk 
+
+ci(t)  k 
+
+(1)
+
+iCv (k )
+
+where k is the random penalty term, and the estimated codeword and the syndrome vector in the t-th iteration respectively. where k equals 0 or 1, P(k  1)   and P(k  0)  1  ,
+ is a predetermined probability value and 0    1 . The gradient descent direction is not necessarily the best direction to obtain a valid codeword. With random penalty term k , the regularity of decoding is broken, and variable nodes may not be flipped in the gradient descent direction, thus increasing the possibility of escaping from the trap set.
+In addition, to further improve the decoding performance, the tabu-list is used to prevent repeated flipping of possibly erroneous bits in multiple consecutive iterations. Therefore, in the current iteration, the flipped bits are pushed into the tabulist, and in the next iteration, they are not selected for flipping and released from the tabu-list.
+
+III. DUAL-ENERGY PROBABILISTIC GDBF ALGORITHM
+In the TRGDBF algorithm, only the VNs with the maximum energy value are flipped. In terms of numerical optimization, to avoid oscillation at the local maximum, the search point is moved towards the local maximum of the objective function with a small step size. However, a smaller step size results in slower convergence.
+
+In order to speed up the convergence speed, this paper proposes a dual-energy value bit-flipping algorithm, which has a faster convergence speed than the single-energy value bitflipping algorithm due to its larger step size. However, suppose the search point is near the local maximum. In that case, the bit-flip algorithm with a larger step size is not suitable for finding the local maximum point, which leads to the oscillation of the dual-energy value bit-flip algorithm. It is necessary to dynamically adjust the larger step size to the smaller one to find the local maximum. Therefore, adjusting the dual-energy value bit dynamically flips to the single-energy value bit flips is necessary.
+
+In addition, to further improve the decoding performance, the probability flip method is adopted. Unlike the TRGDBF in which the VNs that satisfy flipping condition are automatically flipped，In the proposed algorithm, the variable nodes with the sub-maximum energy are flipped with a probability of  . A
+inversion factor ak is introduced, which is suitable for the VNs
+that satisfy the flip condition, the VN is flipped if ak  1 . The flip formula is as follows.
+
+vk(t1)  vk(t)  ak
+
+(2)
+
+where the flip factor ak is generated by the Bernoulli distribution (1,  ), P(ak  1)   and P(ak  0)  1  ,  is a predetermined probability and 0    1.
+
+209
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+According to the above discussion, the TRGDBF algorithm has been improved, and the DPGDBF algorithm is proposed, which is presented in Alg. 1. Equation (1) shows that the range of values (kt) (v) is 0 to dv  2 .The threshold  is set to dv  2 .When the maximum energy value (mt)ax reaches the maximum threshold, all VNs with  energy values are flipped, and the variable nodes with  1energy values are flipped with a probability of  .Otherwise, the VNs with the maximum
+energy value are flipped. l j is used to mark whether the j-th bit
+is in the tabu-list or not.
+IV. SIMULATION RESULTS
+In this section, the decoding performance and convergence speed of the DPGDBF algorithm are introduced and compared with the BF, GDBF, and TRGDBF algorithms. We considered two regular LDPC codes with different code lengths and code rates. The first is an LDPC code (dv4R050N2048) with a column weight of 4, a row weight of 8, a code rate of 0.5 and a length of 2048 (dv4R050N2048), and the second is LDPC code (dv4R083N9216) with a column weight of 4, a row weight of 24, a code rate of 0.83, and a length of 9216. In all simulations, The maxi-mum number of iterations is set to 300.
+We studied predetermined parameters to find the best flip probability value  using a numerical search method. the
+predetermined parameters. The dv4R050N2048 code is simulated under three different cross probability conditions, as shown in Fig 1. It can be seen that the studied parameters have only a small impact on the decoding performance. Its bit error rate can reach the best when   0.7 .
+
+iterations of TRGDBF algorithm is 25, and the average number of iterations of DPGDBF is 22.
+
+Algorithm1 The Proposed DPGDBF
+
+input: r(r0, r1，，rn1)
+Initialize: v(0)  r , t  0 , (l0,l1,,ln1)  0
+
+for t  0 to Tmax 1 do for i  0 to m 1 do
+ci(t)   jVc (i) v(jt)
+end for if c = 0 then
+break
+(m0)ax  0
+for j  0 to n 1 do
+
+ (tj)(v)  v j  rj 
+
+ci   j
+
+iCv ( j)
+if (mt)ax  (tj) and l j  0 then
+
+(mt)ax  (tj)
+end for for j  0 to n 1 do
+
+if (mt)ax   then if (tj)  (mt)ax and l j  0 then
+
+v(jt1)  v(jt) 1 l j  1
+else
+lj 0
+else if (tj)   and l j  0 then
+
+v(jt1)  v(jt) 1
+
+lj 1
+
+else if (tj)   1 and l j  0 then
+
+v(jt1)  v(jt)  a j
+else
+lj 0
+
+lj 1
+
+end for
+
+end for
+
+output: v(t)
+
+Fig. 1. The BER performance versus the probability value  of the
+DPGDBF algorithm.
+As shown in Fig. 2, it is the performance simulation result of dv4R050N2048LDPC code. It can be seen that the DPGDBF algorithm has the best decoding performance, and its bit error rate is three orders of magnitude lower than the GDBF algorithm when the crossover probability   0.04 . Overall, it provides a better performance gain than TRGDBF. As shown in fig. 3, it is the simulation result of the average number of iterations of the dv4R050N2048LDPC code. It can be seen that the average number of iterations of the DPGDBF algorithm is 12% higher than that of the TRGDBF algorithm. In the crossover probability   0.04 , the average number of
+
+Fig. 2. The BER performances of dv4R050N2048code.
+
+210
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. The average iteration number of the DPGDBF and the TRGDBF algorithm on the dv4R050N2048code.
+As shown in Fig 4, it is the performance simulation result of dv4R083N9216LDPC code. It can be seen that the DPGDBF algorithm provides the best decoding performance. The performance advantage of DPGDBF becomes more obvious as the crossover probability decreases, and it has a better error level. The rate is 1/4 of TRGDBF when the crossover probability   0.008 . As shown in Fig 5, it is the simulation result of the average number of iterations of the dv4R083N9216LDPC code. The average number of iterations of the DPGDBF algorithm is 18% higher than that of the TRGDBF algorithm. When the crossover probability   0.0010 . the average number of iterations of the TRGDBF algorithm is 38, and the average number of iterations of the DPGDBF algorithm is 31.
+Fig. 4. The BER performances of dv4R083N9216code.
+Fig. 5. The average iteration number of the DPGDBF and the TRGDBF algorithm on the dv4R083N9216code
+
+V. HARDWARE ARCHITECTURE
+The hardware resource overhead of DPGDBF is unavoidable to reduce the resource overhead, the sequence of the random penalty and flip factor are predetermined and put into the random number register, and the random penalty term and flip factor are generated by shifting the register right. In order to improve the throughput and decoding efficiency, the method of early termination is adopted. Once all the parity checks are satisfied, the decoder stops decoding and starts decoding when the next codeword is pushed.
+
+A. Top-Level Architecture
+The top-level architecture of the DPGDBF decoder is shown in Fig 6, which is similar to the TRGDBF structure, the difference is the setting of the random sequence generator of the flip factor. The decoding process is briefly described in the following. The first group of D flip-flops store the codeword r received from the channel, and the second group of D flip-
+flops are VN registers that store the estimated codeword v .At
+the beginning of the decoder, according to the init signal, the codeword r in the channel is assigned to the variable node registers, and the XOR of the received codeword r and the VNs v are calculated. The check node units (CNUs) calculate the syndrome vector c according to the interconnection between the variable node and the check node to judge whether the estimated codeword is valid. Energy calculation units (ECUs) calculate the energy values of all VNs according to the interconnection of the CNs to the VNs, and express it in a special format called the one-hot format, the details will be shown below. In the inversion indication module, for the variable node that meets the requirements, the related inversion
+indication signal I j  1 .otherwise, I j  0 .Finally, the XOR of
+the VNs and the related inversion indication signal are calculated, complete the inversion of the VNs, and start the next iteration. If the syndrome vector c are equal to 0, the correct signal becomes 1, the value in the variable node register is output, and the new codeword is input into the first group of registers.
+
+B. Other unit architectures
+
+The energy calculation unit plays an important role in the
+
+performance of the decoder, occupying a large area of resource
+
+and a high temporary path delay [11]. To improve the
+
+convergence speed of decoding, the architecture of the
+
+traditional comparator tree is abandoned, and the structure of
+
+the Leading-zero Counting Topology (LCT) [12] is adopted.
+
+The energy value is represented in a special one-hot format,
+
+whose energy value is represented by the length of q bits, such
+
+as
+
+E
+
+j
+
+=
+
+E
+
+q1 j
+
+…
+
+E1j
+
+E
+
+0 j
+
+and
+
+E
+
+k j
+
+ 1 if
+
+Ej
+
+k
+
+.The
+
+structure
+
+of
+
+the energy value calculation unit with dv  3 as an example is
+
+shown in Fig 7. According to formula 1, the 5-bit energy value
+
+is
+
+obtained
+
+that
+
+E
+
+4 j
+
+…
+
+E1j
+
+E
+
+0 j
+
+.where
+
+c1j
+
+c2j
+
+c3j
+
+are
+
+the
+
+three
+
+syndromes related to the j-th VN and  j is the random penalty
+
+term for the j-th VN. VNs that are pushed into the tabu-list will not participate in the energy value calculation. Therefore, the energy values of these bits are set to zero through the AND operations.
+
+211
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+DQ
+clk
+DQ
+clk
+. . .
+DQ
+clk
+r
+
+0 mux 1
+in it
+
+DQ
+clk
+
+0 mux 1
+in it
+
+DQ
+clk
+. . .
+
+0 mux 1
+in it
+
+DQ
+clk
+
+v
+
+0 1
+. . .
+n-1
+
+Varible_nodes to check_nodes network
+
+1
+d2c...
+1
+d2c... . . .
+1
+d2c...
+
+CNUm-1
+
+CNU1
+
+CNU0
+
+Check_nodes to varible_nodes network
+
+0
+
+1
+
+...
+
+. .
+
+...
+
+.
+
+m-1
+
+...
+
+Random
+
+Penalty Term
+
+...
+
+0
+
+. 1 Terminal
+
+.
+
+Unit
+
+.
+
+m-1
+
+1 2
+dv ECN0
+
+1
+
+2 dv
+
+ECN1
+
+. . .
+1 2
+dv ECNn-1
+
+.
+
+...
+
+Inversion Indicator
+
+. .
+
+Flip Factor
+correct
+
+Fig. 6. The top-level architecture of the DPGDBF decoder.
+
+Fig. 7. The architecture of ECU.
+
+To reduce the complexity and resources of the circuit, as shown in Fig 8. A random sequence number is generated by the flip probability  and stored in the cyclic right shift register.
+After each clock cycle, one bit is shifted to the right to generate the corresponding flip factor a j .
+
+0
+
+1
+
+2
+
+n-1 ...
+
+Inversion Indicator Fig. 8. Flip factor sequence generator.
+
+C. Synthesis Results
+This design selects Intel Arria (10Ax115N2F45E1SG) chip, which is synthesized on Quartus 19.4 software, the maximum clock frequency can reach 305.53MHz, and the throughput rate is 19.52Gbps.
+The DPGDBF decoding circuit proposed in this paper is synthesized. The circuit's throughput and maximum clock frequency have been improved to a certain extent, which can be applied to current high-speed communication systems. The TRGDBF decoding circuit and the GDBF decoding circuit are reproduced using the (2048,1024) code. It can be seen from Table 1 that the maximum clock frequencies of the TRGDBF decoding circuit and the GDBF decoding circuit are 283.15MHz and 255.04MHz, respectively. Throughput are 18.12Gbps and 16.322Gbps, and circuit resources are 28390ALMs and 21757ALMs. The resource usage is 30065ALMs, which only accounts for 7% of the on-chip resources. The maximum clock frequency is 305.53MHz, and the throughput rate is 19.52Gbps.
+
+TABLE I.
+
+SYNTHESIS RESULTS OF THE THREE DECODERS
+
+method frequency
+
+proposed 305.53MHz
+
+performance TRGDBF 283.15MHz
+
+GDBF 255.04MHz
+
+Throughput 19.52Gbps
+
+18.121Gbps
+
+16.322Gbps
+
+resources 30065ALMs
+
+28390ALMs
+
+23757ALMs
+
+VI. CONCLUSION
+In this paper, we propose a new hard-decision decoding algorithm called Dual-Energy Probabilistic Gradient Descent
+
+212
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+Flipping Algorithm (DPGDBF). In order to speed up the convergence speed of the codeword, the double energy value is used for flipping, combined with the method of probability flipping. The simulation results show that the DPGDBF algorithm provides faster convergence speed and better decoding performance than the TRGDBF algorithm. We also provide the hardware circuit structure of DPGDBF, which has higher maximum clock frequency and throughput than other decoders, so it is suitable for today's high-speed communication systems.
+ACKNOWLEDGMENT
+This subject is supported by the Low-power, highintegration, high-performance 100g optical transmission system research and application demonstration fund project (No. 2019yfb1803600).
+REFERENCES
+[1] R. Gallager, “ Low-density parity-check codes, ” IRE Trans. Inf. Theory,vol. 8, no. 1, pp. 21–28, Jan. 1962.J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68–73.
+[2] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp.498–519, Feb. 2001.
+[3] Jinghu Chen and M. P. C. Fossorier, "Near optimum universal belief propagation based decoding of low-density parity check codes," in IEEE Transactions on Communications, vol. 50, no. 3, pp. 406-414, March 2002K. Elissa, “Title of paper if known,” unpublished.
+
+[4] Jinghu Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier and XiaoYu Hu, "Reduced-complexity decoding of LDPC codes," in IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288-1299, Aug. 2005.
+[5] V. V. Zyablov and M. S. Pinsker, “Estimation of the error-correction complexity for gallager low-density codes,” Problems Inf. Transmiss., vol. 11, no. 1, pp. 23–26, Jan. 1975
+[6] B. Unal, A. Akoglu, F. Ghaffari, and B. Vasic, “ Hardware implementation and performance analysis of resource efficient probabilistic hard decision LDPC decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 65, no. 9, pp. 3074–3084, Sep. 2018.
+[7] Y. Kou, S. Lin and M. P. C. Fossorier, "Low-density parity-check codes based on finite geometries: a rediscovery and new results," in IEEE Transactions on Information Theory, vol. 47, no. 7, pp. 2711-2736, Nov. 2001.
+[8] N. Miladinovic and M. P. C. Fossorier, "Improved bit flipping decoding of low-density parity check codes," Proceedings IEEE International Symposium on Information Theory,Lausanne, Switzerland, 2002, pp. 229-.
+[9] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami and I. Takumi, "Gradient descent bit flipping algorithms for decoding LDPC codes," in IEEE Transactions on Communications, vol. 58, no. 6, pp. 1610-1614, June 2010.
+[10] H. Cui, J. Lin and Z. Wang, "An Improved Gradient Descent BitFlipping Decoder for LDPC Codes," in IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 66, no. 8, pp. 3188-3200, Aug. 2019.
+[11] K. Le, F. Ghaffari, D. Declercq and B. Vasić, "Efficient Hardware Implementation of Probabilistic Gradient Descent Bit-Flipping," in IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 64, no. 4, pp. 906-917, April 2017.
+[12] B. Yuce, H. F. Ugurdag, S. Gören and G. Dündar, "Fast and Efficient Circuit Topologies forFinding the Maximum of n k-Bit Numbers," in IEEE Transactions on Computers, vol. 63, no. 8, pp. 1868-1881, 1 Aug.
+
+213
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:41:36 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,589 @@
+2010 NASA/ESA Conference on Adaptive Hardware and Systems
+
+An Adaptable Low Density Parity Check (LDPC) Engine for Space Based Communication Systems
+Gregory M. Striemer and Ali Akoglu University of Arizona, Department of Electrical and Computer Engineering,
+Tucson, AZ 85721, USA gmstrie@email.arizona.edu, akoglu@ece.arizona.edu
+
+Abstract
+Space communication systems are characterized by the severe limitations to the on-board computational power and the tight constraints of received signal strengths. Also, these systems observe degradation in signals caused by large propagation latencies, extreme distances traveled, as well as data corruption causing high biterror rates. LDPC codes provide powerful error correction capability where signal power is very low, making them an ideal candidate for space based applications. A hardware architecture that is configurable to dynamic changes in channel conditions is a necessity for error resilient communication systems. In this study we demonstrate the feasibility of designing an FPGA based adaptable LDPC decoder architecture that also matches the throughput demand of current space based communications requirements. We design an LDPC engine that is adaptable to three code rates by taking advantage of the partial reconfiguration technology and parallel nature of the FPGA architecture. We evaluate the tradeoff between the level of parallelism to exploit on the FPGA when implementing LDPC codes and resource demand for each code rate under the constraints of delivering a partially reconfigurable and adaptable solution. Based on the implementation using a Xilinx Virtex-5 FPGA, our design handles context switching between the codes on board in 92μs.
+1. Introduction
+Compared with common terra and satellite communications, deep-space communications presents challenging constraints for data communications, such as long distance, very low signal to noise ratio, high signal propagation delays and data corruption rates and so on [8]. Therefore, ensuring that low bit error rates are achieved is highly important.
+Forward Error Correcting (FEC) codes are used to ensure the reliability and correctness of communications in space, including communication between landers, rovers, and orbiters working in proximity [9]. FECs are utilized to find any errors present in a transmission, as
+
+well as to correct them. This is highly valuable because the retransmission of signals can be very costly if not impossible. The benefit of having FECs become even more apparent as the demand for increasing data rates continues to expand for applications such as hyperspectral imaging, high-resolution stereo cameras, as well as other instruments [16].
+The Shannon limit, states that noisy channels have a maximum rate at which data can be transferred through them, and that it is possible for error correcting codes to approach this limit. Because of the losses in signal power over interplanetary distances, codes which can still approach the Shannon limit in these conditions are valuable. Low-complexity encoders and decoders for FECs are necessary, both to manage high data rates and to deal with the limited resources available on space probes [12].
+One of the error correcting codes capable of such requirements is the low density parity check (LDPC). LDPC codes were developed by Gallager in 1960 [17], and have become very popular over the past several years for ensuring reliable data transmissions over noisy channels as a mechanism for forward error correction. LDPC codes have become very popular because of their high error-correction performance. One of the primary advantages of LDPC is that it uses an iterative decoding process which can be easily parallelized to match the ever increasing throughput demand. FECs are currently being utilized for deep-space missions with throughput demands in the range of 150Mb/s-1GB/s [10], and are capable of approaching within 1dB of the Shannon limit. These FECs are also being utilized in satellite systems that provide broadcasting services to fixed terminals [13]. LDPC codes provide low decoding complexity with low bit-error rate and superior coding gain over traditional codes [12], making them an ideal candidate for highbandwidth communication systems in space [13].
+As the reliability of a transmission channel degrades, or the channel becomes noisier, an LDPC decoder with stronger code rate needs to be employed. However, higher code rate indicates more redundancy in the received data which demands more hardware resources during the decoding process. Therefore it is critical to employ the
+
+978-1-4244-5889-9/10/$26.00 ©2010 IEEE
+
+105
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+code rate that is suitable for the noise level in the channel. Designing a separate ASIC for each code rate is not a feasible option with the stringent power and area constraints. Running the LDPC on a soft processor gives the flexibility of adapting to any code rate but is not desirable because the parallel nature of LDPC cannot be exploited. Software implementation is not a feasible approach while even ASIC technology is challenged by the current GB/s of throughput demand. Since different decoders are used for varying data channel conditions, adaptive hardware architectures are desirable for such dynamic applications [6][7][8][18].
+An LDPC decoder architecture relies heavily on bitwise operations, similar to cryptography applications. These intensive bitwise computations make Field Programmable Gate Arrays (FPGAs) a suitable architectural match for LDPC applications, because they employ fine grained look up table (LUT) based processing elements. Modern FPGAs are capable of partial reconfiguration (PR) which means parts of the device can be configured to run different code rates. This property allows an FPGA switch between the on-board tasks in near real-time as it eliminates full reconfiguration. Therefore, depending on the bit error rate or other properties, an FPGA can adjust its decoders onthe-fly. By pairing the LDPC decoder technology with FPGAs, a highly powerful and adaptive decoder system can be created. It is also possible for these devices to be reprogrammed remotely, providing the ability to conform to new mission requirements as well as adapt to new technologies without the need for new specialized hardware. The ability of partial reconfiguration also provides FPGAs with a higher level of robustness, as they can be utilized to self-configure themselves if errors should occur [1] . FPGAs also have a very low power consumption, compared to general purpose processors, making them suitable for applications where available power is limited, but high performance is still required.
+Our objective in this work is to design an adaptive solution to respond to dynamic channel conditions which takes advantage of the PR capabilities of the Virtex-5 FPGA. This paper proposes a runtime adaptable partially reconfigurable LDPC decoder using a min-sum algorithm, which accommodates three different code-rates. We explore the level of parallelism in our design to exceed a throughput of 1GB/s. We find that we can dynamically switch between decoders in near real-time. Switching between on-board decoders takes up to 92μs, however replacing a decoder with a new one through PR takes up to 3.3 seconds. To our knowledge this is the only PR based LDPC implementation which is adaptable to three different code-rates. The rest of the paper is organized as follows. In Section 2, we describe the LDPC algorithm and its mapping on to the FPGA. The partial reconfiguration methodology is discussed in Section 3.
+
+We present our discussion of results in Section 4, and our conclusions and future work in Section 5.
+
+2. LDPC Decoder
+
+The low density parity check (LDPC) is an error correcting code used as a method for checking the parity of messages transmitted over noisy channels. A sample LDPC parity matrix is represented as:
+
+‫ܿܿێێۍ‬ଵ଴
+
+‫ݒ‬଴ ͳ
+Ͳ
+
+‫ݒ‬ଵ Ͳ
+ͳ
+
+‫ݒ‬ଶ ͳ
+ͳ
+
+‫ݒ‬ଷ ͳ
+Ͳ
+
+‫ݒ‬ସ Ͳ
+ͳ
+
+‫ͲͲݒ‬ହ‫ېۑۑ‬
+
+(1)
+
+‫ܿێ‬ଶ Ͳ ͳ Ͳ Ͳ ͳ ͳ ‫ۑ‬
+
+‫ܿۏ‬ଷ ͳ Ͳ Ͳ ͳ Ͳ ͳ ‫ے‬
+
+The parity matrix shown in (1) is represented by the parity equations for each row as shown below.
+
+c0 = v0⊕ v2⊕ v3 = 0
+
+(2)
+
+c1 = v1⊕ v2⊕ v4 = 0
+
+(3)
+
+c2 = v1⊕ v4⊕ v5 = 0
+
+(4)
+
+c3 = v0⊕ v3⊕ v5 = 0
+
+(5)
+
+Figure 1. Graph containing node connections for the LDPC parity matrix shown in (1). The number of check nodes is equal to the number of parity equations, and the number of variable nodes is equal to the number of columns.
+This code is considered "regular", because each row contains the same number of 1's and each column the same number of 1's. A graph based representation is shown in Fig. 1. This graph is composed of two different types of nodes. These are variable nodes and check nodes. Each check node represents one of the parity equations, and each variable node represents one of the columns vi. In this matrix, each variable node is connected to two check nodes and each check node is connected to three variable nodes. Therefore, we refer to this code as a (2,3) code-rate. This code rate is one of the rates used by NASA in [11] , because it offers an improved coding gain over other methods such as Turbo Codes and Convolution Codes . As noise in the channel increases, so does the number of parity checks. Therefore, depending on the channel conditions, various code rates such as (3,4) and
+
+106
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+9 YBLQ
+YBRXW
+FKDQBLQ YL
+
+9
+
+YBLQ
+
+YBRXW
+
+FKDQBLQ YL
+
+9
+
+YBLQ
+
+YBRXW
+
+FKDQBLQ YL
+
+FBRXW
+
+&
+
+FBLQ
+
+YL
+
+FBRXW
+
+FBLQ
+
+YL FBRXW
+
+FBLQ
+
+YL
+
+Figure 2. Connections required for check node 0 in Fig. 1 to its associated variable nodes. The inputs and outputs of each of the nodes are determined with equations 6-13.
+
+(3,5) are employed. These codes have more number of connections to check nodes and variable nodes than (2,3), hence run more number of checks, thereby improving the sensitivity of the decoder.
+When decoding begins, the variable node receives estimates of whether the provided bit vi is a 1 from the check nodes and the channel. For example, V0 in Fig. 1 receives signals from C0, C3 and the communication channel, calculates a new estimate and sends it back to C0 and C3 using equations (6-8). Each check node at the receiving end, then checks the parity using its corresponding equation listed equations (2-5). For example, c0 will use v0⊕ v2⊕v3 as shown in (2). If all parity check equations satisfy their condition then decoding is completed and calculations are terminated. Otherwise, each check node creates a new estimate for whether the provided bit vi is a 1 based on the values received from its variable nodes (v_outi from V0, V2, and V3 in Fig. 2) using equation 12 and sends this estimate back to its variable nodes. During the first iteration, the check nodes send zero's as estimates. This is because they have not had their own estimates to check yet. For check node 0, we show the connections to variable nodes V0, V2, and V3 in Fig. 2. The computations at the variable nodes are shown by equations (6-8). The message passing between check nodes and variable nodes continue back and forth until all the parity checks are satisfied, or a predetermined number of iterations have occurred.
+
+//Find the sum of all inputs.
+
+Sum = channel_data + σ௜௠ୀ଴ ‫̴݊݅ݒ‬௜
+
+(6)
+
+//Find the sign of the input Sum
+
+vi = sign_of(Sum)
+
+(7)
+
+//Assign outputs
+
+for(i=0 to m)
+
+(8)
+
+v_outi = Sum - ‫̴݊݅ݒ‬௜
+
+The estimates of a check node are based on the minimum magnitude values of the inputs, as well as the sign values of the inputs. The computations at the check nodes are shown by equations 9-13.
+
+//Check the parity
+
+Parity = vi0⊕ vi1 ... ⊕ vin
+
+(9)
+
+//Find the aggregate sign of all inputs in the set Q aggregate _sign = sign_bit(c_in0)⊕ sign_bit(c_in1) ...
+
+⊕ sign_bit(c_inn)
+
+(10)
+
+//Find minimum magnitude from inputs of the set
+
+min1 = min((abs(in0), ..., abs(inn))
+
+(11)
+
+//Find the second minimum magnitude from inputs min2 = min((abs(in0), ..., abs(inn)), min1 ∉ Q (12)
+
+//Assign outputs based on min1, min2, and sign value
+
+for(in=0 to n){
+
+(13)
+
+if(abs(inn) != min1)
+
+c_outn = min1 * aggregate_sign else
+
+c_outn = min2 * aggregate_sign }
+
+As an illustration, in Fig. 1 we represented the LDPC
+
+code with 4 check nodes and 6 variable nodes. However,
+
+in reality the codes have a much larger number of check
+
+nodes and variable nodes. Let's say we have a code that
+
+arrives to variable nodes with a length of 1200, and is a
+
+(2,3) code. This would mean that for a fully parallel
+
+decoder we would need 1200 variable nodes, and 800
+
+check nodes. As shown in Table 1, the resource utilization
+
+for (2,3), (3,4), and (3,5) fully parallel decoders are not
+
+feasible for even a high end series FPGA platform.
+
+In order to overcome this problem, partially parallel
+
+implementations have been introduced [2][3][4][5]. A
+
+partially parallel version of Fig. 1 could be implemented
+
+as shown in Fig. 3. For a (3,4) decoder, the finest
+
+granularity which can be achieved is with 2 check nodes
+
+and 3 variable nodes. This is because each check node
+
+must maintain two edge connections to variable nodes,
+
+and variable nodes 3 connections to check nodes. In the
+
+fully parallel decoder shown in Fig. 1, the nodes pass
+
+messages in a single iteration with a workload of
+
+computations at 4 check nodes and 6 variable nodes.
+
+When there are only two check nodes and three variable
+
+nodes, four iterations are required to accommodate this
+
+workload as illustrated in Fig. 3. In the partially parallel
+
+scheme, shared memory units are necessary to hold
+
+intermediate calculations between the check nodes and
+
+variable nodes. Fig. 4 illustrates the high level view of
+
+this partially parallel (2,3) LDPC. As illustrated in Fig. 3,
+
+in iteration 1, the three available variable nodes (V0, V1,
+
+V2) take their estimates from the channel and run
+
+equations (6-8). During the second iteration, variable
+
+nodes V3, V4, and V5 take their turn to complete the
+
+107
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+Table 1. Resource utilization of (2,3), (3,4), and (3,5) fully parallel decoders on the Virtex-5 LX50 with different code rates.
+
+Decoder Check Nodes Variable Nodes Resource
+
+Used Available Utilization (%)
+
+(2,3)
+
+800
+
+1200
+
+Slice Registers 157200 28800
+
+546
+
+800x1200
+
+Slice LUTs
+
+667280 28800
+
+2317
+
+(3,4)
+
+900
+
+900x1200
+
+1200
+
+Slice Registers Slice LUTs
+
+210000 28800 807800 28800
+
+729 2805
+
+(3,5)
+
+900
+
+1500
+
+Slice Registers 344250 28800
+
+1195
+
+900x1500
+
+Slice LUTs
+
+928500 28800
+
+3224
+
+Figure 3. Partially parallel version of the (2,3) decoder shown in Fig. 1. The fully parallel decoder can send messages between check nodes and variable nodes in a single iteration. Making the decoder partially parallel requires a total of four iterations.
+Figure 4. High level view of a partially parallel (2,3) LDPC decoder on FPGA
+
+calculations at the variable node side. After all channel data has been processed by the six variable nodes and estimates have been stored in the memory, then the check nodes begin their parity check and compute new estimates (equations 9-13). Because there are only two check nodes available, two iterations are required as with the variable nodes.
+In Fig. 5, we provide a high-level view of a partially parallel (2,3) decoder architecture. For illustrative purposes, this decoder only has one check node and three variable nodes and the shared memory has been removed. We show the hardware implementation of check node 0 of Fig. 1 along with the variable nodes it is connected to. Each check node contains a module which simply performs XORing operations for the parity check, as shown in C0 of Fig 5. This module performs the functionality of equations (2-5). We choose to convert the inputs of the check nodes to sign magnitude format in order to simplify the circuit for min1 and min2 calculations (equations 11 and 12). When the variable node receives estimates from the check node, the estimates are converted back to two's complement.
+We have designed shared memory units to hold intermediate calculations between the check nodes and variable nodes as shown in Fig. 6. To allow for the check nodes to read and write to the correct input and output connections of the variable nodes, the shared memories utilize a barrel shifter. Each of the shared memories is implemented with registers.
+Using the partially parallel design shown in Fig. 5, we developed three different decoders: (2,3), (3,4), and (3,5). Our objective is to design a decoder that is run-time adaptable to changes in the noise level of the channel, which requires the ability to change a decoder's code-rate in near real-time. Partial reconfiguration technology allows for such adaptations. For that purpose we need to be able to fit two decoders on to the FPGA. As a first step we determine the number of nodes (level of parallelism) which we can accommodate for two decoders on the target device.
+
+108
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 5. Connections required for check node 0 in Fig. 1 to its associated variable nodes for the (2,3) decoder. After leaving a variable node, estimates which are outputted back to the check node are converted to sign magnitude format. This is done for simpler comparisons when finding the minimum magnitude of the inputs.
+
+Figure 6. Shared memory unit used in the partially parallel implementation. Each row of the memory contains estimates calculated by the variable nodes and check nodes. A barrel shifter is used at the inputs and outputs of the check nodes to select correct connections to the variable nodes. The number of estimates each row contains is m, which is the number of outputs from the variable node. The number of shared memory rows n, is equal to the number of estimates from the channel divided by the number of variable nodes. Outputs are always active.
+
+In Tables 2 and 3, we provide the synthesis results for designs of each of the decoders and the top module, which manages the reconfigurable regions. The resources whose utilization is greatest among all modules are the LUTs. Our top module uses 16% of the LUTs, which means we are left with 84% for both of our PR regions. We have two design options for determining decoder placement in the PR regions. The first option uses our largest (3,5) design with 9 check nodes and 15 variable nodes, and utilizes 32.2% of available LUTs. The two lower rate decoders can also fit in this PR region, since their resource footprint is smaller. This leaves us with 51.8% of LUTs left for the second PR region. It is not
+
+feasible to place the large (3,5) design into this region, because we do not have enough LUTs. Therefore, only the (2,3) and (3,4) decoders can be placed in the second location. Our next option is to decrease the size of the (3,5) decoder to 6 check nodes and 10 variable nodes. This reduces the LUT utilization from 32.2% to 21.5%, allowing for the design to be placed in either PR location. This allows us to configure each PR region with any of the three decoders. The downside to this, however, is that the throughput for the (3,5) decoder will be reduced as we decrease the number of available nodes for processing channel data. Therefore, to maintain a higher throughput, we choose to use our larger (3,5) decoder in the design
+
+109
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+Table 2. Resource utilization of the (2,3), (3,4), and (3,5) partially parallel decoders on the Virtex-5 LX50.
+
+Decoder Check Nodes
+
+Variable Nodes Resource
+
+Used Available Utilization (%)
+
+(2,3)
+
+10
+
+15
+
+Slice Registers
+
+1965 28800
+
+6.8
+
+Slice LUTs
+
+8341 28800
+
+29.0
+
+(3,4)
+
+9
+
+12
+
+Slice Registers
+
+2100 28800
+
+7.3
+
+Slice LUTs
+
+8078 28800
+
+28.0
+
+(3,5)
+
+6
+
+10
+
+Slice Registers
+
+2295 28800
+
+8.0
+
+Slice LUTs
+
+6190 28800
+
+21.5
+
+(3,5)
+
+9
+
+15
+
+Slice Registers
+
+2582 28800
+
+9.0
+
+Slice LUTs
+
+9285 28800
+
+32.2
+
+Table 3. Top module resource utilization on Virtex-5 LX50.
+
+Top Module
+
+Used Available Utilization
+
+(%)
+
+Slice Registers
+
+3241 28800
+
+11
+
+Slice LUTs
+
+4611 28800
+
+16
+
+Bonded IOBs
+
+32
+
+440
+
+7
+
+Block RAM/FIFO
+
+16
+
+48
+
+33
+
+BUFG/BUFGCTRLs 7
+
+32
+
+21
+
+which allows configuring one PR region with (2,3), (3,4) and (3,5) decoders and the second PR region with (2,3) and (3,4).
+3. Partial Reconfiguration Methodology
+
+In our design we utilize the module-based PR feature of the Virtex-5. A module based approach is well suited for LDPC decoders, because we can simply exchange decoders with ones containing the desired properties. We have designed our PR system to have 2 PR regions, each having the ability to reconfigure to a different decoder. This was done so that one decoder could continue its error correction while the other module reconfigures to another decoder when necessary. Bit streams for decoders (2,3) and (3,4) are initially loaded on the PR regions. This allows for task switching in near real-time. Since the (3,5) has a lower throughput due to its higher complexity, the bit stream for it is stored in a compact flash card connected to the FPGA so that it can be read and dynamically, and configured to the first region when needed. To create a PR design for the Virtex-5, we use Xilinx Platform Studio (XPS), Xilinx ISE 9.2 (Service Pack 4, IP Update 2), Xilinx ISE 10.1 and PlanAhead 10.1.03 software flow.
+We use XPS to build the soft processor core, MicroBlaze. This core runs software which notifies the modules when they need to reconfigure to a different decoder. This core will be mapped to the FPGA as a static region. We also use XPS to connect peripherals with the on-chip peripheral bus (OPB), and connect the MicroBlaze processor to on-chip BRAM memories. Each LDPC module is coded as an OPB peripheral, and is considered a slave device. Connections made between MicroBlaze and peripherals are through bus macros, ensuring signals are not lost during reconfiguration. The HWICAP core is used to read and write configuration
+
+memory as well as load PR bit-streams through the ICAP. The user constraints file is also generated by XPS.
+We use ISE 9.2 to design and synthesize each of our PR modules (decoders). After synthesis of each PR module, the top module is synthesized in ISE 10.1. The top module includes the processor, all PR modules, as well as the bus macros. A high level view of our defined architecture is illustrated in Fig. 7. We should note that the most stable versions of Xilinx ISE for PR are 9.2 and 10.1. Because of this we do not use the successive releases.
+PlanAhead is used to physically define the regions of the FPGA which will be used for each PR module, as well as the static MicroBlaze system. The size of each is determined by the number of slices required for the largest decoder. This is necessary, because all three decoders must be able to fit within each region. Having two reconfigurable modules allows for seamless switching between LDPC decoders since we can pre-fetch and load the bit-streams as channel conditions change. An example of the regions which we define in PlanAhead can be seen in Fig. 9.
+4. Results and Discussion
+Our design decisions are influenced by two main factors. The first is maximizing the throughput of the decoders, and the second is having the ability to partially reconfigure each of the two PR regions to suit the needs of incoming channel data. As discussed in Section 2, one design choice is to have a PR region which can contain all three decoders, and the second region can contain the (2,3) and (3,4) decoders. With this design, the (3,5) decoder contains 9 check nodes, 15 variable nodes, and has a throughput of 481MB/s. The second option discussed in Section 2 reduces the (3,5) decoder to 6 check nodes and 10 variable nodes, but we can fit all three decoders in either PR region. However, if this is done the throughput is reduced from 481MB/s to 321MB/s as shown in Table 4. This is due to the fact that as the number of nodes decrease, more iterations are required to process the channel data. For example, with 6 check nodes and 10 variable nodes, (3,5) decoder, an LDPC code of size 900x1500 would require 150 iterations, while 9 check nodes and 15 variable nodes requires 100 iterations. We have chosen to use the larger (3,5) design
+
+110
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 7: Xilinx ML501 Virtex-5 Development Board layout with partially reconfigurable LDPC decoder modules.
+
+Figure 8. Finding min1 and min2 with four inputs for a check node.
+to maintain a higher throughput. Though making this decision limits the second PR region to only the (2,3) and (3,4) designs, all three designs can still be used in the first region.
+As the number of inputs to a check nodes increase, the maximum clock frequency for the designs goes down. This is because the critical path in the design is determined by comparisons performed in a check node to find the value “min2” in Fig. 5. We use a tree structure as shown in Fig. 8 for determining min1 and min2. Every time an input is added, it increases the number of levels in this structure, and has a direct effect on the critical path. Because of this as shown in Table 3, (3,5) decoder is the slowest of all and we achieve the highest frequency with our (2,3) decoder (119.33 MHz), as well as the highest throughput (854MB/s).
+Though increasing inputs to the check nodes negatively impacts the critical path, employing additional nodes to a design (Fig. 4) to increase the parallelism does not. This is because the addition of nodes only expands the design horizontally, because the nodes are running in parallel. Therefore, if we choose to add or remove nodes from any of the designs, their clock rates will remain unchanged. For example, if we increase the parallelism of
+
+Figure 9. PlanAhead floor layout for two PR regions.
+our (3,4) decoder to 15 check nodes, and 20 variable nodes we will see a throughput of 1031 MB/s, or just slightly over 1GB/s. According to NASA in [10], data transfer rates deep space missions per link require a minimum throughput of 150 Mb/s and up to 1 Gb/s, which we have achieved in this study. The number of nodes are limited by the available resources on the FPGA with the constraints of our objective to have two decoders on a single device. However, as the amount of available logic continually increases with new FPGA technologies, we should soon be able to achieve greater than 1GB/s with all designs while maintaining the ability to partially reconfigure the designs.
+Our system is run-time adaptable because we are able to context switch in 92μs between decoders who's bit
+
+111
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+Table 4. Decoder resource utilization on the Virtex-5 LX50, and performance results. Throughput is calculated as the number of MB read from the channel and processed by the variable nodes and check nodes for a full iteration between the nodes.
+
+Decoder Check Variable Slice
+
+Slice Frequency Throughput
+
+Reconfiguration
+
+Context Switching (μs)
+
+Nodes Nodes
+
+Registers LUTs
+
+(MHz)
+
+(MB/s)
+
+Time
+
+(s)
+
+(2,3)
+
+10
+
+15
+
+1965
+
+8341 119.33
+
+854
+
+3
+
+92
+
+(3,4)
+
+9
+
+12
+
+2100
+
+8078 108.24
+
+619
+
+2.9
+
+92
+
+(3,5)
+
+6
+
+10
+
+2295
+
+6190 67.35
+
+321
+
+2.2
+
+92
+
+(3,5)
+
+9
+
+15
+
+2582
+
+9285 67.35
+
+481
+
+3.3
+
+92
+
+streams are loaded in either of the reconfigurable regions. We base our context switching time, from the time required to dynamically change from one PR region to another. In Fig. 9, we provide a screenshot for the PR regions defined in PlanAhead. However, if one of the decoder regions must partially reconfigure itself to accommodate a new code-rate that is not on-board, then we pay a penalty of up to 3.3 seconds for reading the bitstream from the external memory (compact flash card in our case) and reconfiguration. Because one of the regions can continue to run while the other reconfigures, there should be no loss in data..
+5. Conclusion and Future Work
+In this study we demonstrate the feasibility of designing an FPGA based adaptable LDPC decoder architecture that is suitable for space based applications. We take advantage of the partial reconfiguration technology and the parallel nature of the FPGA architecture for designing the decoders for three different code rates. We evaluated the design choices we made during the implementation of these code rates We studied the tradeoff between the throughput and resource demand under the constraints of delivering a partially reconfigurable and adoptable solution. We showed that reconfiguration time is the limiting factor for real time adaptation. We have already started studying fast bitstream relocation mechanisms to accelerate the reconfiguration process [14][15]. With faster relocation mechanisms, overhead associated could be less substantial making PR more feasible for real-time adaptation scenarios. In the near future, we plan to incorporate these mechanisms to our LDPC engine.
+References
+[1] A. Sreeramareddy, J.G. Josiah, A. Akoglu, and A. Stoica, " SCARS: Scalable Self-Configurable Architecture for Reusable Space Systems", IEEE NASA/ESA Conference on Adaptive Hardware and Systems (AHS 2008), pp. 204-210, Noordwijk, Netherlands, June 22-25, 2008
+[2] L. Sun and B. V. K. V. Kumar, “Field programmable gate array implementation of a generalized decoder for structured lowdensity parity check codes,” in Proc. FPT’04, 2004, pp. 17–24.
+[3] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density paritycheck code decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 51, no. 6, pp. 892–904, Apr. 2006.
+
+[4] L. Zhang, L. Gui, Y. Xu, and W. Zhang, “Configurable MultiRate Decoder Architecture for QC-LDPC Codes Based Broadband Broadcasting System,” IEEE Trans. Broadcasting, vol. 54, no. 2, pp. 226–235, June 2008.
+[5] P. Radosavjevic, A. de Baynast, M. Karkooti, and J. R. Cavallaro, "Multi-Rate High-Throughput LDPC Decoder: Tradeoff Analysis Between Decoding Throughput and Area", in Proc. PIMRC, 2006.
+[6] D. Llamocca, M. Pattichis, A. Vera, "A Dynamically Reconfigurable Parallel Pixel Processing System", in Proc. FPL, pp. 462-466, 2009.
+[7] S. U. Bhandari, S. Subbaraman, S. S. Pujari, R. Mahajan, "Real Time Video Processing on FPGA Using on the Fly Partial Reconfiguration", in Proc. ICSPS, pp. 244-247, 2009.
+[8] J. Emmert, C. Stroud, B. Skaggs, M. Abramovici. "Dynamic Fault Tolerance in FPGAs via Partial Reconfiguration" Symposium on Field-Programmable Custom Computing Machines, Napa Valley, CA. 2000.
+[9] G. Liva, S. Abu-Surra, W. Ryan, M. Chiani. "Tanner codes for high data-rate space applications", AIAA Space Ops 2006 Conference, Rome, Italy, June 2006.
+[10] NASA Space Communication Architecture Working Group (SCAWG), "NASA Space Communication and Navigation Architecture Recommendations for 2005-2030", May 2006.
+[11] K.S. Andrews, D. Divsalar, S. Dolinar, J. Hamkins, F. Pollara. "Space Link Coding & Synchronization, Progress on LDPC Codes at JPL", CCSDS, Spring Meeting, 2008.
+[12] K.S. Andrews, D. Divsalar, S. Dolinar, J. Hamkins, C.R. Jones, F. Pollara. "The Development of Turbo and LDPC Codes for DeepSpace Applications", Proceedings of the IEEE, vol 95, no 11, pp. 2142-2156, 2007.
+[13] A. Vanelli-Coralli, G.E. Corazza, G.K. Karagiannidis, P.T. Mathiopoulos, D.S. Michalopoulos, C. Mosquera, S. Papaharalabos, S. Scalise. "Satellite Communications: Research Trends and Open Issues" International Workshop on Satellite and Space Communications (IWSSC), 2007.
+[14] C. Rossmeissl, A. Sreeramareddy, A. Akoglu, "Partial Bitstream 2-D Core Relocation for Reconfigurable Architectures", IEEE NASA/ESA Conference on Adaptive Hardware and Systems (AHS 2009), pp. 98-105, San Francisco, CA, July 29- August 1, 2009.
+[15] A. Sreeramareddy, R. Kallam, A.R. Dasu, A. Akoglu, "SelfConfigurable Architecture For Reusable Systems With Accelerated Relocation Circuit (SCARS-ARC)", Reconfigurable Architectures Workshop, Atlanta, GA, April 19-20, 2010.
+[16] B. Moision, J. Hamkins, M. Cheng, "Design of a Coded Modulation for Deep Space Optical Commnications", Information Theory and Applications (ITA), 2006.
+[17] R.G. Gallager, "Low-Density Parity-Check Codes" Transactions of the IRE Professional Group on Information Theory, Vol. IT-8, Jan 1962, pp.21-28.
+[18] I. Gonzalez, S. L. Buedo, F.J. Gomez, J. Martinez. "Using Partial Reconfiguration in Cryptographic Applications: An Implementation of the IDEA Algorithm" International Conference on File Programmable Logic and Applications (FPL), pp 194-203, 2003.
+
+112
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:43:48 UTC from IEEE Xplore. Restrictions apply.
+
+

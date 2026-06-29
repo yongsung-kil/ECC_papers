@@ -1,0 +1,775 @@
+Architecture and VLSI Realization of a High-Speed Programmable Decoder for LDPC Convolutional Codes∗
+Marcos B.S. Tavares, Steffen Kunze, Emil Matu´sˇ and Gerhard P. Fettweis
+Vodafone Chair Mobile Communications Systems, Technische Universita¨t Dresden, D-01062 Dresden, Germany Emails: {tavares, steffen.kunze, matus, fettweis}@ifn.et.tu-dresden.de
+
+Abstract
+In this paper, we present a novel high-speed dual-core programmable decoder architecture for LDPC convolutional codes and their tail-biting versions. This architecture uses a modified Min-Sum algorithm and enables the decoding of a multitude of codes with different node degree distributions, rates and block lengths. We show how the parallelization concepts are derived using the properties of the bipartite graphs underlying the codes. Moreover, the hardware elements composing the architecture will be presented and analyzed in detail. The programmability of the decoder is also considered. Finally, we present the synthesis results for a prototype ASIC which is capable of achieving high decoding throughput still with very high flexibility, relatively low power consumption and small area.
+1. Introduction
+Communications systems of the next generation impose extreme requirements on the error control coding apparatus. On one hand, there is the need for high decoding throughput and capacity approaching performance. On the other hand, high flexibility and low power consumption must be provided.
+The class of low-density parity-check (LDPC) codes introduced by Gallager in [4] is able to satisfy the requirements from above [10]. However, in order to achieve highspeed decoding architectures with low complexity, some constraints are generally imposed on the construction of the LDPC codes [8]. In this context, the convolutional counterparts of Gallager’s codes – the LDPC convolutional codes (LDPCCCs) [1] – represent an elegant alternative to cope with the requirements of future communication systems.
+For instance, it can be observed that the main bottleneck in any LDPC decoding architecture is represented by the data transfer operations required by the belief-propagation (BP) algorithm. Fortunately, the bipartite graphs underlying the LDPCCCs have special properties that can be exploited
+∗This work was partially supported by the BMBF within the project Wireless Gigabit with Advanced Multimedia Support (WIGWAM) under grant 01 BU 370. The authors are grateful for the use of the high performance computing facilities of the ZIH at the Technische Universita¨t Dresden.
+
+to reduce the complexity of the data transfers. Furthermore, a system using LDPCCCs might benefit from additional flexibility and lower implementation complexity because the same encoder1 (decoder) can be used to encode (decode) code sequences with different lengths [1, 9, 11].
+Although LDPCCCs are very well suited for coding streaming data or packetized data of different lengths, the introduction of the zero-tail that is needed for bringing the encoder back into the zero-state results in the so-called rateloss. This effect is specially noticeable for small block lengths. In order to circumvent the rate-loss problem, the tail-biting LDPCCCs (TB-LDPCCCs) have been introduced [6, 7]. On one hand, the graphs representing the TBLDPCCCs inherit the locality and regularity properties of the mother LDPCCCs from which they were derived. On the other hand, it was observed that these codes show a dual behavior with respect to their minimum distances. Namely, their minimum distances depend on the free distances dfree of the mother LDPCCCs and on their block lengths. Additionally, simulation results have shown that TB-LDPCCCs provide similar performances to semi-random LDPC codes but at lower implementation complexity [6, 7].
+Differently from the architectures in, e.g., [8, 13] which are limited by the block lengths or a sub-block size, we propose in this paper the concepts and realization of a fully programmable architecture that is able to decode any LDPCCCs and TB-LDPCCCs showing quasi-cyclic symmetries.
+2. Codes Definitions
+2.1. LDPC Convolutional Codes
+A time-varying LDPCCC C is defined as the set of all sequences v[0,∞] satisfying the equation v[0,∞]H[T0,∞] = 0, where
+
+ H0T (0)
+
+···
+
+HTms (ms )
+
+
+0
+
+H[T0,∞] =  0
+
+...
+
+H0T (t)
+
+... ···
+
+ HTms (t + ms)
+
+...
+
+...
+
+(1)
+
+1At this point, it is also important to mention that encoders for LDPCCCs are based on linear-time shift-register operations.
+
+1-4244-1898-5/08/$20.00 ©2008 IEEE
+
+215
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+
+
+H0T (0)
+
+H1T (1)
+
+···
+
+Hm T s (ms )
+
+0
+
+···
+
+
+0
+
+H˜ [T0,N−1] = 
+
+0
+HTms (N ) Hm T s −1(N )
+.
+
+HT0 (1) ... 0
+Hm T s (N + 1)
+
+··· 0
+
+HTms−1 (ms) ···
+
+Hm T s (ms + 1) 0
+
+···
+
+... 0 HT0(N − ms )
+
+... ···
+
+0
+Hm T s−1 (N − 1) . . .
+
+
+
+. .
+
+H1T (N )
+
+H2T (N + 1)
+
+· · · Hm T s (N + ms − 1)
+
+0
+
+0
+
+H0T (N − 2)
+
+H1T (N − 1)
+
+···
+
+0
+
+HT0(N − 1)
+
+(3)
+
+is a semi-infinite transposed parity-check matrix, called syn-
+drome former. For a rate R = b/c code, the elements of H[T0,∞] are submatrices of dimension c × (c − b) given by
+
+ hj(1,1)(t)
+
+···
+
+ h(j1,c−b) (t)
+
+HjT(t) = 
+
+. . .
+
+. . .
+
+ , j = 0, · · · , ms,
+
+h(jc,1) (t)
+
+···
+
+h(jc,c−b) (t)
+
+(2)
+
+where, at least for one time-instant t, we have Hm T s (t) = 0. The value ms is the syndrome former memory. For prac-
+
+tical applications, periodic syndrome former matrices with
+
+period T are used, i.e., HTj (t) = HTj (t + T ). If T = 1, the code is said to be time-invariant and it will show a degen-
+
+erated quasi-cyclic symmetry, i.e., appending c zeros at the
+
+left side of v[0,∞] also results in a codeword of C.
+
+2.2. Tail-Biting LDPC Convolutional Codes
+
+The code sequences v˜[0,N−1] of the tail-biting LDPCCC C˜ satisfy the equality v˜[0,N−1]H˜ [T0,N−1] = 0. Here, the transposed parity-check matrix H˜ [T0,N−1] of a rate R = b/c TB-LDPCCC with block length L = cN is obtained by wrapping the last ms columns of submatrices of the syndrome former in (1) after N time instants. Thus, H˜ T[0,N−1] can be written as (3). If H˜ [T0,N−1] is derived from a syndrome former H[T0,∞] that is time-invariant (T = 1), the tail-biting code defined by H˜ [T0,N−1] will be quasi-cyclic.2
+3. Decoder Parallelization
+
+The bipartite graphs underlying LDPCCCs and TBLDPCCCs have two important properties that allows us to derive efficient parallelization strategies. The first property is the locality, which corresponds to the relatively small separation between the variable nodes (VNs) (i.e., symbols of the codewords) that are being checked by an arbitrary check node (CN). The second property is the regularity, which concerns the invariance of the graph connections through the time.
+2Actually, these codes will be quasi-cyclic even if T = 1. However, in order to observe the quasi-cyclic symmetries of the codewords, block lengths N ≥ 2T are required.
+
+Time slot
+
+i+2
+
+Check
+
+j +1
+
+node
+
+i +1
+
+Variable
+
+j
+
+node
+
+i
+
+Edge
+
+tk −1
+
+tk
+
+tk +1
+
+Time
+
+Figure 1. Abstract graph of an LDPCCC.
+Below, we describe in a compact form the ideas behind the parallelization concept used in our architecture after some useful definitions and observations.
+3.1. Definitions and Observations
+In Fig. 1, a section of the abstract bipartite graph G = (C, V, E) of an LDPCCC is depicted. This graph does not contain any concrete connection between nodes. However, the spatial organization of the nodes that permits the derivation of efficient decoding algorithms is shown. Here, C is the set of all CNs, V is the set of all VNs and E is the set of all edges. The main facts associated with such graphs are:
+• VNs within a time slot tk are produced at the same time instant by the LDPC convolutional encoder.
+• An arbitrary CN (VN) within a time slot tk will be connected only with VNs (CNs) from time slots t , where tk−ms ≤ t ≤ tk (tk+ms ≥ t ≥ tk). In other words, this is the locality property.
+• CNs (VNs) can be grouped in the sets Cj = {· · · , cj,k−1, cj,k, cj,k+1, · · · } ⊂ C (Vi = {· · · , vi,k−1, vi,k, vi,k+1, · · · } ⊂ V) according to their connection profiles. We say that CNs (VNs) cj,k (vi,k) with the same index j (i) are of the same type j (i). Actually, the CNs (VNs) cj,k and cj,k+l (vi,k and vi,k+l) are connected to VNs (CNs) of the same type, but l time slots apart from each other. In other words, this is the regularity property.
+• We have |Cj1 | = |Cj2 |, ∀j1, j2 (|Vi1 | = |Vi2 |, ∀i1, i2) and we also have |Cj| = |Vi|, ∀i, j, where | · | is the cardinality of a set. Moreover, |Cj| = |Vi| is the total number of time slots of the code sequence.
+
+216 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+• Similar to the graph nodes, the edges can be grouped in sets according to the nodes that they are connecting. In this case, we have the sets Ei,j,δ = {· · · , ei,j,δ,k−1, ei,j,δ,k, ei,j,δ,k+1, · · · } ⊂ E, where ei,j,δ,k represent the edges connecting the VNs of type i to CNs of type j separated by δ time slots. Additionally, the set Eik,,jK,δ ⊂ Ei,j,δ is given by {ei,j,δ,k, · · · , ei,j,δ,k+K−1}.
+• We define the number of different types of CNs (VNs) by NC (NV). Moreover, NECj (NEiV ) is the number of different types of edges connected to CNs (VNs) of type j (i).
+• The graph of a TB-LDPCCC will also show the same facts from above. However, instead of having an infinite character3, it will be wrapped and will show a cylindrical shape.
+3.2 Parallelization Concept
+The parallelization techniques used in our architecture can be separated into horizontal parallelization and vertical parallelization in analogy with the horizontal and vertical directions of the graph in Fig. 1, respectively.
+The horizontal4 parallelization consists in processing nodes of the same type in parallel. For instance, if we have Γp (p = 1, · · · , NΓ) parallel processing units (PUs), the elements in each of the subsets of CNs (VNs) Ckj ,NΓ = {cj,k, · · · , cj,k+NΓ−1} ⊂ Cj (Vki ,NΓ = {vi,k, · · · , vi,k+NΓ−1} ⊂ Vi), with k = nNΓ and n = 0, · · · , |Cj|/NΓ − 1 (n = 0, · · · , |Vi|/NΓ − 1)5, can be processed in parallel.
+On the other hand, the vertical parallelization consists in processing nodes of different types simultaneously. It is evident that both parallelization concepts (horizontal and vertical) are not mutually exclusive and can complement each other. Thus, they can be combined to obtain the horizontal-vertical parallelization. In this case, Λp (p = 1, · · · , NΛ) horizontal-parallelized computation cores, each with NΓ PUs, will be operating in parallel on NΛ sets of CNs (VNs) Ckj ,NΓ (Vik,NΓ ), with j (i) equal to {mNΛ, · · · , (m+1)NΛ−1} and m = 0, · · · , |NC|/NΛ − 1 (m = 0, · · · , |NV|/NΛ − 1)6.
+4. Decoder Architecture
+We apply the parallelization concepts shown above to construct a decoder. In this case, the realization of the horizontal parallelization can be accommodated by the SIMD (Single Instruction, Multiple Data) computing paradigm
+3If we consider that the LDPCCC is not terminated. 4This technique was presented in [12] for structured LDPC block codes. 5For a given NΓ, the horizontal parallelization will be optimally employed if |Cj | mod NΓ = 0 or |Vi| mod NΓ = 0. 6For a given NΛ, the parallelization in the vertical direction will be optimally employed if |NC| mod NΛ = 0 and |NV| mod NΛ = 0.
+
+Core 1
+
+DMEM 1
+
+Bank 1
+
+Bank 2
+
+Core 2
+
+DMEM 2
+
+Bank 1
+
+Bank 2
+
+Shuffle
+
+Shuffle
+
+Crossbar switch
+
+Vector ALU1 ALU 1 ... ALU NΓ
+
+Vector ALU2 ALU 1 ... ALU NΓ
+
+Crossbar switch-1
+
+Shuffle -1
+
+Shuffle -1
+
+ROM 3 ROM 2
+
+AGU 1
+
+Register File
+ROM 1
+Decoder & PCU
+
+AGU 2
+
+ROM 3s ROM 2s
+
+IMEM
+
+Figure 2. LDPCCC Decoder.
+and the vertical parallelization results in a distributed system with multiple computation cores. Fig. 2 shows the scheme of an LDPCCC decoder with horizontal and vertical parallelisms given by NΓ and NΛ = 2, respectively.
+In addition to the architecture organization depicted by Fig. 2, all functional units are implemented using the principle of a synchronous transfer architecture (STA) [2]. The STA concept is particularly interesting for low-power signal processing applications since it reduces the switching activity and provides flexibility. Moreover, very long instruction words (VLIWs) and instructions pipelining are used in order to fully exploit the parallelism. In the following sections, we discuss the main elements of the architecture presented in Fig. 2.
+4.1. Memories The several types of memories used in our architecture
+are described below:
+• Data Memories (DMEM1 and DMEM2): They accommodate the log-likelihood ratios (LLRs) received from the channel as well as the LLRs that are exchanged between CNs and VNs. Because the temporal distances between the graph nodes (CNs and VNs) and the parallelism NΓ are not multiples, each DMEM must be split into two banks (Bank1 and Bank2) and implement a vector select operation to circumvent the vector misalignment problem [3] that occurs at LOAD/STORE operations (see Fig. 3). Furthermore, we use dual-port data memories such that NbitNΓ bits
+
+217 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+VN update
+
+Updated LLRs
+
+Bank 1 DMEM Bank 2 N bit
+
+Bank 1 DMEM Bank 2 N bit
+
+Nbit NΓ
+a) LOAD
+
+Shuffle
+
+Shuffle-1
+Nbit NΓ
+b) STORE
+
+Figure 3. LOAD/STORE from the memory.
+(Nbit is the bit-width of the LLRs) can be loaded and stored simultaneously in each cycle and, thus, full instructions pipelining is made possible. • ROMs: These memories store the parameters for the specific LDPCCC that is being decoded by the processor. ROM1 stores the base addresses of the data stored in DMEM1 or DMEM2. ROM2(s) stores the offsets to be added to the base addresses. ROM3(s) stores the shift parameters that are used in the shuffle units. • Instruction Memory (IMEM): This memory stores the program codes to decode the LDPCCCs.
+4.2. Address Generation Units (AGUs)
+In the AGUs, the data vector addresses are calculated from the code parameters stored in the ROMs. The outputs of the AGUs are used immediately to load data from the data memories but also kept in FIFOs until the loaded data is processed and needs to be stored again. The AGUs (AGU1 and AGU2) work independently for both processor cores. They provide address generation for terminated as well as for tail-biting LDPCCCs.
+4.3. Routing Network
+The routing network of the proposed architecture is one of the components where the regular structure of the LDPCCCs becomes most visible in terms of complexity reduction. This network consist only of two barrel shifters (Shuffles in Fig. 2), a 2 × 2 crossbar switch and their inverses. If only a single LDPCCC and its TB-LDPCCCs versions are considered for implementation, the barrel shifter becomes even more simple since not all shifts and cyclic shifts need to be implemented. In our implementation, the barrel shifters are partitioned into three pipeline stages in order to enable high-speed decoding.
+
+4.4. Arithmetic Logic Unit (ALU)
+The vector ALUs represent the main component of the computing cores. For our particular implementation, the vector ALUs (see Fig. 2) consist of NΓ = 64 functional units (FUs) that operate in a SIMD fashion, and thus, exploit the regularity of the code. The ALU FUs (Fig. 4) combine the functionalities to compute the CN updates and VN updates using the Offset Min-Sum (OMS) algorithm [5], which represents a good tradeoff between implementation complexity and performance. The equations for the CN and
+
+Input LLRs
+
+CN update
+
+Accumulate
+
+Sum
+
+Subtraction
+
+Minima Buffer
+
+Compare &
+Select
+
+LLR buffer
+Min1
+Min2
+
+Calculate new LLRs
+
+Input
+
+Out
+
+Mux
+
+Mux
+
+Compare &
+Select
+
+Norm.
+
+Eliminate intrinsic information
+
+β
+Apply offset
+normalization
+
+Figure 4. Scheme of an ALU functional unit.
+VN updates using the OMS algorithm are summarized in the equations (4) and (5), respectively.
+
+mji =
+
+sign(mi j ) · max
+i ∈Vj\i
+
+i
+
+min
+∈Vj\i
+
+|mi
+
+j|
+
+−
+
+β, 0
+
+(4)
+
+mij = ci +
+
+mj i − mji,
+
+(5)
+
+j ∈Ci
+
+where ci is the channel LLR belonging to VN i, mi,j (mj,i) is the LLR passed from VN (CN) i (j) to CN (VN) j (i) and
+Vj (Ci) is the set of all VNs (CNs) connected to CN (VN) j (i). Moreover, Vj\i is the set containing the VNs connected to CN j excluding the VN i.
+
+The ALU FUs can be switched between CN and VN op-
+
+eration modes. In order to save power, the functionality that
+
+is not being used is switched off. Furthermore, the hard-
+
+ware complexity and power consumption are significantly
+
+reduced by performing sequential minimum search for the
+
+CN updates and sequential additions for the VN updates.
+
+The steps of the computations are shown in Fig. 4. For
+
+the CN updates, the first step is a minimum search that is
+
+done by comparing the magnitude of the incoming LLRs
+
+with buffers that hold the current two smallest values. Two
+
+smallest values must be stored to satisfy the condition that
+
+no intrinsic information should be used to update a node.
+
+The selection of the minimum value for each node is done
+
+in a second step. After the minima corresponding to each
+
+node have been found, they are normalized with the offset β according to (4). β is programmable to any value within
+
+the quantization range so that a multitude of codes are sup-
+
+ported. The VN updates are simpler. In a first step, the
+
+LLRs are accumulated and in a second step the contribu-
+
+tion of the node to be updated is removed according to (5). The LLR buffer holds up to 16 values that can be selected
+
+with the programmable input multiplexer. Thus, the vector
+
+ALUs enable check node and variable node degrees of up to 16 to be processed.
+
+5. Programmability of the Decoder
+A very important aspect of the presented architecture is the free programmability that allows a wide range of adjustments to be made to the decoding algorithm, even at runtime. It is possible to manipulate CN degrees, VN degrees,
+
+218 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Decoding Flow of the Multi-Core Architecture
+
+1: % Initialize memory with LLRs received from the channel
+
+2: INITIALIZE MEMORY 3: % Loop over the decoding iterations
+
+4: for iter = 0 to I − 1 do
+
+5:
+
+% Loop over the processing windows
+
+6:
+
+for n = 0 to |Cj |/NΓ − 1 do
+
+7:
+
+% Check Node Operations: Loop over the sets of check nodes processed in parallel
+
+8:
+
+for m = 0 to |NC|/NΛ − 1 do
+
+9:
+
+%Vertical parallelization
+
+10:
+
+for j = {mNΛ , · · · , (m + 1)NΛ − 1} do
+
+11:
+
+for i = 0 to NV − 1 do
+
+12:
+
+for δ = 0 to Nδ − 1 do
+
+13:
+
+% Read values associated with edges into ALUs
+
+14:
+
+READ(Ein,Nj,Γδ ,NΓ )
+
+15:
+
+end for
+
+16:
+
+end for
+
+17:
+
+for i = 0 to NV − 1 do
+
+18:
+
+for δ = 0 to Nδ − 1 do
+
+19:
+
+% Compute values associated with edges
+
+20:
+
+¯Eni,Nj,Γδ ,NΓ ⇐ CN UPDATE
+
+21:
+
+% Write updated values back into memory
+
+22:
+
+WRITE(¯Eni,Nj,Γδ ,NΓ )
+
+23:
+
+end for
+
+24:
+
+end for
+
+25:
+
+end for
+
+26:
+
+end for
+
+27:
+
+% Variable Node Operations: Loop over the sets of variable nodes processed in parallel
+
+28:
+
+for m = 0 to |NV |/NΛ − 1 do
+
+29:
+
+%Vertical parallelization
+
+30:
+
+for i = {mNΛ , · · · , (m + 1)NΛ − 1} do
+
+31:
+
+% Read values associated with variable nodes into ALUs
+
+32:
+
+READ(VinNΓ,NΓ )
+
+33:
+
+for j = 0 to NC − 1 do
+
+34:
+
+for δ = 0 to Nδ − 1 do
+
+35:
+
+% Read values associated with edges into ALUs
+
+36:
+
+READ(Ein,Nj,Γδ ,NΓ )
+
+37:
+
+end for
+
+38:
+
+end for
+
+39:
+
+for j = 0 to NC − 1 do
+
+40:
+
+for δ = 0 to Nδ − 1 do
+
+41:
+
+% Compute values associated with edges
+
+42:
+
+¯Eni,Nj,Γδ ,NΓ ⇐ VN UPDATE
+
+43:
+
+% Write updated values back into memory
+
+44:
+
+WRITE(¯Eni,Nj,Γδ ,NΓ )
+
+45:
+
+end for
+
+46:
+
+end for
+
+47:
+
+if iter = I − 1 then
+
+48:
+
+% Calculate final decoding values
+
+49:
+
+V¯inNΓ,NΓ ⇐ FINAL UPDATE
+
+50:
+
+% Store final decoding values into memory
+
+51:
+
+WRITE(V¯ni NΓ ,NΓ )
+
+52:
+
+end if
+
+53:
+
+end for
+
+54:
+
+end for
+
+55: end for
+
+56: end for
+
+block length, number of iterations, offset value β or even the order in which the decoding algorithm processes data. Naturally, also the organization of the data in the memories can be freely modified. This means that some thought must be invested to develop a program code in combination with memory organization that efficiently utilizes the decoder architecture for a given decoding task. A general decoding flow is presented in Algorithm 1, which uses the definitions of Section 3.1. There is an outer loop representing the decoding iterations and inner loops for the CN and VN updates and their subtasks. Depending on the degrees of parallelization, certain instances of these loops are processed simultaneously.
+
+10-1
+
+10-2
+
+10-3
+
+BE R
+
+10-4
+
+10-5
+
+BP Float I=50 L=6400
+
+OMS 5 Bits I=50 L=6400
+
+10-6
+
+BP Float I=10 L=3200
+
+OMS 5 Bits I=10 L=3200
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0 [dB]
+
+Figure 5. BER of a (127,3,5)-TB-LDPCCC.
+
+6. Results
+6.1. BER Performance
+Fig. 5 shows simulation results that compare the BER performance of the BP algorithm in a floating point implementation against the 5-bit fixed-point OMS algorithm with β = 0.11. The code used was a regular (ms = 127, J = 3, K = 5)-TB-LDPCCC, where J is the VN degree and K is the CN degree. Furthermore, two different block lengths (i.e., L = 3200 and L = 6400) and I = 10 and I = 50 iterations were used. It can be observed that there is a very small performance degradation (≈ 0.2 dB) when using the fixed-point OMS algorithm, whereas hardware complexity is greatly reduced in comparison with the floating point implementation of the BP algorithm.
+6.2. Synthesis
+In order to enable cost (i.e., area and power consumptions) estimation of the proposed decoder architecture, the design was synthesized towards 0.13 µm standard cell CMOS technology for a target operating frequency of 200 MHz using the SYNOPSYS tool chain. The synthesized architecture comprises two computation cores (NΛ = 2) with horizontal parallelism NΓ = 64 and word width Nbit = 5 bits. The complete functional core was combined with 32 KByte instruction and 40 KByte data memory macros generated by Faraday’s memory generator. Moreover, the instruction and data word widths in our implementation are 256 bits and 320 bits, respectively. The post-synthesis area estimation of the principal components is summarized in Table 1. As we can observe, the complete functional core occupies an area of ≈ 350 KGates.
+The power consumption estimation is done using PrimePower and is based on the backannotated netlist and a VCD stimulus file. In order to generate the VCD stimulus file, a test program decoding a regular (127, 3, 5)-TB-LDPCCC
+
+219 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+with L = 3200 and R = 0.4 was simulated. This simulation could achieve a throughput of ≈ 100 MBit/s (infobits) at 10 decoding iterations. The power dissipation results associated with a clock frequency of 200 MHz are summarized in Table 2. Additionally, Fig. 6 shows waveforms of the power consumption over the time for the complete functional core and memories during a single decoding iteration. We can observe oscillations in the CN computing phase that are caused by the non-balanced load of the two computation cores due to a non-symmetric scheduling scheme (J = 3 and K = 5 are not multiple of NΛ = 2). Still in Fig. 6, the point A shows a time instant when both computation cores are operating. At point B, one of the cores is idle. Interval C indicates the processing period of one processing window, which is equivalent to NΓNV consecutive VNs.
+
+Module
+Top Level
+Memories - DMEMs - IMEM - ROMs
+Functional Core - Vector ALUs (1 ALU FU) - Address Paths - SFL - Inverse SFL - Interfaces
+
+Area [Gates]
+1152 K
+798 K 655.0 K 107.0 K 36.0 K 354 K 220.2 K (1.8 K) 50.0 K 33.2 K 28.6 K 22.0 K
+
+%
+100
+69 56.9 9.3 3.1 31 19.1 (0.2) 4.3 2.9 2.5 1.9
+
+Table 1. Area estimate for the decoder components
+
+Module
+Top Level
+Memories - DMEMs - IMEM - ROMs
+Functional Core - Vector ALUs - Address path - SFL - Inverse SFL - Interfaces
+
+Power [mW]
+370
+185 157.0 22.0
+6.0 185 116.0 17.0 14.0 23.0 15.0
+
+%
+100
+50 42.4 5.9 1.6 50 31.4 4.6 3.8 6.2 4.1
+
+Table 2. Power estimate for the decoder components
+7. Conclusions
+This paper presented the concepts and realization of a high-speed, full-programmable decoder architecture for LDPCCCs and their tail-biting versions. We showed how the parallelization strategies used in this architecture could be derived from properties of the bipartite graphs underlying the LDPCCCs. The first parallelization concept (i.e., horizontal parallelization) is based on the processing of graph nodes of the same type and results in the SIMD parallelism. The second parallelization strategy (i.e., vertical) consists in processing nodes of different types in parallel and results in a distributed computing system. Both schemes are easily scalable and complementary, so that they
+
+0.5
+A
+0.4
+
+CN-Operations
+
+VN-Operations
+
+Power [W]
+
+0.3
+C B
+0.2
+
+0.1
+
+LDPC Decoder
+
+Core
+
+Memories
+
+0.0
+
+100
+
+300
+
+500
+
+700
+
+900
+
+1100
+
+1300
+
+Time [ns]
+
+Figure 6. Comparison of instant power of core and memories of LDPCCC decoder.
+
+can be applied together to construct high-throughput architectures. We also considered the realization of a processor with 64-fold horizontal parallelism and 2-fold vertical parallelism. We could observe that the proposed LDPCCC decoder was capable of reaching a relatively high throughput with small area and low power consumption. Our further research efforts include the study of other parallelization schemes as well as methods for efficient load balancing of the computation cores of such distributed architectures.
+References
+
+[1] A. Jime´nez Feltstro¨m and K.Sh. Zigangirov. Periodic time-varying convolutional codes with low-density parity-check matrices. IEEE Trans. Inform. Theory, 45(5):2181–2190, Sept. 1999.
+[2] G. Cichon, P. Robelly, H. Seidel, E. Mat´uˇs, M. Bronzel, and G. Fettweis. Synchronous transfer architecture (STA). In SAMOS, pages p126–130, June 2004.
+[3] E. Matu´sˇ, M.B.S. Tavares, M. Bimberg, and G.P. Fettweis. Towards a GBit/s programmable decoder for LDPC convolutional codes. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), New Orleans, USA, May 2007.
+[4] R. Gallager. Low-Density Parity-Check Codes. MIT Press, Cambridge, MA, 1963.
+[5] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and X.-Y. Hu. Reduced-complexity decoding of LDPC codes. IEEE Trans. Commun., 53(8):1288–1299, Aug. 2005.
+[6] M.B.S. Tavares, K.Sh. Zigangirov, and G.P. Fettweis. Tail-biting LDPC convolutional codes. In Proc. of IEEE International Symposium of Information Theory (ISIT’07), Nice, France, June 2007.
+[7] M.B.S. Tavares, K.Sh. Zigangirov, and G.P. Fettweis. Tail-biting LDPC convolutional codes based on protographs. In Proc. of IEEE Vehicular Technology Conference (VTC’07), Baltimore, USA, Sept. 2007.
+[8] M.M. Mansour and N.R. Shanbhag. High-troughput LDPC decoders. IEEE Trans. VLSI Syst., 11(6):976–996, Dec. 2003.
+[9] R.M. Tanner, D. Sridhara, A. Sridharan, T.E. Fuja, and D.J. Costello, Jr. LDPC block and convolutional codes based on circulant matrices. IEEE Trans. Inform. Theory, 50(12):2966–2984, Dec. 2004.
+[10] S.-Y. Chung, G.D. Forney, Jr., T.J. Richardson, and R. Urbanke. On the design of low-density parity-check codes within 0.0045 dB on the Shannon limit. IEEE Commun. Lett., 5(2):58–60, Feb. 2001.
+[11] R. Swamy, S. Bates, and T. Brandon. Architectures for ASIC implementations of low-density parity-check convolutional encoders and decoders. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), Kobe, Japan, 2005.
+[12] T. Richardson and V. Novichkov. Methods and apparatus for decoding LDPC codes. U.S. Patent No. 20030033575A1, Feb. 2003.
+[13] Y. Sun, M. Karkooti, and J.R. Cavallaro. VLSI decoder architecture for high throughput, variable block-size and multi-rate LDPC codes. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), New Orleans, USA, May 2007.
+
+220 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:15 UTC from IEEE Xplore. Restrictions apply.
+
+

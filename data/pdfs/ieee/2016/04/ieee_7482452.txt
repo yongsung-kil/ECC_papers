@@ -1,0 +1,253 @@
+FPGA Architecture of Multi-Codeword LDPC Decoder With Efficient BRAM Utilization
+
+Sergiu Nimara, Oana Boncalo, Alexandru Amaricai, Mircea Popa
+Computer Engineering Department University Politehnica Timisoara
+Timisoara, Romania sergiu.nimara@student.upt.ro, {alexandru.amaricai, oana.boncalo} @cs.upt.ro
+
+Abstract— Implementation of Quasi-Cyclic (QC) Low Density Parity-Check (LDPC) decoder on FPGA devices has shown great interest in both wireless communication, as well as error correction for Flash memories. This paper presents an FPGA flooded LDPC decoder which uses multiple codeword processing for efficient memory utilization. It is based on a partially parallel implementation, which relies on memory blocks for message passing between the processing units. We obtain efficient memory utilization by packing multiple messages corresponding to multiple codewords into the same Block RAM word. The increase in throughput is linear with the number of processed codewords. The proposed LDPC decoder can process up to 9 codewords in parallel, for 4-bit message quantization, or up to 12 codewords, for 3-bit message quantization, without introducing significant memory overhead.
+Keywords—LDPC; FPGA; BRAM; Min-Sum; multi-codeword; Flooded
+I. INTRODUCTION
+Low Density Parity Check (LDPC) codes represent a class of capacity approaching codes, with increased error correction capability for both Binary Symmetric Channel (BSC) and Additive White Gaussian Noise (AWGN) channel [1]. They are used in a wide range of wireless communication standards [2], and recently in NAND based Flash memories [3]. Due to the high demand for increased throughput, hardware implementations for LDPC decoders represent a natural choice, which are favored by their parallel nature.
+This paper proposes to efficiently exploit the FPGAs’ Block RAM (BRAM) memories in partially parallel flooded LDPC decoder architectures by packing messages from different codewords in a single memory entry. Hence, multiple codeword processing allows important throughput gains, by increasing the level of parallelism of the LDPC decoder and processing units, without increasing the memory requirements. We exploit the partially parallel architecture proposed in [11][12][13], which use the memories as means of message passing between the processing units. A drawback of these FPGA implementations is represented by the low hardware usage efficiency (HUE) in the BRAM blocks. We address this problem by storing the extrinsic message associated to multiple codewords in the same BRAM. Thus, we may store messages of 9 codewords for 4-bit message quantization and
+
+12 codewords for 3-bit message quantization with no significant increase in memory resources. FPGA logic resources cost increase is linear for the proposed approach, as the number of processing units is proportional with the number of processed codewords.
+This paper is organized as follows. In section II, an introduction to flooded LDPC decoding is presented; related FPGA architectures are described in Section III; the proposed approach is detailed in Section IV; Section V is dedicated to results. The last section brings some concluding remarks.
+II. FLOODED MIN-SUM LDPC DECODING
+LDPC codes are defined by a sparse parity check matrix ‫ܪ‬ [1]. Based on this parity check matrix, a bi-partite graph, called Tanner graph, can be derived [5]. The Tanner graph contains two types of nodes: variable nodes, corresponding to the columns of the ‫ ܪ‬matrix, and check nodes, corresponding to the rows of the matrix. An edge in the Tanner graph corresponds to a non-zero entry in the parity check matrix. Decoding is performed using message passing algorithms, which rely on the exchange of messages between the variable node units (VNU) and check node units (CNU), in several decoding iterations.
+The vast majority of standards use the quasi-cyclic LDPC (QC-LDPC) code, due to their efficient hardware implementation [6]. These codes are a sub-class of LDPC codes, which present highly structured parity check matrix, defined by blocks of circulant matrices. The QC-LDPC is defined by the base matrix ‫ܤ‬, while the ‫ ܪ‬matrix is obtained by expanding the base matrix, with an expansion factor ݉ as follows: െͳ entries are expanded by a square ݉ ‫ ݉ כ‬zero matrix, while non-negative entries are replaced by the identity matrix right shifted with the non-negative value in ‫ܤ‬.
+Two types of scheduling can be employed in LDPC decoding: flooded and layered [4]. The flooded scheduling represents the classic convention of decoding, where at each iteration, all the CNUs, and subsequently, all the VNUs, pass the newly computed messages to their neighbours in the Tanner graph.
+Regarding the message passing algorithms, Min-Sum (MS) and its variants (offset MS, normalized MS and self-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:44:19 UTC from IEEE Xplore. Restrictions apply.
+
+correcting MS) are the suitable for hardware implementations,
+
+because they are based on operations such as additions and
+
+comparisons on a small number of bits [7].
+
+Regarding flooded MS decoding, the corresponding
+
+processing is performed as follows: the CNUs compute the
+
+check node messages (denoted as ȕ) based on the messages
+
+received from the VNUs (denoted as Į); these updated ȕ
+
+messages are passed to the VNUs, which will update Į
+
+messages. The inputs of the decoding are the channel input
+
+log-likelihood ratios (LLR) - denotes as Ȗ. The decoding
+
+consists of the following steps:
+
+1. Initialization
+
+ߙ௜ǡ௞ ൌ  ߛ௜
+
+(1)
+
+2. Check node update:
+
+ߚ௜ǡ௞ ൌ  ς ൫ߙ௞ǡ௝൯ ൈ ሺ หߙ௞ǡ௝หሻ
+
+(2)
+
+3. Variable node update:
+
+ߙ௜ǡ௞ ൌ  ߛ௜ ൅ σ ߚ௞ǡ௝
+
+(3)
+
+4. A-posteriori update ߛු௜ ൌ  ߛ௜ ൅ σ ߚ௞ǡ௜
+
+(4)
+
+where ߙ௜ǡ௞ǡ ߚ௜ǡ௞ represent the variable node/check node message from node ݅ to node ݇, while ߙ௞ǡ௝ǡ ߚ௞ǡ௝, represent all variable node and check node messages to node ݅ except ߙ௞ǡ௜ǡ ߚ௞ǡ௜.
+
+An iteration consists of the steps 2, 3 and 4. Decoding stops whether a codeword was found, if a stoping criteria is implemented, or the maximum number of iterations has been reached. Regarding the size of the messages, usual quantizations are 3-bits or 4-bits.
+
+III. RELATED FLOODED LDPC ARCHITECTURES
+The straight-forward architecture for a flooded LDPC decoder is represented by the implementation of the Tanner graph [8][9]. The advantage of this fully parallel approach is its high throughput; however, due to the high overhead in the interconnection network between CNUs and VNUs, it may not be suitable for practical hardware implementations. Serialization is used in order to reduce the resource usage of the LDPC decoders, with penalties in throughput. Due to
+
+serialization, message storage is required. A typical partially parallel flooded architecture [10] for QC-LDPC codes comprises of processing units (VNUs and CNUs), interconnection networks (usually implemented using barrel shifters) and memory units.
+An approach presented in [11][12][13] eliminates the interconnection network, by using memory modules for message passing. This architecture presents a number of VNUs equal to the number of columns in the ‫ ܤ‬matrix, and a number of CNUs equal to the number of rows in the base matrix. For each non-zero element in the ‫ ܤ‬matrix, two memory blocks are required: one for storing check-node messages and one for storing variable node messages. For the input LLRs, a number of memory blocks equal to the number of columns in the ‫ܤ‬ matrix is used. Each memory has the word size equal to message quantization – such as 4 bits -, while the memory depth is equal to the size of the circulant matrix ݉. FPGA embedded BRAM memory blocks have typical size of ͵͸ ‫כ‬ ͷͳʹbits for Xilinx RAMB18E primitive or ͹ʹ ‫ כ‬ͷͳʹ bits for the Xilinx RAMB36E primitive. Therefore, this approach has the drawback of having very low memory usage. One way to alleviate this problem is based on using dedicated LDPC codes, with very large expansion factor ݉, such as 256. This way, good usage in depth for FPGA BRAM is obtained. However, this approach has two drawbacks: (i) many wireless communication standards have smaller expansion factors (96 for WiMAX), (ii) it still has low memory usage with respect to the memory word size.
+Several optimizations have been proposed in order to improve the memory usage for this architecture. Overlapped message processing has been proposed in order to have a single memory block for storing both the check-node messages and variable-node messages corresponding to the non-negative entries in the ‫ܤ‬matrix [11][12]. Waiting-time minimization algorithms have to be employed for avoiding memory conflicts and read-after-write data hazards. However, these algorithms do not output good solution for all LDPC codes, and thus, this technique may be code dependent.
+Further optimizations are represented by vectorization and folding [12]. Vectorization represents the packing of several
+
+Fig. 1 – Multiple codeword partially parallel LDPC Decoder
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:44:19 UTC from IEEE Xplore. Restrictions apply.
+
+messages into a single memory word – thus, a memory word in the check-node message / variable-node message memory is composed of several messages [12]. This technique also increases the level of parallelism at the processing unit level, as several messages can be processed by parallel units. Therefore, increase in throughput is also obtained. Alignment problems are the limiting factor for the vectorization technique. Due to these problems, logic resource and stall cycle increase may appear with the increase in vectorization. Thus, the maximum number of packed messages has been limited to 4. Folding represents the technique for which messages corresponding to several circulants in the base matrix are packed into the same BRAM [12]. This way, increased usage of memory depth is targeted. The drawback is represented by increased level of serialization, and thus, reduction of throughput.
+This work proposed the processing of multiple codewords in parallel in order to increase the memory usage, as well as the throughput. The messages corresponding to multiple codewords are stored in a single memory word; parallel processing units are employed. By employing multiple codeword processing, we target increase in throughput, without impacting the FPGA memory requirements.
+IV. MULTIPLE CODEWORD LDPC FLOODED ARCHITECTURE
+In order to increase the BRAM block memory utilization, we propose to store in a BRAM memory word, messages from different codewords. Thus, for a 36-bits BRAM memory width, and a 4-bit message quantization, messages from up to 9 codewords can be stored in the same BRAM block memory.
+Processing the messages from the different codewords will be performed by parallel processing units (VNUs and CNUs). Therefore, the number of VNUs will be equal with the number of columns in the base matrix multiplied by the number of processed codewords, while the number of CNUs will be equal with the number of rows in the base matrix multiplied by the number of processed codewords.
+Regarding the control component of the decoder – which generates the memory addresses, the read/write enable signals for memory accesses, or the start processing signal for both VNUs and CNUs – a single one is employed for all the codeword processing. The shared control is due to the fact that processing multiple codewords in parallel requires identical sequence of operations from a decoding perspective. The proposed architecture is depicted in Fig.1, while the BRAM block memory usage is shown in Fig.2.
+V. SYNTHESIS RESULTS
+The FPGA synthesis results reported in this section have been obtained using the Xilinx ISE 14.7 tool for a Virtex 7 XC7VX485T target device. We have considered two LDPC matrices: (i) a (3,6) regular LDPC matrix, with 3 rows and 6 columns in the ‫ܤ‬matrix, with expansion factor ݉ ൌ ʹͷ͸ – codeword size is 1536 (ii) a (3,6) regular LDPC matrix, with 12 rows and 24 columns in the ‫ܤ‬matrix, with expansion factor ݉ ൌ ͷͶ – codeword size is 1296.
+Table I shows the hardware resources required to implement the partially-parallel QC LDPC decoder when both
+
+4-bit quantization and 3-bit quantization are considered for the messages. We have synthesized the decoder for 1, 4, 6, 9, and 18 codewords, for 4-bit message quantization, and, 1, 6, 12 and 24 codewords for 3-bit message quantizations. The results depicted in Table I show a linear increase in LUT FlipFlop pairs used, with the increase of the number of codewords. The number of BRAMs used for 1, 4, 6 or 9 codewords is the same, but it doubles for the case of 18 codewords, due to the type of primitives used by Xilinx in the synthesis process.
+The maximum frequencies of the LDPC decoders are reported in the range of 150 – 240 MHz. The decoding throughput reported in Table I has been computed as follows:
+
+ܶ ൌ ܰ஼ ൈ ‫ܮ‬஼  ൈ ݂௠௔௫Τܰ௜௧௘௥ ൈ ܰ௖௬௖௟௘௦
+
+(5)
+
+Where ܰ஼ is the number of codewords processed in parallel, ‫ܮ‬஼ denotes code length, ܰ௜௧௘௥ is the number of iterations (typically 20 iterations for flooded scheduling), and ܰ௖௬௖௟௘௦ indicates the number of cycles needed per iteration. The closest to this approach is [12]. It proposes packing
+messages for the same codeword. The drawback to this approach is the need of dedicated re-align logic and buffers.
+Results presented indicate that this approach works well for
+message packaging of up to 4 messages. Nonetheless, it is worthwhile emphasizing that it is dependent on the code, and
+impractical for large number of messages.
+
+Fig. 2 – Memory organization for proposed LDPC decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:44:19 UTC from IEEE Xplore. Restrictions apply.
+
+Decoder type
+NC=1; Q=4 bits NC=4; Q=4 bits NC=6; Q=4 bits NC=9; Q=4 bits NC=18; Q=4 bits NC=1; Q=3 bits NC=6; Q=3 bits NC=12; Q=3 bits NC=24; Q=3 bits NC=1; Q=4 bits NC=4; Q=4 bits NC=6; Q=4 bits NC=9; Q=4 bits NC=18; Q=4 bits
+
+Table I – Synthesis Results for the Proposed Decoder
+
+LDPC Code
+
+Circulant
+
+Type Length
+
+size
+
+LUT-FF Pairs
+
+Block RAMs
+
+4117
+
+49
+
+14996
+
+50
+
+22442
+
+50
+
+33341
+
+51
+
+(3,6) regular
+
+1296
+
+54
+
+66569
+
+102
+
+3827
+
+49
+
+19659
+
+50
+
+35881
+
+52
+
+78299
+
+104
+
+1206
+
+13
+
+4392
+
+13
+
+(3,6) regular
+
+1536
+
+256
+
+6502
+
+13
+
+9638
+
+13
+
+21096
+
+26
+
+Frequency [Mhz]
+169.683 159.200 159.200 159.200 180.734 186.755 185.827 180.716 233.039 194.962 195.362 196.171 195.522 231.335
+
+Throughput [Mbps]
+101.80 382.08 573.12 859.68 1951.92 112.05 668.94 1301.04 3355.68 29.24 117.2 176.52 263.88 624.60
+
+The proposed solution relying on multi-codeword is suitable for systems that require adaptable throughput. Codewords can easily be grouped in multiples of 8 bits and memory operations as well as datapath processing can be disabled / enabled as required by the system for these groups. Throughput for the proposed architecture can be doubled if a waiting time minimization algorithm is employed such as [11].
+VI. CONCLUSIONS
+This paper proposes a novel optimization technique for FPGA based partially parallel flooded LDPC decoders, which rely on memories for message passing. We employ parallel multiple codeword processing in order to increase the BRAM memory usage, as well as the decoding throughput. We pack messages from several codewords in a single memory word. This way, we efficiently use the BRAM memory word. The synthesis results indicated that processing up to 9 codewords for 4-bit messages, and up to 12 codewords for 3-bit messages, results in no significant increase in BRAM memory usage, while increasing the throughput by a factor of 9 or 12 respectively. With respect to other LDPC decoders which use memories for message passing [11][12], we employ one order of magnitude less BRAM blocks per processed codeword. Further optimizations may be obtained by employing waitingtime-minimization algorithms to reduce the memory requirements for extrinsic message storing.
+ACKNOWLEDGMENT
+This work has been supported by the European Commission’s project “I-Risc - Innovative Reliable Chip Design from Low Power Unreliable Components”, grant number 309129.
+
+REFERENCES
+
+[1] T. Richardson and R. Urbanke, "The Renaissance of Gallager’s LowDensity Parity-Check Codes", IEEE Comm. Magazine, Aug. 2003.
+
+[2] IEEE-802.16e, “Physical and medium access control layers for combined fixed and mobile operation in licensed bands,” 2005, Amendment to Air Interface for Fixed Broadband Wireless Access Systems
+
+[3] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, Z. Zheng “LDPC-inSSD: making advanced error correction codes work effectively in solid state drives” Proc. 11th USENIX conference on File and Storage Technologies, 2013
+
+[4] F. R. Kschischang and B. J. Frey, “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE Journal on Selected Areas in Communications, vol. 16, no. 2, pp. 219–230, 1998
+
+[5] R. M. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Trans. Information Theory , vol. 27, no. 5, pp. 533–547, 1981
+
+[6] M.P.C. Fossorier, “Quasicyclic Low-Density Parity-Check Codes from Circulant Permutation Matrices,” IEEE Trans. on Information Theory, vol. 50, no. 8, pp. 1788–1793, 2004
+
+[7] M.P.C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. on Communications , vol. 47, no. 5, 1999
+
+[8] A. B. Stimming and A. Dollas, "FPGA-based design and implementation of a multi - GBPS LDPC decoder", FPL, 2012.
+
+[9] V.Torres, A. Perez-Pascual, T. Sansaloni, J. Valls “Fully-parallel LUTbased (2048,1723) LDPC Code Decoder for FPGA” Proc 19th Int. Conf.
+on Electronic Circuits and Systems (ICECS), 2012
+
+[10] YS Park, D Blaauw, D Sylvester, Z Zhang “Low-Power HighThroughput LDPC Decoder Using Non-Refresh Embedded DRAM” IEEE Journal of Solid State Circuits, Vol. 49, Issue 3, 2014
+
+[11] Y. Dai, Z. Yan, and N. Chen, “Optimal overlapped message passing decoding of quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 16, no. 5, pp. 565–578, May 2008.
+
+[12] X. Chen, J. Kang and S. Lin and V. Akella, "Memory System Optimization for FPGA Based Implementation of Quasi-Cyclic LDPC Codes Decoders", IEEE Trans. on CAS, 2011
+
+[13] Z. Wang, Z. Cui, “A Memory Efficient Partially Parallel Decoder
+
+Architecture for Quasi-Cyclic LDPC Codes”, IEEE Trans. on VLSI
+
+Systems,
+
+Vol.
+
+15,
+
+No.
+
+4,
+
+April
+
+2007
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:44:19 UTC from IEEE Xplore. Restrictions apply.
+
+

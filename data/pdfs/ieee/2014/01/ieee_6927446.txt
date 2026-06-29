@@ -1,0 +1,264 @@
+FPGA Implementation of a Multi-algorithm Parallel FEC for SDR Platforms
+Zhenzhi Wu, Dake Liu, Zheng Yang, Qingying Wang, and Wei Zhou School of Information and Electronics Beijing Institute of Technology Beijing, 100081, China Email: {zhenzhi.wu, dake}@bit.edu.cn
+
+Abstract—Forward Error Correction (FEC) consumes excessive computation in a Software Defined Radio (SDR) system. In this work, a high-throughput flexible FEC processor is proposed for the decoding acceleration. The FEC processor enables Turbo/QC-LDPC/Convolutional Code decoding with softwarehardware co-reconfigurability. A multi-algorithm unified trellis processing unit is introduced for resource sharing. A parallel architecture is proposed for high-throughput decoding. The Software Defined FEC (SD-FEC) with Application Specific Instruction-set Processor architecture is introduced for improving flexibility and enabling fast reconfiguration. The proposed SDFEC can be applied to both low-cost low power applications and high performance applications. Results show that the proposed tri-mode FEC processor achieves high decoding efficiency and enough flexibility, which suits for the flexible SDR platforms.
+I. INTRODUCTION
+Software Defined Radio has received great attention recently for its high flexibility and programmability. An SDR platform can be easily configured to support many wireless standards. With the increase of data rate requirements in current wireless standards, the extensive computation complexity is hard to be sustained on a general computation platform, which contributes to energy inefficiency and throughput bottleneck. Several researches [1] [2] have shown that the FEC decoding consumes 40% around of computation in a general purpose processor which equals to 10-100 GOPS (Giga Operations Per Second). The attainable data rate is insufficient for the high speed standards, such as 3GPP-LTE and 802.11n. Thus a dedicated accelerator is required for reducing the computation burden of the SDR platform.
+The SD-FEC has many application scenarios which need to be considered.
+(1) Multi-standard microcell base station: simultaneously processing up-link signals from several mobiles with different standards;
+(2) Advanced cognitive radio: standard identification and coding scheme detection, finding coding scheme with varieties of coding algorithms and parameters be tried within limited time;
+(3) Base station multi-user up-link signal processing: when several mobiles connect to one base station, the decoding with different algorithms (CC or Turbo) and parameters are demanded, and the working state shall be switched promptly;
+
+(4) Other application scenarios are demanded as well such as the platform for coding performance evaluation, professional mobile communication or military communication with standard customized receiver.
+Throughout these applications, the key issue is to build up a high flexibility FEC for standard and algorithm uncertain scenarios, which is highly demanded in SDR platform. In addition, the swift among coding schemes (parameters) is required to be quick enough. Traditional standard specified decoders are hard to meet the requirements. Although FPGA supplies reconfigure ability, the reconfigure time is hard to accept. Considering all these requirements, the designing of SD-FEC is specified as following.
+Principally, the decoder needs to be multi-functional. When high data rate coding types are considered solely, Quasi-Cyclic Low Density Parity Check Codes (QC-LDPC), Turbo and Convolutional Code (CC) are the most frequently used ones. Therefore these three codes are considered in our solution. A parallel structure is in necessity to meet the throughput requirements for these codes.
+On the other hand, because most of the reconfiguration work of a decoder originates from parameter variations or slight decoding procedure changes (adding NOP to avoid memory conflict as an example) which are minor and frequently happen, we propose an Application Specific Instruction-set Processor (ASIP) [3] architecture with partially programmability. Therefore, most of modification and fast reconfiguration can be operated in software. However, FPGA also supplies the modification ability for unexpected modifications and guarantees the full compatibility for all algorithms.
+In this paper, the unified tri-mode computational kernel is applied firstly, and then the parallel decoder architecture and decoding routine are introduced. Following, the software/hardware partitioning, code size evaluation and reconfiguration time estimation are discussed. FPGA implementations with high performance device and low cost low power device are proposed at last.
+II. UNIFIED TRI-MODE COMPUTATIONAL KERNEL
+In order to construct a re-used data path, the forwardbackward-recursion (FBR) is selected as the unified computational kernel, which is based on a multi-algorithm compliant
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+and the previous state S is decided by deck.
+
+S/2 S=
+
+, deck = 1
+
+(6)
+
+S/2 + Ts/2 , deck = 0
+
+Fig. 1. Diagram of a Turbo, CC and LDPC compatible 8-state trellis structure,
+wherein S is the current state and S0, S and S1 are its three associated previous states.
+
+trellis diagram. It depicts the state transition with time steps. State S in the current step is connected with three states in the previous step, S0 = S/2, S1 = S/2 + Ts/2, and S = S. The first and second ones are necessary for Turbo and CC decoding, and the third one is for LDPC layered decoding. A simple 8-state trellis diagram is shown in Fig. 1.
+Both CC and Turbo codes are trellis decodable. The decoding of a trellis diagram follows the FBR. Maximum-APosteriori (MAP) decoding using Bahl-Cocke-Jelinek-Raviv (BCJR) [4] algorithm provides soft output results, which can be served for soft-output CC decoding or Turbo constituent code decoding. For the case of hard-bit output, Viterbi algorithm with traceback is more preferable for its faster recursion speed compared to that of backward recursion.
+In the forward recursion, the forward metric α(S) of state S at time step k is obtained from previous step metrics α(Si).
+α(S) = f (γ(S0, S) + α(S0), γ(S1, S) + α(S1)) (1)
+The backward metric β(S) of state S at trellis step k is obtained from successor step metrics β(Si).
+β(S) = f (γ(S, S0) + β(S0), γ(S, S1) + β(S1)) (2)
+The a-posteriori message is obtained by
+Le = f(S,S )∈ + (βold(S ) + γ(S, S ) + α(S)) (3) −f(S,S )∈ − (βold(S ) + γ(S, S ) + α(S))
+In Viterbi algorithm [4], the path metric for the forward path is calculated by Add-Compare-Select (ACS) operation, and the survival path is recorded at the mean time.
+
+{α(S), selk(S)} = f (γ(S0, S) + α(S0), γ(S1, S) + α(S1)) (4)
+The traceback procedure is performed step by step. In each step the decision is made and the previous state following the survival path is calculated.
+
+deck = selk(S)
+
+(5)
+
+Updating S by S = S , and k from L + LT B − 1 down to 0. Equation (5) and (6) are performed iteratively. deck are valid to be the decoded bits when k < L, where L is the code length and LT B is the traceback length.
+For the decoding process of QC-LDPC code using Layered Decoding (LD) algorithm [5], FBR can be viewed as running in a special trellis diagram where only horizontal connection is available. The current state is only connected with the same state in the previous time step. It is called as a ’layer’ which connects non-zero elements into a chain. For current value with index of S, the previous state is S = S, and the recursion follows
+
+α(S) = f (α(S ), γ(S ))
+
+(7)
+
+β(S ) = f (β(S), γ(S))
+
+(8)
+
+Λ(S) = f (βold(S), α(S))
+
+(9)
+
+where f (x, y) is defined as f (x, y) = log(1 + ex+y) − log(ex + ey) in LD, f (x, y) = log(ex + ey) in BCJR, and f (x, y) = min{x, y}, idxmin{x, y} in Viterbi. For the needs of reducing the computation complexity, simpler kernel functions are introduced, f (x, y) = sign(x) · sign(y) · min{|x| + |y|} = −max{x, y} + max{x + y, 0} for LD and f (x, y) = max{x, y} for BCJR are applied in our design separately. With the unified computational kernel, a unified processing element (PE) is constructed, shown in Fig. 2. Inside of PE, the Branch metric unit (BMU) is used for calculating γ metrics, Forward Recursion Unit and Backward Recursion Unit are dedicated for performing kernel computation functions including α update, β update and Le (or Λ) update.
+
+III. PARALLEL ARCHITECTURE FOR HIGH SPEED MULTI-ALGORITHM DECODING
+Although there are many researches concerning on parallel architecture for single mode FEC, we propose a multialgorithm compatible parallel architecture. It can be simply described as a Multiple-Memory-Multiple-Datapath architecture, shown in Fig. 2. The Memory Banks (MBs) connect with PEs using the Inter-Connection-Bar (ICB), hence data exchange ability among PEs is provided. The temporary data without the need of exchanging is stored into local buffers inside of PE. T MBs are grouped into a Memory Bank Group (MBG). P MBGs and P PEs are working in parallel. The ICB is obliged for exchanging the data among MBGs and provides the permuted data under the Turbo or LDPC decoding algorithm. Address Generation Unit (AGU) provides the access pattern for the memory banks. The way of mapping the decoding algorithms into this unified parallel architecture is discussed as following.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Parallel architecture diagram
+
+A. Layered Decoding Algorithms for QC-LDPC Codes
+An (N, M ) QC-LDPC code with parity check matrix of size N × M can be expanded from a base matrix of size J × K which specifies the shift value. Each element within the base matrix is expanded into a shifted identity matrix or a zero matrix, which is called sub-matrix. The sub-matrices locating in one row forms a layer, which consists of Z sub-layers. Nonzero sub-matrices form a chain and they are processed cycle by cycle, shown in Fig. 3 (a). Each sub-layer is processed by a Processing Unit (PU), which performs equation (7), (8) and (9). Totally Z PUs are required for a fully parallel processing. One PE contains eight parallel PU performing BCJR algorithm for eight sub-layers.
+α update for the current layer and β, Λ update for the previous layer are processed in parallel. The forward path generates α metrics which are stored in the Alpha Buffer. Backward path generates β metrics, a-posteriori messages and extrinsic messages. Extrinsic messages are stored in the Extrinsic Buffer.
+The a-posteriori data (also referred as channel data before decoding) are stored in the MBGs, where each MBG supplies 40 bits correspond to eight 5-bit quantized messages for one PE. Because the shift value for each submatrix is varied, the matrix is stored in the normal sequence, and a cyclic-shifter located in the ICB is introduced for shifting the data into the desired sequence, depicted in Fig. 3 (b).
+B. Parallel BCJR Algorithm for Turbo Codes
+High-throughput Turbo decoding also needs parallel processing. A Turbo code with information length of N needs 3·N channel messages to be stored. Two extrinsic a-posteriori
+
+Fig. 3. Parallel LDPC decoding, (a) Decoding flow (b) Memory allocation
+Fig. 4. Parallel FBR for Turbo decoding
+messages for the two half iterations are stored back to the memory also. Therefore five memory banks with 8-bit data width are required in an MBG. The whole code is segmented into several parallel windows for speeding up the decoding procedure, and the parallel window is further segmented into sliding windows for saving the buffer area, depicted in Fig. 4. The segmentations lead to the recursion messages discontinuity which is partly recovered by the Next Iteration Initialization [6] technique.
+Each PU processes one state node. In each clock cycle, a recursion step is performed for forward path in the current window and backward path in the previous window. Eight
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+PUs are introduced for processing an 8-state trellis, grouped into a PE. Each parallel window is executed by their own PE, whereas sliding windows are processed in a time-division manner. The decoding follows BCJR algorithm and two halfiteration MAP decoding are performed alternatively.
+C. Parallel Viterbi Decoding for CC
+For a CC(M, 1, K) with code rate of 1/M and code length of N , more than 32 states are processed within each trellis step when K > 5. Therefore partially execution is introduced, shown in Fig. 5. Each time only eight states are processed in each PE. It also employs similar parallel window and sliding window to Turbo mode. An overlapped part is added at the end of each parallel window which equals to the trace back length. The amount of incoming data is M ×N and an MBG supplies M data in each time. M ≤ 4 is considered in our design. With a write sequence, there are totally five memory banks needed. The ICB network is just direct connections. In the PE, The Branch-Metric-Calculation and Add-Compare-Select are performed in the forward path, whereas traceback is performed in backward path. The path metrics are stored in the Alpha Buffer and survival paths are stored at the Traceback buffer (which also refers to the Extrinsic Buffer in LDPC decoding mode).
+It can be concluded that each PE corresponds to an MBG, which contains 5 banks with 40-bit data bandwidth in total, therefore T is optimally chosen to 5. ICB is a dual-mode network, which works at either 5 bit Z width cyclic-shifter mode or 8 bit P input - P output crossbar mode. The data path is multi-algorithm merged, which contains forward path and backward path working in parallel. The processor kernel is introduced for system configuration and control, which is the key component for improving the flexibility and reconfigurability.
+IV. SOFTWARE DEFINED FEC AND THE RECONFIGURE PROCEDURE
+A. FEC Processor Design
+An SDR platform is dedicated for improving the flexibility by introducing programmable processor and software instead of hardware modules. Therefore a FEC processor with programmability is worth considering. The software/hardware partitioning is the principle issue. Software should include as much uncertain part as possible, whereas hardware should include deterministic part and computation intensive part. The hardware behavior can be changed both by configuration registers and instructions. Configuration bits within an instruction are only valid in the instruction execution period (one clock cycle), whereas configuration registers last for a longer time. The registers are initialized by the processor when the reconfiguration procedure is performed. Table I shows all the configuration registers required for the proposed FEC processor.
+Another issue is the instruction-set design. On one viewpoint, the instructions can be designed as macro operations such as ACS, BMU, LLR, Alpha/Beta Update, Cyclic-shifting
+
+Overlapped part (TB length)
+
+Parallel Window 1
+
+Parallel Window 2
+
+Window1 Window2 Window3 Window4 Window1 Window2 Window3 Window4
+
+TB length
+
+PU 1-8 1
+
+1
+
+2
+PU 1-8
+3
+PU 1-8
+4
+PU 1-8
+clk 1
+47
+
+2
+
+3
+
+4
+
+first window
+
+second window
+
+5 9 13 17 21 25 29 33
+
+BMU, ACS
+
+46 45 44 43 42 41 40 39 TB
+
+38 37 NOP
+
+NOP 48 49 50 51
+
+52 56 60 BMU, ACS
+
+Fig. 5. Parallel FBR flow for convolutional code decoding
+
+TABLE I CONFIGURATION REGISTER FILE (CRF)
+
+Reg. Name MODE TS CWL PWL SWL TBL RATE HBCOL HBROW Z INVLEN MASK
+
+Function Algorithm selection Number of trellis states Code word length Parallel window length Sliding window length Traceback window length Viterbi code rate Total columns of the LDPC base matrix Total rows of the LDPC base matrix LDPC parallel factor Turbo interleaving table size Convolutional code generation polynomial
+
+etc., which are performed in sequence. However, for a highthroughput FEC, it is an energy inefficiency way. Because the basic units of them are usually highly optimized and difficult to be shared, and the sequential execution costs more clock cycles and reduces the throughput in several times. In our proposal, these operations are co-exist as independent modules and are working in parallel. The instruction is designed for controlling a trellis forward/backward-recursion step containing all these operations. The configuration bits within the instructions can be specified to change the working modes of the modules. It is verified in our work that all the trellis recursion behaviors including the memory accesses and data path multiplexers can be scheduled by several key-vectors, listed in Table II. In this way, the software and hardware are partitioned by the trellis recursion scheduling, shown in Fig. 6 as an example. In order to speed up the execution of software loops, several hardware loop control units and an instruction repeat unit are introduced. The nested loops and the instruction repeating can be performed automatically by hardware instead of software, which gains no branch cycle cost. In this way, the parameter configuration, decoding flow and basic control are software defined, whereas the executing detail is hardware specified.
+With the aid of FPGA hardware reconfigurability, the hard-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II CONFIGURATION BITS WITHIN DECODING INSTRUCTIONS
+
+Symbol
+αs βs αw βw αen βen br le c rep
+
+Type Incr. counter, 2 bits Decr. counter, 2 bits Incr. counter, 2 bits Incr./decr. counter, 2 bits 1 bit 1 bit 2 bits 1 bit 3 bits 8 bits
+
+Indication Forward step within window Backward step within window Forward window Backward window / Sub step Forward recursion valid flag Backward recursion valid flag Turbo window border flag Special state flag Hardware loop branch flag Inst. repeat times
+
+N , and the parallel degree be P , the code is counted by the address table size (N × log2(N/P ) bits) and route table size (N × log2(P ) bits). For the 3GPP-LTE case with P = 12, it is totally 12 banks of 16-bit 512-deep memory, which costs 6144 clock cycles to update (equals to approximately 62µs). These tables are aiming to support arbitrary interleaving pattern. We are also developing the on-the-fly interleaving computing module for some mainstream standards. In this case the update time is not needed.
+The table for LDPC base matrix also needs to be updated when modes are changed. The base matrix is compressed into a smaller table with each cell records the indexes of the nonzero elements and the shifting values. The size of the table is 13-bit 128-deep designed for 802.11n and 802.16e. Updating the table consumes 128 clock cycles.
+The hardware reconfiguration is also necessary when redesign of the hardware is needed, and is only used when upgrading the device. The reconfigure time is related to the FPGA chip which costs several seconds approximately.
+
+Fig. 6. Code slices for software defined FEC
+ware is possibly to be modified if necessary. Based on the attribute of the instruction-set, new algorithms can be supported by the proposed architecture. the algorithms represented by the FBR are suitable to be mapped into this decoder, which include many trellis related codes and variations.
+B. Software Code Size and Reconfiguration Time Estimation
+For a software defined FEC, the reconfiguration time is essential for handling multi-user up-link decoding or multistandard decoding. The reconfiguration time includes the time for program memory initialization, look-up-tables (interleaving table or base matrix table) initialization, and the configuration registers initialization.
+The code for several standards can be stored in the Program Memory (PM) together, and the program counter (PC) can jump to the desired part, and therefore no PM update is necessary. The code size is 230 lines (32 bits per line) for 802.11n and 802.16e LDPC, 106 lines for 3GPP-LTE Turbo and 38 lines for Convolutional Codes. Totally the code is less than 380 lines which consumes 12.2 kbits storage and costs 3.8µs (at the clock frequency of 100 MHz and one line per cycle) for updating in initialization process. These codes are well folded with the support of hardware loop accelerators. In another case, where parallel Turbo decoding is performed with interleaving conflict, Non-OPeration (NOP) instructions have to be inserted when necessary.
+In addition, the reconfiguration also relates to updating the interleaving table for Turbo decoding. Letting the code size be
+
+V. FPGA IMPLEMENTATION RESULTS
+A. Low Cost Low Power Solution
+Considering that the SDR platform may be cost-sensitive, we firstly discuss the low-end case. The key issue for the lowend FPGA is that the kernel updating of the forward/backward recursion needs to be finished in one clock cycle, which constraints the attainable maximum frequency. The multiplexers for multi-mode merging also contribute to the maximum frequency deduction. To overcome these drawbacks and to avoid write-after-read conflict, we use more pipeline stages and the number of stages are varied with algorithms.
+In this work, we adopt Altera Cyclone III EP3C55F484C6 as the target device. The parallel degree is set to four. The whole design consumes 46717 logic elements, and occupies 84% of the chip resources. 276k memory bits are used which consume 12% of the memory block resource.
+The maximum clock frequency is 63 MHz. The total power consumption estimated by PowerPlay is 608 mW (446 mW for dynamic dissipation, 99 mW for static dissipation, and 64 mW for I/O part). The attainable throughput for several code types is listed in Table IV.
+The resource usage of modules is listed in Table III. It can be concluded that most of the logic and register resources are consumed by the PEs. Regarding to the memory, MBGs consume 30% of memory resources. AGU consumes 23% of memory resources due to the interleaving look-up tables for Turbo. Local buffers inside of PE also consume 46% of the memory bits.
+B. High Performance Solution
+When higher throughput and better performance are required, the parallel degree and the iteration number can be increased. In this occasion we select P = 16. The decoder supports 16-way parallel decoding for Turbo, and 128 sublayer (Z ≤ 128) parallel decoding for LDPC. Stratix IV EP4S40G2F40C2ES1 is chosen as the target device. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE V PERFORMANCE COMPARISON WITH STATE-OF-THE-ART DECODERS
+
+Parameters
+
+FlexiChaP [7]
+
+Murugappa [8]
+
+This approach
+
+Device
+
+Xilinx xc4vlx80-12
+
+Xilinx Virtex-5
+
+Altera Stratix IV
+
+Logic
+
+14495 slices
+
+21164 slices
+
+128775 ALUTs
+
+Maximum frequency Binary Turbo 802.11n LDPC General CC
+
+109 MHz (for FPGA) 5.1 Mbps (5 iters.)a 70 Mbps (10 iters.) a 3.3-54.3 Mbps (16-256 states) a
+
+80 MHz 11.4 Mbps (7 iters.) 36.5 Mbps (10 iters.) -
+
+80 MHz 96.8 Mbps (6 iters.) 230 Mbps (6 iters.) 96 Mbps (64 states)
+
+Note a: The throughput is linearly scaled to 109 MHz clock frequency from the supplied ASIC results in 400 MHz.
+
+TABLE III RESOURCE UTILIZATION FOR MODULES
+
+Module Processor&PM AGU ICB MBGs PEs DMA TOP&CRF Total
+
+Logic Cells 665 (1.4%) 455 (1.0%) 4949 (10.6%) 2339 (5.0%) 36727 (78.6%) 696 (1.5%) 886 (1.9%) 46717 (100.0%)
+
+Registers 315 (3.5%) 148 (1.6%) 428 (4.7%) 180 (2.0%) 6421 (70.6%) 160 (1.8%) 1442 (15.9%) 9094 (100.0%)
+
+Memory Bits 4096 (1.5%) 63936 (23.2%) 0 (0.0%) 81920 (29.7%) 125952 (45.7%) 0 (0.0%) 0 (0.0%) 275904 (100.0%)
+
+TABLE IV DECODING THROUGHPUT FOR LOW END LOW POWER DEVICE
+
+Code 802.11n LDPC Z = 27 802.16e LDPC Z = 32 3GPP-LTE Turbo N = 2048 General CC N ≤ 1908 General CC N ≤ 1868
+
+Parameters 6 iters. 6 iters. 6 iters. 64 states 256 states
+
+Throughput (Mbps) 36.9 60.8 19.5 18.9 4.7
+
+attainable maximum clock frequency is 80 MHz, and the estimated power is 4336 mW (2891 mW for dynamic dissipation and 1305 mW for static dissipation). Totally 89% of resources are utilized, including 128775 combinational ALUTs (71%), 34215 dedicated logic registers (19%), and 1100k memory bits (8%).
+There are few publications on multi-algorithm FEC decoders implemented by FPGA. A solution for LDPC/Turbo duo-mode decoding is revealed in [8], and an LDPC/Turbo/CC tri-mode decoding processor is revealed in [7]. The resource costs and performance are compared in Table V. By introducing 16 parallel processing elements, this proposal reaches much higher throughput with the same (or lower) clock frequency, and the resource utilization is acceptable for nowadays FPGA chips.
+
+Radio Peripheral) [9] include an FPGA chip for baseband processing, it is promising to integrate the proposed decoding core with these systems.
+VII. ACKNOWLEDGEMENT
+This project is supported by the China 863 Program 2014AA01A705. The authors would like to thank to Zhenyu Liu and Yinan Wang for their valuable suggestions on this paper.
+REFERENCES
+[1] C. Van Berkel, “Multi-core for mobile phones,” in Design, Automation Test in Europe Conference Exhibition, 2009. DATE ’09., April 2009, pp. 1260–1265.
+[2] Y. Lin, H. Lee, M. Woh, Y. Harel, S. Mahlke, T. Mudge, C. Chakrabarti, and K. Flautner, “SODA: A Low-power Architecture For Software Radio,” in Computer Architecture, 2006. ISCA ’06. 33rd International Symposium on, 2006, pp. 89–101.
+[3] D. Liu, Embedded DSP Processor Design: Application Specific Instruction Set Processors, ser. Morgan Kaufmann. Morgan Kaufmann/Elsevier, 2008. [Online]. Available: http://books.google.se/books?id=B8hEDekXOG0C
+[4] S. Lin and D. J. Costello, Error Control Coding, Second Edition. Upper Saddle River, NJ, USA: Prentice-Hall, Inc., 2004.
+[5] M. Mansour, “A Turbo-Decoding Message-Passing Algorithm for Sparse Parity-Check Matrix Codes,” Signal Processing, IEEE Transactions on, vol. 54, no. 11, pp. 4376–4392, Nov 2006.
+[6] S. Yoon and Y. Bar-Ness, “A parallel MAP algorithm for low latency turbo decoding,” Communications Letters, IEEE, vol. 6, no. 7, pp. 288– 290, July 2002.
+[7] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” in Turbo Codes and Related Topics, 2008 5th International Symposium on, Sept 2008, pp. 84–89.
+[8] P. Murugappa, J. Bazin, A. Baghdadi, and M. Jezequel, “FPGA prototyping and performance evaluation of multi-standard Turbo/LDPC Encoding and Decoding,” in Rapid System Prototyping (RSP), 2012 23rd IEEE International Symposium on, Oct 2012, pp. 143–148.
+[9] GNU Radio Wiki website - USRP Docs. [Online]. Available: http://gnuradio.org/redmine/projects/gnuradio/wiki/USRP
+
+VI. CONCLUSION
+In this paper, a software defined flexible FEC processor is proposed. A unified computational kernel supporting all these algorithms is introduced. The parallel architecture is proposed to reach the high-throughput requirement. The fast reconfigurability is offered by the software and the full reconfigurability is guaranteed by the FPGA device. Results show that the proposed processor can be applied to both low power low cost situations and high performance situations. Because SDR platforms such as USRP (Universal Software
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:23:20 UTC from IEEE Xplore. Restrictions apply.
+
+

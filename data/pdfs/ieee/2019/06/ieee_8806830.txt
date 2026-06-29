@@ -1,0 +1,613 @@
+Adapting Layer RBERs Variations of 3D Flash Memories via Multi-granularity Progressive LDPC Reading
+
+Yajuan Du1, Yao Zhou1, Meng Zhang2, Wei Liu1, Shengwu Xiong1,∗
+1School of Computer Science and Technology, Wuhan University of Technology, Wuhan, China
+2Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan, China ∗Corresponding author: xiongsw@whut.edu.cn
+
+ABSTRACT
+Existing studies have uncovered that there exist significant Raw Bit Error Rates (RBERs) variations among different layers of 3D flash memories due to manufacture process variation. These RBER variations would cause significantly diversed read latencies when reading data with traditional Low-Density Parity-Check (LDPC) codes designed for planar flash memories, which induces sub-optimal read performance of flash-based Solid-State Drives (SSDs).
+To investigate the latency diversity, this paper first performs a preliminary experiment and observes that LDPC read levels proportional to latencies increase in diverse speeds along with data retention. Then, by exploiting the observation results, a MultiGranularity LDPC (MG-LDPC) read method is proposed to adapt level increase speed for each layer. Five LDPC engines with varied increase granularity are designed to adapt RBER speed requirements. Finally, two implementations for MG-LDPC are applied to assign LDPC engines for each flash layer in a fixed way or dynamically according to prior read levels. Experimental results show that the proposed two implementations can reduce SSD read response time by 21% and 47% on average, respectively.
+CCS CONCEPTS
+• Computer systems organization → Reliability; Firmware;
+KEYWORDS
+3D Flash Memories, Read Performance, Low-Density Parity-Check Codes, Layer RBERs Variation
+ACM Reference Format: Yajuan Du, Yao Zhou, Meng Zhang, Wei Liu, Shengwu Xiong. 2019. Adapting Layer RBERs Variations of 3D Flash Memories via Multi-granularity Progressive LDPC Reading. In The 56th Annual Design Automation Conference 2019 (DAC ’19), June 2–6, 2019, Las Vegas, NV, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3316781.3317759
+1 INTRODUCTION
+The technology development of 3D flash memories greatly promotes the massive production of high-density Solid-State Drives
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. DAC ’19, June 2–6, 2019, Las Vegas, NV, USA © 2019 Association for Computing Machinery. ACM ISBN 978-1-4503-6725-7/19/06. . . $15.00 https://doi.org/10.1145/3316781.3317759
+
+(SSDs) [7, 13]. However, there exist new challenges due to the layerstacked structure. Firstly, the block size is largely increased, which induces low efficiency of garbage collection [2, 4]. Secondly, severe layer-to-layer interferences happens [3, 9], which needs effective methods to mitigate. At last but the most important, process variations (PVs) among different layers induce significant variations on access speed and reliability [3, 9], which requires novel flash access schemes. This paper aims to improve 3D flash read performance with Low-Desity Parity-Check (LDPC) codes under the layer-to-layer reliability PVs.
+LDPC codes [10, 16], as a kind of advanced Error Correction Code (ECC) have been widely used in current SSDs because of high error correction capability [8], that is proportional to LDPC read levels. Note that we call reads with LDPC codes as LDPC reads in this paper. As larger LDPC read level provides higher ECC strength but results in higher read latency, existing methods apply progressive LDPC reading that begins at a low read level and increments oneextra level when decoding failure happens. Thus, balanced ECC strength and read latency can be achieved for current Raw Bit Error Rates (RBERs) [5, 18]. This method is effective for planar flash memories as read latencies on blocks increase smoothly with similar speeds. However, the case in 3D flash memories becomes complicated because that RBERs in middle/bottom layers can reach up to 6X of that in top layers due to PVs [9].
+In order to investigate layer-to-layer PVs of 3D flash memories, this paper first performs a preliminary experiment and observes that RBERs of middle and bottom layers increase more sharply than that of top layers. Thus, existing progressive LDPC read methods with a single read-level-increment granularity are not suitable any more. Then, a Multi-Granularity progressive LDPC read method called MG-LDPC is proposed to adapt layer RBERs variations by applying multiple read-level-increment granularity for different flash layers in LDPC reading. Five LDPC engines with varied granularity are designed. For the engine with a high granularity, intermediate read levels that fails LDPC decoding can be directly jumped over and unnecessary read latencies can be avoided. Flash layers can adaptively choose the suitable LDPC engine in a fixed way or dynamically according to prior read level. Finally, we implement MG-LDPC in Disksim with SSD extension and evaluate it with nine real-world workloads. Compared with existing progressive LDPC methods, experimental results show that the proposed method can improve up to 47% of 3D flash read performance on average. Contributions of this paper are listed as follows.
+• Observe that RBERs of 3D flash layers increase in significantly diversed speeds. Existing single-granularity LDPC read methods would induce sub-optimal read performance.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+• Propose a multi-granularity LDPC reading method, MGLDPC, by exploiting above observation. Five multi-granularity engines are designed and assigned to adapt the varied RBER speeds of flash layers.
+• Evaluate MG-LDPC with real-world workloads in Disksim with SSD extension and verifies that read performance of 3D flash memories can be significantly improved.
+
+Rest of this paper is organized as follows. Section 2 presents background and motivation of this paper. Section 3 describes detailed designs of MG-LDPC. The performance of MG-LDPC is evaluated with basic experiments and sensitivity studies in Section 4. Section 5 presents related works and Section 6 concludes this paper.
+
+2 BACKGROUND AND MOTIVATION
+
+This section first presents the basics of 3D flash memories, and then introduces the current progressive LDPC read method. Finally, the motivation of this paper is presented with a preliminary experiment to uncover the increasing speed variations of LDPC read levels in different 3D flash layers.
+
+2.1 Layer-stacked 3D Flash Memories
+
+Due to scaling limitations, the storage capacity of planar flash memories can hardly be further increased because of severe reliability issues, which promotes the emergence and development of 3D flash memories. The storage capacity is significantly improved by increasing the number of vertically stacked layers. However, interferences between layers are deteriorated, and data reliability concerns still exist, which requires advanced ECC such as LDPC codes to alleviate, as introduced in Section 2.2.
+Most existing 3D flash memory designs use charge trap (CT) transistor, which replaces the floating gate. CT-based flash layer contains an insulator, in which electrons can be stored in a more stable state. A section of the layer-stacked structure of 3D flash is shown in Figure 1, in which there are three dimensions: wordlines, bitlines, and layers. It can be seen that a block contains data across all the layers, which largely increases the block size and induces the big block problem. Besides, as manufacture process may induce varied characteristics on each layer, strengths of storing data are also diversed among different layers.
+
+Block K+2 Block K+1
+Block K
+
+Wordline
+
+Layers
+
+Bitline
+
+Figure 1: The layer-stacked structure of 3D flash memories.
+2.2 Progressive LDPC Reading
+As advanced ECC, LDPC codes can provide multi-level high error correction strengths. And higher read levels often induce high flash read latency that increases quickly along with the level, as shown in the first three columns of Table 1. Note that the "ECC strength" column shows the RBER ranges in which data can be successfully decoded by the corresponding read level. Besides, as read levels cannot be decided in advance, it is not trival to find the ideal read
+
+latency. The existing progressive LDPC read method [18] balances error correction strength and read latency by progressively applying increasing read levels in a read-retry way, as shown in Figure 2.
+
+Table 1: ECC strengths and read latencies of LDPC levels.
+
+Level ECC strength Latency (μs) Accumulated latency(μs)
+
+1
+
+< 0.005
+
+85
+
+85
+
+2 [0.005, 0.006)
+
+109
+
+194
+
+3 [0.006, 0.008)
+
+133
+
+327
+
+4 [0.008, 0.009)
+
+157
+
+484
+
+5 [0.009, 0.01)
+
+181
+
+665
+
+6 [0.01, 0.012)
+
+205
+
+870
+
+7 [0.012, 0.013]
+
+229
+
+1099
+
+Data transfer to controller
+
+Initialize: level i =1
+
+Sensing with level i
+
+LDPC decoding
+
+succeed Read finish
+
+Increment
+
+fail
+
+level i=i+1
+
+澳
+
+Figure 2: The progressive LDPC read method.
+
+We can see from Figure 2 that once LDPC decoding is successful, the read process will end. Otherwise, a retried read happens with a higher read level. The iterative read-retries continue until the maximal read level is reached. Note that one extra read level will be incremented when LDPC decoding fails. In this way, current RBERs can be adapted with suitable read latencies and relatively low read levels. However, high accumulated latency will be induced for high RBERs. As shown in Table 1, when the read level is 1, the latency is 85μs, and the accumulated latency is the lowest. However, when the read level is 7, the latency increases to 229μs, but the accumulated latency from read levels 1 to 7 reaches up to 1099μs. This paper studies the progressive LDPC read method in the layer-stacked structure of 3D flash memories.
+2.3 Motivational Experiment
+To investigate the LDPC read efficiency of 3D flash memories, this section studies the RBER variations via a preliminary experiment. It is uncovered that there exist significant read level variations among different layers. This observation shows that the traditional progressive LDPC method is not effective anymore with the granularity of one extra level in each read-retry. Details of our motivational experiment are presented as follows.
+Due to the manufacture PVs of 3D flash memories, RBERs of each layer are significantly different. RBERs of middle layers can reach more than 6X of that in top layers. By carefully calibrating RBER results when P/E cycle is 10000 in [9], RBERs of five representative flash layers can be obtained, as shown in Table 2. These five layers correspond to the 3th, 9th, 15th, 21th, the 27th layer of 30 flash layers. It can be seen from the table that RBERs of the data in the other four layers are 2.6X, 6.6X, 5.3X, 4.0X of that in the 3th layer, respectively. Besides, RBERs of data in middle layers are the highest while that in the top layers are the lowest.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+The main error sources in 3D flash memories come from the layer-to-layer interference and data retention. By considering these two factors, we draw the RBERs increase curves of three typical layers along with data retention, as shown in Figure 3(a). As there is currently no simulation model for 3D flash memories, the RBER results of the top layer are obtained according to planar flash error models and that of the other two layers are computed by multiplying corresponding times according to Table 2. We can see from the figure that RBER of the top layer does not change obviously with data retention and maintains at a relatively low level, while RBERs of the middle and bottom layers sharply increase when data retention increases at high levels. Note that RBERs data in different layers vary significantly with data retention. Combining the ECC strengths of LDPC read levels in Table 1, the required read levels of the three typical layers are obtained, as shown in Figure 3(b). We can see that the top layer only requires Level 1 during the investigated period while the middle layer and bottom layer requires multiple high read levels. Besides, the read levels sharply increase, especially for the middle layers. This would induce largely accumulated latencies on middle and bottom layers.
+
+Table 2: RBERs variation of 3D flash layers [9]
+
+Layers
+
+3 9 15 21 27
+
+RBER(10−4) 0.6 1.6 4.0 3.2 2.4
+
+Times 1.0 2.6 6.6 5.3 4
+
+濆澶澹濆濧 激澸濄澷澔濆濙濕濘澔激濙濪濙濠
+
+澤澢澤澥澬 澤澢澤澥澪 澤澢澤澥澨 澤澢澤澥澦
+澤澢澤澥 澤澢澤澤澬 澤澢澤澤澪 澤澢澤澤澨 澤澢澤澤澦
+澤 澦
+
+澪 澥澤 澥澨 澥澬 澦澦 澦澪 澧澤 澧澨 澧澬
+濆濙濨濙濢濨濝濣濢澔濈濝濡濙澔澜澔濘濕濭澔澝
+
+濨濣濤澔濠濕濭濙濦
+
+濡濝濘濘濠濙澔濠濕濭濙濦
+
+濖濣濨濨濣濡澔濠濕濭濙濦
+澳
+
+(a) RBERs
+
+澬
+
+澫
+
+澪
+
+澩
+
+澨
+
+澧
+
+澦
+
+澥
+
+澤
+
+澤
+
+澥澤
+
+澦澤
+
+澧澤
+
+澨澤
+
+濆濙濨濙濢濨濝濣濢澔濈濝濡濙澔澜澔濘濕濭澔澝澔
+
+濨濣濤澔濠濕濭濙濦 濡濝濘濘濠濙澔濠濕濭濙濦 濖濣濨濨濣濡澔濠濕濭濙濦
+
+澳
+
+(b) LDPC read levels
+
+Figure 3: Comparison of RBERs and LDPC read level of three layers along with data retention time.
+
+According to above analysis, as different 3D flash layers show significant RBER variations and diverse read level increase speeds, the current LDPC read method with a single level-increasing granularity cannot satisfy the low latency requirements of different layers at the same time. Directly using the current read method induces high accumulated latency and sub-optimal read performance. Thus, this paper proposes a multi-granularity progressive LDPC read method called MG-LDPC to apply varied level-increase granularity when reading different flash layers.
+3 OUR MG-LDPC READING METHOD
+This section first presents the architectural overview of MG-LDPC, and then illustrates details of its two implementations in 3D flash memories.
+3.1 Overview of MG-LDPC
+The system architecture with MG-LDPC integrated into the 3D flash controller is presented in Figure 4. When the host requests data from 3D flash memory, the physical addresses of the data are first located through the mapping table in the flash translation layer of the
+
+controller. Then, the data is read out and transferred into the MGLDPC component to obtain the original data. Five LDPC engines are designed by MG-LDPC with different progressive granularity, details of which are illustrated in Section 3.2. An important task of MG-LDPC is to assign LDPC engines for different flash layers. Two assigning implementations are provided, as shown in Figure 4. The first implementation directly distributes multiple layers into each LDPC engine in a fixed way, named as FixAdp, according to the layer read level characteristics in Section 2.3. The other implementation adapts LDPC engines in a dynamic way, called DynAdp, according to previous read levels stored in extra flash space. Details of these two implementations are presented in the following sections.
+
+SSD Controller
+DRAM
+
+Host
+
+Host Interface
+
+Buffer Manager
+
+Processor
+
+Judge layer
+
+MG-LDPC FixAdp
+
+DynAdp
+
+33D3DD FFlFalalsashshh aararrrrarayaysyss
+
+Figure 4: Architectural overview of MG-LDPC.
+
+3.2 Fixed MG-LDPC Engines
+This section presents the detailed design of the five LDPC engines, as well as FixAdp, the fixed engine assignment. Since the current LDPC method cannot satisfy the low latency requirements of different layers at the same time, different layers require varied read level increasing granularity in LDPC reading. By analyzing Figure 3 (b) in Section 2.3, it can be seen that while low read level is enough to ensure the correctness of data in the top layer, the required read levels in middle and bottom layers probably become very high due to the high RBERs. In order to adapt the variety of level increasing speeds, the five LDPC engines are designed with granularity of 1, 2, 3, 4, and 6, respectively. And the beginning level and maximal level are set to be 1 and 7, respectively, in current 7-level designed LDPC read method.
+
+Read request
+
+Judge layer
+
+} Layer 1
+Layer 2 噯 噯
+} Layer m
+Layer m+1 噯
+}噯
+LLaayyeerrmn-+11
+Layer n
+
+Fixed Engines LLDDPPCC engine wenitghingera1nularity 1 噯 噯
+LDPC engine with granularity 6
+噯 噯
+LDPC engine with granularity 3
+
+Figure 5: MG-LDPC with fixed LDPC engines.
+FixAdp divides all flash layers into five parts, each of which adopts the corresponding LDPC engine by analyzing RBERs. As shown in Figure 5, once a read request comes in, the layer information is first obtained from metadata and then used to determine
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+which LDPC engine should be used by analyzing RBER characteristics obtained from simulations. For example, there are 30 layers in 3D flash with P/E cycle equal to 10000, and the data RBERs of top layers from 1 to 9 are relatively low. Thus, FixAdp chooses the first LDPC engine with one-level increase granularity. And the other engines are assigned to the left layers as follows. Layers from 10 to 13 are assigned with the second engine with the granularity of 2 while 14 to 18 layers are considered as middle layers and assigned with the third engine with the highest granularity of 6. The fourth LDPC engine with the granularity of 4 is used in 19 to 23 layers, and the 24 to 30 layers are considered as the bottom layers and read by the LDPC engine with the granularity of 3. As the fixed LDPC engine assignment may become not applicable when simulated RBER characteristics largely deviated, a dynamic engine assignment method is provided by storing read level information, details of which are presented as follows.
+3.3 Dynamic MG-LDPC Engines
+DynAdp also uses the five LDPC engines mentioned above to read 3D flash layers, and dynamically decides which engine to use according to previous read levels of each layer stored in extra space in flash. Hence, DynAdp is more flexible when RBERs patterns change. As shown in Figure 6. When the read request comes in, after judging which layer the data belongs to, the initial step is to perform the progressive LDPC reading in the first LDPC engine with granularity of 1, and then the final read level is recorded into the extra storage space. Denote that the recorded read level is R. For each layer, the initial value of R is 1, and R will be updated when the final read level of current layer changes. The layer would be assigned to the corresponding engine with the granularity of R, which means that each read-retry step increases R read levels at one time.
+
+Read request
+
+Judge layer
+
+Layer 1 Layer 2
+噯 噯 Layer m Layer m+1 噯 噯 LLaayyeerrmn-+11
+Layer n
+
+Dynamic Engines
+Data transfer and LDPC decoding
+
+Memory sensing
+
+Decoding Succeed?
+
+Read Finish
+
+Go to engine with
+
+granularity R
+
+No
+
+Yes
+
+Stored layer read level
+
+Update level R
+
+Figure 6: MG-LDPC with dynamic LDPC engines.
+
+The read process with DynAdp is briefly summarized in Algorithm 1. When accessing a flash layer for the first time, DynAdp sets the read level as 1, and then read data using the LDPC engine with granularity of 1, as shown in lines from 5 to 7 of the Algorithm 1. Once data are successfully read out, the read level R would be recorded immediately. Besides, the stored read level will be updated again when layer read level changes to R , as shown in lines from 15 to 17 of Algorithm 1. The flash controller will use the LDPC engine with granularity of R to read the data in the current layer for the next time. DynAdp can adapt diversed RBERs increase speeds of flash layers more accurately.
+
+Algorithm 1: Engine Assignment Algorithm in DynAdp
+
+INPUT: layer , P/E cycle, retention, paдe_size;
+
+OUTPUT: read_level_old, paдe_num, averaдe_read_time;
+
+1: while layer > 0 do
+
+2: if read_level_old[layer]==0 then
+
+3:
+
+for r = 1; r ≤ 7; r + + do
+
+4:
+
+perform the fine_grained Progressive LDPC Decoding;
+
+5:
+
+if error _rate < ERR_RAT E[r ] then
+
+6:
+
+precision = r ;
+
+7:
+
+read_level_old[layer ] = precision;
+
+8:
+
+break;
+
+9:
+
+end if
+
+10:
+
+end for
+
+11: end if
+
+12: if read_level_old[layer]==R then
+
+13:
+
+for r = 1; r ≤ 7; r + = R do
+
+14:
+
+perform LDPC engine R Decoding;
+
+15:
+
+if error _rate < ERR_RAT E[r ] then
+
+16:
+
+precision = r ;
+
+17:
+
+read_level_old[layer ] = precision;
+
+18:
+
+break;
+
+19:
+
+end if
+
+20:
+
+end for
+
+21: end if
+
+22: end while
+
+3.4 Discussion
+About Settings of LDPC Engines. According to RBERs distributions in 3D flash memories [9], this method uses five commonly used step sizes to form LDPC engines, and the number of engines can be increased or decreased according to actual use. The impact of engine numbers and level increase steps on read performance would be investigated in our future work.
+Algorithm Complexity. The complexity of Algorithm 1 is O(1) in selecting which granularity to use. Noting that current maximal LDPC read level is 7, complexity of traditional LDPC methods is not high. As some intermediate unnecessary reading steps have been removed in MG-LDPC, DynAdp does not increase computing complexity, but reduces reading iterations by using extra storage of the previous read levels for each layer. Beside, due to the uniqueness of the codeword, our method does not affect the accuracy of reading.
+Storage Overhead. The storage overhead for DynAdp can be estimated based on our experimental settings. For the 64GB flash with 30 layers, the previous read level of each layer takes only one Byte. Thus, the overall storage overhead is 30 Bytes, which is negligible. As the FixAdp implementation directly assigns LDPC read engines, no extra complexity and storage overhead are induced. In summary, the proposed MG-LDPC method can decrease LDPC read latency and optimize flash read performance with reduced complexity and negligible extra storage.
+4 EVALUATION
+This section first introduces the experiment settings to evaluate MGLDPC. Then experimental results with basic settings and sensitivity studies are presented and analyzed.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+4.1 Experimental Setup
+
+The evaluation experiment for MG-LDPC is performed on Disksim with SSD extensions [1, 6]. Experimental setup and parameters are summarized in Table 3, which is mainly based on the specifications of the 3D NAND chip manufactured by Samsung [3]. As shown in Table 4, nine workloads[11, 14] with obvious differences in read/write ratios are chosen to verify the effectiveness of the proposed method. Four LDPC methods have been implemented and compared. PrLDPC is the current progressive LDPC method [18]; LaLDPC is the method which estimates the starting read level of pages that exist in a mapping cache [5]; FixAdp is one implementation of MG-LDPC with fixed LDPC engines; DynAdp is the other implementation of MG-LDPC with dynamic engine assignment.
+
+Table 3: Experimental Parameters
+
+Item
+
+Specification
+
+Flash size
+
+64GBs
+
+Page size
+
+16KBs
+
+Number of pages per block
+
+384
+
+Page write latency(μs)
+
+600
+
+Page read latency(μs)
+
+49
+
+Data transfer rate
+
+553Mbps
+
+Block erase time(ms)
+
+4
+
+Table 4: Statistics of Workloads
+
+Workload Reads Writes Read (Write) ratio)
+
+rsrch1
+
+1110
+
+334365
+
+3%(97%)
+
+ts0
+
+3976632 14127647
+
+22%(78%)
+
+wdev0 5172477 13153463
+
+28%(72%)
+
+hm0 1167249 1932058
+
+37%(63%)
+
+proj4 1301436 824502
+
+61%(39%)
+
+prn0 19136490 5691238
+
+77%(23%)
+
+web1 7992543 1422974
+
+85%(15%)
+
+proj3 3471062 55074
+
+98%(2%)
+
+F1
+
+6508016
+
+4
+
+99.9%(0)
+
+The P/E cycle and initial data retention time are set as 8000 and two months in the basic experiment. In order to comprehensively investigate read performance of MG-LDPC, sensitivity study is performed on two parameters. For one hand, we take the P/E cycle 8000 as a quantitative, and retention time as a variable with three values of two months, three months and four months. For the other hand, by taking the retention time of three months as a quantitative, P/E cycle is used as a variable with three values of 6000, 8000, 10000.
+4.2 Flash Read Latency
+Experimental results of flash read latency for the four methods are shown in Figure 7. Flash read latency is the total latency involved in flash sensing, data transferring, and LDPC decoding. We take PrLDPC as the baseline to compute the normalized read latency in all result figures, Since the experimental results and analysis of the energy overhead of MG-LDPC is consistent with flash read latency, this article does not discuss much.
+Compared with PrLDPC, the proposed two implementations have different degrees of reductions on flash read latency under the tested nine workloads, and 20% and 39% of PrLDPC read latency are decreased on average, respectively. Compared with LaLDPC, although FixAdp only reduces the latency by 4%, DynAdp can
+
+greatly decrease the read latency by 23%, which verifies that the proposed method can work effectively.
+In order to explain results in Figure 7(a) more clearly, Figure 7(b) plots the read level distribution of the four methods under the workload of hm0. It can be seen that the read level distributions under PrLDPC and LaLDPC are similar and mainly concentrated into levels less than 4. The read levels of FixAdp and DynAdp are obviously higher than the other two methods, which means that when reading data with MG-LDPC, the read levels are shifted into higher levels, thus avoiding many unnecessary read-retry latencies in low levels, and further reducing the read latency.
+
+濆濙濕濘澔激濕濨濙濢濗濭
+
+澥澢澦 澥
+澤澢澬 澤澢澪 澤澢澨 澤澢澦
+澤
+
+(a)
+
+濄濦激澸濄澷
+
+激濕激澸濄澷
+
+澺濝濬澵濘濤
+
+澸濭濢澵濘濤
+
+澳
+
+澪澤澤澤澤澤
+
+澩澤澤澤澤澤
+
+濂濩濡濖濙濦澔濣濚澔激濙濪濙濠
+
+澨澤澤澤澤澤
+
+澧澤澤澤澤澤
+
+澦澤澤澤澤澤
+
+澥澤澤澤澤澤
+
+(b)
+
+澤 濠濙濪濙濠澔澥 濠濙濪濙濠澔澦 濠濙濪濙濠澔澧 濠濙濪濙濠澔澨 濠濙濪濙濠澔澩 濠濙濪濙濠澔澪 濠濙濪濙濠澔澫 澳
+
+Figure 7: Flash read latency results.
+
+4.3 SSD Read Response Time
+Experimental results of SSD read response time which computes sum of read latency and queueing time in the controller are shown in Figure 8. Three observations can be obtained. Firstly, FixAdp and DynAdp both perform better than PrLDPC, and up to 47% of response performance has been improved on average of workloads. This is because that the proposed method can remove unnecessary latencies in middle and bottom layers. Secondly, DynAdp performs better than LaLDPC and 26% of read response time has been decreased. And access patterns of workloads largely decides the performance variations. This is because that both method utilize extra storage to record previous read levels that closely relates to workload patterns. At last, FixAdp sometimes performs worse than LaLDPC but shows more stable for workloads, and the average response time has been improved by 3%. This is because that the fixed assignment does not rely on workload patterns as no extra storage is used. FixAdp and DynAdp of MG-LDPC can be chosen according to actual requirements in practice.
+
+濆濙濕濘澔濆濙濧濤濣濢濧濙澔濈濝濡濙
+
+澥澢澦 澥
+澤澢澬 澤澢澪 澤澢澨 澤澢澦
+澤
+
+濄濦激澸濄澷 激濕激澸濄澷 澺濝濬澵濘濤 澸濭濢澵濘濤 澳
+Figure 8: Read response time results.
+The sensitivity study results on two parameters of initial data retention time and P/E cycle are shown in Figure 9. It can be observed that when the retention time increases, both of FixAdp and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+濆濙濕濘澔濆濙濧濤濣濢濧濙澔濈濝濡濙 濆濙濕濘澔濆濙濧濤濣濢濧濙澔濈濝濡濙
+
+濄澣澹澔濗濭濗濠濙澱澬澤澤澤
+
+濆濙濨濙濢濨濝濣濢澔濨濝濡濙澱濨濜濦濙濙澔濡濣濢濨濜濧
+
+澥澢澦
+
+澥澢澦
+
+澥
+
+澥
+
+澤澢澬 澤澢澬
+澤澢澪
+
+澤澢澪
+
+澤澢澨
+
+澤澢澨
+
+澤澢澦
+
+澤澢澦
+澤 濨濫濣澔濡濣濢濨濜
+
+濨濜濦濙濙澔濡濣濢濨濜濧
+
+濚濣濩濦澔濡濣濢濨濜濧
+
+澤 澪澤澤澤
+
+澬澤澤澤 濄澣澹澔濗濭濗濠濙
+
+澥澤澤澤澤
+
+濄濦激澸濄澷 激濕激澸濄澷 澺濝濬澵濘濤 澸濭濢澵濘濤 澳
+
+濄濦激澸濄澷 激濕激澸濄澷 澺濝濬澵濘濤 澸濭濢澵濘濤 澳
+
+(a) Retention Time
+
+(b) P/E cycles
+
+Figure 9: Sensitivity study results.
+
+DynAdp still perform better than the other two methods and improve the performance of existing LDPC methods by up to 36% and 53% on average, respectively. However, when the retention time is short, the fixed method performs worse, as shown in Figure 9(a). This is because that for short retention, only low read levels are induced and latencies from intermediate levels are small, with which fixed LDPC engine assignment would not be so efficient any more. When the P/E cycle increases, read performance improvements by the proposed method are more obvious, as shown in Figure 9(b). DynAdp behaves better and can reduce the response time significantly for high P/E cycles. In summary, FixAdp can improve read performance for long-kept data while DynAdp behaves well under different settings but requires extra storage overhead.
+5 RELATED WORKS
+Existing works related to this paper can be classified into two aspects with LDPC read methods and access performance optimization of 3D flash memories. The first aspect aims to optimize LDPC read schemes for flash memories. Zhao et al. [18] proposed a fine-grained progressive LDPC reading method to increase one extra level when reading with a lower level fails, which induces matched latency for current RBERs. Sun et al. [12] proposed intracell data placement interleaving and intra-cell data dependence aware LDPC decoding to efficiently improve the LDPC decoding efficiency. Zhang et al. [17] exploited the error correlations between different flash pages to accelerate LDPC decoding convergence. Du et al. [5] proposed a latency-aware LDPC read method by exploiting read level characteristics along with data retention.
+The second aspect aims to optimize access performance of 3D flash memories. Luo et al. [9] exhibited a new phenomenon of layerto-layer process variation in 3D flash chip, and designed several methods to estimate optimal sensing levels to improve read latency. Mao et al. [15] presented a process-variation tolerant reliability management strategy for 3D flash memories, which enhances the reliability and reduces the access latency effectively. Chen et al. [3] presented a performance boosting strategy to optimize the access performance of CT-based 3D flash by utilizing its asymmetric page access speed feature. Compared with these works, this paper mainly focuses on read performance improvement of 3D flash memories by exploiting the LDPC read level variations among layers based on the RBER variations [9].
+6 CONCLUSION
+In order to adapt layer RBERs variations of 3D flash memories, this paper proposes the multi-granularity progressive LDPC read method to apply varied read level increase granularity to read different flash layers. Two implementations with fixed and dynamic
+
+granularity assignments are provided. The fixed one directly sep-
+arates layers into five parts while the dynamic one decides the
+granularity according to previous read levels stored in extra stor-
+age space. From the experimental results, the proposed method
+can effectively improve read performance of 3D flash memories
+compared with the existing LDPC methods. This paper is the first
+work to re-design the LDPC read scheme in 3D flash memories.
+ACKNOWLEGEMENT
+This work is partially supported by National key Research & Devel-
+opment Program of China (No. 2016YFD0101903), National Natural
+Science Foundation of China (No. 61802287, 61802288, 61702386)
+and the Defense Industrial Technology Development Program (No.
+JCKY2018110C165).
+REFERENCES
+[1] Nitin Agrawal, Vijayan Prabhakaran, Ted Wobber, John D Davis, Mark S Manasse, and Rina Panigrahy. 2008. Design Tradeoffs for SSD Performance. In USENIX Annual Technical Conference. 57–70.
+[2] Hsin Yu Chang, Chien Chung Ho, Yuan Hao Chang, Yu Ming Chang, and Tei Wei Kuo. 2016. How to enable software isolation and boost system performance with sub-block erase over 3D flash memory. In Eleventh Ieee/acm/ifip International Conference on Hardware/software Codesign and System Synthesis. 6.
+[3] Shuo Han Chen, Yen Ting Chen, Hsin Wen Wei, and Wei Kuan Shih. 2017. Boosting the Performance of 3D Charge Trap NAND Flash with Asymmetric Feature Process Size Characteristic. In Design Automation Conference. 83.
+[4] Tseng Yi Chen, Yuan Hao Chang, Chien Chung Ho, and Shuo Han Chen. 2016. Enabling sub-blocks erase management to boost the performance of 3D NAND flash memory. In Design Automation Conference. 1–6.
+[5] Yajuan Du, Deqing Zou, Qiao Li, Liang Shi, Hai Jin, and Chun Jason Xue. 2017. LaLDPC: Latency-aware LDPC for read performance improvement of Solid State Drives. In International Conference on Massive Storage Systems and Technology (MSST). IEEE.
+[6] Steve Schlosser Greg Ganger John Bucy, Jiri Schindler. 2008. The DiskSim Simulation Environment (v4.0). http://www.pdl.cmu.edu/DiskSim/. Accessed: 2018-11.
+[7] Chulbum Kim, Doo-Hyun Kim, Woopyo Jeong, Hyun-Jin Kim, Il Han Park, HyunWook Park, JongHoon Lee, JiYoon Park, Yang-Lo Ahn, Ji Young Lee, et al. 2018. A 512-Gb 3-b/Cell 64-Stacked WL 3-D-NAND Flash Memory. IEEE Journal of Solid-State Circuits 53, 1 (2018), 124–133.
+[8] Ren-Shuo Liu, Meng-Yen Chuang, Chia-Lin Yang, Cheng-Hsuan Li, Kin-Chu Ho, and Hsiang-Pang Li. 2014. EC-cache: Exploiting error locality to optimize LDPC in NAND flash-based SSDs. In Design Automation Conference (DAC). ACM, 1–6.
+[9] Yixin Luo, Saugata Ghose, Yu Cai, Erich F Haratsch, and Onur Mutlu. 2018. Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation. In Abstracts of the 2018 ACM International Conference on Measurement and Modeling of Computer Systems. ACM, 106–106.
+[10] David JC MacKay. 1999. Good error-correcting codes based on very sparse matrices. Information Theory, IEEE Transactions on 45, 2 (1999), 399–431.
+[11] MSR. 2009. MSR Cambridge Traces. http://iotta.snia.org/traces/388. [12] Hongbin Sun, Wenzhe Zhao, Minjie Lv, Guiqiang Dong, Nanning Zheng, and
+Tong Zhang. 2016. Exploiting Intracell Bit-Error Characteristics to Improve Min-Sum LDPC Decoding for MLC NAND Flash-Based Storage in Mobile Device. VLSI System, IEEE Transactions 24 (2016), 2654–2664. [13] Toshiba. 2017. 3D Flash Memory: Scalable, High Density Storage for Large Capacity Applications. https://www.toshiba.com/tma/technologymoves/3d-flash. jsp. Accessed: 2018-11. [14] UMass. 2007. UMass Trace Repository. http://traces.cs.umass.edu/index.php/ Storage/Storage. Accessed: 2018-11. [15] Yi Wang, Lisha Dong, and Rui Mao. 2017. P-Alloc: Process-Variation Tolerant Reliability Management for 3D Charge-Trapping Flash Memory. ACM Transactions on Embedded Computing Systems (TECS) 16, 5s (2017), 142. [16] Debao Wei, Libao Deng, Mengqi Hao, Liyan Qiao, and Xiyuan Peng. 2018. A joint-LDPC decoding scheme based on retention error characteristics for MLC NAND flash memory. Microprocessors & Microsystems 60 (2018), 65–76. [17] Meng Zhang, Fei Wu, Xubin He, Ping Huang, Shunzhuo Wang, and Changsheng Xie. 2016. REAL: A Retention Error Aware LDPC Decoding Scheme to Improve NAND Flash Read Performance. In Symposium on Mass Storage Systems and Technologies (MSST). IEEE. [18] Kai Zhao, Wenzhe Zhao, Hongbin Sun, Xiaodong Zhang, Nanning Zheng, and Tong Zhang. 2013. LDPC-in-SSD: making advanced error correction codes work effectively in solid state drives. In Presented as part of the 11th USENIX Conference on File and Storage Technologies (FAST). 243–256.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:21:34 UTC from IEEE Xplore. Restrictions apply.
+
+

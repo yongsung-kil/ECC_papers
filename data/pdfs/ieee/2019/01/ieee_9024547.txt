@@ -1,0 +1,747 @@
+Deep Learning-Based Quantization of L-Values for Gray-Coded Modulation
+Marius Arvinte, Sriram Vishwanath, and Ahmed H. Tewfik Department of Electrical and Computer Engineering University of Texas at Austin Austin, Texas 78712 Email: arvinte@utexas.edu
+
+Abstract—In this work, a deep learning-based quantization scheme for log-likelihood ratio (L-value) storage in fading channels affected by interference is introduced. We derive the number of sufficient statistics required to exactly reconstruct the set of L-values corresponding to a channel use as 3 + 2 × NI , where NI is the number of interferers. We analyze the dependency between the average magnitudes of different L-values and show they follow a consistent ordering, regardless of the channel coefficient or interference distribution. Based on this we design a deep autoencoder that jointly compresses and separately reconstructs each L-value, allowing the use of a weighted loss function that promotes more accurate reconstruction of low magnitude inputs. Our method is shown to be competitive with state-of-the-art maximum mutual information quantization schemes, reducing the required memory footprint by a ratio of up to two and achieving a loss of performance lower than 0.1 dB with less than two effective bits per L-value and lower than 0.04 dB with 2.25 effective bits. We demonstrate that the same network can be reused without further training on various channel models and error-correcting codes while preserving the same performance benefits.
+I. INTRODUCTION
+Deep learning has recently gained a foothold in wireless communications and signal processing, with experimental results showing that it can be used for various tasks ranging from channel code design [1] to black-box communication schemes [2]. At the same time, quantization of information in communication systems is critical for applications such as feedback, relay, or hydrid automatic repeat request schemes, which require long-term storage of information. Motivated by finding a quantization scheme that is as greedy as possible with minimal impact to the end-to-end performance, we introduce a deep learning-based L-value quantization scheme that leverages a compressed representation and the statistical ordering of the average magnitudes of different bit positions to achieve good quantization performance.
+Log-likelihood ratio quantization is a well studied topic, where it has been identified that the optimal formulation aims to maximize mutual information [3]. Prior work in [4] presents a data-driven approach for quantizing L-values even in cases when the channel has an arbitrary or intractable distribution. The work in [5] introduces a maximum mutual information vector quantization method for L-values by using the Lloyd algorithm with a KL divergence metric. In both cases, a sharp drop in performance is exhibited when the effective bit
+
+resolution approaches or goes below two bits per L-value. More recently, deep networks have been used for quanti-
+zation and codebook learning, where the main challenge is back-propagating gradients through the quantization function. Solutions to this include soft-to-hard approximations of the nearest neighbor function that are parameterized by an increasing attraction coefficient over time or replacing the null gradient with other approximations. The work in [6] uses such a schedule during the training phase to learn a compression scheme for high resolution images that outperforms state-ofthe-art schemes by almost an order of magnitude. With the same goal, the work in [7] introduces the architecture of vector quantized variational autoencoder (VQ-VAE) to learn a discrete, compressed representation of image and speech signals by approximating the null gradient with a linear function.
+Even though these solutions are shown to be successful for images, in the case of communications the signal statistics are fundamentally different and any application requires careful analysis and design of the network architecture and loss function. Previous work in [8] uses an autoencoder structure to compress the channel state information (CSI) matrix by exploiting its time and spatial domain correlation. In this work, we propose to exploit the use of binary reflected Gray coding (BRGC), almost universally adopted in practical systems and known to be optimal [9] and show that it induces an ordering on the average magnitude of the L-values that holds for any channel coefficient distribution. We leverage this to design a deep autoencoder network that uses a branched decoder architecture to individually reconstruct each L-value, allowing us to weigh the loss function towards smaller magnitude Lvalues.
+In [10], a deep autoencoder is used to jointly compress and reconstruct the set of L-values corresponding to a channel use by leveraging the fact that three sufficient statistics will recover them. However, their work exhibits a performance gap even when the latent representation is not quantized and the analysis only holds for a fading channel not affected by interference. In this work, we extend the analysis of sufficient statistics to cover fading channels with an arbitrary number of interferers and leverage the statistics of L-values to virtually close this performance gap, consequently improving the quantized results as well. We compare our work with state-
+
+978-1-7281-0960-2/19/$31.00 ©2019 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+of-the-art maximum mutual information schemes and show that we exhibit a quantization gain of up to two, allowing us to use an effective storage size of less than two bits per L-value for high order modulation schemes. Furthermore, we experimentally show that the final network has generalization properties and can be used for a wide range of scenarios with different channel models and codes, without requiring any further training or adjustments.
+II. SYSTEM MODEL
+Consider the digital baseband model of a binary reflected Gray coded (BRGC) M -QAM modulation scheme, where the transmitted symbol x is obtained by mapping the bits b1, . . . , bK to a complex symbol belonging to the constellation C, where K = log2 M . We assume there are a number of NI interfering symbols denoted by si, each independently drawn from a constellation CI . Under a flat fading complex channel model the complex received symbol y has the expression
+
+NI
+y = hx + hi(I)si + n = hx + h(I), s + n, (1)
+i=1
+where n is drawn from a circular complex Gaussian distribution with zero mean and variance equal to σn2 and h and h(iI) represent the complex channel coefficients of the desired signal and each interferer, respectively. Given complete channel state information and using the total probability law, the exact loglikelihood ratio (L-value) at the receiver for bit bk is given by
+
+Lk
+
+=
+
+log
+
+P (y|bk P (y|bk
+
+= =
+
+1) 0)
+
+=
+
+log
+
+s∈CI
+
+P (y|bk P (y|bk
+
+= =
+
+1, s)P (s) 0, s)P (s) .
+
+(2)
+
+s∈CI
+
+Assuming that the prior probability of the interference
+
+vector s is uniform, we can simplify the expressions and
+
+expand each conditional probability as
+
+Lk
+
+=
+
+log
+
+s∈CI s∈CI
+
+xˆ∈C,bk
+
+=1
+
+exp
+
+−
+
+|y−hxˆ− h(I σn2
+
+)
+
+,s
+
+xˆ∈C,bk
+
+=0
+
+exp
+
+−
+
+|y−hxˆ− h(I σn2
+
+)
+
+,s
+
+|2 |2
+
+.s
+
+(3)
+
+Carrying out the analysis similar to that in [10] and factoring
+
+out the h term from the exponents we derive the sufficient
+
+statistics required to exactly reconstruct the set of L-values as
+
+G=
+
+|h| σn
+
+2
+, y˜ =
+
+y h
+
+and
+
+s˜i
+
+=
+
+h(i I ) h
+
+,
+
+∀i
+
+≤
+
+NI
+
+.
+
+(4)
+
+Counting each complex value as two real ones, it follows
+that the number of real-valued sufficient statistics required to exactly reconstruct the set of L-values is equal to 3 + 2 × NI for a scenario with NI interferers. The special case NI = 0 corresponds to the case where there is no interference, or,
+more interestingly, when there is no information about the interference channel gains h(I). In this case, the unknown interference is effectively treated as noise.
+
+We further consider the conditional distributions of the L-values under the max-log approximation for different bit positions k = 1, . . . , K, for which the work in [11] shows that in a nonfading (i.e., affected only by noise) scenario the probability density function (PDF) of the L-values for each bit level can be written as a sum of truncated Gaussian PDFs. According to [11], the approximate PDF of the k-th L-value conditioned on the transmitted bit bk has the expression
+
+M 2
+
+−1
+
+pk(λ|bk) =
+
+wk,lΦ(λ; (−1)bk+1μl, σl2),
+
+(5)
+
+l=0
+
+where Φ(λ; μ, σ2) represents the Gaussian PDF and wk,l is
+the uniform probability that Lk is a Gaussian with mean and variance given by μl and σl2 respectively, in concordance with the Zero-Crossing Model approximation in [11]. As the
+
+authors of [11] show, this leads to a key observation about the
+
+L-values corresponding to different bit positions, namely that
+
+after splitting the bits in two groups (due to the real/imaginary
+
+symmetry induced by BRGC) the bits occupying the first
+
+positions are more robust to channel conditions than later ones.
+
+Formally, this can be expressed by the inequality
+
+E [|L1|] > E [|L2|] > · · · > E |L K | ,
+
+(6)
+
+2
+
+where the expectation is taken across the noise and a similar
+ordering holding true for the second half of L-values associated with the imaginary part. Finally, let Λk be the soft bit associated to the L-value Lk, given by [3]
+
+Λk
+
+=
+
+tanh
+
+Lk 2
+
+.
+
+(7)
+
+Since tanh is a monotonic, increasing function, it follows
+
+that the ordering in (6) holds for Λk as well. We let L and Λ denote the K-dimensional real, ordered – according to (6)
+
+– vectors of L-values and soft bits corresponding to a single
+
+channel use with Λk and Lk their k-th elements, respectively. Our goal is to compress Λ to a (3+2×NI )-dimensional latent representation, quantize it to a finite, low number of bits, and
+
+reconstruct the original input, while ensuring that the end-to-
+
+end distortion is minimized.
+
+The machine learning model we use for compressing the L-
+
+values is a deep neural network. From a high-level perspective,
+
+such a model can be viewed as a parameterized function
+
+f (xin; θf ), where xin is the real-valued input vector and θf denotes the weight vector, containing the serialized weights
+
+of all layers. For the rest of this work, we only refer to
+
+feedforward, fully-connected neural networks, in which a layer
+
+takes as input the vector xin and outputs yout as
+
+yout = φ(Wxin + b),
+
+(8)
+
+where (W, b) represent the weights and biases associated with a layer and φ is the element-wise activation function and all dimensions are consistent with matrix-vector multiplication. Typical activation functions include the rectified linear unit (ReLU) given by φ(x) = max {x, 0} and the hyperbolic
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+tangent φ(x) = tanh x. An autoencoder is a deep neural network that is trained to reconstruct its own input xin. This is commonly achieved by performing gradient updates on the weights θf in order to minimize the empirical risk function
+
+1N
+
+L(θf ) = N
+
+L0(f (xin,i; θf ), xin,i),
+
+(9)
+
+i=1
+
+where xin,i represents the i-th training sample and L0 can be chosen as any distance or quasi-distance function. Importantly, we note that gradient-based approaches are incompatible with the quantization of hidden activations in deep networks, since
+
+the gradient becomes null almost everywhere after quantization, preventing preceding weights from being updated.
+
+III. THE PROPOSED SCHEME
+
+While the original derivation is performed for a nonfading
+
+scenario, additional conditioning on the channel realization
+
+(for both h and the interference channels) ensures the ordering
+
+of L-values holds, on average, even for an arbitrary fading dis-
+
+tribution. We formulate and prove the following proposition.
+
+Proposition 1: The ordering in (6) holds for any arbitrary
+
+distribution of h, where the expectation is now also taken over
+
+the distribution of h.
+
+Proof: We prove this for the interference-free case, but the
+
+proof can be extended for interference, by taking the double
+
+integral into account. First we note that by (4) knowledge of |h|2 is sufficient to characterize the distribution of L-values,
+
+since the phase can always be corrected assuming full CSI is available. By letting g = |h|2 and expanding the PDF of the
+
+k-th L-value we obtain
+
+∞
+
+pk(λ|bk) = pk(λ|bk, g)fg(g) dg,
+
+(10)
+
+0
+
+where fg is the PDF of g. Considering pk(λ|bk, g), it follows that (5) holds for any fixed g, thus the ordering (6) holds
+
+pointwise, thus it holds for any fg(g).
+
+The previous result is proven for the max-log approxima-
+
+tion of the L-values but empirically holds for the complete
+
+expression as well. In the case of an interference-free Rayleigh
+
+fading channel, Fig. 1 illustrates this property by plotting
+
+four of the eight distributions of the L-values for a 256-
+
+QAM scenario, where it can be observed that the latter bits
+
+have a lower average absolute reliability than the earlier ones.
+
+This asymmetry present among different bit locations affects
+
+the performance of forward error correction, where accurate
+
+reconstruction of low magnitude L-values is shown to be
+
+critical for correct decoding [12].
+
+Equations (4) and (6) motivate the architecture of our com-
+
+pression and reconstruction network. We use an autoencoder
+
+with a latent representation of dimension 3 + 2 × NI , a joint
+
+encoder and a branched decoder (i.e., a different deep neural
+
+network is used to separately reconstruct each soft bit). The
+
+architecture of our solution is shown in Fig. 2. The network
+
+takes as input the vector of soft bits Λ and feeds them to
+
+the encoder, where the compressed latent representation z is
+
+output. Letting f (·; θf ) be the encoder part of the network and
+
+Fig. 1. Empirical PDFs for the first four soft bits of a K = 8 (256-QAM) transmission over an interference-free Rayleigh fading channel at a signal-tonoise ratio of 18 dB, exhibiting the ordering in (6). The other four soft bits have an identical order due to the binary reflected Gray coding.
+gk(·; θgk ) each of the bit decoders, the k-th reconstructed soft bit can be expressed as
+
+Λ˜ k = gk (z; θgk ) = gk (f (Λ; θf ) ; θgk ) .
+
+(11)
+
+To account for accurate reconstruction of low magnitude soft bits, we adopt two measures:
+1) We use a sample-wise weighted mean squared error function as in [10]. The loss function between the k-th soft bit and its reconstruction has the expression
+
+L0(Λ˜ k, Λk)
+
+=
+
+|Λ˜ k − Λk|2 , |Λk| +
+
+(12)
+
+where = 10−6 is used for numerical stability. This formulation ensures that more importance is given to soft bits with low values inside the same bit position. 2) We use a set of real weights wk ≥ 0 to weigh the contributions of each soft bit to the total loss function leading to the expression
+
+K
+
+N
+
+L(Λ˜ , Λ) = wk L0(Λ˜ (ki), Λ(ki)),
+
+(13)
+
+k=1 i=1
+
+where the weights are normalized to satisfy k wk = 1, thus at least one weight must be strictly positive.
+
+The weights wk are applied per sample for all soft bits in the k-th position and are used to ensure that more importance is placed on reconstructing bit positions with lower average reliability. By using Proposition 1 and the ordering in (6), we set the weights wk as inversely proportional to the reliability and order them as
+
+w1 ≤ w2 ≤ · · · ≤ w K ,
+
+2
+
+(14)
+
+w
+
+K 2
+
++1
+
+≤
+
+w
+
+K 2
+
++2
+
+≤
+
+···
+
+≤
+
+wK .
+
+For a specific set of weights, the architecture is jointly
+
+trained for a number of epochs. Since we are using a single
+
+encoder, all gradient updates are averaged (with the weights
+
+wk factored in) when θf is updated, while θgk are individually
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Block diagram of our proposed deep network architecture with one decoder for each soft bit. Each solid rectangular box represents a feedforward, fully-connected layer. The dashed block represents the latent representation quantizer and is not active during training.
+updated for each of the constituent decoders. In fact, the scheme is completely modular in terms of the decoders, making it possible to replace any of them with other reconstruction methods once the encoder is fixed.
+After training, the compressed representation of the soft bit vector in the form of z = f (Λ) needs to be quantized, stored and reconstructed during inference. In the general case, any quantization method can be applied to the latent space, in the form of a vector codebook. Letting zˆi, i = 1, . . . , 2Nb be the Nb-bit codebook, the quantization function is given by
+
+Algorithm 1: Training procedure
+
+Data: Λi ∈ RK , i = 1, . . . , N.
+
+Randomly initialize weights θf , θgk .
+
+Initialize
+
+weights
+
+wk
+
+=
+
+1 K
+
+,
+
+∀k
+
+=
+
+1, . . . , K.
+
+Stage 1. Encoder and decoders jointly optimized.
+
+for i = 1 to Nr do Train with fixed wk for a number of Ne1 epochs.
+for j = 1 to Ne1 do Mini-batch Adam update of weighted loss
+
+function.
+for b = 1 to Nb do θf , θgk ← Adam(Λi, wk, θf , θgk )
+end
+
+end
+
+Compute average reconstruction error for each
+
+L-value.
+
+ek
+
+=
+
+1 N
+
+N
+
+L(Λ˜ i, Λi)
+
+i=1
+
+Update wk using (16).
+
+end
+
+Stage 2. Individual decoder training. for k = 1 to K do
+for i = 1 to Ne2,k do Mini-batch Adam update of loss function. θgk ← Adam(zi, θgk )
+end
+
+end
+
+Q(z) = argmin z − zˆ 2 .
+
+(15)
+
+zˆ
+
+The use of a minimum distortion quantization in the latent space is justified by prior work showing that overparameterized deep neural networks are naturally robust when their hidden activations are quantized [13]. Finally, reconstruction of the original L-value vector is performed by applying the decoders for each soft bit on the quantized latent representation with Λˆ k = gk(zˆ).
+
+IV. PERFORMANCE RESULTS
+
+A. Architectural and Training Details
+
+We use a number of three hidden layers for the encoder and each of the decoders with an intermediate output size of 4K, except for the latent representation which has a dimension as discussed in Section III. Storing weights in 32-bit floating precision leads to a total memory footprint (considering the quantization codebook as negligible) lower than 83 KB for K = 8 (256-QAM), and scaling on the order of K2, thus rapidly decreasing for lower order modulations. Since the network is feedforward, the runtime complexity reduces to performing a number of three matrix-vector multiplications for compressing and reconstructing each soft bit and is highly parrallelizable.
+All hidden activations are ReLU, except for the latent representation and the outputs, which come from tanh activations. During training, we also add a small amount of additive white Gaussian noise with zero mean and σt = 10−3 to the latent
+
+representation before it is decoded to encourage robustness
+
+to numerical quantization. Since the latent representation z
+
+results from a tanh activation function, each of its elements
+
+is bounded to the [−1, 1] interval, preventing the architecture
+
+from learning trivial solutions such as boosting the power of
+
+the latent representation to overcome the added noise.
+
+We use the AMSGrad version of the Adam algorithm for
+
+minimizing the empirical risk function in (13) with a batch size
+
+of 65,536 samples, learning rate of 0.001 and recommended
+
+parameters [14] and split the training in two phases. The entire
+
+procedure is summarized in Algorithm 1. In the first phase the
+
+encoder and all decoders are jointly trained starting with equal
+
+weights
+
+wk
+
+=
+
+1 K
+
+.
+
+After
+
+a
+
+number
+
+of
+
+epochs
+
+Ne1
+
+the
+
+average
+
+reconstruction error ek is computed for all soft bits in the
+
+training data and we update the weights wk as
+
+wk =
+
+ek
+K
+
+.
+
+(16)
+
+ei
+
+i=1
+
+This process is repeated for a number of rounds Nr, placing a higher importance on soft bits that have larger average reconstruction errors. We empirically observe that this procedure always respects the order induced by (14) and also converges to a steady state where the weights no longer need an update. Alternatively, if a closed form expression of the distribution of pk(λ|bk) is available and can be numerically evaluated one can use a fixed set of weights inversely proportional to E[|Lk|].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+10 0 10 -1 10 -2
+
+Full Precision (FP) Proposed, FP Proposed, 15 bits Proposed, 18 bits [10], FP Max. MI, 16 bits Max. MI, 24 bits Max. MI, 32 bits Max. MI, 40 bits
+
+10 -3
+
+10 -2
+
+10 0
+
+10 -1 10 -2
+
+Full Precision (FP) Proposed, FP Proposed, 15 bits Proposed, 18 bits Max. MI, 24 bits Max. MI, 32 bits Max. MI, 40 bits
+
+10 -3
+
+10 -2
+
+BLER BLER
+
+19
+
+19.1 19.2 19.3
+
+16.5 17 17.5 18 18.5 19 19.5 20
+
+SNR [dB]
+
+10 -4
+
+18.4
+
+18.5
+
+18.6
+
+18.7
+
+16
+
+16.5
+
+17
+
+17.5
+
+18
+
+18.5
+
+19
+
+19.5
+
+SNR [dB]
+
+Fig. 3. BLER performance of the proposed quantization scheme in a Rayleigh fading scenario with LDPC coding and K = 8 (256-QAM) modulation.
+In the second training phase, the weights of the encoder are fronzen and individual training for each decoder is continued for a number of Ne2,k epochs, leveraging the branched decoder architecture to improve the reconstruction of individual soft bits without affecting the learned representation. We have explored options where Ne2,k is equal or proportional to the stationary wk, but both cases lead to roughly the same performance. Since each decoder only updates its own weights, this process is fully parallelizable among them.
+Once training is completed, we apply a mini-batch version of the k-Means algorithm [15] to independently obtain a nonuniform scalar quantizer for each of the three components of the latent representation. This has the advantage of drastically minimizing the storage requirements of the codebook versus vector quantization of the latent space and is also empirically observed to offer similar or better performance. Furthermore, even though we apply scalar quantization in the latent space, the end-to-end procedure is still a vector quantizer of the input data. The training data consists of L-values computed using (3) and generated from the coded bits of a number of 10,000 low-density parity check (LDPC) codewords with a length of 648 and rate 1/2 transmitted over a Rayleigh fading channel with h ∼ CN (0, 1) and no interferers present (NI = 0). The complete source code, pretrained networks and all performance results are available online1.
+B. Impact of Quantization on Block Error Rate
+We show the results obtained for K = 8 (256-QAM) and NI = 0, but the architecture can be readily used for any modulation scheme. The first experiment involves investigating the performance of our scheme in terms of block error rate (BLER) in the same conditions in which the training data is generated. For training, we generate 10,000 LDPC codewords for each signal-to-noise ratio in the set {16, 17, 18, 19} dB, corresponding to a mid-high noise power regime, concatenate the data points and shuffle them. Once training is completed, we design the k-Means quantizers using the latent representation of the same dataset. For testing, we generate a set of unseen 100,000 LDPC codewords across a
+1https://github.com/mariusarvinte/deep-llr-quantization
+
+Fig. 4. BLER performance of the proposed quantization scheme in a ETU fading scenario with LDPC coding and K = 8 (256-QAM) modulation. The same network and codebooks used in Fig. 3 are reused without additional training or adjustments.
+
+wider signal-to-noise ratio range, encode them, quantize the la-
+
+tent representation with the trained codebooks and reconstruct
+
+them, followed by LDPC decoding using belief propagation
+
+with 50 iterations.
+
+We compare the performance of our method with the
+
+maximum mutual information quantization in [4], where we
+
+train a quantization codebook for each separate bit position to
+
+account for large order modulation schemes, as well as use
+
+initial values constrained in the [−3, 3] range to further boost
+
+performance. We include the full precision (unquantized latent
+
+representation) results from the proposed method and [10] to
+
+show that we successfully cover the performance gap coming
+
+from the autoencoder reconstruction error. Fig. 3 shows the
+
+obtained block error rate curves for all the schemes, as well
+
+as the unquantized performance. Comparing at BLER = 0.01,
+
+the same performance is achieved by the proposed algorithm
+
+using 15 bits instead of 24, leading to a compression ratio
+
+of 1.6 times and a performance loss lower than 0.2 dB when
+
+compared to full precision storage, while using an equivalent
+
+of
+
+15 K
+
+=
+
+1.875
+
+bits
+
+per
+
+L-value.
+
+As
+
+a
+
+contrast,
+
+using
+
+the
+
+scheme
+
+in [4] with 2 bits per L-value leads to a performance loss of
+
+up to 1 dB.
+
+C. Generalization Performance
+
+We investigate the performance of the proposed quantization scheme when applied to different testing configurations than the one the network is trained on. Fig. 4 shows the end-to-end performance of the network trained in Section IV-B when the channel is a frequency domain representation of a multitap fading extended typical urban (ETU) channel, corresponding to an OFDM scenario with a carrier frequency of 2 GHz, bandwidth 10 MHz and 81 subcarriers (one for each QAM symbol). Each LDPC codeword is passed through a different realization of the ETU channel and we use a random, but fixed interleaver for extra robustness. The relative gain of our method against the maximum mutual information quantizer is fully preserved both for 15 and 18 bits, even though the network and codebooks are not further trained or adjusted in any way for this particular scenario.
+Additionally, we investigate the performance of the same
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+10 0
+
+BLER
+
+10 -1 10 -2
+
+Full Precision (FP) Proposed, FP Proposed, 15 bits Proposed, 18 bits Max. MI, 24 bits Max. MI, 32 bits Max. MI, 40 bits
+10 -2
+
+10 -3
+
+20
+
+20.2
+
+20.4
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+SNR [dB]
+
+Fig. 5. BLER performance of the proposed quantization scheme in a Rayleigh fading scenario with Polar coding and K = 8 (256-QAM) modulation. The same network and codebooks used in Fig. 3 are reused without additional training or adjustments.
+
+network when applied to a Polar-coded Rayleigh fading scenario. We simulate a Polar code of length 256 and rate 1/2 used for the New Radio (NR) control channels, decoded with the successive list cancellation algorithm with a list size of L = 4. Fig. 5 plots the BLER performance on 100,000 codewords obtained with the same network, where we notice that our method retains its advantages. This leads us to the claim that the learned quantization scheme is universal, in the sense that it exhibits the same performance regardless of the type of channel or channel code used and does not require any further training whatsoever.
+Finally, we have also investigated the effect of using a network trained under interference-free conditions (NI = 0) on a signal that contains low power interference and the network retains the same compression ratios, but we omit these results due to space constraints.
+D. Discussion
+The performance of our scheme can be further enhanced if we take into account that it is not a requirement to have the bit resolutions of all latent space components equal even when performing scalar quantization in the latent space. One can estimate the distribution of the latent components zi and determine which particular one has a higher entropy. For example, given a budget of 16 bits, we expect that allocating them to (z1, z2, z3) as (5, 6, 5) instead of (5, 5, 6) will lead to different end-to-end performance results and that it is possible to further optimize the performance. This is indeed the case, but we omit these results. This reasoning can be further extended to subsets of latent components if vector quantization is applied in the latent space, but we leave this for future research.
+
+V. CONCLUSIONS
+This work introduced a universal log-likelihood ratio (Lvalue) compression and quantization method that uses a deep autoencoder with a branched decoder to compress, quantize and reconstruct the set of L-values corresponding to a channel use affected by interference. The branched decoder architec-
+
+ture allows us to more accurately reconstruct low-magnitude L-values, which are critical for successful decoding under greedy quantization.
+Our results show that we can afford quantization with less than two effective bits per L-value for 256-QAM modulation, regardless of the type of channel model or code used with a loss smaller than 0.2 dB in terms of BLER. In the high performance regime, we achieve losses smaller than 0.05 dB with an effective 2.25 bits per L-value. The algorithm can be used for any modulation scheme (with better gains achieved for higher order schemes) and is competitive with state-ofthe-art maximum mutual information quantization algorithms, achieving a compression factor of up to two times for the same accuracy.
+ACKNOWLEDGEMENTS
+This work was supported by a generous gift from NXP Semiconductors, Austin, Texas.
+REFERENCES
+[1] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: Feedback codes via deep learning,” in Advances in Neural Information Processing Systems, 2018, pp. 9436–9446.
+[2] T. O’Shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Transactions on Cognitive Communications and Networking, vol. 3, no. 4, pp. 563–575, 2017.
+[3] W. Rave, “Quantization of log-likelihood ratios to maximize mutual information,” IEEE Signal Processing Letters, vol. 16, no. 4, pp. 283– 286, 2009.
+[4] A. Winkelbauer and G. Matz, “On quantization of log-likelihood ratios for maximum mutual information,” in 2015 IEEE 16th International Workshop on Signal Processing Advances in Wireless Communications (SPAWC). IEEE, 2015, pp. 316–320.
+[5] M. Danieli, S. Forchhammer, J. D. Andersen, L. P. Christensen, and S. S. Christensen, “Maximum mutual information vector quantization of log-likelihood ratios for memory efficient HARQ implementations,” in 2010 Data Compression Conference. IEEE, 2010, pp. 30–39.
+[6] E. Agustsson, F. Mentzer, M. Tschannen, L. Cavigelli, R. Timofte, L. Benini, and L. V. Gool, “Soft-to-hard vector quantization for endto-end learning compressible representations,” in Advances in Neural Information Processing Systems, 2017, pp. 1141–1151.
+[7] A. van den Oord, O. Vinyals et al., “Neural discrete representation learning,” in Advances in Neural Information Processing Systems, 2017, pp. 6306–6315.
+[8] C. Lu, W. Xu, H. Shen, J. Zhu, and K. Wang, “MIMO channel information feedback using deep recurrent network,” IEEE Communications Letters, vol. 23, no. 1, pp. 188–191, 2018.
+[9] E. Agrell, J. Lassing, E. G. Strom, and T. Ottosson, “Gray coding for multilevel constellations in Gaussian noise,” IEEE Transactions on Information Theory, vol. 53, no. 1, pp. 224–235, 2006.
+[10] M. Arvinte, A. H. Tewfik, and S. Vishwanath, “Deep log-likelihood ratio quantization,” Accepted for Publication at EUSIPCO ’19, 2019. [Online]. Available: http://arxiv.org/abs/1903.04656
+[11] A. Alvarado, L. Szczecinski, R. Feick, and L. Ahumada, “Distribution of L-values in Gray-mapped M 2-QAM: Closed-form approximations and applications,” IEEE Transactions on Communications, vol. 57, no. 7, pp. 2071–2079, 2009.
+[12] X. Zhang and P. H. Siegel, “Quantized iterative message passing decoders with low error floor for LDPC codes,” IEEE Transactions on Communications, vol. 62, no. 1, pp. 1–14, 2013.
+[13] Y. Guo, “A survey on methods and theories of quantized neural networks,” arXiv preprint arXiv:1808.04752, 2018.
+[14] S. J. Reddi, S. Kale, and S. Kumar, “On the convergence of Adam and beyond,” arXiv preprint arXiv:1904.09237, 2019.
+[15] D. Sculley, “Web-scale k-means clustering,” in Proceedings of the 19th international conference on World wide web. ACM, 2010, pp. 1177– 1178.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:52 UTC from IEEE Xplore. Restrictions apply.
+
+

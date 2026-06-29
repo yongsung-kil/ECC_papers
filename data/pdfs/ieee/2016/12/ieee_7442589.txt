@@ -1,0 +1,1049 @@
+3754
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+Unified Designs for High Performance LDPC Decoding on GPGPU
+
+Bo-Cheng Charles Lai, Member, IEEE, Chia-Ying Lee, Tsou-Han Chiu, Hsien-Kai Kuo, and Chun-Kai Chang
+
+Abstract—Modern GPGPU’s have enabled massively parallel computing with programmability that can exploit the highly parallel nature of LDPC decoding. Previous works customized the design on a GPGPU towards specific execution attributes of a particular LDPC decoding matrix. Supporting different LDPC decoding matrices requires either substantial rework on the current program, or a brand new parallel design. This paper proposes two unified designs that can achieve high performance for both regular and irregular LDPC decoding on a GPGPU. The first design introduces a node-based scheme with a versatile translation array mechanism that can efficiently handle the complex data access patterns of different LDPC decoding matrices. The second design proposes an edge-based parallel paradigm that uses more intuitive data layout. More edges than nodes in a Tanner graph also give the edge-based design higher computation parallelism when there are limited concurrent codewords. With the proposed unified designs, designers can be ignorant of the types of LDPC matrices and achieve high performance LDPC decoding. The experiments on a GTX 470 GPGPU have demonstrated up to 134.56x runtime improvement, when compared with designs on a high-end CPU. The maximum throughput can reach 80.25 Mbps. When compared with the previous customized designs, the proposed systematic designs can reach better performance while relieving the effort of customization.
+Index Terms—C.4 performance of systems, D.2.2 design tools and techniques
+Ç
+
+1 INTRODUCTION
+
+LOW-DENSITY parity-check (LDPC) is a linear error cor-
+
+Enabled by the great performance of the recently emerg-
+
+recting code [1], [2] which can approach the noise ing many-core processors, such as GPGPU’s (General Pur-
+
+threshold of the Shannon limit [2]. Due to its excellent error pose Graphic Processing Units), system vendors start
+
+correcting capability, LDPC codes are widely used in com- implementing LDPC and other baseband signal processing
+
+munication systems, such as DVB-S2 [3], Wi-Fi (802.11n) [4], applications on high performance many-core platforms
+
+WiMax (802.16e) [5], and 10 Gbit Ethernet (802.3an) [6]. The [10]. GPGPU’s are high performance throughput processors
+
+complex decoding scheme and execution behavior of LDPC that have been widely adopted in various systems from
+
+necessitate a powerful yet flexible computation platform to mobile devices to supercomputers [11], [12]. In addition to
+
+attain high performance. The fast evolving pace of modern the performance boost from massive parallel processing,
+
+communication schemes further requires the system to be the programmability of GPGPU’s also enables great flexibil-
+
+able to quickly adapt to the changing of the protocols and ity. With appropriate designs, the performance is expected
+
+application requirements. Implementing LDPC decoding to be scalable with the increasing number of processing
+
+on a high performance programmable processor has there- cores in the future generations of GPGPU’s.
+
+fore become an emerging solution [7].
+
+The architecture of GPGPU supports relatively scarce on-
+
+The algorithm of LDPC decoding, as shown in Fig. 1(a), chip memory while preferring coordinated massively paral-
+
+relies on extensive message passing in a large-scale process- lel data processing. An application with non-coordinated
+
+ing network between Check-nodes (CN’s) and Bit-nodes behavior, even with high computation parallelism, cannot
+
+(BN’s). This network is referred as a Tanner graph [8], and efficiently exploit the computing capability of a GPGPU
+
+the message passing mechanism performed by the network [13]. With this unique architecture, it has been demon-
+
+is called belief propagation [9]. The message passing in a Tan- strated that both the effectiveness of parallel scheme and effi-
+
+ner graph has posed abundant computation parallelism where the data processing in nodes and message passing on edges can be executed concurrently.
+
+ciency of data management [14] are key performance factors. When implementing an LDPC decoder on a GPGPU, the various types and complex execution behavior of LDPC
+
+decoding have posed great design challenges. The organiza-
+
+ B.C.–C. Lai, C.-Y. Lee, and C.-K. Chang are with the National Chiao Tung University, Hsinchu, Taiwan. E-mail: bclai@mail.nctu.edu.tw, ee98@g2.nctu.edu.tw, cckai.eecs99@nctu.edu.tw.
+ T.-H. Chiu and H.-K. Kuo are with MediaTek Corp., Hsinchu, Taiwan. E-mail: chiupeter.ee95@g2.nctu.edu.tw, hsienkai.kuo@gmail.com.
+
+tions of CN’s and BN’s together with the connections between nodes have caused considerably disparate parallel execution behavior and data access patterns.
+The diverse characteristics usually require a designated
+
+Manuscript received 9 July 2015; revised 3 Feb. 2016; accepted 7 Mar. 2016. design for each type of Tanner graphs. A Tanner graph is
+
+Date of publication 27 Mar. 2016; date of current version 14 Nov. 2016.
+
+considered regular when every CN has the same number of
+
+Recommended for acceptance by A. Mendelson. For information on obtaining reprints of this article, please send e-mail to: reprints@ieee.org, and reference the Digital Object Identifier below. Digital Object Identifier no. 10.1109/TC.2016.2547379
+
+edges to BN’s, and every BN connects to the same number of CN’s. Otherwise, the graph is considered irregular. Designers should well comprehend the behavior and characteristics of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+0018-9340 ß 2016 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+
+3755
+
+Fig. 1. (a) An example of a Tanner graph. (b) The parity-check matrix of the Tanner graph in Fig. 1(a).
+
+an application in order to achieve efficient and high perfor-
+
+mance computing on GPGPU’s. Most of the previous works
+
+concentrated on certain types of Tanner graphs, and custom- Fig. 2. Behaviors of data accesses in horizontal procedure (BN’s to ized the designs on GPGPU’s towards specific execution CN’s) and vertical procedure (CN’s to BN’s).
+
+attributes of a particular LDPC decoding scheme [1], [2], [3]. In addition to involving considerable programming effort, the customized designs also cause relatively poor adaptability. Supporting different LDPC decoding schemes requires either substantial rework on the current program, or a brand new parallel design. This concern raises the design cost and therefore hinders a GPGPU from supporting various communication protocols.
+This paper addresses the above issues by proposing two unified designs that can support both regular and irregular LDPC decoding schemes on a GPGPU. The first design introduces a node-based scheme with a versatile translation array mechanism that can efficiently handle the complex data access patterns of different LDPC decoding matrices. The second design proposes an edge-based parallel paradigm that uses more intuitive data layout than the commonly adopted node-based designs. More edges than nodes in a Tanner graph also give the edge-based design higher computation parallelism when there are limited concurrent codewords. With the proposed unified designs, programmers can be ignorant of the types of LDPC decoding matrices. The experiments on a GTX 470 have demonstrated up to 134.56x runtime improvement, when compared with designs on a high-end CPU. The maximum throughput can reach 80.25 Mbps. When compared with the previous customized approaches, the proposed systematic designs can reach better performance while relieving the effort of customization.
+The rest of this paper is organized as follows. Section 2 introduces the background of parallel LDPC decoding and GPGPU design environment. Section 3 looks into the commonly used node-based LDPC design and proposes a versatile translation array to handle the complex data access
+
+and exchanges messages between the two types of nodes to achieve convergence of the decoding algorithm. A Tanner graph can be represented by a sparse m Â n parity-check matrix H (as in Fig. 1(b)). A value ‘1’ in the matrix represents an edge between the corresponding CN (rows of H) and BN (columns of H). Various Tanner graphs of LDPC decoding have been proposed to meet different system requirements. For example, regular LDPC schemes enable low complexity in computation and network interconnection, while irregular LDPC, such as QC-LDPC (Quasi-Cyclic LDPC), could achieve better coding efficiency [15].
+The algorithm of LDPC decoding is composed of iterative message passing routines between CN’s and BN’s. Each iteration performs a horizontal procedure that updates the information from BN’s to CN’s, and a vertical procedure that updates the information from CN’s to BN’s. The operations performed in these two procedures have similar data access behaviors. They both need to collect information from the connected nodes, compute the new information, and update the information back to all the connected nodes. As illustrated in Fig. 2, each node is connected to several nodes. A node will compute and send an update message to a certain connected node after collecting the information from the other connected nodes. After an iteration of message exchange, a syndrome is calculated to check if there exist any error bits in a decoded codeword. The message passing routine will terminate when it reaches the iteration bound or when there is no error bit in a codeword. The decoding mechanism initiates the next iteration of message exchange until the decoding algorithm converges and the terminal conditions are met. This mechanism is generally referred as belief propagation [9].
+
+patterns of different LDPC decoding matrices. Section 4 introduces a novel edge-based parallel paradigm to attain high computation parallelism with more intuitive data layout. Section 5 shows experimental results and comparisons with previous works. Section 6 discusses the related works, and Section 7 concludes the paper.
+
+2.2 Parallel Execution of LDPC Decoding
+This paper focuses on the design of parallel LDPC decoding on a GPGPU. The message passing is implemented as data shared between threads. In general, there are two messages that need to be passed on an edge. One message is passed from a CN to a BN, and the other is passed from a BN to a
+
+2 BACKGROUND
+
+CN. Most of the existing works expose the parallelism of LDPC decoding by initiating a thread for a node in the tar-
+
+2.1 LDPC Decoding Algorithm
+
+get Tanner graph. The messages are passed between nodes
+
+The LDPC decoding mechanism can be represented by a and the nodes can process the messages concurrently.
+
+processing network, called a Tanner graph. As illustrated in There are different types of scheduling schemes for
+
+Fig. 1(a), a Tanner graph contains two types of nodes, parallel execution of LDPC decoding on GPGPUs. Many
+
+check nodes (CN’s) and bit nodes (BN’s). The decoding recent works [36], [38], [39] adopted the Layer scheduling, or
+
+mechanism performs iterative computation on the nodes, Turbo-Decoding Message-Passing (TDMP), to achieve efficient
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+3756
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+parallel LDPC decoding. Layer-based approaches split the
+
+check nodes into subgroups called layers. Each layer merges
+
+the two processing kernels for CN’s and BN’s into a single
+
+one. The updated messages of BN’s in a layer are used in
+
+the processing of next layers. Layered decoding benefits
+
+from the use of updated messages within the same iteration,
+
+and results in fast convergence [38]. The main concern of
+
+Layer-based approaches is the limited parallelism within a
+
+layer, and data dependencies between consecutive layers.
+
+The other scheme is called Two Phase Message Passing
+
+(TPMP) [19], [30]. TPMP is a parallel version of the Layer
+
+scheduling. TPMP merges the processing of all the CN’s
+
+in a kernel, and BN’s into another kernel. The decoding
+
+process is divided into a sequence of phases, and each Fig. 3. Fermi architecture: each SM (Streaming Multiprocessor) contains
+
+phase performs CN kernel and BN kernel once. The mes- 32 CUDA cores with L1 cache and shared memory. All SM’s share an sages of a phase are computed in parallel and passed in unified L2 cache and lower memory hierarchy.
+
+an iterative process. This scheme exposes higher parallel-
+
+ism than Layer scheduling, but would require larger stor- accesses in contiguous addresses can be consolidated into a
+
+age capacity to keep the intermediate messages. A single transaction. Designers need to be well aware of these
+
+parallel design with efficient indexing scheme becomes a features in order to fully exploit the benefits provided by
+
+critical design factor.
+
+the architecture.
+
+This paper adopts TPMP scheduling scheme mainly for The Fermi architecture, as illustrated in Fig. 3, is com-
+
+its high computation parallelism when being mapped onto a posed of multiple Streaming Multiprocessors (SM) where
+
+GPGPU platform. The nature of supporting massively paral- each SM contains 32 CUDA cores that can concurrently han-
+
+lel computation encourages the design on GPGPUs to expose dle a considerable number of threads. Fermi can support
+
+high level parallelism. An application with higher parallel- more than a thousand of active threads. These threads are
+
+ism can more effectively exploit the scaling number of proc- organized into warps where each warp is a group of 32
+
+essing cores in the future generations of GPGPUs. The threads that would be executed simultaneously on CUDA
+
+computation parallelism, for both layered-based and TPMP- cores. To fully utilize the abundant hardware resources, the
+
+based approaches, can be further enhanced by decoding hardware multi-threading can switch the execution to
+
+multiple concurrent codewords simultaneously [36], [37], another warp when the current warp encounters a stall
+
+[38]. However, when there are only few concurrent code- such as divergence of control flow or long latency data
+
+words, TPMP still poses extensive coputation parallelism to accesses [16]. Each SM has 64 Kbyte of on-chip memory that
+
+utilize the abundant processing cores in a GPGPU.
+
+can be configured into shared memory and L1 cache. The
+
+A parallel LDPC program on a GPGPU needs to imple- shared memory is fully controlled by programmers,
+
+ment a proper data structure for the message exchanging whereas the cache controller of L1 performs the data man-
+
+mechanism. The organizations of CN’s and BN’s together agement autonomously. The 768 Kbyte of L2 cache is shared
+
+with the connections between nodes have caused consid- by all the SM’s in a GPGPU.
+
+erably disparate parallel execution behavior and data The coalesced memory access can reduce the number of
+
+access patterns on a GPGPU. As mentioned previously, memory accesses by combining several adjacent memory
+
+the data management on GPGPU’s is one of the main per- references into one memory transaction. When the cache
+
+formance factors. In general, a regular parity-check matrix line is brought in from the global memory, threads in a
+
+has more coordinated data accesses and execution behav- warp can respectively gather the required data if the data
+
+ior that ease the design and optimization on a GPGPU. reside in the same cache line. If any of the threads in a warp
+
+An irregular parity-check matrix could return better error has not obtained the required data, the corresponding mem-
+
+correcting efficiency [15]; however, the uneven intercon- ory requests would be continually generated until the
+
+nection between nodes introduces more complex data requests of all the threads in a warp are serviced.
+
+accessing behavior. Designers should carefully consider When compared with customized platforms, such as
+
+the behavior and characteristics of an irregular LDPC ASIC (Application Specific Integrated Circuit), performing
+
+decoding in order to achieve efficient and high perfor- LDPC decoding on a GPGPU is beneficial due to ease of
+
+mance designs on GPGPU’s.
+
+implementation and programmable architecture. An ASIC
+
+2.3 GPGPU Architecture
+
+design can usually achieve high efficiency when targeting a specific application. However, GPGPUs support massive
+
+This section introduces the Fermi GPGPU architecture [16] parallel computing for a wide range of applications. It
+
+that will be used as the computation platform in this paper. becomes a good design choice when productivity and flexi-
+
+In addition to the support of massive parallel computation bility are more important than the performance to the sys-
+
+with fine-grained multi-threading, Fermi also deploys the tem requirements. Another advantage of deploying a
+
+shared cache among processing cores to better exploit GPGPU in a system is that the massive parallel architecture
+
+the data locality inherited in a wide range of general pur- can be shared by other applications when needed. This
+
+posed applications. The coalesced memory access is also an could enhance the versatility of the platform and support
+
+imperative performance enhancement where multiple data various parallel applications in the same system.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+
+3757
+
+Fig. 4. (a) An example of a regular Tanner graph. (b) The data structure and flow of the regular LDPC decoding on a GPGPU.
+
+3 AN UNIFIED DESIGN OF NODE-BASED LDPC DECODING
+
+Fig. 5. An example of the interleaved data structure to enhance coalescing on GPGPU’s.
+
+The node-based LDPC decoding scheme exposes the computation parallelism by initiating a thread for each node in a Tanner graph. The intuitive parallelization paradigm makes the node-based scheme a widely adopted approach in many previous works [17], [18], [19]. However, the complex data exchange between nodes becomes a serious issue when implementing a node-based design on GPGPU’s. This section introduces an unified data structure, Address Translation Array, to support both regular and irregular LDPC decoding. An optimization technique, Node Grouping, is proposed to further enhance the memory coalescing on GPGPU’s.
+
+rearrange data of nodes in a codeword. The design can be easily extended to exploit the parallelism of multiple codewords by initiating more thread blocks for additional codewords without recompiling the structure within thread blocks. This method facilitates the scalability of the design and avoid posing a constraint on the number of concurrent codewords. As mentioned in Section 2.2, to leverage the massive parallel computing resource on a GPGPU, this paper adopts TPMP scheduling [19], [30] to attain high computation parallelism. TPMP merges the processing of all the CN’s in a kernel, and BN’s into
+
+3.1 Parallel Design on Nodes 3.1.1 Exposing Computing Parallelism
+
+another kernel. The decoding process is divided into a sequence of phases, and each phase performs CN kernel and BN kernel once. The messages of a phase are com-
+
+As shown in Fig. 2, LDPC decoding performs extensive mes- puted in parallel and passed in an iterative process.
+
+sage passing and computation between nodes in a Tanner graph. Since the operations of different nodes are indepen- 3.1.2 Data Structure of Regular LDPC Decoding
+
+dent, most previous parallel LDPC designs initiate a thread Fig. 4(a) illustrates an example of a regular Tanner graph
+
+for one node in a Tanner graph. This is referred as node-based and Fig. 4(b) shows the data structure and flow of updates
+
+schemes where a thread will pass the updated messages for regular LDPC decoding. Assume there are four CN’s
+
+along the edges to all the connected nodes. A kernel that that need to pass messages to eight BN’s. Data elements for
+
+implements a node-based design would execute several iter- the same CN are allocated in a consecutive section in array
+
+ations of message updates. Each iteration performs a hori- Lxc. Different colors in Fig. 4(b) specify elements used by dif-
+
+zontal procedure, which updates messages from BN’s to ferent nodes. Each CN is implemented by a thread (threads
+
+CN’s, and a vertical procedure that updates messages from t0 to t3). All the threads belong to the same warp and will be
+
+CN’s to BN’s. Since the horizontal and vertical procedures executed concurrently. In this regular LDPC decoding, all
+
+have very similar execution behavior, the designs for both the CN’s connect to exactly two BN’s. The arrows in Fig. 4(b)
+
+procedures are almost identical. To simplify discussion, this illustrate the sequence of data accesses when a CN updates a
+
+paper uses the vertical procedure (CN’s to BN’s) as an exam- connected BN. There are three arrays used in Fig. 4. Lxc and
+
+ple to discuss the designs and concerns.
+
+Lcx arrays store the messages needed by CN’s and BN’s
+
+Note that the node-based scheme discussed in the previous respectively. LcxPosition array is used by CN’s to specify the
+
+paragraph is an intra-codeword design which focuses on expos- elements for the connected BN’s. In a vertical procedure, all
+
+ing the parallelism within a single codeword. There is a higher the CN’s will first read elements from the Lxc array (Step 1)
+
+level of parallelism when there are multiple codewords in and calculate the new messages (Step 2) that would be then
+
+LDPC decoding. A parallel LDPC decoding can pack the passed to the connected BN’s. By indexing the LcxPosition
+
+processing of the same node from multiple codewords into a array (Step 3), each CN can pass the updated messages to
+
+thread block. Given enough concurrent codewords, this inter- the corresponding elements in the Lcx array (Step 4) that
+
+codeword design can achieve high parallelism [36]. However, will be later used by BN’s in the horizontal procedure.
+
+the inter-codeword design would pose an additional execu- As shown in Fig. 4(b), the four threads perform non-con-
+
+tion constraint where the system needs to collect enough con- tiguous accesses to all the arrays. When executing on a
+
+current codewords before the massive parallel computation GPGPU, this behavior would cause non-coalesced data
+
+on a GPGPU can be invoked. When the number of available accesses and degrade performance significantly. Authors in
+
+concurrent codewords varies, the design optimized for a dif- [19] proposed an interleaving data structure to enhance
+
+ferent number of concurrent codewords needs to go through memory coalescing for regular LDPC decoding. Fig. 5 illus-
+
+another iteration of thread mapping and data reordering.
+
+trates the data structure that allocates data elements for dif-
+
+This paper uses the intra-codeword design style. The pro- ferent BN’s in an interleaved manner. In this way, all the
+
+posed techniques enable flexible indexing scheme and BN’s can retrieve the required elements with coalesced
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+3758
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+Fig. 7. Pseudo code of Node Grouping for BN’s.
+
+our previous work in [35]. The arrows in Fig. 6 show the data
+
+access flow when threads update the messages to one of the
+
+connected nodes. Compared with the data structure used in
+
+Fig. 5, three more arrays, LxcBegin, LxcSize, and LxcStripe, are
+
+added to facilitate flexible indexing of data accesses. The
+
+LxcBegin array records the starting position of the Lxc array
+
+for every CN. The LxcSize array records the number of con-
+
+nected BN’s for each CN. LxcStripe specifies the number of
+
+Fig. 6. The data structure of the Tanner graph in Fig. 1(a). The arrows show the data access flow when threads update messages to one of the connected nodes.
+
+elements apart in the Lxc array between two data elements of a node. Moreover, both the Lxc and LcxPosition arrays are allocated in an interleaved manner so that reading the data
+
+from these arrays can be coalesced. These arrays provide a
+
+accesses. All the threads will concurrently read the first elements that are allocated contiguously in the Lxc array (Step 1) with a single coalesced transaction. The updated messages will then be passed to the corresponding locations in the Lcx array (Step 2 and 3). Reading the next elements will also be a coalesced access (Step 4).
+The interleaved data structure requires that all the nodes have the same number of edges and can achieve memory coalescing for regular LDPC decoding on GPGPU’s. However, an irregular parity check matrix introduces different numbers of connecting edges between nodes. The interleaved data structure cannot properly manage the data accesses of irregular Tanner graphs.
+To attain good performance of an irregular LDPC decoding, a customized data structure on GPGPU is needed. For example, [18] proposed a customized node-based design of QC-LDPC (Quasi-Cyclic LDPC) decoding, which is an irreg-
+
+flexible data mapping mechanism that is useful especially when implementing an irregular LDPC decoding. When nodes with different numbers of edges are executed concurrently, threads are aware of where to start reading the data and how many data elements should be accessed.
+Recall that one thread is created for one node and updates all the messages that need to be passed to the connected nodes. The arrows in Fig. 6 represent the sequence of data accesses. All the threads will first concurrently read one element from the LxcSize array (Step 1), the LxcBegin array (Step 2), and the LxcStripe array (Step 3). With the information provided by the three arrays, threads are aware of how to read the data in the Lxc array (Step 4 and 5). Then the threads will calculate the new messages and write the messages to the Lcx array (Step 6) with the indexes from the LcxPosition array. Note that reading the LxcSize, LxcBegin, and LxcStripe array, are now fully coalesced.
+
+ular LDPC scheme, on a GPGPU. However, this customized
+
+design for the quasi-cyclic matrix cannot be used for other 3.3 Enhancing Data Access with Node Grouping
+
+decoding schemes. The requirement of customized designs As illustrated in Fig. 6, reading the data from the Lxc array
+
+inhibits a system from supporting multiple communication could be non-coalesced when implementing an irregular
+
+protocols. It takes either substantial rework on the current LDPC decoding. The accessing behavior to the Lxc elements
+
+program, or a brand new parallel design in order to imple- is determined by the number of edges of a node. For exam-
+
+ment different LDPC decoding schemes. This paper ple, threads t0 and t1 have three connected edges and are
+
+addresses this issue by proposing unified node-based accessing contiguous elements in Lxc. Threads t2 and t3 also
+
+design that can support both regular and irregular LDPC perform contiguous accesses for the two connected edges.
+
+decoding on GPGPU’s.
+
+However, the accesses between these two groups of threads
+
+in the same warp are non-coalesced since the two groups of
+
+3.2 Support of Irregular LDPC Decoding
+
+threads have different numbers of edges. This is saying,
+
+This paper proposes an unified data structure, Address even the proposed ATA scheme can support irregular
+
+Translation Array (ATA), for node-based LDPC designs to LDPC decoding, it is still desired that all the threads in the
+
+enable efficient data accesses of both regular and irregular same warp can own the same number of edges.
+
+LDPC decoding. The proposed ATA provides an address To address the above issue, this paper proposes a simple
+
+re-mapping mechanism to coordinate the accesses to the Node Grouping technique that rearranges and clusters the
+
+memory. The various data patterns of both regular and nodes with the same number of edges into a warp. Fig. 7
+
+irregular LDPC schemes can be properly handled to achieve shows the pseudo code when performing Node Grouping
+
+efficient memory accesses.
+
+on CN’s. All the CN’s are first sorted according to the num-
+
+Fig. 6 illustrates an example of the data structure for the ber of edges (Line 1). The nodes with the same number of
+
+Tanner graph in Fig. 1(a). This data structure is based on edges will be associated to the same group. Within each
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+
+3759
+
+Fig. 8. An example of the data structure and data access flow of an edge-based design when threads t0 and t1 update the messages to the connected nodes.
+
+Fig. 9. An example of an edge-based design when threads update the connected nodes.
+
+group, nodes are clustered into warps (Line 3), and the data is implemented to control threads accessing the correct ele-
+
+structures, such as LxcBegin, LxcSize, Lxc, and LcxPosition, ments in the Lxc array. The thread will continuously read
+
+are prepared accordingly (Line 4). In these warps, the the element from NextLxcIndex array until the element value
+
+accesses to most of the data arrays are fully coalesced. There is equal to its thread ID.
+
+do have chances that some remaining nodes in a group are In Fig. 8(a), thread t0 updates the first edge, where the
+
+not enough to form a warp. In this case, these nodes will edge ID is 0. In step 1, thread t0 will read the element from
+
+join the nodes in the next group to form warps (Line 5). index 0 in the NextLxcIndex array. In step 2, thread t0 uses
+
+These warps would have non-coalesced data accesses. the index to read the Lxc array. Thread t0 gets the index to
+
+However, there are large numbers of nodes in practical the next Lxc element from the NextLxcIndex array in step
+
+applications [4], [5], [6], and the impact of these non- 3 and reads the corresponding Lxc element in step 4.
+
+coalesced warps is minor. The issue is further mitigated Thread t0 will continue this procedure until the index
+
+when multiple codewords are decoded concurrently. In this from the NextLxcIndex equals the thread ID (Step 5).
+
+case, there exist more nodes with the equal number of edges Thread t0 calculates the updated message for the horizon-
+
+that can be arranged into a warp. After Node Grouping, the tal procedure. Then t0 uses its edge ID as an index to
+
+nodes in most of the warps have the same number of edges. read the LcxPosition array in step 6 and finally updates
+
+This grouping technique improves the regularity of data the message to the Lcx array in step 7. Fig. 8(b) shows
+
+accesses as well as data coalescing.
+
+the flow for thread t1, which takes care of a different
+
+edge with very similar behavior as t0.
+
+4 AN UNIFIED DESIGN OF EDGE-BASED LDPC DECODING
+This section introduces a new edge-based LDPC decoding design that could return higher computation parallelism with simple yet efficient data management on a GPGPU.
+
+Fig. 9 illustrates the behavior of all the threads updating their connected nodes. As one can see, reading arrays NextLxcIndex, Lxc, and LcxPosition, are fully coalesced. Recall that Fermi architecture can form a coalesced access without data ordering constraint if the data reside in the same cache line. Moreover, since a thread reads consecutive
+
+4.1 Parallel Design on Edges
+
+elements from NextLxcIndex and Lxc, the thread can possibly find the next data already loaded in the L1 cache
+
+Unlike node-based designs, the main idea of an edge-based together with the previous data.
+
+design is to initiate one thread to take care of the correspond- When comparing with node-based designs, an edge-based
+
+ing updates on an edge in a Tanner graph. The computation design has shown three distinct attributes. First, an edge-
+
+parallelism of a node-based design is determined by the based design has higher computation parallelism. This is
+
+number of nodes in a Tanner graph. From an observation on mainly because a Tanner graph usually has more edges than
+
+several widely used Tanner graphs, there exist more edges nodes in the network. Second, an edge-based design can
+
+than nodes. It could attain higher computation parallelism achieve fully coalesced data accesses with simple and intui-
+
+by exposing the parallelism on edges, especially when there tive data layout, while node-based designs require more
+
+are only a small number of codewords that can be decoded complex data policies such as interleaving arrangement and
+
+concurrently. Similar to the proposed node-based design, node grouping. Third, an edge-based design requires smaller
+
+the edge-based design also exposes the parallelism within a data footprint to implement a parallel LDPC decoding. For
+
+single codeword. A higher level parallelism can be attained example, in Fig. 6, thread t0 in the node-based design needs
+
+when there are multiple concurrent codewords.
+
+to access a total of 12 data elements, including one element
+
+Fig. 8 illustrates an example of the data structure and from LxcSize, LxcBegin, and LxcStripe, respectively, and three
+
+access flow of thread t0 and t1 for the vertical procedure on elements from Lxc, LcxPosition, and Lcx, respectively. As
+
+a GPGPU. The edge-based design deploys a total of four shown in Fig. 8, thread t0 in the edge-based design only
+
+data arrays. The Lxc, LcxPosition, and Lcx arrays are used in needs to access a total of six elements, including two elements
+
+the same way as in the node-based design. The NextLcxIndex from NextLxcIndex and Lxc, respectively, and one element
+
+array, which is a new array added in the edge-based design, from LcxPosition and Lcx, respectively.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+3760
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+Fig. 10. An example of using the shared memory in an edge-based design. (a) Moving the sharing data into the shared memory. (b) Thread
+
+Fig. 11. An example of edge grouping. All the edges of the same node will be assigned to a thread block.
+
+t0 updates its connected node.
+
+4.2 Utilizing the Shared Memory in a GPGPU
+
+thread blocks are created to handle the edges of all the three nodes. As one can notice, this method could cause some
+
+In an edge-based design, all the edges that connect to the null threads that perform dummy computation in a thread
+
+same CN (or BN) need the data that are common to this CN block. Fortunately, this issue has only minor impact in real
+
+(or BN). There exists data sharing among the threads for the applications. For example, in the 802.15.3c standard [20],
+
+edges that belong to the same node. However, it is hard to the maximum number of edges of a node is eight. And
+
+ensure that these shared data will be preserved in the L1 each thread block in modern GPGPU’s can handle 512
+
+cache with limited size. To be more certain that an edge- threads. The worst case happens when there are seven (out
+
+based design can leverage the data sharing among threads, of 512) threads being idle in a thread block. Even in this
+
+this paper allocates the corresponding shared data to the case, more than 98 percent of the threads in a block are still
+
+shared memory in the Fermi GPGPU.
+
+performing effective computation.
+
+In the Fermi GPGPU, there is a per SM 64 Kbyte of local
+
+memory module that can be configured into a combination 5 EXPERIMENTAL RESULTS
+
+of L1 cache and shared memory. This paper sets the L1 cache as the maximum size of 48 Kbyte to exploit the data locality inherited in an application, while using the remaining 16 Kbyte of shared memory to keep the shared data among threads.
+Fig. 10(a) illustrates an example of using the shared
+
+This section extensively studies the system properties and design concerns of the proposed design schemes. Section 5.1 introduces the experimental environment. Detail evaluations and analyses are discussed in Section 5.2 to Section 5.5.
+
+memory in an edge-based design. Compared with the data structure proposed in Fig. 9, two additional arrays, NextLxcIndex_SharedMem and Lxc_SharedMem, have been created and allocated to the shared memory in a GPGPU. The required length for these arrays in the shared memory is equal to the number of threads within a thread block. Before executing the LDPC decoding, each thread moves the corresponding data from Lxc and NextLxcIndex to Lxc_SharedMem and NextLxcIndex_SharedMem respectively.
+As illustrated in Fig. 10(a), threads within a thread block will move the shared data into the shared memory. In step 1, each thread takes one NextLxcIndex element and performs a shift before writing into NextLxcIndex_SharedMem array. In step 2, each thread takes one Lxc element and writes it into Lxc_SharedMem array. Step 3 performs a thread synchronization. After acquiring proper data, threads can update the connected nodes. Fig. 10(b) illus-
+
+5.1 Experiment Setup and Design Schemes
+Table 1 shows the configurations of the experimental environment. This paper focuses on the NVIDIA GTX 470 architecture, and implements the LDPC decoder with CUDA programming environment. All the performance results are measured by nvvp profiler from the CUDA environment [21]. All the data points apply single precision floating representation. The experiments use the default cache configuration of Fermi architecture by configuring a 48 KB L1 cache and a 16 KB share memory. The unified L2 cache is 768 Kbyte.
+Table 2 lists different design schemes. NBTGL is a nodebased design introduced in Section 3 that implements Address Translation Array, interleaved data structure, and node grouping technique. EBS is the edge-based design proposed in Section 4 that allocates the shared data to the shared memory in a GPGPU.
+
+trates an example of thread t0 updating its connected node. The behavior of a thread in Fig. 10(b) is actually very similar
+
+TABLE 1 Experiment Environment
+
+to the behavior shown in Fig. 8. Due to the size limit of a thread block in a GPGPU, it is
+
+CPU
+
+GPGPU
+
+possible that the threads that process the edges of a node are assigned to different thread blocks. To avoid threads accessing invalid locations in the NextLxcIndex_ SharedMem array, this paper assigns all the edges of the same node to the same thread block. As shown in Fig. 11,
+
+Platform Num. of Cores Clock Rate Memory Last Level Cache
+
+Intel Xeon E5640 4Ã
+2.67 GHz 48 GB 12 MB
+
+GTX 470 448
+1.21 GHz 1.28 GB 768 KB
+
+assume a thread block can only allow four threads, three
+
+Ã The reference design only uses one core in the CPU.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+
+3761
+
+TABLE 2 Design Schemes Used in the Paper
+
+Designs NBTGL
+EBS
+
+Design Techniques
+Node-based design. Apply node grouping and interleaved data layout. Edge-based design. Allocate common data to shared memory.
+
+5.2 Runtime Improvement
+This section shows the runtime improvement for different design schemes on the Fermi GPGPU. Different designs are evaluated with the LDPC matrix of IEEE 802.15.3c [20] standard. IEEE 802.15.3c uses an irregular LDPC matrix. The matrix has 336 CN’s and 672 BN’s with a total of 2184 edges. Fig. 12 illustrates the speedup and throughput of the kernel execution with different concurrent decoded codewords. The speedup is obtained by normalizing the runtime with a sequential LDPC decoder on a CPU. To have a fair comparison on the computation performance enhancement, the experiments in Fig. 12 apply the same number of iterations of LDPC decoding. The overhead of memory copy between the host CPU and GPGPU is not included in the results, and will be discussed in Section 5.4.
+According to Fig. 12, the speedup and throughput are considerably enhanced when there are more codewords being decoded concurrently. Decoding multiple codewords concurrently is an effective and commonly adopted way to increase the parallelism of LDPC decoding. The throughput enhancement becomes less significant when there are more concurrent codewords. This is because the computation resources on a GPGPU have already been extensively utilized by the exposed computation parallelism. As shown in Fig. 12, the maximum speedup is 134.56x when NBTGL applies 256 concurrent codewords. The maximum throughput achieves 80.25 Mbps when NBTGL deploys 256 concurrent codewords.
+In Fig. 12, EBS outperforms NBTGL by 44 to 14 percent when the number of concurrent codewords is from 1 to 8. More edges than nodes in a Tanner graph gives the edgebased design (EBS) higher computation parallelism when there are limited concurrent codewords. The higher parallelism can more effectively leverage the multithreading and computation resources on a GPGPU. The benefit of high parallelism within a codeword in EBS is diminishing when
+
+Fig. 13. The bit error rates (BER) with different signal-to-noise rate (SNR) and different decoding iterations.
+there are enough concurrent codewords to fully exploit the parallel processing resources.
+On the other hand, NBTGL achieves better performance than EBS when there are more than 16 concurrent codewords. The performance difference stabilizes at around 17 to 19 percent when the number of concurrent codewords exceeds 64. Both NBTGL and EBS are essentially performing the same computting of an application. The inferior performance of EBS is mainly caused by the context management overhead due to excessive numbers of threads. For example, in each codeword of IEEE 802.15.3c, there are 1008 nodes with 2184 edges. For each codeword, EBS will initiate more than twice the number of threads than NBTGL. The maximum numbers of blocks and threads are constrained by the available hardware resources of a GPGPU, such as the total number of registers in an SM. When there is enough parallelism to effectively take advantage of the parallel computing capability in a GPGPU, more threads would require more context switches to complete an applicaion.
+Based on the observed behavior discussed previously, it is suggested that a design should use EBS when there are fewer concurrent codewords. When there are enough concurrent codewords, NBTGL is a better choice. Since the number of computing resources on a GPGPU is increasing, modern GPGPUs are able to support more threads efficiently. Therefore, the authors of this paper also predicted that the performance breaking point between EBS and NBTGL tends to move to a higher number of concurrent codewords in the future generations of GPGPUs.
+5.3 Performance of Different Decoding Iterations
+Fig. 13 compares the performance impacts on Fermi when different numbers of decoding iterations are applied, and the corresponding bit error rates (BER) under various signal to noise ratio (SNR). For a certain SNR, the more decoding iterations would achieve better BER. The better BER can provide superior decoding ability to a communication system. The system throughput does not change with different SNR’s or BER’s. The throughput is completely determined by the number of decoding iterations performed by the program.
+
+5.4 Overhead of Memory Copy
+
+This section discusses the overhead of memory copy to
+
+the overall performance. Based on the current CUDA
+
+programming environment, the decoding data needs to be
+
+Fig. 12. Kernel speedup and throughput without overhead (5 iterations, copied from the host CPU to a device GPGPU before
+
+106 decoded data, 1.0dB SNR).
+
+launching an LDPC decoding kernel. The results calculated
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+3762
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+Fig. 14. Overall runtime and throughput when taking into account the data trasnfering overead. (5 iterations, decoded data, 1.0dB SNR).
+by the GPGPU also need to be forwarded back to the host when the kernel is finished. Fig. 14 shows the detailed runtime breakdown between 32 to 256 codewords. The overhead of memory copy has occupied 40.11 to 52.55 percent of the overall execution time.
+The overhead of memory copy can be effectively alleviated by many techniques, such as the asynchronous memory copy used in NVIDIA GPGPU’s [21]. The asynchronous memory copy can overlap the data transfer and kernel execution, and therefore the computation on a GPGPU can be performed while the data are being transferred between a host and a GPGPU. The detailed implementations of asynchronous memory copy have been extensively studied in previous works [22], [23]. This paper mainly focuses on the performance of the kernel on GPGPU’s. The proposed design schemes do not compromise the benefits of asynchronous data transfer and can be integrated with this technique to further enhance the overall performance.
+
+5.5 Comparison with Previous Works
+Due to the various designs of different works, it is not easy to compare the related works in a fair manner since these works adopted a wide range of different parameters, including the sizes of Tanner graphs, characteristics of decoding matrices, termination conditions, and computing platforms. This paper tried to compare the performance with designs of representative previous works, for both regular and irregular LDPC decoding. Table 3 lists the performance of the designs for regular LDPC decoding and Table 4 compares the designs for irregular LDPC decoding. All the results discussed in this section, including previous works and the proposed designs, have included the data transfer overhead between the host and device.
+Tables 3 and 4 compare two performance metrics, including the processing throughput and Throughput under Normalized Decoding Cost (TNDC). TNDC is a comparison metric used in [24] to more fairly evaluate the achievable throughput per processing core in a system. As stated before, it is not easy to compare works on different platforms in a fair manner. Even the design is replicated based on the same techniques as introduced in the previous work, without the source code from original authors, it is still hard to make sure the replicated design performs exactly the same as the ones in the previous work. Under this concern, TNDC is referenced as a metric to comprehend the disparities between different works. TNDC is defined as the processing throughput normalized to the operating frequency and number of processing cores of a GPGPU. Although TNDC still ignores the impacts from implementation details such as data access patterns and memory
+
+Works [17] [31] [19]
+re_[19]
+NBTGL
+EBS
+
+GPGPU 8800GT C1060 8800GTX
+GTX 470
+GTX 470
+GTX 470
+
+TABLE 3 Designs of Regular LDPC Decoding on GPGPU
+
+Code and Matrix Size
+
+Unknown [25]
+Unknown Unknown
+
+(2048, 1024) (4000, 2000) (1024, 512) (4896, 2448)
+
+Syn1 Syn2
+
+(1024, 512) (4896, 2448)
+
+Syn1 Syn2
+
+(1024, 512) (4896, 2448)
+
+Syn1 Syn2
+
+(1024, 512) (4896, 2448)
+
+Early Exit Yes No No
+No
+No
+No
+
+Iter. N/A
+10 10
+10
+10
+10
+
+Throughput
+2.95$8.0 Kbps 2.34 Mbps 10.0 Mbps 17.9 Mbps
+30.82 Mbps 38.17 Mbps
+26.09 Mbps 36.17 Mbps
+28.56 Mbps 34.24 Mbps
+
+TNDCÃ
+0.018$0.048 0.0075 0.058 0.104
+0.0566 0.0701
+0.0480 0.0665
+0.0525 0.0629
+
+TABLE 4 Designs of Irregular LDPC Decoding on GPGPU
+
+Works GPGPU Code and Matrix Size Early Exit Iter.
+
+Throughput
+
+TNDCÃ
+
+[25]
+
+GTX 285 802.11n (1944, 972)
+
+Yes
+
+N/A
+
+0.75 Mbps
+
+0.00023
+
+[18]
+
+GTX 470 802.11n (1944, 972)
+
+Yes No
+
+N/A 10
+
+22.5$100.3 Mbps 39.98 Mbps
+
+0.041$0.184 0.073
+
+NBTGL
+
+GTX 470
+
+802.15.3c 802.11n
+
+(672, 336) (1944, 972)
+
+No
+
+10
+
+46.41 Mbps 51.12 Mbps
+
+0.0853 0.0939
+
+EBS
+
+GTX 470
+
+802.15.3c 802.11n
+
+(672, 336) (1944, 972)
+
+No
+
+10
+
+38.40 Mbps 42.11 Mbps
+
+0.0705 0.0774
+
+Ã TNDC (Throughput under Normalized Decoding Cost) is defined as : Throughput / (freq Ã #of cores). Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+
+3763
+
+organizations, it provides a metric with relatively fair com- 6 RELATED WORK
+
+mon ground to compare different works. To properly compare the processing throughput, this
+paper only compares the designs with the same and fixed number of decoding iterations. Some LDPC decoding designs, such as [17] and [25], have implemented early-exit function that could terminate the kernel process when the termination condition is met. The performance when applying this technique would be considerably affected by the given SNR. With a better SNR, the decoding kernel could terminate with very few decoding iterations. Another concern when comparing different designs is that different input LDPC matrices could significantly impact the behavior of parallel LDPC decoding on a GPGPU, such as parallelism, data reuse, and coalescing. The performance comparison makes much more sense when designs are taking the same input matrix and executed on the same GPGPU platform.
+The work in [19] is a representative previous design of implementing regular LDPC decoding on GPGPUs. The work [19] presented a node-based design scheme that parallelizes the regular LDPC decoding in a Two-Phase MessagePassing (TPMP) and optimizes the memory coalescing with interleaved data layout. Due to the regular data access patterns, designers can easily track the execution behavior and carefully handle the design to fully exploit the computing capability of a GPGPU. The proposed NBTGL and EBS have shown higher throughput than the performance presented in [19]. However, the work in [19] was executed with unknown input matrices on an older generation of GPGPU. To have a fair comparison, this paper replicated the same design by using the techniques introduced in [19]. This replicated design is listed as re_[19] in Table 3. Two regular LDPC matrices, Syn1 and Syn2 generated from [26], are used to measure the performance. When compared with [19], the proposed NBTGL and EBS have shown slight lower processing throughputs. This is mainly because the more complicated data management schemes in NBTGL and EBS to handle different types of LDPC matrices. Note that the design of [19] can only handle regular LDPC while the proposed NBTGL and EBS can manage both regular and irregular matrices.
+As shown in Table 4, when compared with designs for irregular LDPC decoding, the proposed NBTGL and EBS
+
+LDPC decoding adopts the model of belief propagation [9] by distributing messages among the nodes in adistributed network. To achieve the performance requirements of modern communication systems, there are many hardwired solutions that implement ASICs (Application Specific Integrated Circuits) for LDPC decoding [27], [28], [29]. The ASIC solutions leverage the custom design circuits to achieve high throughput. However, the soaring design cost and effort have become the main concern of the ASIC approach.
+GPGPU systems have emerged in the recent years as a promising solution to enhance the sophisticated computation of LDPC decoding. The work in [17] overviewed the possible parallelization schemes when applying LDPC decoding on GPGPU. Falcao [30] is among the first to present a straightforward node-based design scheme that parallelize the regular LDPC decoding in a Two-Phase Message-Passing (TPMP) and optimized the memory coalescing by interleaving data locations. Chang [31] further took benefit of asynchronous memory copy to hide the overhead of memory transfers between the host CPU to GPGPU. The design in [38] used Layer scheduling to benefit from the small intermediate storage and faster convergence rate. The concern of low computation parallelism of Laye scheduling was alleviated by applying multiple concurrent codewords.
+Ji [25] implemented Quasi-Cyclic LDPC [32] (QCLDPC) decoding on GPGPU and compact the sparse matrix to efficiently utilize the on-chip cache memory. Wang [18] further improved the work of [25] by developing a thread mapping algorithm that assigned threads within the same block to different codewords to enhance performance and adopted customized data structure to more efficiently handle QC-LDPC. The authors in [37] extended their previous design in [18], and applied the asynchronous data transferring to shorten the decoding latency of SDR (Software Defined Radio) systems on GPU platforms. The work in [19] implemented and compared the LDPC decoding on three kinds of multi-core platforms, including CUDA, openMP, and Cell/B.E.
+The designs proposed in works [19], [30], [31] focused on regular LDPC decoding, which cannot be directly applied to implement irregular LDPC decoding. The approaches
+
+have outperformed all the previous works with fixed num- proposed in [18], [25] customized the designs for QC-LDPC
+
+ber of decoding iterations, in both processing throughput decoding. QC-LDPC is a special case of LDPC decoding
+
+and TNDC. The work in [18] concentrated on QC-LDPC which applies a specific design of decoding matrix, and ena-
+
+and proposed a customized design to support an irregular bles low complexity of computation and interconnection.
+
+quasi-cyclic matrix in the decoding kernel. According to the However, these customized designs for the quasi-cyclic
+
+work in [18], the performance of QC-LDPC matrix for IEEE matrix cannot be directly used for a different LDPC and
+
+802.11n has achieved 39.98 Mbps on GTX470 when there are would require extra design effort to support other types of
+
+around 300 concurrent codewords. When executing 300 LDPC decoding.
+
+concurrent codewords on GTX470, the proposed NBTGL
+
+Our previous work [35] proposed a high performance
+
+and EBS can achieve 51.12 and 42.11 Mbps respectively.
+
+node-based parallel design of the min-sum algorithm on
+
+In addition to achieving higher processing throughput, GPGPU. The design uses a versatile data structure to more
+
+one of the main advantages of the proposed NBTGL and efficiently leverage memory coalescing for the irregular
+
+EBS is that they only require unified and systematic designs data accesses of LDPC decoding. Based on the data struc-
+
+to support various types of LDPC decoding. Moreover, ture proposed in [35], this paper extends the study and pro-
+
+other effective techniques in either algorithm layer or archi- poses flexible and efficient designs for node-based scheme.
+
+tecture layer, such as early-exit in LDPC decoding or asyn- Furthermore, this paper also introduces an edge-based
+
+chronous memory copy between host and device, can be parallelization paradigm. The proposed designs facilitate
+
+included to enable further performance enhancement with- systematic and unified flows to implement both regular
+
+out compromising the proposed designs.
+
+and irregular Tanner graphs on GPGPU’s. When compared
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+3764
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 65, NO. 12, DECEMBER 2016
+
+with the previous customized approaches, the proposed designs can reach better performance while relieving the design burden of customization.
+
+[10] C. Jalier, D. Lattard, A. A. Jerraya, G. Sassatelli, P. Benoit, et al., “Heterogeneous vs homogeneous MPSoC approaches for a mobile LTE modem,” in Proc. Design, Automation Test Europe, 2010, pp.184–189.
+
+[11] Imagination PowerVR Graphics [Online]. Available: http://
+
+7 CONCLUSIONS
+
+www.imgtec.com/powervr/graphics.asp [12] Introducing TITAN [Online]. Available: https://www.olcf.ornl.
+
+This paper proposes two unified designs to systematically support different types LDPC decoding and effecttively attain high performance on a GPGPU. The first
+
+gov/titan/ [13] F. Raimondo, J. E. Kamienkowski, M. Sigman, and D. F. Slezak,
+“CUDAICA: GPU optimization of infomax-ICA EEG analysis,” Comput. Intell. Neurosci., vol. 2012, no. 2, 2012, Art. no. 206972.
+
+design utilizes a node-based scheme with a versatile [14] M. Saecker and V. Markl, “Big data analytics on modern hardware
+
+translation array mechanism that can efficiently handle the complex data access patterns of different LDPC decoding matrices. The second design proposes an edge-
+
+architectures: A technology survey,” Lecture Notes Business Inform. Process., vol. 138, pp. 125–149, 2013 [15] W. E. Ryan, “An introduction to LDPC Codes,” CRC Handbook for Coding and Signal Processing for Recording Systems, B. Vasic and
+
+based parallel paradigm that enables higher parallelism
+
+E. Kurtas, Eds. USA: CRC Press, 2004.
+
+with more intuitive data layout. With the proposed unified designs, designers can be ignorant of the types of
+
+[16] Nvidia, NVIDIA fermi compute architecture whitepaper [Online]. Available: http://www.nvidia.com/object/fermi-architecture. html
+
+LDPC matrices. The experiments on a GTX 470 GPGPU [17] W. Shuang, S. Cheng, and W. Qiang, “A parallel decoding algo-
+
+have demonstrated up to 134.56x runtime improvement, when compared designs on a high-end CPU. The maximum throughput can reach 80.25 Mbps. When compared
+
+rithm of LDPC codes using CUDA,” in Proc. 42nd Asilomar Conf. Signals, Syst. Comput., 2008, pp. 171–175. [18] G. Wang, M. Wu, S. Yang, and J. R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” in Proc. IEEE
+
+with the previous customized designs, the proposed sys-
+
+9th Symp. Appl. Specific Processors, 2011, pp. 82–85.
+
+tematic designs can reach better performance while relieving the effort of customization.
+As shown in the experimental results, data transfer
+
+[19] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC decoding on multicore architectures,” IEEE Trans. Parallel Distrib. Syst., vol. 22, no. 2, pp. 309–322, Feb. 2011.
+[20] IEEE Standard for Information technology - Telecommunications and
+
+between a host CPU and a GPGPU is still a signiicnat overhead. Integrating the proposed designs with asynchronous memory copy will be an immediate next step in
+
+information exchange between systems - Local and metropolitan area networks - Specific requirements. Part 15.3: Wireless Medium Access Control (MAC) and Physical Layer (PHY) Specifications for High Rate Wireless Personal Area Networks (WPANs) Amendment 2: Millimeter-
+
+our future research. Our future work also involves thread
+
+wave-based Alternative Physical Layer Extension, IEEE Std 802.15.3c-
+
+mapping approaches to further enhance data coalescing of the proposed designs, especially the write coalescing to the target arrays.
+
+2009, pp. c1-187, 2009. [21] (2015, Sep. 1). Nvidia. NVIDIA CUDA C Programming Guide
+[Online]. Available: http://docs.nvidia.com/cuda/index.html [22] J. B. White and J. J. Dongarra, “Overlapping computation and
+
+communication for advection on hybrid parallel computers,” in
+
+ACKNOWLEDGMENTS
+
+Proc. IEEE Int. Parallel Distrib. Process. Symp., May 2011, pp. 59–67. [23] G. Teodore, T. Pan, T.M. Kurc, and J. Kong, “High-throughput
+
+This project was partially supported by Ministry of Science and Technology, Taiwan (MOST 104-2622-8-002-002).
+
+analysis of large microscopy image datasets on CPU-GPU cluster platforms,” in Proc. IEEE 27th Int. Symp. Parallel Distrib. Process., May 2013, pp. 103–114.
+
+[24] Y. Ying, K. You, L. Zhou, H. Quan, M. Jing, Z. Yu, and X. Zeng,
+
+REFERENCES
+
+“A pure software LDPC decoder on a multi-core processor platform with reduced inter-processor communication cost,” in IEEE
+
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans.
+
+Int. Symp. Circuits Syst. (ISCAS), pp. 2609–2612, May 2012.
+
+Inform. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+
+[25] H. Ji, J. Cho, and W. Sung, “Memory access optimized implemen-
+
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit perfor-
+
+tation of cyclic and quasi-cyclic LDPC codes on a GPGPU,” J. Sig-
+
+mance of low density parity check codes,” Electron. Lett., vol. 32,
+
+nal Process. Syst., vol. 64, pp. 149–159, 2011.
+
+p. 1645, 1996.
+
+[26] (2002, May 5). LDPC toolkit for MATLAB [Online]. Available:
+
+[3] A. Morello and V. Mignone, “DVB-S2: The second generation
+
+http://arun-10.tripod.com/ldpc/ldpc.htm
+
+standard for satellite broad-band services,” Proc. IEEE, vol. 94, [27] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-
+
+no. 1, pp. 210–227, Jan. 2006,.
+
+1/2 low-density parity-check code decoder,” IEEE J. Solid-State
+
+[4] IEEE Standard for Information technology– Local and metropolitan area
+
+Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+
+networks– Specific requirements– Part 11: Wireless LAN Medium [28] M. M. Mansour and N. R. Shanbhag, “Low-power VLSI decoder
+
+Access Control (MAC)and Physical Layer (PHY) Specifications Amend-
+
+architectures for LDPC codes,” in Proc. Int. Symp. Low Power Elec-
+
+ment 5: Enhancements for Higher Throughput, IEEE Std 802.11n-
+
+tronics .Des., 2002, pp. 284–289.
+
+2009, pp. 1–565, 2009.
+
+[29] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit pro-
+
+[5] IEEE Standard for Local and metropolitan area networks Part 16: Air
+
+grammable LDPC decoder chip,” IEEE J. Solid-State Circuits,
+
+Interface for Broadband Wireless Access Systems, IEEE Std 802.16-
+
+vol. 41, no. 3, pp. 684–698, Mar. 2006.
+
+2009, pp. 1–2080, 2009.
+
+[30] G. Falca~o, V. Silva, and L. Sousa, “How GPUs can outperform
+
+[6] IEEE Standard for Information Technology-Telecommunications and
+
+ASICs for fast LDPC decoding,” in Proc. 23rd Int. Conf. Supercom-
+
+Information Exchange Between Systems-Local and Metropolitan Area
+
+put., 2009, pp. 390–399.
+
+Networks-Specific Requirements Part 3: Carrier Sense Multiple Access [31] Y.-L. Chang, C.-C. Chang, M.-Y. Huang, and B. Huang, “High-
+
+With Collision Detection (CSMA/CD) Access Method and Physical
+
+throughput GPU-based LDPC decoding,” Proc. SPIE, vol. 7810,
+
+Layer Specifications, IEEE Std 802.3an-2006, pp. 0_1-167, 2006.
+
+pp. 781008–781008, 2010.
+
+[7] S. Shahabuddin, J. Janhunen, M.F. Bayramoglu, M. Juntti, [32] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes
+
+A. Ghazi, O. Silven, “Design of a unified transport triggered pro-
+
+from circulant permutation matrices,” IEEE Trans. Inform. Theory,
+
+cessor for LDPC/turbo decoder,” in Proc. Int. Conf. Embedded Com-
+
+vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+
+put. Syst., Archit. Model. Simul., 2013, pp. 288–295.
+
+[33] (2014). Nvidia. “NVIDIA kepler compute architecture whitepaper
+
+[8] R. M. Tanner, “A recursive approach to low complexity codes,”
+
+[Online]. Available: http://www.nvidia.com/object/nvidia-kep-
+
+IEEE Trans. Inform. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+
+ler.html
+
+[9] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs [34] D. J. C. MacKay. Encyclopedia of sparse graph codes
+
+and the sum-product algorithm,” IEEE Trans. Inform. Theory,
+
+[Online]. Available: http://www.inference.phy.cam.ac.uk/
+
+vol. 47, no. 2, pp. 498–519, Feb. 2001.
+
+mackay/codes/data.html
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+LAI ET AL.: UNIFIED DESIGNS FOR HIGH PERFORMANCE LDPC DECODING ON GPGPU
+[35] T.-H. Chiu, H.-K. Kuo, and B.-C. C. Lai, “A highly parallel design for irregular LDPC decoding on GPGPUs,” in Proc. Asia-Pacific Signal & Inform. Process. Association Annual Summit Conf., 2012, pp. 1–5.
+[36] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Trans. Parallel Distrib. Syst., vol. 27, no. 5, pp. 1373–1386, 2016.
+[37] G. Wang, M. Wu, Y. Bei, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. IEEE Global Conf. Signal Inform. Process., Dec. 2013, pp. 1258–1261.
+[38] K. K. Abburi, “A scalable LDPC decoder on GPU,” in Proc. 24th Int. Conf. VLSI Des., Jan. 2011, pp. 183–188.
+[39] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Syst. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014.
+Bo-Cheng Charles Lai received the BS degree in electronics engineering from the National Chiao Tung University, Taiwan, in 1999. He received the MS and PhD degrees from the University of California, Los Angeles, in 2003 and 2007, both in electrical engineering. His research area concerns parallel computing, multicore architecture, low power designs, and embedded systems. He received the scholarship from John Deere Foundation in 2003. During his study at UCLA, he received two times DAC (Design Automation Conference) Student Design Contest in 2003 and 2005. From 2007 to 2009, he was with Broadcom Corporation as a staff scientist. He joined National Chiao Tung University in August 2009, where he is currently an associate professor at the Department of Electronics Engineering. He is a member of the IEEE.
+
+3765
+Tsou-Han Chiu received the BS degree in electronics engineering in 2010, and the MS degree in electronics engineering in 2013 from the National Chiao-Tung University, Taiwan. His research interests include multicore system architecture, parallel and heterogeneous computing, and machine learning. He is now a low power design engineer for smart phone at Mediatek in Hsinchu, Taiwan.
+Hsien-Kai Kuo received the BS degree in electrical engineering from the National Changhua University of Education, Taiwan, in 2008. He received the PhD degree from the Department of Electronics Engineering, National ChiaoTung University, Taiwan, in 2014. His research interests include computer architecture, electronic design automation, parallel and heterogeneous computing, multi-core and GPGPU.
+Chun-Kai Chang received the BS degree in electrical engineering and computer science from the National Chiao Tung University, Taiwan, in 2014. He is currently working toward the PhD degree at the University of Texas at Austin. His research interests include computer architecture, operating systems and parallel computing.
+
+Chia-Ying Lee received the BS degree in electronics engineering in 2013, and the MS degree in electronics engineering from the National Chiao-Tung University, Taiwan, in 2015.
+
+" For more information on this or any other computing topic, please visit our Digital Library at www.computer.org/publications/dlib.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:48 UTC from IEEE Xplore. Restrictions apply.
+
+

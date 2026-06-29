@@ -1,0 +1,454 @@
+Design of High Throughput FPGA-based Testbed for Accelerating Error Characterization of LDPC
+Codes
+
+Burak Unal, Md Sahil Hassan, Joshua Mack, Nirmal Kumbhare, Ali Akoglu Department of Electrical and Computer Engineering, University of Arizona, Tucson, AZ 85719, USA
+Email: {burak, sahilhassan, jmack2545, nirmalk, akoglu}@email.arizona.edu
+
+Abstract—We present a modular FPGA-based testbed to accelerate the study of low-density parity-check codes (LDPC). This testbed is composed of controller, codeword generator, noise generator, random number generator, LDPC decoder, and statistical analysis modules. The LDPC decoder module is replaceable to enable development or study of new or existing harddecision-based decoders. We demonstrate our testbed’s ability to reduce the timescale of error correction and error pattern analysis through case studies involving the Gallager B (GaB) and Probabilistic Gallager B (PGaB) algorithms. We contextualize the throughput and execution time performance of our framework, running on a Xilinx Zynq XC7Z020 FPGA, with reference CPU (Intel Xeon) and GPGPU (Tesla K40) implementations of the PGaB algorithm. While the single threaded CPU-based testbed and the reference GPU testbed achieve throughputs of 219 Kb/s and 3608 Kb/s respectively, the FPGA-based testbed achieves 9172 Mb/s. This corresponds to reducing the time scale of error correction analysis on PGaB, at previously untested error resolutions, to less than a day from an estimated 199 years on a single general purpose processor and 12 years on the GPU. We finally demonstrate the utility of our testbed by completing the first simulation on identifying all possible codewords with four errors that are not correctable by GaB. We reduce the time scale of this simulation, which requires processing 117 billion codewords, to 4.5 hours from an estimated 488 days on the GPU and 7803 days on CPU. Our open-source, modular and parameterized testbed allows researchers rapidly evaluate error correction performance of the target decoder algorithm and collect statistical data essential to exploring algorithmic improvement opportunities.
+Index Terms—Low density parity check (LDPC) codes, FPGA testbed, GPU, Error-correcting codes.
+I. INTRODUCTION
+Low Density Parity Check (LDPC) codes have been widely adopted in several standards and applications [1], such as fifthgeneration (5G) mobile communications, 10 Gigabit Ethernet (10GBase-T), digital video broadcasting (DVB-S2), wireless local area network (WiFi IEEE 802.11n), WiMAX (IEEE 802.16e) wireless communications, as well as data storage systems [2] due to their promise for error correction ability at levels close to theoretical limits.
+Development and evaluation of the LDPC codes require extremely long simulation times, scaling to months and even years [3]. A typical simulation involves generating codewords (frames), emulating the communication channel by injecting random errors to each frame, and measuring the ratio of codewords that are not recovered (frame error) to the total
+
+number of codewords tested. This ratio is referred to as the frame error rate (FER). When emulating the channel behavior, lower error injection rates require processing of a higher number of codewords to identify first 100 failing codewords by a decoder and to compute their FER, and as such, lower injection rates correspond to higher resolution simulations. Many LDPC codes today reach to FER of 10−12, which indicates that 1014 codewords have been tested and a benchmark of 100 codes were not corrected within a predefined number of iterations per codeword (typically 100 iterations). Therefore such simulations involve well beyond hundreds of millions of iterative error correction processes, and in most cases, the iteration count exceeds the billion mark for a conclusive evaluation at a resolution of 10−12.
+Cluster based computing systems and more recently fine grained parallel computing platforms such as GPGPUs have been utilized to reduce the time scale of LDPC simulations with some degree of success [4]. Because the decoding process is iterative and the data access patterns are not regular between the iterations, parallelism efforts are limited to iteration level only, which also incurs significant amount of cycles spent for memory updates between the iterations. The use of field-programmable gate arrays (FPGAs) allows for substantial acceleration in the simulation of LDPC codes [5]. The combination of bit-wise intensive operations in the decoding process and an iterative flow that is amenable to loop-unrolling style design enables a high degree of overlap between LDPC decoder algorithms and the fine-grained, massively parallel architectures of FPGAs [1].
+Most of the earlier works [5]–[9] on FPGA-based implementation of LDPC codes target the soft-decision class of LDPC decoding algorithms. This class of algorithms performs decoding using floating point operations. These algorithms show higher error correction performance at the expense of more hardware resources and lower throughput. The other class of decoding algorithms, known as hard-decision decoders, perform decoding using bitwise operations (0 and 1). The simplicity of the underlying operations in hard-decision decoders make them practical for deployment on hardware platforms as they offer high throughput with a trade-off in error correction performance. Some popular examples of this class of decoders are Gallager B (GaB) [10], Gradient Descent Bit Flipping (GDBF) [11], Probabilistic Gradient Descent Bit
+
+978-1-7281-1957-1/19/$31.00 ©2019 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+Flipping (PGDBF) [12], Probabilistic Parallel Bit Flipping (PPBF), Non-Syndrome PPBF (NS-PPBF) [13], and Probabilistic Gallager B (PGaB) [14].
+Predominantly, the earlier studies on FPGA implementations of the LDPC decoders are limited to their hardware design optimization, rather than utilizing the FPGA as a testbed for simulating a decoder and studying its error correction performance. In this work, we present a framework that implements the entire simulation flow of the hard-decision decoding algorithms on the FPGA as a self contained testbed in order to reduce the timescale of simulations. This testbed offers the following capabilities:
+• Parameterized inputs: Ability to run repeated simulations by setting different decoder specific input parameters without modifying the hardware design.
+• High resolution simulation: Ability to conduct experiments at previously infeasible error injection rates.
+• Collect iteration level decoder state: Ability to trace the error correction performance parameters during each simulation for offline analysis of the decoder.
+• Modular design: Ability to integrate and simulate hard decision decoders (e.g., GaB, PGaB, GDBF, PGDBF).
+To quantify the speedup benefit of our FPGA-based framework, we also compare its execution time with our GPUbased parallel implementation of the PGaB algorithm. We demonstrate that, at the lowest error injection probability, our FPGA-based testbed reduces the timescale of error correction performance simulations to less than a day, compared to an estimated timescale of 12 years on a GPU, and 199 years on a CPU. For the same injection probability, the measured throughput on our FPGA-based simulation framework is 9172 Mb/s compared to the GPU and CPU throughput of 3608 Kb/s and 219 Kb/s, respectively. Identifying the error patterns that make a decoder fail is a critical step towards improving the error correction performance of that decoder. The massive combinatorial search space in identifying all possible error patterns that make a decoder fail, has necessitated the use of analytical methods. Motivated by trapping set analysis conducted by Vasic´ et al. [15], we perform a case study that involves exhaustively searching for error patterns with four errors that make the decoder fail. We show that our FPGAbased testbed reduces the timescale of this study to less than five hours from an estimated time of 488 days and 7803 days on a GPU and CPU, respectively.
+The rest of the paper is organized as follows. In Section II, we present an overview of the related work from FPGA-based LDPC testbed implementation point of view. In Section III, we give an overview of the GaB and PGaB algorithms. After giving the background information, we present the details of the testbed in Section IV. In Section V, we present our first case study on FER analysis. We begin by presenting our GPUbased implementation of PGaB algorithm and then compare the execution time of the FPGA-based testbed with respect to the reference GPU-based implementation. In Section VI, we present the results from our second case study on error
+
+pattern analysis conducted on our proposed testbed. Finally, we present the conclusions and future work in Section VII.
+II. RELATED WORKS
+Implementing an error correction algorithm on an FPGA is a standard way of studying its hardware characteristics in terms of resource usage, critical path delay, energy efficiency, and throughput metrics [16]–[22]. The survey on FPGA-based LDPC decoders by Hailes et al. [1] presents a comprehensive analysis. Predominantly, these studies are limited to extracting hardware characteristics from the FPGA-based implementation, rather than utilizing the FPGA as a testbed for simulating a decoder and studying its error correction performance.
+To the best of our knowledge, there is no prior work on FPGA-based simulation framework for the hard-decision class of algorithms. The literature on FPGA-based testbeds, as summarized in Table I, focuses on a few best performing soft-decision based algorithms to accelerate their simulationbased investigations with speedup values reaching three orders of magnitude. Even though it is not fair to compare different classes of algorithms in terms of their hardware performance and resource utilization, for the completeness of analysis we give an overview of each by highlighting their key features.
+The study by Zhang et al. [5] proposes an FPGA-based testbed and investigates the impact of employing various levels of parallelism on resource usage and throughput when implementing LDPC decoder architecture for the sum-product [23] algorithm with a codeword length of 2048. The testbed allows for the exploration of the low FER region and provides statistics of the error traces. The testbed is implemented on the Virtex-II Pro XC2VP70 series Xilinx FPGA achieving the FER resolution of 10−8 within one hour. The decoder implementation reaches a throughput of 240 Mb/s on the FPGA, while the C based implementation achieves a throughput of 260 Kb/s on an Intel Xeon 2.4 GHz processor.
+The study by Li et al. [6] proposes an automated design flow for FPGA-based LDPC code simulation. The testbed offers the end user the flexibility of specifying the LDPC decoder parameters to implement the hardware architecture automatically. Several LDPC codes for the belief propagation algorithm [24] are implemented with the codeword lengths ranging from 576 to 2304. The simulation platform employs four Xilinx Virtex5 XC5VLX155T devices and achieves throughput from 380 to 950 Mb/s. The testbed allows researchers to reach an FER resolution of 10−11 in less than one hour.
+Cai et al. [7] present a highly parallel FPGA-based testbed to evaluate the performance of the Min-Sum [25] algorithm on LDPC code with the codeword length of 4923. Eight Xilinx Virtex-2 Pro FPGAs are utilized to achieve 100x speed up over the same class of application specific simulation platforms and achieve the first exploration for the error floor of LDPC codes at FER resolution of 10−12 in magnetic recording channel. The testbed reaches an FER of 10−10 in less than six hours and FER of 10−12 in 24 days. The authors estimate that reaching the scale of 10−12 would take 10 years in software simulation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I FPGA-BASED LDPC TESTBEDS.
+
+Platforms
+
+Algorithms
+
+Throughput Codeword length
+
+[5] Virtex-2 Pro XC2VP70
+
+sum-product
+
+240 Mb/s
+
+2048
+
+[6] Virtex-5 XC5VLX155T (4 nodes) belief propagation 380 Mb/s
+
+576
+
+[7] Virtex-2 Pro (6 nodes)
+
+Min-Sum
+
+NA
+
+4923
+
+[8] Virtex-5 XC5VSX240T-2
+
+Min-Sum
+
+332 Mb/s
+
+3369
+
+[9] Virtex-5 FPGA
+
+sum-product
+
+344 Mb/s
+
+2304
+
+The study by Chen et al. [8] proposes a scalable FPGAbased vector decoder implementation for the Min-Sum algorithm on the LDPC codes with the codeword length of up to 3369. This implementation packs the data used in the subsequent iteration of the decoding process into the embedded memory blocks to minimize LUT-RAM usage on the target Virtex 5 XC5VSX240T-2 FPGA, and achieves a maximum throughput of 332 Mb/s.
+Chen et al. [9] propose an FPGA-based testbed implementation of sum-product algorithm for the LDPC code with the codeword lengths of 1056, 1944, and 2304. Design and implementation of a backtracking scheme to detect error patterns at FER as low as 10−10 is presented. The proposed testbed achieves a throughput of 344 Mb/s for a codeword length of 2304.
+As summarized in Table I, the literature on FPGA-based testbeds present algorithm-specific frameworks that target softdecision decoding algorithms such as sum-product, Min-Sum, and belief propagation. Our presented testbed is a generalframework for hard-decision class of algorithms, and we demonstrate it by presenting the implementation of GaB and PGaB decoders on this framework. Before we introduce our testbed, in the following section we introduce the key terms in LDPC decoders, give an overview of the GaB and PGaB algorithms and present the high level hardware architecture to highlight the required interfaces with the testbed.
+
+III. LDPC BACKGROUND
+Each packet transmitted in the communication channel is referred to as a codeword that includes both the original data and the parity bits used for error correction. Assuming that the channel in which the data is transmitted is noisy, the LDPC decoder uses an iterative process to recover the original data. For this, there are two disjoint sets, which are referred to as variable node units (VNUs) and check node units (CNUs). The interaction between the VNUs and CNUs is captured with a bipartite graph as illustrated in Figure 1 (“left”). Each edge in this graph connects one CNU to one VNU and each node in a set can be connected to a predefined number of nodes in the other set, which is defined as the connection degree. In this graph, the degree of each VNU (dv) is four and the degree of each CNU (dc) is eight. The matrix representation of connections between VNUs and CNUs as shown in Figure 1 (“right”) indicates the existence of a connection between a VNU (column) and a CNU (row). All LDPC codes of length n, start with receiving n bits of message from the channel and storing in each of the n VNUs respectively. After the VNU initialization, the iterative decoding process begins with sending the received message bit from each VNU to its CNUs
+
+        
+ 
+
+
+
+
+
+
+
+
+
+
+
+     
+
+Fig. 1. Tanner graph (left) and parity check matrix (right) (dv = 4, dc = 8).
+
+defined by the H matrix. In a series of iterations CNUs and VNUs exchange information till a satisfaction criteria is met, which indicates successful recovery of the original data transmitted over a channel, which may have been exposed to errors due to noise. The CNU and VNU functions, satisfaction criteria, and connection topology among CNUs and VNUs determine nature of the LDPC algorithm.
+
+A. Gallager B (GaB)
+For the sake of simplicity in explaining the GaB algorithm, we assume a fixed configuration for the decoder architecture based on the Tanner graph [26] shown in Figure 1 (dv = 4, dc = 8). We refer to this as the default configuration.
+The output from a VNU to a target CNU is a majority vote of VNU inputs that excludes the input from the target CNU. For the default configuration, a VNU receives four inputs from its CNUs and the fifth input is received from the channel. This fifth bit is referred to as received word rn where n indicates the VNU id for a codeword length of n. The CNU accumulates the 1-bit inputs received from its VNUs, which is realized with a single xor gate. For the default configuration, a CNU receives eight 1-bit inputs and generates eight 1-bit outputs, one for each destination VNU as the connection degree of the CNU is eight. Each output generated for a specific VNU is an xor of inputs received by the CNU from its other seven VNUs.
+
+B. Probabilistic Gallager-B (PGaB)
+Probabilistic extensions of LDPC decoders have been studied for various algorithms ( [27], [28]) to improve their error correction capability, and PGaB, proposed by Unal et al. [14], is one such extension of GaB. PGaB improves GaB performance by probabilistically disturbing the decoder when it appears to be in a cyclic state of nonconvergence. The overall GaB and PGaB architecture is shown in Figure 2 for a codeword length of 1296 bits for the Quasi Cyclic (QC)-LDPC code [29] with dv and dc set to four and eight respectively. PGaB is implemented with the input P indicated in Figure 2, which is a 1-bit value generated by a random number generator for each VNU. If the decoder does not converge within predefined number of iterations and when P is 1, the VNU state gets disturbed by inverting the rn input. Hardware involves 1296 VNUs, one for each bit of the codeword. Implementation requires a CNU for each parity bit. The interleaver block handles the routing of inputs and outputs for each VNU and CNU. The Syndrome Compute unit in the figure checks whether the codeword has been corrected or not.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+
+ 
+ 
+
+ 
+
+
+ 
+
+
+
+
+
+
+TABLE II HARDWARE RESOURCE UTILIZATION OF LDPC TESTBED IMPLEMENTATION ON THE FPGA. AVAILABLE RESOURCE IS BASED ON THE XILINX ZYNQ XC7Z020 AND VIRTEX-7 XC7VX485T FPGAS.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+ !
+
+ 
+  
+
+
+
+
+
+Fig. 2. Overall decoder architecture of GaB and PGaB for 1296-bit codeword with dv = 4, dc = 8, n = 1296, m = 648, and code rate = 0.5.
+
+Slice Luts 1-bit Register Number of Slices
+
+Resource Usage Zynq Virtex-7 11884 11688 19731 19731 3086 2775
+
+Utilization(%)
+
+Zynq Virtex-7
+
+22%
+
+4%
+
+18%
+
+3%
+
+23%
+
+4%
+
+TABLE III
+HARDWARE RESOURCE UTILIZATION, CRITICAL PATH AND THROUGHPUT OF THE GAB AND PGAB DECODER (1296-BIT CODEWORD, dv = 4, dc = 8, CODE RATE = 0.5) IMPLEMENTATION ON THE PRESENTED
+TESTBED ON XILINX ZYNQ XC7Z020. (∗ INDICATES IMPLEMENTATIONS
+ON XILINX VIRTEX 6 FPGA)
+
+IV. TESTBED AND HARDWARE IMPLEMENTATION
+In this section we present our FPGA-based testbed for studying the quality of the target LDPC decoder. The overall block diagram, shown in Figure 3, consists of seven units: controller, codeword generator, noise generator, LDPC decoder, Random Number Generator (RNG), statistic and error analysis, and interface units. Our testbed offers flexibility of changing the decoder type and simulation settings based on the desired resolution in terms of FER performance. For this, the end-user sets the channel crossover probability (Alpha), maximum number of iterations per decoding attempt (max iter), and maximum number of codewords designated uncorrectable (max cwf ), which form the inputs to the Controller in Figure 3 as simulation parameters. Alpha defines channel crossover probability, which is the probability of error introduced to each bit of the codeword. This parameter allows the end-user to test the decoder for various channel noise scenarios. The higher the Alpha value is, the harder it is for the decoder to recover the codeword. The max iter determines the limit of iteration count per codeword, after which the simulation terminates. If the decoder can not correct the codeword before reaching this limit, the codeword is designated as not recoverable. If the codeword is corrected earlier than max iter, the decoder continues to execute the next codeword. Depending on the LDPC algorithm, the maximum number of attempts to correct a codeword may change. The simulation stops when the total number of codewords that are not recoverable reaches the max cwf . Setting max cwf to 100 is a typical choice for a reliable analysis, but it can be set to larger or smaller values depending on the desired resolution. We keep track of the total number of codewords tested, number of iterations spent for each codeword, and the total number of iterations spent over all the codewords tested. Based on this information, we calculate the average number of iterations and the FER for a given Alpha.
+The controller module in the testbed manages the processes of each component. The codeword generator unit produces codewords specified by parity check matrix H. Each time a component completes its task, an enable signal indicated with ” ena” in the figure triggers controller to activate the next component. In order to emulate the effect of noise in the
+
+Algorithm
+GaB (testbed) PGaB (testbed) GaB (standalone) PGaB (standalone) GDBF(standalone) [30]∗ PGDBF (standalone) [30]∗ PPBF (standalone) [30]∗
+
+Slice LUTs 23204 24036 10377 11956 9528 10839 7250
+
+1-bit Register 36720 38139
+6558 9145 2608 2858 2825
+
+Number of Slices 9003 9497 2665 3356 NA NA NA
+
+Maximum Frequency 101.84 MHz 103.86 MHz 113.53 MHz 121.04 MHz 76 MHz 76 MHz 122 MHz
+
+Throughput (Gb/s) 9.14 9.17 14.71 15.69 9.85 9.85 15.81
+
+communication channel on the transmitted n-bit codeword, the noise generator unit flips each bit of the codeword with the probability of Alpha. We implement a linear feedback shift register (LFSR) based random number generator to generate a 1-bit random value with Bernoulli distribution of Alpha, which represents the probability of each bit in the codeword being flipped or not. After the decoder receives its enable signal along with the noisy codeword, iterative process continues until either the error has been corrected or the decoder has failed within the predefined maximum iteration count (max iter input). Termination of the decoding process starts the statistical analysis process, which receives 16 bits of iteration count (iter cnt) along with 1-bit successful correction (correct cw) and failed correction (error cw) signals from the decoder. We keep track of the total number of codewords tested (cw tested), the number of codewords in fail (cw f ailed), and the total number of iterations (iter tot) spent with 64 bit registers. The random number generator (RNG) unit is a special purpose module needed to simulate probabilistic LDPC decoders, which generates an n-bit random sequence to pair with the n-bit codeword length. We implement a 32-bit LFSR to generate random numbers. The controller enables or disables the RNG with the the signal (ena rng) based on the decoder algorithm type.
+The LDPC Decoder block shown in Figure 3 contains the decoder hardware, along with a state machine that coordinates simulation for multiple codewords until the simulation termination condition is fulfilled. In order to integrate any decoding algorithm, the user should instantiate their desired decoder with cw err input and decoding outcome (final decoded message and output of each CNU) in the Hardware Descriptor Language (HDL) file of LDPC Decoder module.
+In Table II we present the resource utilization of the testbed excluding the decoder block on Xilinx Zynq XC7Z020 and Virtex-7 XC7VX485T FPGAs. Table III shows resource
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+Alpha 16
+max_iter16 max_cwf 16 reset
+
+start_cw
+
+noise_init
+
+Controller
+
+start_dec reset_dec
+
+ena_rng
+
+finish
+
+Codeword n Noise Generator codeword Generator
+
+n RNG
+ena_rng n
+cw_err
+
+P
+
+correct_cw
+
+LDPC error_cw
+
+Decoder dec_done
+
+r
+
+iter_cnt 16
+
+Statistic cw_tested 64
+& cw_failed 64 Error Analysis iter_tot 64
+
+Interface Unit
+
+cw_ena correct_cw error_cw noise_ena dec_done cw_failed
+64 start_cw cw_ena noise_init Alpha 16 noise_ena start_dec reset_dec max_iter16 finish
+
+Fig. 3. Overall architecture of FPGA-based testbed. Red colored wires indicate control signals, others indicate internal connections.
+
+utilization and throughput for standalone implementations of the GaB and PGaB algorithms, and for the entire testbed including the decoder algorithms on Xilinx Zynq XC7Z020. The throughput of the testbed is much lower than standalone implementations primarily due to the state machines in the Controller and LDPC Decoder modules that manage the execution of the simulation. In the same table we also include resource usage and throughput data for the other hard-decision based decoder algorithms.
+V. CASE STUDY I: FER ANALYSIS
+In this section we quantify the execution time benefit in conducting FER analysis of LDPC codes on our FPGA framework compared to our GPU implementation. We also use this section to demonstrate the fast turnaround time capability of our framework in completing simulations for GaB and PGaB with crossover probability (Alpha = 0.005). To the best of our knowledge, this is the lowest resolution achieved for the PGaB. We begin this section by explaining our GPU implementation of PGaB decoding algorithm and then compare the execution time results from the GPU and FPGA implementations.
+A. GPU Implementation
+Comparing our FPGA implementation with a single thread CPU implementation of the LDPC decoder is not a fair comparison as our framework benefits from the massive amount of customization and fine-grained parallelism that is possible in the FPGA platform. To demonstrate the strength of our proposed FPGA-based testbed, we compare its execution time results with the multi-stream GPU version. In mapping the LDPC flow to a GPU, the aim is to produce a representative implementation of LDPC that applies all literature-standard GPU optimizations and can serve as a baseline for comparison. As compute devices, GPUs are characterized by massively parallel architectures with SIMD instruction dispatch. For the GPU implementation of PGaB, we use Tesla K40 that contains 15 streaming multiprocessors (SMs), where each SM is composed of a number of parallel CUDA cores.
+In CUDA programming, computational kernels are launched in the context of three levels of threading hierarchy. First, each individual thread is grouped into a so-called threadblock that determines which other threads it will be able to interact with over shared memory and synchronization primitives. Second, each thread block is launched as a part of an overall grid of
+
+thread blocks, where each block can execute independently of all other thread blocks. Each thread within a block is given a unique thread identification number, or thread id, that is assigned sequentially starting from the first thread. Similarly, each block within a grid is given a unique block id. A programmer can utilize these thread and block indices to coordinate massively parallel data access into large datasets. For example, in an image processing application, a grid may be two dimensional and the programmer may choose to assign work for neighboring areas of the image to neighboring threadblocks. Finally, each grid launch can be targeted towards a different CUDA Stream, potentially allowing multiple different kernels to execute on the GPU simultaneously. The key to efficient CUDA code, then, is to group threads across these three dimensions such that the resulting computation effectively utilizes all GPU resources when memory subsystems, cache hierarchy, and data transfer patterns are taken into account.
+In the CUDA implementation presented here, a single grid launch is representative of a single decoder module, and each grid is composed of as many blocks as are needed to implement all the required VNUs and CNUs. For example, with the standard use case of 1296 VNUs and 648 CNUs, combined with the CUDA restriction of 1024 threads-perthreadblock, there are 2 threadblocks to handle all the VNUs and 1 threadblock to handle the CNUs. As this decoding process involves heavily interconnected data dependencies, there is little reason to split the process up into more granular threadblocks and lose out on the memory management capabilities afforded by threadblock-level shared memory and the passive cache hierarchy benefits of executing on the same SM.
+As the low number of threadblocks leaves a large number of SMs underutilized, however, we employ CUDA streams to launch multiple parallel decoder kernels onto the K40 architecture. This enables horizontal scaling of the LDPC kernel across all available compute units on the GPU when each threadblock has sufficient work to perform. In the case where a threadblock does not have sufficient work to perform – such as when a codeword is trivially correctable in a small number of iterations – we mitigate the resulting data transfer and kernel launch overhead associated with repeated small data transfers by providing each kernel a batch worth of input data words to process. When a sufficiently sized batch of codewords is provided to a single decoder kernel, the kernel is able to stay
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+PGaB on FPGA GaB on FPGA PGaB on GPU
+
+Fig. 4. Execution time per million codewords of GPU-based decoder with α 0.02 across batch and stream sizes
+busy enough to amortize the cost of copying data to the GPU and launching that kernel instance. A new batch of codewords is iteratively transferred to the decoder on the completion of its processing on the older batch of codewords.
+With these optimization techniques in place, we perform a parameter sweep that varies the batch and stream size (thus affecting the workload per decoder and number of parallel decoders) and show the results in Fig. 4. The bottom left axis shows performance as stream size varies while the bottom right axis shows performance as batch size varies. We observe the minimum execution time of 6.5 minutes per million codewords for the stream count of 24 and the batch size of 16. As the stream size increases, the number of parallel decoders increases up until the GPU’s compute capacity is saturated around the stream size of 17 and more, and correspondingly the amount of time it takes to process one million codewords decreases from 8.5 minutes for the stream size of four to 6.75 minutes for the stream size of 17. Compared to the stream count, the impact of batching different number of codewords is negligible on the processing time of the one million codewords. This is because the processing time of an individual codeword is dominated by the overhead of transferring codewords from the CPU to GPU. In the following subsection, we use stream count of 24 and the batch size of 16 codewords for execution time comparison.
+B. FER Execution Time Analysis
+The purpose of this section is to demonstrate the timing benefits of using our FPGA-based testbed compared to a general purpose computing platform (GPU or CPU) for the development and analysis of the hard-decision decoders. We also demonstrate the capability of our proposed framework to accelerate FER analysis of different hard-decision decoders.
+Figure 5 shows the FER curves for the GaB and PGaB algorithms on the QC-LDPC code with codeword length of 1296 (dv = 4, dc = 8, code rate=0.5) from our FPGA framework. It also includes the obtained FER curve for PGaB algorithm on the same code from our GPU implementation. The y-axis indicates the frame error rate (FER) calculated based on number of codewords processed till a total of 100 code words fail. The x-axis indicates the probability of error (crossover probability) introduced to each bit of the input codeword. For all the implementations, the slope of the FER
+
+Fig. 5. GaB and PGaB FER comparison: FER vs. probability of error introduced to each bit of the 1296-bit codeword with (dv = 4, dc = 8).
+curve decreases suddenly beyond certain crossover probability and this region of the curve is called as error floor. The later this error floor region occurs, the better the decoding algorithm is. Therefore it is crucial to be able to conduct simulations with a resolution that reaches the error floor region to be able to make conclusive comparison on the error correction quality with respect to other decoder algorithms. To the best of our knowledge, the lowest resolution reported for the PGaB is for the crossover probability of 0.01 [14].
+As seen in Figure 5, the FER curve for the GPU implementation of PGaB closely follows the FER curve from our FPGA-based testbed. The overlap of the FER curves indicates algorithmic similarity between our GPU and FPGA-based implementations. In order to demonstrate the adaptability of our testbed for different hard-decision decoders, we simulate the GaB decoding algorithm on our framework and present its FER curve in Figure 5. The figure indicates that for the smaller crossover probabilities, PGaB is able to correct more number of codewords compared to GaB. This observation is consistent with the study presented by Unal et al. [14].
+At the crossover probability of 0.01 in PGaB algorithm, our FPGA framework is able to process one million codewords in 0.135 seconds at a throughput of 9172 Mb/s. To process same number of codewords, our GPU implementation takes five minutes and achieves a throughput of 3608 Kb/s. For a fair comparison, because we present the FPGA throughput numbers in the context of the full testbed, we measure GPU throughput similarly. When looking at just the LDPC computation kernels, the pure throughput of our GPU implementation is closer to 14,432 Kb/s, which is in line with previously published work utilizing another type of hard decision algorithm [4]. With the benefit of our testbed, now we are able to reach to 0.005 resolution at FER of 0.917 × 10−11. This simulation takes 24 hours and involves processing 1,090,097,582,683 codewords. To process this many codewords, our GPU implementation is estimated to take twelve years and the CPU implementation to take approximately 199 years.
+VI. CASE STUDY II: ERROR PATTERN ANALYSIS
+In this section we evaluate the utility of our testbed for conducting error pattern analysis needed by information theorists towards improving the error correction performance of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+r1
+
+r2
+
+c5
+
+c6 c5
+
+c6
+
+v1 c1 v2
+
+v1 c1 v2
+
+c2
+
+c3
+
+c2
+
+c3
+
+v4 c4 v3
+
+v4 c4 v3
+
+c7
+
+c8 c7
+
+c8
+
+r4
+
+r3
+
+(a) iteration 0
+
+(b) iteration 1
+
+r1
+
+r2
+
+c5
+
+c6 c5
+
+c6 c5
+
+c6
+
+v1 c1 v2
+
+v1 c1 v2
+
+v1 c1 v2
+
+c2
+
+c3
+
+c2
+
+c3
+
+c2
+
+c3
+
+v4 c4 v3
+
+v4 c4 v3
+
+v4 c4 v3
+
+c7
+
+c8 c7
+
+c8 c7
+
+c8
+
+r4
+
+r3
+
+(c) iteration 1
+
+(d) iteration 2
+
+(e) iteration 2
+
+Fig. 6. 4-error pattern for GaB algorithm. Black/white denotes erroneous/correct VNU, and unsatisfied/satisfied CNU.
+
+the decoder. Before presenting our results, first we give a definition of the error pattern. During the decoding process, the interactions between CNUs and VNUs may result in an oscillation phenomena due to the nth order dependencies between CNUs and VNUs. In such cases, the decoding process may get trapped in a cyclic behavior. For example, in the Tanner graph given in Figure 1, v0 transmits message to c0, c1, and c2. After receiving their inputs from all VNUs, c0, c1, and c2 send their messages back to their designated VNUs. In this example, there is a third order dependency between v0 and v2 based on the message passing in the order of (v0 − c0 − v5 − c4 − v3 − c3 − v2). If we count each VNU-CNU interaction as one iteration, then it would take three iterations for the message of v0 to propagate to v2. During each iteration, CNUs and VNUs update their states. The sequence of states observed for a given VNU may show repeating pattern, which is called a trapping set [28]. As the decoder remains in the cyclic sequences of states it cannot correct the error.
+The decoding algorithm under investigation may be failing to correct the received codeword when ”k” number of bits in a codeword are in error (bit flipped) and these ”k” error bits appear in certain patterns. In such cases, the designer goes through a massive exploration space to understand which error patterns cause the decoding algorithm to fail. After discovering these patterns, then the designer establishes a path for modifying the LDPC code to address this problem. A typical design space exploration starts with 2-error patterns. This involves studying all possible error bit positions in a codeword length of ”n” with only two errors, and identifying the patterns that the decoder fails to correct. The exploration incrementally may go up to six error patterns based on the application [15]. Let ”n” be the length of the codeword, and ”k” be the number of error bits in a codeword. In this case we can formulate the number of all possible error patterns as shown in Equation 1.
+
+C(n, k) =
+
+n k
+
+=
+
+(n
+
+n! − k)!k!
+
+(1)
+
+where C(n, k) refers combination of k bits in error out of codeword length of n.
+Rather than conducting exhaustive sweeping based experiments, researchers avoid the computation time barrier through analytical studies. For example, the study by Ivanis et al. [31] analytically shows that the error pattern indicated in Figure 6 makes the GaB decoding algorithm fail. The figure represents
+
+a subgraph of LDPC code where circles denote VNUs and squares denote CNUs. For the sake of simplicity, we do not include all connections for VNUs and CNUs. An error is denoted by black filling for VNUs and CNUs. Assume that the codeword initially has four errors represented with received message r1, r2, r3, and r4 (Figure 6a - Iteration 0). When each VNU receives its message bit from the channel, the v1, v2, v3, and v4 are in error as illustrated in Figure 6(b). All VNUs send message to their designated CNUs. After receiving their inputs from all VNUs, c5, c6, c7, and c8 generate a message as unsatisfied since each of them has one error message from their designated VNUs (Figure 6(c)). In the second iteration, v1, v2, v3, and v4 receive one error message from their designated CNUs and receive one error message from channel. Since the function of VNU is finding majority of the inputs, v1, v2, v3, and v4 continue to generate error message. In such cases, the decoder cannot correct this 4-error pattern. Therefore it remains in the cyclic sequences of error states.
+In order to evaluate all 4-bit error patterns for a codeword length of 1296, based on Equation 1, we need to test 117,002,820,060 codewords. When ”k” is 5, this value is in the order of 30 (30,233,528,703,504) trillion. We choose the GaB algorithm for this case study as it has been extensively studied in terms of error patterns [32]. For the GaB algorithm the throughput on the Intel Xeon (2.33GHz, 8GB RAM) processor is 10,396 codewords per minute on the QC-LDPC code with codeword length of 1296 (dv = 4, dc = 8, code rate=0.5). Based on this, we estimate the 4-bit error pattern experiment to take 7,803 days. We conducted the same experiment to simulate all possible 4-error patterns for the GaB algorithm on our FPGA-based testbed, and discovered all 4-error patterns, including the ones published in [31] that make the codeword uncorrectable. Total execution time for this simulation is 4.5 hours. For verification purpose, we ran the GaB in C based simulation for those 4-error patterns and verified that the decoder could not correct these errors. The entire source code for the testbed along with the generated data is available as open source at [33].
+VII. CONCLUSION
+In this study we present an FPGA-based testbed for accelerating the simulations of LDPC codes. With its tunable parameters, the testbed allows the end user to conduct experiments based on the desired resolution for the target decoder algorithm. We conduct series of experiments based on GaB and PGaB algorithms and show that our testbed reduces the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+time scale of simulations to hours scale, which allows analysis
+of error correction performance at a resolution that is not
+attainable with CPU and GPU-based simulations. As future
+work we plan to categorize the error patterns identified in this
+study. Similar to the study by [15], we will be in a position
+to rank and prioritize these patterns and incrementally modify
+the GaB algorithm to address each pattern group.
+REFERENCES
+[1] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, “A survey of fpga-based ldpc decoders,” IEEE Communications Surveys Tutorials, vol. 18, no. 2, pp. 1098–1122, 2016.
+[2] J. Kim and J. Lee, “Two-dimensional sova and ldpc codes for holographic data storage system,” IEEE Transactions on Magnetics, vol. 45, no. 5, pp. 2260–2263, May 2009.
+[3] G. Falcao, M. Owaida, D. Novo, M. Purnaprajna, N. Bellas, C. D. Antonopoulos, G. Karakonstantis, A. Burg, and P. Ienne, “Shortening design time through multiplatform simulations with a portable opencl golden-model: The ldpc decoder case,” in 2012 IEEE 20th International Symposium on Field-Programmable Custom Computing Machines, April 2012, pp. 224–231.
+[4] G. Falcao, L. Sousa, and V. Silva, “Massively ldpc decoding on multicore architectures,” IEEE Transactions on Parallel and Distributed Systems, vol. 22, no. 2, pp. 309–322, Feb 2011.
+[5] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. J. Wainwright, “Design of ldpc decoders for improved low error rate performance: quantization and algorithm choices,” IEEE Transactions on Communications, vol. 57, no. 11, pp. 3258–3268, Nov 2009.
+[6] H. Li, Y. S. Park, and Z. Zhang, “Reconfigurable architecture and automated design flow for rapid fpga-based ldpc code emulation,” in Proceedings of the ACM/SIGDA International Symposium on Field Programmable Gate Arrays, 2012, pp. 167–170.
+[7] Y. Cai, S. Jeon, K. Mai, and B. V. K. V. Kumar, “Highly parallel fpga emulation for ldpc error floor characterization in perpendicular magnetic recording channel,” IEEE Transactions on Magnetics, vol. 45, no. 10, pp. 3761–3764, Oct 2009.
+[8] X. Chen, J. Kang, S. Lin, and V. Akella, “Accelerating fpga-based emulation of quasi-cyclic ldpc codes with vector processing,” in 2009 Design, Automation Test in Europe Conference Exhibition, April 2009, pp. 1530–1535.
+[9] X. Chen, J. Kang, S. Lin, and V. Akella, “Hardware implementation of a backtracking-based reconfigurable decoder for lowering the error floor of quasi-cyclic ldpc codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 58, no. 12, pp. 2931–2943, Dec 2011.
+[10] R. G. Gallager, “Low density parity check codes,” MIT Press, Cambridge, MA, 1963.
+[11] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding ldpc codes,” IEEE Transactions on Communucations, vol. 58, no. 6, pp. 1610–1614, June 2010.
+[12] O. Rasheed, P. Ivanis, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Transactions on Communications, vol. 18, no. 9, pp. 1487–1490, September 2014.
+[13] K. Le, F. Ghaffari, L. Kessal, D. Declercq, E. Boutillon, C. Winstead, and B. Vasi, “A probabilistic parallel bit-flipping decoder for low-density parity-check codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 66, no. 1, pp. 403–416, Jan 2019.
+[14] B. Unal, A. Akoglu, F. Ghaffari, and B. Vasic´, “Hardware implementation and performance analysis of resource efficient probabilistic hard decision ldpc decoders,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 65, no. 9, pp. 3074–3084, Sept 2018.
+[15] B. Vasic´, S. K. Chilappagari, D. V. Nguyen, and S. K. Planjery, “Trapping set ontology,” 2009 47th Annual Allerton Conference on Communication, Control, and Computing (Allerton), pp. 1–7, Sept 2009.
+[16] X. Chen and V. Akella, “Exploiting data-level parallelism for energyefficient implementation of ldpc decoders and dct on an fpga,” ACM Trans. Reconfigurable Technol. Syst., vol. 4, no. 4, pp. 17–37, Dec. 2011.
+[17] M. Owaida, G. Falcao, J. Andrade, C. Antonopoulos, N. Bellas, M. Purnaprajna, D. Novo, G. Karakonstantis, A. Burg, and P. Ienne, “Enhancing design space exploration by extending cpu/gpu specifications onto fpgas,” ACM Trans. Embed. Comput. Syst., vol. 14, no. 2, pp. 33:1– 33:23, Feb. 2015.
+
+[18] L. Yang, H. Liu, and C. R. Shi, “Code construction and fpga implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 53, no. 4, pp. 892–904, April 2006.
+[19] C. Beuschel and H. Pfleiderer, “Fpga implementation of a flexible decoder for long ldpc codes,” in 2008 International Conference on Field Programmable Logic and Applications, Sep. 2008, pp. 185–190.
+[20] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory system optimization for fpga-based implementation of quasi-cyclic ldpc codes decoders,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 58, no. 1, pp. 98–111, Jan 2011.
+[21] S. S. Tehrani, C. Jego, B. Zhu, and W. J. Gross, “Stochastic decoding of linear block codes with high-density parity-check matrices,” IEEE Trans. on Signal Processing, vol. 56, no. 11, pp. 5733–5739, Nov 2008.
+[22] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, “Hardware-efficient node processing unit architectures for flexible ldpc decoder implementations,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 65, no. 12, pp. 1919–1923, Dec 2018.
+[23] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theor., vol. 47, no. 2, pp. 498–519, Sep. 2006.
+[24] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, pp. 399–431, March 1999.
+[25] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding ldpc codes with low error-floor,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 61, no. 7, pp. 2150–2158, July 2014.
+[26] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, September 1981.
+[27] C. Leroux, S. Hemati, S. Mannor, and W. J. Gross, “Stochastic chase decoding of reed-solomon codes,” IEEE Communications Letters, vol. 14, no. 9, pp. 863 – 865, September 2010.
+[28] B. Vasic´, S. K. Chilappagari, and D. V. Nguyen, “Failures and error floors of iterative decoders,” Channel Coding: Theory, Algorithms, and Applications: Academic Press Library in Mobile and Wireless Communications, pp. 299–341, June 26 2014.
+[29] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+[30] K. Le, F. Ghaffari, D. Declercq, B. Vasic, and C. Winstead, “A novel high-throughput, low-complexity bit-flipping decoder for ldpc codes,” in 2017 International Conference on Advanced Technologies for Communications (ATC), Oct 2017, pp. 126–131.
+[31] P. Ivanis and B. Vasic´, “Error errore eicitur: A stochastic resonance paradigm for reliable storage of information on unreliable media,” IEEE Trans on Comm, vol. 64, no. 9, pp. 3596 – 3608, September 2016.
+[32] B. Vasic´, P. Ivanis, and D. Declercq, “Approaching maximum likelihood performance of ldpc codes by stochastic resonance in noisy iterative decoders,” Information Theory and Applications Workshop (ITA), pp. 4291–4296, February 2016.
+[33] B. Unal, “High throughput FPGA based framework for accelerating error characterization of LDPC codes,” September 2019. [Online]. Available: http://www2.engr.arizona.edu/∼rcl/publications/ source codes/ldpc/framework.html
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:56 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,835 @@
+A Unified Reconfigurable Datapath for 5G
+Compatible LDPC Decoding
+Ting Lin, Shan Cao, Shunqing Zhang, Shugong Xu
+Shanghai Institute for Advanced Communication and Data Science
+Key laboratory of Specialty Fiber Optics and Optical Access Networks
+Joint International Research Laboratory of Specialty Fiber Optics and Advanced Communication
+Shanghai University, Shanghai, China
+{zjzslt, cshan, shunqing, shugong}@shu.edu.cn
+Abstract—With low-density parity-check (LDPC) codes se-
+lected as the standard codes for the fifth generation (5G)
+enhanced Mobile Broad Band scenario (eMBB) and the raising
+requirement for 5G network deployment, a LDPC decoder that
+supports all LDPC coding structures according to Release 15
+(R15) 5G standard becomes necessary. In this paper, we propose
+a LDPC decoding unit with unified reconfigurable datapath to
+adapt LDPC code structures of 5G data channel. The proposed
+decoding datapath can be configured into several separate ones
+for unified check node update and the corresponding variable
+node updates. The LDPC decoding unit is implemented on Altera
+Stratix IV FPGA with 333.33 MHz frequency and around 26
+Mbps throughput per unit.
+Index Terms—LDPC code, reconfigurable architectures, belief
+propagation
+I. INTRODUCTION
+Low-density parity-check (LDPC) [1] codes are linear block
+error-correction codes, and have been proven to offer reliable
+performance and high parallelism in hardware. To meet the
+high throughput demands for the fifth generation (5G) wireless
+systems [2], a solution to apply LDPC code for data plane
+transmissions in 5G enhanced Mobile Broad Band scenario
+(eMBB) scenario was agreed in the Third Generation Partner-
+ship Project (3GPP) radio access network meeting [3]. And
+novel structural features are introduced in code design to meet
+the broad requirements of 5G New Radio (NR) data channel
+[4].
+LDPC codes can commonly be decoded with belief propa-
+gation (BP) algorithms, information is updated and exchanged
+iteratively between the variable nodes and check nodes. Wire-
+less standards, including 3GPP Release 15 (R15) standard
+[5], support more than one kind of quasi-cyclic LDPC codes
+with different characteristics. Thus the previous hardware
+implementations of LDPC BP decoding algorithms are often
+composed of check nodes processing units (CNUs) and vari-
+able node processing units (VNUs), which are consume signif-
+icant hardware resources and require complicated connecting
+network to route information between processing units through
+shift operations [6]. Compared to the wireless standards that
+LDPC codes have already been adopted into, such as IEEE
+802.11n [7], IEEE 802.16e [8], digital video broadcast (DVB)
+[9], 5G NR proposed new requirements to LDPC decoding,
+such as larger codeword length, wide range of block sizes
+and code rates. In this case, the previous LDPC decoding
+architecture requires even higher complexity and latency in
+the interconnection network to connecting CNU and VNU
+efficiently.
+Therefore in this paper, we proposed a unified LDPC
+decoding unit with reconfigurable datapath for LDPC de-
+coding, which merged CNU, VNU and the interconnection
+network. The proposed LDPC decoding unit, compatible with
+different code lengths and coding structures according to the
+5G standard decoding requirements, can process messages of
+one or two layers simultaneously. We implement the proposed
+decoding unit with Field-Programmable-Gate-Array (FPGA)
+by a pipelined hardware architecture. The implementation
+results show that the proposed decoding unit can support 26.65
+Mbps throughput, less than 36 µs delay and 21.80 Mbps
+throughput, less than 24 µs delay for two kinds of base LDPC
+coding structures.
+The rest of this paper is organized as follows. Section II pro-
+vides necessary background information about LDPC codes.
+The proposed unified reconfigurable decoding architecture is
+discussed in Section III. In Section IV, we provide the simulate
+and implementation results. Finally, we conclude this paper in
+Section V.
+II. PRELIMINARIES
+The decoding algorithm basics for LDPC codes are intro-
+duced in this section.
+LDPC codes can be defined by a sparse parity check
+matrix. Consider a (N, K) LDPC code, which generates N
+coded bits x = [x1, x2, . . . , xN] from K information bits
+b = [b1, b2, . . . , bK] according to [1]. A (N, K) LDPC code
+has a (N−K)×N parity check matrix H which determines the
+connectivity of check nodes and variable nodes. The process
+of BP decoding for LDPC codes can be shown based on a
+graphical description known as a Tanner graph [10], which
+mirrors the parity check matrix as illustrated in Fig. 1. The
+corresponding messages are exchanged between two kinds of
+nodes along the edges and iteratively updated through the
+following equations until the stopping criterion is satisfied.
+M (t)
+cj→vi =
+Y
+v′∈Vi
+sign
+
+M (t−1)
+v′→cj
+
+Φ
+ X
+v′∈Vi
+Φ
+
+M (t−1)
+v′→cj
+!
+(1)
+215
+2018 IEEE Asia Pacific Conference on Circuits and Systems
+978-1-5386-8240-1/18/$31.00 ©2018 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:26:42 UTC from IEEE Xplore.  Restrictions apply. 
+  
+  
+𝑐1 
+𝑐𝑁−𝐾
+𝑐2 
+𝑐3 
+𝑣𝑁−1
+𝑣𝑁
+𝑣1
+𝑣2
+𝑣4 
+𝑣3 
+Fig. 1. An example of the BP decoding by the factor graph for LDPC.
+M (t)
+vi→cj = L(0)
+ˆbi +
+X
+c′
+M (t)
+c′→vi,
+(2)
+L(t)
+ˆbi = L(0)
+ˆbi +
+X
+c
+M (t)
+c→vi,
+(3)
+where M (t)
+a→b denotes the message passing from node a to node
+b in the t-th iteration. v′ ∈Vcj\vi and c′ ∈Cvi\cj represent all
+variable/check nodes connected to cj and vi excluding vi and
+cj, respectively. c ∈Cvi represent all check nodes connected
+to vi. Sign(x) identifies the sign of inner symbols and Φ(x) is
+defined by Φ(x) = −log
+
+tanh
+
+|x|
+2
+
+. In addition, the initial
+condition for the BP update is initialized with probabilistic
+information in the form of log-likelihood ratios (LLRs) that
+pertain to bits of a codeword y = [y1, y2, . . . , yN] received
+from the communication channel. We can obtain the initial
+LLRs based on the observations y and the feature of commu-
+nication channel.
+A significant number of hardware resources are required
+for the implementation of the nonlinear function Φ(x). Based
+on the simplification method which reduces the calculation
+complexity as shown in [11], the check node update equation
+is given by,
+M (t)
+cj→vi =
+Y
+v′
+sign
+
+M (t−1)
+v′→cj
+
+min
+v′
+
+|M (t−1)
+v′→cj|
+
+,
+(4)
+where the production and minimization of v′ is performed over
+the set Vcj\cj.
+Once the message passing procedure converges or the
+maximum number of iteration is met, a hard decision will
+be performed and the estimated information bit ˆb(t)
+i
+can be
+calculated through
+ˆb(t)
+i =
+(
+0,
+if L(t)
+ˆbi ≥0;
+1,
+otherwise.
+(5)
+We scale the decoding of LDPC into fine-grained iterations
+by re-ordering message passing using layered decoding [12].
+Assume only one check node cj is updated in each iteration,
+RDU
+Control Unit
+RDU
+MRDU
+MEM
+CTRL
+MEMORY
+Control Signal
+Data
+Fig. 2. The architecture of reconfigurable decoder.
+the corresponding variable node messages M (t)
+vi→cj (vi ∈Vcj)
+are updated by
+M (t)
+vi→cj= L(t−1)
+vi
+−M (t−1)
+cj→vi.
+(6)
+The check node cj is then updated by (4), and the correspond-
+ing LLR messages of variable nodes vi (vi ∈Vcj) are updated
+through
+L(t)
+vi = L(t−1)
+vi
+−M (t−1)
+cj→vi + M (t)
+cj→vi
+(7)
+= M (t)
+vi→cj + M (t)
+cj→vi.
+(8)
+III. RECONFIGURABLE DECODER
+In this section, we propose a reconfigurable decoder for
+LDPC codes. The architecture of the proposed reconfigurable
+architecture is shown in Fig. 2, composed of several merged
+reconfigurable decoding units (MRDUs), a control unit and a
+memory controller.
+Accordingly, 3GPP R15 [5] has agreed to consider two
+kinds of rate-compatible base graphs, base graph 1 (BG1) and
+base graph 2 (BG2), for the data channel coding and BG1 and
+BG2 have similar structure. BG1 is for larger block lengths
+and higher rates, while BG2 for smaller block lengths and
+lower rates. The H matrix is composed of 46×68 and 42×52
+elements for BG1 and BG2 respectively according to [5]. Each
+element in the H matrix represents a Z × Z submatrix, and
+the sets of LDPC lifting size Z is same for BG1 and BG2.
+The matrix H in (9) is the parity check matrix of BG2 when
+Z = 96.
+H =
+
+
+174
+97
+166
+· · ·
+−
+−
+−
+· · ·
+−
+−
+−
+27
+−
+−
+· · ·
+−
+−
+−
+· · ·
+−
+−
+−
+25
+114
+−
+· · ·
+−
+−
+−
+· · ·
+−
+−
+−
+−
+136
+175
+· · ·
+−
+−
+−
+· · ·
+−
+−
+−
+72
+74
+−
+· · ·
+0
+−
+−
+· · ·
+−
+−
+−
+10
+44
+−
+· · ·
+−
+0
+−
+· · ·
+−
+−
+−
+129
+−
+−
+· · ·
+−
+−
+0
+· · ·
+−
+−
+−
+−
+80
+−
+· · ·
+−
+−
+−
+· · ·
+−
+−
+−
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+·
+93
+−
+−
+· · ·
+−
+−
+−
+· · ·
+0
+−
+−
+−
+−
+103
+· · ·
+−
+−
+−
+· · ·
+−
+0
+−
+−
+147
+−
+· · ·
+−
+−
+−
+· · ·
+−
+−
+0
+
+
+(9)
+For the LDPC BP decoding algorithm, the main calculations
+include two basic computing operations, the signed addition
+operation and the min-sum approximation operation. Check
+nodes updates can be divided into 5 pipeline stages and the
+signed addition units are required in the pipeline stage 1 and
+216
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:26:42 UTC from IEEE Xplore.  Restrictions apply. 
+M
+M
+M
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+…
+…
+sign bits
+M
+M
+M
+inputs
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+A
+A
+MUX_A
+MUX_B
+MUX_C
+MUX_C
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+A
+A
+A
+A
+8
+8
+8
+8
+8
+8
+8
+8
+MUX_B
+Stage1
+Stage2
+Stage3
+Stage4
+Stage5
+(a)
+ 
+M
+M
+M
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+ 
+ 
+sign bits
+M
+M
+M
+inputs
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+8
+A
+A
+MUX_A
+MUX_B
+MUX_C
+MUX_C
+COMP
+COMP
+COMP
+COMP
+COMP
+COMP
+A
+A
+A
+A
+8
+8
+8
+8
+8
+8
+8
+8
+MUX_B
+Stage1
+Stage2
+Stage3
+Stage4
+Stage5
+(b)
+Fig. 3.
+The illustration of data path reconfigurability of the proposed MRDU. (a) The data path of MRDU in LDPC mode when the decoding pattern is
+Nj = 11; (b) The data path of MRDU in LDPC mode when the decoding pattern is (Nj = 7) + (Nj = 4).
+5 respectively, and the min-sum approximation units for the
+pipeline stage 2, 3 and 4. Denote Nj to be the number of
+variable nodes connected to the check node cj, and the value
+of Nj varies from 3 to 19 according to the specification of
+5G eMBB scenario [5]. The message update requires different
+numbers of basic operations determined by Nj.
+The MRDU can be fully pipelined and configured into
+several decoding patterns depending on the length of codeword
+and the standardized parity check matrix H and several
+check nodes updates is able to be processed simultaneously
+in one MRDU. For example, two of the decoding patterns
+are illustrated in Fig. 3. The colored units and registers
+indicates the data path in this case, while the grey ones are
+in idle state. Fig. 3(a) gives an illustration when a Nj = 11
+decoding pattern is performed and Fig. 3(b) shows when a
+(Nj = 7) + (Nj = 4) decoding pattern.
+The layered decoding requires sequential schedule due to
+data dependencies. According to the principle of layered
+decoding, check nodes with no shared variable nodes can be
+updated simultaneously. Therefore, we reorder the check nodes
+and regroup them so that several check nodes can be processed
+in parallel according to the following principles.
+• Check nodes cannot be updated simultaneously with
+variable nodes that have connections with check nodes
+in the same block, to avoid memory access conflicts.
+• The difference in the number of cyclic shifts between two
+adjacent running layers differs by no more than Z −7.
+Since one update process of the LDPC decoding requires
+5 clocks for calculation and 2 clocks for reading and
+storing messages. And the L(t)
+vi cannot advance to the
+next update until the last update is completed. Therefore,
+it is necessary to ensure that at least 7 clocks are taken
+before the same L(t)
+vi message enters to the next update.
+• The number of type conversions of LDPC decoding is
+as small as possible. Therefore, the iterative update of
+the LDPC decoding in the same combination mode is
+updated in the adjacent order.
+Take a (4992, 960) codeword C for example. A check node
+TABLE I
+DECODING FLOW REORDERING FOR A 4992-BIT LDPC CODE
+Order
+Decoding pattern
+No. of submatrices
+No. of check nodes
+1
+4+4
+7
+672
+2
+5+4
+6
+576
+3
+5+3
+2
+192
+4
+3+3
+2
+192
+5
+6
+3
+288
+6
+5
+1
+96
+7
+8
+2
+192
+8
+10
+2
+192
+is connected to 3 ∼10 variable nodes in this case and all
+check nodes are divided into 8 categories and the decoding is
+in the order as shown in Table I.
+IV. SIMULATION AND IMPLEMENTATION
+The proposed architecture is implemented and evaluated by
+Altera Stratix IV FPGA [13]. In this section, we simulate and
+implement the proposed reconfigurable decoding scheme and
+simulate the floating-point and fixed-point bit error rate (BER)
+versus signal-to-noise ratio (SNR) performance using different
+data widths and data precision. In what follows, we provide the
+hardware implement results and performance of the proposed
+design.
+A. Effect of Data Width and Data Precision
+In the FPGA implementation, data width and data precision
+are often used to trade off the decoding performance against
+the hardware complexity. The hardware resource increases in
+proportional with the data width. As a baseline performance,
+we assume the 16-bit floating-point parameters are applied
+and the overall BER versus SNR curve is evaluated as the
+performance metric. The decoding performance for different
+data widths and data precisions are illustrated in Fig. 4.
+Based on the simulated results, we show that 6-bit data
+width provides sufficient solution for LDPC codes in terms of
+BER versus SNR performance, and requires relatively smaller
+amount of hardware resources in the meantime.
+217
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:26:42 UTC from IEEE Xplore.  Restrictions apply. 
+0.5
+1
+1.5
+2
+2.5
+3
+Eb/N0(dB)
+10-3
+10-2
+10-1
+100
+BER
+floating-point, 16 bits
+fixed-point, 1S+11I+4S
+fixed-point, 1S+4I+3S
+fixed-point, 1S+4I+1S
+Fig. 4. BER versus Eb/N0 (4992, 960) LDPC decoding performance under
+different quantization precision. The 6-bit data width provides a reasonable
+BER performance compared with the floating-point solution and fixed-point
+solutions with larger data width and more complexity.
+TABLE II
+FPGA IMPLEMENTATION RESULTS WITH 6-BIT FIXED-POINT LLRS
+Items
+MRDU
+Control Unit
+Memory Controller
+ALUTs
+936
+593
+1708
+Register
+542
+482
+497
+B. Hardware Implementation Results
+In Table II, the FPGA implementation results with 6-
+bit fixed-point LLRs are summarized, where the utilization
+of different types of hardware resources is considered. We
+can see that the MDRU takes a small amount of hardware
+resources compared to the controlling units. The decoder can
+be therefore easily expanded by integrating more MRDUs in
+a single-instruction-multiple-data (SIMD) manner.
+Several examples are given by configuring the MRDU for
+two kinds of base graphs and different codeword lengths,
+the results of which are given in Table III and Table IV
+respectively. The results show that the latency to decode one
+codeword increases almost proportionally with the length of
+the codeword. The throughput however remains almost the
+same despite the increase of codeword lengths due to the full
+pipelined architecture. Therefore, the proposed architecture
+can be used to a wide range of codeword lengths.
+V. CONCLUSION AND FUTURE WORK
+In this paper, a reconfigurable datapath for LDPC decod-
+ing unit is proposed, and a merged LDPC decoding unit
+compatible with 3GPP R15 standard with pipelined structure
+is implemented accordingly. Based on the proposed LDPC
+decoding unit, a reconfigurable LDPC decoder is implemented
+to support all code structures of LDPC codes in 3GPP R15
+standard [5]. To further improve the throughput of the decoder,
+a clustered architecture composed of more MRDUs and its
+implementation by Application Specific Integrated Circuit
+(ASIC) is one of our future work.
+TABLE III
+IMPLEMENTATION RESULTS FOR SEVERAL KINDS CODEWORDS OF BASE
+GRAPH 1 WITH FIVE TIMES ITERATION
+Size of Z
+Throughput(Mbps)
+Latency(µs)
+Frequency(MHz)
+44
+26.63
+16.52
+333.33
+96
+26.65
+36.02
+333.33
+352
+26.66
+132.02
+333.33
+TABLE IV
+IMPLEMENTATION RESULTS FOR DIFFERENT CODELENGTH OF BASE
+GRAPH 2 WITH FIVE TIMES ITERATION
+Size of Z
+Throughput(Mbps)
+Latency(µs)
+Frequency(MHz)
+44
+30.54
+31.70
+333.33
+96
+30.55
+69.14
+333.33
+352
+30.55
+253.46
+333.33
+ACKNOWLEDGEMENT
+This work was supported by the National Natural Science
+Foundation of China (NSFC) Grants under No. 61701293, the
+National Science and Technology Major Project Grants under
+No. 2018ZX03001009, and research funds from Shanghai In-
+stitute for Advanced Communication and Data Science (SICS).
+REFERENCES
+[1] G. Cancellieri, Low Density Parity Check Codes. Springer International
+Publishing, 2015.
+[2] J. Thompson, X. Ge, H. C. Wu, R. Irmer, H. Jiang, G. Fettweis,
+and S. Alamouti, “5G wireless communication systems: prospects and
+challenges,” IEEE Communications Magazine, vol. 52, no. 2, pp. 62–64,
+Feb. 2014.
+[3] RAN-TSG, “Final report of 3GPP TSG RAN WG1 #87 v1.0.0,” 3GPP,
+Tech. Rep., Feb 2017.
+[4] T. Richardson and S. Kudekar, “Design of Low-Density Parity Check
+Codes for 5G New Radio,” IEEE Communications Magazine, vol. 56,
+no. 3, pp. 28–34, 2018.
+[5] R. A. N. T. S. Group, “Multiplexing and channel coding (release 15)
+for radio access network,” 3GPP, Tech. Rep., 2018.
+[6] Y. Dai, Z. Yan, and N. Chen, “Optimal overlapped message passing
+decoding of quasi-cyclic ldpc codes,” IEEE Transactions on Very Large
+Scale Integration (VLSI) Systems, no. 5, pp. 565–578, 2008.
+[7] E. Perahia and R. Stacey, Next generation wireless LANs: 802.11 n and
+802.11 ac.
+Cambridge university press, 2013.
+[8] I. L. S. Committee et al., “IEEE standard for local and metropolitan
+area networks part 16: Air interface for fixed broadband wireless access
+systems,” IEEE Std 802.16ˆ¡ TM¿-2004, 2004.
+[9] U. H. Reimers, “DVB-the family of international standards for digital
+video broadcasting,” Proceedings of the IEEE, vol. 94, no. 1, pp. 173–
+182, 2006.
+[10] R. Tanner, “A recursive approach to low complexity codes,” IEEE
+Transactions on information theory, vol. 27, no. 5, pp. 533–547, 1981.
+[11] I. Tsatsaragkos and V. Paliouras, “A reconfigurable LDPC decoder
+optimized for 802.11n/ac applications,” IEEE Transactions on Very
+Large Scale Integration (VLSI) Systems, vol. 26, no. 1, pp. 182–195,
+Jan. 2018.
+[12] M. M. Mansour and N. R. Shanbhag, “High-throughput ldpc decoders,”
+IEEE transactions on very large scale integration (VLSI) Systems,
+vol. 11, no. 6, pp. 976–996, 2003.
+[13] Altera, Stratix IV Device Handbook, SIV5V1-4.8, Intel Corporation, San
+Jose, U.S.A., Jan. 2016.
+218
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:26:42 UTC from IEEE Xplore.  Restrictions apply. 

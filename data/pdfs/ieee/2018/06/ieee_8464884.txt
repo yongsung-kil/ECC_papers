@@ -1,0 +1,671 @@
+Improved Maximum-Likelihood Decoding Using Sparse Parity-Check Matrices
+
+Florian Gensheimer University of Koblenz-Landau gensheimer@uni-koblenz.de
+
+Tobias Dietz, Stefan Ruzika University of Kaiserslautern
+{dietz, ruzika}@mathematik.uni-kl.de
+
+Kira Kraft, Norbert Wehn University of Kaiserslautern {kraft, wehn}@eit.uni-kl.de
+
+Abstract—Maximum-likelihood (ML) decoding is an important and powerful method in communications to obtain the optimal performance of a channel code. However, ML decoding is a challenging problem whose complexity grows exponentially with the blocklength of the code, making it unfeasible to decode optimally for large codes.
+In this paper, we present a new approach to accelerate ML decoding by minimizing the number of ones in the code’s underlying matrix representation. We formulate this minimization problem as an integer program and use a heuristic algorithm to solve it. Using these minimized matrices, we significantly reduce the runtime of different ML decoders for various codes, resulting in speedups of up to 81% compared to the runtime on the original matrices.
+I. INTRODUCTION
+Channel decoding is an important task in any communication system. Thus, determining the optimal performance of a channel code is significant to qualify heuristic decoders by analyzing the gap towards the optimum. Although theoretical bounds like the Shannon limit [7] exist, these bounds do not rely on the underlying code’s structure, so they cannot give a hint about how much performance gain for heuristic decoders on specific codes is possible. A tight bound can be obtained by Maximum-Likelihood (ML) decoding, which solves the decoding problem optimally and individually for every code. However, solving the ML decoding problem is an NP-hard problem, and obtaining the Frame Error Rate (FER) of the ML decoder via Monte-Carlo simulations requires, e.g., 105 decoding runs for each Signal to Noise Ratio (SNR) and even more for low FERs. Thus, ML decoding is in general very challenging, especially for large blocklengths.
+Techniques for optimal or near-optimal ML decoding are an active research field, that heavily relies on mathematical optimization (see e.g. [2], [3], [4], [8], [10], [12]).
+In this paper, we present a method to reduce the ML decoding runtime of different linear codes by introducing a preprocessing step, that minimizes the number of ones in the code’s underlying matrix representation. Minimizing the density in matrix representations is oftentimes performed to reduce storage or simplify calculations, but has, to the best of our knowledge, never been formulated exactly in the context of ML decoding. This preprocessing step enables speedups in the ML decoding of up to 81%, resulting in many hours less computational time when simulating the FER and enabling the computation of a previously unknown ML performance of a large algebraic code. The preprocessing step only has to be performed once.
+
+In detail, this paper makes the following contributions:
+• It is shown that minimizing the number of ones in a code’s matrix representation is NP-hard. The problem is formulated as an integer program (IP).
+• A heuristic for minimizing the one-entries in a given matrix is presented, and lower bounds on the minimum number of ones are derived. The bounds rely on the underlying code structure.
+• Several matrices of BCH and Reed-Solomon (RS) codes were one-minimized. With the help of the lower bounds we can show that the heuristic attains the minimum in many cases.
+• We show runtime improvements for the optimized matrices of different codes under different ML decoders, reducing the ML decoding runtime up to 81%. This improvement enabled us to simulate the ML FER performance of a large (155,115) RS code for the first time.
+
+II. PRELIMINARIES
+In this section, notation is introduced and the required basics from coding theory are repeated.
+
+A. Binary Linear Block Codes
+
+In this paper, binary linear block codes C ⊆ {0, 1}n are considered, i. e. the codewords form a vector space in {0, 1}n
+
+with the underlying field F2 = {0, 1} and the addition modulo 2. The dimension and the blocklength of C will be denoted
+
+by k and n, respectively. Such binary linear block codes can be represented by a generator matrix G ∈ {0, 1}k×n, where
+C = {x G : x ∈ {0, 1}k} and the rows of G form a basis
+
+of the vector space C. A second representation of C is given by a so-called parity-check matrix H ∈ {0, 1}(n−k)×n, where
+C = {y ∈ {0, 1}n : Hy ≡ 0 mod 2}, i. e. C is the kernel of
+
+the matrix H.
+For a code C with generator matrix G and parity-check matrix H, the dual code C⊥ is defined by its generator matrix
+
+H or, equivalently, by its parity-check matrix G. It follows
+
+that the dual code has blocklength n and dimension n − k. The minimum distance of a binary linear block code C
+
+is defined as d = min δ(y, y ), where δ is the Hamming
+
+y,y ∈C
+
+y=y
+
+distance of two binary vectors. For binary linear block codes,
+
+this is equivalent to d = min
+y∈C
+
+n i=1
+
+yi.
+
+A
+
+codeword
+
+c
+
+∈
+
+C
+
+that
+
+y=0
+
+attains this minimum is called minimum codeword. In case of
+
+C⊥, we will speak of a dual minimum codeword.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5386-2321-3/18/$31.00 ©2018 IEEE
+
+236
+
+B. ML Decoding
+
+Given a binary symmetric memoryless noisy channel, a transmitted codeword y ∈ C may be perturbed such that some other word y ∈ {0, 1}n is received. The goal is to compute which y ∈ C was sent with the highest probability given that y
+was received, or equivalently under the reasonable assumption
+that all codewords have the same probability, to maximize the probability that y was received given that y was transmitted.
+This is called Maximum-Likelihood (ML) decoding:
+
+yML = arg max P r (y received |y transmitted)
+y∈C noise
+
+In the literature (see e. g. [3]), it is shown that ML decoding
+
+is equivalent to the minimization of a linear function, i. e.
+
+yML = arg min
+y∈C
+
+n j=1
+
+λj
+
+yj
+
+,
+
+where
+
+λj
+
+=
+
+ln
+
+P r(yj |yj =0) P r(yj |yj =1)
+
+are
+
+the so-called log-likelihood ratios (LLR). Additionally, the ML
+
+decoding problem can be formulated as an integer program,
+
+which is the basis of the so-called LP decoding approach (see
+
+[3] for further details).
+
+III. RELATED WORK
+A. Matrix Manipulation
+Using equivalent parity-check matrices to improve the decoding performance is a well-known task and has been considered for different codes. In [11], some general rules for paritycheck matrices to work well in belief propagation decoding are given. To obtain better matrices, redundant parity-checks are introduced that improve the decoding performance.
+In [6], RS codes are decoded with a modified belief propagation algorithm. Upon receiving the reliability values from the channel, the matrix structure is changed to obtain best-possible decoding performance based on the obtained reliabilities.
+The authors of [1] also try to reduce the density in a given RS parity-check matrix for improved belief propagation decoding. In contrast, our paper treats the problem of minimizing the number of ones in a given parity-check matrix from an optimization-theoretic point of view, giving an exact formulation as an IP and verifying the optimality of heuristic results by lower bounds.
+
+B. ML Decoding
+The authors of [4] solve the ML decoding problem using a branch-and-bound algorithm. In each step, the problem is divided into subproblems, for which upper and lower bounds are computed to prune parts of the search tree. The lower bounds are computed with an adaptive LP decoder [12], that iteratively computes redundant parity-checks if the solution of the LP was fractional. Well-known tools to solve linear and integer programs are the Gurobi Optimizer1 or IBM’s commercial solver CPLEX2.
+1www.gurobi.com 2www.ibm.com/products/ilog-cplex-optimization-studio
+
+IV. PROBLEM & EXACT FORMULATION
+In this section, we first define our main problem, the minimization of one-entries of a parity-check matrix. Second, we show the NP-hardness of the problem and develop an integer programming formulation with O(n3) constraints. In the following, sets {1, . . . , l} will be abbreviated by [l].
+
+A. Problem & Theoretical Results
+Let a binary linear block code C ⊆ {0, 1}n of dimension k be given. The goal is to find a parity-check matrix H ∈ {0, 1}(n−k)×k of C with the lowest number of one-entries among all parity-check matrices of C. Formally, we want to
+solve the following optimization problem:
+
+n−k n
+
+(MinOnes) min
+
+Hij
+
+(1)
+
+i=1 j=1
+
+s. t. H ∈ {0, 1}(n−k)×n
+
+(2)
+
+{y ∈ {0, 1}n : Hy ≡ 0 mod 2} = C (3)
+
+In the objective function (1) the number of one-entries of H is minimized, while constraint (3) ensures that H is a parity-check matrix of C. Since the parity-check matrices of C are exactly the generator matrices of C := C⊥, our
+problem (MinOnes) is equivalent to the problem of minimizing
+the number of one-entries of a generator matrix. In the next
+theorem, we show that (MinOnes) is an NP-hard problem.
+
+Theorem 1 The problem of finding a generator matrix G of a given binary linear block code C with a minimum number of one-entries is NP-hard.
+
+Proof. The problem of finding the minimum distance of a code, which is known to be NP-hard [9], can be reduced to the problem of finding the sparsest generator matrix G by computing the weight of its sparsest row, which must be a minimum codeword because of the optimality of G.
+
+B. Exact Formulation
+Next, we propose an IP formulation of (MinOnes). For this purpose, we assume that for a given code C, some parity-check matrix Hold is known and w.l.o.g. that Hold ∈ {0, 1}(n−k)×n. If Hold has more than n − k rows, linearly dependent rows can be removed. Since the parity-check matrices of C are the generator matrices of C⊥, we can formulate the problem (MinOnes) as follows: find a basis of C⊥ with a minimum number of one-entries given that some basis of C⊥ is known, namely the rows of Hold. More precisely, we use the following
+theorem:
+Theorem 2 Let Hold ∈ {0, 1}(n−k)×n be a parity-check matrix of the code C with dim(C) = k. Then, the following statements are equivalent:
+1) H ∈ {0, 1}(n−k)×n is a parity-check matrix of C. 2) The rows of H are a basis of the dual code C⊥. 3) All rows of Hold are elements of the span of the rows of
+H, i. e. Hio,l·d ∈ span{H1,·, . . . , Hn−k,·} ∀i ∈ [n − k].
+Proof. “1) ⇔ 2)”: Clear by definition. “2) ⇒ 3)”: This follows since the rows of H are a basis of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5386-2321-3/18/$31.00 ©2018 IEEE
+
+237
+
+C⊥ and all rows of Hold are dual codewords. “3) ⇒ 2)”: Since C⊥ = span{H1o,ld· , . . . , Hnol−d k,·} ⊆ span{H1,·, . . . , Hn−k,·}, the claim follows with n − k = dim(C⊥) = |{H1,·, . . . , Hn−k,·}|.
+
+Thus, it is sufficient to check in our formulation whether all rows of Hold are in the span of the rows of H. Hence, we can
+
+rewrite constraint (3) of (MinOnes) as follows:
+
+n−k
+
+∃λl ∈ Fn2 −k :
+
+λil Hi,· ≡ Hlo,l·d
+
+i=1
+
+mod 2 ∀l ∈ [n − k]
+
+The variables λli denote the coefficients, when we write the rows of Hold as linear combinations of the rows of H. This
+
+program can be transformed into an optimization problem
+
+without modulo calculation in the following way:
+
+n−k
+Hij λil= Hlojld + 2zlj ∀l ∈ [n − k], j ∈ [n]
+i=1
+Hij ∈ {0, 1} ∀i ∈ [n − k], ∀j ∈ [n]
+
+zlj ∈ Z≥0 ∀l ∈ [n − k], ∀j ∈ [n] λil ∈ {0, 1} ∀i, l ∈ [n − k]
+
+Here, we needed to add the auxiliary variables zlj ∈ Z≥0.
+
+n−k
+
+In F2,
+
+Hijλli is equal to Hlojld. However, in the normal
+
+i=1
+addition in R, they are only equal up to 2zlj, a multiple of 2.
+
+The last formulation also includes products Hijλil of two
+
+binary variables, so the formulation is non-linear. Products of
+
+the form f g with f, g ∈ {0, 1} can be replaced by new binary
+variables h = f g by adding the constraints h ≤ f , h ≤ g and h ≥ f + g − 1. In this way, we can replace all Hijλli by new binary variables µijl and we obtain the following integer
+program:
+
+n−k n
+
+min
+
+Hij
+
+i=1 j=1
+
+n−k
+
+s. t.
+
+µijl = Hlojld + 2zlj ∀l ∈ [n − k], ∀j ∈ [n]
+
+i=1
+
+µijl ≤ Hij
+
+∀i, l ∈ [n − k], ∀j ∈ [n]
+
+µijl
+
+≤ λli
+
+∀i, l ∈ [n − k], ∀j ∈ [n]
+
+µijl ≥ Hij + λil − 1∀i, l ∈ [n − k], ∀j ∈ [n]
+
+Hij ∈ {0, 1} ∀i ∈ [n − k], ∀j ∈ [n]
+
+zlj ∈ Z≥0 λli ∈ {0, 1}
+
+∀l ∈ [n − k], ∀j ∈ [n] ∀i, l ∈ [n − k]
+
+µijl ∈ {0, 1} ∀i, l ∈ [n − k], ∀j ∈ [n]
+
+This integer program has O(n(n − k)2) = O(n3) many
+
+constraints and variables.
+
+V. HEURISTIC & RESULTS FOR DENSE CODES
+
+Since the problem (MinOnes) is NP-hard and hard to solve in reasonable time, we will propose an integer programmingbased heuristic for this problem. Additionally, we will derive a lower bound for (MinOnes) and apply our heuristic to short BCH and RS codes.
+
+A. Heuristic
+The idea of the heuristic is to simplify the problem by
+applying a row-wise algorithm. This means that the heuristic starts with the original parity-check matrix H and reduces the number of one-entries in the first row of H, if possible. Then,
+it continues with the resulting matrix and reduces the number
+of one-entries in the next row, until all rows are considered. To optimize the number of one-entries in row i of some
+parity-check matrix H ∈ {0, 1}(n−k)×n of C, elementary row operations are applied to row i. They do not change the kernel of a matrix, i. e. the resulting matrix H is still a parity-check matrix of C. Since all computations are done over the field
+F2, the only relevant elementary row operations are adding other rows once to row i. The following integer program (Pi) answers the question which rows should be added in order to reduce the number of one-entries in row i as much as possible:
+The binary variables xli, l ∈ [n − k] \ {i} are the decision variables and the integer variables zij ∈ Z≥0, j ∈ [n] are auxiliary variables. The variables xli are interpreted as
+
+xli =
+
+1 0
+
+if row l is added to row i otherwise.
+
+The integer program is then given by:
+
+n
+
+n−k
+
+(Pi) min
+
+(Hij + ( xliHlj ) − 2zij )
+
+(4)
+
+j=1
+
+l=1
+
+l=i
+
+n−k
+
+s. t. Hij + xliHlj ≥ 2zij ∀j ∈ [n] (5)
+
+l=1 l=i
+
+xli ∈ {0, 1} ∀l ∈ [n − k] \ {i}
+
+(6)
+
+zij ∈ Z≥0, ∀j ∈ [n]
+
+(7)
+
+n−k
+In the constraints (5), the sum Hij+ xliHlj describes the
+l=1 l=i
+entry Hij of the modified matrix H, which is obtained after adding all chosen rows. This sum is in general not binary.
+To transform this real-valued number in the corresponding
+binary value, we add 2zij to the right-hand side of (5). This means that 2zij must be an even, non-negative integer, which is smaller or equal than the above-mentioned sum. In the
+objective function (4), the term −2zij rewards if zij is chosen as large as possible. Hence, it follows for all optimal solutions
+n−k
+of (Pi) that 2zij = 2 (Hij + xliHlj)/2 , i. e. the objective
+l=1 l=i
+function (4) sums up the number of one-entries of H (in F2) in that case. All feasible solutions of (Pi) with other values for 2zij are not optimal. The model (Pi) consists of O(n) variables and constraints. The whole heuristic is summarized
+in Algorithm 1.
+
+B. Lower Bound
+To measure the quality of the heuristic, we compute a lower bound of the optimal objective function value of (MinOnes). Note that in a parity-check matrix H with only n − k rows,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5386-2321-3/18/$31.00 ©2018 IEEE
+
+238
+
+Algorithm 1 Row-wise heuristic
+
+Require: Parity-Check Matrix H ∈ {0, 1}(n−k)×n of C
+
+1: Hopt := H
+
+2: for all i = 1, . . . , n − k do
+
+3: Solve (Pi) for Hopt and get optimal (or at least feasible) solution xˆi
+
+4: for all l = 1, . . . , n − k do
+
+5:
+
+if l = i then
+
+6: 7:
+
+if
+
+xHˆiliio,p·=t :=1
+
+then Hio,p·t
+
++
+
+Hlo,p·t
+
+mod 2
+
+8: return Hopt
+
+Table I: Results for (60, k) RS and (63, k) BCH codes
+
+n k rate #1’s H #1’s Hopt
+
+loss bound
+
+diff
+
+60 12 0.20
+
+408
+
+208 49.0% 192 8.33%
+
+60 20 0.33
+
+500
+
+272 45.6% 240 13.33%
+
+60 28 0.47
+
+448
+
+288 35.7% 256 12.50%
+
+60 36 0.60
+
+552
+
+308 44.2% 288 6.94%
+
+60 44 0.73
+
+392
+
+272 30.6% 256 6.25%
+
+60 52 0.87
+
+240
+
+192 20.0% 192
+
+0%
+
+63 30 0.48
+
+594
+
+396 33.3% 396
+
+0%
+
+63 36 0.57
+
+486
+
+384 21.0% 378 1.59%
+
+63 39 0.62
+
+672
+
+336 50.0% 336
+
+0%
+
+63 45 0.71
+
+432
+
+288 33.3% 288
+
+0%
+
+63 51 0.81
+
+336
+
+288 14.3% 288
+
+0%
+
+63 57 0.90
+
+192 no improvement
+
+192
+
+0%
+
+all rows are linearly independent and in particular non-zero. Furthermore, we have concluded that H consists of dual
+codewords in every row. Hence, we obtain a lower bound for (MinOnes) by computing the sum of the weights of the n − k
+smallest non-zero dual codewords. A minimum codeword of C⊥ can be found by solving the following integer program:
+
+(CodeDistDual) min s. t.
+
+n
+yi
+i=1
+Gy − 2z = 0
+n
+yi ≥ 1
+i=1
+y ∈ {0, 1}n z ∈ Z≥k 0
+
+Let y∗ ∈ {0, 1}n be an optimal solution of (CodeDistDual). A second-smallest non-zero dual codeword can by computed by adding the following forbidden-set inequality (see [3]) to (CodeDistDual):
+
+n
+
+n
+
+(1 − yi) + yi ≤ n − 1
+
+(8)
+
+i=1 yi∗ =0
+
+i=1 yi∗ =1
+
+Adding such constraints iteratively, the lower bound can be computed. This computation is summarized in Algorithm 2.
+
+CPU E5-1650 v3 and 64 GB memory. The integer programs (Pi) were solved with Gurobi 6.5.1 with a timelimit of 12 seconds per integer program, i. e. Gurobi outputs the best found matrices after at most 12·(n−k) seconds. We chose the Gurobi parameter values MIPFocus = 1 and Heuristics = 0.5. Algorithm 2 was solved optimally with Gurobi. Our results are depicted in Table I. The columns ‘#1’s H’ and ‘#1’s Hopt’ denote the number of one-entries of the original parity-check matrix H and the parity-check matrix Hopt from our heuristic, respectively. The column ‘loss’ denotes the percentage of one-
+entries we could remove with our heuristic. The columns
+‘bound’ and ‘diff’ denote our computed lower bound and its
+relative difference compared to the number of one-entries of Hopt. For the RS codes, n and k refer to the blocklength and dimension of the binary image representation of these codes.
+We can conclude from our bounds that the original paritycheck matrix of the (63, 57) BCH code is already optimal. Overall, the number of one-entries was reduced up to 50%. For four 63-bit BCH codes and the (60, 52) RS code, our computed bounds prove that our heuristic is optimal for these codes. For the (63, 36) BCH and the remaining RS codes, our heuristic solutions have at most 13.33% more one-entries than the lower bound. We also applied the algorithm to several
+LDPC codes, however, no further optimization was possible.
+The one-minimized matrices of all considered codes are
+provided online for further usage [5].
+
+Algorithm 2 Computation of a lower bound
+
+Require: Generator Matrix G ∈ {0, 1}k×n of C
+
+1: Initialize model (P) as (CodeDistDual)
+
+2: Solve (P) and get optimal solution y1 of (P)
+
+3: for all i = 2, . . . , n − k do
+
+4: Add constraint (8) of yi−1 to (P)
+
+5: Solve (P) and get optimal solution yi of (P)
+
+6: return
+
+n−k i=1
+
+n j=1
+
+yji
+
+C. Application to short dense codes
+We applied our heuristic in Algorithm 1 to short BCH and RS codes. The considered BCH codes have a blocklength of 63. The investigated RS codes have a blocklength of 60 in their binary image representation. The initial parity-check matrices were taken from [5]. We implemented Algorithm 1 with Python and Gurobi on a PC with Intel R Xeon R
+
+VI. ML RUNTIME IMPROVEMENTS
+As an application, we used the improved parity-check matrices from Section V-C and compared their ML decoding runtime with the original parity-check matrices. For this purpose, we applied the branch-and-bound-ML decoder from [4] with best-bound search and Gurobi as LP solver. The calculations were, again, carried out on a PC with Intel R Xeon R CPU E51650 v3 and 64 GB memory. For all considered SNR values and all 11 codes, the runtime was decreased when we used our improved parity-check matrices instead of the original ones. In Figure 1, we see the runtimes for the (15, 9) RS code and the (63, 39) and (63, 45) BCH codes. ‘B&B Hold’ and ‘B&B Hopt’ denote the runtimes (in seconds) of the branchand-bound-ML decoder with the original and the improved parity-check matrices, respectively. For the RS code, we get a speedup of at most 45%. For the (63, 39) and (63, 45) BCH codes, the time gain is at most 54% and 33%, respectively. A
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5386-2321-3/18/$31.00 ©2018 IEEE
+
+239
+
+Time per Frame [s] Time per Frame [s] Time per Frame [s]
+
+100 10−1 10−2 10−3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 [dB]
+
+(a) (15,9) RS
+
+100 10−1 10−2 10−3
+
+10−1 10−2 10−3
+
+0
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0 [dB]
+
+(b) (63,39) BCH
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 [dB]
+
+(c) (63,45) BCH
+
+Figure 1: Runtime Improvements
+
+Gurobi Hold Gurobi Hopt B&B Hold B&B Hopt
+LP Hold LP Hopt
+
+reason for the speedup lies in the decreased runtime of the used
+adaptive LP decoder, which can be seen in Figure 1. Figure 2 explains this improvement for the (63, 39) BCH code: It can be seen that the plots ‘LP Hold/opt RPC = i’, that denote the error
+rates when the procedure of adding cuts from redundant rows in the LP decoder of [12] is done at most i times, converge much faster to the final LP performance (RPC = ∞) using
+the improved matrices (compare e.g. the yellow dashed and non-dashed lines for RPC = 3).
+Additionally, we compare the runtime of the ML decoder that is based on the Hx − 2z-formulation (see (IPD) in [8]). The results are denoted as ‘Gurobi Hold’ and ‘Gurobi Hopt’ in Figure 1 and we achieved a speedup of up to 81%.
+When simulating the FER performance of this ML decoder, e.g for the (63,39) BCH code from Figure 2, where 103 ML decoding runs were performed for SNRs 0 to 1.5, 104 for SNRs 2 and 2.5, 105 for SNRs 3 and 3.5, and 106 for SNRs
+4 and 4.5, the time reduces from about 37 h 40 min to 8 h
+20 min. Note that, as a comparison, the matrix minimization
+for this code took around 5 min. This preprocessing enabled
+
+FER
+
+100 10−1 10−2 10−3 10−4
+
+LP Hold RPC=0 LP Hopt RPC=0 LP Hold RPC=1 LP Hopt RPC=1 LP Hold RPC=2 LP Hopt RPC=2 LP Hold RPC=3 LP Hopt RPC=3 LP Hold RPC=∞ LP Hopt RPC=∞
+ML error rate
+
+0
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0 [dB]
+
+Figure 2: LP Decoding Performance of (63,39) BCH Code
+
+us to compute the previously unknown ML FER performance of the (155, 115) RS code. The result can be found in [5].
+
+VII. CONCLUSION AND FUTURE WORK
+In this paper, the problem of minimizing the number of ones in a given parity-check matrix was investigated, and an IP for the problem was formulated. With the help of lower bounds on the number of ones, a heuristic was shown
+
+to yield optimal results in many cases. The benefit of one-
+minimized parity-check matrices is a large reduction in ML
+decoding runtime, where we have shown speedups of up to 81%. Furthermore, this improvement allowed us to simulate the ML FER performance of a large RS code for the first time.
+As a next step, the advantages of one-minimized parity-
+check matrices will be further investigated, including their
+effect on the performance of different decoding schemes, and
+the resulting reduction in complexity when moving towards
+hardware implementation. In addition, the approach can be
+extended to deal with non-binary matrices.
+ACKNOWLEDGEMENT
+We gratefully acknowledge financial support by the DFG
+(project-ID: WE 2442/9-2 and RU 1524/2-2).
+REFERENCES
+[1] J. Bellorado, A. Kavcic, and L. Ping. Soft-input, iterative, Reed-Solomon decoding using redundant parity-check equations. In Information Theory Workshop, 2007. ITW’07. IEEE, pages 138–143. IEEE, 2007.
+[2] M. Breitbach, M. Bossert, R. Lucas, and C. Kempter. Soft-decision decoding of linear block codes as optimization problem. European transactions on telecommunications, 9(3):289–293, 1998.
+[3] J. Feldman. Decoding Error-Correcting Codes via Linear Programming. PhD thesis, Massachusetts Institute of Technology, 2003.
+[4] M. Helmling, E. Rosnes, S. Ruzika, and S. Scholl. Efficient maximumlikelihood decoding of linear block codes on binary memoryless channels. In IEEE International Symposium on Information Theory (ISIT), pages 2589–2593. IEEE, 2014.
+[5] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn. Database of Channel Codes and ML Simulation Results. www.uni-kl.de/channel-codes, 2017.
+[6] J. Jiang and K. R. Narayanan. Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix. IEEE Transactions on Information Theory, 52(8):3746–3756, 2006.
+[7] C. E. Shannon. A Mathematical Theory of Communication. Bell System Technical Journal, 1948.
+[8] A. Tanatmis, S. Ruzika, H. W. Hamacher, M. Punekar, F. Kienle, and N. Wehn. A separation algorithm for improved LP-decoding of linear block codes. IEEE Transactions on Information Theory, 56(7):3277– 3289, July 2010.
+[9] A. Vardy. The intractability of computing the minimum distance of a code. IEEE Trans. Inf. Theor., 43(6):1757–1766, November 1997.
+[10] P. O. Vontobel and R. Koetter. Towards low-complexity linearprogramming decoding. In 4th International Symposium on Turbo Codes Related Topics; 6th International ITG-Conference on Source and Channel Coding, pages 1–9, April 2006.
+[11] J. S. Yedidia, J. Chen, and M. P. C. Fossorier. Generating code representations suitable for belief propagation decoding. In Proceedings of the annual Allerton Conference on Communication Control and Computing, volume 40, pages 447–456. The University; 1998, 2002.
+[12] X. Zhang and P. H. Siegel. Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes. IEEE Transactions on Information Theory, 58(10):6581–6594, Oct 2012.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:54:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-5386-2321-3/18/$31.00 ©2018 IEEE
+
+240
+
+

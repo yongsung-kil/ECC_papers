@@ -1,0 +1,908 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+3697
+
+Sliced Message Passing: High Throughput Overlapped Decoding of High-Rate Low-Density
+Parity-Check Codes
+Lingzhi Liu, Member, IEEE, and C.-J. Richard Shi, Fellow, IEEE
+
+Abstract—The efficient implementation of high-rate highthroughout low-density parity-check (LDPC) code decoding presents challenges to both fully parallel decoding and memory-sharing partially parallel decoding schemes. In this paper, a new decoding scheme, sliced message passing (SMP), is introduced. The key idea is to slice the total set of variable-to-check messages into equal-sized chunks, then to perform check-node computation sequentially chunk by chunk. This new decoding scheme can break the sequential tie between the checkand variable-node update stages and thus greatly improve the throughput. The hardware architectures of SMP decoding are introduced. Each check-node processing unit of the proposed register-based architecture has only inputs instead of inputs. By remapping the variable-node and check-node processing unit decoding blocks, the optimized SMP decoding units can reduce the overall hardware cost, shorten the critical-path delay, and improve the hardware-usage efficiency. An optimized SMP decoder has been further implemented for a 2048-bit (6, 32) LDPC decoder of the emerging IEEE 10 GBase-T standard in an IBM CMOS 90-nm process. Implementation results from synthesis and postlayout simulation have shown the effectiveness of the proposed SMP scheme.
+Index Terms—High-rate low-density parity-check (LDPC) code, high throughput, IEEE 10 GBase-T standard, overlapped decoding, structured codes.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes, invented by Gallager in 1962 [1] and rediscovered in the middle 1990s by Mackay et al.[2], [3], are a class of forward-error-correction codes. They are among the best-known codes capable of achieving low bit error rates (BER) approaching Shannon’s capacity limit [4]–[6]. Recently, LDPC codes have been adopted by the European Digital Video Broadcasting (DVBS-2) standard [7] and IEEE 10 GBase-T standard [8] for 10-Gbit/s communication over balanced twisted-pair structured cabling systems. LDPC codes have also been proposed for the emerging IEEE 802.16 fixed and mobile broadband wireless-access standard [9]. It is evident that LDPC codes will be widely used in
+Manuscript received February 3, 2007; revised March 11, 2008. First published June 10, 2008; current version published December 12, 2008. This work was supported by the U.S. Defense Advanced Research Projects Agency (DARPA) under Grant N66001-05-1-8918 monitored by Navy SPAWAR Systems Center, San Diego, USA. This paper was recommended by Associate Editor A. Wu.
+The authors are with the Silicon Systems Research Laboratory, Department of Electrical Engineering, University of Washington, Seattle, WA 98195 USA (e-mail: lzliu@ee.washington.edu; shi@ee.washington.edu).
+Digital Object Identifier 10.1109/TCSI.2008.926995
+
+wired and wireless communication, magnetic recording, optical networking, DVB, and other fields in the near future.
+Due largely to the inherently parallel nature of the iterative decoding scheme which is often used, LDPC codes have distinct advantages for high-throughput error-correction applications. Many commercial and military systems are required to have ultrahigh data throughput ( 1 Gbit/s). For example, hard-disk drives require 1 Gbit/s or even faster data rates [10], an optical-transmission system in fiber-optic communication requires the throughput of 10 Gbit/s [11], and IEEE 802.3 Higher Speed Study Group plans to establish 100 Gbit/s as the next generation of speed standard for Ethernet [12]. Using a fully parallel decoding architecture, Blanksby and Howland [16] implemented a 1 Gbit/s, 1024-bit, rate-1/2 LDPC decoder in a 7.5 7.0 mm 0.16- m CMOS die. The throughput has further been enhanced, and silicon area has been reduced, by using 3-D integrated-circuit implementation [18], by using C-slow retiming and asynchronous deep pipelining [17], by using simplified or loosely decoding methods [15], [34]–[36], and by turbo decoding message-passing (MP) algorithm [13], [37]. Despite these progresses, a fully parallel implementation requires large silicon area with high interconnect complexity. Furthermore, its silicon-area complexity grows more than quadratically with the code length. Therefore, most hardware implementations, in field-programmable gate arrays [20], [25] or application-specific integrated circuits [26], have used partially parallel decoding with memory-sharing architectures. The achieved throughput is only hundreds of Mbit/s due to the limited-memory bandwidth and hardware parallelism [13], [14], [20]–[22], [25]–[28], [34], [36].
+High-rate LDPC codes are codes where each parity check involves a high number of information bits. They are often used for relatively low-noise channels with high-data-throughput applications, whereas many information bits as possible are required to be transmitted within a finite bandwidth. For example, the number of inputs of the check node of a code with 0.875 code rate in an orthogonal frequency-division multiplexing (OFDM) system is 24 [20], while the number of inputs of the check node is 32 for a code with 0.8413 code rate in the 10 GBase-T standard. In contrast, the node degrees in the LDPC decoder of Blanksby and Howland are six and seven [16]. As shown in this paper, the high node degree leads to extra complexities in hardware, interconnect, timing, and power, which are difficult to handle by existing fully parallel or partially parallel decoding schemes.
+
+1549-8328/$25.00 © 2008 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3698
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+H Fig. 1. An LDPC matrix and its corresponding Tanner graph.
+
+A particular challenge, addressed in this paper, is the im-
+
+plementation of high-rate high-throughput LDPC codes. A
+
+new decoding scheme, called sliced MP (SMP), is presented. Fig. 2. A (3, 6) structured LDPC code.
+
+With the proposed SMP, we have implemented 2048-bit (6, 32)
+
+LDPC decoders for the emerging IEEE 10 GBase-T standard
+
+that achieves 5.3 Gbit/s with 14.5 mm in a 90-nm CMOS for a regular structured (3, 6) LDPC code of length 36, rate 1/2
+
+process.
+
+with the submatrix size of 6 6. Only “1” entries are specified
+
+This paper is organized as follows. In Section II, we briefly review the structured LDPC codes, the basic MP decoding algorithm, and fully parallel and memory-sharing partially parallel architectures and show why both have difficulty for decoding high-rate LDPC codes. By analyzing the MP decoding algorithm, Section III presents the SMP decoding scheme. Section IV presents the hardware architecture, as well as various hardware optimization techniques for efficient implementation of SMP. Section V describes hardware implementation results based on an IBM 90-nm 1.2-V CMOS process. Section V concludes the paper.
+
+in the diagram, and other blanks stand for “0” entries. One can see that the matrix, as shown in Fig. 2, has the
+following two structural properties. 1) No two rows or columns in the same submatrix have any “1” entry in common. Normally, in order to avoid the short girth, which will decrease the code performance, no two rows from two different submatrices have more than one “1” entry in common. 2) If we divide the matrix into several blocks of the same number of columns, the same rows/columns of different blocks have the same number of “1” entries. In Fig. 2, the matrix is partitioned to Blocks 1, 2, and 3. Each
+
+II. STRUCTURED LDPC CODES, DECODING ALGORITHM, AND ARCHITECTURES
+
+block has 12 columns. Every row in each block has two “1” entries. Property 1) is true in all structured codes, while Property
+
+A. Structured LDPC Codes
+LDPC code is described as the null space of a binary sparse parity-check matrix . Each row of matrix represents
+a parity check and each column corresponds to the quantized
+
+2) exists in some well-constrained structured codes. The interconnection-driven LDPC codes in [21], the regular quasi-cyclic (QC) LDPC codes in [22], and the RS-based LDPC codes in [5] are all such LDPC codes that satisfy both properties.
+
+variable symbol. The number of “1” entries in a row (column) is B. Traditional Decoding Algorithm: MP the row (column) weight. An LDPC code is a regular code
+
+if it has a uniform column weight and a uniform row weight
+
+; otherwise, it is an irregular code. In a full-rank
+
+matrix of bits, there are redundant parity checks, and the
+
+code rate is
+
+, and we say it is an -bit LDPC code.
+
+Most LDPC decoders use the symbol-by-symbol softin–soft-out MP (also called belief propagation or sum product) decoding algorithm, or the LLR-MP algorithm, for the log-likelihood ratio case. Define as the intrinsic channel reliability
+
+LDPC codes can be alternatively described by a Tanner graph. value of the th bit,
+
+as the check-to-variable message
+
+As shown in Fig. 1, a Tanner graph is a bipartite graph with from check node to variable node at the th iteration,
+
+variable nodes on one side and check nodes on the other
+
+as the variable-to-check message from variable node
+
+side. Each variable node corresponds to a received symbol, each to check node at the th iteration,
+
+as the index set of
+
+check node corresponds to a particular set of parity-check con- check messages involved in variable node , and
+
+as the
+
+straints, and each edge corresponds to a nonzero entry in the index set of variable messages involved in check node ; the
+
+parity-check matrix.
+
+LLR-MP algorithm can be described as follows.
+
+Codes that are easy to be implemented in integrated circuits, 1) Initialization: Initialize each check-to-variable message
+
+or hardware-friendly codes, are of special interest. Structured
+
+to zero for all check nodes.
+
+LDPC codes, which are generated by partitioning matrix
+
+2) Variable-Node Update Stage: Compute the message
+
+into blocks of submatrices, where each submatrix is gen- corresponding to each of its check-node neighbors for each
+
+erated from the identity matrix by row or column elementary variable node according to
+
+transformation, can provide comparable performance with ran-
+
+domly constructed codes and are hardware friendly [19]–[22],
+
+(1)
+
+[24]–[26]. For example, Fig. 2 shows the parity-check matrix
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3699
+
+where
+
+means that the check message
+
+is
+
+excluded from the summation earlier. The number of input mes-
+
+sages from check-node neighbors to a variable-node processing
+
+unit (VNU) is equal to the column weight.
+
+3) Check-Node Update Stage: Compute the message
+
+corresponding to each of its variable-node neighbors for each
+
+check node according to
+
+Fig. 3. Original VNU architecture.
+
+(2)
+
+where the function
+
+is the sign bit of
+
+(3)
+
+and
+
+means that the check message is ex-
+
+cluded from the summation earlier. The number of input mes-
+
+sages from variable-node neighbors to a check-node processing
+
+unit (CNU) is equal to the row weight.
+
+4) Parity Checking: Compute the posterior reliability quan-
+
+tity for all variable nodes based on the following:
+
+(4)
+
+A CNU in Fig. 4 has 32 input and 32 output messages,. The
+
+widths of the data buses depend upon how the messages are
+
+quantized; normally, they are in the range of 4–6 bits. There
+
+are 64 LUTs in one CNU, and for clarity, they are referred to as
+
+PLUTs and RLUTs. The 32 PLUTs are used for the computation
+
+of , while the RLUTs are for
+
+. The function
+
+is implemented by an adder tree to accumulate all the results
+
+from PLUTs, and a general adder tree consists of 31 multibit
+
+full adders. There are 32 multibit subtracters and sign magnitude
+
+to 2’s complement data format transformation (SM-2s) blocks.
+
+The 32 DRegs are used for storing the outgoing messages to
+
+update the variable node. The sign logic is constructed by an
+
+exclusive-OR gate tree to compute the binary multiplies of (2).
+
+Generally, from Figs. 3 and 4, it is shown that each VNU with
+
+inputs needs an adder tree, subtractors, and 2’s-SM blocks;
+
+and each CNU with inputs needs
+
+LUTs, subtractors,
+
+an adder tree, a XOR array, and SM-2s blocks. For both VNU
+
+and CNU, the number of blocks increases with the increase of
+
+the number of inputs.
+
+Then, hard decisions are made according to
+
+D. Decoder Architectures
+
+(5)
+
+The iterative algorithm terminates if
+
+or if
+
+maximum number of iterations is reached, else continue from
+
+step 2).
+
+C. Functional Units Architectures
+Two main hardware functional units, namely, VNU and CNU, are used to implement (1) and (2). For example, consider the 2048-bit (6, 32) regular-structured LDPC code of the 10 GBase-T standard, in which the matrix size is 384 2048. The typical structures of one VNU and one CNU are shown in Figs. 3 and 4. For clarity, the parity-check part is not shown.
+The input signal in Fig. 3 stands for the intrinsic information. The VNU has a six-input multibit adder tree, which can be implemented using six multibit full adders. The incoming messages are subtracted from the summation of the adder tree by six multibit subtracters individually. The outgoing variable-to-check messages are stored into six Data registers (DRegs) after the 2’s complement-to-sign-magnitude transformation (2’s-SM) block.
+
+The LDPC code structure and MP decoding algorithm naturally lead to the fully parallel architecture of LDPC decoder implementation using VNUs and CNUs. In such architecture, each variable node is mapped to a VNU, and each check node is mapped to a CNU. The connections between the two nodes are mapped to an interconnection routing network in the hardware, as shown in Fig. 5. Assuming that the clock frequency is and the maximum iteration number is and ignoring the time taken by the loading and the output process, the throughput can be represented as
+(6)
+The VNU and CNU can be combined into one decoding stage in a fully parallel design as in [16], [17], and [32]. Thus, the throughput can be denoted as
+(7)
+For an -bit regular LDPC code with parity checks, this implementation requires -input VNUs and -input CNUs, and a complex routing network. Therefore, although the fully parallel architecture allows the decoder to achieve very
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3700
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Fig. 4. Original CNU architecture.
+
+Fig. 5. Fully parallel architecture of (3, 6) LDPC decoder.
+
+high throughput, the large number of VNUs and CNUs leads
+
+to high hardware-implementation complexity.
+
+On the other hand, in order to reduce the routing congestion
+
+and compromise the throughput against hardware cost, memory-
+
+sharing partial parallel architectures are often adopted. For the
+
+regular LDPC code, one approach similar to [20], [22],
+
+[25] uses -input VNUs, -input CNUs, and
+
+extrinsic
+
+information memories. The case of
+
+and
+
+is shown
+
+in Fig. 6. In this architecture, each VNU only connects to
+
+memories, and each CNU only connects to memories. The
+
+connections between the two nodes are mapped to the address
+
+generation logic instead of a routing network.
+
+In this architecture, assuming that columns (rows) share one
+
+VNU (CNU), i.e., there are
+
+VNUs (CNUs), both a
+
+VNU and a CNU need cycles to finish computing one row
+
+block and one column block. Then, for one iteration, a total of
+
+clock cycles are required to compute all the rows and
+
+columns. The throughput is
+
+Fig. 6. Memory-sharing partial parallel architecture of (3, 6) LDPC decoder.
+
+For a partial parallel architecture, variable- and check-node (8) processing cannot be executed in parallel because one pro-
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3701
+
+cessing depends on the computed information passed from the other. As pointed out by Chen and Parhi [22], the dependence of VNU and CNU processing results in only 50% hardware-usage efficiency (HUE) because all the VNUs are idle while the CNUs are busy during check-node processing and vice versa during variable-node processing. By exploring the properties of QC LDPC codes, Chen and Parhi showed that variableand check-node processing can be overlapped. With dual-port memories, their overlapped message architecture can achieve a throughput of
+
+(9)
+
+where is the waiting time and the VNU processing begins after clock cycles of CNU processing with near 100% HUE.
+A memory-sharing architecture with a 4608-bit code length and 8/9-code-rate QC LDPC code that achieved a throughput up to 1.8 Gbit/s under 16 iterations was introduced in [23]. The work used 320 memory blocks and occupies 49 mm in 130-nm CMOS process. The disadvantage of this architecture besides the large quantity of memories is that the architecture can only be used in QC codes. For other LDPC codes as RS-based codes, because the constructing submatrix are anomalous, the memory organization and address generation will be much more complex, and the chip area will be greatly increased.
+III. SMP DECODING SCHEME
+In this section, we first analyze the MP algorithm and discover that the check-node update stage can be executed by a recursive method. Then, we introduce the SMP as a new overlapped decoding scheme for high-throughput high-rate LDPC decoding.
+A. Algorithm Analysis
+We first observe that high-rate LDPC codes such as the one used in the IEEE 10 Gbase-T standard have the following two characteristics.
+1) The number of “1” entries in a row, i.e., the number of input messages to a check node, is generally large, for example, 24 in an OFDM system [20] and 32 in the IEEE 10 GBase-T standard [8].
+2) The number of rows is generally much less than the number of columns.
+Characteristic (1) motivates us to slice the set of input messages to a number, for example, , of groups. In terms of CNU computation, (2) can be rewritten as follows:
+
+(10)
+
+where (11)
+
+and each
+
+is a subset of , and all
+
+the distinct subsets form a partition of , i.e.,
+
+(12) Let
+
+(13)
+
+We can see that the kernel part of (10) is the computation of . Instead of performing the whole summation in one step, an alternative way is to compute recursively. Let
+
+(14) (15)
+
+Then, after times computation, all the ’s have been summed
+
+up and give rise to the results of (13). Define
+
+, (13) and
+
+(14) can be rewritten as
+
+(16)
+
+In terms of the hardware implementation, the transformation
+
+from (2) to (10) is just a reorganization of all operations to
+
+groups, and there is no performance degradation. The input
+
+signals of variable-to-check messages
+
+are
+
+sliced into chunks, each of which contains the elements of
+
+the subset of
+
+. The summation of (13)
+
+can be executed in clock cycles consecutively and the same
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3702
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Fig. 7. Frame diagram of hardware implementation of (2).
+
+Fig. 8. Frame diagram of hardware implementation of (10).
+
+hardware can be utilized to realize the recursive computation.
+
+Note that this partitioning differs from the grouping used in tra-
+
+ditional partially parallel decoding, where the number of input
+
+messages to a check node remains the same.
+
+Characteristic (2) and the need for high-throughput decoding
+
+motivate us to use one CNU unit for each parity-check row.
+
+However, instead of as in a fully parallel implementation where
+
+a CNU computes only after all the input messages are ready,
+
+a CNU can compute the summation of of a chunk and accu-
+
+mulate the partial summation results for a total of chunks. As-
+
+sume that each chunk CNU computation takes one clock cycle;
+
+a total of clock cycles is required to finish a complete CNU
+
+computation. With this, the entire accumulating operation of
+
+is divided into a summation of -independent partial summa-
+
+tions of
+
+. Looking from the CNU side, the
+
+sliced input messages are slipping into the processing unit in
+
+consecutive clock cycles, and the results is updated in every
+
+cycle. This leads to a new SMP decoding scheme.
+
+Figs. 7 and 8 show the frame diagrams of hardware imple-
+
+mentations of (2) and (10) of a regular
+
+code. Compared
+
+with the original CNU, the new CNU for SMP requires only
+
+inputs and need clock cycles to accomplish the entire CNU
+
+computation.
+
+B. SMP Decoding Scheme
+Consider the (3, 6) regular LDPC code with 6 6 submatrices shown in Fig. 2. Suppose that there are 12 VNUs and 6 CNUs with three and six inputs of incoming messages, respectively, the conventional sequential decoding process is shown in Fig. 9(a). One gray column (row) stands for one VNU (CNU) update stage. Because there are 36 columns and 18 rows, both variable- and check-node update stages need three clock cycles to finish computing all columns and rows. In Fig. 10(a), therefore, for one decoding iteration where CNUs and VNUs are se-
+
+quentially executed,
+
+clock cycles are required to update
+
+all the 36 columns and 18 rows.
+
+If there are 12 VNUs with three inputs of incoming messages
+
+and 18 CNUs with two inputs of incoming messages, the SMP
+
+decoding scheme can be computed as shown in Fig. 9(b). The
+
+CNU update stage for each parity check is divided into three
+
+steps. In each step, the new incoming results from the previous
+
+VNU update stage will be accumulated to the former results. In-
+
+stead of waiting for three clock cycles, CNUs can begin to up-
+
+date the check-to-variable messages after only one clock cycle’s
+
+computation of VNUs. The VNUs in the subsequent iteration
+
+can start right after CNUs finish the computation of current iter-
+
+ation. The clock latency for both VNU and CNU is reduced to
+
+only one clock cycle. Only
+
+clock cycles are required
+
+to finish one decoding iteration.
+
+Consider a regular LDPC code, in which the code length
+
+is bits, and the number of redundant parity checks is . As-
+
+suming that both variable- and check-node update stages need
+
+clock cycles to finish updating, the SMP scheme will have
+
+VNUs with inputs and CNUs with inputs. The SMP
+
+decoding scheme can be performed in the following steps.
+
+1) Initialization: The same as the original decoding scheme.
+
+To the th
+
+clock cycle of th iteration.
+
+2) VNU Update Stage: If
+
+, columns of
+
+are updated simul-
+
+taneously according to (1). If , this stage remains idle.
+
+3) CNU Update Stage: If
+
+, this stage remains idle. If
+
+, all rows compute the summations of
+
+according to the recursive method. Each is computed by
+
+(16). If , the total summation of is obtained in the last step
+
+of the recursive method. Finally, all the check-to-variable
+
+messages are computed based on (10).
+
+4) Parity Checking: If
+
+, continue from step 2). If
+
+, i.e., at the
+
+clock cycle of the iteration, compute the
+
+posterior reliability quantities for all variable nodes based on
+
+(4) and (5). If
+
+or if maximum number of iterations
+
+is reached, the iterative algorithm terminates, else continue
+
+iteration from step 2).
+
+From the earlier discussions, we can see that, during each
+
+decoding iteration, the updated check-to-variable messages are
+
+loaded into each VNU consecutively. Then, after the VNU com-
+
+putation, the column results are stored into
+
+( is the
+
+quantized data bus width of messages) DRegs. Therefore, in one
+
+clock cycle columns, i.e., columns
+
+are updated simultaneously. Conse-
+
+quently, clock cycles are required to complete the updating
+
+process of all columns.
+
+In the same decoding iteration, the consecutive
+
+vari-
+
+able-to-check messages are fed into each CNU along with the
+
+VNU updating stage. After each computation cycle, the results
+
+of of rows are stored into
+
+DRegs. Compared with
+
+the VNU update, in one clock cycle, all rows are updated si-
+
+multaneously by using all the variable-to-check messages from
+
+the last clock. In all, clock cycles are required to obtain the
+
+final results of all the rows. Because this stage begins one
+
+clock cycle after the VNU update starts and terminates one clock
+
+cycle after the VNU update ends, there is only one clock latency
+
+between the two stages.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3703
+
+Fig. 9. Two different decoding schemes. (a) Original decoding scheme. (b) SMP decoding scheme.
+
+The SMP scheme can be applied for decoding any struc-
+
+tured LDPC codes. However, it has more advantage when the
+
+number of incoming messages to each processing units are uni-
+
+form across clock cycles. In this case, there is no idle input
+
+in each cycle. This is true for all structured codes with property
+
+2) described in Section II, and the number of inputs equals the
+
+number of submatrices.
+
+The original and SMP decoding schemes can also be alterna-
+
+tively interpreted in timing slots as shown in Fig. 10(a) and (b)
+
+using the (3, 6) code as an example. We can see that the number
+
+of clock cycles of one iteration for the two cases in Fig. 3(a) and
+
+(b) are
+
+and . The throughput
+
+is
+
+(17)
+
+Fig. 10. Timing slots of different decoding schemes. (a) Original decoding scheme. (b) SMP decoding scheme.
+
+The SMP decoding method improves the throughput by
+
+(18) overlapped in clock cycles. The HUE is thus approximated by
+
+For the SMP decoding process, one decoding iteration needs
+
+clock cycles. The VNU and CNU computations are
+
+(19)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3704
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Fig. 11. Register-based partial parallel decoder architecture.
+
+For an LDPC code with rows, CNUs are used, and fully parallel architecture. The temporary results generated by
+
+each CNU has inputs. This leads to a similar hardware cost either CNUs or VNUs will be stored in registers rather than
+
+as the traditional way of partially parallel decoding, where CNUs each with inputs are used.
+
+memories, and multiplexers are used to control the interconnecting wires. Fig. 11 shows such a register-based partial par-
+
+allel architecture.
+
+IV. DECODER ARCHITECTURE
+
+B. SMP Decoding Units
+
+A. Register-Based Partial Parallel Architecture
+
+SMP decoding unit of VNU can be directly mapped from (1),
+
+In high-throughput applications, LDPC decoders often have
+
+a high degree of parallelism, which means that a large number
+
+of processing units need to fetch and store data simultaneously.
+
+This can result in the fragmentized memory units if using a
+
+traditional memory-sharing partial parallel architecture. For ex-
+
+ample, to the 2048-bit (6, 32) code, if the degree of parallelism
+
+of the VNU update stage is
+
+, in consecutive four
+
+clock cycles, 512 VNUs will request
+
+data from
+
+the memories synchronously. Then, the memory-sharing archi-
+
+tecture design would have 512 memories with depth only equal
+
+to four each. Fragmentized memories tend to have larger area
+
+than registers and would increase the complexity when imple-
+
+menting physical-layout floorplan. In addition, high-memory
+
+bandwidth is likely to introduce significant power dissipation.
+
+The memory-sharing decoder architecture is most suited for low
+
+parallel degree where area instead of throughput is the major
+
+while CNU from (10). The VNU architecture is very similar like the original VNU architecture in Fig. 3.
+Assuming that the parallel degree is 512, Fig. 12 shows the CNU architecture of a SMP decoder of the 2048-bit (6, 32) code. For clarity, the sign logic and parity-check part is omitted in the diagram. Each CNU has eight input messages. Since the shift registers of DRegs are used as data buffers, they are relocated right after the PLUTs to store the transformed input data. The TRegs here are used to store the updated data accumulated in every clock cycle. The 32 multiplexers serve as data latches to keep the output data unchanged during one decoding iteration.
+Compared with the original decoder shown in Fig. 6, the new SMP CNU has only eight PLUTs. The number of multibit adders of the adder tree is reduced to eight. The numbers of RLUT and SM-2s blocks are kept the same as in the original CNU.
+
+concern. As fully parallel architecture will cause high hardware-imple- C. Hardware Optimization
+
+mentation complexity problem, while memory-sharing partial parallel architecture is limited by fragmentized memory units of high-throughput applications, to achieve a good tradeoff between hardware cost and throughput, some dedicated registerbased partial parallel architecture, as the one in [33], is more
+
+We can further balance the critical-path delay between CNUs and VNUs. The two stages of the decoding procedure can be equivalently organized as follows.
+For the VNU update stage
+
+appropriate. This architecture has more processing units than a
+
+(20)
+
+memory-sharing architecture but has much fewer units than a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3705
+
+Fig. 12. SMP decoding unit of CNU.
+
+For the CNU update stage
+
+of an LDPC decoder will be limited. After critical path rebalance, the CNUs and VNUs have a similar critical-path delay, thus can achieve a higher clock frequency. 2) When using the SMP decoding scheme, there are CNUs and VNUs. Because the number of VNUs is scaled by parallel factor , moving blocks from the CNUs into VNUs can save the overall hardware cost. 3) Although the SMP decoding scheme can achieve higher HUE, RLUT and SM-2s remain idle until the last clock of the CNU update. Since the total numbers of the two blocks are reduced, moving these operations into VNUs can improve the HUE. We can move the subtracters into VNUs to further reduce the hardware, but this would increase the number of interconnecting wires and can worsen the wire-congestion problem. Since the level of the adder tree is decreased in both SMP and rebalanced SMP units, and the adder tree is a significant portion of the critical path, the SMP decoders can achieve a much faster clock frequency than traditional decoders.
+
+(21) D. Discussion
+
+The architectures of rebalanced VNUs and CNUs are shown in Figs. 13 and 14, respectively. All multiplexers, RLUTs, and SM-2s blocks in CNUs are now moved to inside VNUs, and 2’s-SM blocks are moved into CNUs.
+This computation rebalance among VNUs and CNUs has three benefits.
+1) Both the original and SMP decoding units have unbalanced computation complexity between the two decoding stages. This leads to the unbalanced data paths between CNUs and VNUs. Since the critical path is decided by the longest delay in a pipeline design, the overall throughput
+
+The CNU of SMP decoder has inputs. It can be observed that the hardware advantage of SMP decoder will be diminished if the row weight is small or the parallel factor is large. Large
+means the throughput requirement is relatively low. To such throughput as several hundred megabits per second and low-rate LDPC codes, because the throughput is not the most critical issue and a large number of rows or columns can share one CNU or VNU, respectively, traditional memory-sharing partial parallel architecture is more suitable to get smaller area.
+Fig. 15 shows the architectures for various throughput requirements and parallel factors with hardware costs. We can see that fully parallel architecture can achieve highest throughput and smallest but with highest hardware costs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3706
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+Fig. 13. Optimized SMP decoding unit of VNU.
+
+Fig. 14. Optimized SMP decoding unit of CNU.
+Memory-sharing partial parallel architecture can achieve a good balance on throughput and hardware cost in a large range. But, to smaller and higher throughput requirement, SMP architecture is a good tradeoff all-around.
+It can also be observed that the two structural properties in Section II not only exist in regular LDPC codes but also can be found in some irregular codes. Fig. 16 is an matrix of a irregular code with code length equal to 40 and submatrix size of 5 5. In the matrix, no two rows or columns in the same submatrix have any “1” entry in common. If the matrix is divided into four blocks as shown in the figure with ten columns each, the same rows/columns of different blocks have the same number of “1” entries. SMP decoding is very suitable to these LDPC codes, because the number of incoming messages to each processing units are uniform across the entire clock cycles. Moreover, because there is no idle input in each cycle, the implementation can achieve nearly 100% HUE and minimize the Fig. 15. Decoder architectures for various throughput requirements and parhardware cost by using SMP decoding scheme and architecture. allel factors with hardware costs.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3707
+
+H Fig. 16. matrix of a irregular LDPC code which is suitable to SMP decoding.
+TABLE I HARDWARE BLOCK STATISTICS OF THREE CNU DESIGN
+
+Fig. 17. BER versus SNR for different quantization scheme.
+
+more than that of one VNU_A. Since one LDPC decoder has
+
+multiple VNU units, overall hardware comparisons will show
+
+the hardware benefits. Compared with CNU_A, 23 adders and
+
+24 PLUTs are saved in CNU_B and CNU_C. Respectively, 32
+
+and 6 MUXs are newly introduced to CNU_B and VNU_C.
+
+A multiplexer is often implemented by transmission gates,
+
+and the area is very small. Therefore, CNU_B can save 23
+
+The SMP decoding will introduce some interesting topics on adders and 24 PLUTs but will have 32 additional multiplexers.
+
+how to construct regular or irregular SMP-adaptive LDPC codes Because SM-2s and 2s-SM have similar hardware architecture,
+
+with good performance, but they are not the emphasis of this CNU_C can save 23 adders, 24 PLUTs, 32 RLUTs, and 24
+
+paper.
+
+SM-2s/2s-SM blocks.
+
+V. IMPLEMENTATION RESULTS
+
+The performance and complexity of the decoding algorithm are affected by the quantization scheme of the decoding mes-
+
+For the 2048-bit (6, 32) LDPC code, Table I (a) (for VNUs) sage. For a uniform quantizer, let
+
+denotes the quanti-
+
+and (b) (for CNUs) show the numbers of operational blocks of zation scheme, where means
+
+bits including the sign bit
+
+original, SMP, and optimized SMP decoding units. In Table I, are utilized, in which bits are used for the fractional part of
+
+original decoding units are suffixed by _A, SMP decoding the value. Fig. 17 shows the signal-to-noise ratio (SNR) versus
+
+units are suffixed by _B, and optimized SMP units use _C. the BER simulation performances of the floating point (5:3) and
+
+The adders, PLUTs, RLUTs, MUXs, and Regs are multibit (4:2) quantization scheme. The performances loss of (5:3) and
+
+blocks. We can see from Table I (a), the VNU_A, and VNU_B (4:2) schemes are around 0.2 and 0.5 dB as compared with the
+
+have the same hardware cost. Because MUXs and RLUTs floating pointing simulation. Quantization using more bits can
+
+are moved into VNU_C, the hardware cost of one VNU_C is achieve better performance but will have more hardware cost.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3708
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+TABLE II HARDWARE AND THROUGHPUT COMPARISON AFTER SYNTHESIS
+
+TABLE III PHYSICAL IMPLEMENTATION RESULTS OF OPTIMIZED SMP DECODER
+
+Fig. 18. Layout plot of optimized SMP decoder.
+TABLE IV COMPARISON OF LDPC DECODERS
+
+Using the (4:2) quantization scheme and set
+
+, i.e., par-
+
+allel degree of 512, all the four designs are synthesized using the
+
+IBM 90-nm LVT standard cell library with eight metal layers
+
+[31]. The results are listed in Table II. The number of gates includes all the VNUs and CNUs, an input module and an output module for data-interface buffering, and multiplexers for the top-level routing network. The physical design of the optimized SMP decoder is further implemented. The results are listed in Table III. Compared to the synthesized results, the total gate count is increased because of the buffers/inverters introduced by clock tree and top-level wire segmentation. Synopsys’ Astro is used for floorplanning, placement, and routing, Formality is used for formal verification, StarRC is used for parasitic ex-
+
+throughput of 3.2 Gbit/s with 32 iterations using hard-decision MP algorithm. However, hard decision is lack of quantization precision, thus will lead to significant performance loss. The split-row reduced-complexity LDPC decoder was proposed in [32], which can achieve 7.1-Gbit/s throughput. Because it is also a loose decoding method, the performance loss of the split-row-4 decoder is 0.65 dB as compared with original decoding algorithm. In addition, the author did not mention what is the maximum iteration number.
+
+traction, and PrimeTime is used for static-timing analysis. The layout plot is shown in Fig. 18. The design use 50% core utiliza-
+
+VI. CONCLUSION
+
+tion as in [16] and 90% row/core ratio to lighten the interconnec- In this paper, a new decoding scheme, named SMP, has
+
+tion congestion. The core occupies 14.5 mm . The critical path been proposed for area-efficient high-throughput decoding of
+
+from the postlayout simulation is 4.83 ns. Compared with the high-rate LDPC codes. The decoding scheme overlaps variable-
+
+logic-synthesis results, an additional 0.72-ns delay was incurred and check-node decoding processing and can achieve near-op-
+
+by the top-level routing wires and buffers inserted. Since all timal throughput and HUE. The decoder architecture and the
+
+four considered designs have similar complexity in the top-level decoding units are optimized to balance the critical path among
+
+routing network, we can assume that they all have similar addi- VNUs and CNUs and to further reduce the critical-path delay.
+
+tional delay due to routing and buffer insertion, and the top-level As an example, we have designed 2048-bit (6, 32) LDPC de-
+
+critical-path delay are also listed in Table II. With the maximum coders for the emerging IEEE 10 GBase-T standard. Implemen-
+
+decoding iteration number of 16, the throughput achieved of tation results using an IBM 90-nm CMOS process show that,
+
+optimized SMP decoder is 5.30 Gbit/s.
+
+with the same area, the throughput of the new decoding scheme
+
+Table IV lists the implementation comparison of the (2048, and optimized hardware architecture can be increased by 1.75
+
+1723) RS-based LDPC code between this paper and the latest times when compared to traditional decoding methods.
+
+results from [15] and [32]. A fully parallel decoder for the We have used the standard LLR-MP decoding algorithm as
+
+LDPC code was introduced in [15]. The design can achieve a an illustrative example. However, the proposed SMP decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+LIU AND SHI : SLICED MESSAGE PASSING: HIGH THROUGHPUT OVERLAPPED DECODING OF LDPC CODES
+
+3709
+
+scheme and architectures can be applied to other LDPC decoding algorithms, such as Min-Sum and Normalized Min-Sum algorithms to further simplify the hardware cost. Further hardware sharing and rebalancing techniques [28] can be employed with the proposed SMP method to optimize the decoding units.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. IT-8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, C. Boyd, Ed., “Good codes based on very sparse matrices,” in Proc. Cryptogr. Coding 5th IMA Conf., Oct. 1995, vol. 1025, Lecture Notes in Computer Science, pp. 100–111.
+[3] N. Alon and M. Luby, “A linear time erasure-resilient code with nearly optimal recovery,” IEEE Trans. Inf. Theory, vol. 42, no. 6, pp. 1732–1736, Nov. 1996.
+[4] S.-Y. Chung, G. D. Forney, Jr., T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[5] I. Djunrdjevic, J. Xu, K. Abdel-Ghaffar, and S. Lin, “A class of lowdensity parity-check codes constructed based on Reed–Solomon codes with two information symbols,” IEEE Commun. Lett., vol. 7, no. 7, pp. 317–319, Jul. 2003.
+[6] M. E. O’Sullivan, “Algebraic construction of sparse matrices with large girth,” IEEE Trans. Inf. Theory, vol. 52, no. 2, pp. 718–727, Feb. 2006.
+[7] “Digital Video Broadcasting (DVB); Second Generation,” ETSI EN 302 307 2005, vol. 1.1.
+[8] IEEE 10 GBase-T Task Force [Online]. Available: http://grouper.ieee. org/groups/802/3/an/index.html
+[9] IEEE Standard for Local and Metropolitan Area Networks Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems Amendment for Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, IEEE 802.16e2005, 2005 [Online]. Available: http://standards.ieee.org/getieee802/ download/802.16e-2005.pdf
+[10] X. Hu, B. V. K. V. Kumar, L. Sun, and J. Xie, “Decoding behavior study of LDPC codes under a realistic magnetic recording channel model,” IEEE Trans. Magn., vol. 42, no. 10, pp. 2606–2608, Oct. 2006.
+[11] A. Selvarathinam, E. Kim, and G. Choi, “Low-density parity-check decoder architecture for high throughput optical fiber channels,” in Proc. IEEE Int. Conf. Comput. Des., Oct. 2003, pp. 520–525.
+[12] IEEE 802.3 Higher Speed Study Group Task Force [Online]. Available: http://grouper.ieee.org/groups/802/3/hssg
+[13] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, no. 3, pp. 684–698, Mar. 2006.
+[14] L. Fanucci, M. Rovini, N. E. L’Insalata, and F. Rossi, “High-throughput multi-rate decoding of structured low-density parity-check codes,” IEICE Trans. Fundam. Electron. Commun. Comput. Sci., vol. E88-A, no. 12, pp. 3539–3546, Dec. 2005.
+[15] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Multi-gbit/sec low density parity check decoders with reduced interconnect complexity,” in Proc. IEEE Int. Symp. Circuits Syst., May 2005, vol. 5, pp. 5194–5197.
+[16] A. J. Blanksby and C. J. Howland, “A 690-mW 1-gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[17] L. Zhou, M. Su, and C.-J. R. Shi, Maximizing low-density parity-checking code decoding throughput with c-slow retiming and asynchronous deep pipelining Dept. Elect. Eng., Univ. Washington, Washington, DC, Tech. Rep. UW-EE-2006, Dec. 2006.
+[18] L. Zhou, C. Wakayama, N. Jangkrajarng, B. Hu, and C.-J. R. Shi, Implementing a 2-Gb/s 1024-bit 1/2-rate low-density parity-check code decoder in three-dimensional integrated circuits Dept. Elect. Eng., Univ. Washington, Washington, DC, Tech. Rep. UW-EE-2006, Dec. 2006 [Online]. Available: http://www.ee.washington.edu/research
+[19] R. M. Tanner, “A class of group-structured LDPC codes,” in Proc. ICSTA, Ambleside, U.K., Jul. 2001, pp. 365–370.
+[20] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 51, no. 6, pp. 892–904, Apr. 2006.
+
+[21] M. M. Mansour and N. R. Shanbhag, “Low-power VLSI decoder architectures for LDPC codes,” in Proc. ISLPED, Monterey, CA, Aug. 2002, pp. 284–289.
+[22] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic low-density parity check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+[23] H. Zhong, T. Zhang, and E. Haratsch, “VLSI design of high-rate quasicyclic LDPC codes for magnetic recording channel,” in Proc. IEEE CICC, Sep. 2006, pp. 325–328.
+[24] S. Lin and D. J. Costello, Jr, Error Control Coding: Fundamentals and Applications, 2nd ed. Upper Saddle River, NJ: Prentice-Hall, 2004.
+[25] T. Zhang and K. K. Parhi, “VLSI implementation-oriented (3, k)-regular low-density parity-check codes,” in Proc. IEEE Workshop Signal Process. Syst., Sep. 2001, pp. 25–36.
+[26] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[27] Z. Wang and Q. Jia, “Low complexity, high speed decoder architecture for quasi-cyclic LDPC codes,” in Proc. IEEE ISCAS, Kobe, Japan, May 2005, vol. 6, pp. 5786–5789.
+[28] Z. Wang, Y. Chen, and K. K. Parhi, “Area efficient decoding of quasicyclic low density parity check codes,” in Proc. ICASSP, Montreal, QC, Canada, May 2004, vol. 5, pp. V-49–V-52.
+[29] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[30] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum–product algorithm for decoding LDPC codes,” in Proc. GLOBECOM Conf. , San Antonio, TX, Nov. 2001, vol. 2, pp. 1036–1036E.
+[31] ARM SAGE-X standard cell library for IBM 90 nm process: CMOS9sf-LVT-1.2v_sc-x3_2006q2v1 [Online]. Available: http:// www.arm.com/
+[32] T. Mohsenin and B. M. Baas, “High-throughput LDPC decoders using a multiple split-row method,” in Proc. ICASSP, Honolulu, HI, Apr. 2007, vol. 2, pp. II-13–II-16.
+[33] C. Lin et al., “A 3.33 Gb/s (1200, 720) low-density parity check code decoder,” in Proc. IEEE ESSCIRC, Sep. 2005, pp. 211–214.
+[34] S. Kang and I. Park, “Loosely coupled memory-based decoding architecture for low density parity check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers , vol. 53, no. 5, pp. 1045–1056, May 2006.
+[35] S. L. Howard;, C. Schlegel, and V. C. Gaudet, “Degree-matched check node decoding for regular and irregular LDPCs,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 53, no. 10, pp. 1054–1058, Oct. 2006.
+[36] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[37] C. P. Fewer, M. F. Flanagan, and A. D. Fagan, “A versatile variable rate LDPC codec architecture,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 54, no. 10, pp. 2240–2251, Oct. 2007.
+[38] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Block-interlaced LDPC decoders with reduced interconnect complexity,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 51, no. 1, pp. 74–78, Jan. 2008.
+Lingzhi Liu (M’07) received the B.S. degree from Xi’an Jiaotong University, Xi’an, China, in 1998 and the Ph.D. degree from Shanghai Jiaotong University, Shanghai, China, in 2005.
+He is currently a Research Engineer with the Advance Research Department, Huawei Technologies, Santa Clara, CA. From 2005 to 2008, he was a Postdoctoral Research Associate with the Silicon Systems Research Laboratory, Electrical Engineering Department, University of Washington, Seattle. He did a lot of work on field-programmable gate arrays, digital application-specific integrated circuit, and mixed-signal circuit designs. His general interests include channel coding theory, very large scale integration (VLSI) design, communication theory, multimedia coding theory, VLSI system design, VLSI design methodology. Main current interests include VLSI design for low-power and high-performance communication system, VLSI design for ultrahigh-throughput channel coding system, 3-D VLSI design, and VLSI design for video and audio technology.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+3710
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 55, NO. 11, DECEMBER 2008
+
+C.-J. Richard Shi (M’91–SM’99–F’06) received the B.S. and M.Sc. degrees from Fudan University, Fudan, China, in 1985 and 1987, respectively, and the M.A.Sc. and Ph.D. degrees from the University of Waterloo, Waterloo, ON, Canada, in 1991 and 1994, respectively.
+Since 2004, he has been a Professor of electrical engineering with the University of Washington, Seattle, which he joined in 1998. From 1994 to 1998, he was with Analogy (now part of Synposys), Rockwell Semiconductor Systems (now Conexant Systems), and the University of Iowa. He is a key contributor to IEEE std 1076.1-1999 (VHDL-AMS) language standard for the description and simulation of mixed-signal circuits and systems. He has authored or coauthored over 100 papers published in international journals and conferences and has served as the Principal Investigator of over ten research projects supported by DARPA,
+
+SRC, and NSF. His research interests include computer-aided design and test of integrated circuits and systems, as well as very large scale integration (VLSI) implementation of communication systems.
+Dr. Shi founded IEEE International Workshop on Behavioral Modeling and Simulation in 1997 and has served on the technical program committees of several international conferences. He was the recipient of the Best Paper Award from the IEEE/ACM Design Automation Conference, the Best Paper Award from the IEEE VLSI Test Symposium, a National Science Foundation CAREER Award, and a Doctoral Prize from the Natural Science and Engineering Research Council of Canada. He has been an Associate Editor, as well as a Guest Editor, of the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: ANALOG AND DIGITAL SIGNAL PROCESSING. He is currently an Associate Editor of the IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS and the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:27:41 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,463 @@
+FPGA based design and prototyping of efficient 5G QC-LDPC channel decoding
+Jeremy Nadal1,2, Amer Baghdadi1 1IMT Atlantique, CNRS UMR 6285 Lab-STICC, Brest, France 2Department of Electrical Engineering, Polytechnique Montreal, QC H3T 1J4, Canada
+e-mail: jeremy.nadal@polymtl.ca, amer.baghdadi@imt-atlantique.fr
+
+Abstract—The Quasi-Cyclic (QC) Low-Density ParityCode (LDPC) is the key error correction code for the 5th Generation (5G) of cellular network technology. Designed to support several frame sizes and code rates, the 5G LDPC code structure allows high parallelism to deliver the high demanding data rate of 10 Gb/s. This impressive performance introduces challenging constraints on the hardware design. Particularly, allowing such high flexibility can introduce processing rate penalties on some configurations. In this context, a novel efficient and flexible hardware architecture for the 5G LDPC decoder is proposed, targeting Field Programmable Gate Array (FPGA) devices and supporting all 5G configurations. The architecture supports frame parallelism to maximize the utilization of the processing units, significantly improving the processing rate. Compared to a recent commercial 5G LDPC decoder, the proposed FPGA prototype achieves a higher processing rate for most configurations while having similar complexity.
+Index Terms—LDPC, 5G, Parallelism, Throughput, FPGA
+I. INTRODUCTION
+Future communication systems are foreseen to support several services, each having different system parameters optimized for specific requirements, such as latency, data rate and energy consumption. To meet these challenging requirements, the Quasi-Cyclic (QC)-Low-Density Parity-Code (LDPC) [1] has been selected as the next error correction code for the upcoming 5G communication systems [2]. The 5G LDPC code design allows to support several frame sizes, at a granularity level of a few bits, for several code rate from 1/5 to 9/10. Furthermore, the basegraphs of the 5G LDPC code can be expanded by a lifting size of up to 384, allowing to support very high parallelism levels to guarantee the expected 10 Gb/s of data rate in 5G networks [3]. In term of performance, a FER of 10−5 without error floor is achievable for all frame and code rate configurations [4].
+This work was partially funded by the EU FEDER program and the French Brittany region through the FlexDEC-5G project.
+978-1-7281-8466-1/20/$31.00 ©2020 IEEE
+
+The 5G LDPC decoders can be integrated in Field Programmable Gate Arrays (FPGAs) at the base station. Such devices being reprogrammable, the physical layer can be re-configured accordingly to the future evolution of the upcoming standards, reducing costs for the telecommunication operators. Therefore, there is a high interest of designing 5G LDPC decoders for FPGA devices. However, all the 5G features put high constraints on the hardware design: the architecture must be carefully designed to support all the 5G configurations. Furthermore, the 5G LDPC code structure is well designed to support high parallelism, but only for long frames using the highest lifting sizes. For shorter frames, the processing units are under-used, and the processing rate is greatly reduced. For instance, only 2/384 = 0.52% of the processing units are exploited if a frame configured with a lifting size of 2 is being decoded. Finally, the permutation network is more complex than a barrel shifter as currently implemented in typical LDPC, causing complexity and routing issues. To address these issues, a novel hardware architecture for a 5G QC-LDPC decoder is proposed in this paper, targeting FPGA devices. The architecture features a high flexibility and a high processing speed for all frame sizes. For optimized hardware resources and processing power utilisation, frame parallelism is proposed to decode small frame sizes.
+This paper is structured as follows. Section II-A summarizes the 5G LDPC code characteristics and presents the typical layered decoding algorithms. Then, the proposed 5G LDPC decoder architecture is detailed in III, along with the main processing units. Section IV presents and compares the synthesis results with the commercial Xilinx 5G decoder. The processing throughput is also analysed. Finally, section V concludes the paper.
+II. LDPC SYSTEM DESCRIPTION
+A. 5G LDPC code structure
+For 5G communications, a new QC-LDPC code is employed as coding scheme for data channels. The code
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I BASE-GRAPH CHARACTERISTICS OF THE 5G QC-LDPC CODES.
+
+Characteristics
+Number columns Number rows Number edges VN Degree CN Degree Base code rate
+
+Base Graph 1
+68 46 316 1 to 30 3 to 19 1/3
+
+Base Graph 2
+52 42 197 1 to 23 3 to 10 1/5
+
+construction is based on a prototype matrix, referred as Base-Graph (BG). Each non-null element of this BG is expanded by a Z-by-Z circularly shifted identity matrix, where Z corresponds to the lifting size. The circular shift (rotation) values depend on Z and the edge positions in the BG. This code design allows suitable hardware implementation and enables high parallelism level for high processing throughput. However, compared to existing code design in other standards, several lifting sizes Z and BGs have to be supported for the 5G QCLDPC encoder and decoder.
+In fact, two BGs are defined in 5G, their characteristics being detailed in Table I. The number of columns, rows and edges of the BG number b are respectively denoted ncb, nrb and neb. The CN degree at row i and BG b is denoted dci,b, whereas the VN degree at column j and BG b is denoted dvi,b. It can be observed that the Variable Node (VN) and Check Node (CN) degrees are highly uneven at different rows and columns. Therefore, the 5G QC-LDPC code is irregular. Furthermore, row-byrow orthogonality is not ensured for all the rows, which can potentially lead to update conflicts in a practical implementation.
+For these 2 BGs, 51 lifting sizes can be used. They are defined as Z =∆ B × 2z ≤ Zmax, with Zmax = 384, B ∈ {2, 3, 5, 7, 9, 11, 13, 15} and z ∈ 0, 7 [2]. This contributes to support a large number of frame sizes. At the output of the encoder, the first 2Z bits of the obtained sequence are punctured: this enables to improve the performance of the code [4]. To adapt the Code Rate (CR), the last Npunct bits are punctured too, with Npunct = Z × ncb − 2 − (ncb − nrb )/CR .
+B. Layered decoding algorithms
+
+After encoding and transmitting the message over the noisy channel, the received signal yi and the channel LLRs Li which inputs the LDPC decoder are expressed as
+
+yi = xi + wi
+
+(1)
+
+Li
+
+=
+
+2yi σ2
+
+(2)
+
+where xi is the ith transmitted modulated symbol, and wi is the additive Gaussian noise term of variance σ2.
+For simplicity, BPSK modulation is employed: xi ∈ {−1, +1} = 2ci − 1, where ci is the ith transmitted bit.
+For decoding the message, the Sum-Product Algorithm
+
+(SPA) [5], also known as belief propagation [6], can
+
+be employed. To describe this decoding algorithm, the
+
+following variables are introduced:
+• Mv(ik→) cj corresponds to the variable node i to check
+node j message at iteration number k. • Mc(jk→) vi corresponds to the check node j to variable
+node i message at iteration number k. • Li(k) corresponds to the A Posteriori Probability
+(APP) associated to the variable node i at iteration
+
+number k.
+
+• Vj is the set of variable node indexes connected to the check node number j.
+At the first iteration, the Li(k) APPs are initialized by the channel LLRs Li. The messages and APP are sequentially updated from check node j = 0 to check
+
+node j = nrb − 1, following the equations below:
+
+Mv(ik→) cj = Li(k) − Mc(jk→−1v)i ,
+
+(3)
+
+Mc(jk→) vi =
+
+sign(Mv(lk→) cj )f
+
+f |Mv(lk→) cj | ,
+
+l∈Vj \i
+
+l∈Vj \i
+
+(4)
+
+Li(k) = Mv(ik→) cj + Mc(jk→) vi ,
+
+(5)
+
+with f (x) = −ln(tanh(x/2)). After the last check node is processed, a new iteration starts (k → k + 1) and the same sequential operations described above are performed. The algorithm stops when a codeword is found or when the maximal number of iterations is reached.
+As f contains non-trivial operations, (4) can be complex to implement in hardware. Therefore, approximate algorithms are generally considered to reduce the complexity at the cost of Bit-Error-Rate (BER) degradation. One of the most known approximations is the OffsetMin-Sum (OMS) algorithm [7], which approximates (4) as:
+
+Mc(jk→) vi ≈
+
+sign(Mv(lk→) cj ) max minl∈Vj\i|Mv(lk→) cj |
+
+l∈Vj \i
+
+− α, 0 ,
+
+(6)
+
+For practical hardware implementations, the search of the first and second minimum values of |Mv(lk→) cj | is performed. Then, only the 2 minimums, the index of the
+first minimum, the global sign and all the message signs
+are stored into memories. This allows to save memory
+resources compared to the SPA algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+(from
+
+GCU)
+
+C2V addr
+
+C2V RAMs
+(1st min, 2nd min, index, signs)
+
+Old C2V 16 bits m es s ages
+
+New C2V m es s ages
+
+Channel LLRs
+Input/output interface
+Decoded bits
+
+In/out control
+
+8 bits
+SHIFT
+Global Controler Unit
+(GCU)
+
+8 bits
+
+Node Processing Unit (NPU)
+
+8 bits
+
+V2C m es s ages
+
+Delayed V2C m es s ages
+
+V2C Addr
+
+V2C RAMs
+
+APP data bus
+
+bits
+
+LDPC config.
+
+Fig. 1. Proposed hardware architecture of the LDPC decoder
+
+III. PROPOSED HARDWARE ARCHITECTURE
+A. Proposed architecture
+The proposed architecture, shown in Figure 1, contains an APP memory bank which can stores up to nc1 = 68 words of QAP P × Zmax = 3072 bits, where QAP P corresponds to the number of bits for the APP. Based on a quantization study, it is set to 8 bits in our architecture. An input/output interface unit drives and writes the channel LLR into the APP memory bank and reads the decoded bits when the last iteration is reached. The addresses of the memory bank correspond to the column indexes of the BG. A permutation network rotates Z outputs of the APP memory banks at each clock cycle. It is configured to support all rotation values from the 51 lifting sizes. The Z rotated APPs are then processed by up to Zmax = 384 Node-Processing Unit (NPU) in parallel, enabling high processing throughput. The NPU serially processes all the edges of the chosen BG. The C2V and V2C messages are updated and accessed through dedicated RAMs connected to the NPUs. These RAMs are dimensioned as follows:
+• The maximum number of V2C messages to store corresponds to the highest CN degree (dcmax) amoung all rows and BGs: dcmax = maxi,b(dci,b). Therefore, the V2C RAMs must be able to store total of 19 words of (QAP P + 1) × Zmax = 3456 bits.
+• The C2V RAMs memorize the global messages (global signs, 1st minimum index, 1st and 2nd minimum values) requires maxb(nrb) = 46 words of
+
+Hardware efficiency
+
+1
+
+0.9
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+No frame parallelism
+
+With frame parallelism
+
+0 0 50 100 150 200 250 300 350 400
+
+Lifting size Z
+
+Fig. 2. Hardware efficiency for each lifting size, with and without frame parallelism.
+
+Zmax × 2(QC2V − 1) + log2 dcmax = 16 × 384 bits. The QC2V parameter corresponds to the number of quantization bits used for the C2V messages including the sign bit, and is set to 6 in the proposed architecture. The addresses correspond to the row indexes. • The C2V sign messages are stored into RAMs containing a total of maxb(neb) = 316 words of Zmax = 384 bits. The address correspond to the edge indexes.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+To APP RAM banks From permutation network
+
+From C2V msg RAMs
+
+From GCU (stage 0 counter)
+
+global_sign_old 1st_min_idx_old
+C2V_sign_old 5
+
+5 Pipeline stage 0
+
+From GCU To C2V msg RAMs (stage 1 counter)
+5 Pipeline stage 1
+
+2nd_min_old 1st_min_old
+
+XOR
+
+=
+
+55
+
+REG
+
+REG
+
+5
+1st_min_idx
+
+=
+
+sign & magnitude combination
+REG
+6
+- R 8
+E G
+sign & 9 magnitude
+separation
+
+<
+8
+
+8
+
+R Magnitude
+
+E G Sign
+
+XOR
+
+en_reg_1st_min
+
+REG
+8
+REG
+
+REG 1st_min
+REG 2nd_min
+
+5 Saturation
+O F F S E T
+
+<
+
+5 Saturation
+
+REG
+
+global_sign
+REG
+
+sel_1st_min
+
+8 8
+XOR
+
+sign & magnitude combination
+
+REG
+
+R
+
++
+
+Satura -tion
+
+8E
+
+G
+
+REG
+
+Sign only
+
+From V2C Delay RAMs
+
+Fig. 3. Proposed pipelined Node Processing Unit
+
+B. Frame parallelism
+Finally, the updated APP at the outputs of the NPUs are written back to the APP memory banks.
+The use of a second permutation network is avoided at the output of the NPU: there is no need to rotate the APP back to their original positions. Instead, the wellknow offset permutation technique [8] is employed. It consists of rotating the APPs at column i by ∆r(i) = rnew(i) − rold(i), with:
+• rnew(i) is the expected rotation value at column i. • rold(i) corresponds to the previous rotation value at
+column i: rnew(i), stored in a dedicated RAM (not shown in the figures) and becomes rold(i) for the next processing step.
+The memory addresses, offset permutation values and the control signals are generated by the Global Controller Unit (GCU). Details about this unit are presented in Subsection III-D. The adopted permutation network in this work is the optimized one proposed in [9].
+In typical decoder architectures, only a subset of the NPUs are operating, depending on the selected frame size. This results in a loss of the processing rate: the available hardware resources are not efficiently re-used. This hardware efficiency is proportional to the lifting size, as shown in Figure 2. This becomes a major issue when short frames must be decoded.
+To overcome this problem, an original solution is proposed. It consists of re-using the NPUs by processing several frames in parallel. We assume that these parallel processed frames hold the same code rate, frame size
+
+and BG configuration. It is then possible to process up to P = Zmax/Z frames in parallel, P being the parallelism level. The maximum lifting size being 384, frame parallelism can be supported if Z ≤ 192. The hardware efficiency, denoted η, is expressed as η = P × Z/Zmax and is shown in Figure 2. Averaged over all the available lifting sizes, the hardware efficiency is η = 0.92 with frame-level parallelism and η = 0.23 without. Therefore, our approach enables to multiply the hardware efficiency by almost 4 in average, leading to a processing throughput increase by the same magnitude. The processing throughput, denoted PT, is expressed as
+
+PT = Fclk × K × P ,
+
+(7)
+
+nIT × ncc
+
+where Fclk is the operating clock frequency, K is the frame size, nIT is the number of iterations and ncc ≥ neb is the number of clock cycles per iteration.
+
+C. Node Processing Unit
+The NPU, presented in Figure 3, corresponds to the main computational unit of the decoder. It takes as input the rotated APP associated to column i, row j. The rotated APP is then subtracted to the old C2V message at the same column/row position to generate the V2C message, through the block SUB in Figure 3. Beforehand, a Message Reconstruction (MR) block, referred as block MR1, re-combines the global components of the old C2V messages to form the original C2V message. The obtained V2C message is then transferred to the external V2C RAMs and an internal serial-sorting block,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+based on two comparators, registers and multiplexers. This block serially processes the received V2C messages to find the global components of the new C2V messages, which are stored into dedicated registers and written into the C2V RAMs. Finally, the new C2V messages are reconstructed (block MR2) and added to the delayed V2C messages coming from the V2C RAMs (block ADD). The updated APPs are then obtained.
+In addition, the processing is split into 2 main pipeline stages:
+• The pipeline stage 0 serially processes the dcj+1 APPs of row j +1, computes the V2C messages and the new C2V messages (serial sorting block). This stage contains blocks SUB, MR1 and serial sorting.
+• The pipeline stage 1 serially updates the dcj APPs, where dcj corresponds to the variable node degree of row j. It also writes the new C2V messages into the corresponding memories. This stage contains blocks MR2 and ADD.
+This 2-stage pipeline architecture enables to efficiently exploit the available hardware resources and, by consequence, can double the processing rate. As the VN degree can differ between successive rows, one of the pipeline stages can be put into IDLE state until the second one finishes its processing. This introduces a slight throughput penalty.
+D. Global Controller Unit
+The GCU mainly includes a Finite State Machine (FSM) unit and two addresses generator units, one for each pipeline stage. The FSM controls and schedules the whole decoder architecture. All control actions and events are synchronized on the same clock cycle. This is made possible thanks to a pipeline interface unit within the GCU. It consists of a shift register bank delaying the addresses according to a specific latency value. The latency corresponds to the RAMs read operation and the internal pipeline registers of the permutation network and the NPUs.
+IV. RESULTS AND PERFORMANCE ANALYSIS
+Several LDPC decoder architectures targeting different standards other than 5G has been designed in the literature. However, comparing the proposed architecture with existing LPDC architectures supporting different standards would not be fair: code structure and parameters are different, and most don’t have to support the same required flexibility as in the 5G standard. Nevertheless, commercial 5G LPDC decoders are recently available and are very competitive with respect to the available state of the art. Therefore, they represent an excellent base for comparison. Particularly, the documentation
+
+Processing Throughput (Gb/s)
+
+1.4
+
+1.2
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+Xilinx LDPC decoder
+
+Proposed LDPC decoder 0
+0 50 100 150 200 250 300 350 400
+
+Lifting size Z
+
+0.5 0.45
+0.4 0.35
+0.3 0.25
+0.2 0.15
+0.1 0.05
+0 0
+
+Xilinx LDPC decoder Proposed LDPC decoder
+50 100 150 200 250 300 350 400 Lifting size Z
+
+Processing Throughput (Gb/s)
+
+Fig. 4. Processing throughput comparison for all lifting sizes and a) for a code rate of 0.815 and b) for a code rate of 0.324.
+offered by Xilinx [10] details the processing throughput for several code rates and lifting sizes, and provides synthesis results on Kintex 7 FPGA devices.
+A. Throughput comparison
+For the BG number 1, reference [10] provides the throughput values at nIT = 8 iterations for the code rates a) 0.815 and b) 0.324, respectively corresponding to Npunct = 39 and Npunct = 0. The proposed decoder requires ncc = 130 clock-cycles per iteration when it is configured to process frames with a code rate of 0.815. When the code rate is set to 0.324, ncc = 364 clockcycles per iteration is required. These ncc values were obtained by counting the number of clock cycles for one iteration in the behavioral testbench simulation. In fact, ncc is almost proportional to Npunct, and can be approximated as:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II POST P&R SYNTHESIS RESULTS COMPARISON OF THE XILINX AND THE PROPOSED LDPC DECODERS
+
+Decoder architecture
+Device Algorithm Fmax LUTs Registers 36k BRAMs 18k BRAMs
+
+Xilinx decoder [10]
+xc7k160t NMS
+220 MHz 54731 56998 109 20
+
+Proposed decoder
+xc7k160t OMS
+160 MHz 92664 49049 197 51
+
+TABLE III BLOCK-BY-BLOCK SYNTHESIS RESULTS OF THE PROPOSED 5G LDPC DECODER
+
+Block name
+Input/output interface Permutation network NPU (×384) APP,C2V & V2C memories Global controller unit
+
+LUTs
+3081 34684 50688
+32 1020
+
+Registers
+0 3474 45312
+32 574
+
+BRAMs
+0 51 0 183 14
+
+ncc(Npunct) ≈
+
+364
+
+−
+
+Npunct
+
+×
+
+234 39
+
+,
+
+277
+
+−
+
+Npunct
+
+×
+
+97 33
+
+(8)
+
+When (8) and (7) are combined, the processing throughput can be calculated for all code rates and lifting sizes. After Place and Route (P&R), the operating clock frequency is Fclk = 160 MHz for the proposed decoder on the Kintex 7 xc7k160t device. For the Xilinx decoder, the operating clock frequency is 220 MHz on the same FPGA target.
+Based on all the above information, processing throughput (PT) for all lifting sizes is deduced and shown in Figure 4 at nIT = 8 iterations and for the code rates a) CR = 0.815 and b) CR = 0.324. The proposed LDPC decoder outperforms the Xilinx decoder for most configurations. The Xilinx decoder only supports a slightly higher PT for the cases Z ∈ {208, 224, 240, 256} at CR = 0.815. When short frames (Z ≤ 100 are employed, the proposed decoder provides a large PT increase compared to the Xilinx decoder, up to 28 times more. Averaged over all lifting sizes, the PT is equals to 0.596 Gb/s for the Xilinx decoder for the CR = 0.815 case, whereas it is doubled (1.196 Gb/s) for the proposed decoder. When CR = 0.324, the averaged PT of the proposed decoder is tripled compared to the Xilinx decoder.
+It is worth noting that an uniform distribution of the lifting size usage is assumed. In typical standards, some parameters could be more used than others. Therefore,
+
+pondering the lifting size according to its usage would provide a more realistic comparison. However, this information is not easily available and may depends on the environment and target applications.
+B. Synthesis result
+Post Place & Route (P&R) synthesis results, displayed in Table II, has been obtained for the Kintex 7 xc7k160t device, considering the Xilinx and the proposed LDPC decoder architectures. The proposed architecture requires 69% more LUTs than the Xilinx one, but requires 14% less registers. The number of Block RAMs (BRAMs) of the proposed architecture is almost doubled (92% increase) when compared to the xilinx architecture. These results can be easily explained by the fact that the Xilinx decoder uses 128 processing units in parallel, 3 times less than our proposed design. However, this complexity increase is acceptable considering the PT gain evaluated in Sub-section IV-A, where the PT of the proposed architecture is more than doubled when compared to the Xilinx one.
+For the proposed design, the critical path after P&R is located between the output of the APP memories and the pipeline registers located at the 5th multiplexer stage of the permutation network. This constrains the operating clock frequency at 160 MHz, which is 27.3 % lower than the operating clock frequency of Xilinx architecture. However, the proposed architecture still has higher PT for most 5G configurations, as evaluated in Sub-section IV-A. It should be noted that the pipeline depth in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+permutation network can be increased. However, this could lead to more conflict updates, thus PT would be overall reduced.
+To better understand how each unit impact the final hardware complexity, block-by-block synthesis results are presented in Table III. As expected, the permutation network takes a non-negligible number of LUT resources. This clearly points out the fact that such unit must be carefully designed to achieve high parallelism level and PT. The use of the offset permutation technique [8] is therefore mandatory for 5G LDPC decoder hardware architectures. In addition, the permutation network must only use one barrel shifter to keep the complexity scaling in Zmaxlog2(Zmax), as proposed in [9]. The bottleneck of this later proposal is that the control of the last multiplier stage is quite complex, which explain why it requires 51 BRAMs. This also explains why our proposed architecture takes more BRAMs than Xilinx one.
+
+[5] F. R. Kschischang, B. J. Frey, and H. . Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, Feb 2001.
+[6] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 619–637, Feb 2001.
+[7] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[8] S. Kim, G. E. Sobelman, and H. Lee, “A Reduced-Complexity Architecture for LDPC Layered Decoding Schemes,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 19, no. 6, pp. 1099–1103, June 2011.
+[9] E. Boutillon and H. Harb, “Extended Barrel-Shifter for Versatile QC-LDPC Decoders,” IEEE Wireless Communications Letters, vol. 9, no. 5, pp. 643–647, 2020.
+[10] Xilinx, “Intellectual Property – LDPC Encoder/Decoder,” https://www.xilinx.com/products/intellectual-property/ ef-di-ldpc-enc-dec.html#overview.
+
+V. CONCLUSION
+A novel 5G LDPC decoder design for FPGA devices is proposed in this paper. The designed decoder features high processing throughput and high flexibility to support all 5G configurations. Thanks to the use of frame-level parallelism when short frame sizes are processed, most of the 384 parallel processing units can be re-used to increase the processing throughput. Post P&R synthesis results show that averaged processing throughput is doubled to tripled when compared to recent commercial Xilinx 5G LDPC decoder. The complexity in LUTs and BRAMs is only doubled, demonstrating the efficiency of the proposed FPGA based design.
+
+ACKNOWLEDGMENT
+This work was partially funded by the European Union FEDER program and the French Brittany region through the FlexDEC-5G project.
+
+REFERENCES
+[1] Seho Myung, Kyeongcheol Yang, and Jaeyoel Kim, “Quasicyclic LDPC codes for fast encoding,” IEEE Transactions on Information Theory, vol. 51, no. 8, pp. 2894–2901, Aug 2005.
+[2] 3GPP TS 38.212 , “3rd Generation Partnership Project; Technical Specification Group Radio Access Network; Multiplexing and channel coding,” https://portal.3gpp.org/desktopmodules/ Specifications/SpecificationDetails.aspx?specificationId=3214.
+[3] C. Wang, F. Haider, X. Gao, X. You, Y. Yang, D. Yuan, H. M. Aggoune, H. Haas, S. Fletcher, and E. Hepsaydir, “Cellular architecture and key technologies for 5G wireless communication networks,” IEEE Communications Magazine, vol. 52, no. 2, pp. 122–130, February 2014.
+[4] T. Richardson and S. Kudekar, “Design of Low-Density Parity Check Codes for 5G New Radio,” IEEE Communications Magazine, vol. 56, no. 3, pp. 28–34, March 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:15:39 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1064 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+1219
+
+A (21150, 19050) GC-LDPC Decoder for NAND Flash Applications
+Yen-Chin Liao , Chien Lin, Hsie-Chia Chang, and Shu Lin, Life Fellow, IEEE
+
+Abstract— In this paper, a (21150, 19050) globally-coupled lowdensity parity check (GC-LDPC) code designed for NAND flash memories is presented. The proposed LDPC code comprises three disjoint subcodes which can be decoded independently. This highly structural parity check matrix contributes to efficient decoder implementation and flexible decoding flow control. Moreover, a two-phase local/global decoding procedure optimized for the proposed GC-LDPC code is introduced. Scenarios of collaborative decoding that leverages the special code structures are discussed. In the proposed decoder architecture, the pipelined processing elements with scheduling are employed to reduce the critical path and decoding latency as well. Implemented in UMC 65 nm process, the post-layout simulation shows a maximum decoding throughput of 4.32 Gb/s with the chip area 3.376 mm2.
+Index Terms— Globally-coupled LDPC codes, two-phase local/global iterative decoding, emerging memory ECC.
+I. INTRODUCTION
+O VER the past 10 years, NAND flash memory has become the primary storage media in many mobile devices and consumer electronic products. The advances in process and technology drive the NAND flash memories’ capacity to grow rapidly. Due to the shrinkage of memory cells, multi-levelcell representation, e.g. the MLC (2bit), TLC (3bit) or even QLC (4bit), and advanced memory architectures such as the 3D NAND [1]–[5], the stored information are even prone to errors while information density grows. The manufacturers are urged to seek more powerful error correction codes (ECC) [6] to solve the reliability issues. BCH codes [7], [8] are widely applied in NAND flash memories for their definite error correction capabilities. A t-error correcting BCH code can correct up to t erroneous bits. However, as the raw bit error rate keeps increasing, designing BCH decoders capable of correcting more errors becomes challenging. Longer block-length with larger t is a design trend, nevertheless, the implementation complexity and cost may become unmanageable.
+Manuscript received April 23, 2018; revised July 23, 2018 and September 6, 2018; accepted September 24, 2018. Date of publication November 9, 2018; date of current version February 5, 2019. This work was supported by the Ministry of Economic Affairs, the Higher Education Sprout Project of the National Chiao Tung University and Ministry of Education (MOE), and the Ministry of Science and Technology, Taiwan, under Grant 107-2 22-8-009-014-TA. This paper was recommended by Associate Editor M. Martina. (Corresponding author: Yen-Chin Liao.)
+Y.-C. Liao, C. Lin, and H.-C. Chang are with the Department of Electronics Engineering, National Chiao Tung University, Hsinchu 30010, Taiwan (e-mail: ycliao.ee92g@g2.nctu.edu.tw).
+S. Lin is with the Department of Electrical and Computer Engineering, University of California at Davis, Davis, CA 95616 USA.
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSI.2018.2875311
+
+Low-density parity check code [6], [9], [10] is an alternative ECC solution for emerging memories. The probabilistic decoding algorithm requires multi-bit representation may introduce longer memory read latency. Although the error correction capability is indefinite, LDPC codes are shown to be capable of correcting more errors with high probabilities by the more complicated iterative message-passing decoding algorithms. Compared to BCH codes, LDPC codes can be a more efficient option as the ECC block length increases [3], [11], [12].
+LDPC codes were first invented by Gallager in the early 1960’s [9]. Although being explained by Tanner in the 1980’s [13], LDPC codes are nearly forgotten for more than 30 years until the rediscovery by Mackay and Neal in the late 90’s [10] and then shown to be a capacity approaching code [14]. Vast results from code constructions, performance analysis [15], to encoder/decoder architectural designs and hardware implementations [16] were extensively brought out by numerous researchers over the past two decades. Several wired and wireless communication standards have adopted LDPC codes as the forward error correction schemes due to the promising performance.
+Compared with any wired or wireless communication systems, there are distinct considerations and challenges in designing LDPC codes for NAND flash memories. A different design philosophy is required from code construction to the encoder/decoder implementation. Considering the efficiency, the code rates, which is defined as the ratio of information length to the ECC block length, is usually high. Typically LDPC codes designed for NAND flash memories have code rates higher than 0.8. In order to comply with the confined basic data read/write block size (e.g. the page size), and to preserve superior error correction capabilities for such high code rates, large block lengths from 1K-Byte, 2K-Byte, 4K-Byte or even longer, are necessary. For instance, in [17] and [18], very high code rate (0.95) and large block size (for 8K-Byte information) LDPC code construction and implementations have been introduced.
+The effectiveness and efficiency of LDPC decoders highly depend on the parity check matrix designs. The challenges of implementing a high-throughput decoder for LDPC codes with high-code-rate and long-block-length were addressed in [19]. An LDPC code with special parity check matrix structure designed for their specific decoding algorithm was introduced to overcome these issues. Globally-coupled LDPC (GC-LDPC) codes [20]–[22] especially have great potentials in emerging memory applications. A GC-LDPC code
+
+1549-8328 © 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1220
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+comprises several smaller block-lengthed codes. The parity check matrix is composed of several disjoint smaller matrices where independent decoding among them are possible. The additional globally-connecting part in the parity check matrix joints these smaller codes, which are referred to as local codes, to provide the superior error correction capability of a largeblock-length code. It is possible to leverage the merits of both short and long block length LDPC codes in GC-LDPC decoder implementation. Moreover, due to the flexible and structural parity check matrix form, a GC-LDPC code can be designed in a way that a single decoder implemented for one of the small block-lengthed code to be used for decoding the entire large block-lengthed LDPC code.
+The idea of collaborative decoding was also presented in the two-level LDPC code proposed in IEEE P1890 draft [11]. T 1K-Byte LDPC codes are encoded and decoded independently as the level-1 LDPC codes. A fraction of each of the level-1 LDPC codes is selected to compose a level-2 LDPC code, which is identical to the level-1 1K-Byte LDPC code. The level-2 decoding proceeds only when any of the level-1 decoders fail to correct the errors. Only the information selected by the level-2 encoder has a second chance for error correction. The similar two-level decoding is applicable to GC-LDPC codes. However, a GC-LDPC code differs from the draft in that all the information are encoded jointly with the smaller subcodes. All the error bits have a second chance to be corrected by the level-2 decoding
+The main contributions of this work are a (21150, 19050) GC-LDPC code designed for NAND flash memories; a local-global two-phase decoding procedure; a high throughput decoder in compliance with the proposed decoding algorithm to prove the feasibilities of the design concepts. The rest of the paper is organized as follows. Fundamentals of LDPC codes and GC-LDPC codes are briefly introduced in Section II. The proposed GC-LDPC code and the local-global two-phase decoding procedure are presented in Section III. The decoder architectural design, as well as the implementation results, are addressed in Section IV. Some concluding remarks will be given in Section V.
+II. GLOBALLY-COUPLED LOW-DENSITY PARITY CHECK (GC-LDPC) CODES
+Globally-Coupled Low-Density Parity check codes (GC-LDPC) were first introduced in 2016 [23]. A GC-LDPC code is composed of several smaller-block-lengthed LDPC codes. The highly structural code construction facilitates efficient implementation while maintaining compelling error correcting capabilities of large-block-length codes. In this section, fundamentals of LDPC codes will be reviewed, and the construction of GC-LDPC codes will be introduced in subsequent.
+A. Review of Low-Density Parity-Check Codes
+A low-density parity check code is a linear block code and can be defined by the null space of a sparse parity check matrix H. Let N and K be the codeword and information lengths, the dimension of the parity check matrix is M × N and
+
+Fig. 1. An example of a Tanner graph representation.
+
+the
+
+code rate
+
+R
+
+=
+
+K N
+
+≥
+
+1−
+
+M N
+
+.
+
+Each
+
+of the
+
+valid
+
+codewords
+
+c
+
+must satisfy the M parity check constraints of H. That is,
+
+Hc = 0. These parity check equations are often represented
+
+by a Tanner graph [13]. Fig. 1 is an example of a parity check
+
+matrix and the corresponding Tanner graph. A check node in
+
+the graph is associated with a check equation (a row in H); a
+
+variable node is associated with a bit (a column in H) of a
+
+code word. The variable nodes involved in one check equation
+
+are connected to a check node. The number of the non-zero
+
+terms in a row of H is called the row degree or check node
+
+degree. Similarly, the column degree of a variable node refers
+
+to the number of non-zero elements of the column in H.
+
+LDPC codes can be decoded by iterative belief prop-
+
+agation (BP) algorithms [9], [10]. Probabilistic messages
+
+are exchanged between check nodes (CNs) and variable
+
+nodes(VNs) to update the posterior probabilities of each
+
+VN, which are often represented by the log-likelihood
+
+ratios (LLRs),
+
+Ln
+
+=
+
+log
+
+Pr (vn Pr (vn
+
+= =
+
+0|rn) , 1|rn )
+
+n = 0, 1, . . . N − 1.
+
+(1)
+
+By comparing the signs of (1), a codeword is decoded at the
+
+end of each iteration. Decoding procedure stops when all the
+
+check equations are satisfied or the iteration number exceeds
+
+a predefined number.
+
+Let vn and rn be the value of the n-th bit in a codeword and the decoder input, respectively. N(m) and M(n) denote
+
+the neighbors of the m-th CN and n-th VN, respectively. Each
+
+VN is initialized by the log-likelihood ratio (LLR) Pn. The
+
+message from the m-th CN to the n-th VN at the i -th iteration
+
+is
+
+L
+
+(i) m→n
+
+,
+
+and
+
+the
+
+message
+
+from
+
+the
+
+n-th
+
+VN
+
+to
+
+the
+
+m-th
+
+CN
+
+at
+
+the
+
+i -th
+
+iteration
+
+is
+
+L
+
+(i) n→m
+
+.
+
+The
+
+following
+
+summarizes
+
+a
+
+standard BP decoding procedure.
+
+• Initialization:
+
+Pn
+
+=
+
+log
+
+Pr (rn |vn Pr (rn |vn
+
+= =
+
+0) 1)
+
+,
+
+(2)
+
+L
+
+(0) m→n
+
+=
+
+0,
+
+(3)
+
+L
+
+(0) n→m
+
+=
+
+Pn ,
+
+(4)
+
+for m = 0, 1, . . . , M − 1 and n = 0, 1, . . . , N − 1. • Check node update:
+
+L(mi)→n = 2 tanh−1
+
+tanh
+
+L
+
+(i n
+
+−1) →m
+
+(5)
+
+2
+
+n ∈N(m)\n
+
+for m = 0, 1, . . . , M − 1 .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIAO et al.: (21150, 19050) GC-LDPC DECODER FOR NAND FLASH APPLICATIONS
+
+1221
+
+• Variable node update:
+
+L
+
+(i) n→m
+
+=
+
+Pn
+
++
+
+L
+
+(i) m →n
+
+(6)
+
+m ∈M(n)\m
+
+L(pio)st,n = Pn +
+
+L
+
+(i) m →n
+
+(7)
+
+m ∈M(n)
+
+for n = 0, 1, . . . , N − 1. • Hard decision and syndrome check: The n-th decoded
+bit vˆn(i) at the i -th iteration can be determined by
+
+vˆn(i) =
+
+0,
+
+if
+
+L
+
+(i) post
+
+,n
+
+≥
+
+0;
+
+1,
+
+if
+
+L
+
+(i) post
+
+,n
+
+<
+
+0.
+
+(8)
+
+To ease implementation, scaling-minsum algorithm
+
+(NMS) [24], [25] approximates the non-linear operation
+
+in (5) by its minimum with a scaling factor α. That is,
+
+⎛
+
+⎞
+
+L
+
+(i) m→n
+
+=
+
+α⎝
+
+si
+
+g
+
+n(L
+
+(i −1) nm
+
+)⎠
+
+·
+
+n ∈N(m)\n
+
+min
+n ∈N(m)\n
+
+L
+
+(i −1) nm
+
+)
+
+(9)
+
+where 0 < α < 1. From the Tanner graphs, one can infer that LDPC decoders
+inherently possess high parallelism. All the CNs and VNs in BP or NMS algorithms can be performed concurrently. Considering the decoding speed and complexity, CNs and VNs are often updated block-wise in a partial parallel decoder architecture. That is, only a portion of the messages are updated simultaneously. The iterative decoding algorithms mentioned above have a flooding-type updating schedule such that all the CN updates in (5) or (9) take the input messages updated by the VNs from the previous iteration. Literature has shown improvements in decoding convergence if a CNU or VNU takes the latest updated messages as the input messages [26], [27].
+Column shuffle decoding [26] partitions the VNs into blocks. Only the neighboring nodes connecting to one VN block will perform CN updates before the subsequent VN block proceeds. Shuffle decoding allows the subsequent blocks to process with the latest information. Column shuffle is especially more efficient in implementation when the row degrees are large [28]. Block-wise scheduling can be performed in a row-based fashion as well. Row-based layered scheduling [27], or called row shuffle or layer decoding, partitions the CNs into blocks. When all the CN blocks complete the message updating in one iteration, the VNs are updated more than once, which also leads to faster convergence.
+For efficient implementations, the parity check matrix can be designed as an array of square submatrices. Quasi-cyclic (QC)-LDPC codes [15], [29] are one of the examples. The size of a VN block or a CN block can be multiples of the submatrix size. The parity check matrix of a QC-LDPC can be represented by a base matrix B over a finite field G F(q). All the zero entries in B can be represented by z × z all-zero matrices. The non-zero entries, denoted by βa for β ∈ G F(q), can be represented by a z × z circulant permutation matrix (CPM). In this way, the base matrix B is expanded to the corresponding low-density parity check matrix.
+
+The CPM of βa can be realized by defining its first row as
+
+the generator, which has 1 at the a-th position and the a-th
+
+position is the only non-zero component. The i -th row is the
+
+circular shift of the i − 1-th row by one position to the right for i = 1, 2, . . . , z − 1. For example, the CPM of β0 and β1
+
+for z = 4⎡are
+
+⎤⎡
+
+⎤
+
+1000
+
+0100
+
+⎢⎢⎣
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+⎦⎥⎥
+
+and
+
+⎢⎢⎣
+
+0 0
+
+0 0
+
+1 0
+
+0 1
+
+⎥⎥⎦,
+
+0001
+
+1000
+
+respectively. In the rest of the paper, all CPM is referred to this type of realization.
+
+B. Construction of GC-LDPC Codes
+
+A globally-coupled low-density parity check (GC-LDPC)
+
+is an LDPC code comprising several shorter-block-lengthed
+
+LDPC codes, which are referred to as the local codes. The
+
+parity
+
+check HGC
+
+m=at⎢⎢⎡⎢⎢⎣⎢⎢⎢⎢rixHHl(00o1...Gc)aCl
+
+can have
+0 Hl(o2c)al
+... 0
+
+the format:
+
+··· 0
+
+··· 0
+
+...
+
+...
+
+· · · Hl(ot)cal
+
+⎤ ⎦⎥⎥⎥⎥⎥⎥⎥⎥.
+
+(10)
+
+Hglobal
+
+The t submatrices Hl(o1c)al, Hl(o2c)al, . . . , and Hl(ot)cal, placed along the main diagonal in the upper portion of HGC correspond to
+the t cascaded local codes. The Hglobal at the bottom forms
+
+a globally-connecting part and connects these local codes so
+
+as the local decoders can work collaboratively. The globally
+
+connecting part provides high connectivity among the VNs
+
+such that each VN is capable of acquiring more information
+
+from other VNs. It is stated in [23] that connectivity is an
+
+important characteristic for iterative decoders to converge
+
+faster. Fig. 2 is the associated Tanner graph of (10). It is
+
+perceived the t subgraphs of the local codes are disjoint,
+
+implying that the local codes can be decoded concurrently.
+
+Algebraic GC-LDPC code construction methods were intro-
+
+duced in [21]–[23]. These codes are QC-LDPC codes and the
+
+base
+
+matrices BGC
+
+can⎡ = ⎢⎢⎢⎢⎢⎢⎢⎣⎢
+
+have the Bl(o1c)al
+0 ...
+0
+
+format
+0 Bl(o2...c)al
+0
+
+··· ··· ...
+···
+
+⎤
+
+0
+
+0 ... Bl(oSc)al
+
+⎥⎥⎥⎥⎥⎥⎥⎥⎦ .
+
+(11)
+
+Bglobal
+
+The first GC-LDPC code proposed in [23] was constructed
+
+by a Latin square with the technique of superposition [30].
+
+By
+
+defining ⎡ α0
+
+a matrix B0 −1 α−
+
+over a prime 1 α2 − 1
+
+field ···
+
+G F(q), αq−2
+
+−
+
+1
+
+⎤
+
+B0
+
+=
+
+⎢⎣⎢⎢
+
+αq−2 ...
+
+−
+
+1
+
+α0 − 1 ...
+
+α−1 ...
+
+··· ...
+
+αq−3 ...
+
+−
+
+1
+
+⎥⎥⎦⎥,
+
+α − 1 α2 − 1 · · · αq−1 − 1 α0 − 1
+
+(12)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1222
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+Fig. 2. Tanner graph of a GC-LDPC code.
+
+where α is a primitive element of G F(q) [6], a subset of B0
+
+is selected to form the base matrix BGC in (11) and the CPM
+
+size is q − 1. To construct a GC-LDPC code of t local codes,
+
+it is required that t divides q − 1. Assuming that q − 1 = ts,
+
+B0 can be represented by a t × t array of s × s submatrices,
+
+which is
+
+⎡
+
+⎤
+
+W0,0
+
+W0,1 · · · W0,t−1
+
+B0 = ⎢⎢⎣⎢
+
+W1,0 ...
+
+W1,1 ...
+
+··· ...
+
+W1,t −1 ...
+
+⎥⎥⎥⎦
+
+(13)
+
+Wt−1,0 Wt−1,1 · · · Wt−1,t−1
+
+Subsequently, the base matrix BGC is obtained by the following steps:
+
+1) 2)
+
+SSfaoneerdllmeetcchttaenmrcl(oo1ol(wco)1lac)ulamilncndoroeliuxwnmdssenexfstreoIfsrm(of1om) rW=mth0{ae,i01cs,ouailbn2umd,m.at.nth.reii,nxsidemoel(box1rc)otaaswl ie}nteiJndd(i1en)x1e=s)
+
+{ j1, j2, its size
+
+.. is
+
+., m
+
+l(jo1nc)l(oa1c)lal×}.
+
+The result nl(o1c)al .
+
+is
+
+the
+
+Bl(o1c)al
+
+in
+
+(11)
+
+and
+
+3) Repeat 1) and 2) to derive I(t ), J (t ) for Bl(ot c)al and
+
+t = 2, 3, . . . , t.
+
+4) The unselected rows of W0,0 form a complementary set Ic = {0, 1, . . . , s − 1}\{I(1) ∪ I(2) ∪ · · · ∪ I(t)}
+5) Select mglobal indexes from Ic to form a global row index set Iglobal = {i1, i2, . . . , imglobal } ∈ Ic. The submatrix Bglobal can be obtained by
+
+W0,0(i, j1)W0,1(i, j2) . . . W0,t−1(i, jt )
+
+where Wm,n(i, j ) denotes the (i, j )-th entry of Wm,n; i ∈ Iglobal, j1 ∈ J (1), j2 ∈ J (2), . . . , and jt ∈ J (t).
+
+Note that the submatrix Bglobal has mglobal rows and
+
+t t
+
+=1
+
+nl(ot c)al
+
+columns.
+
+Construction of GC-LDPC codes is not limited to the
+
+approach mentioned above. B0 can have other forms [23].
+
+For example, the base matrix can be designed from a Reed-Soloman code’s parity check matrix, and can be extended to construct non-binary GC-LDPC codes [15]. Interested readers can be referred to [21]–[23] for more details.
+III. GC-LDPC CODES DESIGNED FOR NAND FLASH MEMORIES
+GC-LDPC codes designed for NAND flash applications are addressed in this section. The target code rate is 0.9, and the block length is longer than 2K-Byte. Code constructions by algebraic methods are introduced. The (21150, 19050) GC-LDPC code construction will be given by the subsequent examples. To leverage the structural parity check matrix of GC-LDPC codes, a local-global two-phase decoding procedure is introduced. It can be further simplified to a two-level feed forward decoding flow.
+A. Code Construction
+The finite field G F(q) for constructing a GC-LDPC code by the algebraic method addressed in [23], which is also summarized in the previous section, determines the LDPC’s block length, the number of local codes and the CPM size. The following presents an example of designing a (21150, 19050) GC-LDPC code.
+Example-1 (GC-LDPC-1): Let q = 151, a 150 × 150 matrix B0 in (12) is obtained. Since q − 1 can be factored as 151 − 1 = 3 × 50, we can construct a GC-LDPC code of 3 local codes. The first 4 rows and the first 47 columns of B0 form the 3 identical local parts. That is, Bl(o1c)al = Bl(o2c)al = Bl(o3c)al = Blocal . The 5th and the 6th rows of B0 are used to construct Bglobal with the column indexes of {0, 1, . . . , 46, 50, 51, . . . , 96, 100, 101, . . . , 146}. Fig.3 illustrates the entries in B0 selected to construct the base matrix BGC , which is a 14 × 141 matrix over G F(151). The CPM size is q − 1 = 151 − 1 = 150. Thus the block
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIAO et al.: (21150, 19050) GC-LDPC DECODER FOR NAND FLASH APPLICATIONS
+
+1223
+
+Fig. 3. Example of constructing the GC-LDPC base matrix B1 from B0.
+
+length of the GC-LDPC code is 141 × 150 = 21150. The
+
+corresponding parity check matrix is 2100 × 21150. The
+
+resulted GC-LDPC code is a (21150, 19050) block code with
+
+information length of 19050-bit and code rate 0.9007.
+
+Short cycles in the Tanner graph of an LDPC code can
+
+degrade the iterative decoding of LDPC code [15]. To further
+
+improve the GC-LDPC code’s error correcting capability, ran-
+
+dom base matrix masking [20] is applied to BGC before CPM
+
+matrix dispersion. For each column of BGC , a non-zero entry is
+
+randomly chosen and set to 0. This is equivalently to remove
+
+the edges in the associated Tanner graph, which potentially
+
+breaks cycles. In addition to random masking, one can apply
+
+structural masking patterns. The following example-2 and
+
+example-3 present two GC-LDPC codes derived from the code
+
+constructed in example-1 but applied with different masking
+
+strategies.
+
+Example-2 (GC-LDPC-2): For every column of BGC , ran-
+
+domly set one of the non-zero entries to zero. The column
+
+weights will be reduced by one after random masking.
+
+Example-3 (GC-LDPC-3): For each of the Bl(ot c)al , set
+
+Bl(ot c)al [i , l0 j + i ] = 0 for i = 0, 1, 2, 3 and j =
+
+0, 1, . . . ,
+
+47 l0
+
+.
+
+That
+
+is,
+
+every
+
+one
+
+of
+
+the
+
+consecutive
+
+l0
+
+entries
+
+in the i -th row is set to zero. For the globally-connecting
+
+part, Bglobal[i , j g0 + i ] = 0 for i = 0, 1 and j =
+
+0,
+
+1,
+
+.
+
+.
+
+.
+
+,
+
+141 l0
+
+.
+
+Table I compares the two masked GC-LDPC
+
+codes (GC-LDPC-2 and GC-LDPC-3) with the original
+
+unmasked GC-LDPC code. It has been proven in [23] that
+
+this type of LDPC code is free of cycle-4. The table shows
+
+that cycles of 6 and 8 are significantly reduced after masking.
+
+Fig.4 compares the frame error rates (FER) and bit error
+
+rates (BER) of the proposed unmasked and masked GC-LDPC
+
+codes simulated with an AWGN channel model. All of them
+
+are decoded by layered schedule decoding with a maximum
+
+of 20 iterations. The layer size is the same as the CPM
+
+size, which is 150. It is perceived that masking significantly
+
+improves the waterfall regions. GC-LDPC-3 shows a slightly
+
+better performance because it has less cycle-6 and cycle-8.
+
+Moreover, a QC-LDPC code derived from the B0 in (12) is
+
+compared for reference. This QC-LDPC code has the same
+
+block length, which is 21150 bit, the same row/column weight
+
+Fig. 4. Comparisons of the unmasked and masked (21150, 19050) GC-LDPC codes.
+TABLE I COMPARISONS OF DIFFERENT MASKING STRATEGIES
+distributions, and the same code rate as the 3 GC-LDPC codes.
+Although real NAND flash channel models are not like the AWGN channel model, most of them can be summarized by the raw bit error rate under different conditions. For example [2], [4], [5] present some measurement results of NAND flash memories from different manufacturers, retention period, etc. By comparing this codes under different raw bit error rates, which are shown in Fig. 5, one can infer the performance under real NAND flash channels.
+B. Local-Global Two-Phase Decoding To leverage the locally disjoint and globally coupled parity
+check matrix structure, the decoding can be arranged in a hierarchically local-global two-phase manner. The local phase and the global phase are associated with the local codes and the globally-connecting part, respectively. In the local decoding phase, all the local codes are decoded independently. Several local decoding iterations are performed and the message updating is confined between the local VNs and the local CNs. The information of other local nodes can only be obtained via global decoding. The decoding switches between the local phase and the global phase until the convergence conditions are met. The concept of local-global two-phase decoding was first mentioned in [23] with various usage scenarios.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1224
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+Fig. 5. Comparisons of the unmasked and masked (21150, 19050) GC-LDPC codes.
+In the following, possible realizations and the corresponding decoding flow control will be presented. For conciseness, two-phase decoding will be used to refer to the local-global two-phase decoding hereinafter. The two-phase decoding is highly-flexible in the decoding flow control by configuring the iteration number of local and global phase. In some latency-sensitive applications, decoding may terminate as soon as all the local codes’ parity check equations are satisfied.
+Fig. 7 illustrates one possible two-phase decoding procedure. IL and IG are the iteration number of local decoding and global decoding, respectively. I is the iteration number of complete decoding. The predefined maximum decoding iteration number for local and global phases are TL and TG, respectively. In layer decoding, this two-phase decoding flow can be realized by constraining the check nodes to be updated in different decoding iteration. A maximum of i tr ×(TL +TG) iterations can be performed. For every TL + TG iterations, only the local check nodes are updated in first TL iterations, and the global check nodes are updated only in the subsequent TG iterations. Early termination conditions are examined at the end of each iteration.
+TL and TG are treated as design parameters. In our design, they are derived empirically. We can observe the BER of the local decoding under certain signal-to-noise ratio (SNR). Fig. 6 shows that the local code’s BER goes down quickly at the first few iterations. The decoding convergence slows down with the iteration number. The analysis implies that the decoder should switch to the global phase before the local decoder’s BER starts to saturate. Thus we choose TL = 3 in our design. Then several combinations of TG ’s are tried, and TG = 1 or TG = 2 is found to deliver effective decoding results within i tr = 5 complete iterations.
+Moreover, if the bit error rate is non-uniform among these local codes, the local codes corresponding to lower raw bit error rates will converge faster, and may help the other local codes converge by the information exchanged in the global phase. Flash memories are read or written page by page, which is the smallest data access unit [1]. The page size in the current state of the at flash memory can be 16 K-Byte or larger. For TLC NAND flash memories, the upper/middle/lower pages
+
+Fig. 6. Bit error rate (BER) local code at Eb/N0 = 4.2 dB.
+have different raw bit error rates [1], [3]–[5]. If it is allowed to encoded an LDPC code by data from different pages, the three local decoders and the two-phase decoding can be optimized for the memory channels of the three pages. However, in most of the current system settings, the data of the same page are encoded as multiple codewords. The local-global two-phase decoding provides flexibilities in determining the ECC block length when considering the error correction performance, the hardware complexity and additional degree of freedom in the decoding flow control.
+C. Two-Level Decoding
+The above mentioned local-global two-phase decoding can be simplified in a feed-forward approach. Similar to the two-level decoding introduced in [11], all the local decoders perform independent decoding first. Only when any of the local decoders fail in correcting the errors the decoding is switched to the second-level: a complete decoding based on HGC . Fig. 8 illustrates the two-level decoding flow. Fig. 9 is the simulation results of 2-level layer decoding for the above-mentioned GC-LDPC-3 code. At the beginning of decoding, each of the 3 local codes is decoded independently. The maximum iterations allowed for these local decoding is TL and TL = 3, 6, 10 are compared. Then the decoder performs decoding based on the complete parity check matrix HGC , this is referred to as the second-level or level-2 decoding. The maximum number of iteration for level-2 decoding, TG , is 10 in our simulation. The figure shows a significant gap between the local decoding and the complete GC-LDPC code decoding because local codes have smaller block lengths (7050-bit) and higher code rates (0.9149). It is perceived that level-2 decoding significantly reduces the gap.
+Fig. 10 compares the average iteration numbers. For the two-level decoding strategy, the iteration number required is very close to the upper bound TL , the maximum allowed local decoding iterations. This implies the decoding completes within 1 or 2 iterations after it enters into the level-2 decoding. For two-phase decoding, each iteration comprises at most TL = 3 and TG = 2 local and global iterations. The iterations converged around 2 implies that the globally-connecting part in HGC can effectively provide side information for the local decoders. Most of the time, the decoding can be completed within 4 times of global message exchange.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIAO et al.: (21150, 19050) GC-LDPC DECODER FOR NAND FLASH APPLICATIONS
+
+1225
+
+Fig. 7. Local/global two-phase decoding flow.
+
+Fig. 8. Two-level decoding flow.
+
+Fig. 9. Comparisons of decoding strategies.
+The results coincide with the conventional layer decoding by which the required iteration converges around some value between 3 and 4.
+The computation can be estimated by the non-zero entries of the base matrix. In our design, the globally CNs have row weights about 3 times as large as that of the local CNs. Therefore the computation of these decoding strategies will be estimated by 3 × 4 × I¯L + 3 × 2 × I¯G , where I¯L and I¯G are the average iterations performed in the local and global phase, respectively, of the two-phase decoding
+
+Fig. 10. Averaged required decoding iterations of different SNR.
+procedure. Notice that the average iteration of the two-phase decoding shown in Fig. 10 is measured by the complete iterations, thus the computation is estimated by the upper bound and lower bound. The upper bound is derived by assuming TL and TG iterations are performed in one complete iteration. The lower bound is derived by assuming the only one local iteration is performed in the last complete iteration. Fig. 11 compares the estimated computation when considering early termination. The figure shows that the computation is bounded by TL for both two-level and two-phase decoding. Moreover, it is perceived in Fig. 9 that the two-level (10, 10)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1226
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+Fig. 11. Comparisons of computation (normalized).
+and two-phase (3, 2, 5) decoding have similar BER/FER performance, but the latter requires less computation since more global updating improves the convergence at the early decoding stage. However, two-level decoding has a simpler control mechanism. Fig. 9 and Fig. 11 reveal the trade-off between the performance and the complexity. The structural GC-LDPC parity check matrix provides additional flexibilities in decoding flow control.
+IV. IMPLEMENTATION OF TWO-PHASE LAYER DECODING One big challenge of implementing long LDPC codes
+decoders is the large storage requirement. In our proposed (21150, 19050) LDPC code, the a posteriori LLR require 21150 × 6 = 126900 bits of storage elements if the messages are quantized in 6 bits. Furthermore, assuming that the messages stored for one check node are the first-min’s magnitude (3-bit), the second-min’s magnitude (3-bit), the sign (1-bit), and the index of the first-min (6-bit), there will be 2100 ×(3 + 3 + 1 + 6) = 27300 bits required to store all the check nodes’ information. In addition to the large storage requirement, the data bandwidth grows with the decoder parallelism. Although the 3 local codes in the proposed two-phase decoding can be decoded in parallel, the inevitably high memory bandwidth and the hardware routing complexity for the message passing decoding algorithm may offset the throughput increased by higher parallelism.
+In this section, the architectural designs and the implementation of the proposed (21150, 19050) GC-LDPC codes with local-global two-phase layer decoding will be presented. A row-scheduled layer decoder architecture is introduced. The layer size is the CPM size, which is 150. The proposed design aims to provide a high throughput decoder of long block length LDPC code with manageable complexity. It has been mentioned in [19] that layer decoding may suffer from the long critical path when the parity check matrix has large row weights. Because of the (almost) identical local part, it is possible to apply hardware sharing, pipelining, and scheduling among the local decodings to achieve high hardware utilization and decoding throughput.
+A. Decoder Architecture
+Fig. 12 illustrates the decoder architecture. In the proposed design, the messages are processed block by block.
+
+A row/column block corresponds to the 150 check/variable
+
+nodes of a submatrix in the parity check matrix. 150 check-
+
+node-updating (CNU) units of the same row block are imple-
+
+mented. The maximum local and global check nodes’ degrees
+
+are 47 and 141, respectively. CNU of min-sum algorithm
+
+in (9) is realized by searching for the first and second minimum
+
+values among the input magnitudes [15]. Due to the large row
+
+weight in this design, the sorting operation in CNU becomes
+
+the critical path. In order to reduce the critical path, each
+
+CNU is pipelined into 3 stages and the corresponding mes-
+
+sage updating is carried out by multiple cycles. Furthermore,
+
+to reduce the memory bandwidth, the variable node updating
+
+associated with one CNU block is partitioned into groups of
+
+four column blocks. That is, a CNU takes four neighboring
+
+VNUs’ message each time. Four column blocks of variable
+
+nodes, or totally 600 VNs, are updated at once.
+
+The memory in the proposed architecture comprises the
+
+accumulation results of the VNUs (memory of L post and sign), where the signs and values are stored separately, the first
+
+and second minimums of all the CNUs results, and the prefetch
+
+buffer. Each portion is composed of SRAM modules of 128-bit
+
+or 256-bit IO bandwidth. The largest proportion of the memory
+
+usage is the memory used for storing L post and sign. In the
+
+6-bit quantized L post messages, the memory is partitioned into banks to provide a bandwidth of 150 × 4 × 6 = 3600-bits.
+
+Because the local CNUs’ maximum weight is 47, the memory
+
+depth is
+
+47 4
+
+×
+
+3
+
+= 36. The CNUs’ messages, the first
+
+and second minimum, is 4-bit wide and the index of the first
+
+min is 6-bit wide. Since the parity check matrices of the three
+
+local codes are identical before masking, the three local codes
+
+share the same controlling unit of barrel shifters and memory
+
+addressing, which greatly reduces the number of multiplexers
+
+and control cases.
+
+B. Pipelined CN Updating and Scheduling
+
+As illustrated in Fig. 12 and Fig. 13, four updated VNU
+
+messages are forwarded to a CNU at once. Due to the
+
+pipelined architecture depicted in Fig. 13, a CNU generates the
+
+intermediate sorting results by three clock cycles. The interme-
+
+diate sign, first and second minimum values are compared with
+
+another four updated VNU messages. Because each local code
+
+has a maximum row degree of 47, it takes
+
+47 4
+
+×3 = 36 cycles
+
+to complete one row block check node update. To leverage
+
+the identical parity check matrix structures, the check node
+
+updating of the three local codes are scheduled in a way to
+
+fully utilize the CNU hardware. As it is shown in Fig. 14,
+
+four submatrices of VNU updated messages of the three local
+
+codes are forwarded to the same CNU block sequentially.
+
+For instance, in the first row block local check node update,
+
+the VNU messages of the first local code are processed at
+
+clock cycles 3k, k = 0, 1, . . . 11. For the second and third local
+
+codes, their associated VNU updated messages are processed
+
+at the 3k + 1 and 3k + 2 clock cycles, respectively. In words,
+
+the k-th VNU group messages for the i -th row block of the
+
+l-the local code are processed at the clock cycle
+
+36i + 3k + l,
+
+where i = 0, 1, 2, 3, k = 0, 1, . . . , 11 and l = 0, 1, 2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIAO et al.: (21150, 19050) GC-LDPC DECODER FOR NAND FLASH APPLICATIONS
+
+1227
+
+Fig. 12. Decoder architecture.
+
+Fig. 13. The proposed three-stage pipelined CNU.
+
+In the two-phase decoding algorithm, the global updating does not perform in concurrent with local updating, the computations in the local phase and global phase can share the same hardware logics. The 141 neighbors of a global check node are partitioned by three. Similar to the scheduling in the local phase, the grouped VNU messages of each part are processed in sequential. As it is illustrated
+
+in Fig. 14, a global row block is completed by 36 cycles. The three partial results of a global CNU are carried out sequentially. For example, the first global row block sorting results of the three parts are carried out at the 33, 34 and 35 clock cycles, the global CNU performs an additional comparison operation to generate the final sorting results.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1228
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+Fig. 14. Decoding scheduling for the 3-staged pipelined CNU.
+TABLE II CHIP IMPLEMENTATION (POST-LAYOUT SIMULATION)
+
+C. Implementation Results
+
+The two-phase layered decoding for the (21150, 19050) GC-LDPC code is implemented in UMC 65nm process. Fig. 15 is the chip place-and-route layout. TABLE II summarizes the chip implementation results based on the post-layout simulation. The decoder is designed for NAND flash applications where the latency resulted from acquiring the soft information is long. A finer resolution, i.e. more input quantization bits, requires multiple-read by adjusting different sensing voltages, and may lead to unfordable longer read latency. Thus the input messages are quantized to at most two bits. The internal quantization is 4-bit and 6-bit for the CNUs’ messages and VNUs’ messages, respectively. The decoder operates in two input modes. The maximum decoding iteration is confined to 6. Each iteration comprises 3 local and 2 global iterations in the two-phase decoding procedure. For the purpose of power saving and higher decoding throughput, early termination is implemented where the decoding process can terminate as soon as the decoder generates a valid codeword. The decoder can achieve 4.32 Gb/s decoding throughput with an average of 1.8 decoding iteration under clock frequency at 322.6 MHz.
+TABLE III compares the proposed decoder with several state-of-the-art LDPC decoders for NAND flash memories. For fair comparisons, all the chip areas are normalized to 65nm
+
+Fig. 15. Layout of the proposed design.
+process. The throughput-to-area ratio (TAR) [31] indicates the throughput offered per mm2 when the area is scaled to 65nm. Notice that the area scaling provides easier comparisons among the architectures across different technologies. Scaling in power or clock frequency may require additional estimations [32]–[34]. Architecture efficiency (AE), which is defined as the throughputs divided by the scaled area and the clock frequency, is another metric to benchmark the architectures of different technologies. The fixed-point simulation of bit error rates (BER) for these decoders are compared in Fig. 16 where q denotes the input quantization bit-width. The (TL, TG , i tr ) = (3, 2, 6) is used for our proposed two-phase decoding. Internal messages are quantized to 4 and 6 bits.
+The (68254, 65536) LDPC decoder presented in [18] occupies huge area owing to the large parity-check matrix. Although the code length of our proposed decoder is 3 times shorter, the proposed decoder achieves 2.65 times higher throughput and 12.8 larger TAR. Layered scheduling decoding is implemented for the very long code length in [17].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIAO et al.: (21150, 19050) GC-LDPC DECODER FOR NAND FLASH APPLICATIONS
+TABLE III COMPARISONS OF LDPC DECODERS
+
+1229
+
+The decoder achieves a 4.32Gb/s decoding throughput by the proposed pipelining and multi-cycle scheduling techniques that fully utilizes the special parity check matrix structure. The implementation results show that GC-LDPC codes are suitable for the large-block-length and high-code-rate scenarios in NAND memories.
+
+Fig. 16. BER comparisons of different decoders.
+However, the decoder’s performance is constrained by the considerably large amount of storage elements and computation units, which leads to a smaller TAR. To overcome the critical path issues in CNU due to large row degrees, the LDPC decoder presented in [19] applies variable-nodecentric sequential scheduling (VSS) algorithm which also improves the decoding convergence. With similar code lengths to our decoder, it occupies very small silicon area and has an efficient TAR. Compared with our work, our proposed decoder achieves 2.7 times higher throughput with a slightly better TAR.
+V. CONCLUSION
+In this paper, a (21150, 19050) GC-LDPC codes designed for NAND flash memories is presented. A two-phase decoding procedure and its simplified two-level decoding that leverage the structural parity check matrix are proposed to fully utilize the high-parallelism parity check matrix structures. A decoder conforming with the proposed decoding algorithm is implemented in UMC 65nm process and proves the design concept.
+
+REFERENCES
+[1] R. Micheloni, L. Crippa, and A. Marelli, Inside NAND Flash Memories. Amsterdam, The Netherlands: Springer, 2010.
+[2] V. Taranalli, H. Uchikawa, and P. H. Siegel, “Channel models for multilevel cell flash memories based on empirical error analysis,” IEEE Trans. Commun., vol. 64, no. 8, pp. 3169–3181, Aug. 2016.
+[3] L. Dolecek and Y. Cassuto, “Channel coding for nonvolatile memory technologies: Theoretical advances and practical considerations,” Proc. IEEE, vol. 105, no. 9, pp. 1705–1724, Sep. 2017.
+[4] T. Nakamura, Y. Deguchi, and K. Takeuchi, “AEP-LDPC ECC with error dispersion coding for burst error reduction of 2D and 3D NAND flash memories,” in Proc. Int. Memory Workshop, May 2017, pp. 1–4.
+[5] K. Mizoguchi, T. Takahashi, S. Aritome, and K. Takeuchi, “Dataretention characteristics comparison of 2D and 3D TLC NAND flash memories,” in Proc. IEEE Int. Memory Workshop, May 2017, pp. 1–4.
+[6] S. Lin and D. J. Costello, Error Control Coding: Fundamentals and Applications. Upper Saddle River, NJ, USA: Prentice-Hall, 2004.
+[7] A. Hocquenghem, Codes Correcteurs d’erreurs. Paris, France: Chiffres, 1959, pp. 147–156.
+[8] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Inf. Control, vol. 3, no. 1, pp. 68–79, Mar. 1960.
+[9] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[10] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEEE Electron. Lett., vol. 32, no. 18, pp. 1645–1646, Aug. 1996.
+[11] IEEE Approved Draft Standard for Error Correction Coding of Flash Memory Using Low-Density Parity Check Codes, IEEE Standard SA-P1890, Sep. 2017.
+[12] R. Mecheloni, A. Marelli, and R. Ravasio, Error Control Coding: Fundamentals and Applications. New York, NY, USA: Springer-Verlag, 2010.
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[14] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[15] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge, U.K.: Cambridge Univ. Press, 2009.
+[16] K. Gunnam, “LDPC decoding: VLSI architectures and implementations,” in Flash Memory Summit. Santa Clara, CA, USA, 2013.
+[17] J. Kim, J. Cho, and W. Sung, “A high-speed layered min-sum LDPC decoder for error correction of NAND flash memories,” in Proc. 54th Int. Midwest Symp. Circuits Syst. (MWSCAS), Aug. 2011, pp. 1–4.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+1230
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 3, MARCH 2019
+
+[18] J. Kim and W. Sung, “Rate-0.96 LDPC decoding VLSI for soft-decision error correction of NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 5, pp. 1004–1015, May 2014.
+[19] K.-C. Ho, C.-L. Chen, and H.-C. Chang, “A 520k (18900, 17010) array dispersion LDPC decoder architectures for NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 4, pp. 1293–1304, Apr. 2016.
+[20] J. Li, S. Lin, K. Abdel-Ghaffar, W. E. Ryan, and D. J. Costello, LDPC Code Designs, Constructions, and Unification. Cambridge, U.K.: Cambridge Univ. Press, 2016.
+[21] J. Li, K. Liu, S. Lin, and K. Abdel-Ghaffar., “Reed-Solomon based globally coupled quasi-cyclic LDPC codes,” in Proc. Inf. Theory Appl. Workshop (ITA), Feb. 2017, pp. 1–10.
+[22] J. Li, K. Liu, S. Lin, and K. Abdel-Ghaffar, “Reed-Solomon based nonbinary globally coupled LDPC codes: Correction of random errors and bursts of erasures,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 381–385.
+[23] J. Li, S. Lin, K. Abdel-Ghaffar, W. E. Ryan, and D. J. Costello, “Globally coupled LDPC codes,” in Proc. Inf. Theory Appl. Workshop (ITA), Jan./Feb. 2016, pp. 1–10.
+[24] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[25] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[26] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[27] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[28] C.-L. Chen, K.-S. Lin, H.-C. Chang, W.-C. Fang, and C.-Y. Lee, “A 11.5-Gbps LDPC decoder based on CP-PEG code construction,” in Proc. ESSCIRC, Sep. 2009, pp. 412–415.
+[29] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[30] L. Zhang, Q. Huang, S. Lin, K. Abdel-Ghaffar, and I. F. Blake, “Quasicyclic LDPC codes: An algebraic construction, rank analysis, and codes on latin squares,” IEEE Trans. Commun., vol. 58, no. 11, pp. 3126–3139, Nov. 2010.
+[31] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[32] S. Borkar, “Design challenges of technology scaling,” IEEE Micro, vol. 19, no. 4, pp. 23–29, Jul. 1999.
+[33] A. Stillmaker, Z. Xiao, and B. Baas, “Toward more accurate scaling estimates of CMOS circuits from 180 nm to 22 nm,” VLSI Comput. Lab, Univ. California, Davis, Davis, CA, USA, Tech. Rep. ECE-VCL2011-4, Dec. 2011.
+[34] A. Stillmakera and B. Baas, “Scaling equations for the accurate prediction of CMOS device performance from 180 nm to 7 nms,” Integration, vol. 58, pp. 74–81, Jun. 2017.
+Yen-Chin Liao received the B.S. and M.S. degrees in communication engineering in 2000 and 2002, respectively, and the Ph.D. degree in electronics engineering in 2008, all from National Chiao Tung University, Hsinchu, Taiwan.
+She was with ISSC Technology from 2002 to 2003, where she was involved in developing the IEEE802.11a/g products. From 2008 to 2010, she was with Ralink Technology, where she was working on the IEEE802.11n enhancement projects and submitting contributions to the IEEE802.11ac standard. From 2010 to 2012, she was recruited by MDV Technology, where she participated in the IEEE802.11d/e product development. She joined the Department of Electronics Engineering, National Chiao Tung University, as a Post-Doctoral Researcher in 2012. Her research interests include error correction coding, machine learning, signal processing, and communication systems.
+
+Chien Lin received the B.S. and M.S. degrees in electric and electronic engineering from National Chiao-Tung University, Hsinchu, Taiwan, in 2014 and 2016, respectively. She is currently with the ARM in CPU Engineering Team.
+Hsie-Chia Chang received the B.S., M.S., and Ph.D. degrees from the Electronics Engineering Department, National Chiao Tung University, Hsinchu, Taiwan, in 1995, 1997, and 2002, respectively.
+He was with OSP/DE1, MediaTek Corporation, from 2002 to 2003, where he was involved in decoding architectures for combo single chip. In 2003, he joined the Electronics Engineering Department, National Chiao-Tung University, as a Faculty Member, where he has been a Professor since 2010. His research interests include algorithms and VLSI architectures in signal processing, in particular, error control codes and cryptosystems. He has authored a book, over 120 IEEE journal/conference papers, and over 70 U.S./China/Taiwan patents. Dr. Chang was a recipient of the Outstanding Youth Electrical Engineer Award from the Chinese Institute of Electrical Engineering in 2010, and the Outstanding Youth Researcher Award from the Taiwan IC Design Society in 2011. He has served as the Deputy Director General with the Chip Implementation Center, Taiwan, from 2014 to 2017. He has also served as an Associate Editor for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS I: Regular Papers since 2012, as well as a Technical Program Committee Member of the IEEE Asian Solid-State Circuits Conference from 2011 to 2013, and the International Solid-State Circuits Conference since 2018.
+Shu Lin (S’62–M’65–SM’78–F’80–LF’00) received the B.S.E.E. degree from National Taiwan University, Taipei, Taiwan, in 1959, and the M.S. and Ph.D. degrees in electrical engineering from Rice University, Houston, TX, USA, in 1964 and 1965, respectively. In 1965, he joined the Faculty of the University of Hawaii, Honolulu, as an Assistant Professor of electrical engineering. He became an Associate Professor in 1969 and a Professor in 1973. In 1986, he joined Texas A&M University, College Station, TX, USA, as the Irma Runyon Chair Professor of Electrical Engineering. In 1987, he returned to the University of Hawaii. From 1978 to 1979, he was a Visiting Scientist at the IBM Thomas J. Watson Research Center, Yorktown Heights, NY, USA, where he worked on error control protocols for data communication systems. He spent the academic year (1996–1997) as a Visiting Chair Professor at the Technical University of Munich, Munich, Germany. He retired from the University of Hawaii in 1999, and he is currently an Adjunct Professor at University of California at Davis, Davis, CA, USA. He has published at least 800 technical papers in prestigious refereed technical journals and international conference proceedings. He has authored the book An Introduction to Error-Correcting Codes (Englewood Cliff, NJ, USA: Prentice-Hall, 1970). He has also co-authored (with D. J. Costello) the book Error Control Coding: Fundamentals and Applications (Upper Saddle River, NJ, USA: Prentice-Hall, 1st edition, 1982, 2nd edition, 2004), the book (with T. Kasami, T. Fujiwara, and M. Fossorier) Trellises and Trellis-Based Decoding Algorithms (Boston, MA, USA: Kluwer Academic, 1998), and the book Channel Codes: Classical and Modern (Cambridge University Press, 2009). Dr. Lin was a recipient of the Alexander von Humboldt Research Prize for U.S. Senior Scientists in 1996, and a recipient of the IEEE Third-Millennium Medal in 2000. In 2007, he was a recipient of The Communications Society Stephen O. Rice Prize in the Field of Communications Theory. In 2014, he received the NASA Exceptional Public Achievement Medal.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:41:14 UTC from IEEE Xplore. Restrictions apply.
+
+

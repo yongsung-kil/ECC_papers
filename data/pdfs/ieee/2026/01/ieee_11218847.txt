@@ -1,0 +1,825 @@
+200
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Decoding for Punctured Convolutional and Turbo Codes: A Deep Learning Solution for Protocols Compliance
+
+Yongli Yan , Member, IEEE, and Linglong Dai , Fellow, IEEE
+
+Abstract—Neural network-based decoding methods show promise in enhancing error correction performance but face challenges with punctured codes. In particular, existing methods struggle to adapt to variable code rates or meet protocol compatibility requirements. This paper proposes a unified long short-term memory (LSTM)-based neural decoder for punctured convolutional and Turbo codes to address these challenges. The key component of the proposed LSTM-based neural decoder is puncturing-aware embedding, which integrates puncturing patterns directly into the neural network to enable seamless adaptation to different code rates. Moreover, a balanced bit error rate training strategy is designed to ensure the decoder’s robustness across various code lengths, rates, and channels. In this way, the protocol compatibility requirement can be realized. Extensive simulations in both additive white Gaussian noise (AWGN) and Rayleigh fading channels demonstrate that the proposed neural decoder outperforms conventional decoding techniques, offering significant improvements in decoding accuracy and robustness.
+Index Terms—Deep learning, long short-term memory, error correction code, convolutional code, Turbo Code, IEEE 802.11, 3GPP TS 36.212.
+I. INTRODUCTION
+A RTIFICIAL intelligence (AI) has demonstrated exceptional capabilities in various fields, such as natural language processing (e.g., ChatGPT) [1] and computer vision [2], driving breakthroughs in applications previously dominated by hand-engineered methods. These advances in AI have not only revolutionized traditional domains but also sparked interest in its application to the evolving telecommunications industry. With the ongoing transition towards 6th generation (6G) networks, AI’s nonlinear modeling capabilities are being explored to enhance wireless communication systems. Recognizing its potential, the 3rd generation partnership project (3GPP) has established the AI-for-RAN working group in 2022 [3], focusing on incorporating AI into the radio access
+Received 15 June 2025; revised 29 September 2025; accepted 11 October 2025. Date of publication 27 October 2025; date of current version 2 January 2026. This work was supported in part by the National Natural Science Foundation of China (Youth Program) under Grant 62401332, in part by the Postdoctoral Fellowship Program of CPSF under Grant Number GZC20231377, and in part by the National Natural Science Foundation of China (Distinguished Young Scholars Program) under Grant 62325106. The associate editor coordinating the review of this article and approving it for publication was D. Vukobratovic. (Corresponding author: Linglong Dai.)
+The authors are with the Department of Electronic Engineering, Tsinghua University, Beijing 100084, China, and also with the State Key Laboratory of Space Network and Communications, Beijing 100084, China (e-mail: yanyongli@tsinghua.edu.cn; daill@tsinghua.edu.cn).
+Digital Object Identifier 10.1109/TCOMM.2025.3626030
+
+network (RAN) to improve key performance metrics such as efficiency and capacity.
+A. Prior Works
+Building on AI’s potential in telecommunications, its application in physical layer signal processing for wireless communications has garnered significant attention, particularly in tasks such as channel estimation, signal detection, and channel decoding [4], [5], [6], [7], [8], [9], where it demonstrates notable advantages. In contrast, traditional signal processing algorithms have typically been implemented on central processing units (CPUs), digital signal processors (DSPs), or application-specific integrated circuits (ASICs), relying on serial processing. However, due to the highly parallel nature of AI algorithms, traditional serial processing architectures struggle to meet their demands, thus driving the shift toward graphics processing units (GPUs), which are optimized for parallel computation and capable of efficiently handling largescale, simultaneous operations.
+As a pioneer in this shift and a leading designer of GPUs, NVIDIA has restructured cellular wireless network receivers using AI. For instance, NVIDIA developed the Sionna signal processing AI library [10] and used it to create multi-user, real-time neural network (NN) receivers compatible with the 5th generation new radio (5G NR) protocol [11], [12]. While AI has been successfully applied to channel estimation, signal detection, and demodulation in NVIDIA’s work, integrating neural network-based decoders into the receiver presents significant challenges. One major issue is the generalization of neural network decoders, particularly when applied to varying code rates, which can limit their performance and flexibility in diverse scenarios [13]. Puncturing, which discards part of the encoded data to form different code rates and improve spectral efficiency, is essential in real-world wireless communication systems. Control channels typically employ lower code rates for high reliability, while data channels use more flexible and higher code rates to accommodate diverse transmission conditions and maximize throughput. Linear block codes (e.g., low-density parity-check (LDPC) and Polar codes) and sequential codes (e.g., convolutional and Turbo codes) are widely used in commercial communication protocols [14], [15], [16], [17]. For example, Wi-Fi protocols [18] support four code rates for convolutional and LDPC codes, while cellular protocols [19], [20] utilize Polar codes for control channels
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+201
+
+with dozens of code rates, and Turbo and LDPC codes for data channels with over a hundred code rates. However, the puncturing arrangements in these standards may not always be optimal, as they are often designed for implementation convenience rather than performance maximization. Extrinsic information transfer (EXIT) charts provide a powerful semianalytical tool for designing and analyzing iteratively decoded systems, including the optimization of puncturing schemes for Turbo codes [21], [22], [23], [24].
+Recent studies have proposed neural network-based decoders to address puncturing in linear block codes, demonstrating improvements over traditional methods. For instance, [25] employed a Transformer-based network to decode linear block codes with varying code rates, while [26] introduced a unified Transformer decoder capable of simultaneously decoding multiple code rates of linear block codes with a single set of neural network parameters.
+Other studies have focused on applying neural networks to decode sequential codes, such as convolutional and Turbo codes. For example, [27] explored the use of recurrent neural networks (RNNs) for decoding convolutional codes, achieving performance comparable to the Viterbi algorithm [28] in both AWGN and non-AWGN channels with t-distributed noise. The DeepTurbo approach [29], inspired by the iterative BahlCocke-Jelinek-Raviv (BCJR) algorithm [30], targets Turbo codes but faces performance degradation when generalized to longer code lengths, requiring retraining. A notable study [31] employed model-agnostic meta-learning to enhance the generalization of neural network-based decoders in unseen channel conditions. Additionally, Turbo autoencoders [32] introduced an end-to-end learning framework that jointly optimizes both the encoder and decoder, outperforming traditional BCJR decoders under canonical channels.
+However, these studies on convolutional and Turbo codes have not addressed the issue of puncturing, limiting their applicability in real-world communication systems. In the context of NN-based decoders, models trained without considering puncturing may fail when exposed to such conditions. This is because the model’s parameters are optimized for scenarios without punctured data, making it less robust in realworld applications where puncturing is common. Furthermore, training a separate neural network for each possible code rate leads to significant storage overhead, which is impractical for scalable deployment in dynamic environments.
+B. Contributions
+To address this gap of puncturing issues in sequential codes, we propose a unified, protocol-compatible long shortterm memory (LSTM)-based neural decoder for punctured convolutional and Turbo codes. This approach is inspired by the similarity between the LSTM’s memory mechanism and the shift register’s role in convolutional codes, as both retain a history of prior inputs to inform current outputs. The proposed approach encodes puncturing patterns directly into the neural network’s latent space and introduces a balanced bit error rate training (BBT) method for efficient fine-tuning across different code rates, ensuring seamless compatibility
+
+with protocol flexibility.1 The main contributions of this work are summarized as follows.
+1) Protocol-Compatible Neural Decoding: We propose a unified protocol-compatible neural decoding approach specifically designed for punctured convolutional and Turbo codes. This approach ensures compliance with Wi-Fi (IEEE 802.11) and cellular (3GPP TS 36.212) standards by supporting varying code lengths and rates, even under practical puncturing patterns. The protocol compatibility is achieved through puncturing-aware embedding and balanced bit error rate training, which enables the decoder to handle different code rates effectively. To the best of our knowledge, this is the first neural decoding approach capable of generalizing seamlessly across diverse protocol-compliant configurations while maintaining competitive performance.
+2) Puncturing-Aware Embedding for Adaptability: We introduce a puncturing-aware embedding module that encodes puncturing patterns directly into the neural network’s latent space, enabling seamless adaptation to various code rates. By incorporating the puncturingaware embedding as a gating mechanism, the flow of log-likelihood ratio information is controlled. This design allows the decoder to support diverse code lengths and rates with a single set of network parameters, ensuring exceptional generalization and compatibility with dynamically changing protocol requirements, making it highly suitable for modern wireless communication systems where adaptability is critical.
+3) Balanced Bit Error Rate Training: To further enhance flexibility and prevent overfitting to any specific code rate, we propose a balanced bit error rate training strategy. This method adjusts the signal-to-noise ratio (SNR) for different code rates to maintain a consistent bit error rate (BER) across all settings during training. As a result, each code rate contributes equally, helping the neural network generalize effectively without overfitting to any particular configuration.
+4) Superior Performance in Practical Channels: The proposed neural decoder demonstrates state-of-the-art performance in both additive white Gaussian noise (AWGN) and Rayleigh fading channels. Extensive simulations show that the model not only outperforms traditional decoding algorithms under practical least squares (LS) channel estimation but also exceeds the performance of conventional decoders with perfect channel state information (PCSI). Moreover, under matched code length and rate conditions during training and inference, the proposed neural decoder yields a 0.2 dB performance gain over DeepTurbo [29] at a BER of 10−4. In mismatched conditions, it exhibits substantial performance improvements over DeepTurbo.
+This paper is structured as follows. Section II offers foundational knowledge, covering the basics of convolutional codes, Turbo codes, and long short-term memory networks.
+1Simulation codes will be provided to reproduce the results in this paper: http://oa.ee.tsinghua.edu.cn/dailinglong/publications/publications.html
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+202
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 1. Encoding structure of the convolutional code in IEEE 802.11.
+
+Section III describes the proposed convolutional neural engine
+in detail. Section IV discusses the outcomes of training and
+inference experiments. Section V evaluates the computational
+complexity and decoding latency of the proposed approach.
+Finally, Section VI provides a conclusion. Notations: Bold lowercase and uppercase letters are used
+to represent vectors and matrices, respectively. The symbol R represents the set of real numbers, while C denotes the set of complex numbers. The transpose operation is denoted by [·]T , and [·]H represents the Hermitian (conjugate transpose) operation. The notation N (µ, σ2) denotes a Gaussian distribution with mean µ and variance σ2.
+
+II. BACKGROUND
+To provide a comprehensive understanding of the proposed convolutional neural engine, this section presents background knowledge on convolutional codes, Turbo codes, and long short-term memory neural networks, along with an overview of the simulation link architecture and channel model used in the system.
+
+A. Fundamentals of Convolutional and Turbo Codes
+1) Convolutional Codes in IEEE 802.11: IEEE 802.11 mandates convolutional coding as a required feature for both access points (APs) and stations (STAs) in the physical layer (PHY), specifically within the orthogonal frequency division multiplexing (OFDM) modulation schemes. The standard supports convolutional codes with rates of 1/2, 2/3, 3/4, and 5/6 for forward error correction (FEC) to mitigate bit errors caused by noise, fading, and interference.
+
+G = [g0 = 1338, g1 = 1718]
+
+(1)
+
+The convolutional code is characterized by its encoder structure, where the input bit stream passes through a series of shift registers, generating encoded bits as output. Each output bit is determined by the current input bit and several previous input bits, as defined by the constraint length of the code. The constraint length represents the number of bits stored in the encoder’s memory that influence the current output. In IEEE 802.11, the convolutional encoder operates with a mother code rate of 1/2 and a constraint length of 7. This setup produces two output bits for each input bit, with the constraint length indicating that the output depends on the current bit and the six preceding bits. Figure 1 provides a schematic illustration of the convolutional encoder used in IEEE 802.11, showcasing its encoding process and structure. The bit denoted
+
+Fig. 2. Example of the bit-stealing procedure in IEEE 802.11 (R = 2/3, 3/4, 5/6).
+
+as “z” shall be output from the encoder before the bit denoted as “z ”. The specific generator polynomials governing this encoding process, expressed in octal form, are provided in Eq. 1. Higher code rates, such as 2/3, 3/4, and 5/6, are achieved using a technique known as puncturing. Puncturing selectively removes specific encoded bits to increase the effective code rate without altering the encoder’s fundamental structure. Figure 2 illustrates how puncturing is applied in IEEE 802.11 to achieve these higher code rates.
+2) Turbo Codes in 3GPP TS 36.212: Turbo codes, introduced in the late 1990s, represent a significant advancement in error correction techniques. These codes are used in the 3rd generation partnership project (3GPP) standards, specifically in the 3GPP TS 36.212 specification for long-term evolution (LTE) and beyond.
+
+G (D) =
+
+1, g1 (D) g0 (D)
+
+,
+
+g0 (D) = 1 + D2 + D3 g1 (D) = 1 + D + D3
+
+(2)
+
+In 3GPP TS 36.212, Turbo codes are used in the downlink and uplink channels for the physical layer, where they provide strong error correction capabilities. The standard adopts parallel concatenated convolutional codes (PCCC) as the foundation of Turbo coding. Figure 3 illustrates the encoding process of Turbo codes, which consists of two parallel convolutional encoders, each with a constraint length of 4. The first encoder processes the input bitstream directly, while the second operates on an interleaved version of the input, with the interleaver introducing randomness to the input sequence. The specific
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+203
+
+Fig. 5. The unrolled recurrent neural network.
+
+Fig. 3. Encoding structure of the Turbo codes in 3GPP TS 36.212.
+
+CRC24A for error detection. Each CB then adds another 24-bit CRC24B and is subsequently processed by the Turbo encoder. The encoded CBs undergo sub-block interleaving, which rearranges the data to improve resilience against burst errors. The interleaved code blocks are then processed through a circular buffer, which facilitates the rate matching procedure by selecting and concatenating bits as per the allocated resource block size. This process is crucial for aligning the data to the physical layer’s constraints while ensuring efficient utilization of resources.
+
+B. Long Short-Term Memory Neural Network
+Long short-term memory networks [33], a variant of recurrent neural networks [34], are specifically designed to model sequential data and capture long-term dependencies effectively. As shown in Figure 5, RNNs employ a cyclic structure that allows information to persist across time steps t, enabling sequential data processing. The update of the hidden state ht in an RNN is governed by:
+
+ht = tanh (W hht−1 + W xxt + bh)
+
+(3)
+
+Fig. 4. Example of the rate matching procedure in 3GPP TS 36.212.
+generator polynomials for these encoders are detailed in Equation 2.
+The mother code rate of Turbo codes is 1/3, producing three output bits for each input bit. To support higher data rates, the effective code rate can be increased up to 0.93 through puncturing, which selectively omits specific encoded bits. This enables flexibility in adapting to different data rate requirements while maintaining error correction capabilities. The intermediate code rates between the mother code rate and the maximum rate are achieved by adjusting the allocation of time-frequency physical resources based on channel quality indicators (CQIs) reported by the user. This adaptive process, known as rate matching, enables efficient code rate adjustment to ensure optimal performance under varying channel conditions.
+Figure 4 provides a comprehensive overview of the rate matching process, which adapts the encoded data to the available physical resources. This process begins with the transport block (TB) being divided into code blocks (CBs) after appending a 24-bit cyclic redundancy check (CRC) using
+
+where ht is the hidden state at time step t, ht−1 is the hidden state from the previous time step, xt is the input at time step t, and W h, W x, bh are learnable parameters. This cyclic nature of RNNs makes them well-suited for capturing temporal dependencies in sequential data. However, traditional RNNs encounter challenges during training, particularly vanishing and exploding gradient issues, which hinder their ability to capture long-range dependencies.
+LSTMs, introduced by Hochreiter and Schmidhuber in 1997 [33], overcome these limitations through an innovative memory cell structure. Unlike the simpler architecture of RNNs, LSTMs incorporate a gating mechanism to dynamically regulate information flow, enabling the network to selectively retain, update, or discard information. The architecture of an LSTM cell, illustrated in Figure 6, includes three core gates: the forget gate, input gate, and output gate. These gates are mathematically defined as follows:
+
+f t = φ W f · ht−1, xt + bf
+
+it = φ W i · ht−1, xt + bi
+
+ot = φ W o · ht−1, xt + bo
+
+c˜t = tanh W c · ht−1, xt + bc
+
+ct = f t ct−1 + it c˜t
+
+ht = ot tanh (ct)
+
+(4)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+204
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 6. The architecture of an LSTM cell.
+where f t, it, and ot represent the forget, input, and output gate activations at time step t; xt is the input; c˜t is the candidate memory cell; ct is the cell state; and ht is the hidden state.
+Here, φ denotes the sigmoid activation function, which plays a critical gating role by producing values in the range of [0, 1]. This enables φ to act as a “soft switch” that determines the degree to which information should be passed through the network. For instance, in the forget gate f t, φ dynamically adjusts the proportion of the previous cell state ct−1 that should be retained. Similarly, in the input gate it and output gate ot, φ controls how much new information is incorporated into the cell state and how much of the cell state influences the hidden state ht, respectively. By gating these information flows, φ ensures that the network can focus on relevant inputs and maintain stable gradients during training, allowing LSTMs to effectively capture both short- and long-term dependencies.
+
+C. System Model
+
+The proposed approach is evaluated under two distinct
+
+communication channel models: the AWGN channel and the
+
+Rayleigh fading channel. The AWGN channel serves as the
+
+training and inference environment, providing an idealized
+
+setting for model training. In contrast, the Rayleigh fading
+
+channel is used solely for inference, allowing us to assess how
+
+well the model, trained in the AWGN channel, generalizes to
+
+more realistic fading conditions.
+
+In the AWGN channel, the communication link follows the
+
+sequence illustrated in Figure 7, where K denotes the length of
+
+the original message, N represents the length of the encoded
+
+message, and E refers to the length of the message after rate-
+
+matching. The code rate R is defined as the ratio of the original
+
+message
+
+length
+
+to
+
+the
+
+rate-matched
+
+length,
+
+i.e.,
+
+R
+
+=
+
+K E
+
+.
+
+The rate-matched message m ∈ {0, 1}E is modulated using
+
+binary phase shift keying (BPSK) to produce the transmitted signal x ∈ {±1}E. The received signal y ∈ RE is corrupted by additive Gaussian noise n ∈ RE, and the relationship
+between the transmitted and received signals is expressed as:
+
+y = x+n
+
+(5)
+
+where n ∼ N (0, σ2) represents the AWGN noise. After
+
+demodulation and de-rate matching, the signal is decoded to obtain the original message u ∈ {0, 1}K.
+
+In contrast, the Rayleigh fading channel is utilized for
+
+inference to simulate more realistic wireless communication
+
+conditions, where the transmitted signal experiences multi-
+
+path fading. The communication link for the Rayleigh fading
+
+channel is detailed in Figure 7, which illustrates the multipath
+
+fading model and frequency-domain processing.
+
+The received signal in the Rayleigh fading channel is
+
+modeled as:
+
+y = Hx + n
+
+(6)
+
+where H ∈ CNR×NT is the channel matrix representing the
+
+Rayleigh fading coefficients, with NR denoting the number
+
+of receive antennas and NT the number of transmit antennas. x ∈ CNT ×1 is the transmitted signal vector in the frequency
+
+domain after modulation (e.g., OFDM subcarriers). n ∈
+
+CNR×1 is the noise vector at the receiver, where each element is i.i.d. Gaussian noise with zero mean and variance σ2.
+
+The channel matrix H is constructed by generating multi-
+
+path coefficients in the time domain, based on an L-tap delay
+
+profile determined by environmental characteristics and delay
+
+spread, and then transformed into the frequency domain via
+
+the fast fourier transform (FFT) to be applied to x. Each tap
+
+of H is modeled as an independent complex Gaussian random
+
+variable, and the total power of the L taps is normalized to
+
+1, i.e.,
+
+L−1 l=0
+
+E[|hl|2]
+
+=
+
+1,
+
+where
+
+hl
+
+represents
+
+the
+
+coefficient
+
+of the l-th tap.
+
+Channel estimation is performed to estimate H, and mul-
+
+tiple input multiple output (MIMO) detection is used to
+
+obtain the estimated transmitted signal xˆ, after x has been
+
+affected by multipath fading. The subsequent steps, including
+
+demodulation, de-rate matching, and decoding, are similar to
+
+those in the AWGN case, with the goal of recovering the
+
+original message.
+
+By training the model on the AWGN channel and testing
+
+it on the Rayleigh fading channel, we evaluate how well the
+
+decoder generalizes to real-world, challenging environments.
+
+III. PROPOSED CONVOLUTIONAL NEURAL ENGINE
+In this section, we present the complete architecture and training process of the proposed convolutional neural engine (CNE).
+
+A. Overall Architecture
+The proposed convolutional neural engine introduces a groundbreaking approach to decoding convolutional codes, particularly under punctured conditions, by effectively integrating domain-specific insights into a deep learning framework. Unlike conventional NN-based methods, which often treat punctured sequences as missing data, CNE incorporates an innovative puncturing-aware embedding mechanism that explicitly encodes puncturing patterns into the feature space. This approach enhances the decoder’s adaptability, enabling it to generalize across varying code rates specified by protocols and ensuring compatibility for practical applications. The architecture of the proposed CNE is illustrated in Figure 8.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+205
+
+Fig. 7. The communication link of the AWGN and Rayleigh fading channel.
+
+Fig. 8. The architecture of the proposed convolutional neural engine.
+
+1) Convolutional Decoding: Before decoding, the received
+log-likelihood ratios (LLRs) are rate-dematched by inserting
+zeros at the positions of punctured bits to restore the original codeword length N . The vectors llrz ∈ RK and llrz ∈ RK , together with their corresponding puncturing indicators pz ∈ {0, 1}K and pz ∈ {0, 1}K , are concatenated to form the matrix Lm ∈ RK×2 and its associated puncturing pattern P ∈ {0, 1}K×2. These matrices serve as the input to the
+convolutional neural engine.
+At the core of the CNE architecture lies a sequence of oper-
+ations that transform raw input data and puncturing patterns
+into actionable decoding outputs. The process begins with a projection of the input sequence Lm into a higher-dimensional embedding space:
+
+El = W projLm + bproj
+
+(7)
+
+where W proj ∈ RDembed×Din and bproj ∈ RDembed are learnable parameters, K represents the sequence length, and the input dimension Din = 2 corresponds to the LLRs of the two coded bits generated per time step in IEEE 802.11 convolutional
+codes. A puncturing-aware embedding module integrates punc-
+turing information by mapping the pattern P ∈ {0, 1}K×Din ,
+where each element specifies whether the corresponding position in Lm is punctured (0) or non-punctured (1), into the embedding space of Ep. This is achieved using:
+
+Ep = φ (W puncP + bpunc)
+
+(8)
+
+where W punc ∈ R , Dembed×Din bpunc ∈ R , Dembed and φ(·) is the sigmoid activation function, which ensures that the puncture information acts as a gate, controlling the flow of puncturing effects.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+206
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+The input embedding El and puncturing-aware embedding Ep are then combined through element-wise multiplication:
+
+Elp = El Ep
+
+(9)
+
+allowing the model to dynamically adjust the input representation based on the puncturing pattern.
+Following this, the combined embedding Elp undergoes batch normalization (BN) to stabilize training:
+
+Enorm = BN(Elp)
+
+(10)
+
+The normalized embedding is then processed by a multilayer bidirectional LSTM, which captures both forward and backward temporal dependencies in the sequence:
+
+Sout = LSTM(Enorm)
+
+(11)
+
+where Sout ∈ RK×2Dhidden represents the encoded context of the entire sequence, leveraging information from both directions.
+Finally, the output from the LSTM is passed through a fully connected layer to produce the decoded bit likelihoods:
+
+llru = W outSout + bout
+
+(12)
+
+where W out ∈ R , 2Dhidden×1 and llru ∈ RK represents the likelihoods of the estimated bits being 1.
+The entire decoding process can be summarized as:
+
+llru = W out · LSTM BN (W projLm + bproj) φ (W puncP + bpunc) + bout
+
+(13) Fig. 9. The architecture of the LSTM-based Turbo code decoder.
+
+2) Turbo Decoding: The proposed LSTM-based Turbo decoder builds upon the principles of traditional BCJR Turbo decoding, employing two identical CNEs as its core components. These CNEs are connected through interleaving and de-interleaving mechanisms, enabling iterative refinement of the decoding process. The architecture is specifically designed to capture both the sequential nature of convolutional codes and the iterative exchange of extrinsic information that characterizes Turbo decoding. This architecture is also visualized in Figure 9, which illustrates the interaction between the two component CNEs.
+Before the iterative decoding process begins, the received sequence undergoes a rate-matching reversal procedure, which consists of de-puncturing and sub-block de-interleaving operations. During de-puncturing, zeros are inserted at the locations of punctured bits to restore the original codeword structure. These processes generate the systematic sequence llrs ∈ RK , the first and second parity sequences llrz ∈ RK and llrz ∈ RK, along with their corresponding puncturing indicators ps ∈ {0, 1}K , pz ∈ {0, 1}K , and pz ∈ {0, 1}K , which serve as inputs to the CNE-based Turbo code decoder.
+In our designed architecture CNE 0 processes the systematic sequence llrs alongside the first parity sequence llrz. CNE 1 processes the interleaved systematic bit sequence and the second parity sequence llrz . The two CNEs share identical architectures and weights, ensuring symmetry and simplifying training.
+
+The decoding process operates iteratively, exchanging extrinsic information between the two CNEs through interleaving and de-interleaving. At each iteration, the following steps occur:
+
+Step 1. Step 2.
+
+(t)
+llr0 =fCNE 0
+int,(t)
+llr0 = π
+
+de-int,(t−1)
+
+llrs + llr1
+
+, llrz
+
+(t)
+
+de-int,(t−1)
+
+llr0 − llr1
+
+, ps, pz
+
+(t)
+Step 3. llr1 = fCNE 1
+
+int,(t)
+llr0 , llrz
+
+, π(ps), pz
+
+Step 4.
+
+de-int,(t)
+llr1
+
+=
+
+π−1
+
+(t)
+
+int,(t)
+
+llr1 − llr0
+
+(14)
+
+Here, t denotes the iteration step, while π and π−1 represent the interleaving and de-interleaving operations, respectively. After Niter iterations, the final estimate of the systematic bit likelihood is obtained by applying the de-interleaving operation to the output of CNE 1:
+
+llru = π−1 llr1(Niter)
+
+(15)
+
+3) Structural Differences Between CNE and DeepTurbo:
+Figure 10 illustrates the architecture of the DeepTurbo decoder [29] with a bidirectional gated recurrent unit (Bi-GRU) decoding core and two soft-in soft-out (SISO) modules, where Pin and Pout represent posterior information with a feature size of Fs. Although both the proposed CNE and DeepTurbo
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+207
+
+TABLE I
+NUMBER OF SAMPLES IN TRAINING, VALIDATION, AND TESTING DATASETS
+
+Fig. 10. The architecture of the DeepTurbo decoder.
+
+under idealized conditions, serving as the basis for subsequent fine-tuning.
+Building upon this pretrained model, fine-tuning is performed using a mixed-rate dataset containing samples from multiple code rates, each associated with distinct puncturing patterns. During fine-tuning, the SNR for codewords at different code rates R is adjusted using the formula:
+
+employ iterative decoding inspired by the BCJR algorithm, their architectures differ significantly in three key aspects, as outlined below:
+1) Shared Weights: Unlike DeepTurbo, where the neural network weights for the two SISO modules are independent, our proposed CNE0 and CNE1 share the same set of weights. This design reduces the total number of parameters, thereby lowering storage requirements and improving computational efficiency, making the architecture more practical for resource-constrained environments.
+2) Enhanced High-Dimensional Embedding: While DeepTurbo expands only the posterior information into a higher-dimensional space, our CNE-based Turbo decoder extends the systematic bits (llrs), as well as both parity sequences (llrz and llrz ), into a high-dimensional embedding space. This comprehensive embedding approach enhances the expressive power of the neural network, enabling it to better capture complex relationships within the codeword.
+3) Puncturing-Aware Embedding Layer: A critical distinction of our work is the introduction of a novel puncturing-aware embedding layer, which DeepTurbo lacks. This layer explicitly incorporates puncturing patterns into the neural network’s latent space, enabling seamless generalization across various code rates. This feature ensures compatibility with practical communication protocols, such as IEEE 802.11 and 3GPP TS 36.212, where puncturing is prevalent.
+The proposed CNE architecture overcomes DeepTurbo’s limitations in generalizing to diverse code lengths and rates, making it more suitable for modern communication requirements.
+B. Training Methodology
+To optimize the proposed CNE-based convolutional and Turbo decoder for diverse code rates and puncturing patterns, a two-stage training strategy is employed. The process begins with pre-training on non-punctured codes at a fixed SNR of 0 dB. This pre-training step establishes a strong foundational model capable of decoding convolutional and Turbo codes
+
+SNRtrain = SNRoffset + 10 log10(2R)
+
+(16)
+
+where SNRoffset serves as a baseline SNR value calibrated to align the bit error rate across code rates. This parameter can be selected based on empirical results from conventional decoders, such as the Viterbi or BCJR algorithms, to ensure approximate BER alignment across code rates. This balanced BER training (BBT) prevents the loss function from being dominated by specific code rates, maintaining stability during optimization.
+The training loss is defined using binary cross-entropy (BCE), which evaluates the accuracy of the predicted likelihoods against the true bit labels. Mathematically, the BCE loss is expressed as:
+
+1K
+
+LBCE
+
+=
+
+− K
+
+(yk log(yˆk) + (1 − yk) log(1 − yˆk)) (17)
+
+k=1
+
+where K is the number of bits per batch, yk denotes the true bit value, and yˆk is the predicted likelihood for bit k. This loss function ensures that the model accurately predicts bit likelihoods across all code rates.
+The convolutional code decoder and Turbo code decoder are trained separately. Since both decoders are based on the CNE architecture, the convolutional code decoder can share the same CNE0 or CNE1 component with the Turbo code decoder for decoding, but with distinct weights to account for their different coding structures and requirements.
+The training, validation, and testing datasets are generated by creating original messages of length K, which are then encoded and modulated using BPSK. Noise is added, and the signals are passed through an AWGN channel, following Equation (5) to produce the received signals. In the pre-training phase, the dataset contains 128 × 128 × 1000 = 1.6384 × 107 samples. For fine-tuning, datasets include convolutional codes with three code rates and Turbo codes with four code rates, each with 4.096 × 106 samples. The validation dataset has 1 × 104 samples per SNR level from 0 to 10 dB. The testing dataset covers two scenarios: AWGN channel with SNRs from 0 to 10 dB and 1×105 samples per SNR, and Rayleigh fading channel with SNRs from 0 to 40 dB and 1 × 105 samples per SNR. A summary of the datasets is presented in Table I. To ensure the independence of training and inference datasets
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+208
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+without overlap, different random seeds are used for data generation in these two phases, and a cross-check is performed to ensure that no training data is used for inference.
+The training process leverages the Adam optimizer [35] with an initial learning rate of 10−3 during pre-training and 10−4 during fine-tuning. The reduced learning rate in the finetuning phase helps preserve the knowledge acquired during pre-training and minimizes the risk of catastrophic forgetting. To further enhance optimization, a cosine decay scheduler [36] is employed to progressively decrease the learning rate to 10−6 by the end of training. Both pre-training and fine-tuning were conducted for 1000 epochs, with each epoch comprising 128 minibatches of 128 samples each. The training and inference processes are performed on an NVIDIA RTX 4090 GPU with 24GB of memory, complemented by an Intel(R) Xeon(R) Platinum 8468V CPU and 512GB of DDR5 memory, providing the computational power necessary to handle the complexity and diversity of the dataset.
+
+IV. EXPERIMENTS
+
+In the experimental setup, the information block length during training is 120, while during inference, it is varied across 120, 240, 480, and 960 to evaluate the model’s generalization to different input sizes. Training is performed in an AWGN channel, with inference conducted in both AWGN and Rayleigh fading channels to assess generalization across different channel conditions. Convolutional codes are assigned code rates of 1/2, 2/3, 3/4, and 5/6, in line with protocol specifications. For consistency, the Turbo codes are configured with code rates of 1/3, 1/2, 2/3, 3/4, and 5/6, as Turbo codes offer more flexibility in rate adaptation. The fine-tuning rates are 1/3, 1/2, 2/3, and 3/4, while the 5/6 code rate is used as an unseen rate only during inference to validate the model’s generalization ability. For fine-tuning, SNRoffset is set to 2.5 dB for convolutional decoders and 1.5 dB for Turbo decoders. The traditional convolutional decoder uses the Viterbi algorithm with a traceback depth of 120, while the Turbo code decoder employs a reduced-complexity BCJR algorithm called max-log-MAP [37] with full traceback depth. It should be noted that scaling the extrinsic information in the max-log-MAP algorithm can enhance decoding performance [38]. All simulations of the BCJR algorithm in this paper use the max-log-MAP without a scaling factor.
+The Rayleigh fading channel is modeled with 3 independent taps and a MIMO configuration with 4 transmit and 4 receive antennas. Channel state information (CSI) in the Rayleigh fading scenario is obtained using least squares channel estimation [39]. For a received signal y, the transmitted pilot matrix Ω, and the channel matrix H, the LS estimation is given by:
+
+Hˆ = yΩ†
+
+(18)
+
+where Ω† = (ΩH Ω)−1ΩH is the Moore-Penrose pseudoinverse of Ω, and ΩH represents the Hermitian transpose of Ω. The pilot matrix Ω ∈ CNT ×NT is generated according to the IEEE 802.11 protocol [18] to facilitate accurate channel
+estimation.
+For MIMO detection, the minimum mean square error
+(MMSE) algorithm is employed [40], which minimizes the
+
+mean squared error between the estimated transmitted sig-
+nal xˆ and the true transmitted signal x. The MMSE filter W ∈ CNT ×NR is computed as:
+
+W = HH H + λI −1 HH
+
+(19)
+
+where λ = 10−6 is a regularization parameter ensuring numerical stability, and H ∈ C(NR+NT )×NT is the extended matrix incorporating the noise variance σ2. The extended
+
+channel matrix is defined as:
+
+H=
+
+Hˆ σ2I
+
+(20)
+
+where I ∈ CNT ×NT is the identity matrix.
+
+Once the MMSE filter is computed, the transmitted signal
+
+x is estimated as:
+
+xˆ = W y
+
+(21)
+
+This process yields the estimated transmitted signal xˆ, which is subsequently passed through the demodulation and decoding stages to recover the original message.
+Specifically, in the demodulation stage, the LLR for the i-th bit of the detected signal is computed based on the Euclidean distance between the detected signal and the possible transmitted symbols. The LLR for the i-th bit xi is calculated as follows:
+
+LLR(xi) = log
+
+P (xi = 0 | xˆ) P (xi = 1 | xˆ)
+
+= min ( xˆ − x0 ) − min ( xˆ − x1 ) (22)
+
+x0
+
+x1
+
+Here, x0 and x1 represent the possible transmitted symbols corresponding to hypotheses xi = 0 and xi = 1, respectively, while xˆ denotes the detected signal.
+Additionally, regardless of whether convolutional codes or Turbo codes are employed, to enhance the model’s generalization ability across different communication channels, it is essential to normalize the LLRs before feeding them into the neural network, while retaining the sign of the LLRs. The normalization procedure is expressed as follows:
+
+llr − µ
+
+llr = √
+
+sign(llr)
+
+(23)
+
+δ2 +
+
+where µ and δ2 denote the mean and variance of the LLRs after demodulation but before de-rate matching, comprising both systematic and parity sequences, respectively, and = 10−6 is a small constant added to ensure numerical stability by preventing division by zero. The function sign(·) preserves the sign of the LLRs during normalization.
+Following the normalization process, the LLRs are processed by the de-rate matching module and then passed to the proposed CNE neural network, which is characterized by several key hyperparameters. These include the number of LSTM layers Nlayer, the embedding dimension Dembed, the hidden layer size Dhidden, and the number of iterations Niter. Specifically, in the LSTM cell shown in Eq. 4, the weight matrices W f , W i, W o, W c ∈ R . Dembed×(Dembed+Dhidden) A detailed summary of the parameters for the CNE neural network architecture and the simulation setup is provided in Table II.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+209
+
+Fig. 11. Performance comparison of the proposed CNE decoder and the conventional Viterbi algorithm for convolutional codes. The results demonstrate significant performance gains with increasing information block lengths.
+
+TABLE II DETAILED PARAMETERS FOR CNE AND SIMULATION
+A. AWGN Channels: Benchmarking and Precision In this section, we compare the performance of the pro-
+posed LSTM-based CNE with traditional decoders in an AWGN channel using BPSK modulation. The information bolck lengths varied from 120 to 960, and the code rates ranged from 1/3 to 5/6. The BER was then measured for each combination of information block length and code rate. For each SNR point, 105 code blocks were simulated to ensure statistical reliability.
+The simulation results for convolutional codes are depicted in Figure 11. The proposed decoding approach exhibits comparable performance to the conventional Viterbi algorithm when the information block length is short, such as 120 bits. However, as the block length increases, the proposed CNE decoder significantly outperforms the Viterbi decoder [28], achieving state-of-the-art (SOTA) performance. Notably, at an
+
+information block length of 960 and a BER of 10−4, the proposed CNE decoder achieves a performance gain of over 1.0 dB across all code rates. This performance advantage stems from the CNE’s ability to exploit bidirectional LLR information, capturing both forward and backward dependencies among LLRs. In contrast, the Viterbi algorithm, constrained by limited traceback depth to minimize hardware complexity, fails to achieve a global optimum.
+In Figure 12, the proposed CNE decoder, operating with 3 iterations, achieves performance comparable to the conventional BCJR decoder with 6 iterations. This highlights the CNE’s efficiency in significantly reducing computational complexity while preserving high decoding accuracy. Moreover, Figure 12 shows the performance comparison at an identical iteration count of 3. The CNE decoder consistently surpasses the BCJR decoder across all evaluated information block lengths and code rates. This superiority is attributed to the ability of the LSTM-based CNE to effectively model temporal dependencies in the data and refine LLR estimates through its iterative architecture, resulting in enhanced decoding performance.
+Notably, due to the explicit embedding of puncturing information into the neural network, the proposed architecture effectively generalizes to the previously unseen 5/6 code rate for both convolutional and Turbo codes, demonstrating its generalization ability across various code rates.
+B. Rayleigh Channels: Generalization and Robustness
+In this section, we evaluate the performance of the proposed CNE decoder in a 4 × 4 MIMO Rayleigh fading channel characterized by 3-tap multipath coefficients. The simulation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+210
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 12. BER performance of Turbo codes with the proposed CNE decoder (3 iterations) versus BCJR decoders (3 and 6 iterations without a scaling factor). Results indicate comparable performance with reduced computational complexity.
+
+utilized 16-quadrature amplitude modulation (16)-QAM) with Gray-coded mapping for signal transmission. The evaluation covered a range of information block lengths from 120 to 960 and code rates from 1/3 to 5/6, mirroring the configurations used in the AWGN scenario. For Turbo codes, the BCJR algorithm performs up to 6 iterations, while the proposed CNE decoder is fixed at 3 iterations. To assess the impact of channel estimation accuracy, we simulated the system’s performance under both perfect channel state information and least squares channel estimation. To ensure statistical robustness, 105 code blocks were simulated for each SNR point.
+Tables III and IV present the required Eb/N0 values to achieve target BERs of 10−3 and 10−4, respectively, for convolutional and Turbo codes in Rayleigh fading channels. In the tables, A indicates that when Eb/N0 > A, the decoding performance converges to a BER of 0 before reaching the target BER, and “. . .” signifies that even at Eb/N0 = 40 dB, the target BER remains unattained. Smaller Eb/N0 values reflect better performance, and the best results are highlighted in bold.
+From the results in Table III and IV, it is evident that the proposed CNE decoder achieves a significant performance improvement over traditional decoding algorithms in Rayleigh fading channels. Notably, under LS channel estimation, the CNE decoder demonstrates a substantial advantage, outperforming traditional algorithms by more than 5 dB in many scenarios. Furthermore, the CNE decoder even surpasses traditional decoders with perfect channel state information.
+The simulation results under Rayleigh fading channels provide critical insights into the strengths of the proposed CNE decoder, particularly in terms of generalization and
+
+robustness. The proposed approach achieves consistent performance gains under both AWGN and Rayleigh fading channels. This demonstrates its ability to generalize across different channel conditions, effectively learning the underlying relationships between received LLRs and transmitted bits, irrespective of the noise or fading environment. Unlike traditional decoders that rely on predefined assumptions and fixed traceback mechanisms, the CNE decoder dynamically adapts to complex channel conditions. Its LSTM-based architecture efficiently models temporal dependencies and leverages bidirectional information flow, enabling it to handle multipath interference and Rayleigh fading robustly.
+V. ANALYSIS
+In this section, we examine the proposed CNE decoder, exploring its generalization capabilities, puncturing-aware embedding, computational complexity, decoding latency, and strategies for mitigating complexity and latency in practice. These aspects are crucial for understanding the algorithm’s performance, adaptability, and practical applicability in realworld communication systems.
+A. Generalization Capabilities Following the methodology described in the DeepTurbo
+paper, we reproduced its implementation (available at https:// github.com/TechYan1990/deep-turbo/) and trained and evaluated it using the simulation parameters specified therein, as shown in Table V. To ensure a fair comparison, we configured the CNE architecture to match DeepTurbo’s parameters, including a non-shared two-layer bidirectional gated recurrent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+211
+
+TABLE III SIMULATION RESULTS FOR CONVOLUTIONAL CODES IN A 4 × 4 RAYLEIGH FADING CHANNEL WITH 16-QAM MODULATION
+
+unit with a hidden dimension Dhidden = 100, embedding dimension Dembed = 5, and six decoding iterations Niter = 6. Under these conditions, the primary architectural difference between CNE and DeepTurbo lies in the embedding strategy: CNE projects the systematic bits (llrs) and both parity sequences (llrz, llrz ) into a high-dimensional space, whereas DeepTurbo only projects posterior information.
+Both CNE and DeepTurbo were trained on an AWGN channel with a information block length of 100 and evaluated at a block length of 1000 to assess generalization. The BCJR algorithm, used as a baseline, was configured with six iterations. The results, presented in Figure 13, demonstrate that DeepTurbo exhibits poor generalization at high SNRs, manifesting as a BER floor, whereas CNE maintains robust performance without this limitation.
+These findings indicate that CNE’s superior generalization to different code lengths is not merely a result of increased parameters, as both architectures use identical parameter counts in this experiment. Instead, the key preprocessing step contributing to generalization is CNE’s comprehensive embedding of llrs, llrz, and llrz into a high-dimensional space. This approach enhances the neural network’s expressive power, enabling it to capture complex relationships within the codeword more effectively than DeepTurbo’s posterior-only embedding.
+B. Puncturing-Aware Embedding
+This secion we persent an ablation study on the effect of the puncturing-aware embedding module and the gain of the proposed CNE over a DeepTurbo-like decoder for
+
+Fig. 13. BER performance of Turbo codes decoded by CNE, DeepTurbo, and BCJR (6 iterations without a scaling factor) on an AWGN channel with information block length 1000.
+punctured codes, providing a detailed comparison of decoding performance in terms of BER. This study evaluates CNE (without the puncturing-aware embedding module) against a DeepTurbo-like decoder and the traditional BCJR algorithm under identical training conditions.
+For a fair comparison, both CNE and DeepTurbo are configured with their respective optimal parameters, where the hyperparameters of DeepTurbo are set according to [29], and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+212
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+TABLE IV
+SIMULATION RESULTS FOR TURBO CODES IN A 4 × 4 RAYLEIGH FADING CHANNEL WITH 16-QAM MODULATION. BCJR DECODER WITHOUT A SCALING FACTOR
+
+TABLE V
+PARAMETERS OF DEEPTURBO AND CNE SIMULATIONS TO ANALYZE GENERALIZATION CAPABILITIES
+
+the hidden dimension of DeepTurbo is increased from 100 in the original paper to 256 for a fair comparison, as summarized in Table VI. During fine-tuning, code rates of 1/3, 1/2, 2/3, and 3/4 are used, with the 5/6 code rate reserved as an unseen rate to assess generalization. Training and inference are conducted in an AWGN channel.
+1) CNE vs. BCJR: Figure 14 compares the BER performance of CNE (without the puncturing-aware
+
+Fig. 14. BER performance of Turbo codes decoded by CNE (without the puncturing-aware embedding module), and BCJR (6 iterations without a scaling factor) on an AWGN channel with information block length 120.
+embedding module) against the BCJR algorithm. When the puncturing-aware embedding module is disabled, CNE exhibits limited generalization to the unseen 5/6 code rate, with a performance degradation of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+213
+
+Fig. 15. BER performance of Turbo codes decoded by DeepTurbo, and BCJR (6 iterations without a scaling factor) on an AWGN channel with information block length 120.
+
+Fig. 16. BER performance of Turbo codes decoded by CNE, DeepTurbo, and BCJR (6 iterations without a scaling factor) on an AWGN channel with information block lengths of 120, 240, 480, and 960 at a fixed non-punctured code rate of 1/3.
+
+approximately 1.5 dB at BER = 10−4. For other code rates (1/3, 1/2, 2/3, and 3/4), the BER performance of CNE without the module is comparable to the BCJR algorithm, indicating that the absence of puncturing awareness hampers its ability to adapt to unseen rates. 2) DeepTurbo vs. BCJR: Figure 15 shows the BER performance of the DeepTurbo decoder compared to the BCJR algorithm. DeepTurbo exhibits minimal performance loss for the 1/3 code rate but suffers from a BER floor, indicating limited error correction capability at higher SNRs. For other code rates (1/2, 2/3, 3/4, and 5/6), DeepTurbo shows significant performance degradation and fails to demonstrate meaningful generalization, underscoring its inability to handle punctured codes effectively. 3) Key Insight: From the simulation results in Figure 14, it is evident that, although the absence of the puncturingaware embedding module severely degrades the performance of CNE for the 5/6 code rate, it still exhibits some generalization capability. In contrast, the simulation results in Figure 15 show that DeepTurbo, even after fine-tuning, demonstrates no generalization to the 5/6 code rate. This indicates that the generalization ability for code rates is not solely due to the puncturing-aware embedding module but also stems from the contribution of projecting the systematic bits (llrs) and parity sequences (llrz, llrz ) into a high-dimensional embedding space.
+The ablation study confirms that the puncturing-aware embedding module is a pivotal component of the proposed CNE, enabling superior generalization to unseen code rates (e.g., 5/6) compared to both CNE without the module and a DeepTurbo-like decoder. The module’s ability to encode puncturing patterns into the latent space, combined with highdimensional embedding of systematic and parity sequences, drives CNE’s robustness and protocol compatibility.
+
+TABLE VI PARAMETERS OF DEEPTURBO AND CNE SIMULATIONS TO ANALYZE
+PUNCTURING-AWARE EMBEDDING
+Based on the analysis above, due to DeepTurbo’s limited generalization ability across information block lengths and rates, we trained separate DeepTurbo models for each information block length (K = 120, 240, 480, 960) with a fixed non-punctured code rate of 1/3. The hyperparameters were configured according to Table VI, with the fine-tuning step omitted. The simulation results, shown in Figure 16, indicate that DeepTurbo exhibits a performance gap of approximately 0.2 dB compared to CNE at a BER of 10−4 under fixed code length and rate conditions.
+C. Computational Complexity The computational complexity of the proposed CNE
+decoder, as detailed in Eq. (13), arises from four key components: the input projection and gating operations, the batch normalization, the LSTM-based sequence processing, and the output projection.
+The input features x ∈ RK×Din are projected using W proj ∈ R , Dembed×Din while puncturing patterns p ∈ RK×Din are processed with W punc ∈ R . Dembed×Din This step, involving matrix
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+214
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+TABLE VII COMPLEXITY COMPARISON OF CNE AND DEEPTURBO DECODER
+
+multiplications and sigmoid activations, incurs a complexity of O(2K · Dembed · Din + K · Dembed).
+Following this, batch normalization is applied to the modulated features in R , K×Dembed with a complexity of O(K · Dembed). The core computational unit, a bidirectional LSTM, processes sequences of length K with input size Dembed and hidden state size Dhidden, involving three gates and a candidate memory cell. Its complexity, dominated by quadratic scaling with Dhidden, is:
+
+O K · 8Dh2idden + 8DhiddenDembed + 14Dhidden
+
+(24)
+
+Finally, the LSTM output h ∈ RK×2Dhidden is projected using W out ∈ R , 2Dhidden×1 with a complexity of O(2K · Dhidden). The
+total CNE complexity is:
+
+O K·
+
+8Dh2idden + 8DhiddenDembed+ 2DinDembed + 2Dembed + 16Dhidden
+
+(25)
+
+For comparison, the Viterbi algorithm for a convolutional code with constraint length L has a complexity of:
+
+O(K · 2L−1)
+
+(26)
+
+The BCJR algorithm for Turbo decoding, with Niter iterations, has a complexity of:
+
+O(Niter · K · 2L+1)
+
+(27)
+
+Table VII compares the complexity of CNE and DeepTurbo decoders, focusing on trainable parameters and multiplyaccumulate operations (MACs) per decoded bit, evaluated using Thop [41], a tool designed to measure the MACs of neural networks. Hyperparameters are listed in Table VI, except that CNE includes the puncturing-aware embedding module.
+The CNE Turbo decoder, with shared weights between CNE0 and CNE1, significantly reduces trainable parameters compared to DeepTurbo’s non-shared SISO weights. For 3 iterations, DeepTurbo requires approximately 1.42 times the parameters of CNE Turbo, and for 6 iterations, this increases to about 2.85 times. The shared-weight design of CNE enhances efficiency by lowering storage and computational overhead.
+In terms of computational complexity, DeepTurbo at 3 iterations requires roughly 0.71 times the MACs per decoded bit of CNE Turbo, due to its lower projection dimension (Fs = 5 vs. CNE’s Dembed = 64). However, at 6 iterations—DeepTurbo’s optimal configuration—it demands approximately 1.42 times the MACs per decoded bit of CNE Turbo. This demonstrates that CNE achieves superior performance with competitive complexity using fewer iterations.
+
+D. Decoding Latency
+
+Decoding latency is critical for real-time communication
+
+systems, and the CNE decoder’s latency stems from input
+
+projection and gating, batch normalization, LSTM processing,
+
+and output projection.
+The input projection maps x ∈ RK×Din with W proj ∈ R , Dembed×Din while modulating with p ∈ RK×Din via W punc ∈ R , Dembed×Din using parallel matrix-vector multiplications with
+
+latency:
+
+Tproj = tmat(Dembed, Din)
+
+(28)
+
+Batch normalization then normalizes features in RK×Dembed in parallel, with latency:
+
+TBN = tbn(Dembed)
+
+(29)
+
+The sequential LSTM, processing K time steps, dominates latency due to its sequential nature:
+
+TLSTM = K · tlstm(Dhidden, Dembed)
+
+(30)
+
+The final output projection maps h ∈ RK×2Dhidden with W out ∈ R , 2Dhidden×1 with latency:
+
+Tout = tmat(1, 2Dhidden)
+
+(31)
+
+The total CNE latency is:
+
+TCNE = Tproj + TBN + TLSTM + Tout
+
+(32)
+
+The Viterbi algorithm’s latency, scaling with trellis states,
+
+is:
+
+TViterbi = K · tstate(2L−1)
+
+(33)
+
+The BCJR algorithm, with forward and backward recursions and Niter iterations, has latency:
+
+TBCJR = 2 · Niter · K · tstate(2L−1)
+
+(34)
+
+In addition, we evaluated the proposed CNE decoder using Torch-TensorRT [42], a tool designed to accelerate neural network inference on NVIDIA GPUs. The evaluation was performed with a floating-point precision of float32, based on 1000 trials with an information block length of 120. The results show that the proposed CNE convolutional code decoder has an average inference latency of 0.116 µs/decoded bit, while the Turbo code decoder exhibits an average inference latency of 0.867 µs/decoded bit.
+
+E. Mitigating Complexity and Latency in Practice
+While the proposed CNE decoder demonstrates superior performance, its computational complexity and latency, particularly due to the sequential nature of the LSTM, pose challenges for real-time and resource-constrained communication systems. To address these drawbacks and ensure practical deployment beyond reliance on GPU acceleration, a multi-faceted approach is presented, encompassing model optimization, hardware acceleration, and scheduling efficiency.
+1) Model Optimization: To reduce computational complexity, advanced compression techniques can be applied. For instance, the ‘grow-and-prune’ method iteratively removes low-magnitude weights to simplify
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+YAN AND DAI: DECODING FOR PUNCTURED CONVOLUTIONAL AND TURBO CODES: A DEEP LEARNING SOLUTION
+
+215
+
+RNN-based models while preserving accuracy [43]. Studies on bank-balanced sparsity (BBS) demonstrate 2.3–3.7× energy savings and 7.0–34.4× latency reduction for LSTM models on field programmable gate array (FPGA) [44], [45]. Additionally, techniques such as weight sharing and knowledge distillation compress models effectively, enabling deployment on resourcelimited platforms with minimal performance trade-offs [46]. 2) Hardware Acceleration: Beyond GPUs, tailored FPGA-based accelerators offer a promising solution. Pipelined Vector-Scalar Multiplication engines minimize latency through streamlined computation [47]. On-chip static random access memory (SRAM) and embedded dynamic random-access memory (eDRAM) optimize data access, reducing delays critical for real-time systems [48], [49]. Furthermore, partial reconfiguration adapts hardware dynamically, balancing performance and power consumption for constrained environments [50]. 3) Scheduling Efficiency: Advanced scheduling strategies enhance latency performance. Unfolded and intergate scheduling parallelize LSTM computations across processing elements, significantly reducing latency for time-sensitive tasks [51], [52]. Loop unrolling and pipelining in FPGA designs further eliminate dependencies, ensuring deterministic, low-latency performance [53].
+This layered approach—optimizing the model, leveraging specialized hardware, and refining scheduling—effectively mitigates complexity and latency challenges. These strategies ensure the proposed CNE decoder achieves robust, real-time performance, even in resource-constrained settings, making it highly suitable for practical communication systems. Future work could explore specific case studies or quantitative evaluations of these techniques to further validate their effectiveness in diverse scenarios.
+VI. CONCLUSION
+This paper introduces a unified LSTM-based decoding architecture that enhances the performance of punctured convolutional and Turbo codes in practical communication scenarios. By leveraging deep learning techniques, the proposed approach offers a flexible and code-agnostic solution that ensures robust decoding across a wide range of code rates and channel conditions. The results obtained from extensive simulations validate the efficacy of the approach, demonstrating notable improvements in decoding accuracy compared to traditional algorithms. Future work could focus on further optimizing the architecture to reduce decoding complexity and latency, as well as extending its application to more complex coding schemes and diverse communication environments, paving the way for more efficient and reliable decoding in next-generation AI-powered wireless systems.
+REFERENCES
+[1] OpenAI. (Dec. 2024). ChatGPT: Large Language Model. [Online]. Available: https://chat.openai.com/
+
+[2] A. Voulodimos, N. Doulamis, A. Doulamis, and E. Protopapadakis, “Deep learning for computer vision: A brief review,” Comput. Intell. Neurosci., vol. 2018, pp. 1–13, Feb. 2018.
+[3] Study on Enhancement for Data Collection for NE and ENDC, document TR 37.817, 3rd Generation Partnership Project, Sep. 2022.
+[4] M. Soltani, V. Pourahmadi, A. Mirzaei, and H. Sheikhzadeh, “Deep learning-based channel estimation,” IEEE Commun. Lett., vol. 23, no. 4, pp. 652–655, Apr. 2019.
+[5] J. Gao, C. Zhong, G. Y. Li, J. B. Soriaga, and A. Behboodi, “Deep learning-based channel estimation for wideband hybrid mmWave massive MIMO,” IEEE Trans. Commun., vol. 71, no. 6, pp. 3679–3693, Jun. 2023.
+[6] L. Li, J. Xu, L. Zheng, and L. Liu, “Real-time machine learning for multi-user massive MIMO: Symbol detection using multimode StructNet,” IEEE Trans. Wireless Commun., vol. 22, no. 12, pp. 9172–9186, Dec. 2023.
+[7] F. Choudhury, A. Ikhlef, W. Saad, and M. Debbah, “Deep learning for detection and identification of asynchronous pilot spoofing attacks in massive MIMO networks,” IEEE Trans. Wireless Commun., vol. 23, no. 11, pp. 17103–17114, Nov. 2024.
+[8] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Baltimore, MD, USA, Mar. 2017, pp. 1–6.
+[9] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5G LDPC codes by machine learning,” IEEE Access, vol. 6, pp. 50179–50186, 2018.
+[10] J. Hoydis et al., “Sionna: An open-source library for next-generation physical layer research,” 2022, arXiv:2203.11854.
+[11] S. Cammerer et al., “A neural receiver for 5G NR multi-user MIMO,” in Proc. IEEE Globecom Workshops (GC Wkshps), Kuala Lumpur, Malaysia, Dec. 2023, pp. 329–334.
+[12] R. Wiesmayr, S. Cammerer, F. A. Aoudia, J. Hoydis, J. Zakrzewski, and A. Keller, “Design of a standard-compliant real-time neural receiver for 5G NR,” in Proc. IEEE Int. Conf. Mach. Learn. Commun. Netw., Barcelona, Spain, May 2025, pp. 1–6.
+[13] M. Geiselhart, F. Krieg, J. Clausius, D. Tandler, and S. Ten Brink, “6G: A welcome chance to unify channel coding?,” IEEE BITS Inf. Theory Mag., vol. 3, no. 1, pp. 67–80, Mar. 2023.
+[14] R. G. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. IT-8, no. 1, pp. 21–28, Jan. 1962.
+[15] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[16] R. Johannesson and K. S. Zigangirov, Fundamentals of Convolutional Coding. Hoboken, NJ, USA: Wiley, Jul. 2015.
+[17] D. Divsalar and F. Pollara, “On the design of turbo codes,” TDA Prog. Rep. 42-123, vol. 123, pp. 99–120, Nov. 1995.
+[18] Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks; Part 11: Wireless Lan Medium Access Control and Physical Layer Specifications, IEEE Standard 802.11-2020, Institute of Electrical and Electronics Engineers, Feb. 2021.
+[19] Technical Specification Group Radio Access Network; Multiplexing and Channel Coding, document TS 36.212, 3rd Generation Partnership Project, Mar. 2021.
+[20] Technical Specification Group Radio Access Network; Multiplexing and Channel Coding,” document TS 38.212, 3rd Generation Partnership Project, Sep. 2023.
+[21] M. Peleg, I. Sason, S. Shamai (Shitz), and A. Elia, “On interleaved, differentially encoded convolutional codes,” IEEE Trans. Inf. Theory, vol. 45, no. 7, pp. 2572–2582, Nov. 1999.
+[22] S. T. Brink, “Designing iterative decoding schemes with the extrinsic information transfer chart,” AEU Int. J. Electron. Commun., vol. 54, no. 6, pp. 389–398, Nov. 2000.
+[23] S. T. Brink, “Convergence behavior of iteratively decoded parallel concatenated codes,” IEEE Trans. Commun., vol. 49, no. 10, pp. 1727–1737, Oct. 2001.
+[24] M. El-Hajjar and L. Hanzo, “EXIT charts for system design and analysis,” IEEE Commun. Surveys Tuts., vol. 16, no. 1, pp. 127–153, 1st Quart., 2014.
+[25] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Adv. Neural Inf. Process. Syst., New Orleans, LA, USA, Dec. 2022, pp. 38695–38705.
+[26] Y. Yan et al., “Error correction code transformer: From non-unified to unified,” 2024, arXiv:2410.03364.
+[27] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” 2018, arXiv:1805.09317.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+216
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+[28] A. Viterbi, “Error bounds for convolutional codes and an asymptotically optimum decoding algorithm,” IEEE Trans. Inf. Theory, vol. IT-13, no. 2, pp. 260–269, Apr. 1967.
+[29] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani, and P. Viswanath, “DEEPTURBO: Deep turbo decoder,” in Proc. IEEE 20th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Cannes, France, Jul. 2019, pp. 1–5.
+[30] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),” IEEE Trans. Inf. Theory, vol. IT-20, no. 2, pp. 284–287, Mar. 1974.
+[31] Y. Jiang, H. Kim, H. Asnani, and S. Kannan, “MIND: Model independent neural decoder,” in Proc. IEEE 20th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Cannes, France, Jul. 2019, pp. 1–5.
+[32] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-topoint communication channels,” in Proc. Adv. Neural Inf. Process. Syst., vol. 32, Vancouver, BC, Canada, Dec. 2019, pp. 2754–2764.
+[33] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural Comput., vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
+[34] L. R. Medsker et al., “Recurrent neural networks,” Design Appl., vol. 5, nos. 64–67, p. 2, Dec. 1999.
+[35] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014, arXiv:1412.6980.
+[36] I. Loshchilov and F. Hutter, “SGDR: Stochastic gradient descent with warm restarts,” 2016, arXiv:1608.03983.
+[37] J. Erfanian, S. Pasupathy, and G. Gulak, “Reduced complexity symbol detectors with parallel structure for ISI channels,” IEEE Trans. Commun., vol. 42, no. 2, pp. 1661–1671, Feb. 1994.
+[38] J. Vogt and A. Finger, “Improving the max-log-MAP turbo decoder,” Electron. Lett., vol. 36, no. 23, pp. 1937–1939, Nov. 2000.
+[39] M. Biguesh and A. B. Gershman, “Training-based MIMO channel estimation: A study of estimator tradeoffs and optimal training signals,” IEEE Trans. Signal Process., vol. 54, no. 3, pp. 884–893, Mar. 2006.
+[40] M. A. Albreem, M. Juntti, and S. Shahabuddin, “Massive MIMO detection techniques: A survey,” IEEE Commun. Surveys Tuts., vol. 21, no. 4, pp. 3109–3132, 4th Quart., 2019.
+[41] L. Zhu. (2020). Thop: A Tool for Measuring the Flops of Neural Networks. [Online]. Available: https://github.com/Lyken17/pytorchOpCounter
+[42] PyTorch. (Nov. 2021). Torch-Tensorrt: Easily Achieve the Best Inference Performance for Any PyTorch Model on the NVIDIA Platform. [Online]. Available: https://github.com/pytorch/TensorRT
+[43] X. Dai, H. Yin, and N. K. Jha, “Grow and prune compact, fast, and accurate LSTMs,” IEEE Trans. Comput., vol. 69, no. 3, pp. 441–452, Mar. 2020.
+[44] S. Cao et al., “Efficient and effective sparse LSTM on FPGA with bankbalanced sparsity,” in Proc. ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays, Seaside, CA, USA, Feb. 2019, pp. 63–72.
+[45] Z. Yao, S. Cao, W. Xiao, C. Zhang, and L. Nie, “Balanced sparsity for efficient DNN inference on GPU,” in Proc. AAAI Conf. Artif. Intell., Jul. 2019, vol. 33, no. 1, pp. 5676–5683.
+[46] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural network,” 2015, arXiv:1503.02531.
+[47] R. Y. Aminabadi, O. Ruwase, M. Zhang, Y. He, J.-M. Arnau, and A. Gonza´lez, “SHARP: An adaptable, energy-efficient accelerator for recurrent neural networks,” ACM Trans. Embedded Comput. Syst., vol. 22, no. 2, pp. 1–23, Jan. 2023.
+[48] S. Mittal, J. S. Vetter, and D. Li, “Improving energy efficiency of embedded DRAM caches for high-end computing systems,” in Proc. 23rd Int. Symp. High-Perform. parallel Distrib. Comput., Vancouver, BC, Canada, Jun. 2014, pp. 1–16.
+[49] S. S. Manohar and H. K. Kapoor, “Dynamic reconfiguration of embedded-DRAM caches employing zero data detection based refresh optimisation,” J. Syst. Archit., vol. 100, Nov. 2019, Art. no. 101648.
+[50] K. Chen, L. Huang, M. Li, X. Zeng, and Y. Fan, “A compact and configurable long short-term memory neural network hardware architecture,” in Proc. 25th IEEE Int. Conf. Image Process. (ICIP), Athens, Greece, Oct. 2018, pp. 4168–4172.
+[51] S. Han et al., “ESE: Efficient speech recognition engine with sparse LSTM on FPGA,” in Proc. ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays, New York, NY, USA, Feb. 2017, pp. 75–84.
+
+[52] J. Fowers et al., “A configurable cloud-scale DNN processor for realtime AI,” in Proc. ACM/IEEE 45th Annu. Int. Symp. Comput. Archit. (ISCA), Los Angeles, CA, USA, Jun. 2018, pp. 1–14.
+[53] L. Peng, W. Shi, J. Zhang, and S. Irving, “Exploiting model-level parallelism in recurrent neural network accelerators,” in Proc. IEEE 13th Int. Symp. Embedded Multicore/Many-Core Syst.-Chip, Singapore, Oct. 2019, pp. 241–248.
+Yongli Yan (Member, IEEE) received the B.S. degree from Zhengzhou University, Zhengzhou, China, in 2014, and the Ph.D. degree from the University of Chinese Academy of Sciences, Beijing, in 2019.
+From 2020 to 2023, he was a Senior Researcher with Huawei HiSilicon Technologies Company Ltd. Since 2023, he has been a Post-Doctoral Researcher with the Department of Electronic Engineering, Tsinghua University. His research interests include channel encoding and decoding, AI-driven wireless communication systems, and VLSI architectures for wireless communication chips. He was awarded the Post-Doctoral Fellowship Program of CPSF in 2023 and received funding from the National Natural Science Foundation of China (Youth Program) in 2024. He was also awarded the Huawei HiSilicon Outstanding Engineer in 2023. His work integrates academic research and practical applications to advance wireless communication technologies.
+Linglong Dai (Fellow, IEEE) received the B.S. degree from Zhejiang University, Hangzhou, China, in 2003, the M.S. degree from China Academy of Telecommunications Technology, Beijing, China, in 2006, and the Ph.D. degree from Tsinghua University, Beijing, in 2011. From 2011 to 2013, he was a Post-Doctoral Researcher with the Department of Electronic Engineering, Tsinghua University, where he was an Assistant Professor from 2013 to 2016, an Associate Professor from 2016 to 2022, and has been a Professor since 2022. He has co-authored the book mmWave Massive MIMO: A Paradigm for 5G (Academic Press, 2016). He has authored or co-authored over 100 IEEE journal articles and over 60 IEEE conference papers. He also holds over 20 granted patents. His current research interests include massive MIMO, reconfigurable intelligent surface (RIS), millimeter-wave and Terahertz communications, near-field communications, machine learning for wireless communications, and electromagnetic information theory. He has received five IEEE Best Paper Awards at the IEEE ICC 2013, the IEEE ICC 2014, the IEEE ICC 2017, the IEEE VTC 2017-Fall, the IEEE ICC 2018, and the IEEE GLOBECOM 2023. He has also received Tsinghua University Outstanding Ph.D. Graduate Award in 2011, Beijing Excellent Doctoral Dissertation Award in 2012, China National Excellent Doctoral Dissertation Nomination Award in 2013, the URSI Young Scientist Award in 2014, the IEEE Transactions on Broadcasting Best Paper Award in 2015, the Electronics Letters Best Paper Award in 2016, the National Natural Science Foundation of China for Outstanding Young Scholars in 2017, the IEEE ComSoc Asia–Pacific Outstanding Young Researcher Award in 2017, the IEEE ComSoc Asia–Pacific Outstanding Paper Award in 2018, China Communications Best Paper Award in 2019, the IEEE Access Best Multimedia Award in 2020, the IEEE ComSoc Leonard G. Abraham Prize in 2020, the Distinguished Young Scholar of NSFC in 2023, and the IEEE ComSoc Stephen O. Rice Prize in 2025. He has been recognized as a Highly Cited Researcher by Clarivate from 2020 to 2024.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:54:48 UTC from IEEE Xplore. Restrictions apply.
+
+

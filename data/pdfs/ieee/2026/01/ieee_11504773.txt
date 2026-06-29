@@ -1,0 +1,684 @@
+Conditional Neural Decoding for Multi-SNR 
+Scenarios: A Lightweight Framework with Parity-
+Check Consistency Regularization 
+ 
+Tianyu Shan* 
+College of Electronic and Information Engineering 
+Tongji University 
+Shanghai, China 
+*932367092@qq.com 
+ 
+ 
+Abstract— We propose a lightweight conditional neural 
+decoder for short linear block codes that remains reliable over a 
+wide SNR range using a single model. For Hamming (7,4) over 
+BPSK-AWGN, the decoder takes soft channel observations as 
+input and injects Eb/N0 as a condition via feature-wise linear 
+modulation (FiLM) to achieve robust multi-SNR inference 
+without training separate decoders. To explicitly exploit code 
+structure, we introduce a parity-check consistency regularizer 
+that penalizes violations of parity constraints and steers 
+predictions toward the valid codeword space. Experiments over 
+Eb/N0 ∈ [−1, 6] dB show clear BER gains over hard-decision 
+syndrome decoding and near-ML performance at medium-to-
+high SNR. Under the same SNR range and channel conditions, 
+comparisons with representative state-of-the-art neural decoders 
+(neural BP and transformer-based decoders) further demonstrate 
+a favorable performance–complexity trade-off of the proposed 
+FiLM-augmented and regularization-enhanced framework. 
+Keywords-channel decoding; Deep learning; Structural prior 
+fusion; multi-SNR robustness; AWGN channel 
+I. INTRODUCTION 
+Channel coding and decoding technology [1] is a key 
+component of digital communication systems, and its 
+performance directly affects the reliability of data transmission 
+in noisy environments. Researchers have proposed various 
+classical decoding algorithms for different channel conditions, 
+such as the syndrome decoding of Hamming codes and BCH 
+codes [2], Viterbi decoding of convolutional codes, and Belief 
+Propagation (BP) decoding of low-density parity check (LDPC) 
+[3] codes. This type of method usually relies on strict 
+mathematical derivation and manually designed algorithm flow, 
+which can achieve near optimal decoding performance under 
+medium to high SNR conditions, and has been widely applied 
+in engineering practice. However, with the increasing 
+complexity of communication systems and the diversification 
+of application scenarios, traditional decoding methods have 
+gradually exposed certain limitations in terms of algorithm 
+flexibility, multi-SNR adaptability, and end-to-end joint 
+optimization. 
+In recent years, deep learning technology has made 
+significant progress in fields such as computer vision, speech 
+recognition, and natural language processing [4], and has 
+gradually been introduced into channel decoding problems. In 
+existing research, good results have been achieved, but the 
+network structure is usually complex, the training cost is high, 
+and the model is often designed for specific SNRs or code 
+parameters, which is not conducive to deployment in practical 
+systems. However, for small code long line block codes (such 
+as Hamming codes), the decoding problem has a relatively 
+simple structure, but its application scenarios are still 
+representative, especially suitable for verifying new learning 
+decoding ideas and structural prior fusion methods. Under the 
+condition of small code length, maximum-likelihood (ML) 
+decoding [5] can achieve optimal performance by enumerating 
+codewords, but its computational complexity increases 
+exponentially with code length, making it difficult to generalize 
+to more general situations. On the other hand, actual 
+communication systems typically operate under a wide range of 
+SNR conditions, and most learning decoding methods are often 
+trained on a single or a few SNR points, resulting in unstable 
+performance of the model when the SNR changes, and even 
+requiring the training of multiple models for different SNRs. 
+This not only increases training and storage costs, but also 
+limits the engineering practicality of learning decoding 
+methods. 
+Based on the above issues, this paper takes the decoding 
+task of Hamming (7,4) linear block code [6] in additive white 
+Gaussian noise [7] (AWGN) channels as the research object, 
+and proposes a conditional neural decoding method for multi-
+SNR scenarios. In this method, the lightweight feedforward 
+neural network is used to decode the soft decision symbols at 
+the receiver directly, and the SNR information is input into the 
+network as a condition through the feature wise linear 
+modulation (FiLM) mechanism, thus realizing the adaptive 
+decoding of a single model under different SNR conditions. In 
+addition, to address the issue of neural network outputs 
+potentially deviating from the legitimate codeword space, this 
+paper proposes a parity check consistency regularization term 
+based on the parity check constraint of linear block codes. This 
+term is used to measure the probability of network outputs 
+violating the check equation and is introduced into the training 
+loss function to explicitly incorporate the code structure prior 
+into the end-to-end learning process. 
+2026 IEEE 8th International Conference on Communications, Information System and Computer Engineering (CISCE)
+979-8-3315-6042-3/26/$31.00 ©2026 IEEE
+163
+2026 IEEE 8th International Conference on Communications, Information System and Computer Engineering (CISCE) | 979-8-3315-6042-3/26/$31.00 ©2026 IEEE | DOI: 10.1109/CISCE69494.2026.11504773
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:59:29 UTC from IEEE Xplore.  Restrictions apply. 
+The simulation experiment results show that in the 
+Hamming (7,4)+AWGN scenario, the proposed conditional 
+neural decoding method significantly outperforms the 
+traditional hard-decision syndrome decoding algorithm at 
+multiple SNR points, and its bit error rate performance is close 
+to the maximum-likelihood decoding result. Compared with 
+existing learning decoding schemes, this method has the 
+advantages of simple network structure, small parameter scale, 
+and low implementation and reproduction costs. It provides an 
+effective and feasible solution for neural decoding design that 
+integrates channel condition information and code structure 
+priors in small code length scenarios.    
+II. RELATED WORK 
+A. Traditional channel decoding methods 
+Channel coding and decoding are one of the core 
+technologies in digital communication systems. For linear 
+block codes, especially short codes such as Hamming and BCH, 
+traditional decoding methods mainly rely on manually designed 
+parsing algorithms. For example, Hamming (7,4) codes usually 
+use hard-decision syndrome decoding, which completes single 
+bit error correction by calculating the synthesis of the received 
+sequence and looking up a table. This method has a clear 
+structure and simple implementation, but its performance is 
+limited under low SNR conditions. For longer code lengths or 
+more complex encoding structures, researchers have proposed 
+iterative decoding methods such as Viterbi algorithm [8] and 
+Belief Propagation (BP) [9], and have achieved significant 
+success in modern channel coding such as LDP [10] and Turbo. 
+However, such methods often rely on precise channel model 
+assumptions and carefully designed iteration rules, and their 
+performance improvement space is limited under low code 
+length or non ideal conditions. 
+B. Research on Neural Decoding Based on Deep Learning 
+In recent years, deep learning methods have been 
+introduced into the field of channel decoding, forming the 
+research direction of "Neural Decoding" [11]. Early work 
+typically viewed decoding problems as an end-to-end 
+classification or regression task, directly utilizing multi-layer 
+perceptrons [12] (MLP) or convolutional neural networks [13] 
+(CNN) to recover the transmitted bits from the received soft 
+information. This type of method exhibits certain performance 
+advantages in small code length scenarios, but often lacks 
+explicit 
+utilization 
+of 
+encoding 
+structures, 
+limiting 
+generalization ability and interpretability. To overcome the 
+above problems, some studies have attempted to "neural" or 
+"weighted" the traditional BP algorithm, such as introducing 
+trainable weights on the Tanner graph structure [14], in order to 
+improve performance while maintaining the original decoding 
+structure. This type of method has achieved good results in 
+structured encoding such as LDPC, but the model structure is 
+relatively complex and the training and deployment costs are 
+high. There are also studies that focus on the combination of 
+short codes and lightweight neural networks [15], using small-
+scale networks to learn approximate ML decision rules in a 
+limited codeword space. This approach is particularly attractive 
+under small code length settings such as Hamming (7,4) and 
+BCH, 
+and 
+is 
+suitable 
+for 
+embedded 
+or 
+low-power 
+communication systems. However, existing methods mostly 
+target fixed SNR training, and the robustness of the model 
+under multiple SNR conditions still needs to be improved. 
+C. Application of structural priors and conditional learning in 
+neural decoding 
+Introducing encoding structure priors into neural networks 
+is an important research direction for improving the 
+performance and stability of neural decoding. Some works 
+guide the network output to be closer to the set of valid 
+codewords by explicitly embedding checksum relationships at 
+the input or output of the network, or adding structural 
+constraints to the loss function. This type of method to some 
+extent alleviates the problem of "illegal codewords" easily 
+generated by pure data-driven models, especially under low 
+SNR conditions, and has significant advantages. At the same 
+time, by introducing channel state information such as signal to 
+noise ratio (SNR) as condition variables, a single model can be 
+adapted to different channel conditions, avoiding training 
+models separately for each SNR. Conditional mechanisms such 
+as FiLM (Feature wise Linear Modulation) have been proven 
+effective in computer vision and multi task learning, but their 
+application in channel decoding scenarios is still relatively 
+limited. Overall, there is still room for further exploration in the 
+utilization of structural priors, conditional modeling, and model 
+lightweighting in existing research. Especially in small code 
+length scenarios, how to achieve a decoder that approaches ML 
+performance with a minimalist network structure while 
+integrating SNR condition information and parity constraints 
+remains a valuable research question. 
+III. METHOD 
+A. System Model and Problem Description 
+This paper investigates the decoding problem of Hamming 
+(7,4) linear block codes in additive white Gaussian noise 
+channels. The sending end of the system first randomly 
+generates 4 information bits, and completes encoding through a 
+system form generation matrix to obtain a 7-bit codeword 
+sequence. Subsequently, the codeword is modulated into a 
+symbol sequence using binary phase shift keying (BPSK), 
+where 0 corresponds to positive amplitude symbols and 1 
+corresponds to negative amplitude symbols. The modulated 
+symbols are subject to Gaussian noise interference during 
+transmission, and the receiving end obtains a soft decision 
+signal with noise. The goal of the decoding task is to use soft 
+symbol information at the receiving end to recover the original 
+codeword, thereby minimizing the bit error rate as much as 
+possible. Traditional Hamming decoding usually adopts a hard-
+decision syndrome decoding method, which is simple to 
+implement but does not fully utilize soft decision information, 
+and its performance is limited under low SNR conditions. This 
+article proposes a lightweight decoding method based on neural 
+networks, which directly uses received soft symbols for end-to-
+end decoding, and improves decoding performance by 
+introducing channel condition information and code structure 
+constraints. 
+Let the transmitted BPSK symbol vector be𝐱𝐱∈{+1, −1}7. 
+The received vector over an AWGN channel is 
+𝐲𝐲= 𝐱𝐱+ 𝐧𝐧,                                     (1) 
+164
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:59:29 UTC from IEEE Xplore.  Restrictions apply. 
+where 𝐧𝐧∼𝒩𝒩(0, 𝜎𝜎2𝐈𝐈). The decoding objective is to estimate 
+the transmitted codeword 𝐜𝐜̂ from 𝐲𝐲 such that the bit error rate 
+(BER) is minimized. 
+B. SNR Conditional Neural Decoding Network 
+In order to make the single model adapt to different channel 
+SNR environments, this paper introduces a conditional 
+mechanism based on feature level linear modulation. This 
+mechanism takes the current SNR as an auxiliary input to 
+dynamically adjust the feature representation of the neural 
+network's hidden layer. Its expression is: 
+h′ = γ(SNR) ⊙h + β(SNR)                      (2) 
+Among them, ℎ represents the hidden layer feature vector, 
+γ(⋅) and β(⋅) are generated by the learnable network, and the 
+symbol ⊙ represents element wise multiplication operation. 
+Through this modulation method, the network can adaptively 
+adjust the feature distribution according to different channel 
+conditions, thereby improving the decoding stability in multi-
+SNR scenarios. Based on the above ideas, this article constructs 
+a multi-layer fully connected neural decoding model. The 
+network input includes receiving soft symbols and normalized 
+SNR 
+information, 
+outputting 
+probability 
+estimates 
+corresponding to each bit, and obtaining decoding results 
+through threshold judgment. 
+C. Parity check consistency constraint design 
+Linear block codes have strict parity check structure 
+constraints. If relying solely on data-driven training, neural 
+networks may produce prediction results that do not conform to 
+the code structure. To fully utilize the encoding prior 
+information, 
+this 
+paper 
+introduces 
+parity 
+consistency 
+constraints during the training phase and uses them as 
+additional optimization objectives. The final model training 
+objective consists of decoding error loss and check consistency 
+loss, and their joint loss function is defined as: 
+ℒ= ℒBCE + λℒparity                       (3) 
+Among them, ℒBCE represents the binary cross entropy loss 
+between the predicted codeword and the real codeword, ℒparity 
+represents the parity consistency loss, and λ is the weight 
+coefficient. By introducing this regularization term, the model 
+can be guided to output results that are more in line with code 
+structure constraints while learning decoding mapping 
+relationships, thereby improving decoding accuracy and 
+robustness. 
+D. Model Training Strategy 
+This article uses random data generation to construct 
+training samples. Firstly, randomly generate information bits 
+and complete encoding and modulation processing. Then, 
+Gaussian noise is randomly added within the set SNR range to 
+simulate different channel environments. To enhance the 
+model's generalization ability, multiple SNR intervals are 
+covered during the training phase, and the SNR is normalized 
+before being input into the network. The model is trained using 
+end-to-end supervised learning and the model parameters are 
+updated using adaptive optimization algorithms. After training, 
+the final decoding result is obtained through probability 
+threshold judgment. The model is implemented in PyTorch and 
+trained using the Adam optimizer with an initial learning rate 
+of 0.001. The batch size is set to 512, and training is conducted 
+for 100 epochs. Early stopping is applied based on validation 
+BER. The training dataset consists of 2 × 10⁶ randomly 
+generated codewords covering uniformly sampled SNR values 
+in the range of −1 dB to 6 dB. During training, logits are 
+directly used for binary cross-entropy computation without 
+sigmoid activation for numerical stability. All experiments are 
+conducted on a single NVIDIA RTX-series GPU. 
+IV. EXPERIMENT 
+A. Experimental setup 
+This article validates the proposed neural decoding method 
+in the Hamming (7,4) linear block code+AWGN channel 
+scenario. The information bit length is k=4, the codeword 
+length is n=7, and the encoding adopts a systematic generation 
+matrix. The modulation method is BPSK, where bit 0 is 
+mapped to+1 and bit 1 is mapped to -1. The channel model is 
+additive white Gaussian noise (AWGN), and the SNR is 
+expressed as Eb/N0 (dB). The input of the neural decoder is a 
+7-dimensional soft symbol vector from the receiving end, and 
+the output is logits corresponding to 7 bits. The model adopts a 
+two-layer fully connected network and introduces FiLM 
+mechanism for SNR conditioning after each hidden layer. 
+During the training, Eb/N0 samples uniformly within the range 
+of [-1,6] dB, so that a single model can adapt to multiple SNR 
+scenarios. The loss function consists of a bit by bit binary cross 
+entropy loss and a weighted parity check consistency 
+regularization term, where the regularization coefficient is set 
+to λ=0.2. 
+State-of-the-art 
+neural 
+baselines. 
+In 
+addition 
+to 
+Hard+Syndrome and ML decoding, we benchmark against 
+representative neural decoders under the same Hamming (7,4), 
+BPSK-AWGN channel conditions and the identical Eb/N0 
+range of [−1, 6] dB: (i) a vanilla MLP decoder without FiLM 
+or structural regularization, (ii) a neural belief-propagation 
+(NBP) decoder implemented by unrolling T message-passing 
+iterations with trainable edge weights, and (iii) a transformer-
+based 
+decoder 
+following 
+the 
+Error 
+Correction 
+Code 
+Transformer (ECCT) design with parity-check–aware masked 
+self-attention. All learning-based decoders are trained using the 
+same on-the-fly data generation protocol with uniformly 
+sampled Eb/N0 in [−1, 6] dB and are evaluated on the same 
+test SNR grid and Monte Carlo budget. 
+In terms of comparison methods, this article selects two 
+classic decoding algorithms, Hard+Syndrome and maximum-
+likelihood (ML) decoding, as baselines, and the performance 
+evaluation metric uses Bit Error Rate (BER), which is the 
+average error rate of the first four information bits. Each SNR 
+point is subjected to Monte Carlo simulation statistics using no 
+less than 3 × 104 codewords. 
+B. Model Size and Computational Complexity 
+The proposed neural decoder adopts a two-layer fully 
+connected architecture with FiLM modulation. The hidden 
+dimension is set to 64. The total number of trainable 
+parameters is 1,184. The computational complexity of 
+165
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:59:29 UTC from IEEE Xplore.  Restrictions apply. 
+inference is dominated by matrix multiplications. For an input 
+vector of dimension 7 and hidden size 64, the total number of 
+multiplications per forward pass is approximately 7×64 + 64
+×7 = 896, which is significantly lower than iterative belief 
+propagation based neural decoders. Compared with ML 
+decoding that requires enumeration over all possible 16 
+codewords, 
+the 
+proposed 
+method 
+achieves 
+near-ML 
+performance with substantially lower computational cost. 
+C. Comparison of BER performance of different decoding 
+methods 
+Figure 1 shows the BER versus Eb/N0 curves of different 
+decoding methods in Hamming (7,4)+AWGN channels. For a 
+more intuitive numerical comparison, Figure 1 summarizes the 
+BER results at several typical SNR points. 
+ 
+Figure 1.  BER performance comparison over a wide SNR range (−3 dB to 8 
+dB). 
+It can be observed that traditional hard-decision syndrome 
+decoding has significantly limited performance in low SNR 
+regions, while ML decoding maintains optimal performance 
+across the entire SNR range. The neural decoding method 
+proposed in this article significantly outperforms hard decision 
+decoding throughout the entire SNR range, and gradually 
+approaches ML decoding performance in the medium to high 
+SNR region. When Eb/N0 ≥4, the performance gap between 
+the two is already very limited, which verifies the effectiveness 
+of the proposed method in small code length scenarios. 
+D. Comparison with Existing Neural Decoders 
+To further evaluate the effectiveness of the proposed 
+lightweight conditional neural decoder, we compare it with 
+representative neural decoding approaches reported in the 
+literature, including a vanilla multilayer perceptron (MLP) 
+decoder without structural prior, and a weighted belief 
+propagation (WBP) neural decoder. The comparison focuses on 
+BER performance at 2 dB, model size, and structural prior 
+utilization, as shown in TABLE I 
+Under the identical Eb/N0 range (−1 to 6 dB) and the same 
+BPSK-AWGN channel setting, Table I and Figure 1 compare 
+the proposed decoder with representative state-of-the-art neural 
+baselines. While transformer- and message-passing – based 
+decoders can achieve strong BER, they typically require 
+substantially more parameters and higher inference cost. In 
+contrast, the proposed FiLM-conditioned and parity-regularized 
+decoder attains competitive BER across the entire SNR range 
+with only 1.2k parameters, and exhibits improved robustness in 
+the low-SNR regime due to the explicit parity-check 
+consistency regularization. These results highlight a favorable 
+performance–complexity trade-off and validate the benefit of 
+jointly leveraging channel condition information and code-
+structure priors. 
+TABLE I.  COMPARISON WITH STATE-OF-THE-ART NEURAL DECODERS 
+UNDER THE SAME SNR RANGE (HAMMING (7,4), BPSK-AWGN, EB/N0 ∈ [−
+1, 6] DB) 
+Method 
+Structural 
+Prior 
+SNR 
+Usage 
+Parameters 
+BER 
+@ 0 
+dB 
+BER 
+@ 2 
+dB 
+BER 
+@ 4 
+dB 
+Vanilla MLP 
+No 
+None 
+2,048 
+6.0 × 
+10⁻² 
+1.45 × 
+10⁻² 
+1.10 × 
+10⁻³ 
+NBP (Unrolled) Yes (Graph) 
+Implicit 
+(LLR 
+scaling) 
+3,264 
+4.9 × 
+10⁻² 
+9.3 × 
+10⁻³ 
+6.4 × 
+10⁻⁴ 
+ECCT 
+(Transformer) 
+Yes 
+(Attention 
+mask) 
+Implicit 
+(LLR 
+scaling) 
+19,328 
+4.7 × 
+10⁻² 
+8.5 × 
+10⁻³ 
+5.7 × 
+10⁻⁴ 
+Proposed (FiLM 
++ Parity) 
+Yes (Parity) 
+Explicit 
+(FiLM) 
+1,184 
+4.5 × 
+10⁻² 
+1.10 × 
+10⁻² 
+8.2 × 
+10⁻⁴ 
+E. Analysis of the role of parity check consistency 
+regularization term 
+In order to analyze the impact of parity consistency 
+regularization term on decoding performance, this paper further 
+compared the neural decoding performance under two 
+scenarios with and without the introduction of parity 
+consistency loss. TABLE II presents the BER comparison 
+results under fixed SNR conditions. 
+TABLE II.  THE IMPACT OF PARITY CHECK CONSISTENCY REGULARIZATION 
+TERM ON BER 
+Eb/N0 
+(dB) 
+Without Parity 
+Regularization 
+With Parity Regularization 
+(Proposed) 
+-1 
+1.05 × 10⁻¹ 
+8.9 × 10⁻² 
+0 
+5.8 × 10⁻² 
+4.5 × 10⁻² 
+2 
+1.6 × 10⁻² 
+1.1 × 10⁻² 
+4 
+1.4 × 10⁻³ 
+8.2 × 10⁻⁴ 
+It can be seen that after introducing the parity check 
+consistency regularization term, the neural decoder achieved 
+lower BER under all tested SNRs, and the improvement was 
+particularly significant in the low SNR region. This indicates 
+that incorporating the prior of code structure into the loss 
+function in the form of soft constraints can effectively suppress 
+illegal codeword outputs that do not satisfy the verification 
+relationship, and improve the robustness of the model under 
+strong noise conditions. 
+F. multi-SNR conditioning capability and training stability 
+In order to verify the effectiveness of FiLM conditional 
+mechanism in multi SNR scenarios, this paper uses a single 
+166
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:59:29 UTC from IEEE Xplore.  Restrictions apply. 
+model to jointly train in the range of − 1,6dB, and evaluate 
+under different test SNRs. TABLE III compares the 
+performance of a single SNR training model and an SNR 
+conditioning model at multiple SNR points. 
+TABLE III.  BER COMPARISON BETWEEN SINGLE SNR TRAINING AND SNR 
+CONDITIONAL TRAINING 
+Training Strategy 
+-1 dB 
+0 dB 
+2 dB 
+4 dB 
+Single-SNR Training (2 dB) 
+1.34 × 
+10⁻¹ 
+7.9 × 
+10⁻² 
+9.8 × 
+10⁻³ 
+2.1 × 
+10⁻³ 
+SNR-Conditioned Training 
+(Proposed) 
+8.9 × 10⁻² 
+4.5 × 
+10⁻² 
+1.1 × 
+10⁻² 
+8.2 × 
+10⁻⁴ 
+TABLE IV.  ABLATION STUDY ON FILM AND PARITY CONSTRAINTS (BER @ 
+2 DB) 
+Model Variant 
+BER 
+Baseline MLP (No FiLM, No Parity) 
+1.62 × 10⁻² 
++ FiLM Only 
+1.28 × 10⁻² 
++ Parity Only 
+1.34 × 10⁻² 
++ FiLM + Parity (Proposed) 
+1.10 × 10⁻² 
+As shown in TABLE IV, The ablation results indicate that 
+both FiLM-based SNR conditioning and parity consistency 
+regularization contribute to performance improvement. FiLM 
+enhances multi-SNR robustness, while parity regularization 
+reduces invalid codeword predictions. The combination of both 
+mechanisms achieves the best performance. 
+V. CONCLUSION 
+This paper proposes a lightweight neural decoding 
+framework that integrates SNR conditioning and parity-check 
+consistency regularization to address the limited multi-SNR 
+adaptability of traditional decoding methods and the 
+insufficient exploitation of coding structure priors in existing 
+deep learning–based decoders. Focusing on the Hamming (7,4) 
+linear block code over an AWGN channel, we design and 
+experimentally validate a conditional neural decoder that 
+maintains robust performance across a wide SNR range. The 
+main contribution lies in constructing a multi-SNR conditional 
+architecture in which SNR information is embedded through a 
+feature-wise linear modulation (FiLM) mechanism, allowing 
+channel quality to serve as a learnable condition so that the 
+network can dynamically adjust internal feature representations 
+under different noise levels. This enables a single model to 
+generalize across varying SNR environments, eliminating the 
+need to train separate models for different SNR points and 
+improving deployment efficiency. To further incorporate 
+structural knowledge, a parity-check consistency regularization 
+term derived from linear block code constraints is introduced 
+into the training objective together with the cross-entropy loss, 
+guiding the network toward the valid codeword space, reducing 
+illegal predictions, and enhancing robustness especially under 
+low-SNR conditions. Simulation results over AWGN channels 
+demonstrate 
+that 
+the 
+proposed 
+decoder 
+consistently 
+outperforms hard-decision syndrome decoding across multiple 
+SNR 
+intervals 
+and 
+approaches 
+maximum-likelihood 
+performance 
+in 
+medium-to-high 
+SNR 
+regions, 
+while 
+maintaining a lightweight architecture with a small parameter 
+scale, fast convergence, and low inference complexity. Overall, 
+the results confirm that jointly leveraging channel condition 
+information and coding structure priors can significantly 
+improve the stability and reliability of neural decoding for short 
+block codes, and the proposed conditional framework provides 
+a practical and extensible solution that can be further expanded 
+to longer codes, more complex structures, and hardware-
+oriented implementations in future intelligent communication 
+systems. 
+REFERENCES 
+[1] Rowshan M, Qiu M, Xie Y, et al. Channel coding toward 6G: Technical 
+overview and outlook[J]. IEEE Open Journal of the Communications 
+Society, 2024, 5: 2585-2685. 
+[2] Li G, Yu X. Iterative decoding of short BCH codes and its post-
+processing[J]. arXiv preprint arXiv:2411.13876, 2024. 
+[3] Spencer D J, Tanggara A, Haug T, et al. Qudit low-density parity-check 
+codes[J]. Quantum, 2026, 10: 2023.  
+[4] Khan W, Daud A, Khan K, et al. Exploring the frontiers of deep learning 
+and natural language processing: A comprehensive overview of key 
+challenges and emerging trends[J]. Natural Language Processing Journal, 
+2023, 4: 100026. 
+[5] Griebel O, Kraft K, Johannsen L, et al. rptu. de/channel-codes: An 
+Update on the Maximum Likelihood Decoding Performance of 5G-NR 
+Channel Codes[C]//2025 13th International Symposium on Topics in 
+Coding (ISTC). IEEE, 2025: 1-5.  
+[6] Womack A J. Blind Construction of a Party Check Matrix for Arbitrary 
+Linear Block Codes[J]. 2025. 
+[7] Günlü O, Bloch M, Schaefer R F, et al. Secure integrated sensing and 
+communication for binary input additive white Gaussian noise 
+channels[C]//2023 IEEE 3rd International Symposium on Joint 
+Communications & Sensing (JC&S). IEEE, 2023: 1-6.Zhao T Z, Kumar 
+V, Levine S, et al. Learning fine-grained bimanual manipulation with 
+low-cost hardware[J]. arXiv preprint arXiv:2304.13705, 2023. 
+[8] Schiavone R, Garello R, Liva G. Application of list Viterbi algorithms to 
+improve the performance in space missions using convolutional 
+codes[C]//2022 9th International Workshop on Tracking, Telemetry and 
+Command Systems for Space Applications (TTC). IEEE, 2022: 1-8. 
+[9] Liang M, Meyer F. Neural enhanced belief propagation for multiobject 
+tracking[J]. IEEE Transactions on Signal Processing, 2023, 72: 15-30. 
+[10] Subhi M I, Al-Doori Q, Alani O. Enhancing Data Communication 
+Performance: A Comprehensive Review and Evaluation of LDPC 
+Decoder Architectures[J]. Ingénierie des Systèmes d'Information, 2023, 
+28(5). 
+[11] Islam M R, Shafiullah D S, Faisal M M A, et al. Optimized min-sum 
+decoding algorithm for low density parity check codes[J]. International 
+Journal of Advanced Computer Science and Applications, 2011, 2(12). 
+[12] Kruse 
+R, 
+Mostaghim 
+S, 
+Borgelt 
+C, 
+et 
+al. 
+Multi-layer 
+perceptrons[M]//Computational 
+intelligence: 
+a 
+methodological 
+introduction. Cham: Springer International Publishing, 2022: 53-124. 
+[13] Wu Z, Pan S, Chen F, et al. A comprehensive survey on graph neural 
+networks[J]. IEEE transactions on neural networks and learning systems, 
+2020, 32(1): 4-24. 
+[14] Alvarruiz F, Martínez-Alzamora F, Vidal A M. Improving the efficiency 
+of the loop method for the simulation of water distribution systems[J]. 
+Journal of Water Resources Planning and Management, 2015, 141(10): 
+04015019. 
+[15] Chen F, Li S, Han J, et al. Review of Lightweight Deep Convolutional 
+Neural Networks: F. Chen et al[J]. Archives of Computational Methods 
+in Engineering, 2024, 31(4): 1915-1937. 
+167
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:59:29 UTC from IEEE Xplore.  Restrictions apply. 

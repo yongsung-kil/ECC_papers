@@ -1,0 +1,1982 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+4615
+
+ACOCO: Adaptive Coding for Approximate Computing on Faulty Memories
+Chu-Hsiang Huang, Yao Li, and Lara Dolecek, Senior Member, IEEE
+
+Abstract—With scaling of process technologies and increase in process variations, embedded memories will be inherently unreliable. Approximate computing is a new class of techniques that relax the accuracy requirement of computing systems. In this paper, we present the Adaptive Coding for approximate Computing (ACOCO) framework, which provides us with an analysis-guided design methodology to develop adaptive codes for different computations on the data read from faulty memories. In ACOCO, we first compress the data by introducing distortion in the source encoder, and then add redundant bits to protect the data against memory errors in the channel encoder. We are thus able to protect the data against memory errors without additional memory overhead so that the coded data have the same bit-length as the uncoded data. We design the source encoder by first specifying a cost function measuring the effect of the data compression on the system output, and then design the source code according to this cost function. We develop adaptive codes for two types of systems under ACOCO. The first type of systems we consider, which includes many machine learning and graph-based inference systems, is the systems dominated by product operations. We evaluate the cost function statistics for the proposed adaptive codes, and demonstrate its effectiveness via two application examples: max-product image denoising and naïve Bayesian classification. Next, we consider another type of systems: iterative decoders with min operation and sign-bit decision, which are widely applied in wireless communication systems. We develop an adaptive coding scheme for the min-sum decoder subject to memory errors. A density evolution analysis and simulations on finite length codes both demonstrate that the decoder with our adaptive code achieves a residual error rate that is on the order of the square of the residual error rate achieved by the nominal min-sum decoder.
+Index Terms—Fault-tolerant computing, faulty memory, iterative decoders, error-correcting code, approximate computing.
+I. INTRODUCTION
+N ANOMETER CMOS technologies are susceptible to a variety of reliability issues. Popular approaches to enhancing hardware reliability, such as overdesigning and guardbanding, incur large power consumption and are inefficient for current digital systems. A promising alternative is to develop algorithm-based robust systems tolerant of hardware errors [1].
+Manuscript received March 19, 2015; revised July 3, 2015; accepted September 16, 2015. Date of publication September 24, 2015; date of current version December 15, 2015. This work was supported by NSF Grant CCF 1029030. The associate editor coordinating the review of this paper and approving it for publication was N. Goertz.
+C.-H. Huang and L. Dolecek are with the Department of Electrical Engineering, University of California, Los Angeles, Los Angeles, CA 90095 USA (e-mail: seanhuang0522@ucla.edu; dolecek@ee.ucla.edu).
+Y. Li is with Akamai Technologies, Inc., Santa Clara, CA 95054 USA (e-mail: yli@akamai.com).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2015.2481898
+
+Memory elements and flip-flops have been shown to be the first point of failure in digital circuits, and the memory failure rates are increasing due to the impact of high integration densities, lower operating voltages, etc. [2], [3]. Theoretical analysis for fault-tolerant memory system design was discussed in [4] and [5]. Error correction coding was introduced to mitigate the effects of memory cell errors by redundant bits stored in additional memory cells [6]–[8]. In [9], a memory protection scheme discarding several least significant bits (LSBs) before applying error-correcting codes was proposed. This scheme is able to protect memory errors without the requirement of additional memory cells. Stochastic computation [10] was used to develop systems resilient to hardware errors. Under the stochastic computation framework, unreliable memory cells/logic units are modeled as noisy communication channels or networks; deft use of concepts from communications theory can help guide the designs of inference algorithms with reliable performance under noisy hardware implementation. Recently, following the stochastic computation model, several important works have been devoted to iterative decoders for modern channel codes on graphs under noisy hardware [11]–[15]. Density evolution analysis for the belief propagation and min-sum decoders under different hardware error models was derived in [16]–[20].
+Approximate computing has attracted significant interest in recent years for its capability to trade computation accuracy for data processing throughput or energy efficiency [21]–[23]. This technology is motivated by a large and growing class of applications that are inherently error-tolerant. Such applications include algorithms in multimedia signal processing, statistical learning, and wireless communications [22]. Several previous efforts have achieved promising results by exploring approximate computing both in software and in hardware [24]. However, there is still a need for a systematic methodology that will enable designers to analytically evaluate the distortion (introduced by relaxing the accuracy requirement) and to develop analysis-guided approximate computing techniques.
+In this paper, based on the approximate computing concept and inspired by [9], we propose the Adaptive Coding for approximate Computing (ACOCO) framework. The ACOCO framework provides an analysis-guided design methodology to develop adaptive codes for different types of systems subject to memory errors. In Section II, we introduce the binary symmetric channel (BSC) memory error model based on the stochastic computation concept, and we lay out the ACOCO framework. The adaptive coding scheme first defines a (lossy) source code, and uses the memory cells saved via source coding to store the redundant bits produced by a channel code whose code rate is equal to the ratio of the length (in bits) of the source encoder
+
+0090-6778 © 2015 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4616
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+Fig. 1. A system diagram of the adaptive coding for approximate computing framework.
+
+output (see xse in Fig. 1) to the length (in bits) of the original input data (see xs in Fig. 1). Therefore, unlike the previous error-correcting codes which require additional memory cells (e.g., [6]–[8]), the adaptive codes developed under ACOCO are redundancy-free, i.e., no additional (redundant) memory cells are required: the coded data has the same bit-length as the original data. Although we introduce a little distortion in the source encoder, the channel code is able to correct possibly harmful memory errors (e.g., the errors in the sign bit or in the most significant bit (MSB)).
+We develop adaptive codes for two important types of information processing systems: (a) systems dominated by product operations, and (b) iterative decoders with min operations and sign-bit decision. The former has numerous applications in graph-based inference and machine learning systems, and the latter appears in many communication/signal processing systems, e.g., as min-sum LDPC decoders and its variants.
+In Section III, we consider the type of systems dominated by product operations, develop adaptive codes under ACOCO, analytically evaluate the cost function statistics, and demonstrate the advantages of the proposed code in applications including max-product image denoising and naïve Bayes classification. In Section IV, we first design a cost function based on the observations from a density evolution analysis of the minsum decoder, then propose an adaptive coding scheme based on the cost function, and perform a density evolution analysis to show the error rate reduction achieved by the proposed adaptive code. Simulation results demonstrate the effectiveness of the proposed adaptive code on the noisy min-sum decoder for finite length LDPC codes. Finally, we conclude this paper in Section V.
+II. SYSTEM MODEL
+A. Hardware Error Model
+In this paper, we use the bit-flipping model for faulty memories. The bit-flipping model is also considered in [9], [17], [20], [25]. Under this model and following von Neumann’s work [26], the memory cells are subject to transient errors, and the transient errors in different memory cells are assumed to be independent. Due to the transient errors, the actual value read from a memory cell could be different from the one written into the memory cell. To capture the aforementioned effects of transient errors, we use the noisy hardware model proposed in the stochastic computation framework [10]. Here we model the effect of errors in each memory cell as passing a binary input through a BSC with cross-over probability ρ. To be more specific, suppose a bit is stored in a memory cell. The value retrieved at read time differs from the original value with probability ρ, as illustrated in Fig. 2. Such memory errors
+
+Fig. 2. The bit-flipping memory error model.
+may be caused by voltage over-scaling, semiconductor-process variation, electromagnetic interference, etc., [3], [9], [27]1. We assume that the BSCs associated with different memory cells have the same cross-over (bit-flipping) probability ρ. The logic gates performing the computations (computation units) are assumed to be noise-free. The noise-free computation units fetch their input (input data or the previously computed data) from the memory which is subject to hardware errors.
+B. The Adaptive Coding for Approximate Computing Framework
+Approximate computing in hardware is based on designs of components whose output does not exactly match the prescribed values, due to the impact of either timing-induced errors or functional approximation. We can apply approximate computing techniques in certain applications (e.g., image processing) in which variations in hardware implementation and output quality degradation are tolerable to a certain degree with a careful system design [21], [22]. Inspired by approximate computing techniques, we propose the ACOCO framework. We first reduce the number of bits used to represent each input (to a computation unit) being stored in the memory cells, allowing some distortion in the input. Then, a (systematic) channel code is applied to protect the slightly distorted representation against possibly harmful errors (e.g., the errors in the sign bit or MSB) by storing redundant bits in memory cells that would otherwise be used to store less important bits of the uncoded quantity.
+The system block diagram for ACOCO is shown in Fig. 1. The source message, i.e., the original data or the previously computed data to be written into the memory cells, is denoted by xs. The source encoder generates source codeword xse, the compressed version of xs, which is fed into the channel encoder. The output xce of the channel encoder represents the binary representation stored in the memory cells. The output xch of the hardware error channel represents the binary representation read from memory cells. A channel decoder followed by a source decoder decodes xch, and the output xo is the input
+1For example, the SRAM bit error rate is 10−3 when the supply voltage is 0.6 V [9], and 5.2 × 10−3 under the radiation intensity of 2.8 × 10−4rad [27].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4617
+
+to the computation units performing operations on the data.
+
+Note that we choose the number of bits reduced during the
+
+source coding stage to be equal to the number of redundant bits
+
+introduced during the channel coding stage. Hence, jointly, our
+
+adaptive code is redundancy-free.
+
+We quickly note that the adaptive coding scheme devel-
+
+oped under ACOCO is a hardware mechanism to correct the
+
+errors in the bits retrieved from memories. This is a resource-
+
+efficient approach since the operations in our source encoder
+
+and decoder involve only discarding or randomly generating a
+
+few bits; the overhead induced by the source coding part is rela-
+
+tively small compared to the channel coding part. Additionally,
+
+channel coding has already been recognized as an effective
+
+memory-error-correction mechanism of tolerable overhead [3],
+
+[6]–[9], [28].
+
+Based on our independent BSC memory error model, we use
+
+linear block codes as our channel codes, since they are known to
+
+be good for correcting independent bit flips [6], [29], [30]. For
+
+the source coding stage, given the absence of a generally appli-
+
+cable assumption on the probability distribution of computation
+
+unit inputs, and given the short lengths of the binary repre-
+
+sentations of the inputs, lossless source coding schemes such
+
+as Huffman coding or Lempel-Ziv coding, whose efficiency
+
+hinges on knowledge of the input distribution and long block-
+
+lengths, are not suitable for compressing the inputs. Therefore,
+
+our source code is inevitably lossy. Here we propose a source
+
+code design methodology for minimizing the impact of the distortion introduced in the source encoder on the system output2.
+
+An ideal source encoder is able to minimize the suitably quanti-
+
+fied difference between the output of the system with noise-free
+
+memory and the system subject to memory errors but protected
+
+by the proposed adaptive codes. However, for most systems,
+
+especially those with iterative data processing, the input-output
+
+relationships are too complicated to allow for a tractable analy-
+
+sis to evaluate the effects of the distortion. Therefore, we design
+
+a cost function f (xs, xo) to (approximately) measure the effects
+
+of the distortion introduced in the source encoder on the sys-
+
+tem output, and then construct the source code based on this
+
+cost function. Different cost functions are used for systems with
+
+different operations on the data read from faulty memory to
+
+capture the severity of the distortion.
+
+For example, the quadratic loss function, f (xs, xo) = (xo − xs)2, is a cost function suitable for a system with addition
+
+operations. Under the addition operation, errors in the inputs
+
+additively contribute to the error in the output. Let ei (i =
+
+1, 2, . . . , n) be the additive error on the n inputs. The output
+
+quadratic loss eo2 = ( ity, is upper bounded by
+
+n i =1
+n
+
+ei )2,
+n i =1
+
+by ei2,
+
+Cauchy-Schwartz inequalwhich is proportional to the
+
+sum of the quadratic loss of the inputs. Therefore, we can bound
+
+(measure) the output quadratic loss of the addition operation by
+
+bounding (measuring) the quadratic loss of the inputs.
+
+We first consider a simple code design under the ACOCO
+
+framework. Assume that we use an (n, k) channel code, with k
+
+information bits and n coded bits. When we consider a simple
+
+2In addition, when the probability distribution of the computation unit inputs is available, we can incorporate appropriate source codes or memory-erroraware data representation as in e.g., [31] to further reduce the impact of the distortion introduced in the source encoder.
+
+Fig. 3. Block diagram for the system in Tables I and II.
+cost function, f (xs, xo) = (xo − xs)2, one candidate source coding scheme is to discard the n − k LSBs in the binary representation of xs. This source coding scheme is equivalent to quantizing xs by setting the n − k LSBs to zero and discarding them in its binary representation, thereby reducing the resolution from u (the original resolution) to u × 2n−k. Next, we encode the k MSBs by the (n, k) channel code. The additional n − k bits generated by the channel code are stored in the memory cells originally storing the n − k LSBs. We choose to protect the MSBs because errors occurring in those bits result in a larger distortion than errors in other bits, as evaluated by the cost function f (xs, xo) = (xo − xs)2. This simple coding scheme is the same as the one proposed in [9]. We refer to this simple coding scheme as the quantization code.
+In the following sections, we consider two important types of information processing systems that require more sophisticated adaptive coding schemes: (a) systems dominated by product operations, and (b) iterative decoders with min operation and sign-bit decision. We provide effective design approaches for choosing appropriate cost functions and developing adaptive codes for these systems. Then, we mathematically analyze and compare the performance of the systems implementing proposed adaptive codes with the systems implementing simple quantization code and the nominal systems (without any codes), and demonstrate the advantage of the proposed analysis-guided code design.
+
+III. ADAPTIVE CODES FOR PRODUCT OPERATIONS
+
+We first demonstrate by an exemplary system that for
+
+systems dominated by product operations, the normalized
+
+quadratic loss function,
+
+f (xs, xo)
+
+=
+
+(xo−xs xs2
+
+)2
+
+,
+
+is
+
+better
+
+suited
+
+to
+
+measure the effects of the introduced distortion on the system
+
+output than the quadratic loss function, f (xs, xo) = (xo − xs)2.
+
+The normalized quadratic loss function belongs to the fam-
+
+ily of functions evaluating relative errors and these functions
+
+are widely applied in quantifying errors in circuits [32], [33].
+
+Following this example, we then design a general adaptive
+
+coding scheme based on the normalized quadratic loss function.
+
+In the exemplary system (Fig. 3), the system output is
+
+obtained by comparing the outputs of two multipliers, and
+
+picking the larger one. Two input sets (and the corresponding
+
+system outputs) for the two multipliers are shown in Table I
+
+and Table II. As illustrated in Fig. 1, xo is the deteriorated version of xs. We compare the cost functions and system outputs
+
+corresponding to xs (as input) and xo (as input) for the two input sets. A good cost function f (xs, xo) should be able to capture
+
+the effect of replacing the input xs with xo on the system output.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4618
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+TABLE I INPUT SET (I) AND ITS CORRESPONDING OUTPUT
+TABLE II INPUT SET (II) AND ITS CORRESPONDING OUTPUT
+
+code design and the analysis can be easily extended to the general case by considering the sign bit as the MSB. The data, when stored in the memory cells, is in the form of (unsigned) binary representation. The binary representation of a number is determined by the quantization resolution and the number of bits B used to represent the number. For example, when B = 4 and when the quantization resolution is 1 (i.e., the LSB stands for 1), the binary representation of 12 is 1100. We will use a1a2 . . . aB to denote the binary representation of a number x in the following sections.
+
+A. Code Design
+
+Ideally, we would design our code by minimizing the cost
+
+function. However, this would lead to a hard-to-solve combina-
+
+torial optimization problem. Instead, here we propose a simple
+
+code design approach that uses the properties of the normalized
+
+quadratic loss function. While simple to derive and imple-
+
+ment, the adaptive codes developed under this approach still
+
+In this example, for both input sets (i) and (ii), we increase yield small cost function values (statistics), as we will show in
+
+the input B by 1 and decrease the input D by 1. However, under Section III-B. Since the original input data xs is in the denomi-
+
+the multiplication operation, for input set (i), the output y1 is nator of the normalized quadratic loss function, the quantization
+
+doubled, y2 is halved, and the system output becomes y1, while code (which non-adaptively discards the LSBs) results in a
+
+for input set (ii), the output y1 increases only by 14% and out- small normalized quadratic loss when the magnitude of xs is
+
+put y2 decreases only by 12%, and the system output is still large, but results in a large normalized quadratic loss when the
+
+y2. From this example, for a distortion e in an input φ, we
+
+observe
+
+that
+
+when
+
+|φ−e| φ
+
+≥
+
+1,
+
+we
+
+have
+
+a
+
+|φ−e| φ
+
+times
+
+larger
+
+out-
+
+magnitude of xs is small. This observation inspires us to propose the following adaptive coding scheme. With xs of large
+
+put (in magnitude), compared to the original output, and when magnitude, we discard the LSBs (allowing small distortion) and
+
+|φ−e| φ
+
+≤
+
+1, we have a
+
+|φ−e| φ
+
+times smaller output (in magnitude),
+
+protect the MSBs by a channel code (to avoid large distortion).
+
+compared
+
+to
+
+the
+
+original
+
+output.
+
+This
+
+ratio,
+
+|φ−e| φ
+
+≤
+
+1,
+
+is
+
+small
+
+when φ is large and e is small, and this ratio is large when φ is
+
+The additional bits introduced by the channel code are stored in the memory cells originally storing the LSBs. With xs of small
+
+small, even when e is small. Hence, a small distortion in a term magnitude, since even a small distortion (in the absolute value
+
+with large magnitude has a relatively small effect on the system sense) is undesirable, we keep the LSBs. We additionally use a
+
+output, but a small distortion in a term with small magnitude single bit to indicate that the magnitude of xs is small, identi-
+
+can have a large effect on the output.
+
+fied by the fact that a given number of MSBs are all zero. This
+
+The cost function for systems dominated by product oper- bit is stored in the memory cell originally storing the first MSB
+
+ations should capture this important feature. Normalized (which is 0), and the remaining cells storing the zero MSBs are
+
+quadratic
+
+loss
+
+function,
+
+e2 φ2
+
+,
+
+is
+
+one
+
+of
+
+the
+
+simple
+
+functions
+
+with
+
+this
+
+property3:
+
+e2 φ2
+
+is
+
+small
+
+for
+
+large
+
+φ
+
+and
+
+small
+
+e,
+
+and
+
+used to store the additional bits generated by the channel code. Assume that we use an (n, k) systematic linear code as the
+channel code. Following the above design guideline, we pro-
+
+e2 φ2
+
+is
+
+large
+
+for
+
+small
+
+φ
+
+and
+
+large
+
+e.
+
+On
+
+the
+
+other
+
+hand,
+
+for
+
+the quadratic loss function, e2, the function value is entirely
+
+determined by e, hence it is unable to accurately capture the
+
+effect of the distortion. For example, in the system in Fig. 3,
+
+we first observe that the effects of distortions applied to the
+
+input sets (i) and (ii) are on the same order when evaluated
+
+by the quadratic loss function. On the other hand, the normal-
+
+ized quadratic loss function evaluates the distortion in the input
+
+set (ii) as significantly smaller than the distortion in the input
+
+set (i), thus correctly capturing different severity levels of the
+
+distortions in the two cases.
+
+In this section, we design an adaptive coding scheme with
+
+much smaller cost function statistics than the quantization
+
+code mentioned in the previous section, when we use normal-
+
+ized quadratic loss function as the cost function. We consider
+
+unsigned numbers to simplify the presentation; the adaptive
+
+pose two adaptive codes with different channel code parameters
+n and k in the following.
+Adaptive code I: When 2k − n − 2 ≥ 0, we use the fol-
+lowing source code. Denote the binary representation of xs, the input to the source encoder, as b1b2 . . . bB (recall that B is the length of the binary representation), and the binary
+representation of xse, the output of source code encoder, as c1c2 . . . cB−n+k. When at least one of the k − 1 MSBs is 1, we say that the xs is “large”, otherwise xs is “small”. We then use the MSB in xse, c1, to indicate whether this xs is large (set c1 to 1 when xs is large), and the remaining B − n + k − 1 bits in xse are equal to the B − n + k − 1 MSBs in the binary representation of xs. The n − k + 1 LSBs in the binary representation of xs are discarded.
+When all the k − 1 MSBs are zero (i.e., xs is small), we set the MSB in xse, c1, to zero, set the B − k + 1 bits in the left of the MSB in xse to be the B − k + 1 LSBs in binary representa-
+
+3
+
+Some
+
+other functions, Authorized
+
+leic.ge.nsφee44d
+
+ourse|φel|im, aitlesdo
+
+share this to: Yonsei
+
+property. Univ. Downloaded
+
+on
+
+tion of xs, and the remaining bits in Junew24e,2d0o26naot t16d:i1s3c:2a8rdUTaCnyfroomfItEhEeEnXp−lorke.
+
+xse are set to be +Re1strLicStioBnss awpphley.n
+
+0. Note that xs is small.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4619
+
+Fig. 4. Adaptive code I. Channel code protects the part of xse in the dashed box.
+
+We summarize this source code as follows (depicted in
+
+Fig. 4).
+
+Case 1: If
+
+k−1 i =1
+
+bi
+
+>
+
+0,
+
+then
+
+c1
+
+=
+
+1
+
+and
+
+ci +1
+
+=
+
+bi
+
+for
+
+1
+
+≤
+
+i ≤ B − n + k − 1.
+
+Case 2: If
+
+k−1 i =1
+
+bi
+
+=
+
+0,
+
+then
+
+c1 = 0,
+
+ci+1 = bk−1+i
+
+for
+
+1 ≤ i ≤ B − k + 1, and ci = 0 for i ≥ B − k + 2.
+
+An (n, k) channel code protects the first k bits (denoted by
+
+the dashed box in Fig. 4) in xse. Adaptive code II: When 2k − n − 2 < 0, the number of
+
+available bits in xse may not be enough to represent all the non-
+
+zero bits in the binary representation of xs (see Fig. 4 case 2).
+
+Hence we design the following new source code for this case.
+
+Here we follow the notation in the previous paragraph describ-
+
+ing Adaptive code I. When at least one of the k − 1 MSBs is 1,
+
+we use the same code as Adaptive code I. When all the k − 1
+
+MSBs are zeros, we have the following two cases. When all bi , 1 ≤ i ≤ B − k + 2, are zero, we set c1 = 0 and c2 = 0. The third to the kth bits in xse are equal to the k − 2 LSBs in the binary representation of xs. The remaining B − n bits in xse are set to be 0. When at least one of bi , k ≤ i ≤ B − k + 2, is non-zero, we set c1 = 0, c2 = 1, and ci+2 = bk−1+i for 1 ≤ i ≤ B − n + k − 2. The n − 2k + 3 LSBs in xs are dis-
+carded. We summarize this source code as follows (depicted in
+
+Fig. 5).
+
+Case 1: If
+
+k−1 i =1
+
+bi
+
+>
+
+0,
+
+then
+
+c1
+
+=
+
+1
+
+and
+
+ci +1
+
+=
+
+bi
+
+for
+
+1
+
+≤
+
+i ≤ B − n + k − 1.
+
+Case 2: If
+
+B−k+2 i =1
+
+bi
+
+=
+
+0,
+
+then
+
+c1 = 0,
+
+c2 = 0,
+
+and
+
+ci+1 = bB−k+1+i for 2 ≤ i ≤ k − 1, ci = bi for
+
+k ≤ i ≤ B − n + k − 1.
+
+Case 3: If
+
+k−1 i =1
+
+bi
+
+=
+
+0
+
+and
+
+B−k+2 i =k
+
+bi
+
+>
+
+0,
+
+then
+
+c1
+
+=
+
+0,
+
+c2 = 1, and ci+2 = bk−1+i for 1 ≤ i ≤ B − n +
+
+k − 2.
+
+An (n, k) channel code protects the first k bits (denoted by
+
+the dashed box in Fig. 5) in xse. The source decoder recovers the binary representation of xs
+
+by reversing the above encoding rules. The source decoder fur-
+
+ther replaces the bits discarded during encoding with values
+
+randomly selected from 0 and 1.
+
+B. Analysis of Cost Function Statistics and Numerical Examples
+
+Fig. 5. Adaptive code II. Channel code protects the part of xse in the dashed box.
+
+statistics of the quantization code with the proposed adaptive
+codes. Through this analysis, we demonstrate that the adaptive
+codes designed according to the characteristics of the normal-
+ized quadratic loss function indeed achieves a smaller cost
+function statistics than the quantization code. Let xs, xo ∈ X, and |X | = 2B since we use B bits to repre-
+sent xs (and xo). We use | · | to denote the set size. We then have the expression for the (general) statistics of the cost function S[ f (xs, xo)], as follows,
+
+S[ f (xs, xo)]
+
+=
+
+g( f (xs , xo))P(xo|xcd )P(xcho|xce)P(xs ),
+
+xs∈X u xo∈X
+
+(1)
+
+where u = xce ⊕ xcho, ⊕ denotes the XOR operation, and g
+
+is determined by the statistics we want to derive. We have (1)
+
+because xcd is a deterministic function of xcho and xce is also a deterministic function of xs.
+
+To simplify the analysis, we assume that xs is uniformly dis-
+
+tributed4 on X, i.e., we randomly draw an element in X as our
+
+source
+
+xs .
+
+We
+
+then
+
+have
+
+P (xs )
+
+=
+
+1 |X|
+
+for
+
+all
+
+xs
+
+∈
+
+X.
+
+We
+
+further
+
+assume that we choose the channel code capable of correcting
+
+one bit-flipping error (e.g., (7, 4) Hamming code).
+
+Since we have different encoding rules for different elements
+
+in X, we divide X into M subsets, i ’s, 1 ≤ i ≤ M, for group-
+
+ing xs’s corresponding to different cases in the previous section. Note that M = 2 for Adaptive code I and M = 3 for Adaptive
+
+code II. Let xcd ∈ Xcd , and let j ’s, 1 ≤ j ≤ |Xcd |, be subsets of X. We map every xcd to an index, denoted by I (xcd ).
+
+We define I (xcd) to be the set of elements (in X ) that xcd maps to (by the source decoder). Since the source decoder is a
+
+one-to-many random mapping and every xo ∈ X corresponds to
+
+exactly one xcd , we have ∪|jX=c1d | j = X and j1 ∩ j2 = ∅ for
+
+1 ≤ j1, j2 ≤ |Xcd |. Since the source decoder randomly decides
+
+each
+
+discarded
+
+bit
+
+as
+
+0
+
+or
+
+1,
+
+we
+
+have
+
+P(xo|xcd) = |
+
+1 I (xcd )|
+
+when xo ∈ I (xcd ).
+
+In this section, we analyze (the linear approximation of) the 4Note that when xs is not uniformly distributed, P(xs ) in (1) is specified by
+
+statistics of the cost functions and compare the cost function
+
+xs ’s
+
+distribution
+
+instead
+
+of
+
+1 |X
+
+|
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4620
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+We say that a binary string u of length B belongs to the set
+
+U1 if among the first k entries in u, there is exactly one entry with the value 1, and the remaining entries in u are 0. Likewise,
+
+we say that a binary string u of length B belongs to the set U2 if among the last B − k entries in u, there is exactly one entry
+
+with the value 1, and the remaining entries in u are 0. Denote
+
+the all-zero string of length B by u0.
+
+Based on the sets defined above, we derive the probability
+
+mass functions in (1) for Adaptive codes I and II as follows. To
+
+simplify the analysis, we assume that the bit-flipping probabil-
+
+ity ρ in the hardware error channel is small enough to ignore
+
+the quadratic and higher order terms of ρ in our analysis. Since
+
+the sets for xs’s and xo’s are different for Adaptive codes I and
+II, we use 1,i (i = 1, 2) and 1,I (xcd) for Adaptive code I, and 2,i (i = 1, 2, 3) and 2,I (xcd ) for Adaptive code II. For Adaptive code I, we have two sets for xs, 1,1 and
+1,2, for Case 1 and Case 2 given in the previous section,
+
+respectively. Since the elements in 1,1 have at least one 1
+
+in the first k − 1 bits in their binary representations, 1,1 has
+
+2B − 2B−k+1 elements, and 1,2 has 2B−k+1 elements.
+
+For xs ∈ 1,1, the 2n−k+1, and, for xs ∈
+
+corresponding 1,1,
+
+xcd
+
+has
+
+|
+
+1,I (xcd )| =
+
+1
+
+P(xo|xcd) =
+
+2n−k+1
+0
+
+if xo ∈ 1,I (xcd ), otherwise.
+
+(2)
+
+On the other hand, when xs ∈ 1,2, the corresponding xcd has | 1,I (xcd )| = 1, and
+
+P(xo|xcd) =
+
+1 0
+
+if xo ∈ 1,I (xcd ), otherwise.
+
+(3)
+
+Recall that the BSCs are independent across different bits in
+
+xce. We then have ⎧ ⎪⎨1 − Bρ if xcho ⊕ xce = u0,
+
+P(xcho|xce) ≈1 ⎪⎩ρ0
+
+if xcho ⊕ xce ∈ U1 ∪ U2, (4) otherwise.
+
+TABLE III ADAPTIVE CODE I, (n, k) = (15, 11). THE SMALLEST VARIANCE AND
+MAX AMONG NC, QC, AND AD ARE MARKED IN RED
+TABLE VI ADAPTIVE CODE II, (n, k) = (7, 4). THE SMALLEST VARIANCE AND MAX
+AMONG NC, QC, AND AD ARE MARKED IN RED
+Adaptive code I, and we use (15, 11) Hamming code; for (n, k) = (7, 4), we choose Adaptive code II, and we use (7, 4) Hamming code. For both cases, we assume that the quantization resolution is 1 (i.e., the LSB stands for 1), and that the bit-flipping probability is ρ = 10−3. We compare the variance and the maximum of the cost function in Tables III and IV. In applications where approximate computing is used, a small output deviation is usually acceptable while a large one is not. Therefore, the variance and the maximum of the cost function are more interesting statistics than the mean. We can observe that NC has large variances and large maxima. AD has much smaller variances and much smaller maxima than both NC and QC.
+These two numerical examples support the statement we made in the previous section: AD works better than QC and NC when we use the normalized quadratic loss function as the cost function in the current set-up. Therefore, we expect that the proposed adaptive codes perform better than the quantization code. In the following sections, we demonstrate the improvement brought about by the proposed adaptive coding scheme in two application examples: image denoising by max-product algorithm and naïve Bayes classification.
+
+We use ≈1 to denote the linear approximation5 (discarding the second and higher order terms) in (4). Note that our channel code is capable of correcting one bit error, hence xse = xcd when xcho ⊕ xce ∈ U1. By plugging (2), (3), and (4) into (1), we then have the statistics of any given cost function f (xs, xo) under Adaptive code I. Following similar procedures, we can derive the statistics of any given cost function f (xs, xo) under Adaptive code II.
+We now compute and compare the statistics of the cost
+function (normalized quadratic loss function) with the pro-
+posed adaptive codes (AD), the quantization code mentioned
+in Section II-B (QC), and without any error-correcting code
+(the nominal case, refer to as NC), for some examples. Recall that depending on whether 2k − n − 2 ≥ 0 or 2k − n − 2 < 0 holds (see Section III-A), we choose either Adaptive code I or Adaptive code II. Therefore, for (n, k) = (15, 11), we choose
+
+5For xcho ⊕ xce = u0 case, P(xcho|xce) = 1 −
+
+B i =1
+
+(
+
+B i
+
+)ρi
+
+(1
+
+−
+
+ρ ) B −i
+
+.
+
+We get (4) by discarding quadratic and higher order terms of ρ.
+
+C. Application Example I: Max-Product Algorithm for Image Denoising
+In this section, we apply the proposed adaptive coding scheme to image denoising by the max-product (MP) algorithm implemented on noisy hardware (with faulty memories), and compare to the cases with quantized coding and with no errorcorrecting code. We quickly summarize the MP algorithm as follows.
+The MP algorithm can be used to compute the approximate or exact maximum a posteriori (MAP) solution to inference problems on factor graphs associated with the random variables of interest, Z1, Z2, . . . , Z N . The random variables take values in a discrete space Z = {1, 2, . . . , d}. A factor graph is a bipartite graph with vertex set V ∪ F, where F is the set of factors and V is the set of variable nodes. We denote a factor by its associated set I, where I is the set of indices of the variable nodes connected to this factor, and we denote a variable node by its index i, i ∈ {1, 2, . . . , N }. Each variable node i ∈ V is connected with the factors I ∈ F iff i ∈ I, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4621
+
+Fig. 6. Image denoising via MP: (a) original image, (b) contaminated image, (c) recovered image by noise-free MP, (d) recovered image by noisy MP without ECC, (e) recovered image by noisy MP with QC, (f) recovered image by noisy MP with AD.
+
+the variable node i is associated with the random variable Zi . We denote the neighbors of variable node i by Ni , thus we have Ni = {I : i ∈ I }.
+The computation of the MAP solution is conducted by itera-
+tive message passing on the factor graph: each node updates its
+messages according to the messages received from its neigh-
+bors, and sends its updated messages back to its neighbors. MP
+message update rule is
+
+m (I
+
+) →i
+
+(zi ) ∝ max ψI (zI )
+
+z I \i ∈Z|I |−1
+
+i∈I \i
+
+m(J →−1i)(zi ),
+J ∈Ni \I
+
+(5)
+
+where ψI (zI ) is the potential function associated with the factor I, and denotes the current iteration. When we termi-
+
+nate the iterative message passing process at iteration L, the
+
+beliefs of the random variable Zi is computed as bi(L)(zi ) =
+
+Ci
+
+I ∈Ni
+
+m
+
+(L) I →i
+
+(zi
+
+),
+
+where
+
+Ci
+
+is
+
+a
+
+normalizing
+
+constant
+
+cho-
+
+sen such that xi ∈Z bi (zi ) = 1. The random variable with
+
+maximum belief is selected as the MAP solution to the infer-
+
+ence problem.
+
+MP is successfully applied in image denoising [34], where
+
+we seek to recover the original image from the noise-
+
+contaminated image. We briefly explain a simple MP-based
+
+image denoising algorithm as follows. Consider a 2-D image.
+
+We assign a unique number to every color on the image. The
+
+value of each pixel on the image is then the number corre-
+
+sponding to the pixel color. In the 2-D image, the observation
+
+of each color (pixel value) is contaminated by additive noise.
+
+Assume that the noises added to different pixels are indepen-
+
+dent. To recover the image from the pixel value observations
+
+contaminated by noise, we construct a 2-D grid factor graph
+
+with an appropriate choice of potential functions (e.g., Potts
+
+model [35]). We associate each pixel in the image to a variable
+
+node on the factor graph. The probabilities of all the possi-
+
+ble colors of the associated pixel are presented by the message
+
+vector. We run the MP algorithm on the factor graph to obtain
+
+the most likely value of every pixel based on the contaminated
+
+observations.
+
+In this example, we associate the 2-D grid factor graph for
+
+the “penguin” image (with size 179 × 122 and 256 gray-scale
+
+levels) to a Potts model [35] with coefficient ξ = 0.05. In a
+
+Potts model, the potential function ψI of a factor connecting
+
+two variable nodes is 1 for the two variables with the same value, and ξ for the two variables with different values. We assign the integers 0 to 255 to the 256 grayscale levels. Every observation of the pixel value in the image is contaminated with an independent Gaussian random variable with zero-mean and standard deviation 30. The original image and the contaminated image are shown in Fig. 6a and Fig. 6b. The MP messages are stored in the faulty memories with bit-flipping rate 2.5 × 10−3, as described in Section II. We consider the following cases: memory without error-correcting code (NC), with quantization code (QC), and with the proposed adaptive code (AD). We use B = 9 bits for each message, and therefore we choose (7, 4) Hamming code as our channel code. We run MP for 10 iterations to recover the original image from the contaminated one. Images recovered by noise-free MP, NC, QC and AD are shown in Fig.s 6c, 6d, 6e, and 6f, respectively.
+Comparing Figs. 6e, 6d, and 6f, we observe that for QC and NC, a large portion of the pixels are determined incorrectly and the recovered image is very different from the image recovered using noise-free MP (Fig. 6c). On the other hand, for AD, the recovered image closely resembles the image recovered by noise-free MP. We also compute the PSNR (peak signal-to-noise ratio) for each image. The PSNR for NC is 30.72 dB, PSNR for QC is 30.06 dB, and the PSNR for AD is 32.85 dB. Note that since we want to focus on the effect of memory errors, the reference image for computing the PSNR is the image recovered by noise-free MP instead of the original image. Both the PSNR value and the resulting image demonstrate that the quality of the images recovered by QC and NC is worse than the quality of image recovered by AD. This observation agrees with the theoretical analysis: without applying an error-correcting code, memory errors degrade the algorithm performance. Although the error-correcting code can correct memory errors, the effect of distortion introduced in QC is large in product operations and the quality of the recovered image is still significantly deteriorated, manifested in a higher PSNR. Our adaptive code is capable of correcting harmful memory errors while keeping the effect of the distortion introduced by the source encoder minimal. The recovered image is therefore almost indistinguishable relative to the one recovered by noise-free MP (Figs. 6c and 6f).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4622
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+D. Application Example II: Naïve Bayes Classification
+
+In this section, we consider the naïve Bayes classification
+
+system, which is widely used in statistical learning systems,
+
+apply the proposed adaptive code to this system, and evaluate
+
+its performance.
+
+A classifier is a function that maps input feature vectors
+
+θ ∈ to output class labels φ ∈ {1, 2, . . . , M}, where is the
+
+feature space. Bayesian classifiers assign the most likely class
+
+label φ to a given sample described by its feature vector θ based
+
+on P(θ |φ). The learning step of such classifiers can be greatly
+
+simplified by assuming that the features are independent given
+
+the class label, i.e., P(θ |φ) =
+
+n i =1
+
+P(θi |φ),
+
+where
+
+θi
+
+is
+
+the
+
+i th
+
+entry of φ. The resulting classifier known as naïve Bayes clas-
+
+sifier has been proven effective in many practical applications,
+
+including text classification, medical diagnosis, and systems
+
+performance management [36].
+
+Here we consider the Gaussian naïve Bayes classifier (GBC).
+
+In GBC, we assume that the distribution P(θ |φ) is Gaussian.
+
+Learning of GBC is done by computing the mean and variance
+
+of each feature for each class from the training data. The like-
+
+lihood of a sample with the feature vector θ belonging to class
+
+label φ is
+
+n
+
+n
+
+P(θ |φ) = P(θi |φ) =
+
+i =1
+
+i =1
+
+1 exp
+2π σi2,φ
+
+− (θi
+
+− μi,φ )2 2σi2,φ
+
+,
+
+(6)
+
+where μi,φ and σi,φ are the mean and the variance of the Gaussian distribution for the feature θi conditioned on the class label φ, respectively.
+In this application example, we apply the GBC implemented on noisy hardware with faulty memories to classify the data (sample) generated from (6). For every experiment, we generate 150 samples. Each sample has four features, and there are three classes in the 150 samples.
+We randomly select half of the samples as training samples, and the other half as testing samples. We compare the average classification error rates (over 1000 experiments) of the GBC without error-correcting code (NC), the GBC with the quantization code (QC), the GBC with the proposed adaptive code (AD), and the noise-free GBC. We use B = 7 bits for each message, and therefore we choose (7, 4) Hamming code as our channel code. The GBC reads the likelihoods of each feature for each class from the faulty memory cells, decodes and multiplies them to derive the aggregate likelihood. We decide which class the sample belongs to by comparing the aggregate likelihood of each class.
+In Fig. 7, we observe that the increase in bit-flipping rate ρ has very little effect on the classification error rates under QC and AD, while the classification error rate under NC increases a lot as ρ increases. This is due to the ability of the Hamming code to correct most of the harmful memory errors. We also find that the classification error rate under QC is much larger than under AD due to (non-adaptively) discarding the LSBs. AD is very close to the noise-free case (less than 0.5% difference) in the entire ρ region we considered, due to the better choice of cost function and code design.
+
+Fig. 7. Gaussian naïve Bayes classifiers comparison.
+Both application examples demonstrate that by applying the proposed adaptive code developed under ACOCO, we successfully correct most of the harmful memory errors while keeping the effects of the distortion introduced in the source encoder small.
+IV. ADAPTIVE CODES FOR MIN-SUM LDPC DECODERS
+In this section, we consider another type of systems: iterative decoders with min operations and sign-bit decision. We consider the min-sum decoder, which is widely applied in communication/storage systems, and develop an adaptive coding scheme for the min-sum decoder subject to memory errors.6
+Recently, noisy decoders subject to memory errors attracted much attention. Important topics including density evolution, equivalent noise modeling, and unequal error protection were studied in [4], [17], [38]. In this section, under the ACOCO framework, we develop adaptive codes tailored for the noisy min-sum decoder for low-density parity check (LDPC) codes subject to memory errors. Unlike the previously proposed error protection methods, the proposed adaptive codes based on ACOCO do not require any additional memory cells while offering the same error protection capability. We start with a brief review of LDPC codes and the noise-free min-sum decoder, and then develop the adaptive codes for the noisy min-sum decoder.
+A. LDPC Codes and Noise-Free Min-Sum Decoder
+We briefly review the LDPC codes, the min-sum decoding algorithm and the density evolution analysis of the noise-free min-sum decoder.
+1) LDPC Codes: An LDPC code is a linear code that can be conveniently represented by a sparse bipartite graph. The bipartite graph is composed of variable nodes, check nodes, and edges each connecting a variable node to a check node. In a (dv, dc)-regular LDPC code, each variable is connected to dv check nodes, and each check node is connected to dc variable nodes. The low edge density in the bipartite graph
+6Since some of min-sum decoder’s variants have similar message distribution characteristics [37], our adaptive coding scheme can also be applied to these decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4623
+
+representation of an LDPC code allows for low-complexity
+
+local message-passing decoding algorithms that are known to
+
+approach the performance of high-complexity MAP (maximum
+
+a posteriori) decoding algorithms.
+
+2) Noise-Free Finite Precision Min-Sum Decoder: On the
+bipartite graph associated with an LDPC code, let Nv and Nc
+denote the nodes connected to the variable node v and to the
+check node c, respectively. Let yv be the decoder input at the variable node v, and xv ∈ {+1, −1} be the transmitted bit corresponding to the variable node v. Denote the noise-free messages sent in the th iteration by m˜ ( ). More specifically, m˜ v(,c) denotes the message sent from variable node v to its incident check node c, while m˜ (c,v) denotes the message passed from check node c to its incident variable node v. For completeness, let us quickly
+
+summarize the main steps of the noise-free min-sum decoder.
+
+• (Initialization) At iteration = 0, each variable node v
+
+sends
+
+the
+
+message
+
+m˜ v(0,c)
+
+=
+
+ln
+
+P ( yv |xv =1) P ( yv |xv =−1)
+
+to
+
+each
+
+check
+
+node c, c ∈ Nv.
+
+• (Check node) At each iteration , ≥ 0, each check node
+
+c
+
+sends
+
+a
+
+message
+
+m˜
+
+() c,v
+
+to
+
+each
+
+variable
+
+node
+
+v,
+
+v
+
+∈
+
+Nc
+
+:
+
+⎛
+
+⎞
+
+m˜
+
+() c,v
+
+=
+
+⎝
+v
+
+∈Nc\{v}
+
+sign(m˜ v(
+
+) ,c
+
+)
+
+v
+
+min
+∈Nc\{v}
+
+|m˜ v(
+
+) ,c
+
+|⎠
+
+.
+
+• (Variable node) At each iteration , ≥ 1, each variable node v sends a message m˜ (v,c) to each check node c, c ∈ Nv :
+
+m˜
+
+() v,c
+
+=
+
+m˜
+
+(0) v,c
+
++
+
+m˜ c(
+
+−1) ,v
+
+.
+
+c ∈Nv\{c}
+
+Note that for min-sum decoders, a message is the proxy of the log-likelihood ratio (or belief) of the transmitted bit corresponding to a variable node v.
+Here we consider finite precision decoders, broadly deployed in practice. In such decoders, the messages are quantized and stored in the memory cells using a (binary) sign-magnitude representation. The sign-magnitude representation of each message is determined by the quantization resolution and the number of bits B used to represent the message. For example, when B = 5 and the quantization resolution is 1 (the LSB stands for 1), the sign-magnitude representation of 12 is 01100, where the first bit, 0, stands for the positive sign, and the remaining bits represent the magnitude. The value of B is typically between 4 and 7 in practical LDPC decoders [39].
+
+B. Noisy Min-Sum Decoder and Density Evolution
+1) Noisy Decoder Model: We use the bit-flipping model introduced in Section II-A for the faulty memories storing the messages. This faulty memory model was also considered for the noisy decoders studied in [17] and [40].
+In our noisy min-sum decoder, variable node memory cells, which store the variable-to-check messages and the sum (posterior log likelihood-ratio) messages, are subject to errors. As shown in [12] and [40], errors at the check nodes do not have much impact on the residual error rates of the LDPC decoders.
+
+We therefore assume noise-free check node memory cells to simplify the analysis. In Section IV-C, we propose an adaptive coding scheme under ACOCO to correct harmful variable node memory errors and improve the noisy decoder performance.
+2) Density Evolution Analysis: Density evolution of the noisy finite precision min-sum decoder with the above hardware error model was derived in [17] under Gaussian communication channel with noise variance σ . The major difference between the noise-free and the noisy min-sum decoder density evolution analysis is the “distribution perturbation” due to the BSCs modeling memory cell errors. Denote the quantized variableto-check messages at iteration before the memory errors are applied by mˆ v(,c). With the faulty memory cells, the variableto-check messages retrieved from the memory cells, denoted by mv(,c) might be different from mˆ (v,c). Based on the analysis in [17], we express the “distribution perturbation” as a linear transformation
+
+p( ) = A(ρ) pˆ( ),
+
+(7)
+
+where p( ) is a length-2B − 1 vector representing the probabil-
+
+ity
+
+mass
+
+function
+
+(PMF)
+
+of
+
+m
+
+() v,c
+
+,
+
+pˆ (
+
+)
+
+is
+
+a
+
+length-2B
+
+−
+
+1
+
+vector
+
+representing
+
+the
+
+PMF
+
+of
+
+mˆ
+
+() v,c
+
+,
+
+and
+
+A(ρ)
+
+is
+
+a
+
+2B
+
+−
+
+1
+
+×
+
+2B
+
+−
+
+1
+
+matrix. Recall that as defined in Sec. IV-A2, B is the number
+
+of bits in the sign-magnitude representation of each message.
+
+Detailed derivation of pˆ( ) can be found in [17]. The matrix
+
+A(ρ) is derived as follows. Let {αi }i2=B1−1 be the set of possi-
+
+ble
+
+values
+
+of
+
+messages
+
+mˆ (v,c)
+
+and
+
+m
+
+() v,c
+
+.
+
+Let
+
+the
+
+i th
+
+entry
+
+in
+
+p(
+
+)
+
+denote the probability of the event mv(,c) = αi , 1 ≤ i ≤ 2B − 1. Likewise, let the ith entry in pˆ( ) denote the probability of the
+
+event
+
+mˆ
+
+() v,c
+
+=
+
+αi .
+
+The
+
+(i,
+
+j)
+
+entry
+
+in
+
+A(ρ),
+
+Ai,
+
+j
+
+(ρ),
+
+denotes
+
+the
+
+conditional
+
+probability
+
+of
+
+the
+
+event
+
+m
+
+() v,c
+
+=
+
+αi
+
+given
+
+mˆ
+
+() v,c
+
+=
+
+αj,
+
+is calculated as
+
+Ai, j (ρ) = P(m(v,c) = αi |mˆ v(,c) = α j ) = (1 − ρ)B−di, j ρdi, j , (8)
+
+where di, j is the Hamming distance between the sign-
+magnitude representation of αi and α j . The residual error rate pr( ) at iteration is then derived as
+
+pr( ) =
+
+pi(
+
+)+
+
+pζ( ) , 2
+
+(9)
+
+αi <0
+
+where pi( ) is the ith entry in p( ), and ζ is the index of the entry in p( ) representing the probability of the message being
+zero, i.e. αζ = 0. When the message is equal to zero, we pick uniformly at random either +1 or −1 as the transmitted signal.
+
+C. Adaptive Codes for the Noisy Min-Sum Decoder
+We begin with some key observations from the message update rules and the density evolution analysis for the noisy min-sum decoder. Then, we design an adaptive coding scheme for the variable node memories and develop a density evolution analysis for the noisy min-sum decoder using the proposed codes.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4624
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+1) Code Design: From the density evolution analysis in
+
+[17], we observe that, when the communication channel noise
+
+and hardware error rate are sufficiently small and when is suf-
+ficiently large, pˆi( ) with i = arg maxk αk (recall that αi is the value of mv(,c) corresponding to the i th entry in p( )) is very close to one, and pi( ) with i = arg mink αk is very close to ρ. That is, when the communication channel noise and hardware
+
+error rate are sufficiently small and when is sufficiently large,
+
+the
+
+PMF
+
+of
+
+mˆ
+
+() v,c
+
+concentrates
+
+at
+
+the
+
+largest
+
+positive
+
+number
+
+(as
+
+with the noise-free min-sum decoder), and most of the residual
+
+errors come from the bit flips in the memory cells storing sign
+
+bits (converting the largest representable positive value, i.e. the
+
+correct value, to the largest representable negative value, i.e. the
+
+incorrect value). Bit flips in the other direction, namely, con-
+
+verting the largest representable negative value to the largest
+
+representable positive value, are fortunately possible, and will
+
+be taken into consideration when we perform the density evo-
+
+lution analysis in Section IV-C2. Due to the min operation
+
+in check nodes, the decoding process is sensitive to the pre-
+
+cision level of small-magnitude messages. However, for the
+
+large-magnitude messages, the precision level is less important.
+
+Based on the above observations, we specify a cost function
+
+and design an adaptive coding scheme to protect memory cells
+
+in the noisy min-sum decoder according to the cost function.
+
+The cost function for the noisy min-sum decoder is
+
+f (xs , xo) = 1(|xs | < τ )1(xs = xo) + 1(|xs| ≥ τ ) (xo − xs)2 + |sign(xo) − sign(xs)| (10)
+
+where 1(·) is the indicator function that is set to 1 if the condition in the parenthesis holds, and 0 otherwise, is a large positive value, and τ is the threshold for “large magnitude”. We choose τ to be a number whose sign-magnitude representation is in the form of 010 . . . 0.
+When the message magnitude is smaller than τ , the cost function is evaluated as 1 for every possible xo except for when xo = xs. Therefore, every bit is equally important and discarding some bits to protect other bits would result in a larger cost function value. In this case, we thus choose to keep the message as is. When the message magnitude is larger than or equal to τ , a sign bit flip results in a large cost function value because is large, whereas the errors in the LSBs have a relatively small effect on the cost function value. Therefore, in this case, we quantize the message and apply the (3, 1) repetition code (since we have B = 5) to protect the sign bit. When we retrieve the bits from the memory cells, if the MSB reads as 1, the channel decoder decodes the (3, 1) repetition code to determine the sign bit. The source decoder randomly selects 0 or 1 for the two discarded LSBs; if the MSB reads as 0, the message is the same as what we retrieve from the memory cells.
+2) Density Evolution Analysis of the Noisy Min-Sum Decoder With the Proposed Adaptive Code: Here we demonstrate that the performance of the adaptive code designed according to the cost function (10) is superior to the performance of the quantization code and the performance in the no-error-correcting code case. The major difference between the density evolution analysis of the nominal min-sum decoder
+
+and that of the noisy min-sum decoder with the proposed adaptive code is in the linear transformation (7). Given the coding scheme introduced in Sec. IV-C1, the linear transformation becomes
+
+p( ) = H A(ρ)G pˆ( ),
+
+(11)
+
+where both G and H are 2B − 1 × 2B − 1 matrices. The matrix
+G corresponds to the encoding process (including the source
+and channel encoder, we combine the two encoders in the fol-
+lowing discussion to simplify the presentation), and the matrix
+H corresponds to the decoding process (including the source
+and channel decoder, we combine the two decoders in the
+following discussion to simplify the presentation).
+We construct G as follows. Like the analysis in Section III-B,
+we group messages into several classes to analyze the mappings in ACOCO (Fig. 1). The set of 2B−1 B-bit representations whose MSB is 1 is divided into 2B−3 equivalence classes
+0, 1, . . . 2B−3−1. Each equivalence class j has four elements, β j,q , q ∈ {0, 1, 2, 3}. The element β j,q has the signmagnitude representation s j 1a j,1a j,2 . . . a j,B−4z1z2, where the s j and a j,k’s (k = 1, 2, . . . , B − 4) are either 0 or 1, and 0z1z2 is the sign-magnitude representation of length 3 of the index q. Let φ( j) map the index j of the equivalence class j to the index of the message value αφ( j) which belongs to j and has the sign-magnitude representation s j 1a j,1a j,2 . . . a j,B−4s j s j . The equivalence class j is represented by αφ( j).
+In the encoding process, we copy the sign bit to the two
+LSBs when the MSB is equal to 1. Hence, all elements in j are mapped to αφ( j). Note that the probability of αφ( j)
+is represented as the φ( j)th entry in pˆ( ). Let the proba-
+bilities of the other three elements in j be represented as the v1( j)th, v2( j)th, and v3( j)th entries, respectively, in pˆ( ) (v1( j), v2( j), v3( j) ∈ {1, 2, 3, . . . , 2B − 1}). In G, for j = 0, 1, . . . , 2B−3 − 1, the row φ( j) has 1’s in columns φ( j), v1( j), v2( j), and v3( j), 0’s elsewhere, and the rows v1( j), v2( j), and v3( j) have all-zero entries. In the remainder of the rows of G, all entries are 0 except for the ones on the diagonal. For example, when B = 5, the following entries in G
+are 1: (1, 1), (1, 2), (1, 3), (1, 4), (5, 5), (5, 6), (5, 7), (5, 8), (γ , γ ), (24, 24), (24, 25), (24, 26) (24, 27), (28, 28), (28, 29), (28, 30), (28, 31), γ = 9, 10, . . . , 23. Other entries are 0. Note that α1 = −15, α2 = −14, . . . , α31 = 15 in this example.
+In the decoding process, when the MSB reads as 1, we set
+the sign bit to the value that occurs at least twice among the two
+LSBs and the sign bit. The two LSBs are randomly decided. The set of 2B−1 B-bit representations whose MSB is 1 is divided into 2B−3 equivalence classes 0, 1, . . . 2B−3−1. Denote the majority function (of three binary inputs), which takes the majority of its inputs z1, z2, z3 as its output, by gma(z1, z2, z3). Each equivalence class j has four elements, θ j,q , q ∈ {0, 1, 2, 3}. The element θ j,q has the sign-magnitude representation u j,q,11a j,1a j,2 . . . a j,B−4u j,q,2u j,q,3, where the c j,k ’s (k = 1, 2, . . . , B − 4) are either 0 or 1, and u j,q,1, u j,q,2, u j,q,3 satisfy gma(u j,q,1, u j,q,2, u j,q,3) = s j , s j ∈ {0, 1}.
+Following the construction of G, here we derive H. When
+the MSB is 1, the decoding process, in which we randomly
+decide the two LBSs, is equivalent to the following operation:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4625
+
+Fig. 8. Comparison of residual error rates under NC, QC, AD and noise-free decoder for different s via density evolution.
+
+when we have xcho = z1, z1 ∈ j , we randomly pick an element z2 from j (including z1 if z1 ∈ j ), and xo = z2. Let the
+
+probabilities of the four elements in j be represented as the
+
+w1( j)th, w2( j)th, w3( j)th, and w4( j)th entries, respectively, in
+
+pˆ( ) (w1( j ), w2( j ), w3( j ), w4( j ) ∈ {1, 2, 3, . . . , 2B − 1}). In
+
+H, for j = 0, 1, . . . , 2B−3 − 1, the row vi ( j) (i = 1, 2, 3) has
+
+1 4
+
+in
+
+columns
+
+wk (
+
+j)
+
+(k
+
+=
+
+1,
+
+2,
+
+3,
+
+4),
+
+and
+
+0’s
+
+elsewhere.
+
+The
+
+row
+
+αφ( j)
+
+also
+
+has
+
+1 4
+
+’s
+
+in
+
+columns
+
+wk( j )
+
+(k
+
+=
+
+1, 2, 3, 4),
+
+and
+
+0’s
+
+elsewhere. In the remaining of the rows in H , all entries are 0
+
+except for the ones on the diagonal. Following the example we
+
+have
+
+for
+
+G,
+
+the
+
+following
+
+entries
+
+in
+
+H
+
+are
+
+1 4
+
+:
+
+(η1, 1),
+
+(η1, 2),
+
+(η1, 3), (η1, 31), (η2, 5), (η2, 6), (η2, 7), (η2, 27), (η3, 24),
+
+(η3, 25), (η3, 26), (η3, 8), (η4, 28), (η4, 29), (η4, 30), (η4, 4),
+
+for η1 ∈ {1, 2, 3, 4}, η2 ∈ {5, 6, 7, 8}, η3 ∈ {24, 25, 26, 27},
+
+η4 ∈ {28, 29, 30, 31}. The entries (γ , γ ), γ = 9, 10, . . . , 23,
+
+are 1, and the remaining of the entries are 0. Note that α1 =
+
+−15, α2 = −14, . . . , α31 = 15 in this example.
+
+We compute the residual error rate at the 200th iteration,
+
+pr(200), of the noisy min-sum decoders without error-correcting
+
+code (the nominal case, we call it NC), the noisy min-sum
+
+with the quantization code (QC), the noisy min-sum decoder
+
+with the proposed adaptive code (AD) and the noise-free min-
+
+sum decoder via density evolution. We consider the LDPC code
+
+with (dv, dc) = (3, 6), B = 5, bit-flipping probability ρ = 5 × 10−4, and Gaussian communication channel noise with zero
+
+mean and different standard deviation σ. The numerical results
+
+are shown in Fig. 8. Note that the residual error rate of the noise-
+
+free min-sum decoder under small σ and large enough number
+
+of iterations is zero. In Fig. 8, we observe that as in the noise-
+
+free min-sum decoder, NC, QC, and AD all exhibit a sharp drop
+
+in the residual error rates as σ decreases below certain values. A
+
+similar phenomenon was also observed in [18]. As in [18], we
+
+refer to the σ value corresponding to the sharp drop on the curve
+
+as the phase transition point. Before all the phase transition
+
+points, we observe that the residual error rates under QC and
+
+AD are roughly on the order of the square of the residual error
+
+rate under NC. The phase transition points are 0.781, 0.798, and
+
+0.803 for QC, NC, and AD, respectively. The decoding thresh-
+
+old of the noise-free min-sum decoder is 0.811. It is also worth
+
+noting that the proposed adaptive coding scheme not only low-
+
+ers the residual error rate, but also moves the phase transition
+
+point closer to the decoding threshold of the noise-free min-sum
+
+decoder (comparing to both QC and NC cases). The low phase
+
+transition point under QC (even lower than NC) is due to the
+
+distortion introduced in the source encoder by dropping the two
+
+LSBs regardless of the message magnitude. The improvement in the residual error rate in the low σ
+
+region is attributed to our adaptive coding scheme: in NC, a
+
+single memory cell error in the sign bit results in a decoded bit
+
+error, while in QC and AD, at least 2 memory cell errors are
+
+required to result in a decoded bit error. In fact, this observa-
+tion holds more generally. Let i∗ = arg maxi αi , and the i∗th entry in pˆ( ) for AD (or QC) be 1 − a(d), and NC be 1 − n(c). That is, the probabilities of the noise-free variable node mes-
+
+sages having the largest representable positive value at iteration
+
+are 1 −
+
+() ad
+
+and
+
+1
+
+−
+
+() nc
+
+for
+
+AD
+
+(or
+
+QC)
+
+and
+
+NC,
+
+respectively.
+
+Denote the approximation of the residual error rate of AD up to
+
+the second order terms of ρ by p˘r(,a)d , and denote the approxi-
+
+mation of the residual error rate of NC up to the second order
+
+terms of ρ by p˘r(,n)c. Then, we have the following lemma:
+
+Lemma 1: If the communication noise σ and bit-flipping
+
+rate ρ are sufficiently small and is sufficiently large so that
+
+a( d) ,
+
+() nc
+
+<
+
+ρ3,
+
+then
+
+p˘r(,a)d
+
+=
+
+( p˘r(,n)c)2.
+
+Proof: Since the sign bits are flipped with probability ρ,
+
+() nc
+
+<
+
+ρ3,
+
+and
+
+() nc
+
+ρ
+
+<
+
+ρ4,
+
+we
+
+have
+
+pr(,n)c ≈2 (1 − n(c))ρ ≈2 ρ = p˘r(,n)c,
+
+(12)
+
+where ≈2 denotes the approximation up to the second order terms of ρ. Since with the proposed adaptive coding scheme, at
+
+least two bit flips are required to cause an error in the decoded
+
+sign bit,
+
+() ad
+
+<
+
+ρ3,
+
+and
+
+a(d)ρ2 < ρ5, we have
+
+pr(,a)d ≈2 (1 −
+
+() ad
+
+)ρ2
+
+≈2
+
+ρ2
+
+=
+
+p˘r(,a)d .
+
+(13)
+
+Recall that p˘r(,a)d is the second order approximation for pr(,a)d , and p˘r(,n)c is the second order approximation for pr(,n)c. Therefore, p˘r(,a)d = ( p˘r(,n)c)2.
+We thus conclude that AD achieves significant error rate
+
+reduction by adaptively duplicating the sign bit in 2 memory
+
+cells storing LSBs without adding any redundant memory cells.
+
+In fact, by using a length n code capable of correcting m errors, we are able to reduce pr(,a)d to the order of ( pr(,n)c)m+1 when the communication noise and ρ are sufficiently small.
+
+Next, in Fig. 9, we compare the trajectory of the residual error rate pr( ) w.r.t. iteration number under AD and QC when communication noise standard deviation σ is small. Note that
+in this σ region, the residual error rate under NC is much higher than under AD and QC. In this figure, we plot pr( ) as a function of (up to 30) for the bit-flipping probability ρ = 5 × 10−4 and
+communication noise standard deviation σ = 0.7. We observe
+
+that the residual error rate under AD is lower than that under
+
+QC in every iteration before they reach the lowest achievable
+
+value (this lowest value is the same for AD and QC, see also
+
+Lemma 1). Moreover, the rate of convergence for this lowest
+
+value is higher for AD than QC. The effect of the precision level
+
+in the min-sum decoder on the residual error rate is independent
+
+of the choice of code parameters, hence the above observations
+
+are expected to hold more generally.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4626
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+Fig. 11. Comparison of residual error rates under QC and AD at the end of Fig. 9. Comparison of the residual error rate under QC and AD at the end of each iteration in finite length code simulations. each iteration via density evolution.
+
+Fig. 10. Comparison of residual error rates under NC, QC, and AD for different s in finite length code simulations.
+
+phase transition point than NC due to the distortion introduced in the source encoder.
+Next, we fix σ = 0.7, ρ = 5 × 10−4 and compare the residual error rates under QC and AD in each iteration (up to 30). The residual error curves shown in Fig. 11 exhibit the same trend as predicted by the density evolution analysis (Fig. 9): the residual error rate under AD converges faster to its lowest achievable error rate than QC.
+To sum up, NC has the highest residual error rate in the small σ region; QC achieves a lower residual error rate in the small σ region at the expense of slower convergence and a higher residual error rate in the transition region; AD achieves a lower residual error rate in the small σ region and maintains fast convergence and a low residual error rate in the transition region. The superior performance of AD is attributed to the code design under ACOCO with an appropriately chosen cost function.
+
+D. Simulation Results
+We now compare via simulations the residual error rates under NC, QC, and AD for finite length LDPC codes under the faulty memory model. We use a (3, 6)-regular LDPC code with code length 2640 [41]. The communication channel noise is modeled as a zero-mean Gaussian random variable with variance σ 2. The bit-flipping probability of noisy memories is ρ. The maximum number of iteration is 30.
+We first fix ρ = 5 × 10−4 and compare the residual error rate under NC, QC, and AD under different σ ’s (Fig. 10). It is clear that when σ is large (corresponding to the region to the right of the phase transition points shown in Section IV-C2), the residual error rates of all the decoders are approximately the same, while for small σ (corresponding to the region to the left of the phase transition points shown in Section IV-C2), the residual error rates under AD (and QC) are roughly the square of the residual error rate under NC, as predicted in Lemma 1. In the transition region, AD still achieves a lower residual error rate than QC and NC. Interestingly, although QC has a lower residual error rate than NC in the small σ region, it has larger residual error rate than NC in part of the transition region. The larger residual error rates in the transition region reflect the observation from the density evolution analysis: QC has a lower
+
+V. CONCLUSION
+In this paper, we proposed the ACOCO framework to develop adaptive codes for a variety of computations performed on data read from faulty memories. By introducing distortion with negligible effects in the source encoder, the proposed codes protect the data against memory errors without requiring additional memory cells. Under the ACOCO framework, we first developed adaptive codes for systems dominated by product operations. By applying the proposed code to max-sum image denoising and naïve Bayes classification, we demonstrated that our codes successfully correct harmful memory errors, and that the distortion introduced by the source encoder has negligible effects on the system performance. Then, we further developed adaptive codes for min-sum decoders with faulty memories. Via a density evolution analysis, we showed that the application of the proposed codes indeed lowers the residual error rate. Higher phase transition points are observed when the proposed codes are applied to a noisy min-sum decoder compared with when the proposed codes are not applied and when only quantization codes are applied.
+Our design approaches for cost functions and adaptive codes are important successful examples of developing efficient
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+HUANG et al.: ACOCO: ADAPTIVE CODING FOR APPROXIMATE COMPUTING ON FAULTY MEMORIES
+
+4627
+
+coding schemes under the ACOCO framework. There are several possibly fruitful extensions of this work. First, a more general methodology for the cost function and code design could be developed based on the foundation discussed in this paper, e.g., by incorporating additional knowledge of the data representation and its statistics. Another interesting future research direction is to consider additional types of memory errors (e.g., stuck-at errors) and develop adaptive codes designed for these (asymmetric) errors. Lastly, while crude calculations already suggest a potential 11.6% improvement (this number is calculated based on the yield and percentage of single-bit error statistics in [42]) in yield, future works may also involve a more refined practical evaluation of the framework including more realistic simulations (e.g., by taking the workload and power/performance overhead into consideration) and hardware emulations.
+REFERENCES
+[1] P. Gupta et al., “Underdesigned and opportunistic computing in presence of hardware variability,” IEEE Trans. Comput.-Aided Des., vol. 32, no. 1, pp. 8–23, Jan. 2013.
+[2] A. Chandrakasan et al., “Technologies for ultradynamic voltage scaling,” Proc. IEEE, vol. 98, no. 2, pp. 191–214, Feb. 2010.
+[3] S. Ganapathy, G. Karakonstantis, R. Canal, and A. P. Burg, “Variabilityaware design space exploration of embedded memories,” in Proc. IEEE 28th Conv. Elect. Electron. Eng. Israel, 2014, pp. 1–5.
+[4] M. Khairy, A. Khajeh, A. Eltawil, and F. Kurdahi, “Equi-noise: A statistical model that combines embedded memory failures and channel noise,” IEEE Trans. Circuits Syst. I, vol. 61, no. 2, pp. 407–419, Feb. 2014.
+[5] B. Vasic and S. Chilappagari, “An information theoretical framework for analysis and design of nanoscale fault-tolerant memories based on lowdensity parity-check codes,” IEEE Trans. Circuits Syst. I, vol. 54, no. 11, pp. 2438–2446, Nov. 2007.
+[6] Y. Emre and C. Chakrabarti, “Memory error compensation techniques for JPEG2000,” in Proc. IEEE Workshop Signal Process. Syst., 2010, pp. 36–41.
+[7] D. Rossi, N. Timoncini, M. Spica, and C. Metra, “Error correcting code analysis for cache memory high reliability and performance,” in Proc. Des. Autom. Test Eur. (DATE) Conf. Exhib., 2011, pp. 1–6.
+[8] M. Jayarani and M. Jagadeeswari, “A novel fault detection and correction technique for memory applications,” in Proc. Int. Conf. Comput. Commun. Informat. (ICCCI), 2013, pp. 1–6.
+[9] F. Frustaci, M. Khayatzadeh, D. Blaauw, D. Sylvester, and M. Alioto, “13.8 A 32 kb SRAM for error-free and error-tolerant applications with dynamic energy-quality management in 28 nm CMOS,” in Proc. IEEE Int. Solid-State Circuit Conf. Dig. Tech. Pap., 2014, pp. 244–245.
+[10] N. R. Shanbhag, R. A. Abdallah, R. Kumar, and D. L. Jones, “Stochastic computation,” in Proc. IEEE/ACM Des. Autom. Conf., 2010, pp. 859–864.
+[11] L. R. Varshney, “Performance of LDPC codes under faulty iterative decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4427–4444, Jul. 2011.
+[12] S. Tabatabaei Yazdi, H. Cho, and L. Dolecek, “Gallager B decoder on noisy hardware,” IEEE Trans. Commun., vol. 61, no. 5, pp. 1660–1673, May 2013.
+[13] C.-H. Huang, Y. Li, and L. Dolecek, “Gallager B LDPC decoder with transient and permanent errors,” IEEE Trans. Commun., vol. 62, no. 1, pp. 15–28, Jan. 2014.
+[14] S. Tabatabaei Yazdi, C.-H. Huang, and L. Dolecek, “Optimal design of a Gallager B noisy decoder for irregular LDPC codes,” IEEE Commun. Lett., vol. 16, no. 12, pp. 2052–2055, Dec. 2012.
+[15] E. Dupraz, D. Declercq, B. Vasic, and V. Savin, “Finite alphabet iterative decoders robust to faulty hardware: Analysis and selection,” in Proc. 8th Int. Symp. Turbo Codes Iterative Inf. Process., 2014, pp. 107–111.
+[16] A. Tarighati, H. Farhadi, and F. Lahouti, “Performance analysis of noisy message-passing decoding of low-density parity-check codes,” in Proc. 6th Int. Symp. Turbo Codes Iterative Inf. Process., 2010.
+
+[17] A. Balatsoukas-Stimming and A. Burg, “Density evolution for minsum decoding of LDPC codes under unreliable message storage,” IEEE Commun. Lett., vol. 18, no. 5, pp. 849–852, May 2014.
+[18] C. Kameni Ngassa, V. Savin, E. Dupraz, and D. Declercq, “Density evolution and functional threshold for the noisy min-sum decoder,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1497–1509, May 2015.
+[19] C.-H. Huang, Y. Li, and L. Dolecek, “Noisy belief propagation decoder,” in Proc. 48th Asilomar Conf. Signals Syst. Comp., 2014, pp. 2111–2115.
+[20] C.-H. Huang, Y. Li, and L. Dolecek, “Belief propagation algorithms on noisy hardware,” IEEE Trans. Commun., vol. 63, no. 1, pp. 11–24, Jan. 2015.
+[21] R. Venkatesan, A. Agarwal, K. Roy, and A. Raghunathan, “MACACO: Modeling and analysis of circuits for approximate computing,” in Proc. IEEE/ACM Int. Conf. Comput.-Aided Des., 2011, pp. 667–673.
+[22] M. Samadi, J. Lee, D. A. Jamshidi, A. Hormati, and S. Mahlke, “SAGE: Self-tuning approximation for graphics engines,” in Proc. 46th Annu. IEEE/ACM Int. Symp. Microarchit., 2013.
+[23] A. K. Mishra, R. Barik, and S. Paul, “iACT: A software-hardware framework for understanding the scope of approximate computing,” in Proc. Workshop Approx. Comput. Across Syst. Stack, 2014.
+[24] V. K. Chippa, S. T. Chakradhar, K. Roy, and A. Raghunathan, “Analysis and characterization of inherent application resilience for approximate computing,” in Proc. IEEE/ACM Des. Autom. Conf., 2013, pp. 1–9.
+[25] U. Schlichtmann et al., “Connecting different worlds: Technology abstraction for reliability-aware design and test,” in Proc. Des. Autom. Test Eur. Conf. Exhib., 2014, pp. 1–8.
+[26] J. von Neumann, “Probabilistic logic and the synthesis of reliable organisms from unreliable components,” Automata Stud., pp. 43–98, 1956.
+[27] C. I. Allen, J. Petrosky, and P. L. Orlando, “Effects of non-ionizing radiation on a 130 nm CMOS SRAM for low earth orbit applications,” in Proc. IEEE Nat. Aerosp. Electron. Conf., 2014, pp. 351–356.
+[28] S.-T. Zhou, S. Katariya, H. Ghasemi, S. Draper, and N. S. Kim, “Minimizing total area of low-voltage SRAM arrays through joint optimization of cell size, redundancy, and ECC,” in Proc. IEEE Int. Conf. Comput. Des., 2010, pp. 112–117.
+[29] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[30] S. Lin and D. J. Costello, Error Control Coding: Fundamentals and Applications. Englewood Cliffs, NJ, USA: Prentice Hall, 2004.
+[31] C. Roth, C. Benkeser, C. Studer, G. Karakonstantis, and A. Burg, “Data mapping for unreliable memories,” in Proc. 50th Annu. Allerton Conf. Commun. Control Comput., 2012, pp. 679–685.
+[32] S. Venkataramani, K. Roy, and A. Raghunathan, “Substitute-andsimplify: A unified design paradigm for approximate and quality configurable circuits,” in Proc. Des. Autom. Test Eur. Conf. Exhib., 2013, pp. 1367–1372.
+[33] S. Venkataramani, A. Sabne, V. Kozhikkottu, K. Roy, and A. Raghunathan, “SALSA: Systematic logic synthesis of approximate circuits,” in Proc. IEEE/ACM Des. Autom. Conf., 2012, pp. 796–801.
+[34] P. F. Felzenszwalb and D. P. Huttenlocher, “Efficient belief propagation for early vision,” Int. J. Comput. Vision, vol. 70, no. 1, pp. 41–54, Oct. 2006.
+[35] Y. Boykov, O. Veksler, and R. Zabih, “Fast approximate energy minimization via graph cuts,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 23, no. 11, pp. 1222–1239, 2001.
+[36] I. Rish, “An empirical study of the naïve Bayes classifier,” in Proc. Int. Joint Conf. Artif. Intell., 2001.
+[37] J. Chen and M. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[38] C. Condo, G. Masera, and P. Montuschi, “Unequal error protection of memories in LDPC decoders,” IEEE Trans. Comput., vol. 64, no. 10, pp. 2981–2993, Oct. 2015.
+[39] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. Asilomar 42nd Conf. Signals Syst. Comput., 2008, pp. 1137–1142.
+[40] M. May, M. Alles, and N. Wehn, “A case study in reliability-aware design: A resilient LDPC code decoder,” in Proc. Des. Autom. Test Eur., 2008, pp. 456–461.
+[41] D. MacKay. Encyclopedia of Sparse Graph Codes [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+[42] T.-H. Wu et al., “A memory yield improvement scheme combining builtin self-repair and error correction codes,” in Proc. IEEE Int. Test Conf., 2012, pp. 1–9.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+4628
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 63, NO. 12, DECEMBER 2015
+
+Chu-Hsiang Huang received the B.S. and M.S. degrees from the National Taiwan University, Taipei, Taiwan, in 2007 and 2009, respectively, and the Ph.D. degree from the University of California, Los Angeles, Los Angeles, CA, USA, all in electrical engineering. He was a Research Assistant with NTU-INTEL Research Center, Taiwan, in 2010. He is currently with Qualcomm Technologies, Inc. His research interests include robust inference on unreliable hardware and probabilistic graphical models.
+Yao Li received the B.Eng. degree in information engineering and electronics from Tsinghua University, Beijing, China, and the Ph.D. degree in electrical and computer engineering from Rutgers University, New Brunswick, NJ, USA, in 2012. She was a Postdoctoral Scholar with the Laboratory for Robust Information Systems (LORIS), University of California, Los Angeles, Los Angeles, CA, USA, between 2012 and 2014. She is currently with Akamai Technologies, Inc. Her research interests include coding solutions for content distribution, robust inference in sensor networks, and computing on noisy hardware.
+
+Lara Dolecek (SM’12) received the B.S. (Hons.), M.S., and Ph.D. degrees in electrical engineering and computer sciences, and the M.A. degree in statistics, all from the University of California, Berkeley, Berkeley, CA, USA. She is an Associate Professor with the Department of Electrical Engineering, University of California, Los Angeles (UCLA), Los Angeles, CA, USA. Prior to joining UCLA, she was a Postdoctoral Researcher with the Laboratory of Information and Decision Systems, Massachusetts Institute of Technology, Cambridge, MA, USA. Her research interests include coding and information theory, graphical models, statistical algorithms, and computational methods, with applications to emerging systems for data storage, processing, and communication. She has served as an Associate Editor of Coding Theory for the IEEE TRANSACTIONS ON COMMUNICATIONS and the IEEE COMMUNICATION LETTERS. She was the recipient of the 2007 David J. Sakrison Memorial Prize for the most outstanding doctoral research with the Department of Electrical Engineering and Computer Sciences, UC Berkeley. She was also the recipient of the IBM Faculty Award in 2014, the Northrop Grumman Excellence in Teaching Award, the Intel Early Career Faculty Award, the University of California Faculty Development Award, and the Okawa Research Grant, all in 2013, the NSF CAREER Award in 2012, and the Hellman Fellowship Award in 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:13:28 UTC from IEEE Xplore. Restrictions apply.
+
+

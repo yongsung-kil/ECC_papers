@@ -1,0 +1,471 @@
+Received 12 June 2022; revised 28 August 2022; accepted 16 September 2022. Date of publication 26 September 2022; date of current version 13 October 2022. Digital Object Identifier 10.1109/OJCAS.2022.3209152
+UP-GDBF: A 19.3 Gbps Error Floor Free 4KB LDPC Decoder for NAND Flash Applications
+LI-WEI LIU (Member, IEEE), YEN-CHIN LIAO (Member, IEEE), AND HSIE-CHIA CHANG (Senior Member, IEEE)
+Institute of Electronics, National Yang Ming Chiao Tung University, Hsinchu 300, Taiwan This article was recommended by Associate Editor J. Viraraghavan.
+CORRESPONDING AUTHOR: L.-W. LIU (e-mail: willvegapunk.ee06g@nctu.edu.tw) This work was supported by the National Science and Technology Council (previously the Ministry of Science and Technology)
+under Grant 110-2622-8-A49-007-SB, Grant 110-2221-E-A49-157, and Grant 111-2221-E-A49-153.
+ABSTRACT An error floor phenomenon, decoding performance, and throughput are three major concerns for LDPC decoders in NAND Flash applications. With a penalty method and an active iteration mechanism, we present a Unified Penalty Gradient Descent Bit Flipping (UP-GDBF) decoding algorithm, which not only possesses error-floor free property but also improves convergence speed in decoding performance. To fulfill the high-throughput requirement while maintaining reliable error correction capability, we propose an energy-based backtracking scheme to reduce 40% latency with a negligible 0.8% area overhead. Implemented in TSMC 16nm process, the proposed 4KB LDPC decoder can achieve a throughput of 19.3 Gbps with 0.120 mm2 area to satisfy ONFI 5.0 throughput requirement. Compared to existing approaches, our decoder architecture provides superior data rate and decoding performance in both 1KB and 4KB LDPC codes.
+INDEX TERMS Bit-flipping, low-density parity-check (LDPC) codes, decoder, nand.
+
+I. INTRODUCTION
+Q UASI-CYCLIC Low-Density Parity Check (QC-LDPC) code has been widely used as a mainstream LDPC code [1] in NAND flash applications. In order to cover a wide range of aging NAND channel conditions, a multidecoder error correction subsystem becomes a heterogeneous solution to balance the trade-off among decoding performance, throughput, power, and area. Among numerous decoding algorithms, min-sum decoders [2], [3] provide excellent decoding performance at the expense of hardware complexity and power consumption. On the contrary, bitflipping decoders [4], [5] feature lightweight computation by sacrificing decoding capability.
+Over the years, the performance of bit-flipping decoding has been improved in several studies [6], [7], [8], [9], [10], [11], [12], [13]. Gradient Descent Bit Flipping (GDBF) [6] firstly interpreted the decoding procedure as a maximum likelihood optimization problem, and it showed a significant performance gain and inspired many following works. Probability GDBF (PGDBF) [7] introduced
+
+randomness in the decoding procedure so the decoding process could escape from local maximum traps. Tabu-list aided PGDBF (T-PGDBF) [8] adopted the tabu-search idea to avoid repeated flipping in the decoding process and was well-improved in [9], [10], [11]. The recent counter random GDBF (CRGDBF) [12] and PGDBF with Momentum (PGDBF w/M) [13] added the flipping histories to improve the performance further.
+Flipping decision rules categorize the bit-flipping decoding into global searching [7], [8], [9], [10], [11], [12], [13] and non-global searching [4], [5] decoding. Since globalsearching decoding uses the maximum value to determine flipping bits instead of the estimated threshold, it generally provides better decoding performance at the cost of hardware complexity and decoding latency. Although the global-decoding algorithms are competitive in small code length QC-LDPC code, little is known about their effectiveness in large code length QC-LDPC. Moreover, the existing studies for bit-flipping decoder design in NAND flash applications are limited to non-global searching decoding.
+
+This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+228
+
+VOLUME 3, 2022
+
+This paper explores the feasibility of a global searching algorithm in NAND flash applications. From the perspective of decoding performance, we evaluate the state-of-the-art algorithms in 4KB QC-LDPC code and investigate the cause of the error-floor phenomenon. By penalty methods’ [14] mathematical interpretations and an active iteration mechanism, we propose a Unified Penalty Gradient Descent Bit flipping (UP-GDBF) decoding algorithm to improve the convergence speed. In addition, this paper details the required sub-modules for partial parallel architecture in global searching decoder design. In our time profiling, the partial parallel architecture suffers from redundant scheduling during the flipping process. As a result, we propose an energy-based backtracking mechanism, which removes a large number of idle cycles with negligible overhead. Our implementation results show that the proposed decoder can support the maximum speed over the latest Open NAND Flash Interface Standard (ONFI 5.0) [15]. It also outperforms the existing non-global searching decoders in performance and data rates.
+The remainder of this paper is organized as follows. Section II introduces the preliminaries and the related notations. Section III presents the state-of-the-art algorithms’ evaluation and the proposed UP-GDBF decoding algorithm. Section IV details the hardware architecture and the energybased backtracking mechanism. The implementation results and comparison are discussed in Section V. The conclusion is given in Section VI.
+II. BACKGROUND An (N, K) QC-LDPC code in circular permutation matrices (CPM) size Z is defined by a parity check matrix (H) of size M × N, where N, K, and M represent the length of the codeword, information, and syndrome, respectively. Due to quasi-cyclic properties, the matrix is viewed as a GN × GM array of Z × Z sub-matrices, where GN = (N/Z) and GM = (M/Z) are the numbers of column and row blocks. As visualized in a bipartite graph, each element (hj,i) in H matrix represents the existence of edge connecting between the j th check node (cj) in rows and the i th variable nodes (vi) in columns. The number of non-zero elements in a column is called column degree (dc).
+NAND vendors nowadays have been stacking more layers of memory cells over 3D NAND; the decreasing lifetime makes 4KB QC-LDPC code a popular choice for its stronger error correction capability. In this work, we adopt an (N = 36864, K = 33028, M = 3840) QC-LDPC code with Z = 256 and dv = 5 as our design target. Since bit flipping is a hard-decision decoding method, it is more precise to adopt the fixed error bit count (EBC) channel (i.e., all testing frames contain the same error bit count in each channel condition but with different error locations) to compare decoding performance in frame error rate (FER).
+The penalty method is a way to transform the original constrained optimization problems into the unconstrained optimization functions. This paper utilizes this method in both decoding analysis and algorithm improvement. The
+
+FIGURE 1. Previous Works’ ECC Performance over 4KB QC-LDPC code with Tmax =100.
+
+following shows an example of transformation:
+
+N−1
+
+min fi() s.t. hi() = 0, 0 ≤ i ≤ N − 1 (1a)
+
+i=0
+
+arg max{fi() : hi() = 0}
+
+(1b)
+
+i
+
+→ arg max fi() + Mi · hi()2
+
+(1c)
+
+i
+
+Equation (1a) is the original constrained optimization function, where fi() denotes a soft constraint and hi() is a hard constraint. Equation (1b) interprets the decoding process, where the flipping bits with maximum fi() are subject to the hard constraint. Equation (1c) is the unconstrained optimization function by the penalty method. hi()2 and Mi denote the ith penalty function and the corresponding penalty coefficient.
+This paper refers to xi and yi as the i th estimated code bit and initial code bit, respectively. sj denotes the j th syndrome. Ei and Emax denote the i th energy value and the global maximum energy. N() is a neighboring function to generate the neighboring set for the variable node or check node. I(x = k) is the k-indicator function, which returns one as x = k and zero, otherwise. λ and η are binary random variables subject to Bernoulli distribution (Bernoulli Dist.)
+with probability P, and Tmax denotes maximum iteration.
+
+III. DECODING METHOD FOR NAND FLASH APPLICATIONS A. EVALUATION OF THE STATE-OF-THE-ART ALGORITHMS This work apply all the state-of-the-art decoding algorithms in our target 4K-QC-LDPC code to evaluate the decoding performance in NAND Flash applications, as shown in Fig. 1. Surprisingly, CRGDBF and the previous algorithms based on tabu-list suffer from error floor phenomenon, which is a significant concern in storage applications.
+Algorithm 1 presents details of the CRGDBF algorithm. Its energy value consists of correlation penalty (xi ⊕ yi), random penalty (λi), and the connected syndromes (line 8). The hard constraint (lines 9 and 13) would make sure the bits in the tabu list are excluded from global searching. If the candidate bits fulfill either the flip count or the randomness conditions (line 16), they are assigned to the tabu list and
+
+VOLUME 3, 2022
+
+229
+
+LIU et al.: UP-GDBF: A 19.3 Gbps ERROR FLOOR FREE 4KB LDPC DECODER
+
+Algorithm 1 CRGDBF Decoding Algorithm
+
+Initial xi = yi ∈ {0, 1}, i ∈ {0..N − 1} 1: for t= 0 to TMax − 1 do 2: for j = 0 to M-1 do //Syndrome Calculation
+
+3:
+
+sj = v∈N(cj) xv
+
+4: if s == 0 then //Early Termination
+
+5:
+
+break
+
+6: for i = 0 to N − 1 do //Maximum Finding Phase
+
+7:
+
+λi = Bernoulli Dist. (P)
+
+8:
+
+Ei = xi ⊕ yi + j∈N(vi) sj + λi
+
+9:
+
+if Ei < Emax and li == 0 then
+
+10:
+
+Emax = Ei
+
+11: for i = 0 to N − 1 do //Flipping Phase
+
+12:
+
+ηi = Bernoulli Dist. (P)
+
+13:
+
+if Ei == Emax and li == 0 then
+
+14:
+
+xi = xi ⊕ 1
+
+15:
+
+Li = Li + 1
+
+16:
+
+if Li == θ or ηi == 1 then
+
+17:
+
+li = 1
+
+18:
+
+Li = 0
+
+19:
+
+else
+
+20:
+
+li = 0
+
+Parameter li indicates whether i th bit is in the tabu list. Li denotes flip count and θ as predefined threshold.
+
+FIGURE 2. Error Floor Decoding Trace in CRGDBF.
+
+excluded from the flipping process in the next iteration. Through penalty method transformation, the optimization function would be:
+
+fi() : (xi ⊕ yi) +
+
+sj + λi
+
+(2a)
+
+j∈N(vi)
+
+hi() : I(li = 1)
+
+(2b)
+
+→ arg max fi() + Mtabu · I(li = 1)2 , Mtabu = −∞ (2c)
+i
+
+where the hard constraint considers xi’s existence in the tabu list (li). The dominant penalty coefficient (Mtabu) implies rigidness of the tabu list’s exclusive property, which may lead to an error floor phenomenon if any systematic flaws exist.
+Fig. 2 reveals the cause of error floor phenomenon over CRGDBF’s failure traces collected in the error-floor region. The decoding process is illustrated through the number
+
+Algorithm 2 PGDBF With Momentum Decoding
+
+Algorithm
+
+Initial xi = yi, di = L, i ∈ {0..N − 1} 1: for t= 0 to TMax − 1 do 2: for j = 0 to M-1 do //Syndrome Calculation
+
+3:
+
+sj = v∈N(cj) xv
+
+4: if s == 1 then //Early Termination
+
+5:
+
+break
+
+6: for i = 0 to N − 1 do //Maximum Finding Phase
+
+7:
+
+di = min(di, L)
+
+8:
+
+Ei = xi ⊕ yi + j∈N(vi) sj + ρ(di)
+
+9:
+
+if Emax < Ei then
+
+10:
+
+Emax = Ei
+
+11: for i = 0 to N − 1 do //Flipping Phase
+
+12:
+
+ηi = Bernoulli Dist. (P)
+
+13:
+
+if Emax == Ei and ηi = 1 then
+
+14:
+
+xi = xi ⊕ 1
+
+15:
+
+di = 0
+
+16:
+
+else
+
+17:
+
+di = di + 1
+
+Parameter di denotes the i-th bit’s distance from the last flipping within the last L iteration. ρ() maps to different levels of momentum.
+
+of error bits (error count) and the number of flipping bit (flip count) for each iteration. In the beginning, the error counts stably decrease with a sequence of flipping processes before the 15 th iteration. However, the over correction (flips count > error count) happens and flips the four bits with the maximum energy value (Emax = 5) in the 15 th iteration. Among the four flipping bits, the 25824 th and 33460 th bits do not belong to the original two error bits (Error location in 15 th iteration) and become the remaining error bits (Error location in the 16 th iteration) in the next iteration. To make things worse, these two errors happen to be stored in the tabu list, which is designed to avoid repetitive flipping. Since the tabu list prohibits these two bits’ energy value from the optimization process (line 9 in Algorithm 1), the decoder would select 572 correct bits with the maximum energy value (Emax = 3) as the following flipping targets and induce more error bits beyond the decoder’s capability. As a result, the unexpected over-correction would induce a burst of error bits, leading to the error floor phenomenon.
+On the contrary, PGDBF w/M survives in performance evaluation. As detailed in Algorithm 2, PGDBF w/M utilizes di to measure the distance from the last flip. L denotes the length of the flipping record. Any record longer than L shall be saturated to the last momentum index (line 7). The momentum function (ρ) reflects the impacts of momentum for different di. Since the randomness (η) in the flipping condition acts as the hard constraint, the transformed optimization function would be:
+
+fi() : xi ⊕ yi +
+
+sj + ρ(di)
+
+(3a)
+
+j∈N(vi)
+
+hi() : I(ηi = 1), ηi subject to Bernoulli Dist. (3b)
+
+230
+
+VOLUME 3, 2022
+
+FIGURE 3. Average Number of Flip Miss for Each Iteration. Flip miss represents the number of error bit which are not successfully flipped.
+→ arg max fi() + Mη · I(ηi = 1)2 , 0 < Mη < 1 (3c)
+i
+where the penalty coefficient (Mη) makes the optimization process randomly select the distinguishing bits among bits with fi() = Emax.
+Given L = 1 as the optimized parameter in our simulation, the momentum term (ρ(di)) can be interpreted as the flipping penalty in the energy function. The flipping penalty term occupies a portion of the energy value in PGDBF w/M rather than the dominant factors (Mtabu · I(li = 1)) in (2c). As a result, PGDBF w/M is more resilient to the mentioned overcorrection scenario and shows no error floor phenomenon in 4KB QC-LDPC simulation.
+
+Algorithm 3 Proposed Unified Penalty-GDBF Decoding
+
+Initial xi = yi ∈ {0, 1}, i ∈ {0..N − 1} 1: for t= 0 to TMax − 1 do 2: for j = 0 to M-1 do //Syndrome Calculation
+
+3:
+
+sj = v∈N(cj) xv
+
+4: if s == 0 then //Early Termination
+
+5:
+
+break
+
+6: for i = 0 to N − 1 do //Maximum Finding Phase
+
+7:
+
+Ei = yi ⊕ xi + j∈N(vi) sj + I(li = 1) + ηi
+
+8:
+
+if Emax < Ei then
+
+9:
+
+Emax = Ei
+
+10: for i = 0 to N − 1 do //Flipping Phase
+
+11:
+
+if Emax == Ei then
+
+12:
+
+xi = xi ⊕ 1
+
+13:
+
+li = 0
+
+14:
+
+else
+
+15:
+
+li = 1
+
+Parameter li = 1 denotes no flipping in the previous iteration.
+
+B. PROPOSED UNIFIED PENALTY GRADIENT DESCEND
+
+BIT FLIPPING DECODING
+
+In addition to an error-floor property, the convergence speed
+
+is another concern for decoding performance in NAND flash
+
+applications. The analysis in (3c) implies that the random-
+
+ness (η) is a conservative flipping strategy that selects the
+
+bits with fi() = Emax. We intend to modify the random-
+
+ness mechanism on the existing PGDBF w/M algorithm to
+
+improve the average iteration.
+
+Inspired by the random penalty term applied in CRGDBF
+
+and its predecessors [9], [11], we integrate the randomness
+
+into the original PGDBF w/M’s energy function. Because
+
+there is no hard constraint, the optimization process turns to:
+
+⎧
+
+⎫
+
+⎨
+
+⎬
+
+arg miax⎩xi ⊕ yi +
+
+sj + ρ(di) + ηi⎭
+
+(4)
+
+j∈N(vi)
+
+which is equivalent to (3c) with Mη = 1. As the randomness becomes a portion of the energy value, the flipping process not only picks among the bits with fi() = Emax but also has a chance to select from the bits with fi() = Emax − 1 in (3a). Fig. 3 presents this effect in flip miss (error bits that are not flipped in each iteration) between two randomness approaches. Since the randomness as a soft constraint is more active in the flipping process, the number of flip miss is statistically less than the other, which implies fewer iterations in decoding.
+Although the randomness helps the decoder avoid trapping set, the erroneous randomness also acts as a double-edged sword to slow down decoding convergence. To diminish the backlash of randomness initially, we modify the
+
+FIGURE 4. 4KB QC-LDPC Decoding Performance & Average Iterations with tmax =100.
+
+randomness as:
+
+ηi =
+
+Bernoulli Dist(P = 0.9) 1
+
+if t > tactive otherwise
+
+(5)
+
+where the active iteration (tactive) is determined by an off-line Monte-Carlo search under the fixed EBC channel condition.
+Because the correlation penalty, flipping penalty, and modified random penalty are all unified in the new energy function, we name our proposed algorithm Unified Penalty GDBF (UP-GDBF), detailed in Algorithm 3. With randomness as a soft constraint and active iteration mechanism, the proposed UP-GDBF algorithm can provide a 10% - 20% iteration reduction from the original PGDBF w/M below EBC=220 and significant performance improvement, as shown in Fig. 4.
+
+IV. DECODER ARCHITECTURE Due to the long code length of 4KB QC-LDPC code in NAND flash applications, a partial parallel architecture
+
+VOLUME 3, 2022
+
+231
+
+LIU et al.: UP-GDBF: A 19.3 Gbps ERROR FLOOR FREE 4KB LDPC DECODER
+
+FIGURE 5. Proposed Decoder Architecture The critical path is marked red. Red dash lines separate the pipeline stages for readers’ convenience. Red blocks denote two-port register files and blue blocks for one-port register files. The purple blocks represent flip flops.
+
+becomes an affordable choice in decoder design. Our 4KB QC-LDPC code is divided into 144 column blocks, and each column block represents processing 256 bits in parallel. Based on this QC-LDPC code structure, it takes 144 cycles to search for the maximum energy value and additional 144 cycles to accomplish flipping and syndrome updates.
+The decoder is partitioned into four stages of pipeline architecture in Fig. 5. The first stage is the instruction fetch for sub-module configurations. The second stage is data loading, which separates the memory macro’s access time from the original critical path to boost operating frequency. The third stage consists of the energy computation unit cluster (ECU cluster), value collapse unit, energy-based backtracking unit, and flipping indicator unit. They generate the energy values and flipping vector. The last stage is partitioned to update the global maximum value in the maximum finding phase and update syndromes in the flipping phase (the energy-based backtracking macro will be detailed at the end of this section).
+A. MEMORIES AND BARREL SHIFTERS To fully exploit the structure of the QC-LDPC code, the memory macros’ bandwidth equals the CPM size, and the number of entries is the number of block columns. Our design uses a ROM to store the configuration parameters for each column (e.g., The address for syndrome row block selection and the shifting value for barrel shifters). Oneport and two-port register files are deployed for the initial codeword and the estimated codeword to generate correlation penalties. The flipping penalties are also stored in the twoport register file. There are two sets of barrel shifters. The C2V barrel shifters align the selected syndromes to the ECU cluster, and the V2C barrel shifters align the flipping vector to the selected syndrome.
+
+FIGURE 6. Random Penalty Generation Unit.
+B. RANDOM PENALTY GENERATION UNIT The random penalty generation unit in Fig. 6 consists of a 256-bit iteration-dependent random state, a 16-bitwise block interleaver, and a configurable barrel shifter. Before active iteration, the current random penalty is zero to diminish erroneous randomness effect as mentioned in (5). Considering the randomness’ consistency between the flipping phase and the maximum energy finding phase, we make the random penalty bits depend on the random state (Lock Mode) and the shifting offset for each column block. Moreover, the oneto-one mapping property guarantees the number of ones to be the same as the random state in the initial setting. At the end of the flipping phase, the generated random penalty bits would be collected (Trap Mode) as the new random state for the next iteration.
+C. ENERGY COMPUTATION UNIT AND VALUE COLLAPSE UNIT Instead of using one-hot encoder logic [16], the energy computation unit consists of hierarchies of one-hot adder
+
+232
+
+VOLUME 3, 2022
+
+FIGURE 7. Energy Computation Unit (ECU) Black dot denotes 2-input AND gate, and each output is OR together, represented by red dash boxes. The highest eight bits [8:1] of the 9-bit One-Hot Adder’s output are preserved as the output of the ECU.
+logic in Fig. 7. Since the bits with Ei = 0 are never flipped in the decoding process, we only preserve the highest 8 bits as the output. The value collapse unit fully exploits the ECU’s one-hot-format output and performs element-wise OR operation on 256 energy values and exports an 8-bit indicator vector (e.g., the MSB indicates the existence of E = 8 among 256 energy values, the 6-th bit indicates the existence of E = 7, etc).
+
+FIGURE 8. Profiling of Flipping Process Each cell represents whether the column block contains a flipping process (red) or not (blue) in each iteration.
+
+D. FLIPPING INDICATION UNIT Since there are 256 8-bit one-hot-format outputs from the ECU cluster, the flipping indication unit re-organizes all wires in the same bit location as one group. As a result, there are eight groups of 256-bit vectors, and one of them is selected by the global-maximum value as the flipping vector.
+
+E. ENERGY-BASED BACKTRACKING UNIT A visualization of the flipping process over a frame under the EBC=120 condition is shown in Fig. 8. Due to the maximum energy value Emax dependency (line 11 in Algorithm 3) in each iteration, the decoder needs to access all column blocks twice - one for the maximum finding phase and the other for the flipping phase. Since there is plenty of redundant access (blue cell) in the flipping phase, it requires a mechanism to save those idle cycles and boost the decoder throughput.
+The energy-based backtracking scheme is proposed to leave the breadcrumb along the decoding trail in the maximum finding phase so that this information could navigate the flipping process to access those red cells only. As illustrated in Fig. 9, the energy-based backtracking unit consists of two priority decoders, eight classification entries, backtracking memory, and the related data path control. In the maximum finding phase, the decoder would iterate 144 column blocks. One of the priority decoders would generate the local maximum (Local Max) as a label to categorize the current column index into a specific entry. The original content of the selected entry would be pushed into the energy-based backtracking memory to build up the connection between the column indices sharing the same energy values. In the
+
+FIGURE 9. Energy-Based Backtracking Unit CI denotes column index, IFA as an initial flipping address, and FA as the flipping address after initial flipping.
+flipping phase, the global maximum (Global Max) from the other priority decoder selects the corresponding entry as the initial column index for flipping. Then, the energy-based backtracking would keep generating the next target column index until the end of the flipping.
+Fig. 10 illustrates an example of the proposed scheme, where the timing diagram and the corresponding memory content illustrate the update process in the maximum finding phase. Given the column blocks with index= {1, 136, 139, 141} are the target flipping columns sharing the
+
+VOLUME 3, 2022
+
+233
+
+LIU et al.: UP-GDBF: A 19.3 Gbps ERROR FLOOR FREE 4KB LDPC DECODER
+
+FIGURE 12. Latency Optimization over Fixed EBC Channel The percentage indicates how many cycle counts are saved from the proposed method. TABLE 1. Implementation results of UP-GDBF decoder.
+FIGURE 10. Examples of Energy-Based Backtracking Scheme The timing diagram shows the update process in the maximum flipping phase. The memory content indicates the previous column block index sharing the same local-maximum energy value (the energy value is an annotation for readers’ convenience). The read/write directions are also presented.
+
+FIGURE 11. Pipeline Bubbles Insertion After Optimization NOP denotes a pipeline bubble. Red cells contain flipping operation and blue cells have no flipping operations.
+global-maximum energy value 8, which corresponds to the 7-th bit in the indication format mentioned in Section IV-C. At the beginning of the maximum finding phase, eight classification entries are initialized to −1, which denotes the termination flag in the flipping phase. When the column index equals zero, the local maximum (Local Max=4) selects one of the classification entries (Entry 4) to store the current index (0). Meanwhile, the original content (-1) of the selected entry is pushed into the energy-based backtracking memory, where the writing address equals the current column index (Address=0). In the following cycles, target columns with index= {1, 136, 139} were once updated to the seventh entry and stored in the energy-based backtracking memory at {136, 139, 141}. The index 141 was still kept in the seventh entry. At the end of the maximum finding phase, the global maximum (Global Max=7) chooses the corresponding entry (Entry 7) as the initial flipping address (IFA) to start the flipping. Then, the energy-based backtracking memory generates the target column index for flipping, and the value is fed
+
+back as the read address (FA) pointing to the next target. As a result, all the flipping blocks are accessed backward along the trail in the backtracking memory. As termination flag (-1) is encountered, the decoder ends the flipping state and proceeds to the syndrome check state for early termination.
+In the transition from the maximum finding phase to the flipping phase, two pipeline bubbles (NOP) are inserted in the decoder scheduling to avoid the data hazard in the pipeline architecture, as illustrated in Fig. 11. Although there are three-cycle overhead in pipeline bubbles (NOP) and termination (-1), the proposed method can avoid all unnecessary access in the flipping phase and reduce overall decoding cycles. Fig. 12 plots the average cycle count for each channel condition. It suggests that the proposed method can achieve more than 42% cycle reduction, equivalent to 1.72 times throughput enhancement, above 110 fixed-error-bit channel conditions.
+V. RESULTS AND DISCUSSION A. IMPLEMENTATION RESULTS The UP-GDBF decoder is implemented in TSMC 16nm process to evaluate the effectiveness in NAND Flash applications. The corresponding layout is shown in Fig. 13. The implementation results and area breakdown are summarized in Table 1. The proposed 4K LDPC decoder can operate at 1 GHz with 0.120 mm2. Inside the proposed decoders, the memory macros cover nearly 48% to store codewordrelated information and flipping records. The syndrome value
+
+234
+
+VOLUME 3, 2022
+
+TABLE 2. Comparison of hard-decision bit-flipping decoder for the NAND flash application.
+
+FIGURE 13. Layout of UP-GDBF Decoder.
+FIGURE 14. Throughput over Fixed EBC Channel Throughput = Code word length / (Average Cycle Count × Clock Period).
+occupies 26.2% to store two sets of syndromes, which is implemented in flip-flops for high bandwidth requirements. The random penalty generation module covers 2.7% because there is no need to store all 36864 bits of random bits. Furthermore, the area overhead of the proposed energy-based backtracking unit only occupies 0.8% of the total decoder. The throughput analysis in Fig. 14 suggests that the proposed decoder can endure the 138 error-bit-count channel condition while supporting maximum NAND channel interface speed in ONFI 5.0 with 19.3 Gbps.
+
+B. COMPARISON AND DISCUSSION Table 2 summarizes the hard-decision bit flipping decoders for NAND flash applications. All the data rates and decoding performance are presented under equivalent channel conditions. Because the LDPC code’s error correction capability is different in different code lengths, 1KB and 4KB UPGDBF decoders are implemented in a 90nm process to make a fair comparison. In 1KB LDPC code, the proposed UPGDBF provides a 1.23 higher data rate and 152 times more decoding performance than the modified gradient descent bit-flipping (MGDBF) decoder [4] in the EBC=40 channel condition.
+Regarding the 4KB LDPC code, since there is no partial parallel architecture implementation in global searching bit-flipping decoders, a 4KB PGDBF w/M decoder is implemented without a backtracking mechanism for detailed comparison. In the EBC=110 conditions, the global searching decoders are beyond 104 times more reliable than the non-global searching decoder. This reliability gain gives the global searching methods an advantage in NAND flash applications. Without a global searching process, the multi-bit flipping decoder (MBF) [5] directly flips the candidate bits with energy values above a predefined threshold. Thus, the MBF decoder provides a higher data rate than the PGDBF w/M decoder.
+Among all 4KB bit-flipping decoders, the proposed 4KB QC-LDPC decoder provides the highest data rates for two reasons. Firstly, the UP-GDBF decoding algorithm presents a higher convergence speed than all the state-of-the-art global searching decoding algorithms. In EBC=110 conditions, the UP-GDBF reduces nearly 20% from the PGDBF w/M’s ten iterations. Secondly, the energy-based backtracking scheme can provide an additional 1.72 times data rate enhancement in the decoder. As a result, the proposed UP-GDBF decoder outperforms the others in data rates and decoding performance under the same channel conditions.
+
+VOLUME 3, 2022
+
+235
+
+LIU et al.: UP-GDBF: A 19.3 Gbps ERROR FLOOR FREE 4KB LDPC DECODER
+
+VI. CONCLUSION
+In this paper, we apply the penalty method to analyze
+the error-floor phenomenon and propose a Unified Penalty
+Gradient Descend Bit Flipping decoding algorithm with
+10% - 20% convergence improvement. The corresponding
+decoder architecture not only possesses the advantage of
+global searching algorithms in decoding performance but
+also overcomes the throughput bottleneck with the energy-
+based backtracking scheme. Implemented in TSMC’s 16nm
+process, the proposed 4KB UPGDBF decoder can achieve
+a throughput of 19.3 Gbps to satisfy the requirement of the
+ONFI 5.0 interface. The proposed algorithm and backtrack-
+ing mechanism result in significant enhancements that allow
+our decoder to provide a higher data rate and more than two
+order performance gain in both 1KB and 4KB LDPC codes.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] K.-C. Ho, C.-L. Chen, and H.-C. Chang, “A 520k (18900, 17010) array dispersion LDPC decoder architectures for NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 4, pp. 1293–1304, Apr. 2016.
+[3] H. Sun, W. Zhao, M. Lv, G. Dong, N. Zheng, and T. Zhang, “Exploiting Intracell bit-error characteristics to improve min-sum LDPC decoding for MLC NAND flash-based storage in mobile device,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 8, pp. 2654–2664, Aug. 2016.
+[4] K.-C. Ho, C.-L. Chen, Y.-C. Liao, H.-C. Chang, and C.-Y. Lee, “A 3.46 Gb/s (9141,8224) LDPC-based ECC scheme and on-line channel estimation for solid-state drive applications,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2015, pp. 1450–1453.
+[5] J. Jung and I.-C. Park, “Multi-bit flipping decoding of LDPC codes for NAND storage systems,” IEEE Commun. Lett., vol. 21, no. 5, pp. 979–982, May 2017.
+[6] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding LDPC codes,” IEEE Trans. Commun., vol. 58, no. 6, pp. 1610–1614, Jun. 2010.
+[7] O. A. Rasheed, P. Ivaniš, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Commun. Lett., vol. 18, no. 9, pp. 1487–1490, Sep. 2014.
+[8] H. Cui, J. Lin, S. Song, and Z. Wang, “A new probabilistic gradient descent bit flipping decoder for LDPC codes,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), 2019, pp. 1–5.
+[9] H. Cui, J. Lin, and Z. Wang, “An improved gradient descent bitflipping decoder for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 8, pp. 3188–3200, Aug. 2019.
+[10] Y. Chen, H. Cui, J. Lin, and Z. Wang, “Fine-grained bit-flipping decoding for LDPC codes,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 5, pp. 896–900, May 2020.
+[11] H. Cui, J. Lin, and Z. Wang, “Information storage bit-flipping decoder for LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 11, pp. 2464–2468, Nov. 2020.
+[12] K. Deng, H. Cui, J. Lin, and Z. Wang, “Counter random gradient descent bit-flipping decoder for LDPC codes,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), 2021, pp. 55–60.
+[13] V. Savin, “Gradient descent bit-flipping decoding with momentum,” in Proc. 11th Int. Symp. Topics Coding (ISTC), 2021, pp. 1–5.
+[14] R. Courant, Calculus of Variations and Supplementary Notes and Exercise, New York Univ., New York, NY, USA, 1962.
+[15] “Open NAND flash interface specification revision 5.0.” ONFI. 2021. [Online]. Available: http://www.onfi.org/specifications
+[16] B. Yuce, H. F. Ugurdag, S. Gören, and G. Dündar, “Fast and efficient circuit topologies forFinding the maximum of n k-bit numbers,” IEEE Trans. Comput., vol. 63, no. 8, pp. 1868–1881, Aug. 2014.
+
+LI-WEI LIU (Member, IEEE) received the B.S. degrees in electronics engineering from National Chiao Tung University (currently, National Yang Ming Chiao Tung University), Hsinchu, Taiwan, in 2018, where he is currently pursuing the Ph.D. degree in electronics engineering.
+His current research interests include error correction coding, machine learning, and VLSI architecture for storage and communication system.
+YEN-CHIN LIAO (Member, IEEE) received the B.S. and M.S. degrees in communication engineering and the Ph.D. degree in electronics engineering from National Chiao Tung University (currently, National Yang Ming Chiao Tung University), Hsinchu, Taiwan, in 2000, 2002, and 2008, respectively.
+She was with ISSC Technology from 2002 to 2003, where she was involved in developing the IEEE802.11a/g products. From 2008 to 2010, she was with Ralink Technology, where she was working on the IEEE802.11n enhancement projects and submitting contributions to the IEEE802.11ac standard. From 2010 to 2012, she was recruited by MDV Technology, where she participated in the IEEE802.11d/e product development. She joined the Department of Electronics Engineering, National Chiao Tung University, as a Postdoctoral Researcher in 2012. Her research interests include error correction coding, machine learning, signal processing, and communication systems.
+HSIE-CHIA CHANG (Senior Member, IEEE) received the B.S., M.S., and Ph.D. degrees from the Electronics Engineering Department, National Chiao Tung University (currently, National Yang Ming Chiao Tung University), Hsinchu, Taiwan, in 1995, 1997, and 2002, respectively.
+He was with OSP/DE1, MediaTek Corporation from 2002 to 2003, where he was involved in decoding architectures for combo single chip. In 2003, he joined the Electronics Engineering Department, National Chiao-Tung University, as a Faculty Member, where he has been a Professor since 2010. He has authored a book, over 120 IEEE journal/conference papers, and over 70 U.S./China/Taiwan patents. His research interests include algorithms and VLSI architectures in signal processing, in particular, error control codes and cryptosystems. Dr. Chang was a recipient of the Outstanding Youth Electrical Engineer Award from the Chinese Institute of Electrical Engineering in 2010, and the Outstanding Youth Researcher Award from the Taiwan IC Design Society in 2011. He has served as the Deputy Director General with the Chip Implementation Center, Taiwan, from 2014 to 2017. He has also been served as an Associate Editor for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—PART I: REGULAR PAPERS since 2012, as well as a Technical Program Committee Member of the IEEE Asian Solid-State Circuits Conference from 2011 to 2013, and the International Solid-State Circuits Conference from 2018 to 2021.
+
+236
+
+VOLUME 3, 2022
+
+

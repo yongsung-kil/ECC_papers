@@ -1,0 +1,3030 @@
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+1981
+
+Stochastic Belief Propagation: A Low-Complexity Alternative to the Sum-Product Algorithm
+Nima Noorshams and Martin J. Wainwright, Senior Member, IEEE
+
+Abstract—The belief propagation (BP) or sum-product algo-
+
+rithm is a widely used message-passing method for computing
+
+marginal distributions in graphical models. At the core of the BP
+
+message updates, when applied to a graphical model involving
+
+discrete variables with pairwise interactions, lies a matrix-vector
+
+product with complexity that is quadratic in the state dimension
+
+, and requires transmission of a
+
+-dimensional vector of
+
+real numbers (messages) to its neighbors. Since various applica-
+
+tions involve very large state dimensions, such computation and
+
+communication complexities can be prohibitively complex. In this
+
+paper, we propose a low-complexity variant of BP, referred to as
+
+stochastic belief propagation (SBP). As suggested by the name, it
+
+is an adaptively randomized version of the BP message updates in
+
+which each node passes randomly chosen information to each of
+
+its neighbors. The SBP message updates reduce the computational
+
+complexity (per iteration) from quadratic to linear in , without
+
+assuming any particular structure of the potentials, and also
+
+reduce the communication complexity significantly, requiring
+
+only
+
+bits transmission per edge. Moreover, we establish a
+
+number of theoretical guarantees for the performance of SBP,
+
+showing that it converges almost surely to the BP fixed point for
+
+any tree-structured graph, and for any graph with cycles satisfying
+
+a contractivity condition. In addition, for these graphical models,
+
+we provide nonasymptotic upper bounds on the convergence rate,
+
+showing that the norm of the error vector decays no slower
+
+than
+
+with the number of iterations on trees and the
+
+normalized mean-squared error decays as
+
+for general
+
+graphs. This analysis, also supported by experimental results,
+
+shows that SBP can provably yield reductions in computational
+
+and communication complexities for various classes of graphical
+
+models.
+
+Index Terms—Graphical models, low-complexity belief propagation (BP), randomized algorithms, stochastic approximation,
+sum-product algorithm.
+
+I. INTRODUCTION
+G RAPHICAL models provide a general framework for describing statistical interactions among large collections of random variables. A broad range of fields—among them error-control coding, communication theory, statistical signal
+
+Manuscript received November 03, 2011; revised April 18, 2012; October 14, 2012; accepted November 19, 2012. Date of publication December 03, 2012; date of current version March 13, 2013. This work was supported in part by Multidisciplinary University Research Initiative grant N00014-11-1-0688 to M. J. Wainwright. The material in this paper was presented at the Allerton Conference on Communications, Control, and Computing, Monticello, IL, September 2011.
+N. Noorshams is with the Department of Electrical Engineering and Computer Sciences, University of California, Berkeley, CA 94720-1650 USA (e-mail: nshams@eecs.berkeley.edu).
+M. J. Wainwright is with the Department of Statistics and the Department of Electrical Engineering and Computer Sciences, University of California, Berkeley, CA 94720-1650 USA (e-mail: wainwrig@eecs.berkeley.edu).
+Communicated by P. O. Vontobel, Associate Editor for Coding Techniques. Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TIT.2012.2231464
+
+processing, computer vision, and bioinformatics—involve problems that can be fruitfully tackled using the formalism of graphical models. A computational problem central to such applications is that of marginalization, meaning the problem of computing marginal distributions over a subset of random variables. Naively approached, these marginalization problems have exponential complexity and, hence, are computationally intractable. Therefore, graphical models are only useful when combined with efficient algorithms. For graphs without cycles, the marginalization problem can be solved exactly and efficiently via an algorithm known as the belief propagation (BP) algorithm or sum-product algorithm. It is a distributed algorithm, in which each node performs a set of local computations and then relays the results to its graph neighbors in the form of so-called messages. For graphs with cycles, the BP algorithm is no longer an exact method, but nonetheless is widely used and known to be extremely effective in many settings. For a more detailed discussion of the role of the marginalization problem and the use of the BP algorithm, we refer the reader to various overview papers (see, e.g., [2], [17], [18], and [32]).
+In many applications of BP, the messages themselves are high dimensional in nature, either due to discrete random variables with a very large number of possible realizations (which will be referred to as the number of states), due to factor nodes with high degree, or due to continuous random variables that are discretized. Examples of such problems include disparity estimation in computer vision, tracking problems in sensor networks, and error-control decoding. For such problems, it may be expensive to compute and/or store the messages, and as a consequence, BP may run slowly and be limited to small-scale instances. Motivated by this challenge, researchers have studied a variety of techniques to reduce the complexity of BP in different applications (e.g., see the papers [6], [9], [14], [15], [19], [26], [27], and references therein). At the core of the BP message passing is a matrix-vector multiplication, with complexity scaling quadratically in the number of states . Certain graphical models have special structures that can be exploited so as to reduce this complexity. For instance, when applied to decode low-density parity-check codes for channel coding (see, e.g., [10] and [17]), the complexity of message passing, if performed naively, would scale exponentially in the factor degrees. However, a clever use of the fast Fourier transform over reduces this complexity to linear in the factor degrees (e.g., see [25] for details). Other problems arising in computer vision involve pairwise factors with a circulant structure for which the fast Fourier transform can also reduce complexity [9]. Similarly, computation can be accelerated by exploiting symmetry in factors [15], or additional factorization properties of the distribution [19].
+
+0018-9448/$31.00 © 2012 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1982
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+In the absence of structure to exploit, other researchers have
+
+proposed different types of quantization strategies for BP mes-
+
+sage updates [6], [14], as well as stochastic methods based on
+
+particle filtering or nonparametric BP (see, e.g., [3], [7], and
+
+[27]) that approximate continuous messages by finite numbers
+
+of particles. For certain classes of these methods, it is possible to
+
+establish consistency as the number of particles tends to infinity
+
+[7], or to establish nonasymptotic results inversely proportional
+
+to the square root of the number of particles [13]. As the number
+
+of particles diverges, the approximation error becomes negli-
+
+gible, a property that underlies such consistency proofs. Re-
+
+searchers have also proposed stochastic techniques to improve
+
+the decoding efficiency of binary error-correcting codes [21],
+
+[30]. These techniques, which are based on encoding messages
+
+with sequences of Bernoulli random variables, lead to efficient
+
+decoding hardware architectures.
+
+In this paper, we focus on the problem of implementing BP in
+
+high-dimensional discrete spaces and propose a novel low-com-
+
+plexity algorithm, which we refer to as stochastic belief prop-
+
+agation (SBP). As suggested by its name, it is an adaptively
+
+randomized version of the BP algorithm, where each node only
+
+passes randomly selected partial information to its neighbors at
+
+each round. The SBP algorithm has two features that make it
+
+practically appealing. First, it reduces the computational cost
+
+of BP by an order of magnitude; in concrete terms, for arbi-
+
+trary pairwise potentials over states, it reduces the per itera-
+
+tion computational complexity from quadratic to linear—that is,
+
+from
+
+to
+
+. Second, it significantly reduces the mes-
+
+sage/communication complexity, requiring transmission of only
+
+per edge as opposed to
+
+real numbers in the
+
+case of BP.
+
+Even though SBP is based on low-complexity updates, we
+
+are able to establish conditions under which it converges (in a
+
+stochastic sense) to the exact BP fixed point and, moreover, to
+
+establish quantitative bounds on this rate of convergence. These
+
+bounds show that SBP can yield provable reductions in the com-
+
+plexity of computing a BP fixed point to a tolerance
+
+. In
+
+more precise terms, we first show that SBP is strongly consis-
+
+tent on any tree-structured graph, meaning that it converges al-
+
+most surely to the unique BP fixed point; in addition, we provide
+
+nonasymptotic upper bounds on the norm (maximum value)
+
+of the error vector as a function of iteration number (Theorem
+
+1). For general graphs with cycles, we show that when the or-
+
+dinary BP message updates satisfy a type of contraction condi-
+
+tion, the SBP message updates are strongly consistent and con-
+
+verge in normalized mean-squared error at the rate
+
+to
+
+the unique BP fixed point, where is the number of iterations.
+
+We also show that the typical performance is sharply concen-
+
+trated around its mean (Theorem 2). These theoretical results
+
+are supported by simulation studies, showing the convergence
+
+of the algorithm on various graphs, and the associated reduction
+
+in computational complexity that is possible.
+
+The remainder of this paper is organized as follows. We begin
+
+in Section II with background on graphical models as well as
+
+the BP algorithm. In Section III, we provide a precise descrip-
+
+tion of the SBP, before turning in Section III-B to statements
+
+of our main theoretical results, as well as discussion of some of their consequences. Section IV is devoted to the proofs of our results, with more technical aspects of the proofs deferred to the appendix. In Section V, we demonstrate the correspondence between our theoretical predictions and the algorithm’s practical behavior.
+
+II. BACKGROUND
+In this section, we provide some background on graphical models as well as the BP algorithm.
+
+A. Graphical Models
+
+Consider a random vector
+
+, where
+
+for each
+
+, the variable takes values in
+
+some discrete space
+
+with cardinality . An
+
+undirected graphical model, also known as a Markov random
+
+field, defines a family of joint probability distributions over
+
+this random vector by associating the index set
+
+with the vertex set of an undirected graph
+
+. In
+
+addition to the vertex set, the graph consists of a collection
+
+of edges
+
+, where a pair
+
+if and only if
+
+nodes and are connected by an edge.1 The structure of the
+
+graph describes the statistical dependencies among the different
+
+random variables—in particular, via the cliques2 of the graph.
+
+For each clique of the graph, let
+
+be a
+
+function of the subvector
+
+of the random
+
+variables indexed by the clique, and then, consider the set of all
+
+distributions over that factorize as
+
+(1)
+
+where is the set of all cliques in the graph. As a concrete example, consider the 2-D grid shown in
+Fig. 1(a). Since its cliques consist of the set of all vertices together with the set of all edges , the general factorization (1) takes the special form
+(2)
+
+where
+
+is the node potential function for node
+
+, and
+
+is the edge potential function
+
+for the edge
+
+. A factorization of this form (2) is known
+
+as a pairwise Markov random field. It is important to note that
+
+there is no loss of generality in assuming a pairwise factorization
+
+of this form; indeed, any graphical model with discrete random
+
+variables can be converted into a pairwise form by suitably aug-
+
+menting the state space (e.g., see [33] or [32], Appendix E.3).
+
+Moreover, the BP message updates can be easily translated from
+
+the original graph to the pairwise graph, and vice versa. Accord-
+
+ingly, for the remainder of this paper, we focus on the case of a
+
+pairwise MRF.
+
+1It should be noted that by
+
+, we mean an unordered tuple of vertices.
+
+2A clique of a graph is a subset of vertices that are all joined by edges and so form a fully connected subgraph.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1983
+
+computing marginals for a posterior distribution can be cast3 as an instance of computing marginals for a pairwise Markov random field (2).
+Our focus in this paper is on the marginalization problem, meaning the computation of the single-node marginal distributions
+
+(3)
+
+and more generally, higher order marginal distributions on
+
+edges and cliques. Note that to calculate this summation, brute
+
+force is not tractable and requires
+
+computations. For
+
+any graph without cycles—known as a tree—this computation
+
+can be carried far more efficiently in only
+
+operations
+
+using an algorithm known as the BP, to which we now turn.
+
+Fig. 1. Examples of pairwise Markov random fields. (a) Two-dimensional
+
+grid: the potential functions and are associated with nodes and ,
+
+respectively, whereas the potential function is associated with edge
+
+.
+
+(b) Hidden Markov model including both hidden variables
+
+,
+
+represented as white nodes, and observed variables
+
+, represented
+
+as shaded nodes.
+
+In various application contexts, the random vector
+
+is an unobserved or “hidden” quantity, and
+
+the goal is to draw inferences on the basis of a collection of
+
+observations
+
+. The link between the observed
+
+and hidden variables is specified in terms of a conditional
+
+probability distribution, which in many cases can be written in
+
+the product form
+
+. For instance,
+
+in error-control coding using a low-density parity-check code,
+
+the vector takes values in a linear subspace of
+
+,
+
+corresponding to valid codewords, and the observation vector
+
+is obtained from some form of memoryless channel (e.g., bi-
+
+nary symmetric, additive white Gaussian noise, etc.). In image
+
+denoising applications, the vector represents a rasterized
+
+form of the image, and the observation corresponds to a
+
+corrupted form of the image.
+
+In terms of drawing conclusions about the hidden variables
+
+based on the observations, the central object is the posterior dis-
+
+tribution
+
+. From the definition of the conditional prob-
+
+ability and the form of the prior and likelihoods, this posterior
+
+can also be factorized in pairwise form
+
+B. BP Algorithm
+
+BP is an iterative algorithm consisting of a set of local mes-
+
+sage-passing rounds, for computing either exact or approximate
+
+marginal distributions. For tree-structured (cycle-free) graphs,
+
+it is known that BP message-based marginals converge to the
+
+exact marginals in a finite number of iterations. However, the
+
+same message-passing updates can also be applied to more gen-
+
+eral graphs and are known to be effective for computing ap-
+
+proximate marginals in numerous applications. Here, we pro-
+
+vide a very brief treatment, referring the reader to various stan-
+
+dard sources [2], [17], [32], [33] for further background.
+
+In order to define the message-passing updates, we require
+
+some further notation. For each node
+
+, let
+
+denote its set of neighbors, and let
+
+denote the set of all directed edges
+
+emanating from . Finally, we define
+
+, the
+
+set of all directed edges in the graph; note that has cardi-
+
+nality . In the BP algorithm, one message
+
+is
+
+assigned to every directed edge
+
+. By concate-
+
+nating all of these -dimensional vectors, one for each of the
+
+members of , we obtain a -dimensional vector of mes-
+
+sages
+
+, where
+
+.
+
+At each round
+
+, every node
+
+calculates
+
+a message
+
+to be sent to its neighbor
+
+.
+
+In mathematical terms, this operation can be represented as an
+
+update of the form
+
+, where
+
+is
+
+the local update function of the directed edge
+
+. In more
+
+detail, for each
+
+, we have4
+
+(4)
+
+3For illustrative purposes, we have assumed here that the distribution has a product form, but a somewhat more involved reduction also applies to a general observation model.
+
+where
+
+is the new node compat-
+
+ibility function. (Since the observation is fixed, there is no
+
+need to track its functional dependence.) Thus, the problem of
+
+4It is worth mentioning that
+
+is only a function of the messages
+
+for
+
+. Therefore, we have
+
+, where is
+
+the degree of the node . Since it is clear from the context and for the purpose of
+
+reducing the notation overhead, we say
+
+instead of
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1984
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+is known to be a useful approximation for many classes of graphical models.
+
+III. ALGORITHM AND MAIN RESULTS
+We now turn to a description of the SBP algorithm (see Section III-A), as well as the statement of our main theoretical guarantees on its behavior (see Section III-B).
+
+Fig. 2. Graphical representation of message-passing algorithms. (a) Node
+
+transmits the message
+
+, derived from (4), to its neighbor . (b)
+
+Upon receiving all the messages, node updates its marginal estimate.
+
+where is a normalization constant chosen to ensure that
+
+. Fig. 2(a) provides a graphical representa-
+
+tion of the flow of information in this local update.
+
+By concatenating the local updates (4), we obtain a global
+
+update function
+
+of the form
+
+(5)
+
+Typically, the goal of message passing is to obtain a fixed point,
+
+meaning a vector
+
+such that
+
+and (4) can
+
+be seen as an iterative way of solving this fixed-point equation.
+
+For any tree-structured graph, it is known that the update (5)
+
+has a unique fixed point. For a general graph (with some mild
+
+conditions on the potentials; see [33] for details), it is known
+
+that the global update (5) has at least one fixed point, but it is no
+
+longer unique in general. However, there are various types of
+
+contraction conditions that can be used to guarantee uniqueness
+
+on a general graph (see, e.g., [12], [20], [23], and [29]).
+
+Given a fixed point , node computes its marginal (ap-
+
+proximation) by combining the local potential function
+
+with a product of all incoming messages as
+
+(6)
+
+A. Stochastic Belief Propagation
+
+When applied to a pairwise graphical model with random
+
+variables taking states, the number of summations and mul-
+
+tiplications required by the original BP algorithm is
+
+per
+
+iteration and per edge, as can be seen by inspection of the mes-
+
+sage update (4). This quadratic complexity—which is incurred
+
+on a per iteration, per edge basis—is prohibitive in many ap-
+
+plications, where the state dimension may be on the order of
+
+thousands. As discussed earlier in Section I, although certain
+
+graphical models have particular structures that can be exploited
+
+to reduce the complexity of the updates, not all problems have
+
+such special structures, so that a general-purpose approach is of
+
+interest. In addition to computational cost, a standard BP mes-
+
+sage update can also be expensive in terms of communication
+
+cost, since each update requires transmitting
+
+real num-
+
+bers along each edge. For applications that involve power lim-
+
+itations, such as sensor networks, reducing this communication
+
+cost is also of interest.
+
+SBP is an adaptively randomized form of the usual BP
+
+message updates that yields savings in both computational
+
+and communication cost. It is motivated by a simple obser-
+
+vation—namely, that the message-passing update along the
+
+directed edge
+
+can be formulated as an expectation over
+
+suitably normalized columns of a compatibility matrix [see (7)].
+
+Here, the probability distribution in question depends on the
+
+incoming messages and changes from iteration to iteration. This
+
+perspective leads naturally to an adaptively randomized variant
+
+of BP: instead of computing and transmitting the full expec-
+
+tation at each round—which incurs
+
+computational cost
+
+and requires sending
+
+real numbers—the SBP algorithm
+
+simply picks a single normalized column with the appropriate
+
+(message-dependent) probability and performs a randomized
+
+update. As we show, each such operation can be performed in
+
+time and requires transmitting only
+
+, so that the
+
+SBP message updates are less costly by an order of magnitude.
+
+With this intuition in hand, we are now ready for a precise
+
+description of the SBP algorithm. Let us view the edge poten-
+
+tial function as a matrix of numbers
+
+, for
+
+. For the directed edge
+
+, define the collection
+
+of column vectors5
+
+(7)
+
+where is a normalization constant chosen so that
+
+. See Fig. 2(b) for an illustration of
+
+this computation. For any tree-structured graph, the quantity
+
+is equal to the single-node marginal
+
+, as pre-
+
+and marginal weights
+
+, for
+
+. We assume that the column vectors
+
+and normalization constants
+
+have been precomputed and
+
+stored, which can be done in an offline manner and requires
+
+viously defined (3). For a graph with cycles, the vector
+
+5The columns of the compatibility matrix
+
+represents an approximation to the single-node marginal and i.e.,
+
+for all
+
+are normalized to sum to one: .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1985
+
+Fig. 3. Specification of SBP.
+
+operations. In addition, the algorithm makes use of a pos- The remainder of this paper is devoted to understanding
+
+itive sequence of step sizes
+
+. In terms of these quantities, when, and if so, how quickly the SBP message updates con-
+
+the SBP algorithm consists of the steps shown in Fig. 3.
+
+verge to a BP fixed point. Let us provide some intuition as to
+
+The per iteration per edge computational complexity of the why such a behavior might be expected. Recall that the update
+
+SBP algorithm lies in calculating the probability mass function (10) is random, depending on the choice of index chosen in
+
+, defined in (9), generating a random index according step II(b). Suppose that we take expectations of the update (10)
+
+to the mass function (9) and performing the weighted update only over the distribution (9), in effect conditioning on all past
+
+(10). Denoting the maximum degree of the graph by , we randomness in the algorithm. (We make this idea precise via
+
+require at most
+
+multiplications to compute . the notion of -fields in our analysis.) Doing so yields that the
+
+Moreover, an additional operations are needed to compute expectation of the update (10) is given by
+
+the probability mass function . On the other hand, generating
+
+a random index can be done with less than operations by
+
+picking a number uniformly at random from
+
+and set-
+
+ting6
+
+. Finally, the update
+
+(10) needs
+
+operations. Adding up these contributions, we Recalling the definitions (7) and (9) of the matrix and mass
+
+find that the SBP algorithm requires at most
+
+function , respectively, and performing some algebra, we see
+
+multiplications and/or summations per iteration per edge to up- that, in an average sense, the SBP message update is equiva-
+
+date the messages. As can be seen from (4), the regular BP lent to (a damped version of the) usual BP message update. The
+
+complexity is
+
+. Therefore, for graphs with bounded de- technical difficulties lie in showing that despite the fluctuations
+
+gree (of most interest in practical applications), the SBP mes- around this average behavior, the SBP updates still converge to
+
+sage updates have reduced the per iteration computational com- the BP fixed point when the step size or damping parameter
+
+plexity by a factor of . In addition to computational efficiency, is suitably chosen. We now turn to precisely this task.
+
+SBP provides us with a significant gain in message/communication complexity over BP. This can be observed from the fact B. Main Theoretical Results
+
+that the normalized compatibility matrix is only a function
+
+of edge potentials , hence known to the node . Therefore,
+
+node has to transmit only the random column index to
+
+node , which can be done with
+
+. Thus, we obtain a
+
+significant reduction in communication complexity relative to
+
+standard BP, which requires transmitting a
+
+-dimensional
+
+vector of real numbers per edge at every round. Here, we sum-
+
+marize the features of our algorithm that make it appealing for
+
+practical purposes.
+
+1) Computational complexity: SBP reduces the per iteration
+
+complexity by an order of magnitude from
+
+to .
+
+2) Communication complexity: SBP requires transmitting
+
+only
+
+per edge in contrast to transmitting a
+
+-dimensional vector of real numbers in the case of
+
+BP.
+
+Thus far, we have proposed a stochastic variant of the usual
+
+BP algorithm. In contrast to the usual deterministic updates, this
+
+algorithm generates a random sequence
+
+of message
+
+vectors. This randomness raises two natural questions.
+
+1) Is the SBP algorithm strongly consistent? More precisely,
+
+assuming that the ordinary BP algorithm has a unique fixed
+
+point , under what conditions do we have
+
+almost surely as
+
+?
+
+2) When convergence occurs, how fast does it take place?
+
+The computational complexity per iteration is significantly
+
+reduced, but what are the tradeoffs incurred by the number
+
+of iterations required?
+
+The goal of this section is to provide some precise answers
+
+to these questions, ones which show that under certain condi-
+
+tions, there are provable gains to be achieved by the SBP algo-
+
+6It is known that for any distribution function has the distribution .
+
+, the random variable rithm. We begin with the case of trees, for which the ordinary BP message updates are known to have a unique fixed point
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1986
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+for any choice of potential functions. For any tree-structured
+
+problem, the upcoming Theorem 1 guarantees that the SBP mes-
+
+sage updates are strongly consistent and, moreover, that in terms
+
+of the elementwise norm, they converge in expectation at
+
+least as quickly as
+
+, where is the number of itera-
+
+tions. We then turn to the case of general graphs. Although the
+
+BP fixed point need not be unique in general, a number of con-
+
+tractivity conditions that guarantee uniqueness and convergence
+
+of ordinary BP have been developed (see, e.g., [12], [20], [23],
+
+and [29]). Working under such conditions, we show in The-
+
+orem 2 that the SBP algorithm is strongly consistent, and we
+
+show that the normalized mean-squared error decays at least
+
+as quickly as
+
+. In addition, we provide high probability
+
+bounds on the error at each iteration, showing that the typical
+
+performance is highly concentrated around its average. Finally,
+
+in Section III-B3, we provide a new set of sufficient conditions
+
+for contractivity in terms of node/edge potentials and the graph
+
+structure. As we discuss, our theoretical analysis shows not only
+
+that SBP is provably correct, but also that in various regimes,
+
+substantial gains in overall computational complexity can be ob-
+
+tained relative to the ordinary BP.
+
+1) Guarantees for Tree-Structured Graphs: We begin with
+
+the case of a tree-structured graph, meaning a graph that con-
+
+tains no cycles. As a special case, the hidden Markov chain
+
+shown in Fig. 1(b) is an instance of such a tree-structured graph.
+
+Recall that for some integer
+
+, a square matrix is said to
+
+be nilpotent of degree if
+
+. (We refer the reader to [11]
+
+for further background on nilpotent matrices and their proper-
+
+ties.) Also recall the definition of the diameter of a graph ,
+
+denoted by
+
+, as the length (number of edges) of the
+
+longest path between any pair of nodes in the graph. For a tree,
+
+this diameter can be at most , a bound achieved by the chain
+
+graph. In stating Theorem 1, we make use of the following def-
+
+inition: for vectors ,
+
+, we write
+
+if and only if
+
+for all
+
+. Moreover, for an arbitrary
+
+, let denote the vector obtained from taking the ab-
+
+solute value of its elements. With this notation in hand, we are
+
+now ready to state our first result.
+
+Theorem 1 (Tree-Structured Graphs): For any tree-structured
+
+Markov random field, the sequence of messages
+
+gen-
+
+erated by the SBP algorithm with step size
+
+has
+
+the following properties:
+
+a) The message sequence
+
+converges almost surely
+
+to the unique BP fixed point as
+
+.
+
+b) There exists a nilpotent matrix
+
+of degree at
+
+most
+
+such that the -dimensional error
+
+vector
+
+satisfies the elementwise inequality
+
+(11)
+
+upper bound on the rate of convergence: in expectation, the
+
+norm of the error vector is guaranteed to decay at the rate
+
+. As noted by a helpful reviewer, the upper bound in
+
+part (b) is likely to be conservative at times, since the inverse
+
+matrix
+
+may have elements that grow exponentially
+
+in the graph diameter . As shown by our experimental results,
+
+the theory is overly conservative in this way, as SBP still be-
+
+haves well on trees with large diameters (such as chains). In-
+
+deed, in Section IV, we provide less conservative results for
+
+general graphs under a certain contractivity condition.
+
+2) Guarantees for General Graphs: Our next theorem ad-
+
+dresses the case of general graphs. In contrast to the case of tree-
+
+structured graphs, depending on the choice of potential func-
+
+tions, the BP message updates may have multiple fixed points
+
+and need not converge in general. A sufficient condition for both
+
+uniqueness and convergence of the ordinary BP message up-
+
+dates, which we assume in our analysis of SBP, is that the update
+
+function , defined in (5), is contractive, meaning that there ex-
+
+ists some
+
+such that
+
+(12)
+
+Past work has established contractivity conditions of this form when the BP updates are formulated in terms of log messages[12], [20], [23], [29]. In Section III-B3, we use related techniques to establish sufficient conditions for contractivity for the BP message update that involves the messages (as opposed to log messages).
+Recalling the normalized compatibility matrix with columns , we define its minimum
+and maximum values per row as follows:7
+
+(13) The prefactor in our bounds involves the constant
+
+(14)
+
+With this notation, we have the following result:
+
+Theorem 2 (General Graphs): Suppose that the BP update
+
+function
+
+Satisfies the contraction condition (12).
+
+a) Then, BP has a unique fixed point , and the SBP mes-
+
+sage sequence
+
+, generated with the step size
+
+, converges almost surely to as
+
+.
+
+b) With the step size
+
+for some fixed
+
+, we have
+
+for all iterations
+
+.
+
+(15)
+
+Remarks: The proof of this result is given in Section IV-A.
+
+Part (a) shows that the SBP algorithm is guaranteed to con-
+
+for all iterations
+
+.
+
+verge almost surely to the unique BP fixed point, regardless of the choice of node/edge potentials and the initial message vector. Part (b) refines this claim by providing a quantitative
+
+7As will be discussed later, we can obtain a sequence of more refined (tighter)
+
+lower
+
+and upper
+
+bounds by confining the space of
+
+feasible messages.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1987
+
+c) With the step size
+
+, we have
+
+(16)
+
+also for every
+
+and
+
+, we have
+
+(17)
+
+with probability at least
+
+.
+
+Remarks: The proof of Theorem 2 is given in Section IV-B.
+
+Here, we discuss some of the various guarantees that it pro-
+
+vides. First, part (a) of the theorem shows that the SBP algorithm
+
+is strongly consistent, in that it converges almost surely to the
+
+unique BP fixed point. This claim is analogous to the almost sure
+
+convergence established in Theorem 1(a) for trees. Second, the
+
+bound (15) in Theorem 2(b) provides a nonasymptotic bound
+
+on the normalized mean-squared error
+
+.
+
+For the specified choice of step size
+
+, the first
+
+component of the bound (15) is dominant; hence, the expected
+
+error (in squared -norm) is of the order8 . Therefore, after
+
+iterations, the SBP algorithm returns a solution
+
+with MSE at most . Finally, part (c) provides bounds, both
+
+in expectation and with high probability, for a slightly different
+
+step size choice. On one hand, the bound in expectation (16)
+
+is of the order
+
+, and so includes an additional loga-
+
+rithmic factor not present in the bounds from part (b). However,
+
+as shown in the high probability bound (17), the squared error
+
+is also guaranteed to satisfy a sample-wise version of the same
+
+bound with high probability. This theoretical claim is consis-
+
+tent with our later experimental results, showing that the error
+
+exhibits tight concentration around its expected behavior.
+
+Let us now compare the guarantees of SBP to those of BP.
+
+Under the contraction condition of Theorem 2, the ordinary
+
+BP message updates are guaranteed to converge geometrically
+
+quickly, meaning that
+
+iterations are sufficient to
+
+obtain -accurate solution. In contrast, under the same condi-
+
+tions, the SBP algorithm requires
+
+iterations to return a
+
+solution with MSE at most , so that its iteration complexity is
+
+larger. However, as noted earlier, the BP message updates re-
+
+quire
+
+operations for each edge and iteration, whereas the
+
+SBP message updates require only
+
+operations. Putting the
+
+pieces together, we conclude that:
+
+1) on one hand, ordinary BP requires
+
+op-
+
+erations to compute the fixed point to accuracy ;
+
+2) in comparison, SBP requires
+
+operations to
+
+compute the fixed point to expected accuracy .
+
+Consequently, we see that as long the desired tolerance is not
+
+too small—in particular, if
+
+—then SBP leads to com-
+
+putational savings. In many practical applications, the state di-
+
+mension is on the order of to , so that the precision
+
+can be of the order
+
+to
+
+before the complexity of SBP
+
+becomes of comparable order to that of BP. Given that most
+
+graphical models represent approximations to reality, it is likely that larger tolerances are often of interest.
+3) Sufficient Conditions for Contractivity: Theorem 2 is based on the assumption that the update function is contractive, meaning that its Lipschitz constant is less than one. In past work, various authors have developed contractivity conditions, based on analyzing the log messages, that guarantee uniqueness and convergence of ordinary BP (see, e.g., [12], [20], [23], and [29]). Our theorem requires contractivity on the messages (as opposed to log messages), which requires a related but slightly different argument. In this section, we show how to control and thereby provide sufficient conditions for Theorem 2 to be applicable.
+Our contractivity result applies when the messages under consideration belong to a set of the form
+
+(18)
+
+for some choice of the upper and lower bounds—namely,
+
+and
+
+, respectively. For instance, for all iterations
+
+, the messages always belong to a set of this form9
+
+with
+
+and
+
+, as previously
+
+defined (13). Since the bounds
+
+do not involve
+
+the node potentials, one suspects that they might be tightened
+
+at subsequent iterations, and indeed, there is a progressive
+
+refinement of upper and lower bounds of this form. Assuming
+
+that the messages belong to a set at an initial iteration, then
+
+for any subsequent iterations, we are guaranteed the inclusion
+
+(19)
+
+which then leads to the refined upper and lower bounds
+
+and
+
+where we recall the quantity
+
+previously defined (8). While such refinements are possible, in
+
+order to streamline our presentation, we focus primarily on the
+
+zeroth-order bounds
+
+and
+
+.
+
+Given a set of the form (18), we associate with the directed
+
+edges
+
+and
+
+(where
+
+) the non-
+
+negative numbers
+
+(20)
+
+8At least superficially, this rate might appear faster than the
+
+rate estab-
+
+lished for trees in Theorem 1(b); however, the reader should be careful to note
+
+that Theorem 1 involves the elementwise -norm, which is not squared, as
+
+opposed to the squared -norm studied in Theorem 2.
+
+9It turns out that the BP update function on the directed edge
+
+a convex combination of the normalized columns
+
+for
+
+Therefore, we have
+
+, for all
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+is .
+.
+
+1988
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+and where and
+
+For the Potts model, we have
+
+,
+
+and hence, is a symmetric matrix with
+
+(21) if
+
+if
+
+Some straightforward algebra shows that the second largest sin-
+
+gular value of is given by
+
+, whence
+
+(22)
+
+The next step is to find upper bounds on the terms
+
+and
+
+, in particular by upper bounding the quantities
+
+and
+
+, as defined in (22) and (23) respectively.
+
+(23) In Appendix A, we show that the Lipschitz constant of is
+
+upper bounded as
+
+Recall the normalized compatibility matrix
+
+on
+
+the directed edge
+
+, as previously defined in (7). Since
+
+has positive entries, the Perron–Frobenius theorem [11]
+
+guarantees that the maximal eigenvalue is equal to one, and is
+
+associated with a pair of left and right eigenvectors (unique up to
+
+scaling) with positive entries. Since is column-stochastic,
+
+any multiple of the all-one vector can be chosen as the left
+
+eigenvector. Letting
+
+denote the right eigenvector with
+
+positive entries, we are guaranteed that
+
+, and hence,
+
+we may define the matrix
+
+. By construc-
+
+tion, this matrix has all of its eigenvalues strictly less than 1 in
+
+absolute value (see [11, Lemma 8.2.7]).
+
+Proposition 1: The global update function defined in (5) is Lipschitz with constant at most
+
+where is the degree of node . Therefore, a sufficient condition for contractivity in the case of the Potts model is
+
+(25)
+
+To gain intuition, consider the special case in which the node
+
+potentials are uniform, so that
+
+for
+
+. In this case, for any graph with bounded node
+
+degrees, the bound (25) guarantees contraction for all in an
+
+interval . For nonuniform node potentials, inequality (25) is
+
+weaker, but it can be improved via the refined sets (19) discussed
+
+previously.
+
+(24)
+
+IV. PROOFS
+
+where
+
+denotes the maximum singular value of a matrix.
+
+In order to provide some intuition for Proposition 1, let us
+
+consider a simple but illuminating example.
+
+Example 1 (Potts Model): The Potts model [9], [16], [28] is often used for denoising, segmentation, and stereo computation in image processing and computer vision. It is a pairwise Markov random field that is based on edge potentials of the form
+
+if
+
+and
+
+if
+
+We now turn to the proofs of our two main results, namely Theorems 1 and 2, as well as the auxiliary result, Proposition 1, on contractivity of the BP message updates. For our purposes, it is convenient to note that the ordinary BP update can be written as an expectation of the form
+(26)
+
+for all
+
+. Here, the index
+
+is chosen randomly
+
+according to the probability mass function (9).
+
+A. Proof of Theorem 1
+
+for all edges
+
+and ,
+
+. The parameter
+
+can be tuned to enforce different degrees of smooth-
+
+We begin by stating a lemma that plays a central role in the proof of Theorem 1.
+
+ness: at one extreme, setting
+
+enforces no smoothness, Lemma 1: For any tree-structured Markov random field,
+
+whereas a choice close to zero enforces a very strong type of there exists a nilpotent matrix
+
+of degree at most
+
+smoothness. (To be clear, the special structure of the Potts model
+
+such that
+
+can be exploited to compute the BP message updates quickly; our motivation in considering it here is only to provide a simple
+
+(27)
+
+illustration of our contractivity condition.)
+
+for all ,
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1989
+
+The proof of this lemma is somewhat technical, so that we
+
+defer it to Appendix B. In interpreting this result, the reader
+
+should recall that for vectors ,
+
+, the notation
+
+denotes inequality in an elementwise sense—i.e.,
+
+for
+
+.
+
+An immediate corollary of this lemma is the existence
+
+and uniqueness of the BP fixed point. Since we may iterate
+
+inequality (27), we find that
+
+Subtracting the unique fixed point to
+
+from both sides then leads (30)
+
+for all iterations
+
+, and arbitrary messages , ,
+
+where
+
+denotes the composition of with itself times.
+
+The nilpotence of ensures that
+
+, and hence
+
+for all messages , and . Let
+
+de-
+
+note the common value. The claim is that is the unique fixed
+
+point of the BP update function . This can be shown as fol-
+
+lows: from Lemma 1, we have
+
+where we have introduced the convenient shorthand . We may apply the triangle inequality to each element of this vector equation; doing so and using Lemma 1 to upper bound the terms
+, we obtain the element-wise inequality
+Since is the all-zero matrix, unwrapping the last inequality times yields the element-wise upper bound
+
+(31)
+
+Iterating the last inequality for the total of times, we obtain
+
+where the terms for
+
+are defined via the recursion , with initial conditions
+
+and hence
+
+. On the other hand, the uniqueness
+
+of the BP fixed point is a direct consequence of the facts that
+
+for any fixed point we have
+
+, and for all
+
+arbitrary messages , we have
+
+. Ac-
+
+cordingly, we see that Lemma 1 provides an alternative proof of
+
+the well-known fact that BP converges to a unique fixed point
+
+on trees after at most
+
+iterations.
+
+We now show how Lemma 1 can be used to establish the two
+
+claims of Theorem 1.
+
+1) Almost Sure Consistency: We begin with the almost sure
+
+consistency claim of part (a). By combining all the local up-
+
+dates, we form the global update rule
+
+(28)
+
+for iterations
+
+, where
+
+is the -dimensional vector obtained from stacking up all the
+
+normalized columns
+
+. Defining the vector
+
+, we can rewrite the update (28) as
+
+.
+
+It remains to control the sequences
+
+for
+
+. In order to do so, we first establish a mar-
+
+tingale difference property for the variables
+
+defined
+
+prior to (29). For each
+
+, define the -field
+
+, as generated by the randomness in
+
+the messages up to time . Based on the representation (26),
+
+we see that
+
+, showing that
+
+forms
+
+martingale difference sequence with respect to the filtration
+
+. From the definition, it can be seen that the entries
+
+of
+
+are bounded; more precisely, we have
+
+for all iterations
+
+, and all states
+
+.
+
+Consequently, the sequence
+
+is a bounded martingale
+
+difference sequence.
+
+We begin with the term . Since is a bounded mar-
+
+tingale difference, standard convergence results [8] guarantee
+
+that
+
+almost surely. Moreover, we have the
+
+bound
+
+. Recalling the definition of
+
+from (30), we conclude that
+
+converges to the
+
+all-zero vector almost surely as
+
+. In order to extend
+
+our argument to the terms for
+
+, we make
+
+use of the following fact: for any sequence of real numbers
+
+such that
+
+, we also have
+
+(e.g., see [24]). Consequently, for any realization such that the
+
+deterministic sequence
+
+converges to zero, we are
+
+also guaranteed that the sequence
+
+, with elements
+
+, converges to zero. Since we have
+
+(29) shown that
+
+, we conclude that
+
+as well. This
+
+argument can be iterated, thereby establishing almost sure con-
+
+for
+
+. With our step size choice
+
+, vergence for all of the terms . Putting the pieces together, we
+
+unwrapping the recursion (29) yields the representation
+
+conclude that the vector
+
+converges almost surely to
+
+the all-zero vector as
+
+, thereby completing the proof of
+
+part (a).
+
+2) Bounds on Expected Absolute Error: We now turn to part
+
+(b) of Theorem 1, which provides upper bounds on the expected
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1990
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+absolute error. We establish this claim by exploiting some mar-
+
+tingale concentration inequalities [5]. From part (a), we know
+
+that
+
+is a bounded martingale difference sequence, in
+
+particular with
+
+. Applying the Azuma–Hoeffding
+
+inequality [5] yields the tail bound
+
+for all
+
+, and
+
+. By integrating this tail
+
+bound, we can upper bound the mean: in particular, we have
+
+With this notation, we can write the message update of the SBP algorithm in the compact form
+
+(33)
+
+valid for
+
+, and suitable for application of the Rob-
+
+bins–Monro theorem. (See Appendix C for further details.)
+
+In order to apply this result, we need to verify its hypotheses.
+
+First of all, it is easy to see that we have a bound of the form
+
+for some constant . Moreover, the conditional distribution of the vector , given the past, depends only on ; more precisely, we have
+
+and hence Turning to the term , we have
+
+Finally, defining the averaged function
+
+(32)
+
+, the final requirement is to
+
+verify that the fixed point satisfies the stability condition
+
+(34)
+
+where step (i) uses inequality (32), and step (ii) is based on the
+
+elementary upper bound
+
+. By repeating this same argument in a recursive manner, we
+
+conclude that
+
+for
+
+.
+
+Taking the expectation on both sides of the inequality (31) and
+
+substituting these upper bounds, we obtain
+
+where
+
+denotes the Euclidean inner product, and de-
+
+notes the compact set in which the messages lie. Using the
+
+Cauchy–Schwartz inequality and the fact that is Lipschitz
+
+with constant
+
+, we obtain
+
+(35)
+
+where we have used the fact that
+
+.
+
+B. Proof of Theorem 2
+We now turn to the proof of Theorem 2. Note that since the update function is contractive, the existence and uniqueness of the BP fixed point is an immediate consequence of the Banach fixed-point theorem [1].
+1) Almost Sure Consistency: We establish part (a) by applying the Robbins–Monro theorem, a classical result from stochastic approximation theory (see, e.g., [4] and [22]). In order to do so, we begin by writing the update (10) in the form
+
+where the strict inequality holds for all
+
+. Since is a
+
+fixed point, we must have
+
+, which
+
+concludes the proof.
+
+2) Nonasymptotic Bounds on Normalized Mean-Squared
+
+Error: Let
+
+denote the renormal-
+
+ized error vector. In order to upper bound
+
+for all
+
+, we first control the quantity
+
+,
+
+corresponding to the increment in the squared error. Doing
+
+some simple algebra yields
+
+Recalling the update (33), we obtain
+
+where for any realization
+
+, the mapping
+
+should be understood as a function
+
+from to . By concatenating together all of these map-
+
+pings, one for each directed edge
+
+, we obtain a family
+
+of mappings
+
+from to , one for each realization of column indices.
+
+(36)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1991
+
+Now taking the expectation on both sides of (36) yields
+
+Setting
+
+and unwrapping this recursion yields
+
+(40)
+
+where we have adopted the convention that the inside product
+
+is equal to one for
+
+. The following lemma, proved
+
+in Appendix D, provides a useful upper bound on the products
+
+(37) arising in this expression:
+
+Lemma 2: For all
+
+, we have
+
+where we used the facts that
+
+and
+
+. We continue by upper bounding the term
+
+and lower bounding the term
+
+.
+
+Lower Bound on : Recalling (35) from our proof of part
+
+(a), we see that
+
+(38)
+
+Substituting this upper bound into the inequality (40) yields
+
+Upper Bound on : From the definition of the update function, we have
+
+Recalling the bounds (13) and using the fact that vectors
+
+and
+
+sum to one, we obtain
+
+It remains to upper bound the term
+
+function
+
+is decreasing in for
+
+tegral upper bound
+
+yields
+
+. Since the , we have the in-
+, which
+
+On the other hand, we also have
+
+If we now focus on the range of
+
+, which yields the
+
+fastest convergence rate, some simple algebra yields the form
+
+of the claim given in the theorem statement.
+
+3) High Probability Bounds: Recall the algebra at the begin-
+
+ning of Section IV-B2. Adding and subtracting the conditional
+
+mean of the second term of (36) yields
+
+Combining the pieces, we conclude that the term bounded as
+
+is upper
+
+(39) where we have denoted the term
+
+Since both and are nonnegative, the bounds (39) and (38) also hold in expectation. Combining these bounds with representation (37), we obtain the upper bound
+, or equivalently
+
+Recalling the bounds on
+
+and from part (b), we have
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1992
+or equivalently
+Substituting the step size choice unwrapping this recursion yields
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+Moving on to the first term , we exploit the Cauchy–Schwartz inequality in conjunction with the fact that the martingale difference sequence is bounded to obtain
+and then
+Taking the expectation on both sides of the inequality (41) yields , and hence, we have
+
+for all
+
+. Moreover, since
+
+(41)
+
+Note that by construction, the sequence
+
+is a
+
+martingale difference sequence with respect to the fil-
+
+tration
+
+that is
+
+and accordingly
+
+for
+
+. We continue by controlling the stochastic
+
+term
+
+—namely its variance
+
+the initial term bounded by we obtain
+
+is upper . Finally, putting all the pieces together,
+
+where inequality (i) follows from elementary inequality
+
+Since we have
+
+and the fact that
+
+. Consequently, we may apply
+
+Chebyshev’s inequality to control the stochastic deviation
+
+. More specifically, for any
+
+,
+
+a quantity to be specified shortly, we have
+
+(42)
+
+for all
+
+, the cross product term vanishes. On
+
+the other hand, the martingale difference sequence is
+
+bounded. This can be shown as follows: from part (b) we
+
+know
+
+; also using
+
+the fact that
+
+is convex, Jensen’s inequality yields
+
+; therefore, we have
+
+We now combine our earlier bound (41) with the tail bound (42), making the specific choice
+
+for a fixed
+
+, thereby concluding that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1993
+
+with probability at least obtain
+
+. Simplifying the last bound, we Lemma 3: For all
+
+, we have
+
+for all
+
+, with probability at least
+
+.
+
+C. Proof of Proposition 1
+
+Recall the definition (9) of the probability mass function
+
+used in the update of directed edge
+
+. This
+
+probability depends on the current value of the message, so we
+
+can view it as being generated by a function that performs the mapping
+
+. In terms
+
+of this function, we can rewrite the BP message update (4)
+
+on the directed edge
+
+as
+
+,
+
+where the renormalized compatibility matrix was defined
+
+previously (7). We now define the
+
+block diagonal
+
+matrix
+
+, as well as the function
+
+obtained by concatenating all of the functions
+
+, one for each directed edge. In terms of these quantities,
+
+we rewrite the global BP message update in the compact form
+
+.
+
+With these preliminaries in place, we now bound the Lips-
+
+chitz constant of the mapping
+
+. Given an arbi-
+
+trary pair of messages ,
+
+, we have
+
+(45)
+
+where the quantities
+
+and
+
+were previously de-
+
+fined in (20) and (21).
+
+As the proof of Lemma 3 is somewhat technical, we defer it
+
+to Appendix E. Combining the upper bound (45) with the earlier
+
+bound (44) completes the proof of the proposition.
+
+V. EXPERIMENTAL RESULTS
+In this section, we present a variety of experimental results that confirm the theoretical predictions, and show that SBP is a practical algorithm. We provide results both for simulated graphical models and real-world applications to image denoising and disparity computation.
+
+A. Simulations on Synthetic Problems
+
+We start by performing some simulations for the Potts model,
+
+in which the edge potentials are specified by a parameter
+
+, as discussed in Example 1. The node potentials are gen-
+
+erated randomly, on the basis of fixed parameters
+
+satisfying
+
+, as follows: for each
+
+and label
+
+, we generate an independent random variable uni-
+
+formly distributed on the interval
+
+, and then set
+
+For a fixed graph topology and collection of node/edge
+
+(43)
+
+potentials, we first run BP to compute the fixed point .10 We then run the SBP algorithm to find the sequence of
+
+By the Perron–Frobenius theorem [11], we know that has
+
+a unique maximal eigenvalue of 1, achieved for the left eigen-
+
+vector
+
+, where denotes the vector of all ones. Since the
+
+-dimensional vectors
+
+and
+
+are both probability
+
+distributions, we have
+
+. Therefore,
+
+we conclude that
+
+messages
+
+and compute the normalized squared
+
+error
+
+. In cases where the normalized
+
+mean-squared error is reported, we computed it by averaging
+
+over 20 different runs of the algorithm. (Note that the runs are
+
+different, since the SBP algorithm is randomized.)
+
+In our first set of experiments, we examine the consistency of
+
+the SBP on a chain-structured graph, as illustrated in Fig. 1(b),
+
+representing a particular instance of a tree. We implemented the
+
+SBP algorithm with step size
+
+and performed
+
+simulations for a chain with
+
+, state dimension
+
+, node potential parameters
+
+, and for
+
+two different choices of edge potential
+
+. The
+
+resulting traces of the normalized squared error versus iteration
+
+where denotes the right eigenvector of corresponding to the eigenvalue one. Combining this equality with the representation (43), we find that
+
+number are plotted in Fig. 4; each panel contains ten different sample paths. These plots confirm the prediction of strong consistency given in Theorem 1(a)—in particular, the error in each sample path converges to zero. We also observe that the typical
+
+performance is highly concentrated around its average, as can
+
+be observed from the small amount of variance in the sample
+
+paths.
+
+Our next set of simulations are designed to study the effect
+
+of increasing of the state dimension on convergence rates. We
+
+(44) performed simulations both for the chain with
+
+,
+
+as well as a 2-D square grid with
+
+. In all
+
+It remains to upper bound the Lipschitz constant of the mapping cases, we implemented the SBP algorithm with step sizes
+
+previously defined.
+
+10We stop the BP iterations when
+
+becomes less than
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1994
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+Fig. 4. Panels illustrate the normalized squared error
+
+versus the number of iterations for a chain of size
+
+and state dimension
+
+. Each plot contains ten different sample paths. Panel (a) corresponds to the coupling parameter
+
+, whereas panel (b) corresponds to
+
+. In
+
+all cases, the SBP algorithm was implemented with step size
+
+, and the node potentials were generated with parameters
+
+.
+
+Fig. 5. Effect of increasing state dimension on convergence rates. Plots of the normalized mean-squared error
+
+versus the number of
+
+iterations for two different graphs: (a) chain with
+
+, and (b) 2-D square grid with
+
+. In both panels, each curve corresponds different
+
+state dimension
+
+. All simulations were performed with step sizes
+
+, and the node/edge parameters were generated with
+
+parameters
+
+and
+
+, respectively.
+
+and generated the node/edge potentials with whereas the larger problems
+
+exhibit linear
+
+parameters
+
+and
+
+, respectively. In convergence on the log-log scale.
+
+Fig. 5, we plot the normalized mean-squared error (estimated As discussed previously, the SBP message updates are less
+
+by averaging over 20 trials) versus the number of iterations for expensive by a factor of . The top two rows of Table I show the
+
+the chain in panel (a), and the grid in panel (b). Each panel con- per iteration running time of both BP and SBP algorithms, for
+
+tains four different curves, each corresponding to a choice of different state dimensions as indicated. As predicted by theory,
+
+state dimension
+
+. For the given step the SBP running time per iteration is significantly lower than BP,
+
+size, Theorem 2 guarantees that the convergence rate should be scaling linearly in in contrast to the quadratic scaling of BP.
+
+upper bounded by
+
+with the number of iterations To be fair in our comparison, we also measured the total com-
+
+. In the log-log domain plot, this convergence rate manifests putation time required for either BP or SBP to converge to the
+
+itself as a straight line with slope . For the chain simulations fixed point up to a -tolerance, with
+
+. This comparison
+
+shown in panel (a), all four curves exhibit exactly this behavior, allows for the fact that BP may take many fewer iterations than
+
+with the only difference with increasing dimension being a SBP to converge to an approximate fixed point. Nonetheless, as
+
+vertical shift (no change in slope). For the grid simulations shown in the bottom two rows of Table I, in all cases except
+
+in panel (b), problems with smaller state dimension exhibit one (chain graph with dimension
+
+), we still see signifi-
+
+somewhat faster convergence rate than predicted by theory, cant speedups from SBP in this overall running time. This gain
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1995
+
+Fig. 6. Image denoising application, (a) original image, (b) noisy image, (c) refined image obtained from BP after
+
+iterations, and (d) refined image obtained
+
+from SBP after
+
+iterations. The image is 200 200 with
+
+gray-scale levels. The SBP step size, the Potts model parameter, and noise standard
+
+deviation are set to
+
+,
+
+, and
+
+, respectively.
+
+TABLE I
+
+COMPARISON OF BP AND SBP COMPUTATIONAL COST FOR TWO DIFFERENT
+
+GRAPHS EACH WITH
+
+Nodes. FOR EACH GRAPH TYPE, THE TOP
+
+TWO ROWS SHOW PER ITERATION RUNNING TIME (IN SECONDS) OF THE BP
+
+AND SBP ALGORITHMS FOR DIFFERENT STATE DIMENSIONS. THE BOTTOM
+
+TWO ROWS SHOW TOTAL RUNNING TIME (IN SECONDS) TO COMPUTE THE
+
+MESSAGE FIXED POINT TO
+
+ACCURACY
+
+shown in Fig. 6(a). We then contaminate every pixel with an
+
+independent Gaussian random variable with standard deviation
+
+, as shown in Fig. 6(b). Enforcing the Potts model with
+
+smoothness parameter
+
+as the edge potential, we run
+
+BP and SBP for the total of
+
+and
+
+iterations, re-
+
+spectively, to obtain the refined images (see panels (c) and (d),
+
+respectively, in Fig. 6). Fig. 7 illustrates the mean-squared error
+
+versus the running time for both BP and SBP denoising. As one
+
+can observe, despite smaller jumps in the error reduction, the
+
+per-iteration running time of SBP is substantially lower than
+
+BP. Overall, SBP has done a marginally better job than BP in a
+
+substantially shorter amount of time in this instance.11
+
+Finally, in our last experiment, we apply SBP to a computer
+
+vision problem. Graphical models and message-passing algo-
+
+rithms are popular in application to the stereo vision problem
+
+becomes especially pronounced for larger dimensions, where [28], [16], in which the goal is to estimate objects depth based
+
+these types of savings are more important.
+
+on the pixel dissimilarities in two (left and right view) images.
+
+B. Applications in Image Processing and Computer Vision
+
+Adopting the original model in Sun et al. [28], we again use a form of the Potts model in order to enforce a smoothness prior,
+
+In our next set of experiments, we study the SBP on some and also use the form of the observation potentials given in the
+
+larger scale graphs and more challenging problem instances, Sun et al.’s paper. We then run BP and SBP (with step size
+
+with applications to image processing and computer vision.
+
+) for a total of
+
+and
+
+iterations, respec-
+
+Message-passing algorithms can be used for image denoising, tively, in order to estimate the pixel dissimilarities. The results
+
+in particular, on a 2-D square grid where every node corre- for the test image “map” are presented in Fig. 8. Here, the max-
+
+sponds to a pixel. Running the BP algorithm on the graph, one imum pixel dissimilarity is
+
+, which makes stereo vision
+
+can obtain (approximations to) the most likely value of every
+
+pixel based on the noisy observations. In this experiment, we
+
+consider a 200 200 image with
+
+gray-scale levels, as
+
+11Note that the purpose of this experiment is not to analyze the potential of SBP (or for that matter BP) in image denoising, but to rather observe their relative performances and computational complexities.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1996
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+Fig. 7. Mean-squared error versus the running time (in seconds) for both BP and SBP image denoising. The simulations are performed with the step size
+
+, and the Potts model parameter
+
+on a 200 200 image with
+
+gray-scale levels. The noise is assumed to be additive, independent
+
+Gaussian random variables with standard deviation
+
+.
+
+Fig. 8. Stereo vision, depth recognition, application. (a) Reference image, (b) ground truth, (c) BP estimate after
+
+iterations, and (d) SBP estimate after
+
+iterations. The algorithms are applied to the standard “map” image with maximum pixel dissimilarity
+
+. The SBP step size is set to
+
+.
+
+a relatively low-dimensional problem. In this particular appli- linearly in the state dimension , as opposed to the quadratic
+
+cation, the SBP is faster by about a factor of 3–4 times per it- dependence of BP, and a communication cost of
+
+per
+
+eration; however, the need to run more iterations makes it com- edge and iteration, as opposed to real numbers for standard
+
+parable to BP. This is to be expected since the state dimension BP message updates. SBP is also easy to implement, requiring
+
+is relatively small, and the relative advantage of SBP only random number generation and the usual distributed up-
+
+becomes more significant for larger state dimensions .
+
+dates of a message-passing algorithm. Our main contribution
+
+was to prove a number of theoretical guarantees for the SBP
+
+VI. DISCUSSION
+
+message updates, including convergence for any tree-structured problem, as well as for general graphs for which the ordinary
+
+In this paper, we have developed and analyzed a new and BP message update satisfies a suitable contraction condition. In
+
+low-complexity alternative to BP message passing. The SBP al- addition, we provided nonasymptotic upper bounds on the SBP
+
+gorithm has per iteration computational complexity that scales error, both in expectation and in high probability.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1997
+
+The results described here suggest a number of directions for future research. First, the ideas exploited here have natural generalizations to problems involving continuous random variables and also other algorithms that operate over the sum-product semi-ring, including the generalized BP algorithm [33] as well as reweighted sum-product algorithms [31]. More generally, the BP algorithm can be seen as optimizing the dual of the Bethe free energy function [33], and it would be interesting to see if SBP can be interpreted as a stochastic version of this Bethe free energy minimization. It is also natural to consider whether similar ideas can be applied to analyze stochastic forms of message passing over other semi-rings, such as the max-product algebra that underlies the computation of maximum a posteriori configurations in graphical models. In this paper, we have developed SBP for applications to Markov random fields with pairwise interactions. In principle, any undirected graphical model with discrete variables can be reduced to this form [33], [32]; however, in certain applications, such as decoding of LDPC codes over nonbinary state spaces, this could be cumbersome. For such cases, it would be useful to derive a variant of SBP that applies directly to factor graphs with higher-order interactions. Moreover, the results derived in this paper are based on the assumption that the codomain of the potential functions do not include zero. We suspect that these condition might be relaxed, and similar results could be obtained. Finally, our analysis for general graphs has been done under a contractivity condition, but it is likely that this requirement could be loosened. Indeed, the SBP algorithm works well for many problems where this condition need not be satisfied.
+
+where we have denoted the degree of the node by . Substituting these inequalities into expression (24) and noting that
+, we find that the global update function has Lipschitz constant at most
+
+as claimed.
+
+B) Proof of Lemma 1: By construction, for each directed
+
+edge
+
+, the message vector belongs to the proba-
+
+bility simplex—that is,
+
+, and
+
+. From
+
+(26), the vector
+
+is a convex combination of the columns
+
+of the matrix . Recalling bounds (13), we conclude that the
+
+message vector must belong to the set , as defined in (18), in
+
+particular with
+
+and
+
+. Note
+
+that the set is compact, and any member of it has strictly pos-
+
+itive elements under our assumptions.
+
+For directed edges
+
+and
+
+, let
+
+denote the Jacobian matrix obtained from taking the par-
+
+tial derivative of the update function with respect to the
+
+message vector . By inspection, the function is con-
+
+tinuously differentiable; consequently, the function
+
+is continuous, and hence must achieve its supremum over the
+
+compact set . We may use these Jacobian matrices to define a
+
+matrix
+
+with entries
+
+APPENDIX
+A) Details of Example 1: In this appendix, we verify the sufficient condition for contractivity (25). Recall the definition (13) of the zeroth-order bounds. By construction, we have the relations
+
+for all
+
+and
+
+. Substituting these bounds
+
+into the definitions (22) and (23) and doing some simple algebra
+
+yields the upper bounds
+
+We then use these matrices to define a larger matrix
+
+,
+
+consisting of
+
+sub-blocks each of size , with the
+
+sub-blocks indexed by pairs of directed edges
+
+. In
+
+particular, the matrix
+
+occupies the sub-block indexed by
+
+the edge pair
+
+and
+
+. Note that by the structure
+
+of the update function , the matrix
+
+can be nonzero only
+
+if
+
+and
+
+.
+
+Now let
+
+denote the Jacobian matrix of the up-
+
+date function . By the integral form of the mean value theorem,
+
+we have the representation
+
+Applying triangle inequality separately to each component of this -dimensional vector and then using the definition of , we obtain the elementwise upper bound
+
+and
+
+It remains to show that is nilpotent: more precisely, we
+
+show that is the all-zero matrix, where
+
+denotes
+
+the diameter of the graph . In order to do so, we first let
+
+be the “block indicator” matrix—that is, its entries
+
+are given by
+
+if otherwise.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+1998
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+Based on this definition, it is straightforward to verify that if where we used the fact that
+
+for
+
+.
+
+for some positive integer , then we also have
+
+. Since the function is decreasing, we have
+
+Consequently, it suffices to show that
+
+for
+
+.
+
+Fix a pair of directed edges
+
+and
+
+, and
+
+some integer
+
+. We first claim that the matrix entry is nonzero only if there exists a backtrack-
+
+(47)
+
+less directed path of length
+
+from to that includes both
+
+and , meaning that there exist nodes that
+
+such Substituting inequality (47) into (46) yields
+
+We prove this claim via induction. The base case
+
+is true
+
+by construction. Now supposing that the claim holds at order ,
+
+we show that it must hold at order . By definition of matrix
+
+multiplication, we have
+
+from which the claim stated in the lemma follows.
+
+E) Proof of Lemma 3: Let
+
+denote the
+
+Jacobian matrix of the function
+
+evaluated at .
+
+Since is differentiable, we can apply the integral form of the
+
+mean value theorem to write
+
+From this representation, we obtain the upper bound
+
+In order for this entry to be nonzero, there must exist a directed
+
+edge
+
+that forms a
+
+-directed path to
+
+, and
+
+moreover, we must have
+
+and
+
+. These con-
+
+ditions are equivalent of having a backtrackless directed path of
+
+length
+
+from to , with and as intermediate nodes,
+
+thereby completing the proof of our intermediate claim.
+
+Finally, we observe that in a tree-structured graph, there can
+
+be no directed path of length greater than
+
+. Con-
+
+sequently, our intermediate claim implies that
+
+for any
+
+tree-structured graph, which completes the proof.
+
+C) Version of Robbins–Monro Theorem: Here we state a
+
+version of the Robbins–Monro theorem suitable for our proof
+
+of Theorem 2. Denoting the expected vector field function by
+
+, suppose there exists a vector
+
+such that
+
+Now suppose that
+
+1) the vector field function
+
+has a bounded second
+
+moment—that is
+
+for some
+
+constant ,
+
+2) the conditional distribution of the random vector
+
+knowing the past depends only on —that is
+
+,
+
+and finally,
+
+3) the step size sequence
+
+satisfies the conditions
+
+, and
+
+.
+
+Then, the sequence
+
+, generated by (33), is guaranteed
+
+to converge to
+
+D) Proof of Lemma 2: Noting that it is equivalent to bound
+
+the logarithm, we have
+
+showing that it suffices to control the quantity
+
+.
+
+Let
+
+be the
+
+matrix of partial derivatives of
+
+the function
+
+obtained from taking the partial
+
+derivatives with respect to the message vector
+
+. We
+
+then define a
+
+-dimensional matrix with the entries
+
+if
+
+and
+
+otherwise.
+
+(48)
+
+Our next step is to show that
+
+.
+
+Let
+
+be an arbitrary -dimensional vector,
+
+where each subvector is an element of . By exploiting the
+
+structure of
+
+and , we have
+
+(46)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+NOORSHAMS AND WAINWRIGHT: STOCHASTIC BELIEF PROPAGATION: A LOW-COMPLEXITY ALTERNATIVE TO THE SUM-PRODUCT ALGORITHM
+
+1999
+
+where bound (i) follows by triangle inequality; bound (ii) fol-
+
+lows from definition of the operator norm; and the final in-
+
+equality (iii) follows by definition of .
+
+Defining the vector
+
+with the entries
+
+,
+
+we have established the upper bound
+
+,
+
+and hence that
+
+and
+Thus, by applying inequality (49) with clude that
+
+, we con-
+
+where the final equality uses the fact that
+
+by con-
+
+struction. Since both the message and vector were arbitrary,
+
+we have shown that
+
+, as claimed.
+
+Our final step is to control the quantities
+
+that define the entries of . In this argument, we make repeated
+
+use of the elementary matrix inequality [11]
+
+(49)
+
+Since this bound holds for any message
+
+, we conclude
+
+that each of the matrix entries
+
+satisfies the
+
+same inequality. Again applying the basic matrix inequality
+
+(49), this time with
+
+, we conclude that
+
+is upper
+
+bounded by
+
+valid for any
+
+matrix.
+
+Recall the definition of the probability distribution (9) that
+
+defines the function
+
+, as well as our shorthand
+
+notation
+
+. Taking the deriva-
+
+tives and performing some algebra yields
+
+which concludes the proof.
+ACKNOWLEDGMENT
+The authors would like to thank Alekh Agarwal for helpful discussions on stochastic approximation and optimization at the initial phases of this research, the anonymous reviewers for their helpful feedback, as well as Associate Editor Pascal Vontobel for his careful reading and detailed suggestions that helped to improve the paper.
+
+for
+
+, and
+
+. For
+
+, we have
+
+REFERENCES
+
+Putting together the pieces leads to the upper bounds and
+
+Recalling the definitions (22) and (23) of
+
+and
+
+respectively, we find that
+
+[1] R. P. Agarwal, M. Meehan, and D. O’Regan, Fixed Point Theory and
+
+Applications. Cambridge, U.K.: Cambridge Univ. Press, 2004.
+
+[2] S. M. Aji and R. J. McEliece, “The generalized distributive law,” IEEE
+
+Trans. Inf. Theory, vol. 46, no. 2, pp. 325–343, Mar. 2000.
+
+[3] M. S. Arulampalam, S. Maskell, N. Gordon, and T. Clapp, “A tu-
+
+torial on particle filters for online nonlinear/non-Gaussian Bayesian
+
+tracking,” IEEE Trans. Signal Process., vol. 50, no. 2, pp. 174–188,
+
+Feb. 2002.
+
+[4] A. Benveniste, M. Metivier, and P. Priouret, Adaptive Algorithms and
+
+Stochastic Approximations. New York: Springer-Verlag, 1990.
+
+[5] F. Chung and L. Lu, “Concentration inequalities and martingale in-
+
+equalities: A survey,” Internet Math., vol. 3, no. 1, pp. 79–127, 2006.
+
+[6] J. Coughlan and H. Shen, “Dynamic quantization for belief propagation
+
+in sparse spaces,” Comput. Vis. Image Understand., vol. 106, no. 1, pp.
+
+47–58, 2007.
+
+[7] A. Doucet, N. de Freitas, and N. Gordon, Sequential Monte Carlo
+
+Methods in Practice. New York: Springer-Verlag, 2001.
+
+[8] R. Durrett, Probability: Theory and Examples. New York: Duxbury
+
+Press, 1995.
+
+[9] P. F. Felzenszwalb and D. P. Huttenlocher, “Efficient belief propaga-
+
+tion for early vision,” Int. J. Comput. Vis., vol. 70, no. 1, pp. 41–54,
+
+2006.
+
+[10] R. G. Gallager, “Low-density parity-check codes,” Ph.D. dissertation,
+
+Massachusetts Inst. Technol., Cambridge, 1963.
+
+[11] R. A. Horn and C. R. Johnson, Matrix Analysis. Cambridge, U.K.:
+
+,
+
+Cambridge Univ. Press, 1985. [12] A. T. Ihler, J. W. Fisher, and A. S. Willsky, “Loopy belief propagation:
+
+Convergence and effects of message errors,” J. Mach. Learn. Res., vol.
+
+6, pp. 905–936, May 2005.
+
+[13] A. T. Ihler and D. McAllester, “Particle belief propagation,” in Proc.
+
+Conf. Artif. Intell. Statist., Clearwater, FL, 2009, pp. 256–263.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+2000
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 4, APRIL 2013
+
+[14] M. Isard, J. MacCormick, and K. Achan, “Continuously-adaptive discretization for message-passing algorithms,” in Proc. Adv. Neural Inf. Process. Syst., Vancouver, BC, Canada, 2009, pp. 737–744.
+[15] K. Kersting, B. Ahmadi, and S. Natarajan, “Counting belief propagation,” presented at the 25th Conf. Uncertainty Artif. Intell., Montreal, QC, Canada, 2009.
+[16] A. Klaus, M. Sormann, and K. Karner, “Segment-based stereo matching using belief propagation and a self-adapting dissimilarity measure,” in Proc. 18th Int. Conf. Pattern Recognit., Hong Kong, 2006, pp. 15–18.
+[17] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[18] H.-A. Loeliger, “An introduction to factor graphs,” IEEE Signal Process. Mag., vol. 21, no. 1, pp. 28–41, Jan. 2004.
+[19] J. J. McAuley and T. S. Caetano, “Faster algorithms for max-product message passing,” J. Mach. Learn. Res., vol. 12, pp. 1349–1388, 2011.
+[20] J. M. Mooij and H. J. Kappen, “Sufficient conditions for convergence of the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 53, no. 12, pp. 4422–4437, Dec. 2007.
+[21] A. C. Rapley, C. Winstead, V. C. Gaudet, and C. Schlegel, “Stochastic iterative decoding on factor graphs,” in Proc. 3rd Int. Symp. Turbo Codes Related Topics, Brest, France, 2003, pp. 507–510.
+[22] H. Robbins and S. Monro, “A stochastic approximation method,” Ann. Math. Statist., vol. 22, pp. 400–407, 1951.
+[23] T. G. Roosta, M. J. Wainwright, and S. S. Sastry, “Convergence analysis of reweighted sum-product algorithms,” IEEE Trans. Signal Process., vol. 56, no. 9, pp. 4293–4305, Sep. 2008.
+[24] H. L. Royden, Real Analysis. New Jersey: Prentice-Hall, 1988. [25] H. Song and J. R. Cruz, “Reduced-complexity decoding of q-ary LDPC
+codes for magnetic recording,” IEEE Trans. Magn., vol. 39, no. 2, pp. 1081–1087, Mar. 2003. [26] L. Song, A. Gretton, D. Bickson, Y. Low, and C. Guestrin, “Kernel belief propagation,” presented at the Proc. Artif. Intell. Statist., Ft. Lauderdale, FL, 2011. [27] E. B. Sudderth, A. T. Ihler, W. T. Freeman, and A. S. Willsky, “Nonparametric belief propagation,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., Madison, WI, 2003, vol. 1, pp. 605–612. [28] J. Sun, H. Y. Shum, and N. N. Zheng, “Stereo matching using belief propagation,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 25, no. 7, pp. 787–800, Jul. 2003.
+
+[29] S. Tatikonda and M. I. Jordan, “Loopy belief propagation and Gibbs measures,” in Proc. 18th Conf. Uncertainty Artif. Intell., Edmonton, AB, Canada, Aug. 2002, vol. 18, pp. 493–500.
+[30] S. S. Tehrani, W. J. Gross, and S. Mannor, “Stochastic decoding of LDPC codes,” IEEE Commun. Lett., vol. 10, no. 10, pp. 716–718, Oct. 2006.
+[31] M. J. Wainwright, T. S. Jaakkola, and A. S. Willsky, “A new class of upper bounds on the log partition function,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2313–2335, Jul. 2005.
+[32] M. J. Wainwright and M. I. Jordan, Graphical Models, Exponential Families, and Variational Inference. Hanover, MA: Now Publishers, 2008.
+[33] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Constructing free energy approximations and generalized belief propagation algorithms,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2282–2312, Jul. 2005.
+Nima Noorshams received his B.Sc. degree from Sharif University of Technology, Tehran, Iran, in 2007. He is currently pursuing his Ph.D. degree in the department of Electrical Engineering & Computer Science, and his M.Sc. in the department of Statistics at University of California, Berkeley. His current research interests include stochastic approximation methods, graphical models, message-passing algorithms, and statistical signal processing.
+Martin J. Wainwright (SM’11) is currently an associate professor at University of California at Berkeley, with a joint appointment between the Department of Statistics and the Department of Electrical Engineering and Computer Sciences. He received a Bachelor’s degree in Mathematics from University of Waterloo, Canada, and Ph.D. degree in Electrical Engineering and Computer Science (EECS) from Massachusetts Institute of Technology (MIT). His research interests include coding and information theory, machine learning, mathematical statistics, and statistical signal processing. He has been awarded an Alfred P. Sloan Foundation Fellowship, an NSF CAREER Award, the George M. Sprowls Prize for his dissertation research (EECS department, MIT). He is the co-recipient of Best Paper Awards from the IEEE Signal Processing Society (2008), the IEEE Communications Society (2010), Joint Paper Award from the IEEE Information Theory and Communications Societies (2012), and was awarded a Medallion Lectureship (2013) from the Institute of Mathematical Statistics.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,451 @@
+Design of a Unified Transport Triggered Processor for LDPC/Turbo Decoder
+
+Shahriar Shahabuddin, Janne Janhunen, Muhammet Fatih Bayramoglu, Markku Juntti, ∗Amanullah Ghazi, and ∗Olli Silv´en
+Department of Communications Engineering and Centre for Wireless Communications, University of Oulu, Finland.
+∗Department of Computer Science and Engineering, University of Oulu, Finland.
+
+arXiv:1502.00076v1 [cs.IT] 31 Jan 2015
+
+Abstract—This paper summarizes the design of a programmable processor with transport triggered architecture (TTA) for decoding LDPC and turbo codes. The processor architecture is designed in such a manner that it can be programmed for LDPC or turbo decoding for the purpose of internetworking and roaming between different networks. The standard trellis based maximum a posteriori (MAP) algorithm is used for turbo decoding. Unlike most other implementations, a supercode based sum-product algorithm is used for the check node message computation for LDPC decoding. This approach ensures the highest hardware utilization of the processor architecture for the two different algorithms. Up to our knowledge, this is the first attempt to design a TTA processor for the LDPC decoder. The processor is programmed with a high level language to meet the time-to-market requirement. The optimization techniques and the usage of the function units for both algorithms are explained in detail. The processor achieves 22.64 Mbps throughput for turbo decoding with a single iteration and 10.12 Mbps throughput for LDPC decoding with five iterations for a clock frequency of 200 MHz.
+I. INTRODUCTION
+The forward error correction (FEC) scheme is one of the integral parts of the wireless systems. The turbo coding scheme [1] has been adopted for the air interface standard called Long Term Evolution (LTE), that has been defined by the 3rd Generation Partnership Project (3GPP) [2]. Low-density parity-check codes (LDPC) [3] are also gaining popularity as it has been chosen for IEEE 802.11n WLAN systems [4], IEEE 802.16e WiMAX systems [5] and DVB-S2 [6]. Due to their excellent performance, the turbo and LDPC codes are the primary candidates for FEC scheme for the next generation communication systems. The roaming between WLAN and LTE systems requires a multimode FEC support. Therefore, a decoder which is able to support LDPC and turbo would be beneficial.
+The hardware designs of turbo and LDPC decoders are at a matured stage due to extensive efforts of researchers. Some of the efficient hardware implementations of turbo decoder can be found in [7] and [8] and some of the efficient hardware implementations of LDPC decoders can be found in [9] and [10] etc. Sun and Cavallaro [11] even designed multimode decoders as pure hardware designs. The hardware implementations provide high throughput, but the development time is not as rapid as processor based implementations. Besides, the
+
+hardware implementations suffers from inflexibility. Therefore, the hardware implementation of a multimode decoder might not be useful for other purposes. The design presented in this paper has the potential to be used as a detector or equalizer running on factor graphs, for example.
+The software implementations provide the required flexibility to support a multimode decoder, but requires a careful design to achieve the target throughput. Programmable accelerators, which enable software-hardware co-design method might be an attractive solution to overcome these bottlenecks.
+Several application-specific instruction-set processors (ASIP) for multimode decoders with high throughput have been designed in [12], [13] and [14]. However, all of the ASIPs have been programmed with low level language which does not meet the time-to-market requirement. Besides, the utilization of the same function units for both decoding algorithms has not been described explicitly.
+The design of software and hardware together to grind out the best performance and to ensure programmability is not a straightforward task. The designer needs a very efficient tool, which can be used to design the processor easily for a particular application.
+In this paper, we propose a design of a processor based on the transport triggered architecture (TTA) for turbo and LDPC decoder. TTA is a very good processor template for a programmable ASIP. The TTA based codesign environment (TCE) tool enables the designer to write an application with a high level language and design the target processor in a graphical user interface at the same time [15].
+Up to our knowledge, this is the first attempt to design a TTA processor for the LDPC decoder. The turbo decoder with TTA has been designed by Salmela et al. [16] and Shahabuddin et al. [17]. As a TTA processor can be best utilized to support different algorithms, a unified processor for turbo and LDPC decoding is the natural research direction.
+The max-log-MAP algorithm is used for the component decoders of turbo decoding. The parity-check matrix of size (M, N ) for LDPC decoding is decomposed into M rows of two state trellises or supercodes. The trellis based sumproduct algorithm is used on these supercodes for check node calculation. The processor achieves 22.64 Mbps throughput for turbo decoding with a single iteration and 10.12 Mbps
+
+throughput for LDPC decoding with five iterations. The rest of the paper is organized in the following way:
+In Sections II and III, an overview of the turbo decoding and LDPC decoding algorithms is presented. In Section IV, the simplification techniques and the similarities between turbo and LDPC decoding algorithm are presented. The common special function unit design is presented in Section V. The processor design has been presented in Section VI. In Section VII, the throughput results and comparison with other implementations are given. The conclusion is given in Section VIII.
+II. REVIEW OF TURBO DECODING
+A. Turbo Decoding
+The turbo decoder consists of two soft-input soft-output (SISO) decoders, with interleavers and de-interleavers between them as shown in Fig. 1. The inputs of the turbo decoder come from the soft demodulator, which produces the log-likelihood ratios (LLR) for the systematic bits and the parity bits. The LLRs of the systematic bit, LuI and first parity bits, LcI1 goes to the first SISO decoder. The SISO decoder produces soft outputs based on these LLRs. These soft outputs are used in the second SISO decoder as the additional information. The inputs of the second SISO decoder are the LLRs coming from the systematic bits, second parity bits denoted by LcI2 and output of the first SISO decoder. The LLRs of the systematic bits are scrambled this time with the same interleaving pattern used at the encoder. Similarly, the soft outputs coming from the first SISO decoder are scrambled also with the same interleaving pattern, which are used as a priori values for the second SISO decoder.
+
+second SISO decoder is referred to as a full iteration. On the other hand, the operation performed by a single SISO decoder can be referred to as a half iteration. At the beginning of the first iteration, the a priori values are set at zero. Six to eight full iterations are used to achieve sufficient performance [1].
+
+B. MAP Algorithm for Component Decoder
+
+The MAP algorithm for the component decoder applied here has been proposed by Benedetto et al . [18]. The algorithm can be stated like:
+1. Initialize the values of the forward state metric as α0(s) = 0 if s = S0 and α0(s) = −∞ otherwise.
+2. Calculate all the forward state metric of the same window through the forward recursion according to
+
+αk (s)
+
+=
+
+max
+e
+
+∗
+
+(αk−1[sS
+
+(e)]
+
++
+
+u(e)LuI [k
+
+−
+
+1]
+
+(1)
+
++ c1(e)LcI1 [k − 1 ] + c2 (e)LcI2 [k − 1 ]).
+
+3. Initialize the values of the backward state metric as βn(s) = 0 if s = Sn and βn(s) = −∞ otherwise.
+4. Calculate all the backward state metric of the same window through the backward recursion as
+
+βk (s)
+
+=
+
+max
+e
+
+∗
+
+(βk+1
+
+[sE
+
+(e)]
+
++
+
+u(e)LuI
+
+[k
+
++
+
+1]
+
+(2)
+
++ c1(e)LcI1 [k + 1 ] + c2 (e)LcI2 [k + 1 ]).
+
+5. The LLR values for the information and both parity bits can be calculated as following:
+
+LLR(.; O)
+
+=
+
+max
+e
+
+∗
+
+(αk−1
+
+[sS
+
+(e)]
+
++
+
+c1
+
+(e)LcI
+
+1
+
+[k
+
+− 1]
+
+(3)
+
++ c2(e)LcI2 [k − 1 ] + βk [sE (e)]).
+
+For max-log-MAP algorithm, max∗(x, y) ≈ max(x, y) [19]. The decoding is done in smaller windows so that the decoding process can be done in parallel and the decoder does not have to wait for the whole block to arrive before starting the decoding process. This windowing is sometimes referred to as a sliding window method.
+
+III. REVIEW OF LDPC DECODING
+
+A. Quasi-Cyclic LDPC Codes
+
+LDPC codes are linear block codes which consist of codewords satisfying the parity-check equation
+
+HxT = 0,
+
+(4)
+
+Fig. 1. Block diagram of the turbo decoder.
+The heart of the turbo coding is the iterative decoding procedure. The output of the second SISO decoder does not produce the hard outputs immediately, but the soft output is used again in the first SISO decoder for more accurate approximation. The process continues in a similar fashion in an iterative manner. A single iteration by both the first and the
+
+where H is the parity-check matrix and x is a codeword. The parity-check matrix H is ‘sparse’ or consists of a small number of non-zero entries in case of LDPC codes.
+The non-zero entries of the parity check matrix H are usually distributed pseudo-randomly according to some distribution. Although this pseudo-random distribution leads to very good FER performance, it makes the encoding and decoding of LDPC codes difficult. Therefore, a structure is imposed on H to ease the encoding and decoding by slightly sacrificing the performance. A good trade-off between complexity and performance is provided by the quasi-cyclic (QC) LDPC codes [20].
+
+The parity check matrix of the QC-LDPC consists of square blocks which are either all zero matrix or cyclic shifts of the identity matrix. This structure of the parity check matrix leads to efficient encoding and decoding architectures. Due to their architecture aware construction, QC-LDPC codes have been adopted by several wireless standards such as IEEE 802.11n, IEEE 802.16e and DVB-S2.
+B. Decoding of LDPC Codes
+LDPC codes can be visualized by a bipartite graph consisting of check and variable nodes which represent the rows and columns of the parity check matrix respectively.
+The decoding algorithm of LDPC codes is described as a message passing algorithm running on this graph. Alternative LDPC decoding algorithms differ basically in two aspects which are message computation at the check nodes and message flow schedules. In LDPC decoding, messages are almost always represented in LLR domain to make the decoding numerically stable.
+
+Fig. 2. Super codes from the parity-check matrix of LDPC codes.
+
+The sum-product algorithm is employed at the check nodes in exact or approximate fashion. An approximation, which is proposed in [21], computes outgoing messages by finding the minimum of the absolute values of a subset of the incoming messages. Although this approximation is very popular in the LDPC decoding literature, the hardware it imposes is not useful for turbo decoding. The hardware for computing the minimum and absolute values are redundant for turbo decoding. Therefore, using this approximation reduces the hardware reusability. Hence, we use the forward-backward algorithm running on a binary trellis similar to [9] and [11]. This algorithm is derived by decomposing (M, N ) parity check matrix into M binary or two-state trellises, which can also be called supercodes. The supercodes are shown in Fig. 2. The algorithm can be described for a check node of weight Z as follows.
+1. The forward and backward recursion metrics are initialized as
+
+α0(0) = βZ(0) = 0. α0(1) = βZ(1) = −∞.
+
+2. Forward recursion metrics are computed for k = 1, 2, . . . , Z − 1 as
+
+αk(s) = max ∗
+b
+
+αk−1(s ⊕ b) + (−1)bLik−1
+
+,
+
+(5)
+
+where s and b are binary variables, ⊕ denotes the binary addition, and Lik denotes the incoming message from the kth neighbor.
+3. Backward recursion metrics are computed for k = Z − 1, Z − 2, . . . , 1 as
+
+βk(s) = max ∗ βk+1(s ⊕ b) + (−1)bLik+1 .
+
+(6)
+
+b
+
+4. Finally the outgoing message to the kth neighbor is given by
+
+Lok
+
+=
+
+1 2
+
+max
+s
+
+∗
+
+{αk−1
+
+(s)
+
++
+
+βk(s)}
+
+−
+
+max
+s
+
+∗
+
+{αk−1
+
+(s)
+
++
+
+βk
+
+(s
+
+⊕
+
+1)}
+
+.
+
+(7)
+
+Notice that the steps 3 and 4 can be carried in the same run to get rid of storing βk(.).
+We prefer layered schedule [22] as the message flow sched-
+ule. This schedule can be formally described as follows.
+1. Initialize A(n) to λ(n) for n = 1, 2, . . . , N where λ(n) denotes the LLR of the nth bit received from the channel and
+N is the block length of the code.
+2. For each row repeat the following. 2.a Assign Lik = A(πj (k)) − Lpj,k where πj(k) denotes location of the kth 1 on the jth row of H and Lpj,k is the outgoing message computed by jth row in the previous iteration for the πj(k)th bit. For the first iteration take Lpj,k as 0.
+2.b. Compute the outgoing messages according to the algorithm above for the jth row. 2.c. Update A(πj(k)) as A(πj (k)) ← A(πj (k)) + Lok and assign Lpj,k = Lok to use in the next iteration. 3. Goto Step 2 until a certain number of iteration. 4. A(n) holds the estimated LLR’s from the LDPC decoding.
+
+IV. SHARED CALCULATIONS BETWEEN TURBO AND LDPC DECODING
+
+There are 16 branch metric computations between two states for forward metric, backward metric and LLR calculations in the trellis diagram of an eight state convolutional code.
+From the trellis structure of the 3GPP turbo code in Fig. 3, it can be seen that four calculations of branch metric are being repeated to result in total sixteen calculations. The four calculations can be expressed as
+
+γ1 = LuI + LcI1 + LcI2 ,
+
+γ2 = −LuI − LcI1 + LcI2 , γ3 = LuI + LcI1 − LcI2 ,
+
+(8)
+
+γ4 = −LuI − LcI1 − LcI2 ,
+
+where γ4 can be represented as −γ1 and γ3 can be represented as −γ2. Therefore, it is sufficient to calculate γ1 and γ2 only.
+
+A. Forward Metric calculation
+The trellis of the 3GPP turbo code can be divided into four butterfly pairs. Using the branch metric values given above,
+
+and for LDPC,
+βk(1) = max∗(βk+1(0) − Lik+1, βk+1(1) + Lik+1). (12) βk(0) = max∗(βk+1(0) + Lik+1, βk+1(1) − Lik+1).
+The operations needed to calculate the forward and backward metric is similar. However, the output LLR computation is different for the algorithms. The output LLR of turbo involves eight forward metric, eight backward metrics and all the branch metric in between. The calculation can be presented as
+
+LLRk = max(αk−1(1) + βk(1) + γ1(k), αk−1(2) + βk(5) + γ1(k), αk−1(7) + βk(8) + γ1(k), αk−1(8) + βk(4) + γ1(k), αk−1(3) + βk(6) + γ2(k), αk−1(4) + βk(2) + γ2(k), αk−1(5) + βk(3) + γ2(k), αk−1(6) + βk(7) + γ2(k))
+−max(αk−1(1) + βk(5) − γ1(k), αk−1(2) + βk(1) − γ1(k), αk−1(5) + βk(7) − γ1(k), αk−1(6) + βk(3) − γ1(k), αk−1(3) + βk(2) − γ2(k), αk−1(4) + βk(6) + γ2(k), αk−1(7) + βk(4) − γ2(k), αk−1(8) + βk(8) + γ2(k)). (13)
+
+Fig. 3. Trellis of 3GPP turbo code.
+
+On the other hand, the LLR calculation of the super code in LDPC is simple.
+
+LLRk
+
+=
+
+1 2
+
+(max(αk−1
+
+(0)
+
++
+
+βk(0), αk−1(1)
+
++
+
+βk (1))
+
+(14)
+
+−max(αk−1(0) + βk(1), αk−1(1) + βk(0))).
+
+The output LLR calculation of turbo decoding needs to be divided into four parts to make the calculations similar.
+
+the forward metric calculation of a butterfly pair can be given as
+αk(1) = max∗(αk−1(1) − γk−1(1), αk−1(2) + γk−1(1)). αk(5) = max∗(αk−1(1) + γk−1(1), αk−1(2) − γk−1(1)).
+(9)
+The forward metric calculation for a supercode in LDPC decoding is also similar.
+αk(1) = max∗(αk−1(0) − Lik−1, αk−1(1) + Lik−1). (10) αk(0) = max∗(αk−1(0) + Lik−1, αk−1(1) − Lik−1).
+The value of the branch metric in LDPC decoding equals to a single LLR value between two time instances. On the other hand, the branch metric value in turbo decoding is a combination of three LLR values.
+B. Backward Metric and LLR calculation
+The backward metric calculation is also similar for turbo and LDPC. For turbo decoding, the backward metric calculation of a butterfly pair can be presented as
+βk(1) = max∗(βk+1(1) − γk+1(1), βk+1(5) + γk+1(1)). βk(2) = max∗(βk+1(1) + γk+1(1), βk+1(5) − γk+1(1)).
+(11)
+
+V. SPECIAL FUNCTION UNIT DESIGN
+A. ALPHA Special Function Unit
+A function unit can be made with three inputs and two outputs to compute the forward and backward metric. In turbo case, the unit can use αk−1(1), αk−1(2) and γk−1(1) as inputs and compute the outputs of αk(1) and αk(5). In case of LDPC, the same unit can use αk−1(0), αk−1(1) and LLR as inputs and compute αk(0) and αk(1) as outputs. The same function unit can be used for both of the cases because the operations are same as can be seen from (9) and (10).
+One of the ALPHA special function units calculates two forward metric values based on two earlier state forward metric in the same butterfly pair. Therefore four ALPHA unit can calculate all the necessary forward metric values for one time instant. A block diagram of the ALPHA unit used for LDPC decoding is presented in Fig. 4.
+On the other hand, the LDPC can utilize these four units by processing four supercodes parallely.
+B. BetaLLR Special Function Unit
+The backward metric and the LLR is computed together to reduce memory requirement. For a single algorithm it is easier to design a unit for beta separately and LLR separately. However, the LLR calcualtion of LDPC and turbo is not the
+
+Fig. 4. ALPHA unit for a single butterfly pair.
+same. It can be seen from (14) that we can calculate with a special function unit the two maximization properties as
+
+Equation (13) can be expressed as
+LLRk = max(max(αk−1(1) + βk(1), αk−1(2) + βk(5)) + γ1(k), max(αk−1(7) + βk(8), αk−1(8) + βk(4)) + γ1(k), max(αk−1(3) + βk(6), αk−1(4) + βk(2)) + γ2(k), max(αk−1(5) + βk(3), αk−1(6) + βk(7)) + γ2(k))
+−max(max(αk−1(1) + βk(5), αk−1(2) + βk(1)) − γ1(k), max(αk−1(5) + βk(7), αk−1(6) + βk(3)) − γ1(k), max(αk−1(3) + βk(2), αk−1(4) + βk(6)) + γ2(k), max(αk−1(7) + βk(4), αk−1(8) + βk(8) + γ2(k)). (16)
+We can divide (16) in four parts to use the BetaLLR unit. For example, one of the parts is given here as
+output1 = max(αk−1(1) + βk(1), αk−1(2) + βk(5)). (17) output2 = max(αk−1(1) + βk(5), αk−1(2) + βk(1)).
+The branch metric γ needs to be added or subtracted with the left side of (17) and have to use maximization unit to get the final LLR output. A block diagram is given in Fig. 6 to calculate a LLR in turbo mode.
+
+output1 = max(αk−1(0) + βk(0), αk−1(1) + βk(1)). (15) output2 = max(αk−1(0) + βk(1), αk−1(1) + βk(0)).
+The unit would calculate the earlier state backward metrics βk(0) and βk(1) based on βk+1(0) and βk+1(1).
+Therefore, the BetaLLR unit takes five inputs and produce four outputs. For example, the unit takes βk+1(0), βk+1(1), αk−1(0), αk−1(1) and Lik+1 as inputs and can produce the earlier state backward metrics βk(0), βk(1), output1 and output2 of (15). A block diagram of the unit is given in Fig. 5.
+
+Fig. 6. LLR computation with four BetaLLR units in turbo mode.
+
+Four BetaLLR unit can be utilized in LDPC mode by processing four supercodes parallely.
+
+Fig. 5. BetaLLR unit for a single butterfly pair.
+Equation (13) has to be divided in some similar form to utilize the BetaLLR unit to compute the backward metric and output LLR for turbo decoding.
+
+VI. TRANSPORT TRIGGERED ARCHITECTURE PROCESSOR
+A. Top level architecture
+A part of the TTA processor designed for the LDPC and turbo decoding is illustrated in Fig. 7. For readability, the whole processor figure is not given. The blocks on the upper part of the figure represent the function units and register files of the processor. The black horizontal straight lines represent the buses of the processor. The vertical rectangular blocks represent the sockets. The connection between function units and buses is illustrated by black dots in the sockets.
+The fixed point processor includes load/store unit (LSU), arithmetic logic unit (ALU), global control unit (GCU) and register files. Based on the resource requirements in high level language, function units and register files are added.
+
+Fig. 7. Implemented processor with reduced number of function units.
+
+The ALU unit is used to perform the basic arithmetic operations like addition, subtraction etc. Operations like shifting right or left are also included in ALU.
+For turbo decoding, the forward and backward metric computations between two states need at least four of the ALPHA and BetaLLR units. Therefore, four ALPHA and four BetaLLR units are used in the processor.
+LSU units are used to support the memory accesses. The LSU units are used to read and write memory. The memory can be read in three clock cycles and can be written in a single cycle.
+Several register files are used to save the intermediate results. In terms of the power consumption, registers can be more expensive than memory, but to meet the latency requirement register files are needed. A single Boolean register file has been included in the processor design.
+Thirty buses have been used for the processor. The number of buses is crucial to ensure the parallel processing. However, the complexity also increases with the increased number of buses.
+The LLR outputs have been written using a first-in-first-out (FIFO) buffer by using the function unit called STREAM. The STREAM units can write every output sample in three clock cycle.
+B. Programming the processor
+The processor is programmed with high level language C. Several macros have been used to call the function units and use part of that code with that specific function unit.
+The turbo decoding algorithm use three blocks of 6,144 input LLRs. The blocks have been divided in smaller windows to save the memory requirements. Only the forward metrics have been saved in a window. The backward metric is calculated
+
+with the BetaLLR unit and used immediately to calculate the corresponding LLR.
+The forward metric and backward metrics increase in each step and that is why the forward and backward metrics is normalized to avoid memory overflow.
+Before processing the ALPHA and BetaLLR values, the γ values need to be calculated. As shown in figure 7, The output of the BetaLLR also needs to maximize and added or subtracted with γ values to find the output LLR.
+In the LDPC mode, the processor is programmed for the LDPC code of IEEE WLAN 802.11n of code rate 1/2 and output block size of 648. Due to the data dependencies, a single special function unit is used several times to calculate the required forward and backward metric values of a supercode in serial fashion. For example, the first row of the H matrix of this particular code configuration has seven nonzero elements. The two-state trellis should be a matrix of 8×2 to calculate the forward and backward metrices for this row. The initilization values of the metrices are zero. Therefore, only one ALPHA and one BetaLLR units are used seven times each to get all the necessary output LLR from this row. Four of this rows can be processed in parallel as there are four ALPHA and BetaLLR units available.
+The variable node update is done by simply adding the LLR outputs of the super codes with the corresponding original LLRs of the same position. Shifting operations are required to
+VII. RESULTS AND DISCUSSION
+The designed processor takes 166,224 clock cycles to process three blocks of 6,144 samples for a full iteration for the turbo decoding. The processor takes 10,368 clock cycles to decode a LDPC code for IEEE WLAN 802.11n of block size 648 and code rate 1/2 after five iterations.
+
+The throughput can be calculated using the following equation as
+
+Throughput
+
+=
+
+Size
+
+of
+
+the code block × device clock frequency
+
+latency × number of iterations
+
+.
+
+(18)
+
+The throughput achieved for the turbo mode is 22.64 Mbps for a single iteration and for LDPC mode 10.12 Mbps for five iterations for a clock frequency of 200 MHz.
+
+The buses of the processor are perfectly utilized to achieve the best possible result due to the perfect scheduling. The number of some of the operations during the algorithm execution has been summarized in Table I.
+
+Reference [26]
+proposed
+[27]
+[14] [12]
+
+TABLE III PROGRAMMABLE LDPC PROCESSORS
+
+Architecture TMS320C64xx DSP TTA proc. for LDPC SDR SODA
+VLIW ASIP VLIW ASIP
+
+Algorithm min-sum
+supercode based sum-product min-sum
+offset min-sum offset min-sum
+
+Throughput 1.8 Mbps @ 10 it. 10.12 Mbps @ 5 it. 15.2 Mbps @ 10 it. 53 Mbps @ 10 it. 16.32 - 128.5 Mbps @ 10-20 it.
+
+TABLE I NUMBER OF OPERATIONS
+
+Operation ADD SUB MAX
+ALPHA BetaLLR STREAM
+
+# of OPS in turbo 431,009 96,354 43,008 24,576 24,576 6,144
+
+# of OPS in LDPC 87,134 14,231 0 2,376 2,376 648
+
+The number of addition operations does not only represent the addition for the algorithm, but for several other purposes like loop indexing for the code. The maximization units are not used in case of LDPC decoding because the maximization operations are done inside the ALPHA and BetaLLR units.
+A comparison with different other programmable implementations of turbo decoder has been presented in Table II. The throughput results are normalized for a clock frequency of 200 MHz. Our proposed processor with turbo mode provides very good throughput compared to other programmable implementations. The TTA processors of [16] and [17] provide higher throughputs but the designs were dedicated for only turbo decoding.
+
+TABLE II PROGRAMMABLE TURBO PROCESSORS
+
+Reference [23] [24]
+proposed [17] [25] [16]
+
+Architecture TMS320C6201 DSP
+VLIW ASIP TTA proc. in turbo mode
+TTA proc. for LTE Nvidia C1060 TTA proc.
+
+Algorithm max-log-MAP max-log-MAP max-log-MAP max-log-MAP max-log-MAP max-log-MAP
+
+Throughput 2 Mbps 5 Mbps
+22.64 Mbps 31.21 Mbps 33.85 Mbps
+98 Mbps
+
+A comparison with different other programmable implementations of LDPC decoder has been presented in Table III. The throughput results are normalized for a clock frequency of 200 MHz. Our proposed processor with LDPC mode provides moderate throughput compared to most of the programmable implementations.
+Alles et al . presented an efficient implementation of multimode decoder in [12]. The ASIP achieved 34.5 Mbps to 257 Mbps for LDPC codes of different code configurations and block size of IEEE 802.11n when the clock frequency is 400 MHz. The lowest throughput of 34.5 Mbps at 400 MHz clock
+
+frequency after 20 iterations was achieved when the code rate and block size is the same as presented in this paper. The design of [14] achieved high throughput with a different code configuration. Besides, all the implementations presented here used the assembly language.
+VIII. CONCLUSION
+The paper discussed the design issues of a turbo and LDPC decoder on a TTA processor. The design shows the promise of the possibility of designing several decoding techniques on a single TTA processor. The processor designed in this paper can be used for tasks beyond decoding, for instance, it can be programmed for detection and equalization algorithms running on factor graphs [28]. The target throughput of LTE can also be reached by multi-core TTA processor. The flexibility gained from that processor could provide very interesting results and would be a fruitful direction for future research.
+IX. ACKNOWLEDGEMENT
+This research was supported by the Finnish Funding Agency for Technology and Innovation (Tekes), Renesas Mobile Europe, Nokia Siemens Networks, Elektrobit and Xilinx. Special thanks are due to Dr. Perttu Salmela from Tampere University of Technology and Dr. Frederik Naessens from IMEC for sharing their insights on programmable turbo and LDPC decoder implementations.
+REFERENCES
+[1] C. Berrou, A. Glavieux, P. Thitimajshima, “Near shannon limit errorcorrecting coding and decoding: turbo-codes,” in IEEE International Conference on Communication, vol. 2, pp. 1064-1070, Geneva, Switzerland, May 1993.
+[2] Multiplexing and channel coding, 3GPP TS 36.212 version 10.5.0. [3] R. Gallager, ”Low-density parity-check codes,” in IRE Transactions on
+Information Theory, vol. 8, pp. 21-28, Jan. 1962. [4] IEEE P802.11n/D1.04, Part 11: Wireless LAN Medium Access Control
+(MAC) and Physical Layer (PHY) specifications, Sep. 2006. [5] IEEE P802.16e/D5, Part 16: Air Interface for Fixed and Mobile Broad-
+band Wireless Access Systems, Sep. 2004. [6] Digital Video Broadcasting (DVB); Second generation framing structure,
+channel coding and modulation systems for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications (DVB-S2), 2009-2008. [7] Y. Sun and J. Cavallaro, ”Efficient hardware implementation of a highlyparallel 3GPP LTE/LTE-advance turbo decoder,” Integration, the VLSI Journal, 2010.
+
+[8] G. Prescher, T. Gemmeke, and T. G. Noll, ”A parametrizable low-power high-throughput turbo-decoder,” in IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP), vol. 5, pp. 25 - 28, Mar. 2005.
+[9] M. M. Mansour, and N. R. Shanbhag, ”High-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, pp 976-996, Dec. 2003.
+[10] C. Studer, N. Preyss, C. Roth, and A. Burg, ”Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proceedings of the 42th Asilomar Conference on Signals, Systems, and Computers, Pacific Grove, CA, USA, Oct. 2008.
+[11] Y. Sun, and J. Cavallaro, ”A flexible LDPC/turbo decoder architecture,” Journal of Signal Processing Systems, pp 1-16, 2010.
+[12] M. Alles, T. Vogt, and N. Wehn, ”FlexiChap: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” in 5th International Symposium on Turbo Codes and Related Topics, pp. 84-89, Lausanne, Switzerland, Sep. 2008.
+[13] F. Naessens, B. Bougard, S. Bressinck, L. Hollevoet, P. Raghavan, L. Van der Perre and F. Catthoor, ”A unified instruction set programmable architecture for multi-standard advanced forward error correction,” in IEEE Workshop on Signal Processing Systems, SIPS 2008, pp. 31-36, Washington, D.C., USA, Oct. 2008.
+[14] S. Kunze, E. Matus, and G. P. Fettweis, ”ASIP decoder architecture for convolutional and LDPC codes,” in IEEE International Symposium on Circuits and Systems, ISCAS, pp. 2457-246, Taipei, Taiwan, May 2009.
+[15] P. Ja¨a¨skela¨inen, V. Guzma, A. Cilio, T. Pitka¨nen, and J. Takala, “Codesign toolset for application-specific instruction-set processors,” in Multimedia on Mobile Devices 2007, vol. 6507 of Proceedings of SPIE pp. 1-11, San Jose, CA, USA, Jan. 2007.
+[16] P. Salmela, H. Sorokin, and J. Takala, ”A programmable max-log-MAP turbo decoder implementation,” Hindawi VLSI Design, vol. 2008, pp 636-640, 2008.
+[17] S. Shahabuddin, J. Janhunen, and M. Juntti, ”Design of a transport triggered architecture processor for a flexible iterative turbo decoder,” in Proceedings of Wireless Innovation Forum Conference on Wireless Communications Technologies and Software Radio (SDR Wincomm), Washington, D.C., USA, Jan. 2013.
+[18] S. Benedetto, G. Montorsi, D. Divsalar, and F. Pollara, “A soft-input soft-output maximum a posteriori (MAP) module to decoder parallel and serial concatenated codes,” in JPL TDA Progr. Rep., vol. 42-127, pp. 1-20, Jet Propulsion Lab., Pasadena, CA, 1996.
+[19] P. Robertson, P. Hoeher, and E. Villebrun, “Optimal and suboptimal maximum a posteriori algorithms suitable for turbo decoding,” in European Trans. on Telecommun., vol. 8, pp. 119-125, Mar./Apr. 1997.
+[20] M. P. C. Fossorier, ”Quasicyclic low-density parity-check codes from circulant permutation matrices,” in IEEE Transactions on Information Theory, vol. 50, pp. 1788-1793, Aug. 2004.
+[21] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. -Y. Hu ”Reduced-Complexity Decoding of LDPC codes,” in IEEE Transactions on Communications, vol. 53, pp. 1288-1299, Aug. 2005.
+[22] E. Sharon, S. Litsyn, and J. Goldberger, ”An efficient message-passing schedule for LDPC coding,” in 23rd IEEE Convention of Electrical and Electronics Engineers in Israel, Sep. 2004.
+[23] Y. Song, G. Liu and Huiyang, “The implementation of turbo decoder on DSP in W-CDMA system,” in International Conference on Wireless Communications, Networking and Mobile Computing, pp. 1281-1283, Dec. 2005.
+[24] P. Ituero and M. L´opez-Vallejo, “New schemes in clustered VLIW processors applied to turbo decoding,” in Proceedings of International Conference on Application-Specific Systems, Architectures and Processors (ASAP ’06), pp. 291-296, Steamboat Springs, CO, USA, Sep. 2006.
+[25] M. Wu, Y. Sun, and J. R. Cavallaro, ”Implementation of a 3GPP LTE turbo decoder accelerator on GPU,” in 2010 IEEE Workshop on Signal Processing Systems (SIPS), pp. 192-197, San Francisco, CA, USA, Oct. 2010.
+[26] G. Lehner, J. Sayir, and M. Rupp, ”Efficient DSP implementation of an LDPC decoder,” in IEEE International Conference on Acoustics, Speech, and Signal Processing, ICASSP, vol. 4, pp. 665-668, May 2004.
+[27] S. Seo, T. Mudge, Y. Zhu, and C. Chakrabarti, ”Design and analysis of LDPC decoders for software defined radio,” in IEEE Workshop on Signal Processing Systems, pp. 210-215, Shanghai, China, Oct. 2007.
+[28] M. H. Taghavi, and P. H. Siegel, ”Graph-based decoding in the presence of ISI,” in IEEE Transactions on Information Theory, vol. 57, pp. 21882202, Apr. 2011.
+
+

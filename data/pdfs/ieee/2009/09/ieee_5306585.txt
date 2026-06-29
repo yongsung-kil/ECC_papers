@@ -1,0 +1,619 @@
+The Benefits of 3D Networks-on-Chip as shown with LDPC Decoding
+Christopher Mineo and W. Rhett Davis Department of Electrical and Computer Engineering, North Carolina State University
+{chris mineo, rhett davis}@ncsu.edu
+
+Abstract—In this work we describe our network-on-chip (NoC) simulator, which fills the gap between architectural level and circuit level NoC simulation. The core is a fast, high level transaction-based NoC simulator, which accesses carefully compiled power, timing, and area models for basic NoC componets built from detailed circuit simulation. It makes use of the architectural evaluator, which performs a detailed global interconnect analysis within the framework of industry-standard design tools. Using low density parity check decoding as a test vehicle, the NoC simulator is used in an NoC design study comparing 2D and 3D integrated circuits, and shows a method by which on-chip networks can be optimized.
+I. INTRODUCTION
+The digital integrated circuit trends of today are toward greater levels of integration. With seemingly continuous device scaling and the introduction of 3D technologies, system designers have additional devices at their disposal with which they can incorporate more functionality into a single digital chip. Such systems, with a growing number of modules, have come to require inter-component I/O bandwidth which can only be met by network-on-chip (NoC) interconnection fabrics, however this greatly complicates the architectural planning of such systems.
+The quantity and complexity of the network architectural decisions involved in implementing an NoC renders optimization virtually impossible without the aid of a reliable network simulator. We have created a cycle accurate, transaction level C++ network simulator. It simulates our test application of low density parity check (LDPC) decoding being performed by a varied number of parallel specialized processing elements which communicate over an NoC.
+As LDPC decoding lends itself well to parallelization and is extremely interconnect-centric, it accentuates the advantages and disadvantages of different networks. In order to accurately model the network components, we have broken down the typical NoC router into basic components, and designed each of them using synthesizable parameterized HDL. Each full physical design was carried out using commercial integrated circuit design tools in a predictive 45nm technology. The critical path, area, and power consumption of each of the components was characterized and curve-fit using linear or polynomial regression such that they can be predicted by the network simulator based on simple network parameters. So that we may accurately model the global interconnect, a detailed floorplan for each NoC configuration of interest is generated and global wire lengths are computed.
+
+This work investigates design tradeoffs in application specific network-on-chip design. In this design study, we focus on the mesh, torus, and flattened butterfly topologies. We will determine the appropriate size network for our example application. Through the analysis of various mesh network configurations, we vary the number of allowed 3DIC tiers in order to compare 2DIC and 3DIC implementations. We then compare all of the network configurations and show that we can find the Pareto optimal set for the LDPC decoder example, with respect to power consumption and delay.
+The rest of this paper is organized as follows: Next, Sec. II discusses the NoC simulator in detail. Sec. III will describe the LDPC decoding algorithm, explain why it is a good example NoC application, and describe the assumed architecture. Sec. IV will detail the NoC design study and results. Lastly, Sec. V will help to explain some of the design study results and summarize our findings.
+II. NETWORK-ON-CHIP SIMULATOR
+In order to assist in making NoC architectural decisions, we have created a fast and accurate network-on-chip simulator. Network simulation is typically performed either at the architectural level or at the circuit level. At the architectural level, network simulation is fast, but typically only measures network congestion, relative latency, hop counts, link utilization, and other such parameters for standard benchmarks. It models all message passing, and therefore is useful in comparing protocols such as methods of flow control and routing algorithms, or in comparing topologies, with respect to these metrics.
+Architectural simulations do not model the actual circuits used to implement the networks being studied. Therefore, power, performance, or area computations are normally based on standardized equations for router components, such as those of Orion [1]. These standard equations are very general, and are created only for the basic router components, assuming a specific circuit implementation of each. Power, performance, and area are then predicted based on assumptions about critical nets in each component. The accuracy of these standard equations is limited by the adequacy with which the assumed standard form can describe the circuit module being modeled. Additionally, they cannot account for physical design issues such as layout-dependent parasitics.
+At the circuit level, network simulations are usually performed at the register transfer level (RTL). RTL simulations
+
+99787-81--412-4442-44541-24-57/1029/-$72/50.090/$©2250.0090IE©E2E009 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+can predict power, performance, and area very accurately for synthesized digital circuits. These simulations are based on the actual circuits implementing the network, so can account for the power consumption and delay of individual logic gates and wires. RTL simulations, however, are much slower than those at the architectural level, making simulations of large designs very time consuming or even infeasible. Furthermore, RTL simulations require hardware design language (HDL) descriptions of all circuits to be modeled. The design and verification of these components can also be very time consuming. This leads designers to either evaluate only part of a system at a time, or to seriously limit the scope of a design study.
+Our multi-part NoC simulator bridges the gap between architectural and circuit simulation by tying together three closely knit components, shown as “Developed tools” in Fig. 1. First, there is the router circuit characterization stage. Significant time is spent in the design, verification, and characterization of NoC router components to produce detailed area, power, and delay models. However, this is a one-time, upfront cost in terms of design and simulation time. The characterization data is reused to model the specific circuits that implement a large range of networks. Second, there is the fast, transaction based system level network simulator. This stage models an application being performed over the networkon-chip, and gathers data to be used with the generated models to compute the power, performance, and area of the circuit modules. Finally, the architectural evaluator is used to model all top level interconnect and required repeaters so that power, performance, and area data for the entire system can be computed.
+Fig. 1. Organization of the NoC simulator.
+A. NoC Architecture Each network this work discusses is made up of network
+nodes, such as that of Fig. 2. A single node consists of a one or more functional units and a router. The router is directly connected to each functional unit in its own node, and to routers in neighboring nodes, according to the network topology, via NoC links. This allows functional units within the same node to communicate with one another through the shared router, and allows them to communicate with functional units in other nodes through intermediate routers.
+This study examines three network topologies: the mesh, torus, and flattened butterfly (FBFly). For each of the three
+
+Fig. 2. A single node in an on-chip network, and how it connects to its neighbors (in a 3D mesh).
+
+networks, we consider 2D and 3D variants. The 2D mesh
+
+network is an x × y grid of nodes, where a node is only
+
+directly connected to its (at most) four nearest neighbors.
+
+The 3D mesh network is the logical extension of this into
+
+a x × y × z 3D grid of nodes, where a node is only directly
+
+connected to its (at most) six nearest neighbors. The 2D and
+
+3D torus topologies differ from the 2D and 3D mesh only
+
+in the way that they also have wraparound connections along
+
+each dimension. Therefore, the first and last nodes along any
+
+line of nodes in the x, y, or z dimension in the grid of
+
+nodes are directly connected. Each node in the 2D torus is
+
+connected to four other nodes, and each node in the 3D torus
+
+is connected to six other nodes. This work considers mesh and
+
+torus networks with a concentration equal to one, or having
+
+only one functional unit per network node. The mesh networks
+
+have a worst case latency of (x − 1) + (y − 1) + (z − 1)
+
+network hops, and the tori have a worst case latency of
+
+f loor
+
+x 2
+
++ f loor
+
+y 2
+
++ f loor
+
+z 2
+
+hops. These topologies
+
+are well understood, more information can be found in NoC
+
+literature [2].
+
+The flattened butterfly [3] is a more recently used network
+
+topology which seeks to exploit the advantages afforded by
+
+shrinking interconnect dimensions between successive semi-
+
+conductor technology nodes. With wire width and pitch
+
+shrinking, more on-chip inter-module bandwidth is available.
+
+Research shows that this increase in bandwidth can be best
+
+used by high-radix routers, i.e. channeling data in many thin
+
+channels as opposed to few fat channels [3], [4]. The flattened
+
+butterfly topologies which we consider are implemented as
+
+2D and 3D mesh networks, which may have a concentration
+
+greater than one, and are fully connected along each dimension
+
+(Fig. 3). The 2D and 3D flattened butterfly topologies have
+
+worst case latencies of two and three network hops, but the
+
+network radix varies with the total dimensions of the network.
+
+The typical network router modeled by the NoC simulator,
+
+shown in Fig. 4, has four pipeline stages. There is an input
+
+queue for each port, to store messages to alleviate congestion
+
+and avoid deadlock. The evaluation blocks differ for each
+
+topology, they serve to determine which output ports can be
+
+productively used by a given message. The arbitration block
+
+uses a fixed priority scheme to resolve contention for an
+
+2
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. The 2D flattened butterfly topology with a concentration of four. Processing elements are represented by circles, and routers by squares. In addition to the connections shown, each router has ports through which it is connected to the processing elements it is shown overlapping.
+output port. The crossbar allows data to move from the port it currently occupies to the output port to which it was allocated. These components, in addition to the functional units, are the basic NoC modules that are characterized for power, critical path delay, and area.
+The LDPC decoding application for our NoC requires small enough messages that each message is contained within a single flit, making wormhole routing and virtual channels unnecessary. A simple flow control scheme is used, a single bit is associated with each unidirectional NoC link, and travels in the opposite direction of the data, to signify whether an input queue in a destination node can hold more data. By organizing the router this way, the input queues, arbitration blocks, and crossbars can be used across all networks to be studied. The routing algorithm for a network, which is unique to each topology, is contained within the evaluation block, necessitating the design of an evaluation block for all topologies of interest.
+
+B. Network Component Characterization
+We have created a computer aided design (CAD) tool flow to characterize each network component for power, delay, and area. It is fast enough that it can be run start to finish many times, requires minimal user interaction, but is still customizable. The automated flow manages the design tool environments, runs the design tools, runs the simulations, and organizes the results, generating additional input files and scripts on the fly as necessary. Once the models are generated by this flow, they remain valid and can be used for all NoC simulations that are to be based on the same standard cell library and technology node. The NoC modules have been characterized in a predictive 45 nm technology, using the Nangate open-cell library [5]. This methodology is shown at a high level in Fig. 5.
+The first step is to create HDL descriptions of each basic module using parameterized Verilog. Using parameterized Verilog, we are able to remove network configuration-specific properties of the module from the HDL description. For example, two different networks may require crossbars to have different numbers of ports, or to handle different NoC link widths. By making the number of input ports, number of output ports, and bit width Verilog parameters in the HDL description of the crossbar, we have allowed those properties to remain unset until compile time. Therefore, the HDL descriptions of the basic NoC blocks can be reused between the networks to be studied.
+
+Fig. 5. CAD tool flow used to characterize NoC router components.
+
+Fig. 4. Canonical four stage pipeline n port NoC router, with concentration c. Each stage is characterized for use by the simulatior.
+
+The flow chart in Fig. 5 shows the methodology by which the parameterized modules are characterized. The shell script first sets up the simulation environment, and runs an automatic testbench generator which was customized to the module under test. The automatic generation of realistic test vectors is critical to characterizing a circuit with respect to switching activity, so characterization results can be reused with different network applications. The first set of Verilog parameters are set, and the RTL is compiled and simulated. Once the design has been verified, the RTL is synthesized. The shell script then iterates on the physical design feature of the perl script, which runs the commercial place and route tool to generate a layout complete with a clock tree, power grid, and repeaters
+
+3
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+on long wires, until there are no design rule violations. Each time design rule violations are found, the physical design flow is run again with a slightly more relaxed area floorplan constraint. With a layout in place, we can simulate a series of automatically generated testbenches with varied numbers of transactions per cycles to record internal net switching activity under these different conditions. We can then perform a static timing and power analysis complete with switching activity and circuit parasitics annotated to obtain accurate timing and power consumption data. Finally, a detailed Spice circuit simulation can be run on the clock tree to verify that our initial clock skew and slew rates estimates needed for synthesis were within reason. The procedure, starting with the setup and synthesis steps, is then automatically repeated by the shell script for each set of Verilog design parameters.
+Not shown in Fig. 5 are the post-processing steps on the raw simulation data. The data is parsed, organized, and fed into Matlab. Our flow is set up to perform a linear or polynomial regression analysis on the static timing and power analysis results to create linear models that fit the power, performance, and area simulation data. It is the task of the designer to inspect the circuit architecture of the module and determine which factors should be used as inputs to the regression analysis, i.e. to determine what will be the factors of power, performance, and area in the models. This is typically an iterative process, for a set of chosen factors the regression analysis will report to the designer the quality of the fit of the model to the data. Statistical correlation coefficients, residual statistics, and 95% confidence intervals on the constants in the model are all provided. The designer can view the model graphically to assist in system architectural decisions, or can produce the models in C syntax. When written out as C functions, the power models are appropriate for direct access by the system level cycle accurate simulator described in Sec. II-C. The C functions will return the model’s prediction for the property of interest, or can use the 95% confidence intervals to return bounds on the property’s value.
+It is important to note the advantages of the regression analysis. Most importantly, it allows for interpolation and extrapolation around the simulated data points. Also, it allows for very fast and convenient way to access potentially a very large amount of data. Lastly, it is important to perform regression analysis even when the input parameters are discrete, such as the number of ports a module has or the bit width of an address space. The design tools used to create the physical designs upon which these module simulations are based, use a number of heuristics, particularly in the placement and routing stages. This can lead to unrealistic data points, such as an x+1 port crossbar having a faster critical path delay than an x port crossbar. If not for the purposes of an architectural simulator, these two designs would go through optimization processes which would certainly lead to the smaller crossbar running faster. The initial unrealistic data point was a result of the design tool heuristics and chance, but would be smoothed out after regression analysis. This characterization methodology is discussed in great detail in [6].
+
+C. Transaction-Based NoC Simulation
+The system level transaction-based portion of the NoC simulator is written in object-oriented C++. It operates at a higher level of abstraction than the characterized circuit modules, allowing for full system analysis. During a cycleaccurate simulation, it tracks transactions between nodes and between modules within a node, considering exchanges over ports, not specific bit level switching activity. This transaction data, combined with derived properties about the network, are fed into the characterization models to obtain power, performance, and area data for each module. In order to simulate data moving through the network, functional modeling of the processing elements is necessary. We have created the LDPC processor described in Sec. III-B to provide a useful workload for the network, however, the NoC simulator was created to be modular such that it is not tied to a specific application or specific processing element.
+The NoC simulator takes in such parameters as network topology, network dimensions, network concentration, and input queue depth. It also allows the user to set the number of 3DIC tiers to use in the physical design, as well as application specific simulation parameters. To aid in the LDPC decoding, the NoC simulator makes use of portions of the open-source LDPC software from the University of Toronto [7], and models SRAM memories within the LDPC processor using Cacti [8].
+To accurately model the physical design of the NoC, the NoC simulator creates a floorplan for each unique node out of the basic characterized blocks. Presently, the floorplan of a single node does not span multiple tiers of a 3DIC. The simulator then creates a floorplan for the entire NoC by tiling the individual nodes, which spans as many tiers as designated by the user. This floorplan is generated by discretizing results from the 3D-extensible quadratic placement algorithm [9]. This floorplan data, along with a Verilog netlist generated to describe the logical connections between all modules, and information about the specific signals and bit widths that were collapsed into NoC ports are then passed along to the architectural evaluator for analysis of the global interconnect.
+D. Architectural Evaluator
+The architectural evaluator is a full system floorplanning and interconnect evaluation framework based on commercially available CAD tools. OpenAccess Python descriptions of all NoC modules and NoC ports are created by the NoC simulator, and are compiled into PyCells within the architectural evaluator. These PyCells for each basic NoC module have cell areas based on the characterization models, and have all of the necessary pins placed on valid routing tracks around their perimeters. The Verilog netlists from the NoC simulator are imported into the OpenAccess database, and the floorplan data is used by Skill code to generate a layout. This NoC layout has instances for each basic NoC module in each NoC node, and is complete with net connectivity information for every wire. The architectural evaluator finally will determine the Manhattan routing distance from source pin to sink pin for each wire in the system, and insert repeaters as needed
+
+4
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+to optimize for propagation delay according to [10], within constraints of the standard cell library.
+At this stage, we are no longer using the ports and transaction abstractions that existed during the network simulations, we have returned to considering individual wires. The architectural evaluator reports the impact the global interconnect has on the operating frequency of the system, and the power consumption of all global wires and repeaters. The NoC simulator at this point has enough information to compute the final system power consumption, area, speed, and based on application, throughput or other performance metric.
+III. LDPC DECODING
+LDPC decoding [11], [12] is the chosen application for the NoC study. It is an interesting application and a popular area of research, as it has found its way into many communication standards. LDPC decoding has been shown to be among the best error correction coding algorithms in terms of bit error rate, for large block sizes [13]. It makes a particularly good workload for an NoC because the algorithm can be parallelized beyond what is allowed by the area and power budgets of most chips today. Therefore, within reason, we can create a network of an arbitrary number of LDPC processors and continually keep them busy without complex algorithm optimizations. Additionally, the interconnect fabric through which the LDPC nodes exchange information, is usually the performance bottleneck.
+A. LDPC Algorithm
+The LDPC decoding algorithm is an iterative message passing algorithm. Data regarding the “belief” that a bit in a codeword is a binary “1” or “0” is exchanged between code nodes and check nodes according to the parity check matrix until a probability threshold is reached or a certain number of iterations have been performed. An LDPC parity check matrix can also be represented as a Tanner graph, as in Fig. 6. For a detailed explanation of the algorithm, the reader is referred to the cited references.
+
+Eqs. 2, 3 show the computation performed by a check node, to compute the message to each of its code nodes, rm,l.
+
+δrm,l =
+
+|qm,l |
+
+(2)
+
+l ∈L(m)\l
+
+eδrm,l + 1
+
+rm,l = ln eδrm,l − 1 ·
+
+(sgn (qm,l )) (3)
+
+l ∈L(m)\l
+
+Similarly, Eqs. 4, 5 show the computation performed by a code node, to compute the message to each of its check nodes, qm,l.
+
+δqm,l = pl +
+
+rm ,l
+
+(4)
+
+m ∈M (l)\m
+
+e|δqm,l| + 1
+
+qm,l = ln e|δqm,l| − 1 · sgn (δqm,l)
+
+(5)
+
+Eq. 6 shows how each code node updates the probability corresponding to its bit at the end of each decoding iteration.
+
+ql = pl +
+
+rm,l
+
+(6)
+
+m∈M (l)
+
+B. LDPC Architectures
+
+The typical LDPC code has a block size on the order of 103 to 104 bits, so in a digital IC implementation, the tasks of multiple code and check nodes are often mapped onto a single LDPC processor, resulting in a partially parallel implementation.
+Message passing between code nodes and check nodes is often carried out through memory accesses, dedicated links, or networks. Many of these interconnect fabrics employ optimizations that sacrifice re-configurability for data throughput [14]– [17]. However, we are specifically interested in studying the performance of the networks more than the LDPC. Therefore, we more interested in seeing the effect NoC parameters have on LDPC performance, than we are in building the best LDPC decoder.
+
+Fig. 6. A Tanner Graph representation of an LDPC decoder parity check matrix. The open circles are code nodes, and the closed circles are check nodes.
+
+The designed LDPC processor performs the algorithm in the log-liklihood domain. Each code node is initialized with the probability pl in Eq. 1, where R is the code rate, rl is the received data, and SN R refers to the signal to noise ratio of the additive white Gaussian noise corrupted channel.
+
+pl = 2 ·
+
+2
+
+·
+
+R
+
+·
+
+10
+
+SNR 10
+
+· rl
+
+(1)
+
+Fig. 7. Block diagram of a single LDPC processing element.
+
+5
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+The LDPC decoder architecture used as the functional unit
+
+in this study is shown in Fig 7. The same module performs
+
+the function of both check nodes and code nodes. Incoming
+
+data is stored in the SRAM, and the node RAM contains
+
+add-accumulate registers and other counters. The computation
+
+unit is an adder with control logic, and the ln
+
+e|x| +1 e|x| −1
+
+block
+
+is implemented via a look-up table. Modeling the LDPC
+
+processor is necessary only because we must account for the
+
+additional power and area associated with the speedup from
+
+additional LDPC parallelism.
+
+IV. RESULTS
+
+In this design study, we will optimize an NoC for LDPC
+
+decoding
+
+with
+
+a
+
+1024
+
+bit
+
+block,
+
+rate
+
+1 2
+
+code.
+
+We
+
+will
+
+assume
+
+that network configurations will operate at the maximum
+
+possible speed, and input queues are as shallow as possible
+
+while still keeping the network out of deadlock. We will vary
+
+the number of nodes in the network, the network topology, the
+
+network dimensions, and the number of allowed 3DIC tiers in
+
+the physical design. We will then evaluate the network config-
+
+urations in terms of the tradeoff between power consumption
+
+and delay to identify the Pareto optimal set.
+
+The first issue is to determine the appropriate level of
+
+parallelism, or the appropriate network size. The plots of Fig. 8
+
+assist in this type of decision. As we increase the number of
+
+NoC nodes, we increase the complexity of the system and
+
+create the potential to increase the overall power and cycle
+
+time. Therefore, increasing the number of nodes can only
+
+possibly be beneficial if doing so allows us to complete the
+
+LDPC decoding in a fewer number of cycles. The figure shows
+
+that for both 2D and 3D mesh and torus networks, there exists
+
+an ideal number of network nodes, between 100 and 200.
+
+Beyond this, the networks become too large for this LDPC
+
+code, and messages spend too much time in transit. The Tanner
+
+graph representation (similar to Fig. 6) of this example LDPC
+
+code used here contains 6144 edges. The NoC links perform
+
+the function of these 6144 edges. Closer investigation suggests
+
+that adding NoC nodes to the LDPC decoder is no longer
+
+beneficial when the ratio of NoC links to Tanner graph edges
+
+exceeds a certain point.
+
+Next, as mentioned, we wish to quantify the benefit of
+
+implementing the NoC in a 3DIC technology. In Fig. 9 we
+
+see plots for many mesh network configurations that are
+
+roughly the optimal number of nodes, as determined earlier.
+
+Fig. 9(a) shows a grouping of points for each logical mesh
+
+network configuration of interest. Each individual point in
+
+the grouping represents the power consumption and delay
+
+combination when the physical design of that network con-
+
+figuration consists of one, two, three, or four 3DIC tiers.
+
+Interestingly, the fact that the points for a given logical
+
+mesh network configuration in Fig. 9(a) are in such close
+
+proximity, suggests that in these cases, varying the number
+
+of 3DIC tiers from 1-4 has little impact on the overall system.
+
+Fig. 9(b) provides a closer look at the global interconnect
+
+power consumption in these same network configurations, the
+
+portion of the overall power consumption that we look to
+
+decoding cycles
+
+x 104 6 5
+
+LDPC Decoding via a Mesh NoC
+
+2D Mesh 3D Mesh
+
+4
+
+3
+
+2
+
+1
+
+0 0 100 200 300 400 500 600 700 800 900 1000 1100 number of NoC nodes
+(a) 2D/3D Mesh NoC
+
+x 104 5 4
+
+LDPC Decoding via a Torus NoC
+
+2D Torus 3D Torus
+
+decoding cycles
+
+3
+
+2
+
+1
+
+0 0 100 200 300 400 500 600 700 800 900 1000 1100 number of NoC nodes
+(b) 2D/3D Torus NoC
+
+Fig. 8.
+
+Number
+
+of
+
+cycles
+
+required
+
+by
+
+the
+
+system
+
+to
+
+decode
+
+five
+
+rate
+
+1 2
+
+,
+
+1024
+
+bit LDPC codewords. Ten LDPC decoding iterations are performed on each
+
+codeword, using three parity checks per bit. The simulations account for all
+
+system I/O.
+
+decrease by making use of 3DIC’s. As expected, the larger the network, the greater the global interconnect power savings from a 3DIC implementation. However, we see that varying the number of tiers has little impact on the whole system because the global interconnect power is generally about only 10% of the total power.
+We complete this design study in Fig. 10 by varying the remaining parameters and plotting power consumption versus delay for all network configurations. We see that a Pareto optimal set of NoC’s can be found. Also, analyzing the desired network size is an effective way to steer our simulations toward an interesting design space, rather than spending time simulating network configurations that are clearly sub-optimal. The study shows that for this LDPC code, mesh topologies are outperformed by the torus and flattened butterfly configurations. The torus NoC’s provide the best performance in terms of delay or decoding throughput, but if some performance can be sacrificed, a flattened butterfly implementation can result in significant power savings.
+
+6
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+LDPC Decoding via a Mesh NoC 5
+
+2DIC
+
+4.5
+
+2 tier 3DIC
+
+3 tier 3DIC
+
+4 tier 3DIC 4
+
+LDPC Decoding via an NoC 6
+
+Mesh
+
+Torus
+
+5
+
+FBfly
+
+Power Consumption (W)
+
+Power Consumption (W)
+
+3.5
+
+4
+
+3
+
+3 2.5
+
+2 2
+1.5
+
+1
+
+1
+
+0.5
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+20
+
+22
+
+24
+
+LDPC decoder average compute time (ns/b)
+
+(a) Mesh Total Power
+
+LDPC Decoding via a Mesh NoC 0.7
+
+2DIC
+
+2 tier 3DIC
+
+0.6
+
+3 tier 3DIC
+
+4 tier 3DIC
+
+0.5
+
+Global Interconnect Power Consumption (W)
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0
+
+0
+
+50
+
+100
+
+150
+
+200
+
+250
+
+number of NoC nodes
+
+(b) Mesh Global Interconnect Power
+
+Fig. 9. Power plots for various mesh NoC configurations, as the number of 3DIC tiers is varied.
+
+V. CONCLUSION
+A detailed power and performance modeling methodology for NoC’s has been presented. The design study seems to justify the need for such a detailed simulation platform, between the unintuitive nature of some of the findings, and the very fine tradeoffs of others. Making architectural NoC decisions is very difficult, and requires detailed simulations to ensure that all factors are considred.
+A deeper understanding of the NoC modules helps to explain why varying the number of 3DIC tiers has such a small impact on system power and performance. It is clear that the power consumed within the modules dwarfs the global interconnect power. This is likely because we have chosen to implement a packet switched network, where a message moves as a single unit through the network. New routing decisions are made at each intermediate node it touches, and the data is buffered at each pipeline stage. A circuit switched network would allocate and set up a path through the network for a message to travel along before the data leaves the source node. This would greatly reduce the sizes of the input queues, as well as reduce the amount of required data
+
+0
+
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+LDPC decoder average compute time (ns/b)
+
+Fig. 10. Power vs. average delay for various NoC configurations, for the same LDPC code.
+
+buffering, and would likely decrease the power consumption of the NoC modules. The decrease in power consumed within the modules would give the global interconnect, and thus the 3DIC aspect, a chance to make a greater impact on system power consumption. A similar case can be made for system performance. The delay through the crossbars typically dictates the system operating frequency. Decreasing the bit widths of each crossbar port with a move toward circuit switched networks would speed up these modules, and again, make interconnect delay a greater factor.
+As we continue to develop the NoC simulator, we will soon also analyze the global wire routability and routing congestion with the integration of a global routing algorithm into the architectural evaluator. We also plan to investigate additional variables in future design studies, such as varying the number of 3DIC tiers for other topologies, varying queue depths, and varying the concentration factor for other topologies than the flattened butterfly. We also look forward to investigating the effect changing the LDPC code has on NoC optimization.
+ACKNOWLEDGEMENTS
+We would like to thank DARPA, which supported this work in part under the 3D IC Program through Parametric Technology Corporation (PTC), Needham, MA. We would also like to thank the National Science Foundation which supported this work under Grant 643700, and the Semiconductor Research Corporation for their support under Grant 1824.
+REFERENCES
+[1] H.-S. Wang, X. Zhu, L.-S. Peh, and S. Malik, “Orion: a powerperformance simulator for interconnection networks,” in Proc. 35th Annual IEEE/ACM International Symposium on (MICRO-35) Microarchitecture, 18–22 Nov. 2002, pp. 294–305.
+[2] W. Dally and B. Towles, Principles and Practices of Interconnection Networks. San Francisco, CA, USA: Morgan Kaufmann Publishers Inc., 2003.
+[3] J. Kim, J. Balfour, and W. Dally, “Flattened Butterfly Topology for On-Chip Networks,” in Proc. 40th Annual IEEE/ACM International Symposium on Microarchitecture MICRO 2007, J. Balfour, Ed., 2007, pp. 172–182.
+
+7
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+[4] J. Kim, W. Dally, B. Towles, and A. Gupta, “Microarchitecture of a high radix router,” in Proc. 32nd International Symposium on Computer Architecture ISCA ’05, 2005, pp. 420–431.
+[5] Nangate. (2008, October) 45nm Open Cell Library. [Online]. Available: http://www.nangate.com/
+[6] C. Mineo and W. R. Davis, “Save Your Energy: A Fast and Accurate Approach to NoC Power Estimation,” in Workshop on 3D Integration and Interconnect-Centric Architectures. International Symposium on High-Performance Computer Architecture (HPCA), February 2009.
+[7] R. M. Neal. (2006, February) Software for Low Density Parity Check Codes. University of Toronto. [Online]. Available: http: //www.cs.toronto.edu/∼radford/ftp/LDPC-2006-02-08/index.html
+[8] CACTI 5.3 memory modeler. Hewlett Packard. [Online]. Available: http://www.hpl.hp.com/research/cacti/
+[9] K. M. Hall, “An r-Dimensional Quadratic Placement Algorithm,” Management Science, vol. 17, no. 3, pp. 219–229, 1970. [Online]. Available: http://www.jstor.org/stable/2629091
+[10] J. M. Rabaey, A. P. Chandrakasan, and B. Nikolic, Digital integrated circuits: a design perspective. Pearson Education, 2003.
+[11] R. Gallager, “Low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[12] D. J. C. MacKay, Information Theory, Inference & Learning Algorithms. New York, NY, USA: Cambridge University Press, 2002.
+[13] S.-Y. Chung, J. Forney, G.D., T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Communications Letters, vol. 5, no. 2, pp. 58–60, 2001.
+[14] F. Kienle, T. Brack, and N. Wehn, “A synthesizable IP core for DVB-S2 LDPC code decoding,” in Proc. Design, Automation and Test in Europe, 2005, pp. 100–105 Vol. 3.
+[15] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” IEEE Journal of Solid-State Circuits, vol. 37, no. 3, pp. 404–412, 2002.
+[16] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lantreibecq, and B. Gupta, “A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes,” in Proc. Digest of Technical Papers Solid-State Circuits Conference ISSCC. 2005 IEEE International, E. Yeo, Ed., 2005, pp. 446–609 Vol. 1.
+[17] M. Karkooti, P. Radosavljevic, and J. Cavallaro, “Configurable, High Throughput, Irregular LDPC Decoder Architecture: Tradeoff Analysis and Implementation,” in Proc. International Conference on Applicationspecific Systems, Architectures and Processors ASAP ’06, 2006, pp. 360– 367.
+8
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:17:40 UTC from IEEE Xplore. Restrictions apply.
+
+

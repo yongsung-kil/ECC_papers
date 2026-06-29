@@ -1,0 +1,770 @@
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+Learning to Decode Polar Codes with Quantized LLRs Passing
+Jian Gao, Jincheng Dai, Kai Niu Key Laboratory of Universal Wireless Communication, Ministry of Education Beijing University of Posts and Telecommunications, Beijing, China 100876
+Email:{jiangao, daijincheng, niukai}@bupt.edu.cn
+
+Abstract—In this paper, a weighted successive cancellation (WSC) algorithm is proposed to improve the decoding performance of polar codes with the quantized loglikelihood ratio (LLR). The weights used in the WSC are automatically learned by a neural network (NN). A novel NN model and its simplified architecture are build to select the optimal weights of the WSC, and allzero codewords can train the NN. Besides, we impose the constraints on weights to direct the learning process. The small number of trainable parameters lead to faster learning without performance loss. Simulation results show that the WSC algorithm is valid to various codewords and the trained weights make it outperform SC algorithm with the same quantization precision. Notably, the WSC with 3-bit quantization precision achieves a near floating point performance for short length.
+I. INTRODUCTION
+Polar Codes, discovered by Arikan in [1], have recently been adopted as the coding scheme for control channels in the 5th generation (5G) system. Polar codes achieve the symmetric capacity of binary-input discrete memoryless channels (B-DMCs) under low encoding and decoding complexity. SC algorithm was proposed for decoding polar codes [1], but, it suffers from high latency. The simplified SC (SSC) algorithm was introduced as a method to improve the latency of SC without affecting the error-correcting performance in [2]. In the implementation of hardware, polar code decoders that use quantized LLRs suffer significant performance loss compared to floating point decoder. In [3], the authors designed three uniform quantizers for SC decoder based on either optimizing the equivalent channel capacity, cutoff rate or mean-squared error (MSE). Also, they achieve a near floating point performance with 6-bit precision for the (1024,512) code. In [4], the authors discuss the robustness of quantized decoding algorithm without practical methods proposed for the quantization of polar codes.
+The concept of applying the neural network to decoding has been proposed in the early nineties [5]– [7]. Recently, T. Gruber et al. [8] revisit the idea of using a deep NN for one-shot decoding of random and polar codes. They elaborate that the most challenge facing applications of deep NN to decoding is the large size of training code space (exponential in the block
+
+length). This problem leads to a poor generalization of the NN to new codewords. The scheme of designing NN with the functionality of a decoding algorithm has been proposed to overcome the drawback. E. Nachmani et al. [9] [10], L. Lugosch and W. J. Gross [11] suggested a deep NN which is modeled on the belief propagation (BP) algorithm to improve the performance of decoding High-Density Parity Check (HDPC) codes. These NNs are constructed to closely mimic the message-updating of BP algorithm on the Tanner graph. The trainable weights and bias are assigned to the edges of the Tanner graph. A remarkable property of the BP algorithm is the independence of the performance from the transmitted codeword and is preserved in these NN decoders. This allows training the parameters on a single codeword. Moreover, B. Vasic et al. [12] utilize such weighted BP decoder to decode LDPC codes with finite-alphabet message passing. The NN decoder with 3-bit precision maintains no loss performance compared to the min-sum algorithm. Based on a similar spirit, W. Xu et al. [13] used the NN to improve BP decoding for polar codes by assign weights to the nodes in the Tanner graph.
+SC is a conventional decoding algorithm for polar codes. However, the performance loss caused by the quantized LLRs limits its implementation. In this paper, we propose to apply deep learning to improve the performance of SC with quantized LLRs. The main contributions are summarized as follows:
+1) A WSC algorithm is proposed, and the weights used in the WSC are automatically learned by a NN.
+2) We build a novel NN model and its simplified architecture based on the SC factor graph to select the optimal weights. The training only requires a set of all-zero codewords.
+3) We design a new method to constrain the number of weights. This weights assignment method guides the NN to learn the characteristics of quantized data at a faster rate without performance loss.
+The remainder of the paper is organized as follows. The construction of polar codes and the algorithm of SC and SSC are reviewed in Section II. Section III presents the proposed WSC algorithm and the NN model. Section
+
+978-1-5386-8110-7/19/$31.00 ©2019 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+
+IV introduces a simplified architecture of the NN. In section V, we suggest a new weights assignment method and the simulation results of the error-correcting performance of the proposed WSC algorithm are offered. Section VI concludes the works.
+
+II. PRELIMINARIES
+
+A. Polar Codes
+
+For a (N, K) polar code with length N = 2n, the most reliable K bits are assigned to the message and called information bits. The remaining (N − K) bits are
+referred to as frozen bits and usually set to zeros. The set A is defined as the collection of information bit indices, Ac corresponds to the collection of frozen bit indices.
+The equivalent graph of the polar encoder is shown in Fig. 1. A codeword xN0 −1 is generated as:
+
+xN0 −1 = uN0 −1FN ,
+
+(1)
+
+where the vector uN0 −1 contains two subsets: ui = 0 for i ∈ Ac, and the remain elements are assigned as
+
+information bits. FN denotes the n-th Kronecker power
+
+of F2, i.e. FN = F2⊗n, where the kernel matrix F2 =
+
+[
+
+1 1
+
+0 1
+
+].
+
+u0  s0,0
+
+s1,0
+
+s2,0
+
+s3,0  x0
+
+u1  s0,1
+
+s1,1
+
+s2,1
+
+s3,1  x1
+
+u2  s0,2
+
+s1,2
+
+s2,2
+
+s3,2  x2
+
+u3  s0,3
+
+s1,3
+
+s2,3
+
+s3,3  x3
+
+u4  s0,4
+
+s1,4
+
+s2,4
+
+s3,4  x4
+
+u5  s0,5
+
+s1,5
+
+s2,5
+
+s3,5  x5
+
+u6  s0,6
+
+s1,6
+
+s2,6
+
+s3,6  x6
+
+u7  s0,7
+
+s1,7
+
+s2,7
+
+s3,7  x7
+
+the factor graph, respectively. In particular, L0,i = L(uˆi) and Ln,i is the LLR that computed from the received sequence y:
+
+Ln,i
+
+=
+
+log
+
+Pr(xi Pr(xi
+
+= =
+
+0|yi) 1|yi)
+
+=
+
+2yi σ2
+
+,
+
+(3)
+
+where σ2 is the variance of the Gaussian noise.
+
+uˆ0 Dec.
+
+f Sˆ0,0
+
+f
+
+f
+
+L3,0
+
+uˆ1 Dec.
+
+g
+
+f Sˆ1,0
+
+f
+
+L3,1
+
+uˆ2 Dec. Sˆ0,2 f
+
+g
+Sˆ1,1
+
+f
+
+L3,2
+
+uˆ3 Dec.
+
+g
+
+g
+
+f
+
+Sˆ2,0
+
+L3,3
+
+uˆ4 Dec. Sˆ0,4 f
+
+f
+
+g Sˆ2,1
+
+L3,4
+
+uˆ5 Dec.
+
+g
+
+f Sˆ1,4
+
+g
+Sˆ2,2
+
+L3,5
+
+uˆ6 Dec. Sˆ0,6 f
+
+g
+Sˆ1,5
+
+g
+Sˆ2,3
+
+L3,6
+
+uˆ7 Dec.
+
+g
+
+g
+
+g
+
+L3,7
+
+Fig. 2. The SC factor graph of the (8,4) polar code, where A={3,5,6,7}.
+
+The LLRs propagated in the SC factor graph are calculated by the following function:
+
+Lk,i =
+
+f (Lk+1,i; Lk+1,i+2k ), g(Lk+1,i; Lk+1,i−2k ; sˆk,i−2k ),
+
+if Bk,i = 0,
+if Bk,i = 1, (4)
+
+where sˆ is a modulo-2 partial sum of decoded bits,
+
+Bk,i
+
+=∆
+
+i 2k
+
+mod 2,
+
+0
+
+≤
+
+k
+
+<
+
+n
+
+and
+
+0
+
+≤
+
+i
+
+<
+
+N.
+
+In
+
+the LLR domain, the specific expressions of functions f
+
+and g are as fllows:
+
+f (a, b) = sign(a)sign(b) min(|a|, |b|), (5)
+
+g(a, b, sˆ) = a + (1 − 2sˆ)b.
+
+(6)
+
+Fig. 1. Polar code encoder with N =8.
+
+B. SC Algorithm
+
+Given a AWGN channel output vector y0N−1 corresponding to transmitted codeword xN0 −1 and BPSK
+modulation, the SC decoder successively estimates the source information u0N−1. uˆi is set to 0 if i ⊆ Ac. Otherwise, the SC decoder estimates uˆi such that:
+
+uˆi =
+
+0,
+
+if
+
+log
+
+Pr(y ,uˆ0i−1 |ui =0) Pr(y ,uˆi0−1 |ui =1)
+
+≥ 0,
+
+(2)
+
+1, otherwise,
+
+where Pr(y, uˆ0i−1|ui = b) represents the probability that the currently decoded bit is b under the condition that y received and the previously decoded bits are uˆ0i−1. The ratio of probabilities in log domain in (2) is the LLR of
+bit uˆi. The SC decoding process can be efficiently performed
+over the factor graph which is illustrated in Fig. 2. Mes-
+sages propagated in the factor graph are LLRs denoted
+as Lk,i, where k and i correspond to the stage and row of
+
+Function f is executed immediately after a = Lk+1,i and b = Lk+1,i+2k are received. However, the function g must know the input sˆ, which can be efficiently
+calculated by the encoder graph. For example, in Fig. 1, sˆ2,1 is calculated by propagating uˆ03 in the encoder graph: sˆ2,1 = uˆ1 ⊕ uˆ3.
+
+C. Simplified SC Decoding Algorithm
+
+The Simplified SC decoding algorithm is introduced
+
+in [2]. SC decoder is nested by constituent decoder
+
+iteratively, as shown by the blue rectangles in Fig. 2. We
+
+use I for denoting the set of bits connected to the same
+
+constituent decoder. Each constituent decoder acts as a
+
+decoder for its constituent code xI , which is generated
+
+as:
+
+xI = uI F2⊗k,
+
+(7)
+
+where k denotes the stage index of the constituent code. In the decoding process, uˆI can be calculated directly
+by the L(xI ) instead of L(uˆI ), as follows:
+
+uˆI =
+
+HD(L(xI ))F2⊗l, I ⊆ A,
+
+0,
+
+I ⊆ Ac,
+
+(8)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+
+where HD represents the hard-decision function of
+the LLR, as shown in (2). For example, {uˆ6, uˆ7} = {HD(L1,6), HD(L1,7)}F2⊗1. Since L(uˆI ) does not need to be calculated, the redundant constituent decoders
+that use dotted lines as inputs in Fig. 2 can be omitted.
+
+III. THE PROPOSED WSC ALGORITHM AND NN
+MODEL
+A. Weighted SC Decoder
+Quantization changes the distribution of LLRs during the SC decoding process and results in performance loss. In this paper, we propose a WSC algorithm to improve the decoding performance by adjusting the distribution of the quantized LLRs.
+The need for partial sum makes the SC algorithm have strong data dependence. This constrains the order in which the LLR can be computed in the graph. Fig. 3 illustrates the scheduling of the decoding process using the SC decoder.
+
+step 0 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+w2,0 L2,0
+
+w2,4 L2,4
+
+w2,1L2,1
+LLR w2,2 L2,2 w1,0 L1,0
+
+w1,2 L1,2
+
+w2,5 L2,5 w2,6 L2,6 w1,4 L1,4
+
+w1,6 L1,6
+
+w2,3L2,3 w1,1L1,1 w0,0 L0,0 w0,1L0,1 w1,3L1,3 w0,2 L0,2 w0,3L0,3 w2,7 L2,7 w1,5 L1,5 w0,4 L0,4 w0,5 L0,5 w1,7 L1,7 w0,6 L0,6 w0,7 L0,7
+
+Out
+
+uˆ0 uˆ1
+
+uˆ2 uˆ3
+
+uˆ4 uˆ5
+
+uˆ6 uˆ7
+
+f- function
+
+g- function
+
+Fig. 3. The Scheduling of SC decoding process for the (8,4) polar codes.
+
+WSC is the optimization of the SC algorithm by assigning weights to the outputs of LLR update functions f and g in the decoding process, as follows:
+
+f ∗(a, b) = w · sign(a)sign(b) min(|a|, |b|), (9)
+
+g∗(a, b, sˆ) = w · (a + (1 − 2sˆ)b),
+
+(10)
+
+and the weights are marked with w in Fig. 3.
+
+B. Neural Network Model
+Traditionally, the weights w in the WSC are selected through experimentation and experience. However such an approach is inaccurate and inefficient. Besides, with the increase in the size of the weights, it is difficult to find the optimal weights w by the traditional method. Deep learning and NN provide us with powerful tools to solve this complex problem. We build a NN model based on the SC factor graph. Fig. 4 shows the architecture of the NN, where, each blue rectangle represents one layer. The scheduling of the hidden layers in the NN is the same as in Fig. 3. That means the NN is equivalent to an SC decoder before training if the weights are initialized to 1.
+The NN includes an input layer, 2(N − 1) hidden layers and an output layer. The number of neurons in the input and output layers is N and K respectively,
+
+input layer
+
+hidden layers
+
+output layer
+
+Fig. 4. The NN architecture of the (8,4) polar code.
+
+and the number of neurons of the h-th hidden layer is equal to the number of decoding functions (or LLRs) in the h-th step of SC decoding process.
+There are three types of neurons in the NN as Fig. 5 shows. The f neuron, g neuron and ssign neuron correspond to f ∗, g∗ and the softened sign function:
+
+ReLU (x + t) ReLU (x − t)
+
+ssign(x) = −1 +
+
+−
+
+, (11)
+
+|t| + τ
+
+|t| + τ
+
+where, t is a trainable parameter and τ is set to 1 × 10−4 in this paper. ReLU (x) = max(0, x).
+
+a out
+b f neuron
+
+sˆ
+a out
+b g neuron
+
+out a
+ssign neuron
+
+Fig. 5. Three types of neurons in NN.
+
+The training of a NN is a process of gradient descent, and the gradient must be alive during the training phase. However, the nonlinear operation XOR of the SC algorithm causes the gradient disappears. Therefore, in this paper, the softened sign function ssign(x) is not only used as the activation function of the output layer (ssign neurons) but also replaces the hard decision operation. The partial sum sˆ is converted form {0,1} domain into {1,-1} domain after the replacement and is calculated by the multiplier instead of XOR operation. For instance, in the NN, sˆ2,1 = uˆ1 · uˆ3 in stead of sˆ2,1 = uˆ1 ⊕ uˆ3.
+C. Training and Testing Scheme of the NN
+The NN extracts feature from the quantized LLR by training autonomously. Since the NN is build based on the SC factor graph, all the relationships between LLRs in SC are retained, and the training of the NN only requires a set of all-zero codewords. Fig. 6 shows the training and testing scheme of the NN. In the training phase, only one quantizer participates, and the channel LLRs are fed into the NN as training samples after quantized. However, the intermediate LLRs generated during the decoding process are still floating point values. Based on the trained weights, an additional quantizer is added inside the NN to quantize the outputs of the neurons in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+
+the testing phase, so that all the LLRs are fixed-point values with finite alphabet during the testing phase. In other words, the NN is equivalent to a quantized WSC decoder in the testing phase.
+
+all-zero samples
+training
+
+0
+
+1
+
+1 -1
+
+labels
+
+L3,7 3,0
+BPSK+AWGN
+
+Quantizer
+
+Neur ons
+
+NN
+
+w
+
+download weights
+
+uˆ07
+
+Loss
+
+feedback
+
+u07 testing
+
+Polar encoder
+
+x07
+
+BPSK+AWGN
+
+L3,7 3,0
+
+Quantizer
+
+Neur ons
+
+Quantizer
+
+uˆ07
+
+NN(quantized WSC)
+
+Fig. 6. The training and testing scheme of the NN with (8,4) polar code.
+
+There are several methods for training and optimiz-
+
+ing neural networks. In this paper, we use supervised
+
+learning and Adam [14] with mini-batches for training
+
+the NN model. The loss functions of Minimum Mean
+
+Squared Error (MMSE) and cross entropy are used most
+
+frequently in deep learning. Constrained by the softened
+
+sign function of the output neurons, this paper uses
+
+MMSE as the loss function:
+
+1 l=
+K
+
+(λi − uˆi)2
+
+(12)
+
+i∈A
+
+D. Quantizer in the NN
+
+This paper does not care about the impact of quantization algorithm on the decoding of polar codes, and the quantizer uses the commonly used method of uniform quantization. The uniform quantization function Q(x) with q-bit precision is defined as follows:
+
+Q(x) =
+
+(
+
+x ∆
+
++
+
+1 2
+
+)∆,
+
+x ∈ [−M, M ],
+
+sign(x)(M
+
+−
+
+∆ 2
+
+),
+
+otherwise.
+
+(13)
+
+where the quantization level L = 2q and the quan-
+
+tization
+
+step
+
+size
+
+∆
+
+=
+
+2M L
+
+.
+
+For
+
+the
+
+BPSK
+
+modulation
+
+and AWGN channel, the channel output LLR, i.e., Ln,
+
+obeys the Gaussian distribution N (±2/σ2, 4/σ2). Ac-
+
+cording to the 3σ principles of Gaussian distribution, The truncation threshold M = 2/σ2 + 3 · 2/σ.
+
+The quantization function is symmetric, i.e., −Q(x) =
+
+Q(−x). The input to Q(x) is limited to the range
+
+[−M, M ] and the values out of this range are all clipped.
+
+The same quantization rules are used during the training
+
+and testing phases of the NN.
+
+IV. SIMPLIFIED NN MODEL
+A. Architecture of the Simplified NN
+We introduced in II-C that the SC algorithm has two kinds of computational redundancy. First, the frozen bits are known to both encoder and decoder and usually set to 0. The corresponding LLRs L(ui|i ∈ Ac) does not need
+
+to be calculated. Second, uˆi can be directly calculated by the L(xI ) instead of L(uˆI ) and all calculations related to uˆI can be omitted.
+Based on a similar spirit, we cut some neurons in the NN, and the redundant neurons are categorized into two types:
+• Type-1 indicates the neurons associated only with the frozen bits;
+• Type-2 represents that the neurons embedded in the constituent code with rate 1;
+Fig. 7 shows the simplified NN (SNN) architecture of (8,4) polar codes with Ac = {0, 1, 2, 4}, where, the red dotted neurons are associated only with the frozen outputs {uˆ0, uˆ1, uˆ2, uˆ4} and belong to Type-1. The blue dotted neurons are embedded in the constituent code with output {uˆ6, uˆ7} and belong to Type-2.
+
+input layer
+
+hidden layers
+
+output layer
+
+Fig. 7. The architecture of the SNN for the (8,4) polar code.
+
+In the SNN architecture, the number of neurons of the input and output layers is N and K respectively. The scheduling of the hidden layers in the SNN is the same as in Fig. 3 without the “red” steps.
+Compared with the NN, the SNN abandoned the redundant neurons. Therefore, it has a lower computational complexity. Also, the SNN can be trained by the all-zero codewords.
+
+V. EXPERIMENTS AND NUMERICAL RESULTS
+We implemented the NN and SNN on the advanced neural network library Tensorflow and verified the performance using (64,32) and (1024,512) codewords. Since the NN and SNN are build based on the SC factor graph, therefore, they are equivalent to the quantized WSC decoder in the testing phase.
+Different codewords: For (64,32) polar codes, batch size is set to 100 with the varying SN Rs = {1, 2, 3, 4, 5}dB and 20 samples per SN R. We test the performance of the NN and SNN after every 100 batches. The test set is different from the training set, which is a collection of random codewords in {0,1} domain. The Block Error Rate (BLER) performance of (64,32) polar codes is shown in Fig. 8. We can see from it that the NN and SNN have a similar BLER performance. The NN and SNN with 3-bit quantization precision achieve lower BLER than the quantized SC decoder (QSC) that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+
+using the same precision, and approaching floating point SC decoder.
+Fig. 8. The BLER performance of (64,32) polar codes.
+
+and LLR change direction) but enhances the processing power of the original SC decoder for quantized LLRs. It should be noted that the all-zero codewords generate the LLRs, so the LLRs tend to be positive values after decoding.
+For (1024,512) polar codes, we modified several configured parameters. The batch size is set to 120 with SN Rs = {1, 1.5, 2, 2.5, 3, 3.5}dB and 20 samples per SNR. The test cycle is 100 batches. Fig. 10 shows the BLER performance of (1024,512) polar codes. We can see from it that the SNN with 3-bit precision has a lower curve than SC decoder with the same precision. The SNN with 5-bit precision can achieve an approximate float point SC performance while QSC require 6-bit and there is a gap between the two curves.
+
+Fig. 10. The BLER performance of (1024,512) polar codes.
+
+Fig. 9. We collected the LLRs generated by 10000 frames all-zero codewords, and Eb/N 0 = 5dB. The x axis lists the 8 fixed values of the LLR with 3-bit quantization precision.
+Now we explain how weights affect the performance. Fig. 9 shows the distribution of LLRs at input and output layer of the SNN respectively, where “QLLR” represents the LLRs generated by the SNN without training (equivalent to SC) and “QWLLR” indicates the LLRs are generated by the SNN after training. We use P (ξ) to represent the probability that LLR=ξ. And P (−14.87), P (−10.62) and P (−6.37) are ignored since they are always approximate to 0. From Fig. 9, we find the following three points:
+• At the begin of decoding, both QLLR and QWLLR show the same Gaussian-like distribution at the input layer.
+• The change direction of QLLR d = {↓, ↓, ↓, ↓, ↑} and the QWLLR change direction d = {↓, ↓, ↓, ↓ , ↑}, where ↑ indicates Pout(ξ) − Pin(ξ) > 0 and ↓ indicates Pout(ξ) − Pin(ξ) < 0. Besides, d = d .
+• The ∆ of QWLLR is larger than that of QLLR, where ∆ = |Pout(ξ) − Pin(ξ)|.
+The distribution of QWLLR and QLLR is not entirely different. They have the same initial distribution and change direction. The trained weights only caused an increase of ∆. Therefore, the SNN does not learn to decode polar codes by training (same initial distribution
+
+The distribution of LLRs of (1024,512) polar codes is illustrated in Fig. 11. Moreover, It has similar properties with (64,32) polar codes. This proves that the SNN proposed in this paper is suitable for different codeword configurations, and has good robustness and generalization ability.
+Fig. 11. The distribution of LLRs of (1024,512) polar codes during the SNN decoding process with 3-bit quantization precision. The LLRs are generated by 10000 frames all-zero codewords at Eb/N0=3dB.
+Training complexity: We consider the case that each hidden layer shares a common weight instead of assigning different weights to each LLR, as shown in Fig. 12. Based on the method of assigning weights, we verify the effect on the performance of the SNN with (1024,512) codewords and the BLER curves are illustrated in Fig.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC): Track 1: Fundamentals and PHY
+
+TABLE I THE NUMBER OF TRAINING BATCHES THAT ACHIEVE THE BLER
+PERFORMANCE OF THIS PAPER
+
+codeword model batches
+
+(64,32)
+
+SNN
+
+SNN*
+
+1.4 × 104 8.2 × 103
+
+(1024,512)
+
+SNN
+
+SNN*
+
+5.1 × 104 2.4 × 104
+
+13. Limiting the number of trainable parameters does not result in performance loss. Conversely, there is a slight performance gain at high signal-to-noise ratios.
+
+the NN and SNN in various polar codes. Simulation results show that the NN and SNN have a similar performance. The SNN with 3-bit precision can achieve an approximate float point SC performance for (64,32) polar codes. The BLER curve of the SNN with 5-bit precision is lower than the QSC with 6-bit precision for (1024,512) polar codes. Besides, we explain how the trained weights affect the error-correction performance through the distribution of LLRs. A weight assignment method was proposed in this paper to reduce training complexity without performance loss.
+
+hidden
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+layers
+
+weights W0
+
+W1
+
+W2
+
+W3
+
+W4
+
+W5
+
+W6
+
+L2,0
+
+L2,4
+
+hidden layers
+
+L2,1
+
+L2,5
+
+outputs L2,2
+
+L1,2
+
+L2,6
+
+L1,4
+
+L1,6
+
+L2,3
+
+L1,3
+
+L0,3
+
+L2,7
+
+L1,5
+
+L0,5
+
+L1,7
+
+out
+
+uˆ3
+
+uˆ5 uˆ6 uˆ7
+
+Fig. 12. In the SNN of the (8,4) polar codes, each hidden layer shares the same weight.
+
+Fig. 13. Performance comparison of SNN using different weights assignment methods, where ”SNN” represents that each LLR is assigned a weight and ”SNN*” means that a hidden layer shares a common weight.
+Table I lists the number of training batches that achieve the BLER performance in this paper, where SNN* indicates that each hidden layer shares a common weight. Obviously, SNN* produces the BLER performance with fewer training batches. In other words, the SNN* extracts features from quantized LLRs at a faster rate.
+VI. CONCLUSION
+In this paper, we apply deep learning to improve the performance of the SC algorithm with quantized LLRs and propose the WSC algorithm. A novel NN model and its SNN are build based on the SC factor graph. The NN and SNN only need to training by allzero codewords. We replace the hard decision with the softened sign function, ensuring that the gradient does not disappear during the training phase. To prevent the increase in train complexity, a sharing weight is assigned to a hidden layer. Based on the trained weights, we test
+
+ACKNOWLEDGMENT
+This work is supported by the National Natural Sci-
+ence Foundation of China (No. 61671080).
+REFERENCES
+[1] E. Arıkan, “Channel polarization: A method for constructing capacity achieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[2] A. Alamdar-Yazdi and F. R. Kschischang, ”A simplified successive-cancellation decoder for polar codes,” IEEE Commun. Lett., vol. 15, no. 12, pp. 1378-1380, 2011
+[3] Z. Shi and K. Niu, ”On uniform quantization for successive cancellation decoder of polar codes,” 2014 IEEE 25th Annual International Symposium on Personal, Indoor, and Mobile Radio Communication (PIMRC), Washington, DC, 2014, pp. 545-549.
+[4] S. H. Hassani and R. Urbanke, ”Polar codes: Robustness of the successive cancellation decoder with respect to quantization,” 2012 IEEE International Symposium on Information Theory Proceedings, Cambridge, MA, 2012, pp. 1962-1966.
+[5] J. Bruck and M. Blaum, ”Neural networks, error-correcting codes, and polynomials over the binary n-cube,” in IEEE Transactions on Information Theory, vol. 35, no. 5, pp. 976-987, Sept. 1989.
+[6] Yuen-Hsien Tseng and Ja-Ling Wu, ”High-order perceptrons for decoding error-correcting codes,” [Proceedings 1992] IJCNN International Joint Conference on Neural Networks, Baltimore, MD, USA, 1992, pp. 24-29 vol.3.
+[7] J. -L. Wu, Y. -H. Tseng, and Y.-M. Huang, ”Nerual network decoders for linear block codes”, International Journal of Computational Engineering Science, vol. 3, pp. 235-356, Sept. 2002.
+[8] T. Gruber, S. Cammerer, J. Hoydis and S. t. Brink, ”On deep learning-based channel decoding”, 2017 51st Annual Conference on Information Sciences and Systems (CISS), Baltimore, MD, 2017, pp. 1-6.
+[9] E. Nachmani, Y. Be’ery and D. Burshtein, ”Learning to decode linear codes using deep learning”, 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), Monticello, IL, 2016, pp. 341-346.
+[10] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein and Y. Beery, ”Deep Learning Methods for Improved Decoding of Linear Codes,” in IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119-131, Feb. 2018.
+[11] L. Lugosch and W. J. Gross, ”Neural offset min-sum decoding,” 2017 IEEE International Symposium on Information Theory (ISIT), Aachen, 2017, pp. 1361-1365.
+[12] B. Vasic, X. Xiao and S. Lin, ”Learning to Decode LDPC Codes with Finite-Alphabet Message Passing,” 2018 Information Theory and Applications Workshop (ITA), San Diego, CA, 2018, pp. 1-9.
+[13] W. Xu, Z. Wu, Y. Ueng, X. You and C. Zhang, ”Improved polar decoder based on deep learning,” 2017 IEEE International Workshop on Signal Processing Systems (SiPS), Lorient, 2017, pp. 1-6.
+[14] D. P. Kingma and J. Ba, ”Adam: A method for stochastic optimization”, CoRR, 2014. [Online]. Available: http://arxiv.org/abs/1412.6980.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:02:34 UTC from IEEE Xplore. Restrictions apply.
+
+

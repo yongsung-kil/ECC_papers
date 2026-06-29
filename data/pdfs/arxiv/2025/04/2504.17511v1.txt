@@ -1,0 +1,495 @@
+Subcode Ensemble Decoding of Polar Codes
+
+arXiv:2504.17511v1 [cs.IT] 24 Apr 2025
+
+Henning Lulei†, Jonathan Mandelbaum†, Marvin Ru¨benacke‡, Holger Ja¨kel†, Stephan ten Brink‡, and Laurent Schmalen†
+†Karlsruhe Institute of Technology (KIT), Communications Engineering Lab (CEL), 76187 Karlsruhe, Germany ‡University of Stuttgart, Institute of Telecommunications, 70569 Stuttgart, Germany Email: jonathan.mandelbaum@kit.edu
+
+Abstract—In the short block length regime, pre-transformed polar codes together with successive cancellation list (SCL) decoding possess excellent error correction capabilities. However, in practice, the list size is limited due to the suboptimal scaling of the required area in hardware implementations. Automorphism ensemble decoding (AED) can improve performance for a fixed list size by running multiple parallel SCL decodings on permuted received words, yielding a list of estimates from which the final estimate is selected. Yet, AED is limited to appropriately designed polar codes. Subcode ensemble decoding (ScED) was recently proposed for low-density parity-check codes and does not impose such design constraints. It uses multiple decodings in different subcodes, ensuring that the selected subcodes jointly cover the original code. We extend ScED to polar codes by expressing polar subcodes through suitable pre-transformations (PTs). To this end, we describe a framework classifying pre-transformations for pretransformed polar codes based on their role in encoding and decoding. Within this framework, we propose a new type of PT enabling ScED for polar codes, analyze its properties, and discuss how to construct an efficient ensemble.
+Index Terms—polar codes, ensemble decoding, subcodes I. INTRODUCTION
+Polar codes are the first family of block codes that provably achieve the capacity of binary discrete memoryless channel (BDMC) together with low-complexity successive cancellation (SC) decoding asymptotically in the block length [1]. Yet, it is due to their excellent performance at short block lengths— when pre-transformed with a cyclic redundancy check (CRC) code and decoded using successive cancellation list (SCL) decoding—that they have been standardized for the control channel in the 5G standard [2, 3]. With the anticipated growth of machine-type communication, the requirements on the performance of short block codes are expected to become more stringent in 6G [4]. To ensure that polar codes remain a strong contender for the short block length regime, their performance must be further improved, e.g., by enhancing SCL-based decoding. However, practical list sizes are limited, as increasing the list size leads to suboptimal area scaling in hardware implementations. For instance, [5, Tab. 1], reports that doubling the list size from 8 to 16 increases the required chip area by more than a factor of 5. Thus, enhancing SCLbased decoding while maintaining a fixed list size is of interest.
+This work has received funding from the German Federal Ministry of Education and Research (BMBF) within the project Open6GHub (grant agreements 16KISK010 and 16KISK019) and the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation program (grant agreement No. 101001899).
+
+Ensemble decoding schemes can improve the error correction performance in the short block length scenario [6]– [10]. While they all rely on parallel paths with independent decoding instances, they can be broadly categorized into two classes [7]: those that alter the noise representation—e.g., automorphism ensemble decoding (AED) which permutes the received word using an automorphism of the code [6]—and those that perform decoding on alternative graphical representations [10]. The inherent parallel structure of ensemble decoding schemes enables efficient parallel implementation and, in addition, can yield improved error correction performance [5, 7]. For instance, SCL-based AED can significantly improve performance compared to stand-alone SCL decoding with a larger list size [6, Fig. 9]. However, when considering polar codes, the beneficial effect of automorphisms can be potentially absorbed by symmetries of the decoder [6, Theorem 2]. Hence, AED imposes additional constraints, limiting its application to suitably designed polar codes [11, 12].
+Subcode ensemble decoding (ScED), which was introduced for belief propagation (BP)-based decoding in [7], uses an ensemble of subcode decodings, where the subcodes jointly cover the original code. ScED does not impose any constraints onto the code design. In this work, we consider ScED for polar codes by introducing a novel kind of polar pre-transformations (PTs) which generates suitable subcodes. By optimizing the selection of such PTs, we show that ScED offers competitive performance compared to conventional SCL decoding.
+
+II. PRELIMINARIES
+
+A. Polar Codes
+
+Polar codes leverage the n-fold polar transform to synthe-
+
+size virtual bit-channels given a set of identical BDMCs [1].
+
+These virtual bit-channels are polarized, i.e., either reliable—
+
+suitable for uncoded information transmission—or unreliable
+
+with their input set to a known frozen value (typically 0).
+
+The indices of the reliable and unreliable bit-channels form
+
+the information set I and the frozen set F, respectively. A
+
+polar code C(N, k) with block length N = 2n, n ∈ N,
+
+is
+
+defined
+
+by
+
+the
+
+n-fold
+
+Hadamard
+
+matrix
+
+GN
+
+=
+
+(
+
+1 1
+
+0 1
+
+)⊗n
+
+along with its information set I ⊆ [N ] of size |I| = k,
+
+or equivalently, by its frozen set F = [N ] \ I. Here, (·)⊗n
+
+denotes the n-fold application of the Kronecker product and
+
+[N ] := {0, . . . , N − 1}. The design of a polar code consists
+
+of carefully identifying the most reliable bit-channels, i.e.,
+
+determining I. To this end, a widely used approach for
+
+the binary input additive white Gaussian noise (BI-AWGN)
+
+channel is density evolution (DE) [13]. For the application of polar codes in 5G, a reliability sequence is defined in [3].
+Encoding begins by mapping the data word u ∈ Fk2 onto the padded data word up ∈ FN2 , where (up)I = u and (up)F = 0. Hereby, (u)A denotes the vector consisting of the elements from u with indices in A. Then, multiplication with GN yields the codeword x ∈ C(N, k), i.e, x = upGN . Polar codes were originally proposed together with SC decoding, which follows a sequential decoding order [1], decoding bits with lower indices first [14]. This order prevents SC decoding from revising early decisions. To overcome this limitation, SCL decoding allows the decoder to maintain a list of possible candidate sequences and can revert to decisions that turn out to be more likely as decoding progresses [2].
+B. Pre-transformed Polar Codes In [2], the authors observe that often, when SCL decoding
+produces an incorrect codeword estimate, the correct estimate is in the list of candidates, but is discarded in favor of a more likely codeword. Hence, they propose to pre-transform the data word u with a CRC code before polar encoding and use the CRC code as a decision genie when choosing the final estimate. This significantly improves the error-correcting performance and reduces the undetected error rate compared to conventional SCL decoding.
+Other pre-transformed polar codes modify the value of frozen bits, e.g., polarization-adjusted convolutional [15] and row-merged polar codes [16]. Instead of selecting 0 as the value of frozen bits, the value depends on information bits with lower indices and, thus, the frozen bits become dynamic frozen bits. Under SCL decoding, this approach offers improved error correction performance due to the improved weight spectrum and the exploitation of the remaining capacity of the frozen bit-channels [16].
+C. Subcodes and Subcode Ensemble Decoding (ScED) We define a subcode CT (N, k) ⊆ C(N, κ) of a polar
+code C(N, κ) to consist of 2k codewords out of the 2κ polar codewords, where k ≤ κ and T is a suitable pretransformation. In contrast to [7, 17], we do not require that CT (N, k) is a linear subspace, and we generalize the definition of pre-transformation in [17] by allowing for an offset.
+ScED, introduced in [7], consists of M parallel paths and a maximum likelihood (ML)-in-the-list decision. Assume the transmission of an arbitrary codeword x of a linear block code C(N, κ) over a channel with channel output alphabet Y where y ∈ YN is observed at the channel output. Then, each path of ScED performs decoding on a subcode Ci ⊆ C, where i ∈ [M ], yielding M possibly different estimates xˆi. If xˆi ∈ Ci, the ith subcode decoding converged successfully, which is not guaranteed for BP decoding in [7]. Given the set L = {xˆi}i∈[M] containing the estimates of the M different paths, the ML-in-the-list decision selects the estimate that belongs to the code C and that maximizes the log-likelihood function L(y|x). If no subcode decoding yields a valid codeword, the estimate maximizing L(y|x) is chosen to minimize
+
+TABLE I CLASSIFICATION OF THE THREE TYPES OF PRE-TRANSFORMATIONS.
+
+Type of PT PT-A PT-B PT-C
+
+Encoding
+✓ ✓ ×
+
+Decoding
+× ✓ ✓
+
+Decision-Genie
+✓ × ×
+
+the bit error rate (BER). There might exist codewords x ∈ C with x ∉ Ci ∀i ∈ [M ]. To avoid this, ScED employs a carefully chosen ensemble of M subcodes such that
+
+Ci = C,
+
+(1)
+
+i∈[M ]
+
+ensuring that all codewords are contained in at least one subcode [7].
+
+III. SUBCODE ENSEMBLE DECODING OF POLAR CODES In this section, we introduce ScED for polar codes. Linear subcodes of polar codes can be represented using suitable PTs [17]. To provide a unified framework, we classify three types of PTs, as shown in Tab. I, based on their use in encoding and decoding. First, in Sec. III-A, we describe PT-A and PT-B which incorporate well-known classes of pretransformed polar codes. Then, in Sec. III-B, we introduce a novel third type of PTs, denoted as PT-C, which are considered solely during decoding to enable ScED.
+
+A. Generalized Framework for Pre-transformations
+
+In our framework, we consider PTs which are affine transformations T : FN2 → FN2 mapping the padded data word up ∈ FN2 onto another padded data word u˜p ∈ FN2 :
+
+T (up) = upA + b = u˜p,
+
+A ∈ F2N×N , b ∈ F2N . (2)
+
+Hereby, following [16, 17], the matrix A is upper triangular to ensure that dynamic frozen bits are only dependent on previously decoded information bits. In contrast to [17], (2) allows for an offset b such that the resulting subcodes are potentially affine subspaces of the polar code C(N, κ). As illustrated in Fig. 1, applying a PT to a polar code results in a pre-transformed polar code CT (N, k) with k ≤ κ. Furthermore, we denote the graph that represents CT (N, k) and which consists of the graphical representations of the PT and the polar code as the joint graph.
+Fig. 2 depicts an exemplary joint graph of a pre-transformed polar code CT (8, 3) where the information bits and frozen bits of the polar code C(8, 4) are colored in orange and black, respectively. We decompose the bit indices in u˜p as [N ] = T ∪ T c. Herein, T c denotes the indices of bits that do not undergo pre-transformation, i.e., (u˜p)i = (up)i, i ∈ T c, and are depicted as circles ( / ) in Fig. 2, whereas indices in T that are subject to an affine mapping are called target bits and are depicted as triangles ( / ). The bits in up that contribute to a certain target bit are denoted origin bits. We assume that target bits do not depend on an origin bit with the same index and, thus, At,t = 0, ∀t ∈ T . The number of target bits for a given PT is referred to as the depth dp = |T | of the PT. Note that k = κ − dp.
+
+CT (N, k)
+
+up
+
+TA, TB u˜p C(N, κ)
+
+x
+
+Fig. 1. Pre-transformed polar code formed by employing PT-A and PT-B.
+
+joint graph
+
+up
+
+b
+
+A
+
+u˜p
+
+0
+
+++
+
+0
+
++
+
+0
+
++
+
+u0
+
+01
+
++
+
+++
+
+u1
+
++
+
+u2
+
++
+
+0
+
+0 ++
+
+PT graph
+
+polar graph
+
+Fig. 2. Exemplary joint encoding graph for the polar code C(8, 4) with information set I = {3, 5, 6, 7} and PT with T = {4, 7} from (3), resulting in the pre-transformed polar code CT (8, 3). Information bits of C are colored in orange. Target bits t ∈ T of the PT are drawn as triangles ( / ).
+The first kind of PTs, PT-A with target bits TA, are considered in encoding, while their target bits with TA ⊆ I are treated as conventional information bits upon decoding. Thus, the decoding operates on C, which is a supercode of CT , i.e., CT ⊆ C. This effect is leveraged in genie-aided decisions to filter out invalid codewords from the list in order to improve decoding performance and lower the undetected error rate. For instance, CRC-aided polar codes can be represented in our framework by a polar code with a PT-A.
+In contrast, PT-B, which incorporate row-merged polar codes [16], are considered in both encoding and decoding. To decode on the joint graph, the decoder considers the PT as the decoding process reaches the target bits [15, 16]. Thus, the target bits have to be included in the frozen set, i.e., TB ⊆ F and become dynamic frozen by applying the PT.
+For illustration, Fig. 2 depicts an exemplary joint graph of a polar code C(8, 4) with I = {3, 5, 6, 7} together with a PT with b4 = 1 and the other offsets being 0, resulting in
+u˜p = 0 0 0 u0 u0 + 1 u1 u2 u1 + u2 . (3)
+Here, u˜p,4 is a target bit of a PT-B ( ) as 4 ∈/ I, whereas the PT modifying u˜p,7 is a PT-A ( ) since 7 ∈ I.
+B. Applying Pre-transformations in ScED Let C(N, κ) denote the polar code that is used for trans-
+mission. The goal of a PT-C is to constitute a joint graph that is used in decoding but not used for encoding. Thus, while trying to decode a codeword x ∈ C, the decoder operates on the joint graph associated with a subcode CT (N, k) of C(N, κ) enabling ScED for polar codes. To this end, similar to PT-B, target bits have indices TC ⊆ I and, consequently, become
+
+ML-in-the-list
+
+L0
+
+SCL (TB, TC0 )
+
+L(y)
+
+xˆ
+
+LM −1
+
+SCL (TB , TCM−1 )
+
+Genie with TA
+
+Fig. 3. ScED employing PT-B and M PT-Cs. PT-As are considered for the genie-aided decision.
+dynamic frozen bits by decoding on the joint graph. Note that if x ∈ C and x ∈/ CT (N, k), the subcode decoding, i.e., the decoding on the joint graph, cannot yield the correct estimate. Therefore, following [7], we select M different PT-Cs such that the respective subcodes fulfill (1) [7]. Then, as illustrated in Fig. 3, we combine these M subcode decodings to constitute an ScED for polar codes.
+Next, we introduce Theorem 1, where we investigate the decoding behavior of SC-based ScED compared to stand-alone SC decoding. The analysis of SCL decoding will be part of future work.
+Theorem 1. Consider a polar code C(N, k) with SC decoding SC : YN → C. Consider a PT-C such that CT ⊆ C and let SCT : YN → CT denote the decoder on the joint graph. Assume that codeword x ∈ CT is transmitted over a channel and y ∈ YN is received at the output. Then,
+
+SC(y) = x =⇒ SCT (y) = x,
+
+(4)
+
+i.e., if a stand-alone SC decoding decodes correctly, a subcode SC decoding will make the same decision, provided the codeword is included in its corresponding subcode. Proof. Consider an unmodified SC decoder SC(y) and an SCbased decoding on the joint graph of a depth dp = 1 PT, denoted as SCT (y), which yields the subcode CT . Assume that x ∈ CT is transmitted over a channel and y ∈ YN is received at the output. The decoding process of SCT and SC is identical until reaching the target bit of the PT. Assuming SC(y) = x and because x ∈ CT , both decodings will make the same decision at that bit. As subsequent decisions solely depend on previous decisions and the received values y, both decodings will continue to make the same decisions and, thus, will return the same estimate, i.e., SCT (y) = SC(y) = x. By considering each target bit independently, the same argument holds for an arbitrary PT-C with depth dp > 1 if x ∈ CT .
+Note that SCT (y) = x ≠ ⇒ SC(y) = x. Hence, together with Theorem 1, this motivates that the average performance of SC-based ScED is at least as good as the performance of SC decoding when ensuring a covering of the original code C as proposed in [7]. Furthermore, the performance cannot be improved by incorporating a path that performs SC decoding on the original polar graph which is in contrast to BP-based ScED, where the ensemble decoding still benefits from a path that employs decoding on the original graph [7].
+
+Ratio of decoded URPs Ratio of decoded URPs
+
+0.1 0.04
+0.08 0.03
+0.06
+0.02 0.04
+
+0.02
+
+0.01
+
+0
+
+1
+
+20
+
+40
+
+128
+
+Target bit indices sorted by reliability (ascending order)
+
+Fig. 4. Ratio of decoded URPs over the indices of target bits of PTs sorted by the reliability of the corresponding bit-channels for the DE polar code C(256, 128) with SC decoding in ascending order. Analysis based on 2000 · 100 URPs using 192 newly sampled subcode decoders per 100 URPs.
+IV. SELECTION OF PRE-TRANSFORMATIONS FOR SCED
+
+The selection of suitable PT-Cs for ScED plays a crucial role in its decoding performance. In this section, we outline two steps to identify ensembles with promising error correction capabilities. First, we analyze the influence of the parameters of PT-Cs on the performance of the joint graph decoding. Using those insights, we generate a large set of candidate subcode decodings from which we select a small subset of PT-C to form an ScED. To achieve this, we simulate the transmission of codewords over a BI-AWGN channel collecting log-likelihood ratio patterns that result in a frame error when decoded using stand-alone SC decoding or SCL-L decoding. We refer to these patterns as undecodable received patterns (URPs)-SC or URPs-SCL-L, respectively.
+
+A. Parameter Analysis
+
+We consider a C(256, 128) polar code with an information
+
+set designed using DE and repeat the following process 2000
+
+times: we sample 100 URPs-SC at Eb/N0 = 2.5 dB and select 192 random PT-Cs. Then, for each PT-C, we track the depth
+
+and target bits and evaluate the number of URPs-SC that the
+
+respective subcode can decode correctly.
+
+In Fig. 4 we depict the ratio of decoded URPs for different
+
+target bit indices. Hereby, to assess the influence of each
+
+potential target bit individually, we solely consider PTs of
+
+depth dp = 1. For each target bit, we sample origin bits randomly from the bits that are decoded earlier in SC decoding
+
+and offsets according to Bernoulli according to the reliability of the
+
+c21orr.eWspeonsdoirnt gthbeitt-acrhgaent nbeitlss
+
+in ascending order. Target bits associated with unreliable bit-
+
+channels typically yield a higher ratio of decoded URPs than
+
+those corresponding to more reliable bit-channels. This effect
+
+arises because target bits of PT-Cs become dynamic frozen
+
+bits and thus no longer negatively impact decoding perfor-
+
+mance. However, some outliers indicate that additional effects
+
+influence the decoding performance of subcode decodings.
+
+To investigate the impact of the depth dp of a PT-C, we extend our previous analysis and sample dp uniformly from {1, . . . , 15}. On the one hand, a larger depth increases
+
+the number of dynamic frozen bits, potentially improving
+
+1 3 5 7 9 11 13 Depth dp of pretransformation
+Fig. 5. Ratio of decoded URPs over the depth dp of generated PTs. Analyzed 2000 · 100 URPs using 190 new decoders referencing PTs per 100 URPs for the DE polar code C(256, 128) with SC decoding.
+performance. On the other hand, the number of codewords of the polar code that are elements of the subcode decreases exponentially with increasing dp, as |CT | = 2k−dp . Hence, larger depths require more paths in order to possibly fulfill (1) resulting in a trade-off between depth and ensemble size. This is supported by the results in Fig. 5, which depicts the ratio of decoded URPs over the depth dp of PT-C. For dp > 2, the ratio of decoded URPs decreases with increasing depth. However, Fig. 5 shows that PTs with depth dp = 2 tend to outperform those with depth dp = 1, despite the fact that their respective subcodes cover only half as many of the original codewords. This suggests that setting dp = 2 should yield an efficient ensemble for ScED.
+
+B. Design of an Effective Ensemble for ScED
+
+To design a well-performing ScED consisting of M paths
+
+of SCL-based subcode decodings, we identify a small subset
+
+of M candidates from a larger set of r candidates, where
+
+M ≪ r. To this end, we employ an algorithm that refines
+
+the methods proposed in [7, 8]: choose r ∈ N PT-Cs with
+
+their associated subcode decoding and sample s URPs-SCL-L.
+
+Then, following [7], for the ith PT-C, we determine the
+
+set Si ⊆ [s], i ∈ [r], with j ∈ Si if the ith subcode decoding successfully decodes the jth URP. In addition to [7],
+
+we impose the condition that the final estimate of subcode
+
+decoding has a lower path metric [18, Eq. (10)] compared to
+
+the estimate of stand-alone decoding. According to [18], the
+
+path metric decreases with the likelihood of the codeword.
+
+By definition, stand-alone decoding cannot correctly decode
+
+a URP. If stand-alone decoding results in an estimate with a
+
+lower path metric compared to the estimate of the subcode de-
+
+coding, the subcode estimate would not prevail in the ML-in-
+
+the-list-decision. Finally, we use the heuristic proposed in [8]
+
+for identifying a subset E ⊂ {Si}i∈[r] of cardinality |E| = M
+
+that maximizes | subcode decodings
+
+Sthia∈tE
+
+Si|, can
+
+i.e., we aim jointly correct
+
+at as
+
+determining many URPs
+
+M as
+
+possible.
+
+V. RESULTS In the following, we consider a very short block length 5G polar code CT (64, 32) and longer polar codes CT (256, k), where k ∈ {64, 128, 192}. We employ the CRC-6 polynomial
+
+FER FER
+
+SCL-8
+
+SCL-16
+
+SCL-32 100
+
+ScED-2-SC1L0−-18
+
+ScED-2-SCL-16
+
+ML
+
+10−2
+
+SCL-8 SCL-16 SCL-32
+
+10−3
+
+ScED-2-SCL-8 ScED-2-SCL-16
+
+1
+
+2 ML
+
+10−4 0
+
+1
+
+3
+
+2
+
+3
+
+4
+
+4
+
+5
+
+Eb/N0 (dB) Eb/N0 (dB)
+
+Fig. 6. Decoder performances for a 5G polar code CT (64, 32) employing the CRC-6 polynomial 0x03 as a PT-A.
+
+0x03 and the CRC-11 polynomial 0x621 as PT-A, respec-
+
+tively. To assess the performance of ScED, we consider a
+
+target frame error rate (FER) of 10−3 and conduct Monte-
+
+Carlo simulations using a BI-AWGN channel with at least
+
+1000 frame errors per simulated point. The notation ScED-
+
+M -SCL-L represents an ScED consisting of M SCL-L-based
+
+subcode decodings. The selection of the M PT-Cs follows the
+
+method proposed in Sec. IV-B with r = 30000 and s = 1000.
+
+Figs. 6–7 depict the FER over Eb/N0 for ScED of the different polar codes, with ensemble size M = 2 and M = 8,
+
+respectively. Furthermore, for comparison, both figures include
+
+the performance of SCL decoding (using CRC-based list
+
+selection) with varying list sizes. For the shorter polar code,
+
+we include the performance of ML decoding.
+
+At the target FER, we observe that ScED-M -SCL-L consis-
+
+tently outperforms SCL-L for all considered codes with gains
+
+ranging from 0.1 dB to 0.25 dB. Furthermore, for the shorter
+
+polar code, ScED employing two SCL-L decodings can match
+
+the performance of SCL-2L decoding for L ∈ {8, 16}, despite
+
+the fact that both paths employ only half the list size. For
+
+the longer codes of rate 8 rather than 2 paths to
+
+14maantcdh
+
+21t,heresdpeeccotdivinegly,pSercfEoDrmraenqcueiroesf
+
+stand-alone SCL-2L decoding at the target FER.
+
+As an SCL-2L decoder typically requires more than 5 times
+
+the hardware area of an SCL-L decoder [5], increasing the
+
+list size is not always feasible. ScED offers the possibility of
+
+efficient hardware re-utilization enabling the decoding perfor-
+
+mance of SCL-2L when chip area is limited. Alternatively, if
+
+area requirements are not as stringent, paths of an ScED can
+
+be computed in parallel and, thus, reduce decoding latency.
+
+VI. CONCLUSION In this work, using a unified PT framework, we have introduced a novel kind of PT which generates polar subcodes and, thus, enables ScED for polar codes. We have optimized the selection of subcodes for ScED and compared the optimized ensembles for different parameters to SC and SCL decoding. Our results show that, especially for shorter block lengths, ScED offers promising performance while allowing for hardware-efficient implementation. Alternatively, ScED can reduce latency compared to SCL decoders of similar performance when hardware requirements are not as strict.
+
+100
+
+10−1 10−2
+
+(256, 64)
+
+(256, 128)
+
+(256, 192)
+
+10−3
+
+SCL-8
+
+5 10−4 0
+
+SCL-16 ScED-8-SCL-8
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 (dB)
+
+Fig. 7. Decoder performances for 5G polar codes CT (N, k), where k ∈ {64, 128, 192}, employing the CRC-11 polynomial 0x621.
+REFERENCES
+
+[1] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, Jul. 2009.
+[2] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, May 2015.
+[3] V. Bioglio, C. Condo, and I. Land, “Design of polar codes in 5G new radio,” IEEE Commun. Surv. Tuts., vol. 23, no. 1, Jan.-Mar. 2021.
+[4] S. Miao, C. Kestel, L. Johannsen, M. Geiselhart, L. Schmalen, A. Balatsoukas-Stimming, G. Liva, N. Wehn, and S. ten Brink, “Trends in channel coding for 6G,” Proc. IEEE, Jul. 2024.
+[5] C. Kestel, M. Geiselhart, L. Johannsen, S. ten Brink, and N. Wehn, “Automorphism ensemble polar code decoders for 6G URLLC,” in Proc.
+Int. ITG Workshop on Smart Antennas (WSA) and Conf. on Systems, Commun., and Coding (SCC), Braunschweig, Germany, Mar. 2023. [6] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism ensemble decoding of Reed–Muller codes,” IEEE Trans. Commun., vol. 69, no. 10, Oct. 2021. [7] J. Mandelbaum, H. Ja¨kel, and L. Schmalen, “Subcode ensemble decoding of linear block codes,” arXiv preprint arXiv:2501.11993, 2025. [Online]. Available: https://arxiv.org/abs/2501.11993 [8] K. Kraft, M. Herrmann, O. Griebel, and N. Wehn, “Ensemble belief propagation decoding for short linear block codes,” in Proc. Int. ITG
+Workshop on Smart Antennas (WSA) and Conf. on Systems, Commun., and Coding (SCC), Braunschweig, Germany, Mar. 2023. [9] J. Mandelbaum, S. Miao, H. Ja¨kel, and L. Schmalen, “Endomorphisms of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024. [10] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, Jan. 2010. [11] C. Pillet, V. Bioglio, and I. Land, “Polar codes for automorphism ensemble decoding,” in Proc. Inf. Theory Workshop (ITW), Kanazawa, Japan, Nov. 2021. [12] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “On the automorphism group of polar codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Melbourne, Australia, Jul. 2021. [13] R. Mori and T. Tanaka, “Performance of polar codes with the construction using density evolution,” IEEE Trans. Commun., vol. 13, no. 7, Jul. 2009. [14] A. Alamdar-Yazdi and F. R. Kschischang, “A simplified successivecancellation decoder for polar codes,” IEEE Commun. Lett., vol. 15, no. 12, Dec. 2011. [15] E. Arıkan, “From sequential decoding to channel polarization and back again,” arXiv preprint arXiv:1908.09594, 2019. [Online]. Available: https://arxiv.org/abs/1908.09594 [16] A. Zunker, M. Geiselhart, L. Johannsen, C. Kestel, S. ten Brink, T. Vogt, and N. Wehn, “Row-merged polar codes: Analysis, design, and decoder implementation,” IEEE Trans. Commun., vol. 73, no. 1, Jul. 2025. [17] P. Trifonov and V. Miloslavskaya, “Polar subcodes,” IEEE J. Sel. Areas Commun., vol. 34, no. 2, Nov. 2016. [18] A. Balatsoukas-Stimming, M. B. Parizi, and A. Burg, “LLR-based Successive Cancellation List Decoding of Polar Codes,” IEEE Trans. Signal Process., vol. 63, no. 19, Oct. 2015.
+
+10−2
+
+

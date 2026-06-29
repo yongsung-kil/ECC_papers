@@ -1,0 +1,857 @@
+GLOBECOM 2021 - 2021 IEEE Global Communications Conference | 978-1-7281-8104-2/21/$31.00 ©2021 IEEE | DOI: 10.1109/GLOBECOM46510.2021.9685863
+
+Negentropy-Aware Loss Function for Trainable
+Belief Propagation in Coded MIMO Detection
+Daichi Shirase ∗, Takumi Takahashi ∗, Shinsuke Ibi †, Kazushi Muraoka ‡, Naoto Ishii ‡, and Seiichi Sampei ∗ ∗Graduate School of Engineering, Osaka University, Yamada-oka 2–1, Suita, 565–0871, Japan
+† Faculty of Science and Engineering, Doshisha University, 1–3 Tataramiyakodani, Kyotanabe, 610–0394, Japan ‡ NEC Corporation, 1753 Shimonumabe, Nakahara-ku, Kawasaki, Kanagawa 211–8666, Japan Email: ∗{shirase, takahashi, sampei}@wcs.comm.eng.osaka-u.ac.jp, †sibi@mail.doshisha.ac.jp, ‡{k-muraoka, naoto ishii}@nec.com
+
+Abstract—We consider large multi-user detection (MUD) via deep unfolding-aided belief propagation (BP) in coded multi-user MIMO (MU-MIMO) systems. A BP detector optimized (trained) by data-driven-tuning of embedded internal parameters achieves low-complexity and high-accuracy MUD while compensating practical imperfections. However, in actual implementation, these parameters should be optimized according to system parameters, e.g., modulation and coding scheme (MCS). In particular, when channel coding is used, it is vital not only to minimize the mean square error (MSE) but also to enhance the Gaussianity of the output log-likelihood ratio (LLR), in order to maximize the error correction capability of the subsequent soft-decision decoder. To that end, a novel loss function based on a weighted average of negentropy, which is a key measure to evaluate the Gaussianity, and MSE of the detector output is proposed. Simulation results show that the trainable Gaussian BP (TGaBP) detector optimized with the proposed negentropy-aware loss function significantly improves the bit error rate (BER) performance of the decoder output and substantially outperforms the T-GaBP optimized with the typical MSE loss function.
+Index Terms—Large MIMO detection, deep unfolding, belief propagation, negentropy, channel coding, data-driven-tuning
+I. INTRODUCTION
+Large multi-input multi-output (MIMO) will continue to be one of the most promising technologies in the fifth generation and beyond (5G+) and sixth generation (6G) networks, in order to achieve high spectral efficiency and massive connectivity [1]. Increasing the dimensions of MIMO channels provides a significant amount of the spatial degrees of freedoms (DoFs), which can be exploited to solve multi-user detection (MUD) in uplink scenarios with low-complexity [2]. However, the detection capability is severely degraded owing to the physical limitation of the receiver and the spatial fading correlation between base station (BS) antenna elements [3]. It is thus worth considering a practical methodology to enhance the detection reliability in various MIMO channel conditions. Also, in coded MIMO settings, the detector output is input to the soft-decision channel decoder; and therefore, it is also a vital requirement of MUD that the error correction capability of the subsequent decoder can be maximized.
+A message passing (MP) algorithm on the basis of belief propagation (BP) has been proposed [4]–[10] as a detector that achieves a reasonable trade-off between complexity and performance. A notable method using this approach is approximate MP (AMP) [6], which is systematically derived from a rigorous approximation of Gaussian BP (GaBP) [4],
+
+[5] in the large-system limit, where the input and output dimensions, M and N, respectively, are infinity for a given compression rate ξ = N/M. These BP detectors consist of only tensor products whose computational cost is proportional to M N for each iteration, which is much lower than those of orthogonal AMP (OAMP) [7], vector AMP (VAMP) [9], and expectation propagation (EP) [10]. However, they are guaranteed to converge to the Bayes-optimal solution only when the measurement matrix entries follow an independent identically distributed (i.i.d.) with zero mean in the large-system limit; this assumption is not reasonable in practical MUD scenarios, and severe performance degradation is inevitable.
+A promising emerging approach to tackle this issue is datadriven-tuning of BP detectors [11]–[13], where the internal parameters embedded in the iterative process to control the convergence speed and possibly fixed point are optimized via deep learning (DL) techniques; this methodology is referred to as deep unfolding (DU) [14]–[16]. To elaborate, it has been shown in [17] that DU-aided trainable GaBP (T-GaBP) can achieve comparable detection performance to the EP detector [8] in correlated MUD, with lower computational cost.
+In the above literature, mean square error (MSE) and binary cross-entropy (BCE) are often employed as loss functions with the aim of maximizing the stand-alone performance of the BP detectors. It is worth noting here that maximizing the detection capability does not necessarily mean minimizing the BER of the decoder output. As the forward error correction (FEC) is usually optimized for additive white Gaussian noise (AWGN) channels, their error correction capability is maximized when the log-likelihood ratio (LLR) input to the soft-decision decoder follows a Gaussian distribution [18]. That is, in coded MUD, the detector should be trained with a loss function that can enhance the Gaussianity of the output LLR, while improving the convergence property of iterative detection.
+In light of the above, we propose a novel loss function based on a weighted average of negentropy and MSE to optimize the trainable BP detector for coded MUD via datadriven tuning. A key ingredient to evaluate Gaussianity of the output LLR is the negentropy, which is utilized as a measure of distance to normality [19]. In addition, the proposed loss function allows us to optimize the trainable BP detector more flexibly for various communication conditions by adjusting the weight parameter according to the modulation and coding scheme (MCS). Simulation results demonstrate the efficacy
+
+978-1-7281-81A0u4t-h2o/2ri1z/e$d3l1ic.0e0ns©ed20u2s1e IliEmEitEed to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+of T-GaBP optimized with the proposed loss function in the coded multi-user MIMO (MU-MIMO) system setup compliant with 5G new radio (NR) low-density parity-check (LDPC) code and orthogonal frequency-division multiplexing (OFDM) signaling.
+Throughout this paper, vectors and matrices are denoted by lower- and upper-case bold-face letters, respectively. Furthermore, ·∗, ·T, and ·H are the conjugate, transpose, and conjugate transpose operators, respectively. Pa|b[a|b] and pa|b(a|b) respectively represent the conditional probability mass function (PMF) and the probability density function (PDF) of a realization a of random variable a given the occurrence of a realization b of random variable b. Ea{·} is the expected value of random variable a. Ea|b=b {·} denotes the conditional expectation of random variable a given the occurrence of a realization b of random variable b. Ra×b and Ca×b denote real and complex fields of size a × b, respectively. CN (a, b) indicates a complex-valued Gaussian process with mean a and variance b. Ia represents an a × a square identity matrix.
+II. CUTTING-EDGE DU-AIDED ALGORITHMS
+A series of optimization methods using the DU technique is a powerful framework for designing elaborated iterative algorithms that work under less-than-ideal conditions while benefiting from the advantages of “model-driven” and “datadriven” approach simultaneously [15], [16]. It is also worth mentioning that the DU technique can drastically reduce the number of internal trainable parameters, compared to the typical deep neural network (DNN)-based approach, which leads to a scalable and stable training process. For these reasons, the DU technique has been applied to various problems especially in signal processing and wireless communications, e.g., sparse signal recovery [14], [20], MIMO signal detection [11]–[13], decoding of FEC codes [21], [22], and multi-cast beamforming design via unsupervised DU-aided learning [23].
+While these studies show the effectiveness of DU-aided algorithm design, maximizing the individual performance of each module does not necessarily mean improving the entire performance, especially in wireless communication systems. However, due to the mechanism of the backpropagation and stochastic gradient descent (SGD) methods, it is also difficult to stably and simultaneously optimize multiple modules with different operation levels, such as the detector and decoder. Within the context outlined above, this study focuses on the design of the loss function by taking into account the nature of the later modules. We emphasize that, to our best knowledge, the loss function design for DU-aided detector optimization considering the subsequent channel decoders, which is the key contribution of this paper, has not yet been proposed.
+III. PRELIMINARIES
+A. Signal model
+Consider a coded large MU-MIMO system composed of a BS having N receive (RX) antennas in a uniform linear array (ULA) pattern and serving M (≤ N ) synchronized singleantenna user equipment (UE) devices. At the m -th UE, the coded bits cm ∈ {0, 1}1×Nc with code length Nc are modulated
+
+by Q quadrature amplitude modulation (QAM) to yield trans-
+
+mitted symbols xmc = xmc ,1, . . . , xmc , f , . . . , xmc ,F ∈ C1×F ,
+where F = Nc/log2(Q ), and the average power density of each symbol is normalized to Es. The RX vector ycf ∈ CN×1 at the f -th index can be rewritten as
+
+T
+
+ycf = y1c, f , . . . , ync , f , . . . , ycN , f
+
+=
+
+H
+
+c f
+
+xcf
+
++
+
+z
+
+c f
+
+,
+
+(1)
+
+T
+where xcf = x1c, f , . . . , xmc , f , . . . , xMc , f ∈ CM ×1 denote the transmit (TX) vector, and zvc ∈ CN ×1 is a complex additive white Gaussian noise (AWGN) vector whose entries obey
+
+CN (0, N0), where Ezcf
+
+zcf
+
+z
+
+cH f
+
+=
+
+N0 IN .
+
+H
+
+c f
+
+∈
+
+CN ×M
+
+is
+
+N × M MIMO channel matrix. For ease of notation, the index
+
+f is hereafter omitted when not necessary.
+
+Without loss of generality, we use the typical Kronecker
+
+correlation model to represent the spatial fading correlation
+
+between BS antenna elements, which can be described by
+
+H c = R1R/2 GRT1/2,
+
+(2)
+
+where the entries of G ∈ CN ×M obey CN (0, 1). RT ∈ RM ×M and RR ∈ RN ×N are the TX and RX spatial correlation
+
+matrices, which are generated according to the exponential
+
+decay model [3]. When using the ULA pattern on the BS
+
+side, the element in the i-th row and j-th column of the RX
+
+correlation matrix is given by
+
+[RR]i, j = ρd(i, j),
+
+(3)
+
+where ρ ∈ [0, 1] is the correlation coefficient between two adjacent RX antennas. d(i, j) is the normalized distance between
+
+the i-th and j-th antennas, which is normalized by the distance between two adjacent RX antennas. Thus, d(i, j) is 1 when the
+
+i-th and j-th antennas are two adjacent RX antennas. In an
+
+uplink MU-MIMO system with single-antenna UE devices, it is rational to assume that RT = IM .
+For ease of algebraic manipulations and learning process,
+
+the complex-valued signal model of (1) can be converted to
+
+a double-size real-valued signal model on the basis of pulse
+
+amplitude modulation (PAM) symbols: [3]
+
+y = H x + z,
+
+(4)
+
+where y=
+
+{yc} {yc}
+
+,
+
+H=
+
+{Hc} {Hc}
+
+−
+
+{Hc} {Hc}
+
+,
+
+x=
+
+{xc} {xc}
+
+,
+
+z=
+
+{zc} {zc}
+
+.
+
+(5)
+
+Note that M = 2M and N =√2N . The m-th PAM symbol xm in x represents one of Q(= Q ) PAM constellation points X = χ1, . . . , χq, . . . , χQ . Let us define a coefficient c =
+3Es/(2(Q − 1)) for normalizing the average power density of χq to Es/2. For example, in the 16QAM case (Q = 16, Q = 4), we have X = {±c, ±3c} and c = Es/10.
+
+B. Trainable Gaussian belief propagation
+The structure of the T-GaBP proposed in [17] encompasses all existing methods for improving the convergence property of BP iterative detection: damping [3], scheduling [24], and belief scaling [5]. The pseudo-code of T-GaBP detector is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Trainable GaBP (T-GaBP) [17]
+
+Input: y, H, K, C = ξn,k, µk, ∀n, k Output: xˆ = [xˆ1, . . . , xˆm, . . . , xˆM ]T
+
+// Initialization
+
+1: N = {1, . . . , N } , M = {1, . . . , M√}
+
+2: GQ = 2l · c
+
+l = 0, ±1, . . . , ±
+
+Q 2
+
+−1
+
+3: ∀n, ∀m: xˇn(0,)m = 0, eˇ(n0,)m = Es/2, θn,m = hn2,m
+
+4:
+
+∀n,
+
+∀m:
+
+u
+
+(0) n,m
+
+= 0, v
+
+(0) n,m
+
+=0
+
+5: for k = 1 to K do
+
+6: for m = 1 to M do
+
+// Soft interference cancellation (Soft IC)
+
+7:
+
+∀n:
+
+y˜n(k,
+
+) m
+
+=
+
+yn
+
+− hn xˇ n(k−1)
+
++
+
+hn,m xˇn(k,m−1)
+
+8:
+
+∀n: δn(k,m) = eˇ(nk,−m1) − xˇn(k,m−1) 2
+
+// Belief generation (BG)
+
+9:
+
+∀n: ψn(k,m) = i=1,i m θn,i δn(k,i) + N0/2
+
+10:
+
+∀n: u(nk,)m =
+
+, hn, m y˜n(k,)m
+ψn(k,)m
+
+vn(k,m) =
+
+θn , m ψn(k,)m
+
+11:
+
+∀n: un(,km) = ζn,k · u(nk,)m + (1 − ζn,k ) · un(,km−1)
+
+12:
+
+∀n: vn(,km) = ζn,k · vn(k,m) + (1 − ζn,k ) · vn(,km−1)
+
+13:
+
+∀n: sn(,km) =
+
+N i=1,i
+
+n ui(,km),
+
+ωn(,km) =
+
+N i=1,i
+
+n
+
+vi
+
+(k) ,m
+
+14:
+
+∀n:
+
+γn(k,m)
+
+=
+
+sn(k, m) ωn(k, m)
+
+// Soft replica generation (Soft RG)
+
+15: 16:
+
+∀n: ∀n:
+
+xˇn(k,m) eˇ(nk,)m
+
+= =
+
+cγ √
+Q
+
+∈ GQ
+−1
+
+tanh 2 c2
+
+µk c
+
+·
+
+γn(k,m) − γ
+
++2c
+
+γ ∈ GQ γ
+
+· tanh
+
+µk c
+
+·
+
+γn(k,
+
+) m
+
+−
+
+γ
+
+17: end for
+
+18: end for
+
+// Detection (in uncoded systems)
+
+19: ∀m: xˆm = arg min
+χq ∈X
+
+N i=1
+
+vi(,Km)
+
+−1
+·
+
+2
+
+N j=1
+
+u(jK,m)
+
+−
+
+χq
+
+presented in Alg. 1, where ·(k) for each variable indicates the corresponding variable at the k-th iteration step. For ease of notation, the equation in the i-th line of Alg. 1 is denoted by (A1-i). C = ξn,k, µk, ∀n, k is a set of trainable parameters.
+The T-GaBP consists of three modules: soft interference canceller (Soft IC), belief generator (BG), and soft replica generator (Soft RG). Soft IC is performed for each RX symbol by subtracting the inter-user interference with the soft replica generated in the previous iteration. In BG, the effective noise in the output belief (information to be propagated) of soft IC is approximated as i.i.d. Gaussian noise as a result of the central limit theorem (CLT); this behavior is referred to as scalar Gaussian approximation (SGA) [3]. After computing the likelihood information under SGA, Soft RG approximately calculate the conditional expectation of the TX symbol.
+1) Belief damping and scheduling: The operation of (A112)–(A1-14) encompasses both belief damping and generalized scheduling mechanisms, and this enables to select and/or combine these methods by varying the trainable internal parameters ζn,k, ∀n, k as follows:
+• If ζn,k = 1, ∀n, k , (A1-12)–(A1-14) are corresponding
+
+to the conventional message update rule in GaBP [4]. • If ζn,k ∈ [0, 1] , ∀n, k and ζ1,k = · · · = ζN,k, ∀k ,
+(A1-12)–(A1-14) can be interpreted as belief damping [3]. The current belief is given by the weighted average of the belief at the current iteration step and the belief in the previous iteration steps. • If ζn,k ∈ {0, 1} , ∀n, k , (A1-12)–(A1-14) work as the scheduling operations, where the MP rule is dynamically changed for each iteration according to the position of “1”. The fixed position of “1” based on the antenna placement leads to typical node selection [24]. • If ζn,k ∈ [0, 1] , ∀n, k , (A1-12)–(A1-14) become differentiable operations. Through the data-driven-tuning, the algorithmic structure can be freely changed by combining belief damping and scheduling.
+Given the above, T-GaBP can always select an appropriate strategy at each iteration step according to the channel model and loss function in the training process.
+2) Belief scaling: The adaptively scaled belief (ASB) of [5] is introduced with scaling parameters {µk, ∀k} in (A1-16) and (A1-17), in order to control the convergence speed by adjusting the softness of denoiser (projection function from beliefs to expectations). The belief scaling is performed after normalizing the belief with its effective gain. This normalization allows us to remove the belief fluctuation due to randomness of H, enabling us to design the dynamics of the scaling parameter regardless of the instantaneous channel realization. This stability is attractive as a trainable parameter.
+
+C. LLR calculation
+
+Before designing the loss function, in this subsection, a bit
+
+LLR for input to the subsequent channel decoder is derived. Under SGA of the interference-plus-noise term in y˜n(K,m) in (A18), the conditional PDF of y˜n(K,m) can be expressed as
+
+py˜(nk,)m |xm
+
+y˜n(K,m) | χq
+
+ 
+
+y˜n(K,m) − hn,m χq
+
+2
+
+
+
+∝
+
+exp
+
+− 
+
+
+
+2ψn(K,m)
+
+,  
+
+(6)
+
+
+
+
+
+
+
+
+
+and a joint likelihood function can be rewritten as
+
+plm |xm lm | χq
+
+N
+
+=
+
+py˜(nk,)m |xm
+
+n=1
+
+y˜n(K,m) | χq
+
+∝ exp
+
+χq
+
+sm(K )
+
+−
+
+1 2
+
+ωm(K
+
+)
+
+χq
+
+,
+
+(7)
+
+with
+
+N
+
+N
+
+sm(K) =
+
+u(nK,m) , ωm(K) =
+
+vn(K,m) ,
+
+(8)
+
+n=1
+
+n=1
+
+where lm is a joint belief.
+Recalling that xm = xm,1, . . . , xm, f , . . . , xm,F , when xm, f consists of B = log2(Q) code bits, cm(1,)f , . . . , cm(b,)f , . . . , cm(B,)f , a bit LLR corresponding to the b-th bit cm(b,)f is given by
+
+λ[cm(b,)f ] = ln Pc(mb,) f |lm, f Pc(mb,) f |lm, f
+
+cm(b,)f = 1|lm, f cm(b,)f = 0|lm, f
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+= ln
+
+p χq ∈X |c(b)=1 lm, f |xm, f
+
+lm, f | χq ,
+
+(9)
+
+p χq ∈X |c(b)=0 lm, f |xm, f lm, f | χq
+
+where χq consists of B bits, c(1), . . . , c(b), . . . , c(B), and X|c(b) = c is a set of all candidate symbols such that c(b)
+
+is c ∈ {0, 1}.
+
+√ For example, in the case of Gray-coded 16QAM, i.e., Q = Q = 4, the bit LLR in (9) can be rewritten as
+
+λ[cm(b,)f ] =
+
+ln 
+ln  
+
+( ) ( ) plm, f |xm, f lm, f |+3c +plm, f |xm, f lm, f |+c
+( ) ( ) plm, f |xm, f lm, f |−c +plm, f |xm, f lm, f |−3c ( ) ( ) plm, f |xm, f lm, f |+c +plm, f |xm, f lm, f |−c
+( ) ( ) plm, f |xm, f lm, f |+3c +plm, f |xm, f lm, f |−3c
+
+(b = (b =
+
+1) ,
+2)
+
+(10)
+
+where please note that B = log2(4) = 2.
+
+IV. NEGENTROPY-AWARE LOSS FUNCTION DESIGN
+
+In the internal process of the soft-decision decoder, e.g., sum-product algorithm (SPA), the bit probabilities are calculated on the assumption that the input LLR follows a Gaussian distribution that satisfies the consistency condition (mean : variance = 1 : 2) [25]; and thus, it is vital to enhance the Gaussianity of the input LLR to improve the end-performance, especially when using strong channel codes with low coding rate. Under the ideal channel assumption of very large systems, the output LLR of GaBP follows a Gaussian distribution that satisfies the consistency condition. However, in practical finite-size correlated MIMO channels, a low-precision SGA significantly impairs the Gaussianity of the output LLR, which in turn severely reduces the error correction capability of the subsequent soft-decision decoder.
+To iron out this issue, we propose a novel negentropy-aware loss function for coded MIMO systems.
+
+A. Negentropy
+
+The key ingredient to address this issue is the negentropy, which is often utilized in the context of independent component analysis (ICA) [19] to evaluate the Gaussianity (or NonGaussianity) of a random variable x as
+
+Jneg(x) = Hd(xGauss) − Hd(x),
+
+(11)
+
+where xGauss is a Gaussian random variable with the same
+
+variance as x. Hd(·) is differential entropy which is defined as
+
+∫
+
+Hd(x) = px(ξ) ln px(ξ)dξ.
+
+(12)
+
+The negentropy has the following vital properties: (i) it is
+
+always non-negative, and it is zero if and only if x has
+
+a Gaussian distribution owing to the principle of maximum
+
+entropy, and (ii) it is invariant to invertible linear transforma-
+
+tions. Obviously, the negentropy is a useful tool for evaluating
+
+Gaussianity, but its main disadvantage is that the computa-
+
+tional cost required for an integral operation involves the PDF
+
+px(·) in (12) is prohibitively high. This makes it necessary to approximate the negentropy, and the most reasonable and
+
+well-known approximation is given by [19]
+
+J˜neg(x) = k1
+
+E
+
+x¯ exp
+
+x¯ 2 −
+2
+
+2
++ k2
+
+E
+
+exp
+
+x¯ 2 −
+2
+
+1 −√
+
+2
+,
+
+2
+
+∵ k1 =
+
+36 √
+
+, k2 =
+
+24 √
+
+,
+
+(13)
+
+8 3−9
+
+16 3 − 27
+
+(a) The distributions of L1(1), L2(1), L3(1), and L4(1).
+
+(b) The distributions of L1(2) and L2(2).
+Fig. 1. The PDFs of LLRs in L(1) and L(2), where (N , M ) = (32, 16), K = 32, and ρ = 0, at Es/N0 = 10 dB.
+
+where x¯ = (x − µx)/σx is a standardized random variable with µx = E {x} and σx2 = E (x − µx)2 , which is computed from the actual measurements in the training process.
+
+B. Prepossessing for negentropy calculation
+
+When calculating the negentropy from LLR samples given by (9), it is necessary to divide the LLRs into several sets in advance because the distribution of bit LLR becomes a mixture model with the use of higher-order QAM modulation (Q ≥ 16). In the case of Gray-coded 16QAM, a set of decision threshold is G4 = {0, ±2c}; and thus, the distribution of bit LLR ideally follows a mixed Gaussian distribution with 4 mixture components. From (10), the PDF of L(1) = λ[cm(1,)f ], ∀m, f has 4 components as shown in Fig. 1(a), and the LLRs in L(1) are further divided into 4 sets, each of whose elements follows a Gaussian distribution, as
+L1(1) = λ[cm(1,)f ], ∀m, f |cm(1,)f = 0 ∧ xm, f = −3c , (14a)
+
+L2(1) = λ[cm(1,)f ], ∀m, f |cm(1,)f = 0 ∧ xm, f = −c , (14b)
+
+L3(1) = λ[cm(1,)f ], ∀m, f |cm(1,)f = 1 ∧ xm, f = +c , (14c)
+
+L4(1) = λ[cm(1,)f ], ∀m, f |cm(1,)f = 1 ∧ xm, f = +3c , (14d)
+where the distributions of the LLRs belonging to each of the sets in (14a)–(14d) in different colors. Similarly, the PDF of L(2) = λ[cm(2,)f ], ∀m, f has 2 components as shown in Fig. 1(b), and the LLRs in L(2) are further divided into 2 sets as
+
+L1(2) = λ[cm(2,)f ], ∀m, f |cm(2,)f = 0 ,
+
+(15a)
+
+L2(2) = λ[cm(2,)f ], ∀m, f |cm(2,)f = 1 .
+
+(15b)
+
+In addition, the distribution of LLRs is ideally symmetric
+
+around zero, and this symmetry can be exploited to simplify
+
+the training process and increase the number of LLRs belong-
+
+ing to each set, by considering the following sets:
+
+L1(1,4) = −λ1(1) |λ1(1) ∈ L1(1) ∪ L4(1),
+
+(16a)
+
+L2(1,3) = −λ2(1) |λ2(1) ∈ L2(1) ∪ L3(1),
+
+(16b)
+
+L1(2,2) = −λ1(2) |λ1(2) ∈ L1(2) ∪ L2(2).
+
+(16c)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+10-1
+
+10-2
+
+BER
+
+10-3
+
+Fig. 2. Schematic of data-driven-tuning of T-GaBP with the proposed negentropy-aware loss function.
+
+C. Algorithm implementation
+
+In this paper, the MSE is used as a loss function to evaluate
+
+the convergence property of T-GaBP iterative detection. Note
+
+that the negentropy is a cost function for evaluating the
+
+distribution shape and does not contribute to the detection
+
+capability. A soft bit replica is calculated from the bit LLR by
+
+using the sigmoid function as
+
+cˇm(b,)f = g(λ[cˇm(b,)f ]; 1),
+
+(17)
+
+where g(x; a) = (1 + e−a·x)−1. The MSE is given by
+
+Jmse
+
+=
+
+1 2MFB
+
+M m=1
+
+FB f =1 b=1
+
+cm(b,)f − cˇm(b,)f
+
+2
+.
+
+(18)
+
+From (13), (16), and (18), the proposed loss function is given
+
+by a weighted average of negentropy and MSE as
+
+Jloss = w · J˜neg L1(1,4) + J˜neg L2(1,3) + J˜neg L1(2,2)
+
++ (1 − w) · Jmse,
+
+(19)
+
+where w is the weight parameter determined according to the MCS. When the coding rate is low and the error correction capability is strong, w should be set to a higher value to emphasize the decoding process rather than the convergence
+
+property of T-GaBP. By contrast, when the coding rate is high and the error correction capability is poor, w should be set to a lower value to emphasize the convergence property of T-GaBP. Also, since the Gaussianity of the output LLR reduces as the modulation level increases, a larger setting of w can improve the performance in higher-order QAM settings. The mini-batch training can further increase the number of available LLR
+
+samples depending on the mini-batch size.
+
+Fig. 2 shows the process flow of data-driven tuning with the proposed loss function, where the distribution separator operates (14)–(16), and (17) is the bit replica generator.
+
+V. NUMERICAL RESULTS
+Computer simulations were conducted to validate the performance of the T-GaBP optimized with the proposed loss function for a coded MIMO-OFDM system. The average RX power from each TX antenna is assumed to be identical on the basis of slow TX power control, and the time and frequency synchronization are assumed to be perfect. The modulation scheme is Gray-coded 16QAM, and the LDPC code with a rate of 1/3 and length of 1024 aligned with 5G NR specification [26] is utilized, where the sum-product algorithm (SPA) is employed as the soft-decision decoder. The subcarrier spacing is set to 60 [kHz] and the channel delay is generated based on
+
+10-4 Linear MMSE
+
+GaBP
+
+10-5 GaBP w/ sched. + ASB T-GaBP (w = 0.0)
+
+T-GaBP (w = 0.6)
+
+10-6
+
+-6
+
+-5
+
+-4
+
+-3
+
+-2
+
+-1
+
+0
+
+1
+
+2
+
+E /N [dB]
+s0
+
+Fig. 3. BER performances in (N , M ) = (32, 32) MIMO with ρ = 0.6.
+
+the tapped delay line (TDL)-B model [27] with 300 [ns] delay spread. Hc is assumed to be perfectly known on the BS side. A
+training process in T-GaBP is implemented by PyTorch using the Adam optimizer with the learning rate of 0.005, where the Es/N0 during training is fixed at 2.0 dB. The number of parameter updates is 2 × 103, and the mini-batch size is set to 1×102. For the restriction of ζn,k ∈ [0, 1] , ∀n, k , ζn,k is given by the output of a sigmoid function as ζn,k = g(ηn,k ; 4). In practice, the parameters ηn,k, ∀n, k are learned in a training process as internal parameters.
+An appropriate choice of initial values of trainable pa-
+rameters is of critical importance for efficiently finding the possibly fixed point. In this paper, ξn,k, ∀n, k are initialized by the ULA antenna pattern-based scheduling, which can be
+expressed as the following criterion:
+
+ζn(0,k) =
+
+f (+1.0)
+
+n∈
+
+κ(i
+
+−
+
+1)+mod
+
+(k,
+
+κ)+1|i
+
+=
+
+1,
+
+.
+
+.
+
+.
+
+,
+
+N κ
+
+f (−1.0) otherwise
+
+,
+
+(20)
+
+where the number of subsets is set to κ = 4. On the other hand,
+
+{µk, ∀k} are initialized using the following monotonically increasing linear function:
+
+µ(k0) = τ · (k/K) ,
+
+(21)
+
+where the parameter is set to τ = 2 in this simulation.
+
+A. BER performance
+Fig. 3 shows the BER performances of different detectors in correlated (N , M ) = (32, 32) MU-MIMO systems, where the correlation coefficient is ρ = 0.6. As a baseline performance, the curve of typical linear MMSE filter “Linear MMSE” is drawn, in which the inverse matrix operation is performed for each subcarrier; and therefore, its computational cost is higher than that of GaBP. Under such high-loaded MIMO systems in correlated channels, the typical GaBP fails to detect MIMO signals reliably (BER> 10−1) and the subsequent decoder does not work. “GaBP w/ sched. + ASB” is the performance of GaBP with the fixed scheduling of (20) and belief scaling of (21), which can significantly improve the detection capability compared to “GaBP”, but there is still a 1.0 [dB] degradation at BER = 10−5 comped to “Linear MMSE”.
+Next, we take a closer look at the performances of DUaided T-GaBP, where “T-GaBP (w = 0)” is the T-GaBP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+Required E /N [dB]
+
+)
+
+100-5
+
+s
+=
+
+BER
+
+-0.4 -0.6 -0.8
+-1 -1.2 -1.4
+0
+
+0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 Value of weight w
+
+(
+
+Fig. 4. Required Es/N0 for achieving a BER of less than 10−5 according to weight parameter w.
+
+optimized by the conventional MSE loss function [17], and “T-GaBP (w = 0.6)” is the T-GaBP optimized by the proposed negentropy-aware loss function. By improving the
+convergence property of T-GaBP and enhance the detection capability, the “T-GaBP (w = 0)” provides a gain of 0.4 [dB] over “Linear MMSE” at BER = 10−5. However, the distortion of output LLR distribution cannot maximize the
+error correction capability of the decoder, which aggravates
+the operating point. The most attractive feature is that “TGaBP (w = 0.6)” achieve a remarkable improvement over “T-GaBP (w = 0.0).” More specifically, the proposed scheme provides a gain of 2.4 [dB] from the “GaBP w/ sched. + ASB” and 1.4 [dB] from “Linear MMSE”. These results clarify the
+effectiveness of the negentropy as a loss function for the DU-
+aided BP detector in coded large MIMO systems.
+
+B. Brief analysis of weight parameter
+Let shift our focus to the weight parameter w. Fig.4 shows the Es/N0 required to guarantee a BER of less than 10−5 according to w, where the simulation condition are the same as in the case in Fig. 3. The characteristic curve is convex downward, and takes a minimum Es/N0 around w = 0.6. This result suggests the necessity to optimize the DU-aided BP detector by considering both MSE and negentropy, not just one or the other, in order to improve the performance of the decoder output. As mentioned in Section IV-D, the optimal value of w varies depending on the MCS, but the detailed analysis will be pursued in the following works.
+
+VI. CONCLUSION
+In this paper, we proposed a novel negentropy-aware loss function to optimize (train) the DU-aided BP detector for large MUD in coded MIMO systems. The proposed loss function is given by a weighted average of negentropy and MSE, and the weight parameter can be adjusted according to the MCS to optimize the trainable detector for various communication conditions. Computer simulation demonstrate the proposed scheme can substantially improve the operating point in terms of BER performance in coded MIMO-OFDM systems, as compared to the typical counterpart.
+
+ACKNOWLEDGEMENT
+A part of this work was supported by JSPS KAKENHI Grant Number JP20K14734 and JP21H01332, Japan.
+
+REFERENCES
+[1] I. F. Akyildiz, A. Kak, and S. Nie, “6G and beyond: The future of wireless communications systems,” IEEE Access, vol. 8, pp. 133 995– 134 030, 2020.
+
+[2] S. Yang and L. Hanzo, “Fifty years of MIMO detection: The road to large-scale MIMOs,” IEEE Commun. Surveys Tutorials, vol. 17, no. 4, pp. 1941–1988, Fourthquarter 2015.
+[3] A. Chockalingam and B. S. Rajan, Large MIMO Systems. Cambridge University Press, 2014.
+[4] Y. Kabashima, “A CDMA multiuser detection algorithm on the basis of belief propagation,” J.Phy. A: Math. Gen., vol. 36, no. 43, pp. 11 111– 11 121, Oct. 2003.
+[5] T. Takahashi, S. Ibi, and S. Sampei, “Design of adaptively scaled belief in multi-dimensional signal detection for higher-order modulation,” IEEE Trans. Commun., vol. 67, no. 3, pp. 1986–2001, Mar. 2019.
+[6] D. L. Donoho, A. Maleki, and A. Montanari, “Message-passing algorithms for compressed sensing,” Proc. Nat. Acad. Sci., vol. 106, no. 45, pp. 18 914–18 919, Nov. 2009.
+[7] M. Opper and O. Winther, “Expectation consistent approximate inference,” Journal of Machine Learning Research, vol. 6, pp. 2177– 2204, Dec. 2005. [Online]. Available: http://localhost/pubdb/p.php?3460
+[8] J. C´ espedes, P. M. Olmos, M. Sa´nchez-Ferna´ndez, and F. Perez-Cruz, “Expectation propagation detection for high-order high-dimensional MIMO systems,” IEEE Trans. Commun., vol. 62, no. 8, pp. 2840–2849, Aug. 2014.
+[9] S. Rangan, P. Schniter, and A. K. Fletcher, “Vector approximate message passing,” Computing Research Repository (CoRR), vol. abs/1610.03082, 2016. [Online]. Available: http://arxiv.org/abs/1610.03082
+[10] K. Takeuchi, “Rigorous dynamics of expectation-propagation-based signal recovery from unitarily invariant measurements,” Jan. 2017. [Online]. Available: http://arxiv.org/abs/1701.05284
+[11] M. Borgerding, P. Schniter, and S. Rangan, “AMP-inspired deep networks for sparse linear inverse problems,” IEEE Trans. on Signal Processing, vol. 65, no. 16, pp. 4293–4308, 2017.
+[12] H. He, C. Wen, S. Jin, and G. Y. Li, “A model-driven deep learning network for MIMO detection,” CoRR, vol. abs/1809.09336, 2018. [Online]. Available: http://arxiv.org/abs/1809.09336
+[13] S. Takabe, M. Imanishi, T. Wadayama, and K. Hayashi, “Deep learningaided projected gradient detector for massive overloaded MIMO channels,” in IEEE ICC, 2019, pp. 1–6.
+[14] K. Gregor and Y. LeCun, “Learning fast approximations of sparse coding,” in Proceedings of the 27th ICML, ser. ICML’10. Madison, WI, USA: Omnipress, 2010, p. 399–406.
+[15] J. R. Hershey, J. L. Roux, and F. Weninger, “Deep unfolding: Model-based inspiration of novel deep architectures,” CoRR, vol. abs/1409.2574, 2014. [Online]. Available: http://arxiv.org/abs/1409.2574
+[16] A. Balatsoukas-Stimming and C. Studer, “Deep unfolding for communications systems: A survey and some new directions,” in 2019 IEEE International Workshop on SiPS, 2019, pp. 266–271.
+[17] D. Shirase, T. Takahashi, S. Ibi, K. Muraoka, N. Ishii, and S. Sampei, “Deep unfolding-aided gaussian belief propagation for correlated large MIMO detection,” in IEEE GLOBECOM, 2020, pp. 1–6.
+[18] L. Hanzo, T. H. Liew, B. L. Yeap, R. Y. S. Tee, and S. X. Ng, Turbo Coding, Turbo Equalisation and Space-Time Coding: EXIT-Chart-Aided Near-Capacity Designs for Wireless Channels. Wiley-IEEE Press, Mar. 2011.
+[19] A. Hyva¨rinen, J. Karhunen, and E. Oja, Independent Component Analysis, ser. Adaptive and Cognitive Dynamic Systems: Signal Processing, Learning, Communications and Control. John Wiley & Sons, Ltd, 2004.
+[20] D. Ito, S. Takabe, and T. Wadayama, “Trainable ISTA for sparse signal recovery,” IEEE Trans. Sig. Proc., vol. 67, no. 12, pp. 3113–3125, 2019.
+[21] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[22] T. Wadayama and S. Takabe, “Deep learning-aided trainable projected gradient decoding for LDPC codes,” in IEEE ISIT, 2019, pp. 2444–2448.
+[23] S. Takabe and T. Wadayama, “Deep unfolded multicast beamforming,” in IEEE GLOBECOM, 2020, pp. 1–6.
+[24] C. Fan, X. Yuan, and Y. J. Zhang, “Scalable uplink signal detection in C-RANs via randomized Gaussian message passing,” IEEE Trans. Wireless Commun., vol. 16, no. 8, pp. 5187–5200, Aug. 2017.
+[25] J. Hagenauer, “The EXIT chart - introduction to extrinsic information transfer,” in Proc. EUSIPCO 2004, Vienna, Austria, Sept. 2004, pp. 1541–1548.
+[26] 3GPP, “5G;NR;Multiplexing and channel coding,” 3rd Generation Partnership Project (3GPP), Technical Specification (TS) 38.212, 07 2018, version 15.2.0 Release 15.
+[27] ——, “Study on channel model for frequencies from 0.5 to 100 GHz,” 3rd Generation Partnership Project (3GPP), Technical Report (TR) 38.901, 05 2017, version 14.0.0 Release 14.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:50:47 UTC from IEEE Xplore. Restrictions apply.
+
+

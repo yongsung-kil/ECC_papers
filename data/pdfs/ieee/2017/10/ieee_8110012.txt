@@ -1,0 +1,1060 @@
+Reduced Complexity ADMM-based Schedules For LP Decoding Of LDPC Convolutional Codes
+Hayfa BEN THAMEUR1, Bertrand LE GAL2, Nadia KHOUJA1, Fethi TLILI1, Christophe JEGO2 1 SUPCOM, GRESCOM Lab, University of Carthage, Tunisia.
+2 Bordeaux INP, CNRS IMS, UMR 5218, Bordeaux University, France.
+
+Abstract—The ADMM based linear programming (LP) technique shows interesting error correction performance when decoding binary LDPC block codes. Nonetheless, it’s applicability to decode LDPC convolutional codes (LDPC-CC) has not been yet investigated. In this paper, a first flooding based formulation of the ADMM-LP for decoding LDPC-CCs is described. In addition, reduced complexity decoding schedules to lessen the storage requirements and improve the convergence speed of an ADMM-LP based LDPC-CC decoder without significant loss in error correction performances are proposed and assessed from an algorithmic and computational/memory complexity perspectives.
+I. INTRODUCTION
+Since their discovery in 1999 [1], LDPC-CCs have gained much attention in the error-correcting area. They have a great potential to become a key forward error-correcting code for improving reliability of modern digital communication systems and optical systems. The interest of LDPC-CCs stems from their channel universality property, their capacity to support versatile application scenarios and their flexibility to code frames of arbitrary size using the same code structure [2] which is not afforded by polar codes and LDPC block codes.
+Recently, a novel approach based on linear programming (LP) was proposed for decoding binary LDPC block codes (LDPC-BC). The LP technique was first introduced by Feldman and al in [3] as a prominent alternative to solve the problem of decoding an error-correcting code. Later, an attractive relaxation of the original LP problem was stated by Barman and al in [4]. In fact, it relies on the Alternate Direction Method of Multipliers (ADMM) method [5]. Not only it reduces the LP complexity issues, the ADMM-LP technique can behave as a message passing (MP) algorithm that can be iteratively processed similar to the conventional Belief Propagation (BP) methods [4]. Multiple algorithmic optimizations of the ADMM-LP approach were recently proposed in literature. They aim to improve the error correction performance [6]–[8] and alleviate the decoding computational complexity and the execution time constraints [4], [9]–[13].
+Generally, for MP decoders, the order of messages updates is important to improve the convergence speed. In this paper, a description of a flooding based ADMM-LP algorithm for decoding LDPC-CCs (ADMM-CC) is initially detailed. Then, two optimization ideas based on reordering message updates are proposed to make the ADMM-CC decoding more interesting for software and hardware implementations. Firstly, an On Demand Variable Node Activation (OVA) [14] formulation of the ADMM-CC algorithm is introduced. The underlined
+
+approach is developed to accelerate the convergence speed of the flooding based ADMM-CC algorithm while keeping the same memory footprint. Secondly, an optimized formulation of the OVA based ADMM-CC schedule is detailed, termed as the Horizontal Layered (HL) ADMM-CC schedule. It yields the same convergence speed as the former schedule. Meanwhile, a reduction of memory requirements by almost 12.5% is reached for all possible code rates of the IEEE 1901 LDPC-CC.
+The remainder of this paper is organized as follows: Conventional decoding of LDPC-CCs is reviewed in Section II. The ADMM formulation for decoding LDPC-CC codes is summarized in Section III. In Section IV, a detailed algorithmic description of the proposed OVA and HL based ADMMCC algorithms is provided. A complexity analysis of the three ADMM-CC scheduling schemes is also provided in Section IV. Ultimately, bit error ratio (BER) experimental results are reported in Section V.
+
+II. CONVENTIONAL DECODING OF LDPC-CCS
+
+A. LDPC Convolutional Codes
+
+Similar to a LDPC-BC, a LDPC-CC is a linear code defined
+
+by a sparse parity check matrix H. Let v[0,L−1] denote the code
+
+sequence of L code blocks (vt). A code block vt is of size
+
+c bits and corresponds to an information block ut of size b
+
+bits
+
+(b
+
+<
+
+c)
+
+so
+
+that
+
+the
+
+rate
+
+of
+
+the
+
+related
+
+LDPC-CC
+
+is
+
+b c
+
+.
+
+An
+
+essential feature of the LDPC-CC [1] is that the code blocks,
+
+received at different time instants, are interconnected. Indeed,
+
+each code block vt is coupled by the encoder to the previously received ms code blocks. Thus, ms is called the memory of the considered LDPC-CC. Known as the syndrome former, the
+
+transposed form of H is usually used. It can be defined as:
+
+H0T (0) . . . Hm T s (ms)
+
+
+
+
+
+
+
+H[T0,∞]
+
+=
+
+ 
+
+
+
+
+
+...
+
+...
+
+...
+
+  
+
+H0T (t)
+
+...
+
+Hm T s
+
+(t
+
++
+
+ ms )
+
+
+
+
+...
+
+...
+
+
+
+where HiT , i = 0, 1, ...ms are c × (c − b) submatrices. The syndrome former HT is said to have a period Ts ∈ Z≥1 if its submatrices satisfy HiT (t) = HiT (t + Ts), i = 0...ms, t ∈ Z≥0.
+An additional advantage of LDPC-CCs compared to their
+block code counterparts is the so-called fast encoding property [15]. Indeed, when all submatrices H0T (t) have full rank, the encoding procedure is significantly simplified. Moreover,
+
+978-1-5386-0446-5/17/$31.00 ©2017 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I MAIN PARAMETERS OF THE IEEE 1901 LDPC-CCS.
+
+Coding rate
+
+1 2
+
+2 3
+
+3 4
+
+4 5
+
+dv
+
+3
+
+3
+
+3
+
+3
+
+dc
+
+6
+
+9
+
+12 15
+
+ms
+
+215 226 226 226
+
+Ts
+
+3
+
+3
+
+3
+
+3
+
+unlike LDPC-BC, a LDPC-CC can have a finite (terminated LDPC-CC (T-LDPC-CC)) or semi-infinite structure (nonterminated LDPC-CC). The semi-infinite structure is well suited for transmission of data streams. Nevertheless, a TLDPC-CC is recommended for packet based applications. Furthermore, variable-length code sequences can be supported by the same LDPC-CC structure.
+The IEEE 1901 standard was developed for high-speed communication devices via electric power lines [16]. A periodic time-varying LDPC-CC was proposed for this standard. Its main parameters are summarized in Table I where dv and dc denote variable node degree and check node degree, respectively.
+An alternate representation of a LDPC-CC code can be done by means of a bipartite graph called the Tanner graph [2]. For the rest of the paper, the T-IEEE 1901 LDPC-CC is considered. Let I (J ) be the set of N variable nodes (VN) (M check nodes (CN)) composing the related Tanner graph.
+B. Conventional BP-based Decoding of LDPC-CC Codes
+Similar to LDPC-BCs, LDPC-CCs can be decoded with MP algorithms. The BP is the most efficient one in terms of error correction performance. However, it suffers from high computational complexity due to the costly tanh operations. A straightforward alternative to the BP is its Min-Sum (MS) approximation. Despite the resulting complexity reduction, a significant loss in terms of error-ratio is observed for the MS. It can be partially recovered by considering several MS variants namely the Normalized MS (NMS) and the Offset MS (OMS) [17]. In the next section, the application of a novel approach for decoding LDPC-CCs based on the LP algorithm is detailed.
+III. ADMM BASED LP DECODING FOR LDPC-CC CODES
+A. The ADMM- based LP Decoding Problem
+During the last decade, the LP approach was considered for LDPC decoding [18]. Introduced in [3], the main idea was to relax the ML decoding problem into a linear optimization problem. However, the proposed LP approach suffers from high computational complexity as well as huge memory requirements. Thus, it makes the approach impractical for LDPC-BCs and so for LDPC-CCs. Recently, Barman et al introduced an efficient distributed algorithm for LP decoding that relies on the ADMM decomposition method [4]. In order to fit the ADMM template given in [5], the LP decoding problem stated in [3] is reformulated as:
+
+minimize γT v
+
+(1)
+
+subject to Tjv = zj; zj ∈ Pdj ∀j ∈ J ,
+
+where γ is the vector of negative log-likelihood ratios (LLR)
+
+of the codeword v ∈ C. Its ith entry is defined as:
+
+γi
+
+=
+
+-
+
+log(
+
+P P
+
+r(vˆi r(vˆi
+
+|vi |vi
+
+=1) =0)
+
+),
+
+∀i ∈
+
+I.
+
+The
+
+check
+
+polytope
+
+Pdj
+
+is
+
+the convex hull of all binary vectors of length dj with an even
+
+number of 1s. dj is the degree of the CN j and Tj is its related
+
+transfer matrix [10].
+
+The augmented Lagrangian of the LP problem with scaled
+
+dual variable is:
+
+Lµ(v,
+
+z,
+
+λ)
+
+=
+
+γT
+
+v
+
++
+
+µ 2
+
+Tj x − zj + λj
+
+2 2
+
+−
+
+µ 2
+
+λj 22,
+
+j∈J
+
+j∈J
+
+(2)
+
+where µ > 0 is the penalty parameter and λ is the scaled dual
+
+variable.
+
+Several improvements in terms of error correction perfor-
+
+mance were obtained thanks to a penalized version of the
+
+ADMM-LP based LDPC decoder [6]. The idea is to add a
+
+penalty term to the objective function in (1) so that it becomes: f (x) = γT v + α i∈I g(vi). α is a penalty parameter that can be optimized in advance. According to [6], the decoding based on the l2 penalty (g(v) = −(v − 0.5)2) has slightly better error performance than the other penalty decoding. Besides,
+for LDPC-BCs, it outperforms the BP decoder (up to 0.1 dB
+in [6]). An over-relaxation parameter ρ can be also added to
+
+improve the convergence of the underlined algorithm [4].
+
+B. Flooding based ADMM-LP Formulation for Decoding LDPC-CC
+The conventional MP schedule for decoding LDPC-CCs is the flooding (FL) schedule [1] where a decoding iteration corresponds to a simultaneous update of all VNs followed by a concurrent processing of all CNs. Given that the ADMM algorithm can be reformulated as a MP algorithm for LDPCBCs [4], the application of such LP approach for decoding LDPC-CCs seems intuitively possible. Hitherto, in the following, a first detailed description of the ADMM based flooding decoding approach of LDPC-CCs is provided.
+Note that for Algorithms 1, 2 and 3, Pdj (a) and [0,1](a) denote the Euclidean projection of the vector a on the check polytope Pdj and on [0,1], respectively. The considered projection algorithm for this paper is described in [11].
+Algorithm 1 describes the formalization of the ADMMLP algorithm for decoding T-LDPC-CCs with the flooding schedule. Obviously, four main tasks have to be performed. The first task consists on initializing, for each VN i, z-replica and λ messages to 0.5 and 0, respectively (Algorithm 1, line 2). During the kth iteration, each VN i computes and broadcasts the same message Lv(ki) to its neighboring CNs (Algorithm 1, Step 2). L(vki) is computed based on the channel LLR γi as well as the LLRs zj(k→−i1) and λj(k→−i1), j ∈ Nc(vi), received from its connected CNs at the previous iteration (Algorithm 1, line 7). Each CN j consumes its locally stored zj(k→−i1) and λ(jk→−i1) messages from the (k − 1)th iteration and the incoming messages L(vki), i ∈ Nv(j), from its VN neighbors (Algorithm 1, lines 12 : 14). Then, each couple of messages (zj(k→)i,λ(jk→) i) is sent to the corresponding VN
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Flooding based ADMM-LP Algorithm.
+
+1: Step 1: Initialization
+
+2: ∀ j ∈ J , i ∈ Nv(j): zj(0→) i = 0.5, λj(0→) i = 0, Lj(0→) i = 0.5
+
+3:
+
+∀
+
+i
+
+∈
+
+I:
+
+ni
+
+=
+
+γi µ
+
+,
+
+δi
+
+=
+
+1 dvi
+
+4: for all i = 1 → Imax when stop criterion = false do
+
+5: Step 2: Variable Node Update (VNU)
+
+6: for all i ∈ I do
+
+7:
+
+ψi(k) =
+
+Lj(k→−i1)
+
+j ∈Nc (vi )
+
+8:
+
+L(vki) = [0,1] [ δi × (ψi(k) − ni) ]
+
+9: end for
+
+10: Step 3: Check Node Update (CNU)
+
+11: for all j ∈ J , i ∈ Nv(j) do
+
+12:
+
+wj(k→) i = ρLv(ki) + (1 − ρ)zj(k→−i1) + λj(k→−i1)
+
+13:
+
+zj(k→)i = Pdj [ wj(k→) i ]
+
+14:
+
+λ(jk→) i = zj(k→)i − wj(k→) i
+
+15:
+
+Lj(k→) i = wj(k→) i
+
+16: end for
+
+17: end for
+
+18: Step 4: Hard Decision
+
+19: ∀ i ∈ I: vˆi = [ Lvi ] > 0.5
+
+Algorithm 2 OVA based ADMM-LP Algorithm.
+
+1: Step 1: Initialization
+
+2: ∀ j ∈ J , i ∈ Nv(j): zj(0→) i = 0.5, λj(0→) i = 0, L(j0→) i = 0.5
+
+3:
+
+∀
+
+i
+
+∈
+
+I:
+
+δi
+
+=
+
+1 dvi
+
+,
+
+ψi(1)
+
+=
+
+(
+
+L(j0→) i) −
+
+j ∈Nc (vi )
+
+γi µ
+
+4: for all i = 1 → Imax when stop criterion = false do
+
+5: Step 2: Layer Processing
+
+6: for all j ∈ J do
+
+7:
+
+Step 2.1: Pre-Variable Node Update (Pre-VNU)
+
+8:
+
+for all i ∈ Nv(j) do
+
+9:
+
+L(vki) = [0,1] [ δi × ψi(k) ]
+
+10:
+
+end for
+
+11:
+
+Step 2.2: Check Node Update (CNU)
+
+12:
+
+Perform Step 3 of Algorithm 1 for the Check Node j.
+
+13:
+
+Step 2.3: Post-Variable Node Update (Post-VNU)
+
+14:
+
+for all i ∈ Nv(j) do
+
+15:
+
+ψi(k+1) = ψi(k) − L(jk→−i1) + Lj(k→) i
+
+16:
+
+end for
+
+17: end for
+
+18: end for
+
+19: Step 3: Hard Decision
+
+20: ∀ i ∈ I: vˆi = [ Lvi ] > 0.5
+
+(Algorithm 1, line 15). Similar to traditional MP algorithms, all VN updates, as well as CN updates, can be performed simultaneously (Algorithm 1, Step 2 & 3). The decision on decoded bits is obtained in Step 4. The decoding process is stopped either a maximum number of iterations (Imax) is reached or all CNs are satisfied.
+Graphically, messages are exchanged along the Tanner graph edges between connected VNs and CNs. Unlike usual MP approaches, each check node j, j ∈ J sends two messages, zj(k→−i1) and λj(k→−i1), to each VN neighbor i, i ∈ Nv(j). However, each VN of the Tanner graph produces a single message that is broadcasted along all its connected edges.
+The maximum computational complexity of the ADMM based flooding decoding algorithm, denoted as Cfl, can be approximated by:
+Cfl = Imax × (M × O(CNfl) + N × O(V Nfl)), (3)
+with O(V Nfl/CNfl) the computational complexity of the FL related VN and CN processing units, respectively.
+The memory complexity of the flooding scheduling can be computed as: Mfl = 2× (N + m). Indeed, during the decoding process, N channel LLRs (γi), N a-posterior messages (Lvi ), m z-replica and m λ exchanged messages are stored for computations.
+In the next section, a fast converging and reduced complexity ADMM based schedules for decoding LDPC-CCs are proposed.
+IV. REDUCED COMPLEXITY ADMM-CC SCHEDULES
+According to the ADMM flooding schedule, at each iteration, all VNs are activated just before CNs processing. Hence, the incoming information to a VN (z, λ) are included in its outgoing message Lv only after an iteration is accomplished. To overcome such inefficiency, a first modified schedule is proposed in this paper, named as the OVA schedule. Moreover, a memory optimized version of the OVA technique is also
+
+introduced for the ADMM algorithm for decoding LDPC-CCs that bears resemblance to the BP schedule in [19].
+A. The On-Demand Variable Node Scheduling for the ADMMCC Algorithm
+Inspired by the OVA scheduling for the BP decoding of LDPC-CCs that was introduced in [14], the computation scheduling of the ADMM based LDPC-CC decoding is therein transformed accordingly. The main idea is to change the order of VN and CN updates. Algorithm 2 depicts a formalization of the OVA schedule for the ADMM-LP method.
+Basically, compared to Algorithm 1, in the OVA algorithm, VNU and CNU steps are merged in a single one (Algorithm 2, Step 2). Each CN represents one layer. In fact, in the jth layer, j ∈ J , outgoing messages from the check node j (Algorithm 2, Step 2.2) are computed based on their immediately updated VN neighbors during the Pre-VNU Step (Algorithm 2, Step 2.1). As soon as a CN to VN message ( L(jk→) i, i ∈ Nv(j)) is counted, it is directly added to the intermediate message ψi (Algorithm 2, line 15). ψi is the sum of incoming messages to the VN i. Meanwhile, the information brought to the VN i by the CN j in the previous iteration (Lj(k→−i1)) is subtracted. As a prominent consequence, during the Post-VNU step, the activated VN neighbors get a part of their output message ( L(vki)) updated which helps spreading reliable information to the next layers. Attractively, this property would result in speeding-up the decoding convergence of an ADMM based LDPC-CC decoder. Note that layers are executed sequentially.
+This modification of nodes’ updating order impacts the maximum computational complexity of the OVA based ADMMCC algorithm. Denoted as Cova, it can be approximated by:
+Cova = Imax × M × (O(CNova) + dc × O(V Nova)), (4)
+Although, channel LLRs (γ) are concealed inside ψ messages (Algorithm 2, line 3), unlike the FL ADMM algorithm, ψ messages have to be stored. Thus, the memory complexity
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 3 HL based ADMM-LP Algorithm.
+
+1: Step 1: Initialization
+
+2: ∀ j ∈ J , i ∈ Nv(j): zj(0→) i = 0.5, λj(0→) i = 0, Lj(0→) i = 0.5
+
+3:
+
+∀
+
+i
+
+∈
+
+I:
+
+δi
+
+=
+
+1 dvi
+
+,
+
+L(v1i)
+
+=
+
+δi
+
+×(
+
+Lj(0→) i
+
+j ∈Nc (vi )
+
+−
+
+γi µ
+
+)
+
+4: for all i = 1 → Imax when stop criterion = false do
+
+5: Step 2: Layer Processing
+
+6: for all j ∈ J do
+
+7:
+
+Step 2.1: Pre-Variable Node Update (Pre-VNU)
+
+8:
+
+for all i ∈ Nv(j) do
+
+9:
+
+lv(ki ) = [0,1] [ Lv(ki) ]
+
+10:
+
+end for
+
+11:
+
+Step 2.2: Check Node Update (CNU)
+
+12:
+
+Perform Step 2.2 of Algorithm 2 for the Check Node j
+
+13:
+
+based on messages l(k).
+
+14:
+
+Step 2.3: Post-Variable Node Update (Post-VNU)
+
+15:
+
+for all i ∈ Nv(j) do
+
+16:
+
+L(vki+1) = Lv(ki) + δi×(Lj(k→) i − Lj(k→−i1) )
+
+17:
+
+end for
+
+18: end for
+
+19: end for
+
+20: Step 3: Hard Decision
+
+21: ∀ i ∈ I: vˆi = [ Lvi ] > 0.5
+
+TABLE II COMPARISON OF THEORETICAL COMPLEXITY OF THE CN AND VN COMPUTATION UNITS FOR THE ADMM-CC SCHEDULES.
+
+FL
+
+OVA HL
+
+VN
+
+CN CN CN
+
+arithmetic add & sub
+
+2dv + 1 3dc
+
+7dc
+
+7dc
+
+arithmetic multiply & div
+
+1
+
+2dc
+
+3dc
+
+3dc
+
+abs, min, max, xor, cmp
+
+2
+
+2dc
+
+2dc
+
+projection
+
+1
+
+1
+
+1
+
+Memory access
+
+3dv
+
+5dc
+
+7dc
+
+6dc
+
+TABLE III
+
+COMPARISON OF THEORETICAL COMPLEXITY OF PROPOSED
+
+ADMM-CC BASED SCHEDULES FOR ONE DECODING ITERATION
+
+FOR
+
+THE
+
+CODE
+
+RATE
+
+1 2
+
+T-IEEE
+
+1901
+
+LDPC-CC.
+
+arithmetic add & sub arithmetic multiply & div abs, min, max, xor, cmp projection
+Memory access
+
+FL (×L)
+32 14 4 1
+39
+
+OVA (×L)
+42 18 12 1
+42
+
+HL (×L)
+42 18 12 1
+36
+
+of the OVA is the same as for the FL schedule. Nonetheless, the major feature of the the OVA is its capability to quicken the convergence of the full ADMM-based LDPC-CC decoder. This assertion is empirically proven in section V.
+B. The Horizontal Layered Scheduling for the ADMM-CC Algorithm
+Although the decoding convergence of an ADMM-based LDPC-CC decoder can be further speeded-up, thanks to its OVA version, the memory requirements is still high. In this sub-section, a reduced memory footprint ”CN centric” scheduling for the ADMM-CC algorithm is introduced.
+Formulated as in Algorithm 3, memory savings come from the elimination of ψ messages while keeping the same VN/CN update’s order as for the OVA schedule. In fact, computation operations executed within the Pre-VNU and Post-VNU steps are modified in such a way that updated z-replica and λ messages are added to Lv LLRs directly (Algorithm 3, line 16). The projection of Lv messages onto [0,1] is said to be performed on the fly because, unlike previous schedulings (Algorithm 1, line 8 & Algorithm 2, line 9), they are not supposed to be kept in memory during the decoding process. Instead, each Lv LLR contains only the value of the a-posterior message (expressed as δi × ψi in Algorithm 2, line 9). Yet, the projection is needed to be done only if its related VN is requested by the active constraint node. Thereby, similar to the ADMM based OVA schedule, at the end of each layer processing, the VN neighbors of the activated CN are partially updated. Using this ADMM based approach, the following CNs are able to access the most recent information available from its connected VNs.
+Theoretically, the maximum computational complexity of the ADMM based HL decoding algorithm is the same as for the OVA approach. Denoted as Chlayered, it roughly equals:
+Chlayered = Imax × M × (O(CNhl) + dc × O(V Nhl)). (5)
+
+Compared with the FL and OVA schedules, a memory
+
+complexity reduction can be obtained using the ADMM based
+
+HL scheduling algorithm. The HL memory cost can be approx-
+
+imated by: Mhl = N + 2 × m. Not only channel LLRs (γ)
+
+were hidden in Lv messages (Algorithm 3, line 3) but also ψ
+
+messages are completely removed. Hence, a memory saving
+
+of
+
+about
+
+N 2×(N +m)
+
+can
+
+be
+
+achieved.
+
+Importantly,
+
+It
+
+can
+
+be
+
+trivially demonstrated that this savings is independent of the
+
+code sequence length for regular LDPC-CC codes (dv (dc) is constant for all VNs (CNs)). Due to the structural specificity of
+
+the IEEE 1901 LDPC-CCs, a reduction of 12.5% of memory
+
+storage elements is reached for all possible code rates.
+
+To sum up, the HL formulation of the ADMM algorithm for
+
+decoding LDPC-CCs enables a perceptible memory savings
+
+regarding the FL and OVA schedules.
+
+C. Complexity Analysis Per Iteration
+In Table II, the computational complexity is presented in terms of floating-point like operations for CN and VN computations. Especially, given that both the OVA and HL schedules are ”CN centric” approaches, only computational complexity of related CN processing units are estimated. At the first sight, the ADMM based modified schedules (OVA, HL) have a higher computational complexity than that of the FL scheduling. It comes from the fact that for each CN, dc VN messages are computed during the Pre-VNU step. For instance, for the FL algorithm, two comparison operations are needed to project Lv messages onto [0,1]. However, this projection has to be performed dc further times by the modified schedules. The 7dc arithmetic add & sub operations are obtained as follows: 3dc operations needed for updating zreplica and λ messages (as for the FL and HL schedules) and 4dc ones required for processing the Post-VNU step. Furthermore, due to the remove of ψ messages, the HL needs 1.16 times lower total memory accesses compared to the OVA.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+BER for the IEEE 1901 LDPC-CC rate 1/2 BER for the IEEE 1901 LDPC-CC rate 2/3 BER for the IEEE 1901 LDPC-CC rate 3/4 BER for the IEEE 1901 LDPC-CC rate 4/5
+
+10−1
+
+10−1
+
+10−1
+
+10−1
+
+10−3
+
+10−3
+
+10−3
+
+10−3
+
+10−5
+
+10−5
+
+10−5
+
+10−5
+
+10−7 1.2 1.6 2 2.4
+
+10−7 1.4 1.8 2.2 2.6 3
+
+10−7 2
+
+2.4 2.8 3.2 3.6
+
+10−7 2.4 2.8 3.2 3.6
+
+Eb/N0 (dB) ADMM-CC-HL@50it
+
+Eb/N0 (dB)
+
+ADMM-CC-OVA@50it
+
+ADMM-CC-FL@100it
+
+Eb/N0 (dB) ADMM-CC-HL@100it
+
+Eb/N0 (dB) ADMM-CC-OVA@100it
+
+Fig. 1. BER performance of the T-IEEE 1901 LDPC-CCs where L = 24 ms for the ADMM-LP (dashed lines) and the ADMM-l2 (bold lines).
+
+TABLE IV TERMINATION SEQUENCE LENGTH FOR THE IEEE 1901
+LDPC-CC [16].
+
+Coding Rate 1/2 2/3
+3/4
+4/5
+
+Number Of Transmitted Bits
+τ = 440 bits τ = 540 bits if L ≤ 2040 bits τ = 380 bits if L > 2040 bits τ = 540 bits if L ≤ 2040 bits τ = 380 bits if L > 2040 bits τ = 680 bits if L ≤ 2040 bits τ = 620 bits if 2040 bits < L ≤ 4080 bits τ = 380 bits if L > 4080 bits
+
+To better illustrate the complexity differences, the code rate
+
+1 2
+
+T-IEEE
+
+1901
+
+LDPC-CC
+
+is
+
+considered.
+
+In
+
+Table
+
+III,
+
+numeri-
+
+cal results show that, at the level of one decoding iteration, the
+
+modified schedules have the highest computational complexity
+
+cost. In fact, compared to the FL technique, they need 1.31
+
+times add & sub operations, 1.28 times multiplications and
+
+3 times comparisons. However, all schedules perform the
+
+same number of projections. Even though the HL has the
+
+same computational complexity as for the OVA approach, a
+
+gain of 14.3% in terms of memory access can be success-
+
+fully achieved. Attractively, although one iteration of the HL
+
+exhibits higher computation cost than the FL, a reduction
+
+of 7.7% in terms of memory access can be reached. This
+
+observation is coherent with the memory savings provided by
+
+the HL, pointed out in the former sub-section. Generally, these
+
+gains can be obtained for any regular LDPC-CC satisfying the
+
+condition: dc = c × dv.
+
+To conclude, besides memory savings provided by the HL
+
+schedule, it has a comparable computational cost to the FL and
+
+the OVA decoding approaches. Consequently, the proposed HL
+
+formulation of the ADMM-CC algorithm can be considered as
+
+a reduced complexity scheduling method for ADMM based
+
+LP decoding of LDPC-CCs. In the next section, we study the
+
+impact of the new modified schedulings on the error correction
+
+performances and show whether the accelerated convergence
+
+introduces an error floor behaviour.
+
+V. EXPERIMENTAL RESULTS
+In this section, simulation results of ADMM-l2 and ADMMLP decoding are presented for the FL, OVA and HL schedules. The ADMM-l2 parameters are fixed as follows: µ = 3.0, ρ = 1.9 and α = 0.8 [8]. According to [16], a Zero-tailing must be used to stabilize the T-IEEE 1901 LDPC-CC Encoder state, so that only related parity bits are transmitted. Depending on the code rate and the information size (L), the length of termination sequence (τ ) are reported in Table IV. Simulations are carried over information sequences of length 24 ms. As 24 is divisible by all possible values of b, no padding bits would be needed. A BPSK mapping and an AWGN channel are used. Termination sequences are included in the code rate computation for the AWGN σ setup.
+
+A. Error Correction Performance
+
+Fig. 1 depicts the BER performances of the considered
+
+ADMM-CC algorithms for all possible code rates of the
+
+IEEE 1901 LDPC-CC. When the maximum decoding iteration
+
+(MDI) equals to 100 for the FL and 50 for the OVA and
+
+HL, the decoding performances are almost the same for
+
+all schedules. In addition, it can be seen that both OVA
+
+and HL scheduling decoders perform slightly better than the
+
+FL decoder at the same number of executed iterations. For
+
+instance, error correction performance improvement reaches
+
+0.05
+
+dB
+
+for
+
+the
+
+ADMM-l2
+
+based
+
+code
+
+rate
+
+1 2
+
+.
+
+Ultimately,
+
+it
+
+can be seen that the BER performances of the OVA approaches
+
+is similar to the HL one.
+
+B. Comparison in terms of Convergence Speed
+
+Given that the computational complexity of a full LDPC-
+
+CC decoder is determined by the actual number of executed
+
+iterations, a comparison of the average number of iterations
+
+(ANI)
+
+for
+
+different
+
+scheduling
+
+schemes,
+
+for
+
+the
+
+code
+
+rate
+
+4 5
+
+when the MDI equals 100 and 50, is shown in Fig. 2. It can be
+
+seen that the ANI for the HL is about 1.4 times less than the
+
+FL when MDI=100 and twice less than the FL when MDI=50.
+
+Referring to the complexity analysis in the sub-section IV-C,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+Number of Decoding Iterations BER for the IEEE 1901 LDPC-CC rate 3/4 BER for the IEEE 1901 LDPC-CC rate 4/5
+
+100
+
+HL@50it
+
+OVA@50it FL@100it
+
+10−2
+
+10−2
+
+75
+
+HL@100it
+
+OVA@100it
+
+10−3
+
+10−3
+
+50
+
+10−4
+
+25
+
+10−4
+
+2.9
+
+3.1
+
+3.3
+
+3.5
+
+2.3
+
+2.5
+
+2.7
+
+2.9
+
+3.1
+
+3.3
+
+3.5
+
+Eb/N0 (dB)
+
+E /N (dB) b
+
+0Fig. 2. Average Number of Decoding Iterations of the IEEE 1901 LDPC-CC
+
+rate
+
+4 5
+
+for
+
+the
+
+ADMM-LP
+
+(dashed
+
+lines)
+
+and
+
+the
+
+ADMM-l2
+
+(bold
+
+lines).
+
+it means that the HL based ADMM-CC saves up to 20dc arithmetic operations and 12dc memory accesses compared with the FL.
+In order to pinpoint the impact of the convergence speed on the error correction performance, the BER evolution of discussed schedules depending on the MDI is described in Fig. 3. It can be seen that the HL and OVA have always better error correction performances than the FL. Meanwhile, a gain in terms of MDI ranging from 20% to 33% and from 20% to 37.5% can be observed for the ADMM-l2 and the ADMM-LP, respectively. Moreover, the HL does not give rise to any error floor behavior. Although the OVA exhibits similar performances to the HL, it seems that the HL is the best trade-off between considering complexity reduction, fast convergence and error correction performance. Note that same acknowledgments were found for the other code rates.
+VI. CONCLUSION
+In this paper, a first formulation of decoding T-LDPCCC based on the ADMM-LP approach was investigated. Besides, an algorithmic description of two iterative ADMMCC schedulings were proposed (OVA and HL schedules). The computational/memory complexity of discussed algorithms and their error correction performances were provided. In fact, a memory saving of about 12.5% was achieved by the HL based ADMM-CC applied to the T-IEEE 1901 LDPC-CC. Furthermore, it was found that the proposed schedules are 1.6 times faster than the FL one. Thus, they can be considered as a promising alternatives for futur software and hardware simplifications for decoding LDPC-CCs.
+REFERENCES
+[1] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. on inf. Theory, Sep 1999.
+[2] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. on Comm., 2008.
+[3] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to Decode Binary linear codes,” IEEE Trans. on inf. Theory, March 2005.
+
+10−5
+
+0 10 20 30 40 50
+
+Maximum number of iters
+
+ADMM-CC-FL
+
+ADMM-CC-HL
+
+0 10 20 30 40 50 Maximum number of iters
+ADMM-CC-OVA
+
+Fig. 3. Error correction performance evolution at SNR=2.9dB (left curves) and SNR=3.3dB (right curves) depending on the maximum number of decoding iterations for the ADMM-LP (dashed lines) and the ADMM-l2 (bold lines).
+
+[4] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition Methods for Large Scale LP Decoding,” IEEE Trans. on inf. Theory, Dec 2013.
+[5] S. P. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” 2011.
+[6] X. Liu, S. C. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” in 2012 IEEE inf. Theory Workshop, Sept 2012.
+[7] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM Penalized Decoder for Irregular Low-Density Parity-Check Codes,” IEEE Comm. Lett., June 2015.
+[8] X. Liu and S. C. Draper, “The ADMM Penalized Decoder for LDPC Codes,” IEEE Trans. on inf. Theory, June 2016.
+[9] X. Zhang and P. H. Siegel, “Adaptive Cut Generation Algorithm for Improved Linear Programming Decoding of Binary Linear Codes,” IEEE Trans. on inf. Theory, Oct 2012.
+[10] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large Scale LP Decoding with Low Complexity,” IEEE Comm. Lett., November 2013.
+[11] M. Wasson and S. C. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in 2015 49th Asilomar Conference on Signals, Systems and Computers, Nov 2015.
+[12] X. Jiao, J. MU, and H. Wei, “Reduced Complexity Node-Wise Scheduling of ADMM Decoding for LDPC Codes,” IEEE Comm. Lett., 2016.
+[13] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast Converging ADMM-Penalized Algorithm for LDPC Decoding,” IEEE Comm. Lett., April 2016.
+[14] A. E. Pusane, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, “Reduced complexity decoding strategies for LDPC convolutional codes,” in Inter. Symp. on inf. Theory, June 2004.
+[15] A. E. Pusane, K. S. Zigangirov, and D. J. Costello, “Construction of Irregular LDPC Convolutional Codes with Fast Encoding,” in 2006 IEEE Inter. Conf. on Comm., June 2006.
+[16] “IEEE Draft Standard for Broadband over Power Line Networks: Medium Access Control and Physical Layer Specifications,” IEEE P1901/D4.01, July 2010, pp. 1–1589, Dec 2010.
+[17] H. B. Thameur, C. Bouzouita, N. Khouja, B. L. Gal, F. Tlili, and C. Jego, “Hardware Complexity Reduction of LDPC-CC Decoders Based on Message-Passing Approaches,” in Inter. conf. on Sciences and Techniques of Automatic control computer engineering (STA), Dec 2016.
+[18] L. Bazzi, B. Ghazi, and R. L. Urbanke, “Linear programming decoding of spatially coupled codes,” IEEE Trans. on Inf. Theory, Aug 2014.
+[19] Y. Chen, C. Zhou, Y. Huang, and X. Zeng, “An efficient multirate ldpc-cc decoder with layered decoding algorithm,” in 2013 IEEE International Conference on Communications (ICC), June 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:52:00 UTC from IEEE Xplore. Restrictions apply.
+
+

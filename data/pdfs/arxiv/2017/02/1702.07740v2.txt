@@ -1,0 +1,2517 @@
+APRIL 2017
+
+1
+
+Key Reconciliation with Low-Density Parity-Check
+Codes for Long-Distance Quantum Cryptography
+Mario Milicevic∗, Chen Feng†, Lei M. Zhang∗, P. Glenn Gulak∗ ∗Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON, Canada
+†School of Engineering, University of British Columbia, Kelowna, BC, Canada Email: mario.milicevic@utoronto.ca chen.feng@ubc.ca leizhang@comm.utoronto.ca gulak@eecg.toronto.edu
+
+arXiv:1702.07740v2 [quant-ph] 17 Apr 2017
+
+Abstract—The speed at which two remote parties can exchange secret keys over a fixed-length fiber-optic cable in continuousvariable quantum key distribution (CV-QKD) is currently limited by the computational complexity of post-processing algorithms for key reconciliation. Multi-edge low-density paritycheck (LDPC) codes with low code rates and long block lengths were proposed for CV-QKD, in order to extend the maximum reconciliation distance between the two remote parties. Key reconciliation over multiple dimensions has been shown to further improve the error-correction performance of multi-edge LDPC codes in CV-QKD, thereby increasing both the secret key rate and distance. However, the computational complexity of LDPC decoding for long block lengths on the order of 106 bits remains a challenge. This work introduces a quasi-cyclic (QC) code construction for multi-edge LDPC codes that is highly suitable for hardware-accelerated decoding on a modern graphics processing unit (GPU). When combined with an 8-dimensional reconciliation scheme, the LDPC decoder achieves a raw decoding throughput of 1.72Mbit/s and an information throughput of 7.16Kbit/s using an NVIDIA GeForce GTX 1080 GPU at a maximum distance of 160km with a secret key rate of 4.10×10−7 bits/pulse for a rate 0.02 multi-edge code with block length of 106 bits when finite-size effects are considered. This work extends the previous maximum CV-QKD distance of 100km to 160km, while delivering between 1.07× and 8.03× higher decoded information throughput over the upper bound on the secret key rate for a lossy channel. For distances beyond 130km, the GPU decoder delivers an information throughput between 1868× and 18790× higher than the achievable secret key rates with a 1MHz light source. The GPU-based QC-LDPC decoder achieves a 1.29× improvement in throughput over the best existing GPU decoder implementation for a rate 1/10 multi-edge LDPC code with block length of 220 bits. These results show that LDPC decoding is no longer the computational bottleneck in long-distance CV-QKD, and that the secret key rate remains limited only by the physical parameters of the quantum channel and the latency of privacy amplification.
+Keywords—Quantum key distribution, QKD, continuous-variable QKD, reverse reconciliation, LDPC codes, LDPC decoding, multiedge LDPC codes, quasi-cyclic LDPC codes, GPU decoding.
+I. INTRODUCTION
+Quantum key distribution (QKD), also referred to as quantum cryptography, offers unconditional security between two remote parties that employ one-time pad encryption to encrypt and decrypt messages using a shared secret key, even in the presence of an eavesdropper with infinite computing power and mathematical genius [1]–[4]. Unlike classical cryptography, quantum cryptography allows the two remote parties, Alice and Bob, to detect the presence of an eavesdropper, Eve, while also providing future-proof security against brute force, key distillation attacks that may be enabled through quantum computing [5]. Today’s public key exchange schemes
+
+such as Diffie-Hellman and encryption algorithms like RSA respectively rely on the computational hardness of solving the discrete log problem and factoring large primes [6], [7]. Both of these problems, however, can be solved in polynomial time by applying Shor’s algorithm on a quantum computer [8]–[10].
+While quantum computing remains speculative, QKD systems have already been realized in several commercial and research settings worldwide [11]–[14]. Figure 1 presents two different protocols for generating a symmetric key over a quantum channel: (1) discrete-variable QKD (DV-QKD) where Alice encodes her information in the polarization of singlephoton states that she sends to Bob, or (2) continuous-variable QKD (CV-QKD) where Alice encodes her information in the amplitude and phase quadratures of coherent states [4]. In DV-QKD, Bob uses a single-photon detector to measure each received quantum state, while in CV-QKD, Bob uses homodyne or heterodyne detection techniques to measure the quadratures of light [4]. While DV-QKD has been experimentally demonstrated up to a distance of 404km [15], the cryogenic temperatures required for single-photon detection at such extreme distances present a challenge for widespread implementation [4]. CV-QKD systems on the other hand can be implemented using standard, cost-effective detectors that are routinely deployed in classical telecommunications equipment that operates at room temperature [4]. The majority of QKD research focuses on applications over optical fiber, since quantum signals for both CV- and DV-QKD can be multiplexed over classical telecommunications traffic in existing fiber-optical networks [16]–[18]. Nevertheless, there has been recent progress in chip-based QKD, as well as free-space and Earth-to-satellite QKD [19]–[21]. It is noted here that quantum cryptography, i.e. QKD, differs from post-quantum cryptography, which is an evolving area of research that studies public-key encryption algorithms believed to be secure against an attack by a quantum computer [22]. The discussion of postquantum cryptography is beyond the scope of this work.
+The motivation of this work is to address the two key challenges that remain in the practical implementation of CV-QKD over optical fiber: (1) to extend the distance of secure communication beyond 100km with protection against collective Gaussian attacks, and (2) to increase the computational throughput of the key-reconciliation (error correction) algorithm in the post-processing step such that the maximum achievable secret key rate remains limited only by the fundamental physical parameters of the optical equipment at long distances [23], [25], [28]. Jouguet and Kunz-Jacques showed that Mbit/s error-correction decoding of multi-edge low-density parity-check (LDPC) codes is achievable for distances up to 80km [25], while Huang et al. recently showed that the distance could be extended to 100km by controlling
+
+2
+ALICE
+
+Discrete-Variable QKD
+Light Pulse Generator
+
+Untrusted Optical Fiber
+
+Continuous-Variable QKD
+
+Coherent State
+Modulator
+
+Untrusted Optical Fiber
+
+Single Photon Counter
+Homodyne Detector
+
+APRIL 2017
+BOB
+
+Untrusted Public Channel
+Fig. 1: Information transmission over untrusted quantum channel and authenticated public channel between Alice and Bob for CV- and DV-QKD.
+
+LDPC Decoder Throughput (Mb/s)
+
+102
+
+(n=10 4, R=0.02, β=0.93, SNR=N/A)
+
+(n=1944, R=0.67,QBER=N/A)
+(n=10 5, R=0.55, QBER=8%) (n=10 4, R=0.02, β=0.969, SNR=0.9)
+
+CV-QKD DV-QKD
+
+101
+
+(n=220, R=0.1, β=0.931, SNR=0.161)
+
+(n=10 6, R=0.55, QBER=7.5%)
+
+This Work (n=10 6, R=0.02, β=0.99, SNR=0.0284)
+
+100 0
+
+20 40 60 80 100 120 140 160 180 Distance (km)
+
+Fig. 2: Throughput vs. distance of GPU-based LDPC decoders for CV- and DV-QKD. The reported throughput is the raw GPU throughput without code- or error-rate scaling. For CV-QKD implementations [23]–[25], the annotated values in parentheses indicate the LDPC code code block length n, the code rate R, the reconciliation efficiency β, and SNR of the quantum channel. For DV-QKD implementations, the annotated values indicate the block length n, code rate R, and QBER [12], [26], [27].
+
+excess system noise [29]. This work explores high-speed LDPC decoding for CV-QKD beyond 100km.
+A particular challenge in designing LDPC codes for such long distances is the low signal-to-noise ratio (SNR) of the optical quantum channel, which typically operates below −15dB. At such low SNR, high-efficiency key reconciliation can be achieved only using low-rate codes with large block lengths on the order of 106 bits [30], [31], where approximately 98% of the bits are redundant parity bits that must be discarded after error-correction decoding. Such codes require hundreds of LDPC decoding iterations to achieve the asymptotic, nearShannon limit error-correction performance in order to maxi-
+
+mize the secret key rate [25], [32]. This is in contrast to LDPC codes employed in modern communication standards, such as IEEE 802.11ac (Wi-Fi) and ETSI DVB-S2X, where the target SNR is above 0dB and block lengths range from 648 bits to 64,800 bits [33], [34]. In these standards, the LDPC decoder typically operates at 10 iterations to deliver Gbit/s decoding throughput [35]–[37]. Long block lengths allow Alice and Bob to generate longer secret keys, which can be used to provide unconditional security by employing the one-time pad encryption scheme. Shorter codes with block lengths of 105 bits, for instance, would not be suitable for low-SNR channels beyond 100km due to their less robust error-correction performance [32], [38]. In addition to long block-length codes, key reconciliation over multiple dimensions has also been shown to improve error-correction performance of multi-edge codes at low SNR [28], thereby increasing both the secret key rate and distance. However, the computational complexity and latency of LDPC decoding for long block lengths on the order of 106 bits remains a challenge. Figure 2 presents a comparison of LDPC decoding throughput versus distance for several stateof-the-art CV- and DV-QKD implementations, illustrating that high-throughput reconciliation at long distances is achievable only with large block-length codes that approach the Shannon limit with more than 90% efficiency for CV-QKD or less than 10% quantum bit error rate (QBER) for DV-QKD.
+This work introduces a new, quasi-cyclic (QC) code construction for multi-edge LDPC codes with block lengths on the order of 106 bits [39], [40]. Computational acceleration is achieved through an optimized LDPC decoder design implemented on a state-of-the-art graphics processing unit (GPU). When combined with an 8-dimensional reconciliation scheme, the LDPC decoder achieves a raw decoding throughput of 1.72Mbit/s and an information throughput of 7.16Kbit/s using an NVIDIA GeForce GTX 1080 GPU at a maximum distance of 160km with a secret key rate of 4.10×10−7 bits/pulse when finite-size effects are considered. The performance of this work in comparison to previous GPU-based decoders for QKD is plotted in Fig. 2, and discussed in greater detail in Section IV. This work extends the previous maximum CV-QKD distance of 100km to 160km, while delivering between 1.07× and 8.03× higher decoded information throughput over the upper bound
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+3
+
+on the secret key rate for a lossy channel [41]. These results show that LDPC decoding is no longer the computational bottleneck in long-distance CV-QKD, and that the secret key rate remains limited only by the physical parameters of the quantum channel and the latency of privacy amplification.
+CV-QKD provides a new use case for hardware-based LDPC codes. Over the past 15 years, research in LDPC decoder design has primarily focused on application-specific integrated circuit (ASIC) implementations for wireless, wireline, optical, and non-volatile memory systems, due to the widespread adoption of LDPC codes in modern communication standards [35]– [37]. Although highly-customizable ASICs provide excellent energy efficiency, the silicon implementation of an LDPC decoder for long-distance CV-QKD with an LDPC code block length of 106 bits would require significant silicon die area, which may be prohibitively expensive to fabricate in a modern CMOS technology node [42].
+The high availability of on-chip memory and floating-point computational precision make GPUs a highly suitable platform for LDPC decoder implementation in long-distance CV-QKD systems [43], [44], as opposed to ASICs or field-programmable gate arrays (FPGAs), which suffer from limited memory, fixedpoint computational precision, high-complexity routing, and silicon area constraints [45], [46]. Since Alice and Bob are stationary and their communication occurs over a fixed-length fiber-optic cable, the traditional optimization parameters of energy efficiency and silicon chip area do not necessarily apply since the LDPC decoder does not need to assume an integrated circuit form factor, as in the case of a mobile hand-held device, where power consumption is a primary concern. Furthermore, GPUs seamlessly integrate into a post-processing computer system, and provide increasing computational performance at low cost with each successive architecture generation [47]. The information throughput results presented in this work were measured using a single GPU, however, further computational speedup can be achieved with multiple GPUs.
+The remainder of this paper focuses on the design and implementation of high-efficiency LDPC codes for reverse reconciliation in CV-QKD systems that operate in the low-SNR regime at long distances. Section II presents the background on CV-QKD. Section III introduces the application of LDPC codes for information reconciliation in CV-QKD. Section IV presents the GPU-based LDPC decoder design and achievable secret key rate results with multi-dimensional reconciliation, as well as a comparison of this work to a recently published CV-QKD work that addresses the computational bottleneck of post-processing algorithms.
+II. BACKGROUND
+In a QKD system, two remote parties, Alice and Bob, communicate over a private optical quantum channel, as well as an authenticated classical public channel to generate a shared secret key in the presence of an adversary or eavesdropper, Eve, who may have access to both channels [2]. The security of QKD stems from the no-cloning theorem of quantum mechanics, which states that any observation or measurement of the quantum channel by Eve would disturb the coherent states transmitted from Alice to Bob [38], [48]. Since Alice and Bob can calibrate their expected channel noise threshold for a fixed fiber-optic transmission distance prior to being deployed in the field, any quantum measurement by Eve would result in a channel noise increase, at which point, the reconciliation
+
+Alice
+
+Step 1: Quantum Transmission
+
+Generate Coherent States
+
+Pulsed
+
+Light
+
+xA
+
+Source
+
+pA
+
+Modulation
+
+Variance VA Repetition Rate frep A
+
+Optical Fiber Losses (T, ε) A Private Optical A´
+Quantum Channel (Noisy)
+Eve
+Step 2: Sifting
+
+Bob
+
+Randomly
+
+Select and
+
+xB
+
+Measure
+xB or pB
+
+pB
+
+Quadrature
+
+Homodyne
+
+Detector Losses
+
+B
+
+(η, Vel)
+
+Discard Unused Quadratures
+X0
+Selected Quadratures
+
+Authenticated Classical
+Public Channel (Noiseless)
+Eve
+
+X
+Compute Received Message
+R
+LDPC Decoding
+
+Step 3: Reconciliation
+
+M Authenticated
+
+M
+
+Classical
+
+Public Channel
+
+(Noiseless)
+
+Eve
+
+Step 4:
+
+ŝ
+
+Privacy Amplification
+
+Disclose Selected Quadratures
+Y0
+Y
+Compute Public Message
+C
+LDPC Encoding
+S
+Generate Random String
+S
+
+Universal Hashing
+
+Universal Hashing
+
+Secret Key
+
+Eve
+
+Secret Key
+
++ One-Time Pad Encryption
+Plaintext Input Message
+
+Authenticated Classical
+Public Channel (Noiseless)
+
++ One-Time Pad Decyption
+Plaintext Output Message
+
+Fig. 3: CV-QKD model for secret key distillation with reverse reconciliation between Alice and Bob over a private quantum channel and public classical channel.
+
+error rate would increase, and Alice and Bob could choose to terminate their communication if they suspect a man-inthe-middle attack [28]. A typical prepare-and-measure CVQKD system is based on the Grosshans-Grangier 2002 (GG02) protocol [48], which defines the following four steps presented in Fig. 3: quantum transmission, sifting, reconciliation, and privacy amplification. Fully secure QKD networks can be built by designating intermediate trusted nodes [3], [4], or through measurement-device-independent QKD (MDI-QKD) using untrusted relay nodes in both CV- and DV-QKD [15], [49], [50]. MDI-QKD is beyond the scope of this work, however, it does provide a viable solution to the quantum hacking problem by removing all detector side channels [49]. This section first provides a fundamental overview of QKD, and then presents the mathematical framework for key reconciliation using LDPC codes over multiple dimensions, with the consideration of finite-size effects on the secret key rate.
+A. Quantum Transmission and Measurement
+To construct a secret key using the prepare-and-measure CVQKD protocol, Alice first transmits Nquantum coherent states to Bob over an optical fiber. Each coherent state is comprised of a pair of amplitude and phase quadrature operators, x and p, of
+
+4
+
+√ the form |x + jp , j = −1. Using a quantum random number
+
+generator, Alice prepares each coherent state by randomly selecting her xA and pA quadrature values according to a zero-
+
+mean Gaussian distribution with adjustable modulation variance σA2 = VAN0, where N0 represents the shot noise variance defined by the Heisenberg inequality ∆x∆p ≥ N0 [38], [48].
+Alice transmits her train of Nquantum coherent states to Bob by
+modulating a light source with a pulse repetition rate frep. She also records her selections of xA and pA for the next sifting
+
+step, by constructing a vector, A, of length 2Nquantum, from
+
+her Nquantum coherent state quadrature operator pairs (xA, pA),
+
+such that A2i−1 = xAi and A2i = pAi for i = 1, 2, . . . , Nquantum.
+
+As such, A
+
+=
+
+(xA1
+
+,
+
+pA1
+
+,
+
+x2A
+
+,
+
+p2A
+
+,
+
+.
+
+.
+
+.
+
+,
+
+xA
+Nquantum
+
+,
+
+pA
+Nquantum
+
+)
+
+and
+
+A ∼ N (0, σA2 ). Bob randomly selects and measures either
+
+the x or p quadrature for each incoming pulse using an
+
+unbiased homodyne detector. Bob constructs his own vector,
+
+B, of length Nquantum, comprised of the observed modulated quadrature measurements, where Bi ∈ {xiB, piB} with equal
+probability. Despite the losses in the optical fiber, and the
+
+added noise from the Bob and Eve’s detection equipment, the xB and pB quadrature measurements can still be used
+
+to distill a secret key following the sifting and reconciliation
+
+(error correction) steps.
+
+Without considering the presence of the eavesdropper (Eve),
+
+the quantum transmission is subject to path loss, excess noise
+
+in the single-mode fiber between Alice and Bob, the ineffi-
+
+ciency of Bob’s homodyne detection, as well as added elec-
+
+tronic (thermal) noise [28]. The optical experimental setup is
+
+beyond the scope of this work, thus experimental values from
+
+previously published works have been used to characterize the
+
+quantum channel [38]. The excess channel noise expressed in
+
+shot noise units is assumed to be = 0.005, Bob’s added
+
+electronic noise in shot noise units is chosen as Vel = 0.041, Bob’s homodyne detector efficiency is set to η = 0.606,
+
+and the single-mode fiber transmission loss is assumed to be
+
+0.2dB/km, such that the transmittance of the quantum channel is given by T = 10−αd/10, where d is the transmission
+
+distance in kilometers and α = 0.2dB/km. The total noise
+
+between
+
+Alice
+
+and
+
+Bob
+
+is
+
+given
+
+by
+
+χtotal
+
+=
+
+χline
+
++
+
+χhom T
+
+,
+
+where
+
+χline
+
+=
+
+(
+
+1 T
+
+− 1) +
+
+is the total channel added noise referred to
+
+the
+
+channel
+
+input,
+
+and
+
+χhom
+
+=
+
+1+Vel η
+
+−1
+
+is
+
+the
+
+noise
+
+introduced
+
+by the homodyne detector. The variance of Bob’s measurement
+
+is given by σB2 = VBN0 = ηT (V + χtotal)N0. Although the
+
+adversary (Eve) may have access to the quantum channel,
+
+her presence is not considered in the channel characterization.
+
+Instead, the information leaked to Eve will be considered in
+
+the secret key rate calculation [48].
+
+In the remaining post-processing steps of the QKD protocol,
+
+Alice and Bob communicate over an authenticated classical
+
+public channel, which is assumed to be noiseless and error-
+
+free. Eve may have access to this channel, however, her
+
+eavesdropping does not introduce additional errors [48].
+
+B. Sifting
+Following the quantum transmission step, Alice’s original transmission vector A contains twice as many elements as Bob’s measurement vector B. In the sifting step, Bob informs Alice which of the xB or pB quadratures he randomly selected for each of his Nquantum element measurements, such that Alice may respectively discard her Nquantum unused xA and pA quadrature values [48]. Af-
+
+APRIL 2017
+
+ter sifting, Alice and Bob share correlated random se-
+
+quences of length Nquantum, herein defined as X0 =
+(X01 , X02 , . . . , X0Nquantum ) and Y0 = (Y01 , Y02 , . . . , Y0Nquantum ), respectively, where (X0i , Y0i ), i = 1, 2, . . . , Nquantum, are
+independent and identically distributed realizations of some
+
+jointly Gaussian random variables (X0, Y0). For example,
+
+Alice and Bob may have the following random sequences
+
+after
+
+sifting:
+
+X0
+
+=
+
+(xA1
+
+,
+
+pA2
+
+,
+
+pA3
+
+,
+
+x4A
+
+,
+
+.
+
+.
+
+.
+
+,
+
+pA
+Nquantum
+
+)
+
+and
+
+Y0
+
+=
+
+(xB1
+
+,
+
+pB2
+
+,
+
+p3B
+
+,
+
+xB4
+
+,
+
+.
+
+.
+
+.
+
+,
+
+pB
+Nquantum
+
+).
+
+In
+
+the
+
+following
+
+reconciliation
+
+and privacy amplification steps, Alice and Bob apply error
+
+correction and hashing techniques to build a secret key using
+
+their sifted sequences of correlated quadrature measurements.
+
+C. Reconciliation
+During information reconciliation, Alice and Bob perform the first step in building a unique secret key by: (1) encoding a randomly-generated message using the sifted quadrature measurements, (2) transmitting the encoded message over an authenticated classical channel, and then (3) applying an errorcorrection scheme to decode the original message [38], [51]. In the direct reconciliation scheme, Alice generates and transmits a random message to Bob, who then performs the errorcorrection decoding based on his measured quadratures. However, previous works have shown that the transmission distance with direct reconciliation is limited to about 15km [52]–[54], and is thus not suitable for long-distance CV-QKD targeting transmission distances beyond 100km [32].
+The long distance problem drives the need for an alternate, robust scheme that is capable of operating under the lowSNR conditions of the optical channel, even in the presence of excess noise introduced by an eavesdropper. In the reverse reconciliation scheme, the direction of classical communication between Alice and Bob is reversed. Reverse reconciliation achieves a higher secret key rate at longer distances in comparison to direct reconciliation, however, powerful error-correction codes are still required to combat the high channel noise at long distances without revealing unnecessary information to Eve during the reconciliation process [28], [32], [51].
+Two-way interactive error-correction protocols such as Cascade or Winnow are not practical for long-distance QKD due to the large latency and communication overhead required to theoretically minimize the information leakage to Eve [55]– [58]. Blind reconciliation using short block-length codes on the order of 103 bits with low interactivity was proposed to reduce decoding latency [26], however, the short block length is not suitable for error-correction at low SNR. Instead, one-way forward error-correction implemented using long block-length codes with iterative soft-decision decoding is required to achieve efficient error-correction at low SNR [30], [51]. Jouguet et al. recently showed that multiedge LDPC codes combined with a multi-dimensional reverse reconciliation scheme can achieve near-Shannon limit errorcorrection performance at long distances [28], [32]. However, the computational complexity of LDPC decoding remains a limitation to the maximum achievable secret key rate in a practical QKD implementation [25]. Sections III and IV of this work present hardware-oriented optimization techniques to alleviate the time-intensive bottleneck of LDPC decoding for long distance CV-QKD systems, while the remainder of this section outlines the mathematical framework for long-distance reverse reconciliation.
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+5
+
+1) Reconciliation at Long Distances: Strong errorcorrection schemes do not exist for systems with both a Gaussian input and Gaussian channel, as in the case of CV-QKD. However, at low SNR, the maximum theoretical secret key rate is less than 1 bit/pulse per channel use, and the Shannon limit of the additive white Gaussian noise (AWGN) channel approaches the limit of a binary-input AWGN channel (BIAWGNC) [51]. This makes binary codes highly suitable for error correction in the low-SNR regime [59], [60], as opposed to non-binary codes, which outperform binary codes on channels with more than 1 bit/symbol per channel use [61]. Since binary codewords can be encoded in the signs of Alice and Bob’s correlated sequences, X0 and Y0, the reconciliation system can therefore be modelled as a BIAWGNC [32].
+
+2) Reverse Reconciliation Algorithm for BIAWGNC: A vir-
+
+tual model of the BIAWGNC can be induced from the physical
+
+parameters that characterize the quantum transmission [32],
+
+where the optical fiber and homodyne detector losses are
+
+captured in the form of a signal-to-noise ratio with respect
+
+to the optical input signal, whose variance is normalized
+
+based on Alice’s modulation variance VA. Assuming that the
+
+BIAWGNC has a zero N (0, σZ2 ), the SNR can
+
+mean and noise be expressed as
+
+sva=ria1n/cσeZ2 o. fInσoZ2r,dZer
+
+∼ to
+
+perform key reconciliation, Alice and Bob now construct two
+
+new correlated Gaussian sequences from their sifted correlated
+
+sequences X0 and Y0 of length Nquantum. Alice and Bob first select a subset of n elements from X0 and Y0, where n < Nquantum. Here, n is chosen to be equivalent to the LDPC code block length. Alice and Bob then normalize their subset
+
+of n elements by the modulation variance VA, such that Alice
+and Bob now share correlated Gaussian sequences X and Y, each of length n, where X ∼ N (0, 1), Y ∼ N (0, 1 + σZ2 ), and the property Y = X + Z holds [32].
+
+Bob uses a quantum random number generator to generate a uniformly-distributed random binary sequence S of length k, where Si ∈ {0, 1}. He then performs a computationally inexpensive LDPC encoding operation to generate an LDPC codeword C of length n, where Ci ∈ {0, 1}, by appending (n − k) redundant parity bits to S based on a binary LDPC parity-check matrix H that is also known to Alice. Eve may also have access to H, however, the QKD security proof
+still holds since Eve is assumed to have infinite mathematical genius. Bob prepares his classical message to Alice, M, by modulating the signs of his correlated Gaussian sequence Y with the LDPC codeword C, such that Mi = (−1)Ci Yi for i = 1, 2, . . . , n. The symmetry in the uniform distribution of Bob’s random binary sequence S ensures that the transmission of M over the authenticated classical public channel does
+not reveal any additional information about the secret key to
+Eve [38].
+
+Assuming error-free transmission over the classical channel, Alice attempts to recover Bob’s codeword using her correlated Gaussian sequence X based on the following division operation:
+
+Ri
+
+=
+
+Mi Xi
+
+=
+
+(−1)Ci Yi Xi
+
+=
+
+(−1)Ci (Xi Xi
+
++ Zi)
+
+(1)
+
+= (−1)Ci + (−1)Ci Zi ,
+
+Xi
+
+for i = 1, 2, . . . , n. Here, Alice observes a virtual channel with
+
+binary
+
+input
+
+(±1)
+
+and
+
+additive
+
+noise
+
+(−1)Ci
+
+Zi Xi
+
+.
+
+In
+
+this
+
+case,
+
+the division operation in the noise term represents a fading channel, however, since Alice knows the value of each Xi, the norm of X is revealed and the overall channel noise remains Gaussian with zero mean and variance σN2 i = σZ2 /||Xi|| for each i = 1, 2, . . . , n [32]. Alice then attempts to reconstruct S
+by applying the computationally intensive Sum-Product belief
+propagation algorithm for LDPC decoding, to remove the channel noise from her received vector R. The LDPC decoding algorithm requires the channel noise variance σN2 i to be known for each i = 1, 2, . . . , n. By discarding the (n − k) parity bits from the decoded codeword, Alice can build an estimate Sˆ of Bob’s original binary sequence S for further post-processing
+in the next privacy amplification step to asymptotically reduce
+Eve’s knowledge about the secret key [48]. LDPC decoding is successful if Sˆ = S, whereas a frame error is said to have occurred when Sˆ = S.
+3) Multi-Dimensional Reconciliation: Up until this point,
+the discussion has assumed a 1-dimensional reconciliation scheme in R, with ±1 binary inputs on the virtual BIAWGNC. Leverrier et al. showed that the quantum transmission can be
+extended to longer distances with proven security by employ-
+ing multi-dimensional reconciliation schemes constructed from spherical rotations in R2, R4, and R8, where the multiplication and division operators are defined [30], [51]. These spaces are
+commonly referred to as the set of complex numbers C, the quaternions H, and the octonions O, respectively. As shown in Eq. 1, the division and multiplication operations must be
+defined for the reverse reconciliation procedure. By Hurwitz’s
+theorem of composition algebras, normed division is only
+defined for four finite-dimensional algebras: the real numbers R (Rd=1), the complex numbers C (Rd=2), the quaternions H (Rd=4), and the octonions O (Rd=8) [62]. Hence, the remainder of this discussion considers only the d = 1, 2, 4, 8
+dimensions.
+The multi-dimensional approach is a further reformulation
+of the reduction of the physical Gaussian channel to a virtual BIAWGNC at low SNR. For d-dimensional reconciliation, d ∈ {1, 2, 4, 8}, each consecutive group of d quantum coherent-
+state transmissions from Alice to Bob can be mapped to
+the same virtual BIAWGNC. As a result, the channel noise variance among all d virtual channels is uniform. For the d = 1 case, each Ri defined in Eq. 1 has a unique channel noise variance defined by σN2 i = σZ2 /||Xi|| for i = 1, 2, . . . , n. For the d = 2 case, the reconciliation is performed over successive (R2i−1, R2i) pairs: (R1, R2), (R3, R4), . . . , (Rn−1, Rn), which are constructed from the quadrature transmission of successive (M2i−1, M2i) pairs for i = 1, 2, . . . , n/2 in Rd=2. Similar to d = 1, each ith received value is still comprised of a ±1 binary input and a noise term, such that R2i−1 = (−1)C2i−1 + N2i−1 and R2i = (−1)C2i + N2i for i = 1, 2, . . . , n/2. While the real and imaginary noise components, N2i−1 and N2i, are not equal, the variance of the channel noise is uniform over both dimensions, such that σN2 (2i−1) = σN2 (2i) for each (R2i−1, R2i) pair. This can be extended to the d = 4 and d = 8 cases, where each d-tuple of successive Ri values has a unique channel noise for each dimensional component, but the channel noise variance remains equal over all d dimensions. For example, for d = 4, each received 4-tuple, (R4i−3, R4i−2, R4i−1, R4i) for i = 1, 2, . . . , n/4, has a unique noise term for each of its
+four components, but the channel noise variance over all four
+dimensions remains uniform.
+
+6
+
+APRIL 2017
+
+The following derivation extends Alice’s message reconstruction calculation presented in Eq. 1 to d-dimensional vector spaces, d ∈ {1, 2, 4, 8}, where the multiplication and division operators are defined. The derivation of the channel noise for d = 2, 4, 8 is much more rigorous than for d = 1, however, the procedure can be simplified by applying associative and distributive algebraic properties that hold true for the complex, quaternion, and octonion vector spaces. It follows then that
+
+R = MX−1
+
+= (UY)X−1
+
+= (U(X + Z))X−1
+
+= (UX + UZ)X−1 by right-linearity a(b + c) = ab + ac
+
+= UXX−1 + UZX−1 by left-linearity (b + c)a = ba + ca
+
+= U + UZX−1 by right-cancellation abb−1 = a
+
+X∗
+
+= U + UZ ||X||2 .
+
+(2)
+
+Here, R, M, X, Y, and Z are d-dimensional vectors, and U is the d-dimensional vector comprised of (−1)Ci components. For example, for d = 2, U = [(−1)C2i , (−1)C2i−1 ], while for d = 4, U = [(−1)C4i−3 , (−1)C4i−2 , (−1)C4i−1 , (−1)C4i ]. The
+
+multi-dimensional noise for a virtual BIAWGNC is given by the term N = (UZX∗)/||X||2, such that R = U + N. The
+
+Cayley-Dickson construction can then be applied to complete
+
+the derivation of the multi-dimensional noise N for d = 2, 4, 8.
+
+Since the noise is uniformly distributed in each dimension,
+
+C can be assumed to be the all-zero codeword, i.e. Ci =
+
+0 for all i = 1, 2, . . . , n, to further simplify the derivation.
+
+For d = 2, the channel noise of both the real and imaginary
+
+components can be expressed as N2i−1 = aiZ2i−1 + biZ2i
+
+and N2i = aiZ2i − biZ2i−1, where ai
+
+=
+
+X2i−1 + X2i X22i−1 + X22i
+
+and
+
+bi
+
+=
+
+X2i − X2i−1 X22i−1 + X22i
+
+for
+
+i
+
+=
+
+1, 2, . . . , n/2. It follows
+
+then that the channel noise variance for d = 2 is given by
+
+σN2 (2i−1) = σN2 (2i) = (a2i + bi2)σZ2 . The noise derivation for d = 4 and d = 8 is much longer and not included here.
+
+4) Reconciliation Efficiency: The reverse reconciliation al-
+
+gorithm for the BIAWGNC can be reduced to an asymmetric
+
+Slepian-Wolf source-coding problem with input M and side
+
+information X, where Alice and Bob observe correlated Gaus-
+
+sian sequences X and Y, respectively [57], [63]. Since Alice
+
+must discard (n − k) parity bits from the linear block code
+
+after LDPC decoding, it follows then that the efficiency of the
+
+reverse
+
+reconciliation
+
+algorithm
+
+is
+
+given
+
+by
+
+β
+
+=
+
+, Rcode
+I(X;Y )
+
+where
+
+I(X; Y ) is the mutual information between X and Y, and
+
+Rcode is the LDPC code rate defined as Rcode = k/n from the n-length codeword C and k-length random information string
+
+S [32], [63]. The mutual information I(X; Y ) corresponds
+
+to the Shannon capacity of the quantum channel, hence the
+
+reconciliation efficiency can be expressed more simply as:
+
+β = Rcode = Rcode ,
+
+(3)
+
+C(s) Rmax
+
+where
+
+C (s)
+
+=
+
+1 2
+
+log2(1
+
++
+
+s)
+
+is
+
+the
+
+Shannon
+
+capacity
+
+and
+
+s
+
+is the SNR of the BIAWGNC. The Shannon capacity defines
+
+the maximum achievable code rate Rmax for a given SNR, and thus, the β-efficiency characterizes how close the reconciliation
+
+algorithm operates to this fundamental limit [60].
+
+The reconciliation efficiency plays a crucial role in the performance of CV-QKD. The β-efficiency at a particular SNR operating point determines the code rate, and ultimately, the number of parity bits discarded in each message. Assuming that the LDPC coding scheme has been optimized for a particular SNR operating point such that the code rate Rcode is fixed, the reconciliation efficiency then depends solely on the SNR of the quantum channel, which is a function of Alice’s coherentstate modulation variance and the physical transmission losses in the optical fiber. Hence, for a fixed optical transmission distance between Alice and Bob, the reconciliation efficiency can be optimized by tuning Alice’s modulation variance VA, and designing an optimal error-correction scheme for a target SNR. Sections III and IV explore how changes in the βefficiency affect the reconciliation distance and maximum achievable secret key rate.
+D. Privacy Amplification
+Since Eve may have collected sufficient information during her observations of the quantum and classical channels, Alice and Bob must asymptotically reduce Eve’s knowledge of the key by independently applying a shared universal hashing function on a concatenated block of their independent binary strings Sˆ and S, in order to generate a unique symmetric key [38], [48]. Alice first discards her erroneously decoded Sˆ messages, and informs Bob as to which messages she discarded. Bob then discards his original S messages that correspond to the Sˆ messages that were discarded by Alice. Alice concatenates all of her correctly decoded Sˆ messages to construct a long secret key block of length Nprivacy = mk bits, where k is the length of the LDPC-decoded message Sˆ, and m is some large non-zero integer. Bob also concatenates his corresponding S messages to construct a long secret key, also of length Nprivacy bits. Alice and Bob then independently perform universal hashing on their independent secret key blocks to reduce Eve’s knowledge of the key. Alice and Bob can use the resulting symmetric key to encrypt and decrypt messages with perfect secrecy using the one-time pad technique [3].
+The speed of privacy amplification is an active area of research, with published results showing maximum speeds of 100Mb/s for a block size of Nprivacy = 108 bits [64]. The computational complexity of universal hashing can be reduced from O(n2) to O(n log2 n) by applying the fast Fourier transform (FFT) or number theoretical transform (NTT) on a Toeplitz matrix [65]. Estimation of security parameters is also performed during privacy amplification using (Nquantum − Nprivacy) bits, however, a complete discussion of parameter estimation and privacy amplification is beyond the scope of this work.
+E. Maximizing Secret Key Rate with Collective Attacks
+The primary metric that defines the performance of a QKD system is the maximum rate at which Alice and Bob can securely generate and reconcile keys over a fixed-distance optical fiber in the presence of an eavesdropper that has access to both the quantum and classical channels. The maximum secret key rate must be proven secure against a collective Gaussian attack, the most optimal man-in-the-middle attack, where Eve first prepares an ancilla state to interact with each one of Alice’s coherent states during the quantum transmission,
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+7
+
+and then listens to the public communication between Alice and Bob during the reconciliation step in order to perform the most optimal measurement on her collected ancillae to reconstruct the classical messages transmitted by Bob [38]. Assuming perfect error-correction during the reconciliation step, the maximum theoretical secret key rate for a CV-QKD system with one-way reverse reconciliation can be defined as
+
+Kopt = βIAB − χBE (bits/pulse),
+
+(4)
+
+where IAB is the mutual information between Alice and Bob, β is the previously defined reconciliation efficiency, and χBE is the Holevo bound on the information leaked to Eve. Here, IAB is equivalent to the Shannon channel capacity, and is defined as
+
+1
+
+1
+
+IAB = 2 log2(1 + s) = 2 log2
+
+V + χtotal 1 + χtotal
+
+,
+
+(5)
+
+where V = VA + 1, VA is Alice’s adjustable modulation variance, and χtotal is the total noise between Alice and Bob. The Holevo bound is defined as
+
+χBE = G
+
+λ1 − 1 2
+
++ G λ2 − 1 2
+
+− G λ3 − 1 2
+
+− G λ4 − 1 , (6)
+2
+
+where G(x) = (x + 1) log2(x + 1) − x log2√x, and the
+
+Eigenvalues
+
+λ1,2,3,4√are
+
+given
+
+by
+
+λ12,2
+
+=
+
+1 2
+
+(A
+
+±
+
+A2 − 4B)
+
+and
+
+λ23,4
+
+=
+
+1 2
+
+(C
+
+±
+
+C2 − 4D), where
+
+A = V 2(1 − 2T ) + 2T + T 2(V + χline)2
+
+B
+
+=
+
+T
+
+2(V √
+
+χline
+
++
+
+1)2
+
+V C=
+
+B + T (V + χline) + Aχhom
+
+√T (V + χtotal)
+
+√ V+ D= B
+
+Bχhom .
+
+T (V + χtotal)
+
+Here, Kopt represents the asymptotic limit on the secret key rate based on ideal theoretical security models, and does not consider the imperfections of a practical CV-QKD system, which might enable additional side-channel attacks [66]. Such imperfections include the finite-size effects [67]–[69], excess electronic and phase noise from uncalibrated optical equipment, as well as discretized Gaussian modulation with finite bounds on the distribution and randomness [66]. Leverrier proved that CV-QKD with coherent states provides composable security against collective attacks [70], however, extending the information-theoretic security proofs from collective attacks to general attacks in the finite-size regime of CV-QKD is currently an active area of research [69], [71]. At the time of writing, the highest CV-QKD key rates can be achieved using coherent states and homodyne detection with security against collective attacks and some finite-size effects [28]. The motivation of this work is to show that the key reconciliation (error correction) algorithm can be accelerated such that the throughput of LDPC decoding is higher than the asymptotic secret key rate achievable using realistic quantum channel parameters and optical equipment available today. The finitesize effects on secret key rate are considered later in this section, while the other imperfections of a practical CV-QKD system are beyond the scope of this work.
+Optimizing Alice’s modulation variance for each quantum transmission distance ensures a maximum SNR on the BIAWGNC [32], and thus, a maximum achievable secret key
+
+Optimal V (Shot Noise Units)
+A
+
+20
+
+ǫ = 0.005 v = 0.041
+el
+
+β = 0.8 β = 0.83
+
+η = 0.606
+
+β = 0.86
+
+15
+
+α = 0.2
+
+β = 0.89
+
+β = 0.92
+
+β = 0.95
+
+β = 0.99
+
+β = 0.98
+
+10
+
+β = 0.99
+
+β = 0.98
+
+5
+
+β = 0.95
+
+β = 0.80
+0 0 20 40
+
+60 80 100 120 140 160 180 Distance (km)
+
+Fig. 4: Optimal VA vs. transmission distance for maximum theoretical secret key rate, from β = 0.8 to β = 0.99, based on the assumed physical operating parameters of the quantum channel.
+
+Maximum Secret Key Rate (bits/pulse)
+
+101
+
+ǫ = 0.005
+
+v = 0.041
+
+100
+
+el
+η = 0.606
+
+α = 0.2
+
+10-1
+
+10-2 10-3 10-4
+
+β = 0.8 β = 0.83 β = 0.86 β = 0.89 β = 0.92 β = 0.95 β = 0.98
+
+Fundamental Max CV-QKD Key
+
+Limit Rate
+
+of Lossy (FER=0)
+
+Channel β = 0.99
+
+β = 0.99
+
+β = 0.80
+
+0 20 40 60 80 100 120 140 160 180 Distance (km)
+
+Fig. 5: Maximum theoretical secret key rates vs. transmission distance. The maximum CV-QKD key rate is defined by Kopt from β = 0.8 to β = 0.99 based on the optimal VA. The fundamental limit for a lossy channel is defined by Klim = − log2(1 − T ).
+
+rate Kopt for a particular β-efficiency. Figure 4 presents the optimal modulation variance VA as a function of β for quantum transmission distances up to 180km, assuming perfect errorcorrection in the reconciliation step. Figure 5 shows the corresponding maximum theoretical secret key rate Kopt for CV-QKD based on the computed optimal VA at each distance.
+Pirandola et al. recently showed that there exists an upper bound on the secret key rate for a lossy channel [41]. This fundamental limit is determined by the transmittance T of the fiber-optic channel, and is given by
+
+Klim = − log2(1 − T ) (bits/pulse).
+
+(7)
+
+The transmittance was previously defined as T = 10−αd/10, where the distance d is expressed in kilometers and the stan-
+
+8
+
+APRIL 2017
+
+dard loss of a fiber optic cable is assumed to be α = 0.2dB/km. The upper bound is plotted in Fig. 5.
+The BIAWGNC model for long-distance CV-QKD under investigation in this work has also been proven secure against collective attacks, thus the expression for the asymptotic secret key rate Kopt still holds [32], [51]. At long distances, IAB and χBE are nearly equal, thus in order to maximize the secret key rate, it would appear that the reconciliation efficiency β must also be maximized. However, this is not necessarily true since Kopt only provides an expression for the maximum achievable secret key rate and does not consider the speed of reconciliation, nor the uncorrectable errors. The frame error rate (FER) of the reconciliation algorithm must also be considered.
+
+F. Frame Error Rate for Reverse Reconciliation
+In reverse reconciliation, Alice attempts to construct a decoded estimate Sˆ of Bob’s original message S in order to perform privacy amplification and build a secret key. The tree diagram in Fig. 6 highlights four possible decoding scenarios for generating Sˆ from Alice’s decoded codeword Cˆ .
+
+Decoded Codeword Cˆ
+
+Cˆ H = 0
+Parity Check Pass Cˆ Valid
+
+Cˆ H = 0
+Parity Check Fail Cˆ Error
+
+CRC Pass
+
+CRC Fail
+
+Skip CRC
+
+Sˆ = S No Error
+
+Sˆ = S Undetected
+Error
+
+Sˆ = S Detected
+Error
+
+Sˆ = S Detected
+Error
+
+Fig. 6: Possible decoding scenarios and error detection techniques.
+
+After LDPC decoding, Alice performs a parity check Cˆ H to validate that her decoded codeword Cˆ is valid. When the parity check fails, i.e. Cˆ H = 0, Alice knows that a decoding
+error has occurred and the frame is discarded since it can not
+be used to generate a secret key. However, when the parity check passes, i.e. Cˆ H = 0, Alice knows that Cˆ is a valid codeword, however, she does not yet know if Cˆ is equal to
+Bob’s original encoded codeword C.
+For any binary linear block code, the number of possible codewords is 2k = 2nRcode . Thus, for codes with a long
+block-length n, the number of possible codewords grows
+exponentially, and it is possible for the decoder to converge to
+a valid codeword where the decoded message is incorrect, i.e. Sˆ = S. In coding theory, this is referred to as an undetected
+error. This scenario is problematic for secret key generation
+where both parties must share the same message after decoding
+in order to perform universal hashing in the next privacy
+amplification step. In order to detect invalid decoding errors when CHˆ = 0,
+a cyclic redundancy check (CRC) of Bob’s original message
+S can be transmitted as part of the frame, and then verified against the computed CRC of Alice’s decoded message Sˆ.
+Figure 7 presents the components of an LDPC-encoded frame,
+
+k-NCRC
+Message
+
+NCRC
+CRC
+
+Parity (Redundancy)
+
+k
+
+n-k
+
+n
+
+Fig. 7: LDPC frame components: message, CRC, and parity bits.
+
+where k information bits are comprised of (k−NCRC) message bits and NCRC CRC bits, followed by (n − k) parity bits to be discarded after LDPC decoding. If the CRC results of S and Sˆ are equal, then the decoding is successful and Sˆ can be used
+to distill a secret key, otherwise Alice knows that a decoding error has occurred and Sˆ is discarded. The CRC needs to be
+performed only when the parity check passes, otherwise the
+frame is known to contain an error and the CRC is skipped. A
+truly undetected error occurs when both the parity check and CRC pass, but Sˆ = S.
+A frame error is said to have occurred when Sˆ = S, i.e.
+when the decoding fails to reproduce the original message.
+Both detected and undetected errors contribute to the overall
+FER. The probability of frame error is defined as follows:
+
+Pe = Pdetected error + Pundetected error.
+
+(8)
+
+From Fig. 6, it follows then that the detected and undetected error probabilities are defined as
+Pdetected error = P (Cˆ H = 0) + P (Cˆ H = 0 ∩ CRC Fail) Pundetected error = P (Cˆ H = 0 ∩ CRC Pass ∩ Sˆ = S).
+
+There exists a rare case not shown in Fig. 6, where the parity check passes and CRC fails, yet Sˆ = S. Although the decoded message is correct, it will be discarded by the decoder due to the failed CRC check. As a result, there is a rare chance that this frame will be lost and the secret key rate will be reduced. However, this case is not considered by convention in communication theory.
+
+G. Impact of Reconciliation Error and Efficiency on Key Rate
+The remainder of this work investigates the trade-offs in error-correction performance, reconciliation efficiency, reconciliation distance, and secret key rate, by assuming that the physical parameters of the quantum channel are fixed, and that Alice’s modulation variance VA has been optimally set for each transmission distance and desired β-efficiency. In practice, the asymptotic secret key rate Kopt is scaled by the FER since decoded frames with known error can not be used to generate a secret key and must therefore be discarded. As such, the effective secret key rate of a practical CV-QKD system is given by
+Keff = 1 − Pdetected error (1 − Pundetected error)βIAB − χBE . (9)
+Alice and Bob can discard frames with detected error, while frames with undetected error further reduce the mutual information IAB between Alice and Bob. In Section III, it is empirically shown that Pundetected error = 0 using a 32-bit CRC code, thus the total decoding FER can be expressed more simply as Pe = Pdetected error. This simplified expression for the FER is assumed for the remainder of this work, and thus
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+9
+
+the effective secret key rate expression given by Eq. 9 can be reduced to
+
+Keff = (1 − Pe)(βIAB − χBE).
+
+(10)
+
+Up until this point, the β-efficiency has been assumed to be independent of the reconciliation algorithm, however, as shown in Eq. 9, the effective secret key rate Keff is dependent on both β and FER. Given the set of optimal VA values and assuming that the physical operating parameters of the quantum channel remain constant, the virtual BIAWGNC channel can be induced and described solely in terms of the SNR at a particular distance with an effective secret key rate Keff. As described further in Section III, there exists a trade-off between reconciliation distance and effective secret key rate, such that for a single SNR, one of the following two operating conditions is possible: (1) long distance with a low secret key rate, or (2) short distance with a high secret key rate. In fact, for a fixed LDPC code rate Rcode, the SNR only depends on the reconciliation efficiency and is independent of transmission distance. From Eq. 3, the SNR of a virtual BIAWGNC can be expressed as a function of β such that
+
+s(β) = 22Rcode/β − 1.
+
+(11)
+
+From a code design perspective then, an optimal rate Rcode LDPC code can be designed to achieve a target FER at a particular SNR. Since Alice and Bob remain stationary once deployed in the field, their transmission distance remains fixed, and thus an optimal LDPC code can be designed to achieve the maximum operating secret key rate over a range of distances by providing the optimal trade-off between β and FER.
+
+H. Secret Key Rate with Finite-Size Effects
+
+The security of the CV-QKD protocol must account for
+the finite length of the secret key, which is generated via
+universal hashing in the privacy amplification step using a block of length of Nprivacy bits. Alice constructs her privacy amplification block from her correctly decoded Sˆ messages,
+while Bob constructs his privacy amplification block from his original corresponding S messages. Due to the finite block
+size, the secret key rate is reduced by an offset coefficient ∆(Nprivacy) and scaling coefficient Nprivacy/Nquantum, where Nquantum is the number of symbols sent from Alice to Bob during the first quantum transmission step. The secret key rate,
+accounting for finite-size effects, is given by
+
+Kfinite =
+
+Nprivacy Nquantum
+
+1 − Pe
+
+βIAB − χBE − ∆(Nprivacy) . (12)
+
+Leverrier et al. showed that Nquantum can be arbitrarily chosen as Nquantum = 2Nprivacy [67], and that when Nprivacy > 104, the finite-size offset factor ∆(Nprivacy) can be approximated as
+
+∆(Nprivacy) ≈ 7
+
+log2(2/
+
+) ,
+
+Nprivacy
+
+(13)
+
+where a conservative choice for the security parameter is = 10−10 [67]. The LDPC block length n is not directly included
+in this expression, however, the LDPC block length does affect the reconciliation efficiency β and FER Pe. The impact of β and Pe on reconciliation distance is discussed in greater detail in the next section of this paper.
+The next section presents a study of the optimal block size Nprivacy for privacy amplification, as well as an overview
+
+of the design and application of LDPC codes for reverse reconciliation in long-distance CV-QKD systems on the virtual BIAWGNC.
+III. LDPC CODES FOR RECONCILIATION
+The design of efficient reconciliation algorithms is one of the central challenges of long-distance CV-QKD [32]. Early reconciliation algorithms failed to achieve efficiencies above 80% [72], while more advanced algorithms that now achieve 95% efficiency suffer from computational complexity [25], [28]. LDPC codes are highly suitable for low-SNR reconciliation in CV-QKD due to their near-Shannon limit error-correction performance and absence of patent licensing fees [60]. However, designing efficient LDPC codes with block lengths on the order of 106 bits remains a challenge.
+This section introduces a complexity-reduction technique for LDPC code design that has been widely adopted in hardwarebased LDPC decoders, namely through the implementation of architecture-aware codes [73]. A popular class of such codes are quasi-cyclic codes, whose parity-check matrices are constructed from an array of cyclically-shifted identity matrices that provide a sufficient degree of randomness and enable computational decoding speedup as a result of their highly parallelizable structure, which provides a simple mapping to hardware [40], [73]. Previous independent works by MartinezMateo and Walenta have explored the application of existing QC-LDPC codes from the IEEE 802.11n standard for DVQKD, however, these works were not able to demonstrate reliable reconciliation beyond 50km [26], [74]. While this distance may have been a limitation of DV-QKD, the short block lengths of such existing QC-LDPC codes (on the order of 103 bits) remain unsuitable for long-distance CV-QKD. Recently, Bai et al. theoretically showed that rate 0.12 QC codes with block lengths of 106 bits can be constructed using progressive edge growth techniques, or by applying a QC extension to random LDPC codes with block lengths of 105 bits [75]. However, the reported QC codes target an SNR of -1dB, and are thus not suitable for long-distance CVQKD beyond 100km. At the time of writing, there has not been any reported investigation of the construction of QC codes for multi-edge LDPC codes targeting low-SNR channels below -15dB for long-distance CV-QKD. This work shows that by applying the structured QC-LDPC code construction technique to the random multi-edge LDPC codes previously explored by Jouguet et al. for long-distance CV-QKD [32], it is possible to construct codes that achieve sufficient errorcorrection performance while enabling the acceleration of the computationally-intensive LDPC decoding algorithm such that the reconciliation step is no longer the bottleneck for secret key distillation beyond 100km.
+As previously described, there exists a trade-off between reconciliation distance and maximum secret key rate for a given β-efficiency. Once the target FER and operating SNR are known, an optimal LDPC code, i.e. parity-check matrix H, can be designed independent of other CV-QKD system parameters. The reverse reconciliation problem can thus be reduced to the simpler model shown in Fig. 8 as a result of the BIAWGNC approximation at low SNR. The variables shown in Fig. 8 are the same variables described in Section II, where S is Bob’s random binary sequence, C is Bob’s binary LDPC-encoded codeword, the Gaussian channel is described by Z ∼ N (0, σZ2 ), R is Alice’s received channel value, X is
+
+10
+
+APRIL 2017
+
+S
+
+LDPC
+
+C
+
+Encoder
+
+AWGN Channel
+
+R
+
+LDPC
+
+Decoder
+
+ŝ
+
+H
+
+SNR
+
+
+
+1
+
+
+
+2 z
+
+H
+
+X
+
+
+
+2 z
+
+Fig. 8: Simplified model of BIAWGNC with LDPC encoding and decoding.
+
+Alice’s correlated Gaussian sequence, and Sˆ is Alice’s LDPCdecoded estimate of Bob’s original random binary sequence. Alice and Bob also share a predefined parity-check matrix H for encoding and decoding.
+This work demonstrates the application of multi-edge QCLDPC codes for long-distance CV-QKD through the design of several rate 0.02 binary parity-check matrices with block lengths on the order of 106 bits. While a complete QKD system would offer multi-rate code programmability for various operating channels, this work focuses on the design of a single, low-rate code for a large range of transmission distances to fully study the effects of β-efficiency and FER on the maximum achievable secret key rate and reconciliation distance. While some works have explored the use of rate-adaptive or repetition codes to achieve high-efficiency decoding with multiple code rates [32], the exploration of multi-rate code design for long-distance CV-QKD is beyond the scope of this work. The remainder of this section describes the construction of LDPC codes, the belief propagation decoding algorithm, the error-correction performance of the designed rate 0.02 codes, and the achievable secret key rates for multiple β-efficiencies beyond 100km.
+
+A. General Construction of LDPC Codes
+LDPC codes are a class of linear block codes defined by a sparse parity-check matrix H of size (n − k) × n, k ≤ n, and code rate Rcode = k/n [76]. Given H, an equivalent definition of the code is given by its Tanner graph [77]. A Tanner graph G is a bipartite graph with two independent vertex sets, known as check nodes (CNs) and variable nodes (VNs), which correspond to the rows and columns of H, respectively. As shown in Fig. 9, an edge between VN vi and CN cj belongs to G if and only if H(j, i) = 1.
+
+Check Nodes
+
+Binary Parity-Check Matrix
+
+c1 c22 cCN33
+
+ 1 1 0 1 0 0  c1
+
+ H  0
+
+1
+
+0
+
+1
+
+0
+
+ 1
+
+c2
+
+n-k
+
+ 1 0 1 0 1 0  c3
+
+v v v v v v 1 VN22 VN33 VN44 VN55 VN66
+
+v1 v2 v3 v4 v5 v6
+
+k
+
+Variable Nodes
+
+n
+
+Fig. 9: LDPC Tanner graph and corresponding binary parity-check matrix.
+
+An LDPC code of length n is fully specified by the
+number of variable and check nodes, and their respective
+degree distributions. The number of edges connected to a vertex in G is called the degree of the vertex. The degree distribution of G is a pair of polynomials ω(x) = i ωixi and ψ(x) = i ψixi, where ωi and ψi respectively denote the number of variable and check nodes of degree i in G.
+
+The performance of tree-like Tanner graphs can be analyzed
+
+using a technique called density evolution [59]. As n → ∞,
+
+the error-correction performance of Tanner graphs with the
+
+same degree distribution is nearly identical [59]. Hence, the
+
+variable and check node degree distributions can be normalized
+
+to Ω(x) =
+
+i
+
+ωi n
+
+xi
+
+and
+
+Ψ(x)
+
+=
+
+i
+
+ψi n−k
+
+xi
+
+,
+
+respectively.
+
+The design of binary LDPC codes of rate Rcode and block
+
+length n consists of a two-step process. First, find the nor-
+
+malized degree distribution pair (Ω(x), Ψ(x)) of rate Rcode with the best performance. Then, if n is large, randomly
+
+sample a Tanner graph G that satisfies the degree distribution
+
+defined by ω(x) and ψ(x) (up to rounding error), and find
+
+the corresponding parity-check matrix H. Unfortunately, this
+
+method is non-trivial in the design of low-rate codes that
+
+approach Shannon capacity at low SNR.
+
+B. Multi-Edge LDPC Codes
+
+Multi-edge LDPC codes, first introduced by Richardson and Urbanke, provide two advantages over standard LDPC codes: (1) near-Shannon capacity error-correction performance for low-rate codes, and (2) low error-floor performance for highrate codes [39]. The latter is not a significant concern for longdistance CV-QKD where the reconciliation FER is on the order of 10−1, however, the design of a high-performance low-rate code is crucial to achieving high β-efficiency [32].
+The multi-edge framework can be applied to both regular and irregular LDPC codes with uniform and non-uniform vertex degree distributions, respectively, by introducing multiple edge types into the Tanner graph specifying the code [39]. In a standard LDPC code, the polynomial degree distributions are limited to a single edge type, such that all variable and check nodes are statistically interchangeable. In order to improve performance, multi-edge LDPC codes extend the polynomial degree distributions to multiple independent edge types with an additional edge-type matching condition [39].
+To describe the design of multi-edge LDPC codes, let the potential connections of a variable or check node be called its sockets. Let the vector d = (d1, d2, . . . , dt) be a multiedge node degree of t types. A node of degree d has d1 sockets of type 1, d2 sockets of type 2, etc. When generating a Tanner graph, only sockets of the same type can be connected by an edge of that type. Multi-edge normalized degree distributions are straightforward generalizations based on multiedge degrees Ω(x1, x2, . . . , xt) = d Ωdx1d1 x2d2 · · · xdt t and Ψ(x1, x2, . . . , xt) = d Ψdx1d1 xd22 · · · xtdt , where Ωd1,d2,...,dt and Ψd1,d2,...,dt are the respective fractions of variable and check nodes with d1 edges of type 1, d2 edges of type 2, etc. The rate of a multi-edge LDPC code is then defined as Rcode = Ω(1) − Ψ(1), where 1 denotes the all-ones vector with implied length [39].
+The multi-edge LDPC code used in this work is rate 0.02 with normalized degree distribution
+
+Ω(x1, x2, x3)
+
+=
+
+9 400
+
+x12
+
+x527x30
+
++
+
+7 400
+
+x13x257
+
+x30
+
++
+
+24 25
+
+x10x02x13
+
+Ψ(x1,
+
+x2,
+
+x3)
+
+3 =
+320
+
+x13x02x03
+
++
+
+17 1600
+
+x17x20x30
+
++
+
+3 5
+
+x10x22x13
+
++
+
+9 25
+
+x10
+
+x23x31.
+
+This degree distribution was designed by Jouguet et al. by modifying a rate 1/10 multi-edge degree structure introduced
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+11
+
+by Richardson and Urbanke [32], [39]. Structurally, the subgraph induced by edges of type 1 corresponds to a high-rate LDPC code with variable degree 3 and check degree 7 or 8. Parity checks are added to this code, each checking two or three variable nodes as specified by edges of type 2. The resulting parity bits are degree-1 variable nodes specified by edges of type 3. For the BIAWGNC, the minimum SNR for which the tree-like Tanner graph with this multi-edge degree distribution is error free is 2.863 × 10−2 or -15.47dB [32].
+The LDPC parity-check matrices in this work were generated by randomly sampling Tanner graphs that satisfied the multi-edge degree distribution defined by ω(x) and ψ(x), and the edge-type matching condition. The random sampling technique does not degrade code performance in this case, since the operating FER is known to be high (Pe ≈ 10−1). At such high FER, the error-floor phenomenon is not a significant concern as the code is strictly designed to operate in the waterfall region in order to achieve high β-efficiency [78]. The rate 0.02 LDPC codes explored in this work target a block length of n = 1 × 106 bits in order to achieve near-Shannon capacity error-correction performance. As a result, the paritycheck matrix H has dimensions n − k = n(1 − Rcode) = 9.8 × 105 by n = 1 × 106. Due to the low code rate and large block length, the random parity-check matrix construction does introduce LDPC decoder implementation complexity, which directly affects decoding latency and maximum achievable secret key rate. The LDPC decoder implementation complexity for such a code can be reduced with minimal degradation in error-correction performance by imposing a quasi-cyclic structure to the parity-check matrix.
+C. Quasi-Cyclic LDPC Codes
+While purely-random LDPC codes have been shown to achieve near-Shannon capacity error-correction performance under belief propagation decoding [79], the hardware-based implementation of decoders for random codes is a challenge with large block lengths, especially on the order of 106 bits. The bottleneck stems from the complex interconnect network between CN and VN processing units that execute the belief propagation algorithm [45], [46].
+In a traditional LDPC decoder, variable and check node processing units iteratively exchange messages across an interconnect network described by a Tanner graph, as shown in Fig. 9. Purely-random parity-check matrices introduce unstructured interconnect between the variable and check nodes, resulting in unordered memory access patterns and complex routing, which limit scalability in ASIC or FPGA implementations. Quasicyclic codes alleviate such decoder complexities by imposing a highly-regular matrix structure with a sufficient degree of randomness [40]. This work extends the design of low-rate, mutli-edge LDPC codes to QC codes for hardware realization.
+QC codes are defined by a parity-check matrix constructed from an array of q × q cyclically-shifted identity matrices or q × q zero matrices [40]. As shown in Fig. 10, the tilings evenly divide the (n − k) × n parity-check matrix H into n/q QC macro-columns and (n − k)/q QC macro-rows. The expansion factor q in a QC parity-check matrix determines the trade-off between decoder implementation complexity and error-correction performance. For small q, the parity-check matrix exhibits a high degree of randomness, which improves error-correction performance, while a large q reduces decoder complexity with some performance degradation.
+
+I# qxq Cyclic Identity Matrix
+
+qxq All-Zero Matrix
+
+Expansion Factor q=5
+
+I4 I2 I3 I5 I1
+
+I3
+
+I3
+
+I2 I1
+
+I2 I1 I5 I4
+
+I3 I4
+
+I1 I3
+
+I2 I4 I1 I2 I3
+
+I2
+
+I4
+
+I1
+
+I4 I2
+
+I4 I2 I5 I1
+
+I4
+
+I1
+
+I2
+
+(n-k) check nodes
+
+6 QC MacroRows
+6x5 Check Nodes
+
+k information bits
+
+(n-k) parity bits
+
+block length = n bits (n variable nodes)
+
+10 QC Macro-Columns 10x5 Variable Nodes
+
+Sample Cyclic Identify Matrix
+for q=5
+
+0 0 1 0 0
+
+0 0 0 1 0
+
+I3=
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+1 
+
+1 0 0 0 0
+
+0 1 0 0 0
+
+Fig. 10: Sample quasi-cyclic binary parity-check matrix for q = 5 constructed from uniformly-sized (q × q), cyclically-shifted identity matrices and all-zero matrices.
+
+Matrix Row Matrix Row
+
+0 ×105 2 4 6 8
+
+0
+
+5
+
+10
+
+Matrix Column ×105
+
+(a) Full q = 50 QC parity-check matrix structure with 1 × 106 columns and 9.8 × 105 rows.
+Empty space represents zeros.
+
+1 ×104
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+3
+
+4
+
+5
+
+Matrix Column ×104
+
+(b) Zoom-in of top left corner of q = 50 QC matrix shown in (a). Each dot represents a 50 × 50 cyclic identity matrix.
+
+Fig. 11: Structure of designed parity-check matrices.
+
+To design a multi-edge QC-LDPC code, repeat the random multi-edge sampling process using n/q as the block length instead of n to obtain a base Tanner graph GB. The base paritycheck matrix HB is obtained from GB by populating each nonzero entry by a random element of the set {1, 2, . . . , q}. Let Ii be the circulant permutation matrix obtained by cyclically shifting each row of the q × q identity matrix to the right by i − 1. The QC parity-check matrix H is obtained from HB by replacing each non-zero entry of value i by Ii, and each zero entry by the q × q all-zeros matrix.
+In this work, multi-edge QC-LDPC parity-check matrices of rate 0.02 were generated for expansion factors q ∈ {21, 50, 100, 500, 1000}. Under belief propagation decoding, the error-correction performance of the q ∈ {100, 500, 1000} QC codes was significantly worse in comparison to a random multi-edge code with the same degree distribution. Thus, only
+
+12
+
+APRIL 2017
+
+the q ∈ {21, 50} codes are presented in the remainder of this study. In order to maintain the same degree distributions, the block length for the q = 21 code with rate Rcode = 0.02 was adjusted to n = 1.008×106 bits. Similarly, the q = 50 code has a block length of n = 1 × 106 bits and rate Rcode = 0.01995.
+Figure 11 shows the structure of the parity-check matrices designed in this work. Both the purely-random and QC matrices have a similar structure, which contains a dense area of 1s or cyclic identity matrices on the left, and a long diagonal of degree-1 VNs to the right. The starting point of the diagonal is determined by the VN degree distribution of the multiedge matrix. In the case of the QC codes, no cyclic shifts are implemented along the diagonal, thus all submatrices are q × q I1 identity matrices. This matrix structure greatly improves the decoding speed as degree-1 VNs along the diagonal need to pass VN-to-CN messages only in the first decoding iteration, while CN-to-VN messages need to be passed to degree-1 VNs only if the early-termination condition is enabled. The degree1 VNs along the diagonal correspond to the majority (but not all) of the (n − k) parity bits that are discarded after decoding, thus the VN update computation needs to be performed in these degree-1 VNs only if a decision needs to be made when early termination is enabled. A small fraction of the (n − k) parity bits correspond to VNs with more than one CN connection in the denser area of the matrix to the left of the diagonal. These VNs must perform the VN update computation in each iteration along with the first k VNs, which correspond to the k information bits of the block.
+The parity component of H, i > k in H(j, i), is lowertriangular for both the purely-random and QC parity-check matrices designed in this study. An example of this type of construction is shown in Fig. 10, and is also illustrated in Fig. 11. While the lower-triangular construction does not necessarily impact decoding complexity or error-correction performance, it does simplify the LDPC encoding procedure, which can be performed via forward substitution if H is of this form. Further investigation of LDPC encoding complexity for such large codes is beyond the scope of this work.
+D. LDPC Decoding: Belief Propagation Algorithm
+LDPC decoding is performed using belief propagation, an iterative message-passing algorithm commonly used to perform inference on graphical models such as factor graphs [80]. In the context of LDPC, the decoding procedure attempts to converge on a valid codeword by iteratively exchanging probabilistic updates between variable and check nodes along the edges of the Tanner graph until the parity-check condition is satisfied or the maximum number of iterations is reached. The Sum-Product algorithm is the most common variant of belief propagation [80], and is described in Algorithm 1 for d = 1 dimensional reconciliation on a BIAWGNC.
+In Algorithm 1, Step 1 prepares the Qv log-likelihood ratio (LLR) input values at each variable node based on Alice’s correlated Gaussian sequence X and the channel noise variance σZ2 . All VN-to-CN messages from VN v are initialized to the received channel LLR Qv before the first message-passing iteration. As previously discussed in Section II, the expression for the channel noise variance σN2 v is different for d = 2, 4, 8 reconciliation schemes, but the remainder of the algorithm is the same. Steps 2 to 5 specify the message-passing interaction between the CNs and VNs until the codeword syndrome defined by Cˆ H is equal to zero, or the maximum predetermined
+
+Algorithm 1 Sum-Product algorithm for d = 1 scheme
+
+Input: X, R, σZ2 ; Output: Sˆ
+
+Step 1: LLR initialization at each VN, v = 1, 2, . . . , n
+
+σN2 v
+
+←
+
+σZ2 , ||Xv ||
+
+Qv
+
+← ln
+
+P (Cv = 0|Rv) P (Cv = 1|Rv)
+
+=
+
+2Rv σN2 v
+
+Lv(tc=0) ← Qv, ∀c ∈ M (v) for first iteration
+
+for Iteration t = 1 to Max Iterations do
+
+Step 2: Check node update (CN-to-VN messages) sgn(m(ctv)) ← v ∈N(c)\v sgn(Lv(t−c 1))
+
+m(ctv) ← Φ−1
+
+v ∈N (c)\v Φ L(vt−c 1)
+
+mc(tv) ← sgn(m(ctv)) × mc(tv)
+
+Step 3: Variable node update (VN-to-CN messages)
+
+L(vtc) ← Qv + Lv(t) ← Qv +
+
+c ∈M (v)\c m(ct)v c∈M (v) m(ctv)
+
+Step 4: Hard decision and early termination check 
+Cˆv(t) ← 0, L(vt) ≥ 0 1, otherwise
+
+if Cˆ H = 0 (mod 2) then Go to Step 5
+
+end for Step 5: Discard parity bits Sˆv ← Cˆv, v ≤ k
+
+number of decoding iterations is reached. In Step 2, mc(tv) is the message from CN c to VN v in iteration t, and Φ(x) = Φ−1(x) = − ln(tanh(x/2)). In Step 3, L(vtc) is the message from VN v to CN c, and L(vt) is the updated LLR belief of bit v in the frame, whose decision is given by Cˆv(t) in Step 4. In Step 2, the set of VNs connected to CN c is defined as N (c) = {v|v ∈ {1, 2, . . . , n} ∧ Hvc = 1}, where the notation v ∈ N (c)\v refers to all VNs in the set N (c) excluding VN v. Similarly, in Step 3, the set of CNs connected to VN v is defined as M (v) = {c|c ∈ {1, 2, . . . , n−k}∧Hvc = 1}, where c ∈ M (v)\c refers to all CNs in the set M (v) excluding CN c. As previously described, LDPC decoding is successful if the decoded message Sˆ is equal to the original message S.
+Due to the non-linearity of the tanh(x) function in the Sum-Product algorithm, most hardware-based LDPC decoders instead implement variants of the Min-Sum algorithm [45], [46], which provides an acceptable approximation to SumProduct decoding without the need for complex lookup tables. Despite the benefit of computational speedup, Min-Sum does not perform well at low SNR [81], and is thus not suitable for long-distance CV-QKD. The results presented in the remainder of this work were achieved using Sum-Product decoding.
+E. Error-Correction Performance of Multi-Edge QC Codes
+The multi-edge LDPC codes designed in this work achieve similar FER performance on the BIAWGNC compared to those developed by Jouguet et al. for long-distance CV-QKD with multi-dimensional reconciliation [32]. Table I summarizes the parameters of the three codes designed in this work, and Figures 12 and 13 present their FER vs. SNR error-correction performance under Sum-Product decoding for d = 1, 2, 4, 8 reconciliation dimensions. FER simulations were performed
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+13
+
+TABLE I: Designed rate 0.02 multi-edge LDPC codes
+
+Structure
+Random Quasi-Cyclic Quasi-Cyclic
+
+Expansion Factor q
+N/A 21 50
+
+Code Rate Rcode
+0.02 0.02 0.01995
+
+Block Length (Bits) n
+1 × 106 1.008 × 106
+1 × 106
+
+1
+
+Frame Error Rate (FER)
+
+10-1
+
+Max 500 Iterations 100 Frame Errors
+
+32-bit Floating Point
+
+10-2 0.028
+
+d=1 - Random, R=0.02 d=1 - QC, q=21, R=0.02 d=1 - QC, q=50, R=0.01995 d=2 - Random, R=0.02 d=2 - QC, q=21, R=0.02 d=2 - QC, q=50, R=0.01995
+0.0285 0.029 0.0295 0.03 SNR
+
+0.0305 0.031 0.0315 0.032
+
+Fig. 12: FER vs. SNR for Sum-Product decoding with d = 1 and d = 2 dimensional reconciliation on BIAWGNC.
+
+1
+d=4 - Random, R=0.02 d=4 - QC, q=21, R=0.02 d=4 - QC, q=50, R=0.01995 d=8 - Random, R=0.02 d=8 - QC, q=21, R=0.02 d=8 - QC, q=50, R=0.01995
+
+10-1
+
+Frame Error Rate (FER)
+
+Max 500 Iterations 100 Frame Errors 32-bit Floating Point
+10-2 0.028 0.0285 0.029 0.0295 0.03 0.0305 0.031 0.0315 0.032 SNR
+Fig. 13: FER vs. SNR for Sum-Product decoding with d = 4 and d = 8 dimensional reconciliation on BIAWGNC.
+for the complete linear SNR range corresponding to the range of efficiencies between β = 0.8 and β = 0.99, as defined by Eq. 11. This range of β-efficiency values was chosen to illustrate the trade-off between distance and finite secret key rate. For clarity, however, Figures 12 and 13 present the FER results only for the SNR range corresponding to β-efficiencies between β = 0.88 and β = 0.99.
+
+Despite their identical degree distributions, the q = 50 QC code achieves the best overall FER performance over d = 1, 2, 4, 8 dimensions in comparison to the purely-random and q = 21 QC codes, due to its slightly lower code rate. At low SNR where β is high, the q = 21 QC code also performs better than the purely-random code over all dimensions, likely due to the longer block length. At higher SNR though, the purelyrandom code achieves a lower error-floor than the q = 21 QC code due to higher randomness in the parity-check matrix.
+In general, the d = 2, d = 4, and d = 8 reconciliation schemes achieve approximately 0.04dB, 0.08dB, and 0.2dB of coding gain, respectively, over the d = 1 scheme in the waterfall region for all three codes. As previously mentioned, FER performance in the waterfall region is of particular interest for long-distance CV-QKD since it corresponds to the high β-efficiency region of operation at low SNR close to the Shannon limit. The error-floor region beyond the waterfall is not of practical use in CV-QKD as it corresponds to the low β-efficiency region where transmission distance is limited.
+As previously discussed in Section II, for any binary linear block code, the number of possible codewords is 2k = 2nRcode . In this case, when n = 1 × 106 bits and Rcode = 0.02, the number of possible valid codewords for the decoder to choose from is approximately 4 × 106020. In order to detect invalid decoding errors when the parity check Cˆ H = 0 but Sˆ = S, a 32-bit CRC code is included in each LDPC frame. In this work, NCRC = 32 bits were sufficient to detect all invalid decoded messages without sacrificing information throughput. Having full control of the simulation environment, it was also empirically found that Pundetected error = 0 using a 32-bit CRC code.
+The probability of an invalid decoding error is given by
+
+P (Cˆ H = 0 ∩ CRC Fail) =
+
+Number of CRC Errors .
+
+Total Number of Frame Errors
+
+Figure 14 shows the probability of an invalid decoding error over the SNR range of interest for d = 1, 2, 4, 8 reconciliation dimensions on the BIAWGNC for the three LDPC codes designed in this work. In general, the probability of invalid decoding increases with SNR and becomes the main source of frame error, particularly in the error-floor region as a result of the large block length and low code rate. In the region of operation for long-distance CV-QKD where the FER Pe ≈ 1, invalid decoding convergence still contributes to nearly 10% of all frame errors. A concatenated higher-rate code was not included as part of the message component to correct residual errors [32], [38].
+
+Up until this point, the performance of the reconciliation algorithm has been presented as a coding theory problem, where an optimal LDPC code was designed to achieve a particular FER at a given SNR operating point. The SNR was considered as an abstraction of the virtualized BIAWGNC in order to demonstrate fixed-rate code performance, independent of other CV-QKD system parameters such as modulation variance, transmission distance, and physical losses. Assuming that the transmission distance and physical parameters of the quantum channel are fixed, Alice’s modulation variance can be optimally tuned such that the effective secret key rate is then solely determined by the FER and β-efficiency of the LDPC-decoding reconciliation algorithm.
+
+Figure 15 shows that for each fixed-rate LDPC code, there exists a unique FER-β pair, where each β corresponds to a
+
+14
+
+APRIL 2017
+
+Probability of Invalid Decoding Error
+
+1
+
+d=1 - Random
+
+d=1 - QC, q=21
+
+d=1 - QC, q=50
+
+0.8
+
+d=2 - Random
+
+d=2 - QC, q=21
+
+d=2 - QC, q=50
+
+d=4 - Random
+
+0.6
+
+d=4 - QC, q=21
+
+d=4 - QC, q=50
+
+d=8 - Random
+
+d=8 - QC, q=21
+
+0.4
+
+d=8 - QC, q=50
+
+0.2
+
+0 0.028 0.0285 0.029 0.0295 0.03 0.0305 0.031 0.0315 0.032
+SNR
+Fig. 14: Probability of invalid decoding error vs. SNR for SumProduct decoding with d = 1, 2, 4, 8 dimensional reconciliation on BIAWGNC. Probability of error is computed for invalid messages that are correctly decoded but CRC fails.
+1 d=1 d=8
+
+10-1
+
+Frame Error Rate (FER)
+
+10-2
+10-3 0.8
+
+d=1 - Random LDPC Code, rate = 0.02 d=1 - QC LDPC Code, q = 21, rate = 0.02 d=1 - QC LDPC Code, q = 50, rate = 0.01995 d=8 - Random LDPC Code, rate = 0.02 d=8 - QC LDPC Code, q = 21, rate = 0.02 d=8 - QC LDPC Code, q = 50, rate = 0.01995
+
+0.85
+
+0.9
+
+0.95
+
+1
+
+Reconciliation Efficiency (β)
+
+Fig. 15: FER vs. reconciliation efficiency for Sum-Product decoding with d = 1 and d = 8 dimensional reconciliation on BIAWGNC. FER values are derived from the FER vs. SNR curves based on Eq. 11.
+
+particular SNR operating point based on Eq. 11. While it may appear from Eq. 10 that maximizing β would produce a higher effective secret key rate, Fig. 15 shows that β and FER are positively correlated, such that there exists an optimal tradeoff between β and FER where Keff is maximized for a fixed transmission distance. To achieve key reconciliation at long distances, the operating point must be chosen in the waterfall region where β is high, despite the high FER.
+The results presented in this section showed that higher reconciliation schemes, namely d = 4 and d = 8, extend code performance to lower SNR where the FER Pe > 0 and β → 1. As such, the d = 8 scheme would be most preferred for long-distance reconciliation. The next section examines the impact of reconciliation dimension, β-efficiency, and FER
+
+on the effective secret key rate over a range of transmission distances for the LDPC codes designed in this work.
+
+F. Finite Secret Key Rate
+
+This section extends the discussion of the effective secret key rate to include finite-size effects. Key reconciliation for a particular β-efficiency is only achievable over a limited range of distances where the finite secret key rate Kfinite > 0. In general, for a single FER-β pair, LDPC decoding can achieve either (1) a high secret key rate at short distance, or (2) a low secret key rate at long distance. For long-distance CV-QKD beyond 100km, key reconciliation is only achievable with high β-efficiency at the expense of low secret key rate. This section provides an overview of the maximum achievable finite secret key rates and reconciliation distances for the three LDPC codes designed in this work. Results are presented for the d = 1 and d = 8 reconciliation dimensions in order to demonstrate the effectiveness of higher-order dimensionality on reconciliation distance. The results also consider the finite size of the privacy amplification block. The d = 1 and d = 8 secret key rate results are shown for privacy amplification blocks of Nprivacy = 1010 and Nprivacy = 1012 bits to demonstrate the impact of block size on the maximum transmission distance.
+The range of transmission distances for each β is limited by the total noise between Alice and Bob. From Eq. 5, the total noise can be expressed as a function of β, such that
+
+χtotal(β)
+
+=
+
+VAopt(β) s(β)
+
+−
+
+1,
+
+(14)
+
+where VAopt(β) is a vector of Alice’s optimal modulation variances for a particular β-efficiency from Fig. 4, and the virtual
+
+SNR s(β) is given by Eq. 11 for a fixed-rate LDPC code. From
+
+the
+
+expression
+
+for
+
+the
+
+total
+
+channel
+
+noise,
+
+χtotal
+
+=
+
+χline
+
++
+
+χhom T
+
+,
+
+a set of transmission distance points for a particular β can then
+
+be described by the vector
+
+10 d (β) = α log10
+
+η(χtotal(β) − + 1) , 1 + Vel
+
+(15)
+
+in order to compute the maximum theoretical finite secret key
+rate based on Eq. 12.
+Figures 16 and 17 present the finite secret key rate results
+for the three LDPC codes over the transmission distance range of interest with Nprivacy = 1010 bits based on the d = 1 and d = 8 reconciliation dimensions, respectively. Each β-
+efficiency curve in Figures 16 and 17 represents a FER-β
+pair where the FER and SNR are constant over the entire
+transmission distance range, while VA is optimally chosen to achieve the maximum secret key rate at each distance point.
+When β is high, the FER Pe → 1, and thus Kfinite → 0 as erroneous frames are discarded after decoding. As a result,
+the maximum reconciliation distance is limited by the error-
+correction performance of the LDPC code. Figures 18 and 19 present the finite secret key rate results with Nprivacy = 1012 bits over d = 1 and d = 8 reconciliation dimensions, respectively. When Nprivacy = 1012 bits, the maximum transmission distance is extended by 18km over the result with Nprivacy = 1010 bits for d = 8 reconciliation with β = 0.99 efficiency. This demonstrates the importance of selecting a
+large block size for privacy amplification. In each of the Nprivacy = 1010 and Nprivacy = 1012 cases,
+the three LDPC codes achieve similar finite secret key rates
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+15
+
+Finite Secret Key Rate (bits/pulse)
+
+10-2 10-3 10-4 10-5 10-6 10-7
+
+β = 0.80 β = 0.83 β = 0.86
+
+Random LDPC Code, rate = 0.02 QC LDPC Code, q = 21, rate = 0.02 QC LDPC Code, q = 50, rate = 0.01995
+
+β = 0.92
+
+ǫ = 0.005
+
+v = 0.041
+el
+
+η = 0.606
+
+α = 0.2
+
+N
+
+= 1010
+
+privacy
+
+β = 0.89
+
+β = 0.96
+
+β = 0.95
+
+Finite Secret Key Rate (bits/pulse)
+
+10-2 10-3 10-4 10-5 10-6 10-7
+
+Random LDPC Code, rate = 0.02 QC LDPC Code, q = 21, rate = 0.02 QC LDPC Code, q = 50, rate = 0.01995
+
+β = 0.92
+
+ǫ = 0.005
+
+v = 0.041
+el
+
+η = 0.606
+
+α = 0.2
+
+N
+
+= 1012
+
+privacy
+
+β = 0.83 β = 0.86
+
+β = 0.80
+
+β = 0.89 β = 0.95
+
+β = 0.96
+
+10-8 70 80 90 100 110 120 130 140 150 160 170 Distance (km)
+Fig. 16: d = 1 dimensional reconciliation with Nprivacy = 1010 bits: finite secret key rate Kfinite vs. distance for collective attacks on BIAWGNC with Sum-Product decoding.
+
+10-8 70 80 90 100 110 120 130 140 150 160 170 Distance (km)
+Fig. 18: d = 1 dimensional reconciliation with Nprivacy = 1012 bits: finite secret key rate Kfinite vs. distance for collective attacks on BIAWGNC with Sum-Product decoding.s
+
+Finite Secret Key Rate (bits/pulse)
+
+10-2 ǫ = 0.005
+
+v = 0.041
+el
+
+10-3
+
+η = 0.606
+
+α = 0.2
+
+10-4
+
+N
+
+= 1010
+
+privacy
+
+10-5
+
+β = 0.80 β = 0.83
+
+β = 0.86
+
+10-6
+
+β = 0.89 β = 0.95
+
+β = 0.92
+
+β = 0.98
+
+10-7
+
+Random LDPC Code, rate = 0.02 QC LDPC Code, q = 21, rate = 0.02 QC LDPC Code, q = 50, rate = 0.01995
+
+β = 0.99
+
+10-8 70 80 90 100 110 120 130 140 150 160 170
+Distance (km)
+
+Fig. 17: d = 8 dimensional reconciliation with Nprivacy = 1010 bits: finite secret key rate Kfinite vs. distance for collective attacks on BIAWGNC with Sum-Product decoding.
+
+Finite Secret Key Rate (bits/pulse)
+
+10-2 10-3 10-4
+
+ǫ = 0.005
+
+v = 0.041
+el
+
+η = 0.606
+
+α = 0.2
+
+N
+
+= 1012
+
+privacy
+
+10-5
+10-6
+10-7
+10-8 70
+
+β = 0.83
+
+β = 0.92
+
+β = 0.86
+
+β = 0.95
+
+β = 0.89
+
+β = 0.80
+
+β = 0.98
+
+Random LDPC Code, rate = 0.02 QC LDPC Code, q = 21, rate = 0.02 QC LDPC Code, q = 50, rate = 0.01995
+
+β = 0.99
+
+80 90 100 110 120 130 140 150 160 170 Distance (km)
+
+Fig. 19: d = 8 dimensional reconciliation with Nprivacy = 1012 bits: finite secret key rate Kfinite vs. distance for collective attacks on BIAWGNC with Sum-Product decoding.
+
+and reconciliation distances with both d = 1 and d = 8 schemes for β ≤ 0.92, since the codes are operating close to their respective error floors. However, for β > 0.92, the
+FER becomes a limiting factor to achieving a non-zero secret key rate. The d = 1 scheme achieves a maximum efficiency of β = 0.96, where the maximum distance is limited to 124km with Nprivacy = 1010 bits, and 132km with Nprivacy = 1012 bits. For β > 0.96, the FER Pe = 1, thus Kfinite = 0. The d = 8 scheme operates up to β = 0.99 efficiency, with a maximum distance of 142km with Nprivacy = 1010 bits, and 160km with Nprivacy = 1012 bits. Furthermore, the d = 8 scheme achieves higher secret key rates for all three LDPC codes at β = 0.95 and β = 0.96 in comparison to the d = 1 scheme since the
+code FER performance is higher. While the complete results are not shown here, the d = 2 and d = 4 schemes both
+
+achieve a maximum efficiency of β = 0.97, at 129km with Nprivacy = 1010 bits, and 138km with Nprivacy = 1012 bits.
+The finite secret key rate Kfinite results presented in this section were normalized to the pulse rate, without consideration of the light source repetition rate frep. By considering the pulse rate, the complete operating secret key rate of the CV-QKD
+system can be defined as
+
+Kfinite = frepKfinite (bits/s).
+
+(16)
+
+The next section presents an overview of a GPU-based LDPC decoder implementation where the information throughput for the three LDPC codes designed in this work is compared to the upper bound on secret key rate at the maximum reconciliation distance points.
+
+16
+
+APRIL 2017
+
+IV. GPU-ACCELERATED LDPC DECODING
+GPUs are a highly suitable platform for the implementation of LDPC decoders that target high information throughput with long block-length codes. Computational acceleration of the belief propagation algorithm is achieved by parallelizing the check and variable node update operations across thousands of single-instruction multiple-thread (SIMT) cores, which provide floating-point precision, high-bandwidth read/write access to on-chip memory, and intrinsic mathematical libraries for the logarithmic functions of the Sum-Product algorithm [82]–[86].
+This section provides an overview of the GPU-based LDPC decoder implementation in this work. GPU throughput results are presented for the maximum CV-QKD distances under d = 1, 2, 4, 8 dimensional reconciliation, and also compared to the maximum achievable secret key rates for reconciliation efficiencies β > 0.85. Finally, the implementation is compared to previous work by Jouguet and Kunz-Jacques for an LDPC code with block length of 220 bits [25], as well as other non-LDPC codes. The GPU decoding throughput results presented in this section quantitatively highlight the computational speedup that can be achieved using quasi-cyclic LDPC codes for long-distance CV-QKD.
+A. GPU-based LDPC Decoder Implementation
+The LDPC decoder was implemented on a single NVIDIA GeForce GTX 1080 (Pascal Architecture) GPU with 2560 CUDA cores using the NVIDIA CUDA C++ application programming interface. Figure 20 shows the data flow for a single decoding iteration of the parallelized Sum-Product algorithm, which is comprised of four multi-threaded compute kernels. Each kernel instantiates a different number of GPU threads depending on the level of parallelism for the operation. The individual compute operations of the Sum-Product algorithm are re-ordered to exploit the maximum amount of thread-level parallelism in each kernel such that the latency per iteration is minimized. The overall throughput of the GPU-based LDPC decoder is then determined by the number of iterations, the latency per iteration, and the block length.
+The complexity of an LDPC decoder implementation stems from the highly-irregular interconnect structure between CNs and VNs described by the code’s Tanner graph. For codes with short block lengths, the permutation network complexity does not introduce significant GPU decoding latency [82]–[84], however, for codes with block lengths on the order of 106 bits as those designed in this work, data permutation and message passing constitute between 25% to 50% of GPU runtime per decoding iteration, as shown in Table II. While arithmetic operations are relatively inexpensive on a GPU, addressing global memory is very costly in terms of compute time. The most expensive GPU operation is addressing unordered memory, i.e. accessing non-consecutive memory locations, as multiple transactions are required to perform the unordered memory read or write, and all kernel threads must be stalled [83]. On the contrary, coalesced memory addressing, i.e. accessing consecutive memory locations, can be performed in a single transaction and allows for concurrent thread execution, which reduces the runtime of the kernel. Furthermore, uncoalesced memory writes are more expensive than uncoalesced memory reads. Thus, the throughput of a GPU-based LDPC decoder is highly dependent on memory access patterns.
+The operations of the Sum-Product algorithm presented in Algorithm 1 were re-ordered to avoid uncoalesced memory
+
+Kernel 1: VN-to-CN Message Passing
+
+Kernel 4: VN Update Kernel 3: CN-to-VN Message Passing Kernel 2: CN Update
+
+Edge Memory (CN-to-VN mcv Messages) VN Memory (Lv LLRs)
+
+t1 t2 t3 t4 t5 t6
+
+t t t T-2 T-1
+
+T
+
+EdEgdegMe eMmeomroyry(V(NV-Nto--tCo-NCNΦ(L|LvcvcM|) eMsessasgaegse)s)
+
+t1 t2 t3 t4 t5 t6
+
+t t t T-2 T-1
+
+T
+
+CN Memory (VN-to-CN Φ(|Lvc|) Messages)
+
+t1 t2 t3
+
+t t t n-k-2
+
+n-k-1
+
+n-k
+
+CN Memory (mc Intermediate Values)
+
+Edge Memory (VN-to-CN Φ(|Lvc|) Messages)
+
+t1 t2 t3 t4 t5 t6
+
+t t t T-2 T-1
+
+T
+
+Edge Memory (CN-to-VN mcv Messages) VN Memory (CN-to-VN mcv Messages)
+
+t1 t2 t3
+
+t t t n-2 n-1
+
+n
+
+VN Memory (Updated Lv LLRs)
+
+Aligned Memory
+Read
+Aligned Memory
+Read
+Aligned Memory
+Write
+Unaligned Memory
+Read
+Aligned Memory
+Write
+Aligned Memory
+Read
+Aligned Memory
+Write
+Unaligned Memory
+Read
+Aligned Memory
+Read
+Aligned Memory
+Write
+Aligned Memory
+Write
+Aligned Memory
+Read
+Aligned Memory
+Write
+
+Fig. 20: GPU implementation of LDPC decoder showing four multithreaded compute kernels and data flow from top to bottom for one decoding iteration. Coalesced memory access patterns and message variables are indicated. Thread i is denoted by ti, where T in kernels 1 and 3 represents the maximum number of connections between all CNs and VNs, (n − k) in kernel 2 is the number of CNs, and n in kernel 4 is the number of VNs. Early termination is not shown.
+
+writes and to use the maximum amount of thread-level parallelism for arithmetic computations. For example, the VNto-CN message-passing permutation in kernel 1 also performs the Φ(·) computation from the next CN-update step in each thread. The CN-update kernel (2) does not fully compute the mcv messages from each CN to its connected VNs, but instead, the final CN-to-VN mcv messages are computed in the CN-to-VN message-passing kernel (3). Due to the Tanner graph structure and data permutation nature of the LDPC decoder, uncoalesced memory reads are still required when reading from edge memory in kernel 1 and reading from CN memory in kernel 3. However, the latency of these operations is negligible compared to the overall latency of an entire iteration. Fully-coalesced memory writes are enabled by the
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+17
+
+TABLE II: GPU-based LDPC decoding latency and error-correction performance for rate 0.02 multi-edge codes
+
+LDPC Code
+
+Random Multi-Edge
+
+q = 21 QC Multi-Edge
+
+q = 50 QC Multi-Edge
+
+Block Length (Bits)
+
+1 × 106
+
+1.008 × 106
+
+1 × 106
+
+Code Rate
+
+0.02
+
+0.02
+
+0.01995
+
+Connections in Parity Matrix
+
+3,337,494
+
+160,185
+
+66,747
+
+Latency by Kernel with Percent Breakdown for 1 Decoding Iteration
+
+Kernel 1 Runtime VN-to-CN (ms)
+
+1.773 (50.3%) 0.446 (34.4%) 0.391 (33.2%)
+
+Kernel 2 Runtime CN Update (ms)
+
+0.197 (5.6%) 0.204 (15.7%) 0.198 (16.8%)
+
+Kernel 3 Runtime CN-to-VN (ms)
+
+1.240 (35.1%) 0.317 (24.4%) 0.303 (25.7%)
+
+Kernel 4 Runtime VN Update (ms)
+
+0.318 (9.0%) 0.331 (25.5%) 0.286 (24.3%)
+
+Total Latency Per Iteration (ms)
+
+3.528
+
+1.296
+
+1.177
+
+FER Performance and Decoding Throughput at β = 0.99 and d = 8
+
+Max Iterations
+
+500
+
+500
+
+500
+
+Average Iterations ∗
+
+470
+
+451
+
+470
+
+FER KGraPwU Raw Throughput (Mb/s)
+
+0.883 0.603
+
+0.792 1.724
+
+0.883 1.807
+
+KGPU Information Throughput (Kb/s)
+
+1.409
+
+7.160
+
+4.207
+
+∗ Early-termination check is enabled only after the number of decoding iterations is equal to the average number of iterations, which is determined empirically through FER simulation and stored in a lookup table.
+
+different ordering of connected edges in the VN-to-CN and CN-to-VN message-passing kernels (1 and 3). In the VNto-CN message-passing kernel (1), the edge connectivity is ordered by consecutive VNs, while in the CN-to-VN messagepassing kernel (3), the edges are ordered by consecutive CNs. Each CN-VN edge in the edge memory has a unique index that is addressed by both message-passing kernels (1 and 3). Several additional memory optimizations improve the overall GPU throughput. Shared memory is used in each thread to store local variables and to avoid expensive global memory accesses, while texture caches are used to store frequentlyaccessed static variables such as channel LLRs and the paritycheck matrix.
+As shown in Fig. 20, message-passing kernels (1 and 3) instantiate up to T threads, where T is the maximum number of edge connections between all CNs and VNs, kernel 2 instantiates (n − k) threads equal to the total number of CNs in the matrix, and kernel 4 instantiates up to n threads equal to the total number of VNs in the matrix. When early termination is enabled, T threads are required in kernels 1 and 3, and n threads are required in kernel 4. However, when early termination is disabled, the number of threads instantiated in kernels 1, 3, and 4 can be reduced due to the long-diagonal construction of the parity-check matrices in this work. The message-passing kernels (1 and 3) need only to instantiate threads that correspond to the CN-VN connections to the left of the long diagonal in the matrix structure shown in Fig. 11. Similarly, the VN-update kernel (4) needs only to instantiate threads that correspond to VNs to the left of the long diagonal. This reduction in the number of threads provides a marginal speedup in each iteration.
+While not shown in Fig. 20, the early-termination check is implemented via multiple kernels that perform a parallel reduction following the VN-to-CN message-passing kernel
+
+(1) in order to compute the parity at each CN. Additional computations and memory reads/writes are required in the message-passing and VN-update kernels (1, 3, and 4). The following additional operations must be performed to enable an early-termination check: send the decision bit from each VN to its connected CNs, send all mcv messages from each CN to its connected VNs (including those corresponding to connections along the long diagonal), and calculate the decision bit in each VN. To reduce overall decoding latency and maximize throughput, the early-termination check is performed only after a fixed number of decoding iterations. This fixed number of iterations corresponds to the average number of iterations required at each SNR point, and is pre-determined empirically through FER simulation for each code. The decoder uses a lookup table to decide after how many decoding iterations to enable the early-termination check based on the current SNR.
+A quasi-cyclic matrix structure reduces data permutation and memory access complexity by eliminating random, unordered memory access patterns. In addition, QC codes require fewer memory lookups for message passing since the permutation network can be described with approximately q-times fewer terms, where q is the expansion factor of the QC parity-check matrix, in comparison to a purely-random matrix for the same block length. Table II presents a breakdown of the latency of each GPU kernel for the three LDPC codes designed in this work. While the CN and VN update kernels (2 and 4) have similar runtime for both random and QC codes, QC codes achieve faster runtime in data permutation kernels (1 and 3) due the approximately q-times fewer CN-VN edge connections in the parity-check matrix. Since the parity-check matrices designed in this work are sparse, a compressed data structure is used to store CN-VN edge connections to reduce memory read latency in the message-passing kernels.
+Table II also highlights the respective error-correction performance and GPU throughput of the three codes at the maximum β = 0.99 efficiency with d = 8 reconciliation. The raw GPU throughput (including parity bits) is given by
+
+KGraPwU
+
+=
+
+Latency
+
+Block Length Per Iteration ×
+
+Iterations
+
+(bits/s).
+
+(17)
+
+Similar to the finite secret key rate, the information throughput of the GPU decoder must be scaled by (1) the FER Pe to account for discarded frames when decoding is unsuccessful, i.e. CRC does not pass or parity check fails, and (2) the code rate Rcode to account for the parity bits that must be discarded after decoding. The average GPU information throughput is then given by
+
+KGPU = KGraPwU Rcode (1 − Pe).
+
+(18)
+
+Thus, for any LDPC code, the GPU throughput is determined by the latency per iteration and the number of decoding iterations. The latency per iteration depends on the LDPC code structure and the number of memory lookups, while the FER is bound by the maximum number of iterations.
+Some GPU-based LDPC decoders use fixed-point number representations and/or frame-level parallelism to maximize computational speedup for codes with short block lengths (n < 105 bits) in high-SNR regions above 0dB where the Min-Sum algorithm achieves sufficient error-correction performance [82]–[86]. This work, however, uses single-precision floating point to minimize FER with Sum-Product decoding at SNRs below -15dB. Due to the large block length (n = 106
+
+18
+
+APRIL 2017
+
+TABLE III: Overview of secret key rate and GPU throughput at maximum reconciliation distance with rate 0.02 multi-edge codes and Nprivacy = 1012 bits
+
+Reconciliation Dimension
+
+Maximum Reconciliation
+Efficiency
+
+d=1
+
+β = 0.96
+
+d=2
+
+β = 0.97
+
+d=4
+
+β = 0.97
+
+d=8
+
+β = 0.99
+
+LDPC Code
+Random QC, q = 21 QC, q = 50
+Random QC, q = 21 QC, q = 50
+Random QC, q = 21 QC, q = 50
+Random QC, q = 21 QC, q = 50
+
+Maximum Distance
+(km)
+131.38 131.38 131.43 137.99 137.99 137.85 137.99 137.99 137.85 160.47 160.47 160.52
+
+Operating Secret Key Rate Kfinite at Max Distance with frep = 1MHz (bit/s)
+0.060 0.119 0.235 0.051 0.203 0.050 0.101 0.302 0.401 0.230 0.410 0.224
+
+Fundamental Key Rate Limit Klim at Max Distance with frep = 1MHz (Kbit/s)
+3.405 3.405 3.397 2.510 2.510 2.526 2.510 2.510 2.526 0.891 0.891 0.889
+
+GPU Raw Throughput
+KGraPwU (Mbit/s)
+0.612 1.887 1.966 0.612 1.856 1.983 0.604 1.818 1.855 0.604 1.724 1.808
+
+GPU Info. Throughput
+KGPU (Kbit/s)
+0.111 0.686 1.426 0.223 2.700 0.360 0.439 3.938 2.692 1.409 7.160 4.207
+
+KGPU Speedup Over Klim (KGPU/Klim) 0.033× 0.202× 0.420× 0.087× 1.076× 0.142× 0.175× 1.569× 1.065× 1.581× 8.033× 4.733×
+
+GPU Information Throughput (bits/s) Information Rate (bits/second)
+
+106
+
+105
+
+104
+
+103
+102 0.85
+
+d=1 - GPU Thpt: Random Code d=1 - GPU Thpt: QC q=21 Code d=1 - GPU Thpt: QC q=50 Code d=8 - GPU Thpt: Random Code d=8 - GPU Thpt: QC q=21 Code d=8 - GPU Thpt: QC q=50 Code
+
+d=1
+
+0.9
+
+0.95
+
+Reconciliation Efficiency (β)
+
+d=8 1
+
+Fig. 21: Measured information throughput KGPU vs. reconciliation efficiency for d = 1 and d = 8 dimensional reconciliation. Each
+measurement point corresponds to a particular SNR operating point
+with a measured FER presented in Fig. 15.
+
+bits), all GPU threads are fully utilized, thus external (framelevel) parallelism does not provide additional speedup. Asynchronous data transfer to the GPU is another technique often employed to minimize overhead latency, however, this does not provide any significant performance boost as the Sum-Product computation dominates overall execution time due to the large number of iterations required for low-SNR decoding.
+B. Information Throughput Results
+Figure 21 presents the measured information throughput KGPU from the GPU decoder for all three LDPC codes at each β-efficiency point, which corresponds to a unique SNRFER point in Figures 12 and 13 for the d = 1 and d = 8 dimensional reconciliation cases, respectively. Table III compares the performance of the rate 0.02 random and QC codes at the maximum achievable distance for each reconciliation
+
+107
+
+106 105 104 103 102 101
+0
+
+β = 0.8 β = 0.83 β = 0.86 β = 0.89 β = 0.92 β = 0.95 β = 0.98 β = 0.99
+
+β = 0.80GPU Info. Thpt.
+
+Fundamental Limit
+
+ǫ v
+η
+
+=
+el
+=
+
+Max 0.005 = 0.041
+0.606
+
+CV-QKD
+
+Key
+
+Rate
+
+α = 0.2
+
+N
+
+= 1012
+
+privacy
+
+for q=50 QC Code β = 0.98
+
+of
+
+Lossy
+
+β = 0.99 Channel
+
+(FER=0)
+
+β = 0.99 β = 0.80
+
+20 40 60 80 100 120 140 160 180 Distance (km)
+
+Fig. 22: GPU information throughput KGPU of the q = 50 QC-LDPC code with d = 8 dimensional reconciliation up to the maximum distance point for each β efficiency with Nprivacy = 1012 bits,
+maximum CV-QKD key rate with perfect reconciliation (FER = 0)
+Kopt, and fundamental secret key rate limit for lossy channel Klim vs. distance. Kopt and Klim are scaled by frep = 1MHz.
+
+dimension. The q = 21 and q = 50 QC codes designed in this
+
+work achieve approximately 3× higher raw decoding through-
+
+put KGraPwU over the purely-random code with d = 1, 2, 4, 8 dimensional reconciliation at the maximum distance point for
+
+each β-efficiency. When scaled by the corresponding FER and
+
+code rate, the QC codes achieve between 5.1× and 12.8×
+
+higher information throughput KGPU over the purely-random code. Table III also presents the operating secret key rate
+
+Kfinite defined by Eq. 16, and the fundamental secret key rate limit Klim for a lossy channel defined by Eq. 7. Here, the
+
+fundamental limit is scaled by the light source repetition rate
+
+frep, such that
+
+Klim = frepKlim.
+
+(19)
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+19
+
+A realistic CV-QKD repetition rate of frep = 1MHz is assumed for the comparison [28], [53], [87]. For distances beyond 130km, the operating secret key rate Kfinite is between 2176× and 57112× lower than the fundamental limit Klim, with d = 8 and d = 1 dimensional reconciliation, respectively.
+The rightmost column in Table III (KGPU/Klim) presents the two key results of this work. First, it shows that the GPU decoder can achieve between 1.07× and 8.03× higher information throughput KGPU over the fundamental secret key rate limit Klim with a 1MHz source using QC-LDPC codes with d = 4 and d = 8 dimensional reconciliation. Since the
+decoder delivers an information throughput higher than the
+fundamental key rate limit, it can be concluded that LDPC
+decoding is no longer the post-processing bottleneck in CV-
+QKD, and thus, the secret key rate remains only limited by the
+physical parameters of the quantum channel. The second result is that d = 1 and d = 2 dimensional reconciliation schemes are not well-suited for long-distance CV-QKD since the KGPU speedup over Klim is less than 1×. In general, Table III shows that QC codes achieve lower decoding latency than the purely-
+random code at long distances, thereby making them more suitable for reverse reconciliation at high β efficiencies.
+The results presented in Table III and Fig. 22 assumed a light source repetition rate of frep =1MHz. While a higher source repetition rate such as frep = 100MHz or frep = 1GHz would raise the fundamental secret key rate limit Klim above the maximum GPU decoder throughput KGPU, it would still not introduce a post-processing bottleneck for CV-QKD. The GPU decoder currently delivers an information throughput KGPU between 1868× and 18790× higher than the operating secret key rate Kfinite with a 1MHz light source at the maximum distance points for d = 1, 2, 4, 8 dimensional reconciliation
+schemes beyond 130km. Even with a source repetition rate of frep = 1GHz, the GPU information throughput KGPU would still exceed the operating secret key rate Kfinite for distances beyond 130km by 1.8× and 18.7×, assuming the
+same quantum channel parameters. Therefore, GPUs remain
+a viable platform for the implementation of reconciliation
+algorithms for long-distance CV-QKD. This is further illustrated in Fig. 22 where the GPU in-
+formation throughput KGPU of the q = 50 QC-LDPC code with d = 8 dimensional reconciliation is compared to the asymptotic secret key rate limit Kopt for each β-efficiency with perfect reconciliation (Pe = 0), as presented in Fig. 5. Here, a 1MHz source is assumed, and the scaled Kopt is given by
+
+Kopt = frepKopt.
+
+(20)
+
+The result presented in Fig. 22 also shows that KGPU is higher than the upper bound on secret key rate Klim on a lossy channel with a 1MHz source from β = 0.8 to β = 0.99.
+
+C. Comparison to Other CV-QKD Implementations
+While QKD has been well-studied over the past 30 years, the exploration of long-distance CV-QKD is still nascent, with very few published implementations in the low-SNR regime for optical transmission distances beyond 100km. Hardwarebased implementations of DV-QKD and short-distance CVQKD have previously been demonstrated using FPGAs and GPUs [26], [27], [74], [88], however, at the time of writing, there is only one reported CV-QKD implementation designed to operate in the low-SNR regime for long-distance reconciliation [25].
+
+TABLE IV: GPU LDPC decoding comparison at SNR = 0.161 with d = 8 on BIAWGNC targeting FER = 0.04 with rate 1/10 codes
+
+Specification
+Code Rate Block Length (Bits)
+SNR LDPC Code
+Structure Connections in Parity Matrix Early Termination Max Iterations Average Iterations
+FER (1) Latency Per Iteration (ms) (2) KGraPwU GPU Raw Throughput (Mb/s) KGPU GPU Info. Throughput (Kb/s)
+GPU Model
+CMOS Technology GPU Cores
+GPU GFLOPS GPU Memory Bus
+Width (Bits) GPU Memory Bandwidth (GB/s)
+
+This Work
+
+2016
+
+1/10 220
+
+0.161
+
+Random
+
+q = 512 QC
+
+Multi-Edge
+
+Multi-Edge
+
+4,063,229
+
+7,932
+
+No Yes No
+
+Yes
+
+88 88 100 100
+
+88 78 100
+
+78
+
+0.04 0.04 0.0243 0.0243
+
+4.73 4.84 1.28 1.47
+
+2.52 2.78 8.21 9.17
+
+242 267 801 895
+
+NVIDIA GeForce GTX 1080
+16nm 2560 8228
+256
+
+320
+
+Jouguet & Kunz-Jacques
+2014 [25] 1/10 220 0.161
+Random Multi-Edge
+N/A
+No 100 100 0.04
+1.48
+7.1
+682
+AMD Radeon HD 7970 28nm 2048 3789
+384
+264
+
+(1) FER Pe corresponds to the probability of detected error, since Pundetected = 0 with 32-bit CRC. All three codes achieve a CV-QKD distance of 83.8km based on the quantum channel parameters assumed in this work. (2) Latency per iteration is an average for the full decoding of a single
+frame, and also includes the data transfer latency between the CPU and
+GPU.
+
+Jouguet and Kunz-Jacques reported a GPU-based LDPC decoder implementation that achieves 7.1Mb/s throughput at SNR = 0.161 (β = 0.93) on the BIAWGNC [25], for a random multi-edge LDPC code with a block length of 220 bits based on the rate 1/10 multi-edge code designed by Richardson and Urbanke with an SNR threshold of 0.1556 [39]. For throughput comparison purposes, two additional multi-edge codes with the same code rate, block length, and SNR threshold were designed in this work: a purely-random code and a q = 512 QC code.
+Table IV presents a performance comparison between the two designed rate 1/10 codes and the result achieved by Jouguet and Kunz-Jacques at SNR = 0.161 on the BIAWGNC [25]. The two designed codes achieve a FER of approximately 0.04 under the same decoding conditions as the comparison work with d = 8 dimensional reconciliation. Similar to the results presented in Tables II and III, the q = 512 QC code achieves approximately 3× lower latency per iteration than the purely-random rate 1/10 code designed in this work. Rate 1/10 QC codes with expansion factors q ∈ {64, 128, 256} were also designed, however, the q = 512 QC code achieved the lowest latency per iteration due to the lower number of required memory accesses in the GPU message-passing kernels, as a result of the lower number of connections in the QC parity-check matrix. While the designed rate 1/10 random code achieves a maximum raw throughput of only 2.78Mb/s, the q = 512 QC code delivers a maximum raw throughput of 9.17Mb/s with early termination enabled only in iterations
+
+20
+
+APRIL 2017
+
+greater than the average number of iterations, as determined empirically through FER simulation. The q = 512 QC code achieves a 1.29× higher throughput than the 7.1Mb/s reported by Jouguet and Kunz-Jacques [25], further demonstrating that the QC code structure offers computational speedup benefits for multi-edge codes operating in the high β-efficiency region at low SNR. Although the comparison work is from 2014, both GPU models have a similar memory bus width, which is the primary constraint that limits the latency per iteration. As previously discussed, GPU decoder performance is bound by the memory access rate, and not the floating point operations per second (FLOPS). Thus, a wider GPU memory allows for a higher memory access rate, which in turn, reduces the decoding latency.
+Other types of error-correcting codes have been studied for application in the low-SNR regime of CV-QKD, such as polar codes, repeat-accumulate (RA) codes, and raptor codes. Polar codes require block lengths on the order of 227 bits to achieve comparable FER performance to the rate 1/10 multi-edge LDPC codes designed in this work, however, they have been shown to achieve low decoding latency on generic x86 CPUs due to their recursive decoding algorithm [25]. A polar-code performance comparison is not available for the rate 0.02 multi-edge QC-LDPC codes designed in this work. Punctured and extended low-rate RA codes have been constructed from ETSI DVB-S2 codes with block lengths of 64,800 bits to achieve β > 0.85 efficiency over a wide range of SNRs [89], however, their performance has not been investigated beyond 70km and there is currently no hardware implementation to provide a sufficient throughput comparison. Lastly, raptor codes achieve high β-efficiency at low SNR and guarantee error-free decoding (Pe = 0) by sending as many coded symbols as required by the receiver [90]. However, their decoding latency may be a limitation to high-throughput reconciliation, and at the time of writing, there is no known hardware implementation of raptor codes for long-distance CVQKD. The demand for long-distance communication through applications such as CV-QKD motivates the need for continued research in high-efficiency codes and their hardware realizations.
+V. CONCLUSION
+This work introduced multi-edge quasi-cyclic LDPC codes to accelerate the reconciliation step in long-distance CV-QKD by means of a GPU-based decoder implementation and multidimensional reconciliation schemes. With an 8-dimensional reconciliation scheme, the GPU-based decoder delivers an information throughput up to 8.03× higher than the upper bound on secret key rate for a lossy channel with a 1MHz source, thereby demonstrating that key reconciliation is no longer a computational bottleneck in long-distance CV-QKD. Furthermore, the low-rate LDPC codes extend the maximum distance of CV-QKD from the previously achieved 100km to 160km based on the quantum channel parameters assumed in this work.
+The LDPC codes and reconciliation techniques applied in this work can be extended to post-processing algorithms in two areas that show promise for the future of QKD: (1) free-space QKD using low-Earth orbit satellites as communication relays to extend the distance of secure communication beyond 200km without fiber-optic infrastructure, and (2) fully-integrated chip implementations [4]. Recent works
+
+have experimentally demonstrated terrestrial free-space QKD for distances up to 143km [91], [92], while satellite-based QKD has been proposed as a practical near-term solution to achieving long-distance QKD on a global scale [20], [93]. In August 2016, China launched the Quantum Experiments at Space Scale (QUESS) satellite to generate secret keys between ground stations in Beijing and Vienna by transmitting entangled photon pairs from an orbit altitude of 500km [94]. Freespace fading channels for satellite QKD typically operate at SNRs above 0dB [95], however, quasi-cyclic code construction techniques can still be employed to achieve high secret key rates, while GPUs would allow for simple integration with other satellite equipment for rapid prototyping, in contrast to ASIC- or FPGA-based LDPC decoder implementations. This paper presented the computational speedup achievable on a single state-of-the-art GPU. Further acceleration can be achieved through architectural optimizations in the design of a monolithic QKD chip that combines both optical and postprocessing circuits. Photonic chips have already been realized for QKD transmitters and receivers [4], [21], [96], [97], and further integration of post-processing algorithms would provide a considerable reduction in system size and power consumption. A final key takeaway here is that the quasi-cyclic LDPC code construction and GPU architecture techniques presented in this work can also be applied to forward errorcorrection implementations for DV-QKD where reconciliation is performed over the binary symmetric channel (BSC) instead of the BIAWGNC as in CV-QKD.
+This work addressed the challenge of achieving high-speed, high-efficiency reconciliation for long-distance CV-QKD over fiber-optic cable. In addition to extending information-theoretic security to general attacks for finite key sizes, a major remaining hurdle to extending the secure transmission distance in CVQKD is the reduction of excess noise in the optical quantum channel. While recent techniques have been demonstrated to control excess noise to within a tolerable limit [29], future work may also investigate the security of CV-QKD in the presence of non-Gaussian noise sources, and in particular, the performance of LDPC decoding at low SNR with nonGaussian noise. GPU-based decoder implementations with quasi-cyclic codes would provide a suitable platform for such investigations. Furthermore, reducing the latency of privacy amplification for large block sizes on the order of Nprivacy ≥ 1012 bits is necessary in order to realize secret key exchange for distances beyond 100km.
+ACKNOWLEDGMENT
+The authors would like to thank the Natural Sciences and Engineering Research Council of Canada (NSERC) for supporting this research, Dr. Christian Weedbrook and Dr. Xingxing Xing for their technical guidance related to CVQKD, Professor Hoi-Kwong Lo at the University of Toronto for his insights on MDI-QKD and state-of-the-art implementations, Professor Stefano Pirandola at the University of York for introducing the upper bound on secret key rate for lossy channels, and Dr. Christoph Pacher at the Austrian Institute of Technology for his clarifications on finite-size effects.
+REFERENCES
+[1] C. H. Bennett and G. Brassard, “Quantum cryptography: Public key distribution and coin tossing,” Theoretical Computer Science, vol. 560, Part 1, pp. 7 – 11, Dec. 2014.
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+21
+
+[2] N. Gisin, G. Ribordy, W. Tittel, and H. Zbinden, “Quantum cryptography,” Rev. Mod. Phys., vol. 74, pp. 145–195, Jan. 2002.
+[3] R. Alle´aume, C. Branciard, J. Bouda, T. Debuisschert, M. Dianati, N. Gisin, M. Godfrey, P. Grangier, T. Lnger, N. Ltkenhaus et al., “Using quantum key distribution for cryptographic purposes: A survey,” Theoretical Computer Science, vol. 560, Part 1, pp. 62–81, Dec. 2014.
+[4] E. Diamanti, H.-K. Lo, B. Qi, and Z. Yuan, “Practical challenges in quantum key distribution,” Npj Quantum Information, vol. 2, pp. 16 025–1 –16 025–12, Nov. 2016.
+[5] J. D. Morris, M. R. Grimaila, D. D. Hodson, D. Jacques, and G. Baumgartner, “Chapter 9 - A Survey of Quantum Key Distribution (QKD) Technologies,” Emerging Trends in ICT Security, pp. 141–152, Nov. 2014.
+[6] R. L. Rivest, A. Shamir, and L. Adleman, “A method for obtaining digital signatures and public-key cryptosystems,” Communications of the ACM, vol. 21, pp. 120–126, Feb. 1978.
+[7] C. Kollmitzer and M. Pivk, Applied quantum cryptography. Springer, Apr. 2010, vol. 797.
+[8] P. W. Shor, “Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer,” SIAM Journal on Computing, vol. 26, no. 5, pp. 1484–1509, Oct. 1997.
+[9] D. Adrian, K. Bhargavan, Z. Durumeric, P. Gaudry, M. Green, J. A. Halderman, N. Heninger, D. Springall, E. Thome´, L. Valenta, B. VanderSloot, E. Wustrow, S. Zanella-Be´guelin, and P. Zimmermann, “Imperfect Forward Secrecy: How Diffie-Hellman Fails in Practice,” Proceedings of the 22Nd ACM SIGSAC Conference on Computer and Communications Security, pp. 5–17, Oct. 2015.
+[10] H.-K. Lo, M. Curty, and K. Tamaki, “Secure quantum key distribution,” Nature Photonics, vol. 8, no. 8, pp. 595–604, Jul. 2014.
+[11] M. Peev, C. Pacher, R. Allaume, C. Barreiro, J. Bouda, W. Boxleitner, T. Debuisschert, E. Diamanti, M. Dianati, J. F. Dynes et al., “The SECOQC quantum key distribution network in Vienna,” New Journal of Physics, vol. 11, no. 7, pp. 075 001–1 – 075 001–37, Jul. 2009.
+[12] M. Sasaki, M. Fujiwara et al., “Field test of quantum key distribution in the Tokyo QKD Network,” Opt. Express, vol. 19, no. 11, pp. 10 387– 10 409, May 2011.
+[13] P. Jouguet, S. Kunz-Jacques et al., “Field test of classical symmetric encryption with continuous variables quantum key distribution,” Opt. Express, vol. 20, no. 13, pp. 14 030–14 041, Jun. 2012.
+[14] S. Wang, W. Chen et al., “Field and long-term demonstration of a wide area quantum key distribution network,” Opt. Express, vol. 22, no. 18, pp. 21 739–21 756, Sep. 2014.
+[15] H.-L. Yin, T.-Y. Chen, Z.-W. Yu, H. Liu, L.-X. You, Y.-H. Zhou, S.-J. Chen, Y. Mao, M.-Q. Huang, W.-J. Zhang, H. Chen, M. J. Li, D. Nolan, F. Zhou, X. Jiang, Z. Wang, Q. Zhang, X.-B. Wang, and J.-W. Pan, “Measurement-device-independent quantum key distribution over a 404 km optical fiber,” Phys. Rev. Lett., vol. 117, pp. 190 501–1 – 190 501–5, Nov. 2016.
+[16] B. Qi, W. Zhu, L. Qian, and H.-K. Lo, “Feasibility of quantum key distribution through a dense wavelength division multiplexing network,” New Journal of Physics, vol. 12, no. 10, pp. 103 042–1 – 103 042–17, Oct. 2010.
+[17] K. A. Patel, J. F. Dynes, I. Choi, A. W. Sharpe, A. R. Dixon, Z. L. Yuan, R. V. Penty, and A. J. Shields, “Coexistence of high-bit-rate quantum key distribution and data on optical fiber,” Phys. Rev. X, vol. 2, pp. 041 010–1 – 041 010–8, Nov. 2012.
+[18] R. Kumar, H. Qin, and R. Allaume, “Coexistence of continuous variable QKD with intense DWDM classical channels,” New Journal of Physics, vol. 17, no. 4, pp. 043 027–1 – 043 027–4, Apr. 2015.
+[19] G. Vest, M. Rau, L. Fuchs, G. Corrielli, H. Weier, S. Nauerth, A. Crespi, R. Osellame, and H. Weinfurter, “Design and evaluation of a handheld quantum key distribution sender module,” IEEE Journal of Selected Topics in Quantum Electronics, vol. 21, no. 3, pp. 131–137, May 2015.
+[20] G. Vallone, D. Bacco, D. Dequal, S. Gaiarin, V. Luceri, G. Bianco, and P. Villoresi, “Experimental satellite quantum communications,” Phys. Rev. Lett., vol. 115, pp. 040 502–1 – 040 502–5, Jul. 2015.
+[21] P. Sibson, J. E. Kennard et al., “Integrated silicon photonics for highspeed quantum key distribution,” Optica, vol. 4, no. 2, pp. 172–177, Feb. 2017.
+[22] L. Chen, S. Jordan et al., “Report on post-quantum cryptography,”
+
+National Institute of Standards and Technology Internal Report, vol. 8105, 2016.
+[23] D. Huang, D. Lin et al., “Continuous-variable quantum key distribution with 1 Mbps secure key rate,” Opt. Express, vol. 23, no. 13, pp. 17 511– 17 519, Jun. 2015.
+[24] C. Wang, D. Huang et al., “25 MHz clock continuous-variable quantum key distribution system over 50 km fiber channel,” Scientific reports, vol. 5, pp. 14 607–1 – 14 607–8, Sep. 2015.
+[25] P. Jouguet and S. Kunz-Jacques, “High performance error correction for quantum key distribution using polar codes,” Quantum Inform. & Comp., vol. 14, no. 3, pp. 329–338, Mar. 2014.
+[26] J. Martinez-Mateo, D. Elkouss, and V. Martin, “Key reconciliation for high performance quantum key distribution,” Scientific Reports, vol. 3, pp. 1576–1 – 1576–6, Apr. 2013.
+[27] A. Dixon and H. Sato, “High speed and adaptable error correction for Megabit/s rate quantum key distribution,” Scientific Reports, vol. 4, pp. 7275–1 – 7275–4, Dec. 2014.
+[28] P. Jouguet, S. Kunz-Jacques, A. Leverrier, P. Grangier, and E. Diamanti, “Experimental demonstration of long-distance continuousvariable quantum key distribution,” Nature Photonics, vol. 7, pp. 378– 381, May 2013.
+[29] D. Huang, P. Huang, D. Lin, and G. Zeng, “Long-distance continuousvariable quantum key distribution by controlling excess noise,” Scientific Reports, vol. 6, pp. 19 201–1 – 19 201–6, Jan. 2016.
+[30] A. Leverrier and P. Grangier, “Unconditional security proof of longdistance continuous-variable quantum key distribution with discrete modulation,” Physical Review Letters, vol. 102, no. 18, pp. 180 504–1 – 180 504–4, May 2009.
+[31] A. Becir and M. Ridza Wahiddin, “Phase coherent states for enhancing the performance of continuous variable quantum key distribution,” Journal of the Physical Society of Japan, vol. 81, no. 3, pp. 034 005–1 – 034 005–9, Mar. 2012.
+[32] P. Jouguet, S. Kunz-Jacques, and A. Leverrier, “Long-distance continuous-variable quantum key distribution with a Gaussian modulation,” Phys. Rev. A, vol. 84, pp. 062 317–1 – 062 317–7, Dec. 2011.
+[33] “IEEE Standard for Information technology– Telecommunications and information exchange between systemsLocal and metropolitan area networks– Specific requirements–Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications– Amendment 4: Enhancements for Very High Throughput for Operation in Bands below 6 GHz,” IEEE Std 802.11ac-2013, pp. 1–425, Dec. 2013.
+[34] “ETSI Standard 302 307-2 V1.1.1: Digital Video Broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for Broadcasting Interactive Services, News Gathering and other broadband satellite applications; Part 2: DVB-S2 Extensions (DVB-S2X),” ETSI Std 302 307-2 V1.1.1 DVB-S2X 2014, pp. 1–139, Oct. 2014.
+[35] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 lowdensity parity-check code decoder,” Solid-State Circuits, IEEE Journal of, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[36] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” Selected Areas in Communications, IEEE Journal on, vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[37] Y. S. Park, D. Blaauw, D. Sylvester, and Z. Zhang, “Low-Power HighThroughput LDPC Decoder Using Non-Refresh Embedded DRAM,” Solid-State Circuits, IEEE Journal of, vol. 49, no. 3, pp. 783–794, Mar. 2014.
+[38] J. Lodewyck, M. Bloch, R. Garcia-Patro´n, S. Fossier, E. Karpov, E. Diamanti, T. Debuisschert, N. J. Cerf, R. Tualle-Brouri, S. W. McLaughlin, and P. Grangier, “Quantum key distribution over 25km with an all-fiber continuous-variable system,” Phys. Rev. A, vol. 76, pp. 042 305–1 – 042 305–10, Oct. 2007.
+[39] T. Richardson, R. Urbanke et al., “Multi-edge type LDPC codes,” Workshop honoring Prof. Bob McEliece on his 60th birthday, California Institute of Technology, Pasadena, California, pp. 24–25, May 2002.
+[40] M. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” Information Theory, IEEE Transactions on, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[41] S. Pirandola, R. Laurenza, C. Ottaviani, and L. Banchi, “Fundamen-
+
+22
+
+APRIL 2017
+
+tal limits of repeaterless quantum communications,” arXiv preprint arXiv:1510.08863, 2015.
+[42] “International Roadmap for Devices and Systems (IRDS),” IEEE, 2016. [Online]. Available: http://irds.ieee.org
+[43] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC decoding on multicore architectures,” IEEE Transactions on Parallel and Distributed Systems, vol. 22, no. 2, pp. 309–322, Feb. 2011.
+[44] H. Ji, J. Cho, and W. Sung, “Massively parallel implementation of cyclic LDPC codes on a general purpose graphics processing unit,” 2009 IEEE Workshop on Signal Processing Systems, pp. 285–290, Oct. 2009.
+[45] T. Mohsenin, D. Truong, and B. Baas, “A Low-Complexity MessagePassing Algorithm for Reduced Routing Congestion in LDPC Decoders,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 57, no. 5, pp. 1048–1061, May 2010.
+[46] S. Kim, G. E. Sobelman, and H. Lee, “A reduced-complexity architecture for LDPC layered decoding schemes,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 19, no. 6, pp. 1099–1103, Jun. 2011.
+[47] S. W. Keckler, W. J. Dally, B. Khailany, M. Garland, and D. Glasco, “GPUs and the Future of Parallel Computing,” IEEE Micro, vol. 31, no. 5, pp. 7–17, Sep. 2011.
+[48] F. Grosshans and P. Grangier, “Continuous variable quantum cryptography using coherent states,” Phys. Rev. Lett., vol. 88, pp. 057 902–1 – 057 902–4, Jan. 2002.
+[49] H.-K. Lo, M. Curty, and B. Qi, “Measurement-device-independent quantum key distribution,” Phys. Rev. Lett., vol. 108, pp. 130 503–1 – 130 503–5, Mar. 2012.
+[50] S. Pirandola, C. Ottaviani, G. Spedalieri, C. Weedbrook, S. L. Braunstein, S. Lloyd, T. Gehring, C. S. Jacobsen, and U. L. Andersen, “Highrate measurement-device-independent quantum cryptography,” Nature Photonics, vol. 9, no. 6, pp. 397–402, May 2015.
+[51] A. Leverrier, R. Alle´aume, J. Boutros, G. Ze´mor, and P. Grangier, “Multidimensional reconciliation for a continuous-variable quantum key distribution,” Phys. Rev. A, vol. 77, pp. 042 325–1 – 042 325–8, Apr. 2008.
+[52] C. Weedbrook, S. Pirandola, S. Lloyd, and T. C. Ralph, “Quantum cryptography approaching the classical limit,” Phys. Rev. Lett., vol. 105, pp. 110 501–1 – 110 501–4, Sep. 2010.
+[53] P. Jouguet, D. Elkouss, and S. Kunz-Jacques, “High-bit-rate continuousvariable quantum key distribution,” Phys. Rev. A, vol. 90, pp. 042 329–1 – 042 329–8, Oct. 2014.
+[54] T. Gehring, V. Ha¨ndchen, J. Duhme, F. Furrer, T. Franz, C. Pacher, R. F. Werner, and R. Schnabel, “Implementation of continuous-variable quantum key distribution with composable and one-sided-deviceindependent security against coherent attacks,” Nature Communications, vol. 6, pp. 8795–1 – 8795–7, Oct. 2015.
+[55] F. Grosshans, G. V. Assche, J. Wenger, R. Brouri, N. J. Cerf, and P. Grangier, “Quantum key distribution using Gaussian-modulated coherent states,” Nature, vol. 421, pp. 238–241, Jan. 2003.
+[56] H. Yan, X. Peng, X. Lin, W. Jiang, T. Liu, and H. Guo, “Efficiency of Winnow Protocol in Secret Key Reconciliation,” 2009 WRI World Congress on Computer Science and Information Engineering, vol. 3, pp. 238–242, Mar. 2009.
+[57] D. Elkouss, J. Martinez, D. Lancho, and V. Martin, “Rate compatible protocol for information reconciliation: An application to QKD,” 2010 IEEE Information Theory Workshop on Information Theory, pp. 1–5, Jan 2010.
+[58] N. Benletaief, H. Rezig, and A. Bouallegue, “Toward Efficient Quantum Key Distribution Reconciliation,” Journal of Quantum Information Science, vol. 4, no. 2, pp. 117–128, Jun. 2014.
+[59] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[60] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” Information Theory, IEEE Transactions on, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[61] D. Declercq and M. Fossorier, “Decoding algorithms for nonbinary LDPC codes over GF(q),” IEEE Transactions on Communications, vol. 55, no. 4, pp. 633–643, Apr. 2007.
+
+[62] A. Hurwitz, “Ueber die Composition der quadratischen Formen von belibig vielen Variablen,” Nachrichten von der Gesellschaft der Wissenschaften zu Gttingen, Mathematisch-Physikalische Klasse, vol. 1898, pp. 309–316, Jul. 1898.
+[63] M. Bloch, A. Thangaraj, S. W. McLaughlin, and J. M. Merolla, “LDPCbased secret key agreement over the Gaussian wiretap channel,” 2006 IEEE International Symposium on Information Theory, pp. 1179–1183, Jul. 2006.
+[64] R. Takahashi, Y. Tanizawa, and A. Dixon, “High-speed implementation of privacy amplification in quantum key distribution,” Sept. 2016, poster at QCrypt 2016.
+[65] M. Hayashi and T. Tsurumaru, “More efficient privacy amplification with less random seeds via dual universal hash function,” IEEE Transactions on Information Theory, vol. 62, no. 4, pp. 2213–2232, Apr. 2016.
+[66] P. Jouguet, S. Kunz-Jacques, E. Diamanti, and A. Leverrier, “Analysis of imperfections in practical continuous-variable quantum key distribution,” Phys. Rev. A, vol. 86, p. 032309, Sep 2012.
+[67] A. Leverrier, F. Grosshans, and P. Grangier, “Finite-size analysis of a continuous-variable quantum key distribution,” Phys. Rev. A, vol. 81, pp. 062 343–1 – 062 343–11, Jun. 2010.
+[68] M. Curty, F. Xu, W. Cui, C. C. W. Lim, K. Tamaki, and H.-K. Lo, “Finite-key analysis for measurement-device-independent quantum key distribution,” Nature Communications, vol. 5, Apr. 2014.
+[69] E. Diamanti and A. Leverrier, “Distributing secret keys with quantum continuous variables: principle, security and implementations,” Entropy, vol. 17, no. 9, pp. 6072–6092, Aug. 2015.
+[70] A. Leverrier, “Composable Security Proof for Continuous-Variable Quantum Key Distribution with Coherent States,” Phys. Rev. Lett., vol. 114, pp. 070 501–1 – 070 501–5, Feb. 2015.
+[71] V. C. Usenko and R. Filip, “Trusted noise in continuous-variable quantum key distribution: A threat and a defense,” Entropy, vol. 18, no. 1, p. 20, Jan. 2016.
+[72] G. V. Assche, J. Cardinal, and N. J. Cerf, “Reconciliation of a quantumdistributed Gaussian key,” IEEE Transactions on Information Theory, vol. 50, no. 2, pp. 394–400, Feb. 2004.
+[73] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” Very Large Scale Integration (VLSI) Systems, IEEE Transactions on, vol. 11, no. 6, pp. 976–996, Dec 2003.
+[74] N. Walenta, A. Burg, D. Caselunghe, J. Constantin, N. Gisin, O. Guinnard, R. Houlmann, P. Junod, B. Korzh, N. Kulesza et al., “A fast and versatile quantum key distribution system with hardware key distillation and wavelength multiplexing,” New Journal of Physics, vol. 16, no. 1, pp. 013 047–1 – 013 047–20, Jan. 2014.
+[75] Z. Bai, S. Yang, and Y. Li, “High-efficiency reconciliation for continuous variable quantum key distribution,” Japanese Journal of Applied Physics, vol. 56, no. 4, pp. 044 401–1 – 044 401–4, Mar. 2017.
+[76] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” Communications, IEEE Transactions on, vol. 47, no. 5, pp. 673–680, May 1999.
+[77] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[78] T. J. Richardson, “Error floors of LDPC codes,” Proceedings of the annual Allerton conference on communication, control, and computing, vol. 41, no. 3, pp. 1426–1435, Oct. 2003.
+[79] S.-Y. Chung, J. Forney, G.D., T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” Communications Letters, IEEE, vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[80] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[81] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” Global Telecommunications Conference, 2001. GLOBECOM ’01. IEEE, vol. 2, pp. 1021–1025, Nov. 2001.
+[82] S. Kang and J. Moon, “Parallel LDPC decoder implementation on GPU based on unbalanced memory coalescing,” 2012 IEEE International Conference on Communications (ICC), pp. 3692–3697, Jun. 2012.
+
+MILICEVIC et al.: KEY RECONCILIATION WITH LOW-DENSITY PARITY-CHECK CODES FOR LONG-DISTANCE QUANTUM CRYPTOGRAPHY
+
+23
+
+[83] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” Global Conference on Signal and Information Processing (GlobalSIP), 2013 IEEE, pp. 1258–1261, Dec. 2013.
+[84] Y. Lin and W. Niu, “High Throughput LDPC Decoder on GPU,” IEEE Communications Letters, vol. 18, no. 2, pp. 344–347, Feb. 2014.
+[85] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” Application Specific Processors (SASP), 2011 IEEE 9th Symposium on, pp. 82–85, Jun. 2011.
+[86] B. L. Gal, C. Jego, and J. Crenne, “A High Throughput Efficient Approach for Decoding LDPC Codes onto GPU Devices,” IEEE Embedded Systems Letters, vol. 6, no. 2, pp. 29–32, Jun. 2014.
+[87] D. Huang, P. Huang, T. Wang, H. Li, Y. Zhou, and G. Zeng, “Continuous-variable quantum key distribution based on a plug-andplay dual-phase-modulated coherent-states protocol,” Phys. Rev. A, vol. 94, pp. 032 305–1 – 032 305–11, Sep. 2016.
+[88] H. Zbinden, N. Walenta, O. Guinnard, R. Houlmann, C. L. C. Wen, B. Korzh, T. Lunghi, N. Gisin, A. Burg, J. Constantin et al., “Continuous QKD and high speed data encryption,” Proc. SPIE, vol. 8899, pp. 88 990P–1 – 88 990P–4, Oct. 2013.
+[89] S. J. Johnson, V. A. Chandrasetty, and A. M. Lance, “Repeat-accumulate codes for reconciliation in continuous variable quantum key distribution,” 2016 Australian Communications Theory Workshop (AusCTW), pp. 18–23, Jan. 2016.
+[90] M. Shirvanimoghaddam, S. J. Johnson, and A. M. Lance, “Design of Raptor codes in the low SNR regime with applications in quantum key distribution,” 2016 IEEE International Conference on Communications (ICC), pp. 1–6, May 2016.
+[91] J. Yin, J.-G. Ren, H. Lu, Y. Cao, H.-L. Yong, Y.-P. Wu, C. Liu, S.-K. Liao, F. Zhou, Y. Jiang et al., “Quantum teleportation and entanglement distribution over 100-kilometre free-space channels,” Nature, vol. 488, no. 7410, pp. 185–188, Aug. 2012.
+[92] J. Handsteiner, D. Rauch, D. Bricher, T. Scheidl, and A. Zeilinger, “Quantum key distribution at space scale,” 2015 IEEE International Conference on Space Optical Systems and Applications (ICSOS), pp. 1–3, Oct. 2015.
+[93] J.-P. Bourgoin, N. Gigov, B. L. Higgins, Z. Yan, E. Meyer-Scott, A. K. Khandani, N. Lu¨tkenhaus, and T. Jennewein, “Experimental quantum key distribution with simulated ground-to-satellite photon losses and processing limitations,” Phys. Rev. A, vol. 92, pp. 052 339–1 – 052 339– 12, Nov. 2015.
+[94] E. Gibney, “Chinese satellite is one giant step for the quantum internet,” Nature, vol. 535, pp. 478–479, Jul. 2016.
+[95] J. Rarity, P. Tapster, P. Gorman, and P. Knight, “Ground to satellite secure key exchange using quantum cryptography,” New Journal of Physics, vol. 4, no. 1, pp. 82.1–82.21, Oct. 2002.
+[96] C. Ma, W. D. Sacher, Z. Tang, J. C. Mikkelsen, Y. Yang, F. Xu, T. Thiessen, H.-K. Lo, and J. K. S. Poon, “Silicon photonic transmitter for polarization-encoded quantum key distribution,” Optica, vol. 3, no. 11, pp. 1274–1278, Nov. 2016.
+[97] D. Bunandar, N. Harris, Z. Zhang, C. Lee, R. Ding, T. Baehr-Jones, M. Hochberg, J. Shapiro, F. Wong, and D. Englund, “Cavity integrated quantum key distribution,” Sept. 2016, poster at QCrypt 2016.
+
+Mario Milicevic received the B.A.Sc. degree in electrical engineering in 2010 from the University of Toronto, Canada, where he is currently pursuing the Ph.D. degree in electrical engineering under the supervision of Professor P. Glenn Gulak. His research interests include integrated circuit design for highperformance and low-power digital signal processing systems, cryptography, and security. He is an IEEE volunteer, and served as the student volunteer team lead at the IEEE International Solid-State Circuits Conference (ISSCC) from 2012 to 2016.
+Chen Feng (S’08–M’14) received the B.Eng. degree from the Department of Electronic and Communications Engineering, Shanghai Jiao Tong University, China, in 2006, and the M.A.Sc. and Ph.D. degrees from the Department of Electrical and Computer Engineering, University of Toronto, Canada, in 2009 and 2014, respectively. From 2014 to 2015, he was a Postdoctoral Fellow with Boston University, USA, and the E´ cole Polytechnique Fe´de´rale de Lausanne (EPFL), Switzerland. He joined the School of Engineering, University of British Columbia, Kelowna, Canada, in July 2015, where he is currently an Assistant Professor. His research interests include data networks, coding theory, information theory, and network coding. Dr. Feng was a recipient of the prestigious NSERC Postdoctoral Fellowship in 2014. He was recognized by the IEEE TRANSACTIONS ON COMMUNICATIONS (TCOM) as an Exemplary Reviewer in 2015. Since 2015, he served as an Associate Editor for the IEEE COMMUNICATIONS LETTERS. He is a member of ACM and IEEE.
+Lei M. Zhang received his B.A.Sc. degree in Electrical Engineering from the University of Waterloo in 2009, his M.A.Sc. degree in Electrical Engineering from the University of Toronto in 2011, and his Ph.D. degree in Electrical Engineering from the University of Toronto in 2016 under the supervision of Professor Frank Kschischang.
+P. Glenn Gulak is a Professor in the Department of Electrical and Computer Engineering at the University of Toronto. He is a Senior Member of the IEEE and a registered Professional Engineer in the Province of Ontario. His present research interests are in the areas of algorithms, circuits, and CMOS implementations of high-performance baseband digital communication systems and, additionally, in the area of CMOS biosensors. He has authored or coauthored more than 150 publications in refereed journals and refereed conference proceedings. In addition, he has received numerous teaching awards for undergraduate courses taught in both the Department of Computer Science and the Department of Electrical and Computer Engineering at the University of Toronto. He currently serves as the Vice-President of the Publications Committee for the IEEE SolidState Circuits Society and an elected member of the IEEE Publication Services and Products Board (PSPB).
+
+

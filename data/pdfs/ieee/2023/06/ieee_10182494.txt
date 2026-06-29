@@ -1,0 +1,549 @@
+2023 International Wireless Communications and Mobile Computing (IWCMC) | 979-8-3503-3339-8/23/$31.00 ©2023 IEEE | DOI: 10.1109/IWCMC58020.2023.10182494
+
+A Novel Labeling Scheme for Neural Belief Propagation in Polar Codes
+Qi Chen, Hao Ju, Yin Xu, Dazhi He and Wenjun Zhang Cooperative Media Network Innovation Center (CMIC), School of Electronics Information and Electrical Engineering,
+Shanghai Jiao Tong University, China Pengcheng Laboratory, China
+
+Abstract—Recently, deep learning has been adopted to improve the performance of the belief propagation algorithm in polar codes, namely, the neural belief propagation decoder. By attaching trainable parameters to each edge on a tanner graph, this decoder effectively weakens the effect of short cycles. In this paper, we will show that the decoder can be further improved with our newly-designed labeling scheme. Instead of groundtruth transmitted codewords, our scheme utilizes codewords generated from a high-performance decoder (i.e., noise-aided belief propagation list decoder) to construct loss functions. Besides, to reduce the labeling complexity, the ground-truth transmitted codewords are integrated into the decoder as a list and compared with the other lists with the principle of minimum Euclidean distance. Numerical simulation results demonstrate that the proposed labeling scheme can improve the decoding performance by up to 0.2 dB with the same run time complexity and model size.
+Index Terms—Polar codes, deep learning, belief propagation algorithm
+I. INTRODUCTION
+Polar codes [1] are a class of error-correcting codes that have been chosen to protect the control channels of 5G New Radio (NR) [2]. These codes have the distinction of achieving channel capacity at infinite code length. The Successive Cancellation (SC) decoder was initially introduced for decoding polar codes and is known for its low complexity of O(n log n). However, for code lengths that are short to moderate, the incomplete polarization of virtual channels significantly degrades the error correction performance of the SC decoder. To improve the error correction performance, the SC-List (SCL) decoder was proposed [3]. This decoder has a complexity of O(Ln log n), where L is the decoding list size. Adding an outer Cyclic Redundancy Check (CRC) code is beneficial for identifying the correct message within the decoding lists. Finally, this technique has been shown to be competitive with other modern error-correcting code families such as LowDensity Parity Check (LDPC) and Turbo codes.
+This paper is supported in part by National Natural Science Foundation of China Program(62271316, 62101322), National Key RD Project of China (2019YFB1802703), Shanghai Key Laboratory of Digital Media Processing (STCSM 18DZ2270700). The authors: Qi Chen(qichen221@sjtu.edu.cn), Hao Ju( juhao237@sjtu.edu.cn) and Wenjun Zhang(zhangwenjun@sjtu.edu.cn ) are from Shanghai Jiao Tong University. The authors: Yin Xu(e-mail: xuyin@sjtu.edu.cn), Dazhi He(hedazhi@sjtu.edu.cn) are from Shanghai Jiao Tong University and Pengcheng Laboratory. The corresponding author is Yin Xu.
+
+Nonetheless, both SC and SCL decoders suffer from high latency as well as limited throughput because of their sequential decoding nature [4] (i.e., they have to decode codeword bits one by one). Compared with SC and SCL, the belief propagation (BP) algorithm demonstrates significant parallelism and is more favorable for low-latency and high-throughput applications. However, BP is appreciably inferior to SCL in terms of error rate performance and thus cannot fulfill the stringent requirement of 5G NR.
+Nowadays, deep learning methods have shown incredible performances in various tasks, including computer vision, game playing, and bio-informatics [5]–[7]. One successful case of applying deep learning to improve BP is the neural belief propagation (NBP) algorithm [?], [8], [9]. The NBP decoder uses deep unfolding [10] to attach trainable parameters to each edge in its factor graph to alleviate the inefficiency caused by short cycles in the graph. These parameters are then optimized using the back-propagation algorithm, and significant gains over standard BP can be provided. Nevertheless, there still exists a gap between NBP and SCL, and multiple efforts have been taken to reduce that.
+It is shown in [11] that a hypernetwork-aided decoder, akin to the NBP decoder but varying its parameters based on channel outputs, achieves performance very close to the maximum likelihood (ML) decoder. In [12], the authors proposed a CRC-polar BP (CPBP) decoder by exchanging extrinsic information between the factor graphs of polar codes and CRC codes, where the trainable parameters are on the edges of the concatenated factor graph. [13] demonstrates that restricting an NBP decoder with a shift-invariant structure on the weights can enhance the performance of the NBP for CRC. Besides, the combination of decimation and NBP is investigated in [14], where neural networks are utilized to decide the decimation value for the least reliable bit in NBP decoders. To simplify the computation, the research in [15] replaced the multiplicative parameters in NBP with the additive, with negligible performance loss. For the same reason, in [16], NBP uses the same weights across certain edges through parameter sharing, and simulation results reveal that simple scaling with a few parameters often yields the same gain as full parameterization in NBP.
+However, most of the above works focused on network structures and inference processes while ignoring the optimization of training labels which always use ground-truth informa-
+
+979-8-3503-3339-8/23/$31.00 ©2023 IEEE
+
+586
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:43 UTC from IEEE Xplore. Restrictions apply.
+
+tion bits. Indicating channel output, ground-truth information bits, and ML-decoded information bits with y, uˆGT and uˆML respectively, we have the relation Pr(uˆGT/y) ≤ Pr(uˆML/y) due to the fact that uˆML = arg max Pr(u/y). That is to say,
+u
+compared with ground-truth codeword bits, a ML decoder may offer better training labels for NBP to learn because some seriously noised codewords essentially cannot be decoded correctly, and using ground-truth bits in this case will probably cause over-fitting. In practice, ML decoders are too complex to generate enough labels for NBP which needs a large amount of training data but a high-performance one could be a good substitute.
+Based on these observations, in this paper, we decide to adopt the noise-aided belief propagation list (Na-BPL) decoding algorithm [17], with excellent performance and acceptable complexity, to produce the training labels for NBP. In addition, to further reduce the complexity, we replace one list in the Na-BPL with ground-truth codewords, and the final decoding result is selected with the principle of minimum Euclidean distance.
+The remainder of this paper is organized as follows. Section II briefly introduces polar codes and the NBP decoder. Section III describes the proposed labeling scheme. Numerical simulations are presented in Section IV . Finally, concluding remarks are drawn in Section V .
+
+II. PRELIMINARIES
+
+A. Polar Codes
+
+Polar codes achieve the capacity of binary discrete mem-
+
+oryless symmetric channels by using channel polarization.
+
+A polar code P(N, K) of length N with K information
+
+bits is constructed by applying a linear transformation to the
+
+message u = {u0, u1, ..., uN−1} as x = uGN BN where
+
+x = {x0, x1, ..., xN−1} is the codeword, GN is the n-th
+
+Kronecker power of the polarizing matrix F =
+
+1 1
+
+0 1
+
+where
+
+n = log2 N , and BN represents the bit-reversal permutation matrix. The K information bits and the other (N −K) bits are
+
+assigned to the reliable and unreliable positions of the N-bit
+
+message u , respectively. Generally, the positions of the frozen
+
+bits are aware to the encoder and the decoder, and their values
+
+are generally set to 0.
+
+The codeword x is then modulated and transmitted through
+
+the channel. In this paper, binary phase-shift keying (BPSK)
+
+modulation and additive white Gaussian noise (AWGN) chan-
+
+nel is considered. As a result, the soft vector of the channel
+
+output is shown as y = (1 − 2x) + z, where 1 is an all-one vector of size N , and z ∈ RN is the AWGN noise vector with variance σ2 and zero mean. In the log-likelihood ratio (LLR)
+
+domain, the LLR vector of the received signal is:
+
+Pr(x = 0|y) 2y
+
+LLRx = ln Pr(x = 1|y) = σ2 .
+
+(1)
+
+B. Neural Belief Propagation Decoding
+
+To process a P(N, K) polar code, the BP algorithm iteratively works on the Forney-style factor graph (FFG) [9],
+
+Input layer
+
+Imax iterations
+
+Output layer
+
+Fig. 1. Illustration of the neural belief propagation.
+
+which has (n + 1)N nodes and n = log2 N stages in total. The iterative processing consists of two kinds of message passes: a right-to-left pass propagating LLR values from the channel stage (rightmost) to the information bit stage (leftmost), followed by a left-to-right pass in the reverse order.
+The iterative updating rules are represented by:
+
+
+ 
+
+Li(,tj) = g
+
+
+
+L(i+t)1,2j−1, Li(+t)1,2j + Ri(,tj)+N/2
+
+,
+
+   
+
+L(i,tj)+N/2 = g
+
+Ri(,tj), L(i+t)1,2j−1
+
++ Li(+t)1,2j ,
+
+ 
+
+Ri(+t)1,2j−1 = g
+
+Ri(,tj), Li(+t−11,2)j + Ri(,tj)+N/2
+
+,
+
+(2)
+
+
+
+   
+
+Ri(+t)1,2j
+
+=g
+
+Ri(,tj), L(i+t−11,2)j−1
+
++ Ri(,tj)+N/2.
+
+In Eq. (4), Li(,tj) and Ri(,tj) represent right-to-left and left-to-right messages in the j-th input bit at the i-
+th stage for the t-th iteration respectively. Generally, g(x, y) = tanh(tanh−1(x) tanh−1(y)) but can be simplified as g(x, y) = sign(x)sign(y) min(|x|, |y|) that is used in our
+research. Before the iteration, all messages are set to zero
+except that:
+
+R1(1,j) =
+
+0, if j ∈ A, +∞, if j ∈ Ac,
+
+Ln(1+) 1,j = LLRj.
+
+(3)
+
+Using the idea of deep unfolding, Xu et al. [9] proposed the neural belief propagation in polar codes to alleviate the effect of the short cycles in the factor graphs, which is illustrated in Fig. 1. Same to the BP, iterative processing over the factor graph is performed until the Imax-th iteration, but the updating rules are modified as:
+
+
+ 
+
+Li(,tj)
+
+= αi(,tj) · g
+
+
+
+L(i+t)1,2j−1, Li(+t)1,2j + Ri(,tj)+N/2
+
+,
+
+   
+
+Li(,tj)+N/2
+
+= αi(,tj)+N/2 · g
+
+Ri(,tj), L(i+t)1,2j−1
+
++ L(i+t)1,2j ,
+
+ 
+
+Ri(+t)1,2j−1 = βi(+t)1,2j−1 · g
+
+
+
+Ri(,tj), Li(+t−11,2)j + Ri(,tj)+N/2
+
+,
+
+   
+
+Ri(+t)1,2j
+
+= βi(+t)1,2j · g
+
+Ri(,tj), Li(+t−11,2)j−1
+
++ Ri(,tj)+N/2,
+
+(4)
+
+587
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:43 UTC from IEEE Xplore. Restrictions apply.
+
+where αi(,tj) and βi(,tj) are the trainable parameters for the left message Li(,tj) and right message Ri(,tj) respectively. The output
+of the neural decoder is defined by:
+
+oj = σ
+
+L(Imax
+1,j
+
+)
+
+where σ is the sigmoid activation. The loss function is the cross entropy between the ground-
+truth codeword and the network output:
+
+L(o, uˆGT ) = − 1 N
+
+N
+uˆjGT log (oj) +
+
+1 − uˆjGT
+
+log (1 − oj)
+
+j=1
+
+(5)
+
+where uˆGj T is the j-th ground-truth information bit. Finally, all
+
+of the parameters are trained using stochastic gradient descent.
+
+Groundtruth
+codeword
+BP1
+
+Channel output
+
+Noise1
+
+BP2
+
+Noise2
+
+BP3
+
+...
+
+NoiseL-2
+
+BPL-1
+
+Fig. 2. Illustration of the Ground-truth List aided Na-BPL.
+
+III. PROPOSED LABELING SCHEME
+In this section, we detail our proposed labeling scheme for NBP. Firstly, instead of ground-truth codewords, a Na-BPL decoder is utilized to generate labels to train NBP, which efficiently improves its performance. Secondly, to reduce the list number needed, we replace one list in the Na-BPL decoder with ground-truth codewords.
+A. Na-BPL based Labeling Scheme
+As shown in Eq. (5), The ground-truth information bits, which could be set to all zero according to the symmetry property in [8], are adopted as labels to train the NBP decoder in polar codes. However, from our observation that Pr(uˆGT/y) ≤ Pr(uˆML/y), an ML decoder can generate better labels. In fact, as soon as the bit error rate (BER) of the ML decoder is not zero, some channel outputs essentially can not be decoded correctly. In other words, these channel outputs are mislabeled when using the ground-truth labels, which probably causes over-fitting.
+Unfortunately, producing labels with the ML decoder is unfeasible because of the contradiction between its complexity and the requirement of massive data in deep learning. Thus, a
+
+high-performance decoder could be a good substitute. In this paper, considering both performance and complexity, the NaBPL decoder proposed in [17] is applied to generate labels. As illustrated in Fig. 2, apart from performing the original BP, the Na-BPL decoder adds different artificial noise to the received signal on other parallel independent BP decoders, and the final decoding result is chosen according to the principle of minimum Euclidian distance such as:
+
+xˆBP L = arg min ||y − xˆi||
+
+(6)
+
+xˆi ,i∈{1,..,L}
+
+where xˆi is the decoding result of the i-th decoder. It is declared in [17] that the Na-BPL performs much better than standard BP and the labels generated from that are more appropriate for NBP to learn. As a result, the loss function of our scheme is updated as:
+
+L(o, uˆBP L) = − 1 N
+
+N
+
+uˆBj P L log (oj )+ 1 − uˆBj P L
+
+log (1 − oj)
+
+j=1
+
+(7)
+
+B. Ground-truth List aided Na-BPL
+In our scheme, the closer the Na-BPL decoder is to an ML decoder, the better training labels we can get. It is easy to find that the ground-truth codeword usually has a same result as an ML decoder because the error rate of ML decoders is low. Therefore, as illustrated in Fig. 2 colored with red, we replace the first list in the Na-BPL decoder with the groundtruth codeword, which is then compared with the other lists by the principle of minimum Euclidean distance. When the list size is 1, our scheme is exactly the original scheme, only using ground-truth labels. Thus, this adjustment can ensure that our scheme will not be worse than the original one in [9]. We call this a ground-truth list aided Na-BPL decoder and we should recognize that this decoder can only be used in label generation but not a real communication system because we utilize the ground-truth value. Simulations in Section will show this method can effectively reduce the list size of NaBPL we need. Finally, the overall training scheme is presented in Algorithm 1.
+Note that although our method is more complex, all additional computation is offline and the model size is the same. Once the training of this model is finished, it can be used online same as [9] but with better error rate performance.
+
+IV. EXPERIMENTS
+In this section, we will evaluate the performance of our labeling scheme and verify the effectiveness of the groundtruth list proposed in section III-B.
+
+A. Experimental Setup
+The polar code P(64, 32) constructed with polar weight method [18] is used in our simulation. The iteration number Imax in both the Na-BPL decoder and the standard BP decoder is set to 5. In the Na-BPL decoder, the power ratio of the channel noise and the artificial noise is 6dB, which does not
+
+588
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:43 UTC from IEEE Xplore. Restrictions apply.
+
+BER BLER
+
+10−1 10−2 10−3 10−4 10−5
+
+BP Ground-truth Labeling Our Labeling SCL4
+
+10−1 10−2 10−3 10−4
+
+BP Ground-truth Labeling Our Labeling SCL4
+
+10−6
+
+10−5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+4.0
+
+4.5
+
+5.0
+
+5.5
+
+6.0
+
+Eb/N0 (dB)
+
+(a)
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+4.0
+
+4.5
+
+5.0
+
+5.5
+
+6.0
+
+Eb/N0 (dB)
+
+(b)
+
+Fig. 3. BER and BLER performance of NBP with our proposed labeling scheme, NBP with ground-truth labeling scheme, standard BP and SCL.
+
+Algorithm 1: The overall training scheme
+
+Input: polar code P(N, K), list size L
+
+Output: trained neural polar decoder D
+
+1 Initialize NBP D1 and ground-truth aided Na-BPL
+
+with list size L D2;
+
+2 foreach epoch do
+
+3 foreach batch do
+
+4
+
+Generate information bits u randomly;
+
+5
+
+x ← P.Encode(u);
+
+6
+
+y ← (1 − 2x) + z;
+
+7
+
+LLRx
+
+←
+
+2y σ2
+
+;
+
+8
+
+o ← D1.Decode(LLRx);
+
+9
+
+xˆBP L ← D2.Decode(LLRx);
+
+10
+
+Calculate the loss function as Eq. (7);
+
+11
+
+Perform back-propagation and stochastic
+
+gradient descent algorithms in D1;
+
+12 end
+
+13 end
+
+14 return D1;
+
+damage the received signal too much while making the NaBPL decoder explore different decoding results efficiently.
+To train the decoder, we used 1000 minibatches of 128 received words in each epoch and a total of 10 epochs was conducted. Besides, the transmitted codewords were randomly generated. Before the training, all parameters were initialized as 1. The Adam optimizer [19] was used to update the parameters after calculating gradients, with a learning rate of 1e-3.
+To evaluate the decoder’s performance, we conducted Monte Carlo simulations. We generated test data by creating random binary messages, encoding them with the G matrix, modulating the codewords using BPSK, and introducing AWGN channel noise. To obtain reliable estimates of the BER and BLER, we simulated at least 12800 frames and detected a
+
+minimum of 50 frame errors for each signal-to-noise ratio (SNR).
+B. Results
+Fig. 3(a) presents the BER performance of NBP with our proposed labeling scheme where the list size is 8, NBP with ground-truth labeling scheme, standard BP and SCL with list size 4. As can be seen, our proposed labeling scheme has a small but consistent improvement in BER over the groundtruth labeling scheme when SNR is high. And compared with the standard BP, about 0.45 dB is improved with our proposed scheme when BER equals to 1e-5. Finally, the proposed scheme is still inferior to the SCL with 4 lists, which achieves nearly ML decoding.
+Fig. 3(b) presents the BLER performance of NBP with our proposed labeling scheme where the list size is 8, NBP with ground-truth labeling scheme, standard BP and SCL with list size 4. Compared with BER, we can observe a similar consistent improvement. However, when BLER = 1e-4, it can be seen that about 0.2 dB improvement over the ground-truth labeling scheme is achieved, which is better than that in BER. We infer that this is because our labeling scheme uses the principle of minimum Euclidean distance, which focuses on BLER. Samely, the proposed scheme is still inferior to the SCL with 4 lists, which achieves nearly ML decoding.
+Fig. 5 presents the loss values as Eq. 5 or Eq. 7 with the increasing training epochs. We find that the loss values of both the ground-truth labeling scheme and our labeling scheme decrease slowly with the increasing epochs, but the values of the proposed one are constantly lower than the values of the ground-truth one. This reflects our scheme can produce more accurate labels for NBP to learn.
+To verify the effectiveness of the ground-truth list proposed in section III-B, we conducted an ablation experiment by simulating the BER performance of our proposed labeling scheme with or without the ground-truth list for different list sizes. When the list size is 4, we can see a constant BER
+
+589
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:43 UTC from IEEE Xplore. Restrictions apply.
+
+Ground-truth Labeling
+
+are integrated into the decoder as a list and compared with the
+
+Our Labeling
+
+other lists with the principle of minimum Euclidean distance.
+
+0.54
+
+The simulation results show that our scheme can efficiently
+
+improve the performance of NBP with the same run time
+
+0.52
+
+complexity and model size.
+
+Loss Value
+
+0.50
+
+0.48
+
+0.46
+
+0.44
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+Epoch Number
+
+Fig. 4. Loss values with the increasing training epochs
+
+10−2
+
+with GTL 4 without GTL 4 with GTL 16 without GTL 16
+
+3 × 10−4 10−3
+2 × 10−4 10−4
+
+BER
+
+10−4
+
+10−5
+
+4.8
+
+5.0
+
+5.2
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+4.0
+
+4.5
+
+5.0
+
+5.5
+
+6.0
+
+Eb/N0 (dB)
+
+Fig. 5. BER performance of our proposed labeling scheme with or without the ground-truth list for different list sizes
+
+improvement is gained by adding a ground-truth list, especially in high SNR regions. However, when the list size is 16, we can find that the scheme with or without the ground-truth list has a very similar BER performance. With a large enough list size, the ground-truth list cannot further improve the performance. But with a small list size, the ground-truth list can help our scheme achieve similar performance as the one without the ground-truth list but with a larger list size. We infer that this is because the performance limit of our scheme is realized with a large list size. As a result, this method effectively reduces the list size we need (i.e., the complexity).
+V. CONCLUSION
+In this paper, we propose a novel labeling scheme to improve the performance of NBP further. This scheme replaces ground-truth codewords used before with codewords generated from a high-performance decoder (i.e., noise-aided belief propagation list decoder) to construct loss functions. In addition, to reduce the complexity, the ground-truth transmitted codewords
+
+REFERENCES
+[1] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on Information Theory, vol. 55, no. 7, pp. 3051–3073, 2009.
+[2] V. Bioglio, C. Condo, and I. Land, “Design of polar codes in 5g new radio,” IEEE Communications Surveys Tutorials, vol. 23, no. 1, pp. 29–40, 2021.
+[3] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Transactions on Information Theory, vol. 61, no. 5, pp. 2213–2226, 2015.
+[4] P. Giard, G. Sarkis, A. Balatsoukas-Stimming, Y. Fan, C.-y. Tsui, A. Burg, C. Thibeault, and W. J. Gross, “Hardware decoders for polar codes: An overview,” in 2016 IEEE International Symposium on Circuits and Systems (ISCAS), 2016, pp. 149–152.
+[5] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proceedings of the IEEE conference on computer vision and pattern recognition, 2016, pp. 770–778.
+[6] D. Silver, A. Huang, C. J. Maddison, A. Guez, L. Sifre, G. Van Den Driessche, J. Schrittwieser, I. Antonoglou, V. Panneershelvam, M. Lanctot et al., “Mastering the game of go with deep neural networks and tree search,” nature, vol. 529, no. 7587, pp. 484–489, 2016.
+[7] J. Jumper, R. Evans, A. Pritzel, T. Green, M. Figurnov, O. Ronneberger, K. Tunyasuvunakool, R. Bates, A. Zˇ ´ıdek, A. Potapenko et al., “Highly accurate protein structure prediction with alphafold,” Nature, vol. 596, no. 7873, pp. 583–589, 2021.
+[8] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[9] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in 2017 IEEE International Workshop on Signal Processing Systems (SiPS), 2017, pp. 1–6.
+[10] J. R. Hershey, J. L. Roux, and F. Weninger, “Deep unfolding: Model-based inspiration of novel deep architectures,” arXiv preprint arXiv:1409.2574, 2014.
+[11] E. Nachmani and L. Wolf, “A gated hypernet decoder for polar codes,” in ICASSP 2020 - 2020 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), 2020, pp. 5210–5214.
+[12] N. Doan, S. A. Hashemi, E. N. Mambou, T. Tonnellier, and W. J. Gross, “Neural belief propagation decoding of crc-polar concatenated codes,” in ICC 2019 - 2019 IEEE International Conference on Communications (ICC), 2019, pp. 1–6.
+[13] X. Chen and M. Ye, “Cyclically equivariant neural decoders for cyclic codes,” arXiv preprint arXiv:2105.05540, 2021.
+[14] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. G. i. Amat, “Learned decimation for neural belief propagation decoders : Invited paper,” in ICASSP 2021 - 2021 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), 2021, pp. 8273– 8277.
+[15] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory (ISIT), 2017, pp. 1361–1365.
+[16] M. Lian, F. Carpi, C. Ha¨ger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and snr adaptation,” in 2019 IEEE International Symposium on Information Theory (ISIT), 2019, pp. 161–165.
+[17] A. C¸ ag˘rı Arlı and O. Gazi, “Noise-aided belief propagation list decoding of polar codes,” IEEE Communications Letters, vol. 23, no. 8, pp. 1285– 1288, 2019.
+[18] G. He, J.-C. Belfiore, I. Land, G. Yang, X. Liu, Y. Chen, R. Li, J. Wang, Y. Ge, R. Zhang, and W. Tong, “Beta-expansion: A theoretical framework for fast and recursive construction of polar codes,” in GLOBECOM 2017 - 2017 IEEE Global Communications Conference, 2017, pp. 1–6.
+[19] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” arXiv preprint arXiv:1412.6980, 2014.
+
+590
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:43 UTC from IEEE Xplore. Restrictions apply.
+
+

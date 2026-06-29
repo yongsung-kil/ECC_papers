@@ -1,0 +1,901 @@
+Decoding of Quasi-cyclic LDPC Codes Using an On-the-Fly Computation
+
+Kiran K. Gunnam, Gwan S. Choi, Weihuang Wang, Euncheol Kim, and Mark B. Yeary' Department of ECE, Texas A&M University, College Station, TX-77843 'Department of ECE, University of Oklahoma, Norman, OK-73 109
+
+Abstract-The implementation complexity of the decoder for Low-density parity-check Codes (LDPC) is dictated by memory and interconnect requirements. We propose new LDPC Decoder architectures that reduce the need of message passing memory by 80%(for standard message passing)-55%(for layered decoding) and the router requirements by more than 50%. These novel architectures are based on scheduling of computation that results in "on the fly computation" of variable node and check node reliability messages. These architectures are targeted for quasicyclic LDPC codes such as array LDPC codes (regular QCLDPC) and Block LDPC codes (irregular QC-LDPC). FPGA and ASIC implementation results show substantial gains when compared to the existing work in the literature.
+Index Terms-low-density parity-check (LDPC) codes, offset min-sum, vector processing, decoder architecture, layered decoding, turbo decoding message passing, array LDPC, quasicyclic LDPC, Block LDPC, irregular LDPC, IEEE 802.16e, WiMax, IEEE 802.11n, Wi-fi, on-the-fly computation, blockserial processing.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes and turbo codes are among the best known codes that operate near the Shannon limit [1]. When compared to the decoding of turbo codes, LDPC decoders require simpler computational processing, and they are more suitable for parallelization and low complexity implementation. LDPC codes are considered for error correction coding in virtually all next generation communication systems. While parallel LDPC decoder designs for randomly constructed LDPC codes suffer from complex interconnect issues [2], various semi-parallel [3]-[8] and parallel implementations [9]-[10], based on structured LDPC codes, alleviate the interconnect complexity. Mansour and Shanbhag [3] introduced the concept of turbo decoding message passing (TDMP), which is sometimes also called layered decoding [4], using BCJR for their architecture-aware LDPC (AA-LDPC) codes. TDMP offers 2x throughput and significant memory advantages when compared to standard two-phase message passing (TPMP). A quantitative performance comparison for different check updates was given by Chen et al. [11]. Their research showed that the performance loss for offset min-sum (OMS) decoding with 5-
+
+bit quantization is less than 0.1dB in SNR compared with that of optimal floating point SP (Sum of Products) and BCJR.
+This paper introduces the following concepts to LDPC decoder implementation: Block serial scheduling [5], Valuereuse, Scheduling of layered processing, Out-of-order block processing, Master-slave router, Dynamic state. All these concepts are termed as On-the-fly computation as the core of these concepts is based on minimizing memory and recomputations by employing just-in-time scheduling. Based on this paradigm, we present a new TPMP architecture that exploits the various properties of regular array LDPC codes [9] and the value-reuse properties offset min-sum algorithm to reduce the memory, routing and computational requirements. The key features of this architecture are: 1) 80% savings in message passing memory requirements when compared to other semi-parallel architectures based on min-sum and its variants [6], [7], 2) Scalable for any code length due to the concentric and regular layout unlike the fully parallel architecture [2], 3) Reduction of router multiplexers from 50% and beyond based on dynamic state concept.
+Another main contribution of this paper based on On-the-fly computation is an efficient turbo decoding message passing (TDMP) architecture which utilizes the value-reuse property of OMS, cyclic shift property of quasi-cyclic (QC) LDPC codes, and the extension of block serial scheduling [5]. The resulting decoder architecture has the following key advantages: 1) removal of memory needed to store the sum of the variable node messages and the channel log-likelihood ratios (LLR) when compared to other semi-parallel architectures [3]-[8]. 2) 40%-72% savings in storage of extrinsic messages depending on rate of the codes when compared to other semi-parallel architectures [3]-[8], 3) need of only one cyclic shifter instead of two cyclic shifters when compared to the work in [3]-[8], 4) removal of memory needed to store variable node messages when compared to [6][8] and finally, 5) increase of throughput by 2x as number of required iterations decrease by 50% when compared to [5]-
+[8].
+The rest of the paper is organized as follows. Section II introduces the background of QC LDPC codes, and OMS, the decoding algorithm. Section III presents the equations which facilitate the decoding process. Section IV presents the valuereuse property and micro-architecture structure for CNU. The architecture for TPMP using OMS is included in section V. The new data flow graph and architecture for TDMP using OMS is included in section VI. Section VII shows the FPGA
+
+1-4244-0785-0/06/$20.00
+
+1192
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+and ASIC implementation results, and performance comparison with related work. Section VIII concludes the paper.
+
+II. BACKGROUND
+
+A. Regular Quasi-cyclic LDPC Codes
+
+The array LDPC parity-check matrix is specified by three parameters: a prime number p and two integers k (check-
+
+node degree) and j (variable-node degree) such
+
+that j, k < p [12]. This is given by
+
+I I I *.. I
+
+2k-
+
+I
+
+a
+
+...
+
+akl
+
+H= I a2
+
+a4
+
+...
+
+2(k-1)
+
+()
+
+I a'l a'(j-1)2
+
+(j-l)(k-l)
+
+where I is a p X p identity matrix, and a is a
+p X p permutation matrix representing a single left cyclic
+shift (or equivalently down cyclic shift) of I. The exponent of a in H is called the shift coefficient and denotes multiple cyclic shifts, with the number of shifts given by the value of the exponent.
+
+B. Irregular Quasi-cyclic array LDPC Codes
+Rate-compatible array LDPC codes are modified version of above for efficient encoding and multi-rate compatibility in [13] and their H matrix has the following structure
+I I I... I I ... I
+
+O I a ... do-2 d-'-2
+
+H= O O I ..... d(j-3) CMj-2) CMk-3) ,
+
+(2)
+
+o.
+_° ° *-- I
+
+-l .. j)(k-j)
+
+where 0 is the p X p null matrix. The LDPC codes defined
+
+by H in (lb) have a codeword length N = kp , number of
+
+parity-checks M = jp , and an information block length
+
+K = (k - j)p. The family of rate-compatible codes is
+
+obtained by successively puncturing the left most p columns,
+
+and the topmost p rows. According to this construction, a
+
+rate-compatible code within a family can be uniquely specified by a single parameter, say, q with 0 < q < j - 2. To have a
+
+wide range of rate-compatible codes, we can also fix j, p,
+
+and select different values for the parameterk Since all the codes share the same base matrix size p; the same hardware
+
+implementation can be used. It is worth mentioning that this specific form is suitable for efficient linear-time LDPC encoding [13]. The systematic encoding procedure is carried out by associating the first N - K columns of H with parity
+bits, and the remaining K columns with information bits.
+
+C. Irregular Quasi-cyclic Block LDPC Codes
+The block irregular LDPC codes have competitive performance and provide flexibility and low encoding/decoding complexity [14]-[15]. The Block LDPC code is defined by a matrix H as:
+p1, p1,2 .. Pl,Nb
+
+P2,1 2,2
+
+2,Nb =Pflb
+
+(3
+
+PM PM *..*PM
+
+_ Mb,1 Mb,2
+
+Mb,Nb _
+
+where Pij is one of a set of z-by-z cyclically right shifted
+
+identity matrices or a z-by-z zero matrix. Each 1 in the base
+
+matrix Hb is replaced by a permuted identity matrix while
+
+each 0 in Hb is replaced by a negative value to denote a z-by-
+
+z zero matrix.
+
+D. Offset Min-sum Decoding ofLDPC
+
+Assume binary phase shift keying (BPSK) modulation (a 1 is mapped to -1 and a 0 is mapped to 1) over an additive white
+
+Gaussian noise (AWGN) channel. The received values Yn are
+
+Gaussian with mean xn=
+
+and variance a2 The
+
+reliability messages used in belief propagation (BP)-based offset min-sum algorithm can be computed in two phases: 1. check-node processing and 2. variable-node processing. The two operations are repeated iteratively until the decoding criterion is satisfied. This is also referred to as standard message passing or two-phase message passing (TPMP). For
+
+the ith iteration, Q( is the message from variable node n to
+
+check node m ,R(') is the message from check node m to
+
+variable node n, M(n) is the set of the neighboring check
+
+nodes for variable node n, and N(m) is the set of the
+
+neighboring variable nodes for check node m. The message passing for TPMP based on OMS is described in the following three steps as given in [11] to facilitate the discussion on TDMP in the next section:
+
+Step 1. Check-node processing: for each m and n e N(m),
+
+K(i) |( |= mn I( )| R(')=-( ) max(K( -/,0),
+
+=K~' R(') =n'1c nIm
+
+mmi(n1, N(m)\n
+
+Qnm
+
+(4)
+(55)
+
+where ,6 is a positive constant and depends on the code
+
+parameters [11]. For (3, 6) rate 0.5 array LDPC code, ,6 is computed as 0.15 using the density evolution technique
+presented in [11]. The sign of check-node messageRmn) is
+
+defined as
+
+K(i g(Q(imB)J Semn . ne(r)I sgn
+
+s fmn )
+
+n e=N(m)\n
+
+N(n()6)
+
+Step 2. Variable-node processing: for each n and m Ez N(n),
+
+1193
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+Q2i) =L(°) + E R(i,),
+
+(7)
+
+m'EM(m)\m
+
+where the log-likelihood ratio of bit n is = y .
+
+Step 3. Decision: forfinal decoding
+
+Pn = L(n°) + ZR2.
+
+(8)
+
+me M(n)
+
+A hard decision is taken by setting xn = 0 if Pn (Xn) > 0
+
+and .I,- if In(xn)<0 If xHT =0, the decoding
+process is finished with i' as the decoder output; otherwise,
+
+repeat steps 1-3. If the decoding process doesn't end within
+predefined maximum number of iterations, itmax, stop and
+output an error message flag and proceed to the decoding of the next data frame.
+
+III. TDMP FOR QC-LDPC
+
+In TDMP, the array LDPC with j block rows can be
+
+viewed as concatenation of j layers or constituent sub-codes
+
+similar to observations made for AA-LDPC codes in [3]. After the check-node processing is finished for one block row, the messages are immediately used to update the variable nodes (in step 2, above), whose results are then provided for processing the next block row of check nodes (in step 1, above). We first illustrate the vector equations for TDMP for array LDPC codes assuming that the H matrix has the structure in (1). These equations are directly applicable to all other regular QC-LDPC codes (such as cyclotomic coset based LDPC). For rate compatible array LDPC codes and Block LDPC codes, minor modifications in vector equations are necessary[ 18].
+~(-O),=n -O0 Pi n = L-n0) [Initialization for each new received
+
+data frame],
+
+(9)
+
+Vi = 1,2, * * it.x, [Iteration loop]
+
+Vl = 1, 2,9. , j, [Sub-iteration loop]
+
+Vn = 1,2,** *, k, [Block column loop]
+
+[Qnl1,n)= [n r1'n1 _ ?
+
+(10)
+
+= f JQn ,Vn' = 1,2,...,k),
+
+(1 1)
+
+[ (1,n) = [ (j)]S(l,n) +iRf
+
+(12)
+
+where the vectors R(') and Qf4 represent all the R and Q
+messages in each p X p block of the H matrix, s(l, n) denotes the shift coefficient for the block in I1h block row and nh block
+column of the H matrix. [Q ]S(1n) denotes that the vector
+60 is cyclically shifted down by the amount s(l, n) and k is
+the check-node degree of the block row. A negative sign on s(l, n) indicates that it is cyclic up shift (equivalent cyclic
+right shift). f () denotes the check-node processing, which
+can be done using BCJR or SP or OMS. For this work, we use
+
+OMS as defined in (4)-(6). If we are processing a block row in serial fashion using p check-node units (11), then the output
+of the CNU will also be in serial form. As soon as the output
+vector R(W corresponding to each block column n in H matrix
+
+for a block row I is available, this could be used to produce
+
+S(] ,n)
+
+updated sum
+
+(12). This could be immediately used
+
+in (10) to process block row I + 1 except that the shift
+
+s(l, n) imposed on Pn has to be undone and a new shift
+
+s(l + 1, n) has to be imposed. This could be simply done by
+
+imposing a shift corresponding to the difference of s(l + 1, n)
+ands(l,n) .
+
+A. Extension for Irregular Quasi-cyclic array LDPC Codes
+Note that due to the slight irregularity in array LDPC matrix
+defined in (2), each block row I has a node degree j -I + 1 .
+The variable-nodes in each block column n has a node degree
+equal to min(n, j). One simpler way to facilitate
+implementation is to assume that all the block rows have equal check-node degree and set the check-node messages corresponding to null blocks in H matrix to zero in order not to affect the variable-node processing. Similarly the variablenode messages belonging to the null blocks are always set to positive infinity in order not to affect the check-node processing. For check-node update based on SP or OMS, the message with maximum reliability won't affect the CNU output. In the specific case of OMS, it is easy to see this as the CNU magnitude is dependent on the two least minimum.
+B. Extension for Irregular Quasi-cyclic Block LDPC Codes
+There are several null blocks in Block LDPC codes defined by (3). So the above method to deal with irregularity introduces significant idle clock cycles. One possible way to deal with this check-node irregularity is setting the check-node degrees in CNU processor unit based on the block row that is being processed. In addition, out-of-order processing need to be enforced in the generation of R messages as explained in later sections.
+
+IV. VALUE-REUSE PROPERTIES OF OMS
+This section presents the micro-architecture of serial CNU
+for OMS [16]. For each check node m, R(i)
+Vn e N(m) takes only two values, which are the two least
+minimum of input magnitude values. Since Vn E N(m), 8(min)
+takes a value of either +1or -1 and RN4) takes only 2 values,
+(4) gives rise to only three possible values for the whole set,
+R2) Vn E N(m). In a VLSI implementation, this property
+significantly simplifies the logic and reduces the memory. Fig. l(a) shows the CNU micro-architecture for (5, 25) code
+while Fig. 1(b) shows the block diagram of the same. In the first 25 clock cycles of the check-node processing, incoming
+
+1194
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+a
+
+M M2
+
+nder
+
+_iCounter
+
+1 1 artal State
+
+(a)
+Hse
+
+-fset R selector
+-1 F~~~~~~inal State
+R
+7-11 ~~~~s~~e~Rlecto
+
+Fig 1. Serial CNU for OMS using value-reuse property.(a)detailed micro-architecture (b)Corresponding block diagram.
+
+PS_i n
+
+FSii n
+
+Parta
+rtder EotS at aSat
+
+nal
+
+R
+
+PS
+
+out
+
+FSo
+
+Fig 2. Serial CNU with dynamic shift mechanism for OMS
+
+using value-reuse property
+
+variable messages are compared with the two up-to-date least minimum numbers (partial state, PS) to generate the new partial state, MI which is the first minimum value, M2 which is the second minimum value and index of MI. The final state (FS) is then computed by offsetting the partial state. It should be noted that the final state include only Ml, -Ml, +/-M2 with offset correction. Fig. l(b) is the block diagram of the same
+
+architecture. Ml_M2 finder computes the two least numbers, according to the incoming data and the current minimum numbers stored in partial state. The offset module applies the offset correction, and stores the results in the Final State module. R selector then assigns one out of these 3 values, based on the index of MI and the sign of R message generated
+by sign XOR logic (6), to the output R messages. While the final state has dependency on offset correction, the offset is dependent on the completion of partial state. In operation, the final state and partial state will operate on different checknodes. The serial CNU finds the least two minimum numbers with 2 comparators in a serial fashion and reduces the number
+of offset-correction computation from k to 2. Normally, CNU (check-node unit) processing is done using the signed magnitude arithmetic for (4)-(6) and VNU (variable-node unit processing) (7) is done in 2's complement arithmetic. This requires 2's complement to signed conversion at the inputs of CNU and signed to 2's complement at the output of CNU. In the proposed scheme, 2's complement is applied to only 2
+values instead of k values at the output of CNU. The value re-use property also reduces the memory requirement significantly. Conventionally, the number of messages each
+CNU stores is equal to the number of edges it has, that is k . Now only four units of information are needed: the three
+P(), values that R(i) may take and the mlnocation of M ~~~~~~~mthen
+check-node message to the VNU is readily chosen by multiplexing.
+
+12.. 9-7 Pr, RR F
+
+Ii1
+-l
+
+i
+F2 1X-
+
+1f
+
+.i
+
+I
+
+QQQfl23R
+
+~~~~I ~~~~~~~~~~~~~~~~~~~~~~~~J,
+
+F§-aA
+
+/
+
+FKnF
+
+FS
+2A FS
+
+X
+
+iQ
+
+Q CNf24R
+
+F%r F%.
+
+15~ ~~I~1 ItF
+
+%tl
+
+ar2S3
+
+Q 1Aur :2n*tl2%
+
++$
+
+P3
+
+q9 -- cwu ' It \
+
+Array
+
+. El ock
+
+r
+
+FPS
+
+FCiu Xi/2t
+
+ji
+
+R1_F$,13 F%1ZF&r .4stj3.1
+
+i1,. 1 k>W 1VNi
+
+.2
+
+CNU
+
+9
+
+F
+/l
+
+3FPsF
+x83
+
+F:,,
+
+FSF
+
+AFr lEl
+
+or acky
+
+62
+
+cq1
+
+cni
+
+Akray CQ
+
+Elock
+
+bw 3
+
+Fig. 3. Fixed code block-serial architecture for TPMP and OMSfor regular array LDPC codes. No routers are needed. No message passing memory is needed exceptfor the sign bits of Q messages.
+
+1195
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+V.FIXED CODE ARCHITECTURE USING TPMP AND OMS
+Fig. 3. presents the proposed architecture for the implementation of (3, 30) - array LDPC code of length 1830 with the circulant matrix size of 61. The check node processing unit array is composed of 3 sub-arrays. Each subarray contains 61 serial CNUs which compute the partial state for each block row to produce the check-node messages for each block column of H. Block row 1 is array of 61 simple CNUs (Fig 1). CNU array block row 2 and 3 are composed of dynamic CNUs (Fig 2). The variable node processing array is composed of 61 parallel VNU units which can process 3 x 61 messages at each clock cycle. The sign bits will be stored in a FIFO (implemented as RAM), however, there is no need to subject these values to shifts as these values are not modified in check node processing partial state processing. In the array of simple serial CNU that is designed to do check node processing for first block row in H matrix, the check node processing for each row in H matrix is done such that all the comparisons are performed locally with in one CNU to update the partial state each clock cycle and transfer the partial state
+to final state dc once every cycle. In the array of dynamic
+CNU designed for second block row in H matrix, CNU 122 gets its partial state from CNU 121, CNU 121 gets its partial state from CNU 120 and so on. Array of dynamic CNU designed for the third block row in H matrix such that the connection between partial state registers among various units achieve cyclic shifts of [0,2,..,58]. Similar principle is used when making connections for the final state in the CNU array to achieve reverse routing.
+Initially the variable messages are available in row wise as they are set to soft log likelihood information (LLR) of the bits coming from the channel. Q Init is an SRAM of size 2N and holds the channel LLR values of two different frames. It can supply p intrinsic values to the VNUs each clock cycle. The data path of the design is set to 5 bits to provide the same BER performance as that of the floating point sum of products algorithm with 0.1-0.2 dB SNR loss [11]. Each iteration takes
+dc + 3 clock cycles. For (3, 30) code this results in 6 x 33
+clock cycles to process each frame when a maximum number of iterations set to 6. For (3,6) code this results in 20 x 9 clock cycles to process each frame when the number of iterations is set to 20.
+VI. MULTI-RATE ARCHITECTURE USING TDMP AND OMS
+A. Optimally Scaled Architecture
+A new data flow graph is designed based on the TDMP, and on the value reuse property of min-sum algorithm described above (see Fig. 4.). For ease of discussion, we will illustrate the architecture for a specific structured code: regular array code of length 1525 described by (1), j = 5, k = 25 and
+p = 61, the discussion can be easily generalized to any other
+structured codes. First, functionality of each block in the
+
+architecture is explained. A check-node process unit (CNU) is the serial CNU based on OMS described in previous section. The CNU array is composed of p computation units that compute the partial state for each block row to produce the R messages in block serial fashion. Since final state of previous block rows, in
+
+FS Registers
+
+Control
+
+Layer 1 Layer 2
+
+select
+
+Layer 3
+
+Layer 4 Roid
+
+Q Subtractor - QShift Array +
+
+R Sign FIFO Layer I
+Layer 2 Layer 3
+Layer 4
+FS
+R Sign Bit
+
+Init.hailiiazla.tahtoonn
+
+Cyclic Shifter
+
+For
+
+PSum
+
+CNU 1-61 +
+
+new frameli
+
+Adder Array +
+
+Channel M,
+
++
+
+ew
+
+LLR
+
+P
+
+Fig. 4. Multi-rate LDPC Decoder using Layered Decoding
+
+and OMS.
+
+which the compact information for CNU messages is stored, is
+
+needed for TDMP, it is stored in register banks. There is one
+
+register bank of depth j -1, which is 4 in this case, connected
+
+with each CNU. Each final state is the same as the final state register bank in the CNU. Besides the shifted Q messages, the CNU array also take input of the sign information for previous computed R messages in order to perform R selection operation. The sign bits are stored in sign FIFO. The total
+length of sign FIFO is k and each block row has p one bit
+
+sign FIFOs. We need j -1 of such FIFO banks in total. p
+
+number of R select units is used for Rold . An R select unit generates the R messages for 25(= k) edges of a check-node
+
+from three possible values stored in final state register associated with that particular check-node in a serial fashion. Its functionality and structure is the same as the block denoted as R select in CNU. This unit can be treated as de-compressor of the check node edge information which is stored in compact form in FS registers. The generation of R messages for all the layers in this way amounts to significant memory savingswhich would be quantified in later section. The shifter is constructed as cyclic down logarithmic shifter to achieve the cyclic shifts specified by the binary encoded value of the shift. The logarithmic shifter is composed of log2(p) stages of
+
+p switches. Since cyclic up shift is also needed in the
+
+operation of the decoder, cyclic up shift by u can be simply achieved by doing cyclic down shift with p - u on the vector
+
+of size p . The decoding operation proceeds as per the vector
+
+equations described in section III. In the beginning of the decoding process, P vector is set to received channel values in the first k clock cycles(i.e. the first sub-iteration) as the channel values arrive in chunks of p, while the output vector
+
+1196
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+of R select unit is set to zero vector. The multiplexer array at the input of cyclic shifter is used for this initialization. The CNU array takes the output of the cyclic shifter serially, and the partial state stage will be operating on these values. After
+k clock cycles, partial state processing will be complete and the final state stage in CNU array will produce the final state for each check-node in 2 clock cycles. Then R select unit
+within the each CNU unit starts generating k values of checknode messages in serial fashion. The CNU array thus produces the check-node messages in a block serial fashion as there are p CNUs are operating in parallel. The P vector is computed
+by adding the delayed version of the Q vector (which is stored into a FIFO SRAM to till the serial CNU produces the output) to the output vector R of the CNU. Note that the P vector that is generated can be used immediately to generate the Q vector as the input to the CNU array as CNU array is ready to process the next block row. This is possible because CNU processing is split into three stages as shown in the pipeline diagram and partial state stage and final state stage can operate simultaneously on two different block rows. Now, the P message vector will undergo a cyclic shift by the amount of difference of the shifts of the block row that is processed, and the previous block row that was just processed. This shift value can be either positive or negative indicating that a down shift or up shift need to be performed by the cyclic shifter The shifted P sum messages are subtracted by R message to get the shifted version of Q messages.
+
+CNU PS CNU FS R SelecIdon P Update
+Q Update
+
+..
+
+.... ....
+
+.
+Previous layer
+
+Current layer -++i Nex layer
+
+CNU PS CNU FS R Seledion P pdate Q date
+
+Ptbviouslaye~r Curn laye2r ifff Ndx lay
+
+R selection for Rnew operates out-of-order to feed the data for PS
+processing of next layer
+Fig. 5. Pipeline for the layered decoding (a) for regular QCLDPC codes(regular array LDPC codes and cyclotomic coset based LDPC) and rate-compatible array LDPC codes (b) for irregular QC-LDPC codes(Block LDPC codes of IEEE 802.16e, IEEE802. 1 ln)
+The snapshot of the pipeline of the decoder is shown in Fig. 5. Here, the partial state stage in CNU (CNU PS) is operating on the 2nd block row from clock cycles labeled as 0 to 24 (note that these numbers will not denote the actual clock numbers as the snapshot is shown in the middle of the processing). Final state stage in CNU (CNU FS) can not start until the end of PS
+
+processing, that is clock cycle 25. As soon as the FS is done in clock cycle 26, R select is able to select the output R messages, and P and Q messages processing starts. With the first block of Q message ready, PS for next block row can be started immediately. Note that the all the logic blocks(other than the storage elements) are active over 90% of the time. The only exception is the offset module, which is composed of two 5-bit adders, in each CNU. The overall proportion of all the CNU FS logic in the overall decoder is less than 4%.The control unit also contains the information of array code parameters such as j, k, q - these could be changed to
+support multi-rate decoding. The family of rate-compatible codes is obtained by successively puncturing the left most p columns and the topmost p rows in the H matrix defined
+in (lb) q times. Changing q from 0 to 3(= j - 2) gives the
+code rates of 0.8 to 0.909. Changing k values from 15 to 61 while fixing j = 5 results in code rates from 0.666 to 0.91.
+The Q FIFO needs to be of maximum depth p as the k can
+take a maximum value equal to p . Note that for Block LDPC
+codes, the Q FIFO has to be replaced with a regular memory of the same size. In addition out-of-order processing is employed on R selection for Rnew to account for the irregularity ofBlock LDPC codes (see Fig.5.b) [18].
+B Scalable Architecture
+Note that the throughput of the architecture is increased by increasing p of the code, and scaling the hardware
+accordingly. While the complexity of computational units scale linearly with p , the complexity of cyclic shifter
+increases with the factor (p / 2) log 2 p . So, it is necessary
+to change the architecture for large values of p . Alternatively
+it may be needed in low throughput applications to have low parallelization. To suit this requirement, minor changes in the proposed architecture are necessary. Let us assume, the desired parallelization is M < p. For the ease of implementation,
+choose M close to the powers of 2. The cyclic shifter needed is M X M . Since it is needed to achieve p X p cyclic shift
+with consecutive shifts of M XA ,it is necessary that the complete vector of size p is available in M banks with the
+depths = (ceil(p I M)) and shifting is achieved in part by the cyclic shifter, and in part by the address generation. Now, all the CNU and variable node processing is done in a time division multiplexed fashion for each sub-vector of length M , so as to process the vector of size p to mimic the
+pipeline in Fig. 5. One should note that it is not possible to achieve cyclic
+shifts specified by s(l, n) ,(=0,1,..z-l)on a vector of length z
+with a cyclic shifter of size M X M if M is not a integer multiple of z. So to be able to accommodate different shifts needed for WiMax LDPC codes, we can use a Benes network
+as in [19], which is of complexity 2log 2(M) -1 stages of
+
+1197
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+M 2-in-I multiplexers. A memory can be used to store control inputs needed for different shifts in case of supporting one expansion factor [3],[19]. The authors in [3] use Omega network, which is less complex than Benes network [19]. However both [3] and [19] will support only base H matrix. Note that this memory for providing control signals to this
+
+irregular block LDPC codes are designed. Both the fixed code decoders and multi-rate decoders achieve significant savings. When compared to the latest reported multi-rate decoders, the decoder design for IEEE 802.1 In LDPC codes has an area efficiency of around 5.5x and energy efficiency of 2.6x for a given data throughput.
+
+network is equal to (2 log 2(M) -1) bits for every shift 2
+value that needs to be supported. This will be a very huge requirement for supporting all the WiMax codes [14]. So to avoid the control memory requirement, cyclic shifter is constructed as a Master-slave Benes network [17]-[18] to accommodate 114 different parity check matrices in run time for IEEE 802.16e. This approach eliminates the control memory requirements by generating the control signals for the slave data router with the help of a self routing master network. Note that the control memory savings are specific to an IEEE 802.16e decoder.
+VII. IMPLEMENTATION RESULTS AND DISCUSSION
+We prototyped the proposed fixed code (see Fig. 6) and multi-rate decoder architectures (see Tables I, III, and IV) on Xilinx Virtex 2V8000-5 device. We also implemented the proposed decoder architecture using the open source standard cells vsclibO]3 [20] in 130 nm technology. The synthesis is done using Synopsys design analyzer tool, while layout is done using Cadence's silicon ensemble tool. The synthesis results and performance metrics for the proposed architecture are given in Table V. The design details for the work in [3] are summarized in Table II. When compared to the latest reported multi-rate decoders [3] (Table II), the decoder design for IEEE 802.11n LDPC codes has an area efficiency of around 5.5x and energy efficiency of 2.6x for a given data throughput. The numbers are normalized for a 180nm CMOS process.
+Each TDMP iteration consists of ] sub-iterations and each sub-iteration takes k(=check node degree) clock cycles as defined in sections II and III. Note that k can take any value
+that is less than km,, supported by the decoder implementation.
+This feature along with the ability to control the number of layers makes the decoder to decode a wide range of different rate compatible array LDPC codes and Block LDPC codes.
+To achieve the same BER as that of the TPMP schedule on SP (or equivalent TPMP schedule on BCJR), the TDMP schedule on OMS needs half the number of iterations having similar convergence gains reported for TDMP-BCJR [3] and TDMP-SP [4].
+VIII. CONCLUSION
+This paper presents the decoder architectures for regular and irregular quasi-cyclic LDPC codes that provide substantial gains over existing implementations. The proposed architectures utilize an on-the-fly computation paradigm which permits scheduling of the computations in a way that the memory requirements and re-computations are reduced. Using this paradigm, the run-time configurable and multi-rate VLSI architectures for the rate compatible array LDPC codes and
+
+REFERENCES
+[1] D. MacKay and R. Neal, "Near Shannon limit performance of low
+density parity check codes," Electronics Letters, vol. 32, pp. 16451646, Aug. 1996. [2] A. Blanksby and C. Howland, "A 690-mW 1 -Gb/s 1024-b, rate- 1/2 lowdensity parity-check code decoder," IEEE J. ofSolid-State Circuits, vol. 37, no.3, pp. 404-412, Mar 2002. [3] M. Mansour and N. Shanbhag, "A 640-Mb/s 2048-bit programmable LDPC decoder chip," IEEE J. of Solid-State Circuits, vol. 41, no. 3, pp. 684- 698, Mar. 2006. [4] D. Hocevar, "A reduced complexity decoder architecture via layered decoding of LDPC codes", IEEE SiPS, pp. 107-112, Oct. 2004. [5] K. Gunnam, G. Choi and M. B. Yeary, "An LDPC decoding schedule for memory access reduction," IEEE Int. Conf. on Acoustics, Speech, and Signal Processing, pp- 173-176 vol. 5, May 2004. [6] M. Karkooti and J. Cavallaro, "Semi-parallel reconfigurable architectures for real-time LDPC decoding," Proceedings of the Int. Conf. on Information Technology, Coding and Computing, vol. 1, pp. 579-585, Apr. 2004. [7] T.Brack, F.Kienle, and N.Wehn, "Disclosing the LDPC Code Decoder Design Space," Proceedings of Design Automation and Test in Europe (DATE) Conference, pp. 200-205, March 2006. [8] L. Yang; M. Shen; H. Liu, and C. Shi, "An FPGA implementation of low-density parity-check code decoder with multi-rate capability," Proceedings of the Asia and South Pacific Design Automation Conference, pp. 760- 763 Vol. 2, 18-21 Jan. 2005 [9] E. Kim and G. Choi, "Diagonal low-density parity-check code for simplified routing in decoder, " IEEE SiPS, pp. 756-761, Nov. 2005. [10] K. Gunnam, G. Choi and M. B. Yeary, "A parallel layered decoder architecture for array LDPC codes," Accepted for IEEE VLSI Design Conference, January 2007. [11] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier and X. Y. Hu, "Reduced-complexity decoding of LDPC codes," IEEE Trans. on Communications, vol. 53, pp. 1288-1299, Aug. 2005. [12] J. L. Fan, "Array codes as low density parity check codes," Proc. 2nd International Symposium on Turbo Codes and Related Topics, pp.543546, Brest, France, Sept. 2000. [13] A. Dholakia and S. Olcer, "Rate-compatible low-density parity-check codes for digital subscriber lines," in Proceedings of IEEE International Conference on Communications, pp. 415-419, Jun. 2004. [14] "Part 16: air interface for fixed and mobile broadband wireless access systems amendment for physical and medium access control layers for combined fixed and mobile operation in licensed bands", IEEE P802.16e-2005, October 2005. [15] IEEE 802.11 Wireless LANsWWiSE Proposal: High Throughput extension to the 802.11 Standard. IEEE 11-04-0886--0-OOOn. [16] K. Gunnam and G. Choi, "A Low Power Architecture for Min-Sum Decoding of LDPC Codes," TAMU, ECE Technical Report, May, 2006, TAMU-ECE-2006-02. [Online]. Available: http://dropzone.tamu.edu/te hpubs [17] K. Gunnam, G. Choi, M. B. Yeary and M.Atiquzzaman, "VLSI architectures for layered decoding for irregular LDPC codes of WiMax", TAMU, ECE Technical Report, July 2006, TAMU-ECE-2006-08. Available: http://dropzone.tamu.edu/techpubs. [18] K. Gunnam, "Area and energy efficient VLSI architectures for lowdensity parity-check decoders using an on-the-fly computation," PhD Dissertation, Texas A&M University, October 2006. [19] G. Malema and M. Liebelt, "Interconnection network for structured lowdensity parity-check decoders," Asia-Pacific Conference on Communications, 03-05 Oct. 2005, pp. 537- 540. [20] Open source standard cell library. Available online:
+http://www.vlsitechnology.org
+
+1198
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+p=61, rate 0.9, length 1830 p-211, rate 0.5, length 1266 M. Karkooti et al., rate 0.5, length 1536 T. Brack, et al., rate 0.8, length 3000
+54855
+
+Table III. FPGA Implementation results of the multi-rate 1270 64.4 decoderfor IEEE 802.16e (supports z=24, 48 and 96
+and all the code rates) (Device, Xilinx 2V8000ff]52-5,
+frequency 1 OMHz),[I 7J-[18]
+
+23040
+
+M-24 M =48 M 96 Availble
+
+Slices
+
+1640 3239 6568 46592
+
+30520
+
+585
+
+11695
+
+19732
+15534
+52
+
+20374
+
+18300 15360 153
+1 20 I14'
+
+I 11|
+
+No. Slices
+
+Message Input
+
+No. LUTs passing
+
+buffer
+
+memory (bits) (bits)
+
+Frequency (MHz)
+
+180 110.7
+
+127
+
+r6.2
+
+Throughput Throughput
+
+(Mbps)
+
+per LUT (Kbps)
+
+LUT
+
+2982 5664 11028 93184
+
+SFF
+
+1582 3165 6330 93184
+
+BRAM
+
+38 73 100 168
+
+Memory (bits) 65760 65760 60288
+
+Through-put (Mbps) 41 70 57 139 61 278
+
+Table IV. FPGA Implementation results for the multi-rate decoder. Fully compliant to IEEE 802.1]n (Device, XILINX2V8000FF152-5, frequency
+
+Fig.6. Comparison of proposed Fixed code TPMP
+
+1 OMHZ)[18]
+
+architecture implementations with [6] and [7]..
+
+Mi 27 Al = 54 Af = -1 awu ble
+
+sfices
+
+01L 3
+
+3647 55S141 46592
+
+Table I. FPGA Implementation results for the layered decoderfor rate-compatible array code, [18]
+
+Code Parameters
+Slices LUT SFF BRAM Memo y (bits)
+TThh rouigughh -ppuutter((MMbbpps))
+MaxmumIteatins
+
+M 61
+
+M-61 Available
+
+p-61 p 347
+
+j= 5,
+
+j3,
+
+k = 1 01.611 k 6S*32
+
+q 0,. ,3 q = I
+
+Npk
+
+N kpk
+
+610-3X721 2082-1,1104
+
+Mx. Nh2 295 a. L =93
+
+Code rate, Code rate:
+
+U-059167 O.-059063
+
+6,002
+
+6182 46592
+
+7,713
+
+8,022 93184
+
+9,981
+
+10,330 93184
+
+12
+
+129
+
+168
+
+37,210 131860
+
+68329
+Mbps
+
+113 319
+Mb1 s
+
+1O0TDMP,
+OMS
+
+10OTDMP,
+
+Table I. Reference ASIC Implementation results [3]
+
+LDPC Code
+
+AA-LDPCG
+lreatnegtchom2p0a4t8ible
+
+Decoded ThroughpUt, td, 640 Mbps
+
+Area
+
+14.3 mm
+
+Frequency
+
+125 MHz
+
+Norihnal Power Dissipation 787 rnW
+
+CMOS Technology
+
+1 BO nmr 1 $V
+
+Area Efficienry for t 180 nm 44.75 Mbps/MM2
+
+Energy Efficiency for td, 180 nmI 1;23 pJ/BiYlteration
+
+[LUT
+SFF BRAM
+Wniory(bits) Throlilpighpuu 1N4h
+Z 81
+z _54
+z - 27
+
+3317 1780 46 5664O
+t 19 119 119
+
+6335 3560 89 56640
+238 238 119
+
+9 94) IS4
+
+5341
+
+93184
+
+I 33
+
+L68
+
+55344
+
+356 178 I9
+
+Table V. ASIC Implementation results, multi-rate decoders for
+Block LDPC codes. Fully compliant to IEEE
+802.16e(WiMax) and IEEE 802.1]n [18]
+
+Code parameters
+supported
+ONU Array VNU Array
+Memory
+Pipeline flip flops Cyclic shifter
+Wiring Total chip area
+Frequency Decoded Throughput Power Dissipation
+Technology Area Efficiency for d, 1 80 nm
+Energy Efficiency for td, 180 nm
+
+Fully complaint to Fully complaint to
+
+IEEE 802.11 n,
+
+IEEE 802.16e,
+
+z 27,54,81
+
+z-24,28 96
+
+& all the code rates & ali the code rates
+
+Area (mm2)
+
+Area (mm2)
+
+044
+
+0.53
+
+0.07
+
+0408
+
+1 04
+
+1 23
+
+[55,344 bits
+
+[60,288 bitsj
+
+H02
+
+0 03
+
+0 12
+
+0Q74
+
+'thn[ogat[ic shifter] [Mastersave router]
+
+008
+
+012
+
+1 78
+
+2 73
+
+500 MHz
+
+500 MHz
+
+1 15 Gbps
+
+1 37 Gbps
+
+282 mrW
+
+429 mrW
+
+130 nm CMOS,1.2 V 130 nm CMOS,1.2 V
+
+244 Mbps/ m2
+
+11 91 Mbps mm2
+
+47 pJ/Bit/teration
+
+pAJ 71
+
+Bitllteration
+
+1199
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:04:03 UTC from IEEE Xplore. Restrictions apply.
+
+

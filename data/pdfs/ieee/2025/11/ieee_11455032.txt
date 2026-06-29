@@ -1,0 +1,609 @@
+ 
+Adaptive Layered Enhanced Min-Sum Decoding for 
+Short-Block LDPC Codes in Low-SNR and Burst-
+Prone Communication Systems 
+ 
+Guangyi Luo  
+Information Network 
+Department  
+Wuhan Marine 
+Communication Institution 
+Wuhan, China 
+3141639492@qq.com 
+ 
+Dasheng Zhao* 
+Information Network 
+Department  
+Wuhan Marine 
+Communication Institution 
+Wuhan, China 
+zdshust@163.com 
+Yidu Zhang 
+Information Network 
+Department  
+Wuhan Marine 
+Communication Institution 
+Wuhan, China 
+934707106@qq.com 
+ 
+ 
+ 
+Abstract—Low-bitrate voice and telemetry systems require 
+short LDPC codes with low decoding complexity. This paper 
+presents ALEMS, an Adaptive Layered Enhanced Min-Sum 
+framework for short codes operating under low SNR and bursty 
+conditions. ALEMS combines layered scheduling for fast 
+convergence, an improved Min-Sum core with normalized or 
+offset correction, and adaptive control with an early-stopping 
+policy. These techniques retain the simplicity of Min-Sum 
+decoding while reducing message saturation and trapping effects 
+common in short codes. Simulations using rate-1/2 short LDPC 
+codes over AWGN and Gilbert–Elliott channels show consistent 
+BER and FER gains over normalized Min-Sum and sum-product 
+algorithms, together with fewer iterations and lower stall 
+probability. Under bursty conditions, modest interleaving further 
+enhances robustness without added cost. Fully compatible with 
+QC-LDPC structures and fixed-point realizations, ALEMS offers 
+a balanced solution between theoretical reliability and hardware 
+efficiency for short-block, low-rate applications such as digital 
+voice and narrowband modems. 
+Keywords—LDPC, Min-Sum decoding, layered scheduling, 
+NMS/OMS, early stopping, short blocklength, low-bit rate modem 
+I. INTRODUCTION 
+Low-density parity-check (LDPC) codes are widely 
+recognized for their near-capacity performance and broad use in 
+modern communication systems. However, most existing 
+implementations are optimized for long blocklengths and 
+moderate-to-high SNR conditions, where computational 
+complexity can be amortized. In contrast, emerging scenarios 
+such as digital voice transmission, embedded telemetry, and 
+low-power wireless networks require short-block codes that 
+operate reliably under strict power and latency constraints. 
+These conditions often involve low SNR operation and burst-
+error patterns, under which conventional decoders encounter 
+significant limitations. 
+A representative case is short-packet voice communication 
+over HF/VHF links. Such systems face three key challenges: (1) 
+short LDPC blocklengths, (2) operation near or below 2 dB SNR, 
+and (3) frequent burst errors. In this regime, the sum-product 
+algorithm (SPA) achieves high reliability but with prohibitive 
+complexity, while the normalized Min-Sum (NMS) algorithm 
+offers efficiency at the cost of robustness. The resulting 
+performance–complexity gap motivates the search for decoding 
+methods that remain reliable under short, noisy, and burst-prone 
+conditions. 
+Recent research has explored several approaches to narrow 
+this gap. Variants of the Min-Sum algorithm, such as normalized 
+and offset Min-Sum [1], reduce computational load but require 
+precise parameter tuning to avoid error floors. Layered decoding 
+strategies [2] accelerate convergence, especially for short codes, 
+though their integration with adaptive control remains limited. 
+More recently, neural-aided and graph-neural decoders [3] have 
+achieved notable gains, yet their hardware and energy demands 
+exceed the budgets of embedded or low-power systems. 
+Collectively, these studies reveal a persistent need for decoder 
+architectures 
+that 
+achieve 
+SPA-level 
+reliability 
+while 
+maintaining Min-Sum-level simplicity—particularly in short-
+packet, low-SNR applications. 
+To address these challenges, we propose the Adaptive 
+Layered Enhanced Min-Sum (ALEMS) framework. ALEMS 
+combines layered scheduling, enhanced Min-Sum updates, and 
+adaptive parameter control with a reliable early-stopping policy. 
+Together, these techniques accelerate convergence, mitigate 
+error floors, and dynamically adapt to channel variations while 
+preserving low arithmetic complexity. 
+The main contributions of this work are as follows: 
+1) We introduce ALEMS, a unified decoding framework 
+integrating 
+layered 
+scheduling, 
+enhanced 
+Min-Sum 
+approximations, and adaptive stopping for short-block LDPC 
+codes. 
+2) We evaluate ALEMS on both AWGN and Gilbert–Elliott 
+channels, comparing its performance with SPA and NMS in 
+terms of BER/FER, iteration count, and normalized complexity. 
+3) We demonstrate its engineering feasibility through 
+compatibility with QC-LDPC structures and fixed-point 
+1
+2025 7th International Communication Engineering and Cloud Computing Conference (CECCC)
+979-8-3315-9176-2/25/$31.00 ©2025 IEEE
+DOI 10.1109/CECCC68691.2025.00008
+2025 7th International Communication Engineering and Cloud Computing Conference (CECCC) | 979-8-3315-9176-2/25/$31.00 ©2025 IEEE | DOI: 10.1109/CECCC68691.2025.00008
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:11:06 UTC from IEEE Xplore.  Restrictions apply. 
+implementations, showing that ALEMS is well-suited for low-
+power embedded platforms. 
+Simulation results show that ALEMS operates within 0.1 dB 
+of SPA performance in AWGN channels while reducing average 
+iterations by 60–75% compared with SPA and about 30% 
+compared with NMS. Under burst-error conditions, ALEMS 
+retains robustness with modest interleaving, making it a 
+practical and efficient solution for short-packet, low-rate 
+applications such as narrowband digital voice and telemetry 
+links. 
+II.  SYSTEM ELABORATION 
+A. Channel Model and LLR Formulation 
+The transmitted codeword x ∈{±1}N is obtained via BPSK 
+modulation. For an AWGN channel, the received signal is: 
+yn = xn + wn, wn ∼𝒩(0, σ
+2) 
+The channel log-likelihood ratio (LLR) is derived as: 
+Ln
+ch =
+2yn
+σ
+2  
+where the noise variance relates to the bit-energy-to-noise 
+ratio via: 
+σ
+2 = 1
+2R
+⋅10
+−Eb/N0~[dB]/10 
+For burst channels, we employ the Gilbert-Elliott model with 
+good (G) and bad (B) states characterized by transition 
+probabilities PGB and PBG, yielding steady-state bad probability 
+πB = PGB/(PGB + PBG) and average burst length L‾ B = 1/PBG. 
+B. Belief Propagation Framework 
+The Tanner graph 𝒢= (𝒱, 𝒞, ℰ) has variable nodes 𝒱=
+{1, … , N} , check nodes 𝒞= {1, … , M} , and edges ℰ. 
+Neighborhood sets are defined as: 
+𝒩(m) = {n ∈𝒱: Hm,n = 1}, ℳ(n) = {m ∈𝒞: Hm,n = 1} 
+The sum-product algorithm (SPA) maintains variable-to-
+check (V2C) and check-to-variable (C2V) messages, with the 
+Min-Sum approximation employing normalized (NMS) or 
+offset (OMS) variants to compensate for systematic magnitude 
+overestimation. 
+C. Scheduling and Convergence 
+Layered scheduling processes rows sequentially with 
+immediate message propagation, accelerating convergence by 
+30-50% compared to flooding. A comprehensive early-stopping 
+policy combining syndrome checking and LLR convergence 
+metrics ensures safe termination under layered scheduling. 
+D. Design Requirements for Short-Blocklength Applications 
+Short LDPC codes face distinct challenges including 
+trapping sets due to limited graph expansion, rapid saturation in 
+low SNR regimes, sensitivity to burst errors, and stringent 
+latency/power constraints. These requirements drive the 
+adoption of layered scheduling, adaptive parameter control, and 
+reliable early termination – forming the foundation of the 
+ALEMS framework presented in Section III. 
+III. THE ALEMS ALGORITHM 
+A. Layered Scheduling with Enhanced Min-Sum Core 
+ALEMS employs row-layered processing with the following 
+per-check operations: 
+Extrinsic extraction: 
+Ln
+∖m = Ln
+cur −Rm→n
+old , ∀n ∈𝒩(m) 
+Enhanced Min-Sum computation: 
+1)  Find magnitude extremes: 
+a1 =
+min
+n∈𝒩(m) |Ln
+∖m|, a2 =
+min
+n∈𝒩(m)∖{argmin} |Ln
+∖m| 
+2)  Compute sign product:  
+Sm = ∏ 
+n∈𝒩(m)
+sign(Ln
+∖m) 
+    3）For each 𝑛∈𝒩(𝑚): 
+aexc = {a2,
+n = argmin
+a1,
+otherwise
+sexc = Sm/sign(Ln
+∖m) 
+Adaptive correction (NMS or OMS mode): 
+NMS: |Rm→n
+new | = γ ⋅aexc 
+OMS: |Rm→n
+new | = max(aexc −β, 0) 
+Rm→n
+new = sexc ⋅|Rm→n
+new | 
+Immediate update: 
+Ln
+cur ←Ln
+cur −Rm→n
+old
++ Rm→n
+new  
+Rm→n
+old
+←Rm→n
+new  
+B. Parameter Adaptation Mechanism 
+ALEMS dynamically adjusts correction parameters based on 
+channel conditions: 
+For NMS mode, using linear SNR metric r = (Eb/N0)lin: 
+γ(r) = clip (γmin +
+r −rmin
+rmax −rmin
+(γmax −γmin); γmin, γmax) 
+For OMS mode, using LLR standard deviation σL: 
+β(σL) = clip (cβ ⋅σL; βmin, βmax) 
+Typical parameter ranges: γ ∈[0.80,0.95] , β ∈[0.6,1.0] , 
+cβ ∈[0.15,0.35].values are motivated by preliminary simulation 
+under short-blocklength regime, consistent with prior works [4]” 
+C. Multi-Criterion Stopping Policy 
+ALEMS employs a three-tiered stopping approach: 
+1) Strong criterion: Syndrome check after each global 
+iteration 
+2) Weak criterion: LLR convergence for k ≥kmin      
+2
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:11:06 UTC from IEEE Xplore.  Restrictions apply. 
+3) Stagnation protection: Parameter perturbation after T 
+unchanged iterations 
+The complete algorithm pseudocode is provided as 
+Algorithm 1, ensuring all mathematical operations are explicitly 
+defined without placeholders. 
+D. Complexity Analysis 
+The computational complexity per global iteration is: 
+• Check node updates: O(E) with E edges. 
+• Memory: O(N + E) for LLR and message storage. 
+• Compared to flooding SPA: 40-60% iteration reduction. 
+• Compared to fixed-parameter NMS: similar per-iteration 
+cost with adaptive overhead < 5%. 
+The overall complexity normalized to SPA flooding is: 
+Cnorm =
+AvgIterALEMS × wALEMS
+AvgIterSPA × wSPA
+ 
+where wSPA ≈3.5, wALEMS = 1 accounts for per-iteration 
+complexity differences. 
+Algorithm 1: ALEMS Setup 
+Input: 
+1.H: parity-check matrix with adjacency lists N(m),ℳ(n) 
+2.Lch: channel LLR vector 
+3.kmax,kmin: max/min iterations 
+4.mode∈NMS,OMS: enhancement type 
+5.τabs,τrel: convergence thresholds 
+6.γmin,γmax: NMS scaling bounds (if mode=NMS) 
+7.βmin,βmax: OMS offset bounds (if mode=OMS) 
+8.cβ,min,cβ,max: OMS scaling coefficients 
+9.Lmax: LLR clipping value 
+Output: 
+10.v̂: estimated codeword 
+11.kused: iterations consumed 
+12.success_flag: convergence status 
+Initialization: 
+13. n=1 to N do 
+Ln
+(cur)←clip(Ln
+ch,−Lmax,Lmax) 
+14.each edge (m,n)∈ℰ do 
+Rm→n
+(old) ←0 
+15.Compute adaptation metrics: 
+r←(Eb/N0)lin, σL←std(Ln
+ch
+n=1
+N ) 
+16.if mode=NMS then 
+γ←clip (γmin+ r−rmin
+rmax−rmin
+(γmax−γmin);γmin,γmax) 
+17.else if mode=OMS then 
+cβ←clip (cβ,min+
+σL−σL,min
+σL,max−σL,min
+(cβ,max−cβ,min);cβ,min,cβ,max) 
+β←clip(cβ⋅σL;βmin,βmax) 
+Algorithm 2: ALEMS Main Decoding Loop 
+1. for k=1 to kmax do ▹ Global iterations 
+2. L(prev)←L(cur)  ▹ Store for convergence check 
+3. for m=1 to M do ▹ Layered processing 
+4. Nm←N(m) 
+5. for each n∈Nm do ▹ Extrinsic construction 
+6. Ln→m←Ln
+(cur)−Rm→n
+(old)  
+7. an←|Ln→m|, sn←sign(Ln→m) 
+8. Sm←∏n∈Nm sn  ▹ Check sign product 
+9. (a1,argmin)←minn∈Nm an  ▹ Find min & index 
+10. a2←minn∈Nm∖argmin an  ▹ Second min 
+11. for each n∈Nm do 
+12. if n=argmin then aexc←a2 else aexc←a1 
+13. sexc←Sm⋅sn  ▹ Exclude current node 
+14. if mode=NMS then |Rnew|←γ⋅aexc 
+15. else if mode=OMS then |Rnew|←max(aexc−β,0) 
+16. Rnew←sexc⋅|Rnew| 
+17. Ln
+(cur)←Ln
+(cur)−Rm→n
+(old) +Rnew  ▹ Immediate update 
+18. Rm→n
+(old) ←Rnew 
+19. for n=1 to N do ▹ Hard decision 
+20. v̂n←1Ln(cur)<0 
+21. if Hv̂≡0 (mod 2) then return (v̂,k,true)  ▹ Strong criterion 
+22. if k≥kmin then ▹ Weak criterion 
+23. Δ←
+1
+N ∑n=1
+N  |Ln
+(cur)−Ln
+(prev)| 
+24. A←
+1
+N ∑n=1
+N  |Ln
+(cur)| 
+25. if Δ<τabs or 
+Δ
+max(A,ε) <τrel then return (v̂,k,true) 
+26. if k>5 and Δ
+(k)≈Δ
+(k−1)≈Δ
+(k−2) then ▹ Stagnation detection 
+27. if mode=NMS then γ←γ⋅0.98 
+28. else if mode=OMS then β←β⋅1.02 
+29. return (v̂,kmax,false) 
+ 
+IV. SIMULATION EXPERIMENTS AND ANALYSIS 
+A. Layered Scheduling with Enhanced Min-Sum Core 
+1) Code and Channel Specifications 
+ 
+The evaluation employs a short-blocklength (112, 56) HRA 
+LDPC code with rate 1/2, representative of practical voice-band 
+modem applications.Two channel models are implemented: 
+3
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:11:06 UTC from IEEE Xplore.  Restrictions apply. 
+AWGN channel: yn = (1 −2vn) + wn, wn ∼𝒩(0, σ
+2) 
+Gilbert-Elliott burst channel: Parameterized by transition 
+probabilities PGB = 0.0025, PBG = 0.05, yielding steady-state 
+bad probability πB = 0.048 and average burst length L‾ B = 20 
+symbols. 
+2) Decoder Configurations 
+ 
+Three decoding algorithms are compared under identical 
+conditions: 
+SPA :  Imax = 100   NMS : γ = 0.85   ALEMS: γ ∈
+[0.75,0.95], β ∈[0.1,0.5], dual stopping criteria. 
+3) Performance Metrics and Simulation Methodology 
+ 
+Each data point collects at least 106  transmitted bits for 
+AWGN and multiple random seeds for GE channels to ensure 
+statistical significance down to BER ≈10−6 .Key metrics 
+include:Bit Error Rate (BER) and Frame Error Rate (FER) with 
+95% confidence intervals.Average iteration count I‾ and stall 
+probability.Normalized complexity: Cnorm =
+I‾⋅walg
+I‾SPA⋅wSPA , where 
+wSPA = 3.5, wNMS/ALEMS = 1 
+B.  AWGN Channel Performance Analysis 
+1) Error-Rate Performance 
+ 
+Figure 1 and Figure 2 illustrate the BER and FER 
+performance across the 0–3 dB SNR range. ALEMS 
+demonstrates near-identical error-rate performance to SPA, with 
+differences remaining below 0.1 dB. At representative SNR 
+points, BER values are as follows: 
+0 dB: SPA = 3.6×10⁻³, ALEMS = 3.8×10⁻³ (5.6% relative 
+difference) 
+1 dB: SPA = 1.4×10⁻³, ALEMS = 1.5×10⁻³ (7.1% relative 
+difference) 
+2 dB: SPA = 4.2×10⁻⁴, ALEMS = 4.5×10⁻⁴ (7.1% relative 
+difference) 
+The consistent proximity to SPA performance confirms that 
+ALEMS's adaptive mechanisms preserve decoding reliability 
+while reducing complexity. 
+ 
+Fig. 1. The contrast of AWGN’s  BER performances. 
+ 
+ 
+Fig. 2. The contrast of AWGN’s  FER performance. 
+ 
+Fig. 3. The contrast of AWGN’s  Iterations performance. 
+2) Convergence Acceleration 
+ 
+Figure 3 reveals substantial iteration reduction achieved by 
+ALEMS. The average iteration counts at key operating points 
+are: 
+0 dB: SPA=100, NMS=42.7, ALEMS=28.5 (71.5% 
+reduction vs SPA, 33.3% vs NMS) 
+1 dB: SPA=100, NMS=35.0, ALEMS=24.8 (75.2% 
+reduction vs SPA, 29.1% vs NMS) 
+2 dB: SPA=100, NMS=30.5, ALEMS=21.5 (78.5% 
+reduction vs SPA, 29.5% vs NMS) 
+The stall probability remains below 1.2% across all SNRs, 
+indicating that early termination effectively avoids premature 
+convergence while minimizing unnecessary computations. 
+C. Burst Error Channel Robustness 
+1) Iteration Efficiency under Burst Conditions 
+ 
+Figure 4 presents the average iteration count in Gilbert-
+Elliott channels with πB = 0.048, L‾ B = 20. While BER/FER 
+curves show limited separation among algorithms due to short-
+code saturation effects, iteration statistics provide clear 
+differentiation: 
+0.5 dB: SPA=100, NMS=55, ALEMS=32 (68% reduction vs 
+SPA, 41.8% vs NMS) 
+4
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:11:06 UTC from IEEE Xplore.  Restrictions apply. 
+1.0 dB: SPA=100, NMS=48, ALEMS=29 (71% reduction vs 
+SPA, 39.6% vs NMS) 
+The maintained iteration advantage under burst conditions 
+demonstrates ALEMS's robustness to channel memory effects. 
+Because short-block LDPC codes exhibit error-rate saturation in 
+burst channels, BER/FER separation among algorithms remains 
+marginal. Thus, iteration statistics provide a more discriminative 
+measure of decoder robustness. 
+2) Mechanism Interpretation 
+ 
+Two complementary factors explain this robustness: 
+Adaptive parameter control: Dynamic adjustment of γ/β 
+prevents overconfidence when LLR distributions are distorted 
+by burst errors. 
+Multi-criterion stopping: The combined syndrome-LLR 
+convergence detection avoids prolonged iterations in trapping 
+sets induced by burst clusters. 
+D. Comprehensive Performance Summary 
+Table I consolidates key metrics across both channel types 
+at representative SNR points, revealing three consistent trends: 
+1) Error-Rate Parity: ALEMS maintains BER/FER within 5–
+10% of SPA values across all tested conditions, confirming 
+preserved reliability. 
+2) Complexity Reduction: The normalized complexity 
+metric shows ALEMS operating at 27–31% of SPA's 
+computational load, outperforming NMS's 32–43%.Here 
+complexity is normalized to flooding SPA, where SPA=1.0, 
+NMS≈0.3–0.4, ALEMS≈0.2–0.3. 
+3) Operational Advantage: The combination of SPA-like 
+performance with NMS-like efficiency positions ALEMS 
+favorably for resource-constrained applications. 
+TABLE I. PERFORMANCE SUMMARY AT REPRESENTATIVE SNR POINTS 
+Channe
+l 
+SNR  
+(dB) 
+Algorith
+m 
+BER (×
+10⁻³) 
+FER (×
+10⁻³) 
+Avg 
+Iter 
+Norm 
+Complexity 
+AWGN 
+0 
+SPA 
+3.6 
+11.2 
+100.0 
+1.00 
+ 
+ 
+NMS 
+5.2 
+16.5 
+42.7 
+0.43 
+ 
+ 
+ALEMS 
+3.8 
+11.6 
+28.5 
+0.31 
+AWGN 
+1 
+SPA 
+1.4 
+4.0 
+100.0 
+1.00 
+ 
+ 
+NMS 
+2.1 
+6.8 
+35.0 
+0.36 
+ 
+ 
+ALEMS 
+1.5 
+4.3 
+24.8 
+0.27 
+AWGN 
+2 
+SPA 
+0.42 
+1.2 
+100.0 
+1.00 
+ 
+ 
+NMS 
+0.68 
+1.9 
+30.5 
+0.32 
+ 
+ 
+ALEMS 
+0.45 
+1.3 
+21.5 
+0.28 
+GE 
+0 
+SPA 
+12.7 
+48.1 
+100.0 
+1.00 
+ 
+ 
+NMS 
+13.1 
+50.0 
+46.0 
+0.46 
+ 
+ 
+ALEMS 
+12.9 
+49.3 
+20.0 
+0.20 
+ 
+Fig. 4. The contrast of G E’s  different interleavers Iterations performances. 
+V. CONCLUSION 
+The proposed Adaptive Layered Enhanced Min-Sum 
+(ALEMS) decoder achieves a strong balance between reliability 
+and complexity for short-block LDPC codes in low-SNR and 
+burst-prone environments. Simulations show that ALEMS 
+remains within 0.1 dB of SPA performance while reducing 
+average iterations by 60–75% and normalized complexity to 
+about 30% of SPA. Under burst conditions, modest interleaving 
+further enhances robustness. Beyond numerical gains, ALEMS 
+is lightweight and hardware-friendly. Its layered structure, 
+adaptive control, and enhanced node updates are compatible 
+with QC-LDPC architectures and fixed-point implementations, 
+making it practical for embedded and low-power systems. 
+Future work will extend ALEMS to longer codes and explore 
+parameter tuning for time-varying channels. 
+ 
+REFERENCES 
+[1]  C. Condo, et al., “Normalized and Offset Min-Sum Algorithms for LDPC 
+Decoding,” IEEE Trans. Commun., 2016. 
+[2]  Y. Zhang, et al., “Layered Decoding for LDPC Codes at Short 
+Blocklengths,” IEEE Commun. Lett., 2019. 
+[3]  E. Nachmani, et al., “Deep Learning Methods for Decoding of Linear 
+Codes,” IEEE Trans. Inf. Theory, 2018. 
+[4] Y. Li and H. Hu, “Design of Low-Latency Layered Normalized Minimum 
+Sum Low-Density Parity-Check Decoding Based on Entropy Feature for 
+NAND Flash-Memory Channel,” Entropy, vol. 26, no. 9, Art. 781, 2024. 
+[5] J. Wang et al., “Efficient Layered Parallel Architecture and Application 
+for LDPC Decoder,” Electronics, vol. 12, no. 18, Art. 3784, 2023. 
+[6] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A 
+Generalized Adjusted Min-Sum Decoder for 5G LDPC Codes: Algorithm 
+and Implementation,” IEEE Transactions on Circuits and Systems I: 
+Regular 
+Papers, 
+vol. 
+71, 
+pp. 
+2911–2924, 
+2024. 
+doi:10.1109/TCSI.2024.3368056. 
+ 
+5
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:11:06 UTC from IEEE Xplore.  Restrictions apply. 

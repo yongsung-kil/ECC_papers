@@ -1,0 +1,494 @@
+2024 IEEE 42nd International Conference on Computer Design (ICCD)
+
+2024 IEEE 42nd International Conference on Computer Design (ICCD) | 979-8-3503-8040-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/ICCD63220.2024.00072
+
+HEncode: A Highly Modularized and Efficient FPGA QC-LDPC Encoder Using High Level Synthesis
+Jiawei Yang1, Shaohua Wang1, Xiangrui Yang1, Yifan Zhang1, Qiang Cao1, Jie Yao1, Xiaodi Tan2, Xiao Lin2 1Wuhan National Laboratory for Optoelectronics, Huazhong University of Science & Technology, Wuhan, China 2College of Photonic and Electronic Engineering, Fujian Normal University, Fujian, China {wadeyoung, m202273497, yxr620, xenon zhang, caoqiang, jackyao}@hust.edu.cn, {xtan, xiaolin}@fjnu.edu.cn
+
+Abstract—QC-LDPC (Quasi Cyclic Low-Density ParityCheck) codes, as a regular block-based code, have been prevalently adopted in communication and storage fields to ensure high reliability and bandwidth of data channels. However, existing Field-Programmable Gate Array (FPGA) QC-LDPC encoders designed by RTL experts are generally dedicated to specialized LDPC codes and hardware platforms without flexibility and scalability. Recently, High-Level Synthesis (HLS) was introduced to compile a high-level encoding logic into Register Transfer Level (RTL) implementations, which are low performance and hardware efficiency due to the overlarge HLS-to-RTL design space, especially for large-scale FPGA hardware.
+This paper proposes a highly modularized and efficient FPGA QC-LDPC encoder, HEncoder, to fully leverage HLS to achieve high bandwidth, flexibility in both code parameters, and hardware efficiency. Firstly, HEncode presents an efficient Encode Block (EB) fully exploiting the FPGA LUT characteristic. Second, HEncode designs a low-level subword-encoding pipeline using multiple EBs and subword-parallel Encode Units (EU). Third, HEncoder designs an encode module with a pipelined data stream consecutively passing Input, EU array, and Output to balance bandwidths of accessing and encoding words. Finally, HEncode develops a design space analyzer to automatically determine the encoder parameters under constrained conditions to achieve high bandwidth. We implemented and evaluated HEncode on the Xilinx U50. The results show that compared to existing encoders, HEncode gains an increase of approximately 154.5× in the peak throughput and about 5.89× in hardware efficiency to achieve the encoding throughput of 922.66 Gbps.
+Index Terms—QC-LPDC, FPGA, HLS, Encoder
+I. INTRODUCTION
+LDPC codes have been broadly used in communications such as 5G and the latest IEEE 802.11 series [1] and highdensity storage, e.g., Solid-State Drive and holographic storage [2]. QC-LDPC is a regular LDPC code with scalable code-construction and high parallelism friendly for hardware implementation without compromising error correction ability. Emerging applications have been demanding highthroughput QC-LDPC hardware encoders. For instance, the IEEE 802.11ay standard theoretically requires a maximum transmission rate of 176 Gbps [3]. FPGA is widely used in the implementation of QC-LDPC encoders because of its programmability and high performance. Most LDPC hardware encoders use Hardware Description Language (HDL) languages to develop RTL implementation upon FPGA. The low-level development process is generally long and errorprone. Recently, HLS has been widely used to transform high-level C/C++ codes to low-level RTL implementation [4],
+
+improving the hardware development efficiency. However, due to the significant semantic gap between high-level algorithm abstract and low-level hardware detail as well as the large space design for large-scale FPGA hardware, the existing HLS-based encoder implementation is suboptimal with low throughput and hardware efficiency.
+To fully leverage HLS to achieve high bandwidth in largescale FPGA hardware, we propose a highly modularized and efficient FPGA QC-LDPC encoder. Firstly, HEncode achieved LUT-level optimization within the Encode Block (EB), implementing full connectivity logically, which enhanced the parallelism of encoding. Subsequently, HEncode implemented a low-level subword-encoding pipeline and three types of parallel encoding structures based on the EB, further improving efficiency. Lastly, to generate the optimal encoder under various constraints, a resource usage model and a performance model were developed for HEncode. Based on these, a design space analyzer was developed to facilitate parameter tuning. Our contributions are summarized as follows:
+• We propose an Encode Block structure based on LUTlevel optimization, which achieves full logical connectivity within the EB with standardized characteristics.
+• We implemented a multi-level scheduling system for the HEncode, realizing pipeline designs based on EB and Units, and parallel designs based on EB and HBM ports, enhancing the parallelism of the encoding process.
+• We designed a universal design space analyzer engine based on resource utilization and performance models, generating and optimizing hardware configurations.
+• We implement and validate the effectiveness of HEncode on Xilinx U50 in terms of performance, flexibility, scalability, and efficiency.
+II. BACKGROUND
+A. QC-LDPC
+LDPC codes belong to the category of linear block codes, and in actual computations, they usually employ vector matrix multiplication (VMM) under GF(2) to generate check bits. LDPC codes come in various types and variations, one of the most widely used being QC-LDPC. The generation matrix of a QC-LDPC is usually composed of multiple circulant submatrices. Multiple sub-matrices are combined in the column direction to form a super row and in the row direction to form a super column. The super columns and super rows composed of
+
+2576-6996/24/$31.00 ©2024 IEEE
+
+434
+
+DOI 10.1109/ICCD63220.2024.00072
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:19 UTC from IEEE Xplore. Restrictions apply.
+
+these sub-matrices adhere to the rules of matrix multiplication as well. Although there exist specific optimization algorithms for QC-LDPC, they often face issues with generality and flexibility. Consequently, we employ the conventional vectormatrix multiplication to design the encoder. B. HLS and FPGA
+HLS translates behavioral descriptions, often in C/C++, into hardware, expediting development and verification for flexible, large-scale encoder designs like QC-LDPC [5]. FPGAs are pivotal in this context due to their reconfigurability, low power, and low latency. Traditional FPGA-based encoder designs, however, have not fully exploited the potential of FPGA hardware, such as the 4-6 input LUT structure. Furthermore, FPGAs paired with High Bandwidth Memory (HBM) are ideal for high-concurrency tasks like QC-LDPC encoding, yet design considerations for fan-in and fan-out between modules are crucial to mitigate increased latency and power consumption. C. Existing Research And Motivation
+Existing QC-LDPC encoder designs, often optimized for specific code types, achieve high throughput rates (1–100 Gbps) with limited hardware resources (2k–20k LUTs) using techniques like Richardson-Urbanke (RU) and Lower TriangularUpper (LU) decomposition [6]–[8]. However, these optimizations limit encoder applicability and introduce additional costs. General VMM-based designs offer broader code compatibility but at the expense of increased hardware usage (20k-30k LUTs) and lower throughput (0.3–6 Gbps) [4], [9], [10].To address these limitations, we propose the development of a new QC-LDPC encoder architecture that leverages HLS and FPGA technology for high-throughput and adjustability.
+III. DESIGN
+A. HEncode Overview
+This paper proposes a multi-level, scalable, and efficient encoder design using HLS. Through the use of HLS compilation directives, guidance is provided for the overall encoder logic and hints on some hardware details. Overall, HEncode consists of multiple Encode Modules, which encode in parallel. Each Encode Module comprises a DataLoad Unit(DLU), a DataSend Unit(DSU), and an Encode Unit Array. As shown in Fig.1, the encoding process is divided into several steps: ➀: The DLU reads data from the HBM. ➁: The DLU forwards the data bits to the DSU and distributes the data bits to the Input Buffers of various Encode Units. ➂: The Encode Unit Array completes the encoding of the codeword according to the encoding algorithm and writes the calculated check bits into the Output Buffer. ➃: The DSU concatenates the check bit results and data bits from different Encode Units. ➄: The DSU writes the concatenated codeword back to the HBM. B. Encode Block
+We have designed an HEncoder Encode Block(EB) optimized for LUTs, utilizing HLS to achieve full connectivity logically and implementing shift cycling operations through physical connections. To implement the Encode Block, it is necessary first to define the input and output ports. An EB has three input ports and one output port. Input 1 is for the input of
+
+HBM[0] DataLoad
+Unit
+
+HBM HBM[1] DataSend Unit
+
+··· ···
+
+Input \
+
+\ EB
+
+\ EB
+
+\
+
+\
+
+①
+
+②
+
+Input \
+
+\
+
+\
+
+···
+
+\ EB
+
+\ EB
+
+Input \
+
+\
+
+\
+
+Input buffer
+
+③ ···
+
+···
+
+\
+
+\
+
+②
+
+\
+
+Out Out
+
+\ EB
+
+\ EB
+
+···
+
+\
+
+\
+
+\ \
+
+⑤
+
+④
+
+\
+
+\
+
+Output buffer
+
+EB Array
+
+Encode Unit
+
+Encode Unit Array Encode Module
+
+\ \
+
+Encode Modules
+
+··· ···
+
+Fig. 1. Dataflow of HEncode
+
+Input_1 Informa�on
+
+Input_3 Zero or Temp buffer
+②2
+3
+
+3
+
+2
+
+1
+
+Output_1
+
+Output buffer
+
+Input_2
+
+or Temp buffer
+
+Generate matrices
+
+Fig. 2. Structure of Encode Block
+
+data bits, responsible for reading data bit segments from the input module. Input 2 is for the input of the fragments of the generator matrix. Output 1 is the output port, which outputs data after XOR calculations. Input 3 serves as an input port for either zero or data from the Temp buffer, with the input data also depending on the current computation round. C. Multi-Parameter Scheduling
+In the section III-B, we obtained a basic EB. However, due to the limited hardware scale of a single EB, the encoding throughput is constrained. Therefore, we consider improving the overall throughput of the encoder by reusing EB.
+1) Low-Level Subword-encoding Pipeline in the Super Column Direction
+The HEncoder organizes EBs in a head-to-tail ring structure to handle sub-matrices in the super column direction. This arrangement ensures that the XOR calculations required by the QC-LDPC encoding process are evenly distributed across each EB, thereby preventing fan-in issues that would arise from directly connecting all EBs to the output. In this structure, each EB is responsible for processing a portion of the sub-matrices within a super column. As the blocks progress through the ring, they perform their computations and pass their results to the next block in the sequence. This allows for a continuous flow of data and operations, with the final block in each super column directly connecting to the output.
+2) Parallelism in Super Row Direction and Encode Unit Parallel processing in the super row direction leverages the lack of data dependency between super-rows, allowing straightforward replication of EBs. The design involves determining the replication factor and splitting the loop into parallel and serial parts for efficient check bit generation. This, combined with the super-column pipeline, speeds up codeword encoding. The aggregation of multiple EBs with Input and Output buffers is termed an Encode Unit. Parallelism between Encode Units enables simultaneous encoding of multiple codewords, requiring only the reuse parameter determination. 3) Dataload Unit, Datasend Unit, and Inter-Unit Pipeline The Dataload and Datasend Units manage data input and output, buffering EB operations to mitigate fan-in and fanout issues and reduce control complexity. These Units are connected to HBM through AXI interfaces Forming an Encode Module with a DataLoad Unit, a Datasend Unit, and an Encode Unit Array enables task-level pipelining. This module implements a three-stage pipeline for efficient data flow: “data reading, encoding computation, and data writing back.”
+
+435 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:19 UTC from IEEE Xplore. Restrictions apply.
+
+4) Parallelism Based on HBM Channels In HEncode, we have also implemented parallelism based on HBM channels. For each Encode Module, its Dataload Unit is connected to one pseudo channel, and the Datasend Unit to another. Additionally, we can control the throughput of the Dataload and Datasend Units by setting the interface bit widths, WL and WS, respectively. D. Design Space Analyzer
+To optimize the encoder’s architecture for various code rates, lengths, throughput requirements, and FPGA chips with varying resources, a multi-dimensional design space analyzer engine is developed. The analyzer takes into account hardware constraints like the number of LUTs and encoding throughput. It outputs key encoder parameters, including ROW NUM(NR), COL NUM(NC ), UNIT NUM(NU ), WL, WS, and NM (Number of modules), along with associated hardware consumption and throughput. This approach avoids the labor-intensive task of manually testing numerous parameter combinations.
+1) Resource Utilization Model In FPGAs, our primary resource is the LUT, and the number of LUTs is linearly related to the number of EBs. Therefore, we can predict the LUT usage of the encoder using Formulas (1). Where NR, NC , and NU correspond to the expansion of the number of EB within a single Encode Module. WL and WS represent the interface bit widths. NM determines the number of Encode Modules. The parameter αLUT indicates that as these parameters change, the control circuitry related to the EBs also changes. Generally, as the number of EBs increases and the circuitry becomes more complex, αLUT will also increase.
+
+LU T encoder = (NR ∗ NC ∗ NU ∗ LU TEB + WL∗
+
+(1)
+
+LU TL + WS ∗ LU TS + αLUT ∗ LU Tcontrol) ∗ NM
+
+2) Performance Model
+
+In terms of hardware throughput, it can be calculated using the following formula:
+
+THEncode = NR ∗ NC ∗ NU ∗ NM ∗ TBase
+
+(2)
+
+Where TBase represents the encoding efficiency of a single EB, and THEncode represents the encoding throughput of HEncode. The other parameters have the same meanings as those in Section III-D1. Unlike the calculation of LUT usage,
+
+the calculation of throughput generally only considers the number of EB. Therefore, it is only necessary to consider the throughput of the Encode Unit Array.
+
+IV. EXPERIMENTS
+
+A. Experimental Configuration
+
+We are utilizing the Xilinx hardware development platform, Vitis, to implement our encoder. Our experimental setup
+
+includes a server equipped with two Intel Xeon E5-2670 processors and 128GB of memory. The FPGA hardware is a Xilinx Alveo U50 data center accelerator card, equipped with 8GB of HBM and a total bandwidth of 316 GB/s. The FPGA is connected to the server via a PCIe Gen3 x16 interface. With the assistance of HLS, this design can be conveniently ported
+
+to any other FPGA platform. We are running the experiments on the official firmware (Xilinx u50 gen3x16 xdma 201920 3), with Vitis version 2020.2 and XRT version 2.8.743. B. Encoder Flexibility
+In this section, we will test the flexibility of the HEncoder. 1) Code Length We employ the QC-LDPC encoding rules specified under
+the IEEE 802.16 standard. Tests are conducted with a codeword lengths of 768 to 2304 bits, and a code rate of 1/2. We used a moderately scaled design: NR=2, NC =2, and NU =3. The encoding throughput test results are shown in Fig.3. It can be observed that as the codeword length increases, the encoding throughput almost linearly increases with a linear regression parameter exceeding 0.99.
+
+7KURXJKSXW*ESV
+7KURXJKSXW*ESV
+
+        
+&RGH/HQWK
+
+ 'DWDZRUG
+
+
+&RGHZRUG
+
+
+
+
+
+
+
+
+
+  $ $ % 
+5DWH
+
+Fig. 3. Impact of Code Length Fig. 4. Impact of Code Rate
+
+on Throughput
+
+on Throughput
+
+2) Code Rate
+We use the QC-LDPC encoding rules under the IEEE 802.16 standard. The z-factor is set at 64, corresponding to a codeword length of 1536 bits, with tests conducted at code rates of 1/2, 2/3B, 3/4A, 3/4B, and 5/6. To accommodate different code rates, the parameters used are: NR=2, NC =2, NU =3. The test results are shown in Fig.4. It is evident that as the code rate increases, the throughput also increases.
+3) Row/Column/Encode Unit
+We utilize QC-LDPC encoding rules under the IEEE 802.16 standard. The z-factor is set at 64, corresponding to a codeword length of 1536 bits, tested at a code rate of 1/2. When testing NR, its size is set from 1 to 4, with NC fixed at 2 and NU at 1. When testing NC , its size is set from 1 to 4, with NR fixed at 2 and NU at 1. When testing NU , its size is set from 1 to 6, with both NR and NC fixed at 1. In Fig.5, the throughput grows linearly with NR, NC and NU .
+4) Module Number In the testing of NM , we evaluated the scalability of two different sized encoders, both adhering to the IEEE 802.16 standard QC-LDPC encoding rules with a z-factor of 64. The difference lies in the code rates and dimensions: the smaller size encoder has a code rate of 1/2, NR=2, NC =2, and NU =3 (12 EBs). The larger size encoder has a code rate of 5/6, NR=4, NC =4, and NU =2 (32 EBs). The test results, as shown in Fig.6 above, indicate that both the encoding throughput and LUT consumption rate exhibit good linear growth. 5) LDPC Standards
+To demonstrate the flexibility of HEncode, we conducted tests under different standards using the same parameters. We
+
+436 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:19 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I ENCODER PERFORMANCE COMPARISON
+
+tWork IM
+
+EA
+
+SR CF
+
+CI
+
+FPGA
+
+[6]
+
+RTL Optimized N
+
+5G
+
+Whole Family XCKU-115
+
+[8]
+
+RTL Optimized N 802.11
+
+One Code
+
+VXC5v1×20t
+
+[11] RTL Optimized Y WIMAX Whole Family XC5VFX70T
+
+[12] RTL Hybrid Y 802.16e Whole Family EP2C70F896C6
+
+[13] RTL Hybrid Y
+
+5G
+
+Whole Family XCZU28DR
+
+[9]
+
+RTL VMM
+
+Y CCSDS
+
+4 Codes
+
+xc7z100ffg900
+
+[10]
+
+RTL VMM
+
+Y CCSDS
+
+One Code
+
+VC4VLX80
+
+[4]
+
+HLS VMM
+
+Y CCSDS
+
+6 Codes
+
+XC7S100
+
+Proposed HLS VMM
+
+N Above Whole Family
+
+Alveo U50
+
+IM:Implement Method,EA:Encoding Algorithms,SR:Shift Register
+
+CF:Code Family,CI:Code Implemented,T:Throughput
+
+Freq(Mhz)
+200 290 160-320 117 580 220 425 200-585.6 178.1-300
+
+T(Gbps)
+0.95-12.42 117.45 19.35-29 1.3 5.97 1.6 5.84
+0.099-0.29 1.47-922.66
+
+Resource(max)
+2384 LUTs + 950 FFs 1782LUTs+2187FFs
+18200LE 11399logic+8880memory
+11156LUTs 32708LUTs+15541FFs 25572LUTs+18448FFs 20709LUTs+16486FFs 403615LUTs+272518FFs
+
+7KURXJKSXW*ESV +DUGZDUHXWLOL]DWLRQN/87V
+7KURXJKSXW*ESV +DUGZDUH8WLOL]DWLRQN/87V
+
+3DUDPHWHU7\SH
+
+
+
+
+
+81,7
+
+
+
+52:
+
+
+
+&2/801
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+(%QXPEHUV
+
+(%QXPEHUV
+
+D7KURXJKSXW
+
+E+DUGZDUH8WLOL]DWLRQ
+
+6PDOO6L]H7KURXJKSXW
+
+/DUJH6L]H7KURXJKSXW
+
+
+
+6PDOO6L]H8WLOL]DWLRQ
+
+
+
+/DUJH6L]H8WLOL]DWLRQ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+
+0RGXOH1XPEHUV
+
+Fig. 5. Impact of Row/Column/Encode Fig. 6. Impact of Module num-
+
+Unit on Throughput
+
+bers
+
+set NR to 2, NC to 2, NU to 3, and NM to 8. The two standards tested were 5G-NR BG1(z=128) and CCSDS(z=128). The measured encoding throughputs under these standards were 30.01 Gbps and 47.85 Gbps, respectively.
+
+1RUPDOL]HG7KURXJKSXW 1RUPDOL]HG+DUGZDUH8WLOL]DWLRQ
+
+
+
+
+
+
+
+
+
+
+
+
+
+$
+
+%
+
+&
+
+'HVLJQ
+
+D1RUPDOL]HG7KURXJKSXW
+
+
+
+7\SH
+
+
+
++/6HVWLPDWH
+
+3UHGLFWLRQ
+
+
+
+$FWXDO
+
+
+
+
+
+
+
+$
+
+%
+
+&
+
+'HVLJQ
+
+E1RUPDOL]HG+DUGZDUH8WLOL]DWLRQ
+
+Fig. 7. Accuracy of Two Models
+C. Models Accuracy
+To test the accuracy of resource utilization model and performance model against actual conditions, we randomly selected three different parameter combinations for testing.(A:NR=2 NC =4 NU =3 NM =1, B:NR=4 NC =3 NU =2 NM =1, C:NR=3 NC =3 NU =2 NM =1) It is important to note that there is no comparative object for throughput; it can only be compared with actual performance. LUT usage has a system estimate provided by HLS. The evaluation results are depicted in fig.7. It can be observed that our throughput estimation results deviated from actual conditions by +16% to +39%, and the estimated results for LUT usage deviated by +23% to +47%.
+V. CONCLUSION
+In this paper, we first implemented a modularized, fully parallel Encode Block. Furthermore, we developed a flexible, adjustable encoding framework. Finally, to adapt to different constraints and optimize encoder configuration, we designed
+
+a design space analyzer engine. Compared to traditional en-
+coders, our approach offers higher parallelism, better flexibil-
+ity, and greater hardware efficiency.
+VI. ACKNOWLEDGMENTS
+This work was supported by National Key Research and
+Development Program (Project No.2022YFB2804302, Project
+No.2022YFB0701800).
+REFERENCES
+[1] T. Thi Bao Nguyen, T. Nguyen Tan, and H. Lee, “Low-complexity highthroughput qc-ldpc decoder for 5g new radio wireless communication,” Electronics, vol. 10, no. 4, p. 516, 2021.
+[2] Q. Yu, F. Wu, M. Zhang, and C. Xie, “Fast phase error correction with reference beam-assisted ldpc coding for collinear holographic data storage,” Optics Express, vol. 31, no. 12, pp. 20 345–20 363, 2023.
+[3] K. Kim, J. Kwak, and W. Seok, “Milimeter wave short distance communication for scientific research equipment,” in 2022 23rd AsiaPacific Network Operations and Management Symposium (APNOMS). IEEE, 2022, pp. 01–03.
+[4] Y. M. Gu, S. Kim, and B. Kim, “Telemetry standard 106-17 ldpc decoder design using hls,” Journal of the Korean Society for Aeronautical & Space Sciences, vol. 49, no. 4, pp. 335–342, 2021.
+[5] J. Cong, J. Lau, G. Liu, S. Neuendorffer, P. Pan, K. Vissers, and Z. Zhang, “Fpga hls today: successes, challenges, and opportunities,” ACM Transactions on Reconfigurable Technology and Systems (TRETS), vol. 15, no. 4, pp. 1–42, 2022.
+[6] J. Gong, Z. Lu, L. Wang, X. Chu, and X. Wen, “A reusable and efficient architecture for qc-ldpc encoder with less expansion factors,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, 2023.
+[7] A. Mahdi, N. Kanistras, and V. Paliouras, “A multirate fully parallel ldpc encoder for the ieee 802.11 n/ac/ax qc-ldpc codes based on reduced complexity xor trees,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 29, no. 1, pp. 51–64, 2020.
+[8] G. Tzimpragos, C. Kachris, D. Soudris, and I. Tomkos, “A lowcomplexity implementation of qc-ldpc encoder in reconfigurable logic,” in 2013 23rd International Conference on Field programmable Logic and Applications. IEEE, 2013, pp. 1–4.
+[9] M. Hao, G. Liu, J. Zou, and T. Ban, “Configurable universal qc-ldpc encoder architecture design,” in 2022 IEEE 5th International Conference on Electronic Information and Communication Technology (ICEICT). IEEE, 2022, pp. 106–110.
+[10] X. Yao, L. Li, J. Liu, and Q. Li, “A low complexity parallel qc-ldpc encoder,” in 2021 IEEE MTT-S International Wireless Symposium (IWS). IEEE, 2021, pp. 1–3.
+[11] A. Mahdi and V. Paliouras, “A low complexity-high throughput qc-ldpc encoder,” IEEE transactions on signal processing, vol. 62, no. 10, pp. 2696–2708, 2014.
+[12] X. Wang, T. Ge, J. Li, C. Su, and F. Hong, “Efficient multi-rate encoder of qc-ldpc codes based on fpga for wimax standard,” Chinese journal of electronics, vol. 26, no. 2, pp. 250–255, 2017.
+[13] V. L. Petrovic´, D. M. El Mezeni, and A. Radosˇevic´, “Flexible 5g new radio ldpc encoder optimized for high hardware usage efficiency,” Electronics, vol. 10, no. 9, p. 1106, 2021.
+
+437 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:10:19 UTC from IEEE Xplore. Restrictions apply.
+
+

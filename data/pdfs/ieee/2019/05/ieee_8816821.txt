@@ -1,0 +1,196 @@
+5G NR LDPC Decoding Performance Comparison between GPU & FPGA Platforms
+
+Alex Aronov
+AnStreams Design and Solutions alex@anstreams.com
+Leonid Kazakevich
+InterDigital Communication Inc., NY Leonid.Kazakevich@interdigital.com
+
+Jane Mack
+InterDigital Communication Inc., NY Jane.Mack@interdigital.com
+Fred Schreider
+InterDigital Communication Inc., NY Fred.Schreider@interdigital.com
+Scott Newton
+InterDigital Communication Inc., NY Scott.Newton@interdigital.com
+
+Abstract—Fifth Generation NR is the global standard for the wireless air interface that promises to deliver high reliability and low end-to-end latency while delivering ultra-high-speed data. The 3rd Generation Partnership Project (3GPP) has standardized Low Density Parity Check (LDPC) coding as the solution to satisfy the channel coding demands of 5G NR. The trend towards virtualization of traditionally hardware functions to reduce development and equipment costs motivates a GPU based SDR platform for 5G NR. To that end, we developed an optimized 3GPP compliant LDPC decoder [1]. Performance data was collected on this enhanced decoder algorithm hosted on both a field programmable gate array (FPGA) and a graphic processing unit (GPU) platform. The advantages and disadvantages of FPGA and GPU technology for LDPC decoding are discussed. Both implementations align with Standards, but we show that the GPU solution exhibits larger latency primarily due to memory accesses. Future work for improving the LDPC decoder latency on the GPU is described.
+Keywords-component; LDPC, GPU, FPGA, 5G NR, 3GPP
+I. INTRODUCTION
+Error correction codes (ECCs) which introduce redundancy that can be used by a decoder to correct errors, are widely applied in modern wireless communication systems such as [1] to reduce the Eb/N0 required to reliably send data through a noisy channel.
+In the past few years, significant progress has been observed in ECCs, for example, turbo-like codes, LDPC codes, polar codes, and fountain codes. In particular, the LDPC codes [3] (discovered by Gallagher and recently rediscovered) is recognized as a significant breakthrough in
+
+channel capacity and the motivation to switch from the commonly used turbo codes in fourth generation (4G) wireless systems to LDPC coders for emerging wireless communication, including 5G NR. Performance data has shown that LDPC codes can offer higher coding gains, lower error floors and throughput that increases as the code rate increases in comparison to turbo codes [11].
+Although LDPC decoders have been successfully realized on ASIC and FPGA technology it has become an active research area for GPUs [7], [8], [9]. In these works, LDPC decoders were implemented and supported impressive throughputs, approaching Gbps data rates. However, these works did not focus on latency. In this work, we take a step towards meeting the low latency requirements of 5G NR.
+In addition to the performance advantage that LDPC codes have over Turbo codes, there is also a potential structural one as well. The computations for LDPC codes decompose into a larger number of much smaller units. This allows greater parallelism to be achieved in hardware. LDPC decoders also operate by repetitively decoding single parity check codes that involves a small number of bits. These are independent operations and therefore lend themselves to parallelization [11].
+Due to their parallel architecture, GPUs continue to gain a lot of interest by communication researchers. LDPC algorithms can be structured in a way that makes GPU implementation a good candidate for meeting decoder requirements for NR technology. However, the adoption of GPUs is still somewhat hindered by the lack of easy to use development tools and ecosystem for the wireless domain.
+LDPC codes are also used in optical communications, flash memories, computer hard drives, distributed storage systems, and deep-space communication.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+A. Paper Organization This paper is organized as follows: Section 2 will provide a
+brief description of FPGA and GPU technology, and discuss their advantages and disadvantages for an enhanced NR LDPC decoder implementation. Section 3 will outline the enhancements to the decoder’s Sum Product Algorithm (SPA) implementation. Section 4 will describe the Test Platforms that were used to capture performance data. Section 5 will compare the BLER vs SNR performance results for the FPGA and GPU platforms against a simulation reference. It will also describe a proposed Performance metric (PM) that can be used to characterize the LDPC decoder on each platform. Lastly, in Section 6 we provide an analysis of the performance of the NR LDPC decoder based on our test results and suggest methods for improvement.
+II. FPGA AND GPU TECHNOLOGY
+This section presents an introduction to the two different platforms under consideration for the decoder and highlights the pros and cons for each technology. Aside from performance, some important criteria for a decoder include a small footprint, energy efficiency, throughput, latency, and cost. As it is difficult for a given platform to optimize all these criteria simultaneously, we define a PM, which we then use to benchmark the FPGA and GPU performance. We then compare the FPGA and GPU platforms, discuss the design trade-offs and use the PM to characterize each implementation.
+A. Overview of the FPGA and GPU based platforms LDPC decoders have been largely targeted to FPGA-based
+platforms because they possess abundant high-speed logic resources and typically have IP cores readily available, such as the 3GPP 5G LDPC specification compliant IP core used in this work. FPGAs and FPGA-based platforms are generally optimized for high-speed, low-latency processing. A wide range of commercial-off-the-shelf (COTS) FPGA-based platforms offering numerous peripheral options are available making costly custom platform development unnecessary. These features make them suitable for prototyping a large spectrum of high-speed compute-intensive applications.
+A drawback of FPGA-based platforms is they typically exhibit high non-recurring engineering (NRE) costs especially if a required IP core is unavailable or lacks required performance. Long compilation times in the order of hours can result due to the place and route implementation phase where complicated logic functions are mapped to FPGA resources while attempting to meet timing requirements. Often many design iterations are required for debugging, yielding a larger aggregate NRE cost than for GPU based development. FPGAs are inherently clocked slower and are less energy efficient than ASICs because (among other things) the soft-wired interconnects between logic cores are longer and signals pass though routing elements.
+GPUs are software programmable devices that include a many-core architecture designed for highly parallel computation. Computational algorithms can be parallelized on numerous cores by using multithreading.
+
+Originally conceived as a video processing engine, GPUs are finding new applications that also require highly parallelized processing, which motivates their use for implementing de-coding algorithms. GPUs, like CPUs, are designed to support high precision and floating-point arithmetic compared to FPGAs. Additionally, the design NRE cost can be lower since software compilation times typically take on the order of minutes. The GPU can be programmed in CUDA where the source code follows C++ syntax rules simplifying development and compilation. For these reasons, researchers have recently started investigating the feasibility of targeting LDPC decoder algorithms on a GPU-based platform.
+Compared to FPGAs, power consumption is a known drawback of GPUs. The currently available design entry tools that enable a very high level of performance are still lacking compared to FPGAs, but development cycles are still shorter with GPUs. The ever-increasing need for higher processing bandwidth to support parallelizable applications such as the LDPC decoders for communications applications can be realized with the highly parallel architecture of GPUs.
+An often-discussed difficulty in GPU implementation of LDPC decoders is the random nature of the LDPC codes, which result in irregular memory accesses [10]. This is due to the random connections between the check and variable nodes that result in writing to non-coalesced memory locations that result in a need for separates memory transactions These noncontiguous memory accesses result in long access times and therefore carry heavy latency penalties. Moving data between the host CPU memory and GPU memory can also yield a heavy latency penalty.
+III. LDPC DECODING ALGORITHM – ENHANCEMENTS FOR 5G NR
+Our design of an iterative LDPC decoder of binary LDPC codes is based on the sum-product algorithm (SPA) optimized for implementation. This algorithm is based on passing loglikelihood ratios (LLR) messages between information and parity-check nodes of the Tanner graph associated with a parity check matrix H.
+A. Decoder Enhancements Our improvements to the implementation of this algorithm
+include:
+• Optimized weights and a fixed-point design for probability calculations (belief propagation)
+• Reformulated message passing with vectors that will eliminate redundancy
+• Parity check matrix compression for compact storage • A parallel rotator for the GPU built on fully
+independent threads where each thread extracts the corresponding data with no extra resources for parallelization The performance results presented in this paper are based on this enhanced decoder implementation implemented on both the FPGA-based and GPU-based platforms.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+B. LDPC Decoder for NR - Algorithm Details Compact storage and efficient generation of the parity
+check matrices is critical to the LDPC decoder/encoder implementation. NR LDPC code design is based on quasicyclic (QC) LDPC where the parity check matrix (PCM) consists of circulant submatrices that enable low coding complexity. The parity check matrix H can be fully represented by its compact form [h]. The [h] matrices for Base Graph 1 (BG1) and Base Graph 2 (BG2) in NR are defined in 3GPP TS 38.212 V15.3.0 [1]. The [h] matrix sizes are 46 x 68 for BG1, and 42 x 52 for BG2.
+As specified in Section 5.3.2 of TS 38.212, the parity check matrix H is generated by replacing each element of the compact matrix [h] with a Zc x Zc matrix, where Zc is the lifting size, as follows: Each blank element of the [h] matrix is replaced by an all-zero matrix of size Zc x Zc; Each non-blank element of the [h] matrix is replaced by a circular permutation of an identity matrix of size Zc x Zc. The size of the parity check matrix H generated this way is (46Zc) x (68Zc) for BG1, and (42Zc) x (52Zc) for BG2, respectively.
+Given the large number of lifting sizes supported in NR, and considering the maximum lifting size Zc=384, it becomes clear that storing all 82 H matrices is impractical (for example, the largest H matrix size is (46*384) x (68*384) = ~461Mb). Thus, for practical implementations, it is important to store the compact [h] matrices instead. For illustration purposes, a compact [h] matrix for BG2, as specified in TS 38.212 is shown in Figure 1.
+
+To illustrate the effectiveness of our compression technique we compared the memory that is required to store the compact [h] matrix for BG1 (matrix size 46x68, and a 9-bit representation) using a standard NR decoder to the memory that is required to store one of the 82 compressed matrices using our enhanced NR decoder. 82 uncompressed matrices occupy more than 64kB local memory, while 82 compressed matrices occupy only 9kB of local memory. This compression is very important for saving shared local memories, which could be limited, e.g., 32kB or 64 kB. The results are captured in Table 1.
+
+TABLE 1. Comparison of Memory Usage
+
+3GPP Compliant
+Standard NR decoder Enhanced NR decoder
+
+Required Storage Memory for one [h] or H matrix 28kbits 3.5kbits
+
+IV. TEST PLATFORM DESCRIPTION
+
+A. The FPGA-based Platform The decoder was implemented on a Xilinx FPGA Zynq
+UltraScale+ xczu15eg-1ffvc900 [5] with speed grade -1 operating at 245.76 MHz clock frequency using less than 50% of HW resource utilization. The test setup is shown in Figure 2.
+
+Figure 2 – FPGA-in-the-loop testing block diagram
+
+Figure 1 – Example of matrix [h] for BG2, Zc=144
+We see that matrix [h] is one “tile” out of Zc “tiles” of matrix H that can be stored in a compressed fashion. The color corresponds to shift value, Zc=144 (yellow) requires no operations. The compression algorithm we implemented enabled our LDPC encoder/decoder to support the full set of 5G NR H matrices (lifting sizes Zc up to 384, base graphs BG1 and BG2). All 82 H matrices are pre-loaded in compressed format and selected by an input signal. The desired rate and maximum number of iterations (up to 127) are also selected by an input port.
+
+B. The GPU-based Platform The Nvidia RTX 2080 Ti processor card [6] is powered by
+the Turing GPU architecture and RTX platform. The GPU consists of 68 streaming multiprocessors, each of these contains 64 processing cores. It should be noted that we used only one streaming multiprocessor for our results in this paper.
+One of the biggest challenges in GPU implementation is to parallelize all computations. GPU multi-processor has 64 cores and our goal is to make all 64 cores run efficiently. One multi-processor could also run up to 1024 threads and even 2048 threads with newer tools.
+First step of paralleling the computation was done on the Zc domain: each process does a calculation in its Zc. We have
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+up to 384 parallel processes. The next step was executed within a row in matrix H – we calculate all elements in parallel. We plan to parallelize processes in lines by combining few lines with low correlations within matrix H.
+Future steps towards latency reduction and implementation enhancements are described below in Results and Analysis.
+V. BENCHMARK AND PERFORMANCE RESULTS This section provides a sample of BLER vs. SNR performance of the decoder implemented on FPGA and GPU platforms. The results are compared to a baseline simulation result reported in [2] that was contributed by Huawei.
+A. Results and Analysis Figure 3 and Figure 4 shows the differences in BLER
+performance among GPU, FPGA and simulated results from [2] using different bit width input to the LLR. To achieve the graph results the same lifting size value Zc=176 was used for BG1 and BG2 and performance was measured using 10,000 packets for each SNR point.
+The Figure 3 and Figure 4 graphs show that the designs that used more bits as input to the LLR have better BLER performance as expected but at the expense of higher utilization of lookup tables (LUTS) in the FPGA. Also, it should be noted that the implementation loss of the fixed-point FPGA vs. the 32-bit single precision floating point GPU is no more than 0.5 dB for BG1 or BG2. Additionally, the BLER vs. SNR performance of both platforms matches well, based on bit widths, to the floating-point benchmark results from [2].
+To further characterize the decoder comparison, latency and power were studied.
+The time the FPGA-based decoder used to complete one iteration for BG1 and BG2 can be found in Table 2. Our goal is to complete one iteration at approximately 16us. This will allow us to support H-ARQ where we imposed a 20 symbols latency (167us) for the 1st coded block using 10 iterations. The results of the GPU-based decoder as shown in Table 2 indicate approximately 32x longer latency compared to our goal. This poor performance is due to the lack of fully exploiting parallelism in the decoder architecture, floating point design implementation, and the extra redundancy of our calculations.
+We plan to implement the following enhancements for latency reduction in future work:
+1. Turing can run 2048 threads per multiprocessor, we ran only 1024 threads as a result of the limitations associated with our use of CUDA 10.0. We expect to see about two-fold latency reduction by switching to the latest tools and paralleling our implementation to 2048 threads.
+2. Reduce the amount of lines being processed in matrix H when operating with large R, e.g. with R=1/2 thus, the amount of operations and latency will be reduced.
+3. Introducing fixed point (8-bit operation) in our implementation. We expect to have at least 4 times
+
+processing time reduction vs. 32-bit operation using Turing tensor cores INT8.
+4. Combining two or more lines with low correlation from matrix H when we form variable node messages will reduce the latency by at least 2 times.
+We expect to see a total latency reduction that is greater than 32 times improved after successful implementation of the steps mentioned above.
+Table 2 also captures the average power consumption for the GPU which was calculated as the difference between the power consumption (24W) during idle mode and operating the decoder at full speed (55W) using a single multi-processor. Actual multi-processor power is about 5W, the rest was used for the memory access and clock distribution which does not scale with the number of multi-processors used. Further power optimization is possible, e.g., by using lower precision arithmetic and will be considered in a future work.
+
+TABLE 2. Decoder latency and power metrics for the FPGA & GPU LDPC decoder
+
+Parameters
+
+FPGA decoder GPU decoder
+
+(Zc=384)
+
+BG1 (R=1/3)
+
+4.25us/iteration 520us/iteration
+
+BG2 (R=1/5)
+
+3.14us/iteration 330us/iteration
+
+Average Power
+
+7.5W
+
+~5W*
+
+Consumption
+
+* 1 multiprocessor + 1/68 of power for memory and clock
+
+Figure 3 – BG1, QPSK, Coding Rate R=1/3 (50 Iterations)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 4 – BG2, QPSK, Coding Rate R=1/5 (50 Iterations)
+B. Performance metric (PM) We defined a PM using performance vs. cost and energy to
+compare the FGPA-based platform and the GPU-based platform implementations of the LDPC decoder.
+Where: N = Number of coded blocks decoded per 1 msec assuming 10 iterations (unit: blocks/16slots) using Rate =1/2 and largest size for NR (26,112 bits) C = Cost of resources = utilization times cost of chip (unit: $) P = PowerAVERAGE (unit: Watts) U = utilization times cost of chip (unit: %)
+Parameter “N” captures the maximum number of slots allowed per NR timeline to process coded blocks (using a typical number of 10 iterations). In this way, a latency requirement is implicitly included in the performance metric. These 5G NR based parameters along with hardware platform specific parameters, namely power dissipation “P”, cost “C” comprise our PM. The PM reflects a combination of throughput per Watts and throughput per resouce cost. The PM are in units of (bit/J)*[(bit/sec)/$].
+For our FPGA-based platform implementation: PMFPGA=232*1000/(3300*7.5*0.5)=42.75
+For our GPU-based platform implementation: PMGPU=12*1000/ (1200*5*0.015) =11.11
+The FPGA solution outperforms the GPU for this metric but is expected to be more competitive after the power saving options are completed in future works.
+
+VI. SUMMARY & CONCLUSION There is a growing interest in the use of GPUs for processing intensive tasks because of their massive processing power and ease of programming compared to FPGA. Many 3GPP modem algorithms are traditionally implemented on ASICs and FPGAs, and we have begun exploring the viability of GPUs as a rapid prototyping alternative to FPGAs by comparing the implementation of a 5G NR LDPC decoder on FPGA and GPU. To benefit from the use of GPUs we exploit the parallel computing capabilities by parallelizing the LDPC decoder algorithm on a single Turing multiprocessor.
+Programming tools such as OpenCL and CUDA [4] have made GPUs more accessible to applications outside of graphics, but GPU programming is still not as accessible as programming for CPU.
+We structured an LDPC decoder to target a GPU and verified its performance with an FPGA implementation and a 3GPP documented LDPC design [2]. Decoder latency on the FPGA was significantly better than on the GPU that utilized a single stream. Further work is planned to optimize the algorithms to take advantage of multiple stream processors.
+The GPU-based platform implementation has a competitive incremental power cost but has a much larger idle power. In all but extremely high throughput cases, the FPGA is more energy efficient. The overall design cost (e.g., NRE) with GPUs will be lower with experience and may present a favorable tradeoff.
+Future work has been identified that is expected to substantially improve GPU based performance. For instance, improvements in the GPU latency can be reduced by a parallelization of operations on the rows in the matrix H. Another potential improvement may be to parallelize more iterations by using additional groups of up to 384 threads. Lastly, switching from one 32-bit to four 8-bit arithmetic may further improve the decoding time.
+
+REFERENCES
+
+[1] 3rd Generation Partnership Project; Technical Specification Group Radio Access Network; NR; Multiplexing and channel coding (Release 15) ; https://www.3gpp.org/ftp/specs/2019-03/Rel15/38_series/
+
+[2] Huawei T-doc R1-1713740 – LDPC Code Design ; https://portal.3gpp.org/ngppapp/CreateTdoc.aspx?mode=v iew&contributionId=811072).
+
+[3] R. Gallager, “Low-Density Parity-Check Codes” ; https://web.stanford.edu/class/ee388/papers/ldpc.pdf
+
+[4] M Heller, “What is CUDA? Parallel programming for
+
+GPUs”
+
+;
+
+https://www.infoworld.com/article/3299703/what-is-
+
+cuda-parallel-programming-for-gpus.html
+
+[5] Xilinx FPGA Zynq UltraScale + xczu15eg-ffvc900 ; Xilinx Zynq UltraScale Data Sheet
+
+[6] GPUSpecification;
+
+https://www.nvidia.com/en-
+
+us/geforce/graphics-cards/rtx-2080-ti/
+
+[7] B.Le Gal, C.Jego, J.Crenne, “A High Throuput Efficient Approach for Decoding LDPC codes onto GPU devices,”
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+in IEEE Embedded Systems Letters, Vol 6, No.2, June 2014. [8] G.Wang, M.Wu, Y.Sun, J.R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” IEEE Symp. on Appl.Specific Processors (SASP), June 2011. [9] G.Falcao, L.Sousa, V.Silva, “Massively LDPC decoding on multicore architectures,” IEEE Trans.Parallel Distrib.Syst., vol 22, no.2, pp 309-322,2011 [10] Y. Lin and W. Niu, "High Throughput LDPC Decoder on GPU," in IEEE Communications Letters, vol. 18, no. 2,
+
+URL: http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arn umber=6715256&isnumber=6747950
+
+[11] T. Richardson and S. Kudekar, "Design of Low-Density
+
+Parity Check Codes for 5G New Radio," in IEEE
+
+Communications Magazine, vol. 56, no. 3, pp. 28-34,
+
+March
+
+2018.
+
+URL: http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arn
+
+umber=8316763&isnumber=8316570
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:01 UTC from IEEE Xplore. Restrictions apply.
+
+

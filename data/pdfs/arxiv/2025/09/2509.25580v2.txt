@@ -1,0 +1,1012 @@
+Neural-Model-Augmented Hybrid NMS-OSD Decoders for Near-ML in Short Block Codes
+Guangwen Li, Xiao Yu
+
+arXiv:2509.25580v2 [cs.IT] 26 Apr 2026
+
+Abstract—This paper presents a hybrid decoding architecture that serially couples a normalized min-sum (NMS) decoder with reinforced ordered statistics decoding (OSD) to achieve nearmaximum likelihood (ML) performance for short linear block codes, including LDPC, BCH, and RS codes. The framework introduces several key innovations. A decoding information aggregation model based on a convolutional neural network refines bit-reliability estimates for OSD using the soft-output trajectory of the NMS decoder. An adaptive decoding path for OSD is initialized by the arranged list of the most a priori likely tests algorithm and dynamically updated with empirical data. A sliding-window assisted model enables early termination of test error pattern (TEP) traversal, reducing complexity with minimal performance loss. For short high-rate codes, an undetected error detector identifies erroneous NMS outputs that satisfy parity checks, ensuring they are forwarded to OSD for correction. Extensive simulations on LDPC, BCH, and RS codes demonstrate that the proposed hybrid decoder achieves a competitive tradeoff: near-ML frame error rate performance while maintaining advantages in throughput, latency, and complexity over state-ofthe-art alternatives. Complexity analysis shows that the average number of OSD TEPs is drastically reduced, and the architecture remains highly parallelizable. An optimization framework is also formulated to balance performance and complexity via parameter tuning.
+Index Terms—neural network, belief propagation, min-sum, ordered statistics decoding, block codes
+I. INTRODUCTION
+Channel coding is fundamental to ensuring reliable information transmission in modern communication systems. Among linear block codes, low-density parity-check (LDPC) codes, first introduced by Gallager [1], are well known for approaching the Shannon limit asymptotically under belief propagation (BP) decoding [2]. In complexity-sensitive applications, BP is often approximated by min-sum (MS) variants [3], [4]. However, unlike maximum likelihood (ML) decoding, BP-type algorithms are suboptimal for finite-length LDPC codes due to short cycles in their Tanner graphs, and this performance gap can hardly be substantially bridged for the popular normalized min-sum (NMS) [5]–[7] across the entire signal-to-noise ratio (SNR) range of interest. Moreover, extending these approaches to classical block codes with high-density parity-check (HDPC) matrices–such as BoseChaudhuri-Hocquenghem (BCH) and Reed-Solomon (RS) codes, which are widely employed in storage and deepspace communications for their excellent minimum-distance
+G.Li is with School of Information and Electronic Engineering, Shandong Technology and Business University, Yantai, China e-mail: lgw.frank@sdtbu.edu.cn
+X.Yu is with Teaching Department of Humanities and Social Sciences, Binzhou Medical University, Yantai, China e-mail: yuxiao@bzmc.edu.cn
+
+properties–remains challenging. Their rigid algebraic structure introduces numerous short cycles that violate the messageindependence assumption underlying BP, resulting in significant performance degradation. Consequently, for both LDPC and HDPC codes, there is strong interest in developing decoding schemes that narrow the gap to ML while maintaining high throughput, low complexity, and low latency.
+For classical block codes, exploiting algebraic properties to aid iterative decoding has been extensively studied. Jiang et al. [8] proposed stochastic shifting and adaptive damping for log-likelihood ratio (LLR) updates, and later reduced the parity-check matrix (PCM) based on bit reliability across iterations [9], preventing BP from stalling at pseudo-equilibria. The modified random redundant decoding algorithm [10] employed fixed damping and multiple parallel decoders with permuted PCM, achieving lower complexity than the scheme in [11], which relied on cyclic shifts of minimum-weight dual codewords. Halford et al. [12] introduced random redundant decoding with a cycle-reduced PCM, while Ismail et al. [13] developed permuted BP by applying random automorphisms in each iteration. Santi et al. [14] incorporated minimum-weight parity checks tailored to received sequences, improving BP for Reed-Muller (RM) codes at the cost of batch processing. Geiselhart et al. [15] generalized ensemble decoding with diverse constituent decoders, achieving near-ML performance for RM codes. Deng et al. [16] proposed perturbed adaptive BP with advanced scheduling to accelerate convergence. However, PCM sparsification in these schemes often undermines BP’s batch-processing capability and hampers hardware acceleration, such as on graphics processing units (GPUs).
+Recognizing the central role of the PCM in BP performance, Lucas et al. [17] advocated constructing it from minimumweight dual codewords to exploit sparsity. Yedidia et al. [18], [19] proposed augmenting the PCM with auxiliary bits to reduce row weights and short cycles. Kou et al. [20] showed that redundant PCM design can significantly improve BP for finite-length LDPC codes based on algebraic geometry, despite introducing additional short cycles. Inspired by this, similar strategies have been applied to HDPC codes [21]. For RS codes, embedding hard-decision decoding algorithms such as Berlekamp-Massey (BM) into each BP iteration has proven effective [19]. However, as in [16], these gains come at the expense of parallelizability.
+Ordered statistics decoding (OSD) [22] provides a universal near-ML framework for linear block codes without relying on algebraic properties. Its drawback lies in the exponential growth of test error patterns (TEPs) with block length.
+
+Neural model augmented NMS-OSD decoding
+
+Embedding OSD within BP [23], [24] reduces TEPs per invocation but requires multiple OSD calls per codeword, creating a throughput bottleneck due to the mismatch between parallel BP and serial OSD. Recent work has focused on reducing OSD complexity while retaining frame error rate (FER) performance. Yue et al. [25] introduced probabilistic early stopping for BCH codes and later mitigated Gaussian elimination overhead through preconditioning at high SNR region [26]. However, both approaches involve substantial probability computations tailored to each received sequence. Cavarec et al. [27] incorporated sufficient and necessary conditions for early stopping and skipping but faced long TEP traversals. Bossert et al. [28] proposed information set decoding (ISD) for BCH codes under known noise variance, achieving competitive FER but limited throughput. Bailon et al. [29] combined BM and OSD, yet both being serial, throughput bottlenecks remain.
+Deep learning has transformed fields such as computer vision, natural language processing, and autonomous systems [30], [31]. Recent advances in wireless communications leverage AI to address system imperfections, including robust direction-of-arrival estimation, AI-assisted dynamic frame structures for 5G networks, and robust resource allocation for physical layer security [32]–[34]. In the context of channel coding, Ullah et al. [35] highlight emerging trends, persistent challenges, and future research directions for OTFS-modulated massive MIMO systems employing 5G NR LDPC coding. Nachmani et al. [36] pioneered neural belief propagation (NBP) by unrolling BP iterations into neural networks (NNs) with trainable message weights. Subsequent adaptations of MS variants improved decoding for classical codes [37]–[41]. Lian et al. [42] showed that sharing parameters across SNRs in NBP reduces complexity without sacrificing performance. Other advances include teacher-student training [43], NN-pruned overcomplete parity-check matrices for short LDPC codes [44], NBP with decimation [45], and NBP ensembles tailored to absorbing sets [46], achieving near-ML performance when concatenated with OSD. Simultaneously, Meenalakshmi et al. [47] reviewed deep learning-based polar decoders for 5G and beyond, while Song et al. [48] proposed a self-supervised deep learning polar decoder enabling one-shot decoding without labeled data to reduce training overhead. Both highlight deep learning’s potential to improve efficiency and adaptability in high-speed communication systems. However, the highly loopy structured Tanner graph underlying polar codes differs drastically from the randomly sparse graph for which BP was originally designed. The intervention of NBP only partially closes the performance gap due to the lack of mandatory code structure constraints in the definition of loss functions, limiting gains relative to the complexity overhead.
+Improving bit reliability estimation for OSD has also been investigated. Jiang et al. [49] proposed weighted summation of posterior LLRs from NMS iterations, while Zhang et al. [50] refined reliability via additional BP-like iterations, albeit requiring accurate noise variance estimates. Babalola et al. [51] introduced generalized parity-check transforma-
+
+Fig. 1: Diagram of the proposed hybrid NMS-OSD architecture. ’NMS’ refers to the standard NMS for LDPC codes or the ENMS for BCH/RS codes, depending on the code class.
+tions for syndrome-based updates, but the resulting FER performance and parallelizability were limited. The success of ISD [28] also largely stems from its renewed bit reliability metrics derived from code-structure properties.
+In our prior work [52], a hybrid NMS-OSD architecture was proposed for short LDPC codes, supported by two lightweight NNs: a decoding information aggregation (DIA) model to enhance bit reliability and a sliding-window assisted (SWA) model to timely terminate TEP traversal based on empirical orderings rather than Hamming weight. Subsequently, in [21], we validated that the enhanced NMS (ENMS) can effectively improve the FER performance of BCH codes through deliberate redundancy, adaptation, and automorphism-based enhancements applied to the PCM and inputs.
+In this paper, as illustrated in Fig. 1, we optimize and extend the existing NMS-OSD architecture to HDPC codes such as BCH and RS codes, alongside component improvements applicable to both LDPC and HDPC codes. The main contributions of this work are as follows:
+• The DIA and SWA models are adapted and validated for OSD decoding of BCH and RS codes.
+• To address undetected decoding errors (UDEs) in NMS/ENMS for short high-rate codes, an optional UDE detection NN model is incorporated into the decoding architecture as shown in Fig. 1.
+• The choice of hyperparameters affecting the FER performance of ENMS decoding of BCH and RS codes is elaborated.
+• The optimized decoding path of OSD, consisting of blocks of TEPs of uniform size, outperforms its counterparts by requiring the fewest number of TEPs.
+• Extensive validation of the hybrid NMS-OSD architecture across multiple code classes and lengths demonstrates favorable trade-offs among FER, throughput, complexity, and latency.
+The rest of this paper is organized as follows. Section II reviews the fundamentals of NMS, OSD, and Arranged List of the Most a Priori Likely Tests (ALMLT) [53], along with our prior work. Section III presents the methodological motivations. Section IV provides experimental results and complexity analysis. Finally, Section V concludes the paper and outlines directions for future research.
+
+2
+
+Neural model augmented NMS-OSD decoding
+
+II. PRELIMINARIES
+For convenience, the main symbols used throughout this paper are summarized in Table I.
+Given a binary row message vector m = [m1, m2, . . . , mK ], the encoder maps it to a codeword c = [c1, c2, . . . , cN ] via c = mG over GF(2), where K and N denote the message and codeword lengths, respectively. The generator matrix G is assumed to be full-rank without loss of generality.
+After binary phase-shift keying (BPSK) modulation maps each codeword bit ci to a symbol si = 1 − 2ci, the received sequence is y = [y1, y2, . . . , yN ], where yi = si + ni and ni is additive white Gaussian noise with zero mean and variance σ2. The corresponding SNR in decibels is given by:
+
+SNR = −10 · log10(2Rσ2),
+
+where R = K/N is the code rate. The LLR for the i-th bit is defined as:
+
+lvi = log
+
+p(yi | ci = 0) p(yi | ci = 1)
+
+=
+
+2yi σ2
+
+.
+
+(1)
+
+Thus the magnitude of yi serves as a reliability metric for the hard decision 1(yi < 0), where 1(·) is the indicator function.
+
+A. NMS Decoding of LDPC codes
+The bipartite Tanner graph of a code is defined by its PCM HM×N , consisting of N variable nodes and M check nodes connected by edges corresponding to the nonzero entries of H.
+For LDPC codes, NMS decoding [5] significantly reduces the computational complexity of BP while maintaining competitive error-rate performance. It also exhibits scale invariance [39], allowing fixed noise variance assumptions (e.g., σ2 = 2). The flooding schedule is adopted to enable fully parallel computation.
+Let t ∈ {1, 2, . . . , Im} denote the iteration index, where Im is the maximum number of iterations. The message from variable node vi to check node cj at iteration t is:
+
+xv(ti)→cj = lvi +
+
+x(ctp−→1v)i ,
+
+(2)
+
+p∈C(i)\j
+
+where C(i) \ j denotes the set of check nodes connected to vi excluding cj.
+The message from check node cj to variable node vi is:
+
+x(ctj)→vi
+
+= sp(α) · min
+q∈V (j )\i
+
+xv(tq)→cj
+
+·
+
+sgn
+
+q∈V (j )\i
+
+x(vtq)→cj , (3)
+
+where sp(·) and sgn(·) denote the softplus and sign functions,
+
+respectively, and V(j) \ i denotes the set of variable nodes connected to cj excluding vi. All messages xc(0p)→vi are ini-
+tialized to zero, and the parameter α is learned when NMS is
+
+unrolled as a neural network [37].
+
+The posterior LLR for the i-th bit at iteration t is:
+
+x(vti) = lvi +
+
+xc(tp−→1v)i .
+
+(4)
+
+p∈C(i)
+
+TABLE I: Summary of Symbols and Notations
+
+Symbol
+m mi c ci G GF(2) K N si
+y yi ni σ2 R sp(·) sgn(·)
+lvi 1(·) HM ×N M Im α cˆ(t) cˆi π1 π2 y(2) p λ λi lt
+Is |sn| |sp| Ir Ho Cr d di
+mg pa pr sm
+dm β
+Iat bs
+wt gm Ian Chb Cn Co Fhb Fn Fo
+dv q
+
+Description
+Binary message vector of length K i-th bit of the binary message vector Codeword of length N i-th bit of the codeword Generator matrix of the code Galois field of two elements Message length (in bits) Codeword length (in bits) BPSK-modulated symbol corresponding to ci, i.e., si = 1 − 2ci Received sequence of length N Soft information of the i-th received symbol Additive white Gaussian noise sample Noise variance Code rate, R = K/N Softplus function, sp(x) = log(1 + ex) Sign function, returning +1 for x ≥ 0 and −1 otherwise Log-likelihood ratio for the i-th bit Indicator function Parity-check matrix with M rows and N columns Number of parity-check equations Maximum number of NMS iterations Learned normalization parameter in NMS
+Tentative hard decision at iteration t Hard decision for the i-th bit Permutation for bit reliability ordering in OSD Permutation for Gaussian elimination in OSD
+Received sequence after permutations Order of the OSD algorithm Mean reliability vector for the ALMLT algorithm [53] Mean reliability for the i-th bit position Length of the ALMLT-based test error pattern list (decoding path) Input dilation factor in ENMS for BCH codes Number of cyclic shifts applied Number of automorphism types applied Redundancy factor (ratio of rows in Ho to original H) Optimized parity-check matrix Complexity ratio relative to a baseline NMS Discrepancy distance sequence for UDE detection Weighted discrepancy between hard decisions at iteration i and the final iteration Margin for UDE detection, mg = pa − pr Probability of acceptance from the UDE detector Probability of rejection from the UDE detector Soft margin for SWA-based OSD (difference in output probabilities) Minimum distance of the code Relaxing factor to decide the TEPs buffer size for decoding path Average number of test error patterns traversed in OSD Block size for partitioning the decoding path in SWAbased OSD Window size (number of blocks) in SWA-based OSD Global minimum distance in SWA-based OSD Average number of NMS iterations Average complexity of the hybrid decoder Complexity of the NMS decoder Complexity of the OSD decoder FER of the NMS-OSD decoder FER of the NMS decoder FER of the OSD decoder dealing with NMS decoding failures Average column weight of the parity-check matrix Number of quantization bits
+
+3
+
+Neural model augmented NMS-OSD decoding
+
+A tentative hard decision cˆ(t) = [cˆ1, cˆ2, . . . , cˆN ] is made via cˆi = 1(xv(ti) < 0) and checked for early termination using the
+syndrome condition:
+
+H(cˆ(t))⊤ = 0.
+
+(5)
+
+B. OSD for Linear Block Codes
+Given y and a full-rank PCM H, ordered statistics decoding [22] generates a list of candidate codewords and selects the most likely one. Unlike BP-based decoders, OSD is not affected by cycles in the Tanner graph and is applicable to any linear block code.
+The order-p OSD algorithm proceeds as follows:
+• Bit reliability ordering: Sort the bit indices in ascending order of reliability |yi| via a permutation π1. The K most reliable bits form the most reliable basis (MRB), and the remaining N −K bits form the least reliable basis (LRB).
+• Gaussian elimination: Apply column swaps (permutation π2) to reduce π1(H) to systematic form:
+π2 · π1(H) = H(2) = [I | Q2].
+Apply the same permutations to y to obtain y(2) = π2 · π1(y), and update the MRB and LRB accordingly. • List decoding: For each test error pattern ej of Hamming weight ≤ p, compute a candidate codeword:
+
+cj,2 = cm ⊕ ej , cj,1 = cj,2Q2,
+
+where cm is the hard-decision estimate of the MRB.
+The candidate codeword cj = [cj,1 | cj,2] is checked for validity via H(2)c⊤j = 0. The optimal candidate is selected using:
+
+N
+
+c = arg min 1(cˇi ≠ ci) yi(2) ,
+
+(6)
+
+cj
+
+i=1
+
+N
+
+dc
+
+= min 1(cˇi ̸= ci)
+cj i=1
+
+yi(2)
+
+,
+
+(7)
+
+where cj = [ci]N1 and cˇi is the hard decision of yi(2). • Inverse permutation: Apply π1−1 ◦ π2−1 to c to obtain the
+final codeword estimate cˆ.
+
+C. ALMLT Algorithm
+A major drawback of conventional OSD is its exponential complexity with respect to the decoding order p. The ALMLT algorithm [53] alleviates this issue by prioritizing TEPs according to statistical reliability, and has been shown effective for long block codes. It proceeds as follows:
+• Compute a mean reliability vector λ = [λ1, λ2, . . . , λN ] under the AWGN assumption using ordered statistics, while ignoring the Gaussian elimination permutation π2.
+• For a given SNR, arrange TEPs in ascending order of their weight, where the weight is defined as the sum of λi over the flipped positions within the MRB section. This list is precomputed and remains fixed during decoding.
+
+Empirical results in [53] demonstrate that OSD guided by an ALMLT list of arbitrary length lt often achieves better FER performance than conventional order-p OSD, which uses a trimmed list of the same number of TEPs selected solely by Hamming weight.
+D. Our Prior Work 1) DIA and SWA Models: In the hybrid NMS-OSD archi-
+tecture (Fig. 1), OSD is invoked only when NMS decoding fails. In such cases, the trajectories of posterior LLRs from NMS decoding are available to prepare enhanced reliability measurements for OSD decoding. To this end, as shown in Fig. 2, the DIA model comprises two 1D convolutional layers with two and one filters of size 3 across iterations, respectively, followed by a flattening layer to accommodate possibly varying Im settings, and a dense layer to output renewed bit soft information.
+Fig. 2: DIA model architecture, where ’? × 11 × 1’ denotes (batch size) × (1-D posterior LLR list of length Im + 1 = 11), with the additional entry arising from the raw input sequence.
+To manage the decoding complexity of OSD, a fixed long TEP list, named the decoding path, is first acquired by statistically counting the sum of hits of true error patterns within each TEP block, and then rearranging the blocks in descending order of the ratio of hits to block size. Then the SWA model [52], a two-layer neural network implementation, is called to determine when to early terminate the traversal along the decoding path. As shown in Fig. 3, the softmax activation function of the second layer assesses the risk of early termination in the form of a probability difference.
+Fig. 3: SWA model architecture, where ’? × 6’ denotes (batch size) × (1-D input vectors of length 6), with the six entries comprising a consecutive minimum-distance list of length wt = 5 and the current window position.
+2) ENMS decoding for BCH Codes: BCH codes remain competitive owing to their strong minimum distance properties. To enable high-throughput decoding, an ENMS decoder was proposed in [21], which fully exploits the cyclic structure of BCH codes. A prerequisite for this approach is to transform the original PCM H into an optimized form Ho, thereby improving sparsity and other Tanner graph properties such as a quasi-uniform column weight distribution beneficial for decoding.
+The ENMS decoder is summarized in Algorithm 1. In Step 2, |sn| and |sp| denote the number of shifts and automorphism types applied to each sequence, effectively expanding
+
+4
+
+Neural model augmented NMS-OSD decoding
+
+the input by a dilation factor Is = |sn||sp|. In Step 10, to accommodate the merging operation, the original received vector y is discarded and reassigned with the posterior LLRs obtained after each NMS iteration, resulting in accelerated decoding convergence.
+
+Algorithm 1 ENMS Decoding of BCH Codes
+
+Input: Received y, Ho, fixing σ2 = 2 so that lvi = yi Output: Estimated codeword cˆ
+
+1: for t = 1 to Im
+
+2: Dilate: Expand y into a block B(y) of size Is × N
+
+after applying all shifts and automorphisms.
+
+3: Parallel Message Passing:
+
+4: Compute V2C messages for B(y) via (2), except
+
+removing the second term on the right-hand side.
+
+5: Compute C2V messages for B(y) via (3).
+
+6: Aggregate: Reverse all permutations on the messages
+
+from (3) and sum the results for each variable node vi. 7: Fuse: Compute the posterior LLR xv(ti) by substituting
+the aggregated sum into the second term of the right-hand
+
+side of (4).
+
+8: Obtain hard decision cˆ(t) where cˆi = 1(x(vti) < 0).
+
+9: if Ho(cˆ(t))⊤ = 0 then break
+
+10: else lvi ← x(vti), i ∈ [1, N ].
+
+▷ Update!
+
+11: end for
+
+12: return cˆ(t)
+
+III. MOTIVATIONS
+Hereafter, for LDPC codes, NMS refers to standard NMS operating on the original PCM H [5], whereas for BCH and RS codes, the ENMS operating on the optimized Ho is assumed by default. This section first provides detailed training nuances for all models to ensure reproducibility. It then validates the NN-based UDE detector for short highrate codes. Next, we discuss the impact of hyperparameter tuning on NMS decoding of BCH and RS codes. Finally, after devising the decoding path update mechanism, we extend the DIA model across code classes, and validate the performance of the SWA-based OSD to traverse TEP blocks of uniform size along the decoding path.
+A. Training logistics of NN models
+There are two classes of NN models to be trained in supervised learning mode: NMS decoders and auxiliary models such as the UDE, DIA, and SWA. To align with the noiseagnostic property of NMS and OSD, the training dataset for all NN models is acquired at a specific SNR, then the trained models function across any SNR of interest.
+The following setups are assumed by default, unless stated otherwise. For any model, a training dataset of size 104 is prepared at the SNR that yields an FER of approximately 0.1 for the optimized NMS. The Adam optimizer [54] is applied to optimize the cross-entropy loss on training samples with a batch size of 100, an initial learning rate of 0.01 that decays by 0.95 every 100 steps, and a termination step of 104. Notably,
+
+all trainings are executed on a standard computer with a 2.60 GHz Intel i7-6700HQ processor.
+1) NMS models: For any LDPC code, the sole parameter α of NMS is slightly affected by the Im setup. Combined with the transmitted codewords as the ground-truth labels, randomly generated received sequences constitute the training dataset. The training is expected to minimize the loss function within 30 minutes after reaching the termination step of 103. Similar training steps are applied for any BCH or RS code, except that the only trainable α of its NMS is closely coupled with the (Is, Ir, Im) setups; any variation requires retraining the NMS-associated α in the new configuration.
+2) Training of various auxiliary models: The DIA model [52], shown in Fig. 2, is a four-layer convolutional neural network (CNN) [55] employing ReLU activation for the first two Conv1D layers and linear activation for the final Dense layer. For LDPC codes, the first two Conv1D layers are configured with ’2’ and ’1’ filters, respectively, while for BCH and RS codes, ’4’ and ’2’ filters are used to enhance model capacity. The training data is derived from NMS decoding failures. Specifically, for each decoding failure, the posterior LLRs of every codeword bit across the iterative NMS decoding process are paired with labels corresponding to the transmitted codeword bits. This yields a total of N trajectories, each of length Im+1, where the “+1” accounts for the soft information of bits from the original input sequence. The head element of each trajectory is then rectified to be always positive by multiplying its sign across all trajectory elements, forming one training sample. Consequently, a training dataset of size N × 104 can be readily obtained. The outputs of the trained DIA model are subsequently rectified by multiplying them with the corresponding signs. Under default training settings, the optimization process is expected to complete within 10 minutes.
+The SWA model as shown in Fig. 3, closely embedded in OSD decoding, operates on blocks of TEPs of size bs after sequentially and uniformly partitioning all TEPs of the decoding path. The preparation of its training dataset is more complex than that of the other models. After concatenating the DIA model outputs with the original channel sequence, each codeword bit has two reliability measurements. The former provides evidence for the π1 permutation and hard decision of the MRB in OSD, while the latter is dedicated to any operations involving distance calculation such as (6) or (7) (see [52] for more details of SWA-based OSD). Hence, given a decoding path comprising blocks bi, i = 1, 2, · · · , lp, applying Equation (7) to the TEPs belonging to each bi generates a list of lp minima. Sliding a window of width wt over this list with a default stride of one creates ms = lp − wt + 1 training samples, using every wt minima per sample. For better decision accuracy, the sliding index of the current window is appended to the end of the list of wt elements sorted in ascending order to form one training sample. Thus, a total training sample size of ms · 104 is sufficient as the training dataset for the SWA model. If the true minimum distance corresponding to the transmitted codeword lies within the
+
+5
+
+Neural model augmented NMS-OSD decoding
+
+current window, the one-hot encoded label ’0’ is assigned to terminate further decoding. Otherwise, the one-hot encoded label ’1’ signals proceeding with decoding.
+The SWA model incorporates a weighted cross-entropy loss to address class imbalance and penalize incorrect predictions of premature termination in (8):
+
+
+
+
+
+bn
+
+1
+
+1
+
+ℓce
+
+=
+
+i=1
+
+ω1(2)βi
+
+
+j=0
+
+p(di
+
+=
+
+j)
+
+·
+
+log
+
+p(dˆi
+
+=
+
+ j)
+
+(8)
+
+In this equation, as the class weight, ω1 or ω2 is assigned to the i-th sample depending on whether it is a positive or negative sample within a batch of training data of size bn sampled from the training dataset. The ratio of ω1 and ω2 should be chosen to rectify the imbalance in the number of positive and negative samples. The penalty factor βi is calculated as max(1, γ · 1(di = 1, dˆi = 0)), with γ set to 10. This configuration imposes a significant penalty on predictions that incorrectly identify a ’1’ as ’0’, thereby minimizing adverse effects on the FER. Conversely, misclassifications where the prediction is ’1’ for a true label of ’0’ are not subject to this penalty, as they are deemed to have no impact on FER. We once again train the SWA model with the previously declared default training settings, and the training is expected to converge after reaching the termination step of 20, 000 within 20 minutes.
+For the UDE model shown in Fig. 4, the NMS decoding trajectories are collected that satisfy all parity checks of Ho (or H) at the SNR where the resulting FER is about 0.3. Then the discrepancy distance list d = [di]Ii=m0−1 is obtained with di defined in (9):
+
+N
+
+di = 1 cˆ(ji) ̸= cˆ(jIm) |yj |,
+
+(9)
+
+j=1
+
+where cˆ(ji) denotes the hard decision of the j-th component of the posterior LLR at iteration i, and |yj| is the magnitude of the received symbol. Hence, the di metric measures the soft discrepancy between the i-th and final Im-th iterations. Intuitively, the discrepancy distance list exhibits a smooth and gradual converging trend for correct decodings (true positives) and an erratic trend for UDEs (false positives). Each discrepancy distance list is treated as a training sample and labeled as a positive case with a one-hot encoded label when the hard decision of the Im-th NMS decoding matches the transmitted codeword. After applying the default training settings declared previously, the optimization is expected to complete within 10 minutes after reaching the termination training step.
+
+B. UDE Model
+For short high-rate codes, the UDEs of NMS decoding– where all parity-check constraints are satisfied but the decoding is incorrect–occur with non-negligible probability, especially in the low- to medium-SNR regime, due to the limited minimum distance. In a hybrid NMS-OSD architecture, such
+
+UDEs degrade the FER performance because escaping detection by NMS subsequently prevents the triggering of OSD. To address this issue, we propose a UDE detection NN model that decides whether to accept or reject an NMS decoding even when all parity-check constraints of H/Ho are satisfied. That is, the UDE model arbitrates the NMS decoding based on the trend of the available distance trajectory during iterative NMS decoding.
+
+Input
+
+Conv1D kernel (2×3×1)
+
+Flatten
+
+Dense Softmax:(? × 2)
+
+Output
+
+Fig. 4: UDE model architecture where ’2 × 3 × 1’ denotes (# of filters) × (kernel size) × (stride) and ’? × 2’ means (batch size) × (output dimension).
+
+As shown in Fig. 4, the proposed three-layer UDE model adopts the softmax activation function to output a binary probability distribution: acceptance probability pa and rejection probability pr. A predetermined margin mg = pa − pr serves as the decision threshold, and its variation can impact the balance between performance and complexity. Compared to direct thresholding on distance, the proposed model–trained at a specific SNR point–achieves robust performance across all SNRs of interest. We postpone the training of the UDE model to the subsection below for comparison with other models.
+For the BCH (63,45) code with (Is, Ir, Im) = (9, 2, 4) at SNR = 2.6 dB, where Ir measures the redundancy degree of Ho, Fig. 5a shows that when validating at the same SNR as training, without UDE detection (denoted by mg = −1), UDEs contribute an FER of 0.049–nearly one-third of the total FER of 0.161. Increasing mg reduces the UDE fraction but introduces false negatives (i.e., correct decodings incorrectly rejected), which adds an excess FER relative to the mg = −1 baseline. Importantly, Fig. 5b demonstrates that the model remains effective when testing is performed at a far drifted SNR of 1.5 dB.
+
+(a) Training at SNR = 2.6 dB (b) Testing at SNR = 1.5 dB
+Fig. 5: Detection performance and robustness of the UDE model on the BCH (63,45) code.
+The UDE model was further evaluated on the binary images of RS (15,11) and RS (15,13) codes under the configuration (Is, Ir, Im) = (5, 2, 4), and the RS (31,29) code under (5, 2, 8). The testing results are shown in Table II. For the RS (15,11) code with known minimum distance dm = 8, the UDE FER of about 0.0177 is almost negligible compared to the total FER of 0.328 at mg = −1, suggesting that the detection step using the UDE model may be skipped with minimal loss. In
+
+6
+
+Neural model augmented NMS-OSD decoding
+
+TABLE II: Detection performance of the UDE model on RS codes
+
+Codes
+RS (15,11) code at SNR=2.6dB RS (15,13) code at SNR=3.0dB RS (31,29) code at SNR=4.0dB
+
+Metric
+Total FER UDE FER Total FER UDE FER Total FER UDE FER
+
+−1 0.3280 0.01765 0.2631 0.21948 0.3323 0.22099
+
+Margin mg
+
+0.3
+
+0.6
+
+0.3297 0.3332
+
+0.01152 0.0097
+
+0.3331 0.3888
+
+0.07913 0.05188
+
+0.3897 0.4461
+
+0.0632 0.04103
+
+0.9 0.3586 0.00578 1.0000 0.0000 0.6683 0.00707
+
+contrast, the UDE model is indispensable for discriminating UDE cases for the other two codes. For the RS (15,13) code with dm = 4, the FER performance of the UDE model is highly sensitive to the choice of mg: the UDE FER drops from about 0.219 to 0.079 as mg increases from −1 to 0.3; at an inappropriate mg = 0.9, all NMS decoding results are rejected, forcing OSD to handle all decodings from scratch. Hence, mg = 0.3 is practical in this context. A similar trend is observed for the RS (31,29) code, which also has dm = 4.
+Notably, for the RS (15,13) code with mg = 0.3, nearly half of the rejected cases–which contribute to a total FER of 0.33–will fail OSD post-processing, since the overall FER performance is bounded by the ML FER of 0.198 at SNR = 3.0 dB [41].
+Beyond adjusting mg to balance the ratio of false positives and false negatives, the UDE model can be tuned toward conservative or aggressive detection by modifying class weights during training. Overall, the UDE model provides a quantitative confidence measure for NMS or other iterative decodings and generalizes well across codes and various SNR points.
+C. Configurations for NMS of BCH and RS codes
+For BCH or RS codes, according to our implementation, the trainable variable α and the FER performance of NMS decoding depend critically on the setup of the tuple (Is, Ir, Im). The input dilation factor Is = |sn||sp|, where |sp| denotes the number of available automorphism types; thus |sp| = 3 and 1 for BCH and RS codes, respectively, while |sn| denotes the number of cyclic shifts adopted, which is empirically chosen from 1 to N/6. The special value Is = −1 indicates no cyclic shift. The redundancy factor Ir quantifies the ratio of the number of rows in the optimized Ho relative to the original H. Finally, the maximum number of iterations Im specifies the decoding depth of NMS.
+To investigate how (Is, Ir, Im) jointly affect FER performance, we tested the BCH (63,30) and RS (15,7) codes at SNR = 2.0 dB, assuming that α has been optimized for each chosen (Is, Ir, Im). As shown in Fig. 6, several key trends emerge. First, FER generally improves with increasing Is. A sharp performance gain occurs when Is increases from −1 to positive values, confirming that random cyclic shifts effectively mitigate short-cycle correlations in the Tanner graph. Second, not all high-valued combinations of (Is, Ir, Im) necessarily yield the best FER performance, implicitly suggesting a trade-off among the competing effects of the respective
+
+(a) BCH (63,30) Code
+
+(b) RS (15,7) Code
+
+Fig. 6: Heatmaps showing the strong dependence of FER on (Is, Ir, Im) for BCH (63,30) and RS (15,7) codes at SNR = 2.0 dB.
+
+hyperparameter settings. Third, for a fixed Is, increasing Ir gradually improves FER until saturation, reflecting the tradeoff between the conflicting effects of added redundancy and newly introduced short cycles in the resulting Ho. Finally, increasing Im generally enhances FER but with diminishing returns, highlighting the need to balance complexity and performance.
+These trends generalize across block lengths and code rates. In particular, higher-rate BCH and RS codes converge more quickly with fewer iterations. Accordingly, in the following sections, for codes with a rate above one-half, we fix Im = 4 for block lengths below 100 and Im = 8 otherwise. For simplicity, we set Ir = 2 across all BCH and RS codes, with Is = 9 for BCH codes and Is = 5 for RS codes in the following discussions.
+Assuming the worst-case NMS complexity scales as |Is| · Ir ·Im, we define a complexity ratio Cr relative to the baseline (Is, Ir, Im) = (−1, 1, 4). For the BCH (63,30) code, compared to the optimal FER of 0.141 achieved by (9, 2, 32) with Cr = 144, the configuration (9, 2, 8) achieves an FER of 0.185 with Cr = 36, thus one quarter of the complexity of the former at the expense of a 0.044 FER loss. For the RS (15,7) binary image, (3, 2, 16) achieves an FER of 0.203 with Cr = 24, versus 0.181 for (3, 5, 32) with Cr = 120, a similarly small FER loss in exchange for significant complexity savings. These comparisons justify proper tuning of (Is, Ir, Im) to seek a favorable trade-off between performance and complexity.
+D. Decoding Path Update
+In OSD, the decoding path is defined as the ordered set of TEPs of length lt. Different decoding paths may yield marked variations in FER and complexity even for the same lt.
+
+7
+
+Neural model augmented NMS-OSD decoding
+
+In the original ALMLT [53], the decoding path is derived from ordered statistics of all codeword bits under the assumptions of long block lengths and AWGN at a given SNR. In practice, however, the Gaussian elimination step in OSD introduces column swapping, and finite block length effects cause deviations between empirical means and ALMLT estimates. Moreover, in the hybrid NMS-OSD architecture, OSD processes only NMS decoding failures, so the AWGN assumption no longer holds strictly.
+
+In this enhanced scheme, ALMLT provides a fairly strong starting point, while empirical updates naturally adjust the rankings of TEPs to achieve instantaneous adaptiveness to channel variation. In the long run, this approach is expected to reduce the average number of TEPs required in OSD due to the forward movement of frequently emerging true error patterns underestimated by ALMLT, and to improve FER because true error patterns located in the buffer have the chance to enter the decoding path through this update mechanism.
+
+(a) BCH (127,99) code
+
+(b) LDPC (128,64) code
+
+Fig. 7: Mean delta between empirical and ALMLT calculations for BCH (127,99) and LDPC (128,64) codes at SNR = 3.5 dB. Vertical dotted lines mark MRB/LRB boundaries.
+
+We define the mean delta as the ALMLT calculation subtracted from the empirical mean. The curves sorted empirical and swapped empirical represent the empirical statistics of the original received sequences, depending on whether the effect of Gaussian elimination-induced column swapping is taken into account. The curves retested sorted and retested swapped further restrict to NMS-failure cases. Ideally, mean deltas should approach zero, indicating close agreement with the ALMLT calculation.
+As shown in Fig. 7, for both BCH (127,99) and LDPC (128,64) codes, sorted empirical aligns closely with ALMLT except for a few bits in the rear codeword section. In contrast, swapped empirical exhibits sharp deviations near the MRB/LRB boundaries (bit indices 28 and 64, respectively). However, retested sorted and retested swapped deviate across all bit indices, with larger discrepancies in the LRB. Similar phenomena are observed for other SNRs as well as for RS codes, motivating the incorporation of empirical evidence to enhance the fixed ALMLT ordering.
+The enhanced ALMLT proceeds as follows. First, the foremost lw = β · lt TEPs are extracted by the ALMLT algorithm, where β is a relaxing factor determined empirically. The decoding path comprises the first lt of the lw TEPs, while the remaining lw − lt TEPs serve as a buffer that preserves the opportunity to swap with TEPs in the decoding path. Each member of the lw TEPs is assigned a counter initialized by its index. Next, upon receiving the first batch of samples, the counters are updated by subtracting the occurrences of true error patterns, and the lw TEPs are resorted according to the updated counts. As additional batches arrive, the counter evaluations are updated consecutively, allowing the decoding path to adapt online. In practice, estimated OSD error patterns function as the true ones to update the related counters.
+
+TABLE III: Average number of TEPs before meeting the true
+error pattern under various decoding path schemes of OSD. Parameters: (lt, β) = (103, 10) for BCH/RS codes and (104, 4) for the LDPC code.
+
+Codes
+
+CVT
+
+ALMLT ALMLT MS
+
+BCH (127,99) Plain SNR=3.0/3.5/
+4.0/4.5 dB DIA
+
+77.76/40.71/ 21.28/10.68 76.64/39.41/ 19.76/9.48
+
+54.61/27.03/ 13.92/7.38 53.72/26.22/ 12.87/6.41
+
+54.58/27.02/ 13.91/7.38 53.70/26.21/ 12.88/6.41
+
+RS (31,25) SNR=3.0/3.5/
+4.0/4.5 dB
+
+Plain DIA
+
+124.63/66.27/ 32.54/14.42 123.42/64.6/ 30.56/13.35
+
+90.43/44.95/ 21.38/9.51 89.08/43.99/ 19.75/8.82
+
+90.40/44.93/ 21.39/9.50 89.04/43.97/ 19.76/8.81
+
+LDPC (128,64) SNR=2.0/2.5/
+3.0/3.5 dB
+
+Plain DIA
+
+799.68/485.72/ 325.16/191.96 426.2/173.89/ 86.48/39.92
+
+604.87/357.77/ 231.66/135.65 321.46/125.78/ 60.28/28.09
+
+604.89/357.79/ 231.71/135.70 321.46/125.79/ 60.28/28.09
+
+Denote ALMLT MS as a snapshot of the enhanced ALMLT refreshed by the decoding failures of NMS decoding from the initial 105 received channel sequences, and CVT as the intercepted lt TEPs at the head of the fixed conventional TEP list [22]. The ALMLT decoding path for BCH and RS codes is calculated at SNR = 3.5 dB with (lt, β) = (103, 10); for the LDPC code, it is calculated at SNR = 3.0 dB with (104, 4). Table III reports the average number of TEPs before meeting the true error pattern for the concerned decoding paths.
+Focusing on the rows labeled ’Plain’ (i.e., without DIA), a consistent reduction in the average number of TEPs is observed for ALMLT over CVT across all codes and SNR points. This indicates that mean-based TEP ordering substantially surpasses Hamming weight-based TEP ordering. However, the marginal gain for BCH and RS codes and the slight degradation for the LDPC code when comparing ALMLT MS with ALMLT suggest the following. First, ALMLT already presents a sufficiently optimized TEP ordering, leaving little room for further improvement especially since the ordering of the foremost TEP list perfectly aligns with empirical data. Second, due to the relatively small sample sizes involved in updating, a single snapshot struggles to reflect the long-term effect of large-lt settings. As more samples accumulate and the counters for each TEP reach statistical stability, ALMLT MS is expected to surpass both baselines for all codes, since the aforementioned mean delta can be largely compensated by incorporating historical data to refresh the TEP ordering.
+E. Refined Reliability Estimates via DIA Model
+In prior work [52], the DIA model was shown to improve reliability estimates for LDPC codeword bits. Herein, we
+
+8
+
+Neural model augmented NMS-OSD decoding
+
+elaborate on it for LDPC codes and extend its application to BCH and RS codes.
+We define the residual omission rate (ROR), an FERlike metric, as the fraction of NMS decoding failures that remain unresolved after the i-th TEP scanning in the decoding path of OSD. ROR results are shown in Fig. 8 for four basic decoding paths: CVT, its empirically-enhanced variant CVT MS, ALMLT, and ALMLT MS. Due to limited empirical data, the CVT and CVT MS curves are nearly indistinguishable, as are ALMLT and ALMLT MS; they are therefore roughly grouped as CVT/CVT MS and ALMLT/ALMLT MS, respectively. The addition of DIA yields two further distinct ROR curves.
+
+Indeed, the rows labelled as ’DIA’ in Table III of the previous section corroborate these improvements, showing that the application of DIA reduces the average TEP count (and thus Iat) across all codes. With sufficient samples, the CVT MS and ALMLT MS curves are expected to converge, reflecting the overriding influence of statistical evidence over the initial TEP ordering.
+An optimal decoding path ideally produces a smoothly convex ROR curve, corresponding to monotonically decreasing contributions from successive TEPs. Fig. 8 indicates that CVT MS requires extensive sample collection and many TEP reorderings to smooth fluctuations, whereas ALMLT MS achieves comparable smoothness with far fewer samples, highlighting ALMLT as an effective initialization strategy.
+
+TABLE V: Impact of the DIA model on OSD decoding with an ALMLT decoding path of length lt = 103 for LDPC (128,64) and BCH (127,64) codes, trained at SNR = 3.0 dB and SNR
+= 3.5 dB, respectively.
+
+(a) ROR for BCH code
+
+(b) ROR for LDPC code
+
+Fig. 8: Residual omission rate for decoding failures of NMS with (Is, Ir, Im) = (9, 2, 8) for BCH (127,99) and with Im = 10 for LDPC (128,64) codes at SNR = 4.0 and 3.0 dB, respectively, under various decoding paths.
+
+For BCH codes, Fig. 8a shows that the DIA provides marginal but consistent gains. A closer inspection of this minor effect is presented in Table IV. In the first column, DIA trained at SNR = 4.0 dB consistently shifts high Hamming-weight true error patterns toward lower weights across all SNR points. In the second column, true error patterns are moved forward into the head blocks of the decoding path. Thus, the empirical data indicate that both FER and Iat measurements benefit from DIA, whether given a fixed order-p TEP list or a TEP list of fixed lt when constructing the decoding path.
+
+TABLE IV: Impact of DIA trained at SNR = 4.0 dB for the decoding failures of NMS with the setting (Is, Ir, Im) = (9, 2, 8) for BCH (127,99) code, in terms of number of erroneous bits in
+MRB (first column) and hits in the indexed blocks in decoding path (second column) for lt = 103, where ’-1’ denotes hits overflowed beyond lt.
+
+SNR Distribution of erroneous bits in MRB Hits by indexed blocks (bs = 100)
+
+2.5dB
+
+Plain DIA
+
+{0: 2129, 1: 1397, 2: 421, 3: 65,...} {0: 2258, 1: 1272, 2: 415, 3: 66,...}
+
+{0: 3591, 1: 98, -1: 96, 2: 68,...} {0: 3596, -1: 99, 1: 97, 2: 74,...}
+
+3.0dB
+
+Plain DIA
+
+{0: 6199, 1: 3063, 2: 654, 3: 84,...} {0: 6614, 1: 2748, 2: 566, 3: 73,...}
+
+{0: 9369, 1: 179, -1: 129,...} {0: 9456, 1: 155, -1: 110,...}
+
+3.5dB
+
+Plain DIA
+
+{0: 7063, 1: 2519, 2: 382, 3: 37,...} {0: 7588, 1: 2099, 2: 279, 3: 35,...}
+
+{0: 9658, 1: 108, 2: 59, -1: 53,...} {0: 9732, 1: 78, -1: 47,...}
+
+4.0dB
+
+Plain DIA
+
+{0: 12918, 1: 3313, 2: 314,...} {0: 13800, 1: 2526, 2: 235,...}
+
+{0: 16291, 1: 83, 2: 51, -1: 40,...} {0: 16365, 1: 78, 2: 37,..., -1: 16,...}
+
+4.5dB
+
+Plain DIA
+
+{0: 5939, 1: 1038, 2: 87,...} {0: 6282, 1: 740, 2: 45,...}
+
+{0: 6988, 1: 36, 2: 15,..., -1: 7,...} {0: 7030, 1: 17, ..., -1: 3,...}
+
+For LDPC codes, the improvement is much more pronounced: Fig. 8b shows that for both CTV and ALMLT, the DIA is expected to significantly reduce the FER level observed in its absence.
+
+Codes Abs / Avail (SNR,FER) OSD post-processing of NMS decoding failures
+
+LDPC(128,64) BCH(127,64)
+
+Plain DIA Plain DIA
+
+[(1.5, 0.16917), (2.0, 0.10526), (2.5, 0.06833), (3.0, 0.04578)] [(1.5, 0.11824), (2.0, 0.058), (2.5, 0.02968), (3.0, 0.01639)] [ (2.5, 0.03908), (3.0, 0.01955), (3.5, 0.0076), (4.0, 0.00277)] [ (2.5, 0.03569), (3.0, 0.01715), (3.5, 0.0056), (4.0, 0.00188)]
+
+To isolate the impact of the DIA model on the FER of OSD, and assuming the ALMLT ordering of TEPs along a decoding path of length lt = 103, empirical data for LDPC (128,64) and BCH (127,64) codes are presented in Table V. It is observed that the DIA model generalizes well across all SNR regions of interest, despite being trained at a specific SNR (3.0 dB for LDPC and 3.5 dB for BCH). It is also found that the improvement in OSD performance on NMS decoding failures is considerably more pronounced for LDPC codes than for BCH codes, which corroborates the findings in Table IV.
+More advanced NN structures beyond CNNs were attempted but yielded little additional gain. This suggests that the message updating mechanism of ENMS, designed for BCH and RS codes, does not produce the same informative posterior LLR trajectories derived from standard NMS that benefit the DIA model for LDPC codes.
+
+F. Revised SWA-Based OSD
+When the length lt of a decoding path must be set sufficiently large to approach near-ML performance for longer block codes, it is crucial to terminate TEP traversal once the true error pattern emerges to reduce computational load and decoding latency. Given the decoding path ALMLT MS and a trained SWA model, the revised SWA-based OSD proceeds as follows.
+First, prepare the inputs for the SWA model. Fetch the first wt blocks of TEPs from ALMLT MS, each of uniform size bs. Then extract and sort the wt minima with respect to the distance to the received sequence. These minima, together with the current window index (initialized to zero), form the input window of the SWA model. The SWA model then determines
+
+9
+
+Neural model augmented NMS-OSD decoding
+
+whether early stopping should occur, with the global minimum gm initialized as the smallest among the wt minima.
+Next, the window slides along the decoding path by one block at a time: the newest block is admitted, and the oldest block is discarded. The SWA model is triggered when the minimum of the newest block is less than gm, which then updates gm. This process continues until the early stopping criterion is met or the decoding path is fully traversed, with the final estimate corresponding to the TEP associated with distance gm.
+Concerning the early stopping criterion, we define a soft margin sm as the difference between the binary probabilities of the SWA model outputs. A larger sm enforces stricter earlystopping conditions, reducing FER degradation but increasing the average TEP count Iat. Thus, tuning sm can directly balance performance and complexity.
+
+TABLE VI: FER and Iat for SWA-based OSD with DIA,
+applied to NMS decoding failures of BCH (127,99) with lt = 103, RS (31,25) with lt = 3 × 103, and LDPC (128,64) with lt = 104.
+
+Codes
+
+bs
+
+sm = 0.2
+
+FER/Iat sm = 0.9
+
+sm = 1.0
+
+BCH (127,99) 10 2.9e-2/82.1 2.3e-2/167.5 2.2e-2/1e3
+
+SNR=3.5dB 100 2.3e-2/515.3 2.2e-2/558.4 2.2e-2/1e3
+
+RS (31,25)
+
+10 3.3e-2/272.5 3.0e-2/809.2 3.0e-2/3e3
+
+SNR=3.5dB 100 3.0e-2/682.9 3.0e-2/1030.2 3.0e-2/3e3
+
+LDPC (128,64) 10 1.5e-2/419.3 9.9e-3/653.8 8.4e-3/1e4
+
+SNR=2.5dB 100 8.8e-3/808.2 8.4e-3/1263.1 8.4e-3/1e4
+
+Table VI reports FER and Iat for BCH, RS, and LDPC codes under appropriately chosen parameters (lt, β, wt, bs) = (103(104), 10(4), 5, bs) for each case. Increasing bs allows more TEPs to be processed in parallel, thereby reducing time complexity but raising Iat. For instance, for the BCH (127,99) code at sm = 0.9, setting bs = 10 lowers Iat to about one-third of the value obtained with bs = 100, at the expense of additional window slidings. Importantly, the average number of SWA calls consistently remains between 1 and 1.5, since most TEP traversals shift the window forward without activating SWA.
+The data in Table VI further reveal a tradeoff: a larger sm increases Iat but reduces FER. The baseline case sm = 1.0 disables SWA, forcing all TEPs to be processed in parallel. This achieves the best FER but also incurs the highest Iat, making it practical only for short or moderate-length decoding paths. Conversely, a smaller bs minimizes Iat but causes frequent window slidings and amplifies the sensitivity of both FER and Iat to sm.
+A joint examination of Tables VI and III shows that, when bs = 1, the Iat values in Table VI are lower bounded by those in Table III. The latter table represents the ideal case where true error patterns are identified immediately upon appearance, whereas the former reflects the SWA model’s ability to infer whether the global minimum has appeared in an incomplete candidate list. Due to the heavy penalty imposed on premature termination before encountering the true error pattern in the
+
+loss definition during training, the scenario of hastily stopping TEP scanning before the true error pattern emerges is nearly eliminated, while postponing until the end is also rare. Hence, a SWA model with an appropriately tuned sm can effectively regulate Iat with negligible FER degradation, achieving a practical balance between performance and complexity.
+IV. EXPERIMENTAL RESULTS AND COMPLEXITY ANALYSIS
+We evaluate codes of different lengths from both LDPC and HDPC families. Specifically, we consider BCH codes with parameters (63,45), (127,64), and (127,99); bit-level high-rate RS codes (15,13) and (31,25); as well as LDPC Array (49,36) and CCSDS (128,64) codes. The corresponding PCMs for all codes are available in the channel codes database [41]. Opensource code for reproducing our results is publicly available on GitHub1, built on the TensorFlow platform. For a fair comparison, most reference decoding curves are taken directly from their original publications rather than re-implemented, to avoid potential discrepancies arising from unspecified implementation details or parameter settings.
+For BCH and RS codes, the configurations of NMS decoding follow the descriptions in the previous section. For LDPC codes, Im = 6 and Im = 10 are applied to the LDPC (49,36) and (128,64) codes, respectively. Furthermore, we assume that the NMS, UDE, DIA, and SWA models are all well-trained, and that the decoding path initialized by ALMLT for OSD is properly secured. At each tested SNR point (except for a few at high-SNR regime), adhering to community convention, at least 100 frame errors were collected to ensure statistical reliability.
+A. Decoding of Short High-Rate Codes
+In the hybrid decoding architecture, the NMS decoder triggers OSD only when it fails to converge to a codeword. However, UDEs in short high-rate codes often mislead the NMS decoder, producing false positives–valid codewords that differ from the transmitted ones. This motivates the proposed UDE detection model.
+Fig. 9 compares the FER performance with the UDE detection model disabled (denoted by UDE(−1.0)) and enabled (denoted by UDE(0.5/0.9)), where ’N(4)-U(-1.0)-O(2)’ denotes the combination of NMS with Im = 4, the UDE detection model with mg = −1.0, and order-2 OSD. The contribution of residual UDEs to the total FER is isolated and labeled as FERUDE(-1.0) and FERUDE(0.5/0.9) for the respective cases. Since the curves of FERUDE(0.5/0.9) lie consistently below that of FERUDE(-1.0), we infer that the UDE detection model plays a key role in discriminating NMS false positives–an effect that is more pronounced for BCH and RS codes than for LDPC codes. On the other hand, an order-2 conventional OSD following the NMS decoder closes the gap to ML performance in the presence of the UDE detection model, producing nearly overlapping FER curves, whereas some gap remains in the absence of the UDE detection model for BCH and RS codes.
+1https://github.com/lgw-frank/Neural-Model-Augmented-Decoders
+
+10
+
+Neural model augmented NMS-OSD decoding
+
+100
+
+10−1
+
+FER
+
+10−2 10−3 1
+
+NMS(6) N(6)-U(0.9)-O(2)
+FERUDE(-1.0)
+
+N(6)-U(-1.0)-O(2) ML [41]
+FERUDE(0.9)
+
+1.5 2 2.5 3 3.5 4 1 Eb/N0(dB)
+
+NMS(4) N(4)-U(0.5)-O(2)
+FERUDE(-1.0)
+
+N(4)-U(-1.0)-O(2) ML [41]
+FERUDE(0.5)
+
+1.5 2 2.5 3 Eb/N0(dB)
+
+3.5 2
+
+NMS(4) N(4)-U(0.5)-O(2)
+FERUDE(-1.0)
+
+N(4)-U(-1.0)-O(2) ML [41]
+FERUDE(0.5)
+
+2.5 3 3.5 4 4.5 Eb/N0(dB)
+
+(a) LDPC (49,36) code
+
+(b) BCH (63,45) code
+
+(c) RS (15,13) code
+
+Fig. 9: Impact on the FER of hybrid decoding schemes by the proposed UDE detection model for three short high-rate codes.
+
+B. Decoding of Longer Codes
+Hereafter, we refer to the OSD method integrating the three distinct ingredients–namely, the DIA model, SWA model, and optimized decoding path–as DDS, and further denote DDS with parameter sets (lt, bs, wt, sm) = (103, 102, 5, 0.5) and (104, 102, 5, 0.5) as DDS1 and DDS2, respectively.
+100
+
+10−1
+
+10−2
+
+FER
+
+10−3
+
+NMS(10)
+
+TNMS(10) [7]
+
+10−4
+
+TNMS(20) [7] BP(40) [41]
+
+NBP(50) [45] NBP-D(10,4,4) [45]
+
+NMS(10)-DDS1
+
+NMS(10)-DDS2
+
+MRB(4) [56]
+
+ML [41]
+
+10−5 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 (dB)
+
+Fig. 10: FER of decoding schemes of LDPC (128,64) code
+
+For the half-rate LDPC (128,64) code, the two-way NMS [7], denoted as TNMS, assigns two trainable weights to the min-term of each check depending on the message sign alteration in consecutive iterations.
+The simulation results in Fig. 10 show that the benchmarked NMS with Im = 10 (denoted as NMS(10)) falls slightly behind TNMS(10), and about 0.3 dB behind TNMS(20), whose FER curve nearly overlaps with that of NBP with Im = 50. While the latter slightly lags behind layered BP decoding with Im = 40, this suggests that the marginal FER improvement achieved by the neuralized adaptation of BP can be easily offset by deliberately scheduling the message update order of BP. NBP-D(10,4,4) [45] takes a significant step toward the ML bound, achieving a 1.0 dB gain over NBP, albeit at the cost of much higher complexity and advanced decimation techniques that compromise the parallelizable data
+
+flow of BP. At a FER of 10−3, the hybrid NMS-DDS1 scheme outperforms NBP-D(10,4,4) by 0.5 dB. An additional 0.25 dB gain is achieved when upgrading the DDS component from DDS1 to DDS2, or equivalently, when the decoding path length lt is extended from 103 to 104. Within 0.1 dB of the ML curve [41], MRB(4) [56]–essentially an order-4 OSD– outperforms the NMS-DDS2 scheme by only 0.15 dB in the high-SNR region, while overlapping with it in the low-SNR region below 2.0 dB.
+However, compared with more than 6.7 × 105 TEPs in its decoding path for MRB(4), the Iat of DDS2 drops sharply from approximately 4500 to 600 over the SNR range of 1.03.25 dB for all NMS decoding failures, despite a nominal lt = 104. For reference, the hybrid NMS with Im = 102 combined with a conventional OSD scanning an ALMLT list [56]–omitted to avoid clutter in the figure–requires lt = 2×105 to match MRB(4) in terms of FER performance. More importantly, in pursuing ML performance, much higher throughput is achieved for such NMS-OSD schemes due to the role of the NMS component decoder, which is well utilized in the proposed NMS-DDS scheme that simultaneously enjoys the evident reduction of Iat in measuring OSD complexity.
+For the medium-rate BCH (127,64) code, shown in Fig. 11, achieving the ML lower bound (ML-LB) [28] is more challenging. There exists about a 2.5 dB gap between NMS with Im = 8 and the ML-LB curves. ISD-Dual [28] comes within 0.2 dB of the ML-LB by generating approximately 104 TEPs on-the-fly via minimum-weight codewords in the dual space to update bit reliability measurements, at the cost of a throughput bottleneck due to Gaussian elimination and the repeated TEP generation process for OSD. In contrast, the proposed NMSDDS2 scheme, with a fixed decoding path of nominal length lt = 104, lags behind with a gap of about 0.4 dB to the MLLB. Regarding BER, RNN+SS+PAN [42] slightly leads BPRNN [37]–a neural BP variant–only in the high-SNR region, while both lag behind the proposed NMS by at least 1.3 dB at a FER of 10−2; this gap continues to widen with increasing SNR due to the steeper slope of the NMS curve.
+For the high-rate BCH (127,99) code, the FER curves for NMS-DDS1, HOSD, and conventional OSD all approach the
+
+11
+
+Neural model augmented NMS-OSD decoding
+
+100
+
+100
+
+10−1
+
+10−1
+
+FER
+
+FER/BER
+
+10−2
+
+10−2
+
+10−3
+
+BP-RNN(5) [37] RNN-SS+PAN [42]
+
+NMS(8)
+
+10−4
+
+NMS(8) NMS(8)-DDS2
+
+ISD-Dual(104) [28]
+
+ML-LB [28]
+
+10−5 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5
+
+Eb/N0 (dB)
+
+Fig. 11: FER of decoding schemes of BCH (127,64) code, where solid lines represent FER curves and dashed lines represent BER curves.
+
+100
+
+10−1
+
+FER/BER
+
+10−2
+
+BP-RNN(5) [37]
+
+NMS(5)
+
+10−3
+
+NMS(8) NMS(8)-DDS1
+
+HOSD [29]
+
+OSD(2)
+
+ML [41]
+
+10−4 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/N0 (dB)
+
+Fig. 12: FER/BER of decoding schemes of BCH (127,99) code, where solid lines represent FER curves and dashed lines represent BER curves.
+
+ML curve indistinguishably, as shown in Fig. 12. This occurs because OSD–whether standalone or preceded by another decoder such as an algebraic decoder in HOSD [29] or NMS in our proposal–will eventually reach the ML bound provided the number of traversed TEPs is sufficient to close the FER gap. Therefore, under the assumption that the preceding decoder is less complex than OSD, addressing throughput or complexity becomes more meaningful when comparing various hybrid schemes. The HDD component of HOSD boasts the simplest complexity but also suffers from the worst FER performance, which implies more frequent OSD calls to compensate performance to the ML bound, making it less appealing than the proposed NMS-DDS1 hybrid in scenarios requiring high throughput. In terms of BER, NMS(5) substantially outperforms BP-RNN(5), and this performance gap increases when the Im of both decoders is raised to 8.
+
+10−3
+
+HDD [41]
+
+NMS(8)
+
+10−4
+
+HD-P-ABP [16] NMS(8)-DDS1
+
+OSD(2)
+
+ML [41]
+
+10−5 2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+Eb/N0 (dB)
+
+Fig. 13: FER of decoding schemes of RS (31,25) code
+
+For the high-rate RS (31,25) code, as shown in Fig. 13, HDD, despite its low complexity, is significantly inferior to NMS with Im = 8 in terms of FER performance. The hybrid of this NMS with DDS1 performs nearly as well as order2 OSD, which itself is within 0.1 dB of the ML curve. In comparison, HD-P-ABP [16] employs an advanced message scheduling strategy for BP based on received LLRs, sacrificing parallelizability, yet still shows minor performance degradation relative to the proposed hybrid scheme.
+From the above simulation results for LDPC, RS, and BCH codes, one key finding is that NMS consistently exhibits a curve slope comparable to the various ML curves. This implies that the performance gap between NMS and ML will not widen with SNR. In contrast, the flatter curves of NBP variants reveal a fundamental limitation that would resort to frequent OSD post-processing when targeting the ML bound.
+Concerning the LDPC (128,64) and BCH (127,64) codes of similar rates, a close examination of Figs. 10 and 11 reveals that both codes demonstrate similar ML curves in the SNR region below 3.0 dB. Thus, the LDPC code is favored in this region because its hybrid NMS-OSD scheme can approach the ML bound at the cost of lower complexity, which is mostly attributed to its NMS component. However, in the high-SNR region, the BCH code is likely to take over the advantage due to its better FER performance, as can be inferred from the steeper ML curve of the former. Another distinct advantage of the proposed hybrid scheme is its ready extensibility to longer codes. In contrast, most dedicated decoding schemes in the literature are limited to codes with block lengths below 100 and are hardly scalable due to the curse of dimensionality known in the community.
+C. Complexity Analysis
+Two metrics are vital to evaluate the average complexity of the proposed hybrid scheme: the average number of iterations Ian required by the NMS decoder, and the average number of TEPs Iat required by the SWA-based OSD.
+
+12
+
+Neural model augmented NMS-OSD decoding
+
+Fig. 16: Average number of TEPs Iat required for OSD Fig. 14: Distribution of number of iterations required for NMS decoding of NMS decoding failures for various codes. (Im = 10) decoding convergence of LDPC (128,64) code.
+
+For the LDPC (128,64) code, given Im = 10 and early stopping enabled via (5), Fig. 14 shows that the Ian curve of NMS decoding decreases from 9.31 at SNR = 1.0 dB to 1.94 at SNR = 4.5 dB. The stacked bars illustrate the iteration distribution at each SNR point, with only fractions above 20% explicitly annotated. At SNR = 1.0 dB, 84% of sequences require the full 10 iterations. As SNR increases, the distribution shifts mass toward lower iteration counts until, at SNR = 4.5 dB, 95% of sequences converge within 3 iterations.
+
+based early termination reduces Iat to around 4000 starting at SNR = 1.0 dB for DDS2 and DDS2-10 applied to LDPC
+
+(128,64) and BCH (127,64) codes. As SNR increases beyond
+
+2.5 dB, the DDS2 curves saturate near the theoretical lower
+
+bound bswt = 500, i.e., the first wt blocks of TEPs involved in preparing the initial window of the SWA model, where wt = 5 is assumed. In comparison, the lower bound bswt = 50 is expected for DDS2-10. For high-rate codes BCH (127,99) and
+
+RS (31,25), DDS1 and DDS1-10 similarly reduce Iat from a nominal 103 to respective bounds of 500 and 50 in the
+
+high-SNR region. Notably, these gains are achieved without
+
+observable FER degradation, validating the SWA model’s
+
+effectiveness in reducing computational complexity.
+
+Omitting the FER attributed to UDEs for simplicity, for the
+
+NMS-OSD hybrid scheme, denote Fn as the FER of NMS and Fo as the FER of OSD when processing NMS decoding
+
+failures. The comprehensive FER of the hybrid scheme is
+
+Fhb
+
+=
+
+FnFo,
+
+while
+
+its
+
+BER
+
+is
+
+approximated
+
+as
+
+1−R 2
+
+Fhb,
+
+assuming half the length of the LRB contains erroneous bits
+
+and omitting the at-most p bits in the MRB due to incorrectly
+
+decoded codewords by OSD.
+
+At a given SNR, the average complexity Chb of a sequen-
+
+tially hybrid scheme is expressed as [56]:
+
+Fig. 15: Distribution of number of iterations required for NMS (Im = 8) decoding convergence of BCH (127,64), (127,99) codes and RS (31,25) code.
+
+Chb = Cn + FnCo,
+
+(10)
+
+where Cn and Co denote the complexity of NMS and OSD, respectively. Following [56], the average number of binary operations (BOPS) for LDPC codes is estimated as
+
+For HDPC codes, including BCH (127,64), BCH (127,99), and the binary image of RS (31,25) (denoted as cd1, cd2, and cd3, respectively), Fig. 15 demonstrates a similar trend for NMS (Im = 8) decoding convergence. As SNR increases from 2.0 dB to 4.5 dB, Ian decreases from above 7 to nearly 2 for all codes, with cd2 showing the fastest convergence. The stacked bars again confirm that higher SNRs lead to the dominance of low-iteration decoding across all codes.
+Let the block size bs be reduced from the default 100 to 10 for the decoding paths of both DDS1 and DDS2, denoted as DDS1-10 and DDS2-10, respectively. As shown in Fig. 16, for decoding paths of length lt = 104, SWA-
+
+Cn = IaiN [q (5dv + 2R + 1) + 2dv − 1 + R] ,
+
+Co ≈ qN log2 N +
+
+K 2
+
+3 + Iat
+
+q
+
+N
+
+−K 2
+
++
+
+NK 2
+
+,
+
+where q = 6 quantization bits are assumed, dv is the average column weight of H, and R is the code rate. The complexity of OSD based on the generator matrix G is assumed equal to that based on the PCM H. Concerning the approximation of Cn for BCH and RS codes, the complexity ratio Cr defined in the previous section should be treated as the multiplier of Cn associated with baseline NMS when accounting for the computational load imposed by additional factors such as Is and Ir. Complexity contributions from DIA, SWA,
+
+13
+
+Neural model augmented NMS-OSD decoding
+
+and potential UDE models are also included in the hybrid scheme, though the deliberate design pursuing simplicity of the NN structures justifies omitting them from complexity calculations.
+
+where Θ denotes the feasible parameter space (e.g., Is, Im, lt, wt, bs ∈ Z+, Ir, sm ∈ R+). Due to the absence of closed-form expressions for Chb as a function of θ, the optimization problem in (11) cannot be solved analytically. A practical empirical approach would combine:
+• Grid search over the discrete variables (Is, Im, lt, wt, bs). • Line search or Bayesian optimization over the continuous
+variables Ir, sm.
+Each evaluation requires Monte Carlo simulations with sufficient statistical reliability (e.g., at least 100 frame errors per SNR point). A full optimization campaign is a substantial undertaking beyond the scope of the current paper. Nevertheless, the formulation above provides a formal basis for reproducible trade-off tuning in future work or for practitioners seeking to adapt the proposed scheme to specific code and channel conditions.
+
+Fig. 17: Average complexity of hybrid schemes across different codes in terms of BOPS.
+
+Fig. 17 compares the average complexity of various hybrid schemes under similar FER performance in terms of BOPS. For the LDPC (128,64) code, the proposed NMS-DDS2 requires significantly fewer BOPS than NMS+MRB(4) [56]. In the high-SNR region beyond 3.5 dB, both schemes converge to the dominant NMS complexity alone, since Fn in (10) becomes negligible. For the BCH (127,99) code, the BOPS for HOSD–estimated from the reported weighted sum of FLOPS [29] scaled by q = 6–is much lower than our scheme in the high-SNR region, benefiting from the dominance of a simple HDD as the first-stage decoder.
+Due to the bottlenecks of the mandatory Gaussian elimination operation and on-the-fly TEP ordering scheme, most OSD variants can hardly be accelerated on GPU/TPU. Our hybrid solution reduces its calls to as few as possible and uses a fixed TEP ordering for all received sequences. In terms of throughput, the proposed NMS-OSD hybrid benefits from the highly parallelizable and pipelined NMS component, as well as an optimized OSD. In principle, it will outperform ISDDual (a purely OSD variant) and other hybrids with weaker first-stage decoders such as HOSD across most SNR regions. Nevertheless, it remains to be validated on real GPU/TPU, FPGA, or ASIC hardware accelerators.
+
+D. Optimization Framework
+The proposed hybrid decoding scheme introduces several parameters that affect both performance and complexity. In fact, every term in (10) is closely related to θ = (Is, Ir, Im, lt, sm, wt, bs).
+Given a target FER requirement F ∗ at a specific SNR, the optimal parameter configuration can be formulated as the following constrained optimization problem:
+
+min Chb s.t. Fhb ≤ F ∗, θ ∈ Θ,
+θ
+
+(11)
+
+V. CONCLUSIONS AND FUTURE RESEARCH
+A. Conclusions
+Recent advances in BP-based decoding have shown that integrating diversified components can significantly improve FER performance. However, a major challenge lies in the severe throughput mismatch between decoding components when used in iterative mode. To address this, we favor a sequential architecture in which a high-throughput decoder processes the bulk of received sequences, forwarding only a small fraction of failure cases to a lower-throughput successor.
+In our implementation, an efficient NMS decoder carries the majority of the decoding load due to its parallelizability, simplicity, and scalability to longer block lengths. For the small portion of failures left unresolved, the DIA model is first invoked to refine reliability measures from NMS trajectories. Then, OSD is applied to traverse TEPs along the periodically updated decoding path. Unless the decoding path is short enough for all TEPs to be evaluated in parallel, or minimal latency is the overriding concern, the SWA model assists OSD in making early termination decisions during traversal.
+This hybrid architecture presents several distinctive characteristics: (1) the component decoders are naturally matched to data volume, with NMS efficiently handling large input streams while OSD focuses only on residual decoding failures; (2) each component decoder maximizes its strengths, as NMS prioritizes throughput and robust FER while OSD leverages optimized decoding paths and SWA-based early termination to minimize both computational and time complexity; and (3) for short high-rate codes, the UDE detection model further identifies false positives that pass parity checks in NMS decoding, enabling their post-processing in the second-stage OSD.
+The collaboration among the decoding components yields decoder diversity gain and fulfills the design objective of balancing near-ML performance, high throughput, low latency, and moderate complexity. Furthermore, all decoding information is fully exploited: successful NMS outputs directly advance the decoding process, whereas its failure trajectories
+
+14
+
+Neural model augmented NMS-OSD decoding
+
+are fed into the DIA model to enhance OSD. For NMS, the decoding history supports the tuning of its normalization factor and the parameter learning for the UDE and DIA models; for OSD, historical records facilitate the optimization of the decoding path and the parameter learning for the SWA model.
+B. Limitations and Future Work
+As the current work is limited to software-level validation, critical hardware-aware analyses–including memory and compute costs, quantization effects, and hardware primitive mapping for NMS and OSD–are deferred to future investigation when hardware platforms become available.
+Several directions warrant further exploration:
+• Improved UDE handling: For short high-rate block codes, most detected UDEs are still falsely decoded by OSD. Designing a new metric as an alternative to weighted distance to overcome this challenge is worth further investigation.
+• Automorphism exploitation: For BCH and RS codes, discovering more automorphisms beyond the existing three types would be beneficial for lowering complexity by providing greater input diversity.
+• Advanced neural architectures: Beyond the simple CNNbased DIA, more sophisticated neural architectures may provide more favorable bit-reliability estimates to unleash the full potential of OSD.
+• Alternative first-stage decoders: To achieve a better balance between performance, throughput, and complexity, an alternative approach is to replace the NMS component in the hybrid scheme with TNMS [7], which advocates flooding message scheduling and simple implementation.
+• Theoretical framework: A rigorous theoretical framework linking TEP reduction to DIA ranking accuracy and error pattern statistics remains an open direction for further investigation.
+• Robustness of neural-augmented decoders: The robustness of neural-augmented decoders under varying channel conditions and adversarial scenarios remains an open and important direction for our future research agenda.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. J. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, p. 1645, 1996.
+[3] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 53, no. 4, pp. 549–554, 2005.
+[4] M. Jiang, C. Zhao, L. Zhang, and E. Xu, “Adaptive offset min-sum algorithm for low-density parity check codes,” IEEE Commun. Lett., vol. 10, no. 6, pp. 483–485, 2006.
+[5] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of ldpc codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, 2005.
+[6] W. Ullah, Jiangtao, and Y. FengFan, “Improved min-sum decoding algorithm for moderate length low density parity check codes,” in Comput., Inform., Cybern. Appl.: Proc. CICA 2011. Springer, 2011, pp. 935–943.
+[7] W. Ullah, T. Jiang, F. Yang, and S. M. Aziz, “Two-way normalization of min-sum decoding algorithm for medium and short length low density parity check codes,” in 7th Int. Conf. Wireless Commun., Netw. Mobile Comput. IEEE, 2011, pp. 1–5.
+[8] J. Jiang and K. R. Narayanan, “Iterative soft decoding of Reed-Solomon codes,” IEEE Commun. Lett., vol. 8, no. 4, pp. 244–246, 2004.
+[9] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3746–3756, 2006.
+[10] I. Dimnik and Y. Be’ery, “Improved random redundant iterative HDPC decoding,” IEEE Trans. Commun., vol. 57, no. 7, pp. 1982–1985, 2009.
+[11] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, 2010.
+[12] T. R. Halford and K. M. Chugg, “Random redundant soft-in soft-out decoding of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2006, pp. 2230–2234.
+[13] M. Ismail, S. Denic, and J. Coon, “Efficient decoding of short length linear cyclic codes,” IEEE Commun. Lett., vol. 19, no. 4, pp. 505–508, 2015.
+[14] E. Santi, C. Hager, and H. D. Pfister, “Decoding Reed-Muller codes using minimum-weight parity checks,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2018, pp. 1296–1300.
+[15] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism ensemble decoding of Reed–Muller codes,” IEEE Trans. Commun., vol. 69, no. 10, pp. 6424–6438, 2021.
+[16] L. Deng, Z. Liu, Y. L. Guan, X. Liu, C. A. Aslam, X. Yu, and Z. Shi, “Perturbed adaptive belief propagation decoding for high-density paritycheck codes,” IEEE Trans. Commun., vol. 69, no. 4, pp. 2065–2079, 2020.
+[17] R. Lucas, M. Bossert, and M. Breitbach, “On iterative soft-decision decoding of linear binary block codes and product codes,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 276–296, 1998.
+[18] J. S. Yedidia, J. Chen, and M. P. Fossorier, “Generating code representations suitable for belief propagation decoding,” in Proc. Allerton Conf. Commun., Control, Comput. (Allerton), vol. 40, no. 1, 2002, pp. 447–456.
+[19] F. Shayegh and M. R. Soleymani, “A low complexity iterative technique for soft decision decoding of Reed-Solomon codes,” in Proc. IEEE Int. Conf. Commun. (ICC), 2009, pp. 1–6.
+[20] Y. Kou, S. Lin, and M. P. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, 2001.
+[21] G. Li and X. Yu, “Effective application of normalized min-sum decoding for short BCH codes,” IEEE Commun. Lett., vol. 29, no. 8, pp. 1983– 1987, 2025.
+[22] M. P. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[23] M. P. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, 1999.
+
+15
+
+Neural model augmented NMS-OSD decoding
+
+[24] M. P. Fossorier, “Iterative reliability-based decoding of low-density parity check codes,” IEEE J. Sel. Areas Commun., vol. 19, no. 5, pp. 908–917, 2001.
+[25] C. Yue, M. Shirvanimoghaddam, G. Park, O.-S. Park, B. Vucetic, and Y. Li, “Probability-based ordered-statistics decoding for short block codes,” IEEE Commun. Lett., vol. 25, no. 6, pp. 1791–1795, 2021.
+[26] C. Yue, M. Shirvanimoghaddam, B. Vucetic, and Y. Li, “Orderedstatistics decoding with adaptive gaussian elimination reduction for short codes,” in Proc. IEEE Global Commun. Conf. Workshops (GLOBECOM Workshops), 2022, pp. 492–497.
+[27] B. Cavarec, H. B. Celebi, M. Bengtsson, and M. Skoglund, “A learningbased approach to address complexity-reliability tradeoff in OS decoders,” in Proc. 54th Asilomar Conf. Signals, Syst., Comput., 2020, pp. 689–692.
+[28] M. Bossert, R. Schulz, and S. Bitzer, “On hard and soft decision decoding of BCH codes,” IEEE Trans. Inf. Theory, vol. 68, no. 11, pp. 7107–7124, 2022.
+[29] D. N. Bailon, M. Bossert, J.-P. Thiers, and J. Freudenberger, “Concatenated codes based on the Plotkin construction and their soft-input decoding,” IEEE Trans. Commun., vol. 70, no. 5, pp. 2939–2950, 2022.
+[30] Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” nature, vol. 521, no. 7553, pp. 436–444, 2015.
+[31] Y. Bengio, Y. Lecun, and G. Hinton, “Deep learning for AI,” Commun. ACM, vol. 64, no. 7, pp. 58–65, 2021.
+[32] N. Labbaf, H. R. D. Oskouei, and M. R. Abedi, “Robust DoA estimation in a uniform circular array antenna with errors and unknown parameters using deep learning,” IEEE Trans. Green Commun. Netw., vol. 7, no. 4, pp. 2143–2152, 2023.
+[33] M. R. Abedi, M. R. Javan, M. Pourghasemian, N. Mokari, and E. A. Jorswieck, “AI-assisted dynamic frame structure with intelligent puncturing schemes for 5G networks,” IEEE Access, vol. 11, pp. 113 995–114 012, 2023.
+[34] M. R. Abedi, N. Mokari, H. Saeedi, and H. Yanikomeroglu, “Robust resource allocation to enhance physical layer security in systems with full-duplex receivers: Active adversary,” IEEE Trans. Wireless Commun., vol. 16, no. 2, pp. 885–899, 2016.
+[35] W. Ullah, F. Yang, and D. N. K. Jayakody, “OTFS modulated massive mimo with 5G NR LDPC coding: Trends, challenges and future directions,” Comput. Netw., vol. 254, p. 110751, 2024.
+[36] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. Allerton Conf. Commun., Control, Comput. (Allerton), 2016, pp. 341–346.
+[37] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Top. Signal Process., vol. 12, no. 1, pp. 119–131, 2018.
+[38] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” IEEE J. Sel. Top. Signal Process., vol. 12, no. 1, pp. 144–159, 2018.
+[39] L. Lugosch and W. J. Gross, “Learning from the syndrome,” in Proc. 52nd Asilomar Conf. Signals, Syst., Comput., 2018, pp. 594–598.
+[40] Q. Wang, S. Wang, H. Fang, L. Chen, L. Chen, and Y. Guo, “A modeldriven deep learning method for normalized min-sum LDPC decoding,” in Proc. IEEE Int. Conf. Commun. Workshops (ICC Workshops), 2020, pp. 1–6.
+[41] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of Channel Codes and ML Simulation Results,” www.uni-kl.de/channel-codes, 2019.
+[42] M. Lian, F. Carpi, C. Ha¨ger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2019, pp. 161–165.
+[43] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node activations,” IEEE Commun. Lett., vol. 26, no. 11, pp. 2527–2531, 2022.
+[44] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. G. i Amat, “Pruning and quantizing neural belief propagation decoders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1957–1966, 2020.
+[45] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. G. i Amat, “Learned decimation for neural belief propagation decoders,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP), 2021, pp. 8273–8277.
+[46] J. Rosseel, V. Mannoni, I. Fijalkow, and V. Savin, “Decoding short LDPC codes via BP-RNN diversity and reliability-based post-processing,” IEEE Trans. Commun., vol. 70, no. 12, pp. 7830–7842, 2022.
+
+[47] M. Meenalakshmi, S. Chaturvedi, and V. K. Dwivedi, “Deep learningenabled polar code decoders for 5G networks and beyond,” AEU–Int. J. Electron. Commun., vol. 177, p. 155220, 2024.
+[48] H. Song, Y. Luo, and Y. Fukuzawa, “For one-shot decoding: Selfsupervised deep learning-based polar decoder,” arXiv:2307.08004, 2023.
+[49] M. Jiang, C. Zhao, E. Xu, and L. Zhang, “Reliability-based iterative decoding of LDPC codes using likelihood accumulation,” IEEE Commun. Lett., vol. 11, no. 8, pp. 677–679, 2007.
+[50] W. Zhang, C. Yue, Y. Li, and B. Vucetic, “Efficient near maximumlikelihood reliability-based decoding for short LDPC codes,” in Proc. IEEE Int. Conf. Commun. (ICC), 2024, pp. 5335–5340.
+[51] O. P. Babalola, O. Ogundile, and D. J. Versfeld, “A generalized paritycheck transformation for iterative soft-decision decoding of binary cyclic codes,” IEEE Commun. Lett., vol. 24, no. 2, pp. 316–320, 2019.
+[52] G. Li and X. Yu, “Boosting ordered statistics decoding of short LDPC codes with simple neural network models,” IEEE Commun. Lett., vol. 28, no. 12, pp. 2714–2718, 2024.
+[53] A. Kabat, F. Guilloud, and R. Pyndiah, “New approach to order statistics decoding of long linear block codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), 2007, pp. 1467–1471.
+[54] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” arXiv preprint arXiv:1412.6980, 2014.
+[55] F. Chollet et al., “Keras,” https://keras.io, 2015. [56] M. Baldi, N. Maturo, E. Paolini, and F. Chiaraluce, “On the use of
+ordered statistics decoders for low-density parity-check codes in space telecommand links,” EURASIP J. Wireless Commun. Netw., vol. 2016, no. 272, 2016.
+
+16
+
+

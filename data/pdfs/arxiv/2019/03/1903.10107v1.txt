@@ -1,0 +1,475 @@
+arXiv:1903.10107v1 [quant-ph] 25 Mar 2019
+
+Noname manuscript No. (will be inserted by the editor)
+High Throughput and Low Cost LDPC Reconciliation for Quantum Key Distribution
+Haokun Mao · Qiong Li · Qi Han · Hong Guo
+Received: date / Accepted: date
+Abstract Reconciliation is a crucial procedure in post-processing of Quantum Key Distribution (QKD), which is used for correcting the error bits in sifted key strings. Although most studies about reconciliation of QKD focus on how to improve the efficiency, throughput optimizations have become the highlight in high-speed QKD systems. Many researchers adpot high cost GPU implementations to improve the throughput. In this paper, an alternative high throughput and efficiency solution implemented in low cost CPU is proposed. The main contribution of the research is the design of a quantized LDPC decoder including improved RCBP-based check node processing and saturation-oriented variable node processing. Experiment results show that the throughput up to 60Mbps is achieved using the bi-directional approach with reconciliation efficiency approaching to 1.1, which is the optimal combination of throughput and efficiency in Discrete-Variable QKD (DV-QKD). Meanwhile, the performance remains stable when Quantum Bit Error Rate (QBER) varies from 1% to 8%.
+Keywords Quantum key distribution · Information reconciliation · Low desnity parity check code · SIMD · Rate-compatible
+Haokun Mao · Qiong Li · Qi Han Information Countermeasure Technique Institute, School of Computer Science and Technology, Harbin Institute of Technology, Harbin, 150080, China
+Hong Guo State Key Laboratory of Advanced Optical Communication Systems and Networks, and Institute of Quantum Electronics, School of Electronics Engineering and Computer Science, and Center for Quantum Information Technology, Peking University, Beijing, 100871, China Qiong Li E-mail: qiongli@hit.edu.cn
+
+2
+1 Introduction
+
+Haokun Mao et al.
+
+Quantum Key Distribution (QKD) is a promising technique to generate and distribute secure keys with unconditional security for the remote two parties, so called Alice and Bob [1]. To obtain a string of secure key using QKD, two consecutive phases are involved: quantum phase and classical post-processing phase [2]. In quantum phase, raw keys are obtained by transmitting and detecting quantum signals via an untrusted quantum channel. Due to the physical noises or the presence of an eavesdropper Eve, raw keys of two parties are weakly correlated and partially secure [3]. Thus, a distilling phase called postprocessing is needed. The main task of post-processing is to convert imperfect raw key strings to consistent secure key pairs via an authenticated classical channel. To accomplish this task, a series of post-processing operations have to be performed including sifting, error estimation, reconciliation, verification, privacy amplification and authentication [4]. In this research, we focus on the reconciliation which is often the bottleneck of a high speed QKD system limiting the secure key rate [5]. The main issue of the reconciliation module is to maximize the secure key rate through increased reconciliation efficiency and throughput. Reconciliation efficiency is the parameter that indicates the amount of information leakage. During reconciliation, some information have to be exchanged to correct errors over public channel. The exchanged data may be intercepted by Eve and therefore some information may leak. Throughput determines the amount of data that can be processed by the reconciliation module. The sifted keys that cannot be processed or corrected have to be discarded, resulting a decrease in secure key rate. Unlike reconciliation efficiency, the throughput has not attracted many attentions. However, it has been reported that only an optimal combination of these two parameters: efficiency and throughput, can maximize the secure key rate of a practical QKD system. Especially, throughput plays more important role in high speed QKD systems.
+In general, reconciliation protocols can be divided into two categories: interactive and forward error correction code based [6]. Cascade is the most widely used interactive reconciliation protocol for its simplicity and relatively high efficiency [7–12]. However, lots of interactions are required in Cascade protocol leading to a degradation in throughput [6]. Indeed, nearly all interactive reconciliation protocols are sensitive to latency in the communication channel, which may be unpredictable in practical QKD systems [5]. To overcome such shortcomings, forward error correction codes, such as Polar and LDPC, based reconciliation protocols have been proposed. Polar code was proposed by Arikan in 2009 [13] and first used in post-processing of QKD by Jouguet in 2013 [14]. The throughput up to 10.9Mbps was achieved when QBER equals to 2%. However, the Frame Error Rate (FER) was high leading to a limitation of secure key rate. In 2018, Successive Cancellation List (SCL) decoding algorithm was introduced into Polar reconciliation by YAN Shiling [15] resulting in a higher secret key rate. But the efficiency of Polar reconciliation still lags behind LDPC reconciliation with the same frame length. Furthermore,
+
+Title Suppressed Due to Excessive Length
+
+3
+
+the throughput significantly decreases when the number of paths L increases. Nowadays, LDPC reconciliation is adopted in most current high speed QKD systems for its advantages of high efficiency even using short frame length and inherent parallelism [4, 16]. The original LDPC reconciliation is very sensitive to the Quantum Bit Error Rate (QBER), which severely limits its application. In order to achieve high reconciliation efficiency over a wide range of QBERs, rate-adaptive reconciliation protocol was proposed [17]. In 2014, the bi-directional rate-adaptive LDPC reconciliations were implemented in both CPU and GPU [5], achieving average throughput up to 5Mbps and 15Mbps with high reconciliation efficiency respectively. To further improve reconciliation efficiency, blind reconciliation protocol was proposed [18]. However, the required round of interaction is more than that in rate-adaptive protocol, which affects the performance gain of throughput. In 2017, E. O. Kiktenko suggested an improved blind reconciliation protocol [19]. Via introducing symmetry in operations of two parties and consideration on unsuccessful decoding results, the protocol gains a significant performance increase in both efficiency and interactivity. However, the bi-directional reconciliation strategy cannot be used in the symmetric blind protocol [19], which limits the achievable throughput.
+LDPC reconciliation can be implemented using either hardware (FPGA, ASIC) or software (CPU, GPU). In this research, we focus on software implementations. To implement LDPC reconciliation in software, GPU is commonly used due to its massive parallel computing power [5,20,21]. Though the throughput and efficiency can be very high in GPU implementations [5], the disadvantages of the GPU scheme are obvious too. A GPU device is not able to work alone, but has to work with its host CPU. Moreover, the relatively large volume and high power consumption of a GPU device make it hard to integrate. So the GPU scheme is not well suitable for a compact QKD solution. Comparing to the GPU scheme, the advantage of a CPU scheme is low cost and the disadvantage is much less computing resources. According to the Ref [5], the throughput of their CPU scheme is only one third of the GPU scheme. How to implement the high performance reconciliation using a low cost CPU scheme has not been well discussed in existing literatures so far.
+Though the amount of computation resources of a CPU device is not as plentiful as a GPU, the modern CPU offers some good features that can be exploited to achieve high performance as well. These features include Single Instruction Multiple Data (SIMD) instruction extensions, multi-core processing module and multi-level caches [22]. SIMD instruction extensions improve the performance of an application by operating on multiple data elements in one instruction instead of processing the data individually. Using a multi-core processing module, each autonomous core can execute the same program with different inputs simultaneously in order to accomplish the computation fast. Multi-level caches can decrease the impact of the mass memory latency which is often the performance bottleneck.
+
+4
+
+Haokun Mao et al.
+
+In this research, a high throughput and low cost software LDPC reconciliation implemented in CPU is proposed. The main contributions of our work are as follows. A quantized RCBP-based LDPC decoder is proposed, which achieves high efficiency using fixed-point representation. Moreover, the average throughput of 57.60Mbps and the average efficiency of 1.108 within a wide range of QBER is achieved using an i7-6700HQ CPU, by taking good advantage of the features offered by modern CPUs. The average speedup factors of ×3.8 and ×11.3 are achieved by comparison with the latest GPU and CPU works in DV-QKD [5]. It is worth to mention that the performance improvement comes from our algorithm and implementation optimizations rather than the performance boost of hardware.
+The rest of the paper is organized as follows. The LDPC decoding algorithms are introduced in Section 2. In Section 3, the proposed quantized RCBP-based LDPC decoder is detailed. The experimental results and analysis are presented in Section 4. Finally, a brief conclusion is provided in Section 5.
+
+2 LDPC decoding algorithm
+LDPC code is a kind of linear block code with error correction capability close to Shannon limit. It is originally proposed by Robert Gallager in 1962 [23] and is defined by a sparse parity check matrix H of size m × n. The code rate is defined as R = 1 − m/n, denoting the ratio of information bits. A LDPC code can also be described by a bipartite graph with m check nodes (CNs) and n variable nodes (VNs) corresponding to the rows and columns of H respectively. The matrix element in H can be binary or non-binary alphabets [24]. In this research, only binary LDPC codes are considered for the sake of simplicity. An edge connects CNi and VNj in the bipartite graph if Hij = 1. The degree of check node CNi named degCNi is defined by the number of ones in the ith row of H. Similarly, the number of ones in the jth column is the degree of variable node VNj named degVNj.
+The iterative Sum-Product Algorithm (SPA) [25] is usually applied to decode LDPC codes for its high decoding efficiency. It consists of two main steps: check node processing and variable node processing. During the decoding process, messages are exchanged between check nodes and variable nodes along the bipartite graph edges. Such message updating process will repeat until the stopping criterion is satisfied. In practice, the sequence of message updating usually influences the convergence of the decoding algorithm. In this research, we focus on layered scheduling [26] rather than original flooding scheduling because it enables the decoding convergence to speed-up by a factor of two.
+The sign and magnitude of updated output messages in check node processing using layered scheduling can be calculated as Equations (1) and (2), where Litj is the message from CNi to VNj in the tth iteration; Ljti is the mes-
+
+Title Suppressed Due to Excessive Length
+
+5
+
+sage from VNj to CNi in the tth iteration; Ψ (i) is the set of VNs connected to CNi; Ψ (i)/j is the set Ψ (i) excludes VNj.
+
+sign(Litj) =
+
+sign(Ljt i)
+
+(1)
+
+j ∈Ψ (i)/j
+
+
+
+
+
+Ltij = 2tanh−1 
+
+tanh Ljt i  2
+
+(2)
+
+j ∈Ψ (i)/j
+
+Equation (2) can be formulated in two other ways [24] which are presented in Equations (3) and (4). Mathematically there is no difference between all these three equations, but each equation has its own advantage in practice. For instance, the function φ(x) used in Equation (3) is an invertible function, which is defined in Equation (5). By using φ(x), the multiplication and division operations presented in Equation (2) are removed. Furthermore, the function φ(x) can be implemented by using a look-up table which can be replaced by piecewise linear approximation as discussed in [27, 28]. Although implementation of the φ(x) function by use of a look-up table is sufficient for some software simulations, but due to dynamic-range issues, it is a difficult function to approximate even with a large table. Unlike the Equation (3), the input and output range keeps stable in Equation (4). The The box-plus operator used in Equation(4) is presented in Equation (6), which can be easily implemented by use of a two-input look-up table. For d − 1 operands, corresponding to a degree-d check node, the box-plus operation can be computed via repeated computation of β function as in Equation (7).
+
+
+
+
+
+Litj = φ−1 
+
+φ( Ltj i )
+
+(3)
+
+j ∈Ψ (i)/j
+
+Litj
+
+=
+j ∈Ψ (i)/j
+
+Ltj i
+
+(4)
+
+φ(x) = φ−1(x) = − ln tanh x
+
+(5)
+
+2
+
+L1
+
+L2 = β(L1, L2) = 2tanh−1
+
+tanh
+
+L1 2
+
+tanh
+
+L2 2
+
+(6)
+
+d−1
+
+|Li| = β (|L1| , β (|L2| , · · · , β (|Ld−2| , |Ld−1|)))
+
+(7)
+
+i=1
+
+In order to further simplify the computation complexity of CNs, a series of approximations are proposed including Min-Sum (MS) [29], Offset MinSum (OMS) [30], Normalized Min-Sum (NMS) [30], Approximate Min∗ Decoder [27], Richardson / Novichkov (RN) [31], Reduced-Complexity Box-Plus (RCBP) decoder [32], and etc. The most commonly used approximations accoding to the existing literatures are MS-based decoding algorithm including MS, OMS and NMS. Although these approximations drastically reduce the
+
+6
+
+Haokun Mao et al.
+
+computation complexity, it is hard to obtain high reconciliation efficiency in QKD environment using these approximations. RN decoder is able to obtain a better reconciliation efficiency than OMS and NMS but it is not softwarefriendly. Based on the considerations as above, we adopt RCBP algorithm which can be easily implemented in CPU environment with the potential to achieve high efficiency.
+
+The variable node processing using layered scheduling are presented in
+
+Equations (8) and (9). Ej and Ej are the soft value of VN before and after layered processing respectively. The sign of Ej is the hard decision estimate of the VNj and the magnitude means the reliability of the decision. During the iterative decoding process, the hard decision estimates and their reliabilities
+
+are updated. Indeed, in layered decoding, only the latest Ej and Lij are stored in memory. Lji are computed on the fly as in Equation (8).
+
+Ljti = Ej − Ltij−1
+
+(8)
+
+Ej = Ljti + Litj
+
+(9)
+
+A stopping criterion is inherited in LDPC code to detect the correct word. At the end of each decoding iteration, parity check constraints are tested with the latest Ej. A correct code can be obtained only when all the paritycheck constraints are satisfied. If a correct code has not been detected until the iteration number reaches the predefined maximum iteration number, the decoding process will terminate in failure. Even if all parity check constraints are satisfied, there may exists undetected errors. During decoding process, SPA decoding algorithm may converge to an inappropriate code satisfying the constraints as well. This problem rarely appears and can be solved by the subsequent processing, so called verification.
+
+3 Quantized RCBP-based LDPC decoder
+In this section, a high throughput and efficiency LDPC decoder is proposed. High throughput performance mainly comes from quantization process which is detailed in Section 3.1. Quantization process is able to improve the throughput by a factor of four, but it is certain to have negative impacts on reconciliation efficiency. In order to maintain the high efficiency as the LDPC decoder of floating-point version, the improved RCBP-based check node processing and saturation-oriented variable node processing are proposed in Section 3.2 and Section 3.3 respectively.
+
+3.1 Quantization
+Quantization is a common used approach in hardware implementations to reduce the storage consumption, while it is not common in CPU implemen-
+
+Title Suppressed Due to Excessive Length
+
+7
+
+tations since the storage space is not a big issue in most CPU applications. Nevertheless, quantization is an effective technique to decrease processing delay when the performance of throughput is pursued in a CPU implementation. The reduction of processing delay using quantization mainly comes from the increasing of SIMD unit utilization and cache hit rates.
+In practice, SIMD processing are performed using several sets of instruction extensions supported by specific architectures. In this research, we focus on x86 architecture. Two commonly used instruction extensions are Streaming SIMD Extensions (SSE) with 128-bit registers and Advanced Vector Extensions (AVX) with 256-bit registers [33]. Only 4 and 8 floating-point computations can be processed in one clock cycle in SSE and AVX mode respectively. If the data are quantized as 8-bit fixed-point numbers, 16 and 32 computations can be processed in one clock cycle in these two models respectively, which means nearly four times speed-up.
+Moreover, the memory access latency varies among different levels of caches in multi-level cache architecture. It takes about 4/10/40 clock cycles to access L1/L2/L3 cached data [34], and more than thousand clock cycles for uncached data. Unfortunately, the sizes of fast caches are quite limited. For instance, an i7-4790K CPU contains four cores. Each core has only one 32KB L1 data cache and one 256KB L2 cache respectively. The size of L3 cache is 8MB, but it is shared by all cores. Reducing memory size helps in fitting better into faster cache, which decreases execution time. If 8-bit fixed-point is used instead of floating-point representation, the memory size can be reduced by at least four, leading to an improvement in throughput.
+As mentioned above, the throughput can be improved by a factor of at least four via using 8-bit fixed-point representation, which is the major source of throughput improvement. However, an efficient implementation of LDPC decoder using 8-bit fixed point representation is a challenging task. The issue of quantization precision affects reconciliation efficiency negatively. To overcome the bad influence, algorithm optimizations of check node and variable processing are presented in the following sections.
+
+3.2 Improved RCBP-based check node processing
+
+In QKD environment, the reconciliation efficiency of original RCBP approxi-
+
+mation still lags behind BP algorithm, especially for low QBERs which most
+
+DV-QKD systems focus on. The efficiency lost mainly comes from the rough
+
+quantization. Such practical issue motivates us to propose an improved RCBP
+
+approximation applying more accurate quantization step size. Meanwhile, to
+
+maintain the same range of message representation as in original RCBP ap-
+
+proximation, a larger scale look-up table is designed. Let τ (p, q) represent the
+
+integer output value of the loop-up table. Thus, τ (p, q) is the integer represen-
+
+tation of the function value β
+
+p∆
+
++
+
+∆ 2
+
+,
+
+q∆
+
++
+
+∆ 2
+
+.
+
+8
+
+Haokun Mao et al.
+
+It is noticed that the pre-stored loop-up table is not always a good solution. As mentioned in Section 3.1, four clock cycles are needed even if L1 cached data is accessed. If the loop-up table can be described by a simple equation, the calculation time may by significantly less than the access time of the look-up table, especially when SIMD technique is applied. Thus, according to the process described in the literature [32], a new look-up table generation algorithm is designed as Algorithm 1, involving a series of simple operations. The result of the comparison (d < c) returns 1 if true and 0 if false. The constant number MSGmax is determined by the size of loop-up table. For example, if the input p and q are 6-bit input, MSGmax is set as 63.
+
+Algorithm 1: Computation of τ (p, q)
+
+Input: Quantified intger p, q
+
+Output: τ (p, q)
+
+1 a ← M IN (p, MSGmax);
+
+2 b ← M IN (q, MSGmax);
+
+3 g ← M AX(a, b);
+
+4 l ← M IN (a, b);
+
+5 d ← g − l;
+
+6 if l > 2 then
+
+7 τ ← l − (d < 2) − (d < 6);
+
+8 end
+
+9 else
+
+10
+
+τ ← M AX(l − (d < 4), 0);
+
+11 end
+
+3.3 Saturation-oriented variable node processing
+Variable node processing is simple, since only addition operations are involved. However, some novel operations have to be designed to avoid the efficiency lost caused by the saturation of quantized values. For instance, during the decoding process, the reliability of some variable nodes may be very high. Assuming that the integer representation of a variable node’s soft value is 330 and the increment values of the adjacent check nodes computed by equation Litj −Ltij−1 are -50, -40 and -70, respectively. At the end of the decoding iteration, the soft value of the variable node should be updated to 170. However, using 8-bit fixed-point representation, the original and updated soft value are 127 and -33 respectively. Not only the magnitude but also the sign is incorrect. This sort of situation may lead to an incorrect result, which should be avoided.
+To overcome such issue, a variable node updating rule applying in layered scheduling is proposed in Algorithm 2. The updating rule is simple that only the variable nodes whose magnitudes have not reach maximum should be updated. The function ABS(x) returns absolute value of the input x. The
+
+Title Suppressed Due to Excessive Length
+
+9
+
+constant number Emax is the predefined maximum magnitude and ITERmax represents the maximum number of iterations. Using 8-bit fixed-point representation, the value of Emax is set as 127. The variable t indicates the iteration number.
+
+Algorithm 2: Saturation-oriented variable node processing
+
+Input: Ljti, Litj
+
+Output: Ej
+
+1 for t = 1 → ITERmax do
+
+2
+
+foreach i ∈ C do
+
+3
+
+foreach j ∈ Ψ (i) do
+
+4
+
+if ABS(Ej ) = Emax then
+
+5
+
+Ej ← Ljti + Litj ;
+
+6
+
+end
+
+7
+
+end
+
+8
+
+end
+
+9 end
+
+The proposed updating rule is effective in most cases. Nevertheless, this rule may introduce a new problem: an incorrect hard decision of a variable node with the maximal magnitude will no longer update. Although the decoding process will terminate in failure under that situation, the probability of such situation is so small that it has little effect on reconciliation performance.
+4 Experiments and results
+4.1 Experiment environment
+Structured QC-LDPC codes are used in the experiment [24]. A QC-LDPC code is defined by a base matrix of size Mb × Nb. Each element of the base matrix is a sub-matrix with the expansion-factor Z. Each nonzero entry is replaced by a cyclically shifted identity matrix while each zero entry is replaced by a all-zero matrix. To evaluate the performance of the reconciliation module, a set of QC-LDPC codes are constructed with frame length of 100kb using the finite field approach [35]. This approach ensures that the girth of a LDPC code is at least 6. The check and variable node degree distributions are both irregular and optimized using the Density Evolution (DE) algorithm [36]. The masking matrices are constructed by using standard PEG algorithm [37] with the obtained degree distributions. It is noticed that the structural properties of QC-LDPC codes contribute to the obtaining of good degree distributions.
+The rate-adaptive LDPC reconciliation protocol using bi-directional and interactive approach is applied in the implementation. The positions of shortened and punctured bits are chosen based on the following principles. The
+
+10
+
+Haokun Mao et al.
+
+positions with low column weights are chosen as puncturing bits first. The shortened bits are selected in turn from the puncturing bits when addition information revealing is necessary.
+For software implementations of LDPC reconciliation in DV-QKD systems, the optimal combination of throughput and efficiency is presented in Ref [5]. The evaluation platform of our experiment and Ref [5] are detailed in Table 1. It can be seen from the table that the CPU platforms of i7-6700HQ and X5675 are used in our experiment and Ref [5] respectively. In general, the performance of CPU platforms are evaluated by the core number and working frequency of the processor. The base frequency of i7-6700HQ is only 2.6GHz which is lower than X5675. Thanks to the more advanced turbo boost technology, the max turbo frequency of i7-6700HQ is able to reach 3.50GHz which is almost the same as X5675. However, the max turbo frequency is achieved only when a single processor core is used. When all processor cores are switched on, the working frequencies of both i7-6700HQ and X5675 will reduce to about 3.1GHz. Besides, the core number of i7-6700HQ and X5675 are four and six respectively. Thus, comprehensively considering the effects of core number and working frequency, the performance of our CPU platform is only two thirds of that used in Ref [5]. In addition, the GPU platform that is more powerful than i7-6700HQ and X5675 is not adopted in our experiment, but is used in Ref [5].
+
+Table 1: Evaluation platforms
+
+Processor Number of Cores Vertical Segment Base Frequency Max Turbo Frequency
+
+Ours
+Intel i7-6700HQ 4
+Mobile 2.60GHz 3.50GHz
+
+CPU [5]
+Intel X5675 6
+Server 3.06GHz 3.46GHz
+
+GPU [5]
+NVidia M2090 512
+Server 1.3GHz
+—
+
+4.2 Experiment results
+Simulation results are presented in Figure 1. It can be seen that the throughput and efficiency surpass comparative schemes during the whole range of QBER. The efficiency and throughput are achievable when the number of errors in reconciliation data blocks are known. In the implementation, SIMD and multi-core techniques are applied to intra-frame and inter-frame parallelism respectively.
+The reconciliations modes called high throughput and high efficiency are provided in Ref [5]. The high throughput performance is achieved by decreasing the reconciliation efficiency of high efficiency mode properly, leading to a
+
+Title Suppressed Due to Excessive Length
+
+11
+
+70
+
+60
+
+Throughput(Mbps)
+
+50
+
+Ours
+
+GPU High Throughput[5]
+
+40
+
+GPU High Efficiency[5] CPU High Throughput[5]
+
+CPU High Efficiency[5]
+
+30
+
+20
+
+10
+
+0
+
+1.6
+
+Ours CPU High Throughput[5]
+
+CPU High Efficiency[5]
+
+1.5
+
+Efficiency(f)
+
+1.4
+
+1.3
+
+1.2
+
+1.1
+
+1.0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+QBER(%)
+
+Fig. 1: Throughput(upper panel) and efficiency(lower panel). It is noticed that efficiencies of CPU and GPU are same.
+
+faster convergence speed. Using the same approach, the throughput of our implementation can further improve as well. Thus, only the high efficiency mode with the same level of efficiency is concentrated on. Compared to CPU high efficiency mode in Ref [5], an average speedup factor of ×11.3 is obtained. The high throughput improvement mainly comes from quantization and simplified check-node processing which increase the throughput at least four times. Taking advantage of AVX-2 instruction extensions can double the throughput as well. Other implementation optimizations, such as early termination and parallel scheme optimization, also contribute to the throughput improvement. Even though compared with the GPU implementation, the average speedup factor still reaches ×3.8. The throughput improvement is gained by the better balance among multiple influence factors of throughput. From the angle of computational resources, GPU device is undoubtedly the most powerful one among the three evaluation platforms in Table 1. However, the throughput
+
+12
+
+Haokun Mao et al.
+
+of a practical application is not only determined by the amount of computational resources, but also affected by multiple factors. For instance, Wang et al. [38] has demonstrated that the bottleneck of the LDPC decoder on GPU is the slow memory accesses. Besides, layered scheduling that can reduce the decoding latency by a factor of two is used in our implementation. But due to the data dependencies between consecutive layers, it is not suitable for GPU implementations.
+As depicted in Figure 1, not only the throughput but also the efficiency surpasses comparative schemes. The efficiency improvement is achieved by the use of algorithm optimization in Section 3 and the interactive rate-adaptive LDPC reconciliation protocol. In the original rate-adaptive reconciliation protocol [17], interaction is only an optional step. However, multi-interaction is an essential step in our implementation to further improve reconciliation efficiency. Although the interactions have negative impacts on throughout performance, it is worthwhile from a comprehensive point of view.
+In addition to the comparison with software implementations, a performance comparison with the latest hardware(FPGA) implementation [16] is also made in Table 2. An average throughput of 55Mbps with efficiency about 1.16 has been achieved in Ref [16]. To our best knowledge, this work is the best hardware LDPC reconciliation in DV-QKD systems till now. The throughput of our implementation does not apparently outperform that in Ref [16]. However, the throughput of our implementation will be further increased by using more powerful CPU processor. As can be seen from Table 2, the throughput has reached 122.17Mbps by using the latest i9-9900K processor, which is more than two times faster than comparative implementations.
+
+Table 2: Performance Comparison
+
+Refs.
+This work This work This work
+[5] [5] [16]
+
+Target
+CPU CPU CPU GPU CPU FPGA
+
+Device
+Intel i9-9900K Intel i7-4790K Intel i7-6700HQ NVidia M2090
+Intel X5675 Altera Stratix V 5SGXA7
+
+Throughput(Mbps)
+122.17 65.59 57.60 30.70 9.00
+55
+
+Efficiency
+1.108 1.108 1.108 1.250 1.250 ≈ 1.16
+
+Reconciliation module is not a standalone system, but a part of entire QKD system. The important metric of a QKD system is the final secure key rate. Thus, using the parameter settings in Ref [16] which is the representative of state of the art DV-QKD systems, the secure rate of the QKD system is simulated. The secure key rates at different distances by using ideal reconciliation are calculated as a benchmark. The ideal reconciliation is assumed to have unlimited throughput and disclose the theoretical minimum amount of information leakage. Fig 2 shows the secure key rates calculated for the high
+
+Title Suppressed Due to Excessive Length
+
+13
+
+speed QKD system using both ideal and theoretical reconciliation modules. At short distances, the processing demands of reconciliation module is large. Once the throughput of reconciliation is not sufficient, the final secure key rate will be fixed. As the distance becomes longer, the throughput is to satisfy the processing demand. In such case, the secure key rate is determined principally by the reconciliation efficiency. Above all, both throughput and efficiency are important to final secure key rates of high speed QKD systems. Because both the throughput and efficiency of our reconciliation module are higher than those of comparative ones, the final secure key rates are higher as well.
+
+25M 10M
+
+1M
+
+Secure rate (bit/s)
+
+100K 10K
+
+Theoretical Ideal(f=1.0) Ours (i7-6700HQ) FPGA[16] GPU High Throughput[5] GPU High Efficiency[5] CPU High Throughput[5] CPU High Efficiency[5]
+
+1K 0
+
+10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 Distance (km)
+
+Fig. 2: Secure key rate calculated for a typical high speed QKD system using real implementations
+
+What’s more, our implementation is applicable to nearly all kinds of DVQKD systems. For a low speed QKD system, low performance CPU is sufficient to reduce the cost of whole system. Moreover, blind reconciliation with more communication rounds can be applied to achieve higher efficiency since the throughput of our implementation is much more than demand. For a high speed DV-QKD system, the additional GPU hardware is no longer needed when our scheme is applied.
+
+14
+5 Conclusion
+
+Haokun Mao et al.
+
+In this research, a high throughput and efficiency LDPC reconciliation scheme on a low cost platform is proposed, which is applicable to both low speed and high speed QKD systems. The proposed scheme is adaptive to different QBERs ranging from 1% to 8% with maximum throughput up to 60Mbps. Except for the high performance, our scheme has a good extendibility. First, although this is a software scheme designed for CPU, the optimization is suitable for hardware implementation as well. Secondly, by means of adjusting the quantization step size and the size of loop-up table, the decoding algorithm may also fit for CV-QKD systems. It is noticed that AVX-512 instruction sets are now available in some high-end CPUs, which are able to increase the throughput of the proposed scheme by up to a factor of two. Thus, the throughput of our implementation has the potential to further increase, meeting the requirements of faster QKD systems or short distance applications in the future.
+
+6 Acknowledgements
+This work is supported by the National Natural Science Foundation of China (Grant Number: 61531003, 61771168, 61702224), Space Science and Technology Advance Research Joint Funds (6141B06110105). Many thanks are extended to Prof. Z.F. Han and Prof. T. Liu for the helpful discussion.
+
+References
+1. Bennett, C.H., Brassard, G.: Quantum cryptography: public key distribution and coin tossing. Theoretical Computer Science 560, 7–11 (2014)
+2. Gisin, N., Ribordy, G., Tittel, W., Zbinden, H.: Quantum cryptography. Reviews of Modern Physics 74(1), 145–195 (2001)
+3. Renner, R.: Security of quantum key distribution. International Journal of Quantum Information 6(1), 1–127 (2008)
+4. Walenta, N., Burg, A., Caselunghe, D., Constantin, J., Gisin, N., Guinnard, O., Houlmann, R., Junod, P., Korzh, B., Kulesza, N.: A fast and versatile quantum key distribution system with hardware key distillation and wavelength multiplexing. New Journal of Physics 16(1), 83–97 (2014)
+5. Dixon, A.R., Sato, H.: High speed and adaptable error correction for megabit/s rate quantum key distribution. Scientific Reports 4, 7275 (2014)
+6. Li, Q., Le, D., Mao, H., Niu, X., Liu, T., Guo, H.: Study on error reconciliation in quantum key distribution. Quantum Information & Computation 14(13-14), 1117–1135 (2014)
+7. Brassard, G., Salvail, L.: Secret-key reconciliation by public discussion. In: Workshop on the Theory and Application of Cryptographic Techniques, pp. 410–423. Springer (1993)
+8. Sugimoto, T., Yamazaki, K.: A study on secret key reconciliation protocol. IEICE Transactions on Fundamentals of Electronics, Communications and Computer Sciences 83(10), 1987–1991 (2000)
+9. Nakassis, A., Bienfang, J.C., Williams, C.J.: Expeditious reconciliation for practical quantum key distribution. In: Proceedings of SPIE - The International Society for
+
+Title Suppressed Due to Excessive Length
+
+15
+
+Optical Engineering, vol. 5436, pp. 28–35. International Society for Optics and Photonics (2004) 10. Yan, H., Ren, T., Peng, X., Lin, X., Jiang, W., Liu, T., Guo, H.: Information reconciliation protocol in quantum key distribution system. In: Natural Computation, 2008. ICNC’08. Fourth International Conference on, vol. 3, pp. 637–641. IEEE (2008) 11. Pedersen, T.B., Toyran, M.: High performance information reconciliation for qkd with cascade. Quantum Information & Computation 15(5-6), 419–434 (2013) 12. Pacher, C., Grabenweger, P., Martinez-Mateo, J., Martin, V.: An information reconciliation protocol for secret-key agreement with small leakage. In: IEEE International Symposium on Information Theory, pp. 730–734. IEEE (2015) 13. Arikan, E.: Channel polarization: A method for constructing capacity-achieving codes for symmetric binary-input memoryless channels. IEEE Transactions on Information Theory 55(7), 3051–3073 (2009) 14. Jouguet, P., Kunz-Jacques, S.: High performance error correction for quantum key distribution using polar codes. Quantum Information & Computation 14(3-4), 329–338 (2014) 15. Yan, S., Wang, J., Fang, J., Lin, J., Wang, X.: An improved polar codes-based key reconciliation for practical quantum key distribution. Chinese Journal of Electronics 27(2), 250–255 (2018) 16. Yuan, Z., Plews, A., Takahashi, R., Doi, K., Tam, W., Sharpe, A.W., Dixon, A.R., Lavelle, E., Dynes, J.F., Murakami, A.: 10-mb/s quantum key distribution. Journal of Lightwave Technology 36(16), 3427–3433 (2018) 17. Elkouss, D., MartinezMateo, J., Martin, V.: Information reconciliation for quantum key distribution. Quantum Information & Computation 11(3), 226–238 (2011) 18. Martinez-Mateo, J., Elkouss, D., Martin, V.: Blind reconciliation. Quantum Information & Computation 12(9-10), 791–812 (2012) 19. Kiktenko, E., Truschechkin, A., Lim, C., Kurochkin, Y., Federov, A.: Symmetric blind information reconciliation for quantum key distribution. Physical Review Applied 8(4), 044017 (2017) 20. Wang, X., Zhang, Y., Yu, S., Guo, H.: High speed error correction for continuousvariable quantum key distribution with multi-edge type LDPC code. Scientific reports 8(1), 10543 (2018) 21. Milicevic, M., Chen, F., Zhang, L.M., Gulak, P.G.: Quasi-cyclic multi-edge ldpc codes for long-distance quantum cryptography. NPJ Quantum Information 4(1), 1–9 (2018) 22. Gal, B.L., Jego, C.: High-throughput multi-core LDPC decoders based on x86 processor. IEEE Transactions on Parallel & Distributed Systems 27(5), 1373–1386 (2016) 23. Gallager, R.: Low-density parity-check codes. IRE Transactions on information theory 8(1), 21–28 (1962) 24. Ryan, W., Lin, S.: Channel codes: classical and modern. Cambridge University Press (2009) 25. MacKay, D.J.: Good error-correcting codes based on very sparse matrices. IEEE Transactions on Information Theory 45(2), 399–431 (1999) 26. Hocevar, D.E.: A reduced complexity decoder architecture via layered decoding of LDPC codes. In: IEEE Workshop on Signal Processing Systems, pp. 107–112. IEEE (2004) 27. Jones, C., Vall´es, E., Smith, M., Villasenor, J.: Approximate-min constraint node updating for LDPC code decoding. In: Military Communications Conference, 2003. MILCOM’03. 2003 IEEE, vol. 1, pp. 157–162. IEEE (2003) 28. Jones, C., Dolinar, S., Andrews, K., Divsalar, D., Zhang, Y., Ryan, W.: Functions and architectures for LDPC decoding. In: IEEE Information Theory Workshop, pp. 577–583. IEEE (2007) 29. Fossorier, M.P., Mihaljevic, M., Imai, H.: Reduced complexity iterative decoding of low-density parity check codes based on belief propagation. IEEE Transactions on communications 47(5), 673–680 (1999) 30. Chen, J., Fossorier, M.P.: Near optimum universal belief propagation based decoding of low-density parity check codes. IEEE Transactions on Communications 50(3), 406–414 (2002) 31. Richardson, T., Novichkov, V.: Node processors for use in parity check decoders (2005). US Patent 6,938,196
+
+16
+
+Haokun Mao et al.
+
+32. Viens, M., Ryan, W.E.: A reduced-complexity box-plus decoder for LDPC codes. In: International Symposium on Turbo Codes and Related Topics, pp. 151–156. IEEE (2008)
+33. Deilmann, M., et al.: A guide to vectorization with intel c++ compilers. Intel Corporation, April (2012)
+34. Levinthal, D.: Performance analysis guide for intel core i7 processor and intel xeon 5500 processors. Intel Performance Analysis Guide 30, 18 (2009)
+35. Lan, L., Zeng, L., Tai, Y.Y., Chen, L., Lin, S., Abdel-Ghaffar, K.: Construction of quasicyclic LDPC codes for AWGN and binary erasure channels: A finite field approach. IEEE Transactions on Information Theory 53(7), 2429–2458 (2007)
+36. Elkouss, D., Leverrier, A., All´eaume, R., Boutros, J.: Efficient reconciliation protocol for discrete-variable quantum key distribution. In: IEEE International Conference on Symposium on Information Theory, pp. 1879–1883. IEEE (2009)
+37. Hu, X.Y., Eleftheriou, E., Arnold, D.M.: Regular and irregular progressive edge-growth tanner graphs. IEEE Transactions on Information Theory 51(1), 386–398 (2005)
+38. Wang, G., Wu, M., Yang, S., Cavallaro, J.R.: A massively parallel implementation of qc-ldpc decoder on gpu. In: Application Specific Processors (2011)
+
+

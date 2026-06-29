@@ -1,0 +1,625 @@
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+A Parallel and Memory-Efficient Decoding for
+Spatially-Coupled LDPC Codes
+Qihao Wu∗, Lihong Lv†, Yanjun Yao‡ and Sheng Wu∗ ∗School of Information and Communication Engineering, Beijing University of Posts and Telecommunications,
+Beijing 100876, China †Beijing Space Information Relay and Transmission Technology Research Center, Beijing 100084, China
+‡No.38 Research Institute of China Electronic Technology Corporation, Anhui 230088, China Email: {wuqihao@bupt.edu.cn, llh870324@126.com, 619704171@qq.com, thuraya@bupt.edu.cn}
+
+Abstract—In this paper, we propose a parallel and memoryefficient decoding for spatially-coupled low-density parity-check (SC LDPC) codes. The new decoding was obtained by applying parallel architecture and efficient memory management to the windowed decoding. Simulation results show that the new decoding greatly reduces decoding latency and requires less memory, and there is no performance degradation. The advantage of the proposed decoding make it appealing in practical applications, especially in low latency scenario.
+Index Terms—spatially-coupled LDPC codes, windowed decoding, layered decoding, parallel architecture
+I. INTRODUCTION
+Spatially-coupled low-density parity-check (SC LDPC) codes were first introduced as low-density parity-check (LDPC) convolutional codes by Jimenez Felstrom and Zigangirov in [1]. Owing to the spatially coupling code struture, the belief propagation (BP) decoding of these codes has a phenomenon called threshold saturation, i.e., the BP threshold of SC LDPC codes is close to the maximum a posteriori (MAP) threshold of an underlying LDPC block codes [2]. Due to excellent performance, SC LDPC codes are considered as attractive candidates for future communication systems.
+Unlike LDPC block codes, it is unrealistic to straightly applying the BP decoding to SC LDPC codes, because the codeword length of SC LDPC codes is large or infinite. However, thanks to the special structure, the constraint length of SC LDPC codes is much smaller than the codeword length, which make it possible to decode SC LDPC codes by pipeline decoding as parallelizing the iterations of the BP decoding through several processors [1]. Besides, Pusane et al. have proposed an improved pipeline decoding in [3].
+In [4], Iyengar et al. introduced windowed decoding as another decoding scheme for SC LDPC codes. This scheme operates the BP decoding inside a limited length window and then slides the window to next position to keep working. Compared with the pipeline decoding, the windowed decoding requires less memory and have negligible performance degradation. Due to the memory-saving characteristic, the windowed decoding was more effective at the aspect of implement. It has been shown in [5] that, by employing the windowed decoding, SC LDPC codes can outperform their corresponding LDPC block codes even under the same constraints of complexity
+
+and memory. Moreover, several effective windowed decoding schedules are proposed to reduce decoding complexity by avoiding unnecessary message passing or iterations, and we refer the interested reader to [6], [7].
+In fact, there are two schedules to operate the BP decoding, these schedules are known as flooding decoding and layered decoding. The flooding decoding can operate fully-parallel while the layered decoding is serial, however, the converge speed of the latter is faster than that of the former, and the layered decoding requires only about half numbers of iterations [8] to achieve same performance. To reduce the decoding complexity, the layered decoding is commonly used in the LDPC block codes, and it can also be applied to the SC LDPC codes [9].
+By applying two modifications to the windowed decoding with layered decoding schedule (referred as layered windowed decoding), we obtain a new decoding which has low decoding latency and requires less memory while maintaining the advantage of the original decoding (i.e., low memory requirement and low complexity). These modifications are achieved by paralleling the computation at different position and reducing the unnecessary memory. As a result, the decoding speed is proportional to the numbers of parallel processors, and the required memory can be reduced to 67% in the best case. Note that another parallel architecture was proposed in [10] for the windowed decoding with flooding decoding schedule (referred as flooding windowed decoding) at the cost of performance loss.
+The rest of this paper is organized as follows. In Section II, the structure of SC LDPC codes is described. The conventional windowed decoding and layered decoding schedule are also detailed. In Section III, we introduce the two modifications of the windowed decoding to improve parallelism and storage requirement without performance loss. In addition, the new decoding algorithm is given and analyzed at the aspect of implementation complexity. In Section IV, simulation results of the new decoding with different parameter are given. Besides, we show the comparison result between different decoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1016
+
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+II. SPATIALLY-COUPLED LDPC CODES
+
+A. The Structure of SC LDPC Code
+
+In this paper, we focus on left-terminated time-invariant SC LDPC code over the additive white Gaussian noise (AWGN) channel. This code is defined by a specially structured, semiinfinitely extended parity-check matrix, i.e.,
+
+ H0
+
+
+
+ H1 H0
+
+
+
+  
+
+...
+
+H1 . . .
+
+  
+
+
+
+ 
+
+Hµ
+
+...
+
+. . . H0
+
+  
+
+HSC
+
+=
+
+ 
+
+
+
+Hµ
+
+H1
+
+...
+
+,  
+
+(1)
+
+  
+
+...
+
+...
+
+...
+
+  
+
+
+
+
+
+
+
+Hµ
+
+
+
+
+
+... 
+
+where HSC denotes the parity check matrix of SC LDPC code, µ denotes the syndrome former memory. The sub-matrix Hi is generally constructed from quasi-cyclic matrices , i.e.,
+
+ P1i ,1 Pi1,2 . . . Pi1,n 
+
+ P2i ,1 P2i ,2 . . . P2i ,n 
+
+Hi
+
+=
+
+ 
+
+
+
+...
+
+...
+
+...
+
+...
+
+,  
+
+(2)
+
+Pim,1 Pm i ,2 . . . Pm i ,n
+
+where sub-matrix Hi consists of m × n circulant permutation matrices, the size of matrix P is S × S and parameter S is
+referred as expansion factor or lifting factor. Therefore, the dimension of matrix Hi is mS × nS, the rate of SC LDPC code is R = (n − m)/n. For the purpose of encoding, matrix H0 is required to have full rank. Thus, the last mS columns of H0 are universally chosen as the mS ×mS identity matrix.
+Besides, the corresponding semi-infinite code sequences is v = [v1, v2, ..., vt, ...] and it satisfies HSCvT = 0. Notably, the code block vt of size nS is only coupled to the previously received µ code blocks. As a result, the decoder of SC LDPC
+code is capable of decoding stream data.
+
+B. Windowed Decoding
+In fact, the whole matrix inside the window consists of wmS rows and (w + µ)nS columns, where the parameter w is used to adjust the scale of window. Instead of describing windowed decoding with a sliding window carried out on the portion of matrix HSC, we straightly illustrate it with a fixed window receiving continuous stream data as in [11]. Thus, the procedure of the (layered) windowed decoding with size w = 8 for semi-infinite time-invariant SC LDPC code with µ = 2 can be divided into three step which is separately visualized in Fig. 1, Fig. 2 and Fig. 3.
+In the first step, decoder calculates a new sub-block of nS log-likelihood ratio (LLR) from received consecutive symbols, and then put it into the vacant position of the decoder’s LLR memory of total size (w + µ)nS. In the second step, the decoder carries out (layered) belief propagation decoding
+
+LLR7
+
+LLR-2 LLR-1 LLR0 LLR1 LLR2 LLR3 LLR4 LLR5 LLR6
+
+R0
+
+H2 H1 H0
+
+R1
+
+H2 H1 H0
+
+R2
+
+H2 H1 H0
+
+R3 H p =
+
+H2 H1 H0
+
+R4
+
+H2 H1 H0
+
+R5
+
+H2 H1 H0
+
+R6
+
+H2 H1 H0
+
+R7
+
+H2 H1 H0
+
+Fig. 1. The first step of (layered) windowed docoding.
+
+LLR-2 LLR-1 LLR0 LLR1 LLR2 LLR3 LLR4 LLR5 LLR6 LLR7
+
+R0
+
+H2 H1 H0
+
+R1
+
+H2 H1 H0
+
+R2
+
+H2 H1 H0
+
+R3 H p =
+
+H2 H1 H0
+
+R4
+
+H2 H1 H0
+
+R5
+
+H2 H1 H0
+
+R6
+
+H2 H1 H0
+
+R7
+
+H2 H1 H0
+
+Fig. 2. The second step of (layered) windowed docoding.
+
+algorithm with I iterations. In the third step, the left-most subblock of nS LLR have been processed sufficiently and taken out of the decoder’s LLR memory. At the same time, the remain LLR in memory is shifted by a sub-block, leaving an new vacant position. By iteratively executing the three steps, the decoder can decode consecutive data in real-time.
+
+C. Layered Decoding Schedule
+
+Before introducing the layered decoding, we represent the matrixs inside the window by a Tanner graph with wmS check nodes (CN) and (w + µ)nS variable nodes (VN), i.e., ith row corresponding to CNi and the jth column corresponding to VNj. Thus, the layered decoding algorithm takes palce between check node CNi and variable node VNj in the Tanner graph.
+During the kth decoding iteration, at one CNi, all the related message qij is updated firstly by
+
+qi(jk) = LLRj(k−1) − ri(jk−1), ∀j ∈ N (i) ,
+
+(3)
+
+LLR-2
+
+LLR-1 LLR0 LLR1 LLR2 LLR3 LLR4 LLR5 LLR6 LLR7
+
+R0
+
+R1
+
+H2 H1 H0
+
+R2
+
+H2 H1 H0
+
+R3
+
+H2 H1 H0
+
+R4 H p =
+
+H2 H1 H0
+
+R5
+
+H2 H1 H0
+
+R6
+
+H2 H1 H0
+
+R7
+
+H2 H1 H0
+
+H2 H1 H0
+
+Fig. 3. The third step of (layered) windowed docoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1017
+
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+where qij denotes the message from VNj to CNi, LLRj denotes the log-likelihood of the jth symbol of code sequence, rij denotes the message from CNi to CNj, and N (i) represents the set of neighbors of the CNi. Subsequently, the message rij is calculated by
+
+
+
+
+
+ri(jk) = 2 tanh−1 
+
+tanh qi(jk)/2  , (4)
+
+j ∈N (i)\j
+
+where N (i)\j represents the set of nodes connnected to the CNi without corresponding destination node. Finally, the LLRj can be updated by
+
+LLRj(k) = qi(jk) + ri(jk), ∀j ∈ N (i) .
+
+(5)
+
+The decoder using layered windowed decoding needs to update wmS check nodes, and each check node is connected to average dc parity nodes, where dc denotes the degree of check node. Thus, the total number of messege rij in the window is wmS × dc, which is equal to wnS × dv, where dv denotes the degree of variable node. Note that all the message rij are stored in the decoder’s R memory. In Fig. 1 (i.e., the first step), a new sub-block of mS × dc initialized value, i.e. 0, is put into the vacant position of the decoder’s R memory of total size wmS × dc. In Fig. 3 (i.e., the third step), the top-most sub-block of R are taken out, and the remain R in memory is shifted by a sub-block.
+
+III. A PARALLEL AND MEMORY-EFFICIENT DECODING
+In the following, we introduce two modifications to improve the layered windowed decoding at the aspect of decoding parallelism and memory requirement. Then we analyze the implementational complexity of the new decoding algorithm.
+
+A. Parallel Computation
+Considering the windowed decoding with size w = 8 and iteration I = 1 for SC LDPC code with µ = 2, the partial consecutive process of this decoding is represented in Fig. 4. The processor updates messages layer by layer. At first, it updates the sub-blocks of R0, LLR−2, LLR−1 and LLR0, then the sub-blocks of R1, LLR−1, LLR0 and LLR1, ... , till the end. After the whole memory in decoder have been shifted by one sub-block, the updating in the next stage begins with the sub-blocks of R1, LLR−1, LLR0 and LLR1. Note that the index of LLR or R is the received time instant of each sub-block.
+Due to the spatially-coupled structure of the code, the processor operates on only µ+1 sub-blocks of LLR by one layer, without accessing anyother sub-block of LLR in memory. Thus, it is possible to impove the windowed decoding to compute parallelly like pipeline decoding.
+In Fig. 4, when the processor updates LLR2, LLR3 and LLR4 in the first stage, the sub-blocks between LLR−2 and LLR1 have finished updating in this stage. Therefore, we can advance the second stage by another processor. That is to say, while a processor updates LLR2, LLR3 and LLR4, another
+
+PROCESSOR
+
+R0 LLR−2 LLR−1 LLR0 R1 LLR−1 LLR0 LLR1 R2 LLR0 LLR1 LLR2 R3 LLR1 LLR2 LLR3 R4 LLR2 LLR3 LLR4 R5 LLR3 LLR4 LLR5 R6 LLR4 LLR5 LLR6 R7 LLR5 LLR6 LLR7
+
+R1 LLR−1 R2 LLR0 R3 LLR1 R4 LLR2 R5 LLR3 R6 LLR4 R7 LLR5 R8 LLR6
+
+LLR0 LLR1 LLR2 LLR3 LLR4 LLR5 LLR6 LLR7
+
+LLR1 LLR2 LLR3 LLR4 LLR5 LLR6 LLR7 LLR8
+
+Fig. 4. Computation with Single Processor.
+
+processor begins to work and updates LLR−1, LLR0 and LLR1. With the same idea, we can advance the third stage and so on. The new parallel decoding are shown in Fig. 5.
+
+PROCESSOR1
+
+PROCESSOR2
+
+R0 LLR−2 LLR−1 LLR0 R1 LLR−1 LLR0 LLR1 R2 LLR0 LLR1 LLR2 R3 LLR1 LLR2 LLR3 R4 LLR2 LLR3 LLR4 R1 LLR−1 LLR0 LLR1 R5 LLR3 LLR4 LLR5 R2 LLR0 LLR1 LLR2 R6 LLR4 LLR5 LLR6 R3 LLR1 LLR2 LLR3 R7 LLR5 LLR6 LLR7 R4 LLR2 LLR3 LLR4 R2 LLR0 LLR1 LLR2 R5 LLR3 LLR4 LLR5 R3 LLR1 LLR2 LLR3 R6 LLR4 LLR5 LLR6 R4 LLR2 LLR3 LLR4 R7 LLR5 LLR6 LLR7 R5 LLR3 LLR4 LLR5 R8 LLR6 LLR7 LLR8 R6 LLR4 LLR5 LLR6 R3 LLR1 LLR2 LLR3 R7 LLR5 LLR6 LLR7 R4 LLR2 LLR3 LLR4
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+Fig. 5. Computation with Parallel Processor.
+
+B. Memory-Efficient Management
+The operations of two parallel processors in Fig. 5 are identical, i.e., each processor accesses one sub-block of R and µ+1 sub-blocks of LLR in memory. Therefore, the operations in the same time can be exchanged between two processors. As a result, a processor updates the earlier received subblock corresponding to smaller index, while another processor updates later received sub-block corresponding to larger index.
+Particularly, when the decoder employs the parallel decoding schedule, the required memory of the decoder can be reduced by the following management. Once the last time of updating of LLRt is finished, the decoder remove the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1018
+
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+sub-block of LLRt from memory immediately. Therefore, we redivide each stage of two processors, and the result are shown in Fig. 6.
+
+PROCESSOR1
+
+PROCESSOR2
+
+R2 LLR0 LLR1 LLR2 R5 LLR3 LLR4 LLR5 R3 LLR1 LLR2 LLR3 R6 LLR4 LLR5 LLR6 R4 LLR2 LLR3 LLR4 R7 LLR5 LLR6 LLR7 R2 LLR0 LLR1 LLR2 R5 LLR3 LLR4 LLR5
+
+R3 LLR1 LLR2 LLR3 R6 LLR4 LLR5 LLR6 R4 LLR2 LLR3 LLR4 R7 LLR5 LLR6 LLR7 R5 LLR3 LLR4 LLR5 R8 LLR6 LLR7 LLR8 R3 LLR1 LLR2 LLR3 R6 LLR4 LLR5 LLR6
+
+Fig. 6. Memory-Efficient Computation.
+
+In this case, the decoder only needs to store 6 sub-blocks of R and 8 sub-blocks of LLR, while previously requires store 8 and 10 separately.
+
+C. New Decoding Algorithm
+Inspired by the above modifications, we propose a parallel and memory-efficient decoding. The new decoding have two parameter, the parameter P denotes the number of parallel processors, and the parameter I denotes the times of inner iteration. The algorithm of the new decoding is given below.
+Algorithm 1 New Decoding Algorithm Init decoder’s LLR memory with a large positive value Init decoder’s R memory with zero-value repeat Put one sub-block of LLR into LLR memory and one sub-block of zero-value into R memory for each p ∈ [1, P ] do for i = 1 → I do for j = 0 → µ do Update one sub-block of R and µ + 1 sub-blocks of LLR, they all start from the (p − 1)(µ + 1) + j + 1th sub-block end for end for Update one sub-block of R and µ + 1 sub-blocks of LLR, these sub-blocks start from the (p−1)(µ+1)+1th sub-block end for Shift LLR memory and R memory by one sub-block until the decoding is end
+
+In the repeat statement, the new decoding have three steps, the first step and the third step are the same as windowed decoding, but the second step is different. In the second step, P processors work parallelly, and each processor executes I(µ + 1) + 1 times of updation between different sub-blocks of R and LLR with layered algorithm. Notably, the top-most (left-most) sub-block of R (LLR) is the first sub-block.
+
+In addition, we analyze the implementation complexity of the new decoding on computational complexity, storage complexity and decoding latency.
+1) computational complexity: Let Ccheck denote the computational complexity required for updating a check node with degree dc. In the second step of the new decoding, there are P processors, each processor need to update mS check nodes I(µ + 1) + 1 times. Note that a block of LLR has nS decoded bit, thus the computational complexity per decoded bit is calculated as
+
+Cbit = P mS(I(µ + 1) + 1)Ccheck/(nS)
+
+(6)
+
+= P (1 − R)(I(µ + 1) + 1)Ccheck ,
+
+where R is the rate of the code and R = (n − m)/n. 2) storage complexity: In the memory of decoder, there are
+P (µ+1) sub-blocks of R and P (µ+1)+µ sub-blocks of LLR, the elements of these sub-blocks is mSdc and nS separately. Therefore, the size of required memory is given by
+
+Storage = P (µ + 1)mSdc + (P (µ + 1) + µ)nS . (7)
+3) decoding latency: Let Tcheck denote the time required for updating a check node with degree dc. In fact, decoding a sub-block of LLR needs to carry out the three step P (µ+1)+µ times. In the three step, the second step take up major time, and it requires mS(I(µ + 1) + 1)Tcheck. Thus, the decoding latency is given as
+
+∆delay = (P (µ + 1) + µ)mS(I(µ + 1) + 1)Tcheck . (8)
+
+IV. SIMULATION RESULTS
+In this section, we consider two time-invariant SC LDPC codes over AWGN channel:
+• Code1, µ = 2, dv = 4, dc = 20, m = 6, n = 30, S = 32 • Code2, µ = 1, dv = 4, dc = 20, m = 6, n = 30, S = 32
+
+A. Performance of New Decoding
+We simulate the bit-error rate (BER) of new coding with different parameters for Code1, and the result is shown in Fig. 7 and Fig. 8. It can be observed that increasing I or P leads to better performance. However, the former approach increases complexity and latency while the latter approach increases complexity, memory and latency, according to (6), (7), (8). Therefore, the new decoding can flexibly trade off implementainal complexity for performance.
+
+B. Comparison Results
+To show the merits of new decoding (ND), we compare it with windowed decoding (WD) and pipeline decoding (PD) under the same computational complexity. Though there are varying schemes for new decoding and windowed decoding, we only consider the scheme with I = 1 which has best performance on BER. Moreover, we list the implementational complexity of different decoding in Table I for convenience.
+Fig. 9 shows the BER comparision between different decoding for Code1 under the same computational complexity, and Fig. 10 shows the BER comparision for Code2. Particularly,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1019
+
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+TABLE I IMPLEMENTATION COMPLEXITY COMPARISION
+
+Type
+Windowed Decoding New Decoding
+Pipeline Decoding
+
+Computational Complexity
+Iw(1 − R)Ccheck P (I(µ + 1) + 1)(1 − R)Ccheck
+P (1 − R)Ccheck
+
+Storage Complexity
+wmSdc + (w + µ)nS P (µ + 1)mSdc + (P (µ + 1) + µ)nS (P (µ + 1) − µ)mSdc + P (µ + 1)nS
+
+Decoding Latency
+(w + µ)IwmSTcheck (P (µ + 1) + µ)(I(µ + 1) + 1)mSTcheck
+P (µ + 1)mSTcheck
+
+10−1 P=4,I=1 P=4,I=2 P=4,I=4
+10−2
+
+10−3
+
+BER
+
+10−4
+
+10−5
+
+10−6
+
+2.3
+
+2.4
+
+2.5
+
+2.6
+
+2.7
+
+2.8
+
+2.9
+
+3
+
+3.1
+
+E /N (dB)
+b0
+
+Fig. 7. BER of new decoding with different numbers of iterations I.
+
+10−1 WD,ω=28,I=1 ND,P=7,I=1 PD,P=28
+10−2
+
+10−3
+
+BER
+
+10−4
+
+10−5
+
+10−6
+
+2.3
+
+2.4
+
+2.5
+
+2.6
+
+2.7
+
+2.8
+
+2.9
+
+3
+
+3.1
+
+E /N (dB)
+b0
+
+Fig. 9. BER comparision between different decoding for Code1 (µ = 2).
+
+10−1
+
+10−1
+
+P=4,I=1
+
+WD,ω=30,I=1
+
+P=6,I=1
+
+ND,P=10,I=1
+
+P=8,I=1
+
+PD,P=30
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+BER
+
+BER
+
+10−4
+
+10−4
+
+10−5
+
+10−5
+
+10−6
+
+2.3
+
+2.4
+
+2.5
+
+2.6
+
+2.7
+
+2.8
+
+2.9
+
+3
+
+3.1
+
+E /N (dB)
+b0
+
+Fig. 8. BER of new decoding with different numbers of processors P .
+
+10−6
+
+2.3
+
+2.4
+
+2.5
+
+2.6
+
+2.7
+
+2.8
+
+2.9
+
+3
+
+3.1
+
+E /N (dB)
+b0
+
+Fig. 10. BER comparision between different decoding for Code2 (µ = 1).
+
+the windowed decoding and new decoding both apply the BP decoding on the sub-blocks with discontinuous updated-times, which causing improvement at small Eb/N0 and degradation at large Eb/N0 while compared with the pipeline decoding. As a result, we can see that the BER curves of windowed decoding and new decoding are identical, and they intersect with the BER curve of the pipeline decoding.
+According to Table I, we list the required memory and decoding latency of different decoding for Code1 in Table
+
+II, and Code2 in Table III. The window decoding is set as the reference point.
+V. CONCLUSION
+In this paper, we have presented two modifications to improve the layered windowed decoding of SC LDPC codes. Specifically, parallel computaion decreases decoding latency, whereas memory-efficient management decreases storage requirements and decoding latency. With the combination of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1020
+
+2020 IEEE/CIC International Conference on Communications in China (ICCC)
+
+TABLE II COMPARISION FOR CODE1
+
+Type
+WD (ω = 28, I = 1) ND (P = 7, I = 1)
+PD (P = 28)
+
+Storage
+100% 75% 290%
+
+Latency
+100% 11% 10%
+
+[10] N. U. Hassan, M. Schlu¨ter and G. P. Fettweis, “Fully parallel window decoder architecture for spatially-coupled LDPC codes,” in 2016 IEEE International Conference on Communications (ICC), Kuala Lumpur, 2016, pp. 1-6.
+[11] L. Schmalen, D. Suikat, D. Ro¨sener and A. Leven, “Evaluation of leftterminated spatially coupled LDPC codes for optical communications,” in 2014 The European Conference on Optical Communication (ECOC), Cannes, 2014, pp. 1-3.
+
+TABLE III COMPARISION FOR CODE2
+
+Type
+WD (ω = 30, I = 1) ND (P = 10, I = 1)
+PD(P = 30)
+
+Storage
+100% 67% 196%
+
+Latency
+100% 7% 6%
+
+these modifications, we proposed a parallel and memoryefficient decoding. The algorithm of new decoding is given and analyzed at the aspect of implementation complexity.
+Finally, we provided a comparsions between windowed decoding, new decoding and pipeline decoding. The results indicated that, new decoding were better than windowed decoding in required memory and decoding latency without performance loss, and were better than pipeline decoding in required memory with the cost of negligible performance loss.
+REFERENCES
+[1] A. Jimenez Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,”IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181-2191, Sept. 1999.
+[2] S. Kudekar, T. Richardson and R. Urbanke, “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over the BEC,” in 2010 IEEE International Symposium on Information Theory, Austin, TX, 2010, pp. 684-688.
+[3] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov and D. J. Costello, “Implementation aspects of LDPC convolutional codes,” IEEE Transactions on Communications, vol. 56, no. 7, pp. 1060-1069, July 2008.
+[4] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli and G. E. Corazza, “Windowed Decoding of Protograph-Based LDPC Convolutional Codes Over Erasure Channels,” IEEE Transactions on Information Theory, vol. 58, no. 4, pp. 2303-2320, April 2012.
+[5] L. Schmalen, V. Aref, J. Cho, D. Suikat, D. Ro¨sener and A. Leven, “Spatially Coupled Soft-Decision Error Correction for Future Lightwave Systems,” Journal of Lightwave Technology, vol. 33, no. 5, pp. 11091116, 1 March1, 2015.
+[6] N. Ul Hassan, A. E. Pusane, M. Lentmaier, G. P. Fettweis and D. J. Costello, “Non-Uniform Window Decoding Schedules for Spatially Coupled LDPC Codes,”IEEE Transactions on Communications, vol. 65, no. 2, pp. 501-510, Feb. 2017.
+[7] K. Klaiber, S. Cammerer, L. Schmalen and S. t. Brink, “Avoiding Burstlike Error Patterns in Windowed Decoding of Spatially Coupled LDPC Codes,” in 2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing (ISTC), Hong Kong, Hong Kong, 2018, pp. 1-5.
+[8] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop on Signal Processing Systems, 2004. SIPS 2004, Austin, TX, 2004, pp. 107-112.
+[9] D. Chang et al., “LDPC convolutional codes using layered decoding algorithm for high speed coherent optical transmission,” in OFC/NFOEC, Los Angeles, CA, 2012, pp. 1-3.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:10:37 UTC from IEEE Xplore. Restrictions apply.
+1021
+
+

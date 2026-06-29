@@ -1,0 +1,453 @@
+A Low-complexity LDPC Decoder Architecture for WiMAX Applications
+Yu-Luen Wang, Yeong-Luh Ueng, Chian-Lien Peng, and Chung-Jay Yang Dept. of Electrical Engineering National Tsing Hua University Hsinchu, Taiwan, R.O.C.
+
+ABSTRACT
+In this paper, we present a low-complexity decoder architecture for WiMAX low-density parity-check (LDPC) codes based on a unified task processor. Memory access is accomplished through routing networks with fixed interconnections and memory address generators, which are quite simple due to the quasi-cyclic structure of the LDPC codes. In order to increase the decoding throughput, the check-node and variablenode operations are performed concurrently, and a modified layered decoding is employed. Based on this architecture, we implemented a full-mode WiMAX codec in a 90-nm process. This codec achieves an encoding (decoding) throughput of 960 Mb/s (240 Mb/s) and occupies an area of 0.679 mm2.
+Keywords— LDPC codes, channel decoder, WiMAX.
+I. INTRODUCTION
+Designing a flexible WiMAX LDPC decoder architecture with low complexity for which most hardware resources can be reused when decoding different codes is a challenge [1][2]. An LDPC code can be decoded using message-passing decoding (MPD) through its Tanner graph, which is a bipartite graph consisting of variable nodes and check nodes. In order to increase the convergence speed in BER performance, layered MPD (LMPD) presented in [3][4] can be adopted. In LMPD, the rows of a parity-check matrix (PCM) are partitioned into several layers. Applying the partition method presented in [4] to a quasi-cyclic (QC) LDPC code, the resultant layers have properties such that the core matrices, which are non-zero columns in each layer, are column permuted versions of each other. This modified layered decoding is called LMPD using an identical core matrix (LMPD-ICM).
+This paper presents a low-complexity LMPD-ICM-based decoder architecture using the following techniques. First, the operations of variable and check nodes are divided into small tasks such that different codes can be decoded through a unified architecture. Second, the memory access is accomplished through a simple routing network with fixed interconnections and low-complexity memory address generators based on the quasi-cyclic structure of the codes. To increase decoding throughput, the check-node and variable-node operations are performed concurrently, and a pipelined architecture is adopted. Based on this architecture, we implemented a fullmode codec that supports 114 WiMAX LDPC codes.
+
+II. PRELIMINARIES
+A. QC-LDPC codes in WiMAX
+0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 0 6 13 -1 11 1 -1 22 21 2 21 13 20 8 1 0 9 5 1 19 20 0 -1 -1 -1 1 -1 9 10 11 3 19 11 -1 10 5 3 17 3 18 0 11 12 0 0 0 0 -1 12 20 20 1 16 -1 5 -1 7 6 22 15 20 2 21 19 15 22 16 3 -1 -1 0 0 12 -1 12 3 -1 9 3 2 2 5 13 22 7 23 14 7 21 23 2 16 20 -1 -1 0
+
+CNU0, VNU0 CNU1, VNU1 CNU2, VNU2 CNU3, VNU3
+
+0(21) 0(22) 0(23) 20(20)
+Input0
+
+19(19) 10(10) 19(15)
+2(18)
+Input1
+
+8(13) 11(17) 15(16) 14(14)
+Input2
+
+6( 1) 11( 5)
+5( 6) 3( 3)
+Input3
+
+21( 8) 21(10) 13(11) 0( 0) 9( 3) 17(13) 12(18) 10( 4)
+22(17) 20(12) 20( 2) 20( 1) 21(16) 3( 6) 9( 5) 7(15)
+TASK5
+
+20(12) 1(18) 3( 6) 5(11) 1( 3) 6( 9) 2( 7) 12( 0)
+
+9(16) 13( 2) 8(15) 0(20) 2(13) 21(14) 2( 8) 16(19)
+
+TASK4
+
+1(14) 5(17) 22( 7) 1( 5) 0(16) 0(19) 3(12) 1( 1) 12( 0) 7( 8) 16(18) 16( 4) 13(10) 12( 2) 5( 9) 22(11)
+TASK3
+
+0(15) 20(20) 2( 9) 11( 4) 11( 8) 0(21) 3(14) 19( 7) 22(10) 0(22) 3(19) 15(11) 23(17) 0(23) 23(13) 7(12)
+TASK2
+
+Fig. 1. Processing tasks based on the computer search.
+The PCM for the QC-LDPC code specified in WiMAX can be expressed as an array of z × z circulant matrices. The PCM is constructed by respectively substituting each -1 and each non-negative integer s in an Mb × Nb prototype matrix with a z × z zero matrix and a z × z weight-1 circulant matrix with a shift index s. Consequently, for the PCM, the dimensions are zMb × zNb, and there are Mb block rows and Nb block columns. Fig. 1 shows the prototype matrix in WiMAX for the rate-5/6 code when z = 24. In WiMAX, there are 114=(6×19) QC-LDPC codes which can be classified into six classes. Each class consists of 19 different codes with the same code rate specified by a different expansion factor z.
+B. Layered message passing decoding (LMPD)
+To perform LMPD, the check nodes are divided into L layers (groups) for which the size of each group is ML check nodes, where LML = zMb. First, the check-to-variable (C2V) messages Ri(j0) are initialized at zero for all i and all j ∈ IR(i) values, where IR(i) denotes the index set of the variable nodes connected to the check node i. Then, check-node and variablenode operations for layer 0, layer 1, · · ·, layer L − 1, are sequentially performed to complete one iteration. The extrinsic values are then exchanged among the layers. At the end of the kth iteration, the APP (a posteriori probability) value Λ(jk) of the jth bit is Λ(jk) = λj + i ∈IC(j) Ri(kj) where λj is the channel (reliability) value of variable node j, and
+
+978-1-4244-8499-7/11/$26.00 ©2011 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:14:51 UTC from IEEE Xplore. Restrictions apply.
+
+IC(j) denotes the index set of check nodes connected to variable node j. At the kth iteration, the decoding operations
+
+are described as follows:
+
+Operations at variable nodes for layer : For each
+
+variable node j, associated with check nodes i in layer , i.e.,
+
+· ML ≤ i < ( + 1) · ML, compute the variable-to-check
+
+(V2C) message Qj(ki ) messages corresponding to each of its
+
+check node neighbors i according to Qj(ki ) = Λ(jk, )−1 − Ri(jk−1),
+
+where Λj(k, )−1 = Λj(k−1) + i ∈IC (j) [Ri(kj) − Ri(kj−1)].
+
+Operations
+
+at
+
+check
+
+i<
+nodes
+
+f·M orL
+
+layer
+
+: For each check
+
+node i in layer , compute C2V message Ri(jk) corresponding
+
+to each of its variable node neighbors j according to
+
+Ri(jk) = Si(jk) · max minj ∈IR(i)\{j} |Qj(ki)| − β, 0 , where
+
+β is a positive constant, and Si(jk) = j ∈IR(i)\{j} sgn(Qj(ki)). At the end of the processing of the th layer for the kth
+iteration, Λj(k, ) values are updated according to
+
+Λj(k, ) = Λj(k, )−1 +
+
+[Ri(kj) − Ri(kj−1)]. (1)
+
+i ∈IC (j) ·ML≤i <( +1)·ML
+
+C. LMPD using identical core matrix (LMPD-ICM)
+
+In [4], the rows of H are divided into z layers, in which the th layer, denoted as H , consists of the th, (z + )th, · · ·, [(Mb − 1)z + ]th rows in H for 0 ≤ < z. The non-zero columns of H form the core matrix H for layer which can be used as a PCM for a shorter code whose code bits come from those of C. It has been demonstrated in [4] that these core matrices H , 0 ≤ < z, are column-permutated versions of each other. Consequently, the routing networks for all layers are the same. LMPD using this kind of layer definition is called LMPD-ICM. It has also been demonstrated that for WiMAX LDPC codes belonging to the same class, the core matrices are almost the same. This property benefits the implementation of the routing networks, since the 19 codes in the same class can share the same routing networks.
+
+5DWH
+
+/D\HU
+
+7DVN
+
+3URFHVVLQJ 6HTXHQFH
+
+/D\HU
+
+/D\HU
+
+Fig. 2. The relationship between the layer, task, and processing sequences for the rate-5/6 code classe.
+III. A UNIFIED DECODER ARCHITECTURE
+Since the layer size is not the same for the six code classes, in order to enable hardware reuse, the decoding parallelism adopted is the smallest layer size among the six code classes, which is 4 in this case. Consequently, for some code classes, a layer should be partitioned into several sub-layers with a size not larger than 4. For decoding rate-5/6 codes, the partition is not needed. Since the decoding parallelism is 4, there are four
+
+check-node units (CNUs) and four variable-node units (VNUs) in the proposed decoder. Considering the row weights given in the WiMAX standard, 4-input CNUs and 4-input VNUs are adopted to enable efficient hardware reuse. Consequently, the number of data values, such as APP values and C2V messages, accessed per cycle is 16. The operations associated with each sub-layer (layer) are divided into several tasks. Each task must be in a form that can be processed using a unified architecture, i.e., task processor. For example, as shown in Fig. 2, each layer for a rate-5/6 code is divided into 5 tasks. In Sections III.A to III.C, a case based on rate-5/6 codes is used to illustrate the proposed decoder architecture shown in Fig. 3, which can process these smaller tasks in sequence.
+A. An overview of the proposed task processor
+
+[ PRG ] [ 67 67 67 67 67
+
+5HDG $GGUHVV
+
+,QGH[ &DOFXODWRU
+
+[ϗ [ϗ PRG ] $GGUHVV *HQHUDWRU
+
+$GGUHVV *HQHUDWRU
+
+:ULWH $GGUHVV
+
+$33 0HPRU\
+%ORFN
+$33 0HP $33 0HP
+
+$GGUHVV 520 'H FRPSUHVVRU
+
+PHVVDJHV
+
+5LMN
+
+Ȇ
+
+/
+
+N M
+
+4
+
+N ML
+
+PHVVDJHV Ȇ
+
+),)2 %XIIHU
+
+&RPSUHVVHG &9
+0HPRU\ %ORFN
+
+&03
+6 &03
+E
+6LJQ
+
+& 9 0HP & 9 0HP
+
+& 9 &DOFXODWRU
+
+&18 &18
+
+5LMN
+
+918
+
+/
+
+N M
+
+918
+
+Fig. 3. The block diagram for the proposed decoder architecture, where the number of messages is labeled on the buses.
+
+For rate-5/6 codes, four 4-input CNUs are respectively used
+to process the four rows in each layer. Since the row weight
+of a rate-5/6 PCM is 20, there are 20 V2C messages and
+20 C2V messages associated with a single row. Four V2C
+messages associated with the same row are fed into the same CNU at every cycle. Thus, a total of 16 V2C messages Q(jki ) must be calculated by four VNUs using the associated 16 APP values Λj(k, )−1 and 16 C2V messages Ri(jk−1), where each VNU calculates four V2C messages Qj(ki ), which are then sent to the corresponding CNU. Each CNU recursively compares the magnitudes of four incoming V2C messages Qj(ki ) to update the 20 C2V messages. The 20 updated C2V messages Ri(jk) are then sent to the corresponding VNU in parallel. Consequently,
+it takes five cycles to process a single layer and a total of
+5z cycles to accomplish a single iteration. The updated C2V messages Ri(jk), which will be used in the next iteration, are stored in the C2V memory bank. The registers in the VNUs
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:14:51 UTC from IEEE Xplore. Restrictions apply.
+
+are used to store the V2C messages Qj(ki ) temporarily until the C2V messages Ri(jk) are calculated by the corresponding CNU. The APP memory bank consists of 24 memory blocks, each of which is used to store the APP values corresponding to one block column in the PCM. Through the address generators and routing network Π1 (Π2), we can read (write) 16 APP values Λj(k, )−1 (Λj(k, )) from (into) the APP memory bank. A ROM module is used to store the information of the initial addresses for the 24 address generators. Since there are 80 weight-1 circulant matrices in the PCM of a rate-5/6 code, in order to process a single LMPD-ICM layer, we must access 80 APP values from the APP memory bank. Note that some of these APP values are the same, since there are several weight-2 variable nodes in a single layer. Remember that 16 APP values are required in each cycle and, hence, 16 APP values are accessed from the memory bank in each cycle. Due to the restriction that only one APP value can be read from an APP memory block during a single cycle, the 16 values accessed simultaneously should be individually distributed among the 24 APP memory blocks. As a result of this restriction, the 80 non-negative elements in the prototype matrix are divided into 5 groups (matrices) where each matrix consists of 16 non-negative elements drawn from 16 different columns. Accordingly, the check-node operations and variablenode operations are divided into 5 tasks. These five tasks are performed in sequence in order to process the associated APP values, C2V messages and V2C messages. The arrangement of these tasks is determined by a computer search that ensures that the hardware restriction can be met. Fig. 1 shows an arrangement of the 5 tasks and the associated assignment of data to the corresponding CNUs and VNUs for the prototype matrix, where TASKi denotes the ith task, 1 ≤ i ≤ 5, and s and j in s(j) of each task denote the shift index in the original prototype matrix and the index of its corresponding column of the prototype matrix (or the APP memory block), respectively. Note that s(j) is also the initial address for the jth APP memory block, and the columns of the tasks indicate the input positions of the VNUs and CNUs (see Fig. 1). It can be seen that the 16 elements in each task come from 16 distinct columns of the prototype matrix, and the non-negative elements belonging to the same column of the prototype matrix are distributed across distinct tasks. Although we can read (write) 24 values from the APP memory bank, only 16 APP values are read (written) from (back) into the memory in order to guarantee that the access restriction can be satisfied in the other code classes and thereby achieve a unified architecture.
+B. CNU and VNU
+The four VNUs and four CNUs operate concurrently in order to increase the decoding throughput. As shown in Fig. 3, a CNU is divided into four stages. In the first stage, the four V2C messages |Q(jki )| are sent to a 4-input compare (CMP4) unit. The CMP4 unit, which consists of six comparators, is used to choose the two smallest values among the four inputs. In the second stage, a simplified-CMP4 (S-CMP4) unit, which consists of only three comparators, is used to locate the two
+
+smallest values among the four inputs, where two of the four inputs are fed back from the output of the S-CMP4 unit. The number of comparators in the S-CMP4 unit is smaller than that of CMP4, since the four input values of the S-CMP4 unit are partially ordered. In the third stage, the Sign unit is used to calculate the signs of the new C2V messages Ri(jk). The outputs of this stage are the compressed C2V messages, which are also sent to the compressed C2V memory blocks for the later use in the next iteration. In the last stage, the 20 C2V messages are concurrently calculated by the C2V Calculator. These 20 C2V messages will be sent to the VNU simultaneously in order to update the APP values.
+
+)URP WKH RXWSXWV RI GH FRPSUHVVRUV RI
+WKH & 9 PHPRU\ EORFNV & 9 7R &18 9&
+
+&18 RXWSXWV IRU 7 &9
+
+)URP $33 PHPRU\ Ȇ EDQN
+
+PHVVDJHV
+
+918 67
+
+67
+
+67 67
+
+67
+
+918
+
+&18 RXWSXWV IRU 7 &9
+67
+
+&18 RXWSXWV IRU 7 &9
+67
+
+&18 RXWSXWV IRU 7 &9
+
+&18 RXWSXWV IRU 7 &9
+
+7R $33 PHPRU\
+EDQN
+Ȇ
+
+67
+
+67
+
+67
+
+4
+
+M
+
+N L
+
+5L N M
+
+4
+
+M
+
+N L
+
+/
+
+N M
+
+3DUDOOHO XSGDWH 8QLW
+
+)RUZDUGLQJ
+
+Fig. 4. The block diagram for the variable-node processor (VNP) which consists of four VNUs and a Parallel-update Unit.
+
+/O7 5 /O7
+/D\HU "
+
+8SGDWH $33 YDOXHV E\ / M 4ML 5LM
+
+%Ȇ
+
+4 67 67
+
+67
+
+67
+
+),)2 67 67
+
+67
+
+67
+
+67
+
+:
+
+5
+
+%Ȇ
+
+4
+
+),)2
+
+67 67 67 67 67 67 67 67 67
+
+:
+
+/O7
+
+5
+
+%Ȇ
+
+4
+
+),)2
+
+67 67 67 67 67 67 67 67 67
+
+:
+
+/D\HU "
+
+5 5HDG $33 YDOXHV % %XIIHU WKH PHPRU\ RXWSXW 4 &RPSXWH 4 E\ $33 5 : :ULWH $33 YDOXHV WKURXJK Ȇ
+
+67L 9 & PHVVDJHV 67L $33 YDOXHV
+
+/O 7
+
+5
+
+%
+
+Ȇ
+
+4 67
+
+67
+
+67
+
+67
+
+),)2 67 67
+
+67
+
+67
+
+67
+
+:
+
+/D\HU "
+
+Fig. 5. Timing diagram for the VNP when decoding a rate-5/6 code.
+
+Fig. 4 shows the architecture for the variable-node processor (VNP) which consists of four VNUs and one Parallel-update Unit. Each VNU is divided into ten stages, and the ith stage is denoted as STi. These stages are used to calculate the V2C messages, temporarily store the V2C messages, and update the APP values. Fig. 5 shows the timing diagram for the five tasks performed in the VNP. After the 16 APP values associated with a task are read from the memory and passed through Π1, they are fed into 16 subtractors located in ST1 of the four VNUs. The 16 C2V messages Ri(jk−1) are subtracted from their corresponding APP values Λj(k, )−1 by the 16 subtractors to obtain the associated 16 V2C messages Qj(ki ). Following that, the V2C messages are sent to the corresponding CNUs and the registers in ST3. Registers in both ST4 and ST5 are used to temporarily store the V2C messages while the CNUs are calculating the C2V messages. Since the five tasks are executed in sequence, the five tasks associated with the same layer must be in five consecutive stages. When the TASK1 is in ST9 (or, equivalently, TASK5 is ST5), the updated C2V
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:14:51 UTC from IEEE Xplore. Restrictions apply.
+
+messages Ri(jk) for a single layer are available. The APP values associated with the five tasks (or one layer) are then updated in parallel according to (1). In other words, the APP values associated with TASK1, TASK2, · · ·, TASK5 are updated in ST9, ST8, · · ·, ST5, respectively. Finally, the updated APP values Λj(k, ) associated with each task are written to the APP memory bank through Π2. Note that while the VNUs are performing the APP update for layer , the CNUs are processing layer ( + 1).
+Since data dependency and, hence, data hazard exists between check nodes, not only in the same layer, but also in two distinct layers. To overcome the problem, instead of introducing idle cycles, a delta-based update technique is employed such that the decoding throughput can be increased. The delta-based update is performed in the Parallel-update Unit shown in Fig. 4. In addition, with the help of the computer search [5], the processing tasks are scheduled such that the hardware resources used to overcome the data hazards encountered is negligible.
+C. APP memory access and routing networks
+As shown in Fig. 3, each of the 24 APP memory blocks is controlled by an address generator. Since the decoding operations are performed task by task, the 24 addresses generated concurrently by the address generators are used to access 16 APP values associated with a task at each cycle. Since it takes five cycles to process the five tasks for each layer, an address generator consists of a five-stage shift register, which stores the five addresses of five APP values to be processed in sequence. For the first five cycles, the generated addresses, which are initialized by the address ROM module, are used to access the APP values associated with the five tasks of the first layer. The address for the th layer is (s(j) + )mod(z) due to the quasicyclic property of the codes, where s(j) denotes the initial address of the jth memory block for the first layer, as shown in Fig. 1. For example, in TASK1 of the first layer, the APP value stored at the 6th address of the 1st APP memory block is accessed for Input3 of VNU0. In TASK1 of the second layer, the APP value stored at the 7th address of the same memory block is accessed for Input3 of VNU0. Note that when z varies, only the initial addresses change while the column index of j remains the same. Since the processing latency for each task is fixed, the difference between the address being read and the address being written is always the same. Consequently, we can always calculate the write address from certain stage of the shift register in the address generator, which stores the read address, as shown in Fig. 3.
+Routing network Π1 consists of 16 multiplexors, respectively, for the 16 inputs of the four VNUs. The size of each multiplexor is 5-to-1, since there are five tasks and, hence, five possible APP memory blocks connected to it. For example, the entries in the first column and the first row of the five tasks shown in Fig. 1, i.e., 0(21), 0(15), 1(14), 20(12), and 21(8), are associated with the first input of VNU0. Consequently, the multiplexor for this input connects the 21st, 15th, 14th, 12th and the 8th APP memory blocks. Similarly, Π2 can be
+
+TABLE I COMPARING-TABLE
+
+[1]
+
+[2]
+
+Proposed
+
+(measurement) (measurement) (post-layout)
+
+Process
+
+130nm
+
+90nm
+
+90nm
+
+No. of enc. (dec.) modes
+
+0 (19)
+
+0 (114)
+
+114 (114)
+
+Operating frequency
+
+83.3 MHz
+
+150 MHz
+
+400 MHz
+
+Quantization (bits)
+
+8
+
+6
+
+7
+
+No. of iterations Throughput (Mb/s)‡
+
+8
+
+20
+
+8-12
+
+60.6
+
+126 (max)
+
+133.3-240
+
+SNR(dB) at BER=10−5†
+
+3.1
+
+2.2
+
+2.15
+
+Area (mm2) Scaled area (mm2) TAR (Mb/s/mm2)
+
+4.45 2.225 27.2
+
+6.25 6.25 20.2(max)
+
+0.679 0.679 196.3-353.5
+
+Energy efficiency (pJ/bit)‡
+
+863
+
+2095
+
+516-845 ∗
+
+† The comparison is based on the WiMAX (2304,1152) LDPC code. ‡ For decoder. ∗ Post-layout estimation. Early-termination is disabled.
+
+designed. The advantage of the routing networks is that they can be shared by the 19 different codes in the same class, since the interconnections between the 24 APP memory blocks and the 16 inputs of the four VNUs do not change when z varies. Consequently, these routing networks intrinsically support the multi-length functionality.
+IV. RESULTS AND CONCLUSIONS
+We can divide the decoding operations of 114 WiMAX LDPC codes into several similar tasks. With a slight modification of the task processor presented in Section III, a full-mode LDPC code chip was implemented in a 90-nm CMOS process. In addition to the decoder, both early-termination circuit and encoder are included in this chip. Although the parallelism is low, the proposed codec can achieve throughput values of hundreds of Mbit/s. In addition, the throughput of this codec is nearly independent of or code length. Since the work is targeted at consumer and portable applications, the area and power consumption should be as small as possible. As shown in Table I, the proposed codec achieves the smallest area and the best energy efficiency.
+REFERENCES
+[1] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm2 52 mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13 μm CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 672-683, March 2008.
+[2] C.-H. Liu, S.-W. Yen, C.-L. Chen, H.-C. Chang, C.-Y. Lee, Y.-S. Hsu, and S.-J. Jou, “An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 684-694, March 2008.
+[3] D.-E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop on Signal Processing Systems (SIPS), pp. 107-112, Oct. 2004.
+[4] Y.-L. Ueng and C.-C. Cheng, “A fast-convergence decoding method and memory-efficient VLSI decoder architecture for irregular LDPC codes in the IEEE 802.16e standards,” in Proc. IEEE Semiann. Vehicular Technology Conf., pp. 1255-1259, Oct. 2007.
+[5] Y. L. Wang, Y. L. Ueng, C. L. Peng, and C. J. Yang, “Processing-task arrangement for a low-complexity full-mode WiMAX LDPC Codec,” to appear in IEEE Trans. Circuits Syst. I, Reg. Papers
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:14:51 UTC from IEEE Xplore. Restrictions apply.
+
+

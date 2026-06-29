@@ -1,0 +1,517 @@
+TRADE-OFF ANALYSIS OF DECODING ALGORITHMS AND ARCHITECTURES FOR MULTI-STANDARD LDPC DECODER
+
+Robert Priewasser, Mario Huemer
+Embedded Systems & Signal Processing Klagenfurt University
+9020 Klagenfurt, Austria
+
+Bruno Bougard
+Wireless Group IMEC
+3001 Leuven, Belgium
+
+ABSTRACT
+Since Low-Density Parity-Check (LDPC) codes deliver excellent decoding performance, they are adopted in several recent communication standards like the IEEE 802.11n, IEEE 802.16e and DVB-S2. This raises the need for multi-standard, multi-mode decoder architectures. In this paper we propose to use the min-sum approximation together with a turbo-like decoding approach for decoding LDPC codes, and afterwards we perform a global trade-off analysis which enables the designer to choose the appropriate decoding algorithm.
+Index Terms— LDPC, forward error correction, SDR, trade-off analysis, fixed-point refinement
+1. INTRODUCTION
+The trend of electronic devices to become an integral part in any thinkable application area raised the need for flexible solutions to cover a broad range of applications. For forward error correction (FEC) in general, the implementation approaches are typically very conservative. For the supported standards, individual rather fixed hardware accelerator blocks are deployed to perform the channel (de)coding. Due to the high throughput requirements of these blocks this was the only way to reach the design goals in the past. However, with the multiplication of coding schemes and options, there is a clear need for more flexible solutions, both to enable the support of future standards and for chip area reduction. This paper focuses on a sub-class of LDPC codes, namely architecture-aware (AA) ones, which are composed in such a way that they enable high-throughput, reduced-complexity decoder architectures [1–3]. Two recent communication standards, the IEEE 802.11n and 802.16e standard, are complying with this approach. A turbo-inspired decoding procedure has been introduced in [4] which has the advantage to significantly reduce the computation complexity. This approach is interesting for an application specific instruction set processor (ASIP) implementation [5] since the turbo-like decoding approach can efficiently be mapped to an instruction set architecture (ISA).
+
+In this paper we show how the turbo-like decoding can also be used with a modified min-sum approximation, which further reduces the memory footprint significantly. Afterwards, a global trade-off analysis of the different decoding algorithms for LDPC codes, not only in terms of bit error rate (BER) performance, but also by taking the computational complexity, the fixed-point behavior and the achievable throughput into account, is performed. This is done having in mind a future ASIP implementation. We also propose a unified instruction set which allows efficient computation of the core kernels and which will build the basis for the complexity analysis.
+In Section 2 the basics of LDPC decoding are presented. The trade-off analysis is then performed in Section 3 and the paper concludes with Section 4.
+2. LDPC DECODING
+2.1. Background
+Decoding of LDPC codes is done in an iterative way and all computations are typically performed in the log-domain. The parity-check matrix H defining an LDPC code can be represented by a bipartite graph [1]. The graph contains two types of nodes: check nodes (CN) and bit nodes (BN), which correspond to the M rows and the N columns of H, respectively. Each CN represents a parity check equation, whereas each BN represents a coded bit. Denote the set of all CNs, directly passing probability messages to the BN with index i as C [i]. The degrees of CNs and BNs are defined by the number of edges which are connecting them with neighboring BNs or CNs and are denoted dcj and dvi , for the degree of CN j and BN i, respectively.
+Instead of implementing the two-phase message passing algorithm, as summarized in [4], a check-node-centered processing scheme is considered. The reader is referred to [1–4] for further details about the basic algorithms.
+
+978-1-4244-2924-0/08/$25.00 ©2008 IEEE
+
+88
+
+SiPS 2008
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+In [6], a more detailed summary of the different decoding approaches is given.
+
+L(Λi) = L(vi) +
+
+L(μcj →bi )
+
+(1)
+
+j∈C[i]
+
+L(μbi→cj ) = L(Λi) − L μcj→bi
+
+(2)
+
+Denote μcj→bi (x) with x ∈ {0, 1} as the probability of CN j to be satisfied, when bit i is 0 or 1, respectively. Also denote μbi→cj (x) with x ∈ {0, 1} as the probability of BN i to be 0 or 1, computed for CN j, respectively. The log-likelihood ratio (LLR) of a binary-valued random variable U is defined as L(U ) = log(PU (u = 1)/PU (u = 0)), where PU (u) denotes the probability that U takes value u. When converted to LLRs, the CN and BN probabilities are written as L(μcj→bi ) and L(μbi→cj ), for the CN and BN message, respectively. Further denote L(vi) as the LLR of bit i, i = 1 . . . N from the vector v. Where v represents the received codeword. During decoding, first every BN computes an a posteriori probability (APP) L(Λi) as LLR, which represents the updated estimate for bit i to be 1 or 0, see equation (1). Based on L(Λi), every BN i computes the BN LLRs (L(μbi→cj )) for connected CNs, see (2). Next, every CN computes LLRs for all con-
+nected BNs, which finishes the decoding round. How the CN messages L(μcj→bi ) are computed depends on the approximation used. In the following paragraphs, two approxima-
+tions will be introduced.
+Since we are targeting a check-node-centered compu-
+tation scheme, BNs are reduced to storage places and all
+computations are carried out by the CN processing unit.
+The LLRs a CN needs to produce for all connected BNs can
+efficiently be computed by applying the forward/backward al-
+gorithm, also referred to as the turbo-like decoding algorithm
+(TDMP). Additionally, a layered belief-propagation (LBP)
+decoding approach can be used to exploit the regularities of
+the AA codes used in the investigated standards. The reader
+is referred to [4], for further details about the algorithm.
+For the turbo-like decoding algorithm, the computations
+of each CN are mapped to a 2-state trellis diagram. The LLRs, the considered CN j has received from connected BNs are used as input metric Δλi, with i = 1 . . . dcj (equation (3)). The LLR produced for connected BNs are then computed by
+taking the appropriate state metric from the forward and backward recursion, Δαi and Δβi, respectively, see (6). In (4) and (5) is summarized, how the state metrics are computed.
+
+Δλi = L(μbi→cj )
+
+(3)
+
+Δαi+1 = q(Δαi, Δλi+1)
+
+(4)
+
+Δβi−1 = q(Δβi, Δλi)
+
+(5)
+
+L μcj→bi = q(Δαi−1, Δβi).
+
+(6)
+
+Mansour [4] proposed the use of the max -based approximation (MASTBA) to perform the computations. The function used to compute the forward-/backward and output metric is
+
+given by
+
+q(x, y) = max (x, y) − max (x + y, 0).
+
+(7)
+
+Here max (x, y) = log (ex + ey). For the max function, Mansour proposed a simple but relatively accurate approximation [4]:
+
+q(x, y) ≈ max(x, y) + max
+
+5 8
+
+−
+
+|x
+
+− 4
+
+y| ,
+
+0
+
+−
+
+max(x + y, 0) − max
+
+5 8
+
+−
+
+|x
+
++ 4
+
+y| ,
+
+0
+
+.
+
+(8)
+
+In order to enable a recursive computation of the aforementioned metrics, proper boundary conditions need to be defined. For the MASTBA, they are given by Δα0 = Δβdcj = −∞ for the first element of the forward and the backward recursion, respectively.
+
+2.2. Contribution
+
+We propose to use the well known min-sum-based approximation (MSBA) [7] when implementing the turbo-like decoding algorithm. We will show in section 3, that this way of message computation has advantages compared to the MASTBA, depending on the design criteria.
+In order to use the MSBA, the following adaptations to the TDMP algorithm are necessary: The function evaluated for the forward-/backward recursion and the output metric is computed by evaluating (9).
+
+q(x, y) ≈ min(|x|, |y|) · sgn(x) · sgn(y).
+
+(9)
+
+Additionally, the boundary conditions need to be changed to Δα0 = Δβdcj = ∞.
+Interestingly, the MSBA can further be optimized to reduce the memory footprint. The required CN message storage can be reduced by exploiting the fact that out of all CN LLRs of a single CN only two magnitudes are of interest, since only the smallest and the second smallest magnitude is used to produce LLRs for connected BNs. A more detailed discussion about the optimized MSBA message computation can be found at [6].
+
+3. IMPLEMENTATION TRADE-OFF ANALYSIS
+Extensive simulations have been performed to compare the performance of the decoding algorithms discussed above. See Fig. 2(a), where the floating point performance has been analyzed. There, as reference curve, the optimum implementation of the belief-propagation (BP) algorithm is also depicted [1, 4].
+As forecasted, applying layered decoding increases the convergence speed by almost a factor two [8]. This can be observed in Fig. 2(b), when comparing the BP and the LBP algorithm in terms of number of iterations needed to converge.
+
+89
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+BER BER
+
+1e+00 1e-01 1e-02
+
+BER curve
+MSBA (floating-point) MSBA; in:4.2, dp:8.2 MSBA; in:4.2, dp:6.2 MSBA; in:4.2, dp:5.2
+
+1e-03
+
+1e-04
+
+1e-05
+
+1e-06
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0
+
+(a) Fixed-point BER performance of the MSBA.
+
+1e+00 1e-01 1e-02
+
+BER curve
+MASTBA (floating-point) MASTBA; in:4.2, dp:9.2 MASTBA; in:4.2, dp:8.2 MASTBA; in:4.2, dp:7.2
+
+1e-03
+
+1e-04
+
+1e-05
+
+1e-06
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0
+
+(b) Fixed-point BER performance of the MASTBA.
+
+Fig. 1. Fixed-point BER performance for the (1944,972)-irregular LDPC code, standardized in IEEE 802.11n. In (a) and (b) the simulation results when reducing the data path bitwidth are shown for the MSBA and MASTBA, respectively.
+
+Applying the layered scheme has no impact on the BER performance, see Fig. 2(a).
+From the introduced algorithms, the MASTBA performs better in terms of BER performance and convergence speed than the MSBA, when implemented in floating-point, as depicted in Fig. 2(a) and 2(b), respectively. Because of the very accurate approximation applied when implementing the max operation, the MASTBA performs very close to the optimum implementation.
+3.1. Fixed-point refinement
+For hardware implementation, the fixed-point behavior of the introduced algorithms is of great interest. Simulations have shown, that for representation of LLR values of individual elements in the received codeword, a bitwidth of 6 bit, with 4 bit for the integer part and 2 bit for the fractional part, is sufficient. To identify the minimum bit width for the data path of the ISA, simulations have been performed for each decoding approach, as discussed next.
+MSBA: In Fig. 1(a) the results of the fixed-point refinement for the MSBA are depicted. For the experiment, 6 bit have been used for representing received messages. The internal data path width has been reduced starting from 10 down to 7 bit. For the fractional part, two bit have shown to be sufficient. Intuitively, quantization means a degradation in BER performance, but the opposite effect can be observed here, where the quantized version of the MSBA delivers the same BER performance as the floating-point implementation with an signal-to-noise-ratio (SNR) reduced by half a dB. In fact, the MSBA benefits from the clipping performed to avoid overflows in the fixed-point implementation, where the magnitudes of overestimated probabilities are saturated. Similar effects have been observed in [9]. As seen in Fig. 1(a) the
+
+algorithm delivers excellent results as long as the bit width is greater than 7.
+MASTBA: In Fig. 1(b) the fixed-point experiments for the MASTBA are depicted. It was found that this approximation is more sensitive to quantization. The data path width has been reduced from 11 down to 9 bit. The fractual part was again two bit wide. The results show that the approximation delivers feasible decoding results with a minimum data path bitwidth of 10 bit. When further reducing the bitwidth, as seen in the plot, the algorithm does not converge to valid codewords anymore. Note that the quantized version of the MASTBA does not outperform its floating point implementation, as the MSBA does.
+Optimized MSBA: The optimization of the message storage when implementing the MSBA has no impact on the decoding performance and convergence speed. Only the computation kernel gets a bit more complicated, since pack/unpack instructions need to be performed in order to store/extract individual messages, respectively. This reduces the achievable throughput.
+The fixed-point implementation of the MSBA and the MASTBA are compared in Fig. 2(c). The MASTBA shows a BER performance degradation of around 0.1 dB compared to the MSBA. Also, in the low SNR region, the MSBA converges an average of around 9 iterations faster than the MASTBA, see Fig. 2(d).
+
+90
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+BER
+
+1e+00 1e-01 1e-02 1e-03 1e-04 1e-05 1e-06
+
+BER curve
+BP LBP MSBA MASTBA
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0
+
+(a) Floating-point BER performance.
+
+Number of iterations
+
+50
+
+BP
+
+45
+
+LBP
+
+40
+
+MSBA MASTBA
+
+35
+
+avg. number of iterations
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+3
+
+0 0.5 1 1.5 2 2.5 3 3.5 4
+
+Eb/N0
+
+(b) Number of iterations needed to converge, when implemented in floatingpoint.
+
+BER
+
+1e+00 1e-01 1e-02 1e-03 1e-04 1e-05 1e-06
+
+BER curve
+LBP (floating point) MSBA; in:4.2, dp:6.2 MASTBA; in:4.2, dp:8.2
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0
+
+(c) Fixed-point BER performance.
+
+Number of iterations
+
+50
+
+LBP (floating-point)
+
+45
+
+MSBA; in:4.2, dp:6.2
+
+40
+
+MASTBA; in:4.2, dp:8.2
+
+avg. number of iterations
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+3
+
+0 0.5 1 1.5 2 2.5 3 3.5 4
+
+Eb/N0
+
+(d) Number of iterations needed to converge, when implemented in fixedpoint.
+
+Fig. 2. Comparison of BER performance and the number of iterations needed to converge when applying the layered decoding approach for the (1944,972)-irregular LDPC code, standardized in IEEE 802.11n. In (a) and (b) the floating-point simulation results are shown, in (c) and (d) the fixed-point results are depicted.
+
+3.2. Detailed operational complexity
+To evaluate the detailed implementation complexity considering an ASIP implementation, we first developed an ISA appropriate for implementing the approximations.
+As discussed in section 2, the MSBA and the MASTBA approximation share the same data path. Solely the core operations differ. Implementing both approximations enables the application to choose between them, depending on the environmental requirements, such as maximizing the throughput or increasing the decoding performance. An ASIP design methodology fits the high-throughput requirements and at the same time enables a flexible implementation of the different approximations and has therefore been chosen [5]. The ISA is depicted in Fig. 3. As introduced before, the processing
+
+is organized in a check-node-centered way, where BNs are reduced to message storage and all computations take place in the CN processing unit. In order to increase the throughput, the decoding algorithms need to be parallelized. This can efficiently be done by implementing the processing unit in a Single-Instruction-Multiple-Data-based (SIMD) scheme, since all check equations within one subblock can be computed concurrently. Each SIMD slot then computes one check equation for each decoding round.
+The corresponding instruction set is presented in Table 1 and a more detailed discussion about each instruction is given in the next paragraphs.
+Memory access instructions: The instructions interfacing with the memory are vector instructions manipulating the SIMD word as one vector.
+
+91
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+Table 1. Unified instruction set SIMD instructions
+instruction description add,sub basic arithmetic instructions and,or,xor basic logic instructions lsr,lsl logical shift right/left asr,asl arithmetical shift right/left
+abs extract magnitude from message min compute minimum of two messages min+ running minimum and sign of message
+cs compare and select operation max log. of sum of exponential functions bz,bnz branch zero/branch not zero jmp unconditional jump
+vector instructions vrr,vrl vector rotate right/left
+vpack pack CN messages in SIMD word vunpack extract CN message from SIMD word vld,vst load/store a SIMD word from/to memory vldm,vstm load/store a SIMD word with modulo addr. vpush,vpop store/load a SIMD word to/from stack
+All other instructions are operating on each element of the SIMD word individually.
+The vpack and vunpack instructions are used to compress and decompress messages of one CN. The packed CN messages can be transferred to and from the CN memory by employing the vst/vld or vstm/vldm instructions. The vrl and vrr operations are used for interleaving of SIMD words before writing them back to the APP BN message storage. For state metrics and intermediate storage of messages, a stack-based memory access scheme is proposed with the vpush and vpop instruction.
+Core instructions: A special instruction has been implemented for each presented approximation, for the MASTBA the max instruction and for the MSBA the min+ instruction, respectively. This min+ instruction keeps track of the current sign and the current smallest magnitude, which needs to be found in the forward and backward recursion at each state. The cs operation was introduced as a special instruction for the optimized MSBA. It is used to find and keep track of the two smallest magnitudes when computing the forward recursion.
+When implementing the SIMD based processing scheme, two implementation aspects are very sensitive. First, the minimum bitwidth of one SIMD slot in the data path, which results from the selection of the decoding approximation. Second, the number of SIMD slots utilized. Following, a few guidelines are given on how to choose a proper number.
+Each LDPC code has its inherent number of concurrently computable check equations.
+When exploiting the inherent level of parallelism, interleaving reduces to simple rotate operations. SIMD words
+
+HDEF
+
+layer index check
+node
+index
+
+layer index check node index
+
+Counter base ROM
+INIT
+Counter init ROM
+
+check node message storage
+
+π−1
+APP storage
+APP
+π
+
+m0 m0 m0
+layer index check node index
+
+m1 sign m1 sign m1 sign
+write select
+
+idx
+idx idx
+layer index check node index
+
+read select
+
+check node processing
+
+Fig. 3. Top level architecture.
+
+INIT channel values
+
+are interleaved before being written back, so that they can be read linearly when being accessed for the next decoding round (when the next layer is processed). The interleaving operation needs to compensate for the cyclic permutation of the identity matrices between subsequent layers. When a BN is for example participating in the first check node equation in one layer and in the second check node equation in the subsequent layer, before writing back the results from the first computation, they need to be rotated by one position.
+When not exploiting the inherent level of parallelism, the number of slots should always be a multiple of the subblock sizes of the codes, the system needs to support. For instance, when targeting the IEEE 802.11n standard, the codes are constructed of cyclic permutations of identity matrices with subblock sizes of 27 and multiples of it for different code lengths (e.g. 27,54,81). Then, interleaving also reduces to rotate operations. What still introduces additional overhead is the fact that the result from all computations of one subblock need to be available, before interleaving and writeback can take place. In case the number of SIMD slots do not match the subblock size or multiples of it, interleaving beyond SIMD word boundaries needs to be implemented, which incurs a significant overhead and should therefore be avoided.
+3.2.1. Discussion
+From the simulation results it was found that for the fixedpoint implementation of the MASTBA an overall bith width of 10 bit is necessary for internal message representation. The MSBA has shown to be less sensitive to quantization, only 8 bit are needed for message representation. This fact of course makes it more attractive for hardware implementations. The proposed optimized MSBA, where CN messages are stored in a packed way, reduces the CN memory footprint by around 30%, for the cost of a slightly more expensive CN computation kernel.
+
+92
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+avg. number of iterations throughput [Mbit/s]
+
+Table 2. Summary of trade-off analysis
+
+design driver
+
+approximation
+
+minimize footprint
+
+optimized MSBA
+
+maximize throughput
+
+MASTBA
+
+best decoding performance (fixed-point)
+
+MSBA
+
+maximum flexibility
+
+MASTBA
+
+Throughput for (1944,972)-irregular LDPC code
+
+50
+
+350
+
+45
+
+throughput max*, simd=81 throughput min-sum, simd=81
+
+throughput opt. min-sum, simd=81
+
+300
+
+40
+
+avg. iterations min-sum
+
+avg. iterations max*
+
+35
+
+250
+
+30 200
+25 150
+20
+
+15
+
+100
+
+10
+50 5
+
+0
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0
+
+Fig. 4. Throughput for an (1944,792)-irregular LDPC code, when the inherent parallelism of 81 concurrent CN computations is exploited.
+
+The achievable throughput for the different approximations, when exploiting the inherent parallelism of concurrent processing units for the (1944,972)-irregular LDPC code, standardized in the IEEE 802.11n standard, is depicted in Fig. 4. There, the code is constructed in such a way that 81 CNs can be computed concurrently.
+Due to the simple computation kernel of the MASTBA compared to the MSBA, a higher throughput can be achieved using the MASTBA approximation, even though it needs in average more iterations to converge than the MSBA.
+Concluding the results from the trade-off analysis, Table 2 summarizes the suggested decoding method for different design criteria.
+4. CONCLUSION
+In this paper a new way of message computation based on the turbo-like decoding algorithm and the min-sum approximation, namely the min-sum-based approximation has been introduced and compared to existing approaches. The results from the fixed-point refinement, combined with the trade-off analysis enables a designer to choose the most appropriate approximation to be implemented on an ISA. By thoroughly choosing the number of SIMD slots, as discussed above, the
+
+proposed approximations are suitable for high-throughput implementations.
+5. REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, pp. 21–28, 1962.
+[2] C. Jinghu, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and Xiao-Yu Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. on Communications, vol. 53, pp. 1288–1299, aug 2005.
+[3] P. Radosavljevic, A. de Baynast, and J. R. Cavallaro, “Optimized message passing schedules for LDPC decoding,” Tech. Rep., Department of Electrical and Computer Engineering, Rice University, Houston, TX, 77005, 2005.
+[4] Mohammad M. Mansour and Naresh R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. on Very Large Scale Integration Systems, vol. 11, pp. 976–995, dec 2003.
+[5] T. Schuster, B. Bougard, P. Raghavan, R. Priewasser, D. Novo, L. Van der Perre, and F. Catthoor, “Design of a low power pre-synchronization ASIP for multimode SDR terminals,” Tech. Rep., IMEC, Leuven, Belgium, 2007.
+[6] R. Priewasser, “Joint algorithm and architecture exploration for unified SDR implementation of multi-standard forward error correction codecs,” M.S. thesis, University of Applied Sciences, Upper Austria, Hauptstrasse 117, 4232 Hagenberg, Austria, jul 2007.
+[7] C. Jinghu and M. P. C. Fossorier, “Density evolution for two improved bp-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, pp. 208–210, may 2002.
+[8] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” sips04, pp. 107–112, 2004.
+[9] F. Zarkeshvari and A. Banihashemi, “On implementation of min-sum algorithm for decoding low-density paritycheck (LDPC) codes,” Tech. Rep., Dept. of Systems and Computer Engineering, Carleton University, 1125 Colonel By Drive, Ottawa, Canada K1S5B6, 2002.
+
+93
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:11:00 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1467 @@
+892
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+Code Construction and FPGA Implementation of a Low-Error-Floor Multi-Rate
+Low-Density Parity-Check Code Decoder
+Lei Yang, Student Member, IEEE, Hui Liu, Senior Member, IEEE, and C.-J. Richard Shi, Fellow, IEEE
+
+Abstract—With the superior error correction capability, low-density parity-check (LDPC) codes have initiated wide scale interests in satellite communication, wireless communication, and storage fields. In the past, various structures of single code-rate LDPC decoders have been reported. However, to cover a wide range of service requirements and diverse interference conditions in wireless applications, LDPC decoders that can operate at both high and low code rates are desirable. In this paper, a 9-k code length multi-rate LDPC decoder architecture is presented and implemented on a Xilinx field-programmable gate array device. Using pin selection, three operating modes, namely, the irregular 1/2 code mode, the regular 5/8 code mode, and the regular 7/8 code mode, are supported. Furthermore, to suppress the error floor level, a characterization on the conditions for short cycles in a LDPC code matrix expanded from a small base matrix is presented, and a cycle elimination algorithm is developed to detect and break such short cycles. The effectiveness of the cycle elimination algorithm has been verified by both simulation and hardware measurements, which show that the error floor is suppressed to a much lower level without incurring any performance penalty. The implemented decoder is tested in an experimental LDPC orthogonal frequency division multiplexing system and achieves the superior measured performance of block error rate below
+10 7 at signal-to-noise ratio of 1.8 dB.
+Index Terms—Block-error rate, channel encoding, cycle elimination, forward error correction (FEC), field-programmable gate array (FPGA), low-density parity-check (LDPC) codes, multi-rate, orthogonal frequency division multiplexing (OFDM), signal-to-noise ratio (SNR), VLSI.
+
+I. INTRODUCTION
+
+R ECENTLY, low-density parity-check (LDPC) codes have attracted an ever increasing amount of attention due to
+
+their superior error correction capacity. It has been shown that
+
+with the block length , it is possible to achieve 0.04 dB from
+
+the Shannon limit at a bit-error rate (BER) of
+
+[1]; this
+
+yields significant advantages over other forward error correction
+
+codes including turbo codes. Furthermore, the LDPC decoding
+
+algorithm is inherently parallel and is easy to be implemented.
+
+Manuscript received January 26, 2005; revised July 9, 2005. This work was supported in part by Defense Advance Research Projects Agencies under Grant 66001-05-1-8918 and in part by the National Scienc Foundation ITR Program under Grant 0086032. This paper was recommended by Associate Editor Z. Wang.
+The authors are with the Department of Electrical Engineering, University of Washington, Seattle, WA 98195 USA (e-mail: yanglei@ee.washington.edu; hliu@ee.washington.edu; shi@ee.washington.edu).
+Digital Object Identifier 10.1109/TCSI.2005.862074
+
+Fig. 1. Irregular H-matrix and its corresponding Tanner graph.
+
+Therefore, it can be applied in optical networking, magnetic re-
+
+coding, digital video broadcast satellite (DVB-S) communica-
+
+tions, and other fields [2]–[4].
+
+As illustrated in Fig. 1, an LDPC code is a linear block code
+
+described by a binary sparse
+
+parity-check matrix H.
+
+Each row of matrix H corresponds to a parity check and each
+
+column represents a demodulated symbol. The number of de-
+
+modulated symbols is the LDPC code length. The number
+
+of nonzero elements in a row (column) is defined as the row
+
+(column) weight
+
+. If all rows and all columns are of
+
+uniform weight, the LDPC code is called a regular code, oth-
+
+erwise an irregular code. The notion of Tanner graph has been
+
+introduced to represent LDPC codes. As illustrated in Fig. 1,
+
+a Tanner graph is a bipartite graph with variable nodes on one
+
+side and check nodes on the other side. Each variable node cor-
+
+responds to a received symbol, each check node corresponds
+
+to a particular set of parity-check constraints, and each edge
+
+corresponds to a nonzero entry in the parity-check matrix. For
+
+example, an irregular LDPC H-matrix and its corresponding
+
+Tanner graph are shown in Fig. 1. A cycle of length is de-
+
+fined as a closed path that traversals a set of variable nodes
+
+and check nodes through edges but without going through the
+
+same edge twice. For example, Fig. 1 contains a length-6 cycle
+
+.
+
+Typically, iterative belief propagation (BP) algorithms are ex-
+
+ploited to decode the LDPC codes. In the decoding process,
+
+messages are exchanged along the graph edges, and computed
+
+at the variable/check nodes. If an LDPC code is well designed,
+
+the messages will converge exponentially to the correct bits after
+
+a finite number of iterations. However, proper operations of the
+
+iterative BP algorithms hinges on the assumption that neighbors
+
+of a node in the Tanner graph are conditionally independent. If
+
+1057-7122/$20.00 © 2006 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+893
+
+there are too many short cycles in the graph, the above assump- cessor, each check node is mapped to a check-node processor,
+
+tion is violated, and the BP algorithms will converge slowly and all the processors are connected through a Tanner graph in-
+
+and even result in wrong decoded results. Hence, how to in- terconnection network. This architecture gains high parallelism
+
+crease the Tanner graph girth, which is defined as the length and high throughputs [11], but is not scalable to LDPC codes
+
+of the shortest cycles, is critically important in the construction with large code length due to the heavy burden of intercon-
+
+of LDPC codes. Several algorithms, such as bit-filling [5] and nect wires. The excessive amount of interconnection could lead
+
+progressive edge-growth (PEG) [6], have been proposed to im- to routing congestion, which might exceed the available chip
+
+prove the girth of a Tanner graph. But those algorithms are de- routing area. To elude this problem, partially parallel architec-
+
+veloped with no consideration of the decoder VLSI implemen- tures compromising between the operating speed and intercon-
+
+tation. Consequently, the resulting LDPC matrix with randomly nection complexity are introduced, in which a certain number
+
+located nonzeros elements is hard to be mapped to a hardware of variable nodes and check nodes are mapped to one hardware
+
+structure.
+
+unit in the time-division multiplexing mode [12]. This approach
+
+To design LDPC codes that are amenable to VLSI imple- eases the routing difficulty but at the expense of decreasing parmentation, several methods [7]–[10] have been developed to allelism. Furthermore, all the reported implementations up to
+
+jointly consider the code design and the hardware implemen- now are limited to single-rate LDPC code designs. In practice,
+
+tation. The basic idea of all these methods is that before con- especially for wireless applications, it is highly desirable that a
+
+structing an
+
+parity-check matrix, a small
+
+base design scheme could adapt to different coding rates to meet var-
+
+matrix is built, in which each nonzero element at the position ious service requirements and interference conditions.
+
+is to be expanded to a square permutation
+
+matrix In this paper, a multi-rate LDPC architecture is presented.
+
+. The square permutation matrix This architecture is not only suitable for different regular LDPC
+
+is an identity matrix whose rows have been cyclically shifted by coding rates, but also can support irregular LDPC codes. The
+
+a set of amount , where is a function of and . The proposed architecture is demonstrated by implementing a 9 k
+
+resulting
+
+matrix is referred to as the expanded matrix. bit, multi-rate LDPC decoder in a Xilinx FPGA device. By con-
+
+This LDPC matrix structure can be conveniently converted to a figuring two pins of the FPGA device at “00,” “01,” or “10,”
+
+partially parallel decoder architecture consisting of a structured the decoder works on three coding rate modes: 1/2 as irregular
+
+array of memory and computation units [7].
+
+code, 5/8 and 7/8 as regular codes constructed by employing the
+
+The above VLSI-oriented LDPC codes can achieve the gain performance as good as the random codes. As for the girth performance, [7]–[9] employ different functions to compute the cyclic shifted value . Those functions can ensure that the girth of the expanded matrix is no more than that of the base matrix [7], but cannot guarantee the girth of the expanded LDPC matrix to be improved to a user specified value. In our research, we observed that short cycles in the base matrix can result in a collection of the same length cycles in the expanded matrix. Furthermore, we characterize the necessary and sufficient conditions for such scenarios to occur. With this characterization, we develop a cycle elimination (CE) algorithm. In this algorithm, short cycles existing in the base matrix are checked first. Then through setting the cyclically shifted values , those short cy-
+
+CE algorithm to suppress the error floor. The designed decoder is tested in an LDPC plus orthogonal-frequency-division-multiplexing (OFDM) system [13] and achieves the superior measured performance of block error rate below at a signal-tonoise ratio (SNR) of 1.8 dB without the presence of error floor.
+Some primary results of this work have appeared in [14]–[16]. The rest of this paper is organized as follows. An overview of the LDPC decoding algorithm is given in Section II. The proposed cycle elimination algorithm is presented in Section III. The three rate codes design process and simulation results are described in Section IV. The architecture of the multi-rate decoder is presented in Section V. Measurement results of the implemented FPGA device are shown in Section VI. Concluding remarks are made in Section VII.
+
+cles will not incur the same length cycles in the expanded matrix, thus yielding high girth performance. The cycle elimina-
+
+II. LDPC DECODING ALGORITHM
+
+tion process carries on until the maximum cyclically shifted value exceeds its upper limit ( is the size of a square permutation matrix). With this, even if a base matrix contains potentially many short cycles, the girth of the expanded matrix can be improved to be cycle-6 free, cycle-8 free, or even cycle-10 free. This is very helpful to suppress the error floor to a much lower level.
+Even if hardware-oriented LDPC codes with high girth performance have been achieved, efficiently mapping them to a VLSI implementation remains to be challenging. On one hand, the architecture of LDPC codes is characterized by many parallel memories and a lot of long interconnect wires; On the other hand, various LDPC applications require diverse dominant performances, such as high throughputs, low area, and low power.
+
+For hardware implementation, the BP algorithms are often re-formulated as the Log-BP algorithms [17], [18], in which multiplication operations are converted to addition operations to decrease the computational complexity. In the following, represents the log-likelihood ratio (LLR) messages exchanged between variable nodes and check nodes, and stands for intrinsic probability for every bit from a demodulator. The LDPC decoding algorithm can be summarized in the following four major steps.
+1) Initialization All variables nodes and their outgoing variable mes-
+sages are initialized to the values of the intrinsic messages. The intrinsic message is defined as
+
+Several approaches implement the BP algorithm to hardware in a way that each variable node is mapped to a variable-node pro-
+
+(1)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+894
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+Here, is the received symbol and is the transmitted symbol. 2) Check-Node Computation
+After the incoming messages are gathered in each check node from its connected variable nodes in the Tanner graph, the following check-node computation is performed:
+
+Fig. 2. Base matrix with cycles.
+
+(2)
+
+Here, is the degree of the check node ,
+
+repre-
+
+sents the incoming message from neighbor variable node
+
+to check node , and is the outgoing mes-
+
+sage from check node . Function is equal to , and
+
+is expressed in the following equation:
+
+(3)
+
+After the check-node computation, the outgoing messages Fig. 3. Illustration of the number of cycles increase after expansion. are passed to variable nodes along the edges.
+
+3) Variable-Node Computation
+
+method in [7] to construct a large LDPC H-matrix, every 1
+
+The variable-node computation is expressed as follows: at position
+
+is expanded to a square permutation
+
+(here
+
+) matrix, each of which is an identity matrix
+
+(4) with rows cyclically shifted by a set of amount . The size
+
+of the generated LDPC H-matrix is 2718 5436. It is obvious
+
+where
+
+is the incoming message from the neighbor
+
+check node
+
+to variable node and is the
+
+number of check nodes connected to , and is the
+
+outgoing message from variable node .
+
+4) Check Stop Criterion
+
+When the variable-node computation is finished, the
+
+LLR of every symbol is updated as
+
+that the above matrix expansion is beneficial in terms of error correction performance because the girth of the expanded matrix is always larger than or equal to the girth of the base matrix [7]. However, in order to further improve the girth of the expanded matrix, we need to study the relationship between the cycles in the expanded matrix and the cycles in the base matrix. Two issues arise here.
+1) Will the short cycles in a base matrix result in a collection
+
+of same length cycles in the expanded H-matrix? (5) 2) If the answer is yes, then how to eliminate those short
+
+cycles?
+
+From
+
+the
+
+updated
+
+LLR
+
+vector The above two questions are answered in the following, which
+
+, a hard decision form the basic idea behind the proposed CE algorithm.
+
+result
+
+is calculated as
+
+In fact, if there exists a length- cycle (it has 1’s in
+
+the cycle path) in the base matrix, this cycle can result in
+
+(6) length- cycles in the expanded LDPC matrix. For example, in Fig. 3, the four 5 5 square matrices represent the square
+
+The calculated hard decision vector is then checked
+
+against the parity check matrix . A case of
+
+means the iterative process has converged to a codeword
+
+and decoding stops. Otherwise, steps 2) and 3) have to
+
+be repeated until
+
+or until a fixed number of
+
+iterations is reached.
+
+permutation matrices expanded from a length-4 cycle in the
+
+base matrix with cyclically shifted values
+
+,
+
+,
+
+,
+
+. Clearly, there are five length-4 cycles after
+
+the expansion.
+
+Consider two adjacent 1’s in the same row of a base matrix
+
+located respectively at and
+
+. Let their corresponding
+
+permutation matrices to be and , and their respec-
+
+A. Idea
+
+III. CYCLE ELIMINATION ALGORITHM
+
+tive shifted values to be and . Then let
+
+to be the (cyclically) shifted-value drop from the
+
+1 at location
+
+to the 1 at location
+
+. As illustrated in
+
+Suppose that we already constructed a base matrix shown Fig. 4, the shifted-value drop from the 1 at position (1,1) to its
+
+in Fig. 2, which is a 6 12 irregular matrix with vari- neighbor at (1,2) is
+
+.
+
+able-node degree {2,2,2,2,2,2,3,3,3,3,4,4} and check-node Furthermore, for two adjacent 1’s in the same row (column),
+
+degree {5,3,6,6,6,6}. If we employ the base matrix expansion we refer to its shifted-value drop as a horizontal (vertical)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+895
+
+Fig. 4. Another illustration of the cycle number increase after expansion.
+
+2 Fig. 5. Square permutation L L matrix with row cyclically shifted P .
+
+shifted-value drop. For example, in Fig. 4, along each edge, the
+
+number inside a dotted cycle is a vertical shifted-value drop,
+
+and the number inside a dotted box is a horizontal shifted-value
+
+drop.
+
+Consider a cycle in a base matrix. Let
+
+to be the sum
+
+of all the vertical shifted-value drops along the cycle. Similarly,
+
+let
+
+to be the sum of all the horizontal shifted-value
+
+drops along the cycle. For example, in Fig. 4, the left picture
+
+and right picture in represent a length-4 cycle and a length-6
+
+cycle in the base matrix. The sum of all the vertical shifted-value
+
+drops for the cycle-4 can be computed as:
+
+. For the cycle 6, we have
+
+. Obviously in this case, if each 1 in the cycle-4/cycle-6
+
+is expanded to a
+
+square permutation matrix, length-
+
+4/length-6 cycles will be generated in the expanded matrix.
+
+In general, we have the following result.
+
+Lemma: Any cycle of length in a base matrix will lead to
+
+cycles of length in the expanded matrix, if and only the
+
+sum of all the vertical (horizontal) shifted-value drops along the
+
+cycle is equal to , where
+
+.
+
+Proof: We only need to prove the lemma for the vertical
+
+shifted-value drops case, since the horizontal case is symmetric
+
+to the vertical case.
+
+Sufficient Condition (if part): We need to show that if a
+
+length- cycle exists in the permutation matrices expanded
+
+from a length- cycle in the base matrix, the sum of all vertical
+
+shifted-value drops along the cycle
+
+(here
+
+).
+
+First, consider a square permutation
+
+matrix whose row
+
+cyclically shifted value is , as illustrated in Fig. 5. The 1’s in
+
+the matrix are divided into two parts—the upper-right segment
+
+and lower-left segment. The coordinates of the 1’s are expressed
+
+symbolically as (7), shown at the bottom of the page. It can be
+
+re-written in the following compact form:
+
+(8)
+
+Now consider the expanded matrix consisting of such
+
+permutation
+
+matrices
+
+and expanded from a length- cycle in the base matrix,
+
+as shown in Fig. 6. Let their cyclically shifted values to be
+
+and . To form a length-
+
+cycle, the 1’s must come from the different permutation
+
+matrices and the following two conditions must be satisfied.
+
+Condition 1: The 1’s are located in different rows, and
+
+each row contains two 1’s.
+
+In Fig. 6, since the permutation matrices origin from a
+
+length- cycle in the base matrix, the permutation matrices
+
+can be divided into levels, and every level contains two per-
+
+mutation matrices.
+
+To satisfy condition 1, the two 1’s from the level must be
+
+located on the same row . According to (8), the location of the
+
+two 1’s can be expressed as
+
+(9) (10)
+
+Condition 2: The 1’s are located at different columns,
+
+and each column contains two 1’s.
+
+In Fig. 6, permutation matrices and are expanded
+
+from two 1’s, and the two 1’s are on the same column in the
+
+base matrix. Similarly and , and
+
+and
+
+and , are on the same column too.
+
+If two 1’s are randomly selected from
+
+and , the
+
+following (11) can guarantee the two 1’s are on the same column
+
+in the expanded matrix:
+
+(11)
+
+Similarly, the following equations are derived to meet condition 2:
+
+(12) (13)
+
+Here, represents the row index, and the notation represents
+
+“or.”
+
+(14)
+
+'s coordinate
+
+when when
+
+Upper-right segment Right-left segment
+
+(7)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+896
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+Fig. 6. 1’s from 2g permutation matrices constitute a length-2g cycle.
+
+(15) (16) Summarizing all the equations from (11)to (16), we have
+(17) Here, and stands for an integer number between 0 and .
+Equation (18) can be derived from (17) as
+(18) That is
+
+Necessary Condition (only-if part): We need to prove that
+
+if there are no length- cycles existing in the permutation
+
+matrices, the sum of all vertical shifted value drops along the
+
+cycle
+
+(here
+
+).
+
+Suppose that we have the freedom to pick a 1 freely from
+
+each permutation matrix in Fig. 6, in the following steps, we will
+
+try to connect them to construct a length- cycle and study in
+
+which condition that the 1’s cannot form a length- cycle.
+
+1) The cycle construction process starts from the leftmost
+
+upper permutation matrix in Fig. 6, and the picked
+
+1 location is
+
+, here is the row
+
+index.
+
+2) Next, we need to pick a 1 from , which will be on
+
+the same row as the 1 in . Its location is decided as
+
+.
+
+3) Start from the 1 in , we pick the 1 in , and the
+
+following can ensure that the two 1’s are on the same
+
+column:
+
+(21)
+
+Here, can be any integer number between Equation (19) can be re-written as
+
+(19) to .
+
+4) Similarly, from the 1 in , we can find the 1 in at on the same row.
+5) From the 1 in , the 1 in are found to be on the same column, so the following (22) is obtained:
+
+(20)
+
+(22)
+
+6) Repeating the above the process, if we try to find the next
+
+This completes the proof of the “if” part of the lemma.
+
+1 in the cycle loop, this newly found 1 must be on the same
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+897
+
+row or column as the previous one. Therefore, in the th step, (23) can ensure two 1’s to be on the same column
+
+(23)
+
+7) From the 1 in
+
+, we can find the 1 in
+
+same column, and derive
+
+on the
+
+(24)
+
+9) Finally, from , we reach the 1 in on the same
+
+row at location
+
+.
+
+8) At this stage we obtain all the 1’s as well as their lo-
+
+cations, as seen in Fig. 6, if and only if the last found 1 in
+
+and the first found 1 in are on the same column,
+
+the 1’s can form a length- cycle. Therefore, to have
+
+the 1’s not forming a cycle, the following inequality
+
+must hold:
+
+(25)
+
+Adding the equations from (21)to (25) together, we have the following result:
+
+(26)
+
+This completes the proof of the “only-if” part of the lemma.
+B. CYCLE ELIMINATION ALGORITHM
+Based on the Lemma, a constraint is generated for any cycle detected in the base matrix. Since each 1 in the base matrix may be contained in many cycles, a constraint list is generated from all the cycles containing this 1. The purpose of the CE program is to find suitable values for each 1 in the base matrix that could satisfy all the constraintlists.
+The pseudo-code of the proposed CE algorithm is depicted in Listing 1.
+
+(10)
+
+for each
+
+in the third generation set
+
+(11)
+
+Find
+
+’s offspring set
+
+, and
+
+every
+
+is marked as the fourth generation
+
+(12)
+
+end
+
+(13) end
+
+(14) end
+
+(15) // Find the cycles
+
+(15) Check every row and column in the base matrix
+
+(16) if two second generation
+
+and
+
+are on the same column, backtrack to their ancestors to
+
+form a cycle-4.
+
+(17) if two third generation
+
+and
+
+are
+
+on the same row, backtrack to their ancestors to form a
+
+cycle-6.
+
+(18) if two fourth generation
+
+and
+
+are
+
+on the same column, backtrack to their ancestors to form a
+
+cycle-8.
+
+(19) each found cycle is transformed to a constraint, and
+
+this constraint is added to the constrain-list of the 1’s in
+
+this cycle.
+
+(19) // cycle elimination function ()
+
+(20) for each 1 at position in the found cycle
+
+(21) record its original value
+
+(22) while all the constraints in its constraint-list is not
+
+satisfied
+
+(23)
+
+(24) end while
+
+(25) Check all the current of all the 1’s along the
+
+cycles, choose the one with the smallest and keep this
+
+changed value, others 1’s’ P are restored to their original
+
+values.
+
+(26) end
+
+(27) end
+
+The above pseudo-code is explained in the following.
+
+LISTING 1. The Cycle Elimination Algorithm
+
+(1) All the of the 1’s in the base matrix are initialized
+
+to 0
+
+(2) Set up a empty constraint-list for every 1 in the base
+
+matrix
+
+(3) Choose column j to be the current column (from column
+
+1 to column )
+
+(4) clear all the 1’s generation marking information in the
+
+base matrix.
+
+(5) //Starting from the 1’s in the current column, find and
+
+mark their first, second, third, fourth generations.
+
+(6) for each nonzero
+
+in the current column
+
+(7) Find
+
+’s second offspring set
+
+,
+
+here
+
+, and each
+
+is marked as the second
+
+generation.
+
+(8) for each
+
+in the second generation set
+
+(9)
+
+Find
+
+’s offspring set
+
+, and
+
+every
+
+is marked as the third generation.
+
+1) First, the base matrix is initialized. All values are set
+
+to zero and an empty constraint-list is set up for every 1
+
+in the matrix. Since each 1 may be contained in several
+
+cycles, and every cycle will be translated into a cycle con-
+
+straint and stored in the constraint-list.
+
+2) In each iteration of the algorithm, a column is picked from
+
+the base matrix as a current column (from the order of
+
+left to right). This current column divides the base ma-
+
+trix to the left and right parts. All the current-column-re-
+
+lated cycles in the right part of the base matrix will then
+
+be searched and eliminated through setting the cyclically
+
+shifted value in step 3) and step 4).
+
+3) The cycle searching process is illustrated using the cycle-6
+
+in Fig. 4. Starting from
+
+at the current column, an
+
+offspring
+
+is obtained, the offspring here is defined
+
+as the 1’s on the same row or the same column with the
+
+ancestor 1. From
+
+, its offspring
+
+is found,
+
+and
+
+is called the third generation of
+
+. Ex-
+
+ploiting the same idea to
+
+, which is also located at
+
+the current column, a second generation offspring
+
+and a third generation offspring
+
+are found. Then,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+898
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+the marked generation values are checked. If two third
+
+generations
+
+and
+
+are on the same row, a
+
+cycle-6 is detected and the program backtracks to their
+
+ancestors until all 1’s in the cycle path are found. Be-
+
+cause cycle searching proceeds only in the right part of
+
+the base matrix, all the found cycles are right-side-related
+
+with the current column. In Fig. 4, cycle-4 and cycle-6 are
+
+right-side-related with the current column, which contains
+
+1’s at
+
+and
+
+.
+
+4) All the cycles right-side-related to the current column are
+
+eliminated by setting the cyclically shifted values of the
+
+1’s in the cycle path. The number of cycles in the base
+
+matrix increases exponentially with the cycle length. The cyclically shifted value is limited within the ranges Fig. 7. H-matrix of irregular 1/2 LDPC code.
+
+. Furthermore, if a cycle is found, each 1 in the
+
+cycle is checked to see whether its cycle constraints have A. LDPC Code Base Matrix Design
+
+been satisfied. If not, its is incremented until all the constraints are satisfied. After comparing all the values in the cycle, the 1 with the minimum value is chosen and its current value is accepted, while others values are restored to their original values. 5) The above shifted value setting algorithm in step 4) is very effective in achieving a slow increase of the value. However, it can still increase rather quickly (not exponen-
+
+1) Regular Rate 5/8 Code: A
+
+regular LDPC structure
+
+is adopted to construct the rate 5/8 code because this struc-
+
+ture can provide a good BER performance for moderate code
+
+lengths. The base matrix size of this
+
+structure is
+
+.
+
+If every 1 in the base matrix is expanded to an
+
+square
+
+permutation matrix, the H-matrix size is
+
+[12].
+
+The rate of the regular code is calculated as
+
+tially) and may exceed its upper limit
+
+if the target
+
+girth is too large. For example, in our experiment of a 18
+
+(27)
+
+36 base matrix, the average number of cycles for each
+
+element 1 is 1174 if the maximum cycle length is 8. Therefore, in the CE program, the maximum girth optimization target supported is 10. The program will automatically detect the cycle-4, cycle-6 and cycle-8 in the base matrix and eliminate them. If the set value exceeds the upper limit, the program produces a warning message and the user may lower the girth target.
+
+Here, if
+
+, should be equal to 8.
+
+The structure of the rate 5/8 H-matrix is expanded from a
+
+24 64 (
+
+, and
+
+) base matrix. Every square
+
+permutation matrix is 149 149, so the size of the H-matrix is
+
+4768 9536. This code structure can be mapped to hardware
+
+with 64 VNUs and 24 CNUs, each VNU/CNU contains time-
+
+multiplexed variable nodes and check nodes, respectively.
+
+However, the implementation of 64 VNUs and 24 CNUs would
+
+require a heavy hardware cost. So in our architecture, every two
+
+IV. LDPC CODES DESIGN
+
+VNUs/CNUs are combined and there are a total of 32 VNUs
+
+Since the fully parallel LDPC decoding structure has high
+
+hardware complexity [11], while the fully serial decoding struc-
+
+ture can only achieve low throughput, partially parallel decoder
+
+architecture [7] is adopted in our design to achieve a balance be-
+
+tween the speed and silicon complexity. Moreover, the partially
+
+parallel code is VLSI-oriented, and it can be nicely mapped to
+
+the partially parallel decoder structure. The partially parallel de-
+
+coder contains variable-node computation units (VNU) and
+
+check-node computation unit (CNU), which corresponds to
+
+the size of the base matrix
+
+. Those VNUs and CNUs
+
+work in parallel, and every VNU and CNU contain time-mul-
+
+and 12 CNUs in the design. Overall,
+
+clock cycles
+
+are needed to complete one VNU computation process and one
+
+CNU computation process.
+
+2) Regular Rate 7/8 Code:
+
+regular code structure is
+
+used to design the regular rate 7/8 code too. According to (27),
+
+is for
+
+case, thus its base matrix size is 72
+
+576 (
+
+, and
+
+). Every 1 is expanded to an
+
+square permutation matrix, therefore, the size of the
+
+H-matrix is 1224 9792. Similarly, every 24
+
+matrices
+
+are combined to a VNU and CNU, so the hardware contains 24
+
+VNUs and 3 CNUs. In total,
+
+clock cycles are
+
+needed to finish one VNU computation process and one CNU
+
+tiplexed
+
+variable nodes and
+
+computation process.
+
+check nodes, respectively.
+
+3) Irregular Rate 1/2 Code: Irregular LDPC codes do not
+
+Among the three rate codes implemented: irregular rate 1/2, outperform regular ones unless their degree distribution is care-
+
+regular rate 5/8 and 7/8, the rate 1/2 code is most critical dealing fully designed. The PEG program [6] is employed to determine
+
+with the worst transmission situation. Based on previous obser- the node degree distribution of the base matrix. The designed
+
+vations [19], [20], irregular codes can outperform regular codes variable-node degree distribution is (2, 2, , 2, 3, 3, 7, 7).
+
+in term of coding gain. Hence, the irregular code is implemented The H-matrix of the irregular 1/2 code is shown in Fig. 7. It
+
+for rate 1/2. Rates 5/8 and 7/8 are designed as regular structures contains an 18 36 base matrix. The square permutation matrix
+
+to simplify the hardware complexity.
+
+size is 251 251, and the expanded H-matrix size is 4518
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+899
+
+TABLE I CODE DESIGN PARAMETERS
+
+9036. With each of the square permutation matrix mapped to one VNU/CNU, the hardware contains 36 VNUs and 18 CNUs.
+
+B. Square Permutation Matrix Shifted Value Design
+With the above base matrix designed for the three rates, two different methods are employed to determine the cyclically shifted value of every square permutation matrix. One is the CE program described in Section III, the other one is the technique given by Zhang and Parhi (ZP) [12], in which cyclically shifted value for the 1 at position is determined from formula
+. The detailed parameters of the codes are listed in Table I.
+Seen from Table I, the codes constructed using the ZP method (ZP-constructed codes) have the average girth lengths 8.0556, 8.25, and 5.9132 for rates 1/2, 5/8, and 7/8, respectively. In contrast, the average girths of the codes constructed using the CE method (CE-constructed codes) can be improved to 10, 10, and 8, respectively. With a SUN Fire V480 server with 4 900 MHz UltraSparc-III processors, the CE program uses 22.5, 18.7, and 1.13 min to generate the three codes, respectively. It should be noted that for the regular 7/8 case, due to the large base matrix size and the small value, the constructed code girth is 8.
+
+Fig. 8. Simulation results of the ZP and CE-constructed codes.
+codes exhibit better error floor performance than the ZP-constructed codes, which will be shown in Section VI.
+V. DECODER ARCHITECTURE
+The developed configurable partial parallel decoder architecture is shown in Fig. 9. This architecture is not only suitable for different rates, but also can be used for both regular and irregular LDPC codes. At the top level, the architecture follows the general idea of [12], but has the following key distinct characteristics in comparison to the previous architectures described in [7]–[10], [12].
+• It exploits configurable structures for the VNU block, the CNU block and the memory banks so different rate LDPC regular/irregular codes can be fit.
+• The min-sum with correction (MSC) algorithm [21] is adopted to replace the normally applied table-lookup quantization method to reduce the large performance loss for irregular codes and high-rate regular codes.
+
+C. Simulation Results
+
+According to the Shannon theory, all “random” codes are A. Finite-Precision Implementation
+
+“good codes.” Unfortunately, random codes are not easy to im- A finite word length can impact both the decoding perfor-
+
+plement. Thanks to the work of [7]–[10], we can construct VLSI mance and the hardware complexity. Let
+
+to represent
+
+implemented LDPC codes as good as the random codes. Similar the quantization scheme, where means that totally bits are
+
+to the ZP-constructed codes in [7], the CE-constructed codes are utilized, in which bits are used for the fractional part of the
+
+also pseudo-random codes. Fig. 8 shows the simulation compar- value. If is kept constant, the precision will be proportional to
+
+ison results between the performances of the CE and ZP-con- , while the dynamic range will be inversely proportional to .
+
+structed codes. It is seen that the gain difference between the First of all, an efficient way to emulate function
+
+two codes is within 0.1 dB.
+
+in equation (3) needs to be determined since this function is
+
+Note that the error floor problem is not seen in the figure. This performed frequently for every check-node computation. Up to
+
+is due to the fact that the error floor normally occurs at a very low now, most of the publications on LDPC VLSI implementation
+
+SNR, and a great amount of LDPC blocks and much more sim- employ look-up tables (LUTs) to quantize . However, the LUT
+
+ulation time are needed to reveal the error floor curve. For the quantization method suffers from the tradeoff between the dy-
+
+software simulation, it may take several days to obtain a simula- namic range and the precision. For high rate designs and deep
+
+tion point with BER below . So we will employ hardware fading channels, the maximum magnitude of input channel mes-
+
+implementation measurements to show that the CE-constructed sages may exceed 100. This requires decreasing to achieve a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+900
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+Fig. 9. Multirate decoding architecture.
+high dynamic range, which unfortunately contaminates the precision and results in the decoding failure. To solve this problem, [21] and [22] presented the MSC algorithm to emulate
+(28)
+The correction term in (28) can be further simplified as
+
+else (29)
+
+The two equations above describe the MSC algorithm and
+
+elude the problem of computing nonlinear function . There
+
+is no requirement on the precision and thus there exists the
+
+freedom to increase the dynamic range. In our design, is set to Fig. 10. Comparison of LUT and MSC simulation results. the minimum value 1 to achieve the maximum dynamic range.
+
+To show the MSC performance, both the LUT and MSC methods are used to simulate the three codes in our design. Quantization schemes (6:3) and (6:1) are used for LUT and MSC, respectively. The simulation results are shown in Fig. 10.
+
+quantization scheme (6:1) of the input LLR data is chosen because it only has 0.1 dB loss compared to the floating point simulation result.
+
+As seen from the curves, the LUT method achieves good results
+
+for low-rate regular LDPC codes (for example, regular 5/8 code). But for high-rate regular codes (for example, regular B. Check-Node Computation Block
+
+7/8), there is more than 0.5 dB gain lost. For irregular 1/2 codes,
+
+the LUT method is unable to converge, while other quantization As stated earlier, the MSC algorithm is adopted to improve
+
+schemes show even worse results than that of the scheme (6:3). the decoder performance. However, since every pair of mes-
+
+Fortunately, the MSC algorithm achieves good results for all sages needs to be performed by the check function, which is
+
+the three cases.
+
+used to realize the functions of (28) and (29), the operation of
+
+Based on the above observation, the MSC method is adopted MSC would be time consuming. Below we describe a careful
+
+to emulate
+
+in our design. Through fix point simulations, implementation to improve the speed.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+901
+
+Fig. 13. Architecture of j = 3 VNU without LUTs.
+
+Fig. 11. Architecture of a 4-CNU (4CU).
+
+check nodes of degrees 8 (24) and requires two (three) layers of 4CUs to construct a 8CU (24CU).
+
+C. Variable-Node Computation Block
+In our architecture, variable-node computation becomes simpler than that in [12] due to the use of the MSC checking function operators in CNUs. Therefore, there is no need for lookup tables and fix-point format conversion (between the sign-magnitude and two’s complement). Fig. 13 shows the VNU architecture with node degree 3. The input of this VNU is one intrinsic message and three check-to-variable messages. The output is three computed variable-to-check messages and 1-bit hard decision result.
+
+Fig. 12. Architecture of an 8-CNU (8CU) made of two 4CUs.
+
+D. Configurable Routers
+
+Considering a check node with degree , it has the following input-output relationship:
+
+• VNU Router
+
+In rate 5/8 and 7/8 regular codes, variable-node degree
+
+is uniformly distributed
+
+and each VNU is con-
+
+nected to 3 RAMs. However, in irregular codes, every
+
+(30)
+
+VNU is associated with different numbers of RAM’s due
+
+to the nonuniform distribution of the variable-node de-
+
+Every output
+
+is equal to the checking result of all the
+
+other
+
+input messages in the check node. When imple-
+
+menting the check node in hardware, one natural way to calcu-
+
+late
+
+is checking the other
+
+inputs one by one. But
+
+this serial operation is time consuming, especially when is a
+
+large number. In this work, a multilayer tree structure is pro-
+
+posed for parallel check-node computation, as shown in Fig. 9.
+
+The first layer of the network contains a set of 4-CNUs
+
+grees. To have different rate code designs co-exist in one implementation, a VNU router is inserted between the memory bank and the variable-node computation block to adapt to different code rates, as shown in Fig. 9. This VNU router is configured by a ROM. The ROM contains three arrays corresponding to the three code rates, where each array describes the node degree distribution of the current rate design. The values of the arrays are shown as
+
+(4CUs). Each 4CU has four input messages and five computed Rate
+
+Array Length
+
+output messages, as shown in Fig. 11. One of the outputs is Rate
+
+“OUT-ALL,” which is the checking result of all the four input messages and will be used in the next layer. The 4CU structure
+
+Rate
+
+Array Length Array Length
+
+in Fig. 11 contains seven check function operators and four set • Global Router and Reverse Router
+
+of D-flip-flops to delay the input messages.
+
+In Fig. 9, the global router and reverse router connect
+
+In the second layer, 4CU sets are connected to a set of 8CUs
+
+VNUs and CNUs together. There are two message flowing
+
+or 12CUs. Fig. 12 shows an example of an 8CU made of two
+
+directions going through the global router and reverse
+
+4CU’s. Every 8CU can be easily modified to a 7CU or 6CU
+
+router: one is from VNUs to CNUs, and another one is
+
+by deleting one or two check function operators. The 8CUs and
+
+the reverse direction from CNUs to VNUs. Seen from the
+
+12CUs can be further connected to form 24CUs or 36CUs in the
+
+figure, four buses are involved in this message exchange:
+
+third layer.
+
+“from-VNU,” “to-CNU,” “from-CNU” and “to-VNU.” For
+
+The check-node degrees of the irregular 1/2 code are 6 and
+
+each rate mode, two arrays are used to configure how
+
+7. Each check node is either a 6CU or 7CU, which can be con-
+
+“from-VNU” is permutated and connected to “to-CNU,”
+
+structed using two layers of 4CUs. The regular 5/8 (7/8) has
+
+and how “from-CNU” is permutated and connected to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+902
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+“to-VNU.” A total of six arrays that is stored in a configuration ROM are needed to configure the global router and reverse router to work at three different rate modes.
+
+TABLE II FPGA RESOURCE USAGE STATISTICS
+
+E. Memory Bank
+The RAMs in the memory bank are used to store exchanged messages between variable nodes and check nodes. Each RAM is associated with an address generator (AG) to provide reading and writing addresses. Since each RAM contains one or more
+circularly shifted permutation matrices, an address generator consists of only simple counters starting from an offset address during the check-node processing period or starting from address zero during the variable-node processing period.
+
+VI. FPGA IMPLEMENTATION AND MEASUREMENT RESULTS
+
+Employing the (6:1) quantization scheme and the architec-
+
+ture described in Section IV, a multi-rate LDPC decoder is im-
+
+plemented on a Xilinx Virtex-II XC2V8000 FPGA device. The
+
+design is described in VHDL, synthesized by Synplicity, placed
+
+and routed using Xilinx development tool ISE6.0. It works at
+
+the 100 MHz clock frequency, and has codeword length about 9
+
+kbits. By configuring two pins of the FPGA device at “00,” “10”
+
+or “11,” the decoder can operate at three different code modes:
+
+irregular 1/2 mode, regular 5/8 mode and regular 7/8 mode.
+
+The XC2V8000 FPGA belongs to the Xilinx Virtex-II family,
+
+and is developed for data communication and DSP applica-
+
+tions. The device contains 168 18-kbit dual-port SelectRAM
+
+blocks and 46 592 slices, and possesses the capacity to handle
+
+8-million-gate design. One of the most challenging problems in the LDPC decoder design is the memory usage since the LDPC Fig. 14. Measurement result comparison between CE and ZP-constructed code structure requires a large number of parallel working codes.
+
+memories to store exchanged messages. Therefore, a proper
+
+partition of the memory blocks to fully utilize the FPGA The implemented LDPC decoder has been used together with
+
+SelectRAM resources is needed. In our architecture, memory an OFDM chip to form an OFDM-LDPC system. The measure-
+
+bank and IRAM (used to store intrinsic messages) are the main ment results of the ZP-constructed codes and CE-constructed
+
+sources of memory usage. The memory bank contains 117 codes are compared in Fig. 14. In the figure, the block-error
+
+512 7 independent RAM blocks, and every small RAM needs rate verse SNR curves are plotted. Note that the axis is the
+
+one independent port for reading/writing, so two of them are block error rate (block length 9 k), and it is approximately
+
+combined to one dual-port RAM’s and occupy a SelectRAM two orders of magnitude higher than the BER. As seen from
+
+unit resource in the FPGA. IRAM is a large 4.5K 32 memory, Fig. 14, the ZP-constructed regular 5/8 code achieves the good
+
+and takes eight SelectRAM units. Adding the memory resource block error rate performance and does not have the error floor
+
+used in the data loading, unloading and the interleaver blocks, a problem. However, the ZP-constructed irregular 1/2 and reg-
+
+total of 102 SelectRAM units are used. The resource utilization ular 7/8 codes experience the serious error floor problem at the
+
+statistics is shown in Table II.
+
+block error rate of about . The above phenomena can be ex-
+
+Another challenge of designing an LDPC decoder is the plained using the girth histogram shown in Fig. 15. In Fig. 15,
+
+routing congestion caused by the complex top-level connec- the variable nodes inside one square permutation matrix have
+
+tions. In our implementation, this problem is alleviated by the same girth value. For the ZP-constructed regular 5/8 code,
+
+carefully pipelining the data paths between VNU blocks, because it is cycle-4 and cycle-6 free, the error floor can be effi-
+
+routers, and CNU blocks. In addition, the critical path delays ciently removed. As to the ZP-constructed irregular 1/2 code, al-
+
+are minimized, and the decoder is able to operate at the 100 though it is cycle-4 free and has the average girth of 8.0556, the
+
+MHz clock frequency. At this frequency, the decoder achieves error floor problem still occurs at a much high level because ir-
+
+a maximum throughput of 40 Mbps for regular 5/8 and 7/8 regular codes normally have the worse error floor problem than
+
+codes when performing maximum 24 decoding iterations. For regular codes [23]. Moreover, there exists a tradeoff between
+
+the irregular 1/2 LDPC code, more iterations are required for the threshold SNR and the error floor BER [24]. In our design,
+
+the codes to converge, so maximum decoding iteration number the performance of the irregular 1/2 code is near the Shannon
+
+is set to 60, and the maximum 15 Mbps throughput has been limit, making the error floor to appear at a higher level. For the
+
+achieved.
+
+ZP-constructed regular 7/8 code, its base matrix size is 72
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+YANG et al.: CODE CONSTRUCTION AND FPGA IMPLEMENTATION OF LOW-ERROR-FLOOR MULTIRATE LDPC CODE DECODER
+
+903
+
+eliminate the short cycles in an LDPC matrix. Both the simulation and measurement results showed that the error floor of the LDPC codes constructed with cycle elimination has been significantly lowered without incurring the SNR threshold penalty.
+The principle of the CE algorithm is to find and eliminate the short cycles existing in the LDPC base matrix. However, it has been pointed out that short cycles are not the main cause of the error floor problem [20], [25]. Therefore, the future work include the generalization of the CE algorithm to find and eliminate the so-called stopping sets, instead of short cycles.
+
+ACKNOWLEDGMENT
+The authors thank Dr. Z. Wang, Oregon State University, Corvallis, for several helpful discussions, and the anonymous reviewers for their constructive comments.
+
+REFERENCES
+
+Fig. 15. Girth histogram of the ZP-constructed codes.
+
+576. It contains a lot of length-4 cycles, and those short cycles
+
+are difficult to be eliminated with a very small value 17.
+
+To suppress the error floor in irregular 1/2 and regular 7/8
+
+codes, cycle elimination is used to generate the LDPC H-matrix,
+
+and the average girth values of the three rate codes are improved
+
+to 10, 10, and 8, respectively. This can suppress the error floor to
+
+a much lower level. Furthermore, the decrease of the error floor
+
+does not bring any penalty to the coding gain, and the ZP-con-
+
+structed codes and the CE-constructed codes have the gain dif-
+
+ference within 0.1 dB.
+
+It should be noted that after cycle elimination, the irregular
+
+1/2 code outperforms the regular 1/2 code by approximate 0.5
+
+dB, achieving a block error rate lower than
+
+at SNR 1.8
+
+dB. With this superior error correcting ability, the irregular 1/2
+
+mode decoder in our design can be utilized to handle deep fading
+
+channels and the most severe interference conditions. The reg-
+
+ular 5/8 and 7/8 codes enjoy the higher throughput capability,
+
+and can operate at better transmission conditions.
+
+VII. CONCLUSION
+This paper presented the construction, architecture and VLSI implementation of a 9-kbit multi-rate LDPC code decoder. The implementation used a Xilinx XC2V8000 FPGA device. By configuring two pins of the FPGA device at “00,” “01” or “10,” the decoder can work at three different rates: irregular 1/2, regular 5/8 and regular 7/8. The finite precision effect has been carefully analyzed, and the best quantization scheme that fit for three rates has been developed to improve the decoder performance.
+To suppress the error floor for the irregular 1/2 code and regular 7/8 code, a cycle elimination (CE) algorithm has been developed. By carefully setting the cyclically shifted value for all the square permutation matrices, the CE algorithm attempts to
+
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near shannon limit error-correction coding and decoding,” in Proc. Int. Conf. Commun., Geneva, Switzerland, May 1993, pp. 1064–1070.
+[2] T. Richardson and R. Urbanke, “The renaissance of Gallager’s low-density parity-check codes,” IEEE Commun. Mag., pp. 126–131, Aug. 2003.
+[3] E. Yeo, B. Nikolic, and V. Anantharam, “Iterative decoder architectures,” IEEE Commun. Mag., pp. 132–140, Aug. 2003.
+[4] P. Urard, E. Yeo, and B. Gupta et al., “A 135 Mb/s DVB-S2 compliant CODEC based on 64 800 b LDPC and BCH codes,” in Proc. IEEE Int. Solid-State Circuits Conf., Jan. 2005, pp. 547–548.
+[5] J. Campello, D. S. Modha, and S. Rajagopalan, “Designing LDPC codes using bit-filling,” in Proc. Int. Conf. Commun., Helsinki, Finland, 2001, pp. 55–59.
+[6] X. Y. Hu, E. Eleftheriou, and D. M. Arnold, “Progressive edge-growth tanner graphs,” in Proc. IEEE Global Telecomm. Conf., vol. 2, Nov. 2001, pp. 995–1001.
+[7] H. Zhang and T. Zhang, “Design of VLSI implementation-oriented LDPC codes,” in Proc. IEEE Veh. Technol. Conf., vol. 1, 2003, pp. 670–673.
+[8] D. E. Hocevar, “LDPC code construction with flexible hardware implementation,” in Proc. Int. Conf. Commun., 2003, pp. 2708–2712.
+[9] A. Delvarathinam, E. Kim, and G. Choi, “Low-density parity-check decoder architecture for high throughput optical fiber channels,” in Proc. Int. Conf. Comp. Design, 2003, pp. 520–525.
+[10] E. Boutillon, J. Castura, and F. R. Kschischang, “Decoder-first code design,” in Proc, Int. Symp. Turbo Codes Related Topics, Brest, France, Sep. 2001, pp. 459–462.
+[11] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[12] T. Zhang and K. K. Parhi, “VLSI implementation-oriented (3,k)-regular low-density parity-check codes,” in Proc. IEEE Worksh. Signal Process. Syst., Sep. 2001, pp. 25–36.
+[13] G. Xing, M. Shen, and H. Liu et al., “An LDPC-based Terrestrial Multimedia Broadcasting (TMB) system: design, implementation and experimental results,” Acoust., Speech, Signal Process., vol. 4, pp. 17–21, May 2004.
+[14] L. Yang, M. Shen, H. Liu, and C.-J. R. Shi, “An FPGA implementation of low-density parity-check code decoder with multi-rate capability,” in Proc. Asia South Pacific Design Automation Conf., Shanghai, China, Jan. 2005, pp. 760–763.
+[15] L. Yang, H. Liu, and C.-J. R. Shi, “Cycle elimination method to construct VLSI oriented LDPC codes,” in Proc. IEEE Veh. Technol. Conf., Dallas, TX, Sep. 2005, pp. 522–526.
+[16] L. Yang, H. Liu, and C.-J. R. Shi, “VLSI implementation of low-errorfloor and capacity-approaching performance low-density parity-check codes with multi-rate capacity,” in Proc. IEEE Global Telecomm. Conf., St. Louis, MO, Nov. 2005, pp. 1261–1266.
+[17] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[18] M. Chiani, A. Conti, and A. Ventura, “Evaluation of low-density paritycheck codes over block fading channels,” in Proc. Int. Conf. Commun., 2000, pp. 1183–1187.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+904
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 4, APRIL 2006
+
+[19] D. J. C. Mackay, S. T. Wilson, and M. C. Davey, “Comparison of constructions of irregular Gallager codes,” IEEE Trans. Comm., vol. 47, pp. 1449–1454, Oct. 1999.
+[20] T. Tian, C. Jones, J. D. Villasenor, and R. D. Wesel, “Construction of irregular LDPC codes with low error floors,” in Proc. Int. Conf. Commun., vol. 5, May 2003, pp. 3125–3129.
+[21] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in Proc. IEEE Global Telecomm. Conf., vol. 2, Nov. 2001, pp. 25–29.
+[22] X. Y. Hu, E. Eleftheriou, and D. M. Arnold, “Efficient implementation of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Global Telecomm. Conf., vol. 2, Nov. 2001, pp. 1036–1036.
+[23] T. Tian, C. Jones, J. D. Villasenor, and R. D. Wesel, “Construction of irregular LDPC codes with low error floors,” in Proc. Int. Conf. Commun., vol. 5, May 2003, pp. 3125–3129.
+[24] T. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, pp. 619–637, Feb. 2001.
+[25] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Allerton Conf. Commun. Contr. Comput., Oct. 2003, pp. 1426–1435.
+
+Hui Liu (S’92–M’92–S’93–M’95–SM’04) received the B.S. degree from Fudan University, Shanghai, China, in 1988, the M.S. degree from Portland State University, Portland, OR, in 1992, and the Ph.D. degree from the University of Texas at Austin, in 1995, all in electrical engineering.
+He held the position of Assistant Professor in the Department of Electrical Engineering at University of Virginia from September 1995 to July 1998. He was the Chief Scientist at Cwill Telecommunications, Inc., and was one of the principal designers of the UMTS TD-SCDMA 3G standard. In 2000, he founded Broadstorm Inc. and pioneered the development of the world first OFDMA-based mobile broad-band network. He is currently an Associate Professor in the Department of Electrical Engineering, University of Washington, Seattle. His research interests include broad-band wireless networks, array signal processing, digital signal processing and VLSI applications, and multimedia signal processing. He has published more than 40 journal articles and has twelve awarded or pending patents. He is the author of two textbooks: OFDM-Based Broad-Band Wireless Networks: Design and Optimization (Wiley, 2005), and Signal Processing Applications in CDMA Communications (Artech House, 2000). Dr. Liu’s activities for the IEEE Communications Society include membership on several technical committees and serving as an Editor for the IEEE TRANSACTIONS IN COMMUNICATIONS. He is the General Chairman for the 2005 Asilomar conference on Signals, Systems, and Computers. He is a recipient of 1997 National Science Foundation (NSF) CAREER Award, The Best Patent Award in China, and 2000 Office of Naval Research (ONR) Young Investigator Award.
+
+Lei Yang received the B.S. degree from HuaZhong University of Science and Technology, Wuhan, China, in 1998, and the M.S. degree from TsingHua University, Beijing, China, in 2001. He is currently working toward the Ph.D. degree in the Mixed-Signal CAD Lab, Electrical Engineering Department, University of Washington, Seattle.
+During his M.S. study, he did a lot of work on RF filter design, field–programmable gate arrays, and digital application-specific integrated circuit (ASIC) designs. Currently, his research interests are in the field of VLSI implementation and communication systems such as low-density-parity-check and orthogonal frequency division multiplexing design and chip realization, and mixed-signal VLSI and analog IC design automation.
+
+C.-J. Richard Shi (M’91-SM’99–F’06) is currently a Professor in Electrical Engineering at the University of Washington. His research interests include computer-aided design and test of integrated circuits and systems, as well as VLSI implementation of communication systems. He is a key contributor to IEEE std 1076.1-1999 (VHDL-AMS) language standard for the description and simulation of mixed-signal circuits and systems. He founded IEEE International Workshop on Behavioral Modeling and Simulation (BMAS) in 1997, and has served on the technical program committees of several international conferences. He has authored or coauthored over 100 papers published in international journals and conferences, and has served as the principal investigator of over 10 research projects supported by DARPA, SRC and NSF. Dr. Shi received the Best Paper Award from the IEEE/ACM Design Automation Conference, a Best Paper Award from the IEEE VLSI Test Symposium, a National Science Foundation CAREER Award, and a Doctoral Prize from the Natural Science and Engineering Research Council of Canada. He has been an Associate Editor, as well as a Guest Editor, of the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: ANALOG AND DIGITAL SIGNAL PROCESSING. He is currently an Associate Editor of IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATE CIRCUITS AND SYSTEMS and IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 13:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+

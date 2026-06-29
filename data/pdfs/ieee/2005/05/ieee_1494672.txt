@@ -1,0 +1,446 @@
+A Scalable Decoder Architecture for Linear Congruential LDPC Codes
+Abhiram Prabhakar and Krishna Narayanan Department of Electrical Engineering, Texas A&M University, College Station, TX-77843 Email: {pabhiram,krn}@ee.tamu.edu
+
+Maximal length linear congruential sequence (MLLCS) based LDPC codes have the advantage that the LDPC code graph can be generated at the receiver without having to explicity store the graph. Hence, these codes are advantageous when the same hardware needs to be used for different sets of rates and lengths. In this paper, we reveal an inherent structure in these codes that facilitates parallel implementation of the decoding algorithm. Based on this, we present an architecture for the MLLCS-LDPC decoder that facilitates parallel scalable implementation and joint code-decoder design.
+Keywords-LDPC decoder, MLLCS, Parity check matrix, SPA, bipartite graph.
+I. INTRODUCTION
+Low Density Parity check codes [2] have been the focus of intense research in recent years. The parity check matrix of a regular (N, K) LDPC code is sparse with λ ones in each column and ρ = λ/(1 − K/N ) ones in each row. A bipartite graph can be associated with the LDPC code and the decoder is a message passing decoder which passes extrinsic messages along the edges in this graph. While the bit error rate performance of LDPC codes is impressive, the application of LDPC codes for real world error correction systems is limited by issues related to hardware implementation of the decoder. Serial architectures have high latency while parallel architectures have high hardware complexity that prohibits practical implementations. Partly parallel implementations that explore the trade off between throughput and hardware complexity have been proposed as the solution.
+The parity check matrix (connections in the graph) of an LDPC code is typically constructed at random with constraints to avoid short cycles, especially those of length 4. While the performance of such constrained random LDPC codes are good, they lack any special properties that can be exploited for efficient implementation of the decoder. Also the parity check matrix for such codes need to be stored at the decoder. For a communication system operating with codes of various lengths and rates, the parity check matrix of each code has to be stored at the decoder and this requires huge quantity of memory. Recently, a number of LDPC decoder architectures have been explored [4]- [9]. Some of these [4], [6], [8], present a joint code-decoder design. For such designs the parity check
+
+matrix can be generated at the decoder and need not be pre stored. These designs propose structured LDPC codes that can be exploited for the decoder design. In our previous work [1] we have proposed regular MLLCS-LDPC codes with λ = 3 and girth 6. Such codes require only a set of 3 values to generate the parity check matrix of the LDPC code at the decoder and still perform as well as random constructions with explicit constraints to remove loops of length 4. In [3] further research on [1] has been done and techniques for constructing both regular and irregular MLLCS-LDPC codes of girth 6 and higher have been proposed.
+In this paper, we show that MLLCS based LDPC codes posses additional structure which makes these codes suitable for partly parallel scalable implementation. We show one such design which works directly on the edges of the graph structure associated with parity check matrix and can be used to obtain varying degrees of parallelism.
+Section II explains MLLCS codes in brief and the corresponding bi-partite graph structure. Section III explains how such codes can be used for partly parallel decoder implementation with an example. Section IV explains the message-passing decoding algorithm briefly. Section V explains the proposed decoder.
+II. GRAPH STRUCTURE AND MLLCS-LDPC CODES
+Low density parity-check codes are well represented by bipartite graphs. One set of nodes, the variable nodes or bit nodes, corresponds to elements of the codeword and the other set of nodes, viz. check nodes, corresponds to the set of paritycheck constraints satisfied by each codeword. A (λ, ρ)-regular low density parity check code has a graphical representation in which each variable node or bit node is connected to λ edges and each check node to ρ edges. We use the following representation to ease the exposition in the paper. We first associate with each check node ρ connections called check connections and with each bit node λ connections called bit connections as shown in Fig. 1 for λ = 3 and ρ = 6. Therefore, there are totally M = N λ bit and check connections. An edge in the graph connects a bit connection on the left to a check connection on the right. The edge between the pth bit connection and Apth check connection represents an edge between p/λ th bit node and Ap/ρ th check node.
+
+0-7803-8938-7/05/$20.00 (C) 2005 IEEE
+
+1911
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:42 UTC from IEEE Xplore. Restrictions apply.
+
+A randomly constructed LDPC code is formed by randomly connecting the bit connections on the left with the check connections on the right or, equivalently, when the sequence A0, A1, . . . , Ap, . . . , AM−1 is a randomly generated sequence. In [1] we have proposed generating the sequence using the recursion,
+
+An+1 = (aAn + b) mod M, 0 ≤ n ≤ M − 2 (1)
+
+where a and b satisfy the following conditions and A0 is any integer between 0 and M − 1.
+
+D1. a < M , b < M .
+
+D2. b is relatively prime to M .
+
+D3. (a − 1) is a multiple of p, for every prime p dividing M .
+
+In addition, (a − 1) is a multiple of 4 if M is a multiple
+
+of 4.
+
+D4. (optional) a is relatively prime to M .
+
+D5. (a − 1) divides M
+
+D6. b > 2(ρ − 1).
+
+D7. (a − 1) > 4b + 2(ρ − 1).
+
+D8.
+
+Let
+
+X
+
+=
+
+M a−1
+
+,
+
+X ≥ ρ or, equivalently, (a−1) ≤ (M/ρ).
+
+Then, there exists no integer i, 1 ≤ i ≤ ρ − 1 such that
+
+((a + 1) i) mod X = 0 or, equivalently, ((a2 − 1) i)
+
+mod M = 0.
+
+Conditions [D1-D4] are necessary to ensure that maximal
+length sequence(length M) is generated and [D5-D8] are necessary to avoid cycles of length 4 for a λ = 3 LDPC code. From now on λ = 3 is implicit for the rest of the paper. Bit node 0 will be connected to check connections A0, A1, A2, bit node 1 will be connected to check connections A3, A4, A5 etc.
+
+III. INHERENT STRUCTURE IN MLLCS-LDPC CODES
+The key for implementing a partly parallel LDPC decoder is to divide the check connections of the graph into subgroups. This allows the extrinsic messages along the edges of the graph in each subgroup to be stored in different memory banks and therefore simultaneous read/write operations for several extrinsic messages is possible. We now show how the check connections of the MLLCS-LDPC code can be divided into subgroups. The key result is the following theorem
+Theorem 1: Let M 1 be any value that divides X and is also divisible by ρ. Then, the sequence Cn = (Cn−1a + b) mod M 1, where a and b are the same values used for generating the MLLCS of length M , is an MLLCS sequence of length M 1.
+Proof: Let M = p1y1 , py22 , . . . , pyjj where the set P = {p1, p2, . . . , pj} contains the distinct prime factors of M . Let X = q1w1 , q2w2 , . . . , qkwk where the set Q = {q1, q2, . . . , qk} contains the distinct prime factors of X. Due to conditions D3 and D5, it can be clearly seen that (a−1) will not contain any prime factors that is not contained in M and will contain all the distinct prime factors of M . Hence Q must be a subset of P . Let M 1 be any value that divides X and is also divisible by ρ. Consider the equation,
+
+Cn = (Cn−1a + b) mod M 1
+
+(2)
+
+This can be written as,
+
+Cn = (Cn−1(a − 1) + Cn−1 + b) mod M 1 (3)
+Let us rewrite (a − 1) as U (a1 − 1) for some U , where (a1 − 1) contains all the distinct prime factors of M 1. This can be done since (a − 1) divides M and contains all the distinct prime factors of M . Also, let b mod M 1 = b1, i.e. b = V M 1 + b1 for some V . Due to [D2], b is relatively prime to to M and therefore b1 should be relatively prime to M 1. Since M 1 divides M , if b1 is not relatively prime to M 1 it can be easily shown that b is not relatively prime to M .
+Hence,
+
+Cn = (Cn−1U (a1 − 1) + Cn−1 + V M 1 + b1) mod M(41)
+
+= (Cn−1U (a1 − 1) + Cn−1 + b1) mod M 1
+
+(5)
+
+if U (a1 − 1) i.e. (a − 1) is greater than or equal to M 1, it can be rewritten as M 1 × U 1 for some U 1. Hence,
+
+Cn = (Cn−1U (a1 − 1) + Cn−1 + b1) mod M 1 (6)
+
+= (Cn−1 × M 1 × U 1 + Cn−1 + b1) mod M 1(7)
+
+= (Cn−1 + b1) mod M 1
+
+(8)
+
+This is a MLLCS of length M 1. If U (a1 − 1) = (a − 1) is less than M 1 then the sequence Cn is a MLLCS since (a, b1) satisfy all the conditions necessary for maximal length. Therefore in either case Cn is a MLLCS of length M 1.
+An important consequence of the above result is that the sequence A0, A1, . . . , Ap, . . . , AM−1 mod M 1 is just a repetition of the sequence C0, C1, . . . , Cp, . . . , CM1−1. This enables us to segregate the sequence A0, A1, . . . , Ap, . . . , AM−1 into M 1 groups based on modulus with respect to M 1. Let us consider an
+example to clarify this sub-grouping process.
+Example 1: Consider the design of a rate-1/2 LDPC code with λ = 3, ρ = 6, N = 3072, K = 1536. For this case, the number of edges M = 9216 and let a = 49, b = 11, A0 = 0, M 1 = 6. The sequence An is 0, 11, 550, 8529, 3212, 727, 7986, 4253, 5656, 675, 5438, 8425, . . . . When taken modulus 6 the sequence is 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, . . . . Hence {0, 7986} belong to the same group and similarly {11, 8529} belong to one
+group. M1 can also take values 12, 24, 48, 96 and 192.
+
+IV. MESSAGE-PASSING DECODING ALGORITHM
+
+We shall discuss the decoding algorithm very briefly to
+
+understand the components of the decoder. Let us assume a
+
+BPSK modulation scheme where a 1 is mapped to +1 and 0 is
+
+mapped to −1 and an Additive White Gaussian Noise(AWGN)
+
+channel. The received channel values are converted to log-
+
+likelihood
+
+ratios
+
+given
+
+by
+
+Lch(ci)
+
+=
+
+−2 σ2
+
+ri
+
+,
+
+where
+
+σ2
+
+is
+
+the
+
+variance of the noise added in the channel. Let us define the
+
+function,
+
+ψ(x)
+
+=
+
+log(tanh(
+
+|x| 2
+
+)).
+
+Each decoding iteration has a bit node update and a check
+
+node update. Let Lcq(i) represent the check to bit message along the ith edge connected to the nth check node during the
+
+qth iteration(we will not explicitly use the index n to denote
+
+1912
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:42 UTC from IEEE Xplore. Restrictions apply.
+
+quantities associated with the nth node as the operations are identical at all nodes). Similarly, let Lbq(i) represent the bit to check value along the ith edge connected to the nth bit node.
+
+Enforcing the parity check constraint on the incoming bit
+
+to check values, the check node update is given by,
+
+
+
+
+
+k=t
+
+|Lqc(i)| = ψ−1 
+
+ψ(Lbq−1(k)) , ∀i (9)
+
+k=1,k=i
+
+k=t
+
+sign(Lqc(i)) =
+
+sign(Lbq−1(k))
+
+(10)
+
+k=1,k=i
+
+The bit node update is given by,
+
+Lqb+1(i) = Lch(cn) + Lcq(k)
+
+(11)
+
+k=i
+
+The nth bit is decoded as 1 if (Lch(cn) + k Lqc(k)) < 0, else as 0.
+
+V. MLLCS-LDPC DECODER ARCHITECTURE
+The block diagram of the decoder architecture is shown in Fig. 2. The key aspect to this structure is the memory implementation for storing the extrinsic messages made possible due to the subgrouping of check connections. We shall number the extrinsic messages at the check connections and since each check connection is connected to only one edge, both the extrinsic message number and check connection number refer to the same value. The memory for storing the extrinsic messages is divided into an array of smaller memory blocks. There are M 2 rows with M 1 number of memory blocks in each row. Here, M 1 is the number of simultaneous extrinsic messages processed at the bit node update(BTU) unit and M 2 × M 1/ρ is the number of simultaneous messages processed at the check node update(CNU) unit. The logical mapping of check connections to memory locations is shown in Fig. 3. The example with parameters M = 40, M 1 = 4 and M 2 = 2 is only for illustration purposes and does not satisfy the necessary conditions for a MLLCS-LDPC code. The first check connection is mapped to the first memory location on (row1,column1) memory block. Subsequent check connections are mapped from left to right to the first memory location of memory blocks on the same row. Then the mapping is continued to memory location 2 of each memory block and so on.
+The extrinsic messages for a check node update are read from the same memory location of ρ consecutive memory blocks in a row. Hence the M 1 extrinsic messages read in parallel from each row can be used for M 1/ρ check node updates. Since there are a total of M 2 rows, M 1 × M 2/ρ check node updates can be processed in parallel. We have shown in section III that M 1 consecutive bit connections are connected to check connections belonging to M 1 different subgroups. In the proposed architecture, the memory blocks in each column represent a subgroup. Hence the M 1 columns represent the M 1 subgroups of check connections. Since M 1 extrinsic values can be read in parallel M 1/3 bit node updates
+
+can be processed in parallel. Address generation to identify the exact memory location and memory block to which each bit connection is connected to, can be easily computed by knowing the check connection to which it is connected as defined by the MLLSC sequence, M 1, M 2 and the size of each memory block which in effect is determined by M .
+The channel output values are stored in M 1/3 memory blocks for parallel access by the bit node units.The purpose of the router is to channel the extrinsic message from each memory column to the correct bit node update unit and viceversa. It should be noted that for a given code, the routing is constant over time. This is because the subgroup sequence repeats itself in the same order. If the decoder is used to decode only one LDPC code the router can be replaced by hard wiring each memory column to the appropriate bit node update unit. This is an advantage when compared to partly parallel design in [5] where we need a switch because the routing changes with each clock cycle. Also, for a given code one can choose different acceptable M 1 and M 2 values and hence various levels of parallelization can be achieved using the same LDPC code giving scalability to the architecture. Since the same parity check matrix can be used for various levels of parallelization there will be no difference in bit error performance of the code between the implementations. For the sake of completeness of this paper, Fig. 4 taken from [1] compares the bit error rate performance of a rate 1/2 code of length 3072 with a randomly constructed code without cycles of length 4. It can be seen that the MLLCS code has no noticeable loss compared to the random code. In the architecture in [5] each level of parallelization needs a new parity check matrix. If the memory addresses are to be generated on the fly the address generation module must be run at a much higher clock frequency compared to the decoder since M 1 addresses need to be generated for each clock cycle using the MLLCS equation. In general, for a decoder operating with codes of different lengths and rates the addresses for the selected code can be generated before the decoding starts and stored in a memory. The check node update units can be built in a flexible way to support codes of different rate.
+A. Decoding sequence
+The sequence of operations for the LDPC decoder is summarized below.
+1) Using a counter to generate addresses, read M 2 × M 1 extrinsic messages in parallel and complete M 2×M 1/ρ check node updates and write back the check to bit messages into the extrinsic memory. This process takes a total of M/(M 1 × M 2) clock cycles.
+2) Read M 1 extrinsic messages one from each column using the address generated from the MLLCS sequence. Compute the M 1/3 bit node updates and write back the bit to check messages into the extrinsic memory. This process takes a total of N/(M 1/3) clock cycles. The total time for a decoding iteration is (M/M 1 × M 2) + (N/(M 1/3)) clock cycles.
+
+1913
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:42 UTC from IEEE Xplore. Restrictions apply.
+
+3) Repeat the check and bit updates for a given number of iterations and make hard decisions on the soft output values.
+VI. CONCLUSION
+Joint code-decoder design and partly parallel implementation are increasingly used in the state of art LDPC decoder implementations. In this paper we have shown that our previous work namely MLLCS-LDPC codes is suitable for joint code-decoder design. We have also proved that there is a method to divide the extrinsic messages into subgroups to facilitate a partly parallel decoder implementation. Various levels of parallelization can be achieved giving scalability to the architecture. Since the same parity check matrix is used for various levels of parallelization there is no difference in bit error performance.
+REFERENCES
+[1] A. Prabhakar, K. Narayanan. Psuedorandom Construction of Low Density Parity-Check Codes using Linear Congruential Sequences. IEEE Transactions on Communications, vol.50, no.9, pp.1389-1396, sep 2002.
+[2] R.G. Gallager. Low-density parity-check codes. IRE Transactions on Information Theory, January 1962.
+[3] J. Sun, O.Y. Takeshita, M.P. Fitz. On-Low Density Parity-Check Codes constructed with Maximal Length Linear Congruential Sequences. Communication, Control and Computing, Allerton 2003, 1-2 Oct 2003. Pages:1677-1678.
+[4] T. Zhang and K.K. Parhi A 54 MBPS (3,6)-regular FPGA LDPC decoder. IEEE Proc. of SIPS, pp.127-132, 2002.
+[5] A. Selvarathinam, G. Choi, K. Narayanan, A. Prabhakar, E. Kim. A massively scalable architecture for low-density parity-check codes. Circuits and Systems 2003, ISCAS’ 03, Volume 2, 25-28 May 2003. Pages:II-61II64 vol.2.
+[6] M.M. Mansour, N.R. Shanbhag. Memory efficient turbo decoder architecture for LDPC codes. IEEE workshop on Signal Processing Systems, 2002(SIPS’02), 16-18 oct 02, Pages 159-164.
+[7] A.J. Blanksby, C.J. Howland. A 690-mW 1-Gb/s 1024-b, rate-1/2 lowdensity parity-check code decoder. IEEE J. Solid-State Circuits, vol.37, pp.404-412, 2002.
+[8] Y. Chen, D. Hocevar. A FPGA and ASIC implementation of rate 1/2, 8088-b irregular low density parity check decoder IEEE Global Telecommunciations Conference, 2003. GLOBECOM’03, vol:1, 1-5 Dec.2003, pages:113-117.
+[9] R. Echard, S.C. Chang. Irregular/ spl-pi/ -rotation LDPC codes. IEEE Global Telecommunications Conference, 2002. GLOBECOM’02, vol:2, 17-21 Nov.2002, pages:1274-1278.
+
+bit connection bniot010110de100110
+011100
+
+check connection
+0 1 2 3 4 5
+
+it0110h 1010 bit node
+
+p =3i p+1 p+2
+
+pth bit connection on
+
+the left connected to
+
+Ap th check
+
+s
+
+connection on the
+
+right
+
+s+1
+
+s+2
+
+represents an edge between s+3
+
+ith bit node and jth check node
+
+s+4 s+ ρ-1
+
+check node
+
+010110
+
+Ap
+
+jth check node
+
+010011
+
+Fig. 1. Bipartite Graph Structure
+
+Extrinsic Memory Blocks(MB)
+
+Address Input
+defined by
+(MLLCS) Sequence
+
+MB
+
+MB
+
+(1,1)
+
+(1,2)
+
+…….
+
+MB (1,M1)
+
+MB
+
+MB
+
+(2,1)
+
+(2,2)
+
+…….
+
+MB (2,M1)
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+MB (M2,1)
+
+MB (M2,2)
+
+……..
+
+MB (M2,M1)
+
+CNU units 1..(M1)/ρ
+CNU units
+. . .
+CNU units
+M2*(M1)/ρ -(M1)/ρ …M2*M1/ρ
+
+Channel output memory blocks
+
+MB
+
+MB
+
+MB
+
+1
+
+2
+
+. . . . (M1)/3
+
+Fixed Router For a code
+…
+
+BNU 1 & Hard decision
+
+BNU 2 & Hard decision
+
+BNU ….. (M1)/3
+& Hard decision
+
+Fig. 2. Block diagram of MLLCS-LDPC decoder
+
+1914
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:42 UTC from IEEE Xplore. Restrictions apply.
+
+0
+
+1
+
+4
+
+5
+
+8
+
+9
+
+12
+
+13
+
+16
+
+17
+
+2
+
+3
+
+6
+
+7
+
+10 11
+
+14 15
+
+18 19
+
+20 21 24 25 28 29 32 33 36 37
+
+22 23 26 27 30 31 34 35 38 39
+
+Fig. 3. Logical mapping for check connections
+
+Bit Error Rate(BER)
+
+10−1 MLLCS code random code with no length 4 cycles
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+1.3
+
+1.4
+
+1.5
+
+1.6
+
+1.7
+
+1.8
+
+1.9
+
+2
+
+2.1
+
+Eb/No
+
+Fig. 4. Bit error rate plot for a rate 1/2 code of length 3072
+
+1915
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:08:42 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,771 @@
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+Efficient Implementation of Interior Point Decoding Based on Barrier Function for LDPC Codes
+T. M. N. Ngatched, Attahiru S. Alfa, and Jun Cai Department of Electrical and Computer Engineering
+University of Manitoba Winnipeg, MB R3T 5V6
+Canada Email: {ngatched, alfa, jcai}@ee.umanitoba.ca
+
+Abstract—In this paper, an efficient implementation of the interior point algorithm recently proposed by Wadayama [5] for linear programming (LP) decoding of low-density paritycheck (LDPC) codes is presented. The main idea behind the modification is to approximate the barrier function for the fundamental polytope defining the code so that it contains only one linear constraint for each of the parity-check constraints. Simulation results show that the approximations introduced do not result in any performance degradation, while considerably reducing the decoding complexity and latency.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes originally introduced by Gallager [1] are becoming the standard for error control in many communication and digital storage systems where high reliability is required. By combining randomness and sparsity, LDPC codes with sufficiently long block length can approach Shannon limit using belief propagation (BP) decoding (also known as sum-product algorithm (SPA)). While the observed error-correcting performance of BP is unparalleled, its theoretical understanding remains incomplete.
+Proposed by Feldman et al. [2], linear programming (LP) is an alternative to iterative algorithms for decoding LDPC and turbo-like codes. LP decoding is based on solving a linearprogramming relaxation of the integer program corresponding to the maximum likelihood (ML) decoding problem. Although the practical performance of LP decoding is comparable to message-passing decoding [2], [3], [4] for LDPC codes with short to medium block lengths, LP decoding has some attractive features. LP decoding has the ML certificate property; whenever the result of linear programming decoder is integer, it is provably the maximum likelihood codeword. There are some close connections between LP decoding and standard forms of iterative decoding for LDPC codes. Moreover, LP decoding is amenable to nonasymptotic (finite-length codes) analysis.
+An algorithm for LP decoding of LDPC codes was recently introduced by Wadayama [5]. The algorithm, called interior point decoding (IPD), uses a barrier function to transform the constrained problem resulting from the LP relaxation
+This research is supported in part by NSERC Industrial Research Chair Grant
+
+of ML decoding into an unconstrained problem which can be solved using unconstrained optimization techniques. The barrier function corresponds to the constraints on the fundamental polytope defined based on an LDPC matrix, and is evaluated many times during the decoding process. Unfortunately, the complexity of computing the barrier function increases exponentially with the maximum check-node degree, therefore making this approach impractical even for paritycheck matrices of moderate row weights.
+In this paper we propose an efficient implementation of Wadayama’s algorithm. Inspired by a theorem proved in [6] that at most one of the constraints introduced by each check node can be violated, we develop two corollaries which enable us to approximate the barrier function for the fundamental polytope defining the code so that it contains only one linear constraint for each of the parity-check constraints. This leads to an approximate variation of the Newton method used to solve the convex optimization problem. A huge reduction in computational costs is hence obtained, making it possible to apply interior point algorithms with barrier function for the decoding of any LDPC codes, irrespective of its row weight. The performance of the proposed algorithm is demonstrated through simulation, and it is observed that the approximation does not result in any performance degradation, while considerably reducing the decoding complexity and latency.
+The rest of this paper is organized as follows. In the next section, background on LDPC codes and linear programming relaxation of maximum-likelihood decoding are provided. A review of the interior point decoding based on the barrier function method, with an emphasis on its implementation, is presented in Section III. In Section IV, an efficient implementation of the barrier function method is introduced. Some simulations results are presented in Section V, and finally concluding remarks are made in Section VI.
+II. BACKGROUND
+A. LDPC Codes
+A binary LDPC code is completely described by its sparse binary parity-check matrix H. For an (N, K) LDPC code, H has N columns and M ≥ N − K rows. For a regular LDPC code, H has a constant column weight wc and a constant
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-4o2w4n4lo-a6d3e9d8o-n5/J1u0ne/$2246,2.00026©a2t 0021:021I:E30EUETC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+row weight wr. The set of bits that participate in check m is denoted as N (m) {n : Hmn = 1}. Similarly, the set of checks in which bit n participates is denoted as M(n)
+{m : Hmn = 1}.
+
+B. Decoding Via LP Relaxation of ML Decoding
+Suppose a binary (N, K) LDPC code is used for error control over a binary-input additive white Gaussian noise (BIAWGN) channel with zero mean and power spectral density N0/2. Assume binary phase-shift-keying (BPSK) signaling with unit energy. A codeword c ∈ {GF (2)}N is mapped into the bipolar sequence x before its transmission, where xi = (1 − 2ci) with 0 ≤ i ≤ N − 1. Let y be the soft-decision received sequence at the output of the receiver matched filter. Given the received vector y ∈ RN , the ML decoding problem can be formulated as an integer program of the form
+
+minimize γT c
+
+subject to c ∈ C
+
+(1)
+
+where γ is the known vector of negative log-likelihood ratios (LLR) whose ith entry is defined as
+
+γi
+
+=
+
+log
+
+Pr Pr
+
+(yi|ci (yi|ci
+
+= =
+
+0) 1) .
+
+(2)
+
+In the absence of additional structure, the ML decoding problem (1) requires an exhaustive search over an exponentially large space and is known to be NP-hard [7]. It is straightforward to convert the ML decoding problem into a linear program over the convex hull of all codewords, a polytope known as the codeword polytope [2]. Although linear programming is polynomially solvable in general, for a general binary linear code, the number of constraints required to characterize the codeword polytope, unfortunately, grows in a nonpolynomial manner with blocklength. A natural approach is to relax the linear program by taking only a polynomial set of constraints that approximate the codeword polytope. In [2], Feldman et al. proposed a relaxation using the parity-check matrix H. For each check, the corresponding local codeword polytope is the convex hull of the bit sequences which satisfy the check (local codewords). The relaxed polytope P, also known as the fundamental polytope [4], is obtained by looking at each check independently, and taking the intersection of all the local codeword polytopes.
+For LDPC codes, the relaxed polytope P can be described by a linear number of inequalities as follows. For each row hm, m ∈ [1, M ], of the parity check matrix of C, let V be a subset of odd size in N (m). The fundamental polytope P is the polytope which, for each x ∈ RN , satisfies the following constraints
+
+xn −
+
+xn ≤ |V| − 1, ∀ V ⊆ N (m) (3)
+
+n∈V
+
+n∈N (m)\V
+
+which can be written in the equivalent form
+
+1 + (xn − 1) −
+
+xn ≤ 0, ∀ V ⊆ N (m) (4)
+
+n∈V
+
+n∈N (m)\V
+
+and
+
+0 ≤ xn ≤ 1, ∀ n ∈ [1, N ]
+
+(5)
+
+Equations (4) and (5) are referred to as parity constraints and box constraints respectively. The interior set of P, denoted by P∗, consists of the points satisfying equations (4) and (5) with
+strict inequalities.
+LP decoding can then be written as
+
+minimize γT x
+
+subject to x ∈ P.
+
+(6)
+
+The fundamental polytope has a number of integral and nonintegral vertices, but the integral vertices exactly correspond to the codewords of C. Therefore, whenever LP gives an integral solution, it is guaranteed to be the ML codeword.
+
+III. SOLVING THE LP USING THE INTERIOR POINT METHOD
+Although the LP decoding problem (6) is easier to solve than the original MLD problem (1), it is still a computationally difficult problem. Moreover, using general purpose LP solvers can be highly inefficient as they do not take advantage of the particular structure of the optimization problems arising in LP decoding. In this section, we briefly review the interior point method (IPM) with barrier function for LP decoding.
+Interior point methods are a certain class of algorithms to solve linear and nonlinear convex optimization problems. Consider the constrained optimization problem of the form
+
+minimize f (x)
+
+subject to x ∈ S.
+
+(7)
+
+where x ∈ RN is the decision variable, f (x) is a realvalued function, and S is a convex subset of RN . In many applications, like the problem at hand, S is defined explicitly by a number of functional constraints. The key idea of interior point algorithm based on barrier function method is to use a barrier function to transform the “difficult” constrained problem (7) into an “easy” unconstrained problem, or into a sequence of unconstrained problems, which can be solved using unconstrained optimization techniques. Let φ (x) be a barrier function, the barrier function method replaces the original problem (7) by the unconstrained convex optimization problem
+
+minimize
+
+f
+
+(x)
+
++
+
+1 t
+
+φ
+
+(x)
+
+≡
+
+tf
+
+(x)
+
++
+
+φ
+
+(x)
+
+subject to x ∈ RN .
+
+(8)
+
+where t > 0 is a parameter that sets the accuracy of the approximation. In the sequel, it will be convenient to define
+
+ψ (x) = tf (x) + φ (x) .
+
+(9)
+
+As t → ∞, the barrier function has no effect on the objective function for x in the feasible set, so the modified problem (8) becomes exactly the original problem (7). For finite t, the modified problem is only an approximation, so the optimal point of (8) is not the optimal point of (7). The difficulty
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:21:30 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+with a large t is that the overall function becomes difficult to minimize even using Newton’s method, because the barrier function approaches a discontinuous as t becomes larger. The problem is overcome by a process called centering, where a succession of these modified problems are solved with t increasing (and therefore the accuracy of the approximation) with each centering step (ti+1 = μti). First, the modified problem is solved using some small initial t0 by Newton’s method. The solution of a centering step is used as the starting point of the next centering step. Each execution of the centering step is called an outer iteration, and the Newton iterations or steps executed during the centering step are called inner iterations. In our implementation, for practical reasons, a limit is placed on the number of outer and inner iterations. It should be noted that, although we assume Newton’s method, any method for linearly constrained minimization can be used in the centering step.
+
+A. Choice of the Barrier Function
+There exists many choices for the form of the barrier function in the literature. The most important and commonly used one is the logarithmic barrier function, which has the form − log (−x). The logarithmic barrier function for the fundamental polytope, φ (x) x ∈ RN , that includes both the parity constraints and box constraints is defined by [5]
+
+φ (x)
+
+−
+
+log [− (−xn)] −
+
+log [− (xn − 1)]
+
+n∈[1,N ]
+
+n∈[1,N ]
+
+−
+
+log [−u (x)]
+
+(10)
+
+m∈[1,M ] V⊂N (m)
+
+where
+
+⎛
+
+⎞
+
+u (x) = ⎝1 + (xn − 1) −
+
+xn⎠ . (11)
+
+n∈V
+
+n∈N (m)\V
+
+The function φ (x) is convex and differentiable. Furthermore, if x ∈/ P∗, then φ (x) = ∞; otherwise φ (x) < ∞.
+
+B. Choice of Barrier Step Size μ and Starting Value t0
+The choice of the parameter μ involves a trade-off in the number of inner and outer iterations required. If μ is too large, then we will have less centering steps (outer iterations), but each step will require more inner iterations before it converges. If μ is too small, then we will require many centering steps. Typical implementations take μ between 10 and 20.
+Another important issue is the choice of t0, the starting value of t. Here the trade-off is simple: If t0 is chosen too large, the first outer iteration will require too many iterations. If t0 is chosen too small, the algorithm will require extra outer iterations, and possibly too many inner iterations in the first centering step. We found that values from around 20 or so seem to work well.
+
+C. Centering Step: Newton’s optimization method
+The first step in Newton’ method [8] is calculation of the Newton step and Newton decrement at x. Let G and g be the Hessian and gradient matrices, respectively. For a feasible x,
+Newton step: d = −∇2ψ (x)−1 ∇ψ (x) = −G−1g Newton decrement: λ2 (x) = ψ (x)T ∇2ψ (x)−1 ∇ψ (x)(12)
+The method is outlined in Algorithm 1.
+Algorithm 1 Newton’s method 1: Given strictly feasible x, tolerance ε > 0, maximum number of inner iterations kmax > 0; 2: Set iteration counter k = 0; 3: repeat 4: k ← k + 1; 5: Compute the Newton step and decrement; 6: Stopping criterion. quit if λ2/2 ≤ ε or k = kmax; 7: Line search. Choose step size t > 0 by backtracking line search; 8: Update. x = x + td; 9: until stopping criterion is satisfied 10: Ouput x as the solution;
+1) Backtracking Line Search: Backtracking line search is an inexact line search method that is very simple (it does not need to evaluate the gradient at each point) and quite effective. It depends on two constants α and β, with 0 < α < 0.5, 0 < β < 1, and is outlined in Algorithm 2. The line search is called backtracking because it starts with unit step size and then backtracks toward a step size of 0, stopping when the sufficient decrease condition is met. The constant α can be interpreted as the fraction of the decrease in ψ predicted by linear extrapolation that is accepted. We choose α = 0.3 and β = 0.5.
+Algorithm 2 Backtracking line search 1: Given a descent direction d for ψ at a feasible x, α ∈ (0, 0.5), β ∈ (0, 1). 2: t = 1; 3: while ψ (x + td) > ψ (x) + αt∇ψ (x)T d, do 4: t = βt; 5: end while 6: Ouput t;
+
+D. Fractional Value Quantization
+
+During the IPD process, it is possible that the updated search point at the end of an outer iteration approaches close enough to a codeword vertex. Such a point can easily be corrected through a binary quantization instead of going through one or many more outer iterations, which requires a much longer computational time. Let ˆx be the LP decoding output, the corresponding binary quantized vector z is defined by
+
+zi =
+
+1, 0,
+
+if xˆi ≥ 0.5, if xˆi < 0.5.
+
+(13)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:21:30 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+Not only can this improves the decoding speed, but it can also be used as a stopping criterion for the decoding. For any tentative binary hard decision z made at the end of each decoding iteration, we can compute the syndrome vector as s = z · HT and stop the decoding if s = 0.
+Our implementation of the barrier method can be summarized as in Algorithm 3.
+Algorithm 3 Algorithm Barrier method 1: Given strictly feasible x, t = t0 > 1, μ > 1, maximum number of outer iterations kmax > 0; 2: Set iteration counter k = 0; 3: repeat 4: k ← k + 1 5: Centering step (Newton optimization method). Compute x∗ (t) by minimizing tf (x) + φ (x), starting at x; 6: Update. x = x∗ (t); 7: Quantize x to obtain z, and compute s = z · HT . 8: Stopping criterion. quit if s = 0 or k = kmax; 9: Increase t = μt; 10: until stopping criterion is satisfied 11: Ouput z as the solution;
+E. Initial Search Point
+The barrier method requires a strictly feasible starting point x0. It can easily be shown that, if wr ≥ 3, the point x = (1/2, 1/2, . . . , 1/2) satisfies both the box constraints and the parity constraints. It is thus a feasible point, i.e. x ∈ P∗, and can been used as the initial search point.
+IV. EFFICIENT IMPLEMENTATION OF THE BARRIER FUNCTION METHOD
+The most complex step at each iteration of the IPD is in the Newton iterations. During these steps, a search point x is updated using the Newton method to minimize the objective function ψ (x). During this process, the objective function, and hence the barrier function, is evaluated many times. Any odd-sized subset V of the neighborhood N of each parity check node introduces a unique parity inequality. It can easily be shown, using the binomial theorem, that there are 2wr−1 constraints corresponding to each check node of degree wr. The number of inequalities corresponding to the parity constraints is thus M 2wr−1. Therefore, a brute-force evaluation of the barrier function requires O (N 2wr ) computation time. For parity-check matrices of high row weights, this number can be very large, and even prohibitive.
+In addition, the execution of the Newton Method requires the computation of the gradient and the Hessian of the objective function. Computation of the gradient involves the partial derivative of the barrier function and contains M 2wr−1 terms. Likewise, a straightforward evaluation of the second derivative of the barrier function required for the Hessian needs O (N 2wr ) computational time. The computational time of computing the gradient and the Hessian are therefore an exponential function of the row weight wr as well. These
+
+computational costs are also a major obstacle to achieving an efficient implementation of the interior point decoding for LDPC codes of moderate or high row weight. In this section, some approximations are introduced in order to make the interior point decoding computationally tractable and applicable to any LDPC code, irrespective of its row weight.
+
+A. Approximate Logarithmic Barrier Function
+
+Theorem 4.1: If at any given point x ∈ [0, 1]n, one of the
+
+parity inequalities introduced by a check node m is violated,
+
+the rest of the parity inequalities from this check node are
+
+satisfied with strict inequality.
+
+Proof: See ([6]).
+
+Let
+
+Im
+
+be
+
+the
+
+subset ⎡
+
+of
+
+N (m)
+
+defined
+
+by
+
+⎤
+
+Im arg max ⎣1 + (xn − 1) −
+
+xn⎦ .
+
+V⊂N (m)
+
+n∈V
+
+n∈N (m)\V
+
+(14)
+
+The following corollaries can be derived from the above
+
+theorem: Corollary 4.2: A point x ∈ RN that satisfies the parity
+
+inequality for n ∈ Im of a check node m also satisfies the
+
+rest of the parity inequalities from this check node. Corollary 4.3: A point x ∈ RN that satisfies the parity
+
+inequality induced by Im for every m ∈ [1, M ] and the constraint 0 < xn < 1 for every n ∈ [1, N ], is a feasible point, i.e. x ∈ P∗.
+
+Corollary (4.3) can be used to define the approximate logarith-
+
+mic barrier function for the fundamental polytope as follows
+
+φ˜ (x)
+
+−
+
+log (−σm) −
+
+log [− (−xn)]
+
+m∈[1,M ]
+
+n∈[1,N ]
+
+−
+
+log [− (xn − 1)].
+
+(15)
+
+n∈[1,N ]
+
+where
+
+σm
+
+is
+
+defined ⎡
+
+by
+
+⎤
+
+σm max ⎣1 + (xn − 1) −
+
+xn⎦ . (16)
+
+V⊂N (m)
+
+n∈V
+
+n∈N (m)\V
+
+Due to this approximation, the evaluation of the objective
+function requires only O (N wr) computation time. Im and σm can be obtained without generating all the 2wr−1 subsets of odd size of N (m) using Algorithm 4.
+
+B. Approximate gradient The gradient of ψ (x), which is defined on P∗, is given by
+
+∇ψ (x)
+
+∂ ∂x1
+
+ψ
+
+(x)
+
+,
+
+.
+
+.
+
+.
+
+,
+
+∂ ∂xN
+
+ψ
+
+(x)
+
+.
+
+(17)
+
+It can be shown that for k ∈ [1, N ]
+
+∂ ∂xk
+
+ψ
+
+(x)
+
+=
+
+t
+
+∂ ∂xk
+
+f
+
+(x)
+
++
+
+∂ ∂xk
+
+φ
+
+(x)
+
+= tγk +
+
+τk(N (m)) (x)
+
+m∈[1,M ] V⊂N (m)
+
+1
+
+1
+
+− xk − xk − 1
+
+(18)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:21:30 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+Algorithm 4 Find the subset Im of N (m) and compute σm
+
+1: for all m ∈ [1, M ] do
+
+2: Initialization: Set Im = ∅, σm = 1, k = 0; 3: for all n ∈ N (m) do
+
+4:
+
+σm ← σm + max {xn − 1, −xn}
+
+5:
+
+if xn − 1 > −xn then
+
+6:
+
+Im {n};
+
+7:
+
+k ← k + 1;
+
+8:
+
+end if
+
+9: end for
+
+10: if k is even then
+
+11:
+
+nmin = arg min |2xn − 1|;
+
+n∈N (m)
+
+12:
+
+σm ← σm − |2xnmin − 1|;
+
+13:
+
+if nmin ∈ Im then
+
+14:
+
+Im ← Im \ nmin;
+
+15:
+
+else
+
+16:
+
+Im ← Im nmin;
+
+17:
+
+end if
+
+18: end if
+
+19: end for
+
+where τk(N (m)) (x)
+
+1+
+
+δk,N (m)\V − n∈V (xn − 1) −
+
+δk,V
+n∈N (m)\V
+
+xn
+
+,
+
+(19)
+
+δk,N (m)\V =
+
+1, 0,
+
+if k ∈ N (m) \ V otherwise
+
+(20)
+
+and
+
+δk,V =
+
+1, 0,
+
+if k ∈ V otherwise
+
+(21)
+
+Due to the second summation, the computational time of
+computing the gradient is an exponential function of the row weight wr. The gradient can be approximated by including only the largest contribution for each m ∈ [1, M ] as follows
+
+∂ ∂xk
+
+ψ
+
+(x)
+
+=
+
+tγk
+
++
+
+τk(N (m))
+
+m∈[1,M ]
+
+(x) −
+
+1 xk
+
+−
+
+1 xk −
+
+1
+
+(22)
+
+This approximation also reduces the computational time of the gradient to O (N wr).
+
+C. Approximate Hessian
+
+Let G {Gpq} (p ∈ [1, N ] , q ∈ [1, N ]) be the Hessian matrix. It is the square matrix of second-order partial derivatives of the objective function, which in our case reduces to the second-order partial derivatives of the barrier function φ (x). It is defined by
+
+Gpq
+
+=
+
+∂ ∂xp
+
+xq
+
+φ
+
+(x)
+
+=
+
+τp(N (m)) (x) τq(N (m)) (x)
+
+m∈[1,M ] V⊂N (m)
+
+1
+
+1
+
++δp,q xp2 + (xp − 1)2 .
+
+(23)
+
+Clearly, just as in the case of the gradient, the computation of the Hessian needs O (N 2wr )-time. The Hessian can be
+approximated as follows
+
+Gpq = δp,q
+
+τp(Im) (x) τq(Im) (x)
+
+m∈[1,M ]
+
+1
+
+1
+
++δp,q xp2 + (xp − 1)2
+
+(24)
+
+This approximation also reduces the computational time of the Hessian to O (N wr).
+
+V. SIMULATION RESULTS
+The error performance, in terms of bit-error rate (BER) and frame-error rate (FER) as a function of the rate-normalized signal-to-noise ratio (SNR) per information bit, of the standard IPD and the proposed IPD is evaluated on a number of LDPC codes of various constructions with short to medium block lengths. The maximum number of outer and inner iterations is set to 5 and 20, respectively. However, due to space limitation, we only present a couple of results. For comparison, the performance of the codes using BP is also included. The maximum number of iterations is set equal to 200 for BP. At each SNR value, at least 200 codewords errors are detected for short block length codes, and at least 100 codewords errors for medium block length codes.
+Figs. 1 - 4 show a couple of results. The code in Fig. 1 is a randomly generated (3, 6)-regular LDPC code of length 120, dimension 56, and rate 0.4667. The code in Fig. 2 is a randomly generated (3, 10)-regular LDPC code of length 273, dimension 191, and rate 0.7. The code in Fig. 3 is a (3, 10)regular LDPC constructed using the progressive edge growth (PEG) [9] algorithm. It is of length 504, dimension 252, and rate 0.5. The code in Fig. 4 is the (255, 175) Type-I 2-D Euclidean geometry (EG)-LDPC code [10] of rate 0.686. It can be observed that, in all cases, the approximations introduced in the proposed IPD do not cause any performance degradation. On the other hand, compared with the proposed IPD, the running time of the standard IPD was about 5 times, 10 times, and 7 times for the first code, the second code, and the third code, respectively. For the last code, it was impossible to obtain the performance using the standard IPD due to the large row weight of the code (wr = 16). It can also be observed that, at low SNR, BP slightly outperforms the IPD in some cases. However, at medium to high SNR, the situation is reversed with the IPD always outperforming BP in the error-floor (high SNR) region.
+
+VI. CONCLUSION
+In this paper we studied an efficient implementation of the interior point method with barrier function for the decoding of LDPC codes. Based on the fact that at most one of the constraints introduced by each check node can be violated, two corollaries are developed leading us to approximate the barrier function for the fundamental polytope defining the code so that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:21:30 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2010 proceedings.
+
+it contains only one linear constraint for each of the paritycheck constraints. This approximation, together with the subsequent approximation of the gradient and the Hessian, make the interior point method with barrier function computationally tractable and applicable for the decoding of any LDPC code, irrespective of its row and column weights. The performance of the proposed algorithm is demonstrated through simulation, and it is observed that the approximations do not result in any performance degradation, while considerably reducing the decoding complexity and latency.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes, Cambridge, MA: MIT Press, 1963.
+[2] J. Feldman, M. J. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inform. Theory, vol. 51, no. 3, pp. 954-972, Mar. 2005.
+[3] P. O. Vontobel and R. Koetter, “On the relationship between linear programming decoding and min-sum algorithm decoding,” in Proc. IEEE Intl Symp. on Inform. Theory and Applications, Parma, Italy, Oct. 2004, pp. 991-996.
+[4] P. O. Vontobel and R. Koetter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” Sumbitted to IEEE Trans. Inform. Theory.
+[5] T. Wadayama, “Interior point decoding for linear vector channels based on Convex Optimization,” in Proc. Int. Symp. Information Theory, Toronto, Canada, Jul. 2008, pp. 1493-1497.
+[6] M. H. Taghavi and P. H. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol 54, no. 12, pp. 5396-5410, Dec. 2008.
+[7] E. Berlekamp, R. McEliece and H. van Tilborg, “On the inherent intractability of certain coding problems,” IEEE Trans. Inform. Theory, vol. IT-24, no. 3, pp. 384-386, May 1978.
+[8] S. Boyd, Convex Optimization, Cambridge University Press, 2004, pp. 575-585.
+[9] X. Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge growth Tanner graphs,” IEEE Trans. Inform. Theory, vol. 51, no. 1, pp. 386-398, Jan. 2005.
+[10] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inform. Theory, vol. 47, pp. 2711-2736, Nov. 2001.
+
+Error Rate
+
+100
+
+Standard IPD
+
+10−1
+
+Proposed IPD
+
+BP
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+SNR(dB)
+
+Fig. 2. Simulated FER (dashed) and BER (solid) performances versus ratenormalized SNR of the (273, 191) LDPC code.
+
+Error Rate
+
+100
+
+Standard IPD
+
+10−1
+
+Proposed IPD
+
+BP
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+SNR(dB)
+
+Fig. 3. Simulated FER (dashed) and BER (solid) performances versus ratenormalized SNR of the (504, 252) PEG-LDPC code.
+
+Error Rate
+
+100
+
+10−1
+
+Standard IPD Proposed IPD
+
+BP
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+SNR(dB)
+
+Error Rate
+
+100
+
+BP
+
+10−1
+
+Proposed IPD
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR(dB)
+
+Fig. 1. Simulated FER (dashed) and BER (solid) performances versus rate- Fig. 4. Simulated FER (dashed) and BER (solid) performances versus rate-
+
+normalized SNR of the (120, 56) LDPC code.
+
+normalized SNR of the Type-I 2-D (255, 175) EG-LDPC code.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:21:30 UTC from IEEE Xplore. Restrictions apply.
+
+

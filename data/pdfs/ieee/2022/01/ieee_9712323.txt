@@ -1,0 +1,987 @@
+Received January 26, 2022, accepted February 8, 2022, date of publication February 11, 2022, date of current version February 22, 2022. Digital Object Identifier 10.1109/ACCESS.2022.3151086
+An LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+DECAI LIU , YANFEI LUO , YUNFENG LI , ZHIJIE WANG , ZHENGXUAN LI , QIANWU ZHANG , JUNJIE ZHANG , AND YINGCHUN LI
+Key Laboratory of Specialty Fiber Optics and Optical Access Networks, Shanghai 200444, China Joint International Research Laboratory of Specialty Fiber Optics and Advanced Communication, Shanghai 200444, China School of Communication and Information, Shanghai University, Shanghai 200444, China
+Corresponding author: Yingchun Li (liyingchun@shu.edu.cn) This work was supported in part by the National Key Research and Development Program of China under Grant 2021YFB2900800, in part by the Science and Technology Commission of Shanghai Municipality under Project 20511102400 and Project 20ZR1420900, and in part by the 111 Project under Grant D20031.
+
+ABSTRACT Low-Density Parity-Check (LDPC) code is a type of forward error-correction code with excellent performance, and has been widely used in many modern communication standards. The secondgeneration satellite broadcasting standard (DVB-S2) and its extension (DVB-S2X) adopt a special Irregular Repeated Accumulate (IRA) LDPC code as inner coding scheme. However, due to the large block size, most of the architectures proposed so far use Random Access Memory (RAM) to store and update the encoding results, and the delay caused by address-controlled read and write operations and barrel shift during computation inevitably limits the upper bound of encoder throughput. In this paper, by extracting the periodicity of the parity-check matrix, we introduce a fast encoding algorithm that can efficiently process the multiplication of the information sequence and a large-dimensional sparse matrix, and propose an encoder architecture with low encoding delay and high throughput. The proposed architecture has been implemented and tested on a Xilinx Kintex-7 FPGA, and the result show that the encoder architecture can achieve the highest throughput of 47.5 Gbps at a clock frequency of 280 MHz.
+INDEX TERMS Low-density parity-check code, DVB-S2/S2X, encoder architecture, high throughput, FPGA.
+
+I. INTRODUCTION LOW-DENSITY Parity-Check codes, proposed by Gallager [1], are linear block codes with high encoding gain. Due to the sparsity of the parity-check matrix, LDPC codes have lower decoding complexity than other codes, and have been used in various communication field to approach the Shannon limit better.
+To reduce hardware implementation complexity, all LDPC codes in practical applications are structured, i.e., their paritycheck matrix consists of an array of cyclic submatrices. These structured LDPC codes are collectively referred to as QuasiCyclic LDPC (QC-LDPC) codes. So far, many methods have been proposed to encode QC-LDPC codes, such as the direct method, R-U method [2], Partitioned H method [3], and the hybrid method [4].
+The associate editor coordinating the review of this manuscript and approving it for publication was Luca Barletta.
+
+In the field of satellite communication, QC-LDPC codes have also been adopted by two standardization organizations, the Consultative Committee for Space Data Systems (CCSDS) and the European Telecommunications Standards Institute (ETSI), and have become the common channel coding scheme. With the integration of space and earth, satellite communication rates will increase to tens or even hundreds of Gbps in the future, bringing new challenges to codec design. Under these circumstances, a channel codec with higher throughput performance is desired.
+Two classes of LDPC codes are defined in CCSDS standard [5]: one class of Accumulate, Repeat by 4, and Jagged Accumulate (AR4JA) codes is optimized for Deep-Space communication, and another C2 code is intended for NearEarth communications. Theodoropoulos et al. introduced a parallel algorithm for multiple encoding methods [3], achieving state-of-the-art throughput performance for AR4JA codes. However, for C2 code, the direct method is the best choice, which is implemented by multiplying the information
+
+19022
+
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/ VOLUME 10, 2022
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+sequence and the generator matrix. Since the generator matrix of C2 code is in quasi-cyclic form, the Shift-Register-AdderAccumulator (SRAA) circuit proposed in [6] can be used directly for encoding. However, it leads to a resource burden in the presence of high parallelism, whereas the Recursive Convolutional Encoder (RCE) circuit mentioned in [7] is more suitable for encoding C2 code. By using RCE and pingpang buffer, the throughput of the encoder architecture for C2 code in [8] reached 3.12 Gbps. Based on this, reference [3] replaced the ping-pang buffer at the input with the PISO registers and achieved a higher throughput of 4.16 Gbps. The work in [9] focuses on optimizing the repeated computation logic in RCE and realizes an encoder with a throughput of 4.69 Gbps while occupying only 1658 Look-Up Tables (LUTs) and 1038 Flip-Flops (FFs).
+The second-generation satellite broadcasting standard (DVB-S2) [10] and its extension standard (DVB-S2X) [11] released by ETSI also adopt a Forward Error Correction (FEC) scheme based on a cascaded BCH and LDPC code. For better error correction performance [12], the irregular LDPC code [13] is used in this scheme, and the rightmost part of the parity-check matrix is constructed in a dual-diagonal form so that the encoding process has linear complexity. In this paper, we focus on this particular class of structured LDPC codes.
+In terms of encoding, the Partitioned H method is particularly well suited for this type of LDPC code, but the multiplication of the information sequence and a large-dimensional sparse matrix involved in the method is related to the complexity of the encoder implementation and is also the main source of encoding delay. To accomplish this step, the encoder architectures proposed in [14]–[19] use the processing method of sequentially computing and updating submatrix, Random Access Memories (RAMs) are used for storage of computation results and parameters of the parity-check matrix. In addition, some logic is required for state control and barrel shift. The advantage of this structure is that it is compatible with a variety of frame lengths and code rates by loading parameters of different parity-check matrices. However, the read-write operation and barrel shift cause a large encoding delay at each update, and the complex control logic causes timing closure difficulties and reduces the device’s operating clock frequency. All these factors limited the throughput performance of the encoder and resulted in a maximum throughput of only 10.78 Gbps [19]. To further speed up the encoding process, Lee et al. increased parallelism by shifting multiple groups of information sequences simultaneously [20], but this requires that all input information bits be buffered for simultaneous shift operations, which occupies a large number of register resources at high code rate.
+To sum up, encoder architectures proposed so far are not efficient enough for high-throughput hardware implementations targeting the specific DVB-S2/S2X code. Although there are some high-throughput encoder architectures for codes with similar characteristics, such as the encoder proposed in [21] for 802.11n/ac. However, this is done by a
+VOLUME 10, 2022
+
+large number of parallel operations when the block length is short, which is not suitable for DVB-S2/S2X code because the difference in block length is too large.
+We notice that the RCE also exhibits high efficiency in processing the multiplication of the information sequence and a large-dimensional sparse matrix, and propose a new LDPC encoder architecture for the DVB-S2/S2X standards that can provide higher throughput performance. The contributions of this paper are as follows:
+1) By extracting the periodic structure of the parity-check matrix H, we appropriately transform the form of H and introduce a fast coding algorithm that efficiently solves the multiplication of the information sequence and a large-dimensional sparse matrix.
+2) A new LDPC encoder architecture is proposed, which is suitable for high-throughput applications of DVB-S2/S2X code or similar codes.
+3) The high performance of the encoder is verified on-chip, and the performance and efficiency at various parameters are analyzed and evaluated, which is of great importance for practical application scenarios.
+The rest of this paper is organized as follows: In Section II, we briefly introduce the LDPC code used in DVB-S2/S2X standards. In Section III, we describe the fast encoding algorithm in detail that supports the encoder architecture proposed in Section IV. Section IV gives the overall architecture of the encoder and presents the encoding process. In Section V, the implementation results on Xilinx Kintex-7 FPGA are given, and compared with other methods, the throughput performance and resource utilization efficiency are analyzed. Finally, the conclusion is presented in Section VI.
+
+II. STANDARDIZED LDPC CODE
+
+The LDPC code can be defined by the parity-check matrix.
+
+Normally, it is necessary to obtain a generator matrix for
+
+encoding. However, contrary to the sparsity of the parity-
+
+check matrix, the generator matrix is dense, which may cause
+
+some problems, such as the storage or encoding complexity.
+
+The LDPC code adopted in DVB-S2/S2X standards elimi-
+
+nates this problem.
+
+This standardized LDPC code is an Irregular Repeat Accu-
+
+mulate (IRA) code and also a systematic code, that is, the
+
+K −bit information sequence i = [i0, i1, . . . ,iK−1] will be encoded into an N −bit codeword c = [i0, i1, . . . ,iK−1, p0, p1, . . . ,pN−K−1]. This LDPC code is defined by a special
+parity-check matrix H, as shown in (1), as shown at the
+
+bottom of the next page.
+
+The submatrix B is constrained as a staircase lower triangular matrix. With HcT = 0, the N − K parity-check bits can
+
+be solved from the row of H from top to bottom:
+
+p0 = a0,0i0 ⊕ a0,1i1 ⊕ · · · ⊕ a0,K −1iK −1
+
+p1 = a1,0i0 ⊕ a1,1i1 ⊕ · · · ⊕ a1,K −1iK −1 ⊕ p0 ... ... ... ... ...
+
+pN −K −1 = aN −K −1,0i0 ⊕ aN −K −1,1i1
+
+⊕ · · · ⊕ aN −K −1,K −1iK −1 ⊕ pN −K −2
+
+(2)
+
+19023
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+where ⊕ is the addition operator in the Galois Field, i.e., the bitwise XOR. Moreover, the operator appearing later also refers to the sum operation in GF(2). Therefore, the LDPC code can be encoded by (2) without deriving the generator matrix G.
+The submatrix A is sparse, and another periodic constraint is imposed to reduce the storage requirements of non-zero elements of the matrix: K Variable Nodes (VNs) corresponding to the information sequence are divided into t groups, and each group contains M continuous VNs, i.e. M × t = K , M = 360 is a fixed factor in DVB-S2/S2X standards. VNs of one group have the same degree, denoted as d. Then as long as the location indices (l1, l2, . . . , ld ) of the d Check Nodes (CNs) connected to the first VN in this group are determined, the location indices of the d CNs connected to the i-th VN (i∈ {0, 1, . . . ,M −1}) can be obtained by the following formula:
+
+[a1 + i × q] mod (N − K )
+
+
+
+[a2 + i × q] mod (N − K )
+
+ 
+
+...
+
+(3)
+
+
+
+ [ad
+
++
+
+i
+
+×
+
+q]
+
+mod
+
+(N
+
+−
+
+K)
+
+,
+
+where q = (N − K )/M . To improve the performance, submatrix A uses the construction scheme of irregular LDPC code, so that the degree of VNs may vary between groups, but the above constraint is always satisfied in each group. This constraint reduces the storage requirements of the matrix description by a factor of M , and there is negligible loss in encoding performance.
+
+III. FAST ENCODING ALGORITHM The LDPC code introduced in the previous section is a systematic code, so the input information sequence i mainly participates in the encoding process through the sub-matrix A, which can be expressed as:
+
+S1×(N −K ) = i1×K · ATK ×(N −K )
+
+= [s0, s1, . . . , sN −K−1] ,
+
+(4)
+
+where the operator ‘‘·’’ represents matrix multiplication. For j = 0, 1, . . . , (N − K −1), sj is calculated as follows:
+K −1
+sj = aj,r ir = aj,0i0⊕aj,1i1⊕ · · · ⊕aj,K −1iK −1, (5)
+r =0
+
+and using (5), equation (2) can be rewritten as follows:
+
+p0 = s0,
+p1 = s0 ⊕ s1,
+p2 = s0 ⊕ s1 ⊕ s2, ... ... ...
+
+pN −K −1 = s0 ⊕ s1 ⊕ s2 ⊕ · · · ⊕ sN −K −1.
+
+(6)
+
+Thus, the whole encoding process can be divided into two stages: firstly, the intermediate result S of (4) is obtained by multiplying the information sequence i and matrix A, and then N − K parity-check bits are obtained by accumulative calculation according to (6). It can also be seen from the formulas that the complexity of encoding is mainly contributed by the multiplication of large-dimensional matrix in the first stage.
+Therefore, in the rest of this section, we analyze the structural characteristics of matrix H, and introduce a fast encoding algorithm suitable for different code rates and frame lengths through appropriate reshaping operation, which can complete these two processes quickly and efficiently.
+
+A. COMPUTE THE INTERMEDIATE RESULT S
+
+The constraint introduced in the section II also divides matrix
+
+A into t groups. In the M = 360 columns of each group, the
+
+indices of non-zero elements of the first column can be found
+
+in the appendix of two standards. According to (3), each
+
+subsequent column is given by the q-bit cyclic shift of the
+
+previous column. This means that there is periodicity between
+
+rows with an interval of q, we can extract these periodic rows
+
+and integrate them together in the following ways:
+
+Extract Ar from A(r = 0, 1, . . . , q − 1):
+
+ ar,0
+
+ ar+q,0
+
+Ar
+
+=
+
+ 
+
+
+
+...
+
+ar ,1
+
+···
+
+ar,K −1 
+
+ar+q,1 · · · ar+q,K −1 
+
+...
+
+...
+
+...
+
+  
+
+ar+359q,0 ar+359q,1 · · · ar+359q,K −1
+
+Reorganize Ar into C :
+
+ A0 
+
+ A1 
+
+C
+
+=
+
+ 
+
+
+
+...
+
+  
+
+(7)
+
+Aq−1
+
+Through extraction and reorganization, every M associated rows in matrix A are gathered together in matrix C.
+
+19024
+
+H (N −K )×N = A(N −K )×K B(N −K )×(N −K )
+
+ a0,0
+
+a0,1
+
+···
+
+a0,K −1
+
+1 0 0 ··· 0 0
+
+ a1,0
+
+a1,1
+
+···
+
+a1,K −1
+
+1 1 0 ··· 0 0
+
+ 
+
+a2,0
+
+a2,1
+
+···
+
+a2,K −1
+
+0
+
+1
+
+1
+
+···
+
+0
+
+0
+
+ 
+
+=
+
+ 
+
+
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+  
+
+(1)
+
+
+
+
+
+ aN −K −2,0 aN −K −2,1 · · · aN −K −2,K −1 0 0 0 · · · 1 0 
+
+aN −K −1,0 aN −K −1,1 · · · aN −K −1,K −1 0 0 0 · · · 1 1
+
+VOLUME 10, 2022
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+FIGURE 1. Reshape process of part of matrix A. Size of A is 7200×57600 in the case of frame length of 64800 and code rate of 8/9, only the first 7200 columns are displayed in the figure.
+
+It can be found that the periodicity in A is transformed into the Quasi-Cyclic (QC) characteristic of C. Take a part of matrix A (frame length of 64800 and code rate of 8/9) as an example, Fig. 1 shows this reshaping process and the QC characteristics.
+The reshaped matrix C is composed of q×t cyclic matrices:
+
+ C0,0
+
+C0,1 · · · C0,t−1 
+
+ C1,0
+
+C
+
+=
+
+ 
+
+
+
+...
+
+C1,1 · · · C1,t−1 
+
+...
+
+...
+
+...
+
+,  
+
+(8)
+
+Cq−1,0 Cq−1,1 . . . Cq−1,t−1
+
+where Ci,j is an M × M cyclic matrix, i ∈ {0, 1, . . . , q−1}, j ∈ {0, 1, . . . , t−1}, that is, each row of Ci,j is the cyclic right shift of the previous row, the first row is the cyclic right shift
+of the last row, each column is the cyclic down shift of the
+left column, and the first column is the cyclic down shift of
+the last column. According to the block properties of C, the informa-
+tion sequence can be divided into t segments: i = [i0, i1, . . . , it−1], where im = [i360m, i360m+1, . . . , i360m+359], m∈ {0, 1, . . . ,t−1}. The row adjustment of (7) has changed the order of the intermediate result S. The new result is denoted as S , and is divided into q segments: S = [S0, S1, . . . , Sq−1], where Sj = [sj, sq+j, s2q+j, . . . , s359q+j], j ∈ {0, 1, . . . , q−1}. Their relation is expressed as (9).
+
+S = S0, S1, . . . , Sq−1
+
+= [i0, i1, . . . , it−1] · CT
+
+= [i0, i1, . . . , it−1]
+
+
+
+C
+
+T 0,0
+
+C
+
+T 1,0
+
+···
+
+C
+
+T q−1,0
+
+
+
+ 
+
+C
+
+T 0,1
+
+· 
+
+...
+
+C
+
+T 1,1
+
+...
+
+··· ...
+
+C
+
+T q−1,1
+
+ 
+
+...
+
+ 
+
+(9)
+
+
+
+
+
+C 0T,t −1
+
+C
+
+T 1,t
+
+−1
+
+...
+
+C qT−1,t −1
+
+Further, we use cj,m to represent the first row of the matrix CjT,m, whose size is 1 × 360. Then according to the cyclic characteristics of CTj,m (transpose does not change the cyclic
+
+VOLUME 10, 2022
+
+FIGURE 2. Cyclic shift-register-adder-accumulator structure.
+
+characteristics), the solution of each segment Sj in S can be represented by (10).
+
+t −1
+
+Sj =
+
+im
+
+·
+
+C
+
+T j,m
+
+(10)
+
+m=0
+
+To simplify the expression, we denote by v(j) the vector of
+
+j-bit
+
+cyclic
+
+right
+
+shift
+
+of
+
+any
+
+row
+
+vector
+
+v,
+
+then
+
+the
+
+im
+
+·
+
+C
+
+T j,m
+
+in
+
+the above equation can be expanded into the following form.
+
+359
+
+im
+
+·C
+
+T j,m
+
+=
+
+i360m+n·cj(,nm)
+
+n=0
+
+(11)
+
+Fig. 2 shows a Cyclic Shift-Register-Adder-Accumulator
+
+(CSRAA) circuit that can quickly implement this opera-
+
+tion: cj,m is stored in the cyclic shift register B, and then i360m, i360m+1, . . . , i360m+359 are successively entered, regis-
+ter B is cyclic shifted once for each entry. After the input
+
+is completed, the accumulation register A obtains the result
+
+of (11).
+
+However, it is easy to find that this structure is not suitable
+
+for the generally large matrix CT under the DVB standard.
+
+Although,
+
+most
+
+cyclic
+
+submatrices
+
+C
+
+T j,m
+
+zero
+
+matrices
+
+0
+
+because of sparsity, there will still be tens to hundreds of
+
+submatrices whose weight is not 0. If the circuit structure of
+
+Fig. 2 is constructed for each of them, the resource overhead
+
+of the encoder is unacceptable.
+
+So we further expand (10) and substitute equation (11) to
+
+obtain:
+
+t−1 359
+
+Sj =
+
+i360m+n·c(j,nm) ,
+
+m=0 n=0
+
+(12)
+
+obviously the order of multiplication and cyclic shift does not
+
+affect the result and can be exchanged:
+
+t−1 359
+
+Sj =
+
+i360m+n · cj,m (n) ,
+
+(13)
+
+m=0 n=0
+
+variables m and n are not related to each other, exchange the
+
+order of the summation operators:
+
+359 t−1
+
+Sj =
+
+i360m+n · cj,m (n) .
+
+(14)
+
+n=0 m=0
+
+19025
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+At this point, for the inner summation, n is a fixed value, and the cyclic shift can be extracted outside the summation operator and expanded as follows:
+
+359 t−1
+
+(n)
+
+Sj =
+
+i360m+n · cj,m
+
+n=0 m=0
+
+t −1
+
+t −1
+
+=
+
+i360m · cj,m ⊕
+
+i360m+1 · cj,m
+
+m=0 t −1
+
+m=0 (359)
+
+⊕ ···⊕
+
+i360m+359 · cj,m
+
+.
+
+m=0
+
+(1)
+(15)
+
+The expanded form of (15) can be rewritten in a recursive manner as (16).
+
+  
+t −1
+
+(1) (1) (1) (1)
+
+ 
+
+i360m+359 · cj,m
+
+  
+
+m=0 t −1
+
+Sj
+
+=
+
+ 
+
+⊕
+
+i360m+358 · cj,m
+
+  m=0
+
+
+   
+
+
+
+
+  t−1
+
+ ⊕
+
+i360m+357 · cj,m
+
+ 
+
+
+ m=0
+
+
+
+⊕······
+
+t −1
+
+⊕ i360m · cj,m
+
+(16)
+
+m=0
+
+If for any im, we enter in the reverse order of i360m+359, i360m+358, . . . , i360m, then the cyclic shift operation can be applied to Sj in the following way.
+
+for r = 359 : 0 do
+
+t −1
+
+·Sj = S(j1) ⊕
+
+i360m+r · cj,m
+
+m=0
+
+end
+
+(17)
+
+The initial value of Sj is 01×360. In this way, only the result of Sj needs to be stored, and it does not take up too much resources. The input information sequence is shared by all Sj, which means that S0 −Sq−1 can be computed simultaneously, so the process of computing S is summarized as Algorithm 1. In this algorithm, the information sequence is input in t-bit in parallel, and each bit of the intermediate result S can be obtained after 360 clock cycles.
+
+B. ACCUMULATE TO OBTAIN PARITY-CHECK BITS After S is calculated, it is a good method to accumulate one by one according to (6) to obtain the parity-check bits. However, to achieve higher throughput, we can fully exploit the order feature of Sj (that is, the order of adjacent bits is separated by q) to obtain a parallel output of 360 bits.
+19026
+
+Algorithm 1 Recursive Operation of S
+
+Initialize S with 0: S = S0, S1, . . . ,Sq−1 = 01×360q Recursive computation: for r = 359 : 0 do
+
+S0 = S0(1)
+
+⊕
+
+S1 = S(11)
+
+⊕
+
+... ...
+
+Sq−1 = S(q1−)1 ⊕
+
+t −1
+m=0 i360m+r · c0,m
+t −1
+m=0 i360m+r · c1,m
+t −1
+m=0 i360m+r · cq−1,m
+
+end
+
+First, rearrange the q segments of S by column:
+
+ S0 
+
+ S1 
+
+  
+
+...
+
+  
+
+Sq−1
+
+ s0
+
+sq · · · s359q 
+
+ s1 sq+1 · · · s359q+1 
+
+=  
+
+...
+
+...
+
+...
+
+...
+
+  
+
+,
+
+(18)
+
+sq−1 s2q−1 . . . S360q−1 q×360
+
+sum the matrix in (18) by column to get the following row vector:
+
+ q−1
+
+2q−1
+
+3q−1
+
+360q−1 
+
+ si
+
+si
+
+si · · ·
+
+si  , (19)
+
+i=0
+
+i=q
+
+i=2q
+
+i=359q
+
+then perform another summation: replace the j-th element in the row vector with the sum of the first j-1 elements, j∈ {1, 2, . . . , 360. The resulting vector is denoted as P0.
+
+q−1
+
+2q−1
+
+359q−1
+
+P0 = 0
+
+si
+
+si · · ·
+
+si
+
+i=0
+
+i=0
+
+i=0
+
+(20)
+
+According to (6), the above equation is actually equivalent to [0,pq−1, p2q−1, . . . ,p359q−1]. Then add S0, S1, . . . , Sq−1 one by one to get all parity-check bits:
+
+p0, pq, . . . , p359q p1, pq+1, . . . , p359q+1
+
+= P0 ⊕ S0, = p0, pq, . . . , p359q
+...
+
+⊕ S1,
+
+pq−1, p2q−1, . . . , p360q−1 = pq−2, p2q−2, . . . , p360q−2
+
+⊕ Sq−1.
+
+(21)
+
+Adopting this method, all parity-check bits can be generated in 360-bit parallel within q clock cycles. Use vector P to represent the continuously updated 360-bit result, and the accumulation process is summarized as Algorithm 2.
+
+VOLUME 10, 2022
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+Algorithm 2 Parallel Processing of Parity-Check Bits Compute P0: P0 = [0,pq−1, p2q−1, . . . ,p359q−1] Initialize P: P = P0 Update: for j = 0 : q − 1 do P = P ⊕ Sj end
+FIGURE 4. REC optimized with fixed parameter cj,m.
+TABLE 1. Statistical results of associated input bits of adder.
+
+FIGURE 3. Recursive encoding core of Sj , with t = 2.
+
+IV. PROPOSED ENCODER ARCHITECTURE Based on the encoding algorithm described in the previous section, a new LDPC encoder architecture suitable for DVB-S2/S2X standards is proposed. This architecture mainly adopts a kind of component composed of registers and adders, which we call Recursive Encoding Core (REC). It is extracted from RCE and can quickly complete the relevant computations of the input information sequence. Then, these calculation results are accumulated and the required parity-check bits are output in parallel.
+
+A. RECURSIVE ENCODING CORE
+For a more convenient expression, we can take an example and assume that t = 2 in (17), that is, the input information sequence is divided into two segments: i = [i0, i1], and the corresponding cyclic submatrix first row cj,0 and cj,1 are respectively set as:
+
+cj,0 = [0, 0, 1, . . . , 1, 1] ,
+
+cj,1 = [0, 1, 1, . . . , 0, 1]
+
+(22)
+
+And the structure shown in Fig. 3 is used to perform the recursive computation of Sj.
+Fig. 3 contains 360 registers that store the results of Sj, above each register is an adder with multiple inputs in GF(2),
+which is responsible for completing the summation calcula-
+tion on the right side of the equal sign. At this point, the adder
+has three summation objects: one is the cyclic right shift of the last result Sj(1), which corresponds to the connection between the register output and the adder input, and the other two are
+
+VOLUME 10, 2022
+
+the products of the input information bit and the first row of submatrix CjT,m, denoted as (ir · cj,0) and (i360+r · cj,1), and r is from 359 to 0. The AND gate in the figure reflects this product relationship.
+It can be seen from Fig. 3 that the register group and adder group enclosed by the dotted line are responsible for the cyclic shift and summation in the algorithm. We call them as a whole the Recursive Encoding Core (REC), which is an important component in the architecture of the encoder.
+In addition, we noticed that a large number of AND gates are connected between the REC and the input information bits, which is actually unnecessary. This is because once the parity-check matrix H is determined, the parameter cj,m is also fixed: if one bit of the parameter is 0 (e.g., the four ‘‘0’’s marked in red in Fig. 3), then the corresponding AND gate and the AND gate output can be directly cleared. On the contrary, if one bit is 1, the AND gate can also be optimized away so that the input bit directly participates in the operation of the adder.
+Fig. 4 shows the optimized REC, where the connection between it and the input is very simple. It is worth noting that the adder has also been optimized: Since the input corresponding to parameter ‘‘0’’ is truncated, the number of input ports of some adders is reduced. There is also a special case: when the input port of the adder is not connected to any input bit, the adder can be removed directly (e.g., the adder at the position of the red box in Fig. 4), and the corresponding register is used only as a shift register participating in the operations.
+The above properties of REC can greatly simplify the encoder structure and reduce the complexity of its implementation. An adder in REC, if not optimized, must theoretically add t +1 terms (including t input bits and 1 cyclic shift result). A large t makes the summation logic extremely complicated, leading to the problem of difficult timing closure, so that the maximum operating frequency and throughput are reduced. After optimization, the number of input ports of the adder of REC depends only on the number of non-zero elements of the
+19027
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+FIGURE 6. Hardware test framework.
+
+FIGURE 5. Overall architecture of LDPC Encoder based on algorithm 1 and 2.
+parameter cj,m, and the sparsity of the matrix CT (inherited from matrix A) makes the non-zero elements in parameter cj,m also extremely rare. Next, we take the worst case in the standards as an example to illustrate it.
+In DVB-S2/S2X standards, t reaches the maximum value of 162 in the case that frame length is 64800 and code rate is 9/10. At this time q = 18, i.e., 18 RECs participate in the encoding operation. According to the appendix of the standards, we obtained all cj,m parameters, and sorted out the number of input bits associated with each adder. The results are shown in Table 1.
+As can be seen from Table 1: most adders are not associated with any input bit and can be removed directly. The remaining adders are mostly connected to 1 or 2 input bits, while the number of adders connected to the highest 9 input bits is only 18. Therefore, within the REC, most registers can be simplified to shift registers, and a few adders only need to perform an XOR operation of no more than 10 bits. These features make REC very conducive to hardware implementation.
+B. OVERALL ARCHITECTURE Fig. 5 shows the overall architecture of the encoder, which is mainly composed of three parts. The first part is a parallel t-bit input network, which inputs each sub-information sequence im = [i360m, i360m+1, . . . , i360m+359] bit by bit in reverse order. The second part is an array composed of q RECs, which is the core component of algorithm 1. The array and the input network are sparsely connected, and the computation of S is completed within 360 clock cycles. The bottom output block corresponds to Algorithm 2: after all Sj calculations are completed, an initial result obtained by summation is stored in the P0 register group. In the subsequent accumulation stage, we move each Sj in turn to the position of S0 by a simple shift operation to avoid the complex selection logic between different Sj. Using P0 and each Sj, the register group P accumulates and outputs all parity-check bits in q clock cycles, and the encoding process is finished.
+19028
+
+V. IMPLEMENTATION RESULT A. FUNCTIONAL VERIFICATION AND HARDWARE IMPLEMENTATION In order to validate the function and performance of the designed encoder, we performed the hardware test as shown in Fig. 6: an external differential crystal oscillator (DXO) supplies the FPGA with a 200 MHz source clock, and the Mixed Mode Clock Manager (MMCM) generates a 280 MHz clock for each module. Pseudo-Noise (PN) code is stored in the ‘‘PRBS Source’’ module as the Pseudo-Random Binary Sequence (PRBS) to be encoded, and starts to be output continuously after power-on. The ‘‘Input Buffer’’ module consists of Block RAM and simple control logic. It buffers the information sequence and outputs it when the encoder is idle, which plays the role of rate matching between ‘‘PRBS Source’’ and ‘‘LDPC Encoder’’. The encoder receives the information sequence and performs encoding.
+The Integrated Logic Analyzer (ILA) is an IP core used to monitor the internal signals of a design, and we use it to capture the corresponding signals. Fig. 7 shows the test result of a case. In this case, frame length is 64800 and code rate is 1/4, which corresponds to t = 45 and q = 135. The management between multiple codewords is shown in Fig. 7(a): When codeword 1 is input, the encoder is idle, so the encoding of codeword 1 is started directly; codeword 2 is input immediately after codeword 1, but codeword 1 has not finished encoding at this time, the ‘‘Input Buffer’’ module buffers codeword 2, and codeword 2 will not be provided to the encoder until the valid_out signal corresponding to the end of encoding is pulled down; codeword 3 and codeword 4 processed similarly to the above process. The entire encoding process of codeword 1 is shown in Fig. 7(b): the information sequence m_in is input for 360 clock cycles, which lasts from position 3002 to position 3362 on the time axis, and S is continuously updated during this period. After the input ends, P0 sums S in 4 clock cycles, then P starts accumulating, and the valid_out signal is asserted, indicating that the output parity-check bits are valid. This output period lasts q = 135 clock cycles from position 3366 to position 3501 on the time axis, followed by the encoding of codeword 2.
+The generator polynomial of PN code used in the above test is ‘‘X 15 + X 14 + 1’’, with initial states [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0]. The length of the generated sequence
+VOLUME 10, 2022
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+FIGURE 7. Hardware test result with frame length of 64800 and code rate of 1/4. (a) Management of multi-codeword encoding; (b) expanded view of codeword 1 encoding process.
+
+to be encoded is 16200, and the first input data in 45-bit parallel format is ‘‘18BC0C31F7F3’’, which corresponds to the initial data marked by the yellow box in Fig. 7(b). The blue box also marks the first 360-bit result of the parity-check bits, namely ‘‘8D617A71. . . . . . ’’. After capturing the paritycheck bits, we compared them with the encoding results of MATLAB. The comparison result shows that the two match, indicating that the encoder function is correct.
+The encoding process in Fig. 7(b) also shows that the number of clock cycles for a single encoding process of this encoder is 360+q+4, of which 360 cycles are used to compute S, q cycles are used to compute the parity-check bits, and the other 4 cycles are used for the initialization of S/P and the summation of P0. This means that the throughput of the encoder, denoted as T , is actually determined by the following formula:
+
+T = N ×fclk ,
+
+(23)
+
+360 + q + 4
+
+where fclk and N represent the operating clock frequency of the encoder and frame length, respectively.
+Then consider the hardware resources consumed by the encoder. According to the overall architecture described in the previous section, the main resource consumption is q + 2 register groups, each containing 360 registers. In other words:
+
+VOLUME 10, 2022
+
+TABLE 2. Implementation results on Xilinx FPGA XC7K325T.
+the smaller the q is, the lower the resource consumption will be, and vice versa.
+The DVB-S2/S2X standards include LDPC codes with 3 types of frame length and 48 types of code rate. The q ranges from the lowest 5 to the highest 140. We implemented the LDPC encoders with different frame length and different code rate on Xilinx FPGA device XC7K325T.
+Table 2 shows the implementation results for the best (q = 5) and worst (q = 140) cases. Based on previous estimates, the worst and best cases should theoretically consume (140 + 2) × 360 = 51120 and (5 + 2) × 360 = 2520 registers
+19029
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards TABLE 3. Encoder throughput performance at 280 MHz clock frequency.
+
+FIGURE 8. Comparison of encoding cycles with frame length of 64800.
+
+TABLE 4. Performance comparison of encoders with frame length of 64800 and code rate of 1/2.
+respectively, which are basically consistent with the results in the resources report, indicating that the implementation results meet the design expectations. Then pay attention to the timing report: even in the worst case, the operating clock frequency of the encoder can reach 280 MHz, and in the best case, it can exceed 330 MHz.
+Therefore, we can uniformly use fclk = 280 MHz to measure the maximum throughput of the encoder. According to (23), the throughput performance of the encoder with different parameters is given in Table 3.
+As shown in the table, in the case of Normal FECFRAME (frame length 64800), the proposed encoder has a throughput of over 36 Gbps at various code rates, and can reach up to 47.5 Gbps when the code rate is the highest 9/10. For the other two frame lengths, the throughput of the encoder decreases somewhat with shorter frame length, but a throughput of 11.34 Gbps can be achieved even with the lowest frame length.
+19030
+
+B. PERFORMANCE AND EFFICIENCY ANALYSIS
+According to (23), the throughput performance of the encoder mainly depends on two factors: first, the number of clock cycles required for a single encoding process, and second, the operating clock frequency of the encoder.
+Table 4 shows the comparison result of three encoders with different architectures when the frame length is 64800 and the code rate is 1/2. The proposed encoder is superior to the encoders of [19] and [20] in both aspects: not only the number of encoding cycles is lower, but also the operating clock frequency is also higher.
+Besides, the number of encoding cycles at different code rates are also given in [19], so we compare them with the results of this work, as shown in Fig. 8. It can be seen that the number of encoding cycles of the proposed encoder only increases linearly with q and is lower than the result of [13] at all code rates, which means that the proposed coder has higher throughput performance even at the same operating clock frequency. At a code rate of 3/5 (q = 72), the difference between the two reaches the maximum value of 1004 cycles, and the difference in throughput is more than 3 times.
+In addition, the throughput and occupied resources of the proposed encoder architecture are different at different code rates. To make a better and fair comparison between encoders with different code rates, we use the Resource Utilization Efficiency (RUE) to measure the comprehensive performance of encoders, which is expressed as the obtained throughput divided with the number of used resources:
+
+RUE = T .
+
+(24)
+
+Resources
+
+The RUE represents the average throughput carried by a unit of resource. For encoders with different code rates, the higher the value, the higher the throughput that can be achieved with the same amount of hardware resources.
+In DVB-S2/S2X Standards, there are 17 kinds of code rates when the frame length is 16200, 3 kinds when the frame length is 32400, and 28 kinds when the frame length is 64800.
+
+VOLUME 10, 2022
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+FIGURE 9. Relationship curve between RUE and code rate for (a) Flip-flop and (b) Look-up table.
+We obtain the relationship curve between RUE and code rate of the proposed encoder architecture under three different frame lengths, as shown in Fig. 9.
+It can be seen that at fixed frame length with increasing code rate increases, the RUE of FF shows an exponential growth trend, while the RUE of LUT also increases, although there are some fluctuations. The reason for the fluctuations is that the number and distribution of non-zero elements in the parameter cj,m vary greatly at different code rates, which causes the amount of LUT consumed during implementation does not grow linearly like FF.
+On the whole, the RUE of LUT and FF basically increases with the increase of the code rate, which is mainly due to the two effects caused by the decrease of q: On the one hand, the number of encoding cycles is reduced, increasing the throughput; and on the other hand, the resource usage is reduced. The numerator of (24) is increased and the denominator is decreased, which significantly improves the RUE.
+In summary, we recommend that the encoder architecture proposed in this paper be used in scenarios with longer frame length and higher code rate, so that higher throughput performance than other architectures can be achieved with lower resource consumption.
+VOLUME 10, 2022
+
+VI. CONCLUSION In this paper, we present an encoder architecture suitable for LDPC code in DVB-S2/S2X standards. By exploring and reshaping the parity-check matrix, a kind of component called recursive encoding core is used for fast computations in the encoding process. Compared to other methods, this architecture significantly reduces the encoding time in the case of longer frame length, thereby achieving extremely high throughput performance. The implementation results on FPGA also show that the encoder architecture has higher resource utilization efficiency at higher code rates and can achieve a higher performance index with fewer resources than in lower code rate scenarios. However, the input of the proposed encoder often comes from BCH encoder, and how to effectively convert its output into the required t-bit parallel format needs to be further explored, and this is also the problem we want to solve in the next step.
+REFERENCES
+[1] R. G. Gallager, ‘‘Low-density parity-check codes,’’ IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962, doi: 10.1109/TIT.1962.1057683.
+[2] T. J. Richardson and R. L. Urbanke, ‘‘Efficient encoding of low-density parity-check codes,’’ IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001, doi: 10.1109/18.910579.
+[3] D. Theodoropoulos, N. Kranitis, A. Tsigkanos, and A. Paschalis, ‘‘Efficient architectures for multigigabit CCSDS LDPC encoders,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 5, pp. 1118–1127, May 2020, doi: 10.1109/TVLSI.2020.2975050.
+[4] A. E. Cohen and K. K. Parhi, ‘‘A low-complexity hybrid LDPC code encoder for IEEE 802.3an (10GBase-T) Ethernet,’’ IEEE Trans. Signal Process., vol. 57, no. 10, pp. 4085–4094, Oct. 2009.
+[5] TM Synchronization and Channel Coding, Standard 131.0-B-3, CCSDS, Sep. 2017.
+[6] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, ‘‘Efficient encoding of quasicyclic low-density parity-check codes,’’ IEEE Trans. Commun., vol. 53, no. 11, p. 1973, Nov. 2005.
+[7] K. Andrews, S. Dolinar, and J. Thorpe, ‘‘Encoders for block-circulant LDPC codes,’’ in Proc. Int. Symp. Inf. Theory (ISIT), Sep. 2005, pp. 2300–2304.
+[8] D. Theodoropoulos, N. Kranitis, and A. Paschalis, ‘‘An efficient LDPC encoder architecture for space applications,’’ in Proc. IOLTS, Sant Feliu de Guixols, Spain, 2016, pp. 149–154.
+[9] J. Liu and Q. Feng, ‘‘A miniaturized LDPC encoder: Two-layer architecture for CCSDS near-Earth standard,’’ IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 7, pp. 2384–2388, Jul. 2021, doi: 10.1109/TCSII.2021.3054334.
+[10] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 1: DVB-S2, Standard ETSI EN 302 307-1 V1.4.1, 2014.
+[11] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), Standard ETSI EN 302 307-2 V1.2.1, 2020.
+[12] G. Y. Mihaylov, T. B. Iliev, E. P. Ivanova, I. S. Stoyanov, and L. Iliev, ‘‘Performance analysis of low density parity check codes implemented in second generations of digital video broadcasting standards,’’ Proc. 39th Int. Conv. Inf. Commun. Technol., Electron. Microelectron. (MIPRO), May 2016, pp. 499–502, doi: 10.1109/MIPRO.2016.7522195.
+[13] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, ‘‘Design of capacity-approaching irregular low-density parity-check codes,’’ IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001, doi: 10.1109/18.910578.
+[14] J. Kang, J. S. An, and B. Wang, ‘‘An efficient FEC encoder core for VCM LEO satellite-ground communications,’’ IEEE Access, vol. 8, pp. 125692–125701, 2020, doi: 10.1109/ACCESS.2020.3007923.
+19031
+
+D. Liu et al.: LDPC Encoder Architecture With Up to 47.5 Gbps Throughput for DVB-S2/S2X Standards
+
+[15] A. V. Lazarenko, ‘‘FPGA design and implementation of DVB-S2/S2X LDPC encoder,’’ in Proc. IEEE Int. Conf. Electr. Eng. Photon. (EExPolytech), Oct. 2019, pp. 98–102, doi: 10.1109/EexPolytech.2019.8906811.
+[16] D. Digdarsini, D. Mishra, S. Mehta, and T. V. S. Ram, ‘‘FPGA implementation of FEC encoder with BCH & LDPC codes for DVB S2 system,’’ in Proc. 6th Int. Conf. Signal Process. Integr. Netw. (SPIN), Mar. 2019, pp. 78–81.
+[17] T. Van Nghia, ‘‘Development of the parallel BCH and LDPC encoders architecture for the second generation digital video broadcasting standards with adjustable encoding parameters on FPGA,’’ in Proc. Int. Conf. Eng. Telecommun. (EnT), Nov. 2016, pp. 104–109.
+[18] N. Kumar, C. Prakash, S. N. Satashia, V. Kumar, and K. S. Parikh, ‘‘Efficient implementation of low density parity check codes for satellite ground terminals,’’ in Proc. Conf. ICACCI, New Delhi, India, Sep. 2014, pp. 689–695.
+[19] M. Gomes, G. Falcao, A. Sengo, V. Ferreira, V. Silva, and M. Falcao, ‘‘High throughput encoder architecture for DVB-S2 LDPC-IRA codes,’’ in Proc. Internatonal Conf. Microelectron., Cairo, Egypt, Dec. 2007, pp. 271–274.
+[20] I. Lee, M. Kim, D. Oh, and J. Jung, ‘‘High-speed LDPC encoder architecture for digital video broadcasting systems,’’ in Proc. Int. Conf. ICT Converg. (ICTC), Jeju, South Korea, Oct. 2013, pp. 606–607.
+[21] Y. Jung, C. Chung, J. Kim, and Y. Jung, ‘‘7.7 Gbps encoder design for IEEE 802.11n/AC QC-LDPC codes,’’ in Proc. Int. SoC Design Conf. (ISOCC), Nov. 2012, pp. 215–218, doi: 10.1109/ISOCC.2012.6407078.
+
+ZHIJIE WANG received the B.S. degree in communication engineering from Shanghai University, Shanghai, China, in 2021, where he is currently pursuing the M.S. degree in communication and information system. His current research interests include digital signal processing, satellite communication, and FPGA.
+ZHENGXUAN LI received the Ph.D. degree in communication and information engineering from Shanghai Jiaotong University, in 2016. She is currently an Associate Professor with the School of Communication and Information Engineering, Shanghai University. Her primary research interests include broadband optical access and digital signal processing in short reach optical interconnects.
+
+DECAI LIU received the B.S. degree in communication engineering from Shanghai University, Shanghai, China, in 2020, where he is currently pursuing the master’s degree. His research interests include digital signal processing, channel coding, and FPGA implementation.
+
+QIANWU ZHANG received the Ph.D. degree in communication and information engineering from Shanghai University, in 2015. Since 2015, he has been an Associate Professor with Shanghai University. His research interests include optical amplifiers, optical transceivers, optical and electrical signal processing, high-speed optical signal transmission in long-haul, metropolitan, and access networks.
+
+19032
+
+YANFEI LUO received the B.S. degree in communication engineering from Shanghai University, Shanghai, China, in 2020, where he is currently pursuing the master’s degree. His research interests include digital signal processing, receiver synchronization, channel equalization, and FPGA implementation.
+
+JUNJIE ZHANG received the Ph.D. degree in physical electronics from USTC, Hefei, China, in 2005. He is currently a Professor with the School of Communications and Engineering, Shanghai University, Shanghai, China. His primary research interests include channel coding, satellite communications, and optical communications.
+
+YUNFENG LI received the B.S. degree in communication engineering from Shanghai University, Shanghai, China, in 2019, where he is currently pursuing the master’s degree in communication and information system. His research interests include LDPC decoder and FPGA implementation.
+
+YINGCHUN LI received the B.S. degree from the Shanghai University of Science and Technology, Shanghai, China, in 1984, and the Ph.D. degree from Shanghai University, Shanghai, in 2008.
+From 1984 to 1999, he worked with the Advanced Communication Group, Shanghai University of Science and Technology, where he is engaged in optical fiber and digital communication. Since 2000, he has been working with the Key Laboratory of Specialty Fiber Optics and Optical Access Networks, Shanghai University, and since 2010, he has been a Professor with the School of Communication and Information, Shanghai University. His current research interests include free space optical and radio over fiber communications.
+
+VOLUME 10, 2022
+
+

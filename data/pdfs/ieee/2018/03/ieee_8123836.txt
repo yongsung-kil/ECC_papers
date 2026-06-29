@@ -1,0 +1,2460 @@
+932
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+Modeling and Energy Optimization of LDPC Decoder Circuits With Timing Violations
+François Leduc-Primeau , Member, IEEE, Frank R. Kschischang, Fellow, IEEE, and Warren J. Gross, Senior Member, IEEE
+
+Abstract— This paper proposes a “quasi-synchronous” design approach for signal processing circuits, in which timing violations are permitted, but without the need for a hardware compensation mechanism. The case of a low-density parity-check (LDPC) decoder is studied, and a method for accurately modeling the effect of timing violations at a high level of abstraction is presented. The error-correction performance of code ensembles is then evaluated using density evolution, while taking into account the effect of timing faults. Following this, several quasisynchronous LDPC decoder circuits based on the offset minsum algorithm are optimized, providing a 23%–40% reduction in energy consumption or energy-delay product, while achieving the same performance and occupying the same area as conventional synchronous circuits.
+Index Terms— Error correction codes, decoding, fault tolerance, energy efficiency.
+I. INTRODUCTION
+T HE time required for a signal to propagate through a CMOS circuit varies depending on several factors. Some of the variation results from physical limitations: the delay depends on the initial and final charge state of the circuit. Other variations are due to the difficulty (or impossibility) of controlling the fabrication process and the operating conditions of the circuit [2]. As process technologies approach atomic scales, the magnitude of these variations is increasing, and reducing the supply voltage to save energy increases the variations even further [3].
+The variation in propagation delay is a source of energy inefficiency for synchronous circuits since the clock period is determined by the worst delay. One approach to alleviate this problem is to allow timing violations to occur. While this would normally be catastrophic, some applications (in signal processing or in error-correcting decoding, for example)
+Manuscript received January 12, 2017; revised June 13, 2017, August 7, 2017, and October 30, 2017; accepted November 14, 2017. Date of publication November 29, 2017; date of current version March 15, 2018. This paper was presented at the IEEE ICC 2015 conference [1]. The associate editor coordinating the review of this paper and approving it for publication was L. Dolecek. (Corresponding author: François Leduc-Primeau.)
+F. Leduc-Primeau is with IMT Atlantique, CNRS Lab-STICC, UBL, F-29238 Brest, France (e-mail: francois.leduc-primeau@imt-atlantique.fr).
+W. J. Gross is with the Department of Electrical and Computer Engineering, McGill University, Montreal, QC H3A 0G4, Canada (e-mail: warren.gross@mcgill.ca).
+F. R. Kschischang is with the Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON M5S, Canada (e-mail: frank@comm.utoronto.ca).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2017.2778247
+
+can tolerate a degradation in the operation of the circuit, either because an approximation to the ideal output suffices, or because the algorithm intrinsically rejects noise. This paper proposes an approach to the design of systems that are tolerant to timing violations. In particular we apply this approach to the design of energy-optimized low-density paritycheck (LDPC) decoder circuits based on a state-of-the-art softinput algorithm and architecture.
+Other approaches have been previously proposed to build synchronous systems that can tolerate some timing violations. In better than worst-case (BTWC) [4] or voltage overscaled (VOS) circuits, a mechanism is added to the circuit to compensate or recover from timing faults. One such method introduces special latches that can detect timing violations, and can trigger a restart of the computation when needed [5], [6]. Since the circuit’s latency is increased significantly when a timing violation occurs, this approach is only suitable for tolerating small fault rates (e.g., 10−7) and for applications where the circuit can be easily restarted, such as microprocessors that support speculative execution.
+In most signal processing tasks, it is acceptable for the output to be non-deterministic, which creates more possibilities for dealing with timing violations. A seminal contribution in this area was the algorithmic noise tolerance (ANT) approach [7], [8], which is to allow timing violations to occur in the main processing block, while adding a separate reliable processing block with reduced precision that is used to bound the error of the main block, and provide algorithmic performance guarantees. The downside of the ANT approach is that it relies on the assumption that timing violations will first occur in the most significant bits. If that is not the case, the precision of the circuit can degrade to the precision of the auxiliary block, limiting the scheme’s usefulness. For many circuits, including some adder circuits [9], this assumption does not hold. Furthermore, the addition of the reduced precision block and of a comparison circuit increases the area requirement.
+We propose a design methodology for digital circuits with a relaxed synchronicity requirement that does not rely on any hardware compensation mechanism. Instead, we provide performance guarantees by re-analyzing the algorithm while taking into account the effect of timing violations. We say that such systems are quasi-synchronous. LDPC decoding algorithms are good candidates for a quasi-synchronous implementation because their throughput and energy consumption are limiting factors in many applications, and like other signal processing algorithms, their performance is assessed in
+
+0090-6778 © 2017 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+933
+
+terms of expected values. Furthermore, since the algorithm is iterative, there is a possibility to optimize each iteration separately, and we show that this allows for additional energy savings.
+The topic of unreliable LDPC decoders has been discussed in a number of contributions. Varshney studied the Gallager-A and the Sum-Product decoding algorithms when the computations and the message exchanges are “noisy”, and showed that the density evolution analysis still applies [10]. The Gallager-B algorithm was also analyzed under various scenarios [11]–[13]. A model for an unreliable quantized Min-Sum decoder was proposed in [14], which provided numerical evaluation of the density evolution equations as well as simulations of a finite-length decoder. Faulty finitealphabet decoders were studied in [15], where it was proposed to model the decoder messages using conditional distributions that depend on the ideal messages. The quantized Min-Sum decoder was also analyzed in [16] for the case where faults are the result of storing decoder messages in an unreliable memory. The specific case of faults caused by delay variations in synchronous circuits is considered in [17], where a deviation model is proposed for binary-output circuits in which a deviation occurs probabilistically when the output of a circuit changes from one clock cycle to the next, but cannot occur if the output does not change. While none of these contributions explicitly consider the relationship between the reliability of the decoder’s implementation and the energy it consumes, there have been some recent developments in the analysis of the energy consumption of reliable decoders. Lower bounds for the scaling of the energy consumption of error-correction decoders in terms of the code length are derived in [18], and tighter lower bounds that apply to LDPC decoders are derived in [19]. The power required by regular LDPC decoders is also examined in [20], as part of the study of the total power required for transmitting and decoding the codewords.
+In this paper, we present a modeling approach that provides an accurate representation of the deviations introduced in the output of an LDPC decoder processing circuit in the presence of occasional timing violations, while simultaneously measuring its energy consumption. We introduce a weak symmetry property for this model, and show that when it is satisfied, the model can be used as part of a density evolution analysis to evaluate the channel threshold and iterative performance of the decoder affected by timing faults. We also present experimental evidence showing that weak symmetry is satisfied for the decoder circuits that we consider. Finally, we show that under mild assumptions, the problem of minimizing the energy consumption of a quasi-synchronous decoder can be simplified to the energy minimization of a small test circuit, and present an approximate optimization method similar to Gear-Shift Decoding [21] that finds sequences of quasisynchronous decoders that minimize decoding energy subject to performance constraints. We note that subsequent to [1], an energy optimization method for faulty LDPC decoders was presented in [22]. Both methods look for a sequence of operating conditions that minimize decoding energy, but the method in [22] requires that the operating conditions be ordered based on the message error probability that can be
+
+achieved, which is not possible in general without knowing the message distribution.
+The remainder of the paper is organized as follows. Section II reviews LDPC codes and describes the circuit architecture of the decoder that is used to measure timing faults. Section III presents the deviation model that represents the effect of timing faults on the algorithm. Section IV then discusses the use of density evolution and of the deviation model to predict the performance of a decoder affected by timing faults. Finally, Section V presents the energy optimization strategy and results, and Section VI concludes the paper. Additional details on the CAD framework used for circuit measurements can be found in Appendix A, and Appendix B provides some details concerning the simulation of the test circuits.
+
+II. LDPC DECODING ALGORITHM AND ARCHITECTURE
+
+A. Code and Channel
+
+We consider a communication scenario where a sequence
+
+of information bits is encoded using a binary LDPC code of
+
+length n. The LDPC code described by an m ×n binary parity-
+
+check matrix H = [h j,i ] consists of all length-n row vectors v satisfying the equation v H T = 0. Equivalently, the code
+
+can be described by a bipartite Tanner graph with n variable
+
+nodes (VN) and m check nodes (CN) having an edge between
+
+the i -th variable node and the j -th check node if and only if
+
+h j,i = 0. We assume that the LDPC code is regular, which
+
+means that in the code’s Tanner graph each variable node has
+
+a fixed degree dv and each check node has a fixed degree dc. Let us assume that the transmission takes place over the
+
+binary-input additive white Gaussian noise (BIAWGN) channel. A codeword x ∈ {−1, 1}n is transmitted through the
+
+channel, which outputs the received vector y = x+w, where w
+
+is a vector of n independent and identically distributed (i.i.d.) zero-mean normal random variables with variance σ 2. We use
+
+xi and yi to refer to the input and output of the channel at
+
+time i . The BIAWGN channel has the property of being output
+
+symmetric, meaning that φyi|xi (q | 1) = φyi memoryless, meaning that φy|x (q | r) =
+
+|nix=i 1(−φqyi
+
+| −1), |xi (qi |
+
+and ri ).
+
+Throughout the paper, φ(·) denotes a probability density
+
+function. The BIAWGN channel can also be described mul-
+
+tiplicatively as y = x z, where z is a vector of i.i.d. normal random variables with mean 1 and variance σ 2.
+
+Let the belief output μi of the channel at time i be given
+
+by
+
+μi
+
+=
+
+αyi σ2
+
+,
+
+(1)
+
+with α > 0. Note that if α = 2 then μi is a log-likelihood ratio. Assuming that xi = 1 was transmitted, then μi has a normal distribution with mean α/σ 2 and variance α2/σ 2. Writing ρ = α/σ 2, we see that μi is Gaussian with mean ρ and variance αρ, that is, the distribution of μi is described by a single parameter ρ. We call this distribution a one-dimensional
+(1-D) normal distribution. The distribution of μi can also
+be specified using other equivalent parameters, such as the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+934
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+probability of error pe, given by
+
+pe = P (μi < 0|xi = 1) = P (μi > 0|xi = −1)
+
+1
+
+1
+
+1
+
+ρ
+
+= erfc √
+
+= erfc
+
+2
+
+2σ 2 2
+
+2α ,
+
+(2)
+
+where erfc(·) is the complementary error function.
+
+B. Decoding Algorithm
+
+The well-known Offset Min-Sum (OMS) algorithm is a
+
+simplified version of the Sum-Product algorithm that can usu-
+
+ally achieve similar error-correction performance. It has been
+
+widely used in implementations of LDPC decoders [23]–[25].
+
+To make our decoder implementation more realistic and show
+
+the flexibility of our design framework, we present an algo-
+
+rithm and architecture that support a row-layered message-
+
+passing schedule. Architectures optimized for this schedule
+
+have proven effective for achieving efficient implementations
+
+of LDPC decoders [24]–[26]. Using a row-layered schedule
+
+also allows the decoder to be pipelined to increase the circuit’s
+
+utilization. In a row-layered LDPC decoder, the rows of the
+
+parity-check matrix are partitioned into L sets called layers. To
+
+simplify the description of the decoding algorithm, we assume
+
+that all the columns in a given layer contain exactly one non-
+
+zero element. This implies that L = dv . Note that codes with
+
+at most one non-zero element per column and per layer can
+
+also be supported by the same architecture, simply requiring
+
+a modification of the way algorithm variables are indexed.
+
+Let us define a set L containing the indices of the rows of
+
+H that are part of layer ,
+
+∈
+
+[1, L].
+
+We
+
+denote
+
+by
+
+μ(i,t
+
+) j
+
+a
+
+message
+
+sent
+
+from
+
+VN
+
+i
+
+to
+
+CN
+
+j
+
+during
+
+iteration
+
+t.
+
+and
+
+by
+
+λ(i,t
+
+) j
+
+a message sent from CN j to VN i . It is also useful to refer
+
+to the CN neighbor of a VN i that is part of layer . Because
+
+of the restriction mentioned above, there is exactly one such
+
+CN, and we denote its index by J (i, ). Finally, we denote
+
+the channel information corresponding to the i -th codeword bit by μ(i0), since it also corresponds to the first message sent by a variable node i to all its neighboring check nodes.
+
+The Offset Min-Sum algorithm used with a row-layered
+
+message-passing schedule is described in Algorithm 1. In the
+
+algorithm, N ( j ) denotes the set of indices corresponding to
+
+VNs that are neighbors of a check node j , and i represents
+
+the current sum of incoming messages at a VN i . The function
+
+min1,2(S) returns the smallest and second smallest values in the set S, C ≥ 0 is the offset parameter, and
+
+sgn(x) = 1 if x ≥ 0, −1 if x < 0.
+
+C. Architecture
+The Tanner graph of the code can also be used to represent the computations that must be performed by the decoder. At each decoding iteration, one message is sent from variable to check nodes on every edge of the graph, and again from check to variable nodes. We call a variable node processor (VNP) a circuit block that is responsible for generating messages sent by a variable node, and similarly a check node
+
+Algorithm 1 : OMS With a Row-Layered Schedule
+
+input : {μ1(0), μ2(0), . . . , μ(n0)} output: {xˆ1, xˆ2, . . . , xˆn} 1 begin
+
+// Initialization
+
+2
+
+i ← μi(0), ∀i ∈ [1, n]
+
+3 λi(,0j) ← 0, ∀ j ∈ [1, m], i ∈ N ( j )
+
+// Decoding
+
+4 for t ← 1 to T do
+
+5
+
+for ← 1 to L do
+
+// VN to CN messages
+
+6
+
+μ(i,tJ) (i, ) ← i − λ(i,tJ−(1i,) ), ∀i
+
+// CN to VN messages
+
+7
+
+for j ∈ L do
+
+8
+
+[m1, m2]
+
+←
+
+min1,2({|μ(i,t
+
+) j
+
+|
+
+:
+
+i
+
+∈
+
+N
+
+( j )})
+
+9
+
+m1 ← max(0, m1 − C)
+
+10
+
+m2 ← max(0, m2 − C)
+
+11
+
+sT ←
+
+i∈N
+
+(
+
+j
+
+)
+
+sgn(μ(i,t
+
+) j
+
+)
+
+12
+
+for i ∈ N ( j ) do
+
+13
+
+si
+
+←
+
+sT
+
+·
+
+sgn(μ(i,t
+
+) j
+
+)
+
+14
+
+if
+
+|μ(i,t
+
+) j
+
+|
+
+=
+
+m1
+
+then
+
+λ(i,t
+
+) j
+
+←
+
+si
+
+·
+
+m2
+
+15
+
+else
+
+λ(i,t
+
+) j
+
+←
+
+si
+
+·
+
+m1
+
+// VN update
+
+16
+
+i
+
+←
+
+μ(i,t
+
+) J
+
+(i,
+
+)
+
++ λ(i,tJ) (i,
+
+),
+
+∀i
+
+// VN decision
+
+17
+
+for i ∈ {1, 2, . . . , n} do
+
+18
+
+if i > 0 then xˆi ← 1
+
+19
+
+else if i < 0 then xˆi ← −1
+
+20
+
+else xˆi ← 1 or − 1 with equal probability
+
+processor (CNP) a circuit block generating messages sent by a check node.
+In a row-layered architecture in which the column weight of layer subsets is at most 1, there is at most one message to be sent and received for each variable node in a given layer. Therefore VNPs are responsible for sending and receiving one message per clock cycle. CNPs on the other hand receive and send dc messages per clock cycle. At any given time, every VNP and CNP is mapped respectively to a VN and a CN in the Tanner graph. The routing of messages from VNPs to CNPs and back can be posed as two equivalent problems. One can fix the mapping of VNs to VNPs and of CNs to CNPs, and find a permutation of the message sequence that matches VNP outputs to CNP inputs, and another permutation that matches CNP outputs to VNP inputs. Alternatively, if VNPs process only one message at a time, one can fix the connections between VNPs and CNPs, and choose the assignment of VN to VNPs to achieve correct message routing. We choose the later approach because it allows studying the computation circuit without being concerned by the routing of messages.
+The number of CNPs instantiated in the decoder can be adjusted based on throughput requirements from 1 to m/L (the number of rows in a layer). As the number of CNPs is varied,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+935
+
+Fig. 2. Logic blocks used in the MIN1,2 unit.
+
+Note that it is possible that changes to the architecture could increase or decrease the robustness of the decoder (see e.g. [28]), but this is outside the scope of this paper.
+
+Fig. 1. Block diagram of the layered Offset Min-Sum decoder architecture.
+
+the number of VNPs will vary from dc to n. An architecture
+
+diagram showing one VNP and one CNP is shown in Fig. 1.
+
+In reality, a CNP is connected to dc−1 additional VNPs, which
+
+are not shown. The memories storing the belief totals i and
+
+the
+
+intrinsic
+
+beliefs
+
+λ(i,t
+
+) j
+
+are
+
+also
+
+not
+
+shown.
+
+The
+
+part
+
+of
+
+the
+
+VNP responsible for sending a message to the CNP is called
+
+VNP front and the part responsible for processing a message
+
+received from a CNP is called the VNP back. The VNP front
+
+and back do not have to be simultaneously mapped to the
+
+same VN. This allows to easily vary the number of pipeline
+
+stages in the VNPs and CNPs. Fig. 1 shows the circuit with
+
+two pipeline stages.
+
+Messages exchanged in the decoder are fixed-point num-
+
+bers. The position of the binary point does not have an impact
+
+on the algorithm, and therefore the messages sent by VNs
+
+in the first iteration can be defined as rounding the result of
+
+(1) to the nearest integer, while choosing a suitable α. The
+
+number of bits in the quantization, the scaling factor α, and
+
+the OMS offset parameter are chosen based on a density evo-
+
+lution analysis of the algorithm (described in Section IV). We
+
+quantize decoder messages to 6 bits, which yields a decoder
+
+with approximately the same channel threshold as a floating-
+
+point decoder under a standard fault-free implementation.
+
+In order to analyze a circuit that is representative of state-
+
+of-the-art architectures, we use an optimized architecture for
+
+finding the first two minima in each CNP. Our architecture
+
+is inspired by the “tree structure” approach presented in [27],
+
+but requires fewer comparators. Each pair of CNP inputs is
+
+first sorted using the Sort block shown in Fig. 2a. These
+
+sorted pairs are then merged recursively using a tree of Merge
+
+blocks, shown in Fig. 2b. If the number of CNP inputs is odd,
+
+the input that cannot be paired is fed directly into a special
+
+merge block with 3 inputs, which can be obtained from the 4-
+
+input Merge block by removing the min2b input and the bottom
+
+multiplexer.
+
+III. DEVIATION MODEL
+A. Quasi-Synchronous Systems
+We consider a synchronous system that permits timing violations without hardware compensation, resulting in what we call a quasi-synchronous system. Optimizing the energy consumption of these systems requires an accurate model of the impact of timing violations, and of the energy consumption. We propose to achieve this by characterizing a test circuit that is representative of the complete circuit implementation.
+The term deviation refers to the effect of circuit faults on the result of a computation, and the deviation model is the bridge between the circuit characterization and the analysis of the algorithm. We reserve the term error for describing the algorithm, in the present case to refer to the incorrect detection of a transmitted symbol. A timing violation occurs in the circuit when the propagation delay between the input and output extends beyond a clock period. Modeling the deviations introduced by timing violations is challenging because they not only depend on the current input to the circuit, but also on the state of the circuit before the new input was applied. In general, timing violations also depend on other dynamic factors and on process variations.
+In this paper, we focus on the case where the output of the circuit is entirely determined by the current and previous inputs of the circuit, and by the nominal operating condition of the circuit. We denote by the set of possible operating conditions, represented by vectors of parameters, and by γ ∈ a particular operating condition. For example, an operating condition might specify the supply voltage and clock period used in the circuit. We assume that all the parameters specified by γ are deterministic.
+B. Computation Model
+As described in Section II-C, we consider a decoder composed of a processing unit (shown in Fig. 1) that computes all messages to and from one check node in each clock cycle. Since the circuit is synchronous, we can represent the computations in terms of a discrete-time system. Let Xk be the input at clock cycle k. When timing violations are allowed to occur, the corresponding1 circuit output Zk can be expressed
+1The circuit could require one or several clock cycles to generate the first output, but this is irrelevant to the characterization of the computation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+936
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+Fig. 3. Computation tree combined with the deviation model.
+
+as Zk = g(Xk, Sk ), where Sk represents the state of the circuit at the beginning of cycle k, and g is some deterministic
+function. By definition, the state Sk depends on the previous input Xk−1, but not on Xk .
+The computations required to perform one decoding iter-
+ation can be represented using a computation tree, which
+models the generation of a VN-to-CN message in terms of messages μ(t) sent in the previous iteration. There are (dv − 1) check nodes in the tree. Each of these check nodes receives (dc − 1) messages from neighboring variable nodes, and generates a message sent to the one VN whose message
+was excluded from the computation. This VN then generates an extrinsic message based on the channel prior μi(0) and on the messages received from neighboring check nodes. An
+example of a computation tree is shown within the dashed box
+in Fig. 3a. In this paper, we assume that messages are updated
+using a flooding schedule, or in other words, that all messages μ(t) at the left of the tree are identically distributed.
+Evaluating the computation tree requires (dv − 1) uses of a processor, but the number of processors implemented in
+the decoder, and the way they are mapped to nodes of the
+Tanner graph can affect the modeling of deviations. Since a
+processor performs a parallel check node computation, Xk and Zk are associated with dc distinct VNs. Let Vk denote the set of VNs associated with the processor during cycle k. Let us
+first assume that a processor is always mapped to distinct VNs
+in consecutive clock cycles, i.e. for any processor,
+
+Vk ∩ Vk−1 = ∅.
+
+(3)
+
+Then, Xk and Xk−1 are independent, and if they belong to the same decoding iteration, they are also identically distributed.
+As a result, Xk and Sk are also independent. At the output of
+
+the processor, Zk and Zk−1 are not independent since they both
+
+depend on Xk−1. However, if (3) holds, messages received at a particular VN are guaranteed to have been generated in
+
+non-consecutive clock cycles, and it is therefore reasonable to
+
+consider only the marginal distribution of Zk.
+
+We now briefly describe some decoder architectures in
+
+which (3) holds. One possible architecture consists in imple-
+
+menting a single processor. Neglecting the circuit’s latency,
+
+the processor would therefore be reused for m/L cycles to
+
+compute each layer, and for m cycles to perform one iteration.
+
+If we assume that the parity-check matrix contains at most one
+
+non-zero element per column and per layer, (3) clearly holds
+
+for cycles that belong to the same layer. Furthermore, since the
+
+order in which CNs are processed can be chosen arbitrarily,
+
+it can easily be chosen to ensure that (3) also holds when
+
+starting a new layer. Another architecture of particular interest
+
+is one that instantiates m/L processors to achieve maximum
+
+parallelism. In this case, each processor is used once in each
+
+layer. This type of architecture is often used with quasi-cyclic
+
+parity-check matrices composed of cyclically shifted identity
+
+sub-matrices. In this case, (3) holds as long as the shift indices
+
+used in two consecutive layers are different.
+
+For convenience, we choose to represent the effect of
+
+deviations at the output of the computation tree. The properties
+
+that have been established for the processors continue to apply
+
+when these processors are used to evaluate a computation
+
+tree, since this corresponds to the normal operation of the
+
+decoder that was just discussed. Therefore, reusing the previ-
+
+ous
+
+notation,
+
+we
+
+can
+
+write
+
+μ(i,t
+
++1) j
+
+=
+
+g(Xk,
+
+Sk ),
+
+where
+
+μ(i,t
+
++1) j
+
+is a VN-to-CN message that will be sent in the next iteration,
+
+and Sk now represents the combined state of the processors that are used to evaluate the tree. Defining μ(t) as a vector
+
+containing all the VN-to-CN messages that form the input of the computation tree, Xk becomes the concatenation of μ(t) with μi(0).
+
+C. Deviation Model
+
+We
+
+have
+
+seen
+
+above
+
+that
+
+a
+
+decoder
+
+message
+
+μi(,t
+
++1) j
+
+can
+
+be
+
+expressed as a function of the messages μ(t) received by the
+
+neighboring check nodes in the previous iteration and of the
+
+state of the processing circuit. To separate the deviations from
+
+the ideal operation of the decoder, it is helpful to decompose
+
+a decoding iteration into the ideal computation, followed by a
+
+transmission through a deviation channel. This model is shown in Fig. 3a, where νi(,tj+1) is the message that would be sent from variable node i to check node j during iteration t + 1 if no
+
+deviations had occurred during iteration t. For the first mes-
+
+sages sent in the decoder at t = 0, the computation circuits are
+
+not used and therefore no deviation can occur, and we simply have μ(i,0j) = νi(,0j). Since we neglect correlations in successive circuit outputs, the deviation channel is memoryless.
+
+Unlike typical channel models where the noise is independent from other variables in the system, the deviation Di(,tj) is a function of the current circuit input Xk and of the current state
+
+Sk. Fig. 3b illustrates the dependencies between the random
+
+variables involved in the computation tree. Assuming a fixed distribution for μ(t) and Sk , φ(μ(i,t+j 1)) can be determined by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+937
+
+marginalizing the joint distribution of xi , zi , μ(t), Sk, and μ(i,t+j 1), which in practice can be done using a Monte-Carlo simulation of a test circuit that implements the computa-
+tion tree (such a simulation is discussed in more details in Appendix B). However, directly measuring φ(μ(i,t+j 1)) makes it difficult to extend the model to handle different input dis-
+tributions. Instead, we propose a deviation model that retains conditional dependencies on the ideal message νi(,tj+1) and on the transmitted bit xi . We note that a similar model that did not include xi was also used in [15]. The deviation model is thus expressed as the conditional distribution φ(μ(i,t+j 1)|νi(,tj+1), xi ). Using the ideal message as a model parameter rather than Xk has the advantage of reducing the complexity of the model, but
+also of limiting the error when the model is used with other
+input distributions, as discussed in the following subsection.
+
+D. Generalized Deviation Model
+
+The deviation model introduced in Section III-C requires μ(t) and Sk to have fixed distributions, but these distributions
+change at every decoding iteration. Furthermore, because the
+
+message distribution depends on the transmitted codeword,
+
+the deviation model also depends on the transmitted codeword.
+
+Under the assumption that Xk and Xk−1 are i.i.d., φ(Sk ) is a
+
+function
+
+of
+
+φ
+
+(μ(i,t
+
+) j
+
+),
+
+and
+
+it
+
+is
+
+thus
+
+sufficient
+
+to
+
+consider
+
+the
+
+evolution
+
+of
+
+φ
+
+(μ(i,t
+
+) j
+
+).
+
+Let us first assume that the transmitted codeword is fixed.
+
+In
+
+this
+
+case,
+
+the
+
+message
+
+distribution
+
+φ
+
+(μ(i,t
+
+) j
+
+)
+
+depends
+
+on
+
+the
+
+channel noise, on the iteration index t, and on the operating
+
+conditions of the circuit. Since the messages are affected by deviations for t > 0, only φ(μi(,0j)) is known a priori. An obvious way to measure deviations for all decoding iterations is to determine φ(μ(i,1j)) using the known φ(μi(,0j)), and to repeat the process for each subsequent decoding iteration. However,
+
+the resulting deviation model is of limited interest, since it
+
+depends on the specific message distributions in each iteration.
+
+To generate a model that is independent of the iterative
+
+progress
+
+of
+
+the
+
+decoder,
+
+we
+
+first
+
+approximate
+
+φ
+
+(μ(i,t
+
+) j
+
+)
+
+as
+
+a
+
+1-D Normal distribution with error rate parameter pe(t) chosen
+
+such that
+
+pe(t )
+
+=
+
+P(xi
+
+μ(i,t
+
+) j
+
+<
+
+0)
+
++
+
+1 2
+
+P(μ(i,t
+
+) j
+
+=
+
+0).
+
+(4)
+
+This also provides us with an implicit parametrization of φ(Sk ) in terms of pe(t). Note that while φ(μi(,0j)) does correspond exactly to a 1-D Normal distribution, this is not necessarily
+
+the case after the first iteration. However, the approximation
+
+is only used to characterize deviations, and exact distribu-
+
+tions can still be used to characterize messages. Therefore,
+
+φ(νi(,tj+1)) can be determined exactly, and the impact of the
+
+approximation
+
+remains
+
+small
+
+as
+
+long
+
+as
+
+P(μ(i,t
+
++1) j
+
+=
+
+νi(,tj+1))
+
+is small. In fact, combining a density evolution based on
+
+exact distributions with a deviation model generated using
+
+1-D Normal distributions leads to very accurate bit error rate
+
+predictions in practice [29].
+
+To
+
+evaluate
+
+φ
+
+(μ(i,t
+
+) j
+
+),
+
+we
+
+must
+
+also
+
+consider
+
+that
+
+devia-
+
+tions depend on the operating condition γ . Once ( pe(t), γ ) is
+
+specified,
+
+φ
+
+(μ(i,t
+
+) j
+
+)
+
+is
+
+uniquely
+
+determined
+
+by
+
+the
+
+synthesized
+
+circuit, and in order to retain the ability to represent arbitrary circuits, we make no assumption on the distribution and simply characterize it as an arbitrary conditional probability mass function (PMF). We therefore obtain a model consisting of a family of non-parametric conditional PMFs denoted as
+
+φ( pe(t),γ )
+
+μ(i,t
+
++1) j
+
+νi(,tj+1), xi
+
+,
+
+(5)
+
+where ( pe(t), γ ) are the family parameters. However, we generally omit the ( pe(t), γ ) superscript to simplify the notation. In practice, (5) is constructed by performing several Monte-Carlo
+
+simulations of the circuit implementation of the computation
+
+tree in Fig. 3 for various pe(t) values and for all operating
+
+conditions γ ∈ . Interpolation is then used to obtain a
+
+continuous model in pe(t). While measuring deviations, we also
+
+record the switching activity in the circuit, which is then used
+
+to construct an energy model that depends on γ and pe(t), denoted as cγ ( pe(t)) (where c stands for “cost”).
+
+To use the model, we first use (4) to determine the error
+
+rate parameter pe(t) corresponding to the arbitrary message
+
+distribution
+
+φ
+
+(μ(i,t
+
+) j
+
+)
+
+at
+
+the
+
+beginning
+
+of
+
+the
+
+iteration,
+
+and
+
+we
+
+then retrieve the appropriate conditional PMF based on pe(t)
+
+and on the operating condition γ . This conditional PMF then
+
+informs us of the statistics of deviations that occur at the end
+
+of the iteration, that is on messages sent in iteration t + 1.
+
+As
+
+mentioned
+
+above,
+
+since
+
+φ
+
+(μ(i,t
+
+) j
+
+)
+
+depends
+
+on
+
+the
+
+trans-
+
+mitted codeword, this is also the case of φ(Sk ) and of
+
+the deviation distributions. We show in Section IV that the
+
+codeword dependence is entirely contained within the devia-
+
+tion model and does not affect the analysis of the decoding
+
+performance, as long as the decoding algorithm and deviation
+
+model satisfy certain properties. Nonetheless, we would like
+
+to obtain a deviation model that does not depend on the
+
+transmitted codeword. This can be done when the objective
+
+is to predict the average performance of the decoder, rather
+
+than the performance for a particular codeword, since it is
+
+then sufficient to model the average behavior of the decoder.
+
+For the case where all codewords have an equal probability
+
+of being transmitted, we propose to perform the Monte-Carlo
+
+deviation measurements by randomly sampling transmitted
+
+codewords. This approach is supported by the experimental
+
+results presented in [29], which show that a deviation model
+
+constructed in this way can indeed accurately predict the
+
+average decoding performance.
+
+IV. PERFORMANCE ANALYSIS
+A. Standard Analysis Methods for LDPC Decoders
+Density evolution (DE) is the most common tool used for predicting the error-correction performance of an LDPC decoder. The analysis relies on the assumption that messages passed in the Tanner graph are mutually independent, which holds as the code length goes to infinity [30]. Given the channel output probability distribution and the probability distribution of variable node to check node messages at the start of an iteration, DE computes the updated distribution of variable node to check node messages at the end of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+938
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+decoding iteration. This computation can be performed iteratively to determine the message distribution after any number of decoding iterations. The validity of the analysis rests on two properties of the LDPC decoder. The first property is the conditional independence of errors, which states that the errorcorrection performance of the decoder is independent from the particular codeword that was transmitted. The second property states that the error-correction performance of a particular LDPC code concentrates around the performance measured on a cycle-free graph, as the code length goes to infinity.
+Both properties were shown to hold in the context of reliable implementations [30]. It was also shown that the conditional independence of errors always holds when the channel is output symmetric and the decoder has a symmetry property. We can define a sufficient symmetry property of the decoder in terms of a message-update function Fi, j that represents one complete iteration of the (ideal) decoding algorithm. Given a vector of all the messages μ(t) sent from variable nodes to check nodes at the start of iteration t and the channel information νi(0) associated with variable node i , Fi, j returns the next ideal message to be sent from a variable node i to a check node j : νi(,tj+1) = Fi, j μ(t), νi(0) .
+Definition 1: A message-update function Fi, j is said to be symmetric with respect to a code C if
+Fi, j μ(t), νi(0) = xi Fi, j xμ(t), xi νi(0)
+for any μ(t), any νi(0), and any codeword x ∈ C. In other words, a decoder’s message-update function is
+symmetric if multiplying all the VN-to-CN belief messages sent at iteration t and the belief priors by a valid codeword x ∈ C is equivalent to multiplying the next messages sent at iteration t + 1 by that same codeword. Note that the symmetry condition in Definition 1 is implied by the check node and variable node symmetry conditions in [30, Definition 1].
+B. Applicability of Density Evolution
+In order to use density evolution to predict the performance of long finite-length codes, the decoder must satisfy the two properties stated in Section IV-A, namely the conditional independence of errors and the convergence to the cyclefree case. We first present some properties of the decoding algorithm and of the deviation model that are sufficient to ensure the conditional independence of errors.
+Using the multiplicative description of the BIAWGN channel, the vector received by the decoder is given by y = x z when a codeword x is transmitted, or by y = z when the allone codeword is transmitted. In a reliable decoder, messages are completely determined by the received vector, but in a faulty decoder, there is additional randomness that results from the deviations. Therefore, we represent messages in terms of conditional probability distributions given x z. Since we are concerned with a fixed-point circuit implementation of the decoder, we can assume that messages are integers from the set {−Q, −Q+1, . . . , Q}, where Q > 0 is the largest message magnitude that can be represented.
+
+Definition 2: We say that a message distribution φμi,j | y(μ|x z) is symmetric if
+
+φμi, j | y (μ | x z) = φμi, j | y (xi μ | z) .
+
+If a message has a symmetric distribution, its error proba-
+
+bility as defined in (4) is the same whether x z or z is received.
+
+Similarly to the results presented in [15], we can show that
+
+the symmetry of message distributions is preserved when the
+
+message-update function is symmetric.
+
+Lemma 1: If Fi, j is a symmetric message-update function
+
+and
+
+if
+
+μ(i 0)
+
+and
+
+μ(i,t
+
+) j
+
+have
+
+symmetric
+
+distributions
+
+for
+
+all
+
+(i, j ), the next ideal messages νi(,tj+1) also have symmetric
+
+distributions.
+
+Proof: We can express the distribution of the next ideal
+
+message from VN i to CN j as
+
+φνi(,tj+1)| y (ν | x z) =
+
+φμ(t)| y (μ | x z) φμi(0)| y
+
+(μ,μ(i 0) )∈ R
+
+μ(i0) x z , (6)
+
+where R = (μ, μi(0)) : Fi, j μ, μi(0) = ν .
+
+Assuming that the elements of the VN-to-CN message
+
+vector
+
+μ(t )
+
+are
+
+independent
+
+and
+
+that
+
+each
+
+μ(i,t
+
+) j
+
+has
+
+a
+
+symmetric
+
+distribution,
+
+φμ(t)| y (μ | x z) = φμk(t)| y (μk | x z)
+k
+
+=
+
+φμ(kt)| y (xk μk | z)
+
+k
+
+= φμ(t)| y (xμ | z) ,
+
+and since the channel output μ(i0) also has a symmetric distribution,
+
+φμ(i0)| y μ(i0) x z = φμi(0)| y xi μ(i0) z . Therefore, we can rewrite (6) as
+
+φνi(,tj+1)| y (ν | x z) =
+
+φμ(t)| y(xμ | z) φμi(0)| y xi μ(i0) z .
+
+(μ,μ(i 0))∈ R
+
+(7)
+
+Finally, letting μ
+ = xμ(t) and νi
+ = xi μi(0), (7) becomes
+
+φνi(,tj+1)| y (ν | x z) = (μ
+,νi
+)∈R
+ φμ(t)| y μ
+
+z φμ(i0)| y νi
+ z ,
+
+where R
+ symmetric,
+
+= we
+
+(μ
+, νi
+) can also
+
+: Fi, j (xμ , express R
+
+
+xi νi
+) as
+
+=
+
+ν
+
+.
+
+Since
+
+Fi, j
+
+is
+
+R
+ = (μ
+, νi
+) : Fi, j (μ , νi
+) = xi ν ,
+
+and therefore,
+
+φνi(,tj+1)| y (xi ν | z) = (μ
+,νi
+)∈R
+ φμ(t)| y μ = φνi(,tj+1)| y (ν | x z) ,
+
+z φμ(i0)| y νi
+ z
+
+indicating that the next ideal messages have symmetric distributions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+939
+
+To establish the conditional independence of errors under the proposed deviation model, we first define some properties of the deviation.
+Definition 3: We say that the deviation model is symmetric if
+
+φμ(i,t)j |νi(,tj), y
+
+(μ
+
+|
+
+ν,
+
+x z)
+
+=
+
+φμ(i,t
+
+) j
+
+|νi(,tj),
+
+y
+
+(μ
+
+|
+
+ν,
+
+z)
+
+=
+
+φμi(,t
+
+) j
+
+|νi(,tj),
+
+y
+
+(−μ
+
+|
+
+−ν,
+
+z) .
+
+Definition 4: We say that the deviation model is weakly symmetric (WS) if
+
+φμ(i,t)j |νi(,tj), y
+
+(μ
+
+|
+
+ν,
+
+x
+
+z)
+
+=
+
+φμ(i,t
+
+) j
+
+|νi(,tj)
+
+,
+
+y
+
+(xi
+
+μ
+
+|
+
+xi ν,
+
+z)
+
+.
+
+Note that if the model satisfies the symmetry condition,
+
+it also satisfies the weak symmetry condition, since xi ∈ {−1, 1}. We then have the following Lemma.
+
+Lemma 2: If a decoder having a symmetric message-update
+
+function and taking its inputs from an output-symmetric com-
+
+munication channel is affected by weakly symmetric devia-
+
+tions, its message error probability at any iteration t ≥ 0 is
+
+independent of the transmitted codeword.
+
+Proof: Similarly to the approach used in [31,
+
+Lemma 4.90] and [10], we want to show that the probability
+
+that messages are in error is the same whether x z or z is
+
+received.
+
+This
+
+is
+
+the
+
+case
+
+if
+
+the
+
+faulty
+
+messages
+
+μ(i,t
+
+) j
+
+have
+
+a
+
+symmetric distribution for all t ≥ 0 and all (i, j ).
+
+Since the communication channel is output symmetric and
+
+since no deviations can occur before the first iteration, messages μi(,0j) = νi(,0j) have a symmetric distribution. We proceed by induction to establish the symmetry of the messages for
+
+t > 0. We start by assuming that
+
+φνi(,tj)| y (ν | x z) = φνi(,tj)| y (xi ν | z)
+
+(8)
+
+also holds for t > 0. Using Definition 4 and (8), we can write the faulty message
+distribution as
+
+Q
+
+φμi(,t
+
+) j
+
+|
+
+y
+
+(μ
+
+|
+
+x z)
+
+=
+
+ν=−Q
+
+φμ(i,t
+
+) j
+
+|
+
+y
+
+(μ
+
+|
+
+ν,
+
+x z) φνi(,tj)| y
+
+(ν
+
+|
+
+x z)
+
+Q
+
+=
+
+ν=−Q
+
+φμi(,t
+
+) j
+
+|
+
+y
+
+(xi μ
+
+|
+
+xi ν,
+
+z) φνi(,tj)| y
+
+(xi ν
+
+|
+
+z)
+
+xi Q
+
+=
+
+ν
+=−xi Q
+
+φμi(,t
+
+) j
+
+|
+
+y
+
+xiμ
+
+ν
+, z φνi(,tj)| y ν
+
+
+z
+
+Q
+
+=
+
+ν
+=−Q
+
+φμi(,t
+
+) j
+
+|
+
+y
+
+xiμ
+
+ν
+, z φνi(,tj)| y ν
+
+
+z
+
+=
+
+φμi(,t
+
+) j
+
+|
+
+y
+
+(xi μ
+
+|
+
+z) .
+
+where the third equality is obtained using the substitution ν
+ = xi ν. We conclude that the faulty messages have a symmetric distribution. Finally, since the decodeR’s messageupdate function is symmetric, Lemma 1 confirms the induction hypothesis in (8).
+The last remaining step in establishing whether density evolution can be used with a decoder affected by WS deviations
+
+is to determine whether the error-correction performance of a code concentrates around the cycle-free case. The property has been shown to hold in [10, Ths 2, 3, and 4] for an LDPC decoder affected by “wire noise” and “computation noise”. The wire noise model is similar to our deviation model, in the sense that the messages are passed through an additive noise channel, and that the noise applied to one message is independent of the noise applied to other messages. The proof presented in [10] only relies on the fact that the wire noise applied to a given message can only affect messages that are included in the directed neighborhood of the edge where it is applied, where the graph direction refers to the direction of message propagation. This clearly also holds in the case of our deviation model, and therefore the proof is the same.
+Since the message error probability is independent of the transmitted codeword, and furthermore concentrates around the cycle-free case, density evolution can be used to determine the error-correction performance of a decoder perturbed by our deviation model, as long as the deviations are weakly symmetric. It is important to note that as discussed in Section III-D, the deviation model itself still depends on the transmitted codeword. However, given a weakly symmetric deviation model, density evolution can be used to determine the decoder’s performance. The hope is that in practice, only a single (or a few) deviation models are required to represent the deviations for all codewords, and indeed one model is sufficient to obtain accurate predictions in the experiment of [29].
+
+C. Deviation Examples
+
+As described in Section III-D, we collect deviation measurements from the test circuits by inputting test vectors representing random codewords, and distributed according to several pe(t−1) values. We then generate estimates of the conditional PMFs in (5). It is interesting to visualize the distributions using an aggregate measure such as the probability of observing a non-zero deviation
+
+pnz(νi(,tj), xi ) = P( pe(t−1),γ )
+
+μ(i,t
+
+) j
+
+=
+
+νi(,tj)
+
+νi(,tj), xi
+
+.
+
+(9)
+
+These conditional probabilities are shown for a (3, 30) circuit in Fig. 4. When xi = 1, positive belief values indicate a correct decision, whereas when xi = −1, negative belief values indicate a correct decision. We can see that in this example,
+deviations are more likely when the belief is incorrect than
+when it is correct, and therefore a symmetric deviation model
+is not consistent with these measurements. On the other
+hand, there is a sign symmetry between the “correct” part
+of the curves, and between the “incorrect” parts, that is pnz(νi(,tj), 1) ≈ pnz(−νi(,tj), −1), and for this reason a weakly symmetric model is consistent with the measurements. Note
+that the slight jaggedness observed for incorrect belief values of large magnitude in the pe(t−1) = 0.008 curves is due to the fact that these νi, j values occur only rarely. For the largest incorrect νi, j values, only about 100 deviation events are observed for each point, despite the large number of Monte-
+Carlo (MC) trials.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+940
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+Fig. 4.
+
+Non-zero
+
+deviation
+
+probability
+
+given
+
+νi(,t
+
+) j
+
+and
+
+xi
+
+at
+
+two
+
+pe(t −1)
+
+values,
+
+3anmnu·e1dma0sb81ue0drr,ee0odc7fo1ond,n8oin1nag0-zi(aet3etr,orap3tde(0iteo)−vni1cat)irtriic=oaulnsi0tew.v0oee0prn8eet.rsaptoeerbdfsoearrmtveeVddddifso=r4,e1a01c.57h,52p2Ve(9t −aa1nt)dpve(Tat −lculk1e).
+
+= 3.2 ns. The total = 0.015,
+
+Fig. 5.
+
+Non-zero
+
+deviation
+
+probability
+
+given
+
+νi(,t
+
+) j
+
+and
+
+xi
+
+at
+
+two
+
+pe(t −1)
+
+values,
+
+dmnaneuecdmaosb1due,ir0nre2gdo0f,oi8tnne6or7aant-(aiz3ote,nrp6oe()ttrdc−iaei1rvlcs)iua=itwtioeo0nrp.e0ee5rvpa.eetnerdftsoaromtbVesddedrvf=eodr0ie.s8a52ch,V52pa4ne(,t6d−0T11c)lakvt a=plue(t2e−..11T)nhs=.e30·t.o10t09a8l,
+
+Figure 5 shows a similar plot for a (3, 6) circuit. In this case, pnz(νi(,tj), xi ) ≈ pnz(−νi(,tj), xi ), and a symmetric deviation model could be appropriate. Of course, since it is more general, a WS model is also appropriate.
+Under the assumption that deviations are weakly symmetric, we have
+
+φμ(i,t
+
+) j
+
+|νi(,tj),xi
+
+(μ
+
+|
+
+ν, 1)
+
+=
+
+φμi(,t)j |νi(,tj),xi
+
+(−μ
+
+|
+
+−ν,
+
+−1) .
+
+Therefore, we can combine the xi = 1 and xi = −1 data generated by the MC simulation to improve the accuracy of
+
+the estimated PMFs. To determine the validity of the WS
+
+assumption in a systematic way, we can generate an error
+
+metric by applying the WS assumption to one half of the
+
+simulation data to predict the other half. For all the circuits
+
+and operating conditions considered, the mean squared error of the predicted PMFs remains below 10−3.
+
+Fig. 6. Examples of projected DE curves (solid lines) and energy curves (dashed lines) for rate 0.5 ensembles with dv ∈ {3, 4, 5}, and pe(0) = 0.09.
+Let pL and pH be respectively the smallest and largest pe(t−1) values for which the deviations have been characterized. We can generate a conditional PMF for any pe(t−1) ∈ [ pL, pH ] by interpolating from the nearest PMFs that have been measured. We choose pH ≥ pe(0) to make sure that the first iteration’s deviation is within the characterized range. Because messages in the decoder are saturated once they reach the largest magnitude that can be represented, and since messages are represented in the CNP in sign & magnitude format, the circuit’s switching activity decreases when the message error probability becomes very small. Since timing faults cannot occur when the circuit does not switch, we can expect deviations to be equally or less likely at pe(t−1) values below pL. Therefore, to define the deviation model for pe(t−1) < pL, we make the pessimistic assumption that the deviation PMF remains the same as for pe(t−1) = pL.
+
+D. DE and Energy Curves
+
+We evaluate the progress of the decoder affected by timing
+
+violations using quantized density evolution [32]. For the
+
+Offset Min-Sum algorithm, a DE iteration can be split into
+
+the following steps: 1-a) evaluating the distribution of the CN
+
+minimum, 1-b) evaluating the distribution of the CN output,
+
+after subtracting the offset, 2) evaluating the distribution of the
+
+ideal VN-to-CN message, and 3) evaluating the distribution
+
+of the faulty VN-to-CN messages. Step 1-a is given in [16],
+
+while the others are straightforward. In the context of DE,
+
+we
+
+write
+
+the
+
+message
+
+distribution
+
+as
+
+π (t)
+
+=
+
+φ
+
+(μ(i,t
+
+) j
+
+|xi
+
+=
+
+1),
+
+and We
+
+the channel output distribution as π(0) = write a DE iteration as π(t+1) = fγ (π(t),
+
+φ π
+
+((0μ))(i0. )|xi
+
+=
+
+1).
+
+As mentioned in Section III-D, the energy consumption
+
+is modeled in terms of the message error probability and of the operating condition, and denoted cγ ( pe(t)). As for the deviation model, we use interpolation to define cγ ( pe(t)) for pe(t) ∈ [ pL, pH ], and assume that cγ ( pe(t)) = cγ ( pL ) for pe(t) < pL . To display fγ (π(t), π(0)) and cγ ( pe(t)) on the same plot, we project π(t) onto the message error probability space.
+
+Several regular code ensembles were evaluated, with rates
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+941
+
+Fig. 7. Examples of projected DE curves (solid lines) and energy curves (dashed lines) for the (3, 30) and (4, 40) ensembles (rate 0.9), with pe(0) = 0.015.
+
+1 2
+
+and
+
+9 10
+
+.
+
+Fig.
+
+energy curves
+
+6 shows examples of projected DE
+
+for
+
+rate-
+
+1 2
+
+code
+
+ensembles
+
+with
+
+dv
+
+curves and ∈ {3, 4, 5}
+
+and various operating conditions. The energy is measured
+
+as described in Appendix B and corresponds to one use of
+
+the test circuit (shown in Fig. 8). The nominal operating
+
+condition is Vdd = 1.0 V, Tclk = 2.0 ns and therefore these curves correspond to a reliable implementation. With a reliable
+
+implementation, these ensembles have a channel threshold of pe(0) ≤ 0.12 for the (3, 6) ensemble, pe(0) ≤ 0.11 for (4, 8), and pe(0) ≤ 0.09 for (5, 10). We use pe(0) = 0.09 for all the
+
+curves shown in Fig. 6 to allow comparing the ensembles.
+
+As can be expected, a larger variable node degree results in
+
+faster convergence towards zero error rate, and it is natural to
+
+ask whether this property might provide greater fault tolerance
+
+and ultimately better energy efficiency. This is discussed in
+
+Section V-D.
+
+Fig. 7 is a similar plot for the (3, 30) and (4, 40) ensembles.
+
+The channel threshold of both ensembles is approximately pe(0) ≤ 0.019. For these curves, the nominal operating condition is Vdd = 1.0 V and Tclk = 3 ns. As we can see, the energy consumption per iteration of the (4, 40) decoder is roughly
+
+double that of the (3, 30) decoder. We note that in the case
+
+of the (3, 30) ensemble, the reliable decoder stops making progress at an error probability of approximately 10−8. This
+
+floor is the result of the message saturation limit chosen for
+
+the circuit.
+
+V. ENERGY OPTIMIZATION
+A. Design Parameters
+As in a standard LDPC code-decoder design, the first parameter to be optimized is the choice of code ensemble. In this paper we restrict the discussion to regular codes, and therefore we need only to choose a degree pair (dv, dc), where R = 1 − dv /dc is the design rate of the code. For a fixed R, we can observe that both the energy consumption and the circuit area of the decoding circuit grow rapidly with dv , and therefore it is only necessary to consider a few of the lowest dv values.
+
+Besides the choice of ensemble, we are interested in finding the optimal choice of operating parameters for the quasisynchronous circuit. We consider here the supply voltage (Vdd) and the clock period (Tclk). Generally speaking, the supply voltage affects the energy consumption, while the clock period affects the decoding time, or latency. The energy and latency are also affected by the choice of code ensemble, since the number of operations to be performed depends on the node degrees. The operating parameters of a decoder are denoted as a vector γ = [Vdd, Tclk].
+The decoding of LDPC codes proceeds in an iterative fashion, and it is therefore possible to adjust the operating parameters on an iteration-by-iteration basis. In practice, this could be implemented in various ways, for example by using a pipelined sequence of decoder circuits, where each decoder is responsible for only a portion of the decoding iterations.
+It is also possible to rapidly vary the clock frequency of a given circuit by using a digital clock divider circuit [33]. We denote by γ the sequence of parameters used at each iteration throughout the decoding, and we use γ = [γ1N1 , γ2N2 , . . . ] to denote a specific sequence in which the parameter vector γ1 is used for the first N1 iterations, followed by γ2 for the next N2 iterations, and so on.
+B. Objective
+The performance of the LDPC code and of its decoder can be described by specifying a vector P = ( pe(0), pres, Tdec), where pe(0) is the output error rate of the communication channel, pres the residual error rate of VN-to-CN messages when the decoder terminates, and Tdec the expected decoding latency.
+The decoder’s performance P and energy consumption E are controlled by γ . The energy minimization problem can be stated as follows. Given a performance constraint P = (a, b, c), we wish to find the value of γ that minimizes E, subject to pe(0) = a, pres ≤ b, Tdec ≤ c. As in the standard DE method, we propose to use the code’s computation tree as a proxy for the entire decoder, and furthermore to use the energy consumption of the test circuit described in Appendix B as the optimization objective. To be able to replace the energy minimization of the complete decoder with the energy minimization of the test circuit, we make the following assumptions:
+1) The ordering of the energy consumption is the same for the test circuit and for the complete decoder, that is, for any γ1 and γ2, ETEST(γ1) ≤ ETEST(γ2) implies EDEC(γ1) ≤ EDEC(γ2), where ETEST(γ ) and EDEC(γ ) are respectively the energy consumption of the test circuit and of the complete decoder when using parameter γ .
+2) The average message error rate in the test circuit and in the complete decoder is the same for all decoding iterations.
+3) The latency of the complete decoder is proportional to the latency of the test circuit, that is, if Tdec(γ ) is the latency measured using the test circuit with parameter γ , the latency of the complete decoder is given by β Tdec(γ ), where β does not depend on γ .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+942
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+and the optimization problem becomes the following: given a performance constraint P = (a, b), minimize E(γ ) · Tdec(γ ) subject to pe(0) = a, pres ≤ b, and a fixed circuit area.
+
+Fig. 8. Block diagram of the test circuit.
+Assumption 1 is reasonable because the test circuit is very similar to a computation unit used in the complete decoder. The difference between the two is that the test circuit only instantiates one full VNP, the remaining (dc − 1) VNPs being reduced to only their “front” part (as seen in Fig. 8), whereas the complete decoder has dc full VNPs for every CNP. Assumption 2 is the standard DE assumption, which is reasonable for sufficiently long codes. Finally, it is possible for the clock period to be slower in the complete decoder, because the increased area could result in longer interconnections between circuit blocks. Even if this is the case, the interconnect length only depends on the area of the complete decoder, which is not affected by the parameters we are optimizing, and hence β does not depend on γ .
+Clearly, if Assumption 1 holds and the performance of the test circuit is the same as the performance of the complete decoder, then the solution of the energy minimization is also the same. The performance is composed of the three components ( pe(0), pres, Tdec). The channel error rate pe(0) does not depend on the decoder and is clearly the same in both cases. Because of Assumption 2, the complete decoder can achieve the same residual error rate as the test circuit when pe(0) is the same. The latencies measured on the test circuit and on the complete decoder are not necessarily the same, but if Assumption 3 holds, and if we assume that the constant β is known, then we can find the solution to the energy minimization of the complete decoder subject to constraints ( pe(0), pres, Tdec) by instead minimizing the energy of the test circuit with constraints ( pe(0), pres, Tdec/β).
+We also consider another interesting optimization problem. It is well known that for a fixed degree of parallelism, energy consumption is proportional to processing speed (represented here by Tdec), which is observed both in the physical energy limit stemming from Heisenberg’s uncertainty principle [34], as well as in practical CMOS circuits [35]. In situations where both throughput normalized to area and low energy consumption are desired, optimizing the product of energy and latency or energy-delay product (EDP) for a fixed circuit area can be a better objective. In that case the performance constraint is stated in terms of P = ( pe(0), pres),
+
+C. Dynamic Programming
+
+To solve the iteration-by-iteration energy and EDP mini-
+
+mization problems stated above, we adapt the “Gear-Shift”
+
+dynamic programming approach proposed in [21]. The orig-
+
+inal method relies on the fact that the message distribution
+
+has a 1-D characterization, which is chosen to be the error
+
+probability. By quantizing the error probability space, a trellis
+
+graph can be constructed in which each node is associated with a pair ( p˜e(t), t). Quantized quantities are marked with tildes. A particular choice of γ corresponds to a path P through the
+
+graph, and the optimization is transformed into finding the least expensive path that starts from the initial state ( p˜e(0), 0) and reaches any state ( p˜e(t), t) such that p˜e(t) ≤ pres and the
+
+latency constraint is satisfied, if there is one. Note that to
+
+ensure that the solutions remain achievable in the original continuous space, the message error rates pe(t) are quantized by rounding up. To maintain a good resolution at low error
+
+rates, we use a logarithmic quantization, with 1000 points per
+
+decade.
+
+In the case of a faulty decoder, we want to evaluate the
+
+decoder’s progress by tracking a complete message distribution
+
+using DE, rather than simply tracking the message error
+
+probability. In this case, the Gear-Shift method can be used as
+
+an approximate solver by projecting the message distribution
+
+π (t)
+
+=
+
+φ
+
+(μ(i,t
+
+) j
+
+|xi
+
+=
+
+1) onto the error probability space.
+
+We refer to this method as DE-Gear-Shift. Any path through
+
+the graph is evaluated by performing DE on the entire path
+
+using exact distributions, but different paths are compared in
+
+the projection space. As a result, the solutions that are found
+
+are not guaranteed to be optimal, but they are guaranteed to
+
+accurately represent the progress of the decoder.
+
+In the DE-Gear-Shift method, a path P is a sequence of states {π(t)}. As in the original Gear-Shift method, any
+
+sequence of decoder parameters γ corresponds to a path.
+
+We denote the projection of a state onto the error probability space as pe(t) = (π(t)). To each path P, we associate an energy cost E P and a latency cost TP . A path ending at a state π(t) can be extended with one additional decoding iteration
+
+using parameter γ by evaluating one DE iteration to obtain π(t+1) = fγ (π(t), π(0)). Performing this additional iteration adds an energy cost cγ ( p˜e(t), pe(0)) and a latency cost Tγ to
+the path’s cost. When optimizing EDP, we define the overall
+
+cost of a path CP as CP = E P · TP . When optimizing energy
+
+under a latency constraint, we define the path cost as a two-
+
+dimensional vector CP = (E P , TP ).
+
+We use the following rules to discard paths that are subop-
+
+timal in the error probability space. Rule 1: Paths for which
+
+the message error rate is not monotonically decreasing are
+
+discarded. Rule 2: A path P with cost CP is said to dominate
+
+another path P
+ with cost CP
+ if all the following conditions
+
+hold:
+
+1)
+
+an
+
+ordering
+
+exists
+
+between
+
+CP
+
+and
+
+C
+
+
+ P
+
+,
+
+2)
+
+CP
+
+≤
+
+C
+
+
+ P
+
+,
+
+3) (πP ) ≤ (πP
+ ), where πP denotes the last state reached
+
+by path P. The search for the least expensive path is performed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+943
+
+TABLE I ENERGY AND EDP OPTIMIZATION RESULTS
+
+breadth-first. After each traversal of the graph, any path that is dominated by another is discarded.
+When the path cost is one-dimensional, the optimization requires evaluating O(| |Ns ) DE iterations, where | | is the number of operating points being considered and Ns the number of quantization levels used for p˜e(t). This can be seen from the fact that with a 1-D cost, Rule 2 implies that at most one path can reach a given state p˜e(t). Therefore, O(| |Ns ) DE iterations are required for each decoding iteration. In addition, upper bounds can be derived for the number of decoding iterations spanned by the trellis graph in terms of the smallest latency and energy cost of the parameters in , and therefore it is a constant that does not depend on | | or Ns . On the other hand, when the cost is two-dimensional, the number of DE iterations could grow exponentially in terms of the number of decoding iterations. However, even in the case of a 2-D cost, an ordering exists between the costs of paths P and P
+ if (E P ≥ E P
+ ∧ TP ≥ TP
+ ) ∨ (E P ≤ E P
+ ∧ TP ≤ TP
+ ), and in that case Rule 2 can be applied. In practice, for the cases presented in this paper, the discarding rules allowed to keep the number of paths down to a manageable level, even when using a 2-D cost. Note that an alternative to the use of a 2-D cost is to define a 1-D cost as CP = E P + κ TP , and to perform a binary search for the value of κ that yields an optimal solution with the desired latency.
+The algorithm can also be modified to search for parameter sequences that have other desirable properties beyond minimal energy or EDP. For example, if the decoder is implemented as a pipelined sequence of decoders, it can be desirable to favor solutions that do not require the decoder to switch its parameters too often. We can find good approximate solutions by adding a penalty to E P when the algorithm used in the current and next steps is different.
+
+D. Results
+
+We use DE-Gear-Shift to find good parameter sequences
+
+γ
+
+for
+
+several
+
+regular ensembles
+
+with
+
+rates
+
+1 2
+
+and
+
+9 10
+
+.
+
+The
+
+parameter space consists of (Vdd, Tclk) points with Vdd from
+
+0.70 V to 1.0 V in steps of 0.05 V and several Tclk values
+
+depending on Vdd, in steps of 0.1 ns. The standard and quasi-
+
+synchronous decoders use the same circuits. Parameter α in
+
+(1) is set to α = 4 for the (3, 6), (3, 30), and (4, 40) decoders,
+
+and to α = 2 for the (4, 8) decoder. The offset parameter C in
+
+Alg. 1 is set to C = 2 for the (4, 40) decoder and to C = 1 for
+
+all other decoders. As part of our best effort to design a good
+
+standard circuit, in the case of the (3, 30) decoder we present
+
+results for two circuits synthesized with different nominal Tclk
+
+values. The standard circuit has a lower energy consumption
+
+when synthesized with Tclk = 3 ns, while it has a lower EDP when synthesized with Tclk = 2.5 ns.
+We first run the DE-Gear-Shift solver without any path
+
+penalties to obtain the best possible parameter sequences, for
+
+both the energy and the EDP objectives. We also noticed
+
+that in some cases, adding a small algorithm change penalty
+
+allows to discover slightly better sequences. Note that when
+
+the objective is EDP, there is no constraint on latency. These
+
+results are summarized in Table I, where the energy is nor-
+
+malized per check node. Overall, we see that significant gains
+
+are possible while achieving the same channel noise, latency,
+
+and residual error requirements. The synthesis results show
+
+that increasing dv while keeping the rate constant leads to a
+
+significant increase in circuit area. Despite this, increasing the
+
+node degrees can result in a reduction of the EDP. For the
+
+rate
+
+9 10
+
+ensembles,
+
+going
+
+from
+
+dv
+
+=
+
+3
+
+to
+
+dv
+
+=
+
+4
+
+decreases
+
+EDP by 6.4% for a standard system, and by 14% for a
+
+quasi-synchronous system. However this is not the case for
+
+the
+
+rate
+
+1 2
+
+ensembles,
+
+where
+
+dv
+
+=
+
+3
+
+has
+
+the
+
+smaller
+
+EDP.
+
+As expected, we can also see that much more energy is
+
+required when the channel quality is close to the ensemble’s
+
+threshold.
+
+By applying a cost penalty to parameter switches, it is pos-
+
+sible to find parameter sequences with few switches, without a
+
+large increase in cost. For example, for a (3, 6) decoder starting at pe(0) = 0.09, a single operating condition can provide a 32% EDP improvement, using γ = [[0.8 V, 2.1 ns]11]. The
+
+probability of a non-zero deviation in that schedule ranges
+
+from 0.6% to 7.2%. In the case of a (3, 30) decoder synthesized at a nominal Tclk = 2.5 ns, for pe(0) = 0.015 the sequence γ = [[0.8 V, 2.5 ns]12, [1.0 V, 2.5 ns]] provides a 30% EDP
+
+improvement, with non-zero deviation probabilities from 0 to
+
+0.8%. For a (4, 40) decoder, the single-parameter sequence γ = [[0.8 V, 2.8 ns]9] provides a 39% EDP improvement, with
+
+non-zero deviation probabilities from 1.6 to 4.6%.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+944
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+VI. CONCLUSION
+We presented a method for the design of synchronous circuit implementations of signal processing algorithms that permits timing violations without the need for hardware compensation. We introduced a model for the deviations occurring in LDPC decoder circuits affected by timing faults that represent the circuit behavior accurately [29], while being independent of the iterative progress of the decoder. In addition, we showed that in order to use density evolution to predict the performance of the faulty decoder, it is sufficient for the deviation model to have a weak symmetry property, which is more general than previously proposed sufficient properties.
+We then presented an approximate optimization method called DE-Gear-Shift to find sequences of circuit operating parameters that minimize the energy or the energy-delay product. The method is similar to the previously proposed GearShift method, but relies on density evolution rather than ExIT charts to evaluate the average iterative progress of the decoder. Our results show that the best energy or EDP reduction is achieved by operating the circuit with a large number of timing violations (often with an average probability of nonzero deviation above 1%). Furthermore, important savings can be achieved with few parameter switches, and without any compromise on circuit area or decoding performance.
+In this work, we only considered delay variations associated with the signal transitions at the input of the circuit. While the energy savings that result from tolerating these variations are already significant, we ultimately see quasi-synchronous systems as an approach for tolerating the large process variations found in near-threshold CMOS circuits and other emerging computing technologies, potentially enabling energy savings of an order of magnitude. Furthermore, we believe this approach can be extended to other self-correcting algorithms, such as deep neural networks.
+APPENDIX A CAD WORKFLOW
+The deviations and the energy consumption are measured directly on optimized circuit models generated by a commercial synthesis tool (Cadence Encounter [36]). We use TSMC’s 65 nm process with the tcbn65gplus cell library [37]. In order to provide a fair assessment of the improvements provided by the quasi-synchronous circuit, we first synthesize a benchmark circuit that represents a best effort at optimizing the metric of interest, for example energy consumption. Since we do not have a specific throughput constraint for the design, we synthesize the benchmark circuit at the standard supply voltage of the library (Vdd = 1.0V), while the clock period is chosen as small as possible without causing a degradation of the target metric. Second, we synthesize a nominal circuit that will serve as the basis for the quasi-synchronous design. In this work, we use a standard synthesis algorithm for the nominal circuit, and in all the cases that we report on, the nominal and the benchmark circuits are actually the same. Using a standard synthesis method for the nominal circuit allows using off-the-shelf tools, but is not ideal since the objective of a standard synthesis algorithm (to make all paths only as fast as
+
+the clock period) differs from the objective pursued when some timing violations are permitted. For example, results in [38] show that the power consumption of a circuit can be reduced by up to 32% when the gate-sizing optimization takes into account the acceptable rate of timing violations. Therefore it is possible that our results could be improved by using a different synthesis algorithm.
+Once the circuit is synthesized, we perform a static timing analysis of the gate-level model at various supply voltages. All timing analyses (including at the nominal supply) are performed using timing libraries generated by the Cadence Encounter Library Characterization tool. We then use this timing information in a functional simulation of the gate-level circuit to observe the dynamic effect of path delay variations and measure the deviation statistics. Any source of delay variation that can be simulated can be studied, but in this paper we focus on variations due to path activation, that is the variations in delay caused by the different propagation times required by different input transitions. Note that other methods could be used to obtain the propagation delays, such as the method described in [39] based on analytical models. In addition to speeding up the characterization, such methods allow considering the effect of process variations.
+Power estimation is performed by collecting switching activity data in the functional simulation and using the power estimation engine in Cadence Encounter. However, because the circuit is operated in a quasi-synchronous manner, the clock period used to run the circuit is not necessarily the same as the nominal clock period. When that is the case, the power estimation generated by the synthesis tool cannot be used directly. First, the switching activity recorded during the functional simulation must be scaled so that it corresponds to the nominal clock period. The tool’s power estimation then reports the dynamic power Pdyn and the static power Pstat. The dynamic energy consumed during one clock cycle does not depend on the clock period, whereas the static energy does. Therefore, the total energy consumed during one cycle by the quasi-synchronous circuit is given by Ecycle = PdynTclk,nom + Pstat Tclk, where Tclk,nom is the nominal clock period and Tclk is the actual clock period used to run the circuit.
+APPENDIX B TEST CIRCUIT MONTE-CARLO SIMULATION
+A suitable test circuit for a row-layered decoder architecture consists in implementing a single check node processor, as well as the necessary logic taken from the variable node processor block to send dv messages to the CNP, and receive one message from the CNP. This test circuit is shown in Fig. 8. It re-uses logic blocks that are found in the complete decoder, ensuring the accuracy of the deviation and energy measurements, and minimizing design time.
+The test circuit is used to evaluate the decoder’s computation tree (shown in Fig. 3a). The VNP with index 1, shown at the top, is always mapped to the VN that is at the head of the computation tree, while the VNPs at the bottom of the figure are mapped to different VNs as the CNP is successively mapped to each CN neighbor of the head VN.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+LEDUC-PRIMEAU et al.: MODELING AND ENERGY OPTIMIZATION OF LDPC DECODER CIRCUITS WITH TIMING VIOLATIONS
+
+945
+
+At any given clock cycle, a VNP front block is mapped to a
+
+particular VN i . For illustrative purposes, we simply index the
+
+VN neighbors from 1 to dc, even if the VNs mapped to the
+
+bottom VNPs actually change at each layer. Each VNP front
+
+block takes as input the previous belief total of that VN
+
+
+ i
+
+,
+
+and the previous CN-to-VN message corresponding to layer
+
+,
+
+λ(i,t
+
+−1) J (i,
+
+).
+
+To perform the Monte-Carlo simulation, a VNP front circuit
+
+block with index i must send a message μ(it), randomly
+
+generated according to a 1-D normal distribution with error
+
+probability pe(t). However, the only inputs that are controllable
+
+are
+
+
+ i
+
+and
+
+λ(i,tJ−(1i,) ).
+
+To
+
+simplify
+
+the
+
+Monte-Carlo
+
+simulation,
+
+we disregard the true distribution of λ(i,tJ−(1i,) ) and generate it
+
+according to a 1-D normal distribution. We also introduce
+
+another simplification: we assume that messages received at
+
+a VN only modify the total belief at the end of the iteration,
+
+as would be the case when using a flooding schedule. As a
+
+result, the messages rate parameter pe(t)
+
+μ(i t for
+
+) are all
+
+identically . Note that
+
+distributed with error these simplifications
+
+are not necessary, and they could be removed at the cost of a
+
+slightly more cumbersome Monte-Carlo simulation.
+
+To generate inputs with the appropriate distribution, we use
+
+the fact that
+
+
+ i
+
+=
+
+μ(i,tJ) (i,
+
+)
+
++
+
+λ(i,t
+
+−1) J (i,
+
+).
+
+On
+
+a
+
+cycle-free
+
+Tanner
+
+graph, μ(i,tJ) (i, ) and λ(i,tJ−(1i,) ) are independent, but naturally
+
+
+ i
+
+and
+
+λ(i,tJ−(1i,) )
+
+are
+
+not.
+
+Therefore, we
+
+generate
+
+μ(i,tJ) (i,
+
+)
+
+and
+
+λ(i,tJ−(1i,) ) and sum them to obtain
+
+
+ i
+
+.
+
+To complete the DE iteration, we want to measure an
+
+extrinsic message belonging to the next iteration. Because we
+
+assume a flooding schedule, this extrinsic message can be
+
+obtained by summing any set of (dv − 1) messages in the
+
+current iteration. To achieve this, we start a DE iteration by
+
+setting
+
+
+ 1
+
+←
+
+0
+
+and
+
+λ(1t,−J (11), )
+
+←
+
+0
+
+for
+
+all
+
+. The desired
+
+extrinsic message then corresponds to the total belief output
+
+of the circuit
+
+(t ) 1
+
+after
+
+dv
+
+−
+
+1
+
+layers
+
+have
+
+been
+
+evaluated.
+
+Just like the processor used in the complete decoder, the test
+
+circuit has one input and one output register, as well as one
+
+internal pipeline register, for a latency of 3 clock cycles.
+
+In order to keep the pipeline fed, several distinct computa-
+
+tion trees are evaluated in parallel during the Monte-Carlo
+
+simulation.
+
+ACKNOWLEDGEMENTS
+The authors wish to thank CMC Microsystems for providing access to the Cadence tools and TSMC 65nm CMOS technology, and Gilles Rust for advice on Cadence tools and cell library characterization.
+
+REFERENCES
+[1] F. Leduc-Primeau, F. R. Kschischang, and W. J. Gross, “Energy optimization of LDPC decoder circuits with timing violations,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2015, pp. 412–417.
+[2] S. Ghosh and K. Roy, “Parameter variation tolerance and error resiliency: New design paradigm for the nanoscale era,” Proc. IEEE, vol. 98, no. 10, pp. 1718–1751, Oct. 2010.
+[3] R. G. Dreslinski, M. Wieckowski, D. Blaauw, D. Sylvester, and T. Mudge, “Near-threshold computing: Reclaiming Moore’s law through energy efficient integrated circuits,” Proc. IEEE, vol. 98, no. 2, pp. 253–266, Feb. 2010.
+
+[4] T. Austin, V. Bertacco, D. Blaauw, and T. Mudge, “Opportunities and challenges for better than worst-case design,” in Proc. Asia South Pacific Design Autom. Conf., 2005, pp. 2–7.
+[5] K. A. Bowman et al., “Energy-efficient and metastability-immune resilient circuits for dynamic variation tolerance,” IEEE J. Solid-State Circuits, vol. 44, no. 1, pp. 49–63, Jan. 2009.
+[6] S. Das et al., “RazorII: In situ error detection and correction for PVT and SER tolerance,” IEEE J. Solid-State Circuits, vol. 44, no. 1, pp. 32–48, Jan. 2009.
+[7] R. Hegde and N. R. Shanbhag, “Energy-efficient signal processing via algorithmic noise-tolerance,” in Proc. Int. Symp. Low Power Electron. Design, Aug. 1999, pp. 30–35.
+[8] B. Shim, S. R. Sridhara, and N. R. Shanbhag, “Reliable low-power digital signal processing via reduced precision redundancy,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 12, no. 5, pp. 497–510, May 2004.
+[9] Y. Liu, T. Zhang, and K. K. Parhi, “Computation error analysis in digital signal processing systems with overscaled supply voltage,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 18, no. 4, pp. 517–526, Apr. 2010.
+[10] L. R. Varshney, “Performance of LDPC codes under faulty iterative decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4427–4444, Jul. 2011.
+[11] F. Leduc-Primeau and W. J. Gross, “Faulty gallager-B decoding with optimal message repetition,” in Proc. 50th Allerton Conf. Commun., Control, Comput., Oct. 2012, pp. 549–556.
+[12] S. M. S. Tabatabaei Yazdi, H. Cho, and L. Dolecek, “Gallager B decoder on noisy hardware,” IEEE Trans. Commun., vol. 61, no. 5, pp. 1660–1673, May 2013.
+[13] C.-H. Huang, Y. Li, and L. Dolecek, “Gallager B LDPC decoder with transient and permanent errors,” IEEE Trans. Commun., vol. 62, no. 1, pp. 15–28, Jan. 2014.
+[14] C. K. Ngassa, V. Savin, and D. Declercq, “Min-sum-based decoders running on noisy hardware,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2013, pp. 1879–1884.
+[15] E. Dupraz, D. Declercq, B. Vasic´, and V. Savin, “Analysis and design of finite alphabet iterative decoders robust to faulty hardware,” IEEE Trans. Commun., vol. 63, no. 8, pp. 2797–2809, Aug. 2015.
+[16] A. Balatsoukas-Stimming and A. Burg, “Density evolution for minsum decoding of LDPC codes under unreliable message storage,” IEEE Commun. Lett., vol. 18, no. 5, pp. 849–852, May 2014.
+[17] S. Brkic, O. Al Rasheed, P. Ivaniš, and B. Vasic´, “On fault tolerance of the gallager B decoder under data-dependent gate failures,” IEEE Commun. Lett., vol. 19, no. 8, pp. 1299–1302, Aug. 2015.
+[18] C. G. Blake and F. R. Kschischang, “Energy consumption of VLSI decoders,” IEEE Trans. Inf. Theory, vol. 61, no. 6, pp. 3185–3198, Jun. 2015.
+[19] C. Blake and F. R. Kschischang. (2015). “On the energy complexity of LDPC decoder circuits.” [Online]. Available: http://arxiv.org/abs/1502.07999
+[20] K. Ganesan, P. Grover, J. Rabaey, and A. Goldsmith, “On the total power capacity of regular-LDPC codes with iterative message-passing decoders,” IEEE J. Sel. Areas Commun., vol. 34, no. 2, pp. 375–396, Feb. 2016.
+[21] M. Ardakani and F. R. Kschischang, “Gear-shift decoding,” IEEE Trans. Commun., vol. 54, no. 7, pp. 1235–1242, Jul. 2006.
+[22] P. Schläfer et al., “Error resilience and energy efficiency: An LDPC decoder design study,” in Proc. Design, Autom. Test Eur. Conf. (DATE), Mar. 2016, pp. 588–593.
+[23] K. Cushon, C. Leroux, S. Hemati, S. Mannor, and W. J. Gross, “A minsum iterative decoder based on pulsewidth message encoding,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 57, no. 11, pp. 893–897, Nov. 2010.
+[24] C. Roth, P. Meinerzhagen, C. Studer, and A. Burg, “A 15.8 pJ/bit/iter quasi-cyclic LDPC decoder for IEEE 802.11n in 90 nm CMOS,” in Proc. IEEE Asian Solid State Circuits Conf., Nov. 2010, pp. 1–4.
+[25] Y. Sun, G. Wang, and J. R. Cavallaro, “Multi-layer parallel decoding algorithm and vlsi architecture for quasi-cyclic LDPC codes,” in Proc. IEEE Int. Symp. Circuits Syst., May 2011, pp. 1776–1779.
+[26] A. Cevrero, Y. Leblebici, P. Ienne, and A. Burg, “A 5.35 mm2 10GBASE-T Ethernet LDPC decoder chip in 90 nm CMOS,” in Proc. IEEE Asian Solid-State Circuits Conf., Nov. 2010, pp. 1–4.
+[27] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+946
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 66, NO. 3, MARCH 2018
+
+[28] B. Sedighi, N. P. Anthapadmanabhan, and D. Suvakovic, “Timing errors in LDPC decoding computations with overscaled supply voltage,” in Proc. Int., Symp. Low Power Electron. Design, Aug. 2014, pp. 201–206.
+[29] F. Leduc-Primeau and W. J. Gross, “Finite-length quasi-synchronous LDPC decoders,” in Proc. 9th Int. Symp. Turbo Codes Iterative Inf. Process., Sep. 2016, pp. 325–329.
+[30] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[31] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[32] S.-Y. Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[33] T. Fischer, J. Desai, B. Doyle, S. Naffziger, and B. Patella, “A 90-nm variable frequency clock system for a power-managed itanium architecture processor,” IEEE J. Solid-State Circuits, vol. 41, no. 1, pp. 218–228, Jan. 2006.
+[34] S. Lloyd, “Ultimate physical limits to computation,” Nature, vol. 406, no. 6799, pp. 1047–1054, Aug. 2000.
+[35] R. Gonzalez and M. Horowitz, “Energy dissipation in general purpose microprocessors,” IEEE J. Solid-State Circuits, vol. 31, no. 9, pp. 1277–1284, Sep. 1996.
+[36] Cadence Design Systems Inc. Encounter Digital Implementation System. Accessed: Mar. 09, 2015. [Online]. Available: http://www.cadence.com/products/di/edi_system
+[37] TCBN65GPLUS TSMC 65 nm Core Library Databook, Taiwan Semiconductor Manufacturing Company, Ltd, Singapore, Jun. 2009.
+[38] A. Kahng, S. Kang, R. Kumar, and J. Sartori, “Slack redistribution for graceful degradation under voltage overscaling,” in Proc. 15th Asia South Pacific Design Autom. Conf. (ASP-DAC), Jan. 2010, pp. 825–831.
+[39] A. Pirbadian, M. Khairy, A. Eltawil, and F. Kurdahi, “State dependent statistical timing model for voltage scaled circuits,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Jun. 2014, pp. 1432–1435.
+François Leduc-Primeau (S’09–M’16) received the B.Eng., M.Eng., and Ph.D. degrees in computer engineering from McGill University, Montréal, QC, Canada, in 2007, 2010, and 2016, respectively. In 2016, he joined IMT Atlantique, Brest, France as a Post-Doctoral Researcher.
+His research focuses on the design of telecommunication and signal processing systems, with an emphasis on error-correction codes and on novel approaches for improving energy efficiency. He was awarded the doctoral scholarship from Fonds de recherche du Québec – Nature et technologies, and the Postdoctoral Fellowship from the National Sciences and Engineering Research Council of Canada.
+
+Frank R. Kschischang (S’83–M’91–SM’00–F’06) received the B.A.Sc. degree (Hons.) from the University of British Columbia, Vancouver, BC, Canada, in 1985 and the M.A.Sc. and Ph.D. degrees from the University of Toronto, Toronto, ON, Canada, in 1988 and 1991, all in electrical engineering, respectively. He holds the title of Distinguished Professor of Digital Communication with the Department of Electrical and Computer Engineering, University of Toronto, where he has been a faculty member, since 1991. From 1997 to 1998, he was a Visiting Scientist at MIT, Cambridge, MA, USA. In 2005, he was a Visiting Professor with the ETH, Zurich, and in 2011 and from 2012 to 2013, he was a Visiting Hans Fischer Senior Fellow at the Institute for Advanced Study, Technical University of Munich. His research interests are focused primarily on the area of channel coding techniques, applied to wireline, wireless, and optical communication systems and networks. In 1999, he was a recipient of the Ontario Premier’s Excellence Research Award and in 2001 (renewed in 2008) he received the Tier I Canada Research Chair in Communication Algorithms at the University of Toronto. In 2010, he received the Killam Research Fellowship by the Canada Council for the Arts. Jointly with Ralf Koetter, he received the 2010 Communications Society and Information Theory Society Joint Paper Award. He was a recipient of the 2012 Canadian Award in Telecommunications Research. He is a Fellow of the Engineering Institute of Canada and of the Royal Society of Canada. He served as Technical Program Co-Chair for the 2004 IEEE International Symposium on Information Theory (ISIT), Chicago, and as the General Co-Chair for ISIT 2008, Toronto. He served as the 2010 President of the IEEE Information Theory Society. In 2016, he received the Aaron D. Wyner Distinguished Service Award of the IEEE Information Theory Society. During 1997–2000, he served as an Associate Editor for Coding Theory for the IEEE TRANSACTIONS ON INFORMATION THEORY, and from 2014 to 2016, he served as this journal’s Editor-in-Chief.
+Warren J. Gross (S’92–M’04–SM’10) received the B.A.Sc. degree in electrical engineering from the University of Waterloo, Waterloo, ON, Canada, in 1996, and the M.A.Sc. and Ph.D. degrees from the University of Toronto, Toronto, ON, Canada, in 1999 and 2003, respectively. He is currently a Professor and Associate Chair (Academic Affairs) with the Department of Electrical and Computer Engineering, McGill University, Montreal, QC, Canada. His research interests are in the design and implementation of signal processing systems and custom computer architectures. Dr. Gross served as the Chair of the IEEE Signal Processing Society Technical Committee on Design and Implementation of Signal Processing Systems. He has served as the General Co-Chair of the IEEE GlobalSIP 2017 and the IEEE SiPS 2017, and as the Technical Program Co-Chair of SiPS 2012. He has also served as an organizer for the Workshop on Polar Coding in Wireless Communications at WCNC 2017, the Symposium on Data Flow Algorithms and Architecture for Signal Processing Systems (GlobalSIP 2014) and the IEEE ICC 2012 Workshop on Emerging Data Storage Technologies. He served as an Associate Editor for the IEEE TRANSACTIONS ON SIGNAL PROCESSING and he is currently a Senior Area Editor. He is a licensed Professional Engineer in Ontario.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:31 UTC from IEEE Xplore. Restrictions apply.
+
+

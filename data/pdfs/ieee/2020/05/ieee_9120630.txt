@@ -1,0 +1,221 @@
+A Modified Rejection-Based Architecture to Find the First Two Minima in Min-Sum-Based LDPC Decoders
+
+Alireza Hasani∗, Lukasz Lopacinski†, Steffen Bu¨chner∗, Jo¨rg Nolte∗, and Rolf Kraemer∗† ∗Brandenburg University of Technology Cottbus-Senftenberg, Cottbus, Germany
+Email:{alireza.hasani, steffen.buechner, joerg.nolte}@b-tu.de †IHP - Leibniz-Institut fu¨r innovative Mikroelektronik, Frankfurt (Oder), Germany
+Email: {lopacinski, kraemer}@ihp-microelectrinics.com
+
+Abstract—One of the essential elements of min-sum lowdensity parity-check (LDPC) decoders is to find the first two minima between the binary messages arriving in the check nodes along with the index of the minimum which are altogether used to compute the messages for sending back to the neighboring variable nodes. The main techniques for this task are tree-based and bit-serial architectures. The latest tree-based architecture, known as rejection-based scheme finds the first two minima and the binary index of the minimum with higher speed than the previous tree-based methods. However, in min-sum LDPC decoders, having one-hot sequence of the minimum of the messages is preferred as it has implementation benefits. In this paper, we modify the existing rejection-based technique to yield the one-hot sequence instead of the binary representation of the minimum index. The proposed modification doesn’t cause any latency in the operation of the module. We also provide the results of the implementation of the modified rejection-based technique and the bit-serial architecture, conducted on a Xilinx Virtex-7 FPGA. The two major architectures are compared in terms of latency, maximum clock frequency, area and power.
+I. INTRODUCTION
+LDPC codes are well-known as a forward-error correction method capable of approaching the channel capacity. Compared to their main competitor, i.e. Turbo codes, they are known to have lower complexity and latency in the decoding process. This has led to their widespread use in many wireless standards such as European digital video broadcasting (DVBS2) [1], IEEE 802.16 fixed and mobile broadband wirelessaccess [2], IEEE 10 GBase-T Ethernet [3], IEEE 802.16e (WiMax) [4], G.hn/G.9960 standard for wired home networking [5] and mmWave WPAN (IEEE 802.15.3c) [6].
+The promising performance of LDPC codes comes however with the downside of higher complexity which is translated into higher power consumption and latency with respect to other simpler channel codes such as Reed-Solomon (RS) codes. This challenges the use of LDPC codes in power limited and multi-gigabit high-throughput communication systems, as the overall consumed power and latency may fail to meet the design requirements. For instance, the authors in [7]–[13] have preferred RS codes over LDPC or Turbo codes in their attempts to design the data-link layer of a gigantic wireless communication system, mainly because of these concerns. Nonetheless there have been numerous attempts toward addressing this downside of LDPC codes which have resulted in power-efficient and high-throughput LDPC designs [14], [15].
+
+The main decoding method of LDPC codes which brings about excellent performance is based on belief propagation (BP) algorithm. BP algorithm runs over the Tanner graph representation of an LDPC code attempting to obtain probabilities that a given symbol in a received codeword is either a one or a zero. The parity-check matrix (PCM) of an example LDPC code along with its Tanner graph has been shown in Fig. 1. In this figure, the shaded circles, called variable nodes (VNs), represent the code bits or columns of the PCM, whereas the white circles, called check nodes (CNs), denote the check sums or rows of the PCM. In a BP algorithm, reliability messages are successively passed between VNs and CNs in order to find a codeword that has the maximum probability according to the received soft-decision sequence. In the following, we regard VTC messages as the messages passed from VNs to CNs and CTV messages as those messages passed from CNs to VNs.
+Since the introduction of LDPC codes, authors have tried to propose simple methods for calculation of reliability messages at the VNs and CNs so that the complexity of the overall LDPC decoding reduces. One of the prominent schemes in this regard is the min-sum decoding algorithm [16]. In this method, the value of the CTV message |Lj,l| passed from sj to vl is chosen as the minimum of the value of all the VTC messages |Zj,l | that arrive from neighbors of sj except the |Zj,l| itself. For example, for the Tanner graph in Fig. 1, the value of the CTV messages passed from s1 to v0 will be respectively as follows: |L1,0| = min(|Z1,1|, |Z1,3|), |L1,1| = min(|Z1,0|, |Z1,3|) and |L1,3| = min(|Z1,0|, |Z1,1|). As a result, the value of the CTV messages passed from a CN to its neighbor VNs is either the first or second minimum of the value of the VTC messages it has received. Accordingly, it is sufficient for a CN processing unit to find the first and second minimum among the incoming VTC messages and also determine the location of the first minimum. In this way, it can simply send back CTV messages with the value of the second minimum to the VNs at the location of the first minimum and CTV messages with the value of the first minimum to other neighbor VNs.
+Min-sum algorithm was later varied by many authors, but finding the first two minima among the VTC messages and also the index of the minimum remain the essential computations in all the variants. Accordingly, a considerable portion of scientific research on LDPC codes focused on the efficient methods of finding the first two minima and the index of the minimum for the min-sum LDPC decoders [17]–[27]. The
+
+,(((
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+claim that one-hot sequence representation is favored over the binary address of the minimum. Following that our modified rejection-based technique is introduced. Section IV contains the results of the implementation and comparisons. Final conclusions are made in section V.
+
+Fig. 1. (a) The PCM of a (7,3)-LDPC code; (b) Its Tanner graph.
+proposed methods fall mainly into two categories: tree-based and bit-serial methods, which we will give a brief overview of them in section II.
+One of the latest tree-based schemes, called rejection-based method, was proposed by [25] which is a faster method with insubstantial increase in circuit area with respect to its former tree-based techniques. As a shortcoming, in that method, the binary address of the minimum is calculated as the index of the minimum. However, it is more desirable if modified somehow to yield rather the one-hot sequence of the minimum, i.e. a binary sequence with only one 1 in the location of the minimum. This representation of the minimum index is of greater use when the min-sum decoder is implemented, as we have reasoned out in section III.
+In this paper, we modify the rejection based approach toward this goal, so that one-hot sequence of the minimum value instead of its binary index is output. Another contribution of this paper is the provision of an extensive and detailed comparison between the modified RS-based scheme and the bit serial scheme. In particular, we have implemented both two methods on a FPGA and compared the speed, clock frequency, area and power of them for different numbers of k-bit binary inputs.
+The organization of the paper is as follows. In section II the two major tree-based and bit-serial architectures tailored for finding the first two minima and the index of the minimum are introduced. In section III, we begin by justifying the
+
+II. PROBLEM FORMULATION AND PRIOR WORKS
+Finding the least two minima among a set of binary numbers is generally classified as a sorting problem which is obviously a well-addressed topic in computing and signal processing fields. However, the requirements and constraints of a general sorting problem vary in different applications. In the case of min-sum LDPC decoders, the first two minima along with the index of the minimum location is needed. As a result, many previous works have tried to optimize generic sorting problems in regard of these requirements in order to develop an architecture which is best optimized and efficient for such an application. The main classes of architectures developed so far are tree-based [17]–[25] and bit-serial architectures [26], [27]. Throughout this paper, the number of input binary numbers whose first two minima are to be found is denoted by n and it is assumed that the binary numbers are k-bit long.
+Despite the many variants of the tree-based methods proposed so far, the basic idea is simple. The n binary numbers x0, . . . , xn−1 are first divided into smaller groups, and then the values within each group are compared and ordered. The ordered outputs of all the groups then advance to the next stage in which they are grouped and compared again. This procedure continues until the first two minima of all the values appear at the output. The distinction between different methods is in the arrangement of the comparisons which is translated into different size and speed of the final sorting module. In the most recent variant, authors in [25] propose a tree-based architecture called as rejection-based method. In this method, the fundamental building blocks of any larger sorting module with arbitrary number of inputs are two 3 × 2-MIN and 4 × 2MIN units that are units with three and four inputs respectively and two first minimum in the output. The circuits related to these two modules are shown in Fig. 2. Their operation occurs in two steps. In the first step, all the two combination of all the n numbers are compared which results in the flags that are used in the second step to form the select bits of the multiplexers. Building larger modules from the two fundamental 3 × 2-MIN and 4 × 2-MIN units is straightforward. As an example, Fig. 3 shows the configurations for the five-, six-, seven- and eightinput modules, illustrating how larger modules can be built from these two fundamental units.
+The other class of sorting architectures proposed for finding min1, min2 and index of min1 are known as bit-serial architectures, that, in contrary to tree-based ones, have flat architectures. In a bit-serial architecture, input numbers that are to be sorted enter the module bit by bit. Starting from the most significant bit, the bits of all the input values enter the comparison module and are processed. The recent work of [27] describes systematically and detailed how this method can be used to find min1, min2 and index of min1. In that method, when a set of bits enter the module, the number of zeros among them is counted. If none of them is zero, then it means that all the values are the same up to that bit and the search must continue to the next set of bits. If there is only
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Fundamental sorting units in rejection-based technique (a) Four-input two-output module; (b) Three-input two-output module [25].
+
+Fig. 3. Configuration of fundamental units to build larger comparator modules based on rejection scheme for n = 5, 6, 7 and 8.
+one zero, that one clearly indicates the min1 and thereafter the searching goes on to find min2 among the remaining values. If there are more than one zero, those values remain the potential candidates and the others are discarded from the next step. The flow chart of this method is shown in Fig. 4, in that fi(t) is the status flag of xi and t denotes the time index. fi(t) represents whether xi is a candidate of being min1. When set to one, the corresponding value xi can no longer be a candidate for min1. N0(t) denotes the number of zero flags at time index t which is treated as stated and illustrated by Fig. 4 to distinguish min1 and then min2.
+III. MODIFIED RS-BASED SCHEME
+The min1index output of the rejection-based comparator modules specifies the binary representation of the index of the min1. For example, for n = 4, the index output can be 00, 01, 10 or 11 specifying which input is the minimum. However, a one-hot sequence that specifies the location of the min1 is more handier than its binary index when the comparator module is to be used in a min-sum LDPC decoder. A one-hot sequence is a binary sequence with all the bits as zero except one located at the index of the min1. For example, for n = 4, the one-hot sequence of the minimum can be one of the followings: 1000, 0100, 0010 or 0001, in them the location of the one is determined according to the index of the minimum. In min-sum LDPC decoder, all the CTV messages are valuated as the minimum of the incoming VTC messages except for the one with the same index as min1. In order to show why one-hot sequence is preferred Fig. 5 has been drawn for the case of n = 4. When index of min1 is represented by a one-hot sequence, the CTV messages can be easily valuated by n two-input multiplexers with the bits of the one-hot sequence as the select bits of them, as depicted by Fig. 5-(a). On the contrary, in the case of binary representation
+
+Fig. 4. Flow-chart of the bit-serial scheme for finding min1, min2 and index of min1 [27].
+
+of the min1 index, n extra comparator units are also needed to determine the select bits of the multiplexers, as depicted by Fig. 5-(b). Therefore, one-hot sequence representation of the location of the minimum is practically favored over the binary index of that when the application is the min-sum decoding of LDPC codes.
+
+As stated before, the first contribution of this work is to modify the rejection-based method of [25] in a way that the one-hot sequence of the location of min1 instead of the binary index is output. For this modification, we have got an idea from [28] which introduces the array-based method for finding minimum or maximum among a set of binary values. This method is dedicated to find only the first minimum and its index as a one-hot sequence and therefore not applicable in min-sum LDPC decoders in which both the first and second minimum are required. However, we have noticed a similarity between this scheme and the rejection-based method enabling one to compute the one-hot sequence of the min1 in the rejection-based scheme.
+
+Noticing the first stage in the fundamental units of 4 × 2MIN and 3 × 2-MIN in Fig. 2, it is evident that it is the array of comparisons between every two possible combinations of the input values. Let’s arrange the output flags of these comparators in a matrix
+
+G = [gi,j ]0≤i,j<n,
+
+(1)
+
+with
+
+⎧
+
+⎨0,
+
+i=j
+
+gi,j = ⎩xg¯jj,i<, xi,
+
+i<j. i>j
+
+(2)
+
+In this matrix, the elements in the upper triangle are
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+that is, the ith element of the one-hot sequence is computed by the NOR operation between the elements of the ith row of G. This stems from the fact that in G the row corresponding to the minimum number will be an all-zero row, whereas the other rows will have at least one 1 entry.
+As a result, the flags resulted from the comparisons of the first stage are readily used to find the one-hot sequence of the min1 without introducing any latency in the operation of the module. In fact, the NOR operation between the flags takes place in the second stage, simultaneously with the function of the multiplexers. On the other hand, this operation replaces the one used in Fig. 2 to compute I1I2 (the bits of the index of min1), meaning that the modification doesn’t result in any further computation.
+
+IV. RESULTS AND ANALYSIS
+We have performed an extensive examination on the two rejection-based and bit-serial architectures that reveals the pros and cons of each with respect to another. Toward that, we implemented both architectures on a Xilinx Virtex-7 FPGA, and tested both methods for different values of the parameters. The varying parameters are specifically n and k and the measured factors of interest are latency and the clock frequency the module can work with, power and the area of the design on the FPGA.
+
+Fig. 5. Update of magnitude of CTV messages with (a) one-hot sequence as the index of the minimum; (b) binary number as the index of the minimum.
+
+determined based on the comparison operations between all the
+
+two combinations. Specifically, if xj < xi, then gi,j = 1 and 0
+
+otherwise. The lower triangle of G is simply the complement
+
+of the upper triangle and the main diagonal elements are set
+
+to 0. In particular, for the case of fundamental blocks of the
+
+rejection-based method, this matrix formats as
+
+⎡
+
+⎤
+
+0ba
+
+G = ⎣¯b 0 c⎦ ,
+
+(3)
+
+a¯ c¯ 0
+
+and
+
+⎡0 a e d⎤
+
+G = ⎢⎣a¯e¯
+
+0 ¯b
+
+b 0
+
+f c
+
+⎥⎦
+
+,
+
+(4)
+
+d¯ f¯ c¯ 0
+
+for n = 3 and 4 respectively.
+
+With matrix G in hand, one can compute the one-hot sequence of min1 location as (m0, . . . , mn−1) with
+
+mi = N OR[gi,0, . . . , gi,n−1],
+
+(5)
+
+A. Latency and Clock Frequency
+
+The speed of either of these architectures depends solely on the number of successive steps that an architecture needs to complete its function and also the clock frequency that the module can work with. If each step is corresponded to one clock cycle, then the overall latency of the module to accomplish its goal will be the number of clock cycles divided by fclk.
+
+In the case of rejection-based method, the fundamental
+
+3 × 2-MIN and 4 × 2-MIN units need exactly two clock cycles
+
+and when building larger modules from them the latency grows
+
+with n. Specifically, one can readily verify that for an arbitrary
+
+n, a rejection-based module is composed of log2n − 1 levels
+
+of fundamental units and therefore the required number of
+
+clock cycles will be 2( log2n − 1) + 1. The one extra clock
+
+cycle is needed to perform the final sorting between the two
+
+outputs of the module and find min1 and min2. As a result,
+
+the latency of an n-input rejection-based module is expressed
+
+as
+
+LRS
+
+=
+
+2(
+
+log2n − 1) + fclk
+
+1.
+
+(6)
+
+On the contrary, in the case of bit-serial scheme, the speed is dependent on k, as the module processes the bits of the numbers one by one. Hence, latency grows linearly with k and it is not unreasonable to assume that such a module requires k clock cycles to output min1 and min2. Nevertheless, in our implementation of the method, the operation is completed in k +2 clock cycles. Accordingly, it can be stated for the latency of the bit-serial method that
+
+LBS
+
+=
+
+k+2 .
+fclk
+
+(7)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 6. Number of occupied LUTs in the Xilinx Virtex-7 FPGA for different values of n and k.
+
+Fig. 7. Power consumption in the Xilinx Virtex-7 FPGA for different values of n and k.
+
+Our examination of the architectures show that both can work with maximum clock frequency of ∼ 500M Hz when implemented on a Xilinx Virtext-7 FPGA. Therefore, given specific values for k and n, the designer can readily figure out from (6) and (7) which architecture operates faster.
+B. Area and Power
+Fig. 6 shows the number of occupied look-up tables (LUTs) when either of the architectures are implemented on the Xilinx Virtex-7 FPGA. As indicated by the figure, bitserial architecture consumes, in general, less LUTs than the rejection-based architecture, except for the n < 5. As a result, it can be claimed that bit-serial architectures are generally more efficient in terms of area and power. It is also noteworthy to mention that the increase rate of area with respect to n is lower in the case of bit-serial architecture than the rejection-based technique. The same conclusion is drawn when the consumed power is investigated. This is illustrated in Fig. 7.
+It should be noted that the values of power and LUT derived by the FPGA implementation are solely for the sake of comparisons, and the exact values cannot be relied on. In other words, if one intends to know the exact performance of the design, it should be synthesized for a particular ASIC technology in order for the corresponding results of area and power to be more precise. Nevertheless, our primary target in this paper is the comparison between the two leading architectures and therefore sufficed to the FPGA implementation results.
+V. CONCLUSION
+In this paper, we proposed a modification to the rejectionbased method to find the first two minima between a set of binary numbers. The primary use of this method is in the min-sum LDPC decoder in which the first two minima of the incoming messages at a CN must be found to calculate the messages for sending back to the neighboring VNs. The modification facilitates the computation of the one-hot sequence of the minimum index rather than its binary number. This modification has the implementation benefits when min-sum LDPC decoder is implemented on a hardware. In addition to that, we have carried out an extensive test on the two major architectures, namely the modified rejection-based method as
+
+a tree-based architecture and the bit-serial architecture. Implemented on a Xilinx Virtex-7 FPGA, the latency, maximum clock frequency, area and power consumption of the two architectures have been measured and compared, in order to provide the designer with the pros and cons of the two architectures.
+ACKNOWLEDGMENT
+This research was supported by DFG under the special priority program (SPP) 1655. The paper is particularly related to the End2End100 project defined under SPP1655. The authors are grateful to the support of IHP-Microelectronics GmbH, as the project has been conducted at the joint BTU-IHP lab.
+REFERENCES
+[1] “Digital Video Broadcasting (DVB), Second Generation.” ETSI, 2005. [2] “802.16e-2005 - IEEE Standard for Local and Metropolitan Area
+Networks - Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems - Amendment for Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands.” IEEE, 2005. [3] “IEEE 10 GBase-T Task Force.” IEEE. [Online]. Available: http://grouper.ieee.org/groups/802/3/an/index.html [4] “IEEE 802.16e WiMAX Standard, IEEE P802.16e-2005,” Oct. 2005. [5] “G.hn/G.9960. Next Generation Standard for Wired Home Network.” [Online]. Available: http://www.itu.int/ITU-T [6] “IEEE P802.15.3c, Wireless Personal Area Network (WPAN) Standard Physical Layer (PHY) specifications,” July 2007. [7] L. Lopacinski, M. Brzozowski, R. Kraemer, and S. Buechner, “100 Gb / s Data Link Layer from a Simulation to FPGA Implementation,” J. Telecommun. Inf. Technol., no. 1, pp. 90–100, 2016. [8] L. Lopacinski, M. Brzozowski, and R. Kraemer, “A 100 Gbps data link layer with a frame segmentation and hybrid automatic repeat request,” in Proceedings of the 2015 Science and Information Conference, SAI 2015, 2015, pp. 1062–1069. [9] ——, “A 100Gbps data link layer with an adaptive algorithm for forward error correction,” in Proc. 2015 IEICE ICTF, 2015. [10] L. Lopacinski, J. Nolte, S. Buechner, M. Brzozowski, and R. Kraemer, “Design and Implementation of an Adaptive Algorithm for Hybrid Automatic Repeat Request,” 2015 IEEE 18th Int. Symp. Des. Diagnostics Electron. Circuits Syst., pp. 263–266, 2015. [11] ——, “Parallel RS Error Correction Structures Dedicated for 100 Gbps Wireless Data Link Layer,” in 2015 IEEE Int. Conf. Ubiquitous Wirel. Broadband, ICUWB 2015, 2015.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+[12] L. Lopacinski, S. Buechner, J. Nolte, M. Brzozowski, and R. Kraemer, “Towards 100 Gbps wireless communication: Energy efficiency of ARQ, FEC, and RF-frontends,” in 2016 Int. Symp. Wirel. Commun. Syst., no. Dll, 2016, pp. 320–324.
+[13] L. Lopacinski, M. Brzozowski, and R. Kraemer, “Data Link Layer Considerations for Future 100Gbps Terahertz Band Transceivers,” Wirel. Commun. Mob. Comput., vol. 2017, pp. 1–11, jan 2017.
+[14] S. Ajaz and H. Lee, “Efficient multi-Gb/s multi-mode LDPC decoder architecture for IEEE 802.11ad applications,” Integr. VLSI J., vol. 51, pp. 21–36, sep 2015.
+[15] S.-W. Yen, S.-Y. Hung, C.-L. Chen, H.-C. Chang, S.-J. Jou, and C.-Y. Lee, “A 5.79-Gb/s Energy-Efficient Multirate LDPC Codec Chip for IEEE 802.15.3c Applications,” IEEE J. Solid-State Circuits, vol. 47, no. 9, pp. 2246–2257, sep 2012.
+[16] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, 2002.
+[17] Chin-Long Wey, Ming-Der Shieh, and Shin-Yo Lin, “Algorithms of Finding the First Two Minimum Values and Their Hardware Implementation,” IEEE Trans. Circuits Syst. I Regul. Pap., vol. 55, no. 11, pp. 3430–3437, dec 2008.
+[18] X. Chen, Q. Huang, S. Lin, and V. Akella, “FPGA-based lowcomplexity high-throughput tri-mode decoder for quasi-cyclic LDPC codes,” in 2009 47th Annu. Allert. Conf. Commun. Control. Comput. IEEE, sep 2009, pp. 600–606.
+[19] L. G. Amaru, M. Martina, and G. Masera, “High Speed Architectures for Finding the First two Maximum/Minimum Values,” IEEE Trans. Very Large Scale Integr. Syst., vol. 20, no. 12, pp. 2342–2346, dec 2012.
+[20] Qian Xie, Zhixiang Chen, Xiao Peng, and S. Goto, “A sorting-based architecture of finding the first two minimum values for LDPC decoding,” in 2011 IEEE 7th Int. Colloq. Signal Process. its Appl. IEEE, mar 2011, pp. 95–98.
+[21] W. Cui, Y. Yang, X. Jiang, and S. Kim, “Modified tree structure approach for finding the first two minimum values,” in 2014 IEEE China Summit Int. Conf. Signal Inf. Process. IEEE, jul 2014, pp. 563–567.
+[22] X.-y. Shih, C.-z. Zhan, and C.-h. Lin, “An 8.29 mmP 52 mW MultiMode LDPC Decoder Design for Mobile WiMAX System in 0.13 ”m CMOS Process,” vol. 43, no. 3, pp. 672–683, 2008.
+[23] Y. Lee, B. Kim, J. Jung, and I.-C. Park, “Low-Complexity Tree Architecture for Finding the First Two Minima,” IEEE Trans. Circuits Syst. II Express Briefs, vol. 62, no. 1, pp. 61–64, jan 2015.
+[24] I. Tsatsaragkos and V. Paliouras, “Approximate Algorithms for Identifying Minima on Min-Sum LDPC Decoders and Their Hardware Implementation,” IEEE Trans. Circuits Syst. II Express Briefs, vol. 62, no. 8, pp. 766–770, aug 2015.
+[25] S. Kumawat, R. Shrestha, N. Daga, and R. Paily, “High-Throughput LDPC-Decoder Architecture Using Efficient Comparison Techniques & Dynamic Multi-Frame Processing Schedule,” IEEE Trans. Circuits Syst. I Regul. Pap., vol. 62, no. 5, pp. 1421–1430, may 2015.
+[26] G. Tzimpragos, C. Kachris, D. Soudris, and I. Tomkos, “A Low-Latency Algorithm and FPGA Design for the Min-Search of LDPC Decoders,” in 2014 IEEE Int. Parallel Distrib. Process. Symp. Work. IEEE, may 2014, pp. 269–274.
+[27] J. H. Lee and M. H. Sunwoo, “Low-Complexity First-Two-MinimumValues Generator for Bit-Serial LDPC Decoding,” IEEE Trans. Circuits Syst. II Express Briefs, vol. 63, no. 5, pp. 483–487, may 2016.
+[28] B. Yuce, H. F. Ugurdag, S. Goren, and G. Dundar, “A Fast Circuit Topology for Finding the Maximum of N k-bit Numbers,” in 2013 IEEE 21st Symp. Comput. Arith. IEEE, apr 2013, pp. 59–66.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:56:48 UTC from IEEE Xplore. Restrictions apply.
+
+

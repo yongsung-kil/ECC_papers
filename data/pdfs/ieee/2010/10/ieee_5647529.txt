@@ -1,0 +1,775 @@
+2010 3rd International Congress on Image and Signal Processing (CISP2010)
+
+Data Conflict Resolution for Layered LDPC Decoding Algorithm by Selective Recalculation
+
+Wen Ji, Makoto Hamaminato, Hiroshi Nakayama Fujitsu Laboratories LTD.
+1-1, Kamikodanaka 4-chome, Nakahara-ku, Kawasaki, 211-8588, Japan
+Email: {ji.wen, hamamy, h.nakayama}@jp.fujitsu.com
+
+Satoshi Goto Graduate School of Information, Production and Systems,
+Waseda University 2-7 Hibikino, Wakamatsu-ku, Kitakyushu,
+Fukuoka, 808-0135, Japan Email: goto@waseda.jp
+
+Abstract—Layered LDPC decoding algorithm is known to achieve high Bit Error Rate (BER) performance and high throughput for LDPC decoders. However, for ISDB-S2 (Integrated Services Digital Broadcasting via Satellite - Second Generation) LDPC decoder, applying layered algorithm directly will result in data conflict problem. In this paper, a novel selective recalculation method is proposed to solve the data conflict problem. It determines the inaccurately calculated values based on a recalculation decision rule, and correct them accordingly. By applying this selective recalculation method, the layered algorithm can achieve conflict free BER performance. Simulation results demonstrate that the proposed method can achieve 0.1dB gain for the code with most conflicts in ISDB-S2, under the same BER performance compared to the previous strategy to solve data conflict problem.
+Keywords—LDPC decoding algorithm, ISDB-S2
+I. INTRODUCTION
+Low Density Parity Check (LDPC) Code is an error correcting code first discovered in 1963 by Gallager [1], and rediscovered by Mackay and Neal in 1999 [2]. The decoding algorithm of LDPC is inherently parallel and can achieve performance close to the Shannon Limit, thus making LDPC code widely adopted in communication standards, such as WLAN (802.11n), WiMAX (802.16e) and DVBS2. In Japan, a next generation satellite broadcasting system named “Integrated Services Digital Broadcasting via Satellite - Second Generation (ISDB-S2)” was proposed by NHK (Japan Broadcasting Corporation), and the examination by Association of Radio Industries and Businesses (ARIB) has already been completed in 2009 [3]. To ensure the transmission quality and high error correction capability, LDPC code is selected as the error correction code for ISDB-S2 and is expected to achieve a 10−11 Bit Error Rate (BER).
+LDPC code can be efficiently decoded by two phase message passing (TPMP) algorithm [2], which can correct errors through messages exchange between check nodes and bit nodes by performing check node and bit node operations iteratively. In terms of different implementation of the check node operation, TPMP algorithm can be categorized as Belief Propagation (BP) algorithm [2], Min-sum (MS) algorithm [4], Normalized Min-sum (NMS) algorithm [5] and Offset Min-sum (OMS) algorithm [5], etc. BP algorithm has the best error correcting performance, yet not hardware-friendly due to the implementation of Hyperbolic functions. MS algorithm uses the minimum magnitude of inputs from the bit nodes as a replacement of the Hyperbolic functions, but incurs great performance degrading. Recently, NMS algorithm is widely used in LDPC decoder design because of its good trade-off between BER performance and area cost.
+On the other hand, in 2003, a new family of decoding algorithm called layered decoding algorithm is proposed by Mansour [6]. Because layered algorithm shares the same check node operation as TPMP algorithm, the decoding methods for the check nodes
+
+in TPMP can be applied to layered algorithm, forming the new Layered BP (LBP) algorithm, Layered Min-sum (LMS) algorithm, Layered Normalized Min-sum (LNMS) algorithm and Layered Offset Min-sum (LOMS) algorithm. And they maintain a similar pros and cons as in TPMP algorithms. Instead of using A Posteriori Probability (APP) message at the end of each iteration in traditional TPMP algorithm, layered algorithm uses the intermediate APP results between layers within iterations, and converges two times faster than TPMP algorithm [7]. Therefore, layered algorithm becomes more suitable for high BER performance and high throughput design for the satellite transmission services.
+However data conflict problem happens when layered algorithm is directly applied to ISDB-S2 codes. This problem arises as the layered algorithm adopts a parallel computation among a layer of several rows, which ignores the data dependencies of APP messages, thus degrading BER performance. To solve the data conflict problem in layered algorithm, authors in [8] and [9] tried to split the layers through memory mapping and scheduling the matrices for DVB-S2 and DVB-T2 application, but these methods cannot eliminate all the conflicts and they are limited when they are used to ISDB-S2 codes because of a different code design. Ref. [10] proposed a method to approximate the APP value targeting DVB-S2, and authors in [9] also proposed to add dummy bit nodes for DVB-T2 to leverage the performance degrading. But neither of these methods can achieve conflict free performance and they introduce additional computations and storages.
+In this paper, we proposed a selective recalculation method to achieve conflict free performance by recalculating the inaccurately calculated values. This method enables a parallel implementation of the whole layer and can correct the inaccurate values after the parallel implementation based on the decision of a recalculation rule. The simulation results show that the proposed method can achieve better BER performance than the previous data conflict strategy in [10].
+The rest of the paper is organized as follows. Section II introduces the LDPC codes used in ISDB-S2. Section III describes LDPC decoding algorithms in detail. Section IV discusses the data conflict problem and presents the idea of selective recalculation to settle data conflict problem for layered algorithm, and performance evaluation is given out in Section V. Finally Section VI concludes.
+II. ISDB-S2 LDPC CODES
+LDPC codes can be defined by a parity check matrix HMN , where M and N are the number of rows and columns respectively. The parity check matrix of structured LDPC codes can also be divided into B × D sub-blocks, where B and D are the number of rowblocks and column-blocks respectively and each sub-block is a b × b square matrix. Specifically, for structured Quasi-Cyclic (QC) LDPC
+
+978-1-A4u2t4h4or-i6ze5d16lic-e3n/1se0d/$u2s6e.l0im0it©ed2t0o1: Y0oInEsEeiEUniv. Downloaded on Jun2e92845,2026 at 03:20:21 UTC from IEEE Xplore. Restrictions apply.
+
+codes, each sub-block is obtained through right shifting the identity
+
+matrix Ib×b by a specific number. The structured QC LDPC codes
+
+are comparably easy to be implemented in hardware and are widely
+
+used in the modern communication systems.
+
+Defined by ISDB-S2, the parity check matrices targeted in this
+
+work
+
+are
+
+11
+
+different
+
+ones
+
+with
+
+code
+
+rate
+
+ranging
+
+from
+
+1 4
+
+to
+
+9 10
+
+.
+
+The numbers of columns (N ) for all 11 codes are fixed as 44,880
+
+and the numbers of rows (M ) are related to the code rate. And all
+
+the LDPC codes are structured QC codes, with a sub-block size of
+
+374 × 374 [3].
+
+III. LDPC DECODING ALGORITHMS
+In this section, two families of LDPC decoding algorithms will be introduced: TPMP algorithm and layered algorithm.
+
+A. TPMP algorithm
+Let λn denote the Log-Likelihood Ratios (LLR) of the bit node n of the received codeword from the channel, αmn be the message sent from check node m to bit node n, βmn be the message sent from bit node n to check node m, and sumn be the APP message of the bit node n of the codeword. The bit node operation, check node operation and APP update operation of the BP algorithm can be expressed as Equation (1), Equation (2) and Equation (3), respectively. Note that A(m) and B(n) are defined as A(m) = {n|Hmn = 1} and B(n) = {m|Hmn = 1}.
+
+βmn = λn +
+
+αm n
+
+(1)
+
+m ∈B(n)\m
+αmn = 2 tanh−1(
+
+tanh(
+
+βmn 2
+
+))
+
+(2)
+
+n ∈A(m)\n
+
+sumn = λn +
+
+αm n
+
+(3)
+
+m ∈B(n)
+
+Since the check node function of BP algorithm is not hardware friendly, NMS algorithm (Equation (4)) is normally used as an approximation to Equation (2) for easy hardware implementation. Note that γ is called normalization factor and its value varies according to the construction of the code.
+
+αmn = γ
+
+sign(βmn ) × min |βmn |
+
+(4)
+
+n ∈A(m)\n
+
+n ∈A(m)\n
+
+B. Layered algorithm
+
+Layered algorithm is proposed to achieve higher BER performance and a 2X convergence speed for structured QC LDPC codes, which is suitable for the requirement for satellite communication [6]. Therefore, in this work layered algorithm is chosen for ISDB-S2 decoder design. The bit node operation, check node operation and APP update operation of the LNMS algorithm can be expressed as Equation (5), Equation (4) and Equation (6), respectively.
+
+βmn = sumn − αmn
+
+(5)
+
+αmn = γ
+
+sign(βmn ) × min |βmn |
+
+(4)
+
+n ∈A(m)\n
+
+n ∈A(m)\n
+
+sumn = βmn + αmn
+
+(6)
+
+However, direct application of layered algorithm to ISDB-S2 LDPC codes will result in some design issues, which will be discussed in the next section.
+
+IV. DATA CONFLICT AND ITS RESOLUTION
+In this section, we will discuss the data conflict problem when directly applying layered algorithm to ISDB-S2 LDPC codes and the reason for this problem. After that, we will introduce the proposed selective recalculation method to solve the data conflict problem.
+
+1234 5 6 1011001 1100102 0110013
+Fig. 1. Example of data conflict in layered algorithm
+
+A. Data conflict for layered schedule used in ISDB-S2
+
+As discussed in Section III-B, layered schedule is usually favored for high BER performance application. However, directly applying layered algorithm to ISDB-S2 LDPC codes will lead to data conflict. This is mainly because of the data dependency during the parallel execution within each layer. Fig. 1 shows an example of a layer with two sub-blocks (size b = 3). Each element “1” in the matrix indicates a corresponding α and β message, and there is an APP data sumn associated with each column n. Take column 1 as an example, if a sequential decoding process is applied, the bit node operation, check node operation and APP update operation for column 1 are listed as Equation (7):
+
+β11
+
+= sum1 − α11
+
+α11
+
+= γsign(β13)sign(β14) × min(|β13|, |β14|)
+
+sum1(1) = β11 + α11
+
+(7)
+
+β21
+
+= sum1(1) − α21
+
+α21
+
+= γsign(β22)sign(β25) × min(|β22|, |β25|)
+
+sum1(2) = β21 + α21
+
+Here, α11 and β11, for example, stand for the message α and message β at row 1 and column 1, and sum1 represents the APP value of column 1. sum1(1) and sum1(2) are the APP value updated for the first time and the second time. Note that, in the sequential decoding process, the calculation of message β21 uses the updated APP value sum1(1), and the last updated APP value (sum1(2)) is passed to the next layer as the initial APP value for the next layer.
+If a layer of b (b = 3) rows are processed in parallel instead, the
+
+bit node operation, check node operation and APP update operation
+
+of this parallel calculation for column 1 are listed as Equation (8):
+
+β11
+
+= sum1 − α11
+
+β21
+
+= sum1 − α21
+
+α11
+
+= γsign(β13)sign(β14) × min(|β13|, |β14|)
+
+(8)
+
+α44
+
+= γsign(β22)sign(β25) × min(|β22|, |β25|)
+
+sum1(1) = β11 + α11
+
+sum1(2) = β21 + α21
+
+As can be seen, the calculation for β21 uses the old APP value sum1 other than the updated data sum1(1). The incorrect calculation of β21 will not only result in the incorrect result of sum1(2) but also make the calculation of α22 and α25 inaccurate either. Such data
+
+dependency problem in layered algorithm is called data conflict, and
+
+will degrade the decoding performance. In this example, all the “1”’s
+
+with red circle have data conflict problem. In general, when applying
+
+layered decoding algorithm to structured LDPC codes, data conflicts
+
+happens when there are more than two “1”’s in one column within
+
+the layer.
+
+Simply ignoring the data conflict will affect the performance,
+
+which makes layered schedule less effective than TPMP schedule.
+
+After a complete simulation of all the parity check matrices in ISDB-
+
+S2,
+
+we
+
+find
+
+out
+
+that
+
+the
+
+worst
+
+case
+
+happens
+
+for
+
+rate
+
+7 8
+
+with
+
+9.85%
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June22948,62026 at 03:20:21 UTC from IEEE Xplore. Restrictions apply.
+
+of the sub-blocks having data conflict problems, and an average of 4.67% for all the codes. The small number of conflicts encourages us to apply layered schedule with proper remedy for data conflict to achieve better performance.
+
+B. Conflict resolution by selective recalculation
+
+To solve the data conflict problem, [8] proposed to use group
+
+splitting through memory mapping for DVB-S2, while [9] considered
+
+to achieve group splitting through reconstructing the matrices by
+
+scheduling for DVB-T2. However these two methods cannot elim-
+
+inate all the data conflicts and they are limited when they are used
+
+for ISDB-S2 matrices because that the size of the layer of ISDB-
+
+S2 (b = 374) has less factors than that of DVB-S2 or DVB-T2
+
+(b = 360). Ref. [9] also introduced a method to add dummy bit nodes
+
+and check nodes to reconstruct the matrices which can help leverage
+
+the performance degrading, but introduced additional computations
+
+and storages. Also, it cannot achieve conflict free performance.
+
+Ref. [10] proposed a method to approximate the APP value which
+
+enables the parallel implementation for 360 rows for DVB-S2. The
+
+method in [10] can be introduced based on the example in Fig. 1. The
+
+authors in [10] analyzed the relation between the intermediate APP
+
+values (sum1(1) and sum1(2)) and the initial APP value (sum1)
+
+for the current layer, and after the parallel calculation shown in
+
+Equation (8), Equation (9) is calculated to approximate the updated
+
+APP value for current layer (sum1) which will be used as the initial APP value for the next layer.
+
+sum1 = sum1(1) + sum1(2) − sum1
+
+(9)
+
+However, the APP approximation method cannot achieve the conflict free BER performance and it introduces additional storages for the intermediate APP values. In this paper, we proposed for the first time a method called selective recalculating to enable a parallel implementation of 374 rows for ISDB-S2 to achieve conflict free BER performance.
+In the example shown in Fig. 1, because of the parallel calculation of a layer, β21 is incorrectly calculated which will further result in the incorrect calculation of α22 and α25 by using Equation (4). The error will propagate to sum1, sum2, sum5 based on Equation (6). In order to compensate for the error, we considered to recalculate the problematic β values and the related α and sum values after the computation of each layer.
+However, according to Equation (4), not all the α and sum values related to the recalculated β values need to be adjusted. To demonstrate that, we divide Equation (4) into two parts, the calculation of the sign of αmn (Equation (10)) and the calculation of the absolute value of αmn (Equation (11)).
+
+sign(αmn) =
+
+sign(βmn )
+
+(10)
+
+n ∈A(m)\n
+
+|αmn| = γ × min |βmn |
+
+(11)
+
+n ∈A(m)\n
+
+It can be observed in Equation (11) that the absolute values of αmn have only two values: either the minimum β values from a total of |A(m)| βmn values or the second minimum in the case that the corresponding input β value happens to be the minimum one. So Equation (11) can be rewritten as Equation (12). Here βmin1 and βmin2 indicate the minimum and second minimum β values among all βmn values. The condition pos(αmn) = pos(βmin1) indicates the position of αmn under calculation is the position of βmin1 and only in this condition the absolute value of αmn equals γ × |βmin2|.
+
+|αmn| =
+
+γ × |βmin2| pos(αmn) = pos(βmin1) γ × |βmin1| otherwise
+
+(12)
+
+βi recalculated
+
+β'i<min2_m or
+
+sign(β'i)≠sign(βi)
+
+YES
+
+NO
+
+Si(α),Si(sum) recalculation
+
+Si_sub(sum) recalculation
+
+Fig. 2. Recalculation decision rule for Si(α) and Si(sum)
+
+From Equation (10) and Equation (12), it is apparent that the sign
+
+of αmn is only related to the sign of β values input from the bit nodes, and the absolute value of αmn is only related to the minimum and second minimum β values input from the bit nodes and the
+
+position of the minimum β value. So the calculation of Equation (4)
+
+requires recording the signs of all β values in row m and tracking the
+
+minimum and second minimum β values. However, the inaccurately
+
+calculated βmn values should be excluded from the calculation of minimum and second minimum β values. We denote the minimum
+
+and second minimum β values without considering the inaccurate
+
+βmn values in row m as min1 m and min2 m from now on and
+
+provides the recalculation decision rule in Fig. 2.
+
+In Fig. 2, we denote the β values which should be recalculated as set S(β), βi as the ith βmn value in set S(β), and βi as the ith βmn value after recalculation. We also denote the α values and
+sum values which should be recalculated because of the recalculation
+
+of βi as Si(α) and Si(sum). When condition βi < min2 m or sign(βi) = sign(βi) satisfies, according to Equation (4), Si(α) should be recalculated because of the alteration of input variables
+
+in Equation (4), and Si(sum) should also be recalculated because of
+
+the recalculation of Si(α) according to Equation (6). When condition
+
+βi < min2 m or sign(βi) = sign(βi) does not satisfy, the results
+
+of Equation (4) are not changed, so only a subset of Si(sum) (sumn)
+
+needs to be recalculated because of the recalculated βi (Equation (6)).
+
+Since usually |A(m)| for ISDB-S2 is a large number, the probability
+
+for
+
+βi
+
+<
+
+min2
+
+m
+
+almost
+
+equals
+
+to
+
+2 |A(m)|
+
+which
+
+is
+
+quite
+
+small.
+
+Moreover, as the sign for βi is not altered frequently, the recalculation
+
+decision rule is rarely satisfied. Even when the recalculation decision
+
+rule satisfies, the recalculations of Si(α) and Si(sum) are not com-
+
+plicated and the detailed recalculation techniques will be introduced
+
+in Section IV-C.
+
+Based on the above exploration, we finally get our selective
+
+recalculation scheme by using the recalculation decision rule, as
+
+shown in Algorithm 1 . Here X represents all the “1” in the layer,
+
+and Sm(β) indicates the subset of S(β) for the β in the same row m.
+
+Note that the recalculation for rows can also be computed in parallel
+
+as long as there are no further data conflicts during the recalculation,
+
+i.e., there are no two ”1”’s in the same column of these simultaneously
+
+calculated rows.
+
+Basically, the proposed selective recalculating method is effective
+
+for any layered algorithm based on MS algorithm, such as LMS al-
+
+gorithm, LNMS algorithm and LOMS algorithm. Also, the proposed
+
+method can be used in any structured LDPC parity check matrix, not
+
+limited by ISDB-S2. Fig. 3 shows how our selective recalculation
+
+works for the code in Fig. 1.
+
+C. Techniques for check node operation recalculation
+If the recalculation selection rule in Fig. 2 satisfies, Si(α) and Si(sum) need to be recalculated. As can be seen in Equation (4) and Equation (6), the recalculation for the check node operation is comparably complicated and time consuming. However, the recalculation can be easily carried out by favoring a memory-saving strategy which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June22948,72026 at 03:20:21 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 Selective recalculation scheme initialization sumn = λn for each layer do bit node, check node, APP update operation for set X if data conflict happens then for each subset of Sm(β) in S(β) do recalculate Sm(β) for each βi do if recalculation selecting rule satisfied then recalculate Si(α) recalculate Si(sum) else recalculate Si sub(sum) end if end for end for end if end for
+S2(β)：{β21}
+recalculate β1(β21)
+
+β'21 <min2_2 or
+
+sign(β'21 )≠sign(β21 )
+
+YES
+
+NO
+
+S1(α)：{α22,α25} S1(sum):{sum1, sum2,sum5}
+
+S1_sub(sum):{sum1}
+
+S3(β)：{β32,β33} recalculate β2(β32),β3(β33)
+
+β'32 <min2_3 or
+
+sign(β'32 )≠sign(β32 )
+
+YES
+
+NO
+
+S2(α)：{α33,α36} S2(sum):{sum2,sum3,sum6}
+
+S2_sub(sum):{sum2}
+
+the largest row weight |A(m)| of 32 in ISDB-S2, whose α memory is only 24.5% of that of storing all α messages.
+As shown in Fig. 2, S(αi) and S(sumi) will be recalculated only if the recalculated βmn is smaller than the min2 m or the sign of the recalculated βmn is different from that of βmn. In the following parts, we will discuss, in five different cases, how we can easily derive the recalculated value [min1 m, min2 m, pos min1 m, {sign(αmn)|n ∈ A(m)}] using this vector representation.
+• Case 1:βmn < min1 m and sign(βmn) = sign(βmn). In this case, the minimum value , the second minimum value and the position of the minimum value are all changed. Therefore, min1 m = |βmn|, min2 m = min1 m and pos min1 m = pos(βmn).
+• Case 2:βmn < min1 m and sign(βmn) = sign(βmn). In this case, the minimum value , the second minimum value, the position of the minimum value and the signs of α are changed. Therefore, min1 m = |βmn|, min2 m = min1 m, pos min1 m = pos(βmn), and the signs of α messages are all changed except that of αmn.
+• Case 3:min1 m < βmn < min2 m and sign(βmn) = sign(βmn). In this case, the second minimum value is changed. Therefore min2 m = |βmn|.
+• Case 4:min1 m < βmn < min2 m and sign(βmn) = sign(βmn). In this case, the second minimum value and the signs of α are changed. Therefore, min2 m = |βmn|, and the signs of α messages are all changed except that of αmn.
+• Case 5:βmn > min2 m and sign(βmn) = sign(βmn). In this case, the signs of α messages are all changed except that of αmn.
+We can see that the recalculation of S(αi) can be done without calculating Equation (4) again. Such scheme can not only save the memory but also expedite the recalculation procedure.
+V. PERFORMANCE EVALUATION
+
+β'33 <min2_3 or
+
+sign(β'33 )≠sign(β33 )
+
+YES
+
+NO
+
+S3(α)：{α32,α36} S3(sum):{sum2,sum3,sum6}
+
+S3_sub(sum):{sum3}
+
+Fig. 3. Example of data conflict resolution by selective recalculation
+
+can not only save the memory for message α but also accelerate the
+
+procedure for the recalculation of check node operation.
+
+As explained in Section IV-B, the result of αmn is only related to the minimum and the second minimum β messages sent from bit
+
+nodes, the position of the minimum β message and the sign of all
+
+the β messages. Hence the storage of α values can be divided into
+
+its absolute value and sign bit. In this design, we favor a memory-
+
+saving strategy based on this special characteristic. Instead of storing
+
+all the α messages in the memory, we only store min1 m, min2 m,
+
+the position of min1 m and the signs of α messages in the form
+
+of a vector as [min1 m, min2 m, pos min1 m, {sign(αmn)|n ∈ A(m)}] [8]. With this form of representation, each α value can
+
+be easily retrieved through Equation (10) and Equation (12). This
+
+method
+
+can
+
+help
+
+save
+
+memories,
+
+specifically
+
+for
+
+rate
+
+9 10
+
+which
+
+has
+
+In this section, the performance of the proposed selective recalculation is presented compared to the method in [10].
+
+A. Simulation result
+
+Software simulation of the proposed decoding algorithm has been
+
+conducted for all 11 parity check matrices used in ISDB-S2. The
+
+QPSK modulation and AWGN channel is modeled in the simulation.
+
+The maximum number of iteration is set to 50, and the simulation
+
+program terminates when the decoded codeword is valid or the
+
+iteration upper bound is reached.
+
+Fig. 4 illustrates the simulation result of the BER performance
+
+of NMS algorithm and LNMS algorithm by using the data conflict
+
+strategy of [10] and the proposed selective recalculation method for
+
+rate
+
+7 8
+
+in
+
+ISDB-S2,
+
+which
+
+has
+
+most
+
+data
+
+conflicts.
+
+The
+
+intermediate
+
+α
+
+and β messages of simulations are coded in the 6 bit sign-magnitude
+
+format and the APP value is coded in the 8 bit sign-magnitude format
+
+to avoid overflow. The parameters of NMS and LNMS algorithm
+
+are chosen to optimize both the BER performance and hardware implementation as γ = 0.875 for Equation (4). It can be observed
+
+from the figure that the proposed data conflict strategy achieves a
+
+0.1dB gain compared to [10].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June22948,82026 at 03:20:21 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+Fig. 5. In this figure, P1 and P2 are simulation points obtained from
+
+10−2
+
+the computer simulation result. P3 is the BER=0 Observation Point
+
+and P4 is the point with the required CNR (CNR4). We calculate
+
+10−3
+
+CNR4 as shown in Equation (13) using the extrapolation technique.
+
+BER
+
+10−4
+
+10−5
+
+10−6 10−7
+5.5
+
+NMS LNMS (ignore conflict) LNMS (Ref. [10]) LNMS (proposed)
+5.6 5.7 5.8 5.9 6
+CNR(dB)
+
+6.1 6.2 6.3
+
+Fig. 4. BER performance comparison of different solving strategies for data
+
+conflict
+
+problem
+
+for
+
+rate
+
+7 8
+
+BER
+10-2 10-3 10-4 10-5 10-6 10-7 10-8 10-9 10-10 10-11
+
+P1(CNR1,BER1)
+
+Simulation Point BER =0 Observation Point BER =10-11 Point
+
+P2(CNR2,BER2)
+
+P3(CNR3,BER3)
+
+extrapolation
+
+P4(CNR4, 10-11)
+
+Required CNR
+
+CNR(dB)
+
+Fig. 5. Required CNR calculation using extrapolation
+
+CN R4
+
+=
+
+2·
+
+log(10−11 )
+log(BER2)−log(BER1) C N R2−C N R1
+
+− log(BER3)
+
++
+
+log(BER3)−log(BER2) C N R3−C N R2
+
++CN R3
+
+(13)
+
+The results of the required CNR of all the codes in ISDB-S2 are listed in Table I for BP algorithm [11], NMS algorithm, and LNMS algorithm by using the data conflict strategy of [10] and the proposed selective recalculation method. Except the result of BP algorithm which we include from [11], the results for others are obtained through simulation. In this table, the result for BP algorithm uses floating point simulation and the results for others include a 6-bit quantization process. The row ΔBP in the table indicates the average differences of required CNR for all the code rates compared to the BP algorithm in [11]. As can be seen from Table I, the proposed algorithm is about 0.05dB better than [10] in average.
+
+VI. CONCLUSION
+In this paper, in order to achieve high BER performance for satellite transmission services, layered algorithm is applied to the ISDB-S2 LDPC decoder and the data conflict problem is completely solved through a selective recalculation method. After applying selective recalculation to layered algorithm, it can achieve 0.1dB gain under the same BER performance than the previous data conflict strategy for the code with most data conflicts in ISDB-S2.
+
+B. Comparison of required CNR
+In order to further analyze the efficiency of the proposed selective recalculation and its suitability to all the LDPC codes in ISDB-S2, we use a metric, called the required CNR. The required CNR is defined as the carrier-to-noise ratio when the BER exceeds 10−11 for ISDBS2 [11]. Because of the error floor free performance of ISDB-S2 code and relatively long computer simulation time to evaluate the BER down to the range of 10−11, in this work, we use the same evaluation method as [11], namely extrapolation, to calculate the required CNR. The simulation uses 107 input data, if no error can be found in the simulation, it is fair to say that this point is free of error at BER = 10−7. We call this point “BER = 0 Observation Point”, as shown in
+TABLE I COMPARISON OF REQUIRED CNR OF DIFFERENT SOLVING STRATEGIES
+FOR DATA CONFLICT PROBLEM (DB)
+
+Rate
+1/4 1/3 2/5 1/2 3/5 2/3 3/4 4/5 5/6 7/8 9/10
+Average ΔBP
+
+TPMP BP [11] NMS
+
+-2.1 -1.43
+
+-1.0 -0.61
+
+0.0
+
+0.36
+
+1.2
+
+1.51
+
+2.5
+
+2.79
+
+3.3
+
+3.59
+
+4.0
+
+4.31
+
+5.0
+
+5.28
+
+5.5
+
+5.79
+
+5.9
+
+6.29
+
+6.8
+
+7.08
+
+2.827 0
+
+3.178 0.351
+
+Layered NMS ignore conflict Ref.[10]
+
+-1.14 -0.54 0.41 1.89 3.00 3.69 4.81 5.49 6.1 6.48 7.62
+
+-1.47 -0.6 0.39 1.67 2.67 3.47 4.29 5.28 5.79 6.29 7.08
+
+3.437 0.61
+
+3.169 0.342
+
+proposed
+-1.56 -0.6 0.31 1.42 2.67 3.47 4.29 5.28 5.79 6.16 7.09
+3.12 0.293
+
+REFERENCES
+[1] Robert G. Gallager, Low-Density Parity-Check Codes, MIT Press, Cambridge, MA, 1963.
+[2] David J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, March 1999.
+[3] Akinori Hashimoto and Yoichi Suzuki, “A new transmission system for the advanced satellite broadcast,” IEEE Trans. Consum. Electron., vol. 54, Issue 2, pp. 353–360, May 2008.
+[4] Marc P. C. Fossorier, Miodrag Mihaljevic, and Hideki Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673– 680, May 1999.
+[5] Jinghu Chen, Ajay Dholakia, Evangelos Eleftheriou, Marc P. C. Fossorier, and Xiao-Yu Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, August 2005.
+[6] Mohammad M. Mansour and Naresh R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, December 2003.
+[7] Predrag Radosavljevic, Alexandre de Baynast, and Joseph R. Cavallaro, “Optimized message passing schedules for LDPC decoding,” Asilomar Conference on Signals, Systems and Computers 2005 (ACSSC), pp. 591– 595, October 2005.
+[8] John Dielissen, Andries Hekstra, and Vincent Berg, “Low cost ldpc decoder for dvb-s2,” DATE 2006, pp. 130–135, March 2006.
+[9] Cedric Marchand, Jean-Baptiste Dore, Laura Conde-Canencia, and Emmanuel Boutillon, “Conflict resolution by matrix reordering for DVBT2 LDPC decoders,” IEEE Global Telecommunications Conference (GLOBECOM), October 2009, Honolulu, USA.
+[10] Authur Segard, Francois Verdier, David Declercq, and Pascal Urard, “A DVB-S2 compliant LDPC decoder integrating the horizontal shuffle scheduling,” International Symposium on Intelligent Signal Processing and Communication Systems (ISPACS), pp. 1013–1016, December 2006.
+[11] Yoichi Suzuki, Akinori Hashimoto, Masaaki Kojima, Shoji Tanaka, Takeshi Kimura, and Tomohiro Saito, “LDPC codes for the advanced digital satellite broadcasting system,” IEICE Technical Report, vol. 109, no. 212, pp. 19–24, September 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June22948,92026 at 03:20:21 UTC from IEEE Xplore. Restrictions apply.
+
+

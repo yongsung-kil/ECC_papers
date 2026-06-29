@@ -1,0 +1,397 @@
+66
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+DEPS: Exploiting a Dynamic Error Prechecking Scheme to Improve the Read Performance of SSD
+Weihua Liu , Fei Wu , Member, IEEE, Meng Zhang , Chengmo Yang, Member, IEEE, Zhonghai Lu , Senior Member, IEEE, Jiguang Wan, Member, IEEE, and Changsheng Xie, Member, IEEE
+
+Abstract—3-D NAND flash memory is gradually being widely used in solid state drives (SSDs), leading to increasing storage capacity. However, the read performance of SSD is sacrificed for decoding operations which are executed to guarantee the data reliability. No matter whether the data have bit errors, they will be sent to error correcting code (ECC) engine to decode, introducing a high read delay of SSD. Error prechecking can help to avoid the redundant decoding operations for the error-free data, but it induces extra checking overhead to the error data. Motivated by this, we carry out comprehensive experiments to analyze the distribution of bit errors in 3-D NAND flash memory. The preliminary experimental results show that there are a large number of pages read without errors in the early lifetime of 3-D NAND flash memory. Based on the observations and analyses, we propose a model to estimate the error-free ratio, and utilize it to design a dynamic error prechecking scheme (DEPS) to bypass the decoding operation for the error-free data in 3-D NAND flash memory and improve the read performance of SSD. Furthermore, by dividing a large page into small subpages, DEPS releases more error-free data, which significantly improves the read performance of SSD. Evaluation results from real-world traces demonstrate that by implementing DEPS, the average read performance of SSD is enhanced by 35%–55% with 3-D MLC NAND flash memory.
+Manuscript received September 12, 2019; revised December 29, 2019; accepted April 25, 2020. Date of publication May 12, 2020; date of current version January 11, 2021. This work was supported in part by the Key-Area Research and Development Program of Guangdong Province under Grant 2019B010107001, in part by the National Natural Science Foundation of China under Grant 61821003, Grant 61872413, Grant U1709220, and Grant 61902137, in part by the 111 Project under Grant B07038, in part by the Shenzhen Basic Research under Project JCYJ20170818162129916, in part by the Postdoctoral Innovative Talents Support Program under Grant BX20190128, in part by the China Postdoctoral Science Foundation under Grant 2019M66262, in part by the Excellent Projects for Postdoctoral Science and Technology Activities in Hubei Province, and in part by the Key Project of Shandong Wisdom Joint Fund under Grant ZR2019LZH009. This article was recommended by Associate Editor S. Parameswaran. (Corresponding author: Fei Wu.)
+Weihua Liu, Fei Wu, Meng Zhang, Jiguang Wan, and Changsheng Xie are with the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan 430074, China, also with the Key Laboratory of Information Storage System, and the Engineering Research Center of Data Storage Systems and Technology, Ministry of Education of China, Huazhong University of Science and Technology, Wuhan 430074, China, and also with the Shenzhen Research Institute, Huazhong University of Science and Technology, Shenzhen 518000, China (e-mail: liuweihua@hust.edu.cn; wufei@hust.edu.cn; zgmeng@hust.edu.cn; jgwan@hust.edu.cn; cs_xie@hust.edu.cn).
+Chengmo Yang is with the Department of Electrical and Computer Engineering, University of Delaware, Newark, DE 19716 USA (e-mail: chengmo@udel.edu).
+Zhonghai Lu is with the School of Electrical Engineering and Computer Science, KTH Royal Institute of Technology, 114 28 Stockholm, Sweden (e-mail: zhonghai@kth.se).
+Digital Object Identifier 10.1109/TCAD.2020.2994266
+
+Index Terms—3-D NAND flash memory, error prechecking, read performance, solid state drive (SSD).
+I. INTRODUCTION
+3 -D NAND flash memory with high capacity becomes an extremely promising solution to deal with the increasing data-intensive scenario [1], [2]. As 3-D NAND flash memory capacity increases, data reliability is sacrificed due to program/erase (P/E) cycles, data retention time (RT) [3], [4], and other disturbances [5]. Low-density parity-check (LDPC) codes are used to guarantee the data reliability stemming from high error correction performance [6], [7]. However, exploiting LDPC codes introduces read performance degradation and high power consumption due to its high decoding complexity [8], [9]. Especially, when solid state drive (SSD) equips more channels to enhance performance, incredible read requests are fed to LDPC decoder, yielding to a blocked decoding queue. Thus, LDPC decoding becomes the bottleneck of designing high-read-throughput SSD. Although employing more LDPC decoders could alleviate such decoding bottleneck, the number of LDPC decoder is limited by the chip area and power [10], tremendous heat quantity is emitted from LDPC decoders. On the other hand, if the decoding process can be partially bypassed, the read performance could be improved significantly.
+We conduct extensive experiments to observe the relationship between raw bit error rate (RBER) of 3-D NAND flash memory and disturbances with an FPGA-based test platform. Comprehensive analyses of preliminary experiment results show a large number of data are error-free in the early lifetime of 3-D NAND flash memory. These error-free data can be averted processing LDPC decoding operations. Nevertheless, if all data include the error data are prechecked before decoding, it will introduce extra prechecking latency and downgrade the read performance. We expect to employ the prechecking only for the error-free data to reduce unnecessary decoding operations. Inspired by these observations and analyses, in this article, we propose a dynamic error prechecking scheme (DEPS) to improve the read performance of SSD. DEPS dynamically exchanges the faster prechecking operation with LDPC decoding for the error-free data. To maximize the benefits, DEPS takes the subpage scheme to release more error-free data. Additionally, DEPS implements a novel prechecking code (PC) management scheme.
+
+0278-0070 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+67
+
+To our best knowledge, it is the first time that we apply the prechecking concept in 3-D NAND flash memory, which has not been discussed in prior literature. The model of estimating whether the data have error bits, the dynamic implementation of prechecking, the subpage scheme, and the PC management scheme are novel. They do help to improve space efficiency and read performance. In general, DEPS can be feasibly and effectively implemented to improve the read performance of SSD. The main contributions of this article are concluded as follows.
+1) We collect and analyze the distribution of error bits in 3-D NAND flash memory with various P/E cycles and RT, by conducting comprehensive experiments on an FPGA-based test platform. A considerable ratio of data does not suffer from errors in the early lifetime of 3-D NAND flash memory is observed.
+2) We model the relationship between RBER and the ratio of subpages without bit errors (R-SWBEs), and utilize it to dynamically execute prechecking operations. To maximize the feasibility and benefits of prechecking, we propose a subpage scheme in encoding and decoding to release more error-free data. Moreover, we design a novel space-efficient PC management scheme.
+3) To confirm the effectiveness of DEPS, we conduct extensive evaluations based on real-world traces. The evaluation results show DEPS improves read performance of SSD by 35% and 55% with 3-D MLC NAND flash memory.
+The remainder of this article is organized as follows. Section II gives motivation and related works. Section III shows the preliminary experiments and the R-SWBE-RBER model. The design details of DEPS are described in Section IV. Section V evaluates DEPS with real-world traces. We conclude this article in Section VI.
+II. MOTIVATION AND RELATED WORK
+The capacity of SSD is growing rapidly with the maturity of 3-D NAND flash technology, which makes it easy to deal with big data [11]. Meanwhile, the higher read and write performance of SSD become imperative facing the challenges of processing big data and artificial intelligence. In conventional methods, improving read or write performance of SSD is mainly by utilizing the parallelism of channels, dies, and planes in SSD. Fig. 1 depicts the parallel read process in SSD with die-parallelism and multiplane commands. When the host sends a read request to SSD, several channels, chips, dies, and planes may respond to the read request at the same time since the data are written in different blocks. After reading and transferring, data are ready to be sent to the LDPC decoder. No matter the data have bit errors or not, it consumes time to decode. The increasing read parallelism feeds continuous data to the venerable LDPC decoder and leads to a blocked decoding queue. The higher read parallelism, the more decoding congestion. Hence, if a faster error prechecking operation can be implemented first to bypass (or short-circuit) decoding operation for the error-free data, the read latency can be reduced dramatically.
+
+Fig. 1. NAND flash memory organization structure and read process in SSD.
+3-D NAND flash memory commonly shows stronger reliability than planar NAND flash memory. The main reason may be the manufacturers roll back to more mature nano-technology and the decline of cell-to-cell interference in 3-D NAND flash memory due to the larger cell-to-cell space [5], [12]. More interestingly, except for the error-free data, we find there are also considerable data that have only 1- or 2-bit errors in the early lifetime of 3-D NAND flash memory. Moreover, the experimental results show that the locations of bit errors show approximate random distribution among a small logical page. Therefore, in the early lifetime of 3-D NAND flash memory, by dividing a 4 KB-page with only 1-bit error into two 2 KBsubpages or four 1 KB-subpages, it can release one error-free 2 KB-subpage or three error-free 1 KB-subpages, as shown in Fig. 9. Consequently, the half or three-quarters processing time for decoding then could be saved.
+Many prior works utilize the parallelism [13], [14] to achieve higher read performance. Designing advanced commands, changing work mechanism [15]–[17], and utilizing cache [18], [19] are also usually used to improve the read performance of SSD. Without loss of generality, the read performance is harder to be enhanced than the write performance because expanding the SSD random access memory (RAM) capacity can significantly facilitate high write throughput. Therefore, several methods, such as high-efficiency error correcting code (ECC) [20], [21] and I/O scheduling optimization [14], [22]–[25] are proposed. Different from prior literature, DEPS adopts the idea of predetection, like CDF-LDPC [26], to improve the read performance of SSD. CDF-LDPC aims to design a cascaded code, which merges LDPC and error check code to bypass the unnecessary decoding operations statically for error-free data in planar NAND flash memory. CDF-LDPC employs a PC to tell whether the data have generated bit errors. And it also uses a flag to record the state of corresponding data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+68
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+Fig. 2. Test platform.
+CDF-LDPC is a static prechecking scheme with the fixed 4 KB granularity of address mapping, encoding, and decoding. However, too many wrong operations of NAND flash and confusing designs in CDF-LDPC ruin its implementation. Primarily, the basis of NAND flash may be misunderstood by CDF-LDPC. The flag stored in the NAND flash page is unchangeable due to the erase-before-write mechanism of NAND flash memory, but CDF-LDPC’s design is based on the flag that can be in-place updated. Also, the PC stored in NAND flash may lead to unreliable output-data and degradation of read performance. The more detailed comparison will be elaborated in Section III-A.
+Furthermore, all parameters in the evaluation of CDFLDPC are from referees and assumptions, such as the errorfree ratio and controller frequency. CDF-LDPC evaluates its performance using a controller only runs at 100 MHz, which is far lower than the controller’s mainstream level in 2017. The low frequency will enlarge the latency proportion of decoding and obtain unreasonable results. To facilitate the potential of the predetection technique in improving read performance, we investigate the characteristics of real 3-D NAND flash memory and design DEPS more sophisticated to dynamically bypass decoding operations via the new proposed R-SWBE-RBER model. Besides, to further enhance DEPS’s feasibility with more application scenarios, we design the subpage and novel PC management scheme with 3-D NAND flash memory.
+
+Algorithm 1 Test Process
+Definitions:
+Rt: data retention time, be initialized to 0; Pe: program/erase cycles, be initialized to 1; IRt : the interval of equivalent data retention time; IPe : the interval of program/erase cycles; MAXRt : the maximum value of data retention time; MAXPe : the maximum value of program/erase cycles; DWt: the interval of dwell time;
+
+Process:
+
+1: Select a set of blocks from chips evenly;
+
+2: Generate a random number sequence;
+
+3: while Pe <= MAXPe do 4: Execute erase/program operation;
+
+5: if (Pe mod IPe ) is 1 then
+
+6:
+
+while Rt <= MAXRt do
+
+7:
+
+Read and Compare;
+
+8:
+
+Sleep(IRt )
+
+9:
+
+Rt += 1;
+
+10:
+
+end while
+
+11:
+
+Rt = 0;
+
+12: else
+
+13:
+
+Pe += 1;
+
+14:
+
+Sleep(DWt);
+
+15: end if
+
+16: end while
+
+TABLE I TEST CONFIGURATIONS
+
+III. PRELIMINARIES
+A. Preliminary Experiment
+P/E cycle and data RT have the most serious interference on the reliability of 3-D NAND flash memory [5]. We first carry out experiments to reveal the effect of P/E cycle and RT on RBER. Based on our previous comprehensive testing and characterizing of 3-D NAND flash memory [2], [27], we select the dedicated 3-D MLC and TLC models from many chip models to represent the best and worst reliability of 3-D NAND flash memory. The chip models of 3-D MLC and TLC are MT29F2T08CUHBBM4-3R:B (MT) and TH58TFT1T22BA8H (TH, engineering samples), respectively. TH shows almost the worst reliability of 3-D TLC NAND flash memory and is selected to investigate the potential improvement of DEPS in the worst case. Fig. 2 exhibits the test platform and chips.
+
+The physical page size of TH and MT are 18336 bytes (16 KB + 1952 bytes) and 18592 bytes (16 KB + 2208 bytes), respectively. Algorithm 1 depicts the test process, and more detailed test configurations are listed in Table I. The data retention test is carried out at the high ambient temperature, 85 ◦C, to accelerate aging. According to the enterprise requirement of JEDEC standard [28], the equivalent temperature is set to 40 ◦C. Besides, the acceleration factor is calculated by the Arrhenius equation [29] and the activation energy for the reaction (Ea). We take the equivalent one week as the step of RT. The value of MAXPe references our prior experiments [2], [27] and balances the cost of experimental time. Each block in the 3-D TLC and MLC model we test has 576 pages and 1024 pages, respectively. We count RBER of 4 KB-subpage first because the common address mapping granularity of SSD is 4-KB.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+69
+
+Fig. 3. RBER of 3-D MLC NAND flash memory.
+
+Fig. 7. R-SWBE-RBER model of 3-D MLC NAND flash memory.
+
+Fig. 4. RBER of 3-D TLC NAND flash memory.
+
+Fig. 8. R-SWBE-RBER model of 3-D TLC NAND flash memory.
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 5. R-SWBE of 3-D MLC NAND flash memory.
+
+(a)
+
+(b)
+
+(c)
+
+and 6(b) and (c) show. In Fig. 6, R-SWBE of 3-D TLC will grow to 50%–70% for 1 KB-page when P/E cycles < 1001 and RT < 1 week. In some application scenarios, the performance attracts more concern, such as using SSD as the cache of the storage system and the data do not need long-term storage. Hence, DEPS can be implemented in SSD with 3-D MLC and enterprise-level 3-D TLC NAND flash memory when adopting a subpage scheme. An obvious phenomenon is that the reliability of 3-D NAND flash memory is more vulnerable by RT than P/E cycle, leading RT has a more significant effect on RBER and R-SWBE. Therefore, the refresh-technology [30], [31] combating the bit errors introduced by RT will help to further improve the read performance with DEPS.
+
+Fig. 6. R-SWBE of 3-D TLC NAND flash memory.
+B. Preliminary Result
+The experiment results in Figs. 3 and 4 characterize the interference of RT and P/E cycle on RBER for 3-D MLC and TLC NAND flash memory, respectively. Different curves represent various RT. RT = fresh means the data are read after programming without experiencing data RT. RBER increases with the continuous growth of P/E cycles. When RT is fresh, RBER is mainly introduced by P/E cycles, and the errors soar as the accumulation of RT.
+We then count the R-SWBEs of 4 KB-subpage, as sketched in Figs. 5(a) and 6(a). R-SWBE of 4 KB-subpages can be over 90% when P/E cycle < 4001 and RT < 4 weeks for 3-D MLC NAND flash memory. However, R-SWBE of 3-D TLC is far lower than 3-D MLC NAND flash memory. To release more error-free data, we divide a 4 KB-subpage into two 2 KB-subpages and four 1 KB-subpages. R-SWBE increases with the reduction of the subpage size as Figs. 5(b) and (c)
+
+C. R-SWBE-RBER Model
+Furthermore, we model the relationship between RBER (Figs. 3 and 4) and R-SWBE (Figs. 5 and 6), as shown in Figs. 7 and 8. To dynamically implement error prechecking, DEPS needs to utilize this model to find the threshold of benefit. Prechecking technique will not always improve the read performance of SSD, because the extra prechecking operation on error data could combat the improvement. When R-SWBE is extremely low, such as 0%, all prechecking operations are redundant and degrade the read performance. However, it is unobtainable directly for the in-time R-SWBE value when SSD runs. However, RBER is cheap to be calculated. Hence, by using this model, DEPS changes it to find the corresponding RBER threshold according to a required R-SWBE.
+When RBER is 0, there are no errors and the ideal R-SWBE should be 1. Nevertheless, due to the computation accuracy, an approximate zero may be returned when there are few bit errors in a block. As Figs. 7 and 8 sketched, we count the average R-SWBE for the blocks suffering the same RBER,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+70
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+Fig. 9. Overview design of DEPS.
+and finally fit and model the relationship of RBER and RSWBE. Taking Fig. 8 as an example, R-SWBE keeps a nearconstant decline speed at the growth beginning of RBER. As the continuous increase of RBER, the decline speed slow down gradually. The model also supports that the smaller granularity of the logical page, the higher R-SWBE. Note that different 3-D NAND flash memory models may show variations from Figs. 7 and 8.
+
+Algorithm 2 Read Process of DEPS
+
+1: Read data from flash page, and check historical RBER;
+
+2: Address required subpages;
+
+3: if RBER < RBERth and flag is 0 then 4: Execute error checking;
+
+5: if Error then
+
+6:
+
+Set flag to 1 and execute LDPC decoding;
+
+7: else
+
+8:
+
+Execute LDPC decoding;
+
+9: end if
+
+10: else
+
+11: Execute LDPC decoding;
+
+12: end if
+
+13: Send data to host;
+
+IV. PROPOSED DEPS
+In this section, we first illustrate the overview design of DEPS in flash translation layer (FTL), then describe the implementation details, including the comparison with CDF-LDPC, and the design of space-efficient PC management scheme.
+
+A. DEPS
+The overview design of DEPS is sketched in Fig. 9. Each subpage (logical page) uses a flag to record whether it had bit errors. The flag vector is structured with a bitmap, which is cached in SSD RAM. All flags are initialized to 0. The value 0 indicates it had no errors since being written to or the last read from NAND flash memory, and the data should be checked to tell whether to have errors.
+DEPS changes the read and write process of SSD. When a read command is issued, as depicted in Fig. 9 and Algorithm 2, DEPS first judges whether the historical RBER of this block had exceeded the RBER threshold (RBERth), which is settled by the R-SWBE-RBER model. If RBER exceeds RBERth, it will decode directly because it is redundant for checking the probable error data. If not and when the flag equals 0, checking operation will be executed to tell whether the data have errors. Once the data involving bit errors are detected, the corresponding flag needs to be set to 1 and the data will be sent to the LDPC decoder to decode. However, if the checking result shows the data have no errors, they will be used directly. Since the checking latency is lower than LDPC, the overall performance will be improved.
+When a write command is issued, PC is calculated at the same time as LDPC encoding. Meanwhile, the corresponding flag will be set to 0. Due to the parallelism between PC calculating and LDPC encoding, DEPS will not degrade the write performance of SSD.
+A physical page can be divided into several logical pages (subpages) with a conventional data placement strategy. The
+
+(a)
+
+(b)
+
+Fig. 10. DEPS versus CDF-LDPC. (a) Read process of CDF-LDPC. (b) Read process of DEPS
+
+mainstream size of the physical page is slightly over 16 KB, it is usually divided into four 4 KB areas evenly [32]. Hence, a logical page, as well as the physical page, consists of user area and out-of-band (OOB) area. User area stores user data, and OOB area stores assist data, such as ECC, logical page number, or page state [33]. DEPS exploits the prechecking algorithm to detect if the data contain bit errors. Hence, it needs to introduce extra PC. However, PC is different from the conventional extra data in the OOB area. The logical page number or page state stored in the OOB area could be corrected by ECC if errors occur, but PC will be used before error correction, which leads it hard to be stored in OOB area as CDF-LDPC claims [26]. To clarify the implement details, we compare DEPS and CDF-LDPC first.
+DEPS versus CDF-LDPC are as follows. 1) The first difference between DEPS and CDF-LDPC can
+be found in the read process, which is induced by the variation of the flag storage position. The read process comparisons between CDF-LDPC and DEPS are delineated in Fig. 10. CDF-LDPC schedules read process according to the flag value stored in NAND flash memory. However, DEPS caches the flag in SSD RAM and stores
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+71
+
+it in the meta-area of SSD when power is off. DEPS takes advantage of the parallelism, which can obtain the flag from SSD RAM and prescheduling read process. Hence, DEPS will be faster than CDF-LDPC, especially when all channels execute full parallel read operations. 2) Besides, compared with the static CDF-LDPC, DEPS dynamically avoids the redundant checking operations for the likely error data via the R-SWBE-RBER model, which can enhance the read efficiency significantly. 3) The flag in CDF-LDPC stored in NAND flash memory cannot be modified due to the erase-before-write mechanism, so it cannot be in-place updated and work as CDF-LDPC claims. To modify the flag, CDF-LDPC has to rewrite it to other pages, which will introduce tremendous write amplification (WA). Moreover, if it needs to be rewritten to another page, why not write the correct data directly? 4) CDF-LDPC stores PC in the OOB area, and PC will also produce bit errors as same as the normal data. For 3-D TLC or even quad-level cells (QLCs) NAND flash memory with poor reliability, more wrong PC will be generated, CDF-LDPC will exacerbate the degradation of read performance. However, DEPS releases more error-free data and guarantees the correctness of PC utilizing the subpage scheme and novel PC management scheme, respectively. Which will be elaborated in the next two subsections.
+
+TABLE II STATISTICS OF R-SWBE, R-SW-1-BE, AND R-SW-2-BE
+
+B. Subpage Scheme of DEPS
+To make DEPS more efficient, we investigate error bits distribution in the early lifetime of 3-D NAND flash memory. Except R-SWBE, we also count the ratio of subpage with only 1-bit error (R-SW-1-BE) and the ratio of subpage with only 2-bit errors (R-SW-2-BE), and tabulate the result in Table II. Except 84% error-free 4 KB-page, the rest consists of 11% 4 KB-subpage with only 1-bit error and 3% 4 KB-subpage with only 2-bit errors at the conditions of P/E cycle = 4001 and RT = 4 weeks for 3-D MLC NAND flash memory. If a 4 KBsubpage is divided into 2 KB-subpages or 1 KB-subpages, the R-SW-1-BE and R-SW-2-BE of 4 KB-subpage will make contributions to the R-SWBE of 2 KB-subpage and 1 KBsubpage, as Fig. 11 exhibits. When R-SWBE of 4 KB-subpage is 84%, it releases up to 95% error-free 1 KB-subpage. The same phenomenon can be observed in 3-D TLC NAND flash memory. When 3-D TLC NAND flash memory experiences 1001 P/E cycles, it only remains 19% error-free 4 KB-subpage. However, R-SWBE can approach to 51% by dividing it into 1 KB-subpages. Albeit R-SWBE of 3-D TLC is far lower than 3-D MLC, it is more adaptable to the scenarios which use SSD as cache and do not need long-term storage.
+Hence, to release more error-free data, we divide a 4 KBsubpage into smaller granularity in encoding and decoding. Fig. 11 depicts the subpage scheme. When DEPS does not adopt the subpage scheme, the default address mapping, LDPC encoding, and decoding granularity is 4 KB. When DEPS employs the subpage scheme with 2 KB or 1 KB, the address mapping granularity still keeps 4 KB. That is, the subpage
+
+Fig. 11. Diagram of subpage scheme.
+scheme only changes the granularity in encoding and decoding, the page size of the address mapping algorithm in the FTL is still 4 KB, as Fig. 11 delineates. For example, when FTL implements 4 KB address mapping, the requested 4 KB area can be picked up from a 16 KB physical page. Meanwhile, DEPS can correctly obtain the former and the later 2 KB area from a 4 KB area, the same to the 1 KB-subpage.
+The subpage scheme is a logical segmentation of page, it is related to neither the hardware implementation nor the address mapping granularity. Hence, the subpage scheme will not lead to performance degradation. However, the subpage size is not as small as possible, the error correction capability of potential burst continuous errors decreases with the further reduction of subpage size. Although the burst continuous errors have not observed yet according to our test, the vector length will grow with the smaller subpage size. The subpage size needs to balance the performance, the error-correcting ability, and the RAM occupied by the vector.
+C. Novel PC Managements Scheme
+CDF-LDPC [26] had demonstrated the 16-bit cyclic redundancy check (CRC-16) can meet the requirement of error checking for 4 KB-subpage when hamming distance (HD) is 4. HD = 4 means the minimal continuous undetected errors is 4 bits. Our preliminary experiments show there are no more than four burst continuous bit errors. However, to enhance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+72
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+Fig. 12. Page address mapping of PC management scheme.
+the feasibility for the future generation of 3-D NAND flash memory, we balance the space consumption, the ability of error checking, and finally select CRC-32 as the prechecking algorithm in this article. Using CRC-32 instead of CRC-16 can enhance HD to 6 for 4 KB-subpage [34]. There are two ways to calculate the CRC code. One is the direct calculation and the other one is the look-up table method. The look-up table method can be used to design fast CRC based on the hardware platform, it performs a far lower latency than LDPC decoding. CRC-32 supports 128-bit parallel computation [35] and 4 KB-data need only 256 clock cycles to calculate.
+Storing PC after ECC in the OOB area, as same as the design of CDF-LDPC [26], will introduce two problems. The first one is that PC is possible to suffer bit errors, especially in 3-D TLC NAND flash memory which has high RBER. These errors will degrade the read performance because the wrong PC will mistakenly bypass the prechecking operation or even lead unreliable read results. The second one is the space of the OOB area is extremely limited for some NAND flash models. Taking the 3-D TLC NAND flash model we test for an instance, each physical page only provides extra 1952 bytes for 16 KB data. Except for the logical page number and page state, the rest OOB area is usually used to store ECC to maximize the reliability. It has to sacrifice the reliability to store PC in a conventional placement scheme, which is not what we expect. To solve such two problems, we design a space-efficient management scheme to store PC in dedicated blocks.
+We classify blocks into two categories: 1) Data-Block and 2) PC-Block. Data-Block is used to store user data, and its data placement strategy is shown in Fig. 11. PC-Block is the dedicated block to store PC. DEPS maintains two types of block numbers to address PC-Block: 1) physical PC-Block and 2) virtual PC-Block. The address mapping of PC includes page address mapping and block address mapping, which are shown in Figs. 12 and 13, respectively.
+Page Address Mapping: Page mapping in DEPS utilizes calculation instead of storage. To centrally store PC in PCBlock, DEPS divides each page in PC-Block into several cells, denoted as {C(0), C(1), C(2), . . .}. The cell size equals the
+
+length of PC. As Fig. 12 depicts, C(n) of all pages in a PCblock can store all PC for a Data-Block. In other words, all PC of a Data-Block are bonded to the C(n) page by page, such as {block 0 → c(0), block 1 →c(1), . . .}. To clarify clearly, Figs. 12 and 13 assume the Data-Block only has one logical page in a physical page. If a physical page has more than one logical page, the mapping will be like {block 0 subpage 0 → c(0), block 0 subpage 1 → c(1), block 0 subpage 2 → c(2), . . .}. The ECC cells in PC-block store the ECC for correcting PC errors. Such page address mapping method can guarantee the reliability of PC well and reduce the record length of PC address mapping, because it does not need to store the page number in address mapping.
+Block Address Mapping: DEPS uses a tree structure to map the block address. As sketched in Fig. 13, each virtual PCBlock is the root of a tree, denoted as Root-Node. A tree has N children, and N equals the number of cells in a PC-Block except for the ECC cells. The children nodes of Root-Node are named as Internode, and Leaf-Nodes are the children nodes of Internode. Leaf-Node stores the address of Data-Block (if a physical page in Data-Block has more than one logical page, one Leaf-Node only stores one subpage address of DataBlock), and Internode stores the address of cell. DEPS obtains the corresponding PC address of a Data-Block by searching its parent node, and finally gets the expected PC from relevant physical PC-Block. For example, if DEPS wants to obtain the PC of Data-Block 2, as Fig. 13 shows, Data-Block 2 is the leaf of c(2) and the grandson of virtual PC-Block 0. Finally, DEPS can obtain the required PC from the second cell of physical PC-Block 0.
+Mapping and Adjusting Rules: The links between RootNode and Internode are fixed, while links between Internode and Leaf-Node are changeable. Leaf-Node can link to any Internode, but it can only link to one Internode. DEPS maintains a constant virtual PC-Block set, such as {PC-Block 0, . . ., PC-Block N}. The block address mapping tree only records the relation between Data-Block and virtual PC-Block. The virtual PC-Blocks have another one-to-one mapping with physical PC-Blocks. One virtual PC-Block can map to any physical PC-Block, and the physical PC-Blocks set is dynamically maintained. These Mapping rules guarantee a constant mapping path for addressing PC, meanwhile, they balance the wear of flash memory to a dynamic physical PC-Blocks set. Besides, Data-Blocks and their corresponding PC-Blocks are assigned in different channels to maximize the parallelism.
+It will also help to reduce the requirement of RAM. When a write request comes, the page address mapping scheme can guarantee the PC of all subwrite-request to be mapped and written to the same PC-Block. While reading data, all PC of the request data in different Data-Blocks can be loaded into SSD RAM at once, because the PC is written in the same PC-Block. The flexible mapping rules make it possible to concentrate the PC of data from different blocks even chips to the same physical PC-Block. Furthermore, DEPS maps and adjusts the PC of hot data to a few PC-Blocks and load PC into SSD RAM. To reduce the read and WA introduced by crossblock PC, DEPS needs to load PC into SSD RAM. However, not all PC will be loaded, just the necessary PC of data meeting
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+73
+
+Fig. 13. Block address mapping of PC management scheme.
+
+the requirement of SSD’s running will. It extremely reduces the RAM requirement.
+It is important to note that: 1) the data temperature is relative. The hot data aforemen-
+tioned are not equal to the hottest data of SSD, but the running data for most applications. The hottest data will be cached in SSD RAM and used directly without decoding; 2) albeit the protection and recovery for sudden-power-off of SSD is achievable [36], [37], it is recommended that writing (refreshing) PC cached in SSD RAM back to NAND flash memory in time. DEPS writes PC back to NAND flash memory each hour. Besides, in the worst case that the flag vector is lost, DEPS will initiate all flags to 0. Although some prechecking operations will be executed, the data reliability is not threatened, the same to PC; 3) when writing data to SSD, the relevant PC should be written in SSD RAM first. According to the design of FTL, the active block will be written fully with continuous write requests. The cached PC will be written to NAND flash memory when it can be mapped to a full PC-Block, or when either it is time to refresh or power is offing; 4) DEPS balances the wear of NAND flash memory introduced by in-time refreshing PC via changing the mapping links between virtual and physical PC-Blocks. Assuming an SSD has 30 000 blocks, it only needs about 30 PC-Blocks to store PC (if it implements 4 KB address mapping and subpage scheme, and each 4 KB data need 32 bit-PC). If 20% of data in SSD are hot data (the RAM space occupied by PC is only 0.2‰ of SSD capacity), the PC of hot data is refreshed to NAND flash memory once per hour. The SSD runs 24 h per day without interruption for five years. It just needs extra 8.8 P/E cycles of each block for refreshing PC.
+V. EVALUATION
+A. Benefit Analysis
+Read latency in DEPS mainly consists of the sensing latency (Tsense) from flash memory to the page register, the transferring latency (Ttrans) over BGA interface, the prechecking latency (Tcheck), and the LDPC decoding latency (Tdecode).
+
+The conventional read latency of a page (Tconv) can be modeled as follows:
+Tconv = Tsense + Ttrans + Tdecode.
+If the page has no errors, the read latency of a page for DEPS Tdeps can be expressed as
+Tdeps = Tsense + Ttrans + Tcheck.
+If errors are detected in the page, the read latency should be
+Tdeps + Tdecode.
+The extra prechecking operations for error data even will degrade read performance. For the data in the same block, especially the same page type, they experience the identical P/E cycles and RT, and show similar reliability level. Hence, DEPS can reduce a lot of extra prechecking operations utilizing the RBER-R-SWBE model.
+In the latency formula, Tdecode is related to the size of QC Matrix (q) in Quasi-cyclic LDPC (QC-LDPC), the clock cycle (c), and the iteration times (i). They have such a relationship
+Tdecode = q ∗ c ∗ i.
+With continuous abrasion of 3-D NAND flash memory, DEPS’s benefits decline as its shorter and shorter lifetime, because pages may need to iterate more than one time to decode. DEPS obtains benefits when pages have few errors and just needs to iterate once. Hence, assuming all 4 KB data experience one iteration in the early lifetime and the clock frequency of the SSD controller is 400 MHz (the corresponding clock cycle is 2.5 ns). And q is 1024 with the column weight 4 of the LDPC check matrix for the 4 KB data. Consequently, Tdecode = q ∗ c ∗ i = 1024 ∗ 2.5 ∗ 1 ≈ 2.5 µs. We can also evaluate Tdecode from the throughput of the LDPC chip. The throughput of high-performance commercial LDPC decoder can approach to 10 Gb/s and each 4 KB data experience only one iteration, Tdecode = 10 Gb/s / 4 KB / 1 ≈ 3.1 µs. It is the theoretical speed, so setting Tdecode to 3 µs is reasonable.
+The latency of CRC checking (Tcheck) is a quarter of LDPC decoding, because 4 K data only need 256 clock cycles to calculate the CRC code adopting 128b it parallel computation [35], and it needs 1024 clock cycles to perform LDPC decoding. Hence, Tcheck is set to 0.75 µs.
+The read latencies of physical 16 KB-page in 3-D TLC NAND flash memory (Tsense) we test are 69 µs, 91 µs, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+74
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+69 µs for the least significant bit (LSB), the central significant bit (CSB), and the most significant bit (MSB), respectively. And they in 3-D MLC NAND flash memory (Tsense) are 89 µs and 112 µs for LSB and MSB pages, respectively. Hence, the average Tsense of 4 KB-subpage is about 19 µs for 3-D TLC NAND flash memory and 25 µs for 3-D MLC NAND flash memory. The BGA interface rate is 400 MB/s, so Ttrans of 4 KB is about 10 µ s.
+Assuming an SSD has eight channels (Channels), each channel has one flash chip (Chips), each chip has two dies (Dies) and each die has two planes (Planes). If there is only one LDPC decoder (Ld) and one CRC engine (Ce) in SSD, and each page has 4 subpages (Ss, for a 16 KB-page, it has four 4 KB-subpages). When all channels respond to the same read request, the read request size is Channels ∗ Chips ∗ Dies ∗ Planes ∗ Ss ∗ 4 KB = 512 KB. Hence, the conventional read latency (Tconv_ssd) of 512 KB for 3-D MLC NAND flash memory is
+Tconv_ssd = Tsense + Ttrans ∗ Dies ∗ Planes ∗ Ss
++ Channels ∗ Chips ∗ Dies ∗ Planes ∗ Ss
+∗ Tdecode/Ld
+≈ 644 µs (0.76 GB/s).
+When R-SWBE (R) is 70%, the read latency (Tdeps_ssd) of 512 KB with DEPS can be expressed as
+Tdeps_ssd = Tsense + Ttrans ∗ Dies ∗ Planes ∗ Ss
++ Channels ∗ Chips ∗ Dies ∗ Planes ∗ Ss ∗
+Tdecode ∗ (1 − R)/Ld + Tcheck ∗ R/Ce
+≈ 442.4 µs (1.10 GB/s).
+Since sensing data from flash memory and transferring can be executed concurrently, Tsense is calculated only once. Theoretically, the maximum improvement of read performance can get to 45% when R-SWBE is 70%. If there are two LDPC decoders and one CRC engine in SSD, the improvement can approach to 16.7%.
+Note that, the theoretical calculation only considers a synchronous reading. In real SSD, on the one hand, not all channels will respond to the read request at the same time. Thus, the average improvement of read performance may be lower than the theoretical calculation. One the other hand, the sensing, transferring, and decoding operations are executed concurrently with an asynchronous reading mode. We can find that Tdecode take the major delay to execute, compared with Tsense and Trans. Though once iteration of decoding only consumes 3 µs, the high-read-parallelism blocks the decoding queue. Besides, it shadows partial sensing and transferring latency in parallel execution. Thus, the alleviation of blocked decoding queue with DEPS may show higher average read performance improvement than the theoretical calculation. Hence, we take more experiments to evaluate the read performance in SSD in the following subsections. Theoretically, by implementing DEPS, one LDPC decoder can serve more read operations in the early lifetime of NAND flash memory.
+
+B. Overhead Analysis
+The CRC calculating is executed with LDPC encoding concurrently, and since the CRC calculating complexity is far lower than LDPC encoding, it will not result in write performance degradation. The main overhead of DESP is the incremental use of SSD RAM and NAND flash space. Since DEPS needs a flag vector to store the bit set in RAM, a 1 Tb SSD only needs about 4 MB, 8 MB, and 16 MB RAM space to store the vector for the 4 KB-subpage, 2 KB-subpage, 1 KBsubpage, respectively. When implementing the 4 KB-subpage scheme, CRC-32 needs 4-byte space. The total space requirement of PC storage is about 1‰ of user data. That is, a 1 Tb SSD needs 1Gb space to store PC. The high-read-throughput SSD is usually equipped RAM space exceeding 1‰ of SSD capacity, and PC only needs to be partially loaded into SSD RAM. Hence, the SSD RAM capacity will not become the bottleneck of DEPS.
+Additionally, the garbage collection (GC) of PC-Block is avoided in DEPS, because the replacement of PC is on the block level. When it writes the new PC to PC-Block, a fresh block should be selected to avoid triggering GC actively. If no fresh block to use, the old PC-Block will be erased to guarantee the persistence of PC. Another overhead can be found in the read and WA introduced by PC-Block, which are evaluated in the next two subsections.
+C. Evaluation Setup
+We modify SSDsim [38] to evaluate the read performance of DEPS. We run the traces downloaded from http://iotta.snia.org/ with SSDsim. Some analyses of traces can refer to [39]. The configurations are listed in Table III. SSD usually equips 1‰ or even 2‰ capacity RAM of storage, such as Samsung SSD 983 DCT (1.92 TB) and 869 EVO (250 GB). Hence, we configure an extra 20 MB RAM space of 1‰ SSD capacity in all evaluations. Except the cache area for flag vector and updating PC, all the rest RAM space is used to cache PC. If the RAM space is used up, it will trigger the PC cache replacement. When DEPS implements the 4 KB-subpage or 2 KB-subpage scheme, it consumes 2 MB or 4 MB to cache flag vector. We dynamically adjust the PC mapping links and take the simplest cache replacement strategy, least recently used (LRU) algorithm, to replace the cached PC.
+We select the average response time of read request (ARTRR) as the criterion to measure read performance. The R-SWBE values are set according to the experimental results in Figs. 5 and 6. We also evaluate the read performance variations of different numbers of LDPC decoders and NAND flash models.
+D. Evaluation Result
+First, we evaluate DEPS and conventional SSD. We set eight channels, one LDPC decoder, and one CRC engine in SSD implemented 4 KB-subpage mapping, as listed in Table III. We use the 3-D MLC latency we test in this evaluation, and show the results in Fig. 14. We evaluate DEPS at R-SWBE of 50%, 75%, and 95%, respectively. The ARTRR is normalized by conventional SSD. The read performance of DEPS has a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+75
+
+TABLE III EVALUATION CONFIGURATIONS
+
+Fig. 15. Evaluations of CDF-LDPC and DEPS.
+TABLE IV READ AND WA EVALUATIONS
+
+Fig. 14. Evaluations of conventional SSD and DEPS.
+significant improvement. When R-SWBE is 50%, the average ARTRR for different traces decreases by 34% and ARTRR decreases with the growth of R-SWBE. When R-SWBE is set to 95%, the average improvement for DEPS can approach to 55%.
+We then compare DEPS and subpage-DEPS with CDFLDPC [26] conservatively. CDF-LDPC does not explain how many channels and LDPC decoders were implemented. Hence, we employ the same parameters of the evaluation above for CDF-LDPC. Too many contradictions and flaws of CDFLDPC confuse to reimplement it. Finally, we simulate the flag errors stored in NAND flash memory for CDF-LDPC as we test. DEPS can preschedule the read process due to its cached flag, which makes DEPS faster than CDF-LDPC. Additionally, we exploit the subpage scheme to release more data exempt from decoding, and evaluate the 2 KB-subpage DEPS in this comparison. Note that the parallelism among multiple 2 KB LDPC decoders is not considered. We only use one LDPC decoder in this comparison. Fig. 15 exhibits that DEPS reduces average 12% read latency compared with CDF-LDPC. We assume the 2 KB-subpage can promote the R-SWBE from 50% to 75%,
+
+as Fig. 15 shows, it improves 35% average read performance than CDF-LDPC.
+Moreover, we collect the average page-read and page-write counts of all traces to measure extra read amplification (RA) and WA induced by DEPS. All traces are only played once, and the page-read and page-write counts of conventional SSD are normalized to 1. We set R-SWBE to 50% with 4 KB-subpage, 75% with 4 KB-subpage, and 75% with 2 KBsubpage, respectively. Table IV records the results. WA shows little impact from different experimental configurations, due to the sufficient cache for updating PC. RA increases with the growth of R-SWBE and the decline of subpage size. When R-SWBE is low, more PC will be redundant, releasing more RAM space to cache the necessary PC. Hence, the hitting accuracy of PC increases and leads to lower RA. The smaller subpage size needs more RAM space to cache PC, leading to more frequent replacement of PC. Extra 14.2‰ of RA are introduced for 2 KB-subpage with 75% error-free data. Although RA is negligible compared with the conventional SSD, it will be further reduced if DEPS is equipped with more RAM space.
+Additionally, two or more LDPC decoders will be implemented in high-performance SSD. However, the LDPC decoder number is limited to the chip’s area and power. The read performance of DEPS will not increase proportionally with the continuous growth of LDPC decoders. We compare DEPS with 1, 2, and 4 LDPC decoders, respectively. R-SWBE is set to 75% and the subpage size is 4 KB. Fig. 16 depicts the evaluation results. With the increase of LDPC decoders, the congestion of the decoding queue is alleviated. Hence, the read performance is not promoted linearly as the increase of LDPC decoders. ARTRR has 15% and 22% declines for 2 and 4 LDPC decoders, respectively.
+Finally, we compare the read performance of DEPS with 3-D TLC and 3-D MLC NAND flash memory. Albeit 3-D TLC NAND flash memory has higher RBER than 3-D MLC, subpage-DEPS can be implemented with enterprise-level 3-D TLC NAND flash. The 3-D MLC in this article is a floating
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+76
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 40, NO. 1, JANUARY 2021
+
+Fig. 16. Evaluations of DEPS with different LDPC decoders.
+Fig. 17. Evaluations of DEPS with 3-D MLC and 3-D TLC NAND flash memory.
+gate (FG) NAND flash memory, and 3-D TLC is the charge trap (CT). Due to the variations of storage mechanism, the CT NAND flash memory has many different characteristics from each other [2], [27], the read latency of 3-D TLC NAND flash memory is lower than 3-D MLC for we test. We set R-SWBE to 50% for 3-D MLC and 3-D TLC NAND flash memory, the read performance of SSD with 3-D TLC NAND flash memory is averagely 25% higher than 3-D MLC, as Fig. 17 exhibits.
+VI. CONCLUSION In this article, we propose DEPS to improve the read performance of SSD. DEPS dynamically bypasses the LDPC decoding operation for the error-free data. The high R-SWBE results collected from the real device demonstrate the feasibility of implementing DEPS, and support to design a sophisticated DEPS with the novel schemes of subpage and PC management. The evaluation results show that DEPS achieves significant read performance improvement with negligible overhead.
+REFERENCES
+[1] Y. Wang, M. Zhang, X. Yang, and T. Li, “A thermal-aware physical space reallocation for open-channel SSD with 3-D flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 38, no. 4, pp. 617–627, Apr. 2019.
+[2] W. Liu et al., “Characterizing the reliability and threshold voltage shifting of 3D charge trap NAND flash,” in Proc. IEEE Design Autom. Test Eur. Conf. Exhibit. (DATE), Florence, Italy, 2019, pp. 312–315.
+[3] M. Zhang, F. Wu, Y. Du, C. Yang, C. Xie, and J. Wan, “CooECC: A cooperative error correction scheme to reduce LDPC decoding latency in NAND flash,” in Proc. IEEE Int. Conf. Comput. Design (ICCD), Boston, MA, USA, 2017, pp. 657–664.
+[4] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. IEEE 22nd Asia South Pac. Design Autom. Conf. (ASP-DAC), Chiba, Japan, 2017, pp. 560–565.
+
+[5] R. Micheloni, 3D Flash Memories. Dordrecht, The Netherlands: Springer, 2016.
+[6] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM 2011), Houston, TX, USA, 2011, pp. 1–6.
+[7] J. Kim, D.-H. Lee, and W. Sung, “Performance of rate 0.96 (68254, 65536) EG-LDPC code for NAND flash memory error correction,” in Proc. IEEE Int. Conf. Commun. (ICC), Ottawa, ON, Canada, 2012. pp. 7029–7033.
+[8] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. Presented 11th USENIX Conf. File Storage Technol. (FAST13), 2013, pp. 243–256.
+[9] W. Zhao, H. Sun, M. Lv, G. Dong, N. Zheng, and T. Zhang, “Improving min-sum LDPC decoding throughput by exploiting intra-cell bit error characteristic in MLC NAND flash memory,” in Proc. 30th Symp. Mass Storage Syst. Technol. (MSST), Santa Clara, CA, USA, 2014, pp. 1–6.
+[10] K. Cushon, P. Larsson-Edefors, and P. Andrekson, “A high-throughput low-power soft bit-flipping LDPC decoder in 28 nm FD-SOI,” in Proc. IEEE 44th Eur. Solid-State Circuits Conf. (ESSCIRC), Dresden, Germany, 2018, pp. 102–105.
+[11] M. Fukuchi, Y. Sakaki, C. Matsui, and K. Takeuchi, “20% systemperformance gain of 3D charge-trap TLC NAND flash over 2D floatinggate MLC NAND flash for SCM/NAND flash hybrid SSD,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Florence, Italy, 2018, pp. 1–5.
+[12] J. Chen, “On the reliability of charge-trap (CT) type three-dimensional (3D) NAND flash memory,” in Proc. 14th IEEE Int. Conf. Solid-State Integr. Circuit Technol. (ICSICT), Qingdao, China, 2018, pp. 1–3.
+[13] S. Choudhuri and T. Givargis, “Performance improvement of block based NAND flash translation layer,” in Proc. 5th IEEE/ACM/IFIP Int. Conf. Hardw./softw. Codesign Syst. Synth., Salzburg, Austria, 2007, pp. 257–262.
+[14] B. Mao, S. Wu, and L. Duan, “Improving the SSD performance by exploiting request characteristics and internal parallelism,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 2, pp. 472–484, Feb. 2018.
+[15] G. Wu and X. He, “Reducing SSD read latency via NAND flash program and erase suspension.,” in Proc. 10th USENIX Conf. File Storage Technol. (FAST), vol. 12, 2012, p. 10.
+[16] C.-Y. Liu, J. Kotra, M. Jung, and M. Kandemir, “PEN: Design and evaluation of partial-erase for 3D NAND-based high density SSDs,” in Proc. 16th USENIX Conf. File Storage Technol. (FAST18), 2018, pp. 67–82.
+[17] C.-Y. Liu, J. B. Kotra, M. Jung, M. T. Kandemir, and C. R. Das, “Soml read: Rethinking the read operation granularity of 3D NAND SSDs,” in Proc. 24th Int. Conf. Architect. Support Program. Lang. Oper. Syst., 2019, pp. 955–969.
+[18] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, “Improving read performance of NAND flash SSDs by exploiting error locality,” IEEE Trans. Comput., vol. 65, no. 4, pp. 1090–1102, Apr. 2016.
+[19] S. Wu, Y. Lin, B. Mao, and H. Jiang, “GCaR: Garbage collection aware cache management with improved performance for flash-based SSDs,” in Proc. Int. Conf. Supercomput., 2016, pp. 1–12.
+[20] G. Wu, X. He, N. Xie, and T. Zhang, “DiffECC: Improving SSD read performance using differentiated error correction coding schemes,” in Proc. IEEE Int. Symp. Model. Anal. Simulat. Comput. Telecommun. Syst., Miami Beach, FL, USA, 2010, pp. 57–66.
+[21] M. Zhang, F. Wu, X. He, P. Huang, S. Wang, and C. Xie, “Real: A retention error aware LDPC decoding scheme to improve NAND flash read performance,” in Proc. 32nd Symp. Mass Storage Syst. Technol. (MSST), Santa Clara, CA, USA, 2016, pp. 1–13.
+[22] N. Elyasi, M. Arjomand, A. Sivasubramaniam, M. T. Kandemir, C. R. Das, and M. Jung, “Exploiting intra-request slack to improve SSD performance,” in Proc. 22nd Int. Conf. Architect. Support Program. Lang. Oper. Syst., 2017, pp. 375–388.
+[23] M. Lee, D. H. Kang, M. Lee, and Y. I. Eom, “Improving read performance by isolating multiple queues in NVME SSDs,” in Proc. 11th Int. Conf. Ubiquitous Inf. Manag. Commun., 2017, pp. 1–6.
+[24] J. Liang, Y. Xu, D. Sun, and S. Wu, “Improving read performance of SSDs via balanced redirected read,” in Proc. IEEE Int. Conf. Netw. Architect. Storage (NAS), Long Beach, CA, USA, 2016, pp. 1–10.
+[25] M. Wang and Y. Hu, “An I/O scheduler based on fine-grained access patterns to improve SSD performance and lifespan,” in Proc. 29th Annu. ACM Symp. Appl. Comput., 2014, pp. 1511–1516.
+[26] S. Qi, D. Feng, N. Su, L. Mei, and J. Liu, “CDF-LDPC: A new error correction method for SSD to improve the read performance,” ACM Trans. Storage (TOS), vol. 13, no. 1, pp. 1–22, 2017.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+LIU et al.: DEPS: EXPLOITING DYNAMIC ERROR PRECHECKING SCHEME TO IMPROVE THE READ PERFORMANCE OF SSD
+
+77
+
+[27] Q. Xiong et al., “Characterizing 3D floating gate NAND flash: Observations, analyses, and implications,” ACM Trans. Storage (TOS), vol. 14, no. 2, pp. 1–31, 2018.
+[28] Solid-State Drive (SSD) Requirements and Endurance Test Method, JEDEC Standard, JESD218B.01, 2016.
+[29] D. A. Baglee, “Characteristics & reliability of 100Å oxides,” in Proc. 22nd Int. Rel. Phys. Symp., Las Vegas, NV, USA, 1984, pp. 152–155.
+[30] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. IEEE 30th Int. Conf. Comput. Design (ICCD), Montreal, QC, Canada, 2012, pp. 94–101.
+[31] Y. Di, L. Shi, K. Wu, and C. J. Xue, “Exploiting process variation for retention induced refresh minimization on flash memory,” in Proc. Design Autom. Test Eur. Conf. Exhibit. (DATE), Dresden, Germany, 2016, pp. 391–396.
+[32] Y. Zhou, F. Wu, P. Huang, X. He, C. Xie, and J. Zhou, “Understanding and alleviating the impact of the flash address translation on solid state devices,” ACM Trans. Storage (TOS), vol. 13, no. 2, pp. 1–29, 2017.
+[33] A. Gupta, Y. Kim, and B. Urgaonkar, “DFTL: A flash translation layer employing demand-based selective caching of page-level address mappings,” ACM Sigplan Notices, vol. 44, no. 3, pp. 229–240, 2009.
+[34] P. Koopman. Best CRC Polynomials. Accessed: May 23, 2020. [Online]. Available: https://users.ece.cmu.edu/∼koopman/crc/
+[35] Y. Huo, X. Li, W. Wang, and D. Liu, “High performance table-based architecture for parallel CRC calculation,” in Proc. 21st IEEE Int. Workshop Local Metropolitan Area Netw., Beijing, China, 2015, pp. 1–6.
+[36] Y.-M. Chang et al., “An efficient sudden-power-off-recovery design with guaranteed booting time for solid state drives,” in Proc. IEEE 8th Int. Memory Workshop (IMW), Paris, France, 2016. pp. 1–4.
+[37] D. Kim, Y. Won, J. Cha, S. Yoon, J. Choi, and S. Kang, “Exploiting compression-induced internal fragmentation for power-off recovery in SSD,” IEEE Trans. Comput., vol. 65, no. 6, pp. 1720–1733, Jun. 2016.
+[38] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, “Performance impact and interplay of SSD parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput., 2011, pp. 96–107.
+[39] D. Narayanan, A. Donnelly, and A. Rowstron, “Write off-loading: Practical power management for enterprise storage,” ACM Trans. Storage (TOS), vol. 4, no. 3, pp. 1–23, 2008.
+Weihua Liu received the M.S. degree from the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan, China, in 2018, where he is currently pursuing the Ph.D. degree.
+His current research interests include intelligent storage, machine learning for systems, and nonvolatile memories.
+Fei Wu (Member, IEEE) received the B.S. and M.S. degrees in electrical automation from the Wuhan University of Technology, Wuhan, China, in 1997 and 2000, respectively, and the Ph.D. degree in computer science from the Huazhong University of Science and Technology (HUST), Wuhan, in 2005.
+She is currently a Professor with the Information Storage Lab, Wuhan National Laboratory for Optoelectronics, HUST. Her research interests include computer architecture, nonvolatile storage, embedded system, and intelligent storage.
+Meng Zhang received the Ph.D. degree from the Wuhan National Laboratory for Optoelectronics (WNLO), Huazhong University of Science and Technology, Wuhan, China.
+He is working as a Postdoctoral Researcher with WNLO, Huazhong University of Science and Technology. His current research interests include ECCs, applications of ECC in nonvolatile memory technologies, flash memory reliability, and NVM storage systems.
+
+Chengmo Yang (Member, IEEE) received the B.S. degree from Peking University, Beijing, China, and the M.S. and Ph.D. degrees from the University of California at San Diego, San Diego, CA, USA.
+She is currently an Associate Professor with the Department of Electrical and Computer Engineering, University of Delaware, Newark, DE, USA. She has authored over 70 articles in peer-reviewed international journals and conferences. Her research interests include broad areas of computer architecture, embedded systems, and design automation, with a particular focus on improving security, reliability, nonvolatility, and energy-efficiency of embedded systems, cyber physical systems, and the Internet-of-Things. Dr. Yang has received the National Science Foundation Career Award in 2013, and the two best paper awards and four best paper nominations. She is serving as an Associate Editor for the IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS and the ACM Transactions on Design Automation of Electronic Systems. She has served as a member for program/organization committees in many prestigious international conferences and workshops.
+Zhonghai Lu (Senior Member, IEEE) received the B.S. degree in radio and electronics from Beijing Normal University, Beijing, China, in 1989, and the M.S. degree in system-on-chip design and the Ph.D. degree in electronic and computer system design from the KTH Royal Institute of Technology, Stockholm, Sweden, in 2002 and 2007, respectively.
+He was an Engineer of electronic and embedded systems from 1989 to 2000. He is currently a Professor with the School of Electrical Engineering and Computer Science, KTH Royal Institute of Technology. He has authored more than 180 peer-reviewed articles. His current research interests include interconnection networks, computer architecture, design automation, real-time systems, and emerging memory systems.
+Jiguang Wan (Member, IEEE) received the bachelor’s degree in computer science from Zhengzhou University, Zhengzhou, China, in 1996, and the M.S. and Ph.D. degrees in computer science from the Huazhong University of Science and Technology (HUST), Wuhan, China, in 2003 and 2007, respectively.
+He is currently a Professor with the Wuhan National Laboratory for Optoelectronics, HUST. His research interests include computer architecture, networked storage system, key-value storage system, and parallel and distributed system.
+Changsheng Xie (Member, IEEE) received the B.S. and M.S. degrees in computer science and technology from the Huazhong University of Science and Technology (HUST), Wuhan, China, in 1982 and 1988, respectively.
+He is currently a Professor with the Wuhan National Laboratory for Optoelectronics (WNLO), HUST. His research interests include new storage technology and architecture, multimedia computing and network, computer storage, and network storage and security. Prof. Xie has served as the Deputy Director of WNLO, the Deputy Director of computer peripheral equipment committee of China Computer Federation, the Committee Member of information storage of China Computer Society, and the Vice Chairman of the China Expert Committee of the International Network Storage Industry Association.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:14 UTC from IEEE Xplore. Restrictions apply.
+
+

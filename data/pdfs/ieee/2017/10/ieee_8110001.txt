@@ -1,0 +1,291 @@
+Low-Latency Software LDPC Decoders for x86 Multi-core Devices
+Bertrand LE GAL and Christophe JEGO IMS Laboratory, University of Bordeaux, Bordeaux INP, France.
+
+Abstract—LDPC codes are a family of error correcting codes used in most modern digital communication standards even in future 3GPP 5G standard. Thanks to their high processing power and their parallelization capabilities, prevailing multi-core and many-core devices facilitate real-time implementations of digital communication systems, which were previously implemented on dedicated hardware targets. Through massive frame decoding parallelization, current LDPC decoders throughputs range from hundreds of Mbps up to Gbps. However, inter-frame parallelization involves latency penalties, while in future 5G wireless communication systems, the latency should be reduced as far as possible. To this end, a novel LDPC parallelization approach for LDPC decoding on a multi-core processor device is proposed in this article. It reduces the processing latency down to some microseconds as highlighted by x86 multi-core experimentations.
+I. INTRODUCTION
+Low-Density Parity-Check codes [1] are one of the most popular error correction codes (ECC). Indeed, they can achieve performance close to the Gaussian channel capacity. This code family is adopted in many current digital communication standards such as WiMAX [2], WiFi [3], WiGig [4] or Verizon 5G [5]. To date, FPGA or ASIC technologies have been the principal alternatives to perform real-time LDPC decoding for mobile and/or base station systems. Indeed, LDPC decoding algorithms are characterized by a costly computational complexity discarding other kinds of implementations. Software implementations of LDPC decoding process were only limited to simulation purposes.
+The increasing processing performance of software programmable devices have made the implementation of highthroughput software decoders possible. In fact, during the last five years, a large set of research works focused on the implementations of various ECC decoders (LDPC [6], [7], NB-LDPC [8], turbo codes [9] and polar codes [10], [11]) on multi-core and many-core targets. These software decoders can reach Mbps or even Gbps throughput performances. Moreover, they offer the flexibility level required by Software Defined Radio [12] or Cloud-RAN [13], [14] systems. These high performance levels stem from the massive computation parallelism levels provided by GPUs and CPUs (x86 and ARM processors). However, mastering these targets is a complex task and algorithm modifications are mandatory before their implementations.
+The first software LDPC decoders were implemented on CELL/BE devices [15], [16] then on GPUs [17]. They reach tens of Mbps on high-end GPUs. A various set of optimizations was then proposed to improve the decoding throughputs
+
+[18]. Thus, throughputs ranging from hundred of Mpbs up to Gbps were achieved on mid-range or high-end GPUs [19], [20], [21]. However, as noticed in [20], one of the key concerns in software defined radio and cloud-ran systems is the processing latency. Indeed, most of the research works on GPUs have latencies ranging from some milliseconds up to seconds. In the most efficient trade-off solution between latency and throughput performances [20], the GPU-based decoder has a latency of 236 µs when 10 flooding-based decoding iterations are executed. Meanwhile, x86 and ARM multi-core architectures [22], [7] were investigated. They lead to achieving the most advantageous performances: the highest decoding throughput, the lowest energy consumption and the lowest processing latency. Indeed, their internal memory architectures are based on fast caches associated to an SIMD vectorization unit which maps efficiently with the LDPC decoding process. In the same conditions than [20], the decoding latency was reduced to 130 µs on an INTEL Core-i7 processor with a higher decoding throughput [7]. This high efficiency level is obtained by decoding 32 codewords in parallel (interframe parallelization) to benefit from a regular computation parallelism and aligned memory accesses.
+In the next generation of digital communication standards, the latency parameter is a major constraint. Moreover, in most software defined radio and Cloud-RAN systems the stream of codewords to be processed does not always share the same parameters e.g code lengths and/or code rates. It could drastically reduces the workload of inter-frame parallelized decoders. These two reasons motivate the implementation of low-latency LDPC decoders. The objective is to maximize the throughput performance while (a) minimizing the processing latency and (b) relaxing the constraint on the codeword stream. To reach this objective, a software LDPC decoder implementation which takes advantage of intra-frame parallelization was designed.
+The remainder of the paper is organized as follows. Section 2 introduces LDPC codes and the horizontal-layered based decoding algorithm used in the software implementation. Then, the differences in comparison with [7] and the different optimizations are provided in Section 3. Section 4 summarizes the experimental results obtained with the proposed LDPC decoder implementation and compares them with state of the art solutions. Finally, conclusion and future works are reported.
+
+978-1-5386-0446-5/17/$31.00 ©2017 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. An illustration of QC-LDPC H matrix coming from the IEEE 802.11e WiMAX standard K = 576, rate=1/2 and Z = 24.
+II. LDPC DECODING ALGORITHM
+An LDPC code is a linear block code defined by a binary sparse M × N parity-check matrix called H. In the H matrix, M = N − K rows are associated to parity-check informations (CN) and N columns represent received bit-node informations (VN) with N the codeword length and K the number of information bits in the received sequence. The number of one elements in the yth row of H is defined as the row degree dc(y). Similarly, the number of one elements in the xth column is defined as the column degree dv(x). The decoding can be performed thanks to a message passing (MP) approach where VNs and CNs exchange soft information. The sum-product algorithm (SPA) approximations such as Offset Min-Sum (OMS) or Normalized Min-Sum (NMS) are commonly used to implement LDPC decoders [23]. Indeed, they drastically reduce the computation complexity of the SPA decoding algorithm and they provide negligible error correction performance degradations.
+In their general form, H matrix are un-structured and irregular. It means that dc and dv are not constant in the H matrix. However, to facilitate the design of LDPC decoders, a special class of LDPC codes was proposed (Quasi-Cyclic LDPC codes). QC-LDPC codes are LDPC codes that are composed of an array of Z×Z circulant identity sub-matrices. Z is the order that defines the parallelism level. It eases H matrix storage and insures that Z CNs or VNs can be processed in parallel without memory access conflicts. Consequently, QC-LDPC codes have been adopted in many standards [2], [3], [4], [5]. For each standardized QC-LDPC code, the Z parameter and the rotation offsets (rid) for each non null sub-matrices are specified. Fig. 1 shows the H matrix of a QC-LDPC code from the IEEE 802.11e standard (N = 576, rate=1/2 and Z = 24). This H matrix structure enables hardware architectures to allocate at least Z = 24 processing units for a parallel processing. Moreover, the QC structure grouping VN elements in subsets helps the data interleaving. Indeed, it can be implemented thanks to using a simple shift register or a mutiplexer network generated according to the Z value when Z memory banks are available.
+To reduce the computational and the memory complexities of the LDPC decoder architectures, some schedulings of the
+
+CN computations were proposed [24]. Indeed, in the original LDPC decoding algorithm formulation, named flooding schedule, the overall VN and CN computations are executed in parallel. This formulation was mainly applied in first decoder architectures [25], [26] and GPU-based software LDPC decoder implementations [27], [19], [20], [6], [18] because it provides large parallelization opportunities. However, an horizontal layered-based formulation is more efficient for both hardware and software implementations [28], [29], [30]. It halves the number of decoding iterations required to reach similar error correction performances. Moreover, it allows a reduction of about 30% the memory requirement. More details about the horizontal layered-based algorithm used in this work are provided in [7].
+The main drawback of the layered-based scheduling formulation comes from its maximum computation parallelism level that is lower than the flooding based formulation where all VNs or CNs can be evaluated in parallel. Indeed, in the layered-based formulation, CNs can be executed in parallel if they do not share the same VN neighbors which increases the complexity of the layered-based formulation parallelization. This is the major argument behind discarding it in many multi-core and many-core implementation works. However, for multi-core devices such as x86 or ARM processors, the parallelization issue was solved by using an inter-frame parallelization approach [7], [22]. Nonetheless, processing Q frames in parallel increases the processing latency higher than 100 µs for the decoding of most LDPC codes.
+In [22] and [7], the main objective was to design a generic decoder implementation for both structured and un-structure LDPC codes. In fact, the rescheduling of CN computations to maintain a constant parallelism level without violating VN access policy with unstructured LDPC code was a complex task. For this reason, the inter-frame parallelization was discarded. Since, standardized LDPC codes are QC-LDPC codes, it is possible to benefit from the code structure so as to optimize multi-core implementations. Indeed, CN elements involved in a Z × Z sub-matrix are independent and thus they can be updated in parallel.
+III. PARALLELIZATION STRATEGY FOR LOW-LATENCY
+In this section, we describe an LDPC decoding parallelization strategy and the applied optimization techniques used to reduce the processing latency while maintaining a high processing throughput of software LDPC decoders.
+Low-processing latency involves parallelization of single frame decoding (intra-frame) contrary to previous works [22], [7] in order to discard system frame buffering and also to obtain shorter decoding process. However, like for all efficient parallelized software implementations, computation and memory access regularities are required. Indeed, multicore processors have SIMD units that can process in parallel Q 8-bit fixed-point values. However, the main concern for an efficient intra-frame parallelization comes from irregular memory accesses that depends on the H matrix. Indeed, depending on Z value and sub-block rotation values, accessing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+VN elements for parallel CNs evaluation is a challenging task. In hardware decoder architectures, Z memory banks, Z CN processing units and a Z × Z barrel shifters are necessary for the implementation. However, the multi-core processor data-path cannot be sized according to Z contrary to custom ASIP solutions [31], [32], [33], [34]. Consequently, to replicate a decoder architecture behavior with software programmable targets two major challenges have to be addressed:
+1) the processor has Q SIMD processing units whereas QCLDPC code has a Z CN structure organization;
+2) SIMD logical rotate feature and scatter & gather memory operations are unavailable to access to the Z VN elements.
+Concerning the first challenge, one solution is to decompose the M CN evaluations to execute per QC-LDPC sub-block. Then, each Z CN sub-block has to execute Z/Q × Q subiterations of Z CN evaluations. When Z/Q is not an integer value, it means than some computations during the last subiterations are useless. Indeed, to map with the SIMD unit that always performs Q CN processing in parallel, some fake computations have to be inserted for padding purpose. Consequently, the parallelization efficiency would be less than 100%. For instance, for the IEEE 802.11ad standard, two iterations are required to process the Z = 42 CN computations of each 42 × 42 sub-blocks. A first decoding sub-iteration updates CN[0,31] whereas the second sub-iteration updates CN[32,41]. During the two successive sub-iterations the processor SIMD unit updates up to 64 CNs. Thus the decoding efficiency reaches only 42/64 66% when Z = 42. Padding CN equations from other Z × Z sub-block can be performed but it is not always possible due to VNs access conflicts. Same sub-optimality appears when Z < Q such as with short frame codes from IEEE 802.11n [3] standard with Z = 27. It is important to notice, yet, that more advantageous QC-LDPC codes with software friendly Z value also exist. For instance, in IEEE 802.11e standard [2], LDPC codes with N = 768 and N = 2304 have Z = 32 and Z = 96, respectively.
+Concerning the second challenge related to VN memory access and VN rotation, the solutions are more complex. Indeed, as demonstrated in [7] (Table 3), an efficient interframe processing is necessary to parallelize the CN kernel: it requires only some tens clock cycles to execute 32 CN computations (data loading, CN evaluation and result storing). It means that for intra-frame parallelization, very fast memory accesses to VN elements are required. However, contrary to inter-frame parallelized decoders, VN element accesses are more complex due to VN rotation for load and store operations. Unfortunately, INTEL and ARM processor do not have features to perform gather nor scatter operations on 8 bit data set1. It is possible to emulate these 8-bit gather and scatter features thanks to generic functions based on current AVX2 and x86 scalar instructions [35]. Nonetheless, memory access time penalties involved by the generic functions are too
+
+costly in comparison to CN processing time [7]. For instance, to load Q VN elements in an SIMD register thanks to the generic 8b gather function from [35], at least 24 to 42 clock cycles are required. Consequently, a generic approach based on a twin aligned memory read is applied to reduce the memory access latencies and to achieve high-throughput for intra-frame parallelized LDPC decoders. It is important to notice that this approach is possible thanks to the structure of the QC-LDPC LDPC codes that are based on circulant identity matrices.
+To this end, a hardware shift register behavior was software reproduced by using some memory accesses and some SIMD logic instructions. Let us consider an example from the IEEE 802.11ad standard (Z = 42). In the best case, two memory reads are required to access to the 42 first VN elements if subblock rotation value is equal to 0. The first memory access loads the VN[0,31] elements (as shown in Fig. 2, rid = 0) and the second one loads the VN[32,63] elements. The loaded values during the second memory access are masked to cancel the values VN[42,63]. Indeed, they are not in the considered QC sub-block because Z = 42. Accessing to VN elements when rid = 0 is straightforward. However, for non zero values, other operations are required. Let us consider a second example, with rid = 13. At the end of the VNs read operation, register 1 should be VN[13,41]∪[0,2] whereas register 2 should contain only VN[3,11]. In order to load correct values into register 1 only, different tasks are necessary:
+1) the loading of data set VN[13,44] is performed, 2) the masking of data set VN[42,44] from register is done
+to get only the data set VN[13,41], 3) the loading of data set VN[−29,2] is required, 4) the cancellation of VN[−29,−1] is then performed, 5) finally the concatenation of VN[13,41] set and VN[0,2] set
+is done using an or operation.
+This process for register 1 is illustrated in Fig. 2 with rid = 13. The loading of the second register that should contain
+
+VN set (Z=42) X X X X 0 ... ... ... ... ... ... 41 42 X X X
+
+RID = 0
+
+0 ... ... ... 31
+
+0 < RID < 10
+
+10 ... ... ... 41
+
+RID = 10 RID = 13
+
+10 ... ... ... 41
+
+mask
+
+X X X 0 ... 2
+
+13 ... 41 X X X
+
+AND OR
+AND
+
+13 ... 41 0 ... 2
+
+1Only, gather memory read feature is available for 32-bit data set. But, this Fig. 2. Access to VN elements for Z = 42 QC-LDPC codes - First part of
+
+feature has a higher processing latency than aligned memory access.
+
+the VN set loading (32 first elements)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+VN[3,11] values is in this case straightforward. The elements VN[3,34] are loaded from memory and then the unsolicited values are masked.
+The description of a generic memory access function based on previous explanations is possible through INTEL AVX2 features. In this case, many memory SIMD loads are required to load Q VN elements independently of the Z and rid values. Moreover, at least three logical operations allow the value concatenation. The number of clock cycles required to execute the loading of Q VN elements are between 5 and 10. This approach can be applied to execute the overall VN memory accesses required during the LDPC decoding process. However, in many cases, according to rid value, it can be simplified to a single memory load that is 5 to 10 times faster.
+Efficiency cannot be obtained with a single generic software decoder description. Depending on the QC-LDPC code structure (N and Z) and the identity matrix rotation coefficients, the source codes of the decoder has to be adapted. The generation of decoder source codes according to specific parameters was demonstrated as an efficient approach previously e.g. for LDPC codes [22], [7] and polar codes [36], [11]. It assures that the best throughput and latency performances are achieved. Therefore, a template based approach is defined to generate memory access functions and CN processing kernels. Optimized CN kernel source codes given in [7] was reused to reach high-throughput performances.
+Since the code length, the Z factor and the rid values are known during decoder compilation, the features of C++11 language such as template parametrization are investigated like in [36], [11] for polar code decoders. Hence, at the compiling step, memory optimized access patterns are selected according to rid values. Indeed, for each memory access during the decoding process, only the required instructions with the precomputed memory addresses are executed. It minimizes the overall memory access latency and thus it improves the decoding performance. Furthermore, since the bounds of loops are compile-time constants, the compiler is able to unroll loops and to use register for data storage instead of stack memory. Reducing the amount of instructions executed by the processor should provide the best latency and throughput performances.
+IV. EXPERIMENTATION RESULTS
+To demonstrate the efficiency of the proposed QC-LDPC decoder implementation different LDPC codes from IEEE 802.11e [2] and IEEE 802.11ad [4] standards were benchmarked. Selected QC-LDPC code parameters are provided in table I. For all the experiments, a custom framework was executed to produce the optimized C++11 decoder source codes2. Then, these QC-LDPC decoder descriptions were compiled with the LLVM 4.0 toolchain. The compilation flags that were provided to the toolchain are: -march=native -mtune=native Ofast.
+2INTEL intrinsics which are C style functions that provide access x86 SIMD instructions were used for vectorization purpose.
+
+TABLE I QC-LDPC CODES FROM IEEE 802.11E AND IEEE 802.11AD STANDARDS
+USED FOR PROPOSED SOFTWARE DECODER EVALUATION
+
+#id Source
+
+N Rates z
+
+dc
+
+C1 802.11e 576 1/2 24 C2 802.11e 2304 1/2 96
+
+{6, 7} {6, 7}
+
+C3 802.11ad C4 802.11ad C5 802.11ad C6 802.11ad
+
+672 1/2 42 {5, 6, 7, 8} 672 5/8 42 {7, 8, 10} 672 3/4 42 {13, 14, 15} 672 13/16 42 {14, 15, 16}
+
+An evaluation of the error correction performance of fixedpoint decoders was done. Like in previous works, the quantization format used is 8 bits for VNs and 6 bits for messages. The bit error rate (BER) and frame error rate (FER) performances for C3 and C6 are reported in Fig. 3. The curves show that the quantization formats associated to the offset min-sum (OMS) decoding algorithm do not impact C3 whereas about 0.1 dB degradation is observed for C6 code in comparison with a floating point decoder. Note that non linear channel information quantization proposed in [28] should solve C6 performance degradation.
+Concerning the throughput and latency performance evaluations for the proposed software LDPC decoder implementations, they were carried out on a Mac OS laptop computer. It is composed of an INTEL Core-i7 i7-5650U processor that contains 2 physical cores sharing 4 MB of L3 cache memory. The clock frequency is automatically regulated by the operating system to about ∼ 3.0 GHz. For benchmarking purpose, a digital communication system simulation runs during a period of 30 seconds to estimate fairly the throughput and the latency of the LDPC decoder software implementations. The throughput (Γ) and the latency (∆) results are reported in Table II when 10 layered-based decoding iterations are executed.
+
+Bit Error Rate (BER) Frame Error Rate (FER)
+
+10−1
+
+C3 float
+
+C3 fixed
+
+10−3
+
+10−5
+
+10−7
+
+10−9 0.5 2 3.5 5 6.5 SNR (Eb/N0)
+
+C6 float
+
+C6 fixed
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7 0.5 2.5 4.5 6.5
+SNR (Eb/N0)
+
+Fig. 3. Error correction performance of fixed-point software LDPC decoder implementations when 10 layered OMS decoding iterations are executed. Simulated digital communication system includes an AWGN channel and a BPSK modulation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II
+
+PERFORMANCES OF INTRA-FRAME PARALLELIZED QC-LDPC DECODER
+
+500
+
+WHEN 10 LAYERED-BASED DECODING ITERATIONS ARE EXECUTED
+
+Throughput (Mbps)
+
+Code 1 core
+
+2 cores
+
+400
+
+Γ
+
+∆
+
+Γ
+
+∆
+
+C1 102 Mbps 5.6 µs 220 Mbps 5.2 µs
+
+C2 202 Mbps 8.6 µs 385 Mbps 11.9 µs
+
+300
+
+C3 153 Mbps 7.8 µs 316 Mbps 7.6 µs
+
+C4 167 Mbps 7.2 µs 294 Mbps 8.2 µs
+
+C5 154 Mbps 7.7 µs 312 Mbps 7.7 µs
+
+C6 155 Mbps 7.7 µs 321 Mbps 7.5 µs
+
+200
+
+intra-stop intra-no-stop inter-stop [7]
+
+Throughputs from 102 Mbps up to 202 Mbps were measured for the proposed software decoder implementations. The processing latency is below 10 µs independently of the considered LDPC code. Core-i7 processor used for experimentation has 2 physical cores. Thus an evaluation of the scalability of the decoder implementation was also done. Two decoders are executed in parallel to evaluate the throughput improvement and measure the latency impact. Results obtained with this setup are provided in Table II. The decoding throughput performance is approximately doubled when two cores are allocated. It illustrates the scalability of the proposed decoder description. Moreover, the latency values are almost the same which means that each decoder instance does not impact the other one.
+The proposed LDPC decoder implementations have very short processing latencies. However, during the decoding process, the real usage rate of the SIMD unit is lower than 100%. Moreover, VN memory accesses are not fast due to VN rotations. Consequently an evaluation of the impact of the low-latency approach on the decoding throughput in comparison with [7] that is optimized in terms of throughput was performed. Performance results for same LDPC codes and on the same experimental platform are provided in Table III.
+As supposed, the proposed intra-frame parallelized decoders provide lower throughput performance than inter-frame parallelized ones. The throughput decreases from 18% for C2 code up to 60% to C1 code. However, the processing latency the intra-frame parallelized decoders are approximately divided by 22. Indeed, the latency parameter reduction factor is from ×12 for C1 code up to ×34 for C2 code. To summarize, the throughput is approximatively halved whereas the latency is
+
+TABLE III PERFORMANCES COMPARISON OF PROPOSED INTRA-FRAME AND
+INTER-FRAME [7] PARALLELIZED LDPC DECODER WHEN 10 LAYERED-BASED DECODING ITERATIONS ARE EXECUTED
+
+Code
+C1 C2 C3 C4 C5 C6
+
+inter-frame
+
+Γ
+
+∆
+
+262 Mbps 245 Mbps 247 Mbps 221 Mbps 230 Mbps 238 Mbps
+
+70 µs 300 µs 155 µs 173 µs 166 µs 161 µs
+
+intra-frame
+
+Γ
+
+∆
+
+102 Mbps 202 Mbps 153 Mbps 167 Mbps 154 Mbps 155 Mbps
+
+5.6 µs 8.6 µs 7.8 µs 7.2 µs 7.7 µs 7.7 µs
+
+100
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR (Eb/N0)
+
+Fig. 4. Throughput performances of LDPC decoder implementations when early stopping criterion is switched on.
+
+divided by about ×22.
+In order to improve the average performance of the LDPC decoder implementations, it is possible to stop the decoding process when a valid codeword is discovered. Since the layered-based scheduling of the decoding algorithm is used, the syndrome computation has to be done at the end of each iteration. It involves a decoding computational complexity increase. However, it reduces the average number of decoding iterations when the signal to noise ratio (SNR) value increases. Consequently, a higher value of average decoding throughput is obtained. Fig. 4 provides the throughput performance of the C3 LDPC decoder implementations when early stopping criterion is switched on (intra-on) or switched off (intra-off). The throughput of the LDPC decoder with the syndrome computation is about 15% slower than its counterpart for low SNR values (≤ 1.5 dB). In fact, the decoder implementation has to compute syndrome but cannot stop the decoding process since the codewords are mainly wrong (Fig. 3). However, when the waterfall region is reached, the stop criterion drastically improves the average decoding throughput.
+An other interesting observation comes from the fact that throughput performances of intra-frame parallelized decoders become equivalent and then higher than those of inter-frame parallelized decoders e.g. in Fig. 4, intra-frame decoder provides higher throughput than inter-frame decoder when SNR value is higher than 2.0 dB. Indeed, inter-frame decoders are penalized by the fact that they have to wait that Q syndromes are verified to stop the decoding process. It increases the average number of decoding iterations to the worst-case decoding processing whereas intra-frame parallelized decoders stop the decoding process as soon as possible.
+Finally, the proposed low-latency LDPC decoder implementations compare favorably with GPU-based implementations. Indeed, in comparison with [20], that is the most latency optimized GPU decoder implementation, the throughput and the latency parameters are better. In term of latency for the C2 code, a processing latency of 207 µs and a throughput of 62
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+Mbps are reported if 10 flooding-based iterations are executed [20]. Proposed decoder implementation onto x86 processor provides only a latency value of 4.3 µs with a throughput of 396 Mbps for similar BER performance (5 layered-based decoding iterations are executed instead of 10 flooding-based iterations).
+V. CONCLUSION
+In this paper, a low-latency software LDPC decoder implementation is detailed. Several optimizations for software mapping help reduce the processing latency below 10 µs when 10 layered-based decoding iterations are executed. The decoding throughputs associated to these processing latencies range from 102 Mbps up to 385 Mbps for several IEEE standardized QC-LDPC codes. Currently, the proposed decoder implementation has 16% to 60% lower decoding throughput than previous research works but it provides a latency reduction of ∼ 20×. Current work focuses on improving the throughput while keeping an equivalent performance and lowlatency. Also, an ARM implementation is foreseen to improve the energy per bit efficiency.
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] IEEE Standard for Local and metropolitan area networks - Part 16: Air Interface for Broadband Wireless Access Systems, IEEE Std 802.16TM, 2009.
+[3] Local and metropolitan area networks - Specific requirements Part 11 : Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE 802.11n, 2009.
+[4] Local and Metropolitan Area Networks - Specific Requirements - Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE P802.11ad, 2007.
+[5] V. Wireless, Verizon 5G TF; Air Interface Working Group; Verizon 5th Generation Radio Access; Multiplexing and channel coding (Release 1), TS V5G.212 V1.2, 2016.
+[6] Y. Lin and W. Niu, “High throughput LDPC decoder on GPU,” IEEE Communications Letters, vol. 18, no. 2, pp. 344–347, February 2014.
+[7] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE Transactions on Parallel and Distributed Systems, vol. 27, no. 5, pp. 1373–1386, May 2016.
+[8] J. Andrade, G. Falcao, V. Silva, and K. Kasai, “FFT-SPA non-binary LDPC decoding on GPU,” in Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), Vancouver, BC, May 2013, pp. 5099–5103.
+[9] A. Cassagne, T. Tonnellier, C. Leroux, B. Le Gal, O. Aumage, and D. Barthou, “Beyond Gbps turbo decoder on multi-core CPUs,” in Proceedings of the 9th International Symposium on Turbo Codes & Iterative Information Processing (ISTC’16), Brest, France, September 2016.
+[10] B. Le Gal, C. Leroux, and C. Jego, “Multi-Gb/s software decoding of polar codes,” IEEE Trans. on Signal Processing, pp. 349–359, 2014.
+[11] P. Giard, G. Sarkis, C. Leroux, C. Thibeault, and W. J. Gross, “Lowlatency software polar decoders,” Journal of Signal Processing Systems, Springer, July 2016.
+[12] E. Grayver, Implementing Software Defined Radio. Springer-Verlag New York, 2013.
+[13] D. Wubben, P. Rost, J. S. Bartelt, M. Lalam, V. Savin, M. Gorgoglione, A. Dekorsy, and G. Fettweis, “Benefits and impact of cloud computing on 5g signal processing: Flexible centralization through cloud-ran,” IEEE Signal Processing Magazine, vol. 31, no. 6, pp. 35–44, Nov 2014.
+[14] A. Checko, H. L. Christiansen, Y. Yan, L. Scolari, G. Kardaras, M. S. Berger, and L. Dittmann, “Cloud ran for mobile networks - a technology overview,” IEEE Communications Surveys Tutorials, vol. 17, no. 1, pp. 405–426, Firstquarter 2015.
+
+[15] G. Falca˜o, V. Silva, L. Sousa, and J. Marinho, “High coded data rate and multicodeword WiMAX LDPC decoding on the Cell/BE,” Electronics Letters, vol. 44, no. 24, pp. 1415–1417, 2008.
+[16] J. Zhao, M. Zhao, H. Yang, J. Chen, X. Chen, and J. Wang, “High performance LDPC decoder on CELL BE for WiMAX system,” in Proceedings of the CMC Conference, 2011, pp. 278–281.
+[17] G. Falcao et al., “Massively LDPC decoding on multicore architectures,” IEEE Transactions on Parallel and Distributed Systems, vol. 22(2), 2011.
+[18] J. Andrade, G. Falcao, V. Silva, and L. Sousa, “A survey on programmable LDPC decoders,” IEEE Access, vol. 4, pp. 6704–6718, July 2016.
+[19] G. Falcao, V. Silva, L. Sousa, and J. Andrade, “Portable LDPC decoding on multicores using OpenCL,” IEEE Signal Processing Magazine, vol. 29, no. 4, pp. 81–88, 2012.
+[20] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proceedings of the IEEE GlobalSIP Conference, 2013, pp. 1258–1261.
+[21] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Systems Letters, vol. 6, no. 2, pp. 29–32, 2014.
+[22] B. Le Gal and C. Jego, “High-throughput LDPC decoder on low-power embedded processors,” IEEE Communications Letters, vol. 19, no. 11, pp. 1861–1864, November 2015.
+[23] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Transactions on Communications, vol. 50, no. 3, pp. 406–414, 2002.
+[24] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. of the SIPS Workshop, 2004, pp. 107–112.
+[25] C. Beuschel and H.-J. Pfleiderer, “FPGA implementation of a flexible decoder for long LPDC codes,” in International Conference on Field Programmable Logic and Applications, ser. (FPL’08), 8-10 September 2008, pp. 185–190.
+[26] P. Urard, L. Paumier, V. Heinrich, N. Raina, and N. Chawla, “A 360mw 105mb/s dvb-s2 compliant codec based on 64800b ldpc and bch codes enabling satellite-transmission portable devices,” in Proceedings of the IEEE International Solid-State Circuits Conference (ISSCC), February 2008, pp. 310–311.
+[27] C.-C. Chang, Y.-L. Chang, M.-Y. Huang, and B. Huang, “Accelerating regular LDPC code decoders on GPUs,” IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing, vol. 4, no. 3, pp. 653–659, 2011.
+[28] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoders,” Journal of Signal Processing Systems, vol. 65, pp. 185–197, 2011.
+[29] Z. Luan, Y. Pei, and N. Ge, “A fast convergence and area-efficient decoder for quasi-cyclic low-density parity-check codes,” in Proceedings of the 19th Asia-Pacific Conference on Communications (APCC), 2013, pp. 458–462.
+[30] B. Le Gal, C. Jego, and C. Leroux, “A flexible NISC-based LDPC decoder,” IEEE Transactions on Signal Processing, vol. 62, no. 10, pp. 2469–2479, May 2014.
+[31] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP for convolutional, turbo, and LDPC code decoding,” in Proceedings of the 5th International Symposium on Turbo Codes and Related Topics, sept. 2008.
+[32] C. Condo, M. Martina, and G. Masera, “Vlsi implementation of a multimode turbo/ldpc decoder architecture,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 60, no. 6, pp. 1441–1454, 2013.
+[33] G. Gentile, M. Rovini, and L. Fanucci, “A multi-standard flexible turbo/ldpc decoder via asic design,” in Proceedings of the 6th International Symposium on Turbo Codes and Iterative Information Processing, ser. (ISTC), Brest, France, 6-10 September 2010, pp. 294–298.
+[34] P. Murugappa, R. Al-Khayat, A. Baghdadi, and M. Jezequel, “A flexible high throughput multi-ASIP architecture for LDPC and turbo decoding,” in Proceedings of the Design, Automation Test in Europe Conference Exhibition, ser. (DATE), march 2011, pp. 1 –6.
+[35] T. Nakamura. (u8gather.c), http://github.com/tanakamura. [36] G. Sarkis, P. Giard, C. Thibeault, and W. Gross, “Autogenerating
+software polar decoders,” in Proceedings of the IEEE Global Conference on Signal and Information Processing (GlobalSIP), December 2014, pp. 6–10.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:45 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,508 @@
+2017 9th IEEE International Conference on Communication Software and Networks
+Design of Programmable Parallel LDPC Decoder
+
+Qian Yi, Zhu Xiaorong
+Department of Information Science and Technology Taishan University Taian, China
+e-mail: bjkdqy@126.com, zhuxiaorong@126.com
+
+Abstract—A partial parallel architecture for LDPC (Low Density Parity Check Code) decoder is proposed. The overall architecture is based on MIMD (Multiple Instruction Stream Multiple Data Stream), the internal calculation unit is based on SIMD (single instruction Stream multiple data Stream). The processor uses the programmable method to realize the NMS (normalized minimum sum) decoding algorithm, can get a higher speed of calculation and easier chip layout. The architecture of the processor has passed the timing simulation on XILINX Kintex-7, the maximum clock frequency is 175MHz. Experimental results show that the structure is suitable for multi code long and multi bit rate LDPC decoder.
+Keywords-LDPC; decoder; NMS; partial parallel
+I. INTRODUCTION
+LDPC code is a kind of linear block code which can approximate the theoretical limit [1]. At present, it has been adopted by several communication standards such as digital video broadcasting-satellite-second generation (DVB-S2), wireless local area network (WLAN) and worldwide interoperability for microwave access (Wimax).
+Its decoding algorithm is completely parallel in theory, has the potential for high speed decoding. For the practical application of LDPC codes, people also began to focus on the study of LDPC decoder hardware implementation. In the early stage of LDPC code decoder, there are three main structures: serial structure, fully parallel structure and partial parallel structure [2]-[6]. Serial structure is relatively simple to achieve, its hardware resource consumption is very small, but each iteration cycle is longer, which leads to low throughput of the decoder. Although the whole parallel structure has a high throughput, which can meet the needs of high-speed decoding, but the hardware resource consumption is too high. Where the longer codes with the more difficulty to implementation, its resource consumption is amazing. Balanced between decoding speed and hardware resource consumption, the partial parallel architecture is a compromise between serial and parallel. So in practical applications, the partial parallel decoding structure is widely used because of its high flexibility. The parity check matrix of quasi cyclic LDPC codes can be divided into a series of cyclic matrix composed of arrays, is easy to use partial parallel decoder architecture.
+In this paper, a programmable QC (Quasi-cyclic)-LDPC decoder is designed, the design idea of partial parallel decoding architecture is adopted with MIMD and SIMD. So
+
+the decoder has smaller hardware spending and higher throughput, can flexibly implement the QC-LDPC decoding function of multi code length and multi code rate in a high degrees of parallelism.
+The organizational structure of this paper is as follows: the section II describes the decoding algorithm and algorithm analysis, the section III introduces the main structure of the decoder, the section IV gives the FPGA (FieldProgrammable Gate Array) implementation results and the conclusion.
+
+II. THE NMS DECODING ALGORITHM ANALYSIS
+
+In the decoding method of LDPC codes, soft decision decoding is based on posterior probability information. By its iterative operation, the performance of LDPC codes can approximate the Shannon limit, so it is often used in hardware implementation. In the soft decision decoding algorithm, the NMS algorithm is further improved on the basis of the minimum algorithm. It adds a correction factor, the computation complexity is low, and the hardware realization is easy. So it is a kind of decoding algorithm with excellent performance.
+The NMS decoding algorithm used in this paper is as follows:
+1) Initial phase
+
+( )=
+
+, and
+
+( ,
+
+)
+
+=
+
+0
+
+2) Updating phase Set the maximum number of iterations tmax. If , is not zero matrix, then updating check nodes:
+
+∀∈ ,
+
+∀v ∈ H , ,
+
+( ,
+
+)=
+
+(
+
+)−
+
+( ,
+
+), ∈
+
+(,, )
+
+(1)
+
+( ,
+
+)
+
+=
+
+∙ ∏ ∈ ( , , ),
+
+( ,
+
+)∙
+
+∈ ( , , ),
+
+( ,
+
+)
+
+(2)
+
+If H , is not zero matrix, then updating variable nodes:
+
+∀v ∈ H , ,
+
+() =
+
+( ,
+
+)+
+
+( ,
+
+)
+
+,
+
+∈
+
+(,, )
+
+(3)
+
+3) Hard decision
+
+=0 1
+
+() ≥0 () <0
+
+(4)
+
+978-1-5090-3822-0/17/$31.00 ©2017 IEEE
+
+66
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:20:01 UTC from IEEE Xplore. Restrictions apply.
+
+If decoding successful, then stop iteration.
+
+Among them, the j is the sub line position of the H matrix,
+
+the k is the sub column position of the H matrix.
+
+( ,
+
+)
+
+is
+
+the
+
+information transferred from the check node c to the check node v in the ith iteration. ( ) is the information of the variable node v after the ith iteration. ( , , ) is a set of
+
+variable nodes in the sub matrix , that are all connected with the check node c. ( , , ) is a set of check nodes in
+
+the sub matrix , that are all connected with the variable node c. α is a normalization factor.
+
+According to the above algorithm, the processor should
+
+provide the required calculation functions for (1), (2), (3), (4):
+
+subtraction operation, absolute value operation, minimum
+
+and second minimum values in a set of data, multiplication,
+
+add operations and sign bit operations.
+
+Assume that the size of the check matrix of QC-LDPC
+
+code is MhN, and the matrix is divided into B×B blocks.
+
+The number of rows in the sub block is s, the number of
+
+columns in the sub block is t. So shB=M, thB=N. If each
+
+sub block is considered as a horizontal layer, all check nodes
+
+in each layer are updated simultaneously, that is parallel
+
+processing is in each layer and information transfers between
+
+layers is in series. When the entire decoder exactly contains
+
+the B check node update module, a layer of the update
+
+process can be completed in a clock cycle. The decoding
+
+system only needs s clock cycles to complete a whole
+
+decoding iteration process. But when the decoding
+
+parameters are changed, the check node update module and
+
+related hardware may be idle or in short supply.
+
+III. THE DECODER ARCHITECTURE
+The design of architecture in this section is based on the theoretical analysis of the above algorithm. The overall architecture uses MIMD structures, the SIMD structure is used in the processing unit, and two parallel structures are combined with the programmable instruction set. It balances between the hardware resources and data throughput, in order to achieve a good design results.
+A. Structure of the LDPC Decoder
+There are two types of memory structures in the system of the multi-processing units: the distributed memory structure and the shared memory structure. In a shared memory structure, the number of memory modules is equal to or slightly larger than the number of processing units. The memory module is connected with the processing unit through the alignment network, which is suitable for vector operation. The design of the alignment network directly influences whether there is no conflict between the memory module and the processing unit. Each processing unit in the distributed memory structure has respective local memory. In most cases the data required by the processing unit can be provided by the local memory, and the data exchange between the processing units still needs a data seeking network. Because the data of the node in the same layer is parallel processing and the data transfer serially between layers, so it has the characteristics of distributed storage and the decoder is based on the distributed storage structure. The
+
+overall structure is shown in Fig. 1. The processing unit is independent programming, which can execute multiple tasks in parallel, and has better generality and speed.
+
+SURJ
+
+38
+
+188Ð
+
+SURJ
+
+38
+
+188Ð
+
+/0BYD /0BFK
+/0BYD /0BFK
+
+FRQHFWLRQB/0
+
+ĂĂ ĂĂ ĂĂ
+
+SURJ
+
+38
+
+188Ð
+
+/0BYD /0BFK
+
+&RQWUROXQLW
+Figure 1. The MIMD architecture of the processor.
+There are 16 process unit PU1~PU16. Each PU has its computing component, register file, controller and branch judgment module. Each PU needs to execute the program stored in the corresponding prog module. The prog module is for fetching instructions, decoding and generating control signal. Thus the PU and NUU can read and write data in the corresponding local memory-“LM” module, and complete the data processing task of the unit. Because each PU can be programmed independently by the respective “prog” modules, so the processor forms a MIMD structure, which can flexibly develop the task parallelism between PUs.
+The local memory LM is composed of two banks LM_va and LM_ch, which storage variable node information and check node information respectively.
+The node update unit NUU separates the update operation of the check nodes and the variable nodes from the PU, so that it can run in parallel with the ALU in PU, shorten the running time of the program.
+The CE module is a global control module, which coordinates the execution process of the 16 PU tasks, and manages the synchronization signals.
+The conection_LM module is responsible for implementing the data broadcast communication and one to one communication among PUs. The rules of data communication are single direction: each PU can be read and write operations to other PU’s LM. When there are more than one module’s communication at the same time is required, the CE module do the priority arbitration according to the following principles:
+When several PUs are reading the same data, the conection_LM module broadcasts the data to the PU.
+When several PUs are to read the different data, the priority is in accordance with the PU’s sequence number from the big to small queue.
+B. Structure of the NUU Module
+The internal structure of NUU is shown in Fig. 2.
+
+67
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:20:01 UTC from IEEE Xplore. Restrictions apply.
+
+( −1)
+from LM_va
+( −1) ,
+from LM_ch
+
+( −1)
+
+,
+
+sub
+
+abs
+
+min &
+
+¢
+
+sign
+
+adder
+
+NUU
+
+Figure 2. The internal structure of NUU.
+
+() ,
+to LM_ch
+()
+to LM_va
+
+The sub module is done with the formula (1) in iterations.
+
+When data overflow occurs, the truncation method is used to
+
+deal with the intermediate data.
+
+In each module, the information is stored in the form of
+
+the complement, the abs module convert the complement to
+
+source code, as the absolute value of information data.
+
+By the formula (2), in the process of data processing, we
+
+need to find the minimum and the second minimum value in
+
+a set of data. So in the min & sign module, it is including the
+
+minimum value register, the second minimum value register,
+
+symbol register and FIFO storage. In an iterative process, the
+
+absolute value output from the abs module will be storage
+
+temporary. The value of the current variable node
+
+information compares with the data in the minimum value
+
+register. And then determine whether to update the minimum
+
+value register according to the results. At the same time, the
+
+symbol of the variable node information and the value in the
+
+symbol register do the XOR operation. Afterwards the
+
+symbol value register is updated.
+
+After the minimum and the second minimum values of
+
+the data are calculated and the symbol bit is calculated, the
+
+information of the check node is updated. The data is read
+
+out one by one from FIFO, and then compare with the data
+
+of the minimum register and the second minimum register. If
+
+the read data is equal to the value of the minimum value
+
+register, the absolute value of the check node information is
+
+equal to the absolute value of the data in the second
+
+minimum value register, otherwise equal to the absolute
+
+value of the data in the minimum register. The symbol of this
+
+set data and values of the symbol register do the XOR
+
+operation, get the check node symbol.
+
+The α module completes the multiplication operation of
+
+the normalized coefficient in the formula (2). The best value
+
+of the normalized coefficient is 0.7~0.8. In order to facilitate
+
+the hardware realization, this paper set the normalized
+
+coefficient of 0.75. The operations that the data multiplies
+
+0.75 can be equivalent to: the data with its symbol is shifted
+
+to the right one bit, right two bit, and then these two shifted
+
+data are added together. The sum is check node information
+
+( ,
+
+)
+
+,
+
+and
+
+is
+
+sent
+
+to
+
+the
+
+check
+
+node
+
+information
+
+storage
+
+LM_ch.
+
+The adder module completes addition operation shown in
+
+formula (3). After the variable node information
+
+( ,
+
+) and
+
+the normalized check node information
+
+() ,
+
+are
+
+added
+
+to
+
+get the posterior probability information ( ) , the result is
+
+stored into the variable node memory LM_va.
+
+C. Instruction Set Design
+
+According to the hardware design in the section III.A and section III.B, the update of the check node and the variable
+
+node is supported by dedicated hardware components, and has the characteristic of data block operation. So the instruction set is designed for the dedicated computing instruction “NUU b1, rch1, rva1, b2, rch2, rva2”. This instruction is used for once iteration, and its format is shown in Fig. 3. The b1 is base address of the previous node information. The rva1 and the rch1 are the first address of the check nodes and the variable nodes before update respectively. The b2 is base address of the updated information. The rva2 and the rch2 are the first address of the updated check nodes and the updated variable nodes respectively.
+
+  RS
+
+
+
+
+
+
+
+E
+
+UFK UYD
+
+
+
+
+
+
+
+E
+
+UFK UYD
+
+Figure 3. NUU block operation instruction format.
+
+In addition, the instruction for hard decision output “SIGN b, rva, n” is about data block operation, the n indicates the length of the data block. The conventional instruction length is 24 bits, such as data transfer instruction, arithmetic operation instruction, comparison operation instruction, transfer instruction and control instruction, etc. Each instruction contains the operation code, the operation register number, the immediate number and the transfer address and so on. Some instructions are shown in Table I.
+
+TABLE I. PARTIAL INSTRUCTIONS LIST
+
+instruction
+
+illustration
+
+Conditional jump instrucion in the Jne
+PU
+
+Mov
+
+Data transfer instruction in the PU
+
+Add Setmrc PUs,PUd
+Synch Disynch
+
+Addition instruction in the PU Data transfer instruction among the
+PUs Specify which PUs will be
+synchronized Release the synchronization of PU
+
+In order to make the PUs in the MIMD structure to be worked coordinately, the control instructions control the working status of all modules. They send control signal to open the specified data path, to specify which modules are involved in the execution of subsequent instructions, to release synchronization control of some PUs. For example, The “Synch” instruction sends a synchronization signal to the specified PUs, which makes these PUs synchronous executions of the same program. The “Disynch” instruction releases the PUs from synchronization status. The two instructions work in coordination, easy for PU to wait for another PU’s calculation results or wait for a data transmission and so on, getting the SIMD structure effect of some modules, increasing the flexibility of the MIMD structure.
+
+68
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:20:01 UTC from IEEE Xplore. Restrictions apply.
+
+The data decoding flow is shown in Fig. 4.
+'HFRGLQJLQSXW
+,QLWLDOL]DWLRQ LQIRUPDWLRQ
+1RGHXSGDWH
+
+1
+
+L WPD[˛
+
+<
+'HFRGLQJ LQIRUPDWLRQ
+
+'HFRGLQJ RXWSXW
+Figure 4. The data decoding flow.
+
+IV. EXPERIMENTAL RESULTS AND CONCLUSIONS
+The FPGA platform used in this paper is the Xilinx Kintex-7. Using Verilog to write code of the QC-LDPC hardware decoder on this platform which has rate 3/4, code length 2304bits. Through the VC6.0 software platform, the binary sequence is generated randomly as the source sequence. And then the sequence is coded in the MATLAB simulation environment, is modulated by BPSK, is simulated AWGN to implement noising process which the signal-tonoise ratio is 2dB, at last is done 6 bit integer quantization.
+The initial information in the form of a group of 6bits is sent into the FPGA Xilinx experimental platform for simulation. The maximum iteration number is set to 5. The simulation time sequence of the decoder is shown in Fig. 5. It can be seen from the figure that after the continuous input of multiple data input, then after a period of time of the decoding delay, the results of the data block and subsequent data blocks of the decoding results can be continuously stable output.
+
+Figure 5. The simulation time sequence of the decoder.
+
+Analysis on the simulation results of integrated time series shows that the maximum internal clock frequency of the decoder is 175MHz. When the code length is 2304bits, the throughput is up to 220Mbps. The decoder’s resource occupancy rate is shown in the Table II. This type of device is enough to use, and can also be extended to a larger scale, in order to obtain better decoding performance.
+
+TABLE II. THE DECODER’S RESOURCE OCCUPANCY RATE
+
+Available Used Utilization
+
+Number of Slice Registers
+407600 10748
+3%
+
+Number of Slice LUTs
+203800 17430
+8%
+
+Number of Block
+RAM/FIFO 890 156 16%
+
+Paper [7], paper [8] also are about normalized minimum sum algorithm, multi rate code length and FPGA implementation. This article compares with them as shown in the Table III.
+
+TABLE III. THE COMPARES WITH OTHER DECODER
+
+Frequency M Hz Throughput rate Mbps
+
+Paper[7] 160 30
+
+Paper[8] 110 360
+
+This paper 175 220
+
+By comparing the results show that the LDPC decoder in this paper, although using more resources, but it has a higher
+
+clock frequency, and is able to obtain a higher decoding throughput, so its decoding performance is better.
+In this paper, according to the hierarchical parallel characteristics of QC-LDPC code check matrix, two parallel structures are used as the structure of this paper. The layer is MIMD structure; hierarchical internal is the way of SIMD. In this way, the parallelism of the decoder is improved. The overall structure of the decoder and the sub structure of the main module are analyzed in detail, and the relevant instruction design is given. The simulation results show that the decoder can achieve high decoding performance. In addition, the decoder can also do more detailed functional division in the NUU computing unit to reuse more computing components, so that the structure is more compact and further reduce resource occupation.
+The research work was supported by Shandong Provincial Natural Science Foundation, China #ZR2013FL030.
+REFERENCES
+[1] J. Heo, K. Chugg, “Optimization of scaling soft information in iterative decoding via density evolution methods”, Communications IEEE Transactions on, June. 2005, vol. 53, pp. 957-961.
+[2] C. Marchand, L. Conde-Canencia, E. Boutillon, “High-speed conflictfree layered LDPC decoder for the DVB-S2, -T2 AND -C2 standards”, IEEE Workshop on Signal Processing Systems, 2013, pp. 118-123.
+
+69
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:20:01 UTC from IEEE Xplore. Restrictions apply.
+
+[3] S. Mhaske, H. Kee, T. Ly, A. Aziz, “Strategies for high-throughput FPGA-based QC-LDPC decoder architecture”, IEEE Vehicular Technology Conference, 2015, pp. 1-5.
+[4] J. Chen, R. Tanner, C. Jones, Y. Li, “Improved min-sum decoding algorithms for irregular LDPC codes”, International Symposium on Information Theory, 2005, pp. 449-453.
+[5] O. Abassi, L. Conde-Canencia, A. Ghouwayel, E. Boutillon, “A novel architecture for elementary check node processing in nonbinary LDPC decoders”, Circuits & Systems II Express Briefs IEEE Transitions on, 2016, pp. 1-1.
+[6] H. Shuangqu, X. Bo, B. Dan, C. Yun and Z. Xiaoyang, “VLSI implementation of multi-standard LDPC decoder based on SIMD
+
+Architecture”, Journal of Computer Research and Development, July 2010, vol. 47, pp. 1313-1320.
+[7] S. W. Choi, G. P. Kim, J. K. Kim, “An LDPC decoder architecture for multi-rate QC-LDPC codes”, Circuits and Systems (MWSCAS), 2011 IEEE 54th International Midwest Symposium on. IEEE, 2011, pp. 1-4.
+[8] F. Charot, C. Wolinski, N. Fau, “A parallel and modular Architecture for 802.16e LDPC codes”, Digital System Design Architectures, Methods and Tools (DSD'08), 11th EUROMICRO Conference on. IEEE, 2008, pp. 418-421.
+
+70
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:20:01 UTC from IEEE Xplore. Restrictions apply.
+
+

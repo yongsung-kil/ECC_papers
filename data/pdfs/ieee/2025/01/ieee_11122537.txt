@@ -1,0 +1,671 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+12979
+
+A Two-Stage Soft-Decision Decoding Algorithm for BCH Codes
+
+Qianfan Wang , Member, IEEE, Yiwen Wang , Jifan Liang , Linqi Song , Senior Member, IEEE, and Xiao Ma , Member, IEEE
+
+Abstract—In this paper, we propose a two-stage soft-decision decoding (SDD) algorithm for BCH codes. At the first stage, we search for test error patterns (TEPs) according to the reliabilities of the received bits by using the flipping pattern tree (FPT) algorithm or the ordered reliability bits (ORB) technique, with a bounded number of searches. At the second stage, traditional algebraic hard-decision decoding (HDD), say, Berlekamp-Massey (BM) algorithm, is performed for these TEPs to find codewords. The proposed algorithm, referred to as FPT-BM algorithm or ORB-BM algorithm, can achieve near-optimal performance with a significantly small number of searches (dozens to hundreds). This enables efficient parallel implementation, ensuring low decoding latency and high throughput. To justify the sufficiency of the small number of searches, we provide qualitative reasoning and quantitative evaluation (using saddlepoint approximation) to show that the transmitted codeword under the proposed FPT-BM decoding strategy is reached much earlier in the search list than that under the single stage decoding (FPT-only). To analyze the performance, we calculate the upper bound on the performance gap between the proposed algorithm and maximum likelihood (ML) decoding based on the saddlepoint approximation, showing that the proposed algorithm can effectively approach the ML lower bound for high rate BCH codes. To reduce computational complexity, we introduce a filtering criterion, where the algebraic hard-decision decoding (BM decoding) is performed only for those candidates satisfying a sufficient number of parity-check equations. To determine the key parameters, we provide an intuitive criterion for the threshold in the filtering step based on the statistical analysis and a quantitative criterion for the maximum list size based on the upper bound on the performance gap to ML decoding. Numerical results demonstrate that: 1) By introducing the filtering criterion, the proposed FPTBM algorithm effectively reduces the number of BM calls by half, with negligible performance loss, and outperforms the Chase-BM algorithm under the same filtering criterion; 2) The proposed decoding algorithm outperforms single stage decoding
+Received 14 April 2025; revised 28 June 2025; accepted 27 July 2025. Date of publication 11 August 2025; date of current version 23 December 2025. This work was supported by the National Key Research and Development Program of China (2021YFA1000500), the NSF of China (62301617, 62471506 and 62371411), and the Guangdong Basic and Applied Basic Research Foundation (2023A1515011056 and 2025A1515011650). The associate editor coordinating the review of this article and approving it for publication was Y.-C. Huang. (Corresponding authors: Linqi Song; Xiao Ma.)
+Qianfan Wang and Linqi Song are with the Department of Computer Science, City University of Hong Kong, Hong Kong, SAR, China, and also with the City University of Hong Kong Shenzhen Research Institute, Shenzhen 518000, China (e-mail: wangqf26@mail.sysu.edu.cn; linqi.song@cityu.edu.hk).
+Yiwen Wang, Jifan Liang, and Xiao Ma are with the School of Computer Science and Engineering and Guangdong Key Laboratory of Information Security Technology, Sun Yat-sen University, Guangzhou 510006, China (e-mail: wangyw93@mail2.sysu.edu.cn; liangjf56@mail2.sysu.edu.cn; maxiao@mail.sysu.edu.cn).
+Digital Object Identifier 10.1109/TCOMM.2025.3597658
+
+(FPT only) under limited search sizes; 3) For high rate BCH codes, the proposed decoding algorithm can approach the finitelength capacity, while for medium rate regions, the proposed decoding algorithm also exhibits better performance over FPTonly and BM-only decoding algorithms.
+Index Terms—BCH codes, Berlekamp-Massey (BM) decoding, flipping pattern tree (FPT), guessing codeword decoding (GCD), guessing random additive noise decoding (GRAND), soft-decision decoding (SDD).
+I. INTRODUCTION
+W ITH 5G fully commercialized, research on B5G and 6G is accelerating, presenting more new challenges. B5G and 6G scenarios demand extremely high data rates (Tbps-level), high reliability (block error rates from 10−5 to 10−7), and low latency (end-to-end latency from 0.1 ms to 1 ms) [1], [2], [3]. In addition, optic communication scenarios also demand high throughput and low latency [4], [5]. To meet these stringent requirements, short block codes with efficient decoding algorithms have attracted significant attention [6].
+Among various coding schemes, Bose-ChaudhuriHocquenghem (BCH) codes are well-known for their powerful error-correcting capabilities, attributed to their large minimum distances [7]. In fact, in the short-length regime, BCH codes with near maximum-likelihood (ML) decoding can outperform both binary and non-binary low-density parity-check (LDPC) codes, cyclic redundancy check-aided (CA)-polar codes, and tail-biting convolutional codes (TBCCs), approaching the finite-length bound [6]. However, algebraic codes such as BCH codes lack efficient and high-performance decoding algorithms. Typically, decoding algorithms for algebraic codes can be divided into three categories: 1) syndrome-based decoding, such as Berlekamp-Massey (BM) [8] and Euclidean [9] algorithms; 2) interpolation-based decoding, such as Sudan [10] and Guruswami-Sudan (GS) [11] algorithms; 3) iterative belief propagation like decoding [12], [13], [14], [15]; and 4) universal soft decision decoding (SDD), such as Chase decoding [16], [17], ordered statistics decoding (OSD) [18], [19], [20], guessing random additive noise decoding (GRAND) [21], guessing codeword decoding (GCD) [22] and polar transformation decoding [23], [24]. BM decoding, which can be efficiently implemented using shift registers, is widely used in practical systems due to its simplicity. However, it is a hard-decision decoding (HDD) algorithm and suffers from a significant performance loss compared to SDD. Other algorithms, such as OSD, can achieve better
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12980
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+performance but are often limited by their high decoding complexity.
+Among existing SDD algorithms, Chase decoding (particularly Chase-2 decoding), originally proposed in [25], with a bounded-distance decoder is a widely used SDD approach for algebraic codes in practical communication protocols, such as 400ZR and 800G-LR [26], [27]. This two-stage decoding is particularly advantageous for high-rate short-to-mediumlength codes compared to other algebraic SDD algorithms [28]. However, its decoding complexity grows rapidly due to the combinatorially increasing number of required algebraic decodings. To mitigate this, one-pass Chase decoding was introduced [29], where the order of the test error pattern (TEP) is carefully designed to reduce computational overlap among different TEPs. Obviously, one-pass Chase decoding inherently operates in a serial manner at the TEP level, as each TEP is decoded sequentially based on the preceding decoding results. To meet the demands of high-throughput and low-latency applications, a fully parallel implementation (at TEP level) is preferred, and to the best of our knowledge, this parallel implementation has already been employed in standards such as 400ZR and 800ZR. This paper proposes an improved parallel implementation for such high-throughput and low-latency scenarios. The key idea is to generate TEPs differently from conventional Chase decoding, selecting them to reduce complexity while ensuring that all selected TEPs can be processed in parallel for BM decoding.
+Given the stringent reliability, latency, and throughput requirements of 6G and next-generation optical network optical, there is an urgent need to design high-performance decoding algorithms that achieve the following goals:
+• Reliability: to achieve the near-optimal decoding performance, approaching the finite-length bound.
+• Latency and throughput: to reduce the maximum number of searches down to a small number (tens to a few hundred), enabling parallel decoding for low latency and high throughput, even in the worst case.
+• Practicality: to leverage existing widely-used algebraic decoders, such as the BM decoding, with minimal modifications to the available hardware implementations.
+To achieve the above objectives, we propose an improved Chase-BM-like decoding algorithm for BCH codes, where the conventional Chase step is replaced with a more efficient design (flipping pattern tree (FPT) or ordered reliability bits (ORB)). The proposed decoding algorithm is especially for high-rate regimes, targeting high-throughput and low-latency communication systems, such as optical communications, where high-rate algebraic codes (e.g., RS and BCH codes) are widely adopted or suggested in practical communication protocols, such as ITU-T recommendation G.975, ITU-T recommendation G.709.2, OIF 400ZR and IEEE 800G-LR [26], [27], [30], [31], [32]. The core ideas and differences between the proposed algorithm and existing related algorithms are summarized as follows:
+• The GRAND guesses the global noise sequences and performs parity check to identify the ML codeword [21].
+
+• The GCD guesses the codewords through re-encoding and identifies the ML codeword [33].
+• The Chase-BM generates the candidate sequences via exhaustive enumeration based on Hamming weight [25] and then performs BM decoding on these candidate sequences to find codewords.
+• The proposed FPT-BM produces the ordered candidate sequences based on soft weight in parallel and then performs selectively BM decoding on these candidate sequences to find codewords.
+Compared to modern guessing-based decoding algorithms such as GCD and GRAND, the proposed algorithm achieves good decoding performance while requiring only a small and limited maximum number of searches (on the order of tens to hundreds). It is important to point out that this comparison in terms of the maximum number of searches is not intended to claim lower overall complexity of the proposed decoding algorithm over the GCD and GRAND algorithms. On the contrary, the small and limited maximum number of searches for the proposed decoding facilitates a parallel implementation, enabling low-latency and high-throughput applications. Moreover, the algorithm builds upon the widely-used BM decoding with the additional FPT or hardware-friendly ORB algorithm, guaranteeing practical compatibility. Compared to the ChaseBM algorithm, the proposed FPT-BM algorithm requires a small number of BM calls, but with negligible performance loss.
+The main contributions of this paper are summarized as follows:
+1) We propose a two-stage SDD algorithm for BCH codes, referred to as the FPT-BM algorithm, which combines the FPT algorithm at the first stage (to generate multiple TEPs) with the widely used BM decoding at the second stage (to find codewords). We further propose a more practical variant, ORB-BM algorithm, where TEPs are generated using the hardware-friendly ORB technique at the first stage, followed by BM decoding at the second stage. Both algorithms achieve near-ML performance with a small number of searches (tens to hundreds), especially for high-rate BCH codes.
+2) To reduce computational complexity, we introduce a filtering criterion, where BM decoding is performed only for candidates that satisfy a sufficient number of parity-check equations. The proposed FPT-BM algorithm with this filtering criterion reduces the number of BM calls by approximately 50% but with negligible performance degradation and significantly outperforms Chase-BM under the same criterion. A statistical analysis of the number of satisfied equations further explains why FPT-BM achieves better efficiency (with minimal performance loss) than Chase-BM.
+3) To analyze the feasibility of the proposed algorithms with a small number of searches, we provide both qualitative reasoning and quantitative evaluation (using saddlepoint approximation), demonstrating that, under the proposed decoding strategy, the transmitted codeword is ranked significantly earlier than in the single-stage decoding (FPT-only) algorithm. Numerical
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12981
+
+results also demonstrate that the proposed approach requires a smaller list size to include the transmitted codeword in the candidate list than both the GCD and Chase-BM algorithms. 4) To evaluate the performance, we derive an upper bound on the performance gap between the proposed decoding algorithm and ML decoding, and this bound can be effectively approximated by the derived saddlepoint approach, showing that the proposed decoding algorithm closely approaches the ML lower bound for high-rate BCH codes while requiring only a small list size. 5) We provide key parameter selection criteria for the proposed decoding algorithms, including:
+• An intuitive threshold selection criterion for T in the filtering step, based on the statistical analysis.
+• A quantitative criterion for determining the maximum list size, derived from the upper bound on the performance gap to ML decoding.
+Numerical results demonstrate the following: a) The proposed two-stage decoding algorithm outperforms the single stage decoding (FPT only) and GCD algorithms under limited number of searches; b) For high-rate BCH codes, the proposed decoding algorithm approaches the finite-length bound; c) For medium rate regions, while there remains a gap to the finite-length capacity, the proposed algorithm still maintains a notable advantage over FPT-only and BM-only decoding.
+The rest of this paper is organized as follows. In Section II, we review BCH codes, the PFT algorithm and the ORB technique. We also summarize the related decoding algorithms. In Section III, we propose the two-stage decoding algorithm and the performance analysis, including the rank of the transmitted codeword and the performance gap to ML decoding. This section also discusses the filtering criterion. Numerical results are presented in Section IV. Section V concludes this paper.
+
+II. PRELIMINARIES
+A. BCH Codes
+Let F2 = {0, 1} be the binary field and C [n, k] be a binary linear code of length n and dimension k. In this paper, we focus on primitive BCH codes with n = 2m − 1 or extended primitive BCH codes (eBCH) with n = 2m, both with k ≥ n − mt, where t is the error-correcting capability.
+The generator polynomial g(x) of the primitive BCH code is defined as the least common multiple (LCM) of the minimal polynomials of its roots α, α2, · · · , α2t, where α is a primitive element in F2m . Formally, g(x) = LCM(m1(x), m2(x), · · · , m2t(x)), where mi(x) is the minimal polynomial of αi over F2.
+The symbol-level parity-check matrix Hs can be expressed in terms of the roots of g(x), denoted as
+
+1 α α2 · · · αn−1 
+
+1 α2 α4 · · · α2(n−1) 
+
+Hs
+
+=
+
+  
+
+...
+
+...
+
+... . . .
+
+...
+
+,  
+
+1 α2t α2·2t · · · α2t(n−1)
+
+where each row corresponds to the evaluations of the codeword polynomials at the 2t successive powers of α.
+
+At the transmitter, an information sequence u ∈ F2k is first encoded into a BCH codeword c ∈ F2n by the encoding algorithm of the BCH code, satisfying that HcT = 0,
+
+where H denotes the systematic binary parity-check matrix
+
+corresponding to Hs. Then, the codeword c is transmitted
+
+over a discrete-time memoryless channel (DMC), resulting in y ∈ Yn, where Y is the alphabet of the channel outputs. Upon
+
+receiving y, the log-likelihood ratio (LLR) λ can be calculated
+
+as
+
+λi
+
+=
+
+log
+
+PY PY
+
+|C (yi|ci |C (yi|ci
+
+= =
+
+0) ,
+1)
+
+0 ≤ i ≤ n − 1,
+
+(1)
+
+where PY |C (·|·) is the conditional probability mass (or density) function specifying the channel. Given the LLR sequence λ, the hard-decision sequence z is given by
+
+zi =
+
+1, 0,
+
+if λi < 0 if λi ≥ 0,
+
+0 ≤ i ≤ n − 1.
+
+(2)
+
+For HDD, the input is the hard-decision sequence z, while for SDD, the input is either the received sequence y or its corresponding LLR sequence λ.
+
+B. Flipping Pattern Tree
+In this subsection, we review the spanning tree implementation of the FPT [34]. The FPT is a tree for vectors in F2n, where each vector corresponds to a vertex in the tree. Based on the tree, the FPT algorithm (sometimes simply referred to as the FPT) can generate an ordered list of the max best candidates from most likely to least likely according to their soft weights over the tree structure. Indeed, the idea of building a tree for TEPs was proposed in [35] (with an earlier version [36]) for decoding of RS codes, was applied to semi-LDPCCCs [37], and was further enriched by a simple spanning tree [38]. Similar trees for binary codes to generate the TEPs were also constructed in probability-based OSD [39, Algorithm 1] and soft GRAND [21, Algorithm 2].
+Given the LLR sequence λ ∈ Rn, the FPT outputs (on demand serially) candidates in non-decreasing order of their soft weights, i.e.,
+Γ(e(0)) ≤ Γ(e(1)) ≤ · · · ≤ Γ(e( )) ≤ · · · ≤ Γ(e(2n−1)). (3)
+
+Here, the soft weight of e is defined as
+
+Γ(e)
+
+log
+
+PY |C (y|z) PY |C (y|z − e)
+
+=
+
+n−1
+ei|λi|,
+i=0
+
+(4)
+
+where ei is treated as a real number. For two vectors e ∈ F2n and e ∈ F2n, we say e precedes
+e (denoted e e ) if there exists an injection π : supp(e) →
+supp(e ) such that i ≤ π(i) for all i ∈ supp(e), where the
+support of a vector e, denoted supp(e), is defined as
+
+supp(e) = {i ∈ {1, · · · , n} : ei = 0}.
+
+For n = 4, the following sequence illustrates precedence:
+
+0000 1000 1100 1110 1111.
+
+While for e = 1001 and e = 0110, we have e e and e e, indicating no precedence relation between these vectors.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12982
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 1. An example of graph representation of the FPT, where n = 4 and “→” represents the precedence relation.
+
+The precedence relation has the following properties:
+• If e e and |λ| is a non-decreasing sequence, then Γ(e) ≤ Γ(e ).
+• If e e , there exists a non-decreasing vector |λ| such that Γ(e) > Γ(e ).
+Taking into account the precedence relation and its properties, a spanning tree (see Fig. 1 for reference) of the FPT can be builded, where the root corresponds to the all-zero TEP and other vertexes correspond to non-zero TEPs with order. Based on the flipping pattern tree, the TEPs in non-decreasing order of their soft weights can be efficiently generated by the FPT algorithm, avoiding the need for an exhaustive search.
+
+C. Ordered Reliability Bits Technique
+
+In this subsection, we briefly review the ordered reliability
+
+bits (ORB) technique. It has been observed that, at low SNRs,
+
+the ordered reliability values exhibit an approximately linear
+
+relationship with their rank order [40]. Motivated by this
+
+observation, the reliability-to-rank mapping can be modeled as
+
+a linear function. When the slope is fixed to 1 and the intercept
+
+to 0, the baseline ORB is obtained. When both are adaptively
+
+estimated (rather than being fixed) from the received sequence,
+
+the one-line ORB is derived. Further dividing the reliability
+
+range results in the multiple-line ORB. In this work, we
+
+adopt the baseline ORB due to its independence from the
+
+received LLRs, enabling offline computation and efficient
+
+implementation.
+
+For the baseline ORB, the logistic weight of a TEP e is
+
+defined as [40]
+n
+
+γ(e) = Λiei,
+
+(5)
+
+i=1
+
+where Λi ≤ n is a positive integer indicating that |λi| corresponds to the Λi-th most reliable bit. Consequently, the TEPs can be sorted in ascending order of logistic weight. An integer partition pattern generator is used to generate the TEPs for a given logistic weight, ensuring the sequence
+
+γ(e(0)) ≤ γ(e(1)) ≤ · · · ≤ γ(e( )) ≤ · · · ≤ γ(e(2n−1)). (6)
+
+For example, consider the case where n = 4 and assume λ0 ≤ λ1 ≤ λ2 ≤ λ3. The integers are sequentially decomposed to generate sorted error patterns:
+• Integer 1 corresponds to the error pattern 1000. • Integer 2 corresponds to 0100. • Integer 3 can be partitioned as either 3 or 1 + 2, corre-
+sponding to 0010 and 1100, respectively. • Integer 4 can be partitioned as either 4 or 1 + 3, corre-
+sponding to 0001 and 1010. • Integer 5 can be partitioned as 1 + 4 or 2 + 3, correspond-
+ing to 1001 and 0110, respectively.
+
+Following this process, all error patterns are generated in order of increasing logistic weight.
+
+D. Related Decoding Algorithms
+1) Soft GRAND: Armed with the FPT algorithm or the original algorithm [21, Algorithm 2], the decoder generates on demand a list of TEPs e(0), e(1), · · · , e(2n−1) with e( ) ∈ F2n, such that
+Γ(e(0)) ≤ Γ(e(1)) ≤ · · · ≤ Γ(e( )) ≤ · · · ≤ Γ(e(2n−1)).
+
+The search terminates either when a valid TEP is found (i.e., He( )T = HzT) or when the pre-set maximum number of
+
+searches max is reached.
+
+2) GCD: Recalling the systematic parity-check matrix of
+
+H = [I, P], where I is the identity matrix of size n − k,
+
+and P is a matrix of size (n − k) × k, the TEP e ∈ F2n is
+
+correspondingly
+
+represented
+
+as
+
+e
+
+=
+
+(eL,
+
+eR)
+
+with
+
+eL
+
+∈
+
+n−k
+F2
+
+and eR ∈ F2k. Similar to the soft GRAND, a list of partial
+
+TEPs eR is generated by the FPT such that
+
+Γ(e(R0)) ≤ Γ(eR(1)) ≤ · · · ≤ Γ(e(R )) ≤ · · · ≤ Γ(e(R2k−1)).
+
+Given eR( ) ∈ F2k, the GCD performs re-encoding by calculating e(L ) = zHT − e(R )PT with e(L ) ∈ Fn2 −k, yielding a valid TEP e( ) = (eL( ), e(R )). The search terminates whenever the soft weight of e(R ) is greater than that of the up-to-date minimum soft weight Γopt in the search list, or when the preset maximum number of searches max is reached [33].
+3) BM Decoding: The BM decoding begins by computing the syndromes from the hard-decision sequence z and then find the error locator polynomial σ(x) iteratively by BM algorithm [41]. Once σ(x) is determined, the error locations are found by solving the roots of σ(x), and the errors in the hard-decision sequence z are corrected by flipping the bits at the identified positions.
+4) Chase-BM: Chase-BM can be viewed as a two-stage decoding algorithm. At the first stage, by the Chase algorithm, candidate sequences are generated according to certain rules based on Hamming weights [25]. At the second stage, BM decoding is applied to these candidate sequences to find codewords, from which the most likely one is selected as the output.
+Remark: We need to point out that the proposed scheme is neither GCD nor a variant of GCD, as it does not require re-encoding. Instead, the proposed algorithm employs a GRAND-type approach at the first stage and introduces a bounded-distance algebraic decoder at the second stage. Essentially, the proposed algorithm can be viewed as a variant of GRAND (i.e., soft GRAND with BM) tailored for BCH codes, where the membership-checking of the GRAND is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12983
+
+Fig. 2. The diagram of the two-stage decoding.
+
+replaced with the BM decoder, reducing much the number of searches and enabling parallel implementation for low-latency applications. We also need to point out that this paper is not intended to make a direct comparison between GCD and GRAND.
+
+III. TWO-STAGE SOFT-DECISION DECODING ALGORITHM AND PERFORMANCE ANALYSIS
+
+A. Two-Stage Soft-Decision Decoding Algorithm
+
+In this subsection, we propose a two-stage soft-decision decoding algorithm for BCH codes based on FPT algorithm and BM decoding, which achieves near-optimal performance with a small number of searches (tens to hundreds), especially for high-rate BCH codes. The proposed algorithm can be divided into two stages, as illustrated in Fig. 2. At the first stage, we perform the FPT algorithm or the ORB technique to generate multiple TEPs. These TEPs are then XORed with the hard decision sequence to form the candidate sequences. At the second stage, we select a subset of candidate sequences based on a filtering criterion and perform BM decoding only on those selected candidate sequences to find codewords, from which the most likely one is selected as the decoding output.
+Given the hard-decision sequence z ∈ F2n and the LLR sequence λ ∈ Rn, the decoding process is formally described as follows (see Fig. 2 for reference):
+• Generate Error Patterns: Take as input the LLR sequence λ and perform the FPT or ORB to generate a set of TEPs {e(0), e(1), · · · , e( max−1)}, where e(i) ∈ Fn2 for i = 0, 1, · · · , max − 1 are the max lightest TEPs in terms of soft weight by FPT or logical weight by ORB. This is very different from the Chase algorithms.
+• Generate Candidate Sequences: For each error pattern e(i), compute the candidate sequence as
+
+r(i) = z ⊕ e(i), for i = 0, 1, · · · , max − 1,
+
+where ⊕ is the addition over Fn2 . • Filtrate Candidate Sequences: Apply a filtering cri-
+
+terion based on the number of satisfied parity-check
+
+equations to decide whether or not a candidate sequence r(i) is qualified for further BCH decoding. Specifi-
+
+cally, we calculate the number of satisfied parity-check equations, denoted as n − k − wt(Hr(i)T), and set a
+
+threshold T , where wt(·) represents the Hamming weight. A sequence r(i) is retained if it satisfies the following
+
+condition
+
+n − k − wt(Hr(i)T) ≥ T.
+
+(7)
+
+The qualified candidates for BM decoding are relabeled and collectively denoted as {r˜(j) | 0 ≤ j ≤ a − 1}
+
+with a ≤ max. This is a new criterion of the two-stage like decoding for reducing the complexity, which is also different from the conventional Chase-BM algorithm. • BM Decoding: Perform BM decoding to each sequence r˜(j), resulting in the estimated codewords {cˆ(j) ∈ F2n | 0 ≤ j ≤ b − 1}, where b ≤ a. • Output: Select one codeword with the maximum likelihood from {cˆ(j) ∈ F2n | 0 ≤ j ≤ b − 1}, and output the corresponding estimated information data uˆ ∈ F2k. Algorithm 1 Two-Stage Soft-Decision Decoding Algorithm (FPT-BM or ORB-BM)
+If the TEPs are generated by the FPT algorithm at the first stage, the algorithm is referred to as FPT-BM, while if they are generated by the ORB, the algorithm is referred to as ORB-BM. The complete two-stage decoding algorithm is summarized in Algorithm 1, as illustrated in Fig. 2. B. Rank of the Transmitted Codeword
+Compared with other search decoding algorithms, the proposed two-stage decoding algorithm aims to achieve near-optimal performance with a small number (only tens or hundreds) of searches. To demonstrate the feasibility of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12984
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+proposed scheme, we denote by Ns the rank (position) of the transmitted codeword in the search list. The FPT-only algorithm attempts to find the correct TEP in the search list, which requires exactly Ns searches. In contrast, the proposed two-stage decoding algorithm relaxes this requirement by incorporating BM decoding at the second stage with a bounded distance. Specifically, the proposed algorithm at the first stage attempts to find a candidate whose distance to the transmitted codeword is less than or equal to t (the error correction capability of the BCH code). In this case, we denote by Ns the rank of the first candidate that is within distance t of the transmitted codeword in the search list. Intuitively, Ns ≤ Ns, indicating that the proposed two-stage algorithm require less number of searches. This analysis is detailed below.
+Denote by e the true error pattern, which corresponds to the transmitted codeword. For 0 ≤ i ≤ wt(e), denote by e{\i} the TEP which is equal to e except the i most reliable nonzero positions of e being set to zero. Clearly, e{\i} is strictly lighter than e{\i−1} in terms of the soft weight for i > 0, i.e., Γ(e{\i}) < Γ(e{\i−1}).
+Proposition 1: If the true error pattern e is the all-zero vector, the transmitted codeword is ranked first in both the single-stage FPT only and the proposed two-stage decoding algorithm. For wt(e) > 0, the proposed decoding algorithm requires strictly fewer searches to include the transmitted codeword in the search list than the single-stage FPT algorithm.
+Proof:
+• For wt(e) = 0, both the FPT and the FPT-BM require one search to identify the transmitted codeword as the ML decoding output. Here, Ns = Ns = 1.
+• For 0 < wt(e) ≤ t, the proposed algorithm require one search to include the transmitted codeword as a candidate for future selection, while the FPT requires Ns > 1 searches to include the transmitted codeword in the search list. Here, Ns = 1 < Ns.
+• For wt(e) > t, the proposed algorithm requires Ns searches to include the transmitted codeword, where Ns is the rank of e{\t}. Since Γ(e{\t}) < Γ(e), we have Ns < Ns.
+Thus, the proposed decoding algorithm requires strictly fewer searches for wt(e) > 0 to include the transmitted codeword in the search list than the single-stage FPT algorithm.
+Proposition 2: If the true error pattern e is the all-zero vector, the transmitted codeword is ranked first in both GCD and the proposed FPT-BM decoding algorithm. For 0 < wt(e) ≤ t, the proposed FPT-BM requires no more searches than GCD to include the transmitted codeword in the candidate list. For wt(e) > t, the proposed FPT-BM may require fewer or more searches (to include the transmitted codeword in the candidate list) than GCD, depending on whether errors appear in the re-encoding basis of the GCD.
+Proof:
+• For wt(e) = 0, both GCD and FPT-BM require only one search to identify the transmitted codeword as the ML decoding output.
+
+• For 0 < wt(e) ≤ t, the transmitted codeword is included in the candidate list with only one search by the proposed FPT-BM, since the all-zero TEP is always tested first. In contrast, the GCD algorithm constructs a candidate list through re-encoding. If the re-encoding basis is errorfree (which can occur), the transmitted codeword can also be included in the candidate list with a single search, equivalent to FPT-BM. However, if errors are present in the re-encoding basis (which can also occur), at least two searches are required for GCD to include the transmitted codeword. Thus, in this case, FPT-BM requires no more searches than GCD.
+• For wt(e) > t, the FPT-BM algorithm requires more than one search to include the transmitted codeword in the candidate list. In contrast, for GCD, if the re-encoding basis is error-free (which can occur), the transmitted codeword can be included in the candidate list with a single search, which is fewer than that required by FPT-BM. However, if all errors appear in the re-encoding basis (which can also occur), the re-encoding process becomes equivalent to a FPT search for the re-encoding basis, requiring a candidate list size strictly larger than that of FPT-BM by the Proposition 1. Since either scenario can happen in GCD, the number of searches required to include the transmitted codeword is not consistently higher or lower compared to FPT-BM, but instead depends on the error distribution in the re-encoding basis.
+
+Now we quantitatively analyze the rank of the transmitted codeword in the search list under both decoding algorithms using the saddlepoint approximation. Consider the binaryinput output-symmetric (BIOS) channels. Without loss of generality, we assume that the all-zero codeword is transmitted. As a result, the true TEP e depends only on the LLR sequence λ. Let
+
+LN(λ) {f ∈ F2n : Γ(f ) ≤ Γ(e)|λ}
+
+(9)
+
+be the set of all TEPs whose soft weights are not greater than that of the true TEP e in the single-stage FPT and denote its cardinality by LN(λ). Due to the randomness of λ, we see that LN(λ) is a random variable. Its distribution can be estimated efficiently by using the saddlepoint approximation [42], [43],
+
+as described below. Consider a uniform probability model over Fn2 . Formally,
+the probability of any f ∗ ∈ F2n is
+
+P[f = f ∗] = 2−n.
+
+(10)
+
+Given this probability model, the cardinality (rank of the transmitted codeword) is
+
+n
+
+LN(λ) 2nP
+
+(fi − ei)|λi| ≤ 0 λ
+
+(11)
+
+i=1
+
+= 2nP[Sn ≤ 0|λ],
+
+(12)
+
+where Sn =
+
+n i=1
+
+Di
+
+and
+
+Di
+
+=
+
+(fi
+
+− ei)|λi|
+
+(0
+
+≤
+
+i
+
+≤
+
+n − 1)
+
+are independent random variables with probabilities
+
+P[Di = 0|λ] = P[fi = ei|λ] = 1/2,
+
+(13)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12985
+
+P[Di = λi|λ] = P[fi = ei|λ] = 1/2.
+
+(14)
+
+Therefore, calculating LN(λ) is equivalent to evaluating the tail probability, which allows us to use the saddlepoint approxi-
+
+mation [44]. To be precise, let κ(s) be the cumulant generating
+
+function of the summation Sn, defined by
+
+κ(s)
+
+n
+log E esSn = log
+
+1 + esλi 2
+
+.
+
+(15)
+
+i=1
+
+In principle, we can use the inverse Laplace transformation to derive the PMF/PDF of Sn from κ(s). This can be simplified by the saddlepoint approximation [43] (given λ) as
+
+exp(κ(sˆ) − sˆd)
+
+(d − κ (sˆ))2
+
+fSn (d) ≈
+
+exp −
+
+, (16)
+
+2πκ (sˆ)
+
+2κ (sˆ)
+
+where sˆ is the solution of κ (s) = 0, κ (resp. κ ) is the first (resp. the second) derivative of κ. Then LN(λ) can be approximated by
+
+LN(λ) ≈ 2n−1 exp
+
+sˆ2κ (sˆ) κ(sˆ) +
+2
+
+erfc
+
+−sˆ
+
+κ (sˆ) 2
+
+,
+
+(17)
+
+where erfc(·) is the complementary error function.
+
+For the single-stage FPT algorithm, the distribution of
+
+LN(λ) can be estimated through Monte Carlo simulations by sampling a sufficiently large number of received sequences
+
+(corresponding to the LLR sequences λ). Similarly, we denote
+
+the set of all TEPs for the proposed FPT-BM algorithm to
+
+include the transmitted codeword as
+
+LN(λ) f ∈ Fn2 : Γ(f ) ≤ Γ(e{\ min(wt(e),t)})|λ , (18)
+whose cardinality LN(λ) can also be estimated through Monte Carlo simulations by sampling a sufficiently large number of received sequences.
+Example 1: [Rank of the Transmitted Codeword by the Proposed Algorithm and Other Algorithms] Consider the eBCH code C [256, 239] with binary phase-shift keying (BPSK) modulation over additive white Gaussian noise (AWGN) channels. We compare the complementary cumulative distribution of the probability that the transmitted codeword is not included in the candidate list, for Chase-BM, GCD, single-stage FPT only, and the proposed FPT-BM. The approximation results for FPT only and FPT-BM are obtained using the derived saddlepoint approximation, and that for GCD are based on the approximation given in [22]. We also consider the genieaided (GA) decoder, which outputs the rank of the transmitted correct codeword in the search list, to estimate the distribution of the rank for the transmitted codeword for all four decoding algorithms. The results for SNR = 8 dB are shown in Fig. 1 (a), from which we observe that the proposed FPT-BM exhibits a slightly higher probability of including the transmitted codeword compared to Chase-BM and significantly outperforms FPT only and GCD. We also observe that the statistical results obtained from the GA decoder match well with the saddlepoint approximation results. This confirms the accuracy of the derived saddlepoint approximation.
+We also compare the rank of the transmitted codeword on average of the single-stage FPT only and the FPT-BM by the
+
+GA decoder and the saddlepoint approximation, as shown in Fig. 1 (b). From this figure we see that the average rank of the FPT-BM algorithm is lower than that of the FPT only algorithm. We also see that the simulated values match well with the saddlepoint approximations. This again confirms the accuracy of the saddlepoint approximation.
+Remark: All comparisons against the single-stage FPT-only decoder (equivalent to soft GRAND [21]) are intended to illustrate that by appending a second-stage algebraic (BM) decoder, the proposed two-stage FPT-BM algorithm can achieve comparable or improved FER using a substantially smaller maximum list size max. Such a reduction in max offers practical advantages for fully parallel implementations. However, these comparisons are not intended to claim overall superiority over GRAND-based methods, whose membership checks are inherently simpler.
+Remark: A figure of merit of the guessing like decoding (GRAND and GCD) is the early stopping criteria, by which the ML codeword can be identified, avoiding unnecessary searches. This is critical to reduce the computational complexity if the parity-checking/re-encoding are implemented serially.
+Also notice that, different TEPs may involve overlapping computations in the algebraic decoding stage for serial implementations. Thus, optimizing the TEP order can further reduce complexity; see [28], [45] for more details. However, this optimization is unnecessary for parallel implementations, where multiple BM decoders operate independently without sharing any decoding results. In this work, we focus on regular parallel implementations for practical applications such as 400ZR and 800G-LR [26], [27]. In such cases, the early stopping criterion and TEP search order are of limited relevance, whereas the maximum number of searches is the key parameter for parallel implementations, as it directly determines the worstcase computational complexity.
+C. Performance Gap to the ML Decoding
+In this subsection, we analyze the performance gap between the proposed decoding algorithm and ML decoding. For the time being, we assume that the threshold is T = 0 for the filtering criterion. That is, all candidate sequences require BM decoding, meaning that the proposed filtering criterion is not activated. The error event can be classified into the following two sub-events:
+• E0: The transmitted codeword is in the list but is not the most likely one. This implies that the ML decoding must also incur an error.
+• E1: The transmitted codeword c is not included in the decoding list. This occurs when the rank of the transmitted codeword LN ≥ max.
+Clearly, the frame error rate (FER) of the proposed decoding algorithm, denoted as ε, can be upper bounded by
+ε = Pr{E0} + Pr{E1} ≤ εML + Pr{LN ≥ max}, (19)
+where εML denotes the ML decoding performance and Pr{LN ≥ max} can be efficiently estimated using the proposed saddlepoint approximation. Hence Pr{LN ≥ max} serves as an upper bound on the performance gap between
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12986
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 3. The rank of the transmitted codeword in the search list for the eBCH code C [256, 239] over BPSK-AWGN channels, where the GA decoder outputs the rank of the transmitted codeword in the search list.
+the proposed decoding algorithm and ML decoding since FER − εML ≤ Pr{LN ≥ max}. Similarly, Pr{LN ≥ max} serves as an upper bound on the performance gap between the single-stage FPT algorithm and ML decoding. By analyzing Pr{LN ≥ max}, we can quantify how the search size affects the decoding performance and determine an appropriate max to achieve near-ML decoding performance with minimal complexity. Moreover, the saddlepoint approximation provides a fast and accurate way to evaluate Pr{LN ≥ max}, avoiding time-consuming simulations.
+Example 2 (Upper Bound on the Gap to ML Decoding): Consider the eBCH code C [256, 239] and BPSK-AWGN channels. The upper bound on the performance gap to ML decoding of the single-stage FPT only and the proposed FPTBM algorithms for different max is shown in Fig. 4 (a), from which we observe that as the maximum number of searches max increases, the upper bound on the performance gaps to the ML decoding decreases. Moreover, compared with the single-stage FPT algorithm, the proposed FPT-BM algorithm
+
+Fig. 4. The upper bound on the performance gap to the ML decoding for the eBCH code C [256, 239] over BPSK-AWGN channels, where we consider the single-stage FPT and the proposed FPT-BM algorithms.
+achieves a significantly smaller gap to ML decoding. The upper bound on the performance gap to ML decoding for both decoding algorithms for different SNRs is shown in Fig. 4 (b), from which we observe that the upper bound on the performance gap to ML decoding decreases rapidly with increasing SNR. Notably, the proposed algorithm achieves a gap to ML that is three orders of magnitude smaller than that of the single-stage FPT algorithm at SNR = 9 dB.
+More importantly, based on Pr{LN (λ) > max}, we can determine an appropriate max to achieve near-ML decoding performance with minimal complexity for the proposed FPTBM algorithm. This approach also applies to the single-stage FPT algorithm using the same probability criterion. However, the subsequent analysis primarily focuses on FPT-BM, as the extension to soft GRAND is straightforward. A practical rule of thumb for selecting max is that if the performance gap to ML decoding is sufficiently small (e.g., an order of magnitude lower), the FER loss due to limiting the maximum number of searches can be negligible. For simplicity, the finite-length bound can serve as an approximation of ML decoding performance. The formal criterion for determining the minimum required max, denoted as max, is given below.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12987
+
+Fig. 5. The required max for the eBCH code C [256, 239] over BPSKAWGN channels, where we consider RCU and α = 0.5 or 1.0.
+Criterion for max: The minimum required max is determined such that
+
+Fig. 6. The cumulative count of sequences with Np < i for correctable and non-correctable cases, where correctable sequences are within a distance of t from the transmitted codeword, and non-correctable sequences are at a distance greater than t.
+
+Pr{LN (λ) > max} ≈ αεML or αRCU, (20)
+where α ∈ (0, 1], and RCU is given by [46, Theorem 16], which provides a computationally efficient alternative to ML performance evaluation.
+The determined max of the proposed FPT-BM algorithm and the single-stage FPT algorithm by the proposed criterion is shown in the following example.
+Example 3 (Minimum Required max): Consider the eBCH code C [256, 239] over BPSK-AWGN channels. The max, computed using (20) with RCU and α = 1 or 0.5, for both the single-stage FPT and the proposed FPT-BM algorithm is shown in Fig. 5. From this figure, we observe that the proposed FPT-BM requires significantly fewer searches than single-stage FPT. Notably, max for FPT-BM is typically two orders of magnitude lower than that for single-stage FPT. Furthermore, in the medium-to-high SNR region, ˜max of FPT-BM remains below 100 and can even approach 10. It needs to point out that this comparison is not intended to claim lower complexity of the proposed decoding algorithm over the single-stage FPT algorithm but rather to highlight the feasibility of parallel decoding.
+D. Analysis of the Filtering Strategy
+In this subsection, we aim to analyze the statistical characteristics of candidate sequences generated at the first stage. Based on these statistics, we propose a threshold T for the filtering strategy to reduce the number of BM decoding calls at the second stage, thereby reducing the computational complexity. To validate the effectiveness of the proposed FPTBM algorithm, we compare the FPT-BM algorithm with the Chase-BM algorithm, which generates candidate sequences according to Hamming weights as the Chase-2 algorithm [25].
+The computational complexity of the proposed decoding algorithm is primarily determined by the number of BM decoding calls. Evidently, it is not necessary to try the BM
+
+decoding for all max candidates since some candidates are far away from any codewords. To distinguish between correctable sequences (those within a distance of t from the transmitted codeword) and non-correctable sequences (those with a distance greater than t from the transmitted codeword), we have counted the number of satisfied parity-check equations, denoted as Np, for both types of sequences. Specifically, we collected 106 correctable sequences and 106 non-correctable sequences and compared the cumulative count of Np, as shown in Fig. 6. From this figure we observe that the correctable sequences satisfy more parity-check equations, while the noncorrectable sequences concentrate in the middle region. This observation motivates the use of a threshold T , where only those candidates satisfying greater than or equal to T paritycheck equations are further processed by the BM decoding.
+The threshold T serves as a trade-off parameter between decoding performance and complexity. A larger T significantly reduces the number of BM decoding invocations (thereby complexity) but may lead to FER degradation. Conversely, a smaller T preserves FER performance but fails to effectively reduce BM invocations. To determine T in the filtering step, we propose an intuitive criterion based on the statistical distribution of the maximum number of satisfied paritycheck equations. Specifically, for each frame, we collect the maximum number of parity-check equations satisfied by the correctable TEPs (generated at the first stage) that are within distance t of the true error, denoted as Np,max. The strict cumulative distribution Pr{Np,max < i} is then computed.
+Criterion for threshold T : Based on the strict cumulative distribution of Pr{Np,max < i}, T can be chosen to control the FER loss, where Pr{Np,max < T } corresponds to the resulting FER degradation.
+Example 4 (Maximum Number of Satisfied Equations, FPT Versus Chase-2): Consider the eBCH code C [256, 239]. For each frame, we collect the maximum number of paritycheck equations satisfied by correctable TEPs that are within
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12988
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 7. The strict cumulative distribution of the maximum number of satisfied parity-check equations Pr{Np,max < i} of the correctable TEPs for max = 512 at SNR = 9 dB.
+
+distance t of the true error, denoted as Np,max. The results for Chase-2 and FPT are shown in Fig. 7, from which we observe that the TEP sequence generated by FPT yields a lower probability Pr{Np,max < i} than Chase-BM, indicating that Np,max tends to take larger values for FPT. This analysis highlights the advantage of the proposed FPT-BM scheme over Chase-BM: given the same threshold T , the performance loss of FPT-BM is significantly smaller than that of Chase-BM, as further validated by the following example.
+Example 5 (FPT-BM Algorithm Versus Chase-BM Algorithm): Consider the eBCH code C [256, 239] with BPSK modulation over AWGN channels. At the receiver, both FPTBM and Chase-BM algorithms are evaluated with max = 512 and T = 0, 9, and 15. When T = 0, all candidate sequences require BM decoding, meaning the proposed filtering criterion is not activated. The average number of BM decoding calls is shown in Fig. 8 (a), from which we observe that increasing T reduces the number of BM decoding calls for both algorithms. For instance, when T = 9, the number of BM calls decreases from 512 to about 255 for both algorithms. The FER is shown in Fig. 8 (b), from which we observe that for T = 0, both the FPT-BM and Chase-BM algorithms approach the ML lower bound. While for the same threshold T > 0, the proposed FPT-BM algorithm outperforms the Chase-BM algorithm. At T = 9, the performance of FPT-BM remains close to the ML lower bound with negligible performance loss, while Chase-BM incurs a noticeable performance degradation. At T = 15 (given that the total number of equations is n−k = 17), the proposed scheme requires only a few BM calls while delivering significantly superior performance compared to traditional BM and Chase-BM decoding.
+IV. NUMERICAL RESULTS
+Numerical results of the proposed decoding algorithm are presented in this section, where the codewords are transmitted over BPSK-AWGN channels.
+Example 6: [FPT-BM Algorithm Versus Conventional GCD and Single-Stage FPT Algorithms] Consider the eBCH code
+
+Fig. 8. The performance of eBCH code C [256, 239] under FPT-BM and Chase-BM, where the maximum number of searches is max = 512 and the threshold is T = 0, 9 or 15. Here, T = 0 indicates that all candidate sequences require BM decoding, meaning that the proposed filtering criterion is not activated.
+C [256, 239]. We simulated three decoding algorithms: singlestage FPT algorithm, the GCD algorithm [33], and the proposed FPT-BM algorithm (Algorithm 1), where the maximum number of searches is max = 32, 128, or 512. The results are shown in Fig. 9, from which we observe that for the same max, the proposed FPT-BM algorithm outperforms both the single-stage FPT algorithm and the GCD algorithm. We also observe that the proposed FPT-BM algorithm can approach the random-coding union (RCU) [46, Theorem 16] bound when max = 128 and can approach the ML lower bound when max = 512.
+Example 7: [ORB-BM Algorithm Versus ORBGRAND Algorithm] Consider the eBCH code C [256, 239]. We simulated two decoding algorithms: the ORBGRAND algorithm (as [40]) with max = 104, 105, or 106 and the proposed ORBBM algorithm (Algorithm 1) with max = 32, 128, or 512. The results are shown in Fig. 10, from which we observe that the proposed ORB-BM algorithm with max = 32 can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12989
+
+Fig. 9. FER of the eBCH code C [256, 239] under the single-stage FPT only, the GCD (with trivial stopping criterion [33]) and the proposed FPTBM algorithm (Algorithm 1), where max = 32, 128, or 512.
+
+Fig. 11. FER of the eBCH codes C [256, 223], C [256, 191] and C [256, 131] under the conventional OSD with order of 1 and the proposed FPT-BM algorithm (Algorithm 1) with max = k.
+
+Fig. 10. FER of the eBCH code C [256, 239] under the ORBGRAND (as [40] with max = 104, 105, or 106) and the proposed ORB-BM algorithm (Algorithm 1 with max = 32, 128, or 512).
+outperform ORBGRAND with max = 104 or even 106 (in the high SNR regions). We also observe that the proposed ORBBM algorithm with max = 512 approaches the ML lower bound for the considered eBCH codes, while ORBGRAND with max = 106 does not. It is important to clarify that this comparison is not intended to claim lower complexity but rather to highlight the feasibility of parallel decoding. Indeed, such a small max greatly enhances hardware feasibility for parallel implementation.
+Example 8: [FPT-BM Algorithm Versus Conventional OSD Algorithm] Consider the eBCH codes C [256, 223], C [256, 191] and C [256, 131]. We simulated two decoding algorithms: the conventional OSD with order 1 and the proposed FPT-BM algorithm (Algorithm 1) with max = k, resulting in the same maximum number of searches for the OSD and the proposed FPT-BM. The results are shown in Fig. 11, from which we observe that for the same max, the
+
+Fig. 12. The finite-length capacity by the RCU bound [46, Theorem 16] and the MC bound [46, Theorem 27], and the required SNR by simulations of the eBCH code, where the blocklenth n = 128, dimension k ∈ {120, 113, 106, 99, 92, 78, 64}, and the preset target FER is 10−5. The maximum number of searches is max = 105 in the single-stage FPT, and is max = 512 in the FPT-BM algorithm or ORB-BM algorithm.
+proposed algorithm exhibits marginally inferior performance in low-SNR regimes while demonstrating superior FER in the high-SNR (low-FER) regions. Specifically, for the eBCH code [256, 191], the proposed FPT-BM algorithm can achieve a decoding gain of up to 0.6 dB at FER = 10−6 over the conventional OSD algorithm.
+Example 9: [Proposed Algorithms Versus Single-Stage FPT Algorithm and BM Algorithm for Different Code Rates] Consider the eBCH codes of length n = 128 and dimension k ∈ {120, 113, 106, 99, 92, 78, 64}. We simulated four decoding algorithms: the BM decoding algorithm, the single-stage FPT algorithm with max = 105, the proposed FPT-BM algorithm (Algorithm 1) with max = 512, and the proposed ORB-BM algorithm (Algorithm 1) with max = 512. The required SNRs are obtained by simulations and the finite-length capacity is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12990
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+TABLE I DECODING COMPLEXITY AND PERFORMANCE COMPARISON OF FPT-BM, CHASE-BM, GCD, AND SINGLE-STAGE FPT
+
+TABLE II DECODING COMPLEXITY AND PERFORMANCE COMPARISON BETWEEN THE ORBGRAND AND ORB-BM
+
+obtained from the RCU bound [46, Theorem 16] and the meta-converse (MC) bound [46, Theorem 27], where the target FER is 10−5. The results are shown in Fig. 12, from which we observe that the proposed FPT-BM and ORB-BM algorithms exhibit similar performance. For high-rate BCH codes (e.g., with k ≥ 99), both the proposed algorithms can approach the finite-length capacity. In the medium-rate region, although there remains a gap to the finite-length capacity, the proposed algorithms still outperform single-stage FPT and the conventional BM decoding algorithm.
+Example 10: [Complexity Comparison: FPT-BM Versus Single-Stage FPT, GCD, and Chase-BM] Consider the eBCH code C [256, 239]. We compare decoding performance and the worst-case decoding complexity, measured by the total number of operations (abbreviated as ops), of the proposed FPT-BM algorithm with that of the Chase-BM algorithm, the single-stage FPT algorithm, and the GCD algorithm [33]. For a fair comparison, the maximum list size max is configured as follows: i) For FPT-BM and single-stage FPT, max follows the proposed criterion. ii) For GCD, max is set equal to that of single-stage FPT. iii) For Chase-BM, max is chosen as the nearest power of 2 greater than the maximum number of searches in FPT-BM. These settings ensure that all algorithms achieve comparable FER performance. To provide a unified complexity metric, we adopt the conversion factors from [47], where one floating-point addition corresponds to approximately 8 binary operations, and one floating-point comparison corresponds to 6 binary operations. The comparison results are tabulated in Table I, from which we observe that, at comparable FER levels, the proposed FPTBM algorithm requires fewer operations than both single-stage FPT and GCD due to its smaller maximum list size, where max in single-stage FPT or GCD is several hundred times larger than that in FPT-BM. Compared to Chase-BM, FPT-BM achieves comparable FER with slightly lower complexity. Note that this example considers the worst-case scenario and hence without applying the filtering criterion. If the proposed filtering criterion is incorporated, FPT-BM can achieve an additional complexity reduction of approximately 50% with negligible
+
+performance degradation, whereas Chase-BM does not achieve a comparable improvement.
+We also compare the proposed ORB-BM algorithm with the ORBGRAND algorithm, using the same max as in FPT-BM and single-stage FPT. The comparison results are tabulated in Table II, from which we observe that the ORB-BM algorithm not only achieves lower FER than ORBGRAND but also requires fewer operations while max used in ORBGRAND algorithm is much larger (several hundred times) than one in ORB-BM algorithm.
+V. CONCLUSION AND FUTURE WORKS
+We have proposed two-stage soft-decision decoding algorithms for BCH codes, combining the FPT algorithm or ORB technique at the first stage (to produce multiple TEPs) with the widely-used BM decoding at the second stage (to find valid codewords). The proposed decoding algorithm achieves near-optimal performance especially in the high rate regime but with a significantly smaller number of searches (tens to hundreds), greatly facilitating parallel implementation, making it particularly attractive for high-throughput and low-latency applications. We conducted both qualitative analysis and quantitative analysis (using saddlepoint approximation) for the rank of the transmitted codeword, showing that the proposed algorithm significantly outperforms single stage decoding (FPT only) in terms of the number of searches. Furthermore, the upper bound on the performance gap between the proposed algorithm and ML decoding was derived, demonstrating that the proposed algorithm can effectively approach the ML lower bound for high-rate BCH codes. We also introduced a filtering criterion that performs second-stage BM decoding only for those candidates satisfying a sufficient number of parity-check equations, reducing BM calls by half but with negligible performance loss. The numerical results show that the proposed algorithm outperforms single-stage decoding, approaching the finite-length bound in the high rate regions.
+In future works, the first-stage decoding of the proposed algorithm can be further improved by incorporating various
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: TWO-STAGE SOFT-DECISION DECODING ALGORITHM FOR BCH CODES
+
+12991
+
+GRAND optimizations, such as constrained GRAND [48], [49] and segmented GRAND [50]. Hardware optimization for the proposed algorithm can also be explored to fully leverage GRAND’s advanced hardware implementations [51], [52], [53], [54], [55] for enhanced performance and practicability. The serial implementation with the early stopping criterion is also important, and in this case the order at the first stage can be improved to reduce the complexity of the algebraic decoding.
+REFERENCES
+[1] Future Technology Trends of Terrestrial International Mobile Telecommunications Systems Towards 2030 and Beyond, I. T. Union, Geneva, Switzerland, 2022.
+[2] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, “Channel coding toward 6G: Technical overview and outlook,” IEEE Open J. Commun. Soc., vol. 5, pp. 2585–2685, 2024.
+[3] H. Tataria, M. Shafi, A. F. Molisch, M. Dohler, H. Sjo¨land, and F. Tufvesson, “6G wireless systems: Vision, requirements, challenges, insights, and opportunities,” Proc. IEEE, vol. 109, no. 7, pp. 1166–1199, Jul. 2021.
+[4] P. J. Winzer, D. T. Neilson, and A. R. Chraplyvy, “Fiber-optic transmission and networking: The previous 20 and the next 20 years,” Opt. Exp., vol. 26, no. 18, pp. 24190–24239, 2018.
+[5] M. Chagnon, “Optical communications for short reach,” J. Lightw. Technol., vol. 37, no. 8, pp. 1779–1797, Apr. 1, 2019.
+[6] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[7] E. R. Berlekamp, Algebraic Coding Theory. Singapore: World Scientific, 2015.
+[8] J. Massey, “Shift-register synthesis and BCH decoding,” IEEE Trans. Inf. Theory, vol. IT-15, no. 1, pp. 122–127, Jan. 1969.
+[9] Y. Sugiyama, M. Kasahara, S. Hirasawa, and T. Namekawa, “A method for solving key equation for decoding Goppa codes,” Inf. Control, vol. 27, no. 1, pp. 87–99, Jan. 1975.
+[10] M. Sudan, “Decoding of Reed Solomon codes beyond the errorcorrection bound,” J. Complex., vol. 13, no. 1, pp. 180–193, Mar. 1997.
+[11] V. Guruswami and M. Sudan, “Improved decoding of Reed–Solomon and algebraic-geometry codes,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 1757–1767, Jun. 1999.
+[12] S. Lin, K. Abdel-Ghaffar, J. Li, and K. Liu, “A scheme for collective encoding and iterative soft-decision decoding of cyclic codes of prime lengths: Applications to Reed–Solomon, BCH, and quadratic residue codes,” IEEE Trans. Inf. Theory, vol. 66, no. 9, pp. 5358–5378, Sep. 2020.
+[13] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3746–3756, Aug. 2006.
+[14] B. Liu, Y. Xie, and J. Yuan, “A deep learning assisted node-classified redundant decoding algorithm for BCH codes,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5338–5349, Sep. 2020.
+[15] L. Deng et al., “Perturbed adaptive belief propagation decoding for high-density parity-check codes,” IEEE Trans. Commun., vol. 69, no. 4, pp. 2065–2079, Apr. 2021.
+[16] J. Bellorado and A. Kavcic, “Low-complexity soft-decoding algorithms for Reed–Solomon codes—Part I: An algebraic soft-in hard-out chase decoder,” IEEE Trans. Inf. Theory, vol. 56, no. 3, pp. 945–959, Mar. 2010.
+[17] H. Mani and S. Hemati, “Symbol-level stochastic chase decoding of Reed–Solomon and BCH codes,” IEEE Trans. Commun., vol. 67, no. 8, pp. 5241–5252, Aug. 2019.
+[18] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, May 1995.
+[19] S. Yu and Q. Huang, “Hard reliability-based ordered statistic decoding and its application to McEliece public key cryptosystem,” IEEE Commun. Lett., vol. 26, no. 3, pp. 490–494, Mar. 2022.
+[20] L. Yang and L. Chen, “Low-latency ordered statistics decoding of BCH codes,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2022, pp. 404–409.
+
+[21] A. Solomon, K. R. Duffy, and M. Me´dard, “Soft maximum likelihood decoding using GRAND,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2020, pp. 1–6.
+[22] X. Zheng and X. Ma, “A universal list decoding algorithm with application to decoding of polar codes,” IEEE Trans. Inf. Theory, vol. 71, no. 2, pp. 975–995, Feb. 2025.
+[23] C.-Y. Lin, Y.-C. Huang, S.-L. Shieh, and P.-N. Chen, “Transformation of binary linear block codes to polar codes with dynamic frozen,” IEEE Open J. Commun. Soc., vol. 1, pp. 333–341, 2020.
+[24] C.-Y. Lin, Y.-C. Huang, S.-L. Shieh, and P.-N. Chen, “Toward universal decoding of binary linear block codes via enhanced polar transformations,” 2025, arXiv:2501.07279.
+[25] D. Chase, “Class of algorithms for decoding block codes with channel measurement information,” IEEE Trans. Inf. Theory, vol. IT-18, no. 1, pp. 170–182, Jan. 1972.
+[26] OIF Internetworking Forum, Fremont, CA, USA. (Mar. 2020). Implementation Agreement 400ZR. [Online]. Available: https:// www.oiforum.com/wp-content/uploads/OIF-400ZR-01.0 reduced2.pdf
+[27] F. Chang, R.-C. R. Yu, V. Bhatt, and X. Liu. Relative Cost Analysis on IM-DD Vs Coherent for 800G-LR 10km. Presentation slides, supported by Source Photonics, SiFotonics, Coherent, and Huawei. Accessed: Nov. 2022. [Online]. Available: https://grouper.ieee.org/groups/802/3/df/ public/22 11/chang 3df 01a 2211.pdf
+[28] Y. Wu and J. Ma, “A novel chase Ko¨tter–Vardy algorithm,” IEEE J. Sel. Areas Inf. Theory, vol. 4, pp. 232–244, 2023.
+[29] Y. Wu, “Fast chase decoding algorithms and architectures for Reed–Solomon codes,” IEEE Trans. Inf. Theory, vol. 58, no. 1, pp. 109–129, Jan. 2012.
+[30] Y. Lei et al., “Improved decoding of staircase codes: The soft-aided bitmarking (SABM) algorithm,” IEEE Trans. Commun., vol. 67, no. 12, pp. 8220–8232, Dec. 2019.
+[31] ITU-T Recommendation G.709: Interfaces for the Optical Transport Network (OTN), International Telecommunication Union, Geneva, Switzerland, Dec. 2020.
+[32] ITU-T Recommendation G.975.1: Forward Error Correction for High Bit Rate DWDM Submarine Systems, International Telecommunication Union, Geneva, Switzerland, Feb. 2004.
+[33] X. Ma, “Guessing what, noise or codeword?,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2024, pp. 460–465.
+[34] S. Tang, “Research on low-complexity soft decoding algorithms for Reed–Solomon codes,” Ph.D. dissertation, School Inf. Sci. Technol., Sun Yat-sen University, Guangzhou, China, 2013.
+[35] S. Tang, S. Cai, and X. Ma, “A new chase-type soft-decision decoding algorithm for Reed–Solomon codes,” Alexandria Eng. J., vol. 61, no. 12, pp. 13067–13077, Dec. 2022.
+[36] S. Tang, S. Cai, and X. Ma Member, “A new chase-type soft-decision decoding algorithm for Reed–Solomon codes,” 2013, arXiv:1309.1555.
+[37] Q. Wang, S. Cai, L. Chen, and X. Ma, “Semi-LDPC convolutional codes: Construction and low-latency windowed list decoding,” J. Commun. Inf. Netw., vol. 6, no. 4, pp. 411–419, Dec. 2021.
+[38] J. Liang and X. Ma, “A random coding approach to performance analysis of the ordered statistic decoding with local constraints,” 2024, arXiv:2401.16709.
+[39] C. Yue, M. Shirvanimoghaddam, G. Park, O.-S. Park, B. Vucetic, and Y. Li, “Probability-based ordered-statistics decoding for short block codes,” IEEE Commun. Lett., vol. 25, no. 6, pp. 1791–1795, Jun. 2021.
+[40] K. R. Duffy, W. An, and M. Me´dard, “Ordered reliability bits guessing random additive noise decoding,” IEEE Trans. Signal Process., vol. 70, pp. 4528–4542, 2022.
+[41] R. McEliece, The Theory of Information and Coding. Cambridge, U.K.: Cambridge Univ. Press, 2002.
+[42] A. Martinez and A. G. I. Fa`bregas, “Saddlepoint approximation of random-coding bounds,” in Proc. Inf. Theory Appl. Workshop, Feb. 2011, pp. 1–6.
+[43] J. Font-Segura, G. Vazquez-Vilar, A. Martinez, A. G. I. Fa`bregas, and A. Lancho, “Saddlepoint approximations of lower and upper bounds to the error probability in channel coding,” in Proc. 52nd Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2018, pp. 1–6.
+[44] R. W. Butler, Saddlepoint Approximations With Applications, vol. 22. Cambridge, U.K.: Cambridge Univ. Press, 2007.
+[45] Y. Shany and A. Berman, “Fast syndrome-based chase decoding of binary BCH codes through wu list decoding,” IEEE Trans. Inf. Theory, vol. 69, no. 8, pp. 4907–4926, Aug. 2023.
+[46] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+12992
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+[47] P. Yuan and M. C. Cos¸kun, “Successive cancellation ordered search decoding of modified GN -coset codes,” IEEE Trans. Commun., vol. 72, no. 6, pp. 3141–3154, Jun. 2024.
+[48] M. Rowshan and J. Yuan, “Constrained error pattern generation for GRAND,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2022, pp. 1767–1772.
+[49] Y. Wang, J. Liang, and X. Ma, “Partially constrained GRAND of linear block codes,” in Proc. 9th Int. Conf. Comput. Commun. Syst. (ICCCS), Apr. 2024, pp. 617–622.
+[50] M. Rowshan and J. Yuan, “Segmented GRAND: Complexity reduction through sub-pattern combination,” IEEE Trans. Commun., early access, Feb. 11, 2025, doi: 10.1109/TCOMM.2025.3541094.
+[51] C. Condo, “A fixed latency ORBGRAND decoder architecture with LUT-aided error-pattern scheduling,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2203–2211, May 2022.
+[52] S. M. Abbas, T. Tonnellier, F. Ercan, M. Jalaleddine, and W. J. Gross, “High-throughput and energy-efficient VLSI architecture for ordered reliability bits GRAND,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 6, pp. 681–693, Jun. 2022.
+[53] S.-I. Chu, S.-A. Ke, S.-J. Liu, and Y.-W. Lin, “An efficient hard-detection GRAND decoder for systematic linear block codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 11, pp. 1852–1864, Nov. 2023.
+[54] S. M. Abbas, M. Jalaleddine, and W. J. Gross, “List-GRAND: A practical way to achieve maximum likelihood decoding,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 1, pp. 43–54, Jan. 2023.
+[55] A. Riaz et al., “A sub-0.8-pJ/bit universal soft-detection decoder using ORBGRAND,” IEEE J. Solid-State Circuits, vol. 60, no. 7, pp. 2645–2659, Jul. 2025.
+Qianfan Wang (Member, IEEE) received the Ph.D. degree from Sun Yat-sen University, Guangzhou, China, in 2022. From 2022 to 2024, he was a PostDoctoral Fellow with Sun Yat-sen University. He is currently a Post-Doctoral Fellow with the City University of Hong Kong. His research interests include information theory, channel coding theory, and their applications to communication systems.
+
+Jifan Liang received B.S. degree from Sun Yat-sen University, Guangzhou, China, where he is currently pursuing the Ph.D. degree. His research interests include short block codes decoding and quantum error correction codes.
+Linqi Song (Senior Member, IEEE) received the B.S. and M.S. degrees from Tsinghua University, China, and the Ph.D. degree in electrical engineering from the University of California at Los Angeles (UCLA), USA. He is an Associate Professor with the Department of Computer Science, City University of Hong Kong, and a Research Scientist with the City University of Hong Kong Shenzhen Research Institute. He was a Post-Doctoral Scholar with the Department of Electrical and Computer Engineering, UCLA. His research interests include artificial intelligence, information theory, machine learning, and big data. He has received the Hong Kong RGC Early Career Scheme in 2019, the Best Paper Award from IEEE MIPR 2020, and the Best Paper Award of China Communications 2023.
+
+Yiwen Wang received the B.S. degree from Xidian University, Xi’an, Shaanxi, China, in 2021. He is currently pursuing the Ph.D. degree with Sun Yat-sen University. His research interests include information theory, short block codes decoding, and their applications to communication systems.
+
+Xiao Ma (Member, IEEE) received the Ph.D. degree in communication and information systems from Xidian University, China, in 2000. From 2000 to 2002, he was a Post-Doctoral Fellow with Harvard University, Cambridge, MA, USA. From 2002 to 2004, he was a Research Fellow with the City University of Hong Kong. He is a Professor with the School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou, China. His research interests include information theory, channel coding theory and their applications to communication systems, and digital recording systems. He was a co-recipient, with A. Kavcˇic´ and N. Varnica, of the 2005 IEEE Best Paper Award in Signal Processing and Coding for Data Storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:02:18 UTC from IEEE Xplore. Restrictions apply.
+
+

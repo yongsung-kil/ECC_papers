@@ -1,0 +1,583 @@
+2025 13th Wireless Days Conference (WD) | 979-8-3315-9264-6/25/$31.00 ©2025 IEEE | DOI: 10.1109/WD67713.2025.11302660
+
+An FPGA-Based LDPC Decoder for Smart-NICs
+Hassan Chreif, Lounis Zerioul, Julio C. Pe´rez-Garc´ıa, Stefano Secci, Sami Taktak CNAM, Paris, France
+{hassan.chreif, lounis.zerioul, julio.perez-garcia, stefano.secci, sami.taktak}@cnam.fr
+
+Abstract—Low-Density Parity-Check (LDPC) codes are a key component of modern wireless standards. Most FPGA-based implementations emphasize decoding performance while overlooking system-level concerns such as network integration and autonomous operation. This paper introduces a configurable FPGA-based LDPC decoder with an integrated UDP/Ethernet stack, enabling direct offloading in real 5G New Radio (NR) deployments for 5G access networks equipped with FPGA-based smart-network interface cards (Smart-NICs). The architecture supports multiple base graphs, variable lifting sizes, and diverse code rates through parameter-driven synthesis, while a dual-clock design ensures reliable timing across heterogeneous interfaces. Implemented on the NetFPGA-SUME platform, the proposed decoder achieves efficient resource utilization (15.09% of FPGA resources), a sustained throughput of 181.51 Mbps, and an endto-end decoding latency of 423.1 microseconds. Experimental evaluation further reports a bit error rate of 4.688 × 10−5 at 6 dB of Eb/N0, confirming good performance and deployment readiness.
+Index Terms—FPGA, LDPC, Decoder, 5G, New Radio, dualclock, Smart-NICs.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) coding is a fundamental component of 3GPP 5G New Radio (NR) [1], providing robust forward error correction (FEC). The effectiveness of an FEC scheme is usually evaluated based on two main criteria: complexity, which includes area and power consumption, and performance, typically measured in terms of coding gain. LDPC codes excel in both aspects, enabling efficient implementations with high coding gains, which explains their extensive adoption in modern communication standards [2]. More recently, they have also emerged as suitable workloads for in-network acceleration on Smart-NIC platforms [3].
+Many wireless standards use LDPC codes for FEC, including IEEE 802.11 [4], Digital Video Broadcasting (DVB) [5] and 10 Gigabit Ethernet [6]. However, the more demanding requirements of 5G NR and future networks require greater innovation in LDPC code design. Currently, the LDPC decoder is one of the most computationally demanding components of a 5G modem, often accounting for up to 40% of the hardware resources required to implement the physical layer (PHY). To address these challenges, the decoder must be designed with a high degree of flexibility and adaptability [7].
+With the shift toward software-defined radios (SDR) [8], specialized hardware accelerators are increasingly used to offload LDPC encoding and decoding from general-purpose CPUs. LDPC decoding is highly parallel and computationally intensive, making CPU-only execution inefficient. Offloading to FPGA, ASIC, or GPU-based accelerators reduces latency,
+
+improves energy efficiency, and frees CPU resources. Among these, FPGAs are particularly attractive, offering a balance of performance, energy efficiency, low cost, and flexibility, enabling high throughput while adapting to evolving standards and deployment scenarios. These properties also make them an excellent fit for Smart-NICs, where packet-level programmability and reconfigurable acceleration are critical.
+A. Research Motivation and Contributions
+In the literature, most FPGA-based offloading solutions rely on PCI Express (PCIe) interfaces to transfer LDPC encoding and decoding tasks from the CPU. While PCIe offers high bandwidth and low latency, it is inherently limited in physical reach, typically supporting connections of up to one meter (PCIe 7.0). By contrast, modern data centers and edge computing infrastructures increasingly demand offloading over longer distances, which can be achieved using high-speed network interfaces such as Ethernet or optical links. Smart Network Interface Cards (Smart-NICs), capable of line-rate innetwork computing, are emerging in mobile access networks, disaggregated Radio Access Networks (RANs), and Multiaccess Edge Computing (MEC) platforms.
+We propose a configurable FPGA-based LDPC decoder system that integrates network processing with the LDPC decoder. The design includes a full UDP/Ethernet stack on FPGA, covering Ethernet MAC, IP processing, and UDP handling. This integration removes the boundary between signal processing and network interface, allowing deployment in networked systems without extra hardware or software.
+In summary, the specific contributions of this paper are:
+• A flexible and configurable 5G NR LDPC decoder system, accommodating multiple base graphs, variable lifting sizes, and a wide range of code lengths and rates.
+• A production-ready FPGA implementation that ensures full protocol compliance and reliable timing across dualclock domains. The implementation supports autonomous operation, including flow control, error detection and correction, and end-to-end Ethernet-to-UDP processing, making it directly applicable for Smart-NIC deployment.
+• Comprehensive performance evaluation, reporting decoding latency, sustained throughput, and benchmarks under both standalone and network-integrated scenarios. Experimental results demonstrate real-time operation in practical 5G NR environments.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+B. Organization of the paper
+The remainder of this paper is organized as follows. Section II reviews related FPGA-based LDPC decoder work and the motivating challenges. Section III presents key concepts and algorithms, detailed in Section IV. Section V describes the implementation, including resource utilization, timing, and network integration. Section VI reports experimental results, and Section VII concludes with future research directions.
+II. RELATED WORKS
+This section reviews key FPGA-based LDPC decoder designs and their integration into communication systems. We first cover recent high-throughput, resource-efficient implementations for 5G NR. Next, we summarize flexible architectures enabling runtime adaptability to different codes. Finally, we examine network-enabled FPGA systems, highlighting challenges in integrating LDPC decoding with real-time Ethernet. These studies provide context for our approach, bridging algorithm-level decoders and deployable Smart-NIC solutions.
+A. FPGA-based LDPC Decoder Implementations
+Recent FPGA-based LDPC decoders have aimed at higher throughput for 5G NR. Tran-Thi et al. [9] achieved 2.82 Gbps on Xilinx Kintex UltraScale+ using the HOMS algorithm, improving resource efficiency and reducing check node memory by 10%. Mejmaa et al. [10] proposed a fully parallel Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) decoder with the SOLL technique, validated via HDL co-simulation, showing BER performance across multiple code rates. Pourjabar and Choi [11] presented a multi-mode decoder achieving 2.1 Gbps on FPGA (13.46 Gbps in 28 nm synthesis) with adaptive parallelism and multi-frame support, though limited to single-packet scenarios without network interface handling.
+On the other hand, Subhi and Al-Doori [12] presented a comparative study of LDPC decoder implementations using both direct VHDL and MATLAB-to-VHDL conversion approaches. Their results showed that direct VHDL implementation achieved 37.13% reduction in logic gates and improved thermal power dissipation, while MATLAB conversion provided 52.19% reduction in pin usage. However, both approaches were evaluated exclusively in controlled synthesis environments without consideration for network integration or real-world deployment scenarios.
+The authors in [13] implement a QC-LDPC decoder with the SOMS algorithm, reaching 13.3 Gbps peak throughput and 0.77 µs latency on Xilinx Zynq-Ultrascale+. Sun et al. [14] achieved 7.76 Gbps with a modified 2-bit Min-Sum algorithm, reducing resource usage by two-thirds.
+Other implementations prioritized efficiency and resource optimization. Chen et al. [15] reached 27.85 Mbps decoding throughput on FPGA for irregular QC-LDPC codes with dualdiagonal parity, supporting multiple code rates, while AbdelMomen et al. [16] achieved 224 Mbps with 50% area reduction on NI myRIO 1900 ZYNQ FPGA. Despite these improvements, all designs were limited to algorithm-level evaluation or
+
+controlled testbench environments, lacking network integration and practical deployment capabilities.
+B. Flexible and Stochastic Decoder Architectures
+Recent research has explored flexible decoder architectures that can adapt to different code configurations. Tera et al. [17] introduced a flexible FPGA-based stochastic decoder for 5G LDPC codes, achieving runtime flexibility for different code rates without FPGA reprogramming. Their automated design flow enabled support for multiple 5G NR code configurations and demonstrated 26% reduction in hardware utilization and 52% increase in energy efficiency compared to state-of-theart designs. The decoder runtime adaptability represented a significant advancement in operational flexibility, though the implementation remained confined to controlled testbench environments.
+Benhayoun et al. [18] focused on ultra-reliable low-latency communications (URLLC) requirements, presenting a parallel software implementation achieving 150 µs decoding latency for 288 bits with 50% memory size reduction and threetime speedup compared to previous software implementations. Their work addressed the computational complexity challenges for IoT devices but remained focused on software implementation rather than complete hardware-software integration.
+C. Network-Enabled FPGA Systems and Integration Challenges
+Although FPGA-based LDPC decoders have achieved high performance, integration with network processing remains largely unaddressed. Most designs focus on testbench validation with direct log-likelihood ratios (LLRs) inputs, leaving a gap between prototypes and deployable systems. Le Gal and Je´go [19] demonstrated that CPU-based decoders can achieve 50 to 100 Mbps throughput, but their approach does not exploit FPGA capabilities or real-time network protocols, relying on pre-formatted LLR data.
+Existing implementations assume idealized I/O conditions, often using simulation interfaces or PCIe, and fail to address challenges such as Ethernet packet reception, protocol parsing, and real-time LLR extraction. Commercial FPGA platforms like Xilinx Alveo and Intel Stratix provide network acceleration, but integration with custom LDPC decoding requires extensive effort. Network and processing functions typically operate in separate domains, lacking the specialized pipeline management needed for continuous LDPC processing with live network data.
+As summarized in Table IX, most FPGA-based LDPC decoder implementations emphasize throughput and resource efficiency but remain confined to simulation, HDL cosimulation, or controlled FPGA testbenches. Their configurability is often limited to specific quasi-cyclic structures, fixed code rates, or predefined lifting sizes, with interconnects typically relying on PCIe or simulation inputs rather than live network interfaces. In contrast, our proposed solution introduces a fully parameterized FPGA-based LDPC decoder capable of handling variable 5G NR configurations under
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I COMPARISON OF FPGA-BASED LDPC DECODER IMPLEMENTATIONS
+
+Reference Configurability
+
+Real Implementation Application Domain Connection
+
+[9] [10] [11] [12] [13] [14] [15] [16] [17] [18] [19] Our solution
+
+Limited to specific 5G NR config QC-LDPC, fixed rates Multi-mode, adaptive parallelism Direct VHDL vs MATLAB-to-VHDL 7 code lengths, configurable rates QC-LDPC, 8 iterations Multiple code rates 5G NR, limited config Flexible/stochastic, runtime configurable Software parallel CPU-based, software configurable Variable 5G NR configs, fully parameterized
+
+FPGA synthesis Simulation FPGA FPGA synthesis FPGA testbench FPGA testbench FPGA FPGA FPGA testbench CPU/SW ARM processor FPGA, real deployment
+
+5G NR 5G NR eMBB 5G NR General LDPC 5G NR Decoder 5G NR Decoder Irregular QC-LDPC 5G NR 5G NR URLLC/IoT 5G NR 5G NR
+
+PCIe N/A∗ PCIe PCIe PCIe PCIe PCIe PCIe PCIe N/A N/A Ethernet
+
+∗N/A (Not Applicable) indicates that the design was evaluated without any real I/O or network interface, typically relying on simulation or software-only execution.
+
+real network deployment, uniquely integrating a UDP/Ethernet stack for live packet reception and decoding.
+
+III. PRELIMINARIES
+This section presents the theoretical and structural foundations of the proposed FPGA-based LDPC decoder. It revisits Forward Error Correction (FEC) and soft-decision decoding using Log-Likelihood Ratios (LLRs), introduces the 5G NR Quasi-Cyclic LDPC code structure and base graphs, and describes the layered Min-Sum decoding architecture, highlighting its suitability for FPGA acceleration. These preliminaries establish the framework and notations for the following sections.
+
+A. Generalities of Forward Error Correction
+
+In a communication system, the information message word
+
+m is a vector of K bits, which is encoded using FEC to
+
+produce the codeword c a vector of N > K bits. The FEC
+
+encoder maps the K-bit message word m into the N -bit
+
+codeword c by appending parity bits to the original message.
+
+The coding rate (R) is defined as the ratio of the number of
+
+information bits to the total number of bits in the codeword,
+
+i.e.,
+
+R
+
+=
+
+K N
+
+.
+
+When the channel introduces corruption, the transmitted
+
+signal is distorted, and the received vector y may differ unpre-
+
+dictably. As a result, the demodulator may output a perturbed
+
+version of the codeword, denoted by cˆ, which may contain bit
+
+errors. The decoder then attempts to reconstruct the transmitted
+
+message word (m). Without such error correction, it would not
+
+be possible to reliably detect or correct transmission errors.
+
+The error-correction capability of an FEC decoder strongly
+
+depends on the type of information provided by the de-
+
+modulator. Instead of making hard decisions (mapping each
+
+received symbol directly to a bit), improved performance can
+
+be achieved using soft decisions, typically expressed as log-
+
+likelihood ratios (LLRs) [20].
+
+The sign of an LLR indicates the most likely bit value
+
+(positive for ”0”, negative for ”1”), while its magnitude reflects
+
+the confidence level: values near zero indicate uncertainty,
+
+whereas larger magnitudes correspond to higher certainty. The LLR for bit ci given the received symbol yi is defined as:
+
+LLR(c˜i)
+
+=
+
+log
+
+P (ci P (ci
+
+= =
+
+0 1
+
+| |
+
+yi) . yi)
+
+(1)
+
+Using the logarithm compresses the dynamic range of the likelihood ratio (e.g., mapping values from 10−4 to 104 into roughly −4 to +4). Moreover, it transforms multiplications of probabilities into additions, which are significantly less hardware-intensive.
+
+B. 5G Quasi-Cyclic LDPC Codes Background
+Quasi-Cyclic (QC) LDPC codes represent an important structured LDPC code family extensively used in modern communication systems [21]. These codes offer significant advantages over random LDPC codes, including comparable decoding performance with simplified and structured design, excellent suitability for hardware implementations through parallelizable architectures, simple interconnection networks, and support for flexible block lengths that are essential for adaptive communication systems.
+1) QC-LDPC Code Structure: QC-LDPC codes are mathematically defined by a base matrix B of size L×C with entries bi,j ≥ −1, where i ∈ {1, 2, . . . , L} and j ∈ {1, 2, . . . , C}. The parity check matrix (PCM) H of a QC-LDPC code is constructed by expanding the base matrix using an expansion factor Z. Each element in the base matrix is systematically replaced with sparse matrices of size Z × Z according to specific rules: elements with bi,j = −1 are replaced by zero matrices, while elements with bi,j > −1 are replaced by circulant permutation matrices created by right-shifting the identity matrix by bi,j positions.
+This construction results in a PCM H with M = Z ×L rows and N = Z × C columns, providing the structural regularity that enables efficient hardware implementation.
+2) 5G NR LDPC Code Specifications: The 5G LDPC code design supports extensive flexibility in code sizes and code rates, making it suitable for diverse communication scenarios. The base matrix is extensible by expansion factors up to Z =
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+384, enabling very high parallelism levels in hardware implementations. The expansion factor values are systematically defined as Z = a×2k, where a ∈ {2, 3, 5, 7, 9, 11, 13, 15} and k ∈ {0, 1, 2, 3, 4, 5, 6, 7}, resulting in 51 possible expansion factor values as shown in Table II.
+
+TABLE II THE SET OF LIFTING SIZES (Z)
+
+k
+
+a
+
+2 3 5 7 9 11 13 15
+
+0 2 3 5 7 9 11 13 15
+
+1 4 6 10 14 18 22 26 30
+
+2 8 12 20 28 36 44 52 60
+
+3 16 24 40 56 72 88 104 120
+
+4 32 48 80 112 144 176 208 240
+
+5 64 96 160 224 288 352
+
+6 128 192 320
+
+7 256 383
+
+The 3GPP standard [1] defines two base graph matrices for 5G New Radio channel coding: Base Graph 1 (BG1) is designed for higher code rates (1/3 ≤ R ≤ 8/9) and larger information block sizes (500 ≤ K ≤ 8448 bits), while Base Graph 2 (BG2) is optimized for lower code rates (1/5 ≤ R ≤ 2/3) and smaller information block sizes (40 ≤ K ≤ 2560 bits).
+
+C. Layered Decoding Architecture with Min-Sum Algorithm
+Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) codes enable efficient layered decoding due to their circulant matrix construction. In this approach, the parity-check matrix H is partitioned into L horizontal layers, where each layer consists of Z consecutive rows corresponding to a row of the base matrix B. This structure guarantees that each column of H contains exactly one non-zero element per layer, permitting intra-layer parallelism while preserving sequential inter-layer processing.
+Layered decoding relies on iterative message passing between variable nodes (VNs) and check nodes (CNs). Variableto-check (VTC) messages αm,n are sent from VN n to CN m, while check-to-variable (CTV) messages βm,n flow in the opposite direction. The a priori information from the channel is denoted γn. This framework supports efficient realizations of decoding algorithms such as the Min-Sum algorithm.
+As illustrated in Fig. 1, the Min-Sum algorithm approximates belief propagation while reducing computational complexity, making it well-suited for hardware implementation. The iterative process begins with initialization (i = 0) and a maximum iteration limit Imax. Variable node messages qvc are initialized with the channel LLRs yv.
+The check node update follows. For each check node 0 ≤ c ≤ γm − 1 in the current layer, and for each connected VN 0 ≤ v ≤ ρm − 1, the CTV message σcv is computed as
+
+σcv = α · min |qv c| sign(qv c),
+
+(2)
+
+v =v
+
+v =v
+
+where α is the offset correction factor, , γm is the degree of CN m (i.e., number of connected VNs), and ρm is the degree of VN m (i.e., number of connected CNs).
+
+yv
+
+Initialization
+
+qv c
+
+qv c
+
+Variable Node
+
+update
+
+σcv
+
+Check Node update
+
+σcv Iteration: i
+
+HT , Imax
+
+σcv
+
+Decision
+
+Tentative
+
+Cˆ
+
+Decoding
+
+Fig. 1. Min-Sum Algorithm.
+
+Next, each VN is updated by computing the intermediate message qvc and the a posteriori value zv:
+
+qvc = yv + σc v (excluding current CN) (3)
+c =c
+
+zv = yv + σcv (including all CNs)
+
+(4)
+
+c
+
+A tentative decision is obtained as sign(zv). If the resulting codeword satisfies all parity-check equations (sign(z) · HT = 0) or i = Imax, decoding terminates; otherwise, the iteration counter is incremented and the process repeats. The final codeword is produced by taking sign(zv) for all VNs.
+This layered Min-Sum implementation exploits intra-layer parallelism and maintains iterative convergence properties, while reducing belief propagation complexity to simple addition, comparison, and sign operations. These characteristics make the algorithm highly efficient for FPGA-based realizations.
+
+IV. PROPOSED FPGA-BASED LDPC DECODER
+The proposed FPGA-based LDPC decoder integrates full network processing with a configurable 5G NR decoding pipeline in a dual-clock domain architecture, comprising independent network and LDPC processing domains. The overall system, illustrated in Fig.2, depicts the complete datapath from network ingress through LDPC decoding to network output. The numerical values of operating clock frequencies, buffer depths, and data sizes shown in Fig.2 are implementationdependent and correspond to the prototype described in Section V.
+In the network processing domain, the SFP+ Ethernet interface receives incoming frames, which are processed through the Ethernet MAC, IP, and UDP layers. The pipeline handles frame validation, header parsing, checksum verification, port filtering, and packet classification. Flow control modules manage backpressure and monitor FIFO status to ensure lossless transmission. Configuration and reset management modules provide dynamic control over LDPC parameters, including base graph selection, lifting size, code rate, block length, and iteration limits. Asynchronous FIFOs safely bridge the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+Network Processing Clock Domain
+
+Ethernet Interface
+SFP+
+XGMII
+
+Ethernet MAC
+Frame Processing CRC Validation
+
+IP Processing
+Header Parsing Checksum Verify
+
+TX Control
+Packet Scheduling Rate Limiting
+
+Response Mgmt
+Destination Config
+
+UDP RX Processing
+Port Filter Header Extraction
+
+Packet Classification
+LLR Data detection Config Extraction
+
+Flow Control
+Backpressure Mgmt. FIFO Monitoring
+
+UDP TX Processing
+Header Generation Checksum Calculation
+
+TX Async FIFO
+75MHz Write-156MHz Read Depth:9728 entries x 64 bits FWFT Architecture
+
+RX Async FIFO
+156MHz Write-75MHz Read Depth:9728 entries x 64 bits Gray Code Pointers
+
+LDPC Processing Clock Domain
+Configuration Mgmt.
+Base Graph Select Lifting Size Config Code Rate Setting Block length Iteration Limit
+Reset Mgmt.
+Pipeline Reset State Cleanup Error Recovery
+
+Debug System
+Packet Counters FIFO Status Pipeline Monitor LED Indicator
+
+Output Serializer
+Bit Collection AXI Stream Generation UDP Packet Formatting Output Flow Control
+
+LDPC Decorer Core
+5G NR Compliant(BG1/BG2) Lifting Size Z=2 to 384 Code rate Layer Min-sum Algorithm Iterations and Block Length
+
+Fig. 2. System Architecture.
+
+LLR Input Controller
+UDP Packet parsing 64bits -4bits LLR Unpacking Input FIFO (19200 LLRs) Flow Control and Validation
+Pipeline Register
+LLR Data Control Signals Start/End Flags BGN Signals
+
+network and LDPC domains, accommodating the fact that these typically operate at different clock frequencies.
+In the LDPC processing domain, unpacked log-likelihood ratio (LLR) inputs are decoded using the layered Min-Sum algorithm, fully compliant with 5G NR specifications. The decoded output is serialized, formatted into AXI streams, and repackaged into UDP packets for transmission. Auxiliary modules such as debug monitors, counters, and pipeline registers facilitate system verification, status monitoring, and error recovery. The modular architecture ensures robust operation across clock domains, enabling high-throughput communication and decoding.
+1) Dual-Clock Domain Strategy: The system employs a dual-clock domain architecture to balance performance and resource utilization. The network domain handles Ethernet MAC processing, IP/UDP protocol handling, and flow control, while the LDPC domain performs all algorithmic decoding tasks, including LLR handling, iterative message passing, and output serialization. This separation allows each domain to operate at an optimized frequency, ensuring efficient resource allocation and continuous data flow across heterogeneous subsystems.
+2) Network Interface Architecture: The entire network processing stack is implemented on an FPGA, eliminating the need for external network interface hardware. The interface integrates with SFP+ transceivers, providing a direct connection to network infrastructure without additional protocol conversion. Full IEEE 802.3 Ethernet MAC functionality is supported, including frame validation, CRC checking, and automatic error detection and recovery.
+On top of the Ethernet layer, the system implements complete IP and UDP processing, encompassing header parsing, checksum verification, and protocol compliance. Configurable packet filtering based on UDP destination ports allows se-
+
+lective processing of LDPC-encoded data while discarding unrelated network traffic.
+3) Clock Domain Crossing Architecture: Data transfer between the network and LDPC domains is managed through asynchronous FIFO structures with integrated flow control. On the ingress path, high-capacity FIFOs buffer UDP payloads containing LLR values, absorbing burst traffic and frequency variations while maintaining uninterrupted decoding. Optimized data packing enables multiple LLRs per word, maximizing inter-domain bandwidth. Backpressure mechanisms signal upstream modules to prevent data loss under high traffic.
+On the egress path, dedicated FIFOs buffer decoded output bits prior to network transmission. Automatic UDP packet reconstruction, including header generation and checksum calculation, ensures standards compliance. Coordinated scheduling aligns LDPC output with network timing constraints, preserving throughput and data integrity.
+4) LDPC Processing Pipeline Implementation: The LDPC pipeline consists of three stages: input parsing, core decoding, and output serialization. The input stage extracts LLRs from UDP payloads, performs header validation, and aligns data for decoding. The core stage executes layered Min-Sum decoding, parameterized for all 5G NR base graphs, lifting sizes, and code rates. Configurable iteration limits with early termination provide a trade-off between error-correction capability and decoding latency. The output stage serializes the decoded bits, validates their order, and constructs UDP packets for transmission.
+V. IMPLEMENTATION ON FPGA
+Based on the proposed architecture, the decoder was implemented on the NetFPGA-SUME platform, which features a Virtex-7 690T FPGA. The design supports the maximumresource 5G NR configuration (i.e., Z = 384, BG1, 10
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+iterations). The implementation details are presented in this section.
+A. Resource Utilization
+Table III summarizes the FPGA resource usage and utilization percentages for the maximum-resource scenario. Significant Block RAM usage (1,016 blocks) accommodates large-capacity FIFOs for clock-domain crossing and network buffering, while distributed memory (65,037 LUT-as-Memory) supports parallel LDPC processing requirements. Logic utilization remains moderate (65,383 LUTs), indicating efficient synthesis and sufficient expansion capability.
+
+TABLE III FPGA RESOURCE UTILIZATION
+
+Resource
+Slice LUTs Slice Registers LUT as Logic LUT as Memory Block RAM Bonded IOBs
+
+Available
+433,200 866,400 433,200 174,200 1,470
+850
+
+Used
+65,383 75,649 34,223 65,037 1,016
+28
+
+Util.
+15.1% 8.7% 7.9% 37.4% 69.1% 3.3%
+
+The memory architecture combines distributed RAM for parallel variable-node processing and Block RAM for highcapacity buffering, achieving optimal performance while maintaining synthesizable timing constraints across both clock domains. By provisioning resources for the maximum-resource configuration, uniform timing is ensured across all supported lifting sizes.
+B. Critical Path Analysis and Timing Performance
+The Network domain operates reliably up to a frequency of 156.25 MHz (6.40 ns period), providing adequate margin for 10-Gigabit Ethernet packet processing. The LDPC domain runs at 75 MHz (13.33 ns period), accommodating iterative decoding computations while ensuring reliable throughput. The Reference clock at 200 MHz (5 ns period) and the SFP interface at 322.27 MHz (3.10 ns period) also meet timing constraints, confirming that high-speed data transfer and interfacing occur without violations. Overall, these results validate the dual-clock architecture and confirm reliable operation of both the processing and communication pipelines within their respective frequency domains.
+C. Network Protocol Integration
+A UDP/IP/Ethernet stack based on verilog-ethernet [22] was integrated to provide autonomous packet handling. Ethernet, IP, and UDP modules were reused with minor buffer adjustments, while the LDPC processing pipeline was fully developed in VHDL, available online1 for reference. The system selectively filters LDPC traffic, generates response packets, and employs multi-level buffering to absorb network jitter. Comprehensive error detection, checksum verification at all layers, and AXI4-Stream flow control ensure reliable, lossless operation under high-throughput conditions.
+1https://github.com/cedric-cnam/LDPC-FPGA
+
+VI. EXPERIMENTAL RESULTS AND DISCUSSION
+This section addresses the performance evaluation of the LDPC decoder implemented on the NetFPGA-SUME platform, encompassing power consumption, throughput, latency and error correction capabilities.
+A. Power Consumption Analysis
+Table IV presents the detailed power analysis results for the complete system operating under typical conditions:
+
+TABLE IV POWER AND THERMAL CHARACTERISTICS
+
+Component
+Logic Block RAM Clock Networks I/O Interfaces MMCM Circuits Total Dynamic Device Static Total On-Chip Effective θJA Junction Temperature
+
+Power (W)
+0.453 1.867 0.448 0.007 0.224 3.953 0.479 5.731 1.1 ◦C/W 31.5 ◦C
+
+% of Total
+11% 47% 11% 1% 6% 69% 8% 100%
+-
+
+Type
+Dynamic Dynamic Dynamic Dynamic Dynamic
+Static
+-
+
+Description
+Control and processing logic Buffering and storage Dual-domain clock distribution External connectivity Clock management Active switching power Leakage and quiescent power Complete system power Thermal resistance Operating temperature
+
+The power distribution analysis shows a good balance between processing requirements and thermal constraints. Dynamic power consumption (69%) reflects active signal processing and network interface operations, while static power (8%) remains within acceptable limits for continuous operation.
+The thermal analysis indicates a junction temperature of 31.5 ◦C with effective thermal resistance of 1.1 ◦C/W, demonstrating good thermal characteristics suitable for extended operation without additional cooling requirements. The moderate power consumption enables deployment in power-constrained environments while maintaining full performance capabilities.
+B. End-to-End Latency and Throughput Analysis
+1) Evaluation setup: The performance evaluation of the FPGA-based LDPC decoder system was carried out using a unified test setup to ensure consistent and comparable results for both end-to-end latency and throughput measurements. System parameters are summarized in Table V. Experiments were conducted on the NetFPGA-SUME platform, interfaced with a laptop equipped with an Intel Core i7-7700 CPU (3.60 GHz, 8 cores) and 16 GB of RAM. Each metric was computed over 1,000 repeated measurements, with each repetition considering individual packets from a total of 2,000 packets, yielding 2 × 106 samples. For a confidence level of 95%, this sample size ensures that the maximum error in metric estimation remains below 5%.
+2) End-to-end latency: Table VI reports the measured latency from UDP packet transmission to the reception of the corresponding UDP response. The system achieves an average latency of 423.1 µs, demonstrating near real-time performance suitable for sub-millisecond response requirements in communication systems.
+The measured latency presents a tight distribution, with a standard deviation of 39.8 µs and close agreement between average and median values. These results indicate highly deterministic processing, minimal timing jitter, and consistent end-to-end behavior across multiple packets.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE V EVALUATION SETUP
+
+Metric
+LDPC Configuration Code rate Lifting factor Total packets Transmission Path (TX) Information bits per packet Code expansion Quantization Network payload Reception Path (RX) Decoded output Response payload
+
+Value
+1/5 384 2,000
+3,840 19,200 4-bit signed 9,600
+3,840 480
+
+Unit
+K/N packets
+bits LLRs [-8, +7] bytes/packet
+bits bytes/packet
+
+Description
+Ratio of information bits to total codeword bits Determines code expansion factor Number of packets processed
+Original data per codeword Expanded data after LDPC encoding LLR representation Data sent per packet
+Information bits recovered per packet UDP packet size for decoded data
+
+TABLE VIII STANDALONE LDPC CORE PERFORMANCE (75 MHZ)
+
+Performance Metric
+Operating Frequency Input LLR Count Input Data Size Output Data Size Processing Latency LLR Processing Throughput Information Throughput Clock Efficiency
+
+Value
+75 19,200 76,800 3,840 64.4 1,192.5
+59.6 4,830
+
+Unit
+MHz LLRs bits bits
+µs Mbps Mbps cycles
+
+Description
+System-aligned frequency 4-bit LLRs per frame Total LLR bits (19, 200 × 4) Decoded information bits Core decoding time Input processing rate Decoded output rate Total processing cycles
+
+TABLE VI END-TO-END LATENCY PERFORMANCE
+
+Performance Metric Value Unit Description
+
+Average Latency Median Latency Minimum Latency Maximum Latency Standard Deviation
+
+423.1 µs Mean processing time 411.4 µs 50th percentile 403.0 µs Best-case performance 1,467.7 µs Worst-case scenario 39.8 µs Latency variation
+
+3) Throughput performance Evaluation: The Table VII summarizes the average throughput performance of the LDPC decoder system measured over 2000 packets.
+
+The standalone LDPC core achieves 1,192.5 Mbps LLR processing throughput and 59.6 Mbps information throughput with 64.4 µs processing latency at 75 MHz. The 20:1 ratio between input LLR processing and output information generation accurately reflects the rate 1/5 LDPC code characteristics and the LLR quantification of 4 bits. While higher throughput could be achieved at increased frequencies, the 75 MHz operation was maintained to ensure compatibility with the dualclock domain architecture required for network integration.
+2) Comparison with State-of-the-Art Implementations: Table IX compares the standalone LDPC performance with recent academic implementations:
+
+TABLE VII THROUGHPUT PERFORMANCE RESULTS
+
+Metric
+LLR Processing Throughput Information Throughput Packet Processing Rate Response Rate
+
+Value
+181.51 9.08 ∼2000 100
+
+Unit
+Mbps Mbps packets/s %
+
+Description
+Input data processing rate Decoded output generation rate Sustainable processing frequency Ratio of packets successfully processed
+
+TABLE IX LDPC DECODER PERFORMANCE COMPARISON
+
+Implementation
+Tran-Thi et al. Pourjabar & Choi Verma & Shrestha Sun et al. Chen et al. Our Implementation (LDPC-only)
+
+Frequency
+200 MHz 128.36 MHz 156.25 MHz
+75 MHz
+
+Throughput
+2,820 Mbps 2,100 Mbps 13,300 Mbps 7,760 Mbps 27.85 Mbps 1,192.5 Mbps
+
+Code Length
+8,832 bits Variable (Z ≤ 96) 10,368-26,112 bits Not specified Variable rates Variable
+
+Integration
+Testbench Testbench Testbench Testbench Testbench Standalone
+
+Year
+2023 2021 2023 2023 2019 2025
+
+The results in Table VII demonstrate that the FPGAbased LDPC decoder system is capable of sustaining highthroughput operation with reliable packet processing. The LLR processing throughput of 181.51 Mbps indicates that the system efficiently handles the expanded codeword data, while the information throughput of 9.08 Mbps reflects the effective rate of decoded information bits delivered per packet. The system maintains a packet processing rate of approximately 2,000 packets per second, confirming its ability to support continuous multi-packet operation without performance degradation. Finally, the 100% response rate shows that all packets are successfully processed and returned, highlighting the reliability and robustness of the implemented pipeline under the tested conditions.
+C. LDPC-Only Performance Analysis and System Integration
+To establish fair comparison with existing academic implementations, the LDPC decoder core was evaluated in isolation without network integration overhead. The standalone performance demonstrates the algorithmic capabilities while revealing system integration trade-offs.
+1) Standalone LDPC Core Performance: The LDPC decoder core was tested at 75 MHz to maintain consistency with the complete system operating frequency. Table VIII presents the standalone core performance:
+
+The standalone implementation achieves 1,192.5 Mbps at 75 MHz, demonstrating good performance when considering frequency normalization. Notably, while other works achieve higher absolute throughput, they operate at significantly higher frequencies. The measured performance validates the efficiency of the implemented architecture while demonstrating practical deployment readiness with integrated network processing capabilities.
+D. Bit Error Rate (BER) Performance Analysis
+To validate the error correction capabilities of the implemented LDPC decoder, comprehensive BER performance testing was conducted using 1000 transmitted packets over channel conditions. The evaluation employed hardware-compatible LLR data generated through a complete LDPC encoding and channel simulation pipeline implemented in MATLAB, ensuring realistic testing conditions that accurately represent practical deployment scenarios.
+1) Experimental Setup for BER Testing: The BER evaluation methodology encompassed end-to-end system validation from LDPC encoding through hardware decoding and bit-level comparison. The Table X presents the setup parameters of the experiment.
+The error correction capabilities of the implemented LDPC decoder were evaluated through comprehensive BER testing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE X TEST CONFIGURATION PARAMETERS
+
+Parameter Frame Length Total Test Frames LLR Quantization Channel Model Noise Number of Iterations Modulation Eb/N0
+
+Value 1920 bits per frame 1000 packets 4-bit (signed) Nakagami-m (m = 2) AWGN 10 BPSK from 0 to 6 step 0.5
+
+10−1
+
+simulated LDPC results under Nakagami fading, thereby validating the correctness of the hardware implementation and its ability to reproduce theoretical expectations.
+All curves exhibit the expected exponential BER decay with increasing Eb/N0, and the FPGA-based results show no indication of an error floor up to 6 dB, confirming reliable operation in the low-BER regime. Taken together, the comparison with both uncoded baselines and MATLAB simulations highlights that the proposed LDPC decoder successfully mitigates the combined effects of noise and fading, providing near-ideal error correction performance suitable for practical 5G NR deployments.
+
+10−2
+
+10−3
+
+BER
+
+10−4
+
+10−5
+
+Uncoded Nakagami-m (m = 2)
+
+Theoretical Uncoded AWGN
+
+FPGA-based LDPC (R=1/5))
+
+LDPC (R=1/5) (Nakagami-m, m = 2
+
+10−6 0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+Eb/N0 (dB)
+
+Fig. 3. BER performance of the FPGA-based LDPC decoder compared with uncoded BPSK baselines and MATLAB simulations under Nakagami-m (m = 2) fading.
+
+using 1000 transmitted packets per Eb/N0 point. Test vectors were generated with a MATLAB-based LDPC encoder, producing both transmitted codewords and hardware-compatible LLR data for realistic testing. The evaluation employed a complete LDPC encoding and channel simulation pipeline, including the Nakagami-m [23] fading model with m = 2, which represents moderate fading conditions typical of urban microcell 5G scenarios, providing a balanced assessment between Rayleigh-like NLoS and stronger LoS environments.
+2) BER Performance Results: Figure 3 shows the BER performance of the FPGA-based LDPC decoder (black curve) compared to several baselines: theoretical uncoded BPSK over AWGN as a noise-limited reference, uncoded BPSK over Nakagami-m fading, and MATLAB-simulated LDPC (R=1/5) over Nakagami-m. Each BER point represents 1,920,000 bits, ensuring a 95% confidence level with a maximum metric error below 3%.
+The results clearly demonstrate the benefit of LDPC coding in fading channels. At Eb/N0 = 3 dB, the FPGA-based LDPC decoder achieves a BER of approximately 1.34 × 10−3, which outperforms uncoded BPSK over AWGN (3.87 × 10−3) and provides more than an order of magnitude improvement compared to uncoded BPSK under Nakagami-m fading (3.81 × 10−2). This evidences the strong coding gain of the LDPC scheme, particularly in fading scenarios where the baseline uncoded performance degrades significantly. Furthermore, the measured FPGA performance closely tracks the MATLAB-
+
+VII. CONCLUSIONS
+We introduce an FPGA-based integration of a configurable 5G NR LDPC decoder with a full UDP/Ethernet network stack, with target integration in a Smart-NIC in disaggregated RAN environments. The system supports all 5G NR base graphs, lifting sizes, and code rates through parameter-driven synthesis, achieving 181.51 Mbps throughput, 423.1 µs end-toend latency, 1.19 Gbps LDPC core throughput, 100% packet reliability, and efficient resource utilization (15.09% LUTs, 69.12% BRAM) with dual-clock operation (156 MHz network, 75 MHz LDPC) at 5.731 W. BER evaluation confirms robust error correction: at Eb/N0 = 3 dB, the FPGA-based decoder achieves a BER of 1.34×10−3, outperforming uncoded BPSK over AWGN (3.87 × 10−3) and delivering more than an order of magnitude gain over uncoded Nakagami-m fading (3.81 × 10−2). No error floor was observed up to 6 dB. These results demonstrate the feasibility of deploying LDPC decoding as an in-network function on FPGA-based SmartNIC platforms.
+Future work will focus on porting the proposed architecture to NetFPGA-Alveo platforms based on UltraScale+ FPGAs, aiming to enhance throughput by leveraging higher operating frequencies, parallel LDPC cores, and optimized scheduling for multi-stream decoding. We will also explore runtime resource allocation to enable dynamic switching between LDPC configurations, as well as integrating machine learning for channel estimation and adaptive decoding to enhance performance for next-generation applications. Additionally, the architecture will be extended to operate under more demanding and realistic network conditions, including burst traffic, concurrent decoding streams, and packet loss scenarios typical of Smart-NIC and edge computing environments. The implementation of adaptive buffering and lightweight reliability mechanisms, such as sequence numbering over UDP-lite, will be investigated to improve robustness during high-throughput operation.
+ACKNOWLEDGEMENTS
+This work was funded by the France 2030 projects: IE6 (Internet of the Edges for 6G) contract nb DOS0223931, IPCEI PIEEC ME/CT contract nb DOS0239248/00. Authors would like to thank Prof. Didier Le Ruyet for his useful recommendations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] 3GPP, “3GPP TS 38.212: NR; Multiplexing and channel coding,” 3rd Generation Partnership Project, Tech. Rep. TS 38.212, 2020.
+[2] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, “Channel coding toward 6g: Technical overview and outlook,” IEEE Open Journal of the Communications Society, vol. 5, pp. 2585–2685, 2024.
+[3] W. Lin, Y. Shan, R. Kosta, A. Krishnamurthy, and Y. Zhang, “Supernic: An fpga-based, cloud-oriented smartnic,” in Proceedings of the 2024 ACM/SIGDA International Symposium on Field Programmable Gate Arrays, 2024, pp. 130–141.
+[4] IEEE Standards Association, IEEE Standard for Information Technology–Telecommunications and Information Exchange between Systems Local and Metropolitan Area Networks–Specific Requirements Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 1: Enhancements for HighEfficiency WLAN, IEEE Std. IEEE Std 802.11ax-2021, 2021.
+[5] ETSI, ETSI EN 302 307-1: Digital Video Broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications; Part 1: DVB-S2, European Telecommunications Standards Institute Std. EN 302 307-1, 2014.
+[6] IEEE Standards Association, IEEE Standard for Information technology–Local and metropolitan area networks–Specific requirements–Part 3: Carrier Sense Multiple Access with Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications Amendment: Physical Layer and Management Parameters for 10 Gb/s Operation, Type 10GBASE-T, IEEE Std. IEEE Std 802.3an-2006, 2006.
+[7] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5g new radio,” IEEE Communications Magazine, vol. 56, no. 3, pp. 28–34, 2018.
+[8] I. Palama`, Y. Lizarribar, L. M. Monteforte, G. Santaromita, S. Bartoletti, D. Giustiniano, G. Bianchi, and N. B. Melazzi, “5g positioning with software-defined radios,” Computer Networks, vol. 250, p. 110595, 2024.
+[9] B. N. Tran-Thi, T. T. Nguyen-Ly, and T. Hoang, “An FPGA design with high memory efficiency and decoding performance for 5G LDPC decoder,” Electronics, vol. 12, no. 17, p. 3667, August 2023.
+[10] B. Mejmaa, M. A. Marktani, I. Akharraz, and A. Ahaitouf, “An efficient QC-LDPC decoder architecture for 5G-NR wireless communication standards targeting FPGA,” Computers, vol. 13, no. 8, p. 195, August 2024.
+[11] S. Pourjabar and G. S. Choi, “A high-throughput multi-mode LDPC decoder for 5G NR,” arXiv preprint arXiv:2102.13228, February 2021. [Online]. Available: https://arxiv.org/abs/2102.13228
+[12] M. I. Subhi and Q. Al-Doori, “Optimizing LDPC decoder implementation on FPGA for improved wireless communication efficiency,” Journal of Computational Analysis and Applications, vol. 33, no. 6, pp. 580–593, 2024.
+[13] A. Verma and R. Shrestha, “Low computational-complexity SOMSalgorithm and high-throughput decoder architecture for QC-LDPC codes,” IEEE Transactions on Vehicular Technology, vol. 72, no. 1, pp. 66–80, January 2023.
+[14] Y. Sun, L. Zhao, J. Li, Z. Zhang, X. Yang, and X. Bu, “Design and implementation of a highly efficient quasi-cyclic low-density paritycheck transceiving system using an overlapping decoder,” Sensors, vol. 23, no. 18, p. 7828, September 2023.
+[15] C. Kun, S. Qi, L. Shengkai, and P. Chengzhi, “Implementation of encoder and decoder for LDPC codes based on FPGA,” Journal of Systems Engineering and Electronics, vol. 30, no. 4, pp. 642–650, August 2019.
+[16] S. F. Abdel-Momen, A. H. A. Zekry, A. Y. Hassan, W. I. Shaban, and M. M. Shiple, “FPGA implementation of 5G NR LDPC codes,” Advances in Science, Technology and Engineering Systems Journal, vol. 8, no. 4, pp. 91–100, 2023.
+[17] S. P. Tera, R. Alantattil, and R. Paily, “A flexible FPGA-Based stochastic decoder for 5G LDPC codes,” Electronics, vol. 12, no. 24, p. 4986, December 2023.
+[18] M. Benhayoun, M. Razi, A. Mansouri, and A. Ahaitouf, “Embedded parallel implementation of LDPC decoder for ultra-reliable low-latency communications,” Applied Computational Intelligence and Soft Computing, vol. 2023, p. 5573438, October 2023.
+[19] B. L. Gal, C. Je´go, and V. Pignoly, “High-performance hard-input LDPC decoding on multi-core devices for optical space links,” Journal of Systems Architecture, vol. 137, p. 102832, April 2023.
+
+[20] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, “A survey of FPGA-based LDPC decoders,” IEEE Communications Surveys & Tutorials, vol. 18, no. 2, pp. 1098–1122, Second Quarter 2016.
+[21] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, August 2004.
+[22] A. Forencich, “Verilog ethernet components,” GitHub repository, 2024, accessed: 2024-07-09. [Online]. Available: https://github.com/alexforencich/verilog-ethernet
+[23] A. M. Magableh, T. Aldalgamouni, O. Badarneh, S. Mumtaz, and S. Muhaidat, “Performance of non-orthogonal multiple access (noma) systems over n-nakagami-m multipath fading channels for 5g and beyond,” IEEE Transactions on Vehicular Technology, vol. 71, no. 11, pp. 11 615–11 623, 2022.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:41 UTC from IEEE Xplore. Restrictions apply.
+
+

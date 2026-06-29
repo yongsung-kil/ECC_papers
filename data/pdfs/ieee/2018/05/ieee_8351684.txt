@@ -1,0 +1,401 @@
+Perfect Column-Layered Two-Bit Message-Passing LDPC Decoder and Architectures
+
+Xinmiao Zhang* The Ohio State University
+
+Alexander Bazarsky Western Digital Corporation
+
+Abstract—Flash and other memories may adopt multi-stage low-density parity-check (LDPC) decoders to reduce the average decoding latency and power consumption. To meet the increasingly tighter latency constraints of next-generation data centers, the earlier-stage decoders need to have better error-correcting capability and lower latency. To achieve this goal, this paper first develops a column-layered scheduling scheme for the 2-bit message-passing (TBMP) LDPC decoding algorithm, which has significant coding gain over the 3-bit Min-sum algorithm. The proposed column-layered scheme is perfect in the sense that it does not cause any coding gain degradation. Also by utilizing the 2-bit property, efficient VLSI architectures are designed for the column-layered and non-layered TBMP algorithms. Complexity analysis shows that, the layered (non-layered) TBMP decoder has more than 10 (8) times shorter latency at the cost of 53% (8%) larger area compared to a row-layered 3-bit Min-sum decoder for an example (17664, 16560) LDPC code.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are used for error correction in many storage devices, such as Flash memories. There exist a variety of decoding algorithms with tradeoffs on complexity and correction capability. To reduce the average decoding latency and power consumption, multi-stage LDPC decoders can be adopted. Simpler but lower-gain decoders are used in earlier stage(s). Only when the earlier-stage decoders fail, more complicated decoders are activated. Next-generation applications, such as hyper-speed data analytics and highperformance computing, demand data access with very short latency. To cope with the tightening latency requirements, lowcomplexity earlier-stage decoders with better error-correcting performance and shorter latency are indispensable.
+LDPC decoding is done by iteratively passing messages representing probabilities between the connected check and variable nodes. The achievable coding gain of the popular Minsum [1] algorithm improves with the message word length, and the additional gain becomes marginal when the word length is more than 5 or 6-bit. The simple bit-flipping and high-precision Min-sum algorithms lie on the two ends of the practical complexity-correction capability spectrum of LDPC decoding. Unlike the Min-sum algorithm, the 2-bit messagepassing (TBMP) decoder [2] limits the message magnitudes to two possible values. If proper magnitudes are chosen for the messages, the TBMP algorithm is able to achieve even higher coding gain than the 3-bit Min-sum algorithm, and it converges faster. These properties make the TBMP algorithm one of the best candidates for earlier-stage decoders.
+This work was partly done when the author was with Western Digital Corporation, Milpitas, CA, U.S.
+
+Decoding iteration number is reducible by layered scheduling, which incorporates the newly computed messages immediately in the decoding. Compared to row-layered scheduling [3], column-layered also called shuffled scheduling [4] enables even higher throughput by processing all rows of the parity check matrix simultaneously. Nevertheless, the message updating in column-layered decoding poses more challenges. Existing column-layered architectures are mostly for the Minsum algorithm. Keeping track of and updating only the minimum and second minimum variable-to-check (v2c) message magnitudes and indices according to the newly computed v2c messages leads to performance loss [5]. The loss is mitigated by also recording and updating the third minimum v2c magnitude and its index [6] or using a compensation value for the third minimum [7]. However, this inevitably leads to large memory and more complex message updating logic.
+In this paper, by utilizing the 2-bit property, a novel column-layered TBMP algorithm is first proposed. The proposed scheme does not record multiple minimum v2c magnitudes and their indices. Exploiting the feature that a v2c magnitude can be only one of the two values, a single count of the v2c messages with smaller magnitude is kept and updated. This not only enables a perfect column-layered decoder in the sense that the messages are generated accurately as in the original shuffled scheme [4], but also leads to low hardware complexity. Moreover, the check-to-variable (c2v) message magnitudes are adjusted according to the syndrome weight to further improve the correction capability. The second contribution of this paper is efficient architectures for the TBMP decoders. Low-complexity check and variable node units are designed and the overall decoder architecture is optimized to take advantage of the very short word length. For an example (17664, 16560) LDPC code, the new column-layered (nonlayered) TBMP decoder has more than 10 (8) times shorter latency or higher throughput at the cost of 53% (8%) area overhead compared to a row-layered 3-bit Min-sum decoder, while achieving significant coding gain.
+This paper is organized as follows. Section II introduces the TBMP algorithm. The column-layered TBMP scheme is proposed in Section III. Section IV presents efficient VLSI architectures for the new decoding scheme and comparison results. Conclusions follow in Section V.
+II. TWO-BIT MESSAGE PASSING DECODING ALGORITHM
+An LDPC code is defined by a very sparse parity check matrix H. Each row (column) of H corresponds to a check (variable) code. A check and a variable node are connected by an edge if the corresponding entry in H is nonzero.
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:59:38 UTC from IEEE Xplore. Restrictions apply.
+
+The decoding of LDPC codes is done by iteratively passing messages between the connected check and variable nodes until a codeword is found or the maximum iteration number is reached. A vector r is a codeword iff rHT = 0. To facilitate partial-parallel processing, quasi-cyclic (QC)-LDPC codes are usually used. The H matrix of such a code consists of M × N submatrices of dimension Z ×Z. Each submatrix is either zero or a cyclically shifted identity matrix.
+In the TBMP algorithm [2], the magnitudes of the v2c and c2v messages can be only one of the two values: Strong (S) and Weak (W ), and S > W > 0. The magnitude of the channel input is C, and C can be different from S and W . Let the hard-decision received bit vector be r, and rv is the vth bit. pv = 1 − 2rv is the sign of the vth channel input. Denote the maximum iteration number by Imax. The pseudo codes of the TBMP algorithm are listed in Algorithm A. The message from variable (check) node v (c) to check (variable) node c (v) is denoted by Qvc (Rcv). N (v) (N (c)) is the set of check (variable) nodes connected to variable (check) node v (c). Superscript (i) is added when necessary to denote the messages for the ith iteration.
+
+Algorithm A: 2-bit message-passing decoding algorithm input: C, S, W , r initialization: i = 0, r(0) = r, pv = 1 − 2rv(0), Qv(0c) = pv · W
+
+while (r(i)HT = 0)&(i < Imax) check node processing sign(Rc(iv+1)) = u∈N (c)\v sign(Qu(ic))
+
+|Rc(iv+1)| =
+
+S if ∀u ∈ N (c)\v, |Qu(ic)| = S W otherwise
+
+variable node processing
+
+Qv(ci+1) =⎧ u∈N (v)\c Ru(iv+1) + pv · C ⎪⎨W · sign(Qv(ci+1)) if 0 < |Qv(ci+1)| < S
+
+Q(vic+1)
+
+=
+
+⎪⎩SW·
+
+sign(Qv(ci+1) · pv
+
+)
+
+if |Qv(ci+1)| ≥ S if |Qv(ci+1)| = 0
+
+hard-decision computation
+
+tv = c∈N (v) Rc(iv+1) + pv · C
+
+rv(i+1) = (tv = 0? rv : (1 − sign(tv))/2)
+
+i=i+1
+
+Considering that |Quc| is either S or W , the check node processing in Algorithm A follows the same rule as that in a
+2-bit Min-sum algorithm. Nevertheless, after the channel and
+c2v messages are added up, additional measures are taken to
+decide the v2c messages and hard-decision bits. Although it
+was not noted in [2], the achievable coding gain of the TBMP varies a lot with C, S, and W . Simulation results over binary symmetric channel (BSC) for a QC-LDPC code with N = 368, M = 23, Z = 48 and column weight dv = 4 are shown in Fig. 1. In all the figures of this paper, the x-axis is the bit error rate (BER) of the channel input. Imax = 100, and W is set to 1 since the performance of the TBMP is decided by the relative magnitudes of C, S, and W . Using a larger W and correspondingly scaled S and C leads to the same performance. Take the curves with S = 4 as an example, the performance first improves as C increases. However, when C becomes too big, the error floor shows up early. Similar trends have been observed for the TBMP with other values of S. For
+
+succinctness, only a couple of curves with S = 2, 3 are shown. It is also evident from Fig. 1 that the performance in general is better when S = 4 compared to S = 2, 3. With (C, S, W ) = (5, 4, 1), the TBMP algorithm achieves significant coding gain over the 3-bit scaled Min-sum.
+
+100
+
+3bit scaled Min−sum C=3
+
+10−1
+
+5bit scaled Min−sum C=7 TBMP(C,S,W)=(4,4,1)
+
+TBMP(C,S,W)=(5,4,1)
+
+10−2
+
+TBMP(C,S,W)=(6,4,1) TBMP(C,S,W)=(3,3,1)
+
+TBMP(C,S,W)=(2,2,1)
+
+10−3
+
+Frame error rate (FER)
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+10−3
+
+2x10−3
+
+3x10−3
+
+Bit error rate (BER)
+
+Fig. 1. Simulation results of the TBMP algorithm for a (17664,16560) QCLDPC code with dv = 4 over BSC
+
+III. LAYERED TBMP DECODING ALGORITHM
+In the TBMP of Algorithm A, the newly computed v2c messages in iteration i start to take effect in decoding iteration i + 1. To speed up the convergence, column-layered decoding uses the newly derived v2c messages in the computation of the next c2v messages right away. For QC-LDPC codes, all rows in a block column of circulant submatrices of H can be processed simultaneously in column-layered decoding. This enables much higher throughput compared to row-layered decoding that usually processes one circulant submatrix at a time. In this section, a column-layered TBMP scheme is developed utilizing the 2-bit property of the TBMP algorithm. The newly computed v2c messages are taken into the decoding with no performance loss and small memory and logic overheads.
+|Rcv| equals the smallest |Quc| with u ∈ N (c)\v in the TBMP and Min-sum algorithms. Let min1 and min2 be the smallest and second smallest, respectively, of |Quc| with u ∈ N (c), and idx1 and idx2 are their indices. |Rcv| equals min1 if v = idx1 and min2 otherwise. However, in column-layered decoding, keeping only min1, min2, their indices and updating them according to the newly computed Quc does not always generate accurate min1, min2, and hence c2v messages. When u = idx1 or idx2, |Quc| may be mistakenly taken as the new min2 even if it is larger than some other |Qu c|(u ∈ N (c)\idx1, idx2), which are not stored. To mitigate this error, the third minimum of |Quc|, called min3, and its index are stored and updated [6]. Although min3 can be replaced by a compensation value [7], recording two minimums and three indices and updating them inevitably leads to large storage requirement and logic overhead.
+In the TBMP algorithm, |Quc| is either S or W , and is represented by 1 bit. Hence, a count of |Quc| = W for u ∈ N (c), denoted by Rccnt, can be accurately updated with the newly computed v2c messages. Note that, in column-layered decoding, after the processing of the jth block column of H in iteration i + 1, the most updated v2c messages are Qu(ic+1) for u < jZ and Q(uic) for u ≥ jZ. If Rccnt ≥ 2, which means
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:59:38 UTC from IEEE Xplore. Restrictions apply.
+
+Frame error rate (FER) Average number of decoding iterations
+
+100 non−layered,Imax=100
+
+10−1
+
+non−layered,Imax=20
+
+col.−layered SWth=1104,Imax=20
+
+10−2
+
+col.−layered,SWth=70,Imax=20
+
+col.−layered,SWth=50,Imax=20
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+10−3
+
+2x10−3 Bit error rate (BER)
+
+3x10−3
+
+Fig. 2. FERs of column-layered TBMP algorithm with (C, S, W ) = (5, 4, 1) for a (17664,16560) QC-LDPC code over BSC
+
+min1 = min2 = W , then |Rc(iv+1)| = W . If Rccnt = 0, which means both min1 = min2 = S, then |Rc(iv+1)| = S. In the case of Rccnt = 1, which means min1 = W and min2 = S, |Rc(iv+1)| = S if |Qv(ic)| is the min1 message. Otherwise, |Rc(iv+1)| = W . The proposed column-layered TBMP algorithm is listed in Algorithm B.
+In Algorithm B, dc denotes the row weight of the code. The syndrome weight (SW ) is also utilized to further improve the performance. When SW is higher than a threshold SWth, |Rcv| is adjusted to a smaller magnitude. This helps to improve the error-correcting capability when the BER of the channel input is not very low as will be shown in Fig. 2. The optimal SWth can be decided from simulations. Although now the Rcv messages have a third possible magnitude S − 1, each Rcv can still be represented by 2 bits if SW < SWth is sent to the variable node processing as a control signal. More details on this will be provided in the next section. The second ‘for c ∈ N (v)’ loop in Algorithm B updates Rccnt according to the difference between |Qv(ic+1)| and |Qv(ic)|.
+
+Algorithm B: Column-layered 2-bit message-passing algorithm
+
+input: C, S, W, r, dc initialization: i = g = 0, r(0) = r, pv = 1 − 2rv(0), Qv(0c) = pv · W Rccnt = dc, sc = v∈N (c) pv, SW = (1 − sc)/2
+
+while (i < Imax) while (SW = 0)&(g < N )
+
+for each column v in block column g
+
+for c ∈ N (v) sign(Rc(iv+1)) = sc · sign(Qv(ic)) if ((|Q(vic)| = W )&(Rccnt = 1))|(Rccnt = 0) |Rc(iv+1)| = (SW < SWth? S : S − 1)
+else |Rc(iv+1)| = W
+variable node processing, same as in Algorithm A
+
+hard-decision computation, same as in Algorithm A
+
+for c ∈ N (v)
+
+sc = sig⎧n(Rc(iv+1)) · sign(Q(vic+1)) ⎪⎨Rccnt − 1 if(|Qv(ic+1)| = S)&(|Qv(ic)| = W )
+
+Rccnt
+
+=
+
+⎩⎪R1 ccnt
+
++
+
+1
+
+if(|Q(vic+1)| = W )&(|Q(vic)| = S) if(|Qv(ic+1)| = W )&(Rccnt == 0)
+
+g = g + 1; update SW
+
+i = i + 1;
+
+15
+
+non−layered TBMP
+
+10
+
+col.−layered TBMP,SWth=1104
+
+col.−layered TBMP,SWth=70
+
+col.−layered TBMP,SWth=50
+
+3bit non−layered Min−sum
+
+5
+
+0 10−3
+
+2x10−3 Bit error rate (BER)
+
+3x10−3
+
+Fig. 3. Average decoding iteration numbers for a (17664,16560) QC-LDPC code over BSC using TBMP with (C, S, W ) = (5, 4, 1) and Imax = 20
+
+Fig. 2 shows simulation results of the column-layered TBMP algorithm for the same QC-LDPC code used in Fig. 1, which has constant row weight dc = 64. Imax is set to 20 for practical reasons. From Fig. 2, the column-layered TBMP achieves better performance than the non-layered version with the same Imax since it converges faster. Its performance varies with SWth. In the case of SWth = 17664−16560 = 1104, no adjustment is actually made on |Rc(iv+1)|. When SWth is around 50, the performance of this code over the waterfall region is the best, and the error floor shows up after FER=10−5, which is sufficient for many applications. The average iteration numbers are plotted in Fig. 3. The TBMP converges much faster than the 3-bit Min-sum. The column-layered version further reduces the iteration number by around 32% at BER=1.6 × 10−3 and the gain becomes smaller at lower BER.
+In column-layered decoding, since all rows are processed simultaneously, all variables that are row-specific and updated with the column processing need to be stored in registers. The LDPC codes used for practical applications typically need at least 7 or 8 bits to represent a block column index. dc and hence Rccnt need fewer bits because some submatrices in H are zero. Instead of storing min1, min2, and three indices as in the column-layered scheme of [7], our new scheme only stores Rccnt and |Qvc|. |Qvc| are 1-bit and stored in memory, which costs much smaller area than registers. Hence, our new algorithm requires much smaller area than that in [7] even if min1 and min2 are 1-bit each. In the next section, taking advantage of the 2-bit property, efficient VLSI architectures are developed for the proposed column-layered TBMP algorithm.
+
+IV. COLUMN-LAYERED TBMP VLSI ARCHITECTURES
+In this section, the architectures of the check node unit (CNU) and variable node unit (VNU) are presented before the overall column-layered TBMP decoder architecture is detailed. Efficient architectures for non-layered TBMP using the column-wise sliced message-passing scheduling [8] have also been developed taking advantage of the 2-bit property. Due to the page limitation, the details are not included in this paper. Complexity comparisons with the Min-sum decoder are provided at the end of this section.
+The CNU is divided into two parts. CNUA implements the second ’for c ∈ N (v)’ loop in Algorithm B. CNUB implements the first loop with the SW comparison part excluded and put into the decoder control logic, since it is
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:59:38 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I.
+
+SYNTHESIS RESULTS OF VNUS FOR A CODE WITH dv = 4 USING 40nm CMOS LIBRARY
+
+TBMP VNU based on LUTs, (C, S, W ) = (5, 4, 1) TBMP VNU based on LUTs, (C, S, W ) = (5, 4, 1) with |Rcv | adjustment 3-bit adder-based VNU with saturation
+5-bit adder-based VNU with saturation
+
+cell area (μm2) 230 314
+307 542
+
+shared by all CNUBs. Let the least significant bit (LSB) of a message represent the magnitude, and ’1’ and ’0’ denote S and W , respectively. Assuming Rccnt is represented using 7 bits as R6R5 · · · R0, the logic computing |Rcv| in CNUB is
+
+LSB(Rc(iv+1))=(LSB(Q(vic)) (R6R5 · · · R1R0)) + (R6R5 · · · R1R0)
+
+where ‘ ’ and ‘+’ denote NOT and OR, respectively. CNUA is
+
+implemented by a simple architecture in which Rccnt is added
+
+and subtracted by 1 decide which value
+
+before LSB(Qv(ic+1)), LSB(Qv(ic)), to select as the updated Rccnt.
+
+and
+
+Rccnt
+
+Since each c2v message has only 2 bits in the TBMP algorithm, the VNU is more efficiently implemented by lookup tables (LUTs) taking c2v messages as the inputs. The additions, comparisons, and magnitude decisions needed in the VNU are combined and pre-calculated to form the LUT entries. Compared to converting the c2v messages into 2’s complement, adding up the messages, and carrying out saturation to generate v2c messages, as done in a Min-sum VNU, the area of the LUT is much smaller. Moreover, the LUT-based approach helps to incorporate the |Rcv| adjustment according to SW . SW < SWth adds one more input bit to the LUT. Although this brings more asymmetry to the table, its area is still similar or smaller than the Min-sum VNU. Table I shows synthesis results of VNU architectures using 40nm CMOS.
+
+/ŶƉƵƚ ďƵĨĨĞƌ
+
+KƵƚƉƵƚ ďƵĨĨĞƌ
+
+YǀĐ ŵĞŵŽƌǇ
+
+,ŵĂƚƌŝǆ ŵĞŵŽƌǇ
+
+ZZD
+
+EhƐ
+
+ZĞǀ͘ƐŚŝĨƚĞƌ
+
+EhƐ
+
+ZĞǀ͘ƐŚŝĨƚĞƌ
+
+EhƐ
+
+ZĞǀ͘ƐŚŝĨƚĞƌ
+
+EhƐ
+
+ZĞǀ͘ƐŚŝĨƚĞƌ
+
+ZĐĐŶƚ
+
+ƐŝŐŶ;ZĐǀͿ
+
+Ϯ
+
+Ϯ
+
+Ϯ Ϯ
+
+Ϯ
+
+sEhϭ
+
+Ϯ Ϯ
+
+Ϯ
+
+ϭ
+
+Ϯ
+
+Ϯ
+
+Ϯ Ϯ
+
+Ϯ
+
+sEhϮ
+
+Ϯ Ϯ
+
+Ϯ
+
+ϭ
+
+Ϯ
+
+Ϯ
+
+Ϯ Ϯ
+
+Ϯ
+
+sEh
+
+Ϯ Ϯ
+
+Ϯ
+
+ϭ
+
+^tф^tƚŚ
+
+ĂƌƌĞůƐŚŝĨƚĞƌ ĂƌƌĞůƐŚŝĨƚĞƌ ĂƌƌĞůƐŚŝĨƚĞƌ ĂƌƌĞůƐŚŝĨƚĞƌ
+
+EhƐ EhƐ EhƐ EhƐ
+^tƵƉĚĂƚĞ
+
+Fig. 4. Column-layered TBMP decoder architecture
+Fig. 4 shows the overall architecture of the column-layered TBMP decoder when dv = 4. More groups of CNUs can be added for larger dv. The input buffer holds the channel input, and the most updated hard decisions are written into the output buffer. The locations of the nonzero submatrices and their offsets are stored in the H matrix memory. The RRAM block includes registers for recording Rccnt and sc, as well as multiplexors and switching logics for routing the outputs of CNUAs to the registers and connecting the outputs of the registers to CNUBs according to the locations of the nonzero submatrices in H. Each block of CNUAs and CNUBs in Fig. 4 consists of Z copies of the units. The barrel shifters and their reverse cyclically shift the Z messages associated with a submatrix according to its offset. Each VNU uses dv c2v messages to generate dv v2c messages and a hard-decision bit. The SW is updated with the hard-decision flipping in each block column using the architecture in [9].
+
+TABLE II. COMPLEXITIES OF (17664,16560) LDPC DECODERS WITH N = 368, M = 23, Z = 48, dv = 4 ESTIMATED OVER 40nm PROCESS
+
+non-layer TBMPcol.-layer TBMP3bit row-layer Min-sum
+
+Input buffer (RAM) Output buffer (RAM) Qvc memory (RAM) H matrix memory (RAM) RRAM
+Qvc buffer (RAM) logic cell area (μm2)
+
+N ×Z N ×Z N × 2dv Z N × 11dv M × 3Z register
+-
+89018
+
+N ×Z N ×Z N × 2dv Z N × 11dv M × 8Z register
+-
+146560
+
+N ×Z N ×Z N × 4Z M dc × 15 M × 11Z register M dc × Z RAM dc × 3Z
+16417
+
+Overall cell area
+
+218488
+
+308488
+
+202156
+
+data path logic levels
+
+33
+
+36
+
+# of clks/iteration
+
+N
+
+N
+
+iteration # @BER=1.2x10−3
+
+2.5
+
+2.0
+
+34 N dv 5.4
+
+average latency (normalized)
+
+1.25
+
+1
+
+10.8
+
+For the (17664,16560) example LDPC code, the complexities of different decoders are compared in Table II. The logic area is estimated through architecturally analyzing the gates involved and adding up the areas of the standard cells in the TSMC 40nm CMOS library. The areas of the memories are estimated from the memories with the closest depths and widths generated by the Memory Compiler. The columnlayered TBMP decoder requires 41% larger area than the non-layered version. The overhead is mainly caused by the wider range of Rcnt needed for being updated from an initial value instead of counted afresh in each decoding iteration. This leads to more registers and multiplexors. The logic part in the row-layered Min-sum decoder is small because only one submatrix instead of a column of submatrices is processed simultaneously. Nevertheless, the Min-sum decoder stores min1, min2, and idx1, and hence has larger memory and more registers. Overall, the column-layered (non-layered) TBMP decoder is 53% (8%) larger than the 3-bit Min-sum decoder. Column-layered Min-sum decoder is not compared since it is much larger. The lengths of the critical paths are also listed in Table II. Since they are very similar from architectural analysis, the three decoders can achieve almost the same clock frequency. The column-layered scheduling reduces the average iteration number by 20% at BER=1.2 × 10−3, and the saving is more significant at higher BER. The rowlayered Min-sum decoder requires much more iterations and dv = 4 times the clock cycles to finish an iteration. Overall, with significant coding gain, the column-layered (non-layered) TBMP decoder achieves more than 10 (8) times shorter latency (higher throughput) compared to the 3-bit row-layered Minsum decoder for the example code.
+V. CONCLUSIONS
+Exploiting the 2-bit property of the TBMP algorithm, this paper first proposed a novel column-layered scheme. By recoding and updating a single count of the messages with the smaller magnitude, the proposed scheme has no error-correcting performance loss. The second contribution of this paper is the efficient VLSI architectures for the TBMP algorithms. In particular, LUTs instead of adders are utilized to reduce the VNU area and incorporate the adjusted c2v message magnitude with small overhead. The proposed TBMP decoders are superior replacement of low-precision Min-sum decoders as earlier-stage decoders to substantially shorten the access latency of memory adopting multi-stage LDPC decoders.
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:59:38 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] J. Chen and M. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Letters, vol. 6, no. 5, pp. 208-210, May 2002.
+[2] L. Sassatelli, S. Chilappagari, B. Vasic and D. Declercq, “Two-bit message passing decoders for LDPC codes over the binary symmetric channel,” Proc. IEEE Intl. Symp. Info. Theory, pp. 2156-2160, Korea, Jun. 2009.
+[3] M. Mansour, N. Shanbhag,“A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE Journ. of Solid-State Circuits, vol. 41, no. 3, pp. 684-698, Mar. 2006.
+[4] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. on Commun., vol. 53, no. 2, pp. 209-213, Feb. 2005.
+[5] Z. Cui, Z. Wang, X. Zhang, Q. Jia,“Efficient decoder design for highthroughput LDPC decoding,” Proc. IEEE Asia Pacific Conf. on Circuits and Syst., pp. 1640-1643, Macro, China, Nov. 2008.
+[6] Y.-L. Ueng, et. al., “A multi-mode shuffled iterative decoder architecture for high-rate RS-LDPC codes,” IEEE Trans. on Circuits and Syst.-I, vol. 57, no. 10, pp. 2790-2803. Oct. 2010.
+[7] Y.-L. Ueng, “An efficient multi-standard LDPC decoder design using hardware-friendly shuffled decoding,” IEEE Trans. on Circuits and Syst.I, vol. 60, no. 3, pp. 743-756, Mar. 2013.
+[8] L. Liu and C.-J. Shi, “Sliced message passing: high throughput overlapped decoding of high-rate low-density parity-check Codes,” IEEE Trans. on Circuits and Syst.-I, vol. 55, no. 11, pp. 3697-3710, Dec. 2008.
+[9] X. Zhang, Y. Ryabinin, and E. Sharon, ”On-the-fly syndrome and syndrome weight computation architecture for LDPC decoding,” U.S. Patent 9,768,807, Sep. 2017.
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:59:38 UTC from IEEE Xplore. Restrictions apply.
+
+

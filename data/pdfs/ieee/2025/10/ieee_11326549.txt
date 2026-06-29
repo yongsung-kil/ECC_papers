@@ -1,0 +1,203 @@
+An FPGA Accelerator for CCSDS 142 O3K-LDPC for Non-Coherent Optical Communications Coding
+and Synchronization
+
+Dimitris Theodoropoulos Dept. of Informatics and Telecommunications, National and Kapodistrian University of Athens (NKUA)
+Email: theodimitris@di.uoa.gr
+
+Christos Apostolidis Dept. of Informatics and Telecommunications, National and Kapodistrian University of Athens (NKUA)
+Email: sr1210002@di.uoa.gr
+
+Nektarios Kranitis Dept. of Aerospace Science and Technology, National and Kapodistrian University of Athens (NKUA)
+Email: nkran@aerospace.uoa.gr
+
+Antonis Paschalis Dept. of Informatics and Telecommunications, National and Kapodistrian University of Athens (NKUA)
+Email: paschalis@di.uoa.gr
+
+Abstract—Nowadays, Free Space Optical Communications (FSOCs) such as Direct-to-Earth links have experienced explosive growth as they enable faster and more secure communications with lower power consumption compared to traditional radio frequency links. In this paper, we present the design, hardware implementation, and validation of a novel FPGA accelerator that implements O3K-LDPC telemetry signaling, as specified in the Consultative Committee for Space Data Systems (CCSDS) 142.0P-1.1 standard for Non-Coherent Optical Communications Coding and Synchronization, in the form of a technology-agnostic IP core. The introduced CCSDS O3K-LDPC IP core accelerates the entire O3K-LDPC transmitter data-processing chain and introduces novel scheduling and load-balancing of LDPC operations. A pipelined, frame-to-frame data processing architecture with optimized FIFO-based shift-update scheduling enables continuous processing and significant resource/power efficiency. Targeting Xilinx COTS Zynq-7000 for New-Space and Kintex UltraScale space-grade FPGAs, it sustains a >10 Gb/s channel data rate and offers high-speed AXI4-Stream interfaces for seamless onboard integration. The IP core underwent extensive VHDL-RTL simulation-based verification against a bit-accurate MATLAB golden model and precomputed CCSDS golden MD5 hashes using Siemens Questa and the VUnit Python framework, with a 100% VHDL code-coverage target, and was validated on hardware on a AMD KCU-105 hosting a KU040 FPGA for institutional missions and GOMspace NanoMind HP MK3 hosting Zynq-7030 for NewSpace. Flight heritage is expected by early 2026 on the ERMIS CubeSat under ESA AO/1-11498/22/UK/ND (Greek CubeSats InOrbit Validation Projects).
+I. INTRODUCTION
+A. Background and Motivation
+Free-space optical communications (FSOCs) are gaining increasing traction as an alternative to traditional radiofrequency (RF) links, offering multi-Gbps data rates, improved security, and reduced power consumption. Optical links are now deployed across a wide range of terrestrial and space platforms, from geostationary (GEO) and low Earth orbit (LEO) satellites to high-altitude pseudo-satellites (HAPs) and
+
+unmanned aerial vehicles (UAVs). Compared to RF, they provide higher throughput, lower infrastructure cost, enhanced resistance to interception and jamming, and simplified regulation since narrow laser beams do not require ITU licensing. Their compact terminals also satisfy the stringent size, weight, and power (SWaP) constraints of small satellite missions.
+A persistent challenge is preserving link reliability under atmospheric impairments such as clouds, fog, rain, and turbulence. To address this, the Consultative Committee for Space Data Systems (CCSDS) has defined the draft standard for Non-Coherent Optical Communications Coding and Synchronization (CCSDS 142.0-P-1.1 [1]). Forward Error Correction (FEC) is central to this specification. While the legacy Reed–Solomon (255,223) code remains a baseline and 5GNR LDPC has been adopted in U.S. defense programs, the CCSDS SLS-OPT Working Group has recently introduced Optical On–Off Keying (O3K) LDPC codes for high-photonflux links, targeting Direct-to-Earth (DTE) downlinks in dataintensive missions such as hyperspectral imaging.
+Within this framework, the ERMIS Hellenic CubeSat Demonstration Mission will validate next-generation optical communication and Earth observation technologies in orbit. Coordinated by the National and Kapodistrian University of Athens (NKUA) with contributions from Greek SMEs and research institutes, ERMIS was selected under ESA AO/111498/22/UK/ND and is funded by the Hellenic National Space Project. The mission comprises three 6U CubeSats: ERMIS-1 and ERMIS-2 for LEO 5G-IoT and inter-satellite links, and ERMIS-3 for optical downlink and hyperspectral imaging. ERMIS-3 integrates three payloads: a Simera Sense HyperScape-100 hyperspectral imager, a GOMSpace Nanomind HP MK3 serving as the Payload Data Processing Unit (PDPU), and an Astrolight ATLAS-1 optical terminal. The PDPU hosts onboard compression and coding accelerators implementing CCSDS 123.0-B-2, CCSDS 122.0-B-2,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:00 UTC from IEEE Xplore. Restrictions apply.
+
+This structure enables hardware-friendly implementations using shift registers and XORs while retaining strong error-floor performance. The encoder accepts an information block of length k and outputs a codeword of n “ 30,720 bits:
+
+c
+
+“
+
+“
+
+u
+
+ˇ ˇ
+
+pacc
+
+ˇ ˇ
+
+pira
+
+ˇ ˇ
+
+pext
+
+‰,
+
+(2)
+
+Fig. 1. ERMIS-3 payload data chain (sensor Ñ PDPU Ñ RF/optical downlink). The proposed O3K-LDPC encoder IP resides in the Coding & Synchronization sublayer of the PDPU.
+
+where u denotes the systematic bits, pacc the accumulator parity, pira the irregular-repeat-accumulate redundancy [5], and pext the extension (simple parity) checks. To achieve the target length, the first P systematic bits are punctured: P “ 2560 for the PBRL code and P “ 1536 for the ARA code [4]. After puncturing, the code is no longer strictly systematic, as part of the information block is omitted. Ensuring that all paritycheck equations remain valid despite puncturing introduces additional complexity into encoder scheduling.
+
+and the proposed CCSDS 142.0 O3K-LDPC encoder. The Ground Segment combines VHF/UHF/S-band stations, Xband “Ground Station as a Service” (GSaaS) by KSAT, and the Helmos Optical Ground Station (2.3 m Aristarchos telescope), which will be upgraded with an optical modem to enable endto-end validation of the optical downlink.
+The O3K-LDPC encoder IP is integrated into the Zynq-7000 based PDPU, bridging hyperspectral data acquisition with optical transmission. Data captured by the HyperScape 100 sensor are compressed by CCSDS 122.0-B-2 and CCSDS 123.0B-1, then encoded using CCSDS 142.0 O3K-LDPC before transmission via the ATLAS-1 terminal. Figure 1 illustrates the ERMIS-3 payload data chain.
+
+B. Overview of O3K LDPC Coding
+
+The O3K telemetry chain defined in [1] processes CCSDS transfer frames [2] through several functions. Optionally, Transfer Frame Adaptation (TFA) prepends synchronization markers and slices input frames into blocks matching the FEC encoder input length. Two families of codes are specified: a Reed–Solomon (RS) (255,223) code and two Quasi-Cyclic (QC) LDPC codes—a rate-1/2 Protograph-Based RaptorLike (PBRL) code [3] and a rate-9/10 Accumulate-RepeatAccumulate (ARA) code [4]. All produce codewords of length n “ 30,720 bits. A block interleaver permutes codewords to mitigate burst errors; this stage is memory-dominated and often becomes the throughput bottleneck. In the LDPC option, interleaved symbols are pseudo-randomized and optionally repeated with a configurable spreading factor (SF). Repetition provides rate adaptability under deep fades, while pseudorandomization whitens the spectrum and aids symbol timing recovery. Finally, Sync-layer framing encapsulates the coded stream with markers and counters for acquisition and tracking.
+The O3K-LDPC codes use a fixed circulant size of Z “ 128. The parity-check matrix H is organized in block-circulant form, where each non-zero entry hij represents a Z ˆ Z circulant permutation:
+
+P hij “ circshiftpIZ , hijq.
+
+(1)
+
+C. Related Work and Contribution
+To date, only a few FPGA implementations of CCSDS 142 O3K-LDPC encoders have been reported. At ICC 2023 [6], the first FPGA implementation was presented, but it did not target the exact LDPC codes specified in [1] and was limited to the encoder submodule. More recently, IngeniArs developed an O3K-LDPC encoder under an ESA contract [7], reporting high resource utilization on an AMD Kintex UltraScale KU040 device.
+This paper presents a flight-qualified FPGA accelerator for the CCSDS O3K-LDPC encoder that is both throughputcapable and resource-efficient. The design carefully balances the pipeline across modules—transfer frame adaptation, slicer, LDPC core, interleaver, repeater, and sync-layer framing—to maintain a uniform service rate without over-provisioning. The Annex C exponent matrices of [1] are transformed into compact column-oriented {index, rotation} lists, which are streamed through FIFOs into two worker engines (handling pacc{pira and pext). This eliminates bulky look-up tables and reduces parity generation to circular shift and XOR microoperations. The same datapath supports both ARA and PBRL codes by loading different FIFO schedules without duplicating logic. Furthermore, AXI4 burst length and width are tuned to CCSDS block sizes and the Zynq-7000 DDR controller, improving memory bandwidth in the most constrained stages. The resulting architecture achieves multi-Gbps throughput with a hardware footprint significantly smaller than prior designs, meeting the stringent SWaP constraints of CubeSatclass platforms. The proposed IP core is scheduled to gain flight heritage on the ERMIS-3 mission.
+II. ARCHITECTURE OVERVIEW
+A. System-Level Architecture
+The overall accelerator architecture is depicted in Fig. 2. The datapath consists of Transfer Frame Adaptation (TFA), LDPC encoding, interleaving, repetition, randomization, and Sync-Layer Framing (SLF). Data are provided to the encoder via an AXI4-Stream input interface, while configuration is performed through an AXI4-Lite interface. The only runtime
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:00 UTC from IEEE Xplore. Restrictions apply.
+
+configuration parameter is the Mode ID of the emitter configuration table, which determines all other encoding parameters in accordance with Paragraph 4.8.2.6.4 of [1].
+A total number of input bits
+
+Z Nk ^
+
+Iδ “ NTF NTF ` NASM ` δ,
+
+(3)
+
+δ “ N k ´ pNTF ` NASMqNTF ´ NASM
+
+(4)
+
+must be received before slicing and TFA. Here, NTF denotes the transfer frame length, NASM “ 32 is the attached synchronization marker length, N is the number of rows in the channel interleaver, and k is the LDPC information block length (k “ 15,360 for the PBRL code and k “ 27,648 for the ARA code). The remainder δ accounts for partial filling of the final information block. Zero padding is applied at block boundaries, signaled by a TLAST assertion on the AXI4Stream interface. To sustain throughput, pipelining is applied across successive frames, intermediate results are buffered in Block RAMs, and the interleaver employs double buffering. The output interface is designed for continuous operation without throttling.
+The implementation of TFA, Repeater, Randomizer, and SLF follows directly from [1]. The remainder of this section focuses on the LDPC encoder and interleaver, which dominate complexity and throughput.
+
+B. LDPC Encoding Module
+A block diagram of the LDPC encoder datapath is shown in Fig. 3. The architecture consists of four parallel processes interconnected by FIFOs, which decouple their operation and enable pipelined processing of successive codewords. The SYS process punctures the first P bits of the input block to generate the systematic part u of the codeword. It also regulates the throughput of the entire LDPC module by fixing the sysFIFO depth to kARA{128, corresponding to the maximum input size of an ARA codeword. The FIFO depths of the remaining processes are matched to this limit, ensuring that only the SYS process can stall the datapath if the pipeline becomes unbalanced.
+Parity generation is handled by two independent processes, denoted RED and BLUE, each instantiating a dedicated worker element. These workers consume a stream of column-oriented descriptors Pplq “ ppl, vl, cl, elq derived from the exponent matrices in Annex C of [1]. Each descriptor encodes the target parity index pl, the circulant rotation vl, a control bit cl that distinguishes between overwrite and update operations, and a flag el indicating that the current input vector rj is no longer required.
+Within each worker, the L-bit input block rj is circularly shifted by vl and accumulated into the parity memory wpplq. If cl “ 1, the block is written directly into wpplq, otherwise it is XORed with the existing contents. When el “ 1, the next input block is fetched from the FIFO. A concise description of this operation is given in Algorithm 1. Finally, an output process multiplexes the contributions of all processes—systematic bits
+
+u, accumulator parities pacc, irregular-repeat-accumulate parities pira, and extension parities pext—onto the AXI4-Stream output interface.
+
+Algorithm 1 Worker operation for LDPC parity generation
+
+1: l Ð lbase 2: while true do
+
+3: r pl, vl, cl, el s Ð Pplq
+
+4: if cl “ 1 then
+
+5:
+
+wpplq Ð rjövl
+
+6: else
+
+7:
+
+wpplq Ð wpplq ‘ rjövl
+
+8: end if
+
+Ź Read parameters Ź Overwrite Ź Update
+
+9: if el “ 1 then
+
+10:
+
+j Ð j ` 1; fetch next rj from FIFO
+
+11: end if
+
+12: Stream wi Ð wpiq on output if TREADY=1
+
+13: end while
+
+The allocation of matrix rows between workers for the two supported codes is shown in Fig. 4, adapted from Fig. 4-2 in [1]. In the PBRL code, the BLUE process generates pacc and pira, while the RED process computes pext. For the ARA code, both workers share the load, with the RED process assigned nA{2 of the rows of submatrix A (mA “ 24L). Submatrix C contains many all-zero circulants, which reduces RED’s workload and balances throughput between the two processes. FIFOs in front of the workers further decouple their operation, minimizing idle cycles on the output stream.
+
+C. Interleaver
+The interleaver permutes encoded symbols according to the specification in [1]. This stage is memory-bound and often determines the overall system throughput. To sustain high data rates, the module employs double buffering in external DDR memory, such that one interleaved block is written while the previous one is read out by the repeater. AXI burst sizes and bus widths are carefully tuned to the Zynq-7000 DDR controller, consistent with the GOMspace Nanomind HP MK3 platform used in ERMIS. For N ď 8192, 64 MiB of reserved memory were allocated to CCSDS 142 processing, mapped into Linux kernel space using the u-dma-buf module [8]. This optimization ensures balanced operation of the interleaver with the rest of the encoding chain.
+
+III. HARDWARE IMPLEMENTATION AND VALIDATION
+This section presents the hardware implementation and validation of the proposed encoder. Verification was conducted using industrial-grade EDA tools accessed through the Europractice program, while performance and power were evaluated on a Xilinx KCU105 prototyping board hosting a Kintex UltraScale KU040 FPGA. This device is the commercial counterpart of the space-grade radiation-tolerant Kintex UltraScale XQRKU060.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:00 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. System-level architecture of the FPGA accelerator.
+
+Fig. 3. LDPC encoder datapath.
+
+Fig. 4. Allocation of LDPC parity-check matrix rows between RED and BLUE workers.
+
+A. Verification Methodology
+Verification was carried out in four stages:
+1) A bit-accurate MATLAB golden model was developed in accordance with the CCSDS 142.0-P-1.1 standard. Its correctness was verified by comparing MD5 hashes of predefined test outputs against those reported to the CCSDS SLS-OPT Working Group [9].
+2) Exhaustive simulation of the RTL description was performed in Siemens Questa, using the open-source VUnit framework [10], achieving 100% code coverage (statement, branch, FSM, and condition).
+
+3) The RTL design was further validated in the Siemens Questa verification environment through the qverify framework, enabling automated compilation, regression testing, and coverage reporting.
+4) Hardware verification was conducted on the GOMspace Nanomind HP MK3 platform of the ERMIS-3 PDPU, based on Zynq-7000 7030/7045 SoCs. All parameter combinations pre-loaded in the encoder configuration table for the flight model were exercised with random input vectors, and their outputs were compared against the MATLAB reference model.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:00 UTC from IEEE Xplore. Restrictions apply.
+
+B. Implementation and Test Infrastructure
+The encoder was optimized for the ERMIS mission, where a 100 MHz frequency constraint was imposed to balance operation with the Zynq-7000 DDR controller and the remaining payload data processing chain. For performance and power baselining, the design was also integrated into a KCU105 reference platform. The board features a 2 GB DDR4 SODIMM accessible from the programmable logic through a Memory Interface Generator (MIG) IP, exposing an AXI4 interface. The integration setup is shown in Fig. 5.
+On the KCU105, configuration was performed via a JTAGto-AXI bridge. Test stimuli were generated by a Fibonaccitype Linear Feedback Shift Register (LFSR), and the encoder outputs were compacted into a Multiple Input Signature Register (MISR). Both modules are based on primitive polynomials, yielding maximal-length sequences and supporting full-speed operation without introducing idle cycles in the AXI4-Stream interface. Expected MISR signatures were computed offline by the MATLAB model and compared against hardware results. AXI4 protocol compliance and throughput statistics were monitored by a protocol checker core, which logged transferred bytes and cycles per encoding operation. Power consumption was measured directly from the FPGA rails using the onboard MAXIM monitoring tool, in both idle (post-bitstream load) and active (encoding) states. This ensured representative characterization of static and dynamic power.
+
+TABLE I FPGA RESOURCE UTILIZATION AND POWER ON KCU105 (XCKU040)
+
+Metric Clock (MHz) LUTs Flip-Flops BRAM (36Kb) DSP48 Max throughput (Gbps) Power (W)
+
+This Work 300
+4,858 (2.0%) 3,432 (0.7%)
+9 (1.5%) 0 (0%) 4.86–12.85 0.150
+
+IngeniArs O3K–LDPC 156.25
+126,008 (52.0%) 75,370 (15.5%)
+189 (31.5%) 5 (0.3%) 10
+Not provided
+
+efficiency makes it well-suited for integration in CubeSatclass payload data processing units subject to stringent SWaP constraints.
+IV. CONCLUSION
+We presented a resource-efficient FPGA accelerator for CCSDS O3K LDPC encoding. Novel FIFO-based scheduling, on-the-fly parity accumulation, and optimized memory interfacing allow multi-Gbps encoding at very low resource and power cost. The IP will gain flying heritage onboard the payload data processing unit of ERMIS-3 CubeSat under the framework of ESA AO/1-11498/22/UK/ND Greek CubeSats In-Orbit Validation Projects
+ACKNOWLEDGMENT
+This work was supported by ERMIS mission under the framework of ESA AO/1-11498/22/UK/ND Greek CubeSats In-Orbit Validation Projects.
+
+Fig. 5. Reference design integration of the encoder on the KCU105 prototyping board.
+C. Implementation Results
+Table I summarizes post-synthesis results for the KCU105 at 300 MHz, benchmarked against the IngeniArs O3K–LDPC encoder [7]. Our implementation achieves multi-Gbps throughput while consuming a fraction of the resources.
+Compared to the IngeniArs implementation, our design reduces LUT usage by more than 25ˆ and BRAM usage by over 20ˆ, while sustaining comparable throughput. The resulting
+
+REFERENCES
+[1] “CCSDS 142.0-P-1.1, optical on-off keying (O3K) telemetry coding and synchronization (proposed standard),” CCSDS Secretariat, Washington, D.C., Tech. Rep., Nov. 2023, [Online]. Available: https://public.ccsds.org.
+[2] “CCSDS 132.0-B-23, TM space data link protocol, blue book, issue 23,” CCSDS Secretariat, Washington, D.C., Tech. Rep., Oct. 2021, [Online]. Available: https://public.ccsds.org.
+[3] C. C. Chen, D. Divsalar, and M. P. C. Fossorier, “Protograph-based raptor-like ldpc codes,” IEEE Transactions on Communications, vol. 59, no. 9, pp. 2442–2456, Sep. 2011.
+[4] D. Divsalar, H. Jin, and R. J. McEliece, “Accumulate-repeat-accumulate codes,” IEEE Transactions on Communications, vol. 50, no. 10, pp. 1695–1706, Oct. 2002.
+[5] H. Jin, A. Khandekar, and R. J. McEliece, “Irregular repeat–accumulate codes,” in Proc. Int. Symp. Turbo Codes and Related Topics, Brest, France, 2000, pp. 1–8.
+[6] B. Gadat, L. Barthe, B. Matuz, and C. Poulliat, “Ldpc codes with low error floors and efficient encoders,” in Proc. IEEE Int. Conf. Commun. (ICC). Rome, Italy: IEEE, May 2023, pp. 6658–6664.
+[7] “ING-O3KHPE-RPT-FR-v1.0, IP core development for CCSDS-based optical payload data transmitter,” IngeniArs srl, Tech. Rep., Dec. 2024, final report for ESA Contract AO/1-11498/22/UK/ND.
+[8] I. Kawazome, “u-dma-buf: user space mappable dma buffer device driver for linux,” 2025, [Online]. Available: https://github.com/ikwzm/udmabuf.
+[9] “CCSDS 142.0-Y-1, independent implementations for optical on-off keying telemetry coding and synchronization (yellow book),” CCSDS Secretariat, Washington, D.C., Tech. Rep., May 2024, [Online]. Available: https://public.ccsds.org.
+[10] L. Asplund, VUnit: a test framework for HDL, version 4.7.0, 2023, [Online]. Available: https://vunit.github.io/.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:06:00 UTC from IEEE Xplore. Restrictions apply.
+
+

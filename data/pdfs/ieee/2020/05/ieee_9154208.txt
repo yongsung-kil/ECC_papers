@@ -1,0 +1,584 @@
+2020 IEEE 21st International Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+High Rate Communication over One-Bit Quantized Channels via Deep Learning and LDPC Codes
+Eren Balevi and Jeffrey G. Andrews Department of Electrical and Computer Engineering The University of Texas at Austin, TX 78712, USA Email: erenbalevi@utexas.edu, jandrews@ece.utexas.edu
+
+Abstract—This paper proposes a method for designing error correction codes by combining a known coding scheme with an autoencoder. Specifically, we integrate an LDPC code with a trained autoencoder to develop an error correction code for intractable nonlinear channels. The LDPC encoder shrinks the input space of the autoencoder, which enables the autoencoder to learn more easily. The proposed error correction code shows promising results for one-bit quantization, a challenging case of a nonlinear channel. Specifically, our design gives a waterfall slope bit error rate even with high order modulation formats such as 16-QAM and 64-QAM despite one-bit quantization. This gain is theoretically grounded by proving that the trained autoencoder provides approximately Gaussian distributed data to the LDPC decoder even though the received signal has nonGaussian statistics due to the one-bit quantization.
+Index Terms—Error correction codes, autoencoder, nonlinear channels, one-bit quantization
+I. INTRODUCTION
+Popular error correction codes including turbo codes, low density parity check (LDPC) codes and polar codes produce error rates very close to the Shannon limit for linear additive white Gaussian noise (AWGN) channels. However, these codes often do not perform well under hardware constraints and/or impediments. Two key trends in wireless communication systems are the march towards higher carrier frequencies and a very large number of antennas, both of which will introduce increasingly non-ideal hardware constraints such as low-resolution quantization and other nonlinear distortions. Hence, designing an error correction code that is robust to such distortions is important for future communication systems, even if such distortions are analytically intractable.
+In this paper, we propose a methodology to develop efficient error correction codes for one-bit quantization. The main reason behind the selection of this nonlinear channel model is associated with the fact that one-bit quantization brings severe nonlinearities. Thus, a channel code that can cope with one-bit quantization should be able to resist less severe nonlinearities. Furthermore, it is easy to model the nonlinearities due to one-bit quantization, which can be done by taking the sign of the real and imaginary part of the signals, unlike other RF nonlinearities. Our methodology relies on combining a state-of-the-art code that is optimized for a static linear AWGN channel (which can be seen as an outer code) with an autoencoder (which can be seen as an inner code) so as to capture the system dynamics via learning/training. This
+
+can also be interpreted as combining the current knowledge in coding theory with the recent advances in deep learning in an attempt to end up with novel error correction codes.
+Employing a neural network for error correction codes dates back to late eighties. More precisely, [1] shows how to decode linear block codes. Similarly, the Viterbi decoder was implemented with a neural network for convolutional codes in the late nineties [2], [3]. A simple classifier is learned in these studies instead of a decoding algorithm. This leads to a training dataset that must include all codewords, which makes them infeasible for most codes due to the exponential complexity. Recently, it was shown that a decoding algorithm could be learned for structured codes [4], however this design still requires a dataset with at least 90% percent of the codebook, which limits its practicality to small block lengths. To learn decoding for large block lengths, [5] trained a recurrent neural network for small block lengths that can generalize well for large block lengths. Although there are many papers that propose a deep learning-based decoding algorithm, there are only a few papers that aim to learn an encoder [6], [7], [8].
+In this paper, we design an error correction code, i.e., learn an encoder-decoder pair for a severe nonlinear channel model: a one-bit quantized AWGN channel. For this purpose, we train an autoencoder, and then incorporate an LDPC code to this autoencoder. In the case of QPSK or BPSK modulation one-bit quantization corresponds to hard decision decoding and only leads to a few dB signal-to-noise-ratio (SNR) loss. However, for high order modulations one-bit quantization leads to a very poor error rate, since the real and the imaginary part of the signals carry more than one bit information. The closest paper to this work is [9], which proposed to integrate a turbo code to an autoencoder to handle the detrimental effects of onebit quantization for QPSK and 16-QAM signaling. The main difference of this paper is to (i) use an LDPC code instead of a turbo code; (ii) utilize a modified autoencoder architecture; and (iii) propose a simpler, but efficient training policy that gives us better error rate for high order modulations, e.g., 64QAM can be operable for one-bit quantization at sufficiently low SNRs.
+The main contributions of this paper are as follows. First, we propose sending symbols at a faster-than-Nyquist rate to have a large enough learning capacity for the autoencoder that is integrated with an LDPC code. Then, we theoretically show that with this transmission and the proposed autoencoder
+
+978-1-7281-5478-7/20/$31.00 ©2020 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:59:25 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE 21st International Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+architecture (hat has infinite width neural layers) it is possible to provide Gaussian distributed data to the LDPC decoder despite the nonlinearities of one-bit quantization. In what follows, we evaluate the efficiency of our error correction code with simulations for practical finite layer widths. The proposed channel code can make high order modulations such as 16QAM and 64-QAM operable even if one-bit quantization is employed. To be more precise, our code can approach the performance of the LDPC codes in 802.11n and DVB-S2 standards that decode unquantized samples without increasing bandwidth. This apparently brings significant spectral efficiency gain for low-resolution receivers by enabling high order modulations.
+
+II. AUTOENCODER EMPOWERED ERROR CORRECTION CODING
+
+Conventional error correction codes do not provide any guarantee to obtain almost zero bit error rate at sufficiently low SNRs for nonlinear channels or non-Gaussian noise [10]. To have a low bit error rate for more challenging nonlinear environments, we propose to integrate an autoencoder with an existing error correction code. This results in a concatenated code such that the outer code is a known state-of-the-art code and the inner code is a learned or trained autoencoder. This idea is illustrated for an LDPC code in Fig. 1. In accordance with that, the input bits bn are first encoded with an LDPC encoder. This LDPC encoder produces a codeword cn that has B bits. This means that the LDPC encoder output block size is B. Then, these coded bits are modulated with an M -ary modulation method giving B/ log2(M ) symbols per codeword, which are represented as dn. The coded symbols dn are then given to the autoencoder.
+Processing the entire symbols of a codeword with an autoencoder yields excessive computational complexity for large codeword lengths. For instance, taking a reasonable codeword length of 1000 as an input to an autoencoder yields millions of parameters for a fully connected neural network. Therefore, these coded symbols are broken into small blocks of N , in which N B/ log2(M ). More precisely, a codeword is written in terms of the modulated symbols as
+
+d = [d1T dT2 · · · dTS ]T
+
+(1)
+
+where S = B/(N log2(M )) and
+
+di = [diN−N+1 diN−N+2 · · · diN ]T .
+
+(2)
+
+For (1) each di is processed separately, but with the same weights or parameters of the autoencoder. This means that a single set of weights (or a single autoencoder) is learned for all di for i = 1, 2, · · · , S. This brings huge complexity savings.
+There are many alternatives for the autoencoder architecture. For simplicity, we utilize a few fully connected layers as was done in [9], [11]. Since the same weights are used for each block, the overall architecture can be considered as a onedimensional convolutional neural network with stride N . This autoencoder architecture is given in Table I. In addition to the fully connected layers, there is a lambda layer meaning it
+
+TABLE I THE AUTOENCODER ARCHITECTURE
+
+Layer
+
+Type
+
+Size Activation Weights
+
+l0: Input
+
+Coded Symbols N
+
+-
+
+−
+
+l1: Hidden Layer-1 Fully Connected GN Linear
+
+Θ1
+
+l2: Lambda layer
+
+Channel
+
+GN
+
+-
+
+-
+
+l3: Hidden Layer-2 Fully Connected KN ReLU
+
+Θ2
+
+l4: Hidden Layer-3 Fully Connected KN ReLU
+
+Θ3
+
+l5: Hidden Layer-4 Fully Connected KN ReLU
+
+Θ4
+
+l6: Output
+
+Fully Connected N
+
+Linear
+
+Θ5
+
+does not have trainable weights. This lambda layer includes the transmission power normalization, physical channel, pulse shape, sampling and quantization.
+The autoencoder takes the coded symbols as blocks with length N and generates
+
+ei = φ1(Θ1di + b1) = Θ1di + b1
+
+(3)
+
+where φ1 is an identity function, because there is a linear
+
+activation function for the first hidden layer as can be seen in
+
+Table I. Furthermore, Θ1 and b1 correspond to the trainable weights (in matrix form) and the biases (in vector form) of the
+
+first hidden layer. Both these weights and biases are initialized
+
+with Gaussian random variables that have zero-mean, and σθ2 and σb2 variance, respectively as is standard practice [12], [13].
+
+Notice that
+
+ei = [ei1 ei2 · · · eiGN ]T ,
+
+(4)
+
+where GN is the width of the first hidden layer. The main idea to leverage an autoencoder for a coding
+scheme is to tackle all kinds of channel and hardware impediments so as to perfectly (or with very small error probability) transfer the coded symbols from a transmitter to a receiver. For this purpose, the autoencoder has to have a large capacity. This is the reason for encoding each coded symbol with G neurons. This obviously decreases the bandwidth efficiency G-fold if conventional orthogonal transmission methods are employed. A better approach is to send the input symbols faster, which is known as non-orthogonal faster-than-Nyquist transmission, at the expense of creating inter-symbol interference (ISI) and colored noise [14]. This method enables us to use a large value for G without any increase in bandwidth at the expense of degrading the minimum distance between the encoded LDPC symbols, since an autoencoder does not have isometry property, i.e., it does not preserve the distances among different inputs. Furthermore, in traditional communication systems faster-than-Nyquist signaling heavily increases the demodulation complexity for a large G. However, this is not an issue when it comes to an autoencoder, because a (neural) decoder with the same complexity is used irrespective of how symbols are transmitted.
+The symbols in (4) are transmitted as
+
+√ S GN
+
+nT
+
+s(t) = ρ
+
+einh
+
+t − (i − 1)N T − G
+
+(5)
+
+i=1 n=1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:59:25 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE 21st International Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+Fig. 1. The proposed error correction code that integrates an LDPC code with an autoencoder.
+
+where ρ is the transmission power, h(t) is the real pulse shape and T is the symbol period for orthogonal transmission. The received continuous time signal over an AWGN channel is filtered with a matched filter h(−t) to yield
+
+y(t) = (s(t) + z(t)) ∗ h(−t),
+
+(6)
+
+where z(t) is a zero-mean Gaussian noise with variance σz2 and ∗ denotes linear convolution. Writing (6) in integral form
+gives us
+
+∞
+
+y(t) = (s(τ ) + z(τ ))h(τ − t)dτ
+
+(7)
+
+−∞
+
+Sampling
+
+(7)
+
+at
+
+t
+
+=
+
+(i
+
+−
+
+1)N T
+
++
+
+kT G
+
+with a sampling period
+
+of
+
+T G
+
+makes
+
+our
+
+received
+
+symbols
+
+√ S GN
+
+yik = ρ
+
+eing[k − n] + zik
+
+(8)
+
+i=1 n=1
+
+where
+
+∞
+
+nT
+
+g[k − n] =
+
+h τ − (i − 1)N T −
+
+×
+
+−∞
+
+G
+
+kT
+
+h τ − (i − 1)N T −
+
+dτ
+
+G
+
+and
+
+∞
+
+kT
+
+zik =
+
+z(τ )h
+−∞
+
+τ − (i − 1)N T − G
+
+dτ.
+
+Sending symbols faster than the symbol period results in inter-symbol interference and colored noise. To make this clearer, we consider the vector-matrix representation of the received signal
+
+yi = [yi1 yi2 · · · yiGN ]T ,
+
+(9)
+
+which can be expressed as
+
+In what follows, the decoder part of the autoencoder takes a block of GN samples of
+
+ri = [ri1 ri2 · · · riGN ]T .
+
+(13)
+
+The signal in (13) is decoded with the second, third and fourth hidden layers, which have a width of KN and ReLU activation function, and the output layer, which has a width of N and a linear activation function. This gives us the estimate of (2). Mathematically,
+dˆi = Θ5φ4(Θ4φ3(Θ3φ2(Θ2ri +b2)+b3)+b4)+b5. (14)
+
+The parameters Θ1, Θ2, Θ3, Θ4, Θ5 and the biases b1, b2, b3, b4, b5 are denoted as W for brevity. These are optimized according to a squared error loss function as
+
+W∗ = arg min||di − dˆi||22
+
+(15)
+
+W
+
+where di and dˆi are defined in (2) and (14), respectively. Gathering all these blocks constitutes the estimate of one transmitted codeword as
+
+dˆ = [dˆT1 dˆ2T · · · dˆTS ]T .
+
+(16)
+
+III. THEORETICAL GUARANTEES
+
+The output of the autoencoder can be written according to its input as
+
+dˆi = di + vi
+
+(17)
+
+yi = GISIei + zi
+
+(10)
+
+where GISI is a GN × GN Toeplitz matrix, and its first row becomes [g[0] g[1] · · · g[GN − 1]]. Notice that GISI would be an identity matrix if orthogonal transmission was used. The correlation of the noise samples is
+
+E[zikzin] = σz2g[k − n].
+
+(11)
+
+The sampled signal in (8) is quantized before further pro-
+
+cessing as
+
+rik = Q(yik).
+
+(12)
+
+where vi refers to the residual error stemming from the noise and quantization. Since (17) is given to the LDPC decoder, which is optimized according to the data that has Gaussian statistics, it is important to determine the distribution of vi. Next we prove that vi has a Gaussian distribution.
+Theorem 1. The autoencoder provides Gaussian distributed data to the LDPC decoder, i.e., vi has a Gaussian distribution when the autoencoder has infinitely large width neural layers and is trained with gradient descent for faster-than-Nyquist transmission and one-bit quantization.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:59:25 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE 21st International Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+Proof. The autoencoder architecture in Table I can be expressed layer-by-layer as
+
+l0 :z(0) = di, x(0) = z(0)
+
+l1 :z(1) = Θ1x(0) + b1, x(1) = φ1(z(1))
+
+l2 :z(2) = yi = f (x(1)), x(2) = φ2(z(2))
+
+l3 :z(3) = Θ2x(2) + b2, x(3) = φ3(z(3))
+
+(18)
+
+l4 :z(4) = Θ3x(3) + b3, x(4) = φ4(z(4))
+
+l5 :z(5) = Θ4x(4) + b4, x(5) = φ5(z(5))
+
+l6 :z(6) = Θ5x(5) + b5
+
+where f (·) corresponds to the lambda layer except quantiza-
+tion and yi is defined in (9). Also, φ2(·) = Q(·). Since all the weights and biases are initialized with Gaussian random variables, for each unit (or neuron) in the lth layer zi(l)|x(l−1) is an identical and independent Gaussian random variable with
+zero mean and covariance
+
+K(l)(z, zˆ) = σb2 + σθ2Ezi(l−1) [φl−1(zi(l−1))φl−1(zˆi(l−1))] (19)
+except for l = 2. For the second layer zi(2)|x(1) is also a Gaussian random variable due to (10) and Gaussian noise. Specially, zi(2)|x(1) has zero-mean and its covariance is as given by (11).
+As the width goes to infinity, (19) can be written in integral form as given in (20). To be more compact, the double integral in (20) can be represented with a function such that
+
+lim K(l)(z, zˆ) = Fl−1(K(l−1)(z, zˆ)).
+
+(21)
+
+N →∞
+
+Hence, z(6)|z(0) is a Gaussian process with zero mean and covariance
+
+K(6)(z, zˆ) = F5(F4(F3(F2(F1(F0(K(0)(z, zˆ))))))) (22)
+
+when N → ∞. This means that the output of the autoencoder yields Gaussian distributed data in the initialization phase.
+During training, the parameters are iteratively updated at time n as
+
+Wn = Wn−1 − η∇Wn−1 L(Wn−1)
+
+(23)
+
+where Wn = {Θn1 , · · · , Θn5 , bn1 , · · · , b5n}, and L(·) is the loss function. In parallel, the output z(6) is updated as
+
+z(6),n = z(6),n−1 + ∇Wn−1 (z(6),n−1)(Wn − Wn−1). (24)
+
+The gradient term in (24) is a nonlinear function of the parameters. Nevertheless, it was recently proven in [15] that as the width goes to infinity, this nonlinear term can be linearized via a first-order Taylor expansion. More precisely,
+
+z(6),n = z(6),0 + ∇W0 (z(6),0)(Wn − W0) + O(N −0.5) (25)
+where the output at the initialization or z(6),0 is Gaussian as discussed above. Since the gradient (and hence the Jacobian matrix) is a linear operator, and a linear operation on a Gaussian process results in a Gaussian process, the output of the autoencoder for a given input (or z(6),n|z(0),n) is a
+
+Gaussian process throughout training with gradient descent. It is worth emphasizing that having a piece-wise quantization function in the second layer does not violate the approximation in (25), because Q(·) can easily be approximated to a sigmoid function.
+
+IV. SIMULATIONS
+
+We simulate the performance of the proposed coding
+
+method by combining the autoencoder with (i) the LDPC code
+
+that
+
+has
+
+a
+
+code
+
+rate
+
+of
+
+1 2
+
+and
+
+a
+
+codeword
+
+length
+
+of
+
+648
+
+bits
+
+and
+
+(ii)
+
+the
+
+LDPC
+
+code
+
+that
+
+has
+
+a
+
+code
+
+rate
+
+of
+
+1 2
+
+and
+
+a
+
+codeword
+
+length of 64800 bits. These LDPC codes have been used in
+
+802.11n and DVB-S2 standards, respectively. Our performance
+
+metric is the bit error rate (BER) with respect to the energy
+
+per symbol. Throughout the simulation, the symbols are sent
+
+10 times faster than Nyquist rate, which yields a strong ISI.
+
+The 6-layer autoencoder architecture is trained with the squared error function given in (15) with G = 10 and K = 20. This leads to leaving the layer before quantization (or l1) untrained. In addition to this challenge, employing an autoencoder whose input layer is much smaller than the number of coded LDPC symbols per codeword makes training further difficult. To handle these issues, we propose to periodically train the decoder part of the architecture for k codewords and then utilize it for these k codewords. The main reason for this training policy is related with the very poor generalization capability of the neural network due to one-bit quantization.
+
+For the first (shorter codeword) LDPC code, the coded bits are first modulated with 16-QAM and then fed into the autoencoder. These coded symbols are processed by the autoencoder in blocks of 24, i.e., N = 24. As can be observed in Fig. 2(a), using an LDPC code alone is not sufficient for one-bit quantization despite the fact that it decays very rapidly in the case of unquantized samples after 5dB. On the other hand, integrating an autoencoder with this LDPC code brings substantial improvement and leads to obtain a close performance with respect to the unquantized LDPC code. We repeat this experiment for 64-QAM in Fig. 2(b). Similar to the 16-QAM modulation, our coding method that only sees one-bit quantized samples gives nearly the same performance with the LDPC code that processes the unquantized samples. We also note that this LDPC code alone leads to very poor performance or BER for 64-QAM if there is a one-bit ADC in the receiver.
+
+The performance of the proposed code is also assessed for larger codeword lengths by integrating the autoencoder to the LDPC code that has a codeword length of 64800 bits. All the hyper-parameters of the autoencoder remain the same except that N is taken as 64 instead of 24. This is associated with the fact that large blocks are needed for the autoencoder to capture the structures for large codewords. We observe nearly the same behavior as compared to the shorter LDPC codes as depicted in Fig. 3 for 16-QAM signaling.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:59:25 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE 21st International Workshop on Signal Processing Advances in Wireless Communications (SPAWC)
+
+lim K(l)(z, zˆ) =
+N →∞
+
+φl−1(zi(l−1))φl−1(zˆi(l−1))N z, zˆ; 0, αθ2
+
+K(l−1)(z, z) K(l−1)(z, zˆ) K(l−1)(zˆ, z) K(l−1)(zˆ, zˆ)
+
++ αb2 dzdzˆ.
+
+(20)
+
+BER
+
+100
+
+100
+
+10-1
+
+10-1
+
+BER
+
+10-2
+
+10-3
+
+10-2
+
+10-4
+
+LDPC - Unquantized LDPC - 1 bit quantized LDPC+AE - 1 bit quantized
+
+10-5
+
+-5
+
+0
+
+5
+
+10
+
+15
+
+Es/N0 (dB)
+
+(a) 16-QAM
+
+10-3 0
+
+LDPC - Unquantized LDPC - 1 bit quantized LDPC+AE - 1 bit quantized
+
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+Es/N0 (dB)
+
+(b) 64-QAM
+
+Fig. 2.
+
+The error rate for the code rate
+
+1 2
+
+LDPC code with a codeword length of 648 bits
+
+100
+
+10-1
+
+10-2
+
+BER
+
+10-3
+
+10-4
+
+10-5
+
+LDPC - Unquantized LDPC - 1 bit quantized LDPC+AE - 1 bit quantized
+
+10-6
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+Es/N0 (dB)
+
+Fig. 3.
+
+The error rate for the code rate
+
+1 2
+
+LDPC code with a codeword length
+
+of 64800 bits for 16-QAM
+
+V. CONCLUSIONS
+In this paper, a new design methodology is discussed for developing error correction codes for nonlinear channels by leveraging the merits of deep learning and using the current knowledge in coding theory. This idea is utilized to design a channel code for one-bit quantization. Our results show that the proposed method makes higher-order modulation formats operable for one-bit receivers. As future work, better autoencoder architectures can be designed instead of using a couple of fully connected layers so as to improve our results. Furthermore, it is interesting to craft novel loss functions for one-bit quantization instead of using the canonical squared loss function, which heavily affects the training policy.
+
+REFERENCES
+[1] J. Bruck and M. Blaum, “Neural networks, error-correcting codes, and polynomials over the binary n-cube,” IEEE Trans. Inform. Theory, vol. 35, no. 5, pp. 976–987, September 1989.
+[2] X.-A. Wang and S. B. Wicker, “An artificial neural net Viterbi decoder,” IEEE Transactions on Communications, vol. 44, no. 2, p. 165–171, February 1996.
+[3] A. Hamalainen and J. Henriksson, “A recurrent neural decoder for convolutional codes,” in IEEE ICC, vol. 2, no. 99CH36311, pp. 1305– 1309, June 1999.
+[4] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learning based channel decoding,” in Proc. Conf. Inf. Sci. Syst., pp. 1–6, March 2017.
+[5] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in Proc ICLR, April 2018.
+[6] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: Feedback codes via deep learning,” arXiv preprint arXiv:1807.00801, July 2018.
+[7] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “LEARN codes: Inventing low-latency codes via recurrent neural networks,” arXiv preprint arXiv:1811.12707, November 2018.
+[8] J. Kosaian, K. Rashmi, and S. Venkataraman, “Learning a code: Machine learning for approximate non-linear coded computation,” arXiv preprint arXiv:1806.01259,, April 2018.
+[9] E. Balevi and J. G. Andrews, “Autoencoder-based error correction coding for one-bit quantization,” IEEE Trans. on Communications, doi:10.1109/TCOMM.2020.2977280, 2020.
+[10] J. G. Proakis, Digital Communications, 3rd ed. New York: McGrawHill, 1995.
+[11] E. Balevi and J. G. Andrews, “One-bit OFDM receivers via deep learning,” IEEE Trans. on Communications, vol. 67, no. 6, pp. 4326 – 4336, June 2019.
+[12] X. Glorot and Y. Bengio, “Understanding the difficulty of training deep feedforward neural networks,” in Proc. NIPS, May 2010.
+[13] K. He, X. Zhang, S. Ren, and J. Sun, “Delving deep into rectifiers: Surpassing human-level performance on imagenet classification,” in Proc ICCV, December 2015.
+[14] J. Anderson, F. Rusek, and V. Owall, “Faster-than-nyquist signaling,” Proceedings of the IEEE, vol. 101, no. 8, p. 1817–1830, Aug. 2013.
+[15] J. Lee, L. Xiao, S. Schoenholz, Y. Bahri, J. Sohl-Dickstein, and J. Pennington, “Wide neural networks of any depth evolve as linear models under gradient descent,” arXiv preprint arXiv:1902.06720, 2019.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:59:25 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,578 @@
+ISITA2016, Monterey, California, USA, October 30-November 2, 2016
+
+Hardware implementation of Spatially Coupled LDPC codes for broadcasting
+
+Shingo Asakura
+Science and Technology Research Laboratories
+NHK (Japan Broadcasting Corporation)
+Tokyo, Japan asakura.s-ie@nhk.or.jp
+
+Makoto Tanahashi
+Corporate R&D Center Toshiba Corporation
+Kawasaki, Kanagawa, Japan makoto.tanahashi@toshiba.co.jp
+
+Madoka Nakamura
+Science and Technology Research Laboratories
+NHK (Japan Broadcasting Corporation)
+Tokyo, Japan nakamura.m-ga@nhk.or.jp
+
+Masahiro Okano
+Science and Technology Research Laboratories NHK (Japan Broadcasting Corporation) Tokyo, Japan okano.m-fk@nhk.or.jp
+
+Kenichi Tsuchida
+Science and Technology Research Laboratories NHK (Japan Broadcasting Corporation) Tokyo, Japan tsuchida.k-fy@nhk.or.jp
+
+Abstract— NHK (Japan Broadcasting Corporation) is conducting research on the next generation of digital terrestrial broadcasting system to enable large-volume content services such as UHDTV (ultra-high-definition television). In our previous study, we proposed spatially coupled low density parity check (SC-LDPC) codes for broadcasting. The lengths of these codes can be easily extended and are expected to have good performance. If SC-LDPC codes are implemented in hardware, it is necessary to reduce the decoding calculation complexity and the hardware volume. This paper reports a parameter optimization for the decoding process and log likelihood ratio (LLR) quantization. Offset min-sum decoding was used in order to reduce the calculation complexity while maintaining performance, and the offset value was optimized in a computer simulation. The quantization bit depth of LLR was also determined with a computer simulation. The results were incorporated in the hardware implementation of the SC-LDPC codes, and a laboratory experiment was conducted with a prototype modulator and demodulator for broadcasting. The BER performances measured in the laboratory experiment and computer simulation were compared, and the relative deterioration of the hardware implementation was under 0.1 dB.
+I. INTRODUCTION
+Japan started 4K test broadcasting by satellite in 2014, and will start 8K test broadcasting by satellite in 2016. To enable UHDTV terrestrial broadcasting such as 4K and 8K, NHK is conducting research on large-capacity transmission technology. As part of this development, we have developed large capacity transmission technologies using higher-order modulation (e.g., 1024QAM or 4096QAM) orthogonal frequency division multiplexing (OFDM), dual-polarized multiple-input multiple-output (MIMO), and low-density parity-check (LDPC) codes [1]. LDPC code is a robust error correction code that approaches the Shannon limit, and it has already been incorporated in various broadcasting standards
+
+such as DVB-T2 [2], i.e., the second generation of digital terrestrial standard in Europe, and ARIB STD-B44 [3], i.e., the satellite standard in Japan. We are studying LDPC codes for better performance in order to broadcast large-volume content such as UHDTV.
+SC-LDPC code was recently proposed in the previous studies [4]. This sort of code is based on LDPC convolutional code [5] and has a cyclic structure that is composed of a base matrix. The matrix of SC-LDPC code is able to be optimized by optimizing the base matrix. Therefore, it is easier to produce a parity-check matrix that has good performance than to produce a parity-check matrix of conventional LDPC codes. For this reason, the code length of SC-LDPC can be easily extended. Our research focused on this characteristic, and its goal was to design SC-LDPC codes whose length is longer than that used in the conventional standard and to improve the performance of error correction. We previously designed SCLDPC code whose length is about 260,000 bits, four times as long as that used in DVB-T2, and confirmed that it has good performance in a computer simulation [6]. On the other hand, in order to implement very long LDPC code, it is necessary to reduce the calculation complexity and hardware volume. Another previous study reported a verification of SC-LDPC codes for ultra-high-speed optical communications [7]. But there is no previous report on SC-LDPC codes for broadcasting, or longer LDPC codes, about 260,000 bits, than that of conventional codes. Here, we report on the design of SC-LDPC codes about 260,000 bits long and evaluate the characteristics of a hardware implementation intended for broadcasting. In this paper, first, we briefly explain the design of our SCLDPC codes. Second, we explain the decoding method, using the TDMP (Turbo Decoding Message Passing) algorithm [8]
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:51:04 UTC from IEEE Xplore. Restrictions apply.
+
+Copyright (C) 2016 by IEICE
+
+211
+
+ISITA2016, Monterey, California, USA, October 30-November 2, 2016
+
+and offset min-sum method [9], that can reduce the calculation complexity. The combination of these decoding methods can be implemented in hardware. Third, we optimized the parameters of the decoding process. The offset value of each code rate, used in the offset min-sum method, was optimized in a computer simulation. Next, we verified the quantization bit depth of the log likelihood ratio (LLR). Each LLR was quantized when it was implemented in hardware, and the decoding characteristics depended on the quantization bit depth. As the quantization bit increased, the decoder became more complex. The quantization bit depth was also determined using computer simulation. Finally, we implemented the SC-LDPC codes in a prototype modulator and demodulator and conducted a laboratory experiment using them in order to assess the bit error rate (BER) performance. We also compared the BER performances of a computer simulation and the laboratory experiment, and the comparison showed the relative deterioration of the hardware implementation.
+II. FEATURES
+A. Structure of SC-LDPC codes
+Fig. 1(a) and (b) illustrate the differences between the paritycheck matrixes. The parity-check matrix of SC-LDPC code is quite different from that of conventional LDPC code. Its parity bits are only near the diagonal elements of the parity-check matrix, which is in contrast with LDPC codes whose parity bits are randomly spread throughout the matrix.
+
+R=(n-m)/n. Second, Fig. 2 shows the scheme of
+
+decomposition. The parity-check bit in the component base
+
+matrix is randomly decomposed into two parts, HL and HU, the size of which is the same as that of the component base matrix.
+
+At third, HL and HU are coupled and placed near the diagonal
+
+of the SC-LDPC code matrix HC. Fig. 3 shows the structure of
+
+the SC-LDPC parity-check matrix. Letting the number of
+
+connecting matrices be L, the code length of SC-LDPC code is
+
+L(n-m)+(L+1)m, the parity length of that is (L+1)m, and the
+
+code rate R’ is
+
+R
+
+Ln m
+
+nm
+
+L n m L 1m n m L
+
+(1)
+
+The parity length of SC-LDPC code is L+1 times as long as
+
+that of the component base matrix, whereas the data length is L times as long as that of the component matrix. The increase
+
+in parity length is due to fact that the code rate of the SC-
+
+LDPC code is slightly smaller than that of the component base
+
+LDPC codes. Table I shows the specifications of the SC-
+
+LDPC codes used in this paper. In later sections, the code rate
+
+is represented as an approximate value.
+
+Fig. 2. Decomposition of H into two parts
+
+㻜
+(a). Matrix of conventional LDPC codes
+㻜
+
+(b). Matrix of SC-LDPC codes Fig. 1 Overview of parity-check matrix
+B. Generation of SC-LDPC codes Here, we describe how to generate the parity-check matrices of the SC-LDPC codes. First, we create a matrix of irregular LDPC codes H (called the component base matrix) and reduce the number of short cycles to as few as possible. Letting the code length be n and the parity length be m, the code rate is
+
+Fig. 3. Structure of SC-LDPC parity-check matrix
+
+TABLE I.
+
+SPECIFICATIONS OF SC-LDPC CODE
+
+Code length
+Code rate
+Approx Num. of connect L
+
+269280 2516/3740, 2715/3740, 3230/3740
+10/15, 11/15, 13/15 17
+
+C. Encoding and decoding SC-LDPC codes
+The parity-check matrices of SC-LDPC codes are used in the same way as the conventional parity-check matrix. In the modulator, double-diagonal matrix is attached to the right side
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:51:04 UTC from IEEE Xplore. Restrictions apply.
+
+Copyright (C) 2016 by IEICE
+
+212
+
+ISITA2016, Monterey, California, USA, October 30-November 2, 2016
+
+of the parity-check matrix in order to rapidly calculate the parity check. The decoding algorithm consists of the TDMP
+
+and offset min-sum method. It is known that the TDMP algorithm is faster than TPMP (Two Phase Message Passing),
+
+a sum-product method [10]. The process of TDMP and offset
+
+min-sum method are briefly explained as follows. i is the LLR for the i-th data bit, let mn (j) be the message sent from check node m to bit node n in the j-th iteration. Si (j) is a posteriori probability message of the bit node n of the
+codeword, and each bit of data is determined to be 1 or 0 using hard decision. Note that A(m) is defined as A(m) ={n|Hmn=1}. A) (initialization)
+
+(0) mn
+
+0,
+
+S (0) i
+
+i
+
+B) (row operation)
+
+For each (m,n) satisfying Hmn=1, compute
+
+( j) mn
+
+sign
+
+S
+
+( n
+
+j
+
+1)
+
+( j 1) mn
+
+n A m \n
+
+  (2)
+
+f
+
+f
+
+S ( j 1) n
+
+n A m \n
+
+( j 1) mn
+
+f(x) is the Gallager function defined as
+
+fx
+
+ln
+
+exp exp
+
+x x
+
+1 1
+
+The offset min-sum method is used. In this computation,
+
+and demodulator. The diagram of the computer simulation is shown in Fig. 4. The sub-carrier modulation scheme was QPSK. Table II shows the parameters of the computer simulation. The transmission condition was AWGN (Additive White Gaussian Noise). The required C/N was defined as the value at which the BER falls below 1.0E-7, supposing BCH (Bose Chaudhuri Hocquenghem) outer code and quasi error free (QEF) performance.
+
+㻼㻺㻌㼏㼛㼐㼑 㼓㼑㼚㼑㼞㼍㼠㼛㼞
+
+㻸㻰㻼㻯 㼑㼚㼏㼛㼐㼑㼞
+
+㻽㻼㻿㻷 㻹㼛㼐㻚
+
+㻻㻲㻰㻹 㻹㼛㼐㻚
+
+㻮㻱㻾㻌㼙㼑㼍㼟㼡㼞㼑㼙㼑㼚㼠
+
+㻼㻺㻌㼏㼛㼐㼑
+
+㻸㻰㻼㻯
+
+㻸㻸㻾
+
+㻻㻲㻰㻹㻌
+
+㼞㼑㼏㼑㼕㼢㼑㼞
+
+㼐㼑㼏㼛㼐㼑㼞
+
+㻯㼍㼘㻚
+
+㻰㼑㼙㼛㼐㻚
+
+Fig. 4. Block diagram of computer simulation
+
+TABLE II PARAMETERS OF COMPUTER SIMULATION
+
+Item
+
+Value
+
+FFT size
+
+8912
+
+Number of subcarriers
+
+7128
+
+GI ratio
+
+1/8
+
+Test signal
+
+23rd PN code
+
+SP ratio
+
+8.3%
+
+SP boost ratio
+
+1.33
+
+Iteration number
+
+30
+
+㻭㼃㻳㻺
+
+( j) mn
+
+sign Sn( j 1)
+
+( j 1) mn
+
+n A m \n
+
+max
+
+n
+
+min A m \n
+
+S
+
+( n
+
+j
+
+1)
+
+( j 1) mn
+
+,0
+
+The beta for each code rate is optimized in section III. S
+
+is updated as follows.
+
+S S ( j)
+
+( j 1)
+
+n
+
+n
+
+( j 1) mn
+
+( j) mn
+
+C) (tentative decision)
+
+For each i, compute
+
+xˆi
+
+0ࠉࠉ S
+
+( i
+
+j
+
+)
+
+0
+
+1ࠉࠉ
+
+S
+
+( i
+
+j
+
+)
+
+0
+
+D) (parity check)
+If xˆi satisfies xˆi HT
+decoding process.
+
+0 , then output xˆi and quit the
+
+E) (increment counter)
+If j jmax then j э j+1 and go to step B). Otherwise
+output xˆi and quit the decoding process.
+
+III. VERIFICATION
+We verified the hardware implementation of the SC-LDPC codes by comparing the results of a computer simulation with those of a laboratory experiment with a prototype modulator
+
+A. Optimization of offset value
+The offset value, beta, used in the offset min-sum algorithm, was determined as follows. The offset value was varied under a constant C/N, and the BER of each code rate was measured. The results for each code rate are shown in Fig. 5. The optimum beta is the value at which the BER is a minimum. The optimized beta values are listed in Table III.
+
+1.0E+00 1.0E-01
+
+QPSK r=10/15, C/N=4.25[dB] QPSK r=11/15, C/N=4.85[dB] QPSK r=13/15, C/N=6.55[dB]
+
+BER
+
+1.0E-02
+
+1.0E-03
+
+1.0E-04
+
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+beta
+
+Fig. 5. Optimization of offset value
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:51:04 UTC from IEEE Xplore. Restrictions apply.
+
+Copyright (C) 2016 by IEICE
+
+213
+
+ISITA2016, Monterey, California, USA, October 30-November 2, 2016
+
+TABLE III
+OPTIMIZED OFFSET VALUE
+
+Code rate
+
+The beta
+
+10/15
+
+0.60
+
+11/15
+
+0.65
+
+13/15
+
+0.65
+
+B. LLR quantization
+
+We verified the quantization bit depth of LLR. As in the evaluation in the previous subsection, the quantization bit depth was varied, while the BER at each code rate was measured. The LLR quantization bit depth was from 4 to 8 bits. Fig. 6(a), (b), and (c) show the results for each code. Up to 6 bits, the deterioration of the required C/N is under 0.1 dB. For 8 bits, there is a slight difference between the results with and without quantization. Regarding the hardware implementation, 8 bits equal to 1 byte is a good unit. As a result, the LLR quantization was determined to an 8-bit depth.
+
+1.0E-01
+
+r=10/15 4bit
+
+1.0E-02
+
+r=10/15 5bit r=10/15 6bit
+
+1.0E-03
+
+r=10/15 7bit r=10/15 8bit
+
+1.0E-04
+
+r=10/15 w/o quantize
+
+BER
+
+1.0E-05
+
+1.0E-06
+
+1.0E-07 4
+
+4.5
+
+5
+
+5.5
+
+6
+
+C/N[dB]
+
+Fig. 6(a). Decision of quantization bit (r=10/15)
+
+1.0E-01 1.0E-02 1.0E-03 1.0E-04
+
+r=11/15 4 bit r=11/15 5 bit r=11/15 6 bit r=11/15 7 bit r=11/15 8 bit r=11/15 w/o quantize
+
+1.0E-05
+
+BER
+
+1.0E-06
+
+1.0E-07
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+C/N[dB]
+
+Fig. 6(b). Decision of quantization bit (r=11/15)
+
+1.0E-01 1.0E-02 1.0E-03 1.0E-04
+
+r=13/15 4 bit r=13/15 5 bit r=13/15 6 bit r=13/15 7 bit r=13/15 8 bit r=13/15 w/o quantize
+
+BER
+
+1.0E-05
+
+1.0E-06
+
+1.0E-07 6
+
+6.5
+
+7
+
+7.5
+
+8
+
+C/N[dB]
+
+Fig. 6(c). Decision of quantization bit (r=13/15)
+
+C. Laboratory experiment
+We conducted a laboratory experiment with a prototype modulator and demodulator for broadcasting. The block diagram of the experiment is shown in Fig. 7, and the parameters (same as in the computer simulation) are listed in Table 1. Fig. 8 shows the results of the laboratory experiment and computer simulation that verified the offset value optimization and LLR quantization. Comparing the required C/Ns at each code rate, we can see that the deterioration of hardware implementation relative to the simulation is under 0.1 dB.
+OFDM modulator
+
+PN code genera tor
+
+LDPC encoder
+
+QPSK Mod.
+
+OFDM Mod.
+
+BER
+
+LDPC
+
+LLR
+
+OFDM
+
+counter
+
+decoder
+
+Cal.
+
+Demod.
+
+Noise generator
+
+1.0E+00 1.0E-01
+
+OFDM demodulator
+Fig. 7. Block diagram of laboratory experiment
+
+Simulation, r=10/15 Simulation, r=11/15 Simulation, r=13/15
+
+lab. experiment, r=10/15 lab. experiment, r=11/15 lab. experiment, r=13/15
+
+1.0E-02
+
+1.0E-03
+
+BER
+
+1.0E-04
+
+1.0E-05
+
+1.0E-06
+
+1.0E-07
+
+4
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+7
+
+C/N[dB]
+
+Fig. 8. BER performance of laboratory experiment and computer simulation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:51:04 UTC from IEEE Xplore. Restrictions apply.
+
+Copyright (C) 2016 by IEICE
+
+214
+
+ISITA2016, Monterey, California, USA, October 30-November 2, 2016
+IV. CONCLUSION
+In this paper, we explained the design of SC-LDPC codes for broadcasting. After that, we briefly explained the decoding process that is a combination of the TDMP algorithm and offset min-sum method. Next, we reported the parameter optimization the decoding process in order to reduce the calculation. We also reported an LLR quantization in order to reduce the hardware complexity. The results of these verifications were incorporated in hardware, and a laboratory experiment was conducted with a prototype modulator and demodulator for broadcasting. We found that the deterioration of the hardware implementation relative to the computer simulation is under 0.1 dB. In the future, we will conduct another laboratory experiment and assess the BER performance of higher-order modulation QAM-OFDM such as 1024QAM and 4096QAM in order to confirm the hardware implementation.
+REFERENCES
+[1] M. Taguchi, et al, “Large-Capacity Wireless Transmission Technology,” ITE trans. on MTA, vol.1, no.1, pp. 34–39, January 2013.
+[2] DVB-T2 standard, http://www.dvb.org/standards/dvb-t2/, ETSI EN 302 755, V1.4.1, July 2015.
+[3] Transmission system for advanced wide band digital satellite broadcasting, http://www.arib.or.jp/english/html/overview/sb_ej.html, ARIB STD-B44, July 2014.
+[4] S. Kudekar, T.Richardson, and R. Urbanke, “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over the BEC,” IEEE trans. on Inform. Theory, vol.57, no.2, pp. 803– 834, Februrary 2011.
+[5] Alberto Jimenez Felstrom, and Kamil Sh. Zigangirov, “Time-varying periodic convolutional codes with Low-Deisity Parity-Check matrix,” IEEE trans. on Inform. Theory, vol.45, no.6, pp. 2181–2191, September 1999.
+[6] S. Asakura, et al, “Technologies for the next generation of digital terrestrial television broadcasting -Astudy on Spatially Coupled LDPC codes-,” IEEE International Symposium on Broadband Multimedia Systems and Broadcasting (BMSB), mm14-021, June 2014.
+[7] K. Sugihara, et al, “A spatially-coupled type LDPC code with an NCG of 12 dB for optical transmission beyond 100 Gb/s,” Proc. of OFC/NFOEC 2013, pp1-3, March 2013.
+[8] M.Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check codes,” IEEE trans. Signal Process, vol.54, no.11, pp. 4376–4392, November 2006.
+[9] J.Chen, et al, “Near optimum universal belief propagation based decoding of LDPC code, ” IEEE Trans. on Commun, vol.3,pp406-414, March 2002.
+[10] S.Huang, “A Flexible LDPC Decoder Architecture Supporting TPMP and TDMP Decoding Algorithms, ”IEICE Trans. on Inf. and System, vol.E95-D, no.2, pp.403-412, Februrary 2012.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:51:04 UTC from IEEE Xplore. Restrictions apply.
+
+Copyright (C) 2016 by IEICE
+
+215
+
+

@@ -1,0 +1,395 @@
+Local Probabilistic Decoding of a Quantum Code
+T. R. Scruby and K. Nemoto
+
+arXiv:2212.06985v3 [quant-ph] 22 Aug 2023
+
+Okinawa Institute of Science and Technology, Okinawa, 904-0495, Japan
+
+flip is an extremely simple and maximally local classical decoder which has been used to great effect in certain classes of classical codes. When applied to quantum codes there exist constant-weight errors (such as half of a stabiliser) which are uncorrectable for this decoder, so previous studies have considered modified versions of flip, sometimes in conjunction with other decoders. We argue that this may not always be necessary, and present numerical evidence for the existence of a threshold for flip when applied to the looplike syndromes of a three-dimensional toric code on a cubic lattice. This result can be attributed to the fact that the lowest-weight uncorrectable errors for this decoder are closer (in terms of Hamming distance) to correctable errors than to other uncorrectable errors, and so they are likely to become correctable in future code cycles after transformation by additional noise. Introducing randomness into the decoder can allow it to correct these “uncorrectable” errors with finite probability, and for a decoding strategy that uses a combination of belief propagation and probabilistic flip we observe a threshold of ∼ 5.5% under phenomenological noise. This is comparable to the best known threshold for this code (∼ 7.1%) which was achieved using belief propagation and ordered statistics decoding [Higgott and Breuckmann, 2022], a strategy with a runtime of O(n3) as opposed to the O(n) (O(1) when parallelised) runtime of our local decoder. We expect that this strategy could be generalised to work well in other low-density parity check codes, and hope that these results will prompt investigation of other previously overlooked decoders.
+1 Introduction
+An error correcting code is a method of encoding k bits of logical information into n physical bits in such a way that the redundancy of this encoding allows for the detection and correction of errors affecting these physical bits. Detection of errors is commonly achieved through the use of parity checks, which are
+
+rules stipulating that the overall parities of certain subsets of bits should be even. Configurations of bits satisfying all parity checks are called codewords of the code. Unsatisfied parity checks indicate the presence of errors, and given knowledge of whether or not each parity check is satisfied (this information is called a syndrome) we can attempt to calculate a correction. An algorithm which performs this calculation is called a decoder. The distance, d, of a code is defined as the minimum Hamming distance between codewords, and the best possible decoder for a given code will be capable of correcting any error affecting fewer than d/2 bits [1].
+In a quantum error correcting code the parity checks are replaced by operators called stabilisers, which are multi-qubit Pauli measurements with expected outcome +1 (in the absence of errors) [2]. In the class of quantum codes called Calderbank-ShorSteane (CSS) codes [3, 4] every stabiliser consists of only X or only Z measurements and the quantum decoding problem can be viewed as two separate classical decoding problems (one for Z errors and one for X errors). Classical decoders can (in principle) be applied to these problems directly, but we generally do not expect unmodified classical decoders to perform well in this setting because the syndromes of quantum codes are degenerate, meaning that there are multiple equivalent1 errors with the same syndrome [5, 6]. In particular, because stabilisers act trivially on the encoded information any error E which is equivalent to half of a stabiliser (S) can be corrected equally well by either applying E again or by applying the other half of the stabiliser (ES). The fact that both of these options have the same weight (they act non-trivially on the same number of qubits) as well as the same syndrome can make it difficult for classical decoders to choose between the two, so classical decoders are often modified or combined with other decoders when being applied to quantum codes [5–13].
+In this work we examine the necessity of these modifications by simulating the performance of two classical decoders (flip [14] and BP [1]) when applied to the three-dimensional toric code (3DTC). Both of these decoders suffer from the problem described above (they are unable to correct errors equivalent
+1Two errors E1 and E2 in a quantum code are equivalent if E1S = E2 where S is a stabiliser of the code.
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+1
+
+to half of a stabiliser) and flip suffers from the additional problem that it cannot correct any membrane of errors whose boundary is sufficiently smooth. Despite this, in both cases we observe thresholds competitive with those obtained by some of the best known decoders for this code. This result can be understood using the same intuition that helps explain the validity of single-shot decoding [12, 15] and self-correcting quantum memories [16]2; our recovery procedure does not need to remove all errors, it only needs to remove sufficiently many that it achieves a suitably low-error steady state in conjunction with environmental noise. At the end of the computation the qubits of the code will be measured out and a more sophisticated decoder (capable of correcting all constant-size errors) can be used to process this information before declaring the outcome of the logical measurement. As long as the average number of errors in the code at steadystate is below the amount that can be corrected by this more sophisticated decoder we expect that we can reliably read out the encoded logical information.
+The rest of this manuscript is arranged as follows: in section 2 we provide a brief overview of the 3D toric code, and in section 3 we examine the performance of flip (and a non-deterministic variant we call p-flip) when used to correct errors in this code. In section 4 we perform a similar examination of the belief-propagation (BP) decoder and a hybrid BP+pflip decoder. Finally, we discuss possible improvements and outlooks in section 5.
+All code used in obtaining the results presented in this paper can be found at [17], and additional discussion of simulation methods can be found in appendix A
+2 The 3D Toric Code
+The familiar 2D toric code (2DTC) is obtained by taking a square lattice with periodic boundaries and placing a qubit on each edge, an X stabiliser on each vertex (so that it is supported on the four edges that meet at this vertex) and a Z stabiliser on each face [18]. The 3DTC is a straightforward generalisation obtained by placing qubits on the edges of a cubic lattice, with X (Z) stabilisers once again associated with vertices (faces) [16].
+Unlike in the 2DTC (where each X and Z stabiliser is supported on four qubits and each qubit is part of two X and two Z stabilisers), the 3DTC has an asymmetry between X and Z stabilisers. Namely, each X stabiliser is supported on six qubits and each qubit is part of two X stabilisers, whereas each Z stabiliser is supported on four qubits and each qubit is part of four Z stabilisers. This last detail is of particu-
+2In fact, one of the decoders we investigate is almost identical to the recovery procedure proposed in [16] for the selfcorrecting four-dimensional toric code
+
+(a)
+
+(b)
+
+Figure 1: (a) Four cells of the 3D toric code. Qubits, X stabilisers and Z stabilisers are assigned to edges, vertices and faces respectively. Single-qubit X and Z errors (solid blue and red) and their syndromes (transparent red and blue) are also shown. (b) Correspondence between the vertex neighbourhood of a 3D cubic lattice (dark faces and edges) and its dual (light faces and edges).
+
+lar significance as it means that X errors in the code produce syndromes which are looplike, rather than pointlike, and thus can be corrected using a singleshot decoder [12, 15]. Examples of errors and their syndromes are shown in fig. 1a.
+If we are concerned only with X errors (as will be the case in what follows) it is more convenient to describe the code using the dual lattice, in which cells are exchanged with vertices and edges are exchanged with faces. An example of this mapping is shown in fig. 1b. In this lattice qubits are associated with faces while Z stabilisers are associated with edges, meaning that an X error on a qubit/face will be detected by the Z stabilisers on the four edges of this face.
+There is also an asymmetry between the logical operators of this code: the logical X operators are membranes which wrap around the 3-torus in two directions while the logical Z operators are strings normal to these membranes which wrap around the 3-torus in the third direction. There are three possible planes in which these membranes can lie and thus there are three encoded qubits. In what follows we will consider torii obtained by imposing periodic boundary conditions on an L × L × L cubic lattice. This results in a minimum weight of L2 for logical X operators and a minimum weight of L for logical Z operators, giving codes with parameters [[3L3, 3, L]].
+3 flip and p-flip
+3.1 flip
+flip is an extremely simple and maximally local decoder first proposed by Sipser and Spielman [14] for use with classical expander codes. The decoder works in the following way: define SAT(b) to be the set of satisfied checks containing bit b and UNSAT(b) to be the set of unsatisfied checks containing bit b, then do
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+2
+
+100
+
+10−1
+
+pfail(p, L)
+
+10−2 10−3
+
+L = 14 L = 18 L = 24 L = 32
+
+2.55% 2.6% 2.65% 2.7% p
+
+Figure 2: Performance of the parallelised flip decoder in the 3DTC for physical X error rate p equal to Z stabiliser measurement error rate q. pfail is the logical X error rate calculated via a majority vote on the measurement outcomes of a complete set of disjoint logical Z operators after 1000 code cycles. flip is applied simultaneously to all qubits of the code once per code cycle.
+
+while ∃ b ∈ bits s.t. |SAT(b)| < |UNSAT(b)| do flip b
+end while
+In other words, for each bit of the code we count the number of unsatisfied and satisfied checks to which that bit belongs, flip the bit if there are more of the former than the latter, and repeat until there are no such bits. The sequential version of this decoder runs in time linear in the total number of bits, while a parallelised version runs in constant time.
+For flip to perform well we require that each bit is involved in a relatively large number of checks. For an example of a case where flip does not perform well we can consider a cyclic repetition code. Here each bit is part of two checks, meaning that if an error occurs on two bits of the same check then each of these bits will be part of one satisfied and one unsatisfied check and flip will not be able to correct this error.
+If we consider the syndromes produced by Z errors in the 3DTC we see that they have exactly the same problem. Each qubit is part of two X stabilisers and thus strings of Z errors will only be detected at their endpoints, meaning that for any string of length > 2 there are no qubits which are part of more unsatisfied than satisfied X checks (unless the ends of the string are very close together). On the other hand, every qubit is part of four Z stabilisers and the syndromes produced by X errors are looplike, meaning the weight of the syndrome (i.e. number of unsatisfied checks) scales with the weight of the error. Intuitively we might therefore expect flip to be effective in this case since corrections which decrease the weight of a given syndrome will also decrease the weight of the corresponding error.
+Figure 2 shows the simulated performance of a par-
+
+(a)
+
+(b)
+
+Figure 3: Two examples of low-weight errors which are uncorrectable for flip. Blue faces are qubits subject to X errors and red edges are unsatisfied Z checks. (a) is a three-qubit X error on three of the six qubits of an X stabiliser. (b) is a four-qubit error with all four qubits lying in a plane. In both cases each qubit is part of two satisfied and two unsatisfied Z checks and so flip will be unable to find a correction.
+
+allelised version of flip when used to decode X errors in the 3DTC. In these simulations we evaluate the flip rule only once per qubit per code cycle rather than running the decoder until it runs out of qubits to flip (“flipping” a qubit means applying a single-qubit X correction to that qubit). Presence/absence of a logical X error at the end of the simulation is determined via majority vote on the measurement outcomes of a complete disjoint set of logical Z operators3. We observe that these results agree with our previously stated intuition. For a phenomenological noise model with X error probability per qubit (p) equal to measurement error probability per Z stabiliser (q) we observe a threshold of pth ∼ 2.6% after 1000 code cycles. This is comparable with the thresholds obtained for the BP+OSD decoder in [12] (although higher thresholds for a modified version of this decoder were recently obtained in [13]). Some readers might find this result surprising since, as mentioned previously, we do not generally expect classical decoders to perform well when naively applied to quantum codes and in this specific case we can easily find examples of lowweight X errors which cannot be corrected by flip (two examples are shown in fig. 3). Why, then, does flip seem to perform so well?
+The answer is that all of the lowest weight (and therefore most likely) uncorrectable errors are closer (in terms of Hamming weight) to correctable errors than they are to other uncorrectable errors. As a result, additional errors occurring in the vicinity of such a low-weight uncorrectable error will transform it into a correctable error with high probability. Examples are shown in fig. 4. Here we see how, for the low-weight uncorrectable errors shown in fig. 3, additional single-qubit X errors can make these errors
+3The results shown here are for only one of the three logical qubits encoded by the 3DTC, but as the code, error model and decoder are symmetric along all three axes the logical error rates for the other two encoded qubits will be identical. Correlations between the error rates of these encoded qubits are discussed in appendix A
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+3
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+(e)
+
+(f )
+
+Figure 4: (a)-(c) Some possible additional errors modifying the uncorrectable error shown in fig. 3a. In (a) an additional error on a fourth face of the cube makes the error correctable (an error on any of the cube’s six faces has the same effect). In (b) an error occurs on a qubit next to the cube. flip will correct this additional error and restore the original three-qubit error. In (c) a pair of errors on qubits next to the cube grow the original error into a five-qubit uncorrectable error. (d) - (f) show equivalent situations for the four-qubit uncorrectable error shown in fig. 3b
+
+correctable but cannot transform them into larger uncorrectable errors. The behaviour of the code under the combined action of flip + environmental noise is then analagous to a physical system relaxing towards its ground state at finite temperature, with small thermal fluctuations allowing it to escape from shallow local minima.
+We comment at this point that despite the impressive performance observed for flip in this setting we do not expect to observe a sustainable threshold (as discussed in [19], for example) for this decoder. This is due to the fact that even though the transformation of low-weight uncorrectable errors to higher-weight ones is relatively unlikely, we do expect it to occur over a long enough timescale. Larger uncorrectable errors require more additional errors to make them correctable, and so we expect that regions of uncorrectable errors will slowly build up in the code over many code cycles. However, the results in fig. 2 indicate that this buildup is very slow and so a sustainable threshold could be recovered by combining flip with another decoder capable of correcting all errors below a certain weight. By running this more accurate (but also more complex) decoder every m code cycles we would remove the buildup of uncorrectable errors. m can be chosen to be very large without significantly compromising performance (e.g. m = 1000 should give at least the threshold of ∼ 2.6% observed in fig. 2 provided the more complex decoder has an equivalent or higher threshold) and so this would represent a significant decrease in decoding time/complexity relative to using the more complex decoder at every code cycle.
+
+3.2 p-flip
+Having seen the power of random (qu)bit flips in transforming uncorrectable errors into correctable ones we now consider the incorporation of these random flips into the decoder itself. Consider the following, modified version of flip which we will refer to as probabilistic flip or p-flip.
+for b ∈ bits do if |SAT(b)| < |UNSAT(b)| then flip b else if |SAT(b)| = |UNSAT(b)| then x ← random number in (0,1) if x < 0.5 then flip b end if end if
+end for
+This decoder is (very nearly4) identical to the local recovery procedure for the four-dimensional toric code proposed in [16]. The decoder acts identically to flip on bits where SAT(b) and UNSAT(b) are different sizes, but when they are the same size it flips that bit with probability p = 0.5. Consider the action of p-flip on the two uncorrectable errors from fig. 3. For fig. 3a each qubit in the cube is part of two satisfied and two unsatisfied Z checks and so any of them might be flipped by p-flip. As we saw in fig. 4, this would make the error correctable for flip (and so also
+4The only difference is that this decoder acts on all qubits at once, whereas the decoder of [16] acts on some subset of the qubits chosen such that no two qubits in the set are part of the same Z stabiliser
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+4
+
+Decoding rule applications nA
+
+flip
+
+9 4.343% 4.652% 4.753% 4.652% 4.654% 7 4.212% 4.629% 4.615% 4.620% 4.558%
+
+5 3.998% 4.445% 4.475% 4.274% 4.082%
+
+Figure 5: A pair three-qubit errors which are exchanged by the action of the parallelised version of flip
+for the deterministic part of p-flip). Something very similar is true for fig. 3b as every qubit in the error’s support is part of two satisfied and two unsatisfied Z checks and flipping any of them makes the error correctable for flip. Notice also that, in each case, these are the only qubits which are part of an equal number of satisfied and unsatisfied Z checks. Thus pflip can never increase the size of these errors while leaving them uncorrectable. We say that these errors are probabilistically correctable for p-flip while being uncorrectable for flip.
+p-flip is not a strict improvement over flip, however. Consider, for example, a two-qubit error where the errors are on opposite faces of one of the X stabiliser cubes of the code. flip is guaranteed to correct this error with only one application of the decoding rule per qubit. p-flip, on the other hand, might flip any of the four error-free faces of the cube (as they are each part of two satisfied and two unsatisfied Z checks) if applied to these faces before being applied to the other two. This could produce a weight-three error which would require an additional cycle to correct. We therefore conclude that flip is better than p-flip at correcting determinisitically correctable errors and that p-flip should only be called once flip gets stuck.
+A distinction should also be made between the sequential and parallel versions of flip/p-flip. Since the parallelisability of these decoders (resulting in decoding time constant in the code size) is one of their main strengths we will consider only the parallel case. In this case there is one additional type of weight-3 uncorrectable error that we need to be concerned with, which we show in fig. 5. This error is correctable for the sequential version of flip but not for the parallel version since there are four qubits (two with errors and two without) which each are part of one satisfied and three unsatisfied checks, and flipping all four of these qubits at once results in a rotated version of the original error. In addition to simply being uncorrectable these errors also prevent us from detecting that flip is stuck, since their existence in the code means that flip will never stop finding bits to flip. Thus, in a parallel implementation of flip + p-flip we must apply p-flip on some fixed schedule rather than waiting for flip to terminate.
+
+3 3.604% 3.752% 3.943%
+
+1 2.611%
+
+2
+
+3
+
+4
+
+5
+
+6
+
+p-flip inverse frequency λp
+Table 1: Thresholds after 1000 code cycles for flip + pflip under phenomenological noise (with p = q) in the 3DTC for various values of the parameters nA and λp. Uncertainties on all values are 0.001%a and were calculated by SciPy’s curve fit function. Shaded cells are those where λp > nA (where the decoding strategy consists of nA rounds of flipb). We do not observe thresholds for the case of λp = 1 (where the decoding strategy consists of nA rounds of p-flip).
+
+To find an optimal schedule we simulate the performance of flip + p-flip while varying the number of applications of the decoding rule per qubit per code cycle (nA) and the (inverse) frequency with which we apply p-flip relative to flip (λp). For example, the parameters nA = 5 and λp = 3 describe the following schedule:
+• Measure Z stabilisers
+• flip
+• flip
+• p-flip
+• flip
+• flip
+• Apply correction
+Calculated thresholds for a range of nA and λp are displayed in table 1. These thresholds were calculated by fitting data from our simulations to the ansatz pfail(x) = a0 + a1x + a2x2 with x = (p − pth)L1/ν [20].
+4More precisely, all uncertainties are in the range [0.0005%, 0.0015%).
+6Every λpth application of the decoding rule within a code cycle uses p-flip instead of flip. As we only count within code cycles and not between them any choice of nA and λp such that λp > nA refers to a decoding strategy that uses only nA applications of flip per qubit per code cycle and does not use p-flip.
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+5
+
+We observe that for nA = 1, 3 use of p-flip gives no improvement in performance relative to using only flip. For nA ≥ 5 we do observe some performance improvement, with the highest thresholds of ∼ 4.5% achieved for λp = 3, 4.
+4 BP and p-BP
+Another decoder which has been successfully modified to work with quantum codes (despite being unable to correct half-stabiliser errors) is the belief propagation (BP) decoder [1]. The highest known threshold for the 3DTC was obtained using a combination of BP and ordered statistics decoding (OSD) [13], and BP+OSD has also been shown to work well when applied to hypergraph and lifted product codes [10, 11, 21]. Simulations of the performance of BP without OSD in the 3DTC were also performed in [13], where it was concluded that the decoder was unable to achieve a threshold. However, in that case BP was used for both at-runtime decoding and postprocessing/readout of logical information. In contrast, Grospellier et al. [8] performed simulations of a hypergraph product code where BP was used only for at-runtime decoding of noisy syndrome data and a different decoding strategy was used to check for logical errors (we took the same approach with flip in the previous section). In this case it was concluded that BP did possess a threshold and so it is natural to ask if the same can be achieved in the 3DTC.
+Before answering this question we provide a brief description of the BP decoder. We then present results demonstrating the existence of a threshold for pure BP decoding with readout performed via majority vote on logical Z measurement outcomes and finally we discuss a hybrid decoding strategy that uses both BP and p-flip.
+4.1 BP
+BP is a message-passing algorithm for calculating marginal probabilities of a distribution described by a factor graph [1]. Marginals are calculated exactly when the factor graph is a tree, but a good approximation to the exact answer can be obtained even if the graph contains loops. When BP is used as a decoding algorithm for a classical code (or for decoding only one type of error in a quantum CSS code) this graph will be the Tanner graph of the code, with one variable node for each bit and one factor node for each check. At every iteration of the algorithm each factor node passes messages to each adjacent variable node based on the messages the factor node received from all other adjacent variable nodes. Each variable node then passes messages to each adjacent factor node based on the messages received from all other factor nodes. In the general version of the algorithm one message must be sent for each possible state of
+
+the sending/receiving variable node, but in our case there are only two possible values for each variable (0 and 1) and there then exists a simpler version of the algorithm that requires only one message per edge of the graph at each step [22].
+We begin by defining the log-likelihood ratio (LLR)
+
+li = log
+
+P (vi = 0) P (vi = 1)
+
+(1)
+
+where P (vi = 0) is the probability that bit i is errorfree while P (vi = 1) is the probability that this bit has been flipped. We use li0 to denote the LLR calculated using an initial guess about these probabilities
+based on an assumed error channel, e.g. for the binary
+symmetric channel (each bit flipped with probability p) li0 = log((1 − p)/p) for each bit. These LLRs will be the original variable-to-factor messages (Mvi→fj ) used to initialise the algorithm. The factor-to-variable
+messages are then defined as
+
+
+
+
+
+Mfj→vi = (−1)sj 2tanh−1 
+
+tanh(Mvi′ →fj /2)
+
+i′ ∈∂ j \i
+
+(2)
+
+where sj is 0 if check j is satisfied and 1 if it is unsatisfied, and ∂j denotes the set of neighbours of factor
+
+node j. New variable-to-factor messages are then cal-
+
+culated as
+
+Mvi→fj = li0 +
+
+Mfj′ →vi
+
+(3)
+
+j ′ ∈∂ i\j
+
+and updated log-likelihood ratios can be calculated after each iteration as
+
+li = li0 +
+
+Mfj →vi .
+
+(4)
+
+j∈∂i
+
+If li > 0 then we expect that bit i is error-free (P (vi = 0) > P (vi = 1)), and otherwise we expect it has been flipped. In global implementations of BP the syndrome from these expected errors is compared to the measured syndrome after each iteration and the algorithm terminates when these syndromes match (or if some specified iteration limit is reached without finding a valid correction, in which case failure is declared). We will instead consider a local version of BP where the algorithm always performs a specified number of iterations and then applies a correction to all bits where li < 0. When applying BP to quantum codes we lose almost nothing by doing this as we generally do not expect BP to find an exact correction (so it will usually run to the iteration limit anyway), and any slowdown coming from wasted iterations will likely be compensated for by the ability to perform all decoding calculations locally.
+BP can also be straightforwardly adapted to account for stabiliser measurement errors [9]. This is done by adding a single new variable node for each
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+6
+
+100
+
+100
+
+10−1
+
+10−1
+
+pfail(p, L) pfail(p, L)
+
+10−2 10−3
+
+L = 14 L = 18 L = 24 L = 32
+
+5.06% 5.08% 5.1% 5.12% p
+
+Figure 6: Performance of BP (30 iterations per code cycle) in the 3DTC for physical X error rate p equal to Z stabiliser measurement error rate q. pfail is the logical X error rate calculated via a majority vote on the measurement outcomes of a complete set of disjoint logical Z operators after 500 code cycles.
+
+10−2 10−3
+
+L = 14 L = 18 L = 24 L = 32
+
+5.42%
+
+5.46% p
+
+5.5%
+
+Figure 7: Performance of p-BP in the 3DTC for physical X error rate p equal to Z stabiliser measurement error rate q. The decoder uses 20 iterations of BP followed by six iterations of p-flip (on the first and fourth iteration) and flip (otherwise). pfail is the logical X error rate calculated via a majority vote on the measurement outcomes of a complete set of disjoint logical Z operators after 500 code cycles.
+
+factor node. These new nodes represent measurement errors rather than qubit errors and are connected only to their corresponding factor node and nothing else. In some codes the syndromes themselves can be interpreted as an error-correcting code that protects against measurement errors; for instance, in the 3DTC all valid X error syndromes are closed loops of Z stabilisers, so strings with open endpoints indicate the presence of measurement errors. This kind of structure can be incorporated into the factor graph through the use of “meta-checks”, which enforce parity constraints on only the measurement error variable nodes. Despite the existence of such meta-checks in the 3DTC we do not include them in our simulations since they are not a general feature of quantum codes and we wish to assess whether BP works even in their absence.
+Our simulation results show that pure BP decoding does indeed work, and even retains much of the performance of BP+OSD. We once again use a phenomenological noise model with p = q, and after 500 code cycles with 30 BP iterations per code cycle we observe a threshold of ∼ 5.1%, beating both p-flip and the two-stage version of BP+OSD. As with our simulations of flip and p-flip, decoding success/failure is decided via a majority vote on a complete disjoint set of logical Z operators.
+An analysis of the 3DTC errors which cannot be decoded by BP was given in [13]. The most common are “half-cube” errors which are equivalent to half of an X stabiliser generator such as fig. 3a and fig. 5. In each of these cases the Z syndrome loop divides the X stabiliser into two equal halves and each of these halves is an equally likely candidate error for the observed syndrome. BP therefore cannot choose between the two halves and all qubits in the support
+
+of the X stabiliser will have li > 0, meaning that no correction will be applied to any of these qubits and the error will be unchanged. Therefore, as with the low-weight uncorrectable errors we considered for flip, BP can fail to correct these errors but cannot make them larger or otherwise make actively harmful mistakes. In later code cycles additional single qubit errors may occur in the vicinity of these half-cubes and break the symmetry between the two equivalent corrections, making the error correctable for BP. In order to grow the error while leaving it uncorrectable an additional (at least) two-qubit error must occur, transforming the original half-cube error (e.g. fig. 3a) into an error equivalent to half of a pair of cubes (e.g. fig. 4c).
+We note also that, unlike flip, BP does not struggle to correct large planar errors such as the one shown in fig. 3b. Additionally, even for relatively high-weight uncorrectable errors equivalent to half of a very large X stabiliser, a single additional X error is sufficient to break the symmetry between the two possible corrections and make the error correctable for BP (at least in principle). We therefore expect the threshold for BP to be considerably more sustainable than the one observed for flip (although the question of whether or not this is a true “sustainable threshold”[19] would require additional simulations to answer).
+4.2 p-BP
+Finally, we consider a hybrid decoder that uses a combination of flip, p-flip and BP. We refer to this decoder as p-BP. p-BP operates by first running BP to some specified number of iterations, applying corrections to any qubits with li < 0 and then running flip
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+7
+
+and p-flip on some desired schedule. p-BP still cannot deterministically correct all
+constant-weight errors but it outperforms each of its component decoders in isolation as each component helps to cover the weaknesses of the others. flip and p-flip complement each other in the ways discussed previously, while BP complements flip/p-flip by correcting large planar errors and p-flip assists BP by probabilisitically correcting half-cube errors. We simulated the performance of p-BP using 20 iterations of BP and the following schedule for flip/p-flip: pflip → flip×2 → p-flip → flip×2. The results are shown in fig. 7, where we observe a threshold of ∼ 5.46%. Note also that we have used only 20 BP iterations in these simulations as opposed to the 30 iterations we used when decoding with BP alone. We observed that (unlike in the case of BP) reducing the iteration number from 30 to 20 did not appear to significantly affect p-BP’s performance. The computational cost of running six rounds of flip/p-flip is much lower than the cost of 10 additional rounds of BP, so p-BP outperforms BP not only in terms of accuracy but also in terms of runtime.
+We note that p-BP is analogous to the hybrid BP + small-set-flip (SSF) decoder described in [8], but with SSF replaced by a combination of regular flip and p-flip. However, in that work it was observed that in the presence of measurement noise the performance of BP+SSF was inferior to the performance of pure BP, whereas here the opposite is true.
+5 Discussion
+It is commonly assumed in quantum error correction literature that a useful decoder must be able to correct all errors which have a size that is constant with respect to the code distance. In combination with the results for BP obtained in [8], our results indicate that this assumption may be unnecessarily strict and that competitive thresholds can be achieved even by decoders which fail to correct some very low weight errors. Additionally, simple modifications to these decoders can enable them to correct these low weight errors with finite probability, boosting performance without compromising locality or decoding time. We have studied only two examples (flip and BP), but it is likely that there exist many similar decoders which were assumed to be unsuitable for quantum codes but which, in reality, might achieve practical thresholds. The threshold obtained by p-BP in the 3DTC is roughly 3/4 of the best known threshold for this code (using BP+OSD), but p-BP is fully local and so has a runtime that is constant in the code size, as opposed to BP+OSD which runs in time O(n3) [13]. This is of great practical relevance as slow decoding algorithms can be a significant bottleneck when trying to improve the clock speed of a fault-tolerant quantum computer [23–26], and the severity of error
+
+propagation through transversal non-Clifford gates is also highly dependent on code cycle length and decoding time [27]. We also remark that the threshold for p-BP is around twice as high as the threshold for the sweep decoder (another local decoder for the 3DTC) presented in [28, 29], although it is possible that increasing the number of applications of the sweep rule per code cycle could raise those thresholds to be similar to the ones presented here. There are also a number of fairly simple improvements that could be made to p-BP that would likely increase its threshold further, such as using a longer and more optimised flip/p-flip schedule and adding metacheck factors to BP. Performing readout via majority vote on logical Z measurement outcomes is also suboptimal, and more accurate readout could be achieved by post-processing single-qubit measurement data with a decoder that can correct all constant-size errors.
+The most obvious open question regarding decoders of this type is whether or not they are able to produce sustainable thresholds. It may be the case that all such decoders result in slowly-growing error regions which will eventually cause the code to fail after many code cycles, but if such errors do exist then the timescale for their growth is too slow for them to be observed in feasible simulations. Instead these decoders should be studied analytically and, if possible, rigorous proofs for the existence of thresholds should be obtained. The recovery procedure for the 4DTC (which is essentially equivalent to p-flip) was studied analytically via comparison to a heat bath algorithm [16] and so this analysis may generalise to other decoders of this type.
+Another question is whether or not these kinds of decoding strategies can be successfully applied to other LDPC quantum codes. These more general codes have the potential to massively reduce the overhead associated with fault-tolerantly encoding large numbers of logical qubits and so fast and accurate decoders for them would be extremely valuable. SSF has been shown to work with quantum expander [5] and hypergraph product codes [7], and many of the proposed decoders for the recently discovered good LDPC codes [30, 31] are also based on SSF [32–34]. SSF is itself based on flip and operates using the same principle of attempting to locally reduce syndrome weight, so we might also expect flip and p-flip to be applicable to these codes. The runtime of SSF is exponential in the check degree of the code, whereas flip/p-flip are linear in the bit degree and BP is quadratic in the bit and check degrees, so p-BP may be faster than SSF-based decoders in practise (even though all of these decoders are linear in terms of the blocklength of the code). Simulations studying the performance of p-BP in this setting will be the topic of future work.
+It is our hope that the results presented here will lead to the discovery of new, more practical decoders
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+8
+
+which will reduce the demanding requirements placed on quantum hardware and classical control software by current decoding algorithms.
+
+Acknowledgements
+The authors acknowledge support from the JST Moonshot R&D Grant [grant number JPMJMS2061]. Numerical results presented in this work were obtained using the HPC resources provided by the Scientific Computing and Data Analysis section of the Research Support Division at OIST. TRS is grateful to M. Vasmer and J. Roffe for comments on the manuscript, and also acknowledges valuable discussions with O. Higgott, N. P. Breuckmann, M. Vasmer, J. Roffe and A. Krishna. Some of these discussions occurred during a visit by TRS to Perimeter Institute that was partially funded by Perimeter Institute. Research at Perimeter Institute is supported in part by the Government of Canada through the Department of Innovation, Science and Economic Development Canada and by the Province of Ontario through the Ministry of Colleges and Universities.
+
+References
+
+[1] David J C MacKay. Information Theory, Infer-
+
+ence, and Learning Algorithms. Cambridge Uni-
+
+versity Press, 4th edition, 2005.
+
+[2] Daniel Gottesman. Stabilizer Codes and Quan-
+
+tum Error Correction. arXiv:quant-ph/9705052,
+
+May 1997.
+
+DOI: 10.48550/arXiv.quant-
+
+ph/9705052.
+
+[3] A. R. Calderbank and Peter W. Shor. Good
+
+Quantum Error-Correcting Codes Exist. Phys-
+
+ical Review A, 54(2), 1996. DOI: 10.1103/Phys-
+
+RevA.54.1098.
+
+[4] Andrew Steane. Multiple Particle Interference
+
+and Quantum Error Correction. Proceedings of
+
+the Royal Society of London. Series A: Mathe-
+
+matical, Physical and Engineering Sciences, 452
+
+(1954), 1996. DOI: 10.1098/rspa.1996.0136.
+
+[5] Anthony Leverrier, Jean-Pierre Tillich, and
+
+Gilles Z´emor. Quantum Expander Codes. 2015.
+
+DOI: 10.1109/FOCS.2015.55. arXiv:1504.00822
+
+[quant-ph].
+
+[6] David Poulin and Yeojin Chung. On the iterative
+
+decoding of sparse quantum codes. 2008. DOI:
+
+10.48550/arXiv.0801.1241.
+
+[7] Antoine Grospellier and Anirudh Krishna. Nu-
+
+merical study of hypergraph product codes. 2019.
+
+DOI: 10.48550/arXiv.1810.03681.
+
+[8] Antoine Grospellier, Lucien Grou`es, Anirudh Kr-
+
+ishna, and Anthony Leverrier. Combining hard
+
+and soft decoders for hypergraph product codes.
+
+Quantum, 5, 2021. DOI: 10.22331/q-2021-04-15-
+
+432.
+
+[9] Muyuan Li and Theodore J. Yoder. A Numerical Study of Bravyi-Bacon-Shor and Subsystem Hypergraph Product Codes. 2020. DOI: 10.48550/arXiv.2002.06257.
+[10] Pavel Panteleev and Gleb Kalachev. Degenerate Quantum LDPC Codes With Good Finite Length Performance. Quantum, 5, 2021. DOI: 10.22331/q-2021-11-22-585.
+[11] Joschka Roffe, David R. White, Simon Burton, and Earl Campbell. Decoding across the quantum low-density parity-check code landscape. Physical Review Research, 2(4), 2020. DOI: 10.1103/PhysRevResearch.2.043423.
+[12] Armanda O. Quintavalle, Michael Vasmer, Joschka Roffe, and Earl T. Campbell. SingleShot Error Correction of Three-Dimensional Homological Product Codes. PRX Quantum, 2(2), 2021. DOI: 10.1103/PRXQuantum.2.020340.
+[13] Oscar Higgott and Nikolas P. Breuckmann. Improved Single-Shot Decoding of HigherDimensional Hypergraph-Product Codes. PRX Quantum, 4, 2023. DOI: 10.1103/PRXQuantum.4.020332.
+[14] M. Sipser and D.A. Spielman. Expander codes. IEEE Transactions on Information Theory, 42 (6), 1996. DOI: 10.1109/18.556667.
+[15] H´ector Bomb´ın. Single-Shot Fault-Tolerant Quantum Error Correction. Physical Review X, 5(3), 2015. DOI: 10.1103/PhysRevX.5.031043.
+[16] Eric Dennis, Alexei Kitaev, Andrew Landahl, and John Preskill. Topological quantum memory. Journal of Mathematical Physics, 43(9), 2002. DOI: 10.1063/1.1499754.
+[17] URL https://github.com/tRowans/flip-gpu. [18] A. Yu. Kitaev. Fault-tolerant quantum computa-
+tion by anyons. Annals of Physics, 303(1), 2003. DOI: 10.1016/S0003-4916(02)00018-0.
+[19] Benjamin J. Brown, Naomi H. Nickerson, and Dan E. Browne. Fault-tolerant error correction with the gauge color code. Nature Communications, 7(1), 2016. DOI: 10.1038/ncomms12302.
+[20] Chenyang Wang, Jim Harrington, and John Preskill. Confinement-Higgs transition in a disordered gauge theory and the accuracy threshold for quantum memory. Annals of Physics, 303(1):31–58, 2003. DOI: 10.1016/S00034916(02)00019-2.
+[21] Joschka Roffe, Lawrence Z. Cohen, Armanda O. Quintavalle, Daryus Chandra, and Earl T. Campbell. Bias-tailored quantum LDPC codes. 2022. DOI: 10.48550/arXiv.2202.01702.
+[22] Jinghu Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and Xiao-Yu Hu. Reducedcomplexity decoding of LDPC codes. IEEE Transactions on Communications, 53(8), 2005. DOI: 10.1109/TCOMM.2005.852852.
+[23] Barbara M. Terhal. Quantum error correction for
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+9
+
+quantum memories. Reviews of Modern Physics, 87(2), 2015. DOI: 10.1103/RevModPhys.87.307. [24] Poulami Das, Christopher A. Pattison, Srilatha Manne, Douglas Carmean, Krysta Svore, Moinuddin Qureshi, and Nicolas Delfosse. A Scalable Decoder Micro-architecture for FaultTolerant Quantum Computing. 2020. DOI: 10.48550/arXiv.2001.06598. [25] Christopher Chamberland, Luis Goncalves, Prasahnt Sivarajah, Eric Peterson, and Sebastian Grimberg. Techniques for combining fast local decoders with global decoders under circuit-level noise. 2022. DOI: 10.48550/arXiv.2208.01178. [26] Luka Skoric, Dan E. Browne, Kenton M. Barnes, Neil I. Gillespie, and Earl T. Campbell. Parallel window decoding enables scalable fault tolerant quantum computation. 2022. DOI: 10.48550/arXiv.2209.08552. [27] Thomas R. Scruby, Michael Vasmer, and Dan E. Browne. Non-Pauli errors in the threedimensional surface code. Physical Review Research, 4(4), 2022. DOI: 10.1103/PhysRevResearch.4.043052. [28] Aleksander Kubica and John Preskill. CellularAutomaton Decoders with Provable Thresholds for Topological Codes. Physical Review Letters, 123(2), 2019. DOI: 10.1103/PhysRevLett.123.020501. [29] Michael Vasmer, Dan E. Browne, and Aleksander Kubica. Cellular automaton decoders for topological quantum codes with noisy measurements and beyond. Scientific Reports, 11(1), 2021. DOI: 10.1038/s41598-021-81138-2. [30] Pavel Panteleev and Gleb Kalachev. Asymptotically Good Quantum and Locally Testable Classical LDPC Codes. 2022. DOI: 10.48550/arXiv.2111.03654. [31] Anthony Leverrier and Gilles Z´emor. Quantum Tanner codes. 2022. DOI: 10.48550/arXiv.2202.13641. [32] Shouzhen Gu, Christopher A. Pattison, and Eugene Tang. An efficient decoder for a linear distance quantum LDPC code. 2022. DOI: 10.48550/arXiv.2206.06557. [33] Anthony Leverrier and Gilles Z´emor. Decoding quantum Tanner codes. 2022. DOI: 10.48550/arXiv.2208.05537. [34] Irit Dinur, Min-Hsiu Hsieh, Ting-Chun Lin, and Thomas Vidick. Good Quantum LDPC Codes with Linear Time Decoders. 2022. DOI: 10.48550/arXiv.2206.07750.
+
+Appendices
+A Extra Simulation Details
+All code used in obtaining the results presented in this paper can be found at [17]
+A.1 GPU Implementation and Performance
+As discussed in the main text, one of the main strengths of the decoders we had studied is their parallelisability. This allows not only for dramatic improvements in decoding time in a physical fault-tolerant quantum computer, but also for much faster numerical simulations of decoding performance. In order to take advantage of this all simulations carried out as part of this work were written using CUDA, a GPU programming language that allows for the full parallelisation of the simulated decoders. Using an HPC system with access to a large number of GPUs we are then able to obtain the data for plots such as fig. 2 in a few hours, and for plots such as fig. 6 and fig. 7 in about a day or so, despite the large size of the codes involved (the longer runtime required for the latter two is due to the fact that, although all studied decoders are asymptotically constant time, a single BP iteration is more computationally expensive than a single iteration of flip).
+In principle, the runtime of these simulations should be independent of the code size and should depend only on the number of simulated decoding cycles. In practise we are limited by the number of GPUs available, and when the number of qubits in the code becomes greater than the number of available GPU threads some of the decoding has to be serialised. For this reason the simulations of the L = 32 codes are noticably slower than those for the smaller code sizes, and so we do not simulate any codes larger than this.
+A.2 Logical Error Correlations
+The plots presented in the main text show logical error rates for only one of the three qubits encoded by the 3D toric code. Logical error rates for the other qubits will be identical as, for a given L, the distance is the same for all three encoded qubits and the error model and decoder are symmetric along all three axes of the code. However, correlations between these three encoded qubits can still occur. For instance, consider the uncorrectable error shown in fig. 3a, which is equivalent to three qubits of an X stabiliser and is supported on three different faces of a cube. Because each of these faces lies in a different plane, each one can contribute to the support of a different logical X operator and so we expect the probability of a logical error affecting all three encoded qubits to be increased, while the probability of errors affecting only a single encoded qubit will be reduced. In table 2
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+10
+
+Error Configuration 000 100 010 001 110 101 011 111
+
+# Occurrences 731 52 53 62 21 30 26 25
+
+Table 2: Frequency of occurrence of each possible configuration of logical X errors on the three qubits encoded in an L = 14 3D toric code after 500 code cycles of decoding with p-BP and physical error rate (= measurement error rate) p = 0.544. 1000 simulations were performed in total. The frequency of multi-qubit logical errors is higher than would be expected if each of the three encoded qubits experienced logical errors independently.
+
+we show the frequency of occurrence of different logical X error configurations after 500 decoding cycles with p-BP when p = 0.544 (so very slightly below the numerically observed threshold), and we can see that these data confirm our expectations.
+
+Accepted in Quantum 2023-08-21, click title to verify. Published under CC-BY 4.0.
+
+11
+
+

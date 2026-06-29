@@ -1,0 +1,349 @@
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+High data rate and flexible hardware QC-LDPC decoder for satellite optical communications
+
+Vincent Pignoly, Bertrand Le Gal, Christophe Jego CNRS IMS Laboratory, Bordeaux INP, University of Bordeaux, France
+Email: firstname.lastname@ims-bordeaux.fr
+
+Benjamin Gadat Airbus Defense and Space, Signal and Algorithm Dpt, Toulouse, France Email: benjamin.gadat@airbus.com
+
+Abstract—Satellite optical communications are trendy for future satellite wireless communications and introduce new challenges concerning throughput and error correction for the channel decoder. This paper details a custom solution based on LDPC code and architecture co-design. This solution was designed to deliver an efficient trade-off in terms of decoder throughput and error correction performance. A flexible architecture that implements an Offset Min-Sum algorithm on FieldProgrammable Gate Array (FPGA) is proposed. A resulting system composed of 5 elementary LDPC decoders that fit in a single Zynq Ultrascale+ FPGA device reaches more than 10 Gbps with error correction performance similar or better than present current satellite communication standards.
+I. INTRODUCTION
+Introduced by R. Gallager in 1969 [1], Low-Density ParityCheck codes are a popular class of valuable linear block codes. This forward error correction can reach performance near the Shannon limit about channel capacity. It is the reason why LDPC codes have been chosen in many wireless communications standards like WiMAX, Wifi and also in satellite communication standards such as DVB-S2 [2], DVB-S2x and in CCSDS. The present popularity of optical wireless communications for satellites, with high throughput expectations (up to 10 Gbps), increases the need of efficient solutions providing LDPC codes with good performance and also high efficiency hardware decoder architectures.
+In order to enable the design of high throughput LDPC decoders (≥ 1 Gbps), previous standards have focused on quasi-cyclic (QC) LDPC codes. QC-LDPC codes [3] form a sub-class of structured codes that should achieve performance close to unstructured LDPC codes [4] but with a structure that facilitates the decoder implementation. QC-LDPC structure is convenient for parallel decoder architectures. Indeed, it provides at least a constant parallelism for computation and memory access. Furthermore, encoding QC-LDPC is easy and low complexity fast encoder have been designed [5]. However, obtaining QC-LDPC codes that provides at the same time fast convergence, low error floor and interesting features for hardware implementation (e.g. regularity and large expansion factor) is very challenging. For instance, in DVB-S2 standard, to achieve all these properties, a BCH decoder was added after the LDPC decoder to delay the error floor. For current satellite communications, Jet Propulsion Laboratory designed a long frame (64k bits) DVB-S2 decoder [6] that fills 5 FPGA,
+
+one of which is dedicated to the BCH decoder. This design achieves a data rate of 1.25 Gbps. However, new space optical communications expect higher throughput and there comes the need of innovative methods to reach more than 10 Gbps. So the proposed contribution consists in a codesign of QCLDPC codes and the associated decoder architecture to face this challenge. Because of the application, LDPC codes from DVB-S2 standard is chosen as the main point of comparison.
+Nowadays, construction of efficient LDPC codes and particularly QC-LDPC codes is still a subject of research [7], [8], mainly on the code structure. For space applications, some methods have been proven to be very effective. First, there is Irregular Repeat Accumulate (IRA) codes constructed by Progressive-Edge-Growth (PEG) algorithm [9] used with Approximated Cycle Extrinsic (ACE) constraint [9]. Then, Accumulate Repeat Jagged Accumulate (ARJA) [9] is another family of LDPC codes that have been chosen in the CCSDS standard. Finally Finite Geometry (FG) can be used for algebraic LDPC code construction [9]. These methods have been used to design the proposed codes.
+LDPC codes are decoded by message-passing iterative algorithms. The Min-Sum algorithm [10] is one of them and achieves good performance close to optimal Belief Propagation (BP) algorithm but with a lower computational complexity tackling the check node processing complexity by replacing hyperbolic tangents with summation and minimum functions [10]. Offset Min-Sum (OMS) and Normalized MinSum (NMS) are alternatives that bring error correction closer to optimal against a tiny increase of computational complexity. It is the reason why they are adopted in many hardware decoder implementations [11], [12].
+The remainder of the paper is organized as follows. In section 2, notations and OMS algorithm are introduced. Then, section 3 presents different QC-LDPC codes compared to DVB-S2 standard. In section 4, the hardware architecture dedicated to OMS algorithm for the selected codes is detailed. Finally, section 5 summarizes the experimental results and compares them with previous works.
+II. LDPC CODES AND DECODING ALGORITHM
+A. Notations
+A LDPC code is an error correction code that is defined by a parity check matrix named H. It is composed of M rows
+
+978-1-5386-7048-4/18/$31.00 ©2018 IEEE 1 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+and N columns. The code rate R is denoted by R = K/N with K = N − M being the number of information bits. LDPC codes can be illustrated by a Tanner graph [13] with N variable nodes (VN) and M check nodes (CN). N (j) denotes the set of VNs associated to CNj and M (i) denotes the set of CNs linked to VNi.The number of connections for a node is called the degree and is denoted dv(i) for VNi and dc(j) for CNj. If dv and dc are constant for all nodes, the LDPC code is regular. In the particular case of QC-LDPC, codes have a structure composed of (Z, Z) sub-matrix Sk,l. In most cases, each sub-matrix is either an identity matrix shifted by a number between 0 and Z − 1 or a matrix filled with zeros. However, identity matrices could replace other kinds of submatrices such as in DVB-S2 standard [2]. But, it results in more complex decoding due to data dependencies among CNs.
+B. Decoding algorithm
+There are different techniques to decode LDPC codes at receiver side. Sum-Product algorithm (SPA) [9] or LP-based one [14] are the most efficient approaches in terms of BER and FER performance. However, their computational complexity discards them from hardware decoder implementation. Indeed, computation complexity variants were proposed to this purpose e.g. Offset Min-Sum or Normalized Min-Sum. These variants drastically reduce the computational complexity at the cost of a slightly error correction performance loss, especially when LDPC codes are regular. To reach at the same time low computational decoding complexity and high throughput performance, hardware decoders have to exploit a layered based scheduling of the decoding process. Contrary to the common flooding based formulation of the decoding process, layered based decoding enables to twice reduce the number of decoding iterations at equivalent error correction performance and also reduce by about 30% the memory required by the decoder [15]. However, this layered approach limits the maximum computation parallelism during the decoding process and consequently the data rate.
+The horizontal layered algorithm with offset Min-Sum approximation is given in [16]. Log-likelihood ratios (LLR) are the inputs and thus the initial values in variable nodes Ti(0). Ti(jt) and Ej(ti) are messages from VNi to CNj and CNj to VNi respectively. η is the offset used in the OMS to improve the accuracy of the extrinsic messages. This decoding algorithm has been chosen for its low complexity in terms of operations comparing to BP or other min-sum variants (e.g. 3-min [17]). Indeed, as demonstrated in the experimentation section, the logical element usage is the main bottleneck of FPGA-based implementation.
+III. EFFICIENT QC-LDPC CODES
+A. Decoder design friendly QC-LDPC codes
+On one hand, high throughput applications in space optical and wireless communications require a LDPC code with a powerful error correction capacity with a given rate R including very low error floor. Space optical communications deal with code rate greater than 0.7 so this study is focused on codes with rates between 0.72 and 0.82. On the other hand,
+
+codes need to be decoder design friendly. QC-LDPC are often chosen to achieve this. First, thanks to the regular structure of QC-LDPC codes, the decoding process can be efficiently parallelized and a memory mapping without memory access conflict can always be found. The higher the expansion factor of the code Z is, the higher the throughput should be at the cost of more computational complexity. Considering Z = 256 for instance, 256 VN to CN messages can be sent to 256 CN processing units. In an optimal case, the decoding throughput of a layered based decoder can be approximate by :
+T hroughput = N × Z × F requencyF P GA M × dc × nbiteration
+An expansion factor of Z = 256 is often a higher bound in QC-LDPC code design. In fact, the hardware implementation cost (e.g. the barrel shifter cost) grows non linearly. Furthermore with higher values of Z, dependencies between the CNs increase so computation parallelism is reduced, introducing idle cycles. Other LDPC code parameters can also impact the hardware decoder efficiency e.g. the density of the matrix. This directly affects the throughput because the number of operations increases proportionally with the code density. From a hardware point of view, decreasing the number of iterations allows to increase the throughput at the drawback of performance cost. Actually, the impact of the iteration number is also a major bottleneck. Finally, the matrix regularity is an valuable characteristic for decoder design. From an architecture point of view, a constant degree dc enables an optimal processing units usage.
+All this decoder design friendly attributes compel the LDPC code definition. In some cases, LDPC codes need to be adapted to reach these attributes at the expense of performance.
+B. Selection of different LDPC codes
+In order to define LDPC codes with fast convergence and low error floor, different families of LDPC codes where investigated : IRA, ARJA and FG codes. They are compared with LDPC codes from DVB-S2. Different parameters were considered to obtain QC-LDPC codes that present a useful trade-off between BER/FER performance and decoder design friendliness. A comparison between our LDPC codes (CA to CE) and the LDPC codes from DVB-S2 (CF to CI ) is done. Their properties are presented in table I. dv,avg and dc,avg mean average dv and dc. ”Reg.” means ”Regular”. IRA LDPC code CA is regular in its systematic part.
+A set of proposed LDPC codes was first evaluated. The FER curves are given in Figure 1. They have been simulated using a BPSK mapping on a AWGN channel with AFF3CT, an open-source software dedicated to FEC simulations [18]. For all LDPC codes, 10 decoding iterations are considered to reach high throughput and low latency for satellite optical communications. For LDPC codes CF and CH , the additional BCH decoding that is present in the DVB-S2 standard is also considered. Note that the code rate lost introduced by BCH codes is taken into account. The difference in the code rate, which ranges between 0.72 and 0.82, could justify a shift in SNR as large as 0.2-0.3 dB. The first IRA code
+
+2 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+TABLE I
+
+LDPC CODE PROPERTIES
+
+100
+
+Code Type
+
+N
+
+dv,avg dc,avg R Reg. H density
+
+10−1
+
+CA IRA 16384 3.48 13.3 0.75 no 0.09 %
+
+CB
+
+FG 16384 3.00 12.0 0.75 yes 0.07 %
+
+10−2
+
+CC
+
+FG 16384 2.98 14.7 0.8 no 0.09 %
+
+10−3
+
+CD
+
+FG 16384
+
+3.00 16.0 0.8125 yes 0.10 %
+
+CE ARJA 16384 3 3.44 10.3 0.75 3 no 0.06 %
+
+10−4
+
+CF 1 IRA 16200 CG 2 IRA 16200
+
+2.93 11.0 0.733 no 0.07 % 2.93 11.0 0.723 no 0.07 %
+
+10−5
+
+CA
+
+CH 1 IRA 16200
+
+2.78 12.5 0.778 no 0.06 %
+
+10−6
+
+CB
+
+CI 2 IRA 16200
+
+2.78 12.5 0.767 no 0.06 %
+
+CE
+
+1 : DVB-S2 with LDPC, 2 : DVB-S2 with LDPC+BCH, 3 : after puncturing
+
+10−7
+
+CF
+
+Frame Error Rate Frame Error Rate
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5 CA
+
+10−6
+
+CB
+
+CE
+
+10−7
+
+CF
+
+CA presents better performance than the DVB-S2 code CF if SN R ≥ 2.8dB. Regular LDPC code CB is close to them. But code rates are 0.723, 0.75 and 0.75 for CF , CA and CB, respectively. For similar code rates, LDPC codes CA and CB would have better or similar performance than CG. For higher code rates, waterfalls appear later as expected. Moreover, LDPC codes CF and CH show that DVB-S2 LDPC codes present bad performance with OMS decoding algorithm at 10 decoding iterations. However, the proposed LDPC codes have a good error correction power even when a low numbers of iterations are executed. Figure 2 shows the influence of the number of decoding iterations for LDPC codes CA, CB, CE and CF . For 50 iterations, all waterfall regions are close with a maximum of 0.1 dB between them. But for 10 iterations, LDPC codes CA and CB are better than DVB-S2 and ARJA codes. LDPC code CA has slightly better performance than LDPC code CB but the structure of LDPC code CB is more decoder design friendly. In conclusion, LDPC codes CA and CB are chosen to compare implementation costs.
+
+IV. FLEXIBLE HIGH THROUGHPUT ARCHITECTURE
+In order to validate the error correction performance of the proposed LDPC codes, hardware decoder implementations were designed. Proposed decoders are based on an Application Specific Instruction Set (ASIP) architecture. This section describe the flexible and high throughput ASIP architecture that is an evolution and a specialization of the work detailed
+
+Frame Error Rate
+
+100 10−1 10−2 10−3 10−4 10−5 10−6 10−7 10−8
+2
+
+CA CB CC CD CE CF CG CH CI
+
+2.2 2.4 2.6 2.8
+
+3
+
+SNR (Eb/N0) (dB)
+
+3.2 3.4
+
+Fig. 1. Performance of the LDPC code set
+
+1.5 2 2.5 3 3.5 SNR (Eb/N0) (dB) - 10 iterations
+
+1.5 2 2.5 3 SNR (Eb/N0) (dB) - 50 iterations
+
+Fig. 2. Influence of the number of iterations
+in [16]. It proposes an architecture than can manage structured and unstructured LDPC codes but it is not optimized for QCLDPC codes. The proposed version of the ASIP-based architecture is dedicated to QC-LDPC code such as in [11]. The specialization of the decoder produces an hardware complexity fall-down and also an increase of the decoding throughput both required to achieve a throughput up to 10 Gbps in a single FPGA device.
+
+A. ASIP architectural model
+The ASIP architectural model of the decoder is detailed in Figure 3. It is composed of a controller, a VN memory, an interleaver, a CnToVn message memory, Z processing units (PU) and the IO interface like most of related work architectures [12]. As mentioned earlier, to optimize the hardware implementation, the architecture is dedicated to QC-LDPC codes. A number of PU equal to the expansion factor Z is fixed. Each PU includes dedicated processing logic and is connected to the message memory to store Eij messages. The interconnection network enables to route message between the variable nodes and the check nodes through a single interleaver. Indeed, such as in [12], the Z VN elements move through VN memory during the decoding, discarding the requirement of a de-interleaver. The interleaver is implemented thanks to a barrel shifter, whereas two Benes networks were used in [16]. This evolution represents the major complexity fall-down. Finally, an interface manages input and output data. This architectural model is flexible and can be applied to all QC-LDPC codes. It is fully efficient for LDPC codes when Z = 2z with z ∈ N because of the interleaver structure.
+Two successive blocks compose a PU as shown in [16]. The first one is dedicated to parity check processing and the second one updates LLR. This two steps can work in a pipeline mode if independent CN computations are available during the data processing.
+The parity check processing with OMS algorithm is done in the first block. The computation of the parity check node Ej(t+1) needs dc(j) clock cycles. The second block updates the LLR values of variable nodes and also needs dc(j) clock cycles with one cycle for each LLR.
+
+3 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+IO status
+control signals
+control signals
+control
+ASIP signals
+controller
+
+LRRs (inputs)
+System interface
+
+k information bits
+
+RAM storing LLR
+
+Hard Decision
+
+Interleaver
+
+control signals control signals
+
+PU PU PU PU Processing
+
+RAM storing messages
+
+Units
+
+Bit Error Rate Frame Error Rate
+
+10−1 10−2 10−3 10−4 10−5 10−6 10−7 10−8 10−9 10−10 10−11
+2
+
+Float Q8,6 Q7,5 Q6,4
+
+2.5
+
+3
+
+SNR (Eb/N0) (dB)
+
+100 10−1 10−2 10−3 10−4 10−5 10−6 10−7
+
+Float Q8,6 Q7,5 Q6,4
+
+2
+
+2.5
+
+3
+
+SNR (Eb/N0) (dB)
+
+Fig. 3. Scheme of the ASIP architectural model
+At this point, the regularity of the LDPC code is necessary to avoid the insertion of idle clock cycles during the decoding process to manage dc switching.
+Furthermore, two main memories are necessary in the ASIP architecture with one for VN values and another one to store messages from CN to VN. During the decoding process, data are exchanged in packs of length Z. For this reason, the memories are assigned to RAMs of width nBits ∗Z. It enables to access all necessary data in one single clock cycle.
+The control signals for the overall decoder elements are generated thanks to an instruction set controller. At each clock cycle, the controller sends signals to control the decoder thanks to a set of 15 custom instructions. The instruction set and the datapath have been tailored around the addressed application. The different instructions are stored in a ROM and translated into signals that are sent to each block. Thus, each hardware resource can be activated independently. This approach provides flexibility and low-recurrent costs when a novel LDPC decoder has to be designed.
+B. Flexibility and reuse possibilities thanks to the proposed automated design flow
+A strength of the proposed decoder architecture is its flexibility. It can be used for all QC-LDPC codes. The design flow has been automated [16]. The synthesis process generates the instruction for decoder controller according to the H matrix. Moreover, this process reorders the CN computations to benefits from CN computation parallelism during the decoding process. However, CN dependency can be critical and idle processing cycles are necessary. The generation process can be configured in different ways e.g. the number of processing units, the data formats, or the number of frames to decode in parallel. Indeed, in many cases, when Z is high, a low number of CN set (M/Z) limits the computation parallelism at runtime due to data dependencies. To reach high usage rate of the decoding architecture, the processing of multiple frames in parallel becomes an efficient solution: (a) this technique reuses the processing resources without hardware over cost, and (b)
+
+Fig. 4. BER and FER performance of the LDPC code CB depending on the quantization format (Qk,l means k bits for VN data and l bits for messages)
+the memory footprint increase is often limited due to the fact that memory (BRAM) are not full with one frame.
+Then, the properties and the features of the LDPC decoder architecture can be obtained before logic synthesis e.g. the number of clock cycles per iteration, the usage rate of the processing unit, the estimated hardware complexity, etc. Consequently, this automated design flow can be used for a wide exploration of the design space in terms of hardware solution for a single LDPC code or to benchmark the implementation properties of various LDPC codes.
+V. EXPERIMENTATION RESULTS
+The features of the decoder implementations on a FPGA are detailed in this section. The implementations have been done on Xilinx Zynq xczu9eg-2ffvb1156e FPGA. This FPGA device has been chosen because it is currently used for industrial space applications of Airbus partner thanks to its high processing power, its low power consumption and the presence of an on-chip processor.
+An evaluation of the impact of quantization format representation was performed. Results are provided in Figure 4 for LDPC code CB when 10 decoding iterations are applied. 6 bits for VN and 4 for messages are not enough. Indeed, an error floor appears above BER=10−7. Studied satellite optical communication application needs at least to have an error floor under 10−11 in terms of BER performance.
+First, Table II details hardware complexity of the decoder for LDPC code CA and CB. The provided hardware complexity was obtained after place and route with Vivado environment 2017.2. It appears that the LUT usage rate is the bottleneck. So, message compression presented and applied in [19] is not necessary to reduce the number of RAMs. The critical path in the PU limits the FPGA frequency up to 260 MHz.
+All throughput values are achieved by applying a parallelism level between 3 frames in a decoder. To achieve the maximum throughput on the FPGA, consequently several decoders are allocated to exploit available resources. The chosen FPGA frequency is 250 MHz for the comparison with the state of art and because it is close to the maximum 260 MHz. More
+
+4 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:56 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing
+
+TABLE II FPGA IMPLEMENTATION RESULTS FOR DIFFERENT QUANTIZATION FORMATS (POST PLACE & ROUTE WORKING FREQUENCY = 250 MHZ)
+
+LDPC code
+CA CB CB
+
+Q. format (VN, MSG)
+(8, 6)
+(8, 6)
+(7, 5)
+
+Hardware complexity # LUTs # FFs RAM18K
+
+49 121 26 903
+
+50
+
+49 121 26 903
+
+50
+
+38 913 23 483
+
+43
+
+One decoder performance
+
+Throughput
+
+Latency
+
+1.64 Gbps 11 932 cycles
+
+2.13 Gbps 7576 cycles
+
+2.13 Gbps 7576 cycles
+
+Max Throughput on Xilinx xczu9eg-2ffvb1156e FPGA 6.6 Gbps (4 decoders) 8.5 Gbps (4 decoders) 10.6 Gbps (5 decoders)
+
+Code length Code rate FPGA Device Decoding algorithm Frequency Number of iterations
+Quantization format # LUTs # FFs
+Memory size Throughtput
+
+TABLE III COMPARISON WITH LITERATURE
+
+[17] 64800
+3/4 Stratix 5 5sgxea7
+3-min
+250 MHz
+35(max)
+8 bits VN 6 bits MSG
+63694 75372 3 Mbits 792 Mb/s
+
+[11] 8176 7/8 Virtex 5 xc5vlx330
+F-NMS
+250 MHz
+14
+6 bits
+56778 86942 132 BRAM 2 Gbps
+
+[20] 15360
+2/3 Stratix 2 ep2s180
+GOMP
+140 MHz
+26
+Not given
+51252 68049 Not given 598 Mb/s
+
+This work 16384 3/4 Zynq xczu9eg
+OMS
+250 MHz
+10
+8 bits VN 6 bits MSG
+49121 26903 50 BRAM 2.13 Gbps
+
+than 10 Gbps are achieved at 250 MHz with 5 decoders on one FPGA device. The decoder latency is about 30 µs.
+A comparison with the state of art is done in table III. It’s hard to do a fair comparison but obtained throughput is within the highest with only one decoder whereas the hardware complexity is reduced. Considering high error correction performance, [17] proposes a very effective decoder for DVB-S2 standard. Comparisons demonstrate that the proposed couple of LDPC codes and decoder achieves an interesting trade-off.
+VI. CONCLUSION
+In this paper, an ultra high throughput QC-LDPC decoder is proposed. It was co-designed with an exploration of this kind of LDPC codes while keeping hardware efficiency in mind. The proposed architecture exploits as much as possible the structure of QC-LDPC codes. Main strengths of this architecture are its high throughput, its important flexibility and its error correction performance with the proposed designed LDPC codes. Its implementation can reach more than 10 Gbps with a latency of 30 µs on a single FPGA device. One can note that the proposed architecture is very competitive considering the state of art. Finally, the exploration of QC-LDPC codes shows that selected codes present error correction performance similar and sometimes better than current space communications standards. The proposed trade-off is compliant with the needs of future space optical communications.
+REFERENCES
+[1] R. Gallager, Low density parity-check codes. IRE Trans. Inform. Theory, IT-8:pp. 2129, 1962.
+[2] ETSI, “Second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broadband satellite applications (DVB-S2),” in EN 302 307 V1.2.1, 2009.
+
+[3] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+[4] L. Chen, J. Xu, I. Djurdjevic, and S. Lin, “Near-shannon-limit quasicyclic low-density parity-check codes,” IEEE Transactions on Communications, vol. 52, no. 7, pp. 1038–1042, July 2004.
+[5] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” in GLOBECOM ’05. IEEE Global Telecommunications Conference, vol. 3, Nov 2005, pp. 6 pp.–.
+[6] Kenneth Andrews, “Implementation of a DVB-S2 Encoder and Decoder for the LCRD Mission,” https://cwe.ccsds.org/sls/docs/SLSCandS/Meeting Public Materials/2013/2013 04 Bordeaux/SLS-CS 1309DVBS2 Implementation.pdf [Online], CCSDS Spring Meeting, 2013.
+[7] X. Wu, M. Jiang, and C. Zhao, “Construction of high-rate QC-LDPC codes with multi-weight circulants,” in 2016 9th International Symposium on Turbo Codes and Iterative Information Processing (ISTC), Sept 2016, pp. 21–25.
+[8] M. Diouf, D. Declercq, M. Fossorier, S. Ouya, and B. Vasi, “Improved PEG construction of large girth QC-LDPC codes,” in 2016 9th International Symposium on Turbo Codes and Iterative Information Processing (ISTC), Sept 2016, pp. 146–150.
+[9] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009.
+[10] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[11] T. Xie, B. Li, M. Yang, and Z. Yan, “Memory compact high-speed QC-LDPC decoder,” in 2017 IEEE International Conference on Signal Processing, Communications and Computing (ICSPCC), Oct 2017.
+[12] C. Marchand, J. B. Dore, L. Conde-Canencia, and E. Boutillon, “Conflict resolution by matrix reordering for DVB-T2 LDPC decoders,” in GLOBECOM 2009 - 2009 IEEE Global Telecommunications Conference, Nov 2009, pp. 1–6.
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, 1981.
+[14] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardwarebased linear programming decoding via the alternating direction method of multipliers,” in 2017 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), March 2017, pp. 1143–1147.
+[15] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, no. 6, pp. 976–996, Dec 2003.
+[16] B. L. Gal, C. Jego, and C. Leroux, “A Flexible NISC-Based LDPC Decoder,” IEEE Transactions on Signal Processing, vol. 62, no. 10, pp. 2469–2479, May 2014.
+[17] C. Marchand and E. Boutillon, “LDPC decoder architecture for DVB-S2 and DVB-S2X standards,” in 2015 IEEE Workshop on Signal Processing Systems (SiPS), Oct 2015, pp. 1–5.
+[18] A. Cassagne, O. Hartmann, M. Le´onardon, T. Tonnellier, G. Delbergue, C. Leroux, R. Tajan, B. Le Gal, C. Je´go, O. Aumage, and D. Barthou, “Fast simulation and prototyping with AFF3CT,” in International Workshop on Signal Processing Systems (SiPS). IEEE, Oct. 2017.
+[19] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoders,” in 2010 IEEE Workshop On Signal Processing Systems, Oct 2010, pp. 350–355.
+[20] B. Lin, Q. Li, Y. Pei, L. Yin, and J. Lu, “High speed LDPC decoder design based on general overlapped message-passing architecture,” in 2014 Sixth International Conference on Ubiquitous and Future Networks (ICUFN), July 2014, pp. 454–459.
+
+5 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:56 UTC from IEEE Xplore. Restrictions apply.
+
+

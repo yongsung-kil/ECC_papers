@@ -1,0 +1,632 @@
+70
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+Normalized Min-Sum Neural Network for LDPC Decoding
+Qing Wang , Member, IEEE, Qing Liu , Shunfu Wang, Leian Chen, Student Member, IEEE, Haoyu Fang , Student Member, IEEE, Luyong Chen , Yuzhang Guo, and Zhiqiang Wu, Senior Member, IEEE
+
+Abstract—The success of deep learning has encouraged its applications in decoding error-correcting codes, e.g., LDPC decoding. In this paper, we propose a model-driven deep learning method for normalized min-sum (NMS) low-density parity-check (LDPC) decoding, namely neural NMS (NNMS) LDPC decoding network. By unfolding the iterative decoding progress between checking nodes (CNs) and variable nodes (VNs) into a feedforward propagation network, we can harvest the benefits of both the model-driven deep learning and the conventional normalized min-sum (NMS) LDPC decoding method. In addition, we proposed a shared parameters NNMS with the LeakyReLU and a 12-bit quantizer (SNNMS-LR-Q) which reduces the number of required multipliers and correction factors by sharing parameters, increasing the nonlinear fitting ability by adding LeakyReLU. By utilizing the 12-bit quantizer, we can improve the confrontation ability. Thorough experiments with different code lengths, code rates, channel conditions, and check matrices are implemented to demonstrate the advantages and robustness of our proposed networks. The BER performance of the proposed NNMS is 1.5 dB better than the NMS, using fewer iterations. Meanwhile, The SNNMS-LR-Q outperforms the NNMS regarding the BER performance and efficiency.
+Index Terms—Deep learning, normalized min-sum decoding, LDPC decoding, model-driven neural network.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) code was first proposed by Gallager in 1962 [1] and has become one of the research hotspots in the field of channel coding and
+Manuscript received 12 January 2022; revised 27 April 2022, 17 June 2022, and 20 August 2022; accepted 22 September 2022. Date of publication 6 October 2022; date of current version 8 February 2023. This work is supported by the National Natural Science Foundation of China under Grant No. 61871282 and U20A20162. This work was partly published in 2020 IEEE International Conference on Communications Workshops (ICC 2020 Workshops), held in Dublin, Ireland, 7-11 June 2020. The associate editor coordinating the review of this article and approving it for publication was Z. Qin. (Corresponding author: Qing Wang.)
+Qing Wang, Qing Liu, Shunfu Wang, Luyong Chen, and Yuzhang Guo are with the School of Electrical and Information Engineering, Tianjin University, Tianjin 300072, China (e-mail: wangq@tju.edu.cn; liuqinglq@tju.edu.cn; sf_wang@tju.edu.cn; chenluyong@tju.edu.cn; 2018234095@tju.edu.cn).
+Leian Chen is with the Department of Electrical Engineering, Columbia University, New York City, NY 10027 USA (e-mail: chen.leian@columbia.edu).
+Haoyu Fang is with the Electrical and Computer Engineering, New York University, New York City, NY 10012 USA (e-mail: haoyu.fang@nyu.edu).
+Zhiqiang Wu is with the Department of Electrical Engineering, Wright State University, Dayton, OH 45435 USA, and also with the Department of Electrical Engineering, Tibet University, Lhasa 850000, China (e-mail: zhiqiang.wu@wright.edu).
+Digital Object Identifier 10.1109/TCCN.2022.3212438
+
+decoding. It has a high decoding throughput [2], [3], [4] with the bit error rate (BER) performance approaching the Shannon capacity limit. The belief propagation (BP) and minsum (MS) algorithm are two main LDPC decoding approaches. The BP decoding method achieved good performance but consumes a lot of logarithmic and multiplicative operations in the check nodes (CNs) computation [5]. Compared with the BP decoding method, the MS decoding method significantly reduced the computation and hardware complexity at the cost of performance degradation. However, the modified MS decoding, including normalized MS (NMS) or offset MS (OMS), that employed correction factors can offer competitive decoding performance with a low complexity [5].
+Researchers have recently tried to solve conventional communication physical layer problems such as channel decoding using deep learning. The reasons for this phenomenon are probably two-fold. On one hand, conventionally, communication physical layer problems are often formulated by a specific mathematical model, interpretable but inflexible. On the other hand, deep learning methods have been widely used in computer vision and natural language processing. They have high flexibility and accuracy in dealing with complex problems [6], [7], [8], such as classification, recognition, and detection. Authors in [9] used the convolutional neural network (CNN) to estimate the noise accurately. They then concatenated a conventional LDPC BP decoder to improve the BER performance. In [10], a deep-learning-based decoder was proposed for short code to reduce the computational complexity, showing good BER performance by learning a vast amount of codewords. These BP unrolling-based methods show promising results for short code decoding [10]. Authors in [11] presented a factor graph neural network (FGNN) decoding method in a burst noise channel for the first time. In [12], traditional BP algorithm were combined with the FGNN [11]. These two methods needed too many network parameters to update the node’s features. FGNN required a large data set to train the model, so it isn’t easy to implement them in the practical application of long LDPC codes.
+As the code length grows, training the neural network will require a vast collection of codewords dataset [13]. It is worth mentioning that the number of information bits k determines the number of classes (2k ) the network has to classify [14]. To this end, researchers tried to reduce the decoding complexity by decreasing the number of iterations or operations. Nachmani et al. assigned weights to the edges of the Tanner
+
+2332-7731 c 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+
+71
+
+graph for Bose-Chaudhuri-Hocquenghem (BCH) codes [15], which achieved similar decoding performance with fewer iterations compared with conventional BP decoders. However, multiple weights in these methods resulted in a high decoding complexity, making it challenging to implement in the codes whose block length are more extensive than 100 bits in applications. Lian et al. [16] proposed a parameter sharing scheme to reduce the storage and computational burden of the weighted belief-propagation (WBP) [17] decoder by using a few parameters (three parameters). Several methods have been proposed for decoding long-length block codes. Researchers studied a deep learning framework of low complexity to find the optimal offset value of the OMS under different decoding scheduling [18]. Authors in [19] proposed a family of neural 2-dimensional normalized Min-Sum (N2D-NMS) decoders which was intuitive to consider assigning uniform weights to messages with the same check node degree and/or variable node degree.
+The parameter sharing scheme related to the algorithm to be unfolded is not considered before. For example, we know that the normalization factors in NMS algorithm are varied in each iteration, which inspired a new parameter sharing scheme. Dai et al. constructed a neural min-sum (MS) decoding method for protograph LDPC codes in which identical parameters are shared by a bundle of edges derived from the same edge-type [20]. Removing redundant parameters is critical to reducing complexity. Considering the extensive logarithmic and multiplicative computations in BP decoding, Lugosch et al. proposed a neural offset min-sum (NOMS) decoding algorithm without any multiplication operations [21], which performed well on hardware. But applying existing decoding methods designed for short codes (with a length of several tens) to long codes whose block length is more extensive than 100 bits is challenging. In a word, the complexity of computation hinders the application of neural networks for the long codes.
+In this study, to design a decoder of high accuracy and low complexity for decoding long LDPC codes (i.e., the block length is more extensive than 100 bits), we first propose a novel neural normalized min-sum (NNMS) LDPC decoding network. The iterative decoding progress between check nodes (CNs) and variable nodes (VNs) is unfolded into a feed-forward propagation network to accelerate the decoding progress. Specifically, the neurons in each layer are connected in the same way as the nodes in the Tanner graph of the LDPC code, which is different from the neural network (DNN) of [15]. Furthermore, since the NNMS improves performance at the cost of a large number of multipliers, we then propose a shared parameter neural normalized min-sum decoding network, named as SNNMS-LR-Q, where LR represents the LeakReLU and Q represents the quantizer. Using the same correction factors in each layer reduces the variety of learnable correction factors. The parameters of SNNMS-LR-Q vary with different iterations, which is the same as using the normalization factors in NMS [22]. By adding LeakyReLU and a quantizer, we can further improve the BER performance. We demonstrate the proposed networks’ performance and complexity for LDPC decoding under different code
+
+lengths, code rates, channel conditions, and check matrices configuration.
+Our main contributions are highlighted as follows: • We propose a model-driven LDPC decoding framework
+(NNMS) for longer code decoding by unfolding the NMS algorithm into a neural network. The proposed NNMS decoding network outperforms the NMS algorithm in BER performance. • We further propose an improved SNNMS-LR-Q network by introducing the parameters sharing mechanism to improve the performance by reducing the network parameters reasonably. The parameter setting of SNNMS-LR-Q is closer to NMS than NNMS. To utilize the non-linear fitting ability of the neural network, we improve the BER performance by choosing the LeakyReLU activation module randomly generated sequences. Furthermore, the received signal quantization helps improve the noise confrontation ability, where experiments obtain the optimal quantization level, i.e., 12 bits, by experiments. • To verify the generalization and robustness of the proposed networks, we test the networks for long LDPC codes with different code lengths, code rates, channel conditions, and check matrices. The work described in this paper is related to our previous work reported in [23]. Our previous work presented the basic idea of using unfolded neural networks for LDPC long code decoding and provided preliminary results. The differences between this paper and [23] are multifold. First, this work uses a different method to generate the training data by varying the code lengths and rates according to widely used specifications, such as IEEE 802.11 and 802.16 series standards. Second, the LeakyReLU and quantization are first proposed in this work. Third, this work studies both the bursty noise and additional white Gaussian noise (AWGN), while the previous paper studied only the AWGN case. Fourth, the training processes are different. Fifth, more comprehensive experimental results, analyses, and discussions are provided in this work. The rest of this paper is organized as follows: In Section II, we provide a brief introduction of some related works. In Section III, we propose a well-designed NNMS LDPC decoding network based on NMS and deep learning. In Section IV, the SNNMS-LR-Q LDPC decoding network is proposed to reduce the complexity and improve the performance by introducing the parameters sharing mechanism, LeakyReLU, and a 12-bit quantizer. We demonstrate our model’s excellent performance and analyze the model’s applicability and generalization in Section V. Finally, a conclusion is provided in Section VI.
+II. SYSTEM MODEL AND PROBLEM FORMULATION
+Our proposed LDPC long codes decoding networks are based on the following normalized min-sum (NMS) decoding method and the model-driven deep learning networks. LDPC code is a linear block code, where the parity check matrix H is sparse with very few ‘1’s. For (N , k ) LDPC codes, N bits include k information bits and (N − k ) check bits. Then, the k-bit information x is encoded by LDPC encoder [24] using
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+72
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+Fig. 1. Architecture of CNMS LDPC decoding scheme.
+
+where Ci denotes the set of row locations of the ‘1’ in the i-th column (representing the set of CNs connected to VNi , where VNi represent the i-th variable node) and Ci \j represents Ci excluding check node CNj .
+Step 4: calculate the LLR L(Qi ) of a variable node VNi as
+
+L(Qi ) = L(ui ) + L rji .
+
+(4)
+
+j ∈Ci
+
+Repeat steps 2, 3 and 4 at each decoding iteration until the
+convergence conditions are satisfied or the maximum number of iterations is reached. Then the estimated bit value oi at the variable node VNi is determined by
+
+oi =
+
+1, if L(Qi ) ≤ 0 0, if L(Qi ) > 0.
+
+(5)
+
+equation u = xG, where the generator matrix G is equivalent to the parity check matrix H. We finally have the N-bit codeword u.
+
+A. Normalized Min-Sum (NMS) LDPC Decoder
+The Tanner graph is a bidirectional graph consisting of three parts: CNs, VNs, and edges connecting CNs and VNs. At each pair of nodes, variable node VNi and check node CNj are represented by squares and rings, respectively. If H(i,j) equals to ‘1’, then the i-th VN is connected with the j-th CN, otherwise it is not connected [25]. In this way, the LDPC check matrix H can be expressed by the Tanner graph.
+For the hardware realization, the conventional normalized min-sum (NMS) algorithm is preferred as it can be passed through iterative processing over the Tanner graph. The architecture of the LDPC decoding scheme is shown in Fig. 1.
+Let L(ui ) denote the received channel log-likelihood ratio (LLR) corresponding to bit i , then the CN-to-VN messages L(rji ) and the VN-to-CN messages L(qij ) are propagated and updated iteratively according to the following steps:
+Step 1: calculate the received channel LLR using received symbol y for initialization, that is
+
+L qij
+
+= L(ui ) = log
+
+P (u = 0|y) P (u = 1|y)
+
+=
+
+2y σ2
+
+,
+
+(1)
+
+where σ2 is the noise variance under the additive white Gaussian noise (AWGN) channel condition.
+Step 2: calculate the CN-to-VN messages using
+
+L rji = α ×
+
+sgn L qi j
+
+i ∈Vj \i
+
+i
+
+min
+∈Vj \i
+
+L
+
+qi
+
+j
+
+,
+
+(2)
+
+where α is the correction factor, which is obtained by density
+
+evolution
+
+(DE)
+
+and
+
+usually
+
+1 α
+
+=
+
+1.25
+
+[22].
+
+Vj
+
+denotes
+
+the
+
+set of column location of the ‘1’ in the j-th row (representing
+
+the set of VNs connected to CNj , where CNj represent the j-th check node) and Vj \i represents Vj excluding variable node VNi .
+
+Step 3: calculate the VN-to-CN messages, which is given by
+
+L qij = L(ui ) +
+
+L rj i ,
+
+(3)
+
+j ∈Ci \j
+
+B. Model-Driven Deep Learning Methods
+Most deep learning networks are data-driven without considering the mathematical model of the task, which uses a black box and a large amount of data to train the neural network structure and parameters. The lack of understanding of the relationship between the algorithm and the neural network makes its structure unable to be interpreted and predicted [26]. Besides, a large amount of label data is not easy to obtain.
+The model-driven deep learning method is a good solution to the above problem, consisting of model, algorithm, and network components [26]. An interpretable network can be designed accordingly with the prior knowledge of the model and algorithm of a specific task. For example, an iterative algorithm can be unfolded into a signal flow diagram [27], [28], then the deep neural network is obtained by training several learnable parameters through back propagation. Thus the defects caused by inaccurate models and predetermined parameters can be compensated. Moreover, the model-driven deep learning approach has many other advantages, such as fewer training data, over-fitting risk reduction, and rapid implementation.
+To this end, our goal is to unfold the NMS LDPC algorithm in Fig. 1 into a neural network by learning and compensating the uncertainty through back propagation, making use of both the efficiency and interpretation of the neural network and the Tanner graph.
+III. THE PROPOSED NEURAL NMS (NNMS) LDPC DECODING NETWORK
+This section presents our novel LDPC decoding network based on the normalized min-sum (NMS) decoding algorithm and the model-driven deep learning network, and illustrates how the LDPC decoding algorithm is unfolded into a neural network and how the network parameters are selected.
+A. Neural NMS (NNMS) LDPC Decoding Network
+First, the block diagram is provided for the proposed NNMS LDPC decoding network, as shown in Fig. 2. The k-bits information bits x are encoded into a N-bit codeword u, then u is mapped through BPSK modulator into a symbol vector s and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+
+73
+
+Fig. 2. Block diagram of LDPC decoder with deep feed-forward neural network.
+
+transmitted over the AWGN channel. At the receiver, the LLR values are calculated using the receiver signal y = s + n and then fed into the deep feed-forward neural network. The task of the LDPC decoder is to estimate the transmitted information bits uˆ = o.
+At the receiver side, the detailed signal flow diagram of the proposed NNMS decoding network is shown in Fig. 3. The iterative decoding algorithm is unfold into a forwardpropagation network. In the Tanner graph, the parity check matrix H determines the edges of CNs and VNs connections. The messages between the CN layer and the VN layer are multiplied by different correction factors αij and βji in each iteration, which is equivalent to adding weight parameters to the edges of Tanner graph. The process of calculating the CNto-VN messages and the VN-to-CN messages is realized by the CN layer and the VN layer in the neural network, respectively. There are three types of neuron functions: Neuron I (CN neuron) calculates the CN-to-VN messages in the CN layer, given by
+
+L(l) rji =
+
+sgn L(l−1) qi j
+
+i ∈Vj \i
+
+·
+
+min
+i ∈Vj \i
+
+α(l
+
+−1) i
+
+j
+
+× L(l−1)
+
+qi
+
+j
+
+.
+
+(6)
+
+Neuron II (VN neuron) calculates the VN-to-CN messages in the VN layer using
+
+L(l) qij = L(ui ) +
+
+β(l)j i × L(l) rj i . (7)
+
+j ∈Ci \j
+
+and Neuron III (output neuron) calculates the final output in
+
+the output layer as
+
+⎛
+
+⎞
+
+oi = σ⎝L(ui ) +
+
+β(lmax )ji × L(lmax ) rji ⎠, (8)
+
+j ∈Ci
+
+where l is the number of iterations and lmax is the maximum number of iterations. The activation functions of σ(x ) = (1 + e−x )−1 and σ(x ) = (1+sgn(x ))/2 are used for training
+
+stage and testing stage, respectively, in output neurons.
+
+B. The Signal Flow of the Proposed NNMS Network
+This section illustrates the detailed signal flow of the
+proposed NNMS LDPC decoding network, as shown in Fig. 3. First, the received data L(ui ) is put into the NNMS LDPC
+decoding network through the input layer and obtained as the initialization data L(qij ).
+Second, at the l-th hidden layer, to calculate the CNto-VN messages L(l)(rji ) in (6), the data set L(l−1)(qi j ),
+
+which is connected to the CNj except the VNi , is extracted from L(l−1)(qij ) by Wv2c, where Wv2c is the row weight information of the parity check matrix H. L(l)(rji ) is calculated through the neuron I of the CN layer.
+Third, to calculate the VN-to-CN messages L(l)(qij ) in (7), the data set L(l)(rj i ), which is connected to the VNi except the CNj , is extracted from L(l)(rji ) by Wc2v . Here, Wc2v is the weight factor vector when the check nodes pass the message to the variable nodes. Similarly, Wv2c is the weight factor vector when the variable nodes pass the message to the check nodes. L(l)(qij ) is calculated in the neuron II (VN neuron) of the VN layer.
+Similarly, by adding more CN layers and VN layers in the hidden layers, the number of iterations increase. For (N , k )
+LDPC codes, the T iterations are unfolded into to a deep neural network with 2lmax + 2 layers, consisting of lmax CN layers, lmax VN layers, one input layer and one output layer.
+Finally, the cross entropy loss function is used to train the
+proposed network. The cross entropy loss measures the errors
+of the neural network output o and the transmitted codeword
+u, which is defined as
+
+L(u,
+
+o)
+
+=
+
+−
+
+1 N
+
+N
+ui log(oi ) + (1 − ui ) log(1 − oi ),
+
+(9)
+
+i =1
+
+where ui and oi are the i-th transmitted information bit (labeled) and the network soft estimation, respectively.
+
+IV. THE PROPOSED SHARED NEURAL NMS LDPC DECODING NETWORK
+The proposed NNMS LDPC decoding network above uses different weights for each connection edge between the CNs and the VNs in each iteration. Although the parity check matrix H of LDPC code is a sparse matrix, messages passing using different edges weights in each iteration will consume a lot of multipliers for long codes. To reduce the number of correction factors, this section introduces the parameter sharing mechanism to the neural normalized min-sum (SNNMS) LDPC decoding network. The NNMS decoding network achieves good performance with low computation complecity by sharing the same correction factors in the same layer, i.e., the parameter sharing mechanism. Adding the LeakyReLU modules between each hidden layer and a 12-bit quantizer after the input layer, we obtain the overall framework of the advanced shared NNMS with the LeakyRelu and a 12-bit quantizer (SNNMS-LR-Q) as depicted in Fig. 4.
+
+A. Parameter Sharing Mechanism
+For the SNNMS-LR-Q LDPC decoding network, the correction factor α(l−1) is shared when the CN-to-VN messages in l-th layer are passed, i.e., the Neuron I calculates the CN-to-VN messages in the CN layer, given by
+
+L(l) rji = α(l−1) ×
+
+sgn L(l−1) qi j
+
+i ∈Vj \i
+
+min
+i ∈Vj \i
+
+L(l −1)
+
+qi j
+
+.
+
+(10)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+74
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+Fig. 3. The proposed model-driven deep learning based NNMS decoding network.
+
+Fig. 4. The proposed model-driven deep learning based SNNMS-LR-Q decoding network.
+
+The correction factor β(l) is shared when the VN-to-CN messages in l-th layer are passed, i.e., the Neuron II calculates the VN-to-CN messages in the VN layer using
+
+L(l) qij = L(ui ) + β(l) ×
+
+L(l) rj i . (11)
+
+j ∈Ci \j
+
+Compared with NNMS, the two decoding networks have similar network structures, but the neurons update messages in completely different ways, as shown in Fig. 3 and Fig. 4. Although the neurons in SNNMS-LR-Q have different function, i.e., Neuron I (CN neuron), Neuron II (VN neuron), and Neuron III (output neuron), the correction factor of SNNMSLR-Q is the weight shared by all the edges in each layer. In contrast, each edge in each layer of NNMS has a different correction factor, i.e., weight, just as in the Tanner graph. Sharing parameters allows the weights (i.e., correction factor α(l)) to be shared between the edges in two adjacent network layers. It avoids over-fitting when training the SNNMS.
+
+B. The LeakyReLU Module
+The proposed NNMS in Section III is unfolded according to the NMS decoding algorithm in Section II-A, where the correction factors, αi(jl), and βi(jl), are learned during training progress. The network structure or, more specifically, the network parameters, affect the decoding performance. The prediction accuracy of a neural network is
+
+dependent on the number of layers, and more importantly, the type of activation function [29]. This section introduces activation functions to further ensure the reliability and accuracy of the learnable parameters [30].
+First of all, the activation function is added to a proper position according to the NMS’s messaging rules. In NMS, the messages passed from the CN layer to the VN layer are corrected by the normalization factor. If there is an activation function between the CN layer and the VN layer, the messaging rules of the model may be damaged. So We add an activation function after each iteration, that is, after the VN layer.
+In contrast to ReLU [31], Leaky ReLU, which was first proposed in acoustic models [32], generates non-zero outputs when coupling with negative inputs and is able to reduce information vanishing in unfolding network structure. Mathematically, it can be written as
+
+L(l) qij =
+
+L(l) qij , L(l) qij
+
+L(l
+
+) (qij γi
+
+)
+
+,
+
+L(l )
+
+qij
+
+≥0 ,
+<0
+
+(12)
+
+where γi is a fixed parameter in the interval (0, +∞).
+
+C. A 12 Bits Quantizer
+The MS algorithms have a few advantages. They have low hardware complexity, do not require channel information such as the noise variance for AWGN channels and provide
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+
+75
+
+TABLE I COMPLEXITY COMPARISON OF LDPC DECODERS
+
+less sensitive decoding performance under finite word-length implementations (i.e., quantization) over the BP algorithm. In the NMS or OMS algorithm, the correction factor is applied to the output values of check nodes of the original MS algorithm regardless of the values of output messages, aiming to compensate the overestimated messages. The finite word length of the soft information is one of the major factors affectting the complexity of computation logic and routing, and the decoding performance of an LDPC decoder. Several works to reduce the finite word length were introduced in [33], [34], [35] using quantization schemes for BP decoding algorithms of LDPC codes. And a proper quantization scheme or quantization bit can give a good trade-off between the decoding performance and the hardware complexity and save a large portion of memory [36]. The results of many literature [37], [38] show that when the number of quantized bits exceeds a certain number, increasing the number of quantized bits cannot improve the decoding performance. Thus, considering the quantization problem caused by hardware implementation, we study the quantization effect of received signals in NNMS.
+Assuming that the input signals follow a normal distribution with the means ±1 and the variances calculated by (13), the received signals are quantified according to the “3σ Rule” before feeding them into the network. The σ is calculated by
+
+σ2
+
+=
+
+1 2
+
+×
+
+10−
+
+SNR 10
+
+×
+
+1 R
+
+,
+
+(13)
+
+where R is the code rate. The value range of the channel output is [−1 − 3σ, 1 + 3σ]. Thus the quantization step is given by
+
+Δ
+
+=
+
+(1
+
++
+
+3σ)
+
+− (−1 − 3σ) 2k
+
+=
+
+1 + 3σ 2k −1
+
+,
+
+(14)
+
+where k is the quantification bit. Then we obtain the quantized received signals as
+
+Q(y) =
+
+floor(y /Δ), ceil(y /Δ),
+
+y y
+
+≥ <
+
+0 0
+
+,
+
+(15)
+
+where y is the received signal defined in (1); floor(·) and ceil(·) are the round-down and round-up operations, respectively.
+Through experiments, we find that the optimal quantization level is 12-bit.
+
+D. Complexity Analysis
+Given the same BER performance requirement, the SNNMS-LR-Q decoding network needs fewer iterations or layers, which means that the decoding process has much
+
+lower latency, higher throughput and fewer computational
+complexity. For a (N − k ) × N matrix, we denote the weight in the
+j-th row by aj and the weight in the i-th column by bi . By counting the number of ‘1’s in the low-density parity check
+matrix H [12], we have
+
+N −k
+
+N
+
+aj = bi .
+
+(16)
+
+j =0
+
+i =1
+
+Complexity can be evaluated by counting the operations
+of comparison (CMP), xor (XOR) multiplication (MUL), and
+addition (ADD). When computing the CN to VN messages,
+the NNMS decoder selects the first and second minimum
+messages among several passed messages, so the message
+computation progress can be realized using simple CMP, MUL, and XOR operations. Since each output in the CNj is calculated by (aj -1) inputs, at the VNi , (bi -1) adders are needed when adding bi variables, and an extra adder is used for calculating L(Qi ). As a result, the VN needs (bi (bi -1)+1) adders.
+The computational complexity is listed in Table I, where lmax is the number of iterations. We can find that the SNNMSLR-Q decoder has lower complexity compared with the
+NNMS. Compared with CNMS, it has better BER performance
+without increasing computational complexity.
+
+V. SIMULATION RESULTS
+This section presents the training process and test results of our proposed NNMS and SNNMS-LR-Q LDPC decoding networks using Tensorflow framework [39].
+
+A. Experimental Setup
+We use the mini-batch gradient descent method to train the network. Each mini-batch contains 120 blocks of data, and each SNR occupies the same proportion in one minibatch. The Adaptive Moment Estimation (Adam) optimization method with a learning rate of 0.001 is used to search the optimal network parameters.
+If not otherwise specified, the LDPC code is designed according to IEEE 802.16e standard with code block length 576 and rate 3/4, where the codeword is a random sequence and the parity check matrix H is from [40]. To test the adaptability of our proposed networks, we also generate LDPC codes with different code lengths and rates such as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+76
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+Fig. 6. BER performance versus the number of network layers (NNMS).
+
+Fig. 5. System robustness comparison by training with different SNR data (NNMS iteration = 10).
+
+IEEE 802.16 (576, 192) and IEEE 802.11n (648, 324), in Section V-E.
+The proposed networks are tested in both Gaussian and the bursty channel. Both Gaussian and bursty noise are added to the input signals. More specifically, in a bit i, signal y˜i = yi + ni + pi zi , where ni ∼ N (0, σ2) and zi ∼ N (0, σb2) are Gaussian noise and bursty noise, respectively; pi is a Bernoulli random variable s.t. P (pi = 1) = η; P (pi = 0) = 1 − η. We set η = 0.05 as [41] to simulate burst noise during transmission. By changing σ, we obtain different signals with SNR = 20 log10(1/σ). The training data is generated under Gaussian channel with multiple SNRs ranging from 0 dB to 5 dB. For bursty noise channel, SNRs range from 0 dB to 5 dB and σb range from 0 to 4.
+B. System Robustness
+The first experiment tests the system’s robustness. The system robustness can be measured by the BER performance concerning the quality of the training data, i.e., the signalto-noise ratio (SNR) of the training data. When the SNR of training data equals to 0 dB, the training data is generated under a poor channel condition, resulting in a lot of errors in the labeled dataset. Thus the network cannot learn the decoder structure to correct errors. On the contrary, when the SNR is high, fewer erroneous data are fed into the network. The network system cannot offer the ability to remove noise.
+By training with the data in the range of 0-5 dB under multi-channel conditions, we find that the more diverse the training data is, the better the BER performance we can obtain, compared with the network trained using 0 dB or 5 dB data only, as shown in Fig. 5. In addition, we enriched the dataset by using two step sizes of SNR, 0.25 and 0.5, covering the SNR in {1, 1.25, 1.5, . . . , 5} and {1, 1.5, 2, . . . , 5}, respectively. Experimental results show that a smaller step size of SNR leads to a better BER performance. That is to say, the diversity of the training data helps enhance the robustness of the data-driven neural network.
+C. BER Performance vs. Number of Network Layers
+Fig. 6 illustrates that the BER performances get rapidly improved when the number of layers increases from 10 to 22
+
+Fig. 7. BER performance comparison of difference decoding networks.
+and the number of iterations increases from 4 to 10. The BER performance reaches a plateau after 11 iterations when the network has more than 23 layers. Deeper networks usually consume more computation resources; the BER performance can be improved at the cost of computation complexity. Since the increasing depth of the network only introduces marginal BER performance increment but brings more computation consumption, the proposed network is set to have 22 layers and trained with 10 iterations in our experiments.
+D. BER Performance Comparison Between NNMS and SNNMS-LR-Q
+The loss function of SNNMS-LR-Q decoding network and the training method are consistent with the NNMS decoding network. We compare the performance of the proposed SNNMS decoding network with those of NNMS and NMS. We trained SNNMS-LR-Q and NNMS under the same training conditions. More specifically, when training, each mini-batch contains 120 blocks of data, each SNR occupies the same proportion in one mini-batch. The LDPC codes are generated according to IEEE 802.16e standard with code block-length 576 and rate 3/4. The Adam learning rate is 0.001.
+As shown in Fig. 7, in the case of 32 layers neural network (i.e., 15 iterations) with BER of 10−7, the BER performance of SNNMS-LR-Q outperforms up to 0.4 dB compared with the NNMS LDPC decoding network.
+The reason is that, from the aspect of parameter sharing mechanisms, the parameters setting of SNNMS-LR-Q is closer
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+
+77
+
+Fig. 8. BER performance of different LDPC codes (Iteration = 10).
+to NMS than NNMS. Comparing (2)-(3), (6)-(7) and (10)(11), related to parameter sharing scheme of NMS, NNMS and SNNMS, respectively, we find that the parameters of SNNMSLR-Q are vary with different iterations which is same as the using of the normalization factors in NMS [22]. More specifically, there is only one weighting factor when calculating the CN-to-VN messages in NMS algorithm, i.e., α in (2) and (3), but α should vary with different iterations to achieve the optimum performance [22], it is kept a constant for the sake of simplicity. The NNMS assigns a different weighting factor to each edge in each iteration, i.e., αi ,j and βj i in (6) and (7). The SNNMS uses the same weighting factor for all edges in each iteration, i.e., α(l−1) and β(l) in (10) and (11). Thus the structure and parameter sharing scheme of SNNMS is similar to NMS algorithm, which is the algorithm that the network unfolding should follow.
+E. Different LDPC Code Lengths and Rates
+A method may have different effects on different code lengths or code rates [42]. Thus, this section tests the adaptability of the proposed networks to different LDPC codes. We generate the data using different code lengths and different code rates according to IEEE 802.16 and IEEE 802.11 standards. By training and testing the SNNMS-LR-Q model using several different LDPC codes (802.16e (576, 192), (1248, 312) and 802.11n (648, 324)) as data sets, we find that the SNNMSLR-Q adapts to different LDPC codes and performs better than NMS when the number of the iterations is 10, as shown in Fig. 8. Simulation results demonstrated that our proposed network works successfully for different code lengths and rates.
+F. Bursty Noise Channel
+Previous sections demonstrate that the proposed network has a good performance in Gaussian channels, which are theoretically ideal channels for LDPC decoding. Fig. 16 illustrates the network also achieves a robust performance in bursty noise channel, which consists of both Gaussian noise and burst noise and approximate realiatic environment in practical uses.
+This section sets the conventional decoding algorithms as baselines, such as NMS, MSA, SPA. As shown in Fig. 16,
+
+Fig. 9. Generalization of the proposed networks (LDPC codes generated by different check matrices for training and testing).
+The proposed SNNMS-LR-Q has significant improvement in BER compared with other algorithms under bursty noise channel.
+G. Generalization of the Proposed Method
+This section analyzes the generalization of our model using different check matrices in training and testing. For example, we use the LDPC code generated by 802.11e (576, 144) 3/4A for training, but the testing LDPC code is generated by 802.11e (576, 144) 3/4B. That is to say, the code rate and code length are the same, but the generator matrices are different. As shown in Fig. 9, we find that the proposed networks didn’t perform well in this case. The reasons are multi-fold.
+Firstly, in traditional LDPC decoding algorithms, different check matrices mean that the connections between check nodes and variable nodes in the Tanner graph are entirely different. Besides, our network is model-driven, the messagepassing rules follow the topology of the Tanner graph, the model parameters of the network also correspond to edges in the Tanner graph. Once the check matrix of LDPC code to be tested changes, the model parameters will no longer adapt. This problem provides a challenging direction for our future research.
+H. Ablation Studies
+1) Parameter Sharing Mechanism: When removing parameter sharing mechanism, the BER performance of the network reduces by 0.4 dB compared with the SNNMS-LR-Q, as shown in Fig. 10. And as we can see in Table I, the complexity of the network is greatly increased without the parameter sharing mechanism.
+2) LeakyReLU Module: The LeakyReLU module increases the nonlinear fitting ability and makes the learnable parameters more accurate. A performance drop is observed if we do not use the LeakyReLU module, as shown in Fig. 11.
+We then check whether the LeakyRelu improves the BER performance for the all-zeros codeword. As shown in Fig. 12, there is no gain after adding the activation function for the all-zeros sequence. Compared with the random codewords, the BPSK-modulated all-zeros codeword is a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+78
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+Fig. 10. Ablation studies on parameters sharing mechanism.
+
+Fig. 12. Performance for LeakyRelu on all-zeros codeword.
+
+Fig. 11. Ablation studies on LeakyReLU Module.
++1 sequence. The positive messages are more useful than the negative messages for the all-zeros codeword decoding, from the output layer σ(x ) = (1 + sgn(x ))/2. Recall the Eq. (12), which shows that the LeakyRelu introduces a rectified factor γi to adjust the negative messages. Generally, γi = 100, in this case, the negative values are suppressed, and the positive values are kept unchanged. Obviously, the LeakyRelu has no positive effect on the SNNMS-Q for all-zeros decoding. This is why we have to claim that the SNNMS-LR-Q only outperforms SNNMS-Q for the random sequence decoding.
+3) Quantizer: This section analyzes the quantization of the received signal of LDPC decoding and focus on the influence of quantization level on decoding performance. We trained the model with 10 iterations by 802.11e (576, 144). When the quantized bits are set as 1, 4, 8, 12, 14 each time, we observe that the proposed model with a 12-bit quantizer receives the best BER performance (shown in Fig. 13), even outperforms the unquantized signals. When further increasing the quantization level, i.e., 14-bit, the performance degrades, which means that increasing quantization bit after a certain level cannot provider more precious results, a proper level is required. Simulation results in Fig. 14 show the performance comparison of the model between quantized and unquantized received signals. It can be seen that SNNMS-LR-Q outperforms the SNNMS-LR, which verifies again that 12 bits
+
+Fig. 13. Studies on the quantization levels.
+Fig. 14. Ablation studies on the 12-bit quantizer.
+quantizer outperforms the unquantized case. By testing different LDPC codes, such as 802.16e (576, 192), (1248, 312) and 802.11n (648, 324), we find that “12 bits” is the optimal quantization bit level according to the experimental results, as shown in Fig. 15. Although we can’t experiment on all LDPC codes, we can still observe the generality of “12 bits”.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+
+79
+
+Fig. 15. Studies on the quantization levels with different LDPC codes. (SNNMS-LR-Q, iteration=5).
+
+Fig. 16. BER performance under bursty noise channel (SNNMS-LR-Q).
+
+There are many researches on LDPC codes quantization, signal difference is conductive to model parameters learning
+
+the results show that the decoding performance of the quan- after LLR quantization.
+
+tized belief-propagation (BP) algorithm (or other algorithms)
+
+is close to or even better that of the unquantized BP algorithms, for example [43], [44]. The Gallger’s original decoding
+
+VI. CONCLUSION
+
+scheme is very sensitive to finite precision implementations. In this paper, we first propose an NNMS LDPC decod-
+
+Comparatively, the offset and normalized BP-based decod- ing network by unfolding the LDPC decoding algorithm into
+
+ing is not so sensitive to quantization errors [38]. Results neural networks and train the learnable correction factors. By
+
+in [44] indicate that in iterative decoding, accurate represen- sharing the correction factors, we develop a shared NNMS
+
+tations of log-likelihood ratios belief propagation (LLR-BP) with LeakyReLU and a quantizer (SNNMS-LR-Q) network to
+
+algorithm don’t always lead to the best performance if the enhance the decoding performance for the random sequence.
+
+underlying graph representation contains many short cycles. In Simulation results show that the proposed SNNMS-LR-Q
+
+fact, simplified reduced-complexity decoding schemes some- decoder can achieve better BER performance with lower com-
+
+times can outperform the BP decoding. Therefore, we believe putation complexity compared with the NNMS decoder. In
+
+that SNNMS-LR-Q is better for the following two reasons: addition, the SNNMS-LR-Q decoder is acceptable for longer
+
+firstly, the SNNMS-LR-Q is model-driven by NMS, the NMS codes (the block-length is larger than 100 bits) thanks to the
+
+is not so sensitive to the quantization errors; secondly, the lower latency and less computational complexity, which is
+
+decoding model learned by neural network, and the smaller durable in practice. The SNNMS-LR-Q is suitable for various
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+80
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 9, NO. 1, FEBRUARY 2023
+
+standard LDPC codes of different code lengths and different
+code rates, and it performs well on a bursty noise channel
+as well.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[3] M. G. Luby, M. Mitzenmacher, M. A. Shokrollahi, and D. A. Spielman, “Improved low-density parity-check codes using irregular graphs,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 585–598, Feb. 2001.
+[4] J. Chen and M. P. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[5] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010.
+[6] D. Silver et al., “Mastering the game of go with deep neural networks and tree search,” Nature, vol. 529, no. 7587, p. 484, 2016.
+[7] G. Hinton et al., “Deep neural networks for acoustic modeling in speech recognition,” IEEE Signal Process. Mag., vol. 29, no. 6, pp. 82–97, Nov. 2012.
+[8] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “Imagenet classification with deep convolutional neural networks,” in Proc. Adv. Neural Inf. Process. Syst., vol. 25, Jun. 2012, pp. 1097–1105.
+[9] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 144–159, Feb. 2018.
+[10] T. Gruber, S. Cammerer, J. Hoydis, and S. Ten Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Baltimore, MD, USA, Mar. 2017, pp. 1–6.
+[11] Z. Zhang, F. Wu, and W. S. Lee, “Factor graph neural network,” 2019, arXiv:1906.00554.
+[12] V. G. Satorras and M. Welling, “Neural enhanced belief propagation on factor graphs,” in Proc. 24th Int. Conf. Artif. Intell. Stat., 2021, pp. 685–693.
+[13] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Lorient, France, Oct. 2017, pp. 1–6.
+[14] H. Ye, G. Y. Li, and B.-H. Juang, “Power of deep learning for channel estimation and signal detection in OFDM systems,” IEEE Wireless Commun. Lett., vol. 7, no. 1, pp. 114–117, Feb. 2018.
+[15] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun. Control Comput. (Allerton), Monticello, IL, USA, Sep. 2016, pp. 341–346.
+[16] M. Lian, F. Carpi, C. Häger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2019, pp. 161–165.
+[17] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[18] A. Abotabl, J. H. Bae, and K.-B. Song, “Offset min-sum optimization for general decoding scheduling: A deep learning approach,” in Proc. IEEE 90th Veh. Technol. Conf. (VTC-Fall), 2019, pp. 1–5.
+[19] L. Wang, S. Chen, J. Nguyen, D. Dariush, and R. Wesel, “Neuralnetwork-optimized degree-specific weights for LDPC minsum decoding,” 2021, arXiv:2107.04221.
+[20] J. Dai et al., “Learning to decode protograph LDPC codes,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1983–1999, Jul. 2021.
+[21] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 1361–1365.
+[22] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[23] Q. Wang, S. Wang, H. Fang, L. Chen, L. Chen, and Y. Guo, “A modeldriven deep learning method for normalized min-sum LDPC decoding,” in Proc. IEEE Int. Conf. Commun. Workshops (ICC Workshops), Dublin, Ireland, Jun. 2020, pp. 1–6.
+[24] J. Liu, S. Jing, X. You, and C. Zhang, “A merged BP decoding algorithm for polar-LDPC concatenated codes,” in Proc. 22nd Int. Conf. Digit. Signal Process. (DSP), London, U.K., Aug. 2017, pp. 1–5.
+
+[25] N. Yang et al., “Reconfigurable decoder for LDPC and polar codes,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Florence, Italy, May 2018, pp. 1–5.
+[26] H. He, S. Jin, C.-K. Wen, F. Gao, G. Y. Li, and Z. Xu, “Modeldriven deep learning for physical layer communications,” IEEE Wireless Commun., vol. 26, no. 5, pp. 77–83, Oct. 2019.
+[27] O. Solomon et al., “Deep unfolded robust PCA with application to clutter suppression in ultrasound,” IEEE Trans. Med. Imag., vol. 39, no. 4, pp. 1051–1063, Apr. 2020.
+[28] N. Doan, S. A. Hashemi, E. N. Mambou, T. Tonnellier, and W. J. Gross, “Neural belief propagation decoding of CRC-polar concatenated codes,” in Proc. IEEE Int. Conf. Commun. (ICC), Shanghai, China, May 2019, pp. 1–6.
+[29] S. Tiwari. “Activation functions in neural networks.” Geeksforgeeks. org. 2020. [Online]. Available: https://www.geeksforgeeks.org/activationfunctions-neural-networks/
+[30] S. Sharma, S. Sharma, and A. Athaiya, “Activation functions in neural networks,” Towards Data Sci., vol. 6, no. 12, pp. 310–316, 2017.
+[31] X. Glorot, A. Bordes, and Y. Bengio, “Deep sparse rectifier neural networks,” in Proc. 14th Int. Conf. Artif. Intell. Stat., Fort Lauderdale, FL, USA, 2011, pp. 315–323.
+[32] A. L. Maas, A. Y. Hannun, and A. Y. Ng, “Rectifier nonlinearities improve neural network acoustic models,” in Proc. Int. Conf. Mach. Learn. (ICML) Workshop Deep Learn. Audio, Speech Lang. Process., vol. 30, 2013, p. 3.
+[33] T. Zhang, Z. Wang, and K. K. Parhi, “On finite precision implementation of low density parity check codes decoder,” in Proc. IEEE Int. Symp. Circuits Syst., vol. 4, 2001, pp. 202–205.
+[34] G. Masera, F. Quaglio, and F. Vacca, “Finite precision implementation of LDPC decoders,” IEE Proc. Commun., vol. 152, no. 6, pp. 1098–1102, 2005.
+[35] Z. Cui and Z. Wang, “Efficient message passing architecture for high throughput LDPC decoder,” in Proc. IEEE Int. Symp. Circuits Syst., 2007, pp. 917–920.
+[36] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010.
+[37] J.-S. Lee and J. Thorpe, “Memory-efficient decoding of LDPC codes,” in Proc. Int. Symp. Inf. Theory, 2005, pp. 459–463.
+[38] H. Wymeersch, H. Steendam, and M. Moeneclaey, “Computational complexity and Quantization effects of decoding algorithms for non-binary LDPC codes,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process., vol. 4, 2004, p. 4.
+[39] M. Abadi et al., “TensorFlow: A system for large-scale machine learning,” in Proc. 12th USENIX Symp. Oper. Syst. Design Implement. (OSDI), Nov. 2016, pp. 265–283.
+[40] M. Helmling et al. “Database of channel codes and ML simulation results.” University Koblenz Landau. 2016. [Online]. Available: www.uni-kl.de/channel-codes
+[41] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” 2018, arXiv:1805.09317.
+[42] X. Wu, L. Zhang, and Z. Wu, “Quantized soft-decision-based compressive reporting design for underlay/overlay cooperative cognitive radio networks,” IEEE Trans. Cogn. Commun. Netw., vol. 6, no. 3, pp. 1044–1055, Sep. 2020.
+[43] Y.-C. He, H.-P. Li, S.-H. Sun, and L. Li, “Threshold-based design of quantized decoder for LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory, 2003, p. 149.
+[44] L. Chu, H. He, L. Pei, and R. C. Qiu, “NOLD: A neural-network optimized low-resolution decoder for LDPC codes,” J. Commun. Netw., vol. 23, no. 3, pp. 159–170, 2021.
+Qing Wang (Member, IEEE) received the B.Eng., M.Eng., and Ph.D. degrees in electronic engineering from Tianjin University, Tianjin, China, in 2004, 2007, and 2010, respectively. Since 2010, she has been with the School of Electronical and Information Engineering, Tianjin University, where she is currently an Associate Professor. From 2007 to 2009, she was a visiting student with the School of Electrical and Electronic Engineering, Nanyang Technological University, Singapore. From 2018 to 2019, she was a Visiting Scholar with Columbia University, New York, NY, USA. Her current research interests include wireless communication, passive radar, and intelligent signal processing.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: NORMALIZED MIN-SUM NEURAL NETWORK FOR LDPC DECODING
+Qing Liu is currently pursuing the M.S. degree in information and communication engineering from Tianjin University, China. Her current research is signal processing technology for wireless communications.
+
+81
+Luyong Chen is currently pursuing the master’s degree with the School of Electrical Automation and Information Engineering, Tianjin University. His current research is deep learning technology in wireless communication and signal processing.
+
+Shunfu Wang received the B.Eng. degree in communication engineering from Hainan University in 2017, and the M.S. degree in information and communication engineering, Tianjin University in 2020. His current research interest is signal processing on unmanned aerial vehicle.
+
+Yuzhang Guo received the B.Eng. degree in electronic information engineering (Underwater Acoustic) from Harbin Engineering University in 2018, and the M.S. degree in information and communication engineering, Tianjin University in 2021. His current research interest is radar signal processing and deep learning.
+
+Leian Chen (Student Member, IEEE) received the B.Eng. degree in communication engineering from Fudan University, Shanghai, China, in 2013, and the M.S. and Ph.D. degrees in electrical engineering from Columbia University, New York, NY, USA, in 2015 and 2022, respectively. She has been a Machine Learning Scientist with Expedia Group Inc., Seattle, WA, USA, since 2019. Her research interests include machine learning, statistical signal processing and stochastic control with industrial applications, such as Internet of Things and smart grids.
+Haoyu Fang (Student Member, IEEE) received the B.Eng. and M.Eng. degrees in electrical engineering from Tianjin University, Tianjin, China, in 2015 and 2018, respectively. He is currently pursuing the Ph.D. degree in electrical engineering with New York University, New York, NY, USA. His research interests lie in computer vision, mathematical optimization, and digital signal processing. He is a student member of IEEE Computer Society.
+
+Zhiqiang Wu (Senior Member, IEEE) received the B.S. degree in wireless communications from the Beijing University of Posts and Telecommunications in 1993, the M.S. degree in signal and information processing from Peking University in 1996, and the Ph.D. degree in electrical and computer engineering from Colorado State University in 2002. He was worked with the West Virginia University Institute of Technology as an Assistant Professor from 2003 to 2005. He joined Wright State University in 2005 and currently serves as a Brage Golding Distinguished Professor. His research interests include intelligent signal processing, wireless communications, artificial intelligence and electronic warfare. His research has been supported by the NSF, AFOSR, ONR, AFRL, OFRN, and NASA. He has also held visiting positions at Peking University, Xiamen University, Guizhou Normal University, and Tibet University.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:11:18 UTC from IEEE Xplore. Restrictions apply.
+
+

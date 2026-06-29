@@ -1,0 +1,274 @@
+170
+
+IEEE EMBEDDED SYSTEMS LETTERS, VOL. 13, NO. 4, DECEMBER 2021
+
+Fast LDPC GPU Decoder for Cloud RAN
+Jonathan Ling and Paul Cautereels
+
+Abstract—The graphical processing unit (GPU), as a digital signal processing accelerator for cloud RAN, is investigated. This letter presents a new design for a 5G NR low-density parity check code decoder running on a GPU. The algorithm is flexibly adaptable to GPU architecture to achieve high resource utilization as well as low latency. It improves on the layered algorithm by increasing parallelism on a single code word. The flexible GPU decoder (on a 24 core GPU) was found to have 5× higher throughput compared to a recent GPU flooding decoder and 3× higher throughput compared to a field programmable gate array (FPGA) decoder (757K gate). The flexible GPU decoder exhibits 1/3 decoding power efficiency of the FPGA typical of generalpurpose processors. For rapid deployment and flexibility, GPUs may be suitable as cloud RAN accelerators.
+Index Terms—5G wireless, forward error correction, graphics processors, low-density parity check (LDPC).
+I. INTRODUCTION
+C LOUD radio access networks (RANs) facilitate the rapid development and deployment of new features while reducing the overall cost of ownership [1], [2]. This is enabled by network virtualization, resource pooling, and lower cost development due to common-off-the-shelf hardware. Graphical processing units (GPUs) are typical in cloud computing and are used as accelerators for many applications. GPUs are characterized by high floating-point computation rate and high memory bandwidth to feed those execution cores. Field programmable gate arrays (FPGAs) are also candidates for programmable cloud acceleration. GPUs are attractive versus FPGAs in part due to a programming model that maps well to the underlying hardware. A just-in-time compiler generates the final code, providing a degree of infrastructure independence. GPUs may also be shared with other applications when RAN demands are low. A comparative study [3] found that certain algorithms run faster and more cost effectively on the FPGA while others favored the GPU.
+The upper layers of the RAN stack are currently implemented on general purpose processors. An open issue is the effectiveness of cloud computing with GPU acceleration for the lower layers. One of the salient requirements of 5G is low latency. This put stringent demands on algorithm design as hardware resources are limited and predefined. In this letter, we focus on the acceleration of forward error correction as it consumes nearly half of the total uplink processing cycles. The 5G NR low-density parity check (LDPC) code [4] contains many features different than other LDPC codes which affect
+Manuscript received October 21, 2020; revised December 2, 2020; accepted January 11, 2021. Date of publication January 19, 2021; date of current version November 24, 2021. This manuscript was recommended for publication by F. Palumbo. (Corresponding author: Jonathan Ling.)
+Jonathan Ling is with the Wireless Access Lab, Nokia Bell Labs, Murray Hill, NJ 07974 USA (e-mail: jonathan.ling@nokia.com).
+Paul Cautereels is with the Wireless Access Lab, Nokia Bell Labs, 2018 Antwerp, Belgium (e-mail: paul.cautereels@nokia.com).
+Digital Object Identifier 10.1109/LES.2021.3052714
+
+complexity, memory, and parallelism. Thus, specific design and investigation for this code are necessary.
+Clearly, GPUs excel at graphics acceleration and machine learning, but their application to digital signal processing is not firmly established. Digital signal processing is often performed in fixed point and on smaller word sizes, e.g., 8-bits versus typical 32 bits to reduce cost and power. On Nvidia, GPUs small word sizes are supported by specialized single-instructionmultiple-data (SIMD) “video” instructions that operate on packed 32-bit word, processing up to four 8-bit instructions in parallel. These video instructions were utilized by researchers to develop a high throughput decoder [5]. However, recent GPU architecture has changed such that these instructions are now emulated by up to 10 instructions, and in fact some key primitives required by the decoder are not provided. An interesting tradeoff is support for vector processing of two packed 16-bit floating point quantities.
+Another challenge is related to the number of threads needed to hide the pipeline latency. For example, 256 threads on the Pascal architecture and 128 threads on Volta/Tesla/Ampere architecture are necessary to hide basic arithmetic latency in a single streaming-multiprocessor (SM) core. This minimum level of parallelism must be expressible in the algorithm otherwise there will be a resource underutilization.
+A related challenge is to fit an algorithm’s working set into local memory. Coarse-grained parallelization of independent jobs increases memory and bandwidth requirements. The L1 and L2 caches in the GPU are small and access to main memory is on order of hundreds of cycles. Depending on the shared memory requirements, algorithms may need to be reworked to obtain additional parallelism, applying more threads to the same set of data, rather than simply increasing independent workload.
+In this letter, we describe the techniques needed to reduce the latency of the forward error correction decoder for a 5G NR cloud base station. We flexibly exploit additional parallelism to improve the standard layered decoder. Fixed-point SIMD primitives to improve accelerator performance were devised. Latency, throughput, power, and power efficiency are investigated and compared to an FPGA design [6] and to another GPU design [7].
+The remainder of this letter is organized as follows. In Section II, we provide the context of this letter: a 5G system model for cloud RAN and the uplink processing chain. In Section III, we review belief propagation decoding and its implementations. In Section IV, we describe our innovations to GPU LDPC decoding. In Section V, performance measurements are presented and discussed. The summary and final remarks are found in Section VI.
+II. 5G SYSTEM MODEL
+Fig. 1 illustrates the architecture of a typical cloud RAN deployment [8]. The gNB is split into two components,
+
+1943-0671 c 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:36 UTC from IEEE Xplore. Restrictions apply.
+
+LING AND CAUTEREELS: FAST LDPC GPU DECODER FOR CLOUD RAN
+
+171
+
+a row. The Tanner graph also illustrates the decoding processes as the “messages” from variable-to-check nodes and check-tovariable nodes may be interpreted as probabilities. The check node equation produces the belief of a variable node given all the other input variable nodes. Let i index wr(r) columns involved in row r. Processing at each of the check nodes is given by
+
+Fig. 1. Cloud RAN architecture and placement.
+
+Lci →v =
+
+Lvj →c ∀j = i
+
+(1)
+
+= 2tanh−1
+
+tanh Lvj →c 2
+
+Fig. 2. Tanner graph decoder structure for an LDPC code with parity check matrix H.
+namely, the CU and DU. The CU contains the upper SDAP and PDCP layers, while the DU contains the lower RLC, MAC, and PHY layers. A second low split point in the DU is defined in [9]. ORAN has specified a 7.2 split while a 7.3 split with its lower front-haul requirements is also prevalent.
+Timing requirements for uplink processing in 4G are determined by the hybrid-automatic-repeat-request (HARQ) process. An ACK/NACK from an FDD uplink reception must be send 4 ms later. This leaves 2 ms for uplink processing. Whereas for 5G, preferably, decoding should be completed within one slot, which may take values between 250 μS and 1 ms according to the parameter μ.
+3GPP has defined quasi-cyclic irregular LDPC codes for data channels. Two base graphs are specified, that is, BG1 and BG2. Various length codewords are achieved through the lifting factor Z, which defines the submatrix size in the parity check matrix Hbg [10]. The number of code word information bits is K = Z · Kbg, where Kbg is the number of information base graph columns. The code rate, defined as the ratio of information bits to the total number of code bits is R = K/Nc. R controls the error correcting capability and different rates are achieved by specifying a certain number of basegraph rows. For a base graph with Mbg rows, then the total number of coded bits Nc = Z(Kbg + Mbg). To improve performance, the first two information columns are punctured, i.e., not transmitted, and are fully recovered by decoding [4]. Rows within the submatrix Zm are independent and can be performed in parallel.
+III. BELIEF PROPAGATION DECODING
+LDPC codes may be efficiently decoded by a soft-decision belief propagation algorithm. The Tanner graph is a useful representation where an edge from the variable node to check node corresponds to “1” in the parity check matrix H, as shown in Fig. 2. The number of edges from a variable node corresponds to the column weight wc, i.e., number of 1s in a column. Whereas the number of edges entering a check node corresponding to the row weight wr, i.e., the number of 1s in
+
+where
+
+denotes the XOR operation. The min-sum
+
+approximation [11] simplifies the XOR sum to
+
+Lci →v ≈ βmin Lvj →c
+
+sgn Lvj →c ∀j = i
+
+(2)
+
+where β is a correction factor. Let k index wc(v) rows involved in column v. The variable node log-likelihood-ratio (LLR) is
+
+wc(v)
+
+Lv = Lb +
+
+Lck→v
+
+(3)
+
+k=1
+
+where Lb is the bit LLR obtained from the symbol-to-bit demapper. The next iteration’s variable-to-check messages are
+found by
+
+Lvi →c = Lvi − Lic→v.
+
+(4)
+
+Iterations continue until a valid codeword is found or the maximum number of iterations is reached. After decoding, the CRC check verifies the message correctness.
+The flooding belief propagation decoder evaluates all parity check equations in parallel despite their dependencies. Alternatively, the horizontal layered decoder processes parity check equations one row at a time, feeding results from one dependent row to the next. As compared to the flooding decoder, memory requirements are reduced, and the number of iterations is approximately halved.
+The parallelism in the flooding decoder and that provided by the GPU appeared to be a natural fit [12]. Yet despite the apparent lack of parallelism, the layered decoder was found to
+
+be much faster than the flooding decoder on a GPU [5], probably due to the reduced memory required. Applying this result,
+
+we focus our investigation on the implementation a layered decoder for 5G cloud RAN.
+
+IV. GPU IMPLEMENTATION STRATEGIES
+
+The primary source of decoding parallelism in the 5G NR
+LDPC is given by the lifting factor Z. The layered decoder
+processes up to Z rows at a time, with amount of work in
+each row proportional to wr. The algorithm appears sequential so that “exploitation of intraframe computation parallelism is quite impossible” [5]. Accordingly, this design now assigns
+one row per thread and each thread works on wr columns. The GPU’s SIMD instructions allow processing on ρ = 2 16bit floating point values or ρ = 4 8-bit fixed point values. The high-throughput strategy thus engages
+
+Nthread = ρ−1Z
+
+(5)
+
+threads. Assuming a single codeword is processed per SM with ρ = 4 then 1 ≤ Nthread ≤ 96, which clearly under-utilizes the GPU (at best 75% of the minimum on Turing architecture).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:36 UTC from IEEE Xplore. Restrictions apply.
+
+172
+
+IEEE EMBEDDED SYSTEMS LETTERS, VOL. 13, NO. 4, DECEMBER 2021
+
+The storage size of Lv is Sv = εNc (bytes), where ε
+
+is the number of bytes per LLR. For BG, SvMax is 26 kB
+
+with ε = 1 and 52 kB with ε = 2. Storage for Lc→v is
+
+Sc→v = εZ
+
+Mbg r=1
+
+wc(r)
+
+(bytes).
+
+ScM→axv
+
+is
+
+121
+
+kB
+
+with
+
+ε
+
+=
+
+1
+
+and 242 kB with ε = 2. For the larger code words, both Lv and
+
+Lc→v cannot fit in shared memory. One strategy is to keep Lv
+
+in shared memory while placing Lc→v in main memory. The
+
+messages are needed less frequently and can be preloaded.
+
+Attempting to improve utilization by processing an addi-
+
+tional codeword doubles shared memory usage. Lv might fit
+
+into shared memory but now reading and writing the messages
+
+Lc→v to main memory, i.e., memory bandwidth, becomes the
+
+limiting factor. Due to either the shared memory size and/or
+
+memory bandwidth, the high-throughput strategy cannot be
+
+used to increase utilization. This motivates us to search for
+
+additional avenues for parallelism.
+
+We observe that column processing is fully independent
+
+except for (2) which requires certain quantities to be computed
+
+over Lv→c. These nonparallelizable steps can be performed
+
+partially in parallel by a technique called parallel reduce,
+
+which performs a serial n step operation in log2(n) steps.
+
+Parallel reduce takes pairs of inputs to produce partial results
+
+and then successively combines these results. For example,
+
+min {a1, a2, a3, a4}, can be computed as a12 = min{a1, a2}, a34 = min{a3, a4} and, finally, min {a12, a34}. In this exam-
+
+ple, the a1−4 are loaded in parallel across four threads and the
+
+threads successively exchange data to perform the operations.
+
+The exchanges are performed by so called “warp shuffle”
+
+instructions.
+
+Considering BG1 the additional available parallelization
+
+corresponds to wr ∈ (3, 19). However, for efficiency, the number of threads α in a cooperative group must be a factor of 2.
+
+That is given a warp of 32 threads, we can have groups of 32,
+
+16, 8, 4, or 2 threads working on a single codeword. So α is the
+
+expansion factor in parallelization, and each thread processes
+
+up to wr(r)/α columns. Each thread also processes ρ rows
+
+simultaneously, so a low-latency strategy engages a total of
+
+Nthread =
+
+α ρZ
+
+(6)
+
+threads. α can be adjusted according to Z, to keep utilization high. This strategy flexibly breaks up work into cooperative thread groups to reduce the latency of a single codeword. In contrast, the high-throughput strategy only decodes additional codewords with additional threads. The high-throughput strategy yields fixed latency regardless of code size Z. Whereas latency increases with Z for the low-latency strategy. Notably, this may be helpful in decoding short packets for 5G ultrareliable low latency applications.
+More explicitly, the threads load up to wr(r)/α elements of Lv and previous Lcv are loaded from memory. Then Lv→c is computed by (4). The min, sub-min, and sign are computed next. They are defined as
+
+m1 = min Lvi →c ∀i
+
+m2 = min Lvi →c ∀i = argmin(|Lv→c|)
+
+sv→c = sgn Lvi →c ∀i
+
+(7)
+
+where i indexes over the set of columns. Partial values are first computed per thread and then reduced across threads to obtain (7). Fig. 3 illustrates t1−4 cooperating threads which
+
+Fig. 3. Parallel reduce and m1 m2 calculation block.
+swap data shown by the arrows twice. Inside the box two-input operations are performed. The same final value is available to all threads without a separate broadcast instruction.
+In greater detail, inside the operations block of Fig. 3, m1 and m2 are computed by two ordering and a single selection operation. An ordering intrinsic was devised to minimize cycle count. For 8-bit LLRs packed into 32-bit word, the pseudo “C” code is:
+[min, max] = ordVec8(uint32_t a, uint32_t b) uint32_t mask = __vcmpltu4( a, b) min = (mask & a) | (∼mask & b) max = (∼mask & a) | (mask & b)
+where vcmplte4u is a CUDA intrinsic that does vector comparison using 4 assembly instructions. The last two lines are translated into a single LOP3 assembly instruction each. Thus, ordVec8 takes 6 assembly instructions. For half precision, 16-bit LLRs packed into a 32-bit word the pseudo “C” code is:
+[min, max] = ordVec16(uint32_t a, uint32_t b) uint32_t ans asm(“{set.le.f16x2.f16x2 %0,%1,%2;\n}” : “=r” (ans) : “r” (a) , “r” (b)); ans = ans << 2 asm (“prmt.b32 %0,%1,0,0xbb99;” : “=r” (mask) : “r” (ans)) min = (mask & a) | (∼mask & b) max = (∼mask & a) | (mask & b)
+where set.le.f16x2.f16x2 performs the vectorized comparison and prmt.b32 generates a mask from the upper word bits as needed in PTX ISA 6.4. ordVec16 consists of 1 floating point and 4 integer instructions. Thus, ten instructions, i.e., +67%, are needed to produce the same number of results as ordVec8.
+V. PERFORMANCE RESULTS
+The performance of the low-latency integer (LL-INT) and floating point (LL-FP) GPU decoders are compared to an FPGA decoder [6] given metrics of latency, throughput, power, and decoding power efficiency. The FPGA decoder was built on a moderate sized FPGA with 747K logic cells (Xilinx Zynq UltraScale + xczu15eg-ffvc900), consuming 1/2 the area. The layered GPU decoder (α = 4) was tested on a consumer grade mid-sized GTX 1660 with TU116-400 chip with an observed boost clock speed of 1995 MHz and a total of 24 SMs. The number of decoder instances running in parallel is Ndec = 2 for FPGA and up to Ndec = 24 for the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:36 UTC from IEEE Xplore. Restrictions apply.
+
+LING AND CAUTEREELS: FAST LDPC GPU DECODER FOR CLOUD RAN
+TABLE I MAXIMUM LATENCY FOR DIFFERENT DECODERS PER ITERATION
+(* PER TWO ITERATIONS)
+
+173
+TABLE III MEASURED POWER FOR FPGA AND GPU DECODERS
+
+TABLE II THROUGHPUT IN GIGA-CODED-BPS PER CHIP
+
+C. Decoding Power Efficiency
+Table III presents the power per decoder instance. Using nvidia-smi, the GPU has high base power of about 40 watts and much smaller power per SM. Let power efficiency be defined as Peff = Nc(lcPdec)−1. This yields 41 Mcb/J for FPGA, and about 15 Mcb/J for GPU. The higher power of the FPGA is offset by its much lower latency, yielding about 3× decoding power efficiency gain over the GPU.
+
+GPU. To make comparisons between other GPUs an approximating scaling can be applied. We compare to the flooding decoder (Titan RTX with 72 SMs and 1770 MHz clock) of [7] scaling proportionally by the number of SMs and clock rate.
+A. Performance Validation
+The performance of 32-bit float [13], 16-bit float, 8-bit fixed, and 5-bit fixed decoders [6] were compared for a specific configuration of BG1, R = 1/3, Z = 176 at equivalent of 50 flooding iterations. The 16-bit LL-FP decoder was found to match the performance of the 32-bit reference decoder. Whereas the 8-bit fixed point LL-INT decoder has loss of 0.25 dB compared to the reference. Meanwhile the 5-bit decoder exhibited a large 1.2 dB loss.
+B. Latency and Throughput
+The maximum latencies, that is for the largest code word and lowest rate, per layered iteration are compared in Table I. These latencies are for the decoder only without transfer times, corresponding to inline acceleration. The flooding decoder (Fld) has two modes: 1) throughput (To) optimized and 2) latency (Lo) optimized. The published flooding decoder latencies and throughputs are extrapolated to the TU-116 chip, after removing the transfer time. All GPU decoders exhibit much higher latency than the FPGA due to the need to move intermediate data between registers as compared to the customized pipeline of the FPGA. The LL-INT and LLFP decoders meet our eMBB decoding target of 500 μS at 10 iterations.
+Let the throughput per chip Tchip = Ndec(Nc / lc), where Nc = 26112 bits, and lc is the latency for equivalent of 10 layered iterations. We assume small variations in code rate, e.g., R = 1/2 and R = 1/3, do not affect the processing rate in gigacoded-bits-per-second (Gcbps). Table II gives the throughput for the decoders for BG1. The LL-INT GPU decoder has 3× the throughput of the FPGA, a consequence of the larger number of decoders running in parallel. LL-FP throughput is lower than its integer counterpart as the GPU runs out of main memory bandwidth at exactly Ndec = 12. The flooding decoder in To mode has about 1/5 the throughput of LL-INT, perhaps due to greater number of global memory accesses.
+
+VI. CONCLUSION
+A new low latency design strategy has been presented that exploits additional parallelism in the decoding process. Our design solves the problem of underutilization of resources while maintaining the same memory working set. Overall throughput is quite good as compared to an FPGA implementation. We note that GPU architecture is continuously being improved. Instruction set changes as well as increases in cache and memory bandwidth will continue to improve throughput and power efficiency. Yet, programmable and fixed accelerators will retain their power efficiency. Most likely the cloud RAN will contain a mixture of accelerators, as economics and deployment flexibility dictate.
+REFERENCES
+[1] The Next Generation Mobile Networks Alliance. (Jan. 2013). Suggestions on Potential Solutions to C-RAN by NGMN Alliance. [Online]. Available: https://www.ngmn.org/publications/suggestions-onpotential-solutions-to-c-ran.html
+[2] B. Haberland, F. Derakhshan, H. Grob-Lipski, R. Klotsche, W. Rehm, P. Schefczik, and M. Soellner, “Radio base stations in the cloud,” Bell Labs Tech. J., vol. 18, no. 1, pp. 129–152, Jun. 2013, doi: 10.1002/bltj.21596.
+[3] J. Cong, Z. Fang, M. Lo, H. Wang, J. Xu, and S. Zhang, “Understanding performance differences of FPGAs and GPUs,” in Proc. IEEE FCCM, 2018, pp. 93–96.
+[4] T. Richardon and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[5] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Syst. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014.
+[6] A. Aronov, L. Kazakevich, J. Mack, F. Schreider, and S. Newton, “5G NR LDPC decoding performance comparison between GPU & FPGA platforms,” in Proc. IEEE LISAT, Farmingdale, NY, USA, 2019, pp. 1–6.
+[7] C. Tarver, M. Tonnemacher, H. Chen, J. C. Zhang, and J. R. Cavallaro, “GPU-based LDPC decoding for vRAN systems in 5G and beyond,” in Proc. ISCAS, Sevilla, Spain, 2020, pp. 1–5.
+[8] NG-RAN: Architecture Description (Release 15), V15.0.0, 3GPP Standard TS 38.401, Dec. 2017.
+[9] “Study on new radio access technology: Radio access architecture and interfaces, V14.0.0 (2017–03),” 3GPP, Sophia Antipolis, France, Rep. TR 38.801, 2017.
+[10] Multiplexing and Channel Coding, 3GPP Standard TS 38.212. [11] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propa-
+gation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002. [12] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC decoding on multicore architectures,” IEEE Trans. Parallel Distrib. Syst., vol. 22, no. 2, pp. 309–322, Feb. 2011. [13] Huawei and HiSilicon, Performance Evaluation of LDPC Codes for NR eMBB Data, document TSG RAN WG1 Meeting #90, R1-1713740, 3GPP, Gothenburg, Sweden, Aug. 2017.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:36 UTC from IEEE Xplore. Restrictions apply.
+
+

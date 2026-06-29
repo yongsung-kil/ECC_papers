@@ -1,0 +1,963 @@
+Trellis based Node Operations for LDPC Decoders from the Information Bottleneck Method
+Jan Lewandowsky, Gerhard Bauch Hamburg University of Technology Institute of Communications 21073 Hamburg, Germany
+Email: {jan.lewandowsky,bauch}@tuhh.de
+
+Abstract—We utilize the Information Bottleneck method in a discrete density evolution scheme that was introduced by Brian M. Kurkoski et al. in order to find message mappings for the node operations of discrete LDPC decoders. The resulting decoders have performance close to belief propagation decoding but require much lower implementation efforts because they only process unsigned integers instead of log-likelihood-ratios. An efficient trellis implementation of the resulting discrete node operations is presented. In the trellis implementation the passed messages are calculated using recursive formulas that are fully characterized by two static vectors of integers. Bit error rate simulations for exemplary (3, 6)-regular LDPC codes with a 4 bit message representation prove the performance of the proposed decoders that even outperform Min-Sum decoders with quasi continuous message representation.
+I. INTRODUCTION
+Binary Low Density Parity Check (LDPC) codes offer very good error correction performance what made them very popular in the communications community. There exist very sophisticated code optimization techniques [1] as well as decoding algorithms based on message passing [2] between the distinct decoding components of an LDPC decoder: the variable and the check nodes. Parity check equations of an LDPC code are commonly visualized in a bipartite Tanner graph. Iterative belief propagation is a widely known decoding algorithm for LDPC codes that works on such a graph. In belief propagation decoding messages are exchanged along the edges of the Tanner graph and these messages are loglikelihood-ratios (LLRs). LLRs require a quasi continuous message representation to yield the best decoding result. Furthermore the nodes which calculate the messages propagated into the graph need to evaluate functions also using quasi continuous arithmetics. In contrast the hardware complexity that determines the required chip area and the energy consumption of the decoder is limited and often forms a bottleneck. This is why the task of finding suboptimal decoding algorithms that require low implementation efforts but perform close to belief propagation has been adressed in the past [2], [3] and still is a hot topic [4], [5]. A popular method to investigate the ensemble performance of LDPC codes under message passing decoding is density evolution. In density evolution the messages iteratively exchanged between the nodes are interpreted as random variables and their probability densities are tracked under the assumption of a cycle free graph. In
+
+[6] a density evolution technique that adresses decoders that just use messages from a discrete alphabet (i.e. a limited set of integers) is presented. This technique is used to construct message mappings that map the inputs of a node operation to an output message. The idea is trying to pick the node output message which maximizes the mutual information shared between the node output message and the correct bit it represents. Unfortunately [6] does not include investigations of the performance of the introduced message mapping decoding strategy for finite length codes and does not include an efficient implementation strategy of the resulting node operations. The Information Bottleneck method is a generic framework which yields a compression of a random variable Y in form of a compressed representation T of Y . The random variable T on the one hand is as compact as possible, but on the other hand shares the maximum possible relevant information I(T, X) with another random variable of interest X [7]. Available Information Bottleneck algorithms yield generally stochastical, locally optimal mappings from each element of the event space of Y to the elements of the event space of variable T , that are optimal in the sense that they maximize the mutual information I(T, X) under the constraint of a desired small I(T, Y ) [7]. So far, the method has only rarely been utilized in communications. Some important works are [8], [9], [10] and [11]. The existing works mostly focus on network coding schemes that are designed using the Information Bottleneck method. In this paper we show that the Information Bottleneck method also offers great opportunities for LDPC decoding. It already has been observed in very unrelated work [12] that applying the Information Bottleneck method to random vectors can find approximations of functions of several inputs which are optimal in the sense that they minimize the loss of mutual information that is caused by the approximation. This motivates us to pick up the density evolution strategy from [6] but in contrast to [6] utilize the Information Bottleneck framework to design the node operations. We show that the message mappings for variable and check nodes that result from an application of the Information Bottleneck algorithm can be implemented very efficiently in a trellis structure. Additionally two new Information Bottleneck algorithms tailored to the problems of finding optimum quantizers for the output of binary input discrete memoryless channels and the construction of discrete
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply. 978-1-4673-8118-5/15/$31.00/©2015 IEEE
+
+message mappings for LDPC decoders are presented. In the next section we introduce the considered transmission system. In section III we briefly explain the Information Bottleneck method, before applying it to the quantization of the output signal of a memoryless channel and introducing a dedicated Information Bottleneck algorithm for this purpose. In section IV a discrete density evolution that is similar to the one in [6] is introduced. This discrete density evolution utilizes the Information Bottleneck method and yields discrete node operations for LDPC decoders. We explain our new idea of implementing the discrete node operations in a very efficient trellis structure and present an Information Bottleneck algorithm tailored to the generation of the node operations in section IV. Finally in section V we investigate the performance of the proposed LDPC decoders using computer simulations, before our conclusion closes the paper.
+
+II. TRANSMISSION SYSTEM
+
+The transmitter uses a rate Rc (dv, dc)-regular LDPC code with a sparse binary Nc × Nv parity check matrix H that has column weight dv and row weight dc. For all binary codewords x = [x[0], x[1], . . . , x[Nv − 1]]T the product H · x = [0, 0, . . . , 0]T. The codeword x is transmitted over a symmetric binary input discrete memoryless channel. Its output is modelled as a discrete random variable Y with realization y and event space Y. The transition probabilities are consolidated in the conditional probability density p(y|x), where the time indices are left out, because the channels transition probabilites are modelled to be time invariant. The discrete memoryless channel with a huge number |Y| of possible output levels is concatenated with a quantizer that consolidates several output levels in clusters and maps them to a certain representant t. As a consequence the quantizer output is also modeled as a realization t of a random variable T with event space T . The algorithm to design the quantizer that induces a minimal loss of mutual information between the channel input and the quantizer output is presented in the next section. The concatenation of the channel and the quantizer is characterized by the conditional probability density p(t|x). In information theoretical considerations the actual event space of the variables is irrelevant. For simplicity we define all occuring event spaces to be given by sets of contiguous integers and assign a fixed letter which represents an arbitrary element from these sets:
+
+Y = {0, 1, . . . , |Y| − 1}, y ∈ Y
+
+T = {0, 1, . . . , |T | − 1}, t ∈ T
+
+X = {0, 1},
+
+x∈X
+
+We assume an underlying symmetric additive white Gaussian noise (AWGN) channel of variance σn2 that is first limited to a symmetric interval chosen big enough to avoid noteworthy limitation effects and then uniformly split into |Y| steps very finely (i.e. |Y| >> 1). This discrete output channel is then concatenated with a quantizer that maps y to t. Using this strategy, we approximate quantization of the output signal of a continuous AWGN channel. Since one is free in the choice
+
+random variable Y realization y event space Y
+
+mutual information I(X, Y )
+
+random variable X realization x event space X
+
+I(Y, T ) compression information
+
+p(t|y)
+
+p(x|t)
+
+random variable T realization t event space T
+
+I(T, X) kept relevant information
+
+Fig. 1. Illustration of the Information Bottleneck method: The original mutual information Y shares with X is squeezed through the bottleneck variable T , resulting in a trade off between a very compact representation t ∈ T and a desired great amount of kept relevant information I(T, X).
+
+of the labels of the channel outputs let us without loss of generality assume that
+
+Pr(Y = y|X = 0)
+
+Pr(Y = y + 1|X = 0)
+
+log
+
+< log
+
+, (1)
+
+Pr(Y = y|X = 1)
+
+Pr(Y = y + 1|X = 1)
+
+where log is the natural logarithm and Pr(.) is the probability operator. For modulation binary phase shift keying is used and both symbols are equally likely. Thus
+
+Pr(Y = y|X = 0) = Pr(Y = |Y| − 1 − y|X = 1) (2)
+
+is guaranteed. At the receiver, the vector [t[0], t[1], . . . , t[Nv − 1]]T that holds integers from T is fed to an LDPC decoder. We consider
+a message passing decoder which stops when all Nc check equations are satisfied or after imax iterations.
+
+III. QUANTIZERS FROM THE INFORMATION BOTTLENECK METHOD
+This section starts with a brief recapitulation of the Information Bottleneck method that is visualized in Figure 1. For a deeper analysis of the method we recommend the first chapters of [13]. Afterwards a dedicated Information Bottleneck algorithm for quantizer design of binary input discrete memoryless channels is presented. The resulting quantizers form the receivers interface to the channel in the rest of the paper and as a consequence shall be designed to minimize the loss of relevant information that results from quantization. The quantizers output unsigned integers instead of real valued representants such as LLRs. The integers from the quantizer are used as inputs for the discrete LDPC decoders that are described in the remainder of the paper. As a consequence neither quasi continuous number representation nor the respective arithmetical units are required for decoding. This strategy yields a receiver that has very low complexity.
+
+A. Information Bottleneck problem setup
+
+Given a random variable Y with a certain realization y ∈ Y, another variable of interest X with realization x ∈ X is defined. Both variables necessarily share mutual information, i.e.
+
+p(x, y)
+
+I(X, Y ) =
+
+p(x, y) log2 p(x) p(y) = 0, (3)
+
+x∈X y∈Y
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+where p(x, y) is the joint probability distribution of the discrete variables X and Y . The functions p(x) and p(y) denote its marginal distributions. The Information Bottleneck method aims to extract the features of Y which are informative about X by squeezing the variable through a bottleneck, which is formalized by introducing a (generally stochastic) mapping from Y to a compressed variable T with a certain realization t ∈ T in form of a so called mapping distribution p(t|y). The mapping distribution indicates the probabilities Pr(T = t|Y = y) of the appearance of certain events T = t given Y takes a certain value, i.e. Y = y. In this paper we just consider deterministic mappings p(t|y), because they can be shown to be optimal for output quantization of binary input discrete memoryless channels [14], [15], what causes the restriction
+
+p(t|y) = 1 , if y ∈ Yt
+
+(4)
+
+0 else,
+
+where y ∈ Yt means that an element y from the event space of Y is clustered to a certain subset Yt ⊂ Y, which we will call cluster from now on. Each cluster has a certain representant t assigned to by definition, i.e. T = t ⇒ y ∈ Yt. In [15] a cluster with representant t assigned to by a quantizer is called the preimage of t. We prefer to use the word cluster from the literature on the Information Bottleneck method [13]. The distribution p(t|y) is an indicator function which indicates the representant of the cluster a certain element y ∈ Y lies in. The other side of the Information Bottleneck setup is determined by another conditional distribution, which is p(x|t) and tells what is known about X, given the event T = t is observed. The so called relevant information I(T, X) shall not vanish under the compression. These considerations lead to the overall problem setup of the Information Bottleneck method, which is given by [7], [13]
+
+min I(Y, T ), so that I(T, X) ≥ D,
+
+(5)
+
+p(t|y)
+
+for some D > 0. A locally optimal solution to the problem can be found by introducing a Lagrangian multiplier β ≥ 0 and minimizing the so called Information Bottleneck functional
+
+F{p(t|y)} = I(Y, T ) − β I(T, X).
+
+(6)
+
+In many applications, one aims to keep the maximum amount of relevant information I(T, X) and as a consequence is interested in the limit β −→ ∞. Several iterative algorithms that solve this minimization problem exist and we describe one of these algorithms in the following. In the remainder of this paper we always label the observed variable of the Information Bottleneck by letter Y , the relevant variable by letter X and the compressed variable by T with the respective realizations and alphabets. Although sometimes they are random vectors and indices are added, the letter still represents the role the variables play in the Information Bottleneck framework.
+
+B. The sequential Information Bottleneck algorithm
+Other than in earlier work on communications dealing with the Information Bottleneck method [8–11] where variants of
+
+Input: joint probability density p(x, y); cardinality of compressed variable |T |;
+processing: select a random initial clustering of Y into |T | disjoint clusters Yt, where t = 0, . . . , |T | − 1; done=false; while not done do
+done=true; for all y ∈ Y do
+pick y out of its current cluster and make it a singleton cluster Ys = {y} with representant s; ∀ target clusters Yt: calculate the merger costs δ({y}, Yt) ; merge y into the cluster which minimizes the merger costs δ({y}, Yt); if y was not merged into its original cluster then
+done=false; end end end
+Result: A partition of Y into |T | disjoint clusters.
+Algorithm 1: The classical sequential Information Bottleneck algorithm as proposed by Slonim et. al [13], [16]
+
+the iterative Information Bottleneck algorithm from [7] are used we utilize the so called sequential Information Bottleneck algorithm from [16] for channel output quantization. This is motivated by the fact that this algorithm only considers deterministic mappings p(t|y). Furthermore it is numerically stable for β −→ ∞. Below we briefly recapitulate the sequential Information Bottleneck algorithm from [16] where it is proposed for unsupervised document classification. A pseudo code of the sequential Information Bottleneck algorithm is provided in Algorithm 1. The optimization method of this algorithm is rather straight forward: Starting from a random initial clustering of the input set Y into |T | disjoint clusters, p(t|y) is modified by moving an element y ∈ Yt ⊂ Y into a singleton cluster Ys = {y} with an arbitrary representant s assigned to. Since this modifies the indicator function p(t|y), one updates
+
+p(t) =
+
+p(y) ∀t ∈ T ∪ {s}
+
+(7)
+
+y∈Yt
+
+1
+
+p(x|t) =
+
+p(x, y) ∀t ∈ T ∪ {s} (8)
+
+p(t)
+
+y∈Yt
+
+and then merges the picked out element into the cluster with the lowest merger costs, that are given by
+
+δ({y}, Yt) = Pr (t¯) DJ(Sπ1,π2) {p(x|T = s)||p(x|T = t))} (9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+channel p(y|x) 1
+0
+
+quantizer
+
+0
+
+p(t|y)
+
+1 ...
+|Y| − 2
+
+|Y| − 1
+
+0
+1 ... |T | − 1
+
+x∈X
+
+y∈Y
+
+t∈T
+
+Fig. 2. Abstract model of quantizing a binary input memoryless channels output. The channel is characterized using the transition probabilities from p(y|x), while the quantizer also is represented by a (deterministic) probability density p(t|y).
+
+where
+
+Pr (t¯) = Pr(T = s) + Pr(T = t)
+
+(10)
+
+π1 = Pr(T = s)/ Pr (t¯)
+
+(11)
+
+π2 = Pr(T = t)/ Pr (t¯)
+
+(12)
+
+and D(JSπ1,π2){.} is the Jensen Shannon divergence with weights π1 and π2 (see [13], [16]). The merger costs are independent of β because we took the limit β −→ ∞. The general problem of quantizing the output of a discrete memoryless channel to a smaller number of output stages is visualized in Figure 2. Since according to (1) the channel output indices are sorted by their LLRs, we can utilize an important prerequisite from [15], that is called seperating hyperplane condition for optimality. Loosely spoken, this fundamental result from [15] has the consequence that the investigated quantizers for the output of the binary input discrete memoryless channel need to consist of clusters Y0, . . . , Y|T |−1 with contiguous elements to be optimal. Thus from the preliminary results we learn, that we only need to optimize over the seperating hyperplanes between the different clusters, which we will call cluster borders in the rest of this paper, because they are simply points in one dimensional space [15]. In the following we introduce our modified sequential Information Bottleneck algorithm, which utilizes this fact.
+
+C. Modified sequential Information Bottleneck algorithm
+In Algorithm 2 we propose a modified version of the sequential Information Bottleneck algorithm. The first important distinction to the classical sequential Information Bottleneck algorithm is, that the algorithm does start with a random initial clustering, but all clusters are forced to consist just of contiguous members y ∈ Y. Such a clustering can easily be constructed by seperating a vector of contiguous integers from 0 to |Y| − 1 into different subvectors. During the rest of this algorithm, we aim to keep this “natural” order in the clusters and as a consequence do not run a draw-and-merge loop over all y ∈ Y, but instead only over the elements which are neighboured to one of the |T | − 1 cluster borders. As we want to keep the “natural” order of our initial clustering, we
+
+Input: joint probability density p(x, y); cardinality of compressed variable |T |;
+processing: select a random initial clustering of Y into |T | disjoint clusters Yt, where t = 0, . . . , |T | − 1 and where all elements in one cluster are contiguous elements; done=false; while not done do
+for all pairs (Yt, Yt+1) do done left to right=done right to left=false; while not done left to right do done left to right=true; if |Yt| > 1 then pick the last element of Yt and make it a singleton cluster; calculate the merger costs of putting the element back or to Yt+1; merge into the lowest merger cost cluster; if the element was not merged into Yt then done left to right=false; end end end
+while not done right to left do done right to left=true; if |Yt+1| > 1 then pick the first element of Yt+1 and make it a singleton cluster; calculate the merger costs of putting the element back or to Yt; merge into the lowest merger cost cluster; if the element was not merged into Yt+1 then done right to left=false; end end
+end end if the clusters did not change in this loop run then
+done=true; end end
+Result: A partition of Y into |T | disjoint clusters.
+Algorithm 2: The new Information Bottleneck algorithm for channel output quantization wich utilizes the seperating hyperplane condition from [15]
+only consider two possible merging possibilites, where the one is putting a drawn element back to its original cluster and the other one is putting it to the neighboured cluster. This process is formalized by the two while loops in the pseudo code of the proposed algorithm and additionally visualized in Figure 3 in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+cluster border
+
+0.6
+
+1. 0 1
+
+34 5678
+
+δ({2}, Y0) δ({2}, Y1)
+
+0.5
+
+2
+
+0.4
+
+01 234 5678
+
+done left to right = false;
+
+0.3
+
+σn2
+
+2. 0
+
+234
+
+δ({1}, Y0) δ({1}, Y1) 1
+
+5678
+
+01 234
+done left to right = true;
+
+5678
+
+Fig. 3. Illustration of the first draw-and-merge steps of the modified sequential Information Bottleneck algorithm for |T | = 3 and |Y| = 9: After the first draw the merger costs of putting element 2 to the next cluster on the right (Y1) are smaller than the ones of putting it back to Y0. In the second step this is not the case, the cluster borders do not change and thus “done left to right” is set to true.
+
+an example. A nice side effect of the Information Bottleneck quantizer design is that it automatically yields the distribution p(x|t). This distribution can directly be used to calculate LLRs L(x|t) = log(Pr(X = 0|T = t)/ Pr(X = 1|T = t)) that are needed when a decoder that works on LLRs is used in the remainder of the signal processing chain.
+D. Resulting quantizers
+The upper part of Figure 4 shows the resulting quantizers for varying channel noise variances σn2 . It includes a comparison to globally optimal quantizers for the investigated channels that were found using the algorithm from [15]. The bottom part of Figure 4 additionally compares the amount of preserved mutual information I(T, X) for the quantizers. These results proof that both algorithms find quantizers which only induce a very small loss of mutual information. For comparison to the results in [15] the same parameters as in [15] were used in Figure 4: The channel output interval from −2 to +2 was uniformly split into |Y| = 2000 steps, which were quantized into |T | = 8 clusters. We conclude that channel output quantization utilizing the locally optimal Information Bottleneck method might be a promising alternative to the rather complex globally optimum algorithm from [15]. Because quantization is not the focus of this paper we skip a further comparison.
+IV. NODE OPERATIONS FROM THE INFORMATION BOTTLENECK METHOD
+In this section we describe how the Information Bottleneck method can be utilized to yield locally optimum message mappings for the node operations of an LDPC decoder and how this node operations can be implemented very efficiently in a trellis structure. Our strategy is inspired by the seminal ideas from [6] and [15] and develops them further, what leads to the proposed decoders.
+
+0.2
+
+proposed
+
+optimal
+
+0.1 −2 −1.5 −1 −0.5 0
+
+1
+
+0.9
+
+continuous input
+0.5 1 1.5 2
+I(., .)
+
+0.8
+
+I(X, Y )
+
+σn2
+
+I(T, X) proposed
+
+0.7
+
+I(T, X) optimal
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+Fig. 4. top: Cluster borders of the (globally) optimal quantizers from [15] and the proposed quantizers for different channel noise variances σn2 on a symmetric AWGN channel; bottom: Visualization of the (small but inevitable)
+loss of mutual information that follows from the quantization.
+
+y0
+y1 ... yM −2 yM −1
+
+y0 y1
+f (y) ≡ ...
+yM −2 yM −1
+
+t0 . . . tM−4 tM −3 tM −2 f (y)
+
+Fig. 5. Illustration of the two input operation splitting of an arbitrary node operation for one target edge of an M input node. Each partial node operation gl(yl) outputs an intermediate result tl that is then processed by the next partial node operation.
+
+A. Discrete node operations structure
+As Kurkoski et al. described in [6], an arbitrary node in an LDPC decoder can be interpreted as a concatenation of two input operators. In Figure 5 we recapitulate this idea and introduce our notation for an arbitrary node type. The shown node has the task to calculate an output message f (y) for one particular output edge from M input messages that are stored in vector y = [y0, y1, .. . . . , yM−1]T. The vector y does not include the message that reached the node along the target edge. This is the well known concept of exchanging only extrinsic information. We define a vector b = [b0, b1, . . . , bM−1]T, that holds the correct underlying bits of the incoming messages y. For the check nodes M = dc − 1, while the variable nodes process messages from dv − 1 connected check nodes during the iterative decoding process and an extra message
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+p(yl, xl)
+
+Information Bottleneck
+
+p(tl|yl) −→ tl = gl(yl) p(xl|tl), p(tl) −→ I(Tl, Xl) max.
+
+Fig. 6. In discrete density evolution the Information Bottleneck algorithm clusters all |Y|2 possible combinations yl. The resulting clustering is charac-
+terized by the deterministic classifier p(tl|yl) which is equivalent to gl(yl).
+
+from the channel, what causes M = dv for the variable nodes. A slight difference is given, when the variable nodes create the decision bits. Then they need to process M = dv + 1 messages as not only extrinsic but a posteriori information has to be determined. The intermediate results tl of the two input operations are functions gl(.) of the length 2 vectors
+
+yl =
+
+[yl, yl+1]T [tl−1, yl+1]T
+
+l=0 l > 0,
+
+(13)
+
+i.e. tl = gl(yl). We add the superscripts c (check node) or v (variable node) to distinguish yl, y, b, gl(.) and f (.) between
+the different node types in the rest of this paper. It is crucial to notice, that the tlc for the check nodes may represent an other bit value xlc in each intermediate step l, while for the variable nodes all xvl are constant. This is due to the fact that the check nodes calculate messages representing a running modulo two sum over bc. In contrast all intermediate messages tvl of a variable node represent the same bit, namely the underlying
+code bit of the variable node. Thus we have
+
+l+1
+
+xcl =
+
+⊕ bm c
+
+(14)
+
+m=0
+
+xvl = bv0 = const. ∀l.
+
+(15)
+
+Lots of the introduced notation depends on the decoder iteration. We decided to drop this dependency in our notation to keep it as simple as possible. Since the alphabet size of the quantized received values determines the bitwidth of the channel message representation, we decide to use the same alphabet for the decoder messages, in order to avoid a different bitwidth of channel and decoder messages. As a consequence tl ∈ T and yl ∈ Y, where Y is also set to T in the following.
+
+B. Discrete density evolution
+We use the discrete density evolution technique that is presented in [6] to find the optimum message mappings gl(yl). Other than proposed in [6], we replace the greedy algorithm of Kurkoski et al. in the density evolution algorithm by a dedicated Information Bottleneck algorithm, which we describe later.
+
+C. Check node processing
+In the first decoding step the check nodes process dc − 1 (integer valued) messages from the quantized channel to generate a message for one particular output edge. The joint distributions of the input messages of the check node and the underlying bits p(ylc, blc) as a consequence are given by p(t|x) p(x) = p(t, x) with changed the variable names t = ylc
+
+and x = blc for all input messages. This distribution is a side product of the quantizer algorithm for the channel outputs.
+Equation (14) from [6] then provides the joint distribution
+
+p(y0c , xc0) =
+
+p(y0c , bc0)p(y1c , b1c ),
+
+(b0c ,bc1): b0c ⊕bc1=xc0
+
+(16)
+
+where statistical independence of the messages in ylc is assumed. This joint probability density then is the input of an
+
+Information Bottleneck algorithm as it is illustrated in Figure
+
+6. This algorithm on the one hand outputs the distribution
+
+p(tc0|y0c ) that is normally called classifier in the literature on the Information Bottleneck method. Since in our algorithm we
+
+force this classifier to take the probability 1 for a certain t0c this classifier is equivalent to g0c (y0c ), because it removes all uncertainty about tc0, when y0c is known. On the other hand the Information Bottleneck algorithm yields p(tc0, xc0). Looking back to Figure 5 reveals that for the next intermediate steps
+
+the inputs are given by one message ylc+1 and tcl−1. This is why for the following intermediate steps l ≥ 1, one recursively
+
+evaluates
+
+p(ylc, xlc) =
+
+p(ylc+1, blc+1)p(tcl−1, xcl−1),
+
+(bcl+1 ,xcl−1 ): blc+1 ⊕xcl−1 =xcl
+
+(17)
+
+inputs this joint probability to the Information Bottleneck algorithm and gets glc(ylc) and p(tlc, xlc). The reader should notice that using this strategy the Information Bottleneck
+method is recursively applied to cluster the event space of the vectors ylc, which results in a compression from |Y|2 possible events to |T | events in each step, where the relevance shall be
+kept about the modulo two sum of the underlying bits of the messages in vector ylc. The joint distribution p(tdc c−3, xcdc−3) is the distribution of the output messages that are sent to the
+variable nodes in the next decoding step.
+
+D. Variable node processing
+
+The density evolution for the variable nodes is very similar.
+
+Anyway, one difference is that the variable nodes process the
+
+same channel value in each iteration. We define this value to
+be the first message in y0v. The other messages are distributed according to p(tdc c−3, xdc c−3) which is the output of the check node density evolution, since they are messages from the check
+
+nodes. Due to our desired Information Bottleneck notation
+
+also in this distribution we need to change the variable names
+tcdc−3 = ylv and xdc c−3 = bvl . By transfering [6] to our notation we then obtain
+
+p(y0v, x0v ) =
+
+(b0v ,b1v ):
+
+1 p(b1v
+
+)
+
+p(y1v
+
+,
+
+bv1)p(y0v
+
+,
+
+bv0)
+
+and
+
+bv0=b1v =x0v
+
+(18)
+
+p(ylv, xvl ) =
+
+(blv+1 ,xvl−1 ):
+
+1 p(blv+1
+
+)
+
+p(ylv+1
+
+,
+
+bvl+1)p(tvl−1,
+
+xvl−1),
+
+bvl+1 =xvl−1 =xlv
+
+(19)
+
+for l ≥ 1, where again statistical independence of the messages in ylv is assumed. Just as for the check nodes, in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+each intermediate step joint distributions p(ylv, xlv) are fed to our Information Bottleneck algorithm in order to get glv(ylv) and p(tlv, xlv). During density evolution, the joint distribution p(tvdv−2, xvdv−2) is fed back to the check node processing, where the iteration starts over. Before that, equation (19) is
+evaluated once again and the Information Bottleneck algorithm is applied to get gdvv−1(ydvv−1), that is needed, when the variable nodes perform their bit decision processing all incoming messages. The density evolution stops after imax iterations. It can be used to determine the decoding threshold of an
+LDPC code ensemble, when the resulting message mappings gl(yl) are used for decoding [6]. We found a way to use this density evolution method to construct node operations
+that have excellent performance even for finite length codes.
+The first part of our strategy is using a particular channel parameter σn2 for density evolution that is just very slightly lower than the critical σn2 of the code ensemble for the density evolution and thus for the creation of the message mappings.
+This value can be identified by tracking the mutual information I(Tdvv−1, Xdvv−1) from the distribution p(tvdv−1, xdvv−1) that approaches 1 for a large number of iterations below the
+threshold. Although we know that this cannot be optimal, we then use the resulting message mappings for all σn2 in our transmission scheme. The main motivation is that the message
+mappings then only need to be generated once and offline. At
+the receiver we only adapt the optimum output quantizer of
+the channel using Algorithm 2 to the actual noise variance
+of the channel. The second part of our strategy is to use a
+dedicated Information Bottleneck algorithm in the described
+density evolution. We first need to introduce our new idea of
+implementing the node operations of the decoder in a trellis
+structure to explain this algorithm that is closely related to the
+algorithm that is used for quantizer design.
+
+1 0
+0, 1 0
+0, 1 0
+0, 1 0
+
+y0c
+
+y1c
+
+tc0
+
+y2c
+
+tc1
+
+y3c
+
+tc2
+
+y4c
+
+t3c
+
+L(xcl |tlc = 0) = −1.6
+
+−1.2
+
+−0.9
+
+0
+
+2, 3
+
+0
+
+2, 3
+
+0
+
+2, 3
+
+0
+
+3
+
+−0.7 0
+
+3
+
+1
+
+2 1
+
+3
+
+−.04
+
+1
+
+2 1
+
+3
+
+−.01
+
+1
+
+2 1
+
+2
+0 1 0..3
+
+−0.1 1
+
+0 0, 1
+0 0, 1
+0 0, 1
+0 1
+
+1 22
+3
+
+1 22 +.04
+3
+
+1 22 +.01
+3
+
+2 0..3 0
+
+2 +0.1
+
+2
+
+3
+
+3
+
+3
+
+3
+
+2, 3
+
+2, 3
+
+2, 3
+
+3
+
++1.6
+
++1.2
+
++0.9
+
+3 +0.7
+
+Fig. 7. Exemplary trellis implementation of discrete check node operation
+for |T | = 4. The first state is determined by the first message in y0c , while the following transition is determined by the next message. The partial result
+t0c = g0c (y0c ) is then interpreted as the next trellis state.
+
+y0v
+
+y1v
+
+t0v
+
+y2v
+
+L(xvl |tlv = 0) = −2.9
+
+0 0..3
+
+0
+
+0..3
+
+t1v
+
+y3v
+
+−2.3
+
+0
+
+0..3
+
+t2v −2.3
+0
+
+0, 1
+
+3 1
+
+−.24 12
+
+−.12 1
+
+−.01 1
+
+3
+
+2
+
+0, 1, 2 0
+0, 1
+
+0
+
+1
+
+2, 3 3
+1, 2, 3
+
+E. Trellis based node operations
+
+20
+
+21 +.24
+
+2 +.12
+
+2 +.01
+
+2, 3
+
+We interpret the concatenation of two input operators that is visualized in Figure 5 as a path in a trellis diagram. Such a trellis diagram is exemplarily shown in Figure 7 for a degree dc = 6 check node operation and in Figure 8 for a degree dv = 3 variable node operation, where for both the cardinality of the message alphabet is |T | = 4. The trellis diagrams resulted from application of the method that is described in the following for the first decoder iteration. We explain the trellis for the check node operation shown in Figure 7. The principle can be applied to the variable node operation in Figure 8 analogously. The first state of the trellis diagram is simply given by the first incoming message y0c . The transition to the next state then simply ends in state t0c = g0c (y0c ) and thus is determined by y1c . Since the next partial node operation depends on t0c and the next message y2c , the next transition ends in state t1c = g1c (y1c ) and so on. The path through the trellis only depends on a strict forward metric, namely the next input message. This fact enables a very efficient way to implement
+
+3
+
+0..3
+
+3
+
+0..3
+
+3
+
+0..3
+
+3
+
++2.9
+
++2.3
+
++2.3
+
+Fig. 8. Exemplary trellis diagram of a degree dv = 3 variable node with |T | = 4. The first state is determined by the first incoming message y0v from the channel, while the transitions to the following states are determined by
+the following incoming messages ylv from the connected check nodes.
+
+the trellis operation: We exemplarily read the vector
+
+a = [a[0], a[1], . . . , a[|T |2 − 1]]T = [3, 3, 0, 0, 3, 2, 1, 0, 0, 1, 2, 3, 0, 0, 3, 3]T (20)
+
+aT0
+
+aT1
+
+a2T
+
+aT3
+
+for the first partial node operation from our trellis diagram.
+This vector, as it is indicated by the braces, consists of |T | length |T | subvectors am. The first incoming message y0c picks
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+out a certain subvector am by setting the index m = y0c . The element at position y1c ∈ Y in this subvector then encodes the next trellis state t0c = g0c (y0c ) under the next input y1c ∈ Y. Using this notation we obtain
+
+t0c = a[y0c |T | + y1c ].
+
+(21)
+
+We then simply concatenate all vectors a of all trellis steps and (abusing notation) call the resulting vector a again. Starting from (21) this then yields the recursive operation
+
+tcl = a[tlc−1|T | + ylc+1 + l|T |2] l ≥ 1,
+
+(22)
+
+which fully implements the discrete check node operation for one iteration. Since we get a vector a for each decoder iteration
+from discrete density evolution, we again simply concatenate all length |T |2(dc − 2) vectors a. The trellis states in the i-th decoder iteration are then given by
+
+t0c = a[y0c |T | + y1c + i|T |2(dc − 2)] and by
+
+(23)
+
+tcl = a[tcl−1|T | + ylc+1 + l|T |2 + i|T |2(dc − 2)] (24)
+
+for l ≥ 1. The check node outputs tdc c−3. The overall length of the vector that is stored for the check node operations is imax|T |2(dc − 2). The variable nodes are implemented analogously. For the variable nodes the offset in iteration i is i|T |2dv and the length of the variable node vector is imax|T |2dv. The variable nodes output tvdv−1 for the bit decision and pass tvdv−2 to the check nodes during decoder iteration. The proposed method degenerates the variable and
+the check node operations to simple recursive index cal-
+culation in the vectors. We added the LLRs L(xl|tl) = log (Pr(Xl = 0|Tl = tl)/ Pr(Xl = 1|Tl = tl)) in Figures 7
+and 8 to make the results more illustrative but they are not
+required for decoding as it is shown in the next paragraph.
+
+F. Dedicated Information Bottleneck algorithm
+
+Above we tailored a known Information Bottleneck algo-
+rithm to the quantization of the output of discrete memoryless
+channels. We used a preliminary result from [15], which is called seperating hyperplane condition for optimality. Unfor-
+tunately, it is not obvious, how this condition can be utilized
+for the present problem, because it requires an order in the event space of Yl, that does not uniquely exist. The required order in the yl is, that they need to be ordered by their LLR L(xl|yl). Both messages in the vectors ylc correspond to a certain LLR L(bkc |ykc ) or L(xlc−1|tcl−1) respectively. From these LLRs one can calculate the LLRs
+
+L(x0c |y0c ) = L(b0c |y0c ) L(bc1|y1c ) and
+
+(25)
+
+L(xlc|ylc) = L(xcl−1|tlc−1) L(bcl+1|ylc+1) (26)
+
+for l ≥ 1, where denotes Hagenauers Box-Plus operator. For the variable nodes this operator needs to be replaced by the +-operator. These LLRs are needed to sort the vectors yl, but unfortunately are not unique, because the Box-Plus and the +-operation are commutative and since 0 ⊕ 0=1 ⊕ 1, often several equivalent yl exist. This ambiguity made us map all yl that create the same LLR L(xl|yl) under Box-Plus
+
+y0c or y1c p(ylc|bcl = 0) p(ylc|bcl = 1)
+
+0 0.0193 0.6625
+
+y0c [0, 0]T [0, 1]T [0, 2]T [0, 3]T [1, 0]T [1, 1]T [1, 2]T [1, 3]T [2, 0]T [2, 1]T [2, 2]T [2, 3]T [3, 0]T [3, 1]T [3, 2]T [3, 3]T
+
+L(xc0|y0c ) +2.84 +0.91 −0.91 −2.84 +0.91 +0.41 −0.41 −0.91 −0.91 −0.41 +0.41 +0.91 −2.84 −0.91 +0.91 +2.84
+
+1 0.0873 0.2304
+
+2 0.2304 0.0873
+
+3 0.6625 0.0193
+
+y0c
+
+L(xc0|y0c ) y˜l
+
+[3, 0]T −2.84 0
+
+[0, 3]T −2.84 0
+
+[0, 2]T −0.91 1
+
+[1, 3]T −0.91 1
+
+[2, 0]T −0.91 1
+
+[3, 1]T −0.91 1
+
+[1, 2]T −0.41 2
+
+[2, 1]T −0.41 2
+
+[1, 1]T +0.41 3
+
+[2, 2]T +0.41 3
+
+[0, 1]T +0.91 4
+
+[1, 0]T +0.91 4
+
+[2, 3]T +0.91 4
+
+[3, 2]T +0.91 4
+
+[0, 0]T +2.84 5
+
+[3, 3]T +2.84 5
+
+TABLE I EXEMPLARY CONSTRUCTION OF y˜l FOR A CHECK NODE
+
+(for the check nodes) and under plus (for the variable nodes) to an equivalent superordinate variable Y˜l in a first step. We illustrate this idea in Table I for an example channel that has four output stages after quantization and the vector y0c . We see no gain in handling two or more vectors that yield the same
+LLR under the target operation seperately in optimization, i.e.
+we want to enforce that these vectors must yield the same trellis state tl. Unlike the event space of Yl, the event space of Y˜l can uniquely be sorted by an LLR. This enables us to apply our Information Bottleneck algorithm from above on
+the joint distribution p(y˜l, xl) that can easily be calculated by simple partial summation over p(yl, xl):
+
+p(y˜l, xl) =
+
+p(yl, xl)
+
+yl :L(xl |yl )=L(xl |y˜l )
+
+(27)
+
+Applying Algorithm 2 on this distribution without any modifications, yields discrete node operations that perform poorly for finite length codes from the discrete density evolution. By interpreting the resulting trellis diagrams, we found out that the node operations suffer from a problem: During optimization the trellis diagrams are not forced to be symmetric in the sense that for each state tl with corresponding LLR L(xl|tl), a certain counterpart exists that corresponds to the LLR −L(xl|tl). In our opinion such a state needed to exist, to allow equivalent branch decisions for both possible bit values in each partial step of the node operation. This is why we added the side constraints
+
+Pr(Tl = tl) = Pr(Tl = |T | − 1 − tl)
+
+(28)
+
+L(xl|Tl = tl) = −L(xl|Tl = |T | − 1 − tl) (29)
+
+∀tl ∈ T to our algorithm. We summarize the resulting algorithm in Algorithm 3. Other than for channel output quantization, during iteratively moving the y˜l that are neighboured to a cluster border, we enforce our side constraints (28) and (29). This is simply done by taking the element
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+[0, 3]T [0, 2]T [1, 2]T [1, 1]T [0, 1]T [0, 0]T
+
+y0c
+
+[3, 0]T [1, 3]T [2, 1]T [2, 2]T [1, 0]T [3, 3]T
+
+[2, 0]T
+
+[2, 3]T
+
+[3, 1]T
+
+[3, 2]T
+
+map to y˜0
+1. 0 1 2 3 4 5
+
+2. 0
+
+23
+
+5
+
+δ({1}, Y˜0)
+
+δ({1}, Y˜1)
+
+1
+
+4
+
+3. 0 1 2 3 4 5
+
+Fig. 9. Visualization of the optimization of p(tlc|ylc) in our modified algorithm for the check node example from Table 1.
+Input: joint distribution p(yl, xl), cardinality |T |
+processing: sort all possible yl by LLR L(xl|yl) under /+; map all yl with same LLR to the same y˜l; Save the mapping yl −→ y˜l; Calculate p(y˜l, xl) by simple summation over p(yl, xl); Apply Algorithm 2 on p(y˜l, xl) with side constraints (28) and (29) ; Reconstruct p(tl|yl) using p(tl|yl) = p(tl|y˜l) ∀yl that were mapped to y˜l at the beginning.
+Result: p(tl|yl) −→ gl(yl)
+Algorithm 3: Dedicated Information Bottleneck algorithm to create discrete node operations that guarantee a symmetric trellis diagram
+
+that corresponds to the counterpart LLR −L(xl|y˜l) out of its current cluster when y˜l is drawn. When then an element is moved due to the merger cost decision on δ(.), this counterpart element simply is merged into the opposite direction. Thus in each draw and merge step two elements are drawn and merged (but please note that only one pair of merger costs is calculated). For the variable nodes our algorithm requires to introduce two elements y˜l with LLRs L(xvl |y˜l) = ±0 and the same probability p(y˜l) assigned to, because often many combinations exist that exactly lead to the value 0 under the plus operation that have to be seperated in order to not violate (28). Figure 9 shows the processing of the algorithm in a minimal example for the check node example from Table I. Please note that the resulting clustering in Figure 9 corresponds to the first trellis step in Figure 7. An eyecatching side effect of our side constraints in the optimization can be seen in Figures 7 and 8: The bit decision in every trellis segment can simply be done by comparing the state index to |T |/2, what is caused by (29). As a consequence for bit decision tvdv−1 can simply be compared to |T |/2 and due
+
+100 10−1
+
+Min-Sum decoder quantized channel
+
+bit error rate
+
+10−2
+
+10−3 10−4 10−5
+
+belief propagation continuous channel
+belief propagation quantized channel
+proposed decoder quantized channel
+
+0.31 dB 0.29 dB
+
+(Nc, Nv) = (5000, 10000)
+
+10−6 0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+100 10−1
+
+Eb/N0 in dB
+Min-Sum decoder quantized channel
+
+(Nc, Nv) = 10−2 (50000, 100000)
+
+bit error rate
+
+10−3 belief propagation continuous channel
+
+10−4 belief propagation quantized channel
+
+0.33 dB
+
+0.37 dB
+
+10−5
+
+proposed decoder
+
+quantized channel
+
+10−6 0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0 in dB
+
+Fig. 10. Bit error rate for randomly chosen (3, 6)-regular LDPC codes under iterative decoding with imax = 50 decoder iterations for a (quantized) AWGN channel. The channel output interval [−3, +3] was uniformly split into 2048 uniformly spaced steps and then quantized to 16 levels for the quantized channels using Algorithm 2.
+
+to this not even the signs of the LLRs L(xl|tl) need to be stored in the decoder.
+V. PERFORMANCE AND DISCUSSION
+Figure 10 shows the bit error rate of our decoder for a maximum number of imax = 50 decoder iterations for two random (3, 6)-regular LDPC codes of different lengths Nv = 104 and Nv = 105. We used a message alphabet cardinality of |T | = 16, because consistent with the theoretical results in [6], we found out that a 4 bit message representation is sufficient to perform very close to belief propagation decoding also for finite length codes. The bit error rate of exact belief propagation decoding for a quasi continuous channel output and a quantized channel output are shown as references. For these reference simulations the LLRs used for belief propagation decoding were calculated from the distribution
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+p(x|y) for the quasi continuous channel and from p(x|t) for the quantized channel. In this example we first uniformly split the channel output interval [−3, +3] into 2048 partitions that then were quantized to 16 clusters in order to approximate a 4 bit A/D-conversion of the output signal of a continuous AWGN channel. The reference curves reveal an interesting perspective on the small but inevitable loss of mutual information that follows from the proposed quantizers and has already been shown in the bottom part of Figure 4. The actual influence of optimum quantization on the bit error rate of the transmission scheme can be observed. The reference curves show that the loss of using 16 quantizer levels instead of quasi continuous received samples is just about 0.2 dB over Eb/N0. This is a very strong argument for consideration of minimum loss of mutual information quantization. Interpreting both plots in Figure 10 from left to right then reveals a loss of our decoder of less than 0.4 dB over Eb/N0 in comparison to the exact belief propagation decoder that uses the LLRs from the quantizer in the waterfall regions of the codes. The proposed decoder does not represent any values by LLRs or fractional numbers, but instead by unsigned integers. If the introduced 4 bit quantizer that simply outputs unsigned integers is used at the output of a continuous AWGN channel, the marked loss of less than 0.4 dB over Eb/N0 that is observed for both codes in comparison to the belief propagation decoder is the low price for resigning all higher precision units, signed number representation and all nonlinear functions in the receiver. Instead a decoder that calculates and passes messages also in a 4 bit integer architecture in the proposed static trellis diagrams can be used. Furthermore the proposed decoder just needs to implement the +-operation over integers, which requires much lower implementation efforts than the -operation that is needed for belief propagation decoding. Finally Figure 10 compares our proposed fully discrete and integer based decoder to the well known Min-Sum decoder that is applied for the quantized channel. Our decoder outperforms the MinSum decoder by about 0.3 dB in the waterfall region despite the Min-Sum decoder receives and furtherly processes exact LLRs from the quantizer and requires higher precision units and relational operators to determine the check node outputs.
+VI. CONCLUSION
+In this paper we used the Information Bottleneck method in a discrete density evolution scheme to construct message mappings for the node operations of discrete LDPC decoders. The major advantage of the resulting decoders in comparison to state of the art message passing decoders is that they only process unsigned integers instead of any signed fractional values and do not need to evaluate any nonlinear functions to calculcate the messages that are propagated into the graph during decoding. As a consequence in practice the presented decoders could improve the adaptation of the decoding to hardware constraints. We presented a method to implement the message mappings that result from discrete density evolution in a trellis structure which degenerates the node operations to the evaluation of simple, recursive, integer valued functions
+
+that are characterized by two static vectors of integers. Despite
+their low complexity the proposed decoders perform close to
+belief propagation decoders applied to the quantized output of
+a symmetric AWGN channel.
+REFERENCES
+[1] S.-Y. Chung, G. D. Forney Jr, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Communications Letters, vol. 5, no. 2, pp. 58–60, 2001.
+[2] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 599–618, 2001.
+[3] J.-S. Lee and J. Thorpe, “Memory-efficient decoding of LDPC codes,” in International Symposium on Information Theory, ISIT. IEEE, 2005, pp. 459–463.
+[4] V. V. Vityazev, E. A. Likhobabin, and E. A. Ustinova, “Min-sum algorithm-structure based decoding algorithms for LDPC codes,” in 3rd Mediterranean Conference on Embedded Computing (MECO). IEEE, 2014, pp. 256–259.
+[5] Y. Xu, D. He, Y. Guan, Y. Shi, and W. Zhang, “Variable Min-Sum decoding based on generalized mutual information metric,” in International Symposium on Broadband Multimedia Systems and Broadcasting. IEEE, 2014, pp. 1–5.
+[6] B. M. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise thresholds for discrete LDPC decoding mappings,” in Global Telecommunications Conference, IEEE GLOBECOM, 2008, pp. 1–5.
+[7] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck method,” in Proceedings 37th Allerton Conference on Communication and Computation, 1999.
+[8] G. Zeitler, R. Koetter, G. Bauch, and J. Widmer, “On quantizer design for soft values in the multiple-access relay channel,” in IEEE International Conference on Communications, 2009. ICC’09. IEEE, 2009, p. 15.
+[9] G. Zeitler, “Low-precision analog-to-digital conversion and mutual information in channels with memory,” in Proceedings 48th Annual Allerton Conference on Communication, Control and Computing, Sep. 2010, pp. 745–752.
+[10] A. Winkelbauer and G. Matz, “Joint network-channel coded multiway relaying,” in 2012 Conference Record of the Forty Sixth Asilomar Conference on Signals, Systems and Computers (ASILOMAR), Nov. 2012, pp. 2006–2010.
+[11] A. Winkelbauer and G. Matz, “Joint network-channel coding in the multiple-access relay channel: Beyond two sources,” in 2012 5th International Symposium on Communications Control and Signal Processing (ISCCSP), May 2012, pp. 1–5.
+[12] S. Buddha, K. So, J. Carmena, and M. Gastpar, “Function identification in neuron populations via information bottleneck,” Entropy, vol. 15, no. 5, pp. 1587–1608, May 2013.
+[13] N. Slonim, “The information bottleneck: Theory and applications,” Ph.D. dissertation, Hebrew University of Jerusalem, 2002.
+[14] B. M. Kurkoski and H. Yagi, “Finding the capacity of a quantized binaryinput DMC,” in International Symposium on Information Theory, IEEE ISIT, 2012, pp. 686–690.
+[15] B. M. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, Aug. 2014.
+[16] N. Slonim, N. Friedman, and N. Tishby, “Unsupervised document classification using sequential information maximization,” in Proceedings of the 25th annual international ACM SIGIR conference on Research and development in information retrieval. ACM, 2002, pp. 129–136.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:14:05 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,359 @@
+Table of Contents for this manuscript
+Mixed-Signal Implementation of Differential Decoding using Binary Message Passing Algorithms
+
+Glenn Cowan
+Department of ECE Concordia University
+Montreal, Canada gcowan@ece.concordia.ca
+
+Kevin Cushon
+Microtechnology and Nanoscience Chalmers University of Technology
+Gothenburg, Sweden cushon@chalmers.se
+
+Warren Gross
+Department of ECE McGill University Montreal, Canada warren.gross@mcgill.ca
+
+Abstract—This paper presents the mixed-signal circuit implementation of reduced complexity algorithms for decoding low-density parity check (LDPC) codes. Based on modified differential decoding using binary message passing (MDD-BMP), binary addition using discrete-time digital circuits is replaced by continuous-time analog-current summation. Potential degradation due to the mismatch between current sources, P/N strength mismatch and inverter-threshold mismatch is considered in behavioural simulation and shown to be tolerable. Area estimates suggest a reduction from 0.27 mm2 to 0.11 mm2 for the FG(273, 191) code. Finally, transistor level simulation of the FG(273, 191) code using TSMC 65 nm technology shows an efficiency of 0.56 pJ/bit.
+Keywords—analog circuits; binary messages; energy efficient; iterative decoding; LDPC; VLSI
+I. INTRODUCTION
+Low-density parity check (LDPC) codes are state-of-the-art capacity-approaching error-correcting codes [1][2]. They have attracted much recent interest not only because of their excellent error-correcting capability, but also because of the suitability of their message-passing decoding algorithm for parallel high-throughput implementation. However, fullyparallel hardware architectures present challenges for efficient implementation due to complex processing hardware and routing congestion [3].
+One approach is to use reduced-complexity binary message-passing algorithms such as modified differential decoding using binary message passing (MDD-BMP) [4] and its improved variant, known as IDB [5]. These algorithms reduce the processing and wiring complexity compared to conventional LDPC decoding algorithms such as offset minsum [6], and are very energy efficient [5]. MDD-BMP and IDB can also be used as a component of a hybrid “gear-shifting” decoder, which has the same error-correcting performance as state-of-the-art offset-min-sum decoders, but with reduced energy consumption [7].
+In this paper, we explore mixed-signal implementation of the architecture described in [5] with the aim of reduced hardware complexity and energy-efficiency. We describe the analog-domain versions of MDD-BMP and IDB in Section II. Section III explores the effect of mismatch on the decoding
+The work is supported by ReSMiQ, SYTACom and Concordia University
+
+performance of the analog decoder. Section IV presents the details of transistor-level implementation and simulation results. Conclusions are offered in Section V.
+
+II. MDD-BMP AND IDB IN THE ANALOG DOMAIN
+
+A. MDD-BMP in the Digital Domain
+MDD-BMP is a message-passing algorithm initially proposed in [4] based on a bipartite graph consisting of variable nodes and check nodes. In this algorithm, each variable node has one memory cell that is initialized with a loglikelihood ratio (LLR) extracted from a channel sample, denoted as Mv(0), where (0) denotes the 0th iteration. The memory cell is updated in each iteration. Its sign serves as the variable node’s single out-going message. That is
+
+( ) b(k) v→c
+
+= sgnr
+
+M (k) v
+
+,
+
+(1)
+
+where bvàc is the binary message from variable node v to check node c. In subsequent iterations denoted by k, the variable node implements
+
+∑ M
+
+( v
+
+k
+
+)
+
+=
+
+M (k −1) v
+
++
+
+⎢ ⎢s
+
+⋅
+
+b(k −1) c'→v
+
+⎥ ⎥,
+
+(2)
+
+⎣ c'∈Ci
+
+⎦
+
+where bc’àv is the binary message from check node c’ to variable node v. Ci is the set of check nodes connected to variable node v. The parameter s scales the effect of the sum of incoming messages on the variable node’s memory. Simultaneously, each check node computes its output messages as:
+
+∏ ( ) b(k) c→v
+
+=
+
+sgnr
+
+b(k ) v'→c
+
+,
+
+(3)
+
+v'∈V j \v
+
+where bcàv is the binary message from check node c to variable node v, bv’àc is the binary message from variable node v’ to check node c. Vj is the set of variable nodes connected to check node c, meaning that Vj\v is the set of variable nodes connected to check c with variable node v removed.
+
+The strength of MDD-BMP lies in the fact that each variable node broadcasts a single message to its set of check nodes. Although (3) suggests that each check node computes a variable-node specific message, it can be rewritten as
+
+978-1-4799-192A5u-th3o/r1iz5e/d$li3ce1n.0se0d ©use2l0im1it5edItEo:EYEonsei Univ. Downloaded on J1u1n6e 24,2026 at 16:44:30 UTC from IEEE Xplore. Restrictions apply. ASAP 2015
+
+Table of Contents for this manuscript
+
+bcàv from CNs
+
+Inverters approximate current
+
+sources
+
+iC = ∑iinv
+
+iinv ≈ ± Isat
+
++
+
+C vC = Mv
+
+-
+
+Fig. 1. MDD-BMP variable node schematic [5].
+
+$
+
+'
+
+∏ ( ) ( ) b(k) c−−>v
+
+=
+
+&&
+
+sgnr
+
+b(k) v '−−>c
+
+))sgnr
+
+b(k) v−−>c
+
+,
+
+(4)
+
+% v'∈Vj
+
+(
+
+allowing an overall product from each check node to be calculated and broadcast back to incident variable nodes. The final sign multiplication can take place locally, reducing wiring complexity. This approach is shown in Fig. 1.
+
+Messages are calculated iteratively with the algorithm terminating when either a maximum number of iterations is reached or if all parity check equations are satisfied.
+
+MDD-BMP was shown in [5] to have good performance on finite geometry (FG) codes [8] owing to their high-degree variable and check nodes. However, for a Reed-Solomonbased LDPC (2048, 1723) code, MDD-BMP was plagued by absorbing sets, requiring two improvements to the algorithm, namely degeneration and relaunching. Degeneration is achieved by replacing (2) with:
+
+∑ ( ) M
+
+( v
+
+k
+
+)
+
+=
+
+M (k −1) v
+
++
+
+⎢ ⎢s ⋅
+
+b(k −1) c'→v
+
+⎥ ⎥
+
+−
+
+d
+
+⋅
+
+sgnr
+
+M (k −1) v
+
+,
+
+⎣ c'∈Ci
+
+⎦
+
+where d is the degeneration parameter which prevents variablenode states from remaining constant in the presence of a persistent zero sum from check nodes. The function sgnr is a modified sign function such that sgnr(0) = 1.
+
+B. MDD-BMP in Analog
+In the approach proposed in this paper, check-node operations remain as binary sign multiplication implemented with XOR gates. However, the complexity of the required circuits in the variable nodes can be reduced if the operation in (2) is ported to analog, as depicted in Fig. 2. The variable-node memory is replaced by a capacitor, possibly using only parasitic wiring capacitance. The currents flowing in or out of the inverters are the scaled check-node messages that are added together by connecting the inverter outputs together. Iterationbased accumulation in the digital implementation is replaced by continuous-time integration of current flowing into the capacitor, C. The sign of Mv is determined by comparing the voltage across the capacitor to the threshold of an inverter chain.
+Potential advantages of this approach are reduced area, reduced power dissipation, and faster decoding time. Possible degradation in coding gain due to mismatch between the
+
+Inverters used for sign
+bvàc broadcast to CNs Fig. 2. MDD-BMP analog-domain variable node schematic.
+various near minimum-size inverters used in the analog implementation is investigated in the next section.
+III. EFFECT OF MISMATCH ON ANALOG DECODING
+The analog implementation of MDD-BMP is potentially degraded by four phenomena:
+a) Finite output resistance of inverters. Output currents depend on the capacitor voltage. iinv = f(vC).
+b) Systematic offset between PMOS and NMOS transitors in inverters causing differences in sinking and sourcing currents. f(vC) ≠ - f(0).
+c) Random mismatch between inverters feeding variable nodes.
+d) Mismatch between inverters used for sign within variable nodes relative to those used in check nodes.
+Each of these phenomena was modeled and included in a discrete-time, continuous-valued model and simulated using Python using an FG(273, 191) code. The methodology for modeling each of these and their effect on decoding performance is discussed.
+a) Finite output resistance of inverters. The current flowing from the variable node inverters into the integration capacitor C depends on the binary input of the inverter and the voltage across the capacitor. For an input voltage of 0 V and a capacitor voltage near VDD/2, the inverter’s NMOS transistor is off and the PMOS transistor is in saturation. For larger capacitor voltages, the PMOS transistor will enter triode, reducing the output current. The current output of an inverter is summarized in Fig. 3. This shows the normalized current output of the inverter for each of two possible inputs to the inverter. To avoid using complex transistor models in behavioural simulations a single 4th order polynomial mapping VN state to message weight was used. This was found to have close agreement with the simulated transistor behaviour. IDS vs VGS behaviour need not be included in behavioural models since the input to each inverter is a binary-valued signal. The use of this model had no discernible effect on decoding performance.
+b) Systemic skew between PMOS/NMOS transistors. At design time, the ratio of PMOS and NMOS transistor widths can be selected so that the inverter currents are equal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u1n7e 24,2026 at 16:44:30 UTC from IEEE Xplore. Restrictions apply.
+
+Table of Contents for this manuscript
+
+Fig. 3. Normalized output current of each variable-node inverter for both input possibilities.
+and opposite for a VN state of VDD/2. This is assumed to be the most critical scenario for current matching. Due to process variation, a systemic difference between currents is possible. Corner simulations showed this skew to be as much as 20% for some process corners. Some form of global tuning is needed to keep this skew to less than 5%.
+c) Random mismatch between inverters feeding variable nodes.
+In addition to systemic shifts described in b) inverters will suffer from random mismatch. The modeling of this is also simplified because the input signal is binary. Across 100 monte-carlo experiments using foundry supplied technology parameters, the relative standard deviation in output current across VDS voltage (VN state) was relatively constant and in the range of 5%. This allows the random mismatch in each inverter to be described by selecting two random variables from a Gaussian distribution and assigning each to one value of input signal.
+The overall current sourced by each inverter is given by:
+
+) + ++
+
+−
+
+p(M
+
+v
+
+)(1
+
++
+
+xS
+
+)
+
+# $%%
+
+max(1,1+ max(1,1 -
+
+xn,c→v ) xn,c→v )
+
+& '((
+
+ic→v = * +
++ +,
+
+p(−M
+
+v
+
+)
+
+(1
+
+−
+
+xS
+
+)
+
+# %$%
+
+max(1,1+ max(1,1 -
+
+xp,c→v ) xp,c→v )
+
+& ('(
+
+for
+
+b(k) v→c
+
+=1
+
+for
+
+b(k) v→c
+
+=
+
+0
+
+where check
+
+icàv node
+
+is the current associated c to variable node v. p() is
+
+with the message from the 4th order polynomial
+
+modeling inverter output current. xs is the skew parameter
+
+modeling systemic offset between PMOS and NMOS
+
+transistors. For a given set of simulations xs has one value
+
+affecting all inverters. xn,càv and xp,càv are mismatch parameters associated with the NMOS and PMOS transistors,
+
+respectively of a particular inverter. The ratio of “maximums”
+
+was used to enable the modeling of large mismatch without
+
+causing a non-physical change in sign of the inverter current.
+
+This ensures that the scale factor is non-negative.
+
+d) Mismatch between inverters used for sign within variable nodes relative to those used in check nodes.
+MDD-BMP allows for broadcasting of the variable node output message. However, signal transitions on highly
+
+Fig. 4. Simulated bit-error rate at 4.5 dB SNR for various circuit mismatch.
+capacitive long wires will lead to increased power dissipation. Instead, we propose to use the capacitance of a long wire as the storage element in the variable node, meaning that it is the Mv state that is broadcast. The sign of each variable node memory can be generated locally within a given check node using an inverter threshold as a reference. While this increases the number of circuits required, since each of these inverter’s required drive strength is much smaller, the overall area is not increased. This approach does however create the opportunity for mismatch between the extracted sign within a variable node and the sign extracted within each check node. The mismatch in inverter threshold for minimum sized inverters was found to have a standard deviation of approximate 13 mV which corresponds to an LLR error of 0.26 assuming LLRs from -10.5 to 10.5 are mapped to a range from 0 to 1 V.
+Bit-error rate (BER) results behavioural simulations are shown in Fig. 4 at 4.5 dB SNR. The effects of b), c) and d) are shown separately in the first three curves with the x-axis representing normalized difference between PMOS/NMOS currents, relative standard deviation in current mismatch, and standard deviation in inverter thresholds in LLR, respectively. The line denoted by “Expected mismatch” shows BER as a function of P/N skew when inverters have 5% relative standard deviation in current mismatch and threshold mismatch with a standard deviation of 0.26. These values correspond to the anticipated level of mismatch in the chosen technology. The horizontal line denoted by “Quantized digital” shows the BER achieved in [5] when LLR values are quantized using 6 bits. There is only slight BER performance degradation with the “Expected” level of non-idealities. With ideal or almost-ideal behaviour, the BER performance of the mixed-signal implementation is better than the digital version since there is no quantization error in the mixed-signal implementation.
+IV. TRANSISTOR-LEVEL RESULTS
+The FG(273, 191) circuit was designed and simulated using TSMC 65 nm CMOS. Transistor-level simulations are too slow for bit-error rate tests since transient simulation takes nearly 1h per codeword. However, simulations over 16 codewords showed that codewords that were correctly decoded in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u1n8e 24,2026 at 16:44:30 UTC from IEEE Xplore. Restrictions apply.
+
+Table of Contents for this manuscript
+
+Fig. 5. Variable-node memory voltages in the transistor-level simulation of the FG(273, 191) code. Each trace is the voltage across a variable node capacitor. Decoding starts at 7 ns. Final signal transition is after 7.432 ns.
+
+TABLE I Performance comparison for FG (273, 191) in TSMC 65 nm technology
+
+Area Supply voltage (V) Average throughput (Gb/s) Average power (mW)
+
+This work 0.11 mm2
+1.0 137(1) 76 (2)
+
+MDD-BMP [5] 0.27 mm2
+
+1.0
+
+0.8
+
+37.4 25.8
+
+183
+
+79.3
+
+Average energy (pJ/bit)
+
+0.56
+
+4.88 3.07
+
+(1) Throughput calculated with 2 ns codeword cycle time (2) > 50% of power is dissipated during uncontrolled switching while VN initial voltages are set. Further reduction in power is anticipated.
+
+The area of the decoder was estimated using the areas of the required cells assuming 90% utilization as done in [5]. This resulted in an area estimate of 0.11 mm2. The mixed-signal implementation is smaller because the variable nodes do not require the digital logic adders and accumulators that are present in the all-digital implementation. Preliminary results of this on-going investigation are presented in Table I and compared against [5].
+
+V. CONCLUSION
+A mixed-signal implementation of MDD-BMP was presented. By replacing the variable node’s discretetime/discrete-valued summation and accumulation with continuous-time analog processing, the circuit area and energy per bit can be reduced. Behavioural simulations show that the anticipated variability in the analog behaviour of the required circuits does not degrade decoding performance. Initial transistor-level simulations point to smaller area and lower energy per bit than the digital implementation of the algorithm.
+
+Fig. 6. Check-node outputs in the transistor-level simulation of the FG(273, 191) code. Each trace is the output of a check node. Decoding lasts from 7 ns to 7.656 ns.
+discrete-time Python simulations were decoded properly in continuous-time transistor level simulations. Fig. 5 shows the variable-node memories. The capacitors are set using ideal voltage sources connected through pass-transistors. During this phase, the inverters that drive the capacitors are disconnected. During this interval we can see the range of initial LLR values. At 7 ns, the voltage sources are disconnected and the inverters are connected. The transition of bit errors across the VDD/2 threshold along with the check-node messages in Fig. 6 indicates the correction of bit errors. 0.7 ns was a typical decoding time.
+The average current of 76 mA from a 1 V supply was computed when 2 ns was used to program variable node memories and complete decoding. This corresponds to a throughput of 500 x 106 codewords per second x 273 bits per codeword = 137 Gb/s. This corresponds to an energy efficiency of 0.56 pJ/bit. This power dissipation was simulated for a variable node capacitance of 300 fF. The potential for further energy reduction by reducing the accumulation capacitance is being explored.
+
+REFERENCES
+[1] R. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[2] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[3] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 lowdensity parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[4] N. Mobini, A. H. Banihashemi, S. Hemati, “A differential binary message-passing LDPC decoder,” IEEE Transactions on Communications, vol. 57, no. 9, pp. 2518-2523, September 2009.
+[5] K. Cushon, S. Hemati, C. Leroux, S. Mannor, and W. J. Gross, “HighThroughput Energy-Efficient LDPC Decoders Using Differential Binary Message Passing,” IEEE Transactions on Signal Processing, vol. 62, no. 3, pp. 619-631, February 2014.
+[6] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, Apr. 2010.
+[7] K. Cushon, S. Hemati, S. Mannor, and W. J. Gross, “Energy-Efficient Gear-Shift LDPC Decoders,” Proceedings of the 25th IEEE International Conference on Application-specific Systems, Architectures and Processors, Zurich, Switzerland, June 18-20, 2014, pp. 219-223.
+[8] Y. Kou, S. Lin, and M. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711 –2736, Nov. 20
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u1n9e 24,2026 at 16:44:30 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,746 @@
+2011 IEEE 7th International Conference on Wireless and Mobile Computing, Networking and Communications (WiMob)
+
+Quasi-Cyclic Low-Density Parity-Check Convolutional Code
+Yixiang Wang, Hui Yu, Youyun Xu Department of Electronic Engineering Shanghai Jiao Tong University, P. R. China Email: buffontus@sjtu.edu.cn, yuhui@sjtu.edu.cn, yyxu@vip.sina.com.cn
+
+Abstract—This paper proposes a novel quasi-cyclic low-density parity-check convolutional code, and a two-stage construction algorithm with modified progressive edge growth (PEG) method is provided. We propose both encoder and decoder implementation architecture for this code. The quasi-cyclic form provides the parallelism for encoder and decoder, which can increase the throughput and decrease the delay significantly. The proposed modified min-sum decoding algorithm can speed up the process of convergence and reduce the hardware complexity. We also designed a GPU based simulation platform to speed up about 200 times against CPU to verify the code performance. Simulation results show the proposed code can get 0.5∼1dB coding gain and lower error floor compared with the LDPC codes in WiMAX standard with the same code length, while the decoder only has 20 iterators.
+I. INTRODUCTION
+Low-density parity-check block code (LDPC-BC) is first proposed by Gallager [1], which with soft decoding algorithms on Tanner Graph [2] can achieve outstanding capacity and approach Shannon limit over noisy channels at moderate decoding complexity, thus becomes a hot topic in channel coding. Density evolution [3], regarded as one performance analysis tool for LDPC-BC, can offer degree distribution of the row and column weight in parity-check matrix. The progressive edge-growth (PEG) algorithm [4] is a girth-aware construction method that tries to avoid cycles in Tanner Graph. QuasiCyclic LDPC-BC (QC-LDPC-BC) [5] [6] [7] can be applied feasibly due to simple parallel codeword structure. While, the large code length LDPC-BC owns, which may cause relatively great transmission delay for the whole communication system, limits the application for real-time service.
+To overcome the shortage of LDPC-BC, LDPC convolutional code (LDPC-CC) [8] is put forward, which can be regarded as the combination of the LDPC-BC parity-check matrix and traditional convolutional code. LDPC-CC owns better decoding performance than LDPC-BC [9] under the assumption of the density evolution, and inherits the realtime encoding and decoding characteristic from convolutional code, so LDPC-CC should have wide application field based on its unique features. While the present decoding algorithm demanding too many iterators [8] causes the increase of output delay and implementation complexity. Besides, the related references [10] [9] neglect the feasibility of encoder and decoder when constructing LDPC-CC codeword, which leads to low net throughput and high hardware cost for the whole
+
+system. In this paper, a novel quasi-cyclic low-density parity-check
+convolutional code (QC-LDPC-CC) codeword construction algorithm, where quasi-cyclic is induced as parallel structure into LDPC-CC, is proposed and we also put forward corresponding encoder and decoder architecture as well as a simulation platform based on Graphic Processing Unit (GPU). The QC-LDPC-CC codeword constructor can provide good codes for any code rate R = b/c(b < c), while usual LDPC code rate is R = (c − 1)/c. Our construction algorithm takes both the codeword performance and the hardware feasibility into consideration during encoding and decoding. The encoder architecture has very low hardware cost and the decoder can get quick convergence, and the whole system can achieve much more transmission efficiency due to the parallel structure induced. The BER performance of the generated codewords, especially the error floor, is evaluated by the high-speed GPU based simulation platform, whose real-time net throughput can reach 200 times of that on the CPU based platform.
+The remainder of this paper is organized as follows. Section II presents the background of our research. Sections III, IV, V introduce the QC-LDPC-CC codeword construction algorithm, the encoder and decoder architecture, respectively. Section VI shows the GPU based simulation platform. Simulation results are provided in section VII and conclusion is drawn in section VIII.
+II. BACKGROUND
+A. LDPC-CC and Tanner Graph
+An LDPC-CC with rate R = b/c(b < c) is characterized by a infinite sparse parity-check matrix H which can be shown as (1), where Hi(t)(i = 1, . . . , ms; t ∈ Z) is a binary submatrix of size (c − b) × c and H1(t) should be full-rank to encode (c − b) check bits combined with b information bits as outputs each time. For any t, the code memory length ms is marked as the maximum i for non-zero matrix Hi(t) and all Hi(t) are zero if i > ms, thus the overall constraint length, or called relative code length of an LDPC-CC is defined as νs = ms · c. If there exits Ts ∈ Z+(Ts = 1) that makes Hi(t) = Hi(t + Ts)(i = 1, . . . , ms), we define Ts as the period of the code and this code is a time-variant LDPC-CC.
+One LDPC-CC can be illustrated not only by parity-check matrix but also by Tanner Graph, a bipartite graph defined on the codeword bit set V and parity-check equation set
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4577-2014-7/11/$26.00 ©2011 IEEE
+
+351
+
+...
+
+
+
+· · · H1(1)
+
+ 
+
+· · · H2(2)
+
+H1(2)
+
+ 
+
+ · · ·
+
+...
+
+...
+
+...
+
+  
+
+H
+
+=
+
+ 
+
+Hms (ms) Hms−1(ms)
+
+···
+
+···
+
+H1(ms)
+
+ 
+
+Hms (ms + 1) Hms−1(ms + 1)
+
+···
+
+· · · H1(ms + 1)
+
+  
+
+...
+
+...
+
+...
+
+...
+
+ 
+
+(1)
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+Hms (t)
+
+Hms−1(t) · · ·
+
+H1(t)
+
+ 
+
+
+
+...
+
+...
+
+.
+
+.
+
+ .
+
+C, whose element is called “bit node” or “check node”, respectively. Fig. 1 shows one pair as example. Each bit node in Tanner Graph represents one column in parity-check matrix and each check node represents one row (parity-check equation), correspondingly. An edge is assigned between bit node BNi and check node CNj iff Hj,i = 1. “Node degree” is described as the number of check equations one certain bit node participates in or the number of bit nodes joining in one certain parity-check equation.
+
+ĂĂ
+
+v1 v2 v3 v4 v5 v6 v7 v8 ĂĂ
+
+c1 1 0 1 0 0 0 1 1
+
+c2
+
+01100101
+
+c3
+
+11000101
+
+c4
+
+10101001
+
+(a) Check Matrix v1 v2 v3 v4 v5 v6 v7 v8 v9 v10
+
+ĂĂ
+
+ĂĂ
+
+c1 c2 c3 c4
+
+Bit Node
+
+Check Node
+
+(b) Tanner Graph
+
+Fig. 1. (a) A simple LDPC-CC codeword. (b) The corresponding Tanner Graph and a length-4 cycle.
+
+as follows.
+
+L(qij) = L(Qi) − L(rji)
+
+L(rji) =
+
+sgn L(qi′j )
+
+i′ ∈Vj\i
+
+(2)
+
+Φ
+
+Φ |L(qi′j )|
+
+i′ ∈Vj\i
+
+(3)
+
+L(Qi) = L(ci) +
+
+L(rj′ i )
+
+(4)
+
+j′ ∈Ci
+
+where L(ci) is the initial channel message, L(qij) is the
+
+message passing from BNi to CNj, L(rji) is the message
+
+passing from CNj to BNi, and L(Qi) is the posteriori of bit
+
+node BNi. Ci is the neighbor set of BNi, Vj is the neighbor
+
+set
+
+of
+
+C Nj .
+
+Φ(x)
+
+=
+
+log
+
+ex ex
+
++1 −1
+
+.
+
+The strict derivation of the above equations requires the
+
+independence of all the messages L(qi′j), i′ ∈ Vj and L(rj′i),
+
+j′ ∈ Ci. However, the existence of “cycle” in Tanner Graph
+
+invalidates this independence assumption, thus degrades the
+
+decoding performance of BP algorithm. “Cycle” is a common
+
+phenomenon both in LDPC-CC and in LDPC-BC and here
+
+you can assume a length-4 cycle in an LDPC-BC codeword as
+
+shown with bold lines in Fig. 1(b). In this case, if BP algorithm
+
+proceeds for more than 2 iterations, the receive messages of
+
+the involved bit nodes v5, v10 will partly contain its own
+
+message sent 2 iterations before. For this reason in LDPC-
+
+BC, the average cycle length in the Tanner Graph, called
+
+“girth”, has a strong relationship with its BER performance,
+
+and is considered as an important metric in LDPC-BC code
+
+construction algorithms such as PEG.
+
+B. The BP Algorithm and Effect of Cycle in LDPC-BC
+The BP algorithm for LDPC-BC is a general soft decoding scheme for codes described by Tanner Graph, which is a time-scale iteration method. It can be viewed as the process of iterative message exchange between bit nodes and check nodes. For each iteration, each bit node or check node collects the messages passed from its neighborhood, updates its own message and passes the updated message back to its neighborhood. BP algorithm has many modified versions, such as log-domain BP, MSA, and layered BP. All of them originate from the basic log-domain message passing equations, given
+
+III. THE QC-LDPC-CC CODEWORD CONSTRUCTION ALGORITHM
+In this section, we propose the LDPC-CC codeword construction algorithm that takes both performance and feasibility into consideration during the construction of the H matrix of the LDPC-CC, and our improved algorithm is based on PEG which is designed for LDPC-BC originally. We first formulate this problem and then discuss the details of the algorithm.
+A. Problem Formulation
+We now deal with the LDPC-CC codeword construction problem. Given the constraint length νs, code rate R, the period Ts, and perhaps other constraints such as fixed degree
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+352
+
+distribution (optimized by density evolution), we should construct a “good” LDPC-CC codeword described by its H matrix that meets the demand above. The word “good” here mainly have the following two metrics.
+• High performance, which means the code should have high coding gain and good BER performance, including early water-fall region and low error floor. This is strongly related to large girth, few trapping sets and etc.
+• High feasibility, which means the implementation of the encoder and decoder should have moderate complexity, and high throughput. This is strongly related to high degree of parallel structure for decoder and encoder, simplicity of encoding based on H matrix, and etc.
+Traditional construction methods just focus on performance of the code and neglect the consideration of implementation, leading to low throughput and efficiency, which motivates us to find a joint optimized construction algorithm concerning both performance and feasibility for LDPC-CC.
+B. The two-stage construction algorithm
+In this part, we combine a novel algorithm based on PEG and quasi-cyclic codeword structure together to solve the joint optimized LDPC-CC codeword construction problem.
+PEG is a traditional girth-aware construction method that tries to avoid cycles in LDPC-BC Tanner Graph to get good codeword performance, but it does not fit LDPC-CC Tanner Graph and now we should note the main differences between CC and BC:
+• Unlimited expansion. Because the parity-check matrix of LDPC-CC is periodic and unlimited, the Tanner Graph is also unlimited, and the check nodes and bit nodes even connect to each other over period.
+• Unique relation area. Each check node has unique relation area for the bit nodes it covers, as shown within bold squares in Fig. 1(a).
+So in our algorithm, we should modify the PEG method to get a new solution suitable for LDPC-CC.
+To achieve high parallelism degree in the process of encoding and decoding, we induce quasi-cyclic structure, which is characterized as p × p identity circulant matrix or zero matrix, into our LDPC-CC parity-check matrix and here p is called parallelism degree or expansion factor. Each Hi(t) in H becomes (c − b) · p × c · p matrix and Hi(t) can be represented by the base form Hi(t)b with the size (c − b) × c. Accordingly, the base form of H is Hb, whose elements satisfy −1 ≤ Hbj,i < p. The elements Hjb,i = −1 are expanded to zero matrices, while Hjb,i ≥ 0 are expanded to identity circulant matrices with permutation factors Hjb,i. One node in base Tanner Graph of Hb can be regarded as p nodes in H, and one edge with weight Hjb,i represents p interleaved edges in H.
+So the whole algorithm of QC-LDPC-CC codeword construction can be divided into 2 stages to get Hb: what position and what value should non-negative Hjb,i be in Hb. In stage 1, we use Algorithm 1 which is an improved algorithm based
+
+on PEG to get the position of non-negative Hjb,i in Hb. And in the second stage, Algorithm 2 is given to search for the proper value of Hjb,i in Hb with greedy method.
+
+Algorithm 1 The non-negative Hjb,i position in Hb.
+
+Step1: Get codeword parameter.
+
+1: Set the code rate R = b/c, period Ts, code memory length ms(the integer multiple of Ts is recommended for decoding), and parallelism degree p, thus the number of bit nodes in one period of Hb is n = ms · c and number of check nodes is m = ms · (c − b);
+2: For code rate R, using density evolution method to get bit nodes degree distribution {Dv1, Dv2, · · · , Dvn} and check nodes degree distribution {Dc1, Dc2, · · · , Dcm};
+
+Step2: Fill nodes into graph.
+
+Make n bit nodes {v1, v2, · · · , vn} and m check nodes {c1, c2, · · · , cm} to compose a one-period subgraph, and combine (2 · (ms/Ts)) copies of the subgraph together to get
+period expansion graph. The edge operation in the subgraph
+will be imitated in the expansion graph, which performs as
+the unlimited-expansion characteristic of LDPC-CC. Bit nodes degrees {d1v, dv2, · · · , dnv } ← 0 and check nodes degrees {d1c , d2c, · · · , dcm} ← 0;
+
+Step3: Preset check-bit bit node edge.
+
+To simplify the encoding algorithm, we make the right part of each H1(t)b a (c − b) × (c − b) identity matrix as shown with
+grey background in Fig. 1(a), which indicates each check node connects one check-bit bit node, and {d1c, d2c, · · · , dm c } ← 1;
+
+Step4: Construct edge from check nodes perspective.
+
+1: for j = 1 to m do
+
+2: for dcj = 1 to Dcj − 1 do
+
+3:
+
+Set check node cj as root, and expand current expansion
+
+graph from cj up to a constant depth L to get tree Tj;
+
+4:
+
+Among all bit nodes in the unique relation area of cj with
+
+degree satisfying div < Dvi , get a set Sj for the farthest bit
+
+nodes away from cj according to Tj;
+
+5:
+
+Find one bit node vi with the lowest degree in Sj, connect
+
+an edge between vi and cj , dvi ← div + 1, dcj ← dcj + 1;
+
+6: end for
+
+7: end for
+
+Step5: Return Hb
+Return Hb from the expansion graph, where Hbj,i = 0 means connection exists between bit code i and check nodes j and Hjb,i = −1 means no connection.
+
+QC-LDPC-CC with any code rate R = b/c(b < c) can be produced by our construction algorithm, which offers
+extensive flexibility in practical application. Fig. 2 shows an Hb as example, with R = 2/3, Ts = ms = 5, p = 8 and the codeword degree distribution (row weight, column weight) is (6, 2).
+
+ª
+
+« «
+
+2 1 1 1 5 1 1 1 2 2 5 1 1 1 0
+
+« « «
+
+6 1 1 2 1 1 1 1 1 1 5 1 1 1 0 1 3 1 4 1 7 1 1 1 1 4 1 1 6 0
+
+ 
+
+º »
+
+  
+
+» »
+
+ 
+
+» »
+
+« «
+
+period expansion
+
+«
+
+1 3 1 1 1 1 7 1 2 1 1 1 3 1 0 1 7 4 1 3 1 7 1 1 1 2 1 1 1 0
+
+» » »
+
+«¬
+
+¼»
+
+Fig. 2. An Hb example of QC-LDPC-CC.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+353
+
+Algorithm 2 The value of permutation factor Hbj,i in Hb.
+
+Step1: Get set for non-negative elements Hbj,i in Hb. E ← {Hjb,i|Hbj,i = 0, Hjb,i ∈ Hb}, considering the low complexity for encoder, we can exclude the check-bit bit node edge added in Algorithm 1 step3.
+
+Step2: Scan proper value for permutation factor Hjb,i.
+
+1: for each Hbj,i ∈ E do 2: for k = 0 to p − 1 do
+
+3:
+
+Hbj,i ← k;
+
+4:
+
+Expand base form Hb to expansion form H;
+
+5:
+
+Calculate the current girth gk for H;
+
+6: end for
+
+7: Hbj,i ← τ |gτ = min({g0, · · · , gp−1}); 8: end for
+
+9: return Hb
+
+IV. ENCODER FOR QC-LDPC-CC
+In this section, we will show the method to encode QCLDPC-CC codeword and give the encoder architecture.
+
+A. Method for Encoding
+Let U = [u1, · · · , ui, · · · ] be a segment of an information sequence, where each ui owns b · p bits, and V = [v1, · · · , vi, · · · ] be the corresponding segment of the encoded sequence, where each vi consists of c p-bits vectors vi,j(j = 1, · · · , c). Surely we have that V satisfies the check equation:
+
+H × VT = 0
+
+(5)
+
+Since for any i, we only have non-zero H(i) within the constraint length ms, where H(i) is the sub-matrix of the ith (c−b)·p-row of H, the encoded sequence vi can be generated by the method as follows:
+
+ vi,j
+
+=
+
+ui,j
+
+if j = 1, · · · , b
+
+
+
+ms
+
+H1(i) × viT = Hk(i) × vkT
+
+(6)
+
+
+
+k=2
+
+In our codeword construction algorithm, we have optimized the right part of H1(i) as (c− b)·p× (c− b)·p identity matrix, so the check bits of vi can be encoded by the equation below, where L(H1(i)) means the left (c − b) · p × b · p sub-matrix of H1(i).
+
+ms
+
+[vi,b+1, · · · , vi,c]T = Hk(i) × vkT
+k=2
+
+(7)
+
++ L(H1(i)) × [vi,1, · · · , vi,b]T
+
+B. Architecture of Encoder
+
+Fig. 3 shows the encoder architecture, which consists of one
+encode ram, one interleave network and p encode units. The
+ram stores νs = ms ·c·p previously encoded bits. The network gets p bits each time and make them interleaved according to the permutation factor Hjb,i from Hb. Using Equation (7), the p encode units add the reordered bits to the inside registers
+repeatedly to get check bits.
+
+DATA IN DATA OUT
+
+Encode Unit ˄parallel p˅
+Interleave Network
+Encode Ram
+
+Fig. 3. Encoder Architecture.
+
+Under the same code length νs, compared with the traditional LDPC-BC encoder, whose complexity is not smaller than o(νs) applying RU encoding algorithm [11], the QC-LDPCCC encoder we put forward has the complexity of o(p), which will cost much less hardware resource.
+
+V. DECODER FOR QC-LDPC-CC
+In this section, we provide the modified min-sum decoding algorithm for LDPC-CC (MMSA-CC) based on traditional min-sum algorithm for LDPC-BC (MSA) [12], then the decoder architecture for QC-LDPC-CC is put forward.
+
+A. MMSA-CC
+The traditional decoding algorithm for LDPC-BC is a timescale iteration method, which performs message iteration on one decoder. While LDPC-CC owns real-time and period characteristics, we design the MMSA-CC decoding algorithm working on space scale, which means the nth decoding iteration in LDPC-BC transfers to the nth iterator in LDPC-CC, thus we replace the cyclic decoding process with a pipelined message updating procedure to meet the real-time decoding demand. At any time t, each iterator updates the messages of some bit nodes and check nodes with the following equations, where α is a modified factor to reduce the performance loss from BP to MSA.
+
+L(qij) = L(Qi) − L(rji)
+
+L(rji) = α ·
+
+sgn L(qi′j )
+
+i′ ∈Vj\i
+
+L(Qi) = L(qij) + L(rji)
+
+(8)
+
+min
+i′ ∈Vj\i
+
+|L(qi′j )|
+
+(9)
+
+(10)
+
+B. Decoder Architecture
+For the QC-LDPC-CC with code rate R = b/c, parallelism degree p and code memory length ms, supposing that one LDPC-CC decoder consists of N iterators, the decoder architecture is given as Fig. 4 which shows that the decoder can be divided into 3 main parts: LLRSUM used as L(Qi) shift registers, LLREX used as L(rji) shift registers and N decoder iterators. In each iterator, the decoder unit consists of p MMSA-CC cores to take the task for message updating, and one interleave network to play the role as switch with the permutation factor Hjb,i in Hb. Algorithm 3 gives the decoding algorithm in the decoder for a certain moment t, and we updating message in a row-by-row way according to Hb.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+354
+
+L(qji ) Shift Registers (LLREX)
+
+Decoder
+
+...
+
+Decoder
+
+Iterator 1
+
+Iterator N
+
+decoded
+
+L(Qinit ) L(Qi ) Shift Registers (LLRSUM)
+
+bits
+
+(a) Decoder Architecture
+
+L(Qi ) Interleave Network
+
+MMSA-CC Unit L(Qi )_new (parallel p˅
+
+L(qji ) L(qji )_new (b) Iterator
+
+Fig. 4. Decoder Architecture.
+
+erative communication among p parallel threads, including source generator, QC-LDPC-CC encoder, AWGN channel, QC-LDPC-CC decoder and statistics, noting that due to the limited hardware resource of GPU, the iterators in decoder can only run serially.
+
+Device (GPU)
+
+Block 1 Block 2 Block 3 Block 4 Block 5 Block 6 ……
+Block 7 Block 8 Block 9 Grid
+
+Host (CPU)
+Kernel Controler
+
+Global Memory
+Constant Memory
+
+Block 6
+Thread 1 Thread 4 Thread 7
+
+Shared Memory
+
+Thread 2
+Thread 5
+Thread 8 ……
+
+Thread 3 Thread 6 Thread 9
+
+Thread 2 Channel
+Encoder
+
+Decoder Iterator: 1→N
+Get Qi, rij
+
+Source bit gen
+
+Calculate qij
+
+Statistics
+
+Update Qi, rij
+
+Algorithm 3 The QC-LDPC-CC decoding algorithm.
+
+Initialization.
+1: All L(Qi) ← +∞; 2: All L(rji) ← 0;
+
+Step1: Data in and data out
+LLRSUM shifts in c · p L(Qinit)s as posteriori of new bit nodes and shifts out c · p L(Qi)s as decoder outputs, LLREX shifts in 0s as initial message of new check nodes.
+
+Step2: Message updates for bit nodes and check nodes.
+
+1: for l = 1 to (c-b) serially do
+
+2: for iter = 1 to N parallel do
+
+3:
+
+Read L(Qi)s and L(rji)s from LLRSUM and LLREX.
+
+4:
+
+L(Qi)s go through interleave network;
+
+5:
+
+for p MMSA-CC units parallel do
+
+6:
+
+Updating L(Qi)s and L(rji)s for the lth row in Hb(t)
+
+using MMSA-CC;
+
+7:
+
+end for
+
+8:
+
+Write L(Qi)s and L(rji)s to LLRSUM and LLREX.
+
+9: end for
+
+10: end for
+
+VI. THE GPU-BASED SIMULATION PLATFORM
+In this section, we introduce the implementation of highspeed QC-LDPC-CC simulation platform based on compute unified device architecture (CUDA) supported by GPUs. With the GPU-based simulation platform, we can get the BER performance, such as the bit error floor, of the generated LDPC-CC codewords much more quickly than usual CPU provides.
+CUDA [13] is NVIDIA’s parallel computing architecture. It enables dramatic increases in computing performance by executing multiple parallel independent and cooperated threads on GPU, thus is particularly suitable for the Monte Carlo model and this paper applies CUDA to accelerate the QCLDPC-CC simulation.
+Fig. 5 shows our GPU simulation platform architecture. CPU is used as the controller, which puts the codeword into GPU constant memory, raises the GPU kernels and gets back the statistics. While in GPU grid, we implement the whole coding system for each GPU block based on coop-
+
+Fig. 5. GPU architecture of the BER simulation for LDPC code.
+
+In this paper, we implement the simulation system on Nvidia GTX260 which can contain 27 multi-cores running 8 blocks for each. For a QC-LDPC-CC with p = 32, the system net throughput can achieve 15 Mbps under N = 20 iterators, which is nearly 200 times of the simulation running on the Intel-Core2 based platform, thus we can get much more convinced results.
+
+VII. NUMERICAL SIMULATION
+In this section, we show the decoding performance of QCLDPC-CC generated by the codeword construction algorithm we put forward. Then we give the analysis on the system delay.
+We simulate the QC-LDPC-CC codeword through the GPU platform and make the BER comparison between our QCLDPC-CC and QC-LDPC-BC in WiMAX standard [14] with the same code length under N = 20 iterators . The BER performance is shown in Fig. 6 and Fig. 7, which indicates that the water-fall region and the error floor of our QC-LDPC-CC codeword is much better than the WiMAX codeword, specifically, our QC-LDPC-CC can get more than 0.5∼1dB coding gain compared to QC-LDPC-BC. The BER performance, on the other hand, verifies that the codeword construction algorithm we provide can achieve high-performance codeword.
+As real-time encoding and decoding is a very important characteristic to the overall LDPC-CC system, now we analyze the system delay based on our QC-LDPC-CC system compared to [8] [9], which ever gives the delay calculation equation shown as follows, where fs is the system running frequency.
+
+∆delay = ((c − b) + νs · N )/fs
+
+(11)
+
+Since in this paper we apply quasi-cyclic structure with
+
+parallelism degree p into the LDPC-CC codeword, under the
+
+same code length νs, the delay of our system is shown as
+
+follows.
+
+∆delay = ((c − b) + νs · N/p)/fs
+
+(12)
+
+Noting that (c − b) ≪ νs · N , the new system we designed can reduce the delay to nearly 1/p of the former one and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+355
+
+the throughput can also rise by p times, which improves the real-time transmission significantly. Besides, compared to 50∼100 iterators mentioned in [8] [9], the MMSA-CC decoding algorithm and implementation architecture we adopt can make quick convergence with only 20 iterators, thus the proposed method can even lower the hardware cost.
+
+BER
+
+νs=768, p=32 100
+
+R=1/2 QC−LDPC−CC
+
+R=1/2 QC−LDPC−BC
+
+10−1
+
+R=2/3 QC−LDPC−CC
+
+R=2/3 QC−LDPC−BC
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+10−7
+
+10−8
+
+10−9
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR(dB)
+
+Fig. 6. BER performance of QC-LDPC-CC and QC-LDPC-BC (1).
+
+νs=1536, p=64 100
+
+R=1/2 QC−LDPC−CC
+
+R=1/2 QC−LDPC−BC
+
+10−1
+
+R=2/3 QC−LDPC−CC
+
+R=2/3 QC−LDPC−BC
+
+10−2
+
+observe the proposed code with moderate iterations has better BER performance than typical LDPC-BC in WiMAX.
+ACKNOWLEDGMENT
+This project is partially sponsored by National Science and Technology Major Project “New generation broadband wireless mobile communication networks” (No. 2011ZX03001002-01).
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inform. Theory, 1962.
+[2] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inform. Theory, 1981.
+[3] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacity approaching irregular low-density parity-check codes,” IEEE Trans. Inform. Theory, 2001.
+[4] Y. Hu, E. Eleftheriou, D. M. Arnold, “Regular and irregular progressive edge growth Tanner graphs,” IEEE Trans. Inform. Theory, 2005.
+[5] Fossorier M P C, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inform. Theory, 2004.
+[6] Seho Myung, “Quasi-Cyclic LDPC Codes for Fast Encoding,” IEEE Trans. Inform. Theory,2005.
+[7] Hao Zhong and Tong Zhang, “Block-LDPC: A Practical LDPC Coding System Design Approach,” IEEE Trans. Circuits and Systems, 2005.
+[8] A.J.Felstrom and K.Sh.Ziganirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inform. Theory, 1999.
+[9] A. E. Pusane, A.J.Felstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, Jr, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. Communication, 2008.
+[10] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello,Jr, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inform. Theory, 2004.
+[11] T. Richardson, R. Urbanke, “Efficient Encoding of Low-Density ParityCheck Codes,”IEEE Trans. Inform. Theory, 2001.
+[12] J. Chen, R. M. Tanner, C. Jones, L. Yan Li, “Improved min-sum decoding algorithms for irregular LDPC codes,” Proc. ISIT, 2005.
+[13] http://www.nvidia.com/object/cuda develop.html. [14] IEEE Standard for Local and Metropolitan Area Networks Part 16, IEEE
+Standard 802.16e, 2008.
+
+10−3
+
+10−4
+
+BER
+
+10−5
+
+10−6
+
+10−7
+
+10−8
+
+10−9
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR(dB)
+
+Fig. 7. BER performance of QC-LDPC-CC and QC-LDPC-BC (2).
+
+VIII. CONCLUSION
+In this paper, a novel QC-LDPC-CC codeword structure and corresponding codeword construction algorithm are proposed. We also put forward the encoder and decoder architecture, which can achieve great BER performance and high hardware efficiency. By the GPU based simulation accelerator, we can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:19:33 UTC from IEEE Xplore. Restrictions apply.
+356
+
+

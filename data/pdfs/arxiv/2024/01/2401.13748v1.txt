@@ -1,0 +1,643 @@
+Log-Log Domain Sum-Product Algorithm for Information Reconciliation in Continuous-Variable
+Quantum Key Distribution
+
+Erdem Eray Cil and Laurent Schmalen Communications Engineering Lab, Karlsruhe Institute of Technology, 76187 Karlsruhe, Germany
+erdem.cil@kit.edu
+
+arXiv:2401.13748v1 [cs.IT] 24 Jan 2024
+
+Abstract—In this paper, we present a novel log-log domain sum-product algorithm (SPA) for decoding low-density paritycheck (LDPC) codes in continuous-variable quantum key distribution (CV-QKD) systems. This algorithm reduces the fractional bit width of decoder messages, leading to a smaller memory footprint and a lower resource consumption in hardware implementation. We also provide practical insights for fixed-point arithmetic and compare our algorithm with the conventional SPA in terms of performance and complexity. Our results show that our algorithm achieves comparable or better decoding accuracy than the conventional SPA while saving at least 25% of the fractional bit width.
+Index Terms—FEC, CV-QKD, information reconciliation, loglog SPA, SPA, FPGA-based LDPC decoder
+I. INTRODUCTION
+Quantum computing has made remarkable advances in recent years, challenging the security of conventional data encryption schemes that often rely on the hardness of factorizing large numbers [1]. A promising solution is quantum key distribution (QKD), which leverages the laws of physics to generate and distribute secret keys for symmetric encryption. Among the various QKD techniques, continuous-variable quantum key distribution (CV-QKD) has demonstrated great potential for long-distance secure communication, as shown, e.g., by the experimental achievement of a key exchange over more than 200 km [2].
+However, the practical implementation of CV-QKD faces several challenges, particularly in the information reconciliation phase, where the parties involved aim to extract a common raw key from their measurements. This critical step typically makes use of multi-edge type (MET) low-density parity-check (LDPC) codes [3]–[5], which require long codewords [3] and are sensitive to changes in decoding algorithms. Simplified belief propagation algorithms like the scaled minsum algorithm often exhibit suboptimal performance [6], [7].
+The requirements of an LDPC decoder in long-distance CVQKD systems pose practical hardware challenges. To address these challenges, GPU-based decoders are commonly used due to their high parallelism and floating-point precision, which improve performance and throughput [2], [6]. However, these decoders have drawbacks such as high energy consumption
+This work was funded by the German Federal Ministry of Education and Research (BMBF) under grant agreement 16KISQ056 (DE-QOR).
+
+and host dependence, limiting their commercial viability. As an alternative, FPGA-based decoders offer high parallel processing capabilities with lower energy consumption and host independence. However, CV-QKD systems require high precision in the fixed-point representation of decoder messages, which increases the memory footprint of the decoder [8]. To address this issue, a two-stage decoder architecture is proposed in [9]. By decreasing the fractional bit width, this architecture can reduce the memory footprint. However, it requires additional decoding iterations, leading to lower throughput.
+In this paper, we propose a novel log-log domain sumproduct algorithm (SPA) that reduces the precision of message representations by at least 25% without increasing the decoding iterations or decoding complexity compared to the conventional SPA. Section II provides the background on forward error correction and information reconciliation for CV-QKD systems. In Section III, we derive an approximation for the check node (CN) update of the SPA, streamlining CN processing. Section IV introduces the log-log domain SPA, and in Section V, we briefly explain its implementation in fixedpoint arithmetic. Section VI offers a comparative analysis between SPA and log-log domain SPA, demonstrating the reduction in memory footprint achieved by the latter.
+II. BACKGROUND A. Forward Error Correction in CV-QKD
+QKD allows two parties, Alice and Bob, to establish a shared secret by exchanging and measuring quantum states, while facing an adversary, Eve, who can access and manipulate the quantum channel. To generate a common bit string, which serves as raw key material, one of the parties, either Alice or Bob, uses forward error correction techniques to correct their string according to the other party’s string. This information reconciliation process is called reverse reconciliation when Alice corrects her string, and direct reconciliation otherwise. For CV-QKD, reverse reconciliation enables long-distance operation [10].
+We assume that the quantum channel carrying quantum states is an additive white Gaussian noise (AWGN) channel. The measured quantum state r is the sum of the transmitted quantum state t and the noise n, which has a variance of σn2 . Thus, the channel model is r = t + n.
+
+In reverse reconciliation, Bob measures the quantum states and generates the raw key material. He then sends this material to Alice through a noiseless classical public channel. To reduce the amount of information that an eavesdropper, Eve, can obtain from the message, Bob maps the random binary key material, denoted as C, to BPSK symbols and modulates them onto the measured quantum states before transmission. The message he sends through the noiseless public channel is m = (−1)C r.
+Then, Alice receives the message and divides it by t to recover C from m:
+
+y
+
+=
+
+m t
+
+=
+
+(−1)C (t + t
+
+n)
+
+=
+
+(−1)C
+
++
+
+n t
+
+= (−1)C + n′.
+
+(1)
+
+Assuming BPSK modulation for the transmitted quantum states, n′ follows a Gaussian distribution with zero mean and variance σn2 . Therefore, the synthetic channel after the division is a binary-input AWGN (BI-AWGN) channel.
+If the transmitted quantum states are not BPSK modulated, we can still assume the synthetic channel to be BI-AWGN channel, if we perform multidimensional reconciliation [11].
+The transmit optical powers are kept low to remain in the quantum regime, and the received signal-to-noise ratio (SNR) values are small due to the long transmission distance in longdistance CV-QKD systems. Thus, we need to apply low-rate codes optimized for BI-AWGN channels to recover the key material C in (1).
+The secret key rate (SKR) is an important metric for CVQKD because it quantifies the system’s secure key generation rate. For reverse reconciliation, the SKR reads
+
+SKR = (1 − FER)(βIAB − χBE)
+
+(2)
+
+= (1 − FER)(R − χBE).
+
+Here, IAB ≥ 0 denotes the capacity of the quantum channel, χBE ≥ 0 represents the Holevo bound on the information leaked to Eve, β is the reconciliation efficiency defined as the ratio of the code rate R to IAB, and the FER is the frame error rate after the decoding. According to (2), β must be larger than χBE/IAB to achieve a non-zero SKR. Thus, the system operates close to the channel capacity, and high FER values, on the order of 0.1, are deemed acceptable [6].
+
+B. Multi-Edge Type LDPC Codes for CV-QKD MET-LDPC codes with a cascade structure are suitable
+for long-distance CV-QKD systems that operate in low SNR quantum channels, as they can achieve near-capacity performance [2], [12]. These codes have a graph structure that consists of two sub-graphs: one sub-graph represents a highrate code, and the other sub-graph contains degree-1 variable nodes (VN) similar to low-density generator matrix codes. The connection between the sub-graphs is established by specific, optimized edges.
+
+3
+
+3
+
+14
+
+18
+
+23
+
+2
+
+2
+
+35
+
+4
+
+6
+
+19
+
+4
+
+3 23
+2
+
+3
+5
+2
+
+6
+
+(a)
+
+(b)
+
+Fig. 1. Protographs of the optimized TBP-LDPC codes [3] of rates (a) R = 0.01 and (b) R = 0.1. The (red) numbers at the lower right in the boxes represents the optimized repetition values for the subgraph in the box.
+
+To simplify the design of low-rate MET-LDPC codes, the concept of type-based protograph LDPC (TBP-LDPC) codes is introduced in [3]. The protographs for TBP-LDPC codes with rates R = 0.01 and R = 0.1 are optimized and presented in Fig. 1, following the notation from [3]. The parity check matrices of the codes used in the simulations are obtained by lifting these protographs.
+In this paper, the following notation is employed: Es/N0 = 1/(2σn2 ) represents the SNR of the BI-AWGN channel. Log-likelihood ratio (LLR) values are denoted by L, where L = αγ, with α representing the sign and γ the magnitude of the LLR. The logarithm of the magnitude of LLR values is denoted by L˜, hence γ = exp (L˜). Lch,i stands for the channel LLR value for the VN i. For an LDPC code with parity check matrix H, the set N (i) = {j : Hj,i = 1} denotes the connection set of the VN i, whereas the set M(j) = {i : Hj,i = 1} denotes the connection set of the CN j. L[ic←] j and L[jv→] i represent the messages from CN/VN j to VN/CN i, respectively. N ∈ N denotes the blocklength of the code.
+
+C. Sum Product Algorithm
+The SPA stands out as the most effective practical algorithm for decoding LDPC codes. To ensure numerical stability, LLR values are used as the messages in the SPA decoding. The node update rules for the SPA can be expressed as:
+1) Initialization: for each VN i with i ∈ {1 . . . N } and j ∈ N (i), set L[iv→] j = Lch,i.
+2) CN update: for each CN j and i ∈ M(j), calculate
+
+
+
+
+
+L[ic←] j = 2
+
+αk · tanh–1 
+
+tanh
+
+γℓ 2
+
+ (3)
+
+k∈M(j)\{i}
+
+ℓ∈M(j)\{i}
+
+where Lℓ[v→] j = αℓγℓ. 3) VN update: for each VN i and j ∈ N (i), calculate
+
+L[iv→] j = Lch,i +
+
+L[ic←] k
+
+k∈N (i)\{j}
+
+4) A posteriori LLR: for each VN i with i ∈ {1 . . . N }, calculate
+
+Li[total] = Lch,i +
+
+L[ic←] k
+
+k∈N (i)
+
+xˆi
+
+=
+
+1 − sgn (L[itotal]) 2
+
+5) Stopping Criteria: if HxˆT = 0, with xˆ = (xˆ1, . . . , xˆN ) or the number of decoding iterations equals the limit, stop. Otherwise, go to Step 2.
+
+III. THE APPROXIMATE CN UPDATE EQUATION
+In this section, we revisit the approximation for the SPA CN update equation from [13], originally designed for high rate codes, demonstrating its applicability for low rate codes. To achieve this, we start with the CN update equation for a degree-3 CN and then generalize it to higher degrees.
+The box-plus operator for input LLRs L1 = α1γ1 and L2 = α2γ2, where αi and γi represent the sign and the magnitude of the LLR respectively, can be expressed as [14, Ch. 5]:
+
+L1 ⊞ L2 =
+
+
+
+
+
+1 + e− γ1+γ2
+
+α1α2 min(γ1, γ2) + log 
+
+.
+
+(4)
+
+1 + e− γ1−γ2
+
+=: s(γ1,γ2)
+
+Without loss of generality, we assume that
+
+γmin := γ1 ≤ γmax := γ2 and γmax = dγmin
+
+for
+
+any
+
+1 ≤ d ∈ R. Under this assumption, the correction term
+
+s(γ1, γ2) = s(γmin, γmax) can be reformulated as follows:
+
+s(γmin, γmax) = log (1+e−(d+1)γmin )−log (1+e−(d−1)γmin )
+
+(=i)
+
+∞
+
+(−1)k−1 k
+
+e−kdγmin
+
+k=1
+
+e−kγmin − ekγmin
+
+(ii)
+≈2
+
+∞
+(−1)ke−kdγmin γmin
+
+k=1
+
+(i=ii)
+
+−
+
+1
+
+2 γmin + edγmin
+
+=
+
+−
+
+1
+
+2 γmin + eγmax
+
+·
+
+(5)
+
+Here, step (i) involves expressing the logarithmic terms using the Taylor series. In step (ii), by assuming small values of kγmin, we employ exp(x) ≈ 1 + x. This assumption is reasonable since the density of the degree-1 VNs in typical low-rate codes used in CV-QKD is high. To give an example, in the TBP-LDPC code of rate 0.01 in Fig. 1a, 98.9% of the CNs are connected to degree-1 VNs. It is important to note that this approximation holds for small values of kγmin, and the exponential decay exp (−kdγmin) aids in reducing the error between the actual function and its approximation for large values of kγmin. In step (iii), we employ the geometric series 1/(1 + x) = ∞ k=0(−x)k.
+
+Replacing the correction term in (4) with the approximate correction term (5) yields
+
+L1 ⊞ L2 ≈ α1α2
+
+γmin
+
+−
+
+2 γmin 1 + eγmax
+
+= α1α2γmin tanh
+
+γmax 2
+
+·
+
+Hence, the output LLR of the CN j to the VN i for i ∈ M(j) can be generalized as:
+
+
+
+
+
+Li[c←] j ≈
+
+αk · γm · 
+
+tanh
+
+γℓ 2
+
+,
+
+(6)
+
+k∈M(j)\{i}
+
+ℓ∈M(j)\{i,m}
+
+where m is defined to be:
+
+m = arg mink∈M(j)\{i} |Lk[v→] j |.
+
+(7)
+
+The approximation (6) shows how each incoming LLR value affects the output value. Specifically, the tanh function saturates for high-magnitude LLR values, so they can be ignored in the computation. On the other hand, low-magnitude values scale the output value by tanh (γℓ/2), so they have a proportional impact. This feature can be used to improve the performance of scaled min-sum decoding by choosing more accurate scaling coefficients, as explained in [7], [13].
+In Fig. 2, we compare the performances of decoders utilizing the original CN update (3) and the approximation (6). To assess the accuracy of the approximation across different SNR regimes, we employ two TBP-LDPC codes of rates 0.1 and 0.01 with the protographs given in Fig. 1.
+In the ultra-low rate regime (R = 0.01), as depicted in Fig. 2a, the approximation closely aligns with the original CN update equation, resulting in minimal performance degradation. However, in the low-rate scenario (R = 0.1), the degradation is approximately 0.05 dB at an FER of 0.1, as can be seen in Fig. 2b. It is noteworthy that the performance of the approximate decoding surpasses that of the SPA in the error floor region for R = 0.1, a phenomenon also observed in [13] for high rate codes.
+
+IV. LOG-LOG DOMAIN SPA
+Low-rate decoders need high precision for message representation in the decoder [8]. This can be seen from the approximate CN update equation. By using (6) and linearizing tanh, the CN output LLR is proportional to the product of the incoming messages. The CN output LLR is an extrinsic message that helps to increase the bit reliability, but it is very small when the incoming messages are small in average. If the fixed-point representation is not precise enough, this extrinsic message is rounded to zero and the VN information will not improve. Therefore, low-magnitude messages require high precision, while high-magnitude messages can tolerate lower precision.
+To implement decoders for ultra-low rate codes with rates around R = 0.01 on resource-limited FPGAs, the high precision requirement poses a significant challenge. Together with the high block lengths of the codes, it causes high
+
+100
+
+100
+
+Frame Error Rate (FER) Frame Error Rate (FER)
+
+10−1
+
+10−1
+
+10−2
+
+10−2
+
+10−3
+
+SPA (3) Approx. CN (6)
+−21.5 −21.4 −21.3 −21.2
+Es/N0 (dB)
+
+−21.1
+
+10−3 SPA (3) Approx. CN (6)
+10−−411.3 −11.2 −11.1 −11 −10.9 −10.8 −10.7
+Es/N0 (dB)
+
+(a)
+
+(b)
+
+Fig. 2. Performance comparison of the SPA CN and the approximate CN update equations for the TBP-LDPC codes of rates (a) R = 0.01 with N = 998400 and (b) R = 0.1 with N = 128000
+
+memory consumption. Consequently, new decoding algorithms that can work with lower precision are needed. To this end, we propose a decoding algorithm that uses the logarithmic LLRs (log-LLR). The uniformly quantized log-LLR has the advantage of having high precision for the small LLR magnitudes and low precision for large ones. We refer to this algorithm as log-log domain SPA.
+Utilizing (6), the log-log domain SPA can be articulated as follows:
+1) Initialization: for each VN i with i ∈ {1 . . . N } and j ∈ N (i), set L˜[iv→] j = L˜ch,i = ln(|Lch,i|) and αi[v→] j = αi = sgn(Lch,i).
+2) CN update: for each CN j and i ∈ M(j), calculate
+
+L˜[ic←] j = L˜[mv]→j +
+
+ln
+
+tanh
+
+exp (L˜[ℓv→] j ) 2
+
+(8)
+
+ℓ∈M(j)\{i,m}
+
+αi[c←] j =
+
+αk[v→] j ,
+
+k∈M(j)\{i}
+
+where m is defined in (7). 3) VN update: for each VN i and j ∈ N (i), calculate
+
+Li[v→] j = αi exp(L˜ch,i) +
+
+αi[c←] k exp(L˜i[c←] k)
+
+k∈N (i)\{j}
+
+L˜[iv→] j = ln |L[iv→] j |
+
+(9)
+
+αi[v→] j = sgn L[iv→] j
+
+4) A posteriori LLR: for each VN i with i ∈ {1 . . . N }, calculate
+
+Li[total] = αi exp(L˜ch,i) +
+
+αi[c←] k exp(L˜[ic←] k)
+
+k∈N (i)
+
+xˆi
+
+=
+
+1 − sgn (Li[total]) 2
+
+5) Stopping Criteria: if HxˆT = 0, with xˆ = (xˆ1, . . . , xˆN ) or the number of decoding iterations equals the limit, stop. Otherwise, go to Step 2.
+
+During initialization, the logarithm of each channel LLR is computed. Subsequently, the log-LLR values and the sign of the channel LLRs are stored in the memory. The CN update (8) can be effectively approximated using a piecewise linear approach, eliminating the need for lookup tables. With this approach, (8) becomes
+
+L˜i[c←] j = L˜[mv]→j +
+
+g(L˜[ℓv→] j ),
+
+ℓ∈M(j)\{i,m}
+
+(10)
+
+where g(x) is defined as:
+
+x − 0.694
+
+x ≤ −0.76
+
+
+
+
+
+g(x) = 0.833x − 0.822 −0.76 < x ≤ 0.538 (11)
+
+0.389x − 0.583 0.538 < x ≤ 1.414
+
+
+
+0
+
+1.414 < x.
+
+Since the scaling coefficients and biases in (11) are constant, g(x) can be easily implemented in hardware.
+To compute the log-LLR value L˜i[v→] j without using the exp function or calculating L[iv→] j, we use the log-sum/differenceexp functions f±(x, y) = max(x, y)+ln(1±exp(−|x−y|)) in the VN update. In the pairwise processing of log-LLR values in (9), we need to evaluate either ln(1 + exp(−|x − y|)) or ln(1 − exp(−|x − y|)) depending on the sign bits of x and y. We can store these functions as lookup tables for the decoding. The sign bit corresponding to this log-LLR value can be obtained in hardware by
+
+1 1 1 1 {αx=αy}αx + {αx̸=αy} {x≥y}αx + {x<y}αy , (12)
+where αx and αy are the sign bits corresponding to log-
+LLR values x and y, and 1{a=b} is the indicator function
+that outputs 1 if the condition a = b is satisfied, otherwise it evaluates to 0. The implementation of (12) in hardware can be achieved by using comparators and simple logic gates.
+
+V. FIXED-POINT REPRESENTATION OF LOG-LLR MESSAGES
+
+Fixed-point (FP) representation is preferred for numbers in FPGA, where each number consists of (1, x, y) bits. The first bit indicates the sign, the next x bits represent the integer part, and the last y bits denote the fractional part of the number. This allows us to represent values within the range (−2x, 2x).
+As discussed in the previous section, log-LLR messages are more robust to quantization than LLR messages, and thus need less precision in the FP representation. However, the sign of LLRs has to be stored along with the log-LLR values, which adds one extra bit to the message size.
+The significance of the minimum value in the FP format of the log-LLR messages cannot be overstated, as it represents the smallest magnitude of LLR values. Consequently, the log-LLR values exhibit an uneven range around zero, with a negative offset. This imbalance necessitates an additional bit for the integer part of the FP format. To circumvent this issue, we introduce a constant positive offset to the messages, effectively eliminating the sign bit of the log-LLR and making room for the sign bit of the LLR value.
+For example, suppose that the SPA requires 8 bits of precision. The smallest non-zero value of γ that this format can handle is 2−8, which corresponds to ln(2−8) ≈ −5.5 in log-LLR. To handle LLR values up to 10, the log-LLR representation must cover the interval [−5.5, 2.5]. A possible way to represent this range is to use FP notation with one sign bit and three integer bits, which would need a total of 4 bits. However, we can reduce the total bits to 3 by adding a constant offset of 5.5 to the log-LLR values, which removes the sign bit from the log-LLR format. This ensures that all log-LLR values are positive and lie in the range of 0 to 8. The modified decoding algorithm incorporates this offset operation.
+Assuming that the added offset term is denoted as b, the updated decoding algorithm can be expressed as follows:
+1) Initialization: for each VN i with i ∈ {1 . . . N } and j ∈ N (i), set L≈i[v→] j = L˜ch,i + b and αi[v→] j = αi = sgn(Lch,i).
+2) CN update: for each CN j and i ∈ M(j), calculate
+
+L≈i[c←] j = L≈[mv]→j +
+
+ln tanh
+
+ℓ∈M(j)\{i,m}
+
+αi[c←] j =
+
+αk[v→] j ,
+
+k∈M(j)\{i}
+
+exp (L≈[ℓv→] j − b) 2
+
+where m is defined in (7). 3) VN update: for each VN i and j ∈ N (i), calculate
+
+Li[v→] j
+
+=
+
+αi
+
+≈
+exp(Lch,i
+
+−
+
+b)
+
++
+
+αi[c←] k exp(L≈[ic←] k − b)
+
+k∈N (i)\{j}
+
+L≈[iv→] j = ln |Li[v→] j | + b
+
+αi[v→] j = sgn L[iv→] j
+
+100
+
+Frame Error Rate (FER)
+
+10−1
+
+10−2
+
+SPA - floating point SPA - FP(1,3,8) log-LLR - FP(1,3,6)
+
+−21.5
+
+−21.4 −21.3
+Es/N0 (dB)
+
+−21.2
+
+−21.1
+
+Fig. 3. Performance comparison of floating point sum-product algorithm (SPA), fixed point (FP) SPA and FP log-LLR decoding for the TBP-LDPC codes of rates R = 0.01 with N = 998400. FP(1,x,y) represents one sign bit, x integer bits, y fraction bits for FP representation.
+
+4) A posteriori LLR: for each VN i with i ∈ {1 . . . N }, calculate
+
+L[itotal]
+
+=
+
+αi
+
+≈
+exp(Lch,i
+
+−
+
+b)
+
++
+
+αi[c←] k exp(L≈[ic←] k − b)
+
+k∈N (i)
+
+xˆi
+
+=
+
+1
+
+− sgn (Li[total]) 2
+
+5) Stopping Criteria: if HxˆT = 0, with xˆ = (xˆ1, . . . , xˆN ) or the number of decoding iterations equals the limit, stop. Otherwise, go to Step 2.
+We start by computing the logarithm of the LLR values of the channel and adding the offset term b. We can use the log-sum/difference-exp function for the VN update, as described in Section IV. The CN update requires evaluating ln(tanh(exp(x − ln(2) − b))), which can be simplified as g(x − b) in (11). We do not need to subtract or add b in CN or VN update, because the output log-LLR values are offset by b when input values are offset.
+
+VI. RESULTS
+
+A. Performance We demonstrate the resource reduction achievable with
+LDPC decoding using log-LLR messages by decoding the TBP-LDPC codes of rates R = 0.01 and R = 0.1 with the protographs in Fig. 1. We compare the performance with a fixed-point SPA decoder that processes LLRs, following the algorithm in Section II-C. In the log-log domain SPA decoder, we optimize the offset value b in the fixed-point representation. We select b = 5 after extensive simulations, which balances the representation of small and large LLR values within the fixed integer bit width.
+Fig. 3 shows the Monte-Carlo simulation results for the TBP-LDPC code of rate R = 0.01. The log-LLR representation with 6 fractional bits achieves a performance close to the floating-point SPA. The FP SPA with 8 fractional bits suffers from saturation effects at low FER values, while the
+
+100
+
+Frame Error Rate (FER)
+
+10−1
+
+10−2
+
+10−3
+
+SPA - floating point SPA - FP(1,3,7) log-LLR - FP(1,3,4)
+
+10−−411.3 −11.2 −11.1 −11 −10.9 −10.8 −10.7
+
+Es/N0 (dB)
+
+Fig. 4. Performance comparison of floating point sum-product algorithm (SPA), fixed point (FP) SPA and FP log-LLR decoding for the TBP-LDPC code of rate R = 0.1 with N = 128000. FP(1,x,y) represents one sign bit, x integer bits, y fraction bits for FP representation.
+
+log-log domain SPA avoids them. The log-log domain SPA outperforms the FP SPA decoder in the ultra-low rate regime, even with a 25% reduction in fractional bit width.
+Fig. 4 shows the simulation results for the TBP-LDPC code of rate 0.1. The log-log domain SPA has a slight performance gap to the floating-point SPA due to the CN update approximation. However, this gap is only 0.05 dB at an FER of 0.1, which is acceptable as it only slightly affects the reconciliation efficiency β. The log-log domain SPA with 4 fraction bits performs better than the FP SPA with 7 fraction bits at an FER of 0.1. The FP log-log domain SPA also has a lower error floor than the FP SPA, which saturates at an FER of 0.09. The log-log domain SPA is a feasible option for CV-QKD and other low rate code applications, as it reduces the fractional bit width by more than 40%.
+B. Complexity We compare the complexity of different algorithms by ex-
+amining their node update equations. In this analysis, we focus on pairwise message processing. The CN update equation for the SPA, as shown in (4), requires one minimum operation, two table lookups, two summations, and two subtractions. On the other hand, the VN update equation involves one summation for each LLR pair. For the log-log domain SPA, the CN update equation given by (10) involves one minimum operation, one summation, one subtraction, one multiplication, and up to three threshold comparisons. However, we do not consider the thresholds, scaling coefficients, and values to be subtracted in the decoding complexity, as they are constant and easily implemented in hardware, as discussed in Section IV. The VN update equation for the log-log SPA requires one maximum operation, one table lookup, one summation, and one subtraction for each LLR pair. We disregard the summations and subtractions, as they have lower complexity than the table lookups. Based on these considerations, we conclude that the log-log SPA and the SPA have similar complexities.
+
+VII. CONCLUSION In this paper, we proposed a novel log-log domain SPA for decoding LDPC codes in CV-QKD systems. Our algorithm reduces the fractional bit width of the messages exchanged by the decoder by at least 25%, leading to lower memory consumption and simpler hardware implementation. We provided practical guidelines for fixed-point arithmetic and compared the performance and complexity of our algorithm with the conventional SPA. Our algorithm achieves decoding accuracy comparable to floating point SPA and superior to fixed point SPA.
+
+REFERENCES
+
+[1] I. B. Djordjevic, Physical-layer Security and Quantum Key Distribution,
+
+1st ed. Springer Nature, Sep. 2019.
+
+[2] Y. Zhang, Z. Chen, S. Pirandola, X. Wang, C. Zhou, B. Chu, Y. Zhao,
+
+B. Xu, S. Yu, and H. Guo, “Long-distance continuous-variable quantum
+
+key distribution over 202.81 km of fiber,” Phys. Rev. Lett., vol. 125, p.
+
+010502, Jun. 2020.
+
+[3] K. Gu¨mu¨s¸ and L. Schmalen, “Low rate protograph-based LDPC codes
+
+for continuous variable quantum key distribution,” in Proc. International
+
+Symposium on Wireless Communication Systems (ISWCS), 2021.
+
+[4] P. Jouguet, S. Kunz-Jacques, and A. Leverrier, “Long-distance
+
+continuous-variable quantum key distribution with a Gaussian modu-
+
+[5]
+
+lHat.iMona,”niP, Thy. sG. eRhervin. gA,,Pv. oGl.ra8b4e,npw.e0g6e2r,3B17. O,¨Dmeecr.,
+
+2011. C. Pacher,
+
+and
+
+U.
+
+L.
+
+An-
+
+dersen, “Multiedge-type low-density parity-check codes for continuous-
+
+variable quantum key distribution,” Phys. Rev. A, vol. 103, no. 6, Jun.
+
+2021.
+
+[6] M. Milicevic, C. Feng, L. M. Zhang, and P. G. Gulak, “Quasi-cyclic
+
+multi-edge LDPC codes for long-distance quantum cryptography,” npj
+
+Quantum Information, vol. 4, no. 1, Apr. 2018.
+
+[7] E. E. Cil and L. Schmalen, “Iteration-dependent scaled min-sum decod-
+
+ing for low-complexity key reconciliation in CV-QKD,” in Proc. Opt.
+
+Fiber Commun. Conf. (OFC), San Diego, CA, USA, Mar. 2024.
+
+[8] S. S. Yang, J. Q. Liu, Z. G. Lu, Z. L. Bai, X. Y. Wang, and Y. M. Li,
+
+“An FPGA-based LDPC decoder with ultra-long codes for continuous-
+
+variable quantum key distribution,” IEEE Access, vol. 9, pp. 47 687–
+
+47 697, 2021.
+
+[9] C. Zhou, Y. Li, L. Ma, J. Yang, W. Huang, H. Wang, Y. Luo,
+
+F. C. M. Lau, Y. Li, and B. Xu, “High-throughput decoder
+
+of quasi-cyclic ldpc codes with limited precision for continuous-
+
+variable quantum key distribution systems,” 2022. [Online]. Available:
+
+https://arxiv.org/abs/2207.01860
+
+[10] C. Silberhorn, T. C. Ralph, N. Lu¨tkenhaus, and G. Leuchs, “Continuous
+
+variable quantum cryptography: beating the 3 db loss limit,” Phys. Rev.
+
+Lett., vol. 89, p. 167901, Sep. 2002.
+
+[11] A. Leverrier, R. Alle´aume, J. Boutros, G. Ze´mor, and P. Grangier,
+
+“Multidimensional reconciliation for a continuous-variable quantum key
+
+distribution,” Phys. Rev. Lett., vol. 77, no. 4, Apr. 2008.
+
+[12] T. Richardson and R. Urbanke, “Multi-edge type LDPC codes,” 2004.
+
+[Online]. Available: http://infoscience.epfl.ch/record/95821
+
+[13] M. Magan˜a and P. Poocharoen, “Different perspective and approach to
+
+implement adaptive normalised belief propagation-based decoding for
+
+low-density parity check codes,” IET Communications, vol. 6, no. 15,
+
+pp. 2314–2325, Oct. 2012.
+
+[14] W. E. Ryan and S. Lin, Channel Codes - Classical and Modern.
+
+Cambridge University Press, 2009.
+
+

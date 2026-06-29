@@ -1,0 +1,215 @@
+2022 24th International Conference on Digital Signal Processing and its Applications (DSPA) | 978-1-6654-9443-4/22/$31.00 ©2022 IEEE | DOI: 10.1109/DSPA53304.2022.9790744
+
+High throughput FPGA implementation of Min-Sum LDPC Decoder Architecture for Wireless
+Communication Standards
+Pavel Nikishkin, Ruslan Goriushkin, Nikita Vinogradov, Evgeny Likhobabin and Vladimir Vityazev, Member, IEEE
+Department of Telecommunications and foundations of radio engineering Ryazan State Radio Engineering University, RSREU Ryazan, Russia
+nikishkin.p.b@tor.rsreu.ru, gorushkin.r.s@tor.rsreu.ru, likhobabin.e.a@tor.rsreu.ru, vityazev.v.v@rsreu.ru
+
+Abstract—This paper presents a min-sum decoder design for Quasi-Cyclic (QC) Low-Density Parity-Check (LDPC) codes. The design is supported various LDPC Parity-Check matrices including the WiMAX (IEEE 802.16e) and the WiFi (IEEE 802.11n) standards matrices. New techniques such as pipelining of the decoding architecture core are proposed. These core calculate variable-to-check (VTC) and new check-to-variable (CTV) messages and also update estimate of posterior probabilities (APPs). The parallel multicore decoding architecture implies a prior shift of values based on the LDPC matrix and simultaneous calculation of values for the core. Proposed decoder is implemented on the Zynq-7000 Mini-ITX Evaluation Board (XC7Z100-2FFG900).
+Index Terms—Communication systems, Quasi-Cyclic codes, Low-Density Parity-Check codes, error correction codes, parallel decoder architecture, iterative decoding, min-sum (MS) algorithm, field-programmable gate array, FPGA.
+I. INTRODUCTION
+The Low-density parity-check (LDPC) codes was proposed by Gallager in 1963 [1]. MacKay and Neal [2] gave LDPC codes new life in the year 1999. Currently, there is a high interest in LDPC codes due to their excellent error correcting capability compared by turbo codes. [3]. For error probability level of 10−6 it is possible to get gain in the signal to noise ratio due to the LDPC coding up to 3 dB. The use of these codes is also effective in counteracting wideband impulse noise, as well as signal interference. These codes are widely used by communication standards such as IEEE 802.11n/ad/ay/ax (WiFi) [4], IEEE 802.16e (WiMAX) [5], and ETSI 5G [6].
+In this paper we provide the decoder implementation for QC-LDPC codes, which meets the flexibility to work with various code rates and lengths. The proposed LDPC decoder can operate with matrices similar to IEEE 802.11 and IEEE 802.16e.
+The result of implementing architecture on the FPGA part of the Zynq-7000 Mini-ITX Evaluation Board (XC7Z1002FFG900) are provided.
+This work was supported by Russian Science Foundation under Grant 1779-20302.
+
+The paper is organized as follows: the next section presents the overview of the decoding algorithm used herein. The used FPGA architecture of the LDPC decoder is described in section III. Some decoder implementation features are presented in the section IV. The hardware implementation results are presented in section V. Finally, Section VI concludes this paper.
+
+II. MIN-SUM DECODING ALGORITHM
+
+Low-Density Parity-Check (LDPC) codes are a class of linear block codes. The min-sum algorithm (MSA) is a simplified Belief propagation algorithm (BP) built by reducing complexity of the unit responsible for check node updates (CNU). Compared to the BP algorithm, the Min-Sum algorithm does not provide accurate APP values, but only gives an approximate estimate. This allows for a gain in computational costs, but leads to a decrease in decoding quality. The name these codes comes from the characteristic of their parity-check matrix which contains only a few 1’s in comparison to the amount of 0’s. A regular (N, K) LDPC code is represented as check matrix H which includes M ≥ N − K rows and N columns. The M rows of H are defined as check nodes, and all the elements of a LDPC codeword as variable nodes.
+The algorithm implementation includes the following steps: 1) Initialization: The channel reliability pn of the variable node n is calculated based on a priori probability:
+
+pn
+
+=
+
+log
+
+P (yn|cn P (yn|cn
+
+= =
+
+0) ,
+1)
+
+(1)
+
+where cn is the n-th bit of a codeword, yn is a value received from the channel. The value of the check-to-variable (CTV) message from the check node m to the variable node n during the k-th iteration rmn is set to zero at this step.
+2) Iterative Decoding: The set of variables involved in checking m is defined as N (m) and the set of variable n checks is defined as M (n). The set N (m) without the variable n is denoted as N (m)/n
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:05 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 1. FPGA LDPC decoder structure
+
+and the set M (n) without the check m is denoted as M (n)/m [10].
+The variable-to-check message (VTC) qmn[k] is a message from the variable node n to the check node m. The VTC message is calculated at each iteration as follows:
+
+qmn[k] = pn +
+
+rm n[k − 1].
+
+(2)
+
+m ∈{M (n)/m}
+
+The LDPC decoder makes a hard decision by calculating the estimate of a-posterior probability (APP) as follows:
+
+Λn[k] = pn +
+
+rm n[k − 1]
+
+(3)
+
+m ∈M (n)
+
+The value of the n-th result bit of the codeword xn is equal to 0 when Λn > 0 and xn = 1 otherwise. The decoding process is completed when the entire codeword x = [x1, x2, · · · · · · xN ] satisfies the parity check equations: Hx = 0, or the preset
+
+maximum number of iterations is reached.
+
+If the decoding process does not stop, then the check-tovariable message rmn[k] for the check node m is calculated as follows:
+
+
+
+
+
+rmn[k] = 
+
+sign(qmn [k]) ×
+
+n ∈{N (m)/n}
+
+× α × min {|qmn [k]|}
+
+(4)
+
+n ∈{N (m)/n}
+
+Formula (4) uses the normalized coefficient α to compensate the performance loss compared to the BP algorithm [11]. In this article, the coefficient α is assumed to be 0.75. Compared to the BP algorithm, usage of the min-sum algorithm reduces consumption of hardware resources and the computational complexity of CNUs [10].
+
+III. LDPC DECODER ARCHITECTURE
+The general structure of the proposed LDPC decoder is shown in Figure 1 [12].
+The soft decisions from the demodulator are used as input to the decoder. The input serial bitstream is converted into a parallel and is written to the distributed memory. For ease of
+
+parallel reading and writing, the APP memory is divided into K = N/z blocks, where (N ) - length of the codeword and (z) - size of the parity check matrix circulant.
+When reading data from the memory block, the APP value blocks are shifted according to the initial shifts specified by the check matrix. The reverse shift operation on the APP value blocks is performed after processing on the cores before writing them to the memory block.
+The Iterations counter block makes a decision on completion of the decoding process and output of the result.
+The Operating mode selection block is used to switch the operating mode to ”decoding” or ”result output” and to organize output of the decoding result.
+The VTC calculation block is used to calculate the variableto-check messages based on APPs from the APP block.
+The Min/submin calculation block receives dr signed VTC values including the minimum and subminimal values at the input. The dr value is determined by the check matrix. The subminimal value is obtained at the output corresponding to the input with the minimum modulo value. The minimum value is obtained at the other outputs. All outputs are signed and have the sign obtained from the Signs XORing block. The VTC input is also passed to the output. The described algorithm is shown in Figure 2.
+To calculate the updated CTV values, the input of the CTV and APP calculation block requires the minimum VTC value, the product of the VTC signs and the sign for the current value. The updated APPs are obtained by summing the VTCs and CTVs.
+The decoder architecture was described in detail in the [12].
+IV. DECODER ARCHITECTURE OPTIMIZATION
+This work is dedicated to increasing the throughput of the decoder and reducing the consumed resources. Some issues were found during decoder architecture implementation:
+• Layers can only be processed sequentially, the next layer cannot be processed until the end of the previous one;
+• The growth of consumed resources with increasing circulant size, since the number of algorithm cores is equal to the size of the circulant;
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:05 UTC from IEEE Xplore. Restrictions apply.
+
+use any number of cores multiple of the size of the circulant. Thus, with an insignificant increase in the number of clock cycles for performing one decoding iteration, the resources for the implementation was significantly reduced. This implementation also allows to increase decoder throughput by placing multiple decoders on a single chip.
+
+Figure 2. Check node unit calculation block
+• A large number of the APP memory blocks shifts are required for the decoder to operate.
+A. Independent layers processing
+The row-layered decoding approach is used in this work. In row-layered decoding the parity check matrix of the LDPC code is partitioned into multiple layers (rows). The message updating is performed layer by layer. The decoding process occurs using a parity check matrix. The initial matrices are presented in the IEEE 802.16e (WiMAX) [5] and the IEEE 802.11n (WiFi) [4] standards. According to the structure of the check matrix of the 802.16e standard, to start processing a new layer it is necessary to wait until the end of the calculation of the previous one. It was noticed that the LDPC check matrix has layers that are independent of each other. Therefore, the rows of the matrix can be rearranged in such a way that each layer can be independent of the previous and next one. So for a matrix from the 802.16e standard the following layer reading order is suitable: 1-3-5-9-7-12-8-6-11-2-4-10. The resulting matrix is shown in the Figure 3. The result of rearranging layers does not affect to the bit error rate (BER). Using independent layers makes it possible to nearly double the decoder’s throughput, since the calculation of a new layer can be started without waiting for the previous one to be ready.
+B. Pipeling of decoding architecture core
+The architecture was optimized to use the pipeline structure of the LDPC decoder core. This allowed to increase the throughput and made it possible to receive data to to the decoder core on every clock cycle. The LDPC decoder core calculate variable-to-check (VTC) and new check-tovariable (CTV) messages and also update posterior probabilities (APPs). In the LDPC decoder architecture presented in [12], the updated APPs and CTV values are calculated in parallel for one data block. The main problem of this approach was the suspension of the kernel until the end of the calculation in the minimum/subminimum block. To solve this problem, a pipelined architecture was implemented for the minimum/subminimum block. After that, it became possible to
+
+C. Reducing the number of APP block shift operations
+The algorithm assumes that the shifted in accordance with the check matrix APP data blocks are fed to the input of the cores. After processing on cores, the output needs to be shifted again in order to restore the order of the blocks. The last shift can be excluded. This can be accomplished by slightly changing the APP write algorithm to memory. So, if the initial offset value N is set for the APP block on the current layer in accordance with the check matrix, this APP block will be written into memory with the values shifted by N . The new shift value should be considered during the next processing of this APP block by changing the offset value using the expression (5).
+
+N ewSh = (OldSh−P revSh+M axSh) mod M axSh, (5)
+
+where N ewSh is the new shift value, OldSh is the original shift value, P revSh is the shift value on the previous for this APP block layer, MaxSh is the maximum shift value (circulation value). Values from the original matrix presented in the Figure 3 with rearranged layers are used for the OldSh and the P revSh values. The resulting matrix is shown in the Figure 4.
+
+V. IMPLEMENTATION RESULTS
+
+On the board of Zynq-7000 Mini-ITX Evaluation Board
+
+(XC7Z100-2FFG900) can be placed up to 5 decoders with
+
+a codeword length of 576 and 1 decoder with a codeword
+
+length of 2304. In this case, throughput of 1 Gb/s and 560
+
+Mb/s for 10 iterations can be achieved, respectively.
+
+The implementation results show that the decoder can oper-
+
+ate with any LDPC matrices of the WiMAX (IEEE 802.16e)
+
+and WiFi (IEEE 802.11n) protocols. The decoder can obtain
+
+the maximum throughput of ∼ 5.6 Gpbs per iteration.
+
+At the same time the proposed design may be used to
+
+synthesize decoders not only for IEEE 802.16e and IEEE
+
+802.11n standards, but for any QC-LDPC code.
+
+The decoding throughput (T) of the LDPC decoder can be
+
+evaluated as
+
+T = Fmax × BL
+
+(6)
+
+CP I × NOI
+
+where Fmax is the maximum clock frequency, BL is the block length, CP I is the number of cycles per iteration and N OI is the number of iterations.
+The proposed LDPC decoder was implemented on the Zynq-7000 Mini-ITX Evaluation Board (XC7Z100-2FFG900) FPGA which provides 277 400 look-up tables (LUTs), 554 800 flip-flops (FF) and 755 block RAMs (BRAMs). Implementation results for codeword with a length 576 and rate R = 1/2 are LUT = 39536 (14%), FF = 34958 (6%) and BRAM =
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:05 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 3. Parity-check matrix for rate-1/2 LDPC code in 802.16e standard with rearranged layers order
+
+Figure 4. Offset-modified parity-check matrix for rate-1/2 LDPC code in 802.16e standard with rearranged layers order
+
+26(3%). The results for codeword with a length 2304 and rate R = 2/3 are LUT = 147952 (53%), FF = 147409 (6%) and BRAM = 3 (0.4%).
+VI. CONCLUSION
+A min-sum architecture of a QC-LDPC decoder was proposed herein. The parallel decoding architecture was implemented using the Zynq-7000 Mini-ITX Evaluation Board (XC7Z100-2FFG900).
+The maximum throughput is achieved when the codeword size is 2304 at the frequency of 180 MHz. The results of comparing the proposed decoder with similar ones are shown in Table I. The Table I shows that in contrast to [8] the proposed architecture allows to increase the throughput by increasing the codeword size. It also allows to work with a wider range of code lengths than [9]. An increase in throughput has also been achieved compared to our previous work [12].
+
+TABLE I. Comparison of FPGA Implementations of LDPC Decoders
+
+Block Length Frequency, MHz
+FPGA Technology Iterations Throughput, Mbps
+
+[8] 576-2304
+Altera Stratix IV
+10 218,5-68,1
+
+[9] 648-1944
+200 Xilinx Kintex 7
+420
+
+[12] 576-2304 240-192
+Xilinx Zynq-7000
+10 48,3-140,8
+
+our work 576-2304 256-180
+Xilinx Zynq-7000
+10 237,8-560,4
+
+REFERENCES
+[1] R. G. Gallager, ”Low-density parity-check codes”, Cambridge, MA: M.I.T. Press, 1963.
+[2] D.J.C. MacKay, R.M. Neal, ”Near Shannon limit performance of low density parity check codes”, Electron. Lett., vol. 32, no. 18, pp. 16451646, Aug. 1996.
+[3] S. Y. Chung, G. D. Forney, T. J. Richardson, and R. L. Urbanke, “On the design of low-density parity check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, pp. 58–60, Feb. 2001.
+[4] 802.11n-2009 - IEEE Standard for Information technology– Local and metropolitan area networks– Specific requirements– Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 5: Enhancements for Higher Throughput, 29 Oct. 2009, DOI: 10.1109/IEEESTD.2009.5307322
+[5] 802.16e-2005 - IEEE Standard for Local and Metropolitan Area Networks - Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems - Amendment for Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, 28 Feb. 2006, DOI: 10.1109/IEEESTD.2006.99107
+[6] 3GPP TS 38.212 version 15.2.0 Release 15 - 3GPP Standard 5G; NR; Multiplexing and channel coding, Jul. 2018
+[7] C. Kun; S. Qi; L. Shengkai; P. Chengzhi Implementation of encoder and decoder for LDPC codes based on FPGA, Journal of Systems Engineering and Electronics ( Volume: 30 , Issue: 4 , Aug. 2019 ), 642 – 650 pp., 02 September 2019, DOI: 10.21629/JSEE.2019.04.02
+[8] P. Hailes; L. Xu; R.G. Maunder; B.M. Al-Hashimi; L. Hanzo A Flexible FPGA-Based Quasi-Cyclic LDPC Decoder, IEEE Access ( Volume: 5 ), 20965 – 20984 pps, 03 March 2017, DOI: 10.1109/ACCESS.2017.2678103
+[9] S. Mhaske; D. Uliana; H. Kee; T. Ly; A. Aziz; P. Spasojevic A 2.48Gb/s FPGA-based QC-LDPC decoder: An algorithmic compiler implementation, 2015 36th IEEE Sarnoff Symposium, 20-22 Sept. 2015, DOI: 10.1109/SARNOF.2015.7324649
+[10] K. Zhang, X. Huang, Z. Wang, ”High-Throughput Layered Decoder Implementation for Quasi-Cyclic LDPC Codes”, 2009, IEEE Journal on Selected Areas in Communications. 27. 985-994. DOI: 10.1109/JSAC.2009.090816.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:05 UTC from IEEE Xplore. Restrictions apply.
+
+[11] J. Chen and M. P. C. Fossorier, ”Density evolution for two improved BP-Based decoding algorithms of LDPC codes,” in IEEE Communications Letters, vol. 6, no. 5, pp. 208-210, May 2002, DOI: 10.1109/4234.1001666.
+[12] R. Goriushkin, P. Nikishkin, E. Likhobabin, V. Vityazev, ”FPGA Implementation of LDPC Decoder Architecture for Wireless Communication Standards”, 2021 10th International Conference on Modern Circuits and Systems Technologies (MOCAST), Thessaloniki, Greece, 2021
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:09:05 UTC from IEEE Xplore. Restrictions apply.
+
+

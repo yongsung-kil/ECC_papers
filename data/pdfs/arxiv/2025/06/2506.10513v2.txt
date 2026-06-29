@@ -1,0 +1,621 @@
+A Neural Network-aided Low Complexity
+Chase Decoder for URLLC
+Enrico Testi and Enrico Paolini
+CNIT/WiLab, DEI, University of Bologna, Italy
+Email:{enrico.testi, e.paolini}@unibo.it
+Abstract—Ultra-reliable low-latency communications (URLLC)
+demand decoding algorithms that simultaneously offer high
+reliability and low complexity under stringent latency constraints.
+While iterative decoding schemes for LDPC and Polar codes
+offer a good compromise between performance and complexity,
+they fall short in approaching the theoretical performance limits
+in the typical URLLC short block length regime. Conversely,
+quasi-ML decoding schemes for algebraic codes, like Chase-II
+decoding, exhibit a smaller gap to optimum decoding but are
+computationally prohibitive for practical deployment in URLLC
+systems. To bridge this gap, we propose an enhanced Chase-II
+decoding algorithm that leverages a neural network (NN) to
+predict promising perturbation patterns, drastically reducing
+the number of required decoding trials. The proposed approach
+combines the reliability of quasi-ML decoding with the efficiency
+of NN inference, making it well-suited for time-sensitive and
+resource-constrained applications.
+I. INTRODUCTION
+Emerging applications such as industrial automation and
+vehicular networks demand communication systems capable of
+achieving extremely high reliability with stringent latency re-
+quirements—a paradigm referred to as ultra-reliable low-latency
+communications (URLLC) [1]. Designing efficient decoding
+algorithms for URLLC remains a fundamental challenge, where
+reliability, latency, and complexity must be balanced.
+Iterative decoding algorithms for low-density parity-check
+(LDPC) and Polar codes, such as belief propagation and
+successive cancellation decoding, are widely adopted due to
+their favorable trade-off between performance and complexity
+[2], providing a practical solution for many URLLC use
+cases. However, in the typical URLLC short block length
+regime iterative decoders show visible losses with respect to
+theoretical limits, especially at low error rates. Short algebraic
+codes—such as BCH and Reed-Solomon codes—paired with
+quasi-maximum likelihood (ML) decoding algorithms, tend
+to be very competitive in terms of error rate performance,
+although decoding complexity remains often incompatible
+with URLLC requirements. Among such decoders, the Chase-
+II algorithm stands out, delivering near-ML performance by
+exhaustively testing multiple perturbations of the hard-decision
+vector [3]. Despite its reliability advantages, the Chase-II
+decoder’s exponential complexity makes it unsuitable for real-
+time deployment in latency-sensitive applications.
+Recent advances in deep learning have opened new pathways
+for enhancing decoding algorithms by incorporating data-driven
+learning into traditional decoding frameworks. In [4], deep
+learning is shown to improve belief propagation and min-sum
+decoders by learning better message update rules. Recurrent
+neural architectures have also been proposed to reduce param-
+eter complexity while retaining strong performance. Several
+works have applied neural networks (NNs) to decoding of Polar
+codes. In [5], a deep neural network (DNN) is used to identify
+which bits to flip in belief propagation flip decoding. Similarly,
+convolutional neural networks (CNNs) have been explored to
+reduce decoding latency in [6]. Other approaches leverage
+path metric information to simplify successive cancellation
+list decoding, yielding near-optimal performance with reduced
+complexity [7].
+In the context of algebraic codes, learning-based decoding
+has also shown promise. The work in [8] proposes a DNN
+that uses syndromes and soft reliabilities to estimate channel
+noise, improving generalization and reducing overfitting. A
+different perspective is taken in [9], where a DNN is trained
+as a denoiser to directly map noisy codewords to their clean
+counterparts.
+Building on this, our work focuses on reducing the com-
+plexity of quasi-ML decoding—specifically, the Chase-II
+algorithm—by leveraging machine learning. We propose a NN-
+aided Chase-II decoder that significantly reduces the number of
+required perturbation trials by learning to predict the most likely
+error patterns. The decoder maintains the high reliability of the
+Chase-II algorithm while achieving substantial computational
+savings.
+The main contributions of this paper are summarized as
+follows:
+• We introduce a novel NN-aided Chase-II decoding frame-
+work that achieves near-optimal decoding performance
+with significantly reduced complexity, making it well
+suited for URLLC scenarios.
+• We develop and train a NN that learns to predict the
+most promising perturbation patterns, enabling a selective
+refinement strategy (named NN-ρ) to limit the number of
+decoding trials.
+• We provide a comprehensive complexity analysis in terms
+of floating point operations per second (FLOPS) and
+compare the runtime performance of the proposed scheme
+with traditional Chase-II and bounded distance decoder
+(BDD), showing substantial execution time savings.
+II. SYSTEM MODEL
+The user aims to transmit a k-bit information word u ∈
+{0, 1}k using a binary linear block code C of length n,
+arXiv:2506.10513v2  [eess.SP]  29 Jul 2025
+dimension k, and minimum distance dmin. Let G denote the
+generator matrix of code C. The information word u is encoded
+into the codeword c = uG ∈{0, 1}n. Then, the encoded
+sequence is modulated using binary phase-shift keying (BPSK)
+modulation through the mapping τ : {0, 1} 7→{+1, −1},
+resulting in the transmitted modulated codeword
+x = τ(c).
+(1)
+The modulated codeword is transmitted over additive white
+Gaussian noise (AWGN) channel, such that the received soft-
+symbols y ∈Rn can be expressed as
+y = x + w
+(2)
+where w ∼N(0, σ2
+NIn) is the vector of noise samples. The
+log-likelihood ratios of the received symbols, γ = (γ1, . . . , γn),
+can be expressed as
+γi = log p(yi|ci = 0)
+p(yi|ci = 1) = 2yi
+σ2
+N
+, i = 1, . . . , n.
+(3)
+Let r = (|γ1|, |γ2|, . . . , |γn|) be the vector of reliabilities
+corresponding to the received codeword symbols, where |γi|
+indicates the reliability of the ith symbol. The vector of hard
+decision symbols, q ∈{0, 1}n, is obtained by applying a hard
+decision to the received sequence y. Specifically, qi = 0 if
+yi ≥0, and qi = 1 otherwise. We also let e = c ⊕q be the
+error pattern derived after performing binary decoding on q.
+A. Chase-II Decoder Overview
+The Chase-II algorithm stands out among algebraic soft-
+decision decoding methods designed to improve the decoding
+performance of linear block codes, such as BCH codes. The
+Chase-II decoding algorithm can be summarized as follows:
+• The decoding process starts by analyzing the received soft
+information to identify the least reliable bitss (LRBs), i.e.,
+the bits with the highest uncertainty. Those are the t =
+⌊dmin−1
+2
+⌋bits having the lowest reliabilities. The received
+soft symbols are sorted in ascending order of magnitude,
+resulting in a permutation π(y). The same operation is
+performed to the reliabilities and the hard decision vectors,
+yielding π(γ), and π(q). The first t entries of the ordered
+vectors correspond to the LRBs.
+• Once the LRBs are identified, the Chase-II decoder
+systematically generates and tests all possible perturbation
+patterns for these bits. Each perturbation pattern corre-
+sponds to a hypothesis about the transmitted codeword,
+and the decoder evaluates them to determine the most
+likely candidate. We denote by P the set of all possible
+perturbation patterns pj ∈{0, 1}n with j = 1, . . . , 2t, i.e.,
+sequences that contain 1’s in the location of the LRBs to
+be inverted. By adding a test pattern, modulo-2, to the
+received hard symbols, we obtain a new sequence
+˜qj = q ⊕pj
+(4)
+and by running a BDD a new error pattern is obtained.
+Such an error pattern may or may not differ from the
+original error pattern e depending on wether or not ˜qj
+falls within the decoding sphere of a new codeword.
+• When the jth test pattern produces a valid codeword ˆcj as
+the output of the BDD, the distance between this codeword
+and the received soft symbols y is computed. Specifically,
+for the jth pattern, the weighted distance is calculated as
+wj = |y −τ(ˆcj)|1, where | · |1 denotes the ℓ1 norm of
+the vector. This process is repeated for all the generated
+test patterns, and the pattern that results in the smallest
+weighted distance is selected as
+l = arg min
+j
+wj.
+(5)
+The corresponding estimated codeword, ˆcl is then provided
+as the output of the decoder.
+The exhaustive search approach enables the Chase-II decoder
+to achieve near-ML performance, making it suitable for
+high-reliability applications. However, evaluating all possible
+2t perturbation patterns imposes substantial computational
+complexity, which grows exponentially with the number of
+LRBs. This complexity makes Chase-II decoding impractical
+for ultra-low latency scenarios, such as URLLC, where real-
+time decoding is essential.
+III. NEURAL NETWORK-AIDED CHASE-II DECODING
+To reduce the computational complexity of the traditional
+Chase-II decoder while preserving near-optimal decoding
+performance, we propose a novel algorithm that integrates
+an NN into the decoding pipeline. The core idea is to use the
+NN to predict the most promising perturbation pattern, thereby
+reducing the number of test patterns that must be evaluated
+during decoding. This results in substantial computational
+savings, making the approach particularly attractive for latency-
+and resource-constrained applications such as URLLC.
+A. Overview of the NN-Aided Decoding Framework
+The proposed decoding algorithm leverages a trained NN
+to guide the perturbation pattern selection process. During
+training, the network learns to mimic the decisions of an
+actual Chase-II decoder by observing perturbation patterns
+that result in correct codeword recovery. Once trained, the
+NN acts as a lightweight yet effective approximation of the
+Chase-II exhaustive search, providing a perturbation pattern
+that is likely to lead to successful decoding.
+At inference time, given the received soft symbol vector
+y, the decoder first identifies the set of LRBs. The neural
+network processes a structured representation of the received
+data—including soft symbols, reliabilities, and hard deci-
+sions—and outputs a base perturbation pattern ˆp0 ∈P. This
+pattern serves as the central candidate around which the decoder
+builds a refined set of test patterns. Specifically, starting from
+the NN-predicted base pattern, an expanded set of candidate
+perturbation patterns is generated by systematically flipping all
+HD
+NN
+PPG
+BDD
+𝑙= arg min
+!
+ 𝑤!
+𝒚
+𝒒
+𝒑$!
+𝒫&
+𝒄("
+Fig. 1. Logical block diagram of the proposed NN-aided Chase-II decoder. The received soft symbols, the hard-decision vector, and reliability information are
+fed into the neural network, which predicts a base perturbation pattern over the LRBs. The PPG block expands this base pattern by systematically flipping
+small subsets of LRBs, producing a refined set of candidate test patterns. Each pattern is combined with the hard-decision vector and decoded via a BDD.
+Among the decoded codewords, the one with minimum soft distance to the received symbols is selected as the final output.
+Algorithm 1: Pseudo-code for the NN-aided Chase-II
+Decoder
+Input: Received signal y, reliability vector γ, hard
+decision vector q, ρ
+Output: Estimated codeword ˆcl
+1 Ω←(y; γ; q; π(y); π(γ); π(q))
+2 Generate base test pattern ˆp0 ←NN(Ω)
+3 Generate the set of test patterns ˆP, with | ˆP| = NT, by
+flipping all the subsets of bits of ˆp0 of size up to ρ
+4 foreach ˆpj ∈ˆP do
+5
+Generate perturbed vector ˜qj ←q ⊕ˆpj
+6
+Perform BDD on ˜qj
+7
+if decoding successful then
+8
+Obtain codeword candidate ˆcj
+9
+Compute the metric wj ←|y −ˆcj|1
+10
+end
+11 end
+12 l ←arg minj wj
+13 return ˆcl
+subsets of LRBs of size up to ρ. We refer to this algorithm as
+NN-ρ, which results in a total number of test patterns given by
+NT =
+ρ
+X
+i=0
+t
+i
+
+.
+(6)
+Each test pattern is combined modulo-2 with the hard-decision
+vector q, and the resulting sequence is decoded using a BDD.
+Among all decoded codewords, the one with the minimum
+soft-distance to y is selected as the final output. The decoding
+flow is illustrated in the block diagram in Fig. 1, where the
+perturbation pattern generation (PPG) module produces the
+candidate set from the NN base prediction. The complete
+procedure is also detailed in the pseudo-code in Algorithm 1.
+Compared to the exhaustive Chase-II algorithm, which tests
+all 2t patterns, the NN-ρ scheme drastically narrows the search
+space while preserving decoding performance. The NN-aided
+decoder thus achieves a favorable trade-off between complexity
+and reliability, making it well suited for scenarios requiring
+fast and efficient decoding.
+TABLE I
+NN ARCHITECTURE
+Layer type
+Layer size
+Activation
+Input
+6n
+Fully connected
+NH
+ReLu
+Output
+t
+Sigmoid
+B. NN Architecture
+The perturbation prediction task is cast as a multi-label clas-
+sification problem, where each of the t bits in the perturbation
+pattern is independently predicted. This formulation allows the
+network to selectively identify likely error positions within the
+set of LRBs, replacing the need for a full combinatorial search.
+The network’s input is the feature vector
+Ω= (y, γ, q, π(y), π(γ), π(q)) ∈R6n
+(7)
+which includes soft symbols y, their reliability γ, and the hard
+decision vector q, along with their permutations under the
+sorting map π(·) that ranks bits by reliability.
+The network consists of a single fully connected hidden layer
+of size NH, followed by a rectified linear unit (ReLU) activation.
+The output layer produces t soft values using sigmoid activation
+σ(z) =
+1
+1 + e−z
+(8)
+indicating the likelihood of flipping each bit in the perturbation
+pattern. The network is trained using binary cross-entropy loss
+L(p, ˆp0) = −
+t
+X
+i=1
+ pi log(ˆp0
+i ) + (1 −pi) log(1 −ˆp0
+i )
+
+(9)
+where p is the true perturbation pattern obtained from the
+Chase-II decoder and ˆp0 is the base one. After thresholding
+the sigmoid outputs at 0.5, a binary perturbation vector is
+obtained. This predicted pattern is zero-padded (on the non-
+LRB positions) and reordered via inverse permutation, π−1(·),
+to match the original bit positions. The resulting binary mask
+is then applied to the hard-decision vector during decoding.
+The neural network structure is summarized in Table I.
+C. Decoding Complexity
+1) Bounded Distance Decoder (BDD): The computational
+complexity of a BDD depends on the specific decoding
+algorithm used and can be measured in terms of finite-field
+operations, typically multiplications and additions. Decoding
+BCH codes via bounded distance decoding involves four main
+stages: syndrome computation, solving the Berlekamp–Massey
+algorithm, running Chien search, and performing error cor-
+rection using Forney algorithm. The syndrome computation
+requires evaluating 2t syndromes, each involving approxi-
+mately n multiplications and n −1 additions [10]. Thus, this
+stage has a complexity of 2t(2n −1) FLOPS. Solving the
+Berlekamp–Massey algorithm, which yields the error locator
+polynomial, has a computational complexity of approximately
+t2 multiplications and t2 additions [11]. Finding the roots of the
+error locator polinomial via Chien method requires nt additions
+and nt multiplications [12]. Finally, Forney’s algorithm, used
+for actual error correction, also involves approximately t2
+multiplications and t2 additions [13]. Therefore, the total
+computational complexity of the BDD decoder is approximately
+CBDD = 6nt + 2t(2t −1)
+(10)
+FLOPS.
+2) Chase-II decoder: Considering that the Chase-II algo-
+rithm involves running 2t BDDs, and evaluating the weighted
+distance for each codeword obtained, its overall complexity is
+CChase = 2tCBDD
+(11)
+FLOPS.
+3) NN-aided Chase-II decoder: The computational com-
+plexity of the NN in terms of FLOPS is computed as follows.
+The fully connected hidden layer requires 12NHn FLOPS
+due to the matrix multiplication, while the subsequent ReLU
+activation contributes additional NH FLOPS. Similarly, the
+fully connected output layer has complexity 2tNH FLOPS,
+followed by a sigmoid activation adding 4t FLOPS. Therefore,
+the total complexity for the NN is
+CNN = 12NHn + 2tNH + NH + 4t
+(12)
+FLOPS. Considering that the NN-aided Chase-II decoder
+executes the BDD a total of NT times and selects the codeword
+of minimum weight, the overall complexity is
+CNN−ρ = NT CBDD + CNN
+(13)
+FLOPS. Considering that NN inference can be efficiently paral-
+lelized on hardware platforms equipped with dedicated neural
+processing units, such as GPUs or specialized accelerators,
+the dominant component in (13) is the one related to the
+execution of the BDD, so that the total complexity can be
+further simplified as
+CNN−ρ ≈NT CBDD
+(14)
+FLOPS.
+dH = 1
+dH = 2
+dH = 3
+dH = 4
+dH = 5
+0
+0.2
+0.4
+0.6
+0.8
+1
+EPMF
+SNR = 2 dB
+SNR = 3 dB
+SNR = 4 dB
+Fig. 2. EPMF of the Hamming distance between the NN-predicted test patterns
+and the ones selected by the Chase-II decoder, conditioned on prediction errors,
+for various SNR values.
+IV. NUMERICAL RESULTS
+This section presents a performance evaluation of the
+proposed NN-aided Chase-II decoding scheme introduced in
+Section III. The performance is assessed through extensive
+Monte Carlo simulations and compared with the classical
+Chase-II decoder and the standard BDD in terms of decoding
+reliability, computational complexity, and execution time.
+A. Simulation Setup
+The simulations are conducted on a binary BCH code with
+n = 127, k = 64 and minimum distance dmin = 21, which
+allows correction of up to t = 10 errors. A distinct neural
+network is trained and used for each simulated signal-to-noise
+ratio (SNR) value. For each SNR, the Chase-II decoder is
+employed to generate training and test datasets composed of
+1.6 × 106 and 10 × 106 samples, respectively. Each network
+is initialized using He initialization [14] and trained using
+the Adam optimizer [15] over 130 epochs with mini-batches
+of 1024 samples. The initial learning rate is set to 10−3 and
+reduced by a factor of 10 every 50 epochs. After empirical
+tuning, the number of neurons in the hidden layer is fixed to
+NH = 512 to balance performance and complexity.
+B. Decoding Performance
+1) Neural network behavior and pattern refinement: To
+evaluate the quality of the NN predictions, we analyze the
+distribution of Hamming distances between the predicted test
+patterns and the corresponding ones selected by the Chase-II
+decoder. Fig. 2 reports the empirical probability mass function
+(EPMF) of these distances, conditioned on the event that the
+NN fails to predict the correct test pattern. The results show
+that the majority of mispredicted patterns are only one bit
+flip away from the correct one (i.e., dH = 1), across all SNR
+regimes. This supports the inclusion of the PPG module, which
+systematically flips combinations of the least reliable bits to
+1
+2
+3
+4
+5
+6
+10−5
+10−4
+10−3
+10−2
+10−1
+100
+SNR [dB]
+CER
+BCH(127, 64), Chase-II
+BCH(127, 64), NN-0
+BCH(127, 64), NN-1
+BCH(127, 64), NN-2
+BCH(127, 64), BDD
+LDPC(128, 64), NMS
+Fig. 3. CER varying the SNR for the BCH(127, 64) code using the proposed
+NN-aided Chase-II decoders (NN-0, NN-1, NN-2), the classical Chase-II
+algorithm, and the baseline BDD. The figure also includes a performance
+curve for the LDPC(128, 64) code from the CCSDS standard, decoded using
+the NMS algorithm.
+form additional candidate test patterns. Specifically, running the
+NN-1 algorithm—where all single-bit flips of the NN prediction
+are tested—captures most of the correct patterns while requiring
+a significantly smaller candidate set than the exhaustive Chase-
+II. Furthermore, the probability of mispredicting more than four
+bits vanishes at high SNR, which is attributed to the sparsity of
+the true error pattern in these regimes. This justifies limiting the
+perturbation depth to small values of ρ in the NN-ρ decoding
+framework.
+2) Decoding performance comparison: Fig. 3 presents the
+codeword error rate (CER) as a function of the SNR for several
+decoding algorithms. The NN-1 and NN-2 decoders achieve
+nearly identical performance to the full Chase-II decoder,
+with NN-1 exhibiting a slight performance degradation in
+the high-SNR regime. Both schemes outperform BDD by a
+substantial margin, achieving over 1.5 dB of SNR gain at CER
+10−4. While the NN-0 variant, which relies solely on the base
+prediction of the neural network, does not match the Chase-
+II performance, it still offers a notable improvement over the
+standalone BDD, confirming the added value of the learned base
+pattern. Additionally, the figure includes a performance curve
+for the LDPC(128, 64) code from the CCSDS standard [16],
+decoded using the normalized min-sum (NMS) algorithm with
+a normalization factor of 0.75 and a maximum of 100 iterations.
+Interestingly, the NN-0 decoder for the BCH code achieves a
+performance comparable to that of the LDPC code under these
+conditions, despite being a one-shot decoder without iterative
+processing. This result highlights the efficiency of the proposed
+architecture. Furthermore, the BCH code with both NN-1 and
+NN-2 outperforms the LDPC one with NMS, demonstrating
+the strong potential of the proposed neural decoding strategies
+even when compared with well-established iterative decoders.
+TABLE II
+COMPLEXITY ANALYSIS OF THE DECODING SCHEMES
+Decoder
+FLOPS
+Runtime (s)
+BDD
+1.5 · 103
+0.007345
+Chase-II
+8.19 · 106
+2.115847
+NN-0
+1.18 · 106
+0.012314
+NN-1
+1.27 · 106
+0.034333
+NN-2
+1.63 · 106
+0.133051
+C. Computational Complexity and Runtime
+The computational complexity of each decoder is evaluated
+in terms of the number of FLOPS, based on the analytical
+expressions provided in Section III-C. In particular, the com-
+plexity of the NN-ρ algorithms is assessed using (13), which
+reflects execution on a general-purpose CPU. Table II summa-
+rizes the total number of FLOPS required for each decoder in
+the considered case study. As expected, the Chase-II decoder
+exhibits the highest complexity due to the exponential growth
+in the number of test patterns with respect to the number of
+LRB. In contrast, the NN-aided schemes demand significantly
+fewer operations: NN-1 and NN-2 incur approximately 15%
+and 20% of the Chase-II decoder’s FLOPS, respectively. The
+BDD decoder remains the least complex, albeit with the poorest
+performance. It is worth noting that these complexity estimates
+are based on CPU execution. When deployed on hardware
+platforms with dedicated neural processing capabilities—such
+as GPUs or specialized accelerators—the cost of the NN-ρ
+decoders can be further reduced, potentially approaching the
+complexity of BDD while retaining their superior decoding
+performance.
+In addition to theoretical complexity, Table II reports the
+empirical execution times measured in MATLAB on an Intel
+Core i7 processor running Ubuntu. The execution time trends
+are consistent with the FLOPS analysis but amplify the gap
+between Chase-II and the other schemes. This is likely due
+to implementation inefficiencies in MATLAB’s BDD function,
+which may require more operations than predicted analytically.
+As the Chase-II decoder invokes multiple instances of BDD,
+this inefficiency compounds, resulting in considerably higher
+runtime.
+V. CONCLUSION
+In this paper, we proposed an NN-aided decoding frame-
+work that significantly reduces the complexity of the Chase
+decoder while retaining its near-optimal decoding performance.
+By leveraging a trained NN to predict the most promising
+perturbation pattern, the proposed scheme narrows the set
+of test patterns that must be evaluated, thereby reducing
+the number of BDD invocations. The resulting decoding
+process achieves a favorable trade-off between reliability and
+computational efficiency, making it well suited for URLLC.
+Extensive simulations on a BCH(127, 64) code show that the
+proposed NN-aided decoder achieves a CER close to that
+of the classical Chase decoder, while reducing the required
+number of floating-point operations and execution time by
+over 80%. Among the possible future research directions there
+is the possibility to develop a unified NN architecture that
+generalizes across different SNR levels, avoiding the need to
+train a separate model for each operating point. Moreover,
+extending the NN-aided approach to other classes of quasi-ML
+decoders may unlock further performance and complexity gains
+in different decoding scenarios.
+ACKNOWLEDGMENTS
+This work was partially supported by the European Union un-
+der the Italian National Recovery and Resilience Plan (NRRP)
+of NextGenerationEU, partnership on “Telecommunications of
+the Future” (PE00000001 - program “RESTART”).
+REFERENCES
+[1] B. S. Khan, S. Jangsher, A. Ahmed, and A. Al-Dweik, “URLLC and
+eMBB in 5G industrial IoT: A survey,” IEEE Open J. Commun. Soc.,
+vol. 3, pp. 1134–1163, Jul. 2022.
+[2] C. Yue, V. Miloslavskaya, M. Shirvanimoghaddam, B. Vucetic, and Y. Li,
+“Efficient decoders for short block length codes in 6G URLLC,” IEEE
+Commun. Mag., vol. 61, no. 4, pp. 84–90, Jul. 2023.
+[3] D. Chase, “Class of algorithms for decoding block codes with channel
+measurement information,” IEEE Trans. Inf. Theory, vol. 18, no. 1, pp.
+170–182, Jan. 1972.
+[4] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and
+Y. Be’ery, “Deep learning methods for improved decoding of linear
+codes,” IEEE J. Sel. Top. Signal Process., vol. 12, no. 1, pp. 119–131,
+Jan. 2018.
+[5] Y. Lee, U. Lee, H. H. Fisseha, and M. H. Sunwoo, “Deep learning aided
+BP-flip decoding of polar codes,” in Proc. IEEE 4th Int. Conf. Artificial
+Intell. Circuits Syst., Incheon, Korea, Jun. 2022, pp. 114–117.
+[6] W. Li, Q. Tian, Y. Zhang, T. Feng, Z. Li, Q. Zhang, and Y. Wang, “A
+rate-compatible punctured polar code decoding scheme based on deep
+learning,” in Proc. Int. Conf. Optical Commun. Netw., Shenzhen, China,
+Aug. 2022, pp. 1–3.
+[7] Y. Lu, M. Zhao, M. Lei, C. Wang, and M. Zhao, “Deep learning aided
+SCL decoding of polar codes with shifted-pruning,” China Commun.,
+vol. 20, no. 1, pp. 153–170, 2023.
+[8] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding
+of linear codes – A syndrome-based approach,” in Proc. IEEE Int. Symp.
+Inf. Theory, Vail, CO, USA, Jun. 2018, pp. 1595–1599.
+[9] H. Zhu, Z. Cao, Y. Zhao, and D. Li, “A novel neural network denoiser
+for BCH codes,” in Proc. IEEE/CIC Int. Conf. Commun. in China,
+Chongqing, China, Aug. 2020, pp. 272–276.
+[10] D. Schipani, M. Elia, and J. Rosenthal, “On the decoding complexity
+of cyclic codes up to the BCH bound,” in Proc. IEEE Int. Symp. Inf.
+Theory, St. Petersburg, Russia, Jul. 2011, pp. 835–839.
+[11] K. Imamura and W. Yoshida, “A simple derivation of the Berlekamp-
+Massey algorithm and some applications,” IEEE Trans. Inf. Theory,
+vol. 33, no. 1, pp. 146–150, Jan. 1987.
+[12] R.
+Chien,
+“Cyclic
+decoding
+procedures
+for
+Bose-Chaudhuri-
+Hocquenghem codes,” IEEE Trans. Inf. Theory, vol. 10, no. 4,
+pp. 357–363, Oct. 1964.
+[13] G. Forney, “On decoding BCH codes,” IEEE Trans. Inf. Theory, vol. 11,
+no. 4, pp. 549–557, Jan. 1965.
+[14] K. He, X. Zhang, S. Ren, and J. Sun, “Delving deep into rectifiers:
+Surpassing human-level performance on ImageNet classification,” in
+Proc. IEEE Int. Conf. Computer Vision, Santiago, Chile, Dec. 2015, pp.
+1026–1034.
+[15] D. P. Kingma and J. Ba, “Adam: a method for stochastic optimization,”
+in Proc. 3rd Int. Conf. Learning Representations, San Diego, CA, USA,
+May 2015.
+[16] CCSDS 231.0-B-3, TC Synchronization and Channel Coding.
+Blue
+Book, 2017.

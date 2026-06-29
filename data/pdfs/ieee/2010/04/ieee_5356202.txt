@@ -1,0 +1,1929 @@
+836
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+Jointly Designed Architecture-Aware LDPC
+Convolutional Codes and High-Throughput Parallel
+Encoders/Decoders
+Zhengang Chen, Tyler L. Brandon, Duncan G. Elliott, Member, IEEE, Stephen Bates, Senior Member, IEEE, Witold A. Krzymien´, Senior Member, IEEE, and Bruce F. Cockburn, Member, IEEE
+
+Abstract—A novel design approach is proposed for low-density parity-check convolutional codes (LDPC-CCs), that jointly optimizes the code, encoder and decoder to achieve high-throughput parallel encoding and decoding. A series of implementation-oriented constraints are applied to construct architecture-aware (AA) codes by introducing algebraic structures into the parity-check matrix. The resulting AA codes have bit error rate performance comparable to other published LDPC-CCs. Given these AA LDPC-CCs, new architectures are proposed for a parallel LDPC-CC encoder with built-in termination and an LDPC-CC decoder that is parallel in the node dimension as well as pipelined in the iteration dimension. ASIC synthesis results for a 90-nm CMOS process show that the proposed encoder and the decoding processor achieve 2.0-Gbps throughputs at 250-MHz clock frequencies within silicon areas of 0.1 mm2 and 1 mm2 respectively.
+Index Terms—Application-specific integrated circuits (ASIC), convolutional codes, error correction coding, high-speed integrated circuits, low-density parity-check codes (LDPC).
+I. INTRODUCTION
+L OW-DENSITY parity-check convolutional codes (LDPC-CCs) were proposed in [1] as a variation of the original block code form of LDPC codes (LDPC-BCs) [2]. LDPC-CCs are shown in [1] to have the same capacity-approaching bit-error rate (BER) performance1 as LDPC-BCs. It has also been proved for a class of time-varying LDPC-CCs that they have asymptotically good distance properties [3]. A variety of construction methods have been proposed to generate good LDPC-CCs [4]–[8]. LDPC-CCs share many traits with convolutional codes: The bit stream can be continuously
+Manuscript received December 24, 2008; revised April 28, 2009. First published December 18, 2009; current version published April 09, 2010. This work was supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada, in part by TRLabs, and in part by a Rohit Sharma Professorship. This article was presented in part at the IEEE International Conference on Circuits and Systems for Communications, Shanghai, China, 2008. This paper was recommended by Associate Editor Y. Massoud.
+Z. Chen is with Marvell Semiconductor, Inc., Santa Clara, CA 95054 USA. T. Brandon, D. G. Elliot, S. Bates, and B. F. Cockburn are with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB T6G 2V4, Canada (e-mail: brandon@ece.ualberta.ca; elliott@ece. ualberta.ca; sbates@ece.ualberta.ca; cockburn@ece.ualberta.ca). W. A. Krzymien´ is with the Department of Electrical and Computer Engineering, University of Alberta, Edmonton, AB T6G 2V4, Canada, and also with TRLabs, Edmonton, AB T5K 2M5, Canada (e-mail: wak@ece.ualberta.ca). Digital Object Identifier 10.1109/TCSI.2009.2026684
+1The term “performance” refers to a code’s BER performance, unless otherwise specified.
+
+encoded and decoded, and LDPC-CCs can handle frames of arbitrary lengths. Thus, LDPC-CCs have the flexibility to handle data frames of variable length at the cost of termination-related overhead [9]. Moreover, from the implementation point of view, LDPC-CCs provide a new parallel design dimension for LDPC decoding.
+For LDPC-BCs, the iterative message-passing decoding algorithm based on the code’s graph representation (called a Tanner graph) leads to a natural parallelization in the decoder design: multiple nodes in the graph can be physically realized to perform the decoding in parallel. The parallelization in the node dimension significantly increases the decoding throughput, and is one of the reasons why LDPC codes are gaining popularity in industrial applications (e.g., in standards such as DVB-S2 [10] and 10GBASE-T [11]). However, fully parallel LDPC-BC decoders tend to be expensive, i.e., they have large silicon area in a VLSI implementation, arising from the large numbers of physically implemented nodes (called node units in this article) as well as the “interleaving” operations required by the message-passing algorithm, which tends to cause routing congestion in the implementation [12], especially for large LDPC-BCs. A variety of approaches have been proposed to address the design challenges, including partially parallel decoders [13], [14], layered decoders [15] and many other variations [16], [17]. Such methods partition the decoding problem into somewhat larger units than individual nodes, and try to achieve a better trade-off among cost, throughput and power. Code construction and decoder architecture are often jointly considered to achieve the most efficient designs.
+The decoding algorithm of LDPC-CCs is mathematically equivalent to that of LDPC-BCs. LDPC-CC decoder designs usually use one or more sliding windows (each allocated to a processor) to perform message passing upon the Tanner graph. Each processor corresponds to one iteration of the message-passing algorithm. With a number of identical processors concatenated into a pipeline, the bits in a frame are decoded sequentially in time. Such a decoder architecture is parallel in the iteration dimension. Inside each processor, though, the node operations are serial [1]. Table I lists the decoder parallelization choices for LDPC-BCs and LDPC-CCs. The serial nature of processors lowers the implementation cost of a unit processor. However, with parallelization limited to the iteration dimension, the decoding throughput is limited.
+Recently, a node-parallel decoder for LDPC-CCs was proposed in [20], [21]. However, the design is limited to time-invariant LDPC-CCs, whose performance is generally worse than that of time-varying LDPC-CCs [8]. Among previously reported
+
+1549-8328/$26.00 © 2010 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+837
+
+TABLE I PREVIOUS WORK ON PARALLEL DECODER DESIGN FOR LDPC-BCS AND LDPC-CCS (WITH ONE EXAMPLE FOR EACH COMBINATION)
+
+LDPC-CC decoder architectures that are serial in the node dimension, the design in [19] is built on register-based first-in first-out (FIFO) buffers, which are not suitable for LDPC-CCs of medium to large constraint lengths due to the high cost and power consumption of the large numbers of required registers. A memory-based architecture is proposed in [22] but it cannot be directly used for node parallelization due to memory access collisions.
+The benefit of parallelization also applies to LDPC-CC encoders. Most LDPC-CC encoding algorithms and encoder architectures in the literature are serial. A parallel encoder architecture was first proposed in [23], but it omitted termination circuitry. Despite some cost increase incurred in parallelization, this design provided a better throughput/area ratio than a serial encoder. In a practical LDPC-CC encoder for packetized communications, though, proper termination becomes an essential requirement that dominates the implementation cost. More recently an efficient serial termination scheme was proposed in [9]. However, parallel termination has not yet been addressed. It is possible to directly parallelize the termination circuitry in [9] to generate more termination bits per clock cycle, but the cost will increase substantially unless appropriate algebraic structures are introduced into the code [24].
+In this article we propose an LDPC-CC design strategy that jointly considers the code, decoder and encoder with termination. The proposed methodology applies to time-varying LDPC-CCs. It comprises an architecture-aware code construction algorithm, a parallel encoder architecture with built-in parallel termination, and memory-based node-parallel decoder architectures for both FPGA (field-programmable gate array) and ASIC (application-specific integrated circuit) implementations. Joint design methods have already been applied to LDPC-BCs [13], [15]. For LDPC-CCs, the joint design problem is investigated starting from the encoder and decoder architectures. Potential problems in parallelization are identified, which may stem from certain attributes of the parity-check matrix. Next, a series of constraints are formulated and applied to code construction to ensure efficient memory access, node parallelization, and good performance. To satisfy these
+
+constraints, in particular the parallelization constraints, we use
+
+circulant matrices when constructing the parity-check matrix.
+
+LDPC-CCs constructed with the proposed algorithm have com-
+
+parable performance to architecture-independent LDPC-CCs,
+
+as shown in Section III. Based on these LDPC-CCs, a parallel
+
+partial syndrome encoder architecture is proposed and im-
+
+plemented for a (472,3,6) LDPC-CC. Synthesis results for an
+
+ST Microelectronics 90-nm CMOS process shows significant
+
+throughput increase with an area of 0.1 mm . For the decoder,
+
+a parallel architecture for FPGA implementations is proposed
+
+that achieves significantly higher throughput than a serial
+
+decoder without increasing the total number of memory bits or
+
+memory banks. Finally, a high-throughput ASIC design for the
+
+(472,3,6) LDPC-CC is presented, based on the pipelined node
+
+processing architecture in [25] and the architecture-aware code
+
+design methodology. Synthesis results for a 90-nm CMOS
+
+process achieve 2.0-Gbps information throughput per processor
+
+at the clock frequency
+
+MHz, with a processor area of
+
+less than 1 mm .
+
+The rest of the article is organized as follows: In Section II
+
+we review LDPC-CC definitions, encoder design and decoder
+
+design. We identify key problems in encoder and decoder paral-
+
+lelization. In Section III, we propose an architecture-aware con-
+
+struction algorithm for LDPC-CCs. Sections IV and V present
+
+the proposed parallel architectures for the encoder/decoder as
+
+well as synthesis results. Conclusions and future work direc-
+
+tions are given in Section VI.
+
+II. LDPC-CC OVERVIEW, AND ENCODER/DECODER PARALLELIZATION
+
+A. LDPC-CC Definition
+
+An LDPC-CC is defined by an infinite parity-check matrix.
+
+Let the parity-check matrix be . The code is defined as the
+
+null space of , i.e.,
+
+, where is the code-
+
+word row vector. For an LDPC-CC of rate
+
+the parity-check matrix can be written as (in transposed form,
+
+also known as the syndrome former) see (1) at the bottom of the
+
+page, where the
+
+are sub-matrices of
+
+...
+
+...
+
+... ... ...
+
+(1)
+
+...
+
+...
+
+...
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+838
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+size
+
+. For systematic LDPC-CCs, information bits and
+
+parity pits are interlaced together, in the same way as in system-
+
+atic convolutional codes. The coded sequence can be written
+
+as
+
+, where is a sub-vector
+
+of length , containing information bits and
+
+parity bits.
+
+Correspondingly, in each sub-matrix
+
+, the first rows are
+
+information rows (nodes) and the remaining rows are parity
+
+rows (nodes). In practice, the sub-matrices in are periodic in
+
+time with a finite period :
+
+for all and
+
+. If
+
+, the code is a time-invariant LDPC-CC. In this ar-
+
+ticle we discuss design problems for time-varying LDPC-CCs.
+
+The parameter is known as the syndrome former memory,
+
+called the code memory in this article, in contrast to the memory
+
+definition used in circuits. The (overall) constraint length of a
+
+rate- LDPC-CC is defined as
+
+. For regular
+
+LDPC-CCs, both the column weight and the row weight
+
+of are constant and the code will be referred to as an
+
+LDPC-CC.
+
+B. LDPC-CC Encoder Design
+
+Due to the lower triangular property of , LDPC-CCs can be
+
+directly encoded from the parity-check matrix, given the condi-
+
+tion that
+
+is full rank for all possible ’s [1]. In most cases,
+
+LDPC-CC encoding is applied to finite-length data frames, and
+
+termination is used to ensure that the trailing bits are sufficiently
+
+protected [26]. Therefore, built-in termination is an essential
+
+requirement of the encoder. An efficient termination circuitry
+
+design, called all-phase termination, was proposed in [9]. For
+
+time-varying LDPC-CCs with meaningful constraint lengths,
+
+the termination circuitry usually dominates the encoder com-
+
+plexity [9].
+
+In this article we consider LDPC-CCs with
+
+, i.e.,
+
+(such as 1/2, 2/3, 3/4, etc.). Rate-1/2 codes will
+
+most frequently be used as examples, where each sub-vector in
+
+the codeword can be written as
+
+(2)
+
+H Fig. 1. Check node (column in ) message locations in the memory banks
+of the circular buffer. A memory access collision occurs to the memory bank marked by the ellipse during a node update cycle.
+However, this parallelization approach does not take into consideration the parity-check matrix. The parity-check matrix itself does not guarantee that the parity bits within each group do not depend on each other. There can be cases where one parity bit is generated based on another parity bit within the same group. In such cases, an internal serialization may be needed within a group of parity bits, which increases the latency and lowers the throughput. As grows, this issue becomes more conspicuous [23].
+There are no previously reported results on parallelizing the built-in termination circuitry for LDPC-CCs. Parallel termination is theoretically straightforward because multiple bits can be generated based on the product of a termination matrix and the encoder state vector. However, applying this method to the architecture in [9] would make the area of the termination control logic and the number of XOR trees (each producing a termination bit) grows linearly with the parallelization factor, in exchange for a proportional increase in throughput. As the termination circuitry already dominates the encoder area for a medium-sized time-varying LDPC-CC, this area increase is undesirable. To make parallel encoding and termination possible and more efficient, the parity-check matrix needs to be designed to avoid such pitfalls.
+
+where and represent information bits and parity bits, respec-
+
+tively. The extension to rate- codes will also be discussed.
+
+A recent encoder architecture, named the partial syndrome en-
+
+coder [27], will be used rather than the more commonly seen
+
+direct encoder [28] for two reasons:
+
+• As shown in [28], the partial syndrome encoder throughput
+
+scales better with the code size. In this article, medium-
+
+sized LDPC-CCs are used and the partial syndrome en-
+
+coder is a suitable choice.
+
+• For rate- LDPC-CCs, the number of state bits for the
+
+partial syndrome encoder is
+
+of that
+
+for the direct encoder, which will reduce the termination
+
+complexity.
+
+As the LDPC-CC encoder design is based on registers, it can
+
+be parallelized in a brute force way by generating a group of
+
+parity bits at the same time [23]. This is the method
+
+used in [23] for the direct encoder architecture. Each shift reg-
+
+ister of length is replaced by registers of length
+
+(see Fig. 3 in [23]), the XOR gate is replaced by XOR gates,
+
+and the control logic is also changed correspondingly to en-
+
+able parallel processing while maintaining the integrity of the
+
+parity-check constraints.
+
+C. LDPC-CC Decoder
+
+For LDPC-CC decoders, the design effort can be focused on
+
+one decoding processor, and then a suitable number of pro-
+
+cessors can be concatenated together as the full decoder. An
+
+LDPC-CC decoder can even use a single processor with suf-
+
+ficient memory for the codeword frame to minimize the cost.
+
+In other words, the LDPC-CC decoder can be parallel, partially
+
+parallel or serial in the iteration dimension [18]. In this article,
+
+however, we focus on the design of a unit processor that is par-
+
+allel in the node dimension. In such a processor, with multiple
+
+nodes exchanging messages, the storage and access of messages
+
+need to be carefully considered.
+
+Consider a regular ( , ) rate- LDPC-CC with code
+
+memory and the constraint length
+
+. If the par-
+
+allelization factor is , there are VNUs (variable node units),
+
+CNUs (check node units), and
+
+mes-
+
+sages in the memory, including both intermediate messages and
+
+channel LLRs. To decode sub-vectors (or bits) in parallel,
+
+each node update cycle on a group of sub-vectors consists of
+
+VNU reads,
+
+VNU writes,
+
+CNU
+
+reads, and
+
+CNU writes. To achieve high throughput,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+839
+
+the memory architecture needs to be designed to complete
+
+the node update cycle in the least number of memory cycles.
+
+Multiple design choices are available. Although they are not
+
+necessarily exclusive, we discuss them individually to analyze
+
+the challenges when parallelizing the decoder.
+
+• Parallel access with one block of single-port memory
+
+In the simplest case, to motivate the need for optimizing
+
+the memory architecture, all messages are stored in one
+
+block of single-port memory. Then
+
+memory accesses are needed for each node update cycle.
+
+For a rate-1/2 (3,6) code, the throughput would be de-
+
+coded (information) bits per memory cycle, which is low.
+
+• Parallel access with multi-port memory
+
+A multi-port memory allows simultaneous read and/or
+
+write operations by multiple nodes. Consider a dual-port
+
+memory, where one read and one write can occur simulta-
+
+neously. This potentially reduces the number of required
+
+memory cycles by half. For a (3,6) code, the throughput
+
+is
+
+information bits per memory cycle, doubling that
+
+of a single-port memory. Further increasing the number
+
+of read/write ports will increase the throughput. However,
+
+the cost of further increasing the number of ports on each
+
+memory cell grows quadratically and multi-port memory
+
+usage needs to be weighed based on available resources.
+
+On many modern FPGA devices, dual-port memories
+
+are already available and we will assume the presence of
+
+dual-port memory when discussing the FPGA-based de-
+
+coder architecture. For the ASIC architecture presented in
+
+Section V-B, to achieve a throughput of bits per memory
+
+cycle, multi-port memories are also used.
+
+• Parallel access with multiple memory banks
+
+The memory can be partitioned into multiple banks to re-
+
+duce the number of memory cycles required by node up-
+
+dates. There are many ways to partition the memory for
+
+LDPC decoding but the common target is to achieve the
+
+highest possible throughput with the minimum number of
+
+banks because increasing the number of banks increases
+
+the address decoder overhead and may also increase the
+
+routing/switching area. Here we analyze two previously
+
+used approaches for LDPC-CCs: one for FPGAs with dual-
+
+port memories and the other for ASICs with single-port
+
+memories.
+
+In a previously reported serial FPGA implementation [22],
+
+the partition is aligned with
+
+VNU accesses, i.e., using
+
+dual-port memory banks to allow VNUs read or
+
+write messages in one clock cycle. Due to the randomness of
+
+the edges, the CNU accesses to these banks may result in colli-
+
+sions. An example is shown in Fig. 1 for the (128,3,6) LDPC-CC
+
+used in [22], where a CNU (corresponding to a column in )
+
+tries to access six messages that are not distributed in six dif-
+
+ferent banks. To handle a collision, the CNU can spend extra
+
+clock cycles to access the messages. In each node update cycle
+
+in [22], two clock cycles are allocated for each CNU memory
+
+access, whereas one clock cycle is used for VNU access, and
+
+the resulting throughput is
+
+bits per clock
+
+cycle. Alternatively, a non-deterministic approach is possible,
+
+where the CNU access only stalls for extra cycles when there
+
+are collisions. This design improves the throughput, but incurs
+
+extra circuit complexity. When
+
+, collisions get more fre-
+
+quent. Take the (128,3,6) code for example and let . With
+
+memory banks (still aligned with VNU ac-
+
+cesses), collisions happen so frequently that as many as six clock
+
+cycles are needed to complete the accesses for the four CNUs.
+
+With the accesses of the four VNUs still only taking one clock
+
+cycle, the throughput is
+
+. The speed-up factor
+
+with
+
+is limited to only
+
+on account
+
+of the memory collisions.
+
+It is possible to use even more memory banks to totally avoid
+
+memory access collisions. This is the approach taken in [22]. In
+
+this ASIC design of the (128,3,6) decoder,
+
+and the number
+
+of memory accesses per node update cycle is 26. The number of
+
+used single-port memory banks is 28, optimized through a graph
+
+coloring algorithm. The throughput is increased to one bit per
+
+clock cycle [25]. Note that this increase is achieved at the cost
+
+of cross-point switches of size 28 28, which would otherwise
+
+not exist in a decoder with
+
+. If is increased, the number
+
+of banks will also increase and the switch network area may
+
+increase quadratically [20] due to the absence of coordinated
+
+code design.
+
+III. ARCHITECTURE-AWARE LDPC-CC CONSTRUCTION
+To efficiently parallelize the LDPC-CC encoder and decoder, the code construction and the encoder/decoder design must be jointly considered. We start from the construction algorithm for architecture-aware LDPC-CCs. Here we consider the FPGAbased memory architecture in Fig. 1 and assume that dual-port memory is used. In the ASIC-based architecture in [25], the memory partition is obtained by graph coloring optimization, which makes the connection between the parity-check matrix and the memory architecture rather ad hoc.
+
+A. Constraints in the Code Construction
+
+Similar to the joint code-encoder-decoder designs for
+
+LDPC-BCs [13], [15], the construction of architecture-aware
+
+LDPC-CCs is subject to two classes of constraints: implemen-
+
+tation-oriented and performance-oriented. The former targets
+
+at efficient parallel encoder and decoder architectures, and the
+
+latter ensures the performance of the code. We detail both sets
+
+of constraints below:
+
+Implementation-Oriented Constraints
+
+C1: Encoding constraint: The LDPC-CC should be di-
+
+rectly encodable from the parity-check matrix, i.e.,
+
+should always be full rank. For rate-
+
+codes, this constraint can be easily satisfied by set-
+
+ting the last row (parity row) of
+
+to 1.
+
+C2: Parallel encoding constraint: In a group of parity
+
+bits being generated in parallel by the encoder, no
+
+parity bit should depend on any other parity bit. This
+
+constraint can be satisfied by making sure that in the
+
+parity rows (see Section III-B) each matrix on
+
+the diagonal of has a column weight of no more
+
+than 1.
+
+C3: CNU memory access constraint: For each CNU in
+
+the decoder, one read or write of all associated mes-
+
+sages should take only one clock cycle. In the case
+
+of
+
+regular LDPC-CCs, this means that the
+
+edges connected to each check node must be
+
+mapped to different memory banks. One implicit
+
+condition here is that the memory banks are already
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+840
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+Fig. 2. Steps in the construction algorithm for a rate-1/2 (3,6) architecture-aware LDPC-CC.
+
+aligned with VNUs and each VNU can access all as- Note that alternative construction algorithms, such as random
+
+sociated messages in the memory without collision. construction, the ACE (approximate cycle extrinsic message de-
+
+This constraint can be satisfied by “block-wise” con- gree) algorithm [29], and the protograph-based code construc-
+
+struction of the edges, as will be shown in Fig. 2(b). tion [30], can also be applied to this architecture-aware code
+
+C4: Node parallelization constraint: There must be construction to obtain good codes that satisfy the implementa-
+
+no memory access collisions when multiple tion-oriented constraints.
+
+CNU/VNUs access the circular buffer in parallel.
+
+Within one processor, to decode input codeword
+
+sub-vectors in parallel, CNUs and VNUs must B. Architecture-Aware LDPC-CC Construction work in parallel, accessing the memory banks at
+
+the same time. The access pattern is determined by We now describe a proposed construction algorithm for ar-
+
+the parity-check matrix. Our analysis on a tentative chitecture-aware LDPC-CCs that meet all of the constraints in
+
+parallel decoder architecture shows that permuta- Section III-A. The algorithm starts by constructing one period
+
+tion matrices of size
+
+can be used to satisfy of the syndrome former as a rectangular base matrix including
+
+this constraint.
+
+parity rows and information rows. Then the base matrix is cut
+
+Performance-oriented Constraints
+
+along the diagonal, moved and repeated to generate the entire
+
+C5: Code memory constraint: In constructing a parity-check matrix. The parallelization factor is denoted by .
+
+time-varying LDPC-CC, given the code period The steps presented in this section constitute the algorithm for
+
+, the code memory
+
+should be as large constructing regular architecture-aware LDPC-CCs with
+
+.
+
+as possible. Note that a larger generally leads The process is illustrated in Fig. 2 for a (3,6) code.
+
+to better performance with a fixed . We fix In the algorithm, we use circulant matrices of size when
+
+the value of first because the construction of constructing the parity-check matrix. A circulant (matrix) is a
+
+time-varying LDPC-CCs starts from one period of matrix where each row is the preceding row cyclically shifted to
+
+the parity-check matrix. Although given it is the right by one position. A zero circulant is an all-zero matrix,
+
+possible to construct an LDPC-CC with larger and a weight-one circulant is one with Hamming weight 1 for
+
+than , we only consider the case where
+
+. each row and each column. Weight-one circulants are used in
+
+When
+
+, it can be treated as a code with a the construction, and are actually identity matrices cyclically
+
+new period
+
+, with repetitive shifted to the right by a certain amount. A weight-one circulant
+
+patterns inside one new period of the parity-check is a special case of permutation matrices.
+
+matrix ensuring that is still the basic period [6]. The motivation of using circulants is to introduce algebraic
+
+C6: Girth constraint: The girth of the LDPC-CC Tanner structures into the parity-check matrix of LDPC-CCs to achieve
+
+graph should be kept as large as possible because efficient parallelization of both the encoder and decoder. Circu-
+
+small cycles are detrimental to the performance. The lants have already been used in the construction of LDPC-BC
+
+modified edge-growth algorithm in [6] is applied parity-check matrices [13], [31]. In [5], LDPC-CCs were ob-
+
+here.
+
+tained from quasi-cyclic LDPC-BCs constructed with circulant
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+841
+
+matrices. While circulants were only used in [5] to obtain generator polynomials for LDPC-CCs, our approach here uses circulants directly in the parity-check matrix, making the code satisfy implementation-oriented constraints. In the following discussion, a circulant or an identity matrix is always of size unless otherwise specified.
+Architecture-aware LDPC-CC construction algorithm:
+
+The algorithm is composed of three main steps: parity row
+
+construction, information row construction, and LDPC-CC
+
+parity-check matrix generation.
+
+S1: Construct the parity rows of the syndrome former as
+
+a square matrix of size
+
+with both row
+
+m ; ; K Fig. 3. Performance of a few ( 3 ) architecture-aware LDPC-CCs. An
+LDPC-CC constructed otherwise is included for reference. The sum-product algorithm is used in floating-point simulation with a maximum of 100 iterations. At least 1000 bit errors are collected for each SNR.
+
+weight and column weight being three. This matrix is
+
+also called a parity-row matrix. This step is shown in
+
+Fig. 2(a), where each sub-matrix is a circulant.
+
+The following three steps are then performed:
+
+a) Place identity matrices on the diagonal of .
+
+In total there are
+
+circulants on the
+
+diagonal. This step originates from C1 and C2.
+
+b) Another group of identity matrices is placed in
+
+by cyclically copying each diagonal circulant
+
+to one position below itself. This step makes
+
+information rows and parity rows, as shown in
+
+Fig. 2(c), and obtain a
+
+matrix , which is the
+
+base matrix of the LDPC-CC. With standard operations
+
+on the base matrix (see [1], [6]), including cutting along
+
+the diagonal, moving the lower part to the right, and
+
+repeating the matrix, an LDPC-CC is obtained. As
+
+proved in [6], this procedure does not reduce the girth
+
+of the Tanner graph, which is important to satisfy C6.
+
+each column of the final syndrome former have
+
+maximum non-zero span, thereby fulfilling C5. By
+
+doing this, the code also satisfies
+
+.
+
+Now both the row weight and column weight of
+
+are 2.
+
+c) The rest of is determined by randomly
+
+inserting weight-one circulants with random cyclic shifts, guaranteeing that there is one circulant
+
+in each row and each column. Naturally, in this
+
+random inserting process, small cycles are avoided
+
+by maximizing local girths due to C6. Meanwhile,
+
+C3 is automatically satisfied for parity bits.
+
+S2: The information rows are constructed as
+
+square
+
+matrices of size
+
+denoted by
+
+, where corresponds to the th rows in each
+
+sub-matrix
+
+of . These matrices are called
+
+information-row matrices and they are also built with
+
+circulants. Only C3 and C6 need to be considered in
+
+this step. For C3 , we divide the matrix into 4 4
+
+equal-size blocks and set the four diagonal blocks to
+
+zero. Each of the remaining 12 blocks is filled with a random permutation of weight-one circulants, and the
+
+cyclic shifts of these circulants are also determined
+
+Note that while C4 was not mentioned in the preceding
+
+construction, it is automatically satisfied by building both
+
+the parity-row matrix and the information-row matrices with
+
+circulants of size
+
+. This algebraic structure ensures con-
+
+tention-free memory access in the decoder, as will be further
+
+explained in Section V when decoder memory partition is
+
+discussed.
+
+It is readily shown that the code period must be an in-
+
+teger multiple of for
+
+regular LDPC-CCs. Since the
+
+parallelization factor is usually small, as will be shown in
+
+Section V, this method gives us enough flexibility in code size
+
+when designing time-varying LDPC-CCs.
+
+The algorithm generates most commonly used codes of rate
+
+(e.g., 1/2, 2/3, 3/4, and so on). It can also be extended to
+
+more general code rates. To construct a rate- LDPC-CC with
+
+, the same steps can be used with minor modifications.
+
+The base matrix has size
+
+. The circulant used
+
+in each step is replaced by a “generalized” circulant of size
+
+with each element being a
+
+sub-matrix. The key in
+
+the steps is to continue to satisfy all the constraints specified in
+
+Section III-A.
+
+C. Examples and Performance Simulation
+
+in a random fashion. In this step, the diagonal blocks are avoided because the operations in the next step rearrange elements along the diagonal and this might violate C3. Due to C6, we also maximize the local girth in this procedure. Note that and are constructed sequentially. Local girth calculation must take into account all previously constructed rows. This step is shown in Fig. 2(b) for a rate-1/2 code where
+and only one information-row matrix needs to be constructed. S3: Take the information-row matrices
+
+Fig. 3 shows the simulated BER performance of a few ar-
+
+chitecture-aware LDPC-CCs constructed with the proposed al-
+
+gorithm. Included among the architecture-aware codes are two
+
+rate-1/2 LDPC-CCs of period
+
+with
+
+and 7, re-
+
+spectively, one rate-1/2 LDPC-CC of period
+
+and
+
+, and two higher rate codes. A well-constructed architecture-in-
+
+dependent (512,3,6) LDPC-CC with
+
+is used for com-
+
+parison. Evidently the rate-1/2 architecture-aware LDPC-CCs
+
+perform close to (i.e., within 0.1 dB) the architecture-indepen-
+
+dent LDPC-CC of similar constraint length when is small
+
+(e.g.,
+
+for the code memory less than 500). These rate-1/2
+
+and the parity-row matrix , interlace the
+
+LDPC-CCs with constraint length
+
+have roughly the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+842
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+same BER performance as a regular (3,6) LDPC-BC of block
+
+length of around 8000–10000. The two higher rate codes are
+
+constructed with
+
+and
+
+, and also have good
+
+performance.
+
+Fig. 3 also indicates that the code performance does not de-
+
+grade with increases in . For our present algorithm, this is true
+
+only when is small. Our simulations show that for LDPC-CCs
+
+with an of around 500–1000 and a in the upper twen-
+
+ties, the constructed codes start to show error floors at a BER
+
+of . This implies that the parallelization factor cannot be
+
+arbitrarily increased without compromising code performance.
+
+On the other hand, the construction algorithm has the poten-
+
+tial of being further improved for better code performance and
+
+larger .
+
+IV. PARALLEL LDPC-CC ENCODER WITH BUILT-IN TERMINATION
+
+Given the new class of architecture-aware LDPC-CCs, we
+
+now consider the parallel encoder design in two parts: encoding
+
+and termination. In parallel encoding, a group of information
+
+bits are simultaneously encoded. The time between accepting a
+
+group of information bits and the next group is defined
+
+as a baud period. The same parallelism applies to termination,
+
+where termination bits are generated in one baud period.
+
+We will use rate-1/2 codes
+
+for discussion; however, the
+
+design can be easily extended to rate LDPC-CCs.
+
+A. Parallel Encoding
+For rate-1/2 codes, information bits are encoded within each baud period by the parallel encoder. To differentiate the notation from that used in serial encoding/decoding, we use a new discrete time index to denote the encoding/decoding flow in units of baud periods. The following are the mapping relations between the serial notations and the parallel notations of a rate-1/2 LDPC-CC for the codeword sub-vectors, the information bits and the parity bits, respectively
+
+(3)
+
+The syndrome former is correspondingly organized into
+
+groups of sub-matrices of size
+
+. In addition to the new
+
+time index , the subscript (specifying the relative positions
+
+among sub-vectors involved in the same parity-check) used in
+
+the serial notation is also transformed into a parallel version
+
+. The mapping is shown in (4), at the bottom of the page.
+
+Each group of sub-matrices forms a
+
+matrix
+
+,
+
+consisting of parity rows and information rows. As indicated in
+
+the code construction algorithm, the base parity-check matrix
+
+of a rate-1/2 code is obtained by interlacing the parity-row
+
+2 2 Fig. 4. Interlacing of two   circulants into a 2  matrix, and the de-in-
+terlacing operation. In this example  = 8.
+
+matrix and the information-row matrix . By de-inter-
+
+lacing
+
+, we can get the parity-row component
+
+and the information-row component
+
+, each of which is
+
+a zero or weight-one circulant. The interlacing and de-inter-
+
+lacing operations are illustrated in Fig. 4. We call
+
+and
+
+a parity-row circulant and an information-row circulant,
+
+respectively. It is apparent that the matrix interlacing in code
+
+construction is linked to the interlacing of information/parity
+
+bits in the codewords of LDPC-CCs [see (2)]. Here, the de-in-
+
+terlacing of
+
+is related to the parallelization, where
+
+information bits and parity bits need to be treated separately
+
+[see (3)]. As the parity-check matrix is organized into
+
+groups of size
+
+for parallel encoding, the code memory
+
+and code period are also measured in terms of such groups. The
+
+group period and group memory are defined as
+
+and
+
+, respectively. With the group period so defined, a
+
+new group phase parameter
+
+is also
+
+used in parallel encoding.
+
+The serial partial syndrome encoding equation can be
+
+found in [27]. Here, we give the equations for parallel partial
+
+syndrome encoding. In serial encoding, the encoder state at
+
+time is denoted by a vector
+
+of size
+
+, called
+
+the partial syndrome. In parallel encoding, we still have
+
+the same partial syndrome as the state vector in every baud
+
+period, but it is organized into groups of bits, written as
+
+. At time , each state element
+
+is no longer a bit but a vector of
+
+bits. The parallel encoding equation is then given by
+
+(5)
+
+Meanwhile, the state vector is updated in every baud period as shown in (6), shown at the bottom of the next page.
+Based on (5) and (6), a parallel encoder can be built as shown in Fig. 5. The state vector is implemented as registers
+
+...
+
+...
+
+...
+
+...
+
+(4)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+843
+
+Fig. 5. Parallel partial syndrome encoder for AA LDPC-CCs. The data path width is . Each SW0 represents a phase-controlled -to- switch matrix.
+
+of width bits, and the data path width is bits as well. In
+
+(6), both the information-row circulant
+
+and
+
+the parity-row circulant
+
+are time-varying with
+
+period . Reflected in the parallel encoder, these zero or
+
+weight-one circulants are implemented as switch matrices
+
+controlled by the group phase signal . These switch matrices
+
+(SW0) output zero bits or a cyclic shift (or rotation) of the
+
+input bits. Due to the sparsity of the parity-check matrix, in
+
+each baud period, only five of the
+
+switch matrices
+
+have non-zero output for a rate-1/2 (3,6) code.
+
+While parity bits are generated in each baud period, there is
+
+no dependency among these parity-bits due to the code con-
+
+struction. The number of D flip-flops (DFFs) used as state bits
+
+is still
+
+, and the group period is used for the
+
+control unit in the implementation rather than the code period
+
+. This period change greatly reduces the cost of the phase
+
+control logic. Additional devices used in the parallel encoder
+
+are the
+
+switch matrices. Therefore, compared to a serial
+
+encoder, the parallel encoder uses the same number of DFFs for
+
+the state bits, much less control logic, more switch matrices of
+
+size , and achieves times as much throughput.
+
+For rate- code rates, the same parallel encoder architecture
+
+can be used. The number of state bits becomes
+
+,
+
+which can be organized as state registers, with each register
+
+being
+
+bits wide. The information line data path width
+
+and the parity line data path width change to and
+
+,
+
+respectively, and each switch matrix is composed of
+
+SW0
+
+units used in Fig. 5. The encoding throughput is bits per clock
+
+cycle.
+
+B. Parallel All-Phase Termination
+
+A partial syndrome encoder can be terminated using the ap-
+
+proach described in [27]. By solving a linear equation, the tail
+
+bits for termination (called termination bits or the termination
+
+sequence) are generated as linear combinations of the state bits.
+
+However, termination starts from a fixed phase in [27], which is
+
+called single-phase termination [9]. We use the all-phase termi-
+
+nation approach proposed in [9], where it was applied to a di-
+
+rect encoder. The all-phase termination approach also applies to
+
+partial syndrome encoders. The proof of termination is similar
+
+to the one given in [9] except that the all-zero state in a partial
+
+syndrome encoder corresponds to a partial-zero state in the di-
+
+rect encoder. More detailed discussions on terminating a serial
+
+partial syndrome encoder and on all-phase termination can be
+
+found in [27] and [9], respectively. Here only parallel all-phase
+
+termination is considered.
+
+Suppose the rate-1/2 parallel encoder in Fig. 5 has encoded
+
+a data frame of length (where is an integer multiple of :
+
+) and the encoder is left at state . The termi-
+
+nation length is
+
+. Let the termination sequence be
+
+, the termination parity bits be
+
+, and the
+
+coded termination sequence be
+
+, all of which are or-
+
+ganized in groups of bits. When both the frame length and
+
+the termination length are integer multiples of , a parallel
+
+encoder with termination is mathematically equivalent to a se-
+
+rial encoder with termination. So we start from the termination
+
+equation for a serial partial syndrome encoder [27]
+
+(7)
+
+Here
+
+represents the transposed parity-check matrix
+
+from time
+
+to time
+
+. Its size is
+
+.
+
+It is exactly the matrix used in [9], and defines the linear
+
+equation to be solved in the termination problem. According
+
+to the architecture-aware code construction algorithm and the
+
+parallel encoding equations, all the vectors and matrices in (7)
+
+can be rewritten in units of baud periods, generating (8), shown
+
+at the bottom of the page.
+
+As a part of the infinite syndrome former, the matrix
+
+is also composed of smaller matrices
+
+.
+
+(6)
+
+...
+
+...
+
+...
+
+(8)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+844
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+Third, the first rows of each termination matrix are taken and combined into an all-phase termination matrix , as shown in the following equation:
+
+...
+
+(10)
+
+Fig. 6. A parallel partial syndrome encoder with built-in parallel termination. MUL represents a phase-controlled vector-matrix multiplication unit.
+
+defined by (4), each of which is two circulants interlaced
+
+together as shown in Fig. 4. By de-interlacing these matrices
+
+and the vector
+
+, the right-hand side of (8) is un-
+
+changed. This procedure is actually performing row swapping
+
+on
+
+and column swapping on
+
+in the
+
+same order. Then we obtain the following equation:
+
+The all-phase termination matrix is also composed of circulants but their weight is not always zero or one. They can be circulants of any weight due to the inverting operation over the ring, and is not sparse either. Based on , when termination starts at the end of a frame, termination bits are generated in parallel as follows:
+... (11)
+
+(9) Fig. 6 shows a rate-1/2 parallel LDPC-CC encoder architec-
+
+ture with parallel built-in termination. Note that in the termi-
+
+This is a linear equation defined by the matrix
+
+, where the information
+
+bits/rows and parity bits/rows are separated. Due to the
+
+periodicity of architecture-aware LDPC-CCs, given , there
+
+are a total of possible values of
+
+. The choice of value
+
+to use depends on the phase of the parallel encoder when
+
+termination starts, i.e.,
+
+.
+
+nation circuitry, additional units (named MUL) are introduced
+
+to perform multiplication of a -bit vector and a
+
+circu-
+
+lant of arbitrary weight. The circulant value is controlled by the
+
+phase signal. We can simply implement MUL as an array of
+
+AND-XOR gates with inputs controlled by the phase signal, and
+
+the phase control logic can be shared among multiple inputs due
+
+to the circulant structure.
+
+Based on (9) we can apply all-phase termination to the par-
+
+allel encoder. The matrix
+
+is treated as a matrix defined
+
+upon circulants and has size
+
+. Given the ad-
+
+dition and multiplication operations that we use, the circulants
+
+form a ring rather than a Galois field. Nevertheless, a matrix
+
+over a ring can still be inverted provided that it is full rank. Nat-
+
+urally, its inverse is defined over the same ring, i.e.,
+
+is also
+
+composed of circulants. We’ve tested and verified this parallel
+
+C. Synthesis Results
+
+The proposed encoder architecture is implemented for the
+
+(472,3,6) AA LDPC-CC in Fig. 3. The parallelization factor is
+
+chosen to be
+
+based on two reasons. First, application data
+
+is usually organized as bytes containing 8 bits. With
+
+,
+
+we can encode/decode the data byte-wise and do not need any
+
+padding. Second, a modulo- operation is required in the par-
+
+allel decoder described in Section V. Making a power of 2
+
+all-phase termination approach for the (472,3,6) AA LDPC-CC simplifies this hardware operation. Table II shows the standard
+
+and a few others with \rho being 4, 8, and 16.
+
+To perform all-phase termination, pre-processing needs to be
+
+done before the termination circuitry is built. Pre-processing for
+
+parallel all-phase termination is similar to the pre-processing
+
+proposed in [9] except that all the rank and inverse calcula-
+
+tions are based on the ring of circulants. First, the termina-
+
+tion length is determined, chosen as the minimum value that
+
+makes
+
+full rank for all phases.
+
+Second, the termination matrix is obtained for all phases.
+
+For the partial syndrome encoder, only the first
+
+bits of
+
+the right hand vector in (9) are non-zero. So only the first
+
+columns of
+
+are relevant. In addition, termination parity
+
+bits
+
+will be generated by the encoder. The ter-
+
+mination matrix
+
+is then defined as the first columns
+
+and the first rows of of
+
+. In the process of inverting
+
+(with Gaussian elimination), all the free variable circu-
+
+lants are set to zero circulants to guarantee the correctness of
+
+cell synthesis results for the parallel encoder generated by Syn-
+
+opsys Design Compiler (Version 2007.3) for a ST Microelec-
+
+tronics 90-nm CMOS process. The synthesis uses worst-case
+
+timing libraries operating at 0.9 V. A serial encoder implemen-
+
+tation for the (512,3,6) LDPC-CC is used as a comparison, with
+
+data taken from [9]. A third column lists results from a parallel
+
+(128,3,6) LDPC-CC encoder without termination in [23]. The
+
+last column includes results of a reported LDPC-BC encoder
+
+design. Note that the synthesis reports standard cell area, which
+
+is estimated to be 25% less than the core silicon area if the uti-
+
+lization factor is 75%.
+
+We first consider the encoder design without termination.
+
+With the throughput increased to times that of a serial en-
+
+coder, it is important to evaluate the cost change. It can be
+
+seen that the proposed parallel architecture reduces the area
+
+by 58% compared to a serial encoder with comparable BER
+
+performance. Even when compared to a parallel encoder ( is
+
+also 8) for a much smaller code with
+
+, the area saving
+
+all-phase termination.
+
+is 63%. Note that the efficient parallelization itself generates
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+845
+
+TABLE II STANDARD CELL SYNTHESIS RESULTS FOR THE PARALLEL ENCODERS AND COMPARISON TO PREVIOUS RESULTS. IN THE MEANS NOT APPLICABLE. LDPC-CC
+SPECIFICATIONS ARE FOR THE ENCODER WITH BUILT-IN TERMINATION UNLESS OTHERWISE INDICATED
+
+some area reduction as discussed in Section IV-A (due to cluding encoding and termination, the average encoding energy
+
+simplified control logic), but the significant area reduction is per data bit is 4.6 pJ.
+
+a combined effect of the partial syndrome encoder and the parallel architecture. In contrast, a brute force parallelization
+
+V. PARALLEL DECODER DESIGN FOR LDPC-CCS
+
+with
+
+in [23] increases the encoder area by 2.69 times.
+
+In parallel decoding, a group of sub-vectors in the codeword
+
+For the first two encoders with built-in termination in are processed at the same time. Similar to the definition in the
+
+Table II, the proposed parallel architecture achieves twice the parallel encoder, a baud period is defined as the time between
+
+throughput of the serial one with the clock frequency being receiving a group of sub-vectors and the next group. In this
+
+75% lower, and the area being 81% smaller. The maximum section we discuss the design of a single processor for (3,6)
+
+achievable throughput in the synthesis is 9.6 Gbps. If pipelining regular codes.
+
+is used, even higher throughput could be achieved. To compare with LDPC-BC encoders, we refer to the highly-optimized A. FPGA-Based Decoder Architecture
+
+LDPC-BC encoder design in [32], augmented by full custom To decode sub-vectors in parallel, the circular buffer
+
+design cells. The design should be much smaller in a 90-nm memory within one processor is partitioned into banks (each
+
+technology and also due to the fact that the design in [32] was bank separately addressed) for messages and for channel
+
+pad-limited. Nevertheless, with our design achieving 2.0 Gbps LLRs, with information bit messages and parity bit messages
+
+at 250-MHz clock frequency, and the cell area being 0.1 mm , it stored separately. Each memory bank has a minimum height
+
+is evident that the parallel LDPC-CC encoder with termination of
+
+and each row holds messages. Assuming that
+
+is smaller than a comparable LDPC-BC encoder. The code both the message width and the channel LLR width are bits,
+
+rate difference in this comparison is not considered. But at the the word width of each memory bank is bits. The architec-
+
+same block length, higher rate LDPC-BCs usually have lower ture of a unit processor for a rate-1/2 (3,6) code is shown in
+
+encoding complexity and higher throughput.
+
+Fig. 7, including the memory banks, VNUs and CNUs. Control
+
+As found in previous studies [9], termination circuitry usu- units are not shown in the figure. The memory bank partition
+
+ally dominates the area of a time-varying LDPC-CC encoder is aligned with VNUs, and the messages are accessed in a
+
+due to its quadratic complexity. The proposed parallel encoder SIMD (single instruction, multiple data) fashion. Consider the
+
+architecture with parallel built-in termination for the (472,3,6) memory banks for information bit messages, for example. In
+
+LDPC-CC with
+
+consumes 0.1 mm of cell area, which Fig. 7, the VNUs operate in parallel and read messages
+
+is much smaller than the serial encoder with built-in termina- from the four memory banks simultaneously. No switching
+
+tion. With numbers from Table II, it is not hard to find out that logic is needed for the VNUs because the messages in each
+
+the termination circuitry area (not including the encoding part) row of each memory bank are stored in the same order as the
+
+is 0.069 mm , which is about 15% of the termination circuitry VNUs. These memory banks function as circular buffers. Now
+
+area in [9] (0.459 mm ). This significant improvement is mainly consider the CNU operation. The CNUs operate in parallel
+
+due to using the partial syndrome encoder, and partially due to and they need to access the memory banks simultaneously.
+
+the efficient parallelization. The partial syndrome encoder uses In Fig. 7, a single memory access operation of the CNUs
+
+half the state bits as the direct encoder for rate-1/2 codes, which involves messages in the three information bit message
+
+leads to a theoretical 75% reduction in termination complexity. banks. Due to the circulant structure in the parity-check matrix,
+
+In addition, the serial encoder uses pipelining in the termina- these messages are actually located in exactly three rows
+
+tion circuitry to reach a higher clock frequency, while no extra in these three respective memory banks. However, routing
+
+pipelining is used for the parallel encoder. Therefore, it is fair to these messages to the CNUs requires switching logic.
+
+say that the parallelization itself achieves a speed-up factor of The switching network is an important part of LDPC decoder
+
+with little cost increase for the encoder.
+
+design due to the interleaving of messages in decoding. In
+
+Power consumption is estimated using Synopsys tools based the serial processor [22], no switching network is required.
+
+on the switching activity at data frame length 10000 bits. In- The message-passing operation is transformed into proper
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+846
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+TABLE III ONE-PROCESSOR THROUGHPUT AND COST OF THE FPGA-BASED PARALLEL DECODER ARCHITECTURE FOR RATE-b=c (3; d ) LDPC-CCS
+
+as pipelining, memory ports, etc. Here we consider a node
+
+update schedule similar to the one used in [22] in order to
+
+demonstrate the parallel decoder operations, and to allow a
+
+comparison with serial decoders.
+
+Assuming dual-port memory is used, which is commonly
+
+available on FPGA devices, the decoding within each baud pe-
+
+riod can be divided into two stages:
+
+(a) The input LLRs for sub-vectors, including information
+
+bit LLRs and parity bit LLRs, are written to the circular
+
+buffer. Meanwhile, the oldest messages in the circular
+
+buffer are read into the VNUs, processed and sent to the
+
+output. The read/write addresses for this stage is main-
+
+tained by a circular buffer pointer which increases by one
+
+for each baud period.
+
+(b) The CNUs read messages from the six memory banks.
+
+Meanwhile, the CNUs write the results of message pro-
+
+cessing from the last baud period back to the circular
+
+buffer. In this stage, read and write addresses are always
+
+different. Read addresses are generated by offsetting the
+
+Fig. 7. Parallel architecture for an LDPC-CC decoding processor. SW1 is a -to- cyclic-shift switch matrix. Identity matrix I represents direct connections. The memory banks for parity bits are not shown in the figure.
+
+circular buffer pointer. The offsets are determined by the relative positions of non-zero circulants in each column of
+. Again, they are time-varying with period and are
+
+generated by a ROM. The write addresses in this stage are
+
+simply replicas of the read addresses used in the previous
+
+memory addressing. With multiple CNUs, though, the switch
+
+baud period.
+
+network becomes necessary. Reflected in Fig. 7,
+
+switch In each stage of one baud period, every memory bank is read
+
+matrices are used to properly address the simultaneous access once and written once. No memory banks are idling except the
+
+pattern of the CNUs. Only one switch matrix is used for two for channel LLRs during stage (b). This also increases the
+
+parity bits because of the identity matrices used to construct power efficiency. This decoding schedule is actually similar to
+
+the parity-row matrix in Section III. The values of the switch the flooding schedule used in LDPC-BC decoders.
+
+matrices are determined by the information-row and parity-row Stages (a) and (b) take two clock cycles, and the decoding
+
+circulants (
+
+and
+
+) in each column of and throughput is information bits per clock cycle. Table III
+
+are time-varying with the group period . So they actually gives an estimation of throughput and the core components’ cost
+
+perform cyclic-shift or rotation operations, controlled by the of one processor for codes of more general rates. Also included
+
+phase signal , denoted by SW1 in Fig. 7. The difference is a comparison to a serial LDPC-CC decoding processor.
+
+between SW1 and the SW0 used in the parallel encoder (Fig. 5) Although not listed in the table, the control unit for a par-
+
+is that SW1 does not have all-zero outputs.
+
+allel decoder is actually much smaller than that of a serial one
+
+The same parallel decoder architecture can be applied to for codes of similar constraint length. Similarly to the encoder,
+
+rate- LDPC-CCs. The components for a rate- parallel much of the decoder control logic cost results from the time-
+
+decoder are listed in Table III.
+
+varying nature of the code. For the parallel decoder, the period
+
+The parallel LDPC-CC decoder architecture illustrated used in the implementation (the group period ) is only
+
+in Fig. 7 specifies the main decoder components including of the code period . Therefore, all control logic related to the
+
+memory, nodes, and switching network. In an FPGA imple- phase signal is greatly simplified. One additional cost in the par-
+
+mentation, the scheduling of node updates is determined not allel decoder is due to the switch matrices (SW1), which are not
+
+only by these components, but also by many other factors such seen in a serial decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+847
+
+TABLE IV SYNTHESIS RESULTS FOR A UNIT DECODING PROCESSOR. SRAM BLOCKS IN BOTH THIS WORK AND [25] WERE INSTANTIATED AS REGISTERS
+
+It is evident that with node parallelization, the decoding
+
+throughput can be increased significantly without increasing
+
+the total number of memory bits used, and the paralleliza-
+
+tion factor does not need to be large, limiting the cost in-
+
+crease in VNU/CNUs. To give an example, with
+
+and
+
+MHz, the information throughput for a rate-1/2 par-
+
+allel decoder is 400 Mbps per processor. To compare, the serial
+
+FPGA decoder in [22] achieves 40 Mbps with
+
+MHz2.
+
+In addition, the decoding latency is also reduced significantly
+
+due to the node parallelization.
+
+B. ASIC Design, Synthesis Results, and Discussion
+
+The proposed joint design approach and the parallel architec-
+
+Fig. 8. Fixed-point simulation results of the implemented decoder for the (472,3,6) AA LDPC-CC.
+
+ture were applied for a (472,3,6) LDPC-CC decoder in a 90-nm
+
+CMOS process. The ASIC architecture is based on a previous
+
+approach (see Fig. 3 in [25]). Rather than using 28 single-port
+
+memory banks, only eight banks are used to keep the size of the
+
+switch network contained, and each word in the memory holds
+
+messages. Meanwhile, the memory banks are made multi-port
+
+(2 single-port, 5 dual-port, and 1 single-port-write/dual-port-
+
+read) to achieve a throughput of sub-vectors per clock cycle.
+
+The decoder is designed to store messages in SRAM banks.
+
+However, because the available SRAM blocks are not proved
+
+in silicon, registers are instantiated in the synthesis. Standard
+
+cell synthesis results for worst-case performance are provided
+
+in Table IV. The power consumption was estimated by Syn-
+
+opsys tools based on switching activities at
+
+dB,
+
+for random frames of length 70,000 bits.
+
+Min-sum based CNUs are used due to their simplicity. The
+
+messages are uniformly quantized to 6 bits. Our fixed-point
+
+simulation shows that a 6-bit message width does not compro-
+
+mise the BER performance (Fig. 8). Although the min-sum ap-
+
+proximation loses about 0.4 dB in coding gain compared to the
+
+sum-product algorithm, the proposed parallel architecture is ap-
+
+plicable to CNUs with more complex algorithms [33], [34].
+
+Despite the fact that the (472,3,6) AA LDPC-CC is a much
+
+larger code than the (128,3,6) LDPC-CC in [25], the comparison
+
+in Table IV clearly shows the advantage of the parallel decoder
+
+architecture: a 233% throughput increase at less than half of the
+
+clock frequency with a 84% increase in the area. Even when the
+
+data path width difference is considered, the area increase is less
+
+than 150%. The energy consumption is also reduced by around
+
+70%3.
+
+In Table IV, the area figures for the components of a unit pro-
+
+cessor show that the memory area takes 94%. This is due to
+
+the synthesis using registers. If memory cells were synthesized,
+
+the memory area would be considerably smaller (so would the
+
+power consumption). Also note that the switch network area
+
+takes a significant portion of the combinational logic in a de-
+
+coder. The switch network here is different from the switch ma-
+
+trix (SW1) used in the FPGA decoder (Section V-A). SW1 is a
+
+simple rotation device, and only four such devices are used
+
+in an FPGA processor (Fig. 7). Here in the ASIC architecture,
+
+the switch network has up to
+
+messages as inputs/out-
+
+puts, and only part of the switching network is performing the
+
+rotation operation. Note that the figures in Table IV are for a unit
+
+processor. If the maximum number of iterations is , the decoder
+
+can include processors to achieve fully pipelined decoding and
+
+maximum throughput at the cost of larger area and higher power
+
+consumption. Alternatively, less processors or even a single pro-
+
+cessor can be used to build a decoder with smaller area and lower
+
+power consumption, while the throughput is also lower [18].
+
+We compare our results to other reported parallel LDPC-CC
+
+2In [22], the base clock frequency was 40 MHz, but due to over-clocking, the highest clock frequency used was 120 MHz.
+3Note that this is comparing synthesis results with chip measurements. But the improvement is still evident.
+
+decoders in [20] (listed in Table IV) and [21] (discussed below). Our design is different in the following aspects:
+• Our design uses architecture-aware code construction and applies to time-varying LDPC-CCs. The design in [20] and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+848
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 57, NO. 4, APRIL 2010
+
+[21] only applies to time-invariant LDPC-CCs and exploits
+
+REFERENCES
+
+the graph “regularity” of such codes (“invariance of the
+
+graph connection through the time” [21]).
+
+• In [20], the parallelism needs to be hundreds to achieve
+
+Gbps throughputs. In [21], the parallelism is
+
+.
+
+In our design, the VNU parallelism is
+
+.
+
+Based on the data in Table IV, our design outperforms
+
+[20] in both area and throughput. The design in [21] uses a
+
+tail-biting version of the (127,3,5) LDPC-CC and the decoder
+
+is intended for a specific frame length (3200 bits). To make a
+
+fair comparison, we extend our results to a tail-biting (472,3,6)
+
+LDPC-CC decoder with one processor. With the frame length
+
+being 3200 bits, the memory consumption is increased to
+
+times that of a unit processor. The
+
+other components, including nodes and the switch network, do
+
+not change. The area of a tail-biting version decoder would be
+
+2.94 mm . The throughput is 2.0 Gbps per iteration. In contrast,
+
+the tail-biting decoder in [21] takes 5.43 mm (on a 130-nm
+
+process) and the throughput is 1.07 Gbps per iteration.
+
+Circulants have been used to construct structured LDPC-BCs
+
+for reduced-complexity encoding and decoding, which also in-
+
+volves architectural considerations [13]. We use circulants in the
+
+code construction to satisfy the parallel encoding/decoding con-
+
+straints (C2 and C4). In LDPC-CC decoding, the parallel nodes
+
+in operation correspond to one circulant. In [13], circulants are
+
+used to “serialize” the operation of CNUs and VNUs that corre-
+
+spond to one circulant in order to make the fully parallel decoder
+
+partially parallel. It is an interesting fact that circulants can be
+
+used in both LDPC-CCs and LDPC-BCs but serve seemingly
+
+different purposes. This is caused by differences in their decoder
+
+architectures, especially in the memory architectures used.
+
+VI. CONCLUSION
+A joint code-encoder-decoder design approach has been proposed for high-throughput parallel LDPC-CC encoders and decoders. Key components of the new approach are an architecture-aware LDPC-CC construction algorithm, a parallel partial syndrome encoder architecture with built-in all-phase termination, and parallel decoder architectures, all of which have been presented in this article. The architecture-aware LDPC-CCs are constructed with implementation-oriented constraints while maintaining comparable performance to architecture-independent codes. In particular, circulant structures are introduced into the parity-check matrix to enable efficient parallelization of both encoding and decoding. A (472,3,6) LDPC-CC is constructed and implemented for a 90-nm CMOS process. ASIC synthesis results for the parallel encoder have shown 100% throughput increase at 75%-lower clock frequency with more than 80% area reduction when compared with a previously reported serial encoder. Both FPGA-based and ASIC-based architectures have been proposed for the decoder with a node parallelization factor within a unit processor, and both achieve throughput speed-up factors of at least , while using the same number of memory bits as a serial decoder. ASIC synthesis results of the (472,3,6) LDPC-CC for the 90-nm CMOS process have shown that a unit decoding processor achieves 2.0-Gbps throughput at 250-MHz clock frequency with an area of less than 1 mm .
+
+[1] A. Jiménez-Felström and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 9, pp. 2181–2191, Sep. 1999.
+[2] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. IT-8, no. 1, pp. 21–28, Jan. 1962.
+[3] A. Sridharan, D. Truhachev, M. Lentmaier, D. J. Costello, Jr, and K. S. Zigangirov, “Distance bounds for a class of LDPC convolutional codes constructed from permutation matrices,” IEEE Trans. Inf. Theory, vol. 53, pp. 4537–4555, Dec. 2007.
+[4] A. Sridharan and D. J. Costello, Jr, “A new construction method for low density parity check convolutional codes,” in Proc. IEEE Inf. Theory Workshop, Bangalore, India, Oct. 2002, pp. 212–212.
+[5] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, Jr, “LDPC block and convolutional codes based on circulant matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004.
+[6] Z. Chen and S. Bates, “Construction of low-density parity-check convolutional codes through progressive edge-growth,” IEEE Commun. Lett., vol. 9, no. 12, pp. 1058–1060, Dec. 2005.
+[7] G. Richter, M. Kaupper, and K. S. Zigangirov, “Irregular low-density parity-check convolutional codes based on protographs,” in Proc. IEEE Int. Symp. Inf. Theory, Seattle, WA, Jul. 2006, pp. 1633–1637.
+[8] A. E. Pusane, R. Smarandache, P. O. Vontobel, and D. J. Costello, Jr, “On deriving good LDPC convolutional codes from QC LDPC block codes,” in Proc. IEEE Int. Symp. Inf. Theory, Nice, France, Jun. 2007.
+[9] Z. Chen, T. Brandon, S. Bates, D. G. Elliott, and B. F. Cockburn, “Efficient implementation of low-density parity-check convolutional code encoders with built-in termination,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3628–3640, Dec. 2008.
+[10] A. Morello and V. Mignone, “DVB-S2: The second generation standard for satellite broadband services,” Proc. IEEE, vol. 94, pp. 210–217, Jan. 2006.
+[11] IEEE Std 802.3an 2006. [12] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2
+low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002. [13] H. Zhong and T. Zhang, “Block-LDPC: A practical LDPC coding system,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 52, no. 4, pp. 766–775, Apr. 2005. [14] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Trans. Circuits Syst. I, Fundam. Theory Appl., vol. 53, no. 4, pp. 892–904, Apr. 2006. [15] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 12, pp. 976–996, Dec. 2003. [16] H. Zhang, J. Zhu, H. Shi, and D. Wang, “Layered approx-regular LDPC: Code construction and encoder/decoder design,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, pp. 572–585, Mar. 2008. [17] Y. Dai, N. Chen, and Z. Yan, “Memory efficient decoder architectures for quasi-cyclic LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, pp. 2898–2911, Oct. 2008. [18] S. Bates, Z. Chen, L. Gunthorpe, A. E. Pusane, K. S. Zigangirov, and D. J. Costello, Jr, “A low-cost serial decoder architecture for low-density parity-check convolutional codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, no. 7, pp. 1967–1976, Aug. 2008. [19] R. Swamy, S. Bates, T. L. Brandon, B. F. Cockburn, D. G. Elliott, J. C. Koob, and Z. Chen, “Design and test of a 175-Mbps rate-1/2 (128,3,6) low-density parity-check convolutional code encoder and decoder,” IEEE J. Solid-State Circuits, vol. 42, pp. 2245–2256, Oct. 2007. [20] E. Matus, M. B. Tavares, M. Bimberg, and G. Fettweis, “Towards a Gbits/s programmable decoder for LDPC convolutional codes,” in Proc. IEEE In. Symp. Circuits Syst., New Orleans, LA, May 2007, pp. 1657–1660. [21] M. B. Tavares, E. Matus, S. Kunze, and G. Fettweis, “A dual-core programmable decoder for LDPC convolutional codes,” in Proc. IEEE Int. Symp. Circuits Syst., Seattle, WA, May 2008, pp. 532–535. [22] S. Bates and G. Block, “A memory based architecture for low-density parity-check convolutional decoders,” in Proc. IEEE Int. Symp. Circuits Syst., Kobe, Japan, May 2005, pp. 336–339. [23] S. Bates and R. Swamy, “Parallel encoders for low-density parity-check convolutional codes,” in Proc. IEEE Int. Symp. Circuits Syst., Kos, Greece, May 2006. [24] Z. Chen, S. Bates, and W. Krzymien´, “High throughput parallel decoder design for LDPC convolutional codes,” in Proc. IEEE Int. Conf. Circuits Syst. Commun., Shanghai, China, May 2008, pp. 35–39. [25] T. Brandon, J. Koob, L. v. d. Berg, Z. Chen, A. Alimohammad, R. Swamy, J. Klaus, S. Bates, V. C. Gaudet, B. F. Cockburn, and D. G. Elliott, “A compact 1.1-Gb/s encoder and a memory-based 600-Mb/s decoder for LDPC convolutional codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 56, no. 5, p. 1017–1029, May 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: JOINTLY DESIGNED ARCHITECTURE-AWARE LDPC CONVOLUTIONAL CODES
+
+849
+
+[26] Z. Chen, S. Bates, and X. Dong, “Low-density parity-check convolutional codes applied to packet based communication systems,” in Proc. IEEE Global Telecommun. Conf., St. Louis, MO, 2005, vol. 3, pp. 1250–1254.
+[27] A. E. Pusane, A. Jiménez-Felström, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, Jr, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. Commun., vol. 56, no. 7, pp. 1060–1069, Jul. 2008.
+[28] Z. Chen, R. Swamy, and S. Bates, “A new encoder implementation for low-density parity-check convolutional codes,” in Proc. IEEE Midwest Symp. Circuits Syst., Montreal, QC, Canada, Aug. 2007.
+[29] T. Tian, C. Jones, J. D. Villasenor, and R. D. Wesel, “Construction and irregular LDPC codes with low error floors,” in Proc. IEEE Int. Conf. Commun., Anchorage, AK, 2003, vol. 5, pp. 3125–3129.
+[30] D. J. Costello, Jr, A. E. Pusane, C. R. Jones, and D. Divsalar, “A comparison of ARA- and protograph-based LDPC block and convolutional codes,” in Proc. Inf. Theory Appl. Workshop, San Diego, CA, Jan. 2007, pp. 111–119.
+[31] R. M. Tanner, “A [155; 64; 20] sparse graph (LDPC) code,” in Proc. IEEE Int. Symp. Inf. Theory, Recent Results Session, Sorrento, Italy, Jun. 2000.
+[32] L. Miles, J. W. Gambles, G. K. Maki, W. E. Ryan, and S. R. Whitaker, “An 860-Mb/s (8158,7136) low-density parity-check encoder,” IEEE J. f Solid-State Circuits, vol. 41, no. 8, pp. 1686–1691, Aug. 2006.
+[33] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in Proc. IEEE GLOBECOM, San Antonio, TX, 2001, pp. 1021–1025.
+[34] S. Howard, C. Schlegel, and V. Gaudet, “A degree-matched check node approximation for LDPC decoding,” in Proc. IEEE Int. Symp. Inf. Theory, Adelaide, Australia, Sep. 2005, pp. 1131–1135.
+Zhengang Chen received the B.S. and M.S. degrees in electronics engineering from Tsinghua University, Beijing, China, in 1999 and 2002, respectively. He received his Ph.D. in Electrical and Computer Engineering at University of Alberta, AB, Canada.
+He is currently with Marvell Semiconductor, Inc., Santa Clara, CA, 95054. His research interests include error control coding, signal processing, communication and storage systems and integrated circuit design.
+Dr. Chen was co-recipient of a best student paper award of IEEE International Symposium on Circuits and Systems 2008.
+Tyler L. Brandon received the B.Sc. and M.Sc. degrees in electrical engineering from the University of Alberta, Edmonton, AB, Canada, in 1999 and 2003. respectively, where he is currently pursuing the Ph.D. degree with research in the areas of ASIC architectures for low-density parity-check codes.
+He holds five patents. Previous work includes: multi-level ROM and SRAM-ROM, logarithmic based processing and parallel computing architectures.
+Mr. Brandon was co-recipient of a Best-Student paper award at the 2008 IEEE ISCAS.
+Duncan G. Elliott (M’97) received the B.A.Sc. degree in engineering science and the M.S. and Ph.D. degrees in electrical and computer engineering from the University of Toronto, Toronto, ON, Canada.
+He is an Associate Professor in the Department of Electrical and Computer Engineering at the University of Alberta, Edmonton, AB, Canada. Previously, he has worked at Nortel in data communications, at MOSAID Technologies as a DRAM designer, and at IBM Microelectronics as a contractor in application-specific memory design. He spent his last sabbatical at the MIT Microsystems Technology Laboratories. His research interests include logic-enhanced memories, computer architecture, 3-D IC architecture, high-speed circuits and microfluidic systems.
+
+Prof. Elliott was the 2001 winner of the Colton Medal in microelectronics for his work on Computational RAM, which has been commercialized. He is a member of the IEEE Solid-State Circuits, Circuits and Systems, Computer and Communications Societies and of the ACM.
+Stephen Bates (S’94–M’03–SM’06) received the Ph.D. degree from Edinburgh University, U.K., in 1997.
+He then worked for Massana, an Irish Fabless Semiconductor company specializing in high-speed Ethernet transceiver design. He joined the Department of Electrical and Computer Engineering at the University of Alberta, Edmonton, AB, Canada, as an Assistant Professor in 2003. His research interests include circuits and systems for high-speed wireline communication protocols, circuits for advanced forward error correction schemes and the use of reconfigurable logic to solve problems related to communications and bio-informatics.
+Witold A. Krzymien´ (M’79–SM’93) received the M.Sc. and the Ph.D. degrees from the Poznan´ University of Technology, Poznan´, Poland, in 1970 and 1978, respectively, both in electrical engineering.
+Since April 1986 he has been with the Department of Electrical and Computer Engineering at the University of Alberta, Edmonton, AB, Canada, where he currently holds the endowed Rohit Sharma Professorship in Communications & Signal Processing. In 1986, he was one of the key research program architects of the newly launched TRLabs, Canada’s largest industry-university-government pre-competitive research consortium in the Information and Communication Technology area. His research activity has been closely tied to the consortium ever since. His research is currently focused on multi-user MIMO and MIMO-OFDM systems, and multi-hop relaying and network coordination for broadband cellular applications. Dr. Krzymien´ is a Fellow of the Engineering Institute of Canada, and a licensed Professional Engineer in the Provinces of Alberta and Ontario, Canada. He is an Associate Editor of the IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY and a member of the Editorial Board of Wireless Personal Communications (Springer). From 1999 to 2005 he was the Chairman of Commission C (Radio Communication Systems and Signal Processing) of the Canadian National Committee of URSI (Union Radio Scientifique Internationale).
+Bruce F. Cockburn (S’86–M’95) received the B.Sc. degree in engineering physics in 1981 from Queen’s University, Kingston, ON, Canada, and the M.Math. and Ph.D. degrees in computer science from the University of Waterloo, Waterloo, ON, Canada, in 1985 and 1990, respectively.
+He is an Associate Professor in the Department of Electrical and Computer Engineering at the University of Alberta, Edmonton, AB, Canada. His research interests include VLSI design and test, multilevel memory and memory hierarchies, parallel signal processing algorithms and architectures, iterative decoders, and FPGA hardware accelerators for communications system characterization. Dr. Cockburn is a member of the IEEE Computer Society, the IEEE Communications Society, the IEEE Solid-State Circuits Society, the IEEE Signal Processing Society, and the Association for Computing Machinery. He is a Registered Professional Engineer in the Province of Alberta, Canada.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:03 UTC from IEEE Xplore. Restrictions apply.
+
+

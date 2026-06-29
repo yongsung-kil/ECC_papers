@@ -1,0 +1,1530 @@
+3438
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+Achievable-Rate-Aware Retention-Error Correction for Multi-Level-Cell NAND Flash Memory
+Yingcheng Bu , Yi Fang , Member, IEEE, Guohua Zhang , and Jun Cheng , Member, IEEE
+
+Abstract—Owing to the effect of data retention noise in multi-level-cell NAND flash memory, the initial threshold-voltage distributions and read voltages can no longer be used to accurately calculate log-likelihood ratios (LLRs) as the retention time increases, thus causing retention errors. To solve this problem, we first utilize the so-called “correction factors” to optimize the LLR accuracy by maximizing the achievable rate of a flash-memory system without introducing extra memory-sensing operations. We further prove that the optimization of the correction factors is a convex optimization problem and can be solved analytically. To obtain the optimal correction factors, we propose two retention-error correction schemes, referred to as offline maximum-achievable-rate correction (MARC) algorithm and online MARC algorithm, which enable the flash-memory controller to utilize the corrected LLRs that are stored in a look-up table and correct the inaccurate LLRs in real time, respectively. Motivated by the variation characteristics of the threshold-voltage distributions, we also propose an enhanced expectation–maximization (EM) algorithm to reestimate their corresponding parameters, and then adjust the read voltages. By combining the enhanced EM algorithm with the MARC algorithms, an enhanced EM-based correction strategy is developed to further boost the retention-error endurance of flash memory while avoiding excessive memory-sensing overhead. Theoretical analyses and simulation results illustrate the superiority of the proposed correction mehtods in terms of the robustness against retention errors.
+Index Terms—Achievable rate, data retention noise, loglikelihood-ratio (LLR) accuracy, multi-level-cell flash memory.
+I. INTRODUCTION
+D UE TO the benefits of large storage capacity and fast read-and-write speed, NAND flash memory tends to become the dominant type of nonvolatile memory
+Manuscript received 2 December 2020; revised 24 May 2021 and 25 August 2021; accepted 13 October 2021. Date of publication 26 October 2021; date of current version 20 September 2022. This work was supported in part by the NSF of China under Grant 62071131, Grant 61771149, Grant U2001203, and Grant 61871136; in part by the NSF of Guangdong Province under Grant 2019A1515011465; and in part by the Guangdong Innovative Research Team Program under Grant 2014ZT05G157. The work of Jun Cheng was supported in part by the Japan Society for the Promotion of Science through the Grant-in-Aid for Scientific Research (C) under Grant 20K04493. This article was recommended by Associate Editor D. Marculescu. (Corresponding author: Yi Fang.)
+Yingcheng Bu and Yi Fang are with the School of Information Engineering, Guangdong University of Technology, Guangzhou 510006, China (e-mail: yingchengbu@126.com; fangyi@gdut.edu.cn).
+Guohua Zhang is with the School of Communications and Information Engineering, Xi’an University of Posts and Telecommunications, Xi’an 710121, China (e-mail: zhangghcast@163.com).
+Jun Cheng is with the Department of Intelligent Information Engineering and Science, Doshisha University, Kyoto 610-0321, Japan (e-mail: jcheng@ieee.org).
+Digital Object Identifier 10.1109/TCAD.2021.3123288
+
+(NVM) [1]–[4] in a variety of data storage applications ranging from mobile devices to enterprise data centers. This trend is driven by the manufacturing process scaling and the advent of techniques that can store more than one bit of data within a cell, such as multi-level cell (MLC), triple-level cell (TLC), and quadruple-level cell (QLC) techniques [5], [6]. However, the scaling down of flash-memory chips along with the application of MLC/TLC/QLC technique makes the flash memory prone to suffer from various types of circuit-level noises [7], which causes the degraded reliability issue. Among those noises, data retention noise is the principal source of errors in the programmed memory cells [8]–[11].
+To compensate the raw bit-error rate (BER) caused by various noises of flash memory, the most common solution is to apply error-correction codes (ECCs) [12], [13]. Benefiting from excellent error-correction performance with low-complexity decoding, low-density parity-check (LDPC) codes have appeared to be an outstanding solution for emerging flash-memory devices [14]–[20]. For LDPC codes, the belief-propagation (BP) algorithm [21] is generally applied in the decoding process, which requires high-precision initial log-likelihood ratios (LLRs) to attain excellent decoding performance. However, due to the effect of retention noise, the initial threshold-voltage distribution parameters (i.e., mean and standard derivation) and read voltages can no longer be used to accurately calculate LLRs as the retention time increases [22], [23]. Thus, to improve the decoding performance of flash memory, it is indispensable to develop some retention-error correction schemes to mitigate the effect of retention noise.
+A. Related Work
+To attenuate the retention errors, some state-of-the-art techniques have been presented to periodically refresh (including read, decode, and reprogram) the stored data before reaching the maximum error-correction capability of the decoder [11], [24]–[26]. One of the major drawbacks for the refresh techniques is that the data must be frequently read and reprogrammed, which has an important impact on the lifetime and performance of flash memory. Meanwhile, other retention-error correction schemes that avoid the reprogram operations have been developed in [8] and [27]. In [8], a retention optimized reading (ROR) scheme has been proposed, where the errors are reduced by adaptively applying the optimal read-voltage levels for flash memory. Jeong et al. [27] have presented a flash defibrillator (FD) scheme that can recover the stored data by recharging the charge-loss cells. Unfortunately, the aforementioned techniques require additional memory-sensing operations (i.e., reread the flash-memory cells). For this reason, a
+
+1937-4151 c 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3439
+
+retention-aware belief-propagation (RABP) decoding scheme has been proposed to correct the retention errors without introducing extra memory-sensing operations [28].
+Another solution to overcome retention errors is to employ the flash-memory channel estimation algorithm to update the suboptimal voltage-distribution parameters, which consequently facilitates the calculation of more accurate LLR information. Typically, the threshold-voltage distribution of each state is modeled as a Gaussian distribution in these estimation algorithms [28]–[31]. To estimate voltage-distribution parameters without utilizing extra memory-sensing operations, a decision directed estimation (DDE) algorithm and an RABPassisted channel update (RABP-CU) algorithm have been presented in [30] and [28], respectively, both of which require to obtain the decoded data as the a-priori information in estimation process. In addition, an expectation–maximization (EM) algorithm has been proposed for the estimation of voltage distributions [31], which does not need to acquire the decoded codeword.
+B. Motivation and Contributions
+Although the above methods can reduce the retention errors for flash memory, they suffer from some limitations as follows.
+1) Many retention-error correction techniques, such as the refresh scheme [11], [24]–[26], ROR scheme [8], and FD scheme [27], require additional memory-sensing operations (i.e., reread the flash-memory cells) to attenuate the retention errors, thus causing significant latency and energy consumption. Although the RABP decoding scheme [28] does not introduce extra read operations, it may be only applicable for MLC flash memory employing six read voltages, which restricts its practical application.
+2) To update the suboptimal voltage-distribution parameters and calculate more accurate LLRs, DDE [30] and RABP-CU [28] schemes require to obtain the decoded data for estimation. However, the decoding accuracy of these schemes has a great impact on the estimation performance. As an alternative, the EM algorithm does not need the decoded data as the a-priori information [31]. Yet, the conventional EM algorithm only estimates the voltage distributions for a given number of program-and-erase (PE) cycles without considering the effect of retention errors. Moreover, it requires relatively more read voltages to obtain the accurate read-back threshold voltages, which leads to long memory-sensing latency.
+In this article, our goal is to optimize the inaccurate LLR information induced by the retention noise so as to effectively reduce the retention errors in MLC flash memory, while avoiding the limitations of the existing retentionerror correction techniques. Our contributions are summarized as follows.
+1) The concept of achievable rate is introduced to characterize the LLR accuracy in flash memory. To avoid introducing additional memory-sensing operations, we propose to employ correction factors to improve the inaccurate LLRs via maximizing the achievable rate of flash memory based on initial threshold-voltage distributions and read voltages, and further prove the convexity of optimizing these correction factors.
+
+Fig. 1. Block diagram of the proposed MLC flash-memory system.
+2) To acquire the optimal correction factors, we conceive offline and online maximum-achievable-rate correction (MARC) algorithms to meet diverse application requirements. The offline MARC algorithm can precalculate the corrected LLRs for different retention time by utilizing the optimal correction factors and then store them in a look-up table (LUT). On the contrary, the online MARC algorithm can optimize the inaccurate LLRs in real time.
+3) Motivated by the variation characteristics of the voltage distributions, we present an enhanced EM algorithm to estimate the voltage distributions, which reduces the number of read voltages and computational complexity compared with the conventional EM algorithm [31]. To make the MARC algorithms effective for longer retention time, we propose an enhanced EM-based correction strategy that combines the enhanced EM algorithm and MARC algorithms.
+4) Comprehensive simulations are performed to verify the superiority of the proposed schemes. The results demonstrate that the proposed MARC algorithms can effectively boost the retention-error endurance of flashmemory systems. It is also illustrated that the enhanced EM-based correction strategy can further improve the tolerance against retention errors.
+The remainder of this article is organized as follows. Section II introduces the system model of MLC flash memory and its preliminary foundations. The concept of achievable rate of flash memory and the proposed MARC algorithms is presented in Section III. The enhanced EM-based retentionerror correction strategy is proposed in Section IV. Simulation results and conclusions are given in Sections V and VI, respectively.
+II. SYSTEM MODEL AND PRELIMINARY FOUNDATIONS
+Fig. 1 describes the block diagram of our proposed MLC flash-memory system that contains a transmitter, an MLC flash-memory channel, and a receiver. The details of the three modules in such a system are described as follows.
+A. Transmitter
+The information-bit sequence s is first encoded into a codeword c of length N by an LDPC encoder. Afterward, the codeword c is converted to a tuple sequence c = (c1, c2, . . . , cM), where cm (m = 1, 2, . . . , M) is a K-tuple consisting of K = N/M bits, and K corresponds to the number of bits stored
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3440
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+in a flash-memory cell. Then, the tuple sequence c is written
+to M cells with the corresponding write-voltage values to generate the written data-symbol sequence v = (v1, v2, . . . , vM), where vm represents the voltage written into the mth cell. In an MLC flash memory, each cell stores 2 bits of information (i.e., K = 2), which corresponds to four voltage states s1, s2, s3, and s4.
+
+B. Flash-Memory Channel Model
+According to [20], [23], and [28], the MLC flash-memory channel model with several classic additive noise components can be formulated as
+
+vth = v + nr + nc + nw + nu + np
+
+(1)
+
+where v ∈ {vs1 , vs2 , vs3 , vs4 } is the write-voltage level and vth is the threshold voltage within a memory cell; nr is the data retention noise, which is affected by the retention time t and the number of PE cycles NPE; nc is the cell-to-cell interference (CCI); nw is the random telegraph noise (RTN); nu is the incremental step pulse programming (ISPP) noise; and np is the programming noise.
+1) Date Retention Noise: According to [20], [23], and [28], the data retention noise nr can be modeled by utilizing a Gaussian distribution function with mean μrs and variance σr2s , i.e., pnr (vth) = N (μrs , σr2s ), where μrs and σrs are given by
+μrs = (v − x0) At(NPE)αi + Bt(NPE)αo log (1 + t)
+σrs = 0.3 μrs .
+
+Here, s ∈ {s1, s2, s3, s4}, and the values of the parameters x0, At, αi, Bt, and αo are set according to [20], [23], and [28],
+
+which are shown in Table I.
+
+2) RTN: The RTN can be modeled as a Gaussian-
+
+distributed pnw (vth) =
+
+random variable with mean 0 and variance N (0, σw2), where σw = 0.00027(NPE)αj .
+
+σw2,
+
+i.e.,
+
+3) ISSP and Programming Noises: The ISSP noise nu
+
+follows a uniform distribution, i.e.,
+
+pnu (vth) =
+
+0, for v ∈ vs1
+
+1 vpp
+
+,
+
+if vth ∈
+
+0,
+
+vpp , for v ∈ vs2 , vs3 , vs4
+
+where vpp is the ISPP size. In addition, the programming noise np can be modeled via the Gaussian distribution functions, i.e.,
+
+pnp (vth) =
+
+N 0, σe2 , for v ∈ vs1 , N 0, σp2 , for v ∈ vs2 , vs3 , vs4 .
+
+Here, σe2 and σp2 are the variances of programming noise. 4) Final Threshold-Voltage Distributions: Since the
+predistortion and postcompensation techniques [32] can compensate the effect of CCI, we assume that the CCI has been eliminated in the flash-memory channel model [20], [28]. The probability density functions (PDFs) of the four final threshold-voltage distributions, denoted as {ps1 (vth), ps2 (vth), ps3 (vth), ps4 (vth)}, can be approximated as Gaussian PDFs [20], [28]–[30], [33], i.e.,
+
+psk (vth) = N μk, σk2
+
+=√1
+
+e−
+
+(vth −μk
+2σk2
+
+)2
+
+2π σk
+
+(2)
+
+where μk and σk are the mean and standard deviation of the threshold-voltage distribution of state sk (k ∈ {1, 2, 3, 4}),
+
+Fig. 2. Threshold-voltage distributions of an MLC flash memory before (solid curves) and after (dashed curves) the effect of data retention noise.
+TABLE I PARAMETERS USED IN THE FLASH-MEMORY CHANNEL MODEL
+
+respectively, given by: vpp/2 − μrs2∼4 , σ12 =
+
+μ1 σe2
+
+= vs1 − μrs1 + σn2 + σr2s1 ,
+
+, μ2∼4 = and σ22∼4
+
+vs2∼4 = σp2
+
++ +
+
+σn2 + σr2s2∼4 .
+
+Fig. 2 describes the distributions of threshold voltages with
+
+a 6-level quantization scheme in an MLC flash memory, where
+
+the vertical dashed lines (i.e., R1 to R6) are the read voltages.
+
+The four threshold-voltage states s1, s2, s3, and s4 represent the
+
+symbols “11”, “10”, “00”, and “01”, respectively. Owing to the
+
+presence of retention noise, the threshold-voltage distributions
+
+can be treated as a function of retention time t. Therefore, we define Ps(t) = {ps(t1)(vth), p(st2)(vth), ps(t3)(vth), p(st4)(vth)} as the PDF set of threshold-voltage distributions at retention time t, and define R(t) as the corresponding read-voltage set that is obtained based on P(st). To summarize, the parameters of
+
+flash-memory channel used in this article are set according to
+
+[20], [28], and [33], which are shown in Table I.
+
+C. Receiver
+
+In order to calculate the LLRs for decoding, the information
+
+of threshold-voltage distributions is required. However, the
+
+flash memory generally does not know the information about
+
+the threshold-voltage distributions for different retention time.
+
+For the conventional detection scheme [20], [22], [28], [31],
+
+it only uses initial voltage-distribution parameters (i.e., the
+
+voltage-distribution parameters at retention time equals zero)
+
+and initial read voltages for data detection without any adjust-
+
+ment of LLRs and read voltages over different retention time.
+
+Hence, in the conventional detection scheme with Q read volt-
+
+ages, the LLR values corresponding to the most-significant-bit
+
+(MSB) position and least-significant-bit (LSB) position in the
+
+qth voltage Lmq sb(t = 0)
+
+region [i.e., and Llqsb(t =
+
+Rq(t−=10) < vth ≤ R(qt=0)], 0), can be calculated as
+
+denoted
+
+as
+
+Lmq sb(t = 0) =
+
+Rq(t=0) Rq(t−=10)
+Rq(t=0) Rq(t−=10)
+
+p(st3=0)(vth) + p(st4=0)(vth) p(st1=0)(vth) + ps(t2=0)(vth)
+
+dvth dvth
+
+(3)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3441
+
+Llqsb(t = 0) =
+
+Rq(t=0) Rq(t−=10)
+Rq(t=0) Rq(t−=10)
+
+ps(t2=0)(vth) + p(st3=0)(vth) ps(t1=0)(vth) + p(st4=0)(vth)
+
+dvth dvth
+
+(4)
+
+where q = 1, 2, . . . , Q + 1, R(0t=0) = −∞, RQ(t=+01) = ∞. However, due to the presence of retention noise, the LLRs
+produced by the initial voltage-distribution parameters and read voltages [i.e., Ps(t=0) and R(t=0)] tend to become inaccurate as the retention time increases. Fig. 2 also illustrates the effect of data retention noise on the threshold-voltage distributions in an MLC flash memory. As shown, the retention noise shifts the means of the voltage distributions of the programmed states s2, s3, and s4 to the negative direction and increases their variances. In contrast, the mean and variance of the voltage distribution of the erased state s1 are not affected by the retention noise [8], [28]. Moreover, the threshold-voltage distribution of a higher voltage programmed state changes faster than that of a lower voltage programmed state [8]. Therefore, with the increase of retention time, more overlaps occur between two adjacent states, causing more errors in flash memory.
+Based on the principle of the conventional detection scheme [20], [22], [28], [31], we assume that the voltagedistribution parameters are only known when the retention time equals zero, and the read voltages are selected based on these initial voltage-distribution parameters [i.e., only P(st=0) and R(t=0) are known] in this article. Both voltage-distribution parameters and read voltages are fixed with the increase of retention time unless they are updated by conducting the channel estimation algorithm. Based on this assumption, we design the retention-error correction algorithms to optimize the LLR accuracy for reducing retention errors over different retention time.
+
+D. Overview of the Proposed Design
+The relationship between the proposed MARC algorithms and the enhanced EM-based correction strategy is illustrated in Fig. 1. In actual implementation, as the retention time increases, the flash controller first attempts to employ the proposed offline and online MARC algorithms to optimize the inaccurate LLRs based on the initial voltage-distribution parameters and read voltages. When the retention noise is severe, the retention errors caused by the initial voltagedistribution parameters and read voltages may exceed the correction capability of the MARC algorithms, thus causing decoding failure. To address this issue, the enhanced EM-based correction strategy combining the enhanced EM algorithm with the MARC algorithms is proposed. It uses the enhanced EM algorithm to estimate the voltage-distribution parameters and update the read voltages so as to make the MARC algorithms effective for longer retention time, hence, further improving the retention-error endurance of flash memory.
+
+III. ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION ALGORITHMS
+Many existing retention-error correction techniques [8], [11], [24]–[27] require additional memory-sensing operations, causing significant latency and energy consumption. In addition, although the RABP decoding scheme [28] does not introduce extra read operations, it may be only applicable for
+
+MLC flash memory employing six read voltages, thus restricting its practical application. To address the above drawbacks, we develop the offline and online MARC algorithms, which not only can alleviate the effect of retention noise without introducing extra memory-sensing operations but also are suitable for the flash-memory systems using different quantization schemes and memory-sensing precisions.
+
+A. Achievable Rate of MLC Flash Memory
+
+In this part, we introduce the concept of achievable rate
+to characterize the LLR accuracy for flash memory. To this
+end, we first consider the capacity of flash-memory chan-
+nel [17], which is the mutual information (MI) between the
+input (coded bits) and output (real LLRs) of flash-memory channel.1 Consider an MLC flash-memory channel with Q given read voltages R(t=0), where the threshold voltages are quantized into Q + 1 regions. At retention time t, the capacity Cj of j position (j ∈ {msb,lsb}) can be computed by exploiting the real LLRs that are generated by real voltage-distribution functions Ps(t) [34], i.e.,
+
+Cj t, Ps(t), R(t=0)
+
+= 1 − 1E 2
+
+log2
+
+1 + e−Lj,t
+
+|x = 0
+
+−
+
+1E 2
+
+log2
+
+1 + eLj,t
+
+|x = 1
+
+= 1 − 1 Q+1 2
+
+log2
+
+1 + e−Ljq,t
+
+pL0jq,t
+
+q=1
+
+−
+
+1 Q+1 2
+
+log2
+
+1 + eLjq,t
+
+q=1
+
+pL1jq,t
+
+(5)
+
+where Lj,t is a random variable representing the real LLR value in j position at retention time t, Ljq,t denotes the real LLR value of j position in the qth voltage region at reteniLt.iejoq,.tn,wptixLhmjqo,tes=et,cpoa(nrLrdejq,stpp|xL0o)jq,n,t dxainn∈dg{pb0L1i,tjq,1te}qd.ueTanhlosutesz,etrthhoeeapncradopboaancbeiti,ylirteoiesfpsaeoncftMivLeLLlyRC, flash-memory channel C equals the sum of the capacity of
+MSB position and LSB position, i.e., C = Cmsb + Clsb. However, as the retention time increases, the initial voltage-
+distribution functions Ps(t=0) become no longer valid, thus yielding inaccurate (mismatched) LLR information. Applying the inaccurate LLR, denoted as Ljq,t, into (5), one can obtain
+
+C t, Ps(t=0), R(t=0)
+
+=2− 1 2
+
+Q+1
+log2 1 + e−Ljq,t
+
+j q=1
+
+pL0jq,t
+
+−1 2
+
+Q+1
+log2 1 + eLjq,t
+
+j q=1
+
+p1Ljq,t (6)
+
+where C(t, P(st=0), R(t=0)) represents the achievable rate of an MLC flash memory, which is upper bounded by its capacity [i.e., C(t, P(st=0), R(t=0)) ≤ C(t, Ps(t), R(t=0))] [35]. In other
+
+1Precisely speaking, MI is a measure of the relevance between two random variables. Given two random variables X and Y, the MI I(X, Y) is defined as I(X, Y) = p(x, y) log2(p(x, y)/(p(x)p(y)))dxdy, where p(x, y) is the joint probability distribution of X and Y, and p(x) and p(y) are the marginal probability distributions of X and Y, respectively [34].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3442
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+Fig. 3. Average achievable rate and average capacity of an MLC flashmemory channel with six initial read voltages against retention time at PE = 3K, 5K, 8K.
+words, the achievable rate of an MLC flash memory can be maximized (i.e., C = C) when using real LLRs. Precisely speaking, the achievable rate is defined as the MI between the coded bits and inaccurate (mismatched) LLRs, which can be viewed as a measure of the relevance between the coded bits and inaccurate LLRs. Thereby, a large achievable rate indicates that the LLRs contain high reliable information about the codeword. As such, the achievable rate can reflect the reliability of LLRs and serve as a function of the reliability of LLRs, where a larger achievable rate corresponds to more reliable (accurate) LLRs. For this reason, the achievable rate C can be exploited as an accuracy metric of LLR information in the flash-memory systems.
+Fig. 3 illustrates the average achievable rate (C(t, P(st=0), R(t=0))/K, K = 2) and the corresponding average capacity (C(t, Ps(t), R(t=0))/K, K = 2) of an MLC flash-memory channel with six initial read voltages R(t=0) against the retention time at PE = 3K, PE = 5K, and PE = 8K. The six read voltages R(t=0) are acquired by employing the entropy-aided maximize achievable rate (MAR) scheme (see Section III-E) based on the initial voltage-distribution functions Ps(t=0). As shown, the average achievable rate of an MLC flash-memory channel decreases rapidly with the increase of retention time for different numbers of PE cycles, and the average achievable rate with a higher number of PE cycles tends to decrease faster than that with a lower one. More importantly, the gap between the average achievable rate and average capacity becomes larger with the increase of retention time in all three scenarios. Hence, the LLR information is required to be reoptimized over the increasing retention time so as to alleviate the decrease of achievable rate.
+B. Optimization of Correction Factors
+In this part, we exploit the achievable rate of flash memory for optimizing the accuracy of LLRs without introducing extra memory-sensing operations. To this end, we utilize the correction factors to optimize the inaccurate LLR information by maximizing the achievable rate of MLC flash memory. Specifically, let αjq,t denote the correction factor of an inacccWuoerrareetemctLepdlLoRyLLcLoRjq,rtr,vewaclthuioeenrecfaajnc∈tob{remαesjqxb,tp,ltrsoebso}speatdnimdaisqzeα=jqL,tjq1L,t,jq,,2ta.,nW.d. e.th,duQes,n+oth1tee. α(t) as the set of correction factors at retention time t, and
+
+denote α(jt) as the set of correction factors in the j position at retention time t. Consequently, the achievable rate Cj of j position with the correction factors α(jt) is given by
+
+Cj t, αj(t), Ps(t=0), R(t=0)
+
+1 Q+1 =−
+2
+
+log2
+
+1 + e−αjq,tLjq,t
+
+q=1
+
+−
+
+1 Q+1 2
+
+log2
+
+1 + eαjq,tLjq,t
+
+q=1
+
++ 1.
+
+pL0jq,t
+pL1jq,t (7)
+
+Now, our goal is to obtain correction factors that optimize the inaccurate LLRs via maximizing the achievable rate of MLC flash memory. The optimal correction factor αˆ jq,t can be acquired by solving the following optimization problem that exploits (7) as the objective function, i.e.,
+
+αˆ j1,∼t Q+1 = arg max Cj αj1,∼t Q+1 .
+
+(8)
+
+αj1,∼t Q+1
+
+The following theorem demonstrates that (8) is a convex
+
+optimization problem and can be solved analytically.
+
+Theorem 1: Assume that the conditional probability of LLR
+
+pcoLx jqn,tciasvaelrfeuandcytioknnowwitnharnedspietsctvatoluαejq,its
+
+not equal to zero. for all q = 1, 2, . .
+
+Cj .,
+
+is a Q+
+
+1, where j ∈ {msb,lsb}. maximum value when the
+
+The achievable rate correction factor αˆ jq,t
+
+Csaj tirsefiaecsheαˆsjq,tth=e
+
+(1/Ljq,t) ln{p0Ljq,t /pL1jq,t } for all q = 1, 2, . . . , Q + 1.
+
+Proof: For 1 ≤ q ≤ Q + 1, the first derivative of achievable
+
+rate Cj in (7) with respect to αjq,t can be calculated as
+
+dCj dαjq,t
+
+Ljq,t =
+
+p0Ljq,t e−αjq,tLjq,t + 1 − pL1jq,t eαjq,tLjq,t + 1 2 ln 2 2 + e−αjq,tLjq,t + eαjq,tLjq,t
+
+. (9)
+
+For 1 ≤ q ≤ Q + 1, the second derivative of achievable rate
+
+(d2Cj/[d(αjq,t)2]) can be measured by
+
+d2Cj d αjq,t
+
+2
+
+=
+
+− Ljq,t 2 ln 2
+
+2⎡ ⎣⎢
+
+pL1jq,t eαjq,tLjq,t eαjq,tLjq,t + 1
+
+2+
+
+pL0jq,t e−αjq,tLjq,t e−αjq,tLjq,t + 1
+
+⎤ 2 ⎥⎦
+
+< 0.
+
+In addition, since the second derivative (d2Cj/[dαjq,tdαjd,t]) = 0 for 1 ≤ q ≤ Q + 1, 1 ≤ d ≤ Q + 1 and q = d, the Hessian
+
+matrix of Cj is negative definite, concave function with respect to
+
+which means that αjq,t for 1 ≤ q ≤
+
+Cj is a Q + 1.
+
+Therefore, the achievable rate Cj reaches the maximum value when its first derivative is set to zero for 1 ≤ q ≤ Q + 1, i.e., (dCj/dαjq,t) = 0. Hence, we promptly get the following equation:
+
+p0Ljq,t e−αjq,tLjq,t + 1 − pL1jq,t eαjq,tLjq,t + 1 = 0.
+
+(10)
+
+Equation (10) can be solved when αˆ jq,t satisfies
+
+αˆ jq,t
+
+=
+
+1 Ljq,t
+
+ln
+
+p0Ljq,t /pL1jq,t
+
+.
+
+(11)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3443
+
+Theorem 1 illustrates the fact that in order to maximize the
+
+achievable rate of an MLC flash memory, one only needs to
+
+obtain the conditional probabilities of LLRs to compute the correction factors. However, the conditional probability pLxjq,t is typically unknown due to the nonstationary behavior of MLC
+
+flash-memory systems. Therefore, the above conditional prob-
+
+abilities can be obtained by using the Monte-Carlo histogram
+
+method, which estimates the probabilities via counting the
+
+frequencies the number
+
+of of
+
+all the LLRs
+
+LLR Ljq,t
+
+values. Specifically, let Njx,q denote whose corresponding bit equals x,
+
+where j ∈ {msb,lsb}, q = 1, 2, . . . , Q + 1, and x ∈ {0, 1}.
+
+When the codeword and its corresponding LLR sequence are
+
+given, we can exploit the Monte-Carlo histogram method to
+
+obtain Njx,q, and thus, formulate the approximated conditional probability of LLR pˆLxjq,t as
+
+⎧
+
+⎫
+
+⎨Q+1 ⎬
+
+pˆ Lx jq,t = Njx,q ⎩
+
+Njx,q⎭.
+
+(12)
+
+q=1
+
+Algorithm 1: Offline MARC Algorithm
+
+1 Initialization: Obtain Q read voltages based on the given
+
+threshold-voltage distributions;
+
+2 For a given retention time t, collect a sufficient long codeword
+
+c and its corresponding LLR sequence L;
+
+3 Employ Monte-Carlo histogram method to acquire histogram Njx,q based on c and L;
+
+4 Calculate the correction factors and store the corrected LLRs of
+
+each voltage region into an LUT:
+
+5 for j = msb, lsb do
+
+6 for q = 1 to Q + 1 do
+
+7
+
+for x = 0, 1 do
+
+8
+
+if Njx,q = 0 then
+
+9
+
+pˆxLjq,t = ε
+
+10
+
+use (12) to compute pˆxLjq,t
+
+11
+
+apply (11) to calculate LLR as αˆ jq,tLjq,t;
+
+αˆ jq,t
+
+and
+
+update
+
+the
+
+corrected
+
+To ensure the accuracy of the estimation of LLR conditional
+
+probability, a large number of samples (i.e., coded bits and
+
+their corresponding LLRs) should be utilized. However, the
+
+approximated conditional for some q when the real
+
+probability pˆxLjq,t probably equals conditional probability of LLR
+
+zero pLx jq,t
+
+is sufficiently small, which renders the controller incapable of
+
+using (11) to compute the optimal correction factors. Thus, we set the approximated conditional probability of LLR pˆxLjq,t to a sufficiently small value ε (e.g., ε = 10−6) when Njx,q equals zero so as to ensure pˆxLjq,t > 0 for all q.
+
+C. Offline and Online MARC Algorithms
+
+According to the above discussion, we need to obtain a
+
+large number of coded bits and corresponding LLRs to calcu-
+
+late the optimal correction factors for the sake of improving
+
+the inaccurate LLRs. To this end, we propose the offline and
+
+online MARC algorithms, which meet different flash-memory
+
+application requirements.
+
+The basic idea of the offline MARC algorithm is to pre-
+
+calculate the corrected LLRs for different retention time and
+
+store them in an LUT, where the offline MARC algorithm can
+
+be implemented when the system is idle. The retention time
+
+is assumed to be known at read time in the offline MARC
+
+algorithm, because it can be traced by using counters inside
+
+the flash-memory controller [25]. When the offline MARC
+
+algorithm is performed, it first offline collects a sufficiently
+
+large number of coded bits c and their corresponding LLRs
+
+L in order to calculate the histogram Njx,q (j ∈ {msb,lsb},
+
+q = 1, 2, . . . , Q + 1, and x ∈ {0, 1}) through the Monte-Carlo
+
+histogram method. Then, the optimal be calculated based on the histogram sponding corrected LLR is computed
+
+Ncaosjx,rqαrˆ,ejq,cattLnidojq,tn.thfSuauscb,tostehr qeαˆujcq,etonrctrlaeyn-,
+
+these corrected LLRs are stored in an LUT. Through this way,
+
+for a given number of PE cycles, we can store the corrected
+
+LLRs for different retention time in an LUT. Therefore, at
+
+read time, the controller can know and select the correspond-
+
+ing LLRs from the LUT based on the current retention time for
+
+the LDPC decoder. The details of the offline MARC algorithm
+
+are summarized in Algorithm 1.
+
+The major objective of the online MARC algorithm is to calculate the correction factors for optimizing the inaccurate LLRs in real time. Therefore, it is required to obtain the coded bits and their corresponding LLRs to compute the Monte-Carlo histogram in real time. To this end, once the first-round decoding fails, we first exploit the hard-decision result (i.e., decoded codeword cˆ) as the estimate of coded bits. Subsequently, based on the decoded codeword cˆ and its corresponding inaccurate LLR sequence Lˆ , the online MARC algorithm calculates the approximated histogram Nˆ jx,q by using the Monte-Carlo histogram method, where Nˆ jx,q is the approximation of Njx,q since the decoded codeword contains some error bits. After that, the correction factor αˆ jq,t can be computed based on the approximated histogram, and thus, the corrected LLR can be calculated as αˆ jq,tLjq,t. Finally, the second-round decoding is performed based on the corrected LLR information. Through this way, the online MARC algorithm can reduce retention errors in real time. The details of the online MARC algorithm are outlined in Algorithm 2.
+According to [28], the RABP scheme also requires to execute the second-round decoding if the first-round decoding fails. However, the RABP scheme particularly targets the MLC flash-memory systems using six levels of read voltages. In this scenario, the threshold voltages are divided into four data regions and three erasure regions (i.e., the overlapped regions between every two adjacent states), where most of errors occur in the erasure regions. Therefore, through a specific way to reassign the LLRs for the cells in three erasure regions, the RABP scheme can achieve a significant gain over the conventional detection scheme [20], [22], [28], [31]. However, for the flash-memory applications using other numbers of read voltages, such as 3 and 32, the LLR reassignment method in the RABP scheme does not work [28]. Consequently, the RABP scheme only targets the flash-memory applications using six read voltages, but may be not suitable for the flash-memory applications using other numbers of read voltages (e.g., 3 and 32). This is considered as a fundamental limitation of the RABP scheme and thus, restricts its application in practice. Nevertheless, the proposed MARC algorithms are suitable for the scenarios with different memory-sensing precisions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3444
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+Algorithm 2: Online MARC Algorithm
+
+1 Initialization: Obtain Q read voltages based on the given threshold-voltage distributions;
+2 Execute the first-round decoding; 3 if the decoding success then 4 Proceed to 15;
+
+5 Obtain the decoded codeword cˆ and its corresponding LLR
+
+sequence Lˆ ;
+
+6 Utilize Monte-Carlo histogram method to acquire histogram
+
+Nˆ jx,q based on cˆ and Lˆ (Nˆ jx,q is the approximation of Njx,q); 7 for j = msb, lsb do
+
+8 for q = 1 to Q + 1 do
+
+9
+
+for x = 0, 1 do
+
+10
+
+if Nˆ jx,q = 0 then
+
+11
+
+pˆxLjq,t = ε
+
+12
+
+use (12) to compute pˆxLjq,t
+
+13
+
+apply (11) to calculate LLR as αˆ jq,tLjq,t;
+
+αˆ jq,t
+
+and
+
+update
+
+the
+
+corrected
+
+14 Perform the second-round decoding; 15 End
+
+Remarks: 1) In the offline MARC algorithm, the coded bits and
+corresponding LLRs are collected by employing any flash-memory chip within a solid-state drive (SSD), since all the flash-memory chips in an SSD possess the same variation characteristics of voltage distributions. Furthermore, with a given number of PE cycles, the corrected LLRs can be precalculated as a function of retention time. Thus, one can store them by utilizing an LUT for different retention time. 2) In the online MARC algorithm, the Monte-Carlo histogram is calculated based on the decoded codeword and corresponding LLRs in real time, and then this histogram can be temporarily stored in the buffer of the flash controller. 3) For the online MARC algorithm, although the calculation of the Monte-Carlo histogram leads to a performance cost in terms of computational and storage overheads, the Monte-Carlo histogram method can help to effectively calculate the correction factors for reducing the retention errors. Thereby, the performance cost of calculating Monte-Carlo histogram forms part of the critical path for accurately accessing data from the flash memory.
+D. Complexity Analysis
+To analyze the complexity the proposed MARC algorithms, we present their computational/performance overheads and storage overheads in this part. We further discuss the tradeoff between the offline and online MARC algorithms.
+1) Computational Overhead: As for the proposed offline MARC algorithm, its computational overhead may not be important since it is implemented offline when the system is in the idle state. For the proposed online MARC algorithm, it requires to execute the second-round decoding to correct the retention errors once the first-round decoding
+
+fails, which commonly exists in many state-of-the-art counter-
+
+parts [7], [28], [29]. Apart from the second-round decoding,
+
+the computational overhead of the online MARC algorithm
+
+is induced by and correction
+
+the calculation factors αˆ jq,t for
+
+of approximated histogram Nˆ jx,q Q + 1 threshold-voltage regions.
+
+The computational overheads of calculating the approximated
+
+Monte-Carlo histogram Nˆ jx,q and the correction factors αˆ jq,t
+
+between the first and second round of decoding are O(2(Q +
+
+1)N) and O(4(Q + 1)), respectively. As a result, the extra
+
+computational overhead (i.e., excluding the complexity of the
+
+second-round decoding) of the online MARC algorithm is
+
+O(2(Q + 1)N + 4(Q + 1)) ≈ O(2(Q + 1)N) because N Q.
+
+2) Storage Overhead: For the offline algorithm, its storage
+
+overhead depends on the LUT size, which is determined by the number of corrected LLRs recorded in the LUT.2 These LUTs
+
+can be typically stored within the dynamic random access
+
+memory (DRAM) of flash controller [8], where the size of
+
+DRAM accounts for a fixed fraction of SSD capacity (e.g.,
+
+1 G storage is used as DRAM for a 512 G SSD).
+
+With regard to the online MARC algorithm, its storage over-
+
+head originates from calculating the Monte-Carlo histogram
+
+based on the decoded codeword and its corresponding LLRs.
+
+Hence, the storage overhead of calculating the Monte-Carlo
+
+histogram contains the overheads of storing the decoded code-
+
+word, its corresponding LLRs, and the obtained histogram,
+
+where the decoded codeword comprises N bits, the corre-
+
+sponding LLRs comprises N float values, and the Monte-Carlo
+
+histogram comprises 4(Q + 1) integer values. As a result,
+
+the storage overheads of the decoded codeword, its corre-
+
+sponding LLRs, and the Monte-Carlo histogram are N/8 Byte,
+
+N ×4 Byte = 4N Byte, and 2 Byte×4(Q+1) = 8(Q + 1) Byte,
+
+respectively.
+
+3) Tradeoff: The offline MARC algorithm can approach
+
+the optimal performance (see Section V-A), but requires rel-
+
+atively high storage overhead for the LUTs to store the
+
+corrected LLRs. In contrast, although the online MARC algo-
+
+rithm can optimize the inaccurate LLRs in real time with lower
+
+storage overhead, its retention-error correction capability is
+
+inferior to that of the offline MARC algorithm. Therefore, the
+
+offline MARC algorithm is suitable for the applications with
+
+high-performance requirement but not high demand on storage
+
+efficiency, while the online MARC algorithm is suitable for
+
+the applications with the requirements of real time and low
+
+storage overhead.
+
+Remark: The counters are needed to trace the retention time
+
+at read time for the offline MARC algorithm, which leads to an
+
+additional storage overhead. Since all the pages within a block
+
+in an SSD have similar retention time, we only need to use one
+
+counter to trace the retention time for each block. Here, we
+
+use an array to regulate all the counters in the flash-memory
+
+controller. The counter of a block increases by 1 periodically
+
+(e.g., for every 5 h), and thus, a 2 Byte-counter is required to
+
+trace the retention time. Suppose that the capacity of an SSD is
+
+512 G, in which each block contains 128 pages and each page
+
+stores 4KB data. Thus, the SSD contains 1 048 576 blocks.
+
+2For example, suppose that the offline MARC algorithm is executed every 5 h from 5 h to 8760 h (i.e., a year), and the number of read voltages equals 6. In addition, assume that the lifetime of MLC flash memory is 10 000 PE cycles, and the corrected LLRs are recorded for every ten PE cycles. As a result, the storage overhead of an LUT is 2(6+1)×4 Byte×1752 = 98112 Byte ≈ 96 KB, and thus, the overall storage overhead of LUTs is 98112 Byte×1000 ≈ 96 MB.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3445
+
+Fig. 4. Read voltages obtained via three quantization schemes: 1) harddecision-based quantization scheme (uniform); 2) entropy-aided MMI scheme (nonuniform); and 3) entropy-aided MAR scheme (nonuniform).
+
+we can acquire the six read voltages {R1, R2, . . . , R6} as the boundaries of erasure regions {E1, E2, E3} by solving H(Ri) = β (i = 1, 2, . . . , 6), where β ∈ (0, 1) is a given entropy value.
+
+Thus, the optimization of read voltages can be transformed to
+
+the optimization of the parameter β.
+
+To optimize the parameter β, one way is to maximize the
+
+MI of the flash-memory channel [36]. The MI of an MLC
+
+flash memory with Q read voltages is given by
+
+⎧
+
+I=1 4
+
+k
+
+⎨Q+1 ⎩
+q=1
+
+Rq Rq−1
+
+ps(tk)(vth)
+
+log
+
+1 4
+
+p(stk)(vth) k p(stk) (vth)
+
+⎫ ⎬ dvth⎭.
+
+(14)
+
+As a result, the overall storage overhead for the counters is 1048576 × 2 Byte = 2 MB.
+
+E. Selection of Read Voltages and Calculation of LLRs
+
+In this section, we present three quantization schemes to obtain the initial read voltages R(t=0), which can be used to generate LLRs by applying (3) and (4). These three quantization schemes will be exploited in the simulations of Section V in order to compare the performance between the proposed MARC algorithms and RABP algorithm [28]; hence, verifying the robustness of our design. Actually, the RABP scheme targets MLC flash memory using six read voltages, while the proposed MARC algorithms do not have this limitation. Thus, we employ Q = 6 levels of read voltages in the simulations of Section V for ease of comparison. Fig. 4 shows the read voltages obtained through three quantization schemes.
+1) Hard-Decision-Based Quantization Scheme: To easily obtain the read voltages, we first adopt the uniform memory sensing strategy. Specifically, given the threshold-voltage disctpra(sit2nb)(uvbtiteho)n,osb,attnahdirneeepds(ht2)ba(ryvdth-s)doel=cviisnigopn(st3p)r(s(te0v)at(hdv)t.hv)oAl=tfategrpe(sst1t)hR(avhtt1,h,)s,Rohpf2t(s,-t1)da(evnctdhis)Rioh=n3 read voltages can be readily obtained by uniformly allocating them within two hard-decision read voltages. Since the voltage distributions of the programmed states shift to lower voltages and become wider as the retention time increases (while the distribution of the erased state is not affected), more overlaps will occur between two adjacent programmed states. Therefore, compared with the erased state, the programmed states require higher memory-sensing precision. Thus, we only assign the soft-decision read voltages for the programmed states to boost their memory-sensing precisions, but assign the lowest memory-sensing precision for the erased state. In Fig. 4, six read voltages are utilized, where three soft-decision read voltages are assigned for the programmed states.
+2) Entropy-Aided Maximize MI (MMI) Scheme: Since most errors occur in the erasure region, it is more reasonable to adopt a nonuniform memory sensing strategy to design the read voltages for three erasure regions. We first define the entropy of a threshold voltage vth according to [22], [23]
+
+H(vth) =
+k
+
+ps(tk)(vth) k ps(tk) (vth)
+
+log
+
+k p(stk) (vth) p(stk)(vth)
+
+(13)
+
+where k ∈ {1, 2, 3, 4}. In an erasure region, it will result in large entropy if vth is close to hard-decision read voltage. Then,
+
+Therefore, given the threshold-voltage distributions, we can use the bisection algorithm to search the parameter β that maximizes the MI of a flash-memory channel.
+3) Entropy-Aided MAR Scheme: As an alternative, considering the effect of data retention noise, we propose to optimize the parameter β by maximizing the achievable rate of a flashmemory channel while setting the retention time to a large value (e.g., one year) based on given threshold-voltage distributions.3 Similarly, we can exploit the bisection algorithm to search the parameter β that maximizes the achievable rate.
+IV. ENHANCED EM-BASED CORRECTION STRATEGY
+As mentioned in the preceding section, the MARC algorithms improve the LLR accuracy based on the initial voltagedistribution parameters and read voltages. When the retention noise is severe (i.e., the retention time is large), those initial voltage-distribution parameters and read voltages lead to significant degradation on the LLR accuracy, thus causing a large number of retention errors. If the number of retention errors exceeds the correction capability of the MARC algorithms, the MARC algorithms become no longer effective. As such, we develop an enhanced EM algorithm to update the voltage-distribution parameters and use them to optimize the read voltages so as to obtain more accurate LLRs for correcting the retention errors. Furthermore, we find that the updated voltage-distribution parameters and read voltages can effectively enhance the correction capability of the MARC algorithms. Consequently, we put forward an enhanced EMbased correction strategy that combines the enhanced EM algorithm with the MARC algorithms to jointly optimize the inaccurate LLRs for longer retention time.
+A. Selection of Read Voltages for Estimation
+Before the estimation, the read-back threshold voltages need to be obtained. Obviously, it is desired to utilize less number of read voltages while ensuring the accuracy of voltagedistribution estimation. According to [23] and [28]–[30], the variance of the erased state is larger than that of three programmed states, which illustrates that the erased state occupies a relatively large threshold-voltage space, as shown in Fig. 2. For that reason, the conventional EM algorithm requires to employ a relatively large number of read voltages for the erased state to guarantee the accurate estimation of the parameters. However, according to the variation characteristics of the voltage distributions, the voltage distribution of the erased
+3Note that the achievable rate of an MLC flash-memory channel depends on the read voltages, threshold-voltage distributions, and retention time.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3446
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+state is not affected by the retention noise. This means that the parameters of the erased state do not need to be updated, and thus, it is not necessary to adopt high memory-sensing precision for the erased state.
+To reduce the required number of read voltages in the enhanced EM algorithm, we adopt the lowest memory-sensing precision for the erased state. Here, we use the hard-decisionbased quantization scheme to obtain the read voltages (i.e., the soft-decision read voltages are only assigned to the programmed states). Through experiments, we observe that exploiting 12 read voltages, the enhanced EM algorithm is sufficient to attain satisfactory estimation performance. In particular, there are three hard-decision read voltages and nine soft-decision read voltages. The nine soft-decision read voltages are equally assigned to the three programmed states (i.e., every three soft-decision read voltages are assigned to each programmed state). In the following, we develop an enhanced EM algorithm to estimate the voltage-distribution parameters, which requires much fewer read-voltage levels than that in the conventional EM algorithm [31] (i.e., 23 read voltages).
+
+B. Enhanced EM Algorithm
+
+Consider an MLC flash memory using Q selected read-
+voltage levels R1, R2, . . . , RQ to obtain the read-back threshold voltages, where the threshold voltages are divided into Q + 1
+regions V1, V2, . . . , VQ+1. Let yˆq (q = 1, 2, . . . , Q + 1) be the read-back (quantized) threshold voltage. In particular, the
+read-back threshold voltage yˆq can be used to represent the
+cell whose threshold voltage vth belongs to the voltage region Vq, i.e., Rq−1 < vth ≤ Rq, where R0 and RQ+1 correspond to −∞ and ∞, respectively. We denote y = (y1, . . . , ym, . . . , yM) as the quantized threshold-voltage sequence, where ym ∈ {yˆ1, . . . , yˆq, . . . , yˆQ+1} (m = 1, 2, . . . , M). Nq is defined as the number of cells whose threshold voltages are in the qth voltage region Vq. We also denote N (y|μ, σ 2) as the PDF of a Gaussian random variable y with mean μ and variance σ 2.
+The PDF of the quantized threshold voltage ym can be
+described by a 4-component Gaussian mixture model, i.e.,
+
+4
+
+p ym|μ, σ 2 = wsk N ym|μk, σk2
+
+(15)
+
+k=1
+
+where μ = (μ1, μ2, μ3, μ4) and σ = (σ1, σ2, σ3, σ4) are the means and standard deviations of four threshold-voltage
+states, respectively, and wsk is the probability that the cells are written as the threshold-voltage state sk during the programming operation. Unlike the conventional EM algorithm
+requiring to estimate wsk during each iteration, we fix wsk as 1/4 for k = 1, 2, 3, 4 because the memory cells are generally written to four threshold-voltage states with equal probability.
+Thus, we can obtain the logarithmic likelihood function of the
+quantized voltage sequence y as
+
+ln p y|μ, σ 2
+
+M
+= ln
+m=1
+
+14 N
+4 k=1
+
+ym|μk, σk2
+
+.
+
+(16)
+
+Thus, our aim is to acquire the means and standard deviations of threshold-voltage states by maximizing the logarithmic likelihood of quantized voltage sequence y. However, maximizing (16) is a nonconvex problem since we do not exactly know which state the quantized voltage ym belongs to. Consequently, to effectively solve this problem, we first introduce a
+
+4-dimensional binary latent variable zm = {zm1 , zm2 , zm3 , zm4 } (m = 1, 2, . . . , M) corresponding to quantized voltage ym, in
+
+which only one element equals 1 and the other elements equals
+
+0, i.e., zmk ∈ {0, 1} and
+
+4 k=1
+
+zmk
+
+=
+
+1.
+
+Similarly,
+
+we
+
+denote
+
+zˆq (q = 1, 2, . . . , Q + 1) as the latent variable that corresponds
+
+to yˆq, and thus, zm ∈ {zˆ1, . . . , zˆq, . . . , zˆQ+1}. Hence, the joint
+
+probability of ym and zm can be formulated as
+
+p ym, zm|μ, σ 2 = p ym|zm, μ, σ 2 p zm|μ, σ 2
+
+= 4 N ym|μk, σk2 zmk
+
+1 4
+
+zmk
+. (17)
+
+k=1
+
+Furthermore, we denote the set of all latent variables corresponding to voltage sequence y by z. Thus, the logarithmic form of the joint probability of y and z is yielded as
+
+ln p y, z|μ, σ 2
+
+M
+=
+
+4
+
+zmk ln
+
+1N 4
+
+ym|μk, σk2
+
+m=1 k=1
+
+Q+1
+=
+
+4
+
+Nqzˆqk ln
+
+1N 4
+
+yˆq|μk, σk2
+
+q=1 k=1
+
+. (18)
+
+Next, we define the means and variances before and after an iteration as θ old = {μold, σ o2ld} and θ new = {μnew, σ n2ew}, respectively. The voltage-distribution parameters can be obtained by alternately implementing the E-step and M-step until the convergence condition is satisfied, which is described as follows.
+1) E-step: In the E-step, the aim is to calculate the posteriori distribution for the latent variables z when the parameter θ is given (i.e., θ = θ old). The posteriori probability p(zˆqk = 1|y, θ old) of zˆqk = 1 can be given by
+
+p zˆqk = 1|y, θ old = = =
+
+p zˆqk = 1 p yˆq|zˆqk = 1, θkold
+
+4 v=1
+
+p
+
+zˆqv
+
+=
+
+1
+
+p
+
+yˆq|zˆqv
+
+=
+
+1, θvold
+
+wsk N yˆq|θkold
+
+4 v=1
+
+wsv
+
+N
+
+yˆq|θvold
+
+N yˆq|θkold
+
+4 v=1
+
+N
+
+yˆq|θvold
+
+= γ zˆqk .
+
+(19)
+
+2) M-step: In the M-step, the aim is to evaluate the
+
+optimal θ (i.e.,{μnew, σ n2ew}) by maximizing the expectation of ln p(y, z|μ, σ 2) in terms of z when the posteriori probability
+
+γ (zˆqk ) is given. In specific, the expectation of ln p(y, z|μ, σ 2)
+
+in terms of z can be calculated as
+
+⎧
+
+⎫
+
+⎨Q+1 4
+
+1
+
+⎬
+
+L(θ ) = E{ln p(y, z|θ )} = E⎩
+
+Nqzˆqk ln
+
+N 4
+
+yˆq|θk
+
+⎭
+
+q=1 k=1
+
+Q+1 4
+
+1
+
+=
+
+Nq ln
+
+N 4
+
+yˆq|θk
+
+E zˆqk |y, θ
+
+(20)
+
+q=1 k=1
+
+where E(zˆqk |y, θ ) = p(zˆqk = 1|y, θ ) = γ (zˆqk ). Hence, when
+
+the posteriori probability γ (zˆqk ) is given, we can set the partial
+
+derivatives of L(θ ) with respect of μk and σk2 to zero for
+
+k
+
+=
+
+2, 3, 4
+
+in
+
+order
+
+to
+
+evaluate
+
+the
+
+optimal
+
+θ
+
+({μnew,
+
+σ
+
+2 new
+
+}).
+
+Thus, for k = 2, 3, 4, the optimal mean μnew,k and variance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3447
+
+Algorithm 3: Enhanced EM Algorithm for Voltage-
+
+Distribution Estimation
+
+1 Initialization: Utilize the read voltages to acquire the quantized
+
+threshold-voltage sequence y, and exploit the previously stored means
+
+and variances of voltage distributions as the initialization point (μnew, σ n2ew); 2 repeat
+
+3
+
+μold
+
+=
+
+μnew,
+
+σ
+
+2 old
+
+=
+
+σ 2new;
+
+4
+
+perform E-step:
+
+5
+
+for q = 1 to Q + 1 do
+
+6
+
+for k = 2 to 4 do
+
+7
+
+γ (zˆqk ) =
+
+N (yˆq|μold,k,σo2ld,k)
+
+4 v=1
+
+N
+
+(yˆ q |μold,v
+
+,σo2ld,v )
+
+8
+
+perform M-step:
+
+9
+
+for k = 2 to 4 do
+
+10
+
+μnew,k =
+
+Q+1 q=1
+
+Nq
+
+γ
+
+(zˆqk
+
+)yˆq
+
+Q+1 q=1
+
+Nq
+
+γ
+
+(zˆqk
+
+)
+
+,
+
+σn2ew,k =
+
+Q+1 q=1
+
+Nq
+
+γ
+
+(zˆqk
+
+)(yˆ q −μnew,k
+
+)2
+
+Q+1 q=1
+
+Nq
+
+γ
+
+(zˆqk
+
+)
+
+11 until
+
+ln
+
+p(y|μnew,
+
+σ
+
+2 new
+
+)
+
+−
+
+ln
+
+p(y|μold,
+
+σ
+
+2old )
+
+≤ δ;
+
+TABLE II NUMBER OF ARITHMETIC OPERATIONS FOR EACH ITERATION IN THE
+ENHANCED EM ALGORITHM
+TABLE III TOTAL NUMBER OF ARITHMETIC OPERATIONS FOR EACH ITERATION IN
+THE ENHANCED EM ALGORITHM, CONVENTIONAL EM ALGORITHM, AND RABP-CU ALGORITHM, AS WELL AS THEIR CORRESPONDING
+READ VOLTAGES
+
+σn2ew,k can be obtained as
+
+μnew,k = σn2ew,k =
+
+Q+1 q=1
+
+Nq
+
+γ
+
+zˆqk
+
+yˆq
+
+Q+1 q=1
+
+Nqγ
+
+zˆqk
+
+Q+1 q=1
+
+Nq
+
+γ
+
+zˆqk
+
+yˆq − μnew,k
+
+Q+1 q=1
+
+Nq
+
+γ
+
+zˆqk
+
+2
+.
+
+The iteration stops until the convergence condition is satisfied, i.e.,
+
+ln p
+
+y|μnew,
+
+σ
+
+2 new
+
+− ln p
+
+y|μold
+
+,
+
+σ
+
+2 old
+
+≤δ
+
+(21)
+
+where δ is a preset error threshold. Otherwise, we set μold =
+
+μnew
+
+and
+
+σ
+
+2 old
+
+=
+
+σ 2new,
+
+and
+
+then
+
+execute
+
+the
+
+E-step
+
+and
+
+M-step until the convergence condition is met or the max-
+
+imum number of iterations is reached.4 The details of the
+
+enhanced EM algorithm for voltage-distribution estimation of
+
+MLC flash-memory systems are summarized in Algorithm 3.
+
+Remark: The enhanced EM algorithm is proposed to reduce
+
+the computational complexity and the number of read volt-
+
+ages needed for voltage-distribution estimation. These benefits
+
+make it more effective to apply in practical applications compared to the conventional EM algorithm.5 Specifically, to
+
+reduce the number of read voltages required for estimation,
+
+we adopt the lowest memory-sensing precision for the erased
+
+state since the mean and variance of the voltage distribution
+
+of the erased state are not affected by the data retention noise.
+
+Furthermore, there are three reasons making the complexity
+
+of the enhanced EM algorithm lower than that of the conven-
+
+tional counterpart. First, the enhanced EM algorithm requires
+
+less read voltages to obtain the read-back voltages, resulting in
+
+lower complexity since the complexity of the EM algorithm is
+
+4In the enhanced EM algorithm, each iteration includes two steps (i.e., Estep and M-step). Thus, the number of iterations is defined as the number of times that both the E-step and M-step have been executed.
+5Because the enhanced EM algorithm can reduce the computational complexity and the number of read voltages required for the estimation of threshold-voltage distributions, it has lower read latency compared to the conventional EM algorithm. As such, the enhanced EM algorithm is more suitable for the practical applications with fast read-speed requirement.
+
+Fig. 5. Number of iterations required by the enhanced EM algorithm, conventional EM algorithm, and RABP-CU algorithm to achieve convergence against retention time at PE = 5000.
+related to the number of read voltages. Second, the mean and variance of the erased state do not need to be updated. Third, unlike the conventional EM algorithm updating the parameter wsk for each iteration, the enhanced EM algorithm fixes it as 1/4 because any memory cell is typically written to four threshold-voltage states with equal probability.
+C. Complexity Analysis
+To analyze the computational complexity of the enhanced EM algorithm, we measure the number of arithmetic operations for each iteration in the algorithm (including E-step and M-step), which is shown in Table II. Here, we use LUT to execute the computation of the exponential and Q-functions.
+For comparison, we present the number of arithmetic operations for each iteration in the enhanced EM algorithm, conventional EM algorithm [31], and RABP-CU algorithm [28], as well as their corresponding read voltages, shown in Table III.6 Apparently, the enhanced EM algorithm requires fewer arithmetic operations per iteration compared with the conventional EM algorithm. Fig. 5 presents the number of iterations required by the enhanced EM algorithm, conventional EM algorithm, and RABP-CU algorithm [28] to achieve convergence against retention time. As seen in this figure, since the enhanced EM algorithm and conventional EM algorithm require similar number of iterations to achieve convergence, the total number of arithmetic operations of the enhanced
+6Note that the enhanced EM algorithm requires only 12 read-voltage levels to attain satisfactory estimation performance (see Section IV-D), while the conventional EM algorithm in [31] requires 23 read-voltage levels to do so because it needs to set extra read voltages for the erased state.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3448
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+Fig. 6. Estimation errors of (a) means and (b) standard derivations against retention time at PE = 5000 by utilizing the enhanced EM algorithm and RABP-CU algorithm.
+EM algorithm is lower than that of the conventional one.7 Hence, the enhanced EM algorithm not only requires fewer read voltages but also has lower complexity with respect to the conventional EM algorithm.
+Compared to the RABP-CU algorithm, the enhanced EM algorithm requires more arithmetic operations in each iteration. However, since the enhanced EM algorithm requires much fewer iterations than the RABP-CU algorithm to achieve convergence (see Fig. 5), the total number of arithmetic operations of the enhanced EM algorithm is still lower than that of the RABP-CU algorithm.
+
+Fig. 7. Estimation errors of (a) means and (b) standard derivations against retention time at PE = 5000 by utilizing the enhanced EM algorithm and conventional EM algorithm.
+of standard derivations for the RABP-CU algorithm vary from 0.02 to 0.05 V, and reduce as the retention time increases.
+Furthermore, Fig. 7 shows the estimation errors of means and standard derivations against the retention time by utilizing the enhanced EM algorithm and conventional EM algorithm. One can observe that the estimation performance of the conventional EM algorithm is similar to that of the enhanced EM algorithm. The above analysis demonstrates the robustness and effectiveness of the enhanced EM algorithm in estimating voltage distributions.
+
+D. Estimation Error Analysis
+To evaluate the accuracy of the estimated voltagedistribution parameters, we calculate the estimation errors of mean and standard derivation of the estimated voltage distribution, denoted as Eμk and Eσk (k = 2, 3, 4), which is given by
+
+Eμk = μk − μˆ k ,
+
+Eσk = σk − σˆk
+
+(22)
+
+where μk and σk are the estimated mean and standard derivation, respectively, while μˆ k and σˆk are their real ones.
+In Fig. 6, we measure the estimation errors of means and standard derivations against the retention time at PE = 5000 by utilizing the enhanced EM algorithm and RABP-CU algo-
+rithm [28]. As shown, the estimation errors of means for the enhanced EM algorithm remain in a low level (below 0.02 V) in the whole range of retention time, while the estimation errors of means for the RABP-CU algorithm are very
+large in the early retention time and gradually reduce with the
+increase of retention time. Additionally, we observe that the errors of estimated standard derivations for the enhanced EM algorithm are always below 0.03 V, while the estimation errors
+
+7Note that the maximum number of iterations in three algorithms is set to 200, where the RABP-CU algorithm utilizes the gradient descent (GD) method to iteratively find the optimal voltage-distribution parameters.
+
+E. Enhanced EM-Based Correction Strategy
+In this part, we propose an enhanced EM-based correction strategy that combines the enhanced EM algorithm with the MARC algorithms to further improve the retention-error endurance while avoiding the excessive memory-sensing overhead. Actually, the enhanced EM algorithm requires additional memory-sensing operations to obtain the quantized threshold voltages. Hence, there exists a limitation for the proposed correction strategy. If the enhanced EM algorithm is performed frequently, the retention errors can be reduced significantly, but it inevitably introduces excessive overhead of memorysensing operations. To prevent the excessive memory-sensing overhead, we assume that the enhanced EM algorithm is only invoked when the current average achievable rate of flash memory is less than a predefined threshold η (i.e., C(t, Ps(t=0), R(t=0))/K < η, K = 2). Based on the updated voltage-distribution functions Ps(t=tupdate) (tupdate represents the time triggering the enhanced EM algorithm), we use the three read-voltage design methods in Section III-E to update the read-voltage levels. After that, we can execute the offline MARC algorithm or online MARC algorithm to further enhance the retention-error tolerance of flash memory based on the updated read voltages R(t=tupdate) and voltage-distribution functions Ps(t=tupdate).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3449
+
+Fig. 8. Average achievable rate of an MLC flash memory employing the conventional detection scheme and offline MARC algorithm with six read voltages obtained by three different quantization schemes against retention time at PE = 5000.
+V. SIMULATION RESULTS
+In this section, we present various simulation results to verify the superiority of the proposed MARC algorithms and enhanced EM-based correction strategy over flash-memory channels. The simulations are carried out by using MATLAB, which is a mathematical computing environment with powerful computational capability. We employ the conventional detection scheme in [20], [22], [28], and [31] as the baseline, which detects the data with fixed LLR values and read voltages over different retention time. In the simulations, we employ the regular column-weight-3 (CW-3) protograph LDPC code [37], [38] with a code rate of 6/7, which can be constructed by using a modified progressive edge growth (PEG) algorithm [39].8 The codeword length of regular CW3 photograph LDPC code is 4000. We also assume that the codeword is decoded by an iterative BP algorithm [40] and the maximum number of iterations is set to 25. The parameters of the flash-memory channel model are assumed in Table I.
+A. Error Performance of MARC Algorithms
+We first plot the average achievable rate of an MLC flash memory employing the conventional detection scheme and offline MARC algorithm with six initial read voltages obtained by three different quantization schemes against the retention time in Fig. 8, where PE = 5000.9 For the conventional detection scheme, the average achievable rate (C(t, Ps(t=0), R(t=0))/2) degrades rapidly in three cases as the retention time increases. However, after executing the offline MARC algorithm, the average achievable rate (C(t, α(t), P(st=0), R(t=0))/2) is very close to its average capacity (C(t, Ps(t), R(t=0))/2) in three different cases, which means that the corrected LLRs are close to real LLRs after exploiting the offline MARC algorithm.
+As a further insight, Fig. 9 presents the frame-error-rate (FER) performance of the conventional detection scheme [20], [22], [28], [31], RABP decoding scheme [28], and the
+8The code rate of LDPC codes used in flash memory is typically higher than 0.8 to meet the high-storage-efficiency requirement of flash memory [14].
+9Note that it is extremely hard to effectively evaluate the average achievable rate of an MLC flash memory using the online MARC and RABP algorithms, because both algorithms reoptimize the LLR information based on the incorrectly decoded codeword. In other words, the accuracy of the optimized LLRs is related to the decoding accuracy in the online MARC and RABP algorithms. Owing to this reason, the average achievable rate of an MLC flash memory is not a fixed value for a given retention time in such scenarios.
+
+proposed online and offline MARC algorithms against the retention time at PE = 5000 over a flash-memory channel with six initial read voltages acquired through three different quantization schemes. As seen in Fig. 9(c), when using the entropy-aided MAR scheme, the RABP scheme can improve the retention-error tolerance by 100% compared with the conventional detection scheme. However, it can only achieve a trivial retention-error endurance improvement when utilizing the entropy-aided MMI scheme and hard-decision-based quantization scheme, as shown in Fig. 9(a) and (b). This phenomenon suggests that the RABP scheme is only effective to improve the LLR accuracy of erasure regions in the scenario of using entropy-aided MAR scheme, while it does not work in the other two scenarios. Therefore, the retention-error correction capability of the RABP scheme is sensitive to the quantization schemes, indicating its undesirable robustness.
+In contrast, Fig. 9 also presents that both the offline MARC algorithm and online MARC algorithm can effectively improve the tolerance against retention errors under all three quantization schemes. For the offline MARC algorithm, it can significantly outperform other three retention-error correction schemes in terms of retention-error endurance. Specifically, at a FER of 10−4, the offline MARC algorithm improves the retention time by 70 times, 5 times, and 37 times compared with the conventional detection scheme under the hard-decision-based quantization scheme, entropy-aided MMI scheme, and entropy-aided MAR scheme, respectively. More importantly, the FER performance of the offline MARC algorithm can approach that of the case using real LLR information, which further verifies that the corrected LLRs obtained by the offline MARC algorithm are very close to the real LLRs. Moreover, the simulated results of the conventional detection scheme and offline MARC algorithm are reasonably consistent with the achievable-rate analysis in Fig. 8.
+Besides, at a FER of 10−4, the online MARC algorithm attains 110%, 100%, and 69% improvements in retention time compared to the conventional detection scheme when employing the hard-decision-based quantization scheme, entropy-aided MMI scheme, and entropy-aided MAR scheme, respectively. However, the retention-error correction performance of the online MARC algorithm is inferior to that of the offline MARC algorithm. This is because the relatively short codeword length and incorrectly decoded codeword make the estimation of LLR conditional distribution inaccurate, leading to the suboptimal correction factors.
+B. Error Performance of Enhanced EM-Based Correction Strategy
+As an example, we utilize the hard-decision-based quantization scheme to obtain six read voltages based on initial (nonupdated) or updated distribution parameters to produce the LLR information. We assume that the enhanced EM algorithm is only triggered to update the voltage-distribution parameters when the average achievable rate of MLC flash memory is less than η = 0.9 [i.e., C(t, P(st=0), R(t=0))/2 < 0.9, and thus, tupdate = 70].10
+10To yield the desirable decoding performance for flash-memory systems, we assume the predefined threshold to be η = 0.9 so as to keep the LLRs with relatively high accuracy in the whole range of the retention time. Note that other values of η (e.g., η = 0.95) have also be adopted to verify the superiority of the enhanced EM-based correction strategy.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+3450
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 10, OCTOBER 2022
+
+Fig. 9. FER performance of the conventional detection scheme, RABP decoding scheme, online MARC algorithm, and offline MARC algorithm against retention time at PE = 5000 over a flash-memory channel with six initial read voltages obtained via three different quantization schemes: (a) hard-decision-based quantization scheme, (b) entropy-aided MMI scheme, and (c) entropy-aided MAR scheme.
+
+Fig. 10. Average achievable rate of an MLC flash memory utilizing the conventional detection scheme and offline MARC algorithm against retention time at PE = 8000 before and after updating voltage-distribution parameters and read voltages.
+
+Fig. 11. FER results of the conventional detection scheme, and online and offline MARC algorithms against retention time at PE = 8000 before and after updating the voltage-distribution parameters and read voltages.
+
+We first present the average achievable rate of an MLC flash memory utilizing the conventional detection scheme and the proposed offline MARC algorithm against the retention time at PE = 8000 before and after updating voltage-distribution parameters and read voltages in Fig. 10. As shown, the average achievable rate of an MLC flash memory employing the conventional detection scheme and proposed offline MARC algorithm with updated voltage-distribution parameters and read voltages is larger than that with initial (nonupdated) ones [i.e., C(t, P(st=70), R(t=70)) > C(t, P(st=0), R(t=0)) and C(t, α(t), P(st=70), R(t=70)) > C(t, α(t), Ps(t=0), R(t=0))]. Moreover, for the offline MARC algorithm, the average achievable rates with nonupdated/updated voltage-distribution parameters and read voltages can approach their corresponding average capacities [i.e., C(t, α(t), Ps(t=0), R(t=0)) ≈ C(t, P(st), R(t=0)) and C(t, α(t), P(st=70), R(t=70)) ≈ C(t, Ps(t), R(t=70))].
+Furthermore, Fig. 11 shows the FER results of the conventional detection scheme, and proposed online and offline MARC algorithms versus the retention time at PE = 8000 before and after updating the distribution parameters and read voltages (i.e., employing the enhanced EM algorithm). As seen, the updated voltage-distribution parameters and read
+
+voltages provide significant improvement of the retentionerror endurance in three different retention-error correction schemes. To be specific, at an FER of 10−4, the conventional detection scheme and proposed online MARC algorithm and offline MARC algorithm with updated distribution parameters and read voltages improve the retention time by 42 times, 39 times, and 17 times, respectively, compared to that with initial ones. In addition, the FER performance of the offline MARC algorithm can approach that with the use of real LLRs before and after updating the read voltages. Similarly, the FER results of the conventional detection scheme and proposed offline MARC algorithm with nonupdated/updated voltage-distribution parameters and read voltages are reasonably consistent with the achievable-rate analysis in Fig. 10. The above results indicate that the enhanced EM algorithm can significantly improve the LLR accuracy.
+VI. CONCLUSION
+To alleviate the retention errors over the retention time, the concept of achievable rate has been introduced to facilitate the characterization of LLR accuracy in flash-memory systems. Based on this metric, we have utilized the correction factors to optimize the inaccurate LLR information by maximizing the achievable rate of flash memory and have illustrated that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+BU et al.: ACHIEVABLE-RATE-AWARE RETENTION-ERROR CORRECTION FOR MULTI-LEVEL-CELL NAND FLASH MEMORY
+
+3451
+
+the procedure of optimizing the correction factors is a convex optimization problem. To obtain the optimal correction factors, two novel retention-error correction schemes, referred to as the offline MARC algorithm and online MARC algorithm, have been proposed. In addition, an enhanced expectation– maximization (EM) algorithm has been developed to update the voltage-distribution parameters and read voltages without acquiring decoded data. To further improve the LLR accuracy and avoid excessive memory-sensing overhead, an enhanced EM-based correction strategy has been presented. Error-rate simulations have demonstrated that the proposed MARC algorithms and enhanced EM-based correction strategy can significantly increase the retention time of MLC flash memory.
+REFERENCES
+[1] X. Dong, C. Xu, Y. Xie, and N. P. Jouppi, “NVsim: A circuit-level performance, energy, and area model for emerging nonvolatile memory,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 31, no. 7, pp. 994–1007, Jul. 2012.
+[2] A. F. Inci, M. M. Isgenc, and D. Marculescu, “DeepNVM: A framework for modeling and analysis of non-volatile memory technologies for deep learning applications,” in Proc. Des. Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2020, pp. 1295–1298.
+[3] M. Poremba and Y. Xie, “NVMain: An architectural-level main memory simulator for emerging non-volatile memories,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), Aug. 2012, pp. 392–397.
+[4] A. Inci, M. M. Isgenc, and D. Marculescu, “DeepNVM++: Cross-layer modeling and optimization framework of non-volatile memories for deep learning,” 2020, arXiv:2012.04559.
+[5] C. Matsui, C. Sun, and K. Takeuchi, “Design of hybrid SSDs with storage class memory and NAND flash memory,” Proc. IEEE, vol. 105, no. 9, pp. 1812–1821, Sep. 2017.
+[6] W. Lee, M. Kang, S. Hong, and S. Kim, “Interpage-based enduranceenhancing lower state encoding for MLC and TLC flash memory storages,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 27, no. 9, pp. 2033–2045, Sep. 2019.
+[7] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Conf. Des. Autom. Test Eur., Mar. 2013, pp. 1285–1290.
+[8] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. Int. Symp. High Perform. Comput. Archit., Burlingame, CA, USA, Feb. 2015, pp. 551–563.
+[9] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solid-state drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[10] Y. M. Chee, J. Chrisnata, H. M. Kiah, S. Ling, T. T. Nguyen, and V. K. Vu, “Capacity-achieving codes that mitigate intercell interference and charge leakage in flash memories,” IEEE Trans. Inf. Theory, vol. 65, no. 6, pp. 3702–3712, Jun. 2019.
+[11] D. K. Yu and J. Hsieh, “A management scheme of multi-level retentiontime queues for improving the endurance of flash-memory storage devices,” IEEE Trans. Comput., vol. 69, no. 4, pp. 549–562, Apr. 2020.
+[12] L. Dai, Y. Fang, Z. Yang, P. Chen, and Y. Li, “Protograph LDPC-coded BICM-ID with irregular CSK mapping in visible light communication systems,” IEEE Trans. Veh. Technol., vol. 70, no. 10, pp. 11033–11038, Oct. 2021.
+[13] G. Cai et al., “Design of an MISO-SWIPT-aided code-index modulated multi-carrier M-DCSK system for e-health IoT,” IEEE J. Sel. Areas Commun., vol. 39, no. 2, pp. 311–324, Feb. 2021.
+[14] Y. Liao, C. Lin, H. Chang, and S. Lin, “A (21150, 19050) GC-LDPC decoder for NAND flash applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 3, pp. 1219–1230, Mar. 2019.
+[15] W. Shao, J. Sha, and C. Zhang, “Dispersed array LDPC codes and decoder architecture for NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 65, no. 8, pp. 1014–1018, Aug. 2018.
+[16] Y. Bu et al., “Design of protograph-LDPC-based BICM-ID for multilevel-cell (MLC) NAND flash memory,” IEEE Commun. Lett., vol. 23, no. 7, pp. 1127–1131, Jul. 2019.
+[17] P. Chen, K. Cai, and S. Zheng, “Rate-adaptive protograph LDPC codes for multi-level-cell (MLC) NAND flash memory,” IEEE Commun. Lett., vol. 22, no. 6, pp. 1112–1115, Jun. 2018.
+
+[18] L. Dolecek and Y. Cassuto, “Channel coding for nonvolatile memory technologies: Theoretical advances and practical considerations,” Proc. IEEE, vol. 105, no. 9, pp. 1705–1724, Sep. 2017.
+[19] Y. Fang et al., “Irregular-mapped protograph LDPC-coded modulation: A bandwidth-efficient solution for 6G-enabled mobile networks,” IEEE Trans. Intell. Transp. Syst., early access, Oct. 2021, doi: 10.1109/TITS.2021.3122994.
+[20] Z. Mei, K. Cai, and X. He, “Deep learning-aided dynamic read thresholds design for multi-level-cell flash memories,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2850–2862, May 2020.
+[21] K. Wei, J. Li, L. Kong, F. Shu, and F. C. M. Lau, “Page-based dynamic partitioning scheduling for LDPC decoding in MLC NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 66, no. 12, pp. 2082–2086, Dec. 2019.
+[22] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in nand flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[23] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[24] H. Park, J. Kim, J. Choi, D. Lee, and S. H. Noh, “Incremental redundancy to reduce data retention errors in flash-based ssds,” in Proc. Symp. Mass Stor. Syst. Technol., May 2015, pp. 1–13.
+[25] L. Shi, K. Wu, M. Zhao, C. J. Xue, D. Liu, and E. H.-M. Sha, “Retention trimming for lifetime improvement of flash memory storage systems,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 35, no. 1, pp. 58–71, Jan. 2016.
+[26] Y. Di, L. Shi, C. Gao, Q. Li, C. J. Xue, and K. Wu, “Minimizing retention induced refresh through exploiting process variation of flash memory,” IEEE Trans. Comput., vol. 68, no. 1, pp. 83–98, Jan. 2019.
+[27] J. Jeong, Y. Song, and J. Kim, “Flashdefibrillator: A data recovery technique for retention failures in NAND flash memory,” in Proc. Symp. Non Volatile Memory Syst. Appl., Aug. 2015, pp. 1–6.
+[28] C. A. Aslam, Y. L. Guan, and K. Cai, “Decision-directed retentionfailure recovery with channel update for MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 65, no. 1, pp. 353–365, Jan. 2018.
+[29] D. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,” IEEE Trans. Signal Process., vol. 61, no. 2, pp. 440–449, Jan. 2013.
+[30] D. Lee and W. Sung, “Decision directed estimation of threshold voltage distribution in NAND flash memory,” IEEE Trans. Signal Process., vol. 62, no. 4, pp. 919–927, Feb. 2014.
+[31] J. Peng, Q. Wang, X. Fu, and Z. Huo, “Dynamic LLR scheme based on EM algorithm for LDPC decoding in NAND flash memory,” IEICE Electron. Exp., vol. 14, no. 18, pp. 1–8, Sep. 2017.
+[32] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[33] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[34] A. Sanaei and M. Ardakani, “LDPC code design considerations for nonuniform channels,” IEEE Trans. Commun., vol. 58, no. 1, pp. 101–109, Jan. 2010.
+[35] M. Ivanov, C. Häger, F. Brännström, et al., “On the information loss of the max-log approximation in BICM systems,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 3011–3025, Jun. 2016.
+[36] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[37] Y. Fang, G. Bi, Y. L. Guan, and F. C. M. Lau, “A survey on protograph LDPC codes and their applications,” IEEE Commun. Surveys Tuts., vol. 17, no. 4, pp. 1989–2016, 4th Quart., 2015.
+[38] Y. Fang et al., “Design guidelines of low-density parity-check codes for magnetic recording systems,” IEEE Commun. Surveys Tuts., vol. 20, no. 2, pp. 1574–1606, 2nd Quart. 2018.
+[39] S. Yang et al., “Performance of improved AR3A code over EPR4 channel,” in Proc. ICCRD, vol. 2, Mar. 2011, pp. 60–64.
+[40] C. A. Aslam, Y. L. Guan, K. Cai, and G. Han, “Informed fixed scheduling for faster convergence of shuffled belief-propagation decoding,” IEEE Commun. Lett., vol. 21, no. 1, pp. 32–35, Jan. 2017.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:45:12 UTC from IEEE Xplore. Restrictions apply.
+
+

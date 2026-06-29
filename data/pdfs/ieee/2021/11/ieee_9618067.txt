@@ -1,0 +1,575 @@
+2021 International Conference on Computer, Information and Telecommunication Systems (CITS) | 978-1-6654-4913-7/21/$31.00 ©2021 IEEE | DOI: 10.1109/CITS52676.2021.9618067
+
+An Energy Efficient Hybrid FEC-ARQ Communication Scheme for Small Satellite
+Applications
+
+Oliver Vassallo Dept of Electronics Systems
+Engineering University of Malta
+Msida, Malta oliver.vassallo@um.edu.mt
+
+Victor Buttigieg Dept of Communications & Computer
+Engineering University of Malta
+Msida, Malta victor.buttigieg@um.edu.mt
+
+Marc A. Azzopardi Dept of Electronics Systems
+Engineering University of Malta
+Msida, Malta marc.azzopardi@um.edu.mt
+
+Abstract— With the extensive cost reductions associated with small satellites, low Earth orbit missions are increasingly becoming popular, mostly with universities and the New-Space industry. However, a persistent limitation associated with the smallest satellites is the significant reduction in energy resources that each satellite has at its disposal. This limitation poses a challenge when using advanced communication systems, particularly those employing advanced forward error correction such as low-density parity check (LDPC) codes. To conserve the high computational energy required to decode such codes, we propose a novel early termination stopping criterion for LDPC decoders that is based on detecting the periodicity of syndrome weight oscillations. The technique is independent of the operating signal-to-noise ratio and results in reductions better than 80%, in the computational energy expended on a well-known bit-flipping decoding algorithm. Real world results are presented using an ARM-based microcontroller.
+Keywords—LDPC Codes, Small Satellites, PocketQubes, FEC, Early Termination
+I. INTRODUCTION
+Due to the sharp cost savings associated with launching small satellites into low Earth orbit (LEO), the attractiveness of CubeSats and other small satellites has been increasing steadily. The introduction of the PocketQube (PQ) by Robert Twiggs in 2009 [1], promised to further reduce the cost of accessing space. However, PQs bring with them several challenges associated with their small size and substantial research work is still needed to improve the viability of this class of spacecraft. This paper aims to tackle the constraints revolving around the very limited energy resources available on such small satellites. This is addressed by reducing the energy consumption of the decoding process within a Hybrid forward error-correction (FEC) – automatic repeat request (ARQ) based communication system. This optimisation process is tested out on the UoMB-Lite satellite – a simplified PQ satellite that the University of Malta (UM) Astrionics Research Group is currently developing to demonstrate a number of key technologies [2]. These small satellites have limited available energy, [3] and as such, the use of FEC poses
+This work was partly supported through project RESOLUTE (CNES-20191) financed by the Malta Council of Science and Technology (MCST), for and on behalf of the Foundation for Science and Technology (FST) through the MCST-CNES Space Bilateral Fund. This work was also partly supported through project ASTREA (R&I-2018-002-T) also financed by the MCST, for and on behalf of the FST, through the FUSION: R&I Technology Development Programme.
+
+a challenge due to the associated increase in energy consumption by the decoder.
+Gallager [4], in 1962, proposed low density parity check (LDPC) codes along with a decoding algorithm for these codes, coined bit-flipping (BF) hard decision decoding. These codes were then rediscovered by Mackay and Neal [5] and Sipser and Spielman [6] in 1996. LDPC codes proved to be able to operate close to the Shannon limit [7] and when designed properly may outperform turbo codes [8]. Abela [9] investigated the possibility of a FEC scheme based on LDPC codes to be utilised in a PQ satellite by analysing various decoding algorithms, focusing mostly on the BF algorithm and its variants. Eventually, Abela opted for the BF iterative decoding algorithm due to its lower complexity and developed his own BF variant named Reliability Ratio-Based Self-Normalized Weighed Bit-Flipping (RSSN-WBF).
+The solar energy that may be collected by solar panels on such a small satellite is limited. Hence, techniques to reduce the energy consumption across all the various satellite subsystems must be adopted. This includes reducing the computational energy consumption of the LDPC decoder. Beomkyu et al. [10] proposed an early termination technique based on two stopping criteria that utilise the decoder’s syndrome weight. Ismail et al. [11] optimised an Adaptive Threshold Bit Flipping (ATBF) decoder by using probabilistic thresholds to determine whether a codeword is decodable.
+The drawback of these two methods is that the thresholds used are based on a single / operating point. However, during any satellite pass, the communications distance from a given ground-station, and hence the / will change. At the minimum elevation angle of 10 the UoMB-Lite satellite is designed to operate at an / of 6 dB. The / continues to increase until elevation angle increases to 90 , beyond which, it starts to degrade once again. In this paper we propose a method that reduces the energy consumption of the LDPC decoder that operates with BF decoders, while being independent of the incoming signal’s / .
+The paper is structured as follows. Section II provides a background to LDPC codes, as well as the decoder’s energy consumption analysis. The proposed early termination stopping criteria is described in Section III and its performance is analysed in Section IV, both in terms of detection accuracy, as well as energy consumption. Section V concludes the paper.
+
+978-1-6654-4913-7/21/$31.00 ©2021 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+II. BACKGROUND
+A. Satellite Transceiver Architecture and Operation
+The transceiver on board the satellite consists of a multichip module (MCM) controller, a single chip transceiver and a power amplifier for data transmission. The MCM in turn consists of an STM32F427ZI microcontroller (MCU), a Lattice MachXO2-7000 FPGA, and an Infineon Smart Card chip. The transceiver is the SI4468 from Silicon Labs while the power amplifier is the RF5110G from Qorvo.
+When the satellite is receiving data from the ground station, the communication system cycles through four main operating phases. The first is the Reception (RX) phase, where the transceiver, FPGA and MCU are working together to store the received data into the internal memory of the system. Once all the data has been received, the communication system moves onto the Processing phase. In this phase, all the received data will be processed. Once this is completed, a status frame is constructed and transmitted to the ground station to indicate any frames received in error and the corresponding error type. These are the Framing and the Transmission (TX) phases, respectively.
+The energy consumption of these phases depends on the power consumed as well as the time spent in each phase. The power in each phase was measured either experimentally [12] or obtained from the manufacturer’s datasheet. The active time for each phase was then obtained from orbital propagator (SGP-4) simulations [12], resulting in the energy consumption breakdown shown in Table I. Converting the total energy in a single satellite pass to the energy required for each frame requires knowledge of the average number of frames expected to be received. From the analysis described in [12], the average number of frames in a single pass was 401. Thus, the energy required to process a single frame could be computed. The retransmission rate, as outlined in [12], is low: Only 0.1% to 1% of the frames would have to be retransmitted with the LDPC codes used in this paper. Therefore, the overall impact of retransmitted frames on the average energy required per frame can be neglected.
+As one can observe, the Processing phase consumes 84.43% of the total energy being used by the communications sub-system. Therefore, the LDPC decoder which accounts for most of the processing phase is a good candidate for optimisation.
+B. LDPC Decoder Inefficiencies
+The Bit-Flipping (BF) LDPC decoding algorithm is an iterative process where the decoder performs a number of
+
+TABLE I
+
+ENERGY REQUIRED FOR EACH PHASE IN THE DATA RECEPTION AND TRANSMISSION PROCESSES OF THE SATELLITE’S
+COMMUNICATION SYSTEM OVER A SINGLE PASS
+
+Power (mW) Active Time (s) Energy per phase (J) Energy per frame (J)
+% of Total Energy
+
+RX 151.5 600.0 90.91 0.23 12.70
+
+Processing 73.6 8219.2 604.93 1.51 84.43
+
+Framing 73.6 268.6 19.77 0.05 2.76
+
+TX 1935.3 0.46 0.89 0.002 0.12
+
+operations, one of which is the calculation of the syndrome in
+
+order to determine the bits in error. The syndrome at th
+
+iteration, , is the vector resulting from the matrix
+
+multiplication of the parity-check matrix, , and the received
+
+(and, at each iteration, the estimated) word vector, . The
+
+syndrome weight,
+
+, is determined by evaluating the
+
+number of ones present in the syndrome. Once the syndrome
+
+weight converges to zero, is assumed to be the received
+
+corrected word. If, however after a pre-defined number of
+
+iterations, , the syndrome is not equal to zero, then the word
+
+is considered incorrect.
+
+The LDPC decoder may result in instances where the outcome of the decoding process is not correct. Han and Liu [13] defined a frame (or word) in error as being one of three types: type I – decoder results in an invalid word; type II – decoder oscillates between different solutions without converging; and type III – decoder converges to a valid codeword but not the transmitted one. The occurrence of these error types depends on the signal-to-noise ratio (SNR), hence
+/ , as simulated and presented by Lechner [14]. Lechner shows that the fraction of type I error frames decreases as the SNR improves. All three types of frame errors have to be detected as the corresponding decoded words are all in error. This requires an error detection scheme which triggers a request for a retransmission. One error detection technique that may be used is the cyclic redundancy check (CRC) sum that is appended to the transmitted data, and then re-calculated on the receiver side. Hence a mechanism is required to process this CRC sum and request frames that were in error after the error correction and error detection processes. Such a mechanism is referred to as a type I Hybrid ARQ mechanism, as proposed by Comroe and Castello [15].
+
+C. Decoder’s Energy Consumption
+The decoding process consumes energy approximately in proportion to the duration of the time taken to decode a word. By decreasing the number of iterations computed, the time taken to decode a word is potentially reduced, which in turn saves energy. The energy consumption, , depends on three parameters: the average number of iterations per word, ;
+the average time taken for each iteration to be processed, ; and the processor’s power consumption, , and is given by (1).
+
+=∙ ∙ .
+
+(1)
+
+Therefore, to maximally decrease the overall energy
+
+consumption of the decoder, one or more of the following can
+
+be performed:
+
+• Find a balance between the microprocessor’s operating frequency and decoder computation time;
+• Decrease the average number of iterations performed during the decoding process;
+• Utilise a code and decoder combination to decode the received word faster by having a higher ratio of the number of information bits to total number of bits received (higher code rate).
+
+Reducing the microprocessor’s operating frequency in order to decrease the power consumption would result in a slower system which will incur further mission timing complexities. Such complexities include delays in the communication system management procedures. Changing the code to one with a higher code rate reduces the FEC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II DIFFERENT CODES USED IN THIS WORK
+
+Parameter Description Code 1 Code 2 Code 3
+
+Total number of bits 999 1057 1280
+
+= User data bits
+
+888 813 640
+
+A Code rate, =/
+
+0.889 0.769 0.500
+
+performance of the datalink protocol resulting in more retransmissions and possibly higher energy consumption. For these reasons this work focused on the decrease in the overall average number of iterations required.
+
+The energy for the Processing phase, as shown in Table I, is based on the average number of iterations and the average time required to process a single iteration (using (1)), for the three codes listed in Table II.
+
+III. METHODOLOGY
+
+Abela [9] indicated that the best three codes to be used for
+
+a satellite of this nature would be the three MacKay codes [5]
+
+listed in Table II. Based on these codes, a novel early stopping
+
+criterion for the bit-flipping decoder for LDPC codes was
+
+developed, named Periodicity-Sum Detector (PSD). During
+
+the decoding process, the syndrome weight tends to oscillate
+
+when the decoder is processing an undecodable word, as
+
+observed by Han and Liu [13]. The proposed PSD stopping
+
+criterion checks for a repeated sequence of syndrome weights
+
+within the past iterations. Periodicity may be present
+
+within any number of past iterations. If a period of length
+
+is detected in the th iteration, then the period length is
+
+added to a period sum, . This process is repeated until
+
+exceeds a pre-defined threshold,
+
+. If were to change
+
+!
+
+between one iteration and the next, then the syndrome weight
+
+is no longer oscillating, and the decoder can therefore
+
+continue with the decoding process since the word may
+
+converge to a valid codeword. When this condition is
+
+detected, is reset to 0. Algorithm 1 illustrates this process,
+
+where " and are respectively the received and decoded
+
+words and # $ indicates whether the decoded word is valid
+
+or not.
+
+Inverse Cummulative Probability
+
+Fig. 1. The inverse cumulative probability distribution of undecodable words that have a syndrome repetition period length greater than or equal to a given value.
+
+Algorithm 1: LDPC Decoder with PSD
+
+Input: " Output: , # $
+
+Initialisation:
+
+1.
+
+= 0, = 0, = 0
+
+2.
+
+# $ = unknown
+
+3.
+
+="
+
+LOOP Process:
+
+4. for ( = down to 0) do
+
+5.
+
+Compute = ∙ '
+
+6.
+
+Compute syndrome weight,
+
+7.
+
+if
+
+≠ 0 and > then
+
+8.
+
+*+ =
+
+9.
+
+Get new period, , of the sequence
+
+{
+
+,
+
+*+ , … ,
+
+* .+ }
+
+10.
+
+if = *+ then
+
+11.
+
+=+
+
+12.
+
+else
+
+13.
+
+= 0;
+
+14.
+
+end if
+
+15.
+
+if ≥ ! then
+
+16.
+
+# $ = invalid
+
+17.
+
+exit for
+
+18.
+
+end if
+
+19.
+
+else
+
+20.
+
+# $ = valid
+
+21.
+
+exit for
+
+22.
+
+end if
+
+23. end for
+
+24. Return and # $
+
+The role of ! is to reduce the number of iterations as much as possible while at the same time avoiding prematurely stopping the decoder in the case of a decodable received word. As the period length starts to increase, the decoder is trapped in a more complex pattern, and the probability of pattern repetitions increases. However, for shorter period runs, the decoder may seem to be in a loop while in actual fact it is not, possibly leading to wrongly classified undecodable received words.
+
+To select the appropriate
+
+threshold and the number
+
+!
+
+of past iterations to be analysed, the inverse cumulative
+
+probability distribution shown in Fig. 1 was obtained for all
+
+three MacKay codes shown in Table II. For a given period
+
+length, 2, the probability of having a period length less than
+
+2, is 34. Thus, 1 − 34 gives the probability of having a period length which is greater or equal to 2. ! was set to that value of 2 for which 1 − 34.+ ≤ 7, for some arbitrary small 7 . To determine this limit in practice, 1,000 undecodable
+
+words were simulated for each / value between 0 dB
+
+and 8 dB, effectively setting 7 = 10*8.
+
+The maximum period length of a repetitive syndrome
+
+weight depends on the code that is being used. For Code 3,
+
+this period length is 9 while for Codes 1 and 2 the period
+
+length is 7 and 8, respectively. Thus, by setting the maximum
+
+sum limit,
+
+, to these period values, the codewords
+
+!
+
+would be correctly classified with an accuracy of 10*8. In
+
+addition, the process only needs to look within the past
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+101 100
+
+S = 9, Code 1 P MAX
+S = 8, Code 2 P MAX
+S = 7, Code 3 P MAX
+
+WER Percentage Decrease
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+E /N (dB)
+b0
+Fig. 2. WER percentage difference between the decoder with the PSD stopping criterion and the standard decoder for the three codes in Table II.
+
+= 2 ∙ ! syndrome weight values to determine whether a pattern exists. This is because at least two periods need to be observed to detect periodicity.
+IV. TESTING AND RESULTS
+An STM32F429ZI microcontroller (MCU) with ARM Cortex M4 architecture, 256 KB of random-access memory (RAM) and 2 MB of flash program memory, was used to obtain empirical data. The testing and results section is split into three main parts. The first identifies the performance of the decoder with the proposed PSD early termination stopping criterion in place, the second shows the expected time taken by the decoder to execute one iteration on the selected MCU as well as the power consumption of the MCU, while the last section analyses the overall LDPC bit-error rate performance with and without the early termination stopping criterion.
+During these tests an AWGN channel was used with an optimally detected Binary Phase Shift Keying signal transmission.
+A. Decoder Performance
+The performance was determined through simulation, based on the decoder implemented by Abela [9]. At each
+/ level between 0 dB and 8 dB, in steps of 1 dB, the simulation was terminated when 1,000 decodable words and 1,000 undecodable words were generated. However, the simulation was stopped earlier if the number of transmitted words exceeded 1,000,000, so as to limit the simulation time. These conditions provided a statistically significant dataset. Each received word was then classified into one of four categories:
+1. A decodable word with early termination; 2. A decodable word without early termination; 3. An undecodable word with early termination; 4. An undecodable word without early termination.
+To determine the number of words classified into each of the four categories listed above, each received word was processed until either the syndrome weight reached zero, or
+
+until a maximum of 200 decoder iterations were performed, irrespective of the stopping criterion. During each iteration, the proposed PSD stopping criterion was evaluated to decide whether the decoder should stop or continue decoding the current word. The number of iterations at which the PSD stopping criterion was met was recorded.
+The word error rate (WER) performance of the original and proposed decoder (using PSD) was determined using simulation. For the proposed decoder to offer the same performance as the original decoder, the WER difference between the two needs to be negligible. This difference is shown in Fig. 2 as a percentage difference, taking as reference the original decoder. As one can notice, the percentage difference in WER is marginal, with the worst performance change being a 2% increase in the WER at 8 dB for Code 1. This performance degradation is considered to be negligible, indicating that the optimisation process did not significantly impact the WER performance of the codes being considered.
+We next analyse the average number of iterations required to terminate the decoding process. Any reduction in the number of iterations executed implies that the original decoder was performing unnecessary iterations that did not contribute to a decrease in the WER. Fig. 3 compares the average number of iterations executed by the decoder with early termination and without. It can be observed from Fig. 3 that the decoder with early termination decreased the average number of iterations significantly, in some cases by as much as 95%. This is especially so for Codes 1 and 2 and for
+/ ≥ 6 dB.
+The stopping criterion proposed by Ismail et al. [11] obtained a reduction of 89% in the average number of iterations executed. With the PSD stopping criterion proposed in this work, the average number of iterations were reduced by up to 95% / values between 6 dB and 8 dB. Within the same / range, Beomkyu et al. [10] obtained a reduction of 85%. In addition, besides having better performance, the proposed PSD stopping criterion does not require knowledge of the operating / , unlike the ones proposed in [10] and [11], where in both cases, the thresholds
+
+100
+
+90
+
+Code 1 Code 2
+
+Code 3
+80
+
+70
+
+60
+
+50
+
+40
+
+30
+
+20
+
+10
+
+0 012345678
+
+Fig. 3.
+
+Eb/N0 (dB) Percentage decrease in the average number of iterations
+
+executed by the decoder with PSD compared with the standard decoder.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+had to be selected based on the operating / , which adds unnecessary complexity. In addition, the proposed stopping criterion can be applied to a wider variety of decoders, including those that do not require knowledge of the operating
+/ as part of their decoding process. The reduction in the number of iterations implies a commensurate reduction in energy consumption, as will be shown next.
+B. Microprocessor Energy Consumption
+As indicated in (1), the number of iterations is only one contributor to the energy consumption, with the other two being the MCU’s power consumption as well as the execution time required to process one iteration. To determine the average execution time, the decoder was implemented and executed on the selected MCU. To obtain the energy consumption 200 words were transmitted for each / between 0 dB and 8 dB. For each word, the following tasks were executed:
+1. Generate = random number of bits.
+2. Encode the random bits to obtain a codeword.
+3. Introduce errors in the transmitted codeword according to the operating / , resulting in a received word.
+4. Decode the received word obtaining a (hopefully) error free codeword and extracting the = information bits.
+5. Compare the number of bit errors between transmitted and decoded information bits.
+For each / , the time taken to perform steps 1 through 5 for 200 words was measured. This process was then repeated, however, this time omitting step 4. The time difference between the first and second experiment would yield the time taken by the decoding process (step 4).
+For each simulated word, the number of iterations performed by the decoder was recorded such that the average number of iterations performed at each / could be determined. The average time taken to decode one iteration at each / was measured by determining the total number of iterations executed and by keeping track of the total number of words decoded. The average time required to
+
+TABLE III AVERAGE TIME TAKEN BY THE ORIGINAL AND PROPOSED LDPC DECODER TO EXECUTE ONE ITERATION.
+
+Code Code 1
+
+Original Decoder time per iteration (ms)
+95.42
+
+Proposed decoder time per iteration (ms)
+66.28
+
+Code 2
+
+87.94
+
+58.45
+
+Code 3
+
+77.62
+
+51.67
+
+execute one LDPC decoder iteration, can be determined and shown by the timing results in Table III.
+
+For a net reduction in computation time (and energy) required for decoding each code, one must offset any added complexity with a reduction in the number of decoding iterations. On the one hand, the proposed PSD-based version executes an additional process in order to detect and establish periodicity within the syndrome weight values. This implies that the time required for the proposed decoder to execute one iteration is greater than that for the original decoder.
+
+On the other hand, the proposed decoder performs far fewer iterations, on average, than the original decoder. This effectively decreases the average time and computational energy required to decode one codeword.
+
+The MCU’s power consumption measurement was conducted by measuring voltage across, and current through, the MCU. The current was measured using the voltage drop across a high precision resistor connected in series with the MCU. The average power consumption was determined to be 73.6 mW.
+
+C. LDPC Overall Performance
+Using (1) and the results obtained in Section IV, the energy consumed for each received word can be evaluated. For the original and proposed decoders, the average energy consumption at each / value is shown in Figs. 4 and 5 respectively. As one can note, the average energy consumption is significantly decreased across all / ranges, with the peak energy consumption being reduced from 1.3 J per word to 0.45 J per word.
+
+Average Energy Consumption per Word (J)
+
+Fig. 4. Energy consumption of the LDPC decoder without the PSD algorithm to process one word, for three different codes
+
+0.5
+
+0.45 0.4
+
+Code 1 - (999, 888) Code 2 - (1057, 813) Code 3 - (1260, 640)
+
+0.35
+
+0.3
+
+0.25
+
+0.2
+
+0.15
+
+0.1
+
+0.05
+
+0
+
+-2
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+E /N (dB) Fig. 5. Energy consumption of the LDPC decoder with the PSD
+
+algorithm to process one word, for three different codes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE IV ENERGY REQUIRED FOR THE PROCESSING PHASE IN THE DATA
+
+RECEPTION AND TRANSMISSION PROCESSES OF THE
+
+SATELLITE’S COMMUNICATION SYSTEM WITH AND WITHOUT
+
+PSD
+
+Processing without Processing with
+
+PSD
+
+PSD
+
+Power (mW)
+
+73.6
+
+73.6
+
+Active Time (s)
+
+8219.2
+
+325.4
+
+Energy per phase (J)
+
+604.93
+
+26.38
+
+Energy per frame (J)
+
+1.51
+
+0.07
+
+% of Total
+
+84.43
+
+19.12
+
+A similar analysis as shown in Table I was again performed, with the results being tabulated in Table IV for the Processing phase, which is the only one that is being modified. For ease of comparison, the original values for the Processing phase for the standard decoder are again shown in Table IV. This time, the processing phase uses the timing values achieved with the proposed PSD stopping criterion. The processing phase now consumes about 19% of the total energy consumed by the communication sub-system, whereas the original decoder consumed around 85% of the total energy. This is a significant improvement, especially for a small satellite as the total energy required in the original decoder was 1.78 J for each received frame, whereas now, the total energy required is 0.34 J for each received frame. This resulted in an average of 80% reduction in the total energy consumed by the communication system in the four operating phases when receiving data.
+As mentioned in Section II-C, the energy consumption of the Processing phase as shown in Table II, is based on the average energy required for the three codes. This was done in order to highlight the overall performance benefit of the proposed PSD algorithm irrespective of the code being used. Under the same operating conditions, Code 1, 2 and 3 with the PSD algorithm decreased the energy consumption of the Processing phase by 85.28%, 82.32% and 76.93%, respectively. However, the selection of the appropriate code was not within the scope of this paper due to the dependencies on the typical data payload size that will be used. The analysis on typical payload sizes was not performed as it depends on the implementation of other satellite sub-systems which have not yet been fully developed.
+V. CONCLUSIONS
+The LDPC decoding process with the proposed novel PSD stopping criterion was implemented on an STM32F429ZI MCU to be used on a PQ satellite. It was shown that the new PSD stopping criterion reduces the energy consumption from 1.78 J down to 0.34 J per transmitted frame. This resulted in the MCU consuming 80% less energy than it consumes with the standard decoder. Such energy savings make the mission feasible.
+This energy reduction technique needs to be investigated further with different codes in order to determine the extent to which any advantages are possible with variations in code structure, code length as well as data rate.
+Nevertheless, these codes will be practically applied within the UoMB-Sat Lite satellite. According to Abela [9],
+
+the three codes proposed in Table II were the best codes that should be used for this application. Thus, the work in this paper, while probably transferrable to other contexts, was limited to improving the performance in terms of energy consumption for these three codes.
+Another aspect that could be investigated is the algorithm that is being used in order to determine syndrome weight periodicity (Step 9 in Algorithm 1). However, optimising this step will only yield minor improvements in the overall energy consumption of the system, since its contribution is already very small.
+REFERENCES
+[1] R. Twiggs, J. Puig, and C. Turner, “CubeSat: The Development and Launch Support Infrastructure for Eighteen Different Satellite Customers on One Launch,” Small Satellite Conference Proceedings, pp. 1–5, 2001.
+[2] D. Cachia, J. Camilleri, M. A. Azzopardi, M. Angling, and A. Sammut, “Feasibility Study of a PocketQube Platform to Host an Ionospheric Impedance Probe,” Small Satellites, Systems and Services (4S) Symposium, Valletta, Malta. pp. 1–15, June 2016.
+[3] Speretta, S., Pérez Soriano, T., Bouwmeester, J., Carvajal Godínez, J., Menicucci, A., Watts, T., Sundaramoorthy, P., Guo, J., & Gill, E. (2016), “Cubesats to pocketqubes: Opportunities and challenges”, in Proceedings of the 67th International Astronautical Congress (IAC), Guadalajara, Mexico [IAC-16-B4.7.5_A] IAF
+[4] R. Gallager, “Low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962, doi: 10.1109/TIT.1962.1057683.
+[5] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low-density parity check codes,” Electronics Letters, vol. 33, no. 6, pp. 457–458, 1997, doi: 10.1049/el:19970362.
+[6] M. Sipser and D. A. Spielman, “Expander codes,” IEEE Transactions on Information Theory, vol. 42, no. 6, part 1, pp. 1710–1722, 1996, doi: 10.1109/18.556667.
+[7] S. Y. Chung, G. David Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Communications Letters, vol. 5, no. 2, pp. 58– 60, 2001, doi: 10.1109/4234.905935.
+[8] C. Berrou, A. Glavieux and P. Thitimajshima, "Near Shannon limit error-correcting coding and decoding: Turbo-codes. 1," Proceedings of ICC '93 - IEEE International Conference on Communications, pp. 1064-1070 vol.2, Geneva, Switzerland, 23-26 May 1993, doi: 10.1109/ICC.1993.397441.
+[9] A. Abela, “Design of LDPC Codec for the FX.25,” M.Sc. Dissertation, Faculty of ICT, University of Malta, Msida, 2019.
+[10] B. Shin, S.-H. Kim, H. Park, J.-S. No, and D.-J. Shin, “New stopping criteria for iterative decoding of LDPC codes in H-ARQ systems,” International Journal of Communication Systems, vol. 23, no. 5, pp. 633–652, 2010, doi: 10.1002/dac.
+[11] M. Ismail, I. Ahmed, J. Coon, S. Armour, T. Kocak, and J. McGeehan, “Low latency low power bit flipping algorithms for LDPC decoding,” in 21st Annual IEEE International Symposium on Personal, Indoor and Mobile Radio Communications, Sep. 2010, Istanbul, Turkey, pp. 278–282, doi: 10.1109/PIMRC.2010.5671820.
+[12] O. Vassallo, “Design of a Software Radio for a PicoSatellite,” M.Sc. Dissertation, Faculty of Engineering, University of Malta, Msida, 2021.
+[13] G. Han and X. Liu, “A unified early stopping criterion for binary and nonbinary LDPC codes based on check-sum variation patterns,” IEEE Communications Letters, vol. 14, no. 11, pp. 1053–1055, 2010, doi: 10.1109/LCOMM.2010.100410.100998.
+[14] G. Lechner, “Convergence of the sum-product algorithm for finite length low-density parity-check codes,” Proc. Winter School on Coding and Information Theory, Ascona, Switzerland, 2003.
+[15] R. A. Comroe and D. J. Costello, “ARQ Schemes for Data Transmission in Mobile Radio Systems,” IEEE Journal on Selected Areas in Communications, vol. 2, no. 4, pp. 472–481, 1984, doi: 10.1109/JSAC.1984.1146084..
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:44:07 UTC from IEEE Xplore. Restrictions apply.
+
+

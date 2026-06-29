@@ -1,0 +1,370 @@
+Designing and Implementing Low Density Parity Check
+(LDPC) Decoders using FPGAs
+John C. Porcello Senior Member IEEE,
+President Blueprint Signal Processing, Inc. info@BlueprintSignalProcessing.com
+
+Abstract— Low Density Parity Check (LDPC) Codes offer remarkable error correction performance and therefore increase the design space for communication systems. When implementation complexity and latency are not system limitations, LDPC codes can offer near Shannon Limit performance by using large code lengths and increasing the number of iterations in the decoding process. Furthermore, LDPC codes with smaller block sizes are also of value to the communications system designer and LDPC codes have found practical use in DVB-S2 and other standards. This paper considers design issues with respect to FPGA implementation of LDPC Decoders. Specifically, this paper presents a scalable FPGA architecture for LDPC soft decision decoding based on the Sum Product Algorithm (SPA) for regular LDPC codes. The paper begins with an overall discussion of issues surrounding the use of LDPC codes, followed by a discussion of LDPC decoding using the SPA. A scalable FPGA implementation of an SPA LDPC Decoder is introduced. Design data is provided to support FPGA implementation of this approach for LDPC decoding and quantify required hardware resources. A discussion of trade space for LDPC code implementation based on the FPGA resources is also provided. Finally, an example design is provided based on a Xilinx Virtex-7 to illustrate the concepts discussed in the paper and provide insight into the challenging task of implementing an LDPC decoder in FPGAs.
+TABLE OF CONTENTS
+1. OVERVIEW AND SCOPE ....................................................1 2. SUM PRODUCT ALGORITHM LDPC DECODERS .............2 3. AN SPA LDPC DECODER STRUCTURE IN FPGAS .........3 4. EXAMPLE LDPC DECODER DESIGN ...............................6 5. CONCLUSIONS ..................................................................7 REFERENCES ........................................................................7 BIOGRAPHY ..........................................................................7
+1. OVERVIEW AND SCOPE
+Low Density Parity Check (LDPC) Codes were discovered and developed by Gallager in 1962 [8]. LDPC codes were largely unnoticed as a coding solution until the work of MacKay. The significance of LDPC codes is the remarkable performance delivered by these codes which effectively
+
+reaches the Shannon limit for large LDPC codes. An area of ongoing research, the application of LDPC codes offers great potential, not only to communications but other fields as well. LDPC codes are classified as modern codes along with Turbo Codes and Repeat-Accumulates Codes, however the foundations of LDPC codes can be found in classical coding literature. LDPC codes appear in standards such as DVB-S2 and it is expected that this trend will continue for several reasons including increasing research on LDPC codes and improvements in hardware performance.
+From a system level perspective, using an LDPC code in a communication system requires consideration of the following: (1) system level parameters such Bit Error Rate (BER), required throughput (including any real-time requirements), Eb / N0 , channel properties, etc. (2) system resources such as memory and signal processing capability (3) LDPC Code selection (including such properties as the code size, row weights and column weights, regular or irregular codes, error floor, etc.) (4) LDPC Encoder complexity (5) LDPC Decoder Complexity. It is important to note here that since the generator matrix G is not sparse, LDPC encoder complexity is a significant issue in LDPC implementation, particularly for large LDPC codes necessary to obtain performance near the Shannon limit.
+With respect to LDPC decoders there are several choices such as hard decision decoding using the bit flipping algorithm or soft decision decoding using the Sum Product Algorithm (SPA) [1][2], SPA implemented using Log Likelihood Ratio (LLR), the Min-Sum Algorithm, variants, and other algorithms under current research.
+The focus of this paper is on LDPC decoders for regular LDPC codes based on a simple soft decision output using the SPA. The exchange of soft probabilities is termed message passing or belief propagation. The SPA can be described in terms of a Tanner Graph which consists of bit nodes and check nodes, and provides insight into the SPA. The theory and details of the SPA can be found in [1][3][4][5] and in many of the sources listed in the reference section.
+
+978-1-4799-1622-1/14/$31.00 ©2014 IEEE
+
+1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+2. SUM PRODUCT ALGORITHM LDPC DECODERS
+Soft decision LDPC Decoding based on the SPA is presented in this section to provide a basis for the next section dealing with a scalable FPGA implementation of a decoder. The general notation and convention follows [1][3].
+
+After initialization, qmn (x) values are initialized with the
+channel posterior probabilities at the non-zero elements in
+this matrix. Note that qmn (0) + qmn (1) = 1.
+The horizontal step starts by forming the δqmn matrix:
+
+Given a parity check matrix H, a column vector x consists of bits and rows of H consists of the checks. The SPA has four simple steps operating on matrix H. The first step consists of initialization. The second step is a horizontal multiplication of non-zero row elements excluding the current element called the horizontal step and is denoted as a product of a sequence. The third step is a vertical multiplication of nonzero column elements called the vertical step and is also denoted as a product of a sequence. Finally, the fourth step is a decoding check to stop or continue the iterative decoding loop. The elements represent the check nodes and bit nodes and imply storage within the FPGA(s) or external memory. Since the zero valued elements do not contribute to the decision values, when needed the Parity Check Matrix H as well as other matrices are stored with a row index value, column index value, and a numerical value at the matrix element. For the purpose in this paper all row weights and column weights are constant (a regular LDPC code). Therefore, the specific number of non-zero elements that
+must be stored N Mem , to represent a given matrix is simply:
+
+N Mem = wRow ⋅ N Row = wCol ⋅ N Col
+
+(1)
+
+where wRow is the row weight, N Row is the number of rows, wCol is the column weight, N Col is the number of columns.
+
+In the initialization phase, the received vector is represented as channel posterior probabilities. The posterior
+probabilities are computed based on the received signal rn ,
+transmit signal amplitude a, and noise power (variance):
+
+δqmn = qmn (0) - qmn (1)
+
+(4)
+
+The product of δqmn elements across each row n, excluding the current position (m, n), forms the δrmn matrix:
+
+∏ δrmn =
+
+δqmn′
+
+(5)
+
+n′≠n
+
+The value of rmn (0) and rmn (1) is computed the δqmn
+matrix:
+
+rmn (0) = ½ (1+ δrmn )
+
+(6)
+
+rmn (1) = ½ (1- δrmn )
+
+(7)
+
+Equation (6) and (7) complete the horizontal step. The
+vertical step updates qmn (0) and qmn (1) by calculating the product of rmn (x) across each column m, excluding the current position (m, n), to form the qmn (1) and qmn (0)
+matrices:
+
+∏ qmn (0) = kmn ⋅ f n (0) ⋅
+
+rm′n (0)
+
+(8)
+
+m′≠ m
+
+∏ qmn (1) = kmn ⋅ f n (1) ⋅
+
+rm′n (1)
+
+(9)
+
+m′≠ m
+
+fn
+
+(1)
+
+=
+
+[1
+
++
+
+1 e (2⋅a⋅rn
+
+/σ 2 )
+
+]
+
+(2)
+
+and
+
+fn (0) = 1 − fn (1)
+
+(3)
+
+The parity check matrix is updated with these values. The SPA iterates on the bit nodes and check nodes to update a psuedoposterior probability. By convention in [3] for a
+given element (m, n), qmn (x) is the probability that bit n of
+x is x, and rmn (x) is the probability that check m is satisfied.
+
+and kmn is a scale factor applied to each element:
+
+k mn
+
+=
+
+1 [qmn (0) +
+
+qmn (1)]
+
+(10)
+
+Equation (8), (9) and (10) complete the vertical step. The last step is a decoding check which can be used to stop or continue the iterative decoding loop described above. For
+the decoding check, rmn (0) and rmn (1) are updated by
+calculating the product of rmn (x) across each column m, this
+
+2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+time including the current position (m, n), to form the
+qn (1) and qn (0) matrices:
+
+m
+
+∏ qn (0) = kn ⋅ f n (0) ⋅
+
+rmn (0)
+
+(11)
+
+m=1
+
+m
+
+∏ qn (1) = kn ⋅ f n (1) ⋅
+
+rmn (1)
+
+(12)
+
+m=1
+
+and kn is a scale factor applied to each element:
+
+kn
+
+=
+
+1 [qn (0) + qn (1)]
+
+(13)
+
+The estimate of the codeword cˆn is obtained from
+thresholding the values of qn (1). A simple threshold may be used to determine cˆn , such as if qn (1) > 0.5 then cˆn = 1, otherwise cˆn = 0. Once the estimate of the codeword cˆn
+is obtained, the following check can be performed:
+
+cˆn H T = 0
+
+(14)
+
+where H T is the transpose of the parity check matrix. A
+useful feature of LDPC decoding is that if equation (14) is not satisfied after a given number of iterations, a decoding failure may be declared.
+
+3. AN SPA LDPC DECODER STRUCTURE IN FPGAS
+Given the description of the SPA in the previous section, we can map the SPA into FPGA resources to obtain an implementation. The LDPC decoder in this paper has two major design goals. The first design goal is to maximize performance/speed to obtain the lowest latency at the expense of increased FPGA resources. Of course, increasing parallelism of the algorithm will generally result in reduced latency up to another limiting factor (chip resources, sync, etc.). The second design goal is an FPGA implementation that will support very large LDPC codes capable of operating near the Shannon limit. In other words, the design should be scalable up to very large code sizes.
+From an FPGA implementation perspective, a good design boundary for the SPA can be obtained based on the row weight and column weight. Furthermore, the SPA algorithm in the previous section can imply memory storage only for
+
+the non-zero elements of the δqmn′ matrix, the f n (1) vector, the rmn (0) matrix, the rmn (1) matrix, the cˆn vector, and the H T matrix. This yields a total required
+storage of four (4) times the number of non-zero elements in the parity check matrix and two (2) times the LDPC code
+length. Note that the memory for the δqmn′ matrix, the
+f n (1) vector, the rmn (0) matrix and the rmn (1) matrix
+implies floating point (or possibly fixed point) storage
+values while the cˆn vector, and the H T matrix imply
+storage of simple one bit binary values. Furthermore, the memories are configured differently to maximize throughput based on the row weight and column weight as well as the type of memory for storage being internal or external with respect to the FPGA.
+Memory implies associated access times for both reads and writes. The access times can be a significant performance bottleneck and the limiting factor in the design, particularly for large numbers of non-zero elements (such as in an LDPC encoder). For (on-chip) memory within the FPGA, memory performance will be a function of FPGA internal memory bandwidth such as Block-RAM (BRAM). For (off-chip) memory, performance will be a function of the memory controller in the FPGA and off-chip memory bandwidth.
+Figure 1 shows an FPGA implementation of the data plane for the horizontal plane in the SPA decoder. Input from initialization (the received signal) is provided as inputs
+f n (1) and f n (0) . Both inputs are sent to a subtractor as
+the initial values for qmn (0) and qmn (1). The values for f n (1) are stored into memory for the vertical step and the
+codeword estimate. The initial values of qmn (0) and
+qmn (1) are used to generate the first stored values of δqmn (stored in the wc memory block in figure 1). The wc
+memory block in figure 1 is stored such that the number of independent memory blocks is equal to the row weight. This allows the wc MULT block in figure 1 to be implemented as an array of parallel multipliers to compute the value of
+δrmn . The value of δrmn is sent to the math hardware that
+calculates the value of rmn (0) and rmn (1).
+In figure 2 the values of rmn (0) and rmn (1) are stored into
+separate memory storage areas, wr memory. The wr memory blocks in figure 2 are stored such that the number of independent memory blocks is equal to the column weight
+
+3
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 1 – FPGA Implementation of the Data Plane for the Horizontal Step in the SPA LDPC Decoder.
+
+and the outputs from the horizontal step are written sequentially to each memory block. This allows the wr MULT blocks in figure 2 to be implemented as an array of parallel multipliers.
+It is important to note that configuring the row memory in figure 2 and the column memory in figure 1 independently allows parallel processing by row and column. Specifically, the row and column index values stored with matrix element values are used as address values for the next memory stage to provide a storage strategy that can support parallel processing of the wr MULT blocks and the wc MULT block in figure 1. Furthermore, it is important to note that the array of parallel multipliers described by equation 5, equation 8 and equation 9 are configured in an architecture that outputs combinations of products that can be described with a binomial coefficient using k = n-1 (n inputs taken n-1 at a time to yield n outputs). The array of parallel multipliers used to implement equation 11 and equation 12 will require
+wCol – 1 multipliers for each structure.
+
+For the vertical step, the output from the wr MULT blocks is
+multiplied by the respective values for f n (1) and f n (0) and then normalized to obtain the next values of qmn (0) and qmn (1) for the next decoding iteration.
+The codeword estimate and loop control is obtained by multiplying the outputs of the wr MULT blocks by the
+respective (current) values of rmn (0) and rmn (1) followed by multiplication by the respective values for f n (1) and f n (0) . In this algorithm, only the value of qmn (1) is
+required for thresholding against a constant value of 0.5 to
+obtain the codeword estimate of cˆn .
+The values of cˆn are stored to memory and multiplied by the H T matrix. Per equation (14), an all zero result
+indicates successful decoding. It is important to note here that the Matrix MULT operation in figure 2 is simply a modulo 2 operation.
+
+4
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2 – FPGA Implementation of the Data Plane for the Vertical Step, Codeword Estimate and Loop Control in the SPA LDPC Decoder.
+
+The output of the matrix multiplication provides loop control. Any non-zero output from the streaming matrix multiply will trigger the next decoding iteration, or declaring a decoding failure after a fixed number of decoding iterations. The capability to declare a decoding failure is a useful property in LDPC decoding.
+
+Achieving the design goals of high performance and scalability for the architecture described in this section requires an FPGA implementation that implements efficient parallelization of memory to improve memory bandwidth and implements parallel mathematics at or above the memory bandwidth.
+
+When the column memory in figure 1 is configured independently based on the row weight, a single write or read cycle execution time will be:
+
+t Col
+
+=
+
+N Col f Mem
+
+(15)
+
+where tCol is the execution time for column memory, N Col
+is the number of columns, and f Mem is the clock speed of
+the column memory. Likewise, the write or read cycle
+execution time for the f n (1) vector will be similar. When
+the row memory in figure 2 is configured independently based on the column weight, a single write or read cycle execution time will be:
+
+t Row
+
+=
+
+N Row f Mem
+
+(16)
+
+where t Row is the execution time for each of the row
+memories, N Row is the number of rows, and f Mem is the
+clock speed of the row memory. Note that the row memory
+read cycle time is also used to form the cˆn vector for the
+codeword estimate.
+
+5
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+The simple one bit binary values stored in memory for the
+cˆn vector, and the H T matrix can be packed/unpacked by
+using a single write/read cycle for multiple bits. A memory
+packing factor of K implies that a single write/read cycle to memory contains K bits. This is implemented using
+additional logic in the control plane.
+
+This yields a single write or read cycle execution time to the
+cˆn memory:
+
+t Est
+
+=
+
+N Row K⋅
+
+⋅ wRow f Mem
+
+(17)
+
+where t Est is the execution time, N Row is the number of rows, wRow is the row weight, K is the memory packing factor and f Mem is the clock speed of the memory.
+
+The cˆn vector and the H T matrix modulo 2 operation to
+implement equation (14) can be performed in parallel to reduce execution time. It is also important to note here that
+only the non-zero index values of the H T matrix need to be
+stored. This significantly reduces the both the storage and processing time to implement equation (14) and contrasts LDPC encoders that may need to store a large, non-sparse generator matrix to build a codeword for transmission.
+
+Specifically, it should be noted here that the FPGA implementations in figure 1 and figure 2 can be parallelized independently within the horizontal step, the vertical step, and the codeword estimate and loop control. Parallelization will reduce the execution time of iterations at the expense of additional FPGA resources and increased implementation complexity.
+
+4. EXAMPLE LDPC DECODER DESIGN
+An example design is presented in this section to illustrate the architecture described in the previous section. The selected code is a Rate ½, regular LDPC Code with a size of 8K. An LDPC SPA decoder is targeted for implementation in a Xilinx Virtex-7 485T (XC7V485T).
+The regular LDPC code has a row weight wRow = 8 and a column weight wCol = 4. In order to store the row index
+and column index values an additional 25 bits of memory are required per matrix element. Storage for indexing can
+minimized by combining storage of rmn (0) and rmn (1) in
+figure 2 and/or optimizing memory addressing in the control plane for figure 1 and figure 2. The matrix elements for all
+
+matrices except the cˆn vector, and the H T matrix are
+stored as 64 bit, double precision floating point values. Likewise, mathematical functions in figure 1 and figure 2 are implemented in double precision floating point. This reflects the fact that as long as the row weight and column weight are relatively small values (due to the low density in the H matrix), the SPA and the architectures in figure 1 and figure 2 represent a memory intensive algorithm as opposed to mathematically intensive algorithms.
+Both the memory requirements and mathematical processing requirements can fit within the target FPGA. Simple Dual Port RAM (Block RAM internal to the FPGA) is used for memory storage of the matrices in figure 1 and figure 2. Based on the LDPC Code used in this example and a 400
+MHz clock speed for memory, tCol = 20.48 microseconds
+and t Row = 10.48 microseconds. Assuming a memory
+packing factor K = 32, t Est = 2.56 microseconds. The
+array of parallel multipliers for the wr MULT blocks are implemented with six (6) multipliers each and the wc MULT block is implemented with sixteen (16) multipliers. The array of parallel multipliers for equation 11 and equation 12 in figure 2 requires three (3) multipliers each for a dedicated hardware approach, or can be implemented using the outputs of the wr MULT blocks with two additional multipliers per column weight.
+The matrix multiply operation of the cˆn vector and the
+H T matrix is parallelized into 32 sections to reduce the
+execution time required to check the codeword estimate.
+The row index values of the H T matrix drive the column address logic to the cˆn vector. If the cˆn vector output is
+equal to 1 at that address then a simple up counter is incremented. The modulo 2 result is read from the LSB of the up counter. Each up counter is reset at each new column
+index value. Once each column of the H T matrix is
+processed, the presence of a 1 in the LSB in any of the up counters triggers another decoding iteration, or declares a decoding failure after a fixed number of iterations.
+Accounting for the write and read cycles, row and column multipliers as well as the other mathematics in figure 1 and figure 2, and assuming an average of 100 iterations to converge and an approximate convergence time of 0.01 seconds, yields a decoder throughput on the order of 400 kbps. It should be noted that this throughput value represents a first order design provided for this example. Additional timing optimizations, higher clock speeds and increasing parallelism can significantly improve the throughput of this decoder and/or support larger LDPC codes. Table 1 presents FPGA Percent Utilization for this example design.
+
+6
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+Soft Decision, SPA LDPC Decoder
+Step Initialization Horizontal Step Vertical Step Codeword Estimate / Loop Control Total
+
+Percent Utilization of a
+
+XC7VX485T (Estimate)
+
+Logic BRAM DSP48
+
+7.8
+
+9.4
+
+7.6
+
+14.1
+
+15.3
+
+21.8
+
+19.3
+
+23.0
+
+15.8
+
+10.7
+
+15.3
+
+10.8
+
+51.9 % 63.0 % 56.0 %
+
+Table 1 – FPGA Percent Utilization Estimate for the Example Design Soft Decision SPA LDPC Decoder.
+This example demonstrates the significance of several factors in the FPGA implementation that impact the performance of LDPC decoders. Significant design parameters include LDPC code size, row weight, column weight, clock speed for Block RAM, execution time per iteration and the number of iterations to converge to an all zero solution for equation (14). Finally, the message size per time to converge to a solution (maximum number of iterations, performance simulation, etc.) can be used to yield the throughput for this LDPC decoder.
+
+5. CONCLUSIONS
+This paper provided a brief overview of LDPC decoding and system level issues and then reviewed the Sum Product Algorithm (SPA). This paper has presented a high performance, scalable FPGA architecture for LDPC soft decision decoding based on the Sum Product Algorithm (SPA) for regular LDPC codes. The FPGA architecture provided in this paper represents a high performance, scalable solution to SPA LDPC decoding which is useful for long LDPC codes that operate near the Shannon limit. An example design based on a Xilinx Virtex-7 FPGA was provided along with performance metrics to illustrate the concepts described in the paper.
+The SPA architecture and the example design provided in this paper can be used as a basis to implement LDPC decoders that can process larger LDPC codes, such as LDPC codes that provide Shannon limit performance, at higher throughput.
+LDPC codes represent a practical means to obtain near Shannon limit performance for information transmission. Given this performance, LDPC codes represent tremendous potential to communications as well as other applications.
+
+REFERENCES
+[1] MacKay, D. J., and R. M. Neal, "Near Shannon Limit Performance of Low Density Parity Check Codes," Electron. Letter, Vol. 32, No. 18, 1996, pp. 1645-1646. [2] MacKay, D. J., "Good Error-Correcting Codes Based on Very Sparse Matrices," IEEE Trans. Info. Theory, Vol. 45, No.2, March 1999, pp. 399-431. [3] Moon, T. K., Error Control Coding-Mathematical Methods and Algorithms, John Wiley & Sons, New York, 2005. [4] Richardson, T., Urbanke, R., Modern Control Theory, Cambridge University Press, New York, 2008. [5] Johnson, S., Iterative Error Correction: Turbo, LowDensity Parity-Check Code and Repeat-Accumulate Codes, Cambridge University Press, 2009. [6] Ryan, W. and Lin, S., Channel Codes: Classical and Modern, Cambridge University Press, New York, 2009. [7] Lin, S., and D. J. Castello, Error Control CodingFundamentals and Applications, 2nd ed., Prentice-Hall, Upper Saddle River, NJ, 2004. [8] Gallager, R. G., Low-Density Parity-Check Codes, Cambridge, MA: The MIT Press, 1963. [9] Gallager, R. G., "Low-Density Parity-Check Codes," IRE Trans. Info. Theory, Vol. IT-8, January 1962, pp. 2128. [10] Sklar, B., Digital Communications Fundamentals and Applications, 2nd Edition, Prentice Hall, Upper Saddle River, NJ, 2001. [11] Proakis, J. G., Salehi, M., Digital Communications, 5th Edition, McGraw Hill, Inc. New York, 2007. [12] Jiang, Y., A Practical Guide to Error-Control Coding Using MATLAB, Artech House, Norwood, MA, 2010. [13] Xilinx Web site for Virtex-7 product information www.xilinx.com/products/virtex7
+BIOGRAPHY
+John Porcello designs, develops and implements Digital Signal Processing (DSP) Algorithms in FPGAs for a wide range of applications including communications and radar. John is the President of Blueprint Signal Processing, Inc., (www.BlueprintSignalProcessing.com) a company that produces FPGA IP Cores for signal processing and mathematics. John is also a Senior Member of the IEEE (porcello@ieee.org).
+
+7
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+

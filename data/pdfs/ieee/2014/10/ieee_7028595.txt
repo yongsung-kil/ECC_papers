@@ -1,0 +1,673 @@
+Fifty-second Annual Allerton Conference Allerton House, UIUC, Illinois, USA October 1 - 3, 2014
+Uniformly reweighted APP Decoder for memory efficient decoding of LDPC Codes
+Velimir Ilic´1, Elsa Dupraz2, David Declercq3, Bane Vasic´4
+
+Abstract— In this paper we propose a uniformly reweighted a posteriori probability (APP) decoder. The APP decoder is wellknown to be suboptimal compared to the BP decoder. Here, we derive the APP decoder as an algorithm of approximate Bayesian inference on the LDPC code graph and introduce a correction parameter to overcome the suboptimaly of the APP decoder. We optimize numerically the correction parameter and show that it improves the BER performance of the APP decoder compared to its non-corrected version. In addition, the original APP decoder requires memory that is linear in the number of edges in the code graph. Here, we propose a memory efficient implementation of the algorithm that requires memory that is linear only in the codeword length.
+I. INTRODUCTION
+Belief propagation (BP) is an iterative message-passing algorithm for decoding low density parity check (LDPC) codes, widely used in many systems. Despite its good error correction performances and capability of approaching the Shannon limit, BP suffers from large memory requirements for message processing and storage, proportional to the number of edges in the Tanner graph of the code. Such large memory requirements, coupled with additional hardware resources needed for the message updating, make the BP less attractive in applications with stringing constraints.
+A posteriori probability (APP) decoder [1] is a suboptimal alternative to BP, in which the variable node processing is simplified by allowing variables to send messages in an intrinsic manner, and a message from a variable node corresponds to a posteriori value used to estimate that variable, This property admits a memory efficient implementation.
+The APP decoder can be seen as an iterative Bayesian procedure which computes the a posteriori bit probabilities conditioned on the previously estimated probabilities and the set of check node constraints. Its suboptimality comes from the approximation by which only the closest check constraint neighborhood of a variable node is directly taken into account during the iterative Bayesian procedure.
+In this paper we propose a parameterized version of the APP decoder called uniformly reweighted APP decoder (URAPP), which can be seen as a suboptimal variant of the tree reweighted belief propagation [2], [3]. The algorithm is
+*This work is funded in by the NSF under grants CCF-1314147 and CCF-0963726 and in part by the Seventh Framework Programme of the European Union, under Grant Agreement number 309129 (i-RISC project).
+1Velimir Ilic´ is with Mathematical Institute SANU, Belgrade, Serbia velimir.ilic@gmail.com
+2,3Elsa Dupraz and David Declercq are with ETIS laboratory, CergyPontoise, France {dupraz,declercq}@ensea.fr
+4Bane Vasic´ is with Department of ECE, University of Arizona, Tucson vasic@ece.arizona.edu
+
+derived in the Bayesian framework and the source of the suboptimalily is recognized and treated using a reweighted parameter which, in general, depends on the iteration and node considered. As the simplest case, we consider the uniformly reweighted APP decoder, where a constant value is used for the correction parameter and optimized through simulations. The experiments on binary symmetric channel show that the optimal parameter value does not depend on the cross-over probability value and that URAPP has significantly better performance than the original version of the APP introduced in [1].
+Although the APP decoders can be implementes in a memory efficient way, this advantage has not been recognized in the original paper [1]. As the second contribution of the paper, we propose a memory-efficient realization of the reweighted APP decoder, which requires memory proportional to the number of nodes in the Tanner graph of the LDPC code, rather than to the number of edges, as proposed in [1], which is a significant saving.
+The paper is organized as follows. Section II introduces notations and definitions on LDPC codes. The URAPP decoder is derived in Section III, while its memory efficient implementation is considered in Section IV. The simulation results are presented in Section V.
+
+II. PRELIMINARIES
+
+A regular LDPC code is a linear block code defined by
+
+a sparse parity-check matrix H. We denote by pM, N q the
+
+size of H. A codeword is a vector x “ px1, x2, . . . , xN q P t0, 1uN that satisfies HxT “ 0, where xT denotes the
+
+transposed (column) vector. The Tanner graph [6] of an
+
+LDPC code is a bipartite graph whose adjacency matrix is
+
+the parity-check matrix of the code H. It contains two types
+
+of nodes: a set of variable-nodes N “ tv1, v2, . . . , vN u, corresponding to the N columns of H, and a set of check-
+
+nodes M “ tc1, c2, . . . , cM u, corresponding to the M rows of H. A variable-node vn and a check-node cm are connected by an edge if and only if the corresponding entry of H is
+
+non-zero.
+
+The set of check-nodes connected to the variable-node
+
+vn is denoted Mpnq and the set of variable-nodes con-
+
+nected to the check-node cm is denoted N pmq. The di-
+
+rect neighborhood of a node vn is defined as M¯ pnq “
+
+Ť
+mPMpnq
+
+Ť
+iPN
+
+pmqzn
+
+vi.
+
+We consider the binary symmetric channel (BSC), on
+
+which the binary codeword x is transmitted, and we denote by y “ py1, y2, . . . , yN q the received sequence. The BSC is
+
+978-1-4799-8009-3/14/$31.00 ©2014 IEEE
+
+1228
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:21 UTC from IEEE Xplore. Restrictions apply.
+
+defined by the probabilistic model
+
+N
+
+M
+
+Prpy, x|Cq 9 ź Prpyn|xnq ź p ÿ xnq (1)
+
+n“1
+
+m“1 nPN pmq
+
+where C “
+
+ř
+kPN
+
+pmq
+
+xk
+
+“
+
+0(mPM
+
+is the
+
+set
+
+of
+
+all
+
+all parity check equations defined by HxT “ 0, Prpy|xq
+
+is a channel likelihood, is the indicator function and
+
+ř
+nPN
+
+pmq
+
+xn
+
+are
+
+modulo
+
+2
+
+sums
+
+determined
+
+by
+
+the
+
+parity
+
+check matrix. The probability Pe ” Prpx ‰ yq is called
+
+cross-over probability.
+
+III. REWEIGHTED APP DECODER
+The goal of the Maximum Likelihood (ML) decoding is to compute the a posteriori probability
+
+Pr pxn|y, Cq .
+
+(2)
+
+In accordance with the probabilistic model (1), the a posteriori probability can be expressed from the Bayes’ formula
+
+´
+
+¯
+
+Pr pxn|y, Cq 9 Prpyn|xnq ˆ Pr xn|yzn, Cn , (3)
+
+where yzn “ py1, . . . , yn´1, yn`1, . . . , yN q and Cn “
+
+ř
+kPN
+
+pmq
+
+xk
+
+“
+
+0(mPMpnq
+
+is the set of parity check
+
+equations in which xn participates.
+
+Belief propagation (BP) has been introduced to approxi-
+
+mately compute the a posteriori probability (2) by iterative
+
+computation of vectors pˆn, which serve as an estimate of
+
+´
+
+¯
+
+Pr xn |yzn, Cn . In the i-th iteration, estimates are com-
+
+puted according to [7]
+
+pˆpniq “ ź pˆpmiqnpxnq,
+
+(4)
+
+mPMpnq
+
+where pˆpmiqnpxnq is an estimate of Prpxn |yzn, cmqpiq,
+
+pˆpmiqnpxnq
+
+“
+
+$1
+
+’
+
+’ ’ &
+
+2
+
+1
+
+’
+
+’ ’ %
+
+2
+
+´ `
+
+1 2 1 2
+
+ź
+kPN pmqzn
+ź
+kPN pmqzn
+
+´ 1
+´ 1
+
+´ ´
+
+2qˆkpimq p1q¯; 2qˆkpimq p1q¯ ;
+
+for for
+
+xn xn
+
+“1 “0
+
+(5)
+
+and qˆkpimq pxkq is estimated value for Prpxk|yzn, Cnzcmq which
+
+is computed according to
+
+qˆkpimq pxkq 9 Prpyk|xkq ˆ ź pˆjpik´1qpxkq (6)
+jPMpkqzm
+
+The quantities pˆjk and qˆkm are usually called check-tovariable and variable-to-check messages, respectively. The iterative process is initialized with qˆkm “ Prpyk|xkq and runs until a predefined convergence criterion has been reached.
+The computation procedure is exact if only if the Tanner graph corresponding to the code is a tree. In the case of graphs with cycles it serves only as an approximation, due to the message independence assumption made in the expressions (4)-(6). Nevertheless, it achieves very good accuracy for sparse codes. Its computational complexity is low, but it requires a memory storage growing with the number of
+
+edges in the graph, which is often seen as a limitation for
+practical applications.
+The APP decoder [1] is an suboptimal variant of BP in which all the messages qˆnpimq are same for all m P Mpnq and equal to pˆnpi´1q, which is the estimate value for Prpxn |yzn, Cnq in i ´ 1-th iteration 1. As a result, the APP decoder will not yield exact result, even for tree structured
+Tanner graphs.
+We now propose the parameterized version of the APP
+decoder called uniformly reweighted APP decoder (URAPP).
+The drawbacks of the APP decoder are handled using a reweighting parameter α for improving the correctness of
+the estimation. The URAPP is derived from the equations (4) and (5), in a way that the probability pˆmnpxnq, given by (5), is replaced with its α escort distribution [8]:
+
+pˆmnpxnq
+
+Ð
+
+pˆpmαnq pxnq
+
+“
+
+pˆαmnpxnq
+
+ř
+xn
+
+pˆm α npxn
+
+q
+
+;
+
+α P r0, 1s. (7)
+
+and all messages qˆkpimq pxkq are the same and equal to pˆkpi´1q pxk q.
+Accordingly, the URAPP decoder runs as follows.
+1) For all nodes vn initialize a priori values to pˆpn0qpxnq “ Pr pyn | xnq;
+2) For all nodes vn compute a posteriori probabilities in i-th iteration:
+
+pˆnpxnqpiq 9 Prpyn|xnq ˆ ź pˆpmiqnpxnqα, (8)
+mPM¯ pnq
+
+where pˆmnpxnqpiq is computed according to (5), with qˆkpimq pxkq “ pˆkpi´1qpxkq; 3) For all nodes vn and go to 2 until a convergence criterion has been reached.
+In the limit cases, α “ 0 and α “ 1, the escort distribution reduces to the uniform and to the original one, respectively. Accordingly, as the α becomes smaller, the escort distribution becomes closer to the uniform distribution. Put differently, in the case of small α the check likelihood will be smoothed and the equation (8) will be determined by the channel likelihood. Oppositely, in the case of α “ 1 the URAPP reduces to the APP decoder. The optimal value for α is between 0 and 1. If properly optimized, the parameter α can significantly improve the accuracy of the a posteriori probability estimation. In Section V we present the experimental results for the URAPP when the α is determined by a brute force optimization.
+
+IV. MEMORY EFFICIENT IMPLEMENTATION OF URAPP
+DECODER
+For implementation purposes, in order to avoid the computation of the normalization coefficient in the equation (8) and to reduce the number of multiplications, the APP decoders are commonly represented in log-ratio domain message passing version [1]. The log-ratio domain version
+
+1Note that the estimates depend on yzn only in the first iteration.
+
+1229
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:21 UTC from IEEE Xplore. Restrictions apply.
+
+can be directly derived from the previously defined steps 1-3, if we set
+
+γˆn
+
+“
+
+log
+
+pˆnp1q pˆnp0q
+
+and
+
+µmÑn
+
+“
+
+log
+
+pˆmnp1q pˆmnp0q
+
+as follows.
+Initialization: Variable-nodes are initialized to a priori values pγ1, γ2, . . . , γnq, which are in the case of BI-AWGN channel equal to the received sequence py1, y2, . . . , yN q, prior to the first iteration of the APP decoder:
+
+γˆnp0q
+
+“
+
+γn
+
+“
+
+ppxn P pxn
+
+“ “
+
+0|ynq 1|ynq
+
+.
+
+(9)
+
+Iterative processing:
+
+1) Check-node processing: consists in computing the check-to-variable messages µpmkÑ q n, for all check-nodes
+m and their neighbor variable-nodes vn;
+
+µpmkÑ q n “ ð γˆkpk´1q,
+kPN pmqzn
+
+(10)
+
+where Ð stands for the summation over the set
+iPN pmqzn
+N pmqzn induced by the box-sum operation defined as
+
+x
+
+‘
+
+y
+
+“
+
+log
+
+1 ` exey ex ` ey
+
+(11)
+
+(see [7] for technical details).
+
+2) A posteriori information update: consists in computing the a posteriori messages γˆnpkq, for all variable-nodes
+
+vn,
+
+γ˜npkq “ γn ` α ÿ µpmkÑ q n.
+
+(12)
+
+mPMpnq
+
+3) Hard decision: Estimate (binary) values of sent bits, xˆ “ pxˆ1, xˆ2, . . . , xˆN q, according to the rule: γˆnpkq ą 0 then xpnkq “ 0, otherwise xpnkq “ 1. The decoder stops
+when either xˆ is a codeword or a maximum number
+of decoding iterations is reached.
+
+Check to variable messages requires the computation of
+
+all
+
+partial
+
+sums
+
+Ð
+kPN pmqzn
+
+γˆkpk´1q,
+
+which
+
+can
+
+efficiently
+
+be
+
+computed using the inverse operation for ‘ called minus-box
+
+operator:
+
+x
+
+a
+
+y
+
+“
+
+log
+
+1 ´ exey ex ´ ey
+
+(13)
+
+It is easy to check that x ‘ y a y “ x. Using the a operator,
+
+the sum
+
+Ψpmkq “ ð γˆkpk´1q
+
+(14)
+
+kPN pmq
+
+can be computed once per iteration and node, and all the messages can be computed for all n P N pmq as
+
+µpmkÑ q n “ Ψpmkq a γˆnpkq.
+
+(15)
+
+In a common, parallel message passing implementation of the APP decoder, all the variable nodes take the message at same time, the a posteriori values are computed, which completes one iteration. Although this version provides high throughput, it suffers from the high memory requirements,
+
+Algorithm 1: SEMI-PARALLEL URAPP DECODER
+
+Input: y “ py1, . . . , yN q P YN Output: xˆ “ pxˆ1, . . . , xˆN q P t0, 1uN
+codeword
+
+Ź received word Ź estimated
+
+Initialization:
+
+for
+
+each
+
+tvnun“1,...,N
+
+do
+
+γn
+
+“
+
+log
+
+P P
+
+rpxn rpxn
+
+“ “
+
+0|ynq 1|ynq
+
+;
+
+for each tvnun“1,...,N do γˆnp0q “ γn;
+
+Iteration loop: k ą 0 Total check-sum computation for each tcmum“1,...,M do Ψpmk´1q “ Ð γˆnpk´1q
+nPN pmq
+partial a posteriori update for each tcmum“1,...,M do
+for each vn P Hpcmq do
+µ “ Ψpmk´1q a γˆnpk´1q
+γˆnpkq “ γˆnpkq ` α µ
+a posteriori update for each tvnun“1,...,N do γˆnpk´1q “ γˆnpkq
+hard decision for each tvnun“1,...,N do xˆn “ p1 ´ signpγˆnqq{2
+if xˆ is codeword then exit the iteration loop
+
+End iteration loop
+
+proportional to the number of edges in the Tanner graph, since an iteration requires the storing of all check to variable messages for one iteration.
+In the Algorithm 1 we present semi-parallel, memory efficient implementation of the URAPP decoder, based on the ideas proposed in [9] for the BP algorithm. Instead of the messages, we store only the values Ψpmk´1q “ Ð γˆnpk´1q
+nPN pmq
+which are used for the computation of the posterior values γˆnpkq, and at one iteration, all variable nodes can be partially updated during the computations in all variable nodes. Both implementations provide exactly the same output after each iteration and have the same computational requirements. Although the former one has the smaller throughput, since two check nodes might try to access the same variable node to update its a posteriori value, it needs the storing only of the values in variable nodes. As a result it have the complexity proportional to the number of nodes, which is a significant saving.
+V. REWEIGHTING FACTOR OPTIMIZATION AND
+SIMULATION RESULTS
+In this section we present simulation results for the URAPP. We consider the p3, 5q Tanner code of the length 155.
+
+1230
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:21 UTC from IEEE Xplore. Restrictions apply.
+
+10−1
+
+10−1
+
+10−2
+
+10−2
+
+BER BER
+
+10−3
+
+Pe=0.08
+
+Pe=0.07
+
+Pe=0.06
+
+Pe=0.05
+
+Pe=0.04
+
+Pe=0.03
+
+10−4
+
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+Reweighting parameter α
+
+Fig. 1: BER as a function of the reweighting factor for different values of crossover probability for Tanner p3, 5q code, with the maximal number of iteration set to 5.
+
+10−1
+
+10−3
+
+Pe=0.08
+
+Pe=0.07
+
+Pe=0.06
+
+Pe=0.05
+
+Pe=0.04
+
+Pe=0.03
+
+10−4
+
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+Reweighting parameter α
+
+Fig. 2: BER as a function of the reweighting factor for different values of crossover probability for Tanner p3, 5q code, with the maximal number of iteration set to 10.
+
+10−1
+
+10−2
+
+10−2
+
+BER
+BER
+
+10−3
+
+10−3
+
+APP K=5
+
+10−4
+
+Pe=0.08 Pe=0.07
+
+Pe=0.06
+
+Pe=0.05
+
+10−4
+
+URAPP K=5
+
+APP K=10
+
+URAPP K=10
+
+Pe=0.04
+
+APP K=20
+
+Pe=0.03
+
+URAPP K=20
+
+10−5
+
+10−5
+
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+0.03
+
+0.04
+
+0.05
+
+0.06
+
+0.07
+
+0.08
+
+Reweighting parameter α
+
+Cross−over probability
+
+Fig. 3: BER as a function of the reweighting factor for different values of crossover probability for Tanner p3, 5q code, with the maximal number of iteration set to 20.
+
+Fig. 4: BER as a function of crossover probability. APP decoders are marked with empty markers, URAPP decoders are marked with the black markers.
+
+Optimal reweighted parameter is obtained through simulations. Fig. 1 represents the Bit-Error-Rates (BER) with respect to α of the URAPP decoder for maximum number of iterations set to 5 and for several values of cross-over probability Pe. We see that the optimal choice of parameter
+
+α is equal to 0.8 and does not depend on Pe. Fig. 2 and Fig. 3 represent the BER with respect to to α for maximum number of iterations set to 10 and 20, respectively. As before, we observe that the optimal choices of α are given by 0.6 and 0.5 respectivelly, and do not depend on Pe. However,
+
+1231
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:21 UTC from IEEE Xplore. Restrictions apply.
+
+the optimal choice of parameter clearly depends on the maximum number of iterations. In fact, as discussed in Section III, the introduced parameter slows down the convergence. This agrees with the simulation results, which show that the optimum value of α increases when the maximum number of iterations decreases. iterations.
+Fig. 4 shows the BER with respect to Pe of standard and uniformly reweighted APP decoders, with reweighting parameters obtained from the previous optimization procedure, for maximal number of iterations K “ 5, K “ 10 and K “ 20. For K “ 5, there is not a significant BER improvement over the unweighted APP decoder. But as K becomes larger, the importance of α and the improvement of the reweighted APP decoder become clearer, as we observe a more important BER gain.
+At the end, we have illustrated the BER performance gain at considering the reweighted APP decoder compared with the standard APP decoder. The optimal parameter value depends on the number of iterations, but not on the channel cross-over probability. It remains to identify the other code and decoder parameters that may affect the optimal choice of α.
+
+[3] J. Liu and R. de Lamare, “Low-latency reweighted belief propagation decoding for LDPC codes,” Communications Letters, IEEE, vol. 16, no. 10, pp. 1660–1663, October 2012.
+[4] “A semi-systolic decoder for the PDSC-73 error-correcting code,” Discrete Applied Mathematics, vol. 33, no. 1–3, pp. 109 – 128, 1991.
+[5] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proc. of Global Telecommunications Conference, 2001. GLOBECOM ’01. IEEE, vol. 5, 2001, pp. 3019–3024 vol.5.
+[6] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, May 1981.
+[7] R. G. Gallager, Low Density Parity Check Codes. Cambridge, MA: M.I.T. Press, 1963.
+[8] C. Beck and F. Scho¨gl, Thermodynamics of Chaotic Systems: An Introduction, ser. Cambridge Nonlinear Science Series. Cambridge University Press, 1995.
+[9] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, “Generic description and synthesis of LDPC decoders,” Communications, IEEE Transactions on, vol. 55, no. 11, pp. 2084–2091, Nov 2007.
+
+VI. CONCLUSION
+In this paper we proposed memory efficient uniformly reweighted APP decoder (URAPP) for decoding of LDPC codes, with the memory complexity proportional to the number of nodes in the Tanner graph of the code. The algorithm can be seen as an suboptimal variant of the tree reweighted belief propagation [2], [3] and operates as a parameterized Bayesian inference algorithm, improving the performances of previously propose APP decoder [1]. Suboptimality of the APP decoder comes from the fact that in each iteration and for each variable node only the neighboring check constraints are taken into account. We introduced the reweighting parameter which deals with this source of suboptimallity and empirically showed the significant performance improvements even in the case when the a constant value is used for the correction parameter. Taking into account the graph structure and dynamics of the URAPP decoder for the parameter estimation seem like a promising direction, which is the part of our future work on the parameter adaptive version of the reweighted APP decoder. The simulation results on binary symetric channel for Tanner p3, 5q code [6] show that the reweighting factor does not depend on the cross-over probability, but only on the maximal number of iterations taken in to decoder. Currently, we are exploring its dependence on other LDPC code parameters.
+
+REFERENCES
+[1] M. Fossorier, M. Mihaljevic´, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” Communications, IEEE Transactions on, vol. 47, no. 5, pp. 673–680, May 1999.
+[2] H. Wymeersch, F. Penna, and V. Savic, “Uniformly reweighted belief propagation for estimation and detection in wireless networks,” Wireless Communications, IEEE Transactions on, vol. 11, no. 4, pp. 1587–1595, April 2012.
+
+1232
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:59:21 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,860 @@
+2850
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+Deep Learning-Aided Dynamic Read Thresholds Design for Multi-Level-Cell Flash Memories
+Zhen Mei , Kui Cai , Senior Member, IEEE, and Xuan He , Member, IEEE
+
+Abstract— The practical NAND flash memory suffers from various non-stationary noises that are difficult to be predicted. For example, the data retention noise induced channel offset is unknown during the readback process, and hence severely affects the reliability of data recovery from the memory cell. In this paper, we first propose a novel recurrent neural network (RNN)based detector to effectively detect the data stored in the multilevel-cell (MLC) flash memory without the prior knowledge of the channel. However, compared with the conventional threshold detector, the proposed RNN detector introduces much longer read latency and more power consumption. To tackle this problem, we further propose an RNN-aided (RNNA) dynamic threshold detector, whose detection thresholds can be derived based on the outputs of the RNN detector. We thus only need to activate the RNN detector periodically when the system is idle. Moreover, to enable soft-decision decoding of error-correction codes, we first show how to obtain more read thresholds based on the harddecision read thresholds derived from the RNN detector. We then propose integer-based reliability mappings based on the designed read thresholds, which can generate the soft information of the channel. Finally, we propose to apply density evolution (DE) combined with the differential evolution algorithm to optimize the read thresholds for low-density parity-check (LDPC) coded flash memory channels. Computer simulation results demonstrate the effectiveness of our proposed RNNA dynamic read thresholds design, for both the uncoded and LDPC-coded flash memory channels, without any prior knowledge of the channel.
+Index Terms— MLC NAND flash memory, read threshold, recurrent neural network, LDPC codes, density evolution.
+I. INTRODUCTION
+T HE NAND flash memory based solid state drives have revolutionized the data storage industry. Compared with the conventional hard disk drives, they offer lower power consumption, faster write/read time, and higher reliability. However, the reliability of NAND flash memory is severely affected by various factors such as the programming noise, the random telegraph noise (RTN), and the cell-to-cell interference (CCI) [1]. Most of these noises and interferenc are
+Manuscript received June 21, 2019; revised December 14, 2019 and February 9, 2020; accepted February 9, 2020. Date of publication February 17, 2020; date of current version May 15, 2020. This work is supported by Singapore Ministry of Education Academic Research Fund Tier 2 MOE2016T2-2-054 and RIE2020 Advanced Manufacturing and Engineering (AME) programmatic grant A18A6b0057. This article was presented in part at the IEEE International Conference on Communications (ICC), May 2019. The associate editor coordinating the review of this article and approving it for publication was A. Graell I Amat. (Corresponding author: Kui Cai.)
+The authors are with the Science and Math Cluster, Singapore University of Technology and Design, Singapore 487372 (e-mail: mei_zhen@outlook.com; cai_kui@sutd.edu.sg; xuan_he@sutd.edu.sg).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2020.2974723
+
+difficult to be predicted due to the complication of memory physics. For example, the data retention noise caused by the charge leakage from the floating gate over time will lead to a decrease of the threshold voltage of the programmed cell [2]. The corresponding change of the cell threshold voltage, referred to as the channel offset, is unknown during the readback process, and hence will severely degrade the memory sensing circuit’s performance if the read thresholds still remain the same.
+To mitigate the memory cell errors caused by the various noises and interference, the use of the error correction codes (ECCs) is essential. In modern solid state disks, Bose-Chaudhuri-Hocquenghem (BCH) codes with harddecision decoding (HDD) have been employed to correct multiple bit errors [3], [4]. To further correct errors for the multi-level cell (MLC) flash memory which is more error-prone than the single-level cell (SLC) flash memory, low-density parity-check (LDPC) codes with either HDD or soft-decision decoding (SDD) has been adopted at the cost of a longer decoding latency [5]. For SDD of ECCs, the decoding performance depends greatly on the accuracy of the loglikelihood rate (LLR) of the channel coded bits, and generally more read thresholds will provide a better estimation of the LLRs of the MLC flash memory.
+In this paper, we consider the MLC NAND flash memory which stores 2 bits user data per memory cell. The stored data can be differentiated by the threshold voltage of each memory cell. Specifically, a memory cell is configured to one of four threshold voltage levels with mean voltages of Vs11 , Vs10 , Vs00 , Vs01 , corresponding to the stored symbols of 11, 10, 00, 01, respectively. To read the data stored in a cell, its voltage is measured and typically compared with the predetermined fixed read thresholds by the memory sensing circuit. As shown by Fig. 1 (a), to differentiate four threshold voltage levels, at least three read thresholds a1, a2, a3 are needed. Comparing the threshold voltage read back from the memory cell with the read thresholds a1, a2, a3 can generate hard outputs of the MLC flash memory channel which can support HDD of ECCs. In order to generate the channel LLR to support SDD of ECCs such as the LDPC code, more read thresholds are required.
+In the literature, several techniques have been proposed to design the read thresholds [6]–[10]. For example, a “constantratio” (CR) non-uniform quantization method was proposed by observing that more errors occur in the overlapped regions of adjacent distribution functions [6]. A widely accepted read thresholds design approach was reported in [7], where the
+
+0090-6778 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2851
+
+Fig. 1. Threshold voltage distributions of MLC flash memory cells before and after data retention noise.
+quantization levels are optimized by maximizing the mutual information (MMI) of the quantized channel. Based on minimizing the bit error rate (BER) and MMI, a parameter estimation method and a dynamic programming framework were proposed to design the read thresholds [8]. However, all these approaches of designing the read thresholds assume that accurate threshold voltages of the memory cells can be obtained for different program/erase (P/E) cycles through proper modeling and estimation of the flash memory channel. Furthermore, they did not consider the unknown offset of the channel caused by the data retention noise. Apart from the model-based approaches, read-retry and disparity-based thresholds approximation were also proposed to dynamically adjust the read thresholds such that errors can be corrected by the ECC [11]. However, the read-retry scheme needs to be performed multiple times online when the ECC fails which will lead to a longer latency and more power consumption. The disparity-based method cannot ensure near-optimal performance and needs to be invoked frequently (e.g. daily) when the channel offset caused by data retention is accumulated to a large level.
+Constrained coding techniques, such as the rank modulation [12], balanced codes [13], and the constant composition codes [14], have also been proposed which can mitigate the unknown offset of the channel through sorting the channel readback signals. By leveraging on the balanced codes or the constant composition codes, the dynamic threshold schemes [15], [16] were proposed for both the SLC and MLC flash memories. However, a major problem with all these schemes is the high code rate loss incurred.
+Recently, the deep learning (DL) techniques have been developed rapidly and they have shown superior performance in many aspects of communication systems [17], [18]. In this paper, we propose a novel DL-aided approach to design the read thresholds dynamically for the MLC flash memories. With this DL-based framework, all the unknown offset or unpredictable variations of the flash memory channel can be learned from the training data, thus avoiding the difficult task of modeling of the practical flash memories.
+In particular, we first propose a novel recurrent neural network (RNN) detector to effectively detect data symbols stored
+
+in the memory cells. Compared with the prior art detection approaches, the RNN detector only requires the training data rather than an accurate model of the flash memory channel. In order to minimize the additional read latency and power consumption incurred by the RNN detector, we further propose an approach to derive the 3-level hard-decision read thresholds a1, a2, a3 based on the output of the RNN detector. In this way, the RNN detector only needs to be activated periodically when the system is in the idle state. Once the hard-decision thresholds are obtained, the RNN detector can be terminated and the conventional threshold detector will still be adopted by using the derived adjusted hard-decision thresholds until a further adjustment of the read thresholds is needed. We name such a detector the RNN-aided (RNNA) dynamic threshold detector, which can support HDD of ECCs. Next, in order to enable SDD of ECCs, we first show how to obtain more read thresholds from our derived 3-level hard-decision read thresholds. We then propose integer-based reliability mappings based on the designed read thresholds, which can generate LLRs of the flash memory channel without any prior knowledge of the channel. Finally, to optimize the read thresholds in terms of the decoding performance, we propose to apply density evolution (DE) combined with differential evolution algorithm for LDPC coded MLC flash memory channels. We remark that our proposed RNNA dynamic read thresholds design can be easily extended to the triple-level cell (TLC) or quad-level cells (QLC) flash memories, with minor modifications of the NN parameters and the update of the integer-based reliability mappings.
+The rest of the paper is organized as follows. In Section II, we introduce the channel model for the MLC NAND flash memory adopted by this work. They are only used to generate data for training, testing, and evaluating the performance of the NN-based detector. Our proposed RNNA dynamic read thresholds design does not have any knowledge of the channel model. In Section III, we formulate the detection of the flash memory channel as a machine learning problem and propose an RNN-based detector. In Section IV, we propose novel RNNA dynamic read thresholds design, such that both the hard and soft outputs (i.e. LLRs) of the flash memory channel can be derived based on the outputs of the RNN detector. Extensive computer simulation results are illustrated in Section V. Finally, Section VI concludes the paper.
+II. CHANNEL MODEL
+As extensively reported in the literature [6], [9], [19], [20], the threshold voltage of the flash memory cell is mainly affected by the programming noise, RTN, data retention noise, and CCI.
+A. Programming Noise
+In MLC flash memories, the threshold voltage of each memory cell can be programmed by injecting certain amount of charges into the floating gate. The memory cell needs to be erased before it can be programmed. Due to process variations, the threshold voltage of the erased cell is assumed to follow
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2852
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+the Gaussian distribution [21], given by
+
+ps11 (v)
+
+=
+
+√1
+
+e , −
+
+(v−Vs11 2σe2
+
+)2
+
+2πρe
+
+(1)
+
+where ρe2 is the variance of the erased cell’s threshold voltage. Here, Vs11 denotes the mean threshold voltage of the erased state, while Vs10 , Vs00 , Vs01 denote those of the programmed cells that store different symbols, respectively.
+
+To program the memory cell to these programmed voltage
+
+levels, the incremental-step-pulse programming (ISPP) [22]
+
+scheme is used, which leads to an uniform distribution of the
+
+voltage levels of the programmed cells [6], given by
+
+⎧ ⎨
+
+1
+
+,
+
+pu(v) = ⎩0, Vpp
+
+Vp ≤ v ≤ Vp + otherwise,
+
+Vpp
+
+(2)
+
+where Vp ∈ {Vs10 , Vs00 , Vs01 }, and Vpp denotes the incremental program step voltage. Moreover, the programming cells
+suffer from the programming noise, which is assumed to be Gaussian distributed with zero mean and variance of ρp2 [19], [20], [23], with ρp2 < ρe2. Note that by using a small voltage step that realized by the programming control loop, ρp2 is significantly smaller than ρe2 [24].
+
+B. Random Telegraph Noise
+
+In NAND flash memory, the repeated P/E cyclings lead to the wear-out effect that damages the tunnel oxide of floating gate transistors [25]. Such wear-out effect can be modeled by the RTN. According to [26], the RTN tends to widen the voltage distributions of the memory cells and leads to exponential tails. In this paper, similar to [27], we model it as a Gaussian distribution for mathematical tractability, given by
+
+pw (v)
+
+=
+
+√1
+
+e−
+
+v2 2σw2
+
+2πρw
+
+,
+
+(3)
+
+where ρw = 0.00027 NP0E.62 [19] is a function of NPE, which denotes the number of P/E cycles.
+
+C. Data Retention Noise
+
+The data retention error is the dominant error in the flash memory. It is caused by the leakage of charges from the floating gate over time, which leads to a decrease of the threshold voltage. Following [20], [28], [29], the data retention noise is assumed to follow the Gaussian distribution, given by
+
+prs (v)
+
+=
+
+√1
+
+e , −
+
+(v−μrs 2σr2s
+
+)2
+
+2πρrs
+
+(4)
+
+where μrs and ρrs are state-dependent, given by [19]
+
+μrs = (Vs − x0) · (AtNPαEi + BtNPαEo ) · ln(1 + T ), (5)
+
+ρrs = 0.3|μrs|.
+
+(6)
+
+Here, s ∈ {s11, s10, s00, s01}, T is the retention time, and the other parameters (x0, At, Bt, αi, αo) are constant. With the increase of retention time, there are mainly two effects on the
+threshold voltage distributions of the erased and programmed
+states. First, the threshold voltage distributions of all states
+
+become wider. Second, the threshold voltage distributions of the programmed states shift towards that of the erased state. Furthermore, the shift of the higher-voltage states is larger than that of the lower-voltage states.
+Fig. 1 illustrates the threshold voltage distributions before and after retention noise. Here, a1, a2, a3 are optimal harddecision read thresholds to differentiate different states with the original threshold voltage distributions. However, after data retention, it can be easily seen that these read thresholds are no longer optimal and will lead to more detection errors. Therefore, the read thresholds need to be carefully designed in order to mitigate the data retention noise induced errors.
+
+D. Overall Threshold Voltage Distributions
+
+In the flash memory, the threshold voltage shift of one memory cell will influence the threshold voltage of its adjacent cells due to the parasitic capacitance-coupling effect [22]. Such interference is referred to as the CCI, which is linearly added to the threshold voltage of a victim cell. The threshold voltage shift induced by CCI can typically be compensated by the data predistortion technique [30], hence we assume that the CCI has already been removed in this work.
+The overall threshold voltage distributions is usually approximated by the Gaussian mixture distribution [31], [32], given by
+
+p (v) = √2πρ1 e , s10∼s01
+
+s10 ∼s01
+
+−
+
+(v−μs10 ∼s01 2σs210 ∼s01
+
+)2
+
+(7)
+
+where
+
+μs11 = Vs11 − μrs11 ,
+
+μs10∼s01 = Vs10 ∼s01 +
+
+Vpp 2
+
+− μ , rs10∼s01
+
+ρs211
+
+=
+
+ρe2
+
++ ρw2
+
++
+
+ρ2
+rs11
+
+,
+
+ρ2
+s10 ∼s01
+
+=
+
+ρp2
+
++
+
+ρw2
+
++
+
+ρ . 2
+rs10 ∼s01
+
+(8)
+
+In the simulations of this work, we adopt the flash memory
+parameters provided by [19] and assume: Vs11 = 1.4, Vs10 = 2.6, Vs00 = 3.2, Vs01 = 3.93, Vpp = 0.2, ρe = 0.35, ρp = 0.05, x0 = 1.4, At = 0.000035, Bt = 0.000235, αi = 0.62, and αo = 0.3. With the probability density
+function (PDF) given by (7), we are able to generate the
+
+readback threshold voltages for an arbitrarily long input data
+
+sequence. We remark that the channel model described above
+
+is only used to generate data for training and testing the NNs.
+
+Our subsequently proposed RNN-based detection does not
+
+have any knowledge of this channel model.
+
+III. LEARNING TO DETECT
+In this section, we formulate the detection of the flash memory channel as a machine learning problem and propose a NN-based detector. We denote the readback threshold voltage of the k-th memory cell by vk. The inputs to the NN are v = {v1, v2, · · · , vL}, where L is the number of neurons in the input layer of the NN. The outputs of the NN are the soft estimates x˜ = {x˜1, x˜2, · · · , x˜L} of the labels x. For MLC flash memory, there are four different states Vs11 , Vs10 , Vs00 , Vs01 ,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2853
+
+which can be represented by labels {0, 1, 2, 3}, respectively. Hence, for the k-th cell, xk ∈ {0, 1, 2, 3}, the hard estimate xˆk ∈ {0, 1, 2, 3} can be obtained by taking the nearest integer of x˜k. Thereafter, the corresponding recovered bits c2k−1 and c2k can be obtained by using the mapping {0, 1, 2, 3} → {11, 10, 00, 01}.
+The outputs x˜ of the NN can be considered as a function of the NN’s inputs v and network’s parameters θ, given by x˜ = f (v, θ). Then, the NN is trained to find the best θ∗ that
+lead to a well-performed detector. To accomplish this task, a loss function L is defined over the set of training data, such
+that
+
+θ∗ = arg min L(x, x˜),
+
+(9)
+
+θ
+
+where L(x, x˜) measures the loss between x˜ and x. By using the gradient descent algorithm or its variants, and combining with the back propagation method, θ∗ can be obtained by minimizing L(x, x˜) defined above over the training data set.
+Note that as a supervised learning approach, the labels x are known during training. After the training process, the network parameters θ∗ are obtained and another data set named the validation set will be used to fine tune the
+model hyperparameters. After training and validation, the NN
+detector will be employed to detect the unknown flash memory
+channel outputs using the pre-determined NN.
+
+A. Neural Network Architecture
+Since the signal detection for the flash memory is sequencebased and thereby is one-dimensional, and the various noises of the flash memory channel, such as the programming noise, the random telegraph noise, and the data retention noise are also one-dimensional (In this work, we assume that CCI, which can be two-dimensional, has already been removed by data pre-distortion [30]), it is nature to use the deep neural network (DNN) or the RNN to do signal detection for the flash memory. The CNN, on the contrary, is more suitable for processing two-dimensional tasks, such as image recognition and de-noising. Meanwhile, we have also found that the RNN detector can achieve better error rate performance than the DNN detector with smaller size of training data. Therefore, in this work, we adopt a stacked RNN architecture to perform signal detection for flash memory channels.
+The RNN is a class of NNs with feedback connections. It is very suitable to time series tasks, since it can use memories to process sequences of inputs. There are different types of RNN cells, namely, the vanilla RNN, gated recurrent unit (GRU) and long short-term memory (LSTM). The number of network parameters in vanilla RNN is significantly less than that of the GRU and LSTM. However, it suffers from the vanishing/exploding gradient problem, where the gradients may vanish to zero or explode during the training process [33]. Hence, we employ the GRU as the RNN cell, since it has less parameters than the LSTM. Fig. 2 shows the proposed RNN architecture with two GRU layers and one fully-connected output layer. For each layer, an activation function is applied to introduce the non-linearity to the NN. For the two GRU hidden layers, the rectified linear unit (ReLU) activation function
+
+Fig. 2. Proposed RNN architecture for the NN-based detection.
+
+is adopted, given by ρrelu(t) = max {0, t}, with ρrelu(t) ∈ [0, ∞). For the output layer, to obtain soft estimates of x,
+we use the softplus activation function, which is the smooth approximation of the ReLU function, given by ρsoftplus(t) = ln(1 + exp(x)), with ρsoftplus(t) ∈ [0, ∞).
+
+B. Training Approach
+To train the RNN, the readback threshold voltages v can be obtained by sensing the corresponding memory cells. In our work, we generate the readback threshold voltages by simulating the flash channel model described in Section II. As an supervised learning approach, the label xk of vk is also required for training the RNN. To solve this problem, we use the codewords that are decoded by the LDPC decoder as labels to train the RNN. Since there may exist codewords that are incorrectly decoded by the LDPC decoder, we further check the syndrome of the sequence recovered by the LDPC decoder. Only when the syndrome is an allzero vector, the corresponding recovered sequence is accepted as a valid codeword. We have verified by simulations that the probability for the LDPC decoder to decode to a valid but wrong codeword is negligible. Hence we only keep the valid decoded codewords as labels for training and discard those with non-zero syndromes. Furthermore, we have also investigated the error rate performance of the RNN detector trained with correct and error corrupted labels respectively in Section V.B, and found that the RNN detector is robust to the error corrupted labels if the corresponding error rate is less than 5 × 10−3. This indicates that if the error rate of the labels is below such a level (which is in general not difficult to be achieved after LDPC decoding), we can skip the syndrome check and use all the LDPC decoded codewords as labels, thus helping to reduce the latency and power consumption for collecting data for training.
+For the proposed RNN, to minimize the difference between the NN output x˜ and labels x, we define the loss function as the mean square error (MSE) between x˜ and x, given by
+
+L(x, x˜)
+
+=
+
+1 L
+
+L
+(xk − x˜k)2.
+
+(10)
+
+k=1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2854
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+TABLE I NETWORK SETTINGS FOR THE PROPOSED RNN DETECTOR
+
+application-specific integrated circuit (ASIC), it will still lead to substantial additional read latency and power consumption. To avoid using RNN for direct data detection, in this section, we propose novel NNA dynamic read thresholds design, such that both the hard and soft outputs (i.e. LLRs) of the flash memory channel can be derived based on the output of the RNN detector. In this way, the RNN detector only needs to be activated periodically when the system is in the idle state. After that we can still apply the conventional hard/soft-output threshold detectors, but with updated read thresholds obtained from the output of the RNN detector until a further adjustment of the read thresholds is necessary.
+
+Fig. 3. The training SER of the RNN detector for each epoch at P/E cycles NPE = 104 and retention time T = 102 hours.
+In our experiments, the number of neurons L in the input layer is set to be 50, which can be reduced to simplify the network. After many trials, it is found that 3 × 106 training symbols are sufficient for the RNN to achieve its best performance. For example, for an LDPC code with codeword length 8000 bits, 750 valid codewords are enough for training the RNN.
+The details of the RNN setting are summarized in Table I. To illustrate the learning process, Fig. 3 shows the symbol error rate (SER) of the RNN detector for each epoch during training. It is observed that the training SER decreases sharply at the second epoch and converges from the fourth epoch. This indicates that the RNN can learn the channel variations within only a few epochs.
+We remark that the proposed RNN detection framework is data-driven, which does not need the prior knowledge of the channel. After training and validation, the proposed RNN detector can successfully detect the readback signal v. Furthermore, the above proposed RNN detection framework can be easily extended to the TLC or QLC flash memories, with minor modifications to the NN parameters. For example, more training data and hidden layers may be required to successfully detect the readback signal.
+IV. NEURAL NETWORK-AIDED DYNAMIC READ THRESHOLDS DESIGN
+As will be illustrated in Section V, the proposed RNN detector can achieve near-optimal performance without any knowledge of the channel. However, it needs to be activated for each data block of length L for data detection. Although the NN can be efficiently implemented in parallel with powerful hardware such as the graphical processing units (GPU) or the
+
+A. Read Thresholds Design for Generating Hard Channel Outputs
+
+For the MLC flash memory channel, in order to generate
+hard-outputs of the channel to support HDD of ECCs, 3 read
+threshold levels {a1, a2, a3} need to be determined. For a given v and with assumed {a1, a2, a3}, we can obtain the hard estimate x¯. Meanwhile, based on v, the RNN detector outputs x˜ and hence xˆ. Therefore, the adjusted thresholds {a1∗, a2∗, a3∗} can be obtained by searching for the thresholds that can minimize the Hamming distance between x¯ and xˆ, denoted by d(x¯, xˆ). We assume that M RNN output
+sequences with length L are involved in the searching and denote them by Xˆ = {xˆ1, xˆ2, . . . , xˆM }. We further have X¯ = {x¯1, x¯2, . . . , x¯M } and V = {v1, v2, . . . , vM }. Hence, we can obtain
+
+{a1∗, a∗2, a∗3} = arg min d(X¯ , Xˆ ).
+
+(11)
+
+{a1 ,a2 ,a3 }
+
+To get {a∗1, a∗2, a3∗}, we first uniformly quantize the search space into m intervals (e.g. m = 1000), with boundaries
+
+b0, b1, . . . , bm, where b0 = −∞ < b1 = Vs11 < · · · < bm−1 = Vs01 < bm = ∞. Note that a larger m will result
+in higher precision, but at the cost of higher computational
+
+complexity. Hence, we have ai ∈ {b0, b1, . . . , bm}, i = 0, 1, . . . , n, with a0 = −∞ and an = ∞. In our case, we have n = 4, since there are three read thresholds. To solve (11)
+
+efficiently, a precomputation step is performed. At this step,
+
+the components of V are first sorted in ascending order with complexity O(M L log(M L)). Based on the corresponding Xˆ
+
+obtained at the output of the RNN, we can get the number of
+
+each symbol i that falls into [bj, bk), denoted by s(i, bj, bk), with i = 0, 1, . . . , n − 1, 0 ≤ j < k ≤ m. Hence, (11) is
+
+equivalent to
+
+{a∗1, . . . , a∗n−1} = arg min
+{a∗1 ,...,a∗n−1}
+
+n−1
+M L − s(i, ai, ai+1) .
+i=0
+(12)
+
+Note that (12) can be further simplified to
+
+n−1
+
+{a1∗, . . . , a∗n−1} = arg max
+
+s(i, ai, ai+1).
+
+{a∗1 ,...,a∗n−1} i=0
+
+(13)
+
+Then, an exhaustive search method can be used to find a1∗, . . . , an∗−1 from b1, b2, . . . , bm−1 with computational complexity O(mn−1). To further reduce the complexity, we pro-
+pose to apply dynamic programming (DP) [34] to solve (13)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2855
+
+through a method similar to [35]. That is, let P (m , n )
+
+(1 < n ≤ m ≤ m,) denote the problem of finding
+
+a1, a2, . . . , an −1 from b1, b2, . . . , bm −1 such that C(m , n )
+
+is maximized, where C(m , n ) =
+
+n −1 i=0
+
+s(i,
+
+ai,
+
+ai+1)
+
+is
+
+the objective function in (13). We denote C∗(m, n) as the
+
+objective function of the optimal solution of P (m, n). Hence,
+
+it is given by
+
+C∗(m, n)
+
+= max
+n−1≤λn−1 <m
+
+C∗(λn−1, n − 1) + s(n − 1, bλn−1, bm)
+
+,
+
+= C∗(λn∗−1, n − 1) + s(n − 1, bλ∗n−1 , bm),
+
+(14)
+
+where λ∗1, . . . , λn∗−1 collects the indices of b1, . . . , bm−1, and {bλ∗1 , . . . , bλn∗−1 } is the optimal solution of P (m, n). From (14), the optimal solution of P (m, n) can be obtained
+
+by solving its subproblems P (λn−1, n − 1), with n − 1 ≤ λn−1 < m. Similarly, P (λn−1, n − 1) can also be solved by its subproblems P (λn−2, n − 2), with n − 2 ≤ λn−2 < λn−1. In this way, the optimal solution of P (m, n) can be calculated
+
+in a recursive manner, such that DP can be employed [34]. According to (14), the complexity of DP is given by O(m2n).
+
+Since n m, the complexity of DP is much lower than the
+
+exhaustive search method. Note that when extending this work
+
+to TLC or QLC flash memories, the exhaustive search method
+is prohibitive since its complexity is O(mn−1), with n = 23 and n = 24 for the TLC and QLC cases, respectively. On the
+
+other hand, DP is always feasible to solve this problem, since its complexity is always linearly proportional to m2.
+
+We remark that the RNN detection and the subsequent
+
+search of the read thresholds are only activated periodically
+
+when the system is in the idle state, and will be terminated once {a∗1, a∗2, a∗3} are obtained. Thereafter, the conventional threshold detector with the newly derived read thresholds {a1∗, a2∗, a3∗} will be adopted until a further adjustment of the read thresholds is necessary. For convenience, we name
+
+such a detector the RNNA dynamic threshold detector. Hence,
+
+compared with the RNN detection that is carried out for each
+
+data block, our proposed RNNA dynamic threshold detector
+
+leads to a significant reduction of the read latency and power
+
+consumption.
+
+To evaluate the performance of the proposed RNN detector
+
+and the RNNA dynamic threshold detector, we derive the
+
+optimum symbol error probability (SEP) of the MLC flash
+
+memory channel with the full channel knowledge, and use it as
+
+the performance benchmark. Assuming the four voltage states
+
+{Vs11 , Vs10 , Vs00 , Vs01 } are stored in the memory cells with equal probabilities, and for given read thresholds {a1, a2, a3}
+
+and the channel model described in Section II, the SEP is
+
+Fig. 4. Defining a∗1, a2∗, a3∗.
+
+the
+
+non-uniform
+
+read
+
+thresholds
+
+b1∗, b∗2, . . . , b6∗
+
+based
+
+on
+
+given by (15), as shown at the bottom of this page, where e is a symbol error and i ∈ {11, 10, 00, 01}. When Gray mapping is adopted, the adjacent states only differ by 1 bit. Hence, the corresponding bit error probability (BEP) can be approximated as Pb ≈ 0.5Ps.
+The SEP given by (15) is a function of {a1, a2, a3}. It is a continuous function and is locally quasi-convex within the range of our interest. Therefore, we can find the optimum read thresholds, and thereby the minimum SEP by using the Newton-Raphson method or other quasi-convex optimization techniques [36]. The derived minimum SEP can serve as the lower bound to evaluate the performance of the proposed detectors, and the details will be illustrated in Section V.
+
+B. Read Thresholds Design for Generating Soft Channel Outputs
+The 3-level hard-decision read thresholds derived above can be used to differentiate four types of symbols stored in the MLC flash memory cell. In order to performance SDD, more read thresholds are needed. In this subsection, we first show how to design more read thresholds to support SDD by using the 3-level hard-decision read thresholds designed in the previous subsection. We use the 6-level read thresholds as an example to generate the soft channel outputs, although the proposed thresholds design method can be generalized to more number of read thresholds. Note that the 6-level read thresholds are widely adopted in the literature for sensing the MLC flash memory cells to generate soft channel outputs [6, 7, 9, 19]. We then propose integer-based reliability mappings based on the designed read thresholds, which can generate LLRs of the flash memory channel without any prior knowledge of the channel. Moreover, to optimize the read thresholds in terms of the decoding performance, we propose to apply DE combined with differential evolution algorithm for LDPC coded MLC flash memory channels.
+1) Soft-Decision Read Thresholds Design: As illustrated by Fig. 4, in flash memories, the dominant overlapping regions
+
+Ps = P (v = Vsi )P (e|v = Vsi )
+
+i
+
+1 = 4 P (v > a1|v = Vs11 ) + P (v < a1 ∪ v > a2|v = Vs10 ) + P (v < a2 ∪ v > a3|v = Vs00 ) + P (v < a3|v = Vs01 )
+
+1 =4
+
+3 + Q a1 − μs11 ρs11
+
+− Q a1 − μs10 ρs10
+
++Q a2 − μs10 ρs10
+
+−Q a2 − μs00 ρs00
+
++Q
+
+a3 − μs00 −Q a3 − μs01
+
+ρs00
+
+ρs01
+
+(15)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2856
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+TABLE II THE PROPOSED MAPPINGS BETWEEN THE QUANTIZATION LEVEL THAT THE CHANNEL
+READBACK SIGNAL BELONGS TO AND THE INTEGER-BASED RELIABILITY
+
+of two adjacent distribution functions are around the hard-
+decision read thresholds, where more errors will occur. Hence,
+it is natural to sense these regions with higher precision and the
+remaining regions with lower precision. Therefore, we propose to adopt non-uniform read thresholds {b∗1, b2∗, . . . , b∗6} based on the hard-decision read thresholds {a1∗, a2∗, a3∗} we derived earlier. In particular, to find {b∗1, b2∗, . . . , b∗6}, we first define three regions R1, R2, R3, whose centers are a1∗, a∗2, a∗3, respectively. Assume the widths of R1, R2, R3 are W1, W2, W3, respectively. Then, we propose to obtain the boundaries {b∗1, b2∗, . . . , b6∗} by
+
+b∗2i−1 = ai∗ − Wi/2, b2∗i = a∗i + Wi/2,
+
+(16)
+
+where ai∗ is the center of each interval [b2∗i−1, b∗2i] with i = 1, 2, 3. Based on (16), the optimization of {b1∗, b2∗, . . . , b6∗} is converted to the problem of optimization of {W1, W2, W3}, which is a much easier task. The brute force way to optimize W1, W2 and W3 is by computer exhaustive search through Monte-Carlo simulations so as to minimize the error rate
+performance of the system. However, for specific ECCs, such
+as the LDPC code, we can use theoretical analysis to replace the error rate simulations for optimizing the values of W1, W2 and W3. The corresponding details are presented in Section IV.B.3).
+2) Integer-Based Reliability Mappings: With the designed
+read thresholds, the next step is to derive LLRs for SDD.
+First, as a reference, we show how to obtain the LLR with the designed read thresholds {b∗1, b∗2, . . . , b∗6}, by using the full knowledge of the channel. Each memory cell has four
+possible voltage states and stores two bits, we refer the left
+bit as the most significant bit (MSB) and the right bit as the least significant bit (LSB). Define Tj = [bj, bj+1) as the j-th quantization interval, j = 0, 1, . . . , 6, with b0 = −∞ and b7 = ∞. Then, for a given threshold voltage v ∈ Tj and assume the channel PDF of (7) is known, the LLR of the
+MSB and the LSB are given by
+
+LMSB
+
+=
+
+ln
+
+Pr(v Pr(v
+
+∈ ∈
+
+Tj |MSB Tj |MSB
+
+= =
+
+0) 1)
+
+= ln Tj {ps00 (v) + ps01 (v)}dv
+
+(17)
+
+Tj {ps10 (v) + ps11 (v)}dv
+
+and
+
+LLSB
+
+=
+
+ln
+
+Pr(v Pr(v
+
+∈ ∈
+
+Tj |LSB Tj |LSB
+
+= =
+
+0) 1)
+
+= ln
+
+Tj Tj
+
+{ps00 {ps01
+
+(v) (v)
+
++ +
+
+ps10 ps11
+
+(v)}dv (v)}dv
+
+,
+
+(18)
+
+where
+
+ps10∼s01 (v)dv = Q
+Tj
+
+bj − μs10∼s01
+
+ρs10 ∼s01
+
+−Q
+
+bj+1 − μs10∼s01 ρs10 ∼s01
+
+. (19)
+
+However, in practical flash memories, due to the various noises/interference and especially the data retention noise, the accurate PDF of each voltage state is not available to the channel detector. Hence, accurate calculation of the LLRs given by (17) and (18) is not possible. However, it has been shown that the reliability of a received symbol can be measured by its magnitude and this measure can be quantized to integers for the additive white Gaussian noise (AWGN) channel [37] and the single-level-cell NVM channel [38]. In this paper, we further propose integer-based reliability mappings for SDD of ECCs over the MLC flash memory channel.
+In particular, as shown by Fig. 4, in the dominant overlapped regions R2, we are the least confident about whether the MSB is a ‘0’ or a ‘1’. Hence, if the readback signal v ∈ R2, set LˆMSB = 0. Similarly, if v ∈ R1 or v ∈ R3, set LˆLSB = 0. If v is farther away from these dominant overlapped regions, we are more confident about whether the MSB is a ‘0’ or a ‘1’. Similar trend holds for the LSB. Based on these observations, it is natural to given a mapping between the quantization level that the channel readback signal belongs to, and the integerbased reliability LˆMSB (LˆLSB) as shown by Table II. Note that the mappings we propose in Table II may be not optimal, and better mappings could be found to further enhance the performance.
+3) LDPC Code-Specific Optimization of the Read Thresholds: With the above proposed mappings, the SDD of ECCs can then be performed. In this work, we consider the LDPC codes, which have already been widely applied to MLC flash memory channels [1]. Hence the above proposed integerbased reliability measure can be fed into the decoder of the LDPC codes. In this work, the normalized min-sum (NMS) decoding algorithm is employed since it can closely approach the performance of the sum-product algorithm (SPA) with a much lower computational complexity.
+In this subsection, to optimize the LDPC-coded performance over the MLC flash memory channel, W1, W2 and W3 are jointly optimized for the LDPC codes. To evaluate the decoding performance, the DE analysis is employed to derive the decoding threshold of LDPC ensembles. The ensemble of LDPC codes can be characterized by the degree distributions. A regular LDPC ensemble is defined by (dv, dc), where dv and dc are the number of edges connected to each variable node
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2857
+
+and check node, respectively. An irregular LDPC ensemble has non-uniform variable node and check node degrees, hence it can be defined by edge degree distributions λ(x) and μ(x), given by
+
+λ(x) = λj xj−1, μ(x) = μixi−1,
+
+(20)
+
+j≥2
+
+i≥2
+
+where λj and μi are the fraction of edges that are connected to variable and check nodes with degree j and i, respectively.
+Since the MLC flash memory channel is asymmetric, to enable DE, the channel symmetrizing method proposed in [39] is employed. First, for a given set of widths W1, W2, W3 of R1, R2, R3, the integer-based reliability LˆMSB (LˆLSB) of the readback signal v can be obtained based on the mappings given by Table II. We then define f0(Lˆ) and f1(Lˆ) as the PDFs of Lˆ corresponding to the originally stored bit of c = 0 and c = 1, respectively. Note that f0(Lˆ) and f1(Lˆ) can be obtained using a histogram approach.
+According to the channel symmetrizing method [39], we can flip all the signs of LLRs with x = 0. Due to the symmetry of the processing rules, the signs of messages that enter or exit the variable nodes are also flipped. Hence, the DE for a particular codeword is equivalent to that for the all-one codeword. The L-density after channel symmetrizing is given by
+
+fs(Lˆ)
+
+=
+
+1 2
+
+f0(−Lˆ) + f1(Lˆ)
+
+.
+
+(21)
+
+Then, the L-density f s(Lˆ) can be used to initialize the DE
+
+algorithm. The DE of the NMS algorithm is an iterative
+
+algorithm which consists of the evolution of the L-densities
+
+for the check node and variable node updates. The original
+
+DE of the NMS algorithm is presented in [40]. In this
+
+work, we employ the discrete DE (DDE) [41] to reduce the
+
+complexity of DE by quantizing all input and output messages during decoding. Let the u(l) be the message from a degreedc check node to a variable node at the l-th iteration, and v(l)
+be the output message of a degree-dv variable node at the
+l-th iteration. Under the NMS algorithm with normalization
+
+factor α, the check node update and variable node update are
+
+given by ⎛
+dc −1
+u(l) = ⎝ sign
+j=1
+
+vj(l−1)
+
+⎞
+
+⎠
+
+·
+
+α
+
+·
+
+min
+j∈{1,2,...,dc−1}
+
+|vj(l−1) |,
+
+dv −1
+
+v(l) = v(0) +
+
+ui(l),
+
+i=1
+
+(22)
+
+respectively, where α is the normalization factor, vj(l), j = 1, 2, . . . , dc − 1 are the incoming messages from neighbors of a degree-dc check node, and ui(l), i = 1, 2, . . . , dv − 1 are the
+
+incoming messages from neighbors of a degree-dv variable
+
+node at the l-th iteration. The initial message of the algorithm
+
+is v0 = Lˆ. According to the quantized NMS algorithm,
+
+u(l) and v(l) are quantized to u¯(l) and v¯(l). We denote the
+
+probability mass function (PMF) of u¯(l) and Pv¯(l), and they can be calculated using the
+
+v¯(l) by DDE
+
+Pu¯(l) and approach
+
+given in [41]. According to the DDE algorithm, the fraction
+
+Fig. 5. The MI with the MMI quantizer and RNNA quantizer over different P/E cycles at T = 104 hours.
+
+of incorrect messages for the l-th iteration is given by
+
+Pe(l) =
+
+Pv¯(l)[k].
+
+k<0
+
+(23)
+
+As described earlier, the initial integer-reliability Lˆ, and hence the L-density is determined by W1, W2, W3. Therefore, the choice of W1, W2 and W3 will directly affect Pe(l) given by (23). Differential evolution is an global optimization algo-
+rithm that does not rely on any assumption of the problem [42].
+In this work, we apply the differential evolution algorithm to find the a set of W1, W2 and W3 so as to optimize the decoding performance. The cost function is Pe(l) and hence the optimized {W1∗, W2∗, W3∗} are given by
+
+{W1∗, W2∗, W3∗} = arg min Pe(l),
+{W1 ,W2 ,W3 }
+
+(24)
+
+with given channel parameters NPE, T and the number of iterations (e.g. l = 10). The details of differential evolution optimization process are presented in [42].
+After deriving the optimized W1∗, W2∗, W3∗, the corresponding read thresholds {b1∗, b∗2, . . . , b6∗} can be obtained according to (16). We remark that for extending this work to TLC or QLC flash memories, the above described RNNA dynamic read thresholds design method is still valid. The only difference lies in the design of the mappings between the integer based reliability and the quantization level that the channel readback signal belongs to, since more read thresholds are required for the TLC and QLC cases.
+Fig. 5 compares the MI of the flash memory channel with the MMI quantizer [7] and the RNNA quantizer proposed in this subsection. The MI of the unquantized channel and that with the MMI quantizer with 9-level read thresholds are also included as references. From the figure we observe that the MI with the proposed RNNA quantizer is very close to that with the MMI quantizer for both the 3-level and 6-level read thresholds. Note that for cases with the MMI quantizer, it is assumed that the flash memory channel with different P/E cycles and data retention time is completely known which is unrealistic, while for cases with the RNNA quantizer, there is no prior knowledge of the channel at all,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2858
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+which is consistent with the practical flash memory channels. Moreover, it can be seen that there is an obvious MI gain from the 3-level MMI/RNNA quantizers to the 6-level MMI/RNNA quantizers, while the MI gain from 6-level to 9-level is much less significant. This indicates that to reduce the read latency, the choice of 6-level read thresholds is sufficient for softdecision decoding.
+
+C. Complexity Analysis
+In this subsection, the computational complexity of the MMI quantizer and the RNNA quantizer are compared. To design n − 1 read thresholds using the MMI quantizer, the search space is uniformly quantized into m n intervals (e.g. m = 1000) first, and DP can then be employed to effectively search the read thresholds that maximize the MI with complexity of O(m2n) [43].
+For the RNNA quantizer, it needs to first derive the 3-level read thresholds based on the outputs of the proposed RNN detector. Therefore, the computational complexity of the RNN detector should be determined first. To evaluate its complexity, we follow the study reported in [43], [44], which counts the number of floating-point operations (FLOPs) for all the multiplications and additions involved. As shown by Fig. 2, the proposed RNN architecture consists of two GRU layers and one output layer. For the GRU layer with number of neurons L and input dimension D, the number of network parameters is 3L(D +L+1). Its complexity is given by 3L(6D +6L+5). In this work, we have L = 50, and D = 1 and D = 50 for the first and second GRU layers, respectively. For the output layer, the number of network parameters is L, and hence its complexity is negligible compared with that of the GRU layers. Therefore, the total complexity of the RNN detector is much less than that of the MMI quantizer since L m.
+To derive the 3-level read thresholds based on the RNN detector outputs, as described in Section IV.A, we have applied DP with complexity O(m2n). Finally, to generate more accurate soft information, 6-level read thresholds are further designed on the basis of the 3-level read thresholds derived, and by using the DDE and differential evolution with complexity O(nImax|Q|2). Here, Imax is the maximum number of iterations for differential evolution, and |Q| is the size of message alphabet during the DDE of LDPC codes [41], [45]. In this work, we have Imax = 200 and |Q| = 210.
+From the above analysis, it can be concluded that the complexity for designing the RNNA quantizer is higher than that for the MMI quantizer. However, it is worth noting that the RNNA quantizer only needs to be designed if there is a significant change of the flash memory channel caused by its unknown offset and variations. According to our simulation results which will be presented in the next section, we only need to design the RNNA quantizer once in a month and will still be able to achieve the near-optimal performance. Therefore, its complexity will not cause bottleneck in practice.
+V. PERFORMANCE EVALUATIONS
+In this work, the implementation and training of the RNN are performed using the machine learning library Keras [46],
+
+Fig. 6. The test set BER using correct and error corrupted labels respectively at NPE = 1.1 × 104 and T = 104 hours.
+with TensorFlow [47] as the back-end. As described in Section IV.A, to reduce the read latency and power consumption, the RNN is trained periodically when the system is in the idle state. However, there might be a mismatch of P/E cycles and/or the retention time between the training set and test set. To measure the performance of the RNN detector and RNNA dynamic threshold detector in the presence of training and testing mismatch, we define the mismatch of P/E cycles as NPE = NPteEst − NPtrEain, where NPtrEain and NPteEst are the numbers of P/E cycles during training and testing, respectively. Similarly, we define the mismatch of the retention time as
+T = T test − T train. In the following subsections, the uncoded channel BER as well as the LDPC-coded BER for MLC flash memory channels with our proposed RNNA quantizers are evaluated.
+A. Uncoded BER Performance
+We first investigate the effect of error corrupted labels on the performance of the RNN detector by considering two cases: training with correct labels and training with error corrupted labels. Simulation results illustrated by Fig. 6 show that the RNN detector is robust to the error corrupted labels if the corresponding error rate is less than 5 × 10−3. This indicates that if the error rate of the labels is below such a level (which is in general not difficult to be achieved after LDPC decoding), we can skip the syndrome check and use all the LDPC decoded codewords as labels, thus helping to reduce the latency and power consumption for collecting data for training. Otherwise, as stated in Section III.B, we should apply syndrome check to the sequence recovered by the LDPC decoder, and we only keep the valid decoded codewords as labels for training and discard those with non-zero syndromes.
+Fig. 7 shows the BER performance of MLC flash memory channel using the RNN detector and RNNA dynamic threshold detector with thresholds obtained by (11). The optimum threshold detector we derived in Section IV.A is also included as a reference. Observe that the BER performance with the RNN detector is much better than that with the detector using the original threshold without considering both the programming noise and the data retention noise (designed for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2859
+
+Fig. 7. BER of the RNN detector and RNNA dynamic threshold detector at T = 104 hours.
+
+Fig. 9. BER comparison of different detectors. The RNNA dynamic threshold
+detector is trained with both P/E cycles and retention time mismatch, with NPteEst = 104.
+
+Fig. 8. BER comparison of different detectors. The RNNA dynamic threshold detector is trained with P/E cycles mismatch ( NPE = 1000, 2000, 3000) and at T test = 104 hours.
+
+Fig. 10. BERs of the regular LDPC code with the RNNA quantizer, trained with different P/E cycles mismatch ( NPE = 1000, 2000, 3000), at T test = 1 × 104 hours.
+
+NPE = 0, T = 0), and can closely approach the BERs of the optimum threshold detector. Furthermore, the proposed RNNA dynamic threshold detector even slightly outperforms the RNN detector and almost achieves the the performance of the optimum detector. Therefore, in the following simulations, we only employ the RNNA dynamic threshold detector, instead of the RNN detector.
+Fig. 8 depicts the BERs of the RNNA dynamic threshold detector, where the RNN is trained with different amount of mismatch of P/E cycles between the training set and test set. Observe that when the mismatch NPE is less than 1000, the BER performance of the RNNA dynamic threshold detector can still closely approach the optimum performance. As the mismatch further increases, performance gap between the RNNA dynamic threshold detector and the optimum threshold detector becomes larger. In particular, this gap becomes significant at low BER regions when NPE = 3000. This indicates that we only need to activate the RNN detector as well as the search of the adjusted read threshlds when the P/E cycle mismatch is greater than 3000.
+To investigate the performance of the RNNA dynamic threshold detector in the presence of different retention time mismatch, we fix the mismatch of P/E cycles at 1000 and vary
+
+the the mismatch of retention time. As illustrated by Fig. 9, when the retention time mismatch is 1 month, the RNNA dynamic threshold detector approaches the performance of the optimum detector. When the retention time mismatch increases to 3 months, the RNNA dynamic threshold detector only shows slight performance degradation. However, as the mismatch further increases to 6 months, a severe error floor occurs at T = 5 × 103 hours. This indicates that we only need to activate the RNN detector as well as the search of the adjusted read thresholds every 3 months to maintain the near optimum BER performance.
+B. LDPC-Coded BER Performance
+In this subsection, we present the LDPC-coded performance with our proposed RNNA quantizer and compare it with that of the MMI quantizer. The simulation results are shown by Figures 10 to 13. The decoding thresholds of LDPC codes with different quantizers are also included as vertical lines. For cases with the MMI quantizer, we make the unrealistic assumption that the full channel knowledge is known, and use the corresponding BERs as performance benchmark. For cases with the RNNA quantizer, we consider the practical situation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2860
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+code with N = 4544 and K = 4096 [9]. Its degree distribution is given by
+
+λ(x) = 0.0682x + 0.1822x2 + 0.1329x3 + 0.6167x4,
+
+μ(x) = 0.22x38 + 0.78x39.
+
+(25)
+
+Fig. 11. BERs of the irregular LDPC code with the RNNA quantizer, trained with different P/E cycles mismatch ( NPE = 1000, 2000, 3000), at T test = 1 × 104 hours.
+Fig. 12. BERs of the regular LDPC code with the RNNA quantizer, trained with both P/E cycles and retention time mismatch ( NPE = 1000,
+T = 1 week, 1 month and 3 months), and at NPteEst = 1.1 × 104.
+Fig. 13. BERs of the irregular LDPC code with the RNNA quantizer, trained with both P/E cycles and retention time mismatch ( NPE = 1000,
+T = 1 week, 1 month and 3 months), and at NPteEst = 1.2 × 104.
+that the flash memory channel is unknown, and the LLR is calculated using our proposed integer-based reliability mappings given in Table II. To examine the BER performance, two LDPC codes are simulated. The first code is a rate 0.93 regular (5, 69) LDPC code with codeword length of N = 8832 bits and information length of K = 8196 bits, respectively. The second code is a rate 0.90 irregular LDPC
+
+These LDPC codes are constructed by the progressive edgegrowth (PEG) algorithm and decoded by using the NMS decoding algorithm with normalization factor α = 0.5. The maximum number of decoding iterations is 10.
+Fig. 10 shows the BER comparison of the regular LDPC code with the RNNA quantizer, trained with difference P/E cycles mismatch, and at T test = 1 × 104 hours. We first observe that the BER performance using the MMI quantizer with the original thresholds (designed for NPE = 0, T = 0) is much worse than that using the other quantizers. This implies that it is essential to update the read thresholds to maintain the error correction capability. When training without mismatch, the LDPC-coded performance with the RNNA quantizer approaches to that with the MMI quantizer designed using the full channel knowledge. For cases with the P/E cycle mismatch, the BERs with the RNNA quantizer is close to those with the MMI quantizer, up till to a P/E cycle mismatch of
+NPE = 2000. This demonstrates the robustness of the LDPC coded system with the RNNA quantizer with respect to the training P/E cycle mismatch. However, when the mismatch continues to increases, more performance degradation occurs. In particular, when NPE increases to 3000, the LDPC-coded performance is about 1000 P/E cycles worse than the that without training mismatch. In addition, it is also observed that the LDPC coded performance shown by Fig. 10 is consistent with the threshold detectors’ performance illustrated by Fig. 8 as well as the decoding thresholds obtained from DE.
+Next, we further vary the retention time and consider the case that both the mismatch of P/E cycles and retention time between the training set and test set exist in the LDPC coded system. Observe from Fig. 12 that the BER performance of LDPC codes with the RNNA quantizer can also approach that with the MMI quantizer over a wide range of retention time. For the RNNA quantizer, with a P/E cycle mismatch of
+NPE = 1000, the LDPC code’s performance degradation is small. However, when the retention time mismatch increases to 3 months, the BER performance significantly degrades when the retention time is less than 5000 hours. Again, we observe that the LDPC coded performance shown by Fig. 12 is consistent with the threshold detectors’ performance illustrated by Fig. 9 and the decoding thresholds obtained from DE.
+Finally, by comparing Fig. 11 with Fig. 10, and Fig. 13 with Fig. 12, we observe that the various performances of the irregular LDPC code with different quantizers are consistent with those of the regular LDPC code. This indicates that our proposed approaches are also valid for the irregular LDPC codes.
+VI. CONCLUSION
+We have considered the non-stationary noises and unknown offset which severely degrade the data recovery reliability of MLC flash memories, and proposed novel DL-aided dynamic
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+MEI et al.: DL-AIDED DYNAMIC READ THRESHOLDS DESIGN FOR MLC FLASH MEMORIES
+
+2861
+
+read threshold design techniques. In particular, we have first proposed an RNN-based detector, which can effectively detect the data symbol stored in the memory cell without any prior knowledge of the channel. To avoid the additional read latency and power consumption incurred by the RNN detector, we have proposed a novel RNNA dynamic threshold detector, whose detection thresholds can be derived based on the outputs of the RNN detector. We have also presented approaches to obtain more read thresholds, and further optimize these read thresholds in terms of the decoding performance for the LDPC coded flash memory channels. Simulation results have shown that the BER performance of our proposed RNNA dynamic read thresholds design is significantly better than that with the original read thresholds, and can almost achieve the performance with the optimum read thresholds design based on the full knowledge of the channel. For the LDPC-coded performance, our proposed RNNA quantizer also closely approaches the performance with the MMI quantizer with the full knowledge of the channel. It has also been verified that the proposed RNNA dynamic read thresholds design only needs to be activated every few months, and hence demonstrated its potential for practical applications.
+REFERENCES
+[1] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[2] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,” in Proc. Design, Autom. Test Europe Conf. Exhibit. (DATE), Mar. 2012, pp. 521–526.
+[3] Y. Lee, H. Yoo, I. Yoo, and I.-C. Park, “6.4 Gb/s multi-threaded BCH encoder and decoder for multi-channel SSD controllers,” in Proc. IEEE Int. Solid-State Circuits Conf., Feb. 2012, pp. 426–428.
+[4] Y. Lee, H. Yoo, I. Yoo, and I.-C. Park, “High-throughput and low-complexity BCH decoding architecture for solid-state drives,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 5, pp. 1183–1187, May 2014.
+[5] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. FAST, 2013, pp. 243–256.
+[6] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[7] J. Wang et al., “Enhanced precision through multiple reads for LDPC decoding in flash memories,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[8] B. Peleato, R. Agarwal, J. M. Cioffi, M. Qin, and P. H. Siegel, “Adaptive read thresholds for NAND flash,” IEEE Trans. Commun., vol. 63, no. 9, pp. 3069–3081, Sep. 2015.
+[9] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-Cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[10] Z. Mei, K. Cai, and L. Shi, “Information theoretic bounds based channel quantization design for emerging memories,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2018, pp. 1–5.
+[11] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. IEEE 21st Int. Symp. High Perform. Comput. Archit. (HPCA), Feb. 2015, pp. 551–563.
+[12] A. Jiang, R. Mateescu, M. Schwartz, and J. Bruck, “Rank modulation for flash memories,” IEEE Trans. Inf. Theory, vol. 55, no. 6, pp. 2659–2673, Jun. 2009.
+[13] L. G. Tallini, R. M. Capocelli, and B. Bose, “Design of some new efficient balanced codes,” IEEE Trans. Inf. Theory, vol. 42, no. 3, pp. 790–802, May 1996.
+[14] K. A. Schouhamer Immink and K. Cai, “Composition check codes,” IEEE Trans. Inf. Theory, vol. 64, no. 1, pp. 249–256, Jan. 2018.
+
+[15] H. Zhou, A. Jiang, and J. Bruck, “Error-correcting schemes with dynamic thresholds in nonvolatile memories,” in Proc. IEEE Int. Symp. Inf. Theory Proc., Jul. 2011, pp. 2143–2147.
+[16] F. Sala, R. Gabrys, and L. Dolecek, “Dynamic threshold schemes for multi-level non-volatile memories,” IEEE Trans. Commun., vol. 61, no. 7, pp. 2624–2634, Jul. 2013.
+[17] T. O’Shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cognit. Commun. Netw., vol. 3, no. 4, pp. 563–575, Dec. 2017.
+[18] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2017, pp. 1–6.
+[19] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[20] H. Wang, T.-Y. Chen, and R. D. Wesel, “Histogram-based flash channel estimation,” in Proc. IEEE Int. Conf. Commun.(ICC), Jun. 2015, pp. 283–288.
+[21] K. Takeuchi, T. Tanaka, and H. Nakamura, “A double-level-Vth select gate array architecture for multilevel NAND flash memories,” IEEE J. Solid-State Circuits, vol. 31, no. 4, pp. 602–609, Apr. 1996.
+[22] J.-D. Lee, S.-H. Hur, and J.-D. Choi, “Effects of floating-gate interference on NAND flash memory cell operation,” IEEE Electron Device Lett., vol. 23, no. 5, pp. 264–266, May 2002.
+[23] G. Dong, Y. Pan, and T. Zhang, “Using lifetime-aware progressive programming to improve SLC NAND flash memory write endurance,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 6, pp. 1270–1280, Jun. 2014.
+[24] C. M. Compagnoni et al., “First evidence for injection statistics accuracy limitations in NAND flash constant-current fowler-nordheim programming,” in Proc. IEEE Int. Electron Devices Meeting, 2007, pp. 165–168.
+[25] N. Mielke et al., “Flash EEPROM threshold instabilities due to charge trapping during Program/Erase cycling,” IEEE Trans. Device Mater. Rel., vol. 4, no. 3, pp. 335–344, Sep. 2004.
+[26] C. M. Compagnoni, M. Ghidotti, A. L. Lacaita, A. S. Spinelli, and A. Visconti, “Random telegraph noise effect on the programmed threshold-voltage distribution of flash memories,” IEEE Electron Device Lett., vol. 30, no. 9, pp. 984–986, Sep. 2009.
+[27] C. A. Aslam, Y. L. Guan, and K. Cai, “Decision-directed retentionfailure recovery with channel update for MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 65, no. 1, pp. 353–365, Jan. 2018.
+[28] T.-Y. Chen, A. R. Williamson, and R. D. Wesel, “Increasing flash memory lifetime by dynamic voltage allocation for constant mutual information,” in Proc. Inf. Theory Appl. Workshop (ITA), Feb. 2014, pp. 1–5.
+[29] G. Dong, Y. Pan, N. Xie, C. Varanasi, and T. Zhang, “Estimating information-theoretical NAND flash memory storage capacity and its implication to memory system design space exploration,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 20, no. 9, pp. 1705–1714, Sep. 2012.
+[30] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[31] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis and modeling,” in Proc. Design, Autom. Test Eur. Conf. Exhibit. (DATE),, Mar. 2013, pp. 1285–1290.
+[32] D.-H. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,” IEEE Trans. Signal Process., vol. 61, no. 2, pp. 440–449, Jan. 2013.
+[33] I. Goodfellow, Y. Bengio, A. Courville, and Y. Bengio, Deep Learning, vol. 1. Cambridge, MA, USA: MIT Press, 2016.
+[34] T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, Introduction to Algorithms, 3rd ed. Cambridge, MA, USA: MIT Press, 2009.
+[35] X. He, K. Cai, W. Song, and Z. Mei, “Dynamic programming for sequential deterministic quantization of discrete memoryless channels,” 2019, arXiv:1901.01659. [Online]. Available: http://arxiv.org/abs/1901.01659
+[36] S. Boyd and L. Vandenberghe, Convex Optimization. Cambridge, U.K.: Cambridge Univ. Press, 2004.
+[37] H. Chen, K. Zhang, X. Ma, and B. Bai, “Comparisons between reliability-based iterative min-sum and majority-logic decoding algorithms for LDPC codes,” IEEE Trans. Commun., vol. 59, no. 7, pp. 1766–1771, Jul. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+2862
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 5, MAY 2020
+
+[38] K. Cai, Z. Qin, and B. Chen, “Channel capacity and soft-decision decoding of LDPC codes for spin-torque transfer magnetic random access memory (STT-MRAM),” in Proc. Int. Conf. Computing, Netw. Commun. (ICNC), Jan. 2013, pp. 550–554.
+[39] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[40] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[41] S.-Y. Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[42] R. Storn and K. Price, “Differential evolution—A simple and efficient heuristic for global optimization over continuous spaces,” J. Global Optim., vol. 11, no. 4, pp. 341–359, 1997.
+[43] C. Cao, D. Li, and I. Fair, “Deep learning-based decoding of constrained sequence codes,” IEEE J. Sel. Areas Commun., vol. 37, no. 11, pp. 2532–2543, Nov. 2019.
+[44] P. Zhang, J. Xue, C. Lan, W. Zeng, Z. Gao, and N. Zheng, “Adding attentiveness to the neurons in recurrent neural networks,” in Proc. ECCV, 2018, pp. 135–151.
+[45] Z. Mei, K. Cai, L. Shi, and X. He, “On channel quantization for spin-torque transfer magnetic random access memory,” IEEE Trans. Commun., vol. 67, no. 11, pp. 7526–7539, Nov. 2019.
+[46] F. Chollet. (2015). keras. [Online]. Available: https://github.com/kerasteam/keras
+[47] M. Abadi et al. Tensorflow: Large-Scale Machine Learning on Heterogeneous Systems. Accessed: 2015. [Online]. Available: http://tensorflow.org/
+Zhen Mei received the B.Eng. degree in electronics and information engineering from Central China Normal University (CCNU), China, in 2012, and the M.Sc. degree in communications and signal processing and the Ph.D. degree from Newcastle University, U.K., in 2013 and 2017, respectively. He was a Post-Doctoral Researcher with the Singapore University of Technology and Design (SUTD) from 2017 to 2019. His research interests include machine learning, information theory, channel coding, and signal processing for data storage and wireless communications systems.
+
+Kui Cai (Senior Member, IEEE) received the B.E. degree in information and control engineering from Shanghai Jiao Tong University, Shanghai, China, the M.Eng. degree in electrical engineering from the National University of Singapore, and the joint Ph.D. degree in electrical engineering from the Technical University of Eindhoven, The Netherlands, and the National University of Singapore. She is currently an Associate Professor with the Singapore University of Technology and Design (SUTD). Her main research interests include coding theory, information theory, and signal processing for various data storage systems and digital communications. She was a recipient of the 2008 IEEE Communications Society Best Paper Award in Coding and Signal Processing for Data Storage. She served as the Vice-Chair (Academia) for the IEEE Communications Society, Data Storage Technical Committee (DSTC), from 2015 to 2016.
+Xuan He (Member, IEEE) received the B.E., M.E., and Ph.D. degrees in communication and information engineering from the University of Electronic Science and Technology of China (UESTC), Chengdu, China, in 2011, 2013, and 2018, respectively. From October 2016 to September 2017, he was a Visiting Student with the University of Waterloo, ON, Canada, sponsored by the China Scholarship Council (CSC). He is currently a Research Fellow with the Singapore University of Technology and Design (SUTD), Singapore. His current research interests include information theory, channel coding, and DNA-based data storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:58:16 UTC from IEEE Xplore. Restrictions apply.
+
+

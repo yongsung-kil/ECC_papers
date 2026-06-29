@@ -1,0 +1,911 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+1045
+
+Loosely Coupled Memory-Based Decoding Architecture for Low Density Parity Check Codes
+Se-Hyeon Kang, Student Member, IEEE, and In-Cheol Park, Senior Member, IEEE
+
+Abstract—Parallel decoding is required for low density parity check (LDPC) codes to achieve high decoding throughput, but it suffers from a large set of registers and complex interconnections due to randomly located 1’s in the sparse parity check matrix. This paper proposes a new LDPC decoding architecture to reduce registers and alleviate complex interconnections. To reduce the number of messages to be exchanged among processing units (PUs), two data flows that can be loosely coupled are developed by allowing duplicated operations. In addition, intermediate values are grouped and stored into local storages each of which is accessed by only one PU. In order to save area, local storages are implemented using memories instead of registers. A partially parallel architecture is proposed to promote the memory usage and an efficient algorithm that schedules the processing order of the partially parallel architecture is also proposed to reduce the overall processing time by overlapping operations. To verify the proposed architecture, a 1024 bit rate-1/2 LDPC decoder is implemented using a 0.18- m CMOS process. The decoder runs correctly at the frequency of 200 MHz, which enables almost 1 Gbps decoding throughput. Since the proposed decoder occupies an area of 10.08 mm2, it is less than one fifth of area compared to the previous architecture.
+Index Terms—Channel coding, decoder, factor graph, low density parity check (LDPC) code, matrix permutation, scheduling.
+I. INTRODUCTION
+L OW density parity check (LDPC) codes are originally devised to exploit low decoding complexity by constructing sparse parity check matrices. Though the LDPC code does not have a maximized minimum distance due to the randomly generated sparse parity check matrix, the typical minimum distance increases linearly as the block length increases. Moreover, the error probability decreases exponentially as signal-to-noise ratio (SNR) increases when the code length is sufficiently long, whereas the decoding complexity is linearly proportional to the code length. Exploiting this benefit, the LDPC code is applied to several applications such as data storages, digital subscriber lines [6], DVB-S2 [7], and CDMA [8], especially to space-time coded OFDM systems due to its scalability [9]. Since it is not difficult to design competitive LDPC codes that deal with any block-length and any code rate, the LDPC codes can be easily combined with space time coded systems that scale the number
+Manuscript received September 13, 2004; revised April 20, 2005. This work was supported in part by the Institute of Information Technology Assessment through the ITRC, by the Korea Science and Engineering Foundation through MICROS center and by IC Design Education Center. This paper was recommended by Associate Editor Z. Wang.
+The authors are with the Department of Electrical Engineering and Computer Science, Korea Advanced Institute of Science and Technology, Daejeon, Korea (e-mail: shkang@ics.kaist.ac.kr; icpark@ee.kaist.ac.kr).
+Digital Object Identifier 10.1109/TCSI.2005.862181
+
+of antennas or information rate according to the environment change. Recent simulation results show that the LDPC code can achieve a performance that is within 0.04 dB of Shannon limit [2] and the performance of the LDPC code is close to that of the turbo code if the block length is larger than 1000 bits [3].
+Despite these advantages, when the LDPC code was first introduced, it made little impact on the information theory community because enormous storage is required in encoding and the large computational complexity in decoding. Whereas the iterative decoding can be explained in several different points of view, the main point to understand the complexity of the decoding algorithm is that check equations and received bits affect each other iteratively. The check equations indicate probable error positions. According to the results of the check equations, the received bits are modified and then fed again into the check equations. This process is repeated until all the check equations are satisfied or the predefined maximum number of iterations is reached. In the message passing algorithm, which this decoding process is generally expressed by, the check equations and received bits are mapped into check nodes and variable nodes, respectively, and the error probabilities are calculated and sent as messages along the edges connecting two nodes. Though there are a few edges for each variable node, the number of edges usually exceeds several thousands to get a reasonable coding gain. Since the graph is irregular, how to make interconnections for the large number of edges is a main problem to be solved in hardware implementation.
+Modern VLSI technology is so advanced that it enables parallel architectures exploiting the benefit of inherently parallel LDPC decoding algorithms. Blanksby et al. implemented an 1-Gb/s fully parallel decoder in which the message passing algorithm is directly mapped [4]. This architecture, however, requires a large number of complex routings between concurrent processing units (PUs) each of which corresponds to a node of the Tanner graph of the code, leading to the average net length of 3 mm and the total die size of 52.5 mm . On the other side, Yeo et al. proposed an area-efficient architecture that serializes the computations by sharing PUs [5]. Consequently, one iteration takes about ten-thousand cycles to decode a codeword and wide-input multiplexers are required to select one out of several thousand intermediate values to be fed into the shared PUs. These two counter examples show that high-throughput LDPC decoding architectures should exploit the benefit of parallel decoding algorithms while reducing the interconnection complexity.
+This paper proposes a new architecture to reduce registers and alleviate complex interconnections. The proposed architecture consists of two data flows to minimize the number of messages
+
+1057-7122/$20.00 © 2006 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1046
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+to be exchanged, leading to an area-efficient decoder. Instead
+
+of sending all the messages, only the minimal information is
+
+exchanged between the two data flows. Then, each data flow re-
+
+constructs the original messages using the minimal information.
+
+Furthermore, the intermediate values are stored into local mem-
+
+ories each of which is accessed by only one PU.
+
+Since the parity check matrix does not have any property
+
+except the row and column regularity constraints, several
+H LDPC codes can be constructed by pseudorandom permuta- Fig. 1. Example matrix of a (12, 3, 6) LDPC code.
+tions of sub-matrices. Motivated by this fact, there were some
+
+research efforts on architecture-aware LDPC code construction [14], [15]. These approaches put some constraints on the pseudorandom permutation to enhance the regularity of the parity check matrix while maintaining the code performance. This regularity helps alleviate the interconnection complexity because large-sized multiplexers and de-multiplexers, which are needed to read and write the messages due to randomly generated 1’s, can be reduced into small-sized multiplexers. In this paper, however, we focus on reducing the interconnection complexity for a given LDPC code rather than the code construction.
+The rest of this paper is organized as follows. Section II briefly introduces the LDPC code and the decoding algorithm. Section III proposes a new LDPC decoding architecture based on loosely coupled two data flows. Section IV extends the proposed architecture to the partially parallel architecture and proposes an efficient scheduling algorithm. A prototype LDPC decoder is presented in Section V and its performance is summarized in Section VI. Finally, Section VII addresses some concluding remarks.
+
+Fig. 2 shows the factor graph of the (12, 3, 6) LDPC code, which consists of two sets of nodes: i.e., variable nodes, , and check nodes, . A column of the parity check matrix corresponds to a variable node represented as a circle in the left side of the factor graph and a row corresponds to a check node represented as a square. The edge between a variable node and a check node is constructed if there is 1 at in the parity check matrix. Therefore, each check node represents a check equation used in generating parity check bits and each variable node represents one bit in the codeword. The variable nodes that are connected to a check node are called the neighbor variable nodes of the check node. For a variable node, the neighbor check nodes can be defined similarly.
+The message passing algorithm can be expressed easily based on the factor graph. For all the bits in a received vector, a posteriori probabilities are calculated in the variable nodes and delivered to the neighbor check nodes through the edges. Parity check operations are executed with these probabilities in all the check nodes and the results are passed again to the neighbor variable nodes. Therefore, a fully parallel decoding architecture
+
+II. LOW DENSITY PARITY CHECK CODES
+
+can be directly derived from the factor graph by implementing each node as a PU.
+
+The LDPC code, which was first introduced by Gallager in
+
+1962 [1], is a kind of binary linear block codes. A
+
+LDPC code means that its block length is and the column and
+
+row weight of its parity check matrix are and , which repre-
+
+sent the number of 1’s in a column and a row, respectively. The
+
+column and row weights are much smaller than to achieve
+
+a sparse matrix . For a
+
+LDPC code, the number of
+
+parity check equations is as many as the number of rows of the
+
+parity check matrix: i.e.,
+
+parity check bits are at-
+
+tached to the message. Since the total number of 1’s in the parity
+
+check matrix is the same whether it is counted in the column di-
+
+B. Message Passing Algorithm
+
+General parity check codes whose minimum distance is
+
+can be optimally decoded if there are
+
+or fewer
+
+errors, whereas the LDPC codes cannot be optimally decoded.
+
+Therefore, the message passing algorithm to be described below
+
+is widely used instead, although it is optimal only when there
+
+is no cycle in the factor graph. In the following equations, an
+
+antipodal bit-to-symbol mapping is assumed; i.e., 0 and 1 are
+
+mapped to and 1, respectively.
+
+rection or in the row direction, the equation,
+
+, 1) Initialize each variable node to the probability ratio of
+
+holds for the code parameters and the code rate can be calcu-
+
+the corresponding received bit
+
+lated as
+
+. Fig. 1 shows an example matrix of
+
+a (12, 3, 6) LDPC code. An LDPC code associated with fixed
+
+row and column weights is called a regular LDPC code, and an
+
+irregular LDPC code allows some variations in row and column
+
+(1)
+
+weights.
+
+2) Variable-to-check (VTC) step: Each check node com-
+
+A. Factor Graph The LDPC code is often represented by a factor graph to make
+
+putes the likelihood ratios by using the following equation and sends it to variable node
+
+it easy to understand the message passing decoding algorithm,
+
+which is a bipartite graph that expresses how a global function
+
+of many variables is factored into a product of local functions
+
+(2)
+
+[11]–[13].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+KANG AND PARK: LOOSELY COUPLED MEMORY-BASED DECODING ARCHITECTURE FOR LDPC CODES
+
+1047
+
+Fig. 2. Factor graph for a (12, 3, 6) LDPC code.
+
+3) Check-to-variable (CTV) step: Each variable node computes probability ratios, denoted by , by using the following equation and sends it to check node
+(3)
+4) For each variable node, calculate a tentative bit-by-bit decoding using the pseudo-posteriori probability
+
+Therefore, (2) and (3) are transformed into the following (7)
+
+and (8). In these equations, and represents log probability
+
+ratio; i.e.,
+
+and
+
+. For the sake of clear
+
+representation, we redefine and use and as log probability
+
+ratios hereafter. The a posteriori probability expressed in log
+
+domain is robust and can be represented with a small number
+
+of bits while maintaining coding gain, leading to an area-effi-
+
+cient implementation. Detailed explanation about the a poste-
+
+riori log-likelihood ratio can be found in [20]
+
+(7) (4)
+
+when
+
+when
+
+(5)
+
+5) Check if
+
+is satisfied. If it is satisfied or the
+
+maximum number of iterations is reached, the decoding
+
+algorithm finishes. Otherwise, the algorithm repeats from
+
+step 2).
+
+The symbols and correspond to the outgoing messages of
+
+the variable and check nodes, respectively, and and
+
+represent the set of neighbor nodes of check node and variable
+
+node , respectively. The not-notation (’) marked as superscript
+
+means that the product is calculated over the indexes excluding
+
+its own index, and it is referred to as “self-exclusive” in this
+
+paper. A detailed explanation of the algorithm can be found in
+
+[10].
+
+To reduce the hardware cost, two transformations are usually
+
+employed in practical implementations. First, the product oper-
+
+ations are transformed into summations by using log-likelihood
+
+ratio, and the probability ratio is expressed in terms of tanh and
+
+functions by applying
+
+(8)
+Second, a close look at the iterative decoding algorithm tells that the VTC (CTV) operation can be broken to a summation of all the elements in the same row (column) and a subtraction of its own value from the summation as expressed below. Therefore, (7) is divided into the row summation in (9) and the subtraction in (10). Similarly, (8) is divided into (11) and (12)
+(9)
+(10)
+(11) (12)
+
+III. PROPOSED LDPC DECODING ARCHITECTURE
+
+(6)
+
+Since the functions of variable nodes and check nodes are not complex compared to other elaborate codes such as turbo
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1048
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+Fig. 4. PUs. (a) Variable PU. (b) Check PU.
+
+Whereas the fully parallel architecture computes all the mes-
+
+sages simultaneously, the serial architecture computes messages
+
+row-by-row or column-by-column because there is only one
+
+Fig. 3. Fully parallel LDPC decoding architecture.
+
+PU for each step. Therefore, variable messages calculated by
+
+a variable PU is stored into a memory and accessed later by
+
+codes, the main issue in implementation is how to exchange the large number of messages with other nodes. As opposed to the previous implementations that solve the problem by providing complex wire interconnections, this paper proposes a new architecture based on loosely coupled data flows to reduce the interconnection complexity.
+
+a check PU, and vice versa. In this architecture, the or messages are stored in a memory, but aligned in different
+ways. The read operation is relatively simple because a PU can read a corresponding row or column through multiplexers. The write operation, however, is not so simple because computed messages are written to the other memory aligned in a different manner. Many multiplexers are required for the write access,
+
+which are as many as the number of messages computed at
+
+A. Previous Architectures
+
+a time. Thus, the complex interconnection problem is trans-
+
+Fig. 3 shows a fully parallel LDPC decoding architecture for the (12, 3, 6) LDPC code. The fully parallel architecture is inherited from the message passing algorithm and all the operations
+
+formed to how to read and write the messages aligned in different ways, requiring complex index generation to access the storage elements.
+
+required in each node are implemented as a PU. The number of PUs is as many as the number of the variable and check nodes.
+
+B. Proposed Loosely Coupled Processing
+
+For the sake of clarity, only two variable PUs and two check PUs To resolve the complex interconnection problem, the pro-
+
+are depicted in Fig. 3, where a check PU at the right-hand side posed architecture does not exchange the variable and check
+
+denotes a check node that computes 6 messages using 6
+
+messages, and , between check and variable nodes. In-
+
+messages transferred from variable nodes, and a variable PU at stead, it delivers only the row and column summation values,
+
+the left-hand side corresponds to a variable node computing three and defined in (9) and (11), to the neighbor nodes as shown
+
+messages in a similar way. Computed messages are stored in Fig. 6.
+
+into flip-flops located under the PUs for the next computation.
+
+To derive the individual messages from the summation value,
+
+The PUs calculate (9) and (10), or (11) and (12) using look-up a PU has to include additional operations computed in the
+
+tables and self-exclusive adder trees as depicted in Fig. 4, where neighbor PUs in the previous architecture. Equations (9) to (12)
+
+the functions of LT and AE are
+
+and
+
+are restructured to reflect the additional operations. Given the
+
+(exp ), respectively.
+
+column summation values, , a check PU recovers individual
+
+Although the fully parallel implementation of the message passing algorithm is straightforward and results in a high throughput decoder, it faces with complex interconnections caused by a quite large number of irregular edges. Complex interconnections are required to sum up the and messages that are calculated in the PUs spread over the chip area.
+
+messages and generates the next row summation value to be delivered to the variable PUs. And then it computes the intermediate values, , to be used to recover the individual messages from the next column summation values and stores them into the local flip-flops. The following equations stand for the detailed operation of the check PU
+
+The complexity of the interconnection can be easily inferred
+
+from the number of edges in Fig. 3 by expanding the factor
+
+(13)
+
+graph for more than one thousand nodes. Consequently the global interconnections, denoted by a white box in the middle
+
+(14)
+
+of Fig. 3, become complex and long.
+
+The interconnection complexity can be reduced by em-
+
+(15)
+
+ploying the serial architecture in which a shared PU computes
+
+all the rows or columns one after another as shown in Fig. 5.
+
+(16)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+KANG AND PARK: LOOSELY COUPLED MEMORY-BASED DECODING ARCHITECTURE FOR LDPC CODES
+
+1049
+
+Fig. 5. Serial LDPC decoding architecture.
+
+Fig. 6. Proposed architecture based on loosely coupled data flows.
+
+delivered to other type of PUs, the number of interconnections is reduced significantly.
+In the proposed architecture, (13) to (16) consist of a data flow of the check node and (17) to (20) consist of another data flow of the variable node. The two data flows are symmetrical and each has whole processing operations except the row or column summation. As only the row and column summation values, and
+, are exchanged, the dependence between the two data flows become loose at the cost of duplicated operations. This loosely coupled architecture alleviates the interconnections required for exchanging and messages aligned in different manners. The duplicated operations increase the hardware complexity of PUs. This overhead is inevitable to reduce the interconnection complexity that is more serious than the logic complexity in today’s deep submicron technology. To reduce the overhead, a partially parallel architecture is presented in the next section.
+
+IV. AREA-EFFICIENT PARTIALLY PARALLEL
+
+Similarly, the variable PU recovers individual messages and
+
+DECODING ARCHITECTURE
+
+generates column summation value to be delivered to the As the intermediate values, and , are stored in the local
+
+check PUs. In this case, is the intermediate value
+
+storage, the proposed architecture can exploit the partially par-
+
+(17) allel architecture in which each PU takes in charge of several number of rows or columns. As a PU is shared for a number
+
+of rows or columns, the number of PUs becomes much smaller
+
+than that of the fully parallel architecture, as shown in Fig. 8.
+
+(18) In addition, since a PU processes a row or column at a time,
+
+(19) the intermediate values, and , processed by a PU can be grouped and stored into a local memory instead of flip-flops to
+
+(20) save area. This architecture can reduce the number of intercon-
+
+nections further by sharing the multiplexers required to access
+
+Note that the intermediate values are not and , but the row and column summation values.
+
+and defined in (16) and (20). Detailed block diagrams of the Though the partially parallel architecture looks similar to the
+
+variable PU and check PU are depicted in Fig. 7. Compared to previous serial architecture, its write interface is much simpler
+
+the previous architecture, the PUs in the proposed architecture than that of the serial architecture. Since the intermediate values
+
+have both LT and AE look-up tables and additional subtractions
+
+and stored in a local memory are accessed by only a
+
+for the added (13), (16), (17) and (20). For the (12, 3, 6) LDPC PU, they can be calculated regardless of their alignment in the
+
+code, a variable PU reads 3 ’s from the local storage and gets local memory. Moreover the resulting intermediate values are
+
+the corresponding row summation values to compute a column written back to the positions they are read from. Thus, the index
+
+summation value to be delivered to the check nodes, and generation required for writing the results to the other memory
+
+then it computes 3 new ’s for the next iteration. The check in the serial architecture is no longer necessary in the partially
+
+PU does the similar processing for 6 ’s. As , and are not parallel architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1050
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+Fig. 7. PUs for the proposed LDPC decoder. (a) Variable PU. (b) Check PU.
+
+Fig. 9. Example of overlapped processing.
+
+Fig. 8. Partially parallel LDPC decoding architecture.
+
+performed according to the increasing order of indexes without scheduling, no overlapped processing is possible. Though two
+
+A. Overlapped Processing
+
+CTV operations for variable nodes of index 2 and 7 can start at the last cycle of the VTC step, CTV step does not start until three
+
+As described in Section II, the VTC and CTV operations are CTV operations are enabled for easy control design. If the VTC
+
+parallel in nature and thus a PU can process any rows or columns operations are scheduled as shown in Fig. 10(b), three CTV op-
+
+regardless of their order in matrix . Since a PU takes in charge erations for variable nodes of index 2, 6 and 9 can start pro-
+
+of several rows or columns in the partially parallel architecture, cessing at the last cycle of the VTC step. Furthermore, the CTV
+
+we have to determine which rows or columns are processed in operations can be scheduled to enable the VTC operations of the
+
+the PU. In the grouping, the dependencies between rows and next iteration to start earlier. In this example, the scheduling of
+
+columns should be considered to minimize overall cycles by the VTC and CTV operations saves two cycles.
+
+overlapping the VTC and CTV operations. For example, the The scheduling process can be viewed as the row and column
+
+CTV operation for in the (12, 3, 6) LDPC code requires the permutation of the parity check matrix . Fig. 10(a) is the orig-
+
+VTC operations for
+
+and to be completed beforehand. inal parity check matrix whose size is
+
+. In this case, the
+
+In addition, it is important to determine the processing order of size of is 6 12 and we assume 2 check PUs and 3 variable
+
+rows or columns for a PU, because the dependence of the
+
+PUs. If there are check PUs, rows at the top of the matrix
+
+and can hinder the overlapped processing.
+
+are processed in the first cycle, the next rows in the second
+
+Traditionally, the CTV operations start only after the entire cycle, and so on. Therefore, the VTC step takes
+
+cy-
+
+VTC step finishes completely, and vice versa. A well-scheduled cles where means the smallest integer that is greater than or
+
+sequence of the message calculations can reduce the latency, equal to . Similarly, the CTV step takes
+
+cycles if there
+
+because the CTV step can start in the course of the VTC step if are variable PUs. The permutation changes the sequence of
+
+the corresponding row summation values are available, and vice the VTC and CTV operations to enlarge the empty slots at the
+
+versa. The overlapped processing of the VTC and CTV steps lower left and upper right corners as shaded in Fig. 10(b).
+
+results in a reduced number of cycles.
+
+The empty slots in a column mean that the processing of the
+
+Fig. 9 shows an example scheduling for the (12, 3, 6) LDPC column can start as long as the rows above the empty slots are
+
+code, assuming that the numbers of check PUs and variable PUs processed beforehand. If there are empty slots in a column, the
+
+are two and three, respectively. Each arrow denotes a clock cycle column processing can start
+
+cycles earlier, and if the first
+
+and the numbers above an arrow indicate the row or column in- columns have more than empty slots, all the variable PUs
+
+dexes processed at that cycle. If the VTC and CTV steps are can start their processing one cycle earlier. The simultaneous
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+KANG AND PARK: LOOSELY COUPLED MEMORY-BASED DECODING ARCHITECTURE FOR LDPC CODES
+
+1051
+
+Definition II: Columns to be completed (CTC) of an unse-
+
+lected row means the number of columns whose
+
+1’s are
+
+located in the selected rows. This means that all the 1’s in those
+
+columns are covered if the row is selected.
+
+If all the 1’s in a column are included in the already scheduled rows, it can be thought that all the VTC operations which have dependencies with the column are completed. In Fig. 10(b), if we assume that the first, third and second rows are already selected, the CTC of the fifth row is two since all the 1’s in the 6th and ninth columns are included in the scheduled rows by appending the fifth row to the set of scheduled rows.
+
+The proposed scheduling algorithm is as follows.
+
+Step 1) Row sequence null, column sequence null.
+
+Step 2) Order row indexes randomly and pick the first one.
+
+Then go to Step 4.
+
+Step 3) Count CC and CTC for unselected rows. Then pick
+
+Fig. 10. Scheduling by the permutation of matrix H. (a) Matrix H. (b) Permuted matrix.
+
+a row that has the maximal CTC. If there are more than two rows associated with the maximal CTC,
+
+early starting is possible if the
+
+slots that are at the lower
+
+left part surrounded by thick lines are all empty, and it is required
+
+to achieve an easy control design. For example, as three columns
+
+have empty slots larger than two in Fig. 10(b), they can start
+
+after two cycles of the VTC step. Similarly, the empty slots in a
+
+row mean that the processing of the row can start as long as the
+
+columns at the left-hand side of the empty slots are processed
+
+beforehand, leading to two rows that can start after three cycles
+
+of the CTV step.
+
+In fact, the earliest cycle found by the permutation is not the
+
+real starting time of the CTV (VTC) step. For the sake of easy
+
+control design, we assume that the CTV (VTC) step performs
+
+continuously without skipping cycles once it starts. If there is a
+
+cycle in which any column (row) cannot be processed during the
+
+CTV (VTC) step, the former operations are delayed to achieve
+
+continuous CTV (VTC) operations.
+
+Step 4) Step 5)
+Step 6) Step 7)
+Step 8)
+
+select the one that has the largest CC. Append columns which have 1 at the just selected row but not selected yet to the column sequence. If there are columns that are newly completed by selecting the rows, move them right after the already completed columns. Uncompleted columns are shifted right by the number of the newly completed columns. If there are unselected rows go to step 3. Otherwise go to Step 7. If there are check PUs, assign the first rows at the top of the permuted matrix to the first cycle of the VTC step, the next rows to the second cycle, and so on. Similarly, for variable PUs, assign columns from the left of the permuted matrix to each cycle of the CTV step. Calculate the start point of the CTV and VTC oper-
+
+B. Scheduling Algorithm
+
+ations for easy control design.
+
+It takes a considerable amount of time to find an optimum schedule that minimizes the overall cycles because of the large number of rows and columns. There has been a heuristic scheduling algorithm proposed for quasi-cyclic LDPC codes [19], but it cannot be applied to general LDPC codes. We describe in this section a new scheduling algorithm developed for the partially parallel LDPC decoding architecture. The proposed algorithm is based on the concept of the matrix permutation. The algorithm makes the row sequence and column sequence that can result in empty spaces in the lower left and upper right corners of the permuted matrix when the matrix is rearranged according to the sequences. The row sequence is made by selecting rows one by one in the proposed algorithm. Before describing the proposed algorithm, there are two terms to be defined first.
+
+The random ordering of row indexes in Step 2 is to explore
+
+more search space by starting from a different row and giving
+
+priority to a different row when there are many rows that have
+
+the same CTC and CC. Steps 3 to 5 are the main loop of ma-
+
+trix permutation and Steps 7 to 8 assign rows and columns to
+
+PUs considering easy control design. In the algorithm, rows are
+
+selected to make the upper right part of the permuted matrix as
+
+empty as possible and completed columns are moved to the left
+
+in order to make enlarged empty space in the lower left part. An
+
+example of the algorithm is illustrated in Fig. 11. By applying
+
+the proposed scheduling algorithm to various LDPC codes, we
+
+can save the number of processing cycles per iteration as sum-
+
+marized in Table I, where parallelism
+
+stands for an im-
+
+plementation associated with check PUs and variable PUs.
+
+Definition I: Common columns (CC) of an unselected row In Table I, there are three types of LDPC codes. One is from
+
+means the number of 1’s that are common with the selected Mackay’s Encyclopedia of Sparse Graph Codes [16]. They are
+
+rows.
+
+regular LDPC codes constructed systematically for the binary
+
+If we assume that the first and third rows in the parity check symmetric channel [18]. Another is constructed using Neal’s
+
+matrix for the (12, 3, 6) LDPC codes are selected, the CC of the software [17]. Basically, it tries to locate 1’s randomly on the
+
+fifth row is four, because the row has four 1’s common with the parity check matrix, maintaining the number of checks per row
+
+selected rows, the second, eighth, ninth, and eleventh columns. approximately uniform. Resulted LDPC codes are irregular. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1052
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+Fig. 11. Illustrative example of the proposed scheduling. (a) Select r . (b) Append r . (c) Append r . (d) Move c . (e) Append r . (f) Move c ; c . (g) Append r . (h) Move c ; c ; c . (i) Append r .
+
+other is also a kind of randomly constructed LDPC codes. The to the number of PUs as shown in Table I. Therefore, a tradeoff
+
+parity check matrix is extended by appending a column whose between the area and the processing time has to be investigated
+
+1’s locations are randomly generated under the constraints of the for a number of parallelisms.
+
+given row and column weights and no 4-cycle. For three types of Fig. 12 shows experimental results for a (1024, 3, 6) LDPC
+
+LDPC codes, we generate several codes by varying code length, code. The first bar in the graph represents the total gate count
+
+column and row weights and code rate.
+
+including both the PUs and the and memories implemented
+
+For these codes, the proposed scheduling algorithm reduces with dual port SRAMs. The second bar represents the total
+
+the number of cycles per iteration by 36.7% on the average. The processing cycles considering the dependence between the row
+
+third and forth columns represent the number of cycles per it- and column summation values. The solid line represents the
+
+eration obtained without and with overlapped processing. The throughput per gate, which is a measure of the tradeoff between
+
+fifth and sixth columns indicate the number of reduced cycles throughput and hardware cost.
+
+resulted from the proposed algorithm and its percentage to the The results show that more parallelism delivers higher
+
+cycles without scheduling. The proposed algorithm works well throughput because the second bar becomes shorter as the
+
+for all the three types of LDPC codes and the percentage of parallelism increases. The fully parallel architecture ensures
+
+the saved cycles is almost uniform if the code length and row the highest throughput if the area is not restricted. In the dual
+
+and column weight are given regardless of their construction port SRAM used in this experiment, there is a restriction that
+
+methods. Table II shows the maximum number of saved cycles the minimum number of words is 32. This constraint prevents
+
+that is achieved by 100000 random schedulings which can be higher parallelism because the number of nodes computed by a
+
+used as a performance reference of the proposed scheduling al- PU decreases as the number of PUs increases. In other words,
+
+gorithm.
+
+the height of SRAM becomes shorter. Due to the minimum
+
+number of memory words of the SRAM and the peripheral
+
+V. PROTOTYPE IMPLEMENTATION
+
+circuit overhead such as address decoders and sense amplifiers, the gate count increases exponentially for more than parallelism
+
+There are two things to be considered in implementing an (16, 32). Since on-chip memory is fast enough to be accessed
+
+LDPC decoder based on the proposed architecture. First, we twice during one cycle, two local memories can be merged into
+
+have to determine the number of check and variable PUs. The a large-sized local memory being accessed by two PUs. With
+
+number of PUs to be employed in implementation should be this technique, more parallelism can be exploited. For more
+
+determined by exploration, because the number of overlapped than parallelism (32, 64), however, some part of the SRAM
+
+cycles and the hardware complexity are not linearly proportional starts to be vacant due to the minimum height. Consequently,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+KANG AND PARK: LOOSELY COUPLED MEMORY-BASED DECODING ARCHITECTURE FOR LDPC CODES
+TABLE I CYCLES SAVED BY SCHEDULING PER ITERATION
+
+1053
+
+TABLE II NUMBER OF CYCLES SAVED BY RANDOM SCHEDULING
+
+Fig. 12. Hardware cost versus processing cycles.
+
+tions are
+
+and
+
+(exp
+
+.
+
+The two functions are identical if is greater than 0 and
+
+can be implemented with memories or simple combinatorial
+
+logics because the log-domain probability needs an arithmetic
+
+excessive parallelism does not provide the optimal design in precision of just 3–5 bits for good coding performance. As
+
+terms of area.
+
+(exp ) is positive
+
+The second thing to be considered is how to implement for a positive input and
+
+, the signed magni-
+
+look-up tables. Since for a PU the number of look-up ta- tude representation is more efficient than the 2’s complement
+
+bles required is two times as many as the row or column representation. On the other hand, as the 2’s complement rep-
+
+weight, it is important to make the table efficient in the resentation is efficient for the self-exclusive adder trees and the
+
+sense of area. As mentioned in Section III, the table func- subtraction required for calculating the individual messages,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1054
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+Fig. 13. Detailed PUs of the proposed LDPC decoder. (a) Variable PU. (b) Check PU.
+TABLE III TYPES OF LOOK-UP TABLES
+
+we have to convert the signed magnitude representation to mation values are stored in two one-dimensional arrays of D
+
+the 2’s complement representation. To minimize the area and flip-flops for instant and simultaneous access. To feed the sum-
+
+delay, these conversion logics can be merged with the function mation values to other type of PUs, multiplexers are used. Since
+
+while maintaining the look-up table for the positive input.
+
+and are stored in the local memory in a scheduled se-
+
+Therefore, four different types of look-up tables are imple- quence, PUs can read and write the intermediate values to cal-
+
+mented to take into account the operations performed before culate the summation by simply incrementing the address of the
+
+and after the function and the sign bits are processed sepa- local memory. Each column summation value is bit-by-bit de-
+
+rately, as described in Fig. 13. The functions and input/output coded according to its sign bit to determine the final output.
+
+representations of look-up tables are summarized in Table III.
+
+For parallelism (16, 32) and (32, 64), we designed two (1024,
+
+In the check PU, LUT1 gets an n-bit 2’s complement 3, 6) LDPC decoders using a 0.18- m 4-Metal CMOS process.
+
+input and generates an
+
+-bit output that is the magni- The performances of the decoders are summarized in Table IV.
+
+tude of the n-bit signed magnitude representation, because The first decoder corresponding to parallelism (16, 32) has a
+
+is always positive and the sign that synthesized area of 6.29 mm and is simulated correctly at the
+
+is separately processed is combined before accessing LUT2 frequency of 200 MHz, resulting in more than 500 Mbps de-
+
+whose function is
+
+. LUT2 gets an n-bit coding throughput. The second decoder corresponding to par-
+
+signed magnitude input and generates an n-bit 2’s complement allelism (32, 64) occupies an area of 10.08 mm and provides
+
+output whose value is negated for the subtraction located before almost 1 Gbps decoding throughput at the same frequency. The
+
+LUT1. The adder in Fig. 13(b) is to subtract stored in the performance of the second decoder is comparable to the fully
+
+local memory from the column summation values. Thus, LUT2 parallel architecture proposed by Blanksby et al., but the pro-
+
+convert the output in advance considering its sign bit. The nega- posed decoders achieve significant area reduction. Fig. 15 shows
+
+tion is to enhance the processing speed, as addition is usually the die photo of the second decoder whose parallelism is (32,
+
+faster than subtraction. The input and output representation of 64). Although the iteration number in Blanksby’s implementa-
+
+LUT3 and LUT4 are determined similarly.
+
+tion is fixed to 64 due to the scan-chain like I/O mechanism,
+
+there is no restriction in the proposed architecture. We chose
+
+VI. EXPERIMENTAL RESULTS
+
+eight iterations to provide sufficient bit-error rate (BER) perfor-
+
+We designed a (1024, 3, 6) LDPC decoder based on the pro- mance.
+
+posed partially parallel architecture. As plotted in Fig. 14, the overall architecture is divided into two parts according to and
+
+VII. CONCLUSION
+
+memory. The intermediate values calculated in a PU are stored This paper has presented a new LDPC decoding architecture
+
+in the corresponding local memory, while row and column sum- proposed to relax the interconnection complexity and reduce
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+KANG AND PARK: LOOSELY COUPLED MEMORY-BASED DECODING ARCHITECTURE FOR LDPC CODES
+
+1055
+
+Fig. 14. Block diagram of the proposed LDPC decoder.
+TABLE IV COMPARISION OF LDPC DECODERS
+
+memory instead of registers, since other PUs do not access them. The memory-based architecture is area-efficient in the sense that the memory takes much less area compared to the register if both have the same size. We have extended the proposed architecture for the partially parallel architecture in order to further reduce area by increasing memory usage, and have proposed an efficient algorithm that schedules the processing order of the partially parallel architecture to reduce the overall processing time by overlapping CTV and VTC steps. It saves the number of cycles per iteration by 36.7% on the average and is applicable to both regular and irregular LDPC codes.
+To verify the proposed architecture, a (1024, 3, 6) LDPC decoder is implemented using a 0.18- m CMOS process. The decoder occupies an area of 10.08 mm and runs correctly at the frequency of 200 MHz, resulting in almost 1 Gbps decoding throughput. Compared to the previous architecture, the proposed decoder occupies almost one fifth of area. Since the proposed architecture is highly regular, it is easy to scale up and down the parallelism according to the system specification.
+
+REFERENCES
+
+Fig. 15. Die photo of the proposed LDPC decoder chip.
+area. In the proposed architecture, only the row and column summation values are exchanged among check and variable PUs to reduce the interconnection complexity. To recover the individual messages from the summation values, the function of a PU is restructured to include some operations that are traditionally performed in the neighbor nodes. In addition, intermediate values accessed by a PU are grouped and stored into a local
+
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inf. Theory, vol. IT-8, pp. 533–547, Jan. 1962.
+[2] S. Chung, D. Forney, T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the Shannon limit,” IEEE Comm. Lett., vol. 5, pp. 58–60, Feb. 2001.
+[3] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[4] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[5] E. Yeo, P. Pakzad, B. Nikolic´, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magn., vol. 37, pp. 748–755, Mar. 2001.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+1056
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 53, NO. 5, MAY 2006
+
+[6] E. Eleftheriou and S. Ölçer, “Low-density parity-check codes for digital
+
+subscriber lines,” in Proc. IEEE Int. Conf. Commun., May 2002, pp.
+
+1752–1757.
+
+[7] P. Urard et al., “A 135 Mb/sDVB-S2 compliant codec based on 64 800
+
+b LDPC and BCH codes,” in Proc. IEEE Int. Solid-State Circuits Conf.,
+
+Feb. 2005, pp. 446–447.
+
+[8] V. Sorokine, F. R. Kschischang, and S. Pasupathy, “Gallager codes for
+
+CDMA applications—Part I: Generalizations, constructions and perfor-
+
+mance bounds,” IEEE Trans. Commun., vol. 48, no. 10, pp. 1660–1668,
+
+Oct. 2000.
+
+[9] B. Lu, X. Wang, and K. R. Narayanan, “LDPC-based space-time coded
+
+OFDM systems over correlated fading channels: Performance analysis
+
+and receiver design,” IEEE Trans. Commun., vol. 50, no. 1, pp. 74–88,
+
+Jan. 2002.
+
+[10] K. Lo, “Layered space–time structures with low density parity check
+
+and convolutional codes,” M.S. thesis, School of EIE, Univ. of Sydney,
+
+Sydney, Australia, 2001.
+
+[11] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans.
+
+Inf. Theory, vol. IT-27, pp. 533–547, Sep. 1981.
+
+[12] F. R. Kschischang, B. J. Frey, and H. Loeliger, “Factor graphs and the
+
+sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp.
+
+498–519, Feb. 2001.
+
+[13] F. R. Kschischang, “Iterative decoding of compound codes by proba-
+
+bility propagation in graphical models,” IEEE J. Sel. Areas Commun.,
+
+vol. 16, pp. 219–230, Feb. 1998.
+
+[14] M. M. Mansour and N. R. Shanbhag, “On the architecture-aware struc-
+
+ture of LDPC codes from generalized Ramanujan graphs and their de-
+
+coder architecture,” in Proc. 37th Annu. Conf. Inf. Sci. Syst., Mar. 2003,
+
+pp. 215–220.
+
+[15]
+
+, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale
+
+Integr. (VLSI) Syst., vol. 11, pp. 976–996, Dec. 2003.
+
+[16] Encyclopedia of sparse graph codes, D. Mackay. [Online]. Available:
+
+http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+
+[17] Software for low density parity check (LDPC) codes, R. M. Neal. [On-
+
+line]. Available: http://www.cs.utoronto.ca/~radford/ldpc.software.html
+
+[18] D. Mackay, “Good error-correcting codes based on very sparse ma-
+
+trices,” IEEE Trans. Inf. Theory, vol. 45, no. 3, pp. 399–431, Mar. 1999.
+
+[19] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic
+
+low-density parity check codes,” IEEE Trans. Circuits Syst. I, Reg. Pa-
+
+pers, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+
+[20] J. Barry, “Low-density parity-check codes,” Georgia Inst. Technology, Atlanta, Tech. Rep., 2001.
+Se-Hyeon Kang (S’00) received the B. Tech. degree in electrical engineering from Pohang University of Science and Technology (POSTECH), Pohang, Korea, in 2000, the M.S. degree in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejon, Korea, in 2002. Currently, he is working toward the Ph.D. degree in the Department of Electrical Engineering and Computer Science at KAIST.
+His research interests include VLSI design for communication and signal processing.
+In-Cheol Park (S’88–M’92–SM’02) received the B.S. degree in electronics engineering from Seoul National University, Seoul, Korea, in 1986, the M.S. and Ph.D. degrees in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejon, Korea, in 1988 and 1992, respectively.
+Since June 1996, he has been an Assistant Professor and is now a Professor in the Department of Electrical Engineering and Computer Science at KAIST. Prior to joining KAIST, he was with IBM T.J. Watson Research Center, Yorktown, NY, from May 1995 to May 1996, where he researched on high-speed circuit design. His current research interest includes computer-aided design (CAD) algorithms for high-level synthesis and VLSI architectures for general-purpose microprocessors. Prof. Park received the Best Paper award at ICCD in 1999, and the best design award at ASP-DAC in 1997.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:17:16 UTC from IEEE Xplore. Restrictions apply.
+
+

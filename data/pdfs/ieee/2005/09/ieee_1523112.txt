@@ -1,0 +1,298 @@
+Versatile Architectures for Decoding a Class of LDPC Codes
+Andrew Byrne ∗ Emanuel M. Popovici∗ Michael O’Sullivan †
+
+Abstract — This paper presents a construction for low and high rate Low-Density Parity Check (LDPC) codes, their performance and efficient hardware implementation. The problem with decoding for LDPC codes is the linear increase in resource requirements as the size of the parity check matrix increases. This results in a number of issues with regard to practical implementation. These issues include interconnect routing, memory size and parallelism. A construction for low complexity, variable rate LDPC code will be introduced and an architecture that takes advantage of certain properties of this construction is proposed. A versatile LDPC decoding architecture is then evaluated on FPGA.
+
+1 Introduction
+
+LDPC codes were originally discovered by Gallager[1] in the 1960s but were too complex to implement. Since their rediscovery in 1995 by Mackay and Neal[2], there has been renewed interest in the codes because their bit error rate performance approaches the Shannon limit[3].
+LDPC codes have an advantage over Turbo codes in that they require an order of magnitude less arithmetic computations than Turbo decoders. Furthermore, decoding algorithms for LDPC codes also have the benefit of being inherently parallel.
+This property has allowed for the implementation of very fast parallel decoders. Ultimately though, this leads to very complex, expensive circuits in terms of interconnect and routing between the bit and check nodes. Serial architectures on the other hand are very simple in terms of interconnect but have very high memory requirements. A balance can be found by introducing a certain amount of parallelism to the serial approach by dividing the decoding process over several serial decoders working in parallel[4].
+This paper presents some particular cases of a construction by O’Sullivan[5] for variable rate, low complexity LDPC codes with large girth. In this construction, the parity check matrix is composed of blocks of square matrices. Each square matrix is a sum of permutation matrices which are defined
+
+∗Department
+
+of
+
+Microelectronic
+
+Engineer-
+
+ing, University College Cork, Ireland, e-mail:
+
+[a.byrne,e.popovici]@ucc.ie
+
+†Dept.
+
+of Mathematics and Statistics, San
+
+Diego State University, San Diego, CA, e-mail:
+
+mosulliv@math.sdsu.edu
+
+by an affine equation over a set of integers mod N , where N is of type 2k + 1 or 2k − 1.
+
+2 Overview of LDPC Decoding
+
+LDPC codes are a special class linear block codes whose parity check matrix (H) has a low density of ones. The sparseness of the 1’s in H makes them much easier to implement.
+To visualize the Message-Passing algorithm[6] used for decoding we consider a H matrix and represent it as a bi-partite graph called the Tanner graph (Figure 1). Each column in H is represented by a bit node in the graph and each row is represented by a check node. In this case, H is a 4 × 8 matrix. Each 1 in H corresponds to an edge between a check and bit node in the graph. The bit and check nodes represent computational blocks and the edges of the graph indicate how messages are passed.
+
+f0
+
+f1
+
+f2
+
+f3
+
+Check Nodes
+
+c0 c1 c2 c3 c4 c5 c6 c7 Tanner Graph Representing the H Matrix
+
+Bit Nodes
+
+Figure 1: Example Tanner Graph
+
+LDPC decoders implement a message passing algorithm which specifies the computation of messages and their communication between bit and check nodes as defined by the edges in the graph. One iteration of the decoding algorithm consists of a round of message passing from each bit node to all connected check nodes, followed by a round of message passing from each check node to all connected bit nodes. The decoding of a codeword is achieved through successive iterations of this message passing until the message is decoded or some upper time limit has been reached.
+Although the computational complexity for calculating the check-to-bit and bit-to-check messages is low, the sparse structure of the Tanner graph leads to complex interconnect in parallel architectures, or excessive memory requirements in serial architectures. We aim to tackle these restrictions by presenting a versatile serial architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:22:31 UTC from IEEE Xplore. Restrictions apply.
+
+3 Code Construction
+
+We build on a standard approach for constructing low-density matrices, which is to write the matrix H as an R × S composite of N × N submatrices:
+
+ A11 A12 . . . . . . A1S 
+
+H
+
+=
+
+ A21
+
+ 
+
+.
+
+.
+
+.
+
+A22 ...
+
+... ...
+
+. . . A2S 
+
+...
+
+ 
+
+(1)
+
+AR1 AR2 . . . . . . ARS
+
+with each Ars having a simple description. Typically each Ars is a circulant matrix. An N × N circulant matrix is completely described by an integer b between 0 and N − 1, called its shift. The circulant Ib is the matrix whose entry in position (m, n) is 1 when n ≡ m + b mod N and is 0 otherwise. Alternatively one may use affine permutation ma-
+trices. These are defined by two parameters, a and b with a coprime to N . The entry in the affine permutation matrix Ja,b is 1 in position (m, n) when n ≡ am + b modN and is 0 otherwise. For N = 5 we have:
+
+The girth of the bipartite graph is the key parameter affecting the coding gain achieved by the LDPC code, so it is valuable to have it as large as possible.
+The main idea of this paper is to exploit this construction in a versatile architecture and to use the simple addressing introduced by these modulo solutions.
+The architecture could be further enhanced by parallelizing the s values and serialize the n values. Thus there are R different units each operating serially N times to do one round of message passing from the rows to the columns, and similarly S units each operating serially N times to do one round of message passing from the columns to the rows.
+4 Hardware Architectures
+In this section we review a number of approaches to the practical implementation of an LDPC decoder. For each approach, the relative advantages and drawbacks will be discussed.
+4.1 Parallel Decoder
+
+I= 2
+
+00100 00010 00001 10000 01000
+
+J= 2,1
+
+00100 00001 01000 00010 10000
+
+Using this method, the nodes of the bipartite graph can be doubly indexed, the row nodes by (r, n) for r = 1..R and n = 1..N , the column nodes by (s, n) for s = 1..S and n = 1..N . The edges of the graph are described simply by the parameters used to determine the matrices Ars. For example, if each Ars is a circulant defined by a shift brs, then the set of RS values brs completely describes the RN × SN matrix H. Row node (r, m) is connected to S column nodes, namely for each s = 1..S, (s, n) where n ≡ m+brs mod N . The situation for affine permutations is similar. In fact one can even make each Ars a sum of affine permutations and still take advantage of these methods.
+In [7, 8, 9, 10] each of the Ars is a circulant matrix. Fan [7] models the choice of shift for the circulants on Reed-Solomon codes. Tanner Sridhara and Fuja [9] use a prime N for the dimension of the circulants and use the multiplicative group of Z/N to choose the shifts for the circulants. Fossorier [10] used computer search to choose the shifts for the circulants and achieve girth of 6 and 8. The use of affine permutation matrices was introduced by Bond, Hui and Schmidt [11]. Methods for ensuring that the bipartite graph of H has large girth when affine permutations are used is presented in [5, 12].
+
+The message passing algorithm (discussed in Section II) is inherently parallel, therefore a parallel architecture can process all the bit and check nodes simultaneously. This is because there is no dependency between any of the check nodes Qn for n = 1, 2, .., N nor between any of the bit nodes Rm for m = 1, 2, , M . In fact, one can directly map the bit and check computational blocks onto the bit and check nodes in the Tanner graph, using the edges as the interconnect.
+A fully parallel implementation while efficient from a power and speed point of view is inefficient in terms of area due to interconnect between the processing elements. The number of computational blocks required is a one to one relationship with the number of nodes in the Tanner graph. For a large H matrix, the resource demands and complexity for a hardware implementation will become excessive.
+
+Check Node 1
+
+Check Node 2
+
+0 0 1 10 1 0 1 0 0 1 11 0 1 00 0 1 1 1 1 0 0 1 0 1 0
+
+Check Node M
+
+Bit Node 1
+
+Bit Node 2
+
+Bit Node 3
+
+0 0 1 0 1 10 1 1 0 0 1 0 1 1 1 0 0 1 1 1 0 0 01 0 0 0 1 10 0 0 1 1 1 1 0 1 0 1 0
+
+Bit Node M
+
+M−bit Soft Codeword
+Figure 2: Parallel Decoder One way to overcome this congestion to use multiplexers. Following the indexing mechanism from
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:22:31 UTC from IEEE Xplore. Restrictions apply.
+
+the last section, there are R different units each operating serially N times to do one round of message passing from the rows to the columns, and similarly S units each operating serially N times to do one round of message passing from the columns to the rows. The drawback of this method is that an efficient addressing mechanism has to be used. In Section 4.3 we will propose an efficient way to implement this addressing mechanism.
+4.2 Serial Decoder
+A serial implementation (Figure 3)dramatically reduces the complexity of the interconnect and the total area of the design. This architecture only processes one bit at a time and therefore the latency is directly related to the length of the code. In a serial decoder one bit node computational block is repeatedly used to process the entire codeword. This will make the decoding process very slow and will also require a lot of memory to store all the messages. One way to increase the speed of the decoder is to distribute the process across a number of computational blocks. The check and bit node messages are stored temporarily in memory. The addressing of memory must consider the message flow between the check and bit nodes.
+
+Data In
+
+Memory
+
+Array of Bit Nodes
+
+Memory
+
+Array of Data Out Check Nodes
+
+Control Logic
+
+Figure 3: Serial Decoder
+
+where C0 ∈ {0, 1} , 0 ≤ CL ; CH ≤ 2k
+
+From this we can calculate the modulus
+C∗ = C mod (2k + 1).
+To calculate C∗ we must first determine CL and CH . For a = b = 2k , C0 = 1 , CL = CH = 0 and C∗ = 1
+If, however, 0 ≤ p; q ≤ 2k then C0 = 0 and CL and CH can be derived from C by taking the k LSBs as the value for CL and take the next k bits as the value for CH . The MSB is C0. Now that we have values for CH and CL we calculate C∗ as follows:
+
+C∗ =
+
+CL − CH + C0
+
+, CL ≥ CH
+
+CL − CH + (2k + 1) , CL < CH
+
+(3)
+
+If C = a + b then (3) can be simplified by the observation that C0 = 0 and CH ∈ {0, 1}. Thus, for any modulo operations of type pm + q mod (2k + 1) with 0 ≤ p, m, q < 2k + 1, we have an efficient scheme to calculate the node connections using sim-
+ple addition, multiplication and comparisons. In
+this way we can easily determine the modulus of
+any number represented on 2k + 1 bits. By taking advantage of this property and using built-in
+dedicated multipliers from the Xilinx Virtex II Pro
+library, we have developed an efficient addressing
+scheme for the code construction presented in Sec-
+tion 3. Similar reasoning can be applied for the modulo operations of type m + q mod 2k − 1, with 0 ≤ m, q < 2k − 1[13]. Thus, we can extend the number of primes and therefore increase the good
+LDPC code searching space.
+
+4.3 Modulo N arithmetic
+
+Modulo operation as presented in Section 3 is costly when implemented in hardware. Let us consider a construction for an LDPC code from Section 3 where N = 2k + 1. Thus the equation defining the matrix becomes pm + q ≡ n mod (2k + 1). The reason for choosing N of this type is that we can calculate the modulus very quickly and efficiently in hardware. The advantage is that we can determine the locations of all the ’1’s in the H matrix very fast and with a minimum memory cost. The dissadvantage is that there are only few primes of this type. However, the number is sufficient to research good variable rate LDPC codes.
+Take for example the situation where we have pm mod 2k + 1 (q = 0 in this case)
+For 0 ≤ a; b ≤ 2k
+
+C = ab = C022k + CH 2k + CL
+
+(2)
+
+4.4 Versatile Decoding Architecture
+In both serial and parallel architectures the issue of concern was storing the H matrix so that it could be used for the decoding process. For a 1542×771 matrix this will require an excessive amount of memory particularly when you consider that less than half of the entries are needed for decoding (only the ’1’s are needed). We looked at the construction of the code for N = 2k +1 so that the properties discussed in Section 4.3 could be exploited. By using the relations described in Section 4.3 we can efficiently locate every instance of a ’1’ in the matrix without storing the matrix in memory. This is achieved by comparing the modulus results for am and n. Every match corresponds to a ’1’ in the H matrix. In this way an efficient addressing mechanism can be implemented as shown in Figure 4. In this architecture we present a serial model, but the addressing can be extended to accommodate the parallel decoder discussed in Section 4.1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:22:31 UTC from IEEE Xplore. Restrictions apply.
+
+Counter 1
+m
+
+Counter 2
+n
+
+a (=1) mod N
+
+= b
+
+mod N
+
+n
+MEM A Check Nodes
+
+n
+MEM B Bit Nodes
+
+Check−to−Bit Node Computational Block
+
+Bit−to−Check Node Computational Block
+
+Figure 4: Decoder Architecture
+
+Figure 5: BER vs. SNR performance
+
+Based on the above construction we implemented a length 255, rate 0.8, (3,15)-regular LDPC decoder using Xilinx Virtex-II P device.The results for parallel and serial architectures are given in Table 1.
+
+Resource Slices Slices FF LUTs Block RAMs Multipliers Clock Frequency
+
+Serial 1461 387 2066 4 4 26.67MHz
+
+Parallel 15231 9509 23534 0 0 19.11Mhz
+
+Table 1: FPGA resource usage
+
+The serial implementation takes less area and has higher clock frequency. However, the number of clocks per iteration is proportional to n2 where n is the length of the code. The messages passed between nodes use buses of length four for both serial and parallel implementations.
+
+5 Conclusions
+
+LDPC code construction based on simple arith-
+
+metic operations were presented. Some efficient
+
+addressing serial architecture for these codes were
+
+implemented on FPGA. The serial architecture is
+
+resource efficient but requires more clock cycles to
+
+implement the codes. Figure 5 compares the per-
+
+formance for several LDPC codes. The length 1950,
+
+rate 0.9 code performs well compared to a construc-
+
+tion in [14].
+
+The Rate
+
+1 2
+
+code also performs well
+
+against a code introduced by [15]. We also find
+
+that the performance of a short code of length 255
+
+is very good. Using the construction and the archi-
+
+tecture presented in this paper we can construct a
+
+versatile design for implementing efficient both low
+
+and high rate LDPC decoders.
+
+References
+[1] R.G. Gallager. Low density parity check codes. In MIT, 1963.
+
+[2] D.J.C. Mackay and R.M. Neal. Good codes based on very sparse matrices. In Cambridge, MA: MIT Press, volume 1025, pages 110–111, 1995.
+[3] C.E. Shannon. A mathematical theory of communication. volume 27, pages 379–423 and 623–656. 1948.
+[4] Y. Engling, N. Borivoje, and V. Anantharam. Architectures and implementations of low-density parity check decoding algorithms. In 45th IEEE Midwest Symposium on Circuits and Systems, pages 437–440, 2002.
+[5] M. E. O’Sullivan, M. Greferath, and R. Smarandache. Construction of LDPC codes from affine permutation matrices. In Proc. of the 40th Annual Allerton Conference on Communication, Control, and Computing, 2002.
+[6] Y. Xue and H. Xiang. Performance analysis of finitelength LDPC codes. In 4th IEEE Workshop on Signal Processing Advances in Wireless Communications, 2003.
+[7] J. L. Fan. Array codes as low-density parity-check codes. In Proc. 2nd Int. Symp. Turbo Codes, pages 543–546, 2000.
+[8] R. M. Tanner. On graph constructions for LDPC codes by quasi-cyclic extensions. Information, Coding and Mathematics, pages 209–219, 2002.
+[9] R. M. Tanner, D. Sridhara, and T. Fuja. A class of group-structured LDPC codes. In Proc. of 6th ICSTA, 2001.
+[10] M. P. C. Fossorier. Quasi-cyclic, low-density paritycheck codes from circulant permutation matrices. IEEE Trans. Inform. Theory, 50(8):1788–1793, 2004.
+[11] J. Bond, S. Hui, and H. Schmidt. Linear-congruence construction of low-density check codes. Codes, Systems and Graphical Models, pages 83–100, 2001.
+[12] M. E. O’Sullivan. Algebraic construction of sparse matrices with large girth. IEEE Trans. Inform. Theory, 2005. submitted.
+[13] Z. Wang, G.A.Jullien, and W.C.Miller. An algorithm for multiplication modulo 2N − 1. In IEEE 39th Midwest symposium, volume 3, pages 1301–1304, 1996.
+[14] B. Vasic. LDPC codes based on mutually orthogonal latin rectangles and their application in perpendicular magnetic recording. IEEE Trans. On Magnetics, pages 2346–2348, 2002.
+[15] M. Yang. Design of efficiently encodable moderatelength high-rate irregular LDPC codes. IEEE Trans. On Communications, pages 564–571, 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:22:31 UTC from IEEE Xplore. Restrictions apply.
+
+

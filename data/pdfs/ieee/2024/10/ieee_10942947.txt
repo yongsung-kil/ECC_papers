@@ -1,0 +1,611 @@
+Towards 6G: Configurable High-Throughput Decoder Implementation for SC-LDPC Codes
+Yuqing Ren1, Yifei Shen1, Wenqing Song1, Alexios Balatsoukas-Stimming2, Emmanuel Boutillon3, Andreas Burg1∗
+1Telecommunication Circuits Laboratory, E´ cole Polytechnique Fe´de´rale de Lausanne (EPFL), Switzerland 2Department of Electrical Engineering, Eindhoven University of Technology, The Netherlands 3 Lab-STICC UMR 6285, Universite Bretagne Sud, France email: {yuqing.ren, andreas.burg}@epfl.ch
+
+2024 58th Asilomar Conference on Signals, Systems, and Computers | 979-8-3503-5405-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/IEEECONF60004.2024.10942947
+
+Abstract—Spatially-coupled low-density parity-check (SCLDPC) codes are considered an important candidate for the upcoming 6G standardization, owing to their superior errorcorrection capability and practical decoding complexity. However, current high-throughput SC-LDPC decoders rely on unrolled architectures tailored to a certain code and thus lack the necessary rate compatibility for wireless communications. In this paper, we present a fully reconfigurable decoder architecture for SC-LDPC codes. This hardware architecture can decode virtually any SC-LDPC code that fits in the allocated memories. Based on simplified routing networks, our SC-LDPC decoder can deliver extensive code length and code rate support and achieve high throughput to satisfy the requirements of 6G.
+Index Terms—LDPC codes, SC-LDPC codes, hardware implementation, next-generation, wireless communications, 6G.
+I. INTRODUCTION
+After the successful introduction of low-density paritycheck (LDPC) codes in 5G New Radio (NR) [1], research is vigorously being done on the selection of next-generation channel coding for 6G [2], [3]. Beyond retaining key features of 5G-NR LDPC codes, such as rate compatibility and flexible code lengths and rates, next-generation channel coding must meet even more stringent demands, e.g., a peak date rate of 200 Gbps - 1 Tbps, an energy efficiency of ideally around 1 pJ/bit, and a frame error rate (FER) down to 10−7 [2]. Given the expected ultra-high data rates and diverse operating scenarios, the choice of the right codes and the development of corresponding efficient decoders will be critical for 6G wireless systems, which is a significant challenge.
+Due to their capacity-achieving performance, spatiallycoupled LDPC (SC-LDPC) codes have been viewed as one of the most promising candidates for 6G wireless systems [4], [5]. By superimposing LDPC block codes with a convolutional structure, SC-LDPC codes can achieve the maximum a-posterior probability (MAP) threshold of underlying LDPC blocks using belief propagation (BP) decoding [6]. In ultrahigh data rate scenarios, SC-LDPC codes enable a flexible frame length extension by changing the coupling length [7]. Recently, the authors of [8] proposed a new SC-LDPC code family called edge-spreading Raptor-like (ESRL) LDPC codes, which provides a good solution for next-generation channel coding. Unlike other SC-LDPC codes [9]–[12], ESRL
+
+codes introduce a new protomatrix structure and focus on the design of the coupled matrix. While taking the performance benefits of SC-LDPC codes, ESRL codes also retain key properties of 5G-NR LDPC codes, such as rate compatibility, quasi-cyclic (QC) structure, and BP decoding. When all code configurations, computational complexity, and hardware architecture are equivalent, ESRL codes can outperform the error-correcting performance of 5G-NR LDPC codes by around 1 dB and provide higher processing parallelism [8].
+In terms of hardware implementations, numerous classic QC LDPC decoder architectures with varying degrees of processing parallelism have been reported in the literature [13]– [16]. Specifically for 5G-NR LDPC codes, these architectural strategies have rapidly converged into two main schemes: row-parallel and block-parallel architectures. For instance, the authors of [15] proposed a partial row-parallel architecture to alleviate the routing complexity for long 5G-NR LDPC codes, while the authors of [16] designed a block-parallel 5GNR LDPC decoder to balance flexibility and peak throughput while supporting all 5G-NR LDPC codes. For SC-LDPC codes, decoder implementations can adopt different strategies based on the coupling length. A full BP decoder [17] is suitable for small to medium coupling lengths, while a sliding window BP decoder [18]–[20] is better suited for medium to large coupling lengths. It is noteworthy that [21] proposed an unrolled fully parallel window decoder architecture as a solution for ultra-high throughput SC-LDPC decoders. Subsequently, [19], [20] employed this architecture to achieve throughput on the order of several hundred Gbps on ASIC. However, such high throughput gains come at the cost of sacrificing decoder rate flexibility and relying on hard-wired routing. This limitation makes such architectures less suitable for wireless communication systems, which demand rate flexibility. Given the excellent performance of the aforementioned ESRL codes, a special SC-LDPC variant, developing a decoder architecture for ESRL codes that simultaneously achieves both rate flexibility and high throughput in hardware is a critical challenge to satisfy the 6G demands.
+Contributions: In this paper, we design a reconfigurable high-throughput decoder for ESRL codes. Our decoder can decode virtually any SC-LDPC code that fits into the allocated
+
+979-8-3503-5405-8/24/$31.00 ©2024 IEEE
+
+980
+
+Asilomar 2024
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+B
+(a) HRC 1 1 1
+IRC SSC
+
+Edge-Spreading
+
+1 1
+
+U
+(b)
+
+B
+
+B1
+
+0,   0,  
+
+T
+0 0 0
+1, 
+
+0 0
+
+B0
+
+Raptor-Like:
+
+HRC
+
+IRC
+
+I
+
+(c)
+
+U
+U
+U
+Q
+BSC
+Fig. 1. Code profile of ESRL codes, including an uncoupled protomatrix B, an edge-spreading matrix B, and a tail matrix Q [8].
+memories and can support a wide range of code lengths and code rates in a single VLSI implementation. With a welldesigned quantization strategy, our ESRL decoder implementation can approach the original floating-point performance using 6-bit quantization in hardware. Based on TSMC 16nm technology, with an information length of 17160, this decoder can achieve a peak throughput of 103.9 Gbps with an area efficiency of 91.2 Gbps/mm2, which outperforms other stateof-the-art LDPC decoders and offers a compelling solution for 6G wireless systems.
+II. PRELIMINARIES A. LDPC Codes
+A QC-LDPC code can be described by an m × n protomatrix B with the information length of k = n − m. Each entry can be extended by a Z × Z cyclic-shifting identity matrix (Z is the lifting size). Namely, this expansion transforms B into a parity-check matrix (PCM) H, where M = m · Z, N = n · Z, and K = N − M . From a graphical perspective, H can be further interpreted as a bipartite Tanner graph [22], consisting of a set of M check nodes (CNs) and a set of N variable nodes (VNs). For each CN, let Vc denote the set of the adjacent VNs for the c-th CN, and let Cv denote the set of neighbours of the v-th VN. The number of neighbours connecting to a VN or a CN is referred to as their column- and row-degree, denoted as dv and dc, respectively. For simplicity, we define the cth row of B, or the rows c · Z to (c + 1) · Z − 1 of H, as
+
+the c-th layer. Let qv denote the posterior log-likelihood ratio (LLR) associated with the v-th VN, and Let rc,v denote the message from the c-th CN to the v-th VN. We also define the intermediate variable tv, corresponding to the message from the v-th VN at the current row. Hence, the three message types: Q-message qv, R-message rc,v, and T-message tv are sufficient to completely describe layered decoding, as shown below
+
+tv ← qv − rc,v,
+
+(1a)
+
+rc,v ←
+
+sgn(tv′ ) · min (|tv′ |) · α,
+
+v ′ ∈Vc \v
+
+v ′ ∈Vc \v
+
+(1b)
+
+qv ← tv + rc,v,
+
+(1c)
+
+where we take layered normalized min-sum (L-NMS) decoding [23] as an example and α is the normalization factor.
+
+B. Edge-Spreading Raptor-Like LDPC Codes
+
+ESRL codes are a new rate-compatible SC-LDPC code
+
+family [8], characterized by a code profile defined through
+
+three key matrices: an uncoupled protomatrix B, an edge-
+
+spreading matrix T, and a tail matrix Q. As shown in Fig. 1, B
+
+defines the parent structure of the code, with its nested
+
+structure enabling rate compatibility. This means that higher-
+
+rate ESRL codes are embedded into lower-rate ESRL codes to
+
+support incremental redundancy transmission. The matrix T is
+
+a compact representation of edge-spreading [24] to illustrate
+
+how the non-zero elements of B are spread to form the coupled
+
+matrix BSC. Let ω denote the coupling constraint. An ESRL
+
+code splits B into ω + 1 sub-matrices Bi, i ∈ [0, ω], such
+
+as B =
+
+ω i=0
+
+Bi.
+
+Given
+
+that
+
+the
+
+termination
+
+of
+
+finite-length
+
+SC-LDPC codes always results in an inevitable rate loss, the
+
+tail matrix Q is necessary for ESRL codes to satisfy the en-
+
+coding constraints, which can also alleviate error floors. Using
+
+these three matrices B, T, and Q, the coupled matrix BSC is
+
+constructed. Notably, the ESRL code is a time-invariant SC-
+
+LDPC code with no parallel edges. The time-invariant nature
+
+and the absence of parallel edges ensure that the ESRL code
+
+can be scheduled onto multiple independent identical engines
+
+that decode in parallel, which is called semi-layered multi-
+
+engine (SLME) decoding [8]. The error-rate simulations for
+
+ESRL codes in this paper are based on SLME decoding.
+
+III. QUANTIZATION FOR ESRL CODES
+
+A. Optimized CN Processing
+
+In this section, we focus on the quantization techniques to
+improve the fixed-point performance of ESRL codes. First, we adopt a uniform quantization strategy (qQ, qR). In this notation, qQ is the bit width of the Q- and T-messages associated with VNs, and qR is the bit width of the R-messages associated with CNs. Let yv denote the channel LLR of the vth VN, then we quantize yv as shown below
+
+Λ(yv) = sgn(yv) · min
+
+|yv| + 0.5 , 2qQ−1 − 1 . (2) δ
+
+Since R-messages are obtained as the minimum of incoming T-messages, we observe that qR can generally be represented
+
+981
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:43 UTC from IEEE Xplore. Restrictions apply.
+
++30
+qQ
+
+-28
+qQ
+
++25
+qQ
+
+-10
+qQ
+
++7 qR
+
+-7 qR
+
++7 qR
+
+-7 qR
+
+Search Min Unit
+
+|7| qR
+X |4| qR
+min
+
++30
+
+-28
+
++25
+
+-10
+
+X +22 qQ
+
+X -21 qQ
+
+X +18 qQ
+
+X -7 qQ
+
++7 qR
+
+-7 qR
+
++7 qR
+
+-7 qR
+
+Search Min Unit
+
+|7| qR min
+
+Fig. 2. Optimized CN processing to enhance fixed-point performance under a given quantization scheme (6, 4) and α = 0.75 [25].
+
+FER
+
+100 10−1
+
+R =0.87
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+3.6 3.8 4 4.2 4.4 4.6 4.8 5 5.2
+Eb/N0 [dB] 100
+
+FER
+
+100 10−1
+
+R =0.8
+
+10−2
+
+10−3
+
+10−4
+
+10−5 100
+
+3.2 3.4 3.6 3.8 4 4.2 4.4 4.6 Eb/N0 [dB]
+
+with 2 fewer bits than qQ. Given this difference, saturation processing is performed before the search min unit (SMU) to optimize the data path by reducing the bit-width of SMU operations. However, as illustrated in Fig. 2, multiplying Rmessages by α < 1 always scales them down, leading to inadequate utilization of the R-message quantization range. For example, give a quantization scheme (6, 4) that supports an R-message range of −7 to +7, the maximum R-message magnitude is only 4 after the normalization. This results in the quantization values of “111”, “110”, and “101” being unused. We refer to sign-preserving decoding of [25], by moving the multiplication to the calculation of T-messages and reorganizing the flow of L-NMS decoding. As shown in Fig. 2, thanks to a larger dynamic range of T-messages, we can fully utilize the quantization range of R-messages even after multiplication. Notably, this optimization has minimal impact on the overall path delay.
+Note that the cost for this improvement is the additional multipliers, determined by dcmax , but it allows for a reduction in quantization bits. Given that memory overhead often accounts for over 60% of the total cost in LDPC decoders, and multipliers can be efficiently implemented by shift-andand operations if α is based 2 [16], this approach significantly achieves an overall reduction despite the additional logic.
+B. Performance Analysis
+Fig. 3 presents the fixed-point decoding performance of ESRL codes compared to 5G-NR LDPC codes. To ensure a fair comparison, under L = 10, we refer to [8] and select a series of ESRL codes with K = 85800, where each block has a similar size to that of a single 5G-NR LDPC code with K = 8448 [1]. For 5G-NR LDPC codes, we group 10 individual codewords into a packet frame to get a comparable frame length. Based on the aforementioned optimized CN processing, for L-NMS decoding with I = 5, ESRL codes can approach the floating-point performance with only a 0.05 dB loss across a wide range of code rates using a (6, 4) quantization scheme. In contrast, even with the same CN processing, 5G-NR LDPC codes still require a (7, 5) quantization scheme to approach float-point performance. These comparisons highlight the performance advantages of ESRL codes over 5G-NR LDPC codes, especially under quantization constraints.
+
+FER
+
+10−1
+
+R =0.72
+
+10−1
+
+R =0.63
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+2.8 3 3.2 3.4 3.6 3.8 4
+Eb/N0 [dB] 100
+
+10−1
+
+R =0.52
+
+10−2
+
+10−3
+
+10−4
+
+FER
+
+FER
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+2.4 2.6 2.8 3 3.2 3.4 3.6 3.8
+Eb/N0 [dB] 100
+
+10−1
+
+R =0.34
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+2.2 2.4 2.6 2.8 3 3.2 3.4
+
+Eb/N0 [dB]
+
+Floating 5G-NR
+
+Fixed 5G-NR, (7, 5)
+
+10−5 1.8 2
+Floating ESRL
+
+2.2 2.4 2.6 2.8 Eb/N0 [dB]
+Fixed ESRL, (6, 4)
+
+Fig. 3. Fixed-point FER performance of ESRL decoding.
+
+FER
+
+IV. CONFIGURABLE HARDWARE ARCHITECTURE OF ESRL DECODER
+A. High-Level Overview
+Fig. 4 illustrates the high-level architecture of our configurable high-throughput decoder for ESRL codes. The timeinvariant nature and absence of parallel edges in ESRL codes allow for the decomposition of this decoder into W = L + ω sub-decoders operating in parallel, using SLME decoding. Despite the relatively long overall code length of ESRL codes, the coupling results in a shorter underlying blocklength. Namely, each decoder can adopt a highly parallel architecture with moderate routing complexity. To exploit this property, we use a more advanced partial row-parallel architecture [15] to reduce the area of computation units. This architecture will further decompose the processing of each layer into multiple cycles, and each cycle deals with Z′ = Z/S rows, where S is referred to as folding degree.
+During decoding, n · L + ω groups of Q-messages are read from the Q-memory and distributed among L+ω sub-decoders at each memory access, with each group containing Z′ Q-
+
+982
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+ESRL LDPC Decoder
+Q-Memory
+Z’
+
+n*W
+
+Instruc.
+
+Controller
+
+Gathering Network Row Computation Unit (RCU) Distribution Network
+
+... ...
+... ... ...
+
+Sub-Decoder with Row-Parallel Architecture
+
+dcmax
+
+Z’ QSN
+
+Z’
+
+Z’
+
+Z’
+
+QSN
+
+QSN QSN
+
+Z’ W
+
+R-Memory
+
+W
+
+B0
+
+B1 B0
+
+B1 B0 n
+
+B1 B0 m B1 B0
+
+One sub-decoder
+
+B1 B0
+
+W
+
+B1 B0
+
+B1 B0
+
+B1 B0
+
+B1 B0
+
+B1 Q
+
+L instants, each sub-block is m x n (w.o. tail)
+
+Fig. 4. Overall hardware architecture of a configurable high-throughput ESRL decoder implementation.
+
+messages. In each sub-decoder (except the last one handling the tail), the gathering routing unit (GRU) collects n groups of Q-messages and then reorganizes them into dcmax groups of Q-messages, as the row-parallel architecture can process up to dcmax non-zero blocks per layer. A group of QC-LDPC shift networks (QSNs), each of size Z′, is implemented to execute cyclic shifting on the data. Subsequently, the row computation unit (RCU) executes (1a) to (1c) sequentially. Note that compared to the block-parallel architecture, the RCU utilizes a SMU to find the first minimum and second minimum simultaneously. Finally, the distribution routing unit (DRU) redistributes the dcmax groups of updated Q-messages into n groups of Q-messages and then writes them back to the Q-memory. The whole decoding process is orchestrated by a controller, which reads from a list of instructions in the instruction memory and coordinates the components of our ESRL decoder. This decoder is reconfigurable based on parameters such as the code profile {B, T, Q}, the lifting size Z, the iteration count I, and more.
+B. Implementation Results
+In this section, we present the implementation results of ESRL LDPC decoders and compare them with the stateof-the-art 5G-NR LDPC decoder [16] and SC-LDPC decoders [18]–[20]. For the coding configurations, we adopt the settings from [8] and select three series of ESRL codes with K = {8580, 17160, 85800}, whose maximum frame lengths are 25311, 50622, and 253110, respectively. These configurations correspond to 1×, 2×, and 10× longer than that of a single 5G-NR LDPC decoder. Notably, a key advantage of our ESRL decoders is their rate flexibility, supporting a wide range of code rates from 0.87 to 0.34. This renders both the throughput and the area efficiency of the decoder dynamic.
+As shown in Table I, for K = 8580 with Z = 39, our work can achieve a peak throughput of 54.1 Gbps after synthesis, which is 2.76× higher than the 5G-NR LDPC decoder [16]. For K = 17160 with Z = 78 (2× longer than 5G-NR), it can deliver a peak throughput of 103.9 Gbps and a peak area efficiency of 91.2 Gbps/mm2 after synthesis, meeting initial 6G demands. Note that while the row-parallel architecture of ESRL decoders exhibits low hardware efficiency at low code
+
+TABLE I COMPARISONS OF ESRL LDPC DECODERS AND 5G-NR LDPC
+DECODER.
+
+ESRL†
+
+Technology [nm]
+
+16
+
+Algorithm
+
+SLME (L-NMS)
+
+Implementation
+
+Synthesis
+
+Architecture
+
+Multi-Engine (Row-Parallel)
+
+Rate Compatibility
+
+✓
+
+Iterations
+
+5
+
+Coupled Length
+
+10
+
+FER Gain [dB]
+
+∼ 0.6 ↑ ∼ 0.8 ↑ ∼ 1 ↑
+
+Max. Code Length 25311 50622 253110 (1×) (2×) (10×)
+
+Max. Info. Length
+
+8580 (1×)
+
+17160 85800 (2×) (10×)
+
+Max. Lifting Size
+
+39
+
+78
+
+390
+
+Frequency [MHz] 1050 1010 850
+
+Area [mm2]
+
+0.53 1.14 5.61
+
+T/P⋆ [Gbps]
+Area Eff.∗ [Gbps/mm2]
+
+13.51 54.1 25.5 102.1
+
+26.0 103.9 22.8 91.2
+
+109.4 437.6 19.5 78.0
+
+† Our ESRL decoder is implemented at S = 8. ∗ Peak T/P is achieved at R = 0.87 of ESRL codes.
+
+5G-NR [16] 28
+L-NMS Post-layout Multi-Core (Block-Parallel)
+✓ 5 Baseline
+10 × 25344
+10 × 8488
+384 895 10 × 1.823 10 × (14.14 – 19.54) 10 × (7.73 – 10.72)
+
+rates, resulting in lower throughput and area efficiency compared to the block parallel architecture of the 5G-NR LDPC decoder, it demonstrates significant advantages at higher code rates. For Z = 390, corresponding to the setting of Fig. 3, our ESRL decoder has a core area of 5.61 mm2, with throughput ranging from 109.4 Gbps to 437.6 Gbps and an area efficiency of 19.5 Gbps to 78.0 Gbps/mm2. Beyond these hardware advantages, our ESRL decoder also offers approximately 1 dB performance gain across various code rates, making them a promising solution to next-generation channel coding.
+Table II provides a comparison between the ESRL decoder and other SC-LDPC decoders [18]–[20]. To achieve high throughput, most existing SC-LDPC decoder implementations are typically tailored to one code rate or a few code rates to simplify routing complexity. For instance, [18] works on R = 1/2 and [19], [20] target R = 0.8. In comparison to [18], after the normalization, our peak throughput
+
+983
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II COMPARISONS BETWEEN OTHER SC-LDPC DECODERS.
+
+This Work ASSCC’12
+
+Technology [nm]
+
+16
+
+90
+
+Implementation Code Length Info. Length
+
+Synthesis 50622⋆
+(2×) 17160⋆
+(2×)
+
+Chip 4992
+2496
+
+Rate Compatibility
+
+✓
+
+✗
+
+Frequency [MHz]
+
+1010
+
+305
+
+Area [mm2]
+
+1.14
+
+2.18 (0.069†)
+
+T/P [Gbps]
+
+26.0 103.9⋆
+
+3.66
+
+Area Eff. [Gbps/mm2]
+
+22.8 91.2∗
+
+1.68 (53.12†)
+
+⋆ The maximum values can be supported. † After technology normalization to 16nm. ∗ Peak T/P is achieved at R = 0.87.
+
+EuCNC’21 ISTC’23 22
+Post-layout
+51328
+
+40960
+
+✗ 525
+1.33 (0.70†)
+
+279
+3.43 (1.81†)
+
+336
+
+178.6
+
+252
+
+52
+
+(477.63†) (98.45†)
+
+is 28.4× higher than [18]. With a comparable maximum frame length, while our throughput is 41.8% lower than [20], we save 37% of the core area relative to the unrolled fully-parallel architecture in [20]. It is noteworthy that our ESRL decoder is rate-flexible and achieves high throughput across a wide range of code rates.
+V. CONCLUSION
+In this work, we present a fully reconfigurable SC-LDPC decoder architecture for ESRL codes. Based on SLME decoding, the ESRL decoder can be decomposed into multiple individual sub-decoders running in parallel, leading to rate flexibility like classical LDPC block decoders and large parallelism. This hardware architecture can decode virtually any SC-LDPC code that fits in the allocated memories. Thanks to the regular routing for underlying short block lengths, our ESRL decoder with a partial row-parallel architecture can achieve high throughput across variable code rates. Implementation results demonstrate that ESRL codes outperform 5G-NR LDPC codes by around 1 dB under the same computational complexity and the corresponding decoder can work on a throughput of hundreds of Gbps, making ESRL codes a promising solution for 6G wireless systems.
+VI. ACKNOWLEDGEMENT
+This work has received partial funding from the Swiss State Secretariat for Education, Research, and Innovation (SERI) under the SwissChips initiative.
+REFERENCES
+[1] Chairman’s notes of AI 7.1.5 on consideration on LDPC design for NR, 3GPP R1-1611112 Release 16, Nov. 2016.
+[2] H. Zhang and W. Tong, “Channel coding for 6G extreme connectivityrequirements, capabilities and fundamental tradeoffs,” IEEE BITS Inf. Theory Mag., Oct. 2023.
+[3] S. Miao, C. Kestel, L. Johannsen, M. Geiselhart, L. Schmalen, A. Balatsoukas-Stimming, G. Liva, N. Wehn, and S. ten Brink, “Trends in channel coding for 6G,” Proc. IEEE, Jun. 2024.
+
+[4] A. Jimenez Felstrom and K. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[5] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over the BEC,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 803– 834, Jan. 2011.
+[6] S. Kudekar, T. Richardson, and R. L. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief propagation,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7761–7813, Sep. 2013.
+[7] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. Commun., vol. 56, no. 7, pp. 1060– 1069, Jul. 2008.
+[8] Y. Ren, L. Zhang, Y. Shen, W. Song, E. Boutillon, A. BalatsoukasStimming, and A. Burg, “Edge-spreading Raptor-like LDPC codes for 6G wireless systems,” arXiv preprint arXiv:2410.16875, 2024.
+[9] Z. Si, R. Thobaben, and M. Skoglund, “Rate-compatible LDPC convolutional codes achieving the capacity of the BEC,” IEEE Trans. Inf. Theory, vol. 58, no. 6, pp. 4021–4029, Feb. 2012.
+[10] W. Nitzold, M. Lentmaier, and G. P. Fettweis, “Spatially coupled protograph-based LDPC codes for incremental redundancy,” in Proc. IEEE Int. Symp. Turbo Codes Iter. Inf. Process., 2012, pp. 155–159.
+[11] H. Zhou, D. G. Mitchell, N. Goertz, and D. J. Costello, “Robust rate-compatible punctured LDPC convolutional codes,” IEEE Trans. Commun., vol. 61, no. 11, pp. 4428–4439, Oct. 2013.
+[12] X. Shi, T. Han, H. Tian, and D. Zhao, “Design of raptor-like rate compatible SC-LDPC codes,” ZTE Commu., vol. 20, no. S1, pp. 16– 21, 2022.
+[13] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. VLSI Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[14] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. IEEE Asilomar Conf. Signals, Syst. Compt., 2008, pp. 1137–1142.
+[15] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G New-Radio standard,” IEEE Trans. Circuits Syst. I, vol. 69, no. 5, pp. 2035–2048, May 2022.
+[16] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, Mar. 2024.
+[17] R. Swamy, S. Bates, T. L. Brandon, B. F. Cockburn, D. G. Elliott, J. C. Koob, and Z. Chen, “Design and test of a 175-Mb/s, rate-1/2 (128, 3, 6) low-density parity-check convolutional code encoder and decoder,” IEEE Trans. Syst. Sci. Cybern., vol. 42, no. 10, pp. 2245–2256, Oct. 2007.
+[18] C.-L. Chen, Y.-C. Lan, H.-C. Chang, and C.-Y. Lee, “A 3.66 Gb/s 275mW TB-LDPC-CC decoder chip for MIMO broadcasting communications,” in Proc. IEEE Asian Solid-State Circuits Conf (A-SSCC).
+[19] M. Herrmann, N. Wehn, M. Thalmaier, M. Fehrenz, T. Lehnigk-Emden, and M. Alles, “A 336 Gbit/s full-parallel window decoder for spatially coupled LDPC codes,” in Proc. IEEE Europ. Conf. Netw. Commun. & 6G Summit, 2021, pp. 508–513.
+[20] O. Griebel, M. Herrmann, B. Hammoud, and N. Wehn, “Energy-efficient decoding of spatially coupled low-density parity-check codes using adaptive window sizes,” in Proc. IEEE Int. Symp. Topics Coding (ISTC). IEEE, 2023, pp. 1–5.
+[21] N. U. Hassan, M. Schlu¨ter, and G. P. Fettweis, “Fully parallel window decoder architecture for spatially-coupled LDPC codes,” in Proc. IEEE Int. Conf. Commun. (ICC). IEEE, 2016, pp. 1–6.
+[22] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[23] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[24] D. G. Mitchell, M. Lentmaier, and D. J. Costello, “Spatially coupled LDPC codes constructed from protographs,” IEEE Trans. Inf. Theory, vol. 61, no. 9, Jul. 2015.
+[25] F. Cochachin, E. Boutillon, and D. Declercq, “Sign-preserving min-sum decoders,” IEEE Trans. Commun., vol. 69, no. 10, pp. 6439–6454, Jul. 2021.
+
+984
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+

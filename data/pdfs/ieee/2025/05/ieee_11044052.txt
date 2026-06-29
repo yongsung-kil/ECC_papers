@@ -1,0 +1,305 @@
+2025 IEEE International Symposium on Circuits and Systems (ISCAS) | 979-8-3503-5683-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISCAS56072.2025.11044052
+
+FPGA Accelerated Adaptive LDPC-based Quantum Error Correction by Bitwise Pipeline Parallelism
+
+Bingze Ye, Jiyuan Liu, He Li* School of Electronic Science and Engineering, Southeast University, China
+Corresponding author: helix@seu.edu.cn
+
+Abstract—Quantum networks are at the forefront of nextgeneration communication technologies, providing unparalleled security by leveraging the fundamental properties of quantum mechanics. However, noise and interference adversely affect information sharing within quantum networks, causing quantum bit errors and diminishing the quality of quantum keys. To address this issue, high-speed quantum information error correction is necessitated and this work proposes an FPGA-accelerated error correction system based on low-density parity check (LDPC), incorporating algorithm-hardware co-optimizations. The proposed hardware architecture is applicable to generic LDPC soft decision algorithms and can adaptively select LDPC matrices with different code rates based on the quantum bit error rates. Experiment results demonstrate that the system exhibits high performance in error correction acceleration, achieving a throughput of 728 Mbps and up-to 9.4× speedup compared to existing FPGA-based LDPC error correction implementations.
+Index Terms—LDPC, FPGA, Quantum Error Correction
+I. INTRODUCTION
+Quantum networks, leveraging the principles of quantum mechanics, are poised to revolutionize secure communication through quantum key distribution (QKD) [1]. However, the presence of noise and interference in quantum key sharing can lead to errors in the received quantum bits (qubits), thereby disrupting the stability and reliability of the quantum keys. To address this challenge, a real-time error correction system is essential to promptly detect and accurately rectify the errors in the received qubits.
+As one important application scenario in quantum networks, satellites can cover a wide area and achieve secure communication between different geographical locations [2]. Considering the constant changes in reception angle, climate conditions and terrain, the channel conditions of satellite signals are constantly fluctuating, leading to the instability of quantum bit error rates (QBERs) [2]. Therefore, the adaptability to different QBERs in the quantum error correction system is required for reliable quantum network communication.
+Among various error correcting codes (ECCs), the LDPC code has emerged as a popular choice, due to its low algorithm complexity, high transmission efficiency and high error correction success rates [3] [4]. Moreover, FPGA offers high reconfigurability and pipeline parallelism capability, making it more suitable for accelerating LDPC algorithms via the investigation of architectural optimizations, compared to generalpurpose processors (e.g. GPUs and CPUs) [5].
+In this paper, we implement a high-throughout LDPC-based quantum error correction accelerator on FPGAs, which is able to tune the LDPC matrices in the runtime, adaptive to different QBERs ranging from 0.01 to 0.11. The proposed
+
+hardware architecture is generic and applicable to various LDPC soft decision algorithms. Technical novel contributions of the proposed method are summarized as follows:
+• A real-time and QBER-adaptive quantum key error correction accelerator that selects appropriate LDPC matrices based on different QBERs, reducing quantum error correction latency.
+• A novel bitwise parallel and pipeline architecture based on algortihm-hardware co-optimizations, combining sparsity analysis, efficient dataflow and memory partition.
+• Quantitative and qualitative comparisons against the stateof-the-art LDPC-based quantum key error correction implementations, demonstrating a throughput of 728Mbps and up-to 9.4× speedup.
+II. BACKGROUND
+2.1 Quantum Key Sharing in Quantum Networks
+Future-proofing quantum networks with quantum key distribution has been an effective strategy to combat the escalating threats of data theft, applicable in secure communication scenarios such as satellite and air-ground communication [2] [6]. QKD ensures that any eavesdropping attempts can be detected, providing a secure method for exchanging cryptographic keys. However, quantum networks face challenges, particularly in maintaining quantum coherence and minimizing qubit errors over long distances [1]. Quantum states are sensitive to their environments, leading to decoherence, which poses a barrier to effective key sharing.
+To tackle these issues, interest in high-performance quantum error correction techniques is growing. By using errorcorrecting codes, quantum networks can detect and correct errors without directly measuring the quantum states, preserving qubit coherence. Techniques such as LDPC codes enhance the reliability of QKD systems, ensuring secure key distribution despite noise [7].
+2.2 LDPC Based Quantum Key Error Correction
+1) LDPC Algorithms LDPC codes, as a representative of linear codes, are defined by particularly sparse parity check matrices. The decoding algorithms of LDPC codes can be divided into two categories: hard decision and soft decision [8]. Hard decision decoding directly flips bits based on verification equations, while soft decision decoding iteratively calculates posterior probabilities, allowing LDPC codes to approach the Shannon limit [8]. And there are several LPDC soft decision algorithms, including
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:32 UTC from IEEE Xplore. Restrictions apply.
+
+sum-product algorithm (SPA), min-sum algorithm (MSA), normalized min-sum algorithm (NMSA) and offset min-sum algorithm (OMSA) [9] [10].
+Essentially, these soft decision algorithms share the same decoding process, which can be divided into the following three steps:
+• Initialization step: receive external messages and initialize internal messages according to check matrix.
+• Iteration step: update the internal messages in each iteration in the order of horizontal step and vertical step.
+• Decision step: bit decision based on the posterior probability after iteration.
+Based on the same decoding process framework, different LDPC soft decision algorithms perform different arithmetic operations in probability domain or logarithmic domain. SPA and NMSA are representative algorithms in the probability and logarithmic domains, respectively. SPA involves a large number of multiplication operations, resulting in high computational complexity and resource consumption in hardware implementation. On the contrary, NMSA represents probability information as likelihood ratios, which converts multiplication operations into addition operations, providing significantly low computational complexity.
+2) FPGA Implementation
+FPGA has a high degree of parallel processing capability, which enables hardware level optimization for LDPC decoding algorithms, achieving higher throughput and lower latency. Moreover, it brings convenience to achieve integration control and to further implement adaptive selection of an appropriate parity-check matrix based on QBERs [5].
+With FPGAs, various design methods have been proposed, including fully parallel decoding, partially parallel decoding, hybrid decoding and layered decoding [11] [12]. These methods are essentially different levels of parallelism in the error correction process. Higher parallelism increases throughput and processing speed while consuming a significant amount of resources and reducing system scalability.
+III. METHOD
+3.1 Overview of The Proposed Hardware Architecture
+We propose a hardware architecture applicable to various LDPC soft decision algorithms, which only requires changing the calculation operation according to different algorithms. As shown in Fig.1, the proposed LDPC decoding hardware architecture consists of five processing units.
+• Check matrix selection unit: select a parity check matrix for the subsequent LDPC decoding.
+• Variable nodes process unit: perform initialization operation during the first iteration and horizontal step in subsequent iterations, updating the internal messages from variable nodes to check nodes.
+• Check nodes process unit: perform vertical step during iterations, updating the internal messages from check nodes to variable nodes.
+
+• Address control unit: ensure the correctness of timing for reading and writing BRAMs.
+• Decision unit: complete the final judgment and obtain the corrected data.
+
+Fig. 1. Hardware architecture of LDPC-based quantum key error correction
+
+3.2 Algorithm-Hardware Codesign
+As the most common algorithm in probability domain, we choose SPA and NMSA for LDPC decoders, sharing the same hardware architecture above. The following demonstrates the collaborative design of the algorithm and hardware, we first use SPA as a starting example, while the meanings of generic symbols shown in Table I. Further optimizations for NMSA will be detailed introduced in Section 3.4.
+
+TABLE I SYMBOL EXPLANATION OF LDPC SOFT DECISION ALGORITHM
+
+Symbol
+Pi(b) Q(ijl) (b) Rj(li) (b) C (i)/j
+V (j)/i
+qi(l) (b)
+
+Meaning
+External messages, b = 0, 1 Internal messages from C to V in lth iteration, b = 0, 1 Internal messages from V to C in lth iteration, b = 0, 1 Set of check nodes connected to the ith variable nodes
+except for the jth check nodes Set of variable nodes connected to the jth check nodes
+except for the ith variable nodes Posterior probability of the ith variable node
+in lth iteration, b = 0, 1
+
+1) Initialization Step
+
+As the beginning of the decoding process, this step con-
+
+sists of two parts, including receiving external messages and
+
+initializing internal messages from check nodes to variable
+
+nodes. Based on input data x and error rates qber, the external
+
+messages are one-dimensional data, which can be expressed
+
+as:
+
+qi(0)(1) = Pi(1) = abs(xi − qber)
+
+(1)
+
+qi(0)(0) = Pi(0) = 1 − abs(xi − qber)
+
+Internal messages are two-dimensional data, obtained by mapping external messages through LDPC parity check matrix H:
+
+∆Q(ij0) = Q(ij0)(0) − Q(ij0)(1) = Hij · (qi(0)(0) − qi(0)(1)) (2)
+
+Therefore, we can directly obtain the internal messages from input data and QBERs in hardware implementation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:32 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Data structures in BRAMs. How to efficiently store data will be detailed in Section 3.3, when considering the sparsity of matrix.
+
+We store LDPC parity check matrices and internal messages from check nodes to variable nodes in BRAMs with the same data structure, which is proposed to accommodate subsequent algorithms. Through read and write control of BRAMs and simple addition operation, internal messages are calculated in the variable nodes process unit and written to BRAMs after reading the check matrix, as shown in Fig.1.
+
+2) Iteration Step
+As the main part of the decoding process, this step updates two internal messages in sequence in each iteration. Based on the internal messages from check nodes to variable nodes after initialization, the internal messages from variable nodes to check nodes can be expressed as:
+
+∆Rj(li) =
+
+∆Qi(′l−j 1)
+
+i′ ∈V (j)/i
+
+(3)
+
+Rj(li)(0) = 1/2 + 1/2∆Rj(li), Rj(li)(1) = 1/2 − 1/2∆Rj(li)
+
+This process involves the cumulative multiplication of all elements on each row, known as horizontal operation, performed in the check nodes process unit. Correspondingly, performed in the variable nodes process unit, the next process can be called vertical operation, involving the cumulative multiplication of all elements on each column and a normalization operation:
+
+Qi(jl)(b) = Q(ij0)(b) ·
+
+Rj(l′)i(b), b = 0, 1
+
+j′ ∈C(i)/j
+
+Qˆi(jl)(b) = / , Q(ijl)(b) Q(ijl)(1)+Qi(jl)(0) b = 0, 1
+
+(4)
+
+∆Qi(jl) = Qˆi(jl)(0) − Qˆ(ijl)(1)
+
+As shown in Fig.2, we propose two specific data structures to store two internal messages in BRAMs, respectively. The internal messages from check nodes to variable nodes are in the row form and the others from variable nodes to check nodes are in the column form, so that horizontal (or vertical) cumulative multiplication can be achieved while writing internal messages for each row (or column) in the pipeline.
+In order to save resource consumption, we only need to store important data that requires cumulative multiplication operations in BRAMs, including ∆Q , R(1) and R(0). These two internal messages are constantly updated during iterations and exit after reaching the set maximum number of iterations.
+3) Decision Step As the end of the decoding process, this step obtains the final posterior probability and makes a decision. Posterior
+
+probability after iteration can be expressed as:
+
+qi(l)(b) = Q(ij0)(b) ·
+
+Rj(l′)i(b), b = 0, 1
+
+(5)
+
+j′ ∈C(i)
+
+This can be easily obtained in the variable nodes process unit. Then, performed in the decision unit, if the posterior probability of 1 is higher than the posterior probability of 0, the output data of that bit is 1, otherwise it is 0.
+
+3.3 Optimizations for NMSA
+Different from SPA, NMSA represents probability information using likelihood ratios. The external messages, two internal messages and posterior probability are expressed as:
+
+L(Pi)
+
+=
+
+ln
+
+Pi(0) Pi(1)
+
+=
+
+ln
+
+1
+
+− abs(xi − qber) abs(xi − qber)
+
+Q(ij0) = Hij · L(Pi) = Hij
+
+Rj(li)
+
+=
+
+α
+
+·
+
+i′ ∈mV i(nj)/i(abs(qi(′l)j ))
+
+·
+
+sgn(qi(′l)j )
+i′ ∈V (j)/i
+
+(6)
+
+Qi(jl) = L(Pi) +
+
+Rj(l′)i
+
+j′ ∈C(i)/j
+
+qi(l) = L(Pi) +
+
+Rj(l′)i
+
+j′ ∈C(i)
+
+In the initialization step, logarithmic operation is achieved by storing the calculation results of different QBERs (0.01 to 0.11) in a lookup table. In the iteration step, the acquisition of the minimum value is achieved through pairwise comparison instead of multiplication in SPA, while α represents the normalization factor. In the decision step, if the posterior probability is a positive number, the output data of decision bit is 0, otherwise it is 1.
+
+3.4 Performance and Memory Footprint Optimizations Based on Matrix Sparsity
+The zero element in LDPC parity check matrix represents that there is no relationship between the check node and the variable node in this bit’s position. Therefore, we search the positions of nonzero element to calculate the valid data separately, which can significantly avoid the resource waste. In order to further conserve resources, we directly store the position messages of one elements in each matrix instead of the complete matrix as a preprocessing step. After the selection of the parity check matrix, we can initialize the data structures of internal messages with the aforementioned nonzero positions.
+
+3.5 Generic and Adaptive Error Correction
+Through LDPC encoding, the codeword adds redundant bits to the information bits. More redundant bits bring higher error correction performance, however requiring more error correction time and hardware resources. In order to balance error correction performance with computation latency, we have implemented a runtime QBER analysis module to adaptively select a parity check matrix based on a specific QBER.
+In the parity-check matrix selection unit, given the input QBER (ranging from 0.01 to 0.11), we choose one matrix from
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:32 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II EVALUATION COMPARISON OF FPGA IMPLEMENTATIONS OF LDPC DECODERS
+
+Algorithm SPA
+NMSA
+
+Ref.
+[14] Our work
+[15] [16] [17] [18] [19] [20] Our work
+
+Code length
+384 100
+1000 10368 26112 1000
+2304 100
+
+Code rate
+1/3 0.200-0.900
+0.500 0.324
+0.324
+2/3 0.200-0.900
+
+LUTs
+350892 379121
+61761 100929 1448762 74373 115864 147952 49090
+
+FFs
+294576 39743
+85431
+46517 57931 147409 21733
+
+BRAMs
+306
+136
+198 180
+3 231
+
+DSPs
+988
+1136
+
+Freq (MHz)
+219 38
+154 261 102 160 250 180 153
+
+Throughput (M bps)
+15 180
+77 425 380 391 500 560 728
+
+eight matrices with different code rates ranging from 0.2 to 0.9, that have been pre-stored in BRAMs. The corresponding relationship between QBERs and code rates of parity check matrices are referred from [13].
+
+IV. RESULTS
+
+We deployed two error correction accelerators on FPGA based on SPA and NMSA in register transfer level (RTL) programming in Vivado 2024.1. The quantum error correction system is implemented on the FPGA (xczu48dr-fsvg1517-2-e).
+
+4.1 Performance Evaluation
+
+Throughput is indeed an important performance parameter in LDPC error correction decoding, which measures the amount of information successfully processed by the system per unit time, as shown in the following equation,
+
+T = N × Fmax
+
+(7)
+
+CP I × NOI
+
+while N represents the length of codeword, Fmax represents the maximum clock frequency. CP I and N OI represent the number of clock cycles per iteration and the number of iteration, respectively.
+In our error correction system, the basis length of codeword to be corrected is 100, which serves as a unit and can be flexibly extended to an arbitrary size for real quantum keys error correction. As for CP I, the proposed hardware architecture enables us to complete one error correction iteration in less than 20 clock cycles. The actual clock cycles consumed is related to the code rate of the chosen matrix, characterised in CP I = N × wr + N × wc × CR + 4. wr and wc represent the sparsity of row and column respectively in LDPC parity check matrix, and both are initialized when generating LDPC matrices. CR is the code rate ranging from 0.2 to 0.9. Thanks to the proposed bitwise pipeline parallellism architecture, the number of clock cycles consumed per iteration is less than 20, therefore, we demonstrate that our error correction accelerators reach a throughput of up-to 180 Mbps for SPA and 728 Mbps for NMSA, respectively.
+
+4.2 Comparisons and Discussions
+
+As shown in Table II, the throughput in our experimental results has been significantly improved compared to previous implementations, resulting in up-to 12.4× and 9.4× speedup in SPA and NMSA, respectively. In addition, SPA-based error correction accelerator requires 379121 LUTs, 39743 FFs, 306 BRAMs and 988 DSPs, and NMSA-based error correction
+
+accelerator requires 49090 LUTs, 21733 FFs, 231 BRAMs and 1136 DSPs. We notice that many previous works do not mention the use of DSP resources. By adopting DSPs, we have reduced the consumption of LUTs and FFs, leading to a balance design using available hardware resources on FPGAs.
+Moreover, most existing implementations utilize a single code rate for error correction, while some supporting multiple code rates without the adaptability to select among them. We have innovatively implemented the adaptability to choose different code rates based on QBER in LDPC error correction, further reducing quantum error correction latency.
+The modular design of our proposed architecture allows for seamless expansion beyond the existing LDPC error correction system, supporting longer codeword correction by parallel processing of multiple 100-bit error correction systems. This flexibility ensures that the architecture can be adapted to meet the demands of higher data rates and more complex applications, maintaining its performance and reliability for large scale systems.
+V. CONCLUSION
+A novel real-time adaptive LDPC-based error correction accelerator for FPGA devices is proposed in this paper, which features high throughput and applicability to generic LDPC soft decision algorithms. The proposed new hardware architecture is based on the parallel pipeline capability of FPGA and the sparsity of LDPC matrices, extremely reducing the number of clock cycles in error correction to improve the throughput. The implementation results show that the proposed error correction accelerator outperforms state-of-theart implementations in terms of throughput and adaptability.
+ACKNOWLEDGMENT
+This work is supported by the National Natural Science Foundation of China under Grant 62304037, the Natural Science Foundation of Jiangsu Province under Grant BK20230828, the Jiangsu Provincial Scientific Research Center of Applied Mathematics under Grant BK20233002, the Young Elite Scientists Sponsorship Program by CAST under Grant 2022QNRC001, the Southeast University Interdisciplinary Research Program for Young Scholars under Grant 2024FGC1005, the Fundamental Research Funds for the Central Universities under Grant 2242024K40016, and the Start-up Research Fund of Southeast University under Grant RF1028623173.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:32 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] P. Zhang, N. Chen, S. Shen, S. Yu, S. Wu, and N. Kumar, “Future quantum communications and networking: A review and vision,” IEEE Wireless Communications, vol. 31, no. 1, pp. 141–148, 2024.
+[2] D. Huang, Y. Zhao, T. Yang, S. Rahman, X. Yu, X. He, and J. Zhang, “Quantum key distribution over double-layer quantum satellite networks,” IEEE Access, vol. 8, pp. 16 087–16 098, 2020.
+[3] P. Santini, M. Battaglioni, M. Baldi, and F. Chiaraluce, “Analysis of the error correction capability of LDPC and MDPC codes under parallel bitflipping decoding and application to cryptography,” IEEE Transactions on Communications, vol. 68, no. 8, pp. 4648–4660, 2020.
+[4] S. Belhadj and M. L. Abdelmounaim, “On error correction performance of LDPC and polar codes for the 5G machine type communications,” in IEEE International IOT, Electronics and Mechatronics Conference (IEMTRONICS), 2021, pp. 1–4.
+[5] O. Ferraz, S. Subramaniyan, R. Chinthala, J. Andrade, J. R. Cavallaro, S. K. Nandy, V. Silva, X. Zhang, M. Purnaprajna, and G. Falcao, “A survey on high-throughput non-binary LDPC decoders: Asic, fpga, and gpu architectures,” IEEE Communications Surveys Tutorials, vol. 24, no. 1, pp. 524–556, 2022.
+[6] M. Shaban, M. Ismail, and W. Saad, “Sparq: Efficient entanglement distribution and routing in space–air–ground quantum networks,” IEEE Transactions on Quantum Engineering, vol. 5, pp. 1–20, 2024.
+[7] S. Kasi and K. Jamieson, “Towards quantum belief propagation for LDPC decoding in wireless networks,” in Proceedings of the 26th Annual International Conference on Mobile Computing and Networking. Association for Computing Machinery, 2020.
+[8] R. Jose and A. Pe, “Analysis of hard decision and soft decision decoding algorithms of LDPC codes in AWGN,” in IEEE International Advance Computing Conference (IACC), 2015, pp. 430–435.
+[9] J. Zhao, F. Zarkeshvari, and A. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Transactions on Communications, vol. 53, no. 4, pp. 549–554, 2005.
+[10] S. Myung, S.-I. Park, K.-J. Kim, J.-Y. Lee, S. Kwon, and J. Kim, “Offset and normalized min-sum algorithms for ATSC 3.0 LDPC decoder,” IEEE Transactions on Broadcasting, vol. 63, no. 4, pp. 734–739, 2017.
+[11] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting FPGA,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 29, no. 6, pp. 1141–1151, 2021.
+[12] S. S. Tehrani, S. Mannor, and W. J. Gross, “An area-efficient FPGAbased architecture for fully-parallel stochastic LDPC Decoding,” in 2007 IEEE Workshop on Signal Processing Systems, 2007, pp. 255–260.
+[13] H. Li, “A quantum-classical codesign framework for security enhanced quantum networks,” in 5th Information Communication Technologies Conference (ICTC), 2024, pp. 76–81.
+[14] J. Andrade, N. George, K. Karras, D. Novo, V. Silva, P. Ienne, and G. Falcao, “From low-architectural expertise up to high-throughput non-binary LDPC decoders: Optimization guidelines using high-level synthesis,” in 25th International Conference on Field Programmable Logic and Applications (FPL), 2015, pp. 1–8.
+[15] A. Balatsoukas-Stimming and A. Dollas, “FPGA-based design and implementation of a multi-GBPS LDPC decoder,” in 22nd International Conference on Field Programmable Logic and Applications (FPL), 2012, pp. 262–269.
+[16] V. L. Petrovic´, M. M. Markovic´, D. M. E. Mezeni, L. V. Saranovac, and A. Radosˇevic´, “Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 67, no. 12, pp. 5454–5467, 2020.
+[17] A. Verma and R. Shrestha, “A new vlsi architecture of next-generation QC-LDPC decoder for 5G new-radio wireless-communication standard,” in IEEE International Symposium on Circuits and Systems (ISCAS), 2020, pp. 1–5.
+[18] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting fpga,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 29, no. 6, pp. 1141–1151, 2021.
+[19] E. A. Likhobabin, A. A. Ovinnikov, R. S. Goriushkin, P. B. Nikishkin, and E. I. Khokhryakov, “High throughput fpga implementation of LDPC decoder architecture for DVB-S2X standard,” in International Conference on Information, Control, and Communication Technologies (ICCT), 2022, pp. 1–4.
+[20] P. Nikishkin, R. Goriushkin, N. Vinogradov, E. Likhobabin, and V. Vityazev, “High throughput FPGA implementation of min-sum ldpc decoder architecture for wireless communication standards,” in 24th International Conference on Digital Signal Processing and its Applications (DSPA), 2022, pp. 1–5.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:18:32 UTC from IEEE Xplore. Restrictions apply.
+
+

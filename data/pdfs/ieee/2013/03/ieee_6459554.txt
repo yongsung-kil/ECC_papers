@@ -1,0 +1,1668 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+743
+
+An Efficient Multi-Standard LDPC Decoder Design Using Hardware-Friendly Shuffled Decoding
+Yeong-Luh Ueng, Member, IEEE, Bo-Jhang Yang, Chung-Jay Yang, Huang-Chang Lee, and Jeng-Da Yang
+
+Abstract—This paper presents an efficient multi-standard lowdensity parity-check (LDPC) decoder architecture using a shuffled decoding algorithm, where variable nodes are divided into several groups. In order to provide sufficient memory bandwidth without the need for using registers, a FIFO-based check-mode memory, which dominates the decoder area, is used. Since two compensation factors, rather than a single factor, are dynamically used in the offset Min-Sum algorithm, the number of quantization bits, and, hence, the memory size, can be reduced without degradation in error performance. In order to further reduce the memory size, artificial minimum values, which do not need to be stored in memory, are used. We also propose an algorithm that can be used to partition variable nodes such that the hardware cost can be minimized. Using the proposed techniques, a multi-standard decoder that supports the LDPC codes specified in the ITU G.hn, IEEE 802.11n, and IEEE 802.16e standards was designed and implemented using a 90-nm CMOS process. This decoder supports 133 codes, occupies an area of 5.529 mm , and achieves an information throughput of 1.956 Gbps.
+Index Terms—Channel coding, decoder, G.hn, low-density parity-check codes, LDPC codes, WiMAX, WiFi.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes [1], [2] are appealing for their powerful error-correction capabilities and high-throughput implementation potential [3], [4]. Recently, quasi-cyclic (QC) LDPC codes have been adopted in many standards, such as ITU G.hn [5], IEEE 802.16e (WiMAX) [6], and IEEE 802.11n (WiFi) [7]. In these communications standards, different LDPC codes are specified using different parity-check matrices (PCMs). In real products, a variety of communication standards should be supported. If we use different decoders to support the LDPC codes specified in
+Manuscript received September 23, 2011; revised January 03, 2012, February 24, 2012; accepted March 11, 2012. Date of publication February 11, 2013; date of current version February 21, 2013. This paper was recommended by Associate Editor Xinmiao Zhang.
+Y.-L. Ueng is with the Department of Electrical Engineering and the Institute of Communications Engineering, National Tsing Hua University, 30013 Hsinchu, Taiwan (e-mail: ylueng@ee.nthu.edu.tw).
+B.-J. Yang was with the Department of Electrical Engineering, National Tsing Hua University, 30013 Hsinchu, Taiwan He is now with Sunplus Technology Co., Ltd., Science Park, Hsinchu 30076, Taiwan (e-mail: s9861576@m98.nthu. edu.tw).
+C.-J. Yang, H.-C. Lee, and J.-D. Yang are with the Department of Electrical Engineering, National Tsing Hua University, 30013 Hsinchu, Taiwan (e-mail: r91942083@ntu.edu.tw; akula.lee@gmail.com; dad77911dad@yahoo.com. tw).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSI.2012.2215746
+
+different standards, the design well be inefficient. This triggers the need for efficient multi-standard LDPC decoders [8]–[10].
+An LDPC code can be decoded using a belief propagation (BP) algorithm through its Tanner graph [11], which is a bipartite graph consisting of variable nodes (VNs) and check nodes (CNs). Decoding schedules, such as two-phase message passing (TPMP) [1], [2], layered decoding [10], [12]–[15], [34], and shuffled decoding [4], [16]–[20], are usually used in current decoder designs. Both the sum-product algorithm (SPA) [2] and the Min-Sum algorithm (MSA) [21] can be used in the CN and VN operations. The performance of the MSA can be improved using either the offset MSA (OMSA) or the normalized MSA (NMSA) [22], where only one compensation factor is used. In order to improve the performance, either the adaptive OMSA or the adaptive NMSA can be adopted [23], [24].
+Both layered decoding and shuffled decoding can provide an increased convergence speed in bit-error rate (BER) performance [25], [26]. Layered decoding is usually employed in multi-mode LDPC decoders. For example, a low-complexity WiMAX decoder and a high-throughput two-standard decoder were presented in [15] and [10], respectively. Shuffled decoding is usually employed in a high-throughput high-rate LDPC decoder, since the critical path resultant from large check-node degrees can be shortened [4], [18], [19], [20]. In [4], [19], [20], the authors presented an MSA-based shuffled decoder that only stores three minimum values in each check node in order to achieve a performance near to that when using the SPA. Compared to the MSA-based layered decoder that only stores two minimum values in each check node, the shuffled decoder is a less attractive option for a multi-standard decoder since a larger check-node memory, which dominates the decoder area, is required for low-rate LDPC codes. Consequently, several techniques are introduced that allow shuffled decoding to become more hardware-friendly for multi-standard LDPC decoders.
+In this paper, we propose dynamically using two compensation factors, rather than the single factor in the OMSA used in [4], such that the number of quantization bits can be reduced without degradation in error performance. Since actual minimum values are used in the decoder presented in [4], the storage requirements of the proposed decoder can be further reduced if artificial minimum values, which do not need to be stored in memory, are used in the check-node operation. In the shuffled decoding algorithm presented in [4], variable nodes are first divided into several groups, and then decoding operations are executed group by group such that the critical path can be shortened in order to realize a high-throughput decoder. Since irregular LDPC codes, instead of regular LDPC codes investigated in [4], are considered in this paper, we propose an algorithm that can be used to partition these groups such that the hardware cost
+
+1549-8328/$31.00 © 2013 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+744
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+can be minimized. We also propose a FIFO-based memory configuration for check-node memory that can provide sufficient memory bandwidth for the proposed high-throughput shuffled decoder.
+Using the proposed techniques, a multi-standard decoder that supports the LDPC codes specified in the ITU G.hn, IEEE 802.11n, and IEEE 802.16e standards was designed and implemented using a 90-nm CMOS process This decoder supports 133 codes, occupies an area of 5.529 mm , and achieves an information throughput of 1.956 Gbps at a clock frequency of 400 MHz. Compared to the multi-standard LDPC decoders described in previous literature, the proposed multi-standard decoder supports a greater number of standards and a wider range of code lengths, and achieves a higher throughput and a comparable throughput-to-area ratio. In addition, the employment of barrel shifters and an APP (a posteriori probability) memory bank, which are usually used in multi-mode layered decoders, is unnecessary in the proposed decoder.
+The remainder of this paper is organized as follows. In Section II, we present the hardware-friendly shuffled decoding. In Section III, the advantages and disadvantages of the different partitioning options of variable-node groups are discussed. In addition, a group-partition algorithm and a CN memory configuration that can be used to devise efficient decoders is proposed. In Section IV, an efficient higher-throughput multi-standard LDPC decoder architecture is presented. Implementation and comparison results are also provided. Finally, conclusions are presented in Section V.
+
+II. HARDWARE-FRIENDLY SHUFFLED DECODING
+In [16], the authors presented an SPA-based shuffled decoding algorithm. In [18], the authors proposed a shuffled decoding algorithm using a modified MSA [22] with reduced complexity. In [4], [19] and [20], a shuffled decoding method that can compensate for the performance loss encountered in [18] was proposed. In this section, we propose two modifications to the shuffled decoding algorithm that can be used to reduce the size of the CN memory.
+
+A. Review of Min-Sum-Based Shuffled Decoding in [4], [19]
+
+Let
+
+denote the variable-to-check (V2C) message from
+
+variable node to check node , and denote the check-to-
+
+variable (C2V) message from check node to variable node
+
+at the -th decoding iteration. Let
+
+be the set of check
+
+nodes connected to variable node . Similarly let
+
+be the
+
+set of variable nodes connected to check node . In shuffled de-
+
+coding, the variable nodes are divided into groups having an
+
+equal size of . Let be the set of variable nodes belonging
+
+to the -th group for
+
+. The operations per-
+
+formed for the -th group at the -th decoding iteration using
+
+OMSA are described as follows:
+
+VN operations for group : For each variable node in
+
+group , i.e.,
+
+, compute the V2C value according to
+
+(1)
+
+CN operations for group : For each check node ated with variable node in group , i.e., compute the C2V value according to
+
+associ,
+
+(2)
+
+(3)
+
+(4)
+
+where
+
+is a fixed compensation factor,
+
+, and
+
+.
+
+CN and VN operations for group 0, group 1, , group
+
+are performed sequentially to complete one iteration. In the last
+
+iteration, i.e.,
+
+, a hard decision for each VN is made
+
+based on its APP value, which is given by
+
+(5)
+
+B. Dynamic OMSA (DOMSA)
+
+It can be seen from (3) that the V2C values
+
+, where
+
+, are used in the calculation of
+
+for an
+
+MSA-based decoder. However, it can be seen from Fig. 5.13
+
+in [29] that there is a gap between the magnitudes of the C2V
+
+values produced by an MSA-based decoder and those produced
+
+by an SPA decoder. In order to minimize the performance gap,
+
+compensation can be adopted. As a result, in an OMSA-based
+
+decoder, the CN operation uses a fixed factor to compensate
+
+for the difference, as can be seen from (2). It can also be seen
+
+from Fig. 5.13 in [29] that the gap is larger as the magnitude
+
+of the C2V value becomes larger. In order to improve the error
+
+performance, two compensation factors and
+
+are dy-
+
+namically used in the CN operations. In this method, we use
+
+the V2C values
+
+, where
+
+, to calculate the
+
+compensation factors for the C2V value . This algorithm is
+
+called the dynamic OMSA (DOMSA). For each variable node
+
+connecting to check node , we have to chose a compensa-
+
+tion factor from either or
+
+. In contrast, the authors
+
+in [23], [24] used the V2C values
+
+, where
+
+, to
+
+calculate the compensation factor for each variable node con-
+
+necting to check node , i.e., the C2V value . All the neigh-
+
+boring variable nodes connecting to the th check node use the
+
+same compensation factor. The adaptive algorithms presented
+
+in [23] and [24] are not suitable for MSA-based shuffled de-
+
+coding since both the minimum value and the second minimum
+
+value are changed group by group, even within the same de-
+
+coding iteration. The decoding operations of shuffled decoding
+
+using DOMSA are the same as those described in Section II-A,
+
+except that the CN operations are modified as follows:
+
+Modified CN operations for group : For each check
+
+node associated with variable node in group , i.e.,
+
+, compute the C2V value according to
+
+where is the channel value of variable node .
+
+(6)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+745
+
+where
+
+and are calculated according to (3) and (4),
+
+3:
+
+respectively, and is computed according to
+
+4: for all
+
+to do
+
+5: for all
+
+to
+
+do
+
+6:
+
+(7)
+
+7: if
+
+then
+
+8:
+
+9: else
+
+where is a threshold,
+
+, and
+
+. It is obvious from
+
+10:
+
+CNU-R stage
+
+(6) and (7) that two different compensation factors, i.e., and , are used, even in the operations for the same check
+node. The selection of compensation factors is determined by the threshold value . By properly choosing the compensation factors, performance can be improved for high SNR, which will be demonstrated in Section II-D.
+
+11: Calculate
+
+using
+
+and
+
+12: end if
+
+13: VNU stage
+
+14: Calculate
+
+using (1),
+
+15: if
+
+then
+
+,
+
+C. Shuffled Decoding Using Artificial Minimum Values
+
+16: Make a hard decision based on the sign of 17: else
+
+It can be seen from (3) that many comparisons are needed
+
+in the calculation of
+
+. However, a method was pre-
+
+sented in [4], that can be used to reduce the complexity of
+
+the comparison, which is described as follows. An ordered set
+
+of
+
+, for each check node is stored. Let
+
+be such an ordered set,
+
+where
+
+. In addition,
+
+the associated indices
+
+, are also
+
+stored. It is worth mentioning that the values of
+
+are
+
+produced during either the current iteration or the previous
+
+iteration
+
+. With such an ordered set, updating
+
+is quite easy. If
+
+. Alternatively, if
+
+. With and
+
+, we can calcu-
+
+late
+
+according to (6). Hence,
+
+values do not need to
+
+be stored, and the storage space and comparison complexity
+
+can be reduced by only storing the first values of the ordered
+
+18:
+
+CNU-U stage
+
+19:
+
+20: if
+
+then
+
+21:
+
+Replace
+
+in
+
+with
+
+22:
+
+Update
+
+by reordering the elements in
+
+23:
+
+else
+
+24:
+
+Compare
+
+with the elements in
+
+to
+
+obtain
+
+and
+
+25:
+
+Discard the largest element in
+
+to obtain
+
+and
+
+26:
+
+end if
+
+27: Replace
+
+in
+
+with
+
++
+
+28:
+
+Update
+
+29: end if
+
+30: end for
+
+31: end for
+
+set, i.e.,
+
+, since large values
+
+of
+
+contribute little in the calculation of
+
+. This
+
+ordered set is denoted as
+
+, which is initialized using a
+
+D. BER Results
+
+large constant . The associated index set
+
+is denoted as . Initially,
+
+, where is the null
+
+set. A detailed description of the algorithm, along with some
+
+numerical examples, can be found in Section III of [4].
+
+In the algorithm described in [4], minimum values and
+
+index values are stored in memory for each check node. In this
+
+paper, we propose replacing
+
+with
+
+,
+
+where
+
+is an offset value. This method uses an artificial
+
+-th minimum value rather than the actual -th minimum value.
+
+As a result, only
+
+minimum values and index values are
+
+stored in memory for each check node. In order to calculate
+
+correctly, we need to store the sign bit of each
+
+value. In
+
+In this paper, the channel considered is the additive white Gaussian noise channel and the modulation used is the binary phase shift keying. First, we evaluate the BER results using the shuffled decoding with both actual and artificial minimum values. Fig. 1 shows the floating-point BER results for the (8640, 4320) LDPC code specified in the G.hn standard using shuffled decoding, where OMSA and the variable-node group partition proposed in Section III are used. It can be seen from Curves (A1) and (A2) that the BER obtained using the artificial third minimum value is quite close to that obtained using the actual third minimum value. It is worth noting that we only need to store two minimum values in each check node if the
+
+addition, we also store
+
+so as to artificial third minimum value is used in the decoder. As can
+
+reduce the complexity in calculating for each check node be seen from Curves (A2) and (A3), the advantage of shuffled
+
+. The detailed decoding procedure is described in Algorithm decoding
+
+using the artificial third minimum value is
+
+1, where denotes the number of rows contained in the parity- obvious, compared to shuffled decoding
+
+using the
+
+check matrix (PCM).
+
+actual second minimum value. Also included in Fig. 1 for com-
+
+parison are the BER results using TPMP, where two minimum
+
+Algorithm 1 Proposed shuffled decoding
+
+values are stored in each check node. It can be seen that the
+
+shuffled decoding using the proposed variable-node partition
+
+1: Initialization:
+
+still provides a convergence speedup factor of 2 compared to
+
+2:
+
+TPMP.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+746
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+Fig. 1. Floating-point BER results for the (8640, 4320) code.
+
+. (A1)
+
+Shuffled decoding,
+
+, actual 3rd minimum value,
+
+. (A2) Shuffled
+
+decoding,
+
+, artificial 3rd minimum value,
+
+. (A3) Shuffled de-
+
+coding,
+
+, actual 2rd minimum value,
+
+. (A4) Shuffled decoding,
+
+, actual 3rd minimum value,
+
+. (B1) TPMP,
+
+. (B2)
+
+TPMP,
+
+. (B3) TPMP,
+
+.
+
+Fig. 3. Floating-point BER results for the (8640, 4320) code. (A1) Shuffled
+
+decoding,
+
+, artificial 3rd minimum value, DOMSA,
+
+. (A2)
+
+Shuffled decoding,
+
+, artificial 3rd minimum value, DOMSA,
+
+.
+
+(A3) Shuffled decoding, 2-min OMSA,
+
+. (A4) Shuffled decoding,
+
+2-min OMSA,
+
+. (A5) Shuffled decoding,
+
+, 2-min DOMSA,
+
+. (A6) Shuffled decoding,
+
+, 2-min DOMSA,
+
+. (B1)
+
+Layered decoding, 2-min OMSA,
+
+. (B2) Layered decoding, 2-min
+
+OMSA,
+
+. (B3) Layered decoding, 2-min NMSA,
+
+. (B4)
+
+Layered decoding, 2-min NMSA,
+
+.
+
+Fig. 4. Prototype matrix for the WiMAX rate-5/6 LDPC code where
+
+.
+
+Fig. 2. Fixed-point BER results for the (8640, 4320) code using shuffled de-
+
+coding, where
+
+. (A1) 5-bit quantization, DOMSA, actual 3rd min-
+
+imum value, where
+
+, and
+
+. (A2) 6-bit quanti-
+
+zation, OMSA, actual 3rd minimum value, where
+
+. (A3) 5-bit quanti-
+
+zation, DOMSA, artificial 3rd minimum value, where
+
+, and
+
+.
+
+similar BER performance when using 2-min OMSA compared
+
+to layered decoding. If we are allowed to use greater resources
+
+than NMSA, such that if DOMSA and
+
+can be used in
+
+the shuffled decoding, the BER performance of the proposed
+
+shuffled decoding method can be better than that of layered
+
+decoding, especially when
+
+.
+
+III. DETERMINATION OF VARIABLE-NODE GROUPS FOR EFFICIENT SHUFFLED QC-LDPC DECODERS
+
+We then evaluate the BER results using DOMSA. In the hardware implementation, quantization is necessary. In order to minimize the hardware cost, only a limited number of quantization bits can be used. However, this results in performance loss in the BER. Fig. 2 shows the fixed-point BER results for the (8640,
+
+In shuffled decoding, variable nodes are divided into
+
+groups, where each group consists of
+
+variable nodes
+
+(columns). In this section, we propose a partition algorithm
+
+such that the hardware efficiency can be maximized and the
+
+convergence rate can be maintained.
+
+4320) code using shuffled decoding
+
+. It can be seen
+
+from Curves (A1) and (A2) that the proposed DOMSA can re-
+
+A. A Review of QC-LDPC Codes
+
+duce the required number of quantization bits without causing The PCM for the QC-LDPC codes considered in this paper
+
+any degradation in BER. Now, we consider applying both tech- can be constructed based on an
+
+prototype matrix, which
+
+niques to the code. It can be seen from Curves (A2) and (A3) in consists of and non-negative shift indices . The PCM is
+
+Fig. 2 that using 5-bit quantization, DOMSA, and an artificial constructed by replacing each in the prototype matrix with a
+
+3rd minimum value can achieve an error performance which is
+
+zero matrix, and each non-negative element with a
+
+quite close to that obtained using 6-bit quantization, OMSA, and weight-1 circulant matrix having a shift index . The weight-1
+
+an actual 3rd minimum value. As a result, using the proposed circulant matrix can be obtained by cyclically shifting the
+
+techniques can significantly reduce the storage complexity since identity matrix right by positions. Therefore, the dimensions
+
+a lower number of quantization bits and the artificial 3rd min- of the PCM are
+
+. Fig. 4 shows the prototype matrix
+
+imum value are used.
+
+for the rate-5/6 code where
+
+, as specified in the IEEE
+
+Finally, Fig. 3 compares the proposed shuffled decoding 802.16e (WiMAX) standard. Table I summarizes the parameters
+
+method with the commonly-used layered decoding. It can be of the QC-LDPC codes specified in the ITU G.hn, IEEE 802.
+
+seen that the proposed shuffled decoding method can achieve a 11n, and IEEE 802.16e standards, respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+747
+
+TABLE I LDPC CODES SPECIFIED IN THE G.HN, 802.11N, 802.16E STANDARDS
+
+the second row of the matrix shown in Fig. 4 should handle five V2C messages at the same time in order to handle a single group
+
+of variable nodes in a single cycle. Consequently, the compara-
+
+tors in the CNUs will become the critical path of the CNUs. In
+
+addition, different CNUs need to handle different numbers of
+
+V2C messages. This introduces a challenge to the efficient de-
+
+sign of multi-standard decoders.
+
+To prevent a long critical path, we split a single weight-
+
+check-node process into cycles, where no two different V2C
+
+values are passed to a single CNU in the same clock cycle.
+
+In Section III-D, we propose an algorithm that can be used
+
+to determine the values of
+
+, such that the number of
+
+incoming messages to the CNU will be reduced and the crit-
+
+ical path can be shortened. Using the proposed partition, if we
+
+process 24 columns (one column in each block column) of the
+
+PCM shown in Fig. 4 in a single cycle, we only need 80 CNUs.
+
+Compared to the partition used in [4], the proposed partition
+
+can reduce the required number of CNUs by 16.7% based on
+
+B. Variable-Node Group Partition
+
+the same parallelism of 24 (columns). Although each CNU for these two group partitions only need to handle a single new
+
+In the decoder presented in [4], each group consists of
+
+consecutive columns of the PCM. Using this kind of group par-
+
+titioning where
+
+, we can sequentially process the first
+
+block column, the second block column, and so on. To achieve
+
+a higher throughput, an entire block column must be processed
+
+in parallel. For the PCM shown in Fig. 4, we need a total of
+
+V2C message in a single cycle, the proposed partition requires
+
+fewer CNUs, achieves a higher hardware efficiency, and does
+
+not use barrel shifters for memory access. In order to achieve
+
+a higher throughput, each group can consist of consecutive
+
+columns of each block column. As a result, the parallelism be-
+
+comes
+
+(columns).
+
+check-node units (CNUs), since the maximum column weight of the PCM is 4. However, when processing the weight-2 block
+
+C. Memory Configuration and Access
+
+column, there will be idle CNUs. So, the hardware utilization Since the CN memory dominates the decoder complexity, as
+
+ratio ranges from 50% to 100%. In addition, using such a group is evident from Table V, we present in this section a method of
+
+partition, barrel shifters are usually used in order to access the configuring the memory such that sufficient memory bandwidth
+
+contents stored in the CN memory.
+
+can be provided without the need for using registers. In order to
+
+However, in order to avoid the use of barrel shifters, and provide sufficient bandwidth, the CN memory is divided into
+
+consequently increase hardware efficiency, we can partition the
+
+memory blocks, where each memory block stores the CN
+
+variable nodes using the following method. The basic idea is that messages corresponding to a block row of the PCM, and each
+
+each group contains a single column from each block column. CN message consists of the first
+
+minimum values and the
+
+Suppose that group 0 consists of the -th, -th, , columns of first minimum-value indices.
+
+the 0-th, 1-th, , block columns, respectively. Then, the -th We now use the example shown in Fig. 5 to demonstrate
+
+group consists of the
+
+-th,
+
+-th, the configuration of the memory block, where the first block
+
+, columns of the 0-th, 1-th, , block columns, respectively, row of the PCM given in Fig. 6(a) is considered. Since there
+
+for
+
+. Consequently, the columns which are are eight CNs corresponding to the first block row, there are
+
+processed in cycle are those columns corresponding to the eight CN messages stored in a single memory block. The CN
+
+variable nodes in group . Since the non-zero sub-matrices of message corresponding to the th CN is denoted by , i.e.,
+
+the PCM are
+
+weight-1 circulant matrices, the columns
+
+. Suppose that we
+
+processed in cycle
+
+are the block-wise downward cycli- process the first column of each block column in cycle 0 and
+
+cally shifted versions of the columns processed in cycle . As consider the memory access for the corresponding CN memory
+
+a result, we can access the contents in the CN memory using block. Since the shift index for the first circulant matrix is 1, the
+
+simple read/write counters instead of complex barrel shifters. content stored in address
+
+, i.e., , should be
+
+Although this kind of group partitioning can negate the need read from the CN memory in cycle 0. In addition, the CN mes-
+
+for the use of barrel shifters, the values of -th, -th, , sages
+
+, and need to be read from the CN memory
+
+should be carefully chosen in order to prevent a long critical and sent to the corresponding processing unit (PU) in cycle 0.
+
+path and reduce hardware inefficiency. For example, we can use In cycle 1, CN messages
+
+, and need to be read from
+
+. In other words, the -th group consists of the CN memory, and the updated CN messages
+
+, and
+
+the -th column of each block column. Using such a group par- need to be written back to the memory if the processing delay
+
+tition, the number of V2C messages involved in each CN op- is 1. These memory access requirements can be realized using 3
+
+eration within a single group may be different. For example, FIFOs. As shown in Fig. 5(b), the three FIFOs are arranged in a
+
+the number of V2C messages ranges from one to five for the ring and two adjacent FIFOs are connected through one PU. The
+
+PCM shown in Fig. 4. Specifically, the CNUs corresponding to PU performs the operations described in the CNU-R, VNU, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+748
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+Fig. 5. Example of CN memory configuration, where
+
+and
+
+.
+
+(a) The first block row of the PCM in Fig. 6(a). (b) The associated memory
+
+configuration. (c) The contents in the FIFOs if the processing delay is 1. (d) The
+
+contents in the FIFOs if the processing delay is 2.
+
+Fig. 7. Memory configuration for the first block row of the modified PCM
+
+shown in Fig. 6(b), where
+
+and
+
+. (a) The first block row. (b)
+
+The contents in the FIFOs in cycle 0. (c) The contents in the FIFOs in cycle 1.
+
+(c) The contents in the FIFOs in cycle 2.
+
+the FIFO length is the difference between two adjacent non-neg-
+
+ative shift indices. So the lengths of FIFO0, FIFO1, and FIFO2
+
+are 1, 1, and 6, respectively. Since the lengths of both FIFO0
+
+and FIFO1 are 1 which is equal to the processing delay, the for-
+
+warding technique is used for the two FIFOs in order to prevent
+
+hazards in memory access, as shown in Fig. 5(c).
+
+If the pipeline latency (processing delay) is larger than the
+
+FIFO length, the latest message will still be in the pipeline (pro-
+
+cessing units) and will not yet have been written to the CN
+
+memory. Therefore, hazards in memory access will occur. We
+
+now suppose that the pipeline latency is 2 cycles. In the imple-
+
+mentation shown in Fig. 5(d), there will be hazards in memory
+
+access for FIFO0 and FIFO1, since the lengths of both are 1,
+
+which is smaller than the pipeline latency.
+
+In order to prevent memory access hazards, properly
+
+choosing the starting columns, i.e., values of
+
+, is
+
+essential. In other words, if the starting columns remain as the
+
+first column of each block column, then the prototype matrix,
+
+and, hence, the associated PCM, should be properly modified
+
+in order to prevent hazards in memory access. The prototype
+
+matrix can be modified by adding offset values
+
+, to
+
+the non-negative indices of columns
+
+, of the original
+
+prototype matrix, respectively. The PCM shown in Fig. 6(b) is
+
+obtained by applying the offset values 6, 7, 7, 5, 2, 4, and 1 to the
+
+original prototype matrix. Fig. 7 shows the associated memory
+
+configuration for the first block row of the modified PCM. It
+
+can be seen that the FIFO lengths are more uniform and, hence,
+
+memory access hazards will not occur if the pipeline latency
+
+is 1 or 2. If the original PCM is used, then using the starting
+
+Fig. 6. (a) The original PCM. (b) The modified PCM.
+
+columns
+
+, for block columns
+
+, respectively,
+
+can prevent any hazards in memory access.
+
+CNU-U stages of Algorithm 1. The detailed architecture and the Fig. 8 demonstrates that we can determine the offset values
+
+related description of the proposed decoder are given in Fig. 10 so that the FIFO lengths for each row of the prototype matrix
+
+and Section IV, respectively.
+
+are almost uniformly distributed. Fig. 8(a) shows both the pro-
+
+Since CN messages
+
+, and need to be read from totype matrix considered and the memory configuration (FIFO
+
+the CN memory in cycle 0, is placed in front of FIFO0, distributions) for each row of the prototype matrix. The config-
+
+is placed in front of FIFO1, and is placed in front of uration of each memory block is represented as a ring, where
+
+FIFO2. Obviously, the number of FIFOs in each memory block each section of the ring represents a FIFO. It can be seen in
+
+is the number of distinct non-negative shift indices in the corre- the second row that there are two non-negative elements, which
+
+sponding row of the prototype matrix. If all the distinct non-neg- have the same shift index. This means that the corresponding
+
+ative shift indices on a block row are sorted in descending order, CNU will handle two V2C messages at the same time. We use
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+749
+
+Fig. 8. Determining the offset values in order to achieve a uniform FIFO distribution. (a) Initialization. (b) The results obtained by adding an offset value of 1 to column 0. (c) The results obtained by adding an offset value of 3 to column 5. (d) The results obtained by adding an offset value of 2 to column 6.
+
+two crossed lines in the corresponding memory configuration to demonstrate this fact. Initially, the offset values of all the block columns are zero. First, we increase each non-negative index of column 0 by 1, as shown in Fig. 8(b). In other words, the offset value of column 0 is 1. By continuing to adjust the offset value for column 5, the matrix shown in Fig. 8(c) can be generated. The final results are shown in Fig. 8(d), where it can be seen that the FIFO lengths for each row of the prototype matrix are almost uniformly distributed.
+
+D. Proposed Algorithm
+
+We now present an algorithm that can be used to determine
+
+the values of
+
+, i.e., the offset values for each column
+
+of the prototype matrix, such that uniform CNUs and mod- Fig. 9. FIFO distributions for two different variable-node partitions, where
+
+erate FIFOs with a smaller length spread can be achieved. Mod-
+
+.
+
+erate FIFOs with a smaller length spread have the following ad-
+
+vantages: A short FIFO is usually accompanied by hazards in non-negative element in the prototype matrix affects the lengths
+
+memory access, since the pipeline latency is usually larger than of two FIFOs, in the proposed algorithm, we only assign the
+
+the FIFO length. In addition, short FIFOs are not as area-effi- length of one FIFO to the non-negative element. If element
+
+cient as long FIFOs. As a result, the use of short FIFOs should appears only once in a single row of the prototype matrix, we
+
+be avoided in CN memory. Although long FIFOs can achieve a assign FIFO length
+
+to the non-negative element .
+
+better efficiency in a single-mode decoder, in a multi-mode de- If element appears more than once in a single row of the
+
+coder, memory sharing will reduce its efficiency. Hence, mod- prototype matrix, we assign FIFO length 0 to the non-negative
+
+erate FIFOs with a smaller length spread are required. This goal element . In addition, for each column in the prototype
+
+can be achieved using the proposed algorithm, which is de- matrix, we assign the corresponding average FIFO length. The
+
+scribed as follows:
+
+average FIFO length for a specific column of the prototype
+
+If all of the distinct non-negative elements in a row are matrix is the mean of the FIFO lengths corresponding to the
+
+sorted in descending order, we find that every distinct non-negative elements in the column of the prototype matrix.
+
+non-negative element affects the lengths of two adjacent The detailed process for the proposed algorithm is described as
+
+FIFOs. Suppose that the sorted list for the considered row follows:
+
+is
+
+and we consider element , where
+
+Step 1) The offset values for each column of the prototype
+
+. Then element affects the
+
+matrix are initialized to zeros.
+
+lengths of two FIFOs. The length of the first FIFO is
+
+Step 2) Calculate the average FIFO length for each column
+
+and the length of the second FIFO is
+
+. Although each
+
+of the prototype matrix.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+750
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+Fig. 10. Block diagram for the proposed decoder architecture.
+
+Step 3) Look for the column with the minimum of average sponding row. In addition, each FIFO requires one CNU to up-
+
+FIFO length. Then, increase the offset value corre- date its contents (or, equivalently, CN messages). As a result, the
+
+sponding to the column by 1. In other words, in- number of CNUs in the decoder is also equal to the number of
+
+crease each non-negative element in the column by distinct elements of the resultant prototype matrix. In the G.hn
+
+1 to obtain a temporary prototype matrix.
+
+(8640, 4320) decoder, the total number of FIFOs (or CNUs) is
+
+Step 4) After repeating Steps 2 and 3 times using the 82 when
+
+. Since using
+
+can achieve the required
+
+up-to-date temporary prototype matrix, we can ob- throughput, the total number of FIFOs (or CNUs) in the decoder
+
+tain a proper prototype matrix and the associated will be doubled and becomes 164.
+
+offset values
+
+, if the value is large Fig. 9 shows the FIFO distributions for two different vari-
+
+enough.
+
+able-node partitions for the (8640, 4320) code when
+
+.
+
+The proper prototype matrix can be obtained by adding If we choose the variable nodes corresponding to the first two
+
+offset values
+
+, to the non-negative indices of columns columns of each block column as the elements of group 0, the
+
+, of the original prototype matrix, respectively. If we total number of FIFOs is 152, and the required FIFO length
+
+use the first column of each block column of the PCM corre- ranges from 1 to 152. If we apply the proposed algorithm to
+
+sponding to the proper prototype matrix as the starting columns, the code, the required FIFO length ranges from 12 to 80 and the
+
+then uniform CNUs and moderate FIFO lengths with a smaller total number of FIFOs is 164. Although the total number of re-
+
+length spread can be achieved.
+
+quired memory bits for these two group partitions are the same,
+
+We now demonstrate the advantage of the proposed algorithm the second partition has the following advantages over the first
+
+through the use of the G.hn (8640, 4320) code. Since there are partition: 1) Memory access hazards resultant from pipeline la-
+
+82 non-negative elements in the prototype matrix of the code, tency can be prevented. 2) Moderate FIFOs with a smaller vari-
+
+the associated PCM has 82 nonzero
+
+circulants, and since ance in length, which is beneficial for multi-standard designs,
+
+several elements in the prototype matrix have the same value, can be achieved.
+
+we can apply the proposed algorithm to the prototype matrix such that the non-negative elements of the resultant prototype matrix are distinct. It is worth remembering that the number of
+
+IV. AN EFFICIENT MULTI-STANDARD SHUFFLED DECODER ARCHITECTURE
+
+FIFOs corresponding to each row of a prototype matrix is equal In this section, we apply the proposed techniques in order to
+
+to the number of non-negative distinct elements of the corre- design an efficient decoder for the codes specified in the G.hn,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+751
+
+TABLE II PARAMETERS FOR DIFFERENT CODES IN THE THREE STANDARDS
+
+the associated V2C values . The updated elements are then written back to the CN memory FIFOs. If the operations described in the CNU-R, VNU, and CNU-U stages of Algorithm 1 are executed within a single cycle, the logic delay in the hardware will be very long and, hence, the decoder cannot be operated at a high clock frequency. As a result, the pipeline technique is used in the proposed decoder in order to shorten the logic delay. Due to the processing latency, the FIFOs shown in Fig. 10 are used for the temporary storage of the elements in the ordered and index sets.
+
+WiMAX, and WiFi standards. Under the required throughput constraints, the chosen values are summarized in Table II. The other relevant parameters are also included. In Section IV-A, we use the G.hn (8640, 4320) code, which is the largest code defined in the three standards, to illustrate the proposed decoder architecture. The extension to multi-mode and multi-standard functionality is addressed in Section IV-B. The implementation results are reported in Section IV-C. A comparison of the results is given in Sections IV-D and IV-E.
+
+B. Multi-Standard Functionality
+In the following, we implement the multi-mode functionality and the multi-standard functionality by modifying the (8640, 4320) decoder presented in Section IV-A. The wide range of expansion factors results in a challenge in implementing an efficient multi-standard LDPC decoder. Several difficulties should be overcome, which is described as follows.
+The first difficulty is that the interface between the memory banks and the computation units for different codes should be implemented efficiently. This difficulty can be overcome by
+
+A. Overview of the Decoder
+
+using the method presented in [15] to design the interface be-
+
+Fig. 10 shows the decoder architecture for the (8640, 4320)
+
+code, where a parallelism value of 48, and hence 48 VNUs, is
+
+used. It has been mentioned in Section III that 164 CN Memory
+
+FIFOs and 164 CNUs are required, where each CNU is divided
+
+into a CNU-R part and a CNU-U part according to the functions
+
+described in Algorithm 1. After the starting columns of each
+
+block column are decided using the proposed algorithm, we can derive the corresponding processing order for the variable nodes
+
+and the associated check nodes based on the QC structure of the
+
+code. The addresses of both the CN messages and the VN mes-
+
+sages required for the
+
+-th group are the shifted versions of
+
+those required for the -th group. From this structure, we can use
+
+the Address Generator that is implemented using read and write
+
+counters rather than barrel shifters so as to lower the complexity
+
+of the memory access. In addition, based on the QC structure of the code, the interconnections between the CNU-Rs (CNU-Us)
+
+and the VNUs, i.e., the C2V (V2C) Connection Network, are in-
+
+dependent of the variable-node group in processing and, hence,
+
+can be implemented using fixed interconnections. The Address ROM is used to store the shift indices of the as-
+
+sociated prototype matrix. Since one CV Memory Block cor-
+
+responds to one block column of the PCM, there are 24 CV
+
+Memory Blocks in the proposed decoder. The Address Generator is used to provide the required read/write addresses for
+
+the CV Memory Blocks and the CN Memory FIFOs. When a
+
+group of variable nodes is about to be processed, the associ-
+
+ated CNU-Rs first produce the C2V values
+
+using the
+
+two smallest values, i.e.,
+
+, and the three indices i.e.,
+
+, stored in the CN memory FIFOs, i.e., the elements in
+
+the ordered sets and the index sets. Then the associated channel
+
+values are read from the CV memory blocks and the associ-
+
+ated C2V messages
+
+produced in the CNU-Rs are fed to
+
+tween the memory banks and the computation units. Although
+
+a total of 133 codes are specified in the three standards, there
+
+are only
+
+types of prototype matrix. For codes be-
+
+longing to the same type of prototype matrix, the same C2V and
+
+V2C Connection Networks can be used as the interface with the
+
+assistance of the Address Generator and the Address ROM, as
+
+shown in Fig. 10. As a result, by taking advantage of the QC
+
+structure, the C2V and V2C Connection Networks can be im-
+
+plemented using fixed interconnections. In order to support all
+
+16 types of prototype matrix, we can use 16-to-1 MUXs to select
+
+the required C2V and V2C Connection Networks. The required
+
+control signals for the MUXs are stored in the Address ROM.
+
+Details of the design method for both the Connection Networks
+
+and the Address Generator for the multi-mode functionality can
+
+be found in [15].
+
+The second difficulty is that an efficient memory configura-
+
+tion and sharing of the CNUs and VNUs is required. By uti-
+
+lizing the proposed group-partitioning algorithm, we can deter-
+
+mine the number of FIFOs and the length of each FIFO required
+
+for the (8640, 4320) code. Based on the results presented in
+
+Section III-D, 164 FIFOs are required for the code. It is worth
+
+noting that, among the LDPC codes specified in the three stan-
+
+dards, the (8640, 4320) code is the largest and the number of
+
+FIFOs required is also the largest. It is possible that different
+
+codes lead to different FIFO configurations, and that some of the
+
+configurations may not be compatible to that of the (8640, 4320)
+
+code. If this situation occurs, we increase the FIFO lengths re-
+
+quired for only the (8640, 4320) code. This means that some of
+
+the FIFOs are not fully used when switching from one mode to
+
+another. In order to minimize the overhead required to realize
+
+the multi-mode functionality, the FIFO configuration for each
+
+code should have moderate FIFOs with a smaller length spread.
+
+Since the non-negative elements of the prototype matrix deter-
+
+the VNUs to produce the V2C values . Finally, the CNU-Us mine the FIFO lengths, the offset values for each code defined in
+
+update the elements in both the ordered and index sets using the three standards should be chosen with care so that this goal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+752
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+can be achieved. Using the proposed group-partitioning algorithm, the offset values can be carefully determined so that the
+
+TABLE III THROUGHPUT VALUES FOR THE PROPOSED DECODER
+
+FIFO configurations for different codes are compatible to the
+
+(8640, 4320) decoder with minimal modification. As a result,
+
+the resultant 164 FIFOs can be shared among the 133 decoding
+
+codes. The required control information for the FIFOs is stored
+
+in the Address ROM.
+
+In the (8640, 4320) decoder, we use
+
+in order to meet
+
+the throughput requirements of the G.hn standard. As a result,
+
+there are
+
+VNUs and 164 CNUs in the hardware
+
+implementation. By using the proposed group-partitioning al-
+
+gorithm, we can arrange the processing of variable nodes for a
+
+variety of QC-LDPC codes such that each CNU only needs to
+
+handle a single V2C message in each cycle. The resultant uni-
+
+form CNUs facilitate the multi-standard design, even though a
+
+wide range of CN degrees exists in the three standards. As a re-
+
+sult, we can simply use MUX to select the required hardware
+
+resources in the (8640, 4320) decoder so as to accomplish the
+
+decoding operation for the remaining codes since using
+
+or
+
+can meet the required throughput, and 48 VNUs and
+
+164 CNUs are enough for the remaining codes in the three stan-
+
+dards. Thus, the second difficulty can be overcome through the
+
+use of the proposed algorithm.
+
+Based on the results presented in Section III-D, length-1 Fig. 11. Layout of the proposed decoder.
+
+FIFOs and hence memory-access hazards can be prevented for
+
+the (8640, 4320) code, using the proposed group-partitioning Since
+
+VNUs operate in parallel, the proposed
+
+algorithm. However, for codes with an expansion factor , decoder takes
+
+clock cycles to accomplish a single
+
+which is less than twice that of its maximum row weight, iteration, where is the fractional part. Thus, the decoding
+
+length-1 FIFOs cannot be avoided using any offset values. throughput for the information bits is
+
+For such kind of codes, we can either introduce idle cycles
+
+or use the method presented in [4] to prevent memory access
+
+(8)
+
+hazards. The method presented in [4] is briefly described as
+
+follows. In shuffled decoding, the V2C messages produced where is the clock frequency and is the code rate. A sum-
+
+during the current iteration can be used to calculate the C2V mary of throughput values for the proposed decoder is provided message during the same iteration. Specifically, according to in Table III, together with the associated number of iterations in
+
+(3), we can use the
+
+values, where
+
+, the simulation for each code rate used.
+
+and
+
+values, where
+
+, to calculate
+
+, where
+
+, when processing group . However, in
+
+the hardware implementation, due to the processing delay and
+
+the existence of length-1 FIFOs, some of the
+
+values,
+
+where
+
+, are not available, and we can only use
+
+values, where
+
+, which are produced
+
+at the
+
+-th iteration, to calculate
+
+, where
+
+.
+
+Consequently, the existence of length-1 FIFOs will result in a
+
+degradation in BER performance. It can be seen from simula-
+
+tion that the BER loss due to the existence of length-1 FIFOs is
+
+acceptable, which can also be seen from [4].
+
+Fig. 12 shows the BER results for the proposed decoder. Fig. 11 shows the layout of the decoder chip, which occupies a core area of 5.529 mm and can operate at a clock frequency of 400 MHz. An implementation summary for the proposed decoder is provided in Table IV. A complexity summary for each module is given in Table V. Based on the characteristics of shuffled decoding, channel values (CVs), instead of APP values, are stored in single-port memory blocks in order to minimize the decoder area. Since the values stored in the CN Memory FIFOs need to be read and written in each cycle, it is necessary to use a two-port memory in the implementation. In the proposed decoder, the Address ROM consists of 5 blocks
+
+C. Implementation Results
+
+and the single-port CV memory bank consists of 24 blocks, where the size of each Address ROM block is 512 128 and
+
+Based on the proposed architecture, a multi-standard LDPC the size of each CV memory block is 180 10. The two-port
+
+decoder that supports all the LDPC codes defined in the ITU CN memory bank consists of 164 FIFOs and the size of each
+
+G.hn, IEEE 802.16e, and IEEE 802.11n standards, has been im- FIFO ranges from 12 46 to 80 46.
+
+plemented using a 90-nm CMOS process with nine metal layers. The decoder was synthesized using the Synopsys Design Com- D. Comparison With the Shuffled Decoder Presented in [4]
+
+piler, and placed and routed using SOC Encounter. The power Table VI compares the proposed decoder with the RS-LDPC
+
+estimates were obtained using the power analysis tool, Synopsys decoder presented in [4]. It can be seen that a wider range of
+
+PrimeTime PX.
+
+code rates and a larger number of codes are supported by the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+753
+
+TABLE VI COMPARISON WITH THE DECODER PRESENTED IN [4]
+
+Fig. 12. BER results for the LDPC codes. (FLO: Floating-point results; FIX: Fixed-point results.).
+TABLE IV IMPLEMENTATION SUMMARY
+
+is not possible for the RS-LDPC decoder presented in [4] since RS-LDPC codes are regular.
+E. Comparison With Single-Standard and Multi-Standard Decoders Presented in [8]–[10], [14], [15], [27], [28], [32], [33]
+
+In [33], the authors presented a low-power rate-1/2 19-mode
+
+WiMAX decoder with early termination. In [28], the authors
+
+used a puncturing technique to achieve multi-rate functionality
+
+based on the rate-1/2 length-2304 WiMAX code. Table VII pro-
+
+vides the comparison of the proposed work with the single-stan-
+
+dard LDPC decoders presented in [14], [15], [27], [32] and the
+
+multi-standard LDPC decoders presented in [8]–[10]. Since the
+
+decoders presented in [33] and [28] are not full-mode WiMAX
+
+decoders, the related results are not included.
+
+It can be seen that the decoder presented in [14] can achieve
+
+both the highest TAR value and the highest normalized TAR
+
+(NTAR) value, which is defined by
+
+. The
+
+reason is that the cyclic shifter used in [14] only supports codes
+
+with expansion factors that are multiples of 27 and the com-
+
+plexity of the cyclic shifter can be minimized. However, the de-
+
+TABLE V COMPLEXITY SUMMARY FOR EACH MODULE
+
+coder only supports WiFi LDPC codes, but does not support the LDPC codes specified in the WiMAX and G.hn standards. In
+
+contrast, the proposed decoder supports the LDPC codes speci-
+
+fied in all three standards.
+
+In [27] and [32], the synthesis results for single-standard
+
+LDPC decoders designed for WiMAX applications were re-
+
+ported, and both decoders can achieve a moderate throughput
+
+and a high TAR value. Although the proposed multi-standard
+
+decoder has a lower TAR value compared to the decoder
+
+presented in [27], it is worth noting that the TAR (NTAR) value
+
+for the proposed decoder is calculated during the post-layout
+
+stage, while the TAR (NTAR) value for the decoder presented
+
+proposed decoder compared to the decoder presented in [4]. in [27] is calculated during the synthesis stage where routing
+
+Since low-rate codes, such as rate-1/2 codes, are supported in is not considered. In the post-layout stage, however, routing
+
+the proposed decoder, more quantization bits and a larger CN is considered. It is known that routing within an ASIC im-
+
+memory are required compared to the high-rate RS-LDPC de- plementation for an LDPC decoder requires significant effort
+
+coder presented in [4]. This is the reason that the throughput-to- and consumes a large amount of chip area. Hence the core
+
+area ratio (TAR) value of the proposed decoder, which is defined utilization is usually low for an LDPC decoder. If routing area
+
+by
+
+[30], is lower than that of is taken into consideration when evaluating the results of the
+
+[4], and is also the reason that we propose the two techniques decoders presented in [14], [27] and [32], the TAR (NTAR)
+
+that have been presented in Sections II-B and II-C in order to re- values of the decoders will be greatly impacted.
+
+duce both the number of quantization bits and the size of the CN In [15], a low-complexity WiMAX LDPC codec, that uses
+
+memory. The proposed decoder supports the irregular LDPC a processing-task arrangement to efficiently reuse the hardware
+
+codes defined in the three standards, meaning that the proposed resources in different modes, was reported. One of the major dif-
+
+algorithm can be used to determine the variable-node groups ferences between the proposed shuffled decoder and the layered
+
+such that the hardware cost can be minimized. In contrast, this decoder presented in [15] is that different decoding schedules
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+754
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+TABLE VII COMPARISON TABLE
+
+are used. Compared to the decoder presented in [15], the pro- sion and the expansion factor dimension. However, the re-
+
+posed decoder not only supports WiMAX codes, but also sup- maining decoders are only flexible in the dimension. Since
+
+ports WiFi and G.hn codes. It is worth noting that the throughput the decoders presented in [14] and [27] restrict the flexibility
+
+requirements of WiMAX (about 30 Mbps) and G.hn (about 1 of the circular shifters, the complexity of the shifters can be
+
+Gbps) are quite different. The decoder architecture using the minimized and hence these two single-standard decoders can
+
+processing-task arrangement proposed in [15] cannot be used achieve the highest NTAR values among the decoders presented
+
+to devise a high-throughput decoder to meet the requirements in Table VII. It is worth noting that the circular shifters used
+
+of G.hn. Two of the major reasons why the proposed shuffled in [14] can only support WiFi codes, while the circular shifters
+
+decoder can achieve higher throughput are that a higher paral- used in [27] can only support WiMAX codes. In order to sup-
+
+lelism is used and that the proposed FIFO-based memory con- port LDPC codes in both standards, the decoder presented in
+
+figuration can provide a higher and sufficient memory band- [10] achieves a lower NTAR value compared to the single-stan-
+
+width.
+
+dard decoders presented in [14] and [27]. Although the decoder
+
+In [8], [9], and [10], LDPC decoders that support both presented in [9] not only supports WiMAX and WiFi codes but
+
+WiMAX and WiFi applications were presented. The decoders also QC-LDPC codes with an arbitrary expansion factor when
+
+presented in [9] and [10] are both layered decoders while the
+
+, the greater flexibility provided by the decoder presented
+
+decoder presented in [8] is implemented using phase overlap in [9] also induces a lower NTAR value compared to the decoder
+
+message passing whose convergence speed in BER is quite presented in [10]. Since a wide range of expansion factors
+
+close to the TPMP. As a result, a relatively large number of need to be supported, and the expansion factors do not have any
+
+iterations
+
+is used in the decoder presented in order to apparent relationship, as can be seen from Table I, it is not easy
+
+achieve a comparable BER performance. Since configurable to use the techniques presented in [14], [27], [9] and [10] to de-
+
+permutation networks are used in the decoder presented in [9], sign efficient circular shifters and decoders that support the three
+
+this decoder can be programmed such that QC-LDPC codes standards. It can be seen that the proposed decoder achieves the
+
+with an arbitrary expansion factor can be supported when highest throughput based on a comparable TAR. To the best of
+
+. It can be seen that the proposed shuffled decoder our knowledge, the decoder is the first decoder that can support
+
+can achieve a comparable TAR value compared to the layered the LDPC codes defined in all three communication standards.
+
+decoder presented in [10]. This demonstrates the fact that, Since both wireless and wired (power line) communication stan-
+
+in addition to layered decoding, shuffled decoding using the dards are supported, this decoder would be able to provide both
+
+proposed techniques can also be used to devise an efficient wireless-access capability and radio-free communications and
+
+multi-standard decoder.
+
+can be embedded in a notebook computer to provide more flex-
+
+It is interesting to compare the NTAR values and flexibility ibility for users.
+
+for the layered decoders presented in [14], [27], [9] and [10], where circular shifters are used to implement the multi-mode
+
+V. CONCLUSION
+
+functionality. It is worth noting that the circular shifters used We have demonstrated that shuffled decoding can be used
+
+in [9] provides flexibility in both the shift-amount dimen- to devise an efficient multi-standard decoder using the pro-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+UENG et al.: AN EFFICIENT MULTI-STANDARD LDPC DECODER DESIGN USING HARDWARE-FRIENDLY SHUFFLED DECODING
+
+755
+
+posed techniques. A FIFO-based configurable CN memory
+is proposed that provides sufficient memory bandwidth for
+the high-throughput shuffled decoder. We also presented the
+variable-node group-partitioning algorithm, which is used to
+uniformly configure the CN memory and unify the CNUs
+such that the multi-standard functionality can be implemented
+efficiently. The use of DOMSA and artificial minimum values
+reduces the size of the CN memory bank. Implementation
+results show that the multi-standard decoder can support a
+larger number of standards, and achieves a higher throughput
+and comparable TAR compared to the multi-standard LDPC
+decoders described in previous literature.
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inform. Theory, vol. IT-8, pp. 21–28, Jan. 1962.
+[2] D.-J.-C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[3] A.-J. Blanksby and C.-J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[4] Y.-L. Ueng, C.-J. Yang, K.-C. Wang, and C.-J. Chen, “A multi-mode shuffled iterative decoder architecture for high-rate RS-LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2790–2803, Oct. 2010.
+[5] ITU-T G.hn Standard for Wired Home Networking, [Online]. Available: http://www.homegridforum.org/home/, [On-line]. Available:
+[6] IEEE 802.16e WiMAX Standard, IEEE P802.16e-2005, Oct. 2005. [7] IEEE 802.11 Wireless LANs WWiSE Proposal: High Throughput Ex-
+tension to the 802.11 Standard, IEEE 11-04-0886-00-000n. [8] C.-H. Liu, C.-C. Lin, S.-W. Yen, C.-L. Chen, H.-C. Chang, C.-Y. Lee,
+Y.-S. Hsu, and S.-J. Jou, “Design of a multimode QC-LDPC decoder based on shift-routing network,” IEEE Trans. Circuits Syst. II, Express Briefs, vol. 56, no. 9, pp. 734–738, Sept. 2009. [9] D. Bao, B. Xiang, R. Shen, A. Pan, Y. Chen, and X. Y. Zeng, “Programmable architecture for flexi-mode QC-LDPC decoder supporting wireless LAN/MAN applications and beyond,” IEEE Trans. Circuits Syst. I, vol. 57, no. 1, Jan. 2010. [10] Y. Sun and J. R. Cavallaro, “A low power 1-Gbps reconfigurable LDPC decoder design for multiple 4G wireless standards,” in Proc. IEEE SOCC 2008. [11] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inform. Theory, vol. 27, no. 5, pp. 533–547, Sept. 1981. [12] M.-M. Mansour and N.-R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. VLSI Systems, vol. 11, no. 6, pp. 976–996, Dec. 2003. [13] D.-E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop on Signal Processing Systems (SIPS), Oct. 2004, pp. 107–112. [14] K. Gunnam, G. Choi, W. Wang, and M. Yeary, “Multi-rate layered decoder architecture for block LDPC codes of the IEEE 802.11n wireless standard,” in Proc. IEEE ISCAS 2007. [15] Y. L. Wang, Y. L. Ueng, C. L. Peng, and C. J. Yang, “Processing-task arrangement for a low-complexity full-mode WiMAX LDPC codec,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 415–428, Feb. 2011. [16] J. Zhang and M.-P.-C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005. [17] F. Guilloud, E. Boutillon, J. Toush, and J. Danger, “Generic description and synthesis of LDPC decoders,” IEEE Trans. Commun., vol. 55, no. 11, pp. 2084–2091, Nov. 2007. [18] Z. Cui, Z. Wang, X. Zhang, and Q. Jia, “Efficient decoder design for high-throughput LDPC decoding,” in Proc. IEEE Asia Pacific Conf. on Circuits and Syst., Dec. 2008, pp. 1640–1643. [19] Y. L. Ueng, C. J. Yang, and C. J. Chen, “A shuffled message-passing decoding method for memory-based LDPC decoders,” in Proc. IEEE ISCAS 2009, May 2009, pp. 892–895. [20] J. Lin, J. Sha, Z. Wang, and L. Li, “An improved min-sum based column-layered decoding algorithm for LDPC codes,” in Proc. IEEE Workshop on Signal Processing Systems (SIPS), 2009.
+
+[21] M.-P.-C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commum., vol. 47, no. 5, pp. 673–680, May 1999.
+[22] J. Chen and M.-P.-C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commum. Lett., vol. 6, pp. 208–210, May 2002.
+[23] M. Jiang, C. Zhao, L. Zhang, and E. Xu, “Adaptive offset min-sum algorithm for low-density parity check codes,” IEEE Commum. Lett., vol. 10, no. 6, pp. 483–485, June 2006.
+[24] X. Wu, Y. Song, M. Jiang, and C. Zhao, “Adaptive-normalized/offset min-sum algorithm,” IEEE Commum. Lett., vol. 14, no. 7, pp. 667–669, July 2010.
+[25] P. Radosavljevic, A. de Baynast, and J. R. Cavallaro, “Optimized message passing schedules for LDPC decoding,” in Proc. 39th Asilomar Conf. Signals, Syst. Comput., 2005, pp. 591–595.
+[26] A. V. Casado, M. Griot, and R. Wesel, “LDPC decoders with informed dynamic scheduling,” IEEE Trans. on Commun., vol. 58, no. 12, pp. 3470–3479, Dec. 2010.
+[27] G. Gentile, M. Rovini, and L. Fanucci, “Low-complexity architectures of a decoder for IEEE 802.16e LDPC codes,” in Proc. Euromicro Conf. on Digital System Design Architectures, Methods and Tools (DSD), Aug. 2007, pp. 369–375.
+[28] K. Zhang, X. Huang, and Z. Wang, “A high-throughput LDPC decoder architecture with rate compatibility,” IEEE Trans. Circuits Syst. I, vol. 58, no. 4, Apr. 2011.
+[29] W. E. Ryan and S. Lin, Channel Codes: Classical and Modern. : Cambridge University Press, 2009.
+[30] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits. Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, June 2007.
+[31] M. Karkooti, P. Radosavljevic, and J.-R. Cavllaro, “Configurable, high throughput, irregular LDPC decoder architecture tradeoff analysis and implementation,” in Proc. Int. Conf. on Application-Specific Systems, Architectures and Processors (ASAP), Sept. 2006, pp. 360–367.
+[32] T. Brack, M. Alles, T. Lehnigk-Emden, F. Kienle, N. Wehn, N.-E. L’Insalata, F. Rossi, M. Rovini, and L. Fanucci, “Low complexity LDPC code decoders for next generation standards,” in Proc. Design, Automation and Test in Europe Conf. and Exhibition, Apr. 2007, pp. 16–20.
+[33] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm 52 mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13 m CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 672–683, Mar. 2008.
+[34] Y. L. Ueng, Y. L. Wang, C. Y. Lin, J. Y. Hsu, and P. Y. Ting, “Modified layered message passing decoding with dynamic scheduling and early termination for QC-LDPC codes,” in Proc. IEEE ISCAS 2009, May 2009, pp. 121–124.
+Yeong-Luh Ueng received the Ph.D. degree in communication engineering from the National Taiwan University, Taipei, Taiwan, R.O.C., in 2001.
+From 2001 to 2005, he was with a private communication technology company, where he focused on the design and development of various wireless chips. Since December 2005, he has been a member of the faculty of the National Tsing Hua University, Hsinchu, Taiwan, where he is currently an Associate Professor with the Department of Electrical Engineering and the Institute of Communications Engineering. His research interests include coding theory, wireless communications, and communication ICs.
+Bo-Jhang Yang was born in Kaohsiung, Taiwan, in 1987. He received the M.S. degree in electrical engineering from the National Tsing Hua University, Hsinchu, Taiwan, R.O.C., in 2011.
+He is currently working for Sunplus Technology Co., Ltd. as a Digital Design Engineer. His research interests include VLSI designs for channel coding and storage systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+756 tems.
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 60, NO. 3, MARCH 2013
+
+Chung-Jay Yang received the B.S. degree in electrical engineering from the National Chung Cheng University, Chiayi, Taiwan, R.O.C., in 2002 and the M.S. degree in communication engineering from the National Taiwan University, Taipei, Taiwan, R.O.C., in 2004. He is currently working toward the Ph.D. degree in electrical engineering at the National Tsing Hua University, Hsinchu, Taiwan, R.O.C.
+From 2004 to 2008, he was with Realtek Semiconductor Corporation. His research interests include VLSI designs for channel coding and storage sys-
+
+Jeng-Da Yang received the B.S. degree in National Chin-Yi University of Technology, Taichung, Taiwan, R.O.C., in 2010. He is currently working toward the M.S. degree in electrical engineering at the National Tsing Hua University, Hsinchu, Taiwan, R.O.C. His research interests include error control coding and related VLSI designs.
+
+Huang-Chang Lee received his B.S. and M.S. degrees in electrical engineering from National Chi Nan University, Taiwan, R.O.C. in 2002 and 2004, respectively. He is currently working toward the Ph.D. degree in electrical engineering at the National Tsing Hua University, Hsinchu, Taiwan, R.O.C. His research interests include channel coding, digital signal processing, and their applications to communications.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:19:18 UTC from IEEE Xplore. Restrictions apply.
+
+

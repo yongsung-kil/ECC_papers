@@ -1,0 +1,445 @@
+1
+Quasi-BP for BCH Codes and its Optimization
+Guangwen Li
+
+arXiv:2604.04066v1 [cs.IT] 5 Apr 2026
+
+Abstract—This paper proposes a quasi-belief propagation decoder for BCH codes that systematically integrates domain knowledge–specifically, channel noise variance, the cyclic property of the codes, and the deliberate redundancy in their paritycheck matrices–to enable efficient iterative decoding. We rigorously formalize this parallelizable decoder within an informationtheoretic framework by tracking mutual information evolution through the constituent variable and check decoders, thereby validating the use of scattered EXIT charts as a tool for optimizing the decoder’s parameters. At each iteration, an input dilation operation expands the set of messages, while a subsequent merging operation accelerates mutual information growth, ensuring rapid convergence. The proposed decoder achieves decoding performance approaching that of LDPC codes with comparable rate and blocklength, effectively pioneering the feasible deployment of BP-like decoding for high-density parity-check codes. The generality and robustness of the scheme are demonstrated through extensive simulations across codes of varying rates and blocklengths.
+Index Terms—BCH codes, LDPC codes, Belief propagation, Min-Sum, Mutual information.
+I. INTRODUCTION
+Since Shannon’s groundbreaking work in information theory [1], channel coding has remained a cornerstone of modern reliable telecommunications. Among the broad family of linear block codes, low-density parity-check (LDPC) codes are distinguished by their exceptional error-correcting capability and their potential to asymptotically approach the Shannon limit under canonical belief propagation (BP) decoding [2], [3]. In complexity-sensitive applications, BP decoding is often supplanted by min-sum (MS) variants [4], [5] such as normalized min-sum (NMS) [6]. However, these BP-like methods are suboptimal for finite-length LDPC codes due to short cycles in their Tanner graphs, and the error-floor [7] in the high signalto-noise ratio (SNR) region imposes further constraints on the design of the parity-check matrix H.
+In comparison, classical linear block codes with highdensity parity-check (HDPC) matrices—such as BoseChaudhuri-Hocquenghem (BCH) and Reed-Solomon (RS) codes—are widely used in storage and deep-space communications due to their large minimum distances and effective hard-decision decoding schemes. Soft BP decoding performs poorly for BCH codes because preserving their algebraic structure introduces numerous short cycles in the corresponding Tanner graph. Therefore, a key objective in reviving BCH codes for next-generation communication systems or Internet of Things (IoT) networks [8] is to devise a new decoding scheme that achieves performance comparable to LDPC BP decoding in terms of frame error rate (FER), computational complexity, throughput, and latency.
+G.Li is with School of Information & Electronics, Shandong Technology and Business University, Yantai, China e-mail: lgw.frank@sdtbu.edu.cn
+
+On the other hand, ordered statistics decoding (OSD) [9] was proposed to narrow the gap between BP and maximumlikelihood (ML) decoding for short codes. Recent acceleration strategies for classical BCH codes and short LDPC codes [10] aim to increase throughput by triggering early stopping criteria or reducing the number of test error patterns through thresholding. Despite these efforts, the inherently sequential nature of OSD and its variants limits their suitability as primary decoders in throughput- or delay-sensitive scenarios.
+The rapid advancement of deep learning has inspired new perspectives in error-correction coding. Nachmani et al. [11] pioneered the unrolling of iterative BP decoding into a neural network (NN), giving rise to neural belief propagation (NBP) by assigning trainable weights to the edges of the Tanner graph. Other NN architectures, such as convolutional neural networks (CNNs) and recurrent neural networks (RNNs), have also been explored for various linear codes [12], [13]. A twostage decimation process was introduced in a recent study [14] where the likely bits are first identified using an NN and then followed by list decoding with NBP. However, such customized operation undermines the parallell processing capacity of BP decoding.
+The analysis and design of iterative decoders were revolutionized by the introduction of extrinsic information transfer (EXIT) charts by ten Brink [15]. EXIT charts provide a powerful semi-analytical tool to visualize decoding convergence behavior asymptotically by tracking the mutual information (MI) exchange between soft-input soft-output modules [16]. Building upon this foundation, the concept of scattered EXIT (S-EXIT) charts [17] was introduced to address the limitations of conventional EXIT analysis in the finite-length regime, and was subsequently formalized as a general optimization tool for finite-length LDPC codes.
+In prior work [18], we demonstrated that NMS can effectively decode BCH codes by exploiting the redundancy in H and the cyclic property of the codes. The present work extends this approach to a canonical BP-like framework to probe the fundamental limits of decoding capability when channel noise variance is known. Our main contributions are as follows:
+• A parallelizable quasi-BP decoder for BCH codes is proposed, achieving FER performance comparable to canonical BP decoding for LDPC codes.
+• The decoder’s architecture is analyzed using MI concepts, with key parameters optimized via S-EXIT charts, clearly exposing the internal progression of iterative decoding.
+• Extensive simulations validate the feasibility of the proposed quasi-BP decoder for high-rate longer BCH codes.
+The remainder of this paper is organized as follows. Section II introduces preliminaries on BP variants, EXIT, and SEXIT charts. Section III details the decoding method and its optimization. Section IV presents FER results for various BCH
+
+Quasi-BP and its Optimization
+
+codes, along with a brief complexity analysis and discussion. Finally, Section V concludes the paper.
+
+II. PRELIMINARIES
+Consider a binary message row vector m = [mi]iK=1 encoded into a codeword c = [ci]Ni=1 via c = mG over GF(2), where K and N denote the message and codeword lengths, respectively, and G is a full-rank generator matrix.
+Each codeword bit ci is mapped to an antipodal symbol using binary phase shift keying (BPSK) modulation: si = 1 − 2ci. After transmission over an additive white Gaussian noise (AWGN) channel with noise ni ∼ N (0, σ2), the received soft sequence is
+
+yi = si + ni, i = 1, . . . , N,
+
+(1)
+
+which is fed into a dedicated decoder to estimate the original
+
+codeword. The log-likelihood ratio (LLR) for the i-th bit is
+
+thus
+
+li,ch
+
+=
+
+log
+
+p(yi p(yi
+
+| |
+
+ci ci
+
+= =
+
+0) 1)
+
+=
+
+2yi σ2
+
+.
+
+(2)
+
+Owing to the preserved symmetry property of BP decoders, the all-zero codeword is assumed hereafter in simulations for simpler notation without loss of generality.
+
+A. BP Variants and Neural Counterparts
+
+A code is defined by a bipartite Tanner graph underlying its parity-check matrix H. The graph contains N variable nodes and M ≥ N − K check nodes if redundancy is allowed, with an edge connecting variable node j to check node i whenever Hij ̸= 0.
+Assuming a flooding schedule with at most lmax iterations, canonical BP exchanges LLR messages along the Tanner graph edges. The variable-to-check message at iteration t (t = 1, . . . , lmax) is
+
+lν(ti)→cj = li,ch +
+
+lc(tp−→1ν)i ,
+
+(3)
+
+p∈C(i)\j
+
+where C(i) \ j denotes the neighbors of νi except cj, and lc(0p)→νi = 0. The check-to-variable message flowing in the
+opposite direction is
+
+lc(tj)→νi = 2 tanh−1
+
+tanh lν(tq)→cj
+
+,
+
+(4)
+
+2
+
+q∈V (j )\i
+
+with V(j) \ i being the neighbors of cj except νi. After each iteration, the a-posteriori LLR of the i-th bit is
+
+lν(ti) = li,ch +
+
+lc(tp−→1ν)i ,
+
+(5)
+
+p∈C(i)
+
+which yields the tentative hard decision
+
+ci(t) =
+
+0, 1,
+
+sgn lν(ti) = +1, otherwise.
+
+(6)
+
+Decoding terminates early to reduce complexity if c(t)HT = 0, where c(t) = [c(it)]Ni=1. Otherwise, set t ← t+1 and execute another iteration through (3)–(6) until the lmax-th iteration is
+reached.
+
+To avoid the costly tanh and tanh−1 operations, the minsum approximation replaces (4) with
+
+lc(tj)→νi = sc(tj)→νi ϕ(ctj)→νi ,
+
+(7)
+
+where
+
+sc(tj)→νi =
+
+sgn lν(tq)→cj ,
+
+(8)
+
+q∈V (j )\i
+
+ϕ(ctj)→νi
+
+=
+
+min
+q∈V (j )\i
+
+lν(tq)→cj
+
+.
+
+(9)
+
+Since the approximation in (7) consistently overestimates the exact value in (4), NMS or offset min-sum (OMS) decoders apply a multiplicative weight or an additive offset, respectively, to suppress the overestimation effect.
+Furthermore, when trainable weights are assigned to or shared among the edges of a specific network trellis of BP variants, the resulting decoder is termed NBP.
+
+B. EXIT and S-EXIT Charts
+The core principle of EXIT charts is to decompose a complex iterative decoding process into two component decoders—for LDPC codes, the variable node decoder and the check node decoder. The behavior of iterative decoding can then be predicted by tracking the evolution of the average MI exchanged between these two components. Practically, at iteration t, the average MI is defined as the expectation of MI values,
+I¯(t) ≜ Ee,r I Le(t,)r = 1 − Ee,r log2 1 + e−L(et,)r , (10)
+
+with the set of individual MI samples denoted as
+
+I(t) = I Le(t,)r e ∈ E , r ∈ R ,
+
+(11)
+
+where E denotes the set of edges in the Tanner graph, R the set of channel realizations, and L(et,)r the LLR message passed along edge e at iteration t for the r-th channel realization. A transfer characteristic curve relating the average a-priori MI to the average extrinsic MI can be plotted for each component. The two curves form a ‘tunnel’ on the chart; one can intuitively predict successful convergence if the tunnel remains open, allowing iterations to advance smoothly toward a high-MI point, which implies a low error rate.
+For finite-length codes, the averaging operation obscures the intrinsic randomness of the decoding process. S-EXIT chart analysis therefore retains the individual MI samples before averaging, yielding a cloud of points in the MI plane that captures the distribution of convergence behavior.
+
+III. METHOD AND OPTIMIZATION
+A. Quasi-BP Iterative Decoding
+The proposed quasi-BP decoder mitigates detrimental message correlation from dense short cycles by exploiting the redundancy in H and the code’s cyclic property. Automorphisms enable input dilation, and additional rows are incorporated into H to facilitate iterative decoding while preserving the code’s algebraic structure. Building on canonical BP and enhanced
+
+2
+
+Quasi-BP and its Optimization
+
+NMS [18], the decoding procedure comprises the following
+steps:
+• Preprocessing: Optimize the targeted H by determining a redundancy factor δ1, which measures the desired level of redundancy. Additionally, specify a dilation factor δ2 that controls the extent of input dilation.
+• Initialization: Initialize the LLR message L(ν0i) using (2), and set all check-to-variable messages m(c0j)→νi to zero.
+• Variable Node Update: This update consists of two
+phases: message alignment and merging (Phase One),
+followed by input dilation (Phase Two).
+Phase One – Alignment and Merging: Split and align the incoming messages m(ctj−→1ν)i by applying a blockwise cyclic reversion ϕ−1(·), which restores them to a
+size compatible with the pre-dilation input. This yields δ2 message blocks ϕ(m(t−1,w)). The pre-dilation input is then updated according to
+
+δ2
+
+Lν(ti) = L(νti−1) + β
+
+ϕ−1 m(t−1,w) cj →νi , (12)
+
+w=1 j∈C(i)
+
+where β is a merging weight to be optimized.
+Phase Two – Input Dilation: Leverage the automorphism
+property of the BCH code to dilate the updated input Lν(ti) by a factor δ2, and dispatch the dilated messages to the check nodes. For each variable node νi in the dilated representation,
+
+m(νti)→cj = ϕ L(νti) , j ∈ C(i).
+
+(13)
+
+• Check Node Update: Compute mc(tj)→νi identically to the canonical BP update in (4).
+• Hard Decision and Termination: Form a tentative hard decision based on L(νti) from (12) using (6). If c(t)HT = 0, terminate early; otherwise, proceed to the
+next iteration.
+
+For a chosen lmax, the sole parameter β in quasi-BP can be efficiently optimized by maximizing the output mutual information IE,C (denoted later) after the final iteration via a bisection line search.
+
+(a) Canonical BP
+
+(b) Quasi-BP
+
+Fig. 1: Comparison of BP and quasi-BP in EXIT view.
+
+of the variable nodes and check nodes, respectively. Consequently, we resort to S-EXIT charts analysis to approximate the metrics IE,V and IE,C . Specifically, we define three types of expectation approximations as follows:
+
+1 Ee[·] ≈ |E|
+
+log2 1 + e−Le(t,)r ,
+
+e∈E
+
+1 Er[·] ≈ |R|
+
+log2 1 + e−Le(t,)r ,
+
+r∈R
+
+1 Ee,r[·] ≈ |E||R|
+
+log2 1 + e−Le(t,)r .
+
+e∈E ,r∈R
+
+(14) (15) (16)
+
+At the t-th iteration, (14) and (15) generate S-EXIT clouds by collapsing over edges and channel realizations, respectively, while (16) yields a mean value by collapsing over both dimensions. The evolution curves of IE,V and IE,C are thus obtained by substituting (16) into (10) to approximate the LLR messages exchanged between variable and check nodes across iterations at each SNR, which are then leveraged to optimize key parameters of quasi-BP, as detailed in the following.
+
+(a) Evolution of IE,V and IE,C (b) FER estimated via Ee[·] < τ
+Fig. 2: Association of IE,V and IE,C with lmax optimization and FER estimation under (lmax, δ1, δ2) = (30, 2, 15) for BCH(127,64) code.
+
+B. EXIT View of Quasi-BP
+
+Compared with canonical BP in Fig. 1a, the operations at
+
+variable node side of quasi-BP in Fig. 1b include message
+
+alignment and merging (labeled as ‘Combiner’), input dilation,
+
+and message dispatching. Among these three components,
+
+input dilation and message dispatching preserve MI evaluation;
+
+only the message merging operation within the combiner sub-
+
+stantially increases MI. The input switch in Fig. 1b indicates
+
+that the channel input Ich is employed only once during ini-
+
+tialization, with I(0) E,V
+
+= Ich. Thereafter, the switch toggles, Ich
+
+no
+
+longer
+
+contributes,
+
+and
+
+we
+
+have
+
+I (t+1) E,V
+
+=
+
+TV
+
+(I (t) E,V
+
+, I(t) A,V
+
+).
+
+The
+
+check
+
+node
+
+update
+
+enforces
+
+I (t) E,C
+
+=
+
+TC
+
+(I (t) A,C
+
+).
+
+In general, both mappings TV (·) and TC (·) are analytically
+
+intractable for finite-length codes, although the consistency
+
+relations I(t) A,C
+
+= I(t) E,V
+
+and I(t) A,V
+
+= I(t) E,C
+
+hold, where IA,V
+
+(IE,V ) and IA,C (IE,C ) denote the input (output) MI metrics
+
+1) Selection of lmax: As shown in Fig. 2a, IE,V and IE,C climb, saturate, and decline asynchronously, diverging after their peaks. Per (16), the decline stems from a few decoding failures whose penalties dominate the MI approximation. it may be misinterpreted as performance deterioration with more iterations. With early termination, FER improves monotonically with lmax, but practical applications must balance complexity and delay. We therefore establish a criterion for selecting lmax: take the SNR where FER ≈ 0.1 under sufficient iterations (e.g., 3.0 dB for BCH(127,64) code in Fig. 2a), and set lmax to the intersection index of IE,V and IE, C at that SNR plus two iterations (yielding lmax = 18).
+Compared to IE,V , the IE,C metric is more informative as it quantifies the extent to which parity-check equations are satisfiedan aspect that lies at the very core of linear block code decoding. Thus, it will underscore our following discussions.
+
+3
+
+Quasi-BP and its Optimization
+
+2) Connection Between MI and FER: Select an appropriate threshold τ applicable to all SNRs, such that the proportion of received sequence realizations satisfying Ee[·] < τ can accurately approximate the FER conventionally secured by collecting at least 100 decoding errors per SNR point. Fig. 2b clearly shows that the estimated FERs obtained by counting the cases where the edge-collapsed MI falls below threshold τ = 0.7 gradually approach the dashed curves achieved conventionally per SNR point. Further S-EXIT simulations verify that as the iteration index increases, a typical bimodal phenomenon emerges: the Ee[·] values of successfully decoded realizations gradually tend toward unity, while those of failed realizations degrade toward large negative values. Consequently, the selection of τ is quite lenient; the resulting proportion is so insensitive that τ = 0.5 or 0.9 yields almost identical FER estimates. Furthermore, the setting of lmax = 18 is well justified after observing the marginal improvement in FER beyond that point.
+Notably, more than 105 codeword samples are required to stabilize the dashed curve at SNR = 4.5 dB in Fig. 2b. In comparison, only 4,000 realizations are involved in drawing the solid curves in Fig. 2b, at the cost of only a minor discrepancy. Hence, from the perspective of easing FER stabilization, counting cases where Ee[·] < τ is more favorable for reducing simulation variation than the conventional method of directly counting frame errors.
+3) Selection of δ1 and δ2: Fixing δ2 = 9, the evolution of IE,C with respect to iteration index is examined in Fig. 3a for various redundancy levels. Higher SNR or a larger δ1 (equivalently, 63δ1 rows in H), yields faster MI growth as well as higher final values after the allotted iterations, although the resulting gain from large δ1 narrows at high SNR points. Similarly, Fig. 3b demonstrates that, with δ1 = 1.5 fixed, larger δ2 values consistently achieve faster and higher MI across all SNR points. However, a saturation effect is observed: increasing δ2 from 9 to 15 yields only marginal MI improvement across the SNR region of interest, indicating that further increases beyond 15 offer diminishing returns, even if a wider range of δ2 values were available. Larger δ1 or δ2 entails higher computational complexity, necessitating a tradeoff between complexity and FER performance when selecting these parameters.
+
+(a) δ1 varies, δ2 = 9
+
+(b) δ2 varies, δ1 = 1.5.
+
+Fig. 3: Impact of δ1 and δ2 on IE,C with respect to iteration index for BCH(127,64) code parameterized by varying SNR.
+
+IV. SIMULATION AND ANALYSIS
+We evaluate FER/BER performance of parallelizable iterative decoders for BCH(127,64), BCH(127,99), BCH(255,239),
+
+and CCSDS LDPC(128,64) [19] codes. Non-parallelizable
+decoders (e.g., those requiring sorting or H reduction) are
+excluded. Parameters (δ1, δ2) = (2, 15) are fixed for all BCH codes, with lmax specified per scheme. Source code is available on GitHub.1
+
+A. Potentials of Quasi-BP
+The LDPC(128,64) code–matching the BCH(127,64) code in rate and blocklength–serves as a reference for FER comparison. Larger lmax yields negligible FER improvement for all decoders considered.
+
+100
+
+10−1
+
+FER/BER
+
+10−2 10−3 10−4
+
+BP-RNN(5) (BCH) BER [12] NMS(8) (BCH) [18]
+Quasi-BP(20) (BCH) FER NBP(50) (LDPC) FER [14] BP(40) (LDPC) FER [19]
+
+1 1.5 2 2.5 3 3.5 4 4.5 5 Eb/N0(dB)
+
+Fig. 4: FER/BER of BCH(127,64) and LDPC(128,64) codes.
+
+As shown in Fig. 4, for the BCH code, the dashed bit error rate (BER) curve of the neural BP-RNN decoder [12] (FER data unavailable in the literature) exhibits a flat slope, indicating limited competitiveness due to an unadapted H and the absence of cyclic property exploitation. Although NMS with lmax = 8 [18] achieves significantly better FER than BPRNN, the proposed quasi-BP surpasses NMS by more than 0.6 dB at the cost of higher lmax and computational complexity, with the prerequisite of known noise variance. For the CCSDS LDPC(128,64) code, the NBP decoder with lmax = 50 leads the quasi-BP decoder for the BCH(127,64) code by only 0.1 dB, while traditional BP with lmax = 40 employing layered message scheduling (as opposed to flooding) provides an additional 0.1 dB gain.
+It is observed the NBP and BP decoders for the LDPC code, along with the quasi-BP decoder for the BCH code, exhibit nearly identical slopes, indicating that the FER gap is not expected to widen with SNR. Furthermore, in the highSNR region where LDPC codes suffer error floors, BCH codes are favored due to their excellent minimum distance and dense parity-check structure, which effectively eliminate such floors.
+For higher-rate BCH(127,99) code, the FER and BER performance of quasi-BP is shown in Fig. 5a. In terms of BER (dashed lines), BP-RNN lags behind NMS by at least 0.6 dB at BER = 10−3, and the performance gap widens with increasing SNR due to the shallower slope of the former decoder. For both FER and BER, the proposed quasi-BP leads NMS by at least 0.5 dB. However, the FER of quasi-BP still lags more than 1 dB behind the ML performance.
+For BCH(255,239) code, the FER performance of quasi-BP is shown in Fig. 5b. Quasi-BP is only about 0.6 dB away
+1https://github.com/lgw-frank/Short BCH quasi-BP decoding
+
+4
+
+Quasi-BP and its Optimization
+
+FER/BER FER
+
+100
+
+10−2 10−4
+
+BP-RNN(5) [12] NMS(8) [18] Quasi-BP(30) NMS(8) [18] Quasi-BP(30) ML [19]
+
+1.5 2 2.5 3 3.5 4 4.5 5 Eb/N0(dB)
+
+10−1
+
+10−3
+
+HDD [19]
+
+Quasi-BP(30)
+
+10−5
+
+ML [19]
+
+3 3.5 4 4.5 5 5.5 6 6.5 7 7.5 8
+
+Eb/N0(dB)
+
+(a) BCH(127,99) code.
+
+(b) BCH(255,239) code.
+
+Fig. 5: FER/BER for BCH(127,99) and BCH(255,239) codes.
+
+from ML performance at FER = 10−4, and due to similar slopes, this gap is not expected to increase with SNR. In comparison, despite its simplicity, the hard-decision decoding (HDD) algorithm based on Berlekamp-Massey (BM) operates only in serial mode and lags behind quasi-BP by about 1 dB, with the gap widening at higher SNRs. Finally, the extensible architecture of quasi-BP enables it to decode high-rate longer BCH codes effectively without any modification.
+Compared with canonical BP, even ignoring the dilation and merging operations, quasi-BP incurs a complexity multiplier of approximately δ1δ2 per iteration, resulting in higher worstcase computational complexity unless δ1 and δ2 are carefully designed and constrained using the S-EXIT tool to minimize performance loss. Fortunately, the fast decoding convergence observed in most SNR regions (as seen in Fig. 2b) guarantees a substantial reduction in the average number of iterations, thereby lowering both average computational complexity and average decoding delay.
+B. Reflections on Quasi-BP
+It is well known that NMS decoding [6] for LDPC codes can approach canonical BP performance with only a marginal gap. However, NMS lags behind quasi-BP for BCH codes by more than 0.5 dB, as demonstrated in the previous subsection. We conjecture that the root cause lies in the density of H: any row of the BCH parity-check matrix is significantly denser than that of LDPC codes. For BCH codes, the diversified values returned by a check node in quasi-BP–typically involving more than ten non-zero variable nodes–are sharply reduced to binary decisions in NMS. In contrast, for LDPC codes, the smaller number of non-zero variable nodes per check node results in a milder reduction, yielding less performance loss.
+As shown in the simulations above, despite the superior performance of quasi-BP, a considerable gap remains to reach ML decoding. Consequently, concatenating quasi-BP with OSD, that is, triggering OSD only upon quasi-BP failure, can achieve ML without significantly increasing latency.
+V. CONCLUSIONS
+This paper demonstrates that quasi-BP represents a significant step forward in realizing efficient parallel iterative soft decoding for BCH codes, achieving performance that approaches that of their closest rivals–LDPC codes. In doing so, it challenges the conventional belief that BP-like variants,
+
+long dominated by LDPC codes, can hardly be applied effec-
+tively to HDPC codes. Since each bit of the received sequence
+undergoes identical processing operations throughout quasi-BP
+decoding, the architecture exhibits a valuable property that fa-
+cilitates straightforward implementation on modern hardware
+accelerators such as GPUs or TPUs. Furthermore, S-EXIT
+charts are employed to investigate parameter optimization in
+quasi-BP, enabling a favorable trade-off between decoding per-
+formance and computational complexity. For long BCH codes,
+where more than 50 variable nodes are typically involved in
+each check node update, maintaining the balance between pre-
+cision and numerical stability in the consecutive multiplication of tanh functions is worthy of future investigation.
+REFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” Bell Syst. Tech. J., vol. 27, no. 3, pp. 379–423, 1948.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[3] D. J. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, p. 1645, 1996.
+[4] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of Min-Sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 53, no. 4, pp. 549–554, 2005.
+[5] M. Jiang, C. Zhao, L. Zhang, and E. Xu, “Adaptive offset Min-Sum algorithm for low-density parity check codes,” IEEE Commun. Lett., vol. 10, no. 6, pp. 483–485, 2006.
+[6] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, 2005.
+[7] T. Richardson, “Error floors of LDPC codes,” in Proc. Annu. Allerton Conf. Commun. Control Comput., vol. 41, 2003, pp. 1426–1435.
+[8] Z. Zhang, K. Niu, and H. Cui, “Improved BCH-Polar concatenated scheme for unsourced random access in Internet of Things,” IEEE Internet Things J., vol. 11, no. 19, pp. 32 172–32 182, 2024.
+[9] M. P. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[10] C. Yue, M. Shirvanimoghaddam, G. Park, O.-S. Park, B. Vucetic, and Y. Li, “Probability-based ordered-statistics decoding for short block codes,” IEEE Commun. Lett., vol. 25, no. 6, pp. 1791–1795, 2021.
+[11] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Allerton Conf. Commun., Control, Comput. IEEE, 2016, Conference Proceedings, pp. 341–346.
+[12] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Top. Signal Process., vol. 12, no. 1, pp. 119–131, 2018.
+[13] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” IEEE J. Sel. Top. Signal Process., vol. 12, no. 1, pp. 144–159, 2018.
+[14] A. Buchberger, C. Hger, H. D. Pfister, L. Schmalen, and A. G. i Amat, “Learned decimation for neural belief propagation decoders,” in IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP). IEEE, 2021, Conference Proceedings, pp. 8273–8277.
+[15] S. ten Brink, “Convergence of iterative decoding,” Electron. Lett., vol. 35, no. 10, pp. 806–808, 1999.
+[16] ——, “Convergence behavior of iteratively decoded parallel concatenated codes,” IEEE Trans. Commun., vol. 49, no. 10, pp. 1727–1737, 2002.
+[17] M. Ebada, A. Elkelesh, S. Cammerer, and S. ten Brink, “Scattered EXIT charts for finite length LDPC code design,” in Proc. IEEE Int. Conf. Commun. (ICC), 2018, pp. 1–7.
+[18] G. Li and X. Yu, “Effective application of normalized Min-Sum decoding for short BCH codes,” IEEE Commun. Lett., vol. 29, no. 8, pp. 1983–1987, 2025.
+[19] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, O. Griebel, S. Ruzika, and N. Wehn, “Database of Channel Codes and ML Simulation Results,” www.rptu.de/channel-codes, 2025.
+
+5
+
+

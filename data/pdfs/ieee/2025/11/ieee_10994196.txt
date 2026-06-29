@@ -1,0 +1,515 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+7211
+
+Multiple-Resolution Decoding Architecture for QC-LDPC Codes
+In-Cheol Park , Senior Member, IEEE, Kangjoon Choi , Graduate Student Member, IEEE, Hyejung Jang , Graduate Student Member, IEEE, and Jongmin Baek, Student Member, IEEE
+
+Abstract— This paper proposes a hardware-efficient multipleresolution decoding architecture for quasi-cyclic low-density parity-check (QC-LDPC) codes, specifically designed to meet the stringent requirements of the 5G New Radio (NR) standard. The proposed architecture adopts a single-instruction multipledata (SIMD) approach to dynamically adjust the bitwidth of log-likelihood ratio (LLR) values based on the Eb/N0 condition, significantly reducing hardware complexity and improving throughput area ratio. Unlike conventional single-resolution decoders, the architecture processes 2-bit LLR values in high Eb/N0 regions and scales up to 4-bit or 8-bit LLR values for moderate and low Eb/N0 conditions, maintaining robust errorcorrecting performance. Key innovations include SIMD-based design for variable-node units (VNUs), check-node units (CNUs), and quasi-cyclic shifting networks (QSNs), as well as optimized memory access scheduling to support all 51 lifting sizes defined in the 5G NR standard. Designed in a 65-nm CMOS process, the decoder achieves a peak throughput of 27.24 Gbps under error-free conditions with a throughput area ratio improvement of 2.07× compared to the state-of-the-art designs. Furthermore, the proposed architecture demonstrates superior throughput-area ratio and flexibility, supporting all code rates and lifting sizes specified in the 5G NR standard. Simulation results confirm that the proposed decoder meets the peak throughput requirement under error-free conditions, while maintaining robust performance in challenging channel environments.
+Index Terms— Low-density parity-check codes, 5G new-radio, quasi-cyclic LDPC decoder, single instruction multiple data.
+I. INTRODUCTION
+LOW-DENSITY parity-check (LDPC) codes, first introduced by Gallager [1] in the 1960s and later rediscovered
+by MacKay and Neal [2] in 1996, have attracted significant
+Received 23 January 2025; revised 11 March 2025, 6 April 2025, and 28 April 2025; accepted 29 April 2025. Date of publication 8 May 2025; date of current version 27 October 2025. This work was supported in part by the Ministry of Science and ICT (MSIT), South Korea, through the Information Technology Research Center (ITRC) Support Program, Supervised by the Institute for Information and Communications Technology Planning and Evaluation (IITP), under Grant IITP-2020-0-01847; in part by IITP through the Graduate School of Artificial Intelligence Semiconductor Grant funded by Korean Government (MSIT) under Grant IITP-2025-RS-2023-00256472; in part by the National Research Foundation of Korea (NRF) Grant funded by Korean Government (MSIT) under Grant RS-2024-00353377; and in part by the Basic Science Research Program through NRF funded by the Ministry of Education under Grant RS-2024-00358113. This article was recommended by Associate Editor L. Gan. (Corresponding author: In-Cheol Park.)
+In-Cheol Park, Kangjoon Choi, and Jongmin Baek are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology, Daejeon 34141, South Korea (e-mail: icpark@kaist.edu; kjchoi@ics.kaist.ac.kr; jmbaek@ics.kaist.ac.kr).
+Hyejung Jang is with Samsung Electronics Inc., Hwaseong-si, Gyeonggi-do 18448, South Korea (e-mail: hjjang@ics.kaist.ac.kr).
+Digital Object Identifier 10.1109/TCSI.2025.3566312
+
+research interest over the past decade due to their powerful error-correcting capabilities approaching the channel capacity. It is well known that random connections between variable nodes (VNs) and check nodes (CNs) result in the best achievable decoding performance for LDPC codes. However, storing random patterns becomes practically infeasible for long-sized codes, so the quasi-cyclic (QC) LDPC code [3] has widely been adopted as the main error correction code for it naturally supports high parallelism and its structure is effective in encoding and decoding. For example, many wireless communications, such as IEEE 802.11n, IEEE 802.16e/11ax, DVB-S2X, ITU-T G.hn, ATSC, and 10GBSE-T [4], [5], [6], [7], [8], [9], have adopted QC-LDPC codes. In addition, the QC-LDPC code has recently been adopted for data channels in the 5G New-Radio (NR) communication standard [10], requiring a peak data rate of 20 Gbps in the downlink in case of the enhanced mobile broadband (eMBB) scenario [11].
+The belief-propagation (BP) decoding algorithm, which decodes a codeword via iterative message exchanges between VNs and CNs, shows outstanding error-correcting performance, but the hyperbolic functions required in the CN operation induce intensive computational complexity and large-sized look-up tables. In practice, the min-sum (MS) decoding [12] has widely been used instead of the classical BP decoding, as it replaces the complex hyperbolic functions with finding two minima, reducing the overall complexity significantly at the cost of a slight degradation in errorcorrecting performance. To compensate for the degradation caused by approximating complex hyperbolic functions, several modified versions of the MS decoding algorithm, such as normalized MS (NMS) and offset MS (OMS) [13], have been presented.
+In many standards, including 5G NR, the parity check matrix (PCM) of a QC-LDPC code consists of cyclically shifted identity sub-matrices [3]. The rows within a sub-matrix are orthogonal, allowing them to be grouped into a layer and processed in parallel. To meet the peak throughput, multiple rows of the PCM must be processed in parallel, and deciding the number of rows to be processed together, which is called the parallel factor, is a crucial consideration in the design of a decoder. Processing as many rows as the maximum parallel factor is referred to as fully parallel decoding. However, fully parallel decoding requires 384 hardware modules in 5G NR to process 384 rows simultaneously, which leads to insufficient hardware utilization when the lifting size is moderate or small. Consequently, partially parallel decoding, which processes
+
+1549-8328 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7212
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+fewer rows at a time, emerges as a promising method for hardware implementation.
+Processing all the VNs and CNs in parallel, which is often known as flooded scheduling [14], can easily achieve or even surpass the required 20 Gbps throughput. However, this approach demands an enormous amount of hardware resources, making it almost infeasible for practical decoders. In addition, it imposes severe routing challenges, as many CNs are connected to the same VN. In contrast, row-layered scheduling breaks the rows into smaller groups, called layers, and processes layers sequentially by treating each layer as a separate PCM [15]. This layered decoding approach is effective in reducing the hardware complexity and improving the convergence rate compared to the flooded scheduling, as VNs are updated more frequently and the most recent messages are used in processing subsequent layers.
+While the near-optimum error-correcting performance can be achieved by using floating-point representation, a decoder supporting floating-point operations is infeasible in practice due to extremely high hardware complexity and long processing latency. Therefore, it is imperative to convert the floating-point representation to a fixed-point format. Also, the bitwidth of the fixed-point representation should be chosen carefully to avoid the performance degradation caused by the quantization. If the bitwidth is too narrow, the design will experience significant performance degradation. Conversely, if it is too wide, the design will require excessive hardware resources, leading to lower frequency, reduced throughput, and higher energy consumption. Thus, the fixed-point bitwidth for log-likelihood ratio (LLR) values should be carefully determined to make a trade-off between hardware efficiency and performance degradation.
+Recent studies in [16], [17], [18], [19], [20], [21], [22], [23], [24], [25], [26], [27], and [28] have presented a number of QC-LDPC decoders targeting 5G NR, which can be categorized into three architectures: fully parallel, partially parallel, and block serial. The decoders in [16], [17], [18], [19], [20], [21], [22], and [23] adopted full parallelism, requiring substantial hardware resources and entailing high routing complexity. Moreover, supporting all 51 lifting sizes was challenging. As a result, the decoders in [16], [17], [18], [19], [20], [21], and [22] failed to meet the peak throughput, as they were all designed for short codewords and small lifting sizes. While [16] and [17] attempted to approximate the MS algorithm to reduce the complexity of a check node unit (CNU), the approximations led to a significant degradation in decoding performance. In contrast, block-serial decoders in [24], [25], and [26] process blocks within a layer sequentially. Due to this sequential nature, [24] and [25] failed to meet the required throughput. Additionally, intermediate values needed for finding two minima must be retained until the end of a layer, further complicating hardware design. Although [26] presented a variant of the MS algorithm to mitigate this complexity, it still resulted in a degraded performance.
+In [27], a partially parallel decoder with novel stride scheduling was presented, achieving the peak throughput while reducing hardware complexity. In addition, the hardware
+
+complexity was reduced further in [28] by employing thermometer code-based CNUs and a relative shift-based single quasi-cyclic shifting networks (QSNs) stage. However, [27] and [28] support only a single resolution and represent LLR values with a fixed bitwidth, regardless of channel conditions. While [29] presented a data compaction technique, which is similar to the data formation of the single-instruction multipledata (SIMD) approach, it did not provide parallel processing methods for multiple small-sized data.
+In this paper, we propose a multiple-resolution decoding architecture for QC-LDPC codes in order to reduce hardware complexity and increase hardware utilization. The proposed architecture is partially parallel, and each hardware block is designed in a SIMD manner to support a large-sized value as well as multiple small-sized values to be processed in parallel within a hardware unit. The architecture takes advantage of the fact that the peak data rate of 20 Gbps in the 5G NR standard is only required in the error-free channel associated with a high Eb/N0. While most conventional QC-LDPC decoders aim to achieve the data rate with a single fixed-point resolution, the proposed architecture is designed to process small-resolution values for high Eb/N0 channels and large-resolution values for low Eb/N0 channels, significantly reducing the hardware complexity wasted by fixed-resolution processing. Additionally, we propose novel processing blocks specifically designed to support the SIMD approach.
+The rest of the paper is organized as follows: Section II covers the background of LDPC codes, and Section III describes the computing units required in conventional MS decoding. Section IV details the proposed architecture, explaining the design concepts behind computing units. Section V presents the implementation results of the proposed architecture and compares them with the state-of-the-art decoders. Finally, concluding remarks are provided in Section VI.
+II. PRELIMINARIES
+An (n, k) LDPC code is a linear block code, where n represents the number of codeword bits and k represents the number of information bits. It can be defined by an m × n PCM, H , where m = n − k. The code can also be illustrated by a Tanner graph consisting of n VNs and m CNs. An edge exists between the i-th check node (0 ≤ i < m) and the j-th variable node (0 ≤ j < n) if the corresponding entry in H, hi j , is non-zero.
+In practical implementations, QC-LDPC codes, a class of structure-aware codes, have widely been used in diverse standards. The PCM of a QC-LDPC code consists of cyclically shifted identity sub-matrices or all-zero sub-matrices. The size of each sub-matrix, referred to as the lifting size Z , allows a PCM of size mb Z × nb Z to be described by a base matrix of size mb × nb, further reducing the memory requirement. The base matrix consisting the PCM is composed of shift coefficients, where a value of −1 denotes an all-zero submatrix. Due to the orthogonal nature of sub-matrices, all rows involved in a sub-matrix can be processed in parallel, forming a layer in row-layered scheduling.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7213
+
+to v. The Qvc message is:
+
+Qvc = Iv +
+
+Rc′v = Lv − Rcv
+
+(2)
+
+c′∈Cv \c
+
+where Cv represents the set of all check nodes connected to v, Cv\c is Cv − c, Lv is the APP value updated in the previous layer, and Rcv denotes the C2V message updated in the previous iteration. Then, a check node c newly calculates
+the outgoing extrinsic C2V message, Rcv, to be sent to a variable node v connected to c:
+
+Fig. 1. Base Graph 1 of the 5G NR standard.
+
+A. QC-LDPC Codes in 5G NR
+Two base graphs, base graph 1 (BG1) and base graph 2 (BG2), are defined in the 5G NR standard. BG1 is tailored for long codewords and high code rates, whereas BG2 is optimized for short codewords and low code rates. The two base graphs consist of two parts: a core part and an extension part, as depicted in Fig. 1. The first two columns are punctured during transmission to achieve higher code rates. Note that the core part corresponding to the upper-left 4 × 26 blocks is associated with a high density of cyclic-shifted identity submatrices. The 5G NR LDPC code is referred to as a raptor-like code supporting H-ARQ [30], because it initially utilizes the core part to support a high code rate, while the extension part is utilized incrementally only when the decoding has failed with the core part.
+
+B. QC-LDPC Decoding Algorithm
+
+Most implementations, including the proposed architecture, of the QC-LDPC decoder have adopted the row-layered scheduling and the MS decoding algorithm that approximates the hyperbolic functions used in the conventional BP algorithm. The layered scheduling method allows a faster convergence than the flooded scheduling, while reducing the hardware complexity. In row-layered scheduling, a layer is defined as a set of rows corresponding to the lifting size, and the decoding process operates sequentially on each layer. The decoding process is divided into four steps: initialization, variable-node processing, check-node processing, and a posteriori probability (APP) update. During the initialization, all check-to-variable (C2V) messages are set to 0 while a variable node v is assigned an intrinsic LLR value, Iv, calculated from BPSK-modulated channel output yv and channel noise variance σ 2 given the additive white Gaussian noise (AWGN) channel as follows:
+
+Iv
+
+=
+
+2yv σ2
+
+(1)
+
+After the initialization, the decoder successively decodes layers one by one. During the decoding process, each variable node v sends a variable-to-check (V2C) message Qvc, which is often called an extrinsic message, to a check node c connected
+
+Rcv
+
+=
+
+S
+
+·
+
+min
+v′ ∈Vc \v
+
+|Qv′c|
+
+(3)
+
+where Vc is the set of all variable nodes connected to c, and Vc\v is Vc − v and S = v′∈Vc\v sign(Qv′c). As the MS algorithm overly approximates the hyperbolic functions in the
+BP algorithm, either a normalization factor, which is normally
+chosen to be less than 1, is multiplied to Rcv, or an offset is subtracted from min |Qv′c|.
+v′ ∈Vc \v
+Then, a variable node updates its APP as stated below:
+
+Lv = Iv +
+
+Rc′v + Rcv
+
+c′∈Cv \c
+
+= Lv − Rcv + Rcv
+
+= Qvc + Rcv
+
+(4)
+
+This procedure is applied to a layer and then sequentially applied to subsequent layers. Once all layers have been processed, the procedure completes one iteration. After each iteration, a tentative codeword qˆ is obtained by hard-deciding the APP values as follows:
+
+qv =
+
+0 1
+
+Lv ≥ 0 other wise
+
+(5)
+
+The decoding procedure stops either when the syndrome check is true, qˆ · H T = 0, or when the number of iterations reach the limit. Otherwise, the decoder starts a new iteration.
+
+C. Single Instruction Multiple Data Approach
+Flynn’s taxonomy [31], a simple model classifying computers, categorizes all computers into one of four categories: single instruction single data (SISD), single instruction multiple data (SIMD), multiple instruction single data (MISD), and multiple instruction multiple data (MIMD). In this paper, we focus on the SIMD approach that interprets the same amount of data in a different way. As shown in Fig. 2, the SIMD approach interprets a 64-bit word in various types: 32 2-bit data, 16 4-bit data, and 8 8-bit data. The SIMD approach enhances data parallelism and is particularly effective for small-sized elements, as it can decrease both memory size and processing time.
+An example is depicted in Fig. 3, where four groups of 16-bit operands Ai and Bi , 0 ≤ i ≤ 3, are to be added to generate Oi . In the conventional SISD approach shown in Fig. 3(a), each group must be fetched and processed individually. In contrast, the SIMD approach shown in Fig. 3(b) packs four 16-bit data into a single 64-bit operand, and adds two 64-bit operands at once. By applying the SIMD
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7214
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Fig. 2. Single instruction multiple data approach applied to a 64-bit word.
+Fig. 3. Addition of four pairs of 16-bit operands (a) in the single instruction single data approach and (b) in the single instruction multiple data approach.
+approach, a multi-resolution architecture can process and fetch multiple data simultaneously, achieving a much higher energy efficiency compared to the conventional SISD approach.
+III. PREVIOUS DECODER COMPUTING UNITS As described in Section II-B, MS decoding performs variable-node processing, check-node processing and APP update to compute LLR values. These processes are executed by the variable-node unit (VNU), the check-node unit (CNU) and the APP unit (APPU), which are merged into the decoding function unit (DFU).
+A. DFU As depicted in Fig. 4, the conventional DFU is mainly
+composed of three units: a VNU, a CNU, and an APPU. In the VNU, V2C messages to be fed to the CNU are generated by subtracting C2V messages from the APP values read from the APP memories. C2V messages are reconstructed by the C2V restore module using the C2V information that is the output of the CNU.
+A VNU has as many inputs as the number of APP values to be processed at the same time. For the case of BG1, 27 inputs are required as the core part of BG1 consists of 26 columns and the extension part can be combined into one memory [32]. For BG1, the maximum row weight is 19, which is smaller than 27 and means that not all the APP values are involved in processing a layer. To disable unnecessary APP paths, a 27-bit mask-flag is employed for BG1. Note that the operations performed in the VNU, such as subtraction, are performed in the 2’s complement (2C) representation.
+Receiving V2C messages from the VNU, the CNU computes C2V messages to be sent to the related variable nodes, which are related to the first and second minimum absolute
+
+values among the V2C messages. For the purpose, a min-tree module and a signed magnitude (SM) module are employed in the CNU. The min-tree architecture presented in [33] consists of two major blocks, C1M1 and C1M2, as depicted in Fig. 5. A C1M1 block includes a comparator and a multiplexer to select the minimum value, while a C1M2 block has an additional multiplexer to provide both the minimum and the maximum values. The one-bit E signal is 1 if X0 ≥ X1, and 0 otherwise, and it is later used to generate the index of the first minimum.
+A SM module converts 2C values to signed magnitude values, since the min-tree module searches for two minimum absolute values. Once the first minimum (MIN1), second minimum (MIN2) and the index of MIN1 (IDX) are calculated, they are converted back to 2C messages via the 2C module. The 2C module also computes C2V messages to be sent to the corresponding variable nodes by using MIN1 and MIN2. Additionally, the sign bits generated by the sign maker are used to compute C2V messages, and stored into the C2V restore module. In the conventional decoder architecture, the min-tree contributes significantly to the complexity of the CNU, becoming a critical factor in the overall hardware complexity of a QC-LDPC decoder. Therefore, reducing the hardware complexity of the CNU is important in optimizing the decoder.
+
+B. Memory Access Scheduling and QSN
+A partially parallel architecture, presented in [34], reduces the hardware complexity by simultaneously processing a subset of rows within a layer. In the architecture, the APP values in a single layer may be placed in several different rows, which is not possible in the architectures adopting full parallelism. Consequently, determining the optimal number of APP values to be stored in a row of APP memory and its scheduling becomes a challenge, particularly in supporting various independent lifting sizes in 5G NR. The stride scheduling [34] divides a layer into P subsets, where P refers to the number of the DFUs to be processed simultaneously. The APP values with indices separated by a stride of s = Z /P are stored in the same row of the APP memory and accessed together. To support all 51 lifting sizes specified in the 5G NR, [27] presented a novel stride scheduling method that activates F DFUs among P DFUs, F ≤ P. The approach in [27] modifies the stride to Z /F and F is determined as follows:
+
+F = max({ f | f %Z = 0, f ≤ P})
+
+(6)
+
+As APP values are sequentially stored in the APP memories, efficient cyclic-shifters are required to gather and distribute the data to be processed in the DFUs. As shown in (6), the APP memory can store at maximum P APP values per row. However, when F is smaller than P, only F valid APP values should be cyclic-shifted for processing in the DFUs. Consequently, special cyclic-shifters are required to support all the lifting sizes specified in 5G NR. The most effective solution is the quasi-cyclic shift network (QSN) [35], which is composed of the two barrel-shifters and a merge network. The QSN is well known for its shorter critical path compared to other candidates [36], [37], [38].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7215
+
+Fig. 4. A block diagram of the conventional DFU.
+
+Fig. 5. C1M1 and C1M2 blocks.
+
+To ensure that the same stride of Z /F is applied to all activated DFUs, APP values are stored in a transposed manner. As shift coefficients may exceed P, adjusting each shift coefficient, specified in BG1 or BG2, is necessary. Let e, t, and s represent an original shift coefficient, a read sequence and the stride, respectively. The first DFU, denoted as D0 in Fig. 6(a), processes an APP value each time sequence, and s APP values in total. The index of the first APP value that D0 processes should start from e, therefore, the adjusted shift amount should be adequately computed. The adjusted shift amount is obtained by taking the quotient of the APP index divided by s to ensure that the APP value with index e is placed in the leftmost position. The adjusted left-shift amount et′ is computed from the original value e as follows:
+
+e+t et′ = s
+
+(0 ≤ t < s)
+
+(7)
+
+Fig. 6 (a) illustrates an example, where Z = 9, P = 6, F = 3, e = 5, s = 3 and the APP memory element masked with D is not used in the case. The processing flow is depicted in Fig. 6 (b). During the first read sequence, t = 0, the APP with index e is processed in D0, requiring an access to the third row of the APP memory. The left-shift amount is adjusted to 1 to deliver the 5-th APP value to D0. When t = 1, the first row is accessed and shifted left by 2 to allocate
+
+Fig. 6. (a) Stride scheduling of a submatrix, when Z = 9, P = 6, F = 3, and e = 5, and the corresponding APP memory structure. (b) Processing snapshots for three time instants.
+the 6-th APP value to D0, and lastly, when t = 2, the second row is accessed and shifted left by 2 to allocate the 7-th APP value to D0.
+IV. PROPOSED SIMD DECODER COMPUTING UNITS The 5G NR standard [10] defined by the international telecommunication union specifies a peak data rate of 20 Gbps under error-free conditions, which is achieved for the maximum lifting size and the maximum code rate. Adopting
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7216
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+an 8-bit fixed-point representation in decoding, as suggested in [27], provides error-correcting performance comparable to that of floating-point representation, but it complicates hardware implementation. However, in a stable channel with an Eb/N0 exceeding 18 dB [39], [40], [41], the 20 Gbps requirement can be met with a reduced fixed-point bitwidth. Simulation results, which will be described in Section V, indicate that a 2-bit representation is sufficient to achieve this performance under error-free conditions.
+The partially parallel architecture [27] has significantly reduced the hardware complexity by supporting all codeword configurations by flexibly adjusting the number of active DFUs as discussed in Section III-B. However, the approach employs a single 8-bit representation, resulting in an unnecessarily precise data representation under error-free channel environments. Therefore, we propose a multiple-resolution SIMD architecture based on the partially parallel architecture.
+Note that all data to be processed are regarded as fixed-point numbers by transforming the raw LLR z to z that has a 1-bit sign, a Qi -bit integer and a Q f -bit fraction. If z is beyond the range, z is clipped as follows:
+
+z = cli p(z)
+
+(8)
+
+ 
+
+−2
+
+Qi
+
+p ≤ −2Qi
+
+
+
+cli p( p) = 2Qi p ≥ 2Qi
+
+(9)
+
+ 
+
+p
+
+other wise
+
+In the 2-bit z, Qi and Q f are 1 and 0, respectively, while the 4-bit z has a 2-bit integer part and a 1-bit fractional part, and the 8-bit z has a 4-bit integer part and a 3-bit fraction
+part.
+In this paper, all data including the APP, C2V and V2C messages are quantized to the 2-bit representation when Eb/N0 is sufficiently high so as to reduce the hardware complexity and
+power consumption. For other cases associated with low or moderate Eb/N0, the 4-bit or 8-bit representation is selected depending on Eb/N0. Depending on Eb/N0, consequently, the fixed-point bitwidth is selected among 2 bits, 4 bits, and
+8 bits, where the 8-bit configuration is rarely used only when Eb/N0 is quite low.
+
+Fig. 7. DFUs for 2-bit, 4-bit, and 8-bit data.
+Specifically, the number of memory words required to 4-bit APP values is twice larger than that of 2-bit APP values, and 8-bit APP values require four times larger words, resulting an increase in the number of read operations and a reduction of processing throughput. Note that the 20 Gbps throughput is only required under error-free environments in which the 2-bit configuration is sufficient for decoding.
+To support multiple resolutions, each DFU is designed to process 2-bit APP values under normal conditions but multiple DFUs can be combined to deal with 4-bit and 8-bit APP values. As shown in Fig. 7, two 2-bit DFUs are combined into a 4-bit DFU to process 4-bit APP values, and four 2-bit DFUs are grouped to form an 8-bit DFU dealing with 8-bit APP values. Since each DFU includes addition and subtraction operations, supporting different resolutions with 2-bit DFUs necessitates dynamic reconfiguration, which will be further elaborated in Section IV-C. This dynamic reconfiguration allows the proposed hardware to change its 32 2-bit DFUs to 16 4-bit DFUs or 8 8-bit DFUs depending on the resolution requirement. The 2-bit configuration maximizes the throughput and minimizes the hardware complexity under high Eb/N0 conditions.
+To determine the number of DFUs to be activated in (6), P can be adjusted from 32 to 16 or to 8. Table I summarizes the resulting number of DFUs for all 51 lifting sizes specified in 5G NR, demonstrating that the proposed SIMD architecture can support all cases. Hardware utilization may be suboptimal for certain lifting sizes, such as 11, 13, 22, and 26, due to the property of prime numbers. However, a slightly different alternative can resolve this issue and improve the throughput significantly.
+
+A. SIMD Approach
+The proposed architecture leverages the SIMD approach, shown in Fig. 2, that allows the same amount of data to be interpreted differently. This flexibility enhances data parallelism, particularly for small-sized elements, and reduces the area and power consumption by minimizing memory accesses and processing resolutions.
+Like in the previous architecture [27], P is set to 32 as it is the smallest number that can achieve the 20 Gbps throughput among power-of-two numbers. In the proposed architecture, a 64-bit word in APP memory can store a maximum of 32 APP values, 2 bits wide each, which reduces the width of the APP memory from 256 bits to 64 bits. Additionally, the same 64-bit word can store 16 APP values of 4 bits or 8 APP values of 8 bits, providing flexibility for various configurations. The 4-bit or 8-bit configuration requires a larger number of memory words to store the same number of APP values.
+
+B. Overall Architecture
+The overall architecture depicted in Fig. 8 includes 5 pipeline stages, where the pipeline registers that decompose adjacent pipeline stages are denoted by red vertical lines. The architecture consists of 26 APP memory banks with the width of 64 bits to store the APP values corresponding to the leftmost 26 columns in BG1 and a shared APP memory bank for the remaining 42 columns. For the lifting size of 384, first 12 rows of each APP memories are initialized when the data is being processed in 2 bits, while 24 and 48 rows are initialized for 4-bit and 8-bit processing cases, respectively. This memory structure can also support BG2. To reduce the hardware complexity, the relative shift coefficient described in [28] is applied, leading to a single QSN stage.
+The APP values read from the memory banks are cyclically shifted by the SIMD QSNs, and fed into the SIMD DFUs via a distributing network. After being updated by the SIMD DFUs,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7217
+
+Fig. 8. Overall Decoder Architecture.
+TABLE I COMPARISON OF THE NUMBER OF ACTIVATED DFUS IN THE PROPOSED MULTIPLE-RESOLUTION ARCHITECTURE
+
+the APP values are streamed into the gathering network and subsequently written back to the APP memory. Hard decisions are made on the APP values, which are then evaluated by the syndrome checker. Before starting a subsequent iteration, the syndromes of all rows are examined to determine whether a new iteration is necessary. The decoding process terminates if the syndrome values are all zeros, indicating that the codeword has been decoded successfully.
+The major difference from the conventional architecture is the ability to dynamically configure the bitwidth of APP values according to the channel condition. All the hardware units within the architecture are designed to configure their computing modes according to the selected APP bitwidth.
+C. SIMD DFU
+In the proposed architecture, all computing units including CNUs, VNUs and APPUs are designed to process groups
+
+Fig. 9. Proposed SIMD Compare Unit.
+of APP values with varying bitwidths. To achieve this, the carry-in signals are specially handled depending on the bitwidth configuration. More precisely, the carry-in signal is considered for every 2 bits in the 2-bit configuration, while the 4-bit and 8-bit configurations handle the carry-in signals for every 4 bits and 8 bits, respectively. Figs. 9, 10, and 11 illustrate the units designed with consideration for the aforementioned carry-in signals. To be more specific, a compare
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7218
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+Fig. 10. Proposed SIMD Subtraction Unit for VNUs.
+
+Fig. 11. Proposed SIMD Addition Unit for APPUs.
+
+unit, featured in Fig. 9, in the C1M1 and C1M2 blocks is split into four 2-bit binary adders that are connected with multiplexers controlling the carry-in signals. Each 2-bit adder can compare 2-bit inputs, while two 2-bit adders can be combined with a multiplexer to deal with 4-bit inputs, and four 2-bit adders can be combined into one comparator to handle 8-bit adders. Similarly, the subtraction and addition units, used in the VNU and APPU are divided into four 2-bit units as shown in Figs. 10 and 11. The proposed VNU and APPU structures look similar except for the inverter and carry-in configurations. In the VNU, the C2V message is inverted, and the rightmost carry-in signal is set to 1 to perform subtraction. As in the proposed comparator, the three multiplexers are inserted to ensure either separate or combined operations.
+The CNU usually induces the critical path due to the complex operations required to determine two minima, MIN1 and MIN2. To support multiple bitwidths, a min-tree module is designed in a SIMD manner as illustrated in Fig. 12. Based on the min-tree architecture in [33], the proposed min-tree module is designed such that it can be configured into multiple min-tree modules by dividing C1M1 and C1M2 into smaller blocks. The boxes labeled with the same number form a min-tree module, which can be regarded as a single min-tree module for 8-bit processing as shown in Fig. 12 (a), while in 4-bit or 2-bit processing, shown in Fig. 12 (b) and (c), it can be regarded as 2 or 4 min-tree modules, respectively.
+In the proposed architecture, 8 SIMD min-tree modules are employed, and a SIMD min-tree module is shared by two 4-bit DFUs or four 2-bit DFUs. Even though the area of a SIMD min-tree module is slightly larger than that of an 8-bit min-tree module processing only 8-bit data, the hardware complexity reduces significantly as 32 single-precision min-tree modules are reduced to 8 SIMD min-tree modules.
+D. SIMD QSN
+The adjusted shift amount et′ in (7) must be redefined to support the SIMD approach. To accommodate multiple resolutions, shift coefficients are adjusted by considering F,
+
+Fig. 12. An 8-input SIMD min-tree where bitwidth is set to (a) 8, (b) 4, and (c) 2 bits.
+
+determined based on the lifting size and the bitwidth. The
+number of APP values stored in a row of the APP memory
+depends on the bitwidth of APP values, which means that the
+same shift coefficient can lead to a different shift amount. For
+example, as shown in Fig. 13 (a), the APP values are cyclically
+shifted when et′ is applied to 2-bit configuration. However, applying the same shift coefficient to 4-bit configuration yields
+an incorrect result, as illustrated in Fig. 13 (b).
+Therefore, the shift amount should be determined consid-
+ering the bitwidth. When the architecture operates in 4-bit configuration, the resulting shift amount et4 is twice of et′ , as shown in (10). While in 8-bit configuration, et′ is multiplied by 4, which is achieved by shifting et′ left by 2, as expressed in (11).
+
+et4 =
+
+e+t s
+
+≪1
+
+(0 ≤ t < s)
+
+(10)
+
+et8 =
+
+e+t s
+
+≪2
+
+(0 ≤ t < s)
+
+(11)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7219
+
+Fig. 13. Shifted result by et′ = 1 when applied to (a) 2-bit configuration and (b) 4-bit configuration.
+
+Fig. 14. A QSN consisting of a left shifter, right shifter, and a merge network.
+
+Compared to the conventional QSN, which rotates 32 8-bit APP values, the proposed approach significantly reduces the hardware complexity of the QSN by handling 32 APP values of 2 bits, 16 APP values of 4 bits, or 8 APP values of 8 bits depending on the bit-width configuration. Figs. 14 and 15 describe the overall structure of the proposed SIMD QSN. Note that a 32-bit example is presented for conciseness, but 64-bit SIMD QSNs are employed in our implementation. The data fetched from an APP memory are separately shifted in the left and right shifters and then merged to create cyclically shifted messages, which are fed to the distributing network.
+The internal structures of the networks constituting the QSN is shown in Fig. 15. Note that the number in a box represents the processing bitwidth of each component. The left and right shifters, shown in Figs. 15(a) and 15(b), consist of cascaded stages of multiplexers (MUXs), each stage processing different bitwidths. Depending on the processing bitwidth, the first few levels can be transparent. For example, when processing 2-bit data, all stages should be controlled to ensure the network can shift the data in 2-bit increments. On the other hand, the first stage that shifts data by 2-bits should be transparent when processing data with wider bitwidths. Similarly, the second stage is also transparent when processing 8-bit data.
+The merge network, shown in Fig. 15(c), receives the results from the left and right shift networks and outputs the appropriately merged data. When processing 2-bit data, all 2-bit MUXs should be controlled independently. In contrast, a pair of 2-bit
+
+Fig. 15. A 32-bit (a) left shifter, (b) a 32-bit right shifter and (c) a 32-bit merge network.
+MUXs forms a 4-bit MUX, being controlled together when processing 4-bit data. Similarly, two 4-bit MUXs are paired to process 8-bit data. The proposed SIMD QSN enables the efficient implementation of the SIMD LDPC decoder without requiring additional QSN modules to handle varying bitwidths.
+E. Distributing & Gathering Network
+As described in (3), several APP values involved in the same row of the PCM are compared to calculate MIN1 and MIN2. Therefore, the distributing and gathering networks are required to properly align the APP values read from the APP memories.
+The distributing network collects APP values and sends them to DFUs. Similarly, the gathering network performs the reverse operation after DFU processing. Each DFU receives 27 APP values, as depicted in Fig. 4, specifically to deal with BG1. Given that P is set to 32, the distributing network shuffles 27 groups of 32 APP values into 32 groups of 27 APP values.
+In the proposed architecture, the APP bitwidth has been reduced from 8 bits to 2 bits, significantly decreasing the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7220
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+input and output sizes of the distributing network. The inputs and outputs are organized as 32, 16, or 8 groups of 27 APP values, depending on the bitwidth configuration. Each group deals with 54 bits for 2-bit APP values, 108 bits for 4-bit APP values, and 216 bits for 8-bit APP values.
+The gathering network performs the inverse operation of the distributing network, with its input and output sizes reversely identical to those of the distributing network.
+Compared to the conventional architecture, the proposed design achieves a significant reduction in the input and output sizes of both the distributing and gathering networks, decreasing from 6,912 bits to 1,728 bits by reducing the APP bitwidth to 2 bits.
+
+V. IMPLEMENTATION RESULTS
+This Section presents the implementation results of the proposed QC-LDPC decoder and compares them with those of the state-of-the-art decoders. The proposed QC-LDPC decoding architecture was implemented in a 65-nm CMOS technology, having a core area of 2.71mm2 and an operating frequency of 437MHz on post-layout simulation. In the core area, the logic part takes 0.53mm2 including QSNs, distributing and gathering networks, VNUs, CNUs, APPUs, controllers, syndrome checkers, and pipeline flip-flops. Each block accounts for 13%, 1%, 22%, 24%, 7%, 11%, 1%, and 21% of the logic part, respectively. The layout of the proposed LDPC decoder is shown in Fig. 16.
+
+Fig. 16. Layout of the proposed LDPC decoder. The white and yellow boxes represent the APP and C2V memories, respectively, while the red box is the memory storing the base graphs.
+
+A. Throughput Evaluation
+
+With the maximum lifting size of 384 and the maximum code rate of 8/9, the proposed architecture should satisfy the peak throughput of 20 Gbps in the error-free condition. The throughput is calculated as follows:
+
+384 × 22
+
+= 27.24 Gbps
+
+(2itr × 4lyr) ×
+
+384 32DFU
+
++
+
+5
+
+× 2.28 ns
+
+384 × 22
+
+= 10.65 Gbps
+
+(3itr × 4lyr) ×
+
+384 16DFU
+
++
+
+5
+
+× 2.28 ns
+
+384 × 22
+
+= 5.82 Gbps
+
+(3itr × 4lyr) ×
+
+384 8DFU
+
++
+
+5
+
+× 2.28 ns
+
+384 × 22
+
+= 1.75 Gbps (12)
+
+(10itr × 4lyr) ×
+
+384 8DFU
+
++
+
+5
+
+× 2.28 ns
+
+The proposed architecture meets the peak throughput with a parallel factor of 32 and the 2-bit configuration. When the bitwidth is increased to 4 and 8 bits, the parallelism is reduced to 16 and 8, and the corresponding throughput is almost halved and quartered, respectively. Note that the maximum number of decoding iterations is set to 10, resulting in a throughput of 1.75 Gbps in the worst case scenario.
+
+B. Evaluation of Error-Correction Performance
+Fig. 17 depicts the error-correcting performances of the proposed multiple-resolution decoding obtained under a code rate of 8/9. The red line indicates the reliability criterion
+
+Fig. 17. Error-correcting performance of multiple-resolution decoding where the code rate is 8/9.
+of 10−5 FER as stated in [11], and three lifting sizes of 16, 128, and 384 are simulated to assess the validity of the proposed method. The lifting size of 16 is used to show the performance of a relatively short codeword, the lifting size of 128 is used to show the performance on medium-sized codeword, while the lifting size of 384 is to validate the performance of a long codeword.
+Note that adopting a short codeword leads to a lower decoding performance, whereas adopting a long codeword results in a better decoding performance under the same code rate. Intermediate lifting sizes, which fall between 16 and 384, result in the higher decoding performance than that of 16, but the lower performance that of the 384 under the same code rate. For the long codeword with lifting size 384, the reliability criterion is met when Eb/N0 is 19dB, 13dB, and 5dB for 2-bit, 4-bit, and 8-bit configurations, respectively. In the case of the short codeword, the reliability requirement is met at 19dB, 13dB, and 9dB, respectively. Since codewords with a code rate of 8/9 exhibit the worst decoding performance among all possible candidates defined in 5G NR, the simulation results represent the lower bound of the error-correcting performance of the proposed decoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7221
+
+Fig. 18. Average number of iterations of multiple-resolution decoding where the code rate is 8/9.
+Fig. 19. Error-correcting performance of various code rates obtained from 8-bit processing.
+The average number of iterations, shown in Fig. 18, is another crucial factor determining the decoding throughput as expressed (12). The performance evaluation and simulation results show that the proposed QC-LDPC decoder meets the peek throughput of 20 Gbps when Eb/N0 is higher than 13dB, 14dB and 15 dB for a lifting size of 384, 128 and 16, respectively. Note that the peak throughput requirement of the QC-LDPC decoder is defined for the high Eb/N0 region, often referred to as an error-free region. This evaluation coincides with the previous observation [39], [40], [41] that the error-free condition in 5G NR is achieved when Eb/N0 is higher than 18dB. As shown in Fig. 18, the proposed QC-LDPC decoder successfully meets the peak throughput requirement of 20 Gbps in the error-free region, as the number of decoding iterations required is less than three, usually fewer than two or three iterations considered in the evaluation of peak throughput.
+Fig. 19 shows the error-correcting performance resulting from 8-bit processing applied to various code rates. The LDPC codes used in 5G NR is a raptor-like code, where the core part corresponding to the code rate of 8/9 is transmitted first. If decoding is not successful, the extension part of the code is then received, and decoding is performed through the decoder with lower code rates such as 1/2 or 1/3. Therefore, decoding of various code rates are only applied in the situations with low channel reliability, which the 8-bit processing is used. For the processing resolutions adopted in high channel reliability, the code rate is fixed to 8/9.
+
+C. Comparison With the State-of-the-Art Architectures
+Table II compares the proposed decoder and the stateof-the art decoders. For a fair comparison, all the previous decoders are normalized to 65nm and 1.2V. Compared to [27] and [28] that utilizes the same partial parallelism and stride scheduling, the proposed decoder shows the smallest core area and the lowest power consumption. Since the previous decoders employ a single-resolution architecture of high bit resolutions, they access the longer data from the memory and process the data in wide computing blocks. To be specific, the baseline architecture [27] employs an 8-bit single-resolution scheme. Although there is some additional overhead caused by the hardware modifications required for implementing multiple resolutions, the core area of the proposed multi-resolution decoder is nearly halved while successfully achieving the peak throughput of 20 Gbps for 5G NR with 2-bit resolution. As the resolution is reduced from 8 bits to 2 bits, which is a factor of 1/4, the remaining quarter of the area, which has not been reduced, can be considered as the overhead introduced by the implementation of multiple-resolution processing.
+Both [16] and [18] were designed based on full parallelism, where the number of processing units are equal to the lifting size. Even though [16] shows the smaller core area and the lower power consumption, [16] was designed for a single lifting size of 64, which is much smaller than the maximum lifting size of 384 specified in 5G NR. If implemented with the maximum lifting size, both the area and power consumption would significantly increase since the number of processing units should be increased 6 times. Likewise, [18] was designed for a single lifting size of 96, which is also smaller than 384, but shows the larger core area and higher power consumption than those of the proposed work. Compared to [24], [25], and [26] adopting the block-serial scheduling, the proposed architecture offers the higher peak throughput with the lower hardware complexity, resulting in the higher throughput-area ratio (TAR) and energy efficiency.
+D. Discussion
+The peak data rate of 20 Gbps required by the 5G NR standard represents the amount of aggregated data that a single 5G base station must handle under the assumption of high reliability [42], [43]. However, in practical scenarios, it is nearly impossible for a base station to allocate all data to a single end system. Even in a country with the highest number of 5G base stations per capita, only 593 base stations are available per 100,000 people [44]. Additionally, various studies indicate that the practical user experience data rate remains between 0.1 and 1 Gbps [45], [46], [47]. Therefore, 20 Gbps is an extremely idealized figure, and designing hardware to always meet this target significantly increases complexity in terms of power and area without any practical gain. The proposed SIMD-based LDPC decoder, consequently, has been designed, taking into account the practical situations.
+In communication systems, a channel estimation mechanism is used to track the reliability of the channel [48], [49], [50]. Therefore, the reliability information, such as Eb/N0 is assumed to be available through the channel estimation,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7222
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+TABLE II COMPARISON OF THE PROPOSED AND WITH THE STATE-OF-THE-ART WORKS
+
+TABLE III SUMMARY OF THE OPERATING REGION AND PROCESSING
+RESOLUTION OF THE PROPOSED DECODER
+and the proposed architecture dynamically adjusts the processing resolution based on the external channel reliability information. As summarized in Table III, when the channel Eb/N0 is below 13dB, the proposed decoder performs with 8-bit resolution, similar to the conventional architecture. For Eb/N0 between 13dB and 19dB, it selects 4-bit resolution, and the resolution is further reduced to 2 bits when Eb/N0 is above 19dB. The throughput for each resolution is calculated assuming two to three decoding iterations depending on channel reliability, while in the worst channel conditions with Eb/N0 below 5dB, the maximum number of iterations of the decoder is set to 10. In addition, it is a common practice that at least a decoding iteration performed in all scenarios. A more number of decoding iterations is required for some codewords corrupted more, however, in most situations, three iterations are sufficient for error correction, as demonstrated in Fig. 18.
+
+Under these constraints, the proposed decoder satisfies a peak throughput of 1.75 Gbps even in the worst channel conditions, which far exceeds the practical data rate that a user can experience. Furthermore, when channel reliability is high enough to make 2-bit processing feasible, the decoder achieves a throughput exceeding 20 Gbps. In addition, the proposed decoder is designed to process up to 27 independent APP values and is optimized for the maximum lifting size of 384, ensuring support for both BG1 and BG2 of 5G NR as well as various code rates.
+VI. CONCLUSION
+This paper has proposed a hardware-efficient QC-LDPC decoding architecture that supports multiple precisions in an efficient way. To accommodate various bitwidths in a single hardware architecture, all processing blocks are designed in a SIMD manner. In other words, each computing block involved in QC-LDPC decoding is segmented to support one group of 8-bit APP values, two groups of 4-bit APP values, or four groups of 2-bit APP values. The proposed architecture can handle all the lifting sizes and the code rates specified in the 5G NR standard and reduces the hardware complexity significantly even compared to the conventional partially parallel architecture. Designed in a 65-nm CMOS technology, the proposed decoder achieves a peak throughput of 27.24Gbps
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+PARK et al.: MULTIPLE-RESOLUTION DECODING ARCHITECTURE FOR QC-LDPC CODES
+
+7223
+
+while increasing throughput area ratio by 2.07×, achieving the highest energy efficiency and throughput-area ratio among the state-of-the art QC-LDPC decoders supporting the full 5G NR standard.
+ACKNOWLEDGMENT
+The authors would like to thank the IC Design Education Center (IDEC), South Korea, for supporting EDA tools.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1997.
+[3] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[4] Standard for Information Technology-Local and Metropolitan Area Networks-Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Standard 802.11-2016, 2016.
+[5] Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed Broadband Wireless Access Systems, Standard 802.16-2004, 2004.
+[6] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), Standard ETSI EN 302 307, 2014.
+[7] (2005). IEEE P802.3an (10gbase-t) Task Force. [Online]. Available: http://www.ieee802.org/3/an/
+[8] Standard for Information Technology—Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks–Specific Requirements Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 1: Enhancements for High-Efficiency WLAN, Standard 802.11-2020, 2020.
+[9] Synchronization Standard for Distributed Transmission, ATSC Std., Washington, DC, USA, 2007.
+[10] (2016). Chairman’s Notes of A1 7.1.5 on Channel Coding and Modulation for NR. [Online]. Available: https://www.3gpp.org/ftp/tsg_ran/ wg1_rl1/TSGR1_67/Docs/R101613710.zip
+[11] M. Series, “Minimum requirements related to technical performance for IMT-2020 radio interface (s),” Report, vol. 2410, pp. 2017–2410, Nov. 2017.
+[12] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[13] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[14] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[15] E. Sharon, S. Litsyn, and J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” in Proc. 23rd IEEE Conv. Electr. Electron. Eng. Isr., Sep. 2004, pp. 223–226.
+[16] S. Yun, B. Y. Kong, and Y. Lee, “Area- and energy-efficient LDPC decoder using mixed-resolution check-node processing,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 69, no. 3, pp. 999–1003, Mar. 2022.
+[17] H. Cui, F. Ghaffari, K. Le, D. Declercq, J. Lin, and Z. Wang, “Design of high-performance and area-efficient decoder for 5G LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 2, pp. 879–891, Feb. 2021.
+[18] A. Verma and R. Shrestha, “Low computational-complexity SOMSalgorithm and high-throughput decoder architecture for QC-LDPC codes,” IEEE Trans. Veh. Technol., vol. 72, no. 1, pp. 66–80, Jan. 2023.
+[19] A. Verma and R. Shrestha, “A new VLSI architecture of next-generation QC-LDPC decoder for 5G new-radio wireless-communication standard,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Oct. 2020, pp. 1–5.
+
+[20] J. Nadal and A. Baghdadi, “Parallel and flexible 5G LDPC decoder architecture targeting FPGA,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 6, pp. 1141–1151, Jun. 2021.
+[21] A. Verma and R. Shrestha, “A new partially-parallel VLSI-architecture of quasi-cyclic LDPC decoder for 5G new-radio,” in Proc. 33rd Int. Conf. VLSI Design 19th Int. Conf. Embedded Syst. (VLSID), Jan. 2020, pp. 1–6.
+[22] A. Verma and R. Shrestha, “Hardware-efficient and high-throughput LLRC segregation based binary QC-LDPC decoding algorithm and architecture,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 68, no. 8, pp. 2835–2839, Aug. 2021.
+[23] V. L. Petrovic´, M. M. Markovic´, D. M. E. Mezeni, L. V. Saranovac, and A. Radoševic´, “Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467, Dec. 2020.
+[24] C. Lin, L. Liu, Y. Liao, and H. Chang, “A 33.2 Gbps/ITER. reconfigurable LDPC decoder fully compliant with 5G NR applications,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2021, pp. 1–5.
+[25] B.-S. Su, C.-H. Lee, and T.-D. Chiueh, “A 58.6/91.3 pJ/b dual-mode belief-propagation decoder for LDPC and polar codes in the 5G communications standard,” IEEE Solid-State Circuits Lett., vol. 5, pp. 98–101, 2022.
+[26] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2911–2924, Jun. 2024.
+[27] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G newradio standard,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2035–2048, May 2022.
+[28] B. Jang, H. Jang, S. Kim, K. Choi, and I.-C. Park, “Area-efficient QCLDPC decoding architecture with thermometer code-based sorting and relative quasi-cyclic shifting,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2897–2910, Jun. 2024.
+[29] V. Petcu, O. Boncalo, A. Amaricai, and V. Savin, “Variable throughput LDPC decoders using SIMD-based adaptive quantization,” in Proc. 39th Int. Conf. Telecommun. Signal Process. (TSP), Jun. 2016, pp. 425–428.
+[30] T.-Y. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, “Protographbased raptor-like LDPC codes,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1522–1532, May 2015.
+[31] M. J. Flynn, “Very high-speed computing systems,” Proc. IEEE, vol. 54, no. 12, pp. 1901–1909, Dec. 1966.
+[32] QC-LDPC Code Throughput Comparison, Mediatec, Hsinchu, Taiwan, Apr. 2017.
+[33] Y. Lee, B. Kim, J. Jung, and I.-C. Park, “Low-complexity tree architecture for finding the first two minima,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 62, no. 1, pp. 61–64, Jan. 2015.
+[34] B. Kim and I.-C. Park, “QC-LDPC decoding architecture based on stride scheduling,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2011, pp. 1319–1322.
+[35] X. Chen, S. Lin, and V. Akella, “QSN—A simple circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 57, no. 10, pp. 782–786, Oct. 2010.
+[36] Z. Zhong, Y. Huang, Z. Zhang, X. You, and C. Zhang, “A flexible and high parallel permutation network for 5G LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 12, pp. 3018–3022, Dec. 2020.
+[37] H.-M. Lam, S. Lu, H. Qiu, M. Zhang, H. Jiao, and S. Zhang, “A highefficiency segmented reconfigurable cyclic shifter for 5G QC-LDPC decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 1, pp. 401–414, Jan. 2022.
+[38] S. Song, H. Cui, and Z. Wang, “A universal efficient circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 10, pp. 1553–1557, Oct. 2022.
+[39] Y. Gao, C. Sun, X. Zhang, and X. Hong, “Study on MCS selection and spectrum allocation for URLLC traffic under delay and reliability constraint in 5G network,” 2021, arXiv:2101.05215.
+[40] J. Cao, X. Zhu, Y. Jiang, Y. Liu, and F.-C. Zheng, “Joint block length and pilot length optimization for URLLC in the finite block length regime,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Jun. 2019, pp. 1–6.
+[41] E. J. D. Santos, R. D. Souza, and J. L. Rebelatto, “Rate-splitting multiple access for URLLC uplink in physical layer network slicing with eMBB,” IEEE Access, vol. 9, pp. 163178–163187, 2021.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+7224
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 11, NOVEMBER 2025
+
+[42] K. Tateishi et al., “5G experimental trial achieving over 20 Gbps using advanced multi-antenna solutions,” in Proc. IEEE 84th Veh. Technol. Conf. (VTC-Fall), Sep. 2016, pp. 1–5.
+[43] A. Mehta and E. Elmroth, “Distributed cost-optimized placement for latency-critical applications in heterogeneous environments,” in Proc. IEEE Int. Conf. Autonomic Comput. (ICAC), Sep. 2018, pp. 121–130.
+[44] OECD, OECD Digital Economy Outlook 2024, vol. 2. Paris, France: OECD Publishing, 2024, doi: 10.1787/3adf705b-en.
+[45] D. Hui, S. Sandberg, Y. Blankenship, M. Andersson, and L. Grosjean, “Channel coding in 5G new radio: A tutorial overview and performance comparison with 4G LTE,” IEEE Veh. Technol. Mag., vol. 13, no. 4, pp. 60–69, Dec. 2018.
+[46] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, “Channel coding towards 6G: Technical overview and outlook,” IEEE Open J. Commun. Soc., vol. 5, p. 2585, 2024, Art. no. 2685.
+[47] N. Michailow et al., “Generalized frequency division multiplexing for 5th generation cellular networks,” IEEE Trans. Commun., vol. 62, no. 9, pp. 3045–3061, Sep. 2014.
+[48] H.-Y. Liu and R. Y. Yen, “Effective adaptive iteration algorithm for frequency tracking and channel estimation in OFDM systems,” IEEE Trans. Veh. Technol., vol. 59, no. 4, pp. 2093–2097, May 2010.
+[49] M. Morelli and L. Sanguinetti, “Estimation of channel statistics for iterative detection of OFDM signals,” in Proc. IEEE Int. Conf. Commun., vol. 2, Jun. 2004, pp. 847–851.
+[50] G. Ren, H. Zhang, and Y. Chang, “SNR estimation algorithm based on the preamble for OFDM systems in frequency selective channels,” IEEE Trans. Commun., vol. 57, no. 8, pp. 2230–2234, Aug. 2009.
+
+Kangjoon Choi (Graduate Student Member, IEEE) received the B.S. degree in electronic engineering from Hanyang University, Seoul, South Korea, in 2023. He is currently pursuing the M.S. degree in electrical engineering with Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea. His current research interests include VLSI architectures for error correction codes, communication systems, and neural network processors.
+Hyejung Jang (Graduate Student Member, IEEE) received the B.S. degree in information systems and computer science from Hanyang University, Seoul, South Korea, in 2019, and the M.S. degree in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2024. She is currently with Samsung Electronics.
+
+In-Cheol Park (Senior Member, IEEE) received the B.S. degree in electronic engineering from Seoul National University, Seoul, South Korea, in 1986, and the M.S. and Ph.D. degrees in electrical engineering from Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 1988 and 1992, respectively.
+Since June 1996, he has been an Assistant Professor with the School of Electrical Engineering, KAIST, where he is currently a Professor. Prior to joining KAIST, he was with the IBM T. J. Watson Research Center, Yorktown, NY, USA, from May 1995 to May 1996, where he researched high-speed circuit design. His current research interests include computer-aided design algorithms for high-level synthesis and very large-scale integration architectures for general-purpose microprocessors. Dr. Park received the Best Design Award from ASP-DAC in 1997 and the Best Paper Award from ICCD in 1999.
+
+Jongmin Baek (Student Member, IEEE) received the B.S. degree in electronic engineering from Inha University, Incheon, South Korea, in 2024. He is currently pursuing the M.S. degree in electrical engineering with Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea. His current research interests include VLSI architectures for error correction codes, communication systems, and neural network processors.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:15:48 UTC from IEEE Xplore. Restrictions apply.
+
+

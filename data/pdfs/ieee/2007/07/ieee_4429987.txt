@@ -1,0 +1,660 @@
+A High-Throughput Programmable Decoder for LDPC Convolutional Codes
+Marcel Bimberg, Marcos B.S. Tavares, Emil Matu´ˇs and Gerhard P. Fettweis Vodafone Chair Mobile Communications Systems
+Technische Universitt Dresden, D-01069 Dresden, Germany Emails:{bimberg, tavares, matus, fettweis}@ifn.et.tu-dresden.de
+
+Abstract
+In this paper, we present and analyze a novel decoder architecture for LDPC convolutional codes (LDPCCCs). The proposed architecture enables high throughput and can be programmed to decode different codes and blocklengths, which might be necessary to cope with the requirements of future communication systems. To achieve high throughput, the SIMD paradigm is applied on the regular graph structure typical to LDPCCCs. We also present the main components of the proposed architecture and analyze its programmability. Finally, synthesis results for a prototype ASIC show that the architecture is capable of achieving decoding throughputs of several hundreds MBits/s with attractive complexity and power consumption.
+1. Introduction
+Low-density parity-check (LDPC) codes were discovered by Gallager in 1963 [6] and, nowadays, they are among the most promising error correcting schemes. The renewed interest in Gallager’s LDPC codes can be justified by their simplicity and by their attractive performance/complexity tradeoff. Currently, LDPC codes are being considered by the standardization committees of several future communication systems as serious candidates for the error control coding.
+The convolutional counterparts of Gallager’s LDPC codes – the LDPC convolutional codes (LDPCCCs) – were introduced in [1]. Compared with their block counterparts, the LDPCCCs are not limited to a unique blocklength. Instead, the same encoder/decoder structure can be used to encode/decode different codeword lengths, allowing easy adjustment for changing environment conditions. Therefore, they are highly recommended for next generations wireless communication systems, demanding high flexibility. The encoding of the LDPCCCs is performed in linear-time using shift-register operations and their decoding is facilitated by their highly structured underlying graphs.
+
+As we will show in the next section, LDPCCCs can be decoded using low complexity iterative algorithms, where extrinsic information is exchanged between two decoding steps. In a hardware implementation, this exchange of messages is performed by interleavers [10]. When implementing a decoder for LDPC block codes, such interleavers become rapidly more and more complicated when issues as high throughput and huge block sizes are considered. Specifically, the implementation of more promising irregular block codes demands a combined code-architecture construction leading to a trade-off between hardware complexity and error correction performance. Moreover, parallelization concepts for decoding LDPC block codes are generally limited to the sub-block size of a base matrix they are derived from [7],[8].
+The original construction of LDPCCCs presented in [1] is pseudo-random. In [11], Tanner et al. took advantage of the relation between convolutional codes and quasi-cyclic (QC) block codes to derive LDPCCCs. The obtained LDPCCCs through this method are time-invariant. When implementing time-invariant LDPCCCs, the problems with the exchange of messages can be easily overcome. For instance, the graph regularity guarantees low-complexity interleavers, very simple memory addressing and also homogeneity in the parallel architecture.
+The first architecture concepts for LDPCCC decoders were presented in [2] and [12], where an ASIC architecture was designed for encoding/decoding one special LDPCCC. The applied concepts were mainly derived from the pipeline decoding algorithm proposed in [1]. In this paper, we present a novel low-complexity highly parallel decoder architecture for time-invariant LDPCCCs. Although only the regular LDPCCCs from [11] are considered throughout this paper, our architecture is also capable of decoding irregular LDPCCCs. In this case, no changes in the hardware are necessary: irregular codes can be completely accommodated in our decoding architecture only by writing the corresponding software.
+
+1-4244-1027-4/07/$25.00 ©2007 IEEE
+
+239
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+2. LDPC Convolutional Codes
+
+As described in [6], LDPC codes are defined by sparse
+
+parity-check matrices. In the case of LDPCCCs, the parity-
+
+check matrices, which are called syndrome former matrices,
+show a diagonal structure and are semi-infinite [1]. Thus, the syndrome former HT of an LDPCCC can be written as
+
+ H0T · · · HTms
+
+
+
+HT = 
+
+...
+
+HT0
+
+... ···
+
+Hm T s  ,
+
+(1)
+
+...
+
+...
+
+where the scalar submatrices HνT, ν = 0, 1, · · · , ms, have dimensions c × (c − b), and so determine the rate of the code, which is given by R = b/c (i.e., b represents the number of information bits and c the number of coded bits). As for LDPC block codes (LDPCBCs), a code sequence v
+belonging to an LDPCCC satisfies the parity check equation vHT = 0. Furthermore, if the number of ones in each row of HT is J and K is the number of ones in each column, the LDPCCC is called regular and is referenced as an (ms, J, K)-LDPCCC (otherwise it is called an irregular code). Obviously, J and K indicate the density of connections for the graph nodes. The parameter ms defines the memory of the convolutional code and consequently the
+critical distance of the graph. The critical distance of an LDPCCC is given by ms + 1 and represents the minimum temporal distance between nodes that are not connected to
+each other.
+
+2.1. Decoding Algorithm
+
+The Decoding of LDPCCCs can be accomplished by applying an iterative message passing algorithm to the received code sequence. As shown in [4], the Min-Sum algorithm is a good approximation for fixed point implementations. By utilizing log-likelihood-ratios (LLRs), this algorithm requires low complexity processing. The messages mij that are passed along the edges connecting variable and check nodes are calculated according to the following decoding equations:
+
+0. Initialization:
+
+mij = ci = LLR(chi)
+
+(2)
+
+1. Check node update:
+
+mji = sign(mij )
+
+sign(mi j ) · min |mi j | (3)
+
+i ∈Vj
+
+i ∈Vj\i
+
+2. Variable node update:
+
+mij = ci +
+
+mj i −mji
+
+(4)
+
+j ∈Ci
+
+Qi=Soft decision value
+
+3. Hard decision:
+
+0 vˆi = 1
+
+if Qi ≥ 0 else
+
+(5)
+
+Symbols:
+
+chi channel information belonging to variable node i
+
+ci
+
+LLR of channel information belonging to variable node i
+
+mij message passed from variable node i to check node j
+
+mji message passed from check node j to variable node i
+
+Vj
+
+set of all variable nodes connecting to check node j
+
+Ci set of all check nodes connecting to variable node i
+
+vˆi
+
+estimated bit value for variable node i
+
+The initialization phase is followed by the algorithm repeating through steps 1–3 until either the parity check equation vHT = 0 is fulfilled or a maximum number of iterations has been reached. In the implementation presented in section 3, the decoder executes a predefined number of decoding iterations.
+
+2.2. Parallel Decoding Concept
+
+LDPCCCs can be described by a bipartite graph as shown in Fig. 1 for a (3, 2, 3)-LDPCCC code. As the graph connections between variable and check nodes are the same at each time instant for time-invariant codes, these codes are well suited for a homogeneous, parallel VLSI implementation. The parallelization method applied within our implementation relies on the node level parallelization concept, which was investigated among others in [9]. Fig. 1(a) shows the principle underlying this parallelization concept, which is used as basis for developing our highly parallel decoding architecture. Here, variable nodes are grouped into non-
+
+Processing window
+pt = 2
+
+Processing window
+
+D
+
+E
+
+A
+
+B
+
+floPrwocessing
+
+(a)
+Check-node Variable-node Vector CN operation Vector VN operation
+
+C
+(b) Vector operand for CN operation Vector operand for VN operation Message vectors stored in memory
+
+Figure 1. Principle of node level parallelization of order pt = 2
+
+overlapping segments called processing windows of length pt. The message vectors of length pt are loaded sequentially and fed to the vector computing elements responsible for processing pt check or variable operations simultaneously. Efficient implementation of the vector processing can be achieved by using the SIMD computing model, which
+
+240
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+AGU0
+
+OFFSET RAM
+
+AGU1
+
+REG FILE
+
+SHIFT RAM
+
+Address generation (AG)
+
+IMEM
+
+DECODER
+
+Control Unit
+
+FIFO AGU1
+CMP
+
+FIFO CMP
+
+FIFO SHIFT
+FIFO SHIFT-1
+
+ReadAdr WriteAdr ByteSel
+
+DMEM
+ReadPort
+pt ⋅ N
+BAR-SHIFT
+
+WritePort
+
+pt ⋅ N
+Vector FIFO
+
+pt ⋅ N
+
+Proc.
+
+Proc.
+
+Node 1
+
+Node pt
+
+Vector ALU
+
+Datapath
+
+pt ⋅ N
+BAR-SHIFT-1
+pt ⋅ N
+
+MUX pt ⋅ N
+
+Figure 2. Block diagram of the LDPCCC decoder
+
+exploits the independence and regularity of the graph connections. Due to potential memory misalignments, the LDPCCC decoder demands the usage of a shuffle network. In Fig. 1(b), an example is given where the dashed rectangles represent the message vectors as they are stored in memory. According to this placement, the messages are already aligned for variable node operations, e.g., vector messages D and E. However, for check node operations, the memory alignment is not always provided, as one can see from vector messages B and C. In this case, a vector realignment procedure needs to be applied between variable and check node computation.
+3. Processor Architecture and Implementation Details
+Broadly speaking, our LDPCCC decoder is based on the synchronous transfer architecture (STA) presented in [5]. The STA provides an efficient platform for vectorized signal processing algorithms in terms of low power consumption and high performance. Therefore, it is a very good choice for the implementation of our parallelized LDPCCC decoder. The block diagram in Fig. 2 shows the disposition of the previously described decoding algorithm into an address generation and a datapath part. While address generation utilizes 16-bit fixed point arithmetic logic, the datapath is designed for vector processing, where each vector consists of pt 8-bit width data values.
+3.1. Memory Organisation
+3.1.1 Instruction Memory (IMEM)
+In order to provide flexibility for decoding different LDPCCCs, specific program codes can be loaded into the instruction memory (IMEM). For this purpose, a DMA interface was implemented that is used to transfer data into the memories. By using very long instruction words (VLIWs), all
+
+functional units are able to work in parallel, thereby avoiding stall cycles. Currently, the instruction words for our implementation have widths of 127 bits (without any compression). For prototyping purposes, we have chosen the size of the instruction memory to be 1024 × 127 bits. For specific implementations, IMEM can be downsized. As we will show in section 4, the total number of VLIWs required to implement a regular (ms, J, K)-LDPCCC is given by
+
+NV LIW = 4J K + 3J + 6K + 32.
+
+(6)
+
+3.1.2 Data Memory (DMEM)
+
+The data memory accommodates both the channel LLRs and the messages that are exchanged between variable and check nodes during the decoding iterations. An appropriate addressing scheme, that keeps the decoder flexible, will be described in more detail in section 3.2. As depicted in Fig. 1(b), each vector edge corresponds to one memory location that can be accessed by using a vector load/store instruction. In our implementation, pt = 64 values reside into one vector. This results in a total vector bit-width of 512 bits when N = 8 bits are used for soft-value representation. The vector edges are aligned according to the variable node perspective. The associated channel values are stored in the same manner. If we incorporate the additional 2 mS/pt pt overhead slots surrounding one coded sequence of length L, the minimum memory size required for decoding can be summed up to:
+
+C=
+
+L +2 K
+
+mS pt
+
+pt
+
+· K · (J + 1) · N
+
+[Bits], (7)
+
+where L/K is the number of time slots carrying coded bits. Typical maximum codeword lengths that can be decoded with a memory size of 64 KByte as in our implementation, range e.g. from 7594 bits for a (128, 5, 13)-LDPCCC up to 15104 bits for a (127, 3, 5)-LDPCCC. In order to keep the decoding pipeline filled, a two-port RAM was implemented
+
+241
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+so that new values can be concurrently loaded into the processing nodes while computed results are written back into memory.
+3.2. Address Generation
+As the interconnections between variable and check nodes stay the same for each time instant, it is sufficient to store K(J + 1) offset values for variable node computations plus KJ offset values for check node computations in one RAM. The functional units (FU) involved in address generation are shared by the two operation modes of the processor, namely check node and variable node computations. According to this, the minimum size of the OFFSETRAM depends on the code with the largest product KJ. In our implementation, 256 16-bit values can be stored in OFFSET-RAM, enabling the decoding of codes having parameters K ≤ 16 and J ≤ 7.
+The data values in DMEM are addressed by adding an offset value provided by the OFFSET-RAM to a 16-bit basis address that is pointing to the current pt-width processing window. While AGU0 addresses the OFFSET-RAM in sequential order using modulo arithmetic, AGU1 is used for summation. The output address of AGU1 is directly used for loading packed data from the vector memory. Since every message update is stored at the same address where the original message was loaded from, FIFO-AGU1 buffers the load address until it is used for store operation when the update has finished. Concurrently, CMP uses the output address to check if it fits into the interval spanned by start and end address of the received block. If this condition is violated, a proper setting of the byte select signal for the corresponding store operation avoids updates on values surrounding the received block sequence (each received block is enclosed by LLRs representing zero bits, which is based on the assumption that encoding starts and ends in zero state).
+While operating in check node mode, additional 7-bit width setup values are provided for rotation to two barrel shifters by an extra SHIFT-RAM (Fig. 2). Similarly to the offset values, the shift values are loaded sequentially and buffered by FIFOs that are serving the barrel shifters. The chosen SHIFT-RAM size of 128 words enables the processor to decode various LDPCCCs.
+3.3. Data Flow
+After the first address is calculated, the processor starts to load pt-width packed data from vector memory into the barrel shifter. When operating in variable node mode, rotations on the loaded data can be skipped since it is already aligned in memory for variable node operation. Therefore, the data is just fed forward into the pt processing nodes
+
+di SM ff 2'C
++ SUM
+
+DEMUX
+
+Reg1
+
+Reg2
+
+Reg8
+
+2'C ff SM
+
+-
+2'C ff SM
+
+-
+2'C ff SM
+
+-
+2'C ff SM
+
+do0
+
+do1
+
+do2
+
+do8
+
+(a) Variable node mode
+
+di
+
+<= MIN1 MIN2
+
+DEMUX
+
+Reg1 Reg2
+
+Reg16
+
+== == do1 do2
+
+== do16
+
+(b) Check node mode
+
+Figure 3. Processor operating modes
+
+where the conversion from signed magnitude to two’s complement representation (Fig. 3(a)) is accomplished in a first step. The control of the processing nodes is implemented by using SIMD instructions, which efficiently maps the regularity of the graph connections into the architecture. With every new arriving data value, a sequential addition is executed by the processing nodes, until all edges connected to the corresponding variable nodes in the graph (including the channel values) are processed and temporary stored in the processing nodes. In the current design, a maximum number of Jmax = 8 edges is supported for the variable node operations. Finally, parallel subtraction of intermediate values from the calculated sum leads to the updated messages from variable node side. After reconverting the results back into signed magnitude representation, they are stored sequentially in the order they were loaded from vector memory. In this first prototype, only a fixed number of decoding iterations was considered for implementation. Due to that, the Q-value on data output port do0, which is used for the final hard decision on a bit, overwrites the corresponding channel value in the vector memory when the last decoding iteration has finished.
+When operating in check node mode, data flow stays the same except for an additional rotation operation that becomes necessary due to the misalignment of packed data in memory if seen from the check node side. As illustrated in Fig. 4 for case pt = 2, two loaded vector data words are rearranged by rotation operation to form a pair of new words, of which one is fed into the 64 processing nodes while the second is temporary stored in a FIFO. The FIFO has a size of 16×512 bits, which results from the fact that the processing nodes were designed to decode codes having at most Kmax = 16 edges connected to one check node. It allows parallel PUSH and POP operation so that the pipeline stays filled all the time. As for variable nodes, check node operation is also done in a sequential way and therefore reducing the decoder’s area. With every new arriving data word, the first and second minimum values of the absolute values
+
+242
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+Shifting network
+
+B
+Vector ALU
+B
+
+B’
+Vector FIFO
+B’
+
+Vector-memory load Rearanged vector CN computation Results Vector-memory store
+
+Inverse shifting network
+
+Figure 4. Rearranging vector data words for check node operation
+
+of all incoming data belonging to the same check node are evaluated (Fig. 3b). As the loaded data is in signed magnitude representation, the incoming [N − 2 : 0] bits already represent the magnitude value. Simultaneously, the leading sign bits are evaluated by applying an xor-function. In the last stage, all message updates are computed in one cycle by comparing the internally stored input values to the first and second minimum. Thus, the updates (equation (3)) can be written as:
+
+MIN1 |mji| = MIN2
+
+if |mij| = MIN1 else.
+
+(8)
+
+In order to guarantee the correct data alignment for the next variable node operation, an inverse rotation is performed on each data pair, residing in the FIFO and the processing nodes, before it is written back into memory. A detailed description of the implemented barrel shifters is given in the next section.
+
+3.3.1 Barrel Shifter Implementation
+
+Opposed to the results shown in [9], the barrel shifter presented here is better suited for area constrained designs. Instead of using a fully parallel structure for the shifting network, our implementation applies a hierarchical design consisting of three stages (Fig. 5). Shifting in each stage is controlled by dedicated bits in the input shift value. If not all pt + 1 possible rotations become necessary, area can be further reduced by restricting to a particular set of codes. The complete set of cyclic rotations for a certain code is then given by the elements of matrix
+
+S = logD[HT(D)] mod (pt),
+
+(9)
+
+where log(.) and mod (.) operations are performed element-wise on the polynomial syndrome former matrix HT(D). Place-&-Route (P&R) results show that the implemented barrel shifter, featuring all possible rotations for pt = 64, is able to meet the constraint frequency of fclk = 200 MHz without any pipelining.
+
+shift value [6:0]
+
+packed data on input 1
+
+packed data on input 2
+
+[1023:1016] ... [519:512] [511:504] ...
+
+[7:0]
+
+[2:0] 128 x (8:1) Multiplexers (8 bit input width)
+
+[5:3] 16 x (8:1) Multiplexers (64 bit input width)
+
+[6] 2 x (2:1) Multiplexers (512 bit input width)
+
+[1023:1016] ... [519:512] [511:504] ...
+
+[7:0]
+
+Vector FIFO
+
+Vector ALU
+
+1 cycle
+
+Figure 5. Barrel shifter implementation
+
+4. Programming Issues
+The programming of our architecture is perhaps the task which better reflects our design philosophy and, consequently, also justifies our preference for the LDPCCCs. Namely, because of the regularity and locality of the connections of the graphs representing LDPCCCs, it is possible to obtain memories and data transfer architectures with low complexities and without the need for conflict and/or stall resolutions. In this context, we have directed our efforts to obtain a software architecture that takes advantage of these properties offered by the LDPCCCs.
+The program code implementing an arbitrary regular (ms, J, K)-LDPCCC consists of the different sections listed in Table 1. In the first code section (INITIAL PHASE), the decoding is started. This section continues until the first results of the check node computations are to be stored into the memory. The next code section is CHECKOP CORE, where the check node computations are continued. Differently from INITIAL PHASE, data vectors are simultaneously read and written from/into DMEM. Actually, the code section CHECKOP CORE processes all check node operations inside a processing window of length pt (see Fig.1). This fact can also be observed by the number of required VLIWs (2JK)1, which correspond exactly to the number of data vectors required for the check node operations inside a processing window. Logically, CHECKOP CORE is repeated until all check nodes corresponding to the received codeword – which are divided in processing windows – are processed. The next code section to be processed is CHECKOP TAIL. In this section, two major activities are performed: (1) it represents the inverse of INITIAL PHASE, i.e., the last results of the check node operations are stored in DMEM and thus the FIFOs are flushed; (2) the processing of the bit nodes is started. The code sections BITOP CORE and
+1The factor 2 is due to the misalignment of the data vectors occurring in the check node operations.
+
+243
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+BITOP TAIL are the counterparts of CHECKOP CORE and CHECKOP TAIL for the bit node processing, respectively. Observe also that the number of VLIWs required in BITOP CORE ((J + 1)K + 1) correspond to the number of data vectors required for the bit node computations plus one. The additional VLIW is required because AGU1 – which is also responsible for the update of the counter controlling the loop over BITOP CORE – is always busy with the addresses computations. Obviously, this extra cycle could be avoided with the insertion of additional hardware. Finally, the sections LAST IT BITOP INITIAL, LAST IT BITOP CORE and LAST IT BITOP TAIL are equivalent to the second activity of CHECKOP TAIL, to BITOP CORE and to BITOP TAIL, respectively. The only difference is that these sections are only processed in the last iteration and that the positions of the channel values ci in DMEM are overwritten by the final values given by the decoding operation, i.e., the Qi’s from (4). As an illus-
+
+Code Section
+INITIAL PHASE CHECKOP CORE CHECKOP TAIL BITOP CORE BITOP TAIL LAST IT BITOP INITIAL LAST IT BITOP CORE LAST IT BITOP TAIL
+Total
+
+Number of VLIWs
+8 + 2K 2J K
+5 + 2K (J + 1)K + 1
+5+J 6+J (J + 1)K + 1 6+J
+4JK + 3J + 6K + 32
+
+Table 1. Sections of the program code for an arbitrary regular (ms, J, K)-LDPCCC.
+
+tration, Fig. 6 shows the flow graph of the program code for an arbitrary LDPCCC. The condition ’End of Graph?’ checks if the check node or bit node processing have been done over all processing windows. The condition ’Last Iteration?’ checks if the decoding is in the last iteration so that LAST IT BITOP INITIAL, LAST IT BITOP CORE and LAST IT BITOP TAIL are processed.
+5 Decoder Throughput Analysis
+The number of cycles necessary for one complete iteration of our decoder can be derived from Table 1 and is given by
+
+NCycles/Iter. ≈ (8 + 2K) + NW +
+
+ms pt
+
+INITIAL PHASE
+
+· (2JK) +
+CHECKOP CORE
+
++NW (J + 1)K + 1 + (5 + 2K) + (5 + J),
+
+BITOP CORE
+
+CHECKOP TAIL
+
+BITOP TAIL
+(10)
+
+START INITIAL_PHASE
+
+BITOP_TAIL
+
+CHECKOP_CORE
+No
+End of Graph?
+Yes CHECKOP_TAIL
+Yes
+Last Iteration?
+No BITOP_CORE
+No
+End of Graph?
+Yes
+
+LAST_IT_BITOP_IN ITIAL
+LAST_IT_BITOP_C ORE
+No
+End of Graph?
+Yes
+LAST_IT_BITOP_T AIL
+END
+
+Figure 6. Flow graph of the program code.
+
+where NW is the number of processing windows corresponding to the length of the code sequence to be decoded. Observe that the expression above only approximates the real throughput of the architecture. The reason for it are the jumps in the program flow that eventually occur inside CHECKOP CORE and BITOP CORE.
+For a regular (ms, J, K)-LDPCCC the number of coded bits in a processing window is given by LW = pt · K. The throughput is calculated as T = N /N . Infobits Cycles/Iter If we take the expression in (10) and perform some manipulations we will have the following equation for the throughput:
+
+T≈
+
+NWLWR NW 2JK + (J + 1)K + 1 + 18 + 4K + J + (2JK)
+
+ms pt
+
+,
+
+I
+
+II
+
+(11)
+
+where R = 1 − J/K is the rate of the code. Observe that
+
+part I of the denominator as well as the numerator depend
+
+on the number of processing windows NW. Part II is a constant being determined by the code parameters J and K.
+
+Consequently, if we have NW large enough, part II can be neglected and the throughput can be approximated by
+
+T ≈ pt · K − J 3JK + K + 1
+
+Infobits Cycle × Iteration . (12)
+
+Interestingly, the expression in (12) only depends on the
+code parameters (J, K) and on the parallelism of the architecture pt. Fig. 7 shows the throughputs achieved by our concept for different codes and parallelisms pt. The clock frequency is set to fclk = 200 MHz. Considering our implementation (pt = 64), two points for different codes were
+
+244
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+Throughput [MBits/s] BER
+
+2400 2000 1600
+
+(J=3, K=5) (J=3, K=7) (J=3, K=13) (J=3, K=17) (J=5, K=7) (J=5, K=11) (J=5, K=13) (J=3,K=5) Measured (J=5,K=13) Measured
+
+1200
+
+800
+
+400
+
+0
+
+0
+
+20
+
+40
+
+6064 80
+
+100
+
+120
+
+140
+
+pt
+
+Figure 7. Throughput for one iteration de-
+pending on the parallelism pt. The clock frequency is fclk = 200 MHz.
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+(127,3,5) − 4 bits − 10 Iter. (127,3,5) − 8 bits − 10 Iter.
+
+(127,3,5) − 4 bits − 30 Iter.
+
+(127,3,5) − 8 bits − 30 Iter.
+
+10−6
+
+(127,3,5) − 4 bits − 50 Iter. (127,3,5) − 8 bits − 50 Iter.
+
+(128,5,13) − 4 bits − 10 Iter.
+
+10−7
+
+(128,5,13) − 8 bits − 10 Iter. (128,5,13) − 4 bits − 30 Iter. (128,5,13) − 8 bits − 30 Iter.
+
+(128,5,13) − 4 bits − 50 Iter.
+
+(128,5,13) − 8 bits − 50 Iter.
+
+10−8
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+Eb/N0 [dB]
+
+Figure 8. BER curves for two different codes decoded with 4-bit and 8-bit quantized MinSum and 10, 30 and 50 iterations.
+
+measured. For the code with parameters (ms = 127, J = 3, K = 5), the blocklength was L = 3200, i.e., NW = 10. For the code with parameters (ms = 128, J = 5, K = 13), the blocklength was L = 5824, i.e., NW = 7. As we can observe, the measurements are almost coinciding with the curves obtained from (12) already at these relative short blocklengths.
+6. Simulation Results
+Fig. 8 shows the bit error rates for the regular (127, 3, 5) and (128, 5, 13) LDPCCCs with blocklengths L = 3200 and L = 5824, respectively. The curves were obtained by decoding these codes using 10, 30 and 50 iterations of the 4-bit and 8-bit quantized Min-Sum algorithm. As it can be observed, there is a considerable coding gain between 10 and 30 decoding iterations. On the other hand, the gain between 30 and 50 iterations is almost negligible for both codes. The effects of different quantizations can also be observed in Fig. 8. At least for these two codes that we are investigating, there is no significant gain for using 8-bit instead of 4-bit quantization. Despite of this, we implemented our design using 8-bit quantization because for other codes (e.g., irregular codes) it might result in faster convergence (i.e., less iterations for a certain target BER) and also lower error floors.
+
+7. Tool Flow and Implementation Results
+Based on the integrated design flow shown in [5], the architecture was first described as an XML model, which served as input for automated simulation model, assembler and HDL generation. The data input values for each of the memories are also automatically generated by utilization of a developed Matlab environment. Synthesis for UMC-130nm, 8-metal layer, 1.2V, CMOS technology was accomplished with SYNOPSYS Design Compiler. In order to reduce power consumption, operand isolation and clock gating were deployed. For efficient memory compilation Faraday’s tool memaker was used. Due to the huge bit width of the instruction and data memory, both were partitioned into several banks. As depicted in the final P&R layout (Fig. 9), the instruction memory IMEM consists of two banks and data memory DMEM of eight banks. The system clock frequency fclk = 200 MHz was met by a chip area of 7.83 mm2 and a utilization of 69.5%. Table 2 shows the area contribution of each unit in more detail. As we can observe, the vector FIFO and vector ALU contribute with almost 80% to the area of the computational core. The total gate count of the decoder accumulates to 1.2 MGates.
+After P&R, the power consumption was estimated using PrimePower. For this purpose, we simulated the decoding of the (128, 5, 13)-LDPCCC with a blocklength L = 5824 bits. At 2.8 dB and a clock frequency of fclk = 200 MHz, the average power consumption for decoding with 10 iterations is 437 mW. This results in an energy consumption of 660 pJ per decoded bit and a bit error rate BER ≈ 10−3. Table 3 shows the breakdown of power consump-
+
+245
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+tion for each unit of the LDPCCC decoder after simulating the (128, 5, 13)-LDPCCC. Clearly the vector ALU contributes most to the power consumption of the LDPC decoder with 56%.
+
+Computational Core AG
+BAR-SFT BAR-SFT−1
+V-ALU V-FIFO CTRL
+Memories IMEM
+OFFSET & SHIFT RAM DMEM
+LDPCCC decoder Computational Core
+Memory
+
+Gates 18949 26508 42414 263248 82851 6093 440063
+89670 21086 651035 774290
+440 K 774 K 1214 K
+
+Relative 4% 6% 10% 60% 19% 1% 100%
+12% 3% 85% 100%
+37% 63% 100%
+
+Table 2. Gate count for LDPCCC decoder
+
+Computational Core AG
+BAR-SFT BAR-SFT−1
+V-ALU V-FIFO CTRL
+Memories IMEM
+OFFSET & SHIFT RAM DMEM
+LDPCCC decoder Computational Core
+Memory
+
+Power (mW) 13 30 37 188 37 30 335
+14 4 84 102
+335 102 437
+
+Relative 4% 9% 11% 56% 11% 9% 100%
+14% 4% 82% 100%
+77% 23% 100%
+
+Table 3. Power consumption for LDPCCC decoder
+
+8. Conclusions
+In this paper, a novel programmable decoder architecture for time-invariant LDPCCCs was presented. The architecture is suitable for decoding various time-invariant LDPCCCs and runs at a moderate clock frequency of 200 MHz. Because of the regularity of time-invariant LDPCCCs, the architecture is highly parallel and able to achieve a throughput of several hundred MBit/s. At 2.8 dB the measured average power consumption with a supply voltage of 1.2 V for the (128, 5, 13)-LDPCCC is 437 mW. Beside further power measurements on the chip, which is currently prepared for tape-out, our ongoing research will investigate an enhanced memory management methodology enabling power reduction and higher throughput within a multi-core architecture.
+
+DMEM
+
+2.9 mm
+
+DMEM
+
+DMEM
+
+DMEM
+
+DMEM
+
+IMEM
+
+IMEM
+
+DMEM
+
+2.7 mm
+
+DMEM
+
+DMEM
+
+OFFSET RAM
+SHIFT RAM
+
+Figure 9. LDPCCC decoder layout
+
+9. Acknowledgments
+This work was supported by the German ministry of research and education (BMBF) within the Wireless Gigabit with Advanced Multimedia Support (WIGWAM) project under grant 01 BU 370. The authors would like thank Georg Ellguth for his assistance in P&R.
+References
+[1] A. Jime´nez Feltstro¨m and K.Sh. Zigangirov. Periodic time-varying convolutional codes with low-density parity-check matrices. IEEE Trans. Inform. Theory, 45(5):2181–2190, Sep 1999.
+[2] S. Bates and G. Block. A memory-based architecture for FPGA implementations of low-density parity-check convolutional codes. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), Kobe, Japan, 2005.
+[3] S. Bates, L. Gunthorpe, A. Pusane, Z. Chen, K.Sh. Zigangirov, and D.J. Costello, Jr. Decoders for low-density parity-check convolutional codes with large memory. In Proc. NASA VLSI Symposium, 2005.
+[4] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X. Hu. Reducedcomplexity decoding of LDPC codes. IEEE Trans. Commun., 53(8), Aug 2005.
+[5] G. Cichon, P. Robelly, H. Seidel, E. Mat´uˇs, M. Bronzel, and G. Fettweis. Synchronous transfer architecture (STA). In SAMOS, pages p126–130, June 2004.
+[6] R. Gallager. Low-Density Parity-Check Codes. MIT Press, Cambridge, MA, 1963.
+[7] M. Karkooti, P. Radosavljevic, and J.R. Cavallaro. Configurable, high throughput, irregular LDPC decoder architecture: Tradeoff analysis and implementation. In IEEE International Conference on Application-specific Systems, Architectures and Processors (ASAP), Colorado, USA, Sept 2006.
+[8] M. Mansour and N. Shanbhag. A 640-Mb/s 2048-Bit programmable LDPC decoder chip. In IEEE J. Solid-State Circuits, volume 41, March 2006.
+[9] E. Mat´uˇs, M.B.S. Tavares, M. Bimberg, and G. Fettweis. Towards a GBit/s programmable decoder for LDPC convolutional codes. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), Kobe, Japan, May 2007.
+[10] T. Richardson and V. Novichkov. Methods and apparatus for decoding LDPC codes. In U.S. Patent No. 7,133,853, 2006.
+[11] R.M. Tanner, D. Sridhara, A. Sridharan, T.E. Fuja, and D.J. Costello, Jr. LDPC block and convolutional codes based on circulant matrices. IEEE Trans. Inform. Theory, 50(12):2966–2984, Dec 2004.
+[12] R. Swamy, S. Bates, and T. Brandon. Architectures for ASIC implementations of low-density parity-check convolutional encoders and decoders. In Proc. IEEE International Symposium on Circuits and Systems (ISCAS), Kobe, Japan, 2005.
+
+246
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:44:48 UTC from IEEE Xplore. Restrictions apply.
+
+

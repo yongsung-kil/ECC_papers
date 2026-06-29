@@ -1,0 +1,877 @@
+12th International Conference on Electrical, Electronics and Computer Engineering (IcETRAN), Čačak, 9-12 June 2025 
+979-8-3315-8557-0/25/$31.00 ©2025 IEEE
+Iterative Decoding Algorithms 
+Powered by Deep Learning
+Dimitrije Jovanović 
+School of Electrical Engineering 
+University of Belgrade 
+Belgrade, Serbia 
+jd235018p@student.etf.bg.ac.rs 
+0009-0001-5842-9139 
+Predrag Ivaniš 
+School of Electrical Engineering 
+University of Belgrade 
+Belgrade, Serbia 
+predrag.ivanis@etf.rs 
+0000-0003-4565-1141
+Abstract—In this paper, we analyze the performance of neural 
+belief propagation (BP) decoding on the additive white Gaussian 
+noise (AWGN) channel, compared to the traditional BP algorithm. 
+Previous investigations have shown that assigning pre-trained 
+weights to BP messages can significantly improve the decoding 
+performance in case of high-density parity-check (HDPC) codes, 
+by reducing the negative impact of short cycles. These weights are 
+trained by a neural network whose structure matches the trellis of 
+the decoder. Specifically, we show that medium-density parity-
+check (MDPC) codes decoded with neural BP algorithm can 
+achieve lower bit error rate versus HDPC codes with the same 
+codeword length and the same code rate.  
+Keywords—deep learning, neural network, belief propagation, 
+MDPC codes, AWGN channel, TensorFlow 
+I. INTRODUCTION
+Linear binary block codes are often classified by the number 
+of ones in their parity-check matrix, since this metric is tied both 
+to decoding performance and complexity. Bose-Chaudhuri-
+Hocquenghem (BCH) codes [1], [2] are classical algebraic 
+codes, constructed to reach the guaranteed number of errors that 
+can be corrected. However, corresponding decoding algorithms 
+have high complexity that increases with the square of codeword 
+length. Thus, BCH codes belong to high-density parity-check 
+(HDPC) codes. On the other end of the spectrum, low-density 
+parity-check (LDPC) codes [3] are powerful, easy to implement, 
+and used in many communication standards, such as 10GBASE-
+T, DVB, WiMAX, Wi-Fi, and 5G-NR [4]. Sparsity of the parity 
+check matrix of LDPC codes enables construction of the 
+decoding algorithms with complexity that increases with 
+codeword length at linear rate, which makes possible the use of 
+longer and stronger codes. Although the maximal guaranteed 
+number of errors that can be corrected is not high, LDPC 
+decoders on average have large corrective ability. 
+Moderate-density parity-check (MDPC) codes have parity 
+check matrix density between LDPC and HDPC codes. They 
+were introduced in [5] as an alternative for high-rate, short-
+structured LDPC codes, which have a small constant row weight, 
+typically below 10. The row weight of MDPC codes [6] is of 
+order 𝑂(√𝑛log 𝑛), where 𝑛 is the codeword length. Recently, 
+quasi-cyclic MDPC codes have gained popularity in McEliece 
+cryptosystems [6], [7], [8], [9]. 
+Belief propagation (BP) is an iterative decoding algorithm 
+[10] primarily used for decoding LDPC codes. It is based on
+passing probability messages between nodes of the Tanner graph
+[11] of the code. The aim is to maximize the resulting a posteriori
+probabilities, on which the hard decision is applied at the end. If
+the Tanner graph does not have cycles, the hard decision
+produces a valid codeword. Since codes used in practice have 
+cycles, BP algorithm does not guarantee to decode correctly. The 
+number of short cycles increases with the code density. 
+Therefore, HDPC codes have poor performance when decoded 
+with BP algorithm. 
+Deep learning, in combination with belief propagation 
+algorithm, was introduced in [12], with the aim to improve the 
+performance of dense parity-check matrices. The method 
+introduces weights that multiply the messages that pass between 
+nodes of the Tanner graph. It has been shown that in the case of 
+HDPC codes, weight factors can significantly reduce the 
+negative impact of short cycles and avoid trapping sets in 
+decoding process. These deep learning techniques were then 
+applied to the offset min-sum (OMS) approximation in [13]. 
+Neural OMS, where the offset is the result of deep learning, 
+achieves better performance than the standard version, where the 
+value of the offset is experimentally determined. The authors of 
+the mentioned works then jointly published the deep learning 
+version of the normalized min-sum (NMS) algorithm [14]. These 
+papers only considered short HDPC codes, to clearly show the 
+improvement of the standard BP decoder when the messages are 
+weighted. 
+In this paper, we analyze the performance of neural BP 
+decoding on the additive white Gaussian noise (AWGN) channel 
+for different variants: sum-product, normalized min-sum and 
+offset min-sum. We compare each variant of neural BP with 
+corresponding standard BP propagation algorithm, expecting the 
+neural BP to achieve far better performance. We also compare 
+HDPC and MDPC codes with equal code rates. It has been 
+shown [5] that MDPC codes outperform equivalent HDPC codes 
+when decoded with standard BP algorithm. In case of MDPC 
+codes, we are interested to see if the neural BP decoding is still 
+better than the standard BP decoding, as already shown in case 
+of short HDPC codes. 
+This paper is structured as follows. In Section II we explain 
+the standard sum-product algorithm, a typical version of BP 
+algorithm which has a simple practical implementation. Neural 
+BP decoder introduces deep learning techniques to improve the 
+decoding process, which we explain in Section III. Section IV 
+covers the main approximations of the sum-product decoder: 
+normalized min-sum and offset min-sum algorithm. The 
+standard 
+and neural variant are 
+compared 
+for 
+each 
+approximation. Results of the experiments are provided and 
+discussed in section V. Section VI concludes the paper. 
+2025 12th International Conference on Electrical, Electronic and Computing Engineering (IcETRAN) | 979-8-3315-8557-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/ICETRAN66854.2025.11114279
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 
+II. STANDARD BP DECODER 
+A. Message Passing on the Tanner Graph 
+Let (𝑛, 𝑘) be a linear block code, where 𝑛 is the length of one 
+codeword and 𝑘 is the length of one uncoded message. Encoding 
+each message introduces 𝑟= 𝑛−𝑘 redundant bits and produces 
+a codeword. Code (𝑛, 𝑘) is defined by a parity-check matrix of 
+dimensions 𝑟× 𝑛. 
+Message passing decoders [3] are graphically represented by 
+the appropriate Tanner graph - a bipartite graph, isomorphic to 
+the parity-check matrix [11]. One partition contains variable 
+nodes 𝑣, which correspond to the columns, and the other 
+partition contains check nodes 𝑐, which correspond to the rows 
+of the matrix. The edges of the Tanner graph correspond to non-
+zero elements of parity-check matrix: if there is an edge between 
+variable node 𝑣 and check node 𝑐, the matrix element (𝑐, 𝑣) is 
+equal to 1. For example, parity-check matrix and Tanner graph 
+for the Hamming(7,4) code are shown in Fig. 1. 
+Belief propagation (BP) [10] belongs to the class of message 
+passing decoders, in which edges of the Tanner graph transfer 
+messages between connected nodes, which are either 
+probabilities, likelihood ratios, or most commonly log-
+likelihood ratios (LLR). When a node receives messages from 
+its edges, it will produce a message that will be sent on a given 
+edge. The transmitting message on one edge is calculated by 
+combining all received messages, except the one received on the 
+transmitting edge. At the end of one decoding iteration, variable 
+nodes contain “soft output” LLR values. Hard decision over the 
+soft output produces the codeword estimation. Soft output 
+converges to a posteriori LLRs during the decoding iterations, 
+which hopefully recovers the original codeword. 
+B. Sum-Product Algorithm 
+The iterative version of BP decoding commonly used for 
+practical implementation is called the sum-product algorithm 
+(SPA). In the rest of the paper, we will use the terms belief 
+propagation (BP) and sum-product (SPA) interchangeably. 
+We examine the transmission of binary codewords over the 
+AWGN channel. Before entering the channel, BPSK modulation 
+is applied to the binary codeword vector 𝐗, where bits 0,1 are 
+mapped to symbols +1,-1 respectively, resulting in a vector 
+𝐗𝐵𝑃𝑆𝐾. Noise vector 𝐍 of mean 0 and variance 𝜎2 is added to the 
+codeword, and the vector 𝐘= 𝐗𝐵𝑃𝑆𝐾+ 𝐍 enters the receiver. 
+Channel quality can be characterized by energy per bit divided 
+by the noise power density 𝐸𝑏/𝑁0. Here in particular, we have 
+𝐸𝑏=
+𝑛
+2𝑘 and 𝑁0 = 𝜎2.  
+Historically, propagated messages in SPA algorithm are 
+either probabilities or likelihood ratios [3]. We consider the SPA 
+algorithm in log-domain, where the messages are log-likelihood 
+ratios (LLR), as it is much simpler for practical implementation 
+[15]. Log-domain replaces multiplications with additions and 
+does not require normalization. 
+Log-likelihood ratio (LLR) for the 𝑣-th element of the 
+received word 𝑦𝑣, in case of AWGN channel [15], is equal to 
+ 
+𝑙𝑣= log (
+𝑃(𝑥𝑣=0|𝑦𝑣)
+𝑃(𝑥𝑣=1|𝑦𝑣)) =
+2𝑦𝑣
+𝜎2   
+() 
+ 
+Fig. 1. Parity-check matrix and Tanner graph of the Hamming(7, 4) code 
+After each iteration 𝑖, the decoder produces the soft output, 
+vector 𝑠𝑖, that is supposed to converge to a posteriori LLR 
+values. After the given number of iterations, the hard decision on 
+𝑠𝑖 gives the estimate 𝑥̂𝑖 of the original codeword. 
+The bit of the decoder output that corresponds to the variable 
+node 𝑣 is 
+ 
+𝑥̂𝑣
+𝑖= {1, 𝑠𝑣
+𝑖< 0,
+0, 𝑠𝑣
+𝑖≥0.  
+() 
+The message that the variable node 𝑣 sends to the check 
+node 𝑐 at iteration 𝑖 is equal to 
+ 
+𝜇𝑣,𝑐
+𝑖
+= 𝑙𝑣+ ∑
+𝜇𝑐′,𝑣
+𝑖−1
+𝑐′∈𝐶𝑣\{𝑐}
+ , 
+() 
+where 𝐶𝑣 is the set of all check nodes connected to the variable 
+node 𝑣. 
+The message that the check node 𝑐 sends to the variable node 
+𝑣 the at iteration 𝑖 is equal to 
+ 
+𝜇𝑐,𝑣
+𝑖
+= 2tanh−1 (∏
+tanh (
+𝜇𝑣′,𝑐
+𝑖
+2 )
+𝑣′∈𝑉𝑐\{𝑣}
+) , 
+() 
+where 𝑉𝑐 is the set of all variable nodes connected to the control 
+node 𝑐. At the beginning of the algorithm, we set 𝜇𝑐,𝑣
+0
+= 0 . 
+Soft output at iteration 𝑖 is equal to 
+ 
+𝑠𝑣
+𝑖= 𝑙𝑣+ ∑
+𝜇𝑐′,𝑣
+𝑖
+𝑐′∈𝐶𝑣
+ . 
+() 
+Sum-product decoding on cycle-free Tanner graphs gives 
+the optimal error-correcting performance. However, cycle-free 
+codes have mostly no practical usage due to a very poor tradeoff 
+between code rate and the minimal Hamming distance [16]. On 
+the other hand, sum-product produces poor bit error rate (BER) 
+results for HDPC codes, which have many short cycles. Sum-
+product is predominantly used in case of LDPC codes, which 
+have a very low number of edges, and therefore long cycles.  
+III. NEURAL BP DECODER 
+The model of neural BP decoder consists of offline 
+supervised learning, and binary classification [17]. A 
+feedforward neural network with backpropagation [18] is used 
+for learning, and classes in classificaton correspond to binary 
+values of decoder output. 
+Neural belief propagation is based on weights attached to 
+log-likelihood ratio (LLR) messages. Weights are trained using 
+a neural network, which is mapped to trellis of the decoder [12]. 
+One decoding iteration consists of two layers of the network. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 
+A. Trellis as a Neural Network 
+Steps of message passing decoding can be represented by the 
+trellis structure. Decoding starts from variable nodes (input 
+layer) which send messages to their neighboring check nodes 
+over corresponding edges (first hidden layer). Check nodes send 
+messages back to their neighboring variable nodes over the edges 
+(second hidden layer). This message exchange in two phases 
+constitutes one decoding iteration. Trellis ends at the variable 
+nodes (output layer). 
+Neurons of the input layer correspond to channel input values 
+in variable nodes at the beginning of decoding algorithm. 
+Elements of hidden layers correspond to the edges of the Tanner 
+graph. Elements of the output layer correspond to bits of the 
+decoded codeword. 
+Odd hidden layers (check layers) generate messages from 
+check to variable nodes. Even hidden layers (variable layers) 
+generate messages from variable to check nodes. Neurons of two 
+successive hidden layers are connected according to adjacency 
+of corresponding edges. One neuron of a variable layer is 
+connected to the neuron of the following check layer, if the 
+corresponding edges share the same variable node in the Tanner 
+graph. One neuron of a check layer is connected to the neuron of 
+the following variable layer, if the corresponding edges share the 
+same check node in the Tanner graph.  
+The final marginalization can be done only once, at the output 
+layer (the last iteration). On the other hand, marginalization can 
+be added after every odd hidden layer (every iteration), which 
+was suggested in [12]. In that case, gradient will get updated 
+more frequently, and backpropagation will improve the learning 
+of the lower layers. This approach is called multiloss, which 
+means the loss function is calculated based on the output of 
+multiple layers. 
+As an example, we will use the Hamming(7,4) code. The 
+Tanner graph is illustrated in Fig. 1. It has 𝑛= 7 variable nodes 
+(in blue) and 𝑟= 𝑛−𝑘= 3 check nodes (in green), and the 
+total number of edges is 12. The neural network is illustrated in 
+Fig. 2. The input layer (in red) has 7 neurons. Check hidden 
+layers (odd, in green) and variable hidden layers (even, in blue) 
+each have 12 neurons. Marginalization layers (in yellow) each 
+have 7 neurons. 
+B. Neural Sum-Product Algorithm 
+Neural BP decoder is a generalization of standard BP decoder 
+in which messages are multiplied with corresponding weights. 
+Equations for sum-product algorithm are generalized by 
+multiplying the messages with corresponding weights [12]. 
+The goal is to learn the weights of messages so that the 
+decoder outputs a codeword, as close to the transmitted 
+codeword as possible. Let 𝑖 be the current decoding iteration. 
+The following equations (6), (7), (8) represent the neural SPA 
+algorithm. 
+ 
+𝜇𝑣,𝑐
+𝑖
+= 𝑤𝑣,𝑖𝑛
+𝑖
+𝑙𝑣+ ∑
+𝑤𝑣,𝑐,𝑐′
+𝑖
+𝜇𝑐′,𝑣
+𝑖−1
+𝑐′∈𝐶𝑣\{𝑐}
+ , 
+() 
+ 
+𝜇𝑐,𝑣
+𝑖
+= 2tanh−1 (∏
+tanh (
+𝜇𝑣′,𝑐
+𝑖
+2 )
+𝑣′∈𝑉𝑐\{𝑣}
+)  
+() 
+ 
+𝑠𝑣
+𝑖= 𝜎(𝑤𝑣,𝑜𝑢𝑡
+𝑖
+𝑙𝑣+ ∑
+𝑤𝑐′,𝑣,𝑜𝑢𝑡
+𝑖
+𝜇𝑐′,𝑣
+𝑖
+𝑐′∈𝐶𝑣
+)  
+() 
+ 
+Fig. 2. Feedforward neural network with multiloss [12] for the Hamming(7,4) 
+code. There are five hidden layers, corresponding to 3 decoding iterations 
+Sigmoid function 𝜎(𝑥) =
+1
+1+𝑒−𝑥 is used in (8) to limit the 
+final output inside the range [0,1]. This allows us to train the 
+network by minimizing the cross-entropy loss function [19] 
+𝐿(𝑠, 𝑦) = −
+1
+𝑛∑
+∑
+𝑦𝑣
+𝑛
+𝑣=1
+𝑇
+𝑖=1
+log(𝑠𝑣
+𝑖) 
+ 
+                   +(1 −𝑦𝑣) log(1 −𝑠𝑣
+𝑖)  
+() 
+where 𝑇 is the last decoding iteration. 
+If the applied weights are all equal to 1, the neural SPA 
+reduces down to standard SPA algorithm, i.e., (6), (7), (8) 
+become (3), (4), (5). This means that if the parameters of the 
+neural network are optimally chosen, the performance of the 
+neural SPA cannot be worse than the standard SPA algorithm 
+[12]. 
+The weights in neural SPA are trained by mini-batch gradient 
+descent algorithm [20], which calculates the gradient from small 
+sets of samples, rather than from the whole dataset. Within one 
+mini-batch, the gradient of training loss is used to update the 
+weights. The training continues until the moment we get the 
+deviation from the desired output that is low enough. In case of 
+multiloss, backpropagation is used to compute the gradient, and 
+the gradient is used to update the weights [12]. 
+Both the standard and neural BP decoders are symmetric, 
+meaning that the message passing symmetry condition is 
+satisfied [12]. That implies the bit error probability is 
+independent of the transmitted codeword [21]. For that reason, 
+during the training phase, it is enough to use a single codeword 
+on which the noise is added. The zero codeword can be used in 
+general, since it belongs to every linear code. 
+The total number of weights increases with code length and 
+density. Let 𝑖 be the current decoding iteration. Weights 𝑤𝑣,𝑖𝑛
+𝑖
+ 
+and 𝑤𝑣,𝑜𝑢𝑡
+𝑖
+ correspond to the variable node 𝑣, so the total number 
+of each is equal to code length 𝑛.  
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE I.  
+NUMBER OF WEIGTHS PER DECODING ITERATION 
+Code 
+Edges 
+Extrinsic 
+edges 
+Weights 
+BCH(127,106) 
+1008 
+7832 
+9094
+= 2 ∙127 + 1008 + 7832 
+MDPC(127,106) 
+756 
+4172 
+5182
+= 2 ∙127 + 756 + 4172 
+MDPC(127,92) 
+770 
+5074 
+6098
+= 2 ∙127 + 770 + 5074 
+ 
+For one variable node 𝑣, the number of weights 𝑤𝑣,𝑐,𝑐′
+𝑖
+ is 
+equal to the number of extrinsic edges for each edge (𝑐, 𝑣). So, 
+the total number of weights 𝑤𝑣,𝑐,𝑐′
+𝑖
+ is the sum of the number of 
+extrinsic weights over all variable nodes 𝑣. For one variable node 
+𝑣, number of weigths 𝑤𝑐′,𝑣,𝑜𝑢𝑡
+𝑖
+ is equal to the number of edges 
+containing 𝑣, so the total number of weigths 𝑤𝑐′,𝑣,𝑜𝑢𝑡
+𝑖
+ is equal to 
+the number of edges in the Tanner graph. The values for the 
+examples of codes are given in Table I. 
+IV. MIN-SUM APPROXIMATIONS OF BP DECODER 
+Min-sum approximation was introduced [22] to reduce the 
+complexity of sum-product algorithm, mainly caused by many 
+hyperbolic 
+function 
+calculations 
+and 
+floating-point 
+multiplications. The intention was to greatly lessen the 
+computation 
+while keeping 
+the 
+decoding 
+performance 
+reasonably high. For the basic min-sum, equation (4) from sum-
+product decoder is replaced by 
+ 
+𝜇𝑐,𝑣
+𝑖
+=
+min
+𝑣′∈𝑉𝑐\{𝑣}|𝜇𝑣′,𝑐
+𝑖
+| ∏
+sign(𝜇𝑣′,𝑐
+𝑖
+)
+𝑣′∈𝑉𝑐\{𝑣}
+ . 
+() 
+For all min-sum variants, equations (3) and (5) remain the 
+same as the standard sum-product algorithm. The only equation 
+that is changed is (4), to simplify the calculation of 𝑐𝑣 messages. 
+A. Normalized Min-Sum Algorithm 
+Messages in basic min-sum decoder often have very high 
+magnitudes, which causes overshooting and BER degradation 
+[14]. To reduce the magnitude, 𝑐𝑣 message can be multiplied 
+with a weight [22]. 
+Normalized min-sum algorithm (NMS) scales the 𝑐𝑣 
+messages from check to variable nodes with a fixed weight, 
+denoted by 𝑤, which is empirically determined. For example, the 
+built-in MATLAB function ldpcDecode [23] in case of 
+normalized min-sum has a default scaling weight 𝑤= 0.75. For 
+the standard NMS, equation (4) is replaced by 
+ 
+𝜇𝑐,𝑣
+𝑖
+= 𝑤( min
+𝑣′∈𝑉𝑐\{𝑣}|𝜇𝑣′,𝑐
+𝑖
+| ∏
+sign(𝜇𝑣′,𝑐
+𝑖
+)
+𝑣′∈𝑉𝑐\{𝑣}
+)  
+() 
+B. Neural Normalized Min-Sum Algorithm 
+Weights in neural sum-product are introduced to reduce the 
+negative impact of short cycles of the Tanner graph. Weights in 
+neural min-sum are used for that purpose as well, but mainly to 
+avoid overshooting [14]. For the neural NMS, equation (4) is 
+replaced by 
+ 
+𝜇𝑐,𝑣
+𝑖
+= 𝑤𝑐,𝑣
+𝑖( min
+𝑣′∈𝑉𝑐\{𝑣}|𝜇𝑣′,𝑐
+𝑖
+| ∏
+sign(𝜇𝑣′,𝑐
+𝑖
+)
+𝑣′∈𝑉𝑐\{𝑣}
+)  () 
+Let 𝑖 be the current decoding iteration. For one variable node 
+𝑣, number of weigths 𝑤𝑐,𝑣
+𝑖 is equal to the number of edges 
+containing 𝑣, so the total number of weigths 𝑤𝑐,𝑣
+𝑖 is equal to the 
+number of edges in the Tanner graph. 
+C. Offset Min-Sum Algorithm 
+To avoid messages with a too large magnitude, first factor of 
+the 𝑐𝑣 message can be subtracted by an offset, denoted by 𝛽, 
+instead of multiplying the whole 𝑐𝑣 message with a weight [22]. 
+Compared to normalized min-sum this algorithm is even more 
+computationally simple, since subtraction is less complex than 
+multiplication. 
+Offset min-sum (OMS) introduces a fixed offset bias in 𝑐𝑣 
+message which is empirically determined. For example, the 
+MATLAB function ldpcDecode for offset min-sum has a default 
+offset 𝛽= 0.5. For the standard OMS, equation (4) is replaced 
+by 
+𝜇𝑐,𝑣
+𝑖
+= max ( min
+𝑣′∈𝑉𝑐\{𝑣}|𝜇𝑣′,𝑐
+𝑖
+| −𝛽, 0) 
+                                         ∙∏
+sign(𝜇𝑣′,𝑐
+𝑖
+)
+𝑣′∈𝑉𝑐\{𝑣}
+  
+() 
+D. Neural Offset Min-Sum Algorithm 
+In the neural version offset min-sum, the only difference 
+from the standard version is that the offset is learned from 
+training data instead of being fixed from beginning [13]. For the 
+neural OMS, equation (4) is replaced by 
+𝜇𝑐,𝑣
+𝑖
+= max ( min
+𝑣′∈𝑉𝑐\{𝑣}|𝜇𝑣′,𝑐
+𝑖
+| −𝛽𝑐,𝑣
+𝑖, 0) 
+                                       ∙∏
+sign(𝜇𝑣′,𝑐
+𝑖
+)
+𝑣′∈𝑉𝑐\{𝑣}
+  
+() 
+Let 𝑖 be the current decoding iteration. For one variable node 
+𝑣, number of weigths 𝛽𝑐,𝑣
+𝑖 is equal to the number of edges 
+containing 𝑣, so the total number of weigths 𝛽𝑐,𝑣
+𝑖 is equal to the 
+number of edges in the Tanner graph. 
+V. EXPERIMENTS 
+The baseline for our software implementation was the 
+program [24]. The program originally included a full 
+implementation of neural NMS and neural OMS, even for 
+recurrent neural networks, which is outside the scope of this 
+paper. However, neural SPA algorithm, which is the most 
+complex, was not implemented at all. We developed the missing 
+neural SPA decoder, according to (4), (5), (6) from [12]. To 
+allow incremental learning and selection of the best run, we 
+implemented the saving and restoring of weights values, e.g., the 
+result of offline learning. 
+A. Common Setup 
+HDPC codes tested in experiments belong to the class of 
+BCH codes, and tested MDPC codes are cyclical. Parity-check 
+matrices of a cyclical MDPC code can be constructed by cyclic 
+shifts of the idempotent polynomial, which is created from 
+cyclotomic cosets [5]. 
+We tested the decoding of BCH(127,106), MDPC(127,106) 
+and MDPC(127,92) codes, to first compare BCH and MDPC 
+codes with equal rates, and then to test a MDPC code of some 
+different rate. 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 
+The training of all neural networks was performed using 
+TensorFlow [25], [26] with Adam update rule [27] for the 
+weights. Binary cross-entropy was used as the loss function for 
+supervised learning. 
+Since all the considered decoders are symmetric, it is enough 
+to use a single codeword, both in training phase and testing 
+phase, without loss of generality [21]. Training dataset is created 
+by transmitting the zero binary codeword, modulated with 
+BPSK, over the AWGN channel. This way, we do not need to 
+know the generator matrix to construct the codewords from a 
+random message. 
+The range of values 1-8 dB for 𝐸𝑏/𝑁0 is considered. Mini-
+batch gradient descent was used, and each mini-batch consists of 
+120 noisy words [12], [13], [14]. All eight 𝐸𝑏/𝑁0 values are 
+uniformly present, and noisy words in the batch go from the 
+lowest to highest 𝐸𝑏/𝑁0  value. That is, the first 15 words 
+correspond to  𝐸𝑏/𝑁0 = 1 dB, next 15 words to 𝐸𝑏/𝑁0 = 2 dB, 
+etc. 
+In general, the mini-batch size and learning rate are chosen 
+based on the length of the given code. Smaller mini-batch sizes 
+and smaller learning rates are used for longer codes [14]. Our 
+codes have similar code length, so the mini-batch size is kept as 
+120. In our case, the learning rate is also chosen based on the 
+decoding algorithm, which is specified in following experiments. 
+All weights are initialized with normal distribution.  
+B. Experiment 1 – Standard SPA and Neural SPA Decoder 
+We simulate the decoding of BCH(127,106) code and 
+MDPC(127,106) code according to three cases: 
+• Standard sum-product limited to 5 iterations. 
+• Standard sum-product limited to 50 iterations. 
+• Neural sum-product limited to 5 iterations. 
+The purpose of this experiment is twofold: to see the impact 
+of code density on decoding performance, and to compare 
+performance of standard and neural belief propagation. 
+In the case of standard SPA algorithm, we compare decoding 
+of BCH(127,106) code and MDPC(127,106) code. Simulations 
+in Fig. 3. show that the MDPC code achieves far better 
+performance. The rate of both codes is 21/127. However, the row 
+weight of BCH code is 48 and for MDPC code [5] it is 32. Since 
+this high-density BCH code has a greater density, the bits of the 
+codeword are more susceptible to noise added in during 
+transmission. 
+We now compare decoding with standard SPA versus neural 
+SPA algorithm. To analyze the impact of neural algorithm, we 
+do that separately for each code. The simulation shows that for 
+BCH code, neural SPA with 5 iterations achieves better 
+performance than standard SPA even when 50 iterations is 
+allowed. This means that the complexity reduction factor [12] is 
+more than 10, when using neural instead of standard SPA. For 
+MDPC code, the complexity reduction factor is much smaller. 
+The reason for this is that the standard SPA is not suited for high-
+density BCH codes, and so the neural SPA greatly improves the 
+performance. On the other hand, standard SPA decoding of 
+MDPC codes already achieves low BER values, so that the 
+neural SPA does add much improvement.  
+At the end, we again compare BCH(127,106) and 
+MDPC(127,106) codes, that have the same code rate. We can see 
+that  neural SPA decoding  of BCH code  can achieve nearly the  
+ 
+Fig. 3. Simulation results of experiment 1 – Comparison of the standard SPA 
+and neural SPA decoder 
+ 
+Fig. 4. Simulation results of experiment 2 – Comparison of the neural SPA, 
+neural NMS and neural OMS decoder 
+same BER as MDPC code, decoded with standard SPA, both 
+with maximum number of iterations limited to 5. For 𝐸𝑏/𝑁0 =
+7 dB, they even have the same BER. 
+C. Experiment 2 – Neural SPA, NMS and OMS Decoder 
+We simulate the decoding of MDPC(127,106) code 
+according to four cases: 
+• Standard sum-product limited to 5 iterations. 
+• Neural sum-product limited to 5 iterations. 
+• Neural normalized min-sum limited to 5 iterations. 
+• Neural offset min-sum limited to 5 iterations. 
+The purpose of this experiment is to compare the 
+performance of neural BP, implemented as sum-product, with its 
+approximations.  
+Normalized min-sum and offset min-sum were introduced to 
+simplify the computations of BP decoding, but for cost of 
+lowering its performance. From Fig. 4, we can see that the neural 
+SPA and its neural approximations can achieve similar 
+performance, if the learning is good enough. Also, with dashed 
+lines are shown the alternative results, affected by overfitting. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    
+    
+    
+    
+    
+    
+    
+          
+   
+                           
+                          
+                           
+                                 
+                           
+                            
+                                  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    
+    
+    
+    
+    
+    
+    
+          
+   
+                                        
+                           
+                            
+                            
+                            
+                            
+                            
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+Fig. 5. Simulation results of experiment 3 – Incremental learning for neural 
+SPA decoding of MDPC(127,92) code 
+D. Experiment 3 – Incremental Learning of Neural SPA 
+We present the results of neural SPA decoding of 
+MDPC(127,92) code, when different number of mini-batches are 
+used to train the weights, ranging from 10000 to 70000. 
+To achieve the best learning result, we divide the learning 
+process into smaller steps. For example, instead of applying 
+70000 mini-batches in one run, we perform learning in 7 separate 
+runs (epochs), each with 10000 mini-batches. We save the 
+weights at the end of one run and restore them at the beginning 
+of the next run. Then, we visualize all middle results and stop 
+before overfitting. 
+From the simulations shown in Fig. 5., we can see that for 
+30000 mini-batches we get the best BER value for 𝐸𝑏/𝑁0 =
+7 dB compared to other curves, and for 8 dB there were no 
+errors. Meaning, there is a threshold of the number of mini-
+batches at which overfitting starts to happen, and the increase 
+will not improve the performance. 
+VI. CONCLUSION 
+We applied and validated the neural BP algorithm for 
+decoding several short MDPC codes of different rates. We have 
+shown that all BP variants (sum-product, normalized min-sum, 
+offset min-sum) perform better when the messages in the Tanner 
+graph are weighted. At the same time, we compared the results 
+between MDPC and HDPC codes of equivalent rates. Lastly, we 
+have shown that neural BP decoding of HDPC codes can achieve 
+nearly the same bit error rate as standard BP decoding of MDPC 
+codes of the same rate. 
+Future work will focus on training the neural decoder from 
+the dataset of codewords the standard BP could not decode. Also, 
+the plan is to analyze how many iterations of neural BP are 
+equivalent to iterations for which the standard BP converges. 
+ACKNOWLEDGMENT 
+The authors would like to thank Dr Predrag Tadić, School of 
+Electrical Engineering, University of Belgrade, for his helpful 
+comments in the preparation of this paper. 
+ 
+REFERENCES 
+[1] A. Hocquenghem, “Codes correcteurs d'erreurs,” Chiffres, vol. 2, 1959, 
+pp. 147–156. 
+[2] R. C. Bose and D. K. Ray-Chaudhuri,  “On a class of error correcting 
+binary group codes,” Inform. Control, vol.  , 1960, pp 68–79. 
+[3] R. Gallagher, “Low-density parity-check codes,” IRE Trans. Inform. 
+Theory, vol. 8, 1962, pp. 21–28. 
+[4] T. Ohtsuki, “LDPC codes in communications and broadcasting,” IEICE 
+Trans. Commun., 2007, pp. 440-453.  
+[5] S. Ouzan and Y. Be’ery, “Moderate-density parity-check codes,” 
+arXiv:0911.3262, 2009. 
+[6] R. Misoczki, J.-P. Tillich, N. Sendrier, and P. Barreto, “MDPC-McEliece: 
+New McEliece variants from moderate density parity-check codes,” IEEE 
+Internat. Symp. Inform. Theory, 2013, pp. 2069–2073. 
+[7] R.J. McEliece, “A public-key cryptosystem based on algebraic coding 
+theory,” DSN Progress Report, 1978, pp 114–116. 
+[8] M. Baldi, P. Santini, and F. Chiaraluce, “Soft McEliece: MDPC code-
+based McEliece cryptosystems with very compact keys through real-
+valued intentional errors,” IEEE Internat. Symp. Inform. Theory, 2016, pp. 
+795–799. 
+[9] BIKE team, “BIKE - bit-flipping key encapsulation,” available at 
+https://bikesuite.org/  
+[10] J. Pearl, “Reverend Bayes on inference engines: A distributed hierarchical 
+approach,” Proc. of the 2nd Nat. Conf. Artificial Intelligence, 2009, 
+pp. 133–136. 
+[11] L. M. Tanner, “A recursive approach to low complexity codes,” IEEE 
+Trans. Inform.Theory, vol. 27, 1981, pp. 533–547. 
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear 
+codes using deep learning,”   th Annual Allerton Conf.,     . 
+[13] L. Lugosch and W.J. Gross, “Neural offset min-sum decoding IEEE 
+Internat. Symp. Inform. Theory, 2017, pp. 1361–1365. 
+[14] E. Nachmani, E. Marciano, L. Lugosch, W.J. Gross, D. Burshtein, and Y. 
+Be’ery, “Deep learning methods for improved decoding of linear codes”, 
+IEEE Sel. Topics in Signal Processing, vol. 12, 2018, pp. 119 –131. 
+[15] X.-Y. Hu, E. Eleftheriou, D.M. Arnold, and A. Dholakia, “Efficient 
+implementations of the sum-product algorithm for decoding LDPC 
+codes,” Proc. IEEE Global Telecomms. Conf, vol. 2, 2001. 
+[16] T. Etzion, A. Trachtenberg, and A. Vardy, “Which codes have cycle-free 
+Tanner graphs?,” IEEE Trans. Inform. Theory, vol. 45, 1999, pp. 2173–
+2181. 
+[17] I.H. Sarker, “Machine learning: algorithms, real-world applications 
+and research directions,” SN computer science, vol. 2, 2021.  
+[18] D. Rumelhart, G.E. Hinton, and R.J. Williams, “Learning representations 
+by back-propagating errors,” Nature, vol. 323, 1986, pp. 533–536. 
+[19] A. Mao, M, Mohri, and Y. Zhong, “Cross-entropy loss functions: 
+theoretical analysis and applications,” Proc. of the 40th Inter. Conf. 
+Machine Learning, 2023, pp. 23803–23828. 
+[20] S. Ruder, “An overview of gradient descent optimization algorithms,” 
+arXiv:1609.04747, 2016. 
+[21] T. Richardson and R. Urbanke, “Modern coding theory,” Cambridge 
+University Press, 2008. 
+[22] J. Chen, A. Dholakia, E. Eleftheriou, M. P. Fossorier, and X.-Y. Hu, 
+“Reduced-complexity decoding of LDPC codes,” IEEE Trans. Comm., 
+vol. 53, 2005, pp. 1288–1299. 
+[23] MathWorks, “ldpcDecode,” available at 
+https://www.mathworks.com/help/comm/ref/ldpcdecode.html  
+[24] L. Lugosch, “Neural min-sum decoding in TensorFlow,” available at 
+https://github.com/lorenlugosch/neural-min-sum-decoding   
+[25] M. Abadi et al., “TensorFlow: a system for large-scale machine learning,” 
+Proc. of the 12th USENIX conf., 2016, pp. 265–283. 
+[26] TensorFlow, “TensorFlow Core Guide,” available at 
+https://www.tensorflow.org/guide/  
+[27] D.P. Kingma,  and  J. Ba,  “Adam: a method for stochastic optimization,” 
+Internat. Conf. Learning Representations, 2015.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    
+    
+    
+    
+    
+    
+    
+          
+   
+                     
+                                            
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:33:37 UTC from IEEE Xplore.  Restrictions apply. 

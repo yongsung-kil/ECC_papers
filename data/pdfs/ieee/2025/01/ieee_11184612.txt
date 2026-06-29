@@ -1,0 +1,420 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+13103
+
+Learning Linear Block Codes With Gradient Quantization
+
+Louis-Adrien Dufre`ne , Quentin Lampin , and Guillaume Larue
+
+Abstract—This study investigates the problem of learning linear block codes optimized for Belief-Propagation decoders significantly improving performance compared to the state-ofthe-art. Our previous research is extended with an enhanced system design that facilitates a more effective learning process for the parity check matrix. We simplify the input dataset, restrict the number of parameters to learn and improve the gradient back-propagation within the model. We also introduce novel optimizers specifically designed for discrete-valued weights. Based on conventional gradient computation, these optimizers provide discrete weights updates, enabling finer control and improving explainability of the learning process. Through these changes, we consistently achieve improved code performance, provided appropriately chosen hyper-parameters. To rigorously evaluate the performance of learned codes in the context of short to medium block lengths, we propose a comprehensive code performance assessment framework. This framework enables a fair comparison between our learning methodology and random search approaches, ensuring statistical significance in our results. The proposed model pave the way for a new approach to the efficient learning of linear block codes tailored to specific decoder structures.
+Index Terms—Channel coding, block codes, iterative methods, neural networks, artificial intelligence.
+I. INTRODUCTION
+T HE automatic learning of Error Correcting Codes (ECC) is an open research subject, rising substantial interest within the research community. While the construction of efficient codes is intricately linked with expert information theory knowledge and practical engineering considerations, the advent of Machine Learning (ML) enable innovative code design strategies. The expectations range from the discovery of new construction methods for existing code families to the design of novel code structures with desirable properties.
+For instance, in [1], the authors employ Deep Learning (DL) techniques to design a novel code family known as KO (Kronecker Operation) codes. Drawing inspiration from the Kronecker operations used as the foundation of Reed-Muller and Polar codes, they replace the conventional Plotkin trees with a trainable Neural Network (NN). After an end-to-end
+Received 21 November 2024; revised 14 May 2025 and 25 August 2025; accepted 11 September 2025. Date of publication 29 September 2025; date of current version 23 December 2025. The associate editor coordinating the review of this article and approving it for publication was M. Shirvanimoghaddam. (Louis-Adrien Dufre`ne, Quentin Lampin, and Guillaume Larue contributed equally to this work.) (Corresponding author: Louis-Adrien Dufre`ne.)
+The authors are with Orange Research, 38243 Meylan, France (e-mail: louisadrien.dufrene@orange.com; quentin.lampin@orange.com; guillaume.larue@orange.com).
+Digital Object Identifier 10.1109/TCOMM.2025.3615681
+
+training, this approach results in novel non-linear encoding and decoding functions. In a similar manner, [2] uses an endto-end DL method to learn new efficient codes, based on the Turbo codes encoder and decoder architectures. These novel non-linear structured codes demonstrate the capability of ML to search for new codes design.
+More conventionally, ML is used to improve the performance of codes belonging to existing codes families. In [3], three different Reinforcement Learning (RL) techniques are used to learn codes: a policy gradient, a genetic algorithm and an Advantage Actor Critic (A2C). These learned codes are structured using known codes families, e.g. linear block codes based on a binary generator matrix, and the study proposes a generic constructor-evaluator approach to learn them with RL methods. In the same vein, [4] proposes a genetic algorithm to learn the parity check matrix of Low Density Parity Check (LDPC) codes. A decoder is used to evaluate the reward provided to the RL agent. In the short block length regime, the genetic algorithm delivers well-designed codes tailored to the specific decoder in use, outperforming traditional design tools that often fail to produce efficient codes in this context. Some unconventional choices for LDPC design, such as degree-1 variable nodes, also demonstrate the potential of ML to expand our insights into code construction.
+In addition to RL techniques, both supervised and unsupervised DL are also employed to enhance the performance of known code structures. In [5], a gradient descent based optimization is used to learn the position of the information/frozen bits indices of Polar codes within a Belief Propagation (BP) decoder. The trainable weights are solely the bits position. The resulting codes have competitive performances when compared to the 5G Polar code with the same decoder. In [6], a unified encoder-decoder training framework is proposed to learn binary linear block codes, where both the code and a Transformer-based decoder are jointly optimized in an end-toend fashion. In [7] the same authors apply back-propagation methods over a differentiable Tanner Graph to optimize codes specifically for BP decoding. In a previous work [8], we proposed an auto-encoder to efficiently learn linear block codes with a BP-based decoding. The auto-encoder is composed of a differentiable encoder and decoder, used to learn the parity-check matrix. The decoder is a Gated Neural Belief Propagation (GNBP), a less-complex variant of the Neural Belief Propagation (NBP) proposed in [9], with an iterative graph decoding structure similar to a weighted BP.
+In this paper, we propose to continue the work started in [8]. Our work specifically targets applications where limited
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13104
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+computational resources and energy constraints, or real-time operations, necessitate efficient decoding with few iterations. This is particularly relevant for Internet of Things (IoT) and Ultra Reliable Low Latency Communications (URLLC) systems, where short packets and efficient decoding are essential requirements. BP decoding, despite its sub-optimality for short dense codes, remains highly attractive for practical implementations due to its widespread, fully parallelizable and scalable architecture, with efficient hardware support. Moreover, long LDPC codes with BP decoding - as seen in 5G data channels - already achieve excellent performancecomplexity trade-offs due to their sparse structure. This also motivates our focus on learning short-to-medium length codes specifically optimized for BP decoding, aiming to enable a unified decoding architecture, performing well across all length regimes. Our goal is then not to find theoretically optimal codes but rather short codes that perform well under BP decoding. A novel architecture is described, simplifying the overall NN model and learning process, focusing solely on learning the parity check matrix. When the appropriate hyper-parameters are selected, we demonstrate a rapid and consistent learning, that results in codes showcasing superior performance.
+The paper is organized as follow: In Section II, we present the system model, outlining the novel auto-encoder architecture used for learning the codes. Section III presents a new framework to validate the efficiency of learning methodologies by verifying that learned codes significantly outperform random ones. Section IV introduces a gradient quantization mechanism and the associated discrete optimizer, which provide a novel approach to handle the binary-valued weights in the learning process. In Section V, we detail the training hyperparameters and methodologies employed in our experiments. The simulation results are presented in Section VI, showcasing the performance of the learned codes. Finally, Section VII concludes the paper and discuss potential directions for future works.
+
+II. AUTO-ENCODER MODEL & TRAINING
+
+The auto-encoder model proposed for learning error codes
+
+is described in Figure 1. A trainable BP decoder is considered,
+
+implementing the standard BP algorithm in its forward pass.
+
+The differentiable iterative decoding is executed as a Recurrent
+
+Neural Network (RNN). The general architecture of the RNN
+
+cell is based on the one described in [10], without any
+
+weighting mechanism within the decoding graph.
+
+The number of BP iterations to evaluate the codes per-
+
+formances is fixed to 5. This choice reflects our focus on
+
+applications requiring low computational complexity or real-
+
+time operation, as explained in the previous section. While
+
+increasing the number of iterations typically improves decod-
+
+ing performance, our primary goal is to construct codes that
+
+perform well under these practical efficiency constraints.
+
+The
+
+code-word
+
+size
+
+is
+
+n
+
+bits,
+
+for
+
+a
+
+code
+
+rate
+
+of
+
+k n
+
+.
+
+The
+
+focus is put here on learning the parity check matrix defining
+
+the code, and thus the BP factor graph topology. The linearity
+
+of the codes and the nature of the decoder enable us to work
+
+exclusively with the all-zero code-word during training, while
+
+Fig. 1. System architecture of the auto-encoder during training. See [10] for detailed explanation of the BP RNN Cell architecture and [8] for comparison with the previous auto-encoder architecture. The number of trainable parameters correspond exactly to the size of the redundant part of the Parity-Check (PC) matrix of the code, i.e (n − k) × k.
+ensuring that the performance of the learned code generalizes to all code-words.
+While recent works have explored channel-specific code optimization [11], a controlled error channel is employed during the training stage, allowing precise regulation of the number of errors applied to each code-word. We posit that using an Additive White Gaussian Noise (AWGN) channel or a Binary Symmetric Channel (BSC) instead would not provide any additional relevant information to the optimization procedure, while potentially diminishing our control over the actual learning process. Indeed, to achieve a reasonable error rate for training with AWGN channels, we often need to reduce the noise power to levels where many codewords present little to no challenge for correction, resulting in inefficient training where a significant portion of the dataset contributes minimally to learning. Conversely, a noise power set too high can introduce uncorrectable error patterns that produce contradictory learning signals, potentially causing training regression and unstable convergence. The hypothesis behind our controlled approach is that it ensures almost all codewords in the dataset are meaningful for training, focusing on error patterns that can be solved rather than patterns beyond correction capacity. Based on the previous assumption, the unique code-word of size n provided to the model during training is constructed as the concatenation of Nerrors erroneous bits and Nvalid = n − Nerrors valid bits. The number of Nerrors is considered constant for a given code size during training. The erroneous bits of value 1 are associated with negative Log Likelihood Ratio (LLR)s of arbitrary value −1. The valid bits of value 0 are associated with positive LLRs of arbitrary value
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13105
+
+1. The objective of the decoder is to retrieve x as the all-one vector of size n.
+In the evaluation stage, we focus on the AWGN channel as the standard evaluation benchmark. This choice reflects common practice in communication systems, where signal processing techniques such as channel equalization, scrambling or interleaving are specifically designed to mitigate channel impairments by “whitening” the channel response, making the AWGN model a good approximation of practical channel conditions when reaching the channel decoding stage.
+To accommodate diverse error patterns, the first operation applied by the auto-encoder is to randomly shuffle the previously described code-word, leading to code-words with a predetermined number of errors at random indices.
+A fixed scaling factor α is then applied, such that the LLR vector provided to the BP decoder contains random combination of −α and +α LLRs. This scaling factor facilitates approximate regulation of the magnitude of values propagated through the model’s graph during both forward and backward passes of the training process. We hypothesize that maintaining numerical equilibrium within the computation graph is crucial for successful training outcomes.
+The scaled LLR vector λ is then broadcasted according to the desired number of decoding iterations and provided to the BP RNN cells. Each cell executes one iteration of a standard BP algorithm, based on the code’s factor graph defined by the trainable parity check matrix, H. As in our previous work, we focus exclusively on systematic codes, where the parity check matrix is represented in standard form:
+
+H = W(n−k),k|I(n−k),(n−k)
+
+(1)
+
+H is the result of the concatenation of the trainable part of the code, W, a (n − k) × k matrix of binary values, with an identity matrix of size (n − k) × (n − k). The standard form ensures linear independence between the paritycheck equations, independently of the trainable part values. We would like to emphasize that elements of W constitute the only trainable parameters of the system.
+The decoded n bits code-word obtained at the end of the last BP iteration is used to compute the Binary Cross-Entropy (BCE) loss function:
+
+(x, x˜) = x log(x˜) + (1 − x) log(1 − x˜) (2)
+
+Since we exclusively work with the zero code-word as input, the loss function can be simplified to:
+
+(x˜) = log(1 − x˜)
+
+(3)
+
+III. A METHODOLOGY FOR COMPARING CODE LEARNING TECHNIQUES
+A. On the Performance of Code Learning Techniques
+While code construction would usually be performed offline, the search space complexity remains a fundamental challenge. With 2(n−k)×k possible systematic parity check matrices for a C(n, k) code, efficient exploration or construction methods are essential as exhaustive search becomes intractable even for modest code lengths.
+
+In this context, a common framework can be identified across state-of-the-art papers employing ML for code learning. Typically, the training process iteratively modifies and improves the current version of the code, with the final version emerging after this iterative construction process. This approach aligns with standard DL methodologies and many RL techniques, which rely on step-by-step optimization of the NN model or policy towards a pre-defined objective.
+The efficacy of this learning approach has been demonstrated in numerous studies cited in Section I. However, a critical question arises, particularly as most of these works focus on the short to medium length regime. While it is expected that the learning technique should surpass random processes, the mere application of a ML algorithm does not inherently provide proof of superiority. As mentioned, these techniques typically rely on iterative code construction, implying that the system processes multiple versions of the code during training.
+Consider a DL model using gradient descent. At each step, the model would evaluate code performance, compute the gradient of the loss, and update weights to generate a new code. After 100 epochs of 100 steps each, the final code could be viewed as the best among 10,000 codes (at most).
+This raises a pertinent question: based on a random search of the code space, what are the probabilities of obtaining a code with equivalent (or better) performance among 10,000 samplings? To demonstrate added value, the training process should at least be superior, in a statistically significant manner, to the random search. Failure to show benefit does not necessarily imply that the learning technique performs a random search, but rather that it is statistically not more efficient than a random process.
+We primarily raised this question as part of our effort to develop a robust methodology for evaluating the quality of our code learning techniques.
+B. Random Search Model
+Our initial step involves gathering relevant statistics from random code searches. As detailed in Section II, our study focuses on learning codes based on parity check matrices in standard form, decoded with a classic BP algorithm. To efficiently evaluate randomly sampled parity check matrices in standard form at each step, we designed a simple Random Search NN model. The use of a NN here is not associated with ML techniques, but rather leverages native support for efficient GPU computing capabilities of the Tensorflow library when available.
+A significant challenge in this approach is ensuring a fair comparison between randomly sampled codes and learned ones. The fairness criteria depend on the nature of the code, the system architecture, and the specific ML technique used for code learning. To address this challenge in our system, we propose comparing codes of equal size (same (n, k)) evaluated using an identical decoder (a standard BP decoder with 5 iterations). The 1’s density of W, the non-systematic part of the parity check matrix, plays a crucial role in determining expected code performance. If we assume the worst case of a “learning” process equivalent to a 50% flipping probability of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13106
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+TABLE I BLER OF BEST RANDOM CODES EVALUATED AT MAXIMUM Eb/N0
+
+TABLE II
+DENSITIES ORDERED BY RANDOM CODE PERFORMANCES IN BLER AT SPECIFIC POINTS ON THE CDF
+
+the bits describing W, then the learning will effectively sample parity check matrices with a density that is, on average, equal to the initialization density. Consequently, we incorporate the 1’s density of W as a parameter in our random code search to enhance the fairness of the comparison.
+It is important to note that the density is set as a binomial probability: a density of 30% does not imply that exactly 30% of W is composed of 1s, but rather that each element of W has a 30% probability of being 1. This probabilistic approach means that even when fixing a specific density, we are still effectively sampling from the entire space of parity check matrices in standard form. This method allows for a comprehensive exploration of the code space while maintaining statistical consistency in the density of the sampled matrices.
+For the chosen code size and 1’s density of W, the evaluation process of one random code follows these steps:
+1) Randomly sample a standard form parity check matrix using the selected density.
+2) Construct the generator matrix G for the encoder based on the parity check matrix. From the definition of H in Equation 1, we have G = [W(n−k),k]T|Ik,k , with .T the transpose operator.
+3) Evaluate code performance: set up an end-to-end transmission of random binary words, encoded and transmitted as + 1, −1 on an AWGN channel at target Eb/N0 values. Compute LLRs as input for a 5-iterations BP decoder.
+4) Compute and store Block Error Rate (BLER) values associated with the code, using the Agresti-Coull [12] method.1 Here we consider BLER value reliable when there is a 95% probability that the true value lies within ±10% of the estimated BLER. Until this bound is not reached, we continue to sample new random binary words.
+In our case, we evaluated 12,800 codes for each of the (32,8), (32,16), (32,24), (64,16), (64,32), and (64,48) code sizes and 18 densities among {0.1, 0.15, . . . , 0.95}). From the gathered BLER values, we computed statistics for each Eb/N0 to obtain mean, standard deviation, minimum, and maximum BLER.
+As a summary, Table I presents the performance of the code that obtained the best BLER at maximum evaluated Eb/N0,
+1The Agresti-Coull method is a statistical technique used to calculate confidence intervals for binomial proportions, which in this context is applied to estimate BLER values with a specified level of reliability.
+
+Fig. 2. Estimated CDF of BLER performance for random codes of size (64,32).
+among all tested densities for each code size (230,400 codes evaluated per size).
+For statistical performance comparison, we rely on the estimated Cumulative Density Function (CDF) of the random codes performances for each density and code size. We identify the densities providing the best performances at maximum Eb/N0 for the following points on the CDF: minimum (best performance), first quartile, median, third quartile, and maximum (worst performance). We obtain the Table II.
+As observed, the density providing the best performances and the best 25% and 50% of the CDF is usually consistent for a given code size. However, variations due to outliers are evident, as seen in Figure 2. For (64,32) codes, the best code is obtained with a 15% density, yet the overall probability of getting a good code is significantly better with a 20% density. This underscores the importance of examining the CDF, and not just the best code obtained, before conducting statistical comparisons with learned codes.
+C. Performance Comparison With Learned Codes
+Having established some random code statistics, we now define a general process to determine whether the studied learning technique surpasses random code search in efficiency. As previously mentioned, for a fairer comparison, we will compare learned codes with random codes of the same size but potentially different densities, acknowledging that ML techniques may not maintain the initial 1’s density. Based on our previous CDF study, we propose to select the density
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13107
+
+definitively conclude on the efficacy of the training process or its capacity to produce high-performing codes. However, this visualization serves as a comparative tool for different code learning techniques, with necessary caveats. A technique resulting in a lower red line would indicate greater added value compared to random search.
+
+Fig. 3. Probability to get a better random code, for size (32,8) and a 1’s density of 30%.
+that provides the first quartile performance of the CDF for the random codes. The first quartile density constitutes a more conservative benchmark that accounts for variability in random code performance while still representing aboveaverage codes. Moreover, this density is usually also the one providing the best evaluated code.
+Once the best configuration of the learning algorithm for the selected code size is defined, the objective is to conduct multiple training sessions, while counting the number of updates performed. The resulting learned code from each training is then associated with its corresponding updates count. For a fair comparison, it is desirable that the total number of updates across all sessions does not exceed the total number of random codes used to generate the statistics.
+While this approach may not yield comprehensive statistics on learned codes due to the limited number of resulting codes from each training session, it allows us to assess the relative performance of learned codes against randomly sampled ones. For a training process that has performed M updates, we evaluate the probability of sampling a random matrix that outperforms the resulting learned code, based on M independent random samples, according to the previously estimated CDF.
+D. An Example
+Figure 3 illustrates these probabilities for (32,8) codes. The learned codes were obtained using an earlier version of our architecture (not detailed here), and compared with random codes sampled at a 30% density. Each blue dot represents a learned code, where the x-axis shows the number of updates M during the corresponding training session, and the y-axis indicates the probability of sampling a better code from M random samples. The red line represents the average probability across all learned codes.
+From this analysis, we can infer that there is, on average, approximately a 60% chance of selecting a better code through random search. It is important to note that this does not
+
+IV. QUANTIZATION MECHANISMS
+
+The optimization of trainable weights in NNs typically relies on gradient descent algorithm and its variants. These techniques necessitate a differentiable computational graph for backpropagation, preventing the direct incorporation of discrete functions and values. This constraint poses a significant challenge for learning the parity check matrix, whose elements are inherently binary. To address this challenge, state-of-the-art approaches [5], [8], [13] employ specialized approximation of non-differentiable function [14]. Such function quantizes the real-valued numbers to binary values during the forward pass, while approximating the function’s gradient in the backward pass to ensure differentiability. Such Differentiable Step Function (DSF) can be defined as (here as a direct pass-through):
+
+
+
+f (x) = step(x)
+
+df (x)
+
+(4)
+
+ dx = 1
+
+Nevertheless, it is worth considering the use of scalar weights that can only assume values of 0 or 1, behaving virtually as binary weights. In this scenario, considering a continuous extension between these two values, it is possible to compute the gradient. Consequently, contrarily to the aforementioned DSF, there is no need to use an approximate gradient within the NN model’s graph. However, conventional gradient descent algorithms would cause the scalar weights to deviate from their constrained binary values 0 and 1. Therefore, we must design a dedicated optimizer to maintain these discrete values during training. We denote this class of optimizers as Discrete Levels Learning (DLL) optimizers. This binary approach could provide a more interpretable framework, as both the weights and their associated discrete updates naturally align with various discrete problems, including error correction. Consequently, it could enhance our understanding of the optimization process and potentially offer finer control over the optimizer’s behavior.
+Figure 4 illustrates these two distinct approaches. The DSF method, from the literature (and used in our previous work), typically employs a conventional gradient descent optimizer, gradually modifying the real-valued trainable weights through accumulated updates. The quantization mechanism ensuring binary compatibility is integrated into the neural network itself, implemented through a specialized forward and backward computational graph. In contrast, the proposed DLL approach utilizes a standard neural network graph but incorporates a specialized optimizer. This optimizer quantizes the gradient to update the real weights directly to discrete values, preserving their binary nature throughout the training process. It is worth noting that under certain conditions and configurations, these two approaches to the same problem, although conceptually different, can exhibit certain equivalences, e.g. instead of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13108
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 4. Two classes of method to learn discrete-valued weights. Trainable weights are represented in gray. Related operations in both figures are depicted with the same color.
+
+accumulating small update on the real parameters, one could envision to accumulate gradients.
+As a general definition, we consider a discrete trainable weight denoted by w, which takes its values from a discrete ordered set S. The elements in S are assumed to be real numbers. In many gradient-based optimizers, the update step for the weight value takes the following general form:
+
+w ← w + g(∇w , φ, w)
+
+(5)
+
+where g denotes the optimizer function, ∇w represents the gradient of the loss function with respect to the weight w and φ is a set of hyper-parameters.
+In the context of discrete weights, the function g should output values that guide the transition of the weight within its discrete set S. Given that the set S is ordered, it is intuitive to consider that the weight value should evolve in the opposite direction of the gradient, analogous to traditional gradient descent algorithms. The remaining variable to determine is the magnitude of the step to take. In the case of binary weights, the problem simplifies: the update value can only be −1, + 1, or 0.
+
+interpret consistently. This is further compounded by the fact that the range of gradient values constantly evolve during the training. Consequently, we have chosen to rely solely on the sign of the gradient, independently of its actual numerical value.
+Based on this approach, we propose a straightforward optimizer behavior as follows:
+1) If the gradient is positive, the weight should be set to zero. The update is then −1 if w = 1, or 0 if w = 0.
+2) If the gradient is negative, the weight should be set to one. The update is then + 1 if w = 0, or 0 if w = 1.
+3) If the gradient is zero, the update should be 0.
+Algorithm 1 Mini-Batch GQLA
+
+A. Gradient Quantization LeArning Techniques
+In the following, we propose a method to quantize the scalar gradient value into discrete updates for the trainable weights. We term this approach Gradient Quantization LeArning (GQLA), as part of DLL optimizers. The quantization operation necessitates defining thresholds that map the current gradient to possible update values. Determining these thresholds can be challenging, as they depend on the expected gradient magnitudes, the elements in S, and more broadly, on the impact of discrete weight changes on the rest of the optimization process. Moreover, each discrete weight could potentially have its own set of thresholds, as well as its own set S, increasing the complexity of the problem.
+1) Mini-Batch GQLA: Even in our system, where binary weights necessitate the definition of only two thresholds (one positive and one negative), this task remains difficult. The variations in error combinations in code-words across different batches, as well as the considered code-rate itself, affect the gradient magnitudes in a manner that we find difficult to
+
+This first algorithm, the Mini-Batch GQLA (MB-GQLA) for binary weight, is described in Algorithm 1. The matrix Q that stores the gradients’ signs, has the same size as W, with (i, j) the index of a single element in the 2D-matrix. Using this algorithm as our (DLL) optimizer, we are able to employ trainable binary weights in the parity check matrix, while relying on a traditional gradient computation.
+However, conventional gradient descent algorithms are generally effective in traditional NNs thanks to the small incremental weights’ updates that navigate smoothly the loss slope. The discrete nature of our optimizer introduces discontinuities in the exploration of the loss landscape. This is especially true in our system, where a single bit flip can dramatically alter the code’s structure and performance. Based on the current MB-GQLA description, many bits may flip at each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13109
+
+batch. Consequently, we require a technique to enhance our confidence in the bit flipping decisions.
+2) Update Matrix: We propose using a dedicated Update Matrix to store bit flipping decisions for each batch. This matrix, denoted U, has the same dimensions as W and functions similarly to a matrix of counters. Specifically, elements of U accumulates the computed gradient sign value for each weight as −1, 0, or + 1, until a stopping criterion is met, effectively triggering the update of the weights. One of the aforementioned challenges of gradient quantization is to define thresholds based on gradient magnitude. The Update Matrix provides a tool to define discrete thresholds based on gradient sign accumulation, independent of gradient magnitude. The more consistently the gradient indicates a specific update direction for a weight across multiple batches, the higher our confidence in applying that update. This behavior can be seen as analogous to momentum-based optimizers like ADAM.
+
+TABLE III HYPER-PARAMETERS FOR EACH CODE RATE
+We designate this algorithm as Stochastic GQLA (S-GQLA), deriving its name from this stochastic characteristic. Algorithm 3 Stochastic GQLA With Update Matrix
+
+Algorithm 2 Mini-Batch GQLA With Update Matrix
+
+Building upon this idea, we define a single absolute threshold value, denoted T. When at least one accumulator reaches the value T in absolute, all weights whose accumulators equal T are updated. The remaining weights retain their current values. The Update Matrix is then reset, i.e. all accumulator values are set to zero. Indeed, once some bits are flipped, the code is modified, and the next accumulation process should not be influenced by the previous code. This learning algorithm is summarized in Algorithm 2. It is worth noting that the threshold T remains constant throughout the process. Consequently, the trigger of an update does not depend on the number of batches processed, but rather on the predominant update direction of at least one accumulator exceeding this fixed threshold. This approach ensures that updates are driven by consistent directional signals.
+3) Stochastic GQLA: We extend the GQLA concept to the sample level, computing the gradient of the weights with respect to each sample in the batch. This approach is equivalent to calculating the Jacobian of the loss function before any reduction operation on the batch dimension, or to employing the Stochastic Gradient Descent (SGD) algorithm.
+
+The S-GQLA considers the sign of each individual gradient. These signs are summed over a batch, and we then take the sign of the result to obtain values in {+1, −1, 0} for each trainable weight. Consequently, each sample in the batch has the same impact on the accumulator increment in the Update Matrix. The complete algorithm is described in Algorithm 3. Figure 5 illustrates the complete MB-GQLA and S-GQLA algorithms in conjunction with the Update Matrix.
+B. Generalization to Non-Binary Discrete Levels
+We would like to highlight that these approaches could extend beyond binary values, and therefore address a broader range of discrete optimization problems. Indeed, the quantization of the gradient as a technique for updating discrete weights is generic, depending primarily on the ability to provide relevant quantization thresholds to the algorithm. It is also important to note that the GQLA techniques do not interfere with the back-propagation process itself. As a result, scalar weights can be updated using standard optimization algorithms alongside the GQLA approach for other discrete weights. However, the applicability of these algorithms to nonbinary problems is out of the scope of this paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13110
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+TABLE IV
+NUMBER OF MATRIX UPDATES FOR EACH TRAINING SESSION, PER CODE AND BATCH SIZE. GRAY CELLS ARE THE CODES WHOSE RESULTS ARE PRESENTED IN THE FOLLOWING SUB-SECTIONS
+
+V. TRAINING & EVALUATION PARAMETERS
+The used hyper-parameters for each code rate are provided in Table III. The parameters α, Nerrors, T, and D (the 1’s density in matrix W at initialization) greatly impact the capacity of the system to learn an efficient code. Only the right combination of these hyper-parameters provides the codes whose results are presented in Section VI. Hence, a benchmark is necessary to test all possible hyper-parameters combinations in certain ranges. Hopefully, the training of a single code typically requires only a few minutes using an NVIDIA RTX A6000 GPU, allowing a quick coarse search of the right parameters, followed by a finer benchmark process. The coarse search is conducted with one training session per parameter combination for each code size to identify promising ranges. We then perform the finer analysis with five training sessions per combination within these ranges. Combinations are ranked based on BLER performance at maximum Eb/N0 and consistency across the five trainings. The final selection balances these criteria, optimizing both performance and reliability for each code size. From our experiments, reliable coarse search ranges are: [1.2; 5.0] with a step of 0.2 for α, {2, 3, 4, 5, 6} for Nerrors, {10, 20, 30} for T, and [0.15; 0.45] with a step of 0.1 for D.
+The training is done on a maximum of 256 epochs with 100 steps per epochs. Thus, if the threshold of the Update Matrix is set to T = 20, then the weights can only be updated a maximum of 5 times per epoch.
+The loss function is a binary cross entropy. Other loss functions presented in [15] and focusing on the BLER were tested, providing codes with the same performance.
+Consistent with the findings reported in [8], we observe superior performance in learned codes when training is conducted using 3 BP iterations, even when the evaluation is performed with 5 iterations. An hypothesis is that this approach strikes a balance in the training process between efficient gradient propagation through the graph (facilitated by fewer iterations) and comprehensive consideration of message-passing steps in the loss function (requiring multiple iterations). To improve the gradient propagation, we replace the gradient of the inverse hyperbolic tangent (arctanh) operation within the BP algorithm with a pass-through gradient.
+Finally, and as in [8], the Agresti-Coull method [12] is used on the validation and evaluation BLER. The validation step is
+
+Fig. 5. Description of MB-GQLA and S-GQLA algorithms associated with the Update Matrix.
+stopped when there is a 95% probability that the true value of the BLER lies in-between ±30% of the estimated BLER. The validation is done with 5 iterations and consider an AWGN channel at the Signal to Noise Ratio (SNR) defined in Table III. Hence no scaling factor α is used and the true LLRs are computed as input of the decoder. The chosen SNR value optimizes the trade-off between achieving sufficiently low BLER values for meaningful code performance comparison and meeting the Agresti-Coull confidence criteria within a computationally reasonable timeframe. The early stopping callback uses a patience of 10 epochs.
+The evaluation step uses a complete system, where the generator matrix and the linear encoder are also implemented to evaluated random code-words. Based on the parity check matrix in standard form, the generator matrix is constructed as G = [W(n−k),k]T|Ik,k . The encoder is described as a nondifferentiable function computing the matrix multiplication between the data bits vector and the generator matrix in the Galois Field of cardinality 2. The BLER metric is measured after 5 (or more if indicated) BP iterations, with an AWGN channel and no scaling factor α (true LLRs) at the input of the decoder. The Agresti-Coull method is set to stop the evaluation when there is a 95% probability that the true value of the BLER lies in-between ±10% of the estimated BLER.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13111
+
+Fig. 6. Codes (32,16) with S-/MB-GQLA quantization techniques. Comparison with the best random code and the auto-encoder results from our previous work [8] on (31,16) codes.
+
+VI. SIMULATIONS RESULTS
+A. Comparison With Random Codes
+To evaluate the consistency and efficiency of our code learning approach, we conducted five training sessions for each code size, considering batch sizes (B) of 8 and 64. Table IV summarizes the number of matrix updates for each training session across different code and batch sizes.
+Our initial intention was to present a statistical comparison between learned and random codes, akin to Figure 3, following the methodology outlined in Section III. However, our findings reveal that every learned code consistently outperform the best randomly sampled one, underscoring the efficiency of our proposed code learning technique.
+Moreover, we observe no significant performance difference between codes learned with batch sizes of 8 and 64. In the following, we present only the performance of the best learned codes, where the best code is determined based on its BLER performance at the maximum Eb/N0. For GQLA techniques, the corresponding batch size is indicated in the legends.
+
+Our findings indicate that both MB-GQLA and S-GQLA approaches yield comparable performance levels. While SGQLA potentially offers finer exploitation of individual sample gradient terms, its current implementation introduces additional complexity without discernible performance gains. Consequently, we focus solely on the simpler MB-GQLA approach for the remainder of this paper.
+Our proposed approaches demonstrate superior performance compared to the AE BP model from [8]. The performance gap narrows when comparing with the AE GNBP model, which incorporates trainable weights in the decoder graph.
+It’s important to note several caveats in this comparison, that advantage the AE GNBP approach:
+• The code sizes differ slightly: (32,16) in our work versus (31,16) in [8], due to practical considerations.
+• The total number of matrix updates in [8] exceeds that in our current work.
+• The AE GNBP model’s performance may be partially attributed to its trainable decoder, which our approach does not incorporate.
+
+B. (32,16) Codes - Comparison of MB-GQLA and S-GQLA Approaches
+We conducted a comparative study to evaluate the performance of our proposed approaches, MB-GQLA and S-GQLA with the Update Matrix, for a (32,16) code size. Figure 6 presents the BLER results, comparing these approaches against the best random code and the previously proposed AutoEncoder (AE) model [8]. We include two finite block length limits from [16]: the Metaconverse (a lower bound) and the Achievability limit (an upper bound). These bounds indicate the theoretical attainable performance range for the specified code size.
+
+C. (64,16) Codes - Comparison With DSF
+This section examines the performance of a more conventional training approach using real-valued weights associated with the DSF defined in Equation 4. We employ the classic mini-batch gradient descent algorithm with a scaling factor set to 1, hence not including gradient momentum from previously evaluated codes over the course of training.
+As with the GQLA approaches, hyper-parameters configuration plays a crucial role in the final performance of the learned code. We adjusted the values of α, Nerrors, and D, as well as the weight initialization values. Since the weights are no longer binary-valued, they can be initialized anywhere
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13112
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 7. Codes (64,16), comparison with the best random code and the DSF approach.
+
+in the range [−∞, +∞]. Inspired by the results on binary weights, we opted for a symmetric initialization where each weight is set to either +V or −V with a probability depending on D. After a benchmarking process similar to that used for GQLA, we arrived at the following configuration: α = 1.4, Nerrors = 4, D = 0.15, and V = ±1e−3.
+Figure 7 presents the performance results of the DSF and MB-GQLA approaches. Both methods achieve equivalent performance, outperforming random search. For each approach, we selected the best of five learned codes.
+As explained in Section IV, our binary-valued system treats weights as two real values (0 and 1) with a continuous identity extension over [0,1], enabling differentiable graph and gradient computation. In the case of the DSF approach, a pass-through gradient approximation is used, effectively treating the step function as an identity function during backpropagation. Consequently, the computed and back-propagated gradients are mathematically equal in both approaches. The key difference lies in the actual update values applied to the weights by the different optimizer algorithms.
+The fact that both approaches achieve similar performance levels, despite different update mechanisms, suggests the central role of the system model and design choices (error channel, scaling factor α, Agresti-Coull based validation, etc.) in the learning process. Moreover, the decisive impact of the initial weight value V on the DSF approach’s ability to learn performing codes underscores the importance of numerical balance in the system. This observation aligns with our findings regarding the impact of α on GQLA performance, indicating that careful calibration of gradient magnitudes throughout training is crucial for effective learning with both binary and real-valued weights. The role of V in the DSF approach can also be seen as analogous to the threshold T in the matrix update approach, in that larger V values
+
+require more incremental updates for weights to cross the step function’s threshold.
+To evaluate the impact of gradient’s estimation accuracy, we tested the DSF approach with batch sizes of 64 and 1280 samples. Intriguingly, both consistently provided codes with equivalent performances. To further investigate, we employ the Agresti-Coull method during training to dynamically determine the sufficient number of batches for a reliable BLER estimation. We hypothesize that a reliable BLER estimate would correspond to a reliable gradient estimate. For the MBGQLA, we adapt our approach by implementing a dynamic threshold for the Update Matrix: once the Agresti-Coull method is triggered, we only update weights whose accumulators have reached the current maximum value in the Update Matrix. For the DSF, we average the gradient over all involved batches, thus effectively employing a larger batch size. In this configuration, both DSF and GQLA approaches successfully learn (64,16) codes, achieving performance equivalent to those presented earlier. These findings may suggest that the best known configuration of hyper-parameters results in gradient values sufficiently accurate for training convergence.
+D. (64,32) Codes - Comparison With Irregular LDPC Codes
+This section presents a comprehensive performance evaluation of our proposed approach for code size (64,32). We benchmark our results against previous work [8], state-of-theart irregular LDPC codes constructed using Progressive Edge Growth (PEG) methods [17], and random code search results. The comparison encompasses codes decoded using both a standard BP decoder and a trainable GNBP decoder. Additionally, we include results from recent work by Choukroun and Wolf [7], who also seek to learn short codes optimized for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13113
+
+Fig. 8. Codes (64,32), comparison with the best random code, results from our previous work [8], Choukroun and Wolf [7] and irregular LDPC.
+
+Fig. 9. Codes (128,64), comparison with different (128,64) codes from [18] with 200 BP iterations, results from our previous work [8] and Choukroun and Wolf [7]. We observe that both learned codes from our work and the work from Choukroun and Wolf [7] exhibit a less steep slope at high SNRs compared to the AR3A code - which remains current state-of-the-art LDPC code for this size - that could indicate earlier entry into the error floor region. This characteristic could be related to the training methodology used in both approaches and suggests that optimizing for high SNR performance may require specialized training procedures or adaptive error rate policies as the model converges.
+
+BP decoding. Their results provide a valuable reference point for evaluating ML-based code design approaches.
+Figure 8 illustrates that our proposed model consistently outperforms all other codes tested in this study across all decoding strategies. The improvement over both learned (AE and [7]) and expert-crafted (PEG) codes highlights the potential of our approach in designing state-of-the-art codes for small code sizes when utilizing BP decoding.
+E. (128,64) Codes - Scalability and Comparison With SotA Codes
+To assess the scalability of our approach, we extend our analysis to a higher code size of (128,64). We benchmark
+
+our results against the CCSDS and AR3A LDPC codes, state-of-the-art non-systematic LDPC codes for this size [18]. Additionally, we consider the Sphere Packing (similar to the Metaconverse) and Achievability bounds from [18] as theoretical reference points.
+A key aspect of our investigation is the impact of the number of BP iterations on performance. It is well-established that the iteration count significantly influences the efficacy of such iterative algorithms. Figure 9 illustrates these performance comparisons. Our study yields notable findings: the proposed model evaluated with only 5 BP iterations, although based on systematic codes, achieves performance comparable to the CCSDS code with 200 BP iterations. Furthermore, when our
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13114
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 10. (64,32) Histogram of girth for random and learned codes.
+
+Fig. 11. (64,32) Degrees distribution for random and learned codes.
+
+code is allowed 200 BP iterations, it exhibits performance on par with the AR3A codes under the same iteration count.
+For additional context, we include results from Choukroun and Wolf [7], who also explore ML-based code design with 5-iteration BP decoding at this code length. Our approach achieves comparable performance, further validating the effectiveness of learning-based methods for code design.
+These results validate the scalability of our proposed approach and highlight its competitiveness with state-of-theart codes, particularly in the low to moderate Eb/N0 regime. However, the less steep slope of our code’s performance curve at higher Eb/N0 compared to the AR3A codes suggests room for improvement in high Eb/N0 scenarios. Despite this limitation, these findings underscore the promise of our learning-based approach for designing high-performance codes across various code sizes
+
+F. (64,32) Codes - Cycle, Girth and Degree Analysis In this section, we examine the properties of the learned
+codes in an attempt to draw hypotheses regarding their effectiveness. The following statistics on girth and degree are provided as average distributions over 200 learned codes and 10,000 random codes. To analyze the evolution of girth and degree distributions between the start and the end of the learning process, we set the density of 1’s in randomly generated codes to 25%, same as the initialization density of the learned codes.
+1) Cycles and Girth: A well-known limitation of BP decoders is the potential propagation of intrinsic information through cycles of the decoding graph, which can inadvertently increase confidence in erroneous LLR values. This phenomenon is particularly pronounced in dense codes with short cycles in their graph. To better understand this aspect of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+DUFRE` NE et al.: LEARNING LINEAR BLOCK CODES WITH GRADIENT QUANTIZATION
+
+13115
+
+our learned codes, we analyze their graph properties for the (64,32) code size.
+We first clarify the following definitions: • Code girth: The length of the shortest cycle in the
+complete code’s graph. • Node girth: The length of the shortest cycle containing
+the node. • Girth histogram: The distribution of node girth values
+across several node of the graph.
+Figure 10 illustrates these girth distributions for both random and learned codes. Our analysis reveals a consistent trend in the learning procedure which favors an increase in the overall girth of the code. This is evidenced by a shift in the average girth distributions for both variable nodes (VNs) and check nodes (CNs). While random code models typically display girth distributions with values up to 6 for VNs and 4 for CNs, our learned codes show a marked shift towards higher girths, with values reaching up to 8 for VNs and 6 for CNs.
+This increase in girth is a positive outcome, as higher girths generally correlate with improved BP decoder performance. Longer cycles in the graph can help mitigate the propagation of erroneous information, potentially leading to more reliable decoding outcomes.
+2) Node Degrees: Building on the girth analysis, we further examined the degree distribution of the learned codes. The degree of a node is the number of neighboring nodes directly connected to itself. The results are presented in Figure 11 for the (64,32) code size, clearly illustrating the contrast between the degree distributions of random codes and our learned codes. Our findings reveal intriguing patterns that align with observations reported in our previous work [8]. On one hand, the learning procedure demonstrates a tendency to encourage overall lower density in the parity-check matrices. This preference for sparser matrices is logical, as it can help mitigate the issue of short cycles and improve the convergence of BP decoding. On the other hand, we observed the emergence of a few high-degree check nodes in the learned codes. While the exact mechanism behind this dual behavior is not yet fully understood, it presents an intriguing avenue for future research.
+VII. CONCLUSION
+In this paper, we presented a novel approach to learning linear block codes optimized for BP decoding using a simple auto-encoder architecture. Our method hinges on a few critical hyper-parameters that significantly influence the system’s ability to learn high-performing codes.
+Our learned codes have demonstrated significant performance improvements, surpassing our previous results and several state-of-the-art codes in terms of BLER. For instance, in the case of (64,32) codes, we achieved approximately 1 dB gain compared to our previous architecture. When compared to state-of-the-art codes, our proposed model, although based on systematic codes, reaches performance levels comparable to the standardized non-systematic CCSDS LDPC code of size (128,64), while requiring 40 times fewer decoding iterations.
+To rigorously assess the efficacy of our learning techniques, we developed a methodology for comparison with random
+
+search approaches. This comparative analysis showed that our code learning techniques consistently outperformed random search methods in a statistically significant manner, demonstrating for the first time the value of using ML and gradient descent-based techniques to learn error-correcting codes. We also introduced gradient quantization techniques that maintain binary-valued weights throughout the training process. While these techniques offer potential benefits in terms of interpretability and update efficiency, our results suggest that the overall system design and hyper-parameter selection play a more crucial role in achieving the observed performance improvements. Additionally, we investigated potential design characteristics such as the distribution of girth and node degrees to explain the performance of these codes, confirming observations made in previous studies.
+Several promising avenues for future research emerge from this work. First, the simplification of the model architecture and the relatively small number of hyper-parameters entice us to investigate further the parametrization of the learning process and corresponding results. This investigation could help identify learning policies tailored for specific code lengths, rates and channel characteristics (including dynamic hyperparameter adjustment during training).
+Secondly, we hypothesize that numerical stability in the computation graph is a critical requirement to the learning of BP-decoded codes. This underlying assumption encourages us to study the impact of the scaling factor and that of the gradient normalization techniques beyond the use of the sign function. This also prompts us to also investigate simpler message updates rules, such as the min-sum approach.
+Finally, extending this work to non-systematic linear block codes remains an open challenge.
+VIII. OPEN SOURCE CODE
+The source code for these studies can be found at https:// github.com/Orange-OpenSource/QNBP
+REFERENCES
+[1] A. V. Makkuva, X. Liu, M. V. Jamali, H. Mahdavifar, S. Oh, and P. Viswanath, “Ko codes: Inventing nonlinear encoding and decoding for reliable wireless communication via deep-learning,” in Proc. Int. Conf. Mach. Learn., 2021, pp. 7368–7378.
+[2] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-topoint communication channels,” in Proc. Adv. Neural Inf. Process. Syst., vol. 32, 2019, pp. 2754–2764.
+[3] L. Huang, H. Zhang, R. Li, Y. Ge, and J. Wang, “AI coding: Learning to construct error correction codes,” IEEE Trans. Commun., vol. 68, no. 1, pp. 26–39, Jan. 2020.
+[4] A. Elkelesh, M. Ebada, S. Cammerer, L. Schmalen, and S. T. Brink, “Decoder-in-the-loop: Genetic optimization-based LDPC code design,” IEEE Access, vol. 7, pp. 141161–141170, 2019.
+[5] M. Ebada, S. Cammerer, A. Elkelesh, and S. T. Brink, “Deep learningbased polar code design,” in Proc. 57th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2019, pp. 177–183.
+[6] Y. Choukroun and L. Wolf, “Learning linear block error correction codes,” 2024, arXiv:2405.04050.
+[7] Y. Choukroun and L. Wolf. (2025). Factor Graph Optimization of ErrorCorrecting Codes for Belief Propagation Decoding. [Online]. Available: https://openreview.net/forum?id=XCP0MOMLPo
+[8] G. Larue, L.-A. Dufrene, Q. Lampin, H. Ghauch, and G. R.-B. Othman, “Neural belief propagation auto-encoder for linear block code design,” IEEE Trans. Commun., vol. 70, no. 11, pp. 7250–7264, Nov. 2022.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+13116
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+[9] E. Nachmani, Y. Beery, and D. Burshtein, “Learning to decode linear codes using deep learning,” 2016, arXiv:1607.04793.
+[10] G. Larue, L.-A. Dufrene, Q. Lampin, P. Chollet, H. Ghauch, and G. Rekaya, “Blind neural belief propagation decoder for linear block codes,” in Proc. Joint Eur. Conf. Netw. Commun. 6G Summit (EuCNC/6G Summit), Jun. 2021, pp. 106–111.
+[11] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: Feedback codes via deep learning,” IEEE J. Sel. Areas Inf. Theory, vol. 1, no. 1, pp. 194–206, May 2020.
+[12] A. Agresti and B. Coull, “Approximate is better than ‘exact’ for interval estimation of binomial proportions,” Amer. Statistician, vol. 52, no. 2, pp. 119–126, 1998.
+[13] N. Shlezinger, A. Amar, B. Luijten, R. J. G. van Sloun, and Y. C. Eldar, “Deep task-based analog-to-digital conversion,” IEEE Trans. Signal Process., vol. 70, pp. 6021–6034, 2022.
+[14] J. Ramapuram and R. Webb, “Improving discrete latent representations with differentiable approximation bridges,” in Proc. Int. Joint Conf. Neural Netw. (IJCNN), Jul. 2020, pp. 1–10.
+[15] R. Wiesmayr, G. Marti, C. Dick, H. Song, and C. Studer, “Bit error and block error rate training for ML-assisted communication,” 2022, arXiv:2210.14103.
+[16] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+[17] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[18] G. Liva, L. Gaudio, T. Ninacs, and T. Jerkovits, “Code design for short blocks: A survey,” 2016, arXiv:1610.00873.
+
+Quentin Lampin received the Engineering degree in telecommunication systems and the Ph.D. degree in computer sciences from INSA Lyon in 2009 and 2014, respectively. He holds a full-time researcher position at Orange. His research activity focuses on connectivity technologies for the IoT use cases and covers the physical and link layers, with a particular interest in neural networks and machine-learningbased digital signal processing.
+
+Louis-Adrien Dufre`ne received the M.Eng. degree from IMT Atlantique, Brest, in 2014, and the Ph.D. degree in telecommunications from the National Institute of Applied Sciences (INSA), Rennes, in 2017. He has been with Orange Labs since 2014 and a full-time Research Scientist since 2018. His current field of research interests include artificial intelligence for digital signal processing and semantic communications.
+
+Guillaume Larue received the M.Sc. degree from CentraleSupe´lec, Universite´ Paris-Saclay, in 2019, and the Ph.D. degree in telecommunications from the Institut Polytechnique de Paris in 2023. He holds a full-time research scientist position at Orange Research. His research interests include various applications of machine learning for telecommunications across the physical and network layers.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:53 UTC from IEEE Xplore. Restrictions apply.
+
+

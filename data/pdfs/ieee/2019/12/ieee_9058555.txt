@@ -1,0 +1,695 @@
+2019 IEEE 2nd International Conference on Electronics and Communication Engineering
+Parallel Algorithmic Optimization for Enhanced Quasi-Maximum Likelihood Decoding on GPU
+
+KONG Fei-yue DongHua University
+Shanghai, China e-mail: 13681622561@163.com
+CHEN Si-jing Wuhan Maritime Communication Research Institute
+Wuhan, China e-mail: chensj0219@126.com
+
+WAN Xue-fen North China Institute of Science and Technology
+Hebei, China e-mail: calmerd@ncist.edu.cn
+YANG Yi DongHua University
+Shanghai, China e-mail: yiyang@dhu.edu.cn
+
+Abstract—The Enhanced quasi-maximum likelihood (EQML) decoder has better decoding performance than the traditional belief propagation (BP) decoder, but its decoding speed is greatly reduced due to its complicated computational structure. Therefore, an efficient graphics processing unit (GPU) implementation structure for EQML decoder of low-density parity-check (LDPC) code is proposed. Intra-codeword parallel and inter-codeword parallel decoding schemes on GPU are adopted instead of serial decoding on CPU. Several optimization methods have also been employed to enhance the decoder throughput, such as compressed storing and Kernel thread arrangement scheme, which improve the decoding speed without degrading the decoding performance of the decoder. Experiment results show that our GPU based implementation structure which is about two orders of magnitude faster than that of CPU implementation.
+Keywords-LDPC code; GPU; EQML decoder; parallel decoding; BP decoder
+I. INTRODUCTION
+Low Density Parity Check (LDPC) [1] is a linear block code that is known for its performance very close to the Shannon limit [2]. The LDPC code has the following advantages: The check matrix is flexible in construction, small in delay, low in density, and low in decoding complexity, and the decoding mode can be implemented in parallel operation, thus having high throughput and highspeed decoding potential. In fact, LDPC codes are used in many industrial protocols, such as DVB-S2, DVB-T2, WiFi (802.11n), WiMAX (802.16e), and fifth-generation (5G) wireless systems.
+Lower transmission delays and higher throughput are required in the 5G mobile communication system standard. Therefore, to achieve higher throughput requirements, an Application Specific Integrated Circuit (ASIC) [3] and a Field Programmable Gate Array (FPGA) [4] are proposed for the LDPC decoder. However, these solutions have the disadvantage of high design cost and single function. GPU have been widely used in recent years for high computing power. It can execute multiple threads at the same time, and
+
+the peak performance can reach tera-flops per second. GPUbased solutions are cheaper, more scalable, and more flexible than ASIC or FPGA solutions. [5-7] implemented some LDPC decoders on the GPU and achieved good results. Most of these works are used in the traditional Belief-propagation (BP) decoding algorithm's simplified algorithm which is Min-Sum algorithm (MSA), large-scale multi-codeword parallel decoding, and even multi-GPU implementation to achieve higher throughput. There is a lack of specific applications for some specific LDPC decoders.
+Recently, in order to improve the bit error rate (BER) performance of LDPC decoder, some researchers have proposed to introduce a reprocessing after the failure of the traditional BP decoder. The reprocessing is not to decode the codeword once, but to select some nodes for the input codeword to be saturated according to node selection rules, and to perform BP decoding on the saturated codeword sequence, which can greatly improve the error correction performance of the decoder [8-9]. The Enhanced QuasiMaximum Likelihood (EQML) [9] proposed a more accurate node selection method and a more reasonable decoding stop rule based on [8]. But Due to the inherent structure of the EQML decoder, the decoding time of the decoder far exceeds the traditional BP decoder.
+To improve the decoding time of the EQML decoder, we propose an implementation structure for EQML decoder on GPU. Some optimization schemes are proposed, compressed storage parity check matrix of irregular LDPC code, re-order the traditional BP decoding algorithm, multi-codeword parallel decoding is performed, constant memory and shared memory are used to access. A parallel implementation scheme for EQML decoder for LDPC is designed to reduce the decoding time while maintaining the error correction performance of the decoder.
+II. THE ENHANCED QUASI-MAXIMUM LIKELIHOOD DECODING ALGORITHM
+The EQML decoding algorithm process can be divided into two steps. The first step is: performing BP iterative decoding, if the decoding is successful, continuing the
+
+978-1-7281-4784-0/19/$31.00 ©2019 IEEE
+
+42
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:03 UTC from IEEE Xplore. Restrictions apply.
+
+decoding of the next codeword, and if the decoding fails, the second step is performed. The specific process of the second step operation is: performing a reprocessing on the failed codeword, and the reprocessing first select the unreliable node of the failed codeword according to the edge wise selection (EWS) algorithm in [9]. The unreliable node to be saturated, perform BP decoding on saturated sequences. If the saturated codeword decoding is successful, the codeword is stored and run partial pruning stop (PPS) [9]. if the decoding fails again, and then the above steps are repeated until the preset maximum number of stages is reached. Finally, the optimal codeword is selected as the output of the
+reprocessing process. jmax represents the number of stages
+of the maximum reprocessing; jc represents the current
+reprocessing stage. The codeword xbest of the optimal output decision is selected from the set χ .The specific
+process of the EQML decoder is shown in Fig. 1.
+
+Codeword BP decoder
+
+Reprocessing
+
+Invalid codword
+
+Yes output xbest jc > jmax
+
+No EWS
+
+Saturated
+
+BP decoder
+
+Yes Conver No Reproce
+
+gence
+
+ssing
+
+PPS and
+
+Yes Conver No gence
+
+Figure 1. Overall flow chart of the EQML decoder.
+
+A. Belief Propagation Decoding Algorithm
+The BP decoding algorithm chooses to perform on the Log-likelihood Ratio (LLR). The variable node is represented by VN and the check node is represented by CN. Let the check matrix of the LDPC code be H, as shown in Fig. 2. The row vector of the H matrix corresponds to the CN in the Tanner graph and the column vector corresponds to VN. Fig. 2 shows the connection relationship of the Tanner graph corresponding to the non-zero elements of H.
+
+11100000
+
+CN0 CN1 CN2 CN3
+
+H=
+
+0 1
+
+0 0
+
+0 0
+
+1 1
+
+1 0
+
+1 0
+
+0 1
+
+0 0
+
+0 1 0 0 1 0 0 1 VN0 VN1 VN2 VN3 VN4 VN5 VN6 VN7
+
+Figure 2. Sparse parity-check matrix and Tanner graph.
+
+Some notations: The set of all the VN connected with CN j except VN i is Rj\i . the set of all the CN connected with
+VN i except CN j is Ci\ j . r(vi ) is the initial log-likelihood ratio (LLR) of VN i. The variable node to check node (VN2CN) message, sent from VN i to CN j is L(qij ) . The check node to variable node (CN2VN) message, sent from
+
+CN j to VN i is L(rji ) . A posteriori probability (APP) of
+VN i is L(Qi ) . At Additive White Gaussian Noise (AWGN) with
+variance σ 2 , the BP decoding can be expressed as below:
+(1) Initialization
+
+L(= qij )
+
+r= (vi )
+
+2 yi σ2
+
+(1)
+
+(2) CN update
+
+∏ ∑ = L(rji )
+
+αi' j ×φ ( φ (βi' j ))
+
+(2)
+
+i'∈R j\i
+
+i'∈R j\i
+
+αij = sign(L(qij )) ,
+
+βij
+
+=|
+
+L(qij ) | , φ(x)
+
+=
+
+log(
+
+e e
+
+x x
+
++ 1) −1
+
+(3) VN update
+
+∑ L(= qij ) r(vi ) +
+
+L(r j
+
+'i
+
+)
+
+(3)
+
+j'∈Ci\ j
+
+(4) Compute APP and perform hard decoding
+
+∑ L(= Qi ) r(vi ) + L(rji )
+
+(4)
+
+j∈Ci
+
+cˆi
+
+=
+
+0 1
+
+L(Qi ) ≥ 0 L(Qi ) < 0
+
+(5)
+
+B. Reprocessing
+
+The excellent performance of the EQML decoder based on LDPC code is that it provides a more accurate algorithm
+for selecting VN compared with [8]. Let wl,i be the number of sign flips of the VN2CN message passed through the l-th
+edge of the i-th VN. Denoted by w(vi ) , the total number of sign flips of the VN2CN messages on the i-th VN, which can be determined from
+
+∑ w(vi ) =
+
+d (vi ) l =1
+
+wl ,i
+
+(6)
+
+The pseudo code for the EWS algorithm is as follows:
+
+For each VN i, compute w(vi ) according to Eq.(6)
+
+Select the VN
+
+vs
+
+as
+
+vs = arg max w(vi ) vi∈ V
+
+if vs ∉ ∅ then
+
+Select the VN with the smallest APP among vs
+
+end if [9] reduces the decoding delay caused by the exhaustive
+test in [8] without affecting the performance of bit error rate. A partial pruning stop rule is proposed to terminate the
+
+43
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:03 UTC from IEEE Xplore. Restrictions apply.
+
+reprocessing. TA represents the TA codeword for decoding;
+
+x(TA ) represents the decision output of the TA codeword; χ represents a collection of convergent codewords;
+
+TF represents the remaining codeword to be decoded;
+
+Initializ= e TF 2 jmax +1 − 2 . The pseudo code for the PPS
+algorithm is as follows:
+
+if converge after TA tests then
+
+Save valid codeword x(TA ) in χ
+
+T=F
+
+T − 2 jmax − jc F
+
+Terminate the decoding on sub-branches thereafter
+
+else
+
+Continue the decoding on non-convergent sub-branches
+
+end if
+
+if jc = jmax or TF = 0 then
+Terminate reprocessing procedure end if
+The overall flow chart of the reprocessing is shown in Fig. 4. Input the invalid codeword, perform EWS on the failed codeword, saturate the selected node, and perform the BP decoding on the saturated codeword. As shown in Fig. 4,
+
+when TA = 1, the codeword to be BP decoded after the first
+saturation, the PPS operation is performed when the first
+
+saturated codeword is successfully decoded, and TA = 2, the
+decoding of the two saturated codewords is unsuccessful, and the EWS is performed again on the codeword whose decoding is unsuccessful, and the above steps are repeated until the preset number of stages is reached.
+
+III. PARALLEL COMPUTING OF GPU-BASED EQML DECODER
+The two main steps of the decoding process are: First how to store the H matrix, and secondly how to implement the decoding algorithm. If these two parts are designed reasonably, the decoding speed of the decoder will be greatly improved. Therefore, the GPU-based EQML decoder will design the two parts separately. Finally, complete content and organizational editing before formatting. Please take note of the following items when proofreading spelling and grammar:
+A. Compressed Storage H Matrix
+Since the H is a sparse matrix with a large number of zero elements and a small number of non-zero elements, compressed storage can be used to place non-zero elements in the matrix in consecutive memory locations, saving a large amount of memory space and improving GPU decoding speed. The method of GPU storage base matrix proposed in [5][7] is more complicated to implement by algorithm mapping. [6] only gives a storage scheme for regular LDPC codes. In general, irregular LDPC codes have better performance than regular LDPC codes. Based on [6], storage scheme for irregular LDPC codes is proposed. Fig. 3 shows how we store seven one-dimensional arrays in Tanner graph.
+
+V2C and C2V store edge numbers of CNs and CN numbers of VNs respectively. rowdegree, coldegree, colnum, rowsum, and colsum store CN numbers of non-zero elements, VN numbers of non-zero elements, column numbers of non-zero elements, overlay of the number of
+non-zero elements in all preceding rows and columns respectively.
+
+V2C 0 2 4
+
+rowdegree rowsum
+
+3 0
+
+CN0
+
+579 3 3
+CN1
+
+1 6 10 3 3 6
+CN2
+
+8 11 3 9
+CN3
+
+0 1 2 3 4 5 6 7 8 9 10 11 VN0 VN1 VN2 VN3 VN4 VN5 VN6 VN7
+
+colsum coldegree
+C2V
+colnum
+
+0 2 4 5 7 9 10 11 2 2 1 2 2 1 11 020301213123
+001123344567
+
+Figure 3. Converting matrix H to 7 one-dimensional arrays on the Tanner graph.
+
+B. Graphics Processing Unit Implementation of Enhanced Quasi-Maximum Likelihood Decoding Algorithm
+There is a highly irregular interconnect structure between CN and VN. Therefore, the EQML decoder available on GPU cannot simultaneously read and write continuous data blocks in memory, resulting in long access time. Because the most time-consuming GPU operation is accessing unordered memory, that is, accessing non-contiguous memory locations, multiple transactions are required to perform unordered memory reads or writes, and all kernel threads must be stopped [5]. In contrast, coalesced memory addressing, which accesses contiguous memory locations, can be performed in a single transaction and allows concurrent threads to execute, which reduces kernel runtime. Furthermore, uncoalesced memory writes are more time consuming than uncoalesced memory reads [10]. Therefore, memory access mode should be reasonably arranged for EQML decoder on GPU. The BP decoding algorithm are reordered to avoid uncoalesced memory writes and to use as many threads as possible for parallelism calculations.
+Fig. 4 shows the re-order BP decoding algorithm flow chart. A single codeword consisting of four multi-threadeds Kernels. Each Kernel consists of different parallel-level threads. For example, the VN update in Kernel 1 arranges T threads to calculation, where T is the maximum number of connections between the edges in Fig. 2, and each thread computes an edge in the Tanner graph. Kernel 2 uses M threads, M is equal to the number of rows in the H, and each
+thread ∑ calculates φ(βij ) corresponding to a CN. In Kernel i∈R j
+3, L(rji ) is calculated using the T threads. Finally, the APP
+is computed in N threads in Kernel 4, and each thread computes a VN.
+From threads arrangement shown in Fig. 4, when reading data from Kernel 2 and Kernel 3, it is still necessary to read
+
+44
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:03 UTC from IEEE Xplore. Restrictions apply.
+
+the unordered memory. However, the latency of these operations is negligible compared to the total delay of the entire iterative process.
+To further improve the thread utilization in Kernel, the GPU implementation of the decoder adopts a multicodeword parallel decoding scheme, that is, each stage is generated by the EWS algorithm. The codeword sequence is decoded simultaneously. Because when the reprocessing starts, the decoding process of a single codeword will gradually become a process of decoding multiple codewords such as 2, 4, 8 as the stage increases. It is assumed that Kernel needs to provide N threads to decode a single
+codeword. If there are Ncodeword codewords to be decoded,
+Ncodeword codewords are merged together, and these
+codewords are simultaneously decoded by N × Ncodeword
+threads. All codewords in the stage are decoded in parallel. The specific parallel scheme is shown in Fig. 5.
+
+0 1 0 1 0 0 1
+
+0 1 2 3 4 5 6 7
+
+0 1 2 3 4 5 6 7
+
+0 1
+
+0 1
+
+02
+
+0
+
+3 4
+
+LDPC code of the 802.16e standard with a code length of 576.
+To test the BER performance of the EQML decoder on the GPU, the BER performance of the WiMAX (576, 288) LDPC codes at jmax = 3, 4 and 5 are experimentally tested. The experiment also simulates the traditional BP decoder. Fig. 6 shows the GPU-based EQML decoder comparing the results of the BER simulation with the performance of the traditional BP decoder, the EQML decoder can provide better error correction capability. Meets the requirements of 5G mobile communication systems: security, reliability, and stability. Therefore, it is necessary to parallelize and improve the decoding speed of the EQML decoder capable of providing better error correction capability.
+
+05
+
+6
+
+07 0
+
+1
+
+1
+
+0 1
+
+0 1 2
+
+2 3 4
+
+0 1
+
+4 5 6
+
+5 6 7
+
+0
+
+0 1
+
+02
+
+0
+
+3 4
+
+5
+
+6
+
+7
+
+71
+
+6 07
+
+2 03
+
+3 4 5
+
+0 1
+
+6 7
+
+0 1 2 3 4 5
+
+0
+
+1
+
+2 3 4 5 6 7
+
+Kernel1:VN update T threads
+
+colnum
+
+Aligned memory
+read
+
+7
+
+0
+
+1 1 2 3 3
+
+4
+
+4 5
+
+6
+
+Aligned
+
+t11 t10 t9 t8 t7 t6 t5 t4 t3 t2 t1 t0
+
+memory write
+
+8 0
+
+10 11
+
+0
+
+1
+
+2 3 4 5 6 7
+
+9
+
+Unaligned memory
+read
+
+10
+
+11
+
+V2C
+
+3 8
+
+4 5 7 9 1 6
+
+2
+
+0
+
+Aligned
+
+memory
+
+t3
+
+t2
+
+t1
+
+t0
+
+write
+
+0 0
+0
+
+3 1
+
+2
+
+3
+
+Kernel2:Median Kernel3:CN update Kernel4: Compute APP
+
+M threads
+
+Decoding order
+
+T threads
+
+C2V
+
+3
+
+2
+
+1
+
+3
+
+1
+
+2
+
+1
+
+Unaligned memory
+read
+t11 t10 t9 t8 t7 t6 t5 t4 t3 t2 t1 t0 Aligned memory write
+
+2
+
+0
+
+8
+
+0
+
+1
+
+2 3 4 5 6 7
+
+9
+
+10
+
+11
+
+Aligned memory
+read
+
+5 4
+0
+
+0
+
+1 1 2 3 3
+
+4
+
+4
+
+5
+
+6
+
+7
+
+2 3 6 7
+
+t7 t6 t5 t4 t3 t2 t1 t0
+
+1
+
+0
+
+Aligned memory
+write
+
+N threads
+
+Figure 4. The flow chart of the re-order BP decoding algorithm.
+IV. EXPERIMENTAL RESULTS
+The EQML decoder runs on the GeForce GTX 1060 GPU and is compiled under the NVIDIA CUDA 8 toolkit. The compilation environment is Visual Studio 2013, Windows 10 64-bit operating system. Experiment with the
+
+0
+
+0
+
+1
+
+1
+
+0 1 2 3 4 5
+
+0
+
+2 3
+
+0 1
+
+0 0
+
+04
+
+1 1 2
+
+5 6 7
+
+01
+
+01
+
+12
+
+6 7
+
+3 3
+
+0 1
+
+3 3
+
+4
+
+04
+
+4
+
+04
+
+jc = 3 jc = 2
+jc = 1
+Figure 5. Multi-codeword parallel decoding in reprocessing.
+Figure 6. BER performance comparison between EQML decoder and BP decoder.
+Fig. 7 (a1) shows the difference decoding time at different signal-to-noise ratios (SNR), under low SNR, causing a large number of codewords fail to be decoded for reprocessing. Fig. 7 (a1), (a2) and (a3) show that when the codeword length are the same, as the jmax increases, the decoding time required by the EQML decoder is also gradually increased, because when jmax is increased as the number of reprocessing stages increases, the number of codewords that need to be decoded also increases, so require more decoding time. As shown in Fig. 7 (a1), the speedup ratio of serial and parallel decoding decreases as the SNR
+
+5
+
+05
+
+6 7
+
+0 1
+
+0 1
+
+6 7
+
+2
+
+0 1
+
+0 0
+
+3 4
+
+0 1
+
+0 0
+
+2 3 4 5
+
+1 1 2
+
+5 6 7
+
+01 01 12
+
+6 7
+
+3 3
+
+0 1
+
+3 3
+
+4
+
+04
+
+4
+
+04
+
+5
+
+05
+
+6
+
+6
+
+7
+
+7
+
+45
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:03 UTC from IEEE Xplore. Restrictions apply.
+
+increases, the maximum speedup ratio is 38 and the minimum speedup ratio is 12. The advantages of parallel implementation of the decoder are more obvious at low SNR and as the length of the codeword increases. As shown in Fig. 7 (a3) and (a2), (a1), the time required for decoding is greatly increased, the higher jmax can provide better error correction performance. Parallel decoding can provide faster decoding speeds without sacrificing decoding performance. As shown in Fig. 7 (a3), when jmax is equal to 5, the maximum speedup ratio at low SNR can reach up to 70.
+(a1)N=576, jmax=3
+(a2)N=576, jmax=4
+(a3)N=576, jmax=5 Figure 7. Decoding time of the EQML decoder in serial and parallel when
+jmax is equal to 3, 4, 5 under different Eb/No conditions, when the maximum number of iterations is 15.
+
+V. CONCLUSION
+The 5G mobile communication system requires higher data transmission rates, more connections, and a better user experience while ensuring low cost and security, reliability, and stability of transmission. 5G needs to guarantee higher reliability communication. The EQML decoder can eliminate a large number of pseudo-codewords that cause the BP decoder, providing more reliable communication. The EQML decoder provides superior decoding performance at the expense of decoding time. Therefore, to improve the decoding rate of the EQML decoder, this paper implements the EQML decoder on GPU. Compressing the irregular LDPC codes, reorder the BP decoding algorithm to reduce the decoding delay caused by uncombined memory access, a multi-codeword parallel decoding scheme in reprocessing stage, this paper demonstrates the performance of EQML decoder based on GPU with 802.16e WiMax LDPC code as an example. The experimental results show that the algorithm implemented in parallel on the GPU has a higher speed than the serial implementation on the CPU. The maximum speedup ratio can reach about 70 at low SNR.
+
+ACKNOWLEDGMENT
+This work was supported by the national key research and development plan (No.2018YFC 0808306), Hebei IoT Monitoring Engineering Technology Research Center (No.3142016020) and Hebei Provincial Key Project (No.19270318D).
+
+REFERENCES
+
+[1] R G Gallager. Low Density Parity Check Codes[J]. IRE Transactions on Information Theory, 1962, 8(1): 21-28.
+
+[2] D J C MacKay, R M Neal. Near Shannon Limit Performance of Low Density Parity Check Codes[J]. Electronics Letters,1996, 32(18): 1645–1646.
+
+[3] M Awais, A Singh, E Boutillon, et al. A Novel Architecture for Scalable, High Throughput, Multi-standard LDPC Decoder, in Digital System Design[C]//Proc. of the 14th Euromicro Conference on Digital System Design. Oulu, Finland: IEEE Press, 2011: 340–347.
+
+[4] D Oh, K K Parhi. Efficient Highly-parallel Decoder Architecture for Quasi-cyclic Low-density parity-check Codes[C]//Proc. of IEEE International Symposium on Circuits and Systems.New Orleans, LA, USA: IEEE Press, 2007: 1855–1858.
+
+[5] G Wang, M Wu, B Yin, et al. High Throughput Low Latency LDPC Decoding on GPU for SDR Systems[C]//Proc. of IEEE Global Conference on Signal and Information Processing, Austin, TX, USA: IEEE Press, 2013: 1258–1261.
+
+[6] Y Lin, W Niu. High throughput LDPC decoder on GPU[J]. IEEE Communications Letters, 2014, 18(2): 344–347.
+
+[7] J Yuan, J Sha. 4.7-Gb/s LDPC decoder on GPU[J]. IEEE Communications Letters, 2018, 22(3): 478–481.
+
+[8] N Varnica, M P C Fossorier, A Kavcic. Augmented Belief Propagation Decoding of Low-density Parity Check Codes[J]. IEEE Transactions on Communications, 2007, 55(7): 1308–1317
+
+[9] P Kang, Y Xie, L Yang, et al. Enhanced Quasi-maximum Likelihood Decoding of Short LDPC Codes Based on Saturation [EB/OL]. [2018-10-31]. https://arxiv.org/abs/1810.13111
+
+[10] M Milicevic, C Fen, L M Zhang, et al. Key Reconciliation with Low-
+
+density Parity- check Codes for Long-distance Quantum
+
+Cryptography
+
+[EB/OL].
+
+[2017-04-17].
+
+https://arxiv.org/abs/1702.0774
+
+46
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:38:03 UTC from IEEE Xplore. Restrictions apply.
+
+

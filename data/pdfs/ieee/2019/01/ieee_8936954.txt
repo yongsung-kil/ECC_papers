@@ -1,0 +1,610 @@
+Received December 7, 2019, accepted December 16, 2019, date of publication December 19, 2019, date of current version December 31, 2019. Digital Object Identifier 10.1109/ACCESS.2019.2960839
+A High Throughput Implementation of QC-LDPC Codes for 5G NR
+HAO WU 1,2, (Member, IEEE), AND HUAYONG WANG 3
+1Department of Wireless Product Research and Design Institute, ZTE Corporation, Shenzhen 518055, China 2State Key Laboratory of Mobile Network and Mobile Multimedia Technology, ZTE Corporation, Shenzhen 518055, China 3Microelectronics Research Institute, ZTE Corporation, Shenzhen 518055, China
+Corresponding author: Hao Wu (wu.hao19@zte.com.cn)
+
+ABSTRACT Quasi-cyclic low-density parity-check (QC-LDPC) codes are the choice for data channels in the fifth generation (5G) new radio (NR). At the transmitter side, code bits from the QC-LDPC encoder are delivered to the rate matcher. The task of the rate matcher is to select an appropriate number of code bits via puncturing and/or repetition. Code bits that are not selected do not need to be encoded. At the receiver side, the de-rate matcher combines code bits of different transmission attempts and sends them to the QC-LDPC decoder. The output of the QC-LDPC decoder only needs to include necessary systematic bits. Unnecessary systematic bits and parity bits can be completely removed from the decoding process. Taking these considerations into account, a smaller sub-base matrix instead of a full-base matrix can be used in the encoding and decoding process. In this paper, we propose an efficient implementation of QC-LDPC codes for 5G NR. The full-base matrix is pruned before being used. Compared to the traditional schemes, the proposed scheme improves the throughput of QC-LDPC codes in 5G NR.
+
+INDEX TERMS 5G NR, QC-LDPC, encoder, decoder, base matrix.
+
+I. INTRODUCTION Fifth generation (5G) new radio (NR) is the next generation of mobile networks beyond the fourth generation (4G) long term evolution (LTE) [1], [2]. 5G NR supports three scenarios: enhanced mobile broadband (eMBB), ultra-reliable and low-latency communications (uRLLC) and massive machine type communications (mMTC). These three scenarios have requirements that include low latency and high throughput [3]. The peak throughput requirement is 10 Gbps for uplink and 20 Gbps for downlink. The user plane latency requirement is 4ms for eMBB and 1ms for uRLLC. The control plane latency requirement is 20ms. Taking these requirements into consideration, quasi-cyclic lowdensity parity-check (QC-LDPC) codes are adopted by the 5G NR standard for data channels [4], [5]. To simplify the implementation, QC-LDPC codes have the core part with a dual-diagonal structure and the extension part with a diagonal structure. Two base matrices, BG1 and BG2, are defined to guarantee the decoding performance for full ranges of transport block sizes and code rates. For BG1, the mother code rate is 1/3. For BG2, the mother code rate is 1/5.
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Martin Reisslein .
+
+In 5G NR, the physical downlink shared channel (PDSCH) and the physical uplink shared channel (PUSCH) are used for unicast data transmissions. The data from the medium access control layer to the physical layer is organized in the form of the transport block. Fig. 1 illustrates the processing of the transport block in 5G NR [6]. At the transmitter side, the following steps are carried out for a transport block: cyclic redundancy check (CRC) attachment, code block segmentation, QC-LDPC encoding, rate matching, bit interleaving and code block concatenation. The task of the rate matcher is to select an appropriate number of code bits from the output of the QC-LDPC encoder via puncturing and/or repetition to match the available radio resources. The redundancy version determines the exact set of code bits to be selected. As a consequence, code bits that are not selected do not need to be encoded. At the receiver side, the following steps are carried out for a transport block: code block segmentation, bit de-interleaving, de-rate matching, QC-LDPC decoding, code block concatenation, transport block CRC check. The de-rate matcher combines code bits of different transmission attempts and sends them to the QC-LDPC decoder. The output of the QC-LDPC decoder only needs to include necessary systematic bits. As a consequence, unnecessary systematic bits and parity bits can be completely removed from the
+
+VOLUME 7, 2019 This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see http://creativecommons.org/licenses/by/4.0/
+
+185373
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 1. The processing of the transport block in 5G NR.
+decoding process. Taking these considerations into account, a smaller sub-base matrix instead of a full-base matrix can be used in the encoding and decoding process.
+The architectures of the QC-LDPC encoder include: dual-diagonal [7]–[10], Richardson-Urbanke [11]–[13], LU decomposition [14], [15], etc. In 5G NR, the dualdiagonal architecture is usually used to reduce the complexity of the encoder. The throughput of the dual-diagonal architecture is approximately inverse proportional to the row number of the base matrix. The architectures of the QC-LDPC decoder include: block parallel [16]–[18], row parallel [19], [20], full parallel [21], [22], etc. [23]. In 5G NR, the block parallel architecture is usually used to reduce the complexity of the decoder. The throughput of the block parallel architecture is approximately inverse proportional to the number of circulant blocks in the base matrix. As a consequence, the throughput of QC-LDPC codes can be improved by using a smaller sub-base matrix instead of a full-base matrix.
+Reference [24] only describes the encoding procedure for QC-LDPC codes in 5G NR. The scheme of constructing the sub-base matrix is not described. Reference [7] uses the full-base matrix in the encoding process. It is a waste of resources for the transmitter to encode unnecessary code bits. The sub-base matrix constructed in references [25]–[30] is a leading sub-base matrix [31]. That is, the sub-base matrix is obtained by selecting the intersection of the first i rows and the first j columns of the full-base matrix. The sub-base matrix constructed in [25]–[30] can be further pruned to increase the throughput.
+This paper proposes an efficient implementation of QC-LDPC codes for 5G NR. Unlike the traditional schemes, the sub-base matrix constructed by the proposed scheme is not restricted to the leading sub-base matrix. In addition, the proposed scheme takes into account the difference in the construction of the sub-base matrix between the encoder and the decoder. Compared to the traditional schemes, the proposed scheme improves the throughput of QC-LDPC codes in 5G NR. The rest of the paper is organized as follows: Section II describes the processing of the transport block in 5G NR. Section III gives the scheme of constructing the sub-base matrix for the encoder and the decoder. Section IV
+185374
+
+presents the architecture of the proposed scheme. Numerical results and computational complexity are shown in Section V and Section VI respectively. Finally, the conclusion is given in Section VII.
+
+II. TRANSPORT BLOCK PROCESSING IN 5G NR In this section, we focus on the processing of the transport block in 5G NR [6]. Let T be the transport block size. A A-bit CRC is attached at the end of the transport block, where A is equal to 24 if T > 3824 and 16 otherwise. The transport block, including the CRC, is divided into C equal size code blocks. C is equal to
+
+1, C=
+
+T ≤ζ
+
+(1)
+
+B/(ζ − 24) , T > ζ
+
+where B is equal to T + A and ζ is equal to 8448 for BG1 and 3840 for BG2. The size of each code block is equal to
+
+K = B/C + τ
+
+(2)
+
+where τ is equal to 0 for C = 1 and 24 otherwise. Note that the procedure of the transport block size determination
+guarantees that B is divisible by C [32].
+Let R be the target code rate for the initial transmission. BG1 is used if T > 3824 and R > 0.25 or T > 292 and R > 0.67. Otherwise, BG2 is used. Let ω be the number of systematic columns. For BG1, ω is equal to 22. For BG2, ω is determined based on the value of B. That is, ω = 10 if B ∈ (640, ∞); ω = 9 if B ∈ (560, 640]; ω = 8 if B ∈ (192, 560] and ω = 6 otherwise. The lifting size Z is equal to
+
+Z = min{η : η ∈ , η ≥ B/ω}
+
+(3)
+
+where is the set of supported lifting size. includes all values of the form j × 2i for j ∈ {2, 3, 5, 7, 9, 11, 13, 15} and i ∈ {0, 1, 2, 3, 4, 5, 6, 7} that range from 2 to 384.
+is categorized into eight sets according to j. There is an
+exponent matrix Pj associated with j for each base matrix. We assume that Z can be expressed as m × 2n. The full-base
+matrix Pm is pruned to the sub-base matrix Pm. The detail of the pruning is described in Section III. The parity check
+matrix H is constructed by lifting the sub-base matrix Pm. That is, each non-negative element of Pm is replaced by a
+
+VOLUME 7, 2019
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR TABLE 1. The value of TLBRM as a function of LM , QM and PM .
+
+Z × Z permutation matrix and each negative element of Pm is replaced by a Z × Z zero matrix. If the size of the sub-base
+matrix Pm is R × C, the size of the parity check matrix H is RZ × CZ . The task of the encoding is to find a codeword c
+that satisfies the following equation
+
+HcT = 0T
+
+(4)
+
+where (·)T denotes the transpose of the enclosed vector. Let the codeword c be
+
+c = [s0, s1, . . . , sCZ−RZ−1, p0, p1, . . . , pRZ−1] (5)
+
+where s = [s0, s1, . . . , sCZ−RZ−1] is the systematic bits and p = [p0, p1, . . . , pRZ−1] is the parity bits. c is written into a circular buffer of length N . To reduce the complexity of the implementation, the limit buffer rate matching (LBRM) is introduced in 5G NR. If LBRM is disable, N is equal to , where is equal to 66Z for BG1 and 50Z for BG2. If LBRM is enable, N is equal to
+
+N = min( , 1 TLBRM )
+
+(6)
+
+C RLBRM
+
+where RLBRM = 2/3. TLBRM is a function of the maximum number of layers LM , the maximum modulation order QM and the maximum number of physical resource blocks PM [6], [32]. The values of TLBRM are listed in Table 1. LBRM is usually enable to reduce the size of the circular buffer and increase the throughput of the QC-LDPC codes.
+Let G be the number of code bits available for transmission of the transport block. Let L be the number of layers. Let Q be the modulation order. If code block groups (CBGs) are not supported, the rate matching output length E of the first C − mod(G/(LQ), C) code blocks is equal to
+
+G
+
+Em = LQ LQC
+
+(7)
+
+and that of the last mod(G/(LQ), C) code blocks is equal to
+
+G
+
+Ep = LQ LQC
+
+(8)
+
+VOLUME 7, 2019
+
+Let d = [d0, d1, . . . , dN−1] be the circular buffer. The initial values of the circular buffer are nulls. After writing the codeword c into the circular buffer, the values of d are as follows
+
+s2Z+i, 0 ≤ i < K − 2Z
+
+
+
+null, K − 2Z ≤ i < ξ di = pi−ξ , ξ ≤ i < β
+
+(9)
+
+null, β ≤ i < N
+
+where β = min(N , ξ + RZ ) and ξ is equal to 20Z for BG1 and 8Z for BG2. Then code bits e = [e0, e1, . . . , eE−1] are read out from the starting position k in the circular buffer, skipping the code bit with a value of null. k is a function of the redundancy version rv and is given by Table 2.
+
+TABLE 2. The value of k as a function of the redundancy version rv .
+
+Next, bit interleaving is carried out with a row-column interleaver. The number of rows is equal to the modulation order. Code bits of each code block are written row-byrow into the interleaver and read out column-by-column. This increases the reliability of systematic bits and improves the performance of QC-LDPC codes [2], [33]. Let f = [f0, f1, . . . , fE−1] be the output of the interleaver. e and f are related by
+
+fi+jQ = eiE/Q+j
+
+(10)
+
+where i ∈ {0, 1, . . . , Q − 1} and j ∈ {0, 1, . . . , E/Q − 1}. Finally, code block concatenation collects the output of the rate matching.
+
+185375
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+III. THE SCHEME OF CONSTRUCTING THE SUB-BASE MATRIX In this section, we give the scheme of constructing the sub-base matrix for the encoder and the decoder. Before delving into the details, let us explore the general structure of the base matrix. The structure of BG2 is illustrated in Fig. 2. The structure of BG1 is similar. The base matrix consists of five submatrices: A, C, B, I and O. A and C are non-zero matrices. B has a dual-diagonal structure. I is an identity matrix. O is a zero matrix. A and B constitute the core part. C, I and O constitute the extension part. This structure is similar to QC-LDPC codes introduced in [34]. The core part can not be pruned [4]. The first two columns of the base matrix are not transmitted. This procedure improves the performance of the decoding [35]. The rows of C are designed to be orthogonal or quasi-orthogonal. Since the layered decoding is widely used in QC-LDPC codes [36], [37], this design reduces the decoding latency and improves the system throughput [38], [39].
+
+FIGURE 2. The general structure of the base matrix.
+
+A. CONSTRUCTION OF THE SUB-BASE MATRIX FOR THE ENCODER
+The output of the QC-LDPC encoder should consist of [s0, s1, . . . , sK−1] and some parity bits. In the following, we derive the parity bits that need to be included. In order to gain some insight, let us first focus on the case where k = 0. That is, the starting point of the selection is at the beginning of the circular buffer. Since the first 2Z systematic bits are punctured, the number of systematic bits to be selected is
+
+Ns = K − 2Z
+
+(11)
+
+and the number of parity bits to be selected is
+
+Np = E − (K − 2Z )
+
+(12)
+
+As a result, parity bits should consist of [p0, p1, . . . , pδ−1], where δ is equal to
+
+δ = min(Np, N − ξ )
+
+(13)
+
+If Np is larger than N − ξ , the selection of code bits wraps around to the beginning of the circular buffer.
+Now, let us not restrict the value of k. That is, the starting point of the selection may be anywhere of the circular buffer. The number of systematic bits to be selected is
+
+Ns = max(K − 2Z − k, 0)
+
+(14)
+
+and the number of parity bits to be selected is
+
+Np = E − max(K − 2Z − k, 0)
+
+(15)
+
+If k < ξ , the starting point of the selection is in the middle of the systematic bits. If k ≥ ξ , the starting point of the selection is in the middle of the parity bits. Let λ = N −k +K −2Z −θ, where
+
+0,  θ = ξ − k,
+
+k ≥ξ
+
+K − 2Z ≤ k < ξ
+
+(16)
+
+ξ − (K − 2Z ), 0 ≤ k < K − 2Z
+
+The ending point of the selection in the circular buffer is sK−1 when E is equal to λ. If E ≤ λ, parity bits should consist of [pδs , pδs+1, . . . , pδe−1], where δs is equal to
+
+δs = max(0, k − ξ )
+
+(17)
+
+and δe is equal to
+
+δe = min(Np + δs, N − ξ )
+
+(18)
+
+If E > λ, parity bits should consist of [pδs , pδs+1, . . . , pN −ξ−1] and [p0, p1 . . . , pδe−1], where δs is equal to
+
+δs = max(0, k − ξ )
+
+(19)
+
+and δe is equal to
+
+δe = min(E − λ, δs)
+
+(20)
+
+The size of the systematic bits is at most (ξ + 2)Z . The last (ξ + 2)Z − K systematic bits are filler bits and are not transmitted over the air. Since filler bits are set to zeros, the values of parity bits are not affected by the last (ξ + 2)Z − K systematic bits. As a result, the columns corresponding to these systematic bits can be pruned.
+If the full-base matrix Pm is pruned to a sub-base matrix Pm, Pm and Pm are related by
+
+Pm = Pm(µ, ν)
+
+(21)
+
+185376
+
+
+
+[ δs , δs
+
+µ= Z Z
+
+ [
+
+δs
+
+,
+
+δs
+
+ZZ
+
++ 1, . . . , δe − 1 ] ∪ [0, 1, 2, 3], Z
+
++ 1, . . . , N − ξ − 1 ] ∪ [0, 1, . . . , max(3, δe − 1 )],
+
+Z
+
+Z
+
+E ≤λ E >λ
+
+(22)
+VOLUME 7, 2019
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 3. The construction of the sub-base matrix for the encoder. P2 is obtained by selecting the intersection of the rows [0, 1, . . . , 5] and the columns [0, 1, . . . , 5, 10, 11, . . . , 15] of P2. Here rv = 0, T = 80, G = 160 and TLBRM = 1277992.
+
+FIGURE 5. The construction of the sub-base matrix for the decoder. P2 is obtained by selecting the intersection of the rows [0, 1, . . . , 5] and the columns [0, 1, . . . , 5, 10, 11, . . . , 15] of P2. Here rv = 0, T = 80, G = 160 and TLBRM = 1277992.
+
+FIGURE 4. The construction of the sub-base matrix for the encoder. P2 is obtained by selecting the intersection of the rows [0, 1, . . . , 3, 17, 18, . . . , 26] and the columns [0, 1, . . . , 5, 10, 11, . . . , 13, 27, 28, . . . , 36] of P2. Here rv = 2, T = 80, G = 160 and TLBRM = 1277992.
+
+where µ is give by (22), as shown at the bottom of the previous page, and ν is equal to
+
+ν = [0, 1, . . . ,
+
+K
+
+−1
+
+,µ+2+
+
+ξ ]
+
+(23)
+
+Z
+
+Z
+
+The symbol ∪ means the union of two vectors [40]. The
+expression (21) means that Pm is obtained by selecting the intersection of the rows µ and the columns ν of Pm. Note that B can not be pruned.
+Two examples of constructing the sub-base matrix for the
+encoder are shown in Fig. 3 and Fig. 4. From these figures,
+we see that Pm is only a small portion of Pm. Code bits that are not selected are not encoded. The throughput of the
+QC-LDPC encoder is expected to be increased.
+
+B. CONSTRUCTION OF THE SUB-BASE MATRIX FOR THE DECODER
+Hybrid automatic repeat request (HARQ) is widely used to improve the transmission efficiency [41]–[43]. Log likelihood ratios (LLRs) of the transport block received in error are stored in a buffer. The receiver generates the positive acknowledgement or the negative acknowledgement to drive the retransmission. When the retransmission is received, the decoding is performed by the buffered LLRs combined with the retransmission LLRs. As a result, the sub-base
+
+VOLUME 7, 2019
+
+FIGURE 6. The construction of the sub-base matrix for the decoder. P2 is obtained by selecting the intersection of the rows [0, 1, . . . , 5, 17, 18, . . . , 26] and the columns [0, 1, . . . , 5, 10, 11, . . . , 15, 27, 28, . . . , 36] of P2. Here rv = 2, T = 80, G = 160 and TLBRM = 1277992.
+
+matrix used in the last transmission should be considered
+when constructing the sub-base matrix in the retransmission. Let µ equals to ∅ for the initial transmission and the
+selected rows in the last transmission for the retransmission. Let ν equals to ∅ for the initial transmission and the selected columns in the last transmission for the retransmission. If the full-base matrix Pm is pruned to a sub-base matrix Pm, Pm and Pm are related by
+
+Pm = Pm(µ ∪ µ , ν ∪ ν )
+
+(24)
+
+where µ and ν are given in the preceding subsection. Two examples of constructing the sub-base matrix for the
+decoder are shown in Fig. 5 and Fig. 6. From these figures, we see that Pm is only a small portion of Pm. Unnecessary systematic bits and parity bits are removed from the decoding process. The throughput of the QC-LDPC decoder is expected to be increased. In the initial transmission, the sizes of sub-base matrices of the encoder and decoder are the same. In the retransmission, the sizes of the sub-base matrix of the decoder is larger than that of the encoder.
+
+IV. THE ARCHITECTURE OF THE PROPOSED SCHEME In this section, the architecture of the proposed scheme is described. In the processing of the transport block, we need to know the lifting size, the size of the circular buffer, the type of the base matrix, etc. These parameters are derived from
+
+185377
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 7. The proposed architecture of the encoder.
+
+the scheduling information [2], [6]. However, this derivation is not appropriate to be done in the hardware. Usually, these parameters are calculated by the software and then are passed to the hardware through the configuration [17], [29], [30], [44], [45]. Based on this configuration, the control signals are generate by the controller. The size of the configuration needs to be small as possible to reduce the memory. It is clear that the configuration includes the following fields: E, K , N , Z , the type of the base matrix, etc.
+Compared to the traditional schemes, the proposed scheme mainly affects the QC-LDPC encoding module at the transmitter and the QC-LDPC decoding module at the receiver. For the sake of brevity, we only focus on these modules in this section.
+
+A. ARCHITECTURE OF THE ENCODER
+
+Before giving the proposed architecture, the number of bits
+needed to indicate the sub-base matrix Pm is derived. These bits should be added to the configuration. In the following,
+we show that 13 bits are needed to indicate the sub-base matrix Pm. Let b† = [b0†, b†1, b†2], where b0† is equal to 1 if E is smaller than or equal to λ and 0 otherwise, b†1 is equal to
+
+
+
+  b1† = 
+  
+
+δs
+Z δs
+
+, ,
+
+Z
+
+b†0 = 1 b0† = 0
+
+(25)
+
+and b2† is equal to
+
+
+
+b2†
+
+ δe − 1
+
+
+
+
+
+=
+
+Z
+
+max(3,
+
+, δe − 1
+
+),
+
+Z
+
+b†0 = 1 b†0 = 0
+
+(26)
+
+b0†, b†1 and b†2 can be represented by 1bit, 6bits and 6bits respectively. From (22), we see that µ can be easily obtained from the fields already exist in the configuration and b†.
+From (23), we see that ν can be easily obtained from the fields already exist in the configuration and µ. As a result, only b†
+needs to be added to the configuration to indicate the sub-base
+matrix Pm.
+
+185378
+
+There are many dual-diagonal encoder architectures that offer a variety of parallelism orders [7]–[10]. The architecture with the high parallelism provides the high throughput. However, this benefit comes at the cost of increased area. The architecture supports various base matrices specified by the protocol [6], [46], [47]. The controller of the architecture obtains the particular base matrix P†m used for encoding through the configuration and then generates the control signals based on Pm† , Z , etc. Then the codeword c is produced under the control of these signals. The existing architectures can easily support the proposed scheme by modifying the configuration and the controller. That is, b† that indicates the sub-base matrix Pm is added to the configuration and the logic that generates the sub-base matrix Pm is added to the controller. Compared to the overall area of the architecture, the area of the logic is negligible. Since the logic that generates the sub-base matrix Pm is not on the critical path, this modification does not affect the operating frequency of the architecture.
+For example, one proposed architecture is shown in Fig. 7. The difference between the proposed architecture and the reference architecture [7] is in the configuration and the controller, which are marked in red in the figure. The area of this architecture can be reduced by using few cyclic shifts at the expense of lower throughput. The proposed architecture is briefly discussed as follows. First, the intermediate variable t is obtained by accumulating the cyclic shifts of the the systematic bits s in 4 clock cycles. t is stored in the core unit and s is stored in the systematic buffer. In the following, p = [p0, p1, . . . , p4Z−1] is generated by the core unit in 2 clock cycles. p is stored in the parity buffer 1. Finally, p = [p4Z , p4Z+1, . . . , pRZ−1] is obtained by accumulating the cyclic shifts of the the systematic bits s and p in (R − 4) clock cycles. p are stored in parity buffer 2. The proposed scheme needs a total of (R + 2) clock cycles.
+B. ARCHITECTURES OF THE DECODER
+Before giving the proposed architecture, the number of bits needed to indicate the sub-base matrix Pm is derived. These bits should be added to the configuration. In the following, we show that 42 bits are needed to indicate the sub-base
+VOLUME 7, 2019
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 8. The proposed architecture of the decoder.
+
+matrix Pm. Let b‡ = [b0‡, b1‡, . . . , b‡41] be the bit masks of length 42. The ith element of b‡ is equal to 1 if i is a member of µ ∪ µ − [0, 1, 2, 3] and 0 otherwise, where the symbol − means the difference of two vectors [48]. From (22), we see that µ ∪ µ can be easily obtained from b‡ since B can not be pruned. From (23), we see that ν ∪ ν can be easily obtained from the fields already exist in the configuration and µ ∪ µ . As a result, only b‡ needs to be added to the configuration to indicate the sub-base matrix Pm.
+There are many block parallel architectures [16]–[18]. The architecture supports various base matrices specified by the protocol [46], [49], [50]. The controller of the architecture obtains the particular base matrix P‡m used for decoding through the configuration and then generates the control signals based on Pm‡ , Z , etc. Then the systematic bits s is obtained under the control of these signals. The existing architectures can easily support the proposed scheme by modifying the configuration and the controller. That is, b‡ that indicates the sub-base matrix Pm is added to the configuration and the logic that generates the sub-base matrix Pm is added to the controller. Compared to the overall area of the architecture, the area of the logic is negligible. Since the logic that generates the sub-base matrix Pm is not on the critical path, this modification does not affect the operating frequency of the architecture.
+For example, one proposed architecture is shown in Fig. 8. The difference between the proposed architecture and the reference architecture [17] is in the configuration and the controller, which are marked in red in the figure. The proposed architecture is briefly discussed as follows. First, the log likelihood ratio (LLR) buffer is initialized to LLR values of each bit and the extrinsic buffer is initialized to zeros. Then, at each time instant, the LLR values corresponding to a non-negative element of the sub-base matrix Pm are read from the LLR buffer and the extrinsic information corresponding to the same non-negative element of the sub-base matrix Pm is read from the extrinsic buffer. The difference between the cyclic shifted LLR values and the extrinsic information is fed to the min-sum unit. When all non-negative elements in a row
+VOLUME 7, 2019
+
+of the sub-base matrix Pm are processed, the min-sum unit and the adder output the updated extrinsic information and the updated LLR values respectively. The updated extrinsic information is written back to the extrinsic buffer. And after passing through the de-cyclic shifter, the updated LLR values are written back to the LLR buffer. The decoded bits can be obtained by the hard decision on the LLR values. This decoding process continues until the parity check passes or the maximum number of iterations is reached.
+V. NUMERICAL RESULTS Numerical results are given in this section to compare the throughput and the block error rate (BLER) of the traditional schemes and the proposed scheme. The detail configurations are listed below. There is a total of 14 orthogonal frequency division multiplexing (OFDM) symbols in the slot. Demodulation reference signal (DMRS) is located in the first 2 symbols of the slot. Physical uplink shared channel (PUSCH) is located in the last 12 symbols of the slot. The transport block is mapped to the resource elements (REs) in a frequency-first manner. Note that the front-loaded DMRS and the frequency-first mapping enable the transport block to be processed on the fly. It is not necessary to collect all the symbols in the slot before starting the decoding the transport block. The number of physical resource blocks is Pa. The number of layers is 1. The transport block size T is determined according the procedure in 5.1.3.2 in [32]. The LBRM is applied and TLBRM is equal to 1277992. Let ψ be the index of the modulation and code scheme, which is obtained from the Table 5.1.3.1-2 in [32]. The target code rate R and the modulation order Q are derived from ψ. The sequence of redundancy versions is 0, 2, 3, 1. The parameters of the initial transmission and the retransmission are the same except for the redundancy version.
+A. THROUGHPUT PERFORMANCE In this subsection, the throughput of the proposed scheme and the traditional schemes are compared. In 5G NR, the throughput is usually defined as the number of systematic bits
+185379
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 9. dtp/dtf and dtl /dtf as a function of ψ for different Pa. The redundancy version is equal to 0.
+
+FIGURE 11. dtp/dtf and dtl /dtf as a function of ψ for different Pa. The redundancy version is equal to 3.
+
+FIGURE 10. dtp/dtf and dtl /dtf as a function of ψ for different Pa. The redundancy version is equal to 2.
+
+FIGURE 12. dtp/dtf and dtl /dtf as a function of ψ for different Pa. The redundancy version is equal to 1.
+
+(excluding filler bits) that the system can process within a specified time [51], [52]. This definition is used in this subsection.
+
+1) DECODER
+The pipeline block parallel architecture is usually used to reduce the complexity of the decoder. The pipeline stall due to the pipeline hazard can be kept to a minimum level [53], [54]. If one circulant block in the sub-base matrix needs one clock cycle for processing, the decoding throughput dt is approximately equal to
+
+dt
+
+=
+
+K
+
+fd id ud
+
+(27)
+
+where fd is the operating frequency for the decoder, id is the number of iterations, ud is the number of circulant blocks in the sub-base matrix. Note that this scheme is widely used in
+
+evaluating the decoding throughput [52], [55].
+
+Let dtf be the decoding throughput of the full-base matrix
+
+scheme. sub-base
+
+Let dtl matrix
+
+be the decoding throughput of scheme. Let dtp be the decoding
+
+the leading throughput
+
+of the proposed scheme. These three schemes mainly differ in
+
+the logic that generates the sub-base matrix used for decod-
+
+ing. Since this logic is not on the critical path, the operating
+
+185380
+
+frequencies of these three schemes are the same. Fig. 9 to Fig. 12 illustrate dtp/dtf and dtl /dtf as a function of ψ for different Pa when the number of iterations for these three
+
+schemes are the same. From these figures, we see that the
+
+full-base matrix scheme yields the lowest decoding through-
+
+put. The effective code rate decreases as the number of transmissions increases, and thus dtp/dtf and dtl /dtf approach one as the number of transmissions increases.
+
+Now, we compare the leading sub-base matrix scheme and
+
+the proposed scheme. In the initial transmission, dtp is slightly
+
+larger than dtl in a few cases. The main reason is that the
+
+proposed scheme prunes the systematic bits but the leading
+
+sub-base matrix scheme does not. For example, dtp gets up
+
+to a 1.05 fold improvement as compared to dtl when equal to 27 and Pa is equal to 6. In the retransmission,
+
+ψ dtp
+
+is is
+
+much larger than dtl in most cases. The main reason is that the
+
+parity bits pruned by the proposed scheme is larger than the
+
+parity bits pruned by the leading sub-base matrix scheme. For example, dtp gets up to a 1.40 fold improvement as compared to dtl when ψ is equal to 27, Pa is equal to 6 and rv is equal to 2.
+
+The gain of the proposed scheme can be clearly observed
+
+in the retransmission. The decoder provided to implement
+
+the peak throughput requirement may not be able to decode
+
+VOLUME 7, 2019
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+FIGURE 13. etp/etf and elt /eft as a function of ψ for different Pa. The redundancy version is equal to 0.
+
+FIGURE 15. etp/dtf and etl /etf as a function of ψ for different Pa. The redundancy version is equal to 3.
+
+FIGURE 14. ept /etf and elt /eft as a function of ψ for different Pa. The redundancy version is equal to 2.
+
+FIGURE 16. etp/eft and etl /etf as a function of ψ for different Pa. The redundancy version is equal to 1.
+
+transport blocks with the lower code rate over the same radio resources in the same time duration [51]. The effective code rate decreases as the number of transmissions increases. The peak throughput requirement is difficult to meet in the retransmission [28]. The proposed scheme can alleviate this problem to a large extent.
+
+2) ENCODER
+
+We assume that the dual-diagonal architecture in the reference [7] is used to reduce the complexity of the encoder. This architecture needs a total of (mb + 2) clock cycles to encode the systematic bits s, where mb is the number of rows of the sub-base matrix. Then, the encoding throughput et is equal to
+
+et
+
+=
+
+K
+
+fe mb +
+
+2
+
+(28)
+
+where fe is the operating frequency of the encoder. Let eft be the encoding throughput of the full-base matrix
+
+scheme. sub-base
+
+Let etl matrix
+
+be the encoding throughput of scheme. Let ept be the encoding
+
+the leading throughput
+
+of the proposed scheme. These three schemes mainly differ in
+
+the logic that generates the sub-base matrix used for encod-
+
+ing. Since this logic is not on the critical path, the operating
+
+frequencies of these three schemes are the same. Fig. 13 to
+
+VOLUME 7, 2019
+
+Fig. 16. illustrate etp/eft and etl /eft as a function of ψ for different Pa. From these figures, we see that the full-base matrix scheme yields the lowest encoding throughput. The effective code rate decreases as the number of transmissions increases, and thus etp/eft and elt /etf approach one as the number of transmissions increases.
+The encoding throughput comparison between the leading sub-base matrix scheme and the proposed scheme is similar to the decoding throughput comparison between the leading sub-base matrix scheme and the proposed scheme. And it is omitted for the sake of brevity.
+B. BLER PERFORMANCE In this subsection, the BLER performances of the proposed scheme and the traditional schemes are compared. The parameters of the simulation are listed as follows. The decoding algorithm is the layered normalized min-sum [56]. The scaling factor is equal to 0.85. The maximum iteration number is equal to 12. ψ is equal to 27. From the Table 5.1.3.1.-2 in [32], we can derive that R is equal to 0.9258 and Q is equal to 8. The encoded bits are transmitted over the additive white Gaussian noise (AWGN) channel. Based on the scheduling information, we can derive that T is equal to 295176 and G is equal to 314496 when Pa is equal
+185381
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+for the encoding, the leading sub-base matrix scheme requires up to 2 divisions, 4 comparisons and 6 additions and the proposed scheme requires up to 5 divisions, 8 comparisons and 17 additions. To obtain the sub-base matrix used for the decoding, the leading sub-base matrix scheme requires up to 2 divisions, 5 comparisons and 6 additions and the proposed scheme requires up to 5 divisions, 8 comparisons, 17 additions and 2 union operations. Note that the amount of computation required to obtain the sub-base matrix used for encoding and decoding is amortized over C code blocks and is negligible when C is large.
+
+FIGURE 17. Comparison of the BLER performance between the proposed scheme and the traditional schemes. Here, Pa is equal to 6.
+
+VII. CONCLUSION In many applications, the code rate of the data transmission is larger than the mother code rate. In these case, substantial throughput improvement can be achieved by pruning the full-base matrix of QC-LDPC codes to the desired size. In this paper, a scheme is developed keeping in mind the difference between the pruning of the full-base matrix for encoder and that for the decoder. The transport block of higher code rate is encoded and decoded by using a smaller sub-base matrix instead of a full-base matrix. As a consequence, the computational efficiency and energy efficiency are improved. These features make the proposed scheme attractive for QC-LDPC codes in 5G NR.
+
+FIGURE 18. Comparison of the BLER performance between the proposed scheme and the traditional schemes. Here, Pa is equal to 273.
+to 273 and T is equal to 6400 and G is equal to 6912 when Pa is equal to 6.
+The BLER performances of the proposed scheme and the traditional schemes as a function of the signal-to-noise ratio (SNR) are illustrated in Fig. 17 and Fig. 18. From these figures, we see that the BLER performances of the proposed scheme and the traditional schemes are almost the same. The difference between the BLER performance of the proposed scheme and that of the traditional schemes is negligible. These simulation results verify the correctness of the proposed scheme for the encoder and decoder.
+VI. COMPUTATIONAL COMPLEXITY The difference between the proposed scheme and the traditional schemes is mainly the sub-base matrix used for encoding and decoding. In this section, we consider the amount of computation required to obtain the sub-base matrix used for encoding and decoding. It is clear that the full-base matrix scheme can directly obtain the sub-base matrix used for encoding and decoding. To obtain the sub-base matrix used
+185382
+
+ACKNOWLEDGMENT This article was presented at the Proceedings of the 25th International Telecommunication Networks and Application Conference (ITNAC), Auckland, New Zealand, November 2019 [28].
+REFERENCES
+[1] S. Parkvall, E. Dahlman, A. Furuskar, and M. Frenne, ‘‘NR: The new 5G radio access technology,’’ IEEE Commun. Standards Mag., vol. 1, no. 4, pp. 24–30, Dec. 2017.
+[2] E. Dahlman, S. Parkvall, and J. Sköld, 5G NR: The Next Generation Wireless Access Technology. London, U.K.: Elsevier, 2018.
+[3] M. Shafi, A. F. Molisch, P. J. Smith, T. Haustein, P. Zhu, P. D. Silva, F. Tufvesson, A. Benjebbour, and G. Wunder, ‘‘5G: A tutorial overview of standards, trials, challenges, deployment, and practice,’’ IEEE J. Sel. Areas Commun., vol. 35, no. 6, pp. 1201–1221, Jun. 2017.
+[4] T. J. Richardson and S. Kudekar, ‘‘Design of low-density parity check codes for 5G new radio,’’ IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[5] D. Hui, S. Sandbeg, Y. Blankenship, M. Andersson, and L. Grosjean, ‘‘Channel coding in 5G new radio: A tutorial overview and performance comparison with 4G LTE,’’ IEEE Veh. Technol. Mag., vol. 13, no. 4, pp. 60–69, Dec. 2018.
+[6] NR; Multiplexing and Channel Coding (Release 15), document TS 38.212, V15.4.0, 3GPP, Dec. 2018.
+[7] T. T. B. Nguyen, T. N. Tan, and H. Lee, ‘‘Efficient QC-LDPC encoder for 5G new radio,’’ Electronics, vol. 8, no. 6, p. 668, Jun. 2019.
+[8] J. M. Perez and V. Fernandez, ‘‘Low-cost encoding of IEEE 802.11n,’’ Electron. Lett., vol. 44, no. 4, pp. 307–308, Feb. 2008.
+[9] Z. Cai, J. Hao, P. Tan, S. Sun, and P. Chin, ‘‘Efficient encoding of IEEE 802.11n LDPC codes,’’ Electron. Lett., vol. 42, no. 25, pp. 1471–1472, Dec. 2006.
+[10] Y. Jung, C. Chung, J. Kim, and Y. Jung, ‘‘7.7 Gbps encoder design for IEEE 802.11n/ac QC-LDPC codes,’’ in Proc. Int. SoC Design Conf. (ISOCC), Jeju Island, South Korea, Nov. 2012, pp. 1–4.
+VOLUME 7, 2019
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+[11] H. Zhang, J. Zhu, H. Shi, and D. Wang, ‘‘Layered approx-regular LDPC: Code construction and encoder/decoder design,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 2, pp. 572–585, Mar. 2008.
+[12] J. K. Kim, H. Yoo, and M. H. Lee, ‘‘Efficient encoding architecture for IEEE 802.16e LDPC codes,’’ IEICE Trans. Fundam., vols. E91-A, no. 12, pp. 3607–3611, Dec. 2006.
+[13] T. J. Richardson and R. L. Urbanke, ‘‘Efficient encoding of low-density parity-check codes,’’ IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[14] A. Mahdi and V. Paliouras, ‘‘A low complexity-high throughput QC-LDPC encoder,’’ IEEE Trans. Signal Process., vol. 62, no. 10, pp. 2696–2708, May 2014.
+[15] Y. Kaji, ‘‘Encoding LDPC codes using the triangular factorization,’’ IEICE Trans. Fundam., vols. E89-A, no. 10, pp. 2510–2518, Oct. 2006.
+[16] C. Liu, S. Yen, C. Chen, H. Chang, C. Lee, Y. Hsu, and S. Jou, ‘‘An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,’’ IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 684–694, Mar. 2008.
+[17] P. Murugappa, V. Lapotre, A. Baghdadi, and M. Jezequel, ‘‘Rapid design and prototyping of a reconfigurable decoder architecture for QC-LDPC codes,’’ in Proc. Int. Symp. Rapid Syst. Prototyping (RSP), Montreal, QC, Canada, Oct. 2013, pp. 87–93.
+[18] Y. Sun, G. Wang, and J. R. Cavallaro, ‘‘Multi-layer parallel decoding algorithm and VLSI architecture for quasi-cyclic LDPC codes,’’ in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Rio de Janeiro, Brazil, May 2011, pp. 1776–1779.
+[19] Y. S. Park, D. Blaauw, D. Sylvester, and Z. Zhang, ‘‘Low-power highthroughput LDPC decoder using non-refresh embedded DRAM,’’ IEEE J. Solid-State Circuits, vol. 49, no. 3, pp. 783–794, Mar. 2014.
+[20] S. W. Yen, S. Y. Hung, C. H. Chen, H. C. Chang, S. J. Jou, and C. Y. Lee, ‘‘A 5.79-Gb/s energy-efficient multirate LDPC codec chip for IEEE 802.15.3c applications,’’ IEEE J. Solid-State Circuits, vol. 47, no. 9, pp. 2246–2256, Sep. 2012.
+[21] A. J. Blanksby and C. J. Howland, ‘‘A 690-mW 1-Gb/s 1024-b, rate1/2 low-density parity-check code decoder,’’ IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[22] T. Mohsenin and B. M. Baas, ‘‘Split-row: A reduced complexity, high throughput LDPC decoder architecture,’’ in Proc. Int. Conf. Comput. Design (ICCD), San Jose, CA, USA, Oct. 2006, pp. 1–6.
+[23] C.-W. Sham, X. Chen, F. C. M. Lau, Y. Zhao, and W. M. Tam, ‘‘A 2.0 Gb/s throughput decoder for QC-LDPC convolutional codes,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 7, pp. 1857–1869, Jul. 2013.
+[24] S. K. Ahn, K. J. Kim, S. Myung, S. L. Park, and K. Yang, ‘‘Comparison of low-density parity-check codes in ATSC 3.0 and 5G standards,’’ IEEE Trans. Broadcast., vol. 65, no. 3, pp. 489–495, Sep. 2019.
+[25] D. F. Zhao, H. Tian, and R. Xue, ‘‘Adaptive rate-compatible non-binary LDPC coding scheme for the B5G mobile systems,’’ Sensors, vol. 19, no. 5, p. 1067, Mar. 2019.
+[26] Y. Zhang, K. Peng, X. Wang, and J. Song, ‘‘Performance analysis and code optimization of IDMA with 5G new radio LDPC code,’’ IEEE Commun. Lett., vol. 8, no. 22, pp. 1552–1555, Jun. 2018.
+[27] H. Li, B. Bai, X. Mu, J. Zhang, and H. Xu, ‘‘Algebra-assisted construction of quasi-cyclic LDPC codes for 5G new radio,’’ IEEE Access, vol. 6, pp. 50229–50244, 2018.
+[28] H. Wu and H. Wang, ‘‘Decoding latency of LDPC codes in 5G NR,’’ in Proc. Int. Telecommun. Netw. Appl. Conf. (ITNAC), Auckland, New Zealand, Nov. 2019, pp. 1–5.
+[29] LDPC Encoder/Decoder V2.0, Logicore IP Product Guide. Accessed: Dec. 5, 2019. [Online]. Available: https://china.xilinx.com/member/ldpcenc-dec/v2_0/pg281-ldpc.pdf
+[30] 5G LDPC Intel FPGA IP User Guide, Updated for Intel Quartus Prime Design Suite: 18.1. Accessed: Dec. 5, 2019. [Online]. Available: https:// www.intel.cn/content/dam/www/programmable/us/en/pdfs/literature/ug/ ug_5g_ldpc.pdf
+[31] G. A. F. Seber, A Matrix Handbook for Statisticians. Hoboken, NJ, USA: Wiley, 2007.
+[32] NR; Physical Layer Procedures for Data (Release 15), document TS 38.214, V15.4.0, 3GPP, Dec. 2018.
+[33] F. H. Sepehr, A. Nimbalker, and G. Ermolaev, ‘‘Analysis of 5G LDPC codes rate-matching design,’’ in Proc. IEEE Veh. Technol. Conf. (VTC), Porto, Portugal, Jun. 2018, pp. 1–5.
+VOLUME 7, 2019
+
+[34] T. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, ‘‘Protograph based raptor-like LDPC codes,’’ IEEE Trans. Commun., vol. 63, no. 5, pp. 1522–1532, May 2015.
+[35] D. Divsalar, S. Dolinar, C. Jones, and K. Andrews, ‘‘Capacity approaching protograph codes,’’ IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 876–888, Aug. 2009.
+[36] D. E. Hocevar, ‘‘A reduced complexity decoder architecture via layered decoding of LDPC codes,’’ in Proc. IEEE Workshop Signal Process. Syst. (SIPS), Austin, TX, USA, Oct. 2004, pp. 107–112.
+[37] Q. Lu, Z. Shen, C. W. Sham, and F. C. M. Lau, ‘‘A parallel-routing network for reliability inferences of single-parity-check decoder,’’ in Proc. Int. Conf. Adv. Technol. Commun. (ATC), Ho Chi Minh City, Vietnam, Oct. 2015, pp. 1–6.
+[38] J. H. Bae, A. Abotabl, H. P. Lin, K. B. Song, and J. Lee, ‘‘An overview of channel coding for 5G NR cellular communications,’’ APSIPA Trans. Signal Inf. Process., vol. 8, no. 1, pp. 1–14, Jan. 2019.
+[39] LDPC Design for eMBB Data, document R1-1706970, 3GPP, Huawei, HiSilicon, Hangzhou, China, May 2017.
+[40] Union, Set Union of Two Arrays. Accessed: Dec. 5, 2019. [Online]. Available: https://www.mathworks.com/help/matlab/ref/double.union. html
+[41] A. Anand and G. de Veciana, ‘‘Resource allocation and HARQ optimization for URLLC traffic in 5G wireless networks,’’ IEEE J. Sel. Areas Commun., vol. 36, no. 11, pp. 2411–2421, Nov. 2018.
+[42] S. R. Khosravirad, G. Berardinelli, K. I. Pedersen, and F. Frederiksen, ‘‘Enhanced HARQ design for 5G wide area technology,’’ in Proc. IEEE 83rd Veh. Technol. Conf. (VTC Spring), Nanjing, China, May 2016, pp. 1– 5.
+[43] T. Bai, C. Xu, R. Zhang, A. F. A. Rawi, and L. Hanzo, ‘‘Performance of HARQ-assisted OFDM systems contaminated impulsive noise: Finitelength LDPC code analysis,’’ IEEE Access, vol. 7, pp. 14112–14123, 2019.
+[44] P. Murugappa, A. Baghdadi, and M. Jézéquel, ‘‘Parameterized areaefficient multi-standard turbo decoder,’’ in Proc. Design, Automat. Test Eur. Conf. Exhib. (DATE), Grenoble, France, Mar. 2013, pp. 1–6.
+[45] M. Karkooti, P. Radosavljevic, and J. R. Cavallaro, ‘‘Configurable, high throughput, irregular LDPC decoder architecture: Tradeoff analysis and implementation,’’ in Proc. IEEE 17th Int. Conf. Appl.-Specific Syst., Archit. Process. (ASAP), Steamboat Springs, CO, USA, Sep. 2006, pp. 1–8.
+[46] Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Amendment 5: Enhancements for Higher Throughput, Standard IEEE 802.11n-2009, 2009.
+[47] Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, Amendment 4: Enhancements for Very High Throughput for Operation in Bands Below 6 GHz, Standard IEEE 802.11ac-2013, 2013.
+[48] Set Difference of Two Arrays. Accessed: Dec. 5, 2019. [Online]. Available: https://www.mathworks.com/help/matlab/ref/setdiff.html
+[49] Part 16: Aire Interface for Fixed and Mobile Broadband Wireless Access Systems, Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands and Corrigendum 1, Standard IEEE 802.16e-2005, 2005.
+[50] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications (DVB-S2), Standard ETSI EN 302 307, ETSI, 2009.
+[51] Throughput Requirements of LDPC Decoder, document R1-1707069, 3GPP, Ericsson, Hangzhou, China, May 2017.
+[52] Efficient Channel Coding Implementations for EMMB, document R11610139, 3GPP, Qualcomm Incorporated, Lisbon, Portugal, Oct. 2016, pp. 10–14.
+[53] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, ‘‘Techniques and architectures for hazard-free semi-parallel decoding of LDPC codes,’’ EURASIP J. Embedded Syst., vol. 2009, no. 8, pp. 1–15, Jan. 2009.
+[54] Z. Wu, D. Liu, and Y. Zhang, ‘‘Matrix reordering techniques for memory conflict reduction for pipelined QC-LDPC decoder,’’ in Proc. IEEE/CIC Int. Conf. Commun. China (ICCC), Shanghai, China, Oct. 2014, pp. 354–359.
+[55] Complexity, Throughput and Latency Analysis on LDPC Codes for EMMB, document R1-1700246, 3GPP, ZTE Microelectronics, Spokane, WA, USA, Jan. 2017, pp. 16–20.
+[56] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X. Hu, ‘‘Reducedcomplexity decoding of LDPC codes,’’ IEEE Trans. Commun., vol. 53, no. 8, pp. 28–34, Aug. 2005.
+185383
+
+H. Wu, H. Wang: High Throughput Implementation of QC-LDPC Codes for 5G NR
+
+HAO WU received the M.S. degree in communication and information systems from Tianjin University, in 2009. He is currently a Senior Engineer with ZTE corporation, where he develops technologies to improve the performance of wireless broadband communication systems. He has authored a number of articles. He holds a number of patents. His research interests include wireless communication systems, digital signal processing, and error control coding.
+
+HUAYONG WANG received the M.S. degree in IC design engineering from Peking University, in 2007. He is currently a Senior Engineer with ZTE Corporation, Shenzhen, China. His research interests include wireless communications systems and VLSI design.
+
+185384
+
+VOLUME 7, 2019
+
+

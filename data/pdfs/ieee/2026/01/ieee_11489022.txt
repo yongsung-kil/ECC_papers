@@ -1,0 +1,3045 @@
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+161
+
+In-Memory Bit Error Rate Estimation Using Syndromes of LDPC Codes
+
+Yotam Gershon , Graduate Student Member, IEEE, and Yuval Cassuto , Senior Member, IEEE
+
+Abstract—Modern AI systems entail steep energy costs due to massive-scale computations and data transfers; offloading parts of the computations to be performed in-memory holds great potential for reducing both. This paper studies a new architecture proposed for reliable in-memory computations. Its main component is a coding scheme that is designed for both inmemory error-rate estimation/detection and outside-of-memory error correction. Estimation and/or detection are used to decide when the error rate exceeds the tolerance of the computation, at which point error correction is invoked. The coding scheme is based on a nested bilayer LDPC construction, where in particular, the first layer comprises degree-1 variable nodes guaranteeing accurate bit-error rate (BER) estimation and detection. Towards that, we derive a closed-form maximum-likelihood BER estimator for irregular codes, and a gapped hypothesis testing framework for deciding when to decode given some prescribed error-rate tolerance. The performance analysis of the derived estimator includes a closed-form mean-squared-error expression with explicit dependence on the check-degree distribution. For the hypothesis testing the analysis shows the dependence of detection performance on the same degree distribution. Both results reveal an advantage of check-regular codes that minimize dominant error terms among codes with a given average check degree.
+Index Terms—In-memory computing, LDPC codes, estimation, bit error rate, hypothesis testing, fault tolerant computing, memory architecture.
+I. INTRODUCTION
+I N-MEMORY computing is a paradigm aiming to address the emerging bottlenecks of data-transfer rates and power to and from the memory [1], termed as the memory wall [2]. Based upon introducing processing capabilities into the memory itself, this approach gains increasing momentum in the last decade, mainly due to the ever increasing demand for efficient artificial intelligence (AI) computing platforms. AI systems perform massive computations on vast data, hence porting key AI primitives to in-memory accelerators may improve performance and reduce power significantly. Many architectures have been proposed to enable processing without transferring data outside the memory, ranging from implementing logic gates within traditional charge-based memories (mainly SRAM [3], [4] and DRAM [5]), to utilizing inherent
+Received 17 November 2025; revised 19 February 2026; accepted 15 April 2026. Date of publication 21 April 2026; date of current version 5 May 2026. This work was supported in part by NSF-U.S-Israel Binational Science Foundation (BSF) under Grant 2023627. An earlier version of this paper was presented in part at the 2025 IEEE International Symposium on Information Theory (ISIT) [DOI: 10.1109/ISIT63088.2025.11195686]. (Corresponding author: Yotam Gershon.)
+The authors are with The Andrew and Erna Viterbi Faculty of Electrical and Computer Engineering, Technion—Israel Institute of Technology, Haifa 3200003, Israel (e-mail: yotamgr@campus.technion.ac.il; ycassuto@ee.technion.ac.il).
+Digital Object Identifier 10.1109/JSAIT.2026.3686020
+
+properties of resistance-based memories for quantized analog computations (mainly RRAM [6] and MRAM [7]).
+However, these highly efficient architectures also present challenges, one of them being maintaining reliability. On one hand, data integrity is challenged and degraded by the dynamic nature of the data and frequent read/write accesses, and on the other hand, error mitigation becomes challenging due to resource and latency constraints limiting the ability to employ powerful error-correction coding (ECC). The traditional way in which ECC is used for memory reliability is encoding before each write and decoding after each read [8]. This method is problematic for in-memory computing because of the fine access granularity and limited computing resources that challenge this approach. There have been proposals to implement ECC in memory (e.g. [9]), however, modern coding techniques, such as LDPC [10], [11] and polar [12], [13] codes, are difficult to decode with in-memory logic, while more traditional, easier-to-decode coding schemes are costly in redundancy.
+That said, in-memory computing architectures can usually allow for a certain fraction of errors in the stored data, since many modern computing applications, especially in the fields of AI and machine learning [14] and approximate computing [15], can tolerate some errors throughout computations. This allows to divide the reliability maintenance between: 1) simple error-control tasks performed in-memory, and 2) powerful error-correction tasks performed outside the memory only infrequently, when higher reliability is needed. Under this setting, the paper studies two error-control tasks to be performed in-memory: bit-error rate (BER) estimation, and BER-threshold crossing detection. Both tasks are performed using the sparse check equations of LDPC codes, in a complementary way to the common use of these codes as a powerful error-correction scheme.
+In this paper we study LDPC codes that are particularly designed for these two error-control tasks. More specifically, we design degree distributions (DD) that enable accurate estimation and threshold detection of BER from the syndrome weight (that can be easily evaluated in-memory without decoding). We use a special class of codes that have degree-1 variable nodes, which we call non-intersecting variable nodes (NIV). NIV codes enjoy the useful property of statistically independent check equations. For error correction NIV codes are not useful in themselves, but we show how to concatenate them to get any desired DD for error correction. This allows to implement the codes in a nested architecture: a subset of parity checks is used for estimation/detection (or both), while the full set is used for error correction. The paper
+
+2641-8770 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+162
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+studies the DD’s performance in both estimation and detection, while correction is covered by the vast literature on LDPC analysis and design. In a practical use of these codes in an inmemory architecture, BER estimation provides a fine-grained evaluation of the reliability, while BER-threshold detection is a coarser reliability measure that requires specifying a tolerable level of BER. Either of the two enables the split-maintenance approach suggested above: only when the (periodically measured) BER level is declared intolerable, the data is transferred to a processing unit that decodes the full LDPC code; then it re-writes the corrected codeword to memory (and repeating indefinitely).
+A. Related Work
+BER estimation from syndromes was studied in [16], where a closed-form maximum likelihood (ML) estimator was derived for check-regular codes, and a mean squared error (MSE) analysis was performed using the known CramerRao lower bound. A general form for check-irregular codes was provided, without a closed-form expression due to its complexity. All the results in [16] are derived under the assumption that syndrome values (representing satisfaction of parity-check constraints) are independent between different parity checks. In [17] this assumption is relaxed through an explicit analysis of the syndrome weight variance, taking into account the statistical dependence. Then, a normal distribution approximation, described by the expectation (already known from [16]) and this exact variance, is used to more accurately capture the syndrome weight distribution.
+B. Paper Organization and Contributions
+In Section III we explore the relation between the error weight (and equivalently, error rate) and the syndrome weight, which are the basis for BER estimation from syndromes, from the perspective of both variable and check nodes. In Section IV we describe the memory reliability architecture based on inmemory estimation+detection and out-of-memory correction. The heart of the architecture is a nested LDPC coding scheme with NIV codes for estimation. We examine the properties of such NIV codes, show how to use them for estimation while augmenting them with additional parity checks for powerful correction capability in the out-of-memory code. We specify the correction-code construction through the usual LDPC degree-distribution pair, but appropriately constrained in a bi-layer structure to guarantee the NIV property of the estimation code. Then, in Section V we pursue BER estimation by deriving ML estimators. We provide an estimator for the general check-irregular case, shown to generalize the previously known estimator for check-regular codes. We continue to analyze the estimator’s performance, focusing on a closedform expression for the MSE, with an explicit dependence on the check DD. We use this explicit dependence to understand the main aspects of DD’s influence on the MSE, and show that, in the regime of small BER, the dominant terms of the MSE are monotone increasing with the DD’s variance, and are thus minimized by check-regular codes for any given average check degree. In Section VI we move to BER-threshold detection
+
+using a gapped hypothesis-testing framework (has a “don’t care” gap between hypotheses). We derive the type-I and typeII detection errors as a function of the code’s DD, and then use approximate surrogates to lower bound the combined detection performance. This analysis also provides an optimization tool for setting the DD to maximize performance. Finally, in Section VII we present numerical simulations to both illustrate and support the findings in previous sections. Along with the introduction of an in-memory error control architecture, the main theoretical contributions of this work are as follows:
+1) Generalizing ML estimation to irregular codes (based on an approximated likelihood function),
+2) Providing a closed-from expression for the DD-dependent estimation MSE, along with a simplified expression for its dominant terms, and showing that check-regular codes minimize these dominant terms,
+3) Introducing a gapped hypothesis-testing framework (with a “don’t care” region) for deciding when to decode, using the gap for analyzing the DD-dependent detection performance, and showing the optimality of check-regular codes with respect to a surrogate lower bound on the detection performance.
+
+II. PRELIMINARIES
+
+A. Notations
+
+We denote by Cn(Λ, Ω) an ensemble of irregular LDPC
+
+codes of length n and DD Λ(x)
+
+Pdv
+i=1
+
+Λi
+
+xi
+
+and
+
+Ω(x)
+
+Pdc
+i=1
+
+Ωi xi,
+
+with
+
+Ωi, Λi
+
+describing
+
+the
+
+relative
+
+fraction
+
+of
+
+vari-
+
+able and check nodes of degree i, respectively. We assume
+
+Ω1 = 0 to prevent variable nodes fixed to 0. For checkregular (resp. variable-regular) codes with Ω(x) = xdc (resp. Λ(x) = xdv ), we denote the ensemble explicitly by Cn(Λ, xdc ) (resp. Cn(xdv , Ω)). The class of check-regular codes, sometimes
+
+referred to as right-regular, is studied extensively in the
+
+literature (e.g. [18], [19], [20], [21]), and will be of a specific
+
+interest throughout the paper. We denote m nΛ (1)/Ω (1) as
+
+the number of check nodes, where represents derivative with
+
+respect to x. The parity-check matrix (PCM) of size m × n of C ∈ Cn(Λ, Ω) is denoted H. For any word x ∈ {0, 1}n the
+
+syndrome is defined by sx HxT (with sx = 0 for codewords).
+
+The well-known Hamming weight and Hamming distance will
+
+be denoted by wH(·) and dH(·, ·), respectively. The Tanner graph [22] corresponding to H is denoted by GH = (V ∪ U , E) with V = {v1, . . ., vn}, U = {u1, . . ., um} denoting the sets of variable and check nodes, and E = {(vi, u j) : H ji = 1} denoting
+the edges. The degree of a node v ∈ V or u ∈ U is denoted
+
+by deg(v) or deg(u), respectively. For a natural number N
+
+we denote [N] {1, 2, . . ., N}. P(Z = z), E[Z] denote the
+
+probability distribution and expectation of a random variable
+
+(RV) Z, respectively. O(·) will denote the big-O notation [23].
+
+Finally, We define the cumulative Binomial probability of an
+
+odd number of successes by
+
+po(n, p)
+
+X
+k∈{0,...,n} k odd
+
+!
+
+n pk(1 − p)n−k = 1 − (1 − 2p)n .
+
+k
+
+2
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+163
+
+B. Memory Channel Model
+For some word c ∈ {0, 1}n stored in memory, we assume the occurrence of bit-flips, replacing c with c , the result of passing c through a memoryless binary symmetric channel (BSC) with crossover probability p ∈ [0, 0.5]. Let e c ⊕ c ∈ {0, 1}n, with ⊕ denoting an element-wise XOR operation, be the error vector. Let we wH(e) = dH(c, c ) be the error weight, which is a Binomial random variable with parameter p. The BER is defined by we/n. Unless stated otherwise, s sc = se will denote the measured syndrome of the noisy c . The syndrome weight ws wH(s) will be the main statistic for BER estimation (i.e., estimating we from ws). With a slight abuse of terminology, we will interchangeably discuss estimating the channel parameter p and the empirical error weight we.
+III. RELATIONS BETWEEN ERROR WEIGHT AND SYNDROME WEIGHT
+In this section we first formulate the relations between the error weight and the weight of the corresponding syndrome with respect to an LDPC code, which will form the basis for estimating the former from the latter.
+
+A. Combinatorial Variable-Node Perspective Analysis
+
+For a given error vector e = (e1, . . ., en), it is clear that only the subset Ve = {vi ∈ V : ei = 1}, that is, nodes with erroneous value, affect the syndrome s. Thus for ease of notation, we describe Ve using consecutive indices {v¯1, . . ., v¯we }. We write ([we]l) to denote all the subsets (i1, . . ., il) of [we] with l elements such that i1 < i2 < . . . < il, and for each v¯ ∈ Ve, we denote by U(v¯) the subset of check nodes that are connected
+to v. The following theorem describes ws as a function of we and U (Ve).
+Theorem 1: Given an error vector e of weight we,
+
+ˇ
+
+ˇ
+
+we
+
+ˇl
+
+ˇ
+
+ws
+
+=
+
+X(−2)l−1
+
+X
+
+ˇ\ ˇ
+
+U
+
+(v¯i
+
+j
+
+)ˇˇ
+
+ˇ
+
+ˇ
+
+l=1
+
+([we]l) ˇ j=1
+
+ˇ
+
+we
+
+X = deg(v¯i) − 2
+
+X ˇˇU (v¯i) ∩ U (v¯ j)ˇˇ +
+
+i=1
+
+1≤i< j≤we
+
++ 4 X ˇˇU (v¯i) ∩ U (v¯ j) ∩ U (v¯k)ˇˇ − . . .. (1)
+
+1≤i< j<k≤we
+
+Proof: See Appendix A-A.
+
+Theorem 1 implies several facts on the parity of ws. We notice that all terms but the first in Eq. (1) have even coeffi-
+
+cients. Hence, the parity of ws is determined solely by the first
+
+term,
+
+Pwe
+i=1
+
+deg(v¯i).
+
+The
+
+next
+
+corollary
+
+and
+
+additional
+
+results
+
+in Appendix A-B follow immediately from this observation.
+
+Corollary 1: If all the variable-node degrees are even (Λi 0 only for even i), ws is even for every error vector e.
+
+This “pathology” is important when considering a prob-
+
+abilistic analysis of ws (as done in the rest of the paper),
+
+which due to approximations may deviate from this behavior.
+
+However, as we show in Appendix A-B, even a small fraction
+
+of odd-degree variable nodes is sufficient for mitigating this
+
+pathology.
+
+B. Probabilistic Check-Node Perspective Analysis
+
+The relation given in Eq. (1) becomes exponentially hard to evaluate as we grows, and therefore a probabilistic analysis is required from the check-node perspective.
+
+Let u j ∈ U be a check node corresponding to the syndrome element s j. Let V(u j) be the subset of variable nodes connected to u j. We say that u j is unsatisfied if s j = 1, which occurs if an odd number of nodes vi ∈ V(u j) are erroneous.
+Lemma 1: (From [16]) the probability of a check node u j of degree d being unsatisfied is
+
+pu(d)
+
+=
+
+po(d,
+
+p)
+
+=
+
+1 2
+
+1 − (1 − 2p)d
+
+.
+
+(2)
+
+Proof: For each vi ∈ V(u j), an error occurs with probability
+
+p, statistically independent of other nodes. By its definition,
+
+po(ˇˇV(u j)ˇˇ = d, p) describes the probability of an odd number
+
+of such errors.
+
+The probability distribution of ws can be derived from the probability of unsatisfied checks. Let Uu = {u j ∈ U : s j = 1} be the subset of unsatisfied check nodes. Then,
+
+P(ws = k) = P (|Uu| = k) .
+
+(3)
+
+In general, the simultaneous satisfaction of multiple check nodes is governed by statistically dependent events. This complicates the explicit derivation of P(ws). The approximate independence assumption made in [16] is not accurate enough for our purposes (as shown numerically later in Section VII). Moreover, the approximated normal distribution with exact variance approach proposed in [17] is prohibitive for our purposes, since the two parameters describing the distribution, both depending on p, make the ML estimation untractable. We will therefore use a special class of codes for estimation, under which the events are strictly independent. We refer to such codes as non-intersecting variable nodes (NIV) codes. The rationale behind this terminology, together with an analysis of the conditions and properties of these codes, is presented in Section IV-B. Although this special class of codes exhibits poor error-correction performance, it provides an exact probability distribution of the syndrome weight, thus highly useful for estimation, as discussed in the next corollaries (we show in the next section how to add error correction to NIV codes via bi-layer concatenation).
+Corollary 2: For a check-regular code C with Ω(x) = xdc and NIV, ws is a Binomial RV with m trials and probability pu(dc).
+Corollary 3: For a code C with general Ω(x) and NIV, ws is a Poisson-Binomial RV, with probability vector p ∈ (0, 1)m composed of mΩi values equal to pu(i), for 1 ≤ i ≤ dc.
+Notice that for check-regular codes, all the entries of the vector p from Corollary 3 are pu(dc), and the Poisson-Binomial distribution degenerates to the Binomial distribution from Corollary 2.
+
+IV. IN-MEMORY ERROR CONTROL ARCHITECTURE
+In this section we describe the proposed architecture for efficient and reliable in-memory computations. We formalize the use of an LDPC code for estimation, and detail the construction allowing to combine an estimation NIV code within a general error-correcting code.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+164
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+in-memory routing and the derivation of ML estimator. The latter is discussed in the following section.
+
+B. NIV Codes: Independent Syndrome Elements
+As discussed in Section III-B, we wish for the estimation code C1 that the satisfaction of different syndrome elements will form statistically independent events, whereas in general this is not the case.
+
+Fig. 1. System block diagram of the proposed architecture.
+A. Proposed Architecture and Operation
+We employ and analyze an LDPC coding scheme for reliable in-memory computations. Let C1, C2 be two codes with PCM H1, H2, respectively, designed such that C2 ⊂ C1 (meaning that H1 is a sub-matrix containing m1 < m2 rows from H2, and any codeword of C2 is also a codeword of C1). C1 and C2 will be referred to as the estimation code and correction code, respectively. These codes are operated in the proposed architecture as in the following stages:
+1) Encode: let x ∈ {0, 1}n−m2 be an information word to be stored. Encode x using C2 to obtain c, and store c.
+2) Estimation: perform a periodical in-memory computation of s = H1(c )T , that is, the syndrome of the possibly corrupted c with respect to C1. Estimate pˆ (discussed in Section V), and whether p exceeds some predefined tolerance ptol (discussed in Section VI). If it does, move to step 3.
+3) Decoding: read c from memory into a resourceful processing unit, use C2 to decode c into c, and store c again.
+As can be seen, the estimation code C1 is used for inmemory BER estimation and detection, while the correction code C2 is used for out-of-memory error correction. The correction with C2 is also performed upon standard read accesses, when the data is required externally. The efficiency of the proposed scheme is based upon two principles:
+1) Ensuring that the resource-expensive out-of-memory correction will occur as rarely as possible, only when it must, so that high IMC efficiency will be maintained.
+2) Ensuring that once correction is invoked, the BER will be low enough so it will succeed with very high probability.
+Fig. 1 illustrates the proposed architecture and operation. The XOR gates (blue) are determined through the check equations in H1. The comparator of the syndrome weight, calculated by a counter accumulating logical ’1’ XOR results, with the a predefined threshold wt (discussed in Section VI) tells the controller whether a correction invocation is required. The controller then uses the full H2 to decode and re-writes the data to the memory cells. It can be seen that each memory cell is connected to exactly one XOR gate. This corresponds to degree-1 variable nodes in H1, which is very useful for both
+
+Observation 1: For a memoryless channel, the random events (s j = 1, sk = 1) are statistically independent if and only if V(u j) ∩ V(uk) = ∅.
+
+Therefore, we seek codes that eliminate the dependency through disjoint variable nodes.
+Definition 1: A code C is said to have non-intersecting variable nodes (NIV) if for every l ∈ {2, . . ., m},
+
+l
+
+\
+
+∀ 1 ≤ j1 < . . . < jl ≤ m V(u ji ) = ∅.
+
+(4)
+
+i=1
+
+Following Observation 1, we see that for NIV codes the satisfaction of syndrome elements constitutes independent events as desired.
+NIV codes can be explicitly described through the variable DD, as shown in the next lemma.
+
+Proposition 1: A code C has NIV if and only if Λ(x) = x, that is, the degree of any variable node is 1.
+
+Proof: Let v be a variable node of degree d > 1. Then,
+
+for
+
+U (v)
+
+=
+
+u1, . . ., ud,
+
+we
+
+have
+
+Td
+i=1
+
+V (ui )
+
+=
+
+{v}.
+
+In
+
+the
+
+other
+
+direction, assume there exist u1, u2 such that V(u1)∩V(u2) ∅,
+
+then for v ∈ V(u1) ∩ V(u2) we have deg(v) ≥ 2.
+
+This unusual restriction on the variable DD has substantial implication on the code performance for error correction.
+
+Proposition
+
+2: A code C
+
+∈ Cn(x, Ω), thus NIV,
+
+has
+
+m 2
+
+Ω
+
+(1)
+
+codewords of weight 2.
+
+Proof: Beginning with the all-zero codeword, for each u ∈
+
+U , flipping any pair v1, v2 ∈ V(u) to 1 provides a codeword
+
+(since deg(vi) = 1). For any u of degree i there are
+
+i 2
+
+such
+
+pairs, and there are mΩi such nodes. Therefore,
+
+#
+
+weight
+
+2
+
+words
+
+=
+
+m
+
+dc
+X
+
+Ωi
+
+i(i
+
+− 2
+
+1)
+
+=
+
+mΩ 2
+
+(1).
+
+i=2
+
+We conclude that NIV codes have poor error correction capability, which is entirely prohibitive for using them in the traditional framework as error detection and correction codes. However, the structure of the proposed architecture from Section IV-A allows the use of NIV codes for estimation only, while also taking sub-codes of them having much more powerful correction capability. This is formalized in the following definition, in which we denote by [A; B] the vertical concatenation of two matrices A and B with the same number of columns.
+Definition 2: an estimation-correction code is a pair C1, C2 of LDPC codes that hold
+1) C2 ⊂ C1, that is, H2 = [H1; H¯ 2],
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+165
+
+A. Estimation for Check-Regular Codes
+For completeness, we revisit a result from [16], using our terminology and notations. Following Corollary 2, a ML estimator can be derived for check-regular codes.
+
+Fig. 2. Illustration of a bi-layer estimation-correction code, with DD Ω(x) = 2/3 · x2 + 1/3 · x3 and Λ(x) = x2, and codes C1 ∈ C7(x, Ω) (upper checks) and C2 ∈ C7(Λ, Ω) (all checks). Notice that in this example Λ¯ (x) = x, inducing C¯2 ∈ C7(x, Ω) as well (lower checks).
+
+Proposition 3: (from [16]) For an NIV check-regular code C ∈ Cn(x, xdc ), the BER ML estimator is
+
+pˆ reg (w s )
+
+=
+
+1 2
+
+1 − ([1 − 2ws/m]+)1/dc
+
+,
+
+(5)
+
+where [x]+ max{0, x}.
+
+Proof: See Appendix B-A.
+
+2) C1 ∈ Cn(x, Ω) has NIV, 3) C2 ∈ Cn(Λ, Ω), has desired variable DD and threshold.
+In addition to NIV codes enabling an accurate analysis of the probability distribution of ws, they introduce another significant advantage–since each variable node is of degree 1, each memory cell should only be electrically connected to a single parity check logic, thus preventing a complex inmemory routing between cells and parity checks. A random code construction for an estimation-correction code from Definition 2 is now described. The bottom-up approach is to start from the estimation code C1 and add check equations to nest it in a correction code C2 with desired DD.
+
+Construction 1 (bi-layer Estimation-Correction Code):
+
+1) Construct C1: given a check DD Ω(x), choose a random code C1 ∈ Cn(x, Ω) (e.g. using Richardson-Urbanke
+
+socket-based construction [11]) to obtain H1.
+
+2) Construct C2: given a variable DD Λ(x) with Λ1 = 0,
+
+set
+
+Λ¯ (x)
+
+=
+
+Λ(x)/x
+
+=
+
+Pdv
+i=2
+
+Λi
+
+xi−1.
+
+Choose
+
+a
+
+random
+
+code C¯2 ∈ Cn(Λ¯ , Ω). Vertically concatenate the PCM H¯ 2
+
+of C¯2 to H1 from the previous step to obtain H2.
+
+Discussion 1: Let m¯ 2 denote the number of rows in H¯ 2. Note
+
+that
+
+m1
+
+=
+
+n/Ω
+
+(1).
+
+Moreover,
+
+Λ¯
+
+(1)
+
+=
+
+Pdv
+i=2
+
+Λi(i − 1)
+
+=
+
+Λ
+
+(1) −
+
+1, and therefore m¯ 2 = n(Λ (1) − 1)/Ω (1). Hence, we have
+
+m2 = m1 + m¯ 2 = nΛ (1)/Ω (1). In addition, since H1 adds a
+
+single 1 to each column of H¯ 2, the variable DD corresponding
+
+to H2 is Λ¯ (x) · x = Λ(x), as desired.
+
+Fig. 2 illustrates the Tanner graph of a bi-layer estimation-
+
+correction code from Construction 1 with Λ(x) = x2, Ω(x) =
+
+2 3
+
+x2
+
++
+
+1 3
+
+x3.
+
+Construction
+
+1
+
+is
+
+an
+
+instance
+
+of
+
+the
+
+known
+
+bi-layer
+
+LDPC codes [24], specifically composed of an estimation layer
+
+(checks of C1) and a complementary layer (checks of C¯2), to
+
+be used along with the estimation layer, for powerful error
+
+correction. Efficient design techniques have been proposed for
+
+bi-layer codes in [25]. A topic for future work is studying such bi-layer designs, and constructing such Cn(Λ, Ω) codes with
+
+desired correction performance, in particular, allowing C1 and C¯2 to have different check-degree distributions.
+
+V. MAXIMUM LIKELIHOOD BER ESTIMATION
+The probabilistic relations in Section III-B suggest the use of statistical estimation of p from ws. Since no a-priori assumptions are made for p, the framework of maximum likelihood (ML) estimation is most suitable.
+
+Note that we used Λ(x) = x to require NIV and ensure that
+ws is strictly Binomial. This is in contrast with [16], in which the Binomial distribution is an approximation for general Λ(x).
+
+B. Estimation for Check-Irregular Codes
+
+We now wish to generalize the result from check-regular to any general irregular check DD. However, due to the complex combinatorial form of its probability mass function (PMF), the Poisson-Binomial distribution leads to an intractable ML estimation. We therefore begin by using a widely used Poisson approximation to the Poisson-Binomial distribution [26]. From this point forward we denote ζp 1 − 2p.
+Definition 3: For an NIV check-irregular code C ∈ Cn(x, Ω), define
+
+λ( p)
+
+pT 1
+
+=
+
+dc
+X mΩi pu(i)
+
+=
+
+m 2
+
+1 − Ω(ζp)
+
+,
+
+i=1
+
+with p as defined in Corollary 3 and 1 being the all-one vector. Moreover, define
+
+p˜u(Ω)
+
+λ(p) = 1 m2
+
+1 − Ω(ζp)
+
+,
+
+(6)
+
+as the average unsatisfied-check probability.
+
+Proposition 4: Let ws be a Poisson-Binomial RV as defined
+
+in Corollary 3, and W be a Poisson RV with parameter λ(p).
+
+Let
+
+p
+
+satisfy
+
+pu(dc) ≤
+
+1 4
+
+(Eq.
+
+(2)).
+
+Then,
+
+ws−W
+
+1
+
+≤
+
+8
+
+"
+
+1
+
+−
+
+2Ω(ζp) + Ω(ζp2) 1 − Ω(ζp)
+
+#
+
+= 16p 1 + Ω (1)/Ω (1) + O p2 ,
+
+with
+
+ws − W
+
+1
+
+=
+
+P∞
+r=0
+
+|P(ws
+
+= r) − P(W
+
+= r)|.
+
+Proof: See Appendix C.
+
+Based on Proposition 4, for small values of p, it is very
+
+reasonable to consider ws from Corollary 3 as a Poisson
+
+RV. Since a Poisson RV W follows the concentration bound
+
+P
+
+(|W
+
+−
+
+λ|
+
+>
+
+x)
+
+≤
+
+exp
+
+n −
+
+x2 2(λ+x)
+
+o
+
+[27],
+
+it
+
+can
+
+be
+
+verified
+
+that
+
+the
+
+tail probability (for values that cannot be attained in Poisson-
+
+Binomial) satisfies
+
+P
+
+(ws
+
+>
+
+m)
+
+≤
+
+nm exp −
+2
+
+(1
+
+−
+
+o p˜u(Ω))2 ,
+
+(7)
+
+which is practically 0 for reasonable values of m (e.g. m > 100) and small enough p (for which 1 − p˜u(Ω) is close to 1).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+166
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+Moreover, since the Binomial distribution in the check-regular case is a special case of the Poisson-Binomial distribution, the approximation is further motivated in the general case.
+Assumption 1: From here on, unless stated otherwise, we assume ws ∼ Pois (λ(p)).
+We can now derive the ML estimation for irregular codes.
+
+Proposition 5: Under Assumption 1, for an NIV checkirregular code C ∈ Cn(x, Ω), the BER ML estimator is
+
+pˆ irr (w s )
+
+=
+
+1 2
+
+1 − Ω−1
+
+[1 − 2ws/m]+
+
+,
+
+(8)
+
+where Ω−1(x) is the inverse function of the polynomial Ω(x).
+
+Proof: See Appendix B-B.
+
+We note that finding the inverse Ω−1(·) as an algebraic expression is generally not possible, but the inversion can be performed numerically for values in [0, 1].
+Observation 2: For a check-regular code C ∈ Cn(x, xdc ) we have Ω−1(x) = x1/dc . Substituting to Eq. (8) we get Eq. (5), showing that the check-regular estimator is a special case of the check-irregular estimator.
+
+C. Degree-Distribution-Dependent Estimation Performance
+
+In the following, pˆ and pˆ(ws) will be used as compact replacements of pˆirr(ws) from Eq. (8). We now analyze the estimation performance of the proposed estimator in terms of MSE, that is,
+
+mse(p) E (pˆ − p)2 = var(p) + bias(p)2,
+
+where var(p) E (pˆ − E[pˆ])2 and bias(p) E pˆ − p are
+the estimator’s variance and bias, respectively. Our main goal is to study the effect of Ω(x) on the MSE. We define τ P (ws ≤ m/2), so that 1 − τ is the probability of truncation of the estimator (that is, the case where the value inside the [·]+ in Eq. (8) is negative). τ, which is a function of m and p, can
+
+be easily calculated from the Poisson distribution assumed for
+
+ws. Using a similar concentration bound as in Eq. (7), it can be verified that
+
+1
+
+−
+
+τ
+
+≤
+
+exp
+
+( −m Â 1 2
+
+−
+
+Ã2) p˜u(Ω)
+
+,
+
+(9)
+
+which indicates that the truncation becomes exponentially
+
+negligible as m grows. We denote g(x)
+
+1
+
+−
+
+2
+
+x m
+
+,
+
+Ec[X]
+
+E
+
+X|ws
+
+≤
+
+m 2
+
+.
+
+Lemma 2: It holds that
+
+τEc Ω−1(g(ws)) = ζp + O max ˚m(1 − τ), p2« .
+
+Proof: See Appendix D-A. Corollary 4: It follows from Lemma 2 that
+
+bias(p) = ζp 2
+
+τ − 2 Ec
+
+Ω−1(g(ws))
+
+= O max ˚m(1 − τ), p2« .
+
+Corollary 4 shows that the estimator is asymptotically unbiased for small crossover probabilities. We note that the regularity conditions under-which the ML estimator is known
+
+to be asymptotically unbiased [28] (Section 10.6.2) do not apply to pˆ(ws) due to the truncation [1 − 2ws/m]+, and hence Corollary 4 is important for establishing this. This result is also crucial in the proof of the following theorem, which is the main result of this section.
+Theorem 2: It holds that
+
+mse( p)
+
+=
+
+1 − Ω(ζp2) 4mΩ (ζp)2
+
++ (1 −
+
+τ) Â ζp Ã2 2
+
++ η,
+
+(10)
+
+where
+
+Â η = O max
+
+m2(1
+
+−
+
+τ)2,
+
+p4,
+
+1 m2
+
+,
+
+1
+
+− m
+
+τ
+
+,
+
+p2(1
+
+−
+
+τ)
+
+Ã ,
+
+which is small compared to the leading terms for small p and
+
+large m.
+
+Proof: See Appendix D-B.
+
+Theorem 2 shows that the MSE arises from two major
+
+distinct error mechanisms. The first term stems from the usual
+
+estimation variance which dominates in the non-truncated
+
+region of the estimator. The second term, resulting from the
+
+estimation bias, is significant in the truncated region obtained
+
+with probability (1−τ), where the error is given by the constant
+
+1 2
+
+−
+
+p
+
+=
+
+ζp 2
+
+with zero variance.
+
+Using Theorem 2 we now wish to investigate the main
+
+trends of MSE dependency on the DD Ω(x). 1 − τ is clearly
+
+monotone increasing with λ(p) and therefore with p, and thus
+
+the MSE is dominated by each of the terms in a different
+
+region of p values. We first wish to establish the region in
+
+which the estimator is typically not truncated, that is, where
+
+the MSE is dominated by the first (variance) term.
+
+Definition 4: For a given Ω(x) (and m) we define
+
+pcut(Ω)
+
+p
+
+for which
+
+1 − Ω(ζp2) 4mΩ (ζp)2
+
+=
+
+(1 − τ) Â ζp Ã2 , 2
+
+as the cutoff p, that is, the value of p for which the two MSE terms are equal (recall ζp = 1 − 2p).
+We will focus on the region p < pcut(Ω), which we will call the non-truncated region. Far enough from the boundary in that region, 1 − τ is very close to 0 and the MSE is approximately (1 − Ω(ζp2))/(4mΩ (ζp)2). We therefore define our goal as described in the next problem.
+
+Problem 1: Given a value pmax ∈ (0, 0.5) bounding the interval for estimation, set ζmax 1 − 2pmax, and find a DD Ω(x) that solves,
+
+minimize J(Ω) 1 − Ω(ζm2 ax) /Ω (ζmax)2 subject to pcut(Ω) > pmax
+
+Since Problem 1 is still hard to solve, we further simplify J(Ω). Using Taylor’s expansion about ζp = 1 (p = 0), we have
+
+Ω(ζp2) = 1 − 4pΩ (1) + 4p2 Ω (1) + 2Ω (1) + 1, Ω (ζp)−2 = Ω (1)−2 + 4pΩ (1)−3Ω (1) + 2,
+
+with 1 = O(p3), 2 = O(p2). Using algebraic manipulations we get
+
+J(Ω) =
+
+pmax m
+
+Ä 1 − pmax Ω (1)
+
++
+
+2 pmax Ω (1)2
+
+Ω
+
+(1)
+
++ O(pm3 ax).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+167
+
+We denote by J˜(Ω) this approximation of J(Ω) after neglecting O(pm3 ax) terms. We can now observe two important dependencies:
+
+1) For the family of check-regular codes, with Ω (1) = dc and Ω (1) = dc(dc − 1), we have
+
+J˜(Ω) =
+
+pmax m
+
+Ä 1 − 3pmax dc
+
++ 2pmax
+
+,
+
+which is clearly monotone decreasing with the degree
+
+dc.
+
+2) For the family of codes with a given average degree
+
+Ω (1) = aR, J˜(Ω) is monotone increasing with Ω (1).
+
+We denote var(Ω)
+
+Pdc
+i=1
+
+i2Ωi
+
+−
+
+aR2
+
+as
+
+the
+
+variance
+
+of
+
+the check DD. We get that Ω (1) = var(Ω) + aR(aR − 1),
+
+and so we can see that for integral aR the check-regular code of degree aR, with var(Ω) = 0, minimizes J˜(Ω).
+
+We conclude that for small values of pmax and under the constraint pcut(Ω) > pmax, check-regular codes minimize the dominant terms of the MSE for every integral average
+
+check degree. Moreover, increasing the degree decreases the
+
+MSE. However, pcut(Ω) also decreases when the degree dc is increased (as will be seen in Section VII), and so for a
+
+given pmax, a certain maximal degree exists for which the constraint pcut(Ω) > pmax is satisfied. Therefore, a possible solution methodology is to calculate pcut(Ω) for check-regular
+codes with increasing degrees, and take the maximal degree
+
+for which the constraint is still satisfied. The effectiveness of
+
+this section’s findings will be demonstrated in Section VII.
+
+For completeness, we propose a design procedure for an
+
+estimation-correction code based on this section’s results.
+
+Procedure 1: Given some tolerable error rate pmax (e.g., based on the predetermined error resilience of some neural
+
+network using the data [29]), perform the following stages:
+
+1) For the family of check-regular codes Ω(x) = xdc , find the maximal dc∗ for which pcut(Ω) > pmax.
+2) Draw a random code C1 ∈ Cn(x, xdc∗ ). 3) Use some known procedure for optimizing Λ(x) given
+Ω(x) = xdc∗ and some desired correction threshold (see
+
+[30, Chapter 4.10.1] for example).
+
+4) Draw a random code C¯2 ∈ Cn(Λ¯ , xdc∗ ).
+
+5) Encode x ∈ {0, 1}n−k2 , with k2 = n ·
+
+1−
+
+Λ (1) dc∗
+
+Á ,
+
+using
+
+C2 obtained from concatenating the PCMs of C1 and
+
+C¯2 from above. Use the check equations of C1 for in-
+
+memory estimation, and the entirety of C2’s equations
+
+for error correction outside of memory.
+
+VI. ERROR-THRESHOLD DETECTION
+Recall that the architecture described in Section IV-A is based on an indication whether the current BER satisfies p > ptol. This can be achieved by invoking the BER estimator pˆ(ws) and comparing it to ptol. However, a more direct approach to detecting the threshold crossing is by a hypothesis-testing framework pursued in this section. We emphasize that since C2 can be designed as a standard powerful code, our focus on the hypothesis testing remains on C1, used for deciding when to decode.
+
+A. Hypothesis Testing for Threshold-Crossing Detection
+Considering the proposed architecture, we aim at distinguishing between the region p > ptol in which a correction must be invoked, and the region p ≤ ptol where correction is not required and wastes computation resources. Under this set-up, it is reasonable to introduce a margin [ptol − δ, ptol) in which it is equally “acceptable” to invoke correction or not (not required, but less wasteful than when p is very low). This is formalized in the following definition.
+Definition 5: For δ ∈ (0, ptol), a δ-gapped hypothesis testing for correction invocation is the binary set of hypotheses
+
+H0 : p ≤ ptol − δ, H1 : p > ptol,
+
+correction should not be invoked, correction should be invoked.
+
+The gap δ is crucial for non-degenerate analysis of the
+
+DD-dependent detection performance when there is no prior
+
+knowledge regarding p, as we will see in Section VI-B. It
+
+is noted that given some non-trivial (non-uniform) prior, a
+
+Bayesian hypothesis testing without a gap can be consid-
+
+ered, a topic which we leave for future research. We define
+
+ψ(x)
+
+m 2
+
+(1
+
+−
+
+Ω(1
+
+−
+
+2x)),
+
+and
+
+recall
+
+from
+
+Definition
+
+3
+
+that
+
+ψ(p) = λ(p) is the mean of ws. Since Ω(x) is monotone
+
+increasing, so does ψ(x), and it holds that p > x if and only
+
+if λ(p) > ψ(x). Therefore, we can reformulate the problem to
+
+testing whether λ(p) ≤ ψ(ptol − δ) or λ(p) > ψ(ptol). Under Assumption 1, ws is a Poisson random variable, which meets
+
+the conditions of Karlin-Rubin theorem [31]. Therefore, the
+
+test that rejects H0 if and only if ws > wt ∈ {0, . . ., m/2} (wt is a decision threshold) is uniformly most powerful.1 The type-I
+
+and type-II error probabilities [28] are now given by
+
+3α(δ) P(reject H0|H0) = P (ws > wt|λ(p) ≤ ψ(ptol − δ)) , β P(accept H0|H1) = P (ws ≤ wt|λ(p) > ψ(ptol)) ,
+respectively. We denote by Fpois(x; λ) the cumulative distribution function (CDF) of a Poisson RV with parameter λ, and
+
+αψ(δ, wt) 1 − Fpois(wt; ψ(ptol − δ)), βψ(wt) Fpois(wt; ψ(ptol)).
+
+Since
+
+d dλ
+
+Fpois
+
+(
+
+x;
+
+λ)
+
+=
+
+−
+
+d dx
+
+Fpois(x
+
+−
+
+1;
+
+λ)
+
+≤
+
+0,
+
+taking
+
+α(δ), β
+
+with
+
+equality in the conditioning on λ(p) implies
+
+α(δ) ≤ αψ(δ, wt) β ≤ βψ(wt).
+
+(11)
+
+Notice that αψ, βψ depend on ptol as well, but since it is a system parameter not to be set in design, we omit it for brevity.
+
+B. Optimizing Detection Performance
+We are now interested in designing the check DD (uniquely determining ψ(x)) to optimize the hypothesis-testing performance. Following conventional ROC analysis methods [32], we aim to maximize 1 − β − α(δ) for any point on the curve.
+1The reader is referred to [28] for details on uniformly most powerful tests (Definition 8.3.11), the Karlin-Rubin theorem (Theorem 8.3.17) and its conditions. It is also noted that although that theorem is stated for hypotheses with no gap (δ = 0), the proof also holds for any δ > 0.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+168
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+Since this is hard to do we will use the well-known technique
+of optimizing a surrogate function [33]. Definition 6: For a given parameter set (δ, wt, ptol) and
+function ψ(x), let
+
+Dψ (δ, wt) 1 − βψ(wt) − αψ(δ, wt).
+
+(12)
+
+From Eq. (11) we have that Dψ(δ, wt) ≤ 1 − β − α(δ). We will therefore use Dψ(δ, wt) as a closed-form lower bound surrogate for the detection performance, to be maximized.
+However, the relationship between Dψ and a given check DD and its corresponding ψ(x) is not immediate. We further
+clarify this relationship through the following results. Define ∆ ψ(ptol) − ψ(ptol − δ), and
+
+D∗(∆)
+
+wt
+X
+
+e−ψ( ptol )
+
+j!
+
+e∆ (ψ(ptol) − ∆) j − ψ(ptol) j
+
+.
+
+j=0
+
+Theorem 3: For every set (δ, wt, ptol) such that δ ∈ (0, ptol) and wt ≤ ψ(ptol − δ), it holds that
+1) D∗(∆) = Dψ(δ, wt) ≤ 1 − β − α(δ), 2) D∗(∆) is monotone increasing with ∆.
+
+Proof: By definition
+
+Dψ(δ, wt)
+
+= Fpois(wt; ψ(ptol − δ)) − Fpois(wt; ψ(ptol))
+
+=
+
+wt
+X
+
+Ä e−ψ(
+
+ptol
+
+−δ)
+
+ψ(
+
+ptol
+
+− δ) j
+
+− e−ψ(ptol) ψ(ptol) j
+
+j!
+
+j!
+
+j=0
+
+=
+
+wt
+X
+
+e−ψ( ptol )
+
+j!
+
+e∆ (ψ(ptol) − ∆) j − ψ(ptol) j
+
+,
+
+j=0
+
+which is exactly D∗(∆). Moreover,
+
+dD∗
+
+wt
+X
+
+e−ψ( ptol )
+
+d∆ =
+
+j!
+
+e∆ (ψ(ptol) − ∆) j (ψ(ptol)−∆− j) ,
+
+j=0
+
+in which all terms are strictly positive for j < wt ≤ ψ(ptol−δ) = ψ(ptol) − ∆, and non-negative for j = wt.
+Remark 1: The condition wt ≤ ψ(ptol − δ) can be thought in terms of setting a threshold pt on pˆ(ws) that satisfies wt = ψ(pt), and then requiring pt ≤ ptol −δ, i.e., setting the threshold
+below the gap region, which intuitively maximizes the utility of the gap region in reducing β without contributing to α.
+Lemma 3: For every 0 < δ < ptol it holds that
+
+∆ = mδ Ω (1) − (2ptol − δ)Ω (1) + O mpt3ol . (13)
+
+Proof: See Appendix E.
+Theorem 3 along with Lemma 3 show that the surrogate
+lower bound on the detection performance can be maximized by maximizing the single parameter ∆, which in turn is described explicitly in terms of the check DD Ω(x). More specifically, by fixing δ, ptol and neglecting the O(mp3tol) term, we have the following:
+
+1) For the family of check-regular codes, the check degree that formally maximizes ∆ is
+
+dc∗
+
+=
+
+arg max {d
+d
+
+− (2ptol
+
+− δ)d(d
+
+− 1)}
+
+=
+
+1 + 2ptol − δ . 4ptol − 2δ
+
+(14)
+
+Note that dc∗ is not necessarily integral, hence the term “formal” used above.
+2) For the family of codes with a given average degree Ω (1) = aR, the code that maximizes ∆ is the code with minimal Ω (1) = var(Ω) + aR(aR − 1). For integral aR this code is the check-regular code with check degree aR.
+These put together suggest that check-regular codes with degree dc∗ maximize the surrogate lower bound when dc∗ is integral.
+
+C. Setting the Detection Threshold
+
+After setting the ROC curve by designing ψ(x), it is left to choose a working point on that curve by setting wt. Since β represents the critical event of not invoking correction when the BER exceeds its tolerance, it is reasonable to set some β∗ as the maximum allowed β.
+Definition 7: Given ψ(x) and the parameters (δ, ptol), let
+
+wt∗ = max{wt} s.t βψ(wt) ≤ β∗.
+
+Lemma 4: The threshold w∗t satisfies
+
+w∗t
+
+=
+
+min{αψ(δ,
+wt
+
+wt)}
+
+s.t
+
+βψ(wt) ≤ β∗,
+
+(15)
+
+and it holds that β < β∗.
+Proof: Fpois(wt; ·) is clearly monotone increasing with wt. Following Eq. (11), minimizing αψ(δ, wt) translates to maximizing wt, and the constraint ensures β < β∗.
+
+Discussion 2: Eq. (15) can be described by choosing
+the leftmost point (smallest αψ) on the ROC curve for which the true-positive probability 1 − βψ is above 1 − β∗,
+which is the best working point on that curve under the constraint β∗.
+
+D. Code Design Procedure We end this section by proposing a design procedure for
+estimation-correction with good error-threshold detection.
+Procedure 2: Apply Procedure 1 with the following adjustments:
+1) Replace pmax in Procedure 1 with ptol from Definition 5. 2) Replace dc∗ from Procedure 1 with dc∗ from Eq. (14). 3) Set wt∗ based on Eq. (15). 4) Instead of estimating pˆ, compare ws to w∗t and decide
+whether to perform out-of-memory decoding.
+VII. NUMERICAL SIMULATIONS In this section we perform numerical simulations to demonstrate the concepts derived in previous sections.
+
+A. Probabilistic Syndrome Weight
+We first examine the probability distribution of ws. We randomly construct parity-check matrices using RichardsonUrbanke ensemble construction [11], and for each matrix we randomize error patterns of a BSC channel over the all-zero codeword, calculate the syndrome and its weight. We use
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+169
+
+Fig. 3. Cumulative probability of ws, comparing Monte Carlo simulations (blue bars), Poisson-Binomial (solid red), Poisson (dashed green), and normal with corrected exact variance [17] (dash-dot magenta), for Ω(x) = x6, p = 0.05, m = 400, left: NIV code right: non-NIV code exhibiting worse fit by Poisson-Binomial model and Poisson approximation.
+
+Fig. 4. Left: MSE terms (first and second terms from Theorem 2 - dashes and dash-dots, respectively), and pcut(Ω) (vertical dotted lines), right: Analytical expression (solid) vs Monte Carlo simulations (squares), for different Ω(x) (colors) and m = 100.
+
+this Monte Carlo approach to estimate the CDF of ws, and compare it to the Poisson-Binomial distribution (Corollary 3), the approximated Poisson distribution (Assumption 1), and the normal approximation with corrected exact variance proposed in [17]. Fig. 3 shows the results of this comparison for a NIV code and non-NIV code with Ω(x) = x6, p = 0.05 and m = 400. For both cases we have E[ws] 93.7. It is first seen that the normal approximation with corrected exact variance from [17] captures the actual (Monte Carlo) distribution for both NIV and non-NIV cases, but since it leads to an impractical ML estimation we need the Poisson approximation. Considering that, it can be seen that the Poisson-Binomial distribution tightly fits the actual distribution (and the corresponding normal approximation) for NIV codes, whereas for non-NIV codes the actual distribution deviates with a larger variance, illustrating the importance of NIV for estimation. It is also seen that the Poisson distribution closely fits the accurate Poisson-Binomial one.
+B. MSE
+We now turn to examine the MSE of estimating p. On the left side of Fig. 4, we show the first two MSE terms from Theorem 2 as a function of p, for two check DDs: Ω(x) = x6 and Ω(x) = 0.65x3 + 0.35x9. The first term (dashes) originates from the non-truncated estimator variance, and the second term (dash-dotted) originates from the truncated bias. On the right side of Fig. 4, we compare the sum of the two terms (solid lines) to Monte Carlo simulations of the
+
+MSE, performed by drawing ws from the Poisson-Binomial distribution for each value of p, evaluating (pˆ(ws)− p)2 directly and taking the average. It is seen that the sum of these terms provides a very good estimate of the actual (Monte Carlo) MSE, and moreover, that the first term dominates for values of p smaller than pcut(Ω) (Definition 4, shown as a vertical dotted line on the left-side figure), while the second term dominates for larger p.
+In Fig. 5, we examine the MSE dependence on the DD Ω(x), as discussed in Problem 1 and thereafter. On the left side we show how increasing the degree of check-regular codes decreases the MSE for small enough values of p, but also decreases pcut(Ω) thus limiting the “effective” region for estimation. On the right side, we show how for a given average check degree of Ω (1) = 6, the MSE increases when the DD variance var(Ω) increases. These numerical results further validate the findings in Section V-C.
+In Fig. 6 we demonstrate the importance of using NIV codes, by comparing the MSE from Eq. (10) to Monte Carlo simulations for NIV codes and non-NIV codes (general case in [16], here Λ(x) = 0.5x4 + 0.5x6), with the same m = 100 and the same check DDs Ω(x) = x9 and Ω = x5. It can be seen that unlike the NIV case (squares), in the non-NIV case (triangles) the actual MSE turns out to be significantly larger compared to the analytical expression.
+Moreover, since the MSE highly depends on m, in Fig. 7 we verify that Eq. (10) provides a good estimate for different values of m, namely, {30, 100, 1000}.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+170
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+Fig. 5. Left: MSE for check-regular codes with different degrees, and pcut(Ω) (vertical dotted lines), Right: MSE for fixed average degree with different distributions, m = 100.
+
+Fig. 6. MSE analytical expression (solid) vs Monte Carlo simulation for NIV Fig. 8. ROC curve of the hypothesis testing for correction invocation, for
+
+codes (squares) and non-NIV codes (triangles).
+
+different DDs.
+
+(dot markers) to 25 (x markers), and also that the latter is superior to an irregular code with the same average degree of 25 (+ markers), due to the negative effect of the DD variance var(Ω) analyzed above. These numerical results further validate the findings in Section VI-B.
+
+Fig. 7. MSE analytical expression (solid) vs Monte Carlo simulations (squares) for different m values and different DDs.
+It can be well seen that the analytical expression fits the Monte Carlo results, and that the trends of variance-dominated and bias-dominated regions apply to all examined parameters.
+C. Hypothesis Testing
+We lastly examine the dependence of the hypothesis-testing performance on the DD Ω(x), as discussed following Theorem 3 and Lemma 3. In Fig. 8, we show the ROC curve of 1 − βψ(wt) as a function of αψ(δ, wt), for ptol = 10−2, δ = 10−3 and m = 100, under which the degree dc∗ that formally maximizes ∆ in (14) is 25.5.
+Recall that the performance measure is 1 − βψ − αψ, which translates to the vertical distance from the 1 − βψ = αψ line (dashed). It can therefore be seen that the performance is improved when increasing the check-regular degree from 6
+
+VIII. CONCLUSION
+In this paper we look into the problem of efficiently estimating the BER of stored data directly in-memory. This methodology enables an efficient error control, where the memory performs simple logic-in-memory to decide whether (costly) error correction is actually required. We employed a bi-layer LDPC code design, where only the first layer of degree-1 variable nodes is used for in-memory estimation, and a second layer, complementing the code to a desired variable degree distribution. We study a maximum-likelihood estimation of the BER from the syndrome weight of the first layer, and analyze the degree-distribution-dependent estimation performance. We then introduce a gapped hypothesis testing framework for setting the syndrome-weight threshold. We analyze the degree-distribution-dependent hypothesis-testing performance. In both problems, check-regular codes are shown (for low crossover probabilities) to offer performance advantages.
+APPENDIX A VARIABLE-NODE PERSPECTIVE ANALYSIS OF ws
+A. Proof of Theorem 1
+The following will be useful in the proof ahead.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+171
+
+Definition 8: Let S N = {S 1, S 2, . . . , S N} be a multiset of
+
+N sets S i. The N-ary symmetric difference of S is defined
+
+by
+
+80 1
+
+9
+
+l
+
+∆S N
+
+<[ [
+
+=
+
+@ S ij A : l odd ,
+
+:([N]l) j=1
+
+;
+
+that is, the multiset of all subsets of odd number of sets
+of S .
+We note that Definition 8 is a straight-forward generalization of the known symmetric difference between two sets [34], ∆S 2 = S 1∆S 2 (S 1 \ S 2) ∪ (S 2 \ S 1), through ∆S N = (((S 1∆S 2)∆S 3)∆. . .∆S N).
+Lemma 5: The N-ary symmetric difference’s cardinality is
+
+ˇˇ
+
+N
+
+ˇl ˇ
+
+ˇˇ∆S
+
+Nˇ ˇ
+
+=
+
+X(−2)l−1
+
+X
+
+ˇ\ ˇ
+
+S
+
+ˇ ijˇ
+
+.
+
+(16)
+
+ˇˇ
+
+l=1
+
+([N]l) ˇ j=1 ˇ
+
+Proof: We prove through mathematical induction. Base: for
+
+N
+
+=
+
+2,
+
+we
+
+have
+
+the
+
+known
+
+relation
+
+[34]
+
+ˇˇ∆S
+
+2
+
+ˇ ˇ
+
+=
+
+|S
+
+1|
+
++
+
+|S 2|
+
+−
+
+2|S 1 ∩ S 2|. Step: we assume that Eq. (16) holds for N − 1, and
+
+examine its right-hand term for N.
+
+ˇˇ
+
+N
+
+ˇl ˇ
+
+X(−2)l−1
+
+X
+
+ˇ\ ˇ
+
+S
+
+ˇ ijˇ
+
+ˇˇ
+
+l=1
+
+([N]l) ˇ j=1 ˇ
+
+ˇ
+
+ˇ
+
+N
+
+ˇ l−1
+
+ˇ
+
+(=a) X(−2)l−1
+
+X
+
+ˇ\ ˇ
+
+S
+
+ij
+
+∩
+
+S
+
+ˇ Nˇ
+
+ˇ
+
+ˇ
+
+l=1
+
+([N−1]l−1) ˇ j=1
+
+ˇ
+
+ˇˇ
+
+N−1
+
+ˇl ˇ
+
++ X(−2)l−1
+
+X
+
+ˇ\ ˇ ˇ Sijˇ
+
+ˇˇ
+
+l=1
+
+([N−1]l) ˇ j=1 ˇ
+
+N
+(=b) |S N | − 2 X(−2)l−2 X
+
+l=2
+
+([N −1]l−1 )
+
+ˇ
+
+ˇ
+
+ˇ l−1
+
+ˇ
+
+ˇ\ ˇ
+
+S
+
+ij
+
+∩
+
+S
+
+ˇ Nˇ
+
++
+
+ˇˇ∆S
+
+N−1ˇ ˇ
+
+ˇ
+
+ˇ
+
+ˇ j=1
+
+ˇ
+
+(=c)
+
+|S
+
+N
+
+|
+
+−
+
+2
+
+ˇˇ∆S
+
+N−1
+
+∩
+
+S
+
+N
+
+ˇ ˇ
+
++
+
+ˇˇ∆S
+
+N−1ˇ ˇ
+
+(=d)
+
+ˇˇ∆S
+
+Nˇ ˇ
+
+,
+
+ˇ
+
+ˇ
+
+where
+
+(a)
+
+is
+
+obtained
+
+by
+
+splitting
+
+the
+
+intersections
+
+ˇTl ˇ j=1
+
+S
+
+i
+
+j
+
+ˇ ˇ
+
+to those that include S N (first term) and those that do not, (b)
+
+is by excluding l = 1 from the first sum (resulting in |S N|)
+
+and by the induction assumption on the second term, (c) is by
+
+replacing l ← l − 1 and observing that the intersection with
+
+S N in each subset is the same as the intersection of the entire
+
+set with S N, and (d) is from the known relation of Eq. (16) for N = 2.
+
+The proof of Theorem 1 now directly follows.
+
+Proof: (Theorem 1) A syndrome element satisfies s j = 1
+if and only if the corresponding check u j is connected to an odd number of nodes in Ve. We therefore need to evaluate the cardinality of the symmetric difference of the multiset ˚U (v¯1), . . ., U (v¯we )«. The expression for ws now follows directly from Lemma 5, completing the proof.
+
+B. Asymptotic Even-Odd Symmetry of ws
+Following Theorem 1, we examine the asymptotic even-odd properties of ws.
+
+Corollary 5: If all the variable-node degrees are odd (Λi 0 only for odd i), the parities of ws and we are the same.
+This behavior is important when considering codes with alleven variable-node degrees, for which we will always see an even syndrome weight. However, the following results show that an asymptotic even-odd symmetry is obtained for every other type of codes.
+
+Proposition 6: For a code with all-odd variable-node degrees
+and an error weight we that is Binomially distributed with a fixed parameter p ∈ (0, 0.5), we have
+
+lim
+n→∞
+
+Pr{ws
+
+is
+
+even}
+
+=
+
+lim
+n→∞
+
+Pr{ws
+
+is
+
+odd}
+
+=
+
+1. 2
+
+Proof: Following Corollary 5, we and ws have the same parity. Since we is a Binomial RV, we have
+
+lim Pr{ws
+n→∞
+
+is
+
+odd}
+
+=
+
+lim
+n→∞
+
+po(n,
+
+p)
+
+=
+
+1, 2
+
+since
+
+(1 −
+
+2 p)n
+
+n→∞
+−→
+
+0
+
+for
+
+p
+
+∈
+
+(0, 0.5).
+
+Proposition 7: For every fraction α ∈ (0, 1) of variable nodes having odd degrees, and any fixed weight we, it holds that
+
+lim Pr{ws
+n→∞
+
+is
+
+even}
+
+=
+
+1 2
+
+(1 + (1
+
+−
+
+2α)we ) ,
+
+lim
+n→∞
+
+Pr{ws
+
+is odd} = 1 (1 − (1 − 2α)we ) . 2
+
+Proof: The number k ∈ {0, . . ., we} of odd-degree variable nodes in Ve has hypergeometric distribution with population size n, sample size we, and αn success states. It is well known that the hypergeometric probability mass function (PMF) with a fixed success fraction α converges to the Binomial PMF with probability α as n → ∞ (see, e.g. [35]). Based on
+Theorem 1, ws is odd if and only if k is odd, and therefore, limn→∞ Pr{ws is odd} = po(we, α).
+
+It can be seen from Lemma 7 that as we grows, the probabilities of ws being even and odd both tend to 1/2, implying an asymptotic symmetry of the parity of ws. Moreover, the limiting results in Lemma 7 also hold approximately when we = O(pn) with a small fraction p (and not a constant as above), since the hypergeometric PMF is well approximated
+by the Binomial PMF in that case too [36]. Therefore, when
+we is Binomially distributed with a fixed small parameter 0 ≤ p 0.5, we again obtain a full symmetry between odd and even weight as n → ∞.
+
+APPENDIX B MAXIMUM LIKELIHOOD DERIVATIONS
+
+A. Proof of Proposition 3 - Check-Regular ML
+
+Proof: pu(dc; p) is bijective and monotone increasing in p ∈ [0, 0.5]. Hence, pu(dc; pˆ) = p∗u = arg maxpu P(ws|pu) and pˆ can be calculated from pu∗. Since ws is Binomial, we have
+
+∂ ∂ pu
+
+log P(ws
+
+=
+
+j|pu) =
+
+j pu
+
+−
+
+m− j 1 − pu
+
+=
+
+j − mpu , pu(1 − pu)
+
+and by setting to zero we get j = mpu. Replacing j with ws and
+
+requiring
+
+pu
+
+≤ 1/2, we get
+
+pu(dc; pˆ) =
+
+1 2
+
+1 − (1 − 2pˆ)dc
+
+=
+
+ws/m, when ws ≤ m/2. Taking the inverse provides the desired
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+172
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+expression.
+
+For
+
+ws
+
+>
+
+m/2,
+
+we
+
+have
+
+∂ ∂ pu
+
+log
+
+P(ws | pu )
+
+>
+
+0
+
+(because p ≤ 1/2 ⇒ pu ≤ 1/2), in that case the boundary
+
+value p = 1/2 maximizes the likelihood.
+
+B. Proof of Proposition 5 - Check-Irregular ML
+
+Proof: Since Ω(x) is a polynomial with non-negative coef-
+
+ficients, it is clearly monotone increasing in [0, 1]. Therefore,
+
+λ(p) is also bijective and monotone increasing in p ∈ [0, 0.5],
+
+and λ(pˆ) = λ∗ = arg maxλ P(ws|λ). Based on Assumption 1,
+
+we have
+
+∂ ∂λ P(ws
+
+=
+
+j|λ)
+
+=
+
+e−λ λ j−1 j!
+
+( j − λ) .
+
+Replacing j with ws and requiring λ ≤ m/2 (since p ≤ 0.5),
+
+we
+
+get
+
+λ( pˆ )
+
+=
+
+m 2
+
+(1
+
+− Ω(1 − 2pˆ))
+
+=
+
+ws
+
+when
+
+ws
+
+≤
+
+m/2.
+
+Taking
+
+the inverse provides the desired expression. For ws > m/2, we
+
+have
+
+∂ ∂λ
+
+P(ws
+
+|λ)
+
+>
+
+0,
+
+and
+
+again
+
+in
+
+that
+
+case
+
+the
+
+boundary
+
+value
+
+p = 0.5 maximizes the probability.
+
+APPENDIX C PROOF OF PROPOSITION 4 - PROBABILITY-DISTRIBUTIONS
+DISTANCE
+
+Proof: Following [26], if max j{p j}
+
+≤
+
+1 4
+
+(where
+
+pj
+
+are entries of p), then
+
+ws − W 1
+
+≤
+
+16
+
+P
+j
+
+p2j /
+
+P
+j
+
+pj.
+
+Since pu(d) is monotone increasing with d, it suffices
+
+to require pu(dc)
+
+≤
+
+1 4
+
+.
+
+We
+
+know
+
+that
+
+the
+
+denominator
+
+is λ(p)
+
+=
+
+m 2
+
+(1
+
+−
+
+Ω(1
+
+−
+
+2 p)).
+
+The
+
+numerator
+
+is
+
+given
+
+by
+
+Pdc
+i=1
+
+mΩi
+
+pu2(i)
+
+=
+
+m 4
+
+Pdc
+i=1
+
+Ωi
+
+1 − 2(1 − 2p)i + ((1 − 2p)2)i
+
+and we get the desired expression. To show the limiting result,
+
+we use the Taylor expansions
+
+Ω(1
+
+−
+
+2 p)
+
+=
+
+∞
+X
+
+Ω(
+
+)(1) (−2 p)
+
+,
+
+!
+
+=0
+
+Ω((1
+
+−
+
+2 p)2 )
+
+=
+
+∞
+X
+
+Ω(
+
+)(1) ((1
+
+−
+
+2 p)2
+
+−
+
+1)
+
+,
+
+!
+
+=0
+
+with Ω( )(x) denoting the order- derivative of Ω(x), and get
+
+ws − W
+
+1
+
+≤8·
+
+4[Ω (1) + Ω
+
+(1)] p2
+
++
+
+P∞
+=3
+
+a
+
+2Ω
+
+(1) p
+
++
+
+P∞
+=2
+
+b
+
+p
+
+p
+
+=
+
+8p ·
+
+4[Ω
+
+(1) + Ω
+
+(1)]
+
++
+
+P∞
+=3
+
+a
+
+2Ω
+
+(1)
+
++
+
+P∞
+=2
+
+b
+
+p
+
+−1
+
+p
+
+−2
+,
+
+where we denoted {a }, {b } as the finite coefficients of p .
+Since the limits of the nominator and denominator of the second term exist (and different from zero), we have that ws − W 1 = 16p (1 + Ω (1)/Ω (1)) + O p2 .
+
+APPENDIX D ESTIMATION PERFORMANCE
+
+A. Proof of Lemma 2 - Asymptotically Unbiased Estimator
+
+Proof: We denote
+
+Ω−(i) (g(k))
+
+di dki
+
+Ω−1
+
+(g(k))
+
+=
+
+Â −2 Ãi m
+
+di dg(k)i
+
+Ω−1
+
+(g(k)) .
+
+Using Taylor’s expansion about ws = 0, restricting ws ≤ m/2 we get the expectation
+
+τEc
+
+Ω−1 (g(ws))
+
+=
+
+τ
+
+∞
+X
+
+Ω−(i) i!
+
+(1)
+
+Ec
+
+wsi
+
+.
+
+(17)
+
+i=0
+
+Since Ω (1) > 0, by the inverse function theorem [37]
+
+Ω−1(g(k)) is analytic in the entire range k ∈ [0, m/2], and
+
+therefore have a radius of convergence of m/2. By the
+
+Cauchy
+
+coefficient
+
+estimate
+
+[38],
+
+it
+
+holds
+
+that
+
+ˇ ˇ
+
+Ω−(i)
+
+(1)
+
+ˇ ˇ
+
+ˇ i! ˇ
+
+=
+
+Â
+
+ÁiÃ
+
+O
+
+2 Ω (1)·m
+
+. Moreover, using Taylor’s expansion of Ω(1 −
+
+2p) about p = 0, we have
+
+λ(p) = m (1 − Ω(1 − 2p)) = mΩ (1) · p + O(m · p2). 2
+
+Now, since Ec[wsi] < E[wsi] = O(λ(p)i) [39], the i-th term in Eq. (17) follows a geometric decay at least as fast as O (2p)i ,
+and so we have
+
+τEc Ω−1 (g(ws)) = τ Ω−1(1)+Ω−(1)(1)Ec[ws] + O(p2)
+
+"
+
+#
+
+= τ 1 − 2Ec[ws] + O(p2) ,
+
+mΩ Ω−1(1)
+
+where we used Ω−1(1) = 1 (since Ω(1) = 1), and where the
+
+second equality is due to the inverse function theorem. It now holds that
+
+m/2
+X τEc[ws] = τ P
+
+ws
+
+=
+
+k|ws
+
+≤
+
+mÁ 2
+
+·
+
+k
+
+k=0
+
+=
+
+τ
+
+m/2
+X
+k=0
+
+P(ws = k, ws ≤ m/2) P(ws ≤ m/2)
+
+·
+
+k
+
+m
+
+m
+
+X
+
+X
+
+= P(ws = k) · k −
+
+P(ws = k) · k
+
+k=0
+
+k=m/2+1
+
+= E[ws] − (1 − τ)
+
+m
+X
+
+P(ws
+
+=
+
+k, ws > 1−τ
+
+m/2)
+
+·
+
+k
+
+k=m/2+1
+
+= E[ws] − (1 − τ)E[ws|ws > m/2]
+
+= λ(p) + O(m(1 − τ))
+
+= mΩ (1) · p + O max ˚m(1 − τ), p2« .
+
+Plugging to the equation above we get τEc Ω−1 (g(ws)) = 1 − 2p + O max ˚m(1 − τ), p2« .
+
+B. Proof of Theorem 2 - MSE Closed Form
+
+The following lemma will be useful for the proof. Lemma 6: Given some smooth function f : R → R and a random variable X, it holds that
+
+var ( f (X)) = [ f (E[X])]2var(X) − [ f
+
+(E[X])]2 var(X)2 4
+
++ O f (E[X])2 + f (E[X]) f (E[X]) E[(X −E[X])3]
+
+Proof: We use Taylor’s expansion for f (X) about E[X] to get
+
+f (X) = f (E[X]) + f (E[X])(X − E[X])
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+GERSHON AND CASSUTO: IN-MEMORY BER ESTIMATION USING SYNDROMES OF LDPC CODES
+
+173
+
++
+
+f
+
+(E[X] 2
+
+(X
+
+−
+
+E[X])2
+
++
+
+O
+
+f
+
+(E[X])(X − E[X])3 ,
+
+and again for f 2(X) to get
+
+f 2(X) = f 2(E[X]) + 2 f (E[X]) f (E[X])(X − E[X])
++ f (E[X])2 + f (E[X]) f (E[X]) (X − E[X])2 + O f (E[X])2 + f (E[X]) f (E[X]) (X − E[X])3 .
+
+Taking the expectation of the latter and subtracting the expectation of the former squared completes the proof.
+We now move on to the proof of the theorem.
+
+Proof: (Theorem 2) We denote G(x) Ω−1(g(x)) and
+
+varc(X)
+
+var
+
+X|ws
+
+≤
+
+m 2
+
+.
+
+Following
+
+the
+
+expression
+
+in
+
+Lemma 2, we have
+
+bias( p)2
+
+=
+
+Â ζp 2
+
+Ã2
+
+−
+
+ζp 2
+
+τEc
+
+[G(ws)]
+
++
+
+τ2 4
+
+Ec
+
+[G(ws)]2
+
+Next, for the estimation variance we observe
+
+E[ pˆ 2 ]
+
+=
+
+m/2
+X
+
+P(k)
+
+Ä
+
+1 2
+
+−
+
+1 G(k) 2
+
+2
++
+
+1−τ 4
+
+k=0
+
+=
+
+1
+
+−
+
+1
+
+m/2
+X P(k)G(k)
+
++
+
+1
+
+m/2
+X P(k)G(k)2
+
+42
+
+4
+
+k=0
+
+k=0
+
+E[ pˆ ]2
+
+=
+
+" 1
+2
+
+−
+
+1 2
+
+m/2
+X
+
+#2 G(k)
+
+k=0
+
+=
+
+1
+
+−
+
+1
+
+m/2
+X P(k)G(k)
+
++
+
+1
+
+m/2
+
+!2
+
+X P(k)G(k)
+
+,
+
+42
+
+4
+
+k=0
+
+k=0
+
+and so we have
+
+var(pˆ) = E[pˆ2] − E[pˆ]2
+
+=
+
+1
+
+m/2
+X P(k)G(k)2
+
+−
+
+1
+
+m/2
+
+!2
+
+X P(k)G(k)
+
+4
+
+4
+
+k=0
+
+k=0
+
+τ = 4 Ec
+
+G(ws)2
+
+−
+
+τ2 4
+
+Ec
+
+[G(ws)]2
+
+=
+
+τ 4 varc
+
+(G(ws))
+
++
+
+τ
+
+− τ2 4 Ec
+
+[G(ws)]2
+
+.
+
+Combining the terms, the MSE follows
+
+mse(p) = bias(pˆ2) + var(p)
+
+=τ 4
+
+varc (G(ws))+Ec [G(ws)]2
+
++
+
+ζp2 4
+
+−
+
+ζp 2
+
+τEc
+
+[G(ws
+
+)]
+
+.
+
+Now, following Lemma 2 we write τEc[G(ws)] = ζp + η1, where η1 = O max ˚m(1 − τ), p2« . We plug this into the
+equation above to get
+
+mse( p)
+
+=
+
+τ 4 varc(G(ws))
+
++
+
+ζ
+
+2 p
+
+4
+
+Â1 τ
+
+−
+
+Ã 1
+
++
+
+ζp
+
+η1 2
+
+Â1 τ
+
+−
+
+Ã 1
+
++
+
+η21.
+
+We
+
+notice
+
+that
+
+1 τ
+
+=
+
+1 + (1 − τ) + O((1 − τ)2),
+
+and
+
+so
+
+mse( p)
+
+=
+
+τ 4 varc(G(ws))
+
++ (1
+
+− τ) ζp2 4
+
++ η2,
+
+where η2 = O max{m2(1 − τ)2, p4} . Based on Lemma 6, we have
+
+varc (G(ws)) = [Ω−(1)(g(λ))]2varc(ws)
+
+−
+
+[Ω−(2)(g(λ))]2 4
+
+varc(ws)2
+
++
+
+O
+
+m−3
+
+,
+
+where we used the known property of the third central moment of the Poisson distribution, (ws − E[ws])3 = λ(p) = O(m), and the fact that the power of m increases as twice the term order
+
+for following terms. As in the proof of Lemma 2, we notice
+
+that
+
+τEc
+
+wsi
+
+=E
+
+wsi
+
+−
+
+(1
+
+−
+
+h τ)E wsi|ws
+
+>
+
+mi 2
+
+= E wsi (1 − δE(i)) ,
+
+with δE(i)
+
+(1 − τ)E
+
+wsi|ws
+
+>
+
+m 2
+
+/E
+
+wsi
+
+= O(1 − τ). It now
+
+follows that
+
+τvarc(ws)
+
+= τEc[ws2] − τEc[ws]2
+
+=
+
+E[ws2]
+
+(1
+
+−
+
+δE(2))
+
+−
+
+1 τ
+
+(E[ws](1
+
+−
+
+δE(1)))2
+
+= var(ws) + E[ws]2 (2δE(1) − (1 − τ)) − δE(2)E[ws2]
+
+= var(ws) + ∆E + O (m(1 − τ)) ,
+
+where ∆E
+
+(2δE(1) − δE(2) − (1 − τ)) λ(p)2 =
+
+O (1 − τ)m2 p2 . Using the inverse function theorem,
+
+we
+
+get
+
+Ω−(1)(g(λ))
+
+=
+
+−2 mΩ (ζp
+
+)
+
+,
+
+and
+
+since
+
+var(ws)
+
+=
+
+O(m),
+
+we
+
+get
+
+τvarc(G(ws))
+
+=
+
+4var(ws) m2Ω (ζp)2
+
++
+
+η3,
+
+where η3 = O max{m−2, m−1(1 − τ), p2(1 − τ)} . To increase the approximation accuracy, we use the actual PoissonBinomial variance, to get
+
+var(ws)
+
+=
+
+dc
+X mΩi pu(i)(1
+
+−
+
+pu(i))
+
+=
+
+m 4
+
+dc
+X Ωi
+
+1 − (ζp2)i
+
+i=1
+
+i=1
+
+=m 4
+
+1 − Ω(ζp2)
+
+,
+
+and so in total we get
+
+mse( p)
+
+=
+
+1 − Ω(ζp2) 4mΩ (ζp)2
+
++
+
+(1
+
+−
+
+τ) Â ζp Ã2 2
+
++
+
+η,
+
+where η takes the maximum between {ηi}i3=1.
+
+APPENDIX E PROOF OF LEMMA 3 - ∆ EXPANSION
+
+Proof: Expanding ψ(x) to a Taylor series around x = 0 gives
+
+ψ(x) = mΩ (1)x − mΩ (1)x2 + O(mx3).
+
+Therefore,
+
+ψ(ptol) − ψ(ptol − δ)
+
+= mΩ (1) ptol − (ptol − δ) + mΩ (1) p2tol −(ptol − δ)2
+
++ O m p3tol − (ptol − δ)3
+
+= mΩ (1)δ + mΩ (1) δ2 − 2ptolδ
+
+Â
+
+Ã
+
++O
+
+m
+
+·
+
+max {
+0≤i≤2,0≤ j≤3−i
+
+ptiol
+
+·
+
+δj}
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+174
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 7, 2026
+
+and since δ < ptol, the last term can be expressed as O mpt3ol .
+ACKNOWLEDGMENT
+The authors wish to thank the JSAIT reviewers for valuable
+comments, and Prof. Ido Tal for valuable suggestions.
+REFERENCES
+[1] A. Sebastian, M. Le Gallo, R. Khaddam-Aljameh, and E. Eleftheriou, “Memory devices and applications for in-memory computing,” Nature Nanotechnol., vol. 15, no. 7, pp. 529–544, Jul. 2020.
+[2] S. A. McKee, “Reflections on the memory wall,” in Proc. 1st Conf. Comput. frontiers, Apr. 2004, p. 162.
+[3] S. Aga, S. Jeloka, A. Subramaniyan, S. Narayanasamy, D. Blaauw, and R. Das, “Compute caches,” in Proc. IEEE Int. Symp. High Perform. Comput. Archit. (HPCA), Feb. 2017, pp. 481–492.
+[4] P. Deaville, B. Zhang, and N. Verma, “A fully row/column-parallel MRAM in-memory computing macro with memory-resistance boosting and weighted multi-column ADC readout,” IEEE J. Solid-State Circuits, vol. 60, no. 5, pp. 1856–1866, May 2025.
+[5] S. Li, D. Niu, K. T. Malladi, H. Zheng, B. Brennan, and Y. Xie, “DRISA: A DRAM-based reconfigurable in-situ accelerator,” in Proc. IEEE/ACM Int. Symp. Microarchitecture, Oct. 2017, pp. 288–301.
+[6] J. Borghetti, G. S. Snider, P. J. Kuekes, J. J. Yang, D. R. Stewart, and R. S. Williams, “‘Memristive’ switches enable ‘stateful’ logic operations via material implication,” Nature, vol. 464, no. 7290, pp. 873–876, Apr. 2010.
+[7] H. Mahmoudi, T. Windbacher, V. Sverdlov, and S. Selberherr, “Implication logic gates using spin-transfer-torque-operated magnetic tunnel junctions for intrinsic logic-in-memory,” Solid-State Electron., vol. 84, pp. 191–197, Jun. 2013.
+[8] C. L. Chen and M. Y. Hsiao, “Error-correcting codes for semiconductor memory applications: A state-of-the-art review,” IBM J. Res. Develop., vol. 28, no. 2, pp. 124–134, Mar. 1984.
+[9] O. Leitersdorf, B. Perach, R. Ronen, and S. Kvatinsky, Efficient Error-Correcting-Code Mechanism for High-Throughput Memristive Processing-in-Memory. Piscataway, NJ, USA: IEEE Press, 2021.
+[10] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[11] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[12] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[13] I. Tal and A. Vardy, “How to construct polar codes,” IEEE Trans. Inf. Theory, vol. 59, no. 10, pp. 6562–6582, Oct. 2013.
+[14] G. Zervakis, H. Saadat, H. Amrouch, A. Gerstlauer, S. Parameswaran, and J. Henkel, “Approximate computing for ML: State-of-the-art, challenges and visions,” in Proc. Asia South Pacific Design Autom. Conf., 2021, pp. 189–196.
+[15] J. Han and M. Orshansky, “Approximate computing: An emerging paradigm for energy-efficient design,” in Proc. 18th IEEE Eur. Test Symp. (ETS), May 2013, pp. 1–6.
+[16] G. Lechner and C. Pacher, “Estimating channel parameters from the syndrome of a linear code,” IEEE Commun. Lett., vol. 17, no. 11, pp. 2148–2151, Nov. 2013.
+
+[17] C. Pacher, P. Grabenweger, and D. E. Simos, “Weight distribution of the syndrome of linear codes and connections to combinatorial designs,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2016, pp. 3038–3042.
+[18] M. A. Shokrollahi, “New sequences of linear time erasure codes approaching the channel capacity,” in Applied Algebra, Algebraic Algorithms and Error-Correcting Codes. Berlin, Germany: Springer, 1999.
+[19] O. Barak, D. Burshtein, and M. Feder, “Bounds on achievable rates of LDPC codes used over the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 50, no. 10, pp. 2483–2489, Oct. 2004.
+[20] E. Paolini and M. Chiani, “On the threshold of right regular LDPC codes for the erasure channel,” in Proc. IEEE 61st Veh. Technol. Conf., vol. 1, May 2005, pp. 664–667.
+[21] P. Oswald and A. Shokrollahi, “Capacity-achieving sequences for the erasure channel,” IEEE Trans. Inf. Theory, vol. 48, no. 12, pp. 3017–3028, Dec. 2002.
+[22] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[23] T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, Introduction to Algorithms, 4th ed., Cambridge, MA, USA: MIT Press, 2022.
+[24] P. Razaghi and W. Yu, “Bilayer low-density parity-check codes for decode-and-forward in relay channels,” IEEE Trans. Inf. Theory, vol. 53, no. 10, pp. 3723–3739, Oct. 2007.
+[25] E. Ram and Y. Cassuto, “Design of bilayer and multi-layer LDPC ensembles from individual degree distributions,” IEEE Trans. Inf. Theory, vol. 67, no. 11, pp. 7096–7109, Nov. 2021.
+[26] L. H. Y. Chen, “On the convergence of Poisson binomial to Poisson distributions,” Ann. Probab., vol. 2, no. 1, pp. 178–180, Feb. 1974.
+[27] C. Canonne. (2016). A Short Note on Poisson Tail Bounds. [Online]. Available: https://www.cs.columbia.edu/
+[28] G. Casella and R. L. Berger, Statistical Inference, 2nd ed., New York, NY, USA: Thomas Publishing, 2002.
+[29] R. M. Zur, Y. Jiang, L. L. Pesce, and K. Drukker, “Noise injection for training artificial neural networks: A comparison with weight decay and early stopping,” Med. Phys., vol. 36, no. 10, pp. 4810–4818, Oct. 2009.
+[30] T. J. Richardson and R. L. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2007.
+[31] S. Karlin and H. Rubin, “The theory of decision procedures for distributions with monotone likelihood ratio,” Ann. Math. Statist., vol. 27, no. 2, pp. 272–299, Jun. 1956.
+[32] T. Fawcett, “An introduction to ROC analysis,” Pattern Recognit. Lett., vol. 27, no. 8, pp. 861–874, Jun. 2006.
+[33] K. Lange, D. R. Hunter, and I. Yang, “Optimization transfer using surrogate objective functions,” J. Comput. Graph. Statist., vol. 9, no. 1, pp. 1–20, Mar. 2000.
+[34] K. H. Rosen, Discrete Mathematics and Its Applications. McGrawHill Education, 2011. [Online]. Available: https://books.google.co.il/ books?id=QlWQzgEACAAJ
+[35] S. Ross, A First Course in Probability. Upper Saddle River, NJ, USA: Prentice-Hall, 2010. [Online]. Available: https://books.google.co.il/ books?id=Bc1FAQAAIAAJ
+[36] U. Rupassara and B. Sedai, “On the convergence of hypergeometric to binomial distributions,” Comput. Inf. Sci., vol. 16, no. 3, p. 15, Jul. 2023.
+[37] W. Rudin, Real and Complex Analysis. New York, NY, USA: McGrawHill, 1987.
+[38] E. M. Stein and R. Shakarchi, Complex Analysis, vol. 2. Upper Saddle River, NJ, USA: Prentice-Hall, 2010.
+[39] J. Riordan, “Moment recurrence relations for binomial, Poisson and hypergeometric frequency distributions,” Ann. Math. Statist., vol. 8, no. 2, pp. 103–111, Jun. 1937.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:49:50 UTC from IEEE Xplore. Restrictions apply.
+
+

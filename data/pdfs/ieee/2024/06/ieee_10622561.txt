@@ -1,0 +1,590 @@
+ICC 2024 - IEEE International Conference on Communications | 978-1-7281-9054-9/24/$31.00 ©2024 IEEE | DOI: 10.1109/ICC51166.2024.10622561
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+A Deep Learning Based Decoder for Concatenated Coding over Deletion Channels
+E. Uras Kargı†, Tolga M. Duman Dept. of Electrical and Electronics Engineering, Bilkent University
+Email: {kargi, duman}@ee.bilkent.edu.tr
+
+Abstract—In this paper, we introduce a deep learning-based decoder designed for concatenated coding schemes over a deletion/substitution channel. Specifically, we focus on serially concatenated codes, where the outer code is either a convolutional or a low-density parity-check (LDPC) code, and the inner code is a marker code. We utilize Bidirectional Gated Recurrent Units (BI-GRUs) as log-likelihood ratio (LLR) estimators and outer code decoders for estimating the message bits. Our results indicate that decoders powered by BI-GRUs perform comparably in terms of error rates with the MAP detection of the marker code. We also find that a single network can work well for a wide range of channel parameters. In addition, it is possible to use a single BI-GRU based network to estimate the message bits via one-shot decoding when the outer code is a convolutional code.
+1
+Index Terms—Deep learning, RNN, GRU, deletion channels, channels with synchronization errors, marker codes.
+I. INTRODUCTION
+We consider binary-input binary-output channels with synchronization errors modeled as deletions and substitutions. Such channels are encountered in various real-world scenarios, such as storage systems, recording channels, and wireless communications [1]. Another scenario in which these models are observed is DNA storage, where existing nucleotides are deleted or new ones are inserted into the DNA strands [2].
+Dobrushin proved that channels with independent and identically distributed (i.i.d.) synchronization errors are information stable; hence, their Shannon capacity exists [3]. While channel capacity calculation remained elusive despite many efforts over the last six decades, computable upper and lower bounds have been developed, e.g., [4]–[6]. There are also practical channel codes designed for such channels, including algebraic codes, convolutional codes, and serially concatenated codes, e.g., [7]–[9].
+An important class of codes for insertion/deletion channels is obtained by concatenating an outer code with an inner marker or watermark code [10]–[12]. Markers are specific sequences of bits inserted into the data stream at regular
+This work was funded by the European Union through the ERC Advanced Grant 101054904: TRANCIDS. Views and opinions expressed are, however, those of the authors only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
+†E. Uras Kargı’s work is also supported by Vodafone within the framework of the 5G and Beyond Joint Graduate Support Program coordinated by the Information and Communication Technologies Authority.
+1Code is available at https://github.com/Bilkent-CTAR-Lab/DNN-forDeletion-Channel
+
+intervals. They serve as reference points for maintaining synchronization, allowing the receiver to detect if there are insertions or deletions between the markers. The outer code can be a powerful channel code such as an LDPC code, a polar code, or a convolutional code [10], [13]. On the other hand, watermark codes employ patterns within a sparsely encoded sequence of bits to recognize and recover from insertion and deletion errors and can be efficiently used with non-binary LDPC codes [11].
+MAP detection is used to identify the synchronization errors by estimating the log-likelihood ratios of the transmitted bits, which are then input to the outer decoder for serial concatenation of an outer code with an inner code over channels with insertions and deletions [10], [11]. As an alternative, we argue that recurrent deep learning architectures may also be promising candidates to deliver a similar performance to that of the MAP detector while offering further benefits. Hence, they represent a potential avenue for development of new decoders for channels with insertions and deletions within the context of marker codes.
+Various deep-learning architectures have been developed for coding over different channels. Several decoder architectures based on multi-layer perceptrons (MLP) have been proposed for one-shot decoding of channel codes in [14], [15]. Decoders based on MLPs have demonstrated that structured codes are learnable by neural networks, and generalizations to unseen codewords are possible. However, for large code lengths, decoding via MLPs does not appear feasible [15]. Recurrent Neural Networks (RNN) have shown excellent performance in handling time-series data due to their internal memory. RNN variants, namely gated recurrent units (GRU) [16] and long short-term memory (LSTM) [17], have further enhanced the performance of RNNs by alleviating the vanishing gradient problem and allowing the network to investigate further the relationship between the data separated by large time steps. As a result, networks based on LSTM and GRU architectures are proposed for decoding convolutional codes [18], demonstrating a close to optimal error performance obtained by MAP decoders. GRUs have also been employed to decode turbo codes, replacing the BCJR blocks in iterative decoding [19]. Moreover, decoders based on the transformer architecture have been demonstrated successfully for different channel codes by combining the attention mechanism and the code structure [20].
+In this paper, we develop a deep learning (DL) based
+
+978-1-7281-9054-9/24/$31.00 ©2024 IEEE
+
+2797
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+
+decoder for concatenation of an outer LDPC or convolutional code with an inner marker code used over channels with deletions and substitution errors. Our contributions are to develop:
+• a BI-GRU estimator for the bit LLRs for the inner marker code,
+• one-shot decoder for serial concatenation of convolutional and marker codes via a complete BI-GRU based architecture.
+Numerical results demonstrate that the newly developed DNN-based decoders offer robust decoding over a deletion channel by replacing the main parts of the decoder.
+We note that after the original submission of this paper, a closely related paper on deep learning-based decoders for coding over insertion/deletion channels was uploaded on Arxiv [21]. The authors propose two distinct setups: a model-based configuration within the framework of forwardbackward equations and a model-free setup, where the implementation focuses on end-to-end estimation of LLRs within a framework akin to ours. The differences in our work and [21] can be highlighted as the incorporation of one-shot decoding approach applied to the receiver in our work, distinct preprocessing steps applied to the received bits, and variations in training methodologies (for instance, utilization of a static dataset in [20] versus simulation-based generation of minibatches during training in our approach).
+The paper is organized as follows. Section II discusses the system model. Section III describes the decoding scheme employing the proposed BI-GRU architecture. Section IV presents some numerical examples demonstrating the performance of the proposed architectures. Finally, the paper is concluded in Section V.
+
+II. SYSTEM MODEL
+
+We consider transmission over binary channels susceptible
+
+to deletions and bit flips, modeling synchronization errors.
+
+Let Pd and Ps be the deletion and substitution probability
+
+of the channel, respectively. That is, each bit is either deleted
+
+with probability Pd or transmitted incorrectly with probability
+
+(1 − Pd)Ps or transmitted correctly with probability (1 −
+
+Pd)(1 − Ps). The deletions and substitutions are independent
+
+for different uses of the channel.
+
+We adopt a serially concatenated scheme as the specific
+
+channel coding approach in which the outer code is either
+
+an LDPC or a convolutional code, and the inner code is a
+
+marker code. Message vector m = (m1, . . . , mk) of length k
+
+where mt ∈ {0, 1} is encoded via the outer code, and then
+
+the encoded sequence c = (c1, . . . , cn) of length n where ct ∈ {0, 1} is interleaved, resulting in cπ. The rate of outer
+
+code is k/n. Then, a pre-selected marker sequence with Nm
+
+bits is inserted after every Nc coded bits in cπ. The rate of
+
+the
+
+overall
+
+code
+
+is
+
+r
+
+=
+
+Nc k (Nc +Nm
+
+)n
+
+.
+
+The
+
+resulting
+
+sequence
+
+of
+
+n(Nc +Nm ) Nc
+
+bits
+
+comprise
+
+the
+
+overall
+
+codeword
+
+as
+
+illustrated
+
+in
+
+Fig. 1.
+
+The codeword is transmitted over a deletion/substitution
+
+channel. At the receiver, a MAP detector can be used to
+
+Message Bits
+
+01011 01111 00101
+
+LDPC /Convolutional Codeword Bits 00110 11010 01111 11011 00001 10110
+
+Marker Insertion to Codeword Bits 00110 01 11010 01 01111 01 11011 01 00001 01 10110 01
+
+Fig. 1. Insertion of marker bits into the LDPC or convolutional coded bits. This case is for when Nc = 5, Nm = 2, k/n = 0.5, r = 5/14 and the two-bit marker of [0, 1].
+
+estimate the LLRs of the bits encoded by the outer code, and the obtained LLRs can be input into the outer code’s decoder. In this paper, our objective is to develop DNN-based alternatives for the MAP detector and the overall decoder for the case of convolutional codes concatenated with marker codes.
+III. PROPOSED DECODING SCHEME EMPLOYING BI-GRUS
+We consider two different setups. In the first setup, we have a serial concatenation of an LDPC (or a convolutional code) with a marker code, and a BI-GRU architecture is developed to estimate the LLRs of the bits input to the marker code. Fig. 2 illustrates the block diagram of the first setup. In the second setup, we focus on the serial concatenation of a convolutional code with a marker code and develop BIGRU architectures that perform one-shot decoding. That is, two BI-GRU architectures are combined to estimate the LLRs and decode the message bits in one step. Fig. 3 depicts the block diagram of the second setup, where the entire receiver is replaced by BI-GRU architectures.
+The transmitted sequence of length T is denoted by x = (x1, . . . , xT ) and the received sequence by y = (y1, . . . , yR) where the length of the received sequence, R, is a random variable due to the deletions, R ≤ T . The proposed BI-GRU based architecture estimates the LLR of each transmitted bit, denoted by L = (L1, . . . , LT ). The estimated LLRs are first de-interleaved, and then those corresponding to marker bits are removed, resulting in the vector L∗ = (L1, . . . , Ln). L∗ is passed to the outer code decoder. A sum-product algorithmbased decoder can be used for LDPC codes, or the Viterbi algorithm can be employed for convolutional codes to estimate the message vector mˆ = (mˆ 1, . . . mˆ k). Other alternatives for the outer code decoder are also possible. For instance, we employ a BI-GRU architecture to estimate the message vector for the second setup [18].
+A. Bi-directional RNN
+We choose the BI-RNN architecture since it can handle variable-length sequences produced at the output of a deletion channel, and it resembles the structure of the MAP detector realized by the forward-backward equations. BI-RNN consists of two independent RNN architectures, forward and backward
+
+2798
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+
+"
+
+OUTER CODE c
+ENCODER
+
+Π
+
+c ! MARKER
+INSERTION
+
+x
+
+DELETION/ SUBSTITION
+
+CHANNEL
+
+"
+
+OUTER CODE c
+ENCODER
+
+Π
+
+c ! MARKER
+INSERTION
+
+x
+
+DELETION/ SUBSTITION
+
+CHANNEL
+
+y
+
+y
+
+"#
+
+OUTER CODE DECODER
+
+L∗ Π!" L
+
+BI-GRU ESTIMATOR
+
+"#
+
+BI-GRU DECODER
+
+L∗ Π!" L
+
+BI-GRU ESTIMATOR
+
+BI-GRU Based Receiver
+
+Fig. 2. The block diagram for the first setup.
+
+Fig. 3. The block diagram for the second setup.
+
+RNN, enabling the network to capture information effectively in both forward and backward direction→−s. In a forward RNN, the hidden state −→at a given −→time t, ht represents the prior information. Let W rec and W in denote the recurrent weight matrix and the input weight matrix of forward RNN, respective→−ly, and f denote an activation function. We can compute ht as follows:
+
+→− −→ →− −→
+
+ht = f (W rec h t−1 + W inyt).
+
+(1)
+
+In a backward RNN, the hidden state at a given time t represents the info←−rmation←−about the←−sequence to the right of the current input, ht. Let W rec and W in denote the recurrent weight matrix and the input we←−ight matrix of backward RNN, respectively. We can compute ht as follows:
+
+←− ←− ←− ←−
+
+ht = f (W rec h t+1 + W inyt).
+
+(2)
+
+A layer of BI-RNN [22] combines a forward and a backward RNN described above. A linear layer with a sigmoid activation function is added on top of the final BI-RNN layer to calculate the conditional probability of xt = 1 given y. Let Wo denote the output weight matrix of the network, σ be the sigmoid function and [ ; ] be the concatenation operator. We c→−alcu←−late the output of the network as P (xt = 1|y) = σ(Wo[ht; ht]). Then, the LLR of xt, L(xt|y) for t = 1, 2, . . . , T is computed using:
+
+→− ←−
+
+L(xt|y)
+
+≜
+
+log P (xt P (xt
+
+= =
+
+0|y) 1|y)
+
+=
+
+log
+
+1
+
+−
+
+σ(Wo[ht; ht →− ←−
+
+])
+
+.
+
+σ(Wo[ht; ht])
+
+(3)
+
+B. BI-GRU as an LLR Estimator
+We implement the BI-GRU architecture as an LLR estimator for the marker code. GRU and LSTM networks address the issues of vanishing and exploding gradients commonly faced in RNNs, while also significantly enhancing memory capabilities compared to simple RNNs [16], [17], [23]. GRUs are chosen instead of LSTMs since the latter is more challenging to train. The BI-GRU is an extension of BI-RNN and has two independent components that are similar to BIRNN outlined in Section III-A, namely forward and backward
+
+BI-GRU. Let ⊙ denote the Hadamard Product; equations of a forward GRU layer are as follows [16]:
+
+zt = σ(Wz[ht−1; yt]))
+
+rt = σ(Wr[ht−1; yt]))
+
+h˜t = tanh(Wh[rt ⊙ ht−1; yt])
+
+(4)
+
+ht = (1 − zt) ⊙ ht−1 + zt ⊙ h˜t,
+
+where zt is the vector that controls how much new information is added to the hidden state, h˜t is the vector that represents the new candidate information, and rt is the vector that controls how much the previous state information is passed to the temporary variable h˜t. All of zt, rt, h˜t, and ht have a size of dBI-GRU.
+Similarly, backward GRU equations are easily obtained as in
+(2). If→−a BI-G←R−U architecture with NBI-GRU layers is employed, then ht and ht serve as inputs to the forward and backward GRU of the following layer, respectively. An MLP with NMLP layers with dimensions dMLP is added at the top of the final layer of BI-GRU, and then (3) can be used to estimate the bit
+LLR.
+
+C. One Shot Decoding of Convolutional Codes Concatenated with Markers
+As an alternative approach, we utilize the BI-GRU architecture as the decoder for the outer code in the second setup, employed in [18]. At time step t, two consecutive LLRs (L2∗t−1, L2∗t) of the vector L∗ are input to the BI-GRU network and the output is the message estimate mˆt for t = 1, . . . , k. A linear layer with a sigmoid activation function is added on top of the final BI-GRU layer to estimate message bits.
+
+D. Implementation Details
+We now describe the training procedure of the BI-GRU architecture for the proposed setups. The BI-GRU networks are trained with a supervised learning approach: For the BI-GRU based estimator, labels are the original transmitted sequences x over a deletion/substitution channel, and the inputs are the received sequence y transformed by −2y + 1 whereas for the BI-GRU decoder, labels are message sequences m and inputs are the LLR vectors L∗ obtained from the BI-GRU based estimator. We do not use a pre-determined data set, instead, we generate each mini-batch randomly during training. I.e, we generate random message bits m (labels), encode them using an outer encoder to produce x, which are then transmitted through a deletion/substitution channel. This process yields
+
+2799
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+
+either y (inputs to the estimator) or L∗ (inputs to the decoder), obtained by estimating LLRs from y. Note that, the BI-GRU based decoders and estimators are trained independently.
+We use the Adam optimizer [24] and a staircase learning decay [25], for which in each S step of the Adam optimizer, the learning rate decays exponentially with parameter D during training. If not stated, we use the default hyperparameters of the Adam optimizer. Batch normalization layers are added between the BI-GRU layers to train the network smoothly for both the estimator and the decoder [26].
+IV. NUMERICAL RESULTS
+As a first example, we use a regular, rate 1/2 LDPC code with n = 204 and k = 102 (taken from [27]). The maximum iteration number of the sum-product decoder is set to 100. We use a two-bit marker [0, 1] and choose Nc as 5 and 10, which results in code rates of 0.358 and 0.4167, respectively. We train two networks for 30, 000 steps, fixing Pd = 0.05 and Ps = 0. The initial learning rate is chosen as 9 · 10−5 for the Adam optimizer, and we use a mini-batch size of 16. The overall input length is T , and since R ≤ T , a total of T − R zeros are padded for training and inference. From our numerical experiments, two consecutive bits after t including the current one, (yt, yt+1) are input to the BI-GRU at time step t since it performs better than giving only yt as an input. We set D = 0.95 and, S = 1000 as detailed in Section III-D. We use gradient clipping with 0.1 to avoid the vanishing gradient problem. LLRs obtained from the BI-GRU estimator are clipped in between [−10, 10] during testing. The loss function is chosen as mean-squared error (MSE). Parameters of the trained BI-GRUs are given in the first and second columns in Table I.
+Fig. 4 and Fig. 5 show the error rate performance of the proposed decoders for the first setup. We observe that the proposed decoders generalize well over the deletion probabilities in the range of 0.02 − 0.07 despite being trained only with Pd = 0.05. The performance gap between the baseline and proposed decoder is smaller for Nc = 10. For instance, when Nc = 5, a BER of 10−3 is achieved at a deletion probability of 0.04 for the proposed decoder and 0.05 for the baseline decoder. When Nc = 10, the same BER is obtained at a deletion probability of 0.025 for the proposed decoder and at around 0.027 for the baseline.
+As a second example, we trained a network to be robust to different deletion and substitution probabilities. We use the same LDPC code and the marker sequence as in the first example and choose Nc = 10. The network is trained by mixing deletion probabilities in [0.01, 0.1] with 0.01 increments and mixing substitution probabilities in [0, 0.1] with 0.01 increments. In this case, unlike the first approach, the bits before timestep t, including the current one, (y1, . . . , yt), are input to the BI-GRU at time step t. The initial learning rate is chosen as 9 · 10−4, and we use a mini-batch size of 16. The loss function is chosen as binary cross entropy (BCE). In this case, since the input size is increased, we use smaller
+
+100
+
+10-1
+
+BER/FER
+
+10-2
+
+10-3
+
+BER - BCJR + LDPC Decoder
+
+FER - BCJR + LDPC Decoder
+
+BER - BI-GRU + LDPC Decoder
+
+10-4
+
+FER - BI-GRU + LDPC Decoder
+
+0.02
+
+0.03
+
+0.04
+
+0.05
+
+0.06
+
+0.07
+
+0.08
+
+P
+d
+
+Fig. 4. BER/FER as a function of the deletion probability for the first setup with BI-GRU as an estimator when Nc = 5.
+
+models. Parameters of the robust BI-GRU are given in the third column in Table I.
+
+Estimators
+
+Decoder
+
+Estimator 1
+
+Estimator 2 Estimator 3
+
+Nc
+NBI-GRU dBI-GRU NMLP
+dMLP
+
+5 6 1024 4 [256,128,32,1]
+
+10 8 1024 4 [256,128,32,1]
+
+10 4 128 3 [128, 32, 1]
+
+2 400 2 [32, 1]
+
+TABLE I PARAMETERS OF TRAINED BI-GRUS AS AN ESTIMATOR OR A DECODER.
+
+An important point is that the baseline approach employing
+
+the BCJR algorithm uses the deletion and substitution
+
+probabilities of the channel to calculate the LLR estimates,
+
+while the BI-GRU based estimator does not. Fig. 6
+
+compares the performance of the proposed decoder with
+
+the baseline over a range of substitution probabilities for
+
+a deletion/substitution channel with Pd = 0.03, and Fig.
+
+7 compares the performance of the proposed decoder with
+
+the baseline over a range of deletion probabilities when
+
+Ps = 0.05. For both figures, we assume that the channel parameters are not known accurately at the receiver. The
+
+baseline decoder estimates the deletion probability using
+
+Pˆd
+
+=
+
+T
+
+−R T
+
+.
+
+Four
+
+different
+
+results
+
+are
+
+produced
+
+by
+
+taking
+
+the
+
+substitution probabilities used at the receiver as {0, 0.03, 0.05,
+
+0.1}. We observe that the proposed BI-GRU based decoder
+
+exhibits improved performance in some cases. Specifically,
+
+when the baseline decoder uses a substitution probability of
+
+0, for a range of deletion probabilities, the proposed decoder
+
+outperforms the BCJR algorithm results. Notably, in terms of
+
+the FER performance, the proposed decoders outperform the
+
+mismatched decoder for a wider range of channel parameters.
+
+We also provide an example where we replace the decoder
+
+of the outer convolutional code with the fully BI-GRU-
+
+based decoder, detailed in Section III-C. We use a rate 1/2,
+
+2800
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+
+100
+
+100
+
+10-1
+
+10-1
+
+BER/FER
+
+BER/FER
+
+10-2
+
+10-3
+
+BER - BCJR + LDPC Decoder
+
+FER - BCJR + LDPC Decoder
+
+BER - BI-GRU + LDPC Decoder
+
+10-4
+
+FER - BI-GRU + LDPC Decoder
+
+0.02
+
+0.03
+
+0.04
+
+0.05
+
+0.06
+
+0.07
+
+P
+d
+
+10-2
+10-3 0
+
+BER - BI-GRU + LDPC Decoder BER - Baseline BER - Baseline when Ps = 0 BER - Baseline when Ps = 0.1 FER - BI-GRU + LDPC Decoder FER - Baseline FER - Baseline when Ps = 0 FER - Baseline when Ps = 0.1
+
+0.02
+
+0.04
+
+0.06
+
+0.08
+
+0.1
+
+P
+s
+
+Fig. 5. BER/FER as a function of the deletion probability for the first setup Fig. 6. BER/FER as a function of substitution probability for a channel with
+
+with BI-GRU as an estimator when Nc = 10..
+
+Pd = 0.03.
+
+(5, 7)octal convolutional code with n = 210, and k = 105. The parameters of the BI-GRU decoder for the convolutional code are given in the fourth column of Table I. We train the BI-GRU decoder for 5000 steps with an initial learning rate of 3 · 10−4. We do not apply any learning rate decay for training in this case. We use the same BI-GRU estimator previously used for the first setup, whose parameters are given in the second column of Table I. We consider two outer decoders as baselines: Viterbi algorithm with soft-decision decoding (SDD) and with hard-decision decoding (HDD). For the SDD case, LLRs of the BCJR algorithm-based estimator are used as if they are the outputs of an additive white Gaussian noise (AWGN) channel, and a correlation metric is used. For the case of the Viterbi algorithm with HDD, the LLRs of the estimator (it can be BI-GRU based or BCJR-algorithm based) are mapped to hard decision values: 0 if L(xt = 0|y) ≥ 0 and 1 if L(xt = 0|y) < 0, which are then input to the Viterbi algorithm.
+Fig. 8 depicts the resulting error rates. We observe that the fully BI-GRU based decoder performs similarly to the baseline decoder, when the Viterbi algorithm with SDD is used as the outer decoder and a BCJR algorithm is used as the estimator. Given that the training objective of the BI-GRU estimator is binary classification, there may be enhanced compatibility with the Viterbi algorithm using HDD; the decoder using the BIGRU estimator along with Viterbi algorithm employing HDD performs better than the baseline approach paired with the same outer decoding algorithm for all the deletion probabilities considered.
+Finally, we want to comment on the numerical results of the recent work [21]. We find that the results in [21] are compatible with ours: the BI-GRU based estimators perform similarly to our trained decoders in terms of their performance difference with the baseline decoders realized using forward-backward equations. The model-based decoders in [21] utilizing a forward-backward algorithm aimed to
+
+100
+
+BER/FER
+
+10-1
+10-2 0.02
+
+0.04
+
+BER - BI-GRU + LDPC Decoder BER - Baseline when Ps = 0 BER - Baseline when Ps= 0.03 BER - Baseline when Ps = 0.05 (Matched) BER - Baseline when Ps = 0.1 FER - BI-GRU + LDPC Decoder FER - Baseline when Ps = 0 FER - Baseline when Ps= 0.03 FER - Baseline when Ps = 0.05 (Matched) FER - Baseline when Ps = 0.1
+
+0.06
+
+0.08
+
+0.1
+
+P
+d
+
+Fig. 7. BER/FER as a function of deletion probability for a channel with Ps = 0.05.
+
+estimate Pd, Ps, and Pi, perform better than the BCJRalgorithm based decoders when the channel parameters are not known to the recevier. The authors also experiment with the burst insertion/deletion channels of which the deletions and insertions are not independent for different uses and show that without knowing the channel model, one may develop BI-GRU based decoders and argue that their performance in terms of error rates is superior to those of the BCJR-based decoders.
+V. CONCLUSIONS
+This paper develops a BI-GRU architecture as a decoder for concatenated codes used over deletion channels. This architecture is chosen since it can handle variable-length inputs making it suitable for processing the received sequences over channels with symbol losses. The BI-GRU based deep neural network is trained to estimate the LLRs of the bits input
+
+2801
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+2024 IEEE International Conference on Communications (ICC): Communication Theory Symposium
+
+100
+
+10-1
+
+BER/FER
+
+10-2
+10-3 0.02
+
+0.03
+
+BER - BI-GRU + BI-GRU BER - BCJR + Soft Viterbi BER - BCJR + Hard Viterbi BER - BI-GRU + Hard Viterbi FER - BI-GRU + BI-GRU FER - BCJR + Soft Viterbi FER - BCJR + Hard Viterbi FER - BI-GRU + Hard Viterbi
+
+0.04
+
+0.05
+
+0.06
+
+0.07
+
+P
+d
+
+Fig. 8. BER/FER as a function of deletion probability (with no substitution errors).
+
+to the marker code, which are then decoded using the outer code constraints. Furthermore, a one-shot solution is developed for the case with the outer convolutional code. The results reveal that the newly developed deep-learning based decoders offer competitive performance with the previously employed solutions, and they are robust. In some cases, they outperform the results obtained with the BCJR algorithm when there is a mismatch between the actual channel parameters and those used at the receiver. The current implementation of the BIGRU network is demanding; however, different approaches, such as pruning and quantization, can be employed to reduce its complexity.
+Many promising research directions can be identified. For instance, deep-learning-based decoders can be developed for more general channel models with synchronization errors, e.g., those including insertions along with deletions and even intersymbol interference and AWGN (motivated by the channel models in bit-patterned media recording technologies [28] or nanopore sequencing in DNA storage [29]). Other deep-learning architectures can also be investigated, including those employing transformers. Developing new architectures that can be efficiently trained for decoding long codewords is also interesting.
+REFERENCES
+[1] R. L. White, R. M. H. New, and R. F. W. Pease, “Patterned media: a viable route to 50 Gbit/in2 and up for magnetic recording?,” IEEE Trans. Magn., vol. 33, no. 1, pp. 990–995, Jan. 1997.
+[2] S. M. H. T. Yazdi, H. M. Kiah, E. Garcia-Ruiz, J. Ma, H. Zhao and O. Milenkovic, “DNA-based storage: trends and methods,” IEEE Trans. Mol., Biol. and Multi-Scale Commun., vol. 1, no. 3, pp. 230-248, Sept. 2015.
+[3] R. L. Dobrushin, “Shannon’s theorems for channels with synchronization errors,” Problems of Inf. Transmiss., vol. 3, no. 4, pp. 11–26, 1967.
+[4] D. Fertonani and T. M. Duman, “Novel Bounds on the Capacity of Binary Deletion Channels,” IEEE Trans. Inf. Theory, vol. 56, no. 6, pp. 2753-2765, Jun. 2010.
+[5] M. Rahmati and T. M. Duman, “Upper bounds on the capacity of deletion channels using channel fragmentation,” IEEE Trans. Inf. Theory, vol. 61, no. 1, pp. 146–156, Jan. 2015.
+
+[6] D. Fertonani, T. M. Duman, and M. F. Erden, “Bounds on the capacity of channels with insertions, deletions and substitutions,” IEEE Trans. Commun., vol. 59, no. 1, pp. 2–6, Jan. 2011.
+[7] A. S. Helberg and H. C. Ferreira, “On multiple insertion/deletion correcting codes,” IEEE Trans. Inf. Theory, vol. 48, no. 1, pp. 305–308, Jan. 2002.
+[8] L. McAven and R. Safavi-Naini, “Classification of the deletion correcting capabilities of Reed-Solomon codes of dimension 2 over prime fields,” IEEE Trans. Inf. Theory, vol. 53, no. 6, pp. 2280–2294, Jun. 2007.
+[9] M. F. Mansour and A. H. Tewfik, “Convolutional codes for channels with substitutions, insertions, and deletions,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), Nov. 2002, vol. 2, pp. 1051–1055.
+[10] F. Wang, D. Fertonani and T. M. Duman, “Symbol-level synchronization and LDPC code design for insertion/deletion channels,” IEEE Trans. Commun., vol. 59, no. 5, pp. 1287-1297, May 2011.
+[11] M. C. Davey and D. J. Mackay, “Reliable communication over channels with insertions, deletions and substitutions,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 687–698, Feb. 2001.
+[12] Johnny Chen, M. Mitzenmacher, Chaki Ng and N. Varnica, “Concatenated codes for deletion channels,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2003, pp. 218-218.
+[13] H. D. Pfister and I. Tal, “Polar codes for channels with insertions, deletions, and substitutions,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2021, pp. 2554-2559.
+[14] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, and Comput., Sept. 2016, pp. 341–346.
+[15] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learningbased channel decoding,” in Proc. Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2017, pp. 1–6.
+[16] K. Cho, B. van Merrienboer, C. Gulcehre, D. Bahdanau, F. Bougares, H. Schwenk, and Y. Bengio, “Learning phrase representations using RNN encoder–decoder for statistical machine translation,” in Proc. Conf. Empirical Methods in Natural Lang. Process. (EMNLP), Oct. 2014, pp. 1724-1734.
+[17] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural Computation, vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
+[18] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in Proc. Int. Conf. Learn. Represent. (ICLR), Apr. 2018, pp. 1-19.
+[19] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani and P. Viswanath, “DEEPTURBO: deep turbo decoder,” in Int. Workshop on Signal Process. Advances in Wireless Commun. (SPAWC), Jul. 2019, pp. 1-5.
+[20] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Advances in Neural Inf. Process. Syst. (NeurIPS), Nov. 2022, pp. 3869538705.
+[21] G. Ma, X. Jiao, J. Mu, H. Han, and Y. Yang, “Deep learning-based detection for marker codes over insertion and deletion channels,” Jan. 2024, arXiv:2401.01155.
+[22] M. Schuster and K. K. Paliwal, “Bidirectional recurrent neural networks,” IEEE Trans. Signal Process., vol. 45, no. 11, pp. 2673-2681, Nov. 1997.
+[23] R. Pascanu, T. Mikolov, and Y.Bengio, “On the difficulty of training recurrent neural networks,” in Proc. Int. Conf. Mach. Learn. (ICML), Jun. 2013, vol. 28, pp. 1310-1318.
+[24] D. P. Kingma and J. Ba, “Adam: a method for stochastic optimization,” 2014, arXiv:1412.6980.
+[25] K. You, M. Long, J. Wang, and M. I. Jordan, “How does learning rate decay help modern neural networks?,” 2019, arXiv:1908.01878.
+[26] S. Ioffe and C. Szegedy, “Batch normalization: accelerating deep network training by reducing internal covariate shift,” in Proc. Int. Conf. Mach. Learn. (ICML), Jul. 2015, pp. 448–456.
+[27] D. J. C. MacKay, “Encyclopedia of sparse graph codes,” 2015. [Online]. Available: https://www.inference.org.uk/mackay/codes/data.html
+[28] J. Hu, T. M. Duman, E. M. Kurtas and M. F. Erden, “Bit-patterned media with written-in errors: modeling, detection, and theoretical limits,” IEEE Trans. Magn., vol. 43, no. 8, pp. 3517-3524, Aug. 2007.
+[29] W. Mao, S. N. Diggavi and S. Kannan, “Models and informationtheoretic bounds for nanopore sequencing,” IEEE Trans. Inf. Theory, vol. 64, no. 4, pp. 3216-3236, Apr. 2018.
+
+2802
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:40:04 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1787 @@
+STAR: Improving Lifetime and Performance of High-Capacity
+Modern SSDs Using State-Aware Randomizer
+Omin Kwon∗1, Kyungjun Oh∗1, Jaeyong Lee1, Myungsuk Kim2, Jihong Kim1
+1Seoul National University, Seoul, Republic of Korea
+2Kyungpook National University, Daegu, Republic of Korea
+Abstract—Although NAND flash memory has achieved continuous
+capacity improvements via advanced 3D stacking and multi-level cell
+technologies, these innovations introduce new reliability challenges, par-
+ticularly lateral charge spreading (LCS), absent in low-capacity 2D flash
+memory. Since LCS significantly increases retention errors over time,
+addressing this problem is essential to ensure the lifetime of modern SSDs
+employing high-capacity 3D flash memory. In this paper, we propose
+a novel data randomizer, STate-Aware Randomizer (STAR), which
+proactively eliminates the majority of weak data patterns responsible for
+retention errors caused by LCS. Unlike existing techniques that target
+only specific worst-case patterns, STAR effectively removes a broad
+spectrum of weak patterns, significantly enhancing reliability against
+LCS. By employing several optimization schemes, STAR can be efficiently
+integrated into the existing I/O datapath of an SSD controller with
+negligible timing overhead. To evaluate the proposed STAR scheme, we
+developed a STAR-aware SSD emulator based on characterization results
+from 160 real 3D NAND flash chips. Experimental results demonstrate
+that STAR improves SSD lifetime by up to 2.3× and reduces read latency
+by an average of 50% on real-world traces compared to conventional
+SSDs.
+Index Terms—3D NAND Flash memory, Multi-Level Cell, LCS, Reli-
+ability, Data Randomizer, NAND Controller
+I. INTRODUCTION
+For decades, NAND flash memory has been a predominant tech-
+nology to meet the storage capacity requirements of data-intensive
+applications such as graph analytics [1]–[3] and machine learning-
+based applications [4], [5]. Due to key innovations such as 3D
+cell stacking and advanced multi-level cell technologies, NAND
+flash memory succeeded in continuous growth of flash capacity;
+the capacity of recent 3D triple-level cell (TLC) or quad-level
+cell (QLC) flash memory has increased up to 2 Tib per die [6],
+[7]. Specifically, 3D NAND flash memory [8]–[10] achieved high
+flash capacity by increasingly stacking flash memory cells in the
+vertical direction. Furthermore, multi-level cell technology enabled
+flash memory to store multiple bits within a single flash cell, thus
+significantly reducing bit cost.
+Such capacity-centric flash memory solutions have successfully
+provided high storage capacity, but conversely, they have intensified
+the reliability problems in modern SSDs. It is well known that multi-
+level cell flash memory has disadvantages in flash reliability [11]–[13]
+due to its reduced error margin. For instance, the lifetime of a QLC-
+based SSD, whose capacity is 2 times that of an MLC-based SSD, is
+only 30% of the MLC-based SSD [14]–[16]. More seriously, 3D flash
+memory introduces new reliability problems that were not present
+in low-capacity 2D flash memory, called lateral charge spreading
+(LCS) [17], [18]. This unique reliability problem originated from
+the fact that commercial 3D flash memories adopt charge trap (CT)-
+type cell structures. The CT-type flash cell exploits a non-conductive
+charge trap layer of silicon nitride (SiN) that traps electrical charges
+to store bit information, and all flash cells in a NAND string
+share a cylindrical-shaped trap layer that is physically connected
+∗These authors contributed equally to this work.
+vertically (Details in Section II) [19], [20]. When charge spreading
+happens, the trapped charge in a flash cell leaks out and moves
+to its (vertically) adjacent flash cells through the trap layer, which
+is similar to the diffusion mechanism. Since the charge spreading
+makes bit information stored in a flash cell increasingly change over
+time (e.g., from ‘0’ to ‘1’), it is responsible for substantial retention
+errors in 3D flash memory. Therefore, to ensure SSD lifetime, it is
+a critical challenge to address the LCS problem in high-capacity 3D
+flash memory (e.g., 3D TLC or QLC flash memory).
+Although a large body of previous work has investigated the
+LCS spreading problem, most have focused only on device-level
+mechanisms of why LCS occurs between adjacent flash cells and
+under what conditions it is exacerbated [17], [21], [22]. In the system-
+level approach, prior work has proposed a technique called TailCut,
+which attempted to reduce error-prone patterns by modifying encoded
+flash states [18]. However, its effect can be limited in high-capacity
+3D flash memory for two reasons. First, since TAILCUT requires
+redesigning the existing write/read operation, TAILCUT can eliminate
+only the top 2 weak patterns due to its implementation complexity.
+Second, to flip data bits, TAILCUT should track bit information for
+all pages in the adjacent WLs. Therefore, such overhead makes
+TAILCUT impractical in the advanced flash memory with four or
+more pages (e.g., QLC or PLC flash memory [6], [23]).
+Our goal in this work is to improve the lifetime and performance
+of modern high-capacity SSDs by mitigating the LCS problem. To
+address the challenge, we propose a novel system-level optimization
+technique called STate-Aware Randomizer (STAR), which modifies
+the data randomizer in the SSD controller based on a thorough
+and systematic characterization of real 3D TLC/QLC NAND flash
+chips. The key idea of STAR is to selectively perform bit-flip
+operations for error-prone Vth states (e.g., P0, P1, P14, and P15
+states in QLC flash memory), enabling the reduction of all weak
+patterns vulnerable to the LCS problem. Unlike existing approaches
+that require high implementation overhead, STAR introduces a
+minor change to the conventional Linear Feedback Shift Register
+(LFSR)-based randomizer, which uniformly randomize data without
+considering error characteristics. In addition, STAR does not require
+any modifications to NAND flash chips, so it can be applied to any
+type of flash memory and storage system.
+The STAR operates in three sequential stages: (i) LFSR ran-
+domization, (ii) group error estimation, and (iii) optimal bit-flip.
+First, STAR scrambles the input data and distributes it uniformly
+across WLs and BLs using the conventional LFSR-based randomizer.
+Second, for each group of cells, STAR estimates the error probability
+of a group and calculates the change in error probability if each bit-
+flip operation is applied. Bit-flip operations selectively invert different
+combinations of physical bits in each cell (e.g., 16 options in QLC).
+Using our profiled state-specific error rates, STAR computes the total
+error change for each option and selects the one that best reduces
+group error. Finally, STAR applies the optimal bit-flip operation to all
+2025 IEEE/ACM International Conference On Computer Aided Design (ICCAD) | 979-8-3315-1560-7/25/$31.00 ©2025 IEEE | DOI: 10.1109/ICCAD66269.2025.11240772
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+BL1
+3D NAND Block
+4 SSLs
+…..
+…
+…
+…..
+x
+y
+z
+BL2
+BLn
+….
+…
+NAND
+String
+Flash 
+cell
+WL1
+WL2
+WLm
+1
+1
+1
+1
+P0
+1
+1
+1
+0
+1
+1
+0
+0
+1
+0
+0
+0
+1
+0
+1
+0
+1
+0
+1
+1
+0
+0
+1
+1
+0
+0
+0
+1
+1
+0
+0
+1
+1
+1
+0
+1
+0
+1
+0
+1
+0
+1
+0
+0
+0
+0
+0
+0
+0
+0
+1
+0
+0
+1
+1
+0
+0
+1
+1
+1
+LSB
+CSB
+MSB
+TSB
+𝑉𝑉𝑅𝑅𝑅𝑅𝑅𝑅
+1
+𝑉𝑉𝑅𝑅𝑅𝑅𝑅𝑅
+15
+VTH
+# of cells
+P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11P12 P13P14P15
+QLC
+1
+1
+1
+P0
+LSB
+CSB
+MSB
+𝑉𝑉𝑅𝑅𝑅𝑅𝑅𝑅
+1
+𝑉𝑉𝑅𝑅𝑅𝑅𝑅𝑅
+7
+# of cells
+0
+1
+1
+P1
+0
+0
+1
+P2
+0
+0
+0
+P3
+0
+1
+0
+P4
+1
+1
+0
+P5
+1
+0
+0
+P6
+1
+0
+1
+P7
+TLC
+VTH
+VTH margin
+VTH window
+(a)
+(b)
+Fig. 1: (a) Organization of 3D flash memory. (b) Comparison of
+Vth distributions between TLC flash memory (top) and QLC flash
+memory (bottom).
+cells in the group and records the corresponding bit-flip information,
+referred to as the Flip Indicator Bit (FIB), in the spare area of
+the target flash page. This approach systematically reshapes Vth
+state distributions to favor lower-error states, statistically reducing
+weak patterns without explicitly detecting them. In subsequent read
+operations for the corresponding flash pages, the FIB information
+is used to reverse the bit-flip operations before performing de-
+randomization, ensuring data recovery.
+Although the core idea behind STAR is straightforward, imple-
+menting it in modern SSDs introduces several practical challenges.
+One significant challenge is finding the optimal bit-flip operation
+without impacting I/O performance. To address this, STAR integrates
+three optimization techniques: (1) Zig-Zag IO Scheduling, (2) Group-
+Level Pipelining, and (3) Parallel Error Estimator. The key approach
+is to execute various computational tasks in STAR concurrently. Zig-
+Zag IO scheduling interleaves the pages at the group level, making
+all physical bits (e.g., LSB, CSB, MSB, and TSB) in a group input
+to the STAR at the same time, enabling them to process through
+STAR’s sequential stages together. Group-Level Pipelining of STAR
+efficiently overlaps operations across different groups, enhancing
+the throughput efficiency of STAR. In addition, the Parallel Error
+Estimator enables STAR to evaluate the impact of all possible bit-
+flip operations on group error simultaneously. Due to these latency-
+efficient optimizations, STAR can fully exploit its reliability benefits
+while minimizing implementation overhead.
+From extensive real-device characterizations, we validate the effec-
+tiveness of our proposed technique, STAR. In QLC flash memory,
+STAR reduces the number of error-prone states (P0, P1, P14, P15)
+by 33.0%, 30.1%, 41.6%, and 38.6%, respectively, compared to
+conventional data randomization. Such redistribution of Vth states is
+directly converted to a substantial reduction in weak patterns created
+by a combination of error-prone states, which makes the top 10 weak
+patterns decrease by 71.7%, on average. The evaluation results reveal
+that STAR improves the flash lifetime by up to 98% (for TLC flash
+memory) and 130% (for QLC flash memory), respectively, while 80%
+(for TLC flash memory) and 50% (for QLC flash memory) in the
+existing technique (e.g., TAILCUT). It strongly suggests that STAR
+outperforms the existing scheme, and its impact on the flash lifetime
+is more pronounced in high-capacity QLC flash memory.
+To evaluate the effectiveness of STAR at the system level, we
+implemented a STAR-enabled SSD, called StarSSD, based on a
+state-of-the-art SSD emulator [24]. The evaluation results with vari-
+ous real-world traces demonstrate that STAR significantly improves
+SSD lifetime up to 2.3x over the existing scheme. Furthermore, our
+technique efficiently reduces read latency by an average of 49% due
+to fewer read retries compared to conventional SSDs.
+II. BACKGROUND
+A. 3D NAND Flash Memory Basics
+Organization. Fig. 1(a) illustrates the hierarchical organization of
+3D flash memory. Compared to 2D flash memory, 3D flash memory
+significantly increases its storage density by vertically stacking flash
+cells along the z-axis. In our example, a 3D flash block consists of
+N horizontal layers (h-layers) stacked along the z-axis. Similarly, the
+3D flash block may be described as having four vertical layers (v-
+layers) in the x-axis where each v-layer consists of N stacked WLs
+separated by four select-line (SSLs) [19]. A set of flash cells form a
+NAND string that is connected to a bitline (BL), and multiple BLs
+(e.g., 8KB-16KB) compose a block. The control gate of each cell
+at the same vertical location in a block is connected to a wordline
+(WL), so all the cells sharing the same WL concurrently operate.
+Multi-level Cell Flash Memory. A flash cell stores bit data as a
+function of its threshold voltage (Vth) level, which highly depends on
+the amount of charge in the cell’s charge trap layer; the more electrons
+in the charge trap layer, the higher the cell’s Vth level. It means that
+different bit data can be encoded by different Vth of the flash cell.
+For example, we can assign the data value ‘0’ to a higher Vth and
+‘1’ to a lower Vth. To increase storage capacity, a flash cell can store
+multiple bits by adjusting its Vth level more precisely, called m-bit
+multi-level cell technology. It stores m bits within a single flash cell
+by using 2m distinct Vth states (i.e., m is 3 and 4 for TLC and QLC
+flash memory, respectively). The multi-level cell (MLC) technology
+was initially developed for storing 2 bits per cell [25], [26], but it
+was extended to support QLC (4 bits/cell) and PLC (5 bits/cell).
+Fig. 1(b) illustrates the Vth distribution of a QLC flash memory that
+uses different 24 states to store 4 bits per cell, indicating each WL
+contains four pages called LSB, CSB, MSB, and TSB page.
+NAND Flash Operation. There are three basic operations that enable
+access to flash memory: program, erase, and read. The program
+operation, which increases Vth of selected flash cells, injects electrons
+from the substrate into the charge trap layer of the selected flash cells
+using FN tunneling [27] by applying a high voltage (> 20V) to WL
+gates (i.e., changing the state of the flash cell from ‘1’ state to ‘0’
+state). On the other hand, to erase programmed cells (i.e., change
+the state of the flash cell from ‘0’ state to ‘1’ state), a high voltage
+(> 20V) is applied to the substrate (while WL gates are set to 0V)
+to remove electrons from the charge trap layer, which decreases the
+Vth of the flash cells. The stored data can be read out by sensing the
+Vth level of the target flash cells on the selected WL using a proper
+read reference voltage (VREF ).
+B. NAND Flash Reliability
+NAND flash memory is highly error-prone due to its imperfect
+physical characteristics, such as defects in the tunnel oxide layer of
+flash cells. When a flash cell experiences repeated program and erase
+operations (e.g., P/E cycles), the high voltage used in program/erase
+operations physically damages flash cells. Due to damage, the Vth
+distribution of cell gets wider and distorted, making the cells more
+error-prone, called endurance. In addition, a flash cell leaks its charge
+over time (i.e., its Vth level shifts to the left), which is called retention
+loss. If a cell’s Vth level shifts beyond the VREF values (i.e., to
+adjacent Vth states having different bit values) due to endurance or
+retention, reading the cell causes a bit error.
+Such a bit error occurs more seriously in high-capacity m-bit multi-
+level cell flash memory. As m is increased to store more bits within a
+flash cell, more Vth states should be put into the limited Vth window.
+Furthermore, a Vth margin i.e., a gap between two neighboring Vth
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+Control
+Gate
+Lateral Charge Spreading
+WL
+Vertical Charge Loss
+Substrate
+Bitline
+2D NAND Flash
+Floating
+Gate
+WL
+WL
+Oxide
+Oxide
+Charge
+Trap
+Substrate
+Bitline
+WL
+WL
+3D NAND Flash
+Control
+Gate
+(a)
+P0
+P0
+P0
+P7
+P0
+P0
+P0
+WL1
+BL1
+BL2
+BL3
+WL2
+WL3
+P7
+P0
+P7
+BL4
+…
+Before Randomization
+P7
+P1
+P6
+P4
+P0
+P5
+P1
+P5
+P2
+WL1
+WL2
+WL3
+P7
+P4
+P3
+…
+After Randomization
+(b)
+P7
+P7
+Fig. 2: (a) Mechanism of LCS. (b) Comparison of TLC data patterns
+before and after randomization
+states calculated as WTotal−Pk
+i=0 WPi)) inevitably becomes narrower
+as shown in Fig. 1(b). When the Vth margin gets smaller, since two
+neighboring Vth states are more likely to be overlapped, NAND flash
+memory becomes more vulnerable to various noise effects, in turn,
+significantly increasing the raw bit-error rate (RBER) of NAND flash
+memory. Therefore, to ensure data reliability, more careful reliability
+management is required for a higher m-bit multi-level cell flash
+memory (e.g., TLC or QLC flash memory).
+C. Mechanism of LCS
+A new type of flash cell (CT-type flash cell) is a key enabler of
+3D flash memory to achieve cube-like 3D architecture because a
+conventional floating-gate flash cell was not suitable to stack flash
+cells along a vertical direction. However, due to its unique structure
+and physics, 3D flash memory suffers from LCS, a new phenomenon
+in 3D flash memory. Fig. 2(a) illustrates the conceptual mechanism
+of LCS and why it is present only in 3D flash memory. In 2D flash
+memory, since the floating gate of each cell is physically isolated,
+stored charges can leak only through the thin oxide layer between
+the floating-gate and substrate by various de-trapping mechanisms,
+which is called vertical charge loss. 3D flash memory, on the other
+hand, stores charges in a charge trap layer to increase the Vth. Unlike
+the isolated floating gates in 2D flash memory, this charge trap layer
+is physically shared among adjacent cells along the bitline direction.
+As a result, charges stored in one cell can unintentionally diffuse into
+neighboring cells, a phenomenon known as LCS. Since LCS is driven
+by a diffusion process, the rate of charge migration is proportional to
+the concentration gradient of trapped charges between adjacent cells.
+This means that greater differences in Vth levels between neighboring
+cells result in faster charge redistribution. Because a cell’s Vth state
+is determined by its programmed data, LCS is highly sensitive to the
+data pattern across vertically neighboring cells.
+D. Data Randomizer
+In order to handle bit errors, it is common practice to employ strong
+error-correction codes (ECC) in modern SSDs. ECC stores redundant
+bits called ECC parity, which enables detecting and correcting raw
+bit errors in the codeword. To cope with the high RBER of modern
+NAND flash memory, modern SSDs use sophisticated ECC that can
+correct several tens of raw bit errors per 1-KiB data (e.g., low-
+density parity-check (LDPC) codes [28]). However, when extremely
+unbalanced data patterns (e.g., all ‘0’ or ‘1’ along the NAND string)
+Error Rate (%)
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏
+3D QLC Flash Memory
+3D TLC Flash Memory
+Initial Error
+Endurance Error
+Retention Error
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟐𝟐
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟑𝟑
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟒𝟒
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟓𝟓
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟔𝟔
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟕𝟕
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟐𝟐
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟒𝟒
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟔𝟔
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟖𝟖
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟑𝟑
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟓𝟓
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟕𝟕
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟗𝟗
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏
+𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏𝑽𝑽𝒓𝒓𝒓𝒓𝒓𝒓
+ 𝟏𝟏𝟏𝟏
+0
+0.5
+1.0
+0
+0.5
+1.0
+Fig. 3: Comparison of inter-state error distributions between TLC
+flash memory (top) and QLC flash memory (bottom).
+are written to the NAND flash chip, shown in Fig. 2(b), we may
+experience some unfortunate situations where RBER exceeds the
+maximum ECC capability [29]. To avoid such events, commodity
+SSDs perform data randomization, which scrambles user data before
+writing it to the NAND flash chips, thus forming a probabilistic
+random pattern (shown in Fig. 2(b)). The data randomizer transforms
+the original user data by simply inserting an exclusive OR (XOR)
+operation between the data path and the output of a Linear Feedback
+Shift Register (LFSR) initialized by a seed [30]. The random seed
+is loaded into an internal circuit of the NAND Flash memory,
+called a page buffer, through the memory data-path. Then, additional
+peripheral circuits perform a bit-wise XOR operation on the original
+data input and a random seed in the page buffers, enabling the
+randomized write pattern. When the randomized pattern is written,
+Vth states across different WLs are uniformly distributed, avoiding
+an unbalanced pattern. On the contrary, de-randomizing is performed
+during the read operation: after sensing the stored data from flash
+cells, the seed is loaded into a page buffer and a bit-wise XOR
+of the sensed data and random sequence is executed, reconstructing
+the original data. Since the randomization algorithm exploits simple
+bitwise operations with a seed, its complexity is low, and both spatial
+and temporal overheads can be negligible. These advantages make it
+widely adopted in commercial SSDs, where it effectively removes
+extremely unbalanced data.
+III. MOTIVATION
+A. Impact Analysis of LCS in 3D Flash Memory
+To better understand the impact of LCS on the reliability of 3D
+NAND flash memory, we have conducted an extensive characteri-
+zation study using 160 real 3D TLC/QLC flash chips (detailed test
+procedure is provided in Section VI).
+Inter-State Error Distribution. As is well known, reliability-related
+flash errors in low-capacity 2D flash memory are highly skewed
+across Vth states and occur in an asymmetric fashion [31]. That is,
+not all bit errors occur with equal likelihood among different Vth
+states, and most bit errors are localized in a few specific Vth states.
+To quantify inter-state error distribution in 3D flash memory, we
+measured three types of errors in 3D TLC and QLC flash memory:
+initial (i.e., just after write), endurance, and retention errors. Fig. 3
+shows the inter-state error distributions for TLC and QLC NAND
+flash memory, respectively. From the evaluation results, we derive two
+key observations. First, the asymmetry in inter-state error distribution
+is more pronounced in QLC flash memory than in TLC flash memory.
+The error difference across Vth states is up to 3.7x in TLC flash
+memory, while it is aggravated up to 4.6x in QLC flash memory.
+Moreover, QLC flash memory exhibits twice as many error-prone
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+3D TLC Flash Memory
+3D QLC Flash Memory
+Normalized 
+# of bit errors
+0
+7
+0
+0
+6
+0
+0
+7
+1
+0
+7
+2
+0
+6
+1
+0
+7
+3
+0
+7
+4
+0
+6
+2
+0
+7
+5
+7
+7
+7
+0
+6
+3
+0
+15
+0
+0
+14
+0
+0
+15
+1
+0
+14
+1
+0
+13
+0
+0
+15
+2
+1
+15
+1
+1
+15
+2
+1
+14
+2
+15
+15
+15
+1
+14
+1
+1.0
+2.0
+3.0
+Fig. 4: Top 10 LCS-induced weak patterns of TLC and QLC flash
+memory.
+Vth states as TLC flash memory, indicating that a greater variety
+of weak patterns may exist. Second, retention error is the dominant
+factor in determining the overall RBER in both TLC and QLC flash
+memory. Specifically, retention errors account for up to 48% of total
+bit errors. Therefore, to ensure the reliability of high-capacity 3D
+flash memory, it is highly required to mitigate retention error by
+removing weak patterns.
+LCS-Induced Weak Patterns. As described in Section II-C, LCS
+occurs when charges diffuse into vertically adjacent cells through
+their shared charge trap layer, with diffusion rate proportional to
+the concentration gradient between neighboring cells. Consequently,
+patterns with large Vth differences between neighboring cells expe-
+rience accelerated charge spreading, leading to higher LCS-induced
+bit errors. For example, in TLC NAND, if cells in the P7 state are
+adjacent to cells in the E state (i.e., an E–P7–E pattern), the victim cell
+in the middle (P7 state) is highly susceptible to errors due to LCS.
+Similarly, in QLC NAND, a pattern such as E–P15–E can induce
+significant errors in the middle cell (P15 state). To quantitatively
+understand the impact of Vth patterns on error, we measure the error
+rate of a victim cell under various Vth states of its adjacent cells.
+Fig. 4 shows the retention error rates of the top-10 LCS-induced
+weak patterns in TLC and QLC flash memory, ranked in descending
+order by their error contribution. It demonstrates that patterns with
+larger Vth differences between the victim cell and vertically adjacent
+cells exhibit significantly higher bit error rates. Notably, in TLC,
+the top-2 weak patterns produce substantially higher error rates than
+the remaining eight, whereas in QLC, the error contributions from
+the top-10 weak patterns are relatively comparable. This implies that
+in TLC, mitigating just few weak patterns is sufficient to reduce
+LCS-induced errors, while in QLC, it is necessary to suppress a
+broader range of weak patterns to achieve comparable error reduction.
+This difference can be attributed to the fact that QLC flash memory
+has twice as many states as TLC, resulting in approximately eight
+times more possible combinations of vertically adjacent patterns and
+forming a diverse set of LCS-induced weak patterns.
+B. Limitations of Existing Approaches
+Despite growing concern over LCS in modern 3D flash memory,
+how to effectively mitigate its reliability impact remains largely
+unexplored. To our knowledge, only TailCut [18] has proposed a
+specialized data encoding scheme aimed at mitigating LCS-induced
+weak patterns. By extending existing peripheral circuitry within the
+flash chip, TAILCUT effectively identifies and eliminates specific
+weak patterns in 3D TLC flash memory, achieving an average error
+reduction of 43.8%. However, TAILCUT has two practical limitations
+that hinder its applicability to modern 3D NAND flash memory.
+First, TAILCUT requires modifications to the peripheral circuitry of
+existing flash chips, resulting in significant implementation complex-
+ity. Due to limited hardware resources within flash chips, TAILCUT is
+(c) After State-Aware Bit Flip
+0
+2
+1
+6 7
+3 4 5
+0
+2
+1
+6 7
+3 4 5
+WL0
+WL1
+WL2
+WL3
+# Cell States
+# Cell States
+VTH
+VTH
+7
+0
+0
+7
+0
+0
+0
+0
+7
+7
+0
+7
+0
+7
+0
+0
+# Cell States
+VTH
+0
+2
+1
+6 7
+3 4 5
+1
+6
+0
+3
+7
+2
+5
+4
+5
+0
+7
+1
+2
+4
+6
+3
+3
+5
+3
+5
+4
+6
+1
+2
+2
+4
+3
+4
+4
+5
+2
+3
+Weak
+Pattern
+Weak
+Pattern X
+(a) Input data
+(b) After LFSR
+Fig. 5: Illustrative example STAR.
+only capable of eliminating the top 2 weak patterns in TLC (E–P6–E
+and E–P7–E), which is insufficient for advanced flash technologies.
+Second, TAILCUT requires tracking bit information for all pages
+in the adjacent wordlines (WLs). For each programming operation,
+it must check whether WLi−2 is in state E and WLi−1 is in state
+P6/P7, then verify if WLi would be in state E. In high-capacity
+flash memory with four or more pages per cell (e.g., QLC or PLC
+flash memory), this approach introduces prohibitive overhead. The
+memory controller would need to perform multiple pattern checks to
+cover the expanded pattern space, significantly increasing both timing
+overhead and implementation complexity.
+These limitations make TAILCUT impractical for modern high-
+density NAND flash memory. To address reliability challenges in
+high-capacity QLC and next-generation PLC flash memory, a more
+generalized approach is needed—one that can efficiently handle
+diverse weak patterns without requiring flash chip modifications while
+maintaining compatibility with existing flash architectures.
+IV. OVERALL PROCEDURE OF STAR
+We propose STAR (STate-Aware Randomizer), a novel data ran-
+domizer scheme to improve SSD lifetime and performance by effec-
+tively mitigating the LCS-induced errors. Fig. 5 shows an illustrative
+example of how our proposed STAR works. The input data from the
+host can be highly biased, which can introduce unbalanced patterns
+that exceed the ECC capability (Fig. 5(a)). While modern SSDs
+can effectively prevent the unbalanced pattern using the LFSR-based
+data randomizer (Fig. 5(b)), the resulting uniform Vth distribution is
+insufficient to address the new challenge posed by the LCS problem.
+To overcome the challenge, STAR performs an internal bit-flip
+operation on error-prone states so that it redistributes the number
+of each Vth state distribution to form a robust pattern for the LCS
+problem rather than a uniform data pattern (Fig. 5(c)). By doing
+this, unlike existing techniques that target only specific worst-case
+patterns, STAR effectively removes a wide spectrum of weak pat-
+terns, significantly improving the reliability against the LCS problem.
+To efficiently design STAR, our technique proactively exploits a
+state-aware algorithm consisting of three sequential stages: (i) LFSR
+randomization, (ii) group error estimation, and (iii) optimal bit-flip.
+LFSR Randomization. The first stage in the STAR exploits a con-
+ventional LFSR-based data randomizer to obtain a uniform Vth state
+distribution. The LFSR-based data randomizer effectively breaks up
+inherent pattern dependencies in the original user data by scrambling
+it with random seed values, forming a probabilistically randomized
+pattern. These randomized data are transferred into the next stage of
+STAR as the input values to be bit-flipped, shown in Fig. 6 ( 1 ).
+Group Error Estimation. Before performing the state-aware bit-
+flip operation, STAR estimates the error probability of each group
+based on the current state distribution of flash cells. In our technique
+STAR, the error estimation is executed at the granularity of a group
+consisting of 128 flash cells (details on how to set a group are
+provided in Section V).
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+Write FIB
+0
+1
+1
+1
+1
+1
+0
+0
+1
+1
+1
+1
+0
+0
+1
+0
+LSB
+CSB
+MSB
+TSB
+1
+0
+0
+0
+1
+1
+0
+1
+0
+1
+0
+0
+1
+0
+1
+0
+0
+P7 P4 P8 P11
+2
+LFSR
+3
+Bit-Flip
+0
+1
+1
+0
+FIB
+f(0, 1, 1, 0)
+-7.8
+f(1, 1, 1, 1)
++3.2
+Flip
+∆EG
+…
+…
+…
+…
+Group Cells
+Spare Area
+Data Area
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+Flip
+1
+1
+1
+1
+0
+0
+0
+1
+1
+0
+1
+1
+0
+0
+1
+0
+0
+1
+0
+1
+…
+f(0, 0, 0, 0)
++0.0
+P15 P2 P0 P13
+4
+𝑬𝑮
+Estimate
+Fig. 6: STAR algorithm concept: (1) LFSR (2) Group Error Estima-
+tion (3) Optimal bit-flip (4) Write FIB.
+To quantify error probability at the group level, we define a new
+parameter, group error (EG), as the cumulative error probability of
+all flash cells in the target group as follows:
+EG =
+G
+X
+i=1
+esi =
+15
+X
+k=0
+ekNk
+(1)
+where:
+• G is the total number of cells in the group (e.g., 128),
+• si is the original state of the i-th cell in the group,
+• k indexes the states from 0 to 15 (corresponding to P0 through
+P15 in QLC flash memory),
+• ek denotes the error probability of k-th state,
+• Nk is the number of cells in k-th state.
+A higher EG value indicates that the group contains more error-
+prone states, resulting in a higher error probability. For calculating
+EG value, ek of each k-th state is determined using offline error
+profiling based on extensive real-device characterizations.
+Flipping specific bits in the current group reshapes the Vth state
+distributions of cells, which in turn changes the estimated value of
+EG. We refer to each specific combination of bit inversions as a bit-
+flip operation, and represent it using the following notation (assuming
+QLC flash memory):
+f(bTSB, bMSB, bCSB, bLSB)
+(2)
+where bj ∈{0, 1} indicates whether the corresponding bit position
+is flipped (1) or not (0). For instance:
+• f(0, 0, 0, 0) does not change any bit in the data,
+• f(0, 0, 0, 1) flips only the LSB bit in each flash cell,
+• f(1, 1, 1, 1) flips all four bits (complete inversion).
+In total, there are 24 = 16 different bit-flip operations. Each operation
+systematically transforms the state of each cell. For example, the bit-
+flip operation f(0, 0, 1, 0), which flips only the CSB, can convert
+state P0 (1111) to P9 (1101), or state P14 (0110) to P11 (0100).
+To identify the impact of each bit-flip operation on the target
+group, STAR calculates the difference between EG values before
+and after for all possible bit-flip operations (Fig. 6 ( 2 )). When a
+bit-flip operation f is applied to the target group, the i-th cell in the
+group is converted from its original Vth state si to the new Vth state
+f(si). Therefore, the difference in the group error can be calculated
+as:
+∆EG,f =
+G
+X
+i=1
+(ef(si) −esi)
+(3)
+where:
+• si is the original state of the i-th cell in the group,
+• f(si) is the transformed state after applying bit-flip f,
+• esi and ef(si) are the per-state error probability.
+A negative ∆EG,f indicates that the bit-flip operation reduces the
+total error in the group, whereas a positive value indicates that
+it increases the error. By calculating the cumulative error change
+(∆EG,f) for each bit-flip operation based on our characterized state-
+specific error rates, STAR identifies which bit-flip operation would
+most effectively reduce the overall error probability of the group.
+Optimal bit-flip. STAR selects the optimal bit-flip operation that
+minimizes the RBER of the target group as follows:
+f ∗= arg min
+f
+∆EG,f
+(4)
+Since different bit-flip operations result in diverse redistributions of
+states (i.e., changing the number of each state), by selecting the bit-
+flip operation having the largest negative ∆EG,f, we can reduce the
+number of error-prone states. This approach systematically reshapes
+state distributions to favor lower-error states, statistically reducing the
+weak patterns without explicitly detecting them (Fig. 6 ( 3 )).
+These three stages in STAR are repeated for each group in a
+flash page, providing a fine-grained, group-based optimization. The
+optimal bit-flip information for each group is recorded in the Flip
+Indicator Bit (FIB) within the spare area of the target flash page
+(Fig. 6 ( 4 )). FIB exploits a single bit for each of the LSB, CSB,
+MSB, and TSB bit positions within the group, where ‘1’ indicates
+the bit was flipped and ‘0’ indicates it was not flipped. In subsequent
+read operations for corresponding flash pages, the FIB information
+is used to reverse the bit-flip operations. Then, the conventional de-
+randomization is performed to fully recover the original data.
+V. DESIGN AND IMPLEMENTATION OF STAR
+The STAR algorithm is rather straightforward to implement, but a
+naive implementation can incur significant capacity and performance
+overheads. In this section, we present our design choices to meet the
+key implementation requirements of STAR.
+A. Design Optimization
+As illustrated in Fig. 7(a), STAR is implemented within the data
+path of the SSD controller between the host interface and the NAND
+flash chip. It consists of three modules (LFSR, EG Estimator, and
+Bit-Flipper) which correspond to key stages described in Fig. 6.
+To fully leverage its reliability benefits while minimizing overhead,
+STAR incorporate three optimizations: (1) Zig-Zag IO Scheduling,
+(2) Group-Level Pipelining, and (3) Parallel Error Estimator, each of
+which is enabled by efficient hardware integration.
+Zig-Zag IO Scheduling (ZIS). As explained in Section IV, STAR
+performs state-aware bit-flip operations repeatedly for each group,
+which is a time-consuming process requiring a huge amount of
+computation. For example, in QLC flash memory with a 16-KiB page
+and 128-cell groups, STAR needs to calculate (4096 × 16) EG values
+to find the optimal bit-flip operation on one WL data.
+In modern SSDs, user data passes through the SSD controller in
+page order (i.e., page-by-page scheduling) as shown in Fig. 7(b). It
+means that all LSB data is sent to the flash chip first, followed by
+CSB, MSB, and TSB in a sequential manner. Since STAR operates
+on a basis of groups, the conventional page-by-page scheduling makes
+it impossible to integrate the bit-flip operation into the data I/O path.
+Therefore, to address the challenge, we introduce a new optimiza-
+tion, Zig-Zag IO scheduling. It ensures that each bit of LSB, CSB,
+MSB, and TSB is transferred to the SSD controller with interleaving
+at a group granularity, allowing all four bits within a group to pass
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+Host
+SSD Controller
+Flash 
+channel
+8bit
+LFSR
+𝑬𝑮Estimator
+1
+Embedded 
+processor
+PCIe 
+Interface
+Buffer
+ECC
+STAR
+Group 
+N + 1
+Group 
+N-3
+FIB
+Flash Cell Array
+(Plane)
+Page Buffer
+128bit
+Flash chip
+Buffer
+Output Buffer
+Input Buffer
+Group 
+N-2 
+32/64bit
+Bit Flipper
+FIB
+LSB’
+CSB
+MSB
+TSB
+Flip
+f(0, 0, 0, 1)
+f(0, 0, 1, 0)
+f(1, 1, 1, 0)
+f(1, 1, 1, 1)
+ERROR 
+LUT
+...
+Group 
+N
+Group 
+N-1
+Group
+N
+(a)
+(c)
+(d)
+Timing diagram
+t
+Bit Flip
+EG Estimator
+LFSR
+Group
+N-1
+Group
+N-2
+Group
+N-3
+Group
+N
+Group
+N-1
+Group
+N-2
+Group
+N+1
+Group
+N
+Group
+N-1
+Group Size (Cells)
+16
+32
+64
+128 256 512 1024
+Ratio of Top-10
+Weak Patterns (%)
+FIB Storage
+Overhead  (%)
+6.25
+12.5
+25.0
+50.0
+0.00
+0
+50
+100
+Group1
+Group2
+Group3
+I/O Data
+(1) Page-by-Page Scheduling
+(2) Zig-Zag IO Scheduling
+LSB
+CSB
+MSB
+TSB
+(b)
+LSB
+CSB
+MSB
+TSB
+Fig. 7: (a) Hardware Design of STAR. (b) Zig-Zag IO Scheduling. (c) Group-Level Pipelining. (d) Group Size Selection.
+through the SSD controller simultaneously. Since STAR is designed
+to operate at a throughput of 32 or 64 bits per cycle, equal to the
+throughput of external buffer connected to STAR, only the initial
+latency of a single group passing through STAR is added to the
+overall I/O performance. 100 ns of latency will not act as a bottleneck
+in the I/O path, with no impact on the overall data I/O throughput.
+Group-Level Pipelining (GLP). Although all four bits in a group can
+be processed simultaneously due to the optimized I/O scheduling, the
+I/O throughput can be severely degraded as the operations for each
+group proceed sequentially. To overcome this problem, we design
+an optimization technique, Group-Level Pipelining, by interleaving
+the per-group computational tasks within the STAR. As shown in
+Fig. 7(c), due to three dedicated hardware modules for LFSR, EG
+Estimator, and Bit-Flipper, different operations of each group can be
+performed simultaneously. For example, while one group is under the
+Group Error Estimation module, the previous group simultaneously
+proceeds to the Bit-Flipper module, and the next group enters the
+LFSR Randomization module. By implementing micro-pipelining
+that reflects the different latencies of each module, we can match the
+number of groups processed by STAR per cycle and the input rate of
+groups from the external buffer. This carefully designed overlapping
+ensures continuous data flow without bottlenecks in the I/O path,
+allowing STAR to achieve high data I/O throughput.
+Parallel Error Estimator (PEE). Even under the GLP processing,
+the long-latency module can significantly reduce the pipelining effi-
+ciency, which can bottleneck the overall performance of STAR. Since
+the EG estimator is the slowest module, consuming the majority of
+the processing time, we optimize the overall procedure for the EG
+estimator through a dedicated hardware architecture. Our goal is to
+evaluate the impact of all 16 possible bit-flip operations on group
+error (EG) simultaneously.
+To this end, we implement EG estimator with 16 dedicated
+computation units, each responsible for calculating the cumulative
+error change for a specific bit-flip operation. Each unit linearly
+scans the cells in a group, accumulating the error difference between
+original and transformed states as defined in Eq. 3. To efficiently
+calculate the cumulative error change for all possible state transitions
+(from original state to transformed state), the EG estimator exploits
+pre-characterized error-change values, which are stored in an on-chip
+Look-Up Table (LUT). Each value in the LUT is derived from offline
+error analysis of real 3D flash memory. During runtime operation,
+each computation unit fetches the required error-change values from
+the LUT, thereby eliminating the need for complex calculations. This
+allows STAR to determine the optimal bit-flip operation with minimal
+delay while maintaining full I/O throughput.
+B. Group Size Selection
+The group size is a critical factor in deciding the efficiency of
+STAR. As shown in Fig. 7(d), since the group size affects both
+how much weak patterns can be reduced and how much space is
+needed for FIB overhead, it should be set carefully to maximize
+the benefit of our technique. For example, a smaller group size
+enables more fine-grained control over bit-flip optimization, which
+results in better error reduction by removing more weak patterns.
+However, when group size decreases, the number of groups per page
+increases proportionally, requiring more FIB bits to store the bit-
+flip information (i.e., need for more spare area). Recent work [15]
+shows that reserving up to 1% of cells per wordline cells in the
+space area for auxiliary metadata has a negligible impact on ECC
+correction capability. Accordingly, we select a 128-cell group size
+in our QLC flash design (16KB page, 2KB spare area), resulting in
+a FIB overhead of only 0.7%, well within the practical limitation,
+while maximizing error reduction.
+C. Analysis of Implementation Overhead
+STAR requires only minor changes to existing SSDs, without mod-
+ifying NAND chips. To evaluate the overhead, we implemented the
+STAR hardware logic in HDL and conducted Power, Performance,
+and Area (PPA) analysis using Synopsys Design Compiler, targeting
+a 45nm standard-cell library. First, the performance overhead of
+STAR is minimized through latency-efficient design. STAR only
+adds less than 100 ns to the conventional data randomization process,
+which is negligible compared to typical QLC flash memory pro-
+gram operations that range from tens to thousands of microseconds,
+ensuring no degradation in IOPS performance in practice. Second,
+chip-area overhead is also negligible in practice due to a compact
+hardware design. The analysis based on EDA tool demonstrates that
+implemented in a 45nm process, the STAR randomizer occupies only
+0.036mm2 (44.8K gates), representing a negligible fraction compared
+to a typical SSD controller die size of approximately 70mm2 [32],
+[33]. Third, the power analysis shows that STAR incurs additional
+power consumption of approximately 15.3mW. Since it accounts
+for less than 0.3% of the overall power budget in typical SSDs
+(5W–15W) [34], the power overhead can be trivial. Finally, STAR
+stores a single FIB bit per group in the flash spare area. With a 128-
+cell group size, the FIB overhead is only 0.7% of the wordline, which
+is well within practical limits [15].
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+TLC VTH States (P0~P7)
+QLC VTH States (P0~P15)
+0
+1
+2
+3
+4
+5
+6
+7
+0
+2
+4
+6
+8
+10
+12
+15
+1
+3
+5
+7
+9
+11
+1314
+Baseline
+STAR
+8.5
+16.5
+12.5
+2.0
+10.0
+6.0
+Ratio(%)
+-39%
+-33%
++43%
++24%
+-13%
+-20%
+(a) Distribution of each Vth state in TLC/QLC NAND.
+Normalized Ratio
+1
+0.5
+0.0
+Baseline
+STAR
+0
+15
+0
+0
+14
+0
+0
+15
+1
+0
+13
+0
+0
+14
+1
+1
+15
+1
+0
+13
+1
+1
+14
+1
+1
+15
+2
+1
+13
+1
+Top 10 Weak Patterns of QLC
+0
+7
+0
+0
+6
+0
+0
+7
+1
+0
+6
+1
+1
+7
+2
+1
+7
+3
+0
+6
+2
+1
+7
+4
+1
+7
+5
+0
+6
+3
+Top 10 Weak Patterns of TLC
+44.7%
+72.3%
+39.8%
+(b) Suppression of the top 10 weak patterns in TLC/QLC NAND.
+Fig. 8: Impact of STAR on 3D TLC/QLC NAND: (a) Vth state
+distribution and (b) normalized suppression of weak patterns.
+VI. EVALUATION
+To evaluate the effectiveness of STAR in real hardware, we con-
+ducted extensive device-level characterization using 160 commercial
+3D TLC/QLC flash chips. We implemented three SSD configurations:
+one equipped with a conventional LFSR-based randomizer (Baseline),
+one with TailCut, and one with our proposed STAR randomizer.
+For each chip, we uniformly selected 120 blocks across different
+physical locations and tested all wordlines—amounting to 3,686,400
+WLs in total. Using an FPGA-based testing platform with a cus-
+tom flash controller and a temperature chamber, we measured key
+reliability metrics—endurance errors, retention errors, and read-retry
+counts—under varying program/erase (P/E) cycles and data retention
+times. Test protocols followed JEDEC industry standards [35]; for
+example, to simulate a 12-month retention period, chips were baked
+at 85◦C for 13 hours, equivalent to one year at 30◦C based on
+Arrhenius’s law [36].
+Using a state-of-the-art SSD emulator [24], we construct a STAR-
+aware SSD model, StarSSD. Specifically, we extend the NAND
+model to reflect LCS error behaviors and read-retry dynamics based
+on our real-chip characterization. The emulator includes three SSD
+configurations—Baseline (LFSR), TailCut, and StarSSD —allowing
+system-level evaluation under realistic error conditions. As summa-
+rized in Table I, we configured the architecture and key parameters of
+the emulated SSDs to be close to modern high-end SSDs employing
+state-of-the-art 3D flash memory [37], [38]. For our evaluations, we
+study five workloads from the Filebench benchmark suite: OLTP,
+File, Proxy, Mail, and Web server [39]. Table II summarizes the I/O
+characteristics of the workloads used for our evaluations [40].
+TABLE I: Key parameters of a target SSD [37], [38].
+Configuration
+1 TB total capacity,
+8 channels,
+1 chips/channel,
+2 planes/die
+Interface
+NVMe 8 GB/s
+tR (µs)
+45 (TLC), 110 (QLC)
+tPROG (µs)
+390 (TLC), 2000 (QLC)
+Best
+25%
+50%
+75% Worst
+Best
+25%
+50%
+75% Worst
+Normalized 
+Lifetime
+1
+0
+2
+2.3x
+1.98x
+3D TLC Flash Memory
+3D QLC Flash Memory
+Baseline
+TailCut
+STAR
+(a) Normalized lifetime comparison across chip percentiles (Best to Worst).
+# Read Retry
+0
+5
+10
+15
+20
+25
+30
+6
+12
+6
+12
+6
+12
+6
+12
+1.0K PEC
+2.0K PEC
+Retention Time (months)
+3D TLC Flash Memory
+48%
+58%
+0.5K PEC
+1.0K PEC
+3D QLC Flash Memory
+Baseline
+TailCut
+STAR
+40%
+30%
+(b) Read retry counts across varying retention times and P/E cycles.
+Fig. 9: Impact of STAR on (a) lifetime and (b) read retry counts,
+measured using 160 real 3D TLC/QLC flash chips.
+A. Impact on SSD Lifetime
+Reduction of Weak Patterns. As shown in Fig. 8(a), STAR reduces
+weak patterns by reshaping the Vth state distributions. In TLC flash
+memory, STAR lowers the error-prone states P0 and P7 by 13% and
+20%, respectively, compared to baseline. The effect is even more
+pronounced in QLC flash memory, where STAR reduces the P0 and
+P1 by 33% and 31%, and P14 and P15 by 42% and 39%, respectively.
+This greater reduction in QLC flash memory is due to STAR ’s
+ability to exploit more bit-flip candidates—4 bits per cell versus 3
+in TLC—enabling more effective bit-flip pattern optimization. The
+reduced error-prone states lower weak pattern generation, as shown
+in Fig. 8(b). In TLC flash memory, STAR reduces the top weak
+pattern E-P7-E by 39.8% and reduces the occurrence of the top 10
+weak patterns by an average of 29.0%. STAR is more effective in
+QLC flash memory, reducing the E-P15-E pattern by 72.3% and the
+top 10 weak patterns by an average of 71.7% over the baseline.
+Lifetime Improvement. STAR improves SSD lifetime by reducing
+the RBER via eliminating weak patterns. To quantify this improve-
+ment, we subjected devices to increasing P/E cycles and identified
+the point at which the RBER exceeded the ECC correction capability
+(72 bits per 1-KiB) [41] for each comparison scheme. Fig. 9(a)
+shows that STAR significantly extends SSD lifetime. For TLC flash
+memory, STAR increased lifetime from 7.5K PEC to 9.9K PEC
+(98%), compared to TAILCUT’s 7.5K PEC to 9.0K PEC (80%). For
+QLC flash memory, STAR increased lifetime from 1.5K to 2.3K
+PEC (130%), compared to TAILCUT ’s 1.2K to 1.5K PEC (50%),
+highlighting the greater effectiveness of STAR in QLC flash memory.
+Unlike TAILCUT, which targets specific weak patterns, STAR aims
+to redistribute error-prone states, significantly reducing a majority
+TABLE II: Key I/O characteristics of evaluated workloads [40].
+Workload
+File size
+# files
+# threads
+R/W Ratio
+Web Server
+32 KB
+20,000
+100
+10:1
+File Server
+256 KB
+50,000
+100
+1:2
+Mail Server
+16 KB
+50,000
+100
+1:1
+DB Server
+0.5 GB
+10
+200+10
+20:1
+Web Proxy
+1 MB
+10,000
+100
+5:1
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+Baseline
+TcSSD
+StarSSD
+OLTP
+File
+Proxy
+Mail
+Web
+OLTP
+File
+Proxy
+Mail
+Web
+Normalized
+Response Time
+0.0
+0.5
+1.0
+1.0K PEC w/ 6 months ret.
+2.0K PEC w/ 12 months ret.
+0.5K PEC w/ 6 months ret.
+1.0K PEC w/ 12 months ret.
+(a)
+(b)
+0.0
+0.5
+1.0
+31%
+41%
+49%
+58%
+Fig. 10: Comparison of response time of (a) TLC and (b) QLC on Filebench workloads.
+of weak patterns. These results indicate that STAR is especially
+effective for flash memories with many error-prone states and weak
+patterns, such as QLC flash memory.
+B. Impact on Read Performance
+Reduction in Read Retry Counts. By minimizing weak patterns,
+STAR effectively reduces unintended Vth shifts caused by LCS,
+thereby lowering the frequency of read retry, which is one of the
+primary contributors to read latency in modern 3D flash memory [18],
+[42]. Fig. 9(b) shows the average read-retry count under varying PEC
+and retention times. For TLC flash memory, STAR reduced read-retry
+operations by up to 48% after 2.0K PEC compared to the baseline.
+QLC flash memory showed even greater improvements: up to 40%
+and 58% reduction after 0.5K and 1.0K PEC, respectively, implying
+a high probability of SSD latency improvement.
+Read Latency Improvement. To assess read performance, we
+compare StarSSD with a TAILCUT-based SSD (TcSSD) using the
+read-retry models in Fig. 9(b). Average read latency per operation was
+measured across five workloads (Tab. II). Fig. 10 shows normalized
+read response times of StarSSD and TcSSD against the Baseline
+under various PEC and retention settings. In TLC SSDs (Fig. 10(a)),
+StarSSD reduced latency by 28% over the Baseline and 9%
+over TcSSD at 1.0K PEC with 6-month retention. With further aging
+(2.0K PEC, 12-month retention), reductions reached 46% and 25%,
+respectively. For QLC SSDs (Fig. 10(b)), where RBER and retention
+errors are more severe, the improvement is more pronounced. At
+0.5K PEC and 6 months, StarSSD reduced latency by 33% over
+the Baseline and 25% over TcSSD; at 1K PEC and 12 months,
+the reduction reached 50% and 41%, respectively. Although TcSSD
+also improves over the Baseline, its gains in QLC are limited
+due to diverse weak patterns. StarSSD consistently outperforms
+both baselines across all workloads and NAND types, demonstrating
+strong scalability and robustness under varied conditions.
+VII. RELATED WORK
+To our knowledge, this work is the first to address the LCS
+problem by redesigning the data randomizer in the SSD controller,
+providing significant lifetime and performance benefits for modern
+SSDs without modification to the NAND flash chip.
+LCS Problem. Several studies have characterized the mechanism of
+LCS in 3D NAND flash memory. Mizoguchi et al. [21] revealed the
+physical mechanism behind LCS by investigating the amount of Vth
+shift in 3D charge-trap cells, while Luo et al. [17] demonstrated that
+LCS contributes up to 80% of early charge loss in 3D flash memory.
+However, these works focused only on device-level characterization
+without analyzing the impact of LCS on the performance and
+reliability at the system level. The recent system-level approach,
+TAILCUT [18], improves the LCS problem by detecting and elim-
+inating the two most vulnerable weak patterns. However, it requires
+flash chip modifications with complex read/write operations, limiting
+its ability to eliminate only a few patterns and reducing effectiveness
+in advanced flash technologies with many weak patterns.
+Randomizer. Conventional data randomization is widely used in
+modern SSDs [30] to prevent unbalanced patterns from exceeding
+ECC capability. However, existing data randomizers do not address
+the challenges posed by LCS. To overcome this, STAR employs
+a state-aware bit-flip mechanism to reshape Vth states and improve
+robustness against LCS.
+VIII. CONCLUSION
+In this paper, we introduced STAR, a novel randomization tech-
+nique addressing reliability challenges in 3D NAND flash memory.
+Unlike conventional LFSR-based randomizers which uniformly dis-
+tribute data across Vth states, STAR strategically reshapes Vth states
+by applying optimal group-level bit-flip operations, effectively reduc-
+ing error-prone states and minimizing LCS effects. By lowering error-
+prone states (e.g., P0, P1, P14, P15), STAR statistically reduces weak
+patterns without explicitly detecting them. Our comprehensive eval-
+uations demonstrate significant improvements, extending the lifetime
+of TLC and QLC flash memory by up to 1.98x and 2.3x compared
+to baseline, and improving read performance of TLC and QLC-based
+SSD by an average of 46% and 50% on real-world traces. Importantly,
+STAR’s controller-level implementation requires no NAND flash
+chip modifications and adds minimal overhead, making it highly
+practical. Although tested on TLC and QLC flash memory, STAR ’s
+design is expected to be effective in next-generation SSDs such as
+PLC flash memory, which pose more severe reliability challenges.
+IX. ACKNOWLEDGMENT
+This work was mainly supported by Korea Institute for Advance-
+ment of Technology(KIAT) grant funded by the Korea Government
+(Ministry of Education) (P0025681-G02P22450002201-10054408,
+Semiconductor - Specialized University), by the Ministry of Science
+and ICT (MSIT, Korea) under Grant RS-2024-00456287, and by the
+Institute for Information & communications Technology Planning
+& evaluation (IITP) under Grants RS-2024-00459026 and RS-2025-
+02214654. Myungsuk Kim was supported in part by the National
+Research Foundation of Korea (RS-2024- 00414964) and by K-
+CHIPS(Korea Collaborative & High-tech Initiative for Prospective
+Semiconductor Research) (2410012261, 02219428, 25066-15FC)
+funded by the Ministry of Trade, Industry & Energy (MOTIE, Korea).
+The ICT at Seoul National University provided research facilities for
+this study. The EDA tool was supported by the IC Design Education
+Center (IDEC), Korea. (Co-corresponding Authors: Jihong Kim and
+Myungsuk Kim)
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+REFERENCES
+[1] H. Liu and H. H. Huang, “Graphene: Fine-Grained IO Management for
+Graph Computing,” in Proc. USENIX Conf. File and Storage Technolo-
+gies, 2017, pp. 285–300.
+[2] N. Elyasi, C. Choi, and A. Sivasubramaniam, “Large-Scale Graph
+Processing on Emerging Storage Devices,” in Proc. USENIX Conf. File
+and Storage Technologies, 2019, pp. 309–316.
+[3] K. K. Matam, G. Koo, H. Zha, H.-W. Tseng, and M. Annavaram,
+“GraphSSD: graph semantics aware SSD,” in Proc. Int. Symp. on
+Computer Architecture, 2019, pp. 116–128.
+[4] H. Choe, S. Lee, H. Nam, S. Park, S. Kim, E. Chung et al., “Near-data
+processing for machine learning,” 2017, arXiv:1610.02273.
+[5] S. Liang, Y. Wang, Y. Lu, Z. Yang, H. Li, and X. Li, “Cognitive SSD: A
+Deep Learning Engine for In-Storage Data Retrieval,” in Proc. USENIX
+Annu. Tech. Conf., 2019, pp. 395–410.
+[6] A. Khakifirooz, E. Anaya, S. Balasubrahmanyam, G. Bennett, D. Castro,
+J. Egler et al., “A 1.67Tb, 5b/Cell Flash Memory Fabricated in 192-
+Layer Floating Gate 3D-nand Technology and Featuring a 23.3 Gb/mm2
+Bit Density,” IEEE Solid-State Circuits Lett., vol. 6, pp. 161–164, 2023.
+[7] M. Kim, S. Yun, J. Park, H. Park, J. Lee, Y. Kim et al., “A 1Tb
+3b/Cell 8th-Generation 3D-NAND Flash Memory with 164MB/s Write
+Throughput and a 2.4Gb/s Interface,” in Proc. IEEE Int. Solid-State
+Circuits Conference, 2022, pp. 136–137.
+[8] M. Ishiduki, Y. Fukuzumi, R. Katsumata, M. Kito, M. Kido, H. Tanaka
+et al., “Optimal device structure for Pipe-shaped BiCS Flash memory
+for ultra high density storage device with excellent performance and
+reliability,” in Proc. IEEE Int. Electron Devices Meeting, 2009, pp. 1–4.
+[9] J. Jang, H. Kim, W. Cho, H. Cho, J. Kim, S. Shim et al., “Vertical cell
+array using TCAT(Terabit Cell Array Transistor) technology for ultra
+high density NAND flash memory,” in Proc. Symp. on VLSI Technology,
+2009, pp. 192–193.
+[10] K. Park, D. Byeon, and D. Kim, “A world’s first product of three-
+dimensional vertical NAND Flash memory and beyond,” in Proc. Annu.
+Non-Volatile Memory Technology Symp., 2014, pp. 1–5.
+[11] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC
+NAND flash memory: Measurement, characterization, and analysis,” in
+Proc. Design, Automation and Test in Europe Conf. and Exhibition,
+2012, pp. 521–526.
+[12] Y. Cai, Y. Luo, S. Ghose, and O. Mutlu, “Read Disturb Errors in MLC
+NAND Flash Memory: Characterization, Mitigation, and Recovery,” in
+Proc. Annu. IEEE/IFIP Int. Conf. on Dependable Systems and Networks,
+2015, pp. 438–449.
+[13] Y. Cai, S. Ghose, Y. Luo, K. Mai, O. Mutlu, and E. F. Haratsch, “Vul-
+nerabilities in MLC NAND Flash Memory Programming: Experimental
+Analysis, Exploits, and Mitigation Techniques,” in Proc. IEEE Int Symp.
+on High Performance Computer Architecture, 2017, pp. 49–60.
+[14] A. Tai, A. Kryczka, S. O. Kanaujia, K. Jamieson, M. J. Freedman, and
+A. Cidon, “Who’s Afraid of Uncorrectable Bit Errors? Online Recovery
+of Flash Errors with Distributed Redundancy,” in Proc. USENIX Ann.
+Technical Conf., 2019, pp. 977–992.
+[15] Q. Li, M. Ye, Y. Cui, L. Shi, X. Li, T.-W. Kuo et al., “Shaving Retries
+with Sentinels for Fast Read over High-Density 3D Flash,” in Proc.
+Annu. IEEE/ACM Int. Symp. on Microarchitecture, 2020, pp. 483–495.
+[16] R. Frickey, J. Doller, R. Norton, R. Sancho, R. Sayyad, D. Ustinov et al.,
+“Comparing the Reliability of Solid-State Drives Based on TLC and
+QLC NAND Flash Memories (Invited),” in Proc. IEEE Int. Reliability
+Physics Symp., 2024, pp. 3A.1–1–3A.1–7.
+[17] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D
+NAND Flash Memory Lifetime by Tolerating Early Retention Loss and
+Process Variation,” Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 3,
+2018.
+[18] J. Lee, M. Kim, W. Choi, S. Lee, and J. Kim, “TailCut: improving
+performance and lifetime of SSDs using pattern-aware state encoding,”
+in Proc. ACM/IEEE Design Automation Conf., 2022, p. 409–414.
+[19] R. Micheloni, 3D Flash Memories.
+Springer, 2016.
+[20] A. Goda, “Recent Progress on 3D NAND Flash Technologies,” Elec-
+tronics, vol. 10, no. 24, 2021.
+[21] K. Mizoguchi, S. Kotaki, Y. Deguchi, and K. Takeuchi, “Lateral charge
+migration suppression of 3D-NAND flash by vth nearing for near data
+computing,” in Proc. IEEE Int. Electron Devices Meeting, 2017, pp.
+19.2.1–19.2.4.
+[22] Y. Kong, M. Zhang, X. Zhan, R. Cao, and J. Chen, “Retention Correlated
+Read Disturb Errors in 3-D Charge Trap NAND Flash Memory: Obser-
+vations, Analysis, and Solutions,” IEEE Trans. Comput.-Aided Design
+Integr. Circuits Syst., vol. 39, no. 11, pp. 4042–4051, 2020.
+[23] W. Jung, H. Kim, D. Kim, T. Kim, N. Lee, D. Shin et al., “13.3 A
+280-Layer 1Tb 4b/cell 3D-NAND Flash Memory with a 28.5Gb/mm2
+Areal Density and a 3.2GB/s High-Speed IO Rate,” in Proc. IEEE Int.
+Solid-State Circuits Conf., 2024, pp. 236–237.
+[24] S. Kim, J. Shim, E. Lee, S. Jeong, I. Kang, and J. Kim, “NVMeVirt:
+A Versatile Software-defined Virtual NVMe Device,” in Proc. USENIX
+Conf. on File and Storage Technologies, 2023, pp. 379–394.
+[25] K. Kanda, N. Shibata, T. Hisada, K. Isobe, M. Sato, Y. Shimizu et al.,
+“A 19 nm 112.8 mm2 64 Gb Multi-Level Flash Memory With 400
+Mbit/sec/pin 1.8 V Toggle Mode Interface,” IEEE J. Solid-State Circuits,
+vol. 48, no. 1, pp. 159–167, 2013.
+[26] K. Park, J. Han, D. Kim, S. Nam, K. Choi, M. Kim et al., “19.5 Three-
+dimensional 128Gb MLC vertical NAND Flash-memory with 24-WL
+stacked layers and 50MB/s high-speed programming,” in Proc. IEEE
+Int. Solid-State Circuits Conf. Digest of Tech. Papers, 2014, pp. 334–
+335.
+[27] J. Maserjian and N. Zamani, “Behavior of the Si/SiO2 interface observed
+by Fowler-Nordheim tunneling,” J. Appl. Phys, vol. 53, no. 1, pp. 559–
+567, 1982.
+[28] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPC-
+in-SSD: Making Advanced Error Correction Codes Work Effectively
+in Solid State Drives,” in Proc. USENIX Conf. on File and Storage
+Technologies, 2013, pp. 243–256.
+[29] Macronix, “The Introduction of Randomizer Feature on Macronix, Ap-
+plication Note,” 2023, https://www.mxic.com.tw/Lists/ApplicationNote/
+Attachments/2151/AN1051V1-The%20Introduction%20of%20Randomi
+zer%20Feature%20on%20MX30xFxG28AD MX35xFxG24AD.pdf.
+[30] S. Yoon, “Nonvolatile Memory Device and Data Randomizing Method
+Thereof, U.S. Patent 20100259983A1,” 2023, https://patents.google.c
+om/patent/US20100259983A1/en.
+[31] M. Kim, Y. Song, M. Jung, and J. Kim, “SARO: A State-Aware Relia-
+bility Optimization Technique for High Density NAND Flash Memory,”
+in Proc. Great Lakes Symp. on VLSI, 2018, pp. 255–260.
+[32] A. Tavakkol, J. G´omez-Luna, M. Sadrosadati, S. Ghose, and O. Mutlu,
+“MQSim: A Framework for Enabling Realistic Studies of Modern Multi-
+Queue SSD Devices,” in Proc. USENIX Conf. on File and Storage
+Technologies, 2018, pp. 49–66.
+[33] M. Cornwell, “Anatomy of a solid-state drive,” Commun. ACM, vol. 55,
+no. 12, pp. 59–63, 2012.
+[34] TechPowerUp, “Silicon Motion’s SM2508 PCIe 5.0 NVMe SSD Con-
+troller is as Power Efficient as Promised,” 2024, https://www.techpowe
+rup.com/forums/threads/silicon-motions-sm2508-pcie-5-0-nvme-ssd-c
+ontroller-is-as-power-efficient-as-promised.326606/.
+[35] JEDEC, “JESD218B.03: Solid-State Drive (SSD) Requirements and
+Endurance Test Method,” 2024, https://www.jedec.org/standards-d
+ocuments/docs/jesd218b01.
+[36] S. Arrhenius, “ ¨Uber die Dissociationsw¨arme und den Einfluss der
+Temperatur auf den Dissociationsgrad der Elektrolyte,” Z. Phys. Chem.,
+vol. 4U, pp. 96–116, 1889.
+[37] TechPowerUp, “Samsung 870 EVO 1 TB (V-NAND V6 512Gb),”
+TechPowerUp SSD Database, 2021, https://www.techpowerup.com/
+ssd-specs/samsung-870-evo-1-tb.d3.
+[38] TechPowerUp,
+“Samsung
+870
+QVO
+1
+TB,”
+TechPowerUp
+SSD
+Database, 2020, https://www.techpowerup.com/ssd-specs/samsung
+-870-qvo-1-tb.d16.
+[39] V. Tarasov, E. Zadok, and S. Shepler, “Filebench: A Flexible Framework
+for File System Benchmarking,” Login Usenix Mag., vol. 41, no. 1, pp.
+6–12, 2016.
+[40] P. Sehgal, V. Tarasov, and E. Zadok, “Evaluating performance and energy
+in file system server workloads,” in Proc. USENIX Conf. on File and
+Storage Technologies, 2010, p. 19.
+[41] L. Macronix International Co., “NAND Error Correction Codes
+Introduction,” Macronix International Co., Ltd., Application Note
+AN0271V1, 2021, accessed: 2025-04-22. [Online]. Available: https://ww
+w.macronix.com/Lists/ApplicationNote/Attachments/1910/AN0271V1
+-NAND%20Error%20Correction%20Codes%20Introduction-0217.pdf
+[42] M. Chun, J. Lee, M. Kim, J. Park, and J. Kim, “RiF: Improving Read
+Performance of Modern SSDs Using an On-Die Early-Retry Engine,” in
+IEEE International Symposium on High-Performance Computer Archi-
+tecture (HPCA), 2024, pp. 643–656.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:01:26 UTC from IEEE Xplore.  Restrictions apply. 

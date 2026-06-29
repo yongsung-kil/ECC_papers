@@ -1,0 +1,1039 @@
+A mapping of the Min-Sum decoder to reduction operations, and its implementation using CUDA
+kernels
+
+Omer S. Sella dept. of computing Imperial College London o.sella@imperial.ac.uk
+
+Thomas Heinis dept. of computing Imperial College London t.heinis@imperial.ac.uk
+
+arXiv:2507.10424v1 [cs.IT] 14 Jul 2025
+
+Abstract—Decoders for Low Density Parity Check (LDPC) codes are usually tailored to an application and optimized once the specific content and structure of the parity matrix are known. In this work we consider the parity matrix as an argument of the Min-Sum decoder, and provide a GPU implementation that is independent of the content of the parity matrix, and relies only on its dimensions.
+Index Terms—Low density parity check codes, Min-Sum decoder, map-reduce optimization, LDPC, GPU.
+
+The SPC pictured in Figure 1 corresponds to the case where
+
+I. INTRODUCTION
+LDPC codes made their way into several standards and technologies, spanning telecommunications and storage [1]. Prior to adoption, it is sometimes the case that several codes are considered, stemming from different constructions or parameter tuning of a single construction [15]. In this early, short-lived stage, decoder optimizations that are a function of the specific parity matrix are not readily available. In this stage, a high throughput decoder helps eliminate or choose from a selection of codes, often having a parity matrix of similar dimensions. This work is concerned with the optimization of the Min-Sum decoder when only the dimensions of the parity matrix H are known.
+
+II. PRELIMINARIES
+The material presented here is entirely covered or can be deduced from prior literature. Nevertheless, we believe that the practical significance of it makes it worthwhile to present here.
+
+A. A collection of linear equations over a binary field
+The reader may be familiar with the term Single Parity Checksum (SPC). Given a vector v from the k dimensional space {0, 1}k over F2, an SPC is defined by a choice I ⊂ {1, .., k} of indices from the set of integers {1, .., k}. An SPC is said to be satisfied if
+
+v(i) = 0 (mod 2)
+
+(1)
+
+i∈I
+
+which is identical to the bit-wise XOR of the values of the specific coordinates being 0, i.e.:
+
+⊕i∈I v(i) = 0
+
+(2)
+
+Fig. 1: A single parity checksum. Bits 1 through 6 may take any value in 0, 1. We say that the single parity checksum is satisfied if 0 = Bit1 ⊕ Bit2 ⊕ Bit4 ⊕ Bit5 corresponding to the index set I = {1, 2, 4, 5}. The corresponding vector 1I = (1, 1, 0, 1, 1, 0)
+k = 6 and I = {1, 2, 4, 5}. Bipartite graphs can be viewed as a collection of SPCs. The bipartite graph in Figure 2 is also known as a Tanner graph [14] or a Forney Factor Graph (FFG) [11]. The nodes in the bipartite graph defined by H (i.e., the Tanner graph) are labelled as two enumerated sets B, C. The nodes in the set C represent the check nodes c1, c2, ... shown on the right side of Figure 2 that impose relations on the circular bit nodes from the set B. We may observe that this graph could be viewed as a collection of the following SPCs:
+• Check 1 is defined by
+I1 = {1, 2, 3, 6, 7, 10}
+and yields 1I1 = (1, 1, 1, 0, 0, 1, 1, 0, 0, 1) • Check 2 is defined by
+I2 = {1, 3, 5, 6, 8, 9}
+
+ci ∈ C denote by Ni the subset of bit nodes that are connected
+
+to ci, i.e.:
+
+Ni = {bj : H(i, j) = 1}
+
+(4)
+
+the reader may note that these are determined by the locations of the non-zero entries in the i′th row of the parity matrix
+H, and indeed this is demonstrated in Figure 3. Similarly, we
+
+Fig. 2: Tanner graph example.
+
+and yields 1I2 = (1, 0, 1, 0, 1, 1, 0, 1, 1, 0) • Check 3 is defined by
+I3 = {3, 4, 5, 7, 9, 10}
+and yields 1I3 = (1, 1, 1, 0, 0, 1, 1, 0, 0, 1) • Check 4 is defined by
+
+(a) A binary matrix. The check nodes are enumerated according to the row numbers and are presented here in the leftmost column. The bit nodes are enumerated according to the column numbers and are presented here on the top row.
+
+I4 = {2, 4, 5, 6, 8, 10}
+and yields 1I4 = (0, 1, 0, 1, 1, 1, 0, 1, 0, 1) • Check 5 is defined by
+
+I5 = {1, 2, 4, 7, 8, 9}
+and yields 1I5 = (1, 1, 0, 1, 0, 0, 1, 1, 1, 0) A binary vector v ∈ {0, 1}10 satisfies all these SPCs concurrently if and only if it is in the kernel of all the vectors above, i.e., v ∈ ker(H) where the rows of H are exactly the above vectors.
+
+B. The Min-Sum algorithm
+
+We continue by examining the Min-Sum decoding algorithm as summarised here in Algorithm 1. A complete mathematical derivation, as well as other algorithms, can be found in [12]. In our context, it is more important to understand how the algorithm works and how it could be rephrased so it can be implemented in various ways. As mentioned, an assignment of a binary sequence:
+
+c ∈ {0, 1}||B||
+
+(3)
+
+(b) The indices corresponding to of In this example we show how to find the set of bit nodes N4. We start at the row corresponding to check node number 4, i.e.: c4 and find the non-zero elements in that row.
+
+is a codeword if and only if it satisfies all check nodes in C. The Min-Sum algorithm, summarised in Algorithm 1 and used in this work, uses this structure to pass messages between bit nodes and check nodes. Every bit node is assigned a real number representing Log-Likelihood-Ratio (LLR). Its sign represents its logical value. In this work, strictly positive means logical "1", and non-positive means logical "0". A bit node’s magnitude represents the confidence of the bit node in its logical value, i.e., larger magnitude means more certainty. We follow the notation from [12] with minor changes so that we can build on it in the following chapters. For a check node
+
+(c) The location of each non-zero element found in the row indicates a bit node that belongs to the set N4.
+Fig. 3: The sets Ni are defined for every check node and so correspond to the locations of non-zero elements in the rows of the parity matrix.
+
+denote by Mj the set of check nodes that are connected to bit node j, i.e.:
+
+Mj = {ci : H(i, j) = 1}
+
+(5)
+
+The reader may note this time that these correspond to the non-zero entries of the j′th column in the parity matrix H. Figure 4 shows how to find the set M7 using the parity matrix. An observed vector r of real values serves as initial values for
+(a) We use the same binary matrix as in Figure 3
+
+The min-sum decoder starts by taking the received values r as a first estimation for the bit values, i.e.:
+
+λj = r(j)
+
+(8)
+
+The decoder continues by generating update values at the check nodes, followed by updating the values of the bit nodes. Check node ci generates individual updates to each bit node bj which is a member of the set Ni, using the values λj of the other bit nodes in the same set:
+
+ηi,j = min
+bk∈Ni, k≠ j
+
+|λk − ηip,rkevious| ·
+
+sign(λk − ηip,rkevious)
+
+{k≠ j :bk∈Ni}
+
+(9)
+
+where ηip,rkevious is the value calculated in the previous iteration
+
+by ci and sent to bk. Where in the special case of the first
+
+iteration we define ηkprevious = 0.
+
+The bit nodes update their values by summing all values
+
+calculated by the check nodes connected to them, as well as
+
+the initially observed information i.e.:
+
+λj = r(j) +
+
+ηi,j
+
+(10)
+
+ci ∈Mj
+
+At this point, we can check if the algorithm converged to a binary code-word b by "slicing" the inferred values vector λ(j), i.e. setting:
+
+(b) In this example we show how to find the set of bit nodes M7. We start at the row corresponding to bit node number 7, i.e.: B7 and find the non-zero elements in that row.
+
+(c) The location of each non-zero element found in the row indicates a check node that belongs to the set M7.
+Fig. 4: The sets Mj are defined for every bit node and so correspond to the locations of non-zero elements in the columns of the parity matrix.
+
+the bit nodes. The task of the decoder is to find a value λj for each bit node bj that maximises:
+
+P (λj | r, all checks involving bj are satisf ied) (6)
+
+It should be noted that this is a computationally feasible approximation of the optimum decoder, i.e., a decoder that would seek a codeword c that maximises:
+
+P (c | r, H · c = 0)
+
+(7)
+
+b(i) = 1 if s(i) > 0 (11)
+b(i) = 0 if s(i) ≤ 0
+Algorithm 1: Iterative Min-Sum decoding algorithm for binary LDPC codes
+Input: The parity matrix H, the received vector r and the maximum number of iterations L.
+Output: A binary vector b, the iteration number at which the decoder stopped k, a status indication isCodeword.
+Set l = 0 Set ∀j λj = r(j) set ∀i, j ηi,j = 0 Set isCodeword = False while (k < L) and (¬ isCodeword) do
+For every cj ∈ C calculate: ηi,j = minbk∈Ni, k̸=j |λk − ηip,rkevious| ·
+{k̸=j :bk∈Ni} sign(λk − ηip,rkevious) For every bj ∈ C calculate: λj = r(j) + ci∈Mj ηi,j Calculate b according to equation 11. if H · b = 0 then
+set isCodeword = True end k = k+1 end return isCodeword, k, b
+
+III. A MAP REDUCE ARCHITECTURE OF THE MIN-SUM
+ALGORITHM
+We begin this section with two observations regarding the Min-Sum algorithm 1. The first observation regards the term:
+
+min
+bk∈Ni, k̸=j
+
+|λk − ηip,rkevious|
+
+(12)
+
+in equation 9:
+
+Observation 3.1: The minimum taken in equation 9 does
+
+not need to be calculated for every j in the set Ni =
+
+{bj : H(i, j) = 1}.
+
+Let:
+
+mini0
+
+=
+
+min
+bk ∈Ni
+
+|λk − ηip,rkevious|
+
+(13)
+
+and:
+
+min0i Location = arg min
+{bk ∈Ni }
+
+|λk − ηip,rkevious|
+
+(14)
+
+and finally:
+
+min1i =
+
+min
+
+{bk∈Ni, k≠ min0Location}
+
+|λk − ηip,rkevious|
+
+(15)
+
+then there are two cases: Case 1: j ̸= mini0Location and hence
+
+min
+{bk∈Ni, k≠ j}
+
+|λk − ηip,rkevious|
+
+= min0
+
+(16)
+
+Case 2: j = min0Location and hence
+
+min
+{bk∈Ni, k̸=j}
+
+|λk − ηip,rkevious|
+
+= min1
+
+(17)
+
+Observation 3.1 can be found in [17]. The second observation is similar in nature to observa-
+tion 3.1, in that, we seek to reduce the number of numerical operations. The second term of equation 9, i.e.:
+
+sign(λk − ηip,rkevious)
+{k̸=j :bk∈Ni}
+
+(18)
+
+requires a product of signs. Observation 3.2: Assuming the function sign(·) returns
+either 1 or −1 (but not 0), we have:
+
+sign(λk − ηip,rkevious) =
+
+{k≠ j :bk∈Ni}
+
+=
+
+{bk ∈Ni }
+
+sign(λk
+
+−
+
+ηip,rkevious)
+
+×
+
+sign(λj
+
+1 − ηip,rjevious)
+
+=
+
+sign(λk − ηip,rkevious) × sign(λj − ηip,rjevious)
+
+{bk ∈Ni }
+
+(19)
+
+where
+
+the
+
+last
+
+equality
+
+stems
+
+from
+
+the
+
+fact
+
+that
+
+1 1
+
+=
+
+1
+
+and
+
+1 −1
+
+=
+
+−1.
+
+The importance of observation 3.1 and observation 3.2,
+
+other than the apparent reduction of mathematical opera-
+
+tions, is that they allow us to reformulate the Min-Sum
+
+algorithm using reduction operation on matrices. Reduction
+
+operations lend themselves to Single Instruction Multiple
+
+Threads (SIMT) architectures, which are common to Graphics Processing Unit (GPU). Examples of reductions are the functions min(·), sum(·), product(·), and implementation of reduction operations on GPUs are explained in [7] and [5].
+In this section we will restate the components η and λ of the Min-Sum algorithm 1 so that a single iteration could be easily seen as a sequence of fan-out (map) and reduction operations.
+If we define η as a matrix, i.e.:
+
+η(i, j) ≜ ηi,j
+
+(20)
+
+Then equation 10 takes the form:
+
+λj = r(j) +
+
+ηi,j
+
+ci ∈Mj
+
+(21)
+
+= r(j) +
+
+η(i, j)
+
+ci ∈Mj
+
+If we were to make sure that in the above equation we have η(i, j) = 0 whenever ci ∈/ Mj, then we would obtain:
+
+λj = r(j) +
+
+η(i, j)
+
+ci ∈Mj
+
+= r(j) +
+
+η(i, j) + 0
+
+ci ∈Mj
+
+= r(j) +
+
+η(i, j) +
+
+(22) η(i, j)
+
+ci ∈Mj
+
+ci ∈/ Mj
+
+= r(j) + η(i, j)
+i
+
+We make sure of that by setting η(i, j) = 0 whenever H(i, j) = 0, i.e.:
+
+H(i, j) = 0 =⇒ η(i, j) = 0
+
+(23)
+
+This allows for the implementation of the summation part of equation 10 as a reduction operation, rather than needing control logic. Next we turn our attention to equation 9. Plugging in observations 3.1 and 3.2 as well as our definition of η as a matrix we obtain:
+
+ηi,j =
+
+min
+bk∈Ni, k≠ j
+
+|λk − ηip,rkevious| ·
+
+sign(λk − ηip,rkevious) =
+
+{k≠ j :bk∈Ni}
+
+min
+bk∈Ni, k≠ j
+
+|λk − ηip,rkevious|
+
+·
+
+·
+
+sign(λk − ηip,rkevious) · sign(λj − ηip,rjevious) =
+
+k :{bk∈Ni}
+
+(δj,mini0Location · min1i ) + ((1 − δj,min0i Location) · mini0)·
+
+·
+
+sign(λk − ηip,rkevious) · sign(λj − ηip,rjevious) (24)
+
+{bk ∈Ni }
+
+We have already set η(i, j) = 0 whenever H(i, j) = 1. Assume that:
+sign(0) = 1
+
+then we have the following:
+
+sign(λk − ηip,rkevious) · sign(λj − ηip,rjevious) =
+{bk ∈Ni }
+(25)
+
+1·
+
+sign(λk − ηip,rkevious) · sign(λj − ηip,rjevious)
+
+{bk ∈Ni }
+
+(26)
+
+=
+
+sign(λk − ηip,rkevious)
+
+{bk ∈/ Ni }
+
+(27)
+
+·
+
+sign(λk − ηip,rkevious)
+
+{bk ∈Ni }
+
+(28)
+
+·sign(λj − ηip,rjevious) (29)
+
+= sign(λk − ηip,rkevious) · sign(λj − ηip,rjevious)
+i
+(30)
+
+and the term
+
+sign(λk − ηip,rkevious)
+
+(31)
+
+i
+
+is a reduction operation. We are now ready to restate the MinSum algorithm in map and reduce form. We begin with the inputs:
+1) The parity matrix H with dimensions m × n 2) A set of values r is observed at the receiver 3) The maximal number of iterations is L
+
+The first iteration of the Min-Sum algorithm starts as follows: We first map the vector of observation r to a matrix by taking as many copies as there are check nodes, m, followed by masking with H and subtracting η:
+
+λ(i, j) ≜ r(j) · H(i, j)
+
+(32)
+
+We proceed by a reduction of λ to four vectors of size m; min0, min1 and min0Location defined as follows:
+
+sign(0) = 1. We now have all the information we need to update the matrix η as follows:
+η(i, j) =H(i, j)· sign(λ(i, j)) · sgn(i)· (37) (δj,min0Location(i) · min0(i)+ (1 − δj,min0Location(i)) · min1(i))
+The next part is the "sum" part of the Min-Sum algorithm, which we perform as a column-wise sum reduction of the matrix η, and add to it the initial observations vector r:
+
+s(j) =
+
+η(i, j) + r(j)
+
+(38)
+
+{0≤j<n}
+
+At this point, we check if the algorithm converged to a binary code-word b by slicing the vector s as in equation 11. i.e. setting:
+
+b(i) = 1 if s(i) > 0 (39)
+b(i) = 0 if s(i) ≤ 0
+
+And then checking whether b is in the kernel of H, i.e.:
+
+H·b ?= 0
+
+(40)
+
+where the last equation is over the binary field, and 0 is the
+
+all 0s vector.
+
+If b is indeed in the kernel of H, then b is a code-word and
+
+we can stop the algorithm. Otherwise, we increase the iteration
+
+counter k by 1:
+
+k := k + 1
+
+(41)
+
+The algorithm proceeds iteratively, with a single difference in subsequent iterations. We replace equation 32 with the following update of the matrix λ, based on the vector s instead of r, and reducing the formerly calculated η:
+
+λ(i, j) ≜ s(j) · H(i, j) − η(i, j)
+
+(42)
+
+We note that this could be incorporated into the first iteration (setting η initially to an m×n 0s matrix as well as s to be r).
+
+min0(i) = min {|lambda(i, j)| : H(i, j) = 1}
+0≤j<m
+and
+
+(33)
+
+IV. CUDA KERNELS
+
+In this section, we explain how to break the algorithm further so it could be implemented using CUDA kernels and
+
+min0Location(i) = arg min {|lambda(i, j)| : H(i, j) = 1}
+0≤j<m
+(34)
+as well as:
+
+min1(i) =
+
+min
+
+{|λ(i, j)| : H(i, j) = 1}
+
+0≤j<m, i̸=min0Location(i)
+
+(35)
+
+and finally:
+
+sgn(i) =
+
+sign(λ(i, j))
+
+(36)
+
+device functions using NUMBA [9]. By convention, variables that end with _device exist on the GPU memory, whereas _host signifies that they reside on the host CPU. The given here 1 shows the signature of every kernel used. Parameters such as Blocks Per Grid (BPG) and Threads Per Block (TPB) have to be calculated before hand, and experience shows that fine-tuning them separately for each kernel may improve performance. The full version of this code can be found in [13].
+
+{0≤j<m}
+
+1 # Move a s s e t s from h o s t t o CUDA d e v i c e
+
+It should be noted that the first three vectors could be cal- 2 f r o m C h a n n e l _ d e v i c e = cuda . t o _ d e v i c e ( f r o m C h a n n e l _ h o s t
+
+culated
+
+at
+
+once
+
+using
+
+a
+
+sort
+
+function
+
+truncated
+
+to
+
+the
+
+two
+
+3
+
+) softVector_device
+
+=
+
+cuda . to_device ( softVector_host )
+
+smallest elements. Furthermore, the sign function here satisfies 4 i t e r a t o r = 0
+
+Algorithm 2: Iterative Min-Sum decoding algorithm
+
+27
+
+locateTwoSmallestHorizontal2DV2 [
+
+for binary LDPC codes Input: The parity matrix H, the received vector r and
+
+BPG_LOCATE_TWO_SMALLEST_HORIZONTAL_2D , TPB_LOCATE_TWO_SMALLEST_HORIZONTAL_2D ] ( matrix_device , parityMatrix_device ,
+
+the maximum number of iterations L. Output: A binary vector b, the iteration number at
+which the decoder stopped k, a status
+
+smallest_device , secondSmallest_device ,
+
+locationOfMinimum_device )
+
+28
+
+# C a l c u l a t e the sign of each row
+
+29
+
+s i g n R e d u c e H o r i z o n t a l [ DIM0 , 1 ] ( m a t r i x _ d e v i c e ,
+
+indication isCodeword. Set η(i, j) = 0 for all i, j. Set λ(i, j) = r(i) · H(i, j) = 1.
+
+productOfSigns_device )
+
+30
+
+produceNewMatrix2D [
+
+BPG_PRODUCE_NEW_MATRIX_2D ,
+
+TPB_PRODUCE_NEW_MATRIX_2D ] ( p a r i t y M a t r i x _ d e v i c e ,
+
+Set isCodeword = False while (k < L) and (¬ isCodeword) do
+calculate the matrix η according to equation 37.
+
+matrix_device , smallest_device ,
+
+secondSmallest_device , locationOfMinimum_device ,
+
+productOfSigns_device , newMatrix_device )
+
+31
+
+# Sum v e r t i c a l l y . N o t i c e t h a t t h e r e s u l t o f
+
+calculate the vector s according to equation 38. calculate b according to equation 11. if H · b == 0 then
+
+matrix summation using the cuda kernel does not
+
+have t o be e x a c t l y as t h e numpy sum .
+
+32
+
+m a t r i x S u m V e r t i c a l [ BPG_DIM1 , TPB ] (
+
+newMatrix_device , softVector_device )
+
+set isCodeword = True
+
+33
+
+c u d aP l u s D i m1 [ BPG_DIM1 , TPB ] ( s o f t V e c t o r _ d e v i c e ,
+
+end
+k := k + 1 end
+
+fromChannel_device )
+
+34
+
+35
+
+# Check i f the r e s u l t i s a codeword , s i m i l a r to
+
+what we d i d b e f o r e e n t e r i n g d e c o d i n g .
+
+return isCodeword, k, b
+
+36
+
+s l i c e r C u d a [ BPG_DIM1 , TPB ] ( s o f t V e c t o r _ d e v i c e ,
+
+binaryVector_device )
+
+37
+
+resetVector [1022 , 1]( isCodewordVector_device )
+
+38
+
+c a l c B i n a r y P r o d u c t 2 [ BPG_BINARY_CALC ,
+
+TPB_BINARY_CALC ] ( p a r i t y M a t r i x _ d e v i c e ,
+
+5 # Set variable to False
+
+binaryVector_device , isCodewordVector_device )
+
+6 isCodeword = False
+
+39
+
+mod2Vector [ BPG_16 , TPB ] ( i s C o d e w o r d V e c t o r _ d e v i c e )
+
+7 # R e p e a t t h e v e c t o r s o f t V e c t o r _ d e v i c e which s i z e i s 40
+
+c h e c k I s C o d e w o r d [ BPG_DIM0 , TPB ] (
+
+[1 , numberOfBitNodes ] to create a matrix which
+
+isCodewordVector_device , result_device )
+
+dimension is [ numberOfCheckNodes ,
+
+41
+
+i f r e s u l t _ d e v i c e [ 0 ] == 0 :
+
+numberOfBitNodes ]
+
+42
+
+isCodeword = True
+
+8 maskedFanOut [ BPG_DIM1 , TPB ] ( p a r i t y M a t r i x _ d e v i c e ,
+
+43
+
+# Fan o u t t h e l a s t LLR v a l u e s t o be u s e d a g a i n
+
+softVector_device , matrix_device )
+
+44
+
+maskedFanOut [ BPG_DIM1 , TPB ] ( p a r i t y M a t r i x _ d e v i c e ,
+
+9 # S l i c e ( make a b i n a r y d e c i s i o n ) out of the v a l u e s of
+
+softVector_device , matrix_device )
+
+softVector_device
+
+45
+
+# Reduce : matrix_device − newMatrix_device
+
+10 s l i c e r C u d a [ BPG_DIM1 , TPB ] ( s o f t V e c t o r _ d e v i c e ,
+
+46
+
+c u d a M a t r i x M i n u s 2 D [ BPG_MATRIX_MINUS_2D ,
+
+binaryVector_device )
+
+TPB_MATRIX_MINUS_2D ] ( m a t r i x _ d e v i c e ,
+
+11 # S e t i s C o d e w o r d V e c t o r _ d e v i c e t o z e r o
+
+newMatrix_device )
+
+12 r e s e t V e c t o r [ DIM1 , 1 ] ( i s C o d e w o r d V e c t o r _ d e v i c e )
+
+47
+
+iterator = iterator + 1
+
+13 # C a l c u l a t e t h e p r o d u c t o f t h e p a r i t y m a t r i x and t h e 48 s l i c e r C u d a [ BPG_DIM1 , TPB ] ( s o f t V e c t o r _ d e v i c e ,
+
+sliced ( binary ) values
+
+binaryVector_device )
+
+14 c a l c B i n a r y P r o d u c t 2 [ BPG_BINARY_CALC , TPB_BINARY_CALC 49 r e s u l t _ d e v i c e [ 1 ] = 0
+
+]( parityMatrix_device , binaryVector_device ,
+
+50 numberOfNonZeros [ BPG_DIM1 , TPB ] ( b i n a r y V e c t o r _ d e v i c e ,
+
+isCodewordVector_device )
+
+result_device )
+
+15 # Apply module 2 t o t h e r e s u l t
+
+51 r e s u l t _ h o s t = r e s u l t _ d e v i c e . c o p y _ t o _ h o s t ( )
+
+16 mod2Vector [ BPG , TPB ] ( i s C o d e w o r d V e c t o r _ d e v i c e )
+
+52 b e r D e c o d e d = r e s u l t _ h o s t [ 1 ]
+
+17 # Check i f a l l e n t r i e s a r e 0 , and s t o r e t h e r e s u l t i n Listing 1: Architecture of the Min-Sum decoder as a sequence
+
+location 0: 18 c h e c k I s C o d e w o r d [ BPG_DIM0 , TPB ] (
+
+of CUDA kernels
+
+isCodewordVector_device , result_device )
+
+19 i f r e s u l t _ d e v i c e [ 0 ] == 0 :
+
+20
+
+isCodeword = True
+
+V. RELATED WORK
+
+21 w h i l e ( i t e r a t o r < n u m b e r O f I t e r a t i o n s and n o t
+
+The implementation of a message-passing decoder devel-
+
+isCodeword ) :
+
+oped in this work uses the min-sum decoding algorithm de-
+
+22
+
+# Find ( in every row ) the s m a l l e s t element , i t s l o c a t i o n , and t h e s e c o n d s m a l l e s t e l e m e n t . We
+
+scribed in (for example) [12] and [10]. A decoder architecture
+
+also use t h i s kernel to find the number of
+
+for 60GHz WiFi (802.11ad) and Bluetooth (802.153c) can be
+
+negative values .
+
+found in [16]. The work there provides micro architecture
+
+23
+
+f i n d M i n i m a A n d N u m b e r O f N e g a t i v e s [ BPG_DIM0 , TPB ] ( parityMatrix_device , matrix_device ,
+
+hardware schematics as well as an estimate of power con-
+
+smallest_device , secondSmallest_device ,
+
+sumption. Some insights on Graphical Processing Unit (GPU)
+
+locationOfMinimum_device )
+
+implementation could be found in [17], where a 4.7 Gbps
+
+24
+
+# Next we c a l c u l a t e t h e ( e x t e n d e d ) s i g n from t h e number of n e g a t i v e s , −1 f o r odd and 1 f o r even
+
+decoder is implemented on a GeForce 1080Ti. The LDPC
+
+25
+
+n u m b e r O f N e g a t i v e s T o P r o d u c t O f S i g n s [ BPG_DIM0 , TPB used in [17] was the same as the one used in WiFi standard
+
+] ( n u m b e r O f N e g a t i v e s _ d e v i c e , p r o d u c t O f S i g n s _ d e v i c e 802.11n. A similar work but specific to the codes used in the
+
+)
+
+26
+
+# Find the two smallest elements ( in rows ,
+
+Digital Video Broadcasting (DVB-S2) [4] is presented in [8].
+
+concurrently ) and t h e i r location
+
+For the codes used in 5G, a comparison between an FPGA and
+
+a GPU implementation is given in [2], and a 150Mbps software decoder is reported in [6]. In this work we use CUDA kernels to implement reduction functions. The reader would find such reduction functions explained in [5], and [7].
+
+VI. EXPERIMENTAL RESULSTS
+We use a Quaci-Cyclic 8176,1022 code from [3] to test decoder throughput. For comparison, we implemented a pure CPU-oriented of the Min-Sum decoder in Python with as much usage of the Numba package [9] to compile code directly to the machine language as possible. This is a good approach if the content of the sparse parity matrix H is known, and many of the calculations could be discarded beforehand. Figure 5, however, shows its scaling limitations for decoding the benchmark parity matrix taken from [3] as a function of the number of cores utilised. The reader may observe that although the throughput increases, there are diminishing returns. Figure 6 shows the same evaluation, this time with the y-axis signifying time in seconds.
+
+Fig. 7: GPU formulated Min-Sum decoder. For each fixed number of cores, 60 samples of each of the SNR points: [3.0 ,3.2, 3.4] were chosen at random and up to 50 Min-Sum iterations were allowed. Termination was checked for every 6 iterations.
+The reader may note we used 60 samples per SNR point in Figure 7 as opposed to 56 in Figure 5. This was in order to capture the performance on 1, 2, 3 and 4 GPUs. For evaluation time to be compared between Figure 6 and Figure 9 we reduced the number of samples back to 56 to match both figures, neglecting the 3-GPU data point. This brings us to the throughput results in Figure 8. Independent of how efficient
+
+Fig. 5: Scaling results of our implementation of a Min-Sum decoder that relies on the Tanner graph representation of an LDPC code. For each fixed number of cores, 56 samples of each of the SNR points: [3.0 ,3.2, 3.4] were chosen at random and up to 50 Min-Sum iterations were allowed.
+
+Fig. 8: Throughput as a function of SNR when the parity
+
+matrix is taken from [3]. At each SNR point, fifty sam-
+
+ples of AWGN noise were generated and added to the all-
+
+zero codeword. The indicated throughput was calculated as
+
+P
+
+samples×8176 rocessing time in
+
+bits seconds
+
+.
+
+Fig. 6: Scaling results of our implementation of a Min-Sum decoder showing the total amount of time is takes to: sample 56 times each of the SNR points: [3.0 ,3.2, 3.4] and decode using up to 50 Min-Sum iterations.
+Next, we turn to examine our formulation of the MinSum algorithm implemented using CUDA kernels, on a node equipped with four NVIDIA A100 GPUs per node.
+
+our CPU-oriented implementation may be, we provide a profile of our CUDA-kernels-based code in table I. While profiling the code running on the GPU, an interesting observation emerged: over 95% of the time spent in API functions was used to copy memory from the GPU and to the host. At the same time, these consume several orders of magnitude smaller memory than host to device memory copy as seen in Table III. This was investigated by changing the frequency at which the decoder checks for convergence (isCodeword == 0), and proved to have an affect of the number of calls. More generally, the control logic around the CUDA kernels required communication with the host. Changing the
+
+frequency, however, did not contribute to the performance of the code when running with cuda toolkit 11.2.
+
+Total 74.234 105,642.695
+
+Operations 4,724 374
+
+Operation CUDA memcpy DtoH CUDA memcpy HtoD
+
+TABLE III: CUDA Memory Operation Statistics (by size in KiB)
+
+Fig. 9: Scaling results of our implementation of a GPU formulated Min-Sum decoder showing the total amount of time is takes to: sample 60 times each of the SNR points: [3.0 ,3.2, 3.4] and decode using up to 50 Min-Sum iterations.
+
+Time(%) 68.6 13.3 7.4 6.3 1.5 1.3 0.9 0.4 0.1 0.1 0.1 0.1 0.0 0.0 0.0
+
+Total Time (ns) 30, 782, 512, 889 5, 970, 164, 807 3, 315, 661, 996 2, 812, 575, 858 667, 298, 761 571, 863, 673 406, 282, 038 173, 104, 002 25, 418, 451 24, 269, 465 24, 177, 579 23, 348, 399 21, 828, 707 21, 406, 907 840, 889
+
+CUDA kernel name findMinimaAndNumberOfNegatives signReduceHorizontal matrixSumVertical maskedFanOut locateTwoSmallestHorizontal2DV2 produceNewMatrix2D cudaMatrixMinus2D calcBinaryProduct2 cudaPlusDim1 resetVector numberOfNegativesToProductOfSigns slicerCuda checkIsCodeword mod2Vector numberOfNonZeros
+
+TABLE I: Table of time spent in each CUDA kernel used. The total run time was 48.31 seconds with 60 iterations of the Min-Sum decoder, and 50 samples at each of the following SNR points: 3.0, 3.2, 3.4, 3.6. A valid codeword was checked for every 6 iterations.].
+
+Time(%) 96.5 2.1 1.4 < 0.1 < 0.1 < 0.1 < 0.1 < 0.1 < 0.1 < 0.1 < 0.1 < 0.1
+
+Total Time (ns) 31, 300, 527, 019 673, 476, 248 445, 250, 879 9, 827, 377 5, 016, 936 2, 164, 764 1, 738, 263 790, 449 736, 754 32, 852 22, 101 3, 206
+
+API call name cuMemcpyDtoHv2 cuLaunchKernel cuMemcpyHtoDv2 cuMemAllocv2 cuMemFreev2 cuModuleLoadDataEx cuLinkComplete cuModuleUnload cuLinkCreatev2 cuMemGetInfov2 cuLinkDestroy cuInit
+
+TABLE II: API calls that were used in order to run the code on a GPU. The total run time was 48.31 seconds with 60 iterations of the Min-Sum decoder, and 50 samples at each of the following SNR points: 3.0, 3.2, 3.4, 3.6. A valid codeword was checked for every 6 iterations.
+
+REFERENCES
+
+[1] Patrick Anderson, Erika Blancada Aranas, Youssef Assaf, Raphael
+
+Behrendt, Richard Black, Marco Caballero, Pashmina Cameron, Burcu
+
+Canakci, Thales De Carvalho, Andromachi Chatzieleftheriou, et al.
+
+Project silica: towards sustainable cloud archival storage in glass. In
+
+Proceedings of the 29th Symposium on Operating Systems Principles,
+
+pages 166–181, 2023.
+
+[2] Alex Aronov, Leonid Kazakevich, Jane Mack, Fred Schreider, and
+
+Scott Newton. 5g nr ldpc decoding performance comparison be-
+
+tween gpu & fpga platforms. In 2019 IEEE Long Island Sys-
+
+tems, Applications and Technology Conference (LISAT), pages 1–
+
+6. IEEE. URL: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=
+
+8816821, doi:10.1109/LISAT.2019.8816821.
+
+[3] CCSDS. Low density parity check codes for use in near-earth and deep
+
+space applications. online, 2007. Research and Development for Space
+
+Data System Standards. URL: https://public.ccsds.org/Pubs/131x1o2e2s.
+
+pdf.
+
+[4] Digital Video Broadcasting (DVB). Second generation framing
+
+structure, channel coding and modulation systems for broadcast-
+
+ing, interactive services, news gathering and other broadband satel-
+
+lite applications. ETSI EN, 302:2005–01, 2003. ETSI EN
+
+302 307. URL: https://www.etsi.org/deliver/etsi_en/302300_302399/
+
+30230701/01.04.01_60/en_30230701v010401p.pdf.
+
+[5] Mark Harris et al. Optimizing parallel reduction in cuda.
+
+2(4):70. URL: http://vuduc.org/teaching/cse6230-hpcta-fa12/slides/
+
+cse6230-fa12--05b-reduction-notes.pdf.
+
+[6] Florian Kaltenberger, Guy de Souza, Raymond Knopp,
+
+and Hongzhi Wang.
+
+The openairinterface 5g new radio
+
+implementation: Current status and roadmap. In WSA 2019;
+
+23rd International ITG Workshop on Smart Antennas, pages
+
+1–5. VDE.
+
+URL: https://5genesis.eu/wp-content/uploads/
+
+2019/04/The-OpenAirInterface-5G-New-Radio-Implementation_
+
+Current-status-and-roadmap.pdf.
+
+[7] David B Kirk and W Hwu Wen-Mei. Programming massively parallel
+
+processors: a hands-on approach. Morgan kaufmann.
+
+[8] David Kun. High throughput gpu ldpc encoder and decoder
+
+for dvb-s2. In 2018 IEEE Aerospace Conference, pages 1–9.
+
+IEEE. URL: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=
+
+8396831, doi:10.1109/AERO.2018.8396831.
+
+[9] Siu Kwan Lam, Antoine Pitrou, and Stanley Seibert. Numba: A llvm-
+
+based python jit compiler. In Proceedings of the Second Workshop on
+
+the LLVM Compiler Infrastructure in HPC, pages 1–6.
+
+[10] Juane Li, Shu Lin, Khaled Abdel-Ghaffar, Daniel J Costello Jr, and
+
+William E Ryan. LDPC code designs, constructions, and unification.
+
+Cambridge University Press.
+
+[11] H-A Loeliger. An introduction to factor graphs. 21(1):28–41.
+
+URL: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1267047,
+
+doi:10.1109/MSP.2004.1267047.
+
+[12] Todd K Moon. Error correction coding: mathematical methods and
+
+algorithms. John Wiley & Sons.
+
+[13] Omer S. Sella. Cuda implementation of the min-sum decoder, code
+
+repository, 2024. URL: https://github.com/Omer-Sella/cudaLDPC.
+
+[14] R Tanner. A recursive approach to low complexity codes. 27(5):533–
+
+547. doi:10.1109/TIT.1981.1056404.
+
+[15] Jeremy Thorpe. Low-density parity-check (ldpc) codes constructed from
+
+protographs. 42(154):42–154. URL: https://ipnpr.jpl.nasa.gov/progress_
+
+report/42-154/154C.pdf.
+
+[16] Matthew Weiner, Borivoje Nikolic´, and Zhengya Zhang. Ldpc decoder
+
+architecture for high-data rate personal-area networks. In 2011 IEEE
+
+International Symposium of Circuits and Systems (ISCAS), pages 1784–
+
+1787. IEEE.
+
+[17] Jinyang Yuan and Jin Sha. 4.7-gb/s ldpc decoder on gpu. 22(3):478–481. doi:10.1109/LCOMM.2017.2778727.
+
+

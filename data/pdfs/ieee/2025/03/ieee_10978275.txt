@@ -1,0 +1,307 @@
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Energy-Efficient LDPC Acceleration in Open Radio Access Networks Using DRL and QRF
+
+Aerman Tuerxun Graduate School of Engineering
+The University of Tokyo Tokyo, Japan
+armantursun@g.ecc.u-tokyo.ac.jp
+
+Akihiro Nakao Graduate School of Engineering
+The University of Tokyo Tokyo, Japan
+nakao@nakao-lab.org
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC) | 979-8-3503-6836-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/WCNC61545.2025.10978275
+
+Abstract—In the evolving landscape of Open Radio Access Networks (O-RAN), achieving both high energy efficiency and computational acceleration is crucial for optimizing network performance. Low-Density Parity-Check (LDPC) decoding, a computationally intensive process widely used in wireless communication, is commonly accelerated by hardware to meet the stringent demands of real-time processing. However, balancing this acceleration with energy efficiency remains a significant challenge. In this paper, we propose a Deep Reinforcement Learning (DRL)-based smart offloading strategy to achieve lowlatency, energy-efficient LDPC acceleration using an FPGAbased hardware accelerator. We introduce a Quantile Regression Forest (QRF)-based method for predicting latency and energy consumption in real time, enabling per-block decision-making, alongside a Proximal Policy Optimization (PPO)-based algorithm for dynamically adapting offloading weights to optimize energy efficiency. The proposed strategy is implemented on the OpenAirInterface5G (OAI) and FlexRIC platforms to demonstrate its feasibility within an O-RAN testbed. Evaluation results show that the method adapts dynamically to varying network conditions in under 5 seconds, making offloading decisions in less than 5 µs, resulting in up to 20% energy savings and 14% latency reduction.
+Index Terms—Hardware Acceleration, Energy Efficient, ORAN, DRL
+I. INTRODUCTION
+The rapid adoption of Open Radio Access Networks (ORAN) represents a significant shift in the architecture of modern wireless communication systems. O-RAN’s open, disaggregated framework allows for greater flexibility and interoperability between network components, driving innovations in both hardware and software design. As network operators and researchers continue to explore ways to enhance ORAN performance, one critical challenge remains: balancing the computational demands of advanced signal processing tasks, such as Low-Density Parity-Check (LDPC) decoding, with the need for energy efficiency. LDPC, a widely used error-correction code in 5G and other wireless technologies, is known for its computational complexity. Traditionally, LDPC decoding has been accelerated using specialized hardware, such as Field-Programmable Gate Arrays (FPGAs), Application-Specific Integrated Circuits (ASICs) and Graphics Processing Units (GPUs), to meet the strict latency and throughput requirements of real-time communication systems.
+
+However, while these hardware accelerators offer significant performance gains, they often do so at the cost of increased energy consumption, posing a challenge to the broader goal of creating energy-efficient, sustainable networks.
+
+(a) Energy Consumption
+
+(b) Latency Comparison
+
+Fig. 1: LDPC Decoding with FPGA and CPU
+
+While our previous work [1] has demonstrated the effectiveness of FPGA-based acceleration in reducing LDPC decoding latency, the extended evaluation highlights a key trade-off: energy consumption. The Figure 1 reveals that although FPGAs significantly reduce decoding latency, they tend to consume more energy when processing transport blocks below a certain size. In contrast, CPU-based processing, though generally slower, can meet the latency requirements for smaller transport blocks with lower energy costs. This presents a need for energy-efficient LDPC processing, especially in dynamic environments where transport block sizes vary.
+Offloading tasks to FPGAs without considering the operational context can result in unnecessary energy consumption, highlighting the need for dynamic offloading strategies. To address this issue, it is essential to develop intelligent decisionmaking algorithms that account for both latency and energy requirements in real time, optimizing the offloading process based on current network conditions and demands.
+There are several key challenges that need to be addressed for effective dynamic offloading in LDPC decoding. First, real-time prediction of both processing latency and energy consumption is complex, yet essential for making accurate offloading decisions. Accurately modeling the relationship between various factors and system performance in real time poses significant difficulties. Second, while Transport Block Size (TBS) is a critical factor, the processing latency is also influenced by multiple other parameters, including
+
+979-8-3503-6836-9/25/$31.00 ©2025 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+the Modulation and Coding Scheme (MCS), Signal-to-Noise Ratio (SNR), resource block allocation, and the specific MCS table in use. This multidimensional dependency adds another layer of complexity to the decision-making process. Third, dynamically adapting the offloading strategy to different network environments and requirements presents a major challenge, particularly given the rapid fluctuations typical of wireless networks. The offloading strategy must be flexible and intelligent enough to respond to these variations in real time to ensure optimal performance without sacrificing energy efficiency or latency requirements.
+To address these challenges, we propose a contextual smart offloading strategy where PPO [2] and QRF [3] collaborate to dynamically adapt the offloading decisions to various network environments. The proposed scheme is composed of two main components. First, the QRF and multi-criteria decision model (MCDM) operate in the MAC scheduler to make optimal offloading decisions. Second, a PPO-based deep reinforcement learning algorithm runs within the RAN Intelligent Controller (RIC) to dynamically adjust the weights of latency and energy used by the MCDM.
+The principal contributions of this paper are summarized as follows:
+• We propose a contextual offloading mechanism for dynamic wireless environments, which maintains performance while reducing energy usage. The QRF predicts the processing latency and energy consumption for each transport block in real time and feeds these predictions into a MCDM to make optimal offloading decisions, determining whether LDPC decoding should be processed on the CPU or FPGA based on current conditions. PPO dynamically adjusts the weights based on varying network conditions. The strategy adapts to changing network environments in under 5 seconds, makes decisions in less than 5 microseconds, and operates with a 100millisecond decision cycle.
+• We implement and evaluate our system using OpenAirInterface5G (OAI) [4] and FlexRIC [5], demonstrating the feasibility and effectiveness of contextual smart offloading under various wireless network conditions. Our contextual offloading approach outperforms noncontextual methods by dynamically optimizing for energy and latency, achieving 20% energy savings at lower traffic loads and 14% lower latency under higher loads, making it more efficient across varying network demand than legacy methods.
+The rest of the paper is organized as follows. Section II discusss the related work. Section III formulates the problem and proposed solution. Section IV illustrate the offloading strategy in O-RAN and evaluate the proposal in 5G and RIC testbed. Section V briefly concludes this paper.
+II. RELATED WORK
+Resource efficiency in Radio Access Networks (RAN) has been extensively researched in recent years. There are
+
+some studies [1], [6], [7] that show the impact of resource allocation to the RAN function performance. Specifically for CPU resource allocation, several studies have explored Bayesian-based CPU resource allocation among virtualized RANs (vRANs) [8], [9]. There is another study [10] uses QRF models to predict and allocate CPU resources among different processes. In [11], the authors propose a CPU resource allocation scheme to reduce energy consumption in systems that include Software-Defined Radios (SDR). However, none of these works consider hardware acceleration in the RAN.
+Regarding energy efficiency in hardware-accelerated RANs, one study focuses on multi-agent-based dynamic offloading of the LDPC decoding process to GPU-based acceleration in the O-Cloud [12]. Another work [13] aims to share GPU resources with machine learning processes while ensuring LDPC offloading performance. However, both of these studies focus on the O-Cloud rather than local offloading systems, and they use a threshold-based offloading decision-making process, which is not suitable for transport block-specific strategies. Another study [14] addresses dynamic offloading to different accelerators for energy efficiency, but it focuses on broader metrics like traffic bandwidth and switches data load between different accelerators instead of managing it within a single device. In [15], the authors propose middleware that switches traffic loads between different processing units for energy-efficient acceleration, but the switching is based on time periods rather than transport block granularity.
+In this work, we focus on transport block-specific offloading decision-making, enhanced by dynamic self-adaptation, within an FPGA-accelerated offloading system.
+III. MODEL FORMULATION
+A. Problem Formulation
+In this section, we formulate the problem of dynamic offloading for energy-efficient LDPC decoding in 5G ULSCH processes. The system is tasked with processing transport blocks, where each block bi is characterized by a set of features such as TBS, MCS, SNR, and resource allocation parameters (PR), etc. These features, collectively, influence the processing latency l(ai, bi) and energy consumption e(ai, bi) of each TB bi, where ai represents the offloading action.
+In every ULSCH process, the system handles a total of K TBs. For each TB bi, an offloading decision must be made: to either process it on the CPU (software processing) or offload it to an FPGA (hardware acceleration). The offloading decision for each TB is represented as ai, where ai = 0 indicates CPU processing, and ai = 1 indicates FPGA.
+Let the processing latency of each TB be denoted as l(ai, bi) and the corresponding energy consumption as e(ai, bi), both of which depend on the offloading action ai and the features of the transport block bi. The objective is to minimize the total energy consumption E while ensuring that the average processing latency L does not exceed a predefined latency requirement Lmax. Formally, the optimization problem is defined as:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+1K
+
+min K
+
+e(ai, bi)
+
+(1)
+
+i=1
+
+1K
+
+subject to K
+
+l(ai, bi) ≤ Lmax
+
+(2)
+
+i=1
+
+This formulation encapsulates the trade-off between energy efficiency and latency. The system must make offloading decisions ai for each TB based on its features bi to minimize the overall energy consumption while ensuring that the average latency remains within acceptable limits. The dynamic nature of the problem requires real-time decision-making as network and TB characteristics can vary with each ULSCH process.
+
+B. Markov Decision Process Model
+
+The dynamic offloading problem for energy-efficient LDPC decoding is formulated as a Markov Decision Process (MDP) where the system interacts with the environment at each time step t. The MDP is defined by the tuple (St, At, Pt, Rt):
+- St represents the system state at time t, including performance metrics Mt (e.g., latency and energy) and contextual information Ct (e.g., TBS, MCS, SNR) and is defined as st = {Mt, Ct}.
+- At denotes the set of offloading actions taken at time t. For each transport block bi, the action ai,t ∈ {0, 1} determines whether the block is processed on the CPU (ai,t = 0) or offloaded to the FPGA (ai,t = 1).
+- Pt(st+1|st, at) is the state transition probability, describing the likelihood of transitioning from state st to state st+1 based on the action at taken at time t. The transition depends on the evolving characteristics of the transport blocks and the network conditions.
+- Rt(st, at) is the reward function, designed to penalize latency that exceeds latency deadline.
+The objective of the MDP is to learn a policy π(at|st) that maximizes the expected cumulative reward over a finite time horizon. Specifically, the system seeks to minimize both the energy consumption and the latency by solving:
+
+T
+
+max E
+π
+
+Rt(st, at) ,
+
+(3)
+
+t=1
+
+where T is the total number of time steps.
+However, there are several practical considerations that must be taken into account when designing the MDP. First, TBs are allocated and processed within each TTI, which is typically less than 1 ms. Due to this strict timing constraint, interacting with the scheduling process in real-time to compute offloading decisions for individual TBs is not feasible. Second, the number of TBs and their associated features vary dynamically with each TTI. This variability leads to rapidly changing system states, making it challenging to design fixed state representations.
+
+C. DRL and QRF-based Offloading
+To handle these problems mentioned in the previous section, we propose using QRF to predict the latency and energy consumption for both CPU and FPGA, with the predictions fed into a Technique for Order of Preference by Similarity to Ideal Solution (TOPSIS) [16] for multi-criteria decisionmaking to determine the optimal offloading decision for each TB in every TTI. The weights for the MCDM are dynamically adjusted by a DRL model, which sends actions in less than 100 ms. Additionally, we represent the system state using aggregated metrics that capture the system’s performance and the distribution of transport block characteristics, enabling a flexible state representation that can adapt across TTIs.
+1) QRF-based Prediction for Latency and Energy: For each TB bi, we use QRF to predict the latency and energy consumption on both the CPU and FPGA, based on the TB’s features fi, which include TBS, MCS, SNR, PR, etc. Let LCPU,i(fi) denote the predicted latency of bi when processed on the CPU, and LFPGA,i(fi) represent the predicted latency when the same block is processed on the FPGA. Similarly, let ECPU,i(fi) be the predicted energy consumption for processing bi on the CPU, and EFPGA,i(fi) denote the predicted energy consumption for processing bi on the FPGA. Thus, for each TB bi, the latency Li(fi, ai,t) and energy consumption Ei(fi, ai,t) depending on the offloading decision ai,t ∈ {0, 1} are given by:
+
+Li(fi, ai,t) =
+
+LCPU,i(fi), LFPGA,i(fi),
+
+if ai,t = 0, if ai,t = 1,
+
+(4)
+
+Ei(fi, ai,t) =
+
+ECPU,i(fi), EFPGA,i(fi),
+
+if ai,t = 0, if ai,t = 1.
+
+(5)
+
+2) TOPSIS for Multi-Criteria Offloading Decision: The predictions from QRF are fed into the TOPSIS model, which evaluates each offloading option (CPU or FPGA) based on two criteria: minimizing latency and minimizing energy consumption. The TOPSIS decision-making proceeds as follows:
+Normalization of Criteria: The predicted latency and energy for both CPU and FPGA are normalized as follows:
+
+LnCoPrUm,i =
+
+LCPU,i(fi)
+
+,
+
+LCPU,i(fi)2 + LFPGA,i(fi)2
+
+(6)
+
+LnFoPrGmA,i =
+
+LFPGA,i(fi)
+
+,
+
+LCPU,i(fi)2 + LFPGA,i(fi)2
+
+(7)
+
+Similarly, the energy is normalized as ECnoPrUm,i and EFnPorGmA,i. Weighted Normalization: The normalized values for latency
+
+and energy are weighted based on the dynamically adjusted
+
+weight wt, which controls the trade-off between them:
+
+LwCPU,i = (1 − wt) · LnCoPrUm,i, ECwPU,i = wt · ECnoPrUm,i. (8)
+
+LFwPGA,i = (1 − wt) · LFnoPrGmA,i, EFwPGA,i = wt · EFnPorGmA,i. (9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Distance Calculation: The distances to the ideal (best) and anti-ideal (worst) solutions are computed for both CPU and FPGA offloading options. The ideal solution minimizes both latency and energy, while the anti-ideal solution maximizes.
+The distance to the ideal solution for CPU and FPGA options is calculated as:
+
+DCidPeUal =
+
+2
+
+2
+
+LwCPU,i − Lideal + ECwPU,i − Eideal , (10)
+
+DFidPeGalA =
+
+2
+
+2
+
+LwFPGA,i − Lideal + EFwPGA,i − Eideal .
+
+(11)
+
+Similarly, the distances to the anti-ideal solution are computed as DCaiPdUeal and DFaiPdGeaAl .
+Offloading Decision: Finally, the offloading decision ai,t
+is made by selecting the option (CPU or FPGA) that has
+
+the greatest similarity to the ideal solution. The similarity
+
+is computed as the ratio of the distance to the anti-ideal
+
+solution over the sum of the distances to the ideal and anti-
+
+ideal solutions:
+
+ai,t = arg max
+
+DCaiPdUeal DCidPeUal + DCaiPdUeal
+
+,
+
+DFaiPdGeaAl DFidPeGalA + DFaiPdGeaAl
+
+. (12)
+
+3) PPO for Dynamic Weight Adjustment: PPO is used to dynamically adjust the weight wt that balances the tradeoff between minimizing latency and energy consumption in the TOPSIS model. The PPO agent learns a policy π(wt|st), where wt is the action taken by the agent. The action space is continuous, where wt ∈ [0, 1] in each time step t. The state space st = {Mt, Ct} consists of performance metrics Mt and contextual information Ct. The reward function is designed to penalize latency that exceeds the system’s requirement while encouraging energy efficiency. Let Lt and Et represent the average latency and energy consumption for all transport blocks at time t. The reward function Rt(st, wt) is given by:
+
+Rt(st, wt) = − (log(Et) + λ log(Lt)) ,
+
+(13)
+
+where Et is the average energy consumption at time t, Lt is the average latency at time t, λ is a penalty factor that applies when Lt exceeds Lmax, penalizing latency violations.
+The PPO algorithm seeks to optimize the policy π(wt|st) to maximize the expected cumulative reward over time. The objective of PPO is to maximize the objective function defined in (3). It uses a clipped surrogate objective to ensure that updates to the policy are conservative and do not drastically change the policy in a single update. The PPO objective function is defined as:
+
+LPPO(θ) =
+
+(14)
+
+Et min rt(θ)Aˆt, clip(rt(θ), 1 − ϵ, 1 + ϵ)Aˆt ,
+
+where θ represents the policy parameters, rt(θ) is the probability ratio between the new and old policies, defined as:
+
+rt(θ)
+
+=
+
+πθ(wt|st) . πθold (wt|st)
+
+(15)
+
+Aˆt is the advantage function, which measures how much better an action wt is compared to the expected action, ϵ is the clipping parameter that limits the range of policy updates,
+
+ensuring that the new policy is not too far from the old one.
+
+The pseudo-code of our solution is shown in Algorithm 1.
+
+Algorithm 1 Energy-Efficient Offloading
+1: Input: fi, Lmax 2: Initialize: PPO policy parameters θ, initial weight w0 3: for each time step t do 4: Observe the current state st = {Mt, Ct} 5: Compute the action: wt ∼ π(wt|st) 6: Use QRF to predict: LCPU, LFPGA, ECPU, EFPGA 7: Normalize the predicted latency and energy values 8: Apply TOPSIS to each TB with the weight wt 9: LDPC decoding 10: Observe and Compute the reward:
+Rt(st, wt) = − (log(Et) + λ log(Lt))
+11: Compute Aˆt and rt(θ) 12: Update the PPO policy π(wt|st) using the clipped
+surrogate objective:
+L = Et min rt(θ)Aˆt, clip(rt(θ), 1 − ϵ, 1 + ϵ)Aˆt
+13: Update policy parameters θ based on computed loss. 14: end for
+
+IV. EXPERIMENTAL EVALUATION
+We implement our proposed solution using the OAI and FlexRIC platforms. The QRF and TOPSIS algorithms are executed at the MAC layer of the gNB. When each transport block is scheduled, the system first predicts its latency and energy consumption using QRF. The predicted results are then fed into TOPSIS, along with the current weights. Based on the TOPSIS output, an offloading indication is generated as part of the LDPC decoding parameters and sent to the PHY layer. In the PHY layer, the transport block is directed to the appropriate processing unit based on the offloading indication.
+The PPO algorithm runs in the xApp within the Near-RT RIC on the FlexRIC platform. The xApp consists of three components. The first component is responsible for MAC monitoring, which receives state reports from the MAC layer every 1 ms and adds them to a buffer, where the aggregated state data is calculated. The second component handles sending MAC control signals, which are actions computed by the PPO algorithm, sending control signals at each PPO processing step. The third component is the PPO itself, which triggers control events to send the computed actions, loads state data from the aggregated buffer, calculates rewards, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+demonstrate that QRF provides highly accurate predictions. Since the predictions are only used for TOPSIS calculations, QRF can effectively capture and reflect the performance of the LDPC decoding on both the CPU and FPGA.
+B. POP Convergence Figure 4 illustrates the performance of the PPO-based
+weight adaptation. The model converges after approximately 4 seconds, or around 150 time steps, demonstrating its ability to adapt the offloading weights within a relatively short period. This suggests that, in a real wireless environment, the model could be retrained every few minutes or even hourly to adjust the policy in response to changing network conditions.
+
+Fig. 2: Offloading Scheme
+
+updates the model. The MAC monitoring and PPO processes run in two separate threads. The overall offloading scheme is illustrated in Figure 2.
+The FPGA system is effectively deployed on the USRP X410 platform [1]. Meanwhile, OAI and FlexRIC are executed on the same machine powered by Ubuntu 20.04, featuring an Intel(R) Core(TM) i9-9900K CPU operating at 3.60 GHz, and equipped with 16GB of RAM.
+A. QRF Prediction
+We profil the LDPC decoding latency and energy consumption for transport blocks with various features, such as TBS, MCS, SNR, MCS table index, resource block size, and others, using the OAI ulsch sim tool. Energy consumption is measured using the software tool Turbostat and FPGA synthesis reports. We train our QRF model with the collected latency and energy consumption data. Subsequently, we generate a C code implementation (15k lines) of the Python-based QRF model using a Python script. The mean values produced by the QRF model are used as predictions for the subsequent processes. Meanwhile, the QRF prediction can be done within 5µs with negligible energy consumption.
+
+(a)
+
+(b)
+
+Fig. 3: QRF Prediction of Energy and Latency
+
+The prediction results are presented in Figure 3. Due to space constraints, we only display the latency and energy consumption predictions for CPU processing. The results
+
+Fig. 4: POP Convergence
+Fig. 5: Energy Weight Adaptation To evaluate the PPO adaptation under varying network conditions, we generated two uplink streams, one at 20 Mbps and the other at 60 Mbps. As illustrated in Figure 5, the weight adjustments reveal distinct offloading behaviors depending on the load. Under a light load, with smaller transport blocks, the CPU can efficiently decode within the latency deadline while consuming less energy than the FPGA, leading the model to prioritize energy savings, resulting in 35% of the workload being offloaded. In contrast, under a heavy load, the CPU struggles to meet the latency deadline, prompting the model to prioritize latency reduction. This results in 86% of the workload being offloaded to the FPGA, which is more capable of decoding with lower latency in such conditions. In Figure 6, we present the average energy consumption and decoding latency per transport block using the TOPSIS
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+(a) Energy Comparison
+(b) Latency Comparison Fig. 6: Average Latency and Energy Consumption
+decision-making model, compared to two straightforward strategies: (1) Latency-First: always selecting the processing unit with the lowest predicted latency, and (2) Energy-First: always selecting the processing unit with the lowest predicted energy consumption. For both 20 Mbps and 60 Mbps bandwidths, the proposed offloading scheme demonstrates the ability to maintain both low latency and energy efficiency. Specifically, compared to the Latency-First strategy, the TOPSIS approach achieves nearly 20% energy savings at 20 Mbps and 8% at 60 Mbps, indicating that the system saves more energy under lighter loads, where the CPU can handle low-latency processing efficiently. Compared to the Energy-First strategy, TOPSIS reduces latency by 14% at 60 Mbps and 7% at 20 Mbps, showing that the system prioritizes low-latency processing when the CPU struggles with heavier loads. Overall, TOPSIS achieves a well-balanced trade-off between latency reduction and energy savings, dynamically adjusting its decision-making process to suit varying network condition by optimizing the weights for latency and energy.
+V. CONCLUSION In this paper, we propose a contextual smart offloading strategy that adapts to dynamic network conditions by integrating Proximal Policy Optimization and Quantile Regression Forests with the TOPSIS decision-making model. We implemented the offloading scheme using OAI and FlexRIC, evaluating it across various wireless network conditions. The results demonstrate that our approach effectively balances latency and energy consumption, achieving up to 20% energy savings at 20 Mbps traffic and 14% lower latency under 60 Mbps traffic, making it significantly more efficient than traditional methods under varying network demands. The strategy adapts to changing network conditions in under 5 seconds,
+
+makes offloading decisions in less than 5 microseconds, and
+operates with a 100-millisecond decision cycle.
+VI. ACKNOWLEDGMENT
+This work was partly supported by NICT, Grant Num-
+ber JPJ012368C00801, Japan, JST ASPIRE Grant Number
+JPMJAP2323, Japan and JST SPRING, Grant Number JP-
+MJSP2108.
+REFERENCES
+[1] Aerman Tuerxun and Akihiro Nakao, “Comparative analysis of processing latency and cpu efficiency in fpga-based fec acceleration,” in 2024 IEEE 10th International Conference on Network Softwarization (NetSoft). IEEE, 2024, pp. 268–276.
+[2] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov, “Proximal policy optimization algorithms,” arXiv preprint arXiv:1707.06347, 2017.
+[3] Nicolai Meinshausen and Greg Ridgeway, “Quantile regression forests.,” Journal of machine learning research, vol. 7, no. 6, 2006.
+[4] Navid Nikaein, Mahesh K Marina, Saravana Manickam, Alex Dawson, Raymond Knopp, and Christian Bonnet, “Openairinterface: A flexible platform for 5g research,” ACM SIGCOMM Computer Communication Review, vol. 44, no. 5, pp. 33–38, 2014.
+[5] Robert Schmidt, Mikel Irazabal, and Navid Nikaein, “Flexric: An sdk for next-generation sd-rans,” in Proceedings of the 17th International Conference on emerging Networking EXperiments and Technologies, 2021, pp. 411–425.
+[6] Carlos Baena, Mar´ıa Herva´s-Gutie´rrez, Eduardo Baena, Javier Villegas, Raquel Barco, and Sergio Fortes, “Assessing the impact of computational resources to the quality of experience provided by vrans,” IEEE Access, 2023.
+[7] Xenofon Foukas, Bozidar Radunovic, Matthew Balkwill, and Zhihua Lai, “Taking 5g ran analytics and control to a new level,” in Proceedings of the 29th Annual International Conference on Mobile Computing and Networking, 2023, pp. 1–16.
+[8] Jose A Ayala-Romero, Andres Garcia-Saavedra, Xavier Costa-Perez, and George Iosifidis, “Orchestrating energy-efficient vrans: Bayesian learning and experimental results,” IEEE Transactions on Mobile Computing, vol. 22, no. 5, pp. 2910–2924, 2021.
+[9] Jose A Ayala-Romero, Andres Garcia-Saavedra, Xavier Costa-Perez, and George Iosifidis, “Edgebol: a bayesian learning approach for the joint orchestration of vrans and mobile edge ai,” IEEE/ACM Transactions on Networking, vol. 31, no. 6, pp. 2978–2993, 2023.
+[10] Xenofon Foukas and Bozidar Radunovic, “Concordia: Teaching the 5g vran to share compute,” in Proceedings of the 2021 ACM SIGCOMM 2021 Conference, 2021, pp. 580–596.
+[11] Beiran Chen, Frank Slyne, and Marco Ruffini, “Energy efficient sdn and sdr joint adaptation of cpu utilization based on experimental data analytics,” in ICC 2023-IEEE International Conference on Communications. IEEE, 2023, pp. 1–6.
+[12] Jose A Ayala-Romero, Leonardo Lo Schiavo, Andres Garcia-Saavedra, and Xavier Costa-Perez, “Mean-field multi-agent contextual bandit for energy-efficient resource allocation in vrans,” in IEEE INFOCOM 2024IEEE Conference on Computer Communications. IEEE, 2024, pp. 911– 920.
+[13] Leonardo Lo Schiavo, Jose A Ayala-Romero, Andres Garcia-Saavedra, Marco Fiore, and Xavier Costa-Perez, “Yinyangran: Resource multiplexing in gpu-accelerated virtualized rans,” in IEEE INFOCOM, 2024, pp. 1–10.
+[14] Riichiro Nagareda, Chikara Sasaki, Atsushi Tagami, and Tomohiro Otani, “An implementation of o-ran-based dynamic acceleration for reducing power consumption,” in ICC 2024-IEEE International Conference on Communications. IEEE, 2024, pp. 2827–2832.
+[15] Ko Natori, Ikuo Otani, Hikaru Harasawa, Shogo Saito, and Kei Fujimoto, “Power saving for hardware accelerated applications with dynamical processor switching,” IEEE Access, 2024.
+[16] Young-Jou Lai, Ting-Yun Liu, and Ching-Lai Hwang, “Topsis for modm,” European journal of operational research, vol. 76, no. 3, pp. 486–500, 1994.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:12:15 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,423 @@
+1
+From multicore LDPC decoder implementations to FPGA decoder architectures: a case study
+Yann Delomier, Bertrand Le Gal, Jeremie Crenne and Christophe Jego IMS Laboratory, University of Bordeaux, Bordeaux INP, France.
+
+Abstract—Last generation high-level synthesis (HLS) tools enables hardware generation of software descriptions speeding up hardware development times. LDPC codes are involved in many digital standards even 5G, generating high quality architecture from software description is needed for Software Defined Radio (SDR) or Cloud-RAN (C-RAN) systems. Previous works in the field focused on reusing many-core software description of LDPC decoding algorithm for hardware generation purpose. In this article we demonstrate that multicore oriented ones once transformed for HLS are more suitable for hardware decoder generation. Indeed, throughputs and hardware complexities observed are closer to handmade LDPC decoders in comparison with related works. Presented results open new perspective for fast integration or prototyping of ECC architectures.
+I. INTRODUCTION
+Low-Density Parity-Check codes [1] are one of the most popular error correction codes (ECC) because they achieve performances close to the Gaussian channel capacity. Consequently, this code family was adopted in many digital communication standards such as Wifi, WiMAX and future 3GGP 5G. Handmade ASIC or FPGA LDPC decoders [2], [3] were considered as the only way to provide real-time decoding feature. However, the advent of multi/many-core architectures transformed this state of affairs. The processing power provided by such architectures, made possible to reach throughput performance compatible with softwaredefined radio (SdR) or Cloud-RAN applications [4]. This kind of implementation provide the lacking flexibility required by researchers and industrials. To map on CPU or GPU targets efficiently, different parallelization approaches for LDPC decoding algorithms were proposed in the literature [5], [4]. Depending on the selected algorithmic formulation and the applied parallelization model chosen, different throughput and latency trade-offs are possible: throughputs up to Gbps were reported in on a GPU device while latencies of some µs were reported in [5]. Independently of these disparities, these works have demonstrated the viability of software approaches for software simulation and even in the field of real-time LDPC decoding.
+However, the high-performances reached on multi/manycore architectures goes hand in hand with high power consumption. Indeed, software architectures have to operate at high processing frequencies to compete with hardware architectures. Consequently, in the field of cloud computing, a number of actors are currently migrating from GPU or CPU solutions to configurable FPGA ones [6], [7]. To response to time-to-market pressure, automatic methodologies for generating ASIC or FPGA hardware architectures based
+
+on parallel software descriptions are investigated [8], [9]. Indeed, the current maturity of architectural synthesis tools allows designer to contemplate this path, which has been awaited for several years [10], [8], [9]. Recently, works were undertaken on the automatic generation of hardware LDPC decoders implementation thanks to high level synthesis tools [11], [12], [13], [14]. For this purpose, software descriptions from earlier works in the field of GPU-based implementation [15], [16] written in CUDA or OpenCL languages were exploited. Automatically generated architectures reached throughputs roughly comparable to handmade architectures and rivalled with software implementations on GPUs [12], [13], [14], [17]. However, the hardware complexity of such architecture was important.
+The software description provided in the HLS tools drives and constrains the architectural choices. In this article, a different way of describing the LDPC decoding process is presented. SIMD programming model oriented for multicore architectures has been chosen for this. It enables to better guide the architecture generation than manycore oriented programming language e.g. OpenCL. Two parallelization schemes used with success for multicore implementation of LDPC decoders are thus investigated. The implementation results demonstrate the relevance of the proposed approach.
+The remainder of the paper is organized as follows. Section 2 introduces LDPC codes. Then, in section 3 the SIMD parallelization of the LDPC decoding process are presented such as their probable implementation architectures. Finally, section 4 summarizes the experimental results.
+II. LDPC DECODING ALGORITHMS
+LDPC codes are linear error correcting codes defined by a sparse matrix called H. The H matrix is composed of N columns and M = N −K rows [1]. To transmit K information bits, a codeword of N bit is generated at the emitter side. At the decoder side, the M parity equations are used to correct the N information received from the channel [4].
+The most efficient decoding algorithm is the Sum-Product one. However, for implementation purpose more friendly formulations are preferred eg. Min-Sum based algorithms [18]. Different scheduling are available to order the decoding computation. The flooding based scheduling used in the overall previous work offers the highest computation parallelism but has a slow convergence speed. It ease software and hardware implementation of LDPC decoder thanks to a two phase computations in which no data dependency exist. The horizontal layered based scheduling improve the convergence speed and
+
+978-1-5386-9562-3/18/$31.00 ©2018 IEEE
+
+89
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:02 UTC from IEEE Xplore. Restrictions apply.
+
+2
+
+Algorithm 1 Horizontal TDMP Min-Sum algorithm
+
+1: Kernel 1: Initialization
+
+2: for all m ∈ C, n ∈ Ψ(m) do
+
+3: Lm (0)n = 0 4: end for
+
+5: for all t = 1 → (iter max) do
+
+6: Kernel 2: For each check node in the code
+
+7: for all m ∈ C do
+
+8:
+
+for all n ∈ Ψ(m) do
+
+9:
+
+L(ntm ) = En − L(mt−n1)
+
+10:
+
+end for
+
+11:
+
+for all n ∈ Ψ(m) do
+
+12:
+
+sign(Lm t n) =
+
+sign(L(t) )
+nm
+
+(n ∈Ψ(m)/n)
+
+13:
+
+|Ltmn| =
+
+min
+
+|L(t) |
+
+(n ∈Ψ(m)/n) n m
+
+14:
+
+end for
+
+15:
+
+for all n ∈ Ψ(m) do
+
+16:
+
+En = Ltnm + Lm t n
+
+17:
+
+end for
+
+18: end for
+
+19: end for
+
+20: Kernel 3: Hard decision
+
+21: for all n ∈ V do
+
+22: cˆn = 0 if En ≤ 0 else 1
+
+23: end for
+
+thus reduce the global computation complexity. However, it makes data dependencies appears. It limits the computation parallelism according to the Quasi-Cyclic (QC) LDPC code structure. It is the reason why a large set of software based implementations of LDPC decoders focused on flooding-based scheduling [4]. However, recently, the horizontal layered based formulation was also adopted with success for many/multicore decoder implementations [19], [5], [20], [21], [22]. A formulation of this version of the decoding algorithm is provided in Algorithm 1. The decoding process is mainly composed of 3 main steps: the decoder initialization, the processing of the CN computations that is executed i times and finally the hard decision on transmitted bit values. The computation complexity is located in the second part of the decoding process where the N − K CN are computed i times. Interested reader can find a more precise description of the layered decoding algorithm in [20].
+In the context of this study, different parallelization strategies were evaluated to promote throughput [20], [21] and/or latency [5] features. The software description of these decoder implementations are considered for direct hardware decoder generation thanks to HLS methodologies. In the following, the parallelization strategies are detailed.
+
+III. LDPC DECODING PROCESS PARALLELIZATION
+A. Inter-frame parallelization
+A first LDPC decoder implementation is based on a interframe parallelized decoder description that is also applied for x86 and ARM processor implementations [21], [20]. This strategy also applied for GPU-based decoder implementation is the easiest way to parallelize the layered LDPC decoding algorithm. The complete decoding algorithm (Algorithm 1) is processed sequentially from the frame point of view. Consequently, VN data dependencies between CN computations are always respected. This serial execution of the decoding process is quite slow. But to improve the throughput, a set of Q frames can be decoded in parallel. Indeed, the processing regularity between decoded frames, enables to have a single
+
+and low-cost controller and a highly parallel decoding behavior. Consequently, the throughput performance should scale linearly with Q. The management of the H matrix is done thanks to a ROM memory that stores the memory addresses of the VN elements that are involved in CN computations. The serialization on the computation discard the requirement of hardware interleavers such as in intra-frame decoders.
+An overview of the hardware architectures that should be generated according to this LDPC decoding description is provided in Figure 1. In figure 1, Q frames are processed in parallel, thus Q memory banks and Q processing units are required. This architecture can be scaled independently of code structure. Moreover, it should provide a constant decoding latency with an interesting trade-off between hardware complexity and the decoding throughput according to Q value.
+
+B. Intra-frame parallelization
+Second, an intra-frame parallelization approach was experimented. It is based on x86 software decoder implementations that are detailed in [5]. This SIMD parallelization scheme targets only QC LDPC codes. Indeed, the QC structure ensures that a set of Z independent CN elements exist. This set can be evaluated in parallel without data dependency. However, to handle the H matrix structure, an interleaving step is necessary after the VN data uploading from memories. The opposite operation is also necessary at the end of the CN computation.
+A model of architecture that should be obtained according to this LDPC decoding description is provided in Figure 2. It is similar to most handmade hardware architectures [?]. It is composed of Z memory banks and Z processing units. The parallelization factor is constraint by H structure. Thus it provides variable decoding latencies and throughputs depending on the N and Z values.
+
+C. Behavioural description for HLS
+In this work, Vivado HLS from Xilinx [9] was the selected tool. It produces RTL architectures from behavioral description described in C, C++ and SystemC language. However, to generate the decoder architectures from x86 source codes from [21], [20], [5] descriptions, some transformations are necessary. First, to specify decoder IOs SystemC language is chosen. Thus the LDPC decoder source codes were encapsulated in a
+
+N channel LLRs
+
+k information bits
+
+System interface
+
+Unified VN accumulator memory (Q memory banks of N elements)
+
+Computation controller
+
+PU
+
+PU
+
+PU
+
+PU
+
+1
+
+2
+
+…
+
+Z
+
+Unified message memory (Q memory banks of M elements)
+
+Fig. 1: Architecture for a SIMD parallelized description
+
+90
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:02 UTC from IEEE Xplore. Restrictions apply.
+
+3
+
+TABLE I: Performances of intra-frame parallelized QC-LDPC decoders on a Virtex-7 XC7VX690T device
+
+N Rate Z fmax Cycles Throughput Latency LUTs FFs Slices RAMs
+
+648 1/2 27 333 8430 26 Mbps 84 µs 3800 6638 1553
+
+22
+
+648 5/6 27 333 5670 38 Mbps 57 µs 3859 6643 1606
+
+22
+
+1296 1/2 54 333 8308 52 Mbps 83 µs 8280 13018 3060
+
+42
+
+1296 5/6 54 333 5627 77 Mbps 56 µs 8143 12885 3067
+
+44
+
+1944 1/2 81 333 8308 78 Mbps 83 µs 15280 19424 6291
+
+64
+
+1944 5/6 81 333 5221 124 Mbps 52 µs 13538 19526 5762
+
+67
+
+1152 1/2 48 333 7818 49 Mbps 78 µs 6571 11702 2602
+
+38
+
+1920 1/2 80 333 7698 83 Mbps 77 µs 15119 19189 6483
+
+64
+
+2304 1/2 96 333 7698 100 Mbps 77 µs 17257 22968 6930
+
+76
+
+SystemC process. Then, the dynamic memory allocation part of the original x86 source codes is replaced by static memory allocations. Moreover, a library that implements the behavior of x86 SIMD instructions used in the original source codes was developed for synthesis purpose. Finally, a few set of pragma commands were added to the source codes to guide HLS process. These are pipeline directives that where added in the data loading, result generation and CN processing kernels.
+At the end, the behavioral description of the LDPC decoder looks like initial ones and are short in comparison to RTL one. The inter-frame parallelized decoder is described in about 200 lines such as the intra-frame decoders. The SIMD to HLS library consumes about 300 lines. Note that a single operation is almost performed by line and that function declaration and blank line are also taken into account.
+The quantization format applied in the final LDPC decoder description is 8 bits for the VN elements and 6 bits for CN to VN messages. It provides performance closed to those of floating point ones. Note that it is possible to still reduce more the selected quantization format to improve architecture frequency and lowering the hardware complexity.
+
+IV. EXPERIMENTATIONS
+To evaluate the performance of the generated LDPC decoder implementations, two sets of experimentations were carried out. The first set is focused on intra-frame parallelized decoders and the second one is focused on inter-frame parallelized decoders. LDPC codes from 802.16e and 802.11n standards were selected for benchmarking.
+The implementation results concerning the intra-frame parallelized decoders are provided in Table I. The clock frequency
+
+N channel LLRs
+
+k information bits
+
+System interface
+
+Unified VN accumulator memory Z banks of [N/Z] elements
+
+Interleaver ∏
+
+Computation controller
+
+PU
+
+PU
+
+PU
+
+PU
+
+1
+
+2
+
+…
+
+Z
+
+Unified message memory Z banks of [m/Q] elements
+
+Fig. 2: Architecture for a QC parallelized description
+
+synthesis constraint was fixed at 400 MHz to maximize decoding throughput. Note that the hardware complexity values are PaR data and the throughput concerns coded information.
+The generated architectures have throughputs in range from 26 to 124 Mbps when 10 layered iterations are executed. The decoded throughput performance mainly depends on the frame length. Indeed, the number of processing units set according to Z value increases from 27 when N = 648 up to 81 when N = 1944. For this reason, the number of clock cycles required to decode a frame seems independent of N value. The hardware complexity of the decoder also mostly scale accordingly to Z except for LUT consumption. For instance, when Z is multiplied by 2, the cost of the data interleaver that is implemented thanks to a barrel shifter increases by a factor higher than 2. The working frequency is the same for all the experiments because the critical path is located in min computation that is independent of N and Z values.
+Second, the implementation results for the inter-frame parallelized decoder are provided in Table II. The throughput of the generated architectures increases linearly with the Q factor. Also the hardware complexity of those architectures does not scale accordingly to Q. Indeed, when the number of parallelized frames increases the resources are factored for the computation controller as well as for memories. However, for an equivalent throughput inter-frame architectures are more expensive in terms of memory used than intra-frame ones.
+In this section we showed that it was possible to generate a multitude of hardware architectures for decoding LDPC codes from 2 generic software descriptions. The algorithmic choices associated with the parallelization model makes it possible to achieve interesting performance levels with limited hardware complexity. However, it is important to notice that the interframe parallelization strategy that is interesting for software based implementation where it uses the resource available in the fixed processor architecture is much less interesting when resources are allocated according to the real needs.
+We will continue to compare the performance of the architectures generated with that offered in the literature, mainly developed by hand or using dedicated automated tools.
+V. COMPARISON WITH RELATED WORKS
+The solutions space is vast and comparison complex to perform in a fair way1. Indeed, different languages, tools or FPGA targets were selected in previous works. However, Table III summarize the performances of other HLS-based LDPC decoders. In terms of throughputs proposed decoders
+1The source codes will be published on GitHub after article publication.
+
+91
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:02 UTC from IEEE Xplore. Restrictions apply.
+
+4
+
+TABLE II: Performances of inter-frame parallelized QC-LDPC decoders on a Virtex-7 XC7VX690T device
+
+N Rate Q Frequency Cycles Throughput Latency LUTs FFs Slices RAMs
+
+648 1/2 2
+
+333 206757 2,1 Mbps 207 µs 729 1009 334
+
+7
+
+648 1/2 4
+
+333 206757 4.2 Mbps 207 µs 1102 1627 449
+
+11
+
+648 1/2 8
+
+333 206757 8,3 Mbps 207 µs 1883 2886 773
+
+18
+
+648 1/2 16
+
+333 213237 16,2 Mbps 213 µs 3169 5447 1311
+
+37
+
+648 1/2 32
+
+333 213237 33,4 Mbps 213 µs 5872 10464 2505
+
+69
+
+648 1/2 64
+
+333 213237 64,8 Mbps 213 µs 11097 20610 4559
+
+133
+
+1944 1/2 2
+
+333 611919 2,1 Mbps 612 µs 736 1029 307
+
+14
+
+1944 1/2 4
+
+333 611919 4,2 Mbps 612 µs 1111 1647 496
+
+22
+
+1944 1/2 8
+
+333 611919 8,5 Mbps 612 µs 1891 2928 786
+
+38
+
+1944 1/2 16
+
+333 631359 16,4 Mbps 631 µs 3183 5469 1316
+
+73
+
+1944 1/2 32
+
+333 631359 32,8 Mbps 631 µs 5969 10573 2519
+
+139
+
+1944 1/2 64
+
+333 631359 65,6 Mbps 631 µs 10857 20694 4745
+
+270
+
+2304 1/2 96
+
+333 699309 105 Mbps 699 µs 16873 30778 7309
+
+487
+
+TABLE III: Comparison Table with previous work
+
+Type
+
+N Rate
+
+Target Ref. It Mbps L (µs)
+
+1152 1/2 Stratix5 [13] 10◦ 104
+
+-
+
+1920 1/2 Stratix5 [13] 10◦ 81
+
+-
+
+HLS 816 1/2
+
+Artix7 [23] 10◦
+
+3
+
+-
+
+FPGA 648 1/2 Spartan6 [11] 3◦ 27
+
+24
+
+1944 1/2 Stratix5 [24] 10◦ 21
+
+-
+
+CPU
+
+2304 1944
+
+1/2 1/2
+
+i7-5650U [5] 10• i7-2600K [25] 5•
+
+385 30
+
+12 -
+
+GPU
+
+2304 2304
+
+1/2 GTX Titan [19] 10 ◦ 1/2 GTX 470 [26] 10 ◦
+
+316 52
+
+-
+
+◦ Flooding scheduling • Layered scheduling
+
+are at least as efficient as the related work ones because two times less decoding iterations are needed to reach equivalent error correction performances. At the same time the hardware complexity is roughly from 2× to 10× lower. It seems to demonstrate that the proposed approach is competitive.
+A comparison with CPU and GPU targets demonstrate also the interest of the approach. A CPU-based implementation was proposed in [21] on a ARM Cortex-A9 and Cortex-A15. For N = 2304 the the proposed solution reach a throughput equivalent to Cortex-A15 with only 1 core instantiated in the FPGA and is twice as fast as Cortex-A9. As for GPU implementation on GTX Titan as in [19], the proposed FPGA architecture has the same throughput when 2 LDPC decoder cores are instantiated in the FPGA device (at least 10 cores can be instantiated in parallel in a Virtex-7 FPGA). Proposed automatically generated LDPC decoder architectures are thus serious competitive for SdR and C-RAN domain where flexibility and power efficiency are key features.
+
+VI. CONCLUSION
+In this article two ways to generate efficient LDPC decoder architectures using HLS tool were proposed. Intraframe parallelized description provides efficient architectures closed to handmade designs in terms of throughput and hardware complexity. Inter-frame parallelized architectures are disappointing except for low-throughput oriented applications. However, these both experimentation demonstrate that HLS methodology are effective for ECC domain. Moreover, it shows that multicore descriptions seems more suited for LDPC decoder design than manycore ones. Finally, performance levels in terms of throughput and latency reached by generated architectures make this solution attractive to replace x86, ARM or GPU based LDPC decoder implementations in SdR or CRAN systems.
+
+REFERENCES
+[1] R. G. Gallager, “Low density parity check codes,” IRE Transactions on Information Theory, 1962.
+[2] R. Maunder, “Survey of ASIC implementations of LDPC decoders,” DOI:10.5258/SOTON/399259, 2016.
+[3] P. Hailes et al, “A survey of FPGA-based LDPC decoders,” IEEE Communications Surveys & Tutorials, 2016.
+[4] J. Andrade, G. Falcao, V. Silva, and L. Sousa, “A survey on programmable LDPC decoders,” IEEE Access, 2016.
+[5] B. Le Gal and C. Jego, “Low-latency software LDPC decoders,” in Proc. of SIPS, 2017.
+[6] Xilinx, Baidu Deploys Xilinx FPGAs in New Public Cloud Acceleration Services, 2017.
+[7] N. Heath, Azure: How Microsoft plans to boost cloud speeds with an FPGA injection, TechRepublic, 2016.
+[8] G. Martin and G. Smith, “High-level synthesis: Past, present, and future,” IEEE Design & Test of Computers, 2009.
+[9] Xilinx, Vivado Design Suite User Guide - High-Level Synthesis, ug902 (v2017.1) edition, 2017.
+[10] P. Coussy and A. Morawiec, Eds., High-Level Synthesis from Algorithm to Digital Circuit, Springer, 2008.
+[11] E. Scheiber et al., “Implementation of an LDPC decoder for IEEE 802.11n using Vivado high-level synthesis,” in Proc. of ESPCO, 2013.
+[12] M. Owaida et al., “Enhancing design space exploration by extending CPU/GPU specifications onto FPGAs,” ACM TECS, 2015.
+[13] J. Andrade, G. Falcao, , and V. Silva, “Flexible design of wide-pipeline based WiMAX QC-LDPC decoder architectures on FPGAs using highlevel synthesis,” IET Electronics Letters, 2014.
+[14] F. Pratas, J. Andrade, G. Falcao, V. Silva, and L. Sousa, “Open the gates: High-level synthesis high-level synthesis towards programmable LDPC decoders on FPGAs,” in Proc. of GlobalSIP, 2013.
+[15] G. Falcao, V. Silva, L. Sousa, and J. Andrade, “Portable LDPC decoding on multicores using OpenCL,” IEEE Signal Processing Magazine, 2012.
+[16] G. Falcao, J. Andrade, V. Silva, and L. Sousa, “GPU-based DVB-S2 LDPC decoder with high throughput and fast error floor detection,” IET Electronics Letters, 2011.
+[17] J. Andrade et al., “Design space exploration of LDPC decoders using high-level synthesis,” IEEE Access, 2017.
+[18] X. Wu, Y. Song, M. Jiang, and C. Zhao, “Adaptive-normalized/offset min-sum algorithm,” IEEE Communications Letters, 2010.
+[19] G. Wang et al, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. of GlobalSIP, 2013.
+[20] B. Le Gal and C. Jego, “High-throughput multi-core LDPC decoders based on x86 processor,” IEEE TPDS, 2016.
+[21] B. Le Gal and C. Jego, “High-throughput LDPC decoder on low-power embedded processors,” IEEE Communication Letters, 2015.
+[22] B. Le Gal, J. Crenne, and C. Jego, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Systems Letters, 2014.
+[23] Si-Dong Roh, Keol Cho, and Ki-Seok Chung, “Implementation of an LDPC decoder on a heterogeneous FPGA-CPU platform using SDSoC,” in Proc. of TENCON, 2016.
+[24] J. Andrade et al, “Combining flexibility with low power: Dataflow and wide-pipeline LDPC decoding engines in the Gbit/s era,” in Proc. of ASAP, June 2014.
+[25] X. Han, K. Niu, and Z. He, “Implementation of IEEE 802.11n LDPC codes based on general purpose processors,” in Proc. of ICCT, 2013.
+[26] G. Wang et al, “A massively parallel implementation of QC-LDPC decoder on GPU,” in Proc. of SASP, 2011.
+
+92
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:12:02 UTC from IEEE Xplore. Restrictions apply.
+
+

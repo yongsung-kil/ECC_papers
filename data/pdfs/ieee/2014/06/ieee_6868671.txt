@@ -1,0 +1,806 @@
+Combining Flexibility with Low Power: Dataflow and Wide-pipeline LDPC Decoding Engines in the
+Gbit/s Era
+
+Joao Andrade∗, Frederico Pratas†, Gabriel Falcao∗, Vitor Silva∗ and Leonel Sousa† ∗Instituto de Telecomunicac¸o˜es, DEEC, University of Coimbra, Portugal †INESC-ID, Instituto Superior Te´cnico, Universidade de Lisboa, Portugal
+
+Abstract—Power and flexibility are important constraints in the design of new chips. The efficiency extracted from a design is increasingly becoming a dominant question, and several techniques and technological advances can be used to optimize efficiency in its energy and functionality domains. These two characteristics are critical in digital communication systems that must work accordingly with multiple communication standards at different power, throughput and latency requirements. In this work, we focus on the physical layer Forward Error Correcting (FEC) system, due to the tight throughput and latency constraints they are required to meet, and develop specialized processing engines for Low–Density Parity–Check (LDPC) codes decoding, a class of widely standardized codes. The engines were developed for execution on Field–Programmable Gate Array (FPGA) devices by exploring dataflow and widepipeline design approaches, and have the design flexibility to target different LDPC codes, since they were implemented using recent High–Level Synthesis (HLS) tools. The generated engines and architectures allow achieving highly efficient decoders with decoding throughputs ranging from 16 Mbit/s to 1.2 Gbit/s at energy efficiencies of 42 to 908 Mbit/Joule/iteration, while the achieved clock frequencies of operation vary from 80 to 300 MHz. Furthermore, our bandwidth analysis shows that workload boundaries do not impose limitations on a system bus.
+I. INTRODUCTION
+The massification of mobile device usage and internet connected systems has intensified the demand for increasingly effective channel bandwidths, offering higher data rates at low latencies, adding further constraints to Quality of Service (QoS) and Quality of Experience (QoE) requirements of digital communication systems. Among the modules composing a digital communication system, the Forward Error Correcting (FEC) sub-system plays a crucial role by implementing powerful Error–Correcting Codes (ECCs) that allow the system to operate near channel-capacity [1]. Accordingly, the closer to capacity, the higher the numerical complexity of the methods implemented by the FEC system and the higher is the developer effort to find suitable designs that match the system requirements. While traditional High–Performance Computing (HPC) platforms offer plenty of processing power they are deemed unsuitable due to excessive power consumption; on the other hand, embedded platforms meet power constraints
+This work was supported by FCT projects PEst-OE/EEI/LA0021/2013, PEst-OE/EEI/LA0008/2013, scholarship SFRH/BD/78238/2011, and Maxeler Technologies.† The second author performed this work while at INESC-ID.
+
+but do not provide the processing power necessary to deliver high decoding data rates. While Application–Specific Integrated Circuit (ASIC) designs are a standard approach to overcome this challenge, and in the recent past several Application–Specific Integrated Processor (ASIP) strategies also proved to surpass power and throughput challenges, we turn our attention to Field–Programmable Gate Array (FPGA) devices that offer design flexibility and also incorporate High– Level Synthesis (HLS) that allow to generate dataflow- and wide-pipeline-based accelerators [2], [3].
+In this paper, we exploit dataflow and wide-pipeline approaches to generate Low–Density Parity–Check (LDPC) decoders, using the Maxeler MaxCompiler and the Altera OpenCL compiler [2], [3]. We show how design flexibility, energy efficiency and processing power constraints can be met on reconfigurable devices through the development of specialized LDPC cores and their organization into an LDPC engine. We are able to deliver data throughputs scaling up to 1.2 Gbit/s at 908 Mbit/Joule/iteration energy efficiency, while keeping the development effort, cost and delay lower than those associated with Register Transfer Level (RTL)-based development. The main contributions of this work are:
+• development of specialized LDPC decoding engines using JAVA-based HLS dataflow descriptions, and widepipeline architectures, based on OpenCL, which retain throughput and flexibility through the global control of the architecture design, by identifying the most intensive kernels, exploiting dataflow patterns, and locality.
+• analysis of the memory bandwidth limitations for the decoding engines proposed, and of the obtained throughput for a number of executed iterations per codeword.
+II. LDPC DECODING FUNDAMENTALS
+In this work we focus on the class of capacity-approaching LDPC codes, presented by Gallager in the 1960s. They recaptured the attention of the scientific community in the 1990s and since then were adopted by several communication standards such as ETSI 2nd Gen. DVB and IEEE 802 standards.
+LDPC codes are a class of linear block codes defined by sparse parity-check matrices. Thus, c is a codeword from the set C if it verifies the condition c × HT = 0, c ∈ C, where H is the parity-check matrix of the code and C is the null-space of H. Alternatively, H can be seen as the
+
+978-1-4799-360A9u-th0o/r1iz4e/d$li3ce1n.0se0d ©use2l0im1it4edItEo:EYEonsei Univ. Downloaded on J2u6n4e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply. ASAP 2014
+
+(BN0 (BN1 (BN2 (BN3 (BN4 (BN5 (BN6 (BN7
+
+
+
+
+
+(CN0) 1 1 1 0 0 0 0 0
+
+H
+
+=
+
+(CN1) (CN2)
+
+01
+
+0 0
+
+0 0
+
+1 1
+
+1 0
+
+1 0
+
+0 1
+
+00
+
+(CN3) 0 1 0 0 1 0 0 1
+
+adjacency matrix of the code’s Tanner graph, a bipartite graph,
+as shown in Figure 1, where rows and columns define a node
+type and the non-null elements, i.e., the bits or Bit Nodes
+(BNs) participating in a parity-check equation or Check Node
+(CN), constitute the graph’s edges. The following notation is associated with the LDPC codes: (N, K) are the code and information dimensions; edges (non-null elements in H) connect BNs to CNs; γn a-priori reliability (LLR) of BNn; αnm message sent from BNn to CNm; βmn message sent from CNm to BNn; αˆn a-posteriori LLR of BN n; M (n)/N (m) set of CNs/BNs adjacent to BNn/CNm; Decoding algorithms are inherently parallel, as nodes of each kind, BNs and CNs,
+can be processed in parallel, in two decoding phases [4],
+known as flooding decoding schedule or Two–Phased Message
+Passing (TPMP). Among the LDPC decoding algorithms, the
+Min–Sum Algorithm (MSA) is a very popular one due to
+the arithmetic nature of the operations carried out [5]. Its
+formalization is provided in equations (1)-(4) and can be summarized as: αm (0n) messages are initialized as αm (0n) = γn; (1) CN processing computes βm(i)n messages from αm (i)n; (3) BN processing updates αm (i+n1) according to βm(i)n messages; (2) in the BN processing the a-posteriori computation of αˆn(i+1) is executed, (4) allowing to extract the bit state of BNn, since the signal of αˆn(i+1) encodes the bit state for iteration (i + 1).
+
+βm(i)n =
+
+sign{αn(i)m}
+
+×
+
+n
+
+min
+∈N (m)\n
+
+|αn(i)m|
+
+(1)
+
+n ∈N (m)\n
+
+αˆn(i+1) = γn +
+
+βm(i) n
+
+(2)
+
+m ∈M (n)
+
+αm (i+n1) = αˆn(i+1) − βm(i)n
+
+(3)
+
+HD αˆn(i+1) = 1/2 − 1/2 sign αˆn(i+1)
+
+(4)
+
+Nonetheless, the algorithm is both compute- and dataintensive, as thousands of α and β messages are computed or sent through the Tanner graph edges from/to BNs to/from CNs. Thus, the complexity of the interconnection network between nodes defined by the Tanner graph is a critical overhead factor that is addressed through the use of structured LDPC codes such as LDPC Irregular Repeat Accumulate (LDPC–IRA) and Quasi–Cyclic LDPC (QC–LDPC) [6].
+
+III. DECODING ARCHITECTURES
+A. LDPC Core Architecture
+The LDPC decoding core architecture is shown in Figure 2. It computes the MSA algorithm and explores the TPMP decoding schedule [4]. The LDPC core integrates two parallel datapaths in the same core: i) for CN processing Eq.(1); and ii) for BN processing Eq.(3).
+CN Datapath: The CN processing datapath (bottom of Figure 2) implements the most complex portion of the LDPC decoding algorithm (1). Its front-end is composed by the Pipelined MIN SUM block [7]. This block is responsible for finding the absolute minima among α messages and selecting which β elements will have the magnitude of the first or the second absolute minima.
+
+(from channel)
+
+Tanner Graph
+
+α0(i0+1)
+
+CN
+
+CN
+
+CN
+
+CN
+
+0
+
+1
+
+2
+
+3
+
+β3(i7)
+
+γn
+
+BN BN BN BN BN BN BN BN
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+Fig. 1. LDPC code Tanner Graph representation, showing the message
+
+passing between nodes.
+
+BN dataflow node
+
+γ
+
++
+
+Accum.
+
++
+
+β
+
+αˆ
+
+REG REG
+
+CN dataflow node
+α
+
+Pipelined MIN SUM
+
+-
+
+α
+
+β
+
+Fig. 2. The proposed LDPC core incorporates both the BN and CN datapaths to exploit pipelined execution of BNs and CNs.
+
+BN Datapath: The BN datapath (top of Figure 2) implements equations (2) and (3) through a sequential registered sum block, designated as Accum. Its design supports decoder topologies where each LDPC core is responsible for processing several BNs in pipeline.
+B. LDPC Engine Architecture
+The designed LDPC core architecture is meant for integration in an array of m cores, in an m-parallel kernel engine architecture [7]. While fully parallel decoders would involve a very high number of LDPC cores, at a maximum of one core per node, it has been shown in [6] that structures embedded in the LDPC Tanner graph can be leveraged to reduce m.
+Naturally, the LDPC core introduces a dispatching overhead, a result of its pipelined CN and BN datapaths, that can be masked by pipelining the decoding modes. Thus, the trailing CNs and BNs can be concurrently executed in the LDPC core, provided no memory hazards occur. For the case of QC–LDPC codes, if the selected m is a multiple or sub-multiple of the expansion factor zf [8], this challenge can be successfully overcome, while for code structures such as LDPC–IRA, it can be addressed by cyclically shifting the BN and the CN node that initiates decoding in each phase [7].
+IV. SPECIALIZED DATAFLOW AND WIDE-PIPELINE LDPC ENGINES
+A. LDPC Dataflow Engine
+Using the Maxeler MaxCompiler [2], [9] based on a dataflow model, we can describe the LDPC core (Figure 2), as a hardware block and instantiate it an arbitrary m number of times when composing the actual LDPC engine [7]. The engine is associated with a dedicated input stream for γ messages and with one output stream for αˆ messages (2) or the hard-decoded bit states (4).
+The structured properties LDPC codes can be exploited to simplify the memory organization of the dataflow engine so that it never stalls on fetching data from memory. In particular,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u6n5e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply.
+
+we have observed that data can be laid out in BRAM banks, each associated with a single LDPC core [6], [10]. Thus, data is fed to the accelerator through the input stream and used to populate the corresponding BRAM banks in an initial stage, at the same time that the output stream is delivering the decoded data. The main advantage of this design is the ability to decouple the LDPC core from the remaining LDPC engine architecture, enabling the MaxCompiler to aggressively search for hardware regions with different clocks. This is feasible also due to the double-buffering strategy employed at the input where communication and computation are overlapped in order to avoid bandwidth limitations.
+The BN and CN operation modes are seamlessly interchangeable in the LDPC cores. The input and output streams are connected with the BRAMs with a feedback loop while respecting the Tanner graph structure. Switching between modes occurs according to the number of BN nodes and CN nodes in the Tanner graph. It is important noticing that, due to the latency associated with the LDPC cores and interconnection network, the input and output streams of the memory are shifted in time. This means that, to avoid introducing stalls in the pipeline, and to maintain maximum streaming performance, we need to guarantee the absence of memory hazards not only within each m consecutive nodes processed but also between processing modes whenever overlap occurs. This can be achieved by adjusting at compile time the order how the Tanner graph is traversed. Moreover, because the number of connections to BN nodes and CN nodes in the Tanner graph can vary independently with different code rates, the latency of the LDPC cores for each of the operation modes can also vary. This unbalance creates another synchronization issue when switching between operation modes, and can be solved by introducing FIFO buffers at the output of the BN and CN dataflow nodes to equalize the latency of both streams.
+Whereas ASIC constraints may drive the designer to find a compromise on the parallelism level of the LDPC engine (m), and optimize it according to the LDPC characteristics [11], in reconfigurable platforms, such as FPGAs, the ultimate constraint in the design size lies in the total amount of logic resources provided by the FPGA. Moreover, while previous works on reconfigurable hardware also focused on optimizing the number of LDPC cores in order to have the design fit into the FPGA [10], nowadays FPGA are large enough to accommodate several LDPC engines. Thus, we propose a more flexible design that combines the number of cores per engine (m) and the number of engines per device (p). Using MaxCompiler we were able to explore different configurations in the design space and incorporate up to p=8 LDPC cores.
+B. LDPC Wide-Pipeline Engine
+The LDPC engine can also be described using the Open Computing Language (OpenCL) data-parallel programming model to generate a wide-pipeline architecture using the Altera OpenCL compiler [3]. An implicit advantage of this approach is that, due to its cross-platform capabilities, algorithmic validation of the designed LDPC decoding engines can take
+
+iteration i iteration i-1
+
+Manager FIFO
+
+LDPC Engine codeword likelihoods
+
+γ
+Bank
+
+α/β Bank
+
+... Control
+
+CU 0
+
+CU 1
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+β/α
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+β/α
+
+Tanner Graph Interconnection Network
+
+... ... ... ...
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+BN
+
+CN
+
+FIFO
+
+β/α decoded word
+
+Latency
+
+iteration i+1
+
+Fig. 3. Wide-pipeline LDPC decoding engine implementing 2-way SIMD processing and 2 CUs, which lowers the Initiation Interval to 1/4 cycle, i.e., 4 work-items are issued per cycle (on the top of the control unit).In this case, α/β and γ messages are stored in independent memory banks.
+
+place in devices where compilation times are much lower,
+
+for instance CPUs and GPUs [12]. However, if the JAVA-
+
+based description employed by the MaxCompiler allowed for
+
+a very accurate description of the architecture, the C89-based
+
+OpenCL model can only do so up to a certain level. In particu-
+
+lar, the concept of LDPC core can no longer be associated with
+
+a function instantiation on the generated hadware. Instead, it is emulated by an OpenCL work-item, and thus an x number
+
+of LDPC cores translate into x work-items scheduled for
+
+execution on the wide-pipeline accelerator. The wide-pipeline
+
+architecture incorporates parallelism by initiating OpenCL
+
+work-items at a given rate in the accelerator. This rate is
+
+the Initiation Interval (II) and depends on the inverse of the
+
+number of work-items initiated per clock cycle, which depend
+
+on the supported level of Single Instruction Multiple Data
+
+(SIMD) instructions and the number of Compute Units (CUs).
+
+Thus, II can be written as:
+
+II
+
+=
+
+1 KSIMD×KCUs
+
+,
+
+(5)
+
+where KSIMD is the length of the work-item vector processed and KCUs the number of CUs in the wide-pipeline LDPC engine. The wide-pipeline design supports SIMD parallelism
+
+of {2, 4, 8, 16} work-items, as well as instantiating multiple
+
+parallel CUs. While the former has less control logic overhead,
+
+it is constrained to the supported levels of parallelism, the
+
+latter has additional overheads but it is only restricted by the
+
+available FPGA resources. Figure 3 illustrates the work-item scheduling for KSIMD = 2 and KCUs = 2.
+The wide-pipeline model explored can pose issues in the
+
+pipelined execution when commuting between BN and CN
+
+kernels, if these are defined as separate instances (OpenCL
+
+kernels). Whenever the BN function is executed it must finish
+
+all its instances before executing the CN function. Effectively,
+
+whenever a synchronization occurs, the pipeline is flushed.
+
+However, as shown in the literature for structured LDPC
+
+codes [13], the execution scheduling of BNs and CNs has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u6n6e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply.
+
+enough flexibility to be pipelined to some extent. Thus, in order to exploit this flexibility, we manually unrolled the decoding iterations and include both the BN and the CN decoding modes in the same function definition. In this way, we assign several OpenCL work-items to different decoding iterations for a particular mode and work around the synchronization issues when commuting from one decoding mode to another. The unrolling of the decoding iterations is represented in Figure 3, showing both decoding modes for a configuration of 2 CUs and SIMD of width 2. Data flows through an Avalon memory module [3] from the external SDRAM memory blocks available in the FPGA to the LDPC cores. Considering that each processing phase exclusively reads and writes data to either α or β messages memory spaces, they can lie on different SDRAM memory banks in order to maximize bandwidth.
+V. EXPERIMENTAL RESULTS
+The Altera OpenCL wide-pipeline engine was synthesized for the rate 1/2 WiFi code with length N =1944 bits, in order to increase m beyond a single CU. The Maxeler-generated dataflow LDPC engines was synthesized for the N =64800 bits rate 1/2 Digital Video Broadcasting–Satellite2 (DVB–S2) code and up to p×m=720 cores were driven. We compare with LDPC GPU decoders [7], [14].
+A. Apparatus
+The dataflow LDPC decoder was run on a Xilinx Virtex 5 LX330T MAX2336B board, connected to the host system via PCIe x8 2nd Generation with a theoretical peak bandwidth of 4GB/s, while the wide-pipeline decoder was run on a Altera Stratix V D5 Nallatech PCIe 385 N board, connected to the host system via PCIe x8 3rd Generation with a peak bandwidth of 7.88 GB/s. We also include synthesis results for a MAX3 board based on a Xilinx Virtex 6 SX475T. We obtain the dynamic power by measuring the system when running the LDPC engines and subtracting it from the measurements obtained while the host system is idle using a power data acquisition tool based on an Allegro ACS712 Hall effect current sensor and a PIC18F4550.
+B. LDPC Engine Throughput
+Dataflow LDPC Engine: For DVB–S2 codes, we could incorporate LDPC engines with m={45, 90, 180, 360}. Furthermore, the number of engines included in the dataflow accelerator could be replicated in the range of p={1, 2, 4, 8}. Previous works that dealt with a reduced number of LDPC cores [10], [11] were motivated, in the FPGA case, to fit the engine in a device where resources were scarce for an engine with a higher number of cores, and in the ASIC case, to allow a better optimization of chip power and area. However, as lithography processes scale down the logic resources provided in nowadays FPGA devices support higher number of LDPC cores (m) and multiple LDPC engines in the same device.
+The number of clock cycles that an LDPC engine with m cores needs to run is roughly twice of that of an engine with
+
+2m cores. Thus, for the same clock frequency the throughput expected from the former is roughly half of the latter. A closer inspection to the throughput results shown in Table I shows that due to the different clock frequencies of operation of the different solutions, this relation does not hold. In particular, LDPC engines with less cores support higher frequency of operations due to the lower overhead introduced by the control logic. Nevertheless, the relation between frequency and the number of cores does not scale linearly. Hence, for the number of cores tested, the decoders with the highest throughput are the ones with the larger number of cores.
+Regarding the effects of adding extra engines, we can observe that there is only a slight overhead increase. This is clear for example when comparing an accelerator with m=90 and another with two engines of m=45, i.e., accelerators with the same absolute number of cores. The overall effect, across both the MAX2 and the MAX3 boards, is that for any combination of p≥1 and m, the best performance is always achieved for p= 1 and m=360.
+With the methodology proposed, the LDPC accelerators allow decoding throughputs from 270 to 1296 Mbit/s for 10 decoding iterations. Although for some applications there is a fixed throughput that must be meet, and therefore achieving higher throughput is not the main design goal, for simulation purposes this allows considerable speedup gains when compared with programmable simulators based on Central Processing Units (CPUs) or GPUs [12], [14].
+Wide-pipeline LDPC Engine: As shown in Table I the wide-pipeline LDPC decoder yields a decoding throughput of 16 to 21 Mbit/s, respectively for m=1 and m=2 (m the number of CUs). The OpenCL wide-pipeline accelerator has the advantage of rapid prototyping across both CPU and GPU devices [13]. However, it has some scalability issues: 1) the logic utilization of the LDPC wide-pipeline engine saturates for only 2 CUs; 2) although the utilized FPGA board supports a clock frequency of up to 800MHz, the Altera OpenCL compiler sets a maximum pace of 240MHz for a single CU; and 3) in our experiments, the introduction of the second CUs imposed routing constraints that translated into lower clock frequencies, namely the 240MHz that was observed for 1 CU reduced to 157MHz when doubling the number of CUs, thus limiting the potential maximum performance of the decoder. A possible way to overcome this challenge is by tuning the data granularity at the work-item level so that more data can be processed by less work-items, with the objective of reducing the number of scheduled work-items at a higher rate than the probable drop in the clock frequency of operation.
+C. Bandwidth Evaluation
+While throughput is a critical figure of merit for an LDPC decoding engine, bandwidth analysis also provides useful insights [15]. In particular, given that the FPGA boards are connected to the main host system via PCIe, having enough bandwidth is key to keep the LDPC decoding engine active and performing at its peak capacity. The same rational holds when data is buffered through the SDRAM (for the wide-pipeline
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u6n7e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I FPGA LOGIC RESOURCE UTILIZATION, CLOCK FREQUENCY AND THROUGHPUT (10 ITERATIONS) FOR THE PROPOSED LDPC DECODER.
+
+Parallelism (p, m)∗
+
+Altera OpenCL1 (Stratix V D5)
+
+(1,1)
+
+(1,2)
+
+MaxCompiler2(MAX2 Virtex5 LX330T) (1,45) (1,90) (1,180) (1,360) (2,45) (4,45)
+
+(2,90)
+
+LUTs/LEs / FFs(%)
+
+28/23
+
+41/36
+
+12/16 19/25 33/44 62/82 19/25 33/43 33/44
+
+BRAMs (%)
+
+42
+
+67
+
+27
+
+29
+
+35
+
+49
+
+41
+
+71
+
+47
+
+Clock (MHz)
+
+240
+
+157
+
+300 260
+
+200
+
+175
+
+250
+
+180
+
+150
+
+Thr. (Mbit/s)
+
+16
+
+21
+
+270 468
+
+720
+
+1260
+
+450
+
+648
+
+540
+
+Rel. Thr. (Mbit/s/core)
+
+16
+
+10.5
+
+6
+
+5.2
+
+4
+
+3.5
+
+5
+
+3.6
+
+3
+
+Min. Dec. Iter.
+
+0.02
+
+0.03
+
+0.76 1.32
+
+2.03
+
+3.54
+
+1.27 1.82
+
+1.52
+
+MaxCompiler2(MAX3 Virtex6 SX475T)
+
+Parallelism (p, m)∗ (1,45) (1,90) (1,180) (1,360) (2,45) (4,45) (8,45) (2,90) (4,90) (8,90) (2,180)
+
+LUTs/LEs / FFs(%)
+
+6/4
+
+9/7 17/14 32/27 9/7 16/14 32/26 16/14 31/27 63/52 32/27
+
+BRAMs (%)
+
+6
+
+6
+
+8
+
+13
+
+10
+
+19
+
+37
+
+12
+
+22
+
+43
+
+15
+
+Clock (MHz)
+
+260
+
+260
+
+200
+
+175
+
+250 200
+
+150
+
+150
+
+150
+
+90
+
+170
+
+Thr. (Mbit/s)
+
+234
+
+468
+
+720
+
+1260
+
+450
+
+720
+
+1080
+
+540 1080 1296 1224
+
+Rel. Thr. (Mbit/s/core) 5.2
+
+5.2
+
+4
+
+3.5
+
+5
+
+4
+
+3
+
+3
+
+3
+
+1.8
+
+3.4
+
+Min. Dec. Iter.
+
+0.66 1.32 2.03
+
+3.54
+
+1.27 2.03
+
+3.04
+
+1.52
+
+3.04 3.65
+
+3.44
+
+1 N = 1944 rate 1/2 WiFi code. 2 N = 64800 rate 1/2 DVB–S2 code. * In the wide-pipeline case p = KSIMD, m = KCUs.
+
+(2,360) 64/53
+24 80 1152 1.6 3.24
+
+Decoding Iterations/s PCIe 2nd Gen x8
+Decoding Iterations/s DDR3−SDRAM PCIe 3rd Gen x8 PCIe 3rd Gen x8
+
+x 105 2 1.5 1 0.5
+
+High SNR
+
+Max3 (8,90) 1296 Mbit/s Max2, Max3 (1,360) 1260 Mbit/s
+Max3 (2,180) 1224 Mbit/s Max3 (2,360) 1152 Mbit/s Max3 (8,45), Max 3(4,90) 1080 Mbit/s Lower SNR
+
+Max3 (1,180), Max3 (4,45) 720 Mbit/s Max2 (4,45) 648 Mbit/s
+Max2, Max3 (2,90) 540 Mbit/s Max 2, Max 3 (1,90) 468 Mbit/s Max 2, Max 3 (2,45) 450 Mbit/s
+Max 2 (1,45) 270 Mbit/s Max 3 (1,45) 234 Mbit/s
+
+00
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+Decoding Iterations/Codeword
+
+(a) Dataflow – throughput is limited by the PCIe bandwidth for few iterations.
+
+20 x 105 15
+
+x 105 2.5
+2
+
+1.5 10
+1
+
+5
+
+0.5
+
+0.5
+
+1
+
+Altera (1,2) 21 Mbit/s
+
+0
+
+Altera (1,1) 16 Mbit/s
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+Decoding Iterations/Codeword
+
+(b) Wide-pipeline – since the engines are not able to consume data faster than
+
+provided, the PCIe and SDRAM bandwidths do not represent real constraints.
+
+Fig. 4. LDPC decoders throughput in iterations per second vs. iterations issued per codeword. Results are shown in Mbit/s for 10 decoding iterations.
+
+decoders). In order to assess the effects due to bandwidth limitations, we computed the number of decoding iterations executed per second for each LDPC decoding architecture in relation to the number of decoding iterations executed per codeword. The results are shown in Figures 4(a) and 4(b) for the dataflow and the wide-pipeline based LDPC decoders.
+As seen in Figure 4(a), the throughput performance can be divided into two regions: i) on the left-hand side, the PCIe bandwidth dominates the decoding process and the architectures are not able to perform at their maximum capacity; and ii) on the right-hand side, when the PCIe connection bandwidth no longer poses a constraint, the number of executed decoded iterations per second saturates. Since the number of iterations executed by the LDPC decoder can be related to the Signal to Noise Ratio (SNR) conditions of the channel, we can evaluate the proposed dataflow decoder architecture efficiency for different qualitative SNR ranges, shown in Figure 4(a) as High SNR if falling below four decoding iterations per codeword and lower SNR if more than that occurs [5]. For Lower SNR values, the PCIe bandwidth does not pose a constraint to the performance of our architecture, since the PCIe bus is able to feed data at a higher rate than it is consumed. However, for high SNR values—when the number of iterations executed per codeword is low—the execution is communication-bounded. Moreover, in the scenario where all decoders issue only one decoding iteration, as in Figure 4(a), the dataflow decoders would be limited to ∼300 Mbit/s—with
+
+the exception of the Max2 and Max3 (1, 45) configurations. The wide-pipeline LDPC decoders convey a different situ-
+ation as seen in Figure 4(b). In this case, neither the SDRAM nor the PCIe bandwidth pose a real constrain to the achieved decoding throughput. Hence, there is no tradeoff regarding either the SNR or the amount of logic resources utilized. While not being limited by the bandwidth of the connecting interfaces may seem an advantage of the design, in reality it is due to the poorer throughput of the decoder.
+D. LDPC Engine Energy Efficiency
+Energy efficiency is defined as the number of Mbits (106) decoded per Joule per decoding iteration (Mbit/J/iter). We profiled the {(p=1, m=45), (p=2, m=45), (p=4, m=45), (p=2, m=90)} dataflow LDPC decoders for their energy consumption and efficiency (see Figure 5 and Table II). We included energy efficiency results for equivalent GPU solutions [7], [14]. The profiled engines exhibit a dynamic power consumption lower than 10W, specifically, the 45 and the 2×45 cores dataflow engine consume ∼5W against the ∼6W of the 90 cores design, while the (p=4, m=45) and the (p=2, m=90) cores consume ∼10W. Furthermore, the profiled engines show that the energy efficiency increases with the number of cores. This effect is verified for: i) more cores, since doubling m from 45 to 90 increases the efficiency from 540 to 780MBit/J/iter; and ii) more LDPC cores are used for data-parallelism with (p=2, m=45) and (p=4, m=45) cores reaching 980 and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u6n8e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II THROUGHPUT, EXECUTION TIME AND POWER RESULTS OF THE PROPOSED DATAFLOW LDPC ENGINE AND ALSO OF CPU AND GPU IMPLEMENTATIONS.
+
+GTX Titan3 [14] Tesla K20c1 [7]
+
+ASIC2 [6]
+
+MaxCompiler - Virtex5 LX330T2 (p=2,m=45) (p=2,m=45) (p=4,m=45) (p=2,m=90)
+
+Thr. for 10 iterations (Mbit/s)
+
+304
+
+340
+
+765
+
+270
+
+450
+
+648
+
+540
+
+Power Cons. (W)
+
+87 (est.)
+
+79
+
+<1 (est.)
+
+5
+
+4.5
+
+9
+
+9
+
+Freq. (MHz)
+
+876
+
+700
+
+270
+
+300
+
+250
+
+180
+
+150
+
+Eff. (Mbit/J/iter)
+
+35
+
+43
+
+>7650 (est.)
+
+540
+
+908
+
+720
+
+600
+
+Dev. Effort
+
+hour ∼ days
+
+months
+
+days
+
+Re-usable modules
+
+arch.
+
+none
+
+core
+
+All power figures obtained with Hall sensor, except on the K20c which provides power usage registers (marked with *). 1 N = 1944 rate 1/2 WiFi code. 2 N = 64800 rate 1/2 DVB–S2 code; 3 N = 1152 rate 1/2 WiMAX code.
+
+Mbit/J/iteration Tesla K20c* GTX Titan** D(apt=a1fl,omw=4E5n)gine D(apt=a2fl,omw=4E5n)gine D(apt=a4fl,omw=4E5n)gine D(apt=a2fl,omw=9E0n)gine
+
+Fig. 5. Energy efficiency of different multi-processor architectures, expressed as decoded Mbit per Joule in log scale (higher is better). The GPU decoders were proposed in: * [7]; ** [14].
+720Mbit/J/iter, respectively. The designed LDPC dataflow engines rank one order of magnitude above those conveyed by the Tesla K20c and GTX Titan GPUs, respectively at 43 and 35 Mbit/J/iter.
+VI. ADVANTAGES AND DISADVANTAGES OF THE PROPOSED APPROACH
+The results obtained with the proposed LDPC decoding engines vary widely, especially in terms of the obtained decoding throughput, not only as a function of the number of cores included in the dataflow design, but also when comparing with the wide-pipeline approach. As previously said, the higher logic utilization of the FPGA resources by the wide-pipeline approach led to its benchmark for the smaller length WiFi LDPC code. Also, the levels of parallelism of both approaches are somewhat non-comparable. Whereas the dataflow approach was able to incorporate a number of LDPC cores as high as p×m=720, the wide-pipeline approach could only incorporate 2 CUs. Comparing the wide-pipeline decoder and the dataflow decoder with (p, m)=(1, 45) on the MAX2 board, we find that the decoding throughput levels are one order of magnitude apart, which is about the same difference between the number of CUs in the wide-pipeline and the number of LDPC cores.
+Consequently we could speculate that a larger FPGA could bring the wide-pipeline decoding throughput inline with the dataflow decoder. In order to obtain a relative estimate, the decoding throughput was divided by the number of LDPC cores included in the design (p, m), and the results obtained are shown in Table I as the rate of decoded bits per core. In the strict sense, in the wide-pipeline approach a core stands for CU in the pipeline. As shown, the wide-pipeline approach shows higher computational power per CU than the dataflow LDPC
+
+engines (one order of magnitude above). Notwithstanding, the composition of the dataflow cores lead to more efficient solutions that increase performance for the available logic resources, namely they achieve decoding throughputs in the order of the Gbit/s at relatively low frequencies of operation.
+VII. CONCLUSIONS
+The methodology proposed allows to save significant time in all these phases and has illustrated how a bottom-up approach can be pursued using HLS descriptions to arrive at an LDPC decoding engine architecture that not only achieves energy efficiencies one order of magnitude higher than conventional programming architectures, but also achieves maximum throughputs in the Gbit/s range, in the dataflow LDPC engine case, by exploring the maximum level of parallelism in the proposed parallel LDPC decoding engines, which competes well in terms of throughput against ASIC LDPC decoders.
+REFERENCES
+[1] D. Costello and G.Forney, “Channel coding: The road to channel capacity,” Proceedings of the IEEE, vol. 95, no. 6, pp. 1150–1177, 2007.
+[2] O. Lindtjorn, R. Clapp, O. Pell et al., “Beyond Traditional Microprocessors for Geoscience High-Performance Computing Applications,” IEEE Micro, vol. 31, no. 2, pp. 41–49, 2011.
+[3] Altera Corp., “Implementing FPGA Design with the OpenCL Standard.” [4] S. Huang, D. Bao et al., “A flexible LDPC decoder architecture
+supporting two decoding algorithms,” in ISCAS, 2010, pp. 3929–3932. [5] J. Chen, A. Dholakia, E. Eleftheriou et al., “Reduced-complexity de-
+coding of ldpc codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, 2005. [6] F. Kienle, T. Brack, and N. Wehn, “A Synthesizable IP Core for DVB-S2 LDPC Code Decoding,” in DATE, 2005, pp. 100–105. [7] F. Pratas, J. Andrade, G. Falcao et al., “Open the gates: Using highlevel synthesis towards programmable ldpc decoders on fpgas,” in IEEE GlobalSIP, 2013, pp. 1274–1277. [8] M. Rovini, N. L’Insalata, F. Rossi et al., “VLSI design of a highthroughput multi-rate decoder for structured LDPC codes,” in Euromicro DSD, 2005, pp. 202–209. [9] O. Pell and V. Averbukh, “Maximum Performance Computing with Dataflow Engines,” Computing in Science and Engineering, vol. 14, no. 4, pp. 98–103, 2012. [10] M. Gomes, G. Falcao, V. Silva et al., “Flexible parallel architecture for DVB-S2 LDPC decoders,” in IEEE GLOBECOM, 2007, pp. 3265–3269. [11] G. Falcao, M. Gomes, V. Silva et al., “Configurable M-factor VLSI DVB-S2 LDPC decoder architecture with optimized memory tiling design,” EURASIP JWCN, no. 98, 2012. [12] G.Falcao, V.Silva, L.Sousa et al., “Portable LDPC Decoding on Multicores Using OpenCL,” IEEE SPM, vol. 29, no. 4, pp. 81–109, 2012. [13] G. Falcao, M. Owaida, D. Novo et al., “Shortening Design Time through Multiplatform Simulations with a Portable OpenCL Golden-model: The LDPC Decoder Case,” in IEEE FCCM, 2012, pp. 224–231. [14] G. Wang, M. Wu et al., “High throughput low latency ldpc decoding on gpu for sdr systems,” in IEEE GlobalSIP, 2013, pp. 1258–1261. [15] A. Ilic, F. Pratas, and L. Sousa, “Cache-aware roofline model: Upgrading the loft,” IEEE CAL, vol. 99, no. RapidPosts, p. 1, 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u6n9e 24,2026 at 18:29:10 UTC from IEEE Xplore. Restrictions apply.
+
+

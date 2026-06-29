@@ -1,0 +1,572 @@
+Evaluating Alternative Implementations for LDPC Decoder Check Node Function*
+
+T.Theocharides, G. Link, E. Swankoski, N.Vijaykrishnan, M.J. Irwin
+Dept. of Computer Science and Engineering, Pennsylvania State University
+{theochar, link, vijay, mji}@cse.psu.edu
+
+H. Schmit Dept. of Electrical and Computer Engineering, Carnegie Mellon University
+herman@ece.cmu.edu
+
+Abstract
+Low Density Parity Checks (LDPC) are a method of error detection and correction that are able to achieve near Shannon-limit channel communication. LDPC decoders involve a series of computations between two units, the check node and the bit node. In this paper we propose the use of an approximation unit to perform the check node operation. Additionally, we propose a ROM based look-up table (LUT) as a function approximation technique, to be used with an LDPC decoder. The paper shows that a ROM based LUT achieves better performance than using a piecewise linear approximation method to approximate the LDPC computation function. Furthermore, this paper shows that the ROM LUT method can gradually take over as the selected function approximation technique for computationally intensive demanding VLSI designs as the technology shifts to the nanometer era.
+1. Introduction
+Low Density Parity Check (LDPC) codes are a form of error correction codes similar to Turbo codes, but much more computationally intensive with the advantage that they can achieve near Shannon-limit communication channel capacity [1]. They offer excellent decoding performance and good block error performance. There is almost no error floor and they are decodable in linear time. The most notable advantage of LDPC codes is their suitability for parallel hardware implementation.
+An LDPC code is a linear message encoding technique, defined by a very sparse parity check matrix. The message to be sent is encoded using the sparse parity check matrix. When it reaches its destination, it is decoded using another sparse matrix (H-Matrix – Figure 1). The LDPC decoding algorithm consists of a series of intensive computations derived from a message-passing iterative bipartite graph, as shown in Figure 1.
+ * This work was supported in part by grants from NSF 0093085 and MARCO 98-DF-600 GSRC
+
+Figure 1: H-Matrix and Bipartite Graph
+
+Message passing iterations are performed by the two computation units - the bit node and the check node [2]. Each type of node interacts with a number of other nodes, all of the opposite type, to decode a word. The number of check nodes and bit nodes, as well as how they communicate, is defined by the parity check matrix H, shown also in Figure 1 [7]. The idea is to measure the probability of an encoded bit y having a logic state of 0 or 1, based on the probable values of the other bits in the same word. A sequence of iterations is performed to either converge the probability value towards zero or towards one. The initial probability measurements can be obtained straight through the physical layer (i.e. a continuous analog signal) [7]. Since the probability of a bit being 0 is linearly related to the probability of a bit being 1, a more distinctive term has to be used to converge asymptotically to 0 or to infinity in order to make the distinction clearer. Therefore, the term ‘likelihood ratio’ (lr), a ratio of the probability of a bit in a word being 1, to the probability of it being 0 (i.e. lr = P(data==1) / P(data==0) ) is introduced [2]. It is derived by the well known Bayes’ Rule [2] that gives an explicit relationship between the two probabilities. The idea is that the likelihood ratio can converge asymptotically and non-linearly towards zero or infinity by virtue of the bilinear transform [2].
+
+The bilinear transform, B(x) 1 x has the
+1 x
+
+property that is reversible, that is
+
+B(B( x))
+
+1 B(
+
+
+
+x
+
+)
+
+1 x
+
+B((1 x)  (1 x)) (1 x)  (1 x)
+
+x
+
+(Eq.1)
+
+The bit and check nodes therefore perform a series of
+
+computations trying to reach convergence of the
+
+likelihood ratio, towards zero or infinity, via a set of
+
+bilinear transforms. Initially, we have a bit x, whose
+
+state we do not know. We then compute for each
+
+check, what bit x should have been by looking at the
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+state of the other bits that participate in a check. The check node therefore receives the set of likelihood ratios for bits participating in a check, and takes the bilinear transform of the old ratio to obtain the new ratio (lr_new = (1-lr_old) / (1+ lr_old)). It then converts this back to the new likelihood ratio (lr_new) by applying the bilinear transform again on it and sends the value back to the bit node. The bit node in turn, for the given bit x, assumes that it does not know what check it was and computes an assumed check based on the other checks that bit x participates [2]. It starts with an original likelihood ratio that then it multiplies with the new ones that it receives from each of the check nodes participating in that check, sending it back to the check node. This operation is iterative and eventually after a series of iterations the likelihood ratio converges to either infinity or zero. Bit x (and all other bits participating in a check) are determined, giving a valid word which should be close to the received data [2]. The check node unit is the bottleneck in the LDPC decoding operation in the idea that it has to perform a set of divisions per iteration, complicating the entire process. The bit node on the contrary deals mostly with controlling the iteration count and involves only multiplication and accumulation of the ratios that are simpler to implement. The check node computation unit has to compute a complicated function, and it is desirable to improve this computation. It makes sense therefore, to use appropriate approximation techniques to avoid division in such a way that while it improves speed, it maintains the accuracy of the operation. Two common function approximation techniques can be used effectively with the check node computation; ROM based LUT and piecewise linear approximation. This paper illustrates both implementations and compares and contrasts between the two. It highlights possible benefits for using each technique and shows the disadvantages of using each method as well.
+There have been various related efforts in designing hardware for LDPC decoders mainly because of the wide range of applications in which it is employed. LDPC are used in applications such as wireless communications [5, 6, and 7], Error Correction Codes (ECC) for memories [7, 8, 9 and 10], storage devices data exchange [7, 8, 9 and 10] and other communication and interconnect applications. Also, applications where fault tolerance is desired benefit from LDPC codes [6 and 7]. In addition, error control is becoming more and more critical in vital applications, therefore stressing the need for fast, reliable and noise-tolerant error correction codes, properties that LDPC codes achieve. Prior hardware implementations have primarily focused on exploiting the inherent parallelism in operations in LDPC [5, 6, 7 and 12] and providing desired throughput. These architectures address issues such as communication between the nodes, memory efficiency and power efficiency of the implementations [6, 7, 8, 9, 10 and 11]. Other efforts focus [14, 17, 18 and 19] on constructing the decoding sparse matrix in ways to ease the computation. Most of the existing work focuses only on system-level issues rather than component issues. Special attention is focused on achieving better interconnection and communication between the check node and the bit node [5, 7, 8, 9, 11 and 13], improving the speed of the LDPC algorithm, with each work assuming standard hardware implementation for the mathematical operations involved in each unit. However, there is still a need to evaluate appropriate implementation choices of the two primitive operations (check and bit node computations) to enhance performance while keeping the area within a reasonable value. It is equally important to approach the LDPC implementation bottom up as well, exploring issues that occur at the component level instead of only the system level. The FPGA implementation [7] is efficient in dealing with component architecture, but is limited to existing FPGA technology and standard logic cells in order to implement the decoding functions of the bit node and the check node. While standard hardware is fine for
+
+performing the bit node operation however, the check node operation requires specialized hardware in the sense that the operation performed is more complex.
+This paper shows that the most relevant part of the check node unit in achieving better performance both in terms of speed and accuracy, is the selection of the mathematical computation hardware. We explore the tradeoffs involved between two alternative ways of implementing the hardware to perform this computation. The paper illustrates the advantages of choosing a ROM based approximation method to implement the function computation performed in the check node, and also raises some interesting observations that can be used in similar designs.
+The remainder of this paper is organized in the following manner: Section 2 will detail the check node operation showing why the approximation is important. Section 3 will illustrate the selected implementations, explaining the architecture of the two alternative approximation methods demonstrating the operation of each method and how it affects the computation. Section 4 will compare the hardware performance between the ROM based approximation and a piecewise linear approximation method. Section 5 continues discussing the importance of the results and the implications of using ROMs as the basis for function approximation methods, and Section 6 concludes the report and proposes suggested future work and considerations.
+
+2. Check Node Basics
+
+This section takes a closer look in the operation
+
+performed by the check node. Recall that the check
+
+node receives a set bit participating in
+
+of a
+
+gliikveelnihocohdecrkatiforosm(lrti_hoeld)bfiot rneoadceh.
+
+Once that set arrives, the check node computes and
+
+sends new likelihood ratios accumulates the likelihood
+
+(lrrai_tnioews)
+
+to bit with
+
+node which a series of
+
+multiplications/accumulations. The check node
+
+computation involves a series of multiplications and
+
+divisions of the bilinear transforms of the likelihood
+
+ratios. Putting all the bits in a check together now, we
+
+have which is the desired check node operation [2].
+
+Notice that for every bit i, the new likelihood ratio
+
+depends on every other bit in the check, omitting
+
+therefore the likelihood ratio for bit i from the
+
+particular check operation.
+
+B(lr0 _ new) B(lr1 _ old ) * B(lr2 _ old ) * B(lr3 _ old )...
+
+B(lr1 _ new) B(lr0 _ old ) * B(lr2 _ old ) * B(lr3 _ old )...
+
+n
+B(lri _ new) [ B(lri _ old )] / B(lri _ old )
+i1
+
+1  lri _ new
+
+[
+
+n
+
+
+(1
+
+
+
+lri
+
+_
+
+old
+
+)]
+
+/(1
+
+
+
+lri
+
+_
+
+old
+
+)
+
+(Eq.2)
+
+1  lri _ new i 1 1  lri _ old 1  lri _ old
+
+As seen from Equation 2, the computation that takes
+
+place requires a series of multiplications and divisions,
+
+which slows the operation drastically. Therefore, it
+
+makes sense to use an alternative computation domain
+
+in order to speed up the operation. Performing the
+
+computation in the logarithmic domain simplifies the
+
+computation greatly, since the multiplications between
+
+the terms in Equation 2 become additions and divisions
+
+become subtractions. Taking the natural logarithms of
+
+both sides of the equations shown in Equation 2 results
+
+in a much simpler form of equation as shown below,
+
+where
+
+ln(1  lri _ new ) ln(1  lr1 _ old )  ...  ln(1  lrn _ old )  ln(1  lri _ old )
+
+1  lri _ new
+
+1  lr1 _ old
+
+1  lrn _ old
+
+1  lri _ old
+
+¦ ln(1  lri _ new ) [ n ln(1  lri _ old )]  ln(1  lri _ old )
+
+1  lri _ new
+
+i 1 1  lri _ old
+
+1  lri _ old
+
+(Eq.3)
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+As seen in equation 3 now, it makes more sense to
+
+use the logarithmic domain since it reduces the
+
+problem to a set of additions of terms. Logarithmic
+
+domain computation offers significant advantages in
+
+both hardware and descriptive range. The likelihood
+
+ratio ‘llr’.
+
+‘lr’ We
+
+now then
+
+becomes represent
+
+tlhreblyogthareitthemrmicellilrk,ewlihhiocohdisratthioe
+
+likelihood ratio in logarithmic form. Positive values of
+
+llr imply a likelihood ratio greater than 1 and when llr
+
+is negative, the likelihood ratio is smaller than 1.Also,
+
+as shown in Equation 2, bit i should be omitted from
+
+the calculation of its own likelihood ratio, however
+
+since the check node receives an entire set of ratios for
+
+each bit, it makes sense to compute everything on the
+
+fly, and simply subtract the term for bit i, in order to
+
+achieve pipelined flow (see Equation 2). Converting
+
+back to the likelihood ratio can be done by some basic
+
+linear algebra. Given that we take the natural logarithm
+
+of the bilinear transform of B(lr) we need to also
+
+maintain the bilinear transform entirely in the
+
+logarithmic domain as well, in order to convert it back
+
+to the new likelihood ratio. We therefore need to
+
+perform the operation
+
+B(llri _ ) new
+
+ln(1 1
+
+ 
+
+ellri ellri
+
+_ _
+
+old old
+
+)
+
+(Eq.4)
+
+awloshgeaorreiuthr mllmrici_aoljlidokrelaischoomosdtpaurteatadtitoio.enTarhlefiuerernfcotirisoe,n,uthsieanngdiBnc(floulmrrit_ihonledg)r
+
+algebra, we can simplify the entire check node
+
+operation (as shown in Equation 2) for bit i as follows:
+
+llr i_new = B[B(llr0_old) + B( llr1_old) + ... + B(llrn_old) - B( llri _old) ](Eq.5)
+which is the overall computation [2]. Note that since we are using the bilinear transform and we want to return the likelihood ratio to the bit node, we take the bilinear transform of the entire sum of products at the very end, in order to obtain the original logarithmic likelihood ratio as shown in Equation 1.
+This simplification drastically minimizes the hardware complexity, reducing all divisions and multiplications into a sequence of additions and a subtraction. The computation is not simple, as it involves taking a natural logarithm of a division result, but this function can be calculated using an approximation method, a method simpler and faster than dedicating hardware to perform division and natural logarithm. Focusing on enhancing the approximation would result in a better overall check node and a better overall result. In addition, the check node computation is more of a factor than the bit node computation, as the bit node simply accumulates check node results, and keeps track of iteration counts. The result of the check node approximation hence affects the outcome of the operation much more than the result of the bit node operation does. A very important factor in the performance of the check node is the accuracy of the approximations – both number representation and accuracy of operations are critical factors in the performance. Rounding and truncation errors should be minimized due to the large number of iterations. The selected approximation method has to improve both the speed and the accuracy of the check node, maintaining a reasonable area at the same time as there is a relevant number of check nodes in the algorithm [8]. Our proposed implementation is outlined in the next section, showing tradeoffs between the speed and accuracy of each implementation over the area.
+3. Check Node Numerical Approximation
+3.1. Pre-Implementation Issues Recall from Section 2 that the check node performs the computation operation as shown in Equation 5, where
+llr i_new = B[ B(llr0_old) + B( llr1_old) + ... + B(llrn_old) - B( llri_old )]
+
+for each bit i, where i ranges from 0 to n, n being the
+
+number of bits participating in a check. Therefore, in
+
+implementing the check node, it makes sense that as
+
+a(hs1orirg+oihnvelxei)asg],shttdeo(adwtcaihnoefmrboeorpluedtxaeic=nhtlhltrhbei_eitoflpudi)rnnecvatifiooocunrhseBcetkqh(xue()altl=irco0,onlm.nllTrp1[hu,(.e1t.a,n-te,lilxotr)hnnes)/
+
+sums of each approximation are accumulated, and the
+
+approximation of the from the accumulated
+
+csuurmre.ntFibniatllBy,(lltrhi)e
+
+is subtracted result of the
+
+subtraction operation is then again used to approximate
+
+B[2(]l.lriT) hoencaeddmitoioren
+
+to convert the result back to the and subtraction operations can
+
+llr be
+
+easily designed in the datapath. Arranging the dataflow
+
+in an optimal manner will improve the operation
+
+however it is clear that the approximation unit (AU) is
+
+the bottleneck in the operation. Thus, we need to
+
+design an optimal approximation unit which will take a
+
+single input (llr) and will return the value of B(llr). In
+
+order to do so, an efficient function approximation
+
+technique is necessary.
+
+[(1-Texh)e
+
+s/ ol(e1+taesxk)]offothre
+
+AU is x=
+
+to llr
+
+compute which
+
+B(x) = is not
+
+ln a
+
+straightforward function. Most importantly, the fact
+
+that the ratio of the probabilities of bit i being 0 to 1
+
+lies within the range from 0 to 1, results in B(x) being
+
+undefined for x >= 0 as shown in Figure 2a.
+
+.
+
+Figure 2a (left): Plot of B(x). Figure 2b (right): Plot of B(x) as magnitude only values
+Signed approximation adds additional burdens on the hardware; therefore it is desired to eliminate sign issues, reducing if possible, the approximation to a magnitude only value. Recall now, that if the logarithmic likelihood ratio is negative, the value of the likelihood ratio lies between zero and one, and if the logarithmic likelihood ratio is positive, it indicates a likelihood ratio larger than 1. Since we are multiplying both positive and negative numbers, the sign bit is the result of an XOR operation between the signs of the two input operands. In the logarithmic domain, that is even more helpful, allowing the sign bits of two incoming llr’s to be XORed together when adding or subtracting in order to determine the sign bit of the output, making the computation a magnitude only computation. Additionally, this allows B(x) to be scnuoecmghaptiutvhteea,dt aBndd(ixreB)c(t=xly)-=1us-*1ing*lnltn[h(e[1(-eemxx-)a1/g)/n(1i(t1+u+edxee)x-])o]nwwlhyheenvnaxxlueiiss, positive (Figure 2b). However, the second function is a reflection of the first one across the y axis, with the same values of B(x) for both positive and negative values of x as seen in Figure 2b. This shows that the function B(x) is better suited to computation in the signed-magnitude domain reducing the complexity while also reducing the range of output values without sacrificing accuracy. Note that the sign of the incoming operand is simply propagated to the output, and is taken care of during additions and subtractions. 3.2. Hardware Implementation Details
+For the reader’s convenience, we will be using B(x) to define the approximation of an input x from this section and beyond, where x is the logarithmic
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+likelihood ratio (llr). Recall from Section 2
+that B( x) ln(1 ex ) . In order to determine the optimal way t1o imexplement the approximation unit
+(AU), we implemented two separate designs, and observed the performance for each under various conditions. We implemented a piecewise linear approximation (PWL) unit and a ROM LUT based approximation unit. We used 16-bit operands to represent the logarithmic likelihood ratio, using signmagnitude representation. We modeled the precision in software [3], and determined that for both methods, 5 bits could be used to represent the integer and 10 bits could be used to represent the fractional part of the operand, with 1 bit as the sign bit. This representation gave the minimum bit error rate compared to a software implementation. We then compared both implementations in terms of hardware performance metrics. Both methods have their respective advantages and disadvantages that will be explained in detail. As it will be seen, the ROM LUT method, although intimidating in terms of the area required proved to be better overall. The following subsections will discuss the hardware implementation of both methods. It is important to emphasize that the objective of both implementations was to target a single clock cycle between the time that the input arrives and the time the output is clocked at the output register. This is essential in order to be able to maintain a pipelined datapath, to maximize the throughput of a check node.
+3.2.1 Piecewise Linear Approximation (PWL). PWL approximates a continuous function linearly, using line segments to separate the function in the range required. This allows each particular segment to be approached using a linear equation rather than the function’s actual higher order equation. Given the function B(x), plotting software can be used to graphically segment the function as shown in Figure 3. The objective is to estimate B(x) around x by treating the function section around x as a straight line instead. We divide the function in a number of segments knowing that smaller segments yield better results. Each function segment is approximated using the tangents at the two points that construct each segment using simple geometric triangle properties (Figure 3 – magnified region).
+As shown in Figure 3, B(x) becomes linear for each segment and can then be represented by B(x) = ax +b. We only need to store the values of a and b to perform the approximation in hardware. We can use a small LUT to store and retrieve these values. The remaining hardware operations involve the addition and the multiplication in the linear equation. Choosing the tangent gradients as powers of two eliminates the need for multiplication and makes the operation a left shift simplifying the implementation even more. Piecewise linear approximation has its advantages and disadvantages. It is very simple to build in hardware requiring only an adder and a shifter per unit. Based on the number of segments, it needs only a relatively small table to hold the values of a and b. Determining the segment in which x lies can be done upon arrival of x using parallel comparators. The accuracy of the operation is not optimal however. There are only a certain number of distinct values given by the PWL approximation unit, limited by the number of segments. The number of segments is constrained by the range of the operand as well, as we are limited by the available powers of two represented in the operand. In some regions, this translates into noticeable error; in other regions, it translates into little to no error. Since the check node operation is iterative, this affects results emphasizing the need for as many bits of accuracy as possible. In addition, the unit is still relatively slow, as it has to do a comparison, a shift, and an addition, where in a pipelined design this will be a bottleneck. Figure 4 shows the hardware block diagram for the PWL operation. As soon as x arrives the segment that lies is determined and the values of A and B are retrieved. These values are then used to calculate the approximated result as shown in Figure 4.
+
+The operation can potentially happen within a single clock cycle, thus being optimal for a pipelined operation.
+
+Figure 3: Piecewise Linear Approximation
+
+Figure 4: PWL Hardware Block Diagram
+
+3.2.2 ROM-Based Look-Up Table. The alternative implementation is a ROM based LUT. The algorithm is simple – calculate the expected values of B(x) in software using as much precision as desired, and store the results in a ROM with bits from x as the address bits of the ROM. This is expected to provide improved accuracy compared to the PWL implementation, as within the representation range, almost every word is mapped to its respective B(x) calculated value. In theory, the accuracy or a ROM implementation can be 100% but given the limitations of the number representation and the result of the data compression, lower accuracy is expected. ROMs are large and potentially require complicated address decoding logic with the word length becoming a major issue. Larger bit width means larger ROM, and consequently more complicated address decoding logic. In order to resolve these issues, methods such as data compression and shortening the word length were used.
+
+Recall that the range of values for the magnitude
+
+computation of B(x) emphasizes the fact that the value
+
+of B(x) is the same as B(-x) (Fig. 2b). Using this
+
+property we can focus only on the magnitude
+
+approximation of B(x), not having to worry about the
+
+sign bit. The shape of magnitude only B(x) makes data
+
+compression easy since as shown in Figure 2b for
+
+small values of x and for values of x larger than ~6.422
+
+B(x) is either asymptotically growing to infinity, or
+
+asymptotically going to zero, respectively. Note also
+
+that the value of B(x) is undefined for x=0 and from
+
+[2] takes a value of the maximum possible number
+
+within the represented range. This also happens when x
+
+has [2].
+
+already Out of
+
+the the
+
+m21a4xipmousmsiblpeosvsaibluleesre(pmreasgennittueddev-oanlulye
+
+computation), there are only approximately 4500
+
+distinct values within the selected bit range. The
+
+remaining values converge to zero or very close to
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+zero as x grows. Of the remaining ~4500 values, about 400 values for x greater than 6.422 converge to a single very small value and can be discarded, with x = 6.422 the highest possible input for x with B(x) returning a distinct value (anything larger results in B(x)=0) . Therefore, the ROM size could be limited to 4096x15 bits that is reasonable and not as large as initially seemed.
+
+Figure 5: ROM Hardware Block Diagram
+
+In fact, it can be further reduced by further
+
+compression, trading off accuracy in order to reduce
+
+the area. Thus, it becomes comparable to the PWL
+
+approximation. As shown in Figure 2b, the majority of
+
+the ROM values lie in the range 0 < x < 6.422.
+
+Reducing the ROM output range by a constant (power
+
+of 2) factor would result in a smaller ROM with
+
+reduced accuracy. For the compression however to
+
+remain within some desired accuracy, at least
+
+comparable to PWL accuracy, we have to determine
+
+the optimal number of entries, which reduces the area
+
+of the ROM. In order to determine the optimal
+
+representation and reduce the area, we modeled the
+
+ROM using a variety of numeric formats and operand
+
+lengths, from 5 integer bits and 5 fractional bits (10
+
+bits total) to 5 integer bits and 10 fractional bits (15
+
+bits total). The results are shown in Table 1. The
+
+hardware can be configured to quickly skip ROM
+
+lookup for values outside the ROM range, such as
+
+values of x greater than 6.422 or x=0, bypassing the
+
+decoding delay. The bits used to address the ROM
+
+depend on the represented in
+
+number k bits
+
+aonfdenthtreiesROofMthehaRsO2Mn .eInftrxieiss,
+
+where 0  n  k, only the higher n bits from k are used
+
+to address the ROM. For example if we have 1024
+
+entries and x is represented in 5 integer bits and 8
+
+fractional bits, means that only the lower 13 bits in the
+
+16-bit operand are valid for x. Out of those 13 bits,
+
+only 10 (n = 10) are used to address the ROM and
+
+those are the 10 higher order bits of x. Figure 5 shows
+
+the ROM-based hardware in detail, where smart
+
+decoding bypasses the ROM when a corner case is
+
+detected. The decoder checks the valid bits which x is
+
+represented. If x lies within the range covered by the
+
+ROM then the higher order valid bits of x are used to
+
+address the ROM. If x is zero, or negative infinity, or
+
+greater than 6.422, the decoder skips the ROM by
+
+asserting the select signal on the output multiplexer
+
+choosing a direct output of 0 or the maximum
+
+representable number depending on the value of x. If x
+
+has to be looked up used to address the
+
+the n ROM,
+
+higher which
+
+order is of
+
+bits size
+
+o2fn.x
+
+are The
+
+number of address bits as well as the number of bits
+
+used to check the range of values that x lies are
+
+determined by the number of ROM entries. Should x
+
+need to be looked up, the select line of the multiplexer
+
+sets the output to the ROM output.
+
+4. ROM vs. PWL comparison
+
+Tables 1 and 2 show relevant comparisons between both implementations and help us make very useful observations. The question of course remains on the area of the ROM. At 4096x15 bits, the ROM is still quite large compared to the PWL implementation
+
+when using the same bit format in both implementations. However, the ROM area decreases exponentially every time we reduce the word length by a bit. Tables 1 and 2 summarize the area, speed, and accuracy comparisons of the PWL and the ROM implementations for all possible representations. The accuracy and the speed of the ROM are better than the PWL accuracy and speed, even as we decrease the number of words in the ROM. Interestingly enough, when both units have roughly the same area, the ROM is still more accurate and faster than the PWL implementation. Given that the major argument against the ROM would be the area difference as shown by tables 1 and 2, this illustrates that the ROM implementation is superior to the PWL. If we consider the same number of operand bit representation, the ROM implementation is up to approximately 17 times larger but upon compressing the ROM data and reducing the number of word bits to 11, we have the same area for the ROM implementation as we do for the PWL implementation with 11 bits. The ROM is still more accurate and faster than the PWL implementation, simply because of the number of iterations required. Tables 1 and 2 also show results for other word lengths as well indicating that the rate of decrease in the area due to the reduction of entries is more than the growth of error in the accuracy. This makes the ROM LUT method a more suitable design method for our approximation. A relevant question is as to why the number of segments in the PWL implementation cannot be increased. The answer to this is simple – increasing the number of segments to a number which is a non-power of two, would require multiplication incurring performance and area penalties. At the same time increasing the number of segments to the next integer power of 2 (32 segments) would require the operand bits to change as well. One can argue however, that as the number of bits per word increases, eventually the increase in the ROM area might become much more of a factor against the ROM implementation, with the PWL accuracy improving at the same time. This might make the ROM inappropriate for a larger number of bits in an operand. In order to obtain the bit error rates, both the ROM implementation and the PWL implementation were modeled in software [3], varying the decoding structure into which the check node could be used every time, and also changing the noise variation encoded in the test message in each case for each implementation.
+
+Operand Representation
+5.10 5.9 5.8 5.7 5.6 5.5
+
+Average Bit Error Rate
+(%) 9.2367 9.8433 10.3867 11.0367 11.1267 12.79
+
+Clock Period (ns)
+2.20 2.10 2.01 1.89 1.76 1.63
+
+ROM Size (bits)
+4096 x 15 2048 x 14 1024 x 13 512 x 12 256 x 11 128 x 10
+
+Area (ROM and Decoding Logic) (µm2) 428840 200131 92914 42880 19655 8931
+
+Table 1: ROM Implementation Details
+
+Operand Representation
+5.10 5.9 5.8 5.7 5.6 5.5
+
+Average Bit Error Rate
+(%) 11.230333 11.833333 12.925 14.71415 17.086667 20.08333
+
+Clock Period (ns)
+2.37 2.32 2.30 2.22 1.96 1.88
+
+a and b LUT entries (bits)
+16 x 15 16 x 14 16 x 13 16 x 12 16 x 11 16 x 10
+
+Area (µm2)
+31936 30979 24968 27434 24741 22348
+
+Table 2: PWL Implementation Details The bit error rates shown in Tables 1 and 2 are the
+bit error rates when compared to a 32 bit floating point software implementation [3]. The bit error rate percentage is defined as the number of wrongly decoded bits per 100 original message bits. Experiments involved multiple simulations and the average bit error rate was obtained shown in Tables 1 and 2. The clock period was obtained by synthesizing
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+each design in Synopsys Design Compiler™ and the timing analysis was verified for a placed and routed design using Cadence Silicon Ensemble and Synopsys Primetime™ tools. The results shown in these two tables favor the ROM implementation as the check node’s function approximation unit; they also bring up some interesting points regarding function approximation methods in general. These interesting points, in addition to some other observations regarding a ROM approach, are discussed in detail in Section 5.
+5. Discussion and Observations
+As shown in section 4, the ROM implementation is better than the PWL implementation, simply because when the ROM area is reduced to the same size that the PWL occupies, the performance of the ROM is better than the performance of the PWL approximation. The results also indicate that ROM approximation methods could soon become more appropriate for iterative applications like LDPC, and in particular to implement transcendental functions. Knowing that the function we need to approximate is transcendental, we can then look at ideal methods of approximation. Logarithmic arithmetic units often use ROM-based LUT for all or part of the computation, and clever optimization techniques can greatly reduce the actual ROM size in many cases [16]. Ideally, single-cycle ROM lookups would be implemented in place of iterative or computation-intensive operations like division or reciprocation. ROM tables are often fast, especially when considered with respect to the substituted operation. However, overuse of ROM tables creates unnecessarily large units.
+An alternative to ROM LUT are piecewise linear approximations, which combine linear approximations with a very small lookup table. Accuracy with piecewise linear approximations is often acceptable, though not as accurate as the ROM-based LUT [15, 16]. The main theoretical advantage of a piecewise linear unit is its small area. It is easy to see the tradeoff between size and accuracy in a piecewise linear approximation unit; increasing the accuracy requires either an increased number of segments or a less convenient number base (requiring multiplications instead of shifts, for example), or both. [15].
+6. Conclusions
+It is obvious that a ROM LUT based arithmetic approximation unit has many advantages compared to a similar piecewise linear approximation unit. The bit error rates are comparatively smaller for smaller ROM units, and the area of the ROM decreases at a faster rate compared to the rate of loss of accuracy when we decrease the word length involved in each computation. Also, the ROM unit is faster and allows the check node as a whole to operate faster, resulting in larger overall throughput.
+7. References
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon Limit Error-Correcting Coding and Decoding: Turbo-Codes,” Proceedings of ICC 1993, Geneva, Switzerland, pp. 1064-1070, May 1993. [2] R. G. Gallager, Low Density Parity-Check Codes. MIT Press, Cambridge, MA, 1963. [3] R. Neal, “Software for LDPC Codes”, http://www.cs.utoronto.ca/~radford/ldpc.software.html/, September 2003. [4] T. Zhang, K. Parhi, “VLSI Implementation Oriented (3,k)-Regular Low-Density Parity-Check Codes”, Proceedings of 2001 IEEE Workshop on Signal Processing Systems, pp. 25-36, Sept. 2001 [5] W. L. Lee, A. K. M. Wu and L.I. Ping, "VLSI Parallel Architecture of Low Density Parity Check Decoder for Turbo Codes", Proceedings of the 9th International
+
+Symposium on Integrated Circuits, Devices and Systems (ISIC-2001), Vol 1, Nanyang Technological University, Singapore, 3-5 September 2001, pp 254-257. [6] A. Selvarathinam, G. Choi, K. Narayanan, A. Prabhakar and E. Kim, “A Massively Scalable Decoder Architecture for Low-Density Parity-Check Codes”, ISCAS’2003, Bangkok, Thailand. [7] B. Levine, R. Taylor and H. Schmit ``Implementation of Near Shannon Limit Error-Correction Codes Using Reconfigurable Hardware", Proceedings of the 2000 IEEE Symposium on Field-programmable Custom Computing Machines (FCCM), pp. 217-226, Napa, CA, April 17-19, 2000 [8] M M. Mansour and N. R. Shanbhag, "High-throughput LDPC decoders,'' IEEE Transactions on VLSI Systems, 2002. [9] M. M. Mansour and N. R. Shanbhag, "Architectureaware low-density parity-check codes,'' in IEEE International Symposium on Circuits and Systems (ISCAS), Bangkok, Thailand, May 2003. [10] M M. Mansour and N. R. Shanbhag, "Memory-efficient turbo decoder architectures for LDPC codes,'' in The IEEE Workshop on Signal Processing Systems 2002 (SIPS'02), San Diego, CA, Oct. 2002, pp. 159-164. [11] M. M. Mansour and N. R. Shanbhag, "Low-power VLSI decoder architectures for LDPC codes," in International Symposium on Low Power Electronics and Design (ISLPED), Monterey, CA, Aug. 2002, pp. 284-289. [12] E. Yeo, B. Nikolic, and V. Anantharam, Architectures and Implementations of Low-Density Parity Check Decoding Algorithms, IEEE International Midwest Symposium on Circuits and Systems, Aug 4-7, 2002. [13] C. Howland and A. Blanksby, “A 220mW 1Gb/s 1024Bit Rate-1/2 Low Density Parity Check Code Decoder”, Proceedings of the 2001 IEEE Custom Integrated Circuits Conference, San Diego, CA , May 2001, pp. 293-296 [14] OKI Semiconductor, http://www.oki.com, September, 2003. [15] E. M. Schwarz and M.J. Flynn, “Hardware Starting Approximation Method and its Application to the Square Root Approximation,” IEEE Transactions on Computers, pp. 1356-1369, Dec. 1996. [16] Y. Wan and C. L. Wey, “Efficient Algorithms for Binary Logarithmic Conversion and Addition,” IEEE Proceedings on Computers and Digital Techniques, pp. 168172, May 1999
+
+Proceedings of the IEEE Computer Society Annual Symposium on VLSI Emerging Trends in VLSI Systems Design (ISVLSI’04) 0-7695-2097-9/04 $20.00 © 2004 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:21:59 UTC from IEEE Xplore. Restrictions apply.
+
+

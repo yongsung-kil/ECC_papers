@@ -1,0 +1,586 @@
+High Throughput GPU LDPC Encoder and Decoder for
+DVB-S2
+David Kun The Aerospace Corporation
+2310 E. El Segundo Blvd. El Segundo, CA 90245 david.s.kun@aero.org
+
+Abstract—Previous studies that used Graphics Processing Units (GPUs) to decode Low Density Parity Check (LDPC) codes for DVB-S2 employed inter-codeword parallelism and/or Turbo Decoding Message Passing (TDMP) to achieve high throughput. By converting the LDPC parity check matrix into a quasi-cyclic structure, we show that LDPC encoding can be efficiently implemented on a GPU, and a different approach to LDPC decoding with intra-codeword parallelism and early termination that can achieve approximately 100 Mbps increase in throughput per 0.1 dB increase in signal-to-noise ratio and, for some cases, achieve 1 Gbps or greater overall throughput.♦
+TABLE OF CONTENTS
+1. INTRODUCTION ....................................................... 1 2. LDPC CODES FOR DVB-S2 ................................... 1 3. GPU DESIGN OF LDPC ENCODER ......................... 2 4. GPU DESIGN OF LDPC DECODER......................... 4 5. RESULTS.................................................................. 6 6. CONCLUSIONS......................................................... 8 REFERENCES............................................................... 8 BIOGRAPHY ................................................................ 9
+1. INTRODUCTION
+Decoding Low Density Parity Check (LDPC) codes using Graphics Processing Units (GPU) has been an active research topic in which high throughput is attained by decoding multiple codewords simultaneously for a fixed number of iterations [1], [2]. The primary disadvantage of these approaches is decoding continues regardless if a valid codeword has been reached. This reduces throughput with the GPU by performing additional unnecessary calculations. On the contrary, decoding LDPC in hardware, such as Field Programmable Gate Arrays (FPGA), employ intra-codeword parallelism and/or early termination to increase decoder throughput [3].
+This paper adopts the decoding approach that is similar to hardware and takes advantage of the GPU architecture to efficiently encode and decode all the LDPC codes described in the DVB-S2 specification. Simulation results using NVIDIA Titan Xp reveal that encoding LDPC can achieve a throughput of multi-Gigabits per second and decoding can
+
+reach Gigabits per second throughput for low bit error rates of less than 1e-9 with early termination.
+
+The rest of the paper is organized as follows. Section 2 discusses how to restructure the LDPC parity check matrix for intra-codeword parallelism encoding and decoding. Sections 3 and 4 covers the GPU kernel designs of the LDPC encoder and decoder, respectively. Finally, section 5 presents simulation results of these GPU kernels using the NVIDIA Titan Xp graphics card.
+
+2. LDPC CODES FOR DVB-S2
+
+To employ intra-codeword parallelism, the parity check
+
+matrix, , has a quasi-cyclic structure where it consists of
+
+smaller identity matrices of size
+
+that are circularly-
+
+shifted by a specific amount. Examples of this quasi-cyclic
+
+structure of the LDPC parity check matrix are in the IEEE
+
+802.16 standard [4]. Since none of the parity check matrices
+
+for DVB-S2 [5] exhibit this structure, two permutations are
+
+performed to yield a quasi-cyclic matrix: (a) permute all the
+
+rows, except for the first row, of by grouping rows that are
+
+separated by a factor of ; (b) permute only the columns that
+
+correspond to the parity bits of by grouping columns that
+
+are separated by a factor of , which is equal to the number
+
+of LDPC parity bits divided by 360 as shown below.
+
+/360
+
+(1)
+
+Consider the parity check matrix in Fig. 1.
+
+Fig. 1. DVB-S2-like parity check matrix
+
+978-1-5386-2014-4/18/$31.00 ©2018 IEEE
+1
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+The dimensions of this DVB-S2-like parity check matrix is 24 40 and 8, 3. The locations of the 1’s in the information portion of are denoted by triangles pointing in various directions; whereas, the squares and octagons denote the 1’s in the parity portion. After row permutation, the information portion exhibits a quasi-cyclic structure but the parity portion does not, which is shown in Fig. 2.
+
+Fig. 2. DVB-S2-like after row permutation
+Grouping every -th column of the parity portion of a quasi-cyclic structure that is shown in Fig. 3.
+
+yields
+
+circulant whose first row is all zeroes and only appears in the upper right hand corner of . Thus, has the following structure:
+
+*
+1*
+
+%
+*
+
+0 0
+
+⋮
+
+⋯ ⋱
+
+% %
+
++,-.
+
+% ⋮
+
+6 5 5
+
+(3)
+
+0% % /% %
+
+⋯
+
+* %5 * *4
+
+Thus, consists of rows and &
+
+/ columns of
+
+either circulants or superimposed circulants.
+
+3. GPU DESIGN OF LDPC ENCODER
+A valid codeword, 7, fulfills the following:
+
+70
+
+(4)
+
+Since the LDPC code is systematic, let 7 be a column vector
+
+7 8:9 ;
+
+(5)
+
+Where 9 is the information bits with size
+
+1 and : is the
+
+parity bits with size
+
+1. Solving for : over
+
+<= 2 yields
+
+:
+
+-. 9
+
+(6)
+
+To illustrate the fixed structure of > ?-., let 2 and 3, which is an “interleaved” cumulative sum as follows:
+
+100000
+
+-.
+
+0001111
+
+1 0 1
+
+1 1 1
+
+0 0 1
+
+1 0 1
+
+0006555
+
+(7)
+
+01 0 1 0 1 05
+
+/1 1 1 1 1 14
+
+Fig. 3. DVB-S2-like after parity column permutation Denote the permuted as with the following structure
+
+Consequently, computing : per (6) is amenable to GPUs and is shown in Fig. 4.
+
+(2)
+
+Where and are matrices of size
+
+and
+
+, respectively.
+
+consists of smaller matrices of size with 360 for
+DVB-S2. Let be the identity matrix with a right circular shift of with ∈ !0, ⋯ , 1$. For DVB-S2, there are three types of these smaller matrices: (a) all zeroes matrix, %, (b) ; (c) & ' with ( ) and , ) ∈ !0, ⋯ , 1$. We refer to second and last type as a circulant and superimposed circulant and dropping the term “identity” for brevity.
+
+Similarly, consists of three types of smaller matrices: (a) all zeroes matrix, %, (b) *, (c) +,-.. The last type is a
+
+Fig. 4. Block Diagram of GPU-based LDPC Encoder
+
+The matrix-vector multiplication over <= 2 and requires
+
+knowledge of all the 1’s in the sparse matrix, . Since
+
+consists of circulants with maximum of 792 for the code rate
+
+of 3/5 and
+
+64,800, it is stored into constant memory
+
+on the GPU as an array of 32-bit words. Each 32-bit word
+
+contains: (a) row degree of that circulant row, (b) column
+
+location of that circulant ranging from 0 to &
+
+/ 1,
+
+and (c) right rotation value.
+
+Given the circulant structure of , parity bits can be computed simultaneously. So, the GPU kernel for the matrixvector multiplication has thread block dimensions of , 1,1
+
+2
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+and grid block dimensions of @ A, 1,1 where the number of codewords is @ A. The function prototype for this kernel is:
+__global__ void kernel_computeGamma( char *info_bits, char *gamma, const int info_size, const int parity_size, const int circ_size, const int num_circ_rows, const int num_circ_cols)
+The algorithm for this kernel is described in the following pseudocode.
+# get info about this thread & compute offsets into # global memory to read info bits & store parity bits tid = threadIdx.x iwid = blockIdx.x*info_size gwid = blockIdx.x*parity_size
+
+ix = blockDim.x*blockIdx.x + threadIdx.x iy = blockDim.y*blockIdx.y + threadIdx.y # linear global memory index for original matrix ti = iy*nx+ix+blockIdx.z*nx*ny
+idx = threadIdx.y*blockDim.x + threadIdx.x row_idx = threadIdx.y*(blockDim.x+IPAD)+threadIdx.x irow = idx/blockDim.y icol = idx % blockDim.y col_idx = icol*(blockDim.x+IPAD)+irow
+# linear global memory index for transposed matrix ix2 = blockDim.y*blockIdx.y+icol iy2 = blockDim.x*blockIdx.x+irow to = iy2*ny+ix2+blockIdx.z*nx*ny
+# transpose with boundary test if (ix < nx && iy < ny):
+tile[row_idx] = gamma[ti] __syncthreads() if (ix2 < ny && iy2 < nx):
+gammaT[to] = tile[col_idx]
+
+circ_number = 0 for row in range(q):
+# get row degree from constant memory at circ_number row_deg = (CMEM[circ_number] >> 24) & 0xFF subGamma = 0 for col in range(row_deg):
+# get rotation & circulant column index from # constant memory rotation = CMEM [circ_number+col] & 0xFFF col_index = (CMEM [circ_number+col] >> 12) & 0xFFF if (col_index < num_circ_cols – num_circ_rows):
+# fetch info bit from global memory rdaddr = col_index*S + rotation + tid + iwid # account for circular rotation rdaddr -= ((rotation+tid) > S-1)*S # do modulo 2 addition subGamma = (info_bits[rdaddr] + subGamma) & 0x1 # go to next circulant row & save to global memory circ_number += row_deg gamma[gwid+row*S+tid] = subGamma
+
+For the matrix transpose kernel, the algorithm can be found
+
+in [6], but modified to handle multiple matrices in which the
+
+dimensions of the thread block is B, C, 1 and grid block
+
+is
+
+& B 1 ⁄ B , & C 1 / C, @ A where
+
+B C 32. The amount of shared memory for each
+
+thread block is B & E F ∗ C ∗ sizeof NOPQR where
+
+E F 2 to prevent bank conflicts when reading out of
+
+shared memory in a column-wise fashion. The function
+
+prototype for this kernel is:
+
+__global__ void kernel_transposeGamma( char *gamma, char *gammaT, const int nx, const int ny)
+
+The original matrix, gamma, is ny rows by nx columns, which yields a transposed matrix, gammaT, with nx rows and ny columns. The pseudocode for this algorithm is:
+
+# shared memory is dynamically allocated extern __shared__ unsigned int tile[] # coordinates in original matrix
+
+The z-dimension of the grid block allows multiple matrices to be transposed during kernel execution.
+
+For the in-place cumulative sum, the algorithm is outlined in
+[7] with a complexity of S log @ . For this operation, there are 2 GPU kernels: (a) cumulative sum over a block of
+2 ∗ VWXY values, (b) add the sum of each block to all other values.
+
+The first kernel is called twice; first with thread and grid
+
+dimensions of VWXY, 1,1 and @ZWXY, @ A, 1 and second with VWXY, 1,1 and @ZWXY 1 ⁄ 2 ∗ VWXY & 1, @ A, 1
+
+where @ZWXY >
+
+1?⁄ 2 ∗ VWXY & 1. The
+
+maximum number of parity bits is 48600, which implies 4 ∗
+
+VWXY[ > 48600, so let VWXY 128. The amount of shared memory for each thread block is 2 ∗ VWXY ∗ sizeof ] R . The function prototype for the first kernel is:
+
+__global__ void kernel_cumSum( char *input, char *blockSum, const unsigned int length)
+
+The pseudocode for this kernel is:
+
+extern __shared__ unsigned int buffer_s[] # each thread load 2 values; # if beyond length, store 0 i0 = 2*blockDim.x*blockIdx.x + threadIdx.x if (i0 < length):
+buffer_s[threadIdx.x] = input[i0+length*blockIdx.y] else:
+buffer_s[threadIdx.x] = 0 i1 = i0+Csum if (i1 < length):
+buffer_s[threadIdx.x+Csum] = input[i1+length*blockIdx.y]
+else: buffer_s[threadIdx.x+Csum] = 0
+__syncthreads() # traverse the reduction tree for stride=1, stride <= Csum, stride *=2:
+index = (threadIdx.x+1)*stride*2-1
+
+3
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+if index<2*Csum: buffer_s[index] = (buffer_s[index]+ buffer_s[index-stride]) & 0x1
+__syncthreads()
+# post reduction reverse phase for stride=Csum/2, stride>0, stride /=2:
+__syncthreads() index = (threadIdx.x+1)*stride*2-1 if index < 2*Csum:
+buffer_s[index+stride] = (buffer_s[index+stride] + buffer_s[index]) & 0x1 __syncthreads()
+# store results back to global memory; overwrite input if i0 < length:
+index = i0+length*blockIdx.y input[index] = buffer_s[threadIdx.x] if i1 < length: index = i1 + length*blockIdx.y
+# store last element into block sum if (threadIdx.x==0):
+blockSum[blockIdx.x+gridDim.x*blockIdx.y] = buffer_s[2*Csum-1]
+
+IEEE WiMax maximum block size of 2,304. The approach to decode WiMax LDPC codes in GPUs [8] cannot be used for DVB-S2 since the amount of shared memory on a GPU to store an entire codeword-worth of LLRs would prohibit decoding more than one codeword simultaneously. Furthermore, to increase throughput, the decoder checks if a valid codeword is reached after each iteration, which cannot be done if inter-codeword parallelism is used.
+Fig. 6 illustrates the GPU kernel of QC LDPC decoder that decodes one codeword at a time. Check node messages are generated using the min-sum algorithm with offset [9].
+
+The second kernel has thread and grid dimensions of 2 ∗ VWXY, 1,1 and @ZWXY, @ A, 1 . The function prototype is:
+__global__ void kernel_blockSumAdd( char *input, char *blockSum, int length)
+
+The pseudocode for this kernel is:
+index = blockDim.x*blockIdx.x+threadIdx.x if index<length:
+if blockIdx.x > 0: input[index+length*blockIdx.y] = (input[index+length*blockIdx.y] + blockSum[blockIdx.x-1+gridDim.x*blockIdx.y]) & 0x1
+4. GPU DESIGN OF LDPC DECODER
+Although the order of the parity bits of the encoder, described in Section 3, conform the DVB-S2 specification [5], it needs to be permuted for decoding using a quasi-cyclic LDPC decoder with soft inputs and soft outputs. Fig. 5 shows this permutation as matrix transpose of the log likelihood ratios (LLRs) corresponding to the parity bits by treating them as
+matrix.
+
+Fig. 6. GPU Kernel of QC LDPC Decoder with TDMP To describe the algorithm, define the following quantities:
+
+)^ _^ ` @a b^ c ,a
+e ,a
+gh^ a
+gh^Yi ΛhYi^
+
+n-th LLR of received codeword
+
+LLR for the n-th variable node
+
+row indices of ‘1’s in n-th column of
+
+column indices of ‘1’s in m-th row of
+
+number of elements in `
+
+subset of check nodes in ` that have had
+
+their messages updated during the i-th
+
+iteration before processing check node a
+
+where ∈ !0,1, … , b^$; when
+
+0, no
+
+messages have been updated (only valid at
+
+beginning of an iteration)
+
+remaining set of check nodes in ` that
+
+have not had their message updated; i.e.,
+
+e , a ` \c , a
+
+sum of _^ and the most up-to-date messages from the check nodes in c , a for variable
+
+node n during i-th iteration
+
+message sent to check node a during i-th
+
+iteration
+
+message sent from check node node a
+
+during i-th iteration
+
+Fig. 5. Block Diagram of GPU-based LDPC Decoder
+The QC decoder is a computationally intense kernel due to the large code sizes of 16,200 and 64,800 compared to the
+
+The steps for the LDPC decoding using the offset min-sum algorithm with TDMP are:
+
+4
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+1. Initialize iteration counter to 1 and let Yk be the maximum number of iterations allowed.
+
+2. Initialize the LLRs for the messages to the variable nodes
+
+by _^ )^.
+
+3. Update the check nodes using messages from λmn mp
+
+a. λ.m m* _^
+
+b. Λ*qrm 0
+
+c. λmn qr λmn mp
+
+Λnq-r.m
+
+d. Λnqrm XOR^v∈w ^,Yi \^ sgn λnmvqr ∙
+
+max min^|∈w ^,Yi \^ λ^n vYi }, 0
+
+4. Update the variable nodes with check node messages
+
+a. λnm mp~. λnmqr & Λnqrm _^ & ∑Y|∈w ^,Yi ΛnY|m ΛnY-|.m
+5. After all check node messages have been computed, check
+
+if a valid codeword is reached by
+
+a. If 7€ 0, stop, else go to step 3
+
+b. •^̂ 0, if λnm mp~. ≥ 0, else 1 6. If iteration counter equals Yk , stop decoding.
+
+When mapping this algorithm to a GPU kernel, the following key design choices were implemented to attain high GPU occupancy.
+
+1. Thread and grid block dimensions are , 1,1 and @ A, 1,1 , respectively.
+2. For each thread block, allocate shared memory as
+(maximum row degree of )*2 bytes. Shared memory stores λmn mp as half precision (16 bits); however, all computations for min-sum algorithm are performed as single precision (32 bits). The half precision intrinsics, __float2half_rn() and __half2float(), are used. 3. In step 4 of the decoding algorithm, Lm is double-counted for the superimposed circulant, so it needs to be retrieved from global memory to subtract out its contribution. 4. By storing the degree of each circulant row in each 32-bit entry in constant memory, different row degrees in the 16,200 code sizes of DVB-S2 are readily supported. 5. When computing the two minimum magnitudes for the min-sum algorithm, branchless version of the ‘if’ statement was implemented to eliminate thread divergence within a warp. 6. For early termination, the early termination flag and checksum are declared as volatile __shared__. This forces the compiler to not move shared memory to registers and allows these values to be used a communication vehicle among threads in a block.
+
+const int circ_size, const int num_circ_rows, const int max_iterations, const float ms_offset)
+
+The pseudocode for finding the two minimum magnitudes for each circulant row in the min-sum algorithm is:
+
+sign_product = 1
+
+sign_bits_new = 0
+
+min_idx
+
+=0
+
+min_mag
+
+= 1e10
+
+min_2nd_mag = 1e10
+
+for circ_idx in range(0, circ_row_deg): addr_offset = tid + rotation lambda_addr = circ_idx*S + addr_offset lambda_addr -= (addr_offset > S-1)*S
+
+# = 0 if circulant is upper rightmost circulant upper_rh_circ = (tid==0 & row_idx==0 &
+circ_idx == circ_row_deg-1)==0
+
+# decompress check messages temp_sign = (sign_bits >> circ_idx) & 0x1 temp_sign = 1 – 2*temp_sign*upper_rh_circ temp_float = temp_sign*(
+(check_min_idx==circ_idx)*check_2nd_min + (check_min_idx!=circ_idx)*check_min)
+
+# subtract prev check messages lambda = __half2float(lambda_mem[lambda_addr]) –
+temp_float*upper_rh_circ lambda_mem[lambda_addr] = __float2half_rn(lambda)
+
+# save sign bits & sign product for variable node
+
+# update
+
+temp_sign
+
+= (lambda < 0.0f) * upper_rh_circ
+
+sign_product *= (1 - 2*temp_sign)
+
+sign_bits_new |= (temp_sign << circ_idx)
+
+# branchless ‘if’ to find 2 min mags temp_float = fabsf(lambda) +
+(upper_rh_circ == 0) * 1e10 temp_sign = (temp_float < min_mag) temp_sign2 = (temp_float < min_2nd_mag) min_2nd_mag = temp_sign * min_mag +
+((temp_sign == 0) & (temp_sign2)) * temp_float + ((temp_sign == 0) & (temp_sign2 == 0)) *
+min_2nd_mag min_mag = temp_sign * temp_float +
+(temp_sign == 0) * min_mag min_idx = temp_sign * circ_idx +
+(temp_sign == 0) * min_idx
+
+# get rotation of next circulant in this row rotation = CMEM[curr_idx] & 0xFFF
+
+The function prototype for the decoder kernel is:
+__global__ void kernel_LDPCDVBS2DecoderStagMsg( float *input_llrs, float *check_mag_min, float *check_mag_2nd_min, int *min_index_gm, int *sign_bits_gm, const int num_input_llrs, const int parity_size,
+
+The pseudocode to update the variable nodes with the updated check messages is:
+sign_bits = 0 # to be stored in global memory
+for circ_idx in range(0, circ_row_deg): # = 0 if circulant if upper rightmost circulant upper_rh_circ = (tid==0 & row_idx==0 & circ_idx == circ_row_deg-1)==0
+# XOR the sign bit {0,1} with sign product {-1,1}
+
+5
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+# must convert sign product to {0,1} temp_sign = (sign_bits_new >> circ_idx) & 0x1 sign_bits |= ((temp_sign + (sign_product < 0))
+& 0x1) << circ_idx
+temp_sign = (1 - 2*temp_sign)*sign_product temp_float = temp_sign * (
+(min_idx == circ_idx) * min_2nd_mag + (min_idx != circ_idx) * min_mag)
+# save updated lambda value into rotated addresses addr_offset = tid + rotation lambda_addr = circ_idx * S + addr_offset lambda_addr -= (addr_offset > S-1)*S
+# don't update LLR if upper_rh_circ = 0; # else update LLRs lambda_mem[lambda_addr] =
+__float2half_rn(__half2float( lambda_mem[lambda_addr]) + temp_float * upper_rh_circ)
+if (prev_circ_col_idx == circ_col_idx): # handle the superimposed matrix case by # adding the previous lambda's lambda_mem[lambda_addr] = __float2half_rn( __half2float(lambda_mem[lambda_addr]) + __half2float(lambda_mem[lambda_addr - S]))
+# get the current LLRs from global memory & # subtract it since it's been # accounted for in the above addition lambda_mem[lambda_addr] = __float2half_rn(
+__half2float(lambda_mem[lambda_addr]) input_llrs[cwid + circ_col_idx*S + addr_offset - (addr_offset > S-1)*S])
+__syncthreads()
+# move to next circulant in this row # column index & rotation prev_circ_col_idx = circ_col_idx circ_col_idx = (CMEM[curr_idx] >> 12) & 0xFFF rotation = CMEM[curr_idx] 0xFFF
+Except for the code size of 16,200 and rate 9/10, the limiting factor to achieving maximum usage of the Titan Xp is the number of registers per thread block. For NVIDIA GPUs, the number of threads per block (TPB) is a multiple of 32, so TPB is rounded up to 384 for 360. Thus, each thread block uses 12,288 out of the possible 65,536 registers. So only five thread blocks can run simultaneously, which results in 1920 active threads out of the possible 2048. Thus, we achieve a high occupancy of 93.75% using the NVIDIA visual profile and CUDA occupancy calculator.
+5. RESULTS
+Simulations were ran on the NVIDIA Titan Xp with a compute capability of 6.1. The source code was C++ and was compiled with the NVIDIA CUDA compiler (nvcc) version 8.0. The GPUs kernels were grouped by functionality and
+
+separated into different CUDA C files with a .cu extension and corresponding header files with .cuh extension. Since the GPU kernels for encoding, kernel_computeGamma(), and decoding, kernel_LDPCDVBS2DecoderStagMsg(), refer to the same variable in constant memory, they needed to be in the same .cu file. During kernel compilation, the – dc flag is required for separate .cu file compilation and during linking, the –dlink option must be present to combine all the device objects into one object.
+A. DVB-S2 LDPC encoder throughput
+The throughput of the encoder was measured by dividing the number of information bits by the duration for the three kernels to compute the parity bits. The duration to transfer information and parity bits were not included and can vary by application. Fig. 7 illustrates multi-Gigabit per second throughput with @ A 8000 for all code rates and linear increase with code rate for both LDPC block sizes for DVBS2.
+DVB-S2 LDPC Encoder GPU Throughput
+1E+11
+
+1E+10
+
+16200 64800 1E+09 1/4 1/3 2/5 1/2 3/5 2/3 3/4 4/5 5/6 8/9 9/10 Code Rate
+Fig. 7. Throughput of GPU-based LDPC Encoder for all DVB-S2 codes
+
+B. DVB-S2 LDPC decoder error rate performance
+An error rate simulation was entirely built using GPU kernels to (a) generate random bits with a uniform distribution from 0 to 1; (b) create LDPC codewords; (c) convert bits to symbols of +/-1; (d) add white Gaussian noise using cuRAND and the CURAND_RNG_PSEUDO_MRG32K3A pseudo-random number generator with zero mean and standard deviation of
+
+√0.5 ∙ 10-Šˆ‰‹Œ[*
+
+(8)
+
+Where •Z⁄@* is the energy per bit to noise density ratio (in decibels) as seen at the input of the LDPC decoder; (e) decode received LLRs as single precision floating point values with the quasi-cyclic LDPC decoder; (f) convert decoded LLRs to
+bits; (g) compute bits errors and bit errors per frame.
+
+6
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+1E+0 1E-1 1E-2 1E-3 1E-4 1E-5 1E-6 1E-7 1E-8
+
+BER, 50 iter, r=1/4 FER, 50 iter, r=1/4 BER, 50 iter, r=1/3 FER, 50 iter, r=1/3 BER, 50 iter, r=2/5 FER, 50 iter, r=2/5 BER, 20 iter, r=1/2 FER, 20 iter, r=1/2 BER, 20 iter, r=3/5 FER, 20 iter, r=3/5 BER, 20 iter, r=2/3 FER, 20 iter, r=2/3 BER, 20 iter, r=3/4 FER, 20 iter, r=3/4 BER, 20 iter, r=4/5 FER, 20 iter, r=4/5 BER, 20 iter, r=5/6 FER, 20 iter, r=5/6 BER, 20 iter, r=8/9 FER, 20 iter, r=8/9 BER, 20 iter, r=9/10 FER, 20 iter, r=9/10
+
+1E-9
+
+1E-10
+
+1E-11 0.1 0.3 0.5 0.7 0.9 1.1 1.3 1.5 1.7 1.9 2.1 2.3 2.5 2.7 2.9 3.1 3.3 3.5 3.7 3.9 4.1 4.3 4.5 4.7 4.9 5.1 Eb/N0 per bit [dB]
+Fig. 8. DVB-S2 64,800 LDPC Min-Sum BPSK Error Rate Performance using GPUs
+
+Fig. 8 depicts the bit and frame error rate versus •Z⁄@* per bit for all the code rates for the 64,800 LDPC block size. At least 50 frame errors were collected for BER < 1e-9. The offset, }, for the min-sum algorithm is 0.125. For code rates greater than 2/5, the number of decoder iterations was set to 20, which yielded a good tradeoff between error rate versus number of iterations. For code rates less than 2/5, 50 iterations were needed. This reveals that most code rates may not “need” BCH decoding except for rates 1/4 and 1/2, which exhibit an inflection point near a bit error rate of 1e-9; however, for the rate of 2/3, there is an unacceptable high bit error rate inflection point near 1e-7.
+For the 16,200 LDPC block size, Fig. 10 shows that all code rates need BCH to remove the inflection point on the bit error rate. The min-sum offset was also chosen to 0.125 and the number of decoder iterations was chosen by the same manner as for 64,800.
+C. DVB-S2 LDPC decoder throughput with early termination
+Fig. 9 reveals the throughput of the GPU-based QC-LDPC decoder versus •Z⁄@* for the 64,800 LDPC block size given the same decoder iterations for the error rate results. There is about 100 Mbps increase in decoder throughput per 0.1 dB of •Z⁄@* increase. This implies early termination greatly enhances the speed of the kernel since it takes less iterations to reach a valid codeword.
+The throughput is the ratio between OŽ•• ∙ @•• bits and the duration of the QC LDPC kernel to decode @ A 8000
+
+codewords. The duration to move the LLRs into the decoder and decoded bits out of the decoder is not factored into the throughput calculation. For BERs < 1e-9, throughputs of at least 500 Mbps can be achieved for rates ≥ 1/2 and near 1 Gbps for rates 3/4, 4/5, 5/6, 8/9 and 9/10.
+For the 16,200 block size, throughputs are higher than 64,800 as shown in Fig. 11. For rates > 1/2, throughputs are either near or exceed 1 Gbps for BER < 1e-9; whereas, for the other lower rates, the throughputs are near 500 Mbps.
+
+1.4E+9 1.3E+9 1.2E+9 1.1E+9 1.0E+9 9.0E+8 8.0E+8 7.0E+8 6.0E+8
+
+r=1/4, 50 iter r=1/3, 50 iter r=2/5, 50 iter r=1/2, 20 iter r=3/5, 20 iter r=2/3, 20 iter r=3/4, 20 iter r=4/5, 20 iter r=5/6, 20 iter r=8/9, 20 iter r=9/10, 20 iter
+
+5.0E+8
+
+4.0E+8
+
+3.0E+8
+
+2.0E+8
+
+1.0E+8 0.1 0.3 0.5 0.7 0.9 1.1 1.3 1.5 1.7 1.9 2.1 2.3 2.5 2.7 2.9 3.1 3.3 3.5 3.7 3.9 4.1 4.3
+Eb/N0 per bit [dB]
+
+Fig. 9. GPU Decoder Throughput vs. •Z⁄@* for
+
+64800
+
+7
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+1E+0 1E-1 1E-2 1E-3 1E-4 1E-5 1E-6 1E-7 1E-8 1E-9
+
+BER, 50 iter, r=1/4 FER, 50 iter, r=1/4 BER, 50 iter, r=1/3 FER, 50 iter, r=1/3 BER, 50 iter, r=2/5 FER, 50 iter, r=2/5 BER, 20 iter, r=1/2 FER, 20 iter, r=1/2 BER, 20 iter, r=3/5 FER, 20 iter, r=3/5 BER, 20 iter, r=2/3 FER, 20 iter, r=2/3 BER, 20 iter, r=3/4 FER, 20 iter, r=3/4 BER, 20 iter, r=4/5 FER, 20 iter, r=4/5 BER, 20 iter, r=5/6 FER, 20 iter, r=5/6 BER, 20 iter, r=8/9 FER, 20 iter, r=8/9
+
+1E-10
+
+1E-11 0.3 0.5 0.7 0.9 1.1 1.3 1.5 1.7 1.9 2.1 2.3 2.5 2.7 2.9 3.1 3.3 3.5 3.7 3.9 4.1 4.3 4.5 4.7 4.9 5.1 5.3 Eb/N0 per bit [dB]
+
+Fig. 10. DVB-S2 16,200 LDPC Min-Sum BPSK Error Rate Performance using GPUs
+
+2.2E+9 2.1E+9 2.0E+9 1.9E+9 1.8E+9 1.7E+9 1.6E+9 1.5E+9 1.4E+9 1.3E+9 1.2E+9 1.1E+9 1.0E+9 9.0E+8 8.0E+8 7.0E+8 6.0E+8 5.0E+8 4.0E+8 3.0E+8 2.0E+8 1.0E+8
+
+r=1/4, 50 iter r=1/3, 50 iter r=2/5, 50 iter r=1/2, 20 iter r=3/5, 20 iter r=2/3, 20 iter r=3/4, 20 iter r=4/5, 20 iter r=5/6, 20 iter r=8/9, 20 iter
+
+0.1 0.3 0.5 0.7 0.9 1.1 1.3 1.5 1.7 1.9 2.1 2.3 2.5 2.7 2.9 3.1 3.3 3.5 3.7 3.9 4.1 4.3 4.5
+
+Eb/N0 per bit [dB]
+
+Fig. 11. GPU Decoder Throughput vs. •Z⁄@* for
+
+16200
+
+6. CONCLUSIONS
+
+In this paper, we have shown that converting the LDPC parity check matrix for DVB-S2 into a quasi-cyclic structure allows for intra-codeword parallelism that achieves throughputs for (a) an encoder greater than 1 Gigabit/sec and (b) an early terminating decoder from 500 Mbps for rates < 1/2 to 1 Gigabit/second for code rates > 1/2 at bit error rates < 1e-9. Furthermore, with each 0.1 dB increase in •Z⁄@*, the decoder yields approximately 100 Mbps increase in throughput.
+
+and decoding using low-cost GPUs versus existing intercodeword approaches. As newer GPU architectures are released by NVIDIA such as Volta, it is expected that the throughputs will increase with the benefit of not having to rewrite CUDA C++ code.
+Areas of future work are to design an efficient GPU implementation of (a) a soft-input hard-output BCH decoder and (b) a fast BCH encoder that does not use the conventional shift-register approach. These are required to eliminate the inflection point in the error rate performance as •Z/@* increases. Coupled with an early terminating LDPC decoder, the overall throughput of decoding BCH and LDPC should not decrease significantly at low BERs.
+REFERENCES
+[1] B. Le Gal, C. Jego, J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Systems Letters, Vol 6, Issue 2, pp 29-32, Jun 2014.
+[2] S. Gronroos, K. Nybom, J. Bjorkqvist, “Efficient GPU and CPU-based LDPC decoders for long codewords,” Analog Integrated Circuits and Signal Processing, Vol 73, Issue 2, pp 583-595, Nov 2012.
+
+The advances presented in this paper provide another attractive alternative for real-time DVB-S2 LDPC encoding
+
+8
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+[3] J. Dielissen, A. Hekstra, V. Berg, “Low cost LDPC decoder for DVB-S2,” Design, Automation and Test in Europe 2006 Proceedings, Vol 2, pp 1-6, Mar 2006.
+[4] IEEE 802.16-2012, “IEEE Standard for Air Interface for Broadband Wireless Access Systems,” pp 1285-1289, Aug 2012.
+[5] EN 302 307 V1. 1.1, European Telecommunications Standards Institute (ETSI), Digital video broadcasting (DVB).
+[6] J. Cheng, M. Grossman, T. McKercher, “Professional CUDA C Programming,” John Wiley & Sons Inc., pp 241249, 2014.
+[7] M. Harris, S. Sengupta, J. Owens, “Chapter 39. Parallel Prefix Sum (Scan) with CUDA”, https:// developer.nvidia.com/gpugems/GPUGems3/gpugems3_c h39.html
+[8] X. Wen, et al., “A High Throughput LDPC Decoder using a Mid-range GPU,” IEEE Internationl Conference on Acoustics, Speech, and Signal Processing, May 2014.
+[9] Lechner, G., Bolzer, A., Sayir, J. and Rupp, M., “Implementation of an LDPC Decoder on a Vector Signal Processor,” 38th Asilomar Conf. on Signals, Systems, and Computers, Vol. 1, pp 549-553, Nov 2004.
+BIOGRAPHY
+David Kun received his B.S. and M.S. degrees in Electrical Engineering from the University of Minnesota-Twin Cities and the University of Illinois at Urbana-Champaign, respectively. Prior to joining The Aerospace Corporation in 2006, he worked as a system engineer and later as a design/test engineer for Northrop Grumman Space Technology. His research interests include signal detection and estimation theory, heterogeneous parallel computing with CPUs, FPGAs, and GPUs, FPGA hardware prototyping of digital signal processing algorithms, cloud-based software defined radios, and more recently, parallelizing existing algorithms on GPU devices.
+9
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:10:48 UTC from IEEE Xplore. Restrictions apply.
+
+

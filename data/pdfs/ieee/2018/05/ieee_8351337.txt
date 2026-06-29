@@ -1,0 +1,771 @@
+Reconfigurable Decoder for LDPC and Polar Codes
+Ningyuan Yang1,2,3, Shusen Jing1,2,3, Anlan Yu1,2,3, Xiao Liang1,2,3, Zaichen Zhang2,3, Xiaohu You2, and Chuan Zhang1,2,3,∗
+1Lab of Efficient Architectures for Digital-communication and Signal-processing (LEADS) 2National Mobile Communications Research Laboratory, Southeast University 3Quantum Information Center of Southeast University, Nanjing, China
+Email: {nyyang, shs.jing, anlan, xiao liang, zczhang, xhyu, chzhang}@seu.edu.cn
+
+Abstract—With low-density parity-check (LDPC) code and polar code selected as the standard codes for 5G eMBB scenario, one challenge is how to improve the hardware efficiency when both decoders are required by one system. Since LDPC and polar codes can be decoded with belief propagation (BP) algorithms, this similarity allows us to design a reconfigurable decoder, which can decode both codes at the cost of only one decoder. Numerical and implementation results are also given in this paper to show that the proposed decoder achieves higher hardware efficiency than stand-alone LDPC or polar decoder, without harming the error performance.
+Index Terms—LDPC codes, polar codes, belief propagation, reconfigurable decoder.
+I. INTRODUCTION
+Low-density parity-check (LDPC) code [1] was first proposed by Gallager in 1961, and became famous for its near Shannon-capacity performance and high decoding parallelism. The standard decoding algorithm for LDPC is belief propagation (BP), which takes advantage of the code sparsity and iterative decoding. For better balance of performance and complexity, variants of BP such as min-sum and layered minsum were proposed [2]–[4]. Nowadays, LDPC code has been widely adopted for applications and become the standard code for eMBB data channel by 3GPP.
+Polar code [5] is another breakthrough in channel coding after LDPC code. Invented by Arıkan in 2008, it is the first code proved to achieve channel capacity of symmetric binary-input discrete memoryless channels (B-DMCs). Recently, polar code has been selected as the code for eMBB control channel by 3GPP. For polar decoding, successive cancellation (SC) was proposed together with polar code. Then, SC list (SCL) was proposed to further improve the error performance of SC. Although SCL significantly improves the performance, it suffers from high decoding complexity. Furthermore, since SC and SCL decoders are tree-searching based, they suffer from low parallelism and high delay. To address the problem, BP decoding, which can be carried out in parallel, was employed [6]–[9] for high throughput applications.
+Since both LDPC and polar codes have been set as standard codes for eMBB, one of the utmost challenges is to implement both decoders efficiently at the same time. One straightforward solution is to have two separated decoders which take care of both codes, respectively. Admittedly, highlevel transforms such as folding and fine-grain optimization can help to improve the efficiency. The resulting decoders
+
+remain not satisfactory. To this end, this paper devotes itself in proposing a reconfigurable BP decoder, which can decode both LDPC and polar codes with the same hardware. This target is achieved by: 1) revealing the similarity of LDPC and polar codes’ BP algorithms, and 2) reconfiguring a set of basic computational units. Complexity analysis and numerical results have indicated the efficiency advantages of proposed decoders over stand-alone ones. Such advantages have also been verified by FPGA implementations in this paper.
+The remainder of this paper is organized as follows. Section II reviews the preliminaries. The proposed reconfigurable BP decoder for both codes is given in Section III with detailed module introduction. Complexity analysis and numerical results are given in Section IV. FPGA implementation is given in the same section. Section V concludes the entire paper.
+II. PRELIMINARIES
+A. BP LDPC Decoding Algorithm
+An (m, k) LDPC code has an (m − k) × m parity-check matrix H, where m denotes codeword length and k denotes data word length (m > k). Its BP decoding is based on a factor graph which is illustrated in Fig. 1. A ‘1’ located at the jth row and the ith column of H indicates an edge between the jth check node (CN) and the ith variable node (VN).
+
+C0
+
+C1
+
+C2
+
+C3
+
+VN CN
+
+V0 V1 V2 V3 V4 V5 V6 V7
+
+Fig. 1. Factor graph of a regular (8, 4) LDPC code.
+
+In each pair of nodes, CN-to-VN messages L(rji) and VN-
+
+to-CN messages L(qij) are propagated and updated iteratively
+
+according to the following equations:
+
+
+
+
+
+∏
+
+L(rji) = 
+
+sgn(L(qi′j)) × min |L(qi′j)|, (1)
+
+i′∈Rj /i
+
+i′∈Rj /i
+
+∑
+
+L(qij) = L(ci) +
+
+L(rj′i),
+
+(2)
+
+j ′ ∈Ci /j
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:57:46 UTC from IEEE Xplore. Restrictions apply.
+
+where Rj denotes the set of column locations of the 1’s in the jth row and Ci denotes the set of row locations of the 1’s in the ith column, respectively. Besides, L(ci) is used for initialization, while L(Qi) is iteratively computed for cˆi.
+B. BP Polar Decoding Algorithm
+
+Stage 1
+
+Stage 2
+
+Stage 3
+
+(1,1)
+
+(2,1)
+
+(3,1)
+
+(4,1)
+
+u1
+
+x1
+
+u5 (1,2)
+
+(2,2)
+
+(3,2)
+
+(4,2)
+x2
+
+(1,3)
+
+(2,3)
+
+(3,3)
+
+(4,3)
+
+u3
+
+x3
+
+u7 (1,4)
+
+(2,4)
+
+(3,4)
+
+(4,4)
+x4
+
+u2 (1,5)
+
+(2,5)
+
+(3,5)
+
+(4,5)
+x5
+
+u6 (1,6)
+
+(2,6)
+
+(3,6)
+
+(4,6)
+x6
+
+u4 (1,7)
+
+(2,7)
+
+(3,7)
+
+(4,7)
+x7
+
+(1,8)
+
+(2,8)
+
+(3,8)
+
+(4,8)
+
+u8
+
+x8
+
+A. Basic Modules
+
+sgn(a) sgn(b)
+abs(a) abs(b)
+
+GFU
+
+XOR CMP
+
+sgn(c) abs(c)
+
+Fig. 4. Hardware design for a GFU.
+
+Two important factors are involved in Eqs. (1) and (4): the sign and the minimum. As shown in Fig. 4, we design a gfunction unit (GFU), which is made up of a comparison (CMP) and an exclusive-OR (XOR) gate. Given 2 inputs a and b, the CMP and the XOR is supposed to obtain the minimum of two absolute values and the XOR of two signs, respectively.
+
+c1
+
+d1
+
+b2
+
+c2
+
+Fig. 2. Factor graph of a polar code with N = 8.
+
+BP decoding for a polar code with code length N = 2n is
+
+also based on a factor graph. Fig. 2 illustrates the factor graph
+
+of an 8-bit polar code. The factor graph has n + 1 node stages,
+
+and each stage consists of N nodes. The label for the jth node in the ith stage is denoted by (i, j). There are n × N/2 basic
+
+computational blocks (BCBs), and each of them is linked with
+
+4 nodes. In Fig. 3, each node is associated with two kinds of
+
+LLRs: right-to-left messages L and left-to-right messages R.
+
+During the BP decoding procedure, two types of messages
+
+are passed and updated iteratively between adjacent nodes
+
+according to the following equations:
+
+
+
+
+
+Li,j = g(Li+1,2j−1, Li+1,2j + Ri,j+N/2), Li,j+N/2 = g(Ri,j , Li+1,2j−1) + Li+1,2j ,
+
+
+
+Ri+1,2j−1 Ri+1,2j =
+
+= g(Ri,j , Li+1,2j + Ri,j+N/2), g(Ri,j , Li+1,2j−1) + Ri,j+N/2.
+
+(3)
+
+Using a min-sum algorithm, the function g(x, y) is approximated by Eq. (4) in implementation.
+
+b1
+
+GFU
+
+Type ĉ
+
+f1 f2
+
+GFU
+
+d2
+
+Type Ċ
+
+Fig. 5. Two forms of design for computation.
+
+B. Architecture for Polar Decoder
+
+For polar decoding, 2-input GFUs are used to compute Eq.
+
+(3), which can be classified into two forms:
+
+{
+
+f1 = g(b1, c1) + d1, f2 = g(b2, c2 + d2).
+
+(5)
+
+As shown in Fig. 5, the corresponding structure for each form is both designed with a GFU and an adder. Fig. 6 illustrates a parallel architecture for a BCB. Grey squares represent memories, which are used for storing L and R messages.
+
+Li,j
+
+Ri,j+N/2
+
+Li,j+N/2
+
+Ri,j
+
+g(x, y) ≈ sgn(x)sgn(y) min(|x|, |y|).
+
+(4)
+
+(i,j+N/2) (i,j)
+
+Ri,j Li,j Ri, j+N/2 Li, j+N/2
+
+Ri+1,2j-1 Li+1,2j-1 Ri+1,2j Li+1,2j
+
+(i+1,2j-1) (i+1,2j)
+
+Fig. 3. A BCB of polar codes.
+
+III. PROPOSED RECONFIGURABLE DECODER
+In this section, a hardware architecture for the reconfigurable BP decoder is proposed. We will use a specific example to describe it in detail.
+
+GFU Li+1,2j
+
+GFU
+
+GFU
+
+Ri+1,2j-1
+
+Li+1,2j-1
+
+GFU B C B
+Ri+1,2j
+
+Fig. 6. Parallel architecture for a BCB.
+
+C. Architecture for LDPC Decoder
+
+Since there are more than two L(qij)s on the right side
+
+of Eq. (1), several GFUs are combined to carry out LDPC
+
+decoding process. We can design a CN unit (CU) by observing
+
+the recursive property of Eq. (6):
+
+(
+
+)
+
+∏3
+
+sgn(ai) × min |ai| = g(g(a1, a2), a3).
+
+(6)
+
+1≤i≤3
+
+i=1
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:57:46 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 7 illustrates the architecture for a 3-input CU and a 4input CU. Generally, a CU with t(t ≥ 3) inputs and 1 output is made up of t − 1 GFUs.
+
+Li,j
+
+L(q20) Ri,j+N/2
+
+S
+
+Li,j+N/2 L(q30)
+
+Ri,j
+
+L(r01)
+
+a2
+
+Output
+
+a2
+
+Output
+
+a3
+
+a1
+
+GFU
+
+GFU
+
+a3 a1
+
+GFU
+
+GFU
+
+GFU
+
+a4
+
+3-input CU
+
+4-input CU
+
+Fig. 7. Architecture for 3-input and 4-input CUs.
+
+M GFU
+
+GFU
+
+GFU
+
+GFU
+
+B
+
+C
+
+B
+
+Li+1,2j L(r00) Ri+1,2j-1 L(q10) Li+1,2j-1 L(q00) Ri+1,2j
+
+Fig. 9. Architecture for an MBCB.
+
+Then, consider a regular (12, 6) LDPC code with H6×12
+
+listed in Eq. (7) as an example.
+
+
+
+
+
+111100000000
+
+H6×12
+
+=
+
+
+
+1 0 0 0
+
+0 1 0 0
+
+0 0 1 0
+
+0 0 0 1
+
+1 1 0 0
+
+1 0 1 0
+
+1 0 0 0
+
+0 1 0 1
+
+0 1 0 0
+
+0 0 1 0
+
+0 0 1 1
+
+0 0 0 1
+
+
+
+.
+
+(7)
+
+000000101101
+
+Polar inputs S
+
+LDPC inputs
+
+S Polar inputs
+
+GFU GFU GFU GFU GFU GFU GFU GFU
+
+Polar outputs
+
+LDPC outputs
+
+LDPC outputs
+
+Polar outputs
+
+Notice that each CN has 4 inputs and 4 outputs, while each
+
+VN has 3 inputs and 3 outputs. Fig. 8 presents an architecture
+
+for the 0th CN. In the CN, 4 CUs are used for calculating 4 groups of Eq. (1) simultaneously. Besides, 3 adders are needed
+
+to construct a VN. After 2 L(qij)s and 1 L(ci) are put in, 2 L(rji)s and 1 L(Qi) are calculated by Eq. (2) and Eq. (8),
+
+respectively.
+
+∑
+
+L(Qi) = L(ci) + L(rji).
+
+(8)
+
+j∈Ci
+
+In total, 48 GFUs and 36 adders are used to construct CNs and VNs.
+
+L(r00)
+
+L(q20)
+
+L(r02)
+
+L(q00)
+
+GFU GFU GFU GFU GFU GFU GFU GFU
+
+L(q30)
+
+L(r01)
+
+L(q10)
+
+Fig. 8. Architecture for the 0th CN.
+
+CN L(r03)
+
+MBCB
+
+Memory
+
+CN
+
+Fig. 10. Architecture for a pair of MBCBs.
+
+For polar decoding, the MBCB’s function is the same to the BCB’s. For LDPC decoding, 2 L(rji)s are calculated by 2 CUs. As a result, 8 GFUs in a pair of MBCBs are reused to carry out a CN’s computation. Fig. 10 illustrates the corresponding architecture for a pair of MBCBs. GFUs and adders are connected according to Fig. 9. Besides, adders in MBCBs are reused to carry out VNs’ computation. Fig. 11 illustrates the architecture for the proposed reconfigurable BP decoder. It is made up of 48 GFUs and 48 adders, and its connection modes are shown in previous figures.
+Blue squares representing 3 stages of MBCBs are connected to implement polar decoding. In a pair of MBCBs, 8 GFUs and 6 adders are reused to make up a CN and 2 VNs, respectively. For LDPC decoding, 6 CNs and 12 VNs are connected according to the factor graph. The input S determines which connection mode to be switched. If both decoding processes are implemented separately by a polar decoder and an LDPC decoder, 96 CMPs, 96 XORs and 84 adders are needed in total. As a result, CMPs, XORs and adders are reduced by 50%, 50%, and 43%, respectively.
+
+D. Reconfigurable BP Decoder
+To implement both decoding processes, we design the merged BCB (MBCB). Fig. 9 illustrates an architecture for the 9-input and 6-output MBCB, which is alternative to carry out a BCB’s computation or part of the 0th CN’s computation. There are two modes of inner connection in the MBCB. Black lines and red lines represents the mode for polar decoding and LDPC decoding, respectively. The input signal S is used for switching the two connection modes.
+
+IV. HARDWARE IMPLEMENTATION
+A. Complexity Analysis
+Generally, the reconfigurable BP decoder is composed of 2N × log2 N CMPs, XORs and adders, respectively. For the LDPC code, we denote the number of ‘1’s in the jth row by aj (aj ≥ 3) and the number of ‘1’s in the ith column by bi (bi ≥ 2). By counting the number of ‘1’s, we obtain the
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:57:46 UTC from IEEE Xplore. Restrictions apply.
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+Decoder MBCB
+CN
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+GFU
+
+VN
+
+Fig. 11. Architecture for the reconfigurable BP decoder.
+
+equation:
+
+m∑ −k−1
+
+m∑−1
+
+aj = bi.
+
+(9)
+
+j=0
+
+i=0
+
+Since each output in the jth CN is figured out by aj − 1
+
+inputs, the CN consists of aj(aj − 2) GFUs. In the ith VN,
+
+bi − 1 adders are needed when adding bi variables, and an
+
+extra adder is used for calculating L(Qi). As a result, the VN
+
+consists of bi(bi − 1) + 1 adders.
+
+m−∑k−1
+
+m∑−1
+
+Totally,
+
+aj(aj − 2) GFUs and (bi(bi − 1) + 1)
+
+j=0
+
+i=0
+
+adders are reused for LDPC decoding. It can be implemented
+
+if both numbers are less than or equal to 2N × log2 N . Table I compares the reconfigurable decoder’s hardware complexity
+
+and the total of two separated decoders.
+
+TABLE I COMPARISON OF DECODERS’ COMPLEXITY.
+
+Decoder Type Reconfigurable The total of Polar and LDPC
+
+CMPs XORs ADDs
+
+2N × log2 N 2N × log2 N 2N × log2 N
+
+m−∑k−1
+
+2N × log2 N +
+
+aj (aj − 2)
+
+j=0
+
+m−∑k−1
+
+2N × log2 N +
+
+aj (aj − 2)
+
+j=0
+
+m∑−1
+
+2N × log2 N +
+
+(bi(bi − 1) + 1)
+
+i=0
+
+100
+
+10-1
+
+BER
+
+10-2
+
+10-3
+
+ldpc float
+
+ldpc fixed (1,4,2)
+
+polar float
+
+polar fixed (1,4,2)
+
+10-4
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+E /N (dB)
+b0
+
+Fig. 12. BER performance with N = 8, m = 12, k = 6.
+
+TABLE II FPGA IMPLEMENTATION RESULTS OF THE DECODER.
+
+Items
+
+This Work
+
+Registers
+
+384
+
+LUTS
+
+3223
+
+Max Freq. (MHz) 120.5
+
+Decoding Process LDPC Polar
+
+Iteration Number 10 10
+
+Code Length
+
+12 8
+
+Code Rate
+
+0.5 0.5
+
+Throughput (Mbps) 144.6 15.3
+
+Latency (clocks) 10 63
+
+B. Numerical Results
+Fig. 12 compares the bit error rate (BER) performance of the float scheme and the fixed scheme for both decoding processes. The fixed scheme employs 1 sign bit, 4 integer bits and 2 decimal bits. When BER = 10−2, compared with the float scheme, the fixed scheme has 0.2 dB and 0.5 dB loss for polar decoding and LDPC decoding, respectively. Hardware’s performance loss is acceptable under this condition. FPGA implementation results are given in Table II.
+V. CONCLUSION
+In this paper, we propose a reconfigurable BP decoder, which can flexibly decode polar code or LDPC code. Theoretical analysis shows that the decoder requires lower hardware
+
+complexity, while numerical results indicate negligible performance loss. FPGA implementation results are also given Future work will be directed towards further optimization of performance and architecture, and its application in our 5G Cloud Platform.
+ACKNOWLEDGEMENT
+This work is supported in part by NSFC under grant 61501116, Jiangsu Provincial NSF under grant BK20140636, Huawei HIRP Flagship under grant YB201504, the Fundamental Research Funds for the Central Universities, the SRTP of Southeast University, State Key Laboratory of ASIC & System under grant 2016KF007, ICRI for MNC, and the Project Sponsored by the SRF for the Returned Overseas Chinese Scholars of MoE.
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:57:46 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] C. Zhang, X. You, and Z. Wang, “Efficient column-layered decoders for single block-row quasi-cyclic LDPC codes,” in Proc. IEEE International Symposium on Circuits and Systems (ISCAS), Jun. 2014, pp. 413–416.
+[3] W. Chang and J. R. Cruz, “RS plus LDPC codes for perpendicular magnetic recording,” IEEE Trans. Magn., vol. 46, no. 6, pp. 1416–1419, Jun. 2010.
+[4] F. Zarkeshvari and A. H. Banihashemi, “On implementation of minsum algorithm for decoding low-density parity-check (LDPC) codes,” in Proc. IEEE Global Telecommunications Conference (GLOBECOM), vol. 2, Nov. 2002, pp. 1349–1353.
+[5] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[6] B. Yuan and K. K. Parhi, “Early stopping criteria for energy-efficient low-latency belief-propagation polar code decoders,” IEEE Trans. Signal Process., vol. 62, no. 24, pp. 6496–6506, Dec. 2014.
+[7] Y. Zhang, Q. Zhang, X. Pan, Z. Ye, and C. Gong, “A simplified belief propagation decoder for polar codes,” in Proc. IEEE International Wireless Symposium (ISW), Mar. 2014, pp. 1–4.
+[8] J. Yang, C. Zhang, H. Zhou, and X. You, “Pipelined belief propagation polar decoders,” in Proc. IEEE International Symposium on Circuits and Systems (ISCAS), May. 2016, pp. 413–416.
+[9] B. Yuan and K. K. Parhi, “Architecture optimizations for BP polar decoders,” in Proc. IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), May. 2013, pp. 2654–2658.
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:57:46 UTC from IEEE Xplore. Restrictions apply.
+
+

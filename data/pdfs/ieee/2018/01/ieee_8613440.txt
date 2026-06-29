@@ -1,0 +1,637 @@
+A Neural Network Lattice Decoding Algorithm
+Mohammad-Reza Sadeghi, Farzane Amirzade, Daniel Panario, and Amin Sakzad
+
+Abstract—Neural network decoding algorithms are recently introduced by Nachmani et al. to decode high-density paritycheck (HDPC) codes. In contrast with iterative decoding algorithms such as sum-product or min-sum algorithms in which the weight of each edge is set to 1, in the neural network decoding algorithms, the weight of every edge depends on its impact in the transmitted codeword. In this paper, we provide a novel feed-forward neural network lattice decoding algorithm suitable to decode lattices constructed based on Construction A, whose underlying codes have HDPC matrices. We first establish the concept of feed-forward neural network for HDPC codes and improve their decoding algorithms compared to Nachmani et al. We then apply our proposed decoder for a Construction A lattice with HDPC underlying code, for which the well-known iterative decoding algorithms show poor performances. The main advantage of our proposed algorithm is that instead of assigning and training weights for all edges, which turns out to be timeconsuming especially for high-density parity-check matrices, we concentrate on edges which are present in most of 4-cycles and removing them gives a girth-6 Tanner graph. This approach, by slight modifications using updated LLRs instead of initial ones, simultaneously accelerates the training process and improves the error performance of our proposed decoding algorithm.
+Index Terms—Lattices, deep learning, Tanner graph, trellis graph.
+I. INTRODUCTION
+C Onstructing lattices from codes has been an intense research topic which resulted in well-know Constructions A, B, C, D, and D’ (see [1] and [2]). High dimensional lattices along with iterative decoding algorithms were first introduced by Sadeghi et al. [3]. Although high dimensional lattices have high coding gain, in practice, they are difficult to implement and in higher dimensions they have high decoding complexity. Several decoding algorithms have been proposed in the literature. The generalized min-sum algorithm was presented in [3] to decode low-density parity-check (LDPC) lattices. Other iterative decoding algorithms to decode LDPC lattices are sum-product algorithm (SPA) [4] and FFT based SPA [5]. In these methods, the process of transmitting messages in variable node and check node operations is applied on the Tanner graph of LDPC lattices.
+Some underlying codes of the algebraic lattices have a rather high-density parity-check (HDPC) matrix. For example, the underlying code of Barnes-Wall lattices are Reed-Muller codes whose parity-check matrices are not sparse. These lattices are
+M.-R. Sadeghi and F. Amirzade are with the Faculty of Mathematics and Computer Science, Amirkabir University of Technology, Tehran, Iran. D. Panario is with the School of Mathematics and Statistics, Carleton University, Ottawa, Canada. A. Sakzad is with the Clayton School of IT, Monash University, Melbourne, Australia. (e-mails: msadeghi@aut.ac.ir, famirzade@gmail.com, daniel@math.carleton.ca, amin.sakzad@monash.edu).
+
+based on Construction D’ [6] using a set of nested ReedMuller codes. In this case, the variable-node and check-node operations in message passing decoding algorithms are timeconsuming. In fact, applying iterative algorithms to decode most well-known algebraic codes would result in poor performance when compared to maximum likelihood decoders [7]. To resolve this problem, deep neural network decoders were proposed [8], [9].
+In recent years, deep learning methods have shown amazing performances in a variety of subjects. For example, an application of deep learning methods to the problem of low complexity channel decoding has been proposed [9]. It has been demonstrated that deep learning methods improve the min-sum and sum-product algorithms for HDPC codes using a weighted trellis graph, which is another representation of codes. The main benefit of the neural network decoder is that the weight of every edge relies on its influence in the transmitting messages. By setting weights properly, we can compensate for small cycles, which are the main causes of high error floor regions and deterioration of the decoding process. The first step in this method is to train weights for a given codeword like the all-zero codeword 0. Then, using these trained weights, we decode codewords. The computation complexity of the neural network decoder depends on the number of weights required to be trained. For example in [8], this number is 2n + 2LE, where n is the number of variable nodes, L is the number of iterations and E is the number of edges in the corresponding trellis diagram of the code.
+In the -th iteration of trellis graph in [8], there are two hidden layers V N and CN for the variable node operation and the check node operation, respectively. In this framework, two weights w and w are defined for each edge in the -th iteration. The weight w links the first layer and the hidden layer, CN , and the weight w links the hidden layers CN , V N( +1). In [9], a new recurrent neural network (RNN) algorithm was defined by which the number of weights to train was significantly reduced to 2E. In this method, all weights between the first layer and hidden layers CN , for 1 ≤ ≤ L, are set to 1. No training process is needed for them as the experimental results have shown that training these parameters did not result in any performance improvement. Moreover, for each edge in the RNN method, two weights w and w are considered fixed in iterations. In this framework, w is the weight associated to the hidden layers CN , V N( +1) and w is the weight associated to the hidden layer CN and the layer related to hard decision operation of the -th iteration. Numerical results [9] show that the RNN method outperforms the neural network decoding algorithm in [8].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+In a concurrent work, a deep learning lattice decoder is also proposed in [12]. In this paper, we aim to present a neural network decoding algorithm for lattices constructed based on Construction A, whose underlying codes have highdensity parity-check matrices. All the weights w in the RNN algorithm are trained in this work. However, instead of considering the weight w for each edge, similar to the RNN algorithm, we mainly focus on edges which are, potentially, the main culprits of high decoding failure rates. In particular, we define weights w only for the edges that are present in most of the 4-cycles in the Tanner graph of the code and by removing them the girth of the Tanner graph is increased to 6. We call such edges “culprit edges”. The weight for the non-culprit edges are considered to be 1. So, the pair of weights to train for culprit edges is (w, w ) and for the other edges is set to be (1, w ). By properly training these weights and running SPA with the trained weights, we achieve an improvement in the decoding process of lattices constructed based on Construction A, whose underlying code is a HDPC code.
+The rest of the paper is organized as follows. In Section II, we give some basic notations and definitions. In Section III, we present three contributions: first, the structure of the trellis graph, which is completely new and different from the ones in the literature; second, the message computations in variable node and check node operations on the trellis graph; and third, a few algorithms to train weights in the neural network decoding algorithm. In Section IV, we apply our newly proposed deep neural network decoding algorithm to a lattice based on Construction A. We finish our paper in the last section giving concluding remarks and open problems.
+
+II. PRELIMINARIES
+
+A lattice, Λ, is a discrete additive subgroup of Rm [2]. The
+
+set of linearly independent vectors {b1, b2, . . . , bn}, where n
+
+is the dimension of the lattice, is a lattice basis. The generator
+
+matrix of the lattice is defined as B = [b1, b2, . . . , bn]T and a lattice can be shown by Λ = {v = xB : x ∈ Zn}. We
+
+let m = n and consider only full dimensional lattices in this
+
+paper. The length of the shortest nonzero vector of the lattice is
+
+denoted by dmin with respect to Euclidean norm. The notation det(Λ) is used to denote the volume of the lattice which
+
+is obtained by det(BBT ), and Vn is the volume of the n-
+
+dimensional sphere of radius 1. For an unconstrained additive
+
+with Gaussian noise (AWGN) channel, the volume-to-noise
+
+2
+
+ratio
+
+of
+
+the
+
+lattice
+
+Λ
+
+is
+
+defined
+
+by
+
+VNR
+
+=
+
+(det(Λ)) n 2πeσ2
+
+.
+
+Suppose C ⊆ Fnp is a linear code over Fpn, where p is a
+
+prime number. We construct Λ as follows: x = (x1, . . . , xn)
+
+is a point of lattice if and only if there exists a codeword
+
+c = (c1, . . . , cn) such that x ≡ c mod p. In other words,
+
+Λ = pZn+C = {(pz1+c1, . . . , pzn+cn) : zi ∈ Z, c ∈ C}, (1)
+
+where the components of c in (1) are considered as real numbers and operations are done in reals. The produced lattice Λ is said to be constructed based on Construction A [2].
+
+III. TRELLIS GRAPH AND BACK-PROPAGATION ALGORITHM
+Every linear code with parity check matrix H can be represented by a Tanner graph which is a bipartite graph whose incident matrix is H, see Example 1. In the existing iterative decoding algorithms in the literature, a message passing process is considered on the Tanner graph. The SPA is a message passing algorithm that exchanges messages through the edges in the corresponding Tanner graph. In this section, we first explain SPA on Tanner graphs and trellis diagrams and then we introduce our back-propagation algorithm.
+
+A. Sum-Product Algorithm on Tanner Graph
+
+Let us first recall a SPA on Tanner graph of a code. Each iteration in SPA consists of two main processes, variable node process and check node process. Let vi, chj, cv and yv denote the i-th variable node, the j-th check node, the v-the component of the transmitted codeword and the v-th channel output, respectively. Nodes vi, 1 ≤ i ≤ n, are associated with the initial inputs which are the log-likelihood ratios (LLR) of the channel output given by
+
+v
+
+=
+
+log
+
+Pr(cv Pr(cv
+
+= =
+
+1|yv 0|yv
+
+) )
+
+.
+
+(2)
+
+In the variable node operation, the message μvi,chj from i-th variable node to j-th check node is computed by
+
+μvi,chj = v +
+
+μchk,vi ,
+
+(3)
+
+chk∈Vi, k=j
+
+where Vi is the set of all neighboring check nodes to the
+
+variable node vi. In the check node operation, the message
+
+μchj,vi from the j-th check node to the vi is computed by:
+
+⎛
+
+⎞
+
+μchj,vi = 2 tanh−1 ⎝
+
+tanh μvk,chj ⎠ , (4) 2
+
+vk∈CHj , k=i
+
+where CHj denotes the set of all neighboring variable nodes to the j-th check node chj. After each check node operation we have a hard decision process in which we obtain updated LLRs, denoted by ov, for 1 ≤ v ≤ n, and computed as follows:
+
+ov = v +
+
+μchk,vi .
+
+(5)
+
+chk ∈Vi
+
+If ov < 0, then cv = 0, and if ov > 0, then cv = 1. If HcT = 0, then the decoding process halts and returns the
+decoded codeword.
+
+B. Sum-Product Algorithm on Trellis Graph
+In the neural network decoding algorithms proposed in [8] and [9], the message passing process is taken place on the trellis graph corresponding to the Tanner graph. The number of hidden layers with L full iterations is 2L; with the input and output layers there are a total of 2L + 2 layers in the trellis graph. In the following, we introduce a new trellis graph representation, which is different from the ones in the literature.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. The Tanner graph of H in Example 1.
+
+Let n and E be the number of variable nodes and the
+number of edges in the Tanner graph of a linear code, respectively. If L is the number of iterations, then the trellis graph has 3L + 1 layers. The first layer consists of n nodes.
+There are three hidden layers for the -th iteration. The first layer is V N , the second layer is CN , each of which contains E nodes. The first and the second layers are associated with
+variable node and check node operations, respectively. The third layer is O consisting of n nodes. This layer is associated
+with the hard decision process.
+Before drawing edges between nodes in the trellis graph, we have to find culprit edges whose weights, w’s, should be
+trained. We explain this further in an example later. For each edge in the Tanner graph between variable node vi and check node chj, we define two types of edges in the trellis graph, evi,chj and echj,vi , respectively, for V N and CN , where 1 ≤ ≤ L. We draw edges in the trellis graph using the
+following steps:
+• If chj ∈ Vi, then we connect node evi,chj of the layer V N1 and the i-th node of the first layer.
+• Each node echj,vi of the layer CN in the -th iteration is connected to evk,chj of the layer V N , where vk ∈ CHj and k = i. For each node, we define a weight wchj,vi .
+• Each node evi,chj of the layer V N in the -th iteration is connected to echk,vi of the layer CN −1, where chk ∈ Vi and k = j.
+• Each node echj,vi in the layer CN is connected to vi in the layer O , where chj ∈ Vi. There is a weight, wchj,vi , between the node echj,vi in the layer CN and its corresponding variable node, vi, in the layer O .
+Hence, we assigned a pair of weights (wchj,vi , wchj,vi ) to the edge echj,vi ; see the following example.
+Example 1: Let C be a linear code with parity-check matrix
+
+H=
+
+111 011
+
+.
+
+(6)
+
+As we see in Fig. 1, there are five edges in its Tanner graph and four of them are involved in a unique 4-cycle in the graph. We aim to train the weight w for one of these four edges. Suppose the edge corresponding to h22 is chosen as a special edge. Hence, the pairs of weights which we consider to train are (1, wch1,v1 ), (1, wch1,v2 ), (1, wch1,v3 ), (wch2,v2 , wch2,v2 ), and (1, wch2,v3 ) for the corresponding edges ech1,v1 , ech1,v2 , ech1,v3 , ech2,v2 , and ech2,v3 , respectively. The corresponding trellis graph with 2 iterations is shown in Fig. 2.
+
+Fig. 2. The trellis graph of H in Example 1 with two iterations.
+
+C. Back-propagation Algorithm
+
+The back-propagation algorithm looks for the minimum of the error function in the weight space using the gradient descend method [10]. The combination of weights, which minimizes the error function is the solution of the learning problem. This method requires computation of the derivative of the error function with respect to weights in each iteration step. Therefore, we have to guarantee the continuity and differentiability of the error function. The error function that we use is the cross entropy, which is defined as:
+
+L(o,
+
+c)
+
+=
+
+−1 n
+
+n
+
+cv log2(ov) + (1 − cv) log2(1 − ov),
+
+(7)
+
+v=1
+
+where o = (o1, . . . , on), c = (c1, . . . , cn), and ov and cv are v-th component of the deep neural network output and the transmitted codeword, respectively. If the transmitted
+
+codeword is 0, then cv = 0 for all v.
+
+Moreover, in the back-propagation neural network, a sig-
+
+moid function is extensively used because it reduces complica-
+
+tions involved during the training phase. The sigmoid function
+
+σ
+
+is
+
+a
+
+real
+
+function
+
+from
+
+R
+
+to
+
+(0, 1)
+
+defined
+
+as
+
+σ(x)
+
+=
+
+1 1+e−x
+
+.
+
+In the deep neural network decoder, each node of the hidden
+
+layers in the trellis graph contains two messages which we
+
+label them as the left and right messages. In the following,
+
+we explain how to obtain these messages for each node of the
+
+three hidden layers in the -th iteration.
+
+• In V N layer, the right message μvi,chj, of each node
+
+is defined as:
+
+⎛⎛
+
+⎞⎞
+
+tanh ⎝⎝ v +
+
+wchk,vi μchk,vi,( −1)⎠ /2⎠ .
+
+chk∈Vi, k=j
+(8)
+
+The left message of each node is a vector of derivatives
+
+of μvi,chj ,
+
+with
+
+respect
+
+to
+
+μchk ,vi ,(
+
+−1),
+
+. ∂μvi,chj ,
+∂μchk ,vi,( −1)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+• In the CN layer, the right message μchj,vi, of each node
+
+is
+
+⎛
+
+⎞
+
+100
+
+2 tanh−1 ⎝
+
+μvk,chj , ⎠ .
+
+(9)
+
+10-1
+
+vk∈CHj , k=i
+
+10-2
+
+The left message of each node is a vector of derivatives
+
+BER
+
+of μchj ,vi,
+
+with
+
+respect
+
+to
+
+μvk,chj ,
+
+,
+
+∂μchj ,vi, ∂μvk ,chj ,
+
+.
+
+10-3
+
+• In the Ol layer, the right message ov, of each node is
+
+10-4
+
+BER of C1 BER of C2 BER of C3 BER of C4
+
+σ v+
+
+wchk,vi μchk,vi, .
+
+chk ∈Vi
+
+(10)
+
+The left message of each node is a vector of derivatives
+
+of ov,
+
+with
+
+respect
+
+to
+
+μchk ,vi ,
+
+,
+
+∂ov, ∂μchk ,vi,
+
+.
+
+We call the above constructed trellis graph whose nodes
+
+contain messages mentioned above a feed-forward neural
+
+network. In fact, such a network represents a chain of function
+
+compositions, which transform an input to an output vector.
+
+The learning problem consists of finding the optimal combi-
+
+nation of weights so that the decoded vector is as close as
+
+possible to the transmitted codeword. In other words, we aim
+
+to obtain weights by which the following error function L is
+
+minimized:
+L
+
+L = L(o , c),
+
+=1
+
+where o is the output of neural network at -th iteration, 1 ≤ ≤ L. Suppose the vector of weights are W =
+(w1, . . . , wE , w1, . . . , wE), where E < E is the number of culprit edges which are chosen to train their weights. We can minimize L by using an iterative process of gradient descent for which we need to calculate the gradient ∇L as follows
+
+∂L , . . . , ∂L , ∂L , . . . , ∂L .
+
+∂w1
+
+∂wE ∂w1
+
+∂wE
+
+If ∇L = 0, then we have to update weights and begin the
+
+process with new weights. We expect to find a minimum of
+
+the error function, when ∇L = 0. In order to update weights,
+
+a learning constant (rate), denoted by α, is used in the gra-
+
+dient descent algorithm. The learning rate is a proportionality
+
+parameter, which defines the step length of each iteration in
+
+the negative gradient direction. Wnew = Wold − α · ∇L. In the following example we illustrate how to update weights on the
+
+trellis graph.
+
+Example 2: Consider the parity-check matrix of Example 1
+
+with L = 2 and the initial input y = (−0.5, 2.5, −4) (received
+
+vector corresponding to sent codeword c = 0) and with the
+
+initial weight vector W = (0.1, 0.15, 0.16, 0.17, 0.18, 0.19) in
+
+which the first element is associated to wch2,v2 and the other elements are associated to wchj,vi . We also let the training rate be α = 0.1. We compute all messages both left and right
+
+in the trellis graph. Then, using the paths between the nodes
+
+of the last layer and nodes in the CN1 and CN2 layers in the trellis graph we update the weights. For example to update
+
+wch2,v2 , we have to find paths from the last layer to the node ech2,v2 of the first iteration. As can be seen in Fig. 2, we
+
+10-5
+10-6 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6 Eb/No (dB)
+Fig. 3. The comparisons of performances of C1, C3 and C2, C4.
+
+have two paths to this node, which are highlighted bold. The
+
+paths P1 and P2 are o1,2 → ech1,v1 → ev2ch1 → ech2,v2 and
+
+o3,2 → ech1,v3 → ev2ch1 → ech2,v2 , respectively. Therefore,
+
+the derivative of the function L with respect to wch2,v2 is
+
+∂L
+∂ wch2 ,v2
+ech2,v2 is
+
+= −0.013967. Hence, the new weight for
+
+(wch2,v2 )new
+
+=
+
+(wch2,v2 )old − α ×
+
+∂L ∂ wch2 ,v2
+
+the edge = 0.1 −
+
+0.1 × (−0.013967) = 0.101396. Continuing this process we
+
+obtain the new weights W as:
+
+(0.101396, 0.099499, 0.182551, 0.169208, 0.39523, 0.185566).
+
+Comparison between the works of [8] and [9] shows that the former does not perform hard decision till the end of the last iteration while the latter performs hard decision in every iteration. Whereas, when it comes to decoding using SPA we perform hard decision in every iteration. However, we observed that in each variable node operation if instead of adding the initial input to the incoming messages we add the updated LLRs from the previous iteration to the incoming messages, we obtain better performances. To show this, we compare the performance curves of two LDPC codes of sizes 10×15 and 63×105 using initial LLRs, C2, C4, respectively, and using updated LLRs, C1, C3, respectively. The difference between these curves is noticeable; see Fig. 3.
+
+IV. DEEP LEARNING METHOD TO DECODE LATTICES CONSTRUCTED BASED ON CONSTRUCTION A
+
+The belief propagation algorithm obtains poor performance
+
+results compared to maximum likelihood algorithms if applied
+
+to HDPC codes. Therefore, to achieve better performances,
+
+we provide a deep neural network decoder for such lattices
+
+constructed based on Construction A. Using the same notation
+
+proposed in [11] and the deep neural network decoder pre-
+
+sented in Section III, we present the lattice decoding algorithm.
+
+We
+
+take
+
+the
+
+volume-to-noise-ratio
+
+as
+
+VNR
+
+=
+
+. 4(2n−k)/n
+2πeσ2
+
+Suppose we send the all-zero codeword c. We employ BPSK
+
+modulation to convert c into (−1, . . . , −1). If the noise n is
+
+distributed as a normal distribution N (0, σ2) with zero mean
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+and variance σ2, then the transmitted vectors are of the form
+
+y = c+4z+n, [11]. At the first step, z has to be decoded. We
+
+define the decoded z as zˆ =
+
+y−(1,...,1) 4
+
+as an all-one vector
+
+is added during encoding [11]. Now we define ai = yi − 4zˆi,
+
+for 1 ≤ i ≤ n, and put aˆi = 2 − ai for ai > 1 and ai itself
+
+otherwise. Similar to [11], we need to define the i-th input
+
+LLRs as
+
+i
+
+=
+
+(aˆi + 1)2 2σ2
+
+−
+
+(aˆi − 1)2 2σ2
+
+.
+
+(11)
+
+Considering these LLRs as the received word of the deep
+
+neural network decoder, we decode c with c˜ as its decoded
+
+vector. We convert c˜ to ±1 notation and call the obtained
+
+vector c˜ . Finally, we let cˆi = 2 − c˜i if ai > 1 and c˜i otherwise. Then, the decoded lattice vector is xˆ = cˆ + zˆ.
+
+The stopping criterion in the back-propagation algorithm is
+
+∇L = 0, in other words we can get the trained weights
+
+when the trend of cross entropy changes from downwards to
+
+upwards. In practice, meeting this criterion is computationally
+
+costly. Instead, we impose a second termination condition. We
+
+define a parameter β for the value of cross entropy which
+
+depends on VNR. Therefore, the stopping criteria in our
+
+neural network decoding algorithm for lattices are either: 1) a
+
+change in the trend of the cross entropy, and/or 2) the value
+
+of cross entropy becomes smaller than β. Therefore, the two
+
+parameters α and β determine the speed and precision of the
+
+experiment. The smaller parameters provide a better chance to
+
+train weights although, in this case, we need more time to get
+
+results. The learning rates chosen in [8] and [9] are α = 0.001
+
+and α = 0.003, respectively.
+
+Example 3: We applied our proposed neural network de-
+coding algorithm with four iterations to decode Barnes-Wall lattice BW8 (see [1]). We first determined the culprit edges in the Tanner graph of the Reed-Muller code, which is used in construction of BW8. The boldface 1’s correspond to culprit edges. We train these edges using back-propagation algorithm
+to find the best possible weights. For initial weights, we used a vector of length 33 with normal distribution. We chose α = 0.1 and β = 0.01 for VNR = 1. By assuming weight 1 for each edge, the bit error rate (BER) is 0.13 and the trained weights cause an improvement in BER, 0.098. For VNR = 3 and 6, we let α = 0.1 and β = 0.001 and 5 × (10)−5, respectively. An error performance comparison for BW8 between SPA in [11] and our proposed decoding algorithm with four iterations is shown in Fig. 4. It is clear that by reducing β we can have better results for different VNR’s.
+
+⎡
+
+⎤
+
+11111111
+
+H = ⎣⎢⎢⎢⎢⎢⎢⎢
+
+1 1 1 1 1
+
+0 1 1 0 0
+
+1 0 1 0 1
+
+0 0 1 0 0
+
+1 1 0 1 0
+
+0 1 0 0 0
+
+1 0 0 0 0
+
+0 0 0 0 0
+
+⎥⎥⎥⎦⎥⎥⎥⎥
+
+(12)
+
+110 0 0000
+
+The dependency of simulation results to the choices of parameters α, β and culprit edges is the topic of our future work. We also plan to extend neural network decoding algorithms to lattices constructed based on Construction D and D’ with underlying HDPC codes such as Reed-Muller codes.
+
+100 10-1
+
+BER of the code with weight 1 BER of the code with backpropagation algorithm
+
+BER
+
+10-2
+
+10-3
+
+10-4 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6 VNR
+Fig. 4. A comparison between the performance of SPA and back-propagation algorithm.
+
+V. CONCLUSION
+In this paper, for the first time, a deep neural network decoding algorithm was presented for Construction A based lattices whose parity-check matrices are high-dense and have high decoding failure rates when iterative algorithms are used to decode them. In contrast with the neural network decoding algorithms in the literature, which were proposed for decoding linear codes and weights for all edges are required to be trained, we focused on training weights for edges which occur in most of 4-cycles and are, potentially, the main culprits of high decoding failure rates. Computer simulations were conducted to compare the error performance of the proposed algorithm versus a message passing algorithm.
+REFERENCES
+[1] E.S. Barnes and N.J.A. Sloane, “New lattice packings of spheres,” Canad. J. Math., vol. 35, pp. 117–130, 1983.
+[2] J.H. Conway and N.J.A. Sloane, “Sphere Packings, Lattices, and Groups,” Springer Verlag, 1998.
+[3] M-R. Sadeghi, A.H. Banihashemi, and D. Panario, “Low-density paritycheck lattices: Construction and decoding analysis,” IEEE Trans. Inf. Theory, vol. 52, no. 10, pp. 4481–4495, 2006.
+[4] Y.S. Choi, I.J. Baik, and S.Y. Chung, “Iterative decoding for low-density parity-check lattices,” 2008 International Conf. on Adv. Commun. Tech., pp. 358-361, 2008.
+[5] L. Safarnejad and M-R. Sadeghi, “FFT Based Sum-Product Algorithm for LDPC Lattices,” IEEE Commun. Letters, vol. 16, no. 9, pp. 1504– 1508, 2012.
+[6] G.D. Forney, Jr., M.D. Trott, and S.-Y. Chung, “Sphere-boundachieving coset codes and multilevel coset codes,” IEEE Trans. Inf. Theory, vol. 46, no. 3, pp. 820–850, 2000.
+[7] E. Viterbo and J.J. Boutros, “A universal lattice decoder for fading channels,” IEEE Trans. Inf. Theory, vol. 45, pp. 1639–1642, Jul. 1999.
+[8] E. Nachmani, Y. Be’ery and D. Burshtein, “Learning to decode linear codes using deep learning,” 54th Annual Allerton, pp. 341-346, 2016.
+[9] E. Nachmani, E. Marciano, L. Lugosch, W.J. Gross, D. Burshtein, and Y. Be’ery, “Deep Learning Methods for Improved Decoding of Linear Codes”, IEEE J. Selected Topics in Sig. Proc., vol. 12, no. 1, pp. 119131, 2018.
+[10] R. Rajosh, “Neural Networks”, Springer-Verlag, Berlin, 1996. [11] H. Khodaiemehr, M-R. Sadeghi, and A. Sakzad, “Practical encoder and
+decoder for power constrained QC-LDPC lattice codes”, IEEE Trans. Commnu. vol. 65, no. 2, 2017. [12] V. Corlay, J.J. Boutros, Ph. Ciblat, and L. Brunel, “Neural Lattice Decoders,” arXiv preprint arXiv: 1807.00592, July 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:27:10 UTC from IEEE Xplore. Restrictions apply.
+
+

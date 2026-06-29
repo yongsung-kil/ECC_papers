@@ -1,0 +1,694 @@
+Deep Learning-Aided Trainable Projected Gradient Decoding for LDPC Codes
+Tadashi Wadayama and Satoshi Takabe ∗Nagoya Institute of Technology, Gokiso, Nagoya, Aichi, 466-8555, Japan,
+{wadayama, s takabe}@nitech.ac.jp
+
+Abstract—We present a novel optimization-based decoding algorithm for LDPC codes that is suitable for hardware architectures specialized to feed-forward neural networks. The algorithm is based on the projected gradient descent algorithm with a penalty function for solving a non-convex minimization problem. The proposed algorithm has several internal parameters such as step size parameters, a softness parameter, and the penalty coefficients. We use a standard tool set of deep learning, i.e., back propagation and stochastic gradient descent type algorithms, to optimize these parameters. Several numerical experiments show that the proposed algorithm outperforms the belief propagation decoding in some cases.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes have been adopted in numerous practical communication and storage systems, e.g., digital satellite broadcasting, wireless mobile communications, hard disks and flash memories, and the 5G standard as a key component to increase the reliability of the information exchange. Since the combination of LDPC codes and belief propagation (BP) decoding is capacity approaching (or achieving in some cases) with practical computation complexity, such wide use of the LDPC codes can be seen as a natural consequence. If we are allowed to use a code of long length, this trend would continue in future.
+Recently, interest to machine to machine (M2M) communications is increasing in the context of internet of things (IoT). In M2M communications, latency of communications has critical importance in order to achieve harmonized real time operations of a number of machines. In 5G wireless system, ultra low latency (up to 1 millisecond) mode will be prepared for M2M communications. For error correction of such a system, a code with short code length, e.g., order of hundred, is preferable choice in order to reduce the latency. In such a situation, it is not clear whether BP decoding is the best candidate in terms of the decoding performance.
+There have been several decoding algorithms that outperform the BP performance. Ordered Statistics Decoding (OSD) for LDPC codes [7] is one of the most known algorithms in such a category. An OSD decoder iteratively produces candidate codewords by a re-encoding process. An OSD decoding process contains internal processes to find the klargest values among n-candidates and Gaussian elimination.
+Another stream of studies trying to find decoding algorithms surpassing the BP performance is the optimization-based decoding for LDPC codes. The origin of the optimizationbased coding is the work by Feldman [6] that presents a
+
+linear programming (LP) formulation of decoding for LDPC codes. Since the Feldman’s work, a number of works for optimization-based decoding have been presented in this decade. One notable work is the Alternative Direction Method of Multipliers (ADMM)-based decoding with the penalty function by Liu and Draper [5]. They presented that their decoder provides smaller bit error rate (BER) performances than those of BP decoding with reasonable computational complexity.
+In this paper, we present a novel optimization-based decoding algorithm for LDPC codes that is suitable for hardware architectures specialized to feed-forward neural networks (NN). This is because the proposed algorithm mostly consists of matrix-vector products and coordinate-wise nonlinear map operations. Based on recent interests in NN-oriented hardware architectures, it is expected that such an architecture will be included in future CODEC-chips. The algorithm is based on the projected gradient algorithm for solving the non-convex minimization problem based on the objective function that is a composition of a linear combination of received symbols and the penalty functions corresponding to the parity constraints. The decoding process consists of two steps, i.e., the gradient step and the projection step. The gradient step is the gradient descent process such that a search point moves to the direction of negative gradient of the objective function. The projection step is based on a soft projection operator for binary values.
+Since the optimization problem we dealt is a non-convex problem, we cannot expect the convergence of a gradient descent type algorithm to the global minimum. A remarkable point of the proposed algorithm is that the initial point of a projected gradient process can be randomly chosen. Since a trajectory of the search point depends on the initial point, the output of the algorithm may vary for each decoding trial, i.e., the output of the algorithm becomes a random variable. Executing the multiple trials with randomly initial points is a common technique in non-convex optimization to find the global minimum. We can expect that multiple decoding trials, called restarting, can improve the decoding performance.
+The proposed algorithm has several internal parameters such as step size parameters for the gradient descent step, a softness parameter controlling the softness of the soft projection function, and penalty coefficients controlling the strength of the penalty term in the objective function. The appropriate choice of these parameters are of critical importance for the algorithm to work properly. In this paper, we use a standard tool set of deep learning (DL), i.e., back propagation and
+
+978-1-5386-9291-2/19/$31.00 ©2019 IEEE
+
+2444
+
+ISIT 2019
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:17:36 UTC from IEEE Xplore. Restrictions apply.
+
+stochastic gradient method (SGD) type algorithms, to optimize these parameters. By unfolding the signal-flow of the proposed algorithm, we can obtain a multilayer signal-flow graph that is similar to the multilayer neural network. Since all the internal processes are differentiable, we can adjust the internal trainable parameters via a training process based on DL techniques. This approach, data-driven tuning, is becoming a versatile technique especially for signal processing algorithms based on numerical optimization [2] [3].
+
+II. PRELIMINARIES
+A. Notation
+In this paper, a vector z ∈ Rd is regarded as a row vector of dimension d. For z = (z1, . . . , zn) ∈ Rn and a scalar c ∈ R, we will use the following notation: c + z := (c + z1, c + z2, . . . , c + zn) for simplicity. For a real-valued function f : R → R, f (z) means the coordinate-wise application of f to z = (z1, . . . , zn) such that f (z) := (f (z1), f (z2), . . . , f (zn)). The i-th element of f (z), i.e., f (zi) is also denoted by (f (z))i. The set of consecutive integers from 1 to n is denoted by [n] := {1, 2, . . . , n}. An n-dimensional unit cube is represented by [0, 1]n := {(x1, . . . , xn) ∈ Rn | ∀i ∈ [n], 0 ≤ xi ≤ 1}. The cardinality or size of a finite set A is represented by |A|. The indicator function I[cond] takes the value 1 if the condition is true; otherwise it takes the value 0.
+
+B. Channel model
+
+Let H be an m×n sparse parity check matrix over F2 where n > m. The binary LDPC code defined by H is denoted by C(H) := {x ∈ Fn2 | HxT = 0}. In the following discussion, we consider that 0 and 1 in F2 are embedded in R as 0 and 1, respectively. The design rate of the code is defined by ρ :=
+1 − m/n.
+In this paper, we assume additive white Gaussian noise
+(AWGN) channels with binary phase shift keying (BPSK) signaling. A transmitter choose a codeword c ∈ C(H) according to the message fed into the encoder. A binary to bipolar mapping is applied to c to generate a bipolar codeword x := 1 − 2c ∈ Rn. The bipolar codeword x is sent to the AWGN channel and the receiver obtains a received word y = x + w where w is an n-dimensional Gaussian noise vector with mean zero and the variance σ2/2. The signal-tonoise ratio SN R is defined by SN R := 10 log10(1/(2σ2ρ)) (dB). The log likelihood ratio vector corresponding to y is given by λ := 2y/σ2. The decoder’s task is to estimate the transmitted word from a given received word y as correct as
+possible. The maximum likelihood (ML) estimation can be
+expressed by a non-convex optimization form:
+
+xˆ := argminc∈C(H)||y − (1 − 2c)||22.
+
+(1)
+
+C. Fundamental polytope
+
+Feldman [6] proposed a continuous relaxation of the ML
+rule (1) based on the fundamental polytope. The fundamental polytope is a polytope in Rn such that any codeword of C(H)
+
+is a vertex of the polytope. In other words, the feasible region of (1), i.e., C(H), is relaxed to the fundamental polytope in the Feldman’s formulation. The fundamental polytope is defined by the simple box constraints and a set of linear inequalities derived from the parity check constraints. In the following, we will review the definition of the fundamental polytope.
+Let Ai(i ∈ [m]) be an index set defined by Ai := {j ∈ [n] | hi,j = 1} where hi,j denotes the (i, j)-element of H. Let Oi be the family of subsets in Ai with odd size, i.e., Oi := {S ⊂ Ai | |S| is odd}. The polytope Q(H) defined based on the parity check matrix H is defined by
+
+Q(H) := {x ∈ Rn | x satisfies the parity constraint (3)},
+
+(2)
+
+where the parity constraints are given by
+
+∑
+
+∑
+
+∀i ∈ [m], ∀S ∈ Oi, 1 + (xt − 1) −
+
+xt ≤ 0. (3)
+
+t∈S
+
+t∈Ai \S
+
+A parity constraint defines a half-space and the intersection of
+
+the half-spaces induced by all the parity constraints is Q(H).
+
+These parity constraints introduced by Feldman [6] come from
+
+the convex hull of the single parity check codes.
+
+The fundamental polytope [6] corresponding to H is the in-
+
+tersection of Q(H) and n-dimensional cube [0, 1]n: F(H) :=
+
+Q(H) ∩ [0, 1]n. Since the number of the parity constraints
+
+for a given i ∈ [m] is constraints becomes n +
+
+∑2|Ai∈i|[−m1],2t|Ahei|−to1t.aIln
+
+number of the case of
+
+all the LDPC
+
+codes, the maximum size of the row weight, i.e., maxi∈[m] |Ai|
+
+is n
+
++co∑nsit∈an[mt ]t2o|Ani|−an1d=thnu+s
+
+the total ρnO(1)
+
+number = O(n).
+
+of
+
+constraints
+
+is
+
+III. TRAINABLE PROJECTED GRADIENT DECODING
+
+A. Overview
+
+We start from an unconstrained optimization problem closely related to the LP decoding [6]:
+
+minimizex∈{0,1}n λxT + βP (x),
+
+(4)
+
+where P (x) is a penalty function satisfying P (x) = 0 if x ∈ Q(H); otherwise P (x) > 0. The scalar parameter β called the penalty coefficient that adjusts the strength of the penalty term. From the ML certificate property, it is clear the solution of (4) coincides with the ML estimate if β is sufficiently large. Although the optimization problem in (4) is a non-convex problem, it can be a start point of an numerical optimization algorithm for solving (1).
+Let fβ(x) := λxT +βP (x), which is our objective function to be minimized. We here use the projected gradient descent algorithm for solving (4) in an approximate manner. The projected gradient descent algorithm consists two steps, the gradient step and the projection step. The gradient descent step moves the search point along the negative gradient vector of the objective function. The projection step moves the search point into a feasible region. The two steps are alternatively performed
+In the gradient step, a search point is updated in a gradient descent manner, i.e., rt := st − γt∇fβt (st), where ∇fβt (x)
+
+2445
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:17:36 UTC from IEEE Xplore. Restrictions apply.
+
+is the gradient of fβt (x). The index t represents the iteration index. A scalar γt ∈ R is the step size parameter. If the step size parameter is appropriate, a search point moves to a new point having a smaller value of the objective function. The parameter βt ∈ R is an iteration-dependent penalty coefficient.
+The projection step is given by st+1 := ξ (α (rt − 0.5)) , where ξ is the sigmoid function defined by ξ(x) := 1/(1 + exp(−x)). The parameter α controls the softness of the projection. Precisely speaking, the function ξ is not the projection to the binary symbols {0, 1}. The projection step exploits soft-projection based on the shifted sigmoid function because the true projection to discrete values results in insufficient convergence behavior in a minimization process.
+The main process of the proposed decoding algorithm described later is the iterative process executing the gradient step and the projection step.
+
+B. Penalty function and objective function
+
+The penalty function corresponding to the parity constraints
+
+is defined by
+
+
+
+2
+
+1∑ P (x) :=
+2
+
+∑
+
+∑
+
+ν 1 + (xt − 1) −
+
+∑
+
+xt
+
+i∈[m] S∈Oi
+
+t∈S
+
+t∈Ai \S
+
+(5)
+
+where the function ν is the ReLU function defined by ν(x) :=
+
+max{0, x}. This penalty function is a standard penalty func-
+
+tion corresponding to Q(H) based on the quadratic penalty.
+
+From this definition of the penalty function P (x), we im-
+
+mediately have P (x) = 0 if x ∈ Q(H) and P (x) > 0 if
+
+x ∈/ Q(H).
+
+In the proposed decoding algorithm to be described later,
+
+the gradient of the penalty function is needed. The partial
+
+derivative of P (x) with respect to the variable xk (k ∈ [n])
+
+is given by ∂ P (x) =
+∂xk
+
+
+
+
+
+∑∑
+
+∑
+
+∑
+
+ν 1 + (xt − 1) −
+
+xt
+
+i∈[m] S∈Oi
+
+t∈S
+
+t∈Ai \S
+
+× (I[k ∈ S] − I[k ∈ Ai\S]) .
+
+(6)
+
+As described before, the objective function to be minimized
+
+in a decoding process is given by fβ(x) = λxT +βP (x). The
+
+first term of the objective function prefer a point close to the
+
+received word. On the other hand, the second term prefer a
+
+point in Q(H). The partial derivative of the objective function
+
+with
+
+respect
+
+to
+
+the
+
+variable
+
+xk
+
+is
+
+thus
+
+given
+
+by
+
+∂ ∂xk
+
+fβ (x)
+
+=
+
+λk
+
++
+
+β
+
+∂ ∂xk
+
+P
+
+(x).
+
+C. Concise representation of gradient vector
+
+For the following argument, it is useful to introduce a
+
+concise representation of the gradient vector
+
+ϕi
+
+For the odd size family Oi(i : Oi → [2|Ai|−1]. Let L :=
+
+∑∈ m i[=m1]2),|Awi|e−p1r,ewpahriecha
+
+bijection indicates
+
+the total number of parity constraints required to define Q(H).
+
+ϕTih(eSf)u+nc∑tioikn−=11ℓ(2i|,ASk
+
+)(i
+|−1
+
+∈ is
+
+[m], S ⊂ Oi) defined by ℓ(i, a bijection from the set {(i, S
+
+S) ):
+
+:= i∈
+
+[m], S ⊂ Oi} to [L].
+
+The following matrices Q and R play a key role to derive
+
+a concise representation of the gradient vector. The matrix
+
+Q ∈ {0, 1}n×L satisfies
+
+{
+
+Qi,j =
+
+1, if i ∈ S and j = ℓ(i, S) 0, otherwise
+
+for any i ∈ [m] and for any S ⊂ Oi. In a similar way, the
+
+matrix R ∈ {0, 1}n×L satisfies
+
+{
+
+Ri,j =
+
+1, if i ∈ Ai\S and j = ℓ(i, S) 0, otherwise
+
+for any i ∈ [m] and for any S ⊂ Oi. We can see that the column order of Q and R depends on
+the choice of the bijections {ϕi}i∈[m], i.e., a different choice of {ϕi}i∈[m] yields a column permuted version of Q and R. However, in the following argument, the column order does
+not cause any influence for gradient computation. We thus can choose any set of bijections {ϕi}i∈[m].
+We are now ready to derive a concise expression of the gradient. By rewriting (6) with the matrices Q and R, we have ∇P (x) = ν(1 + (x − 1)Q − xR)DT , where D := Q − R. By using this expression, the gradient vector ∇fβ(x) can be concisely rewritten by ∇fβ(x) = λ + βν(1 + (x − 1)Q − xR)DT . From this expression, the evaluation of the gradient vector is based on the evaluation of the matrix-vector products with sparse matrices Q, R, and D. The computational
+complexity of the gradient vector is to be discussed in the next
+subsection.
+
+D. Trainable Projected Gradient Decoding
+
+The following decoding algorithm is based on the projected gradient descent algorithm described in the previous subsections. Trainable Projected Gradient (TPG) Decoding
+• Input: received word y ∈ Rn • Output: estimated word cˆ ∈ C(H) • Parameters: tmax: maximum number of the projected
+gradient descent iterations (inner loop), rmax: maximum number of restarting (outer loop)
+
+Step 1 (initialization for restarting) The restarting counter is
+
+initialized to r := 1.
+
+Step 2 (random initialization) The initial vector s1 ∈ Rn is randomly initialized, i.e., each elements in s1 is
+
+chosen uniformly at random in {x ∈ R | 0 ≤ x ≤ 1}.
+
+The iteration index is initialized to t := 1.
+
+Step 3 (gradient step) Execute the gradient descent step:
+
+rt
+
+:=
+
+st
+
+−
+
+γt
+
+( y
+
++
+
+βtν(1
+
++
+
+(st
+
+−
+
+1)Q
+
+−
+
+stR)DT
+
+)
+
+.
+
+(7)
+
+Step 4 (projection step) Execute the projection step:
+
+st+1 := ξ (α (rt − 0.5)) .
+
+(8)
+
+Step 5 (parity check) Evaluate a tentative estimate cˆ :=
+
+θ(st+1) where the function θ is the thresholding
+
+function defined by
+
+{
+
+θ(x) :=
+
+0, x < 0.5, 1, x ≥ 0.5.
+
+(9)
+
+2446
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:17:36 UTC from IEEE Xplore. Restrictions apply.
+
+If Hcˆ = 0 holds, then output cˆ and quit the decoding
+
+process.
+
+Step 6 (end of inner loop) If t < tmax holds, then t := t + 1
+
+and go to Step 3.
+
+Step 7 (end of outer loop) If r < rmax holds, then r := r+1
+
+and go to Step 2; Otherwise, output cˆ and quit the
+
+decoding process.
+
+The
+
+trainable
+
+parameters
+
+{γt
+
+}tmax
+t=1
+
+control
+
+the
+
+step
+
+size
+
+in
+
+the
+
+gradient
+
+descent
+
+step
+
+and
+
+{βt
+
+}tmax
+t=1
+
+defines
+
+relative
+
+strength
+
+of the penalty term. The trainable parameter α controls the
+
+softness of the soft-projection. These parameters are adjusted
+
+in a training process described later. In the gradient step, we
+
+use the received word y instead of the log likelihood ratio
+
+vector λ since λi ∝ yi for i ∈ [n] under the assumption of the
+
+AWGN channel. The proportional constant can be considered
+
+to be involved in the step size parameter γt. The parity check
+
+in Step 5 helps early termination that may reduce the expected
+
+number of decoding iterations.
+
+The TPG decoding is a double loop algorithm. The inner
+
+loop (starting from Step 2 and ending at Step 6) is a projected
+
+gradient descent process such that a search point gradually
+
+approaches to a candidate codeword as the number of iterations
+
+grows. The outer loop (starting from Step 1 and ending at Step
+
+7) is for executing multiple search processes with different
+
+initial point. The technique is called restarting. The initial
+
+search point of TPG decoding s1 is randomly chosen in Step
+
+2. In non-convex optimization, restarting with a random initial
+
+point is a basic technique to find a better sub-optimal solution.
+
+The most time consuming operation in the TPG decoding
+
+is the gradient step (7). We here discuss the computational
+
+complexity of the gradient step. In order to simplify the
+
+argument, we assume an (l, k)-regular LDPC code where ℓ
+
+and k stands for the column weight and the row weight,
+
+respectively. In the following time complexity analysis, we will
+
+focus on the number of multiplications because it dominates
+
+the time complexity of the algorithm. Since the number of non-
+
+zero elements in Q and R is m2k−1, the number of required
+
+multiplications over real numbers for evaluating (st −1)Q and stR is m2k−1. On the other hand, the multiplication regarding DT needs m2k multiplications because the number of non-
+
+zero elements in Q − R is m2k. In summary, the computation complexity of the TPG decoding is O(m2k) per iteration.
+
+E. Training Process
+
+As we saw in the previous subsection, TPG decoding contains several adjustable parameters. It is crucial to train and optimize these parameters appropriately for achieving reasonable decoding performance.
+Let the set of trainable parameters be
+
+Θt := {α, {βt}tt=1, {γt}tt=1}(t ∈ [tmax]).
+
+Based on a random initial point s1 and Θt, we define the
+
+function gst1 : Rn → Rn by gst1 (y) := st+1(t ∈ [tmax])
+
+where st+1 is given by the recursion:
+
+rt
+
+:=
+
+st
+
+−
+
+γi
+
+( y
+
++
+
+βtν(1
+
++
+
+(st
+
+−
+
+1)Q
+
+−
+
+stR)DT
+
+) (10)
+
+st+1 := ξ (α (rt − 0.5)) .
+
+(11)
+
+In other words, gst1 (y) represents the search point of a projected gradient descent process after t iterations. In the
+
+training process of Θt, we use mini-batch based training with
+
+a SGD-type parameter update.
+
+Suppose that a mini-batch consists of K-triples: B :=
+
+{(c1, y1, s1,1), (c2, y2, s1,2), . . . , (cK , yK , s1,K )} which is a randomly generated data set according to the channel model.
+
+The vector ck ∈ C(H)(k ∈ [K]) is a randomly chosen codeword and yk = (1 − 2ck) + wk is a corresponding received word where wk is a Gaussian noise vector. The vector s1,k ∈ Rn(k ∈ [K]) is chosen from the n-dimensional unit
+cube uniformly at random, where these vectors are used as the
+
+random initial values.
+
+ht
+
+We (Θt
+
+)
+
+e:=xplK1oit∑akK=1si|m|cpkle−
+
+squared
+
+gt
+s1,k
+
+(yk
+
+loss function given )||22 for a mini-batch B
+
+.
+
+by A
+
+back propagation process evaluates the gradient ∇ht(Θt) and
+
+it is used for updating the set of parameters as Θt := Θt+∆Θt
+
+where ∆Θt is determined by a SGD type algorithm such as
+
+AdaDelta, RMSprop, or Adam. Note that a mini-batch of size
+
+K is randomly renewed for each parameter update.
+
+In order to achieve better decoding performance and sta-
+
+ble training processes, we exploit incremental training such that h1(Θ1), h2(Θ2), . . . , htmax (Θtmax ) are sequentially minimized [3]. The details of the incremental training is as follows. At first, Θ1 is trained by minimizing h1(Θ1). After finishing the training of Θ1, the values of trainable parameters in Θ1 are copied to the corresponding parameters in Θ2. In other words, the results of the training for Θ1 are taken over to Θ2 as the initial values. Then, Θ2 is trained by minimizing h2(Θ2). Such processes continue from Θ1 to Θtmax . The number of iterations for training Θi, which is referred to as a generation, is fixed to J for all i ∈ [tmax].
+
+In this work, the training process was implemented by
+
+PyTorch. [4].
+
+IV. EXPERIMENTAL RESULTS
+The decoding performances of TPG decoding for the rate 1/2 (3,6)-regular LDPC code with n = 204 are shown in Fig. 1. Figure 1 includes the BER curves of TPG decoding with rmax = 1, 10, 100. For each simulation, 10000 codewords were generated. As the baseline performance, the BER curve of the belief propagation (BP) decoding where the maximum number of iterations is set to 100. The BER performance of TPG decoding (rmax = 1) is inferior to that of BP. On the other hand, we can observe that restarting significantly improves the decoding performance of the proposed algorithm. In the case of rmax = 10, the proposed algorithm shows around 0.2 dB gain over the BP at BER= 10−5. In the case of rmax = 100, the proposed algorithm outperforms the BP and yields impressive improvement in BER performance. For example, it achieves 0.5 dB gain at BER = 10−5. These results indicate that restarting works considerably well as we expected. This means that we can control trade-off between decoding complexity and the decoding performance in a flexible way. Figure 2 shows the BER curves of TPG decoding for the rate 1/2 (3,6)-regular LDPC code with n = 504.
+
+2447
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:17:36 UTC from IEEE Xplore. Restrictions apply.
+
+bit error rate
+
+10-2 BP (itr=100)
+TPG (rmax=1) TPG (rmax=10) TPG (rmax=100) 10-3
+
+10-4
+
+10-5
+
+10-6 3
+
+3.2 3.4 3.6 3.8 4 4.2 4.4 4.6 SNR (dB)
+
+Average number of iterations
+
+65
+
+TPG (rmax=1)
+
+60
+
+TPG (rmax=10) TPG (rmax=100)
+
+55
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20 3 3.2 3.4 3.6 3.8 4 4.2
+SNR (dB)
+
+Fig. 1. BER performance of the TPG decoding for (3.6)-regular LDPC code (n = 204, m = 102). Parameters: tmax = 100, K = 50, J = 500, training SN R = 4.0 (dB), Adam optimizer with learning rate 0.005
+
+Fig. 3. Average number of iterations of the TPG decoding for (3,6)-regular LDPC code (n = 204, m = 102). Parameters: tmax = 100.
+
+bit error rate
+
+10-2
+
+BP (itr=100)
+
+10-3
+
+TTPTPGPG(Gr(mr(marxma=xa=1x=10010)))
+
+10-4
+
+10-5
+
+10-6
+2 2.2 2.4 2.6 2.8 3 3.2 3.4 SNR (dB)
+
+rmax = 1, 10, 100. This means that the probability of running multiple outer loops is very small in this range.
+V. CONCLUDING SUMMARY
+In this paper, we present a novel decoding algorithm for LDPC codes, which is based on a non-convex optimization algorithm. The main processes in the proposed algorithm are the gradient and projection steps that have intrinsic massive parallelism that fits forthcoming deep neural network-oriented hardware architectures. Some of internal parameters are successfully optimized with data-driven training process with back propagation and a stochastic gradient type algorithm. Although we focus on the AWGN channels in this paper, we can apply TPG decoding for other channels such as linear vector channels just by replacing the objective function.
+
+Fig. 2. BER performance of the TPG decoding for (3,6)-regular LDPC code (n = 504, m = 252). Parameters: tmax = 100, K = 50, J = 500, training SN R = 2.5 (dB), Adam optimizer with learning rate 0.001
+
+ACKNOWLEDGEMENT
+This work was partly supported by JSPS Grant-in-Aid for Scientific Research (B) Grant Number 19H02138.
+
+We can observe that the proposed algorithm again provides superior BER performance in the high SNR regime.
+The average time complexity of the proposed decoding algorithm is closely related to the average number of iterations in the TPG decoding processes. The number of iterations means the number of execution of Step 3 (gradient step) for a given received word. The average number of iterations for (3,6)-regular LDPC code (n = 204, m = 102) are plotted in Fig. 3. When SNR is 3.75 dB, the average number of iterations is around 30 for all the cases (rmax = 1, 10, 100). It should be remarked that early stopping by the parity check (Step 5) significantly reduces the number of iterations. When a tentative estimate cˆ becomes a codeword, the execution of a TPG decoding process stops. In the range of SNR between 4.0 to 4.2dB, the average number of iterations are almost the same but the BERs are significantly different for the cases
+
+REFERENCES
+[1] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” 2016 54th Annual Allerton Conf. Comm., Control, and Computing, 2016, pp. 341–346.
+[2] K. Gregor and Y. LeCun, “Learning fast approximations of sparse coding,” in Proc. 27th Int. Conf. Machine Learning, pp. 399–406, 2010.
+[3] D. Ito, S. Takabe, and T. Wadayama, “Trainable ISTA for sparse signal recovery,” IEEE Int. Conf. Comm., Workshop on Promises and Challenges of Machine Learning in Communication Networks, Kansas city, May. 2018. (arXiv:1801.01978)
+[4] PyTorch, https://pytorch.org [5] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC
+codes, ” IEEE Transactions on Information Theory, Vol. 62 , Issue: 6, pp. 2966–2984, 2016. [6] J. Feldman, “Decoding error-correcting codes via linear programming,” Massachusetts Institute of Technology, Ph. D. thesis, 2003. [7] M. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics, ” IEEE Transactions on Information Theory, Vol. 41, Issue:5, pp.1379–1396, 1995.
+
+2448
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:17:36 UTC from IEEE Xplore. Restrictions apply.
+
+

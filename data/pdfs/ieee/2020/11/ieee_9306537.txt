@@ -1,0 +1,207 @@
+Generalized Very High Throughput Unrolled LDPC Layered Decoder
+
+Alexandru Amaricai Univesitatea Politehnica Timisoara
+Timisoara, Romania alexandru.amaricai@cs.upt.ro
+
+Daian Stein Universitatea Politehnica Timisoara
+Timisoara, Romania stein.daian@upt.ro
+
+Oana Boncalo Universitatea Politehnica Timisoara
+Timisoara, Romania oana.boncalo@cs.upt.ro
+
+Abstract—Unrolled layered LDPC architectures have been shown to obtain tens of Gbps throughputs. These types of decoders are well suited to array LDPC codes, for which they present improved throughput. In this paper, we propose a generalization for unrolled layered LDPC decoding architectures, by employing the residue-based layered scheduling when merging multiple layers. This way, we can efficiently implement unrolled decoding architecture for any QC-LDPC (Quasi-Cyclic LDPC) codes. FPGA implementation results for WiMAX Rate 5/6 show that 35-41 Gbps throughputs are achievable using this architecture.
+Index Terms—LDPC decoding, layered scheduling, unrolled architectures;
+I. INTRODUCTION
+One main characteristic of modern communication systems is represented by its increase throughput requirement. This prompted the exploration of FEC codes that are suitable for highly parallel architectures. One such class of codes are Quasi Cyclic Low-Density Parity-Check codes (QC-LDPC), a class of structured codes that makes them suitable for hardware implementations. The main challenge in implementing LDPC codes is represented by the decoding process. During the last decade, much effort has been spent on optimizing different aspects of LDPC decoding ranging from fine fitting of the algorithm and code for a given channel model [1], [2], different decoding algorithms [3], to the fine fitting of message quantizations inside the decoder [2], the hardware architecture [4], as well as message access scheduling and memory organization [5]. There are three different metrics that are optimized, and of course, their weight in deciding the final design is motivated mainly by the application specific requirements: error correction capability, hardware implementation cost, and throughput.
+In this paper we try to efficiently implement a very high throughput unrolled layered QC-LDPC decoder that uses the concept of generalized layers (GL) introduced in [6]. The idea of unrolled architectures has been presented in [7]–[10]. This work differs in the following: (i) it uses generalize layers that can be made of several conventional layers, (ii)as well as residual based computation presented in [5] such that the decoding of the GL is done correctly. Using GL, we have the advantage of efficiently using storage, as well as the means to
+
+reduce the number of unrolled layers, and thus, limiting cost increase.
+This paper is organized as follows: Section II presents a brief overview of LDPC codes, and decoding using layered scheduling, Section III describes unrolled layered architectures, Section IV present the proposed solution, while Section V is concerned with presenting FPGA implementation results.
+II. OVERVIEW OF LDPC DECODING
+QC-LDPC codes are class of LDPC codes that are structured. They can be defined by a base graph, denoted by G(E, V ), where E is the set of edges, and V is the set of nodes [11]. Alternatively, they can be described in matrix representation by a base marix B. Each edge of G is labeled by the corresponding cyclic shift value z, and corresponds to a non ”-1” entry of the base matrix B. The parity check matix H, and the Tanner graph of the code, G is obtained by replacing each non −1 entry by the identity matrix of size z × z shifted by the B entry value [12]. Otherwise, it is replaced by a z × z zero matrix. z is termed expansion factor. The Tanner graph G has two kinds of nodes: the set of check nodes, M , and the set of variable nodes, N [13].
+There are two main types of scheduling for LDPC decoding: layered and flooding scheduling. In layererd scheduling, the H matrix in groups of consecutive rows, typically z, corresponding to a B matrix row.
+For a LDPC code with parity check matrix H, we use H(m) for the rows of the current processed layer, and N (m) as the set of variable nodes connected to check-node m. The variable node messages are denoted by α, and check node messages are denoted by β, whereas γ represents the channel inputs during initialization, and later during decoding it encompasses the sum of all variable node contributions, and the channel input for a given parity check column n. Note that in this case the variable node messages are not explicitly stored, and they are updated dv(n) times during an iteration. The dv(n) notation is the variable node degree, and is equal to the number of non-zero values of column n of H matrix. This leads to efficient storage, and superior convergence with respect to flooded scheduling [14]. According to the layered decoding principle, each variable-node n is updated dv(n) times during an iteration. Consequently, the γn message containing the equivalent of the contribution
+
+978-1-6654-0499-0/20/$31.00 ©2020 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:30:35 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 1 *
+
+Algorithm 1: Layered scheduling decoding
+
+1: Initialization:
+
+2: set all β messages to 0
+
+3: γ ← channel input
+
+4: Iterative decoding:
+
+5: for all (It < Itmax), and for all laers do
+
+6: for all m ∈ H(m) do
+
+7:
+
+for a ll check-nodesm connected to current layer
+
+8:
+
+for all n ∈ N (m) do
+
+9:
+
+VN: compute all variable node messages
+
+10:
+
+αm,n = γn − βm,n
+
+11:
+
+CN: new check-node βm,n messages
+
+12:
+
+βm,n =
+
+13:
+
+sign(αm,n ) × min αm,n
+
+n ∈N (m)\{n}
+
+n ∈N (m)\{n}
+
+14:
+
+Update AP-LLR:
+
+15:
+
+γn = αm,n + βm,n
+
+16:
+
+end for
+
+17: end for
+
+18: compute syndrome check for all AP-LLRs
+
+19: end for
+
+20: Offloading: output ← sign(γ)
+
+of all variable nodes and channel input is updated dv(n) times. Implementation wise, it also introduces a constraint during execution. The hardware architecture has to ensure that the ith update out of dv(n) is completed before stating the variable node processing corresponding to the next processing. Otherwise, a Read-after-Write (RAW) hazard occurs, and the variable node ith contribution is lost. In many cases this requires stalls, that degrade the hardware unit’s throughput [5]. A workaround is the residue scheduling proposed in [5]. It accounts for this contribution in an residue variable and adds it at a later time – denoted as δn. The penalty is a small convergence degradation, and the additional hardware logic to handle the residue part. Note that all control information regarding scheduling is computed offline, and stored inside ROM files. For this work we are only interested in the case when a single overlap occurs (for the general description of this principle refer to [5]). Algorithm 1 is modified as follows: The old notation denotes the value before layer processing, while new is used to define the message value after current layer processing. A final note is that the number of residue variables effectively needed is computed offline. Although not explicitly stated in the algorithm, they are not required for each column of the H matrix.
+III. UNROLLED LAYERED LDPC DECODING
+ARCHITECTURES
+The most common LDPC decoding architectures are represented by iterative ones; they perform one iteration - in case of flooded decoders -, or one layer - for layered decoders - at a time. For layered scheduling, these architectures consists of a block memory, that store the γn and the βm,n messages, a
+
+Algorithm 2 *
+
+Residue-based layered scheduling processing
+
+1: Modified VN for variable node n of check-node m:
+
+2:
+
+αm,n = γn − βm,n
+
+3: if RAW hazard to mitigate then
+
+4:
+
+δn = 0
+
+initialize residue variable
+
+5: end if
+
+6:
+
+7: Residue-based Modified Update AP-LLR:
+
+8: if no RAW hazard then
+
+9:
+
+γn = αm,n + βmne,wn + δn
+
+10: else
+
+11:
+
+δn = βmne,wn − βmold,n
+
+12: end if
+
+set of barrel shifter used for routing and a set of z processing units. For each layer, a set of γn and βm,n are read from the memory, the AP-LLRs are routed through the barrel shifters, and a new set of γn and βm,n are computed by the processing units and stored in the memory.
+In order to increase the throughput of the decoding to tens of Gbps, hardware unrolling has been applied to LDPC decoder architectures. For flooded architectures, iteration unrolling has been employed [7], [10]. In the case of layered architectures, layer unrolling has been used in [8], [9].
+The unrolled layered decoder is depicted in Fig 1.It consists of multiple stages, each corresponding to a layer within the iteration decoding. Pipeline registers are placed between processing layers. Each stage consists of z parallel processing units, dc(n) shifters to route the γn messages, and a local memory for storing the βm,n messages. The AP-LLRs are stored in the pipeline registers; therefore, no dedicated memory is required for these messages. The main advantage of unrolled LDPC decoders is represented by its very high throughput, that is obtained when multiple codewords are decoded at the same time. For a LDPC code with nl layers, nl codewords can be decoded in an unrolled architecture, with each codeword being processed in one separate stage. The high throughput characteristic of these decoders comes at the cost of high hardware overhead.
+In [8], [9], unrolled layered decoders have been proposed for array LDPC codes, that have no negative entries in the base matrix B. For these types of codes, all the AP-LLRs are processed in each stage of the unrolled architecture - Fig. 2.a . Therefore, all the pipeline stages store γn messages that are to be processed/updated, that leads to a highly efficient usage of hardware storage resources. However, most standard LDPC codes are not array type, having multiple negative entries in their base matrix. For these, in stages corresponding to layers containing negative entries, some sets of AP-LLRs are transferred without processing/updating between pipeline registers - Fig. 2.b .
+In this paper, we propose an unrolled architecture with stages that combine multiple consecutive layers processing. This is achieved by employing residue based layered decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:30:35 UTC from IEEE Xplore. Restrictions apply.
+
+described in section II. This way, we provide a method for efficient hardware usage in unrolled layered architectures for non-array LDPC codes.
+IV. UNROLLED RESIDUE BASED LAYERED DECODER
+High throughput QC-LDPC decoder can only be obtained as a result of efficient parallelization (i.e. large number of parallel units utilized if possible 100 % of the time). Unrolling is a well known hardware technique for accelerating execution loops. Therefore, it is a natural choice for iterative QCLDPC decoders, as well. It has been applied for both type of schedulingd: flooded [7], and layered [8] LDPC decoders, leading to implementations capable of achieving throughput in range of tens of Gbps. For layered scheduling, layer unrolling has been used [8]. Furthermore, this approach is mostly suitable for array codes, where each layer of B matrix has only non-negative values - Fig. 2-a. Thus, implementation wise it is straightforward to place pipeline registers that forward γ messages from one layer to the next. In addition to this, it is worthwhile emphasizing that given the data dependency between layers, multiple codeword processing is required. Otherwise,only a layer can be processed at a time, all others being stalled and waiting for the updated data. Thus, the baseline unrolled architecture consists of n‘l stages, where nl is the number of rows in the B matrix. If the processing of each stage/layer takes one clock cycle, one decoding iteration requires nl clock cycles to complete. In the multi codeword setup, nl codewords are decoded at the same time, with each codeword being processed in one pipeline stage during a clock cycle. The baseline hardware architecture is depicted in Fig. 1.
+
+a layer cluster block - Fig 2-c. Data from one GL layer to the next is stored inside flip-flip based registers. Since a GL contains one or several QC-LDPC layers, elements of the same column may be present in a GL. Thus, an additional step is required in order to compute the correct APLLR updated value, according to Algorithm 2. The hardware unit implementing it is called Residue Merger Unit. This processing unit updates the AP-LLR when a residue value is provided, as well as computes the residue value δn according to algorithm II.
+V. EVALUATION
+We have designed unrolled architecture for WiMAX rate 5/6 code, with a code-length of 2304 bits, and the expansion factor z = 96. The base matrix associated to this code contains 4 rows. We have implemented architectures for 3 layer groupings:(i) (1,1,1,1), that corresponds to conventional
+
+A layer processing consists of the following sub-operations:
+• VNU: a β message is read from the local β memory in compressed format (the first and second minimum, the index, as well as the message signs) form; furthermore, this message is represented in sign-magnitude (SM) form. First, the message is decompressed, then converted in twos complement (C2) format, and subtracted from the γ message in full precision in order to obtain the α message. Note that the γ message is typically in a higher resolution than the α, and β messages. Thus, it is more cost efficient to route α, and β messages, given the high number of messages of the unrolled architecture.
+• Routing: direct wire-in is used for message routing. • CNU: performs the comparison between the absolute
+values of α messages from VNU. Thus, the conversion from C2 to SM is required. Its main component is a dc data input comparator. The newly generated β messages are written in the layer local memory in compressed SM representation. Furthermore, they are used for the APLLR update. • AP-LLR update: adds in full precision the α and beta messages computed during the current layer processing, and computes an updated γ message value.
+The proposed decoder implementation is a straightforward hardware unrolling of the GL. Each GL is materialized in
+
+Fig. 1. Unroll layered architecture overview
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:30:35 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Processing stages in unrolled layered: (a) Full layer (b) Base matrix containing negative entries (c)Merged layers using residue computation
+
+TABLE I FPGA IMPLEMENTATION ESTIMATES FOR WIMAX RATE 5/6 LDPC CODE
+
+Decoder
+(1,1,1,1) (2,1,1) (2,2)
+
+Slice Registers
+69211 55963 53844
+
+Slice LUT
+360163 334898 328952
+
+Freq [MHz]
+35 31 30
+
+Throughput
+41 Gbps 36 Gbps 35 Gbps
+
+unrolled layered architectures, (ii) (2,1,1), that corresponds to an unrolled architecture with the first two layers merged, and (iii) (2,2) that corresponds to a decoding architecture with both the first two and the last two layers merged. We have used a 6-bit quantisation for AP-LLRs and a 4-bit quantisation for check node messages. Implementation has been performed for a Xilinx Virtex-7 XC7VX485T device, using the Xilinx Vivado tool. Results are depicted in Table I. Throughputs are obtained for 4 decoding iterations.
+Regarding the results presented in Table I, it is worth mentioning that the implemented decoders occupy more than 75% of the FPGA device’s logic resources, leading to routing congestion within the FPGA and rather small frequencies. The operating frequency is expected to increase for a FPGA device with more resources or for a LDPC code with shorter codeword. The results in Table I indicate that employing merging layers using the residue based layered scheduling lead to cost decrease - both in terms of memory elements (slice registers, used mostly for AP-LLR storage), and of combinational elements (slice Look-Up Table (LUT)), with the penalty of slightly lower frequency, and therefore, lower throughput.
+CONCLUSIONS
+We have proposed and implemented a generalization for unrolled layered LDPC decoding architectures, by employing the residue-based layered scheduling when merging multiple layers. The FPGA implementation results for WiMAX Rate 5/6 show that 35-41 Gbps throughput is achievable. Nonetheless, given that 75% of the FPGA resources are used, routing congestion occurs. Thus, future work will focus on cost reduction approaches such as [2], and therfore, reducing the main bottleneck of these highly parallel architectures.
+
+REFERENCES
+[1] D. Declercq, L. Danjean, E. Li, S. K. Planjery, and B. Vasi, “Finite alphabet iterative decoding (faid) of the (155,64,20) tanner code,” in 2010 6th International Symposium on Turbo Codes Iterative Information Processing, 2010, pp. 11–15.
+[2] T. T. Nguyen-Ly, K. Le, V. Savin, D. Declercq, F. Ghaffari, and O. Boncalo, “Non-surjective finite alphabet iterative decoders,” in 2016 IEEE International Conference on Communications (ICC), 2016, pp. 1–6.
+[3] O. Boncalo, A. Amaricai, P. F. Mihancea, and V. Savin, “Memory trade-offs in layered self-corrected min-sum LDPC decoders,” Analog Integrated Circuits and Signal Processing, vol. 87, no. 2, pp. 169–180, 2016. [Online]. Available: http://dx.doi.org/10.1007/s10470-015-0639-3
+[4] T. T. Nguyen-Ly, T. Gupta, M. Pezzin, V. Savin, D. Declercq, and S. Cotofana, “Flexible, cost-efficient, high-throughput architecture for layered LDPC decoders with fully-parallel processing units,” in 2016 Euromicro Conference on Digital System Design (DSD), Aug 2016, pp. 230–237.
+[5] O. Boncalo, G. Kolumban-Antal, A. Amaricai, V. Savin, and D. Declercq, “Layered ldpc decoders with efficient memory access scheduling and mapping and built-in support for pipeline hazards mitigation,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 66, no. 4, pp. 1643–1656, April 2019.
+[6] D. Declercq, V. Savin, O. Boncalo, and F. Ghaffari, “An imprecise stopping criterion based on in-between layers partial syndromes,” IEEE Communications Letters, vol. 22, no. 1, pp. 13–16, 2018.
+[7] P. Schlfer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput ldpc decoding,” in SiPS 2013 Proceedings, 2013, pp. 153–158.
+[8] O. Boncalo and A. Amaricai, “Ultra high throughput unrolled layered architecture for qc-ldpc decoders,” in 2017 IEEE Computer Society Annual Symposium on VLSI (ISVLSI), 2017, pp. 225–230.
+[9] O. Boncalo, V. Savin, and A. Amaricai, “Unrolled layered architectures for non-surjective finite alphabet iterative decoders,” in 2017 IEEE Nordic Circuits and Systems Conference (NORCAS): NORCHIP and International Symposium of System-on-Chip (SoC), 2017, pp. 1–5.
+[10] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-gb/s ldpc decoder based on finite-alphabet message passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, 2018.
+[11] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+[12] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep 1981.
+[14] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop onSignal Processing Systems, 2004. SIPS 2004., Oct 2004, pp. 107–112.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:30:35 UTC from IEEE Xplore. Restrictions apply.
+
+

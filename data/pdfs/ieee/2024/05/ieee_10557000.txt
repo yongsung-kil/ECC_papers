@@ -1,0 +1,666 @@
+A minimal-resource LDPC encoder and decoder design for memory-constrained systems
+
+2024 ELEKTRO (ELEKTRO) | 979-8-3503-7235-9/24/$31.00 ©2024 IEEE | DOI: 10.1109/ELEKTRO60337.2024.10557000
+
+Tomáš Páleník, PhD. Viktor Szitkey, Jakub Otruba, Ladislav Divinec
+Faculty of Electrical Engineering and Information Technology
+Slovak University of Technology tomas.palenik@stuba.sk
+ORCID: 0000-0003-3511-3390
+
+Abstract— In this paper we present our LDPC encoder and decoder design focused on, but not limited to, the LDPC codes described in the recent CCSDS space data systems standard, known as the Blue Book. Two important code transformations: shortening and puncturing are described in detail with the goal of introducing a wider range of LDPC code parameters for Adaptive Coding and Modulation and minimizing the transceivers memory requirements. The effects of these transformations on the error performance of the system are evaluated using Monte-Carlo simulations and a provided along with the newly added LDPC code parameters set and memoryconstraints analysis. Our custom free and open-source C implementation of both encoder and decoder is provided along with supporting MATLAB mini-toolkit for LDPC code lifting and transformations. This toolkit further includes also a full implementation and transformations of the QC-LDPC codes utilized in the Wi-Fi 6 IEEE 802.11ax standard.
+Keywords—CCSDS, LDPC, code shortening, code puncturing
+I. INTRODUCTION (HEADING 1)
+Low Density Parity Check (LDPC) codes [1] have found applications in a myriad of communication systems mainly because of their performance approaching the Shannon’s channel capacity [2]. An important development in LDPC design was introduced by [3] - the Quasi Cyclic H matrix structure defines the QC-LDPC codes which are used in many communication standards today, such as the IEEE 802.16 [4], IEEE 802.11ax (Wi-Fi 6) [5,6], DVB-S2 [7], the latest 5G 3GPP Release 17 TS 38.212 [8], and even the wired networking Ethernet IEEE 802.3 standard (10G Ethernet) [9]. Even with the latest processor technologies, the design and efficient implementation of encoder/decoder is a challenging task because of the size of the H matrices of practical LDPC codes. In addition to software-based approaches, the efficient implementation of LDPC decoding on hardware platforms, such as Application-Specific Integrated Circuits (ASICs) and Field-Programmable Gate Arrays (FPGAs), has garnered significant attention [10]. Harnessing the computational power of Graphics Processing Units (GPUs) has become an integral aspect of LDPC decoding research [11,12], while LDPC code matrices modifications research is still complemented by ReedSolomon codes design evolution [13], which turns out to be advantageous in ultra-low decoding latency scenarios. Besides the practical hardware accelerated designs, there is also a substantial need for high-throughput software implementations that can use modern commodity processors [14]. These implementations offer valuable resources for experimentation, optimization, and implementation in research scenarios [15,16]. For studying purposes one can choose from many implementations available at GitHub
+
+portal [17-20] which unfortunately lack the H matrices present in current standards. Some of the publicly available implementations are more comprehensive [21] and can be used without any modifications.
+This paper follows up on our previous research [22] focused on the LDPC codes described by the older IEEE 802.16 WiMAX, and more recent WiFi-6 IEEE 802.11ax standards. Both of these specifications share the same QCLDPC design with slightly different parameters. The most recent satellite communications CCSDS 131.0-B-5 for space systems [23] introduces a different LDPC design, which is in the focus of this paper. Our free and open source LDPC toolkit for C and MATLAB available on GitHub [24] has been expanded to accommodate the new CCSDS-defined codes, along with important code transformations, that extend the set of usable code parameter for more flexible Adaptive Coding and Modulation (ACM) purposes.
+This paper is organized as follows: The next section briefly describes the LDPC codes used in the most recent CCSDS Blue Book standard. The third section then describes our modification to these codes, introducing a set of new code parameters to be used in flexible ACM schemes. The fourth section then provides some practical information regarding the C implementation memory footprint, results of the error performance obtained by simulation in the form of waterfall curves, and comparison of throughput with other toolkits. The fifth section then concludes the paper.
+II. CCSDS LDPC CODES
+The LDPC codes are a subclass of binary Linear Block Codes (LBC). Their basic parameters [ n, k ] and m = n – k define the number of rows and columns of their sparse parity check matrix Hm x n, as well as the systemic important code rate R = k / n. The code generator matrix Gk x n can be derived from H is several ways, but it will unlikely be sparse. The encoding using the G matrix is described simply by multiplication of the data word – the vector i of length k bits by G to obtain the codeword c of length n. For a systematic code, the systematic part s of the codeword is a subvector of c equal to i. We may describe the encoding in the following way:
+
+
+
+c1n  s1k p1m   i1k  Gkn , s  i 
+
+
+
+We give the details on storing the H matrix in a greatly compressed form denoted the model matrix Hbm, as well as the mathematical description of its expansion to large binary H in our previous paper [22], along with the detailed description of our Soft-Input-Soft-Output (SISO) layered Min-Sum LDPC decoder. Sufficient here is a brief recap of
+
+979-8-3503-7235-9/24/$31.00 ©2024 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+the Hbm matrix: it is a small matrix of integer values (we denote mb and nb as the number of rows and columns of Hbm) and each such value then expands to create a square submatrix of size M x M in the large binary matrix H. The CCSDS Blue Book uses a somewhat similar structure for the LDPC codes it introduces. In all cases the large H matrix is a block-matrix, so it can be described as a matrix of matrices, or a matrix divisible into a grid of mb x nb submatrices, each of size M x M
+
+TABLE II.
+
+CCSDS LDPC BASE CODE PARAMETERS
+
+k 1024
+
+R=2/5 mb = 3, nb = 5
+512, 2560
+
+M, n R=4/7 mb = 3, nb = 7
+256,1792
+
+R = 8 / 11 mb = 3, nb = 11
+128, 1408
+
+4096
+
+2048,10240
+
+1024,7168
+
+512,5632
+
+16384
+
+8192,40960
+
+4096,28672
+
+2048,22528
+
+The CCSDS Blue Book defines several different LDCP codes suitable for various situations. In this paper we focus on the codes defined primarily for the telemetry frames transfer, since these use the potentially largest codeword size and therefore bring potentially the best error correcting capabilities. Section 7.4. of [23] defines three different LDPC codes with rates R = 1/2, 2/3 and 4/5 along with three different data word sizes k = 1024, 4096, and 16384 bits. These can be freely combined, thus defining 9 LDPC codes parameters summarized in Table I:
+
+To obtain the permutation i matrices in (2), a special function is defined in [23]:
+
+
+
+k
+
+(i)
+
+
+
+M 4
+
+ 
+
+
+
+k
+
+
+
+
+
+ 4i  M
+
+ 
+
+  mod 
+
+ 4
+
+
+
+
+
+
+
+
+
+
+ k 
+
+  
+
+ 
+
+4i M
+
+ 
+
+,
+
+M
+
+  
+
+
+
+i
+
+  
+
+mod
+
+M 4
+
+TABLE I.
+
+CCSDS LDPC PARAMETERS
+
+M, n
+
+k
+
+R = 1/2, K = 2
+
+R = 2/3, K = 4
+
+R = 4/5, K = 8
+
+This function is then used to construct i such that they have non-zero entries in row i and column k(i) for i = 0, 1,… M – 1. The values of the integer functions ( j, M ) and
+
+1024 4096
+
+512, 2048 2048, 8192
+
+256, 1536 1024, 6144
+
+128, 1280 512, 5120
+
+k are enumerated in a tabular form in [23] and omitted here for brevity. The expanded binary base matrix H is very large (up to 16384 rows and 32768 columns) and sparse. In
+
+16384
+
+8192, 32768
+
+4096, 24576
+
+2048, 20480 contrast to the Wi-Fi 6 standard, no direct encoding
+
+a. To obtain correct rate, the last M columns of H must be omitted. M,K and k are independent variables, while n and R are calculated from them.
+Table I defines a submatrix size M, ranging from 128 to 8192, and the parameter K (not to be mistaken with k), to be used later (Note: the somewhat confusing parameter names
+
+procedure, that would produce the codeword c directly by using H, is defined, so for encoding, a systematic code generator matrix G must first be found. The standard prescribes the following procedure for G derivation:
+
+are defined directly in [23], so we use them also here). The LDPC codes are actually defined in term od submatrices, more specifically a large base matrix HB as shown in (2):
+
+A P matrix is defined as a submatrix of H, obtained by taking the last three matrix-columns. The size of P will therefore be 3M x 3M.
+
+A Q matrix is defined as a submatrix of H, obtained by
+
+HB1/2 
+
+taking the first K (defined in Table I) matrix columns. The size of Q will be 3M x MK.
+
+
+
+0M
+
+ 
+
+I
+
+M
+
+ I M
+
+0M
+
+IM
+
+IM
+
+0M
+
+Π5  Π6 0M
+
+0M IM Π7  Π8
+
+Π2
+
+IM 
+
+ Π1 Π3 
+
+Π
+
+4
+
+  
+
+
+
+
+
+IM
+
+
+
+
+
+Over GF(2) we calculate matrix W by: W = (P-1Q)T
+
+
+
+Each symbol in HB represents a square submatrix of size M x M, where 0M denotes an all-zero matrix, IM an identity matrix and i a specific permutation matrix (With sums in (2) performed over GF(2)). The base matrices for all the codes in Table I share this three matrix-rows structure –
+
+The resulting W matrix will be a dense matrix of binary circulants, each of size M/4 x M/4, and will be used as a parity submatrix in a systematic code generator matrix
+
+
+
+G = [ IMK W ]
+
+
+
+only the number of matrix-columns changes according to the core rate R. The number of matrix-rows is constant and equal to 3. For brevity, we show only the base matrix for R = 1/2. The two other rates define their own base matrices that are given in [23]. Furthermore, the base matrices given by (2) are actually larger than indicated by the parameters in
+
+It is important to note, that the matrix inversion of P in (4) is an inversion of a relatively large matrix: as shown in Table I, M ranges from 128 to 8192, so a calculation of matrix inversion of sizes up to 24576 x 24576 is necessary to support all defined LDPC parameters. If each value of such a matrix is stored as a one-byte variable, 576 megabytes
+
+Table I, and the code rates calculated by measuring the sizes of memory are necessary just for storing it. Fig. 1 shows the of these matrices are lower. It is only by removing of the visual representation of the structure of the large matrix H:
+
+last M columns of H we actually obtain the LDPC codes
+
+with parameters given above. Table II summarizes the
+
+actual parameters of the base codes before this
+
+transformation:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Zoomed-out block-structure of the base H matrix: The special structure facilitates derivation of the G matrix, orthogonal to H. Each black pixel indicates 1, white pixels indicate zeros.
+III. CODE SHORTENING AND PUNCTURING
+As described in the previous section, the CCSDS standard defines just 3 different LDPC codes with a total set of 9 different parameter combinations. This may be insufficient in situations where fine-grained code parameters selection is required. For comparison, Wi-Fi 6 defines four code rates R = {1/2, 2/3, 3/4, 5/6} [6] and three codeword lengths n = {648, 1296, 1944}, providing 12 code parameters sets, and the 5G specification [8] defines its own LDPC structure with 51 potential H and G matrix sizes, providing much greater flexibility of the code parameters combination. In our design, we use various levels of code shortening and puncturing to introduce a much improved flexibility of parameters even for the LDPC codes defined in the CCSDS standard. Furthermore, the transformations given below are flexible enough so that they may also be used for the Wi-Fi 6 LDPC codes.
+A. Shortening and puncturing
+Fig. 2 shows the shortening procedure while Fig. 3 depicts the puncturing. Both of these procedures may be further combined if necessary.
+
+and fill it to the required k value by zeros. To maintain compatibility with the block-matrix structure of H, we deliberately choose to work on blocks of M bits, but this design is actually completely general. We denote the number of shortened bits s. After the zero-filled data is encoded by an LDPC encoder using the standard-described systematic G matrix, the filler zeros are dropped and only the actual data and parity bits are transmitted. In the receiver, the LogLikelihood-Ratio (LLR) metrics are calculated as an input to a SISO LDPC decoder. This decoder uses the standarddefined H matrices. Since the filler zeros were not transmitted at all, corresponding High-Confidence-Zero LLR metric is inserted at their positions. Depending on the actual LLR definition and decoder data-type used, this usually translates to a relatively high positive value (e. g. 1023 in our fixed-point 10-bit decoder implementation [22,24]). After the iterative decoding, a hard decision is made on each LLR metric to obtain the binary data estimate. Further check may be introduced to make sure, that none of the untransmitted zero-fill bits get received as inverted. This would indicate error in decoding. This procedure changes the code rate by shortening the data:
+
+
+
+Rs
+
+
+
+k n
+
+s s
+
+
+
+
+
+The second transformation we employ is the puncturing. The CCSDS defined-codes come with the puncturing of the last block-matrix column of the H matrix prescribed, which translated to dropping of the last M parity bits from the encoded LDPC codeword. Our design extends this procedure to an arbitrary number of columns (with limitations given by the H matrix size), while also introducing the possibility for data bits puncturing. This procedure is depicted in Fig. 3:
+
+Fig. 2. Data transmission without (left) and with (right) shortening of the code by using zero-fill bits in the transmitter and high-confidence zero metrics insertion at corresponding positions in the SISO decoder.
+In contrast to standard data transmission using the LDPC base codes defined in Table II, we use a shorter data vector i
+
+Fig. 3. Data transmission with parity bit (left) and data bit (right) puncturing implemented by dropping bits in the transmitter and zeroconfidence metrics insertion at corresponding positions in the SISO decoder.
+The puncturing procedure is even simpler than shortening, since no zero fill bits need to be added/removed in the transmitter: selected bits of the encoder output are just dropped. In the SISO decoder, the dropped bits are replaced by a zero-confidence LLR metrics (actually equal to zero).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+This will work with parity, as well as data bits, as long as the bits position being punctured have good connectivity to other nodes, so that the extrinsic LLRs can recreate their values. As show in Fig. 1, the last M columns in H are connected to the largest number of check nodes (indicated by the number of ones in each column). The first 2 block-columns are also viable candidates for puncturing, while the 3rd and 4th are not. We denote the number of punctured bits p and depending on which part of the codeword is punctured, this procedure changes the code rate in two potential ways:
+If data bits are punctured:
+
+TABLE III. LDPC SHORTENING RESULTS
+
+s
+
+Rs
+
+M = 128
+
+R = 8 / 11, k, n M = 512
+
+M = 2048
+
+0
+
+8/11
+
+1024, 1408 4096,5632 16384,22528
+
+1
+
+7/10
+
+896, 1280 3584, 5120 14336,20480
+
+2
+
+2/3
+
+768, 1152 3072, 4608 12288,18432
+
+3
+
+5/8
+
+640, 1024 2560, 4096 10240,16384
+
+4
+
+4/7
+
+512, 896 2048, 3584 8192,14336
+
+5
+
+1/2
+
+384, 768 1536, 3072 6144,12288
+
+
+
+Rp
+
+
+
+k n
+
+ 
+
+p p
+
+
+
+If parity bits are punctured:
+
+6
+
+7
+s
+
+2/5
+
+256, 640 1024, 2560 4096,10240
+
+1/4
+
+128, 512
+
+512, 2048
+
+2048, 8192
+
+R = 4 /7, k, n
+
+Rs
+
+M = 256
+
+M = 1024
+
+M = 4096
+
+0
+
+4/7
+
+1024, 1792 4096, 7168 16384,28672
+
+
+
+Rp
+
+
+
+n
+
+k 
+
+p
+
+
+
+ 1
+
+1/2
+
+768, 1536 3072, 6144 12288,24576
+
+2
+
+2/5
+
+512, 1280 2048, 5120 8192,20480
+
+In contrast to shortening, it is now clear that the puncturing procedure, primarily the puncturing of parity bits, will have negative impact on the error performance of the resulting code, so it is more suitable for a higher Signal-toNoise (SNR) transmissions.
+B. CCSDS code transformations parameters
+We can now apply the transformations described above to the base codes defined by the CCSDS standard. Fig. 2 and 3 are completely general, but we will limit our choices for the shortened or punctured bits to groups of bits in multiples of M, corresponding to columns of the HB matrix, so a value of s in table below will actually mean shortening of s.M bits. Furthermore, we limit the patterns of shortened columns to continuous indices starting at the index of the last data bit k and counting in reverse. We will always use the base code for shortening. Within these constraints we can write a general expression for shortened bits index range as (assuming indexing starting at 1): is = ( kb – s ).M + 1 for the start index and ie = kb.M for the index of the last shortened bit. For example, for a base code of R = 8/11, M = 128, and s = 5, the sizes of the block matrix HB are nb = 11, mb = 3 (Table II), which determines kb = nb – mb = 8. We will shorten 5 block-columns, which in terms of the large binary H matrix results to shortening of 5x128 = 640 bits at indices 385 to 1024. The remaining codeword will then consist of 384 data bits at indices 1 to 384 and 384 parity bits, originally at indices 1025 to1408, which gives an R=1/2 code. This results is given in Table III, which shows resulting code parameters for two base codes and all potential shortening values. Careful reviewing with Table I reveals the introduction of 3 new code rates R = {7/10, 5/8, 1/4}, (not counting the CCSDS Blue Book defined but unused base code rates R = {8/11, 4/7, 2/5}) and 16 new data word sizes k = {14336, 12288, 10240, 6144, 2048, 3584, 3072, 2560, 1536, 896, 768, 640, 512, 384, 256, 128}. The pre-existing values of k and n are then shown in bold. These greatly improve the choice of available LDPC code parameters to be used in ACM scheme both in real systems and in simulations. Especially the smaller values could be interesting in short-frame protocols, such as IEEE 802.15.4 in IoT applications.
+
+3
+
+1/4
+
+256, 1024 1024, 4096 4096,16384
+
+b. Pre-existing k and n parameters are show in bold.
+Similarly to shortening, we also suggest puncturing the code in groups of multiples of M bits, so a value p means puncturing of p.M bits from the end of the codeword. For brevity we will only cover puncturing of parity bits of one of the codes here, where the group of continuous columns of H is punctured, with results given in Table IV:
+
+TABLE IV. LDPC PUNCTURING RESULTS
+
+p
+
+Rp
+
+M = 512
+
+k, n M=2048
+
+M=8192
+
+0
+
+2/5
+
+1024, 2560 4096,10240 16384,40960
+
+1
+
+1/2
+
+1024, 2048 4096, 8192 16384,32768
+
+2
+
+2/3
+
+1024, 1536 4096, 6144 16384,24576
+
+a.
+
+Pre-existing k and n parameters are show in bold.
+
+Table IV shows the results of parity-bits puncturing for the R
+
+= 2/5 base code. In order to obtain optimal results, the
+
+puncturing of the code requires a careful selection of
+
+columns, depending on the actual H matrix structure even a
+
+combination of data bits and parity bits puncturing, and is out
+
+of the scope of this short paper.
+
+IV. PRACTICAL RESULTS
+A. Error performance evaluation
+We evaluated the error correcting capabilities of the CCSDS space communications systems [23] standarddefined LDPC codes using a MATLAB simulation with an AWGN channel model. We combined our MEX implementation of the encoder and decoder with MATLAB simulation for a selected parameters set. First we chose the middle-size k = 4096, R = 8/11 base code for shortening with Fig. 4 giving the resulting waterfall curves. The AWGN model was chosen because it is commonly used for satellite communications. The simulation could be easily extended by using the comm.rayleighChannel for a multipath fading channel evaluation and is out of scope of this short paper. It would shift the curves in Fig. 4 to the right, affecting all their inclines in the same way.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. CCSDS R = 8/11, k = 4096 shortening by multiples of sub block size M ( 512 bits ) effect: no shortening (dashed line), 1M bits shortened (plus marker), 2M bits shortened (diamond), 3M bits shortened (square).
+As expected, since the shortening of data bits, while keeping the amount of parity bits, decreases the resulting code rate (from R = 8/11 to 7/10, 2/3 and 5/8), the error performance is improving with larger s value.
+We also tested several puncturing options. To show the generality of our puncturing mini-toolkit, we demonstrate the puncturing results using the LDPC codes defined in the WiFi 6 standard [5,6]. These have somewhat different structure, but the puncturing process works without problems. The choice of this code for puncturing comes from the finer granularity of the Wi-Fi 6 defined codes – the number of block columns of matrix H is far larger (nb = 24) than with any of the CCSDS codes (max. nb = 11), so there are more room for setting the puncturing value p, out of which 4 are presented.
+As shown in Fig. 5, since the parity bits are punctured out, the code rate is increasing, so the waterfall shifts to higher –SNR(Eb/N0) area, which is again in line with expectations.
+B. Memory requirements
+Our implementation uses bitmaps/packed bits whenever possible, to increase efficiency of operations among other things and ultimately to decrease requirements for memory usage. The main factor determining the required amount of memory is the chosen code, i.e., information block length k and code rate R. Table V. shows 3 possible implementation configurations, that represent corner cases ( Configs A, C) as well as median case (Config B).
+
+TABLE V.
+
+LDPC PUNCTURING RESULTS
+
+Config A B C
+
+Encoder [B] 1596
+49212 1572924
+
+Decoder [B] 28160 176128
+1212416
+
+Total [KiB] 30 225
+2707
+
+Configuration A represents the smallest possible value of supported k = 1024 bits with code rate R = 4/5. On the other side of the spectrum, we have configuration C that uses largest information block length k defined by CCSD Blue Book, k = 16384 bits, with code rate R = 1/2.
+The most practical is the usage of configuration B where k = 4096, with R = 2/3 (base code R = 4/7). As shown in Table III, using shortening it will be possible to cover 4 additional code rates R = {4/7, 1/2, 2/5, 1/4} with a single configuration with small memory requirement of just 225 KiB. This setup is also practical because the limiting parameters may be compiled-in, so that the C compiler can make optimizations. At the same time, by reusing the encoder and decoder as show in Fig. 2 and 3 we have shown to support 5 parameter sets together. C. Throughput analysis
+To see how our decoder compares to other implementations, several Monte Carlo simulations were conducted, focusing on their processing speed. Tested implementations were a mixture of pure MATLAB implementations [26,19], C/C++ implementations [25,17] and a C/C++ implemented into MATLAB through MEX [24,27]. We also only tested built-in MATLAB function ldpcDecode (denoted as MATLAB R2023b in Table VI). To avoid comparing functions other than a decoder, throughput was only measured on the decoder function itself. Tests were done on a machine running an AMD Ryzen 7 7700X 8-Core/16-thread processor operating at 4.5Ghz.
+Fig. 5. WiFi-6 R = 1/2, N=1944 puncturing of parity bits by multiples of sub block M (81 bits) effect: no puncturing (dashed line), 1M puncture (square marker), 2M (cross), 3M(diamond), 4M(circle).
+All simulations were performed with the LDPC code defined in chapter 7 of [23]. Decoder was always forced to perform 10 iterations of its version of the decode algorithm. Two simulations were done, one using a single thread mode, other using multithreading of 16 threads whenever possible. 160 frames of data were sent per simulation cycle. Before decoding, encoded data was sent through an AWGN channel with Eb/N0 = 10dB.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE VI. THROUGHPUT EVALUATION
+
+Framework
+1 MATLAB R2023b 2 YALDPC [24] 3 AFF3CT [25] 4 Radford Neal [17] 5 Nicopi [26] 6 Tavildar [19] 7 Simgunz [27]
+
+Throughput [Mbps]
+
+16 thread
+
+1 thread
+
+3.00
+
+5.13
+
+31.69
+
+4.82
+
+114.72
+
+12.97
+
+N/A
+
+7.07
+
+N/A
+
+0.02
+
+N/A
+
+0.011
+
+1.25
+
+0.15
+
+Table VI compares various different frameworks. The first entry shows the throughput of the MATLAB built-in decoder, which is actually implemented as an optimized, closed source MEX-file under the hood. In our benchmarks, we noticed that it performed worse with 16 threads then it did with one (such setting actually runs two). We attribute this to a bug in the multithreaded implementation. AFF3CT library is by far the fastest implementation, being both a C++ library and well optimized. Our YALDPC implementation, while not looking too impressive in a single thread mode, pulls ahead when used in multithreaded mode. Other implementation, shown on lines 5 to 7, are pure MATLAB code, and are much slower than the low-level language implementations 1 to 4.
+
+V. CONCLUSION
+In this paper we introduced transformations to the LDPC codes defined in the recent CCSDS Blue Book standard in order to extend the set of available code parameters for a more flexible ACM. Out of the original 18 code parameters set, we derived additional 31. We provide simulation results evaluating selected code parameters in the context of AWGN channel transmission. We tested an upgrade to our existing free and open source MATLAB minitoolkit available on GitHub by evaluating our platform-independent C implementations of LDPC encoder and decoder using MEX.
+
+ACKNOWLEDGMENT
+This work was supported by the Slovak APVV Agency under cont. no. APVV-19-0436 an the Tatra Bank Foundation under cont. no. 2023digVS008.
+
+REFERENCES
+
+[1] GALLAGER, R.G. Low-density parity-check codes, MIT Press
+
+Cambridge
+
+(USA),
+
+1963.
+
+Available
+
+at:
+
+https://direct.mit.edu/books/book/3867/Low-Density-Parity-Check-
+
+Codes DOI: 10.7551/mitpress/4347.001.0001
+
+[2] SHANNON, C. E., A Mathematical Theory of Communication, Bell System Tech J., vol. 27, 1948, p. 379-656
+
+[3] TANNER, R. M., SRIDHARA, D., SRIDHARAN, A., et al. LDPC block and convolutional codes based on circulant matrices. IEEE Transactions on Information Theory, 2004, vol. 50, no. 12, pp. 29662984. DOI: 10.1109/TIT.2004.838370.
+
+[4] IEEE Std. 802.16-2017, IEEE standard for air interface for broadband wireless access systems – Section 8.4.9.2.5: low density parity check (LDPC) code. IEEE New York (USA), 2018, p. 1459 – 1463. ISBN 978-1-5044-4474-3
+
+[5] IEEE Std. 802.11ax-2021, Part 11: wireless lan medium access control (MAC) and physical layer (PHY) specifications - Amendment 1: enhancements for high-efficiency WLAN. IEEE New York (USA), 2021. ISBN 978-1-5044-7389-7
+
+[6] IEEE Std 802.11-2020, Part 11: Annex F: HT LDPC matrix definitions. IEEE New York (USA), 2021. p. 4130–4132. ISBN 9781-5044-7283-8
+
+[7] ETSI EN 302 307 V1.2.1, Digital Video Broadcasting (DVB): Second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broadband satellite applications (DVB-S2). ETSI Sophia Antipolis Cedex (France), 2009.
+
+[8] 3GPP TS 38.212 V17.4.0, 3GPP RAN NR; Multiplexing and channel coding (Release 17). 3GPP Valbonne (France), 2022. Available at: http://www.3gpp.org
+
+[9] IEEE Std. 802.3-2018, IEEE Standard for Ethernet 802.3-Section 7: 10G Ethernet, Chapter: 101.3.2.4 LDPC FEC codes. IEEE New York (USA), 2018, p. 321–330. DOI: 10.1109/IEEESTD.2018.8457469
+
+[10] JUNG, Y., CHUNG, C., KIM J., JUNG, Y. 7.7Gbps encoder design for IEEE 802.11n/ac QC-LDPC codes. In International SoC Design Conference (ISOCC), Jeju (Island), 2012, p. 215–218 DOI: 10.1109/ISOCC.2012.6407078
+
+[11] GAL, L. B., JEGO, C. and CRENNE, J. A high throughput efficient approach for decoding LDPC codes onto GPU devices, IEEE Embedded Syst. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014 DOI: 10.1109/LES.2014.2311317
+
+[12] KESKIN, S., KOCAK, T. GPU-Based Gigabit LDPC Decoder. IEEE Communications Letters Volume 21, Issue 8, 2017, p. 1703 - 1706 DOI: 10.1109/LCOMM.2017.2704113
+
+[13] Farkas, P., Rakus, M. Decoding five times extended Reed Solomon codes using syndromes. In Computing and Informatics. Vol. 39, no. 6 (2020), pp. 1311-1335. ISSN 1335-9150, DOI: 10.31577/cai_2020_6_1311
+
+[14] GRAYVER, E. Scaling the Fast x86 DVB-S2 Decoder to 1 Gbps, IEEE Aerospace Conference, 02 March 2019 DOI: 10.1109/AERO.2019.8742225
+
+[15] GAL, L. B. and JEGO, C. High-throughput multi-core LDPC decoders based on x86 processor, IEEE Trans. Parallel Distrib. Syst, vol. 27, pp. 1373-1386, May 2016 DOI: 10.1109/TPDS.2015.2435787
+
+[16] SY, M., Optimization Strategies for Low-Latency 5G NR LDPC Decoding on General Purpose Processor, International Conference on Control, Communication and Computing (ICCC), 2023 DOI: 10.1109/ICCC57789.2023.10165378
+
+[17] RADFORD, N. radfordneal/LDPC-codes. GitHub repository, 2011,
+
+[Online]
+
+Cited
+
+2023-11-26.
+
+Available
+
+at:
+
+https://github.com/radfordneal/LDPC-codes
+
+[18] WANG, A. Wangaran/LDPC Codes GitHub repository, 2015.
+
+[Online]
+
+Cited
+
+2023-11-26.
+
+Available
+
+at:
+
+https://github.com/wanganran/LDPC_codes/tree/master/LDPC_Code
+
+[19] TAVILDAR, S. Tavildar/LDPC GitHub repository, 2016, [Online] Cited 2023-11-26. Available at: https://github.com/tavildar/LDPC
+
+[20] SEA-WIND, cea-wind/LDPCC. LDPCC GitHub repository, 2018, [Online] Cited 2023-11-26. Available at: https://github.com/ceawind/LDPCC/tree/master
+
+[21] GAL, L. B. Blegal/LDPC GitHub repository, 2020, [Online] Cited
+
+2023-11-26.
+
+Available
+
+at:
+
+https://github.com/blegal/Fast_LDPC_decoder_for_x86
+
+[22] Palenik T., Szitkey V. High throughput open-source implementation of Wi-Fi 6 and WiMAX LDPC encoder and decoder. In:In. Journal IT Applications Vol 11,Nr 2,2022. ISSN: 2453-7497 [Available: https://www.paneurouni.com/veda/vedecke-casopisy/aplikacieinformacnych-technologii/archiv-5/ ]
+
+[23] CCSDS 131.0-B-5, Recommendation for Space Data System Standards TM synchronization and channel coding - Recommended standard - Blue book. CCSDS Washington DC (USA), 2023, p. 7-1– 7-11. Available at: https://public.ccsds.org/Pubs/131x0b5.pdf
+
+[24] PALENIK, T. YALDPC Toolkit, GitHub repository. [Online] Cited 2023-11-26. Available at: https://github.com/talenik/YALDPC
+
+[25] CASSAGNE, A., et al. AFF3CT: A Fast Forward Error Correction Toolbox!, Elsevier SoftwareX, vol. 10, p. 100345, July 2019 DOI: https://doi.org/10.1016/j.softx.2019.100345
+
+[26] PIOVESAN, N. nicopi/deep-space GitHub repository, 2020 Available at: https://github.com/nicopi/deep-space
+
+[27] GAIARIN, S. simgunz/802.11n-ldpc GitHub repository, 2021,
+
+Available
+
+at:
+
+https://github.com/simgunz/802.11n-ldpc.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:33:30 UTC from IEEE Xplore. Restrictions apply.
+
+

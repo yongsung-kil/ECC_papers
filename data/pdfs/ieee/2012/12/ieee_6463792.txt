@@ -1,0 +1,209 @@
+Hardware design and verification techniques for Giga-bit Forward-Error Correction systems on
+FPGAs
+A. Mahdi, P. Sakellariou, N. Kanistras, I. Tsatsaragkos and V. Paliouras, University of Patras - Electrical and Computer Engineering Department
+26500 Patras, Greece {mahdi, sakellariou, kanistras, tsatsaragkos, paliuras}@ece.upatras.gr
+
+Abstract—Contemporary and next-generation wireless, wired and optical telecommunication systems rely on sophisticated forward error-correction (FEC) schemes to facilitate operation at particularly low Bit Error Rate (BER). The ever increasing demand for high information throughput rate, combined with requirements for moderate cost and low-power operation, renders the design of FEC systems a challenging task. The definition of the parity check matrix of an LDPC code is a crucial task as it defines both the computational complexity of the decoder and the error correction capabilities. However, the characterization of the corresponding code at low BER is a computationally intensive task that cannot be carried out with software simulation. We here demonstrate procedures that involve hardware acceleration to facilitate code design. In addition to code design, verification of operation at low BER requires strategies to prove correct operation of hardware, thus rendering FPGA prototyping a necessity. This paper demonstrates design techniques and verification strategies that allow proof of operation of a gigabit-rate FEC system at low BER, exploiting the state-of-the-art Virtex-7 technology. It is shown that by occupying up to 70% − 80% percent of slices on a Virtex-7 XC7V485T device, iterative decoding at gigabit rate can be verified.
+Index Terms—LDPC encoding-decoding, low Bit Error Rate, parity check-matrix, Gbit application, hardware architecture, FPGA prototyping.
+I. INTRODUCTION
+Low-density parity-check (LDPC) [1] codes are considered strong candidates for current and next-generation forward error correction (FEC) systems in high-throughput optical, wireless or wired transmission and recording applications. Their excellent error-correcting performance and the inherent parallelism of the iterative decoding algorithms make them suitable for technologies such as DVB-S2, IEEE802.16e [2], and IEEE802.11n, ac [3]. High throughput rate comes at a relatively increased hardware cost.
+Error correction systems based on iterative decoders and long codewords are computationally intensive and require both bit wise operations and arithmetic operations, the latter usually in non-standard format. Furthermore, the memory access pattern is highly localized and distributed. The aforementioned structural characteristics of the iterative decoding systems renders extremely attractive combined with the recent evolution of their implementation on FPGAs. Due
+
+to the extremely low bit error rate (BER) specifications of contemporary telecommunications and storage systems which may be below 10−12, the design verification of iterative decoding systems is a challenge. In addition design optimization tasks such as finite-word length refinement which may involve stochastic procedures and extensive simulations become extremely time consuming, rendering hardware prototyping an essential part of the design flow, independently of the final implementation platform. Therefore in addition to the high cost of standard cell-based and full-custom chips that makes them prohibitive for certain applications, a relatively long design and verification time may be required for prototyping. Finally, the low throughput of software implementations may inhibit the development of software-only solutions. Hence FPGAs are well suited to serve as the implementation platform for special-purpose hardware in the field of the computation-intensive iterative decoding. FPGAs present an ideal compromise in that they retain the reconfigurability and control of software approaches while also achieving high throughputs near those of custom designed ASICs.
+Xilinx’s 7 Series FPGA devices can be considered as an enabling technology for high-performance physical layer baseband applications on FPGA [4]. State-of-the-art 28nm technology allows even higher throughput of FEC systems. Moreover, ultra-high LUT density enables multi-code multi-parallel systems to be placed on a single FPGA device together with the remainder of baseband functionality, or additional logic for code characterization and verification. A prominent feature of the 7-series FPGA devices is the sophisticated clock sourcing system composed of the clocking center line (the clock backbone) which divides the device into regions. This allows an accurate high-speed clock sourcing system and at the same time, allows high-speed communication between FPGA LUTs and the outside world. The device used in this paper, namely the Virtex-7 XC7V485T, has fourteen clock regions. Based on this device, multi-parallel systems with even different clock speed source can be placed in each region and still operate as a united system.
+In this paper we demonstrate that by taking advantage of the latest FPGA technology, it becomes possible to develop
+
+978-1-4673-1260-8/12/$31.00 ©2012 IEEE
+
+89
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:49:03 UTC from IEEE Xplore. Restrictions apply.
+
+a gigabit-rate FEC system prototype. The available hardware resources allow the incorporation of additional functionality relevant to the application or of support logic that can be used to support computationally-intensive system optimization tasks, such as LDPC code characterization under iterative decoding and internal data representation minimization. The high throughput rate of the low-BER FEC prototype is a necessity in order to support design iterations that utilize computationally-intensive optimization tasks in reasonable time, since the low-BER specification substantially increases the complexity of the system simulation.
+The remainder of the paper is organized as follows. Section II reviews the LDPC codes. The concept of the proposed design is analyzed in Section III. The throughput achieved by the proposed design and its area complexity are mentioned in Section IV, while Section V describes the verification methodology. Finally, Section VI concludes the paper.
+
+II. REVIEW OF LDPC CODES
+
+LDPC codes are linear block codes specified by a parity check matrix, H. The parity check matrix is sparse, of size M ×N , where N is the codeword (c) length, M is the number of parity bits (p) and K = N − M is the length of the information bits (s).
+In systematic codes, the parity check matrix H can be partitioned into two matrices, H1 and H2, such H = [H1 H2], and the codeword vector is then composed of s and p, such c = [s p] . The rows of the parity check matrix correspond to
+the parity check equations of the code and must be satisfied by every codeword c of the code, as follows,
+
+c · HT = 0 ,
+
+(1)
+
+where calculations are in GF (2). Encoding may be executed using the generator matrix G,
+where the parity bits p derive as p = u ⊗ G. This procedure can be implemented using a fully parallel vector-matrix multiplication, achieving gigabit throughput. On the other side, efficient decoding requires iterative execution of the decoding algorithm [1], which inherently limits the parallelism capabilities of the decoding procedure. Therefore, further techniques should be considered in order to achieve decoding throughput of gigabit order. Such techniques are addressed in the following sections.
+
+III. GIGABIT ITERATIVE DECODER DESIGN ON FPGA
+Modern telecommunication applications demand an increasingly high throughput rate. Their task graph often exhibits a high level parallelism which can be exploited by individual cores to achieve higher throughput. Such an application is a digital baseband processor of a 60GHz, 1.6Gbps point-to-point link, under Nexgen Miliwave research project [5]. The particular application requires the implementation of processing capable of compensating impairments due to millimeter-wave front-end and yet operate at a throughput rate in excess of one gigabit, with modest
+
+High Speed Low Speed High Speed Clock Domain Clock Domain Clock Domain
+
+15 bits at 984M Hz
+
+D1
+D2
+5 bits at 984M Hz
+
+Input Interface Output Interface
+
+DN
+
+DCM/MMCM
+Fig. 1: An instant of the decoding subsystem.
+hardware cost. This baseband processor provides all basic functionality required from a digital transmitter and receiver, including filtering, synchronization, equalization, and iterative error correction.
+Specifically, in this paper we focus on the development of the high-speed rate error correction subsystem. Targeting backhauling applications, a particularly low BER specification of 10−12 is imposed. Meeting the particular specification, as well as speed and complexity constraints, requires the adoption of sophisticated FEC techniques to provide a sufficient coding gain, which balances the overall link power budget at the channel operating point. Furthermore, extensive verification tasks are needed to be adopted based on hardware prototyping and effective IP management among involved collaborating independent design teams. By exploiting the features of series-7 FPGA devices, a gigabit error correction subsystem based on extensive parallelism of the decoder is shown to be implemented into a single FPGA device, keeping free adequate area, like DSP48 components, needed to implement filters and equalizers.
+The gigabit decoding subsystem (GbD) is composed of multiple decoders connected in a parallel fashion delivering a throughput that is a multiple of the throughput of each individual decoder. The loss of throughput in the parallel GbD is avoided by appropriately interleaving the transmitted codewords, thus eliminating the requirement for communication among the constituent decoders. A block diagram of the GbD subsystem is shown in Fig. 1. The challenge lays in the implementation of the input and output (I/O) interfaces; each decoder must receive the corresponding LLRs of the particular frame without inserting any extra delay and transmit the corresponding symbols in each clock cycle without omitting any data. This requires a high-speed I/O interface supporting a frequency that is a multiple of the number of the decoders comprising the GbD. This synchronization process is based on three main blocks, Serial-to-Parallel conversion in the input interface, Parallel-to-Serial conversion in the output interface, and clock generation in the communication between I/O and decoders.
+
+90
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:49:03 UTC from IEEE Xplore. Restrictions apply.
+
+DQ en
+DQ en
+DQ en
+
+DQ
+
+DQ en
+
+Walking One
+
+Counter
+
+(a) Input: Serial-to-Parallel
+
+(b) Output: Parallel-to-Serial
+
+Fig. 2: Input/Output Interface using Rotating Enables.
+
+The serial-to-parallel conversion is implemented using a loadable shift register or by rotating enables (multiplexer). A simple representation of the second method is shown in Fig. 2(a). The reverse logic is followed to implement the parallel-to-serial conversion, as shown in Fig. 2(b).
+Since the I/O interface and the decoding core component operate at different clock frequencies and the FPGA device provides one reference frequency, we need to adjust the provided clock frequency to generate multiple clock domains required to each component. For that purpose, a Digital Clock Manager (DCM), primitive in Xilinx FPGA parts, is used to implement digital clock synthesizer. It receives a reference clock and creates new ones, of scalable frequencies and phases supported by the device technology. The digital clock manager module is a wrapper around the DCM, which allows it to be used in the EDK tools suite. In series-7 FPGAs, the DCM component has been replaced by a Mixed-Mode Clock Manager (MMCM) having enhanced functions and capabilities. The reference high-speed clock is provided to the device using differential signaling.
+As the communication speed between the implemented circuits is of multi-hundreds-MHz, there is a need of signaling methods capable of handling high speeds. Differential signaling is such a method [4]. It has several advantages over single-ended signaling. For example, it is much less susceptible to noise. It helps to maintain a constant current flow into the driving IC. And rather than comparing a voltage to a set value or reference voltage, it compares two signals to each other. Thus, if the signal referenced as the positive node has a higher voltage than the one referenced negative, the signal is high, or one. If the negative referenced signal is more positive, the signal is low, or zero. The positive and negative pins are driven with exact complementary signals, as shown in Fig. 3.
+pn p
++_ n
+Fig. 3: High speed signals creation using differential signalling.
+
+The input stream includes 12 data bits (2 LLRs × 6 bits/LLR, assuming QPSK modulation) and additional 3 control bits, while the output stream has 2 data bits and 3 control bits. Data and control signals are multiplexed onto the same bus. An example of the input stream is shown in Fig. 4, where serial frames are delivered to parallel decoders. SD and ED, when active, define, correspondingly, the start and the end of the data, while VD remains active when the data is valid.
+clk LLRs
+SD ED
+VD
+Fig. 4: An example of input stream.
+
+IV. HARDWARE PERFORMANCE
+
+A. Throughput Rate and Frequency
+
+The throughput rate of the decoder is calculated as
+
+T
+
+=
+
+rate ×
+
+codelength nit × nclk
+
+×
+
+fmax
+
+,
+
+(2)
+
+where fmax is the maximum operating frequency of the decoder obtained from FPGA implementation, nit is the number of decoding iterations and nclk is the number of clock cycles required to complete one iteration. Equation (2)
+
+excludes the loading time of the individual LLRs (before
+
+starting the decoding process) and transmitting time of the
+
+decoded data (after decoding is completed). The implemented
+
+decoder [6] requires three iterations to ensure a good decoding performance at BER of 10−12 and Eb/N0 equals to 5db.
+Therefore, each decoder of Fig. 1 is configured to execute
+
+three iterations, avoiding synchronization problems caused by
+
+early decoding convergence. The total throughput of an GbD instant is then given as, Ttotal = N × T , WHERE N is the number of the decoders in the instant and T is given
+
+by (2). In case of maximum generated frequency restrictions
+
+of the used FPGA device, which is required to implement I/O
+
+interface, the GbD instant can be divided into smaller parallel
+
+instants, each one has its own I/O. Therefore, the achieved total throughput is computed as the Ttotal of each instant, multiplied by the number of instants.
+The decoder of [6] with codeword length of 2016 bits and code rate of 3/4, and 7-parallelism degree
+
+has been implemented in Virtex-7 FPGA, device XC7VX485T-2FFG1761, achieving a frequency of 177MHz and throughput of 144Mbps. The corresponding occupied area
+
+is shown in Table I. The I/O interface of Figs. 2(a) and 2(b) operates at frequency of 1.1GHz. The specific application targets on data rate with throughput of 1.6Gbps, therefore, an instant of 12 parallel decoders of 177MHz is needed to
+
+achieve the required throughput. To accomplish that, I/O interface must operate at frequency equals to 2.124GHz,
+
+which can not be achieved. Furthermore, the maximum
+
+frequency could be provided by the certain FPGA device,
+
+91
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:49:03 UTC from IEEE Xplore. Restrictions apply.
+
+generated by the MMCM module, is 1.44GHz. Therefore, we need to implement two parallel GbD instants of Fig. 1, where each one will be composed of 6 parallel decoders. Each decoder has throughput 134Mbps at 164MHz, and each I/O will process at 984MHz.
+
+B. Area Complexity
+The used FPGA device provides 75, 900 slices, thus facilitating the implementation of several iterative decoders. The Serial-to-Parallel and the Parallel-to-serial components occupy about 2% of the available slices. Due to the restriction on maximum clock generation, required to supply I/O interface, in our experimental system, two GbD instants are implemented. The total occupied area of the 1.6Gbps-GbD subsystem and the achieved throughput are shown in Table I, where each instant comprises 6 decoders. The implemented
+
+TABLE I OCCUPIED AREA AND ACHIEVED THROUGHPUT OF THE GBD SUBSYSTEM.
+
+XC7VX485T-2FFG1761
+One Decoder 1 instant 2 instants
+
+Area
+
+Slices Utilization
+
+5, 573
+
+7%
+
+30, 052 39%
+
+57, 105 75%
+
+Throughput M bps 144 804 1608
+
+Host Pc with ChipScope/
+Matlab
+
+Top-Level module ICON
+Controller
+ILA
+
+VIO GbD
+
+Fig. 5: Verification of GbD using ChipScope modules.
+LDPC decoding algorithms, on the other hand, restricts the parallelism capabilities internally of the decoder. Due to these restrictions, sophisticated techniques are employed to achieve gigabit decoding throughput rate. In particular, a structure of parallel decoders, is efficiently implemented and functionally verified in this work, resulting to the desired 1.6Gbps data rate. The achieved throughput rate allows the code characterization at very low BER thus decreasing the time of the required verification activities. Hence we have experimentally demonstrated that is feasible to implement gigabit-rate prototypes in FPGAs, thus allowing verification at full speed and a design space exploration, not possible with ASIC technologies, traditionally used for the implementation of high-speed FEC systems.
+
+core occupies one additional MMCM module, used to generate the clocks required to each component.
+V. DESIGN VERIFICATION
+The functionality of the implemented LDPC decoder has been extensively verified using the method proposed in [7]. Due to the high-speed I/O components, an integrated logic analyzer is required to allow direct access to the hardware core at high-speed rates. In order to verify the functionality of the GbD subsystem, decoded frames are captured and verified by a corresponding Matlab bit-true model. ChipScope Modules are incorporated into the design [8] to allow the capturing of several frames for verification. These modules are used to capture input and output directly from the implemented FPGA system, as shown in Fig 5. We exploit the Integrated Controller (ICON), a module that provides communication between the ChipScope host PC and ChipScope modules in the design. ICON is sequentially connected to the Virtual Input/Output (VIO) module which monitors and drives signals in the GbD subsystem in real-time, while the Integrated Logic Analyzer (ILA) gives the ability to monitor and trigger on signals in GbD. The output of the GbD is then acquired and verified against the corresponding results of the Matlab bit-true model.
+VI. CONCLUSIONS
+The proposed GbD design exploits the FPGA device resources in order to implement LDPC decoding supporting gigabit throughput rate. Although the encoding process can be fully parallel, thus increasing significantly the data throughput rate, the inherent sequential nature of iterations in iterative
+
+ACKNOWLEDGMENT
+The research activities that led to these results, were co-financed by Hellenic Funds and by the European Regional Development Fund (ERDF) under the Hellenic National Strategic Reference Framework (NSRF) 2007-2013, according to Contract no.MICRO2-SE-B/E-II of the Project “Next Generation Millimeter Wave Backhaul Radio” within the Programme “Hellenic Technology Clusters in Microelectronics - Phase-2 Aid Measure”.
+REFERENCES
+[1] R. Gallager, “Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, 1962.
+[2] I. S. 802.16e 2005, IEEE Std 802.16e-2005 and IEEE Std 802.16-2004/Cor 1-2005 (Amendment and Corrigendum to IEEE Std 802.16-2004, May 2006.
+[3] I. 11-04-0889-06-000n, IEEE P802.11 wireless LANs WWiSE Proposal: TGnSync Proposal Technical Specification, May 2005.
+[4] Xilinx, “7 series FPGAs Clocking Resources,” Website, Jul. 2012, http:// www.xilinx.com/support/documentation/user guides/ug472 7Series Clocking.pdf.
+[5] N. Kanistras, I. Tsatsaragkos, A. Mahdi, K. Karagianni, V. Paliouras, F. Gioulekas, E. Lalos, K. Adaos, M. Birbas, P. Karaivazoglou, M. Koziotis, and M. Perakis, “Digital baseband challenges for a 60GHz gigabit link,” in 2011 18th IEEE International Conference on Electronics, Circuits and Systems (ICECS),, Dec. 2011, pp. 346–349.
+[6] I. Tsatsaragkos and V. Paliouras, “A flexible layered LDPC decoder,” in 2011 8th International Symposium on Wireless Communication Systems (ISWCS), Nov. 2011, pp. 36–40.
+[7] P. Sakellariou, I. Tsatsaragkos, N. Kanistras, A. Mahdi, and V. Paliouras, “An FPGA-based prototyping method for versification, characterization and optimization of LDPC error correction systems,” in IEEE International Conference on Embedded Computer Systems (SAMOS XII), Jul. 2012.
+[8] Xilinx, “Chipscope pro software and cores,” Website, Jul. 2012, http://www.xilinx.com/support/documentation/sw manuals/xilinx14 2/ chipscope pro sw cores ug029.pdf.
+
+92
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:49:03 UTC from IEEE Xplore. Restrictions apply.
+
+

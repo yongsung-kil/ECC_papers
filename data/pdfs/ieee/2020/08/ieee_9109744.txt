@@ -1,0 +1,743 @@
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+8725
+
+Learning to Denoise and Decode: A Novel Residual Neural Network Decoder for Polar Codes
+Hongfei Zhu , Zhiwei Cao, Yuping Zhao , and Dou Li
+
+Abstract—Polar codes are known as the first capacity-achievable codes with low encoding and decoding complexity. The sequential decoding nature of traditional polar decoding algorithms such as successive cancellation (SC) results in high decoding latency, which is not suitable for services that require high reliability and low latency. Deep learning for decoding, referred to as neural network decoder (NND), has shown strong competitiveness because of its non-iterative and full-parallel feature. Whereas, the bit-error-rate (BER) performance of NND is still not satisfactory. In this paper, we first propose a residual learning denoiser (RLD) for polar codes. The RLD can remarkably improve the signal-to-noise ratio (SNR) and reduce the symbol-error-rate (SER) of received symbols. In order to decode polar codes more efficiently, we subsequently propose a residual neural network decoder (RNND) for polar codes. Different from the traditional pure-NND (PNND) which directly uses neural network for decoding received symbols, the proposed RNND concatenates a RLD used for denoising and a NND used for decoding. We provide a novel multi-task learning (MTL) strategy to jointly optimize the denoiser and decoder, and find that the denoising gain of Joint-RLD is more significant than the Independent-RLD. Numerical results show that the proposed RNND outperforms its counterpart PNND with regard to the BER performance. In addition, the optimal RNND(MLP-MLP) approaches the traditional SC decoding performance, while saving more than one hundred times of computation time. Eventually, scalability of the RNND to longer polar codes as well as LDPC codes further demonstrates the superiority of our proposed scheme.
+Index Terms—Polar codes, neural network decoder, residual learning, multi-task learning, successive cancellation.
+I. INTRODUCTION
+P OLAR codes, proposed by Erdal Arikan [1], are the first constructive and provable coding schemes to achieve the symmetric capacity of the binary-input discrete memoryless channels (B-DMCs) under a successive cancellation (SC) decoding algorithm. Although SC has a lower complexity O(N logN ) in terms of the code length N , the finite-length performance of polar codes under SC is not competitive. Therefore, successive cancellation list (SCL) [2], [3], successive cancellation stack (SCS) [4] and CRC-aided SCL/SCS decoders [5] were
+Manuscript received November 15, 2019; revised April 2, 2020 and May 20, 2020; accepted June 1, 2020. Date of publication June 5, 2020; date of current version August 13, 2020. This work was supported in part by the National Key Research and Development Program of China under the Grant 2018YFB1801403 and in part by the Huawei Technologies Co., Ltd. The review of this article was coordinated by Prof. H.-F. Lu. (Corresponding author: Dou Li.)
+The authors are with the School of Electronics Engineering and Computer Science, Peking University, Beijing 100871, China (e-mail: zhuhongfei@ pku.edu.cn; cao_zhiwei@pku.edu.cn; yuping.zhao@pku.edu.cn; lidou@pku. edu.cn).
+Digital Object Identifier 10.1109/TVT.2020.3000345
+
+proposed to improve the decoding performance of polar codes. Nevertheless, those decoding algorithms still suffer from high latency as well as limited throughput because of their sequential decoding property, which hinders their practical application in wireless communication systems requiring high reliability and low latency.
+Recently deep learning (DL) [6], also referred to as deep neural network, has attracted worldwide attentions due to its powerful capability to solve complicated tasks. With the aid of DL, significant improvements have been achieved in many fields, such as computer vision [7], natural language processing [8], autonomous vehicles [9] and many other areas. Applications of DL in the communication physical layer have a long history covering a wide range of aspects [10]. These applications comprise equalization [11], channel decoding [12], [13], compressed sensing [14], modulation detection [15], massive multiple input multiple output (MIMO) systems [16], etc. The powerful data processing capability of DL systems makes it hold the potential to improve on some of these communication algorithms in terms of reliability, generality, latency, and energy efficiency.
+Among all communication modules, the general channel decoding module can be solved with DL because it can be regarded as a type of classification problem [17]. The channel decoder based on deep neural networks is called neural network decoder (NND) which consists of two stages: NND training and NND testing. Non-iterative and consequently low-latency decoding are two main advantages of NND, because NND calculates the estimated value of information bits by passing each layer only once with the pre-trained neural network, which is referred to as one-shot decoding [18]. Compared with traditional DL scenarios such as image classification, it is easier for NND to obtain training samples, because the features of training samples are the noisy versions of the N -bit codewords and the labels of training samples are the K information bits. What’s more, compared with traditional decoding algorithms, NND can be fastly and efficiently implemented using the current DL platforms, such as Pytorch [19], and the powerful hardwares like graphical processing units (GPUs).
+A. Related Works and Motivation
+NND has been applied to numerous channel coding schemes such as Hamming codes [20], convolutional codes [21] and BCH (Bose, Ray-Chaudhuri, Hocquenghem) codes [12], [13] and LDPC (low-density parity-check) codes [22]. After polar codes were put forward by Erdal Arikan in 2009 [1], NND for
+
+0018-9545 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8726
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+polar codes was first proposed in [18], where the authors found that structured codes are indeed easier to learn than random codes, and the bit-error-rate (BER) performance of NND is close to that of maximum a posteriori (MAP) decoding. To address the challenge that it is difficult for NND to train long codes [18], the authors in [23] proposed to divide the polar coding graph into sub-blocks, and the decoder for each sub-codeword is trained separately. To solve the same proplem, the authors in [24] proposed a multiple scaled belief propagation (BP) algorithm and designed a novel deep neural network decoder based on the factor graph of polar codes. However, the decoding latency in [24] is long since the depth of NND is determined by iteration number and code length. So the authors in [25] proposed a sparse neural network decoder (SNND) for polar codes based on the sparse Tanner graph to reduce decoding complexity and latency. Later in [17] the authors considered a deep feed-forward neural network for polar codes and investigated its decoding performances with respect to numerous configurations: the number of hidden layers, the number of nodes for each layer, and activation functions. More discussion about the activation function of the neural network for decoding polar codes and decoding under Rayleigh fading channels using NND can be found in [26] and [27], respectively. In [28], the authors compared the decoding performance of three types of neural network, i.e., multi-layer perceptron (MLP), convolutional neural network (CNN) and recurrent neural network (RNN) with the same parameter magnitude. The authors found that the neural network is capable of learning the encoding structure perfectly with noiseless codewords as training data. The comparison of the three types of neural network was also discussed in [29], where the authors proposed a unified polar-LDPC NND by concatenating an indicator section.
+Recently the authors in [7] have designed a deep residual learning framework (ResNet) by introducing a “shortcut connection” to realize identity mapping. The advantage of ResNet over traditional networks is that ResNet is capable of addressing the performance degradation problem and gain accuracy when training deeper neural networks. Later in [30] the authors proposed a image denoising scheme called denoising convolutional neural networks (DnCNNs), where residual learning and batch normalization are utilized to speed up the training process as well as boost the denoising performance.
+As for the channel decoding problem, the received symbols can also be seen as the noisy versions of the codewords, from which we can think that codeword denoising can be regarded as the one-dimensional (1-D) special case of two-dimensional (2-D) image denoising. The traditional pure-NND (PNND) directly utilizes multi-layer neural networks to decode received symbols [17], [18], [23]–[29], whereas the denoising operation is ignored. It is well known that higher testing SNR (signal-tonoise ratio) during the NND testing stage will lead to better BER performance. Intuitively, if we place a denoising neural network module before NND to improve the testing SNR, the modified NND will probably show a better decoding performance than the original NND. Presumably, ResNet will be an appropriate choice for the denoising neural network module.
+
+B. Main Contributions
+In this paper, a comprehensive study is conducted to design and optimize the denoising neural network module before NND. The main contributions of this paper are summarized as follows:
+1) We propose a residual learning denoiser (RLD) for polar codes. The RLD could be constituted by any one of the three types of neural network, MLP, CNN, or RNN. We show that the RLD has a powerful capability to improve the SNR of received symbols. And as a result, the symbolerror-rate of (SER) of the received symbols under hard decision will be reduced remarkably.
+2) We propose a residual neural network decoder (RNND) for polar codes. The proposed RNND concatenates a RLD used for denoising and a NND used for decoding. A novel multi-task learning (MTL) strategy is adopted to jointly optimize the denoising loss function and decoding loss function. The less denoising loss, the higher SNR improvement and the lower SER all verify the effectiveness of the MTL strategy.
+3) We carry out extensive experiments to evaluate and analyse the proposed RNND. Simulation results show that the BER performance of the proposed RNND has a considerable advantage over its counterpart PNND. In addition, the optimal RNND(MLP-MLP) runs more than one hundred times faster than the SC algorithm with a negligible performance gap.
+4) We implement more simulations to prove the scalability of the proposed RNND. Scalability to longer polar codes demonstrates that the residual learning structure and MTL are effective to address the problem of dimensionality. Moreover, scalability to LDPC codes further validates the universality of the proposed scheme for different codes.
+The remainder of this paper is organized as follows. Section II provides some preliminary knowledge of polar codes, three types of neural network (MLP, CNN, RNN) and the residual learning. We give a detailed description of the proposed RLD and the reason for introducing ResNet as denoiser in Section III. The architecture of the proposed RNND with the MTL strategy is given in Section IV. In Section V, we provide the training and testing strategy along with corresponding numerical results. Eventually, concluding remarks and future works are given in Section VI.
+II. PRELIMINARIES
+A. Polar Codes
+To construct (N, K) polar codes, we should first calculate the reliability order of N subchannels, i.e., code construction. For the binary-input additive white Gaussian noise (BI-AWGN) channel, code construction usually adopts Gaussian approximation (GA) method [31]. Then the K information bits uA and the other N − K frozen bits uAc are assigned to the reliable and unreliable positions of the N -bit message uN1 , respectively. A is the information set and Ac is the frozen set. The N − K frozen bits with indices in Ac are always fixed to zeros. Finally the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8727
+
+N -bit transmitted codeword xN1 can be obtained by multiplying uN1 with the generator matrix GN as
+
+x1N = u1N GN = uN1 BN F2⊗n, n = log2 N
+
+(1)
+
+where
+
+⊗
+
+denotes
+
+the
+
+Kronecker
+
+product,
+
+F2
+
+=
+
+[1
+1
+
+0]
+1
+
+and
+
+BN
+
+is
+
+the bit-reversal permutation matrix.
+
+The codeword x1N can be modulated to sN1 by binary phase
+
+shift keying (BPSK) modulation, which is then transmitted
+
+over a B-DMC W . Let y1N be the channel output, then the log-likelihood ratio (LLR) of yi, i = 1, 2, . . ., N is defined as
+
+L(yi)
+
+=
+
+log
+
+W W
+
+(yi|xi (yi|xi
+
+= =
+
+0) 1)
+
+(2)
+
+The SC decoder calculates the LLR of the ith message bit ui, i = 1, 2, . . ., N as
+
+Fig. 1. Diagram of multi-layer perceptron (MLP). MLP has an input layer, an output layer and a lot of hidden layers.
+
+L(Ni)(y1N , uˆi1−1)
+
+=
+
+log
+
+WN(i)(y1N , WN(i)(y1N ,
+
+uˆi1−1|ui uˆi1−1|ui
+
+= =
+
+0) 1)
+
+(3)
+
+Here, uˆi1−1 denotes the estimate of ui1−1 and WN(i)(y1N , uˆi1−1|ui) stands for the transition probability of the ith subchannel. The
+
+LLRs in (3) are computed in a recursive manner by the SC algo-
+
+rithm. Judgment should be implemented to get the N message
+
+bitsr
+
+as follows: If ui is a frozen
+
+bit,
+
+the
+
+decoder
+
+output
+
+for
+
+ui
+
+is
+
+always
+
+set
+
+r
+
+to zero. If ui is selected as an information bit, the decoder deter-
+
+mines uˆi by taking the sign of L(Ni)(y1N , uˆi1−1).
+
+The process of decoding judgment above can be expressed as
+
+Fig. 2. Diagram of convolutional neural network (CNN). The black and blue arrows represent convolution and pooling operations, respectively.
+
+0,
+
+if i ∈ Ac
+
+uˆi = hi(y1N , uˆi1−1), if i ∈ A
+
+(4)
+
+where
+
+⎧
+
+⎨ 0, hi(y1N , uˆi1−1) = ⎩ 1,
+
+if L(Ni)(y1N , uˆi1−1) ≥ 0 otherwise
+
+(5)
+
+If u1N = uˆN1 then we say that a decoder frame error has occurred.
+
+B. Neural Network
+In this paper, we utilize three popular and effective neural network architectures: 1) MLP; 2) CNN; 3) RNN to construct the RLD and compare their denoising performance. Here, we briefly describe the general architecture of the three types of neural network.
+1) MLP: MLP is a kind of feedforward and densely connected neural network. There is no feedback or loop in the neural network and each node is connected with all its ancestors. The general architecture of MLP is described in Fig. 1. MLP has an input layer, an output layer and a lot of hidden layers. The input data is processed layer by layer with affine transformation and nonlinear activation function between layers and finally reaches the output layer. Commonly used nonlinear activation functions
+
+include sigmoid function and rectified linear unit (ReLU) function which are respectively defined as
+
+gsigmoid(z)
+
+=
+
+1
+
+1 + e−z
+
+, gReLU (z)
+
+=
+
+max{0, z}
+
+(6)
+
+Denoting i as the input and o as the output of the MLP, an inputoutput mapping is defined by a chain of functions depending on a set of parameters w by
+
+o = f (i; w) = f (L−1) f (L−2) . . . f (0)(i)
+
+(7)
+
+where L denotes the number of layers and is also called depth. 2) CNN: CNN is also a class of feedforward artificial neural
+network which has been widely used in computer vision tasks like image classification, recognition, segmentation, and so on in recent years. Fig. 2 shows the classical diagram of CNN. The hidden layers of classical CNN are either convolutional layers or pooling layers. Assume that the convolutional layer l contains kl feature maps, then each of these feature maps implement convolution operations on all of kl−1 feature maps of the convolutional layer l − 1 with a kernel of size fl × fl. The pooling layer is also referred to as sampling layer, whose typical applications include MaxPooling layer and MeanPooling layer [32].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8728
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+Fig. 3. Diagram of long short-term memory (LSTM). ht, Ct, Xt and Ot represent the hidden state, cell state, input vector and output vector at time t,
+respectively. LSTM contains three gates called forget gate, input gate and output
+gate, respectively.
+
+Fig. 4. Residual learning: a building block.
+flexible, which can comprise multiple MLP layers, CNN layers or LSTM units.
+
+It is universally known that CNN has strong ability of extract-
+
+ing features automatically. The key reasons for the success of
+
+CNrNCaNreNlisdteradsatiscafolllylowresd:uces parameters in the network via
+
+parameter sharing, and thus decreases the risk of overfitting
+
+r
+
+and alleviates the difficulty to train deep neural networks. CNN explicitly exploits the spatial or temporal correlation
+
+in the input data through convolution, which is crucial to
+
+efficient feature extraction.
+
+3) RNN: RNN is a class of neural network that has recurrent
+
+structure, i.e., previous states will influence current outputs.
+
+Unlike feedforward neural networks, RNN can use their in-
+
+ternal memory to process arbitrary sequences of inputs, which
+
+makes them suitable for tasks such as unsegmented, connected
+
+handwriting recognition or speech recognition [33]. Traditional
+
+RNN suffers from severe vanishing and exploding gradients
+
+problem [34], making it difficult to train. Hence, in practice,
+
+people usually utilize its variants like long short-term memory
+
+(LSTM) [35] and Gated Recurrent Unit (GRU) [36]. In this
+
+paper, we use LSTM as our practical RNN implementation. As
+
+presented in Fig. 3, LSTM contains three gates called forget
+
+gate, input gate and output gate, respectively. The three gates are
+
+mainly used to control the information flow, which can prevent
+
+backpropagated errors from vanishing or exploding.
+
+C. Residual Learning
+Residual learning of deep neural network was first proposed in [7] to solve the performance degradation problem, i.e., the training accuracy begins to decrease as the depth of the neural network increases. Fig. 4 illustrates the general architecture of the residual learning block. Formally, denoting the desired underlying mapping as H(x), the authors stacked a few nonlinear layers to fit another mapping of F(x) := H(x) − x, which is referred to as residual mapping. The shortcut connection simply performs identity mapping, and its output is added to the output of the stacked layers. Consequently, the original mapping is recast into F(x) + x. Note that compared with the counterpart plain neural nertwork, the identity shortcut connection adds no extra parameter and neglectable computational complexity. Additionly, the construction of residual mapping F(x) is specially
+
+III. THE PROPOSED RESIDUAL LEARNING DENOISER
+In this section, we first present the system model of the proposed RLD. A loss function called denoising loss function when training the RLD is subsequently introduced. In the following, we provide the network architecture and parameter design of the three types of RLD: RLD(MLP), RLD(CNN) and RLD(RNN). Finally, we detailedly illustrate the reason for introducing ResNet to denoise and the advantages of choosing ResNet as denoiser.
+
+A. System Model
+
+The system model of the proposed residual learning denoiser
+(RLD) in this paper is shown in Fig. 5. At the transmitter, K-bit information uA is first encoded into a N -bit codeword xN1 with a polar encoder. Then x1N is mapped to N modulated symbols s1N through BPSK modulation by si = 1 − 2xi for i = 1, 2, . . ., N . The modulated symbol s1N is subsequently transmitted over an BI-AWGN channel. The signal model for received symbols can
+be formulated as
+
+y1N = sN1 + n1N
+
+(8)
+
+where nN1 ∼ N (0, σ2IN ) represents the i.i.d. Gaussian noise vector. At the receiver, the received symbol vector y1N enters the RLD to reduce its noise, and after denoising, we obtain the estimated value of sN1 denoted as sˆN1 at the output of the denoiser.
+
+B. Denoising Loss Function
+
+Clearly, the training features of the RLD are the received symbols, i.e., y1N , while the training labels of the RLD are the modulated symbols, i.e., s1N . As shown in Fig. 5, denoting the residual function corresponding to the stacked weight layers in the RLD as F (y1N ), then the output sˆ1N of the denoiser, i.e., the original function H(y1N ), will be the element-wise sum of the identity function y1N and the residual function F (y1N )
+
+sˆ1N = H(y1N ) = y1N + F (y1N )
+
+(9)
+
+For the denoising task, we aim to minimize the difference between sˆN1 and s1N in order to improve SNR of the received symbols. Here we take mean squared error (MSE) to measure the discrepancy between sˆN1 and s1N , which leads to the loss
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8729
+
+Fig. 5. The system model of the proposed residual learning denoiser (RLD) in this paper. The residual function F (y1N ) consists of one input layer, three hidden layers and one output layer in the RLD. The denoising loss function corresponds to (10).
+
+function for the denoising task
+
+Ldenoise(sˆN1 , s1N )
+
+=
+
+1 N
+
+||sˆ1N
+
+− sN1 ||22
+
+(10)
+
+where || · ||2 represents the Euclidean norm of a vector.
+
+TABLE I THE NETWORK PARAMETER DESIGN OF THE THREE RLDS
+
+C. Network Architecture and Parameter Design
+In this paper, we use a single residual learning block to build the RLD and compare the performance of three different types of RLD called RLD(MLP), RLD(CNN) and RLD(RNN), which are built by MLP, CNN, RNN, respectively. Each RLD has one input layer, one or more hidden layers and one output layer. The dimension of the input layer is N . The hidden layers of the three RLDs are depicted as follows:
+1) RLD(MLP): We employ three fully connected layers with 128, 64, 32 nodes as the three hidden layers of the RLD(MLP). The activation function of each hidden layer is ReLU.
+2) RLD(CNN): In most image processing tasks, CNN deals with 2-D input image data. However, in our denoising task, the input of CNN is the 1-D received signal vector. Therefore, we should adopt the convolutional layer with 1-D convolution instead of classical 2-D convolution. We empoly three basic convolutional blocks as the three hidden layers of the RLD(CNN). Each basic convolutional block consists of one convolutional layer, one MaxPooling layer and the ReLU activation function. The number of feature maps of the three convolutional layers are 64, 48 and 32, respectively and the convolutional kernel size is set to 3. In addition, the MaxPooling layer with kernel size 2 and stride 2 is utilized between the adjacent convolutional layers.
+3) RLD(RNN): Different from the RLD(MLP) and the RLD(CNN), the RLD(RNN) has only one hidden layer. We empoly a single LSTM unit with hidden-dimension 64 as the hidden layer. At each time step, the LSTM runs through one input vector with N input symbols and produces an output vector of dimension 64. After the LSTM reads all input vectors, it produces a sequence of output vectors. Due to the recurrent nature of RNN, the last 64-D vector in the output sequence contains information of all input vectors, which we select as the feature vector.
+
+A striking feature of the ResNet in Fig. 4 is that the dimension of x and F(x) must be equal in order to implement addition operation F(x) + x. The dimension of x is N so that all the three RLDs must use a fully connected layer with N nodes as the output layer to achieve dimension matching. Note that no activation function is used in the output layer in order to eliminate positive and negative noise. The detailed values of network parameters of the three RLDs are listed in Table I. The principle of the network parameter design is to ensure that the total number of trainable parameters of the three RLDs are approximately the same. Note that the short cut of the RLD does not add any extra parameter compared to its plain counterpart.
+D. The Reason for Introducing ResNet as Denoiser
+The traditional PNND directly utilizes multi-layer neural networks to decode received symbols [17], [18], [23]–[29], whereas the denoising operation is ignored. At the NND testing stage of the PNND, it is obvious that higher testing SNR contributes to lower BER. Intuitively, if we can place a denoiser before NND to improve the testing SNR of the received symbols and the denoised symbols are then sent to the NND to decode, the modified NND will be likely to show better BER performance.
+Residual learning has been shown to be a powerful tool for image denoising [30]. The task of image denoising is to recover the original image pixels X from its noisy observation Y, following the additive model Y = X + W where W denotes the unknown noise. Returning to our task in this paper, the role of ResNet in the codeword denoising architecture is to recover the true symbol vector s1N from its noisy version y1N following the model (8), which is very similar to image denoising. The original symbol vector s1N in our task corresponds to the image pixels X in image denoising and the error vector n1N corresponds to the noise W.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8730
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+Fig. 6. The system model of the proposd residual neural network decoder (RNND) in this paper. Residual learning denoiser (RLD) and neural network decoder (NND) make up the architecture of the RNND. The denoising loss function and decoding loss function correspond to (10) and (12), respectively. The multi-task loss function is the proposed joint optimization objective (13).
+
+The unique difference is that the input of image denoiser is 2-D while the input of codeword denoiser is 1-D. Notice that just like ResNet-based image denoising which exploits the spatial correlation in pixels X, the proposed RLD exploits the temporal correlation in the symbol vector s1N .
+As for our codeword denoising task, the advantages of choosing ResNet as the denoiser are summarized as follows:
+1) The denoiser can be built by either a plain network or a ResNet to learn the original mapping H(y1N ) to predict s1N . According to [7], when the original mapping is more like an identity mapping, the ResNet will be much easier to be optimized than the plain network. Note that the noisy codeword y1N is much more like the latent clean codeword s1N (especially when the SNR is very high). Thus, the original mapping would be more close to an identity mapping, and the residual learning formulation is more suitable for codeword denoising.
+2) Residual learning alleviates the difficulty of training deeper neural network since it provides shortcut connections for backpropagated gradients signals. The performance degradation problem has been well solved by ResNet, which enables us to adopt deeper and more powerful neural networks.
+3) The performance of the RLD are investigated via numerical experiments presented later. We find that the RLD can significantly improve the SNR and reduce the SER of received symbols, which demonstrates the superiority of ResNet from the perspective of practice.
+
+those modules before the RLD in Fig. 6 are exactly the same as
+that in Fig. 5. Additionally, in order to realize the goal of polar
+decoding, we concatenate a NND module used for decoding after
+the RLD module. The two neural network modules, RLD and
+NND, together make up the architecture of the proposed RNND. At the receiver, the received symbol vector y1N first enters the RLD to reduce the noise. After the denoising process, the filtered signal vector sˆ1N is then sent to the NND to decode. Finally, we obtain the estimated value of uA, denoted as uˆA.
+
+B. Decoding Loss Function
+
+In our work, we regard the channel decoding task as a binary
+classification problem, i.e., the desired output of NND’s each
+output layer node is 0 or 1. Denote the function corresponds to the NND as G, and we can get the relationship between sˆ1N and uˆA by
+
+uˆA = G sˆN1
+
+(11)
+
+For the classification problem, there are some commonly used loss functions like binary cross entropy (BCE) and MSE. In [18] the authors have shown via experiments that MSE and BCE have little difference w.r.t. the BER performance. Here, we utilize MSE as our loss function for the decoding task and the decoding loss function can be formulated as
+
+Ldecode(uˆA, uA)
+
+=
+
+1 K
+
+||uˆA
+
+−
+
+uA||22
+
+(12)
+
+C. Multi-Task Learning Strategy
+
+IV. THE PROPOSED RESIDUAL NEURAL NETWORK DECODER
+In this section, we first present the system model of the proposed RNND. Then to achieve the goal of decoding, we concatenates a NND after the RLD and introduce a loss function called decoding loss function. The denoising loss function and decoding loss function of the RNND will be jointly optimized through a novel MTL strategy, which will be discussed in the following. Ultimately, we provide the network architecture and parameter design of the three types of RNND: RNND(MLPMLP), RNND(CNN-CNN) and RNND(RNN-RNN).
+A. System Model
+The system model of the proposd residual neural network decoder (RNND) is shown in Fig. 6. The RLD module and
+
+Multi-task learning (MTL) is an approach of inductive transfer that uses the domain information contained in the training signals of related tasks as an inductive bias to improve generalization [37]. The shared representation adopted by MTL can guarantee that what is learned for each task can help other tasks be learned better. In this paper, we adopt the MTL strategy to train the proposed RNND so that it can accomplish both denoising and decoding task. Explicitly, we add up the decoding loss function and denoising loss function together as the multi-task loss function of the RNND
+
+LMT L = Ldenoise + λ · Ldecode
+
+(13)
+
+where λ is the weight factor that can be considered as a hyperparameter. With MTL, the learning process of the denoiser and the decoder can reinforce mutually. In other words, the gradient
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8731
+
+signal backpropagating from the NND may lead to a better learning result of the RLD. Meanwhile, the RLD will reduce noise level of the received signal, which facilitates the NND to learn decoding rules. Since Ldenoise and Ldecode are both continous and differentiable everywhere, LMT L is also continous and differentiable everywhere, which can be efficiently optimized with some famous optimizers like SGD [38] and Adam [39].
+The denoising loss function of the RLD in Fig. 5 is optimized independently while the denoising loss function of the RLD in Fig. 6 is optimized jointly with the decoding loss function of the NND. To distinguish between the two kinds of RLD, in the following we refer to the former and the latter as IndependentRLD and Joint-RLD, respectively. The Joint-RLD is expected to yield better denoising performance than the Independent-RLD, which is confirmed by experiments in Section V.
+D. Network Architecture and Parameter Design
+Just like the construction of the RLD in Section III-C, the NND can also be built by any one of the three types of neural network, MLP, CNN or RNN. In this work, we compare the performance of three different types of RNND called RNND(MLPMLP), RNND(CNN-CNN) and RNND(RNN-RNN), respectively. Each RNND utilizes the same type of neural network to build RLD and NND. For example, the RLD and the NND inside the RNND(MLP-MLP) are both built by MLP, and the same is true of RNND(CNN-CNN) and RNND(RNN-RNN).
+The network architecture and parameter design of the three Joint-RLDs still remain the same as the three IndependentRLDs. For each RNND, the NND keeps the network architecture the same as its corresponding RLD, except that the short cut has been cancelled because the task for NND is decoding instead of denoising. Nonetheless, to ensure that the total number of trainable parameters of three RNNDs are nearly consistent, we need to slightly adjust the parameter design of each NND. The dimension of the input layer is N and the hidden layers of the three NNDs inside the three RNNDs are illustrated as follows:
+1) NND(MLP): We employ three fully connected layers with 128, 64, 32 nodes as the three hidden layers of the NND(MLP). The activation function of each hidden layer is ReLU.
+2) NND(CNN): We empoly three basic convolutional blocks as the three hidden layers of the NND(CNN). Each basic convolutional block consists of one convolutional layer, one MaxPooling layer and the ReLU activation function. The number of feature maps of the three convolutional layers are 64, 32 and 32, respectively and the convolutional kernel size is set to 3. In addition, the MaxPooling layer with kernel size 2 and stride 2 is utilized between the adjacent convolutional layers.
+3) NND(RNN): Different from NND(MLP) and NND (CNN), the NND(RNN) has only one hidden layer. We empoly a single LSTM unit with hidden-dimension 48 as the hidden layer. At each time step, the LSTM runs through one input vector with N denoised symbols and produces an output vector of dimension 48. After the LSTM reads all input vectors, it produces a sequence of output vectors.
+
+TABLE II THE NETWORK PARAMETER DESIGN OF THE THREE NNDS
+Due to the recurrent nature of RNN, the last 48-D vector in the output sequence contains information of all input vectors, which we select as the feature vector. The dimension of the desired information vector is K so that all the three NNDs use a fully connected layer with K nodes as the output layer. The label of the NND output is 0 or 1 and based on the previous research [17], [18], [26], [27], we adopt the sigmoid function as the activation function of the output layer. The detailed values of network parameters of the three NNDs inside the three RNNDs are listed in Table II.
+V. NUMERICAL RESULTS
+In this section, all experimental results in this paper will be presented. First we give the training and testing strategy of the RLD and RNND and compare the denoising loss of the Independent-RLD and the Joint-RLD during training. Subsequently, to show the denoising performance gain brought by the ResNet, we provide simulation results of SNR improvement, SER reduction and probability density function (PDF) analysis. The BER performance and computation time comparison of the three PNNDs, the three RNNDs and the SC algorithm will be discussed later. Finally, investigation towards applying the proposed RNND to decoding longer polar codes as well as LDPC codes is conducted to edify future research.
+A. Training and Testing Strategy
+In this paper, the proposed RLD and RNND adopt the same training and testing strategy. We first take the code (16, 8) as an example, i.e., code length N = 16, information length K = 8, and code rate R = 1/2. With such code setting, there are 2K = 256 distinct codewords referred to as the codeword set X . Since the noise module in our architecture generates a new noise realization each time it is used, the network will never see the same input twice. For this reason, although the training set has a limited size of 2K codewords, the number of training samples is infinite in theory. We implement all experiments on Pytorch, an open source deep learning platform with powerful GPU acceleration for tensor calculation [19]. The network weights are initialized using the Gaussian distribution. The training and testing hyper-parameter setting are depicted in the following:
+1) Training: Before training the network, the training data is first generated. Following the common practice in NND [18], the training data is generated under training SNR = 0 dB. Every time we have finished training all of the 256 codewords in X , we say that a training epoch is over. We adopt the conventional mini-batch gradient
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8732
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+TABLE III THE TRAINING AND TESTING HYPER-PARAMETER SETTING
+
+descent method to train the network. The batch size is set to 64 and the learning rate is set to 0.001. In each training batch, the gradient of the loss function is calculated using Adam, a method for stochastic gradient descent optimization [39]. Specially, the weight factor λ for the multi-task loss function in (13) is set to 1. During the training process, we check the loss value over the training set every 100 epochs. The maximum number of training epochs is set to 216. 2) Testing: The system model generated in the training stage is saved to be used in the testing stage. In contrast to the training stage, the modulated symbols are transmitted over the BI-AWGN channel with different noise levels at the testing stage. The testing Eb/N0 (Eb denotes the bit energy and N0 denotes the noise power spectral density) ranges from 0 dB to 7 dB with an interval 1 dB. The system performance of the RLD is measured by SER while that of the RNND is measured by BER. In order to test BER with high reliability and low time overhead, a total of 106 codewords are tested for each SNR. The training and testing hyper-parameter setting is summarized in Table III. In this paper, we do not further consider hyper-parameter optimization [40] and restrict ourselves to the fixed set of hyper-parameters in Table III which we have found perform well.
+
+Fig. 7. The denoising loss of the three Independent-RLDs and the three JointRLDs versus the number of training epochs. The first 15000 epochs of 216 epochs are shown.
+Fig. 8. The SNR of symbols before and after denoising with the three Independent-RLDs. “Original” refers to the testing SNR of original received symbols.
+
+B. Denoising Loss
+During the training procedure of the three RLDs and the three RNNDs, we monitor the denoising loss every 100 epochs. The denoising loss versus the number of training epochs is shown in Fig. 7. The first 15000 epochs of 216 epochs are shown. We see that the three Joint-RLDs have faster convergence rate than the three Independent-RLDs. Moreover, the final convergence values of the three Joint-RLDs are notably lower than that of the three Independent-RLDs. The root cause of this phenomenon is that the denoising loss function of the Independent-RLD is optimized independently while the denoising loss function of the Joint-RLD is optimized jointly with the decoding loss function of the NND. The learning process of the RLD and that of the NND inside the RNND can reinforce mutually, which speeds up the convergence and results in a lower convergence value of the denoising loss.
+C. SNR Improvement
+Fig. 8 shows the SNR of symbols before and after denoising with the three Independent-RLDs. We can see that the SNR gain
+
+is considerable by the three Independent-RLDs. For example, at testing SNR = 0 dB, Independent-RLD(CNN) can improve the testing SNR by about 2.5 dB, while Independent-RLD(MLP) improves 3.3 dB and Independent-RLD(RNN) improves 3.6 dB. As the testing SNR increases, the SNR gain of IndependentRLD(MLP) and that of Independent-RLD(CNN) gradually become similar while the gap between them and IndependentRLD(RNN) becomes more significant. It turns out that RNN has more powerful denoising capacity than MLP and CNN. Fig. 9 presents the SNR of symbols before and after denoising with the three Joint-RLDs. To our excitement, compared with the three Independent-RLDs, the SNR gain of the three Joint-RLDs is especially greater. For example, at testing SNR = 0 dB, all of the three Joint-RLDs can improve the testing SNR by more than 4 dB. Additionally, as the testing SNR increases, the SNR gain of the three Joint-RLDs tends to be more remarkable: all of the three Joint-RLDs can improve the testing SNR by more than 9 dB at testing SNR = 7 dB. The experimental results illustrate that the NND can assist the RLD in improving denoising capacity due to the introduction of MTL. The order of SNR gain from high to low of the three Joint-RLDs is RNN, MLP, CNN, which is the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8733
+
+Fig. 9. The SNR of symbols before and after denoising with the three JointRLDs. “Original” refers to the testing SNR of original received symbols.
+
+Fig. 11. The PDF of y1N and sˆ1N of RNND(MLP-MLP) under different testing SNRs. Blue and orange region represent the PDF of received symbols and denoised symbols, respectively. The green line is the theoretical Gaussian distribution with the same variance as the PDF of sˆ1N .
+
+Fig. 10. The SER of no denoising, the three Independent-RLDs and the three Joint-RLDs under hard decision.
+
+same as that of the three Independent-RLDs. It should be noted that although RNN still has more powerful denoising capacity than MLP and CNN, the gap becomes tiny for the Joint-RLD scheme.
+
+D. SER Reduction
+
+To further elaborate on the advantages of MTL, we carry out
+hard decison and compare SER. The hard decision refers to that we get the estimation of sN1 denoted as s˜1N according to signs of sˆ1N . The process of hard decision is given as follows
+
+1, if sˆi ≥ 0
+
+s˜i =
+
+(14)
+
+−1, if sˆi < 0
+
+Compare s1N and s˜N1 , then we can count the number of wrong symbols and consequently compute the SER. To effectively
+display the denoising capacity of the RLD, we provide the SER
+of no denoising, i.e., implementing hard decision directly using y1N instead of sˆ1N , as a benchmark.
+We plot the SER of no denoising, the three Independent-RLDs
+and the three Joint-RLDs under hard decision in Fig. 10. The
+figure shows that compared with no denoising, both the three
+
+Independent-RLDs and the three Joint-RLDs can conspicuously reduce SER and the reduction is even greater with the latter. For example, the Independent-RLD(RNN) obtain a gain of about 1.8 dB while the gain is almost 3 dB for Joint-RLD(RNN) at SER = 0.02. An interesting thing is that the SER gap among the three Independent-RLDs is huge while it is negligible among the three Joint-RLDs, which exactly corrresponds to the SNR results in Section V-C.
+
+E. PDF Analysis
+
+Besides SNR and SER, we want to investigate the change of statistical rule of data before and after denoising. For this purpose, we plot PDF of y1N and sˆN1 of RNND(MLP-MLP) under different testing SNRs in Fig. 11. As for each subfigure in Fig. 11, before and after denoising, the mean of the PDF keeps zero while the variance of the PDF is significantly reduced, leading to a more sharply shaped distribution after denoising. What’s more, when the testing SNR increases, the change of variance tends to be larger, corresponding to a larger SNR gain.
+One thing needed to be checked is that whether the PDF of sˆN1 is still a Gaussian distribution. First we obain the variance σ2 of sˆ1N using
+
+σ2 =
+
+M j=1
+
+||sj
+
+− ˆsj ||22
+
+M ·N
+
+(15)
+
+where s, ˆs and M denotes s1N , sˆ1N , and the number of testing samples, respectively. Then according to the full probability
+formula [41], the theoretical Gaussian distribution with the same variance as the PDF of sˆN1 is given by
+
+p(y) = p(x = 0) · p(y|x = 0) + p(x = 1) · p(y|x = 1)
+
+=1·√1
+
+e−
+
+(y−1)2 2σ2
+
++
+
+1
+
+·
+
+√
+
+1
+
+e−
+
+(y+1)2 2σ2
+
+2 2πσ2
+
+2 2πσ2
+
+(16)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8734
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+TABLE IV TOTAL NUMBER OF PARAMETERS OF SIX TYPES OF NEURAL NETWORK
+
+Fig. 12. The denoising loss and decoding loss versus the number of training epochs of the three RNNDs. The first 15000 epochs of 216 epochs are shown.
+
+The theoretical Gaussian distribution is plotted using the green line in Fig. 11. It is worth noting that the PDF of sˆ1N is still similar to the theoretical Gaussian distribution even though y1N has gone through nonlinear operations, i.e., the ReLU function. Particularly, the similarity becomes greater when the testing SNR increases.
+Recent research on the learning dynamics of wide neural networks under gradient descent [42] may shed some lights on this phenomenon. In that paper, the authors proved that as the width becomes infinite, the neural network can be effectively governed by a linear model obtained from the first-order Taylor expansion of the network around its initial parameters. As for finite width networks, the difference between the neural network and the linear model diminishes in proportional to the square root of the width of the neural network. In our experiments, as the width of the RLD inside RNND(MLP-MLP) has a magnitude of hundreds and the initial network parameters are Gaussian distributed, we suspect that the RLD can be approximated by a linear model. According to the probability theory [41], Gaussian distribution is still Gaussian after a linear model. Given that the input y1N is Gaussian distributed and the RLD is an approximate linear model, the distribution of the output sˆN1 is therefore Gaussian-like. Further research on this topic can be conducted to construct a more interpretable neural network denoiser.
+F. BER Performance Comparison
+Fig. 12 depicts the denoising loss and decoding loss versus the number of training epochs of the three RNNDs. The first 15000 epochs of 216 epochs are shown. It can be observed that during the training procedure of the three RNNDs, the downtrend of Ldenoise and Ldecode is basically the same, and they both converge at about 4000 epochs. It is MTL that guarantees the realization of this process.
+To further illustrate the advantage of the denoiser, we provide the PNND for performance comparison. Each RNND has its counterpart PNND named PNND(MLP), PNND(CNN) and PNND(RNN), respectively. The PNND cancels the shortcut connection, has no denoiser module and just performs as a pure
+
+Fig. 13. The BER performance of the six NNDs, the SC algorithm and the RNN-BP.
+decoder. Besides, we keep the amount of trainable parameters of the three PNNDs approximately equal to their counterpart RNNDs, which can avoid the performance difference coming from the difference of parameter number. The total number of trainable parameters of six types of neural network is summarized in Table IV. In addition, the traditional SC and BP algorithm are also presented as the benchmark. Particularly, RNN-BP has been proposed to achieve the same performance as BP with fewer iterations [43]. The RNN-BP adopts the network unfolded by the BP algorithm, and different iterations share the same set of parameters which can be efficiently optimized by optimizers such as Adam. Therefore, we tend to adopt RNN-BP as the specific implementation of BP.
+The BER performance of the six NNDs, the SC algorithm and the RNN-BP is provided in Fig. 13. Here the number of iterations for RNN-BP is set to 5. We can observe that each RNND remarkably outperforms its counterpart PNND. For instance, RNND(MLP-MLP) obtains a gain of roughly 0.1 dB over PNND(MLP) at BER 10−3 while the gain is about 0.3 dB for RNND(RNN-RNN) and 0.2 dB for RNND(CNN-CNN). Meanwhile, the BER performance of RNND(MLP-MLP) is superior to that of RNN-BP and very close to that of the SC algorithm, which is near optimal decoding performance in our code setting. The above results indicate that the benefits brought from residual learning is obvious.
+From the BER performance comparison of PNND(MLP) and PNND(RNN) in Fig. 13, we can see that the decoding capacity of RNN is not as good as MLP. However, the gap is narrowed between RNND(MLP-MLP) and RNND(RNN-RNN). We suspect that the reason is that the decoding capacity of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8735
+
+Fig. 14. The computational time of one frame for the six NNDs, the SC algorithm and the RNN-BP.
+
+Fig. 15. The BER performance of the six NNDs, the SC algorithm and the RNN-BP for the codes (64, 16).
+
+RNND is dominated by both the denoising capacity of its RLD and the decoding capacity of its NND. Although the decoding capacity of NND(RNN) is inferior to NND(MLP), the denoising capacity of RLD(RNN) is more powerful than RLD(MLP), as shown in Fig. 9. Therefore, the BER improvement of the PNND(RNN) is far greater than PNND(MLP). However, the BER performance of RNND(MLP-MLP) is still optimal compared with RNND(CNN-CNN) and RNND(RNN-RNN), which demonstrates that if the RNND utilizes the same type of neural network to build RLD and NND, MLP may be the optimal choice.
+G. Computational Time Comparison
+We track the decoding time of one frame for the three PNNDs and the three RNNDs during the testing stage. For comparison, we also calculate the decoding time of one frame using the SC algorithm and the RNN-BP. The experimental environment includes a NVIDIA 1080Ti GPU and an Intel Core i7 3.5 GHz CPU. The six NNDs and RNN-BP run both on GPU and CPU while SC merely runs on CPU. The testing batch size of the six NNDs and RNN-BP is set to 100. The computational time of one frame for the six NNDs, the SC algorithm and the RNN-BP is shown in Fig. 14. The figure shows that RNNDs run slightly slower than their counterparts PNNDs whereas such differences are neglectable in practice. Moreover, all of the six NNDs with CPU or GPU run dozens to hundreds of times faster than the SC algorithm and the RNN-BP. For the comparison of CPU and GPU, MLPs show similar performance while GPU surpasses CPU for CNNs and RNNs. The powerful parallel computing capacity of GPU ensures its advantage over CPU.
+It is worthwhile mentioning that although there exists a small gap between the BER performance of RNND(MLP-MLP) and that of the traditional SC algorithm, RNND(MLP-MLP) runs more than one hundred times faster than the SC algorithm. It implies that when latency plays a crucial role in decoding in practice, the proposed RNND(MLP-MLP) may be a strong alternative for the traditional SC algorithm.
+
+H. Scalability to Longer Codes
+To prove the usability of the proposed method with longer codes, we conduct an experiment with N = 64 in the following. Taking into account the limitation of the computation power and running time of our personal computer, we set K = 16. Compared with the original codes (16, 8), the number of codewords that need to be trained of the current codes (64, 16) have been increased from 28 = 256 to 216 = 65536 so that larger-scale neural networks need to be adopted to obtain a reasonable result. Here we keep the number of layers the same and increase the number of nodes per layer. According to Fig. 13, RNND(MLP-MLP) has the most powerful decoding capability among the three RNNDs. Therefore, we compare three RNND(MLP-MLP)s of different scales with their counterparts PNND(MLP)s. The relationship of their total parameters is PNND(MLP)1 < PNND(MLP)2 < PNND(MLP)3 and RNND(MLP-MLP)1 < RNND(MLPMLP)2 < RNND(MLP-MLP)3. The total parameters of each RNND(MLP-MLP) and its counterpart PNND(MLP) are also made approximately equal to make the comparison fair.
+The BER performance of the six NNDs, the SC algorithm and the RNN-BP for the codes (64, 16) is provided in Fig. 15. Here the number of iterations for RNN-BP is set to 10. It is astonishing that the three PNND(MLP)s perform too badly to be used. Moreover, PNND(MLP)3 that has the most parameters yields the worst BER performance among the three PNND(MLP)s. On the contrary, the three RNND(MLP-MLP)s perform very well. Compared with the three PNND(MLP)s, RNND(MLP-MLP)1 has made great progress. Furthermore, RNND(MLP-MLP)2 and RNND(MLP-MLP)3 achieve similar BER performance, which has approached that of the SC and RNN-BP. From the above we conclude that the proposed RNND can well scale to longer polar codes and obtain better performance with a greater network scale. Nonetheless, the PNND cannot scale to longer polar codes and even larger networks have worse performance.
+In order to explore the reasons for this phenomenon, we monitor the Frobenius norm of gradients of parameter tensors versus the number of training epochs during the training stage. The first 1000 epochs are shown. Results for all hidden layers
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8736
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+have a similar trend and we only present that of their first hidden layers, which are illustrated in Fig. 16. For the three PNND(MLP)s, all the norms of gradients are becoming smaller and smaller, and gradually vanish as the training epochs increase. The largest PNND(MLP) suffers from the most severe vanishing problem instead. In contrast, for the three RNND(MLP-MLP)s, all the norms of gradients become stronger and stronger, which ensures the continuous decline of the decoding loss and the satisfying testing BER. The larger the RNND(MLP-MLP), the stronger the norm of gradients. The above results illustrate that the PNND deeply suffers from the curse of dimensionality while both the residual learning structure and MTL effectively address the problem of dimensionality and guarantee the superiority of the RNND.
+
+I. Scalability to LDPC Codes
+
+At the end of this paper, to explore whether the proposed
+
+RLD can obtain performance gain when the proposed RNND is
+
+applied to other codes, we take LDPC codes as an example. The
+
+LDPC codes were proposed in [44] by Robert Gallager in 1962
+
+and rediscovered in [45] by David MacKay in 1997. Existing
+
+simulation results show that LDPC codes can perform near to
+
+Shannon limit when their length becomes very long [45]. LDPC
+
+codes are currently being used in many communication systems
+
+such as DVB-S2, 802.11n (WiFi allowing MIMO), 802.16e
+
+(Mobile WiMAX), etc.
+
+An LDPC code is defined by an M × N parity check matrix
+
+H that has a low density of 1s. The parity check matrix we use
+
+in this paper is expressed as
+
+⎡
+
+⎤
+
+00000000000000001111
+
+H
+
+=
+
+⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎢⎣⎢
+
+0 0 0 0 1 0 0 0
+
+1 0 0 0 0 1 0 0
+
+0 1 0 0 0 0 1 0
+
+0 0 1 0 0 0 0 1
+
+0 0 0 0 0 0 0 0
+
+1 0 0 0 1 0 0 0
+
+0 1 0 0 0 1 0 0
+
+0 0 0 1 0 0 1 0
+
+0 0 0 0 0 0 0 1
+
+1 0 0 0 0 0 0 0
+
+0 0 1 0 0 1 0 0
+
+0 0 0 1 1 0 0 0
+
+0 0 0 0 0 0 1 0
+
+0 1 0 0 0 0 0 1
+
+0 0 1 0 0 0 0 0
+
+0 0 0 1 0 1 0 0
+
+1 0 0 0 0 0 0 1
+
+0 1 0 0 1 0 0 0
+
+0 0 1 0 0 0 1 0
+
+0 0 0 1 0 0 0 0
+
+⎥⎥⎥⎥⎥⎥⎥⎥⎦⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥⎥
+
+00001000010000100001
+
+(17)
+
+We keep the network architecture and parameter of the three PNNDs and the three RNNDs the same as that of the polar codes (16, 8). As for the traditional LDPC decoding algorithm, we adopt the BP algorithm, more specifically, the sum product algorithm (SPA) [46]. We set the maximum number of iterations of BP to 30. The BER performance of the three PNNDs, the three RNNDs and the BP algorithm for decoding LDPC codes is provided in Fig. 17. Similar to the simulation resuls of polar codes, all of the three RNNDs outperform their counterpart PNNDs. Furthermore, the gap between the RNND and its counterpart PNND seems to be larger. The results show that the RLD can
+
+Fig. 16. The Frobenius norm of gradients of parameter tensors for the first hidden layer of the three PNND(MLP)s and the three RNND(MLP-MLP)s versus the number of training epochs. The first 1000 epochs are shown.
+Fig. 17. The BER performance of the three PNNDs, the three RNNDs and the BP algorithm for decoding LDPC codes.
+bring larger performance gain for LDPC codes. Nevertheless, the performance of BP is much better than the optimal network, i.e., the RNND(MLP-MLP). Perhaps the depth or the width of the RNND for LDPC codes should be increased to further improve its performance. More in-depth discussion will be carried out in the future work.
+VI. CONCLUSIONS AND FUTURE DIRECTIONS In this paper, we first propose a residual learning denoiser (RLD) to denoise received symbols for polar codes. Moreover, we propose a novel residual neural network decoder (RNND) to decode polar codes. A MTL strategy is proposed to jointly optimize the denoising loss function and decoding loss function for the RNND. We present the SNR, SER and PDF of the received symbols before and after denoising, which demonstrates the significant noise supression capacity of the RLD. The benefit of MTL lies in the denoising advantage of the Joint-RLD over the Independent-RLD. Simulation results show that with the help of the denoiser, the RNND can obtain considerable BER
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+ZHU et al.: LEARNING TO DENOISE AND DECODE: A NOVEL RESIDUAL NEURAL NETWORK DECODER FOR POLAR CODES
+
+8737
+
+performance gain compared with the traditional PNND decoding scheme. The computation time results show that our proposed RNND(MLP-MLP) may be a strong competitor with classical SC algorithm due to its near optimal BER performance and ultra low latency. Eventually, we prove that the RNND can scale to longer polar codes as well as LDPC codes, which further demonstrates the superiority of our proposed scheme.
+It is worth noting that ResNet is especially suitable for training deep neural network [7]. The deep RNND which utilizes multi-level concatenated ResNet as denoiser is expected to show better performance than the shallow RNND, which requires further research. At the end of this article, we conduct part of the experiments on LDPC codes and the results are very encouraging. Whether the benefit of RNND is universal for all channel coding schemes remains to be studied. In conclusion, this paper provides an initial research result of the RLD and RNND, which confirms that denoising before NND is helpful indeed. More work such as the structure optimization of the denoiser, the selection of network type, the design of the network parameter and so forth will be investigated in the future.
+REFERENCES
+[1] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[2] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[3] K. Chen, K. Niu, and J. R. Lin, “List successive cancellation decoding of polar codes,” Electron. Lett., vol. 48, no. 9, pp. 500–501, Apr. 2012.
+[4] K. Niu and K. Chen, “Stack decoding of polar codes,” Electron. Lett., vol. 48, no. 12, pp. 695 –697, Jun. 2012.
+[5] K. Niu and K. Chen, “Crc-aided decoding of polar codes,” IEEE Commun. Lett., vol. 16, no. 10, pp. 1668–1671, Oct. 2012.
+[6] G. E. Hinton, S. Osindero, and Y. Teh, “A fast learning algorithm for deep belief nets,” Neural Comput., vol. 18, no. 7, pp. 1527–1554, Jul. 2006.
+[7] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vision Pattern Recognit., 2016, pp. 770–778.
+[8] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning with neural networks,” in Proc. Adv. Neural Inf. Process. Syst., 2014, pp. 3104– 3112.
+[9] C. Chen, A. Seff, A. Kornhauser, and J. Xiao, “Deepdriving: Learning affordance for direct perception in autonomous driving,” in Proc. IEEE Int. Conf. Comput. Vision, Dec. 2015, pp. 2722–2730.
+[10] T. OShea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cognitive Commun. Netw., vol. 3, no. 4, pp. 563–575, Dec. 2017.
+[11] H. Ye and G. Y. Li, “Initial results on deep learning for joint channel equalization and decoding,” in Proc. IEEE 86th Veh. Technol. Conf. (VTCFall), Sep. 2017, pp. 1–5.
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[13] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding of linear block codes,” 2017, arXiv:1702.07560.
+[14] M. Borgerding and P. Schniter, “Onsager-corrected deep learning for sparse linear inverse problems,” in Proc. IEEE Global Conf. Signal Inf. Process. (GlobalSIP), Dec. 2016, pp. 227–231.
+[15] O. S. Mossad, M. ElNainay, and M. Torki, “Deep convolutional neural network with multi-task learning scheme for modulations recognition,” in Proc. 15th Int. Wireless Commun. Mobile Comput. Conf., Jun. 2019, pp. 1644–1649.
+[16] H. Huang, J. Yang, H. Huang, Y. Song, and G. Gui, “Deep learning for super-resolution channel estimation and doa estimation based massive mimo system,” IEEE Trans. Veh. Technol., vol. 67, no. 9, pp. 8549–8560, Sep. 2018.
+
+[17] J. Seo, J. Lee, and K. Kim, “Decoding of polar code by using deep feedforward neural networks,” in Proc. Int. Conf. Comput., Netw. Commun., Mar. 2018, pp. 238–242.
+[18] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst., Mar. 2017, pp. 1–6.
+[19] A. Paszke et al., “Automatic differentiation in PyTorch,” NIPS Autodiff Workshop, 2017.
+[20] A. Di Stefano, O. Mirabella, G. Di Cataldo, and G. Palumbo, “On the use of neural networks for hamming coding,” in Proc. IEEE Int. Symp. Circuits Syst., Jun. 1991, pp. 1601–1604, vol. 3.
+[21] X.-A. Wang and S. B. Wicker, “An artificial neural net viterbi decoder,” IEEE Trans. Commun., vol. 44, no. 2, pp. 165–171, Feb. 1996.
+[22] A. R. Karami, M. A. Attari, and H. Tavakoli, “Multi layer perceptron neural networks decoder for ldpc codes,” in Proc. 5th Int. Conf. Wireless Commun., Netw. Mobile Comput., Sep. 2009, pp. 1–4.
+[23] S. Cammerer, T. Gruber, J. Hoydis, and S. Ten Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” in Proc. GLOBECOM IEEE Global Commun. Conf., Dec. 2017, pp. 1–6.
+[24] W. Xu, Z. Wu, Y. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Proc. IEEE Int. Workshop Signal Process. Syst., Oct. 2017, pp. 1–6.
+[25] W. Xu, X. You, C. Zhang, and Y. Beery, “Polar decoding on sparse graphs with deep learning,” in Proc. 52nd Asilomar Conf. Signals, Syst., Comput., Oct. 2018, pp. 599–603.
+[26] J. Seo, J. Lee, and K. Kim, “Activation functions of deep neural networks for polar decoding applications,” in Proc. IEEE 28th Annu. Int. Symp. Personal, Indoor, Mobile Radio Commun., 2017, pp. 1–5.
+[27] A. Irawan, G. Witjaksono, and W. K. Wibowo, “Deep learning for polar codes over flat fading channels,” in Proc. Int. Conf. Artif. Intell. Inf. Commun., Feb. 2019, pp. 488–491.
+[28] W. Lyu, Z. Zhang, C. Jiao, K. Qin, and H. Zhang, “Performance evaluation of channel decoding with deep neural networks,” in Proc. IEEE Int. Conf. Commun., May 2018, pp. 1–6.
+[29] Y. Wang, Z. Zhang, S. Zhang, S. Cao, and S. Xu, “A unified deep learning based polar-ldpc decoder for 5G communication systems,” in Proc. 10th Int. Conf. Wireless Commun. Signal Process., Oct. 2018, pp. 1–6.
+[30] K. Zhang, W. Zuo, Y. Chen, D. Meng, and L. Zhang, “Beyond a Gaussian denoiser: Residual learning of deep cnn for image denoising,” IEEE Trans. Image Process., vol. 26, no. 7, pp. 3142–3155, Jul. 2017.
+[31] P. Trifonov, “Efficient design and decoding of polar codes,” IEEE Trans. Commun., vol. 60, no. 11, pp. 3221–3227, Nov. 2012.
+[32] Y.-L. Boureau, J. Ponce, and Y. LeCun, “A theoretical analysis of feature pooling in visual recognition,” in Proc. 27th Int. Conf. Mach. Learn. (ICML-10), 2010, pp. 111–118.
+[33] S. Shelke and S. Apte, “A novel multistage classification and wavelet based kernel generation for handwritten marathi compound character recognition,” in Proc. Int. Conf. Commun. Signal Process., Feb. 2011, pp. 193–197.
+[34] R. Pascanu, T. Mikolov, and Y. Bengio, “On the difficulty of training recurrent neural networks,” in Proc. Int. Conf. Mach. Learn., 2013, pp. 1310–1318.
+[35] J. Schmidhuber and S. Hochreiter, “Long short-term memory,” Neural Comput., vol. 9, no. 8, pp. 1735–1780, 1997.
+[36] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Gated feedback recurrent neural networks,” in Proc. Int. Conf. Mach. Learn., 2015, pp. 2067– 2075.
+[37] R. Caruana, “Multitask learning,” Mach. Learn., vol. 28, no. 1, pp. 41–75, Jul. 1997.
+[38] L. Bottou, “Large-scale machine learning with stochastic gradient descent,” in Proc. COMPSTAT’2010, 2010, pp. 177–186.
+[39] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in Proc. Int. Conf. Learn. Representations, 2015.
+[40] J. S. Bergstra, R. Bardenet, Y. Bengio, and B. Kégl, “Algorithms for hyperparameter optimization,” in Proc. Adv. Neural Inf. Process. Syst., pp. 2546– 2554, 2011.
+[41] K. L. Chung, A Course in Probability Theory, Academic Press, 1974. [42] J. Lee et al., “Wide neural networks of any depth evolve as linear models
+under gradient descent,” in Proc. Adv. Neural Inf. Process. Syst., 2019, pp. 8570–8581. [43] C. Teng, C. D. Wu, A. Kuan-Shiuan Ho, and A. A. Wu, “Low-complexity recurrent neural network-based polar decoder with weight quantization mechanism,” in Proc. ICASSP IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), 2019, pp. 1413–1417.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+8738
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 69, NO. 8, AUGUST 2020
+
+[44] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[45] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[46] S.-Y. Chung, R. Urbanke, and T. J. Richardson, “Gaussian approximation for sum-product decoding of low-density parity-check codes,” in Proc. IEEE Int. Symp. Inf. Theory (Cat. No. 00CH37060), Jun. 2000, p. 318.
+Hongfei Zhu received the B.S. degree in communication engineering from Beijing Jiaotong University, China in 2017. He is currently pursuing the Ph.D. in information and communication engineering at the School of Electronics Engineering and Computer Science, Peking University, China. In 2017, he began working as a Laboratory Engineer at the Institute of Wireless Communication and Signal Processing where he was engaged in design and optimization of 5G physical layer algorithm. His research interests include channel coding and information theory for communication systems.
+
+Yuping Zhao received the B.S. and M.S. degrees in electrical engineering from Northern Jiaotong University, Beijing, China, in 1983 and 1986, respectively, and the Ph.D. and Doctor of Science degrees in wireless communications from Aalto University, Espoo, Finland, in 1997 and 1999, respectively. She was a System Engineer for telecommunication companies in China and Japan. She was a Research Engineer with Nokia Research Center, Helsinki, Finland, in the field of radio resource management for wireless mobile communication networks. She is currently a Professor with the State Key Laboratory of Advanced Optical Communication Systems and Networks, School of Electronics Engineering and Computer Science, Peking University, Beijing. Her current research interests include wireless communications and corresponding signal processing, especially for orthogonal frequency division multiplexing, ultra wideband, and multiple-input multiple-output systems, cooperative networks, cognitive radio, and wireless sensor networks.
+
+Zhiwei Cao received the B.S. degree in communication engineering from Jilin University, China in 2018. He is currently pursuing the M.S. degree in information and communication engineering at the School of Electronics Engineering and Computer Science, Peking University, China. In 2018, he began working as a Laboratory Engineer at the Institute of Wireless Communication and Signal Processing. His research interests include information theory and machine learning application in communication systems.
+
+Dou Li received the B.S., M.S. and Ph.D. degrees from Peking University, Beijing, P.R. China, in 1989, 1992, and 2007, respectively. In 1992, she became an Assistant Professor in Peking University. Currently, she is an Associate Professor with the Department of Electronics, School of Electronics Engineering and Computer Science, Peking University. Her research interests include signal processing for information systems, resource management and error control coding in wireless communication networks.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:12:01 UTC from IEEE Xplore. Restrictions apply.
+
+

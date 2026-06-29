@@ -1,0 +1,377 @@
+On the Addition of an Input Buffer to an Iterative Decoder for LDPC Codes
+
+Massimo Rovini Dept. of Information Engineering
+University of Pisa via G. Caruso 16, 56122, Pisa, Italy Email: massimo.rovini@iet.unipi.it
+
+Alfonso Martinez Dept. of Electrical Engineering Technische Universiteit Eindhoven 5600MB Den Dolech 2, Eindhoven, The Netherlands Email: alfonso.martinez@ieee.org
+
+Abstract— This paper describes the application of a new hardware architecture to the design of a decoder for Low-Density Parity-Check (LDPC) codes. Thanks to the systematic use of the built-in stopping rule in the decoder, the decoder runs the minimum number of iterations on each packet of received data. The addition of a small buffer on the decoder input allows the exploitation of the variations in the decoding time of different packets, in a spirit similar to statistical multiplexing of the data flow. Analysis and simulations are presented using the decoder for the next generation satellite Digital Video Broadcasting (DVBS2) as a case study, to show that the throughput may be doubled with only two extra buffer locations, at almost no cost in chip area.
+I. INTRODUCTION
+Interest in the implementation of high-throughput LDPC decoders has exploded in the latest years, and can be traced back to the expected ever-larger demand for high-rate data services. As a representative example of this trend, the new satellite broadcasting standard (DVB-S2) [1] makes use of the most power-efficient channel codes currently known, lowdensity parity-check (LPDC) codes [2]. Specifically, it consists of the serial concatenation of an outer Bose-ChaudhuriHochquenghem (BCH) code with an inner LDPC code. The latter is an Irregular Repeat-Accumulate (IRA) code [3], blockwise structured with size Q = 360. This is exploited to implement partially parallel decoder architectures, in which the parallel update of up to Q nodes is performed, in an singleinstruction multiple-data (SIMD) way.
+For LDPC codes, decoding speeds as high as 1 Gb/s have been reported [4]. Note however, that this result is typically achieved with short blocks (1024 bits in [4]), effectively trading off increased speed with reduced performance. To any extent, standard hardware designs fall prey to the worst-case situation, where the resources are determined by the maximum number of iterations required.
+A different route, attacking the problem from an architectural point of view, would be preferable. As previously suggested in [5], significant gains are possible if the hardware is able to exploit the variations in the required number of iterations, on a packet by packet basis. This is achieved with the introduction of an input buffer, which stores the incoming data and smooths out the differences in decoding time. As we shall see, the advantage of statistically multiplexing the
+
+decoder operations is twofold: given a chip complexity, more packets are decoded per time unit or, dually, for a given gain in throughput the decoder cost is lower. This also allows scaling down the architectural parallelism as for the decoder presented in [6], but, thanks to the proposed technique, the throughput can be maintained unscaled.
+In the proposed approach the use of a (any) stopping criterion is crucial to drive the statistical multiplexing of the incoming packets. Although the use of stopping rules is not new, its application to increase the throughput is innovative, since current state–of–the–art designs exploit it only to save unnecessary power.
+II. DECODER STATISTICAL MODEL
+We assume throughout that data arrive at the decoder input in ‘frames’ which correspond to the LDPC code. Frames will also be referred to as ‘packets’ with no difference of meaning, and flow at a constant rate Γ.
+LDPC decoding consists of repeated applications of the maximum ‘a posteriori’ (MAP) algorithm, also referred to as ‘message-passing’ or ‘belief propagation’ [7], as reliability messages are exchanged between variable and check nodes. To simplify the implementation, elaborations are typically in the log domain, and reliability messages have the form of log-likelihood ratios (LLR); in line with that, data arriving in the input packets are ‘a priori’ LLR. Then, the decoding unit1 carries out a number of iterations Nit on each incoming packet.
+Several choices are viable for the algorithm schedule. In [8], a DVB-S2 decoder architecture is described, which performs layered decoding [9] over the nodes in the bi-diagonal, systematic part of the parity-check matrix, with savings in iterations and, although less, memory. Other works implement the traditional flooding (or concurrent) schedule [10]. Also the type of elaborations on check nodes may vary from the straightforward implementation with look-up-table (LUT) to several low-complexity approximations [11], [12].
+Regardless of the algorithm approximation or schedule, LDPC decoding usually proceeds iteratively for a fixed number of iterations. However, early convergence can be easily
+1In general, there may be P units working in parallel. Examples are parallel or pipelined architectures.
+
+1550-2252A/u$t2ho5r.i0ze0d©lic2e0n0s7edIuEsEe Elimited to: Yonsei Univ. Downloaded on J1u9n9e523,2026 at 19:34:21 UTC from IEEE Xplore. Restrictions apply.
+
+detected by monitoring the (even) parity of the hard-decision messages entering the check nodes:
+
+pm (q) =
+
+sign{ m (q),n}
+
+(1)
+
+n ∈Nm
+
+with Nm the set of variable nodes connected to check node m = 0, 1, ..., M − 1, m,n the variable–to–check message, q the iteration index and ⊕ denoting mod-2 sum. If p(mq) = 0 for every check node in the code, the current estimate of the
+transmitted sequence is a valid codeword, and the decoder may be instructed to halt. The number of iterations Nit clearly varies on a packet by packet basis: we assume this number
+is independent and identically distributed for each packet. To prevent endless loops, decoding is also stopped after Nit,max iterations.
+Letting Tit denote the time to perform an iteration, the total decoding time is Ts = Nit·Tit. Fig. 1 depicts some examples of distributions of the service time Ts for the DVB-S2 decoder for three operating points with rate 2/3, two with rate 3/4 (with QPSK and 16APSK, respectively), and one with rate
+8/9. Up to 150 iterations are run for the sake of a thorough
+analysis.
+
+PDF
+
+100
+
+DVB-S2
+
+10-1
+
+LDPC Code N = 64800
+
+Es/N0 =
+
+2/3, 8PSK
+
+6.35dB
+
+3/4, QPSK (3.90dB)
+
+10-2
+
+6.45dB
+
+8/9, QPSK (6.15dB)
+
+6.50dB
+
+3/4, 16APSK (10.10dB)
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+10-7 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 Normalized Service Time (Tit = 1s)
+
+Fig. 1. Distributions of the LDPC decoder service time.
+
+In a worst-case design, where decoding stops after Nit,max iterations, the throughput is Γ0 = 1/ TitNit,max . This is to be compared with Γ∞, the maximum achievable speed, given by
+
+1
+
+1
+
+Γ∞ = E{Ts} = E{Nit}Tit ,
+
+(2)
+
+with E{·} denoting the expectation of a random variable. By running the decoder at higher speed an overflow may
+happen: if a packet gets to the decoder and finds it busy, the packet is lost2. This event can be reduced to a negligible probability by introducing a buffer of length L to store the packets awaiting decoding. Let us denote with PL the overflow probability; clearly it must be small enough not to degrade the total frame error rate PF . The overall design aim is to adjust
+
+2There are some other strategies, such as forcing the termination of the decoding of the current packet, but they all are seen to perform similarly.
+
+Γ and L in order to have PL ≤ αPF , with α sufficiently low. In our case we have taken α = 10−2.
+The analysis of the loss and the estimation of Γ and L exploits an analogy of the decoder with a queue. In queueing theory, a decoder is a D/G/1/1+L queue, where D stands for deterministic arrivals, G is for arbitrary (generic) service time and the single server is equipped with L + 1 buffer locations. One possible estimate of the loss probability can now be made by direct simulation of the equivalent queue D/G/1/1 + L, as in [5]. For a given PF (PL), we calculate the maximum throughput served by one decoder unit with L extra buffer locations, plus the one storing the packet under decoding. Note that knowledge of the statistical distribution (pdf) of the service time is required.
+Another alternative is the use of formulas based on large deviation theory, which in turn exploit a further analogy with a random walk, already seen by Feller [13]. Let S(n) denote the remaining service time for the current decoding when packet n arrives, with n = 1, 2, . . . , and S(0) = 0. We then have
+
+1
+
+S(n) = S(n − 1) + Ts(n) − Γ ,
+
+(3)
+
+where the i.i.d. random variables Ts(n) represent the required decoding time for packet n. As long as E Ts(n) < Γ−1 the queue is stable and the overflow probability PL is small.
+Let now define B = L + 1, the total number of memory
+positions in the decoder. It is shown in [13] that an overflow
+takes place when the remaining decoding time at time n is larger than BΓ−1. Moreover, the probability of this event is
+
+PL Ce−θˆBΓ−1
+
+(4)
+
+where θˆ is the unique positive root of the equation
+
+log E eθ(Ts(n)−Γ−1) = 0
+
+(5)
+
+with C a constant. It is common to disregard C, of small impact for low PL.
+Note that to keep the rate of the decoded packets constant, an extra buffer with (conservative) depth L must also be added at the decoder output.
+
+III. SIMULATION RESULTS
+The overall complexity of the decoder can be expressed as a function of L as:
+
+S (L) = SLDPC + L · SIO
+
+(6)
+
+where SIO is the area of a single I/O buffer location, and SLDPC is the one of the whole LDPC decoder inclusive of extrinsic memories plus one local I/O buffer storing the frame under decoding.
+The complexity breakdown of a decoder for DVB-S2 is reported in [8], based on ST Microelectronics 0.13 µm CMOS technology. The decoder sustains an input throughput of 255 Mbps, which is achieved thanks to the use of a partially parallel architecture with Q = 360 functional units and running 30 iterations. If a different number of iterations is run, throughput scales proportionally.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u9n9e623,2026 at 19:34:21 UTC from IEEE Xplore. Restrictions apply.
+
+Throughput gain γ(L) Complexity (mm2)
+
+Within our notation, the core area is SLDPC 22.74 mm2, and the I/O buffer is SIO 2.00 mm2. Since SIO SLDPC, an input buffer can be efficiently plugged into the decoder, as discussed in Sect. II, with small cost to the overall complexity3.
+A. Gain in Throughput
+The advantage brought about by the input buffer can translate into a throughput gain γ(L), defined as the ratio between the achievable rate Γ(L) and the baseline value Γ0, γ(L) = Γ(L)/Γ0. Fig. 2 shows the throughput gain γ(L) for several code configurations obtained via Monte-Carlo simulation as well as with (4). For each code and operating point, instead of sticking at 30 iterations as in [8], a proper number of iterations Nit,max is run to meet the target error rate PF , which is set to 10−5 for r = 8/9 at Es/N0 = 6.10 dB and to 10−6 otherwise, as a trade-off between ‘quasi errorfree’ (QEF) performance and simulation time. Accordingly, each code features a different nominal throughput given by Γ0(r) = (Nit,max(r)/30) · Γ0.
+
+3.50
+
+γ8/9 (6.10dB)
+
+γ2/3
+
+3.00
+
+γ3/4
+
+γ8/9 (6.15dB) 2.50
+
+2.00 1.50
+
+r23 8PSK 6,45dB 6.45dB (theory)
+r34 16APSK 10,10dB 10.10dB (theory)
+r89 QPSK 6.15dB 6.15dB (theory) 6.10dB 6.10dB (theory)
+
+1.00
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+Buffer length (L)
+
+Fig. 2. Throughput gain γ(L) of the buffered-input LDPC decoder.
+
+A first point to remark is the closeness between the simulation and the theoretical analysis, which allows us to use (4) to dimension the decoder. A second element is that all curves exhibit a significant throughput gain even for L = 1, where γ(1) 1.5, while γ(2) > 2 for L = 2. This implies that the buffered input decoder is a robust design to variations in signal-to-noise ratio, modulation, or coding rate, and the presence of a small buffer allows for an increase in throughput over a wide range of operational conditions. This result could somehow be expected in view of the similarity among the distribution functions of the service time presented in Fig. 1. Furthermore, a tailored design for a specific modulation/rate/signal-to-noise ratio triplet may reap a larger gain, as given by the asymptotic values for L → ∞ shown in Fig. 2.
+3Different figures can be extrapolated from [10]. For the 90 nm CMOS design, assuming a maximum number of edges E = 285119 and input signals and internal messages on 6 bits as a rule of thumb, it is SIO 0.96 mm2. In this case the ratio η = SIO/SLDPC is then 0.061, against 0.087 of [8]. The following results would only marginally change.
+
+70
+
+65
+
+Traditional Design
+
+2/3 8PSK
+
+2/3 8PSK (theory)
+
+60
+
+3/4 APSK
+
+3/4 APSK (theory)
+
+55
+
+8/9 QPSK 6.10dB
+
+8/9 QPSK 6.10dB (theory)
+
+8/9 QPSK 6.15dB
+
+50
+
+8/9 QPSK 6.15dB (theory)
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+Throughput gain γ(L)
+
+Fig. 3. Complexity comparison between the traditional and buffered design.
+
+B. Complexity Reduction
+It may be possible to exploit the input buffer as a means of reducing the chip complexity, for a fixed throughput. Fig. 3 depicts the complexity, in mm2, of a traditional design, and of the buffered D/G/1/1 + L decoder as a function of the throughput gain γ. In the traditional approach, throughput is increased through parallelization or replication of functional units, and the related curve is a straight line4; on the contrary, the buffered decoder complexity is given by (6). This yields the remarkable saving in the chip area of about 18.75 mm2 (41.2%) when γ = 2 for the selected case-study.
+Note that curves diverge when the throughput gain tends to γ∞, as an infinite buffer should be placed. Therefore, at the selected operating points, only some of the configurations can reach γ = 3. Again, results from (4) exhibit a good match with the measured values.
+C. Coverage of Different SNRs
+Once the system has been dimensioned for a specific triplet modulation/rate/signal–to–noise ratio, variations in the latter may result in different gains. Figure 4 reports the analysis with different SNR for code rate 2/3 and 8PSK. The system was initially dimensioned for SNR = 6.45 dB with Nit, max = 113 to get PF = 10−6; it was γ = 2 when L = 2. FER and blocking probability PL are drawn in Fig. 4 along with the theoretical and simulated gain γ(2), keeping the same Nit, max = 113 and 2 input buffer locations. Above 6.45 dB, we only required PL < 10−8, the system being designed to get PF = 10−6. Below 6.45 dB the gain γ > 2 is guaranteed up to PF = 10−3, which proofs the robustness of the design to variations of SNR.
+D. Scaled-Down Decoder
+Another way of exploiting statistical multiplexing is dual to that described in Sec. III-A and III-B, and it consists in
+4In principle, only functional nodes and the shuffling networks need to be scaled by γ, while memories should not; however, several processing units would access the same common memory at the same time, with collision problems, making this solution impractical. Thus, instead of allocating more processing power on a same codeword, more codewords can be decoded in parallel, so that not only the processing units but also memories must be replicated by a factor γ.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u9n9e723,2026 at 19:34:21 UTC from IEEE Xplore. Restrictions apply.
+
+FER / PL=2 Complexity Saving (%)
+
+γ(2)
+
+100
+
+10-1
+
+10-2
+
+10-3
+
+10-4 DVB-S2 r=2/3 8PSK
+
+L=2 (113 iter.)
+
+10-5
+
+FER
+
+P2
+
+10-6
+
+γ(2) - theory
+
+γ(2)
+
+10-7
+
+10-8
+
+10-9
+
+6.1
+
+6.2
+
+6.3
+
+6.4
+
+Es/N0 (dB)
+
+2.4 2.2 2.0 1.8 1.6 1.4 1.2 1.0 6.5
+
+Fig. 4. Normalized throughput gain γ as a function of SNR (dB) for code rate 2/3, 8PSK and L = 2.
+
+0
+
+-5
+
+L=3 -10
+
+L=2 -15
+
+L=1
+
+-20
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+K = 1 / γ(L)
+
+r =2/3 6,45dB sim theory
+r=3/4, 10,10dB sim theory
+r=8/9, 6,10dB sim theory
+r=8/9, 6,15dB sim theory
+
+0.8
+
+0.9
+
+1.0
+
+Fig. 5. Percentage saving in the decoder complexity when the design is scaled down but the original (unscaled) throughput is kept (K = 1/γ(L)).
+
+getting a given throughput with fewer functional units, which operate faster in a statistical way. In the case of structured LDPC codes, this means that smaller hardware parallelisms can be selected for the implementation, as described [6], but the same throughput (or the required one) can be achieved with the proper size of the input buffer. As a refinement of (6), the complexity of the buffered decoder is:
+S (L) = {SIO + Smsg + K · Sproc + SCL} + L · SIO (7)
+in which K < 1 is the scaling down factor, so that K · Q functional units are implemented in the decoder; if K = 1/γ(L), then the same throughput of the unscaled design is achieved. Note that in (7) only the functional units are scaled down by K, while the input and the message memory (SIO and Smsg, respectively) are not; the same holds for other constant terms added up into the area of the control logic SCL.
+The saving w.r.t. the unscaled design is given by ∆S(L) = (1 − 1/γ(L)) · Sproc + L · SIO, and Fig. 5 shows the normalized gain in complexity (percentage decrease) for several simulated and theoretic cases, as a function of the hardware parallelism factor K = 1/γ. Results show that about 8% of complexity can be saved if L = 1 or L = 2.
+Note that the scaling factor K must be always rounded as to have an integer number of functional units K · Q.
+IV. CONCLUSIONS
+In this paper we applied the concept of statistical multiplexing to the design of a high-throughput architecture for iterative decoders using an extra input buffer and an early stop criterion. Applied to the design of a new generation satellite Digital Video Broadcasting (DVB-S2) decoder, this architecture doubles the decoder throughput with only two buffer locations, roughly saving 40% of the complexity of a traditional design. However, this technique is of wider applicability, and promises a new efficient architectural design for any iterative decoder, especially for very complex iterative algorithms, which do not suit to traditional techniques such as parallelization.
+
+Reverting this approach, input packets can be also statistically multiplexed not to increase the decoding throughput, but dually, to reduce the implementation complexity for a given throughput. Thus, in the case of structured LDPC codes, a smaller hardware parallelism can be selected for the implementation, while the same throughput can be kept with the proper size of the input buffer. In this sense, the design of the LDPC code and the performance of the related decoder are made more independent.
+Then, in the design of a real modem, this analysis should be extended to all the supported code rates, and the worst-case (maximum) value of L selected for implementation, although a small spread of its values is expected, as suggested by Fig. 1 for the DVB-S2 case-study.
+The choice of Es/N0 also affects the results. However, this technique is very robust to variations of Es/N0, and once the system is dimensioned for a certain operating point (Lˆ, Nˆit,max), the same gain is offered over a wider set of conditions.
+Finally, additional care must be taken with those systems featuring the acknowledgement of reception within a preset time, as the extra latency of the input buffer may prevent the applicability of the proposed technique.
+REFERENCES
+[1] E. T. S. Institute, “Digital Video Broadcasting (DVB); improved framing structure, channel coding and modulation for 11/12 GHz satellite services (DVB-S2),” vol. EN 302 307, 2004.
+[2] R. Gallager, “Low-density parity-check codes,” Ph.D. dissertation, Massachusetts Institute of Technology, 1963.
+[3] H. Jin, A. Khandekar, and R. McEliece, “Irregular repeat-accumulate codes,” in Proceedings 2nd International Symposium on Turbo codes and Related Topics, Sep 2000, pp. 1–8.
+[4] C. Howland and A. Blancksby, “A 220 mw 1 gb/s 1024-bit rate-1/2 low density parity check code decoder,” Proc. IEEE 2001 Custom Integrated Circuits Conference, vol. 13, no. 3, pp. 293–296, 2001.
+[5] A. Martinez and M. Rovini, “Iterative decoders based on statistical multiplexing,” Proc. 3rd; International Symposium on Turbo Codes and Related Topics, pp. 423–426, Sept. 2003, brest, France.
+[6] J. T. Dielissen and A. P. Hekstra, “Low cost LDPC decoder for DVBS2,” in Design Automation and Test in Europe, DATE 06, Apr 2006.
+[7] T. J. Richardson and R. L. Urbanke, “The capacity of low density parity check codes under message-passing decoding,” IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 599–628, Feb. 2001.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u9n9e823,2026 at 19:34:21 UTC from IEEE Xplore. Restrictions apply.
+
+[8] F. Kienle, T. Brack, and N. Wehn, “A synthesizable IP core for DVBS2 LDPC code decoding,” in Design, Automation and Test in Europe (DATE), 2005, pp. 100–105.
+[9] D. Hocevar, “A Reduced Complexity Decoder Architecture via Layered Decoding of LDPC Codes,” in IEEE Workshop on Signal Processing Systems (SISP), 2004, pp. 107–112.
+[10] P. Urard, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Yeo, and B. Gupta, “A 135Mbps DVB-S2 Compliant Code Based on 64800bit LDPC and BCH Codes,” in IEEE International Solid-State Circuit Conference (ISSCC), Jun 2005, pp. 547–548.
+[11] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[12] C. Jones, E. Valles, M. Smith, and J. Villasenor, “Approximate-MIN Constraint Node Updating for LDPC Code Decoding,” in IEEE Military Communications Conference (MILCOM), vol. 1, Oct 2003, pp. 157–162.
+[13] W. Feller, An Introduction to Probability Theory and Its Applications, 2nd ed. John Wiley & Sons, 1971, vol. 2.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u9n9e923,2026 at 19:34:21 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,563 @@
+High Throughput Layered Decoding of LDPC Codes
+
+Mohamed Ismail, Justin Coon, Imran Ahmed Toshiba Telecommunications Research Laboratory
+32 Queen Square Bristol BS1 4ND tel: +44 (0)117 906 0700 fax: +44 (0)117 906 0701 e-mail: mohamed@toshiba-trel.com
+
+Simon Armour, Taskin Kocak Centre for Communications Research Department of Electrical and Electronic Engineering
+University of Bristol, Bristol, UK
+
+Abstract—Layered decoding of Low Density Parity Check (LDPC) codes has been shown to give faster convergence and use less storage than the conventional Two Phase Message Passing (TPMP) algorithm in decoding such codes. To achieve higher throughput, multiple rows of the parity check matrix may be decoded in parallel, as in the Parallel-Turbo Decoding Message Passing (P-TDMP) algorithm. However, contention for globally shared memory permits only a subset of rows to be decoded in parallel thus limiting overall throughput. This paper uses a near optimal scheduling algorithm, based on graph colouring, to overcome memory contention, allowing processing of multiple rows without code modification, resulting in significant throughput gains over the standard P-TDMP algorithm. For the LDPC codes studied, throughput gains compared to the P-TDMP algorithm, of between ten and fifteen are shown to be possible.
+I. INTRODUCTION
+The need for high throughput channel decoding is a reality in many application areas ranging from hard disk and solid state data storage to personal, local and cellular wireless networks. A simple encoding/decoding scheme, naturally, presents a better candidate for achieving high throughput. Low density parity check (LDPC) codes, as described by Gallager [1], offer a comparatively simple means of decoding whilst achieving competitive error correcting performance. Hence, their inclusion in a number of recent wireless standards such as IEEE 802.16e (WiMax), IEEE 802.11n and DVB-S2.
+Gallager [1] described an iterative two phase decoding algorithm, subsequently generalised by Pearl [2] and referred to as belief propagation. By combining the received sequence according to the parity check code, the likelihood (belief) of a checksum being satisfied is formed, this being the first phase. The second phase sees updating of symbol estimates based on the likelihood of checksum values (propagation), subject to code constraints. Multiple iterations of these two steps lead to an estimate of the received sequence that is optimal, in a maximum likelihood sense, for codes which do not contain cycles.
+From an implementation perspective the standard two phase belief propagation algorithm is attractive as it is highly parallelisable whilst avoiding the high computational cost usually associated with trellis based algorithms. However, the process
+
+of updating checksum values and symbol estimates, commonly referred to as check nodes and variable nodes, requires storage of intermediate values and propagation between the two sets of nodes. For long codes, a significant proportion of a typical hardware implementation is taken up by the routing network mirroring connectivity between the two sets of nodes [3]. Also, for long codes, storage of intermediate values results in large memory requirements. To address these problems alternative decoding methods, based on belief propagation, have been proposed [4], [5].
+In [6], an alternative to the two phase decoding algorithm is given called Turbo Decoding Message Passing (TDMP). In contrast to the standard belief propagation approach of updating two types of message, the TDMP algorithm uses only a single message type, thereby reducing the storage requirement significantly. The TDMP algorithm also converges faster than the standard belief propagation algorithm due to using the most recently computed values in updating the next set of values.
+In this paper we investigate the behaviour of the TDMP algorithm with a view to improving overall throughput. We describe a near optimal and computationally simple scheduling algorithm derived from graph theory. This scheduling algorithm, applied off-line, allows grater parallelism in the decoder architecture by overcoming memory contention resulting in a significant increase in throughput.
+This paper is organised as follows: section II briefly explains the TDMP algorithm, highlighting memory contention as a limiting factor on decoder throughput. Section III introduces graph theory and describes a proposed edge colouring algorithm as means of scheduling contention free memory access. Section IV compares performance, in terms of number of colours used, of the proposed edge colouring algorithm with an established algorithm and gives the subsequent improvement in throughput. Finally, section V summarises our findings.
+II. SCHEDULED DECODING USING TDMP
+A synopsis of the TDMP algorithm is given using the notation employed in [6] to form a basis for further discussion.
+
+978-A1ut-h4or2iz4e4d -lic5e2ns1e3d-u4se/0lim9/ite$d2to6: .Y0o0nse©i U2n0iv0. 9DoIwEnEloEaded on1J7un2e724,2026 at 07:15:37 UTC from IEEE Xplore. Restrictions apply.
+
+The TDMP algorithm decodes a row at a time, using the
+decoded output from one row to aid decoding in subsequent rows. Let λi represent a vector holding the extrinsic values resulting from decoding row i. Each entry in the vector λi corresponds to a non-zero entry in row i of the parity check matrix H. Vector γ, referred to as the vector of posterior messages, maintains a cumulative sum of all decoded bits
+contributing to a given variable bit. Fig. 1 shows the two
+vector formations as derived from a row of a parity check matrix. Hard decisions are made from slicing vector γ. The decoding of row i proceeds as follows:
+
+Ȗ1(t) Ȗ2 10
+
+Ȗ3 Ȗ4 (t) Ȗ5 Ȗ6 (t) Ȗ7 Ȗ8 (t) 010101
+
+ȡ1 (t) -
+Ȝ1(t)
+SISO Decoding
+
+ȡ4 (t) -
+
+ȡ6 (t) -
+
+ȡ8 (t) -
+
+Ȝ4 (t)
+
+Ȝ6 (t)
+
+Ȝ8 (t)
+
+SISO Decoding
+
+SISO Decoding
+
+SISO Decoding
+
+1) Decode and update: Decode the posterior message vector using a soft-input soft-output algorithm, such as the Bahl-Cocke-Jelinek-Raviv (BCJR) [7] algorithm, or as shown below ensuring the extrinsic information is removed. Update the extrinsic message vector with the newly decoded message as shown in (1).
+
+
+
+
+
+λi (t + 1) = φ−1  φ ρ (t) 
+
+(1)
+
+l:l=j
+
+where j is the jth message in row i, ρ (t) = γ (t) − λi (t)
+
+and φ−1 (x) =φ (x) = −log
+
+tanh
+
+x 2
+
+for x > 0.
+
+2) Write back: Update posterior messages.
+
+γ (t + 1) = ρ (t) + λi (t + 1)
+
+(2)
+
+The above two steps are repeated for each row, one iteration of the decoding process is completed when all rows in the parity check matrix have been processed as described. As seen from (2) the TDMP algorithm uses the most recently computed extrinsic value in updating bit estimates. Thus, in contrast to the standard belief propagation algorithm, updates are propagated as soon as they are made available resulting in faster convergence and fewer storage requirements.
+To permit decoding of multiple rows simultaneously, as seen from (1), posterior memory locations accessed at any time instant must be unique to avoid memory contention. Specifically, multiple read operations from posterior memory are not subject to contention, write operations however need to be carefully scheduled to avoid contention. Extrinsic messages are stored local to each row processor and therefore do not suffer contention. One method for ensuring posterior memory locations being accessed at a given time instant are unique is by careful design of the parity check matrix. In [8] Architecture-Aware LDPC (AA-LDPC) codes are introduced as a means of avoiding memory contention by partitioning the parity check matrix into sub-matrices. Each sub-matrix has the property that every column has at most a single ’one’ entry and every row has at most a single ’one’ entry. Fig. 2 shows a portion of a parity check matrix constructed from permuting an 3x3 identity matrix. For all three rows of any given row block the posterior values accessed at a given time instant are guaranteed to be unique as a result of
+
+Ȝ1(t +1)
+
+Ȝ4 (t +1) Ȝ6 (t +1) Ȝ8 (t +1)
+
+Ȗ1(t +1)
+
+Ȗ4 (t +1) Ȗ6 (t +1) Ȗ8 (t +1)
+
+Fig. 1. Extrinsic and posterior vector updating
+
+001010000100100000000 100001000001010000000 010100000010001000000 000010000001100100000 000001000100010010000 000100000010001001000 001000010000000100100 100000001000000010010 010000100000000001001
+
+Fig. 2. Parity check matrix formed from permuting a 3x3 identity matrix
+a single entry in any given column position. The ParallelTDMP (P-TDMP) algorithm [6] relies on this method of code construction to facilitate parallel decoding of S rows. Reference [9] classifies the belief propagation, TDMP and two additional decoding algorithms in terms of their message passing schedules, showing the possibility of partitioning a parity check matrix so as to achieve greater throughput at the expense of more iterations.
+By decoding more than S rows in parallel a significant increase in throughput can be achieved. However, the issue of multiple access to the posterior memory needs to be overcome. Section III introduces a novel scheduling algorithm derived from graph theory which is empirically shown to be near optimal in the number of time slots used to allow parallel decoding of all rows of a parity check matrix.
+III. PROPOSED SCHEDULING ALGORITHM
+The application of graph theory to scheduling problems has a long history covering many fields. In [5] graph theory is applied to the LDPC encoding problem, whereas [10] uses graph theory in the context of the standard belief propagation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J7un2e824,2026 at 07:15:37 UTC from IEEE Xplore. Restrictions apply.
+
+Time slot
+
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+
+Decoder 1
+
+35
+
+10
+
+13
+
+Decoder 2 1
+
+6
+
+12 14
+
+Decoder 3
+
+24
+
+11
+
+15
+
+Decoder 4
+
+5
+
+12 13
+
+16
+
+Decoder 5
+
+6
+
+10
+
+14
+
+17
+
+Decoder 6
+
+4
+
+11
+
+15
+
+18
+
+Decoder 7
+
+3
+
+8
+
+16
+
+19
+
+Decoder 8 1
+
+9
+
+17
+
+20
+
+Decoder 9
+
+2
+
+7
+
+18
+
+21
+
+7 Posterior memory location
+
+Fig. 3. Contention for posterior memory locations
+
+colouring of G is achieved by starting at a random node i ∈ A, select an uncoloured edge e ∈ E incident on i and assign to e a unique colour in the sense it is unique to both nodes connected by e. Remove e from E and repeat process for remaining edges incident to i, once all edges incident on i are coloured move to the next node in A containing uncoloured edges and repeat the process. Algorithm 1 shows the pseudocode for the proposed algorithm when applied to a bipartite graph. In [12] a similar edge colouring approach is described, however, it is for distributed edge colouring where multiple nodes are being processed simultaneously.
+
+algorithm to derive a partially parallel solution limited to concurrently decoding rows and columns within a regular submatrix. We introduce graph theory in the context of bipartite graphs and derive a colouring algorithm which is applied to the TDMP scheduling problem to permit decoding of more than S rows simultaneously.
+A. Graph Colouring
+In the graph colouring problem the aim is to find the smallest number (chromatic number) of colours needed to colour each vertex (node) in the graph such that no two vertices connected by an edge have the same colour, this is known as vertex colouring. Alternatively, a graph may be coloured with the minimum number of colours such that all edges incident on a vertex are of a different colour, this being termed edge colouring. For general graphs, vertex colouring is an NPcomplete problem whereas edge colouring can be achieved in polynomial time.
+To ensure that each posterior memory location is accessed by only one row processor at any time instant, each column of the parity check matrix must have unique time slots in which row processors may access it. Since a row processor cannot access more than one posterior memory location at any time instant, due to the sequential nature of row processing, each row must have unique time slots in which the posterior memory locations are accessed. Fig. 3 shows contention of the posterior memory locations for the parity check matrix shown in Fig. 2 if nine parallel decoders were to be used in the decoding process. To apply graph theory to the memory contention problem and take the easier edge colouring approach a processor can be termed a vertex and a time slot an edge.
+Thus, the posterior memory access problem may be seen as an edge colouring problem for a bipartite graph. For a bipartite graph G with a maximum vertex degree d, Konig’s elegant theorem [11] tells us the edge chromatic number χ′ (G) = d. Hence, for an LDPC code of maximum degree d it is possible to perform one complete iteration of the TDMP algorithm in d time slots. A simple and near optimal edge colouring algorithm is given below which can be applied, in reasonable time, to large bipartite graphs.
+B. Proposed Algorithm
+For a bipartite graph G = (A, B, E), let A be one set of nodes, B the other set connected by edges E. An edge
+
+Algorithm: Edge colouring
+
+Input: Bipartite graph G = (V, E)
+
+Output: Edge colouring
+
+for i=1 to K do
+
+// K variable nodes
+
+for j=1 to M do // M uncoloured edges
+
+Allocate a colour unique to edges incident on
+
+check node j and variable node i end
+
+end
+
+Algorithm 1: Pseudocode for edge colouring algorithm
+
+Fig. 4 shows a small parity check matrix with the associated bipartite graph to which Algorithm 1 is applied. The graph can be coloured with a minimum of two colours whereas the proposed algorithm uses three colours. However, algorithms which coloured the graph in Fig. 4 using two colours were found to, in general, require more colours than Algorithm 1 when used for colouring LDPC codes. Based on the edge colouring a scheduling is derived showing every column position being accessed in a different time slot as well as every row position. Thus, contention for the posterior memory locations between different row processors would be avoided based on this schedule.
+A scheduling derived by the proposed algorithm of the parity check matrix of Fig. 2 is shown in Fig. 5. Using the P-TDMP algorithm three rows would be decoded in parallel requiring four time slots giving a total of twelve time slots to decode all nine rows. In contrast, using nine decoders the whole matrix may be decoded in four time slots, made possible due to the contention free access of the posterior memory.
+
+IV. PERFORMANCE
+Performance, in terms of number of colours used and the potential increase in throughput is studied below. Edge colouring of the proposed algorithm is compared against the edge colouring algorithm available in Matgraph [13]. The Matgraph edge color function produces a proper edge colouring (one where no two adjacent edges have the same colour) of a given graph using either a greedy or optimal algorithm. The greedy algorithm makes a locally optimum choice without consideration for global optimisation, the usual result being a quick solution which is not optimal. Conversely, the optimal algorithm tries to find the least number of colours by considering all possible combinations resulting in long run
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J7un2e924,2026 at 07:15:37 UTC from IEEE Xplore. Restrictions apply.
+
+Parity check matrix
+
+D
+
+E
+
+F
+
+A
+
+1
+
+1
+
+B
+
+1
+
+1
+
+C
+
+1
+
+1
+
+Bipartite graph edge colouring
+
+A
+
+1
+
+D
+
+2
+
+2
+
+B
+
+1
+
+E
+
+3
+
+3
+
+C
+
+F
+
+Equivalent time slot allocation
+
+D
+
+E
+
+F
+
+A
+
+1
+
+B C
+
+D
+
+E
+
+F
+
+A
+
+1
+
+B
+
+C
+
+2
+
+D
+
+E
+
+F
+
+A
+
+1
+
+B
+
+1
+
+C
+
+2
+
+D
+
+E
+
+F
+
+A
+
+1
+
+B
+
+1
+
+C
+
+2
+
+3
+
+D
+
+E
+
+F
+
+A
+
+1
+
+2
+
+B
+
+1
+
+C
+
+2
+
+3
+
+D
+
+E
+
+F
+
+A
+
+1
+
+2
+
+B
+
+1
+
+3
+
+C
+
+2
+
+3
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 4. Scheduling derived from edge colouring
+
+Decoder 1 Decoder 2 Decoder 3 Decoder 4 Decoder 5 Decoder 6 Decoder 7 Decoder 8 Decoder 9
+
+Time slot
+1234 3 5 10 13 1 6 12 14 2 4 11 15 5 12 13 16 6 10 14 17 4 11 15 18 8 3 16 19 9 1 17 20 7 2 18 21
+
+Row 1 Row 2 Row 3 Row 4 Row 5 Row 6 Row 7 Row 8 Row 9
+
+7 Memory location Ł Column index
+
+Fig. 5. Scheduling of parity check matrix in Fig. 2
+
+times. In this analysis we used the greedy algorithm since the optimal algorithm run time was prohibitive for the code sizes studied. Significantly, the proposed algorithm took only a few minutes on a standard PC to colour even the largest of the graphs studied whereas the optimal algorithm failed to complete colouring of the smallest graph after four hours of run time.
+A. Edge Colouring
+Six LDPC codes with different code rates, lengths and node degrees were evaluated with the two algorithms. Four of the codes were systematic, and thus practical, constructed by permuting an identity matrix and five codes were irregular. Table I shows the maximum node degree which is the optimal number of colours as given by Konig’s theorem, the number of colours used by the proposed algorithm and the number of colours used by the greedy algorithm from Matgraph. Where
+
+TABLE I NO. OF COLOURS USED IN EDGE COLOURING
+
+Graph
+SI(324,648) SI(600,1200) SI(450,1200) SI(300,1200) RI(252,504) RR(1320,2640)
+
+Max. node degree
+12 6 9 12 7 6
+
+Optimal
+12 6 9 12 7 6
+
+Algorithm 1
+14 8 10 12 8 8
+
+Greedy
+20 12 17 17 11 10
+
+the graph type is coded as AB, with A being S for a structured code and R for a random code, B being I for an irregular code and R for a regular code. The (m, n) parenthesised values represent the number of check nodes and variable nodes in the code, respectively.
+Table I shows the proposed algorithm uses at most two extra colours than the optimal solution compared to the greedy algorithm in Matgraph which uses up to eight additional colours.
+
+B. Throughput
+
+A decoder operating at frequency f on a code of length L requiring T clock cycles per row entry using b bits to represent messages attains a throughput, θ, given by
+
+θ = bf LPR bits/s
+
+(3)
+
+cT M
+
+where, c is the row weight, M is the total number of rows and
+
+PR is the number of rows being decoded in parallel. Where
+
+all M rows are decoded in parallel a M -fold increase in
+
+throughput is observed over the sequential TDMP algorithm.
+
+Compared to the P-TDMP algorithm which manages to de-
+
+code S
+
+rows
+
+in parallel requiring
+
+M S
+
+steps to complete one
+
+iteration
+
+the proposed method would
+
+give a
+
+M S
+
+fold
+
+increase
+
+in throughput where all M rows can be decoded in parallel.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J7un3e024,2026 at 07:15:37 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II THROUGHPUT GAIN OVER P-TDMP ALGORITHM
+
+Graph
+
+Row weight S Parallelism Alg. 1 Greedy
+
+SI(324,648)
+
+8
+
+27
+
+324
+
+6.9
+
+4.8
+
+SI(600,1200)
+
+6
+
+30
+
+600
+
+15.0 10.0
+
+SI(450,1200)
+
+9
+
+30
+
+750
+
+13.5
+
+7.9
+
+SI(300,1200)
+
+12
+
+30
+
+900
+
+10.0
+
+7.1
+
+Table II compares gains in throughput achievable by using the proposed method over the P-TDMP algorithm. The four codes studied were constructed from permuted identity matrices of size S with the assumption of S rows being decoded in parallel by the P-TDMP algorithm. Taking the first code with 324 rows the P-TDMP algorithm would decode 27 rows simultaneously requiring eight timeslots (the row weight) resulting in 96 timeslots for the whole matrix. In contrast, the proposed method would use 14 timeslots, based on the proposed scheduling algorithm, employing 324 row decoders giving an increase in throughput of approximately seven times. For comparison, throughput gain using schedules based on the greedy algorithm is also given. For the codes analysed, throughput gains for the proposed algorithm range from a factor of approximately seven up to fifteen. In comparison, throughput gains for the greedy algorithm range from approximately five to ten. Finally, it is important to note that although the degree of parallelism appears high each processor can be a relatively simple operation as described in [6].
+
+[4] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of ldpc codes,” in Proc. IEEE Workshop on Signal Processing Systems SIPS 2004, 2004, pp. 107–112.
+[5] H. Zhong and T. Zhang, “Block-ldpc: a practical ldpc coding system design approach,” IEEE Trans. Circuits Syst. I, vol. 52, no. 4, pp. 766– 775, April 2005.
+[6] M. Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check matrix codes,” IEEE Trans. Signal Process., vol. 54, no. 11, pp. 4376–4392, 2006.
+[7] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (corresp.),” IEEE Trans. Inf. Theory, vol. 20, no. 2, pp. 284–287, 1974.
+[8] M. Mansour and N. Shanbhag, “High-throughput ldpc decoders,” IEEE Trans. VLSI Syst., vol. 11, no. 6, pp. 976–996, 2003.
+[9] Y. Dai, N. Chen, and Z. Yan, “Memory efficient decoder architectures for quasi-cyclic ldpc codes,” IEEE Trans. Circuits Syst. I, vol. 55, no. 9, pp. 2898–2911, 2008.
+[10] L. Sun and B. Vijaya Kumar, “Field programmable gate array implementation of a generalized decoder for structured low-density parity check codes,” in Proc. IEEE International Conference on Field-Programmable Technology, 2004, pp. 17–24.
+[11] J. Aldous and R. Wilson, Graphs and Applications, An Introductory Approach. Springer, 2004.
+[12] M. V. Marathe, A. Panconesi, and L. D. Risinger, jr, “An experimental study of a simple, distributed edge-coloring algorithm,” J. Exp. Algorithmics, vol. 9, p. 1.3, 2004.
+[13] E. R. Scheinerman, Matgraph: A Graph Theory Toolbox for MATLAB, T. J. H. University, Ed. http://www.ams.jhu.edu/ ers/matgraph/.
+
+V. CONCLUSIONS
+The turbo decoding message passing (TDMP) algorithm was discussed, highlighting the bottleneck prohibiting parallel decoding, namely contention for the globally shared posterior memory. Although the parallel TDMP algorithm allows for decoding of S rows in parallel, based on designing a parity check matrix from permuted identity matrices, it is limited to using S decoders. To overcome this limitation, a scheduling algorithm based on edge colouring of a bipartite graph was proposed and shown to outperform an existing edge colouring algorithm; using between 25% to 50% fewer colours whilst using significantly less computational time than an optimum edge colouring algorithm. Throughput analysis for six LDPC codes based on a scheduling derived from the proposed algorithm showed a gain of between approximately seven and fifteen times over the parallel TDMP algorithm.
+
+ACKNOWLEDGMENT
+The authors would like to thank Toshiba TRL and its directors for supporting this work.
+
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes, M. Cambridge, Ed. MIT Press, 1963.
+[2] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference, C. San Mateo, Ed. Morgan Kaufmann, 1988.
+[3] A. Blanksby and C. Howland, “A 690-mw 1-gb/s 1024-b, rate-1/2 lowdensity parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, 2002.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J7un3e124,2026 at 07:15:37 UTC from IEEE Xplore. Restrictions apply.
+
+

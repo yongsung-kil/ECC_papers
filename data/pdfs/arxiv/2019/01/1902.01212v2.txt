@@ -1,0 +1,963 @@
+1
+Model-Based Detector for SSDs in the Presence of Inter-cell Interference
+Hachem Yassine, Mihai-Alin Badiu, and Justin P. Coon, Senior Member, IEEE
+
+arXiv:1902.01212v2 [cs.IT] 8 Feb 2019
+
+Abstract
+In this paper, we consider the problem of reducing the bit error rate of flash-based solid state drives (SSDs) when cells are subject to inter-cell interference (ICI). By observing that the outputs of adjacent victim cells can be correlated due to common aggressors, we propose a novel channel model to accurately represent the true flash channel. This model, equivalent to a finite-state Markov channel model, allows the use of the sum-product algorithm to calculate more accurate posterior distributions of individual cell inputs given the joint outputs of victim cells. These posteriors can be easily mapped to the log-likelihood ratios that are passed as inputs to the soft LDPC decoder. When the output is available with high precision, our simulation showed that a significant reduction in the bit-error rate can be obtained, reaching 99.99% reduction compared to current methods, when the diagonal coupling is very strong. In the realistic case of low-precision output, our scheme provides less impressive improvements due to information loss in the process of quantization. To improve the performance of the new detector in the quantized case, we propose a new iterative scheme that alternates multiple times between the detector and the decoder. Our simulations showed that the iterative scheme can significantly improve the bit error rate even in the quantized case.
+
+Index Terms
+
+The authors are with Department of Engineering Science, University of Oxford, United Kingdom, OX1 3PJ (e-mail: hachem.yassine@eng.ox.ac.uk, Mihai.badiu@eng.ox.ac.uk justin.coon@eng.ox.ac.uk). M.-A. Badiu is also with the Department of Electronic Systems, Aalborg University, Fredrik Bajers Vej 7, Aalborg, 9220, Denmark.
+
+February 12, 2019
+
+DRAFT
+
+2
+SSD, Flash memory, LDPC decoder, soft detection, ICI mitigation
+
+I. INTRODUCTION
+The modern paradigms of machine learning and artificial intelligence were made possible only through the abundance of computational power and available data. It is estimated that by 2020, 12000 terabytes of data will be generated per second [1], while currently, the largest commercial storage device has a capacity of 100 terabytes [2]. Therefore, it is becoming increasingly important to figure out how to store and manage it. The ideal non-volatile storage system is fast, reliable, power efficient, cheap and dense in capacity. While not perfect, magnetic hard disk drives (HDDs) are cheap and offer a high bit density, and have been popular for mass storage applications, e.g., personal computers and data centers. However, their major limitation is the existence of mechanical parts that can easily break, and limit their access speed [3]. In the last decade, solid state drives (SSDs), which are based on the semiconductor NAND flash memory [4], has been a strong competitor that is constantly gaining ground. Being purely electric, NAND flash provides, compared to HDDs, more reliability, lower power consumption, scalability due to Moore’s law, and faster access. Over the last 30 years, flash memory evolved to become a standard technology found in a wide variety of applications ranging from consumer electronics to primary memory, e.g., music players, digital cameras, smartphones, personal computers. An attestation to the success of flash memory is that in 2003, the cost of 128 megabytes of flash memory was USD 33, while in 2017, the cost of 128 gigabytes was USD 28, i.e., the megabyte got 1200 times cheaper [5].
+The aggressive cost-per-bit reduction was made possible thanks to several innovations in the industry including size shrinkage and multi-level cells. As a consequence, inter-cell interference (ICI) became a major reliability issue in modern flash memories [6]. In order to maintain virtually error-free storage, it is important to have system level approaches that reduce the probability of errors. One of the most prominent approaches is the use of error-correcting codes (ECC). With
+
+DRAFT
+
+February 12, 2019
+
+3
+
+the increase in the number of errors, there is a shift from simple, hard-decoded ECC schemes such as BCH and RS codes to the more advanced schemes such as LDPC codes with softdecoding. The performance of soft-decoding is known to depend on the precision of the read output of the cells and on having an accurate model of the flash channel. The model consists of a probabilistic characterization of the output threshold voltage (Vth) of the cells given their inputs.
+In the flash channel modeling literature, the focus is always on the characterization of a single cell. The underlying assumption is that cells are identical and that their outputs are identically and independently distributed according to the conditional probability distribution pY |X(y|x) where Y is the output of a cell and X is its input. Several works were focused on fitting empirical measurements from devices to an assumed parametric model of pY |X(y|x) by minimizing some metric. For example, [7], [8] considered a Gaussian distribution, [9] considered a Normal-Laplace mixture, [10] considered a Students t-distribution, and [11] considered a discrete Beta-binomial distribution. What these works have in common is that they treat interference as an independent noise, that together with the actual noise form an overall independent noise term which the assumed distribution accounts for. Alternatively, when an ICI-aware model is pursued, it is often the case that ICI is first processed out of the outputs via equalization and then the ICI-removed output is characterized [12]–[16]. However, this approach of dealing with ICI is not always feasible as it requires access to the interfering cells in order to equalize their effect on the victim cells. In solid state drives (SSDs), a file is typically spread across multiple dies/chips that can be read in parallel to increase data throughput. In this case, it is common that the data in the interfering cells are not necessarily requested, hence reading them will incur significant latency and power consumption. In short, ICI equalization is only efficient when a large sequential portion of a flash block is requested by the user.
+When equalization is not feasible, ICI must be treated as noise. However, there are two main aspects of ICI that the work treating ICI as noise ignore. The first is that ICI depends on the
+
+February 12, 2019
+
+DRAFT
+
+4
+
+inputs of the interfering cells and can therefore be more complicated than what can be accounted for by a simple density, e.g., Gaussian. In fact, the empirical investigation of ICI in [17] has shown that a mixture density better describes its distribution. The second aspect is the fact that by definition, ICI creates a correlation between different cells. The obvious cause of this correlation is that one cell interferes with another, but more importantly, even if two cells do not directly interfere with each other, they can be the subject of interference by a third cell, making them correlated by transition.
+In this paper, we consider both the aforementioned aspects. In particular, we model the flash channel using a hidden Markov model where the hidden states of the channel are defined by the inputs of the aggressor cells. This model differentiates between the independent noise and ICI, and accounts for the correlation between victim cells due to common aggressors. Based on this model, we use the sum-product algorithm to soft-detect the inputs. When the outputs of the detector are used as inputs to the soft LDPC decoder, we show that the adverse effect of ICI can be significantly reduced without accessing the aggressors when the cells’ outputs have high precision. The improvement becomes more significant as diagonal coupling increases. However, we show that the proposed scheme is sensitive to output quantization. Hence, to make our scheme realistic, we consider the effect of low-precision quantization of the output. We show that quantization can significantly limit the benefit of our scheme. To mitigate this effect, we propose an iterative scheme that alternates between detection and decoding. We show that the iterative scheme can significantly improve the performance of the LDPC soft decoder even when the quantization precision is low.
+The rest of this paper is organized as follows.In section II, we introduce the basics of flash memory and our model. In section III, we derive the output distribution of a single cell. In section IV, we present our model-based detector. In section V, we present and discuss the simulation results. In section VI, we discuss the effect of quantization on the performance of the proposed detector and propose an iterative scheme to improve it. The paper concludes in section VII.
+
+DRAFT
+
+February 12, 2019
+
+5
+Fig. 1: Schematic of a floating gate transistor.
+
+Fig. 2: Gray mapping of the levels to data bits for MLC.
+
+II. FLASH MEMORY BASICS AND MODEL
+
+A planar NAND flash memory block is a two-dimensional grid of floating-gate transistors (cells). The rows are called word-lines (WL), and the columns are called bit-lines (BL). When a charge is injected into the floating gate, it gives rise to a threshold voltage (Vth). This continuous Vth is then quantized into q levels (windows), namely Zq = {0, ..., q − 1}, so that log2 q bits of information can be modulated in each cell. Fig. 2 shows this quantization with a Gray labelling of the levels for q = 4. Before being programmed, a cell must be erased. The erase operation shifts the cell’s Vth back to level 0, while the program operation shifts it up into the level corresponding to the intended symbol (bit sequence). When reading it, the Vth of a cell is not readily available, but only a limited precision sensing is possible, i.e., the output is always quantized and a higher precision Vth can be obtained with more readings at the expense of increased latency. In the next four sections, we assume that the output is not quantized. In section VI, we consider the effect of quantization on the performance and then propose an iterative scheme to improve the performance under quantization. Ideally, the erase operation would push the Vth of all cells
+
+February 12, 2019
+
+DRAFT
+
+6
+to a nominal voltage v0, while the program operation shifts the cell’s Vth into one of q − 1 nominal voltages v1, ..., vq−1 representing the q − 1 program levels. However, the acutal Vth fluctuates around this mean due to circuitry noise, degradation and charge leakage (see Fig. 2) . For simplicity, we abstract the different sources of noise and consider a single noise term that follows a zero-mean, input-dependent Gaussian distribution.
+The parasitic capacitance coupling between cells gives rise to ICI, where the voltage shift in one cell induces a proportional shift in its neighbours. A cell is subject to interference only by cells programmed subsequently to it, hence the sequence of programming cells implies which cells interfere with which. In the even-odd bit-line structure (EOBL), even, then odd BLs along each WL are alternately programmed, subjecting the odd cells to interference by the even ones. Alternatively, in the all bit-line structure (ABL) all BLs are programmed at the same time, causing no interference to each other. When more than a single bit/cell is stored, the bits belong to different pages. The different pages of a WL can be programmed at the same time (fullsequence), resulting in interference only from the subsequently programmed WL. Alternatively, pages from adjacent (above and below) WLs can be programmed in the intermediary (shadowsequence), resulting in interference from both sides. In the rest of this paper, we consider the ABL structure with full-sequence programming of WLs in increasing order. We also assume that the coupling between non-immediate neighbours is negligible. Consequently, each victim cell is subject to ICI from the three neighbour cells on the next WL as shown in Fig. 3.
+We denote by X ∈ Zq and Y ∈ R the input level and output voltage of a cell, respectively. Hence, it is possible to write the Vth as a communication channel as follows
+
+Y = vX + Z + W.
+
+(1)
+
+Z is the input-dependent noise term having pZ|X(z|x) = N (z|0, σk2) as its pdf where σk2 is the noise variance when the input is the kth level. W is the ICI that the cell is subject to. Assuming
+
+DRAFT
+
+February 12, 2019
+
+7
+that m cells interfere with the victim cell, W can be written as follows
+
+m
+
+W=
+
+γj Yja − Yja,e ,
+
+(2)
+
+j=1
+
+where the superscript ‘a’ stands for ‘aggressor’, and the superscript ‘e’ stands for ‘erased’.
+
+γj is the parasitic capacitance coupling ratio between the jth direct aggressor and the victim, Yja and Yja,e are Vth of the jth direct aggressor after being programmed and when it is erased, respectively. Note that if at the time of programming a WL, a cell is kept erased, then Yja = Yja,e and hence the erased cell does not interfere with other cells. Due to the variability of the
+
+manufacturing process, a pair of cells may have a different coupling than that of another pair. However, the effect of this variability is negligible compared to the voltage shift Yja − Yja,e with which it is multiplied. This shift is at least one order of magnitude larger. Therefore, to
+
+maintain mathematical tractability, this variability is ignored, and cells separated by the same
+
+distance are assumed to have the same coupling ratio. In particular, the cells that are direct
+
+neighbors (same WL/BL or adjacent WL/BL) in the vertical, diagonal directions, have coupling
+
+ratios γv and γd respectively, independently of their position in the block.
+
+III. THE Vth DISTRIBUTION OF A SINGLE CELL
+
+In this section, we derive the distribution of ICI in a victim cell and the distribution of the
+
+output of a single cell given its input. The input levels to all cells are assumed independently
+
+and uniformly distributed (i.u.d).
+
+The ICI expression of (2) can be expanded using (1) as follows
+
+m
+
+W=
+
+γj vXja + Zja − v0 − Zja,e ,
+
+(3)
+
+j=1
+
+where Zja,e and Zja are the noise that the jth aggressor suffer from before and after being
+
+programmed, and Xja is the input to the jth aggressor. Therefore, ICI is a linear combination
+
+of the shifts in the aggressor cells due to their programming. Note that (3) assumes that since
+
+February 12, 2019
+
+DRAFT
+
+8
+
+WLs are programmed in order, the aggressor cell does not originally suffer from ICI when it
+
+subjects the victim cell to ICI, and that any subsequent ICI that the aggressor is subject to, does not affect the original victim. It is easy to see that given Xja, vXja + Zja − v0 − Zja,e follows a Gaussian distribution (difference of two independent Gaussians). It is easy to see that given
+
+the inputs to the aggressors, which we denote by vector Xa = (X1a, ...., Xma ), W is a linear combination of independent Gaussian variables which is also Gaussian. Therefore, we can write
+
+that
+
+pW |Xa(w|xa) = N w|ψ(xa), θ2(xa) ,
+
+(4)
+
+where
+
+m
+
+ψ(xa) = γj(vxja − v0),
+
+(5)
+
+j=1
+
+m
+
+θ2(xa) =
+
+γj2 1 − δxja,0 (σx2aj + σ02),
+
+(6)
+
+j=1
+
+where the Kronecker-delta indicator reflects the fact that when a cell is kept erased, no ICI-free
+
+shift occurs in it. Given X, Z also follows a Gaussian distribution. Thus, given the inputs of
+
+the victim and aggressors, Z + W is a sum of two Gaussian variables, and
+
+pY |X,Xa(y|x, xa) = N y|vx + ψ(xa), σx2 + θ2(xa) .
+
+(7)
+
+The conditional distribution of the output given its input is then obtained by marginalization as
+
+pY |X (y|x) = pXa|X (xa|x)pY |X,Xa(y|x, xa)
+xa
+
+1 = qm
+
+N y|vx + ψ(xa), σx2 + θ2(xa) ,
+
+(8)
+
+xa
+
+where the second equality is due to the input of all cells being i.u.d. For the case of ABL
+
+discussed in section II, m = 3 and the Gaussian mixture contains q3 components.
+
+Equation (8) shows that the read Vth of a cell given its input follows a Gaussian mixture
+
+distribution with one component per realization of the inputs of the aggressors. This result
+
+coincides with the experimental results of [17] where a similar behaviour was observed.
+
+DRAFT
+
+February 12, 2019
+
+9
+
+Fig. 3: Victim word-line (red) and agressor word-line (grey).
+
+IV. MODEL-BASED DETECTOR
+A. Graphical Model
+In this section, instead of considering a single victim cell, we consider a group of n victim cells that constitute a WL. We denote by X = (X1, ..., Xn)T ∈ Zqn and Y = (Y1, ..., Yn)T ∈ Rn the inputs and outputs of the victim cells, and we are interested in deriving an accurate approximation of the conditional joint distribution of the outputs of the victim cells given their inputs, namely pY|X(y|x). Note that an exact expression of pY|X(y|x) can be obtained through a similar approach to that of the previous section, but it results in a multi-variate Gaussian mixture with qn components. Given that n is typically on the order of thousands, this exact model is prohibitively complex to implement in practice for detection purposes.
+Since noise is independent from one cell to another, it does not introduce any correlation between them. However, even when two cells are not interfering with each other (as is the case for cells on the same WL in ABL), the fact that an aggressor can subject more than a single cell to ICI will induce a correlation between them. Fig. 3 shows (in black) the common aggressors, due to diagonal coupling, of two adjacent cells (in red). Consequently, two adjacent victim cells indexed by i and i + 1 will be subject to a correlated ICI, i.e., Wi and Wi+1 are not independent.
+
+February 12, 2019
+
+DRAFT
+
+10
+
+The ICI expression in (3) can be re-written as
+
+m
+
+m
+
+W=
+
+γj vXja − v0 +
+
+γj Zja − Zja,e .
+
+(9)
+
+j=1
+
+j=1
+
+where the leftmost sum is a discrete interference term caused by the ideal shift in the aggressor
+
+cell, and the rightmost sum is a continuous propagated noise term that the interfering cells are
+
+subject to. Subsequently, the channel model of (1) can be re-written as follows
+
+m
+
+m
+
+Y = vX + γj vXja − v0 + Z + γj Zja − Zja,e .
+
+j=1
+
+j=1
+
+(10)
+
+Z
+where Z is an equivalent noise term that includes the direct and propagated noise in the victim
+
+cell. However, in contrast to Z which was independent from one cell to another, Z is correlated
+
+since it depends on the noise in the aggressors, which as discussed above, may be shared among
+
+victims.
+
+In order to obtain a mathematically tractable form, we assume that this new term is independent
+
+from one cell to another. As opposed to when the whole of ICI is assumed independent from
+
+one cell to another, the outputs of adjacent cells will still be correlated in our approximation
+
+due to the discrete term in (10). To summarize our approximation: in the actual model, the
+
+output of a cell depends on its input and the shifts in its aggressor, which are continuous. In our
+
+approximated model, the output of a cell depends on its input and the inputs of its aggressors,
+
+which are discrete. If we define the state of a cell by the inputs of its aggressor cells and we denote it by Si = (Xia−1, Xia, Xia+1), the channel reduces to the well known finite state Markov channel (FSMC) [18] with
+
+n
+pY|X,S(y|x, s) = pY |X,S(yi|xi, si)
+i=1
+where S = (S1, ..., Sn), and
+pY |X,S(yi|xi, si) = N yi|vxi + ψ(si), σi2 + θ2(si) .
+DRAFT
+
+(11)
+(12)
+February 12, 2019
+
+11
+
+From a graphical modeling point of view, the joint distribution pY,X,S(y, x, s) can be factorized as follows
+
+n
+
+pX,Y,S(x, y, s) = pX (xi) pSi|Si−1 (si|si−1)
+
+i=1 hi(xi)
+
+gi (si ,si−1 )
+
+pY |X,S(yi|xi, si), (13)
+fi(yi,xi,si)
+where the sequences of functions fi, gi and hi are introduced for clarity of representation, and
+the variables of each function will be omitted but should be clear from its index. Since adjacent
+
+cells have common aggressors, their states are not independent and form a Markov chain where
+
+pSi|Si−1(si|si−1) represents the dependency between the states of adjacent cells. In particular, the
+
+two leftmost components of Si are always identical to the two rightmost components of Si−1,
+
+while the rightmost component of Si follows the input distribution, which is i.u.d. In other words,
+
+pSi|Si−1 (si|si−1)
+
+=
+
+0
+
+if
+
+(si,1, si,2)
+
+=
+
+(si−1,2, si−1,3)
+
+and
+
+1 q
+
+otherwise.
+
+The
+
+factorization
+
+in
+
+(13)
+
+can
+
+be represented by the factor graph [19] shown in Fig. 4, where circles represent variables and
+
+squares represent functions.
+
+It is worth noting that according to the above model, the flash memory channel in the presence
+
+of ICI is equivalent to a FSMC [18] where the state of the channel changes according to a finite-
+
+state Markov process. In this analogy, a cell corresponds to a discrete time-step. The FSMC is
+
+defined by its conditional input/output probability at cell i by pY |X,S(yi|xi, si). This distribution
+
+in our case is Gaussian with mean and variance given by
+
+µx,s = E [Y |X = x, S = (s1, s2, s3)]
+
+3
+
+= vx + γi (vsi − v0) , and
+
+(14)
+
+i=1
+
+σx2,s = V [Y |X = x, S = (s1, s2, s3)]
+
+3
+= σx2 + (1 − δsi,0)γi2 σs2i + σ02 ,
+i=1
+
+(15)
+
+February 12, 2019
+
+DRAFT
+
+12
+
+Fig. 4: Factor Graph representing (13)
+
+where δi,j is the Kronecker delta function (erased cells do not interfere), γ2 = γv and γ1 = γ3 = γd. Therefore, the channel is Gaussian but with variable mean and variance that depend on the state of the cell which itself depends on the states of adjacent cells.
+
+B. Detector
+When the access to the outputs or inputs of the aggressor WL is prohibited, cancellation or equalization is not possible. Therefore, the detector can exploit only the outputs Y of the victim cells to estimate the inputs. The soft detector is obtained by calculating the posterior probability mass function (PMF) of each cell, denoted by pXi|Y(x|y) for i = 1, ..., n, while the optimal hard detector is obtained by maximizing these PMFs to minimize the symbol error rate, i.e.,
+
+xi∗ = arg max pXi|Y(x|y).
+
+(16)
+
+x∈Zq
+
+where xi∗ is the optimal estimate of the symbol stored in the ith cell. Both hard and soft detection
+
+can be passed on to hard or soft decoder respectively. The PMF pXi|Y(x|y) is proportional
+
+to pXi,Y(x, y), which is the marginal of pX,Y,S(x, y, s). The marginalization is done over all
+
+unknown variables except xi, i.e.,
+
+pXi,Y(x, y) =
+
+pX,Y,S(x, y, s)
+
+(17)
+
+∼{xi}
+
+where ∼{xi} is the summation over all unknown variables except xi. This marginalization
+
+problem can be solved by applying the sum-product algorithm (shown in Algorithm 1) to
+
+DRAFT
+
+February 12, 2019
+
+Algorithm 1 Posterior Calculation Using Message-Passing 1: for i = 1 : 1 : n do
+
+2:
+
+µhi→Xi (xi) = p(xi)
+
+3:
+
+µXi→fi (xi) = µhi→Xi (xi)
+
+4:
+
+µfi→Si (si) = Xi p (yi|xi, si) µXi→fi (xi)
+
+5: end for
+
+6: µg1→S1 (s1) = p(s1) 7: for i = 1 : 1 : n − 1 do
+
+8:
+
+µSi→gi+1 (si) = µfi→Si (si)µgi→Si (si)
+
+9:
+
+µgi+1→Si+1 (si+1) = si p (si+1|si) µsi→gi+1 (si)
+
+10: end for
+
+11: µSn→gn (sn) = µfn→Sn (sn) 12: for i = n − 1 : 1 : 1 do
+
+13:
+
+µgi+1→Si (si) = si+1 p (si+1|si) µSi+1→gi+1 (si+1)
+
+14:
+
+µSi→gi (si) = µfi→Si (si)µgi+1→Si (si)
+
+15: end for
+
+16: for i = 1 : 1 : n do
+
+17:
+
+µSi→fi (si) = µgi→Si (si)µgi+1→Si (si)
+
+18:
+
+µfi→Xi (xi) = si p(yi|xi, si)µSi→fi (si)
+
+19:
+
+p(xi|y) ∝ µhi→Xi (xi)µfi→Xi (xi)
+
+20: end for
+
+13
+Forward Messages Backward Messages
+
+the factor graph representation of Fig. 4. Since the corresponding factor graph is a tree, the sum-product algorithm provides the exact marginals for all variables by running the forward and backward recursions once without the need for any iterations. The messages µa→b and
+
+February 12, 2019
+
+DRAFT
+
+14
+
+Bit Error Rate
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+Uncoded, Cell by Cell Uncoded, Sum-Product
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.125 0.13 0.135 0.14 0.145 0.15 0.155 0.16
+
+γy
+
+(a) β = 1, α = 0.075.
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+Uncoded, Cell by Cell Uncoded, Sum-Product
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16
+
+γy
+
+(c) β = 1, α = 0.5.
+
+Bit Error Rate
+
+Bit Error Rate
+
+Bit Error Rate
+
+10-1
+
+10-2
+
+10-3
+
+10-4 10-5 10-6
+0.1
+10-1
+
+Uncoded, Cell by Cell Uncoded, Sum-Product Coded, Cell by Cell Coded, Sum-Product
+0.11 0.12 0.13 0.14 0.15 0.16 γy
+(b) β = 1, α = 0.25.
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+Uncoded, Cell by Cell Uncoded, Sum-Product
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16
+
+γy
+
+(d) β = 0.5, α = 0.25.
+
+Fig. 5: Coded and uncoded BER using of the cell by cell detector (blue) and the model-based detector (in green) as a function of γv and for different β and α.
+
+µb→a are exchanged between each pair of adjacent nodes a and b according to Algorithm 1 where the messages are always functions of the variable involved [19]. In practice, appropriate normalization of the messages is required to ensure their values do not rapidly go to zero for large n. Note that the complexity of the algorithm is linear in n.
+
+DRAFT
+
+February 12, 2019
+
+15
+
+x
+
+0
+
+1
+
+2
+
+3
+
+vx 1.1
+
+2.7
+
+3.3
+
+3.9
+
+σx 0.35β 0.09β 0.09β 0.09β
+
+TABLE I: Input and noise parameters used for simulation.
+
+V. SIMULATION RESULTS
+
+To demonstrate the benefits of the proposed detector, we compare its coded and uncoded performances against the benchmark. As a benchmark detector, we consider the sub-optimal cell by cell detector where each cell is detected based only on its output, i.e., the soft detector is simply obtained by evaluating pX|Y (x|yi) for all i and the hard detector is obtained by maximizing these posteriors, where pX|Y (y|x) ∝ pY |X(y|x) which was derived in (8) of section III. This suboptimal detector, which is often employed in the literature, becomes optimal only when the cells are actually independent, i.e., diagonal interference is negligible.
+For the uncoded performance, the posteriors are simply maximized while, for the coded one, the posterior PMF (or the log-likelihood ratios evaluated from it) of each cell is passed to the soft-LDPC decoder. We simulate an MLC device (q = 4) and employ the simulation parameters given in Table I, where β controls the strength of noise in the system. The channel parameters are assumed to be perfectly known and are given for each input/state combination by (14) and (15).
+We plot the bit error rate performance as a function of the vertical coupling γv and for different values of the diagonal coupling γd, which we set as a fraction α of the vertical coupling, i.e., γd = αγv. The outputs of the cells are assumed to be available with floating point precision, i.e., unquantized. We use a rate-0.89, length-9216 LDPC code and the built-in Matlab encoder and decoder with the maximum number of iterations set to 50. Simulations were run until the decoded WL was erroneous in at least 100 Monte Carlo trials?
+
+February 12, 2019
+
+DRAFT
+
+16
+The results are shown in Fig. 5. As mentioned before, when there is no diagonal coupling, i.e., α = 0, the two detectors are equivalent and hence provide the same performance (the plots were omitted). As the diagonal coupling starts to increase, i.e., α = 0.075, the uncoded performance of the two detectors is virtually the same, while the proposed detector provides an improvement in the coded performance over the cell by cell detector; e.g., at γv = 0.135, the proposed scheme reduces the BER by 75%. The benefit of sum-product detector becomes more significant for α = 0.25, especially in the coded case where we can see at γv = 0.126 a 99.7% reduction. For extreme cases of diagonal coupling (α = 0.5), the uncoded BER experience up to 44.5% reduction at γv = 0.0955, while the minimum reduction in the coded BER is approximately 34% (γv = 0.1585) and reduction can reach up to 99.99% (γv < 0.1096). In general, the results show that the proposed detector provides more accurate soft-input to the LDPC decoder by exploiting the dependence between adjacent cells due to common aggressors.
+The choice of β = 1 reflects a significant level of noise in the system. To see what happens when the system is less affected by noise, we show in Fig. 5d the same results for β = 0.5 and α = 0.25. The gap between the performance of the two detector widens for both coded and uncoded performance. This shows that in cases where the system is limited by interference, exploiting the dependency between adjacent cells can bring significant improvements to the performance. As devices scale down, they become more and more limited by ICI. By having a more accurate posterior PMF, the coded and uncoded performance can be significantly improved.
+
+VI. EFFECT OF QUANTIZATION ON THE PROPOSED DETECTOR
+
+In the previous section, it was assumed that the output of a cell is available in floating point precision, i.e., unquantized. While high-precision is possible in practice, there is a trade-off between reading latency and output precision as explained in section II. Therefore, it is desirable to have a small number of required sensings to achieve an acceptable reliability level. In this section, we assess the effect of having a low-precision output on the inference performance. We
+
+DRAFT
+
+February 12, 2019
+
+Bit Error Rate
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+Uncoded, Cell by Cell
+
+Uncoded, Sum-Product
+
+10-5
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+
+(a) β = 1, α = 0.075.
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+Uncoded, Cell by Cell
+
+Uncoded, Sum-Product
+
+10-5
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+
+(c) β = 1, α = 0.5.
+
+Bit Error Rate
+
+Bit Error Rate
+
+17
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+Uncoded, Cell by Cell
+
+10-5
+
+Uncoded, Sum-Product
+
+Coded, Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+
+(b) β = 1, α = 0.25.
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+Uncoded,Cell by Cell
+
+10-5
+
+Uncoded, Sum-Product
+
+Coded,Cell by Cell
+
+Coded, Sum-Product
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+
+(d) β = 0.5, α = 0.25.
+
+Bit Error Rate
+
+Fig. 6: Coded and uncoded BER using of the cell by cell detector (blue) and the model-based detector (in green) when the output is quantized as a function of γv and for different β and α.
+
+show that when the output is quantized, the performance of the proposed sum-product detector deteriorates significantly. Therefore, we propose an iterative scheme to partially recover this drop in performance.
+
+A. Quantization Several quantization schemes were proposed to improve soft decoding of LDPC codes. In [20],
+it was shown that non-uniform quantization improves the performance of soft decoded LDPC
+
+February 12, 2019
+
+DRAFT
+
+18
+
+PDF
+
+3.5
+
+Level 0
+
+3
+
+Level 1 Level 2
+
+Level 3
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+
+0
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Threshold Voltage (volts)
+
+Fig. 7: The quantization boundaries are shown in black when β = 1, γv = 0.08 and α = 0.075.
+
+codes relative to uniform quantization. In [21], it was shown that a quantizer that maximizes the mutual information between the input and the quantized output improves soft decoding. At the intuitive level, the quantized output should preserve as much information about the input as possible. Since in practice, the LSB and MSB pages are read independently, we consider three and six read references to read the LSB and MSB pages, respectively. Fig. 7 shown an example of the quantization boundaries used for detecting the LSB (in black) and the MSB (in red) when β = 1, γv = 0.08 and α = 0.075. The references for each page were obtained such as to maximize the mutual information between the binary input of the page and the quantized output, i.e.,
+
+QL∗ = arg max I XL; Q(Y )
+
+(18)
+
+Q∈Z4
+
+Q∗M = arg max I XM ; Q(Y ) ,
+
+(19)
+
+Q∈Z7
+
+where XL ∈ {0, 1} and XM ∈ {0, 1} are the LSB and MSB bits of a cell, respectively, Q∗L and QM ∗ are the LSB and MSB quantizers, respectively. Zk is the set of all scalar, deterministic
+
+quantizers with k outputs, and Q : R → Zk is a many-to-one function in Zk that maps the real
+
+output to a quantized output in Zk.
+
+DRAFT
+
+February 12, 2019
+
+19
+In [22], a low complexity algorithm to obtain such quantizers for binary-input discrete memoryless channels was proposed, which we adopt. However, it is important to note that this algorithm assumes that the channel is memoryless, therefore, the obtained quantizers are optimal only when the input of each cell is inferred using its output, which is true only for our benchmark. However, in the case of the proposed detector, the input of a cell is inferred from the outputs of a group of cells, and hence, it is not guaranteed that such quantizer maximizes the mutual information between the input and the quantized outputs, i.e., I XL; Q(Y1), ..., Q(YN ) and I XM ; Q(Y1), ..., Q(Yn) . Nevertheless, we do not aim to design an optimal quantizer, and the performance of the sum-product approach for this quantizer can be considered as a lower bound on the optimal performance.
+
+B. Performance Under Quantization
+The performances of both detectors under quantization are shown in Fig. 6. Despite still being superior, the performance of the sum-product detector is more negatively affected by quantization compared to cell by cell detector. In the uncoded case, the performance does not exhibit any improvement, even in the ICI-limited case. The coded performance on the other hand exhibits an improvement that is small compared to the improvement observed in the unquantized case. As an example, for β = 1, α = 0.25 and γv = 0.126, the reduction in the coded BER is only 14.1% in the quantized case compared to 99.7% in the unquantized case. This deterioration is accompanied with a general shift to the left of the plots, indicating that quantization significantly increase the BER for both detector, which is expected.
+This significant sensitivity of the proposed detector can be explained by the fact that quantization, especially when it has low-precision, discards some information from the output signal. The sensitivity to quantization is then a matter of how much the inference scheme has been initially benefiting from the discarded information. In our case, the sum-product benefited significantly more than the benchmark from the outputs when they were not quantized to learn information
+
+February 12, 2019
+
+DRAFT
+
+20
+about ICI and provide high-quality inputs to the soft decoder. The quantized output contains information about the input, noise, and ICI. When the noise is significant, a big part of the information kept due to quantization will be related to noise, which is independent, and the performance of the sum-product seems to become very similar to that of the benchmark. However, when the system becomes limited by ICI, e.g., β = 0.5 as shown in Fig. 6d, it is clear that the quantized output carries much more information about ICI, which can now be exploited more efficiently by the sum-product, and we can see the performance gap between the sum-product and the benchmark partially recovering.
+As a conclusion, the proposed sum-product algorithm is sensitive to quantization and can cope better with it in an ICI-limited scenario. As explained before, the quantization scheme that we employ is not necessarily optimal for our detector, and it may be possible to design a better quantizer that extracts more information to inform the sum-product algorithm. However, in the next section, we use a different approach to improve the performance of the sum-product algorithm using the same quantization scheme.
+
+C. Iterative Detection/Decoding Strategy
+In our setting, the sum-product algorithm is used to soft detect the input symbols and subsequently pass the soft information to the soft decoder. In other words, the detector informs the decoder but not vice-versa. The structure of the ECC obtained from the constraint Hx = 0T can be represented by a factor graph (Tanner graph) [19]. Therefore, the channel and code factor graphs can be combined into a single factor graph representing the system on which inference is to be performed using the sum-product algorithm. In this case, no differentiation is made between detection and decoding.
+As a middle ground, we propose a strategy that still differentiates between detection and decoding, but allows the detector to inform the decoder and vice-versa, by iterating multiple times between detection and decoding. In other words, the output of the decoder, which is another
+
+DRAFT
+
+February 12, 2019
+
+Bit Error Rate
+
+10-1
+
+10-2
+
+10-3
+
+MaxIn=50, MaxOut=1
+
+10-4
+
+MaxIn=20, MaxOut=10
+
+10-5 0.11
+10-1 10-2 10-3 10-4 10-5 10-6 10-7
+0.08
+
+0.12
+
+0.13
+
+0.14
+
+0.15
+
+0.16
+
+γy
+
+(a) β = 1, α = 0.075.
+
+MaxIn=50, MaxOut=1 MaxIn=20, MaxOut=10
+
+0.09
+
+0.1
+
+0.11 0.12 0.13 0.14
+
+γy
+
+(c) β = 1, α = 0.5.
+
+Bit Error Rate
+
+Bit Error Rate
+
+21
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+MaxIn=50, MaxOut=1
+
+10-6
+
+MaxIn=20, MaxOut=10
+
+10-7 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+
+(b) β = 1, α = 0.25.
+
+10-1
+
+10-2
+
+10-3
+
+10-4
+
+MaxIn=50, MaxOut=1
+
+MaxIn=20, MaxOut=10
+
+10-5
+
+10-6 0.08 0.09 0.1 0.11 0.12 0.13 0.14 0.15 0.16 γy
+(d) β = 0.5, α = 0.25.
+
+Bit Error Rate
+
+Fig. 8: Coded BER using the sum-product with (green) and without (brown) the iterative scheme. M axIn is the maximum number of iterations that the decoder performs and M axOut is the maximum number of times the detection/decoding process is done.
+
+posterior distribution on the input, is passed back to the detector as a new prior, after removing from it the intrinsic information. This is equivalent to iterative receivers used for FSMC as in [23]. Note that the decoder itself is an iterative instance of the sum-product since it has cycles, while the detector is a cycle-free instance of it. Hence, we differentiate between the number of inner iterations of the decoder, and the number of outer iterations that switches between
+
+February 12, 2019
+
+DRAFT
+
+22
+decoding and detecting. We denote the maximum number of these iterations as M axIn and M axOut, respectively. The scheme evaluated in the previous sections corresponds to M axIn = 50, M axOut = 1 which means there is no iteration between detection and decoding. Fig. 8 shows the results when the output is quantized and when the iterative strategy between detection and decoding is employed with M axIn = 20 and M axOut = 10 and compares it to the case of the previous subsection. The choice of the of M axIn = 20 M axOut = 10 was made arbitrarily based on a few trials. From the figure, it is clear that the proposed strategy can mitigate the effects of quantization and the performance is improved significantly especially for larger diagonal coupling. Note that even in the unquantized case of Fig. 5, the significant improvement was for larger diagonal coupling as well. When the system is ICI-limited as shown in 8d, the iterative strategy significantly improves the performance by several orders of magnitude.
+
+VII. CONCLUSION AND FUTURE WORK
+
+This paper presented a model-based detector that enables soft LDPC decoder to perform significantly better in the presence of ICI. The work is particularly relevant for the highly parallel SSDs of the future which will be based on significantly scaled flash chips. In these devices, powerful, yet simple signal processing techniques will be a key factor contributing to their mass adoption. We have shown that the proposed detector is sensitive to low-precision output. To overcome this, we applied the concept of joint detection and decoding and proposed an iterative scheme that alternates between detection and decoding multiple times to recover the data. This scheme was shown to significantly reduce the adverse effect of quantization.
+The work demonstrated the potential of joint detection of cells, as opposed to the stateof the art schemes that either detect cells individually or employ expensive ICI cancellation. This opens the door for several future works such as the extension to different architectures and different channel models. As the work assumed perfect knowledge of channel parameters, future work may study efficient methods to estimate these parameters given the proposed model.
+
+DRAFT
+
+February 12, 2019
+
+23
+Furthermore, since we identified the finite-state Markov channel model as a more accurate model of flash memory, it will open the door to answer theoretical and practical questions about the information theoretic capacity of flash memory [18] and the design of suitable LDPC codes [24].
+
+REFERENCES
+
+[1] “Data Never Sleeps 6.0.” https://www.domo.com/learn/data-never-sleeps-6. Accessed: 2018-08-27. [2] “Nimbus Data Launches the Worlds Largest Solid State Drive.” https://bit.ly/2OU5quO. Accessed: 2018-08-27. [3] S. Aritome, NAND flash memory technologies. John Wiley & Sons, 2015. [4] F. Masuoka, M. Momodomi, Y. Iwata, and R. Shirota, “New ultra high density eprom and flash eeprom with nand structure
+cell,” in Electron Devices Meeting, 1987 International, pp. 552–555, IEEE, 1987. [5] “Flash Memory and SSD Prices (2003-2018).” https://jcmit.net/flashprice.htm. Accessed: 2018-08-27. [6] L. M. Grupp, J. D. Davis, and S. Swanson, “The bleak future of NAND flash memory,” in Proceedings of the 10th USENIX
+conference on File and Storage Technologies, pp. 2–2, USENIX Association, 2012. [7] D.-h. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error
+correction,” IEEE Transactions on Signal Processing, vol. 61, no. 2, pp. 440–449, 2013. [8] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory:
+Characterization, analysis, and modeling,” in Proceedings of the Conference on Design, Automation and Test in Europe, pp. 1285–1290, EDA Consortium, 2013. [9] T. Parnell, N. Papandreou, T. Mittelholzer, and H. Pozidis, “Modelling of the threshold voltage distributions of sub-20nm NAND flash memory,” in Global Communications Conference (GLOBECOM), 2014 IEEE, pp. 2351–2356, IEEE, 2014. [10] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Enabling accurate and practical online flash channel modeling for modern mlc nand flash memory,” IEEE Journal on Selected Areas in Communications, vol. 34, no. 9, pp. 2294–2311, 2016. [11] V. Taranalli, H. Uchikawa, and P. H. Siegel, “Channel models for multi-level cell flash memories based on empirical error analysis,” IEEE Transactions on Communications, vol. 64, no. 8, pp. 3169–3181, 2016. [12] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 57, no. 10, pp. 2718–2728, 2010. [13] D.-h. Lee and W. Sung, “Least squares based coupling cancelation for mlc nand flash memory with a small number of voltage sensing operations,” Journal of Signal Processing Systems, vol. 71, no. 3, pp. 189–200, 2013. [14] D.-h. Lee and W. Sung, “Soft-decision decoding with cell to cell interference removed signal in nand flash memory,” in Acoustics, Speech and Signal Processing (ICASSP), 2013 IEEE International Conference on, pp. 2518–2522, IEEE, 2013.
+
+February 12, 2019
+
+DRAFT
+
+24
+[15] M. Asadi, X. Huang, A. Kavcic, and N. P. Santhanam, “Optimal detector for multilevel NAND flash memory channels with intercell interference,” Selected Areas in Communications, IEEE Journal on, vol. 32, no. 5, pp. 825–835, 2014.
+[16] H. Yassine, J. Coon, M. Ismail, and H. Fletcher, “Towards an analytical model of NAND flash memory and the impact on channel decoding,” in 2016 IEEE International Conference on Communications (ICC), pp. 1–6, IEEE, 2016.
+[17] Y. Cai, O. Mutlu, E. F. Haratsch, and K. Mai, “Program interference in mlc nand flash memory: Characterization, modeling, and mitigation,” in Computer Design (ICCD), 2013 IEEE 31st International Conference on, pp. 123–130, IEEE, 2013.
+[18] A. J. Goldsmith and P. P. Varaiya, “Capacity, mutual information, and coding for finite-state markov channels,” IEEE Transactions on Information Theory, vol. 42, no. 3, pp. 868–886, 1996.
+[19] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on information theory, vol. 47, no. 2, pp. 498–519, 2001.
+[20] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision error-correction codes in NAND flash memory,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 58, no. 2, pp. 429–439, 2011.
+[21] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for ldpc decoding in flash: Mutual-information optimized quantization,” in Global Telecommunications Conference (GLOBECOM 2011), 2011 IEEE, pp. 1–6, IEEE, 2011.
+[22] B. M. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, 2014.
+[23] E. A. Ratzer, “Low-density parity-check codes on markov channels,” in Second IMA Conference on Mathematics in Communications, Citeseer, 2002.
+[24] A. W. Eckford, F. R. Kschischang, and S. Pasupathy, “On designing good ldpc codes for markov channels,” IEEE Transactions on Information Theory, vol. 53, no. 1, pp. 5–21, 2007.
+
+DRAFT
+
+February 12, 2019
+
+

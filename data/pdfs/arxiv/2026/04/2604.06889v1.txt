@@ -1,0 +1,1499 @@
+1
+Affine Subcode Ensemble Decoding of Linear Block Codes
+Jonathan Mandelbaum, Graduate Student Member, IEEE, Paul Bezner, Graduate Student Member, IEEE, Holger Ja¨kel, Member, IEEE, Stephan ten Brink, Fellow, IEEE, Laurent Schmalen, Fellow, IEEE
+
+arXiv:2604.06889v1 [cs.IT] 8 Apr 2026
+
+Abstract—In the short block length regime, ensemble decoding schemes with their inherently parallel structure can improve error correction performance and reduce latency compared to stand-alone suboptimal decoders such as belief propagation (BP). In this work, we introduce affine subcode ensemble decoding (aSCED), which uses an ensemble of decoders operating on linear block codes and both linear and strictly affine subcodes. This generalizes the recently proposed subcode ensemble decoding (SCED), which is restricted to linear subcodes. We derive BP update rules for affine subcodes and show that aSCED simplifies ensemble design compared to SCED, multiple bases BP, and automorphism ensemble decoding. Monte-Carlo simulations of two low-density parity-check codes and two Bose–Chaudhuri– Hocquenghem (BCH) codes demonstrate improved error correction performance of aSCED over competing existing ensemble schemes. Notably, for one BCH code, when combining ensemble design with algorithms for constructing high-performance paritycheck matrices, aSCED achieves near-maximum likelihood performance using only 64 BP decoding paths.
+Index Terms—Belief Propagation Decoding, Ensemble Decoding, Universal Codes, Code Agnostic Decoding
+I. INTRODUCTION
+L OW-density parity-check (LDPC) codes decoded with belief propagation (BP), a low-complexity iterative message passing algorithm, achieve excellent error correction performance in the large block length regime [3]. However, in the short block length regime, the decoding performance of BP becomes unsatisfactory [4], [5]. This hinders the application of LDPC codes in emerging applications such as the Internet of Things (IoT) and ultra-reliable low-latency communication (URLLC) in future wireless systems. In contrast, polar codes, proposed by Arıkan in 2009 [6], paired with successive cancellation (SC) list decoding [7], are well known for their strong performance at short block lengths.
+There exist two independent key research directions to enable the use of BP in the short block length regime:
+1) Parity-check matrix (PCM) design: Many short codes with large minimum Hamming distance, e.g., Bose– Chaudhuri–Hocquenghem (BCH) codes, exhibit dense
+This work has received funding from the German Federal Ministry of Research, Technology and Space (BMFTR) within the projects Open6GHub and Open6GHub+ (grant agreements 16KISK010, 16KIS2405 and 16KISK019). Parts of this paper have been presented at the IEEE Int. Symp. Inf. Theory 2025 [1] and IEEE Int. Symp. on Topics in Coding 2025 [2]. Jonathan Mandelbaum, Holger Ja¨kel, and Laurent Schmalen are with the Communications Engineering Lab (CEL), Karlsruhe Institute of Technology (KIT), Hertzstr. 16, 76187 Karlsruhe, Germany (e-mail: first.lastname@kit.edu). Paul Bezner and Stephan ten Brink are with the Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany (e-mail: bezner,tenbrink@inue.uni-stuttgart.de)
+
+Tanner graphs with short cycles that degrade BP performance. Different approaches to enhance BP performance aim at improving sparsity or eliminating short cycles in the graphical representation of the code [8]–[13]. 2) Ensemble decoding: Employing multiple suboptimal decoding algorithms in parallel—not limited to BP—and selecting the best estimate to improve overall the error correction performance [14]–[16].
+Ensemble decoding can improve the performance in the short-block regime, enhancing both latency and frame error rate (FER) [15], [17], [18]. Prior work on ensemble decoding methods achieves diversity by decoding over modified representations of noise realizations or graphs [1], [14]–[24].
+Homomorphism-based ensemble decoders, such as automorphism ensemble decoding (AED), generalized AED (GAED), and endomorphism ensemble decoding (EED), leverage known code symmetries to transform the noise representation. If the automorphism group is known and its effect is not absorbed by a symmetry of the decoder, AED can yield performance gains [15]–[17], [19]. Related noise-altering ensemble decoding schemes include noiseaided ensemble decoding [20] and saturated BP [21]. Other methods, such as multiple bases BP (MBBP) and scheduling ensemble decoding (SED), improve performance by decoding over ensembles of distinct graphs or BP variants. MBBP, for instance, employs a set of equivalent PCMs, i.e., structurally different graphs, while SED varies the scheduling order of layered BP updates [16], [18]. However, when considering an arbitrary code, MBBP relies on an NP-complete search for minimum-weight codewords of the dual code, severely limiting its applicability for codes of medium-to-long block lengths [13], [25].
+In [1], we introduced subcode ensemble decoding (SCED), an ensemble decoding scheme using different linear subcodes of the code C. PCMs of subcodes are obtained by appending linearly independent rows to the original PCM, thereby forming PCMs for BP-based SCED. It is essential to ensure a linear covering (LC), i.e., that the union of the linear subcodes covers the code C [26]; otherwise, some codewords are not decodable.
+For arbitrary codes, SCED simplifies ensemble design. Unlike MBBP, it only requires identifying low-weight linearly independent rows, which is easier than searching for minimum-weight dual codewords. Moreover, unlike AED, SCED does not require any knowledge of the code structure beyond its PCM. For the codes investigated in [1], MonteCarlo simulations confirm that SCED consistently outperforms AED, which itself surpasses other ensemble methods [1], [16].
+
+2
+
+In this work, we extend SCED by introducing aSCED, which not only decodes on linear subcodes but also operates on suitably defined affine subcodes. Our contributions are:
+(i) we provide theoretical results on aSCED showing that the additional use of affine subcodes further simplifies the ensemble design compared to SCED.
+(ii) we demonstrate that some decoders in the ensemble employ the same decoding graphs, which potentially allows for hardware reuse.
+(iii) we develop an efficient approximation of the ensemble list error rate (LER), which equals the FER when maximum likelihood (ML) decoding errors are negligible.
+(iv) we show that the use of subcodes allows us to design better performing PCMs. To demonstrate this, we pick up the second research direction that aims to enhance BP performance by designing high-performance PCMs. In particular, we use a refined version of the algorithm from [9] to construct the so-called structured sparse PCMs (ssPCMs) of subcodes and demonstrate different structural benefits of using subcodes.
+(v) we conduct Monte-Carlo simulations for both LDPC and BCH codes, demonstrating improved performance compared to other equal-complexity ensemble decoding schemes. Notably, for the BCH code C1(63, 30), we show that BP-based aSCED using 64 paths of subcode ssPCMs already achieves near-ML performance.
+The remainder of this paper is organized as follows. In Sec. II, we briefly review linear codes and BP decoding, before introducing a general framework of ensemble decoding in Sec. III. In Sec. IV, we present aSECD and prove some of its properties. Additional structural benefits enabled by the usage of subcodes are discussed in Sec. V. Numerical results supporting these structural advantages and demonstrating the improved error-correction performance of aSCED are provided in Sec. VI. Finally, Sec. VII concludes the paper.
+Notation: Vectors and matrices are denoted by lowercase and uppercase bold letters, respectively, e.g., x and X. The ith element of x is denoted by xi, the ith row of X by Xi,:, and the element in row i and column j of X by Xi,j. Sets are denoted by calligraphic letters, e.g., S, and we use the notation [m] := {1, . . . , m}. For index sets A and B, we define the submatrix MA,B := (Mi,j)i∈A,j∈B, the subvector xA = (xi)i∈A and the vector 1A := i∈A ei, where ei denotes the ith canonical unit vector. Finally, 1a×b and 0a×b denote the all-one and all-zero matrices of size a × b, respectively.
+II. PRELIMINARIES
+A. Linear Codes and Subcodes
+A linear block code C(n, k) =: C with k ≤ n is a k-dimensional subspace of the vector space Fn over a field F. When clear from the context, the block length n ∈ N and information length k ∈ N are omitted. Every linear code can be defined as the span of the rows of a generator matrix G ∈ Fk×n or by the null space of a PCM H ∈ Fm×n, i.e.,
+C := uG : u ∈ Fk = x ∈ Fn : HxT = 0 ,
+
+where rank(G) = k and rank(H) = n − k ≤ m. We denote the code characterized by H as C(H). A PCM with m > rank(H) is called overcomplete. The weight wt(H) := j,i Hji of H is the number of non-zero elements. The dual code of C, denoted by C⊥, is defined by interchanging the generator matrix and the PCM, i.e., H⊥ = G. We refer
+to codewords of the dual code simply as dual codewords. Following [1], a linear subcode Cs(n, k′) of C with k′ ≤ k
+is a k′-dimensional subspace of C. We define an strictly affine subcode Ca(n, k′) of C by a tuple (Cs(n, k′), xa) as
+Ca(n, k′) := {xa + x : x ∈ Cs(n, k′)} =: xa + Cs(n, k′), (1)
+where Cs(n, k′) is a linear subcode of C and the affine offset xa satisfies xa ∈ C but xa ∈/ Cs(n, k′) requiring k′ < k. Thus, a strictly affine subcode Ca coincides with a coset within the quotient space C/ Cs. Let Hs denote a PCM of Cs, then we define the affine syndrome sa := HsxaT. Since every codeword x ∈ Ca can be written as x = xa + xs with xs ∈ Cs, all codewords within the strictly affine subcode have the same non-zero affine syndrome, i.e., HsxT = sa ≠ 0 for all x ∈ Ca.
+Linear subcodes and strictly affine subcodes are subsets of C, i.e., Cs ⊆s C and Ca ⊂a C, where the subscripts indicate the relation of a linear and a strictly affine subcode to the original code C, respectively. A linear subcode Cs(n, k′) is a proper subcode if k′ < k. In this case, we replace ⊆s by ⊂s. In contrast, a strictly affine subcode does not constitute a subspace of C since it does not contain the all-zero codeword
+and therefore is not closed under addition. Throughout this
+paper, we exclusively consider linear subcodes and strictly
+affine subcodes. For brevity, we omit the term strictly and
+refer to the latter simply as affine subcodes. We consider the transmission of a binary codeword x ∈ C
+over a binary-input memoryless symmetric-output channel (BiMSC) with output alphabet Y [3, Ch. 4]. At the receiver, the corresponding channel output is denoted by y ∈ Yn and
+can be mapped onto the bit-wise log-likelihood ratio (LLR) vector λ := (l(yi))in=1 ∈ Rn with l(yi) given by [3, Def. 4.5].
+
+B. Belief Propagation Decoding
+
+BP is an iterative message passing algorithm operating on the Tanner graph of a code [3]. A Tanner graph, associated with a PCM H of a linear code, is a bipartite graph, consisting of variable nodes (VNs) and check nodes (CNs). A VN vi is associated with the ith code bit, and a CN cj is associated with the jth parity check equation. An edge connects VN vi and CN cj iff Hj,i ̸= 0. Define N (i) := {j ∈ [m] : Hj,i ̸= 0} and M(j) := {i ∈ [n] : Hj,i ̸= 0}.
+During BP, LLR messages computed by the nodes are iteratively passed along the edges of the Tanner graph. For each i ∈ [n], the VN update equation yields the VN-to-CN messages
+
+λi→j = λi +
+
+λi←j′ =: λitot − λi←j , j ∈ N (i),
+
+j′∈N (i)\{j}
+
+where λi = l(yi) denotes the bit-wise LLR, λi←j is the message passed from CN cj to VN vi, and λitot represents the a posteriori LLR estimate at VN vi.
+
+3
+
+Pre (·|τ1)
+
+Dec1 xˆτ1 Post (·|τ1)
+
+ML-in-the-list
+
+λ
+
+Pre (·|τ2) ...
+
+Dec2 xˆτ2 Post (·|τ2)
+
+...
+
+...
+
+xˆ
+
+Pre (·|τM )
+
+DecM xˆτM Post (·|τM )
+
+Fig. 1. Structure of parallel paths employed in ensemble decoding.
+
+Several BP decoding variants exist, differing primarily in the CN update rule. In this work, we consider the normalized sum-product algorithm (NSPA) and the normalized min-sum algorithm (NMSA). In the NSPA, for each CN cj, the CN-toVN messages are given by
+
+
+
+λi←j = α·2·tanh−1
+
+tanh
+
+i′ ∈M(j )\{i}
+
+λi′→j 2
+
+ , i ∈ M(j),
+
+where α ∈ R is a normalization constant. For α = 1, we recover to the sum-product algorithm (SPA) [3].
+The NMSA, which is particularly suited for hardware implementation, replaces the CN update rule of CN cj by [27]
+
+λi←j = α ·
+
+sign (λi′→j) · min |λi′→j| , i ∈ M(j),
+
+i′ ∈M(j )\{i}
+
+i′ ∈M(j )\{i}
+
+where α ∈ R is a normalization constant. In a flooding schedule, after initializing all VN-to-CN messages as λi→j = λ˜i, one BP iteration consists of updating all CNs, followed by
+updating all VNs. After each iteration, the current codeword
+estimate xˆ is obtained by the hard decision
+
+xˆi =
+
+1, λtiot < 0, 0, otherwise,
+
+i ∈ [n] .
+
+The iterative procedure continues until HxˆT = 0 or until a maximum number of iterations has been conducted. If no valid codeword is found, the current hard decision is returned as the codeword estimate. We denote this estimate resulting from BP using H as xˆ := BP(H, y) = BP(H, λ).
+
+III. ENSEMBLE DECODING
+A. Basics of Ensemble Decoding
+Ensemble decoding schemes aim at improving the performance of a single suboptimal decoding algorithm by employing multiple parallel decoding paths [16]. Fig. 1 illustrates the general structure of ensemble decoding. The LLR vector λ is provided as the input to M parallel paths. Each path, indexed by ℓ ∈ [M ], comprises a preprocessing function Pre (·|τℓ) : Rn → Rn, a decoder Decℓ : Rn → F2n, and a corresponding postprocessing function Post (·|τℓ) : Fn2 → F2n. Hereby, the pre- and postprocessing functions are based on a homomorphism τℓ : C → C, and we denote xτℓ := τℓ(x). The preprocessing function aims at reproducing the effect of τℓ(·) on the transmitted codeword x in the LLR domain. Thus, the ℓth decoder returns an estimate xˆτℓ for xτℓ and the postprocessing identifies xˆℓ such that τℓ(xˆℓ) = xˆτℓ [24].
+Typically, an ensemble decoding scheme either
+
+(i) uses M different decoders Decℓ, but omits pre- and postprocessing, i.e., τℓ = id, ℓ ∈ [M ], or
+(ii) employs the same decoder across all paths, i.e., Decℓ = Dec, ℓ ∈ [M ], but uses M distinct homomorphisms τℓ with associated pairs of pre- and postprocessing functions (Pre(λ|τℓ), Post(xˆτℓ |τℓ)), ℓ ∈ [M ].
+Following [1], ensemble decoding generates a list
+
+L := {xˆℓ : ℓ ∈ [M ], xˆℓ ∈ C}, if ∃ℓ ∈ [M ] : xˆℓ ∈ C
+
+{xˆℓ : ℓ ∈ [M ]},
+
+otherwise,
+
+and then, using the LLR vector λ, selects the final estimate xˆ according to an ML-in-the-list rule [17]
+
+xˆ := arg max(11×n − 2x)Tλ.
+x∈L
+
+Next, we characterize several ensemble decoding schemes based on how they select distinct decoders and pre- and postprocessing functions to enhance the decoding performance.
+
+B. Multiple Basis Belief Propagation Decoding
+MBBP decoding was first proposed by Hehn et al. in [18] and later extended in [14], [22]. In MBBP, the ensemble consists of M parallel BP decoders, each instantiated with a distinct PCM Hℓ, resulting in Decℓ = BP(Hℓ) : Rn → F2n. Note that MBBP employs no pre- or post-processing functions, so it belongs to category (i).
+MBBP requires M PCMs suitable for BP decoding, i.e., M matrices ideally composed of minimum-weight dual codewords. In general, for an arbitrary code, finding such matrices is an NP-complete problem [25]. However, for short- to medium-length codes, efficient algorithms for finding lowweight codewords exist, e.g., [28]. In particular, Hehn et al. investigate overcomplete PCM designs and information exchange between parallel BP decoders [14], [18]. More recently, Shen et al. showed that MBBP, in combination with a refined PCM construction, achieves strong error correction for various short non-LDPC codes [12].
+
+C. Homomorphism-based Ensemble Decoding
+With the introduction of AED of Reed–Muller and polar codes [17], homomorphism-based ensemble decoding schemes have attracted significant attention in wireless communications, e.g., [29]. Such schemes belong to category (ii), employing the same decoder in each path, i.e., Decℓ = Dec for all ℓ ∈ [M ], while selecting M distinct homomorphisms τℓ.
+AED builds on the definition of the automorphism group of a code C prevalent in coding theory
+
+Aut(C) := τ (a) : C → C, x → aτ (x) : τ ∈ Sn, a ∈ F\{0} ,
+
+where Sn denotes the symmetric group of [n] and aτ (x) := a · (xτ(1), . . . , xτ(n))T. For binary codes, a = 1, and we simply write τ := τ (1) [24]. Hence, AED em-
+
+ploys homomorphisms τℓ that are permuting codewords. For
+
+each path ℓ ∈ [M ], a distinct permutation automorphism
+
+τℓ ∈ Aut(C) is selected and the pre- and postprocessing func-
+
+tions are Pre(λ|τℓ) :=
+
+λτℓ(i)
+
+n i=1
+
+and Post(x) := τℓ−1(x),
+
+respectively, where τℓ−1 ∈ Aut(C) is the inverse of τℓ.
+
+4
+
+AED can yield substantial decoding gains compared to stand-alone decoding, provided that the effects of the selected automorphisms are not absorbed by the symmetries of the decoders [15], [17], [30]. In particular, the authors in [15] investigate AED to enhance stand-alone BP decoding of quasicyclic (QC) LDPC codes. Due to the QC construction of their PCM H, and noting that Aut(C) = Aut(C⊥) [31], certain permutation automorphisms are known a priori. It was observed that the AED path using Dec = BP(H) and τℓ is equivalent to BP decoding with τℓ−1(H), where the QC permutation τℓ−1 is permuting columns of H, while both pre- and postprocessing become the identity map id [32]. For QC LDPC codes τℓ−1(H) is typically equivalent to H up to row permutations, such that BP(H) and BP(τℓ−1(H)) yield identical decoding results preventing an ensemble gain. Hence, BP decoding based on H is equivariant with respect to these QC automorphisms. A similar effect can occur for polar codes under SC decoding [17]. Nevertheless, [15] proposes to break the decoder path equivariance for QC LDPC codes by modifying H, e.g., by removing a row, superimposing two rows, or appending a new linearly dependent row.
+Recent works generalize the concept of AED. For instance, by dropping the constraint that τ must be a permutation, GAED [24] adopts the more general notion of the automorphism group prevalent in linear algebra. EED further removes the requirement of bijectivity and instead relies on mappings from the set of endomorphisms [23]
+End(C) := {τ : C → C, τ linear} .
+Both GAED and EED require a preprocessing to mimic the effect of the respective linear map in the LLR domain. This preprocessing causes information loss, which limits the applicability of GAED and EED to arbitrary codes.
+
+D. Linear Subcode Ensemble Decoding
+
+1) Principle Idea: SCED [1] belongs to ensemble decoding schemes of category (ii). In particular, SCED possibly uses proper linear subcodes Cℓ ⊂s C and their respective decoder Decℓ in the parallel decoding paths [1]. Note that for every path ℓ ∈ [M ], there exist codewords x ∈ C such that x ∈/ Cℓ, implying that the ℓth path cannot decode this codeword x. To ensure that all codewords can potentially be decoded, the ensemble of linear subcodes should constitute a LC of C. Following [26], we define the LC of a code C as a set of subcodes {Cℓ ⊆s C : ℓ ∈ [M ]} satisfying
+
+M
+
+Cℓ = C,
+
+(2)
+
+ℓ=1
+
+where M ≥ 3 needs to hold [26]. If a well-performing decoder for C exists, one may include C1 = C to guarantee an LC [1]. The motivation for using subcode decoding is twofold. First, the minimum Hamming distance of an arbitrary subcode Cℓ ⊆ C is lower bounded by the minimum Hamming distance of C. Hence, a subcode Cℓ can eventually correct more errors than the original code C. Second, efficient subcode decoders may exist, which can be leveraged within an ensemble.
+
+Note that for τℓ ∈ End(C), it holds that τℓ(C) ⊆s C [23]. Thus, EED operates over linear subcodes of C while achieving ensemble diversity through distinct endomorphisms. In contrast, SCED explicitly employs distinct linear subcode decoders avoiding the information loss induced by preprocessing.
+2) BP-based SCED: In particular, SCED with BP decoding is investigated in [1]. In this setting, each path ℓ ∈ [M ] employs a PCM Hℓ describing a subcode Cℓ, such that Decℓ = BP(Hℓ). Given the PCM H of a binary code C, the PCM Hℓ of a subcode C(Hℓ) ⊆s C can be constructed by appending to H a matrix Mℓ ∈ Fm 2 ℓ×n whose mℓ rows are possibly linearly independent of the rows of H, i.e.,
+
+Hℓ =
+
+H Mℓ
+
+=: [H; Mℓ],
+
+(3)
+
+where [H; Mℓ] denotes the vertical stacking of matrices. Furthermore, we define the rank deficiency of the subcode as
+
+∆ℓ := rank(Hℓ) − rank(H) ≥ 0.
+
+Then, Cℓ = C(Hℓ) is a (k − ∆ℓ)-dimensional linear subcode of C. Thus, if there exists i ∈ [mℓ] such that the ith row of Mℓ is linearly independent of all rows in H, then ∆ℓ > 0 and BP(Hℓ) is a decoder of a proper subcode Cℓ ⊂s C. If ∆ℓ = 0 for all ℓ ∈ [M ], then BP-based SCED reduces to MBBP, highlighting that BP-based SCED naturally generalizes MBBP. Importantly, in contrast to MBBP, SCED allows appending linearly independent rows to create diversity. Thereby, it can avoid the exhaustive search of minimumweight dual codewords, while still providing ensemble gains [1]. Even when employing an exhaustive search for lowweight dual codewords, these appended rows can yield further structural advantage for BP decoding since the search is performed over Cℓ⊥ rather than C⊥, as shown in Sec. V.
+For LDPC codes, appending even a single linearly independent row, i.e., mℓ = 1, already yields ensembles with substantial decoding performance gains [1]. This aligns with [33], where Laendner et al. observed that even a single linearly dependent row can disrupt trapping sets, an effect that may also occur when appending linearly independent rows.
+However, the design of SCED ensembles still faces certain challenges. For instance, some codewords, e.g., the all-zero codeword, are decodable by a larger number of decoding paths than others [1]. To overcome this imbalance and to further simplify the ensemble design while retaining the advantages of SCED, we seek an approach that operates on subcodes while guaranteeing that every codeword is recoverable by the same number of decoding paths. To this end, we propose aSCED, which extends SCED by decoding over affine subcodes.
+
+IV. AFFINE SUBCODE ENSEMBLE DECODING
+A. Idea and Some Properties of aSCED
+We propose aSCED for an arbitrary linear code C. The central idea is that aSCED generalizes SCED by allowing affine subcodes, in addition to linear subcodes, each with its respective decoder. Hence, aSCED belongs to category (i) and employs M distinct decoders for subcodes Cℓ that are
+
+5
+
+either linear or affine. As in SCED, to ensure that all codewords can potentially be decoded, we require that the set {Cℓ ⊆ C : ℓ ∈ [M ]} of linear and affine subcodes satisfies (2). As shown next, the use of affine subcodes yields beneficial properties compared to SCED.
+
+ML performance in certain cases. To efficiently implement aSCED, we require efficient de-
+coders for both linear and affine subcodes, which are not guaranteed to exist. In the following, we show that suitable decoders exist for BP decoding.
+
+Theorem 1. Let C be a linear binary code. Then, there exists a covering satisfying (2) using M = 2 proper subcodes. This is the minimum number of proper subcodes for a covering and can only be attained if the covering consists of a linear and an affine subcode.
+Proof: Since Cs(n, k − 1) is a (k − 1)-dimensional subspace of C, the set of cosets with respect to Cs(n, k − 1), contains exactly two elements due to Lagrange’s Theorem. Since the coset 0 + Cs(n, k − 1) constitutes the neutral element of the quotient space, there exists at least one element xa ∈ C \ Cs(n, k − 1) such that C/Cs(n, k − 1) = {0 + Cs(n, k − 1), xa + Cs(n, k − 1)}. Defining C1 = 0 + Cs(n, k − 1) and C2 = xa + Cs(n, k − 1), we finally obtain a covering C = C1 ∪C2 consisting of a proper linear subcode C1 and a proper affine subcode C2. Obviously, a single proper subcode cannot satisfy (2). Note that neither two proper linear subcodes nor two affine subcodes can satisfy (2). The latter cannot cover the all-zero codeword, and the former fact is proven in [26].
+Theorem 1 demonstrates that the smallest number of subcodes needed to satisfy (2) is M = 2, i.e., when allowing affine subcodes, M can be reduced relative to M = 3 when only proper linear subcodes are allowed.
+Remark 1. For subcodes Cs with rank deficiency ∆ > 1, , the quotient space C/ Cs(n, k′) contains 2∆ distinct cosets 0 + Cs, xa,1 + Cs, . . . , xa,2∆−1 + Cs. This is the minimum number of subcodes to achieve a covering based on Cs.
+Remark 2. The lemma can be extended to non-binary codes over Fq by using a (k − 1)-dimensional linear subspace and q − 1 affine subcodes, i.e., requiring M = q.
+We next show that aSCED can match ML decoding when employing sufficiently many paths.
+Proposition 1. For a linear binary code C, there exists an aSCED with M = 2k paths whose ML-in-the-list decision coincides with ML decoding.
+Proof: Consider the singleton linear subcode Cs = {0}. According to Remark 1, it induces M = 2k singleton affine subcodes Cℓ = xℓ + Cs, ℓ ∈ [M ]. Consider an aSCED ensemble with M paths, where the ℓth path, ℓ ∈ [M ], employs the decoder Decℓ : Rn → Cℓ. Each path outputs its unique codeword, so the candidate list is L = C.
+Proposition 1 establishes that an aSCED approaches ML performance as the number of paths increases; the construction above relies on M = 2k paths, which is infeasible for practical codes. Although the resulting decoding complexity is prohibitively large, this theoretical result indicates that MLlike behavior is, in principle, attainable. Moreover, the results in Sec. VI-B1 show that, when using subcode ssPCMs, a substantially smaller number of paths is sufficient to reach
+
+Remark 3. In [2], we introduced SC-based SCED for polar codes, using the observation that subcodes of polar codes can be induced by suitable pre-transforms applied before the polar graph [34]. These pre-transforms generate linear and affine subcodes, such that [2] implements aSCED for polar codes. Hence, in this work, we focus on BP-based aSCED.
+
+B. BP-based aSCED
+
+We show how BP decoding of binary codes can be adapted such that it can be used with affine subcodes within the context of aSCED. While BP decoding of a linear subcode simply uses the PCM of the subcodes without modifying the update rules [1], BP decoding of an affine subcode requires an adapted CN update rule to account for the fixed affine offset.
+1) BP Decoding of Affine Subcodes: The following lemma formalizes the modified BP update equations when decoding over an affine subcode Ca.
+
+Lemma 1. Let Ca(n, k′) = xa + Cs(n, k′) be an affine subcode of a binary code C, where Cs(n, k′) is a proper linear subcode with PCM Hs. Define sa := HsxTa . Then, affine BP decoding, denoted by BPsa (Hs, λ), operates on the Tanner
+graph associated with Hs using the adapted CN update
+
+(−1)(sa)j · λi←j .
+
+(4)
+
+The initialization of VNs with the bit-wise LLRs and the VN update rules remain unchanged. Decoding terminates when Hsxˆ = sa or when reaching the maximum number of iterations. When employed within an ensemble, decoding of each path still terminates when Hxˆ = 0.
+
+Proof: Recall that all codewords x ∈ Ca satisfy HsxT = sa. Rearranging gives HsxT + sa = 0, which corresponds to BP decoding over the Tanner graph of Hs, but with each CN j incorporating a fixed binary offset (sa)j. This offset (sa)j is equivalent to injecting an LLR of (−1)(sa)j · ∞ at the
+CN. Finally, since both standard CN update rules incorporate
+odd functions, we obtain the stated update rule.
+
+Remark 4. The adapted CN update (4) can be used for all CN updates since it reduces to the standard CN update for sa = 0.
+Remark 5. Affine BP shares similarities with syndromebased BP decoding [35, Ch. 47]. Unlike syndrome-based BP decoding, the affine syndrome sa is fixed and independent of the received sequence.
+
+Remark 6. The affine offsets xa defining the cosets can be derived from the non-zero columns of HsGT.
+
+2) BP-based aSCED: With affine BP decoding established, BP-based aSCED can be realized by applying BP, either in its standard or affine-modified form, to each linear or affine
+
+6
+
+aSCED batch BP(Hs, ·)
+
+ML-in-the-list
+
+BPsa,1 (Hs, ·)
+
+λ
+
+...
+
+xˆ
+
+BPsa,2∆−1 (Hs, ·)
+
+Fig. 2. Block diagram of an aSCED batch according to Design Principle 1.
+
+Thus, we split the ensemble decoding process into the event A that the transmitted codeword is contained in the list L and the event B that it is actually selected as the ensemble output, and define the list error probability (LEP) and FEP
+LEP := P (A¯), FEP := P (B¯).
+Since P (B|A¯) = 0 we have P (B) = P (A)(1 − P (B¯|A)). For any outcome m ∈ A ∩ B¯, the ML decoder also outputs an error. Thus, we refer to this event as ML error. In the absence of ML errors, P (B¯|A) = 0 =⇒ P (A¯) = P (B¯), i.e., LEP = FEP.
+
+subcode in the ensemble. Next, we propose a crucial design principle for constructing an efficient ensemble.
+Design Principle 1. Let Hs be the PCM of a proper subcode Cs(n, k′) of C, and let ∆ := k − k′ the rank deficiency of its PCM. Following Remark 1, identify 2∆ − 1 distinct cosets xa,i + Cs =: Ca,i. Then, we propose to include the set {Cs, Ca,1, . . . , Ca,2∆−1} satisfying (2) as one batch, denoted as aSCED batch, in the ensemble. The whole aSCED ensemble possibly consists of multiple aSCED batches.
+Given a proper subcode Cs ⊆s C with PCM Hs, the design principle is to construct an aSCED batch, illustrated in Fig. 2 that ensures full coverage of C without degrading the performance of individual decoding paths. Note that aSCED may comprise multiple aSCED batches. In this case, the total number of paths is M = i∈[L] 2∆ℓ , where L denotes the number of aSCED batches and ∆ℓ is the rank deficiency of the ℓth batch.
+When following Design Principle 1, every codeword x ∈ C is decodable by L paths. In contrast to SCED [1], where ensuring equal protection for all codewords may degrade the performance of individual decoding paths, Theorem 2 formally establishes that aSCED adhering to Design Principle 1 achieves this without compromising the average error performance of any path.
+Theorem 2. Let Hs be the PCM of a proper subcode Cs(n, k′) of C and let Ca = xa + Cs be an arbitrary coset of Cs. When transmitting via a BiMSC, the error probability of the decoder BP(Hs), when averaged over all x ∈ C, is identical to the average error probability of the affine decoder BPsa (Hs).
+C. All-zero Assumption
+The all-zero codeword assumption accelerates Monte Carlo simulations by avoiding the need for encoding, and simplifies analytical analysis, e.g., in density evolution [3]. However, in general, this assumption is not always feasible for assessing the frame error probability (FEP) of aSCED.
+In the following, we show that the all-zero assumption can remain valid for performance evaluation, and allows to reduce the number of simulated paths per aSCED batch to one. To formalize this, consider the transmission of the all-zero codeword 0, yielding the channel output y0. Define the events A := {0 ∈ L} (list success) and B := {arg maxx∈L(11×n − 2x)Tλ = 0} (frame success).
+
+Proposition 2. Consider an aSCED batch associated with the linear subcode PCM Hs. Then,
+P (BP(Hs, y0) ≠ 0) ≥ P ({0 ∈/ L}).
+Proof: We neglect outcomes where at least one affine path estimates 0 but BP(Hs, y0) ̸= 0. Although theoretically possible due to the hard decision of BP, this event is highly unlikely, which is confirmed by our simulations.
+Remark 7. The LEP of an aSCED batch can be (tightly) upper-bounded by P (BP(Hs, y0) ̸= 0), which can be estimated as the LER of Monte-Carlo simulations under the allzero assumption, simulating only the linear subcode path and ignoring the 2∆ − 1 affine paths.
+Remark 8. In the absence of ML errors, the FER of an aSCED ensemble comprising L aSCED batches is identical to the LER of Monte-Carlo simulations using the all-zero codeword assumption and evaluating only the L linear subcode paths, where the candidate list of the full ensemble is the union of the candidate lists generated by the individual aSCED batches.
+
+V. STRUCTURAL ADVANTAGE OF SUBCODES FOR BP
+
+A. Optimized Parity-Check Matrices of Subcodes
+
+In the very short block length regime, e.g., for n ≤ 128,
+
+many codes with a large minimum Hamming distance are
+
+known, yet their dense PCMs often contain many short cycles
+
+of length 4, which are particularly harmful for BP and are
+
+referred to as 4-cycle. Hence, approaches to optimize PCMs
+
+for BP aim at improving their sparsity or eliminating 4-
+
+cycles [8]–[12]. In such approaches, starting from the PCM
+
+H H
+
+⋆
+
+∈
+
+m×n
+
+F2 ∈
+
+m⋆
+F2
+
+of a ×n⋆ ,
+
+code, one constructs m⋆ ≥ m, n⋆ ≥
+
+an n,
+
+optimized PCM with improved
+
+properties for BP. If m⋆ > m or n⋆ > n, we say that
+
+the approach introduces m⋆ − m auxiliary CNs (ACNs) or
+
+n⋆ − n auxiliary VNs (AVNs), respectively, which ensure that
+
+∀x ∈ C(H⋆) =⇒ x[n] ∈ C(H).
+
+In particular, we are interested in finding optimized PCMs of
+
+subcodes, i.e., starting from Hℓ according to (3), identify Hℓ⋆. We revisit the construction of ssPCMs [9] and use ssPCMs as
+
+optimized PCMs Hℓ⋆ of the respective aSCED batches.
+
+B. Revisiting Structured Sparse Parity-Check Matrices
+Building on the seminal work of Yedidia et al. [10], both [11] and [8] independently propose a 4-cycle removal strategy, for which, with a single (ACN, AVN) pair, multiple 4-cycles
+
+7
+
+Algorithm 1 Elimination of 4-cycles [8], [11]
+
+1: Input: PCM H ∈ F2m×n, index sets R ⊆ [m], T ⊆ [n]
+
+2:
+
+Output:
+
+Optimized
+
+PCM
+
+H⋆
+
+∈
+
+(m+1)×(n+1)
+F2
+
+3: Assume: HR,T = 1|R|×|T | with |R|, |T | ≥ 2
+
+4: H ← H
+
+0m×1
+
+∈
+
+m×(n+1)
+F2
+
+(introduce
+
+AVN)
+
+5: H⋆ ← [H; 1T ∪{n+1}] ∈ F(2m+1)×(n+1)(introduce ACN)
+
+6: for each r ∈ R do
+
+7: Hr⋆,: ← Hr⋆,: + Hm⋆ +1,: 8: Return H⋆
+
+Algorithm 2 Generation of search space matrix S [9]
+
+1: Input: Max. search space size Smax, PCM H of C 2: Output: Search space matrix S 3: Initialize d ← d⊥min; S ← ∅ 4: while number rows(S) < Smax and rank(S) < n − k do 5: s, dnew ← find next min weight codeword(H) 6: S ← [S; s]
+
+7: if dnew > d and rank(S) = n − k then
+
+8:
+
+Return S
+
+9: d ← dnew 10: Return S
+
+can be removed. Consider a PCM H. If there exist index
+
+sets R ⊂ [m] and T ⊂ [n] with |R|, |T | ≥ 2 such that
+
+HR,T = 1|R|×|T |, then the Tanner graph associated with H contains 4-cycles. The process of removing the associated
+
+4-cycles is detailed in Algorithm 1, which returns a (first)
+
+optimized
+
+PCM
+
+H⋆
+
+∈
+
+(m+1)×(n+1)
+F2
+
+with HR⋆ ,T
+
+= 0|R|×|T |
+
+and removes all 4-cycles associated with the pair of index sets
+
+R and T . The Tanner graph associated with H⋆ may still
+
+have (other) 4-cycles, which can be eliminated by iteratively
+
+repeating this process, introducing more auxiliary nodes [8]. If m⋆ > m, BP using H⋆ operates on a PCM of increased
+
+size that contains AVNs. These AVNs are only used in the
+
+decoder, and their bit-wise LLR is set to 0; consequently,
+
+during decoding, they behave similarly to punctured bits and
+
+effectively introduce erasures that must be resolved by the
+
+decoder. We therefore have a tradeoff in finding a suitable
+
+number of AVNs: Fewer may leave residual cycles, while too
+
+many may degrade the BP performance. Recent refinements
+
+further optimize the PCM by avoiding low-degree CNs and
+
+maximizing the heuristic approximate cycle extrinsic message
+
+degree of 6-cycles [36], which correlates with a larger mini-
+
+mum size of trapping sets [12]. In the follow-up work [9], this
+
+strategy was further optimized, introducing ssPCMs.
+
+The construction of ssPCMs starts by generating a search
+
+space of low-weight dual codewords, organized as a search
+
+matrix S, as summarized in Algorithm 2. Ideally, the ma-
+
+trix S should consist of Smax minimum-weight dual codewords. However, if required to fulfill the rank condition
+
+rank(S) = n − k, we include higher-weight rows. The func-
+
+tion find next min weight codeword() returns the next dual
+
+codeword such that its Hamming weight is minimum among
+
+all dual codewords not considered so far, along with its weight.
+
+This function can be implemented using, e.g., [28].
+
+The basic step of designing ssPCMs described in Algo-
+
+Algorithm 3 Generation of ssPCM [9]
+
+1: Input: Search space matrix S, max. weight wmax
+
+2: Output: HssPCM−I and HssPCM−II
+
+3: Initialize HssPCM ← ∅, P ← ∅, check rank←true
+
+4: while wt(HssPCM) < wmax and S ̸= ∅ do
+
+5: for 1 ≤ i < j ≤ number rows(S) do
+
+6:
+
+Pcand., Pc⋆and. ← identify pcrb(i, j, S)
+
+7:
+
+P ⋆ ← select(P ⋆, Pc⋆and.)
+
+8: HssPCM ← [HssPCM; P ⋆]
+
+9: S ← S.remove rows(P )
+
+10: if check rank and rank(HssPCM) = n − k then
+
+11:
+
+HssPCM−I ← HssPCM;
+
+12:
+
+check rank←false
+
+13: HssPCM−II ← HssPCM 14: Return HssPCM−I and HssPCM−II
+
+rithm 3 is to identify parity-check row blocks (PCRBs) P in S as follows: Consider a set of column indices T ⊂ [n] with t = |T |. A PCRB P consists of s rows of S such that P[s],T = 1s×t and T is maximal with this property, i.e., for any T ′ ⊆ [n] with T ⊂ T ′ and t′ = |T ′|: P[s],T ′ ≠ 1s×t′ . Given such a PCRB P , Algorithm 1 with (R = [s], T ) yields a 4-cycle free P ⋆ [9].
+An ssPCM is generated from S by successively identifying such P and P ⋆, as detailed in Algorithm 3: To identify candidate P of different size, i.e., with different s, t, we iterate over all row pairs of S and apply identify pcrb(·), which identifies all additional s − 2 rows intersecting in the same t positions and returns the associated candidate P (and P ⋆) denoted Pcand. (and Pc⋆and.). Among all candidates Pc⋆and., select(·) selects the best PCRB according to the following criteria, in order of priority, such that criterion i+1) only is used if several PCRBs are equivalent regarding criterion i):
+1) Maximize rank of [HssPCM; P ⋆] 2) Maximize block size s; 3) Minimize number of 4-cycles in [HssPCM; P ⋆] 4) Minimizes variance of information column weights
+
+Note that, in contrast to [9], we reordered rules 1) and 2),
+
+i.e., we prioritize maximizing the rank over maximizing the
+
+block size s, which resulted in a more stable behavior of the
+
+implemented algorithm.
+
+After iterating over all row pairs in S, the selected P ⋆ is
+
+appended to HssPCM, and each row in the search space is extended by one 0 to preserve the structure when appending future P ⋆. The dual codewords forming the selected P are
+
+then removed from S, and the process repeats by iterating
+
+over
+
+all
+
+row
+
+pairs
+
+until
+
+an
+
+ssPCM
+
+H⋆
+
+∈
+
+m′ ×n′
+F2
+
+satisfying
+
+rank(H) = n − k is obtained, which is denoted HssPCM−I.
+
+Algorithm 3 continues beyond HssPCM−I to construct larger
+
+ssPCMs with enhanced cycle connectivity, stopping once a
+
+predefined criterion is met, e.g., a maximum weight wmax.
+
+Our simulations show that NMSA combined with ssPCMs
+
+provides strong error-correction performance. In contrast, SPA
+
+requires an additional normalization constant; therefore, when
+
+using ssPCMs, we employ NSPA with normalization factor α.
+
+10
+8
+
+C. Structural Advantage of Subcodes
+
+FER
+
+10 We propose employing ssPCMs as opti−miz3ed PCM Hℓ⋆ for
+
+10−1
+
+an aSCED batch. Starting from the PCM Hℓ of a code, Algorithm 2 yields a search space matrix Sℓ
+
+linear sub-
+consistiNngMSA
+
+[1]
+
+toafilUdousraeinldgctoosdstehPweCosMurdbsscootadfieltohCreeℓdsuusbtioncogsdAueb.lgcToohdreietnhs,mwpr3eo,vciio.den.e,sstyriuaecltdstisrnsugPcCtHuMANrℓa⋆sEMl. DS-A1-11305−[132]
+
+FER
+
+[1]
+
+NMSA [1] NMSA-352
+
+[1]
+
+10 advantage for BP. Since
+imum Hamming weight
+
+Cs ⊂s C dm⊥in of
+
+=⇒ C⊥
+
+Cs⊥ ⊃s
+bo−un5ds
+
+C⊥ the
+
+,
+
+mthineimmuSinmC- ED-1101−5[1]
+
+Hamming weight dℓ⊥,min of Cs⊥ from above. Hence, via lineaaSrCED-11
+
+AED-11 [1] SCED-11 [1] aSCED-11 OSD-4 [15]
+
+combinations, the linearly appended row in (3) can additional dual codewords of the subcode x ∈/
+
+introduce
+C⊥ wOithSD-4
+
+[15]1
+
+wt(x) < dm⊥in. By appending a linearly independent row
+
+1.5
+
+2
+
+2.5 3 3.5 Eb/N0 (dB)
+
+4
+
+4.5
+
+5
+
+1 1.5 2 2.5 3 3.5 4 with weight dc < d⊥min to H, we can ensure the existence of
+such vectors and Sℓ contains rows with weight lower than all
+
+Fig. 3. Decoder performances for the 5G LDPC code C5G(132, 66). All
+
+BP
+
+decodings
+
+employ
+
+the
+
+NMSA
+
+using
+
+a
+
+normalization
+
+constant
+
+of
+
+α
+
+=
+
+3 4
+
+.
+
+rows in S. Indeed, we observe the following: The minimum
+E /N (dB) weight dm⊥in of the dual code of the BCH code C(63, 30)
+
+b 0 Decoder NMSA-352 uses a maximum of Imax = 352 iterations; all other BP
+decoders use Imax = 32 iterations. The aSCED ensemble employs ∆ = 1.
+
+is 12. After appending to H a randomly selected linearly
+
+independent row of weight dc = 6 and running Algorithm 2
+
+100
+
+with Smax = 1000, the resulting search space matrix Sℓ
+
+contained one row of weight 6, and 10 and 220 rows of weight
+
+10−1
+
+8 and 10, respectively. Consequently, Algorithm 3 using Sℓ
+
+rather than S typically results in Hℓ⋆ being sparser than Hℓ,
+
+10−2
+
+and thus, providing a structural advantage for BP.
+
+FER
+
+VI. NUMERICAL RESULTS
+To evaluate the performance of different decoding schemes, we conduct Monte Carlo simulations using a binary-input additive white Gaussian noise (BI-AWGN) channel. We use the notation {aSCED, SCED, MBBP, AED}-M to denote the respective ensemble decoding technique employing M parallel paths. Unless stated otherwise, each stand-alone decoder and each path employs BP with a flooding schedule and the early stopping criterion HxˆT = 0. For every simulated SNR point, we collect at least 200 frame errors. If available, we include the performance of ordered statistics decoding (OSD) with order t, denoted as OSD-t, as an estimate of the ML performance.
+We first evaluate the performance of aSCED for LDPC codes. Subsequently, we consider BCH codes highlighting the structural advantage for BP arising from the use of subcodes.
+Remark 9. PCMs and C++ implementation are available in https://github.com/JonathanMandelbaum/aSCED.git.
+
+A. Performance aSCED-BP for LDPC Codes
+
+We consider two short-length LDPC codes, namely the
+
+5G LDPC code C5G(132, 66) and the CCSDS LDPC code CCCSDS(256, 128). Both codes are quasi-cyclic, which, us-
+
+ing techniques from [15], allows us to include the perfor-
+
+mance of AED as a reference. To show that aSCED can
+
+improve different BP variants, we employ the NMSA with
+
+normalization
+
+constant
+
+α=
+
+3 4
+
+for
+
+C5G(132, 66),
+
+whereas
+
+for
+
+CCCSDS(256, 128), we use the SPA. In line with [1], since
+
+well-performing PCMs H are known for both codes by design,
+
+we fix Dec1 = BP(H, ·) and consider ensembles of size M = M˜ + 1, where M˜ is the number of auxiliary paths.
+
+We use ∆ = 1, i.e., we append a single linearly independent
+
+row to H and each aSCED batch contributes two decoders.
+
+10−3
+
+SPA
+
+10−4
+
+AED-32 [15] aSCED-17
+
+aSCED-31
+
+10−5 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 (dB)
+
+Fig. 4. Performance of BP-based decoders for the CCSDS code
+CCCSDS(256, 128). All BP decoders employ the SPA with a maximum of Imax = 32 iterations. Both aSCED ensembles use ∆ = 1.
+
+Thus, the ensemble size is M = 2L˜s + 1, where L˜s denotes the number of constructed PCMs Hℓ of the linear subcodes constituting an aSCED batch. To select well-performing ensembles, we follow the procedure described in [1, Sec. VI-A].
+Fig. 3 and Fig. 4 show the FER performance of standalone BP, AED-M , and the novel aSCED-M for the code C5G(132, 66) and code CCCSDS(256, 128), respectively. All BP decodings employ a maximum of Imax = 32 iterations. Additionally, in Fig. 3, we include the performance of SCED11 and stand-alone BP with Imax = 352 iterations, denoted NMSA-352, as reported in [1]. Under the assumption that all ensemble paths are executed in parallel, the BP using Imax = 32 serves as a reference for equal worst-case latency maxi∈[M] Imax,i, whereas NMSA-352 represents an equalworst-case computational complexity scenario. Since all PCMs have a comparable number of edges, the worst-case decoding complexity is governed by the maximum total number of iterations i∈[M] Imax,i.
+In Fig. 3, the performance of aSCED-11 matches or surpasses that of SCED-11. Importantly, this gain is accompanied by advantages from an implementation perspective:
+
+4.5
+
+9
+
+LER @ 3 dB LER @ 3 dB
+
+10−1
+
+FER of C1(63, 30) with BP on ssPCM
+
+10−1
+
+10−2
+
+10−3
+
+FER of C1(63, 30) with ML
+
+10−4
+
+FER of C1(63, 30) with BP on ssPCM
+
+10−2
+
+12345678 dc
+
+10 12
+
+10−5
+
+1 2 3 4 5 6 7 8 9 10 11 12 mℓ
+
+Fig. 5. List Error Rate (LER) of aSCED batches of subcodes of the BCH code C1(63, 30) using different check node degrees dc for Mℓ with mℓ = 1 and ssPCMs. The box plot at dc = 6 is depicted in orange to indicate that it corresponds to the same box plot shown in Fig. 7
+
+Fig. 6. LER of aSCED batches of subcodes of the BCH code C1(63, 30) using a varying number of checks mℓ of degree dc = 6 in Mℓ and ssPCMs. We ensure that all appended rows are linearly independent, i.e., mℓ = ∆ℓ.
+
+all decoders within one aSCED batch share the same graph with slightly different CN updates, enabling potential hardware reuse and increased architectural flexibility. Furthermore, the construction of an aSCED ensemble only requires half the number of suitable PCMs compared to SCED, thereby simplifying the design process. Finally, we verify coverage properties by evaluating the fraction of codewords that are not decoded by any auxiliary path of the ensemble of SCED-11, which consists of decoding on H and on 10 auxiliary paths using proper subcodes [1]. Out of 10,000 randomly sampled codewords from code C5G, a total of 11 codewords were not covered by any of the 10 proper subcodes. Thus, there exist codewords that are less protected since they can only be recovered by the path using H. However, by Design Principle 1, aSCED guarantees uniform protection across all codewords.
+In Fig. 3 and Fig. 4, when comparing to the other decodings, aSCED-M consistently outperforms stand-alone BP decoding and AED-M under equal worst-case latency and equal worst-case complexity. Specifically, at an FER of 10−3, in Fig. 3, aSCED-11 achieves gains of 0.4 dB and 0.2 dB over NMSA and AED-11, respectively. In Fig. 4, the lowercomplexity aSCED-17 matches AED-32, while at equal complexity, aSCED-32 outperforms AED.
+
+B. BCH Codes
+
+Throughout this section, unless stated otherwise, all BP de-
+
+coders
+
+employ
+
+the
+
+NMSA
+
+with
+
+normalization
+
+constant
+
+α
+
+=
+
+1 2
+
+and a maximum of Imax = 20 iterations.
+
+1) Analysis of ssPCMs of Subcodes: In the following, we
+
+analyze the structural benefit of decoding subcodes of the
+
+BCH code C1(63, 30) using their ssPCMs. We first investigate
+
+the impact of appending a single linearly independent row of
+
+varying Hamming weight dc to the original PCM H.
+
+To this end, for varying dc, we sample 50 distinct linearly
+
+independent rows and append each row to H. Following
+
+Sec. V-C, we append the rows before running Algorithm 2,
+
+which improves the sparsity of the respective search matrix.
+
+Subsequently, we use Algorithm 3 with wmax = 2000 to
+
+construct the corresponding HssPCM−II.
+
+For Fig. 5, for each of the 50 linear subcodes, we run a Monte-Carlo simulation under the all-zero codeword assumption at Eb/N0 = 3 dB. As per Remark 8, this yields an estimate on the LER of the respective aSCED batch. Therefore, Fig. 5 presents box plots of the resulting LERs. As stated in Remark 7, in the absence of ML errors, the LER equals the FER of the full aSCED batch. As a baseline, we include the FER of BP decoding using HssPCM−II of the original BCH code [9]. For dc ≥ 3, we consistently observe substantial gains, indicating that the enriched search space introduced by the appended row improves the structure of the ssPCM. Notably, for C(63, 30), even check node degrees yield lower FER. However, this behavior is code-dependent: simulations on C(63, 36) suggest the opposite trend, where odd dc appears beneficial. This implies that dc must be optimized per code. While all dc ≥ 3 yield substantial gains, the interquartile ranges suggest that further optimization is possible.
+Next, we fix dc = 6, and vary the number of appended rows mℓ while ensuring ∆ℓ = mℓ. For every mℓ, we sample 50 subcodes and construct HssPCM−II with wmax = 2000.
+Fig. 6 displays the LER box plots at an Eb/N0 of 3 dB for the different mℓ under the all-zero codeword assumption (Remark 7). For larger mℓ, this significantly reduces the simulation complexity by assessing only one path of each aSCED batch, which comprises 2mℓ paths. For comparison, we include the performance of BP decoding on HssPCM−II of the original BCH code and its ML performance [37].
+With increasing mℓ, the average LER decreases monotonically. Notably, for mℓ ≥ 8, the LER of the aSCED batch can be lower than the ML performance of the original BCH code. This is not contradictory: as mℓ increases, the assumption in Remark 8—no ML errors occur—becomes invalid, and an estimate of the performance of the ensemble can only be attained by transmitting an arbitrary codeword and using the full aSCED batch. Still, the all-zero case provides insights: For mℓ ≥ 8, the dominant source of errors shifts from individual BP decoding failures to ML failures. This suggests that aSCED with 28 = 256 paths already approaches ML performance, despite possessing a significantly smaller number of paths than the full 230-path ensemble referenced in Proposition 1.
+In summary, the use of subcodes enables the construction
+
+10
+
+100
+10−1
+BDD-BM
+
+H H1-min HssPCM−I HssPCM−II HssPCM−II MBBP-M HssPCM−II aSCED-M
+
+FER @ 4 dB
+
+10−2
+Chase-II* p = 7
+10−3
+Chase-II* p = 10
+10−4 ML
+
+M =1 M =2
+M =4 M =8 M = 16 M = 32 M = 64
+
+102
+
+103
+
+104
+
+105
+
+Total Edge Count (TEC)
+
+Fig. 7. Performance of BP-based decoders for the BCH code C1(63, 30) over
+
+TEC, and visualization of PCMs and ssPCMs used in those BP decodings.
+
+All
+
+BP
+
+decodings
+
+employ
+
+the
+
+NSPA
+
+with
+
+α
+
+=
+
+1 2
+
+and
+
+Imax
+
+= 20.
+
+Chase-II*
+
+denotes a performance estimate for the Chase-II decoder [38].
+
+of ssPCMs from sparser rows, yielding optimized PCMs that
+
+are better suited for BP than those of the original code.
+
+2) Analysis of the Efficiency of aSCED for Classical Codes:
+
+In the following, we consider the BCH code C1(63, 30), to analyze the performance of BP-based aSCED for classical codes,
+
+i.e., for non-LDPC codes. For constructing an aSCED-M
+
+ensemble, we use L
+
+=
+
+M 2
+
+distinct aSCED batches with
+
+mℓ = 1 (∆ℓ = 1), unless stated otherwise.
+
+First, we demonstrate that, due to the structural benefit of
+
+subcodes for PCM optimization, aSCED can exploit decoding
+
+complexity more efficiently. For BP-based decoding with a
+
+fixed number of maximum iterations, the worst-case complex-
+
+ity is mainly dominated by the total edge count (TEC)
+
+TEC :=
+
+wt(Hℓ).
+
+ℓ∈[M ]
+
+In Fig. 7, we plot the FER at an Eb/N0 of 4 dB of NSPA
+
+with normalization
+
+constant
+
+α
+
+=
+
+1 2
+
+and
+
+maximum
+
+number
+
+of Imax = 20 iterations, versus the TEC for different BP-
+
+based schemes, namely BP using H, H1-min from [37], and
+
+ssPCMs, as well as MBBP-M and aSCED-M . The respective
+
+PCM designs are detailed below and visualized in Fig. 7. We
+
+conducted the same analysis using NMSA; however, NSPA
+
+consistently yields slightly better performance. A comparison
+
+between the two BP variants is provided later. Note that only
+
+H, H1−min and HssPCM−I are not overcomplete. As a baseline performance of classical decoders, we include the FER
+
+performance of the bounded-distance decoder based on the
+
+Berlekamp–Massey (BDD-BM) algorithm and a performance
+
+estimate for the Chase-II decoder using 2p test patterns [38], [39].
+For stand-alone BP decoding, we use the PCM H1-min with minimized weight [37], and for the ssPCMs of the BCH code C1(63, 30), we first construct a large ssPCM-II of the BCH code based on a search space matrix Smin consisting of all minimum weight dual codewords and using Algorithm 3 with wmax = 8000. From this large ssPCM-II, we derive a series of smaller ssPCM-IIs by iteratively removing the last PCRB and its associated AVNs, down to the ssPCM-I.
+For MBBP, we construct 64 different ssPCM-IIs of C(63, 30) by running Algorithm 3 with wmax = 2000 using 64 randomly sampled subsets of Smin. Then, MBBP-M consists of M randomly selected ssPCMs. Note that the idea of using ssPCMs within MBBP was already mentioned in [9].
+When constructing subcode ssPCMs for code C1, we empirically observe a saturation effect around wmax = 2000, i.e., increasing wmax beyond this value does not yield further FER improvements for the corresponding aSCED batch, while increasing decoding complexity. Hence, for aSCED-M , we select 32 distinct (k −1)-dimensional linear subcodes obtained by appending a single linearly independent row with random dc ∈ {6, 8, 10} and running Algorithm 3 with wmax = 2000 to construct the respective ssPCM-II. The considered ensembles consist of L randomly selected aSCED batches from the 32 constructed ones, yielding a total ensemble size of M = 2L.
+The aSCED-M proposed in this work outperforms MBBPM at all evaluated ensemble sizes. For a fixed TEC, aSCED achieves a lower FER, and for a fixed FER, it requires a lower TEC. More specifically, as highlighted in Fig. 7, aSCED reduces the TEC by a factor of around 3 to match the FER performance of MBBP-32. Similarly, it reduces the FER by a factor of roughly 2 for a fixed TEC. For a TEC > 6000, aSCED-M yields lower FER compared to stand-alone BP decoding using ssPCM-II, for which a saturation effect can be observed. Notably, aSCED-64 approaches ML performance using only 26 paths of NSPA, even fewer than using the single aSCED batch with ∆ℓ = 8 from Fig. 6, which uses NMSA.
+This raises the question: Is it always preferable to append multiple single rows, i.e., use ∆ = 1 and increase L, or can a single larger aSCED batch, i.e., let L = 1 and increase ∆, yield better trade-offs? We address this in the next section.
+3) Implementation Benefits vs. Performance Trade-off: Fig. 8 plots the FER versus Eb/N0 performance for the BCH code C1(63, 30) of various aSCED-M decoders consisting of BP decoders of subcodes with varying rank deficiencies ∆ℓ.
+For the ensembles consisting of a single aSCED batch, i.e., M = 2∆ℓ , the best-performing batch was selected for each ∆ℓ from the corresponding 50 candidates shown in Fig. 6. The ensemble of 32 aSCED batches with ∆ℓ = 1 is the one from Fig. 7 evaluated using NMSA.
+As ∆ℓ increases, the FER of aSCED-2∆ℓ , i.e., an ensemble consisting of a single large aSCED batch (L = 1), decreases monotonically, fully closing the gap to ML performance at ∆ℓ = 10. When comparing the two depicted 64-path ensembles, i.e., one composed of L = 32 aSCED batches with ∆ℓ = 1, and the other of a single large aSCED batch
+
+10−1
+
+FER
+FER
+
+11
+10−2
+
+10−1
+10−3 10−2
+
+10−1
+
+10−1
+
+10−3
+
+FER
+
+10−4 10−5
+
+10−4 10−5 10−6 2
+
+aSaSCCEED-6D4 ∆-6ℓ =4 6∆ℓ = 6
+
+aSCED-64 ∆ = 1 aSCED-64 ∆ℓ = 1
+aSCED-256 ∆ℓ = 8 ℓ
+
+FER
+
+10 aSCED-256 ∆ aSCED-1024 ∆ℓ = 10
+
+ML [37]
+
+ℓ
+
+=
+
+8
+
+−3
+
+aSC2.5ED-10324 ∆3ℓ.5= 104 4.5
+
+5
+
+10−3 10−5
+
+ML [37] Eb/N0 (dB) −6Fig. 8. Performance of aSCED for the BCH code C1(63, 30) using different
+10 2 2.5 3 3.5 ∆ℓ and ensemble sizes.
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 (dB)
+
+4 4.5 BDD-BM Chase-II* p = 7
+
+ML [37] H1-min
+
+5 MBBP-8
+MBBP-64
+
+6
+
+7
+
+aSCED-8 aSCED-64 NMSA
+
+1E0 /N (dB) −5
+with L = 1, ∆ℓ = 6, the former outperfobrms the0latter at
+
+Chase-II* p = 10
+
+ssPCM-II
+
+aSCED-64 NSPA
+
+comparable TEC. This indicates that the diversity gain from using multiple
+2 distinct aSCED batches (fixing ∆ℓ = 1 and increasing L)
+provides a performance advantage over a single large batch
+
+Fig. 9. Performances of BP-based decoders and classical decoders for the
+
+BCH
+
+code C1(63, 30).
+
+Unless
+
+stated otherwise,
+
+NMSA with α
+
+=
+
+1 2
+
+and
+
+Imax
+
+=
+
+20
+
+is
+
+used
+
+for
+
+BP.
+
+All
+
+aSCED-M
+
+use
+
+∆
+
+=
+
+1
+
+and
+
+L
+
+=
+
+M 2
+
+.
+
+Chase-
+
+3 4 5 II* denotes the performance estimate for the Chase-II decoder derived in [38].
+
+6
+
+(fixed L = 1 and increasing ∆ℓ = 1) and can be reasoned as follows: Assume we randomly sample L rows Mℓ, mℓ = 1,
+
+100
+
+that are jointly linearly independent of the rows of H. Ap-
+
+pending each of those rows to H according to (3) results
+
+10−1
+
+in L distinct linear subcodes Cℓ ⊂s C and theBirDreDsp-eBctMive
+
+(k + 1)-dimensional dual appended rows are jointly
+
+codes Cℓ⊥ ⊃s C⊥, ℓ ∈ linearly independent
+
+o[CLf ]th.haeSsirneocw-eIsIth*oef
+
+p
+
+FER
+
+=
+
+10−2
+7
+
+H, it follows that ℓ∈[L] Cℓ⊥ = C⊥ and ℓ∈[L](CCℓ⊥h\aCs⊥e)-=II*∅. p = 1100−3
+
+E /N (dB) b 0
+
+H1-min
+
+ssPCM-II
+
+MBBP-6
+
+ML [37]
+
+aSCED-6
+MBBP-8 MBBP-30
+
+H1-min
+
+aSCED-30
+MBBP-64ML [37]
+
+ssPCM-II
+
+aSCED-8 aSCED-6 aSCED-6
+
+Hence, each dual code of a linear subcode contains a subset
+
+Cℓ⊥ \C⊥ consisting of 2k dual codewords that are not elements
+
+10−4
+
+of Cℓ′ , ℓ′ ∈ [L] \ {ℓ}. Then, if appending a row Mℓ with
+
+wt(Mℓ) < dm⊥in and following the reasoning in Sec. V-C, the search space matrix Sℓ used for constructing the ssPCM
+tailored to subcode Cℓ typically mostly consists of rows which are elements of Cℓ⊥ \C⊥. Consequently, the ssPCM for each of the aSCED batches is built mostly out of different rows and
+likely possesses distinct resulting in an inter-path diversity,
+
+10−5 2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+Eb/N0 (dB)
+
+Fig. 10. Performances of BP-based decoders for the BCH code C2(63, 36).
+
+All
+
+BP
+
+decoders
+
+employ
+
+the
+
+NMSA
+
+with
+
+normalization
+
+constant
+
+α
+
+=
+
+1 2
+
+and
+
+a maximum of Imax = 20 iterations.
+
+which boosts performance when using increased L.
+
+However, when latency is not the limiting factor and some loss in decoding performance is acceptable, fixing L and increasing ∆ potentially offers a key advantage in hardware implementation: since all decodings within a single aSCED batch share the same underlying graph, the same hardware could be reused in a serialized fashion, thereby reducing area
+
+the BCH code C1(63, 30) in an FER versus Eb/N0 plot. As reference, we include ML decoding, BDD-BM, and Chase-II performance [37]–[39]. As BP baselines, we include decoding using H1−min and ssPCM-II [9], [37]. Ensemble designs follow the procedures outlined in previous sections.
+
+overhead. Thus, aSCED can allow for a balanced trade-off Across the simulated SNR range, aSCED consistently out-
+
+among performance, hardware area, and latency.
+Remark 10. As expected, when dropping the all-zero codeword assumption, the FER of ensembles with LER below ML in Fig. 6 is lower-bounded by the ML performance. Notably, those ensembles achieve performance close to ML, underlining that the all-zero assumption enables a practically efficient simulation during ensemble design.
+4) FER Performance: In the following, we consider two medium-rate BCH codes, i.e., codes for which no efficient ML decoding exists.
+
+performs its equal-complexity (equal TEC) MBBP counterpart. Specifically, using NMSA, at a target FER of 10−3, aSCED-8 and aSCED-64 achieve gains of 0.2 dB and 0.1 dB, respectively, over their MBBP counterparts. Moreover, for Eb/N0 ≥ 3.6 dB and using NSPA, aSCED-64 fully closes the gap to ML performance.
+Fig. 10 plots the FER versus SNR for various BP-based decoders for the BCH code C2(63, 36). As baselines, we include BP decoding using H1−min and ssPCM-II [9], [37]. For ensemble construction, we follow the previous procedure. At a target FER of 10−3, aSCED-6 and aSCED-30 achieve
+
+First, in Fig. 9, we summarize the previous findings for gains of 0.2 dB and 0.3 dB compared to their equal-complexity
+
+12
+
+MBBP counterparts, respectively. Comparing the two BCH codes C1(63, 30) and C2(63, 36),
+the larger performance gains of aSCED over MBBP observed for C2 may be attributed to the structural constraints of its dual code. Specifically, constructing ssPCMs for C2 requires higherweight dual codewords to achieve full-rank search spaces [9]. This can degrade the sparsity and structural quality of the resulting ssPCM. In contrast, appending linearly independent rows, i.e., as done for aSCED, mitigates this degradation, preserving or even enhancing the decoding graph structure.
+
+VII. CONCLUSION
+In this work, we introduce aSCED for binary linear codes. This approach extends the previously proposed SCED by incorporating affine subcodes alongside linear subcodes. To this end, we develop a BP decoder for affine subcodes. Leveraging the fact that an affine subcode is a coset of a linear subcode, we show that the decoding graph structure remains unchanged, only requiring sign flips at specific check nodes.
+We further provide theoretical results on aSCED and, in particular, demonstrate that by appending linearly independent rows before search-space generation, we gain a structural advantage over MBBP ensembles. Consequently, subcodes enable the design of high-performance subcode ssPCMs.
+Compared to SCED, aSCED offers four key advantages:
+1) Simplified design: Fewer PCMs must be designed to achieve the same ensemble size.
+2) Uniform protection: The inclusion of affine subcodes ensures that all codewords are equally protected.
+3) Improved performance: aSCED consistently outperforms other ensemble methods at equal complexity.
+4) Hardware efficiency: All decodings within an aSCED batch share the same graph structure, potentially enabling hardware reuse.
+To demonstrate its effectiveness, we evaluate aSCED using two LDPC codes and two BCH codes, achieving significant gains over stand-alone BP and other equal-complexity ensemble decoders. Furthermore, when combining aSCED with ssPCMs, we report ML performance for the (63, 30) BCH code with BP-based decoding using only 64 decoding paths.
+
+APPENDIX PROOF OF THEOREM 2
+
+In the following proof, we denote the binary phase-shift
+keying (BPSK) codeword as x¨ := 1 − 2x [3]. Proof: Let Hs ∈ F2ms×n denote a PCM of a fixed proper
+subcode Cs(n, k′) ⊂ C, with decoder BP(Hs). After selecting Cs, there exist 2k−k′ − 1 disjoint affine subcodes from which we arbitrarily select one affine subcode Ca = xa + Cs with affine offset xa, affine syndrome sa = Hs xTa , and decoder BPsa (Hs). Without loss of generality, we may reorder the rows and columns of Hs such that
+sa = 1, . . . , 1, 0, . . . , 0 T, xa = 1, . . . , 1, 0, . . . , 0 , (5)
+
+α
+
+ms −α
+
+β
+
+n−β
+
+with 1 ≤ α ≤ ms and 1 ≤ β ≤ n; we consider BiMSCs, so this re-ordering does not affect the performance of flooding BP.
+
+BPsa Hs, λ[2]
+
+BPsa Hs, λ[2]
+
+BP Hs, λ[1]
+
+−λ1[1]
+−λ...[21] ...
+−λβ[1]
+λ[β1...+] 1 ...
+
++
+
+−λ[11]
+
+−1 + −λ[11] −1 λ[11]
+
+−∞
+...
+
+α
+
+−λ...2[1]
+
+...
+
+−1
+
+−1
+
+... ... −λ[21] −1 λ[21]
+
+...
+
++
+−∞
+... +...
+
+−λ[β1]
+
++ −λβ[1] −1 λ[β1]
+
+−1
+
+λ[β1...+] 1
+
+...
+
+−
+... 1
+
++...
+
+λ[β1...+] 1
+
+λ[β1...+] 1 ...
+
++
+...
++
+... +...
+
+λn[1]
+
++
+
+λn[1]
+
++ λn[1]
+
+λn[1]
+
++
+
+(a)
+
+(b)
+
+(c)
+
+Fig. 11. Illustration of the key transformation steps in the proof of Theorem 2: (a) Affine decoding problem; (b) Transferring the signs to edges; (c) Interrelation of affine and subcode decoding problem. Remaining edges are not depicted for readability.
+
+Consider the transmission of vector x¨[1] with x[1] ∈ C. Let the resulting channel output be y[1] ∈ Yn with corresponding LLR vector λ[1] ∈ Rn. We do not assume x[1] ∈ Cs since in
+aSCED, subcode decoders may be asked to decode a received
+word that originates from a codeword within an arbitrary coset
+Ca, not necessarily coinciding with the corresponding subcode. Now, consider the codeword x[2] := x[1] + xa. Note that
+x[2] ∈ Ca iff x[1] ∈ Cs. Next, we introduce the bijection fβ(·) : Rn → Rn, inverting the sign of the first β components
+
+(fβ(v))i =
+
+−vi, vi,
+
+1 ≤ i ≤ β, β < i ≤ n.
+
+By construction, we have x¨[2] = fβ(x¨[1]) and we define λ[2] := fβ(λ[1]).
+Next, we show that the average decoding error probabilities
+of BP(Hs) and BPsa (Hs) are identical. Define the set of bitwise LLR vectors successfully decoded by BP(Hs)
+
+S[1] := λ[1] ∈ Rn : BP Hs, λ[1] = x[1] ,
+
+where we assume the transmission of x[1] ∈ C. When defining S[2] := {fβ(λ) : λ ∈ S[1]}, and using the
+symmetry property of BiMSCs, it follows that
+
+P (S[2]|X = x[2]) = P (S[1]|X = x[1]),
+
+(6)
+
+where X is random codeword uniformly distributed over C. Let λ[2] = fβ(λ[1]) ∈ S[2]. We show that decoding x[1]
+from λ[1] using BP(Hs) is equivalent to decoding x[2] from λ[2] using BPsa (Hs).
+To this end, as illustrated in Fig. 11, we transform the Tanner
+graph of the affine decoding problem based on the following observations: For the first α CNs, the affine syndrome com-
+ponent is non-zero by construction, thus the CN update in (4) introduces the factor (−1) which we refer to as signed CN and which is indicated in Fig. 11 by injecting −∞ to the signed
+CNs. For all remaining CNs, the affine syndrome component
+is zero, and they behave like standard CN updates. Due to reordering, sa and xa are non-zero precisely in their
+first α and β positions, respectively. In order for sa = Hs xTa to hold, each VN vi with i ≤ β shares an edge with
+• an odd number of the α signed CNs, and
+
+13
+
+• an even number of the remaining ms − α standard CNs.
+Since there is an odd number of edges connecting the first β VNs with any of the first α CNs, the (−1) factor of each
+signed CN can be transferred to every edge that connects that CN with a VN vi, i ≤ β. In Fig. 11 (b), these edges are drawn in red and are labeled with an additional weight (−1). After transferring the (−1) factor onto the edges, the signed CNs
+revert to standard CNs. Similarly, each of the first β VNs is linked to the remaining
+ms − α CNs by an even number of edges. Thus, an auxiliary factor (−1) can be attached to every one of these edges without
+altering the update rule of the connected CN. In Fig. 11 (b), these are shown in green and carry the extra (−1) weight.
+Summarizing, after those two sign transfers shown in Fig. 11 (b), all edges that connect a VN vi with i ≤ β bear a (−1) factor and every CN has now become a standard
+CN. Next, in a final transformation step from the graph in Fig. 11 (b) to the graph illustrated in Fig. 11 (c), the (−1) weights can be shifted onto the first β incoming LLRs.
+As highlighted in Fig. 11 (c), the resulting graph interre-
+lates the affine-decoding problem (blue background) with the
+subcode-decoding problem (green background). This representation shows that the affine decoder correctly recovers x[2] from λ[2] ∈ S[2] if and only if the subcode decoder correctly recovers x[1] from λ[1] ∈ S[1]. Thus, by definition of S[1], S[2] is the set of bit-wise LLR vectors successfully decoded by BP(Hs). Hence, using (6) and averaging over all codewords x ∈ C completes the proof.
+REFERENCES
+[1] J. Mandelbaum, H. Ja¨kel, and L. Schmalen, “Subcode ensemble decoding of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Ann Arbor, MI, USA, 2025.
+[2] H. Lulei, J. Mandelbaum, M. Ru¨benacke, H. Ja¨kel, S. ten Brink, and L. Schmalen, “Subcode ensemble decoding of polar codes,” in Proc. Int. Symp. on Topics in Coding (ISTC), Los Angeles, USA, 2025.
+[3] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge University Press, 2008.
+[4] S. Miao et al., “Trends in channel coding for 6G,” Proc. IEEE, vol. 112, no. 7, pp. 653–675, Jul. 2024.
+[5] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[6] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[7] I. Tal and A. Vardy, “List decoding of polar codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), St. Petersburg, Russia, Jul. 2011.
+[8] S. Sankaranarayanan and B. Vasic, “Iterative decoding of linear block codes: a parity-check orthogonalization approach,” IEEE Trans. Inf. Theory, vol. 51, no. 9, pp. 3347–3353, Sep. 2005.
+[9] Y. Shen et al., “Belief propagation decoding for short codes on structured sparse parity-check matrices,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Ann Arbor, MI, USA, 2025.
+[10] J. S. Yedidia, J. Chen, and M. P. C. Fossorier, “Generating code representations suitable for belief propagation decoding,” in Proc. Allerton Conf. Commun., Control, and Comput. (Allerton), Monticello, IL, 2002.
+[11] V. Kumar and O. Milenkovic, “On graphical representations of algebraic codes suitable for iterative decoding,” IEEE Commun. Lett., vol. 9, no. 8, pp. 729–731, Aug. 2005.
+[12] Y. Shen et al., “Toward universal belief propagation decoding for short binary block codes,” IEEE J. Sel. Areas Commun., vol. 43, no. 4, pp. 1135–1152, Feb. 2025.
+[13] K. Kraft, M. Hermann, O. Griebel, and N. Wehn, “Ensemble belief propagation decoding for short linear block codes,” in Proc. Int. ITG Workshop on Smart Antennas (WSA) and Conf. on Syst., Commun., and Coding (SCC), Braunschweig, Germany, Feb. 2023.
+
+[14] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, Jan. 2010.
+[15] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. ten Brink, “Automorphism ensemble decoding of quasi-cyclic LDPC codes by breaking graph symmetries,” IEEE Commun. Lett., vol. 26, no. 8, pp. 1705–1709, Aug. 2022.
+[16] F. Krieg, J. Clausius, M. Geiselhart, and S. ten Brink, “A comparative study of ensemble decoding methods for short length ldpc codes,” in Proc. Intl. ITG Conf. on Syst., Commun., and Coding (SCC), Mar. 2025.
+[17] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Automorphism ensemble decoding of Reed-Muller codes,” IEEE Trans. Commun., vol. 69, no. 10, pp. 6424–6438, Oct. 2021.
+[18] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-bases belief-propagation for decoding of short block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Nice, France, Jun. 2007.
+[19] M. Geiselhart, J. Clausius, and S. ten Brink, “Rate-compatible polar codes for automorphism ensemble decoding,” in Proc. Int. Symp. on Topics in Coding (ISTC), Brest, France, Sept. 2023.
+[20] A. C¸ ag˘rı Arlı and O. Gazi, “Noise-aided belief propagation list decoding of polar codes,” IEEE Commun. Lett., vol. 23, no. 8, pp. 1285–1288, Aug. 2019.
+[21] P. Schla¨fer, S. Scholl, E. Leonardi, and N. Wehn, “A new LDPC decoder hardware implementation with improved error rates,” in Proc. IEEE Jordan Conf. on Appl. Elect. Eng. and Comput. Technol. (AEECT), Amman, Jordan, Nov. 2015.
+[22] T. Hehn, J. B. Huber, P. He, and S. Laendner, “Multiple-bases beliefpropagation with leaking for decoding of moderate-length block codes,” in Proc. Int. ITG Conf. on Source and Channel Coding (SCC), Ulm, Germany, Jan. 2008.
+[23] J. Mandelbaum, S. Miao, H. Ja¨kel, and L. Schmalen, “Endomorphisms of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024.
+[24] J. Mandelbaum, H. Ja¨kel, and L. Schmalen, “Generalized automorphisms of channel codes: Properties, code design, and a decoder,” in Proc. Int. Symp. on Topics in Coding (ISTC), Brest, France, Sept. 2023.
+[25] A. Vardy, “The intractability of computing the minimum distance of a code,” IEEE Trans. on Inf. Theory, vol. 43, no. 6, pp. 1757–1766, Nov. 1997.
+[26] P. L. Clark, “Covering numbers in linear algebra,” The American Mathematical Monthly, vol. 119, pp. 65–67, Jan. 2012.
+[27] J. Chen and P. Fossorier, “Density evolution for BP-based decoding algorithms of LDPC codes and their quantized versions,” in Global Conf. Commun. (GLOBECOM), Taipei, Taiwan, Nov. 2002.
+[28] J. Leon, “A probabilistic algorithm for computing minimum weights of large error-correcting codes,” IEEE Trans. Inf. Theory, vol. 34, no. 5, pp. 1354–1359, 1988.
+[29] C. Kestel, M. Geiselhart, L. Johannsen, S. ten Brink, and N. Wehn, “Automorphism ensemble polar code decoders for 6G URLLC,” in Proc. Intl. Workshop on Smart Antennas (WSA) and ITG Conf. on Syst., Commun., and Coding (SCC), Braunschweig, Germany, Feb. 2023.
+[30] C. Pillet, V. Bioglio, and I. Land, “Polar codes for automorphism ensemble decoding,” in Proc. IEEE Inf. Theory Workshop (ITW), Kanazawa, Japan, Oct. 2021.
+[31] F. J. MacWilliams and N. J. A. Sloane, The Theory of Error Correcting Codes, ser. North-Holland Mathematical Library. Elsevier, 1977.
+[32] C. Chen, B. Bai, X. Yang, L. Li, and Y. Yang, “Enhancing iterative decoding of cyclic LDPC codes using their automorphism groups,” IEEE Trans. Commun., vol. 61, no. 6, pp. 2128–2137, Jun. 2013.
+[33] S. Laendner, T. Hehn, O. Milenkovic, and J. B. Huber, “When does one redundant parity-check equation matter?” in Global Conf. Commun. (GLOBECOM), San Francisco, CA, USA, Nov.-Dec. 2006.
+[34] P. Trifonov and V. Miloslavskaya, “Polar subcodes,” IEEE J. Sel. Areas Commun., vol. 34, no. 2, pp. 254–266, Nov. 2016.
+[35] D. J. C. MacKay, Information Theory, Inference, and Learning Algorithms. Cambridge, U.K.: Cambridge University Press, 2003.
+[36] T. Tian, C. Jones, J. Villasenor, and R. Wesel, “Selective avoidance of cycles in irregular LDPC code construction,” IEEE Trans. Commun., vol. 52, no. 8, pp. 1242–1247, Aug. 2004.
+[37] M. Helmling et al., “Database of Channel Codes and ML Simulation Results,” www.uni-kl.de/channel-codes, 2019, accessed 2023-01-04.
+[38] M. Fossorier and S. Lin, “Error performance analysis for reliabilitybased decoding algorithms,” IEEE Trans. Inf. Theory, vol. 48, no. 1, pp. 287–293, Jan. 2002.
+[39] J. L. Massey, “Shift-register synthesis and BCH decoding,” IEEE Trans. Inf. Theory, vol. 15, pp. 122–127, Jan. 1969.
+
+

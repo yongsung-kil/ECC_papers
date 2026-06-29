@@ -1,0 +1,572 @@
+ICSP2014 Proceedings
+
+DUAL PORT RAM BASED LAYERED DECODING FOR MULTI RATE QUASI-CYCLIC LDPC CODES
+A CASE STUDY: IEEE 802.16E WIMAX LDPC CODES
+Soner Yes¸il, Murat Arslan
+Communication & Information Technologies Division Aselsan Inc., Ankara, Turkey
+syesil@aselsan.com.tr, muarslan@aselsan.com.tr
+
+ABSTRACT
+This paper presents a generic RAM based FPGA architecture for decoding of Multi Rate Quasi-Cycling LDPC codes. RAM based decoding enables us to reduce permutation networks into simple address controllers. Moreover, utilizing Block RAMs with various aspect ratios in an FPGA provides flexibility ranging from area driven compact designs to fully parallelized high throughput designs. Utilizing the read-first property of the RAMs, the proposed design efficiently exploits the dual port Block RAM resources by accessing all the four ports at the same time. Such facilities of recent FPGA devices have been combined with the well known layered decoding algorithm with non-linearly mapped Min-Sum approximation in order to obtain area efficient yet high throughput decoders. The proposed decoder architecture has been verified on Xilinx XC7Z020 FPGA device for IEEE 802.16e Wimax LDPC codes. 340Mbps of information throughput has been observed at an operating frequency of 150MHz.
+Index Terms— LDPC, Quasi-Cyclic, Wimax, Layered Decoding, Min-Sum
+1. INTRODUCTION
+Low Density Parity Check Codes, first introduced by Gallager [1] in 1962 as a forward error correction (FEC) technique having very good bit error rate (BER) performance near Shannon-Limit, had to wait for a long time to take place in real-life applications due to its complex nature to implement in hardware. In parallel with the developments in the VLSI technology in the last quarter of 20th century, these codes were re-invented in the late 90s [2] and become popular for various high-throughput, low power, and reliable communication systems. Increasing demand on band-width and energy efficiency together with robustness in the presence of various channel impairments and minimum possible computation resources has also increased the research on construction of new implementation-friendly multi-rate LDPC codes with least possible degradation in BER performance. As a result, Quasi-Cyclic (QC) LDPC codes have been adopted as
+
+the FEC technique in various well-known communications standards such as WLAN, WIMAX, and DVB-S2. QC-LDPC codes are specifically tailored to give way to efficient encoder and decoder implementations. Even so, realization of highthroughput QC-LDPC decoders with tight area requirements still remains a challenging problem. There are hundreds of various ASIC and FPGA implementations for various types of QC-LDPC Codes in the literature. Although the algorithms and approximation techniques are quite similar, the proposed architectures show much variety in each implementation. ASIC implementations [3, 4, 5, 6, 7, 8, 9] mainly focus on squeezing highly parallelized decoders into smaller silicon areas, whereas FPGA implementations [10, 11, 12, 13, 14, 15, 16, 17] focus on efficient utilization of the inherent resources. Therefore, the challenge of optimizing large permutation networks in ASIC designs has mostly turned into designing dynamic RAM-based networks in FPGA designs. There have been some fully-parallel and logic-based FPGA decoder implementations targeted for a specific code type [18, 19] that go beyond multi-Gbps throughputs. However, partially parallel designs aiming moderate throughputs and supporting multiple coding rates are likely to be more practical in concurrent system realizations, where FPGAs are expected to support extra duties ranging from physical layer processing to higher level control tasks.
+In this work, we propose a generic and flexible RAMbased FPGA architecture for decoding of QC-LDPC Codes. The rest of the paper continues by giving a brief description of the QC-LDPC codes. Then the Turbo Decoding Message Passing (TDMP) Algorithm [20] (also known as Layered Decoding Algorithm), together with some approximations and implementation-oriented modifications is introduced in the following subsections. Section 3 presents the detailed explanation of the proposed Dual-Port RAM-based architecture and the techniques used in Check Node Processing (CNP) and Early Termination decision. An example implementation of IEEE 802.16e WIMAX LDPC Decoder based-on the proposed architecture is explained and compared to similar FPGA implementations within our knowledge. Finally, a
+
+978-1-4799-2186-7/14/$31.00 ©2014 IEEE
+
+1524
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+conclusion part summarizes the presented work and forwards some suggestions for further improvements.
+2. DECODING OF QUASI-CYCLIC LDPC CODES
+
+LDPC codes with unstructured Parity Check Matrices (H) having randomly placed non-zero entries give the best performance among all. However these codes by nature are very difficult to implement in hardware. Therefore, research on code construction has been focused on finding implementable structured codes keeping the performance as good as possible. Reference [21] presents a good example showing how the structured LDPC codes can reveal significant reductions in hardware with a slight loss in the BER performance. QuasiCyclic (QC) LDPC codes are considered to be the most popular of such structured codes. In a QC-LDPC code, the HMatrix consists of z-by-z square sub-matrices, Pi,j, each of which is either zero or circularly shifted identity matrix as in (1). The circular-shift property makes it possible to simplify the troublesome permutation networks by reducing these into shift register or address counter based networks, which is the underlying reason for the popularity of these codes.
+
+Fig. 1: Tanner Graph representation
+
+Algorithm 1 Layered Decoding Algorithm
+
+1: for q = 1 : < maximum number of iterations > do
+
+2: for m = 1 : < number of layers > do
+
+3:
+
+Q(i→ q)j = Viq − Rj(q→−i1)
+
+4:
+
+Rj(q→) i = f (Qi(→ q)j )
+
+step 1 step 2
+
+5:
+
+Vi(q) = Qi(→ q)j + Rj(q→) i
+
+6: end for
+
+7:
+
+xˆ(iq) =
+
+0, 1,
+
+Vi(q) ≥ 0 Vi(q) < 0
+
+step 3
+
+8: if xˆi(q) × HT = 0 T erminate 9: end for
+
+Step 4
+
+ P0,0
+
+P0,1
+
+···
+
+P0,nb−1 
+
+ P1,0
+
+P1,1
+
+···
+
+P1,nb−1 
+
+ H =
+
+
+...
+
+...
+
+...
+
+...
+
+  (1) 
+
+
+
+
+
+Pmb−2,0 Pmb−2,1 · · · Pmb−2,nb−1
+
+Pmb−1,0 Pmb−1,1 · · · Pmb−1,nb−1
+
+2.1. Layered Decoding Algorithm (LDA)
+Layered Decoding Algorithm separates the Parity Check Matrix into its block rows, which are called layers. The HMatrix in (1) has mb layers, each having z rows and z · nb columns. Fig.1 depicts the Tanner Graph [22] representation of the variable and check nodes of a layer. The upwards and downwards arrows in this graph represent the variable and check node messages, respectively. Since each Pi,j is a circular shift of a z-by-z identity matrix, it is guaranteed that every variable node has at most one branch connected to the check node group of the corresponding layer. Different from the traditional Belief Propagation Algorithm (BPA), the variable node is now simply updated by subtracting the previous iterations check node message from the current Log Likelihood Ratio (LLR) information. This, however, means that every check node message occurring in the current iteration needs to be stored and used in the next iteration. A pseudo-code for the layered decoding is shown in Algorithm (1), where f (.) denotes a given check node update function, the use and choice of which does not depend on the application of the LDA.
+
+2.2. Min-Sum Algorithm (MSA)
+
+Min-Sum Algorithm, which is an approximation of the original Sum Product Algorithm (SPA), has been widely preferred in many implementations because of its hardware efficiency. The performance analysis of this approximation together with several modifications is presented in [23] showing that the MSA introduces very little penalty of loss in the BER performance. According to this algorithm, every check node outputs the absolute minimum of the input messages other than the one coming from the target variable node. Similarly, the sign of every output message is simply obtained by multiplying the signs of the input messages excluding the target variable node. A mathematical representation of this process is given in (2), where N = {0, 1, 2, ...z × nb − 1}.
+
+
+
+
+
+f Qi(→ q)j = Rj(q→) i = 
+
+sgn(Q) × min
+i ∈N \i
+
+Q(iq→ ) j
+
+(2)
+
+i ∈N \i
+
+2.3. Mapping
+MSA has been mostly used with some modifications in order to match the performance of the original SPA[24]. Normalized-MSA and Offset-MSA are the most common ones among them. Some recent research suggests that nonlinear quantization of the messages using just a few bits might even provide sufficient improvement for MSA to surpass the performance of the floating-point equivalents [25]. The mapping algorithm strongly depends on the H-matrix of the code. In this work, we aimed to minimize the hardware resources required in the Check Node Processing by finding a robust map-
+
+1525
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+ping of 4-bits, which would not cause performance variations in different code rates and block lengths. The generic representation of the proposed mapping is defined as follows: Let Q(i→ q)j = (qh−1...qb−1qb−2...q0)2 be an h-bit message, then b-bit mapped message Mi→j is defined as
+
+
+
+ 
+
+(01...11)2
+
+ Mi(→ q)j = 
+ 
+
+(qb−1qb−2...q0)2 (qb−1qb−2...q0)2
+
+
+
+ (11..11)2
+
+Q(i→ q)j > 2b−1 − 1
+
+0 ≤ Q(i→ q)j ≤ 2b−1 − 1 −2b−1 ≤ Q(i→ q)j ≤ 0
+
+(3)
+
+Qi(→ q)j ≤ −2b−1
+
+Note that the resulting messages are 1’s complement integers, where the sign bit and the magnitude bits are simply concatenated. This eliminates the magnitude calculation over 2’s complement numbers. An inverse mapping is required to convert the messages back into 2’s complement numbers to be used in the variable node and LLR updates:
+
+Rj(q→) i =
+
+(cb−1cb−2...c0)2 (cb−1cb−2...c0)2
+
+cb−1 = 0 cb−1 = 1
+
+(4)
+
+The proposed mapping not only reduced the hardware complexity but also provided a slight improvement about ∼0.2 dB around BER=10−5 when compared to the linearly quantized
+18-bit operations.
+
+3. RAM-BASED LAYERED DECODING
+
+3.1. General Architecture
+The main challenge for the hardware implementation of a multi-mode QC-LDPC decoder is to design a routing network serving for all modes of operations [26, 27]. Due to the limited resources, recent FPGA designs tend to handle this problem by efficient utilization of the embedded RAM capabilities [10, 11, 12, 13, 14, 15, 16]. With this approach, a highly logicconsuming routing network is replaced by simple address management logic blocks. Moreover, the decoding architecture can be configured on-the-fly and adapted to different Hmatrices of various modes of operation. In addition, thanks to the flexible configuration capability and increasing RAM capacity in the recent FPGA devices, it is possible to meet extended degree of parallelization by exploiting different aspect ratios [11, 12]. Fig. 2 depicts the general view of the proposed RAM-based architecture with a parallelization degree of p. A main controller block runs a finite state machine to provide a higher-level control for the input-output processing and re-configuring the RAM controller blocks according to a specific mode of operation. The architecture includes nb identical RAM controller units, each of which is responsible for a single block column of the H-Matrix. The Check Node Processing units (CNPU) gather the variable node messages from the RAM controller units and return a message to each unit in parallel. With this architecture, full parallelization and hence maximum throughput can be achieved by exploiting zCNPUs in parallel. However, one must keep in mind that parallelization results in an increase in the resource utilization in
+
+Fig. 2: General view of the RAM-based multi-rate decoder
+the RAM controller unit due to the data alignment need before and after a RAM access.
+3.2. Dual-port Block RAM Address Management
+The proposed RAM Controller Unit (Figure 3) consists of a true dual-port RAM, which enables accessing two separate ports at the same time. In addition, the “Read-First” property of the FPGA Block-RAMs makes it possible to both read and write on the same port at a single clock cycle, eliminating the need for clocking the RAMs at twice the clock frequency as in [12]. Therefore, every Block RAM Controller Unit becomes capable of processing all the steps of the Layered Decoding Algorithm at a single clock cycle after some fixed pipelining latency. This latency is caused by the register delays occurring in between the read and write ports of the RAM, including the CNPU. The number of registers in this path can be increased as required in order to obtain higher clock frequencies. This latency entails a circular shift in the re-organization of the LLRs to be stored and used in the next layer. However, this is a rather easy task for the address controller, which only requires starting the next layer with an offset. The LLRs and the CN messages are isolated in the address space in such a way that the Port-A is used to circularly store the updated LLRs layer by layer, whereas the Port-B is used to continuously store the CN updates during the whole iteration (Fig. 4). Further reduction in the number of clock cycles can be achieved by exploiting some degree of parallelization with multiple CNPUs. Depending on the desired level of parallelization, the physical RAM locations, which can be configured in various aspect ratios, can be shared by multiple variable node messages. Every variable node message would then be separately handled and directed to the corresponding CNPU. A data alignment process would be needed to bring the messages together and then deliver them towards the target CNPUs. This would be a simple multiplexor, the select pins of which are controlled according to the corresponding circular-shift value of the H-matrix. But as the degree of parallelization increases, extra resources introduced due to data alignment logic may become important. Therefore a trade-off occurs between throughput and FPGA resources. Another point that must be taken into account is that the degree of parallelization needs to be optimized for all modes of operation. Otherwise, extra logic resources would
+
+1526
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+be required to manage the RAM contents as the mode of operation changes in real-time. A good choice would be to choose the least-common-factor of the possible z-values as the level of parallelization. Then the throughput of such a RAM-based parallel LDPC decoder can be calculated as follows:
+
+TEb/N0 =
+
+N · R · fclk N/p +IEbNo · (z/p + L) · (N/z) · (1–R)
+
+(5)
+
+# of cycles to get input
+
+# of cycles per layer
+
+# of layers
+
+TEb /N0
+
+p · R · fclk , for IEb/N0 · (1–R)
+
+z/p L IEb/N0 · (1–R)
+
+1
+
+(6)
+
+where N : Code Length, R: Rate, fclk: Operating Frequency IEb/N0 : Average number of iterations for a given Eb/N0, p: Parallelization Degree, z: Size of the square sub-matrix, and L: Latency until the first LLR update. Note that N cancels out in (5). Further simplification can be obtained as in (6) for the cases where the latency is negligible when compared to z/p, which brings out that the average throughput is directly proportional to the parallelization degree for such cases.
+
+when computing the Check Node messages to decrease the critical path delays.
+3.4. Early Termination
+Early termination decision, which stops the decoding before reaching the maximum number of iterations, is taken by checking the condition in step 4 of the LDA (Algorithm 1). Although written as a separate step in the algorithm, it is possible to do this check inherently during LLR updating process. One can easily obtain the required information to stop the decoding by accumulatively XOR’ing the sign bits of the LLRs of parallel columns throughout the whole iteration just before writing them to the RAM. The decoding is terminated if and only if the resulting XOR value is always a zero for all the rows of H-matrix. The decision is made by the main controller block which observes the sign bits coming from the identical BRAM controller blocks. Hence, with this method, the early termination condition is checked in parallel without a need for extra time.
+4. CASE STUDY: IEEE 802.16E WIMAX LDPC CODES
+
+Fig. 3: Dual-Port RAM Controller Unit
+3.3. Check Node Processing Unit
+The Check Node Unit consists of a sub-block that computes the smallest two magnitudes (min1 and min2) among the inputs. Then a decision circuit prepares each reply message as in (2) by using these two minimum values and the sign of the inputs. This sub-block is based on a tree-structure composed of inner blocks computing the least two minima among four inputs [28]. Once the least two minima are found, the decision circuit sends min1 attached with the sign-bits to all the branches except for the one having min1 as the input. As for that branch min2 is sent, instead. The sign of each branch is simply determined by XOR’ing all the sign bits of the branches excluding the target branch. Regardless of the H-matrix, the proposed CNPU takes nb input messages and computes a reply for each. The input messages corresponding to the all-zero sub-matrices of each layer are set to their maximum possible values in order not to affect the check node processing. A desired level of pipelining can be exploited
+
+The proposed architecture is implemented for the IEEE 802.16e Wimax LDPC codes. In this system, two parameters, rate (R) and expansion factor (z), together with a base model matrix for each rate, are used to define a code type among 114 different code types. There are six different rates (1/2, 2/3A, 2/3B, 3/4A, 3/4B, and 5/6) and 19 different z values obtained by z = 24 + 4f , f ∈ {0, 1, 2, ..., 18}. For any code type, the number of block columns, nb, is a constant equal to 24 and the number of block rows, mb, is obtained by mb = nb(1 − R) [29].
+4.1. Implementation and Test Details
+A multi-rate decoder for IEEE 802.16e LDPC codes has been implemented according to the proposed architecture. The implementation was held for two different parallelization levels of p=1 and p=4 with a latency of L=6. The check node processing unit based on 4-bit mapping of the messages was designed to operate in one clock cycle, whereas the other levels of pipelining registers took place in the data alignment, summation and mapping operations of the RAM controller blocks. The design has been verified on Xilinx XC7Z020 FPGA located on the Zedboard Kit at an operating clock frequency of 150MHz. An AWGN FPGA IP Core previously verified for un-coded BPSK BER performance, has been used as the noise generator. A TCL script running on a PC has been used to change the test parameters (information bits, noise gain, code type, base matrix, expansion factor) and to read the test results (BER, number of packets, iteration statistics, and throughput data). A block diagram in Fig. 5 summarizes the setup used in the hardware verification.
+
+1527
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+(a)
+
+(b)
+
+Fig. 4: a) Port-A Circular Update with LLR Values b) Port-B Update with Check Node Messages
+
+Fig. 5: Test set-up
+4.2. Results and Comparison
+Fig. 6 shows the BER performance of the implemented decoder for N =2304 with R=1/2, 2/3, 3/4, 5/6. The number of maximum iterations was set to 10. The decoding was configured to stop when early termination detected. A performance comparison of the 4-bit mapped and 18-bit un-mapped Check Node Processing is also given. As shown, mapping has introduced about 0.2dB gain except for the R=5/6 code. Note that, for the R=1/2 code, mapping has induced a flooring effect starting earlier around BER=10−6, whereas the gain is almost constant for the other rates. The throughput measurement was held for two different parallelization levels of p=1 and p=4. The implementation with p=4 has increased the throughput by about 4 times with a cost of doubling the logic resources. Note that the BRAM utilization remained the same for the two implementations. A detailed comparison with known similar implementations is tabulated in Table 1.
+
+utilization can be significantly reduced by non-uniform mapping of the extrinsic information into a few bits. The performance can be further improved by on the fly adaptation of this mapping process to the parity check matrices as the code type alters in a multi-mode system. Extra logic caused by data alignment problem at high levels of parallelization can be eliminated by designing proper architecture-aware quaci-cyclic LDPC codes. Hence very high throughput rates (>Gbps) can be obtained with a less penalty in terms of increased resource utilization.
+6. ACKNOWLEDGMENT
+The authors would like to thank Dr. Bekir Ahmet Dog˘ruso¨z for his most support on the subject and invaluable advices on grammar and organization of the paper.
+7. REFERENCES
+[1] R.G. Gallager, “Low-density parity-check codes,” Information Theory, IRE Transactions on, vol. 8, no. 1, pp. 21–28, January 1962.
+[2] D. J C MacKay and R.M. Neal, “Near Shannon limit performance of low density parity check codes,” Electronics Letters, vol. 32, no. 18, pp. 1645–, Aug 1996.
+[3] K. W. Shin and H. J. Kim, “A Multi-mode LDPC Decoder for IEEE 802.16e Mobile WiMAX,” J. of Semiconductor Technology and Science, vol. 32, Aug. 2012.
+
+5. CONCLUSION
+A generic RAM-based decoder architecture based on the Layered Decoding Algorithm with a mapped Min-Sum Algorithm has been proposed for multi-rate QC-LDPC codes. The architecture eliminates the low throughput disadvantage of the RAM-based designs by exploiting the read-first property of the embedded dual-port BRAMs, by which read/write access at a single port can be done at the same time. The architecture proposes various levels of parallelization by using multiple check node processing units, in which the resource
+
+[4] M. Awais, A. Singh, E. Boutillon, and G. Masera, “A Novel Architecture for Scalable, High Throughput, Multi-standard LDPC Decoder,” in Digital System Design (DSD), 2011 14th Euromicro Conference on, Aug 2011, pp. 340–347.
+[5] Kai Zhang, Xinming Huang, and Zhongfeng Wang, “A High-Throughput LDPC Decoder Architecture With Rate Compatibility,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 58, no. 4, pp. 839– 847, April 2011.
+
+1528
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+Table 1: Comparison with other FPGA implementations
+
+Work Standard
+Code Length (N)
+
+This work’14 Wimax
+All
+
+Code Rate (R)
+FPGA Parallelization
+
+All
+Zynq 7020 14
+
+[10]’13 Wimax
+All
+All Virtex-5 LX50
+-
+
+[11]’13 AR4JA
+All
+All Virtex-6 LX130
+64
+
+[12]’11 NASA Land Sat
+8176
+~7/8
+Virtex-4 LX160
+4
+
+[13]’11 WiMedia
+1200
+1/2,5/8, 3/4,4/5 Virtex-4 LX60
+3
+
+[14]’10
+-
+6400
+13/25 17/25 21/25 Stratix-II EP2S90 3~13
+
+[15]’08 Wimax
+All
+All Virtex-5 LX110T
+4
+
+[16]’07
+Wimax 576 1152 2304
+All
+Virtex-2 8000 48
+
+[17]’11 IEEE P802.11ad
+672
+
+[18]’12 -
+1152
+
+[19]’10 -
+576
+
+1/2
+Virtex-6 LX240T
+14
+
+1/2
+
+1/2
+
+Virtex-5 LX155
+FP
+
+Virtex-5 LX110T
+FP
+
+SLICE
+
+2110 3732
+
+4446
+
+-
+
+17857
+
+15096
+
+-
+
+-
+
+3239
+
+-
+
+21488
+
+6803
+
+LUT
+
+6237 12250 13555
+
+25035
+
+27046
+
+25634
+
+12662
+
+19K
+
+5664
+
+93065
+
+72290 19585
+
+FF
+
+3194 8040
+
+3086
+
+18627
+
+27210
+
+5573
+
+12088
+
+10K
+
+3165
+
+110740
+
+27372
+
+7619
+
+BRAM
+
+24
+
+15
+
+36
+
+80
+
+90
+
+180
+
+92
+
+73
+
+70
+
+-
+
+-
+
+fclk (MHz)
+
+150
+
+100
+
+175
+
+212.2
+
+90
+
+200
+
+160
+
+110
+
+87
+
+154.3
+
+138
+
+104
+
+T(Mbps)
+
+13-90 47-341 9.6-27.91 29-74
+
+713
+
+225-360
+
+136
+
+10.4-21.6 57-139
+
+1210
+
+16900 ~6000
+
+168
+
+Eb /N0 ∗
+
+~2.1
+
+~2.5
+
+~1.9
+
+~3.8∗∗ ~4.25∗∗∗
+
+-
+
+-
+
+-
+
+~3.7
+
+~3.3
+
+4.25
+
+Notes
+
+LD 4-mMS
+I=10
+
+-
+
+LD λ-Min I=30
+
+BP MS
+
+LD MS I=6
+
+BP MS I=12
+
+BP MS I=20
+
+LD MS
+
+BP
+
+BP
+
+BP
+
+MS
+
+MS
+
+2-mMS
+
+I=6
+
+I=10
+
+I=10
+
+∗BPSK, BER=10-5, R=1/2 unless otherwise specified; ∗∗R= ~7/8; ∗∗∗16QAM; BP: Belief Propagation; LD: Layered Decoding; I: Max Iterations; n-mMS: n-bit
+
+mapped Min Sum; FP: Fully Parallel
+
+(a)
+
+(b)
+
+Fig. 6: a) BER Performance b) Average Throughput and Average Number of Iterations vs. Eb/N0
+
+[6] Shuangqu Huang, Dan Bao, Bo Xiang, Yun Chen, and Xiaoyang Zeng, “A flexible LDPC decoder architecture supporting two decoding algorithms,” in Circuits and Systems (ISCAS), Proceedings of 2010 IEEE International Symposium on, May 2010, pp. 3929–3932.
+[7] Bo Xiang, Dan Bao, Shuangqu Huang, and Xiaoyang Zeng, “A fully-overlapped multi-mode QC-LDPC decoder architecture for mobile WiMAX applications,” in Application-specific Systems Architectures and Processors (ASAP), 2010 21st IEEE International Conference on, July 2010, pp. 225–232.
+[8] T. Brack, M. Alles, F. Kienle, and N. Wehn, “A Syn-
+
+thesizable IP Core for WIMAX 802.16E LDPC Code Decoding,” in Personal, Indoor and Mobile Radio Communications, 2006 IEEE 17th International Symposium on, Sept 2006, pp. 1–5.
+[9] Yang Sun and J.R. Cavallaro, “A low-power 1-Gbps reconfigurable LDPC decoder design for multiple 4G wireless standards,” in SOC Conference, 2008 IEEE International, Sept 2008, pp. 367–370.
+[10] J. Wetcharungsri, N. Buabthong, S. Jantarachote, P. Sangwongngam, and K. Sripimanwat, “Fieldprogrammable gate array implementation of lowdensity parity-check codes decoder and hardware
+
+1529
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+testbed,” in TENCON Spring Conference, 2013 IEEE, April 2013, pp. 104–107.
+[11] W.H. Zhao and J.P. Long, “Implementing the NASA Deep Space LDPC Codes for Defense Applications,” in Military Communications Conference, MILCOM 2013 2013 IEEE, Nov 2013, pp. 803–808.
+[12] Xiaoheng Chen, Jingyu Kang, Shu Lin, and V. Akella, “Memory System Optimization for FPGA-Based Implementation of Quasi-Cyclic LDPC Codes Decoders,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 58, no. 1, pp. 98–111, Jan 2011.
+[13] Sung-Woo Choi, Gyung-Pyo Kim, and Jin-Kyeong Kim, “An LDPC decoder architecture for multi-rate QC-LDPC codes,” in Circuits and Systems (MWSCAS), 2011 IEEE 54th International Midwest Symposium on, Aug 2011, pp. 1–4.
+[14] Yun Chen, Xiang Chen, Yifei Zhao, Chunhui Zhou, and Jing Wang, “Design and implementation of multimode QC-LDPC decoder,” in Communication Technology (ICCT), 2010 12th IEEE International Conference on, Nov 2010, pp. 1145–1148.
+[15] F. Charot, C. Wolinski, N. Fau, and F. Hamon, “A Parallel and Modular Architecture for 802.16e LDPC Codes,” in Digital System Design Architectures, Methods and Tools, 2008. DSD ’08. 11th EUROMICRO Conference on, Sept 2008, pp. 418–421.
+[16] K.K. Gunnam, G.S. Choi, M.B. Yeary, and M. Atiquzzaman, “VLSI Architectures for Layered Decoding for Irregular LDPC Codes of WiMax,” in Communications, 2007. ICC ’07. IEEE International Conference on, June 2007, pp. 4542–4547.
+[17] Yong Niu, Zhenyu Xiao, Depeng Jin, Li Su, and Lieguang Zeng, “Reduced-routing complexity decoder for high-rate QC-LDPC codes,” in Computational Problem-Solving (ICCP), 2011 International Conference on, Oct 2011, pp. 703–707.
+[18] A. Balatsoukas-Stimming and A. Dollas, “FPGA-based design and implementation of a multi-GBPS LDPC decoder,” in Field Programmable Logic and Applications (FPL), 2012 22nd International Conference on, Aug 2012, pp. 262–269.
+[19] V.A. Chandrasetty and S.M. Aziz, “Analysis of performance and implementation complexity of simplified algorithms for decoding Low-Density Parity-Check codes,” in GLOBECOM Workshops (GC Wkshps), 2010 IEEE, Dec 2010, pp. 430–435.
+
+[21] V.A. Chandrasetty and S.M. Aziz, “A multi-level Hierarchical Quasi-Cyclic matrix for implementation of flexible partially-parallel LDPC decoders,” in Multimedia and Expo (ICME), 2011 IEEE International Conference on, July 2011, pp. 1–7.
+[22] R.M. Tanner, “A recursive approach to low complexity codes,” Information Theory, IEEE Transactions on, vol. 27, no. 5, pp. 533–547, Sep 1981.
+[23] A. Anastasopoulos, “A comparison between the sumproduct and the min-sum iterative detection algorithms based on density evolution,” in Global Telecommunications Conference, 2001. GLOBECOM ’01. IEEE, 2001, vol. 2, pp. 1021–1025 vol.2.
+[24] Jinghu Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and Xiao-Yu Hu, “Reduced-Complexity Decoding of LDPC Codes,” Communications, IEEE Transactions on, vol. 53, no. 8, pp. 1288–1299, Aug 2005.
+[25] S.K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite Alphabet Iterative Decoders—Part I: Decoding Beyond Belief Propagation on the Binary Symmetric Channel,” Communications, IEEE Transactions on, vol. 61, no. 10, pp. 4033–4045, October 2013.
+[26] Chih-Hao Liu, Chien-Ching Lin, Hsie-Chia Chang, Chen-Yi Lee, and YarSun Hsu, “Multi-mode message passing switch networks applied for QC-LDPC decoder,” in Circuits and Systems, 2008. ISCAS 2008. IEEE International Symposium on, May 2008, pp. 752– 755.
+[27] Xiaoheng Chen, Shu Lin, and V. Akella, “QSN— A Simple Circular-Shift Network for Reconfigurable Quasi-Cyclic LDPC Decoders,” Circuits and Systems II: Express Briefs, IEEE Transactions on, vol. 57, no. 10, pp. 782–786, Oct 2010.
+[28] F. Gutierrez, G. Corral-Briones, D. Morero, T. Goette, and F. Ramos, “FPGA implementation of the parity check node for min-sum LDPC decoders,” in Programmable Logic (SPL), 2012 VIII Southern Conference on, March 2012, pp. 1–6.
+[29] “IEEE Standard for Local and metropolitan area networks Part 16: Air Interface for Broadband Wireless Access Systems Amendment 3: Advanced Air Interface,” IEEE Standard for Local and metropolitan area networks Part 16: Air Interface for Broadband Wireless Access Systems Amendment 3: Advanced Air Interface, pp. –.
+
+[20] M.M. Mansour and N.R. Shanbhag, “A 640-Mb/s 2048bit programmable LDPC decoder chip,” Solid-State Circuits, IEEE Journal of, vol. 41, no. 3, pp. 684–698, March 2006.
+
+1530
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:51:39 UTC from IEEE Xplore. Restrictions apply.
+
+

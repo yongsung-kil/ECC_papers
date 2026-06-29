@@ -1,0 +1,426 @@
+Memory Efficient Implementation of Self-Corrected Min-Sum LDPC Decoder
+
+Oana Boncalo
+
+Alexandru Amaricai
+
+University Politehnica Timisoara Computer Engineering Department
+
+Timisoara, Romania
+
+{oana.boncalo, alexandru.amaricai} @cs.upt.ro
+
+Valentin Savin
+CEA-LETI, MINATEC Campus,
+Grenoble, France valentin.savin@cea.fr
+
+Abstract— This paper proposes memory efficient FPGA implementations for layered quasi-cyclic (QC) LDPC decoders, based on the Self-Correcting Min-Sum (SCMS) algorithm. We address the problem of high memory overhead required by layered SCMS based decoders compared to conventional MinSum (MS), by proposing two improvements. These require changes in the flow/rule of the conventional SCMS algorithm, in order to avoid storing the signs and the erasure bits of the variable node messages. Three layered LDPC decoders with serial a-posteriori log likelihood ratios (AP-LLR) processing have been implemented: (1) conventional SCMS, (2) SCMS with no check node message signs storage, and (3) SCMS with neither check node message signs nor erasure bits storage. FPGA implementation results for WiMAX (1152, 2304) code show that the third architecture has a resource utilization with 17% less with respect to the one implementing conventional SCMS, and with 11% less than the second architecture. Furthermore, it presents a similar cost to conventional MS, while having a 0.5 dB better error correction capability.
+Keywords—LDPC; Min-Sum; Layered scheduling; FPGA
+I. INTRODUCTION
+Increased error correction capability when message passing (MP) iterative decoding is applied, has made Low Parity Density Codes (LDPC) [1][2] suitable candidates in a wide range of communication standards, such as IEEE 802.16 WiMAX data transmission protocol [3], or the DVB-S2 video encoding standard [4]. Self-Corrected Min-Sum (SCMS) [5] has shown to present quasi-optimal error-correction capability (very close to the optimal iterative decoding of the SumProduct (SP) algorithm), while retaining the low complexity characteristic of the Min-Sum (MS) decoding [1]. It relies on the erasure of variable node messages considered as unreliable (see Section II). With respect to other variants like normalized MS and offset MS, the SCMS has been proven to provide better performance, especially in the error-floor region [5][6]. The concept of erasing unreliable messages also results in better energy efficiency, mainly due to a reduced switching activity in the processing units [7][8]. However, these improvements come with a price when implementing SCMS decoder architectures: the signs of variable node messages and the “erasure bits” have to be stored, thus increasing memory requirements [6]. This also leads to additional overhead in
+
+terms of routing the messages to the appropriate processing units.
+This work addresses the problem of reducing memory overhead of layered SCMS compared with conventional MS architectures by reducing the number of stored check node message bits. The paper is organized as follows: Section II presents an overview of SCMS decoding and existing approaches for layered implementation of this algorithm; Section III discuses the proposed memory SCMS improvements; a case study and FPGA implementation results are presented in Section IV; Section V contains concluding remarks.
+II. SELF-CORRECTED MIN-SUM DECODING
+A. Algorithm
+Quasi-Cyclic (QC) LDPC codes are a class of algebraic constructed LDPC codes that feature a highly structured parity check matrix, defined by blocs of circulant matrices [2]. The structure of the parity-check matrix allows for the efficient hardware implementation of MP decoders, which explains the wide use of QC-LDPC codes in many telecommunication standards. Precisely, a QC-LDPC code is defined by a base matrix B, with integer entries bi,j≥ −1. The parity-check matrix H is obtained by expanding the base-matrix B by an expansion factor m; thus, each entry of B is replaced by a square matrix of size mxm, defined as follows: -1 entries are replaced by the allzero matrix, while entries bi,j≥ 0 are replaced by a circulant matrix, obtained by right-shifting the identity matrix by bi,j positions. A horizontal layer of H is defined as the set of m consecutive rows corresponding to one row of B. In layered decoders, horizontal layers are processed sequentially, while rows within the same layer are processed in parallel.
+The characteristic of the SCMS decoder [5] is to erase (i.e. set to zero) any variable-node message that changes its sign with respect to the previous iteration. However, the same message cannot be erased during two consecutive iterations. Therefore, binary values ez,n∈ {0,1} are used to record whether or not the corresponding variable-node message has been erased, where z and n denote respectively the row (check-node) and column (variable-node) indexes of a non-zero entry of H. In the following, variable and check node messages are denoted by αz,n and βz,n, respectively. Furthermore, sz,n denotes
+
+978-1-4799-4242-8/14/$31.00 c 2014 IEEE
+
+295
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:36:20 UTC from IEEE Xplore. Restrictions apply.
+
+the sign of αz,n, and γn denotes the a-posteriori log likelihood ratio (AP-LLR) of variable-node n. Previous to the first iteration, γn values are initialized to the a priori LLR values (based on the received signal), βz,n messages are initialized to 0, while ez,n values are initialized to 1. Then, each iteration of the SCMS decoding comprises of (where superscripts “old” and “new” indicate values computed at the previous and current iterations, respectively) :
+
+For L = 1,…, nLAYERS 1. Variable-node messages:
+
+⎧⎪α
+
+new z,n
+
+= γ nold
+
+− β old ; z ,n
+
+( ) ⎨
+
+⎩⎪
+
+enew z,n
+
+=
+
+(¬ezo,lnd
+
+)⋅
+
+s ⊕ s new
+
+old
+
+z,n
+
+z,n
+
+;
+
+∀z ∈ M L ∀n ∈ H (z)
+
+If
+
+enew z,n
+
+=1
+
+then
+
+α SC z,n
+
+=
+
+0
+
+else
+
+α SC z,n
+
+α = new z,n
+
+2. Check-node messages:
+
+∏ ( ) ⎛
+
+⎞
+
+β new z,n
+
+=
+
+⎜⎝⎜
+
+n1∈H
+
+(
+
+z
+
+)
+
+\
+
+n
+
+s new z , n1
+
+⎠⎟⎟
+
+×
+
+min
+
+α SC z , n1
+
+; ∀z ∈ M L ∀n ∈ H (z)
+
+3. AP-LLR update:
+
+γ new n
+
+α = new z,n
+
++
+
+β
+
+new z,n
+
+;
+
+∀z ∈ M L
+
+∀n ∈ H (z)
+
+ML stands for the horizontal group of rows from the H matrix corresponding to layer L, H(z) represents the indexes of the non-zero entries of the row z of layer L, and nLAYERS is the number of layers of matrix H.
+
+B. Layered SCMS Hardware Implementations
+SCMS algorithm has been used as kernel in layered LDPC decoders, such as [6][7][8]. Results from [7][8] have shown that, due to the near-optimal convergence of this MS variant and to its reduced switching activity in the processing units, it presents improved power with respect to other MS variants.
+
+Typical layered LDPC architectures, such as [9][10], are made of three main building blocks: check node messages (β) memory, the AP-LLRs (γ) memory and data-path processing, with merged variable node and check node units. From the memory perspective, the SCMS implementations require the storage of the following additional bits compared to the MS
+
+Fig.1: β compressed messages format
+
+algorithm [6]:
+1. α signs – the variable node message sign from the previous iteration has to be stored in order to be compared with the sign of the variable node message from the current iteration;
+2. Erasure bits – these bits signal whether an erasure operation has been performed in the previous iteration;
+In layered LDPC architectures, these bits are stored within the β memory word. Fig. 1-a,b presents the memory word format for variable node message storage in conventional MS and SCMS. For conventional MS (Fig. 1-a), a compressed memory word is used, which is composed of the following fields: (i) the first minimum absolute value (βmin1) (ii) the second minimum absolute value (βmin2) (iii) the index of the first minimum (iv) the check node message signs. The size of
+the compressed word is wβ = 2q + dc + ⎡⎢log2 (dc )⎥⎤ bits, where
+q is the number of quantization bits used for βmin1 and βmin2 values, and dc is the check node degree.
+The contributions of this work are: (i) Smaller implementation cost of the SCMS algorithm, by discarding the β signs from the previous compressed check node messages (Fig. 1-c); (ii) Modified self-correction rule that allows further discarding the erasure bits from the β memory word (Fig. 1-d), with analysis of decoder erasure capability for the modified rule; (iii) Case study results for WiMAX (1152, 2304) on a SCMS layered architectures with serial AP-LLR processing with three different processing units: SCMS with conventional message format (Fig.1.a), SCMS without β signs (Fig.1.c), and SCMS with no β signs and no erasure bits (Fig.1.d);
+III. MEMORY EFFICIENT SCMS
+A. Decoder architecture
+The decoder architecture implemented is a layered decoder with serial AP-LLR processing utilizing the SCMS algorithm, similar to the one in [11] (which uses conventional MS). It comprises of three major building blocks: the AP-LLRs storage module, β storage module and datapath processing module. Data path processing is done using m distinct merged variable-check node (VCN) units with serial AP-LLR processing.
+B. Memory design
+AP-LLRs module and β module comprise two major parts: the actual memories (implemented in FPGA technology using BRAM blocks) and interconnect logic responsible for routing data to the processing components. Both have a simple control unit (CU) that receives read and write-back requests from decoder main CU for reading and routing the message words to the appropriate processing units, and generates the end of operation signals. Furthermore, both memories take advantage of the configurable size of the FPGA’s BRAM, meaning that several messages are packed in a single memory entry. For example for 6 bits AP-LLR messages, 12 γ-messages can be stored in one 72 bit width BRAM memory location. γ module interconnect requires two large pipelined barrel shifters: one for reading the γ values, and the other for writing back.
+
+296
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:36:20 UTC from IEEE Xplore. Restrictions apply.
+
+The β routing module is made of two sets of shift registers:
+
+one that prepares the data at the input of processing units, and one responsible for processing results write-back. Each set consists of n2 serial in/parallel out shift registers of m × wβ n2
+
+bits, where m – expansion factor of the base matrix, wβ - size of the β memory word, and n2 - number of BRAM blocks required for storing the β -messages. Each BRAM memory is
+
+linked to one serial in/parallel out shift register for reads, and one parallel in/serial out shift register for write-back of size m n2 × wβ . The shift amount for both cases equals to the
+BRAM width. The total number of required β BRAM blocks
+
+n2 is given by the minimum integer value that satisfies two
+
+criteria:
+
+n2
+
+≤
+
+wβ' × m ⎡⎢log2 m⎥⎤ × wBRAM
+
+,
+
+and
+
+m n2
+
+is a multiple of
+
+wBRAM wβ'
+
+. Here,
+
+wBRAM denotes the maximum configurable value
+
+of the BRAM bock that satisfies the criteria, while wβ' is the
+
+smallest multiple of 8 bits, greater than or equal to wβ (β messages are byte aligned). Besides the aforementioned,
+
+another important beta module decoder parameter is nβcyc - the number of cycles for all m β messages to be available at the input of the processing units.
+
+In conventional SCMS, each compressed β message (denoted βC) contains: the index of the first minimum, the first and the second minimum, the β signs, the previous α signs, and, erasure bits. In order to further decrease β message size, two optimizations are proposed: (i) no storage of check node message (β) sign bits; (ii) no storage of erasure bits. Both modifications yield a reduction of dc bits of the β message word. We have considered three SCMS implementations: conventional SCMS as baseline where only compressions is used; SCMS with optimization (i); and SCMS with both (i) and (ii).
+Fig. 1 presents the β message word format for the MS and for the three SCMS approaches. It is important to emphasize that the first optimization (Fig.1.c) has no impact on decoding
+
+performance. According to the modified rule, we consider that
+
+an erasure has happened during the previous iteration if the
+
+first absolute minimum value equals zero. In addition to this,
+
+an erasure occurs during the current iteration if the α sign from
+
+the previous iteration differs from the one computed during
+
+the current one.
+
+( ) eold_est z,n
+
+=⎨⎧1, βmin1 =0 ⎩0,otherwise
+
+(1)
+
+( ) ( ( ) ( )) enew z,n
+
+=
+
+¬eold_est z,n
+
+⋅
+
+sign
+
+αold z,n
+
+⊕sign
+
+αnew z,n
+
+∀z∈ML ∀n∈H(z)
+
+Furthermore, the last approach comes with the same cost for βC size as MS. For dc =7 and β-messages quantized on 3 bits, the number of required bits for βC is reduced by 25% for (i) and by 50% if both (i) and (ii) optimizations are employed, compared to the baseline that uses compression only.
+
+C. Decoder datapath architectures
+
+The building block for data path processing is represented by
+
+the merged VCN unit. In order to improve frequency for our
+
+FPGA targeted design, arithmetic operations such as α
+
+message computation, comparisons, and the final addition to
+
+obtain γ, have been realized using ROMs implemented using
+
+Distributed RAM in Xilinx technology (for more details, see
+
+[11]). The SM representation has been adopted for the entire
+
+data path processing. Fig.2-a describes the computational
+
+blocks that have been replaced by ROM memories, as well as
+
+the pipeline registers that have been introduced for the SCMS
+
+implementation approach with no β signs. The erasure
+
+detection block signals the reset of the α-message, according
+
+to
+
+the
+
+enew z,n
+
+value.
+
+If
+
+no
+
+storage
+
+of
+
+β
+
+message
+
+sign
+
+bits
+
+takes
+
+place, these needs to be regenerated. This means that the β
+
+signs comp – the block that computes the check node
+
+messages signs based on the variable node message signs -
+
+needs to be duplicated. It comes with a very small
+
+implementation overhead, and it can be computed in parallel
+
+with βC message decompression. No storage of erasure bits requires the zero testing of the first minimum absolute value.
+
+A VCN design featuring both memory optimizations is
+
+presented in Fig.2-b. In this case, the erasure detection block
+
+implements the condition from Eq. (1) .
+
+a) SCMS with no β signs stored to memory
+
+b) SCMS with no β signs and no erasure bits stored in memory
+
+Fig. 2: VCN architectures
+
+297
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:36:20 UTC from IEEE Xplore. Restrictions apply.
+
+IV. CASE STUDY
+We have implemented a baseline architecture for WiMAX (1152, 2304) QC irregular LDPC, rate ½, expansion factor m = 96, (γ,β)-quantization = (5,3) bits, with the conventional SCMS approach. The width for the virtual γ memory is 96*5 bits, implemented with 8 BRAM blocks with width 60. The barrel shifters for γ routing have 7 pipeline stages. Therefore, we have selected nβcyc = 6 . The conventional SCMS uses a wβ = 28 . We have implemented the same code with the same message quantization for : (1) first memory optimization: no β message
+signs storage ( wβ = 21 ) ; (2) both optimizations ( wβ = 14 ). SCMS decoders have been implemented on Xilinx XC5VLX50T device, (Digilent Genesys board) using the Xilinx ISE 14.7 tool. Results indicate that the additional overhead in the VCN units is overruled by the reduction in the β routing logic (see Table I). The implementation based on the α signs and erasure bits requires 8% additional resources with respect to the third architecture. Regarding the decoder with only the α signs, its cost is similar to the one of the conventional MS.
+The Bit Error Rate (BER) performance of the conventional SCMS, the SCMS with α signs only (SCMS-V2), and the MS decoder is shown in Fig. 3 (note that conventional SCMS and SCMS with first improvement only have the same performance). It can be seen that both SCMS-based decoders have nearly the same performance, and outperform the MS decoder by approx. 0.5 dB.
+V. CONCLUSIONS
+This work presents two improvements for the layered SCMS architecture suitable for both FPGA and ASIC implementations. First improvement reduces the size of the β message memory, by not storing the β signs. This requires the duplication of the sign logic. As indicated by implementation results, for FPGA layered implementations with m parallel processing units (m is the size of the matrix expansion factor), this overhead is masked by the gain obtained by a reduced routing network for the variable messages (i.e. fewer bits to route). Second, we propose a new self-correction rule which avoids the requirement for erasure bits storage. Our case study, shows a reduction of up to 25% in memory utilization and 17% less FPGA slice utilization compared to the baseline SCMS, with a small penalty in decoder error correction capability. In fact, the overall memory cost is the same as in conventional MS layered decoders.
+ACKNOWLEDGMENTS
+This work has been supported by the Franco-Romanian (ANR-UEFISCDI) Joint Research Programme “Blanc–2013” – project DIAMOND.
+REFERENCES
+[1] T. Richardson and R. Urbanke, "The Renaissance of Gallager’s LowDensity Parity-Check Codes", IEEE Comm. Magazine, Aug. 2003.
+
+1E+00
+
+1E-01
+
+Bit Error Rate (BER)
+
+1E-02
+
+1E-03
+
+1E-04
+
+1E-05
+
+MS
+
+1E-06
+
+SCMS SCMS-V2
+
+1E-07
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+SNR (dB)
+
+Fig. 3: Decoder BER for (5,3) quantization
+
+[2] M.P.C. Fossorier, “Quasicyclic Low-Density Parity-Check Codes from Circulant Permutation Matrices,” IEEE Trans. on Information Theory, vol. 50, no. 8, pp. 1788–1793, 2004.
+[3] IEEE-802.16e, “Physical and medium access control layers for combined fixe and mobile operation in licensed bands,” 2005, amendment to Air Interface for Fixed Broadband Wireless Access Systems
+[4] ETSI EN 302 307, “Digital Video Broadcasting; Second generation framing structure, channel coding and modulation systems for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications”, (DVB-S2), v1.3.1, Novembre 2012.
+[5] V. Savin “Self-Corrected Min-Sum Decoding of LDPC Codes”, IEEE Int. Symp. On Information Theory (ISIT), 2008
+[6] J. Andrade, G. Falcao, V. Silva, J.P. Barreto, N. Goncalves, N.V. Savin, “Near-LSPA performance at MSA complexity”, IEEE Int. Conf. On Communication, 2013
+[7] E. Amador, V. Rezard, R. Pacalet, R. "Energy efficiency of SISO algorithms for turbo-decoding message-passing LDPC decoders", 17th IFIP Int. Conf. On Very Large Scale Integration (VLSI-SoC), 2009
+[8] E. Amador; R. Knopp, V. Rezard,R. Pacalet, "Dynamic Power Management on LDPC Decoders", IEEE Annual Symposium on VLSI (ISVLSI), 2010
+[9] S Kim, G. E. Sobelman, and H. Lee, "A Reduced-Complexity Architecture for LDPC Layered Decoding Schemes", IEEE Trans. On VLSI, vol. 19, no. 6, 2011, pp. 1099-1103.
+[10] K. Zhang, X. Huang, Z. Wang, “High-Throughput Layered Decoder Implementation for Quasi-Cyclic LDPC Codes”, IEEE J. on Selected Areas in Communications, Vol. 27, No. 6, August 2009
+[11] O. Boncalo, A. Amaricai, A. Hera, V. Savin “Cost Efficient FPGA Layered LDPC Decoder With Serial AP-LLR Processing”, Field Programmable Logic and Applications (FPL), 2014
+
+TABLE I – IMPLEMENTATION RESULTS
+
+Implementation
+
+Cost
+
+SCMS with beta and alpha
+
+7179 slices
+
+signs, and erasure bits storage
+
+16 BRAM
+
+SCMS with alpha signs and
+
+6748 slices
+
+erasure bits storage
+
+14 BRAM
+
+SCMS with alpha signs
+
+5946 slices
+
+storage
+
+12 BRAM
+
+MS[11]
+
+5895 slices 12 BRAM
+
+Max Freq. 270 MHz 289 MHz 266 MHz 290 MHz
+
+298
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:36:20 UTC from IEEE Xplore. Restrictions apply.
+
+

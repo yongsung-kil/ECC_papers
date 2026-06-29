@@ -1,0 +1,963 @@
+An almost-linear time decoding algorithm for quantum LDPC codes under circuit-level noise
+Antonio deMarti iOlius,1, ∗ Imanol Etxezarreta Martinez,2, † Joschka Roffe,3, ‡ and Josu Etxezarreta Martinez1, § 1Department of Basic Sciences, Tecnun - University of Navarra, 20018 San Sebastian, Spain. 2Independent researcher, San Sebastian, Spain. 3Quantum Software Lab, University of Edinburgh, United Kingdom.
+Fault-tolerant quantum computers must be designed in conjunction with classical co-processors that decode quantum error correction measurement information in real-time. In this work, we introduce the belief propagation plus ordered Tanner forest (BP+OTF) algorithm as an almost-linear time decoder for quantum low-density parity-check codes. The OTF post-processing stage removes qubits from the decoding graph until it has a tree-like structure. Provided that the resultant loopfree OTF graph supports a subset of qubits that can generate the syndrome, BP decoding is then guaranteed to converge. To enhance performance under circuit-level noise, we introduce a technique for sparsifying detector error models. This method uses a transfer matrix to map soft information from the full detector graph to the sparsified graph, preserving critical error propagation information from the syndrome extraction circuit. Our BP+OTF implementation first applies standard BP to the full detector graph, followed by BP+OTF post-processing on the sparsified graph. Numerical simulations show that the BP+OTF decoder achieves similar logical error suppression compared to state-of-the-art inversion-based and matching decoders for bivariate bicycle and surface codes, respectively, while maintaining almost-linear runtime complexity across all stages.
+
+arXiv:2409.01440v2 [quant-ph] 5 Aug 2025
+
+I. INTRODUCTION
+Quantum error correction (QEC) is the key to operationally useful quantum computing and will enable the construction of fault-tolerant systems with capabilities well in excess of classical computing technologies [1]. The past decade has seen significant progress in experimental realisations of QEC, recently highlighted by the first demonstration by Google Quantum AI of a surface code logical qubit operating below the break-even point [2]. However, significant barriers remain to the practical realisation of QEC at scale. A particularly pertinent challenge relates to the problem of real-time decoding: the operation of a QEC code relies upon the ability to process vast quantities of syndrome information at timescales as low as 1µs [3] using classical co-processors [4]. As such, fast and accurate decoding algorithms are a critical component of the quantum computing stack.
+Surface code QEC architectures are conceptually simple and can be implemented using local interactions between qubits arranged in a grid. However, a disadvantage of surface codes is that they have poor encoding rate and will require large qubit counts to achieve logical error rates in the teraquop regime (logical failure rate pL < 10−12) that is thought to be necessary to run algorithms that offer quantum advantage. Quantum lowdensity parity-check (QLDPC) codes are an alternative QEC protocol to the surface code and are suitable for quantum computing technologies that have high qubit
+∗ toni.demarti@gmail.com † ietxezarretam@gmail.com ‡ joschka@roffe.eu § jetxezarreta@unav.es
+
+connectivity. Numerical simulations of QLDPC code architectures suggest that they will require approximately 10× fewer qubits compared to surface code architectures [5–7]. However, the design of efficient decoding algorithms for QLDPC codes remains an open problem and a bottleneck to their implementation in experiment.
+The belief propagation (BP) decoder is ubiquitous in classical communications, enabling real-time decoding for LDPC protocols underpinning technologies such as 5G, WiFi, and Ethernet [8]. The primary advantage of BP decoders lies in their speed: they can be executed on distributed hardware and have a linear worst-case runtime complexity of O(n) with respect to the code block length n [9]. However, when applied to QLDPC codes, BP decoders face significant challenges. These challenges stem from the presence of degenerate quantum errors and the emergence of trapping sets, which can prevent the BP decoder from converging [10, 11]. To address these issues, decoders for QLDPC codes typically augment BP with post-processing routines that are invoked when the main algorithm fails [12–23]. The most accurate of these two-stage algorithms — ordered statistics decoding (BP+OSD) [13, 14], ambiguity clustering (BP+AC) [16], and localized statistics decoding (BP+LSD) [18] — employ matrix inversion techniques to solve the decoding problem during post-processing. While these inversionbased decoders achieve high error thresholds, they also increase the worst-case runtime complexity to O(n3). This is significantly slower than the O(n) runtime of standard BP.
+In this work, we present the ordered Tanner forest (OTF) algorithm as a post-processor to belief propagation that does not require matrix inversion. The core idea behind OTF post-processing is based on the fact that the BP algorithm is guaranteed to converge when applied to decoding graphs with a tree-like structure.
+
+2
+
+The OTF post-processor leverages this by constructing an ordered spanning tree of the QEC code’s decoding (Tanner) graph, giving priority to nodes that were assigned a high probability of supporting an error during the initial BP decoding attempt. This spanning tree can contain multiple disconnected components, so we refer to it as an ordered Tanner forest. Once the ordered Tanner forest is formed, the BP algorithm can be applied directly to it to identify a decoding solution that aligns with the measured syndrome.
+The OTF post-processor employs a modified version of Kruskal’s algorithm to find the ordered Tanner forest, with a worst-case runtime complexity of O(n log(n)) [24]. This process involves searching through the nodes of the decoding graph and eliminating those that would introduce loops. A second round of BP is then run on the ordered Tanner forest, with a linear time complexity proportional to the number of remaining nodes. As a result, the combined BP+OTF decoder achieves an almostlinear runtime relative to the code’s block length.
+In practice, QEC decoding algorithms are run on a detector graph or detector error model which relates error mechanism in the QEC circuit to the measured syndromes [25]. A problem with applying OTF postprocessing directly to the detector graph is that the columns are typically high-weight compared to the code capacity or phenomenological graph for the same code. As a consequence, it is often the case that many graph nodes need to be discarded in the search for the ordered Tanner forest, sometimes to the point where the remaining graph no-longer contains enough qubits to support a solution to the syndrome. To address this problem, we propose a novel procedure for mapping a detector graph to a sparsified detector graph with fewer shortlength loops. When applied to this sparsified detector graph, OTF post-processing is more likely to succeed.
+We propose a three-stage decoder specifically optimized for circuit-level noise which we refer to as BP+BP+OTF. First, standard BP decoding is applied to the full detector graph. Second, the soft-information output of the first BP round is mapped to the sparsified detector graph via a pre-defined transfer matrix. Using this soft-information as prior-information, BP decoding is applied a second time to the sparsified detector graph. Third, OTF post-processing is run on the sparsified detector graph guided by the soft-information output of the previous round of BP. Note that the BP+BP+OTF decoder terminates at the first successful decoding. E.g., the final round of OTF will not be invoked if either of the preceding rounds of BP succeeds.
+To benchmark the BP+BP+OTF decoder, we run Monte Carlo simulations under depolarising circuit-level noise for bivariate bicycle codes [5] as well as for surface codes. Our results demonstrate that the BP+BP+OTF decoder achieves comparable error suppression to stateof-the-art decoders such as BP+OSD and minimumweight perfect-matching. Notably, our implementation runs more than 10× faster compared to the BP+OSD
+
+implementation from [26] when decoding bivariate bicycle codes under certain noise regimes. Furthermore, our results show that BP+BP+OTF can reliably decode surface codes using a very small number of iterations of the minimum-sum algorithm.
+One of the key advantages of BP+BP+OTF is its simplicity: the decoder requires just three applications of a standard BP decoder and a single application of a modification of the well-known Kruskal algorithm for generating the ordered spanning forest. This straightforward design allows for the construction of highly efficient hardware implementations using off-the-shelf application-specific integrated circuits (ASICs). As a result, the BP+OTF decoder is an appealing option for real-time decoding.
+
+II. PRELIMINARIES
+
+A. Calderbank-Shor-Steane codes
+
+Calderbank-Shor-Steane (CSS) codes describe a large family of quantum error correction protocols that can be expressed in terms of a pair of classical binary codes, Q(HX , HZ ). The HX matrix describes X-type stabilisers that detect phase-flip errors and the HZ matrix Z-type stabilisers that detect bit-flip errors. If HX/Z are sparse, we can consider the CSS code to be a quantum LDPC code.
+The decoding task for CSS codes involves solving two syndrome equations for X/Z errors
+
+HX/Z · eZ/X mod 2 = sX/Z .
+
+(1)
+
+As the above syndrome equations amount to a pair of classical decoding problems, it is possible to use existing classical decoders to directly decode CSS codes. Note that the above syndrome equation is over binary field modulo-2. From this point onwards, we will assume all linear algebra operations are performed modulo-2 unless stated otherwise.
+
+B. Belief propagation decoding
+
+Belief propagation (BP) is common decoding algorithm in classical communication technologies [8, 9]. Decoders based on BP exploit the sparsity of the LDPC code’s parity check matrix to efficiently solve the bit-wise decoding problem
+
+p(ei) = p(e|s).
+
+(2)
+
+∼i
+
+The specific advantage of the BP decoder lies in its speed. The message passing operations that underpin the algorithm occur locally between the nodes of a graphical representation of the parity check matrix known as a Tanner
+
+3
+
+graph, and can be run in parallel on distributed hardware. In this setting, BP has a worst-case runtime complexity O(n) in the code’s block-length n.
+The product-sum algorithm is a variant of the BP decoder that is known to yield exact marginals for parity check matrices that have tree-like Tanner graphs. In practice, however, most high-rate LDPC codes contain loops that compromise the performance of product-sum BP and can prevent it from converging to a valid solution. A challenge in designing LDPC codes lies in finding parity check matrices that are sufficiently loop-free and sparse.
+For quantum LDPC codes, it is particularly difficult to design HX and HZ matrices that are a well-suited for BP decoding. The reason for this can be attributed to degenerate errors that lead to cyclic dependencies in the decoding graph. As such, BP-based algorithms typically do not work as effective decoders for quantum LDPC codes. Indeed, a standard implementation of product-sum BP fails to yield a threshold for the surface code [14]. In practice, quantum decoders require BP to be augmented with a post-processing routine to achieve satisfactory performance in terms of both threshold and sub-threshold error suppression [12–18].
+C. Decoding circuit-level noise and the detector error model
+In classical error correction, the decoding problem involves directly solving the syndrome equation H · e = s, where H is the parity-check matrix of the code. In quantum error correction, however, an additional layer of complexity arises due to the fact that syndromes are measured using noisy circuits, leading to error propagation that is not described by the CSS code’s HX/Z matrices. Instead, the circuit-level decoding problem is characterised by a binary matrix, HCL, where the columns correspond to error mechanisms within the circuit, and the rows correspond to syndrome measurements. For instance, a non-zero entry at position (HCL)ij indicates that error mechanism j triggers syndrome measurement i. Once the circuit-level matrix HCL is constructed, the decoding problem becomes equivalent to that of decoding a classical linear code, specifically solving HCL · e = s. The key conceptual difference is that the columns of HCL represent circuit error mechanisms, rather than PauliX/Z errors, as is the case in code capacity decoding using the HX/Z CSS matrices.
+In practice, QEC protocols operate by repeatedly measuring the same stabiliser extraction circuit over time. This repeating structure can be leveraged to simplify the circuit-level decoding problem by mapping it to a detector error model [25]. A detector vector is defined as a linear combination of syndrome measurements that sums to zero when there are no errors in the circuit. In a repeated stabiliser measurement circuit, the most intuitive choice of detectors involves comparing the parity
+
+between consecutive syndrome measurements. For example, if the same check yields a value of 1 in two consecutive rounds, the detector value will be trivial. The resulting detector vector sD is therefore sparser than the original syndrome s. Correspondingly, the circuit-level decoding matrix HCL is replaced with a detector matrix Hdem, as a d × n binary matrix, where d is the number of measurements (detector elements) and n is the number of possible errors in the circuit [27]. Here, the rows correspond to detector measurements rather than syndromes. Typically, Hdem is also sparser than HCL. This sparser structure of the detector error model, described by the equation Hdem · e = sD, makes the decoding problem more amenable to BP decoding. From this point onwards, we will refer to s as a syndrome (code capacity, phenomenological noise) or a detector (circuit-level noise) interchangeably.
+Once a set of fault-mechanisms ˆe have been identified by decoding the detector error model Hdem · e = s, the task remains to determine their logical action. This can be analysed using the logical observable matrix, Odem ∈ Fk×n, where k is the number of logical qubits encoded, and n represents the number of possible fault mechanisms in the detector error model. This matrix links errors in the circuit to measured logical observables, which are defined as binary sums of measurements that correspond to the outcomes of logical operator measurements for any logical state encoded by the QEC code. The logical observable matrix associated with the detector error model is crucial for verifying whether the error estimate produced by the decoder successfully corrects the actual faults that occurred. A logical error is detected if the logical observable derived from the decoded error does not match the true logical observable, i.e., if Odem · e ̸= Odem · ˆe.
+The detector error model, as well as the the logical observable matrix for a specific detector error model related to the syndrome extraction circuit can be generated using a stabiliser simulator [28, 29].
+III. THE ORDERED TANNER FOREST DECODER, AN ALMOST-LINEAR TIME
+POST-PROCESSOR
+In this section, we introduce the ordered Tanner forest (OTF) decoder as an almost-linear post-processor for general QLDPC codes. The OTF decoder is a postprocessing algorithm that is called if the original round of BP decoding fails, i.e., when the estimated BP error ˆeBP does not satisfy the syndrome equation, H ·ˆeBP ≠ s. Being a post-processor, OTF requires the posterior probabilities coming from a BP decoding stage (or some process able to provide soft reliability information) and is only invoked when BP does not converge. Based on the received soft information, we sort the columns of the parity check matrix from the least reliable to the most reliable [4]. The OTF post-processor then works by deleting
+
+4
+
+columns in the ordered parity check matrix to obtain a reduced parity check matrix, Hotf , that maps to a Tanner graph that is completely loop free. Note that the resultant spanning tree may contain multiple disconnected trees, so we refer to the returned structure as an ordered Tanner forest (OTF). A product-sum BP decoder is then applied to solve the reduced decoding problem Hotf · eotf = s. As the Hotf matrix has a tree-like structure, the second round of BP is guaranteed to converge if a solution exists, i.e., if s is linearly dependent on the columns of Hotf such that s ∈ image(Hotf ).
+A loop-free graph can be obtained from any parity check matrix through the application of Kruskal’s minimum spanning tree algorithm [24]. This algorithm iterates through every node in the graph, eliminating those that introduce loops in the Tanner graph. An example of an OTF instance over a Tanner graph is shown in Figure 1. Note that a slight reinterpretation of the original Kruskal algorithm, as presented in [24], is necessary to adapt it to Tanner graphs. Specifically, while the original algorithm focuses on excluding certain graph edges, the modified version instead considers the data nodes of the Tanner graph. With this adjusted perspective, the modified algorithm can be implemented exactly as described in [24].
+The BP+OTF decoding process can now be summarised as follows:
+1. Attempt to solve to the decoding using BP on the full parity check matrix. If H ·ˆeBP = s, return ˆeBP as the solution. Else, proceed to step 2.
+2. Use the soft-information output of the BP decoding, pBP (e), to order the qubits from most-to-least likely of being in the support of the error.
+3. Apply the modified Kruskal algorithm to the parity check matrix, considering qubits in the order determined in step 2, to obtain the OTF parity check matrix Hotf .
+4. Solve the OTF decoding problem using a productsum BP decoder.
+5. Verify the output of the OTF decoding: if Hotf · ˆeotf = s, then the decoding is valid. This will be the case for all instance of Hotf where s ∈ image(Hotf ), assuming that the BP decoder has been allowed to run for a number of iterations equal to the column count of Hotf .
+A. Complexity of OTF post-processing
+The runtime complexity of each of the steps in OTF post-processing is outlined below:
+1. Sorting qubits by probability of error: the columns of the parity check matrix are sorted in order of
+
+123
+
+1
+
+2
+
+3
+
+
+
+
+
+110
+
+H = 1 0 1
+
+011
+
+123
+
+1
+
+2
+
+3
+
+ 11
+Hotf = 1 0 01
+
+Figure 1: Top: the Tanner graph of a classical cyclic code altogether with its parity check matrix H. Grey
+circles denote bits and green circles parity checks. Bottom: the ordered Tanner forest generated by the OTF algorithm and its corresponding parity check matrix Hotf . Note that the third bit has been removed from the graph. This ensures that the Hotf matrix is
+cycle free.
+decreasing probability of being in error. Such a sort can be computed with complexity O(n log(n)), e.g. by means of a merge sort algorithm [30].
+2. Computing the ordered Tanner graph Hotf . The OTF can be obtained with complexity O(n log(n)), using Kruskal’s algorithm [24] (see Appendix A for more details).
+3. Belief propagation over the OTF graph. This has worst-case runtime O(n), where n is the blocklength of the code [9].
+The complexity is dominated by the second step with runtime O(n log n). Thus, the OTF decoder therefore has almost-linear time complexity with the block-length of the code.
+B. Graph sparsity and OTF graph validity
+The OTF post-processor can be viewed as an approximate matrix inversion method: by generating a spanning tree of the original graph, it seeks to identify a set of linearly independent columns that can reproduce the syndrome. This set of columns can be identified in O(n log(n)) time, which is a significant improvement over the O(n3) worst-case complexity of matrix inversion via Gaussian elimination. However, unlike Gaussian elimination, Kruskal’s algorithm does not guarantee that a compatible set of linearly independent columns will be found such that s ∈ image(Hotf ).
+The success of OTF post-processing is closely tied to the sparsity of the parity-check matrix’s columns: the lower the average column weight ¯j, the more likely it
+
+5
+
+is to find a valid ordered Tanner forest Hotf . To understand this, consider the process by which the OTF matrix is constructed. The search begins with an empty matrix Ho0tf . The OTF matrix is then populated by adding columns from the original matrix, H, that do not introduce loops into Hoitf , where i denotes the tree growth step (i.e., the number of columns added so far). At each growth step i, the Tanner graph of Hoitf is represented as T i(VD, VP , E), where VD are the data nodes, VP are the parity nodes, and E are the edges. Each column under consideration from H can similarly be represented as a set of parity nodes V˜P , with the column weight j defined as |V˜P |.
+For a new column to introduce a loop in Hotf , it must satisfy the condition |V˜P ∩ VP | > 1. Therefore, a lower average column weight ¯j will lead to a higher chance that a new column will not produce a loop. Consequently, a sparser graph is more likely to result in an ordered Tanner forest Hotf with a greater number of linearly independent columns, thereby increasing the probability that the condition s ∈ image(Hotf ) is satisfied.
+IV. SPARSIFYING DETECTOR ERROR MODELS
+As described in Section II C, QEC codes are decoded by means of a detector graph that relates circuit fault locations to linear combinations of syndrome measurements. The detector error model enables the propagation of errors through the syndrome extraction circuit to be accounted for during decoding. Due to the richer set of error mechanisms it considers, it is typically the case that a detector error model graph will be less sparse than the corresponding CSS parity check matrices HX/Z of the code. This lack of sparsity is detrimental to the success of OTF post-processing, as it increases the probability that the generated OTF matrix will not satisfy the validity condition s ∈ image(Hotf ). See Section III B for more details.
+We now describe a sparsification routine which is designed to re-express a detector error model graph into a sparser form that is more suitable for OTF decoding. Specifically, our method maps the detector graph Hdem ∈ F2d×n into a sparsified detector graph Hsdem ∈ F2d×ns that has maximum column weight at most equal to the maximum column-weight, γ, of HX/Z . This is achieved by finding linear-combinations of columns of weight ≤ γ that generate each of the columns in Hdem. As the Hsdem matrix is by design sparser and smaller than the detector matrix Hdem, applying OTF post-processor Hsdem is more likely to result in a successful decoding.
+Our mapping includes a transfer matrix that allows the error channel associated with each error mechanism in the detector graph to be mapped to an equivalent error channel for the sparsified detector graph. This enables the soft-information output of an initial run of BP applied to the detector model to be re-purposed in the
+
+sparsified detector graph. The benefit of this is two-fold: first, the sparsified detector graph decoding will account for aspects of error propagation through the circuit, and second, the BP decoding over the OTF graph will be over a non-uniform noise channel, improving its rate of convergence.
+The sparsification routine is motivated by techniques used to map detector error models for surface codes to graphs with column-weight ≤ 2 suitable for decoding with matching decoders such as minimum-weight perfectmatching [31] or union-find [32]. Furthermore, the transfer matrix is a generalization of the methods proposed for mapping circuit-level soft-information in [33].
+We now formally define the sparsified detector error model and its associated transfer matrices.
+
+Definition 1 (Sparsified Detector Matrix) Let the detector error model be represented by a binary matrix Hdem ∈ F2d×n, where Hdem = (hd1em, hd2em, . . . , hdnem) and each column hdi em ∈ F2d. The sparsified detector matrix, denoted Hsdem ∈ Fd2×ns with ns < n, is defined such that
+image(Hsdem) = image(Hdem),
+
+i.e., the columns of Hsdem form a generating set for the column space of Hdem. Similarly, we define the sparsified logical observable matrix Osdem, whose columns lie in the image of the original logical observable matrix Odem.
+Note that the selection of the sparsified detector matrix is not unique. In this work, we use the following sparsified models:
+• For surface codes, the standard circuit-level matching graph is used as the sparsified detector model. This is obtained by decomposing hyperedges in the full detector graph into matchable edges [33].
+
+• For bivariate bicycle codes, a quasiphenomenological model is used as the sparsified detector graph. This is obtained by removing the two-qubit gate errors from the circuit-level noise model.
+We observe that the number of columns in the sparsified detector models is typically ≈ 30% of the original DEM. This shows that the models are not only sparser, but also much smaller.
+Recall that each column in a detector error model matrix, Hdem, corresponds to a fault mechanism in the code’s syndrome extraction circuit, each of which triggers a sequence of detectors indexed by the non-zero entries in the column. As such, Hsdem represents a reduced set of error mechanisms. We now define the transfer matrix that relates the full detector error model to its sparsified form:
+
+Definition 2 (The transfer matrix) The
+
+trans-
+
+fer matrix Atr ∈ Fn2 s×n describes the mapping from
+
+sparsified detector model to the full detector error model
+
+Hsdem · Atr = Hdem.
+
+(3)
+
+Each column ai of Atr is a vector that maps column hdi em of Hdem to a linear combination of the columns of Hsdem
+
+hdi em =
+
+aji hsjdem.
+
+(4)
+
+j
+
+The transfer matrix preserves the action of the logical observable matrix such that
+
+
+
+
+
+Odem · edi em = Osdem ·  aij ejsdem ,
+
+(5)
+
+j
+
+where eidem and ejsdem refer to the circuit faults associated to columns i and j of the detector and sparsified models
+accordingly.
+
+Importantly, the decomposition given by the transfer matrix maps the faults of the detector error model to combinations of faults on the sparser detector graph with the same logical action. Note, also, that the transfer matrix is not unique: multiple decompositions of the columns of Hdem into components of Hsdem are possible. Our primary objective is to identify sparse transfer matrices, where each column ai in Atr has the smallest possible Hamming weight. This is crucial because the transfer matrix inherently maps low-weight fault mechanisms in the detector error graph to higher-weight errors in the sparsified graph. By ensuring the transfer matrix is sparse, we minimise the likelihood that the mapped errors will exceed the code distance. Additionally, a sparse transfer matrix is advantageous for mapping softinformation to the sparsified detector graph, as will be expanded upon in the next section.
+The question as how to best optimise the sparsified detector model and the transfer matrix is an interesting question for future work. For the QEC codes simulated in this work, we found that an exhaustive search method was sufficient. Details of our exhaustive strategy are outlined in Appendix B.
+
+A. Belief propagation decoding using the sparsified detector graph
+In this section, we propose a two stage BP+BP decoder, where BP is first applied to the full detector model graph followed by a second round of decoding on the sparsified detector graph. To this end, we outline a procedure that uses the transfer matrix to translate the softinformation output of the first round of BP into a form that can be used as the initial error channel for the second round of BP. This ensures that the decoding on the sparsified graph accounts for information about error propagation at the circuit-level. Furthermore, as the second round of BP will be supplied with a non-uniform error channel, it is more likely to converge to a solution satisfying the syndrome.
+After completing the first round of BP on the full detector graph, we obtain the decoder’s soft-information
+
+6
+output, denoted as pBP (edem). This output assigns an error probability to each fault mechanism in the detector model Hdem. Our objective is to develop a method to translate pBP (edem) into a corresponding probability vector p(esdem), which allocates error probabilities to each fault mechanism in the sparsified detector error model Hsdem.
+The transfer matrix Atr establishes a relationship between fault mechanisms in the detector model and those in the sparsified detector model. Specifically, the list of detector fault mechanisms that trigger a given fault mechanism i in the sparsified model is represented by {j : Aitjr ≠ 0}.
+When combining multiple error probabilities from the detector graph into a single probability for the sparsified graph, it is crucial to account for parity. For instance, if two individual error mechanisms in the detector error model, ed1em and ed2em, trigger the same component in the sparsified detector matrix, eskdem, their combined effect would be (eskdem + eksdem) mod 2 = 0. Therefore, probabilities should be summed only when an odd number of detector fault mechanisms contribute to the relevant sparsified detector fault mechanism. Thus, we want to determine the probability of the sparsified faults as the random variable defined as the modulo-2 sum (parity constraint) of the binary random variables associated to the detector error model faults that relate to it via Atr. This mapping of probabilities from Hdem to Hsdem can then be accomplished by considering the probability of the exclusive OR (XOR) of the component binary random variables, as follows [34]
+
+
+
+
+
+p(eisdem) = p 
+
+ekdem
+
+k∈{j:Aitjr ̸=0}
+
+
+
+
+
+=
+
+1 2
+
+1 −
+
+(1 − 2p(edkem)) ,
+
+(6)
+
+k∈{j:Aitjr ̸=0}
+
+where by Atijr we refer to element j of row i of the transfer matrix, ⊕ refers to the XOR operation and by eisdem and ekdem we refer to the binary random variables associated to the sparsified and circuit faults i and k, respectively. The combined probability in expression 6 can be derived by means of the Piling-up lemma that describes the probability of the XOR-clause of n independent binary random variables [35], which is the case discussed here.
+The complete BP+BP algorithm is outlined in Algorithm 1. Both stages of the BP algorithm run in linear time. To fully understand the performance of the BP+BP decoder, we need to analyse the runtime scaling of the mapping from the detector error model to the sparsified model. To this end, it is insightful to treat the transfer matrix Atr as analogous to a Tanner graph, where the variable nodes represent elements of the detector error model, and the check nodes correspond to
+
+7
+
+Algorithm1 BP+BP decoder for circuit-level noise
+
+INPUT:
+
+Measured
+
+syndrome
+
+s
+
+∈
+
+d
+F2
+
+A priori probabilities of detector error model mechanisms,
+
+pch
+
+∈
+
+n
+R
+
+Detector
+
+matrix:
+
+Hdem
+
+∈
+
+d×n
+F2
+
+,
+
+Sparsified detector matrix: Hsdem ∈ F2d×ns ,
+
+Transfer matrix: Atr ∈ F2ns×n
+
+OUTPUT: Estimated error, ˆe.
+
+1: (ˆedem, p(edem)) ← BP_decode(s, pch, Hdem) 2: if s == ˆsdem then 3: return ˆedem 4: end if 5: p(esdem) ← Map(p(edem), Atr) 6: ˆesdem ← BP_decode(s, p(esdem), Hsdem) 7: return ˆesdem
+
+elements of the sparsified detector error model. Equation 6 can be interpreted as a message-passing update from the variable nodes to the check nodes. By using the soft information from the first BP update round as the a posteriori soft information, the probabilities p(esidem) can be computed in a single message-passing step. The computational complexity of this mapping process is essentially equivalent to that of running BP. The key difference is that the column weight is now determined by the transfer matrix, which is not uniquely defined. However, in all QEC codes examined in this study, the transfer matrices did not exhibit column weights exceeding 3, suggesting that it is generally lower than the column weight of the detector error model. Therefore, the worst-case complexity of the overall BP+BP decoder can be bounded by O(n), indicating linear time complexity.
+
+V. AN ALMOST-LINEAR TIME DECODER FOR QLDPC CODES UNDER CIRCUIT-LEVEL
+NOISE
+We now outline BP+BP+OTF as a decoding method with almost-linear runtime complexity for QLDPC codes operating under circuit-level noise. The decoder first runs the two-stage BP+BP decoder on the detector graph and its corresponding sparsified graph as described in the previous section. If BP+BP fails, the OTF decoder is applied to the sparsified graph as a post-processor. Pseudo-code for the BP+BP+OTF decoder is provided below:
+The runtime complexity of this decoder is dominated by the O(n log(n)) complexity of the OTF postprocessing stage. As such, the full BP+BP+OTF decoder is an almost-linear time decoder for circuit-level decoding of QLDPC codes.
+
+Algorithm2 BP+BP+OTF decoder for circuit-level noise
+INPUT: Measured syndrome: s ∈ Fd2 a priori probabilities of DEM error mechanisms, pch ∈ Rn Detector matrix: Hdem ∈ Fd2×n, Sparsified detector matrix: Hsdem ∈ F2d×ns , Transfer matrix: Atr ∈ Fn2 s×n OUTPUT: Estimated error, ˆe.
+1: (ˆedem, p(edem)) ← BP_decode(s, pch, Hdem) 2: if s == ˆsdem then 3: return ˆedem 4: end if 5: p(esdem) ← Map(p(edem), Atr) 6: (ˆesdem, p(esdem)) ← BP_decode(s, p(esdem), Hsdem) 7: if s == ˆssdem then 8: return ˆesdem 9: end if 10: ˆeotf ← OTF(Hsdem, p(esdem)) 11: return ˆeotf
+VI. RESULTS
+We numerically benchmark the performance of the BP+BP+OTF decoder via Monte Carlo simulations of the bivariate bicycle codes and rotated surface codes under a depolarising circuit-level noise model [5]. Precise details of the numerical methods used for this section can be found in Appendix C, whilst a detailed specification of the circuit-level noise model is outlined in Appendix D.
+A. Bivariate Bicycle Codes
+Figure 2 shows the logical error rate per round for families of bivariate bicycle codes decoded using BP+OSD and BP+BP+OTF. Simulations were performed on the [[72, 12, 6]], [[108, 8, 10]], [[144, 12, 12]], and [[288, 12, 18]] bivariate bicycle codes first introduced in [5]. The decoder setup is as follows:
+• BP+OSD-0: We set the maximum number of iterations for the minimum-sum belief propagation decoder to 10,000, following [5]. As noted in [16], using a large iteration count improves speed, as premature termination means the decoder relies more on OSD-postprocessing. The ‘0’ in OSD-0 indicates that no higher-order post-processing is applied find solutions that improve upon the initial output [14].
+• BP+BP+OTF: Oscillations in the soft output of BP can emerge after a sufficient number of iterations [19], which may result in OTF graphs that fail to span the observed syndrome. To address this, we adopt an ensemble decoding strategy [22, 36], where each member of the ensemble uses a different number of iterations in the first BP stage. This
+
+8
+
+10−1
+
+[[72, 12, 6]]
+
+[[108, 8, 10]]
+10−2
+[[144, 12, 12]]
+
+[[288, 12, 18]]
+
+10−3
+
+BP+BP+OTF
+
+BP+OSD-0
+
+10−4
+
+logical error rate per round
+
+10−5
+
+10−6
+
+10−7
+
+10−3 physical error rate
+
+Figure 2: Logical error rate per syndrome extraction round as a function of the physical error rate for bivariate bicycle codes. Each code is simulated over a number of syndrome rounds equal to its distance. The shading
+highlights the region of estimated probabilities where the likelihood ratio is within a factor of 1, 000; similar to a confidence interval.
+
+improves robustness without affecting overall runtime, as all decoders run in parallel [37]. The ensemble consists of 22 BP+BP+OTF decoders, with first-stage BP iteration counts ranging from 17 to 391 in steps of 17. The subsequent BP rounds on both the sparsified and OTF graphs are capped at 113 iterations. All BP stages use the minimum-sum variant.
+The results demonstrate that the proposed decoder matches the performance of BP+OSD-0 when decoding bivariate bicycle codes. Crucially, this is achieved with an almost-linear runtime, requiring at most 617 BP iterations across the three stages of the decoder.
+To evaluate the speedup provided by our implementation, we also performed timing benchmarks. Full details of these tests are provided in Appendix C. Figure 3 reports the mean decoding time per syndrome extraction round for both decoders at two physical error rates, p = 0.003 and p = 0.004 (see Appendix E for detailed statistics). The results clearly show that our decoder con-
+
+sistently outperforms the standard BP+OSD decoder, achieving speedups greater than a factor of 10 across all scenarios.
+This performance gap should be interpreted with care. The BP implementation used from [26] executes serially, even under a parallel schedule. As a result, the actual complexity of our current implementation is quadratic. A fully parallel implementation would yield significantly greater speedups compared to BP+OSD. Nonetheless, these results already highlight that the BP+BP+OTF decoder exhibits much better scaling behaviour, particularly for codes with higher distances and larger detector error models.
+Another important aspect of our analysis concerns the amount of decoding information lost when the detector error model (DEM) is sparsified. To investigate this, we conduct a series of numerical experiments using BP+OSD-0 in different configurations, with detailed results presented in Appendix F.
+First, we compare the performance of BP+OSD-0 ap-
+
+9
+
+10−1
+
+10−1
+
+BP+OSD-0
+
+BP+OSD-0
+
+BP+BP+OTF
+
+BP+BP+OTF
+
+10−2
+
+10−2
+
+Decoding time per round (s) Decoding time per round (s)
+
+10−3
+
+10−3
+
+10−4 [[72,12,6]]
+
+[[108,8,10]]
+
+[[144,12,12]] [[288,12,18]]
+
+10−4 [[72,12,6]]
+
+[[108,8,10]]
+
+[[144,12,12]] [[288,12,18]]
+
+(a) physical error rate @ p = 0.003.
+
+(b) physical error rate @ p = 0.004.
+
+Figure 3: Mean decoding time per round for BP+OSD-0 and BP+BP+OTF when decoding bivariate bicycle codes. For the BP+BP+OTF ensemble we record the time of the first instance that finishes decoding. a) Decoding at physical error rate p = 0.003. b) Decoding at physical error rate p = 0.004.
+
+plied directly to the full DEM with the same decoder applied to the sparsified model, both using a maximum of 10,000 BP iterations. We observe a significant degradation in performance, with logical error rates worsening by several orders of magnitude, and no improvement in decoding time. This indicates that completely ignoring the structure of the full DEM is not an effective strategy.
+We then evaluate the BP+BP+OSD-0 decoder, where the first BP stage runs on the full DEM for 1,000 iterations and the second stage runs on the sparsified model for 9,000 iterations, followed by OSD-0 on the sparsified model. In this setup, 90 percent of the BP iterations and all post-processing are performed on the sparsified graph. Remarkably, this hybrid approach matches the logical error rate of BP+OSD-0 executed entirely on the full DEM, while achieving a threefold reduction in average decoding time.
+These results support the effectiveness of our sparsification technique. Running a limited number of BP iterations on the full DEM is sufficient to extract the essential soft information required for decoding. Since the sparsified model is also smaller, other decoders that perform well under phenomenological noise may benefit from this approach, enabling them to operate effectively under circuit-level noise with reduced dependence on the full DEM.
+B. Surface codes
+Figure 4 presents the logical error rates per round for rotated surface codes with distances d = 5, 9, 13, 17, decoded using minimum-weight perfect
+
+matching (MWPM), BP+OSD-0, and BP+BP+OTF. For the BP+OSD-0 decoder, we use 70 minimum-sum BP iterations, while the BP+BP+OTF decoder employs 6, 51, and 50 maximum iterations for its three decoding stages, respectively. As shown in the figure, BP+BP+OTF achieves logical error suppression comparable to MWPM (Figure 4a), and significantly outperforms BP+OSD-0 (Figure 4b). This result is particularly notable, as BP+OSD-0 is known to slightly outperform belief-find [18], a decoder with almost-linear runtime complexity. These findings highlight the strong performance of BP+BP+OTF in both accuracy and efficiency.
+A distinctive feature of the BP+BP+OTF decoder in the context of surface codes is its guaranteed convergence. This property arises from the fact that the OTF post-processor operates on a matrix with a matching structure. In the case of surface codes without periodic boundaries, an additional virtual node must be included in the matrix to enable OTF decoding (see Appendix G). This results in an augmented matrix with d+1 rows, and each column has weight 2. Since a tree-like graph must satisfy |V |−|E| = 1, where |V | and |E| are the numbers of vertices and edges, respectively, we can deduce the number of columns in the OTF matrix. Letting notf denote the number of such columns, the relationship becomes (d + 1 + notf) − 2notf = 1, which implies notf = d. The final BP step is then performed on a full-rank d×d matrix, excluding the virtual node, ensuring that the syndrome is always in the image of Hotf. This guarantees convergence and makes BP+BP+OTF particularly attractive for codes with matching structure [4].
+We do not explicitly benchmark the runtime of our
+
+10
+
+logical error rate per round logical error rate per round
+
+10−1
+
+10−1
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+10−4
+
+10−5 10−6 10−7
+10−3
+
+d=5 d=9 d = 13 d = 17 BP+BP+OTF MWPM
+10−2 physical error rate
+(a) BP+BP+OTF versus MWPM.
+
+10−4
+
+10−5 10−6 10−7
+10−3
+
+physical error rate
+
+d=5 d=9 d = 13 d = 17 BP+BP+OTF BP+OSD
+10−2
+
+(b) BP+BP+OTF versus BP+OSD-0.
+
+Figure 4: Logical error rate per syndrome extraction round as a function of the physical error rate for rotated surface codes. Each code is simulated over a number of syndrome rounds equal to its distance using Stim’s
+surface_code:rotated_memory_z experiment. The shading highlights the region of estimated probabilities where the likelihood ratio is within a factor of 1, 000; similar to a confidence interval.
+
+BP+BP+OTF implementation against pymatching [38], since pymatching is highly optimised for CPU execution, while our BP implementation is serial and not performance-tuned. Nonetheless, it is noteworthy that BP+BP+OTF is capable of decoding a d = 17 surface code using a total of only 107 BP iterations. This suggests that a hardware-accelerated implementation, for example on an FPGA, could achieve decoding speeds and meet the requirements for real-time operation [23].
+VII. CONCLUSION
+In this work, we introduced BP+BP+OTF as an almost linear-time decoder for QLDPC codes under circuitlevel noise. The OTF post-processor removes qubits from the decoding graph until it achieves a tree-like structure, thereby increasing the likelihood that subsequent rounds of BP will converge. Additionally, we presented a novel method for mapping detector error models to sparser matrices while preserving critical information about circuitlevel fault propagation. Numerical simulations demonstrate that using this mapping, the BP+BP+OTF decoder matches the performance of state-of-the-art decoders such as BP+OSD and MWPM when applied to families of bivariate bicycle and surface codes under circuit-level noise.
+The sparsification routine we propose extends beyond the BP+BP+OTF decoder. Our simulations suggest that performing an initial round of decoding on the full detector model, followed by a second round on the sparsified detector model, can enhance performance across
+
+various decoders, including plain BP and BP+OSD. The sparsified detector model features fewer loops, fewer columns, and a less redundant structure. Moreover, by mapping the soft information from the first BP round to the sparsified detector model, the second BP round is supplied with a non-uniform error channel, accelerating convergence. Our results show that this mapping to the sparsified detector model can be used to match the performance of BP+OSD-0 executed over the full DEM while significantly accelerating its speed. We anticipate that other decoder families – for example BP+AC [16], BP+LSD [18], and BP+CB [17] – will also benefit from the sparsified detector error model. Furthermore, being able to operate over a detector model that resembles a phenomenological parity check matrix may make several decoding proposals to succeed at decoding circuit-level noise when those have shown promise over the simplified phenomenological noise model.
+In future work, we will explore the application of the BP+BP+OTF decoder to various code families, including colour codes, hypergraph product codes [6], and lifted product codes [7].
+The primary failure mode of the BP+BP+OTF algorithm arises in cases where the OTF post-processor fails to produce a spanning tree capable of supporting the syndrome, i.e., when s ∈/ image(Hotf ). The probability of such failures can be reduced by optimising the sparsity of the transfer matrix that maps the detector model to its sparsified form. In this work, we used an exhaustive approach to derive the mapping, but further optimisations could be achieved by, for example, explicitly excluding elements of Hsdem that introduce loops. This remains an
+
+11
+
+area for future investigation.
+Following this line of investigation, we observed that oscillations in the a posteriori information produced by BP can be detrimental, as they may prevent the OTF step from yielding a solution consistent with the observed syndrome. To address this issue, we adopted an ensemble-based approach that enabled reliable decoding of bivariate bicycle codes. Future work could explore alternative strategies to improve the stability and reliability of the soft information. For example, automorphism ensemble BP [22], modified versions of BP [23, 39], or techniques such as iteration buffers [19, 20] could increase the likelihood of convergence.
+In addition, careful optimisation of the number of BP iterations performed on both the full detector error model and the sparsified model is essential for achieving the best performance with BP+BP+OTF. In this work, we explored iteration schedules that match the decoding performance of state-of-the-art methods. Further improvements may be possible through dynamic halting strategies, where the number of iterations is adapted based on the evolution of the a posteriori information or the density of the observed syndrome.
+Further improvements in the runtime of BP+BP+OTF could be achieved by exploring parallelisation methods for the tree search step in the OTF post-processor. One possible approach is to combine OTF post-processing with the parallel cluster-growth strategies employed by the BP+LSD decoder [18].
+The OTF post-processor operates on the principle that QLDPC decoding can be enhanced by modifying the structure of the decoding graph. Specifically, Kruskal’s algorithm is used to identify and eliminate variable nodes that introduce problematic cycles in the Tanner graph. Similarly, the recently introduced BP+GD decoder iteratively modifies the decoding graph by excluding variable nodes with the least uncertainty in their soft-information [40]. An interesting direction for future research would be to explore the combination of BP+OTF and BP+GD.
+Given its low complexity, BP+BP+OTF is a promising candidate for real-time decoding of syndromes from experimental quantum computers. To this end, dedicated hardware implementations of the algorithm using FPGAs or ASICs will be necessary. Since the
+
+BP+BP+OTF algorithm uses standard methods like the well-established minimum-sum implementation of BP and Kruskal’s minimum spanning tree algorithm, it may be possible to construct such a decoder by combining existing commercially available chips. Consequently, development costs could potentially be lower compared to more specialised decoders such as BP+OSD [41].
+VIII. CODE AVAILABILITY
+The code for the BP+OTF decoder can be found in the following Github repository: https://github.com/ Ima96/BPOTF. In future versions we will include the implementation of the ensemble BP+BP+OTF decoder.
+IX. ACKNOWLEDGEMENTS
+We thank Oscar Higgott for many useful comments and recommendations, as well as Anqi Gong for discussions on loops and trapping sets present in the detector error models of bivariate bicycle codes. We also thank Pedro Crespo for his guidance and the other members of the Quantum Information Group at Tecnun for their support.
+This work was supported by the Spanish Ministry of Economy and Competitiveness through the MADDIE project (Grant No. PID2022-137099NBC44), by the Spanish Ministry of Science and Innovation through the project Few-qubit quantum hardware, algorithms and codes, on photonic and solid state systems (PLEC2021008251), and by the Ministry of Economic Affairs and Digital Transformation of the Spanish Government through the QUANTUM ENIA project call - QUANTUM SPAIN project, and by the European Union through the Recovery, Transformation and Resilience Plan - NextGenerationEU within the framework of the Digital Spain 2026 Agenda.
+J.R. is funded by an EPSRC Quantum Career Acceleration Fellowship, grant code UKRI1224. J.R. also acknowledges the support of EPSRC grants EP/T001062/1 and EP/X026167/1.
+
+[1] J. Roffe, “Quantum error correction: an introductory guide,” Contemporary Physics, vol. 60, no. 3, pp. 226–245, 2019. [Online]. Available: https://doi.org/10. 1080/00107514.2019.1667078
+[2] Google Quantum AI, “Quantum error correction below the surface code threshold,” 2024. [Online]. Available: https://arxiv.org/abs/2408.13687
+[3] S. Krinner, N. Lacroix, A. Remm, A. Di Paolo, E. Genois, C. Leroux, C. Hellings, S. Lazar, F. Swiadek, J. Herrmann, G. J. Norris, C. K. Andersen, M. Müller, A. Blais, C. Eichler, and A. Wallraff, “Realizing
+
+repeated quantum error correction in a distancethree surface code,” Nature, vol. 605, no. 7911, p. 669–674, May 2022. [Online]. Available: http: //dx.doi.org/10.1038/s41586-022-04566-8 [4] A. deMarti iOlius, P. Fuentes, R. Orús, P. M. Crespo, and J. Etxezarreta Martinez, “Decoding algorithms for surface codes,” Quantum, vol. 8, p. 1498, Oct. 2024. [Online]. Available: https: //doi.org/10.22331/q-2024-10-10-1498 [5] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-
+
+12
+
+overhead fault-tolerant quantum memory,” Nature, vol. 627, no. 8005, pp. 778–782, Mar 2024. [Online]. Available: https://doi.org/10.1038/s41586-024-07107-7 [6] Q. Xu, J. P. B. Ataides, C. A. Pattison, N. Raveendran, D. Bluvstein, J. Wurtz, B. Vasic, M. D. Lukin, L. Jiang, and H. Zhou, “Constant-overhead fault-tolerant quantum computation with reconfigurable atom arrays,” 2023. [Online]. Available: https://arxiv.org/abs/2308.08648 [7] T. R. Scruby, T. Hillmann, and J. Roffe, “Highthreshold, low-overhead and single-shot decodable faulttolerant quantum memory,” 2024. [Online]. Available: https://arxiv.org/abs/2406.14445 [8] T. Richardson and S. Kudekar, “Design of lowdensity parity check codes for 5g new radio,” IEEE Communications Magazine, vol. 56, no. 3, pp. 28–34, Mar. 2018. [Online]. Available: https://ieeexplore.ieee. org/abstract/document/8316763 [9] D. J. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics letters, vol. 33, no. 6, pp. 457–458, 1997. [10] P. Fuentes, J. Etxezarreta Martinez, P. M. Crespo, and J. Garcia-Frías, “Degeneracy and its impact on the decoding of sparse quantum codes,” IEEE Access, vol. 9, pp. 89 093–89 119, 2021. [Online]. Available: https://ieeexplore.ieee.org/abstract/document/9456887 [11] N. Raveendran and B. Vasić, “Trapping Sets of Quantum LDPC Codes,” Quantum, vol. 5, p. 562, Oct. 2021. [Online]. Available: https://doi.org/10.22331/ q-2021-10-14-562 [12] A. Grospellier, L. Grouès, A. Krishna, and A. Leverrier, “Combining hard and soft decoders for hypergraph product codes,” Quantum, vol. 5, p. 432, Apr. 2021. [Online]. Available: http://dx.doi.org/10.22331/ q-2021-04-15-432 [13] P. Panteleev and G. Kalachev, “Degenerate quantum ldpc codes with good finite length performance,” Quantum, vol. 5, p. 585, Nov. 2021. [Online]. Available: http://dx.doi.org/10.22331/q-2021-11-22-585 [14] J. Roffe, D. R. White, S. Burton, and E. Campbell, “Decoding across the quantum low-density paritycheck code landscape,” Phys. Rev. Res., vol. 2, p. 043423, Dec 2020. [Online]. Available: https: //link.aps.org/doi/10.1103/PhysRevResearch.2.043423 [15] T. R. Scruby and K. Nemoto, “Local probabilistic decoding of a quantum code,” Quantum, vol. 7, p. 1093, Aug. 2023. [Online]. Available: http://dx.doi.org/ 10.22331/q-2023-08-29-1093 [16] S. Wolanski and B. Barber, “Ambiguity Clustering: an accurate and efficient decoder for qLDPC codes,” arXiv, p. arXiv:2406.14527, Jun. 2024, https://arxiv.org/abs/ 2406.14527. [17] A. deMarti iOlius and J. Etxezarreta Martinez, “The closed-branch decoder for quantum LDPC codes,” arXiv, p. arXiv:2402.01532, Feb. 2024, https://doi.org/10. 48550/arXiv.2402.01532. [18] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, “Localized statistics decoding: A parallel decoding algorithm for quantum low-density parity-check codes,” arXiv, Jun. 2024, https://doi.org/ 10.48550/arXiv.2406.18655. [19] A. Gong, S. Cammerer, and J. M. Renes, “Toward Low-latency Iterative Decoding of QLDPC Codes Under Circuit-Level Noise,” arXiv e-prints, p. arXiv:2403.18901, Mar. 2024, https://arxiv.org/abs/
+
+2403.18901. [20] K. R. Ott, B. Hetényi, and M. E. Beverland, “Decision-
+tree decoders for general quantum ldpc codes,” 2025. [Online]. Available: https://arxiv.org/abs/2502.16408 [21] L. A. Beni, O. Higgott, and N. Shutty, “Tesseract: A search-based decoder for quantum error correction,” 2025. [Online]. Available: https://arxiv.org/abs/2503. 10988 [22] S. Koutsioumpas, H. Sayginel, M. Webster, and D. E. Browne, “Automorphism ensemble decoding of quantum ldpc codes,” 2025. [Online]. Available: https://arxiv.org/abs/2503.01738 [23] T. Müller, T. Alexander, M. E. Beverland, M. Bühler, B. Johnson, T. Maurer, and D. Vandeth, “Improved belief propagation is sufficient for real-time decoding of quantum memory,” 2025. [Online]. Available: https: //arxiv.org/abs/2506.01779 [24] J. B. Kruskal, “On the shortest spanning subtree of a graph and the traveling salesman problem,” Proceedings of the American Mathematical society, vol. 7, no. 1, pp. 48–50, 1956. [25] P.-J. H. S. Derks, A. Townsend-Teague, A. G. Burchards, and J. Eisert, “Designing fault-tolerant circuits using detector error models,” arXiv, Jul. 2024, https: //doi.org/10.48550/arXiv.2407.13826. [26] J. Roffe, “LDPC: Python tools for low density parity check codes,” 2022. [Online]. Available: https: //pypi.org/project/ldpc/ [27] Strictly, the number of columns n is not exactly the number of possible circuit errors since errors that have the same detector vectors are merged in single columns, adding their a priori probabilities. [28] C. Gidney, “Stim: a fast stabilizer circuit simulator,” Quantum, vol. 5, p. 497, Jul. 2021. [Online]. Available: https://doi.org/10.22331/q-2021-07-06-497 [29] W. Fang and M. Ying, “Symbolic execution for quantum error correction programs,” Proceedings of the ACM on Programming Languages, vol. 8, no. PLDI, p. 1040–1065, Jun. 2024. [Online]. Available: http://dx.doi.org/10.1145/3656419 [30] M. H. G. Michael T. Goodrich, Roberto Tamassia, Data Structures and Algorithms in Python, 1st ed. Wiley, 2013. [31] O. Higgott, “Pymatching,” https://github.com/ oscarhiggott/PyMatching, accessed: 2024-07-26. [32] N. Delfosse and N. H. Nickerson, “Almost-linear time decoding algorithm for topological codes,” Quantum, vol. 5, p. 595, Dec. 2021. [Online]. Available: https: //doi.org/10.22331/q-2021-12-02-595 [33] O. Higgott, T. C. Bohdanowicz, A. Kubica, S. T. Flammia, and E. T. Campbell, “Improved decoding of circuit noise and fragile boundaries of tailored surface codes,” Phys. Rev. X, vol. 13, p. 031007, Jul 2023. [Online]. Available: https://link.aps.org/doi/10.1103/ PhysRevX.13.031007 [34] Recall that the XOR logical operation is true if and only if the number of true inputs is odd. Furthermore, XOR and modulo-2 sum are equivalent for the binary field, i.e. a parity constraint. We stick to the XOR operation so as to relate the update rule to the Piling-up lemma, which is formulated by means of it [35]. [35] M. Matsui, “Linear cryptanalysis method for des cipher,” in Advances in Cryptology — EUROCRYPT ’93, T. Helleseth, Ed. Berlin, Heidelberg: Springer Berlin
+
+13
+
+Heidelberg, 1994, pp. 386–397. [Online]. Available: https: //link.springer.com/chapter/10.1007/3-540-48285-7_33 [36] N. Shutty, M. Newman, and B. Villalonga, “Efficient near-optimal decoding of the surface code through ensembling,” 2024. [Online]. Available: https://arxiv. org/abs/2401.12434 [37] For the [[72, 12, 6]] code, which exhibits limited degeneracy, we do not use the ensemble approach. Instead, we run a single BP+BP+OTF decoder with 300 iterations on the full detector graph and 113 iterations in the second BP stage and on the OTF graph. [38] O. Higgott and C. Gidney, “Sparse Blossom: correcting a million errors per core second with minimum-weight matching,” Quantum, vol. 9, p. 1600, Jan. 2025. [Online]. Available: https://doi.org/10.22331/q-2025-01-20-1600 [39] K.-Y. Kuo and C.-Y. Lai, “Exploiting degeneracy in belief propagation decoding of quantum codes,” npj Quantum Information, vol. 8, no. 1, Sep. 2022. [Online]. Available: http://dx.doi.org/10.1038/ s41534-022-00623-2 [40] H. Yao, W. A. Laban, C. Häger, A. G. i Amat, and H. D. Pfister, “Belief propagation decoding of quantum ldpc codes with guided decimation,” 2024. [Online]. Available: https://arxiv.org/abs/2312.10950 [41] J. Valls, F. Garcia-Herrero, N. Raveendran, and B. Vasić, “Syndrome-based min-sum vs osd-0 decoders: Fpga implementation and analysis for quantum ldpc codes,” IEEE Access, vol. 9, pp. 138 734–138 743, 2021. [Online]. Available: https://ieeexplore.ieee.org/ document/9562513 [42] Being strictly correct, the first round is special due to the fact that there is no propagation of previous rounds and, thus, such first round should be processed independently [19].
+
+will change their first element in the DYNAMIC_LIST to be the new root. Moreover, if there are two or more roots with largest depth, one will be chosen arbitrarily to be the new root of the merged tree and its depth will be increased by one.
+After the first step, there will be elements in the DYNAMIC_LIST for which the first element will not satisfy DYNAMIC_LIST[i] [0] = i, but the new root that it has adopted once merging with other trees. Therefore, if we want to know its root, we will have to search the first element of the dynamic list of each element that we find until the condition DYNAMIC_LIST[i] [0] = i is satisfied. Figure 5 portrays an example of the process of considering a column with three non-trivial elements, which results in the merging of three trees.
+The objective of the OTF decoder will be to consider all columns from the parity check matrix following this rationale. After all the columns have been considered, the ones that will have been kept for the OTF matrix will not produce loops in the Tanner graph. Ultimately, this process will involve considering n columns from the parity check matrix, for each column to consider j nontrivial elements, and for each of these elements to look for their root, which can be done in, at most, log(n) time. Therefore, the overall worst-case complexity of the process of searching an OTF given a parity check matrix is O(nj log(n)). Due to the fact that the weight of the column is assumed to be constant when increasing block length, the overall complexity can be expressed as O(n log(n)).
+
+Appendix A: The Union-Find data structure for the OTF decoder
+In order to search an OTF in almost-linear time, we need to consider the union find data structure. Let us consider a dynamic list of a length equal to the number checks in the code to decode, where each element is a 2element list, we shall name that list as DYNAMIC_LIST. The first element of each duple will indicate the root of the element and the second one will indicate its depth. At the beginning, each element i will be its own root and its depth will be 1, i.e. DYNAMIC_LIST[i] = [i, 1]. Each element in the dynamic list will become a tree of a single element. Afterwards, we will consider columns in the parity check matrix in the order established by the posterior probabilities. Once we consider a column in the parity check matrix, we will study its non-trivial elements. Considering j non-trivial elements, we will search at the root of each of them in the DYNAMIC_LIST. If the j roots are different, introducing the edges emanating from the variable node which represents the column will not produce a loop in the Tanner graph. If that is the case, all the elements will be merged into a single tree and the root with the largest depth will become the root of the overall tree. Subsequently, the remaining roots
+
+Appendix B: Finding the transfer matrix by means of an exhaustive search
+
+We aim the decomposition of each column of the de-
+
+tector error model into a minimum amount of sparsified
+
+components by means of the exhaustive search shown in
+
+Algorithm 3. The algorithm starts by identifying the
+
+columns of Hsdem that at least share a non-trivial com-
+
+ponent with the selected detector error model column,
+
+saved in the Hreduced matrix. This is done to reduce the
+
+amount of elements to be considered in the exhaustive
+
+search. Once this is done, the algorithm starts to test
+
+if the detector vector in question can be expressed as a
+
+combination of the columns of the sparsified parity check
+
+matrix, starting from a single element in the sum and pro-
+
+gressively increasing the amount of terms in the decom-
+
+position. This is done in the for loop of starting at line 17.
+
+The GetCombinations([1, 2, · · · , colsr], j) method creates
+
+a matrix containing all possible combinations with size
+
+j of the elements of the vector [1, 2, · · · , colsr] as its
+
+rows. When we write combs(k), we refer to getting a row
+
+of such matrix, i.e. a possible combination of columns
+
+with indexes given by such row. Therefore, the matrix
+
+obtained has size
+
+colsr j
+
+× j, and we use those combi-
+
+nations to test the decomposition with j elements and
+
+increase such value if no decomposition is found. We
+
+14
+
+1
+
+2
+
+4
+
+5
+
+6
+
+11
+
+12
+
+3 7 8 9 10
+13
+
+[1, 3] 1
+
+4
+
+5
+
+11
+
+12
+
+[2, 2] 2
+6
+
+[3, 3] 3
+7 8 9 10 13
+
+[1, 4] 1
+
+4
+
+5
+
+2 [1, 2]
+
+3 [1, 3]
+
+11
+
+12
+
+6
+
+7 8 9 10
+
+13
+
+Figure 5: Process of considering a column in the parity check matrix for the ordered Tanner forest. Green
+circles represent the elements of the DYNAMIC_LIST, which are labelled. For a violet line connecting a node
+on the bottom j with a bottom on the top i, DYNAMIC_LIST[j] [0] = i. The top figure indicates three trees with three different roots on the top. The
+three red-circled nodes belong to the non-trivial elements of the column that is being considered. On the
+middle image, the value of the three roots of each considered node is found within the DYNAMIC_LIST.
+Since all roots are different, we can incorporate the column, as it does not produce a loop. We choose the root of the tree on the left as the overall root and, in
+the bottom figure, we merge the three trees by changing the first element in the DYNAMIC_LIST of the elements 2 and 3 to be 1. Moreover, as the tree on the left and the one on the right had the same depth,
+the depth of the overall tree increases by 1 to be 4.
+
+also impose that a decomposition candidate must coincide in its logical effect. Once such a decomposition is found, we generate the decomposition vector ai with the method ones(map(combs(k))) which adds ones at locations map(combs(k)), i.e. at the positions found but mapped back from the Hreduced to the Hsdem of interest. Note that since we exhaustively search from a minimum amount of columns to a bigger one, the obtained decomposition is expected to be consisted of a minimum amount of sparsified mechanisms.
+Algorithm 3 is then looped for all the columns of the detector error model in question and a transfer matrix Atr is found, relating the detector error model and the
+
+Algorithm3 Decomposing detector error model detectors into “phenomenological” elements
+
+INPUT: detector error model column hdi em ∈ F2d,
+“phenomenological” parity check matrix Hsdem = (hs1dem, · · · , hsndsem) ∈ F2d×ns , logical observable detector error model matrix Odem ∈ F2k×n, logical observable “phenomenological” matrix Osdem ∈ F2k×ns OUTPUT: decomposition vector for the detector error model column, ai ∈ Fn2 s
+
+1:
+
+▷ Get columns of Hsdem that at least
+
+share a non-trivial element with the detector error model
+
+column, hdi em. The map variable contains which elements
+
+of Hsdem are retained so that the result for Hreduced can
+
+be mapped back.
+
+2: Hreduced ← ∅
+
+3: Oreduced ← ∅
+
+4: map ← ∅
+
+5: for j ← 1 to ns do
+
+6: for k ← 1 to d do
+
+7:
+
+if hdi em(k) == hsjdem(k) & hdi em(k) == 1 then
+
+8:
+
+Hreduced ← Hreduced ∪ hsjdem
+
+9:
+
+Oreduced ← Oreduced ∪ ojsdem
+
+10:
+
+map ← map ∪ {j}
+
+11:
+
+break
+
+12:
+
+end if
+
+13: end for
+
+14: end for
+
+15:
+
+▷ Exhaustive search over
+
+the reduced matrix Hreduced to decompose the detector error model column, hdi em. colsr refers to the number of columns of Hreduced = (hr1educed, · · · , hrcoeldsurced). Vectors eidem, em reduced refer to the error vectors associated to the
+i and m columns of their respective parity check matrix. 16: ai ← ∅
+
+17: for j ← 1 to colsr do
+
+18: combs ← GetCombinations([1, 2, · · · , colsr], j)
+
+19:
+
+for k ← 1 to
+
+colsr j
+
+do
+
+20:
+
+dec ← m∈combs(k) hrmeduced
+
+21:
+
+edec ← m∈combs(k) ermeduced
+
+22:
+
+lsdem ← Oreduced · edec
+
+23:
+
+ldem ← Odem · eidem
+
+24:
+
+if (dec == hdi em & lsdem == ldem then
+
+25:
+
+ai = ones(map(combs(k)))
+
+26:
+
+break
+
+27:
+
+end if
+
+28:
+
+if ai ≠ ∅ then
+
+29:
+
+break
+
+30:
+
+end if
+
+31: end for
+
+32: end for 33: return ai
+
+sparsified parity check matrix of interest. The exhaustive
+
+search approach seems to be demanding due to the fact
+
+that the combinatorial number
+
+colsr j
+
+increases very fast
+
+with j. Importantly, this is done in a pre-processing stage
+
+and has no impact in the latency of the decoder. Note
+
+15
+
+also that detector error model matrices have a periodic structure from round to round, as it can be seen in Figure 1 of [19], implying that the processing can be done for a single propagation round and then extrapolate the rest of the transfer matrix [42]. It is not within the scope of this work to optimize this decomposition, but to show that doing this kind of reduction to a sparsified noise model is beneficial to decode over circuit-level noise. Aiming at the best decomposition and finding better ways to search for those, e.g. using stabiliser simulators such as Stim, is considered future work.
+
+Regarding the timing analysis, we decode 20, 000 shots using both BP+OSD-0 and BP+BP+OTF (the same shots for both of them) and measure the time required to obtain a recovery. For the ensemble version of BP+BP+OTF we define the decoding time as the time required by the first decoder of the ensemble that reaches a solution because the ensemble can be run in parallel. All simulations have been run single-threaded on an Intel Core i9 based laptop.
+Appendix D: Circuit-level noise model
+
+Appendix C: Numerical simulations
+Monte Carlo computer simulations of the bivariate bicycle codes have been performed with the objective of obtaining the performance curves (logical error rate). The circuit-level noise simulations have been done the following way. The sampling of the errors arising due to the noisy stabiliser circuit noise has been done by means of Stim [28]. Stim considers the check measurements upon a set of syndrome extractions altogether with a final measurement of the data qubits. We consider dc syndrome extraction rounds, where dc is the distance of the QEC. We also use the SlidingWindowDecoding [19] Github repository for constructing the Stim syndrome extraction circuits and obtain the circuit-level noise parity check and observable matrices of the bivariate bicycle codes. The decoder uses those to resolve the syndrome and return an error, which is later compared to the logical action of the Stim error.
+The operational figure of merit we use to evaluate the performance of these quantum error correction schemes is the Logical Error Rate per syndrome cycle, i.e. the probability that a logical error has occurred after the recovery operation per syndrome extraction round [5].
+Regarding the software implementations of the decoders used perform the numerical simulations have been: the BP+OSD implementation in the LDPC Github package [14, 26] (with slight modifications for handling circuit-level noise [5]) and our implementation for the proposed decoder can be found in the following Github https://github.com/Ima96/BPOTF.
+We also use a decimation parameter to determine how aggressively the OTF is decimated from the sparsified detector model. For bivariate bicycle codes, we observed that leaving a small probability for the nodes that do not belong to the OTF improves convergence and, thus, we set said decimation parameter at 1e − 9. For surface codes, convergence is assured over the OTF graph, which implies that the best scenario is to set the parameter to 0 and fully decimate the sparsified detector model.
+Furthermore, we observe that it is important to clip the propagated values of posteriori information from the DEM to the sparsified detector model for the sake of numerical stability. In this work, we set the clipping range at [10−80, 1.0 − 10−80].
+
+We consider the standard depolarizing (unbiased) circuit-level noise model [4, 5, 19, 33] that consists of:
+• Noisy single qubit gates: those are followed by a Pauli operator, {I, X, Y, Z}, sampled independently with probabilities pX = pY = pZ = p/3 and pI = 1 − p.
+• Noisy two-qubit gates: those are followed by a two-qubit Pauli operator, {I, X, Y, Z}⊗2, sampled independently with probability p/15 for the nontrivial operators and pI⊗2 = 1 − p.
+• State preparation: state preparations are followed by a Pauli operator which may flipped the state to its orthogonal one with probability p. Note that this reduces to substituting the preparation of the |0⟩ state by |1⟩ and the preparation of the |+⟩ state by |−⟩, each with probability p.
+• Measurements: the outcomes of measurements are flipped with probability p.
+• Idle locations: those are followed by a Pauli operator, {I, X, Y, Z}, sampled independently with probabilities pX = pY = pZ = p/3 and pI = 1 − p.
+Appendix E: Statistics of the timing results
+In the main text, we presented the mean average time of BP+BP+OTF and BP-OSD-0 to show the speed improvement that our implementation of the decoder offers. However, the statistics of the decoding times are also interesting for elucidating the behavior of both decoders. Figure 6 shows the histograms of the decoding times obtained from 20, 000 shots for the [[288, 12, 18]] bivariate bicycle code. We do so for the physical error rates p = 0.003 and p = 0.004. We select the bigger bivariate bicycle code due to the fact that it is the most demanding code.
+In such figure, we can observe that BP+OSD-0 shows a clear bimodal distribution (note the peak at the right of Figures 6b and 6d) as discussed in [20]. The distributions for the BP+BP+OTF show to be more complex, with a couple of peaks. The reason for this is the fact that we used an ensemble version of the decoder to mitigate the
+
+16
+
+Relative Frequency
+
+0.08
+
+0.08
+
+0.07
+
+0.07
+
+0.06
+
+0.06
+
+Relative Frequency
+
+0.05
+
+0.05
+
+0.04
+
+0.04
+
+0.03
+
+0.03
+
+0.02
+
+0.02
+
+0.01
+
+0.01
+
+0.00
+
+0.00
+
+10−4
+
+10−3
+
+10−2
+
+10−1
+
+100
+
+101
+
+10−4
+
+10−3
+
+10−2
+
+10−1
+
+100
+
+101
+
+Decoding time per round (s)
+
+Decoding time per round (s)
+
+0.035 0.030 0.025
+
+(a) BP+BP+OTF at p = 0.003.
+
+0.035 0.030 0.025
+
+(b) BP+OSD-0 at p = 0.003.
+
+Relative Frequency
+
+Relative Frequency
+
+0.020 0.015 0.010
+
+0.020 0.015 0.010
+
+0.005
+
+0.005
+
+0.000
+
+0.000
+
+10−4
+
+10−3
+
+10−2
+
+10−1
+
+100
+
+101
+
+10−4
+
+10−3
+
+10−2
+
+10−1
+
+100
+
+101
+
+Decoding time per round (s)
+
+Decoding time per round (s)
+
+(c) BP+BP+OTF at p = 0.004.
+
+(d) BP+OSD-0 at p = 0.004.
+
+Figure 6: Runtime distributions of BP+BP+OTF and BP+OSD-0 for the [[288, 12, 18]] bivariate bicycle code. a) and c) show BP+BP+OTF at p = 0.003 and p = 0.004, respectively. b) and c) show BP+OSD-0 at p = 0.003 and
+p = 0.004. The data is separated into time-bins with width that grows logarithmically with decoding time.
+
+negative effects of the oscillations of BP a posterioris. However, the spread in this case is much smaller than that shown by BP+OSD-0, indicating that the decoder is faster not only in average, but in all cases. Finally, an important thing here is that the BP implementation we used runs serially, as commented on in the main text. Thus, a fully parallelized implementation would make the distributions for BP+BP+OTF to drift to the left as the full decoder is based on BP. On the contrary, for BP+OSD-0 such an implementation would make the timing associated to BP to drift left leaving the OSD-0 peak unchanged.
+
+Appendix F: Running BP+OSD-0 on the sparsified detector model and a two stage BP+BP+OSD-0
+As stated in the main text, a natural question arising from the sparsification technique we propose is how much information is lost when doing so. In fact, this technique can also understood as compressing the detector error model. In principle, the rank of the matrices defining both models should be the same by construction, so all possible faults and detectors can appear in both models. Anyway, in order to understand this, we conduct the following simulations for the bivariate bicycle codes in [5] and compare those to the standard BP+OSD-0 (with 10, 000 maximum minimum-sum BP iterations) running
+
+17
+
+logical error rate per round logical error rate per round
+
+10−1 10−2 10−3
+
+[[72, 12, 6]] [[108, 8, 10]] [[144, 12, 12]] [[288, 12, 18]] BP+OSD-0 SDEM BP+OSD-0 DEM
+
+10−1 10−2 10−3
+
+[[72, 12, 6]] [[108, 8, 10]] [[144, 12, 12]] [[288, 12, 18]] BP+BP+OSD-0 BP+OSD-0
+
+10−4
+
+10−4
+
+10−5
+
+10−5
+
+10−6
+
+10−3
+
+physical error rate
+
+(a) BP+OSD-0 over DEM vs BP+OSD-0 over sparse model.
+
+10−6
+
+10−3
+
+physical error rate
+
+(b) BP+OSD-0 over DEM vs BP+BP+OSD-0.
+
+Figure 7: Performance of BP+OSD-0 when operating over the sparsified detector model. a) We compare the standard BP+OSD-0 running over the full DEM with BP+OSD-0 only over the sparsified detector model. Several orders of magnitude are lost in logical error. b) We compare the standard BP+OSD-0 running over the full detector error model with the two-stage BP and an OSD-0 post-processor, i.e. BP+BP+OSD-0. 90% of BP iterations are
+run on the sparsified model. We observe matching accuracy. The shading highlights the region of estimated probabilities where the likelihood ratio is within a factor of 1, 000; similar to a confidence interval.
+
+over the full DEM:
+• BP+OSD-0 fully over the sparsified detector model. Here, we are oblivious to the fact that there is a DEM that has a richer information about how the faults behave at the circuit-level and directly attempt decoding over the sparsified detector model. We just map the priors using the transfer rule discussed in the text. The maximum number of minmum-sum BP iterations is set to 10, 000.
+• Leveraging the two-stage BP proposed, resulting in a BP+BP+OSD-0 decoder. We set up the BP+BP decoder discussed in the main text running 1, 000 and 9, 000 maximum minimum-sum BP iterations over the DEM and the sparsified detector model, respectively.
+Figure 7 shows the obtained results. For the first case, it can easily be observed that being completely oblivious to the fact that we are compressing a bigger model results in a significant degradation in logical error rate. Interestingly, the decoder would still work and shows logical error rate reduction with code distance, but the performance is not on par with that of decoding over the full DEM. Another interesting thing that we observe by doing this relates with the mean time required for decoding. Note that, even if the sparsified detector model is significantly smaller than the DEM (recall that their sizes are around 30% of the full model), we observed very similar mean decoding times for both scenarios. We consider that this
+
+comes from the fact that even if the model is smaller, the solutions to the problem will involve more columns of the sparsified model, indicating that both BP and OSD-0 will require some more time, resulting in the same thing as running the decoder over a much bigger model.
+However, the second scenario resulted to be much more interesting. In Figure 7b, we can see that the performance of the BP+BP+OSD-0 decoder matches the one of BP+OSD-0. This is done by running just 10% of the BP iterations over the full DEM. Furthermore, we measure that the BP+BP+OSD-0 requires 3× less average decoding time than its counterpart. This comes from the fact that even if the smaller model requires solutions with higher weight, the BP iterations over the DEM and the transference to the sparsified model bias the solutions enough for faster convergence. This information that we get from the BP iterations over the DEM and their appropriate transference to the sparsified model does also explain why this decoder is able to match the accuracy of the BP+OSD-0 decoder. To sum up, the sparsified detector model can get enough information if some BP rounds are run over the full DEM. We consider that many other decoding proposals can benefit of this fact to improve their speed or to operate properly over circuit noise if they showed promise over phenomenological noise models but failed to escalate further.
+
+18
+
+a)
+
+b)
+
+c)
+
+d)
+
+e)
+
+!
+
+!
+
+!
+
+!
+
+!
+
+Figure 8: Representation of the process of finding an ordered Tanner forest for a specific syndrome in a surface code. In a) the syndrome is presented. In b) an ordered Tanner forest implementing Kruskal’s algorithm directly in the Tanner graph can be seen. The red lines portray the variable nodes that will prevent the BP process from converging. In c) a virtual check presented on the top is introduced to the Tanner graph so as to run a Kruskal
+algorithm on it. In d) a Tanner forest is found which is then used in e) for finding an error recovery, also represented with a red line.
+
+Appendix G: OTF in surface codes, considerations and virtual checks
+The nature of surface codes prevents the OTF algorithm from being implemented directly into the parity check matrix. This is because variable nodes in the boundaries only have a single adjacent check. To the eyes of the modified Kruskal algorithm, variable nodes connected to a single check node cannot produce loops as it would require two adjacent checks with the same root. Consequently, all variable nodes adjacent to a single check will be accepted into any Tanner forest. This will produce a heavy detriment to the task of the second BP, as some sets of variable nodes can produce trapping
+
+sets that will prevent the second BP algorithm from preventing.
+Fortunately, one can circumvent this phenomenon for surface codes by including a virtual check to the Kruskal graph algorithm. This is a check only considered in Kruskal’s algorithm section that is adjacent to all variable nodes which have parity check column weight 1. Including this check allows the Kruskal algorithm to avoid trapping sets consisting of boundary variable nodes. Figure 8 portrays the inclusion of the check node when implementing Kruskal’s algorithm for surface codes. For the simulations of surface codes, we have considered two different virtual checks, one for each different independent Tanner graph.
+
+

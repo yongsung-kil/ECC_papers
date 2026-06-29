@@ -1,0 +1,477 @@
+LDPC Code Construction with Flexible Hardware Implementation
+
+Dale E. Hocevar
+DSP Solutions R&D Center Texas Instruments — Dallas, TX
+
+Abstract–This paper presents an LDPC code construction tech-
+nique for irregular codes of various block sizes and code rates,
+thus obtaining the performance benefit of irregular distributions. It represents an extension of the methods presented by Sridhara
+et al. [7] for regular codes. More importantly, an efficient and
+practical decoder architecture is also presented that achieves flexibility in block size and code rate for this broad family of
+codes, a capability not present in other approaches. This decoder
+can also achieve a high degree of parallelism, thus exploiting one of the benefits of belief propagation.
+I. INTRODUCTION
+LDPC codes are receiving an ever-increasing amount of attention due to their excellent performance and the simplicity of iterative decoding. They can provide performances that can be quite close to Shannon’s limit; but what may be more important is that the decoding algorithm can allow for a very large degree of parallelism that can be exploited in the decoder. This is difficult for turbo decoders. Also, as compared to turbo codes, the decoder implementations for each are quite different. Turbo codes are based upon trellis structures provided by the convolutional codes and this provides a simplifying organization for the implementation. This is not the case in general for LDPC codes as there are many ways to generate these codes, some completely random, others full of structure.
+LDPC code decoders are not necessarily simple to implement in hardware though there is an efficient iterative decoding algorithm called belief propagation that can be used [1] & [2]. Some approaches apply constraints or structure to the codes to facilitate building the decoder. Two such works are important since they provide some useful approaches towards such implementations, [5] & [6]. Alternately, others have simply hardwired all connections of a particular code to achieve amazing levels of parallelism, [3]. However, the practical approaches thus far have been limited to a single code or a small selection of codes. What is more desirable is a set of codes for various block sizes and code rates together with a single flexible decoder that can decode any of these codes. This would include the capability of the decoder to be designed for various degrees of parallelism.
+This paper presents one solution to this problem. First we will discuss a construction technique for irregular LDPC codes that have desirable properties as related to a flexible hardware implementation. These codes are based upon the SFT approach in [7] and exhibit very good error correction performance and can be designed for various block sizes and code rates. An overall concept for a flexible hardware decoder is given that solves many of the implementation problems with such decoders such as routing and addressing. Various concepts will be
+
+discussed for achieving high levels of parallelism and for achieving flexibility in block sizes and code rates.
+II. IPP CODES: IRREGULAR PARTITIONED PERMUTATION LDPC CODES
+A recent construction technique has been given by Sridhara, Fuja and Tanner (SFT), [7]-[8], for regular LDPC codes. First we’ll give a quick overview of the SFT construction method for regular LDPC codes.
+The SFT method accommodates a variety of code rates and block sizes and is based on simple permutation matrices. Their approach constructs a block structured parity check matrix H whereby each block is from a subclass of square permutation
+matrices and all have the same dimensions, m × m, where m is
+a prime number. Each permutation matrix is an identity matrix whose rows have been circularly shifted by a set amount. Assume H has j rows of blocks and k columns of blocks. Each block’s shift value is given by the expression bsat mod m where 0 ≤ s < j , 0 ≤ t < k , and (s, t) denotes the block’s location.
+Generator a is chosen to have multiplicative order k, likewise b has order j.1 A quasi-cyclic, regular (j, k) LDPC code with rate
+R ≥ 1-(j/k) and codeword size m⋅ k is thus constructed. Their
+error performance results compare very favorably with the best regular LDPC codes.
+We have devised a modified code construction technique that produces a block structured parity check matrix for irregular LDPC codes of nearly any code rate and that is based upon the method found in [7]. Our irregular LDPC code construction method uses optimized degree distributions [2].
+To get the best performance, irregular LDPC codes with optimized degree distributions and with no, or very few, short cycles are necessary. The SFT codes have good girth properties, but they are regular codes, and as such their performance will not compare favorably to comparable irregular codes. However, one can construct irregular codes that perform very well by reworking the SFT approach. A very rough description of our approach follows. Choose the parameters needed that will work for your problem, optimize the degree distributions, construct a matrix of dimensions j×k that is populated largely with 0’s and sparsely with 1’s such that it closely matches the desired distributions,2 and lastly, replace each 0 with an m×m matrix of zeros and replace each 1 with the corresponding SFT circularly shifted permutation matrix for that position. The result is your parity check matrix. This method has a little similarity at the block level to the approach given in [10].
+1 This means j is the smallest positive integer such that aj = 1 mod m. 2 We will call this the macro matrix form of H.
+
+0-7803-7802-4/03/$17.00 © 2003 IEEE
+2708
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:25:25 UTC from IEEE Xplore. Restrictions apply.
+
+For the first step and for the desired code rate, decide upon the largest variable degree that will be allowed. Larger is usually better, but it needs to be constrained because it affects the architecture as will be seen later. This size is also determined in conjunction with the choice of a prime m and the existence of generators a and b with multiplicative orders k and j, respectively, that all fit together to create the parity check matrix of the desired code rate and block size. In particular, this largest variable degree needs to be less than or equal to number of block rows, j, in the final matrix. Once this has been decided, the degree distributions can be optimized as described in [2] or related works. The step for constructing the j×k matrix of 1’s and 0’s is largely an art at this point, though we do have patterns that have worked well and that have further advantages in the architecture.
+Many codes have been constructed for rates ¼, 1/3, ½, ¾, and 9/10, but here only one example will be shown; it’s for R = 1/2. For this case we set the max variable degree at 11 as this harmonized with a macro matrix size of 12×24 for which valid generator elements existed for m = 193. Fig. 1 shows one choice for the H macro matrix for this case. The optimized degree distribution cannot be followed exactly due to quantization but we try to match the column weights as best we can first. The overall H matrix dimensions are 2316×4632.
+Although the SFT method provides a good way to define the value for each cyclic shift, this method is not the only way. A variety of other means for defining these shifts can be used, and in general can provide more freedom in parameter choices and code performance. We call this broad family the irregular partitioned permutation (IPP) codes.
+Fig. 2 shows the BER curves together with two other block sizes using the same macro matrix; i.e., for different values m.3 These curves are compared against several other curves. The two curves on the right are regular LDPC codes of similar size; one from Rosenthal and Vontobel [10], and one from MacKay’s web site database of LDPC codes [11]. Note that our IPP codes are significantly better, even the smallest block size, at least above 10-5, and these codes are very close to the comparable 3G turbo codes.
+III. ITERATIVE DECODING ALGORITHM
+A brief review of the decoding algorithm is provided to facilitate the implementation discussion. LDPC codes typically use a form of iterative decoding starting with the soft-data received inputs from the channel. The algorithm is called belief propagation (BP), though it has other names such as message passing algorithm and sum-product algorithm. See [1] & [2].
+The BP algorithm internally has two value arrays containing log likelihood ratios, defined as L(c) = log(P(c=0)/P(c=1)), and pertaining to various probabilities needed in the computation. The first of these 2D arrays is L(qmj) and the second is Rmj where m is the parity check equation or row index and j is the bit or column index. The first array, L(qmj), is initialized to the channel input LLRs. Each iteration is a two-pass effort: L(qmj)
+3 In general for this example, any prime m could be used provided generators exist with orders 12 and 24.
+
+is used to compute the next Rmj which is then used to compute the next L(qmj).
+The log BP algorithm can be written as below.
+
+∑ Amj =
+
+Ψ(L(qmn ))
+
+(1)
+
+n∈N (m)
+
+n≠ j
+
+∏ smj =
+
+Sign (L(qmn ))
+
+(2)
+
+n∈N (m)
+
+n≠ j
+
+( ) Rmj = − smjΨ Amj
+
+(3)
+
+∑ L(qj ) =
+
+Rmj
+
+m ∈ M ( j)
+
++
+
+−2rj σ2
+
+(4)
+
+L(qmj ) = L(q j ) − Rmj
+
+(5)
+
+Above, M(j) is the set of check node indices for all such
+
+nodes connected to bit cj. And,
+
+−2r j
+
+σ2,
+
+is the LLR of the
+
+input channel probability for the jth bit. Similar to M(j) in na-
+
+ture, the set N(m) is the set of all bit indices for bits connected
+
+to check node m.
+
+The Psi function is defined as Ψ(x) ≡ log ( tanh(x / 2) )
+( ) and tanh() is given as tanh ( L 2) = eL − 1 eL + 1 . Also the
+
+Ψ(⋅) function is its own negative inverse: Ψ( Ψ(x) ) = − | x | .
+
+A full iteration of this algorithm entails computing the equa-
+
+tions from top to bottom for all m and j where an edge exists
+
+between check m and bit j. Initialization sets
+
+L(qmj ) = − 2rj σ 2, ∀m ∈ M ( j), ∀j , which is equivalent to
+
+setting these LLRs to zero and doing one start-up iteration.
+
+The terms L(qj) represent the output LLRs for the decoded bits. The hard decisions are made by slicing L(qj) as
+
+L(q j ) ≥ 0 ⇒ c j = 0 & L(q j ) < 0 ⇒ c j = 1 . (6)
+
+Usually the algorithm is run until the parity check equations
+
+are satisfied using the above hard decisions, or until a maxi-
+
+mum number of iterations is reached.
+
+A variation in the above algorithm results in a different way
+
+to compute the Rmj terms, shown below.
+
+∑ Rmj =
+
+[+] L(qmn )
+
+n∈N (m)
+
+(7)
+
+n≠ j
+
+Here the special LLR addition is defined as
+
+L(c2 )
+
+[+]
+
+L(c3 )
+
+≡
+
+log
+
+1+ eL
+
+e(L
+(c2 )
+
+(c2
++
+
+)+L(c3 ))
+eL(c3 )
+
+
+
+.
+
+(8)
+
+IV. DECODER ARCHITECTURE
+A. Overview of Target Architecture
+Some of the complications that arise when building an LDPC decoder for high data rates is the large amount of data I/O that is required assuming most algorithm values are stored in memories. Another is the indexing into the memories to get the necessary data at the correct time and also the routing of
+
+2709
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:25:25 UTC from IEEE Xplore. Restrictions apply.
+
+data between memories and computational units. These references provide some overview of these issues, [3], [4], [5] and [6].
+A new decoder architecture is described next that is similar at the top level to that from Boutillon et al. [6], and that also uses some concepts from Zhang et al. [5]. Our architecture is significantly different in several aspects as will be discussed and it has been devised to exploit the structural properties of our IPP codes discussed previously, though it is not limited to just these codes.
+Fig. 3 shows the top-level architecture. The R storage memory holds the Rij terms packed by rows. A single word holds all the elements for one row, or many rows, as we will expand upon later. At times this memory will simply be called the row memory and it can consist of a single or multiple memories. For this section, assume only single row processing.
+This architecture computes both algorithm passes simultaneously. The operations for computing the new Rij terms occur in the parity check update block (PCUB). This block performs the operations as in eqn.s (1), (2) and (3), or as in (7).4 The results are stored in the row memory. The inputs for these operations, L(qij), come from the parallel adder block. Here the previous Rij terms are read from the row memory and subtracted from the L(qj) terms that come from the reverse router block. This is in effect the operations from eqn. (5).
+In addition, these Rij terms are simultaneously fed into the router block which routes each single term to the appropriate bit update block. In these blocks the data is accumulated by bit as in (4) without the channel input term. Each block handles some predetermined subset of the codeword bits, though only one at a time, at least for now in the discussion. The memories within these bit update blocks will be called column sum memories. Notice that for this portion, data routing and addressing in the column sum memories are non-trivial operations in general. We will come back to this later.
+It is also necessary to test the parity check equations on each iteration as one stopping criterion. This can easily be done in our architecture. The decisions are easily formed in the parallel adder, then fed into the PCUB where the checks can be done as they are a trivial form of that parity update process.
+Fig. 4 details the structure of the bit update block. The two memories, A and B, operate in a ping-pong manner. One acts as part of the accumulator for new data while the other supplies last iteration’s data. The mux they feed is actually a crossswitch to facilitate their alternating operation. The adder on the right forms the rest of the accumulator and the following demux selects the receiving memory. While data flows out from last iteration, the channel data is added to this. In principal, only one set of addresses need be computed as the data is referenced by column number in all three memories and is used in the same sequence by both sides. In practice, address delay (or data delay) elements would be needed to align the processes in time.
+A rough outline of just one approach for the parity check update block (PCUB) is depicted in Fig. 5. Assuming the input
+
+is one single row, the data elements are sent to a parallel set of
+LUT’s for the Ψ(⋅) function. Each input element consists of L(qmj) and a hard decision cn, whereas, there are three outputs from each LUT block: an unsigned function value from LUT, sign of L(qmj) and hard decision. These then flow through an augmented adder tree that sums the function values, multiplies the signs together (Exc.–Or), and forms the Exc.–Or of the hard decisions. The following parallel set of adders then subtracts the necessary terms to complete computation for (1). Another parallel bank of LUTs and appropriate sign adjustment completes eqn. (3). The results are now ready to be sent out of the block. Rows with fewer terms than the width of the above datapath pose no problem since the unused portions are easily nullified. Rows with too many terms require alteration to the PCUB as discussed later. The outline above is simply a straightforward implementation of the equations (1), (2) and (3); it is very similar to that given in [3].
+Alternatively, these parity check updates can be implemented by using blocks that compute eqn. (7) and various approaches towards construction can be taken. One such approach is given in [6]. In addition, this approach can be modified to operate very similarly to the full sum then subtract arrangement in Fig. 5 by also defining a special LLR subtraction, [12].
+To this point, the architecture we have been describing is very similar to that found in [6]. One main difference is that the R memory and parallel adder block are on the same side of the router as is the parity check update block in our approach. In [6] the parity check update block is on one side of the router and everything else is on the other side. They do this because they use every column group on each iteration and assume a straightforward 1:1 sequence order of terms from row data to column groups. Hence their router block does all the work in arranging the data. Our approach does not need to use all column groups and can achieve a wider variation in the number of terms per row equation. We do not need to use random address generators for the column sum memories (bit update blocks), nor a random permutation generator for the router, as they do.
+So, the question could be asked, ‘What forms of LDPC codes will map onto the architecture we have described?’ Certain assumptions concerning this have been made. It is assumed that the codeword bits, or columns of H, have been partitioned into several groups, each one corresponding to a bit update block. In addition, for any single row of H, at most one entry exists in any column group. The matrix H would be reordered to match this column grouping.
+What are the consequences of these assumptions and actions? First, on any cycle, a bit update block has at most one data item. This in itself simplifies the router.5 But in addition, due to the reordering, the router has other restrictions. Namely, the order of data elements that it is fed does not change when passing through the router.6 Since the number of data elements will be the same as, or less than, the number of update blocks, but never by much, the router is even more restricted in the number of paths it must be able to realize. Hence, the routing is
+
+4 We will often simply refer to the operations in (1), (2) and (3) as the row operations; similarly for (4), with or without (5), as the column operations.
+
+5 When we speak of router in general, we also mean the reverse router. 6 We mean the sequence of data items in the data word. This order is unaltered by the router w.r.t. the left to right ordering.
+
+2710
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:25:25 UTC from IEEE Xplore. Restrictions apply.
+
+significantly simpler than in [6]. The routing needed for our one example is given in Fig. 6; we’ll explain the reduction to 9 sections later.
+B. Architectural Aspects Specifically for IPP Codes
+It can be seen that the IPP codes presented earlier match the assumptions for our architecture just discussed. Each column in the macro matrix expands into a block column in the parity check matrix, likewise for the rows. So each block column can be mapped to its own bit update block with column sum storage (Fig.s 3 and 4). Another key advantage for IPP codes is that of column addressing.
+The idea for simple column addressing in Fig. 4 lies in fact that our permutation matrices have a certain structure; namely, they are circularly shifted identity matrices. To utilize this fact note that since the rows are done in sequence, the columns will be as well, only there will be a starting offset and the sequence will wrap around modulo m. By storing the entry for each column linearly in its memory, addressing becomes a trivial counter. Note that Zhang et al. exploited the same property when they used circularly shifted identity matrices, [5].
+C. Advancing Beyond the Basic Architecture
+Many extensions beyond the basic architecture are known, but there is only space to briefly mention those most important.
+1) Parallel Row Computation: Thus far, only parallelism within a single row has been exploited. Many row operations can be performed in parallel however, and for the IPP codes this can be done fairly simply. Again, properties due to the simple form of the permutation matrices can be exploited. Assume several rows in sequence within a row block are to be operated upon in parallel; let’s say w rows. Recall that their corresponding columns, considering just one macro matrix connection, are also sequential, modulo m. So, one can use wider words in the column sum memories so that each word holds w entries. For this macro connection, the row updates produce w terms and the column summing can handle w terms. However, it is not nearly this simple as there are alignment issues; but these can be handled with store and shifting hardware.
+This multiple row computation requires that w rows be stored as a single word in the row memory. The computational portions of the parity check update block, parallel adder block, bit update blocks, and the data path of the router and reverse router would all have to be duplicated w times. But the decoding speed would increase by a factor of w.
+2) Column Grouping & Simplified Routing: A further benefit of these codes is realized by forming sections of the column blocks. This reduces the number of bit update blocks, which more importantly reduces the number of individual memories. Notice in Fig. 1 the partitioning of the macro matrix into 9 segments. In any segment, at most there is one column connection per row. So, all column blocks for any section can be grouped into a single bit update unit containing just the three memories as in Fig. 4. Overall memory size in bits remains the same, however, a large decrease in the number of memories is
+achieved. For Fig. 1, only 9×3 = 27 memories are now needed versus 24×3 = 72 without this grouping. This also simplifies the router as previously shown in Fig. 6.
+
+3) Flexibility for Block Sizes and Code Rates: These codes can be designed for various block sizes, macro matrix definitions and code rates. The architecture also can be built in a flexible manner to accommodate these. Variations in the block size for a fixed macro matrix can be handled with addressing and alignment flexibility in the bit update blocks. Varying the macro matrix structure further requires more paths in the router blocks and memory allocation changes in the bit update blocks. Designing for multiple code rates is more difficult as the change in ratio of matrix dimension changes the ‘dimensions’ of the hardware blocks. This issue only becomes difficult when the range of desired code rates is large. In particular, for long rows, hardware sharing and flexible restructuring are needed in the row memory, PCUB and bit update blocks.
+V. CONCLUSIONS
+A construction technique for irregular LDPC codes that is a modified form of the SFT method [7] was presented. A practical architecture was shown that exploits the structure of these IPP codes. With this approach it is possible to attain the performance gain of irregular codes and the flexibility to handle various block sizes and code rates. It can also achieve a high degree of parallelism thus enabling very high data rate and flexible decoders. A structured code approach was adopted to help solve the difficult LDPC decoder implementation issues. Future work will entail further code design and evaluation methods and alterations to the basic IPP approach.
+REFERENCES
+[1] D.J.C. McKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. on Info. Theory, vol. IT-45, pp. 399-431, March 1999.
+[2] T.J. Richardson, M.A. Shokrollahi and R.L. Urbanke, “Design of Capacity–Approaching Irregular Low-Density Parity-Check Codes,” IEEE Trans. on Information Theory, vol.47, no.2, pp. 619-637, Feb. 2001.
+[3] A.J. Blanksby and C.J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol.37, no.3, pp. 404-412, March 2002.
+[4] G. Al-Rawi and J. Cioffi, “A highly efficient domain-programmable parallel architecture for iterative LDPCC decoding,” Proc.: Int’l Conf. on Info. Technology: Coding and Computing (ITCC), LasVegas, NV, 2001, pp. 569-577.
+[5] T. Zhang and K.K. Parhi, “VLSI implementation-oriented (3,k)-regular low-density parity-check codes,” IEEE Workshop on Signal Processing Systems, Sept. 2001, pp. 25-36.
+[6] E. Boutillon, J. Castura and F.R. Kschischang, “Decoder-first code design,” Proc.: Int’l Symp. on Turbo Codes & Related Topics, Brest, France, Sept. 2000, pp. 459-462.
+[7] D. Sridhara, T. Fuja and R.M. Tanner, “Low density parity check codes from permutation matrices,” Conf. On Info. Sciences and Sys., The John Hopkins University, (1 page), March 2001.
+[8] R.M. Tanner, D. Sridhara and T. Fuja, “A class of group-structured LDPC codes,” ICSTA-2001 Proc., Ambleside, England, 2001.
+[9] J. Rosenthal and P.O. Vontobel, “Constructions of LDPC codes using Ramanujan graphs and ideas from Margulis,” Proc. Allerton Conf. on Comm., Control and Computing, Monticello, IL, pp. 248-257, Oct. 2000.
+[10] J. Rosenthal and P.O. Vontobel, “Constructions of regular and irregular LDPC codes using Ramanujan graphs and ideas from Margulis,” Proc. IEEE Int’l Symp. on Info. Theory, Washington, D.C., p. 4, June 2001.
+[11] D.J.C. MacKay. (2001). Encyclopedia of sparse graph codes. University of Cambridge, Cavendish Laboratory. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+[12] T. Bhatt, K. Narayanan and N. Kehtarnavaz, “Fixed point DSP implementation of low-density parity check codes,” Proc. of the 9th IEEE DSP Workshop, Hunt, TX, Oct. 2000, 4 pages.
+
+2711
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:25:25 UTC from IEEE Xplore. Restrictions apply.
+
+Bit Error Rate
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+11
+
+11 1
+
+11 1
+
+1
+
+11 1
+
+1
+
+11 1
+
+1
+
+11 1
+
+1
+
+11
+
+1 11 1
+
+1
+
+11 1
+
+1
+
+11 1
+
+1
+
+11
+
+1
+
+11 11
+
+11 11 1
+
+Figure 1. Parity check macro matrix for rate ½.
+
+10−1 10−2 10−3
+
+Constructed LDPC codes, R=1/2, Max Iter 50
+RV Regular, K=2448 Irregular Part’nd Perm., K=1164 Irregular Part’nd Perm., K=2316 Irregular Part’nd Perm., K=2892 3GPP Turbo, K=2048 3GPP Turbo, K=3072 3GPP Turbo, K=1146, TWolf MacKay (3,6),K=2000,50its
+
+10−4
+
+10−5 The curves go from left
+
+to right as block sizes
+
+decrease for curves
+
+10−6 with the same mark-
+
+ings and style, i.e.
+
+within the same family.
+
+10−7
+
+0.8
+
+1
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+Eb/No (dB)
+
+Figure 2. BER performance curves for IPP code example compared against 3G turbo codes and regular LDPC codes.
+
+R Storage
+Memory
+
+-
+
+Parallel Adder
+
+Block
+
++
+
+Parity Check Update Block
+
+Router & Reverse Router Blocks
+
+Bit Update Blocks
+(Column Summations)
+Recv’d Data Figure 3. LDPC decoder top-level architecture.
+
+To Reverse From Router Router
+Align/Shift Align/Shift
+
+Rec’vd Data
+Memory
+
+Column Sum
+Memory B A
+
+Address Generation
+
+Channel Input Data Figure 4. Architecture for bit update or column sum block.
+Input Word
+
+Ψ(·) LUT
+•••
+
+•••••
+•••
+
+Ψ(·) LUT
+•••
+
+Augmented
+
+Adder Tree
+
+•••
+
+•••
+
+-
+
+•••
+-
+
+•••
+
+•••
+-
+
+-
+
+Ψ(·)
+
+•••••
+
+Ψ(·)
+
+LUT
+
+LUT
+
+±
+
+±
+
+Output Word
+Figure 5. Architecture for parity check update block – PCUB; version for single row processing.
+Data terms 1 2 3 4 5 6 7 8 from one row
+
+2a 2b 3a 3b 3c 4 11a 11b 11c
+Figure 6. Simplified data routing for one example.
+
+2712
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:25:25 UTC from IEEE Xplore. Restrictions apply.
+
+

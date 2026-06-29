@@ -1,0 +1,1829 @@
+arXiv:2605.01942v1 [cs.IT] 3 May 2026
+
+Combinatorial Analysis of Dyadic and Quasi-Dyadic Codes
+Anthony Gómez-Fonseca 1, Gretchen L. Matthews ∗2, Kirsten D. Morris 2, and Tefjol Pllaha 1
+1Department of Mathematics & Statistics, University of South Florida, Tampa, FL USA {agomezfonseca, tpllaha}@usf.edu
+2Department of Mathematics, Virginia Tech, Blacksburg, VA USA {gmatthews, kdmorris}@vt.edu
+Abstract
+Quantum low-density parity-check (QLDPC) codes offer a promising route to scalable faulttolerant quantum computation, but their performance under iterative decoding is strongly influenced by short-cycle structure and other harmful subgraphs in the associated Tanner graphs. This paper develops an algebraic framework for constructing and analyzing (Q)LDPC codes from dyadic and quasi-dyadic matrices—translation-invariant 2ℓ × 2ℓ binary matrices specified compactly by a signature row and forming a commutative ring with recursive block structure. Leveraging this structure, we relate cycles in lifted Tanner graphs to tailless backtrackless closed walks in the protograph and derive efficient, implementable methods to enumerate and control short cycles (notably 4-, 6-, and 8-cycles). We introduce dyadic-aware PEG-style construction algorithms that use forbidden sets of shifts to maximize attainable girth when possible and otherwise minimize the multiplicity of the shortest cycles at the target girth. Motivated by error-floor phenomena, we further characterize and explicitly enumerate absorbing sets in key dyadic layout boundary cases, identifying configurations that induce abundant (a, 0)-absorbing sets. Finally, we propose CSS-oriented dyadic constructions that satisfy commutation constraints by design and demonstrate via belief-propagation simulations that reducing short-cycle multiplicity can yield substantial decoding gains even when girth cannot be increased.
+1 Introduction
+Quantum error correction is a central prerequisite for scalable quantum computing, and the current momentum around quantum low-density parity-check (QLDPC) codes reflects a broader push toward code families that combine strong protection with implementable, sparse stabilizer measurements. In the CSS framework, this reduces to constructing sparse parity-check matrices HX and HZ that satisfy the commutation constraint HZHX⊤ = 0 while still producing Tanner graphs with favorable combinatorial structure—especially large girth and controlled populations of short cycles. Short cycles are well known to degrade iterative decoding and to raise the error floor; moreover, in quantum settings, they can exacerbate syndrome-based iterative decoder failures through small problematic substructures [1, 2].
+In this work we study—and exploit—the algebraic structure of dyadic and quasi-dyadic matrices to build and analyze families of (Q)LDPC codes. A dyadic matrix D ∈ F2N×N (with N = 2ℓ) is
+∗G. L. Matthews is partially supported by NSF DMS-2502705 and the Commonwealth Cyber Initiative.
+1
+
+determined by a signature row σ(D) via the translation-invariant rule Dx,y = D0,x+y, yielding a commutative ring with strong recursive block structure. This dyadic framework provides two key advantages for code design: (i) the lifting factor is naturally a power of two, and (ii) products and sums of dyadic permutation matrices encode walk composition in lifted Tanner graphs through simple “permutation shifts.” These features make dyadics an appealing substrate for protographbased constructions and for CSS constraints, while enabling a level of cycle accounting that is typically costly for unstructured LDPC ensembles [3, 4].
+Our first contribution is a cycle and girth analysis toolkit specialized to dyadic and quasi-dyadic lifts. We connect cycles in the lifted Tanner graph to tailless backtrackless closed (TBC) walks in the protograph and show how powers of the (block) adjacency matrix enumerate protograph walks whose permutation-shift labels determine whether they lift to genuine cycles. Building on this correspondence, we derive efficient counting strategies for short cycles—starting with explicit, implementable conditions and formulas for enumerating 4-cycles in both single-dyadic and protographbased quasi-dyadic constructions, and extending the analysis to 6- and 8-cycles. These counts are not merely descriptive: they become design constraints and objective functions for construction and optimization [5, 6].
+Second, we introduce dyadic-aware PEG-style construction methods that leverage “forbidden sets” of permutation shifts to avoid (or delay) the formation of short cycles during matrix assembly. Because choosing a single 1 in a dyadic signature row induces an entire dyadic permutation block, dyadic lifting changes the effective granularity of edge placement—and this, in turn, allows a substantial reduction in construction complexity compared to applying PEG directly to the full lifted Tanner graph. We present practical algorithms that (i) maximize attainable girth when possible and (ii) further minimize the number of short cycles at the target girth when avoidance is no longer feasible [5, 7].
+Third, motivated by the role of harmful substructures in iterative decoding, we analyze absorbing sets in Tanner graphs arising from dyadic layouts. We characterize boundary cases (e.g., m × 1 and 1 × n arrays of dyadic permutations) and identify configurations that yield disconnected unions of complete bipartite components, for which absorbing sets can be enumerated explicitly. This clarifies when dyadic structure may inadvertently introduce an abundance of (a, 0)-absorbing sets and when certain layouts can be ruled out due to unavoidable problematic combinatorics [1, 8].
+Finally, we propose and evaluate CSS-oriented code constructions from dyadic permutations that naturally satisfy commutation constraints through structured pairing and permutation choices, and we compare them to recent quasi-dyadic CSS constructions whose Tanner graphs inevitably have girth four. Using belief-propagation simulations as a proof of concept, we demonstrate that even when girth cannot be increased, reducing the multiplicity of the shortest cycles can yield substantial decoding gains; when larger girth is achievable, combining girth control with short-cycle minimization improves performance further [9, 10].
+This paper is organized as follows. This section concludes with a review of notation to be used throughout the paper. Section 2 reviews dyadic matrices, protograph-based LDPC codes, and CSS stabilizer prerequisites. Section 3 details the code constructions studied in this paper. Section 4 develops the dyadic/protograph TBC-walk framework and presents explicit cycle-counting results and algorithms. Section 5 studies absorbing sets in dyadic-induced Tanner graphs. Section 6 presents some simulation comparisons. Section 7 concludes with open directions, and Appendix A contains additional short-cycle enumerations beyond the main text.
+Notation. All vectors will be row vectors and will be denoted with bold letters. Matrices will be denoted with italic capital letters. The all-zero and all-one vectors in F2n will be denoted 0n and 1n, respectively. The zero matrix and the all-one matrix will be denoted 0n and 1n, respectively.
+2
+
+The subscript will be dropped when the context is clear. The row space and the (right) kernel of
+a matrix A will be denoted rs(A) and ker(A), respectively. The space of binary m × n matrices is denoted by F2m×n. Given A ∈ Fm2 ×n, the entry of A in Column i and Row j is denoted by Ai,j. The transpose of A is denoted by A⊤. We will use the notation [n : m] := {n, n + 1, . . . , m} and
+[n] := [1 : n]. A binary linear [n, k] code C is a k-dimensional subspace of Fn2 . We will use the term code
+to mean binary linear code. The parameter n is called the length of the code. The support of a vector x ∈ Fn2 is supp(x) := {i ∈ [n] | xi ≠ 0}. The Hamming weight of a vector x is wt(x) := |supp(x)|, and the Hamming distance of C is d(C) = min{wt(x) | x ∈ C, x ≠ 0n}. If the code has Hamming distance d, then it is called an [n, k, d] code. For a code C, a matrix M is called
+a generator matrix if rs(M ) = C and a parity-check matrix if ker(M ) = C. Note here that we require
+neither generator matrices nor parity-check matrices to be full rank. The dual of C is defined as C⊥ := {x ∈ F2n | xc⊤ = 0, for all c ∈ C}. We have that dim(C⊥) = n − k. By the definition, it follows that a generator matrix of a code is a parity-check matrix of its dual and vice-versa, that is, C = rs(G) = ker(H) if and only if C⊥ = rs(H) = ker(G). A code C is called self-orthogonal (resp., self-dual) if C ⊆ C⊥ (resp., C = C⊥). Note that for self-dual codes we necessarily have k = n/2
+and self-dual codes of odd length cannot exist. Analogously, a code C is called dual-containing if C⊥ ⊆ C. Since (C⊥)⊥ = C, we have that C is self-orthogonal if and only if C⊥ is dual-containing.
+The focus of this paper is low-density parity-check codes (LDPC), that is, codes C = ker(H)
+where H is a sparse matrix.
+
+2 Preliminaries
+
+2.1 Dyadic Matrices
+Let ℓ be a natural number, and let N = 2ℓ. We will consider N × N binary matrices whose rows and columns will be indexed using elements of F2ℓ via the bijection
+
+ℓ
+
+x = (x1, x2, . . . , xℓ) ∈ F2ℓ ↔ x = 1 + xi2i−1 ∈ [N ].
+
+(1)
+
+i=1
+
+Given M ∈ F2N×N , under this bijection, the elements of Fℓ2−1 × {0} index the “left” half of columns and “top” half of rows, meaning columns [N/2] and rows [N/2] of M , whereas the elements of Fℓ2−1 × {1} index the “right” half of columns and the “bottom” half of rows, meaning columns [N/2 + 1 : N ] and Rows [N/2 + 1 : N ] of M .
+
+Definition 2.1. A matrix D ∈ FN2 ×N is called a dyadic matrix if its entries satisfy Dx,y = D0,x+y for all x, y ∈ Fℓ2. The signature of a dyadic matrix D, denoted σ(D), is the first row D0,• of D. For v ∈ F2N , we will denote by Dv the corresponding dyadic matrix with signature v, that is, σ(Dv) = v. A quasi-dyadic matrix is a block matrix where its blocks are dyadic matrices.
+
+It is well-known [3] that the collection of N × N dyadic matrices is isomorphic to the polynomial ring F2[x1, . . . , xℓ]/⟨x12 + 1, . . . , xℓ2 + 1⟩. This in turn immediately implies that the set of N × N dyadic matrices forms a commutative ring, which we will denote Dℓ. Beyond commutativity, we list
+some additional elementary properties below; see [4] and the references therein.
+
+Proposition 2.2. For N = 2ℓ, the following hold.
+
+3
+
+(1) The set of N × N dyadic matrices is
+
+Dℓ =
+
+A B
+
+B A
+
+A, B ∈ Dℓ−1
+
+where D0 = {[0] , [1]}, and | Dℓ |= 2N .
+(2) Dyadic matrices are symmetric. (3) The zero matrix and the identity matrix in F2N×N are dyadic. (4) Let D ∈ Dℓ. Then, D2 = 0N if wt(σ(D)) is even, and D2 = IN if wt(σ(D)) is odd. (5) For any u, v ∈ F2N , Du + Dv = Du+v.
+
+Notice that for any v ∈ FN2 ,
+
+Dv =
+
+Du Dw
+
+Dw Du
+
+.
+
+(2)
+
+where v = (u, w) with u, w ∈ FN2 /2.
+
+Remark 2.3. Let D ∈ Dℓ be a dyadic matrix. Then, by definition, supp(σ(D)) ⊆ [N ]. Under the
+
+bijection (1), we can view this support as a subset of Fℓ2. Along this line, for x ∈ F2ℓ , we will denote
+
+x˜ ∈ FN2 the indicator vector with 1 in position x and 0 else. Thus, {x˜ | x ∈ F2ℓ } is the standard
+
+basis of F2N .
+
+□
+
+Definition 2.4. A dyadic matrix D is called a dyadic permutation matrix if wt(σ(D)) = 1.
+
+Notice that for all x ∈ Fℓ2, Dx˜ is a dyadic permutation matrix. For emphasis, we write Px := Dx˜. Alternatively, we will also denote the same dyadic permutation as Px where x ∈ [N ] is the integer that corresponds to x via (1). Even though the set Dℓ is closed under multiplication, the signature of a product of dyadic matrices is not in general easily expressible in terms of the signatures of its
+factors. The next result shows that a nice expression is possible for dyadic permutation matrices.
+
+Proposition 2.5. Let x, y ∈ Fℓ2. Then supp(σ(D · Px)) = x + supp(σ(D)) for all D ∈ Dℓ. As a consequence, PxPy = Px+y.
+
+A code C is said to be dyadic (resp., quasi-dyadic) if it has a parity-check matrix that is dyadic (resp., quasi-dyadic). Such codes are reproducible, as defined in [11], and have compact representations. Indeed, it has a parity-check matrix that depends only on a single vector, its signature. We note that dyadic and quasi-dyadic codes may also have parity-check matrices that do not reflect this structure, since any matrix A with ker(A) = C is a parity-check matrix for C.
+
+2.2 LDPC Codes
+Let C be a quasi-dyadic LDPC code, either (dv, dc)-regular or irregular, with blocklength 2ℓ·nv based on the nc × nv protograph [12] described by the matrix B = (bij)nc×nv , where bij is a nonnegative integer for i ∈ [nc] and j ∈ [nv], and where [l] = {0, 1, . . . , l − 1}. Then C can be described by a (scalar) parity-check matrix H = (Hij)nc×nv , where each Hij, for i ∈ [nc] and j ∈ [nv], is a summation of bij (non-overlapping) 2ℓ × 2ℓ dyadic permutation matrices if bij is nonzero, and the 2ℓ × 2ℓ all-zero matrix if bij = 0. Graphically, this operation is equivalent to taking a 2ℓ-fold graph cover, or lifting, of the protograph. Here, N = 2ℓ is called the lifting factor.
+From the parity-check matrix H, we construct a bipartite graph G = (V, E), called a Tanner graph [13], by considering H as its biadjacency matrix. This bipartite graph represents the quasidyadic LDPC code C obtained from H. The set V is the set of vertices (or nodes) and E is the
+
+4
+
+set of edges. Label the vertices of G by va, for a = 0, 1, 2, . . . , |V | − 1, and the edges by eb, for b = 0, 1, 2, . . . , |E| − 1. Each edge eb has the form eb = (va, vc), for some va, vc ∈ V , and the vertices va and vc are called the endpoints of eb. A walk W of length m in the graph G is an alternating sequence W = v0e1v1e2 · · · vm−1emvm of vertices and edges such that el = (vl−1, vl) ∈ E for all 1 ≤ l ≤ m. The first vertex appearing in the alternating sequence, v0, is called the base point of W . A walk W is said to be closed if the two endpoints are the same, this is, when v0 = vm. A closed walk W is backtrackless if el ̸= el+1 for all l = 1, 2, . . . , m − 1. A backtrackless closed walk W is tailless if em ≠ e1, and W is called, in this case, a TBC walk. A cycle is a closed walk W having distinct vertices and distinct edges, and if its alternating sequence has k edges in it, then we call W a k-cycle. The length of a shortest cycle is called the girth of the graph.
+
+2.3 CSS Codes
+
+For a positive integer n, the Pauli group on n qubits Pn is generated by n-fold Kronecker products
+
+of the Pauli matrices
+
+I2,
+
+X=
+
+0 1
+
+1 0
+
+,
+
+Z=
+
+1 0
+
+0 −1
+
+,
+
+Y = iXZ.
+
+(3)
+
+Then, a stabilizer group S is a subgroup of Pn that contains only commuting matrices but not −I2n.
+
+If we write a stabilizer S in terms of its generators {s1, . . . , sk}, then the corresponding quantum stabilizer code is the 2n−k dimensional subspace of C2n consisting of all the states |ψ⟩ that are
+
+stabilized by all of the generators si, that is si|ψ⟩ = |ψ⟩.
+
+It is convenient to think of the Pauli matrices in terms of the binary representation I2 ↔ (0, 0),
+
+X ↔ (1, 0), Z ↔ (0, 1), and Y ↔ (1, 1). Then, any n-qubit Pauli matrix P ∈ Pn can be represented as
+
+p = (pX | pZ) ∈ F22n where pX, pZ ∈ Fn2 have ones at those positions where P has X and Z respectively.
+
+With this representation, a stabilizer group yields a full rank k × 2n matrix H = (HX | HZ). Two
+
+stabilizers commute if and only if their respective representations h = (hX | hZ), g = (gX | gZ) of H
+
+are orthogonal with respect to the symplectic inner product h ⊙ g := hXgZ⊤ + hZgX⊤. Cumulatively, this leads to
+
+H ⊙ H := HXHZ⊤ + HZHX⊤ = 0.
+
+(4)
+
+An important class of stabilizer codes are the Calderbank-Shor-Steane (CSS) codes [14, 15], defined by a pair of classical linear codes CX, CZ ⊂ Fn2 such that CX⊥ ⊂ CZ. This condition forces two respective parity-check matrices HX and HZ to satisfy HZHX⊤ = 0 and thus the matrix
+
+H = HX 0 0 HZ
+
+(5)
+
+satisfies (4) and defines a stabilizer code. If CX, CZ have parameters [n, kX, dX], [n, kZ, dZ] respec-
+tively, then the corresponding quantum code, which will be denoted Q(CX, CZ), has parameters [[n, kZ + kX − n, ≥ min{dZ, d⊥X }]] where dX⊥ denotes the minimum distance of CX⊥.
+A quantum LDPC (QLDPC) code then is a quantum code with low-weight stabilizers or equiv-
+alently sparse H matrix.
+
+3 Code Construction
+3.1 Discussion of dyadic and quasi-dyadic codes
+Before introducing specific constructions, we discuss some general properties of dyadic and quasidyadic matrices along with their built-in duality, which in turn makes them appealing to the CSS construction.
+5
+
+Theorem 3.1. Given a dyadic matrix D ∈ Dℓ, if supp(σ(D)) ⊆ F2ℓ is a subspace (or coset), then rank(D) = N/|supp(σ(D))|.
+
+Proof. Let S := supp(σ(D)) = supp(D0,•) = {x1, . . . , xω} be a subspace of Fℓ2 of dimension k. For the xth row of D, by definition, we have dx,y = d0,x+y. Thus we have that supp(Dx,•) = x + supp(D0,•); see also Proposition 2.5(b). Since S is a subspace, every row Dx,• of D is either supported on S if x ∈ S or on the coset x + S if x ∈/ S. Of course F2N is a disjoint union of 2ℓ−k = N/|S| cosets of size 2k. If S is subspace, then the first 2k entries in the signature σ(D)
+are ones. Thus, D can be put in block-diagonal form diag(12k , · · · , 12k ). If S is a coset, then by multiplying with a dyadic permutation as in Proposition 2.5, the resulting dyadic matrix will have
+the same block-diagonal form. Thus, there are N/|S| blocks and each block has rank 1, and the
+result follows.
+
+Corollary 3.2. Let D ∈ Dℓ. If wt(σ(D)) = 2 then rank(D) = N/2.
+
+Example 3.3. Let ℓ = 3 and N = 2ℓ = 8. There are 2N = 256 dyadic matrices. Half of them
+
+are full-rank, corresponding to signatures of weights 1, 3, 5 and 7; see Proposition 2.2(4). There are
+
+8 2
+
+signatures of weight 2 that yield 28 dyadic matrices of rank 4. It is also easy to verify that for
+
+v ∈/ {0N , 1N }, we have rs(Dv) = rs(Dv+1N ). Thus, there are 28 additional dyadic matrices of rank
+
+4 corresponding to signatures of weight 6. Including the extreme cases 1N and 0N , this accounts
+
+for 186 dyadic matrices. The remaining 70 correspond to signatures of weight 4. Recall that there
+
+are 7 subspaces of F23 of dimension 2. Along with the additional coset, we have 14 signatures that yield dyadic matrices of rank 2. The rest, that is the other 56, yield dyadic matrices of rank 4.
+
+Remark 3.4. It was shown in [4, Thm. 4.6] that if D is a dyadic matrix with support S such that
+x∈S x ≠ 0, then rank(D) = N/2. Recall also that if S is a subspace (or coset) of dimension at least 2, then x∈S x = 0. Thus, Theorem 3.1 is a partial converse of [4, Thm. 4.6]. However, based on computation results and as also illustrated in Example 3.3, we conjecture that the full converse
+is true.
+
+Next, we consider the associated linear codes.
+
+Theorem 3.5. Let D ∈ Dℓ be a dyadic matrix.
+(1) If wt(σ(D)) is even, then C = rs(D) is self-orthogonal. (2) If supp(σ(D)) is a subspace or a coset of F2ℓ of size 2k, then C = rs(D) is an [N, 2ℓ−k, 2k] code
+whereas C⊥ is an [N, N − 2ℓ−k, 2] code.
+
+Proof. 1) Let D ∈ Dℓ be a dyadic matrix such that wt(σ(D)) is even. Then, D2 = 0N and thus rs(D) ⊆ ker(D). Hence, C⊥ = ker(D) and the code C is self-orthogonal.
+2) The statement of the dimensions follows directly by Theorem 3.1. The statement on the
+minimum distance of C follows by the fact that, as also highlighted in the proof of the same Theorem,
+D can be permuted to a block diagonal form where each block is 12k . Row permutations of course do not change the row space and column permutations do not change the weight. Therefore, d(C) = 2k. For C⊥, by the same argument, D has (at least) two equal columns. Thus d(C⊥) = 2.
+
+In general, if H1 and H2 are two matrices such that
+
+H1H2⊤ = 0
+
+(6)
+
+then the codes C1 = ker(H1) and C2 = ker(H2) satisfy the CSS condition C2⊥ ⊆ C1. This condition is easily met with dyadic matrices due to their built-in duality, providing a source for CSS codes.
+
+6
+
+Lemma 3.6. Let Du, Dv ∈ Dn be two dyadic matrices. Then Du · Dv = 0N if and only if u ∈ ker(Dv) if and only if v ∈ ker(Du).
+Proof. Note that σ(Du · Dv) = uDv. Thus, Du · Dv = 0N if and only if uDv = σ(Du · Dv) = 0N if and only if u ∈ ker(Dv). Since Du · Dv = Dv · Du, everything is equivalent with v ∈ ker(Du).
+Example 3.7. Let v ∈ F126 be such that supp(v) = {1, 5, 6, 7, 11, 14}. Then rank(Dv) = 6 and C1 = ker(Dv) is a [16, 10] code. Choosing u ∈ C1 with supp(u) = {4, 5, 6, 8, 10, 13}, we have that rank(Du) = 6 and C2 = ker(Du) is also a [16, 10] code such that C2⊥ ⊆ C1. Direct computation yields d(C1) = d(C2) = 4 and thus Q(C1, C2⊥) is a [[16, 4, 4]] CSS code.
+Choosing H1 = H2 = D to be a dyadic matrix such that wt(σ(D)) is even, then condition (6) is satisfied automatically (recall that dyadic matrices are symmetric), and as described above, we obtain CSS codes. Another construction is to choose
+
+H1 = A B , H2 = B A
+
+(7)
+
+where AB = BA, in which case H1H2⊤ = 0. One example of such method is the class of generalized bicycle codes [16,17], where the matrices A and B are chosen to be (versions of) circulant matrices so that the commutativity condition is automatically satisfied. Yet again, because dyadic matrices commute, they can be used in such a construction. Moreover, if A and B are dyadic matrices, then H1 and H2 are halves of another dyadic matrix.
+
+Example 3.8. Let D1, D2 ∈ Dℓ be such that rank(D1) = rank(D2) = N/2. Then, Ci = ker(Di) is self-dual, which in turn yields an [[N, 0, d(Ci)]] CSS code. In (7), let us take H1 = D1 D2 , H2 =
+D2 D1 . Let us now consider the CSS pair (C1, C2) where Ci = ker(Hi). Note that
+
+dim(Ci) = N + dim(C1 ∩ C2), and thus, such CSS pair will yield an [[2N, K, d]] CSS code where
+
+K = 2dim(C1 ∩ C2), d ≥ min{d(C1), d(C2)}. In such a way, it is possible to construct a [[64, 16, 8]] CSS code.
+
+3.2 Codes from quasi-dyadic matrices
+The hypergraph product codes [18] are a class of CSS codes constructed from two matrices A ∈ F2mA×nA , B ∈ F2mB×nB and
+H1 := A ⊗ ImB ImA ⊗ B , H2 := InA ⊗ B⊤ A⊤ ⊗ InB ,
+which straightforwardly satisfy (6). In fact, (6) is again satisfied if the matrices A, B take entries from any commutative ring. The lifted product codes [19] are obtained from the hypergraph product construction using the commutative ring of circulant matrices. Since dyadic matrices form a commutative ring as well, they can be used in such construction. Note that an c × v matrix over the ring Dℓ is simply an cN × vN block matrix where each block is an N × N dyadic matrix, that is, a quasi-dyadic matrix. We will denote Dℓc×v the ring of such matrices.
+
+7
+
+Example 3.9. With quasi-dyadic matrices in D23×4 it is possible to further improve upon Example 3.7. Indeed, there exists a [[16, 6, 4]] CSS code, which is the highest achievable distance for the given length and dimension [20]. Similarly, quasi-dyadic matrices in D23×5 can be used to construct a [[20, 6, 4]] CSS code.
+We now give the main construction—a generalization of [10]—that uses permutation dyadic matrices.
+Construction 3.10. Fix a positive integer ω and xi, yi ∈ Fℓ2 for i = 1, . . . , ω. Let σ, τ be two permutations of [ω] of order ω, and consider the ω ×2ω block quasi-dyadic matrices HX = [HX,L | HX,R] and HZ = [HZ,L | HZ,R] where
+
+HX,L =
+
+Pxσ(i−1) (j )
+
+, HX,R =
+i,j∈[ω]
+
+Pyσ(i−1) (j )
+
+,
+i,j∈[ω]
+
+HZ,L =
+
+Py τ
+
+(i−1) (j )
+
+, HZ,R =
+i,j∈[ω]
+
+Px τ
+
+(i−1)
+
+(j)
+
+,
+i,j∈[ω]
+
+and each of the blocks is a dyadic permutation matrix.
+
+In Construction 3.10, we choose the permutations σ and τ such that HXHZ⊤ = 0. For this, we
+
+must have
+
+ω
+
+ω
+
+P P = xσ(i−1)(k)
+
+y
+τ
+
+(j−1)
+
+(k)
+
+P P yσ(i−1)(k)
+
+x
+τ
+
+(j−1)
+
+(k)
+
+(8)
+
+k=1
+
+k=1
+
+for all i, j ∈ [ω]. Since the product of dyadic permutation matrices is again a dyadic permutation matrix (see Proposition 2.5) and since every dyadic matrix is a unique sum of dyadic permutations (see also (12) below), we must guarantee that every term on the left-hand side of (8) must appear on the right-hand side of (8) and vice versa. Such condition can be easily achieved by choosing σ, τ to be cyclic permutations. For simulations, σ, τ are also optimized so that the resulting codes have designated girth and small number of short cycles.
+We will compare our Construction 3.10 with the recent Construction B of [9], which we lay out next.
+
+Construction 3.11. Fix an even integer u = 2v and x1, . . . , xv ∈ F2ℓ . Consider the quasi-dyadic
+
+matrix
+
+ P Px1 P Px2 · · · P Pxv 
+
+HP
+
+=
+
+Pxv  P
+
+P Pxv
+
+Px1 P
+
+P Pxv−1
+
+··· ···
+
+Pxv−1 P
+
+P 
+Px1 
+
+(9)
+
+Px1 P Pxv P · · · Px2 P
+
+where P is a fixed dyadic permutation and Pxi’s are the corresponding dyadic permutations.
+
+Remark 3.12. In Construction 3.11, the arrangement of the dyadic permutations P and Pxi is chosen so that HP HP⊤ = 0 and thus yielding a dual-containing CSS code. However, by construction (see [4, Thm. 5.1] or [9, Cor. 2] for instance), the associated Tanner graph will inevitably have girth
+4. As we will see from the simulations and as also discussed below, this is a major drawback in terms
+of performance. Nevertheless, using our cycle analysis, the choices of P and Pxi can be optimized (instead of random as in [9]) so that the associated Tanner graph has a minimal number of 4-cycles,
+and this alone gives significant performance gain.
+
+8
+
+4 Girth Analysis
+In this section, we present the girth and cycle analysis of dyadic and quasi-dyadic codes. Specifically, in Sections 4.2 and 4.3, we propose strategies to count 4-cycles in the Tanner graph of dyadic and quasi-dyadic codes, respectively; the rest of the analysis is presented in Appendix A. First, we present the background required to establish a connection between the cycles in the Tanner graph and the TBC walks in the protograph.
+
+4.1 Connection Between TBC Walks in the Protograph and Cycles in the Tanner Graph
+
+Let H be the parity-check matrix of a dyadic or quasi-dyadic code and let G = (V, E) be the
+
+corresponding Tanner graph. The adjacency matrix A = (Aij) is the symmetric binary matrix
+
+with Aij = 1 if (vi, vj) ∈ E, and Aij = 0 otherwise. After some reordering of the vertices, if
+
+necessary, we can write A, for either the scalar or block representation of H, in the compact
+
+expression
+
+0H A = HT 0 .
+
+(10)
+
+The powers of A, and in particular the matrices
+
+Bt(H) = HHT ⌊t/2⌋ H(t mod 2), t ≥ 0,
+
+give information about the walks in the Tanner graph [21]. It is not difficult to see that, for any nonnegative integer t, we have
+
+A2t =
+
+B2t (H ) 0
+
+0 B2t (H T )
+
+and
+
+A2t+1 =
+
+0 B2t+1 (H T )
+
+B2t+1 (H ) 0
+
+.
+
+(11)
+
+Theorem 4.1 ([22]). Given an adjacency matrix A, the entry (Am)ij is equal to the number of walks of length m between the vertices vi and vj.
+
+Similarly to the cycle analysis of QC-LDPC codes presented in [6], the block representation of
+
+quasi-dyadic LDPC codes allows for a reduction in the complexity of our computations. The kth
+
+power of the scalar adjacency matrix A of the Tanner graph can be used to determine the number
+
+of k-walks between any two vertices, as we have seen in Theorem 4.1. The kth power of the block
+
+version of the adjacency matrix can be used to describe the edges traversed in a k-walk between
+
+any two vertices in the protograph. For example, if A is the block version of the adjacency matrix
+
+in (10), then
+
+nc +nv −1
+
+(A2)ij =
+
+AilAlj ,
+
+l=0
+
+and every term of (A2)ij is a product of the form Pcil Pclj = Pcil+clj , where Pcil and Pclj come from Ail and Alj, respectively. Each one of the two dyadic permutation matrices Pcil and Pclj corresponds to a unique edge in the protograph, and the order in which they appear in the product is the order
+used to traverse the walk in the protograph. The index cil + clj, in consequence, corresponds to the
+two edges traversed from vertex vi to vertex vl to vertex vj in the protograph. In the same way, every term of (A3)ij is a product of the form Pcil Pclk Pckj = Pcil+clk+ckj , and the index cil + clk + ckj corresponds to the three edges traversed in the protograph from vertex vi to vertex vl to vertex vk to vertex vj . In general, every term of (Am)ij is of the form P P cil1 cl1l2 · · · Pclmj = Pcil1 +cl1l2 +···+clmj ,
+
+9
+
+and each one of them corresponds to a walk of length m and the specific order in which it is traversed.
+Theorem 4.2 ([6]). Given an adjacency matrix A, every term of (Am)ij is of the form P P cil1 cl1l2 · · · Pclmj and corresponds to a walk of length m between the vertices vi and vj in the protograph.
+Definition 4.3. The index cil1 + cl1l2 + · · · + clmj corresponding to the product P P cil1 cl1l2 · · · Pclmj in Theorem 4.2 is called a permutation shift.
+
+Suppose that P P cil1 cl1l2 · · · Pclmj and P P ci′l1 cl′1l2 · · · Pc′lmj are two terms of (Am)ij describing two m-walks between vertices vi and vj in the protograph. Then the combination
+
+P P cil1 cl1l2 · · · P P clmj cl′mj · · · P P cl′1l2 ci′l1
+
+of the first walk and the reversal of the second one describes a closed (2m)-walk that starts and ends at the vertex vi, and that has the vertex vj midway. Hence, the entries (Am)ij of the power Am describe all the m-walks in the protograph and can be used to count certain cycles in the Tanner
+graph.
+Let G = (V, E) be a protograph described by matrix B = (bij)nc×nv . Each row and each column of B corresponds to a check node and a variable node in the protograph, respectively. Once a lifting factor N = 2ℓ is chosen, for each vertex v ∈ V in the protograph, either a check node or a variable node, we create N copies of it and denote them by v˜l, for l ∈ [N ]. For each edge e = (u, v) ∈ E in the
+protograph, there is, associated with it, a dyadic permutation matrix Pa, where a ∈ [N ]. Once the value for a is chosen, we create N copies of e and denote them by e˜l, for l ∈ [N ]. The vertices that are endpoints of these edges are permuted in such a way that we have e˜l = (u˜l, v˜sl,a), where sl,a is the integer corresponding to l + a. If we let V˜ = v˜l | v ∈ V, l ∈ [N ] and E˜ = e˜l | e ∈ E, l ∈ [N ] , then the graph G˜ = (V˜ , E˜) is an N -fold graph cover, or lifting, of the protograph, and we call it the Tanner graph. The process of creating the N copies v˜l of the vertex v and the N copies e˜l of the edge e induces a projection map p : G˜ → G, and we call p the natural projection map. The set of vertices v˜l | l ∈ [N ] and the set of edges e˜l | l ∈ [N ] , denoted by p−1(v) and p−1(e),
+respectively, are called the fiber over the vertex v and the fiber over the edge e, respectively, under
+the natural projection map.
+All the results that follow have been slightly adapted to the dyadic case. Lemmas 4.4 and 4.6,
+based on some results from [23], are useful for studying both the images of cycles in the Tanner
+graph and the preimages of TBC walks in the protograph.
+
+Lemma 4.4 ([24,25]). Let G˜ be an N -fold graph cover of the protograph G. Let W be a k-walk in G starting at vertex v and ending at vertex v′, and having edge sequence e1, e2, . . . , ek with associated
+dyadic permutation matrices Ps1, Ps2, . . . , Psk . Then the permutation shift s that maps v˜, the inverse image of v in G˜, to v˜′, the inverse image of v′ in G˜, through the walk W˜ is given by s1 +s2 +· · ·+ sk.
+
+Remark 4.5. If the walk W in Lemma 4.4 is traversed in the opposite direction starting at vertex
+
+v′ and ending at vertex v, then its permutation shift is given by s′ = −s = s.
+
+□
+
+We denote by Zt the additive group of integers modulo t. For any element a ∈ Zt, the order of a is the smallest positive integer m such that m · a = 0.
+Lemma 4.6 ([24]). Let G˜ be an N -fold graph cover of the protograph G and let W˜ be a k-cycle in G˜. Then W˜ is projected onto a TBC walk W of length k/m, where m ≥ 1 is the order of the permutation shift of W in F2ℓ .
+
+10
+
+Remark 4.7. The order of a TBC walk W , which is referred to as the order of its permutation
+
+shift s in the previous lemmas when considered as an element of Fℓ2, is given by 2/ gcd (2, s), where
+
+s is as in Lemma 4.4 and gcd denotes the greatest common divisor.
+
+□
+
+We combine the following lemma with our analysis of TBC walks to count cycles in the Tanner graph.
+Lemma 4.8 ([26]). Let G˜ be an N -fold graph cover of the protograph G and let W be a closed k-walk in G. Then the inverse image of W in G˜ is the union of N/m closed (km)-walks, where m ≥ 1 is the order of the permutation shift of W in Fℓ2.
+In [6], the authors extended Lemma 4.8, stated for closed k-walks, to TBC walks of length k.
+Theorem 4.9 ([6]). Let G˜ be an N -fold graph cover of the protograph G and let W be a TBC walk of length k in G. Then the inverse image of W in G˜ is the union of N/m TBC walks of length km, where m ≥ 1 is the order of the permutation shift of W in F2ℓ .
+The following lemma explains why we restrict our analysis to k-cycles with k < 2g, where g is the girth of the Tanner graph.
+
+Lemma 4.10 ([24, 27]). Let G be a graph with girth g. Then the set of TBC walks of length k coincides with the set of k-cycles if k < 2g.
+
+Corollary 4.11. Let G˜ be an N -fold graph cover of the protograph G and let W be a TBC walk of length k in G. Then the inverse image of W in G˜ is the union of N/m (km)-cycles, where m ≥ 1 is the order of the permutation shift of W in Fℓ2.
+
+Remark 4.12. As a direct consequence of Lemmas 4.6 and 4.10, Theorem 4.9, and Corollary 4.11,
+
+the TBC walks in the protograph of a quasi-dyadic LDPC code are the necessary and sufficient
+
+structures needed to describe all the k-cycles, k < 2g, in the Tanner graph.
+
+□
+
+We define the equivalence of closed walks.
+
+Definition 4.13. Two closed walks W1 and W2 are said to be equivalent if one can be obtained from the other by a change of base point, a change in direction, or both.
+
+Remark 4.14. If W is a closed walk of length k, then there are 2k equivalent closed walks to W . □
+
+4.2 Cycles in Dyadic Codes
+
+Let D = (Dx,y) be an N × N dyadic matrix over F2, where N = 2ℓ. The integer ℓ will rep-
+
+resent the degree of the graph lift. Suppose that σ(D) has weight ω and that supp(σ(D)) =
+
+{x0, x1, x2, . . . , xω−1} ⊆ [N ]. Then we can write D as a summation of ω dyadic permutation matri-
+
+ces
+
+D = Px0 + Px1 + Px2 + · · · + Pxω−1 .
+
+(12)
+
+If ω = 1, then D = Px0, so its Tanner graph is acyclic. If ω ≥ 2, then the girth of D is 4. To see why this is the case, first notice that {x0, x1} ⊆ supp(σ(D)). Let c = x0 + x1. By assumption,
+D0,x0 = D0,x1 = 1. Applying Definition 2.1, we see that Dc,x0 = D0,c+x0 = D0,x0+x1+x0 = D0,2x0+x1 = D0,x1 = 1 and Dc,x1 = D0,c+x1 = D0,x0+x1+x1 = D0,x0+2x1 = D0,x0 = 1. Hence, D has a 2 × 2 submatrix with all its entries equal to 1, so it contains at least one 4-cycle.
+
+11
+
+4.2.1 Counting 4-cycles
+
+If D is a dyadic matrix as in (12), then we can consider this matrix as a lifting of the 1 × 1 protograph with unique entry equal to ω. By the results in Section 4.1, and in particular by Lemma 4.6, the 4-cycles in the Tanner graph are projected onto either TBC walks of length 2 that are traversed twice or TBC walks of length 4, in the protograph, and these walks can be studied by computing the product DDT according to Theorem 4.2. A TBC walk of length 4 in the protograph has the form [xu, xv, xv′, xu′] and counting the number of 4-cycles requires analyzing the mset A = {(u, v, xu + xv) | u, v ∈ [ω], u ≠ v}. Consider the following theorem.
+Theorem 4.15. Let D be as in (12) and let
+
+A = {(u, v, xu + xv) | u, v ∈ [ω], u ̸= v} .
+
+For u, v, u′, v′ ∈ [ω], let (u, v, αu,v), (u′, v′, αu′,v′) ∈ A be such that αu,v = αu′,v′. Then this repetition αu,v = αu′,v′ lifts to a collection of 4-cycles in the Tanner graph if u ̸= u′ and v ̸= v′. The total
+number of 4-cycles in the Tanner graph, N4, is given by
+
+N4
+
+=
+
+2ℓ 2
+
+·
+
+1 2
+
+·
+
+RA∗c
+
++
+
+2ℓ
+
+·
+
+1 4
+
+·
+
+R∗Anc
+
+=
+
+2ℓ 4
+
+·
+
+(RA∗c
+
++
+
+R∗Anc) ,
+
+(13)
+
+where RA∗c and R∗Anc are the numbers of repetitions αu,v = αu′,v′ in the mset A satisfying u = v′ and v ̸= u′.
+
+Proof. For u, v, u′, v′ ∈ [ω], let (u, v, αu,v), (u′, v′, αu′,v′) ∈ A be such that αu,v = αu′,v′. The walk of length 4 corresponding to this repetition is given by W = [xu, xv, xv′, xu′]. If u ≠ u′ and v ≠ v′,
+
+then this walk is actually a TBC walk with permutation shift αu,v + αu′,v′ = 0, so by Corollary
+
+4.11, its inverse image is the union of N/m 4-cycles, where m ≥ 1 is the order of the permutation
+
+shift of W in Fℓ2. Notice that m ∈ {1, 2}, leading to two cases. If m = 1, then all the edges in W are distinct. For simplicity, let us focus on the indices
+
+(u, v, v′, u′). When computing all the walks equivalent to W , we obtain exactly 4 distinct elements
+
+with indices (u, v, v′, u′), (v, v′, u′, u), (v′, u′, u, v), and (u′, u, v, v′), which means that the repetition
+
+αu,v = αu′,v′ is counted four times in the construction of A. The number of 4-cycles arising from this repetition is 2ℓ.
+
+If m = 2, then W is obtained by traversing a TBC walk of length 2 twice. When computing the
+
+walks equivalent to W , we obtain exactly 2 distinct elements with indices (u, v, u, v) and (v, u, v, u)
+
+because the conditions u = v′ and v = u′ are required, which means that the repetition αu,v = αu′,v′
+
+is
+
+counted
+
+twice
+
+in
+
+the
+
+construction
+
+of
+
+A.
+
+The
+
+number
+
+of
+
+4-cycles
+
+arising
+
+from
+
+this
+
+repetition
+
+is
+
+2ℓ 2
+
+.
+
+Then equation (13) follows and we conclude the proof.
+
+Example 4.16. Let D be the parity-check matrix given by D = P0 + P1 + P2 + P3, and let N = 23. Since the weight of σ(D) is ω = 4 ≥ 2, the Tanner graph has 4-cycles. To study the 4-cycles in the Tanner graph, we construct the mset in Theorem 4.15:
+
+A = {(0, 1, 1), (0, 2, 2), (0, 3, 3), (1, 0, 1), (1, 2, 3), (1, 3, 2), (2, 0, 2), (2, 1, 3), (2, 3, 1), (3, 0, 3), (3, 1, 2), (3, 2, 1)}.
+
+Further computations show that R∗Ac = 12 and RA∗nc = 24. According to (13), the total number of 4-cycles in the Tanner graph of D is
+
+N4
+
+=
+
+2ℓ 4
+
+·
+
+(R∗Ac
+
++
+
+RA∗nc)
+
+=
+
+23 4
+
+·
+
+(12
+
++
+
+24)
+
+=
+
+72.
+
+The parity-check matrix D gives a code with parameters [8, 6, 2], meaning it is almost MDS. □
+
+12
+
+Remark 4.17. If ω ≥ 2, then W = [x0, x1, x0, x1] is a TBC walk of length 4 obtained by traversing
+
+a TBC walk of length 2 twice. This TBC walk always have permutation shift 0 in F2ℓ . By the proof
+
+of
+
+Theorem
+
+4.15,
+
+notice
+
+that
+
+N4
+
+≥
+
+2ℓ 2
+
+·
+
+1 2
+
+· ω(ω − 1).
+
+The
+
+first
+
+term
+
+of
+
+(13)
+
+is
+
+equal
+
+to
+
+the
+
+right-hand
+
+side of this inequality since that is the number of ways we can construct the TBC walks of length
+
+2 that are traversed twice. If ω ∈ {0, 1}, we naturally have N4 = 0.
+
+□
+
+If D is a dyadic matrix as in (12) and σ(D) has weight ω ≥ 2, then D has girth 4 by Remark 4.17. We can use our cycle analysis to also compute the number of 6-cycles and this is presented in Appendix A.1.
+
+4.3 Cycles in Protograph-based LDPC Codes from Dyadics
+Let C be a protograph-based LDPC code with parity-check matrix H given by
+
+ Px0,0
+
+ H =
+ 
+
+Px1,0 ...
+
+Px0,1
+
+···
+
+Px0,nv−1 
+
+Px1,1 ...
+
+··· ...
+
+Px1,...nv −1
+
+ .  
+
+P P · · · P xnc−1,0
+
+xnc −1,1
+
+xnc−1,nv −1
+
+(14)
+
+4.3.1 Counting 4-cycles
+
+We have seen that the 4-cycles in the Tanner graph are projected onto either TBC walks of length 2
+
+that are traversed twice or TBC walks of length 4, in the protograph, and these walks can be studied by computing the product HHT according to Theorem 4.2. Since Tanner graphs are bipartite, a 4-
+
+cycle can only be projected onto a TBC walk of length 4. Because of this, the 4-cycles are projected
+
+onto a 2 × 2 submatrix of the form
+
+H2 =
+
+Phu Piu
+
+Phv . Piv
+
+In terms of notation, an index of the form hu indicates that the dyadic permutation matrix Phu appears in the hth row and uth column of H. The corresponding TBC walk of length 4 in the
+
+protograph, [hu, iu, iv, hv], gives the product
+
+(Phv )−1 · Piv · (Piu )−1 · Phu = Phv · Piv · Piu · Phu = Phu+iu+iv+hv ,
+
+so we require that hu + iu + iv + hv ̸= 0 to avoid 4-cycles in the Tanner graph. This is the case since the only dyadic permutation matrix that has fixed points is the identity matrix, so we need to make sure that the left-hand side is not equal to 0.
+
+Theorem 4.18. Let H be as in (14). A repetition in any of the following
+
+nc 2
+
+msets
+
+Ah,i = {hu + iu | u ∈ [nv]} , h < i,
+
+lifts to a collection of 4-cycles in the Tanner graph. The total number of 4-cycles in the Tanner
+
+graph, N4, is given by
+
+N4 = 2ℓ ·
+
+h,i∈[nc h<i
+
+]
+
+α∈Fℓ2 ∩Ah,i
+
+ρAh,i (α) , 2
+
+(15)
+
+where ρAh,i(α) denotes the number of times the element α appears in the mset Ah,i.
+
+13
+
+Algorithm 1 Counting 4-cycles
+
+Input: Exponents in parity-check matrix (14), nc, nv, ℓ.
+
+Initialize N4 = 0.
+
+for h = 0 to nc − 1 do
+
+for i = h + 1 to nc − 1 do
+
+Ah,i ← {hu + iu | u ∈ [nv]}
+
+for α ∈ F2ℓ ∩ Ah,i do
+
+N4+ =
+
+ρAh,i (α) 2
+
+return N4
+
+Proof. By Lemma 4.6, the 4-cycles in the Tanner graph are projected onto TBC walks of length 4 in the protograph and these walks can be studied by computing the product HHT as a consequence of Theorem 4.2. To determine all possible TBC walk patterns, we use the product H2H2T instead, but if H has less than two rows, then any pattern arising from these additional row are omitted in the computations of 4-cycles. Once H2H2T has been computed, we use the strategy of combining walks following Definition 4.3 to compute all possible TBC walk patterns, and then use Definition
+4.13 to compute all nonequivalent TBC walk patterns. This gives us the unique TBC walk pattern
+[hu, iu, iv, hv] if u ̸= v. If hu + iu + iv + hv = 0, then hu + iu = hv + iv, so we have 4-cycles in the Tanner graph every time this repetition happens. In this case, this repetition contributes 2ℓ
+4-cycles. Summing over all pair of rows (h, i), h < i, gives (15).
+
+Remark 4.1. From Theorem 4.18 and the preceding discussion, we obtain conditions on avoiding
+
+the girth 4 barrier. Namely, we have that girth(H) > 4 if and only if each one of the
+
+nc 2
+
+msets
+
+{hu + iu | u ∈ [nv]}, for h < i, contains distinct elements, which also corresponds to yielding N4 = 0
+
+in (15).
+
+Algorithm 1 shows how we use Theorem 4.18 to count 4-cycles in the Tanner graph of a quasidyadic code with parity-check matrix H as in (14). In Appendix A.2, we present the results used to count 6-cycles and 8-cycles in a quasi-dyadic code with parity-check matrix H as in (14) along with some examples.
+We end this section with two observations on the girth.
+
+Theorem 4.19. Let G be a protograph with girth g. Then the girth of any lifting of G using dyadic matrices is upper bounded by 2g.
+
+Proof. Let W be a g-cycle in the protograph, and suppose that W is described by the TBC walk
+of length g given by [xi1,j1 , xi2,j1 , xi2,j2 , xi3,j2 . . . , xig/2,jg/2 , xi1,jg/2 ]. The permutation shift of this TBC walk is given by s = xi1,j1 + xi2,j1 + xi2,j2 + xi3,j2 + · · · + xig/2+jg/2 + xi1,jg/2 ∈ Fℓ2. If s is nonzero, then it has order 2 in Fℓ2, that is, 2s = 0 and P2s = P0 = I2ℓ. Hence, there is a 2g-cycle in the Tanner graph.
+
+Remark 4.2. Analogous to dyadic matrices, one can also consider n-adic matrices [4] where the addition of the subscripts is done over Znℓ instead, that is, Dx,y = D0,x+y for all x, y ∈ Znℓ . It was shown in [4] that if a protograph has 12 in its base matrix, then the girth of any quasi-n-adic lifting of this protograph is upper-bounded by 4n. Theorem 4.19 generalizes this result in the sense that if
+G is a prograph of girth g, then the girth of any lifting of G using n-adic matrices is upper bounded
+by ng. The proof of this statement is completely analogous to the dyadic case where one simply considers the order of s in Zℓn instead.
+
+14
+
+By Theorem 4.19, any quasi-dyadic code constructed by lifting a binary base matrix will have girth upper bounded by 2g, where g is the girth of the protograph. In the case of the all-ones protograph, this upper bound is 8 since the girth of the protograph is 4. To exceed girth 8 in the Tanner graph, we will need the protograph to have girth at least 6.
+
+4.4 Dyadic-PEG and Cycle Optimization
+
+The short cycles in the Tanner graph of LDPC codes are known to play an important role in their performance [28, 29], which motivates the search for LDPC codes from graphs of large girth. However, even if two LDPC codes have the same girth, their performance can be dramatically different if they have a different number of short cycles [29]. In an attempt to construct quasi-dyadic LDPC codes with a large girth and a small number of short cycles, we present some construction strategies using a PEG-like approach similar to that presented in [5].
+The Progressive Edge-Growth (PEG) algorithm [7] was originally proposed as a general method for constructing Tanner graphs with large girth. This algorithm works by establishing edges between symbol and check nodes in an edge-by-edge manner while satisfying some node degree sequence. The creation of a new edge in the Tanner graph occurs in a position where the impact on the girth is minimized, meaning that edges forming cycles are avoided for as long as possible. In terms of parity-check matrices, the algorithm starts creating a parity-check matrix from an all-zero matrix, placing ones in particular entries that avoid, or delay if unavoidable, the creation of cycles while preserving either a column or row weight distribution.
+The complexity of the PEG algorithm scales as O(mn), where m is the number of check nodes and n is the number of symbol nodes in the Tanner graph. In a quasi-dyadic LDPC code, these values are given by m = ncN and n = nvN . Due to the nature of dyadic matrices, once an edge is created between the first check node and some variable node in a given N × N block, which corresponds to adding a 1 to the signature row of that N × N dyadic matrix, the remaining N − 1 edges corresponding to that block will also be created. This allows for a reduction in the complexity of the construction when combined with the girth conditions presented in this section and Appendix A. To propose this low-complexity PEG algorithm, we start with a definition.
+
+Definition 4.20 ([5]). Let the parity-check matrix H of a quasi-dyadic LDPC code be as in (14) and let N = 2ℓ be the lifting factor. The forbidden set Fag,N of the index a, corresponding to the dyadic permutation matrix Pa in H, is the set of elements in F2ℓ such that if a assumes any value
+in this set, then girth(H) ≤ g.
+
+Remark 4.21. Notice that the description of the forbidden set Fxg,N of an index x corresponding
+to the dyadic permutation matrix Px are given symbolically. In practice and as we will see in a
+moment, the dyadic permutation matrices are chosen sequentially (one at a time), which means that at a given iteration, some of the indices have not been assigned an element of Fℓ2 and should not be involved in the computations of that specific forbidden set. As an illustration, consider the
+
+matrix
+
+H=
+
+Ph0 Pi0
+
+Ph1 Pi1
+
+Ph2 Pi2
+
+··· ···
+
+Phnv −1 Pinv −1
+
+and suppose that only the dyadic permutation matrices Ph0, Ph1, and Pi0 have been chosen with,
+
+say, h0 = h1 = i0 = 0, and that we want to choose Pi1. Then we have Fi41,N = {h1 + h0 + i0} =
+
+{0 + 0 + 0} = {0}. This means that i1 ≠ 0 guarantees girth larger than 4. Notice that the element
+
+h1 + h2 + i2, for example, is not an element of Fi41,N since h2 and i2 have not been assigned an
+
+element of Fℓ2 before this iteration.
+
+□
+
+15
+
+Algorithm 2 Quasi-dyadic PEG algorithm with forbidden sets
+Input: nc, nv, ℓ. Initialize indices xlk = ∞, l ∈ [nc], k ∈ [nv]. for k = 0 to nv − 1 do
+for l = 0 to nc − 1 do Choose largest g ∈ {4, 6} such that F = Fℓ2\forbidden(H, xlk, g, N ) ≠ ∅ if there is such g then xlk ← random(F ) else xlk ← random(F2ℓ )
+return H
+A natural way to combine the PEG algorithm with the forbidden set approach a as follows. First, we need to decide in what order we construct the parity-check matrix (14), that is, in what order we assign elements in Fℓ2 to the indices. Two common orderings are row-by-row
+(x0,0, x0,1, . . . , x0,nv−1, x1,0, x1,1, . . . , x1,nv−1, . . . , xnc−1,0, xnc−1,1, . . . , xnc−1,nv−1)
+and column-by-column
+(x0,0, x1,0, . . . , xnc−1,0, x0,1, x1,1, . . . , xnc−1,1, . . . , x0,nv−1, x1,nv−1, . . . , xnc−1,nv−1);
+a random ordering is another option. After choosing the ordering and prescribing a target girth g, which is usually taken to be the maximum attainable girth (since PEG tries to guarantee maximum girth), we compute the forbidden set Fxg,N of the first index x in the ordering and assign to it an element from the set F2ℓ \Fxg,N at random. For the second index y, we compute Fyg,N and assign to it an element from the set Fℓ2\Fyg,N at random. The algorithm continues in this fashion for as long as possible. At some point, if ℓ is not large enough, then there exists the possibility that the set F2ℓ \Fzg,N = ∅ for some index z. In this case, the algorithm decreases the target girth to g − 2 and repeats the same strategy, only reducing the target girth when needed. In the quasi-dyadic case, the maximum attainable girth in a lifting of (14) is 8, so the algorithm will decrease the target girth to either 6 or 4 when needed.
+The construction strategy described in the previous paragraph is recorded as Algorithm 2. For a set S, the function random(S) returns a random element in S; the function len(V ) returns the length of the list V (or the cardinality of the set V ); and, the function forbidden(H, var, g, N ) returns the set Fvga,Nr . The indices xlk are initialized to ∞, which can be understood as having a 2ℓ × 2ℓ all-zero matrix in the position of what will be the dyadic permutation matrix Pxlk once we assign to the index xlk an element from F2ℓ \Fvga,Nr . Notice that Algorithm 2 constructs an nc × nv parity-check matrix H as in (14), following a forward search manner, maximizing the girth where possible from previous index selections. The indices are chosen in a column-by-column fashion, following the idea of PEG. For the row-by-row ordering, we just need to interchange the order of the two for loops in Algorithm 2.
+Algorithm 2 can be modified to include a cycle optimization step in the selection stage of an index x. After choosing the ordering and prescribing a target girth g, we start the algorithm by computing the forbidden set Fxg,N of the first index x. Instead of assigning to it an element from the set Fℓ2\Fxg,N at random, we first compute the number of g-cycles, Ng, of the matrix H under the current setting for each element of Fℓ2\Fxg,N . Then, we let M ⊆ Fℓ2\Fxg,N be the subset of elements that minimize Ng under the current setting and we assign to x an element from M at random.
+16
+
+Algorithm 3 Quasi-dyadic PEG algorithm with forbidden sets and cycle minimization
+Input: nc, nv, ℓ. Initialize indices xlk = ∞, l ∈ [nc], k ∈ [nv]. for k = 0 to nv − 1 do
+for l = 0 to nc − 1 do Choose largest g ∈ {4, 6} such that F = Fℓ2\forbidden(H, xlk, g, N ) ≠ ∅ if there is such g then M ← {a ∈ F | Ng is minimum under current setting} xlk ← random(M) else M ← a ∈ F2ℓ | Ng is minimum under current setting xlk ← random(Fℓ2)
+return H
+This means that in each iteration, we are choosing a dyadic permutation matrix that minimizes the number of cycles introduced by the selection of a new index. To choose the remaining indices y, this procedure is repeated for as long as possible. As before, if at some point it turns out that ℓ is not large enough and we have that the set F2ℓ \Fzg,N = ∅ for some index z, the algorithm decreases the target girth to g − 2 and repeats the same strategy. This algorithm is recorded as Algorithm 3. Two variations of this algorithm would be to assign to an index x an element from F2ℓ \Fxg,N that maximizes Ng under the current setting, or an element in F2ℓ \Fxg,N such that Ng is average among all the options.
+5 Absorbing Set Analysis
+While short cycles influence decoder convergence, error-floor behavior in iterative decoding is often dominated by more subtle subgraphs. In this section, we turn our attention to absorbing sets, which capture persistent local trapping configurations beyond pure cycle structure. Absorbing sets are combinatorial objects studied in classical coding theory [1,8,30–32] and recently analyzed in the quantum setting as well [2, 33]. They have been shown to be the dominant problematic structure affecting the error floor for certain families of LDPC codes, as well as being responsible for many instances of decoding failure under the Gallager B syndrome-based iterative decoder for quantum LDPC codes. Thus, it is a natural question to characterize the presence of absorbing sets for codes arising from dyadic and quasi-dyadic matrices. First, we recall that given a graph G = (V, E) and subset of vertices W ⊆ V , the induced subgraph GW is the graph obtained by taking all vertices in W and all edges incident to these vertices.
+Definition 5.1 ([1]). An (a, b)-absorbing set A in a Tanner graph G is a subset of |A| = a variable nodes such that the induced subgraph GA∪N (A) has b odd degree check nodes and every variable node v ∈ A has strictly more even than odd degree neighbors in GA∪N (A).
+We first make some observations about the “boundary cases” for dyadic and quasi-dyadic constructions. Observe that Tanner graphs arising from m × 1 arrays of dyadic permutation matrices are acyclic and have no absorbing sets. Indeed, an m × 1 array of dyadic permutation matrices has a Tanner graph G with all check nodes of degree one, which means both that G is acyclic and it has no absorbing sets. Thus, while it is not interesting to consider m × 1 arrays of dyadic permutation matrices with respect to absorbing sets, 1 × n arrays of dyadic permutation matrices and their absorbing sets deserve attention.
+17
+
+Unless stated otherwise, we count absorbing sets whose induced subgraph is connected.
+
+Lemma 5.2. Consider a 1 × n array M of 2ℓ × 2ℓ dyadic permutation matrices. The corresponding Tanner graph is acyclic and has exactly 2ℓ(2n−1 − 1) absorbing sets, all of which are (a, 0)-absorbing
+sets for a = 2k even and 2 ≤ a ≤ n.
+
+Proof. Let G denote the Tanner graph corresponding to M . Since M is a 1 × n array, all variable nodes have degree 1, so G is acyclic. Each check node is incident to exactly one variable node in each block of M . Thus, each check node is incident to n variable nodes, and the Tanner graph G consists of 2ℓ disconnected star graphs, meaning complete bipartite graphs K1,t, one per check node.
+To count the number of absorbing sets, we count the number of ways to choose an even number of variable nodes from each cluster of n variable nodes and then multiply by 2ℓ to denote the 2ℓ clusters forming star graphs. Then the total number of absorbing sets for G is
+
+⌊
+
+n 2
+
+⌋
+
+2ℓ
+
+n
+
+= 2ℓ(2n−1 − 1).
+
+2k
+
+k=1
+
+We note that each cluster has 2n−1 − 1 ways of forming absorbing sets since we exclude selecting 0 variable nodes from the group of n nodes.
+
+Next, we consider various configurations of quasi-dyadic whose corresponding Tanner graphs contain complete bipartite graphs. We then present a unified description of their absorbing set structure.
+
+Lemma 5.3. Consider an m × n array M of identical dyadic permutation matrices. The Tanner graph GM comprises 2ℓ Km,n complete bipartite graphs, where m and n are the number of check and variable nodes in each Km,n graph, respectively.
+Proof. Consider an m × n array M of identical dyadic permutation matrices. Given a labeling of the rows and columns of M , label the variable nodes and check nodes of GM as
+
+v0, . . . , v2ℓ−1, v2ℓ , . . . , v(n−1)2ℓ , . . . , vn2ℓ−1 and c0, . . . , c2ℓ−1, c2ℓ , . . . , c(n−1)2ℓ , . . . , cn2ℓ−1.
+
+Since M comprises dyadic permutation matrices, the degree of each variable node and each check node is m and n, respectively. Consider some variable node vi for 0 ≤ i ≤ 2ℓ − 1. That is, vi corresponds to a column in the first m × 1 column of the m × n array. We know that vi ∼ ci0 for 0 ≤ i0 ≤ 2ℓ − 1. Moreover, vi+k·2ℓ ∼ ci0 for 0 ≤ k ≤ n − 1. Since deg(ci0) = n, the neighborhood N (ci0) is precisely {vi+k·2ℓ | 0 ≤ k ≤ n − 1}. On the other hand, vi ∼ cij for 0 ≤ j ≤ m − 1. Thus, N (cij ) = {vi+k·2ℓ | 0 ≤ k ≤ n − 1} for 0 ≤ j ≤ m − 1 and N (vi+k2ℓ) = {cij | 0 ≤ j ≤ m − 1} for 0 ≤ k ≤ n − 1.
+By degree counting, the induced graph Gi = (Vi, Ci, Ei) formed by Vi = {vi+k·2ℓ | 0 ≤ k ≤ n − 1} and Ci = {cij |0 ≤ j ≤ m−1} is the complete bipartite graph Km,n on m check nodes and n variable nodes. Since we considered an arbitrary index i such that 0 ≤ i ≤ 2ℓ − 1, GM thus comprises 2ℓ Km,n complete bipartite graphs.
+Lemma 5.4. Consider a dyadic matrix D ∈ F22ℓ×2ℓ with signature consisting of 2k ones at the beginning followed by zeros. Then GD is a disconnected graph, consisting of 2ℓ−k subgraphs K2k,2k .
+
+18
+
+Proof. Given that the signature of D is of form σ(D) = (12k , 02ℓ−k ), in the language of Section 2-A, we have that σ(M ) is supported on a subspace of dimension 2k. As such, D = diag(12k , · · · , 12k ); see also Theorem 3.1.
+The block diagonal nature of D immediately yields that the Tanner graph GD has 2ℓ−k connected components, and each block Di,i for 0 ≤ i ≤ 2ℓ−k being an all-ones matrix tells us these connected
+components are all K2k,2k graphs.
+
+Since the graph structure consists of multiple copies of Km,n complete bipartite graphs, we consider a single dyadic whose Tanner graph is complete and then count the resulting number of absorbing sets in a single complete bipartite graph.
+
+Lemma 5.5. Let D = 12ℓ be the all-one dyadic matrix. Then, all absorbing sets of the corresponding
+
+Tanner graph are of the form (a, 0) for a even and 2 ≤ a ≤ 2ℓ. Moreover, there are
+
+2ℓ a
+
+such (a, 0)
+
+absorbing sets. Setting a := 2k for 1 ≤ k ≤ 2ℓ−1 there are
+
+2ℓ−1 k=1
+
+2ℓ 2k
+
+total absorbing sets in the
+
+corresponding Tanner graph.
+
+Proof. In this case it is clear that GD is the complete bipartite graph on 2 · 2ℓ vertices. Thus, the
+
+induced graph of any subset A consisting of a variable nodes will form a complete bipartite graph
+
+on 2a nodes, implying that each variable node in GA will have a degree a check neighbors. Hence,
+
+absorbing sets consist of all even-cardinality sets of variable nodes, forming (a, 0) absorbing sets.
+
+For a given value a, there are
+
+2ℓ a
+
+ways of obtaining an (a, 0) absorbing set. Thus, the total number
+
+of absorbing sets arises from summing over all nonzero even values of a ≤ 2ℓ.
+
+We use Lemma 5.5 and combine the absorbing set results for Lemma 5.3 and Lemma 5.4 in the following corollary.
+
+Corollary 5.6. The Tanner graphs for dyadic matrices as in Lemma 5.3 and Lemma 5.4 have
+
+absorbing sets of the following type:
+
+(1) For Lemma 5.3, all absorbing sets whose induced subgraphs are connected are of the form (a, 0)
+
+for
+
+a
+
+even
+
+and
+
+2
+
+≤
+
+a
+
+≤
+
+⌊
+
+n 2
+
+⌋
+
+·
+
+2.
+
+There
+
+are
+
+n·
+
+n a
+
+such (a, 0) absorbing sets.
+
+(2) For Lemma 5.4, all absorbing sets whose induced subgraphs are connected are of the form (a, 0)
+
+for a even and 2 ≤ a ≤ 2k. There are 2ℓ−k ·
+
+2k a
+
+such (a, 0) absorbing sets.
+
+Proof. For any graph consisting of connected components, absorbing sets whose induced subgraphs
+
+are connected will thus consist of variable nodes from a single connected component. For Lemma
+
+5.3, whose connected components are Km,n complete bipartite graphs, even if n is odd, absorbing
+
+sets whose induced subgraphs are connected will again consist of all even collection of variable nodes
+
+from a single Km,n complete bipartite graph. Then, since there are n complete bipartite graphs
+
+Km,n, there are n ·
+
+n a
+
+such
+
+(a,
+
+0)
+
+absorbing
+
+sets,
+
+for
+
+2
+
+≤
+
+a
+
+≤
+
+⌊
+
+n 2
+
+⌋
+
+·
+
+2.
+
+The graph GD consists of 2ℓ−k disconnected K2k,2k subgraphs. Thus, absorbing sets whose
+
+induced subgraphs are connected arise from one of these K2k,2k subgraphs. By Lemma 5.5, all of
+
+these absorbing sets are of the form (a, 0) for a even and 2 ≤ a ≤ 2ℓ. This means we have 2ℓ−k
+
+groups of 2k variable nodes from which we choose a variable nodes to form an absorbing set. This
+
+number is 2ℓ−k
+
+2k a
+
+.
+
+6 Simulation Results
+In this section, we provide simulations to demonstrate the performance of the codes considered in this paper. For simulations, we use the belief propagation decoding algorithm [34] using the software [35].
+
+19
+
+(a)
+
+(b)
+
+(c)
+Figure 1: Subfigure (a): Two dyadic matrices with signature weight 4 and ℓ = 5. Subfigure (b): Construction 3.11 with ℓ = 3 and v = 4 using only the first three rows. Subfigure (c): Comparison of Construction 3.10 versus Construction 3.11.
+As a proof of concept, we begin by showcasing our cycle analysis with two dyadic matrices. In Figure 1(a), we use dyadic matrices with signature weight 4 and ℓ = 5, where one matrix is random whereas the other is optimized so that the resulting Tanner graph has minimal number of 4-cycles. The decoding gain in this case is clear. This behavior is caused by dyadic matrices that are supported on subspaces or cosets and their “duals” (where a signature v becomes v + 1) all of which have 288 4-cycles. In comparison, our “optimized" matrix has only 96 4-cycles.
+Next, in Figure 1(b), we test our cycle analysis on Construction 3.11. Here we use ℓ = 3 and 3 × 8 block matrices. As discussed, in all scenarios, the girth is four but they differ by the number of 4-cycles. The dotted line represents a choice with a maximum number of 4-cycles, the dashed line represents a choice with an average number of 4-cycles (for which we use a representation of [9]), and for the solid line we use our PEG algorithm to obtain a code with the minimal number of 4-cycles. As seen in Figure 1(b), the optimized version performs significantly better whereas the “average” version is closer to the worse version.
+In Figure 1(c), we use ℓ = 4 and 2 × 8 block matrices. The orange line represents Construction 3.11 in its random/average version (as discussed above). Whereas the blue lines represent Construction 3.10 with the dashed line representing the random/average version and the solid line representing the best version (that is, the smallest number of 8-cycles). Immediately, Construction 3.10 is expected to perform better since it allows for bigger girth. Then minimizing the number of small cycles yields further improvements.
+20
+
+7 Conclusions and Future Research
+This paper demonstrates how the dyadic and quasi-dyadic structure can be leveraged as a practical design framework for (Q)LDPC codes by enabling efficient cycle enumeration, dyadic-aware PEG/forbidden-set constructions that either increase girth when possible or, when dyadic constraints limit girth growth, reduce the multiplicity and organization of the shortest cycles, and by providing initial characterizations of absorbing-set behavior for key structured layouts.
+We have shown how systematic control of short-cycle multiplicity and bad layouts can yield tangible iterative-decoding gains. It remains open to establish the fundamental limits of dyadic lifts, including tight bounds on achievable girth and minimal short-cycle multiplicities along with structure–randomness trade-offs and extending absorbing-set results to general quasi-dyadic ensembles and identifying dyadic invariants that predict the error floor. It would also be interesting to explore strengthening the constructions and to determine whether forbidden sets are complete for lengths 6 and 8 pathologies along with what optimization objectives best correlate with performance (e.g., cycle counts). Along the same lines, in order to break the girth g ≤ 8 bound for dyadic lifting of the all-one protograph, we will explore in future work n-adic lifting of irregular protographs. Preliminary results already show that high girths are indeed achievable and a similar cycle analysis is feasible.
+Another direction worth pursuit involves addressing quantum-specific issues such as distance and rate scaling for dyadic CSS families along with consideration of how dyadic regularity may improve syndrome extraction and decoder parallelism and generalizations to other group-ring lift families beyond characteristic 2.
+A Girth Analysis (Continuation)
+In this appendix, we continue the cycle analysis of dyadic and quasi-dyadic codes presented in Sections 4.2 and 4.3, respectively.
+A.1 Cycles in Dyadic Codes (Continuation)
+A.1.1 Counting 6-cycles
+If D is a dyadic matrix as in (12) and its signature row σ(D) has weight ω ≥ 2, then D has girth 4 as we discussed in Section 4.2.1. We can use our cycle analysis to also compute the number of 6-cycles. By Lemma 4.6, a 6-cycle in the Tanner graph of a dyadic matrix projects only onto a TBC walk of length 6. The reason why a 6-cycle does not project onto a TBC walk of length 2, which would be traversed three times, is because there are no elements of order 3 in F2ℓ . Also, the reason why it does not project onto a TBC walk of length 3, which would be traversed twice, is because the protograph is bipartite, so there are no 3-cycles in it. These walks can be studied by computing the product DDTD according to Theorem 4.2. A TBC walk of length 6 in the protograph has the form [xu, xv, xw, xw′, xv′, xu′] and counting the number of 6-cycles requires analyzing the mset A = {(u, v, w, xu + xv + xw) | u, v, w ∈ [ω], u ≠ v, v ≠ w}. Consider the following theorem.
+Theorem A.1. Let D be as in (12) and let
+A = {(u, v, w, xu + xv + xw) | u, v, w ∈ [ω], u ≠ v, v ̸= w} .
+For u, v, w, u′, v′, w′ ∈ [ω], let (u, v, w, αu,v,w) and (u′, v′, w′, αu′,v′,w′) ∈ A be such that αu,v,w = αu′,v′,w′. Then this repetition αu,v,w = αu′,v′,w′ lifts to a collection of 6-cycles in the Tanner graph
+21
+
+if u ̸= u′ and w ≠ w′. The total number of 6-cycles in the Tanner graph, N6, is given by
+
+2ℓ N6 = 6 ·
+
+R∗Ac1 + RA∗c2 + R∗Ac3 + R∗Ac4 + R∗Anc
+
+,
+
+(16)
+
+where R∗Ac1 , R∗Ac2 , R∗Ac3 , RA∗c4 , and R∗Anc are the numbers of repetitions αu,v,w = αu′,v′,w′ in the mset A satisfying Conditions 1, 2, 3, 4, and not satisfying either, respectively, and where
+
+• Condition 1: u = w′, v = v′, and w = u′;
+
+• Condition 2: v = u′ and w = v′;
+
+• Condition 3: u = w and w′ = u′; and
+
+• Condition 4: u = v′ and v = w′.
+
+Proof. For u, v, w, u′, v′, w′ ∈ [ω], let (u, v, w, αu,v,w) and (u′, v′, w′, αu′,v′,w′) be two elements in A such that αu,v,w = αu′,v′,w′. The walk of length 6 corresponding to this repetition is given by W = [xu, xv, xw, xw′, xv′, xu′]. If u ̸= u′ and w ̸= w′, then this walk is actually a TBC walk with permutation shift αu,v,w + αu′,v′,w′ = 0, so by Corollary 4.11, its inverse image is the union of N/m 6-cycles, where m ≥ 1 is the order of the permutation shift of W in F2ℓ . Notice that m ∈ {1, 2}, but since m = 2 is not possible by the argument before the statement of Theorem A.1, we only study
+the case m = 1. Let us focus on the indices (u, v, w, w′, v′, u′). When computing all the equivalent walks to W ,
+there are five sets of conditions that arise:
+
+• Condition 1: u = w′, v = v′, and w = u′;
+
+• Condition 2: v = u′ and w = v′;
+
+• Condition 3: u = w and w′ = u′;
+
+• Condition 4: u = v′ and v = w′; and
+
+• Condition 5: u = w = v′ and v = w′ = u′.
+
+If Condition 1 is assumed, the tuple of indices (u, v, w, w′, v′, u′) becomes (u, v, w, u, v, w). Since
+the walk [xu, xv, xw] is not closed, the walk corresponding to the tuple (u, v, w, u, v, w), W , is not the double traversal of a TBC walk of length 3 (which would require m = 2), so the tu-
+ple actually contributes to the number of 6-cycles in the Tanner graph. When computing all the
+walks equivalent to W , we obtain exactly 6 distinct elements (u, v, w, u, v, w), (v, w, u, v, w, u),
+(w, u, v, w, u, v), (u, w, v, u, w, v), (v, u, w, v, u, w), and (w, v, u, w, v, u), which means that the rep-
+etition αu,v,w = αu′,v′,w′ is counted six times in the construction of A. The number of 6-cycles arising from this repetition is 2ℓ.
+If Condition 2 is assumed, the tuple of indices (u, v, w, w′, v′, u′) becomes (u, v, w, w′, w, v). When computing all the walks equivalent to W , we obtain 6 distinct elements (u, v, w, w′, w, v), (v, w, w′, w, v, u), (w, w′, w, v, u, v), (w′, w, v, u, v, w), (w, v, u, v, w, w′), and (v, u, v, w, w′, w), which
+means that the repetition αu,v,w = αu′,v′,w′ is counted six times in the construction of A. The number of 6-cycles arising from this repetition is 2ℓ.
+If Condition 3 is assumed, the tuple of indices (u, v, w, w′, v′, u′) becomes (u, v, u, u′, v′, u′). When computing all the walks equivalent to W , we obtain 6 distinct elements (u, v, u, u′, v′, u′), (v, u, u′, v′, u′, u), (u, u′, v′, u′, u, v), (u′, v′, u′, u, v, u), (v′, u′, u, v, u, u′), and (u′, u, v, u, u′, v′), which
+
+22
+
+means that the repetition αu,v,w = αu′,v′,w′ is counted six times in the construction of A. The number of 6-cycles arising from this repetition is 2ℓ.
+If Condition 4 is assumed, the tuple of indices (u, v, w, w′, v′, u′) becomes (u, v, w, v, u, u′). When computing all the walks equivalent to W , we obtain 6 distinct elements (u, v, w, v, u, u′), (v, w, v, u, u′, u), (w, v, u, u′, u, v), (v, u, u′, u, v, w), (u, u′, u, v, w, v), and (u′, u, v, w, v, u), which means that the repetition αu,v,w = αu′,v′,w′ is counted six times in the construction of A. The number of 6-cycles arising from this repetition is 2ℓ.
+If Condition 5 is assumed, the tuple of indices (u, v, w, w′, v′, u′) becomes (u, v, u, v, u, v). The corresponding TBC walk would be formed by traversing a TBC walk of length 2 three times, but we have argued why this is not possible. Finally, if none of these conditions are satisfied, then we also obtain 6 distinct elements (u, v, w, w′, v′, u′), (v, w, w′, v′, u′, u), (w, w′, v′, u′, u, v), (w′, v′, u′, u, v, w), (v′, u′, u, v, w, w′), and (u′, u, v, w, w′, v′), when computing all the walks equivalent to W . This means that the repetition αu,v,w = αu′,v′,w′ is counted six times in the construction of A. The number of 6-cycles arising from this repetition is 2ℓ.
+Therefore, if RA∗c1 , RA∗c2 , RA∗c3 , R∗Ac4 , and R∗Anc are the numbers of repetitions αu,v,w = αu′,v′,w′ in the mset A satisfying Conditions 1, 2, 3, 4, and not satisfying either, respectively, then (16) follows and we conclude the proof.
+Example A.2. Let D be the parity-check matrix given by D = P0 + P1 + P2 + P3 and let N = 23 as in Example 4.16. We know that D has girth 4, so we can use our strategy to count the number of 6-cycles in the Tanner graph. To do this, we construct the mset in Theorem A.1 and get
+
+A = {(0, 1, 0, 1), (0, 1, 2, 3), (0, 1, 3, 2), (0, 2, 0, 2), (0, 2, 1, 3), (0, 2, 3, 1), (0, 3, 0, 3), (0, 3, 1, 2), (0, 3, 2, 1), (1, 0, 1, 0), (1, 0, 2, 3), (1, 0, 3, 2), (1, 2, 0, 3), (1, 2, 1, 2), (1, 2, 3, 0), (1, 3, 0, 2), (1, 3, 1, 3), (1, 3, 2, 0), (2, 0, 1, 3), (2, 0, 2, 0), (2, 0, 3, 1), (2, 1, 0, 3), (2, 1, 2, 1), (2, 1, 3, 0), (2, 3, 0, 1), (2, 3, 1, 0), (2, 3, 2, 3), (3, 0, 1, 2), (3, 0, 2, 1), (3, 0, 3, 0), (3, 1, 0, 2), (3, 1, 2, 0), (3, 1, 3, 1), (3, 2, 0, 1), (3, 2, 1, 0), (3, 2, 3, 2)}.
+Some computations show that R∗Ac1 = 24, R∗Ac2 = 24, RA∗c3 = 24, R∗Ac4 = 24, and RA∗nc = 48. Using (16),
+
+2ℓ N6 = 6 ·
+
+R∗Ac1 + R∗Ac2 + RA∗c3 + RA∗c4 + RA∗nc
+
+23 = · (24 + 24 + 24 + 24 + 48)
+6
+
+= 768,
+
+so the total number of 6-cycles in the Tanner graph of D is N6 = 768.
+
+□
+
+Remark A.3. In the same line of Remark 4.17, if ω ≥ 3, then notice that W = [x0, x1, x2, x0, x1, x2]
+
+is a TBC walk of length 6 that always has permutation shift 0 in F2ℓ . This is a TBC walk that satisfies
+
+Condition
+
+1
+
+in
+
+Theorem
+
+A.1.
+
+By
+
+the
+
+proof
+
+of
+
+Theorem
+
+A.1,
+
+notice
+
+that
+
+N6
+
+≥
+
+2ℓ 2
+
+·
+
+1 6
+
+· ω(ω − 1)(ω − 2).
+
+The first term of (16) is equal to the right-hand side of this inequality since that is the number
+
+of ways we can construct the TBC walks of length 6 satisfying this condition. If ω ∈ {0, 1, 2}, we
+
+naturally have N6 = 0.
+
+□
+
+23
+
+A.2 Cycles in Protograph-based LDPC Codes from Dyadics (Continuation)
+
+A.2.1 Counting 6-cycles
+
+The 6-cycles in the Tanner graph of protograph-based LDPC codes are projected onto a 3 × 3
+
+submatrix of the form
+
+Phu Phv Phw  H3 =  Piu Piv Piw  .
+Pju Pjv Pjw
+
+The corresponding TBC walks of length 6 in the protograph obtained from this submatrix are given
+by [hu, iu, im, jm, ju′ , hu′ ], [iu, hu, hm, jm, ju′ , iu′ ], and [ju, hu, hm, im, iu′ , ju′ ] for 0 ≤ h < i < j ≤ nc − 1 and u, m, u′ ∈ [nv]. In [6], it was shown that these three TBC walk patterns are equivalent, so only one of them is enough to describe all 6-cycles in the Tanner graph. The first TBC walk
+pattern gives the product
+
+Phu′ −1 · Pju′ · (Pjm )−1 · Pim · (Piu )−1 · Phu = Phu′ Pju′ Pjm Pim Piu Phu = Phu+iu+im+jm+ju′ +hu′ ,
+
+so we require that hu + iu + im + jm + ju′ + hu′ ≠ 0 to avoid 6-cycles in the Tanner graph. From this observation, we have that girth(H) > 6 if and only if for each 0 ≤ h < i < j ≤ nc − 1, all the elements in each one of the msets
+
+{hu + iu + im, hu + ju + jm | u ∈ [nv]\{m}} , m ∈ [nv],
+
+contains distinct elements. To count 6-cycles in the Tanner graph, we rewrite these conditions. Consider the following theorem.
+
+Theorem A.4. Let H be as in (14). For 0 ≤ h < i < j ≤ nc − 1 and m ∈ [nv], consider the following msets
+
+Ah1,,mi,j = {(u, hu + iu + im) | u ∈ [nv]\{m}} , A2h,,mi,j = {(u, hu + ju + jm) | u ∈ [nv]\{m}} .
+
+For u, u′ ∈ [nv], let (u, αu) ∈ A1h,,mi,j and (u′, αu′) ∈ A2h,,mi,j be such that αu = αu′. Then the repetition αu = αu′ lifts to a collection of 6-cycles in the Tanner graph if u ≠ u′. The total number of 6-cycles in the Tanner graph, N6, is given by
+
+N6 = 2ℓ ·
+
+ρ (α), A1h,,mi,j ,Ah2,,mi,j
+
+h,i,j∈[nc] m∈[nv] α∈Fℓ2
+
+h<i<j
+
+(17)
+
+where ρ (α) Ah1,,mi,j,A2h,,mi,j denotes the number of times the element α is repeated between the msets A1h,,mi,j and A2h,,mi,j in the sense described above.
+Proof. By Lemma 4.6, the 6-cycles in the Tanner graph are projected onto TBC walks of length 6 in the protograph and these walks can be studied by computing the product HHTH as a consequence of Theorem 4.2. To determine all possible TBC walk patterns, we use the product H3H3TH3 instead, but if H has less than three rows, then any pattern arising from these additional rows are omitted in the computations of 6-cycles. Once H3H3TH3 has been computed, we use the strategy of combining walks following Definition 4.3 to compute all possible TBC walk patterns, and then use Definition
+
+24
+
+4.13 to compute all nonequivalent TBC walk patterns. This gives us the unique TBC walk pattern [hu, iu, im, jm, ju′, hu′] if u ≠ m, m ≠ u′, and u′ ̸= u. If hu + iu + im + jm + ju′ + hu′ = 0, then hu + iu + im = hu′ + ju′ + jm, so we have 6-cycles in the Tanner graph every time this repetition happens. In this case, this repetition contributes 2ℓ 6-cycles. If we sum over all sets of three of rows
+(h, i, j), h < i < j, and all m ∈ [nv], (17) follows.
+
+Example A.5. Let H be the parity-check matrix given by
+P0 P0 P0 P0 P0 H = P0 P1 P2 P3 P4 .
+P0 P2 P4 P6 P8
+For N = 24, this parity-check matrix has girth 6. To show this, we construct the msets in Theorem A.4 and check for repetitions. Since H has exactly three rows, the only combination of three rows is given by (h, i, j) = (0, 1, 2), so the only msets that we need to construct are the following:
+
+A10,,10,2 = {(1, 1), (2, 2), (3, 3), (4, 4)}, A20,,10,2 = {(1, 2), (2, 4), (3, 6), (4, 8)}, A10,,11,2 = {(0, 1), (2, 3), (3, 2), (4, 5)}, A02,,11,2 = {(0, 2), (2, 6), (3, 4), (4, 10)}, A01,,12,2 = {(0, 2), (1, 3), (3, 1), (4, 6)},
+
+A20,,21,2 = {(0, 4), (1, 6), (3, 2), (4, 12)}, A10,,31,2 = {(0, 3), (1, 2), (2, 1), (4, 7)}, A02,,31,2 = {(0, 6), (1, 4), (2, 2), (4, 14)}, A10,,41,2 = {(0, 4), (1, 5), (2, 6), (3, 7)}, A20,,41,2 = {(0, 8), (1, 10), (2, 12), (3, 14)}.
+
+Once all the pairs A10,,m1,2, A02,,m1,2, for m ∈ [nv], are constructed, we analyze each pair separately. If m = 0, notice that (2, 2) ∈ A01,,01,2 and (1, 2) ∈ A02,,01,2. Since there is a repetition in the second coordinate of these two elements and they differ in the first coordinate, we have ρ (2) A10,,10,2,A20,,10,2 = 1. Similarly, (4, 4) ∈ A10,,10,2 and (2, 4) ∈ A02,,01,2, so ρ (4) A10,,10,2,A20,,10,2 = 1. After applying the same strategy to the other pairs, we obtain ρ (2) A10,,11,2,A02,,11,2 = 1, ρ (2) A10,,12,2,A20,,12,2 = 1, ρ (6) A10,,12,2,A20,,12,2 = 1, and ρ (2) A10,,31,2,A02,,13,2 = 1. Plugging in these values in (17), we have
+N6 = 24 · [(1 + 1) + (1) + (1 + 1) + (1) + (0)] = 16 · 6 = 96,
+
+so the number of 6-cycles in the Tanner graph is N6 = 96.
+
+□
+
+A.2.2 Counting 8-cycles
+
+Let us start by simplifying the notation. Let W be a walk in the protograph. If W = [hα1 β1 , hα2 β1 , hα3 β2 , hα4 β2 , . . . , hαk−1 βm , hαk βm ] has length k = 2m, then we write
+
+[hα1 , hα2 , . . . , hαk ]β1,β2,...,βm .
+
+If W = [hα1 β1 , hα2 β1 , hα3 β2 , hα4 β2 , . . . , hαk−1 βm , hαk βm , hαk+1 βm+1 ] has length k = 2m + 1, then we write
+
+[hα1 , hα2 , . . . , hαk |hαk+1 ]β1,β2,...,βm|βm+1 .
+
+The 8-cycles in the Tanner graph of protograph-based LDPC codes are projected onto a 4 × 4
+
+submatrix of the form
+
+Phu Phv Phv′ Phu′ 
+
+H4
+
+=
+
+ Piu
+
+ 
+
+Pju
+
+Piv Pjv
+
+Piv′ Pjv′
+
+Piu′ Pju′
+
+  
+
+.
+
+Pku Pkv Pkv′ Pku′
+
+25
+
+The corresponding 21 nonequivalent TBC walk patterns of length 8 in the protograph obtained from this submatrix are given by
+
+[h, i, i, h, h, i, i, h]u,v,v′,u′ , [h, i, i, h, h, j, j, h]u,v,v′,u′ , [h, i, i, h, h, k, k, h]u,v,v′,u′ , [h, j, j, h, h, j, j, h]u,v,v′,u′ , [h, j, j, h, h, k, k, h]u,v,v′,u′ , [h, k, k, h, h, k, k, h]u,v,v′,u′ , [h, j, j, i, i, j, j, h]u,v,v′,u′ ,
+
+[h, j, j, i, i, k, k, h]u,v,v′,u′ , [h, k, k, i, i, k, k, h]u,v,v′,u′ , [h, i, i, j, j, i, i, h]u,v,v′,u′ , [h, i, i, j, j, k, k, h]u,v,v′,u′ , [h, k, k, j, j, k, k, h]u,v,v′,u′ , [h, i, i, k, k, i, i, h]u,v,v′,u′ , [h, i, i, k, k, j, j, h]u,v,v′,u′ ,
+
+[h, j, j, k, k, j, j, h]u,v,v′,u′ , [i, j, j, i, i, j, j, i]u,v,v′,u′ , [i, j, j, i, i, k, k, i]u,v,v′,u′ , [i, k, k, i, i, k, k, i]u,v,v′,u′ , [i, k, k, j, j, k, k, i]u,v,v′,u′ , [i, j, j, k, k, j, j, i]u,v,v′,u′ , [j, k, k, j, j, k, k, j]u,v,v′,u′ ,
+
+for 0 ≤ h < i < j < k ≤ nc − 1 and u, v, v′, u′ ∈ [nv]. To count 8-cycles in the Tanner graph, we rewrite these conditions. Consider the following theorem.
+
+Theorem A.6. Let H be as in (14). For 0 ≤ h < i < j < k ≤ nc − 1, consider the following msets
+Ah1,,1i,j,k = {(u, v, hu + iu + iv + hv) | u, v ∈ [nv], u ̸= v} , A1h,,2i,j,k = {(u, v, hu + iu + iv + hv) | u, v ∈ [nv], u ̸= v} , A2h,,1i,j,k = {(u, v, hu + iu + iv + hv) | u, v ∈ [nv], u ≠ v} , Ah2,,2i,j,k = {(u, v, hu + ju + jv + hv) | u, v ∈ [nv], u ≠ v} , A3h,,1i,j,k = {(u, v, hu + iu + iv + hv) | u, v ∈ [nv], u ̸= v} , A3h,,2i,j,k = {(u, v, hu + ku + kv + hv) | u, v ∈ [nv], u ≠ v} , A4h,,1i,j,k = {(u, v, hu + ju + jv + hv) | u, v ∈ [nv], u ≠ v} , Ah4,,2i,j,k = {(u, v, hu + ju + jv + hv) | u, v ∈ [nv], u ≠ v} , Ah5,,1i,j,k = {(u, v, hu + ju + jv + hv) | u, v ∈ [nv], u ̸= v} , Ah5,,2i,j,k = {(u, v, hu + ku + kv + hv) | u, v ∈ [nv], u ≠ v} , Ah6,,1i,j,k = {(u, v, hu + ku + kv + hv) | u, v ∈ [nv], u ≠ v} , A6h,,2i,j,k = {(u, v, hu + ku + kv + hv) | u, v ∈ [nv], u ≠ v} , A7h,,1i,j,k = {(u, v, hu + ju + jv + iv) | u, v ∈ [nv], u ̸= v} , A7h,,2i,j,k = {(u, v, hu + ju + jv + iv) | u, v ∈ [nv], u ̸= v} , A8h,,1i,j,k = {(u, v, hu + ju + jv + iv) | u, v ∈ [nv], u ̸= v} , Ah8,,2i,j,k = {(u, v, hu + ku + kv + iv) | u, v ∈ [nv], u ≠ v} , A9h,,1i,j,k = {(u, v, hu + ku + kv + iv) | u, v ∈ [nv], u ≠ v} , Ah9,,2i,j,k = {(u, v, hu + ku + kv + iv) | u, v ∈ [nv], u ̸= v} , Ah10,i,,1j,k = {(u, v, hu + iu + iv + jv) | u, v ∈ [nv], u ≠ v} , Ah10,i,,2j,k = {(u, v, hu + iu + iv + jv) | u, v ∈ [nv], u ≠ v} , A1h1,i,,1j,k = {(u, v, hu + iu + iv + jv) | u, v ∈ [nv], u ≠ v} , Ah11,i,,2j,k = {(u, v, hu + ku + kv + jv) | u, v ∈ [nv], u ̸= v} ,
+
+26
+
+Ah12,i,,1j,k = {(u, v, hu + ku + kv + jv) | u, v ∈ [nv], u ≠ v} , Ah12,i,,2j,k = {(u, v, hu + ku + kv + jv) | u, v ∈ [nv], u ≠ v} , A1h3,i,,1j,k = {(u, v, hu + iu + iv + kv) | u, v ∈ [nv], u ̸= v} , Ah13,i,,2j,k = {(u, v, hu + iu + iv + kv) | u, v ∈ [nv], u ≠ v} , A1h4,i,,1j,k = {(u, v, hu + iu + iv + kv) | u, v ∈ [nv], u ≠ v} , Ah14,i,,2j,k = {(u, v, hu + ju + jv + kv) | u, v ∈ [nv], u ̸= v} , A1h5,i,,1j,k = {(u, v, hu + ju + jv + kv) | u, v ∈ [nv], u ≠ v} , A1h5,i,,2j,k = {(u, v, hu + ju + jv + kv) | u, v ∈ [nv], u ̸= v} , A1h6,i,,1j,k = {(u, v, iu + ju + jv + iv) | u, v ∈ [nv], u ̸= v} , A1h6,i,,2j,k = {(u, v, iu + ju + jv + iv) | u, v ∈ [nv], u ≠ v} , A1h7,i,,1j,k = {(u, v, iu + ju + jv + iv) | u, v ∈ [nv], u ≠ v} , Ah17,i,,2j,k = {(u, v, iu + ku + kv + iv) | u, v ∈ [nv], u ≠ v} , A1h8,i,,1j,k = {(u, v, iu + ku + kv + iv) | u, v ∈ [nv], u ≠ v} , A1h8,i,,2j,k = {(u, v, iu + ku + kv + iv) | u, v ∈ [nv], u ̸= v} , A1h9,i,,1j,k = {(u, v, iu + ku + kv + jv) | u, v ∈ [nv], u ≠ v} , A1h9,i,,2j,k = {(u, v, iu + ku + kv + jv) | u, v ∈ [nv], u ̸= v} , Ah20,i,,1j,k = {(u, v, iu + ju + jv + kv) | u, v ∈ [nv], u ≠ v} , A2h0,i,,2j,k = {(u, v, iu + ju + jv + kv) | u, v ∈ [nv], u ̸= v} , Ah21,i,,1j,k = {(u, v, ju + ku + kv + jv) | u, v ∈ [nv], u ̸= v} , Ah21,i,,2j,k = {(u, v, ju + ku + kv + jv) | u, v ∈ [nv], u ≠ v} .
+For u, v, u′, v′ ∈ [nv], let (u, v, αu,v) ∈ A1h,,1i,j,k and (u′, v′, αu′,v′ ) ∈ Ah1,,2i,j,k be such that αu,v = αu′,v′ . Then this repetition αu,v = αu′,v′ lifts to a collection of 8-cycles in the Tanner graph if u ̸= u′ and v ≠ v′. The same result follows if the pair A1h,,1i,j,k, Ah1,,2i,j,k is replaced with any of the other twenty
+27
+
+pairs. The total number of 8-cycles in the Tanner graph, N8, is given by
+
+N8 =
+h,i,j,k∈[nc] h<i<j<k
+
+2 2 ∗ R + 2 R + 2 R + R , Ah1,,1i,j,k,A1h,,2i,j,k
+
+ℓ A2h,,1i,j,k ,Ah2,,2i,j,k
+
+ℓ Ah3,,1i,j,k ,A3h,,2i,j,k
+
+∗ A4h,,1i,j,k ,Ah4,,2i,j,k
+
+ℓ
++ 22 R + R + 22 R + 2 R A5h,,1i,j,k,Ah5,,2i,j,k
+
+∗ Ah6,,1i,j,k ,Ah6,,2i,j,k
+
+ℓ A7h,,1i,j,k ,A7h,,2i,j,k
+
+ℓ A8h,,1i,j,k ,A8h,,2i,j,k
+
+ℓ
++ 22 R + 22 R + 2 R + 22 R A9h,,1i,j,k,A9h,,2i,j,k
+
+ℓ A1h0,i,,1j,k ,Ah10,i,,2j,k
+
+ℓ Ah11,i,,1j,k ,A1h1,i,,2j,k
+
+ℓ A1h2,i,,1j,k ,A1h2,i,,2j,k
+
+ℓ
++ 22 R + 2 R + 22 R + R A1h3,i,,1j,k,Ah13,i,,2j,k
+
+ℓ A1h4,i,,1j,k ,A1h4,i,,2j,k
+
+ℓ A1h5,i,,1j,k ,A1h5,i,,2j,k
+
+∗ A1h6,i,,1j,k ,Ah16,i,,2j,k
+
+ℓ
++ 22 R + R + 22 R + 22 R Ah17,i,j,k,Ah17,i,j,k
+
+∗ Ah18,i,,1j,k ,Ah18,i,,2j,k
+
+ℓ A1h9,i,,1j,k ,A1h9,i,,2j,k
+
+ℓ Ah20,i,,1j,k ,A2h0,i,,2j,k
+
++ R , ∗
+A2h1,i,,1j,k ,Ah21,i,,2j,k
+
+(18)
+
+where RX1,X2 is the number of repetitions αu,v = αu′,v′ between the msets X1 and X2, the coefficient
+of each RX1,X2 is coming from the number of equivalent walks for the corresponding TBC walk pattern, R∗X1,X2 is given by
+
+R∗X1,X2
+
+=
+
+2ℓ 2
+
+·
+
+1 2
+
+·
+
+R∗Xc1,X2
+
++
+
+2ℓ
+
+·
+
+1 4
+
+RX∗n1c,X2
+
+=
+
+2ℓ 4
+
+·
+
+R∗Xc1,X2 + RX∗n1c,X2
+
+,
+
+(19)
+
+and R∗Xc1,X2 and RX∗n1c,X2 are satisfying and not satisfying
+
+the the
+
+numbers of repetitions αu,v = αu′,v′ between conditions u = v′ and v = u′, respectively.
+
+the
+
+msets
+
+X1
+
+and
+
+X2
+
+Proof. By Lemma 4.6, the 8-cycles in the Tanner graph are projected onto either TBC walks of
+length 4 that are traversed twice or TBC walks of length 8, in the protograph, and these walks can be studied by computing the product HHTHHT as a consequence of Theorem 4.2. To determine all possible TBC walk patterns, we use the product H4H4TH4H4T instead, but if H has less than four rows, then any pattern arising from these additional rows are omitted in the computations of 8-cycles. Once H4H4TH4H4T has been computed, we use the strategy of combining walks following Definition 4.3 to compute all possible TBC walk patterns, and then use Definition 4.13 to compute
+all nonequivalent TBC walk patterns. This is how we obtained the 21 nonequivalent TBC walk patterns before the statement of Theorem A.6 and the corresponding 21 pairs of sets Ahm,i,1,j,k, Ahm,i,2,j,k for 1 ≤ m ≤ 21.
+To show that a repetition in any of these pairs lifts to a collection of 8-cycles in the Tanner graph, consider a repetition in the pair Ah1,,1i,j,k, A1h,,2i,j,k. There are u, v, u′, v′ ∈ [nv], (u, v, αu,v) ∈ Ah1,,1i,j,k, and (u′, v′, αu′,v′ ) ∈ Ah1,,2i,j,k such that αu,v = αu′,v′ . Then this is equivalent to hu + iu + iv + hv + hv′ +iv′ +iu′ +hu′ = 0. To guarantee that this permutation shift represents a TBC walk, in addition to the conditions u ̸= v and u′ ̸= v′ required in the construction of the msets A1h,,1i,j,k and Ah1,,2i,j,k, we need to ensure that u ≠ u′ and v ̸= v′. In this case, this TBC walk lifts to a collection of 8-cycles.
+The same approach works for the remaining 20 pairs.
+Once a TBC walk pattern is fixed, it is possible that at least one of its equivalent walks has
+the same pattern, which means that the same collection of 8-cycles will be counted multiple times. Let us focus on the indices (u, v, v′, u′). If we let m = 1, then for the corresponding TBC walk
+pattern, there are four equivalent walks that have the same TBC walk pattern and these have index tuples (u, v, v′, u′), (v′, u′, u, v), (v, u, u′, v′), and (u′, v′, v, u). From this collection of index tuples,
+
+28
+
+we get the relation u = v′ and v = u′. If this relation is satisfied, then we obtain two distinct
+
+index
+
+tuples
+
+(u, v, u, v)
+
+and
+
+(v, u, v, u),
+
+so
+
+the
+
+corresponding
+
+coefficient
+
+is
+
+1 2
+
+and
+
+their
+
+contribution
+
+to
+
+the
+
+number
+
+of
+
+8-cycles
+
+is
+
+2ℓ 2
+
+(since
+
+they
+
+correspond
+
+to
+
+the
+
+double
+
+traversal
+
+of
+
+a
+
+TBC
+
+walk
+
+of
+
+length 4). If the relation is not satisfied, the four index tuples are distinct, so the corresponding
+
+coefficient
+
+is
+
+1 4
+
+and
+
+their
+
+contribution
+
+to
+
+the
+
+number
+
+of
+
+8-cycles
+
+is
+
+2ℓ.
+
+The
+
+same
+
+situation
+
+happens
+
+for m ∈ {4, 6, 16, 18, 21}.
+
+If we let m = 2, then for the corresponding TBC walk pattern, there are two equivalent walks
+
+that have the same TBC walk pattern and these have index tuples (u, v, v′, u′) and (v, u, u′, v′). Since
+
+there is no possible relation between the index tuples, they are always distinct, so the corresponding
+
+coefficient
+
+is
+
+1 2
+
+and
+
+their
+
+contribution
+
+to
+
+the
+
+number
+
+of
+
+8-cycles
+
+is
+
+2ℓ.
+
+The
+
+same
+
+situation
+
+happens
+
+for m ∈ {3, 5, 7, 9, 10, 11, 12, 13, 14, 15, 17, 19, 20}.
+
+Finally, if we let m = 8, then for the corresponding TBC walk pattern, there are no equivalent
+
+walks that have the same TBC walk pattern, so this gives the unique index tuple (u, v, v′, u′).
+
+Naturally, the corresponding coefficient is 1 and their contribution to the number of 8-cycles is 2ℓ.
+
+The same situation happens for m ∈ {11, 14}.
+
+Therefore, if we let RX1,X2 be the number of repetitions αu,v = αu′,v′ between the msets X1 and X2, and RX∗c1,X2 and RX∗n1c,X2 be the numbers of repetitions αu,v = αu′,v′ between the msets X1 and X2 satisfying and not satisfying the conditions u = v′ and v = u′, respectively, then (18) and
+
+(19) follow, and we conclude the proof.
+
+Remark A.7. As mentioned in the proof of Theorem A.6, the product H4H4TH4H4T was used to determine all possible TBC walk patterns that can contribute to 8-cycles in the Tanner graph
+
+instead of the product HHTHHT. If H has less than four rows, then any pattern arising from
+
+these additional rows are omitted in the computations of 8-cycles. If H has one row, notice that all
+
+TBC walk patterns are omitted, so there cannot be any 8-cycles. If H has two rows numbered by
+
+h and i, then the only TBC walk patterns involved in the computation of 8-cycles have m ∈ {1}.
+
+Similarly, if H has three rows numbered by h, i, and j, then the only TBC walk patterns involved
+
+in the computation of 8-cycles have m ∈ {1, 2, 4, 7, 10, 16}.
+
+□
+
+Example A.8. Let H be the parity-check matrix given in Example A.5. Since this parity-check matrix has girth 6 for N = 24, we can use our strategy to count the number of 8-cycles in the
+Tanner graph. We construct the msets in Theorem A.6 and check for repetitions. Since H has
+exactly three rows, the only combination of three rows is given by (h, i, j) = (0, 1, 2), so we only need to construct the six pairs A0m,1,1,2, A0m,1,1,2 for m ∈ {1, 2, 4, 7, 10, 16}. These computations have been omitted for space constraints. After constructing these msets, we analyze each pair separately
+and look for repetitions. Some computations show that we have
+
+N8
+
+=
+
+R∗
+A1,1 ,A1,2
+
++
+
+2ℓ 2 RA2,1,A2,2
+
++
+
+R∗
+A4,1 ,A4,2
+
++
+
+2ℓ 2 RA7,1,A7,2
+
++
+
+2ℓ 2 RA10,1,A10,2
+
++
+
+R∗
+A16,1 ,A16,2
+
+2ℓ =
+4
+
+R∗c
+A1,1 ,A1,2
+
++
+
+RA∗n1c,1,A1,2
+
+2ℓ
+
+2ℓ
+
++ 2 RA2,1,A2,2 + 4
+
+R∗c
+A4,1 ,A4,2
+
++
+
+R∗An4c,1,A4,2
+
+2ℓ
+
+2ℓ
+
+2ℓ
+
++ 2 RA7,1,A7,2 + 2 RA10,1,A10,2 + 4
+
+R + R ∗c
+A16,1 ,A16,2
+
+∗nc A16,1 ,A16,2
+
+24
+
+24
+
+24
+
+24
+
+24
+
+24
+
+= (20 + 24) + (20) + (20 + 24) + (12) + (20) + (20 + 24)
+
+4
+
+2
+
+4
+
+2
+
+2
+
+4
+
+= 944,
+
+so the number of 8-cycles in the Tanner graph is N8 = 944.
+
+□
+
+29
+
+References
+[1] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Transactions on Information Theory, vol. 56, no. 1, pp. 181–201, 2009.
+[2] K. D. Morris, T. Pllaha, and C. A. Kelley, “Absorbing sets in quantum LDPC codes,” Advances in Mathematics of Communications, vol. 23, no. 0, pp. 234–254, 2026. [Online]. Available: https://www.aimsciences.org/article/id/69a6ac251c9579521d08fdc7
+[3] M. Gulamhusein, “Simple matrix-theory proof of the discrete dyadic convolution theorem,” Electronics Letters, vol. 9, pp. 238–239(1), May 1973. [Online]. Available: https://digital-library.theiet.org/content/journals/10.1049/el_19730172
+[4] M. Martinez, T. Pllaha, and C. A. Kelley, “Codes based on dyadic matrices and their generalizations,” Advances in Mathematics of Communications, 2024. [Online]. Available: https://www.aimsciences.org/article/id/675c0e92d0b64a5d1d3497e9
+[5] A. Gómez-Fonseca, R. Smarandache, and D. G. M. Mitchell, “A low complexity PEG-like algorithm to construct quasi-cyclic LDPC codes,” in 2023 12th International Symposium on Topics in Coding (ISTC), 2023, pp. 1–5.
+[6] ——, “An efficient strategy to count cycles in the Tanner graph of quasi-cyclic LDPC codes,” IEEE Journal on Selected Areas in Information Theory, vol. 4, pp. 499–513, 2023.
+[7] X. Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth Tanner graphs,” IEEE Transactions on Information Theory, vol. 51, no. 1, pp. 386–398, January 2005.
+[8] E. McMillon, A. Beemer, and C. A. Kelley, “Extremal absorbing sets in low-density parity-check codes,” Advances in Mathematics of Communications, vol. 17, no. 2, pp. 465–483, 2023.
+[9] A. Baldelli, M. Battaglioni, and P. Santini, “Quantum CSS LDPC codes with quasi-dyadic structure,” in 2025 13th International Symposium on Topics in Coding (ISTC), 2025, pp. 1–5.
+[10] K. Kasai, “Quantum error correction with girth-16 non-binary LDPC codes via affine permutation construction,” in 2025 13th International Symposium on Topics in Coding (ISTC), 2025, pp. 1–5.
+[11] P. Santini, E. Persichetti, and M. Baldi, “Reproducible families of codes and cryptographic applications,” Journal of Mathematical Cryptology, vol. 16, no. 1, pp. 20–48, 2022. [Online]. Available: https://doi.org/10.1515/jmc-2020-0003
+[12] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” Jet Propulsion Laboratory Pasadena, CA, INP Progress Report 42-154, pp. 42–154, August 2003.
+[13] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, September 1981.
+[14] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Physical Review A, vol. 54, pp. 1098–1105, Aug 1996. [Online]. Available: https: //link.aps.org/doi/10.1103/PhysRevA.54.1098
+30
+
+[15] A. M. Steane, “Simple quantum error-correcting codes,” Physical Review A, vol. 54, pp. 4741–4751, Dec 1996. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRevA.54.4741
+[16] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” Quantum, vol. 5, p. 585, 2021.
+[17] A. A. Kovalev and L. P. Pryadko, “Quantum Kronecker sum-product low-density parity-check codes with finite rate,” Physical Review A, vol. 88, no. 1, p. 012311, 2013.
+[18] J.-P. Tillich and G. Zémor, “Quantum LDPC codes with positive rate and minimum distance proportional to the square root of the blocklength,” IEEE Transactions on Information Theory, vol. 60, no. 2, pp. 1193–1202, 2013.
+[19] P. Panteleev and G. Kalachev, “Quantum LDPC codes with almost linear minimum distance,” IEEE Transactions on Information Theory, vol. 68, no. 1, p. 213–229, Jan. 2022. [Online]. Available: http://dx.doi.org/10.1109/TIT.2021.3119384
+[20] M. Grassl, “Bounds on the minimum distance of linear codes and quantum codes,” Online available at http://www.codetables.de, 2007, accessed on 2024-10-19.
+[21] X. Wu, X. You, and C. Zhao, “A necessary and sufficient condition for determining the girth of quasi-cyclic LDPC codes,” IEEE Transactions on Communications, vol. 56, no. 6, pp. 854–857, June 2008.
+[22] J. McGowan and R. Williamson, “Loop removal from LDPC codes,” IEEE Information Theory Workshop Proceedings, pp. 230–233, 2003.
+[23] J. L. Gross and T. W. Tucker, Topological Graph Theory. USA: Wiley-Interscience, 1987.
+[24] R. Asvadi, A. H. Banihashemi, and M. Ahmadian-Attari, “Design of irregular quasi-cyclic protograph codes with low error floors,” IEEE International Symposium on Information Theory Proceedings, pp. 908–912, 2011.
+[25] ——, “Lowering the error floor of LDPC codes using cyclic liftings,” IEEE Transactions on Information Theory, vol. 57, no. 4, pp. 2213–2224, April 2011.
+[26] C. A. Kelley, “On codes designed via algebraic lifts of graphs,” 2008 46th Annual Allerton Conference on Communication, Control, and Computing, pp. 1254–1261, 2008.
+[27] M. Karimi and A. H. Banihashemi, “Message-passing algorithms for counting short cycles in a graph,” IEEE Transactions on Communications, vol. 61, no. 2, pp. 485–495, February 2013.
+[28] Y. Mao and A. H. Banihashemi, “A heuristic search for good low-density parity-check codes at short block lengths,” IEEE International Conference on Communications Proceedings, vol. 1, pp. 41–44, June 2001.
+[29] T. R. Halford and K. M. Chugg, “An algorithm for counting short cycles in bipartite graphs,” IEEE Transactions on Information Theory, vol. 52, no. 1, pp. 287–292, January 2006.
+[30] L. Dolecek, “On absorbing sets of structured sparse graph codes,” in Information Theory and Applications Workshop (ITA), 2010, Jan 2010, pp. 1–5.
+31
+
+[31] L. Dolecek, J. Wang, and Z. Zhang, “Towards improved LDPC code designs using absorbing set spectrum properties,” in 2010 6th International Symposium on Turbo Codes & Iterative Information Processing. IEEE, 2010, pp. 477–481.
+[32] A. Beemer, K. Haymaker, and C. A. Kelley, “Absorbing sets of codes from finite geometries,” Cryptography and Communications, vol. 11, no. 5, pp. 1115–1131, 2019.
+[33] K. D. Morris, T. Pllaha, and C. A. Kelley, “Analysis of syndrome-based iterative decoder failure of QLDPC codes,” in 2023 12th International Symposium on Topics in Coding (ISTC). IEEE, 2023, pp. 1–5.
+[34] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of lowdensity parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, 1999.
+[35] J. Roffe, “LDPC: Python tools for low density parity check codes,” https://pypi.org/project/ ldpc/, 2022, software package.
+32
+
+

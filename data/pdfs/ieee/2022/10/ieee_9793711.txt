@@ -1,0 +1,494 @@
+1438
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 10, OCTOBER 2022
+
+NoD: A Neural Network-Over-Decoder for Edge Intelligence
+
+Arash Fouman Ajirlou , Student Member, IEEE, Farid Kenarangi , Graduate Student Member, IEEE, Eli Shapira , and Inna Partin-Vaisband , Senior Member, IEEE
+
+Abstract— The ubiquitous applications of the Internet of Things (IoT) devices and the increasing computational capabilities of neural networks (NNs) have led to a new era of edge computing and a paradigm known as edge intelligence (EI). With EI, the goal is to maximize the utilization of resources available within an edge device, offloading only the most compute-intensive operations to the cloud. In this article, we propose to leverage the close similarity between the internal architecture of a typical network decoder and an NN for deep learning on decoders. The proposed NN-over-decoder is developed in Verilog and synthesized on field-programmable gate array (FPGA). Based on experimental results, the system exhibits power consumption of the same order of magnitude as a baseline decoder and negligible memory overhead while increasing local hardware utilization, alleviating the high communication load in typical communication devices, and offering scalable multiply–accumulate (MAC)/cycle performance compared with the state of the art.
+Index Terms— Convolutional network decoder, edge computing, edge intelligence (EI), Internet of Things (IoT), neural network (NN).
+I. INTRODUCTION
+N EURAL networks (NNs) have become a powerful method to enhance everyday applications. The ability to model nonlinear data with high accuracy makes NNs beneficial in applications, such as signal processing, optimization of processor performance, digital healthcare and biosensing, and the Internet of Things (IoT) applications [1]–[5]. However, the high computational resource demand of NNs poses a significant obstacle for executing high-performance machine learning (ML) on computationally limited systems [6]. To enable ML on such systems, two primary approaches have been explored: 1) locally enhancing computational end nodes and 2) offloading intense computing to cloud as part of the edge computing (or cloud IoT) solutions [7]–[9].
+To locally mitigate the high NN overheads, NN optimization and hardware resource sharing techniques have been proposed in [10]–[16]. Albeit the reported increase in performance with these methods, executing ML algorithms on a typical edge CPU (e.g., ARM Cortex M-3) is often computationally
+Manuscript received 27 January 2022; revised 4 May 2022; accepted 19 May 2022. Date of publication 10 June 2022; date of current version 27 September 2022. (Corresponding author: Inna Partin-Vaisband.)
+Arash Fouman Ajirlou, Farid Kenarangi, and Inna Partin-Vaisband are with the Department of Electrical and Computer Engineering, University of Illinois at Chicago, Chicago, IL 60607 USA (e-mail: afouma2@uic.edu; vaisband@uic.edu).
+Eli Shapira is with DriveU.auto, Kefar Saba 4442211, Israel (e-mail: shapiraster@gmail.com).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TVLSI.2022.3179324.
+Digital Object Identifier 10.1109/TVLSI.2022.3179324
+
+impractical, while adding a dedicated ML hardware is power and cost inefficient. Alternatively, with edge computing, information is preprocessed by an end device and the compute-intensive portion of learning is offloaded into a remote, high-performance server [7]–[9]. Once computed, the ML output is sent back to the edge device via wireless communication [7], [9], [17]. The primary concern with the cloud IoT approaches is high, typically 100%, workload of the edge-cloud communication network. In addition, cloud processing costs and privacy [17] and cybersecurity concerns [8] often make the centralized ML processing at the cloud impractical for edge users. To alleviate network congestion, privacy, and security concerns, edge intelligence (EI) has been introduced in [18] as a new IoT compute paradigm, prioritizing local computation at edge devices. The rationale behind the EI is twofold: 1) reducing the exposure of private data to remote servers and communication networks [19] and 2) lowering energy consumption (e.g., transmitting a single bit of data can be ∼104× more energy expensive than processing it [18]). Cost-efficient utilization of local computational resources for learning at the edge is therefore desired.
+In this article, an NN-over-decoder is proposed for ML inference on communication integrated circuit (ICs). The approach is based on two fundamental observations: 1) encoders/decoders in communication ICs are significantly underutilized during the regular device operation [20] and 2) convolutional encoders/decoders comprise trellis-like networks, exhibiting significant architectural similarity to neural networks (NNs). Network encoding and decoding algorithms have previously been exploited to assist in NN applications and vice versa [21]–[24]. Such applications include improving NN training and inference, encoding and decoding NN weights, and utilizing NN models to enhance the network decoder’s performance. However, independently multiplexing the individual operations of the NNs and network decoders has not yet been studied or demonstrated in hardware. Motivated by these observations, an NN-over-decoder framework is proposed to facilitate learning at the edge. The proposed framework comprises the analytical, hardware-aware mapping of an NN onto a trellis network, system architecture, and design methodology. The system is designed in Verilog and demonstrated on field-programmable gate array (FPGA) with a practical Viterbi decoder. To the best of authors’ knowledge, this is the first work that utilizes the idle time of network decoder hardware for NN inference. The proposed approach enables ML on communication edge devices with reasonable overhead, exhibiting the following attributes.
+
+1063-8210 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+FOUMAN AJIRLOU et al.: NoD: NEURAL NETWORK-OVER-DECODER FOR EDGE INTELLIGENCE
+
+1439
+
+Fig. 1. Single stage of Viterbi decoder. (a) Block diagram of a typical hardware implementation. (b) State transition diagram. Each node in (b) with its inbound edges represents a state with a unique identification number (here, the binary 00, 01, 10, and 11) and can be mapped to a certain ACS block in the hardware implementation in (a). The output (here, 0 or 1) is a function of the state and the input value, xi+1 (here, the binary 00, 01, 10, or 11), as shown on the outbound arrows from each state.
+
+1) Increased hardware utilization due to effective reuse of existing, typically underutilized, circuits for local ML inference. For example, on average, a typical network decoder is idle over 50% of the time [25]–[27]. A neural network-over-decoder for edge intelligence (NoD) can achieve the state-of-the-art NN performance while utilizing the decoder idle time.
+2) Reduced physical system size and heat and power dissipation, compared with the alternative state-of-the-art solutions that require a dedicated chip for ML processing. A typical edge NN accelerator consumes 1–10 W and occupies 1–10 mm2 [28] and is on average ten times more power and area expensive than a typical Viterbi decoder [25], [29]. The cost of such dedicated edge ML accelerators is prohibitive for many modern edge devices. For example, compared to a stateof-the-art an end-to-end deep-learning framework for fast exploration of quantized neural networks (FINN-R) accelerator optimized for quantized CNNs [30], the proposed NoD architecture exhibits lower hardware cost and an overhead within the same order of the baseline decoder while yielding similar other performance characteristics. Thus, by eliminating a dedicated ML chip, the proposed NoD architecture significantly reduces the cost for consumer and dissipates a modest overhead of 0.55 and 1.5 W for classifying, respectively, the Modified National Institute 447 of Standards and Technology (MNIST) and CIFAR-10 [31] datasets.
+3) Lower cloud service fees and reduced congestion in often overutilized communication channels enabled by
+
+local ML inference. For example, a recommender system running on different instances of Amazon Web Services (AWS) makes between 180 and 720 K requests per hour and instances can cost between U.S. $0.25 and $1 per hour, totaling between U.S. $45 and $720 per hour [32]. Such costs are not affordably priced for many edge applications that process data on a regular basis. Thus, an efficient local compute capability is preferred. 4) Scalable performance under constrained power and area overhead. High inference latency is prohibitive for executing large NNs and is a primary scalability constraint. Thus, the proposed framework is designed with rigid inference latency constraints to support inference with large and deep NNs. For example, for every four additional neurons, the inference latency with the NoD architecture increases by a single clock cycle. The rest of this article is organized as follows. The architecture of a Viterbi decoder is explained in Section II. The similarity between the Viterbi and NN architectures is discussed in Section III. The proposed design methodology is described in Section IV. Implementation and the experimental results are presented in Section V. Discussion around the observations and future paths for enhancing the proposed NN-over-decoder approach is presented in Section VI. Finally, the article is concluded in Section VII.
+II. VITERBI DECODER
+Operation of Viterbi decoder is based on the Viterbi algorithm [33], in which a maximum-likelihood principle is used to decode a bit-stream as encoded with convolutional codes.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+1440
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 10, OCTOBER 2022
+
+Hardware architecture of Viterbi decoder comprises three main components: branch metric unit (BMU), path metric unit (PMU), and traceback unit (TBU), as shown in Fig. 1(a).
+
+A. Branch Metric Unit
+The difference between the received code, xi , and an expected code, ck, j , is determined in BMU and used to make path selection decisions within the decoder. Decoders are typically categorized based on their hard-decision or soft-decision decoding method. With hard-decision Viterbi decoders, a path is determined according to the least number of bit difference (i.e., Hamming distance) between the received and expected codes. Alternatively, with soft-decision Viterbi decoders, the numerical difference between the codes (i.e., Euclidean distance) is used to determine the preferred path [34].
+
+B. Path Metric Unit
+The objective of the PMU is to summarize the cumulative distance (i.e., branch metric) from the starting node, i.e., the initial decoding state, to each node within the decoder. The main function in PMU is executed within the addcompare-select (ACS) module. In this module, the current BMU value [see the individual distances determined in the decoder’s (i + 1)th stage, {B0, B1, B2, B3}, in Fig. 1(a)] is added to the PMU values from the previous stage [see the individual cumulative distances, {P0, P1, P2, P3}, from the i th stage in Fig. 1(a)]. Path metric is determined for each node based on the minimum sum value.
+
+C. Traceback Unit
+
+TBU is a memory unit, which stores the per node path
+
+history in a first-in last-out queue format. Upon determination
+
+of a path in PMU, the node ID of the state initiating the
+
+path is pushed into the TBU stack. At the end of the decoder
+
+datapath, the state with minimum PMU represents the winner
+
+decoding path. Thus, the decoded data are reconstructed by
+
+backpropagating through the datapath to the nodes whose node
+
+IDs are popped out of the TBU stack.
+
+In this article, a baseline Viterbi decoder is designed based
+
+on the architecture shown in Fig. 1(a). The decoder is utilized
+
+to illustrate the functionality of a typical decoder operation and
+
+as a demonstration vehicle for the proposed NN-over-decoder
+
+framework. The state transition diagram of the decoder is
+
+shown in Fig. 1(b). Each ACS-Reg tuple in the physical
+
+implementation as shown in Fig. 1(a) is mapped to an indi-
+
+vidual state, comprising a single node as shown in Fig. 1(b).
+
+As a result, the inbound edges, as shown in Fig. 1(b), repre-
+
+sent a corresponding BMU in Fig. 1(a). The logic operation
+
+executed at the individual states is mathematically expressed
+
+as
+
+
+
+
+
+di,k = min (xi ⊕ ck,0 + di−1,0), (xi ⊕ ck,1 + di−1,1) (1)
+
+where di,k is the overall distance (i.e., the path metric), accumulated from the first stage to the kth state in the i th stage. The input to the i th stage is represented with xi . The expected codeword on an inbound edge j of the kth state is
+
+Fig. 2. Illustration of the path metric calculation in (1).
+
+represented with ck, j . The expression in (1) is also visually shown in Fig. 2.
+
+III. MOTIVATION
+
+An NN is an interconnected network of neurons capable of
+
+learning the features of input data through a series of non-
+
+linear transformations. An NN can be viewed as a trellis-like
+
+structure of interconnected neurons, which can perform vector
+
+arithmetic, similar to convolutional network decoders, such as
+
+Viterbi and low-density parity-check code (LDPC). Given n
+
+input features, x = (x0, . . . , xn) ∈ Xn, and n weights at the
+
+j th neuron, w j = (w0, j , . . . , wn, j ) ∈ Wn, the output of the
+
+j th neuron is
+
+ n−1
+
+
+
+Out j = f (x T · w j ) = f
+
+(xi · wi, j )
+
+(2)
+
+i =0
+
+where f (·) is a nonlinear activation function. Features
+
+and weights in this article are quantized to 8-bit integers.
+
+Details about data resolution and quantization are provided
+
+in Section V.
+
+The similarity between the fundamental operations of a
+
+Viterbi decoder and an NN follows from (1) and (2). Note
+
+that the final decoded output as computed at the last stage of
+
+Viterbi decoder is a summation of XOR operations, xi ⊕ ck, j ,
+
+for an input xi at the i th stage and expected codeword ck, j on
+
+an inbound edge j of state k
+
+⎧ ⎪⎨⎪
+
+ min dn−1,g(k,
+j
+
+j)
+
++
+
+xn
+
+⊕
+
+ck, j
+
+ ,
+
+n = 0
+
+dn,k = ⎪⎪⎩ 0,
+
+(3) n = 0.
+
+Here, g(k, j ) is the state in the (i − 1)th stage initiating the edge j toward the kth state in the i th stage. Also, note that if the XOR operation described in (3) is substituted with the vector scalar product and the trained weights, wi, j , are used in place of the expected codewords, ck, j , the micro-operation of a Viterbi decoder becomes identical to that of an NN. To enable the Viterbi decoder as an NN, the decoder is modified as shown in Fig. 3. In particular, a multiplier is added to the BMU, the input xi is fed to both the XOR and multiplier units, and an additional input wi, j is fed to the multiplier. The TBU block is not utilized with the proposed NN implementation. The active and inactive submodules in a normal decoder operation are shown with, respectively, dark and light colors in Fig. 3(a). The active and inactive submodules in NN mode are shown in Fig. 3(b) with the same color coding. The datapath of the baseline decoder is, therefore, little affected by the augmented NN capability. Motivated by this observation, this work aims
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+FOUMAN AJIRLOU et al.: NoD: NEURAL NETWORK-OVER-DECODER FOR EDGE INTELLIGENCE
+
+1441
+
+Fig. 3. Modified stage in the proposed NN-over-decoder architecture. The active submodules in each operating mode are shown with black solid, and the modules on hold are shown with faded gray. (a) Modified stage while operating in the decoder mode. (b) Modified stage while operating in the NN mode.
+
+Fig. 4. Possible construction of neuron paths for a decoder with four decoder stages. In the first stage, the solid lines are the edges (links) selected to represent a specific neuron path, and the dotted lines are all the other edges, as shown in Fig. 1. The dotted lines are omitted in the remainder stages for better visualization.
+
+to repurpose the available decoder hardware for NN inference executed during the decoder’s idle time.
+IV. PROPOSED APPROACH
+To design a neuron, existing decoder nodes and edges are utilized and the NN functionality is enabled by transforming (2) into (3). For that matter, a single neuron path is defined as a set of connected nodes and edges starting with a state in the first decoder stage and ending at a state in the last decoder stage. Consequently, each neuron path forms a single neuron. An example of four neurons implemented over a four-state decoder is shown in Fig. 4. The challenges in finding distinctive neuron paths and, hence, creating neurons using a Viterbi decoder along with the proposed solutions are described in the following subsections.
+A. Nonoverlapping Neuron Paths
+A single neuron mapped onto a distinct neuron path within a Viterbi decoder is a well-defined set of constructing nodes and edges. To illustrate the problem of overlapping neuron paths, consider a state transition diagram, as shown in Fig. 5. In this example, the selected outbound edges at states S0,i−1
+
+Fig. 5. Illustration of the problem of assigning neurons to the individual decoder paths. States S0,i−1 and S1,i−1 initiate neuron paths toward the same node, S0,i . Each of these neuron paths results in a feature-weight product, xi · wi, j , where xi is the input at the ith stage and wi, j is its corresponding weight at the kth neuron. For a reliable neuron computations, the feature-weight products on inbound S0,i edge must be rerouted to correct neuron paths. Additional information, e.g., hard coded links or tags, is required in Viterbi state nodes to support such functionality.
+and S1,i−1 construct neuron paths that cross at state S0,i in the i th stage. With this configuration, the functions partially computed by the individual neurons are fused within the i th stage. To carry on the remaining neuron computations, state S0,i produces two outbound edges going to the (i + 1)th stage, passing the partial results to the next stage. With two partial results entering state Si,0 and the two possible destinations from S0,i , the distinction between the neuron paths is crucial for reliable neuron computations; otherwise, the partial computations belonging to a neuron are passed on to another neuron causing incorrect inference. To this end, two possible solutions are available to S0,i : 1) only pass one of inputs to the output (next stage) and discard others or 2) additional information (tags) can be integrated within the input data of S0,i to route the individual inputs to their respective outputs. With the latter
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+1442
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 10, OCTOBER 2022
+
+solution, a higher number of neurons are possible at the cost of additional design, hardware, and computational complexity. Alternatively, neuron-path crossing can be avoided by limiting the number of inbound links to a single link in the NN mode (see Fig. 4). With this approach, the desirable inbound edge is hard coded for each state, facilitating a straightforward neuronpath composition. The nonoverlapping hard-decision neuronpath coding is preferred in this work due to its lower design overhead.
+
+B. Maximum Number of Neuron Paths
+
+Another concern is the limited number of neurons as defined
+
+by the maximum nonoverlapping neuron paths (MNPs). In a
+
+practical Viterbi decoder, MNP typically ranges between
+
+four and 128. To enable the coding of a large NN over a
+
+typical decoder, an iterative inference with weight batching is
+
+proposed. In each iteration, a subset of weights (as determined
+
+by the MNP) is loaded into the decoder and the partial
+
+sum of products is progressively accumulated in a register.
+
+Accordingly, (2) is rewritten for a layer with ni neurons as
+
+⎛
+
+⎞
+
+Out =
+
+f
+
+n U(n i ,MNP) ⎝
+
+V ( p ,MNP)
+ xi
+
+·
+
+wi, j ⎠
+
+(4)
+
+i=0 p=0 j = p·MNP
+
+where n represents the number of features, U (x, y) = (x /y) − 1, V (x , y) = (x + 1)y − 1, and wi, j is the corresponding weight for xi in the j th neuron. To facilitate large NNs, the proposed weight batching can be complemented
+with link tagging for a larger MNP (see Section IV-A).
+
+C. Constraint Length
+
+In a typical decoder, a constraint length is defined as the
+
+number of the decoder stages, often ranging between three and
+
+15. With the proposed approach, NN features are fed into the
+
+individual decoder stages (see Fig. 4). The number of stages
+
+in a practical decoder and the number of features in an NN
+
+coded over the decoder are not necessarily the same. If the
+
+constraint length exceeds the number of NN features, zeros
+
+should be passed into the redundant stages to compensate
+
+for the missing features. Alternatively, a feature batching
+
+mechanism is required to utilize a large feature space within a
+
+smaller decoder. In the proposed configuration, the batch size
+
+is determined by the decoder constraint length, K . The output
+
+of the batched NN based on (4) is therefore
+
+⎛
+
+⎞
+
+U (n,K ) V (r,K ) U(n i ,MNP) V ( p ,MNP)
+
+Out = f ⎝
+
+xi · wi, j ⎠. (5)
+
+r=0 i=r·K p=0 j = p·MNP
+
+With this approach, the inference is executed on a sequence of input feature batches: at each iteration, a subset of K input features is fetched from the memory and kept in the decoder until the completion of the partial feature-weight dot product operations. In the last iteration, the nonoccupied decoder stages are fed with zeros.
+
+Fig. 6. Inference latency for different K ’s and NN configurations in a dataset with 81 input features and ten outputs.
+D. Inference Latency
+The inference latency of the NN-over-decoder is a strong function of the values and value ratios of system parameters, such as the number of features, the number of neurons, the number of hidden NN layers, and constraint length. The complex dependence of NN latency on the constraint length and number of neurons in the hidden NN layer is shown in Fig. 6. With the proposed architecture, a neuron path consisting of a set of nodes and edges within the decoder datapath forms a single neuron. Therefore, the output of different neurons, as determined by nonoverlapping neuron paths, is computed in parallel. Alternatively, the feature-weight products for the individual inputs of each multi-input neuron are computed in series. Intuitively, the latency of the NN-overdecoder increases with the increasing number of input features. The decoder constraint length also plays a significant role in the overall NN latency. For example, consider a classification problem with six input features and a baseline decoder with K = 4. Following the principle of input feature batching, as described in Section IV-C, a subset of four input features is passed to the NN-over-decoder in the first batch. Once the partial dot products are computed, the second batch of the remaining two features is passed to the NN-over-decoder. In this batch, however, only two out of the four decoder stages are utilized, while the other two stages are fed with zeros. The overall neuron latency in this case is eight clock cycles, whereas in architecture with K = 3 or 6, this latency is six clock cycles. As a result, the NN latency is not a monotonic function of the constraint length, as shown in Fig. 6. The number of neurons within a single NN layer is yet another parameter that affects the NN latency. Intuitively, if the number of neurons within a single NN layer exceeds the MNP, neurons should be designed to share nonoverlapping neuron paths. Therefore, each nonoverlapping neuron path in the datapath must be reassigned to appropriate weights at each clock cycle. With the reconfigurable approach, each input
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+FOUMAN AJIRLOU et al.: NoD: NEURAL NETWORK-OVER-DECODER FOR EDGE INTELLIGENCE
+
+1443
+
+Fig. 7. Block diagram of the proposed circuit with path constraint K = 9 and MNP = 4.
+
+feature is kept stable at a decoder stage input for ni /MNP consecutive clock cycles, where ni is the number of neurons in the i th layer. In addition to these single-layer parameters, the overall NN latency also depends on the number of layers. The single-layer delays introduced by the individual system parameters are, therefore, accumulated with additional NN layers. Thus, the per inference latency of an L-layer NN-overdecoder with INi inputs and ni neurons in the i th layer can be formulated as
+
+T = L Ti(l)
+
+(6)
+
+i=1 
+
+Ti(l) =
+
+INi K
+
+· K + TP
+
+(7)
+
+where Ti(l) and T are the propagation latencies of an inference through the pipeline stages for, respectively, a single NN layer
+
+and an L-layer NN. Note that with the pipelined approach,
+
+a partial result is produced by the datapath per each clock
+
+cycle once the pipeline is filled with data. The propagation
+
+latency
+
+of
+
+filling
+
+the pipeline
+
+⎧ ⎨⎪⎪ INi
+
+·
+
+Hi
+
+with −K K
+
+data for the 
+, if Hi >
+
+first K
+
+time
+
+is
+
+TP
+
+TP Hi
+
+= =
+
+⎪⎩⎪ 
+
+Hi ni
+
+− 1, 
+
+MNP
+
+(8) otherwise
+(9)
+
+where Hi is the number of clock cycles that an input is kept at a stage in the pipeline if the number of neurons in the i th layer, ni , exceeds the MNP. Solving (6)–(9) for minimum latency as a function of K for a given MNP and NN parameters (INi , ni , and L) yields INi = c· K and K ≥ max{Hi}, for i = 1, . . . , L. Note that while the constraint length is set for a given decoder, precisely mapping an NN on a subset of the decoder stages can significantly increase the overall system performance.
+A block diagram of the proposed circuit with nine stages, four disjoint neuron paths (as shown in Fig. 4), and up to 12 neurons in each layer is shown in Fig. 7. The NN-overdecoder, as shown in Fig. 7, comprises three major submodules: finite-state machine (FSM), pipelined modified decoder, and accumulator unit.
+1) Pipeline: The NN-over-decoder is implemented in a pipeline fashion, and each pipeline stage (denoted as NNViterbi Si ) is a modified Viterbi stage, as shown in Fig. 3.
+
+At each stage i , an input feature is multiplied by appropriate weights and is accumulated with the partial feature-weight product from the previous stage (i − 1). The new partial feature-weight product is passed to the (i + 1)th stage.
+2) Accumulator Unit: As discussed in Sections IV-B and IV-C, when the number of neurons and the number of inputs in a layer exceed the available resources, a weight batching and a feature batching mechanism are exploited to ensure completeness and reliability of the neuron inference. For each batch of weights and inputs in the pipeline, the partial results of various neurons are calculated at each clock cycle. These partial results are stored in individual neurons’ registers within the accumulator unit.
+3) Finite-State Machine: The FSM comprises three individual FSMs. These FSMs are designed to control the data movements within the NN-over-decoder datapath, enabling three major tasks: weight batching, feature batching, and accumulation. Each FSM task, as shown in Fig. 7, is implemented separately. The FSM: System and features controls feature batching. This FSM fetches features from the feature buffer and feeds them to the pipeline stages. The features are registered upon entry to a stage. The FSM: System and features controls (with a write enable, wrEN, signal) the data in these registers and, consequently, xi input to the individual stages. This signal is used to keep an input stored at a stage register until weight batching is completed. This FSM also coordinates the other two FSMs. The FSM: Pipeline and weights controls the weight batching. When a feature is passed to the NNViterbi S0 stage, this FSM is notified by the FSM: System and features and fetches (based on the precoded number of neurons, MNP, K, and number of input features) an appropriate batch of weights from the weight memory associated with each stage and feeds the fetched weights to the pipeline. The FSM: System and features issues a signal to the FSM: Neurons and accumulators when a feature is passed to the final NN-overdecoder stage (see stage S8 in Fig. 7). Note that once the pipeline is filled with data, the partial results of up to four neurons are computed per clock cycle. The FSM: Neurons and accumulators passes each set of pipeline outputs to the corresponding accumulators.
+V. EXPERIMENTAL RESULTS
+Two hard-decision Viterbi decoders with K = 3 and 9 are designed and exploited as baseline decoders in this article. The NN-over-decoder is implemented based on (5) and by replacing the XOR operation with a multiplication, as shown in Fig. 3. A pipelined Viterbi decoder with K = 9 is designed using the modified Viterbi stage (see Fig. 3) for each pipeline stage as shown in Fig. 7. The underlying Viterbi decoder is pipelined to mitigate the high (compared with XOR) delay of the dot product operation, and the performance of the proposed system is reported in a number of clock cycles. Both the baseline decoder and the NN-over-decoder system (see Fig. 7) have been synthesized on Terasic DE1-systemon-chip (SoC) FPGA board with Altera 28-nm Cyclone V SE FPGA [35]. Specifications of the FPGA are listed in Table I. The systems are evaluated in terms of performance, power, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+1444
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 10, OCTOBER 2022
+
+Fig. 8. Classification accuracy with the original (32-bit single-precision floating point) and quantized (8-bit integer) input features and weights. The maximum accuracy loss compared with the original representation is 0.2%.
+
+Fig. 9. Normalized latency-over-accuracy metric for varying number of neurons and K ∈ {3, 9, 27, 81}. Note that K does not affect the accuracy of the classifications but has a major impact on overall latency. According to (6), the choice of the values of K is made to minimize the latency.
+
+TABLE I ALTERA CYCLONE V SE FPGA SPECIFICATIONS
+
+TABLE II
+EXPERIMENTAL PERFORMANCE AND OVERHEADS OF AN 81 × 12 × 10 NN CLASSIFICATION ON ALTERA CYCLONE V FPGA WITH NOD. THE PERCENT VALUES IN THE TABLE ARE BASED OFF OF THE CONVENTIONAL OPERATION OF THE BASELINE DECODER
+
+logic size. The design flow and considerations are explained in this section.
+The functionality and performance of the system are evaluated with a varying number of neurons in the hidden layer and constraint lengths based on the MNIST [36] dataset. The MNIST dataset is a collection of 28 × 28-pixel grayscale handwritten digits. To reduce the large size of the 784-input feature space, a downsampled version of MNIST dataset, as introduced in [37], is utilized in this work. The downsampled, 81-input feature, dataset has shown to exhibit less than 3% accuracy degradation compared with the original, highresolution dataset. Note that the operations and performance of the proposed architecture are independent of the dataset. The chosen dataset is merely a means to demonstrate and evaluate the design characteristics.
+In addition, to mitigate the multiplication overheads, the input features and weights are quantized to 8-bit integers. Based on the experimental results, the inference accuracy loss with such quantization is negligible. To evaluate the accuracy loss due to quantization, NNs of various sizes have been trained and tested in Python using a quantization-aware training approach with the original floating-point weights and quantized (8-bit integer) weights. The accuracy results are shown in Fig. 8, exhibiting between 0% and 0.2% accuracy loss with the quantized representation.
+The accuracy of traditional NNs typically increases with the increasing NN size (e.g., see Fig. 8). Alternatively, based on (6), the latency of an NN-over-decoder is also expected to increase with additional neurons. To account for this tradeoff, a latency-over-accuracy metric is proposed in this work. A two-layer NN is trained with a varying number of neurons
+
+in the hidden layer (n1 ∈ [10, 30]) and varying constraint lengths (K ∈ [1, 82]). The trained model is evaluated on the MNIST test set of 60 000 samples, and the latency-overaccuracy metric for various constraint lengths is shown in Fig. 9 (compared with the latency and accuracy as shown in, respectively, Figs. 6 and 8). Based on the experimental result, the system with n1 = 12 yields the minimum latencyover-accuracy for K ∈ {3, 9, 27, 81}, confirming the analytical solution of the optimization problem in (6)–(9). Note that the constraint length only contributes to the latency, and accuracy is not affected by K , reaffirming the independence of the NN-over-decoder architecture from the dataset. The unfavorable increase in latency-over-accuracy for K = 3 (also a divisor of 81) in Fig. 9 is due to the significant increase in the number of clock cycles [see Hi in (8) and (9)], during which the individual inputs are kept at decoder stages and, consequently, the significant increase in the overall NN latency [see Ti(l) in (7)].
+NN-over-decoders for MNIST classification are synthesized and tested on FPGA for constraint length of K = 3 and 9 with n1 = 12, as determined by the best latency-over-accuracy metric in Fig. 9. Note that the NN-over-decoder classifiers for K = 27 and 81 could not be synthesized with the avail-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+FOUMAN AJIRLOU et al.: NoD: NEURAL NETWORK-OVER-DECODER FOR EDGE INTELLIGENCE
+TABLE III PERFORMANCE OF THE NN-OVER-DECODER AND STATE-OF-THE-ART FPGA NN ARCHITECTURES
+
+1445
+
+able DE1-SoC board, which is discussed in Section VI. The performance and overheads of the proposed NN-over-decoder classifier compared with the baseline decoder are presented in Table II.
+Note that the proposed approach is able to perform 81 × 12 + 12 × 10 = 1092 multiply–accumulate (MAC) operations in 97 clock cycles, yielding 11.25 MACs/cycle for MNIST classification. Similarly, the NoD architecture is able to perform 12.5 MACs/cycle for CIFAR-10 classification. This performance is comparable with the state-of-theart 15.5-MACs/cycle multicore processor-based NN in [38]. A detailed comparison between the proposed NoD and a traditional Viterbi decoder coupled with a dedicated NN hardware is given in Table III. As shown in Table III, NoD yields significant savings at the edge, up to 19× (MNIST) and 10.1× (CIFAR-10) in power, up to 7.7× (MNIST) and 16.4× (CIFAR-10) in FPGA logic block utilization, and up to 3.8× improvement (MNIST) and 4.2× degradation (CIFAR-10) in performance. However, NoD performance can be further optimized with a latency-aware design as discussed in Section IV-D. In addition, NoD remains a general-purpose architecture, while other FPGAs in Table III are strictly optimized for specific NN architectures. Note that NoD classification accuracy can be increased by optimizing the architecture for a narrower set of applications. Furthermore, as described in Section IV, a designer can maximize the performance of the proposed method by tuning the MNP and K.
+The NN-over-decoder exhibits 96.2% classification accuracy for MNIST with negligible memory overhead and 7.72% and 12.47% total power overhead for, respectively, K = 3 and 9 at the cost of up to 80.5% logic overhead on an Altera Cyclone V FPGA. Note that the overheads reported in Table II are relative to the bare-bone Viterbi decoder, excluding the peripheral decoder logic as well as encoder, transmitter, receiver, and other computing and memory circuits comprising a typical edge device. A significant reduction in the reported overhead percentages is expected when compared against the overall overheads of an entire communication device.
+VI. DISCUSSION
+The increasing demand for artificial intelligence (AI) in the IoT applications poses significant performance, power consumption, security, and privacy challenges in the design of modern edge devices. The high computational complexity of AI solutions has been recently mitigated in resource-limited,
+
+edge IoT devices with cloud computing. However, the high energy cost of data transmission (∼10× of processing at the edge [18]), slow turnaround time of cloud-assisted computing, and the communication network congestion are major concerns. To mitigate these issues and protect private information and data, local AI computation is preferable. The proposed NN-over-decoder framework introduces new opportunities for locally running intelligent edge applications by utilizing existing decoder hardware with power consumption similar to that of a typical decoder. Enabling a decoder as an NN is expected to reduce the amount of data transferred between the device and the cloud, further increasing the availability of decoder hardware in the edge device for NN inference. Furthermore, the proposed NN-over-decoder exhibits high scalability of ML performance since an additional input feature imposes only one extra clock cycle for neuron inference. With the baseline decoder used in this work, four additional neurons in a layer (or eight additional neurons with the link tagging introduced in Section IV-A) increase the inference latency of the layer by only one clock cycle. For example, the classification of the full MNIST dataset with 784 features using a two-layer NN with 22 neurons in the hidden layer and ten neurons in the output layer on the same NN-over-decoder hardware implemented in Section V requires 784 + 5 + 22 + 2 = 813 clock cycles [see (6)–(9)], yielding 21.48 MACs/cycle— 1.4× the ML computation capability of a state-of-the-art NN accelerated on a parallel low power reduced instruction set computer (RISC)-V processor [38]. The proposed NN-overdecoder exhibits superior scalability in MACs/cycle performance with the increasing number of features and NN size due to slow increase in the NN-over-decoder latency, as explained in Sections IV and V. These benefits, however, come at the cost of additional hardware and logic utilization, which further increases with additional decoder stages (i.e., the constraint length, K ). For instance, the baseline decoder with K = 27 or 81 cannot be implemented with the available FPGA resources due to an exponential increase in logic overhead from the additional multipliers. Although such K values are uncommon in practical network decoders, the resource overhead is a significant challenge. Further investigation is required to reduce the area and power consumption overheads in an NNover-decoder. In particular, lookup tables and cache-multiplier hybrid solutions should be considered to mitigate the area and power overheads of multiplication in an NN-over-decoder. Note that this issue is expected to be naturally alleviated in ASIC edge devices.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+1446
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 10, OCTOBER 2022
+
+VII. CONCLUSION
+The idea of reusing a decoder as an NN is explored for the first time in this article. While assisting NN applications with network decoders and vice versa has been previously explored, multiplexing the network decoder hardware in idle time for NN inference is proposed and studied in this work for the first time. An NN-over-decoder is designed and tested as a framework for enabling EI applications on IoT devices. A baseline Viterbi decoder with K = 3 and 9 stages is synthesized and tested on an FPGA chip. NN latency with the proposed architecture is analytically derived and verified through experimental results. The performance of the NNover-decoder is evaluated with the proposed latency-overaccuracy metric. Based on the experimental results on a downsampled MNIST dataset, an input sample with feature size of 81 can be classified in 97 clock cycles (i.e., 11.25 MACs/cycle) with an accuracy of 96.2% and negligible memory overhead by the NN-over-decoder with 12 hidden layer neurons and ten output layer neurons. While every NN algorithm exhibits a unique tradeoff between accuracy, latency, and hardware overhead, NN-over-decoder is designed as a robust and flexible accelerator, which can efficiently execute any complex DNN and CNN algorithm with modest resource overhead. While modern edge computing systems are strictly optimized for specific applications and types of NN algorithms, the robustness of the proposed NN-over-decoder is an important cornerstone to intelligent edge computing. The NN-over-decoder architecture offers high-performance scalability with an increasing number of input features and neurons per layer. The proposed circuit exhibits only 7.72% and 12.47% power overhead with constraint lengths of, respectively, K = 3 and 9 compared with the baseline Viterbi decoder. The outstanding performance and power characteristics of the proposed method come with 53.88% and 80.54% logic overhead for, respectively, K = 3 and 9 when compared with the bare-bone baseline decoder. The reported percent overheads are expected to be significantly lower when compared against the overall overheads of a typical communication edge device, comprising a decoder, encoder, transmitter, receiver, and additional computing and memory logic. To further mitigate the logic overheads, lookup tables and cache-multiplier hybrid solutions should be considered.
+REFERENCES
+[1] A. Jahanshahi, R. Sharifi, M. Rezvani, and H. Zamani, “Inf4Edge: Automatic resource-aware generation of energy-efficient CNN inference accelerator for edge embedded FPGAs,” in Proc. 12th Int. Green Sustain. Comput. Conf. (IGSC), Oct. 2021, pp. 1–8.
+[2] A. F. Ajirlou and I. Partin-Vaisband, “A machine learning pipeline stage for adaptive frequency adjustment,” IEEE Trans. Comput., vol. 71, no. 3, pp. 587–598, Mar. 2022, doi: 10.1109/TC.2021.3057764.
+[3] M. H. Miraz, M. Ali, P. S. Excell, and R. Picking, “A review on Internet of Things (IoT), internet of everything (IoE) and internet of nano things (IoNT),” in Proc. Internet Technol. Appl. (ITA), Sep. 2015, pp. 219–224.
+[4] H. Raji, M. Tayyab, J. Sui, S. Reza Mahmoodi, and M. Javanmard, “Biosensors and machine learning for enhanced detection, stratification, and classification of cells: A review,” 2021, arXiv:2101.01866.
+[5] S. Darabi, M. Kachuee, S. Fazeli, and M. Sarrafzadeh, “TAPER: Timeaware patient EHR representation,” IEEE J. Biomed. Health Informat., vol. 24, no. 11, pp. 3268–3275, Nov. 2020.
+
+[6] M. Shafique et al., “An overview of next-generation architectures for machine learning: Roadmap, opportunities and challenges in the IoT era,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2018, pp. 827–832.
+[7] M. Jutila, “An adaptive edge router enabling Internet of Things,” IEEE Internet Things J., vol. 3, no. 6, pp. 1061–1069, Dec. 2016.
+[8] W. Yu et al., “A survey on the edge computing for the Internet of Things,” IEEE Access, vol. 6, pp. 6900–6919, 2018.
+[9] J. Ren, Y. Pan, A. Goscinski, and R. A. Beyah, “Edge computing for the Internet of Things,” IEEE Netw., vol. 32, no. 1, pp. 6–7, Jan./Feb. 2018.
+[10] K. Khalil, O. Eldash, A. Kumar, and M. Bayoumi, “An efficient approach for neural network architecture,” in Proc. 25th IEEE Int. Conf. Electron., Circuits Syst. (ICECS), Dec. 2018, pp. 745–748.
+[11] M. Hailesellasie, S. R. Hasan, F. Khalid, F. A. Wad, and M. Shafique, “FPGA-based convolutional neural network architecture with reduced parameter requirements,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2018, pp. 1–5.
+[12] C. Schorn, T. Elsken, S. Vogel, A. Runge, A. Guntoro, and G. Ascheid, “Automated design of error-resilient and hardware-efficient deep neural networks,” Neural Comput. Appl., vol. 32, no. 24, pp. 18327–18345, Dec. 2020.
+[13] A. Yousefzadeh, G. Orchard, E. Stromatias, T. Serrano-Gotarredona, and B. Linares-Barranco, “Hybrid neural network, an efficient lowpower digital hardware implementation of event-based artificial neural network,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2018, pp. 1–5.
+[14] G. Du, C. Tian, Z. Li, D. Zhang, Y. Yin, and Y. Ouyang, “Efficient softmax hardware architecture for deep neural networks,” in Proc. Great Lakes Symp. VLSI, May 2019, pp. 75–80.
+[15] X. Zhang et al., “SkyNet: A hardware-efficient method for object detection and tracking on embedded systems,” 2019, arXiv:1909.09709.
+[16] Z. Tang et al., “A hardware friendly unsupervised memristive neural network with weight sharing mechanism,” Neurocomputing, vol. 332, pp. 193–202, Mar. 2019.
+[17] O. Goldstein, M. Kachuee, D. Shiell, and M. Sarrafzadeh, “Real-time decentralized knowledge transfer at the edge,” 2020, arXiv:2011.05961.
+[18] N. Cao, “Circuit and algorithm design to enable edge intelligence,” Ph.D. dissertation, Georgia Inst. Technol., Atlanta, GA, USA, 2020.
+[19] B. Chatterjee, N. Cao, A. Raychowdhury, and S. Sen, “Context-aware intelligence in resource-constrained IoT nodes: Opportunities and challenges,” IEEE Des. Test, vol. 36, no. 2, pp. 7–40, Apr. 2019.
+[20] J. Mocnej et al., “Quality-enabled decentralized IoT architecture with efficient resources utilization,” Robot. Comput.-Integr. Manuf., vol. 67, Feb. 2021, Art. no. 102001.
+[21] A. Richard, H. Kuehne, A. Iqbal, and J. Gall, “NeuralNetwork-Viterbi: A framework for weakly supervised video learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018, pp. 7386–7395.
+[22] N. Shlezinger, N. Farsad, Y. C. Eldar, and A. J. Goldsmith, “ViterbiNet: A deep learning based Viterbi algorithm for symbol detection,” IEEE Trans. Wireless Commun., vol. 19, no. 5, pp. 3319–3331, May 2020.
+[23] D. Ahn, D. Lee, T. Kim, and J. J. Kim, “Double Viterbi: Weight encoding for high compression ratio and fast on-chip reconstruction for deep neural network,” in Proc. Int. Conf. Learn. Represent., Sep. 2018.
+[24] L. Bai, Z. Zhang, and J. Hu, “Voice activity detection based on deep neural networks and Viterbi,” in Proc. IOP Conf., Mater. Sci. Eng., 2017, vol. 231, no. 1, Art. no. 012042.
+[25] N. Prasad, I. Chakrabarti, and S. Chattopadhyay, “An energy-efficient network-on-chip-based reconfigurable Viterbi decoder architecture,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 65, no. 10, pp. 3543–3554, Oct. 2018.
+[26] P. N. Whatmough, S. K. Lee, D. Brooks, and G.-Y. Wei, “DNN engine: A 28-nm timing-error tolerant sparse deep neural network processor for IoT applications,” IEEE J. Solid-State Circuits, vol. 53, no. 9, pp. 2722–2731, Sep. 2018.
+[27] S. Hoppner et al., “How to achieve world-leading energy efficiency using 22 FDX with adaptive body biasing on an arm cortex-M4 IoT SoC,” in Proc. 49th Eur. Solid-State Device Res. Conf. (ESSDERC), Sep. 2019, pp. 66–69.
+[28] S. Cho, H. Choi, E. Park, H. Shin, and S. Yoo, “McDRAM V2: Indynamic random access memory systolic array accelerator to address the large model problem in deep neural networks on the edge,” IEEE Access, vol. 8, pp. 135223–135243, 2020.
+[29] C.-C. Lin, Y.-H. Shih, H.-C. Chang, and C.-Y. Lee, “A low power turbo/Viterbi decoder for 3GPP2 applications,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 14, no. 4, pp. 426–430, Apr. 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+FOUMAN AJIRLOU et al.: NoD: NEURAL NETWORK-OVER-DECODER FOR EDGE INTELLIGENCE
+
+1447
+
+[30] M. Blott et al., “FINN-R: An end-to-end deep-learning framework for fast exploration of quantized neural networks,” ACM Trans. Reconfigurable Technol. Syst., vol. 11, no. 3, pp. 1–23, 2018.
+[31] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from tiny images,” Univ. Toronto, Toronto, ON, Canada, Tech. Rep., 2009.
+[32] D. Chahal, M. Mishra, S. Palepu, and R. Singhal, “Performance and cost comparison of cloud services for deep learning workload,” in Proc. Companion ACM/SPEC Int. Conf. Perform. Eng., Apr. 2021, pp. 49–55.
+[33] A. Viterbi, “Error bounds for convolutional codes and an asymptotically optimum decoding algorithm,” IEEE Trans. Inf. Theory, vol. 13, no. 2, pp. 260–269, Apr. 1967.
+[34] M. R. G. Butler, S. Armour, P. N. Fletcher, A. R. Nix, and D. R. Bull, “Viterbi decoding strategies for 5 GHz wireless LAN systems,” in Proc. IEEE 54th Veh. Technol. Conf. (VTC Fall), vol. 1, Oct. 2001, pp. 77–81.
+[35] Terasic Technologies. DE1-SoC User Manual. Accessed: Jan. 28, 2019. [Online]. Available: http://de1-soc.terasic.com
+[36] Y. LeCun and C. Cortes. (2010). MNIST Handwritten Digit Database. [Online]. Available: http://yann.lecun.com/exdb/mnist/
+[37] F. Kenarangi and I. Partin-Vaisband, “Leveraging independent doublegate FinFET devices for machine learning classification,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 66, no. 11, pp. 4356–4367, Nov. 2019.
+[38] A. Garofalo, M. Rusci, F. Conti, D. Rossi, and L. Benini, “PULPNN: Accelerating quantized neural networks on parallel ultra-low-power RISC-V processors,” Phil. Trans. Roy. Soc. A, Math., Phys. Eng. Sci., vol. 378, no. 2164, Feb. 2020, Art. no. 20190155.
+[39] X. Liu, D. H. Kim, C. Wu, and D. Chen, “Resource and data optimization for hardware implementation of deep neural networks targeting FPGA-based edge devices,” in Proc. 20th Syst. Level Interconnect Predict. Workshop, Jun. 2018, pp. 1–8.
+[40] Y. Zhang, J. Pan, X. Liu, H. Chen, D. Chen, and Z. Zhang, “FracBNN: Accurate and FPGA-efficient binary neural networks with fractional activations,” in Proc. ACM/SIGDA Int. Symp. Field-Program. Gate Arrays, Feb. 2021, pp. 171–182.
+Arash Fouman Ajirlou (Student Member, IEEE) received the B.Sc. degree in computer engineering from the University of Tehran, Tehran, Iran, in 2017, and the M.Sc. degree from the Department of Electrical and Computer Engineering, University of Illinois at Chicago, Chicago, IL, USA, in 2022, where he is currently working toward the Ph.D. degree in computer engineering.
+He was a Research Assistant with the School of Electrical and Computer Engineering, University of Tehran, from 2015 to 2017. From 2017 to 2018, he served as the Secretary for the Electrical and Computer Engineering Committee in the Alumni Association, Faculty of Engineering, University of Tehran. In 2018, he was an RTL Design Engineer with the Engineering Department, Ofogh Tajrobe Moj Company, Tehran. His primary research interests are embedded systems and high-performance/low-power computing systems, with an emphasis on machine learning and self-governing systems. His current focus is on utilizing machine learning methodologies to enhance processor performance and energy consumption.
+
+Farid Kenarangi (Graduate Student Member, IEEE) received the B.Sc. degree in electrical engineering from the University of Tabriz, Tabriz, Iran, in 2015. He is currently working toward the Ph.D. degree in electrical engineering at The University of Illinois at Chicago, Chicago, IL, USA, under the supervision of Prof. I. Partin-Vaisband.
+His current research interests include hardware security, machine learning integrated circuits (ICs), analog design, and on-chip power delivery and management. Mr. Kenarangi was a recipient of the 2017 University of Illinois at Chicago Chancellor’s Graduate Research Award.
+Eli Shapira received the B.Sc. degree in electrical engineering and electronics from Ariel University, Ariel, Israel.
+He has more than 20 years of experience in wireless telecommunications field with special emphasis on satellite and cellular communications. Since 2015, he has been researching the applied machine learning algorithms suitable for wireless communication and modems fields. He is currently serving as the Director of Innovation with previous roles of the research and development director and a CTO at various telecommunications companies and machine learning technologybased startups. He was responsible for system architecture and innovation projects in DriveU.Auto, Kefar Saba, Israel, Finview, Ceragon Networks, Advantech Wireless, and Gilat Satellite Networks.
+Inna Partin-Vaisband (Senior Member, IEEE) received the B.Sc. degree in computer engineering and the M.Sc. degree in electrical engineering from the Technion–Israel Institute of Technology, Haifa, Israel, in 2006 and 2009, respectively, and the Ph.D. degree in electrical engineering from the University of Rochester, Rochester, NY, USA, in 2015.
+She is currently an Assistant Professor with the Department of Electrical and Computer Engineering, University of Illinois at Chicago, Chicago, IL, USA. From 2003 to 2009, she held a variety of software and hardware research and development positions at Tower Semiconductor Ltd., GConnect Ltd., and IBM Ltd., all in Israel. Her primary interests include high-performance integrated circuits (ICs) and VLSI system design. Her current research focused on innovation in the areas of AI hardware and hardware security. Yet, another primary focus is on distributed power delivery and locally intelligent power management that facilitates performance scalability in heterogeneous ultra-large-scale integrated systems. Special emphasis is placed on developing robust frameworks across levels of design abstraction for complex heterogeneous integrated systems. Dr. Partin-Vaisband is an Associate Editor of the Microelectronics Journal and has served on the Technical Program and Organization Committees of various conferences.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:44:47 UTC from IEEE Xplore. Restrictions apply.
+
+

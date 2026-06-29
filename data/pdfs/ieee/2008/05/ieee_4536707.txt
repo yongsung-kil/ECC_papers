@@ -1,0 +1,394 @@
+High Throughput Parallel Decoder Design for LDPC Convolutional Codes
+Zhengang Chen, Stephen Bates, and Witold Krzymien´ Department of Electrical and Computer Engineering University of Alberta, Edmonton, T6G 2V4, Canada Email: {zgchen, sbates, wak}@ece.ualberta.ca
+
+Abstract— LDPC convolutional code (LDPC-CC) decoders are composed of processors, making them parallel in the iteration dimension. However, for time-varying LDPC-CCs, each individual processor is serial in the node dimension, hindering the throughput increase for such decoders. We propose a joint code-decoder design, which generates architecture-aware LDPCCCs of good performance, as well as an LDPC-CC decoder architecture parallel in the node dimension. Without increase in the memory bits used, the parallel decoder can achieve throughputs at the level of Gb/s with small parallelization factors.
+I. INTRODUCTION
+Low-density parity-check convolutional codes (LDPC-CCs) were first proposed as a variation of the original block code form of LDPC codes[1]. With the same error-correction performance as LDPC block codes (LDPC-BCs), LDPC-CCs encode and decode data sequences in a continuous fashion. There is no need to fragment data into fixed-sized blocks. This gives them advantage in handling streaming data or data frames of variable lengths. From the circuit point of view, LDPCCCs provide a new design space for LDPC decoding, because LDPC-CC decoders, although mathematically equivalent to LDPC-BC decoders, assume a very different architecture [1][2].
+LDPC-BC decoders can be fully parallelized in the node dimension. Researchers have been working on partition methods of the LDPC-BC decoder to find solutions with smaller parallelization factor due to the problem of cost and routing congestion [3][4]. For LDPC-CC decoders, the scenario is quite different. An LDPC-CC decoder is composed of processors. A processor can be considered a sliding window on the Tanner graph (which can be infinite), performing message passing. With a number of processors concatenated, the LDPC-CC decoder is parallel in the iteration dimension, i.e., the LDPC-CC decoder can perform different rounds of iterations at the same time, certainly on different parts of the Tanner graph. Inside one processor, though, the node operations are serial. With parallelization only in the iteration dimension, the potential of decoding throughput increase is limited. It is desirable to have parallelization also in the node dimension for high throughput LDPC-CC decoding. In previously proposed LDPC-CC decoder architectures, [5] is based on registers, which is not suitable for medium to large size LDPC-CCs due to the high cost of registers; [6] is a memory-based architecture, but cannot be directly used for
+
+node parallelization due to memory access collision. Recently, a node parallelization scheme for LDPC-CCs was proposed in [7]. However, it is only applicable to time-invariant LDPC-CCs with high regularity in the Tanner graph, whose performance is worse than time-variant LDPC-CCs [8].
+We propose an LDPC-CC decoder design capable of parallelization both in the node dimension and in the iteration dimension. The proposed approach is joint optimization of the code and the decoder1. An architecture-aware LDPC-CC construction method is proposed, in which a series of constraints is applied to ensure efficient memory access, direct encoding, and good performance. LDPC-CCs constructed with the proposed algorithm have comparable error correcting performance to LDPC-CCs constructed with other approaches. The proposed architecture for decoding processors is a memory-based design. Much higher throughput can be achieved than an LDPCCC decoder that is parallel only in the iteration dimension, without increase in the memory bits used.
+
+II. LDPC-CC DECODER
+
+A. LDPC-CC definition
+
+A time-variant LDPC-CC is defined by an infinite parity-
+
+check matrix. Suppose the parity-check matrix is H. The code
+
+is defined as the null space of H, i.e., vHT = 0, where v is the
+
+codeword row vector. The parity-check matrix of an LDPC-CC
+
+of code rate R = b/c (b < c) can be written as (in transposed
+
+form, also known as the syndrome former)
+
+HT
+
+=
+
+ 
+
+.
+
+.
+
+.
+
+HT0 (t−ms)
+
+... ... ...
+
+HmT s (t)
+...
+HT0 (t)
+
+... ...
+
+HmT s (t+ms)
+
+  ,
+
+(1)
+
+. . . ... . . .
+
+where the HiT (t) (i = 0, 1, · · · , ms) are sub-matrices of size c × (c − b). In practice, these sub-matrices are periodic in time: if the period is Ts, then HTi (t) = HTi (t + Ts) for all i and t. An important parameter of the code is the syndrome former
+memory ms (called code memory in this paper, in contrast to
+the memory definition used in circuits). The constraint length
+
+1An LDPC-CC encoder is considerably smaller and faster than the decoder, and is parallelizable [9]. Encoder details will not be discussed in this paper due to the space limit.
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-4o2w4n4lo-a1d7e0d8o-n7/J0u8ne/$2245,2.00026©a2t 0050:842I:E02EUETC from IEEE Xplore. Restrictions apply.
+
+35
+
+of this kind of convolutional code is defined as c · (ms + 1). For regular LDPC-CCs, both the column weight (K) and the row weight (J) of HT are constant and the code is referred to as an (ms, J, K) LDPC-CC. For fixed J and K, the code performance improves with increasing ms. Although HT is infinite, ms and Ts are finite, making practical implementations possible. Due to the upper triangular property of HT , LDPCCCs can be directly encoded from the syndrome former, given the condition that HT0 (t) is full rank for all possible t’s [1].
+In this paper we consider LDPC-CCs of b = c − 1, i.e., R = (c − 1)/c, which covers most commonly used code rates. Let the coded sequence v be written as v = {· · · , v(0), · · · , v(t), · · · }, where v(t) is a sub-vector of length c. For a systematic LDPC-CC, the first c−1 bits in the sub-vector v(t) are information bits, and the last bit in v(t) is a parity bit. It’s obvious that each sub-vector in the codeword corresponds to a sub-matrix row in HT . Naturally, the syndrome former HT is composed of information rows and parity rows. Take a rate-1/2 LDPC-CC for example, each sub-matrix in the HT can be written as HTi (t) = [hui (t), hvi (t)]T , where u indicates information rows and v indicates parity rows. As far as hv0(t) = 1 for all t’s, the LDPC-CC can be encoded directly from HT .
+B. Memory-Based LDPC-CC decoder
+An LDPC-CC decoder is built with one or more decoding processors. Processors correspond to iterations. Design efforts can be spent on a single processor, and a certain number of identical processors are concatenated together as a decoder, depending on the performance/throughput/cost targets. In the extreme case, an LDPC-CC decoder can use only one processor to minimize the cost [10]. I.e., the LDPC-CC decoder can be parallel, partially parallel or serial in the iteration dimension.
+In [1], a processor is a combination of FIFO delay lines and check node units (CNUs) and variable node units (VNUs). The length of the delay line is at least ms + 1 and the width of the delay line is determined by node degrees (J) and the LLR message width in decoding. A register based design is natural for such a processor [5] but the cost is relatively high, especially when a number of processors need to be tiled together. We consider a memory based design replacing the FIFO delay lines with circular buffers [6], which can be used for both FPGA and ASIC implementations with lower cost.
+Take rate-1/2 (3,6) LDPC-CCs for example, there are c − b = 1 CNU and c = 2 VNUs in a single processor, and the circular buffer is divided into c · (J + 1) = 8 memory banks to reduce the number of clock cycles required by read/write operations.
+In [6], the memory bank allocation is aligned for variable node operations and I/O of LLRs. A VNU can access all 4 messages in the circular buffer in one clock cycle. However, for check node operations, this efficiency does not apply. Fig. 1 illustrates the allocation of 1’s in one column of HT , representing messages associated with a check node, to the memory banks. To read 6 LLRs from the memory banks, a CNU might need more than one clock cycle. For the LDPC-CC
+
+used in [6], at most 2 clock cycles are required to complete a read or write operation of a CNU. So in total 1+2=3 clock cycles are needed to decode one sub-vector (for dual-port memory). For an arbitrary LDPC-CC, more clock cycles may be needed. This inefficiency in memory access hinders the decoder throughput.
+
+4 RAM banks for information bit nodes HT
+
+4 RAM banks for parity bit nodes
+
+1
+
+11
+
+1 11
+
+1 11 1 11
+
+11 1 1 11
+Two read/write operations needed in one memory bank.
+Fig. 1. Check node (column in HT ) message locations in the memory banks. Memory access collision is possible.
+
+This problem gets worse when parallelization in the node dimension is considered. The purpose of node parallelization is to decode more than one sub-vector simultaneously, achieving higher throughput. However, with more CNUs in one processor, more clock cycles are needed to access the memory. Dividing the memory into more banks is possible, but is very inefficient due to the lack of optimization in the code design. For example, for the (128,3,6) LDPC-CC used in [6], simply grouping the codeword sub-vectors into batches of four can generate a decoding processor with four times number of VNU/CNUs and the same amount of total memory. Due to the memory access collision, even after partitioning the memory into four times more banks, at most 6 clock cycles are needed for a CNU read/write. So with a parallelization factor p = 4, the throughput increase factor is only 4 ∗ (3/(6 + 1)) = 1.7, assuming other conditions are the same. Although optimization techniques such as graph coloring exist for better memory partition, this inefficiency cannot be fully avoided [11].
+III. ARCHITECTURE-AWARE LDPC-CC CONSTRUCTION
+To make the LDPC-CC decoder parallelizable in the node dimension for higher throughputs, code construction and decoder design must be jointly optimized.
+A. Constraints in the code construction
+Similar to joint code/decoder designs of LDPC-BCs [3][4], construction of architecture-aware LDPC-CCs is subject to two classes of constraints: implementation-oriented and performance-oriented.
+Implementation-oriented constraints:
+C1: Encoding constraint: The LDPC-CC should be directly encodable from the syndrome former HT , i.e., H0T (t) should be always full rank. For rate-(c − 1)/c codes, this can be easily satisfied by setting the last row (parity row) of HT0 (t) to 1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:42:02 UTC from IEEE Xplore. Restrictions apply.
+
+36
+
+C2: CNU memory access constraint: For each CNU, read or write of all associated messages should take only one clock cycle. In the case of (J, K) regular LDPCCCs, this means the K edges connected to each check node must be mapped to K different memory banks. One implicit condition here is that the memory banks are already aligned for VNUs and each VNU can access all associated messages in the memory without collision in one clock cycle.
+C3: Node parallelization constraint: There must be no memory access collision when multiple CNU/VNUs access the circular buffer in parallel. In one processor, to decode p input codeword sub-vectors in parallel, p CNUs and p · c VNUs must work in parallel, accessing the memory banks at the same time. The access pattern is determined by the code, which should satisfy this constraint.
+Performance-oriented constraints:
+
+C4: Code memory constraint: In constructing a time-variant LDPC-CC, given Ts, ms should be as large as possible. Because larger ms leads to better LDPC-CC performance. In contrast, only increasing Ts does not necessarily improve performance significantly[12].
+C5: Girth constraint: Girth of the LDPC-CC Tanner graph is to be kept as large as possible, because small cycles (especially cycles of length 4) are detrimental to the code performance and error floor behavior.
+
+B. Architecture-aware LDPC-CC construction
+
+Subject to all the constraints presented in Section III-A,
+
+a construction algorithm for architecture-aware LDPC-CCs
+
+is proposed. It starts with constructing one period of the
+
+syndrome former, parity rows and information rows separately,
+
+as a rectangular base matrix. Then it is cut along the diagonal,
+
+moved and repeated to generate the entire parity-check matrix.
+
+The code parameters are the same as defined in Section II-A.
+
+The parallelization factor is denoted by p. The following steps
+
+constitute the algorithm for constructing regular architectureaware LDPC-CCs with J = 3. The process is illustrated in Fig.
+
+2 for a (3,6) code.
+
+S1: Construct the parity rows as a Ts × Ts square matrix P of both row weight and column weight being 3. This step
+
+is shown in Fig. 2(a), where each sub-matrix Pi, j is a p× p circulant. A circulant is a cyclic shift of an identity
+
+matrix This ensures that C3 is satisfied. Notice that
+
+on the diagonal are identity matrices, which originates
+
+from
+
+C1.
+
+Another
+
+g
+
+=
+
+Ts p
+
+identity
+
+matrices
+
+are
+
+placed
+
+in P as a cyclic shift of the diagonal, making sure each
+
+column of the final syndrome former has maximum nonzero span, i.e., fulfilling C4. In this case, ms = Ts − p. The rest of P is determined by randomly inserting
+
+circulants of random cyclic shifts, guaranteeing there is
+
+one circulant in each row and each column. Naturally, in
+
+this random inserting process, small cycles are avoided
+
+by maximizing local girths due to C5. Meanwhile, C2
+
+is automatically satisfied.
+
+S2: The information rows are constructed as (c − 1) square matrices of size Ts ×Ts denoted by S(r) (r = 1, · · · , c−1), where S(r) corresponds to the r-th rows in each submatrix HTi (t) of HT . Again, these matrices are built with circulants. Other than that, only C2 and C5 need to be considered in this step. For C2, we divide the matrix into 4 × 4 large blocks and set the diagonal blocks to zero. For the rest 12 blocks, each one is filled with a permutation of circulants, in a random fashion. The diagonal blocks are avoided because the operations in the next step disarrange elements along the diagonal and may ruin C2. Due to C5, we also maximize the local girth in the procedure. Note that P and S(r) are constructed one after another. Local girth calculation must take into account all previously constructed rows.
+S3: Regrouping (c − 1) · Ts information rows and Ts parity rows into a c · Ts × Ts matrix HbT as shown in Fig 2.(c). This matrix is considered the base matrix of the LDPCCC. With standard procedures including cutting along the diagonal, swapping the two parts, and repeating [1][12], an LDPC-CC is obtained. As proved in [12], this procedure does not reduce the girth of the Tanner graph, which is important to C5.
+It is obvious in the steps that the code period Ts must be integer multiples of 4 · p for (3, K) regular LDPC-CCs. Since the parallelization factor p is usually small as will be shown in Section IV, this method gives us enough flexibility in designing LDPC-CCs of different code memories.
+C. Examples and performance evaluation
+Fig. 3 shows the simulated bit error rate (BER) performance of a few architecture-aware LDPC-CCs constructed with the proposed algorithm. For the two rate-1/2 codes, Ts is set to 504 and p is chosen to be 7 and 3 respectively. Their performance is comparable to a well constructed architectureindependent LDPC-CC with ms = 512. With constraint length being 996 and 1004 respectively, they perform closely to (3,6) LDPC-BCs of block length around 10000. The two higher rate codes are constructed with Ts = 336, and also have good performance.
+IV. PARALLEL DECODER DESIGN FOR LDPC-CCS
+We use a memory-based architecture for the LDPC-CC decoder with node parallelization within a processor. Architecture of a single processor is discussed in this section.
+Take rate-1/2 codes for example. The codeword is organized as groups of p sub-vectors consecutively. The time between receiving a group of p sub-vectors and the next group is defined as the baud period. To decode p sub-vectors in parallel, the circular buffer within one processor is partitioned into 8 · p memory banks: half for information bits and half for parity bits. Half of the processor is shown in Fig. 4, including the memory banks for information bits, VNUs for information bits and all the CNUs. to those in [6]. We can see that the memory bank partition in the x − y plane is the same as in a processor without node parallelization (Fig. 1), except that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:42:02 UTC from IEEE Xplore. Restrictions apply.
+
+37
+
+S(1)
+
+Ts
+
+0
+
+Ts/4
+
+S1,1 p p
+
+S1,f
+Ts/4
+
+Architecture−aware LDPC−CC Construction
+
+0 Ts
+
+Sf,1
+
+Sf,f
+
+0
+A permuatation of circulants
+
+HT
+
+0
+
+(b) Information rows. f = Ts/(4p)
+
+P
+
+Ts
+
+p
+
+p I P1,2
+
+II
+
+II
+
+I
+
+Ts
+
+I P2,g
+
+HTb
+
+1st row of S(1)
+1st row of P 2st row of S(1)
+2st row of P
+
+last row of S(1) last row of P
+(c) Combine S(1) and P into the base matrix
+
+HT0 (0) H0T (1)
+
+Pg,1Pg,2
+
+I II
+
+(a) Parity rows. g = Ts/p
+
+(d) Cut, swap, and repeat to get HT .
+
+Fig. 2. Construction of a rate-1/2 (3,6) architecture-aware LDPC-CC.
+
+Performance of LDPC−CCs, 100 iterations, tanh check node −1
+
+extra parallelization dimension (z dimension), 4 p-to-p switch
+
+AA LDPC−CC (497,3,6), rate−1/2, p=7 AA LDPC−CC (501,3,6), rate−1/2, p=3
+
+matrices (3 for information bits and 1 for parity bits due to
+
+−2
+
+LDPC−CC (512,3,6), rate−1/2 AA LDPC−CC (329,3,9), rate−2/3, p=7 AA LDPC−CC (332,3,9), rate−2/3, p=4
+
+the regularity in the parity rows of HT ) are needed to properly
+
+address the access pattern of p CNUs simultaneously. Actually
+
+these switch matrices are cyclic shift mapping devices because
+−3
+circulants are used in the code construction.
+
+−4
+
+Output
+
+−5
+
+4 · p memory banks for
+
+VNU Q1
+
+−6
+
+information bits
+
+VNU
+
+−7
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0
+
+Q2 CNU
+
+Fig. 3. Performance of a few (ms,3,K) architecture-aware (AA) LDPC-CCs. An LDPC-CC constructed otherwise is included for reference.
+
+Q3 VNU
+
+CNU
+
+log10(Bit Error Rate)
+Connected to parity bit memory bankds
+
+here each CNU can access all 6 messages in the memory banks without collision, due to C2. In the z-dimension, p such planes are used to store messages of p sub-vectors for the processing of 2 · p VNUs and p CNUs. The generation of read/write addresses in each x − y plan is similar to that in [6]. Moreover, the read/write address is the same for all p x − y planes, which simplifies related control units. As a result of the
+
+Input
+
+CNU
+
+z y
+
+x
+
+Fig. 4. Parallel LDPC-CC decoder architecture. Q1, Q2, and Q3 are p-to-p cyclic-shift switch matrices.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:42:02 UTC from IEEE Xplore. Restrictions apply.
+
+38
+
+TABLE I THROUGHPUT/COST ESTIMATION OF A PARALLEL DECODING PROCESSOR FOR RATE-(c − 1)/c (3,K) LDPC-CCS.
+
+(with clock frequency fc and message width q bits)
+Information throughput Memory (bits, not including ROM used in addressing )
+# of memory banks # of gates for CNU/VNUs
+
+Absolute Value
+p·(c−1)· fc 2
+4 · c · Ts · q 4·c· p
+(320 + 250 · c) · p · q
+
+Relative to the decoder in [6]
+
+3 2
+
+·
+
+p×
+
+1×
+
+p×
+
+p×
+
+Assuming dual-port memory is used, the decoding process within each baud period can be divided into two phases:
+(a) The input LLRs for p sub-vectors are written to the circular buffer. Meanwhile, the oldest LLRs in the circular buffer are read into the VNUs, processed and sent to the output.
+(b) The CNUs read the latest LLRs from the 6p memory banks (the other 2p banks are for channel LLRs). Meanwhile, the CNUs write the results of messages processing from the last baud period back to the circular buffer. In this phase, read and write addresses are always different. Read addresses are generated by a ROM and a modulo-g counter, and write addresses are simply replicas of read addresses in the previous baud period.
+Phase (a) and (b) take two clock cycles, i.e., one baud period can be as small as two clock cycles. The decoding throughput is then p/2 information bits per clock cycle. Table I gives an estimation of throughput and core components’ cost of the decoding processor for codes of more general rates, as well as a comparison to an LDPC-CC decoder without node parallelization. The cost of VNUs and CNUs are heavily dependent on the algorithms used. Here we use the data from [3] for estimation only: 320 · q gates for a CNU and 250 · q gates for a VNU, when the message width is q bits. Control units are much smaller and are listed in the table. Compared to a LDPC-CC decoder without node parallelization, most control units in the parallel decoder are actually much smaller due to the cyclic regularity. The actual period in circuit implementation is g, which is only 1/p of Ts, the code period and the period in a decoder without node parallelization. One exception is the cyclic-shift switch matrices not seen in a processor without node parallelization, but they are usually very small due to the small p used.
+It is evident that with node parallelization, the decoder throughput can be increased significantly without increasing the total number of memory bits used, and the parallelization factor does not need to be large, making the cost increase in VNU/CNUs limited. For instance, with a parallelization factor of p = 7, at a moderate clock frequency of 300 MHz (In [11], 600 MHz clock is used on a 90 nm process), the decoding throughput (of information bits) easily reaches 1 Gb/s for a rate-1/2 architecture-aware LDPC-CC, with one processor or with more than one processor concatenated together. In addition, the decoding latency is also reduced by a factor of p due to the node parallelization. Note that our design is very different from [7], where the parallelization factor needs to be hundreds to achieve Gb/s throughputs. In [6], the circular
+
+buffer was overclocked 3× for higher speed memory access, which can also be used here for better balancing the speed
+of different parts of the circuit. Due to the architecture-aware code design, only 2× overclocking will be needed.
+V. CONCLUSIONS
+A joint code-decoder design has been proposed for high
+throughput parallel LDPC-CC decoders. Two crucial parts of
+the approach are the architecture-aware code construction and
+parallel decoder architecture design, both of which have been
+presented in this paper. The architecture-aware LDPC-CCs
+have good error correcting performance, and the proposed
+parallel decoder for such codes can reach throughputs at the
+level of Gb/s with a small parallelization factor.
+REFERENCES
+[1] A. Jime´nez-Felstro¨m and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181–2191, Sept. 1999.
+[2] D. J. Costello Jr., A. E. Pusane, S. Bates, and K. S. Zigangirov, “A comparison between LDPC block and convolutional codes,” in Proc. Information Theory and Applications Workshop, San Diego, CA, USA, Feb. 2006.
+[3] H. Zhong and T. Zhang, “Block-LDPC: A practical LDPC coding system,” IEEE Transactions on Circuits and Systems – I: Regular Papers, vol. 52, no. 4, pp. 766–775, Apr. 2005.
+[4] M. M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[5] R. Swamy, S. Bates, and T. L. Brandon, “Architectures for ASIC implementations of low-density parity-check convolutional codes,” in Proc. IEEE International Symposium on Circuits and Systems, Kobe, Japan, May 2005.
+[6] S. Bates and G. Block, “A memory based architecture for low-density parity-check convolutional decoders,” in Proc. IEEE International Symposium on Circuits and Systems, Kobe, Japan, May 2005.
+[7] E. Matus, M. B. Tavares, M. Bimberg, and G. Fettweis, “Towards a Gbits/s programmable decoder for LDPC convolutional codes,” in Proc. IEEE International Symposium on Circuits and Systems, New Orleans, LA, USA, May 2007.
+[8] A. E. Pusane, , R. Smarandache, P. O. Vontobel, and D. J. Costello Jr., “On deriving good LDPC convolutional codes from QC LDPC block codes,” in Proc. IEEE International Symposium on Information Theory, Nice, France, June 2007.
+[9] S. Bates and R. Swamy, “Parallel encoders for low-density paritycheck convolutional codes,” in Proc. IEEE International Symposium on Circuits and Systems, Kos, Greece, May 2006.
+[10] S. Bates, L. Gunthorpe, A. E. Pusane, Z. Chen, K. S. Zigangirov, and D. J. Costello Jr., “Decoders for low-density parity-check convolutional codes with large memory,” in Proc. IEEE International Symposium on Circuits and Systems, Kos, Greece, May 2006.
+[11] T. Brandon, J. Koob, L. v. d. Berg, Z. Chen, A. Alimohammad, R. Swamy, J. Klaus, S. Bates, V. C. Gaudet, B. F. Cockburn, and D. G. Elliott, “A 600-Mb/s encoder and decoder for low-density parity-check convolutional codes,” in IEEE International Symposium on Circuits and Systems, Seattle, WA, USA, May 2008.
+[12] Z. Chen and S. Bates, “Construction of low-density parity-check convolutional codes through progressive edge-growth,” IEEE Communications Letters, vol. 9, no. 2, pp. 1058–1060, Dec. 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:42:02 UTC from IEEE Xplore. Restrictions apply.
+
+39
+
+

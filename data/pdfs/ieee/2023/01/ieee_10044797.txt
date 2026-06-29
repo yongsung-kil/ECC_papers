@@ -1,0 +1,908 @@
+DECC: Differential ECC for Read Performance Optimization on
+High-Density NAND Flash Memory
+Yunpeng Song, Yina Lv, Liang Shi
+School of Computer Science and Technology, East China Normal University, Shanghai, China
+ABSTRACT
+3D NAND flash memory with advanced multi-level-cell technology
+has been widely adopted due to its high density, but with significantly
+degraded reliability. To solve the reliability issue, flash memory often
+adopts the low-density parity-check code (LDPC) as error correction
+code (ECC) to encode data and provide fault tolerance. For LDPC
+with a low code rate, it can provide a strong correction capability, but
+with a high energy cost. To avoid the cost, LDPC with a higher code
+rate is always adopted. When the accessed data is not successfully
+decoded, LDPC will rely on read retry operations to improve the
+error correction capability. However, the read retry operation will
+induce degraded read performance. In this work, a differential ECC
+(DECC) method is proposed to improve the read performance. The
+basic idea of DECC is to adopt LDPC with different code rates for
+data with different access characteristics. Specifically, when data is
+hot read and retried due to reliability, LDPC with a low code rate will
+be adopted to optimize performance. With this approach, the cost
+from LDPC with a low code rate is minimized and the performance
+is optimized. Through careful design and real-world workloads eval-
+uation on a 3D triple-level-cell (TLC) NAND flash memory, DECC
+achieves encouraging read performance optimization.
+CCS CONCEPTS
+• Computer systems organization →Firmware; Embedded hard-
+ware; Reliability.
+KEYWORDS
+ECC, LDPC, 3D NAND Flash, Read Performance
+ACM Reference Format:
+Yunpeng Song, Yina Lv, Liang Shi. 2023. DECC: Differential ECC for
+Read Performance Optimization on High-Density NAND Flash Memory. In
+28th Asia and South Pacific Design Automation Conference (ASPDAC ’23),
+January 16–19, 2023, Tokyo, Japan. ACM, New York, NY, USA, 6 pages.
+https://doi.org/10.1145/3566097.3567853
+*This work is supported by the NSFC (62072177), and Shanghai Science and Technol-
+ogy Project (20ZR1417200, 22QA1403300). The corresponding author is Liang Shi
+(lshi@cs.ecnu.edu.cn).
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+© 2023 Association for Computing Machinery.
+ACM ISBN 978-1-4503-9783-4/23/01...$15.00
+https://doi.org/10.1145/3566097.3567853
+1
+INTRODUCTION
+NAND flash memory is a popular technology used in modern com-
+puting systems to build storage devices to meet large storage capacity
+and I/O performance requirements. 3D NAND with multi-level-cell
+technologies can continue to increase storage density, but they can
+negatively impact the reliability of modern NAND flash chips. As the
+density of flash memory increases, reliability-induced performance
+degradation issues will hinder its further development [17]. To en-
+sure data reliability, modern high-density flash-based solid state
+drives (SSDs) typically use two main approaches. First, modern
+SSDs use the powerful error correction code (ECC) that can detect
+and correct dozens of raw bit errors (e.g., 72-bits per 1KiB code
+word [17]). With powerful error correction capability, low-density
+parity-check code (LDPC) has been adopted in state-of-the-art flash
+[10]. Second, when the ECC is unable to correct all bit errors, the
+SSD controller performs a read retry operation, reading the incorrect
+page again using a slightly adjusted state sensing voltage [21]. Bit
+errors occur when the threshold voltage offset of a flash cell exceeds
+the reference voltage, so detecting cells with appropriately offset
+reference voltage values can greatly reduce the number of raw bit
+errors [1]. However, this read retry operation will introduce the sig-
+nificantly degraded performance. This work will propose a scheme
+to optimize the read performance induced by read retry operations.
+Read performance degradation has been a critical issue for high-
+density NAND flash memory. Previous works have proposed to
+optimize the read performance from several aspects. First, some
+works proposed optimizing the LDPC to improve read performance
+[5, 10–12, 19, 20]. Dong et al. [5] proposed a non-uniform memory
+sensing scheme. Second, some studies have proposed to optimize
+read performance by designing data placement methods. Lv et al.
+[15] proposed to identify hot read data and place them on highly
+reliable pages of high-density flash memory. Third, some works
+proposed to optimize flash read performance by reducing read retries.
+Park et al. [17] adopt a pipelined model in multiple read retries to
+optimize read performance. Zhao et al. [25] proposed to perform
+read retry steps by starting from the lowest level of accuracy and
+then adding additional sensing levels. Finally, there is also work
+that focuses on optimizing flash read performance through multi-
+ECC. Wu et al. [23] proposed to optimize flash read performance
+through a combination of fine-grained programming and weak ECC.
+But their optimization targets low-density NAND flash memory.
+However, the retry operation cannot be avoided with the degraded
+reliability of high-density NAND flash memory. Once the read retry
+operation happens, especially on hot read data, the read performance
+will be significantly degraded, which cannot be solved by the above
+schemes.
+Different from the above schemes, this work proposes a differen-
+tial ECC (DECC) scheme for high-density 3D NAND flash memory
+to improve the read performance. The basic idea is to adopt ECCs
+104
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+Song and Lv, et al.
+with different error correction capabilities for data with different
+access characteristics. LDPC with a low code rate can provide high
+error correction capability, but with a high parity and energy cost,
+and vice versa. These reliability characteristics of LDPCs with differ-
+ent code rates can be used for the reliability guarantee of data with
+different characteristics. First, LDPC with a low code rate is adopted
+for hot read data to provide a high-reliability guarantee to improve
+the read performance. Second, for other read data, LDPC with a
+high code rate is adopted to provide a uniform reliability guarantee
+to control the storage overhead and power consumption. With this
+approach, the number of read retry operations for hot read data can
+be reduced due to enhanced reliability and thus the read performance
+is optimized. To summarize, we make the following contributions:
+• The construction and selection for DECC are present to meet the
+reliability needs of data with different characteristics. A DECC
+table is constructed to provide ECCs with different fault tolerance
+capabilities.
+• A hot read data identification scheme for DECC is proposed to
+adapt to DECC’s requirements.
+• A hot read data aware re-coding scheme is proposed to adopt
+different strengths of ECC. The re-coding scheme is designed to
+minimize the re-coding cost and improve the read performance.
+• Through careful design and real workloads evaluation, experimen-
+tal results show that DECC can achieve significant read perfor-
+mance optimization.
+2
+BACKGROUND
+2.1
+High-Density NAND Flash Memory
+Flash memory is organized by arrangements of storage cells, which
+are interconnected by wordlines and bitlines. With the multi-bits-
+per-cell technique, there are various densities of flash memory, such
+as single-level-cell (SLC), multi-level-cell (MLC), triple-level-cell
+(TLC), and quad-level-cell (QLC) flash, in the order of flash density
+increases. In this paper, we take TLC as the default storage. Each
+storage cell contains three bits, which are called least-significant-bit
+(LSB), central-significant-bit (CSB), most-significant-bit (MSB),
+respectively. In addition, the space of a page is logically divided into
+two parts: user space and spare space. User space is used to store
+user data, while spare space is used to store additional information,
+such as error correction code (ECC). The reliability of high-density
+flash memory has been a critical issue, which causes performance
+and lifetime degradation [17]. Figure 1 shows the 𝑉𝑇𝐻distribution
+of a 3D TLC flash cell. TLC flash with 3-bits-per-cell should divide
+the voltage window into eight levels (𝐸𝑅, 𝑃1 −𝑃7).Here, we use 𝑆to
+represent the number of voltage states, and 𝑛to represent the number
+of bits in a storage cell. The relationship between the values of 𝑆
+and 𝑛is 𝑆= 2𝑛. Such voltage distribution will be distorted due to the
+retention loss or disturbance. For example, the voltage distribution
+will shift to the left during retention time and shift to the right due to
+the disturbance [16](the red dotted line in Figure 1). To this end, the
+adjacent voltage states will be overlapped, making more bit errors.
+2.2
+Read on High-Density Flash Memory
+To ensure reliability, the read process on high-density NAND flash
+memory relies on error correction module in the SSD controller.
+Specifically, the read process includes several steps. First, the read
+111
+110
+001
+101
+100
+000
+010
+011
+濩瀇濻
+P7
+P1
+PDF
+E
+Programmed States
+MSB
+CSB
+LSB
+P2
+P3
+P4
+P5
+P6
+Erase State
+VREF0
+VREF6
+VREF1
+VREF2
+VREF3
+VREF4
+VREF5
+VPass
+Figure 1: 𝑉𝑇𝐻distribution of a 3D TLC flash cell.
+request is issued. Second, the corresponding page is sensed. Third,
+the data is transferred to the controller and corrected by ECC. If the
+data is not corrected successfully, the retry operation is activated
+to read the data again until the data can be corrected. During page
+sensing, the reference voltage (𝑉𝑅𝐸𝐹0 to𝑉𝑅𝐸𝐹6) is used to distinguish
+the voltage states of the flash cell. For the three bits of a TLC
+flash cell, the added locations of reference voltages are different, as
+shown in Figure 1. With the interference of various flash errors, the
+reliability of the data stored in flash cells gradually decreases and
+the raw bit error rate (RBER) of the data gradually increases [14].
+To solve the reliability issue, high-density NAND flash mem-
+ory always adopts LDPC as the default ECC module. LDPC is a
+probability-based ECC that needs to obtain accurate information
+for data error correction. When the RBER of the data is within the
+error correction capability of the LDPC, the data is sensed only one
+time. In this case, read performance is not affected. When the data is
+not correctly decoded, read retry operations are issued to get more
+accurate input information. Figure 2(a) shows the phenomenon of
+retention loss leading to overlapping area. As the retention time
+grows, the overlapping area will further increase, resulting in the
+data failure decoded. In this case, the read retry operation reads
+the data again with a different V𝑅𝐸𝐹value (e.g., V𝑅𝑅𝑖in the i-th
+read retry step in Figure 2(b)). By adjusting the V𝑅𝐸𝐹, the V𝑂𝑃𝑇is
+gradually approached so that the correct data can be read. When the
+RBER of the data is high, we need to read retry several times. In
+this case, the read operation needs to acquire the state information
+multiple times until LDPC can correct the errors. The read latency
+will increase exponentially. For high-density flash memory, degraded
+reliability will result in severe performance degradation.
+VREF
+VREF
+Vth
+PDF
+瀖
+瀖
+After retention loss Right after programming
+Overlapping area
+P(x-1)
+state
+Px
+state
+P(x+1)
+state
+Px
+state
+P(x+1)
+state
+VREFx
+VRR1
+VRR(N-1)
+VOPT
+(a) Retention loss
+(b)Read retry:Adjusting VREF
+Figure 2: 𝑉𝑅𝐸𝐹adjustment in the read retry operation.
+3
+PROBLEM STATEMENT
+From the above discussion, it is clear that read performance is cor-
+related with data reliability. Due to the rapidly decreased reliability
+of 3D TLC NAND flash, adopting LDPC to guarantee data relia-
+bility is an excellent choice. Many state-of-the-art flash chips have
+adopted LDPC with a unified code rate to guarantee data reliability.
+Existing uniform code rate based LDPC combined with reference
+voltage tuning can guarantee the reliability of data stored in flash
+cells. However, the process of reference voltage tuning triggers read
+105
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+DECC: Differential ECC for Read Performance Optimization on High-Density NAND Flash Memory
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+retry operations, which leads to serious degradation of flash read
+performance. A simple solution is to adopt a low code rate based
+LDPC to provide strong error correction capability. In this case, read
+retry will rarely happen, and then the performance can be optimized.
+However, the low code rate based LDPC has several problems. One
+of the most important problems is that this kind of LDPC will intro-
+duce parity cost and power consumption. If it is adopted for all data,
+the power consumption and parity cost will be high.
+To understand the performance characteristics of different LDPC
+for high-density NAND flash memory, we have done experiments as
+follows. First, several LDPC with different code rates were simulated.
+Second, based on their error correction capability, the percentages of
+data enrolled in read retry are varied. For example, we assume that
+the percentage of data enrolled in read retry is low for LDPC with
+a low code rate and vice versa. Then, based on the above settings,
+the percentages of data enrolled in read retry are varied from 0%
+to 100% to represent LDPC with different code rates. FIO is used
+as the workloads to evaluate the device and IOPS is used as the
+metric. Specific experiment configurations can be found in Section 5.
+Figure 3 shows the results. From the results, we have the following
+observations. First, the access performance of high-density NAND
+flash memory is highly related to the error correction capability of
+LDPC. For LDPC with a low code rate, it can provide up to 2.2X
+IOPS. Second, as we have stated above, LDPC with a low code
+rate will introduce much high energy consumption even for data
+with high reliability. In conclusion, simply adopting LDPC with a
+low code rate or a high code rate cannot satisfy the performance or
+reliability requirement of high-density NAND flash memory. The
+above results motivate us to propose a new design, where data with
+different reliability or performance requirements should be protected
+by LDPC with different code rates.
+0%
+10%
+20%
+30%
+40%
+50%
+60%
+70%
+80%
+90% 100%
+0
+2000
+4000
+6000
+8000
+Percentage of Data that Suffer From One Read Retry
+澽濃濄濇
+2.2X
+Figure 3: Motivational results with random read workloads.
+4
+DIFFERENTIAL ECC
+4.1
+Overview
+In this section, a differential ECC (DECC) scheme is proposed for
+read performance improvement of 3D NAND flash. The basic idea is
+to adopt two LDPC with different code rates for data with different
+access characteristics. Specifically, if data accesses need to activate
+read retry and they are hotly accessed, the LDPC with a low code
+rate will be adopted to boost performance. Otherwise, the LDPC
+with a high code rate will be adopted to protect data reliability.
+Figure 4 shows the architecture of DECC. DECC is implemented as
+a module inside the SSD controller, which includes three methods, a
+DECC table, a hot read data identification method, and a hot read
+data re-coding method. To realize the above design, there are several
+challenges: 1) ECCs with different fault-tolerance capabilities have
+different implementation overheads. We should consider the trade-
+off between benefits and overheads for DECC design. 2) DECC
+provides ECC with different fault tolerance capabilities. Hot read
+data needs to be identified and protected by taking strong ECC with
+high fault tolerance. The identification should take the cost and
+efficiency into consideration. 3) The re-coding method is designed
+to adopt the strong ECC. This process is high cost, which includes
+data read and write. Its design should be efficient and low cost.
+To tame the above challenges, we presented three techniques
+as follows. First, we construct a DECC table to record ECCs with
+different code rates and elaborate the principles for selecting ECCs
+with different error tolerance capabilities. Second, we analyze the
+hot read data identification requirements of DECC and design a
+hot read data identification scheme suitable for DECC. Finally, we
+perform a hot read data aware re-coding scheme by the selection of
+DECC. In the following, more details will be discussed.
+Flash Interface Layer
+Host Interface Layer
+Differential ECC
+Chip 0
+FTL
+DECC Table
+SSD Controller
+DRAM
+Hot Read Data Identification
+Hot Read Data Re-coding
+…
+Wear Leveler
+Garbage Collector
+濄
+濅
+濆
+Chip M
+Chip 0
+Chip M
+Channel #0
+Channel #1
+Chip 0
+Chip M
+Channel #N
+…
+…
+…
+Figure 4: Overview of differential ECC.
+4.2
+Construction and Selection for DECC
+We construct DECC to provide different levels of reliability guaran-
+tees for data with different characteristics. In this paper, the access
+characteristics of data are classified into two types, hot reads and
+other reads. Two fault-tolerant ECCs are provided. One strong ECC
+(ECC𝑆) with a low code rate is used to encode hot read data and one
+normal ECC (ECC𝑁) with a higher code rate is used to encode other
+read data. With this approach, if the hot read data is accessed, retry
+operations will rarely happen. Table 1 shows the features of ECC𝑆
+and ECC𝑁. The adoption of ECC𝑆is designed based on the hot read
+data identification and retry operation. Once the accessed data is
+identified as hot read data and retry operation is activated, ECC𝑆will
+be adopted. For example, read retries are triggered when the RBER
+exceeds the error correction capability of ECC𝑁. If the RBER is
+below the error correction capability of ECC𝑆, we are able to obtain
+optimization of read performance. Even if the RBER exceeds the
+error correction capability of ECC𝑆, we need less read retries to
+bring the RBER down below the error correction capability of ECC𝑆
+compared to ECC𝑁.
+For the above design, the selection of ECC𝑆and ECC𝑁should
+be careful. For ECC𝑆, it not only introduces a high error correction
+capability but also introduces parity space and energy consumption
+106
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+Song and Lv, et al.
+Table 1: Differential ECC Table
+Error Correction Capability
+Symbol
+Data Characteristic
+Code Rate
+Strong
+ECC𝑆
+For hot read data
+0.8
+Normal
+ECC𝑁
+For other read data
+0.9 [17]
+cost. If a very strong ECC is selected as ECC𝑆, the parity space
+and energy consumption cost will be unacceptable. In contrast, if a
+weak ECC is selected as ECC𝑆, the read performance will not be
+optimized. The selection of ECC𝑆requires a trade-off between per-
+formance gain and overhead. First, the energy consumption comes
+from the decoding of the hot read data. Compared with ECC𝑁,
+ECC𝑆can reduce the probability of retry operations. With this effect,
+ECC𝑆can avoid the additional energy cost from retry operations.
+Then, the energy cost from ECC𝑆should be comparable to that of
+ECC𝑁. Second, for the parity space cost, it will be larger than that
+of ECC𝑁. Based on our studies on the relationship between error
+correction capability and code rates of LDPC, the error correction
+capability can be significantly increased with a slight reduction of
+code rates. Then, the parity space cost can be controlled based on
+the requirement of error correction capability. The specific selection
+of ECC𝑆will be presented in Section 5.1. For ECC𝑁, it is designed
+to guarantee the integrity of the data. Considering that the ECC has
+been taken in existing SSDs, we can adopt the existing ECC𝑁to
+meet the demand. The identification and re-coding of hot read data
+will be described in Sections 4.3 and 4.4, respectively.
+4.3
+Hot Read Data Identification for DECC
+To optimize the read performance, a critical step is to identify hot
+read data. DECC obtains read performance optimization by identi-
+fying hot read data and improving its reliability. There are various
+methods to identify hot read data. The advantages and disadvantages
+of each method can be measured by accuracy and overhead. Meta-
+data storage and computation overhead are essential if hot read data
+is to be identified accurately. For DECC, the identification of hot read
+data has two characteristics. First, the impact of mis-identification
+of hot read data on DECC is unbalanced. If the data is cold read data
+but identified as hot read data, it will increase the re-coding overhead,
+but the performance impact is negligible. If the data is hot read but
+is not identified, there will be an impact on performance. Second,
+DECC requires a "sluggish" hot read data identification scheme.
+An overly aggressive hot read data identification scheme will cause
+over-protection problems, which will introduce more energy and
+space costs. For non-hot read data, even ECC, which provides more
+fault-tolerant space, has little benefit on performance.
+Combining the above characteristics, we adopt the read count
+method to identify hot read data. In this work, hot read data is de-
+fined as the number of reads between updates exceeding a certain
+threshold, T𝑅. The read counter of data is cleared when it is updated.
+Adopting the read counter method, there are several advantages.
+First, the read counter method does not require complex data struc-
+tures and computational overhead. Second, the read counter method
+is a "sluggish" hot read data identification scheme and meets the
+requirements of DECC. The larger the value of T𝑅, the less data will
+be identified as read hot, and vice versa. In the experiment, T𝑅is
+evaluated to trade off read performance and re-coding cost.
+4.4
+Hot Read Data Aware Re-Coding
+As presented above, ECC𝑆is used when the data is hot read data and
+accessed with read retries with ECC𝑁. In this case, the data should
+be re-coded with ECC𝑆. This design means that data are initially
+encoded with ECC𝑁. Once the above requirements are satisfied, the
+accessed data should be re-coded for read performance optimization.
+The basic re-coding processes are as follows. First, data are read
+and decoded by ECC𝑁. Second, data are encoded with ECC𝑆at the
+storage controller. Finally, the coded data are written back to flash.
+The above process is costly, especially when much data needs to
+be re-coded. To minimize the cost, the re-coding process is designed
+as follows. First, as we have presented, only data hotly read and
+retried, can be re-coded. With this approach, only a limited number
+of data are re-coded. Second, the re-coding process can be activated
+at two timing points. The first timing is during background processes,
+such as garbage collection (GC) or wear leveling (WL). The second
+timing is when it is retried. Figure 5 shows the re-coding process
+for the above two cases. Figure 5(a) shows the first case. During
+runtime, hot read data with retry are identified and recorded. Once
+the block is enrolled in GC or WL, the recorded data will be re-coded
+with ECC𝑆. Figure 5(b) shows the second case. If the hot read data
+is accessed and retried, it can be re-coded by encoding the data in
+the controller. If many read requests waiting in the I/O queue, this
+process should be delayed to the first case.
+Plane
+…
+Re-coder
+Victim Block
+(b) re-coding with host read requests
+(a) re-coding with internal management
+…
+B1
+B2
+Bk
+Bk+1
+BN
+Hot Read Page
+Cold Read Page
+Invalid Page
+1
+Write Pointer
+ECCS
+ECCN
+Hot Read Page with Retries
+2
+Plane
+…
+Re-coder
+…
+B1
+B2
+Bk
+Bk+1
+BN
+Write Pointer
+Host Reads
+1
+ECCS
+Figure 5: Data re-coding for hot read data.
+4.5
+Implementation and Overhead Analysis
+To implement DECC, the FTL (flash translation layer) of the SSD is
+updated as follows. First, for DECC, each page should be identified
+to distinguish the strength of its adopted ECC. One bit is used to
+differentiate them, which is used to indicate ECC decoding and data
+re-coding. Second, for hot read data identification, each page needs a
+counter to record the number of times it has been read. The mapping
+table always has a reserved area, where three bits will be used to
+record them. Third, for ECC𝑆codes, we need extra space to store
+parity information. Take the ECC presented in Table 1 as example.
+The required extra space as a percentage of the total space is (0.9-
+0.8)*100% = 10%. Although some storage space is sacrificed, DECC
+can greatly improve read performance and guarantee data reliability.
+Considering that high-density NAND flash memory has enough
+capacity, this capacity cost can be negligible. More importantly,
+DECC minimizes the power and performance impact of LDPC
+with a low code rate while improving data reliability (e.g., only
+the hot read data uses ECC𝑆). Finally, the re-coding scheme needs
+additional program operations to encode the hot read data. The
+program operations have an impact on lifetime and performance. In
+this work, only hot read data with retry operations are re-coded. To
+minimize the re-coding cost, we can increase T𝑅. In the experiment,
+107
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+DECC: Differential ECC for Read Performance Optimization on High-Density NAND Flash Memory
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+T𝑅is carefully studied to avoid the cost. Furthermore, we propose re-
+coding data during internal operations, which can further minimize
+the impact on the performance.
+5
+PERFORMANCE EVALUATION
+5.1
+Experiment Setup
+We use FEMU [9] to evaluate the benefit of DECC. 3D TLC flash
+is used as the default storage medium, and the capacity is 16GB.
+There are 8 channels, each channel has 2 chips, and each chip is
+equipped with 2 planes. Table 2 shows the configuration and work-
+load characteristics. The latency configurations in Table 2 are con-
+sistent with the work in [17]. We use FIO to generate workloads and
+conduct tests. Our tests use skewed synthetic workloads. It has been
+shown that real-world workloads typically exhibit skewed access
+patterns [4, 8, 13]. Therefore, we use Zipfian distributions [7] to
+generate workloads with skewed access characteristics. They have
+been widely used to study device characteristics [18, 24]. As shown
+in Table 2, we denote these workloads as Zipf x/y, and we adjust the
+skew factors of the Zipfian distribution such that x% of the generated
+operations access y% of the LBA space for a given device size.
+Table 2: Evaluated 3D TLC NAND Flash Memory Configuration
+Parameters
+Value
+Workloads
+Footprint(GB)
+# of chips
+16
+Zipf 70/20
+10
+Chip size
+1GB
+Zipf 70/10
+10
+Plane size
+512MB
+Zipf 80/20
+10
+Block size
+4MB
+Zipf 80/10
+10
+Page size
+16KB
+Zipf 90/20
+10
+Read latency
+127𝜇s [17]
+Zipf 90/10
+10
+We use quasi-cyclic low-density parity checking (QC-LDPC) to
+implement different code rates of ECC in a single circuit without
+using a dedicated circuit for each code rate [22]. Figure 6 shows
+the code rate sequence synthesized from the state-of-the-art AR4JA
+code [3]. The x-axis represents the code rates and the y-axis repre-
+sents the fault tolerance capability. For data reliability and overhead
+consideration, we need to encode data with an appropriate code
+rate using LDPC. Table 1 shows the adopted two ECCs of DECC,
+including ECC𝑆with a 0.8 code rate and ECC𝑁with a 0.9 code rate.
+-2.3
+-2.1
+-1.9
+-1.7
+-1.5
+0.5
+0.6
+0.7
+0.8
+0.9
+RBER (log10)
+Code Rate
+Figure 6: Tolerable RBER at each code rate. Data size is 16KB.
+Considering the variation in the reliability, a probability-based
+read retry model is adopted to simulate the read retry in real sce-
+narios, which is used to evaluate the performance improvement by
+DECC. The model includes the number of read retries and probabil-
+ity distributions. We denote the model as retry x/y/z and generate
+various probability distributions by adjusting the values of x, y and
+z. One of the most important configurations is the parameters asso-
+ciated with above model. Among them, the x,y and z represent the
+probability of zero, one and two read retries, respectively. In this
+work, the number of read retries is limited to 3. For performance
+comparison, the hot read data encoded with ECC𝑆will reduce one
+read retry under all retry models. Detail sensitive studies will be
+presented in the following section.
+5.2
+Experimental Results
+To evaluate the benefit of our proposed DECC scheme, three state-
+of-the-art works are compared in the following experiments. (1)
+Uniform code rate LDPC (UECC): UECC represents the approach of
+adopting a uniform code rate LDPC for the data. UECC uses 0.9 code
+rate LDPC as the ECC [17]. (2) Refresh [6]: Refresh represents hot
+read data encoded using ECC𝑁after refresh when retry happens. (3)
+Multi-ECC (MECC): MECC represents the adoption of multi-code
+rate LDPC [2], which adopts different code rate LDPCs according
+to the P/E cycles. In this paper, MECC uses 0.94 code rate and 0.9
+code rate LDPC codes for performance comparison evaluation.
+1) Performance: Figure 7 shows the normalized average IOPS
+under different read retry probability models. The DECC achieves
+optimized read performance under the three read retry probability
+models. First, MECC has not benefit on IOPS due to that it adopts
+a high code rate based LDPC, which is harmful to performance.
+Second, the refresh scheme can improve the IOPS by 18.3%, 14.3%
+and 11.8% for the three models, respectively. This is because, with
+the refresh, the reliability of data can be recovered. Third, DECC
+further improves the IOPS by 41.7%, 15.7% and 16.2% for the three
+models, respectively. This is because DECC uses ECC𝑆when hot
+read data with retry is identified. Different from that of the refresh,
+DECC will significantly delay the retry with ECC𝑆, which is critical
+for high-density NAND flash memory. In addition, DECC achieves
+more benefit when the workloads are more skewed and the storage
+is less retried. This is because DECC pays attention to the hot read
+data and can reduce the retry more with less retry operations.
+2) Energy consumption: To understand the difference in en-
+ergy consumption between UECC and DECC, we have collected
+their energy consumption, respectively. The power consumption con-
+figuration is consistent with the work in [19]. Figure 8 shows the
+comparison of energy consumption between UECC and DECC. The
+results show several observations: 1) Compared to UECC, DECC
+reduces power consumption by 32%. The reason is that DECC can
+effectively reduce the number of read retries. This will not only opti-
+mize performance, but also reduce energy consumption. 2) As the
+skewness of the workload increases, DECC achieves better energy
+consumption optimization. This is because the higher the skew of
+the workload is, the more read retries DECC can reduce.
+3) Re-coding cost: Re-coding cost refers to the ratio of back-
+ground operations generated during the re-coding process to the
+total number of host requests. Here, for each data re-coding, it will
+cause one rewrite operation. Therefore, background operations dur-
+ing re-coding are as large as the footprint of hot read data. To this
+end, the re-coding cost is determined by the footprint of hot read data
+and the number of host requests. Our proposed re-coding scheme
+reduces the re-coding cost by considering only hot read data. Take
+Zipf 80/20 as an example. The ratio between the footprint of the
+hot read data and the amount of data is about 20%. The re-coding
+108
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 
+ASPDAC ’23, January 16–19, 2023, Tokyo, Japan
+Song and Lv, et al.
+Zipf
+70/20
+Zipf
+70/10
+Zipf
+80/20
+Zipf
+80/10
+Zipf
+90/20
+Zipf
+90/10
+0
+0.5
+1
+1.5
+2
+2.5
+Normalized Average IOPS
+UECC
+MECC
+Refresh
+DECC
+(a) Retry model 20/80/0
+Zipf
+70/20
+Zipf
+70/10
+Zipf
+80/20
+Zipf
+80/10
+Zipf
+90/20
+Zipf
+90/10
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+Normalized Average IOPS
+UECC
+MECC
+Refresh
+DECC
+(b) Retry model 10/40/50
+Zipf
+70/20
+Zipf
+70/10
+Zipf
+80/20
+Zipf
+80/10
+Zipf
+90/20
+Zipf
+90/10
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+Normalized Average IOPS
+UECC
+MECC
+Refresh
+DECC
+(c) Retry model 0/20/80
+Figure 7: Normalized average IOPS in different read retry probability models.
+Zipf
+70/20
+Zipf
+70/10
+Zipf
+80/20
+Zipf
+80/10
+Zipf
+90/20
+Zipf
+90/10
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+Normalized Energy 
+Consumption
+UECC
+DECC
+Figure 8: Normalized energy consumption in Retry 20/80/0.
+overhead of hot read data is 0.5% to 1%. Moreover, as the degree of
+workload skew increases, the re-coding overhead decreases further.
+Based on the above analysis, the overall re-coding cost is negligible.
+To understand the relationship between re-coding cost and T𝑅,
+the have done experiments by varying T𝑅from 2 to 16. Figure
+9(a) shows re-coding cost with different T𝑅varies from 2 to 16.
+The results show that as T𝑅increases, the re-coding cost decreases.
+In this work, to avoid the high re-coding cost and achieve read
+performance optimization, T𝑅was set to 4.
+4) Sensitive study: Figure 9(b) shows the read performance op-
+timization effect of DECC when the number of read retries varies
+from 1 to 16. The results show that as the number of read retries in-
+creases, the optimization of read performance decreases. In the Zipf
+80/20 workload, the read performance optimization decreases from
+50% for one read retry to 4% for sixteen read retries. Importantly,
+DECC optimizes read performance over the lifetime of the data.
+Zipf 80/20
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+澜濖澝
+Improvement of IOPS
+1
+2
+3
+4
+8
+16
+Zipf 80/20
+0
+0.01
+0.02
+0.03
+澜濕澝
+Normalized Re-coding Cost
+2
+3
+4
+5
+8
+16
+Figure 9: (a)Re-coding cost with different T𝑅and (b)IOPS im-
+provement by different number of read retries.
+6
+CONCLUSION
+This work proposes a differential ECC (DECC), which takes differ-
+ent strength ECCs for data with different access characteristics to
+improve the read performance of high-density flash memory. The
+read performance is optimized by encoding the hot read data with
+strong ECCs through a data re-coding scheme. We use workloads
+with different skew levels to evaluate the proposed DECC scheme.
+The experimental results show that DECC achieves significantly read
+performance optimization. In future work, we will further perform
+relevant tests on 3D QLC NAND flash to verify the performance of
+DECC. Additional differential ECC designs will also be conducted
+to further optimize read performance.
+REFERENCES
+[1] Yu Cai and Saugata Ghose et al. 2017. Error Characterization, Mitigation, and
+Recovery in Flash-Memory-Based Solid-State Drives. Proc. IEEE 105, 9 (2017).
+[2] Yu Cai and Yunxiang Wu et al. 2018. Error correction code (ECC) selection using
+probability density functions of error correction capability in storage controllers
+with multiple error correction codes. US Patent 10,153,782.
+[3] Adrien Cassagne and Olivier Hartmann et al. 2019. Aff3ct: A fast forward error
+correction toolbox! SoftwareX 10 (2019).
+[4] L. Cherkasova and Gupta Minaxi et al. 2004. Analysis of enterprise media
+server workloads: access patterns, locality, content evolution, and rates of change.
+IEEE/ACM Transactions on Networking 12, 5 (2004).
+[5] Guiqiang Dong and Ningde Xie et al. 2010. On the use of soft-decision error-
+correction codes in NAND flash memory. IEEE TCS 58, 2 (2010).
+[6] Yajuan Du and Qiao Li et al. 2017. Reducing LDPC soft sensing latency by
+lightweight data refresh for flash read performance improvement. In DAC.
+[7] MW Green. 1986. Pareto Distributions.
+[8] Sang-Won Lee and Bongki Moon et al. 2008. A Case for Flash Memory Ssd in
+Enterprise Database Applications. In ACM SIGMOD.
+[9] Huaicheng Li and Mingzhe Hao et al. 2018. The {CASE} of {FEMU}: Cheap,
+accurate, scalable and extensible flash emulator. In FAST 18.
+[10] Qiao Li and Liang Shi et al. 2017. Improving LDPC performance via asymmetric
+sensing level placement on flash memory. In ASP-DAC.
+[11] Qiao Li and Liang Shi et al. 2020. Process Variation Aware Read Performance Im-
+provement for LDPC-Based nand Flash Memory. IEEE Transactions on Reliability
+69, 1 (2020).
+[12] Qiao Li and Min Ye et al. 2020. Shaving Retries with Sentinels for Fast Read over
+High-Density 3D Flash. In MICRO.
+[13] Songbin Liu and Xiaomeng Huang et al. 2013. Understanding Data Characteristics
+and Access Patterns in a Cloud Storage System. In CCGrid.
+[14] Yixin Luo and Saugata Ghose et al. 2018. Improving 3D NAND flash memory
+lifetime by tolerating early retention loss and process variation. ACM on MACS 2,
+3 (2018).
+[15] Yina Lv and Liang Shi et al. 2020. Latency Variation Aware Read Performance
+Optimization on 3D High Density NAND Flash Memory. In GLSVLSI.
+[16] Nikolaos Papandreou and Haralampos Pozidis et al. 2019. Characterization and
+analysis of bit errors in 3D TLC NAND flash memory. In IEEE IRPS.
+[17] Jisung Park and Myungsuk Kim et al. 2021. Reducing Solid-State Drive Read
+Latency by Optimizing Read-Retry. In ASPLOS.
+[18] Roman Pletka and Ioannis Koltsidas et al. 2018. Management of next-generation
+NAND flash to achieve enterprise-level endurance and latency targets. ACM TOS
+14, 4 (2018).
+[19] Shigui Qi and Dan Feng et al. 2015. A New Solution Based on Multi-rate LDPC
+for Flash Memory to Reduce ECC Redundancy. In IEEE ISPA, Vol. 1.
+[20] Shigui Qi and Dan Feng et al. 2017. CDF-LDPC: A New Error Correction Method
+for SSD to Improve the Read Performance. ACM Trans. Storage 13, 1 (2017).
+[21] Youngseop Shim and Myungsuk Kim et al. 2019. Exploiting Process Similarity
+of 3D Flash Memory for High Performance SSDs. In MICRO. 13 pages.
+[22] Yang Sun and Marjan Karkooti et al. 2007. VLSI decoder architecture for high
+throughput, variable block-size and multi-rate LDPC codes. In IEEE ISCS.
+[23] Guanying Wu and Xubin He et al. 2013. Exploiting Workload Dynamics to
+Improve SSD Read Latency via Differentiated Error Correction Codes. ACM
+Trans. Des. Autom. Electron. Syst. 18, 4 (2013).
+[24] Yue Yang and Jianwen Zhu et al. 2016. Write skew and zipf distribution: Evidence
+and implications. ACM TOS 12, 4 (2016).
+[25] Kai Zhao and Wenzhe Zhao et al. 2013. LDPC-in-SSD: Making Advanced Error
+Correction Codes Work Effectively in Solid State Drives. In FAST.
+109
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:26 UTC from IEEE Xplore.  Restrictions apply. 

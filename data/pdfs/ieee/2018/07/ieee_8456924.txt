@@ -1,0 +1,157 @@
+DEVELOPMENT OF THE LDPC CODERDECODER OF THE DVB-S2 STANDARD ON
+FPGA
+
+M. Yu. Zinchenko
+National Research University “MPEI”
+Moscow, Russia ZinchenkoMY@gmail.com zinchenko@media-publisher.ru
+
+A. M. Levadniy
+National Research University “MPEI”
+Moscow, Russia
+
+Yu. A. Grebenko
+National Research University “MPEI”
+Moscow, Russia
+
+Abstract—Forward error correction (FEC) is a mandatory step in the processing of information in modern digital communication channels. Encoding methods are constantly improved. Today's most popular FEC codes are low-density parity check codes (LDPC).
+The paper presents the results of the development on the FPGA the encoder and the decoder of LDPC codes compatible with the standard DVB-S2. Parametrized FEС modules with the ability to use several coding rates and two frames types of the standard were developed. In this paper, proposed architectures of coder and decoder, methods for improving performance and used resources of FPGA are presented.
+Keywords—FEC; decoder; LDPC; DVB-S2; FPGA;
+I. INTRODUCTION The use of forward error correction coding is one of the ways to increase the reliability of data transmission over a communication channel. By adding redundant symbols to the transmitted data, it becomes possible to correct errors on the receiving side and restore the original information. Such noiseimmune codes include binary low-density codes, also known as binary codes with a low density of parity checks. These codes are used in many modern data transmission standards: DVBS2/T2, IEEE 802.11n/ac (Wi-Fi) etc. Since in this work we used the LDPC code of the standard DVB-S2 with a long code word length - 64800 bits, then for practical application and obtaining high performance of the encoder-decoder, it is expedient to use Field Programmable Gate Arrays (FPGAs). We wanted to get FEC-modules that can work in low-cost Xilinx Artix-7 series FPGAs. The architects of the encoder and the decoder for implementation have been proposed in this work.
+II. DISCUSSION Low-density codes were originally presented in the Robert G. Gallagher doctoral dissertation in 1960 [1]. However, due to the lack of an effective decoding algorithm and hardware capabilities, these codes were not widely used until the early
+
+2000s. Now they are used in many standards such as Wi-Fi 802.11, WiMAX, DVB-S2, etc.
+Encoding information using LDPC codes results in a significant increase in noise immunity compared to the protection offered by turbo codes. For the selected error probability level of 10-6 and the same percentage of control symbols, we can get gain in the signal to noise ratio due to the LDPC-coding up to 3 dB. The use of these codes is also effective in counteracting wideband impulse noise, as well as signal interference.
+Low-density parity check codes are linear block codes. A feature of these codes is the low density of significant elements in the matrix - units, meaning the connection of the codeword bits with the corresponding checks. Building an effective structure of LDPC parity check matrix for hardware implementation is a very laborious task. Therefore, in this work we use the structure of H matrix of the Digital Video Broadcasting - Satellite - Second Generation (DVB-S2) standard. In which, 21 coding rates R and 2 codeword lengths (16,200 and 64,800 bits) are defined [2]. In the annex to the standard, look-up tables are provided, using which it is possible to construct generating matrices G for each degree of encoding r and corresponding check matrices H. First, the code structures in this standard have a high correcting ability, which allows one to come close to the Shannon limit when applying iterative decoding methods with "soft" bits. Second, it is possible to perform calculations of up to 360 parity checks in parallel. The aim of the work was to implement a parametrized decoder with the possibility of specifying the coding rate and the length of the codeword for each incoming codeword. Therefore, six coding degrees were selected for subsequent implementation (3 for normal and 3 for short frames). The graphs of the dependence of the bit error probability Pb on the ratio Eb/N0 for the selected LDPC coding rates represented in the DVB-S2 standard are shown in Fig. 1.
+
+978-1-5386-6474-2/18/$31.00 ©2018 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,202F6iga.t 11.2C:4h5a:4ra8cUteTrCistfircosmolfIeELnEgDEtPhXCopflcocoroded.eefRwoerosrdtdriifcfteiorennstacpopdlyin. g rates and
+
+Initially, a coding algorithm was implemented in the FPGA basis. The LDPC encoder systematically encodes an information block of size k, i = (i0, i1,…, ik-1) into a codeword of size n, с = (i0, i1,…, ik-1, p0, p1,…, pn-k-1). A detailed description of the method according to which the encoding is performed is represented in the DVB-S2 standard. The FPGA resources used by the implemented encoder are presented in Table 2.
+Developing an effective low-density parity-check code decoder is a difficult task. In the DVB-S2 standard there are no specific instructions for the implementation of the decoder. The structure of the check matrix is well suited for hardware implementation, but requires special approaches to parallel processing of data. It was determined that in order to maintain an acceptable decoding throughput, it is sufficient to use 90 parallel functional units (FUs).
+To increase the sensitivity of the receiver, a demodulator that outputs soft values of the demodulated bits of the codeword was implemented. Unlike "hard" bits, where the value of the received vector has only two values of 0 or 1, the realized demodulator gives the reception probabilities 0 or 1. It has 127 discrete levels, where "-63" means "confident" unit reception, "63" means "sure" zero, and "0" means uncertainty in the value of the received bit.
+
+decoding, after each iteration a "hard" check of the received code word occurs. If the correct codeword is found, the decoder completes the decoding.
+An efficient minimum-sum decoding algorithm was chosen for hardware implementation. This algorithm allows us to replace the calculation of the function log[tanh(x/2)] by calculating the sum of minima. This greatly reduces the amount of hardware resources used. In addition, to accelerate the processing, two steps of decoding (first step update all check nodes and second step update all bit nodes) were replaced by one-step of decoding (updating the bit nodes immediately after computing the check with which they are connected) [3].
+Each functional unit performs an operation of majority updating of the probabilities of bits of current check. The operation of the FUs in parallel requires the implementation of special mechanisms for sampling the bits of the codeword in accordance with the structure of the check matrix. This also imposes restrictions on the way of storing the bits of codeword in the FPGA memory. Furthermore, for parallel processing of checks, it is necessary input data into FU on time. A memory model that includes 90 RAM blocks was developed.
+
+Fig. 2. Iterative decoding of the received codeword
+The decoder uses an iterative decoding algorithm based on the principle of majority multiple updating of the probabilities of the demodulated bits of the received codeword. The codeword bits associated with each other are involved in checks, during which the probabilities of each bit nodes are renewed, seeking to obtain the desired codeword. That is, the correct bits based on their probabilities try to "pull up" the probabilities of bits received with errors to the correct values. The iterative decoding process of the first 10 bits of the codeword for the case of a small signal-to-noise ratio is shown in Fig. 2.
+As can be seen from the figure, the correct bits (green points) "strengthen" their value after each iteration, tending to a "confident" value of modulus equal to 63. Bits that contain errors (red dots) first reduce their probability to zero, and then change the sign to the correct one and begin to increase value for a "confident" level. After the third iteration is completed, all first 10 bits of the codeword have the correct values. The decoder implemented in the FPGA can do 1 to 50 iterations of
+
+Fig. 3. Block diagram of decoder architecture.
+It should be noted, that at parallel decoding the structure of the matrix of the DVB-S2 standard leads to errors in reading and writing to the memory information of bits probabilities. This case occurs when in there is a submatrix 360x360 with two diagonals in the check matrix H. Then a bit node enters in two parallel computed checks, thereby making these checks interconnected. That checks cannot be processed in parallel. This problem was solved by reorganizing the check matrix H and removing from it the dual diagonal submatrices [4].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:48 UTC from IEEE Xplore. Restrictions apply.
+
+The implemented architecture of the decoder is shown in Fig. 4.
+With the use of "soft" demodulated bits, it becomes possible to use "erasure", that is, zeroing by the demodulator of probabilities for knowingly erroneous bits. The implemented FEC-codes were analyzed for resistance to erasure. As can be seen from Table 1, for the length of the codeword N = 64800 and r =1/4 it is possible to erase up to 37.5% of the demodulated bits while retaining the ability to decode a code word, when the remaining bits have good Eb/N0.
+
+Code rate, r
+1/4 1/2 3/4
+
+TABLE 1
+
+Percent of erased bits of the codeword vs. Eb/N0
+
+0%
+
+12.5
+
+25 %
+
+37.5 %
+
+-2.05 dB
+
+-1.9 dB
+
+0 dB
+
+3 dB
+
+1.1 dB
+
+2.1 dB
+
+5.1 dB
+
+-
+
+4.05 dB
+
+8 dB
+
+-
+
+-
+
+FPGA Logic Block RAM DSP
+
+Encoder
+
+5
+
+1.37 %
+
+0
+
+0%
+
+Decoder
+
+149
+
+40,82 %
+
+0
+
+0%
+
+The obtained decoder performance at a working frequency of 110 MHz is presented in Table 3.
+
+N
+16200 16200 16200 64800 64800 64800
+
+R
+11/45 2/5 2/3 1/4 1/2 3/4
+
+TABLE 3
+Decoder throughput (Mbit/s) 4.24 6.12 10.84 4.54 10.47 17.9
+
+Eb/N0 (dB)
+-2.45 0.15 3.1 -2.05 1.1 4.05
+
+The processing in FUs also used a data pipeline (Fig. 4). With this scheme, there is no need to wait for the output of the processed data to load the next others. The data blocks follow one another continuously. That allowed to further reduce the processing time of one iteration and, consequently, to increase the processing speed of the decoder.
+
+IV. CONCLUSIONS An encoder and a decoder with six coding rates and two code word lengths were presented. To calculate checks, a minimum-sum algorithm was chosen that can significantly reduce used FPGA resources, compared to other low-density code decoding algorithms. In addition, algorithm was modified to update probabilities of the bits immediately after the calculation of the check to which they are included. A partially-parallel architecture with 90 processing units was proposed. After synthesis, it was shown that decoder uses an acceptable amount of FPGA resources - less than 35%, which makes it easy to scale to achieve a given decoder performance.
+
+Fig. 4. FU data pipeline
+III. RESULTS The presented architecture of the decoder was synthesized in the FPGA Aritx-7 xc7a200 and is capable of operating at frequencies up to 230 MHz while occupying 31% of logical cells. The decoder resources are shown in Table 2.
+
+REFERENCES
+[1] Robert. G. Gallager, Low-density parity-check codes. Ph.D. dissertation, MIT, Cambridge, MA, 1963.
+[2] European Telecommunication Standards Institute (ETSI), http://www.dvb.org/documents/white-papers/wp06.DVB-S2.final.pdf.
+[3] H. Zhong, W. Xu, N. Xie, and T. Zhang, “Area-Efficient Min-Sum Decoder Design for High-Rate QC-LDPC Codes in Magnetic Recording,” IEEE Transactions on Magnetics, vol. 43, No. 12, pp. 4117 - 4122, Dec. 2007.
+[4] C. Marchand, J-B Dore, L. Conde-Canencia and E. Boutillon, “Conflict Resolution by Matrix Reordering for DVB-T2 LDPC Decoders”, 2009 IEEE Global Telecommunications Conference (Honolulu, HI), pp. 1–6, Dec. 2009.
+
+FPGA Logic Slice LUTs Slice Registers
+
+TABLE 2
+
+Encoder
+
+2443
+
+1,82 %
+
+948
+
+0.35 %
+
+Decoder 41378 30.74 %
+52898 19.65 %
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:45:48 UTC from IEEE Xplore. Restrictions apply.
+
+

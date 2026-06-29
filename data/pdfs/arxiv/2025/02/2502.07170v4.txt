@@ -1,0 +1,2947 @@
+Practical classical error correction for parity-encoded spin systems
+Yoshihiro Nambu
+NEC-AIST Quantum Technology Cooperative Research Laboratory
+National Institute of Advanced Industrial Science and Technology
+Quantum annealing (QA) has emerged as a promising candidate for fast solvers for combinatorial
+optimization problems (COPs) and has attracted the interest of many researchers. Since COP is
+logically encoded in the Ising interaction among spins, its realization necessitates a spin system with
+all-to-all connectivity, presenting technical challenges in the physical implementation of large-scale
+QA devices. W. Lechner, P. Hauke, and P. Zoller proposed a parity-encoding (PE) architecture
+consisting of an expanded spin system with only local connectivity among them to circumvent
+this difficulty in developing near-future QA devices.
+They suggested that this architecture not
+only alleviates implementation challenges and enhances scalability but also possesses intrinsic fault
+tolerance. This paper proposes a practical decoding method tailored to correlated spin-flip errors in
+spin readout of PE architecture. Our work is based on the close connection between PE architecture
+and classical low-density parity-check (LDPC) codes.
+We show that the bit-flip (BF) decoding
+algorithm can correct independent and identically distributed errors in the readout of the SLHZ
+system with comparable performance to the belief propagation (BP) decoding algorithm. Then,
+we show evidence that the proposed BF decoding algorithm can efficiently correct correlated spin-
+flip errors by simulation. The result suggests that introducing post-readout BF decoding reduces
+the computational cost of QA using the PE architecture and improves the performance of global
+optimal solution search. Our results emphasize the importance of the proper selection of decoding
+algorithms to exploit the inherent fault tolerance potential of the PE architecture.
+I.
+INTRODUCTION
+Combinatorial
+optimization
+problems
+(COPs)
+present
+significant
+mathematical
+challenges
+in
+various
+industrial
+applications,
+including
+routing,
+scheduling, planning, decision-making, transportation,
+and telecommunications.
+COPs have garnered the
+attention of many researchers,
+leading to intensive
+efforts to develop a fast solver for these problems.
+Since many COPs are NP-hard, effective approximation
+methods such as heuristics [1] and meta-heuristics [2],
+have often been employed to tackle related challenges.
+Some of these methods rely on probabilistic simulations
+of dynamic processes in physical systems.
+They are
+inspired by computational models of natural phenomena,
+which can be executed on digital computers or specially
+designed physical hardware.
+Recently, there has been
+increasing interest in natural computing,
+with new
+nature-inspired computing hardware being proposed
+and analyzed based on intriguing natural systems such
+as neural networks, molecules, DNA, and quantum
+computers [3].
+There is a growing interest in quantum annealing (QA)
+devices as fast solver candidates for COPs [4]. The COPs
+can be mapped to a search for the ground state of the
+Hamiltonian of the Ising spin network. The QA device
+is designed to quickly search for such ground states by
+exploiting quantum phenomena.
+Various architectures
+of QA devices have been developed to solve large-
+scale industrial and social optimization problems in a
+reasonable amount of time.
+D-Wave Systems was the
+first to create a commercial QA device consisting of
+superconducting flux qubits [5–9]. Another QA device,
+called a coherent Ising machine, has been developed using
+optical systems.
+[10–13].
+Kerr parametric oscillators
+(KPOs) have been proposed as alternative candidates for
+components of a QA device. [14–23].
+To apply QA devices to a universal problem of COP,
+we need to simulate the fully connected graph model
+in a scalable manner using Ising spin hardware.
+This
+requirement is technically challenging, especially when
+implementing large-scale QA devices using on-chip solid-
+state technology, because many long-range interactions
+between spins are necessary. To alleviate this problem,
+we usually embed a network of logical spins with many
+long-range interactions in an enlarged network of physical
+spins that exhibit fewer long-range interactions.
+For
+example, a minor embedding technique was proposed
+that replaces long-range interactions between logical
+spins with short-range interactions between clusters of
+physical spins [24, 25]. In this technique, physical spins
+within the same cluster are connected in a chain by
+strong ferromagnetic interactions to act as a logical spin,
+and a minor-embedded Hamiltonian replaces the logical
+problem Hamiltonian. Strong ferromagnetic interactions
+act as energy penalties to align the orientation of the
+physical spins in a chain. This technique enables solving
+problems requiring fully connected graph structures by
+allowing them to be embedded into the sparse graph
+structures available for current QA hardware.
+However, it isn’t easy to apply this technique to
+large-scale QA hardware scalably because it requires
+non-planar wiring between spins in this technique.
+In response, W. Lechner, P. Hauke, and P. Zoller
+(LHZ) proposed a parity encoding (PE) architecture,
+an embedded method that can be implemented scalably
+using planar circuitry [26]. In this architecture, physical
+spins are connected lattice-like by strong adjacent four-
+arXiv:2502.07170v4  [quant-ph]  30 Apr 2025
+2
+body interactions to simulate a fully connected logical
+spin system. The strong four-body interaction acts as an
+energy penalty to map a physical spin state to a logical
+spin state uniquely. As a result, both the logical local
+fields and logical couplings are mapped to the local fields
+that act on the physical spins. This offers a particularly
+attractive feature of the PE architecture: it can separate
+the problem of controlling local fields and couplings.
+Since the PE architecture encodes logical information
+redundantly and nonlocally in the physical degrees of
+freedom, LHZ suggested that this architecture includes
+an intrinsic fault tolerance. Later, F. Pastawski and J.
+Preskill (PP) [27] pointed out that the PE architecture
+is interpreted as a classical low-density parity-check
+(LDPC) code [28, 29] and demonstrated that if the
+spin readout errors are independent and identically
+distributed (i.i.d.), they can be corrected through the
+belief propagation (BP) algorithm, recognized as the
+standard decoding algorithm for the LDPC codes [30].
+T. Albash, W. Vincl, and D. Lidar discussed whether
+several decoding algorithms can improve the performance
+of PE architectures [31].
+They reported that when a
+simple majority vote decoding (MVD) is used for post-
+readout decoding, the PE architecture does not exhibit
+fault tolerance against the correlated spin-flip errors that
+arise in their model of QA. In addition, they showed
+that a more sophisticated minimum weight decoding
+(MWD) algorithm,
+while requiring significant effort
+over MVD, can boost decoding success over MVD for
+sufficiently weak four-body penalty constraints. Despite
+observing that the BP algorithm boosted decoding
+success substantially for sufficiently weak four-body
+penalty constraints, they concluded that this boost is
+an artifact only seen in special problem instances that
+depend on the principle of the MWD. They pointed
+out that for PE architecture to achieve performance
+comparable to or better than the ME method, it is
+essential to develop a better decoding strategy tailored
+to correlated spin-flip errors. Furthermore, it would be
+a matter of course that developing practical decoding
+algorithms with lower decoding costs is also essential to
+exploit the potential of the PE architecture.
+This paper proposes a practical decoding algorithm
+applicable to QA devices based on PE architecture.
+The proposed algorithm is an iterative hard-decision
+decoding algorithm based on majority voting in a
+generalized syndrome, known as Gallager’s bit-flipping
+(BF) algorithm within the context of LDPC codes
+[28, 29].
+Although the complexity class of the MWD
+is NP-hard, that of our BF algorithm is P, similar to
+the BP algorithm. Furthermore, the algorithm requires
+less computational effort and processing time than the
+BP algorithm, and can be implemented by a logic
+circuit. Our BF algorithm is devised based on the close
+connection between the PE architecture and the classical
+LDPC codes noted by PP. We show that the spin system
+initially proposed by Sourlas [32] and later by LHZ
+(referred to as the SLHZ system) is a realization of the PE
+architecture, and COP based on the Hamiltonian of the
+SLHZ system is itself equivalent to decoding the LDPC
+codes. Assuming the i.i.d. noise model, we demonstrate
+that our BF decoding algorithm can correct spin readout
+errors with comparable convergence to the BP algorithm.
+To verify the potential for correcting correlated spin-
+flip errors in the BF decoding algorithm, we performed
+classical
+simulations
+of
+stochastically
+sampled
+spin
+readouts in the SLHZ system using Markov chain Monte
+Carlo (MCMC) sampling.
+This analysis allows us to
+study the tolerance to leakage errors due to purely
+classical thermal noise.
+We show evidence that by
+making the four-body penalty constraint sufficiently
+weak, the BF decoding algorithm, similar to the BP
+decoding algorithm, can efficiently correct correlated
+spin-flip errors in simulated readouts of SLHZ systems.
+We further show that applying BF decoding to the
+MCMC sampler’s readouts reduces the computational
+cost in the MCMC sampling.
+Our findings suggest
+that a hybrid computational approach combining two
+different types of decoding algorithms, decoding by
+MCMC sampling and subsequent BF decoding, can
+mitigate the calculation overhead inherent in the SLHZ
+systems.
+Our results were similar to those of the
+pioneering work by Albash et al., who used simulated
+quantum annealing to simulate the readout of the spins in
+the SLHZ system and used BP decoding to decode it. We
+sought to understand this phenomenon by comparing our
+algorithm with various known BF decoding algorithms.
+According to our analysis, this is a consequence of a
+combination of the Hamiltonian of the SLHZ system and
+the property common to the post-readout BF or BP
+decodings. Our BF decoding is promising for realizing
+near-term QA devices based on PE architecture.
+This paper is organized as follows. Section II briefly
+explains error-correcting codes (ECC) and probabilistic
+decoding as a preliminary step.
+Section III describes
+the close connection between LDPC codes and SLHZ
+systems, and proposes a simple BF decoding algorithm
+for SLHZ systems.
+Section IV demonstrates the
+performance of the proposed BF decoding. In Sec.V, we
+outline several types of BF decoding algorithms and their
+relation to our algorithm.
+We explain why two-stage
+hybrid decoding performs better than the two algorithms
+individually. We also discuss relevance of our study to
+the Albash et al.’s work [31]. Section VI concludes this
+paper.
+II.
+PRELIMINARIES
+A.
+Model
+First, let’s describe our model. A binary source-word
+˜
+M is first encoded into a binary code-word ˜C using ECC.
+The code-word is then modulated into the real signal
+˜S and transmitted.
+During transmission, the signal is
+affected by noise in a transmission channel. At the end
+3
+Source
+Noise
+Decoder
+Demodulator
+Channel
+Modulator
+Encoder
+𝒁∈±1 𝐾
+𝒛∈±1 𝑁𝑣
+𝜈𝒛∈ℝ𝑁𝑣
+෩𝑀
+ሚ𝐶
+ሚ𝑆
+Data
+𝒏∈ℝ𝑁𝑣
+𝒚∈ℝ𝑁𝑣
+𝒙∈±1 𝑁𝑣
+෨𝑅
+FIG. 1. A considered model for a communication system.
+of the channel, the received signal is demodulated to
+obtain the observations ˜R (Fig.1).
+The ECC aims to
+communicate reliably over a noisy channel. Let ˜
+M and
+˜C be K bits and Nv (> K) bits, respectively, and denote
+them by the binary vectors ¯
+Z =
+  ¯Z1, . . . , ¯ZK
+
+∈{0, 1}K
+and ¯z = (¯z1, . . . , ¯zNv) ∈{0, 1}Nv, respectively. A Linear
+code is defined by a one-to-one map from ˜
+M in the set
+ ¯Z
+	
+of 2K source-words
+˜
+M of length K to ˜C in the
+set {¯z} of 2K code-words ˜C of length Nv.
+They are
+specified by a generating matrix GK×Nv or a generalized
+parity
+check
+matrix
+HNc×Nv
+satisfying
+GHT
+=
+0K×Nc (mod 2).
+Here G and H are binary matrices
+(i.e., their elements are 0 or 1) and “mod 2” denotes that
+the multiplication is modulo two.
+The source-word ¯
+Z
+is mapped to the code-word ¯z by ¯z =
+¯
+ZG (mod 2).
+Note that any K linearly independent code-words can
+be used to form the generating matrix.
+For an
+arbitrary Nv-dimensional vector ¯x = (¯x1, . . . , ¯xNv) ∈
+{0, 1}Nv, define the generalized syndrome vector ¯s (¯x) =
+(¯s1 (¯x) , . . . , ¯sNc (¯x)) (generalized because it may not
+have Nv −K bits) as ¯s (¯x) = ¯xHT (mod 2).
+Then,
+¯x is a code-word if and only if ¯s (¯x) = 01×Nc.
+This
+vector equation defines a set of generalized parity check
+equations consisting of a set of Nc equations where only
+Nv −K of them are linearly independent. It follows that
+the parity-check matrix for a given linear code can be
+chosen in many ways and that many syndrome vectors
+can be defined for the same code.
+The ratio of the
+length of the source-word to that of the code-word is
+called the rate: r = K/Nv.
+Later in this section, we
+will show specific examples of the matrices G and H for
+the PE architecture. The code-word ¯z is converted into a
+sequence of bipolar variables z = (z1, . . . , zNv) ∈{±1}Nv
+(0 is mapped to +1, and 1 to −1) and modulated to
+antipodal signals |v| z by a binary phase shift keying
+modulation, where |v| is the signal amplitude. Assume
+the signal ˜S is transmitted over a channel with additive
+white Gaussian noise (AWGN). At the end of the channel,
+the receiver obtains an observation ˜R, denoted by an
+antipodal vector y = (y1, . . . , yNv) = |v| z + n ∈RNv
+where n = (n1, . . . , nNv) ∈RNv is a noise vector whose
+elements are i.i.d. Gaussian random variables with zero
+mean and variance σ2.
+The goal of decoding is to
+reproduce the original source-word ˜
+M or associated code-
+word ˜C with a low bit error rate from the observation y.
+The link between the ECC and the spin glass model
+was first pointed out by Sourlas [33]. In the remainder
+of this paper, we will discuss our arguments primarily
+in the language of spin glass.
+Following Sourlas [34–
+37], our argument relies on isomorphism between the
+additive Boolean group ({0, 1} , ⊕) and the multiplicative
+Ising group ({±1} , ·), where a binary variable ¯ai ∈
+{0, 1} maps to the spin variable ai = (−1)¯ai ∈{±1}
+and the binary sum maps to the product by aiaj =
+(−1)¯ai⊕¯aj ∈{±1}.
+Source-word ¯Z and code-word ¯z
+are mapped to vectors Z = (Z1, . . . , ZK) ∈{±1}K and
+z = (z1, . . . , zNv) ∈{±1}Nv in the spin representation,
+respectively.
+Hereafter, we will refer to Z and z
+as a source-state and a code-state, respectively, and
+associated fictitious spins as logical and physical spins,
+respectively, following LHZ. Similarly, binary vectors ¯s
+and ¯x are mapped to the associated vectors s and x
+in the spin representation. In the following, we denote
+variables by symbols with and without an overbar in the
+binary and spin representations. It should be noted that
+by isomorphism, every addition of two binary variables
+corresponds to a unique product of spin variables and
+vice versa. For example, since ¯z = ¯
+ZG (mod 2) holds, z
+4
+and Z are connected by the relation
+zi = (−1)
+LK
+j=1 ¯
+ZjGji =
+Y
+{j:Gji=1}
+Zj ∈{±1} ,
+(1)
+where i = 1, . . . , Nv.
+Similarly, z must satisfy the
+equation
+(−1)
+LNv
+j=1 ¯zjHij =
+Y
+{j:Hij=1}
+zj = (−1)0 = +1,
+(2)
+for i = 1, . . . , Nc, since ¯z satisfies the parity check
+equation ¯zHT (mod 2) = 01×Nc.
+B.
+Probabilistic decoding
+Probabilistic decoding is performed based on statistical
+inference according to Bayes’ theorem. To infer the code-
+state, consider the conditional probability P (z|y) dy
+that the prepared state is z when the observation was
+between y and y + dy. According to Bayesian inference,
+the Bayes optimal estimate is obtained when the
+posterior probability P (z|y) or its marginals, discussed
+below, are maximized. According to Bayes’ theorem,
+P (z|y) =
+P (y|z) P (z)
+P
+z P (y|z) P (z) = κP (y|z) P (z)
+(3)
+holds,
+where
+κ
+is
+a
+constant
+independent
+of
+z
+which is determined by the normalization condition
+P
+z P (z|y) = 1, and P (z) is the prior probability for
+the code-state z.
+Word MAP decoding
+Sourlas showed that, based on Eqs.(1) and (2), two
+different formulations are possible for ECC. The first
+one is expressed in terms of source-state Z.
+In this
+case, following Eq.(1), we assume the following prior
+probability for z:
+P (z) = µ
+Nv
+Y
+i=1
+δ
+
+zi,
+Y
+{j:Gji=1}
+Zj
+
+,
+(4)
+where µ is a normalization constant. The Kronecker’s δ
+in Eq.(4) enforces the constraint that z obeys Eq.(1);
+it is a valid code-state.
+Assuming that the noise
+is independent for each spin and that P (y|z)
+=
+Nv
+Q
+i=1
+P (yi|zi) holds (memoryless channel), we can derive
+the following equation:
+−ln P (z|y) = const. −
+Nv
+X
+i=1
+θ (yi)
+Y
+{j:Gji=1}
+Zj
+≡Hsource (Z) ,
+(5)
+where θ (yi) is the half log-likelihood ratio (LLR) of the
+channel observation yi, namely
+θ (yi) = 1
+2 log P (yi| + 1)
+P (yi| −1).
+(6)
+Alternatively, the second one is expressed in terms of
+code-state z. In this case, following Eq.(2), we assume
+the following prior probability for z:
+P (z) = µ
+Nc
+Y
+i=1
+δ (si (z) , +1) ,
+(7)
+where
+si (z) =
+Y
+{j:Hij=1}
+zj
+(8)
+is the ith syndrome for z in the spin representation.
+Then, we can derive the following equation:
+−ln P (z|y) = −
+Nv
+X
+i=1
+θ (yi) zi + lim
+γ→∞γ
+Nc
+X
+i=1
+1 −si (z)
+2
+≡Hcode (z) .
+(9)
+In Eq.(9), δ’s in Eq.(7) is replaced by a soft constraint
+using the identity
+δ (x, +1) = lim
+γ→∞exp
+
+−γ 1 −x
+2
+
+.
+(10)
+The second term of Eq.(9) enforces the constraint that
+z obeys Eq.(2); it is a valid code-state. In contrast, the
+first term reflects the correlation between the observation
+y and the code-state z.
+Since a source-state corresponds one-to-one to an
+associated code-state, the two formulations above are
+equivalent as long as z is a code-state associated with
+a source-state Z.
+It is evident that Hsource (Z) is
+in the form of a spin glass Hamiltonian.
+In contrast,
+Hcode (z) can be considered a Hamiltonian of an enlarged
+spin system.
+The state corresponding to the most
+probable word (“word maximum a posteriori probability”
+or “word MAP decoding”), i.e., the state that maximizes
+probability P (z|y), is given by the ground state of the
+Hamiltonian Hsource (Z) or Hcode (z).
+In this case,
+probabilistic decoding corresponds to finding the most
+probable code-state z, namely,
+z = arg max
+x∈C
+P (x|y) = arg min
+x∈C
+Hcode (x) ,
+(11)
+where C denotes the set of all code-states. Such decoded
+results can be obtained by, for example, simulated
+annealing or QA.
+The LLR vector θ (y) = (θ (y1) , . . . , θ (yNv)) ∈RNv is
+important because it contains all the information about
+the observation y. Let be the likelihood for the additive
+white Gaussian noise (AWGN) channel as
+P (yi|zi) =
+1
+√
+2πσ exp
+"
+−(yi −|v| zi)2
+2σ2
+#
+,
+(12)
+5
+where |v| and σ2 are the amplitude of the prepared
+signal and the variance of the common Gaussian noise
+[38].
+Then the LLR is given by θ (yi) = βyi, where
+β =
+2|v|
+σ2
+> 0 is called the channel reliability factor,
+and its inverse β−1 is considered the temperature of the
+spin system in the language of spin glasses. Note that
+1
+2
+
+|v|
+σ
+2
+is the signal-to-noise ratio (SNR) of the AWGN
+channel. Thus, θ (yi) is proportional to the magnitude
+of the channel observation yi for the AWGN channel.
+Here is a more detailed look at what LLR means [38].
+Suppose that the channel observation yi is hard-decided
+by xi = sign [θ (yi)], where sign [. . .] is the sign function.
+Then the error probability of this decision is given by
+γi =
+1
+1 + e|θ(yi)| =
+e−|θ(yi)|
+1 + e−|θ(yi)| .
+(13)
+Thus, the absolute value |θ (yi)|, called soft information,
+represents a reliability metric of the hard decision xi =
+sign [θ (yi)]. It indicates how likely xi is to be +1 or −1.
+A value close to zero indicates low reliability, while a
+large value indicates high reliability.
+Symbol MAP decoding
+On the other hand, there is an alternative way for
+probabilistic decoding. Instead of considering the most
+probable word, it is also allowed to be interested only in
+the most probable symbol, i.e., the most probable value
+zi of the ith spin, ignoring the values of the other spin
+variables (“symbol MAP decoding”). In this strategy, we
+consider marginals
+P (xi|y) :=
++1
+X
+x1=−1
+· · ·
++1
+X
+xi−1=−1
++1
+X
+xi+1=−1
+· · ·
++1
+X
+xNv =−1
+P (x|y)
+=
+X
+xk(k̸=i)
+P (x|y) .
+(14)
+Decoding corresponds to finding the value of the spin
+variable that maximizes the marginals P (xi|y), i.e.,
+zi = arg max
+xi∈{±1}
+P (xi|y) = sign
+"
++1
+X
+xi=−1
+xiP (xi|y)
+#
+= sign
+h
+⟨xi⟩P (x|y)
+i
+.
+(15)
+A variety of algorithms can be used to achieve this
+task. For example, the best-known algorithm is the belief
+propagation (BP) algorithm for the LDPC codes [30].
+The BP algorithm is an iterative algorithm where the
+LLR, initially given by the observation y, is gradually
+increased in absolute values by taking account of parity
+check constraints.
+LLR is used in many decoding
+algorithms to measure reliability and uncertainty in
+binary random variables.
+The log of the likelihood is
+often used rather than the likelihood itself because it is
+easier to handle. Since the probability is always between
+0 and 1, the log-likelihood is always negative, where
+larger values indicate a better-fitting model.
+In this work, an alternative simple algorithm is studied:
+the BF algorithm [28, 29].
+This algorithm can be
+considered an approximation of the BP algorithm.
+It
+starts with an initial LLR θ(0) = θ (y), and iteratively
+updates the hard decision x(m)
+i
+=
+sign
+h
+θ(m)
+i
+i
+by
+a spin-flip operation determined by the parity check
+constraints and LLR θ(m) =
+
+θ(m)
+1
+, . . . , θ(m)
+n
+
+, which
+depends on the hard decision x(m−1) of the previous
+round. A decoding algorithm that uses only information
+about the hard decision is called hard-decision decoding,
+while one that uses information about both the hard
+decision and its reliability metric is called soft-decision
+decoding.
+In the BF decoding, the reliability of the
+hard decision gradually increases as the bit-flipping is
+repeated.
+It is widely recognized that one of the key
+advantages of BF decoding over BP decoding is its
+simplicity and lower computational complexity.
+BF
+decoding is particularly useful in environments with
+limited computational resources because it requires fewer
+operations to decode the received message.
+This fact
+makes it a more efficient option when processing power
+is a concern.
+In contrast, although providing better
+error-correcting performance regarding bit error rate
+(BER), BP decoding typically involves more complex
+calculations and higher computational requirements.
+Therefore, BF decoding is often favored in applications
+where simplicity and low complexity are prioritized.
+III.
+PARITY-ENCODING ARCHITECTURE
+AND CLASSICAL LDPC CODES
+A.
+Connection between SLHZ system and LDPC
+codes
+Next, consider an example of a PE architecture. The
+PE architecture corresponds to the following map: ¯zij =
+¯Zi ⊕¯Zj for 1 ≤i ≤j ≤k. As a simple example, consider
+the case K = 4 and assume that ¯
+Z =
+  ¯Z1, ¯Z2, ¯Z3, ¯Z4
+
+∈
+{0, 1}K and ¯z = (¯z12, ¯z13, ¯z14, ¯z23, ¯z24, ¯z34) ∈{0, 1}
+ K
+2
+
+.
+Suppose that the generating matrix is given by K ×
+ K
+2
+
+matrix:
+G =
+
+
+
+1 1 1 0 0 0
+1 0 0 1 1 0
+0 1 0 1 0 1
+0 0 1 0 1 1
+
+
+.
+(16)
+Note that there are two 1s in each column of G. This
+is because each element of ¯z is the binary sum of two
+elements of ¯
+Z. We can consider the following two parity
+6
+12
+13
+14
+23
+24
+34
+1234
+2334
+1223
+12
+13
+14
+23
+24
+34
+123 124 134 234
+(a)
+(b)
+𝑑𝑣≤4
+𝑑𝑐≤4
+𝑑𝑣= 𝐾−2
+𝑑𝑐= 3
+𝑁𝑣= 𝐾
+2
+𝑁𝑣= 𝐾
+2
+𝑁𝑐= 𝐾
+3
+𝑁𝑐= 𝐾−1
+2
+𝑁𝑖
+𝑀𝑗
+𝑁𝑖
+𝑀𝑗
+𝑖
+𝑗
+𝑖
+𝑗
+1
+2
+3
+4
+5
+6
+1
+2
+3
+4
+5
+6
+1
+2
+3
+1
+2
+3
+4
+FIG. 2. Two representations of bipartite graph for K = 4 logical spins. The dark blue circle labeled {k, l} represents the variable
+xkl, while the red circles labeled {k, l, m, n} or {k, l, m} represent the weight-4 syndrome s(4)
+klmn and weight-3 syndrome s(3)
+klm,
+respectively. In these diagrams, let us relabel the variables with blue letters. An element of code-word vector x = (x1, . . . , xNv) ∈
+{+1, −1}Nv is called variable node (VN). The i-th syndrome of x is defined by si (x) = Q
+k∈N(i) xk ∈{+1, −1} and an element
+of vector s(x) = (s1 (x) , . . . , sNc (x)) ∈{+1, −1}Nc is called a check node (CN), where N (i) =
+n
+j : Hij(H
+′
+ij) = 1
+o
+is the VNs
+adjacent to a CN i (1 ≤i ≤Nc) and M (j) =
+n
+i : Hij(H
+′
+ij) = 1
+o
+is the CNs adjacent to a VN j (1 ≤j ≤Nv). The column
+and row weights of the parity-check matrix are defined by dv(i) = |M (j)| and dc(i) = |N (i)|, respectively.
+check matrices,
+H =
+
+
+1 1 0 1 0 0
+0 1 1 1 1 0
+0 0 0 1 1 1
+
+
+(17)
+and
+H′ =
+
+
+
+1 1 0 1 0 0
+1 0 1 0 1 0
+0 1 1 0 0 1
+0 0 0 1 1 1
+
+
+,
+(18)
+which are sparse matrices with mostly 0s and relatively
+few 1s when K is very large.
+We can easily confirm
+that these parity-check matrices satisfy the constraints
+GHT
+=
+GH′T
+=
+0.
+From these matrices, two
+different syndrome vectors can be derived. One is weight-
+4 syndrome vector ¯s(4)(¯x) =
+
+¯s(4)
+1223, ¯s(4)
+1234, ¯s(4)
+2334
+
+=
+¯xHT ∈{0, 1}
+ K−1
+2
+
+, and the other is weight-3 syndrome
+vector ¯s(3)(¯x) =
+
+¯s(3)
+123, ¯s(3)
+124, ¯s(3)
+134, ¯s(3)
+234
+
+=
+¯xH′T
+∈
+{0, 1}
+ K
+3
+
+, where ¯x
+=
+(¯x12, ¯x13, ¯x14, ¯x23, ¯x24, ¯x34)
+∈
+{0, 1}
+ K
+2
+
+is an arbitrary binary vector.
+Only 2K
+elements out of the 2
+ K
+2
+
+possible ¯x are valid code-
+words satisfying the parity check constraints ¯s(4)(¯x) =
+0
+1×
+ K−1
+2
+ or ¯s(3)(¯x)
+=
+0
+1×
+ K
+3
+.
+The connections
+between the variables ¯xkl and the weight-4 syndromes
+¯s(4)
+klmn are depicted by a sparse bipartite graph shown in
+Fig.2(a).
+Similarly, the connections between variables
+¯xkl and the weight-3 syndromes ¯s(3)
+klm are depicted in
+Fig.2(b).
+The number of elements in ¯x is Nv =
+ K
+2
+
+,
+while the number of elements in ¯s(4)(¯x) and ¯s(3)(¯x)
+is Nc =
+ K−1
+2
+
+and Nc =
+ K
+3
+
+, respectively.
+In the
+terminology of graph theory, the Nv elements in ¯x
+constitute variable nodes (VNs) and the Nc elements in
+¯s(4)(¯x) or ¯s(3)(¯x) constitute check nodes (CNs).
+The
+matrix H or H′ has Nc rows and Nv columns where
+each row i represents a CN and each column j represents
+a VN; If the entry Hij = 1, VN j is connected to CN
+i by an edge. Thus, each edge connecting VN and CN
+corresponds to an entry 1 in the row and column of H
+or H′. Let dc be the number of 1s in each row and dv
+be the number of 1s in each column of H or H′. These
+numbers characterize the number of edges connected to
+a VN and a CN, respectively, called row and column
+weights. The matrix H′ is regular, where the row weight
+dc = 3 is common for all the CNs and the column weight
+dv = K −2 is common for all the VNs.
+In contrast,
+the matrix H is irregular, and its weights depend on
+the associated nodes, which are at most 4.
+Since the
+weight-3 syndrome is written as a linear combination of
+three elements in ¯x: ¯s(3)
+klm = ¯xkl ⊕¯xlm ⊕¯xkm, where
+1 ≤k < l < m ≤K, its spin representation s(3)
+klm is
+written as a product of three elements in x: s(3)
+klm =
+xklxlmxkm (see Eq.(8)). Similarly, s(4)
+klmn is written as a
+product of four elements in x if x is complemented by the
+fictitious spin variables xii (i = 2, . . . , K −1) having fixed
+value 1: s(4)
+klmn = xkmxlmxlnxkn [26]. It should be noted
+that any element in ¯s(4)(¯x) can be written as a linear
+combination of appropriate elements in ¯s(3)(¯x), and vice
+versa. Similarly, in the spin representation, any element
+in s(4)(x) can be written as a product of appropriate
+elements in s(3)(x), and vice versa.
+Let
+us
+consider
+the
+graph
+in
+Fig.3,
+which
+is
+7
+K
+ K
+2
+  K−1
+2
+  K
+3
+
+K −2
+4
+6
+3
+4
+2
+5
+10
+6
+10
+3
+6
+15
+10
+20
+4
+7
+21
+15
+35
+5
+TABLE I. Parameters related to Fig.2 for 4 ≤K ≤7.
+12
+13
+14
+23
+24
+34
+1234
+2334
+1223
+FIG. 3. Bipartite graph topologically equivalent to Fig.2(a).
+This graph avoids any edge crossings.
+topologically equivalent to Fig.2(a). We can see that this
+is nothing but the SLHZ system. It can also be seen that
+Hcode (z) in Eq.(9) agrees with the Hamiltonian of the
+SLHZ system.
+Therefore, it was confirmed that there
+is a close connection between the SLHZ system and the
+word MAP decoding of the LDPC codes. Furthermore,
+since the two formulations for word MAP decoding, i.e.
+those based on Hcode (z) (Eq.(9)) and those based on
+Hsource (Z) (Eq.(5)) are mathematically equivalent, it
+follows that finding the ground state of the Hamiltonian
+of the SLHZ system is equivalent to finding the ground
+state of the spin glass.
+B.
+Decoding readout of the SLHZ system
+Bit flipping decoding algorithm
+Now, let us consider decoding the readout of the
+SLHZ system from the perspective of the LDPC codes.
+To begin with, we consider the simplest model, i.e.
+the correction of errors caused by i.i.d.
+noise.
+This
+model is reasonable for noisy communication systems
+and QA when measurement errors dominate over other
+sources of error in the readout. We show that a simple
+decoding algorithm with very low decoding complexity
+can be used in this case. Our decoding algorithm only
+uses information about the syndrome vector s(x) to
+eliminate errors in the current x.
+Furthermore, our
+algorithm is a symmetric decoder since all spin variables
+are treated symmetrically. It should be noted here that
+the syndrome vector depends only on the error pattern
+e = x ◦z = (e12, . . . , eK−1 K) ∈{±1}
+ K
+2
+
+, where ◦
+denotes componentwise multiplication. This is because
+s(z) =
+
+
+Y
+{j:H1j=1}
+zj, . . . ,
+Y
+{j:HNcj=1}
+zj
+
+= (+1, . . . , +1)
+(19)
+holds for any code-state z, and therefore
+s(x) = s(ze) = s(z) ◦s(e) = s(e)
+(20)
+holds.
+Note that, in general, we only know x but
+never know e. Since LDPC codes are linear codes, and
+the AWGN channel is assumed to be symmetric, i.e.
+P(yi|zi) = P(−yi| −zi) holds, the success probability
+of decoding is independent of the input code-state z [39].
+The
+proposed
+decoding
+algorithm
+corresponds
+to
+Gallager’s
+BF
+decoding
+algorithm
+in
+the
+spin
+representation [28, 29]. It is based on Massey’s APP (a
+posteriori probability) threshold decoding algorithm [38].
+The weight-3 syndrome s(3)
+ijk (x) = xijxjkxik = eijejkeik
+rather than the weight-4 syndrome is used to decode
+the current decision x because it has the advantage of
+treating all variables (VN and CN) symmetrically [27].
+The trade-off is that more constraints may increase the
+decoding complexity. However, as will be shown later,
+this is not the case for us since we can take advantage
+of symmetry to reduce computational costs. To obtain
+the best estimate e∗
+ij ∈{±1} of error eij, we use the
+syndromes s(3)
+ijk (x) with k ̸= i, j, which are considered
+an K −2 parity checks orthogonal on eij [38].
+The
+value of the syndrome s(3)
+ijk (x) indicates whether the
+parity-check equation is satisfied (being +1) or violated
+(being −1). Based on this value, we decide whether a
+spin should be flipped. There are Nv =
+ K
+2
+
+choices for
+the set {i, j}, and the associated syndromes s(3)
+ijk (x)’s
+are computed from a hard decision x of the observation
+y. The estimate e∗
+ij is obtained from the APP decoding
+by weighted majority voting [38]
+e∗
+ij = sign
+
+w0 +
+K
+X
+k̸=i,j
+wks(3)
+ijk (x)
+
+= sign [∆ij (x)] ,
+(21)
+where the positive parameter w0 is the weighting factor
+associated with the reliability |θij| of the hard decision
+xij = sgn [yij]:
+w0 = |θij| = log 1 −γij
+γij
+.
+(22)
+Here, w0 = β |yij| for the AWGN channel and γij is the
+error probability that xij is in error
+γij = P (xij = −zij) = P (eij = −1) .
+(23)
+The
+positive
+parameter
+wk
+is
+a
+weighting
+factor
+associated with the reliability of the kth parity check for
+the decision of eij:
+wk = log 1 −pk
+pk
+,
+(24)
+8
+where pk is the probability that a decision based on s(3)
+ijk
+is in error:
+pk = P
+
+s(3)
+ijk = −eij
+
+= P (ejkeik = −1) .
+(25)
+In Eq.(21), e∗
+ij = −1 means that we should invert the
+sign of xij →xijeij = −xij. Function ∆ij (x) is called
+the inversion function and determines whether to invert
+the sign of the spin variable xij (e∗
+ij = −1) or not
+(e∗
+ij = 1) [40, 41]. Parameters γij and pk are considered
+to be crosstalk parameters that characterize the binary
+symmetric channels shown in Fig.4. We should note that
+the probability pk is given by the probability of an odd
+number of −1s among the errors exclusive of eij that are
+checked by s(3)
+ijk (x) = eijejkeik so that it is given by [38]
+pk = P (ejkeik = −1) = 1
+2 (1 −(1 −2γjk) (1 −2γik)) .
+(26)
+Since we assumed i.i.d. noise, γij = γ0 holds for every
+{i, j} for which γ0 is a constant. In this case, assuming
+1 ≤γ0 < 1
+2, we can confirm that w0 can be approximated
+as w0 = wk for any k. Thus, we obtain the following
+algorithm: we calculate the best estimate by
+e∗
+ij = sign
+
+1 +
+K
+X
+k̸=i,j
+s(3)
+ijk (x)
+
+.
+(27)
+This equation means that if the majority vote of
+n
+1, s(3)
+ij1 (x) , . . . , s(3)
+ijK (x)
+o
+∈{±1}K+1 is negative, xij
+should be flipped to increase the value of PK
+k̸=i,j s(3)
+ijk (x).
+Thus, Eq.(27) is reduced to the following equation for the
+best estimate zij ∈{±1}:
+zij = xije∗
+ij = sign
+
+xij +
+K
+X
+k̸=i,j
+xjkxki
+
+,
+(28)
+where we used the fact xij ∈{±1}.
+Note that this
+expression is represented only in terms of the values of
+VNs. Eq.(27) can be interpreted as the Gallager’s BF
+decoding [28, 29].
+Fig.5 shows the relevant bipartite
+graph for K = 5. Note that the graph associated with the
+SLHZ system is more loopy, with a minimum length of 4,
+whereas this graph is less loopy, with a minimum length
+of 6. The initial decision x on the VNs, hard-decided by
+y, is broadcasted to its adjacent CNs connected by edges.
+Each CN then reports the syndrome value to its adjacent
+VNs connected by the edge.
+All VNs update their
+values simultaneously according to Eq.(27), representing
+a majority vote of 1 and the associated value of adjacent
+CNs.
+Application to the SLHZ system
+Next, let us describe how our decoding applies to the
+SLHZ system. Consider a matrix representation of the
+state of the SLHZ system.
+Let us introduce the K ×
+K symmetrized matrix ˆz whose elements are given by
+spin variable zij = zji ∈{±1} and have unit diagonal
+elements, namely,
+ˆz =
+
+
+1
+z12
+z13
+· · ·
+z1 K−1
+z1 K
+z21
+1
+z23
+· · ·
+z2 K−1
+z2 K
+z31
+z32
+1
+· · ·
+z3 K−1
+z3 K
+...
+...
+...
+...
+· · ·
+...
+zK−1 1 zK−1 2 zK−1 3 · · ·
+1
+zK−1 K
+zK 1
+zK 2
+zK 3
+· · · zK K−1
+1
+
+
+∈{±1}K×K .
+(29)
+We use similar notations ˆx and ˆe for the symmetrized
+matrices associated with current x and error pattern e.
+They satisfy ˆx = ˆz ◦ˆe. Hereafter, we will call ˆe the error
+matrix. Then, Eq.(28) can be conveniently written as
+ˆz = F (ˆx) = sign [ˆx (ˆx −IK×K)] ,
+(30)
+where we assume the sign function is componentwise
+in this equation.
+This operation updates the
+ K
+2
+
+elements in ˆx in parallel. Therefore, Eq.(30) represents a
+parallel BF algorithm. We further consider the iterative
+operation of F, i.e.,
+ˆz(n) = ˆz ◦ˆe(n) = F(n) (ˆx) .
+(31)
+If ˆz(n) →ˆz, or in other words, ˆe(n) →ˆ1K×K at
+n = n0, where ˆ1K×K is K × K matrix whose entries
+are all one (all-one matrix), we say that the decoding
+was succeeded after n0 iteration of the BF decoding. In
+the case of success, it follows that s(3)
+ijk (ˆz) = 1 for a set
+of possible {i, j, k} at n = n0. Our algorithm can safely
+be stated as an iterative process that gradually increases
+the syndrome values by flipping spins according to the
+majority vote of an associated set of relevant syndrome
+values.
+IV.
+EXPERIMENTAL DEMONSTRATION
+We demonstrate the validity and performance of the
+BF algorithm and compare it to those of the standard BP
+algorithm and word MAP decoding using Monte Carlo
+sampling. In addition, the results are shown when the BF
+decoding is applied to a stochastically sampled readout
+of the SLHZ system.
+A.
+I.i.d. noise model
+First,
+the performance of the BF algorithm was
+investigated assuming i.i.d noise, a simple model of
+the noisy readout of the SLHZ system. PP previously
+studied this model with the BP algorithm [27].
+Note
+that the BF decoding in Eq.(27) depends only on
+9
++1
+−1
++1
+−1
++1
+−1
++1
+−1
+𝑧𝑖𝑗
+𝑥𝑖𝑗
+𝑠𝑖𝑗𝑘
+(3)
+𝑒𝑖𝑗
+(𝑎)
+(𝑏)
+𝛾𝑖𝑗
+𝛾𝑖𝑗
+1 −𝛾𝑖𝑗
+1 −𝛾𝑖𝑗
+𝑝𝑘
+𝑝𝑘
+1 −𝑝𝑘
+1 −𝑝𝑘
+FIG. 4. Binary symmetric channel associated with the parameters γij and pk.
+135
+125
+124
+123
+134
+145
+245
+235
+234
+345
+12
+23
+13
+34
+45
+24
+35
+14
+25
+15
+𝑠125
+(3)
+𝑥15
+𝑥25
+𝑥12
+𝑠124
+(3)
+𝑠123
+(3)
+Check nodes
+Variable nodes
+𝑑𝑣
+𝑑𝑐
+Broadcast
+Broadcast
+Broadcast
+FIG. 5. Bipartite graph for K = 5 logical spins. Solid blue
+lines show an example of the shortest loop of edges connecting
+VNs and CNs, which has a length of 6.
+the weight-3 syndromes, which treat all variables (VN
+and CN) symmetrically [27].
+In this case, without
+loss of generality, the performance of decoding can
+be analyzed using the assumption that all-one code-
+state z = (+1, . . . , +1) has been transmitted [39, 42].
+In physics, this assumption corresponds to choosing
+the ferromagnetic gauge and representing the current
+decision x by an error pattern e. We assume the input
+is all-one code-state, that is, ˆz = ˆ1K×K.
+All the
+demonstrations were performed using the Mathematica®
+Ver.14 platform on the Windows 11 operating system.
+We generated 5000 symmetric matrices ˆx = ˆe with
+unit diagonal elements and other elements randomly
+assigned to −1 with probability ε
+<
+1
+2
+and +1
+otherwise. After n = 5 iterations, the BF decoding was
+checked to see if the error was corrected.
+Figure 6(a)
+shows the performance of the BF algorithm, plotting
+the probability of decoding failure as a function of
+the number K of logical spins for K ranging from
+2 to 40 and seven values of common bit error rate
+ε (= 0.05, 0.07, 0.1, 0.15, 0.2, 0.3, 0.4).
+Note that the
+associated SLHZ model consists of
+ K
+2
+
+physical spins.
+The failure probability falls steeply as N increases if ε
+is not too close to the threshold value 1/2.
+A similar
+performance calculation was reproduced for the decoding
+based on the BP algorithm given by PP, assuming
+that it is iterated five times, as shown in Fig.6(b)
+[27].
+Comparing these figures, we can see that the
+performance of the BF algorithm is comparable to that
+of the BP algorithm.
+Note that the BP algorithm
+updates all marginal probabilities P (xi|y) associated
+with the
+ K
+2
+
+spins sequentially by passing a real-valued
+message between the associated VNs and CNs per a single
+iteration. In contrast, in the BF algorithm, all the
+ K
+2
+
+variables xij in the matrix ˆx are updated in parallel per a
+single iteration. Thus, in these performance evaluations,
+each variable was updated the same number of times, i.e.,
+five times, in both the BF and BP algorithms. Fig.7 is
+an example of a successfully decoded result when K = 40
+and ε = 0.3. In this figure, each entry of the error matrix
+ˆe is plotted after n = 1, . . . , 4 iterations of the operation
+in Eq.(30).
+The blue pixels correspond to spins with
+error, the number of which gradually decreases as rounds
+of iteration are added.
+In this example, an error-free
+matrix was obtained after n = 3 iterations. Such results
+were observed for more than 70 % of the error matrices
+generated.
+In addition to the BF and BP algorithms, let us focus
+on the word MAP decoding introduced in Sec.II B and
+compare its performance with the above algorithms. The
+word MAP decoding says that the code-state is the
+ground state of the Hamiltonian, as shown in Eq.(9),
+Hcode(ˆx) ≡γ
+X
+{i,j,k}
+1 −s(3)
+ijk(ˆx)
+2
+,
+(32)
+where ˆx ∈{±1}K×K is the matrix representing the
+general state of the SLHZ system. In general, Hcode(ˆx) ≥
+0 and Hcode(ˆx) = 0 if and only if ˆx is a code-state. In
+Eq.(32), the correlation term (the first term in Eq.(9))
+was omitted.
+This is because the all-one code-state
+10
+BF decoding
+BP decoding
+𝑎
+𝑏
+MCMC decoding 
+𝑐
+𝐾
+𝐾
+𝐾
+Average probability 
+of decoding failure
+Average probability 
+of decoding failure
+Average probability 
+of decoding failure
+FIG. 6. Comparison of performance of (a) BF, (b) BP, and (c) MCMC decodings. Assuming that the error probability ε is
+common to all physical spins, the average probabilities of decoding failure are plotted as a function of the number K of logical
+spins (associated with
+ K
+2
+
+physical spins) for seven values ε. Each data point was obtained by averaging over 5000 error matrix
+realizations. The BF and BP algorithms were iterated five times for each realization, and the MCMC sampling was iterated
+ K
+2
+
+times. We considered a tie in the majority voting as a failure in the BF decoding, although we can resolve a tie by introducing
+a tie-break rule, such as coin tossing.
+Readout
+𝐾= 40, 𝜀= 0.3 (i.i.d. noise model)
+ෝ𝒙𝑛
+𝑛
+1
+2
+3
+4
+FIG. 7. An example of successfully decoded results by the BF decoding when K = 40 and ε = 0.3. The initial readout was
+generated in accordance with the i.i.d. noise model. The estimated matrix ˆx is plotted from left to right in increasing order of
+iterations n. The blue pixels represent spins with error.
+11
+assumption uses no information about the observation
+y. Under this assumption, the ground state of Hcode(ˆx)
+is given by
+ˆz =
+arg min
+ˆx∈{±1}K×KHcode(ˆx) = ˆ1K×K.
+(33)
+The performance of word MAP decoding was evaluated
+based on the Hamiltonian Hcode(ˆx) given by Eq.(32).
+We generated 5000 random symmetric error matrices
+with bit error rate ε as stated before.
+The classical
+MCMC sampler was used to search for the ground
+state of Hcode(ˆx) from the initial state ˆx = ˆe.
+The
+hyperparameter γ was assigned γ ≈1, which was found
+to be experimentally optimal. We examined whether the
+ground state ˆz could be found in a set of estimates {ˆx}
+sampled by MCMC. In this sampling, we used rejection-
+free MCMC sampling, in which all self-loop transitions
+are removed from the standard MCMC [43, 44], and the
+size of {ˆx} was restricted to
+ K
+2
+
+. Figure 6(c) indicates
+the performance of the word MAP decoding using the
+MCMC sampler, which we called the MCMC decoding.
+Although its performance is not as good as that of the
+BF and BP algorithms, it shows a similar dependence
+on K and ε. This result is quite reasonable as well as
+suggestive. Later, we will discuss the reason.
+B.
+Beyond i.i.d. noise model
+As the development of QA devices is ongoing and
+classical simulation of a quantum-mechanical many-body
+system is computationally challenging, it is difficult to
+verify whether our BF decoding algorithm provides good
+protection against noise in physical spin readouts of QA,
+not only by classical computer simulations but also by
+an actual QA device.
+In this study, we tested the
+potential of our BF decoding algorithm by simulating the
+hard-decided readout of spins in the SLHZ system with
+the data stochastically sampled by a classical MCMC
+sampler.
+We
+used
+the
+following
+Hamiltonian
+to
+obtain
+stochastically sampled data for the SLHZ system:
+Hcode(ˆx) ≡−β
+X
+{i,j}
+Jijxij + γ
+X
+{i,j,k,l}
+1 −s(4)
+ijkl(ˆx)
+2
+, (34)
+where Jij ∈R is a coupling constant identified with the
+channel observation yij ∈R in the AWGN channel model.
+Parameters {β, γ} are independent annealing parameters
+to be adjusted. If the weight-4 syndrome is defined by
+s(4)
+ijkl(ˆx) = xikxjkxjlxil,
+(35)
+with the assumption xii = 1 for i = 1, . . . , K, Eq.(34) is
+just the Hamiltonian of the SLHZ system given in Fig.3.
+The (K −1)-degenerated ground state of the second
+term in Eq.(34) defines the code-states. Sampling from
+the low-temperature equilibrium state ˆx of Hcode(ˆx), we
+can see which is most likely to be the code-state given
+by the matrix ˆz = ZT Z that minimizes Hcode(ˆx), as
+shown in Eq.(33), where Z = (Z1, . . . , ZK) ∈{±1}K
+is the source-state.
+Therefore, optimization using this
+Hamiltonian corresponds to nothing but the word MAP
+decoding. However, in this case, ˆz = ˆ1K×K cannot be
+assumed in the evaluation of performance, in contrast
+to Eq.(33).
+This is because both the correlation term
+(first term) as well as the penalty term (second term)
+in Eq.(34) violate the symmetry conditions required for
+all-one code-state assumption to hold in this case. As a
+result, the performance of the word MAP decoding based
+on Eq.(34) depends not only on the error distribution ˆe
+but also on ˆz .
+Our BF algorithm is also valid for the readout of the
+SLHZ system sampled by a classical MCMC sampler.
+We show an illustrative example to see this.
+We
+simulated readouts ˆx ∈{±1}K×K of the SLHZ system
+associated with a spin glass problem for K = 14 (K14)
+as a toy model using the MCMC sampler.
+To this
+end, we generated a set of 12 logical random instances
+on complete graphs K14 with couplings Jij ∈[−1
+4, 1
+4]
+chosen uniformly at random and all logical local fields
+set to zero, where the code-state ˆz for a given J =
+(J12, . . . , JK−1 K) ∈R
+ K
+2
+
+was precomputed by brute
+force.
+The leftmost matrix plot in Fig.8 visualizes an
+example of the error matrix ˆe = ˆx ◦ˆz associated with a
+sampled readout ˆx of the SLHZ system. In this example,
+the error distribution was different from the expected
+when assuming an i.i.d. noise model, as shown in Fig.7.
+This suggests that our BF algorithm, as well as the
+BP algorithm, can correct errors in the stochastically
+sampled readouts of the SLHZ system. Here, although
+we can not know the error rate for each spin a priori
+because the correct ground state is generally unknown a
+priori, a uniform i.i.d. error rate of 0.25 was assumed
+when running the BP algorithm.
+The MCMC sampling was performed as follows: We
+sampled a sequence {ˆx} of estimated states using a
+rejection-free MCMC sampler starting from a random
+state. After a certain number of MCMC samplings, we
+checked whether {ˆx} involved ˆz. If {ˆx} involved ˆz, we
+decided that the decoding was successful. Otherwise, it
+failed. The performance can be evaluated by repeating
+the same experiment independently, obtaining many
+sampled sequences {ˆx}, and measuring the average
+probability of obtaining a successfully decoded sequence.
+We call a search of the ground state Hcode(ˆx) using
+the MCMC sampler the MCMC decoding. In addition
+to this, we also performed two-stage hybrid decoding.
+In this strategy, the sequence {ˆx} is sampled by the
+MCMC sampler in the first stage.
+Each element
+of the sequence {ˆx} is then decoded using the BF
+decoding in the second stage to correct the errors
+in each
+ˆx and updated to { ˆw}.
+Then,
+if { ˆw}
+involved ˆz, we decided that the decoding was successful.
+Otherwise, it failed. We call this strategy the MCMC-
+12
+BP
+BF
+𝑛
+1
+2
+3
+4
+Readout
+FIG. 8. Examples of successful BF and BP decoding for K = 14 logical spins. An MCMC sampler sampled readout based on
+the Hamiltonian Hcode(ˆx) of Eq.(34). See details in the main text. The readout matrix ˆx is plotted from left to right in order
+of increasing number of iterations n of the two algorithms. The blue pixels represent spins with error.
+BF hybrid decoding. We can evaluate its performance
+as well.
+The MCMC decoding can be identified with
+simulated annealing.
+Similarly, the MCMC-BF hybrid
+decoding can be identified with simulated annealing and
+subsequent classical error correction.
+The performance of these decoding strategies depends
+not only on the annealing parameters {β, γ} but also
+on the strategy as shown in Fig.9.
+The columns (a)
+and (b) indicate landscapes of the success probability
+for (a) the MCMC decoding and (b) the MCMC-BF
+hybrid decoding, respectively. In these figures, the top
+two figures are the probability of success in finding the
+correct code-state ˆz = ZT Z, and the bottom two figures
+are the probability of finding any code-state ˆx = XT X,
+where X ∈{±1}K is any logical state.
+It is very
+important to note that the size of the sample {ˆx} differs
+significantly between the two decoding strategies; it was
+1200
+ K
+2
+
+for the MCMC decoding and 4
+ K
+2
+
+for the
+MCMC-BF hybrid decoding, which were determined by
+the number of iterations of the rejection-free MCMC
+loops. The readers can understand that the MCMC-BF
+hybrid decoding provides a better trade-off between error
+performance and decoding complexity, assuming that the
+decoding complexity of the BF decoding is negligible. We
+will revisit the validity of this assumption later.
+Let us note two arrows A and B denoted in Fig.9.
+These indicate two annealing parameter sets A
+=
+{βA, γA} and B = {βB, γB}.
+The set A corresponds
+to parameters for which the MCMC decoding is highly
+efficient, and the set B corresponds to the parameters for
+which the MCMC-BF hybrid decoding is highly efficient.
+The left and right plots in Fig.
+10 are the matrix
+plots showing average error matrix ⟨ˆe⟩= ⟨ˆx⟩◦ˆz over
+the set of samples {ˆx} of the MCMC sampler when
+they were sampled with the parameter sets A and B,
+respectively. A positive (negative) entry in ⟨ˆe⟩indicates
+that there is likely no error (error) in the corresponding
+entry in ˆx. Thus, each entry in ⟨ˆe⟩reflects a marginal
+error probability for inferring the correct sign for that
+entry.
+We can see that they depend on the annealing
+parameters. The average error matrix ⟨ˆe⟩in Fig.10(b) is
+consistent with the error matrix ˆe in Fig.8. In fact, the
+error matrix ˆe in Fig.8 was an element of {ˆx} sampled
+by the MCMC sampling with the parameter set B. Note
+that the parameter set B allowed little sampling for
+the code-state by the MCMC sampler in the first stage
+(see the lower left plot in Fig.9). This means that the
+state ˆx the MCMC sampler sampled in the first stage
+of the MCMC-BF decoding is not a code-state, which is
+quite reasonable because the subsequent BF decoding can
+correct errors in the state ˆx only if it is a leakage state.
+It is important to note that this is a feature of our BF
+decoding algorithm and is independent of the decoding
+algorithm in the first stage. Therefore, optimal annealing
+parameters {βopt, γopt} should differ between single and
+two-stage hybrid decodings.
+Our result suggests that
+optimal annealing parameters should be carefully studied
+when applying our BF decoding for readouts of QA; they
+might differ from the optimal parameters for QA when
+used alone.
+13
+(a) MCMC decoding
+(b) MCMC-BF decoding
+Finding correct 
+code-state ො𝒛
+Finding any
+code-state
+Leakage-states
+𝛽
+𝛾
+𝛽
+𝛾
+𝛽
+𝛾
+𝛽
+𝛾
+A
+A
+B
+B
+A
+A
+B
+B
+Code-states
+FIG. 9. Landscapes of the probability distribution for successful decoding. They are plotted as functions of the annealing
+parameters {β, γ}. The left and right columns are the results of (a) MCMC decoding and (b) MCMC-BF hybrid decoding,
+respectively. On the other hand, the states searched in the upper and lower rows are different: they are the correct target state
+ˆz for the upper row and any code-states for the lower row.
+−1
+1
+0
+(a) Sampled at A
+(b) Sampled at B
+FIG. 10. Matrix plots representing the averaged error matrix ⟨ˆe⟩= ⟨ˆx⟩◦ˆz after the MCMC sampling (but before the BF
+decoding), where each entry reflects the marginal error probability in inferring the correct sign of the associated entry. Warm
+(cold) colored pixels indicate that there is likely no error (error) in the inference of the corresponding spin. The left and right
+plots correspond to ⟨ˆe⟩when {ˆx} was sampled with the parameter sets A and B in Fig.9, respectively.
+14
+V.
+DISCUSSIONS
+A.
+Relationship between MCMC-BF hybrid
+algorithm and other known BF algorithms
+The MCMC-BF decoding algorithm includes MCMC
+decoding as a preprocessing step for the BF decoding
+algorithm.
+Both
+the
+MCMC
+and
+BF
+decoding
+algorithms are hard-decision algorithms. We consider the
+mutual relationship between these algorithms and similar
+existing hard-decision algorithms.
+There
+are
+two
+obvious
+shortcomings
+in
+the
+postprocessing BF decoding algorithm.
+Introducing
+the MCMC decoding as a preprocessing step can solve
+these. The first one is that the BF algorithm neglects
+the soft information in the observation y. As mentioned,
+the BF algorithm assumes a symmetric channel and
+treats all the spin variables (VNs) and syndromes
+(CNs) symmetrically, justifying the all-one code-state
+assumption.
+This is the result of neglecting the y-
+dependent correlation term that breaks the necessary
+symmetry in the Hamiltonian Hcode(ˆx) in Eq.(9) (see
+also Eq.(32)).
+Soft information should be considered
+to improve decoding, which is frequently considered by
+incorporating the reliability information, LLR θ(yi) ,
+into the algorithm. In contrast, the BF decoding loses
+soft information since it approximates the weighted
+majority formula in Eq.
+(21) to the majority formula
+in Eq.
+(27) by assuming that γij = γ0 for the error
+probability of channel decision xij, which is reasonable
+in the i.i.d.
+noise model.
+In general, γij depends on
+the channel index {i, j}. In the AWGN channel model,
+θ (yi) = βyi and Eq. (13), it follows that γij is small
+(large) if |yij| is small (large) and that the hard decision
+xij = sgn [yij] is less (more) reliable.
+Many
+researchers
+have
+developed
+sophisticated
+versions of the weighted BF (WBF). See details in
+Refs.[45, 46] and references therein. Alternatively, there
+is another approach to incorporate soft information.
+For example, Wadayama et al. proposed the Gradient
+Descent Bit Flipping (GDBF) algorithm [40].
+They
+are based on modifications to the inversion function,
+which may improve the decoding performance, although
+it increases decoding complexity.
+For example, the
+inversion functions employed in the BF, WBF, and
+GDBF algorithms are formally written as
+∆(BF)
+k
+(x) = 1 +
+X
+i∈M(k)
+si(x),
+(36)
+∆(WBF)
+k
+(x) = β |Jk| +
+X
+i∈M(k)
+wksi(x),
+(37)
+and
+∆(GDBF)
+k
+(x) = Jkxk +
+X
+i∈M(k)
+si(x),
+(38)
+respectively.
+Here, x = (x1, . . . , xNv) ∈{±1}Nv the
+current decision (VNs), β is a positive real parameter
+to be adjusted, and
+si(x) =
+Y
+j∈N(i)
+xj ∈{±1}
+(39)
+is ith syndrome (CN) for the decision x in the spin
+representation, Jk is identified with channel observation
+yk
+in the AWGN channel model.
+Here,
+the set
+N(i) = {j : Hij = 1} is the VNs adjacent to an ith CN
+(1 ≤i ≤Nc) and the set M(j) = {i : Hij = 1} is the CNs
+adjacent to a jth VN (1 ≤j ≤Nv). Please refer to Fig.2
+for the definition of these sets.
+Note that as long as
+si (x) is a weight-3 syndrome, ∆(BF)
+k
+(x) is symmetric for
+the permutation of the elements of x. In other words,
+∆(WBF)
+k
+(x) is invariant under exchanging i ←→j for any
+pair of indices of VN other than k, justifying the all-one
+code-state assumption. In contrast, weight-4 syndrome
+is not symmetric. Similarly, because ∆(WBF)
+k
+(x) involves
+weight wk in the second term and ∆(GDBF)
+k
+(x) involves Jk
+in the first term, both depend on observation y. Thus,
+∆(WBF)
+k
+(x) and ∆(GDBF)
+k
+(x) are not symmetric even if
+si(x) is weight-3 syndrome. It is interesting to note that
+the inversion functions in Eq.(36)-(38) can be formally
+derived from the following Hamiltonians:
+H(BF)(x) = −
+Nv
+X
+i=1
+xi −
+Nc
+X
+i=1
+si(x),
+(40)
+H(WBF)(x) = −β
+Nv
+X
+i=1
+|Ji| xi −
+Nc
+X
+i=1
+wisi(x),
+(41)
+H(GDBF)(x) = −1
+2
+Nv
+X
+i=1
+Jixi −
+Nc
+X
+i=1
+si(x).
+(42)
+If we note that when we invert the sign of xk, that is,
+xk →−xk, the increase in energy ∆H(X)
+k
+(x) is given by
+∆H(X)
+k
+(x) = 2∆(X)
+k
+(x),
+(43)
+where X = BF, WBF, or GDBF.
+It follows that if
+∆(X)
+k
+(x) < 0, flipping the kth spin reduces the energy
+of the spin system. Therefore, the BF, WBF, and GDBF
+decoding algorithms can be considered deterministic
+algorithms that determine the most suitable spins to
+be flipped to reduce the energy H(X)
+k
+(x) based on
+the inverse function ∆(X)
+k
+(x).
+In contrast to the BF
+algorithm, it should be noted that the BP algorithm
+essentially considers soft information since it is based on
+calculating a consistent marginal probability P (xi|y) by
+exchanging real-valued messages between the VNs and
+CNs.
+On the other hand, the inversion function and
+15
+the associated Hamiltonian for the MCMC decoding are
+formally written by
+∆(MCMC)
+k
+(x) = βJkxk + γ
+2
+X
+i∈M(k)
+si(x)
+(44)
+and
+H(MCMC)(x) = −β
+Nv
+X
+i=1
+Jixi + γ
+Nc
+X
+i=1
+1 −si(x)
+2
+.
+(45)
+The MCMC decoding algorithm uses MCMC sampling to
+find x that reduces the energy H(MCMC)(x) based on the
+inversion function ∆(MCMC)
+k
+(x). Therefore, the MCMC
+decoding at the first stage intrinsically includes the soft
+information in Jk (namely yk) in the correlation term,
+which resolves one shortcoming of the BF decoding.
+Furthermore, introducing MCMC decoding in the first
+stage also solves another shortcoming.
+The MCMC
+sampling is stochastic in contrast to our deterministic
+BF algorithm and gradient descent algorithm used in
+the GDBF algorithm.
+This stochasticity introduces
+randomness into the spin-flip selection.
+It allows
+spins to flip even when ∆(MCMC)
+k
+(x)
+>
+0,
+which
+provides an escape from spurious local minima and
+makes it more likely to arrive at the neighborhood
+of the global minimum of H(MCMC)(x).
+In this way,
+the stochastic spin-flip selection helps find the global
+minimum of H(MCMC)(x). A similar stochasticity can be
+incorporated directly into the GDBF algorithm, either by
+adding a noise term to the inversion function ∆(GDBF)
+k
+(x)
+(Noisy GDBF [41]) or by taking account of stochastic
+spin-flip selection in the algorithm (Probabilistic GDBF
+[47]). In other words, our MCMC-BF hybrid decoding
+algorithm can be considered an alternative to the BP
+algorithm and other existing BF decoding algorithms.
+In addition, the two annealing parameters {β, γ} in
+the inversion function ∆(MCMC)
+k
+(x) control the intensity
+of fluctuations in MCMC sampling and the relative
+contribution of the correlation and penalty terms. Our
+simulation suggests that proper control of these annealing
+parameters is important to optimize the performance
+of MCMC-BF decoding.
+It also suggests that the
+contribution of the penalty term to the Hamiltonian must
+be small enough not to force x into a valid code-state.
+Controlling annealing parameters makes it possible to
+switch between the two decoding modes of MCMC
+sampling. Fig.11 shows schematic diagrams illustrating
+two modes that optimize (a) MCMC decoding and (b)
+MCMC-BF hybrid decoding, respectively. Decoding is
+formulated as a constrained COP. The large and small
+ellipses indicate the search space and the state space
+that minimizes the penalty term of the Hamiltonian,
+i.e.
+the code-state space.
+In MCMC decoding, the
+MCMC samples both the code-states (feasible solution)
+and leakage states (infeasible solution) (Fig.11(a)).
+In
+some occasions, the correct code-state (solution) may be
+sampled. In MCMC-BF hybrid decoding, on the other
+hand, the first-stage MCMC sampler samples only the
+leakage state, and the second-stage BF decoding maps
+the leakage state to the correct code-state occasionally
+(Fig.11(b)). Our simulations showed that the MCMC-
+BF hybrid decoding (Fig.11(b)) was about 300 times
+more efficient than the MCMC decoding (Fig.11(a)) if we
+ignore the decoding cost of the BF decoding and compare
+performance simply by the number of required MCMC
+samples needed to obtain at least one correct code-state.
+We will discuss the decoding cost of the BF decoding
+next.
+B.
+Spin-flipping mechanism and decoding cost
+The above discussions did not discuss the mechanism
+for choosing the spins to be flipped at each iteration, nor
+did they discuss the decoding cost of the BF algorithm.
+We want to discuss these points briefly.
+Spin-flipping
+mechanisms are free to choose from several strategies.
+For example, we can flip only the most suitable spin
+chosen based on the inversion functions ∆(X)
+k
+(x)’s
+estimated by the current decision x.
+Alternatively,
+we can flip several spins chosen based on ∆(X)
+k
+(x)’s
+together. These are called the single-spin flipping and
+the multi-spin flipping strategies, respectively.
+In this
+classification, MCMC decoding algorithm belongs to
+the single-spin flipping strategy, while our BF decoding
+algorithm belongs to the multi-spin flipping strategy.
+Note that the BF decoding algorithm consists of two
+operations: evaluating the inversion function ∆(BF)
+k
+(x)
+and determining spins to be flipped.
+The inversion
+function ∆(BF)
+k
+(x) for each spin k is computed at once
+from the current x by matrix multiplication. Subsequent
+sign evaluation for each element of ∆(BF)
+k
+(x) determines
+which spins are flipped together.
+We can see from Fig.2 that more edges are connected
+to VNs for the weight-3 syndromes (dv = K −2) than
+the weight-4 syndromes (dv ≤4).
+Thus, each spin
+variable affects more syndromes when using the weight-
+3 syndrome than the weight-4 syndrome.
+Conversely,
+each spin variable is determined from more syndromes
+when using the weight-3 syndrome than the weight-
+4 syndrome.
+Consequently, when using the weight-3
+syndrome, one must compute the sum of products of
+data distributed globally across many spins to decide
+whether to invert each spin. In contrast, when using the
+weight-4 syndrome, it is sufficient to compute the sum of
+products of data distributed over at most eight adjacent
+spins to determine whether to invert each spin.
+Such
+a global reduction operation to compute the inversion
+function, which occurs when using the weight-3 syndrome
+in the BF decoding algorithm, requires more effort, but
+can accelerate the correction of errors in each spin-flip
+operation.
+On the other hand,
+we can perform the matrix
+multiplication required for calculating ∆(BF)
+k
+(x) easily
+16
+Code-state
+Solution
+Code-state
+Solution
+(a) MCMC decoding (QA)
+(b) MCMC (QA)-BF decoding
+BF
+FIG. 11. Schematic diagrams illustrating two modes that optimize (a) MCMC decoding (and QA) and (b) MCMC(QA)-BF
+hybrid decoding. The large and small ellipses indicate the search space and the code-state space, respectively. Blue circles
+indicate the sampled state by the MCMC or QA sampler. Green circles indicate the decoded states by the BF decoding. The
+red circle designates the correct code-state. Black solid arrows indicate the transitions to the following samples. Blue broken
+arrows indicate the BF decoding.
+and
+much
+more
+benefit
+from
+parallel
+computing
+techniques and hardware engines that calculate matrix
+sum products, such as GPUs and vector processing
+engines
+developed
+for
+machine
+learning.
+This
+fact
+provides
+practical
+merit
+of
+choosing
+weight-3
+syndrome for syndrome si(x) in ∆(BF)
+k
+(x) (Eq.(36)).
+In
+fact,
+comparing
+the
+computation
+times
+of
+the
+MCMC and MCMC-BF hybrid decoding presented in
+Fig.9 performed on the Mathematica platform,
+the
+computation time of MCMC-BF hybrid decoding was
+one-fifth of that of the MCMC decoding. Although the
+computational cost depends on the algorithm used and
+the software or hardware platforms on which we perform
+the calculations, this result suggests that the MCMC-BF
+hybrid decoding is more efficient than MCMC decoding
+alone. Furthermore, we confirmed that our BF algorithm
+was much less computationally expensive than the BP
+algorithm.
+For example, the computation time of the
+performance evaluation for the BF decoding shown in
+Fig.6 (a) was about 1/40 of that for the BP decoding
+shown in Fig.6 (b).
+This paper does not discuss decoding cost in any
+further detail.
+Let us recall that the purpose of this
+paper is to propose and demonstrate the potential of
+the BF decoding as a practical post-processing algorithm
+for a pre-processing stochastic algorithm, such as a QA
+device.
+Since the development of QA devices is now
+ongoing, it is not easy to demonstrate our BF decoding
+algorithm as a post-processing algorithm for an actual
+QA device. Instead, the potential of the BF decoding
+was demonstrated using a classical MCMC sampler as
+a pre-processor.
+We believe that the present result is
+principally dependent on the property of the BF decoding
+algorithm, not the MCMC sampler.
+Furthermore, our
+result is consistent with the general belief that two
+decoding algorithms based on different mechanisms can
+be used together to solve problems that cannot be
+solved by either one alone.
+We believe that our BF
+decoding algorithm is promising for correcting errors in
+the readouts of QA devices due to measurement errors as
+well as dynamic errors that may be encountered during
+QA.
+C.
+Relevance to the previous work by Albash et al.
+In Ref.[31], the authors present minimum weight
+decoding (MWD), which aims to find the nearest
+Hamming distance, constraint-satisfying physical spin
+state from the hard-decided spin readout x ∈{±1}Nv
+of the SLHZ. To this end, they directly estimated the
+optimal error pattern e∗∈{±1}Nv from the global
+ground state of the following Hamiltonian:
+H(MWD)(w) = −
+Nv
+X
+i=1
+wi −λ
+Nc
+X
+i=1
+s(4)
+i (x)s(4)
+i (w),
+(46)
+where w = (w1, . . . , wNv) ∈{±1}Nv is an arbitrary spin
+state, and s(4)(w) = (s(4)
+1 (w), . . . , s(4)
+Nc(w)) ∈{±1}Nc
+is the associated weight-4 syndrome vector. Here, λ is
+17
+assumed to be sufficiently large such that w satisfies all
+constraint terms. Let C denote the set of w such that
+s(4)(w) = s(4)(x). Then, the optimal estimate e∗is given
+by
+e∗= arg min
+w∈C
+H(MWD)(w).
+(47)
+Thus, the optimal estimate e∗is the error pattern with
+the same syndrome vector and the smallest number of
+errors (i.e., the smallest number of elements ek = −1).
+Consequently, the MWD decoded state z∗is given by
+z∗= x ◦e∗. The authors also related the MWD to the
+ground state of the following Hamiltonian:
+H(MWD)
+spin
+(s) = −
+X
+i<j
+gijsisj,
+(48)
+where a set of spin variables g = (g12, . . . , gK−1 K) ∈
+{±1}
+ K
+2
+
+can be regarded as a gauge transformation.
+Once the ground state of Eq.(48) is found, one can deduce
+the optimal estimate e∗and obtain the MWD decoded
+state z∗. The problem here is that the MWD requires the
+optimal solution of the Hamiltonian defined in Eq. (36).
+This is equivalent to solving an instance of maximum 2-
+satisfiability, which is as hard as the original COP to
+be solved.
+Therefore, the MWD does not necessarily
+resolve the performance bottleneck problem for the SLHZ
+system.
+We think that MWD is difficult to apply in
+realistic scenarios when considering implementation in
+QA devices.
+Their decoding strategy is to find an error pattern
+e with minimum Hamming distance from the hard-
+decided readouts x and with the same syndrome vector
+as s(4)(x).
+In contrast, our BF decoding algorithm
+is an approximation, where the current hard-decided
+estimate x is updated iteratively to estimate x′ better.
+If the estimate x converges to a certain state with finite
+iterations, it gives a correctly decoded state z∗with a
+finite probability. Our BF algorithm can be executed on
+a deterministic Turing machine in polynomial time since
+it is executed by finite iterations of matrix multiplication
+and the associated sign evaluation of the entries of the
+resultant matrix. Therefore, we think our BF decoding
+algorithm is practical and realistic when considering
+implementation in QA devices.
+It was pointed out that the SLHZ system faces more
+challenges with single spin updates than the ME system.
+We expect that they can be alleviated by introducing the
+BF decoding. Recall that, in the ME and SLHZ systems,
+there is an overhead resulting from the embedding, where
+the chain of short-range physical interactions simulates
+the effect of long-range physical interactions. Although
+a chain consists of local two-body interactions in the
+ME system, it consists of local four-body interactions
+in the SLHZ system.
+On the other hand, the spin
+update in our BF decoding algorithm relies on numerous
+weight-3 syndromes corresponding to long-range three-
+body interactions. As shown in Fig.2, the column weight
+dv for the weight-4 syndrome is always less than 4, while
+that for the weight-3 syndrome depends on the size K of
+the original logical problem and increases with increasing
+K. For K > 6, the use of the weight-3 syndrome instead
+of the weight-4 syndrome can make spin updates more
+efficient since it increases the connectivity between spins.
+This was actually confirmed in the following observation.
+Let us recall that MCMC decoding using the Hamiltonian
+(32) results in the performance curves shown in Fig
+6(c). However, when the same evaluation was performed
+by replacing the weight-3 syndrome s(3)
+ijk(ˆx) with the
+weight-4 syndrome s(4)
+ijk(ˆx), the performance was found to
+drop significantly. This is quite reasonable, considering
+that the mixing property of the MCMC depends on
+connectivity between the spins; the more connectivity
+each spin has, the better the mixing property should
+be. In other words, embedding is not possible without
+sacrificing mixing properties.
+Since we don’t have to
+worry about technical restrictions on connectivity if we
+use a digital computer, we can use weight-3 syndromes
+for the post-readout BF decoding. Therefore, although
+the spin-update of SLHZ system is less efficient, the post-
+readout BF decoding can vastly improve its spin-update
+properties.
+Our
+BF
+algorithm
+lacks
+consideration
+of
+soft
+information related to the logical coupling constants
+J = (J12, . . . , JK−1 K) ∈R
+ K
+2
+
+. Thus, it is important to
+increase the relative weight of the correlation term to the
+penalty term to recover the soft information contained
+in the correlation term of the Hamiltonian Hcode (ˆx)
+of the SLHZ system given by Eq.(34).
+Previously,
+Albash et al.
+had tested with relevant distributions
+generated using simulated quantum annealing (SQA)
+and parallel tempering (PT) and found that BP, as
+well as MWD, offer a substantial performance boost
+over majority vote decoding (MVD) when the penalty
+strength is brought close to zero. However, they thought
+that this boost was totally due to MWD itself, because
+it was typically seen in a specific class of instances where
+the ground state of the original logical problem that
+was approximated by Jij →sign(Jij) and the ground
+state of the original logical problem happen to coincide.
+On the other hand, the similar performance boost was
+also observed for the BF decoding when the penalty
+strength was almost zero as shown in Fig.9.
+In our
+simulations, similar characteristics were observed in all
+instances studied, regardless of whether they belonged
+to the above specific class. We believe this performance
+boost comes from the mechanism schematically depicted
+by Fig.11 in V A. Since our BF algorithm ignores the
+soft information related to the logic coupling constant J
+and uses only the weight-3 syndrome as a criterion for
+updating the spin state, to be decoded to the correct
+state, the spin state just before it is applied must be in
+a state with correctable leakage errors. By controlling
+the penalty strength, the soft information contained in
+the correlation term of the Hamiltonian Hcode (ˆx) of the
+18
+SLHZ system can be adequately reflected in the readout
+state, boosting the sampling probability of the states
+with correctable leakage errors.
+As seen from the above, our study suggests that even
+though the BF and BP algorithms were initially designed
+to deal with independent or weakly correlated spin-flip
+errors, they can also be used to deal with correlated errors
+in SLHZ systems.
+It also suggests that appropriately
+controlling the strength of the penalty is crucial to
+exploiting the full potential of the fault tolerance inherent
+in the SLHZ system. We recognize the performance boost
+at vanishing penalty strength as a feature specific to the
+SLHZ system that shows intrinsic fault tolerance against
+correlated errors. Here, let us recall that the main focus
+of this study is to propose a practical decoding algorithm
+that can handle correlated spin-flip errors. We do not
+claim that this performance boost is sufficient for the
+SLHZ system to outperform the ME system, but we
+do consider that it is at least essential for the SLHZ
+system to be competitive with the ME system.
+We
+confirmed that this is indeed required in our preliminary
+experiments using the MCMC sampler and that ME
+system shows no performance boost at vanishing penalty
+strength even after post-readout MVD.
+VI.
+CONCLUSIONS
+This paper studied a practical decoding algorithm for
+correcting errors in the readout of the spins in the SLHZ
+systems.
+Given the close relationship between COP
+based on the SLHZ system and the decoding of the
+classical LDPC codes associated with the AWGN channel
+model, classical decoding techniques for LDPC codes are
+expected to provide noise immunity for the SLHZ system.
+We proposed a BF decoding algorithm based on iterative
+majority voting, which is known as a decoding method
+for LDPC codes and is much simpler than the standard
+BP algorithm. We demonstrated that the BF decoding
+algorithm provides good protection against i.i.d. noise in
+the spin readout of the SLHZ system as efficiently as the
+BP decoding algorithm. To study the tolerance to errors
+caused by noise other than i.i.d. noise, we conducted a
+classical simulation of spin readouts on the SLHZ system
+using MCMC sampler.
+We found that BF decoding
+can correct leakage errors due to classical thermal noise.
+An efficient decoding is possible if we reduce energy
+penalties so that thermal excitations are more likely
+to populate correctable leakage states.
+This implies
+that the SLHZ system exhibits fault tolerance against
+a broader range of noise models than i.i.d. noise model
+if collaborating with the post-readout BF decoding. Our
+observation is quite reasonable if we note that stochastic
+sampling followed by error correction can be regarded
+as a two-stage hybrid decoding algorithm. Controlling
+the annealing parameters in the first-stage sampler is
+essential to obtain the correct state efficiently. Special
+attention should be paid to the fact that the optimal
+annealing parameters depend heavily on whether or not
+decoding is performed on the sampled readout.
+Since our demonstration used readouts stochastically
+sampled by a classical method,
+specifically MCMC
+sampling, we are not fully convinced that the BF
+decoding is also valid for readouts obtained through
+QA device using the SLHZ system.
+Further research
+is needed to assess how effectively the QA device
+performs
+collaboratively
+with
+BF
+decoding
+under
+realistic laboratory conditions. Nevertheless, we believe
+that most of our insights stem from the intrinsic
+nature of BF decoding and are applicable regardless
+of the stochastic sampling mechanism employed in the
+initial stage.
+For example, if measurement error is
+the primary source of error in the spin readout of
+the SLHZ system, our BF decoding algorithm offers
+a straightforward solution to mitigate it.
+In addition,
+it would be reasonable to expect that a two-stage
+hybrid computation combining QA and post-readout
+BF decoding may address issues neither method can
+solve independently. Our research also emphasizes the
+importance of adequately selecting decoding algorithms
+to exploit the potential of fault tolerance inherent in
+SLHZ systems.
+In
+this
+study,
+we
+tested
+only
+a
+small
+number
+of instances K14
+with fixed-size to investigate the
+performance and characteristics of the BF decoding,
+which is insufficient to draw a general conclusion.
+Of
+particular importance for future work is investigating the
+size dependence on the performance of the SLHZ system.
+In the present discussion, we suggested that the post-
+readout BF decoding may compensate for the poor spin-
+update properties of the SLHZ system to some extent.
+It will be interesting to see how this compensation works
+well for a problem of arbitrary size. Albash et al. also
+pointed out another important limitation of the SLHZ
+system: the strength of the energy penalty must grow
+with the problem size [31]. Introducing the post-readout
+BF decoding may alleviate this limitation since it reduces
+the penalty strength.
+Both of these are issues that
+need to be studied to realize scalability. More research
+is needed to determine the efficacy of post-readout
+decoding. While the performance evaluation using the
+states generated by PT and SQA is reasonable, questions
+remain about the performance evaluation based on the
+number of sweeps necessary for generating them. This
+is because MC describes spin dynamics as a sequential
+update of spin states at each sweep, which is a serial
+and discrete time evolution. In contrast, QA dynamics
+always involve a parallel and continuous time evolution
+of spins. Therefore, the number of MC sweeps required
+and QA performance are not necessarily correlated. A
+reasonable performance evaluation would need to await
+the development of an actual QA device.
+19
+ACKNOWLEDGMENTS
+I would like to thank Dr.
+T. Kadowaki at Global
+Research and Development Center for Business by
+Quantum-AI technology (G-QuAT) and Prof.
+H.
+Nishimori at Institute of Science Tokyo for their useful
+comments and discussions. I also thank Dr. Masayuki
+Shirane
+of
+NEC
+Corporation/National
+Institute
+of
+Advanced Industrial Science and Technology for his
+continuous support. This paper is partly based on results
+obtained from a project, JPNP16007, commissioned by
+the New Energy and Industrial Technology Development
+Organization (NEDO), Japan.
+[1] Judea Pearl, Heuristics:Intelligent Search Strategies for
+Computer Problem Solving (Addison-Wesley Longman
+Publishing Co., Inc., USA, 1984).
+[2] Fernando Peres and Mauro Castelli, “Combinatorial
+Optimization Problems and Metaheuristics:
+Review,
+Challenges, Design, and Development,” Applied Sciences
+11, 6449 (2021).
+[3] Licheng Jiao, Jiaxuan Zhao, Chao Wang, Xu Liu, Fang
+Liu, Lingling Li, Ronghua Shang, Yangyang Li, Wenping
+Ma,
+and Shuyuan Yang, “Nature-Inspired Intelligent
+Computing: A Comprehensive Survey,” Research 7, 0442
+(2024).
+[4] Sovanmonynuth Heng, Dongmin Kim, Taekyung Kim,
+and
+Youngsun
+Han,
+“How
+to
+Solve
+Combinatorial
+Optimization Problems Using Real Quantum Machines:
+A Recent Survey,” IEEE Access 10, 120106–120121
+(2022).
+[5] M. W. Johnson, M. H. S. Amin, S. Gildert, T. Lanting,
+F. Hamze,
+N. Dickson,
+R. Harris,
+A. J. Berkley,
+J. Johansson, P. Bunyk, E. M. Chapple, C. Enderud,
+J. P. Hilton, K. Karimi, E. Ladizinsky, N. Ladizinsky,
+T. Oh, I. Perminov, C. Rich, M. C. Thom, E. Tolkacheva,
+C. J. S. Truncik, S. Uchaikin, J. Wang, B. Wilson, and
+G. Rose, “Quantum annealing with manufactured spins,”
+Nature 473, 194–198 (2011).
+[6] Andrew D. King,
+Jack Raymond,
+Trevor Lanting,
+Sergei V. Isakov, Masoud Mohseni, Gabriel Poulin-
+Lamarre, Sara Ejtemaee, William Bernoudy, Isil Ozfidan,
+Anatoly Yu Smirnov, Mauricio Reis, Fabio Altomare,
+Michael Babcock, Catia Baron, Andrew J. Berkley,
+Kelly Boothby, Paul I. Bunyk, Holly Christiani, Colin
+Enderud, Bram Evert, Richard Harris, Emile Hoskinson,
+Shuiyuan
+Huang,
+Kais
+Jooya,
+Ali
+Khodabandelou,
+Nicolas Ladizinsky, Ryan Li, P. Aaron Lott, Allison
+J. R. MacDonald, Danica Marsden, Gaelen Marsden,
+Teresa Medina, Reza Molavi, Richard Neufeld, Mana
+Norouzpour, Travis Oh, Igor Pavlov, Ilya Perminov,
+Thomas Prescott, Chris Rich, Yuki Sato, Benjamin
+Sheldan, George Sterling, Loren J. Swenson, Nicholas
+Tsai, Mark H. Volkmann, Jed D. Whittaker, Warren
+Wilkinson, Jason Yao, Hartmut Neven, Jeremy P. Hilton,
+Eric Ladizinsky, Mark W. Johnson, and Mohammad H.
+Amin, “Scaling advantage over path-integral Monte
+Carlo in quantum simulation of geometrically frustrated
+magnets,” Nature Communications 12, 1113 (2021).
+[7] Jack Raymond, Radomir Stevanovic, William Bernoudy,
+Kelly Boothby,
+Catherine C. McGeoch,
+Andrew J.
+Berkley, Pau Farré, Joel Pasvolsky,
+and Andrew D.
+King, “Hybrid Quantum Annealing for Larger-than-
+QPU Lattice-structured Problems,” ACM Transactions
+on Quantum Computing 4, 17:1–17:30 (2023).
+[8] Andrew D. King,
+Jack Raymond,
+Trevor Lanting,
+Richard Harris, Alex Zucca, Fabio Altomare, Andrew J.
+Berkley, Kelly Boothby, Sara Ejtemaee, Colin Enderud,
+Emile Hoskinson, Shuiyuan Huang, Eric Ladizinsky,
+Allison J. R. MacDonald, Gaelen Marsden, Reza Molavi,
+Travis Oh,
+Gabriel Poulin-Lamarre,
+Mauricio Reis,
+Chris Rich, Yuki Sato, Nicholas Tsai, Mark Volkmann,
+Jed D. Whittaker, Jason Yao, Anders W. Sandvik, and
+Mohammad H. Amin, “Quantum critical dynamics in a
+5,000-qubit programmable spin glass,” Nature 617, 61–
+66 (2023).
+[9] Andrew D. King, Sei Suzuki, Jack Raymond, Alex Zucca,
+Trevor Lanting, Fabio Altomare, Andrew J. Berkley,
+Sara Ejtemaee, Emile Hoskinson, Shuiyuan Huang, Eric
+Ladizinsky, Allison J. R. MacDonald, Gaelen Marsden,
+Travis Oh, Gabriel Poulin-Lamarre, Mauricio Reis, Chris
+Rich, Yuki Sato, Jed D. Whittaker, Jason Yao, Richard
+Harris, Daniel A. Lidar, Hidetoshi Nishimori,
+and
+Mohammad H. Amin, “Coherent quantum annealing in a
+programmable 2,000 qubit Ising chain,” Nature Physics
+18, 1324–1328 (2022).
+[10] Zhe Wang, Alireza Marandi, Kai Wen, Robert L. Byer,
+and Yoshihisa Yamamoto, “Coherent Ising machine based
+on degenerate optical parametric oscillators,” Physical
+Review A 88, 063853 (2013).
+[11] Alireza Marandi, Zhe Wang, Kenta Takata, Robert L.
+Byer,
+and Yoshihisa Yamamoto, “Network of time-
+multiplexed optical parametric oscillators as a coherent
+Ising machine,” Nature Photonics 8, 937–942 (2014).
+[12] Peter
+L.
+McMahon,
+Alireza
+Marandi,
+Yoshitaka
+Haribara, Ryan Hamerly, Carsten Langrock, Shuhei
+Tamate,
+Takahiro
+Inagaki,
+Hiroki
+Takesue,
+Shoko
+Utsunomiya, Kazuyuki Aihara, Robert L. Byer, M. M.
+Fejer, Hideo Mabuchi,
+and Yoshihisa Yamamoto, “A
+fully programmable 100-spin coherent Ising machine with
+all-to-all connections,” Science 354, 614–617 (2016).
+[13] Takahiro Inagaki, Yoshitaka Haribara, Koji Igarashi,
+Tomohiro Sonobe, Shuhei Tamate, Toshimori Honjo,
+Alireza Marandi, Peter L. McMahon, Takeshi Umeki,
+Koji Enbutsu, Osamu Tadanaga, Hirokazu Takenouchi,
+Kazuyuki Aihara, Ken-ichi Kawarabayashi, Kyo Inoue,
+Shoko Utsunomiya,
+and Hiroki Takesue, “A coherent
+Ising machine for 2000-node optimization problems,”
+Science 354, 603–606 (2016).
+[14] Hayato Goto, “Bifurcation-based adiabatic quantum
+computation
+with
+a
+nonlinear
+oscillator
+network,”
+Scientific Reports 6, 21686 (2016).
+[15] Simon E. Nigg, Niels Lörch,
+and Rakesh P. Tiwari,
+“Robust quantum optimizer with full connectivity,”
+Science Advances 3, e1602273 (2017).
+[16] Shruti Puri, Christian Kraglund Andersen, Arne L.
+Grimsmo,
+and Alexandre Blais, “Quantum annealing
+with all-to-all connected nonlinear oscillators,” Nature
+20
+Communications 8, 15785 (2017).
+[17] Peng Zhao, Zhenchuan Jin, Peng Xu, Xinsheng Tan,
+Haifeng
+Yu,
+and
+Yang
+Yu,
+“Two-Photon
+Driven
+Kerr Resonator for Quantum Annealing with Three-
+Dimensional Circuit QED,” Physical Review Applied 10,
+024019 (2018).
+[18] Hayato
+Goto,
+“Quantum
+Computation
+Based
+on
+Quantum
+Adiabatic
+Bifurcations
+of
+Kerr-Nonlinear
+Parametric Oscillators,” Journal of the Physical Society
+of Japan 88, 061015 (2019).
+[19] Tatsuhiro Onodera, Edwin Ng, and Peter L. McMahon,
+“A quantum annealer with fully programmable all-to-
+all coupling via Floquet engineering,” npj Quantum
+Information 6, 1–10 (2020).
+[20] Hayato Goto and Taro Kanao, “Quantum annealing
+using vacuum states as effective excited states of driven
+systems,” Communications Physics 3, 1–9 (2020).
+[21] M J Kewming, S Shrapnel, and G J Milburn, “Quantum
+correlations in the Kerr Ising model,” New Journal of
+Physics 22, 053042 (2020).
+[22] Taro Kanao and Hayato Goto, “High-accuracy Ising
+machine using Kerr-nonlinear parametric oscillators with
+local four-body interactions,” npj Quantum Information
+7, 1–7 (2021).
+[23] T Yamaji, S Masuda, A Yamaguchi, T Satoh, A Morioka,
+Y Igarashi, M Shirane,
+and T Yamamoto, “Correlated
+Oscillations in Kerr Parametric Oscillators with Tunable
+Effective Coupling,” PHYSICAL REVIEW APPLIED
+20, 14057 (2023).
+[24] Vicky Choi, “Minor-embedding in adiabatic quantum
+computation:
+I.
+The
+parameter
+setting
+problem,”
+Quantum Information Processing 7, 193–209 (2008).
+[25] Vicky Choi, “Minor-embedding in adiabatic quantum
+computation:
+II.
+Minor-universal
+graph
+design,”
+Quantum Information Processing 10, 343–353 (2011).
+[26] Wolfgang Lechner, Philipp Hauke,
+and Peter Zoller,
+“A
+quantum
+annealing
+architecture
+with
+all-to-all
+connectivity from local interactions,” Science Advances
+1, e1500838 (2015).
+[27] Fernando Pastawski and John Preskill, “Error correction
+for encoded quantum annealing,” PHYSICAL REVIEW
+A 93, 52325 (2016).
+[28] R G Gallager, “Low-Density Parity-Check Codes,” Ier
+Transactions on InformationN Theory , 21 (1962).
+[29] Robert G. Gallager, Low-Density Parity-Check Codes
+(MIT Press, 1963).
+[30] Judea Pearl, “Reverend Bayes on Inference Engines:
+A Distributed Hierarchical Approach,” in Probabilistic
+and Causal Inference, edited by Hector Geffner, Rina
+Dechter, and Joseph Y. Halpern (ACM, New York, NY,
+USA, 1982) 1st ed., pp. 129–138.
+[31] Tameem Albash, Walter Vinci,
+and Daniel A. Lidar,
+“Simulated-quantum-annealing comparison between all-
+to-all connectivity schemes,” Physical Review A 94,
+022327 (2016).
+[32] Nicolas Sourlas, “Soft Annealing:
+A New Approach
+to Difficult Computational Problems,” Physical Review
+Letters 94, 070601 (2005).
+[33] Nicolas Sourlas, “Spin-glass models as error-correcting
+codes,” Nature 339, 693–695 (1989).
+[34] N
+Sourlas,
+“Spin
+Glasses,
+Error-Correcting
+Codes
+and Finite-Temperature Decoding,” Europhysics Letters
+(EPL) 25, 159–164 (1994).
+[35] Nicolas
+Sourlas,
+“Statistical
+Mechanics
+and
+error-
+correction Codes,” (1998), arXiv:cond-mat/9811406.
+[36] Nicolas Sourlas, “Statistical mechanics and capacity-
+approaching error-correcting codes,” Physica A 302, 14–
+21 (2001).
+[37] Sourlas N, “Statistical mechanics approach to error-
+correction codes,” in Winter School on Complex Systems
+(2002).
+[38] James L. Massey, Threshold Decoding, Ph.D. thesis,
+M.I.T. (1962).
+[39] T.J. Richardson and R.L. Urbanke, “The capacity of
+low-density parity-check codes under message-passing
+decoding,” IEEE Transactions on Information Theory
+47, 599–618 (2001).
+[40] Tadashi
+Wadayama,
+Keisuke
+Nakamura,
+Masayuki
+Yagita,
+Yuuki Funahashi,
+Shogo Usami,
+and Ichi
+Takumi,
+“Gradient
+descent
+bit
+flipping
+algorithms
+for
+decoding
+LDPC
+codes,”
+IEEE
+Transactions
+on
+Communications 58, 1610–1614 (2010).
+[41] Gopalakrishnan Sundararajan, Chris Winstead,
+and
+Emmanuel Boutillon, “Noisy Gradient Descent Bit-Flip
+Decoding for LDPC Codes,”
+IEEE Transactions on
+Communications 62, 3385–3400 (2014).
+[42] Marc Vuffray, The Cavity Method in Coding Theory,
+Ph.D. thesis, École Polytechnique Fédérale de Lausanne
+(2014).
+[43] Yoshihiro
+Nambu,
+“Rejection-Free
+Monte
+Carlo
+Simulation
+of
+QUBO
+and
+Lechner–Hauke–Zoller
+Optimization Problems,” IEEE Access 10, 84279–84301
+(2022).
+[44] Yoshihiro Nambu, “Error correction of parity-encoding-
+based annealing through post-readout decoding,” (2024),
+10.48550/arXiv.2402.08839, arXiv:2402.08839.
+[45] Khoa Le Trung, New Direction on Low Complexity
+Implementation
+of
+Probabilistic
+Gradient
+Descent
+Bit-Flipping Decoder, Ph.D. thesis, École Nationale
+Supérieure de I’Électronique et de ses Applications
+(2017).
+[46] Kennedy Masunda, Threshold Based Multi-Bit Flipping
+Decoding
+of
+Binary
+LDPC
+Codes,
+Ph.D.
+thesis,
+University of the Witwatersrand (2017).
+[47] Omran
+Al
+Rasheed,
+Predrag
+Ivaniš,
+and
+Bane
+Vasić, “Fault-Tolerant Probabilistic Gradient-Descent
+Bit Flipping Decoder,” IEEE Communications Letters
+18, 1487–1490 (2014).
+[48] Hayato Goto, Kosuke Tatsumura,
+and Alexander R.
+Dixon,
+“Combinatorial
+optimization
+by
+simulating
+adiabatic
+bifurcations
+in
+nonlinear
+Hamiltonian
+systems,” Science Advances 5, eaav2372 (2019).

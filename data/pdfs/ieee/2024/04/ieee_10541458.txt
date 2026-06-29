@@ -1,0 +1,673 @@
+2024 7th World Conference on Computing and Communication Technologies (WCCCT) | 979-8-3503-7232-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/WCCCT60665.2024.10541458
+
+2024 the 7th World Conference on Computing and Communication Technologies
+Iteration-Aware Dynamic Quantization Neural Belief Propagation Decoder
+
+Liangsi Ma
+
+Bei Liu
+
+Xin Su
+
+School of Communications and Information Beijing National Research Center for Department of electronic engineering
+
+Engineering
+
+Information Science and Technology
+
+Tsinghua University
+
+Chongqing University of Posts and
+
+Tsinghua University
+
+Beijing, China
+
+Telecommunications
+
+Beijing, China
+
+suxin@tsinghua.edu.cn
+
+Chongqing, China
+
+liubei@tsinghua.edu.cn
+
+s210131173@stu.cqupt.edu.cn
+
+*Corresponding author
+
+Abstract—For some linear codes, neural networks have been found to be a way to enhance traditional belief propagation (BP) decoder. When deploying such methods in practice, quantization issues also need to be considered. Considering that the messages of variable/check nodes are variable during the BP decoding process, this paper proposes a dynamic quantization method to predict the optimal bit-width for the node’s message quantization in different decoding iterations. We build a shallow neural network as a bit-width predictor and train it jointly with a neural belief propagation decoding network. During actual decoding, the bit prediction network will generate appropriate bit-width for quantizing the messages of each layer of nodes. Finally, simulation experiments validate the effectiveness of the proposed quantization method.
+Index Terms—belief propagation, dynamic quantization, LDPC codes, neural decoder
+I. INTRODUCTION
+Low Density Parity Check (LDPC) codes were first introduced by Gallager in 1962, and later Tanner studied LDPC codes from a graph-theoretic perspective [1], which revealed their superior performance. Nowadays LDPC codes have been widely used in communication systems. The recommended decoding algorithm for LDPC codes is belief propagation (BP) algorithm, which can achieve near-optimal decoding performance for long code lengths. For short codes, some recent work has introduced the combination of feedforward neural networks to extend the BP algorithm and its improved algorithms, and obtained performance improvements on some linear block codes [2], [3]. For hardware implementation, the information processed by LDPC decoders is usually quantized, as lower bit-width messages result in lower complexity. There has been a lot of research on this topic, which can be divided into dynamic quantization and static quantization based on whether the quantization parameters change during the iterative process. For dynamic quantization, a (q+1)-bit quasi-uniform quantization method was used to quantify the traditional message iteration decoder of LDPC codes in [4], which can adapt to the dynamic range of messages, i.e., the later messages will use larger bit widths to accommodate
+This work was supported by the National Key R&D Program of China under Grant 2020YFB1806702
+
+larger message ranges as the decoding iteration progresses. Other studies use adaptive quantization methods with different quantization step sizes to quantize messages [5]. A quantization method proposed in [6] trains a surrogate model of the quantization function using neural network methods to obtain the quantization step sizes of different nodes in the iterative process. Fixed quantization methods include the finite alphabet iterative decoder (FAID) [7], which describes the variable and check node update behavior of BP decoder with a customized update function. Work presented in [8] demonstrated training linear FAID and RQNN parameters using a recurrent quantized neural networks. They performed well on an additive white Gaussian noise (AWGN) channel. Other fixed quantization treats the update of node messages as a binary input discrete memoryless channel (DMC) model [9], and then maximizes the mutual information between quantizer inputs and quantizer outputs by designing update rules [10].
+Recently, researchers at Peking University proposed a method for quantizing the weights and activation values of residual neural networks. This method predicts the optimal quantization bit-width for each layer of the network using a bit predictor with low complexity, and then implements dynamic quantization [11]. Inspired by this work, this paper proposes a generic quantization method for quantizing Neural BP (NBP) decoders of linear (LDPC) codes. Different quantization bitwidths are allocated for different code blocks at different decoding iterations to implement dynamic quantization. This method can be used to find the optimal bit-width at each iteration for most fixed quantization schemes. Specifically, a lightweight fully connected neural network is used to predict the number of quantization bits for each iteration of node messages in NBP decoding. The loss function is designed to jointly train the network with the NBP decoding network to obtain more suitable outputs. We verify our method by using a uniform quantizer to quantize the NBP decoder in experiments. The main contributions of this paper can be summarized as follows:
+1) The quantization problem of NBP decoders is considered and a uniform quantization of 5 bits is used to quantize the node outputs of the NBP decoder with floating-point precision
+
+979-8-3503-7232-8/24/$31.00 ©2024 IEEE
+Authorized licensed use limited to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+J7un4e
+
+24,2026
+
+at
+
+15:30:10
+
+UTC
+
+from
+
+IEEE
+
+Xplore.
+
+Restrictions apply.
+
+to a finite value. The bit-error-rate (BER) results on shortlength LDPC codes are close to that of the floating-point NBP decoder.
+2) A dynamic quantization framework based on neural networks is proposed, which can be jointly trained with the NBP decoder to predict the bit-width of variable/check node messages for each iteration of the NBP decoder, and tested using uniform quantization.
+
+II. PRELIMINARIES
+
+A (n, k) LDPC code is generally defined by a parity-check matrix H of size m ∗ n. Each row of the matrix H represents a check equation of the LDPC code, hence it is also referred to as check nodes (CNs). The columns of the matrix H correspond to the encoded code bits, which are known as variable nodes (VNs). By examining the positions of “1”s in the H matrix, a Tanner graph can be constructed. In the Tanner graph, the set of VNs is defined as I {i|i = 1, 2, · · · , n}, and the set of CNs is defined as J {j|j = 1, 2, · · · , m}. The set of VNs connected to CN j is denoted by Nc (j), and the set of CNs connected to VN i is denoted by Nv (i).
+
+A. BP Decoder
+
+The BP algorithm, also known as the message passing algorithm, is a compromise algorithm between hard decision decoding and soft decision decoding for LDPC codes in terms of decoding complexity and decoding performance. It is based on the Tanner graph. Given the symbols defined above, the process of BP decoding can be described as the following steps:
+Step 1, for each variable node, calculate the initial loglikelihood ratio (LLR) information from the channel:
+
+Li
+
+=
+
+log
+
+Pr Pr
+
+(ci (ci
+
+= =
+
+1|yi) 0|yi)
+
+(1)
+
+where yi is the channel observation value corresponding to the i-th code bit ci received by the receiver from the original transmission.
+
+Step 2, check node message updates:
+
+
+
+
+
+Lj→i = 2tanh−1 
+
+tanh
+
+Li →j 2
+
+
+
+(2)
+
+i ∈Nc(j)\{i}
+
+Step 3, variable node message updates:
+
+Li→j = Li +
+
+Lj →i
+
+(3)
+
+j ∈Nv(i)\{j}
+
+Step 4, marginalized output information:
+
+Lo,i = Li +
+
+Lj →i
+
+(4)
+
+j ∈Nv (i)
+
+Step 5, decoding decision:
+
+cˆi =
+
+1, 0,
+
+if Lo,i ≤ 0 , if Lo,i > 0
+
+1≤i≤n
+
+(5)
+
+If the estimated codeword passes the checksum or reaches the preset maximum iteration tmax, decoding ends; otherwise, go back to Step 3.
+
+B. Neural BP decoder
+
+Assigning weights to the messages passed along the edges of Tanner graph in BP decoder, the weights are trained by a neural network, which can further improve the decoding performance of the BP decoder on certain linear codes. This approach is known as the neural BP decoder (NBP). Specifically, for each decoding iteration, equations (2), (3), and (4) are replaced with the following, respectively:
+
+
+
+
+
+Lj→i
+
+=
+
+2tanh−1
+
+
+
+1 2
+
+Li →j 
+
+(6)
+
+i ∈Nc(j)\{i}
+
+and,
+
+
+
+
+
+Li→j = tanh 
+
+t i
+
+Li
+
++
+
+itLj →i (7)
+
+j ∈Nv(i)\{j}
+
+and,
+
+
+
+
+
+Lo,i = σ 
+
+L tmax
+
+i
+
+i
+
++
+
+L tmax
+
+i
+
+j
+
+→i
+
+(8)
+
+j ∈Nv (i)
+
+where σ (x) = 1/1 + e−x is the activation function of output layer. For convenience, we refer to the layer that performs (6) in neural network as the CN-layer and the layer that performs (7) as the VN-layer, so that one BP decoding iteration is represented as a 2-layer neural network. Ultimately, the NBP decoder minimizes the following loss function to optimize the weights assigned to the messages:
+
+1 tmax n L (Lo, c) = − n
+
+ci log Lot ,i + (1 − ci) log 1 − Lot ,i
+
+t=1 i=1
+
+(9)
+
+III. DYNAMIC QUANTIZATION SCHEME
+A. Fixed-Point Quantization of Neural BP Decoder
+There has been a significant amount of work investigating the use of finite-precision messages instead of floating-point messages passed between different nodes (CNs or VNs) in BP decoders, which usually leads to FAID or lookup tables designed for hardware implementation. Such quantization can typically be described by a Markov chain X → Y →Q Z, where X is a node (CN or VN), Y is its observation value, Q is the quantization function, Z is the quantized value, and then minimizing the conditional entropy of X and Z [12] or maximizing the mutual information of X and Z [13], using the quantized value Z instead of the observation value Y during actual decoding. In this section, we do not consider how to design the optimal quantizer Q, but instead use a simple uniform quantizer Q (q, ∆, x) to perform the above process, which is determined by the quantization interval ∆ and the bitwidth q. Based on this, messages from VN to CN (and CN to VN) will be mapped to an alphabet {A1, A2, · · · , A2q−1 } of size 2q − 1, where −2q−1 + 1 ≤ Ak ≤ 2q−1 − 1, Ak ∈ Z,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J7un5e 24,2026 at 15:30:10 UTC from IEEE Xplore. Restrictions apply.
+
+LLR
+
+CN
+
+Layer
+
+Quantize Layer
+6 bit
+
+VN Layer
+
+Quantize
+
+…
+
+Layer
+
+5 bit
+
+CN Layer
+
+Quantize Layer
+4 bit
+
+Bit prediction network
+
+VN Layer
+
+Quantize LLR Layer
+5 bit
+
+Loss
+
+CN Layer
+
+STE
+
+VN Layer
+
+STE
+
+…
+
+CN
+
+Layer
+
+STE
+
+VN Layer
+
+STE
+
+Forward: Fig. 1. Dynamic quantized NBP decoder based on bit prediction network.
+
+Backward:
+
+k = 1, 2, · · · 2q−1. The quantization process can be represented
+
+as follows:
+
+A1,  Q(q, ∆, x) = Ak,
+   A2q−1 ,
+
+x
+
+≤
+
+−
+
+2q −3 2
+
+·
+
+∆
+
+2Ak −1 2
+
+·∆
+
+≤
+
+x
+
+<
+
+2Ak +1 2
+
+· ∆,
+
+k = 2, 3, · · · , 2q−1 − 1
+
+2q −3 2
+
+·
+
+∆
+
+≤
+
+x
+
+(10)
+
+We apply Q (q, ∆, x) to NBP decoder for quantizing mes-
+
+sages from CN-layer and VN-layer. However, applying the
+
+staircase-wise quantizer as shown in (10) to neural networks
+
+leads to training failure, as (10) does not provide gradients
+
+for updating neural network parameters. Here, we employ a
+
+technique called Straight-Through Estimator (STE) [14], [15],
+
+where (10) is used during the forward propagation of neural
+
+decoder training, and in the backward propagation process, an
+
+surrogate derivative is used to replace the quantization node.
+
+That is, during backpropagation, the gradient of quantization
+
+node is replaced by:
+
+∂Q =
+
+1
+
+if
+
+|x| <
+
+2q −3 2
+
+∆
+
+(11)
+
+∂x 0 otherwise
+
+The method of using STE for quantizing NBP decoder can be found in Fig. 1.
+
+B. Dynamic Quantization of Neural BP Decoder Messages
+The quantization of messages in BP decoders is mostly done using fixed bit-width, although there are a number of dynamic quantization schemes but they mainly focus on quantization parameters other than bit-width. In fact, the range of node messages during BP decoding iterations is dynamically changing and the distribution of messages is also related to signal-to-noise ratio (SNR). To study such dynamically changing messages with iterative decoding, we propose dynamic quantization to dynamically allocate quantization bits according to the parity check matrix of different codewords
+
+and different iterations. Assuming that we provide K bit-width candidates, denoted as q1, q2, · · · , qK , in a certain transmission channel environment, the quantization of messages during a
+
+BP decoding iteration process may obtain values within these K candidates. We use dynamic quantization to select different quantization bit for CN-layer and VN-layer in different itera-
+
+tions. Therefore, the quantization layer corresponding to each CN-layer/VN-layer can be represented by these K candidates as:
+K
+
+QCN/V N (x) = pkQ(qk, ∆, x),
+
+k=1
+
+(12)
+
+K
+
+s.t. pk ∈ {0, 1}, pk = 1.
+
+k=1
+
+where pk is the probability of selecting quantization bit qk, and only one bit will be selected in each layer.
+
+C. Bit Prediction Network
+
+The pk in (12) cannot be directly optimized because the distribution and range of CN/VN layer messages in different
+
+iterations of NBP decoder are different for different parity
+
+check matrices. Therefore, we use a neural network to predict
+
+the probability of different bit candidates being selected. To
+
+avoid introducing too much complexity, we only use a three-
+
+layer fully connected neural network as the bit prediction
+
+network. The initial LLR messages are used as input data for
+
+network training, and the logits output by the network are
+
+used to determine the probability of each quantization layer’s
+
+bit candidate. Assuming that the logits output from last layer
+
+of bit prediction network for a certain quantization layer is
+
+1, 2, · · · , k, then the probability pk of determining the bitwidth is determined as:
+
+
+
+1, if k = arg max k ,
+
+pk =
+
+k
+
+(13)
+
+0, otherwise.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J7un6e 24,2026 at 15:30:10 UTC from IEEE Xplore. Restrictions apply.
+
+100 10-1 10-2
+
+BP DQ-NBP Q-NBP NBP
+
+10-1 10-2 10-3
+
+BP DQ-NBP Q-NBP NBP
+
+100 10-2
+
+BP DQ-NBP Q-NBP NBP
+
+BER BER BER
+
+10-3
+
+10-4
+
+10-4
+
+10-4 10-5
+
+10-5 10-6
+
+10-6
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+SNR(dB)
+
+10-7 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6 SNR(dB)
+
+10-8 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6 SNR(dB)
+
+Fig. 2. BER performance on LDPC (32, 16), Fig. 3. BER performance on LDPC (96, 48), Fig. 4. BER performance on LDPC (128, 64),
+
+tmax = 5.
+
+tmax = 10.
+
+tmax = 10.
+
+Using (13) will generate a one-hot vector of length K corresponding to the candidate bit vector. However, this formula is not differentiable. In order to train it with a neural network, we use a differentiable Gumbel-Softmax method as shown in [11] to replace (13) in backpropagation:
+
+pk =
+
+e( k+πk)/τ
+
+K j
+
+e(
+
+j +πj )/τ
+
+(14)
+
+where τ is a temperature coefficient that determines how closely the generated values approximate 0 and 1. πk is a
+random noise that follows Gumbel distribution as follows:
+
+πk = − log − log uk , uk ∼ U (0, 1)
+
+(15)
+
+The schematic of proposed dynamic quantized NBP decoder based on bit prediction network is shown in Fig. 1.
+
+D. Network Training
+In order to enable the newly added bit prediction network to perceive quantized decoding at different iterations, we have carefully designed the length of output logits to be 2 · tmax · K. This allows each quantization layer to correspond to its respective quantization bits. To enable the two networks to be trained jointly, we added a bit loss term to the loss function, so that the entire network is trained with a loss function of:
+
+2·tmax
+
+Ltotal = L (Lo, c) + α
+
+(max (bi − bbenchmark, 0))
+
+i=1
+
++ β wb2 (16)
+
+where bbenchmark is the quantization bit in quantization layer when fixed quantization is implemented using the chosen base quantizer (e.g., in this paper, the simplest uniform quantizer is used). The third term denotes a regularization term from bit prediction network, where wb refers to the trainable parameters within that network. Regularization is employed to constrain the complexity of network, as during the simulation process, it was observed that bit prediction network converges faster, and excessive training can lead to overfitting. α and β are balance coefficients designed to allow the first term to dominate training process.
+
+During forward propagation we utilize (13) to obtain the quantization bits for each quantization layer. During backward propagation, (14) is used to calculate bit loss and obtain the gradients. The whole process of proposed dynamic quantization is shown in Fig. 1. After selecting base quantization method, with the constraint of baseline quantization bit bbenchmark, we can obtain quantization bits of CN and VN layers in different iterations through joint training.
+IV. SIMULATION RESULTS
+We constructed the proposed model in python and all the simulation experiments were performed based on Tensorflow. We utilized Adam optimizer with a learning rate of 0.001 for training. After encoding, the coded bits were modulated using binary phase shift keying (BPSK) and passed through an AWGN channel. Sufficient datasets for training and testing were obtained at receiver. The neural decoder was fed with observation values from 2400 code blocks for each training, and after repeating the training for 5000 epochs, the loss function stabilized. During performance testing at least 1000 code block errors occur or at least 12000000 code blocks are simulated before stopping, considering that the maximum number of iterations for conventional BP decoding is either 5 or 10. The quantization interval ∆ = 1 in (10).
+The choice of benchmark quantization bit bbenchmark is determined by the selected base quantizer, here 5 bits are chosen when uniform quantization is used. The candidate bits for dynamic quantization are chosen from around bbenchmark, and for this simulation, {4, 5, 6} are selected. Choosing not to use too small bit is because uniform quantization incurs significant performance loss at low bit quantization.
+A. Results on LDPC codes We tested the proposed decoding framework on LDPC codes of different lengths, including LDPC(32, 16), LDPC(96, 48), and LDPC(128, 64). All the channel codes used in this paper are from [16]. Each LDPC code was tested for its BER performance using four decoding models: 1) traditional BP decoder, 2) Neural BP (NBP) decoder, 3) Dynamic Quantization NBP decoder based on bit prediction network (DQ-NBP), and 4) fixed 5-bit uniform quantization NBP decoder. The training data was uniformly sampled from signal-to-noise ratios
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J7un7e 24,2026 at 15:30:10 UTC from IEEE Xplore. Restrictions apply.
+
+10-1 10-2 10-3 10-4 10-5
+
+BP DQ-NBP Q-NBP NBP
+
+10-1 10-2 10-3 10-4 10-5
+
+BP DQ-NBP Q-NBP NBP
+
+100 10-1 10-2 10-3 10-4 10-5
+
+BP DQ-NBP Q-NBP NBP
+
+BER BER BER
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+SNR(dB)
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+SNR(dB)
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+SNR(dB)
+
+Fig. 5. BER performance on BCH (63, 45), Fig. 6. BER performance on BCH (127, 113), Fig. 7. BER performance on BCH (127, 113),
+
+T =3.
+
+T =2.
+
+T =7.
+
+(SNRs) ranging from 1 to 6 dB, as varying training sets is better for NBP decoding. The test results are shown in Fig. 2 Fig. 4. As can be seen from the figures, full-precision NBP decoder exhibits varying degrees of performance gain compared to traditional BP decoder on LDPC codes. Similar performance to full-precision NBP decoding can be achieved by using fixed 5-bit uniform quantization. Dynamic quantization based on bit prediction networks, on the other hand, has a small BER loss only at the highest SNR, and can effectively track the performance of fixed quantization at the rest of the SNRs, but requires the same or fewer bits in relative terms. For example, during a BER test for LDPC(128, 64), the predicted bits given were {5, 4, 4, 4, 4, 5, 6, 6, 4, 6, 4, 5, 4, 4, 4, 6, 6, 4, 6, 5}, with an average requirement of only 4.8 bits.
+B. Results on BCH codes Since NBP decoder was initially proposed mainly for BCH codes, we provide the BER performance of dynamic quantization NBP decoder on BCH codes with different error correction capability T . The training dataset is obtained from SNR ranging from 1 to 8 dB. All simulations are performed with 5 iterations. The results are shown in Fig. 5 - Fig. 7. It can be seen that the BER curve of NBP decoder using uniform quantization has a significant gap compared to the un7quantized case, but the proposed dynamic quantization framework can still effectively track the performance of fixed quantization, especially for small T there is almost no performance loss compared to fixed quantization. Note that uniform quantization may not be the best base quantization method in this test, but it is simple to implement. Using uniform quantization to test our dynamic quantization scheme has the benefit of being adaptive to the dynamic range of the iterative messages, and we also recommend interested readers to test the proposed quantization framework with other more advanced quantization methods.
+V. CONCLUSION
+In this paper, we proposed a dynamic quantization scheme for a neural decoder of LDPC codes, where the quantization bit-width of variable/check node messages varies with the dynamic range of messages in different iterations. We used a three-layer fully connected neural network for bit predic-
+
+tion and jointly trained it with the main network of neural
+decoder by designing a loss function to predict the optimal
+bit-width for decoding. We simulated the proposed dynamic
+quantization method using uniform quantization and verified
+its effectiveness.
+REFERENCES
+[1] R. Tanner, “A recursive approach to low complexity codes,” in IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533-547, September 1981.
+[2] E. Nachmani, Y. Be’ery and D. Burshtein, “Learning to decode linear codes using deep learning,” 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), Monticello, IL, USA, 2016, pp. 341-346.
+[3] Q. Wang et al., “Normalized Min-Sum Neural Network for LDPC Decoding,” in IEEE Transactions on Cognitive Communications and Networking, vol. 9, no. 1, pp. 70-81, Feb. 2023.
+[4] X. Zhang and P. H. Siegel, “Quantized Iterative Message Passing Decoders with Low Error Floor for LDPC Codes,” in IEEE Transactions on Communications, vol. 62, no. 1, pp. 1-14, January 2014.
+[5] X. An, C. Zhang, K. Peng, Z. He and J. Song, “Adaptive Quantized and Normalized MSA and Its Application for DTMB-A LDPC Codes,” 2023 IEEE International Symposium on Broadband Multimedia Systems and Broadcasting (BMSB), Beijing, China, 2023, pp. 1-5.
+[6] M. Geiselhart et al., “Learning Quantization in LDPC Decoders,” 2022 IEEE Globecom Workshops (GC Wkshps), Rio de Janeiro, Brazil, 2022, pp. 467-472.
+[7] S. K. Planjery, D. Declercq, L. Danjean and B. Vasic, “Finite Alphabet Iterative Decoders—Part I: Decoding Beyond Belief Propagation on the Binary Symmetric Channel,” in IEEE Transactions on Communications, vol. 61, no. 10, pp. 4033-4045, October 2013.
+[8] X. Xiao, B. Vasic´, R. Tandon and S. Lin, “Designing Finite Alphabet Iterative Decoders of LDPC Codes Via Recurrent Quantized Neural Networks,” in IEEE Transactions on Communications, vol. 68, no. 7, pp. 3963-3974, July 2020.
+[9] B. M. Kurkoski and H. Yagi, “Quantization of Binary-Input Discrete Memoryless Channels,” in IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544-4552, Aug. 2014.
+[10] C. Lv, X. He, P. Kang, K. Cai, J. Xing and X. Tang, “Mutual Information-Maximizing Quantized Layered Min-Sum Decoding of QCLDPC Codes,” GLOBECOM 2022 - 2022 IEEE Global Communications Conference, Rio de Janeiro, Brazil, 2022, pp. 3490-3495.
+[11] Z. Liu, Y. Wang, K. Han, S. Ma and W. Gao, “Instance-Aware Dynamic Neural Network Quantization,” 2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), New Orleans, LA, USA, 2022, pp. 12424-12433.
+[12] P. A. Chou, “Optimal partitioning for classification and regression trees,” in IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 13, no. 4, pp. 340-354, April 1991.
+[13] F. J. C. Romero and B. M. Kurkoski, “LDPC Decoding Mappings That Maximize Mutual Information,” in IEEE Journal on Selected Areas in Communications, vol. 34, no. 9, pp. 2391-2401, Sept. 2016.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J7un8e 24,2026 at 15:30:10 UTC from IEEE Xplore. Restrictions apply.
+
+[14] Bengio, Y., Le´onard, N., & Courville, A.C. (2013). Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation. ArXiv, abs/1308.3432.
+[15] Yin, P., Lyu, J., Zhang, S., Osher, S., Qi, Y., & Xin, J. (2019). Understanding Straight-Through Estimator in Training Activation Quantized Neural Nets. ArXiv, abs/1903.05662.
+[16] Michael Helmling, Stefan Scholl, Florian Gensheimer, Tobias Dietz, Kira Kraft, Stefan Ruzika, and Norbert Wehn. Database of Channel Codes and ML Simulation Results. rptu.de/channel-codes, 2023.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J7un9e 24,2026 at 15:30:10 UTC from IEEE Xplore. Restrictions apply.
+
+

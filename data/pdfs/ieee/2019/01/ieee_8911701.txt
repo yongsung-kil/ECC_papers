@@ -1,0 +1,433 @@
+Information Preserving Quantization and Decoding for Satellite-Aided 5G Communications
+
+Tobias Monsees, Dirk Wu¨bben, and Armin Dekorsy Department of Communications Engineering
+University of Bremen, 28359 Bremen, Germany Email: {tmonsees, wuebben, dekorsy}@ant.uni-bremen.de
+
+Abstract—We consider the uplink of a non-terrestrial network where a relay node is forwarding digitized signals via a rate limited error-prone forward link to the serving satellite. The focus of our investigations are the design of suitable low-bit resolution quantization schemes to limit the rate on the forward link and the optimization of the decoder processing at the satellite. To this end, we investigate Information Bottleneck (IB) based quantizer design with mutual information as fidelity criterion. The IB approach can be extended to consider also the error statistic of the forward link within the quantizer design. By numerical investigations we demonstrate the performance gains of this forward-aware IB quantizer in case of erroneous forward links. Furthermore, we investigate a lookup-table based decoder which is optimized for the end-to-end statistic including the access link, the quantizer and the forward link. This decoder implementation processes only discrete values using lookup-tables of small size. The numerical results show that the performance of 3-bit forward-aware IB quantizer in combination with a 3-bit discrete decoder implementation is close to the double-precision floating-point belief propagation decoder even for strongly errorprone forward links.
+I. INTRODUCTION
+The 3rd Generation Partnership Project (3GPP) has identified Non-Terrestrial Networks (NTNs) as a promising solution for the 5G service enablers Massive Machine-type Communication (mMTC) and Enhanced Mobile Broadband (eMBB) and several architecture options are currently under discussions [1], [2]. In particular, the User Equipment (UE) may use a direct access link to communicate with the satellite or, alternatively, an on-ground relay node (RN) provides the access link for the UE and forwards the information between the satellite and the UEs [3].
+In this paper, we focus on the Uplink (UL) of this two-hop scenario where the RN provides the access link as depicted in Fig. 1. To this end, it is assumed that the signals received on the access link are processed by the RN and digitized messages are transmitted via the rate limited Forward Link (FL) to the satellite. Here, the application of low-bit quantizers is of significant interest in order to limit the required data rate on the FL. For the satellite, a regenerative payload configuration is assumed where the user messages are estimated by decoding the Forward Error Correction (FEC) [2] code. Thus, this scenario is similar to the UL of a Cloud Radio Access Network (Cloud-RAN) system where Small Cells (SCs) forward UE messages to the Central Processing Unit (CPU) for final
+978-1-7281-3627-1/19/$31.00 c 2019 IEEE
+
+Satellite
+
+Relay Node UE
+
+Access Link Forward Link
+
+Fig. 1. Considered 5G architecture with relay node (RN) providing the access link for the User Equipments (UEs).
+processing [4], [5].
+Considering modern FEC schemes like Turbo-Codes or Low Density Parity Check (LDPC) codes, the main computational complexity of the UL processing chain is required by the iterative decoder in the satellite [4]. In order to reduce the decoder complexity, we investigate discrete variants of the Message Passing (MP) decoder for LDPC codes with a low-bit representation for the internal messages [6]–[10]. As all internal operations of this Lookup-Table based Message Passing (LUT-MP) decoder are replaced by Lookup-Tables (LUTs) of small size being efficiently implementable in suitable hardware architectures, this approach promises high throughput [11].
+Contributions: The considered communication system implements a classical two-hop transmission with a compressand-forward relay consisting of an access- and a forward link. In order to transmit compressed signals by the RN, we apply the IB method [12]–[14] to design scalar quantizers at the RN based on the access channel statistic such that the mutual information between the source signal and the RN signal is maximized. In addition, we utilize the ForwardAware Vector Information Bottleneck (FAVIB) algorithm [15] to consider also the statistic of the forward link in the quantizer design such that the end-to-end (e2e) mutual information between the source signal and the receive signal at the satellite is maximized. Compared to common quantization schemes, both approaches will provide improved e2e performance and increase the robustness against transmission errors on the FL. Furthermore, we extend the LUT-MP approach by optimizing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:22 UTC from IEEE Xplore. Restrictions apply.
+516
+
+the internal LUTs with respect to the e2e channel statistic given by the access channel, the quantizer, and the forward channel.
+Outline: The remainder of this paper is organized as follows. Section II introduces the system model. In Section III we discuss the IB based quantization setup and the forwardaware quantization which considers the access- and forward channel statistics jointly. In Section IV the LUT-MP decoder, which considers the statistics of the access- and forward link jointly, is presented and evaluated by numerical investigations. The paper is summarized in Section V.
+Notation: Random variables are denoted by sans-serif letters x, random vectors by bold sans-serif letters x, realizations by serif letters x, and vector valued realizations by bold serif letters x. Sets are denoted by calligraphic letters X .
+
+II. SYSTEM MODEL
+
+UE
+
+u
+
+c
+
+encoder
+
+modulator
+
+Satellite
+
+uˆ
+
+L
+
+decoder
+
+demodulator
+
+x
+
+access
+
+y RN
+
+quantizer
+
+r forward link
+
+z
+
+Fig. 2. Blockdiagramm for the uplink transmission of an UE to a satellite via a RN.
+
+The uplink model for one UE is shown in Fig. 2. The UE
+wethnheceocrdoeedFse 2awdboeirndnaocrtye∈sinFtfhoN2ermboifantaaiorrynegGwulaoalrrodiLsuDFP∈ieClFdcK2oadnoedfwRleitnh=gtlheKNnKgitshintNhtoe,
+rate of the code. The modulated sequence is denoted as x ∈ X J , where X is the finite modulation alphabet and J is the
+
+length of the sequence. It is assumed that the source symbols
+
+are independent and identically distributed (iid) according to
+
+the distribution px(x) =
+
+J j=1
+
+px(xj
+
+).
+
+Depending on the used transmission scheme and the in-
+
+fluence of the wireless transmission channel the RN processes
+
+the receive signals (e.g. down-conversion, equalization) before
+
+generating the discrete forward symbols. In order to allow
+
+for a general investigation, we describe the influence of the
+
+transmission channel and the preprocessing in the RN by a
+
+Discrete Memoryless Channel (DMC) with probability mass
+
+function (pmf) py|x(y|x) =
+
+J j=1
+
+py|x
+
+(yj
+
+|xj
+
+).
+
+Furthermore,
+
+without loss of generality, for the numerical investigations this
+
+equivalent access channel is modelled as a finely quantized
+
+Additive White Gaussian Noise (AWGN) channel with output
+alphabet Y and noise variance σn2 resulting in the transition probabilities py|x(y|x).
+The RN maps the access channel output y ∈ YJ by scalar
+
+quantization into discrete samples z ∈ ZJ , where Z is the
+
+set of quantizer labels and |Z| |Y| holds in general. The
+
+scalar quantizer is uniquely defined by its pmf pz|y(z|y) and a deterministic quantizer [16] is a special case where pz|y(z|y) ∈ {0, 1} for all (y, z) ∈ Y ×Z. The corresponding vector-valued
+
+mapping is defined by pz|y(z|y) =
+
+J j=1
+
+pz|y
+
+(zj
+
+|yj
+
+).
+
+Due
+
+to
+
+the compression, the data rate on the FL is at most log2 (|Z|)
+
+bit/channel use.
+
+The transmission of discrete samples z to the satellite
+
+over the FL would also comprise encoding, modulation,
+
+channel impact, demodulation, decoding, etc. Again, in order
+
+to focus the investigations on the impact of the quantizer
+
+design and the transmission errors induced by the FL, all
+
+these processing steps are summarized in a second DMC
+
+pr|z(r|z) =
+
+J j=1
+
+pr|z
+
+(rj
+
+|zj
+
+),
+
+where
+
+r
+
+∈
+
+RJ
+
+denotes
+
+the
+
+output sequence of the FL with output alphabet R. For the
+
+subsequent numerical investigations a rather simple model to
+
+describe the transmission over the FL is applied [17], where
+
+each sample z is represented by a bit tuple with log2 (|Z|) elements which are transmitted over a Binary Symmetric
+
+Channel (BSC) with bit flip probability Pe. The received bit tuple is mapped onto receive samples r with output cardinality
+
+|R| = |Z|.
+
+In the satellite the receive samples r are fed to the decoder
+
+in order to estimate the transmitted information word u.
+
+In case of common Floating-Point based Message Passing
+
+(FP-MP) decoder, Log-Likelihood Ratios (LLRs) L ∈ LJ are
+
+calculated by the demodulator in order to represent a-posteriori
+
+information for the code bits as discussed subsequently in
+
+Subsection IV-A. In contrast, the LUT-MP decoder processes
+
+the samples r directly such that the calculation of LLRs is
+
+omitted, as explained in Subsection IV-B.
+
+III. QUANTIZER DESIGN AT RELAY NODE
+
+A. Quantizer Design based on Information Bottleneck
+
+In contrast to common quantizers, the IB setup considers the statistic of the access channel py|x(y|x) and the source px(x) for the quantizer design. Furthermore, it considers the mutual information1 (MI) I(x; z) between the source x and the quantizer output z as relevant information. The objective
+is to preserve a maximum amount of relevant information I(x; z) under a constraint on the compression rate I(y; z). The
+solution of the underlying trade-off is characterized by the IB
+functional [12]
+
+1
+
+pz|y(z|y) = argmin
+pz|y (z |y)
+
+β+1
+
+I(y; z)−βI(x; z)
+
+s.t. |Z| ≤ Nz ,
+
+(1)
+
+where the parameter β ≥ 0 controls the trade-off between
+
+compression rate I(y; z) and relevant information I(x; z) and
+
+the parameter Nz is an upper bound on the number of clusters |Z|. The quantizer labels Z are immaterial since the objective
+
+function depends only on the statistic pz|y. The optimization problem is neither convex nor concave in general and several
+
+heuristics exist to find local optimal solutions [14]. Subse-
+
+quently, we assume β → ∞, which leads to the maximization
+
+of the relevant information, i.e.
+
+pz|y(z|y) = argmax I(x; z) s.t. |Z| ≤ Nz .
+
+(2)
+
+pz|y (z |y)
+
+1The mutual information [18] between two random variables a and b is
+
+given
+
+by
+
+I(a; b)
+
+=
+
+pa,b(a, b) log
+a∈A b∈B
+
+pa,b (a,b) pa (a)pb (b)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:22 UTC from IEEE Xplore. Restrictions apply.
+517
+
+In case of a deterministic quantizer mapping, the compression rate I(y; z) = H(z) ≤ log2 (|Z|) is determined by the Shannon entropy H(z) = − z∈Z pz(z) log2 (pz(z)). The optimization problem belongs to the class of concave problems
+since it is a convex maximization problem. One can show that
+an optimal solution of deterministic type exists and for the
+special case of a binary input alphabet, an optimal solution
+can be found via dynamic programming [16].
+
+B. Forward-Aware Quantization I(x; r)
+
+px(x) x ∈ X py|x(y|x) y ∈ Y pz|y(z|y) z ∈ Z pr|z(r|z) r ∈ R
+
+source
+
+access
+
+quantizer I(y; z)
+
+forward link
+
+Fig. 3. Forward-aware quantizer design framework.
+
+The IB framework can be extended to consider also the FL statistic pr|z(r|z) (see Fig. 3) in the quantizer design. In [15], the underlying variational problem was established
+and the derived Forward-Aware Vector Information Bottleneck
+(FAVIB) algorithm realizes a full extension of the IB method. In case of an error-free FL (Pe = 0), FAVIB and IB determine the same quantizer for given β. Subsequently, we consider again the special case β → ∞ such that the e2e mutual information I(x; r) between the transmitted signal x and the received signal r is maximized
+
+pz|y(z|y) = argmax I(x; r) s.t. |Z| ≤ Nz ,
+
+(3)
+
+pz|y (z |y)
+
+leading to deterministic quatizers. As shown in [15], the
+
+optimization problem in (3) is equivalent to the Channel-
+
+Optimized Vector Quantization (COVQ) problem with MI as
+
+fidelity criterion [19]. Furthermore, a comparable problem
+
+setup has been analyzed in [17], where the authors developed
+
+an algorithm to maximize I(x; r) by using a continuous model
+
+of the access channel.
+
+IV. SATELLITE PROCESSING
+A. Demodulation
+After the transmission of discrete values z over the FL, the satellite performs FEC decoding based on the discrete received signals r to estimate the user message u. It is assumed, that the satellite has perfect knowledge about the e2e statistic pr|x(r|x) between the UE and the satellite given by
+
+pr|x(r|x) = pz|x(z|x)pr|z(r|z).
+
+(4)
+
+z∈Z
+
+In case of BPSK modulation, the a-posteriori statistic for the codebits is given by pr|c = pr|x and the LLRs are calculated by
+
+L(r) := log
+
+pr|c(r|0) pr|c(r|1)
+
+.
+
+(5)
+
+Please notice, that only discrete LLRs occur since r is a discrete random variable. Subsequently, the discrete LLRs are
+
+the input of the FP-MP decoder to estimate the transmitted information word u.
+
+B. LUT based MP Decoder
+In order to optimize the decoder processing for discrete values, we utilize the discrete Density Evolution (DE) algorithm of [6] to generate LUT based decoding functions for a regular LDPC code with column weight dv and row weight dc. The LUT-MP decoder is optimized based on the e2e statistic pr|c(r|c) for every decoder iteration with design parameter σn, since we assume that the FL is fixed with parameter Pe. The LUTs are optimized for the noise threshold σn of a (dv,dc)-regular LDPC code, i.e., where the mutual information I(u; uˆ) between the transmitted UE message u and the estimated message at the satellite uˆ approaches one for the maximum number of iterations imax. The LUT-MP decoder has a three decomposed LUTs for every iteration [9], i.e. for variable nodes, check nodes and for the final decision. Since the LUT-MP decoder is designed based on the e2e statistic pr|c, it processes the discrete values of r directly, such that no LLR calculation step is required.
+
+C. Performance Results
+The numerical investigation shows the impact of quantization at the RN on the decoding performance at the satellite and the difference between the LUT-MP and the FP-MP decoder. We assume BPSK modulation such that the access channel is given by a finely quantized real valued AWGN channel, where the first and last boundary are set to ∓(1 + 3σn). We use a regular LDPC code [20] with column weight dv = 3 and row weight dc = 6 of length N = 2640 and code rate R = 0.5 from [21].
+
+100 10−1 10−2 10−3
+
+No Quant. FAVIB IB LM UQ Pe = 0 Pe = 0.01 Pe = 0.1
+
+BER
+
+10−4
+
+10−5 0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Eb/N0 in dB
+
+Fig. 4. BER simulations of the FP-MP decoder with LLR calculation (5) and 3-bit quantization at RN.
+The performance of the FP-MP decoder with imax = 50 using 3-bit (i.e. Nz = 8) quantization at the RN and LLR calculation as given in (5) is shown in Fig. 4. The FP-MP decoder for Pe = 0 without quantization serves as benchmark. The FAVIB approach outperforms Uniform (UQ), Loyd-Max (LM) and IB based quantization by considering also the FL statistic in the quantizer design. The reason for that is an
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:22 UTC from IEEE Xplore. Restrictions apply.
+518
+
+inherent error protection in the quantizer mapping, since some of the quantizer labels are unused. This gives an additional gain of approximately 1.2 dB compared to the IB approach. Furthermore, we investigate the LUT-MP decoder and FP-MP decoder in case of an error free and erroneous FL. The BER performance is shown in Fig. 5. For Pe = 0, the performance loss for a BER of 10−5 of the discrete implementation with 3bit FAVIB quantization and 3-bit LUT-MP decoder processing is approximately 0.4 dB compared to the FP-MP decoder without quantization at the RN. It is also notable that for an error free and erroneous FL, the LUT-MP decoder using only 3-bits per message is about 0.3 dB for a BER of 10−5 to the performance of the FP-MP decoder with 64 bit double precision per message.
+
+100 10−1 10−2 10−3
+
+FP-MP (No Quant.) FP-MP (FAVIB) FP-MP (FAVIB) LUT-MP (FAVIB) Pe = 0 Pe = 0.01 Pe = 0.1
+
+BER
+
+10−4
+
+10−5 0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Eb/N0 in dB
+
+Fig. 5. BER performance of the 3-bit LUT- vs. FP-MP decoder.
+V. SUMMARY
+We investigated the impact of quantization on the decoding performance in the uplink of a non-terrestrial network, where the relay node forwards digitized signals to the satellite. Our evaluation shows that Information Bottleneck based quantization is superior compared to common quantization approaches like uniform and Lloyd-Max. Furthermore, we also utilized the FAVIB algorithm to design quantizers which maximize the end-to-end performance between the user and the satellite. The optimized quantizer mapping contains an additional error protection leading to an improved decoding performance compared to Information Bottleneck based quantization. Finally, we investigated the performance of a lookuptable based message passing decoder which is optimized via a density evolution algorithm to process quantized samples. The lookup-table based decoder is designed for the threshold SNR of the code ensemble and used for all SNRs during the simulations. The BER performance of this decoder with 3bit channel quantization and 3-bit message resolution is close to the floating-point implementation of the belief-propagation decoder without quantization at the relay node.
+
+REFERENCES
+[1] 3GPP TR 22.822, “Study on using Satellite Access in 5G, Stage 1 (Release 16),” Jun. 2018.
+[2] 3GPP TR 38.811, “Study on New Radio (NR) to support Non-Terrestrial Networks; (Release 15),” Jun. 2018.
+[3] A. Guidotti, A. Vanelli-Coralli, M. Conti, S. Andrenacci, S. Chatzinotas, N. Maturo, B. Evans, A. Awoseyila, A. Ugolini, T. Foggi, L. Gaudio, N. Alagha, and S. Cioni, “Architectures and Key Technical Challenges for 5G Systems Incorporating Satellites,” IEEE Transactions on Vehicular Technology, vol. 68, no. 3, pp. 2624–2639, March 2019.
+[4] D. Wu¨bben, P. Rost, J. Bartelt, M. Lalam, V. Savin, M. Gorgoglione, A. Dekorsy, and G. Fettweis, “Benefits and Impact of Cloud Computing on 5G Signal Processing,” Special Issue The 5G Revolution of the IEEE Signal Processing Magazine, vol. 31, no. 6, pp. 35–44, Nov 2014.
+[5] T. Monsees, D. Wu¨bben, and A. Dekorsy, “Channel-Optimized Information Bottleneck Design for Signal Forwarding and Discrete Decoding in Cloud-RAN,” in 12th International ITG Conference on Systems, Communications and Coding (SCC), Rostock, Germany, Feb. 2019.
+[6] B. M. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise Thresholds for Discrete LDPC Decoding Mappings,” in 2008 IEEE Global Telecommunications Conference (GLOBECOM), Louisiana, USA, Dec. 2008.
+[7] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, “A Fully-Unrolled LDPC Decoder based on Quantized Message Passing,” in 2015 IEEE Workshop on Signal Processing Systems (SiPS), Hangzhou, China, Oct. 2015.
+[8] J. Lewandowsky and G. Bauch, “Trellis based Node Operations for LDPC Decoders from the Information Bottleneck Method,” in 2015 9th International Conference on Signal Processing and Communication Systems (ICSPCS), Cairns, Australia, Dec. 2015.
+[9] F. J. C. Romero and B. M. Kurkoski, “LDPC Decoding Mappings That Maximize Mutual Information,” IEEE Journal on Selected Areas in Communications, vol. 34, no. 9, pp. 2391–2401, Sept. 2016.
+[10] J. Lewandowsky and G. Bauch, “Information-Optimum LDPC Decoders Based on the Information Bottleneck Method,” IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[11] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[12] N. Tishby, F. C. Pereira, and W. Bialek, “The Information Bottleneck Method,” in 37th Annual Allerton Conference on Communication, Control, and Computing, Monticello, IL, USA, Sept. 1999, pp. 368–377.
+[13] N. Slonim, “The Information Bottleneck: Theory and Applications,” Ph.D. dissertation, Hebrew University of Jerusalem, Israel, 2002.
+[14] S. Hassanpour, D. Wu¨bben, and A. Dekorsy, “Overview and Investigation of Algorithms for the Information Bottleneck Method,” in 11th Int. Conference on Systems, Communications and Coding (SCC), Hamburg, Germany, Feb. 2017.
+[15] S. Hassanpour, T. Monsees, D. Wu¨bben, and A. Dekorsy, “ForwardAware Information Bottleneck-Based Vector Quantization for Noisy Channels,” in preparation.
+[16] B. M. Kurkoski and H. Yagi, “Quantization of Binary-Input Discrete Memoryless Channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, Aug. 2014.
+[17] J. Bartelt, L. Landau, and G. Fettweis, “Improved Uplink I/Q-Signal Forwarding for Cloud-Based Radio Access Networks with Millimeter Wave Fronthaul,” in 2015 International Symposium on Wireless Communication Systems (ISWCS), Brussels, Belgium, Aug. 2015.
+[18] T. M. Cover and J. A. Thomas, Elements of Information Theory, 2nd ed. John Wiley & Sons, 2006.
+[19] A. Winkelbauer, G. Matz, and A. Burg, “Channel-Optimized Vector Quantization with Mutual Information as Fidelity Criterion,” in 2013 Asilomar Conference on Signals, Systems and Computers, California, USA, Nov. 2013.
+[20] R. G. Gallager, “Low-Density Parity-Check Codes,” Ph.D. dissertation, 1963.
+[21] D. J. C. MacKay, “Encyclopedia of Sparse Graph Codes,” http://www.inference.org.uk/mackay/codes/data.html, 2018, [Online].
+
+ACKNOWLEDGMENT This work was partly funded by the European Regional
+Development Fund (ERDF) under grant LURAFO2012A.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:22 UTC from IEEE Xplore. Restrictions apply.
+519
+
+

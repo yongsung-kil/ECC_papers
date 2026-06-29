@@ -1,0 +1,1651 @@
+arXiv:2412.08596v1 [quant-ph] 11 Dec 2024
+
+Quantum-enhanced belief propagation for LDPC decoding
+Sheila M. Perez-Garcia∗1,2 and Ashley Montanaro†1,3
+1Phasecraft Ltd. 2University College London
+3University of Bristol
+Abstract Decoding low-density parity-check codes is critical in many current technologies, such as fifth-generation (5G) wireless networks and satellite communications. The belief propagation algorithm allows for fast decoding due to the low density of these codes. However, there is scope for improvement to this algorithm both in terms of its computational cost when decoding large codes and its error-correcting abilities. Here, we introduce the quantum-enhanced belief propagation (QEBP) algorithm, in which the Quantum Approximate Optimization Algorithm (QAOA) acts as a preprocessing step to belief propagation. We perform exact simulations of syndrome decoding with QAOA, whose result guides the belief propagation algorithm, leading to faster convergence and a lower block error rate (BLER). In addition, through the repetition code, we study the possibility of having shared variational parameters between syndromes and, in this case, code lengths. We obtain a unique pair of variational parameters for level-1 QAOA by optimizing the probability of successful decoding through a transfer matrix method. Then, using these parameters, we compare the scaling of different QAOA post-processing techniques with code length.
+1 Introduction
+Low-density parity check (LDPC) codes are a vital component in fifth-generation (5G) new radio (NR) digital communications, replacing turbo codes for forward error correction. This class of linear codes, first proposed by Gallager in his 1963 PhD thesis [1], are ideal for fast communication as they offer lower error floors and higher coding gains
+∗sheila.garcia.17@ucl.ac.uk †ashley@phasecraft.io
+1
+
+at lower signal-to-noise ratio (SNR) than turbo codes [2, 3]. In particular, quasi-cyclic LDPC codes are the standard set by the Third Generation Partnership Project (3GPP) for rate matching and hybrid automatic repeat request (HARQ) [4–7]. Other applications include storage in solid-state drives [8]; and DVB-S2, a satellite-based digital video broadcast standard upgrading the use of Reed-Solomon codes in its previous iteration, DVB-S [9].
+The belief propagation algorithm is currently the industry-standard method for decoding LDPC codes [10]. It is a message-passing algorithm that performs inference on the Tanner graph of the parity-check matrix of the code. Even though, in general, messagepassing algorithms are the most efficient LDPC decoding method due to the low density of LDPC codes [11], they provide exact solutions only for tree graphs [1]. For general graphs, message-passing algorithms can only approximate the probability of a bit being in error. Furthermore, despite performing well in practice, the algorithm is not guaranteed to converge in the presence of cycles [12]. Cycles, commonly present in short codes, prevent the belief propagation algorithm from reaching maximum likelihood performance. These considerations make belief propagation a suboptimal algorithm, inspiring research to improve its accuracy and expedite communication [13–15]. In particular, modifications of belief propagation have been proposed to reduce the error-correcting gap with maximum likelihood with a focus on short codes [16].
+Decoding an LDPC code, as with any linear code, involves retrieving original information from received messages despite potential errors introduced during transmission. This process presents a combinatorial optimization challenge: identifying the most likely transmitted codeword (encoded information without error) among all possible codewords based on the received signal. Introduced by Farhi et al. in 2014 [17], QAOA is a parameterized quantum optimization algorithm designed to give approximate solutions to combinatorial optimization problems. QAOA seeks the qubit configuration that minimizes a given cost function by iteratively adjusting a set of parameters. QAOA’s suitability for solving optimization problems makes it an attractive method for decoding classical linear codes. Notably, three main approaches using QAOA have been proposed: minimum-distance decoding [18], syndrome decoding [19], and minimum distance decoding as a quadratic unconstrained binary optimization (QUBO) problem [20].
+In this paper, building on previous work by Lai et al. on syndrome decoding with QAOA [19], we introduce the quantum-enhanced belief propagation algorithm (QEBP), which treats QAOA as a pre-processing step to the belief propagation algorithm. We show through exact simulations that QEBP lowers the average block error rate (BLER) when compared with QAOA syndrome decoding and belief propagation for codes with block length 12. It also reduces the iterations needed for the convergence of belief propagation by 35% on average. We also investigate the decoding of the repetition code with QAOA, as its simplicity allows us to study the scaling of the BLER and the possibility of having shared parameters valid for different decoding rounds. We present a method based on transfer matrices, which allows us to optimize the variational parameters to maximize the probability of successful decoding for any decoding instance of any size. Even though
+2
+
+suboptimal, these parameters will enable us to compare the scaling of the BLER for different post-processing strategies.
+The paper is organized as follows. In section 2, we discuss previous work on quantum approaches to decoding linear codes. Then, in section 3, we present LDPC codes, belief propagation decoding, and an overview of QAOA and QAOA syndrome decoding. In section 4, we describe the QEBP algorithm and, through exact simulations, analyze its error performance and convergence. Finally, in section 5, we evaluate different QAOA post-processing techniques for decoding in the case of the repetition code.
+2 Related work
+Bruck and Blaum introduced the connection between error-correcting codes and energy functions in 1989 [21]. However, it wasn’t until 2019 that the first work on decoding linear codes with QAOA was realized by Matsumine et al. describing how to perform minimum distance decoding by defining a cost Hamiltonian, which rewards messages close to the desired output [18]. In their work, they provide an analytic expression of the cost function for decoding Hamming codes with a single QAOA circuit layer. Using this expression, they obtain the minimum cost expectation for [7, 4] Hamming codes of different average column degrees, concluding that the lower the average degree distribution, the lower the minimum cost expectation. Note that, in this work, they define the optimization part as maximizing the objective function instead of minimizing it. This indicated that codes with low-density generator matrices are well-suited for level-1 QAOA decoding. However, in practical applications, LDPC codes achieve the highest rates with the least complexity. Unfortunately, LDPC codes do not generally produce low-density generator matrices.
+With this motivation in mind, Lai et al. proposed a method using QAOA analogous to syndrome decoding, defined on the parity-check matrix. In this case, the cost function has a parity-check satisfaction term and an error-weight minimization term [19]. This work presents decoding performance results for the [7, 4] Hamming code and an equivalent code generated through the cyclic permutation of a row vector. Through simulations, they could show near maximum-likelihood block error rates for decoding the Hamming code with four QAOA layers.
+To aid with the parameter optimization required for QAOA, Zhu et al. employed a meta-learning strategy to train Recurrent Neural Networks [22], which provides initial parameters for the QAOA algorithm. This method improved the bit error rate compared with a random initialization for an LDPC code of size 12 and one layer of QAOA.
+Preceding the application of QAOA to decode LDPC codes, considerable work has been done on decoding with quantum annealers [23–25]. Of particular note is work on LDPC decoding using a QUBO formulation with a quantum annealer [26]. This approach defines a cost function with two terms: a parity-check satisfaction term and a term that minimizes the distance (proportionally to the error parameter of the channel) to the desired codeword. This approach was then adapted to QAOA with the additional observation that the QAOA variational parameters can be reused across decoding rounds
+3
+
+with the same signal-to-noise ratio, thus removing the need for parameter optimization at decoding time [20]. The method presented in this paper shows that the block error rate closely approaches that of belief propagation decoding for a length-13 LDPC code but doesn’t give better error correction performance.
+On a similar line of thought to our quantum-enhanced decoding method, Dupont et al. used QAOA to enhance the relax-and-round algorithm [27]. The authors experimentally realize the algorithm using a superconducting quantum computer, achieving similar performance to the Gurobi solver for MaxCut but short of simulated annealing and the Burer-Monteiro algorithm.
+3 Background
+In this section, we introduce LDPC codes, a linear code characterized by its sparse parity-check matrix. Then, we give a general description of the belief propagation algorithm, highlighting the key characteristics that affect its performance. Finally, we briefly describe QAOA and the QAOA syndrome decoding algorithm.
+3.1 Low-density parity-check codes
+Linear codes can be defined for non-binary alphabets, but, in this work, we shall consider only binary linear codes. A linear code C of length n and dimension k is a k-dimensional subspace of the vector space F2n of binary tuples of length n over the field F2. The vectors x in the codespace Fn2 are called codewords. In general, a code of length n and dimension k is referred to as an [n, k] linear code. The Hamming distance between two vectors v and u, dH(v, u), is the number of positions at which the corresponding bits are different. The Hamming weight of a vector v, wH(v), is the number of nonzero entries in the vector.
+Each codeword x ∈ C can be written in terms of the basis that spans C. In particular, the spanning matrix G for a linear code C is a (k × n) matrix such that the rows of G are the basis vectors spanning C and x = uG, where u is the original message of length k. This matrix is given the name generator matrix. The (n − k)-dimensional null space C⊥ of G consists of all vectors x ∈ Fn2 for which xGT = 0. The spanning matrix for C⊥ is the so-called (n − k) × n parity-check matrix, H. This parity check matrix has (n − k) linearly independent rows, each corresponding to a parity-check equation, which all codewords must satisfy. It can be represented as a factor graph, or Tanner graph, where k factors, or check nodes, are connected to the variable nodes that take part in their respective parity-check equation [28], as can be seen in fig. 1. This representation is the basis for message passing or iterative decoding algorithms, such as belief propagation.
+A (dv, dc)-regular LDPC code is a binary linear code in which every codeword bit participates in exactly dv parity-check equations, and every check equation involves dc bits. They are parity-check codes as they are generated through their parity-check matrix and are low-density as the number of ones in the parity-check matrix is lower than the number of zeros. In fact, the fraction of nonzero entries grows linearly with the block
+4
+
+v1 c1
+v2
+
+1 1 1 0 0
+
+c2
+
+v3
+
+H = 0 1 0 1 1
+
+00111 v4
+
+c3
+
+v5
+
+Figure 1: Tanner graph representation of a linear code. On the left, the Tanner graph with check nodes ci and variable nodes vi and, on the right, the corresponding paritycheck matrix.
+
+0 Input
+
+1−ε ε
+
+0 Output
+
+1
+
+1
+
+1−ε
+
+Figure 2: Binary symmetric channel with crossover probability ε.
+
+length n. In contrast, the number of nonzero entries in the parity check matrix of a random linear code is expected to grow as n2 [29].
+3.2 Communication channels
+In this work, we study decoding under transmission through the binary symmetric channel (BSC) and the Additive White Gaussian Noise (AWGN) channel with binary-phase shift key (BPSK) modulation. The BSC is a communications channel model that transmits a single bit at a time. This bit may be transmitted in error, or “flipped”, with crossover probability ε, as shown in fig. 2.
+An AWGN channel is a noise model used in communication systems to model the noise experienced by a receiver. The noise is modeled as a Gaussian random process, and it is referred to as “white” noise as it has a constant power spectral density across all frequencies. Then, the received signal is given by the addition of the transmitted signal and the noise component. Although the noise in some channels may be nonGaussian, most communication channels of practical interest experience noise due to thermal fluctuations, and so can be modeled as AWGN [30]. Binary phase shift keying is a digital modulation scheme whereby the information is encoded in the phase of a carrier signal by assigning each bit value to two distinct phases. Using this modulation scheme, one bit of information corresponds to a single phase state. Here, we consider a carrier
+
+5
+
+signal under BPSK affected by AWGN, which, after hard-decision demodulation, behaves like the BSC (appendix D). Hence, for simplicity, we will define the QEBP algorithm in terms of the BSC.
+
+3.3 Belief propagation algorithm
+Belief propagation [1] is a message-passing algorithm that performs inference on a factor graph. In the case of LDPC decoding, it is used to calculate the probability of a particular bit being 0 or 1. Two main processes form the general belief propagation algorithm: message-passing and belief estimation.
+The message-passing stage of the algorithm involves two types of operations, represented in fig. 3. Firstly, a factor sends a message to a variable node by marginalizing over the other variables connected to the factor. In this way, the message contains the factor’s information about the receiving variable node. Denote the set of factor nodes connected to the jth variable by N (j), and the set of variables connected to the ith factor node by M (i). The message from a factor to a variable node mfj→vi has the form
+
+mfj→vi =
+
+fj(M (j))
+
+mvk→fj .
+
+(1)
+
+M (j)\vi
+
+k∈N (j)\i
+
+where fj(M (j)) is the so-called factor potential, and mvk→fj is a message sent from variable node vk to factor fj. For LDPC decoding, the factor potential corresponds to parity-check satisfaction of the variable nodes involved. The algorithm is initialized by setting the values of mvk→fj , which depend on the received bit string and the error probability of the channel.
+By a similar marginalization process, the factors’ information is updated from the variable nodes using the information from the other connected factors. In particular, the message from variable to factor node is defined as
+
+mvi→fj =
+
+mfs→vi .
+
+(2)
+
+s∈N (i)\j
+
+Finally, to finish a full iteration, the variable belief bi is updated by taking the product of messages incoming from all factors connected to the variable i, that is,
+
+bi(vi) =
+
+mfs→vi .
+
+(3)
+
+s∈N (i)
+
+The belief is then used to determine the corrected string. If the string obtained is a codeword, then the algorithm terminates; otherwise, the message-passing rounds continue until the maximum number of iterations set by the user is reached.
+The belief propagation algorithm is equivalent to maximum-likelihood decoding for tree graphs; but for graphs with cycles, there are no convergence guarantees, even though it performs well in practice [12, 31]. It is particularly suited for LDPC decoding as the
+
+6
+
+mf1→v2
+
+mv1→f1
+
+b1(v1) v1
+
+f1 v2
+
+f2
+
+v3
+
+v4
+
+f3
+
+v5
+
+Figure 3: Message passing in the belief propagation algorithm. Here, mf1→v2 is the message from factor f1 to variable node v2, mv1→f1 is the message from variable node v1 to factor f1 and b1(v1) is the belief of variable v1.
+
+complexity of the algorithm grows linearly with the size of the code n, as the number of messages passed depends on the number of nonzero entries of the parity-check matrix. However, it is not an optimal decoding strategy in general, and there are a few considerations to take into account when concretizing the decoding procedure.
+Firstly, the number of iterations needed for the algorithm to converge, especially for larger codes, may impact the processing latency, amount of time required to process a LDPC codeword [32]. The number of iterations can be set, or there can be an early termination clause that checks if the belief at the end of each iteration results in a codeword. As the code size tends to infinity, assuming the number of iterations is less than or equal to half of the girth, the probability of error in decoding decays exponentially [29]. When the number of iterations surpasses this, due to the cycles present in the code, the performance may be hindered. In the case of iterative decoding of LDPC codes under the BSC or AWGN channel, the effect of cycles is studied by defining trapping sets— sets of variables that are never corrected. By identifying trapping sets, one can improve the LDPC code construction, but their removal may affect the density of the code and, therefore, their error-correcting ability [33].
+The scheduling scheme for the message passing also influences the processing latency. There are certain LDPC code constructions that allow for parallel decoding [34] increasing the processing latency, but fully parallel schemes limit the flexibility of LDPC codes accepted by the decoder. In contrast, a serial decoder allows for full decoding flexibility. As a result, decoding architectures that allow partial parallelization and accept a considerably large family of codes, like quasi-cyclic LDPC codes [2, 35], have become the industry standard for 5G communications [7].
+
+7
+
+3.4 Quantum approximate optimization algorithm
+
+The Quantum approximate optimization algorithm (QAOA) [17] is a variational quantum
+
+algorithm that produces approximate solutions for combinatorial optimization problems.
+
+In particular, for a classical cost function C(z) defined on n-bit strings z ∈ {0, 1}n, the
+
+aim is to find the bit string z that minimizes the cost function. To construct the ansatz
+
+for the variational circuit, we define the corresponding cost operator C, diagonal in the
+
+computational basis, such that
+
+C|z⟩ = C(z)|z⟩,
+
+(4)
+
+and introduce the following unitary operator, U (C, γ), depending on said cost operator C and the variational parameter γ
+
+U (C, γ) = e−iγC.
+
+(5)
+
+We also introduce the operator B =
+
+n j=1
+
+Xj ,
+
+which
+
+we
+
+refer
+
+to
+
+as
+
+the
+
+mixer
+
+Hamilto-
+
+nian. Then, define a unitary operator, U (B, β), that depends on B and the variational
+
+parameter β
+
+U (B, β) = e−iβB.
+
+(6)
+
+To construct the QAOA circuit, initialize the quantum circuit to the uniform superposition state |+⟩⊗n and apply p layers of U (C, γ) and U (B, β) in the following manner
+
+|ψγ,β⟩ = U (B, βp)U (C, γp) . . . U (B, β1)U (C, γ1)|+⟩⊗n.
+
+(7)
+
+The objective function for a cost function C for the variational algorithm is ⟨ψγ,β|C|ψγ,β⟩. This function is minimized with respect to the variational parameters γ = (γ1, γ2, . . . , γp) and β = (β1, β2, . . . , βp), where γk ∈ [0, 2π) and βk ∈ [0, π) for k ∈ [1, p]. The final solution is obtained by measuring the quantum circuit in the computational basis to obtain a close-to-optimal bit string z.
+
+3.5 QAOA syndrome decoding algorithm
+A QAOA-based decoder implements a cost function that is minimized for the desired codeword. There are two main approaches to defining the cost function: a minimumdistance decoder and a syndrome-based decoder. The minimum-distance decoder has a single term that is minimized for qubit combinations that belong to the code defined by its generator matrix [18]. In this work, however, we will use the syndrome-based decoder.
+In syndrome decoding, the objective is to find the error that satisfies a particular syndrome. Let y ∈ {0, 1}n be the vector received at the end of the communication protocol. For a linear code, this vector can be expressed as y = x + e˜, where x is the original message and e˜ is the error vector. If the received string is such that yHT = (x + e˜)HT ≠ 0, then e˜ has nonzero entries and y is not a codeword. The vector s = yHT is called the error syndrome or syndrome of y. Given a syndrome vector s ∈ {0, 1}r, where r = n − k,
+
+8
+
+the minimum weight decoding rule is to find the minimum weight error e˜ that satisfies the syndrome equation, that is,
+
+arg min wH(e˜),
+
+(8)
+
+e˜∈{0,1}n s.t. e˜HT =s
+
+where wH is the Hamming weight. Following this idea, define the following cost Hamiltonian for QAOA with n qubits
+according to syndrome s = (s1, s2, . . . , sr) ∈ {0, 1}r as
+
+r
+
+n
+
+n
+
+C = −η
+
+(1 − 2sj)
+
+Z [H]j,ℓ ℓ
+
+−
+
+α
+
+Zj ,
+
+(9)
+
+j=1
+
+ℓ=1
+
+j=1
+
+where η and α are balancing parameters, and
+
+Z n
+
+[H ]j,ℓ
+
+ℓ=1 ℓ
+
+is
+
+the
+
+tensor
+
+product
+
+corre-
+
+sponding to all nonzero elements in the jth row of the parity-check matrix. The rows
+
+of H correspond to the constraints, and the syndrome tells us whether the constraint
+
+is satisfied (+1) or not (−1). The second term is a penalty function for higher error
+
+weights.
+
+4 Quantum-enhanced belief propagation algorithm
+
+We now outline the quantum-enhanced approach to belief propagation using the minsum algorithm in the log-likelihood domain due to its numerical stability. The belief propagation algorithm in the log-likelihood domain follows the same steps as described in section 3.3, using log-likelihood ratio (LLRs) as the messages being sent between check nodes and variable nodes.
+Our objective is to compute the log-likelihood ratio
+
+L(vi) = log
+
+P(vi = 0|yi) P(vi = 1|yi)
+
+,
+
+(10)
+
+where P(vi = b|yi) is the probability that vi = b for b ∈ {0, 1} given the value of yi ∈ {0, 1}. In this way, the sign of the LLR conveys the value of the corresponding bit, whilst its magnitude indicates how likely this value is. The higher the LLR, the greater
+
+certainty one has of the value of the particular bit.
+
+The expression for messages from check nodes to variable nodes given in eq. (1)
+
+become
+
+mcj→vi = L(qij) = log
+
+qij (0) qij (1)
+
+,
+
+(11)
+
+where qij(b) is the probability that check node vi = b, given the value of the ith entry of the received message yi and assuming the parity checks involving ci are satisfied. Note that, as before, a message sent to vi is independent of the previous message coming
+
+9
+
+from vi. Similarly, the messages from variable nodes to check nodes in eq. (2) have the
+
+following form,
+
+mvi→cj = L(cji) = log
+
+cji(0) cji(1)
+
+,
+
+(12)
+
+where cji(b) is the probability that the parity-check cj is satisfied given vi = b. These messages are independent of the messages previously sent by node cj. Finally, we denote the belief after a full iteration as defined in eq. (3) as
+
+bi = L(Qi) = log
+
+Qi(0) Qi(1)
+
+,
+
+(13)
+
+where Qi(b) is the belief that vi = b.
+
+4.1 The algorithm
+
+The key idea behind the quantum-enhanced approach is to use the distribution of samples
+
+given by QAOA to determine the probability that QAOA introduces a bit correction. This
+
+is defined as
+
+εiQAOA =
+
+PQAOA e˜|s = yHT ,
+
+(14)
+
+{e˜|e˜i=1}
+
+where i refers to the ith bit and
+
+p
+
+PQAOA(e˜|s = yHT , α, η, γ, β) = |⟨e˜| e−iβℓBe−iγℓC |+⟩|2,
+
+(15)
+
+ℓ=1
+
+where p is the number of QAOA layers, C is as defined in eq. (9). If one were to decode the received message using this information, then bit i would flip if εQi AOA > 1/2. Hence, we can treat this as a channel that flips a bit if the error probability of that bit is
+greater than one half. With this information, we construct a channel that consists of a
+concatenation of the original BSC channel and the QAOA probability of error output.
+This channel has the following parameter for each bit i:
+
+εi = 1 − εBSC εiQAOA + εBSC 1 − εQi AOA .
+
+(16)
+
+Hence, the initial log-likelihood rate becomes
+
+L(qij) = L(vi) = (−1)yi log
+
+1 − εi εi
+
+.
+
+(17)
+
+Now, we can look at how the probability of error will impact the value of the initial
+log-likelihood ratio. We assume in the following that 0 < εBSC < 1/2. Depending on the value of εiQAOA, we can distinguish three cases:
+
+10
+
+• if εQi AOA > 1/2, then from the QAOA probability distribution, we determine there is an error in position i,
+• if εiQAOA < 1/2, then from the QAOA probability distribution, we determine there is not an error in position i,
+• if εQi AOA = 1/2, then there is no decision on whether there is an error in position i.
+For εQi AOA > 1/2, assuming 0 < εBSC < 1/2, the final probability of error is εi > 1/2. So,
+
+0 < 1 − εi < 1 ⇒ log 1 − εi < 0,
+
+εi
+
+εi
+
+and eq. (17) becomes
+
+L(vi) = (−1)yi+1 log
+
+1 − εi εi
+
+.
+
+(18)
+
+Notice that, when yi = 0, the log-likelihood ratio is negative, signifying that the cor-
+
+responding codeword bit should be 1. Conversely, when yi = 1, the log-likelihood is
+
+positive, indicating that the codeword bit should be 0. Similarly, if εiQAOA < 1/2, then
+
+log ((1 − εi)/εi) > 0 and
+
+L(vi) = (−1)yi log
+
+1 − εi εi
+
+,
+
+(19)
+
+which assigns the correct corresponding signs. Finally, if the probability εQi AOA = 1/2, then L(vi) = log(1) = 0. Here, we can see how the initial QAOA input feeds an initial guess. Equation (18), when QAOA detects an error, flips the sign of the corresponding input LLR, while eq. (19) maintains it. In the case where 1/2 < εBSC < 1, the LLR signs for cases 1 and 2 are interchanged, which gives the desired behavior.
+Then, the steps of the algorithm are as before. The check node update equation in eq. (12) becomes
+
+where
+
+
+
+
+
+L(cji) =
+
+αi′j · ϕ 
+
+ϕ(βi′j) ,
+
+i′ ∈Vj \i
+
+i′ ∈Vj \i
+
+(20)
+
+αij = sign(L(qij)),
+
+βij = |L(qij))| ,
+
+x
+
+ex + 1
+
+ϕ(x) = − log tanh = log
+
+.
+
+2
+
+ex − 1
+
+For the BSC, this can be further simplified since we can see that the term corresponding to the smallest βij in the summation dominates from the shape of ϕ(x). Noting that
+
+11
+
+ϕ(x) is its own inverse,
+
+
+
+
+
+ϕ
+
+ϕ(βi′j) ≃ ϕ
+
+i′ ∈Vj \i
+
+ϕ
+
+min
+i′ ∈Vj \i
+
+βi′j
+
+So, eq. (20) can be re-written as
+
+=
+
+min
+i′ ∈Vj \i
+
+βi′j .
+
+L(cji) =
+
+αi′j · min βi′j.
+
+i′ ∈Vj \i
+
+i′ ∈Vj \i
+
+(21)
+
+The variable node update equation in eq. (11) takes the form
+
+L(qij) = L(vi) +
+
+L(cj′i).
+
+j ′ ∈vi\j
+
+(22)
+
+Finally, we calculate the belief for each bit,
+
+L(Qi) = L(vi) + L(cji).
+
+(23)
+
+j∈vi
+
+We denote v to be the received vector estimated by our algorithm. We assign values to
+
+each vi by
+
+1 vi = 0
+
+L(Qi) < 0, otherwise.
+
+(24)
+
+After determining the v, we calculate the corresponding syndrome s = vHT . If s = 0 or a set number of maximum iterations is reached, the algorithm terminates; otherwise, it returns to eq. (21).
+Figure 4 shows a single QEBP decoding round, illustrating its connection to standard belief propagation and syndrome decoding with QAOA. As with any communication protocol, data is transmitted through a channel; in this case, the physical noise model we use is the AWGN channel (the connection between the AWGN channel and a BSC channel is explored in appendix D), which introduces errors. From this process, we can extract the error probability induced by the channel and find the syndrome associated with the error in the codeword. The QAOA syndrome decoding algorithm only uses the syndrome information without the probability of error, assuming a low-weight error is more probable. In contrast, the belief propagation algorithm takes both the error probability of the channel and the received bit-string as inputs.
+A single round of decoding with the quantum-enhanced belief propagation algorithm involves running the QAOA syndrome decoding algorithm for the syndrome of the string received. Then, from the measurement outcomes, one can estimate the probability of QAOA correcting a bit or, treating QAOA as a second channel, the error probability of the QAOA syndrome decoding algorithm. This estimate, in conjunction with the error
+
+12
+
+Data transmission
+
+Codeword x
+
+AWGN channel
+
+Received string
+y = x + e˜
+
+Error probability ε
+
+s = yHT
+
+QAOA
+
+Syndrome decoding
+
+Sampling
+
+LLR from ε and y
+message passing
+
+Estimate bit
+error probability εQi AOA
+
+BP
+
+QEBP
+
+LLR from ε, εiQAOA and y
+
+message passing
+
+Pick most common sample
+Error vector e˜
+Error-corrected string
+xˆ = y + e˜
+
+Belief estimation
+
+Belief estimation
+
+Error-corrected string xˆ
+
+Error-corrected string xˆ
+
+Figure 4: Decoding process for a single decoding round of belief propagation, quantumenhanced belief propagation, and syndrome decoding with QAOA.
+
+13
+
+probability of the channel and the received string, then becomes the input of the belief propagation algorithm, as previously described. We will consider two cases for the error probability of QAOA. The first, as given in eq. (14), calculates the error probability of each bit by computing the marginal probability of each bit being in error. The second, the QEBP one-sample approach, assigns 0 or 1 to the crossover probability depending on the string with the highest number of measurement counts.
+
+4.2 Equivalence under transmission
+Up to this point, the only assumptions made on the communication protocol are that the codeword belongs to a binary linear code and that all codewords are equally likely to have been transmitted. However, for simplicity in the analysis, one may wish to assume the transmission of the all-zero codeword. To do so, the construction of the LLR input from the BSC channel and QAOA output, as well as the belief propagation algorithm, must satisfy the following symmetry conditions [29].
+
+1. Channel symmetry. The channel is output symmetric:
+
+P(yi = 1|xi = 1) = P(yi = 0|xi = 0)
+and P(yi = 0|xi = 1) = P(yi = 1|xi = 0).
+2. Check node symmetry. Signs factor out of check node message maps, that is,
+
+L(cji)
+
+=
+
+i′ ∈Vj \i
+
+αi′j
+
+·
+
+min
+i′ ∈Vj \i
+
+βi′j ,
+
+where αij = sign(L(qij)) and βij = |L(qij))|, as before.
+3. Variable node symmetry. Sign inversion invariance of variable node message map holds. At initialization, −L(vi) = L(vi). Also, if the signs of the incoming check node messages are reversed, the resulting variable node update expression is L′(qij) = −L(qij), where L(qij) is the original variable node LLR.
+
+The second and third conditions are assumptions built into the belief propagation algorithm, so the quantum-enhanced approach satisfies them. On the other hand, the first is a condition on the channel. As illustrated in section 4.1, from the point of view of the belief propagation algorithm, the input is a log-likelihood depending on the BSC channel error probability and the estimated probability of error given by QAOA. Equation (16) is obtained by treating the QAOA decoding step as a second BSC channel and concatenating it with the actual BSC channel. Then, using the monotonicity of BSC channels, the combined channels are treated as a single BSC channel with probability of error εi for each bit i. For this to be a valid assumption, εiQAOA must be independent
+
+14
+
+of the codeword transmitted and, so, have a symmetric bit crossover probability. As seen from eq. (15), the probability of obtaining any error string after QAOA decoding only depends on the syndrome, which is itself independent of the original codeword transmitted. Therefore, we can treat the input of the belief propagation algorithm as a single BSC with probability of error εi, which satisfies the first condition.
+To show that the output of the quantum-enhanced belief propagation algorithm is invariant under codewords transmission, we invoke the following lemma on the probability of error [29].
+Lemma 1 (Independence of Error Probability Under Symmetry) Let G be a bipartite graph representing a binary linear code, and for a given message-passing algorithm, let Pe(ℓ)(x) denote the conditional probability of error after ℓth decoding iteration, assuming that codeword x was sent. If the channel and the decoder fulfill the symmetry conditions, then Pe(ℓ)(x) is independent of x.
+Lemma 1 implies that, by construction, the algorithm does not depend on the original codeword being transmitted.
+4.3 Error rate performance
+We compare the BLER performance of QAOA-based decoding methods against the minsum belief propagation algorithm and maximum-likelihood decoding. The methods we concentrate on are the QAOA syndrome decoding algorithm, the QAOA syndrome decoding algorithm with an additional codeword post-selection step, the QEBP algorithm as described in section 4.1, and QEBP with one sample as input. For the case where a single sample is taken as input, the sample chosen determines the QAOA bit correction probability; that is, for a sample e˜, if e˜i = b, where b ∈ {0, 1}, then εQi AOA = b. We choose the balancing parameters to be α = 1 and η = 2 to give the parity-check term in the cost Hamiltonian a higher weight. In all cases, we average over 10000 random decoding instances where a codeword has been transmitted through an AWGN channel using BPSK modulation as discussed in Appendix D. We show results for two [12, 8] LDPC codes, a (2, 3)-regular code with redundant parity checks, and an irregular code with an average variable node degree of 1.92 and an average check node degree of 2.88.
+As discussed in section 4.2, without loss of generality, we assume the transmission of the all-zero codeword. For the QAOA syndrome decoder, we simulate the QAOA algorithm using the Julia library Yao [36] and optimize the variational parameters using the BFGS algorithm with 10 random initialization points. For each algorithm run, we collect 10000 measurement samples and rank the output strings by number of appearances. The final solution is the highest-ranked string. The same ranking scheme is implemented for the post-selection algorithm on the strings that satisfy the codeword condition. In fig. 5, we plot the BLER against the signal-to-noise ratio (Eb/N0) for all versions of the decoding algorithm using QAOA with p = 3. Similarly, in fig. 6, we show our results for p = 5. The results for p ∈ {1, . . . , 5} are in appendix C.
+15
+
+Block Error Rate
+
+100
+
+100
+
+10 1 10 1
+
+QAOA QAOA postselection QEBP QEBP one-sample BP ML
+
+2
+
+1
+
+0E0/Nb (d1 B) 2
+
+3
+
+(a) [12, 8]-regular code.
+
+2
+
+1
+
+0E0/Nb (d1 B) 2
+
+3
+
+(b) [12, 8]-irregular code.
+
+Figure 5: Block error rate against signal-to-noise ratio (E0/Nb) for syndrome decoding with QAOA with p = 3. We compare results using QAOA syndrome decoding, QAOA with codeword post-selection, and quantum-enhanced belief propagation decoding.
+
+For the irregular LDPC code (fig. 5b and fig. 6b) with p = 3, the QAOA syndrome decoder with post-selection achieves a BLER of up to 72% lower than QAOA syndrome decoding for Eb/N0 = 3.5 dB. However, for p = 5 the largest improvement seen is of 30% for Eb/N0 = 0.5 dB. This shows that as QAOA produces better solutions, the impact of post-selecting in the BLER is reduced, as expected. A similar effect can be seen for the regular code and the other decoding protocols.
+The QEBP algorithm’s BLER improvement on BP ranges over 13 − 40% across both codes and levels. Remarkably, in fig. 6, we can see how the QEBP algorithm initialized with one sample closely matches the QAOA syndrome decoding BLER for the regular code and the QEBP algorithm for the irregular one. In both instances, matching whichever approach has a lower BLER. This phenomenon may make it a good candidate over QEBP with the estimated probability of error as input.
+4.4 Average number of iterations before convergence
+One of the main characteristics affecting fast communications is the number of iterations it takes for belief propagation to converge to a solution [32]. We compare the number of iterations that it takes for the min-sum algorithm to converge to a solution, be it the correct one or not, and compare it with QEBP and QEBP with one sample as input.
+For the (3, 2)-regular code, in fig. 7a, we find that the min-sum algorithm warmstarted with the probability estimate from level 5 QAOA reduces the number of iterations needed for the convergence of belief propagation on average by 19.5%. The quantumenhanced algorithm with the highest-count sample as input, however, is able to reduce the iterations by approximately 53.7% on average. Nonetheless, due to the quantum resources needed for each decoding round, the final processing throughput is smaller in the quantum-enhanced approach. In the irregular case, both methods display similar
+
+16
+
+Block Error Rate
+
+100
+
+100
+
+10 1 10 1
+
+QAOA QAOA postselection QEBP QEBP one-sample BP ML
+
+2
+
+1
+
+0E0/Nb (d1 B) 2
+
+3
+
+(a) [12, 8]-regular code.
+
+2
+
+1
+
+0E0/Nb (d1 B) 2
+
+3
+
+(b) [12, 8]-irregular code.
+
+Figure 6: Block error rate against signal-to-noise ratio (E0/Nb) for syndrome decoding with QAOA with p = 5. We compare results using QAOA syndrome decoding, QAOA with codeword post-selection, and quantum-enhanced belief propagation decoding.
+
+convergence, reducing iteration by 35% on average.
+
+5 QAOA syndrome decoding post-processing
+In this section, we analyze the decoding performance of 1-layer QAOA in the case of syndrome decoding for the [n, 1] repetition code, where one bit is repeated n times. We consider three versions to obtain the error pattern from the QAOA circuit: one-sample QAOA, QAOA with post-selection, and QAOA with ranking. To compare these methods, we re-express the probability of correct decoding in terms of transfer matrices. Then, we use the eigenvalues of the transfer matrix to maximize the the probability of successful decoding.
+
+5.1 Probability of successful decoding
+
+Akin to the transfer matrix method used to calculate the free energy of the one-dimensional Ising model [37], we want to express the probability of successful decoding for the repetition code in terms of the multiplication of repeated matrices. For the repetition code, the parity-check matrix has the following form
+
+1 1 0 0 0 0 0 
+
+0 1 1 0 0 0 0 
+
+
+
+
+
+H = 0 0 1 1 0 0 0  ,
+
+(25)
+
+
+
+
+
+0 0 0 1 1 0 0 
+
+ 0
+
+0
+
+0
+
+0
+
+1
+
+1
+
+.
+
+.
+
+ .
+
+17
+
+Average Iterations Average Iterations
+
+5.0
+
+4.5
+
+4.0
+
+3.5
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(a) [12, 8]-regular code.
+
+4.0 3.5 3.0 2.5 2.0 1.5 1.0
+2
+
+QEBP QEBP one sample BP
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(b) [12, 8]-irregular code.
+
+Figure 7: Average number of iterations needed over 10000 decoding rounds for the belief propagation algorithm, QEBP and QEBP with a single sample as input.
+
+with dimension (n − 1) × n. The corresponding syndrome-decoding QAOA cost Hamil-
+
+tonian is
+
+n−1
+
+n
+
+Crep = η (1 − 2sj) ZjZj+1 + α Zj.
+
+(26)
+
+j=1
+
+j=1
+
+Then, the probability of successful decoding, that is, the probability of obtaining the state e˜ with syndrome s when decoding a bit string y by measuring a 1-layer QAOA syndrome decoding circuit is given by
+
+↶
+
+2
+
+n−1
+
+PQAOA(e˜|s = yHT , α, η, γ, β) = 2−n ⟨ψ(−β)| exp(−i(−1)e˜nαγZ) Te˜k |ψ(β)⟩ , (27)
+
+k=1
+
+where the arrow on top of the product signifies multiplication on the left,
+
+and |ψ(β)⟩ =
+
+1
+
+Te˜k
+
+= 2
+
+cos(αγ)e−iβ − i(−1)e˜k sin(αγ)eiβ
+
+e−iγ η 1
+
++ − i sin(2β)eiηγ cos(αγ)X 2
+
+− (−1)e˜k − i sin(2β)eiηγ sin(αγ)Y 2
+
+1 +
+
+cos(αγ)eiβ − i(−1)e˜k sin(αγ)e−iβ
+
+e−iγ η Z,
+
+2
+
+√
+
+√ cos β −i sin β
+
+. The full details of this derivation are given in appendix A.
+
+18
+
+The matrix Te˜k has eigenvalues
+
+1 λe˜k,± = 2
+
+cos(αγ)e−iβ − i(−1)e˜k sin(αγ)eiβ
+
+e−iγη
+
+1 ±
+
+−2i sin(2β)eiγη + cos2 (αγ) e2iβ − sin2 (αγ) e−2iβ − i(−1)e˜k sin(αγ) e−iγη,
+
+2
+
+(28)
+
+which can be used to obtain the parameters β and γ that maximize the probability of successful decoding.
+The expected number of errors introduced by a BSC channel is given by
+
+E[|e˜|] = nε,
+
+where ε is the crossover probability of the channel. In applications, the minimum SNR is around 20 dB, resulting in a crossover probability very close to zero. Hence, for a string of length n, we should expect the number of errors to be low. Therefore, expecting the eigenvalues of Te˜0 to dominate, we maximize |λ0,+| for β and γ setting the values for the balancing parameters to be α = 1 and η = 2, as before. The result obtained from the optimization is γ ≈ 0.19419 and β ≈ 0.506185, which are the parameters that we will use in the following to compare post-processing protocols for the repetition code as the length of the codeword increases. These values for γ and β may be sub-optimal for some syndromes, as other terms in the expression for the probability of successful decoding in eq. (27) may be, in turn, minimized. However, due to the similarity of the eigenvalues in eq. (28), this effect is not likely to be, in general, prevalent.
+
+5.2 Block error rate for each post-processing strategy
+
+Now, we compare the expected block error rate for each post-processing strategy after
+
+transmission through the BSC channel. For a message of length n, the probability of re-
+
+ceiving a message with m errors after transmission through a BSC channel with crossover
+
+probability ε is given by
+
+P(m) = εm(1 − ε)n−m.
+
+(29)
+
+We find the probability of wrong decoding for each decoding algorithm for information sent using BPSK modulation transmitted over an AWGN channel. In the following, we find the block error rate for each decoding protocol.
+
+One-sample QAOA
+
+The expectation of wrong decoding by a single run of QAOA is given by
+
+E[X] =
+
+P(wH (e˜)) 1 − PQAOA e˜|s = yHT ,
+
+e˜∈{0,1}n\{0,1}
+
+(30)
+
+where X represents the outcome of sending a message through the bit-flip channel; that is, X gives the probability of obtaining a particular error string. Note that in eq. (30), we have dropped the dependence on the balancing and variational parameters.
+
+19
+
+QAOA with post-selection
+
+The QAOA parity-check algorithm outputs an error string e˜, which added to the received message y should output a codeword x. In this version of the decoding algorithm, all instances where y + e˜ is not a codeword are thrown away. Therefore, for the [n, 1] repetition code, where there are only two possible codewords, the all-zero and the all-one strings, the probability of error is
+
+Perror(e˜)
+
+=
+
+PQAOA e˜′|s = yHT PQAOA (e˜|s = yHT ) + PQAOA (e˜′|s
+
+=
+
+, yHT )
+
+(31)
+
+where e˜′ is the complement error string to e˜, which would output the opposite result. The expectation of wrong decoding would be
+
+E[X] =
+
+P(wH (e˜))Perror(e˜).
+
+e˜∈{0,1}n\{0,1}
+
+(32)
+
+QAOA with ranking
+
+In this approach, the QAOA parity-check algorithm is run multiple times to build an estimate of the probability of obtaining each string. The solutions obtained are then ranked with respect to their corresponding output probability. Define re˜ as follows
+
+re˜ =
+
+re˜ = 1 re˜ = 0
+
+e˜ ≠ e˜′, e˜ = e˜′,
+
+(33)
+
+that is, re˜ is one when the first string in the ranking differs from the expected error string for the input syndrome e˜′ and zero when the correct string is found.
+The expectation of wrong syndrome decoding, in this case, is given by
+
+E[X] =
+
+P(wH (e˜))re˜.
+
+e˜∈{0,1}n\{0,1}
+
+(34)
+
+To estimate re˜, we find the expected number of appearances for each string after r rounds.
+
+Let σe˜ be the number of times string e˜ is obtained after r rounds. Then, the expectation
+
+of σe˜ is
+
+E[σe˜] = rPQAOA e˜|s = yHT ,
+
+(35)
+
+where s is the syndrome obtained from the correct error string e˜′.
+
+We compare these post-processing strategies with majority vote decoding, the optimal
+
+decoding strategy for the repetition code. For majority vote decoding, the block error rate
+
+of the repetition code with n repetitions over a bit-flip channel with cross-over probability
+
+ε is given by
+
+n
+BLER =
+
+n εm(1 − ε)n−m.
+
+(36)
+
+m
+
+m=(n+1)/2
+
+20
+
+Block Error Rate
+
+0.6 0.5 0.4 0.3 0.2 0.1 0.0
+5 n (le1n0 gth of c15ode) 20
+
+0.005 0.004 0.003 0.002 0.001 0.000 0.001 2 4 6 8 10 12
+
+Figure 8: Block error rate against code length for Eb/N0 = 2 dB. We compare majority vote ( ) with the different QAOA post-processing approaches: one-sample QAOA ( ), QAOA with ranking of 1000 samples ( ) and QAOA with post-selection ( ).
+
+Block Error Rate
+
+1.0 0.8 0.6 0.4 0.2 0.0
+2.5 5.0 7.5 n 1(0l.e0ng1t2h.5 of1c5.o0 de1)7.5 20.0 22.5
+Figure 9: Block error rate against code length for Eb/N0 = −4 dB. We compare majority vote ( ) with the different QAOA post-processing approaches: one-sample QAOA ( ), QAOA with ranking of 1000 samples ( ) and QAOA with post-selection ( ).
+21
+
+Figures 8 and 9 show the block error rate for odd values of n in the interval from 3 to 23; odd values were chosen to ensure a definite response to the majority vote decoding. In fig. 9, for Eb/N0 = −4 dB, rapidly approaches one, providing worse than random guessing error performance for n > 3. We note that discarding the rounds that produce strings that are not part of the code drastically improves the BLER scaling, converging to a BLER close to zero for large n when Eb/N0 = 0 dB. However, as the code size increases, the probability of outputting a codeword decreases, which may make the method intractable for large n due to its high computational cost. By estimating the probability distribution through sampling, we can reduce the BLER significantly. The results shown are for an estimate of 1000 samples. However, the resulting BLER does not converge to zero as with maximum-likelihood decoding.
+By optimizing γ and β using the transfer method described in section 5.1, we could determine unique parameters for level-1 QAOA that achieve close to maximum-likelihood decoding performance for positive Eb/N0. In the case of one-sample QAOA, we obtain a linear scaling for positive Eb/N0, which is improved by post-processing, indicating that, in general, post-processing may be required to get good solutions from QAOA.
+
+5.3 Expected number of QAOA decoding rounds
+
+To reach a solution in the case of QAOA decoding with the post-selection algorithm, the corrected string needs to be a codeword. The probability of outputting a codeword after a single round of QAOA decoding is given by
+
+Pcodeword e˜) = PQAOA(e˜|s = yHT + PQAOA e˜′|s = yHT ,
+
+(37)
+
+where e˜′ is the complement error string to e˜, as before. Then, the expected termination probability would be
+
+Ptermination = E[Pcodeword(e˜)] =
+
+P(wH (e˜))Pcodeword(e˜),
+
+e˜∈{0,1}n
+
+(38)
+
+and the expected number of rounds needed for the QAOA decoding algorithm with postselection to terminate is given by
+
+1
+
+E[rounds] =
+
+.
+
+Ptermination
+
+(39)
+
+In fig. 10, we observe that the expected number of rounds for the algorithm to terminate increases exponentially with the length of the code, as expected. The fit equation is 2ax+b, where a = 0.3005264440307172 and b = 2.7767955365873327. In fig. 11, we compare the block error rate for the QAOA ranking protocol for a varying number of total rounds and contrast it with the post-selected QAOA algorithm. In the post-selected case, the expected number of rounds needed for a code length in the range in the figure, that is, from three to eleven, ranges from 8 to 36. In blue, we compare the results obtained
+
+22
+
+Expected number of rounds
+
+1000
+
+800
+
+600
+
+400
+
+200
+
+0
+
+0
+
+5 n (len10gth of c1o5de) 20
+
+25
+
+Figure 10: Rounds required for the post-selected QAOA decoding algorithm to terminate against the length of the repetition code for Eb/N0 = 2 dB.
+
+by setting the number of rounds in the QAOA with ranking case to be the expected number of rounds needed for the post-selected case to terminate. As shown in the figure, the BLER varies for each code length, making it difficult to draw conclusions from this comparison. In practice, the low number of rounds makes the final ranking of solutions strongly dependent on the particular experiment, therefore requiring a higher number of samples for stable results. This effect can be appreciated when looking at the results for an increasing number of rounds. For smaller code lengths, the probability of successful decoding is higher, thus requiring fewer rounds for the BLER to stabilize. Overall, the QAOA ranking method requires more rounds on average to produce stable results than the post-selection counterpart. However, it can achieve BLERs more than five times lower. This reduces the question of which methods to use to the question of how many rounds one is able to perform.
+
+6 Conclusion
+We have introduced the quantum-enhanced belief propagation algorithm, which uses QAOA to warm-start belief propagation. By performing exact simulations for regular and irregular LDPC codes, we have shown that QEBP achieves lower BLER than belief propagation for small block sizes and helps it converge to a solution in fewer iterations. In practice, however, the code block sizes used in error correction with LDPC codes are in the order of thousands, with the maximum code block size set by 3GPP being 8448. The current generation of Noisy Intermediate-Scale Quantum (NISQ) devices prevents us from implementing such large code sizes reliably, as they are susceptible to noise, which compromises the quality of the solution.
+While this paper does not explore the hardware implementation of the QEBP decoder, it is a critical consideration for its realization. Unlike the belief propagation
+
+23
+
+Block Error Rate
+
+0.07 0.06 0.05 0.04 0.03 0.02 0.01 0.00
+3 4 5 n (le6ngth7 of co8 de) 9 10 11
+
+QAOA ranking QAOA post-selection r = rps r = 50 r = 100 r = 500 r = 1000
+
+Figure 11: Block error rate against length of code n for different number of rounds r for the QAOA with ranking protocol. We show results for Eb/N0 = 2 dB and compare them to the post-selected QAOA algorithm.
+
+algorithm, which, when implemented using field-programmable gate array (FPGA) devices, can accommodate different families of codes without reprogramming [38], QAOA requires re-optimizing the parameters of the quantum circuit for each decoding round. This leads to a lack of decoding time flexibility, which could potentially slow down the communication process. Nonetheless, the QEBP algorithm’s potential advantage lies in its modular integration into existing decoding architecture. It allows the quantum device to be re-programmed while the classical decoding architecture continues working and is only added to the routine once it is ready. As we have done for the repetition code, there is also the possibility of speeding up the parameter optimization routine by finding shared parameters between syndromes in advance.
+We have also investigated how different QAOA post-processing strategies may affect the BLER as the code size increases by looking at the repetition code. In particular, as the code length increases, the probability of successful decoding decreases exponentially with the code length. This makes the BLER for the single-round QAOA decoding approach rapidly reach one as the code length increases. Through post-selection and repeated sampling, we reduced the scaling of the BLER. Yet, in contrast with maximum-likelihood decoding, neither method is shown to converge to zero with the code length. Then, the question of which method is preferred is reduced to how many decoding rounds one can perform. In the case where performing a decoding round has a high cost associated with it, then the codeword post-processing strategy produces more stable results, although the number of rounds increases exponentially with the code length. However, if one is able to conduct more rounds, the ranking method provides better error-correcting performance.
+Further work is needed to understand how the algorithm can perform in practice. One potential avenue of study is to carry out noisy simulations to gauge how resilient the QEBP algorithm is against noise in the QAOA circuit. Another possible direction
+
+24
+
+is to investigate convergence in belief propagation and how the initial guess affects the trapping sets of the code.
+Acknowledgments
+S.M.P.G. is supported by the Engineering and Physical Sciences Research Council (EPSRC) [grant no. EP/S021582/1]. AM acknowledges funding from the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme (grant agreement No. 817581).
+References
+[1] R. Gallager. “Low-density parity check codes”. PhD thesis. Cambridge: MIT, 1963. [2] T. Richardson and S. Kudekar. “Design of Low-Density Parity Check Codes for
+5G New Radio”. In: IEEE Communications Magazine 56.3 (2018), pp. 28–34. doi: 10.1109/MCOM.2018.1700839. [3] M.V. Patil, S. Pawar, and Z. Saquib. “Coding Techniques for 5G Networks: A Review”. In: 2020 3rd International Conference on Communication System, Computing and IT Applications (CSCITA). 2020, pp. 208–213. doi: 10.1109/CSCITA47329. 2020.9137797. [4] M.P.C. Fossorier. “Quasicyclic low-density parity-check codes from circulant permutation matrices”. In: IEEE Transactions on Information Theory 50.8 (2004), pp. 1788–1793. doi: 10.1109/TIT.2004.831841. [5] A. Yahya, M.F.M. Salleh, and F. Ghani. “A new Quasi-Cyclic low density parity check codes”. In: vol. 1. Nov. 2009, pp. 239–242. doi: 10 . 1109 / ISIEA . 2009 . 5356472. [6] M. Chiu, C. Lee, et al. QC-LDPC Coding Methods And Apparatus. U.S. Patent 15594239. Dec. 2018. [7] 3GPP. 5G; NR; Physical layer; General description. TS 138 201. [8] K. Zhao, W. Zhao, et al. “LDPC-in-SSD: making advanced error correction codes work effectively in solid state drives”. In: USENIX Conference on File and Storage Technologies. 2013. [9] ETSI. Digital Video Broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for Broadcasting, Interactive Services, News Gathering and other broadband satellite applications (DVB-S2). EN 302 307 V1.2.1. Apr. 2009. [10] J. Pearl. “Reverend bayes on inference engines: a distributed hierarchical approach”. In: Proceedings of the Second AAAI Conference on Artificial Intelligence. AAAI’82. Pittsburgh, Pennsylvania: AAAI Press, 1982, pp. 133–136.
+25
+
+[11] D.J.C. MacKay. “Good error-correcting codes based on very sparse matrices”. In: IEEE Transactions on Information Theory 45.2 (1999), pp. 399–431. doi: 10 . 1109/18.748992.
+[12] A.T. Ihler, J.W. Fisher III, and A.S. Willsky. “Loopy Belief Propagation: Convergence and Effects of Message Errors”. In: Journal of Machine Learning Research 6.31 (2005), pp. 905–936.
+[13] J. Chen, A. Dholakia, et al. “Reduced-complexity decoding of LDPC codes”. In: IEEE Transactions on Communications 53.8 (2005), pp. 1288–1299. doi: 10.1109/ TCOMM.2005.852852.
+[14] W.H. Hu, C.Y. Chen, and N. Bagherzadeh. “A Spectral-based partitioning algorithm for parallel LDPC decoding on a multiprocessor platform”. In: 2009 International SoC Design Conference (ISOCC). 2009, pp. 245–248. doi: 10.1109/SOCDC. 2009.5423793.
+[15] J. Guo, M. Qin, et al. “Enhanced belief propagation decoding of polar codes through concatenation”. In: 2014 IEEE International Symposium on Information Theory. 2014, pp. 2987–2991. doi: 10.1109/ISIT.2014.6875382.
+[16] W. Zhang, C. Yue, et al. Efficient Near Maximum-Likelihood Reliability-Based Decoding for Short LDPC Codes. 2023. arXiv: 2306.00443 [cs.IT].
+[17] E. Farhi, J. Goldstone, and G. Gutmann. “A Quantum Approximate Optimization Algorithm”. In: Proceedings of the 3rd International Workshop on Post-Moore’s Era Supercomputing (2014).
+[18] T. Matsumine, T. Koike-Akino, and Y. Wang. “Channel Decoding with Quantum Approximate Optimization Algorithm”. In: IEEE International Symposium on Information Theory - Proceedings (2019). doi: 10.1109/ISIT.2019.8849710.
+[19] C.Y. Lai, K.Y. Kuo, and B.J. Liao. Syndrome decoding by quantum approximate optimization. 2022. arXiv: 2207.05942 [quant-ph].
+[20] S. Kasi, J. Sud, et al. A Quantum Approximate Optimization Algorithm-based Decoder Architecture for NextG Wireless Channel Codes. 2024. arXiv: 2408.11726 [quant-ph].
+[21] J. Bruck and M. Blaum. “Neural networks, error-correcting codes, and polynomials over the binary n-cube”. In: IEEE Transactions on Information Theory 35.5 (1989), pp. 976–987. doi: 10.1109/18.42215.
+[22] J. Zhu, X. Yu, and H. Zeng. “Meta-Learning with QAOA for Channel Decoding”. In: 2024 5th Information Communication Technologies Conference (ICTC). 2024, pp. 239–242. doi: 10.1109/ICTC61510.2024.10602144.
+[23] Z. Bian, F. Chudak, et al. “Discrete optimization using quantum annealing on sparse Ising models”. In: Frontiers in Physics 2 (2014). issn: 2296-424X. doi: 10. 3389/fphy.2014.00056.
+26
+
+[24] N. Chancellor, S. Zohren, et al. “A Direct Mapping of Max k-SAT and High Order Parity Checks to a Chimera Graph”. In: Scientific Reports 6 (Apr. 2016). doi: 10.1038/srep37107.
+[25] N. Ide, T. Asayama, et al. “Maximum Likelihood Channel Decoding with Quantum Annealing Machine”. In: 2020 International Symposium on Information Theory and Its Applications (ISITA). 2020, pp. 91–95.
+[26] S. Kasi and K. Jamieson. “Towards quantum belief propagation for LDPC decoding in wireless networks”. In: Proceedings of the 26th Annual International Conference on Mobile Computing and Networking. MobiCom ’20. New York, NY, USA: Association for Computing Machinery, 2020. isbn: 9781450370851. doi: 10.1145/ 3372224.3419207.
+[27] M. Dupont, B. Sundar, et al. Quantum Optimization for the Maximum Cut Problem on a Superconducting Quantum Computer. 2024. arXiv: 2404.17579 [quant-ph].
+[28] R. Tanner. “A recursive approach to low complexity codes”. In: IEEE Transactions on Information Theory 27.5 (1981), pp. 533–547. doi: 10.1109/TIT.1981. 1056404.
+[29] T.J. Richardson and R.L. Urbanke. “The capacity of low-density parity-check codes under message-passing decoding”. In: IEEE Transactions on Information Theory 47.2 (2001), pp. 599–618. doi: 10.1109/18.910577.
+[30] M. Safak. Digital communications / Mehmet Safak. eng. Chichester, West Sussex, United Kingdom: Wiley, 2017. isbn: 9781119091271.
+[31] J.S. Yedidia, W.T. Freeman, and Y. Weiss. “Constructing free-energy approximations and generalized belief propagation algorithms”. In: IEEE Transactions on Information Theory 51.7 (2005), pp. 2282–2312. doi: 10.1109/TIT.2005.850085.
+[32] P. Hailes, L. Xu, et al. “A Survey of FPGA-Based LDPC Decoders”. In: IEEE Communications Surveys & Tutorials 18.2 (2016), pp. 1098–1122. doi: 10.1109/ COMST.2015.2510381.
+[33] A. Price and J. Hall. A Survey on Trapping Sets and Stopping Sets. 2017. arXiv: 1705.05996 [cs.IT].
+[34] M. Gomes, G. Falcao, et al. “Flexible Parallel Architecture for DVB-S2 LDPC Decoders”. In: IEEE GLOBECOM 2007 - IEEE Global Telecommunications Conference. 2007, pp. 3265–3269. doi: 10.1109/GLOCOM.2007.619.
+[35] R.M. Tanner, D. Sridhara, et al. “LDPC block and convolutional codes based on circulant matrices”. In: IEEE Transactions on Information Theory 50.12 (2004), pp. 2966–2984. doi: 10.1109/TIT.2004.838370.
+[36] X.Z. Luo, J.G. Liu, et al. “Yao.jl: Extensible, Efficient Framework for Quantum Algorithm Design”. In: Quantum 4 (Oct. 2020). doi: 10.22331/q-2020-10-11341.
+27
+
+[37] H. A. Kramers and G. H. Wannier. “Statistics of the Two-Dimensional Ferromagnet. Part I”. In: Phys. Rev. 60 (3 Aug. 1941), pp. 252–262. doi: 10.1103/PhysRev.60. 252.
+[38] J. Choi and R.A. Rutenbar. “Configurable and scalable belief propagation accelerator for computer vision”. In: 2016 26th International Conference on Field Programmable Logic and Applications (FPL). 2016, pp. 1–4. doi: 10.1109/FPL.2016. 7577316.
+[39] M. Luby, M. Mitzenmacher, et al. “Improved low-density parity-check codes using irregular graphs”. In: IEEE Transactions on Information Theory 47 (Feb. 2001), pp. 585–598. doi: 10.1109/18.910576.
+[40] R. Gallager. Course materials for 6.450 Principles of Digital Communications I. Chapter 8: Detection, coding and decoding. 2006.
+28
+
+Appendices
+
+A Calculations for probability of successful decoding by QAOA syndrome decoding algorithm
+
+In this section, we show how to re-write the probability of successful decoding using
+
+transfer matrices, as given in eq. (27). Let C = η
+
+jn=−11(1 − 2sj)ZjZj+1 + α
+
+n−1 j=1
+
+Zj
+
+.
+
+We
+
+first re-express the amplitude of a state e˜ state with syndrome s as
+
+n
+
+n−1
+
+n
+
+⟨e˜| exp(−iβ Xj) exp(−iγ η (1 − 2sj)ZjZj+1 + α Zj
+
+j=1
+
+j=1
+
+j=1
+
+n
+
+= ⟨e˜| exp(−iβ Xj) exp(−iγC) exp(−iγαZn)|+⟩⊗n
+
+j=1
+
+n
+= ⟨e˜| exp(−iβ Xj) exp(−iγC) cos(αγ)|+⟩⊗n
+
+j=1
+
+n
+
+− ⟨e˜| exp(−iβ Xj) exp(−iγC)i sin(αγ)Zn|+⟩⊗n.
+
+j=1
+
+)|+⟩⊗n
+
+The first term in the previous expression can be re-written by inserting a closure relation as
+
+n
+
+cos(αγ)⟨e˜| exp(−iβ Xj) exp(−iγC)|+⟩⊗n
+
+j=1
+
+
+
+
+
+n
+
+= cos(αγ)⟨e˜| exp(−iβ Xj) 
+
+|z⟩⟨z| exp(−iγC)|+⟩⊗n
+
+j=1
+
+z∈{0,1}n
+
+= cos(αγ)2−n/2
+
+(cos β)n−|e˜+z| (−i sin β)|e˜+z| exp(−iγC),
+
+z∈{0,1}n
+
+where
+
+n−1
+
+n−1
+
+n−1
+
+n−1
+
+C = η (−1)zj+zj+1+sj + α (−1)zj = η (−1)zj+zj+1 (−1)e˜j+e˜j+1 + α (−1)zj
+
+j=1
+
+j=1
+
+j=1
+
+j=1
+
+and we have used the fact that sj = e˜iHij = e˜j + e˜j+1. Now, we perform the following change of variables z′ = z + e˜ such that
+
+29
+
+and
+
+n−1
+
+n−1
+
+C = η (−1)zj′ +zj′+1 + α (−1)zj′ +e˜j ,
+
+j=1
+
+j=1
+
+cos(αγ)2−n/2
+
+(cos β)n−|z′| (−i sin β)|z′| exp(−iγC)
+
+z′∈{0,1}n
+
+= cos(αγ)2−n/2 ei(−1)e˜k +1 αγ
+
+√ √ cos β
+
+↶ T n−1
+
+−i sin β
+
+√ k=1
+
+0
+
+cos β
+
+0
+
+ei(−1)e˜k αγ
+
+0
+
+= cos(αγ)2−n/2
+
+√ √ cos β
+−i sin β
+
+T
+
+√
+
+cos β √ 0
+
+0
+
+−i sin β
+
+e−iηγ eiηγ
+
+√0 −i sin β
+
+√ √ cos β
+−i sin β
+
+eiηγ e−iηγ
+
+↶ 
+n−1
+
+
+k=1 
+
+cos βe−iγ(η+(−1)e˜k α)
+
+−
+
+i 2
+
+sin(2β)e−iγ(−η+(−1)e˜k α)
+
+
+
+−
+
+i 2
+
+sin(2β )e−iγ (−η+(−1)e˜k +1 α)
+
+
+
+
+
+−i sin βe−iγ(η+(−1)e˜k+1α)
+
+
+
+√ √ cos β
+−i sin β
+
+.
+
+Here, we label the matrix inside the curly brackets as Te˜k. Obtaining a similar expression for the other term and using |ψ(β)⟩ =
+the amplitude becomes
+
+√
+
+√ cos β −i sin β
+
+,
+
+n
+
+n−1
+
+n
+
+⟨e˜| exp(−iβ Xj) exp(−iγ η (1 − 2sj)ZjZj+1 + α Zj )|+⟩
+
+j=1
+
+j=1
+
+j=1
+
+↶
+
+↶
+
+n−1
+
+n−1
+
+= 2−n/2(cos(αγ)⟨ψ(−β)| Te˜k |ψ(β)⟩ − i(−1)e˜n sin(αγ)⟨ψ(−β)|Z Te˜k |ψ(β)⟩)
+
+k=1
+
+k=1
+
+↶ n−1
+= 2−n/2⟨ψ(−β)| cos(αγ) − i(−1)e˜n sin(αγ)Z Te˜k |ψ(β)⟩
+
+k=1
+
+↶ n−1
+= 2−n/2⟨ψ(−β)| exp(−i(−1)e˜nαγZ) Te˜k |ψ(β)⟩.
+k=1
+
+Therefore, we obtain that the probability of successful decoding of the repetition code by the QAOA syndrome decoding algorithm is
+
+30
+
+↶
+
+2
+
+n−1
+
+PQAOA(e˜|s = yHT , α, η, γ, β) = 2−n ⟨ψ(−β)| exp(−i(−1)e˜nαγZ) Te˜k |ψ(β)⟩ . (40)
+
+k=1
+
+B LDPC codes used for simulations.
+
+The parity-check matrix corresponding to the [12, 8]-irregular LPDC code used in sec-
+
+tion 4 is
+
+1 0 0 0 0 0 0 0 0 0 1 0
+
+0 0 0 1 0 0 1 0 0 0 0 1
+
+0 1 1 0 0 1 0 0 0 0 0 0
+
+1 0
+
+1 0
+
+0 0
+
+0 0
+
+0 1
+
+0 0
+
+1 0
+
+0 1
+
+0 1
+
+0 0
+
+0 0
+
+0 0
+
+.
+
+(41)
+
+0 0 0 1 0 0 0 1 0 1 0 0
+
+0 0 0 0 0 0 0 0 1 1 0 1
+
+001011000000
+
+The (2, 3)-regular LDPC code is
+
+0 0 0 1 0 0 1 0 1 0 0 0
+
+1 0 0 0 0 0 0 1 0 0 1 0
+
+0 0 0 1 0 1 0 0 0 0 0 1
+
+0 1
+
+1 0
+
+0 0
+
+0 0
+
+1 1
+
+0 0
+
+0 0
+
+0 1
+
+0 0
+
+1 0
+
+0 0
+
+0 0
+
+.
+
+(42)
+
+0 1 1 0 0 0 0 0 1 0 0 0
+
+0 0 1 0 0 0 1 0 0 0 1 0
+
+000001000101
+
+C Error performance for QAOA layers 1-5
+Figure 12a compares the BLER of the QAOA decoding algorithm, the sum-product algorithm, and the maximum-likelihood for the (2, 3)-regular LDPC code. As shown in the figure, QAOA with five layers outperforms the best-known efficient classical decoding algorithm. However, by performing an additional post-selection step (see fig. 12b), the number of layers needed to outperform belief propagation is reduced to 2, achieving a lower block error rate than level 5 QAOA syndrome decoding.
+Figure 12c shows the BLER for the QAOA-enhanced belief propagation algorithm, comparing it to the sum-product algorithm and maximum-likelihood decoding, as before. QEBP with 1-layer QAOA gives an error performance similar to standard belief propagation.
+
+31
+
+Similarly, the results for the [12, 8]-irregular code are summarized in fig. 13, which, as expected, has better error rate performance overall [39]. In this case, all QAOA decoding algorithms are much closer in block error rate to minimum distance decoding than in the regular case. Remarkably, post-selecting for codewords in QAOA decoding gives a near maximum-likelihood performance for QAOA level 5.
+The best-performing algorithm, irrespective of the number of QAOA layers, is the QAOA decoder with codeword post-selection. However, for level-1 QAOA, the QAOAenhanced belief propagation approach either matches (fig. 12c) or is very close (fig. 13c) to belief propagation.
+
+D Probability of error for the AWGN channel
+
+Here, we summarize how we extract the probability of error from an AWGN channel
+
+with binary phase-shift key (BPSK) modulation, connecting it to the BSC channel. The
+
+encoded message is sent through a communication channel that may introduce bit-flip
+
+errors. We consider an additive white Gaussian noise (AWGN) channel with zero mean
+
+and variance σ2. For the AWGN channel, the variance is given in terms of the noise
+
+power spectral density N0 by
+
+σ2 = N0 ,
+
+(43)
+
+2
+
+and the noise density function is
+
+1
+
+−n2
+
+fN (n) =
+
+exp 2πN0/2
+
+N0
+
+.
+
+(44)
+
+We use BPSK modulation, which segments bits into one tuple (1 → A and 0 → −A), which are then mapped into a waveform. Take X to be the transmitted value of the waveform, Y to be the received value, modified by the AWGN channel, and X the assigned value after receiving Y . Using a Maximum A Posteriori (MAP) decoder, the
+resulting phase assignments are: X = A if Y > 0 and X = −A if Y < 0. So, the probability of wrong detection is given by
+
+1
+
+1
+
+P (X ̸= X) = P (X = A|X = −A) + P (X = −A|X = A) = P (N > A),
+
+(45)
+
+2
+
+2
+
+where N ∼ N (0, N0/2) is a Gaussian noise random variable corresponding to the AWGN channel. A measure of signal-to-noise ratio for a digital communication system is Eb/N0, where Eb is the energy per information bit. The probability of error is then related to Eb/N0 by
+
+Pe = Q
+
+2Eb , N0
+
+(46)
+
+where Q is the q-function [40]. Equation (46) gives the probability of error per bit. So, we can construct a BSC channel with crossover probability ε = Pe.
+
+32
+
+Block Error Rate
+
+Block Error Rate
+
+Block Error Rate
+
+10 1
+
+10 1
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(a) Syndrome decoding with QAOA.
+
+10 1
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(b) Decoding with codeword post-selection.
+BP MD QAOA QAOA postselection QEBP
+QAOA level 1 QAOA level 2 QAOA level 3 QAOA level 4 QAOA level 5
+
+(c) Decoding with QAOA-enhanced belief propagation.
+
+Figure 12: Block error rate against signal-to-noise ratio (E0/Nb) for syndrome decoding with QAOA using a ranking system, QAOA with codeword post-selection and QAOAenhanced belief propagation decoding. The test code is a [12, 8]-regular code, and the simulations were run for p = 1, . . . , 5.
+
+33
+
+Block Error Rate
+
+Block Error Rate
+
+Block Error Rate
+
+10 1
+
+10 1
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(a) Syndrome decoding with QAOA.
+
+10 1
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(b) Decoding with codeword post-selection.
+BP MD QAOA QAOA postselection QEBP
+QAOA level 1 QAOA level 2 QAOA level 3 QAOA level 4 QAOA level 5
+
+2
+
+1
+
+0E0/Nb (1dB) 2
+
+3
+
+(c) Decoding with QAOA-enhanced belief propagation.
+
+Figure 13: Block error rate against signal-to-noise ratio (E0/Nb) for syndrome decoding with QAOA using a ranking system, QAOA with codeword post-selection and QAOAenhanced belief propagation decoding. The test code is a [12, 8]-irregular code, and the simulations were run for p = 1, . . . , 5.
+
+34
+
+

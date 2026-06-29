@@ -1,0 +1,417 @@
+Received 24 June 2025, accepted 9 July 2025, date of publication 21 July 2025, date of current version 25 July 2025. Digital Object Identifier 10.1109/ACCESS.2025.3590986
+
+Iteration Overlap and Dual-Sided LSOVA for Efficient Parallel Turbo Decoding Architectures
+STEFAN WEITHOFFER , (Member, IEEE), AND CHARBEL ABDEL NOUR , (Senior Member, IEEE)
+Lab-STICC, UMR CNRS 6285, IMT Atlantique, 29238 Brest, France
+Corresponding author: Stefan Weithoffer (stefan.weithoffer@imt-atlantique.fr) This work was supported in part by French National Research Agency TurboLEAP Project under Grant ANR-20-CE25-0007.
+
+ABSTRACT An efficient turbo decoder architecture is proposed by jointly exploring advancements in code design, decoding algorithms, and hardware implementation to achieve high-throughput and low-latency performance. At the algorithmic level, we introduce Dual-Sided Local-SOVA (DS-LSOVA), an enhanced variant of Local-SOVA that significantly lowers the complexity of extrinsic information computation while preserving decoding accuracy. To further improve implementation efficiency, iteration overlap interleavers are developed specifically for fully pipelined, iteration-unrolled UXMAP decoders, enabling full iteration overlap. This design reduces decoding latency and boosts hardware area efficiency by up to 22%. Importantly, these gains are achieved without sacrificing error-correcting performance: DS-LSOVA matches the Frame Error Rate (FER) of conventional max-Log-MAP decoding, while the proposed interleavers deliver FER results comparable to the Quadratic Permutation Polynomial (QPP) interleavers used in LTE.
+INDEX TERMS Forward error correction, fully parallel, high-throughput, local-SOVA, turbo decoder.
+
+I. INTRODUCTION The Long Term Evolution Advanced Pro (LTE-A Pro) standard [1] has played a pivotal role in the transition toward 5G networks, supporting both the progressive evolution and seamless coexistence of LTE-A Pro systems with 5G New Radio (5G-NR) [2]. Beyond mobile broadband, LTE-A and LTE-A Pro are also being adapted to emerging use cases such as Machine-to-Machine (M2M) communication [3] and Vehicle-to-Everything (V2X) applications [4]. This ongoing evolution imposes increasingly stringent requirements on throughput and latency—constraints that directly impact the physical layer, where efficient and robust robust decoding mechanisms for error correction play a crucial role.
+Turbo codes [5], widely employed for error correction in LTE standards, are renowned for their inherent rate flexibility and low-complexity encoding. However, when targeting ultra-high-throughput decoding, they face strong competition from Low-Density Parity-Check (LDPC) codes [6], which
+The associate editor coordinating the review of this manuscript and approving it for publication was Nurul I Sarkar .
+
+leverage a decoding algorithm that lends itself more naturally to parallelization.
+As a result, highly parallel, ultra-high-throughput Turbo Decoding (TD) has garnered relatively limited attention from the research community, despite notable advancements in area efficiency (measured in throughput per mm2) [7], [8], [9]. Nevertheless, recent progress in code design [10], decoding algorithms [11], and hardware architectures [7], [12] demonstrates that substantial performance gains continue to be achieved. These developments also highlight a critical limitation in prior research: the predominant reliance on variants of the Bahl, Cocke, Jelinek, and Raviv (BCJR) algorithm [13], which, due to its recursive nature, poses significant challenges for efficient hardware parallelization.
+For Beyond 5G applications, for which channel coding schemes are discussed in [14], [15], decoding latency has emerged as a critical performance metric [16]. To address this, shuffled decoding—which extends parallelism to the iteration level through immediate extrinsic information exchange [17], [18]—has been proposed as a technique to reduce the latency of iterative decoders. However, the use of incomplete extrinsic information in this approach leads to
+
+127902
+
+
+ 2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+
+VOLUME 13, 2025
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+a degradation in error-correcting performance, necessitating additional decoding iterations to compensate. This not only undermines the intended latency benefits but also results in increased area overhead for fully pipelined, iteration-unrolled decoders designed for ultra-high-throughput scenarios [7], [8].
+While efficient scheduling of layer-wise decoding has been extensively explored for LDPC decoders—primarily to address the limitations of immediate or partial extrinsic information exchange [19], [20], [21]—the concept has only recently regained attention in the context of Turbo decoding in the form of iteration overlap [22], [23]. Building on our recent contributions in code and interleaver design, decoding algorithms, and hardware architectures, this work takes a significant step forward by integrating these advances into a fully realized decoder implementation for the first time.
+The main contributions of this work are as follows:
+• The introduction of a dual-sided computation scheme for extrinsic information within the Local-SOVA (LSOVA) algorithm, resulting in the Dual-Sided Local-SOVA (DS-LSOVA) variant (Section II-B);
+• The design of iteration overlap interleavers that enable full iteration overlap between the half-iteration pipeline stages in fully pipelined, iteration-unrolled decoders (Section III);
+• The development of the first hardware architecture and implementation results for fully iteration-unrolled decoders based on both LSOVA and DS-LSOVA (Sections IV and V).
+The remainder of this paper is organized as follows: Section II introduces the three decoding algorithms considered in this work, including the proposed DS-LSOVA. Section III details the iteration-overlap scheduling strategy and the corresponding interleaver design. The focus then shifts to hardware architectures in Section IV, with implementation results presented in Section V. Finally, Section VI concludes the paper.
+II. DECODING ALGORITHMS Fig. 1 shows the structure of a turbo decoder that consists of two component decoders, which are connected by an interleaver and a de-interleaver −1. The two decoders exchange extrinsic information e in an iterative loop where we refer to an execution of one component decoder as a Half Iteration (HI) and the execution of both decoders as a Full Iteration (FI). Most classical hardware architectures for TD implement one decoder instance based on the maxLog-MAP algorithm (MLM) which alternately operates as Decoder1 and Decoder2 [5]. Similarly, the Fully Pipelined Iteration Unrolled decoders from [7], [8], and [9] are based on the MLM as well (see also Sec. IV). However, in [11] the LSOVA algorithm was proposed as an alternative to the MLM that offers significant complexity reductions for the computation of the extrinsic information. In subsequent work, we confirmed the predicted complexity reductions with hardware implementations of its computational units [12].
+VOLUME 13, 2025
+
+FIGURE 1. General turbo decoder structure.
+
+A. THE MAX-LOG-MAP ALGORITHM
+In the following, we will briefly recall the MLM
+algorithm [24]. For each step in the code trellis (see Fig. 2 (a)), the MLM algorithm computes a forward state metric αis, backward state metric βis+′ 1 and a branch metric γis,,i+s′ 1 for each state s, s′ and each branch (s, s′) respectively. The state metrics α and β are calculated recursively:
+
+αs′ = max αs + γs,s′
+∀s
+
+βs = max βs′ + γs,s′ . (1)
+∀s′
+
+From the state and branch metrics, an a Posteriori Probability
+
+(APP) Logarithmic Likelihood Ratio (LLR) i is calculated by considering the ‘‘best’’ branch carrying the hard decision
+
+u = 0 and the best branch carrying the hard decision u = 1:
+
+i = max
+∀(s,s′)
+
+γsu,=s′ 0 + αs + βs′
+
+− max
+∀(s,s′)
+
+γsu,=s′ 1 + αs + βs′
+
+Processing r trellis steps at the same time, referred to as radix2r decoding [25], reduces the state metric memory and the
+decoding latency. However, due to the increase in complexity
+and critical path, typically a radix ≤ 16 will be used for hardware implementations.1
+
+B. THE LOCAL-SOVA ALGORITHM
+The LSOVA algorithm, proposed in [11] offers a significant reduction in complexity over the classical MLM by reformulating and re-ordering of computations. This is particularly true for the case of processing r trellis steps at the same time, referred to as radix-2r decoding.
+Where the MLM operates on branches in the trellis diagram, the LSOVA operates on paths stretching along k trellis steps i, i + 1, . . . i + (k − 1) for a radix order R = 2r . A path in the trellis is defined as a 3-tuple consisting of a path metric M , a set of binary hard decisions u = {ui, ui+1, . . . , ui+(k−1)} and a set of positive reliability values L = {Li, Li+1, . . . , Li+(k−1)}:
+
+P = {M , u, L} ∈ R × {0, 1}k × (R+)k .
+
+(2)
+
+The path metric M along a branch (s, s′) in a radix-2r trellis, i.e. traversing r subsequent branches carrying the hard decisions u, is composed of α and β state metrics which themselves are calculated following Eq. 1 as well as the branch metrics. For radix-2 we get:
+
+M = αs + γs,s′ + βs′ .
+
+(3)
+
+1For the hardware implementations discussed in Sec. V, we use radix-4.
+
+127903
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+FIGURE 2. Algorithmic steps on the radix-4 code trellis for (a) MLM (b) LSOVA and (c) the proposed Dual-Sided LSOVA.
+
+For the path structure, the Local-SOVA defines a merge operation, which takes as input two paths Pa = {Ma, ua, La} and Pb = {Mb, ub, Lb} and outputs one path Pc = {Mc, uc, Lc}.
+It relies on three functions:
+
+Mc = f0(Ma, Mb) = max(Ma, Mb)
+
+(4)
+
+uc = f1(ua, ub) =
+
+ua ub
+
+, if f0(Ma, Mb) = Ma , if f0(Ma, Mb) = Mb
+
+(5)
+
+Lc = Lic|Lic = f2(Lia, Lib) .
+
+(6)
+
+The update of the reliability values L through f2 is performed
+
+on the basis of the Hagenauer rule (HR) [26] and the Battail
+
+rule (BR) [27], [28]. Let Pa and Pb be two paths to be merged and Mp and Mp′ be defined as Mp = max(Ma, Mb) and Mp′ = min(Ma, Mb). The metric difference between Pa and
+Pb is then defined as p,p′ = Mp −Mp′ and is always positive. Then the updates on Lic are performed as follows:
+
+Lic = f2(Lia, Lib)
+
+
+
+ min Lpi ′ , p,p′ =
+
+, if uia ̸= ubi (HR)
+
+(7)
+
+ min Lpi ′ , p,p′ + Lpi , if uia = uib (BR).
+
+If all paths at a trellis section are merged, the resulting path Pc is the maximum likelihood (ML) path and it carries the hard decision provided by the decoder for this section. The merge operation was proven in [11] to be commutative and associative which allows merging in an arbitrary order. In particular, the merges are rearranged so that paths Pa and Pb with the same ending state s′ are merged first to yield the path metric
+
+Mc = f0 (Ma, Mb)
+
+(8)
+
+= max αs0 + γs0,s′ + βs′ , αs1 + γs1,s′ + βs′
+
+= max αs0 + γs0,s′ , αs1 + γs1,s′ + βks′+1
+
+(9)
+
+= αs′ + βs′ ,
+
+(10)
+
+The careful reordering of merges can allow for the implicit computation of the forward state metrics, as can be seen
+
+127904
+
+from (9). To achieve this, the computations are divided into two distinct phases. The first is the Add-Compare-Select (ACS) phase, which merges paths that terminate in the same trellis state. This is followed by the Soft Output Unit (SOU) phase, where the remaining paths, ending in different states, are further merged. It is important to note that the number of layers in the merge tree during the SOU phase depends solely on the memory length ν of the underlying convolutional code. This structure is independent of the radix order, as exactly one path per trellis state is passed forward from the ACS phase. Thus, for a memory length ν, the SOU merges require a binary tree of ν layers, leading to a significant reduction in complexity of the SOU in comparison to the MLM.
+
+C. PROPOSED DUAL-SIDED LOCAL-SOVA
+
+Building on the use of paths and path-merging during the computation of the backward metric, we propose reusing the same comparison tree in the SOU phase to compute both extrinsic information and hard decisions for the forward and backward paths simultaneously—effectively performing two radix-2r steps in parallel. This approach further reduces the number of comparison operations required in the SOU phase, as only a single comparison tree needs to be traversed. We get a slightly different merge operation in forward and backward direction in the ACS phase. For even k, uptates on reliabilities and hard decisions are only performed in forward direction and for odd k in the backward direction. For the forward direction, we get:
+
+Mc = f0(Ma, Mb)
+
+(11)
+
+uc = forward: f1(ua, ub), if k mod 2 = 0
+
+(12)
+
+0 else
+
+Lc = forward: f2(La, Lb), if k mod 2 = 0
+
+(13)
+
+0 else
+
+where k refers to the k-th trellis step. Note, that the overall computational complexity in the ACS phase remains the same
+
+VOLUME 13, 2025
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+since half of the reliability values L and hard decisions u are computed in the even steps of the forward ACS and the other half in the odd steps of the backward ACS. For the backward ACS operations, we obtain:
+
+Mc = f0(Ma, Mb)
+
+(14)
+
+uc = backward: f1(ua, ub), if k mod 2 = 1
+
+(15)
+
+0 else
+
+Lc = backward: f2(La, Lb), if k mod 2 = 1
+
+(16)
+
+0 else
+
+In the SOU phase, the path metrics M of the winning
+forward and backward paths are first summed, and the corresponding hard decision vectors ufw and ubw, along with the preliminary reliability values Lfw and Lbw from the for-
+ward and backward merges, are concatenated (see Fig. 2(c)).
+The merging of these combined paths—each spanning two radix-2r trellis steps—is then carried out as in the LSOVA algorithm: The merges are performed in a tree of ν layers. However, in difference to the LSOVA, the amount of updates
+is doubled. This extended version of LSOVA is referred to as
+the DS-LSOVA.
+
+III. ITERATION OVERLAP INTERLEAVERS From a code design perspective, the interleaver plays a crucial role in determining the error-correcting performance of turbobased forward error correction (FEC) schemes. However, the interleaving and de-interleaving operations—responsible for data reordering between the two component decoders—also introduce significant implementation challenges, particularly in terms of hardware complexity.
+In architectures with a single decoder instance, the degree of parallelism must be carefully managed to prevent memory access conflicts [29], [30], [31]. For fully pipelined, iteration-unrolled architectures—where complete frames are processed in parallel—the interleaver imposes precedence constraints that directly influence the scheduling of successive HI computations.
+In our prior work [22], we demonstrated that with proper interleaver design, full computational overlap between half-iterations is achievable: extrinsic information generated in HI i can be immediately consumed in HI i + 1.
+To enable this, we focus on Almost Regular Permutation (ARP) interleavers [31], and adopt a protograph-based design method from [10], which explicitly accounts for the structural characteristics of the UXMAP decoder.
+
+A. PROPOSED PROTOGRAPH ARP INTERLEAVER DESIGN An ARP interleaver is defined by a value P, which is relatively prime to the frame size K , a shift vector S, and a disorder degree Q [31]. Given an interleaved frame index i, the corresponding index in the natural (non-interleaved) order is given by ARP(i), computed as:
+
+ARP(i) = P · i + S(i mod Q) mod K .
+
+(17)
+
+VOLUME 13, 2025
+
+FIGURE 3. Layer connections in an ARP interleaver with K = 16, P = 3, Q = 4, S = {3, 11, 15, 4}.
+
+For a layered construction [10], the indices ARP(i) are divided into Q groups of K /Q bits called layers such that
+ARP(i + Q) mod Q = ARP(i) mod Q. (18)
+Each layer l = i mod Q in the interleaved order is linked to a layer l′ = ARP(i) mod Q in the natural order. Fig. 3 (a) illustrates that for the example of K = 16, P = 3, Q = 4, S = {3, 11, 15, 4}. The link between the layers of the non-interleaved and the interleaved order can be expressed by a protograph as shown for the same example in Fig. 3 (b).
+In [10], the protograph structure was used to impose specific constraints on the interleaver design, aiming to mitigate the adverse effects introduced by puncturing. The resulting puncture-constrained interleavers demonstrated significantly improved performance compared to LTE turbo codes of the same frame length K .
+
+B. FULLY UNROLLED WINDOWED SCHEDULE & OVERLAP
+
+Figure 4 depicts the decoding schedule for a fully pipelined,
+
+iteration-unrolled decoder. In this example, two decoding
+
+windows of size WS = K /2 are processed in parallel as they progress through the pipeline. Generally, the interleaving
+
+between HIs j and j + 1 can only occur after the complete
+
+processing of HI j, due to precedence constraints imposed by
+
+the interleaver on extrinsic information exchange [22]. As a
+
+result, delay registers must be introduced to maintain pipeline
+
+alignment between successive HIs, as shown in Fig. 4(a).
+
+To enable immediate extrinsic information exchange and
+
+fully overlap the processing of consecutive HIs j and j + 1,
+
+we propose explicitly designing the interleaver to align the
+
+precedence constraints with the pipelines processing sched-
+
+ule (Fig. 4(b)). To achieve the maximum Overlap Depth
+
+(OD), the extrinsic information corresponding to bit index i,
+
+denoted as
+
+e i
+
+and
+
+produced
+
+at
+
+time
+
+slot
+
+GUX(i)
+
+during
+
+HI
+
+j,
+
+must be available for consumption in HI j + 1 at or after time
+
+slot CUX(i):
+
+GUX(i) = | mod(i, WS ) − (WS − 1)/2 |
+
+(19)
+
+CUX(i) = (WS − 1)/2 − GUX(i),
+
+(20)
+
+127905
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+FIGURE 4. (a) Non overlapped UXMAP decoding schedule (b) UXMAP decoding schedule with full overlap.
+
+Here, ⌊·⌋ denotes the floor function. Note that GUX(i) and CUX(i) are defined relative to the start of HI j and HI j + 1, respectively. Given the values of GUX(i) and CUX(i), the corresponding precedence constraint can be expressed as:
+
+0 ≤ CUX(i) − GUX(i).
+
+(21)
+
+This constraint inherently depends on both the structure of the interleaver and the window size WS .
+To ensure that the precedence constraints are satisfied for all bit positions under full overlap, we propose embedding these constraints directly into the interleaver structure during code design. In particular, the ARP interleaver can be constructed to inherently satisfy these constraints when the number of layers is set equal to the window size of the UXMAP decoder, i.e., Q = WS . Under this condition, for each layer l ∈ {0, . . . , Q − 1} (i.e. each position within a window), the following constraint must hold:
+
+0 ≤ ( (l) mod Q−l mod Q)
+
+(22)
+
+This condition ensures that the precedence constraints are respected, i.e. the extrinsic information at window position (layer) l is generated in the non-interleaved HI before it is consumed in the interleaved HI (see Eq. 21). Thus, Eq. 22 enables immediate extrinsic information exchange and full overlap between successive HIs.
+As a proof of concept, we designed a set of interleavers that enable full overlap for various values of WS by adapting the methodology proposed in [10] to comply with the constraint in (22). The corresponding parameters are summarized in Table 1. Figure 5 presents the error-rate performance, measured in terms of FER, over an AWGN channel using binary phase-shift keying (BPSK) modulation and four full decoding iterations. Results for the corresponding LTE interleavers are also included for DS-LSOVA decoding with identical configuration of frame- and window size to allow a fair comparison. To maintain clarity, only the results for MLM and DS-LSOVA decoding are shown, since the FER performance of the LSOVA for the same K /WS configuration is comparable to the MLM [11], [12]. MLM decoding of the LTE Turbo Codes serves as baseline reference. The results in Fig. 5 are based on bit-true models of the hardware implementations
+
+127906
+
+described in Section V, corresponding to the various codes and decoding algorithms under consideration.
+Notably, the DS-LSOVA algorithm demonstrates performance comparable to that of the MLM algorithm across all simulated scenarios. While the overlap interleavers with a window size of WS = 16 (WS16) achieve error-rate performance identical to their respective LTE interleavers, the WS32 configuration exhibits a slight performance degradation of approximately 0.25 dB at a FER of 10−4. This degradation is not attributed to the DS-LSOVA, but it instead arises from the additional design constraints imposed on the interleaver to satisfy the precedence conditions required for full overlap. In particular, for a relatively small interleaver size of K = 128 bits and a larger window size of 32, the increased regularity introduced by these constraints adversely impacts the error-correcting performance.
+TABLE 1. Designed full overlap ARP interleaver parameters.
+FIGURE 5. FER comparison of full iteration overlap with LTE interleavers under 4 full iterations MLM and DS-LSOVA decoding.
+IV. DECODER HARDWARE ARCHITECTURES In turbo decoder hardware architectures, both spatial and functional parallelism can be leveraged at multiple levels, giving rise to a variety of architectural archetypes [7]. The parallel MAP (PMAP) [32], [33], [34], [35] and pipelined MAP (XMAP) [36], [37], [38] architectures implement a single decoder instance that alternates between operating as Decoder1 and Decoder2 (as illustrated in Fig. 1). In contrast, the fully parallel MAP (FPMAP) [39] and fully pipelined iteration-unrolled (UXMAP) [7] architectures represent the extreme forms of the PMAP and XMAP approaches, respectively, offering maximum parallelism and throughput.
+VOLUME 13, 2025
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+The FPMAP architecture further employs a shuffled decoding scheme, allowing it to process both component codes—namely, the non-interleaved and interleaved HIs— simultaneously. For each trellis step and for both component decoders, a dedicated processing element is instantiated. These elements exchange state metrics and extrinsic information with neighboring elements within the same component decoder and across to the other component decoder. FPMAP implementations have demonstrated throughput rates of up to 15 Gb/s, albeit at the cost of requiring a higher number of decoding iterations to achieve comparable error-rate performance [40], [41]. This trade-off becomes particularly pronounced for short frame sizes and highly punctured codes, where the shuffled decoding approach leads to a notable degradation in decoding performance—even when additional iterations are applied [7].
+This work focuses exclusively on the Fully Pipelined Iteration-Unrolled MAP (UXMAP) decoder architecture. For detailed descriptions of the PMAP, XMAP, and FPMAP architectures, the reader is referred to [32], [33], [34], [35], [36], [37], [38], [39], [40], and [41], respectively. For a detailed comparison of Turbo Decoder implementations with decoders for other code families, we refer to [42].
+The fundamental UXMAP architecture is composed of multiple Half-Iteration pipeline stages (HI-stages), interconnected through hardwired or configurable interleaving and de-interleaving links [7], [8], as shown in Fig. 6(a). Each HI-stage may contain several X-windows to reduce area overhead by efficiently pipelining the channel LLRs, extrinsic information, and state metrics [9]. Figures 6(b), (c), and (d) illustrate the different X-window architectures implemented in this work, namely the MLM-based, LSOVA-based, and DS-LSOVA-based configurations.
+A. NON-OVERLAPPING DECODER ARCHITECTURES 1) MLM An MLM-based X-window without iteration overlap is used as the reference architecture, as illustrated in Fig. 6(b). The scheduling of operations—including branch metric computation, forward recursion, and backward recursion—is unrolled across the pipeline following the scheme depicted in Fig. 4(a).
+Each trellis step includes dedicated forward and backward recursion units, along with a soft-output computation unit. Additionally, two branch metric units are instantiated per trellis step. This duplication allows recomputation of branch metrics from the channel values for the right half of the X-window, eliminating the need to pipeline branch metrics across the window.
+The architecture is further complemented by delay pipelines to ensure proper synchronization. Specifically, the pipeline section labeled (2) in Fig. 6(b) aligns the arrival of channel LLRs and extrinsic information prior to interleaving and de-interleaving. The pipeline segment labeled (1) provides additional delay elements for the channel LLRs, extrinsic information, and state metrics, ensuring coherent data flow throughout the pipeline.
+VOLUME 13, 2025
+
+2) LSOVA The LSOVA-based X-window, shown in Fig. 6(c), is derived from the MLM-based X-window by modifying the recursion units in the right half of the window and incorporating LSOVA-specific soft-output units. In previous work [12], we demonstrated that these modifications lead to significant area savings at the level of the computational units. Consequently, for the implementations presented in Section V, we adopt the LSOVA computational unit architectures introduced in [12].
+3) DS-LSOVA The hardware implementation of the algorithm proposed in Section IIC builds upon the computational unit architectures from [12], extending them to support the modified merge operations required by the DS-LSOVA. It is important to note that the DS-LSOVA variant proposed in this work differs from the LSOVA variants introduced in [43], which would necessitate more substantial modifications to the decoding algorithm.
+The DS-LSOVA X-window architecture features an alternating structure in its forward and backward recursions, switching between LSOVA and MLM recursion units. Additionally, due to the dual-sided merge requirement—which involves combining paths from both forward and backward recursions—the pipelines labeled (1) in Fig. 6(d) carry full path information (M , L, u), as opposed to state metrics, which are used in the MLM and LSOVA architectures. Finally, the number of soft-output unit (SOU) instances is reduced by half compared to the MLM and LSOVA cases, contributing to overall area savings.
+B. OVERLAPPING DECODER ARCHITECTURES When implementing the decoder architectures shown in Figure 6 (b)-(d) for the non-overlapping case, it is necessary to introduce delays in the inputs to and outputs from the X-window. These delays ensure that the channel values and extrinsic information remain aligned with the forward and backward recursion computations. As discussed in Section III-B, such delays are generally required to account for precedence constraints arising from interleaving and de-interleaving between the half-iteration stages.
+When the decoder is implemented with a carefully designed interleaver—such as those listed in Table 1—that aligns the interleaver constraints with the decoder’s window size, full iteration overlap becomes possible. As a result, overlap architectures only require input delay registers for the first half iteration and output delay registers for the hard decision outputs generated in the final half iteration. For all X-windows in subsequent half iterations, these delay pipelines can be eliminated ((2) in Fig. 6 (b)-(d)). Instead, extrinsic and channel value outputs are directly interleaved or de-interleaved into the inputs of the X-windows for the next half iteration. However, the delay pipelines that store state/path metrics as well as channel and extrinsic values within the X-windows ((1) in Fig. 6 (b)-(d)) remain in place.
+127907
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+FIGURE 6. (a) Basic UXMAP architecture with Half Iteration (HI) pipeline stages and X-windows, (b) MLM-based X-window, (c) LSOVA-based X-window, (d) DS-LSOVA-based X-window.
+
+V. IMPLEMENTATION RESULTS The hardware architectures discussed in the previous section were implemented in VHDL and synthesized using Synopsys Design Compiler for a 22 nm process.
+
+TABLE 3. Comparison of 22 nm synthesis results. Area scaling to 22 nm according to [45]: ♯: 1.591.
+
+TABLE 2. Algorithmic parameters for the implementations.
+
+The algorithmic parameters are detailed in Table 2, while the interleaver parameters are provided in Table 1. To ensure a fair comparison, the benchmark configuration architecture commonly used in previous work (frame size K = 128, window size WS = 32, [8]) has also been re-implemented. The synthesis results, in terms of core area, are presented in Table 3 for all implemented configurations. This section primarily focuses on comparing Non-overlapping and overlapping architectures, as well as evaluating the differences among MLM, LSOVA, and DS-LSOVA implementations. Additionally, Table 3 includes scaled results from [8] for reference. As shown in Table 3, the DS-LSOVA implementations outperform their MLM counterparts by up to 17%, with the most area-efficient configurations in terms of Gb/s/mm2 being DS-LSOVA with K = 128, WS = 16 and K = 256, WS = 16. Furthermore, implementations with overlap achieve better performance than their non-overlap counterparts, with gains ranging from 6% (K = 128, WS = 16, MLM) to 11.49% (K = 128, WS = 16, LSOVA). Notably, while DS-LSOVA outperforms LSOVA by approximately 3% (both with and without overlap) for WS = 16, its performance for WS = 32 is slightly lower (around -0.5%), even when overlap is applied. Lastly, comparing DS-LSOVA with overlap to the widely used MLM without overlap reveals an overall improvement of approximately 22%.
+127908
+
+VI. CONCLUSION In this paper, we have presented a comprehensive synthesis of our recent advancements in code and interleaver design, decoding algorithms, and hardware architectures aimed at achieving efficient high-throughput turbo decoding. The proposed Dual-Sided Local-SOVA (DS-LSOVA) variant of the LSOVA algorithm demonstrated comparable FER performance to the MLM while offering notable architectural simplifications. Additionally, we extended the concept of interleaver design for iteration overlap decoding architectures, showing that for smaller window sizes, the proposed interleavers can achieve performance on par with the QPP interleavers of the LTE standard while significantly reducing decoding latency. Finally, we introduced hardware architectures optimized to leverage all proposed improvements, both for full iteration overlap and conventional non-overlap decoding. Synthesis results for a 22 nm technology confirm the anticipated complexity reductions, with area savings of up to 22% compared to state-of-the-art MLM decoding architectures.
+While the presented work addressed the DS-LSOVA algorithm and iteration overlap interleavers in the context of fully pipelined architectures with a focus on high throughput requirements in 5G/6G systems [14], [15], the demonstrated improvements in area efficiency are applicable to classical
+VOLUME 13, 2025
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+PMAP and XMAP decoder architectures as well. This makes the proposed decoding algorithm and interleavers well suited in the context of M2M and V2X scenarios, where frame size and code rate flexibilities may be more important than raw throughput.
+ACKNOWLEDGMENT The authors acknowledge the kind support by Prof. Dr.-Ing. Norbert Wehn of RPTU Kaiserslautern-Landau.
+REFERENCES
+[1] LTE; Evolved Universal Terr. Radio Access (E-UTRA); Multiplexing Channel Coding, document TS 36.212, 3GPP, Apr. 2022.
+[2] J. Lee, Y. Kim, Y. Kwak, J. Zhang, A. Papasakellariou, T. Novlan, C. Sun, and Y. Li, ‘‘LTE-advanced in 3GPP rel -13/14: An evolution toward 5G,’’ IEEE Commun. Mag., vol. 54, no. 3, pp. 36–42, Mar. 2016.
+[3] U. Singh, A. Dua, S. Tanwar, N. Kumar, and M. Alazab, ‘‘A survey on LTE/LTE–A radio resource allocation techniques for Machine-toMachine communication for B5G networks,’’ IEEE Access, vol. 9, pp. 107976–107997, 2021.
+[4] H. Ullah, N. Gopalakrishnan Nair, A. Moore, C. Nugent, P. Muschamp, and M. Cuevas, ‘‘5G communication: An overview of Vehicle-toeverything, drones, and healthcare use-cases,’’ IEEE Access, vol. 7, pp. 37251–37268, 2019.
+[5] C. Berrou, A. Glavieux, and P. Thitimajshima, ‘‘Near Shannon limit errorcorrecting coding and decoding: Turbo-codes. 1,’’ in Proc. IEEE Int. Conf. Commun., vol. 2, May 1993, pp. 1064–1070.
+[6] D. Mackay and R. M. Neal, ‘‘Near Shannon limit performance of low density parity check codes,’’ Electron. Lett., vol. 33, no. 6, p. 457, Mar. 1997.
+[7] S. Weithoffer, C. A. Nour, N. Wehn, C. Douillard, and C. Berrou, ‘‘25 years of turbo codes: From Mb/s to beyond 100 Gb/s,’’ in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–6.
+[8] S. Weithoffer, O. Griebel, R. Klaimi, C. A. Nour, and N. Wehn, ‘‘Advanced hardware architectures for turbo code decoding beyond 100 Gb/s,’’ in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), May 2020, pp. 1–6.
+[9] S. Weithoffer, R. Klaimi, C. A. Nour, N. Wehn, and C. Douillard, ‘‘Fully pipelined iteration unrolled decoders the road to TB/S turbo decoding,’’ in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2020, pp. 5115–5119.
+[10] R. Garzón-Bohórquez, C. Abdel Nour, and C. Douillard, ‘‘Protographbased interleavers for punctured turbo codes,’’ IEEE Trans. Commun., vol. 66, no. 5, pp. 1833–1844, May 2018.
+[11] V. H. S. Le, C. Abdel Nour, E. Boutillon, and C. Douillard, ‘‘Revisiting the Max-Log-Map algorithm with SOVA update rules: New simplifications for high-radix SISO decoders,’’ IEEE Trans. Commun., vol. 68, no. 4, pp. 1991–2004, Apr. 2020.
+[12] S. Weithoffer, R. Klaimi, C. A. Nour, N. Wehn, and C. Douillard, ‘‘Lowcomplexity computational units for the local-SOVA decoding algorithm,’’ in Proc. IEEE 31st Annu. Int. Symp. Pers., Indoor Mobile Radio Commun., Aug. 2020, pp. 1–6.
+[13] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, ‘‘Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),’’ IEEE Trans. Inf. Theory, vol. IT-20, no. 2, pp. 284–287, Mar. 1974.
+[14] S. Miao, C. Kestel, L. Johannsen, M. Geiselhart, L. Schmalen, A. Balatsoukas-Stimming, G. Liva, N. Wehn, and S. T. Brink, ‘‘Trends in channel coding for 6G,’’ Proc. IEEE, vol. 112, no. 7, pp. 653–675, Jul. 2024.
+[15] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, ‘‘Channel coding toward 6G: Technical overview and outlook,’’ IEEE Open J. Commun. Soc., vol. 5, pp. 2585–2685, 2024.
+[16] P. Schulz, M. Matthe, H. Klessig, M. Simsek, G. Fettweis, J. Ansari, S. A. Ashraf, B. Almeroth, J. Voigt, I. Riedel, A. Puschmann, A. MitscheleThiel, M. M´’uller, T. Elste, and M. Windisch, ‘‘Latency critical IoT applications in 5G: Perspective on the design of radio interface and network architecture,’’ IEEE Commun. Mag., vol. 55, no. 2, pp. 70–78, Feb. 2017.
+[17] J. Zhang and M. P. C. Fossorier, ‘‘Shuffled iterative decoding,’’ IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[18] O. M´’uller, A. Baghdadi, and M. Jezequel, ‘‘Exploring parallel processing levels for convolutional turbo decoding,’’ in Proc. 2nd Int. Conf. Inf. Commun. Technol., vol. 2, 2006, pp. 2353–2358.
+VOLUME 13, 2025
+
+[19] P. Radosavljevic, A. de Baynast, and J. R. Cavallaro, ‘‘Optimized message passing schedules for LDPC decoding,’’ in Proc. 39th Asilomar Conf. Signals, Syst. Comput., 2005, pp. 591–595.
+[20] E. Sharon, S. Litsyn, and J. Goldberger, ‘‘An efficient message-passing schedule for LDPC decoding,’’ in Proc. 23rd IEEE Conv. Electr. Electron. Engineers Isr., Sep. 2004, pp. 223–226.
+[21] V. L. Petrovic, M. M. Markovic, D. M. E. Mezeni, L. V. Saranovac, and A. Radošević, ‘‘Flexible high throughput QC-LDPC decoder with perfect pipeline conflicts resolution and efficient hardware utilization,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 12, pp. 5454–5467, Dec. 2020.
+[22] S. Weithoffer, G. Aousaji, J. Nadal, and C. A. Nour, ‘‘Iteration overlap for low-latency turbo decoding,’’ in Proc. 12th Int. Symp. Topics Coding (ISTC), Sep. 2023, pp. 1–5.
+[23] J. Nadal, S. Weithoffer, C. A. Nour, and C. Douillard, ‘‘Advanced iteration overlap for low-latency turbo decoding,’’ in Proc. 19th Int. Symp. Wireless Commun. Syst. (ISWCS), Jul. 2024, pp. 1–6.
+[24] P. Robertson, E. Villebrun, and P. Hoeher, ‘‘A comparison of optimal and sub-optimal MAP decoding algorithms operating in the log domain,’’ in Proc. IEEE Int. Conf. Commun., vol. 2, Jun. 1995, pp. 1009–1013.
+[25] G. Fettweis and H. Meyr, ‘‘Parallel Viterbi algorithm implementation: Breaking the ACS-bottleneck,’’ IEEE Trans. Commun., vol. 37, no. 8, pp. 785–790, Aug. 1989.
+[26] J. Hagenauer and P. Hoeher, ‘‘A Viterbi algorithm with soft-decision outputs and its applications,’’ in Proc. IEEE Global Telecommun. Conf., Exhib. Commun. Technol. Beyond, Nov. 1989, pp. 1680–1686.
+[27] G. Battail, ‘‘Pondération Des symboles décodés par l’algorithme de viterbi,’’ Annales des Telecommun., vol. 42, nos. 1–2, pp. 31–38, Jan. 1987.
+[28] L. Lin and R. S. Cheng, ‘‘Improvements in SOVA-based decoding for turbo codes,’’ in Proc. Int. Conf. Commun., vol. 3, 1997, pp. 1473–1478.
+[29] J. Sun and O. Y. Takeshita, ‘‘Interleavers for turbo codes using permutation polynomials over integer rings,’’ IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 101–119, Jan. 2005.
+[30] S. Crozier and P. Guinand, ‘‘Distance upper bounds and true minimum distance results for turbo-codes designed with DRP interleavers,’’ in Proc. 3rd Int. Symp. Turbo Codes Rel. Topics, vol. 60, Brest, France, 2005, pp. 10–28.
+[31] C. Berrou, Y. Saouter, C. Douillard, S. Kerouedan, and M. Jezequel, ‘‘Designing good permutations for turbo codes: Towards a single model,’’ in Proc. IEEE Int. Conf. Commun., Mar. 2004, pp. 341–345.
+[32] E. Boutillon, W. J. Gross, and P. G. Gulak, ‘‘VLSI architectures for the MAP algorithm,’’ IEEE Trans. Commun., vol. 51, no. 2, pp. 175–185, Feb. 2003.
+[33] T. Ilnseher, F. Kienle, C. Weis, and N. Wehn, ‘‘A 2.15GBit/s turbo code decoder for LTE advanced base station applications,’’ in Proc. 7th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Aug. 2012, pp. 21–25.
+[34] C. Roth, S. Belfanti, C. Benkeser, and Q. Huang, ‘‘Efficient parallel turbodecoding for high-throughput wireless systems,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 6, pp. 1824–1835, Jun. 2014.
+[35] S. Favero, M. Martina, and G. Masera, ‘‘Architectural comparison model for area-efficient PMAP turbo-decoders,’’ IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 70, no. 1, pp. 131–135, Jan. 2023.
+[36] A. Worm, H. Lamm, and N. Wehn, ‘‘Design of low-power high-speed maximum a priori decoder architectures,’’ in Proc. Design, Autom. Test Europe. Conf. Exhib., 2001, pp. 258–265.
+[37] S. Weithoffer, F. Pohl, and N. Wehn, ‘‘On the applicability of trellis compression to turbo-code decoder hardware architectures,’’ in Proc. 9th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Sep. 2016, pp. 61–65.
+[38] M. May, T. Ilnseher, N. Wehn, and W. Raab, ‘‘A 150Mbit/s 3GPP LTE turbo code decoder,’’ in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2010, pp. 1420–1425.
+[39] R. G. Maunder, ‘‘A fully-parallel turbo decoding algorithm,’’ IEEE Trans. Commun., vol. 63, no. 8, pp. 2762–2775, Aug. 2015.
+[40] A. Li, P. Hailes, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, ‘‘1.5 Gbit/s FPGA implementation of a fully-parallel turbo decoder designed for mission-critical machine-type communication applications,’’ IEEE Access, vol. 4, pp. 5452–5473, 2016.
+[41] A. Li, L. Xiang, T. Chen, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, ‘‘VLSI implementation of fully parallel LTE turbo decoders,’’ IEEE Access, vol. 4, pp. 323–346, 2016.
+127909
+
+S. Weithoffer, C. A. Nour: Iteration Overlap and DS-LSOVA for Efficient Parallel TD Architectures
+
+[42] S. Shao, P. Hailes, T.-Y. Wang, J.-Y. Wu, R. G. Maunder, B. M. Al-Hashimi, and L. Hanzo, ‘‘Survey of turbo, LDPC, and polar decoder ASIC implementations,’’ IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2309–2333, 3rd Quart., 2019.
+[43] R. Klaimi, S. Weithoffer, C. A. Nour, and C. Douillard, ‘‘Simplified recursion units for Max-Log-MAP: New trade-offs through variants of local-SOVA,’’ in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[44] J. Dielissen and J. Huiskens, ‘‘State vector reduction for initialization of sliding windows map,’’ in Proc. ISTC, Brest, France, Sep. 2000, pp. 387–390.
+[45] S. Sarangi and B. Baas, ‘‘DeepScaleTool: A tool for the accurate estimation of technology scaling in the deep-submicron era,’’ in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2021, pp. 1–5.
+STEFAN WEITHOFFER (Member, IEEE) received the Ph.D. degree from the University of Kaiserslautern, Germany, in 2018.
+He worked on implementation issues of high-throughput turbo decoding with the University of Kaiserslautern. Since September 2019, he has been an Associate Professor with the MEE Department, IMT Atlantique. He has designed several turbo decoder IP in the course of collaborations with academia as well as industry, which have been successfully integrated and manufactured in systems-on-chip (SoC) on 28 nm.
+
+CHARBEL ABDEL NOUR (Senior Member, IEEE) received the degree in computer and communications engineering from Lebanese University, Beirut, Lebanon, in 2002, the master’s degree in digital communications from the University of Valenciennes, Valenciennes, France, in 2003, the Ph.D. degree in digital communications from Telecom Bretagne, Brest, France, in 2008, and the Habilitation degree from the University of Southern Brittany, Lorient, France, in 2020. From November 2011 to November 2022, he was an Associate Professor with the Electronics Department, IMT Atlantique, Brest. Since December 2022, he has been a Professor with the Mathematical and Electrical Engineering Department, IMT Atlantique. He was involved in several research projects related to broadcasting and satellite communications and was active in the Digital Video Broadcasting (DVB) Consortium, where he had important contributions. He presented several contributions to H2020 METIS, FANTASTIC5G, and EPIC Projects and to the 3GPP Consortium related to coding solutions for 5G. His research interests include radio mobile communications systems, broadcasting systems, coded modulations, error correcting codes, resource and power allocation for NOMA, waveform design, MIMO, and iterative receivers. Dr. Nour served as the Co-Chair for the Technical Program Committee of the International Symposium on Topics in Coding (ISTC), in 2023.
+
+127910
+
+VOLUME 13, 2025
+
+

@@ -1,0 +1,507 @@
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+RECFEC: A Reconfigurable
+
+FEC Processor for Viterbi, Turbo,
+
+Reed-Solomon and LDPC Coding
+
+Afshin Niktash
+
+Hooman T.Parizi
+
+TiaLinx Inc.
+
+Broadcom
+
+Newport Beach, CA, USA Irvine, CA, USA
+
+Amir H.Kamalizad Maxim Integrated Products
+Irvine, CA, USA
+
+Nader Bagherzadeh EECS Dept., University of California
+Irvine, CA, USA
+
+Abstract- RECFEC is a REConfigurable processor optimized for soft implementation of Forward Error Correction (FEC) algorithms. Viterbi, Turbo, Reed-Solomon and LDPC coding algorithms are widely used in wired and wireless standards. The implantation of these algorithms on RECFEC for a multi-mode wireless system is explored and performance metrics are demonstrated. RECFEC is comprised of a pool of processing elements, a processing element controller and memory. Each processing element encapsulates multiple functional units which are optimized for FEC algorithms. Memory includes the configuration and the data buffers. A high bandwidth interconnect network facilitates data movements. Unlike traditional approach to programmable FEC architectures, RECFEC supports multiple algorithms and is instruction-level programmable which results the ultimate flexibility and programmability.
+I. INTRODUCTION
+Digital communication systems benefit from at least one form of error correction coding algorithms. Forward Error Correction (FEC) coding improves data reliability by introducing redundant information into a data sequence prior to transmission or storage which enables a receiver to detect and possibly to correct errors without requesting retransmission of the original information
+There are four main algorithms widely used in wireless and wired communications: Viterbi, Turbo, Reed-Solomon and LDPC. However, multiple variations of these algorithms are employed in standards. More specifically, every standard uses a different configuration of an algorithm which makes it unique to that standard. For example, the Turbo coding algorithm used in W-CDMA employs a different polynomial, block size, coding rate and termination method from that used in WiMAX. This translates to having a plurality of coding accelerators for different coding algorithms and configurations which is very common in industry. The traditional approach is to have a separate coprocessor for every FEC algorithm. Nevertheless, even one coprocessor is not programmable enough to support all existing configurations of an FEC algorithm for different standards.
+In this paper, we introduce RECFEC, a REConfigurable processor for FEC algorithms. While general purpose processors could not meet the high processing requirements of many new applications, traditional custom ASIC suffers from a long and costly design cycle which requires a high initial investment and has a slow time-to-market.
+
+There are considerable research efforts to develop prototypes for reconfigurable architectures for channel coding.
+A general reconfigurable processor is introduced in [1] which targets multi-media signal processing. A reconfigurable signal processor is also introduced in [2] using an FPGA board to implement a programmable log-MAP Turbo decoder. Viturbo[3], which is an FPGA based runtime reconfigurable architecture is among the first contributions trying to integrate Viterbi and Turbo decoders in a single architecture to be used for 3GPP and IEEE802.11a. A dual mode Viterbi/Turbo decoder is introduced in [4]. The component decoder in this architecture has two modes and some of the modules are shared. A turbo decoder on a dynamically reconfigurable architecture is introduced in [5]. The decoder is optimized for implementation on FPGA. The key power-saving technique in this design is the use of decoder run-time dynamic reconfiguration in response to variations in the channel conditions.
+There is very little research done on a multi-mode Viterbi, Turbo, LDPC and Reed-Solomon decoder. In general, emerging wireless standards and selection of their nonidentical profiles in different regions around the world highlight the need for multi-standard mobile devices. In [6] and [7] a modified Turbo decoder architecture is introduced to decode LDPC code. Ref. [8] presents an architecture for RS block turbo codes on FPGA. A DVB compliant Viterbi and RS decoder is explored in [9]. However, a multimode engine to support all four of these FEC algorithms has not been proposed as of yet.
+The RECFEC design criteria can be summarized as: • Programmability: RECFEC is designed to be
+programmable enough to support a wide range of parameters for single or multiple FEC coding algorithms. • Flexibility: prior contributions are based on integration of one or two FEC coding algorithms (e.g. Viterbi/Turbo or LDPC/Turbo) into a single design. RECFEC target is to support all four common FEC algorithms: the Viterbi, Turbo, Reed-Solomon and LDPC. • Scalability: The conventional designs typically require major hardware modifications to accommodate different profiles, higher data rates or improved performance. • Choice of algorithm: For every coding scheme, only one algorithm is selected and implemented in related works.
+
+605 Authorized licensed use limited to: Yonsei Univ1. D52ow5-n3lo5a1d1e/d0o8n/$J2u5ne.0204,©2022060a8t 0IE4:E50E:36 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+Figure 1. RECFEC architecture
+
+For example, SOVA algorithm in [3] or MAP algorithm in [4] is implemented for Turbo decoding. • Precision: Modifying the data paths to improve the precision is not possible in conventional designs. In the design of RECFEC 8-16 bit data paths were chosen, which are more than enough for implementation of all four FEC algorithms. Nevertheless, higher precision can still be achieved by sacrificing throughput. • Performance: Modifying an algorithm to improve its performance or using a set of different algorithms depending on the channel quality, data rate, power consumption or other parameters is an attractive feature of RECFEC. • Upgradeability: on-the-fly software upgrade is allowed in RECFEC. This paper is structured as follows. Section 2 describes the RECFEC architecture and programming model. Section 3 presents the implementation of FEC algorithms and section 4 summarizes and concludes the paper.
+II. RECFEC ARCHITECTURE
+RECFEC architecture is comprised of the Processing Elements Pool (PE Pool) controlled by a controller. Fig. 1 demonstrates the architecture of RECFEC.
+The PE Pool is a two dimensional array of processing elements which performs the parallel execution of instructions (Configurations). Data and Configuration information are stored in the Data Buffer (DB) and the Configuration Buffer (CB). During the execution, Configuration Words which accommodate the configuration information of PEs are broadcast from the CB to the PE Pool and stored in configuration registers. The DB is an embedded data memory interfacing the external memory and the PE Pool. The high throughput data network facilitates the supply of data and collection of the results from the PE Pool. Reconfiguration of the DB connection to the PE Pool facilitates the support of different data movement patterns. All data movements between the DB or the CB and the external memory are handled by the DMA controller. The PE Controller is a general purpose 32-bit RISC processor which controls the sequence of operations. In the following sections, components of this architecture are elaborated upon.
+
+Figure 2. Processing Element architecture
+
+A. Processing Elements Pool The PE Pool is an 8×8 array of homogeneous PEs that
+follows the SIMD model of computation. All PEs in the same row/column share the same configuration. However, each PE operates on different data. Sharing the configuration across a row/column is useful for data-parallel FEC algorithms. The PE Pool has a mesh interconnection network, designed to enable fast data exchange between the PEs. Four functional units are integrated in each PE, as shown in Fig. 2:
+• ALU: This unit performs the regular arithmetic and logic operations.
+• Add, Compare and Select (ACS) unit: This unit performs ACS, Max and Max* operation needed in Viterbi and Turbo coding. In the Viterbi algorithm, branch metrics are updated using following equation:
+
+PMi’,t+1= Min(PMi,t + BMii’, PMj,t+BMji’)
+
+(1)
+
+where PM and BM represent the path metrics and branch metrics of a trellis butterfly. This operation is performed in a single cycle using the dedicated ACS unit. The unit is also capable of calculating Max and Max* operations frequently used in Turbo algorithm:
+
+Max*(x,y)=Max(x,y)+log(1+e-|y-x|)=Max(x,y)+fc(|y-x|) (2)
+
+where fc(.) is the correction factor that could be implemented using the integrated lookup table in ACS unit. • GF Accelerator: Galois Field accelerator is a dedicated engine that performs modulo and modulo multiply and add (MAC) operations used in Reed-Solomon decoding. The GF accelerator operates on two 8-bit input data channels. Addition and subtraction in GF operations can be done simply by XOR of individual input bits. GF multiplication requires two steps, the first of which uses AND and XOR to compute the result of polynomial multiplication. Next, the GF multiplication is completed by a modulo operation which is basically a series of shifts and subtractions of primitive polynomials. This
+
+606
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:50:36 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+architecture is programmable for any 8th degree polynomial. • Lookup Table: It is a 16-byte local memory module within PEs used for lookup table and temporary data storage.
+B. Data Buffer The Data Buffer makes memory accesses transparent to the
+PE Pool by overlapping computation and data loading and storage. It is designed as a dual port memory which facilitates two simultaneous accesses by the PE Pool, the PE Controller and the DMA. The DB consists of 64 memory banks where each bank is associated with one PE in the PE Pool and could feed it with one byte per clock cycle. A DB bank is a set of memory segments. Normally, during each access 64 banks are activated which provide 64×8 bits of data for PE Pool with the memory organized into multiple 512-bit lines. DB supports 16, 32 and 64-bit accesses. In order to enable a variety of permutations, a selection logic network is integrated in the DB. The network pattern is determined by providing the right configuration in the Configuration Table which in turn sends appropriate control signals to the selection logic network as shown in Fig. 3. Eight selection logic networks are integrated to address 8 rows. Every selection logic network provides the data for 8 PEs. By employing two levels of multiplexers, every PE could access any bank in Data Buffer. This feature facilitates random permutation, interleaving and data shuffling.
+C. Configuration Buffer The Configuration Buffer stores the configuration program
+which is the list of operations (Configuration Words) of every PE including the operation and its sources and destination. Configuration Words are 32-bit each. In every cycle Configuration Words of all PEs are broadcast to PE Pool and stored in Configuration Registers. Broadcast patterns could be horizontal/vertical where all PEs in the same row/column share the same Configuration Word and perform the same operation on different input data (SIMD). Furthermore, Configuration Words can initially be stored in the Configuration Registers of the PEs. Later, the PEs can execute the stored Configuration Words repeatedly (MIMD).
+D. PE Controller The PE controller is a 32-bit RISC processor which
+orchestrates the operation of PE Pool. It has sixteen 32-bit registers and three functional units, a 32-bit ALU, a 32-bit shifter and a memory unit and has a 4-state pipeline. The instruction set of this RISC processor is augmented with
+
+special instructions to control the PE Pool.
+E. Programming Model of RECFEC Different FEC algorithms could be implemented in software.
+An algorithm is partitioned to two segments: the control segment and the processing segment. In FEC algorithms the processing segment is typically parallel and is mapped to the the PE Pool. There are some control and scheduling parts in algorithms that are handled by the PE Controller. A RECFEC program consists of two sections: the PE Controller Code (PEC) is the main control and scheduling program that orchestrates the operation of the PE Pool, the DB, the DMA and the CB. The PE Pool Code (PEP) is the parallel Configuration Words for PEs. Configuration Words are broadcast to the PE Pool using special instructions in PEC Code pointing to corresponding Configuration Words in PEP Code. Fig. 4 depicts the programming model of RECFEC.
+III. IMPLEMENTATION OF FEC ALGORITHMS
+In this section we present the implementation of Viterbi, Turbo, RS and LDPC algorithms on RECFEC.
+A. Viterbi Algorithm The Viterbi algorithm [10],[11] is employed in many
+different wired and wireless applications ranging from disk drive to W-LAN, WCDMA, WiMAX and DVB-H. In order to utilize the maximum parallelism of the Viterbi algorithm, an efficient mapping approach is of great importance. A systolic implementation on a reconfigurable architecture is shown in [12]. However, our studies show that a parallel implementation on RECFEC has a superior performance. The Viterbi decoder used in W-LAN has 64 trellis states. By assigning one state to every PE, we can map 64 parallel trellis states to 64 PEs. Following steps summarize the algorithm:
+• Branch metrics calculation: Branch metrics are calculated in parallel in all 64 PEs. The 4-bit soft value symbols are stored in the DB. For half rate codes, 128 symbols are broadcast to the PE Pool. Every PE reads two symbols and calculates the appropriate branch metrics. Four branch metrics are required per trellis stage.
+• Path metrics calculation: ACS is the main instruction in this step. 64 PEs perform 64 parallel ACS operations in every cycle. Path Metrics are updated and then stored back to the DB.
+• Survivor paths storage: Survivor paths are represented
+
+8x8=64 bit
+
+8x8
+Figure 3. The selection network in the DB
+
+Figure 4. Programming model
+
+607
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:50:36 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+by single bit flags set by ACS instructions and stored in the DB to be used in trace back. • Trace back: Due to the sequential nature of trace back, it is performed on the PE Controller. Fig. 5 shows the processing schedule of Viterbi algorithm and the mapping of the trellis diagram to the PE Pool as performed on RECFEC. Viterbi decoder of W-CDMA standard has 256 trellis states. One efficient mapping is to allocate 4 adjacent states to one PE. Therefore every PE performs four back-to-back ACS operations. This mapping requires 4 internal registers to store the path metrics. Another mapping scenario is to use half of the PE Pool for the trellis and consequently ACS operation of 8 states is performed sequentially in every PE. The other half of the PE Pool could be used then to perform similar operation, but on a different Viterbi block. As a result, two encoded blocks will be decoded concurrently. This mapping approach is used in Turbo decoder . The performance of the single block implementation of Viterbi is summarized in Table I. The maximum throughput in this approach is good enough for W-LAN application which requires 54Mbps. For W-CDMA, the maximum throughput is much more than required date rate since it is only used for voice.
+B. Turbo Algorithm By using iterative techniques, Turbo decoders [13] provide
+large coding gains and are widely used in digital communication standards like W-CDMA, HSDPA, WiMAX as well as satellite and deep-space communications. Each iteration of Turbo decoder consists of two Soft Input Soft Output (SISO) decoders corresponding to the encoder network which provide a measure of reliability of the decoded bits [13].
+Typically, two types of soft decision decoding algorithms are used in hardware implementation. Soft output Viterbi algorithm (SOVA) is preferred in dual mode Viterbi-Turbo accelerators [3][14]. Maximum a posteriori (MAP) algorithm [15, 16] results a better performance in low SNR with the penalty of higher processing requirement. Suboptimal MAP algorithms like MAX-Log-MAP or Log-MAP (with lookup table for correction function) are widely used in hardware implementation [17,18].
+RECFEC enables the implementation of either of these
+
+algorithms in software. A powerful ACS unit is embedded in each PE which performs the MAX or MAX* operation. It could also generate the difference of path metrics to be used for SOVA. The turbo decoder in W-CDMA has 8 states. Two rows of PE Pool are employed to realize a Turbo decoder. Therefore the PE Pool can decode up to four blocks in parallel. An example of MAX-LOG-MAP implementation requires the mapping of four major functions of a SISO decoder:
+• γ calculation: It is similar to branch metrics calculation in Viterbi algorithm. 4 γ values are required for every trellis stage: γ00, γ01, γ10, γ11. Two values are calculated and the other two are derived by changing the sign of first two values. 8 PEs in first row and second row calculate γ00 and γ01 of 8 trellis stages in 6 cycles. The PE allocation is shown in Fig. 6.
+• α calculation: Using the ACS accelerator, MAX* operation which is the main operation of α and β calculations is performed on PEs. 8 PEs on the first row is allocated to handle alpha calculations of 8 states of a trellis stage in 4 cycles.
+• β calculation: It is similar to α calculation and is mapped to the second row of the PE Pool.
+• Log Likelihood Ratio (LLR) calculation: This step requires loading of α, β and γ of all states and computation of likelihood ratio which is add, subtract and comparison. Once LLR values of all states are compared, the maximum in selected. Two rows compute the LLR of two separate stages in 9 cycles.
+Fig. 6 shows the mapping of α, β, γ and LLR calculations. Interleaving function is performed by loading the customized pattern to the Configuration Table of the DB. Hard decision is executed after last iteration on two rows. Table II shows the performance of a Turbo decoder used for W-CDMA on 3856 bit blocks.
+C. Reed-Solomon Algorithm Reed-Solomon (RS) coding [19] uses the Galois field
+properties and are symbol based codes. The code RS(255,239) is very popular and its shortened versions are used in concatenation with convolutional coding in many standards including DVB-T, DVB-H, and WiMAX. We chose this code
+
+Figure 5. a. The processing schedule of Viterbi, b. Trellis mapped to PEs
+
+Figure 6. Mapping of Turbo decoder on PEs
+
+608
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:50:36 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+Figure 7. Mapping of Reed-Solomon decoder on PEs
+as an example for implementation on RECFEC. The RS decoding problem incurs a lot of GF polynomial
+evaluations which breaks down to a lot of GF MAC operations. Therefore, RS decoder can benefit from the GF accelerator featured in PEs.
+Two rows of PE Pool are employed to decode one block. The decoding steps of RS code can be enumerated in four steps [20-21] as demonstrated in Fig. 7:
+• Syndromes computation: 2t error syndromes are computed using following equation where j=1-2t, and r is the received sequence.
+
+( ) ∑ ( ) ∑ 254
+
+254
+
+S j = r α j = rk α j k = rkα jk
+
+(3)
+
+k =0
+
+k =0
+
+In order to map syndrome computation to the PE Pool, summation could be distributed on two rows of PEs. The other approach is to allocate one PE for each syndrome computation which is a GF MAC operation. Two rows are used for all 16 syndromes. This approach minimizes the data movement among PEs which results in better performance and is chosen in this work. • Berlekamp-Massey algorithm: This is a fully serial algorithm and generally has 2t steps. However, polynomial evaluation is performed in parallel. Each partial GF multiplication is carried out on one PE. Then partial results are added. • Roots search (Chien search) algorithm: The roots of the error locator polynomial need to be found. The error locator polynomial generally has degree of t. In order to find the roots, the polynomial should be evaluated with all field members; if the result is zero then a root is found. This procedure can be performed in parallel as it consists of 255 independent computations. Each PE performs 16 searches sequentially.
+
+• Forney algorithm: Error location values are found. Following equation summarizes the operations:
+
+eik
+
+=
+
+− ΧkΩ(Χk−1)
+
+Λ′(
+
+X
+
+−1 k
+
+)
+
+(4)
+
+where Ω= Λ(1+S(x)) Mod x17, S(x) is the syndromes polynomial and Λ is the error locator polynomial. Fig. 7 shows the mapping on the PE Pool. In this example, 2 rows of PE Pool are employed to decode a block of data. So the PE Pool is capable of processing 4 blocks of data concurrently. There are other mapping scenarios, such as using only one row or using half the PE Pool. However, the presented mapping is an appropriate trade-off considering the latency, memory and utilized parallelism. Table III summarizes the performance of a RS decoder on RECFEC.
+
+D. Low Density Parity Check Algorithm Low Density Parity Check (LDPC) codes are considered an
+efficient alternative for channel coding in wireless communication and storage systems [22]. WiMAX and DVBS2 are among the first standards that have selected LDPC for channel coding.
+LDPC codes are a class of linear block code that are defined as the null space of parity check matrix H. A Tanner graph is defined for each parity check matrix. Tanner graph is a bipartite graph with two sets of nodes, variable nodes and check nodes.
+Message passing algorithm is the main algorithm for LDPC decoding. It specifies the computation and communication of messages between variable nodes and check nodes along the edges of the Tanner graph. In every decoding iteration, messages at check nodes are computed and passed to variable nodes and messages at variable nodes are calculated and passed to check nodes. This process continues until one of the termination conditions satisfies. In LDPC mapping on RECFEC, PEs are configured as variable nodes and check nodes alternatively as shown in Fig. 8. The mapping process for LDPC in RECFEC is as follows:
+• Variable node computation: 64 variable nodes are assigned to 64 PEs and bit node computation is performed on the ALU of all PEs. This step continues until messages are generated for all bit nodes in parity check matrix.
+• Check node computation: 64 check nodes are assigned to 64 PEs and check node computation is executed on the Lookup table and ALU of all PEs. This step continues until messages are generated for all check nodes in parity check matrix. Lookup table is used to implement the following nonlinear function:
+
+φ(x) = − ln(tanh(x / 2))
+
+(5)
+
+• Hard Decision: Threshold the values calculated in each variable node to find a code word. Stop if Maximum
+
+609
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:50:36 UTC from IEEE Xplore. Restrictions apply.
+
+This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the WCNC 2008 proceedings.
+
+Selection Network
+Selection Network
+
+Data Buffer
+
+c0 c1 c2
+
+c7
+
+PE Pool
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+C
+
+Check messages
+
+Data Buffer
+
+v0 v1 v2
+
+v7
+
+PE Pool
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+V
+
+Variable messages
+
+Figure 8. PE Pool configuration as the check node and variable node
+
+Number of iteration is reached or the code word satisfies all parity check equations. If the number of variable nodes or check nodes is a multiple of 64 (number of PEs) the maximum parallelism is achieved by the above mapping. We used the H matrix of WiMax and DVB-S2 standard for this mapping. Table IV shows the results.
+
+IV. CONCLUSION
+
+Tables I-IV report the cycle breakdown and the overall throughput of four coding algorithms as reviewed in this paper. The Viterbi and Turbo decoder implementations can meet the data rate requirement of W-LAN (54Mbps) and W-CDMA (10-14Mbps for HSDPA). The RS decoder throughput is much higher than requirement of any commercial wireless standard (DVB-T data rate is less than 35Mbps). The proposed LDPC decoder can also achieve the data rate of fixed WiMAX (70Mbps for basestation). The results show that with an 8×8 PE Pool, RECFEC is capable of decoding four FEC algorithms with required throughput as employed in different wireless standards. RECFEC architecture is flexible and programmable and FEC algorithms can be developed on it in software and with minimum effort. The estimated power consumption of a PE based on the RTL synthesis using TSMC 90nm technology is 3.1mW.
+
+REFERENCES
+
+[1] H. Singh M.H Lee, G. Lu, F.J. Kurdahi, N. Bagherzadeh, E.M.C. Filho, “MorphoSys: an integrated reconfigurable system for data-parallel and computation-intensive applications,” IEEE Trans. on Computers, vol. 49, pp. 465-481, May 2000.
+[2] S. Halter, M.Oberg, P.M. Chau, P.H.Siegel, “Reconfigurable signal
+
+TABLE I
+
+PERFORMANCE OF VITERBI DECODER
+
+K
+
+R
+
+Branch Metrics Calculation (cc/bit)
+
+Path Metrics Calculation
+(cc/bit)
+
+Survivor Path Trace Back Total Storage (cc/bit) (cc/bit) cc/bit
+
+Mbps
+
+7 1/2
+
+0.03
+
+3
+
+1.06
+
+0.42 4.51 55.43
+
+7 1/3
+
+0.05
+
+3
+
+1.06
+
+0.42 4.53 55.24
+
+9 1/2
+
+0.03
+
+12
+
+4.25
+
+0.63 16.91 14.79
+
+9 1/3
+
+0.05
+
+12
+
+4.25
+
+0.63 16.92 14.77
+
+TABLE II
+
+PERFORMANCE OF TURBO DECODER
+
+SISO Decoder
+
+K R Log gamma LogAlpha Log Beta
+
+LLR
+
+Int/Deint
+
+(cc/dec/bit) (cc/dec/bit) (cc/dec/bit) (cc/dec/bit) (cc/dec/bit)
+
+4 1/3
+
+0.75
+
+2
+
+2.00
+
+4.50
+
+0.50
+
+Hard Decision (cc/bit)
+0.38
+
+Total Cycles/
+bit
+
+Mbps (per iter)
+
+19.58 51.09
+
+processor for channel coding and decoding in low SNR wireless communications,” IEEE workshop on Signal Processing Systems, pp. 260-274, 1998. [3] Cavallaro, J.R. Vaya, M, “ Viturbo: a reconfigurable architecture for Viterbi and turbo decoding,” ICASSP ’03, vol. 2, pp. 497-500, 2003. [4] 4. Kai Huang, Fan-Min Li, Pei-Ling Shen and An-Yeu Wu, “VLSI design of dual mode Viterbi/Turbo decoder for 3GPP,” ISCAS ’04, vol. 2, pp.773-776, 2004. [5] Jian Liang, Russell Tessier, Dennis Goeckel, “A DynamicallyReconfigurable, Power-Efficient Turbo Decoder,, 12th Annual IEEE Symposium on Field-Programmable Custom Computing Machines, pp. 91-100, 2004. [6] M.M. Mansour, N.R. Shanbhag, “Turbo decoder architectures for lowdensity parity-check codes,” GLOBCOM ’02, vol. 2, pp. 1383-1388, 2002. [7] Lu Jin, J.M.F Moura, “Turbo like decoding of LDPC codes,” IEEE International Magnetics Conference, pp. DT – 11, Apr. 2003. [8] E. Piriou, C.Jego, P. Adde, R. Le Bidan, M. Jezequel, “Efficient architecture for Reed Solomon block turbo code,” ISCAS ’06, pp. 368285, 2006. [9] K.Mueller et al ,“A low-cost DVB compliant Viterbi and Reed Solomon decoder,” IEEE Trans. Consumer Electronics, vol. 43, pp. 448-452, Aug. 1997. [10] A. Viterbi, “Error bounds for convolutional coding and an asymptotically optimum decoding algorithm,” IEEE Trans. Info. Theory, vol. IT-13, pp 260-269, Apr. 1967. [11] G.D. Forney, “The Viterbi algorithm,” Proc. of the IEEE, vol. 61, pp. 268-278, Mar. 1973. [12] A. Niktash, H. Parizi, N. Bagherzadeh, “A Multi-standard Viterbi decoder for mobile applications using a reconfigurable architecture,” VTC, fall 2006. [13] C.Berrou, A. Glavieux, P. Thitimajshima, “Near Shannon limit errorcorrecting coding and decoding: Turbo-Codes,” ICC, pp. 1064-1070, May 1993. [14] J. Hagenauer, P. Hoeher,”A Viterbi algorithm with soft–decision outputs and its applications,” GLOBECOM ’89, pp. 1680–1686, 1989. [15] L. Bahl, J. Jelinek, J. Raviv, F. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Info. Theory, vol. IT–20, pp. 284–287, Mar. 1974. [16] S. Pietrobon, S. A. Barbulescu, “A simplification of the modified Bahl decoding algorithm for systematic convolutional codes,” Int. Symp. on Inform. Theory and its Applications, pp. 1073–1077, Nov. 1994. [17] J. A. Erfanian, S. Pasupathy, G. Gulak, “Reduced complexity symbol detectors with parallel structures for ISI channels,” IEEE Trans. Com., vol. 42, pp. 1661-1671, 1994. [18] W. Koch, A. Baier, “Optimum and sub-optimum detection of coded data disturbed by time-varying inter-symbol interference,” GLOBECOM’90, pp. 1679-1684, Dec. 1990. [19] I.S. Reed, G. Solomon, “Polynomial codes over certain finite fields,” Journal of society of industrial and applied math., pp. 300-304, Jun. 1960 [20] Stephen B. Wicker, Error control systems for digital communication and storage, Prentice-Hall 1995. [21] S. Lin, D.J. Costello, Error control coding: fundamentals and applications, Prentice-Hall 1983. [22] R. Gallagar, “Low Density Parity Check Codes,” IEEE Trans. Info. Theory, vol. 8, pp. 21-28, Jan. 1962.
+
+TABLE III
+
+PERFORMANCE OF REED-SOLOMON DECODER
+
+Syndromes Berlekamp Chien Forney Total
+
+n k Computatio Massey Search (cc/block) Cycles/ Mbps
+
+n (cc/block) (cc/block) (cc/block)
+
+255 239
+
+510
+
+144
+
+176
+
+79
+
+block 909 2103.41
+
+TABLE IV PERFORMANCE OF LDPC DECODER
+
+Parity Max Row/Col
+
+Message
+
+Matrix size Degree
+
+Iteration Resolution
+
+288x576
+
+4
+
+528x1056
+
+7
+
+704x1056
+
+7
+
+64
+
+4 bit
+
+20
+
+4 bit
+
+20
+
+4 bit
+
+Resolution
+4 bit 4 bit 4 bit
+
+Mbps
+355 85 58
+
+610
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:50:36 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,495 @@
+2024 9th International Conference on Communication, Image and Signal Processing (CCISP) | 979-8-3503-5665-6/24/$31.00 ©2024 IEEE | DOI: 10.1109/CCISP63826.2024.10765523
+
+FPGA Implementation of QC-LDPC Decoder with Rapid Cyclic Shifter for CV-QKD Systems
+
+1st Zeyuan Jin School of Information Science and Technology Donghua University
+Shanghai, China dhuinfper@163.com
+
+2nd Yinghua Xie∗ School of Information Science and Technology Donghua University
+Shanghai, China yh xie@dhu.edu.cn
+
+3rd Xue-Qin Jiang School of Information Science and Technology Donghua University
+Shanghai, China xqjiang@dhu.edu.cn
+
+4th Genlong Chen School of Information Science and Technology Donghua University
+Shanghai, China glchen2008@dhu.edu.cn
+
+Abstract—In continuous variable quantum key distribution (CV-QKD) systems, low-density parity check (LDPC) decoders have gained widespread adoption due to their robust error correction capabilities and good adaptability to parallel processing hardware designs. We introduce a syndrome-based normalized min-sum algorithm (S-NMSA) and implement the decoder on FPGAs for high throughput and minimal resource consumption. The decoder utilizes a semi-parallel architecture. The proposed rapid cyclic shifter (RCS) can complete the shift of any dimension matrix in one clock cycle and realizes a significant reduction in hardware resource consumption. The semi-parallel decoding structure attains a 68.5 Mbps processing throughput on the condition that the system clock of the quasi-cyclic (QC) LDPC decoder is 250 Mhz.
+Index Terms—CV-QKD, QC-LDPC, NMSA, RCS, FPGA
+I. INTRODUCTION
+Quantum key distribution (QKD) [1] is a quantum information technology that ensures unconditional security, a feat achieved through the utilization of the principles of immeasurability and quantum unclonability. Compared to discrete variable quantum key distribution (DV-QKD) systems [2], continuous variable quantum key distribution (CV-QKD) systems [3] are less expensive to deploy and offer higher potential key rates over short distances. Currently, the performance of the post-processing procedure in CV-QKD systems is a constraining factor for the development of the systems. This is because the extremely low signal-to-noise ratio (SNR) conditions in which the CV-QKD systems is located place higher demands on the data processing speed for information reconciliation (IR).
+Error correcting codes (ECCs) is used by both communicating parties during IR to effectively detect and correct errors in the key so that both parties end up holding identical keys. Robert Gallager initially presented low-density parity-check (LDPC) codes [4] in 1962. LDPC codes are well known for their decoding ability close to the Shannon limit. Nevertheless, the implementation of the LDPC decoder is a challenge that should not be underestimated if the requirements of IR for low latency and high throughput of error-correcting codes are to be met [5].
+
+In contrast to central processing unit (CPUs) and graphics processing units (GPUs) with instruction-based architectures, field-programmable gate arrays (FPGAs) offer higher data parallel processing power than GPUs, as well as lower power consumption and greater ease of integration. The FPGA-based implementation of the LDPC code decoder is a crucial step in the development of a CV-QKD system. In FPGA implementation of a quasi-cyclic (QC) LDPC decoder, a programmable circular-shift network QSN [6] is designed and implemented in order to transfer the decoded messages correctly during the iterative decoding process. The QSN has a flexible structure and supports predefined cyclic shifts of arbitrary size, but the disadvantage is that the hardware resource consumption is still high.
+This paper introduces a syndromes-based normalized minsum decoding algorithm (S-NMSA), integrated with the IR of the CV-QKD systems. Additionally, we delineates the realization of a decoder tailored for high throughput and minimal resource consumption implemented on a FPGA. In order to address the issue of repeatedly calculating the memory location index, this paper presents a check matrix preprocessing method. This method aims to reduce the timeconsuming process of obtaining the location index and to reduce the decoding complexity. A rapid cyclic shifter (RCS) architecture is proposed, aimed at efficiently executing cyclic shifting.
+The rest of this paper is organized as follows. In Section II, we describe the PCM and the decoding algorithm of LDPC codes. Subsequently, the overall system architecture of the QCLDPC decoder is described in Section III. Section IV presents the experimental results of QC-LDPC decoder. Finally, in Section V we summarize and conclude our work.
+II. PRELIMINARIES
+A. The Structure of QC-LDPC Codes
+The QC-LDPC codes are widely used in communication standards due to its properties [7] that aid in designing hardware-efficient decoder architectures. The parity check matrix (PCM) of a QC-LDPC code, typically defined by an mb × nb base PCM Hb, is comprised of several sub-matrices
+
+979-8-3503-56A6u5t-h6o/r2iz4e/d$3lic1e.n0s0ed©u2s0e2l4imIiEteEdEto: Yonsei Univ. Downloaded on J1u0n2e 24,2026 at 16:09:21 UTC from IEEE Xplore. Restrictions apply.
+
+sharing the same dimension. Equation (1) illustrates the Hb, 3) Variable nodes update
+
+with mb = 2, nb = 4.
+
+Hb =
+
+1 0
+
+2 1
+
+0 −1
+
+−1 3
+
+(1)
+
+Lv2cj(ki ) = LPj +
+
+Lc2vi(kj).
+
+(4)
+
+i ∈C(j)\i
+
+4) AP log-likelihood ratio (LLR) updata
+
+LQj(k) = LPj +
+
+Lc2vi(jk).
+
+(5)
+
+i∈C (j )\i
+
+5) Decision decoding
+
+uj =
+
+1, 0,
+
+if LQj(k) < 0 . else
+
+(6)
+
+Fig. 1. The full PCM H for the QC-LDPC codes.
+
+In the Hb, the value of ”-1” signifies the presence of a zero matrix, whereas non-negative values designate circulant permutation matrices (CPMs). The CPMs are typically of dimensions Z × Z, with the parameter Z being referred to as the expansion factor. A non-zero entry Hij in the full PCM H indicates the existence of an edge connecting the i-th check node (CN) to the j-th variable node (VN). The full PCM H corresponding to (1) is displayed in Fig. 1, where Z = 4. The row degree Dc and column degree Dv of PCM indicate the number of non-zero elements in each row or column. A PCM is considered regular when the Dv (Dc) is consistent across all columns (rows). If not, it is classified as irregular.
+
+B. LDPC Codes Decoding Algorithm
+The normalized min-sum algorithm (NMSA) [8] is proposed to neutralize the implementation complexity of the belifpropagation (BP) algorithm and the inaccuracy of the min-sum algorithm algorithm (MSA). In the reverse-multiple reconciliation scheme of the CV-QKD systems, Bob (the communication receiver) computes the syndromes S = Hu using the binary key sequence u and the PCM H. Alice (the communication transmitter) gets the key sequence u by decoding based on the syndromes S, if decoding is successful then u = u . We employ S-NMSA for the implementation of an QC-LDPC decoder specifically tailored for CV-QKD systems. The SNMSA decoding process is consists of the following five steps.
+1) Initialization
+
+LPj
+
+=
+
+2yj σ2
+
+,
+
+(2)
+
+where σ2 is channel noise variance and 0 ≤ j < N .
+
+2) Check nodes update
+
+Lc2vi(jk) = (1 − Sj ) · (
+
+sgn(Lv2cj(ki−1)))
+
+j ∈V (i)\j
+
+(3)
+
+·
+j
+
+min (
+∈V (i)\j
+
+Lv2c(jki−1)
+
+)·
+
+α,
+
+where sgn stands for the sign function and α is the normalization factor.
+
+At the end of each iteration, ascertain whether S = u ∗ Ht is satisfied or the allowed maximum iterations has been completed. If one of these conditions is met, the decoding process is terminated. Otherwise, proceed to (2) to continue the next iteration.
+The meanings of the symbols used in this paper and in this section are explained in Table I.
+
+TABLE I SUMMARY OF FREQUENTLY USED SYMBOLS
+
+Notation
+i j V (i) C (j ) i j k yj σ2 LPj Lc2vi(jk) Lv2cj(ki ) LQj(k)
+
+Meaning index of CN index of VN Set of VNs connected to the CNi Set of CNs connected to the VNj
+C (j )\i. V (i)\j. The number of the current iteration Received codeword symbols from Channel Channel noise variance Input a-priori LLR for a VNj The LLR from the CNi to the VNj in the k-th iteration
+The LLR from the VNj to the CNi in the k-th iteration
+A-posteriori LLR for a VNj
+
+III. THE PROPOSED QC-LDPC DECODER ARCHITECTURE
+This section provides a comprehensive introduction to the proposed FPGA based QC-LDPC decoder architecture, which aims to reduce hardware resource utilization and enhance the decoding speed.
+A. The system block diagram
+The system block diagram of the QC-LDPC decoder proposed in this paper is illustrated in the Fig. 2, comprising the control module, memory module, calculation module, and selection module. We employ the parallelism parameter P (P = Z) to implement a semi-parallel architecture for the decoder, which strikes a balance between throughput and hardware complexity.This implies the decoder has to process the LLRs of P groups check or variable nodes simultaneously.
+Within the control module, the decoder processing control (DPC) is responsible for supervising the decoding process,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u0n3e 24,2026 at 16:09:21 UTC from IEEE Xplore. Restrictions apply.
+
+Decoder Processing
+Control
+Memory Address Control
+RCS Offset Control
+Control Module
+
+LPj Block Memory Module
+VN MMoCdVMouNdNVloMeusdNlVeouMdNleuelessages Block Memory Module
+Mux Module
+
+LPj&Lc2v to VN1
+LPj&Lc2v to VN2
+...
+LPj&Lc2v to VNP
+Select Module
+
+re-RCS Module
+MMVoMVdNoudVNoluedVNlueCNleNs CMaolcduullaetion Module
+
+Lv2c to CN1
+Lv2c to
+.C.N. 2
+Lv2c to CNP
+Select Module
+
+VN ModVulNe
+VNs ModuVleN ModuVleN CaMlocduulelation
+Module
+
+Decision Module
+
+RCS Module
+Mux Module
+VN ModuVleN
+ModuVleN
+VNMosdMuVloMedNuleessages Block Memory Module
+
+Fig. 2. Architecture of the proposed QC-LDPC decoder.
+
+the memory address control (MAC) generates addresses for storing and retrieving LLR messages in the memory, and the RCS offset control module manages the shift magnitude of the RCS. Before the first iterative decoding, it is necessary to convert the LPj stored in the LPj block memory into Lv2c, which is needed to compute the Lc2v in (3). Specifically, after reading out the LPj, the select module divides the LPj into P groups according to each CPM. The RCS module then implements cyclic shifting according to the corresponding shift value of the CPM. Finally, the Lv2c is deposited into the VNs messages block memory. The iterative decoding process is that the check nodes calculation modules (CNCM) calculates Lc2v and stores it, and the variable nodes calculation modules (VNCM) calculates the AP-LLR and performs the decoding judgement, and at the same time stores the AP-LLR in the variable node information memory.
+B. Preprocessing of the QC base PCM
+In order to simplify the design of the decoder and reduce the hardware complexity, this paper preprocesses the Hb to obtain a regular matrix Hb before decoding. The preprocessing of the Hb includes the following steps:
+1) Extract the non-negative values from Hb to obtain a numeric matrix, referred to as the extracted matrix. This matrix contains values that represent the offsets for the cyclic right shifts of the block CPM. These numerical values are utilized by the RCS module to execute cyclic shifts on LLRs.
+2) Get the addresses and values from the extracted matrices. Create the offset matrices Of f set1 and Of f set2 from the values in the extracted matrix. The number of rows and columns corresponding to the numeric values create the address matrices Addr1 and Addr2, which are essential for determining the addresses of the LLRs in the memory module.
+3) Regularize the offset matrices and address matrices. Specifically, use ”Z” to fill the offset matrices and ”0” to fill the address matrices.
+Fig. 3 shows a graphical illustration of the base 6 × 6 PCM Hb preprocessing operation for a QC-LDPC code.
+
+row
+1 2 3 4 5 6
+row
+1 2 3 4 5 6
+
+column row 1 2
+1 57
+
+The Extracted Matrix
+
+3 4 5 6 7 8 9 10 11 12
+
+50
+
+11
+
+50
+
+79
+
+23
+
+28
+
+7
+
+3 30
+
+24 37
+
+56 14
+
+4 62 53
+
+35
+
+5 40
+
+20 66
+
+22 28
+
+60
+
+8
+
+42
+
+50
+
+8
+
+2IIVHW
+
+(a) column
+
+2IIVHW
+
+57 50 11 50 79 3 28 7 Z Z 30 24 37 56 14 62 53 35 Z Z 40 20 66 22 28 0 8 42 50 8
+
+1 2 3 4 5 6 7 8 9 10 11 12 57 53 28 20 50 37 11 22 50 7 79 8 3 Z Z Z 24 Z 42 Z 56 14 Z Z 30 Z Z Z 66 Z Z Z 35 Z Z Z 62 Z Z Z 8 Z Z Z 28 Z Z Z 40 Z Z Z Z Z Z Z 50 Z Z Z 0ZZZZZZZZZZZ
+
+$GGU
+
+(b) column
+
+$GGU
+
+1 5 7 9 11 1 3 10 0 0 1 5 6 9 10 12900 14589 1 5 7 9 12
+
+1 2 3 4 5 6 7 8 9 10 11 12 142513151216 200030603300 300050004000 400060005000 500000006000 600000000000
+
+(c)
+
+Fig. 3. The preprocesses of the Hb. (a) The non-negative values extracted from the Hb. (b) The offset matrices Of f set1 and Of f set2 obtained after the preprocessing. (c) The address matrices Addr1 and Addr2 obtained after
+the preprocessing.
+
+C. Node calculation Module
+The VNCM and the CNCM are both designed with P calculation units. Each calculation unit processes one column or row of H. A row (or cloumn) in H corresponds to a check (or variable) node. By leveraging P computational units, we achieve parallel processing of either P columns (rows) from H, significantly enhancing computational efficiency. In this paper, we devise a hierarchical tree structure within the variable nodes calculation unit (VNCU) to calculate the Dv groups of Lv2c for variable nodes. Additionally, we employ a minimum value structure to calculate the Dc groups of Lc2v required by the check nodes.
+
+Lc2v1( kj )
+
+Lc2v(2kj)
+
+Lc2v3(kj)
+
+Lc2v(4kj)
+
+Lc2v5(kj)
+
+LQ
+
+( j
+
+0)
+
+Sum1_1
+
+Sum1_2
+
+Sum1_3
+
+Sum2_1
+
+Sum2_2
+
+LLRs(ukm)
+
+Lv2c(jk1)
+
+Lv2c(jk2)
+
+Lv2c(jk3)
+
+Lv2c(jk4)
+
+Lv2c(jk5)
+
+LQ
+
+( j
+
+k
+
+)
+
+Fig. 4. The hierarchical tree structure within the variable nodes calculation unit, shown with Dv = 5.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u0n4e 24,2026 at 16:09:21 UTC from IEEE Xplore. Restrictions apply.
+
+Lv2c1(ik ) Lv2c(2ki ) Lv2c3(ki ) Lv2c(4ki ) Lv2c5(ki ) Lv2c6(ki )
+
+sign1 value1
+sign2 value2
+sign3 value3
+sign4 value4
+sign5 value5
+sign6 value6
+
+Miniums Lv2cmin
+Lv2cmin-minor
+Sign product
+
+Lc2vi(1k ) Lc2vi(2k ) Lc2vi(3k ) Lc2vi(4k ) Lc2vi(5k ) Lc2vi(6k )
+
+1 2
+3 4 5 6
+
+345612
+
+Left Right
+
+120000 003456
+
+Select
+
+123456
+
+Fig. 5. The minimum value structure within the check nodes calculation unit, shown with Dc = 6.
+
+Fig. 6. The operation strategy of the RCS for a 6 × 6 CPM with an offset of 4.
+
+The VNCU employs a hierarchical addition tree structure as shown in Fig. 4. The inputs are Dv sets of Lc2v and one inherent LLR provided by the channel. The outputs are Dv sets of Lv2c and one posterior LLR corresponding to the variable node, which will be used as the basis of the hard decision to get the decoded codeword. Additionally, after each layer of additional calculations, the bit width of the result needs to be expanded by one bit to avoid overflow.
+The minimum value structure shown in the Fig. 5 is used by the check node calculation unit (CNCU) to complete the sign product computation and the minimum (Lv2cmin) and the subminimum (Lv2cmin−minor) find operations. The inputs are Dc sets of Lv2c and the outputs are Dc sets of Lc2v corresponding to each input. The minimum value structure initially compares all the input values directly to identify the minimum and the subminimum among them. Subsequently, it assesses whether the value of an input Lv2c is the minimum. If not, its corresponding output the value of Lc2v is assigned minimum; otherwise, the value of Lc2v is assigned subminimum.
+D. Rapid Cycling Shifter
+In the proposed QC-LDPC decoder architecture, we propose a flexibly configurable RCS that supports the circular shifting of square Z × Z matrices with arbitrary offsets. As previously described, Lv2c is computed in the order of the columns of H and Lc2v is computed in the order of the rows of H, the RCS needs to convert the LLRs to the corresponding read order before the calculation process. Fig.6 shows the operation strategy of the RCS with a Z × Z CPM and an offset of 4.
+The original matrix is first decomposed into parts that need to be shifted left and parts that need to be shifted right. The offsets for the left and right shifts are then determined based on the given matrix shift values. Secondly, the leftward and rightward shift matrices are added to obtain the circular shift matrix. The principle of merging two shifted matrices is that during shifting, only key parts are retained, while the rest are zeroed, leading to the final left-shifted and right-shifted matrices. The RCS is capable of simultaneously shifting and selecting matrices in both directions in a single clock cycle, greatly reducing the time required to shift matrix data sequentially. Its flexibility ensures parallel processing of multiple
+
+matrix circular shift operations, thereby minimizing matrix shift complexity due to differing offsets.
+
+IV. EXPERIMENTAL RESULTS
+This section focuses on the optimization performance verification of the proposed decoder architecture. On one hand, the optimized performance of the rapid cyclic shifter is verified. On the other hand, the error correction performance of the decoding is verified.
+
+A. Performance Optimization Results
+The proposed rapid cyclic shifter is designed to enhance the throughput of QC-LDPC decoders by reducing the time required for iterative decoding. The designed RCS is implemented on Xilinx Vertex-7 FPGA platform, in which the shifter supports any shift value for any matrix size. Table II compares the network size and the look-up-tables (LUTs) and the clock frequency of the RCS with the IBN[11] and the FPGA-based implementation of QSN. As show in TABLE II, the proposed shifter structure can save up to 65% in the elimination of hardware resources. Compared to the barrel shifter in the current state-of-the-art LDPC decoder, the implemented RCS is capable of 128-bit data in one clock cycle, whereas literature [10] requires six clock cycles.
+
+B. SNR Performance
+
+Our proposed QC-LDPC decoder has been implemented and tested on Xilinx Vertex-7 FPGA platform. The experiments utilize QC-LDPC codes compliant with IEEE 802.11n, featuring a 1944-bit length and a 1/2 code rate. For throughput optimization, we choose a 16-bit finite-precision fixed data format (1-bit sign, 7-bit integer, and 8-bit decimal) to represent the LLR of the QC-LDPC decoder. The throughput Γ is calculated as follows:
+
+Γ=
+
+N × fclk
+
+,
+
+(2 × Z + θ) × Imax
+
+(7)
+
+where fclk represents the operating frequency, θ represents the overall initialization interval, the sub-matrix size Z is equal to 81, and Imax represents the max number of iterations. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u0n5e 24,2026 at 16:09:21 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II HARDWARE RESOURCE COMPARISON FOR CONFIGURABLE SWITCHED NETWORKS (8-BIT WORD LENGTH)
+
+Network Size (Z × Z) 32 × 32 48 × 48 64 × 64 96 × 96 128 × 128
+
+Slices 1650 2911 3796 6558 9483
+
+IBN [9] FFs Luts 1008 2553 1520 4345 2432 6140 3056 10489 5744 14329
+
+Freq. (MHz) 139.2 139.2 92.2 87.1 81.6
+
+Slices 1614 2631 3598 5936 8160
+
+QSN [6] FFs Luts 1008 2538 1520 4290 2032 5996 3056 9703 4000 13589
+
+Freq.(MHz) 253.2 251 237 192.4 171.7
+
+Slices 568 984 1328 2112 2920
+
+RCS (This work)
+
+FFs Luts Freq.(MHz)
+
+928 1656
+
+250
+
+1312 2968
+
+250
+
+1760 3920
+
+250
+
+2464 6408
+
+250
+
+3232 8704
+
+250
+
+100
+
+PCM preprocessing is proposed for extracting and filling the
+
+MSA S-NMSA
+
+H. Furthermore, an adjustable rapid cyclic shifter is designed,
+
+which not only minimizes resource utilization but also enables
+
+10-1
+
+arbitrary shifts of any matrix within a single clock cycle,
+
+thereby enhancing the decoder’s throughput. Experimental
+
+results on the Xilinx Vertex-7 FPGA demonstrate that the
+
+10-2
+
+designed decoder achieves a throughput of 68.5 Mbps. Consequently, this decoder architecture is suitable for the post-
+
+processing of CV-QKD systems.
+
+FER
+
+10-31.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 SNR
+Fig. 7. FER performance of different SNRs.
+
+maximum throughput of the designed QC-LDPC decoder can reach 68.5 Mbps when the fclk is chosen to be 250 MHz.
+The SNR performance of QC-LDPC codes was implementated on FPGAs, where rate is 1/2 and the maximum number of iterations Imax = 100. Compared with the MSA, the FER performance of the S-NMSA implemented in this paper is shown in Fig. 7. The proposed decoder demonstrates superior performance compared to the MSA decoder.
+The resource utilisation of the QC-LDPC decoder designed in this paper and the QC-LDPC decoder comparison of the most relevant QKD systems are shown in Table III. It can be seen that the decoder designed in this paper compared with relevant work shows that our decoder delivers 2.2× higher throughput for the same code length.
+
+TABLE III COMPARISON OF PROPOSED QC-LDPC DECODER IMPLEMENTATION-RESULTS WITH THE MOST-SIMILAR
+WORKS
+
+Resource Code length
+Code rate throughput(Mbps)
+LUT LUTRAM
+FF BRAM
+
+This work 1944 1/2 68.5 124625 4104 30625 147
+
+IR-QC-LDPC Decoder[11] 1944 2/3 27.85
+102622 3287 49909 210
+
+V. CONCLUSION
+In this paper, we have implemented a highly flexible QCLDPC decoder on FPGA. To reduce decoding complexity, a
+
+ACKNOWLEDGMENT
+This work is supported by Innovation Program for Quantum
+Scienceand Technology (Grant No.2021ZD0300703), Shang-
+hai Municipal Science and Technology Major Project (Grant
+No. 2019SHZDZX01), the State Key Laboratory of Advanced
+Optical Communication Systems and Networks (Grant No.
+2024GZKF006), China.
+REFERENCES
+[1] N. Gisin, G. Ribordy, W. Tittel, and H. Zbinden, “Quantum cryptography”, Rev. Mod. Phys., pp. 145–195, January 2002.
+[2] Weedbrook, C., Pirandola, S., Garc´ıa-Patro´n, R., Cerf, N.J., Ralph, T.C., Shapiro, J.H., and Lloyd, S., “Gaussian quantum information,” Rev. Mod. Phys., pp. 621-669, May 2012.
+[3] E. Diamanti and A. Leverrier, “Distributing secret keys with quantum continuous variables: Principle, security and implementations,” Entropy, pp. 6072–6092, August 2015.
+[4] R. G. Gallager, “Low-density parity-check codes,” IRE Transmission Information Theory, January 1962.
+[5] S. -S. Yang, Z. -G. Lu and Y. -M. Li, “High-speed post-processing in continuous-variable quantum key distribution based on FPGA implementation,” Journal of Lightwave Technology, pp. 3935-3941, August 2020.
+[6] X. Chen, S. Lin and V. Akella, “QSN—A simple circular-shift network for reconfigurable quasi-cyclic LDPC decoders,” IEEE Transactions on Circuits and Systems II: Express Briefs, pp. 782-786, October 2010.
+[7] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, pp. 1788–1793, August 2004.
+[8] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., pp. 673–680, May 1999.
+[9] D. Oh and K. Parhi, “Low-complexity switch network for reconfigurable LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., pp. 85–94, Jan. 2010.
+[10] B. L. T. Edara, T. G. N. Aishwarya, S. R. Patlolla and M. O. V. P. Kumar, ”Implementation of LDPC decoder using barrel shifter,” 2024 3rd International Conference on Applied Artificial Intelligence and Computing (ICAAIC), Salem, India, pp. 1731-1737, June 2024.
+[11] A. Verma and R. Shrestha, ”Hardware-Efficient and High-Throughput LLRC Segregation Based Binary QC-LDPC Decoding Algorithm and Architecture,” IEEE Transactions on Circuits and Systems II: Express Briefs, pp. 2835-2839, Aug. 2021.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J1u0n6e 24,2026 at 16:09:21 UTC from IEEE Xplore. Restrictions apply.
+
+

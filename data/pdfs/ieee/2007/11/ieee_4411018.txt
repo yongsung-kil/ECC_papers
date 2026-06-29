@@ -1,0 +1,291 @@
+Multi-Gbps FPGA-based Low Density Parity Check (LDPC) Decoder Design
+
+Radivoje Zarubica, Stephen G. Wilson, and Eric Hall∗
+Charles E. Brown Department of Electrical and Computer Engineering
+University of Virginia, Charlottesville, VA 22904 ∗L-3 Communications West, Salt Lake City, UT 84116
+
+Abstract— A novel high-throughput (6 Gb/s), fully-parallel FPGA-based 1200-bit rate-1/2 Low Density Parity Check (LDPC) decoder design is presented. The decoder features a PEGbased regular (6,3) code and a modified min-sum algorithm that improves performance without any additional hardware overhead.1
+I. INTRODUCTION
+Low density parity check (LDPC) codes have garnered a great deal of attention in the error control coding field recently, due to the ability to implement soft-decision decoders that perform very near the Shannon bound (for long blocklengths.) The decoding algorithm is iterative, using message passing among nodes in a Tanner graph representation of the code, and allows parallel, or semi-parallel, processing in the computation to speed decoding.
+Already LDPC codes have become part of important standards, including 10Gb Ethernet over copper pairs, NASA’s Deep Space Coding standard, digital video broadcasting (DVB-S2), MIMO-WLAN 802.11n, 802.20, Wi-Max, and long-haul optical communication systems.
+Many investigators have studied the design of high-speed LDPC decoders either for custom ASIC implementation [1][2][3][4] or in general-purpose FPGA’s [5][6][7]. In this paper we report on design of an FPGA in Xilinx Virtex-4 hardware using a fully-parallel architecture. We are able to implement a regular rate-1/2 code with variable node degree 3 and check node degree 6 having blocklength 1200. The maximum clock speed is 100 MHz, leading to a decoder throughput of 6 Gb/s (with 10 iterations). To our knowledge this is by far the fastest LDPC decoder reported in FPGA hardware, and rivals the best custom IC designs for speed.
+In the following sections, we give a brief overview of LDPC codes, the message passing algorithm, then proceed to report the synthesis, layout, and simulation results achieved to date.
+II. BACKGROUND
+Given k message bits, an LDPC encoder constructs a codeword of length n (n > k) code bits, yielding a code with rate=k/n. The coding scheme relies on n − k possibly overlapping subsets of the code bits such that the parity of each subset in any codeword is even. These subsets are described
+
+by a (n−k)×n matrix H = [hij], such that hij = 1 iff the i-th subset has bit j in it. The H matrix is called the parity check matrix of the code and it is very sparse, hence the name “low density parity check” codes. An LDPC code is called regular if the weights of rows and columns in its parity check matrix are equal and is called irregular otherwise. The parity check matrix can be visualized as a bipartite graph, referred to as the Tanner graph of the code. One such graph of a short (10, 5) code is shown in Figure 1. Check nodes correspond to n − k parity checks and variable nodes correspond to n bits of the codeword that is transmitted. The Hamming weights of rows and columns in this representation are the degrees of check and variable nodes, respectively. A variable node is connected to a check node if the bit corresponding to it participates in the parity check operation of the check node. For better visualization we say that a variable node j is connected to a check node i iff hij = 1.
+Fig. 1. Tanner graph of a regular (10, 5) code
+To decode LDPC codes there are soft-decision, harddecision or hybrid decoding options. Of all these methods best results are achieved with soft decision decoding. The first algorithm used for soft decision decoding was Belief Propagation (BP) algorithm, also known as the Sum-Product (SP) algorithm. This algorithm gives best results in decoding LDPC codes, but implementation of that algorithm is more complex. The next paragraph explains the SP algorithm in log-likelihood ratio (LLR) form, using the notation from [8].
+First, we need to calculate the LLR for the received symbol:
+
+1Research supported by L-3 Communications West, Salt Lake City, UT 84116. Technical and equipment support provided by Xilinx.
+
+L(ci) = log
+
+Pr(ci = 0|yi) Pr(ci = 1|yi)
+
+(1)
+
+548 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E8E:27 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+For the case of antipodal signaling over AWGN channel, (1)
+
+becomes L(ci) = 2yi/σ2, where yi is the received symbol and σ2 is the noise power. Then these messages feed corresponding
+
+check nodes becoming a L(qij)-message from variable node i
+
+to check node j, where the sign and magnitude of L(qij) are
+
+αij and βij, respectively. At check nodes, these messages get
+
+processed according to (2).
+
+
+
+
+
+
+
+L(rji) = 
+
+αi j · φ 
+
+φ (βi j) (2)
+
+i ∈Vj \i
+
+i ∈Vj \i
+
+φ(x) = log
+
+ex +1 ex −1
+
+= log
+
+tanh
+
+x 2
+
+Thus message L(rji) from check node j to variable node i does not depend on the message that came from i − th variable node (Vj\i represents a set of all variable nodes that are connected to j − th check node, except i − th variable node).
+The variable node processor uses a somewhat simpler rule
+given in (3), and basically says that message from variable node i to check node j is just a simple addition of messages coming from all check nodes that i − th variable is connected to, except the j − th node. Processing messages through both processors is equivalent to one iteration of the SP algorithm.
+After the required number of iterations, decoded symbols are obtained comparing L(Qi) with the threshold (for the case of antipodal signaling the threshold is set to 0).
+
+L(qij) = L(ci) +
+
+L(rj i)
+
+(3)
+
+j ∈Ci\j
+
+L(Qi) = L(ci) + j∈Ci L(rji)
+
+The SP algorithm in its check nodes requires a complicated
+
+φ function, hence implementation of LDPC decoder employ-
+
+ing the SP algorithm has higher complexity than some low
+
+complexity alternatives. An alternative for SP algorithm is the
+
+min-sum (MS) algorithm. Although it introduces roughly 0.5
+
+dB penalty compared to the SP algorithm, its implementation
+
+is much simpler. The MS algorithm is just an approximation
+
+of the SP algorithm and the only difference is the check
+
+node processor. The check node update rule for MS algorithm
+
+is given in (5), and the initialization message for an LDPC
+
+decoder operating on AWGN channel is L(ci) = yi, since it
+
+can be shown that the decoder’s selection is invariant to scaling
+
+in floating-point arithmetic.
+
+
+
+
+
+L(rji) = 
+
+αi j  · min βi j
+
+(4)
+
+i ∈Vj \i
+
+i ∈Vj \i
+
+There are also some variations on the MS algorithm that improve its performance in finite-precision implementation, and in some cases even outperform the SP algorithm for the price of increased complexity. More on these variations will be explained in the next sections.
+There are many approaches in designing an efficient LDPC decoder. First is a fully-parallel approach, where each check
+
+and variable node is implemented directly in hardware. Second is a semi-parallel approach, where only a certain number of variable and check nodes are implemented in hardware and then reused. Finally there is a memory-based approach where just one variable and one check node is implemented. With increasing parallelism, throughput of a decoder increases, at the expense of decoder size. We concentrate here on the fully parallel decoder design.
+III. CHECK NODE ARCHITECTURE Coding efficiency and decoder throughput improve with increasing blocklength. To achieve maximal blocklength on a given FPGA it is clear that the complexity of variable and check node processors must be minimized. Since check node processing is fundamentally more complicated we next discuss implementation of the check node processor. In this work we focus on implementing an LDPC decoder performing the MS algorithm. In the literature, there have been many designs and ideas for check node processor in MS form, and some of them will be explained in detail. From (2), it can be seen that the check node processor has two separate parts, one calculating signs (α’s) and the other calculating magnitudes (β’s). Since sign calculation is a one-bit operation and is simple, the only way to reduce the complexity of a check node is to reduce complexity of magnitude calculations. To explain complexity differences among different designs, we use a check node of degree six. Figure 2 represents the straight-forward approach, where each output is calculated by finding a minimum of all inputs except a given input. Calculating the minimum of five inputs using a comparator tree requires four comparators, which for degree-six check node gives total of 24 comparators.
+Fig. 2. Straight-forward approach to check node design.
+The design in Figure 3 is in some form developed and used in [6]. This design calculates only one minimum and outputs either this minimum or some larger number. To calculate the minimum of six inputs, only five comparators are needed. However, implementing this design in FPGA did not give satisfactory results because of hardware overhead needed for
+
+549 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E8E:27 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+the output selector. It needs to be noted that the original design [6], although based on this principle, had reduced complexity because it serially calculated bit-by-bit. Since serial calculations reduce throughput of a decoder, this design did not suit our objective of a high-speed decoder.
+
+and the Variable Node Processor (VNP) in more detail. A block diagram of a check node processor of degree six used in our design is shown in Figure 5. This design uses only 12 comparators for the ”magnitude” part of a node, which is less than a half of a number used by the processor in Figure 2. The designs in Figures 3 and 4 have smaller number of comparators, but the complexity of the processor is dominated by the output selector.
+
+Fig. 3. Finding minimal input and then outputing original and offset value of that input.
+
+The third design, shown in Figure 4, is developed in [4]. This design basically finds the two smallest inputs and outputs them to the appropriate output (Note that the magnitudes on the check node outputs take on only two values). This design reportedly reduced complexity when implemented in ASIC, but when implemented in an FPGA, we found it three times more complex than our design (see Figure 5 below). This shows how some designs and ideas from ASIC design do not apply in FPGA design.
+
+Fig. 5. Check node processor used in our design.
+A block diagram of a VNP of degree three is shown on Figure 6. It can be seen that a VNP is less complex than a CNP. The entire VNP is implemented using only one 4-input adder and three 2-input adders (subtractors).
+
+Fig. 4. Finding two minimal inputs and then outputing.
+Also worth noting is that performance of the conventional MS algorithm can be improved using offset factors, and scaling output messages from a check node [11][12]. Values of these parameters need to be precisely determined. Implementing these values in fixed-point arithmetic requires much higher precision than the precision of our decoder, and that is the main reason why implementation of such modifications did not lead to performance improvement.
+IV. PROPOSED DESIGN Before we introduce the full design of our decoder, we need to explain its two main parts: the Check Node Processor (CNP)
+
+Fig. 6. Variable node processor used in our design.
+Our decoder employs a 3-stage pipeline design, involving input, decoding, and output. The first stage, shown on Figure 7, is used to input channel data. It is implemented as a structure using only flip-flops. The number of columns in the structure equals the number of required iterations increased by one. Since our decoder completes one iteration of MS algorithm in one clock cycle and uses one clock cycle to input channel data and output decoded data, the number of clock cycles needed to decode one frame is equal to the number of required iterations increased by one (Nit + 1). Since new data needs to be at the input of a decoder every Nit + 1 clock cycles, the number of rows of the input structure is N/(Nit + 1) where N is
+
+550 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E8E:27 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+blocklength of a code. Each row of the input structure has two rows of flip-flops. In our case N = 1200 and Nit = 10, so the number of rows is 110. The upper row is used to transfer blocks of input data from left to right and the lower row is used to transfer received blocks of channel data to VNPs every Nit +1 clock cycles. This parallel stream design supports high speed serial data over the channel with I/O speed constraints on FPGA pins.
+
+position and every Nit + 1 clock cycles they switch to upper position and transfer VNP outputs into flip-flops. Flip-flops then transfer this data to the output. Although flip-flops at the input structure and output structure in block diagram of a layout look the same they differ in size, since at the input of our we receive soft decision data, the size of flip-flops needs to accommodate that data and it depends on a precision used to quantize soft decision data. In the case of our decoder, 3bit precision is used, as justified below, so flip-flops in Figure 7 represent three flip-flops. Output flip-flops are just single flip-flops.
+
+Fig. 7. Flip-flop structure used to input channel data.
+
+Fig. 9. Structure used to output decoded data.
+
+Fig. 8. Connections between VNPs and CNPs.
+Figure 8 shows the second stage of a decoder used to send messages from VNPs to CNPs and vice versa. Every clock cycle messages are sent from VNPs to CNPs and back and then stored in flip-flops in VNPs. After completing the required number of iterations, decoded messages are ready to be output. This process is done in the third stage of a decoder shown in Figure 9. The structure of this part is somewhat similar to the input structure as far as number of columns and rows is concerned. The difference is that in the case of output structure basic elements are a flip-flop and a multiplexer instead of two flip-flops. Here, multiplexer switches are normally in lower
+
+V. DECODER PRECISION AND PERFORMANCE
+An FPGA implementation of a fully-parallel LDPC decoder must take into account resource limits. Every FPGA has certain number of look-up tables and flip-flops organized into slices. Also there are certain number of input-output pins called IOBs, and limited number of connections used to connect all these resources. For our design we used Xilinx’s top-of-family Virtex4 part (xc4vlx200). In this type of FPGA each slice has two look-up tables and two flip-flops.
+Since every FPGA has limited resources we need to decide on precision we want to use. The more bits we use to quantize messages, the larger the design becomes. After implementing LDPC decoders of different precision we noticed that each bit we add to precision roughly doubles the resources used to implement the decoder. Knowing that using 5-bit precision introduces only a minor performance loss, we first implemented such a decoder. We found that if we use 5bit precision, the longest code that could be implemented had blocklength of around 700, while utilizing only 70% of resources. Even though we had more resources (slices) remaining, the tool used for routing failed to route larger designs. To get better performance out of limited resources we decided to use precision with fewer number of bits while implementing a longer code. Information theory suggests that penalty for using 3-bit precision is about 0.25dB, but the gain that we would achieve by implementing longer code should be more than 0.25dB (see Figure 11). The maximal blocklength we were able to achieve was 1200, using 3-bit precision. (a,b)
+
+551 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E8E:27 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+Pf Pf
+
+Notation for message precision means that input channel data and log-domain messages are represented with 2a discrete levels, with level spacing 2−b. Thus a (3,1) design uses 8
+levels in the set -2,-1.5,...,1.5.
+Figure 10 shows performance of a regular (6, 3) LDPC code of blocklength 1200 and rate 1/2, while performing 10
+iterations of the MS algorithm. We assume decoder inputs are scaled in a modem so that yi = ±1 + ni. It is important to properly scale the input to the quantizer range; we have found that scaling the inputs according to L(ci) = yi/2σ2 slightly improves performance for (3,1) precision, compared to L(ci) = yi. This improvement becomes less significant for higher precision.
+
+blocklength−1200, rate−1/2, regular (6,3) code 100
+
+floating point precision
+
+10−1
+
+conventional (3,1) precision
+
+modified (3,1) precision
+
+conventional (5,2) precision
+
+10−2
+
+conventional (4,2) precision
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/No(dB)
+
+Fig. 10. Performance vs. precision.
+
+The decoder is implemented in Virtex4 (xc4vlx200) part and its utilization is shown in Table I. In this case utilization of the most-used resource is 45%. The reason for this lies in inability of the routing tool to complete the routing process for longer codes because of limited routing resources of an FPGA.
+The throughput (T) of the decoder is calculated as,
+
+T
+
+=
+
+rate·blocklength·fmax Nit ·γ
+
+where the maximal clock frequency is 100 MHz, blocklength
+
+is 1200, rate is 1/2, Nit = 10 (number of iterations), and γ = 1 (number of clock cycles needed to complete one iteration).
+
+All this leads to throughput of 6 Gb/s, which makes it, to our
+
+knowledge, by far the fastest FPGA-based decoder.
+
+100
+blocklength−696, (5,2) precision blocklength−1200, (3,1) precision 10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/No(dB)
+
+Fig. 11. The gain achieved using longer code and smaller precision.
+
+REFERENCES
+[1] A.J. Blanksby and C.J. Howland, ”A 690mW, 1Gb/s, 1024b, Rate– 1/2 Low-Density Parity-Check Decoder.” IEEE Journal of Solid-State Circuits, vol. 37, no. 3, pp. 404-412, March 2002.
+[2] A. Darabiha, A.C. Carusone, and F. Kschischang, ”Multi-Gbit/sec LowDensity Parity-Check Decoders with Reduced Interconnect complexity.” IEEE International Symposium on Circuits and Systems, vol. 5, pp. 5194 - 5197, May 2005.
+[3] M. Mohiyuddin, A. Aziz, A. Prakash, and W. Wolf, ”Synthesizing Interconect-Efficient Low Density Parity Check Codes.” Design Automation Conference, pp. 488-491, 2004.
+[4] K.K. Gunnam, G.S. Choi, M.B. Yeary, ”A Parallel VLSI Architecture for Layered Decoding for Array LDPC Codes.” International Conference on VLSI Design, pp. 738-743, Jan. 2007.
+[5] C. Zhiqiang, W. Zhongfeng, ”A 170 Mbps (8176, 7156) quasi-cyclic LDPC decoder implementation with FPGA.” International Symposium on Circuits and Systems, May 2006.
+[6] A. Darabiha, A.C. Carusone, F.R. Kschischang, ”A bit-serial approximate min-sum LDPC decoder and FPGA implementation.” International Symposium on Circuits and Systems, May 2006.
+[7] Z. Tong, K.K. Parhi, ”A 54 Mbps (3,6)-regular FPGA LDPC decoder.” Workshop on Signal Processing Systems, pp. 127-132, Oct. 2002.
+[8] W.E. Ryan, ”An Introduction to LDPC codes.” www.ece.arizona.edu/ ryan [9] R. Zarubica and S.G. Wilson, ”A Wiring-Efficient, High-Throughput
+Low Density Parity Check Decoder Design.” 40th Annual Conference on Information Sciences and Systems , pp. 818 - 822, March 2006. [10] Xiao-Yu Hu, E. Eleftheriou, D.M. Arnold, ”Regular and irregular progressive edge-growth tanner graphs.” IEEE Transactions on Communications, vol. 51, no. 1, pp. 386-398, Jan. 2005. [11] C. Jinghu, A. Dholakia, E. Eleftheriou, M. Fossorier, H. Xiao-Yu, ”Reduced-Complexity Decoding of LDPC Codes.” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288-1299, Aug. 2005. [12] Z. Juntan, M. Fossorier, G. Daqing, Z. Jinyun, ”Improved min-sum decoding of LDPC codes using 2-dimensional normalization.” IEEE Transactions on Communications, Nov. 2005.
+
+TABLE I DEVICE UTILIZATION SUMMARY.
+
+Resource Number of occupied Slices Number of 4 input LUTs Number of Slice Flip Flops Number of bonded IOBs
+
+Used 40, 613 69, 038 18, 945
+444
+
+Available 89, 088 178, 176 178, 176
+960
+
+Utilization 45% 38% 10% 46%
+
+552 Authorized licensed use limited to: Yonsei Univ1.9D3o0w-n5l2oa9dXe/d0o7n/$J2u5ne.0204,©2022600a7t 0I5E:0E8E:27 UTC from IEEE Xplore. Restrictions apply. This full text paper was peer reviewed at the direction of IEEE Communications Society subject matter experts for publication in the IEEE GLOBECOM 2007 proceedings.
+
+

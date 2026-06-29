@@ -1,0 +1,638 @@
+Graph Neural Network-based Joint Equalization and Decoding
+
+2024 IEEE International Symposium on Information Theory (ISIT) | 979-8-3503-8284-6/24/$31.00 ©2024 IEEE | DOI: 10.1109/ISIT57864.2024.10619122
+
+Jannis Clausius, Marvin Geiselhart, Daniel Tandler and Stephan ten Brink Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany
+Email: {clausius,geiselhart,tandler,tenbrink}@inue.uni-stuttgart.de
+
+Abstract—This paper proposes to use graph neural networks (GNNs) for equalization, that can also be used to perform joint equalization and decoding (JED). For equalization, the GNN is build upon the factor graph representations of the channel, while for JED, the factor graph is expanded by the Tanner graph of the parity-check matrix (PCM) of the channel code, sharing the variable nodes (VNs). A particularly advantageous property of the GNN is the robustness against cycles in the factor graphs which is the main problem for belief propagation (BP)-based equalization. As a result of having a fully deep learning-based receiver, joint optimization instead of individual optimization of the components is enabled, so-called end-to-end learning. Furthermore, we propose a parallel flooding schedule that further reduces the latency, which turns out to improve also the error correcting performance. The proposed approach is analyzed and compared to state-of-the-art baselines in terms of error correcting capability and latency. At a fixed low latency, the flooding GNN for JED demonstrates a gain of 2.25 dB in bit error rate (BER) compared to an iterative Bahl–Cocke–Jelinek–Raviv (BCJR)-BP baseline.
+I. INTRODUCTION
+Belief propagation (BP)-based channel equalization promises lower latency and lower complexity [1] at the tradeoff of sub-optimal performance compared to the maximum a posteriori (MAP) solution based on the Bahl–Cocke–Jelinek– Raviv (BCJR) [2] algorithm. Recently, deep learning methods [3]–[5] were proposed to narrow down the gap between BP and BCJR for equalization or to improve BP performance for channel decoding [6]–[8]. These propositions can be categorized as deep neural network (DNN)-aided inference oriented by the structure of the underlying factor graph [9], [10]. In contrast, [6], [11], [12] proposed to use general purpose DNNs (e.g., convolutional neural networks (CNNs) and recurrent neural networks (RNNs)) categorized as modelaided networks. Here, the path of DNN-aided inference is continued as we propose to use a factor graph-based graph neural network (GNN) [8], [13] for equalization. The structure and schedule of the GNN is the same as in the classical BP algorithm. However, all node and edge calculations are replaced by small multilayer perceptrons (MLPs). In [7], [8], [14], GNNs have been proposed for channel decoding. In the case of equalization, BCJRNet [5] comes close to our approach, where the BCJR algorithm was augmented with small MLPs as the factor nodes (FNs). Also, in [4], a single MLP-based FN was added to the BP-based factor graph for equalization.
+This work is supported by the German Federal Ministry of Education and Research (BMBF) within the project Open6GHub (grant no. 16KISK019).
+
+5G LDPC
+
+BPSK
+
+u
+
+c
+
+x
+
+Enc.
+
+Map.
+
+K
+
+N
+
+N
+
+GNN
+
+GNN
+
+uˆ
+
+Dec.
+
+Eq.
+
+K
+
+JED
+
+ISI Channel h
+y
+N +L
+
+Fig. 1: Block diagram of the system model with an inter-symbol interference (ISI) channel and graph neural networks (GNNs) for iterative/joint equalization and decoding.
+
+Moreover, we propose the use of GNNs for joint equalization and decoding (JED), one for equalization and one for decoding. Both GNNs are connected by their variable nodes (VNs) to form a combined factor graph that allows information exchange between equalization and decoding. In [15], such a combined graph was used with a decision feedback equalizer and a BP decoder. The joint GNN constitutes an fully deep learning-based receiver that can be jointly optimized in an endto-end fashion. DNNs for JED have been proposed in [16], however, the component networks are general purpose DNNs and not build upon the structure of the underlying factor graph, resulting in limited scalability. Furthermore, their component networks were jointly optimized, but the DNN for equalization did not allow feedback from the decoder. Our contributions are as follows:
+• We demonstrate that GNNs are capable of closely approaching the MAP performance in equalization.
+• We propose GNNs for JED where the respective factor graphs are connected by their common VNs and allow joint processing. The proposed approach is compared to state-of-the-art baselines.
+• Finally, we propose a flooding schedule for the GNNs on the joint factor graph instead of an iterative/sequential schedule, improving both performance and latency.
+
+II. PRELIMINARIES
+A. System Overview
+Fig. 1 shows the block diagram of the considered system model. We assume 5G low-density parity-check (LDPC) channel encoding and binary phase shift keying (BPSK) at the transmitter. The ISI channel is modeled as a tapped delay line with Proakis-C impulse response (h =
+
+979-8-3503-A8u2th8o4riz-6ed/2li4ce/n$s3e1d.u0s0e ©lim2ite0d2t4o:IYEoEnsEei Univ. Downloaded on1J2un0e324,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+[0.227, 0.460, 0.688, 0.460, 0.227]) [17] and additive white Gaussian noise (AWGN). Hence, the discrete-time channel can be mathematically described by [18]
+
+L
+
+yk = hlxk−l + zk
+
+(1)
+
+l=0
+
+with channel memory L, transmitted code symbols xk and where zl ∼ N (0, σ2) denotes independent and identically distributed Gaussian noise. Furthermore, we assume that the symbols xk for k ∈ [−L + 1, −1] ∪ [N − 1, N + L] are known at the receiver, where N denotes the codeword length. Thus, we can rewrite Eq. (1) to y = Hx + z with Toepelitz matrix H ∈ R(N+L)×(N+2L), equivalent transmit sequence x ∈ RN+2L and z ∈ RN+L. The goal of the receiver is to estimate the bit-wise a posteriori probabilitys (APPs) P (ui|y, H). This is usually done by a sequential processing of equalization and decoding without feedback to the equalizer,
+which we call disjoint processing. If the equalizer can refines
+its estimate based on the decoder feedback, we label it joint
+equalization and decoding (JED).
+
+B. Belief Propagation
+Consider the factorization of a joint probability function f (X ) into a product of J factors gj(Xj), i.e., f (X ) = 1<j≤J gj(Xj) where X corresponds to a set of random variables {x1, . . . , xN } and Xj ⊂ X . One can construct a corresponding factor graph by assigning each variable xj a VN Vj, each function gi a FN Fi, and introducing an edge connecting between Vj and Fi if xj is an argument of gi [10]. The marginals of f , i.e. f (xi) for each xi ∈ X , can be efficiently computed using the message passing algorithm BP on the factor graph. The algorithm operates by sending messages from VNs (FNs) to FNs (VNs), denoted as mVi→Fj (mFj→Vi ). In the log-domain, the messages are determined using
+
+mVi→Fj =
+
+mFk →Vi
+
+Fk∈F (Vi)\{Fj }
+
+
+
+(2) 
+
+mFj →Vi
+
+=max⋆
+∼{Vi }
+
+ln
+
+(gj
+
+(Xj
+
+))
+Vk
+
++
+∈V
+
+(Fj
+
+mVk →Fj
+)\{Vi }
+
+
+
+(3)
+
+where V(Fj) and F (Vi) denote the neighborhood of VNs of Fj and of FNs of Vi, respectively and max∼⋆ {Vi} denotes the Jacobian algorithm [19] applied over all messages except
+mVi→Fj .
+
+C. Factor Graph-based Equalization
+
+With an appropriate factorization of the joint symbol APP P (x|y, H), one can obtain an equivalent factor graph representation. Here, the FNs correspond to Hx and the VNs to the symbols in x (the first and last L VNs are virtual VNs). BP is used to calculate the symbol-wise APP P (xk|y, H). Using Bayes’ theorem, we obtain
+
+∥y − Hx∥2
+
+P (x|y) ∝ P (y|x)P (x) ∝ exp − 2σ2
+
+. (4)
+
+yi−2
+
+yi−1
+
+yi
+
+yi+1
+
+yi+2
+
+···
+
+MLP
+
+FN
+
+···
+
+MLP
+
+MLP
+
+···
+
+MLP
+
+VN
+
+···
+
+i−2
+
+i−1
+
+i
+
+i+1
+
+GNN structure
+
+i+2
+
+Fig. 2: Forney factor graph with GNN elements are presented for an exemplary pair of VN/FN for a channel with memory L = 2. Blue nodes represent MLPs.
+
+Direct application of the chain rule on Eq. (4) yields
+
+N
+P (y|x) ∝ exp
+
+− |yk −
+
+L l=0
+
+hlxk−l
+
+|2
+
+2σ2
+
+.
+
+(5)
+
+k=1
+
+The factor graph corresponding to the factorization of Eq. (5) was first proposed in [18] and is referred to as Forney factor graph (FFG) in the following. By rewriting Eq. (4) and using the substitutions G := HTH and χ := HTy we obtain an alternative factorization of the APP [20], [21]:
+
+
+
+
+
+N
+
+N
+
+P (y|x) ∝ FkUFG(xk)
+
+Ik,j (xk, xj ) (6)
+
+k=1
+
+j=1,j̸=k
+
+FkUFG(xk) : = exp
+
+1 2σ2
+
+(2χk xk
+
+−
+
+Gk,k |xk |2 )
+
+(7)
+
+1
+
+Ik,j (xk, xj ) : = exp − 2σ2 Gk,j xkxj .
+
+(8)
+
+The corresponding factor graph is referred to as Ungerboeck factor graph (UFG) in the following. However, applying BP to these factor graphs is not guaranteed to converge, since ISI channels may contain short cycles in their graphs [1].
+
+III. GRAPH NEURAL NETWORKS FOR EQUALIZATION
+
+The bipartite GNN framework from [7] can be directly
+
+applied to the FFG and UFG for equalization. In each iteration
+
+of the GNN, first the FNs are updated, then the edges towards
+
+VNs, followed by the VNs themselves, and finally the edges
+
+towards FNs. As shown in Fig. 2, the GNN assigns learnable
+
+parametric functions fθ(·) to each VN, each FN and each directed edge. Here, this parametric function is implemented
+
+by a MLP with trainable weights θ. The weights θ are shared
+
+for each type of node or directed edge in the graph, i.e., there
+
+is a set θV for VNs, θF for FNs, θF →V for edges directed towards VNs, and θV →F for edges directed towards FNs. Each MLP represents a node state update function or an edge state
+
+update function. The state of a node or edge is represented by
+
+a d-dimensional vector, where d is the so called feature size.
+
+For simplification, all nodes and edges share the same number
+of features d. The updated state sV(ti+1) in iteration t+1 of node VN Vi is calculated by
+
+
+
+
+
+s(Vti+1)
+
+=
+
+fθV
+
+s(Vti),
+
+1 |F (Vi)|
+
+mFj →Vi , gVi 
+Fj ∈F (Vi)
+
+(9)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J2un0e424,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+where F (Vi) is the set of connected FNs, mFj→Vi is the state of the edge from Fj to Vi, and gVi ∈ Rd is a trainable attribute of node Vi. In a similar fashion, the update of FN states s(Ftj+1)
+is calculated by
+
+
+
+
+
+s(Ftj+1)
+
+=
+
+fθF
+
+sF(tj),
+
+1 |V (Fj )|
+
+mVi→Fj , gFj 
+Vi∈V(Fj )
+
+(10)
+
+JED Equalization
+
+TABLE I: Hyperparameters of the GNNs and training
+
+NN Parameter
+
+Value Train. Parameter
+
+Value
+
+# MLP hidden layers 2 Learning rate
+
+10−4
+
+# MLP hidden units 64 Batch size
+
+activation
+
+ReLU Epochs Equal.
+
+256 5 · 104
+
+Feature size d Schedule Flooding
+
+16 SNR Equal. (10, 1) Epochs JED
+
+10 dB to 14 dB 1.6 · 105
+
+Schedule Sequential (3, [3, 5]) SNR JED
+
+10 dB to 13 dB
+
+where where V(uj) is the set of connected VNs. In between of VN and FN updates, the edges are updated according to
+
+mVi→Fj = fθV →F sVi , sFj , gV →F , mFj →Vi = fθF →V sFj , sVi , gF →V .
+
+(11) (12)
+
+While the node states s and message states m are updated during inference, the attributes g are constant during inference, but are learned during training. In [7], the node and edge attributes were set to 0 as they did not improve the performance for decoding linear channel codes. However, in the case of equalization, the edge attributes are crucial, since different edges fulfill different tasks, i.e., in classical BP equalization the messages originating from a FN are calculated with different functions. Before and after inference on the graph, the channel outputs are projected to the feature space of the GNN and the inference results are projected to log-likelihood ratios (LLRs), respectively. Before inference, y is linearly projected to the d dimensional FN state sFi = wyi, where w ∈ Rd is a learnable projection vector. The VN states are initialized with svi = 0. After inference, the VN states are projected to LLRs by ℓi = vTsvi , where v ∈ Rd denotes a learnable projection vector. Finally, a sigmoid function σsigmoid(·) converts the LLRs to probabilities cˆi = σsigmoid(ℓi). Note that the conversion from feature vectors to probabilities can be done after any number of iterations, allowing for adjustment to the desired latency, complexity, or performance.
+
+A. Training
+
+For training, the binary cross-entropy (BCE) loss LBCE is employed as its minimization was shown to maximize the bitwise mutual information (BMI)
+
+IBMI
+
+= H(U) − H(U|Uˆ)
+
+[22]
+≈ H(U) −
+
+1 |B|
+
+LBCE (13)
+
+u,uˆ∈B
+
+where U and Uˆ are the random variables associated with the bits u and bit estimates uˆ, respectively, and B is a set of input/output pairs and |B| is called the batch size. While minimizing the bit error rate (BER) does not directly correspond to maximizing the BMI, it was shown in [23] that LBCE also works well for minimizing the BER. Furthermore, the BCE loss is used in a multi-loss fashion, meaning it is averaged over all NIt GNN iterations t ∈ [1, NIt] as
+
+LMulti
+
+=
+
+1 NIt
+
+NIt
+LB(tC) E.
+t=1
+
+(14)
+
+Finally, the BCE loss is calculated from the coded bits c and its estimates cˆ, resulting in
+
+LB(tC) E
+
+=
+
+1 n
+
+n
+[ci log2 cˆ(it) + (1 − ci) log2(1 − cˆ(it))].
+
+(15)
+
+i=1
+
+This loss was first proposed in [6] and applied for GNN-based decoding in [7]. In addition, we use the Adam [24] optimizer.
+
+B. Results
+For the evaluation of the proposed GNN equalizer, a transmission of N = 132 BPSK symbols over the Proakis-C channel is simulated. The channel is chosen to represent a scenario with severe ISI, where BPSK signaling results in at least an estimated loss of 2.01 dB and 5.01 dB compared to an AWGN channel, for JED and disjoint processing, respectively [25]. We assume the channel to be fixed throughout the paper. Therefore, the results demonstrate the algorithmic capability of GNN-based equalization rather than generalization, robustness and adaptability aspects. The hyperparameters for the structure of the GNN and the training are shown in the top part of Tab. I. Fig. 3 (a) and (b) compare the BER and BMI of the GNN equalizer based on the FFG and UFG. Note that for Fig. 3 (b) all outputs are multiplied with a damping factor to increase the BMI [26]. The BCJR-based equalizer implements a MAP estimator and serves as a baseline. Furthermore, we show a CNN for equalization with the same structure as in [16] but with an optimized, in the sense of the BMI, number of feature maps (100) for this channel. The other baselines are, similar to the GNN, based on the BP algorithm on the FFG: BP without neural augmentations and neural belief propagation (NBP) with learned multiplicative weights per edge per iteration. Note that the BP equalizer diverges after NIt = 5 iterations due to cycles in the graph. Training of the NBP does not converge for NIt > 7. The GNNs show substantial gains, with the FFG variant outperforming the UFG, suggesting strong robustness to the cycles in the graph. First, this matches the results for NBP on the FFG compared to the UFG [3]. Second, the FFGbased GNN is significantly less complex than the UFG variant because the complexity scales with the number of nodes and edges in the graph rather than the FN degree as for classical BP variants [1]. The accumulated number of nodes and edges in the FFG is N (L + 3) + L(L + 4) ≈ N (L + 3), whereas for the UFG it is N (3L + 3) + L(3L + 4) ≈ N (3L + 3). For both factor graphs, we prune the first and last L virtual VNs without any loss in performance. An interesting observation is that the performance of the FFG-GNN remains close to MAP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J2un0e524,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+BER BMI BER
+
+10−1 10−2 10−3 10−4
+4
+
+(a) BER
+
+BP FFG [1] NBP FFG [3] CNN [16] GNN UFG GNN FFG BCJR [2]
+
+NIt = 5 NIt = 7
+NIt = 8 NIt = 8
+
+6
+
+8
+
+10
+
+12
+
+Eb/N0 (dB)
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+
+14
+
+4
+
+(b) BMI
+
+10−1
+
+10−2
+
+BCJR [2]
+
+10−3
+
+GNN FFG GNN UFG CNN [16]
+
+NIt = 8 NIt = 8
+
+10−4
+
+NBP FFG [3] NIt = 7 BP FFG [1] NIt = 5
+
+10−5
+
+6
+
+8
+
+10
+
+12
+
+14
+
+Eb/N0 (dB)
+
+(c) Latency
+
+BP FFG [1] NBP FFG [3] GNN FFG GNN UFG BCJR [2]
+
+N = 256
+N = 66 N = 132
+
+101
+
+102
+
+Latency (clock cycles)
+
+Fig. 3: Uncoded BER, BMI and latency of different equalizers for the Proakis-C channel and block length N = 132. For the BER and BMI plot, NIt is selected such that increasing it does not improve the performance. Latency is given at Eb/N0 = 14 dB, and graphed over different values of NIt. Note that the latency of the BCJR is the only value depending on the sequence length due to its sequential nature.
+
+even in the high signal-to-noise-ratio (SNR) regime, while NBP variants tend to diverge [3]. Finally, Fig. 3 (c) shows the BER vs. latency in clock cycles. We assume that every node or neural network layer is processed in one clock cycle. This means 12 and 2 cycles per iteration for the GNNs and (N)BP, respectively. The latency of the BCJR equalizer equates to N + L + 2, and is, thus, dependent on the block length. We assume a parallel computation of the forward and backward metric in N + L cycles and 2 additional cycles are needed to calculate the channel likelihoods and the bit estimates. As a result, the GNN shows larger latency gains as the transmission length increases.
+IV. GRAPH NEURAL NETWORKS FOR JOINT EQUALIZATION AND DECODING
+In this section, we describe a DNN for JED based on GNNs. A fully deep learning-based receiver allows to jointly optimize the component networks rather than an individual optimization like in traditional receivers. This is called end-to-end learning. Furthermore, using GNNs for the components prevents the neural networks (NNs) from the curse of dimensionality (referring to exponential growth of points in high-dimensional objects) [27], since the graph-based structures leverage the sparseness of the connections. Moreover, the GNNs use highdimensional processing the nodes and edges, leveraging the blessing of dimensionality [28].
+The structure of the GNN for JED is displayed in Fig. 4. One set of FNs is based on the graph for equalization as in Sec. III and one of FNs for decoding as in [7]. Note, both graphs share the same VNs, building a connected graph. Furthermore, interleaving and deinterleaving makes the a priori information of the equalizer and decoder to appear more independent, thus, improving performance.
+
+y
+
+...
+
+...
+
+Equalizer
+
+GNN
+
+...
+
+...
+
+Decoder
+
+GNN
+
+...
+
+...
+
+Fig. 4: JED system with a decoder GNN based on the Tanner graph of the channel code and an equalizer GNN based on the FFG of the channel. Note that the Tanner graph of the channel code code has been rearranged according to the interleaver to directly match the equalizer VNs.
+amount of a priori information for the subsequent BCJR run. However, during this time, BP decoding does not benefit from new a priori information from the equalizer. In case of the combined GNN, the latency for equalization and decoding are the same, thus, enabling schedules with earlier information exchange between the components. This can result in improved error correcting performance at the same latency. Moreover, the combined GNN can be updated in a flooding fashion. The difference to the iterative, sequential schedule is shown in Fig. 5. The GNN updates the FNs for equalization and for decoding simultaneously and combines their beliefs after each iteration in their shared VNs. Consequently, the same number of resources can be used as in the iterative case, but in half the time. In every iteration, the component GNNs receive new a priori information but also keep their respective FN state. In [30], it was found that keeping the state of the FNs is beneficial for iterative systems with a small number of inner iterations.
+
+A. Schedule
+In contrast to the classical solution of using iterative BCJR equalization and BP decoding [29], the combined GNN for joint equalization and decoding enables an earlier use of equalization with a prioi knowledge. BCJR runs are costly in complexity and latency, thus, a sufficient amount of iterations should be spend on BP decoding to generate a significant
+
+B. Training
+The training is similar to the training process described in section III-A with some extensions. Note that the 5G LDPC code contains punctured VNs that we include in the calculation of the loss. The additional hyperparamters are shown below the horizontal line in Tab. I. The schedule of the combined GNNs is given in the form (#Outer Iterations,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J2un0e624,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+It. Dec. FN VN Eq. FN 1
+
+It. Dec. FN VN Eq. FN 1
+
+FN state
+
+2
+
+2
+
+3
+
+3
+
+4
+
+4
+
+(a) Flooding
+
+(b) Sequential
+
+Fig. 5: Schedules of the GNN-based JED
+
+100 10−1 10−2 10−3 (5, [1]) 10−4
+
+BCJR-BP DUIDD NBP-BP GNN sequ. GNN flood
+(2, [10])
+(20, [10])
+
+BER BER
+
+10−1 10−2
+
+2.25 dB
+
+10−5 10−6101
+
+(12, [1])
+
+(30, [1])
+
+102
+
+103
+
+Latency (clock cycles)
+
+10−3
+
+10−4
+BCJR-BP
+
+Best BER Same latency
+
+(20, [10])
+
+(1, [2])
+
+10−5 GNN flood
+GNN sequ.
+
+(30, [1]) (5, [3, 5])
+
+(12, [1])
+
+(2,
+
+[3,5] [3,2]
+
+)
+
+DUIDD NBP-BP
+
+(3, [3, 8])
+
+10−6 9
+
+9.5 10 10.5 11 11.5 12
+
+Eb/N0 (dB)
+Fig. 6: BER of uncoded bits u using coded system (N = 132, R = 0.5, 5G LDPC, BPSK) over SNR of different equalizers and decoders over the Proakis-C channel. Curves with best BER were the best achieved results disregarding latency or complexity. Curves with same latency use 144 clock cycles (12 GNN flooding iterations). The JED schedules are given in (#Outer Iterations, [#Inner Iterations]).
+
+[#Inner Iterations]). For deep GNNs, i.e., a large number of iterations, direct training led to sub-optimal performance. Therefore, we used a two stage training process in these cases. First, we trained with the schedule given in Tab. I, for which the GNNs trained reliable and consistent. Second, the number of iterations is increased to the desired schedule and the model is finetuned. A flexible schedule is ensured by the weightsharing over iterations in the GNNs.
+
+C. Results
+For showcasing the potential of GNNs for JED, especially in low latency scenarios, we evaluate a transmission encoded by a 5G LDPC code (K = 66, N = 132, R = 0.5) and BPSK signaling over the Proakis-C channel. In Fig. 6 the BER of the bits u is shown over the SNR. For almost all systems, two variants are shown. The dashed ones indicate systems disregarding latency and focusing on error correcting performance. The solid ones share a common latency constraint of 144 clock cycles, equivalent to 12 iterations of the GNN with flooding schedule. The resulting schedules are given in the legend in the form (#Outer Iterations, [#Inner Iterations]). For an equal latency, the flooding schedule GNN outperforms the sequential GNN and the iterative BCJR-BP baseline by 2.25 dB. In the all-out performance case, the BCJR-BP baseline outperforms
+
+Fig. 7: BER of uncoded bits u using coded system (N = 132, R = 0.5, 5G LDPC, BPSK) over latency at SNR 12 dB of different equalizers and decoders over the Proakis-C channel. The JED schedules are given in (#Outer Iterations, [#Inner Iterations])
+the flooding GNN by 0.15 dB, however, the latency is 7.7 times higher. Unexpectedly, the flooding GNN outperforms the sequential GNN regardless of the latency constraints, suggesting that the flooding schedule may be advantageous during training. The only BP variant with the classical update equations that showed good enough performance to appear on the graph is a variant with a NBP equalizer, a BP decoder and trainable weights at every edge between the components (called deep-unfolded interleaved detection and decoding (DUIDD)) [30]. Fig. 7 displays the BER over the latency in clock cycles. Recall that 12, 2, and N + L + 2 clock cycles are needed for the flooding GNN, BP and BCJR, respectively. In the low latency regime, the flooding GNN outperforms the sequential GNN and the BCJR-BP baseline, as it demonstrates a BER 3 times lower than the sequential GNN and 10 times lower than the BCJR-BP baseline. The flooding GNN is only outperformed by the BCJR-BP baseline after ∼ 7 times the latency of the GNN.
+V. CONCLUSION
+The paper proposes and demonstrates the application of GNNs for equalization and JED. In the case of equalization, the GNN based on the FFG shows almost optimal performance at a fixed latency compared to BCJR equalization whose latency depends on the transmission length. Thus, GNNs may be an elegant way of bridging the gap between BP and BCJR for equalization. In the case of JED, we demonstrated the end-to-end learning capabilities of GNNs for equalization and decoding, leveraging sparse graphs and the blessing of dimensionality. With the proposed flooding schedule, the GNN outperforms an iterative BCJR-BP baseline with a substantially lower BER for a constrained latency. Future works may analyze generalization, adaptability, and robustness aspects of the GNN-based equalization. In addition, scalability to larger block lengths, higher modulation orders, and channels with longer memory are interesting aspects.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J2un0e724,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] G. Colavolpe and G. Germi, “On the application of factor graphs and the sum-product algorithm to ISI channels,” IEEE Transactions on Communications, vol. 53, no. 5, pp. 818–825, 2005.
+[2] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate (corresp.),” IEEE Transactions on Information Theory, vol. 20, no. 2, pp. 284–287, March 1974.
+[3] L. Schmid and L. Schmalen, “Low-Complexity Near-Optimum Symbol Detection Based on Neural Enhancement of Factor Graphs,” IEEE Transactions on Communications, vol. 70, no. 11, pp. 7562–7575, 2022.
+[4] B. Liu, S. Li, Y. Xie, and J. Yuan, “A Novel Sum-Product Detection Algorithm for Faster-Than-Nyquist Signaling: A Deep Learning Approach,” IEEE Transactions on Communications, vol. 69, no. 9, pp. 5975–5987, 2021.
+[5] N. Shlezinger, N. Farsad, Y. C. Eldar, and A. J. Goldsmith, “Data-driven factor graphs for deep symbol detection,” in 2020 IEEE International Symposium on Information Theory (ISIT). IEEE, 2020, pp. 2682–2687.
+[6] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Allerton Conf. IEEE, 2016, pp. 341–346.
+[7] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph Neural Networks for Channel Decoding,” in IEEE Global Communications Conference (GLOBECOM) Workshop, 2022.
+[8] Z. Zhang, F. Wu, and W. S. Lee, “Factor graph neural networks,” in Advances in Neural Information Processing Systems, H. Larochelle, M. Ranzato, R. Hadsell, M. Balcan, and H. Lin, Eds., vol. 33. Curran Associates, Inc., 2020, pp. 8577–8587. [Online]. Available: https://proceedings.neurips.cc/paper_files/paper/ 2020/file/61c66a2f4e6e10dc9c16ddf9d19745d6-Paper.pdf
+[9] N. Shlezinger, J. Whang, Y. C. Eldar, and A. G. Dimakis, “Model-based Deep Learning,” Proceedings of the IEEE, 2023.
+[10] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor graphs and the sumproduct algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, 2001.
+[11] X. Huang, J. Cho, K. Hashemizadeh, and R.-R. Chen, “Extrinsic Neural Network Equalizer for Channels with High Inter-Symbol-Interference,” in ICC 2021 - IEEE International Conference on Communications, 2021, pp. 1–6.
+[12] N. Farsad and A. Goldsmith, “Neural Network Detection of Data Sequences in Communication Systems,” IEEE Trans. on Signal Process., vol. 66, no. 21, pp. 5663–5678, 2018.
+[13] J. Gilmer, S. Schoenholz, P. Riley, O. Vinyals, and G. Dahl, Message Passing Neural Networks, 06 2020, pp. 199–214.
+[14] V. G. Satorras and M. Welling, “Neural Enhanced Belief Propagation on Factor Graphs,” in International Conference on Artificial Intelligence and Statistics. PMLR, 2021, pp. 685–693.
+[15] W. Henkel, N. S. Islam, and M. A. Leghari, “Joint Equalization and LDPC Decoding,” in 2019 11th International Congress on Ultra Modern Telecommunications and Control Systems and Workshops (ICUMT), 2019, pp. 1–5.
+
+[16] W. Xu, Z. Zhong, Y. Be’ery, Y. Xiaohu, and C. Zhang, “Joint Neural Network Equalizer and Decoder,” 08 2018, pp. 1–5.
+[17] J. Proakis, Digital Communications. McGraw-Hill, 2001. [18] G. Forney, “Lower Bounds on Error Probability in the Presence of
+Large Intersymbol Interference,” IEEE Transactions on Communications, vol. 20, no. 1, pp. 76–77, 1972. [19] P. Robertson, E. Villebrun, and P. Hoeher, “A comparison of optimal and sub-optimal MAP decoding algorithms operating in the log domain,” in Proceedings IEEE International Conference on Communications ICC ’95, vol. 2, 1995, pp. 1009–1013 vol.2. [20] G. Colavolpe, D. Fertonani, and A. Piemontese, “SISO Detection Over Linear Channels With Linear Complexity in the Number of Interferers,” IEEE Journal of Selected Topics in Signal Processing, vol. 5, no. 8, pp. 1475–1485, 2011. [21] G. Ungerboeck, “Adaptive Maximum-Likelihood Receiver for CarrierModulated Data-Transmission Systems,” IEEE Transactions on Communications, vol. 22, no. 5, pp. 624–636, 1974. [22] S. Cammerer, F. Ait Aoudia, S. Dörner, M. Stark, J. Hoydis, and S. ten Brink, “Trainable Communication Systems: Concepts and Prototype,” IEEE Transactions on Communications, vol. 68, no. 9, pp. 5489–5503, 2020. [23] M. Lian, F. Carpi, C. Häger, and H. D. Pfister, “Learned BeliefPropagation Decoding with Simple Scaling and SNR Adaptation,” in 2019 IEEE International Symposium on Information Theory (ISIT), 2019, pp. 161–165. [24] D. P. Kingma and J. Ba, “Adam: A Method for Stochastic Optimization,” arXiv preprint arXiv:1412.6980, 2014. [25] A. Roumy, I. Fijalkow, and D. Pirez, “Joint equalization and decoding: why choose the iterative solution?” in Gateway to 21st Century Communications Village. VTC 1999-Fall. IEEE VTS 50th Vehicular Technology Conference (Cat. No.99CH36324), vol. 5, 1999, pp. 2989–2993 vol.5. [26] L. Szczecinski and A. Alvarado, Bit-interleaved coded modulation: fundamentals, analysis and design. John Wiley & Sons, 2015. [27] R. Bellman, Adaptive Control Processes: A Guided Tour. Princeton University Press, 1961. [Online]. Available: http://www.jstor.org/stable/ j.ctt183ph6v [28] D. Donoho, “High-Dimensional Data Analysis: The Curses and Blessings of Dimensionality,” AMS Math Challenges Lecture, pp. 1–32, 01 2000. [29] C. Douillard, M. Jézéquel, C. Berrou, D. Electronique, A. Picart, P. Didier, and A. Glavieux, “Iterative correction of intersymbol interference: Turbo-equalization,” European Transactions on Telecommunications, vol. 6, no. 5, pp. 507–511, 1995. [30] R. Wiesmayr, C. Dick, J. Hoydis, and C. Studer, “DUIDD: DeepUnfolded Interleaved Detection and Decoding for MIMO Wireless Systems,” in 2022 56th Asilomar Conference on Signals, Systems, and Computers. IEEE, 2022, pp. 181–188.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on1J2un0e824,2026 at 15:47:17 UTC from IEEE Xplore. Restrictions apply.
+
+

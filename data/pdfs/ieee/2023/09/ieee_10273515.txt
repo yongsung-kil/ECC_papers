@@ -1,0 +1,422 @@
+2023 12th International Symposium on Topics in Coding (ISTC) | 979-8-3503-2611-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISTC57237.2023.10273515
+
+Reinforcement Learning for Sequential Decoding of Generalized LDPC Codes
+Salman Habib and David G. M. Mitchell Klipsch School of Electrical and Computer Engineering, New Mexico State University, Las Cruces, NM, 88003
+Email: {salmanh, dgmm}@nmsu.edu
+
+Abstract—In this work, we propose reinforcement learning (RL) for sequential decoding of moderate length generalized lowdensity parity-check (GLDPC) codes. Here, sequential decoding refers to scheduling all the generalized constraint nodes (GCNs) and single parity-check nodes (SPCNs) of a GLDPC code serially in each iteration. A GLDPC decoding environment is modeled as a finite Markov decision process (MDP) in which the state-space comprises of all possible sequences of hard-decision values of the variables nodes (VNs) connected to the scheduled GCN or SPCN, and the action-space of the MDP consists of all possible actions (GCN and SPCN scheduling). The goal of RL is to determine an optimized scheduling policy, i.e., one that results in a decoded codeword by minimizing the complexity of the belief propagation (BP) decoder. For training, we consider the proportion of correct bits at the output of the GCN or SPCN as a reward once it is scheduled. The expected rewards for scheduling all the GCNs/SPCNs in the code’s Tanner graph are earned via BP decoding during the RL phase. The proposed RL-based decoding scheme is shown to significantly outperform the standard BP flooding decoder, as well as a sequential decoder in which the GCNs/SPCNs are scheduled randomly.
+I. INTRODUCTION
+Short and low rate (R < 1/2) forward error correction schemes are critical for ultra reliable low latency communications (URLLC) in the fifth generation (5G) communications and beyond [1], [2]. However, the design of such codes for attaining both low error-floor and good decoding threshold is a challenging problem [3]. Generalized low-density-paritycheck (GLDPC) codes are one class of promising candidates which are constructed by replacing one or more single paritycheck nodes (SPCNs) of an LDPC code Tanner graph by generalized constraint nodes (GCNs), which have multiple parity constraints [4], [5]. The resulting GLDPC code has the same length as the base (non-generalized) code, but possesses a rate that decreases with increasing proportion of GCNs nodes in the Tanner graph of the code. A GCN represents the paritycheck constraints induced by a separate component code, such as a [p, k] Hamming code, where both the component code length p, and number of information bits k, are typically small. Replacing a SPCN with a GCN improves the node’s decoding capability at the expense of the associated rate loss. The component codes can be decoded via trellis based decoders such as the Bahl-Cocke-Jelinek-Raviv (BCJR) algorithm. However, this scheme is computationally intensive and may be less attractive for applications which are power constrained. An alternative method is to decode the GCN/SPCN subgraph via the belief propagation (BP) algorithm which has a significantly lower decoding complexity.
+The material is based upon work supported by the National Science Foundation under Grant Nos. CCF-2145917 and CNS-2148358.
+
+The decoding performance of both these schemes for quasicyclic GLDPC codes with Hamming component codes have been analyzed in [6]. The quasi-cyclic structure is a property of the base (non-generalized) Tanner graph that is desirable for efficient implementation. By carefully selecting the quasicyclic base graph, the authors were able to construct GLDPC codes with excellent waterfall and error-floor performances. Recently, GLDPC codes have also been proposed for URLLC [1]. The authors study the optimal proportion of GCNs of multiple GLDPC codes constructed from (γ, p)-regular LDPC base codes, where γ and p represent the column and row weights of the code, respectively. Here, optimality refers to minimizing the GLDPC code’s asymptotic gap to capacity, which is an important metric for gauging the finite-length behavior of iteratively decodable codes. Specifically, they consider γ = 2 and p = 6, 7, and 15. It is shown that the optimal proportion, µ, of GCN nodes is 0.75 (resp., 0.8) in case of (2, 6)-regular and (2, 7)-regular (resp., (2, 15)-regular) codes. These results were obtained by randomly replacing the SPCNs of the base code with Hamming code GCNs.
+In this work, we propose reinforcement learning (RL) for sequential decoding of GLDPC codes. Related work includes an RL aided bit-flipping decoder proposed in [7], which was shown to outperform a standard bit-flipping scheme for Reed-Muller and BCH codes. The performance of RL-based sequential soft-decoding of LDPC codes was examined in [8], [9]. It was shown that RL is able to learn an optimized SPCN scheduling order, i.e., one which results in a codeword output by minimizing the expected number of SPCN to VN message propagations for a given LDPC Tanner graph.
+Here, we consider sequential decoding of GLDPC codes with double BP decoding, i.e., BP decoding of the base Tanner graph and of the component codes, which are either fully generalized (all SPCNs of the base LDPC code are replaced by Hamming component codes), or partially generalized (a certain proportion, µ, of the SPCNs are replaced with GCNs). It is shown that a sequential decoding schedule can improve the frame error rate (FER) performance of GLDPC codes, as well as reducing the convergence speed and associated complexity, measured as the number of constraint node computations. This is particularly important for decoding GLDPC codes, where the decoder complexity is dominated by GCN computation [1]. In particular, we show that the RL optimized scheme can improve the performance of a moderate length (469 bits) GLDPC code by approximately 1 dB at a target FER of 10−4 with complexity saving of greater than 50% at high signal-tonoise ratios (SNRs).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:51 UTC from IEEE Xplore. Restrictions apply.
+
+II. PRELIMINARIES
+A. Generalized Low-density Parity-check Codes
+Let HB ∈ Fm 2 ×n be the parity-check matrix of a (γ, p)regular base LDPC code with (base) Tanner graph GB, and let HC ∈ F2(p−k)×p be the parity-check matrix of a [p, k] component code. By µ = g/m, g ∈ {0, . . . , m}, we denote the fraction of SPCNs in GB that are replaced with GCNs, where the resulting graph, referred to as the generalized Tanner graph G, contains g GCNs and m − g SPCNs. Note that for g = 0, G is identical to GB. Suppose ζ is the set of SPCN indices of GB that are replaced with GCNs, and let ζ = {0, . . . . , m − 1}\ζ be the set of remaining SPCN indices in GB. A GLDPC code with parity-check matrix H ∈ F2(m+µm(p−k−1))×n and rate R = (n − rank(H))/n is obtained by replacing the nonzero (resp., zero) entries in the rows of HB, corresponding to SPCNs in ζ, with a column of HC (resp., all-zero column of length p−k), where all rows of H representing the SPCNs are identical to the rows of HB that correspond to the SPCNs in ζ . Note that due to this construction, each of the GCNs/SPCNs in G are connected to p VNs. Note also that we do not decode with the parity-check matrix H. Rather, we decode with BP decoding on the generalized Tanner graph G, where GCNs are decoded according to that particular linear code via component BP decoding. Since a constraint node of a GLDPC code can be either a GCN or an SPCN, we call it simply a constraint node (CN) in the rest of the paper.
+B. Reinforcement Learning
+In an RL problem, an agent (learner) interacts with an environment whose state space can be modeled as a finite Markov decision process (MDP) [10]. The agent takes actions that alter the state of the environment and receives a reward in return for each action, with the goal of maximizing the total reward in a series of actions. The optimized sequence of actions is obtained by employing a policy which utilizes an action-value function to determine how beneficial an action is for maximizing the long-term expected reward. Suppose that an environment allows m possible actions, and let the random variable A( ) ∈ {0, . . . , m − 1} with realization a represent the index (a scheduled CN update for example) of an action take by the agent during learning step ∈ {0, . . . , max − 1}. Let S( ) with realization s( ) ∈ Z, represent the current state of the environment before taking action A( ) and let S( +1) with realization s( +1) represent a new state of the MDP after executing A( ). Let a state space S contain all possible state realizations. Also, let R = R(S( ), A( ), S( +1)) be the reward yielded at step after taking action A( ) in state S( ) which will yield state S( +1). Optimal policies for MDPs can be estimated via Monte Carlo techniques, such as Qlearning. The estimated action-value function Q (S( ), A( )), also known as the Q-function, represents the expected longterm reward an agent obtains after taking action A( ) in state S( ). Learning involves iteratively adjusting the action-value function for a specific (S( ), A( )) pair, based on previously learned action-values for the same state and action pair and the reward R earned from taking that action. Learning results in an optimal policy that guides the agent to select an action
+
+in a given state that maximizes the Q-function value for that state and action pair during inference.
+
+C. Learning Environment for GLDPC Decoding
+
+Let x = [x0, . . . , xn−1] and y = [y0, . . . , yn−1] represent
+
+the transmitted and the received words respectively where for
+
+each v ∈ {0, . . . , n − 1}, xv ∈ {0, 1} and yv = (−1)xv + z
+
+with z ∼ N (0, σ2). The posterior log-likelihood ratio (LLR)
+
+of xv
+
+is expressed as Lv
+
+=
+
+log
+
+Pr(xv Pr(xv
+
+=0|yv =1|yv
+
+) )
+
+.
+
+Let
+
+Lˆv( )
+
+=
+
+c∈N (v) mc(→) v +Lv be the posterior LLR computed by VN v
+
+during iteration , where N (v) denotes the set of neighboring
+
+SPCNs of VN v, Lˆ(v0) = Lv, and m(c→) v is the message
+
+received by VN v from neighboring SPCN c in iteration
+
+computed based on standard BP as
+
+m(c→) v = 2 atanh
+
+tanh
+
+mv(
+
+−1) →c
+
+2
+
+.
+
+(1)
+
+v ∈N (c)\v
+
+Here, N (c) denotes the set of neighboring VNs of c, and
+
+m(v→) c =
+
+mc(
+
+) →v
+
++
+
+Lv
+
+(2)
+
+c ∈N (v)\c
+
+is the message propagated from VN v to SPCN c. Moreover, let Lˆj(,a) be the posterior LLR computed during learning step
+by VN j in the subgraph induced by a CN with index a ∈ {0, . . . , m − 1}. Hence, Lˆ(j,a) = Lˆv( ) if VN v in the Tanner graph is also the j-th VN in the subgraph induced by the CN with index a. Let xˆa( ) = [xˆ0(,a) , . . . , xˆl(a)−1,a], where la is the number of VNs adjacent to CN with index a. After scheduling
+CN a, the state of the MDP associated with this node is given by its output xˆa( ) that is obtained by taking hard decisions on the vector of posterior LLRs Lˆ(a ) = [Lˆ(0,a) , . . . , Lˆ(la)−1,a], computed according to
+
+xˆj(,a) =
+
+0, if Lˆj(,a) ≥ 0, 1, otherwise.
+
+(3)
+
+We assign a unique index s(a ) ∈ {0, . . . , 2la − 1} to a realization of xˆa( ), and thus we call s(a ) the state of our
+MDP in the remainder of the paper. Since the state of the
+MDP is a sequence of hard-decision VN values associated with
+the subgraph of the scheduled node, the collection of signals xˆ(0 ), . . . , xˆm ( )−1 at the end of decoder iteration forms the entire state of the MDP associated with our learning scheme.
+Given that the transmitted signal x is known during the training phase, let xa = [x0,a, . . . , xla−1,a] be a vector containing the la bits of x that are reconstructed as xˆ(a ). In each learning step , the reward Ra obtained by the agent after scheduling CN a is defined as
+
+Ra
+
+=
+
+1 la
+
+la −1
+1(xj,a
+j=0
+
+=
+
+xˆj,a),
+
+(4)
+
+where 1(·) denotes the indicator function. Thus, the reward
+earned by the agent after scheduling CN a is identical to the probability that the transmitted bits x0,a, . . . , xla−1,a are correctly reconstructed.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:51 UTC from IEEE Xplore. Restrictions apply.
+
+III. RL FOR SEQUENTIAL GLDPC DECODING
+Our goal is to learn an optimized sequence of actions, i.e., the scheduling of individual CNs C1, . . . , Cm where Ci = {ci,1, . . . , ci,z}, ci,j ∈ {0, . . . , m − 1} is the index of the j-th SPCN in the i-th CN, and z is the number of SPCNs involved in the CN (which is 1 in case of an SPCN). By N (Ci) we refer to all the VNs connected to the i-th CN. We choose the BP decoding algorithm to learn the optimized CN scheduling order. We form the subgraph of a CN, which consists of the target CN, all attached VNs, as well as their attached CNs. Then a single CN scheduling step involves CN computation, message propagation from the SPCN to its neighboring VNs in the first half of the step, and message propagation from these VNs to their SPCN neighbors in the second half.1 In other words, a CN subgraph is decoded via flooding, where in this paper, the SPCN to VN messages are computed with a BP decoder and flooding schedule on the component graph. Every CN is scheduled exactly once within a single decoder iteration. Sequential CN scheduling is carried out until a stopping condition is reached, or an iteration threshold is exceeded.
+The MDP for sequential decoding is shown in Fig. 1. The idea is that scheduling a CN with index a, represented by the blue square, alters the hard-decisioned beliefs of the blue VNs associated with the node, i.e., the state of the environment changes from s(a ) to sa( +1). In return, the agent receives a reward 0 ≤ Ra ≤ 1 according to (4) which grows in proportion to the number of correct bits of output xˆa( ). The long-term expected rewards, for scheduling a CN with index a in state sa( ), is learned via standard Q-learning [11].
+
+IM
+
+1, if event M is true, 0, otherwise.
+
+(5)
+
+During the learning phase, the long-term expected rewards are earned according to the recursion
+
+G( + 1, sa( ),a, IM ) = (1 − α)G( , sa( ), a, IM )+ α Ra + β max G( , s(a +1), a , IM ) ,
+a ∈{0,...,m−1}
+(6)
+
+where G( , s(a ), a, IM ) =
+
+Q (s(a ), a), if IM = 1, Q(k)(sa( ), a), otherwise,
+
+(7)
+
+sa( +1) represents the new state of the MDP after taking action a in state sa( ), 0 < α < 1 is the learning rate, 0 < β < 1
+is the reward discount rate, and is the number of learning steps elapsed after observing the initial state s(a0) corresponding to a received channel output L = [L0, . . . , Ln−1] in a
+learning episode. A learning episode comprises all the Q-
+learning steps needed to learn the action-values corresponding
+to a single training example (LLR vector). Here, note that G( + 1, sa( ), a, 1) is a future action-value resulting from action a in the current state s(a ) when learning is done over a mixture of SNR values chosen from a set S = {S1, . . . , SK }, where Si ∈ R is the i-th SNR value, and K is the total number of distinct SNRs considered for training (a single policy is learned for each SNR). In contrast, G( + 1, s(a ), a, 0) is a future action-value when Q-learning is done only for the kth SNR value in S (a separate policy is learned for each SNR). For each , CN a is selected via an -greedy approach
+according to
+
+a=
+
+selected uniformly at random w.p. π(sa( ), IM ) selected w.p. 1 − ,
+
+from A,
+
+(8)
+
+Fig. 1: Illustration of our GLDPC scheduling policy learning framework. In each learning step, a fictitious agent schedules a CN with index a when the environment state, based on hard-decisioned (blue) VN values, is sa( ). Once an action is taken, the state of the environment changes from sa( ) to sa( +1), as the blue VN values are updated after scheduling, and the agent receives reward Ra that indicates the accuracy of the hard-decisions taken by the BP algorithm for each blue VN.
+Now, we consider learning the CN scheduling policy in two distinct ways: in the first approach, we learn a single policy using a dataset of LLR vectors corresponding to a range of K SNR values, and in the second, separate policies are learned using a specific dataset for each fixed SNR. Let an event M be true if the first approach is employed, and false otherwise. We then define a learning indicator function
+1Note that any component decoder could be used to compute the SPCN to VN messages.
+
+where is the probability of exploration, A = {0, . . . , m} is a set of all possible actions, and π(s(a ), IM ) is an agent’s policy for taking an action in state sa( ), expressed as
+
+π(sa( ), IM ) = arg max G( , sa( ), a, IM ).
+
+(9)
+
+a∈{0,...,m−1}
+
+At the end of the learning phase, we obtain an optimal
+CN scheduling policy that maximizes the long-term expected reward in state s(a ), given by
+
+π∗(s(a ), IM ) = arg max G∗( , sa( ), a, IM ),
+
+(10)
+
+a
+
+where G∗( , s(a ), a, IM ) is the highest possible long-term expected reward (action-value) for a given (sa( ), a) pair. Since G∗( , s(a ), a, IM ) is unknown, the outcome of Q-learning is an optimized CN scheduling policy, πˆ(sa(Ii), IM ), for scheduling the i-th CN expressed as
+
+πˆ(sa(Ii), IM ) =
+
+arg max
+
+g(s(aIi), ai, IM ),
+
+ai ∈{0,...,m−1}\{a0 ,...,ai−1 }
+
+(11)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:51 UTC from IEEE Xplore. Restrictions apply.
+
+where
+
+g(sa(Ii), ai, IM ) =
+
+Qˆ(sa(Ii), ai), if IM = 1, Qˆ(k)(s(aIi), ai), otherwise,
+
+(12)
+
+i ∈ {0, . . . , m−1}, I is the decoder iteration during inference, and ai indicates the CN index to be scheduled at time instant i. Further, Qˆ(s(aIi), ai) and Qˆ(k)(sa(Ii), ai) represent optimized action-value functions once learning ends. Note that we draw
+distinction between the decoder iteration during RL and the decoder iteration I during inference, as the maximum number of iterations, Imax, for the latter need not match max.
+The proposed learning scheme is shown in Algorithm 1.
+The input to this algorithm is the learning indicator function IM , the code’s parity-check matrix H, and a set Lˆ (resp., Lk) of |Lˆ| (resp., |Lk|) realizations of L over which standard Qlearning is performed. Note that each vector in Lˆ corresponds to an SNR selected from S. That is, there are |Lˆ|/K LLR vectors in Lˆ with the same SNR. In comparison, all the LLR vectors in Lk correspond to a fixed SNR. Note also that the action-values Q0(s(a0), a) and Q0(k)(sa(0), a), ∀(s(a0), a), are initialized with zeros. Finally, we note that the posterior LLR vector LˆI = [LˆI(0), . . . , LˆI(n−1)], used for making harddecisions in Step 11 is initialized using L in Step 4.
+In Algorithm 1, for a training sample L ∈ |L |, the initial
+state of all the CNs are determined in Step 5. Then, a total of
+max training rounds are completed in Steps 6-18. In each episode, an action is taken according to (8) and a single
+flooding BP iteration is performed in the subgraph of the
+scheduled CN as shown in Steps 8-9. The new CN output is
+determined in Steps 10-12, leading to a new CN state in Step 13. The reward for taking action a in Step 7 is earned in Step
+14. Finally, the action-value (long-term reward) is computed
+in Step 15. The output of Algorithm 1 is an optimized CN scheduling policy πˆ(s(aIi), IM ). For inference, we invoke a BP decoding algorithm with inputs comprising of LLR vector L that corresponds to one of the SNRs in S, parity-check matrix H of the GLDPC code, and IM . In every iteration, we generate an optimized CN scheduling order using πˆ(s(aIi), IM ).
+
+IV. NUMERICAL RESULTS
+We compare the RL-based sequential BP decoding performance of GLDPC codes against both flooding and random sequential BP decoding schemes. The flooding decoder schedules all the GCNs and SPCNs serially, and then updates all the VNs in the Tanner graph simultaneously. In case of random sequential decoding, the GCNs and SPCNs are randomly scheduled in sequence. Once a CN is scheduled, only the VNs in its subgraph are updated at once, and this process repeats for all the CNs. Consequently, in the case of sequential decoding, a VN that is common to multiple CN subgraphs gets updated more than once in the same iteration. In contrast, each VN is updated only once per iteration in case of flooding.
+We utilize flooding, random sequential, and RL-based schemes for decoding GLDPC codes using a (2, 7) base LDPC code of length n = 469, where the number of SPCNs is m = 134. Multiple GLDPC codes are constructed for different values of µ, which is the fraction of GCNs in the
+
+Algorithm 1: GLDPC scheduling policy learner
+
+Input : learning indicator IM , training sets Lˆ, Lk,
+
+parity-check matrix H
+
+1
+
+Output: optimized Initialization: For
+
+scheduling policy IM = 1, initialize
+
+Lπˆ(s←a(Ii)L, IˆMa)nd
+
+Q0(sa(0), a) ← 0 ∀(sa(0), a), otherwise initialize
+
+L ← Lk and Q(0k)(s(a0), a) ← 0 ∀(s(a0), a)
+
+2 for each L ∈ L do
+
+3
+
+←0
+
+4 Lˆ ← L
+
+5 determine initial states of all GCNs using (3)
+
+// start of an episode
+
+6 while < max do
+
+7
+
+select CN a according to (8)
+
+8
+
+for each SPCN c in Ca, compute and propagate
+
+m(c→) v ∀v ∈ N (c)
+
+9
+
+for each VN v in N (Ca), compute and
+
+propagate m(v→) c ∀c ∈ N (v)
+
+// determine CN output
+
+10
+
+for each VN v in the subgraph of CN a do
+
+11
+
+If Lˆ(v ) ≥ 0, xˆv( ,)a ← 0, otherwise xˆ(v,)a ← 1
+
+12
+
+end
+
+13
+
+determine index sa( +1) of xˆa via binary to
+
+decimal conversion
+
+14
+
+update Ra according to (4)
+
+15
+
+compute G( + 1, s(a ), a, IM ) according to (6)
+
+16
+
+s(a +1) ← sa( +1)
+
+17
+
+← +1
+
+18 end
+
+19 end
+
+GLDPC code Tanner graph. A [7, 4] Hamming component code is used in each case. Specifically, we consider µ values of 0, 0.373, 0.746, 0.970, and 1, resulting in GLDPC codes C1, C2, C3, C4, and C5, with rates 0.714, 0.501, 0.288, 0.160, and 0.143, respectively. The choice of GLDPC code length is influenced by the run-time of the proposed learning schemes on our system. We employ the GLDPC scheduling policy learner of Algorithm 1 using Q-learning. For both learning schemes, we found a reasonable choice of hyper-parameters that render superior decoding performance when compared to flooding and random sequential schemes. Those parameters include a learning rate of α = 0.1, a reward discount rate of β = 0.9, a probability of exploration of = 0.6, and a maximum number of steps per learning episode of max = 50.
+For learning we select K = 6 different Eb/N0 values (in dB) from the set S = {1, 2, 3, 4, 4.5, 5}. For IM = 1, the GLDPC scheduling policy is learned for dataset size |Lˆ|= 180000, ensuring that 1/K-th of the dataset contains LLR vectors of a fixed SNR. That is, a single CN scheduling policy is learned using dataset for all K SNR values in S, and |Lˆ|/K = 30000 training samples are allotted for each. On the other hand, for IM = 0, the GLDPC scheduling policy is learned over a dataset of size |Lk|= 30000. That is, a separate
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:51 UTC from IEEE Xplore. Restrictions apply.
+
+CN scheduling policy is learned using each Lk for the k-th SNR value in S. The training set sizes |Lˆ| and |Lk| are chosen to ensure that the dataset is large enough for accurate training without incurring too much simulation time.
+For both training and inference, we transmit all-zero codewords using BPSK modulation. Note that training with the all-zero codeword is sufficient since, due to the symmetry of the BP decoder and the channel, the decoding error is independent of the transmitted signal (see [12, Lemma 4.92]). For performance measures, we consider the FER given by Pr[xˆ = x] and choose a maximum number of BP iterations Imax = max.
+The curves FER vs. channel SNR, in terms of Es/N0 in dB, for codes C1, . . . , C5 using the flooding and random sequential decoding techniques are shown in Fig. 2. This figure reveals that, as expected, the GLDPC decoding performance generally improves as µ increases, and the random sequential decoder slightly outperforms flooding (note that we plot in terms of Es/N0). Furthermore, in Fig. 3, we clearly see significant gains of RL-based decoding in case of both IM = 1 and IM = 0, when compared to flooding and random sequential decoding schemes for codes C4 and C5. Similar gains are obtained for C2 and C3 (not shown). For this example, RLbased sequential decoding does not provide any gain for C1. We also note that the performances using the two RL schemes are almost identical.
+In Table I, we compare the average number of SPCN to VN messages propagated in the considered decoding schemes to attain the results in Fig. 3 for the C5 code. We note that the RL-based scheme (for IM = 1) require a significantly lower number of SPCN to VN messages when compared to the other decoding schemes (the complexity results for IM = 0 are similar to the IM = 1 case, and hence omitted).
+100
+
+10−1
+
+FER
+
+10−2 10−3 10−4
+
+C1 flooding C1 random C2 flooding C2 random C3 flooding C3 random C4 flooding C4 random C5 flooding C5 random
+
+−6
+
+−4
+
+−2
+
+0
+
+2
+
+4
+
+Es/N0 (dB)
+
+Fig. 2: FER results using the flooding and random sequential decoding scheme for different GLDPC codes of block length n = 469.
+
+V. CONCLUSION
+We studied sequential (double) BP decoding of generalized LDPC codes with the aid of RL. In learning, a scheduling instant updates all the nodes of a CN subgraph via flooding. By learning the CN scheduling order, we are able to outperform
+
+100
+
+10−1
+
+FER
+
+10−2
+
+10−3 10−4
+
+C4 flooding C4 random C4 RL, IM = 1 C4 RL, IM = 0 C5 flooding C5 random C5 RL, IM = 1 C5 RL, IM = 0
+
+−7
+
+−6
+
+−5
+
+−4
+
+−3
+
+Es/N0 (dB)
+
+Fig. 3: FER results using different BP decoding schemes for GLDPC codes C4 and C5.
+
+Es/N0 (dB)
+flooding random seq. RL (IM = 1)
+
+−7.45
+78924 78342 77640
+
+−6.45
+68751 65248 56127
+
+−5.45
+42087 36664 20561
+
+−4.45
+21498 15469 9214
+
+−3.94
+16217 11170 7381
+
+TABLE I: Average number of SPCN to VN messages propagated by different decoders for C5 to attain the results shown in Fig. 3.
+both a random CN scheduling scheme, as well as a flooding scheme, where the gain increases with the proportion of GCN nodes in the GLDPC Tanner graph. Moreover, the number of CN updates was greatly reduced, particularly at high SNRs. Future work will take into account other component code decoding schemes, such as the BCJR algorithm.
+REFERENCES
+[1] Y. Liu, P. M. Olmos, and D. G. M. Mitchell, “Generalized LDPC codes for ultra reliable low latency communication in 5G and beyond,” IEEE Access, vol. 6, pp. 72 002–72 014, 2018.
+[2] ——, “On the design of generalized LDPC codes with component BCJR decoding,” in GLOBECOM 2020 - 2020 IEEE Global Communications Conference, 2020, pp. 1–6.
+[3] Y. Mao and A. Banihashemi, “A heuristic search for good low-density parity-check codes at short block lengths,” in ICC 2001. IEEE International Conference on Communications, vol. 1, 2001, pp. 41–44 vol.1.
+[4] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. on Inf. Theory, vol. 27, no. 5, pp. 547–553, Sep 1981.
+[5] P. M. Olmos, D. G. M. Mitchell, and D. J. Costello, “Analyzing the finite-length performance of generalized LDPC codes,” in 2015 IEEE International Symposium on Information Theory (ISIT), 2015, pp. 2683– 2687.
+[6] G. Liva, W. E. Ryan, and M. Chiani, “Quasi-cyclic generalized LDPC codes with low error floors,” IEEE Transactions on Communications, vol. 56, no. 1, pp. 49–57, 2008.
+[7] F. Carpi, C. Hager, M. Martalo, R. Raheli, and H. D. Pfister, “Reinforcement learning for channel coding: Learned bit-flipping decoding,” Proc. of 57th Allerton Conf. on Commun., Control and Computing.
+[8] S. Habib, A. Beemer, and Kliewer, “Belief propagation decoding of short graph-based channel codes via reinforcement learning,” IEEE Journal on Sel. Areas in Inf. Theory, vol. 2, no. 2, pp. 627–640, 2021.
+[9] S. Habib, A. Beemer, and J. Kliewer, “RELDEC: Reinforcement learning-based decoding of moderate length LDPC codes,” [Online]. Available: arXiv.org, arXiv:2112.13934 [cs.IT], 2021.
+[10] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction, 2nd Edition. The MIT Press Cambridge, 2018.
+[11] C. J. C. H. Watkins, “Learning from delayed rewards,” Ph.D. dissertation, King’s College, 1989.
+[12] T. J. Richardson and R. L. Urbanke, “Modern Coding Theory,” Cambridge University Press, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:46:51 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1688 @@
+Received 20 June 2025, accepted 19 July 2025, date of publication 24 July 2025, date of current version 30 July 2025. Digital Object Identifier 10.1109/ACCESS.2025.3592296
+
+Gradient Flow Decoding
+TADASHI WADAYAMA , (Member, IEEE), AND LANTIAN WEI , (Member, IEEE)
+Nagoya Institute of Technology, Nagoya, Aichi 4668555, Japan
+Corresponding author: Lantian Wei (wei.lantian@nitech.ac.jp) This work was supported by Japan Society for the Promotion of Science (JSPS) KAKENHI under Grant JP22H00514 and Grant JP25H01111.
+
+ABSTRACT This paper presents the Gradient Flow (GF) decoding for LDPC codes. GF decoding, a continuous-time methodology based on gradient flow, employs a potential energy function associated with bipolar codewords of LDPC codes. The decoding process of the GF decoding is concisely defined by an ordinary differential equation and thus it is well suited to an analog circuit implementation. We experimentally demonstrate that the decoding performance of the GF decoding for AWGN channels is comparable to that of the multi-bit mode gradient descent bit flipping algorithm. We further introduce the negative log-likelihood function of the channel for generalizing the GF decoding. The proposed method is shown to be tensor-computable, which means that the gradient of the objective function can be evaluated with the combination of basic tensor computations. This characteristic is well-suited to emerging AI accelerators, potentially applicable in wireless signal processing. The paper assesses the decoding performance of the generalized GF decoding in LDPC-coded MIMO channels. For LDPC-coded MIMO channels, our method achieves approximately 1.6 dB performance gain over MMSE + BP. Furthermore, an exploration of score-based channel learning for capturing statistical properties is also provided.
+
+INDEX TERMS LDPC codes, ordinary differential equations, gradient descent, tensor computation, MIMO channel, MIMO detection.
+
+I. INTRODUCTION A. BACKGROUND Low-Density Parity-Check (LDPC) codes [1] have emerged as a cornerstone in the ongoing advancement of contemporary wireless communication technologies. Their role is becoming increasingly critical, and LDPC codes are expected to be necessary in ensuring reliable data transmission in the forthcoming 6G systems. However, implementing efficient LDPC decoders remains challenging, particularly when balancing decoding performance with computational complexity, energy efficiency, and throughput requirements.
+Concurrently, the technological landscape has been transformed by significant advancements in Artificial Intelligence (AI) computing platforms [2]. The success of Large Language Models (LLMs) such as GPT-4 [3] has driven the development of fast and power-efficient AI accelerators [4], including the next generation of General Purpose Graphics Processing Units (GPGPUs). These advanced devices are
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Jiayi Zhang .
+
+specifically designed to cater to the demanding computational needs of AI models. They play a crucial role not only in accelerating the training process of these complex models but also in enhancing the efficiency of inference tasks.
+Beyond digital accelerators, emerging analog computing technologies offer new possibilities for signal processing tasks. Optical integrated circuits based on Mach-Zehnder Interferometers (MZI) [5], [6], and resistive random-access memory (RRAM)-based analog computing [7], [8] both demonstrate promising capabilities for matrix operations with exceptional speed and energy efficiency. An analog computer capable of simulating nonlinear ordinary differential equations (ODEs) can be constructed using analog adders, multipliers, integrators, and other nonlinear devices, making it particularly well-suited for LDPC decoding algorithms formulated as continuous-time systems. Optical analog integrated circuits are currently under intensive study [6], [9], [10], with implementations showing both fast processing and extremely low power consumption. Although the full potential of these analog implementations is still being explored, they represent a promising direction for improving
+
+VOLUME 13, 2025
+
+
+ 2025 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+131937
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+both power efficiency and processing latency in decoding operations.
+These developments create an opportunity to rethink decoding algorithms from a fundamental perspective. Rather than simply adapting existing algorithms to new hardware, we can design algorithms specifically tailored to exploit the tensor computation capabilities of modern AI accelerators and analog computing platforms. Such algorithms would need to express their core operations in terms of tensor computations (matrix-vector products, element-wise operations, etc.) to leverage the full potential of these accelerators.
+For this direction, a next-generation decoding algorithm needs to be ‘tensor-friendly’, i.e., each internal process of the decoding algorithm should be efficiently executable on an AI accelerator. This implies that each subprocess must be based on tensor computation, such as tensor product, tensor addition, and component-wise function application, which is optimally managed by the AI accelerator. In other words, the core of algorithm should comprise tensor-friendly computations to fully leverage the power of the AI accelerator. A tensor-friendly decoding algorithm also facilitates batch based decoding, allowing for the simultaneous handling of multiple codewords. A batch-based algorithm promotes the efficient use of the AI accelerator.
+Furthermore, a tensor-friendly algorithm is a differentiable algorithm, i.e., every part of the algorithm is differentiable. This means that an automatic differentiation mechanism including back propagation can be easily and efficiently applied to compute the gradients of the internal trainable parameters. We can embed a learnable block or learnable parameters into the algorithm. For example, we can immediately use deep unfolding for performance improvement. Such an ‘AI-friendly’ property is another benefit of a tensorfriendly algorithm.
+B. CONTRIBUTION The objective of this study is to devise a tensor-friendly decoding algorithm suitable for digital/analog AI accelerators. To achieve the goal, we begin with a decoding approach based on a non-convex optimization problem. Utilizing the gradient flow dynamics to minimize the objective function, we can derive a continuous time system for decoding LDPC codes. This paper presents the Gradient Flow (GF) decoding for LDPC codes. GF decoding, a continuous-time methodology based on gradient flow, employs a potential energy function associated with bipolar codewords of LDPC codes. This approach utilizes a potential energy function akin to the objective function employed in the Gradient Descent Bit Flipping (GDBF) algorithm [11].
+The key contributions of this paper are outlined as follows:
+• Introduction of the GF decoding method for AWGN channels, which is based on a continuous-time dynamical system suitable for analog implementation. To the best of the authors’ knowledge, this is the first attempt to
+131938
+
+explore a continuous-time decoding method for LDPC codes. • Demonstration that GF decoding is tensor-friendly, making it compatible with future AI accelerators, thereby enabling efficient parallel processing and potential integration with other AI-based communication systems for significantly enhanced processing capabilities. • Expansion of GF decoding through the inclusion of the channel’s negative log-likelihood function, enabling its application to a broad range of channels such as channels with memory, substantially increasing the practical utility of our approach across diverse communication environments. • Development of a discretized version of GF decoding, analogous to a gradient descent method, tailored for digital AI accelerators such as GPGPUs, thus bridging the gap between theoretical advantages and practical implementation for tangible performance gains. • Exploration on score-based channel learning for capturing channel statistical property, enabling the design of decoders without predefined channel models and addressing a significant limitation in traditional approaches by providing adaptability to unknown channel characteristics.
+The GF decoding can be regarded as the continuous-time counterpart of the GDBF algorithm since both approaches utilize fairly similar objective functions. The simplicity of the method enhances its suitability for implementation on AI accelerators. A notable feature of GF decoding is its differentiability, which allows for smooth integration with other AI components, such as a neural network mimicking a negative log likelihood of the target channel.
+C. OUTLINE The concept of GF decoding was initially presented in the conference papers [12] and [13]. The current paper enriches the initial presentation by offering a thorough exposition on the detailed derivation of GF decoding, an enhanced treatment of tensor-computability, addition of complete proof of theorems and extensive experimental validations. Furthermore, this paper newly introduces the concept of score-based channel learning. These enhancements are anticipated to substantially bolster the understanding of the proposed method, offering deeper insights.
+The structure of this paper is organized as follows: Section II briefly reviews related works and introduces basic notation related to LDPC codes. Section III presents the idea of GF decoding for AWGN channels. Section IV discusses ‘tensor-computability’, a rather simple computation model useful for AI accelerators. Section V broadens the scope of GF decoding to encompass general channels. Section VI shows the results of numerical experiments on MIMO channels. Section VII discusses score-based channel learning suitable for GF decoding. Finally, Section VIII provides a conclusive discussion.
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+TABLE 1. Key notations used in this paper.
+II. PRELIMINARIES A. RELATED WORKS The method presented in this paper can be classified as part of the optimization-based decoding algorithms for LDPC codes. A number of works have been developed in this class. The seminal work on Linear Programming (LP) decoding by Feldman [14] clearly formulated the LDPC decoding problem as an LP problem. Applications of interior point methods for solving the LP problem have been discussed in [15] and [16]. A gradient descent formulation of a non-convex objective function leads to the GDBF algorithm [11], which introduced optimization perspective into the bit-flipping decoding algorithms. Some variants of the GDBF algorithm, such as the noisy GDBF algorithm [17], have shown considerable improvement in decoding performance over a simple GDBF algorithm. Zhang and Siegel [18] and Barman et al. [19] applied Alternating Direction Method of Multipliers (ADMM) for solving the Feldman’s LP problem, which leads to ADMM decoding. ADMM decoding has been studied by many researchers and has become a decoding algorithm quite competitive with BP in both decoding performance and decoding complexity.
+Recently, extensive research has been conducted on continuous-time methodologies that are amenable to analog circuit implementations including optical circuits.
+VOLUME 13, 2025
+
+A contribution by [20] introduced an ordinary differential equation (ODE)-based approach for minimum mean square error (MMSE) signal detection in multiple-input multipleoutput (MIMO) systems, providing a rigorous analytical formulation for error quantification. Furthermore, the gradient flow paradigm has been applied to sparse signal recovery problem [21]. The optical or other analog realization of these methodologies holds substantial potential for advancing wireless communication systems requiring both high throughput and high power efficiency.
+
+B. NOTATION
+We summarize the key notations used throughout this paper in Table 1. Some fundamental notations are defined below, while others are introduced at their first occurrence in subsequent sections.
+Assume that a sparse binary parity check matrix H = {Hij} ∈ F2m×n is given. The LDPC code C˜ (H) is defined by C˜ (H) ≡ {b ∈ F2n | Hb = 0}. The binary to bipolar transform B : F2 → {1, −1} defined by B(0) ≡ 1 and B(1) ≡ −1 transforms C˜ (H) into the bipolar code defined by C(H) ≡ {B(b) ∈ {1, −1}n | b ∈ C˜ (H)}.
+The index sets A(i) and B(j) are defined as
+
+A(i) ≡ {j | j ∈ [n], Hi,j = 1}, i ∈ [m],
+
+(1)
+
+B(j) ≡ {i | i ∈ [m], Hi,j = 1}, j ∈ [n],
+
+(2)
+
+respectively. The notation [n] denotes the set of consecutive integers {1, 2, . . . , n}. The parity check condition for the LDPC code C˜ (H), j∈A(i)xj = 0, holds for any x ∈ C˜ (H) and for any i ∈ [m]. This corresponds to the parity check
+condition for the bipolar LDPC code C(H), which is
+
+∀x ∈ C(H), ∀i ∈ [m],
+
+xj = 1.
+
+(3)
+
+j∈A(i)
+
+A function g : C → C can be applied to a vector x ∈ Rn as g(x) ≡ (g(x1), g(x2), . . . , g(xn)), where x = (x1, . . . , xn) ∈ Cn. Namely, a scalar function g can be
+component-wisely applicable to a vector x. For a pair of vectors a = (a1, . . . , an) ∈ Cn, b ≡ (b1, . . . , bn) ∈ Cn,
+we define the multiplication and division on two vectors
+by ab ≡ (a1b1, . . . , anbn) and a/b ≡ (a1/b1, . . . , an/bn),
+respectively.
+
+III. GRADIENT FLOW DECODING FOR AWGN CHANNELS A. GRADIENT FLOW DYNAMICS
+
+The gradient flow dynamics, also known as steepest descent dynamics, is a continuous-time dynamics defined by an Ordinary Differential Equation (ODE):
+
+dx(t) = −∇f (x(t)),
+
+(4)
+
+dt
+
+where f : Rn → R is a potential energy function. The system’s state x : R → Rn evolves to reduce
+
+the potential energy f as the continuous time variable t
+
+increases. This continuous dynamical system can be viewed
+
+as the continuous counterpart of the gradient descent method.
+
+131939
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 1. Minimization process of a convex function in a gradient flow dynamics system: x(t ) represents the solution to the ordinary differential equation (4). The equilibrium points become the minimum points of the convex function f .
+
+If the potential function f is strictly convex, the equilibrium point of the dynamics coincides with the minimum point of f . Therefore, the gradient flow dynamics can be seen as a continuous-time minimization process of the potential energy function. If f is a non-convex function, then the gradient flow dynamics finds a stationary point of f as t → ∞.
+Figure 1 presents an example of the gradient flow dynamics for a simple convex energy function κ defined on two-dimensional Euclidean space. The state vector following the ODE (4) gradually approaches to the minimum point of κ. The gradient flow can be considered as the continuous-time counterpart of the gradient descent method.
+
+B. GRADIENT FLOW DECODING FOR AWGN CHANNEL
+We assume an AWGN channel. A transmitter sends a
+codeword s ∈ C(H) and a receiver obtains a received word y = s + n, where n ∼ N (0, σn2I).
+Let f be a potential energy function defined by
+
+f
+
+(x)
+
+≡
+
+1 ∥x
+2
+
+−
+
+y∥2
+
++
+
+γ hα,β (x),
+
+(5)
+
+where γ is a real parameter controls the strength of the penalty term. The first term of the potential energy function corresponds to the negative log likelihood function for an AWGN channel. The second term is a penalty term attracting x to a codeword of C(H). This formulation is derived from maximum a posteriori (MAP) decoding principles, which form the theoretical foundation for optimal decoding algorithms. Later in Section V, we generalize this approach to incorporate negative log likelihood functions for arbitrary channels. The definition of hα,β is given as follows.
+
+131940
+
+Definition 1: The code potential energy function for C(H) is a multivariate polynomial defined as
+
+n
+
+
+m
+
+ 2
+
+hα,β (x) ≡ α (xj2 − 1)2 + β 
+
+xj − 1 ,
+
+j=1
+
+i=1 j∈A(i)
+
+(6)
+
+where x = (x1, . . . , xn)T ∈ Rn. The parameters α ∈ R+ and β ∈ R+ control the relative strength of the first and second terms.
+The first term on the right-hand side of (6) represents the bipolar constraint for x ∈ {+1, −1}n, and the second term corresponds to the parity constraint induced by H, i.e., if x ∈ C(H), we have j∈A(i)xj − 1 = 0 for any i ∈ [m].
+The code potential energy hα,β (x) is inspired by the non-convex parity constraint function used in the GDBF
+objective function [11]. The sum-of-squares form of (6) directly implies the most important property of hα,β (x), i.e., the inequality hα,β (x) ≥ 0 holds for any x ∈ Rn. The equality holds if and only if x ∈ C(H).
+The gradient flow decoding for the AWGN channel is
+simply a gradient flow dynamics based on the potential
+energy function f that is given by
+
+dx(t) = −∇f (x(t)).
+
+(7)
+
+dt
+
+This ODE can be rewritten as follows.
+
+Definition 2 (Gradient flow decoding forAWGN channels):
+
+The GF decoding is defined by the ODE:
+
+dx
+
+dt = −(x − y + γ ∇hα,β (x))
+
+(8)
+
+x(0) = x0,
+
+(9)
+
+where hα,β (x) is the code potential energy and x(0) = x0 ∈ Rn is an initial point. In general, there exist stationary points satisfying f (x) > 0 and ∇f (x) = 0. These stationary points are called noncodeword stationary points. Additionally, points that satisfy f (x) > 0 and ∇f (x) ≃ 0 rather than equality are called pseudo non-codeword stationary points. When iterative optimization techniques that use gradient information, such as gradient methods, are applied, these non-codeword stationary points or pseudo non-codeword stationary points can cause the search vector’s movement speed to drastically reduce near the stationary points, leading to traps at the stationary points. These undesirable stationary points may negatively impact decoding performance because the search points may get trapped near them, preventing them from reaching the codeword stationary points.
+It should be emphasized that the objective function f (x) defined in (5) is generally non-convex. The GF approach cannot guarantee convergence to the global minimum in nonconvex settings. This limitation distinguishes our approach from convex optimization methods such as LP decoding [14], [15], [16]. However, this theoretical limitation is compensated for by lower computational complexity. Our numerical
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 2. Analog circuit for generalized GF decoding corresponding to the GF-ODE (8).
+
+experiments demonstrate that despite the non-convex nature, GF decoding achieves competitive BER performance while maintaining implementation efficiency. This represents a practical trade-off, especially considering that optimal LDPC decoding is NP-hard.
+
+C. ANALOG CIRCUIT IMPLEMENTATION
+The formulation of GF decoding is useful for continuous-time signal processing by an analog circuit with feedback signals. Figure 2 presents a block diagram of the analog circuit realizing the continuous-time dynamics given by the generalized GF-ODE (8). The left box represents an analog circuit evaluating the value of −(x − y + γ ∇hα,β (x)). A similar optical circuit implementing an Ising machine with feedback loop was reported in [22]. In principle, an optical implementation of the analog circuit depicted in Fig.2 would be possible if the gradient part −(x − y + γ ∇hα,β (x)) can be implemented with an optical circuit.
+A tensor-friendly implementation of the circuit evaluating ∇hα,β (x) is to be discussed in Subsection IV-B. The matrix-vector product in optical domain could be implemented with programmable optical switches when we use the quasi-cyclic LDPC codes.
+
+D. EULER METHOD
+To evaluate the decoding performance of the GF decoding (8), a numerical method is required to solve the ODE. The simplest numerical method for solving simultaneous nonlinear differential equations is the Euler method [23]. While the convergence order of the Euler method is lower than that of higher-order methods, it is straightforward to use and can provide sufficiently accurate solutions if the time interval is sufficiently fine discretized. Therefore, in the present study, we will use the Euler method to solve the ODE (8).
+Suppose that we require to simulate the dynamics defined by the above ODE (8) in the time interval 0 ≤ t ≤ T . The interval is divided into N bins where N denotes the number of discretized intervals. The discrete-time ticks tk = kη(k = 0, 1, . . . , N ) defines the boundaries of the bins where the width of a bin is given by η ≡ T /N . It should be noted that the choice of the bin width η is crucial in order to ensure the stability and the accuracy of the Euler method. By using the Euler method, the ODE (8) can be approximated by
+
+x(k+1) = x(k) − η∇f (x(k))
+
+(10)
+
+for k = 0, 1, 2, . . . , N − 1. The initial condition of this recursion is x(0) = x0.
+
+VOLUME 13, 2025
+
+FIGURE 3. Heat map of hrep(x). The codewords (1, 1), (−1, −1) lie on the right upper and left bottom corners, respectively.
+
+E. EXAMPLE OF CODE POTENTIAL ENERGY FUNCTION
+As a simple example, suppose the potential energy function
+of the bipolar repetition code Crep (n = 2) below. The code Crep is given by Crep ≡ {(1, 1), (−1, −1)}. In this case, the corresponding potential energy function is hrep(x) = (x12 − 1)2 + (x22 − 1)2 + (x1x2 − 1)2, where the constants α and β are set to one. It can be easily confirmed that by substituting the
+codewords into hrep(x), the potential energy value becomes 0, and for any x, hrep(x) ≥ 0.
+The heatmap representation of the potential energy func-
+tion hrep(x) is shown in Fig. 3. From this figure, it can be seen that the function takes a minimum value of 0 at the locations of the codewords (+1, +1), (−1, −1). The shape of the function hrep(x) resembles a valley with these two codewords at its base. Therefore, it is expected that when optimization
+techniques such as gradient methods are used, a state vector
+is attracted towards the direction of the codewords will occur. On the other hand, the origin (0, 0) is a maximum point, and ∇hrep(0) = 0 holds. Therefore, if a state vector following the gradient descent dynamics passes near the origin, it is
+expected that its movement speed will be extremely slow.
+
+F. EXAMPLE OF GF DECODING PROCESS
+We first present a small example to illustrate the basic principles of the GF decoding process using a simple two-dimensional visualization of a repetition code of length 2, Crep. Assume that a transmitted word is x = (1, 1) and that the corresponding received word is y = (0.6027, 0.8244). In this case, the ODE (8) for the GF decoding becomes
+
+dx1 dt dx2 dt
+
+=−
+
+x1 − 0.6027 + 4x1(x12 − 1) + 2(x1x2 − 1)x2 x2 − 0.8244 + 4x2(x22 − 1) + 2(x1x2 − 1)x1
+
+.
+
+(11)
+
+The initial condition for the ODE is set to x(0) = (0, 0). Figure 4 shows the solution curve of the ODE, with the white small circle representing the initial point and the black small circle indicating the equilibrium point (0.9642, 0.9901). The solution curve is obtained numerically using the Euler method. In Fig. 4, the contour curves
+
+131941
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 4. Example of a solution curve of the ODE. The repetition code of length 2 is assumed. The equilibrium point reflects the trade-off between channel likelihood and codeword constraints.
+of the potential energy function f (x) are also plotted. We can observe that the solution curve is orthogonal to the contour curves because the solution path follows the negative gradient vector field of the potential energy. This means that the curve is a steepest descent curve for f . By rounding the equilibrium point, we obtain xˆ = (1, 1), which is the correct estimated word. It should be noted that while the repetition code has two valid codewords (1, 1) and (−1, −1), the equilibrium point represents the optimal balance between the channel likelihood term (1/2)∥x − y∥2 and the codeword constraint penalty γ hα, β(x). Given the received signal y = (0.6027, 0.8244), the solution naturally converges closer to the transmitted codeword (1, 1) due to the combined influence of both objectives.
+We then show solution curves for an LDPC code. Figure 5 displays the solution curves of each element in the state vector x, where xi(t) (for i ∈ [204]) represents the solution of the ODE (8) plotted as a function of time t. Notably, all solution curves are smooth and continuous. It can be seen that the equilibrium point is in proximity to a bipolar vector.
+
+G. BER PERFORMANCE OF GF DECODING We evaluated the bit error rate (BER) of GF decoding through computer simulations on LDPC codes with design rate R = 1/2, the (3, 6)-regular LDPC codes (96.33.964, 204.33.484, PEGReg252 × 504, PEGReg504 × 1008) [24]. The signalto-noise ratio (SNR) is defined as Eb/N0 = 1/(2Rσn2). The continuous-time GF decoding was numerically simulated using the Euler method described in Section III-D with the parameters shown in Table 2. The values of parameters α and β were determined through experimental trials to achieve the best decoding performance. We used BP decoding as the baseline and set the maximum iteration of BP to 100.
+Figure 6 displays the BER performance of the proposed GF decoding. Compared to BP, the GF decoding has a BER performance that is approximately 2 dB worse. Notably, for PEGReg504 × 1008, the GF decoding performance is almost on par with the multi-mode GDBF algorithm using 100 iterations ([11], Fig. 3). Overall, GF decoding’s BER performance is comparable to that of bit flip-type decoding algorithms.
+To evaluate the BER shown in Fig. 6, hard decisions were applied to the outputs of all decoding algorithms. For GF decoding, the estimated bipolar codeword was determined by xˆ = sgn(x(t)) at time t = 10, where sgn represents the element-wise sign function. For BP decoding, hard decisions were applied to the log-likelihood ratios. This approach converts the continuous-valued state vector to bipolar values {+1, −1}, allowing for direct comparison with the original transmitted bipolar codeword for BER calculation.
+TABLE 2. Parameter setting of GF decoding for the numerical experiment.
+
+FIGURE 5. Solution curves of the ODE. (3,6)-regular LDPC codes of length 204.
+131942
+
+FIGURE 6. Bit error rate (BER) of the GF decoding for AWGN channels, evaluated by applying hard decisions sgn(x(t )) at sampling time t = 10. The BERs of BP with maximum 100 iterations are also included as benchmarks.
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+IV. TENSOR-COMPUTABILITY A. COMPUTATION MODEL Our target hardware includes AI accelerators, such as GPGPUs and programmable analog circuits. Such hardware is especially efficient for tensor-based computations. Here, we introduce the concept of tensor-computability to clarify our computation model.
+Definition 3: A function f : Cn → Cn is said to be tensor-computable if the value of f can be evaluated by a combination of the following basic operations:
+• Tensor product, e.g., matrix-vector product. • Scalar multiplication, e.g., αx(α ∈ C, x ∈ Cn). • Component-wise function applications to a tensor • Tensor/vector addition and subtraction, e.g., a+b, a−b.
+A tensor-computable function can be naturally evaluated with parallel computation because its basic operations inherently has parallelism. This concept of tensor-computability could also be viewed as the essential criteria for basic, efficient operations that a future AI accelerator should support. While contemporary AI accelerators have the capacity to handle more complex tensor operations, we restrict the permissible operations to maintain a straightforward and clear definition of tensor-computability.
+An additional advantage of tensor-computable functions is their compatibility with batch processing, crucial for fully leveraging the computational power of GPGPUs. Moreover, this batch processing aligns seamlessly with contemporary neural network frameworks like PyTorch, TensorFlow, and JAX, indicating that tensor-computable functions are wellsuited for AI tasks. Namely, a tensor-computable function is naturally suitable for automatic differential mechanism used in these neural network frameworks because every part of an algorithm can be differentiable. In essence, a tensorcomputable function is highly AI-friendly.
+In the realm of optical computing, MZI-based MatrixVector Product (MVP) circuits have already been implemented [6], and the computation of logarithmic and exponential functions in the optical domain has been explored [25]. Optical switches and crossbar can be used for constructing a programmable MVP circuit with a permutation matrix. An implementation of RRAM-based analog matrix computing is discussed in [8]. We may be able to implement a tensor-computable function with such optical or electrical devices, which provides high processing speed and energy efficiency.
+As an example of a tensor-computable function, we present tensor-computable BP decoding in Appendix. The formulation of tensor-computable BP decoding relies mainly on matrix-vector product operations.
+B. TENSOR COMPUTABILITY OF GRADIENT OF CODE POTENTIAL ENERGY For implementing the GF decoding, we need to evaluate the gradient of the code potential energy. The first order
+VOLUME 13, 2025
+
+derivative of the potential energy can be easily evaluated as
+
+∂ ∂xk hα,β (x)
+
+= 4α(xk − 1)(xk + 1)xk
+
+
+
+ 
+
+
+
++ 2β
+
+ xj − 1 
+
+xj .
+
+i∈B(k) j∈A(i)
+
+j∈A(i)\{k }
+
+(12)
+
+The gradient ∇hα,β (x) is thus given by
+
+∇hα,β (x) ≡
+
+∂ ∂ x1
+
+hα,β (x),
+
+.
+
+.
+
+.
+
+,
+
+∂ ∂ xn
+
+hα,β (x)
+
+T
+.
+
+(13)
+
+The following lemma indicates tensor-computability of the
+gradient of the code potential energy. Lemma 1: The gradient ∇hα,β (x)(x ∈ Rn) can be
+evaluated by
+
+∇hα,β (x) = 4α exp (z−1 + z + z+1) + 2β exp (w − z) , (14)
+
+where z, z−1, z+1, w are defined by
+
+z ≡ ln(x),
+
+(15)
+
+z−1 ≡ ln(x − 1),
+
+(16)
+
+z+1 ≡ ln(x + 1),
+
+(17)
+
+w ≡ ln(HT (exp(2Hz) − exp(Hz)))
+
+(18)
+
+if x ̸= 0. This implies that ∇hα,β (x) is tensor-computable. It should be remarked that logarithmic and exponential
+functions in these equations are defined on complex domain. (Proof) From Eq.(15), we have xi = exp(zi), and it results in
+
+xj = (i) exp(zi)
+
+(19)
+
+j∈A(i)
+
+j∈A
+
+
+
+
+
+= exp  (i)zi .
+
+(20)
+
+j∈A
+
+It is evident that the following equality holds:
+
+ Q1 
+
+ Q2 
+
+  
+
+...
+
+ ≡ exp(Hz),  
+
+(21)
+
+Qm
+
+where Qi(i ∈ [m]) is defined by
+
+
+
+
+
+Qi ≡  (i)xj .
+
+(22)
+
+j∈A
+
+Note that the binary matrix H is originally defined over F2 but the matrix H is now embedded into R. Namely, the
+
+131943
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+matrix vector product Hz is carried out over R. By using (21), we have
+
+
+
+ 
+
+
+
+2β
+
+ xj − 1 
+
+xj
+
+(23)
+
+i∈B(k) j∈A(i)
+
+j∈A(i)\{k }
+
+2β =
+xk i∈B(k)
+
+Q2i − Qi
+
+(24)
+
+2β =
+
+HT (exp(2Hz) − exp(Hz))
+
+,
+
+(25)
+
+xk
+
+k
+
+where the notation [·]k represents the kth component of the vector. We thus have
+
+4α(x − 1)(x + 1)x = 4α exp (z−1 + z + z+1) , (26)
+
+2β exp(w) = 2β exp (w − z) ,
+
+(27)
+
+x
+
+which yields the claim of the lemma. It should be noted that the evaluation method presented
+in Lemma 1 may not be optimal in terms of the computing time. The computing time for evaluating ∇hα,β (x) could be improved depending on the basic tensor operations provided by an AI accelerator. For example, some AI accelerators have efficient sparse MVP operation which can make use of the sparseness of the parity check matrix H. While the evaluation approach detailed in Lemma 1 may not be the most efficient for some AI accelerators, Lemma 1 clearly demonstrates that the process of evaluating gradients can be effectively parallelized.
+
+C. GRADIENT COMPUTATION ON REAL DOMAIN
+Section IV-B introduced the tensor-computable gradient of code potential energy in the complex domain. When implementing the GF decoding algorithm in digital AI accelerators, constraining operations to the real domain reduces memory consumption and computational complexity while improving numerical stability by eliminating inevitable numerical artifacts in the imaginary components that arise from floating-point computations.
+When we constrain the original tensor-computable gradient of code potential energy (14) to the real domain, logarithmic operations become problematic due to their inability to handle negative values. In cases where logarithmic operations are unavoidable, special handling mechanisms must be implemented. The logarithmic operations in the first term of (14) can be completely replaced, and the replaced expression becomes
+
+4α exp(z−1 + z + z+1) = 4α(x − 1) ⊙ x ⊙ (x + 1) = 4α(x ⊙ x − 1) ⊙ x, (28)
+
+where ⊙ denotes the Hadamard product.
+131944
+
+For the second term of (14), it can be expressed as
+
+2β exp(w − z) = 2β exp(w)/ exp(z)
+
+= 2βHT (exp(2Hz) − exp(Hz))/x
+
+= 2βHT (exp(Hz) ⊙ exp(Hz) − exp(Hz))/x
+
+= 2βHT (exp(H ln(x)) ⊙ exp(H ln(x))
+
+− exp(H ln(x)))/x.
+
+(29)
+
+The expression exp(H ln(x)) represents a ‘soft parity check’ that cannot be eliminated. This necessitates separate computation of the absolute value and sign.
+For a real-valued vector x ∈ Rn, we have the absolute value of the ‘soft parity check’ as
+
+| exp(H ln(x))| = exp(H ln(|x|)),
+
+(30)
+
+where | · | denotes the component-wise absolute value. The sign of the ‘soft parity check’ can be determined through the binary parity after a hard decision as
+
+sgn(exp(H ln(x))) = 1 − 2bmod(H(1 − sgn(x)/2), (31)
+
+where bmod represents the real remainder modulo 2 function,
+
+defined as
+
+bmod(a) ≡ a − 2 a , 2
+
+a ∈ R.
+
+(32)
+
+In summary, we have the gradient of code potential energy
+
+which can be calculated in the real domain as follows. Lemma 2: The gradient ∇hα,β (x)(x ∈ Rn) can be
+evaluated as
+
+∇hα,β (x) = 4α(x ⊙ x − 1) ⊙ x + 2βHT (d ⊙ d − d)/x, (33)
+d ≡ (1−2bmod(H(1−sgn(x)/2))) ⊙ exp(H ln(|x|)). (34)
+
+The logarithmic and exponential functions in these equations are defined on real domain. This means that the implementation of the gradient computation using a neural network framework such as PyTorch and TensorFlow with 32-bit or 16-bit floating point arithmetics is straightforward.
+
+D. THREAD COMPUTATION MODEL FOR GPGPU
+In estimating the computational complexity and required computational resources with the assumption of GPGPU, a model that takes into account thread parallelism is necessary. Below is a simple computational model that considers thread parallelism for evaluating the gradient of code potential energy function ∇hα,β (x).
+Our basic assumptions are as follows:
+• Assuming batch processing with a batch size of D. • The size of H is m × n. • A single thread can handle up to O(n) processing.
+In the evaluation of the gradient of code potential energy, we need a computation of matrix-matrix product HZ where Z ∈ Cn×D is a batch of state vectors, which is the most computationally intensive task in the gradient evaluation with
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+Lemma 1. It is assumed that a single thread is responsible for computing the dot product between a row vector of H and a column vector of Z. Although this dot product calculation is executed serially on a per-thread basis, its computational complexity is O(n). In this case, mD threads work in parallel to calculate HZ. Under these conditions, calculating the matrix product with parallel threads requires mD threads.
+A comparison of the required computational resources between GF decoding and tensor-computable BP decoding is presented in the Appendix. GF decoding can be seen as a lighter algorithm that requires fewer GPGPU computational resources because it involves matrix computations with smaller size matrices.
+E. DISCRETIZED GF DECODING FOR AWGN CHANNEL When implementing GF decoding on a GPGPU, it is necessary to discretize the continuous GF decoding process. The Euler method can be employed to discretize the minimization processes of the GF-ODE (8). This approach yields the recurrence formula for a discrete-time version of GF decoding:
+Definition 4 (Discretized GF (DGF) Decoding for AWGN Channels): The recursive formula of the discretized GF decoding is given by
+s(k+1) = s(k) − η(s(k) − y + γ ∇hα,β (s(k))), k = 0, 1, . . . , (35)
+where s(0) = x0. The computational complexity of DGF algorithm is
+O(Dmn) per iteration. This is significantly lower than the tensor-computable BP which has a complexity of O(Dε2) per iteration, where ε is the number of edges in the Tanner graph, and typically ε > n > m.
+F. AVOIDING NUMERICAL INSTABILITY The DGF decoding can become numerically unstable when the step size parameter η is relatively large.
+Let ξ be a positive constant slightly larger than 1, and let Bξ ≡ [−ξ, ξ ]n represent an n-dimensional hypercube. Here, [a, b] ≡ {x ∈ R | a ≤ x ≤ b}. The norm of the gradient ∥∇hα,β (x)∥ tends to become very large when x ∈/ Bξ due to the properties of the potential energy function, which can cause numerical instability (oscillations or divergent behavior) in the aforementioned neighborhood decoding process. In such cases, to prevent numerical instability, instead of (35), one can use
+s(k+1) = ξ s(k) − η(s(k) − y + γ ∇hα,β (s(k))) . (36)
+The projection operator ξ : Rn → Bξ represents the projection onto Bξ , and is defined as ξ (x) ≡ arg minx′∈Bξ ∥x−x′∥. It is experimentally confirmed that this projection operation can stabilize the decoding process.
+VOLUME 13, 2025
+
+FIGURE 7. Comparison of decoding time for GPGPU implementation on NVIDIA® GeForce® RTX™ 4070 SUPER GPU and Intel® Core™ i7-11700k CPU. Experiments were conducted using Python 3.9.20 with TensorFlow™ 2.15.1 framework with just-in-time compilation enabled. Both DGF and Tensor-BP implementations were configured with 100 iterations for fair comparison.
+G. DECODING SPEED ON GPGPU We conducted decoding time performance experiments on a workstation equipped with an NVIDIA® GeForce® RTX™ 4070 SUPER GPU and Intel® Core™ i7-11700k CPU. The experiments were implemented using Python 3.9.20 with TensorFlow™ 2.15.1 framework with just-in-time compilation enabled.
+We compared the tensor-computable belief propagation described in Appendix (Tensor-BP) and our proposed method (DGF). The proposed DGF utilizes real-domain gradient computation provided by Lemma 2. Both implementations were based on Float32 arithmetics and were configured with 100 iterations for a fair comparison. The evaluation was conducted with respect to their decoding time performance under various batch sizes for (3, 6)-regular LDPC codes (204.33.484, 408.33.844). The experimental results are shown in Fig. 7. As illustrated in Fig. 7, DGF consistently achieves smaller decoding time across all test scenarios. Specifically, at a batch size of 30, 000, for code length n = 204, DGF requires approximately 0.08 seconds for decoding, significantly outperforming Tensor-BP which requires approximately 0.35 seconds. The performance gap becomes more pronounced with code length n = 408, where DGF maintains efficient decoding time (approximately 0.17 seconds), while Tensor-BP increases to approximately 0.85 seconds. Notably, while both algorithms exhibit a linear increase in decoding time with increasing batch size, DGF demonstrates superior scalability with a significantly lower growth rate compared to Tensor-BP. This observation indicates the advantage of DGF in large-scale data processing scenarios, particularly for longer LDPC codes.
+Beyond decoding time performance, memory efficiency is another critical consideration for practical
+131945
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 8. Comparison of memory usage between DGF and Tensor-BP implementations. DGF demonstrates significantly lower and more stable memory consumption across all batch sizes and code lengths.
+
+implementation. Figure 8 presents the memory consumption profile corresponding to the decoding time experiments shown in Fig. 7. The results demonstrate that DGF’s computational advantages extend beyond faster execution to include superior memory efficiency. DGF maintains significantly lower memory consumption across all tested batch sizes, requiring approximately 900 megabytes (MB) for n = 204 and 1150 MB for n = 408 at batch size 30, 000, while Tensor-BP demands substantially higher memory, up to 1650 MB for n = 204 and 2750 MB for n = 408. Moreover, DGF exhibits more stable memory usage patterns with gradual increases, whereas Tensor-BP shows steeper memory scaling, particularly for longer codes. This memory efficiency advantage makes DGF more suitable for resource-constrained environments and enables larger batch processing within given memory constraints.
+
+V. GENERALIZATION OF GRADIENT FLOW DECODING A. APPROXIMATE MAP DECODING
+The GF decoding is defined only for AWGN channel in the previous sections. In this section, we will generalize GF decoding for a general vector channel defined by a conditional probability distribution p(y|x).
+We here briefly review the approximate MAP decoding introduced in the paper on proximal decoding [26]. Assume that a sender transmits a codeword of C(H) to a given channel. The channel is defined by a probability density function (PDF), p(y|x)(x ∈ Rn, y ∈ RN ). The negative log-likelihood function is defined as
+
+L(x; y) ≡ − ln p(y|x).
+
+(37)
+
+The optimal decoding rule for this channel is MAP decoding rule defined as xˆ ≡ argmaxx∈Rn p(y|x)p(x), where p(x) is the prior distribution. In general, MAP decoding is
+computationally intractable and we thus need to consider an
+approximation of MAP decoding for sufficiently long codes.
+
+131946
+
+The ideal prior distribution is based on the code C(H) which is given by
+
+1 p(x) ≡
+
+δ(x − c),
+
+(38)
+
+|C (H )|
+
+c∈C (H )
+
+where δ is Dirac’s delta function. We here introduce a Gibbs prior distribution p˜(x) ≡ (1/Z ) exp −γ hα,β (x) , where Z is the normalizing constant and γ is a positive constant. The Gibbs distribution serves as a theoretical tool to approximate
+the ideal discrete prior, providing a principled derivation of
+the continuous optimization objective function. The function hα,β (x) takes the value zero if and only if x ∈ C(H) and takes a positive value otherwise. This implies that we have
+
+1 p˜(x) = exp
+Z
+
+−γ hα,β (x)
+
+1 →
+|C (H )|
+
+δ(x − c)
+
+c∈C (H )
+
+(39)
+
+at the limit γ → ∞. This fact suggests the following approximation on the posterior PDF:
+
+p(x|y) ∝ p(y|x)p(x) ≃ p(y|x)p˜(x)
+
+= exp −L(x; y) − γ hα,β (x) .
+
+(40)
+
+From this approximate posterior PDF, we can define the
+following decoding rule.
+Definition 5: The approximate MAP rule considered here is given by xˆ ≡ argminx∈Rn L(x; y) + γ hα,β (x) , where γ is a positive real number.
+
+B. GENERALIZATION OF GF DECODING
+In the previous subsection, the concept of an approximate MAP rule was introduced. The objective function to be minimized is F(x) ≡ L(x; y) + γ hα,β (x). There are many possibilities for solving the optimization problem. For example, proximal decoding aims to solve this continuous minimization problem by using a proximal gradient descent method [26]. In the subsequent argument, we will solve this minimization problem by using the continuous-time gradient flow dynamics. The definition of the generalized GF decoding [21] is given as follows.
+Definition 6 (Generalized GF decoding): The ODE for the generalized GF decoding is given by
+
+dx
+
+dt = −(∇L(x; y) + γ ∇hα,β (x)),
+
+(41)
+
+where the initial condition is x(0) = x0. For example, for AWGN channels, the objective function has
+
+the form:
+
+FAWGN(x)
+
+≡
+
+1 ∥x − y∥2 2
+
++ γ hα,β (x),
+
+(42)
+
+where y represents the received word. This means that the
+
+generalized GF-ODE (41) becomes identical to the original
+
+GF-ODE (8).
+
+If the righthand side of the generalized GF-ODE (41),
+
+∇F(x) = ∇L(x; y) + γ ∇hα,β (x),
+
+(43)
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+is tensor-computable, the whole decoding process can be efficiently executed in an AI accelerator. The following theorem clarifies the tensor-computability of ∇F(x).
+Theorem 1: If ∇L(x; y) is tensor-computable, then ∇F(x) is tensor-computable. (Proof) To prove the claim of the theorem, it is sufficient to show that ∇hα,β (x) is tensor-computable. Lemma 1 establishes the tensor-computability of the gradient of code potential energy function.
+C. DISCRETE-TIME VERSION OF GF DECODING While GF decoding is formulated as a continuous-time system, GPGPU implementation specifically requires discretization. The Euler method can be employed to discretize the minimization processes of the generalized GF-ODE (41). This approach yields the recurrence formula for a discrete-time version of GF decoding:
+Definition 7 (Generalized DGF decoding): The recursive formula of the discretized GF decoding is given by
+s(k+1) = s(k) −η(∇L(s(k); y)+γ ∇hα,β (s(k))), k = 0, 1, . . . , (44)
+where s(0) = x0. The iterative process in (44) can be regarded as a gradient
+descent method for minimizing F(x). We also refer to the discretized decoding process (44)
+as GF decoding in this paper. GPGPUs and digital AI accelerators can be used to execute the discrete time iterative process defined in (44). In such cases, computation of ∇L(s(k); y) should be tensor-computable, as these devices are designed for tensor-friendly computations.
+D. DEEP UNFOLDING The recursive equation (44) incorporates multiple internal parameters, such as η, γ , α, and β. It has been confirmed through experiments that the choice of these parameters significantly influences the decoding performance. To fine-tune these parameters, several strategies can be employed, such as conducting preliminary experimental searches, employing random or grid searches, and using Bayesian optimization for hyper-parameter optimization. Nonetheless, pinpointing the ideal parameter setup is a computationally intractable task due to the extensive number of tunable parameters.
+Deep unfolding is a method that seeks to boost the performance of iterative algorithms by optimizing the internal parameters via deep learning techniques. In this approach, iterative processes are unfolded into the time direction and each iteration is treated as a layer of a deep neural network. For example, many sparse signal recovery algorithms and MIMO detection algorithms are iterative in nature, applying deep unfolding can lead to significant improvements in both recovery performance and convergence speed [27], [28], [29], [30], [31].
+In the following discussion, we will study the DGF decoding algorithm with the set of internal trainable parameters:
+VOLUME 13, 2025
+
+{η(k),
+
+γ
+
+(k
+
+),
+
+α (k ) ,
+
+β
+
+(k
+
+)
+}
+
+for
+
+k
+
+=
+
+1, 2, . . . , T . Namely, the
+
+recursive formula for the DGF decoding becomes as follows.
+
+Definition 8 (DGF decoding with trainable parameters):
+
+s(k+1) = s(k) − η(k)(∇L(s(k); y) + γ (k)∇hα(k),β(k) (s(k))). (45)
+
+The decoding process of the trainable discretized GF decoding is summarized in Algorithm 1. Notably, every step in Algorithm 1 is differentiable, meaning that the automatic differentiation mechanism can be seamlessly applied to evaluate the gradients of the trainable parameters.
+
+Algorithm 1 DGF Decoding With Trainable Parameters 1: s(0) := x0 2: for k := 0 to U − 1 do 3: Set the following variables:
+g := ∇L(s(k); y) d := (1 − 2bmod(H(1 − sgn(s(k))/2))
+⊙ exp(H ln(|s(k)|)) h := 4α(s(k) ⊙ s(k) − 1) ⊙ s(k)
++ 2βHT (d ⊙ d − d)/s(k)
+
+4: s(k+1) := s(k) − η(k)(g + γ (k)h) 5: end for 6: xˆ := sgn(s(U))
+7: Output xˆ
+
+Applying back-propagation with the Mean Squared Error (MSE) loss function enables the computation of gradients for the trainable parameters within the model. These gradients are essential to know how each parameter needs to be adjusted to minimize the loss. Gradient descent-based optimizers, such as Stochastic Gradient Descent (SGD) or Adam, leverage these gradients to update the trainable parameters. Incremental training is effective Details of how to train the deep unfolded model can be found in [30].
+Figure 9 demonstrates the BER performance of DGF decoding over AWGN channels. The experimental condition is as follows. The initial values of the trainable parameters η(k), γ (k), α(k), β(k) were set to 0.01, 0.05, 1, 2, respectively. We trained DU-DGF using incremental learning [30], using the Adam method, with a learning rate of 1 × 10−4, a batch size of 64, and 100 inner loops. We used the same (3, 6)-regular LDPC codes (204.33.484) for training and testing, and the SNR during training is fixed at 6 dB. The choice of these initial values and training parameters affects the success of parameter tuning by DU. These specific configurations were determined through preliminary empirical validation. Training with multiple initializations and selecting the best model could further improve results.
+The left panel indicates the relationship between BER and the number of iterations. We can observe that DU
+131947
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 9. BER performance of discretized GF decoding over AWGN channels. Left panel: BER as a function of the number of iterations. Right panel: BER as a function of Eb/N0.
+
+significantly improves the convergence speed compared with the DGF decoding with fixed parameters. The right panel shows the BER performance under the condition that the maximum number of iterations is 30. The BER performance of BP is included as a baseline. The BER performance of the DU-DGF is much better than that of DGF because of the convergence acceleration due to DU.
+It should be noted that while DU significantly improves the convergence speed of DGF, the performance in AWGN channels still does not surpass that of BP decoding. However, as will be demonstrated in Section VI, our approach shows more significant advantages in complex scenarios such as LDPC-coded MIMO channels, where joint detection and decoding benefit from the unified optimization framework.
+VI. GF DECODING FOR MIMO CHANNELS A. GENERALIZED GF-ODE FOR MIMO CHANNELS In this section, we discuss an application of GF decoding for LDPC-coded massive MIMO channels. Joint decoding of LDPC codes and MIMO channels is a practically important problem for future wireless systems such as beyond-5G/6G systems.
+Let A ∈ RN×n be a channel matrix. Suppose that a received word y ∈ RN is given by y = Ax + w, where w ∈ RN is a Gaussian noise vector with components following i.i.d. Gaussian distribution N (0, σw2). The channel input vector x is assumed to be a codeword of C(H), which implies that we assume BPSK modulation.
+The conditional probability density function of the received signal y given the transmitted signal x is
+
+1
+
+∥y − Ax∥2
+
+p(y|x) = (2π σw2)N/2 exp − 2σw2
+
+.
+
+(46)
+
+131948
+
+The negative log-likelihood function is therefore
+
+L(x; y)
+
+=
+
+− ln p(y|x)
+
+=
+
+N 2
+
+ln(2π σw2) +
+
+∥y
+
+− Ax∥2 2σw2
+
+.
+
+(47)
+
+Since the first term is constant with respect to x, the
+
+optimization-relevant part becomes
+
+L(x; y)
+
+=
+
+1 2σw2 ∥y −
+
+Ax∥2
+
+∝
+
+1 ∥y
+2
+
+−
+
+Ax∥2.
+
+(48)
+
+Our objective function for the approximate MAP rule can be
+
+expressed as
+
+FMIMO(x)
+
+≡
+
+1 ∥y − Ax∥2 2
+
++ γ hα,β (x).
+
+(49)
+
+Corollary 1: ∇FMIMO(x) is tensor-computable. (Proof) The gradient of the first term of FMIMO:
+
+∇L(x;
+
+y)
+
+=
+
+∇
+
+1 ∥y
+
+−
+
+Ax∥2
+
+=
+
+AT
+
+(Ax
+
+−
+
+y)
+
+(50)
+
+2
+
+is tensor-computable. By Theorem 1, we immediately have
+
+the claim of the corollary.
+
+The generalized GF-ODE for LDPC-coded MIMO chan-
+
+nels thus becomes
+
+dx dt
+
+=
+
+−(AT (Ax
+
+−
+
+y)
+
++
+
+γ ∇hα,β (x)),
+
+(51)
+
+where the initial condition is given by x(0) = x0. Using the Euler method, the recursive formula of the discretized GF
+
+decoding is given by
+
+s(k+1) = s(k) − η(AT (As(k) − y) + γ ∇hα,β (s(k))), (52)
+
+where s(0) = x0.
+
+B. EXPERIMENTAL CONDITIONS
+In this subsection, we will explain the details of the numerical
+experiments for real-valued MIMO model. Let A′ ≡ {ai′,j} ∈ Cµ×ν be a channel matrix, where ai′,j is
+the fading coefficient corresponding to the path between the
+jth transmit antenna and the ith receive antenna. We assume
+an i.i.d. model such that each component of A′ follows a complex circular Gaussian distribution CN (0, 1), modeling
+Rayleigh fading. The received signal in the complex domain is y′ = A′x′ + w′, where x′ ∈ Cν represents the transmitted QPSK symbols and w′ ∈ Cµ is the complex additive white
+Gaussian noise. An equivalent real-valued MIMO model with
+BPSK modulation can be defined as y = Ax + w where A is
+given by
+
+A≡
+
+Re(A′) −Im(A′) Im(A′) Re(A′)
+
+∈ Rµ×n,
+
+(53)
+
+where N = 2µ and n = 2ν. The transmitted word x
+is randomly chosen from C(H) according to the uniform
+distribution. Each component of the Gaussian noise vector w ∈ RN follows Gaussian distribution with zero mean and variance σw2/2. In this model, σw2 is related to the signal-tonoise ratio SNR by σw2 = N /SNR.
+In the following experiment, we used the regular
+(3,6)-LDPC code with n = 204 and m = 102. We assume
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+perfect channel state information (CSI), meaning the channel matrix A is perfectly known at the receiver. The step-size parameter ω used in the gradient descent step was set to ω ≡ 2/(λmin + λmax ), where λmin and λmax are the minimum and maximum eigenvalues of AT A, respectively.
+For comparison, we exploited the MMSE detector defined as xˆ ≡ AT (AAT +(σw2/2)I)−1y. Furthermore, as a baseline for joint detection and decoding, we employed the combination of the MMSE detector and BP decoding which is to be denoted by MMSE + BP.
+C. NUMERICAL EXPERIMENTS In this subsection, we present experimental results on DGF decoding for MIMO channels. For the DGF implementation, the parameters of the code potential were set to α = 1, β = 2. The regularization parameter was set to γ = 10, the step size parameter was η = 0.001. The initial state vector of the decoder was set to s(0) = x0, where x0 ∼ CN (0, σi2niI) with σini = 1 × 10−4. For the DU-DGF implementation, we only trained the step size parameter η(k) since our preliminary experiments showed that η(k) significantly affects the performance of DGF. The initial value of η(k) was set to 0.001. We employed incremental learning with the Adam optimizer using a learning rate of 2 × 10−5. Other settings remained consistent with the DGF implementation, and the DU-DGF model was trained specifically for each SNR.
+Figure 10 shows the bit error rate (BER) performances of the proposed ‘DGF’ and its DU version, ‘DU-DGF’, alongside baseline schemes. For BER evaluation, the continuous-valued outputs of both DGF and BP algorithms are converted to hard decisions using xˆ = sgn(s(k)) and xˆ = sgn(LLR), respectively, where LLR represents the log-likelihood ratios from BP decoding. The estimated bipolar codewords are then compared with the transmitted codewords to calculate the bit error rate. The labels ‘DGF-50’
+FIGURE 10. Bit error rate performances of DGF/DU-DGF decoding and baseline schemes (n = 204, m = 102). MMSE represents uncoded detection, while MMSE+BP, DGF, and DU-DGF represent LDPC-coded detection schemes.
+VOLUME 13, 2025
+
+and ‘DU-DGF-50’ represent the BER performance evaluated at the 50th iteration, while ‘DGF-100’ and ‘DU-DGF-100’ represent the BER performance at the 100th iteration. The maximum number of iterations for BP decoding was set to 100.
+From the results, we can find that the BER performance of the plain MMSE detector is far behind other methods that consider LDPC encoding (labeled with ‘MMSE+BP’, ‘DGF’, and ‘DU-DGF’). With a maximum number of iterations of 100, our proposed method (‘DGF-100’) achieves approximately a 1.6 dB advantage over ‘MMSE+BP’ at BER= 10−4. Additionally, with DU, the adjustment of the step size for each iteration can speed up the convergence of DGF, further widening the BER performance gap between our proposed method and the ‘MMSE+BP’ approach. Meanwhile, by comparing the results at the 50th and 100th iterations, we also found that the improvement of ‘DU-DGF’ is more obvious in fewer iterations.
+
+VII. SCORE-BASED CHANNEL LEARNING A. OVERVIEW
+A trajectory of the search vector of GF decoding is determined by the vector field created by −∇ ln p(y|x) and γ ∇hα,β (x). Essentially, these vector fields dictate the dynamics of the GF decoding process. If the negative log-likelihood function of the channel, ∇ ln p(y|x), is perfectly known and can be computed using tensor-based computation, then implementing GF decoding becomes relatively simple. For example, channels with correlated Gaussian noise and certain nonlinear vector channel fall under this class, as ∇ ln p(y|x) for these types of channels can be easily expressed in a simple formula [26]. Conversely, if the negative log-likelihood function for the channel is unknown, it is necessary to learn this function from data. The section discusses channel learning for GF decoding from data on inputs and outputs of the target channel.
+For a given probability density function p(x),
+
+s(x) ≡ ∇ ln p(x)
+
+(54)
+
+is referred to as the score function of p [32], [33]. It is known
+
+that by combining the score function s(x) with Langevin
+
+sampling, it is possible to efficiently generate random vectors
+
+that follow p(x). Generative models based on score functions
+
+is currently known as score-based diffusion models. In the
+
+context of generative models based on score functions,
+
+a neural network model approximating s(x) is learned from
+
+given data. It is known that modeling the score function
+
+with a neural network [32] offers more benefits than directly
+
+modeling the probability density function p(x) itself with a
+
+neural network.
+
+If we know the true score function s(x), we can efficiently
+
+generate samples following the PDF p by using a Langevin
+
+sampling defined by the following iteration:
+
+ϵ
+
+√
+
+xt = xt−1 + 2 s(st−1) + ϵzt , t = 1, 2, . . . , (55)
+
+131949
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+where zt ∼ N (0, I) represents a Gaussian random vector, and ϵ is a small positive step size parameter controlling the balance between gradient-based updates and random
+exploration.
+
+B. CHANNEL SCORE MODEL 1) OVERVIEW If one wishes to use GF decoding in situations where the true likelihood function p(y|x) of the channel is unknown, it is anticipated that learning the conditional score function
+
+s(x; y) ≡ ∇x ln p(y|x)
+
+(56)
+
+from data is beneficial. Let sˆθ (x; y) be a neural conditional score model. After a leaning process, the model sˆθ (x; y) can be used as ∇L(x; y) ≡ −sˆθ (x; y) in the GF decoding process.
+Research on learning techniques for score functions, such as score matching methods [33], is actively being pursued in the context of diffusion models that is recoginized as a powerful approach in the area of generative AI, and it is believed that these studies could enable the realization of novel channel learning techniques suitable for GF decoding.
+Modeling the conditional score function s(x; y) with a neural network is an intuitive strategy but the neural model must meet certain criteria:
+• It should be tensor-computable. • A shallow network architecture is favored to ensure
+efficient inference processes. • To maintain training efficiency, the model should be
+designed with a limited number of parameters. • If prior knowledge about the statistical characteristics
+of the channel exists, the model architecture should reflect this information. For instance, exploiting the memoryless property could greatly simplify the model architecture.
+Although a variety of neural network models could fulfill the specified requirements described above, for the sake of simplicity, our discussion will focus on employing a simple feedforward neural network. Note that, depending on the characteristics of channels, other models might be more appropriate for channel learning tasks.
+
+2) NEURAL NETWORK MODEL In the following discussion, we assume an additive channel where there exists a PDF Q satisfying p(y|x) = Q(y − x) for the sake of simplicity of the argument, i.e., the received word y is given by
+
+y = x + e,
+
+(57)
+
+where e ∼ Q(e). We further assume a segment-wise independence and an identically distributed (i.i.d.) memoryless property characterized by the equation:
+
+K
+
+K
+
+p(y|x) = p(yi′|xi′) = q(yi′ − xi′),
+
+(58)
+
+i=1
+
+i=1
+
+131950
+
+where x ∈ Rn and y ∈ RN (n = N ) are segmented into:
+
+x ≡ (x′1, x′2, . . . , xK′ ), y ≡ (y1′ , y2′ , . . . , y′K ), (59)
+where q : Rν → R is a PDF (n = νK ). In the discussions that follow, we will use boldface letters with a prime symbol to denote vectors that correspond to the segment.
+Given these assumptions, the conditional score function can be broken down as follows:
+
+s(x; y) = ∇x ln p(y|x)
+
+(60)
+
+N
+
+= ∇x ln p(y′i|x′i)
+
+(61)
+
+i=1
+
+N
+
+= ∇x ln q(y′i − x′i)
+
+(62)
+
+i=1
+
+ ∇x1′ ln q(y1′ − x1′ ) 
+
+=
+
+   
+
+∇x2′
+
+ln
+
+q(y2′ ...
+
+−
+
+x′2)
+
+   
+
+(63)
+
+∇xK′ ln q(yK′ − x′K )
+
+ −ς (y1′ − x1′ ) 
+
+=
+
+   
+
+−ς (y′2... −
+
+x′2)
+
+   
+
+,
+
+(64)
+
+−ς (y′K − xK′ )
+
+where ς (e′) ≡ ∇e′ ln q(e′) because
+
+∇xi′ ln q(yi′ − xi′) = −∇ei′ ln q(e′i)
+
+(65)
+
+holds when ei′ = yi′ − x′i. The function ς (e′) is referred to as the segmented score function.
+Next, we delve into utilizing a neural network to
+approximate the segmented score function ς . We define a feedforward neural network model ςˆθ : Rν → Rν as follows:
+
+ςˆθ (e′) = hL ,
+
+(66)
+
+hi+1 = gi(W ihi + bi), i = 1, 2, . . . , L − 1, (67)
+
+h1 = e′,
+
+(68)
+
+where each gi represents an activation function, and the set θ encompasses all trainable parameters in the model. The W i matrices and bi vectors are the trainable weights and biases, respectively. The aim is for the segmented score model ςˆθ to be trained so that
+
+ −ςˆθ (y1′ − x1′ ) 
+
+s(x;
+
+y)
+
+≈
+
+sθ (x; y)
+
+≡
+
+   
+
+−ςˆθ (y2′...
+
+−
+
+x2′ )
+
+ , 
+
+
+(69)
+
+−ςˆθ (yK′ − x′K )
+
+effectively modeling the segmented score function for each segment.
+
+C. SCORE MATCHING LEARNING We first briefly outline the idea of the score matching learning according to [32] and [33]. Assume that we wish to learn
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+the score function of p(x) from the data following p(x). It is natural to minimize the expected loss function:
+
+1 2
+
+Ex∼p(x)[∥sθ
+
+(x)
+
+−
+
+∇
+
+log
+
+p(x)∥22]
+
+(70)
+
+for tuning the trainable parameter in the model sθ (x) but evaluation of ∇ log p(x) is impossible as p(x) is unknown. The
+
+above loss function is known to be equivalent to the following
+
+loss function up to a constant:
+
+1 2 Ex∼p(x)
+
+tr
+
+(∇ sθ
+
+(x))
+
++
+
+1 2
+
+∥sθ
+
+(x)∥22
+
+.
+
+(71)
+
+In principle, the above expectation can be evaluated but is not suitable for learning relatively large model such as deep neural network. In this paper, we use the denoising score matching loss [32] defined by
+
+
+
+2
+
+1 2 Ex∼p(x)Ex˜∼N (x,σ 2I) 
+
+x˜ − x sθ (x˜) + σb2
+
+.
+2
+
+(72)
+
+It is anticipated that the trained model can precisely approximate the true score function if the noise variance σb2 is small enough [32].
+The denoising score matching loss can be justified with
+Tweedie’s formula [34]:
+
+E[x|x˜ ]
+
+=
+
+x˜
+
++
+
+σb2
+
+∇ P(x˜ ) P(x˜ )
+
+,
+
+(73)
+
+where x ∼ p, x˜ = x + e, e ∼ N (0, σb2I). Namely, x˜ can be considered as a blurred sample with a Gaussian noise. The
+conditional expectation E[x|x˜] is the MMSE estimator of x.
+From Eq. (73), we immediately have
+
+∇
+
+log P(x˜)
+
+=
+
+E[x|x˜ ] σb2
+
+−
+
+x˜ .
+
+(74)
+
+If the noise variance σb2 is small enough, we can obtain an approximation E[x|x˜] ≃ x. Due to Eq. (74), the score
+
+function s can be approximated by
+
+s(x˜ )
+
+=
+
+∇
+
+log
+
+P(x˜ )
+
+≃
+
+−
+
+x˜ − σb2
+
+x
+
+.
+
+(75)
+
+Therefore, from a minimization process of the denoising
+
+score matching loss, we can expect that the approximation
+
+x˜ − x
+
+sθ (x˜) ≃ − σb2 ≃ s(x˜)
+
+(76)
+
+holds with sufficient accuracy.
+
+D. DETAILS OF SCORE-BASED CHANNEL LEARNING
+Assume that we have a mini-batch generator producing a random mini-batch for additive error batch: E ≡ (e1′ , e2′ , . . . , e′D), where each error vector ei′ is sampled according to the PDF q. This mini-batch generator could be designed based on a theoretical probabilistic channel model or using actual data collected from the real target channel.
+The details of score-based channel learning are summarized in Algorithm 2, which is based on the standard method
+
+VOLUME 13, 2025
+
+for denoising score matching [32]. To update trainable
+parameters, we can utilize standard optimization techniques
+like stochastic gradient descent (SGD) and Adam. The noise variance σb2 specifying the blurring noise level is a hyper parameter that needs to be determined before the training
+begins.
+
+Algorithm 2 Score-Based Channel Learning 1: Initialize the trainable parameters in θ . 2: for k := 1 to U do 3: Generate a random mini-batch E. 4: Generate blurred samples:
+
+e˜′d = e′d + nd
+
+(77)
+
+for d ∈ [D] where nd ∼ N (0, σb2I). 5: Evaluate the score matching loss:
+
+L(θ ; X , Y) ≡ 1 D D
+d =1
+
+ςˆθ (e˜′d )
+
++
+
+e˜d′
+
+− ed′ σb2
+
+2
+.
+2
+
+(78)
+
+6: Perform back-propagation to evaluate the gradient of L respect to the trainable parameters in θ.
+7: Update the trainable parameters in θ . 8: end for
+
+As a result of the training process, we acquire a trained model denoted by ςˆθ∗ . The gradient of negative log likelihood function L can then be approximated using this trained model
+as:
+
+∇L(x; y) = −s(x; y) ≈ −sˆθ (x; y).
+
+(79)
+
+This approximated negative log likelihood function can be used in the GF decoding process.
+It is crucial to emphasize that, in the training process outlined in Algorithm 2, the disturbed samples are generated using a single noise level. However, the literature on score-based diffusion models [32], [33] has established that a gradual change in the noise level is essential for accurately approximating a complex score function. Consequently, further development of Algorithm 2 to incorporate varying noise levels constitutes a significant area for future research, as it has the potential to enhance the accuracy and effectiveness of the score-based channel learning.
+
+E. NUMERICAL EXAMPLE 1) ONE-DIMENSIONAL MIXED GAUSSIAN NOISES In order to confirm efficacy of score-based channel learning introduced in the previous subsection, we conducted a numerical experiment regarding one-dimensional Gaussian mixture PDF q defined by
+
+q(e) ≡ π1q1(e) + π2q2(e),
+
+(80)
+131951
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 11. Gaussian mixture PDF used in the numerical experiment. Left: σi (i = 1, 2) = 0.9, Right: σi = 0.1.
+
+FIGURE 12. True score function of Gaussian mixture PDF and learned score function (σb = 0.05).
+
+where qi(i = 1, 2) is a Gaussian distribution given by
+
+qi(e) ≡
+
+1 exp
+2π σi2
+
+(e − µi)2 − 2σi2
+
+.
+
+(81)
+
+Namely, we here focus on the case where the segment size
+is ν = 1. The parameters of Gaussian mixture, π1 and π2, are non-negative real number satisfying π1 + π2 = 1. The parameters of respective Gaussian distribution, µi and σi2, represents mean and variances of qi. For the PDF q, we can
+derive the score function s as
+
+s(e) = −∇e ln q(e)
+
+(82)
+
+=
+
+π1σ22
+
+(e
+
+−
+
+µ1
+
+)q1(e) + π2σ12(e σ12σ22q(e)
+
+−
+
+µ2)q2
+
+(e)
+
+.
+
+(83)
+
+In the numerical experiment, we used the following
+
+parameter setting. The parameters of q is given as µ1 = 0.3, µ2 = −0.3, and π1 = π2 = 1/2. In the experiment, we constrained σi to be σ1 = σ2. The respective Gaussian PDF q1, q2 and the Gaussian mixture PDF q are shown in
+Fig. 11.
+
+In the training process of the neural score function, mini-
+
+batches containing 100 samples following q were randomly
+
+generated. The noise standard deviation σb for blurring process was set to 0.05 in this training. The number of
+
+iterations for training was 10, 000. The neural model consists
+
+of a three-layer (L = 3) feedforward neural network with the
+
+ReLU activation function and each layer has 64 hidden units.
+
+Network weights were initialized using Xavier initialization
+
+method. Adam optimizer with learning rate 0.005 was
+
+used for parameter updates. In this experiment, training
+
+data is generated at runtime according to the probabilistic
+
+channel model, so traditional training/validation splits are not
+
+required.
+
+Figure 12 shows the true score function and learned
+
+score function. We can observe that the learned neural
+
+score function certainly captures the shape of the true score
+
+function. This result indicates that the learning process of
+
+Algorithm 2 is quite effective in this case.
+
+Figure 13 demonstrates the BER performances of dis-
+
+cretized GF decoding with the true score function and the
+
+learned score function (σb = 0.05) for the additive Gaussian mixture noise channel. We also used (3, 6)-regular LDPC
+
+code for this experiment. The horizontal axis represents
+
+131952
+
+FIGURE 13. BER performance of GF decoding with the true score function and the learned score function for the additive Gaussian mixture noise channel.
+
+1/σi2 (i = 1, 2) in dB format. We can see that BER is decreasing as the value 1/σi2 (i = 1, 2) increases. This fact indicates that the GF decoder can actually utilize the score function as an effective guidance in decoding processes. The BER curves of the true score function and the learned score function are very close to each other. This means that the learned score function can be used as an effective proxy for the true score function.
+
+2) TWO-DIMENSIONAL CORRELATED GAUSSIAN NOISES We here assume a two-dimensional additive correlated Gaussian noise channel represented by y = x + e where q(e) is given by the two-dimensional Gaussian distribution:
+
+1
+
+q(e) = 2π |
+
+1 exp |2
+
+− 1 (e − µ)T 2
+
+−1(e − µ)
+
+.
+
+(84)
+
+The symbols µ = [µ1 µ2] and represent the mean vector and the covariance matrix, respectively. In the following experiment, the covariance matrix is assumed to be
+
+=
+
+σ2 ρσ2 ρσ2 σ2
+
+,
+
+(85)
+
+where σ 2 be a variance parameter and ρ is the correlation parameter. Figure 14 shows noise samples when ρ = 0.8.
+
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 14. Noise samples following two-dimensional Gaussian PDF (ρ = 0.8).
+
+FIGURE 16. Correlated error candidates (1000 2D-points). One of the 2D-points is randomly realized in our channel model.
+
+FIGURE 15. BER performance of GF decoding with the true score function and the learned score function for the additive correlated Gaussian noise channel. The error curve of BP decoding is also included as a baseline.
+
+For this channel, true score function is given by
+
+s(x; y) = −∇e ln q(e)
+
+(86)
+
+1 =(
+
+−1 + (
+
+−1)T )(e − µ).
+
+(87)
+
+2
+
+In the next experiment, we used the following parameter setting. The mean vector was set to µ1 = µ2 = 0. The correlation parameter was fixed to ρ = 0.8. We used (3, 6) LDPC codes of length 204. The number of
+
+iterations of GF decoding was set to 100 and the iterations
+
+number of BP decoding was 30. In BP decoding, marginal
+
+PDFs of each dimension of two-dimensional PDF (84) are
+
+used for computing LLR values. The neural score function
+
+and parameter setting of the training process are the same as
+
+those of the previous experiment of the one-dimensional case.
+
+Figure 15 presents the bit error probabilities of GF
+
+decoding with the learned score function, GF decoding with
+
+the true score function, and BP decoding. We can observe that GF decoding achieves smaller BER when 1/σ 2 is in the
+
+range 0 dB to 4 dB. This result implies that GF decoding with
+
+true/learned score function can effectively utilize the noise
+
+correlation in decoding processes.
+
+3) TWO-DIMENSIONAL ARTIFICIAL NOISES In this subsection, we explore a numerical example for GF decoding utilizing a two-dimensional score function. We focus on a scenario involving artificial two-dimensional
+
+VOLUME 13, 2025
+
+correlated noises, i.e., the segment size is ν = 2. A total of 1000 two-dimensional error candidates, e′1, . . . , e′1000, are illustrated in Fig. 16. The segment-wise channel model is defined as y′ = x′ + e′, where e′ is selected uniformly at random from the error candidates. In this example, we utilize a serial training approach and opt not to employ deep unfolding for additional optimization.
+Initially, we train the model ςˆθ∗ (e′) using mini-batches generated randomly in accordance with the probabilistic channel model previously defined. Our model architecture comprises a three-layer (L = 3) feedforward neural network equipped with the ReLU activation function, and we configured each layer of the network to have 64 hidden units. During the training phase, we set the mini-batch size to 100 and carried out 10,000 training iterations. For the adjustment of trainable parameters, the Adam optimizer with learning rate 0.005 was employed. For generating blurred samples, Gaussian noises with σb = 0.3 were used in Algorithm 2.
+Figure 16 presents the vector field generated by the trained model ςˆθ∗ . Upon comparing Figs 16 and 17, it becomes apparent that regions near the error sample points correspond to attractors in the learned vector field. Specifically, a vector in Fig. 16 points towards the nearest error sample point which is consistent with the ascending direction of the true segmented score function. This indicates that the trained model ςˆθ∗ (e′) effectively encapsulates the characteristics of the segmented score function ς (e′).
+We conducted experiments on the discretized GF decoding process using the trained model ςˆθ∗ (e′). For these experiments, a (3, 6)-regular LDPC code with n = 204 and m = 102 was utilized. The configuration for the GF decoder was α = β = 1, η = 0.05,and γ = 1.0 were chosen. The initial state of the GF decoder was initialized by a random vector x0 drawn from a normal distribution N (0, 0.12I).
+Figure 18 displays the discrepancy count between xˆ(k) ≡ sgn(s(k)) and the transmitted word x, i.e., the estimated
+131953
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+FIGURE 17. Learned vector field.
+FIGURE 18. Number of bit errors as a function of the number of iterations (100 trials, (3,6)-regular LDPC code with n = 204, m = 102).
+number of errors as a function of the iteration count k. In this experiment, we conducted 100 GF decoding trials, and each curve in Fig. 18 illustrates the change in the number of bit errors for each trial. It is noticeable that all curves exhibit a sharp decrease during the initial few iterations, followed by a more gradual reduction. This indicates that the gradient descent processes are effectively functioning with the learned score function. In all trials, errors were eliminated before reaching 50 iterations. VIII. CONCLUSION This paper introduces the GF decoding algorithm, which has a tensor-friendly design, making it particularly well-suited for implementation on next-generation AI accelerators. The underlying principle of GF decoding is remarkably universal, allowing for its application to a wide range of nontrivial channels, provided that the gradient of the negative log-likelihood function can be efficiently evaluated. Another significant advantage of our proposed method lies in its suitability for deep unfolding. This is facilitated by the ease of evaluating the gradient of the internal trainable
+131954
+
+parameters, which can be efficiently handled using automatic differentiation mechanisms or back-propagation, as every component of the algorithm is differentiable.
+In massive MIMO channels encoded with an LDPC code, the proposed algorithm demonstrates competitiveness with established detection methods, such as MMSE + BP. When considering the balance between decoding complexity and decoding performance, GF decoding shows considerable promise for LDPC-coded MIMO channels. Traditionally, signal processing algorithms in a receiver have been designed following a modular design principle. Typically, components like a MIMO signal detector and an LDPC decoder are designed separately and then integrated. However, the principle of GF decoding facilitates a codesign principle [35], potentially enhancing the overall performance of the receiver. The methodology outlined in this paper may pave the way for innovative strategies in developing jointly designed signal processing algorithms within a receiver.
+For scenarios where the channel characteristics are unknown and the negative log-likelihood function cannot be analytically derived, score-based channel learning offers a novel approach to learn the probabilistic nature of the target channel. A neural network can be employed to approximate a conditional score function, and the resulting model can be directly utilized in GF decoding as the gradient of the negative log-likelihood function. As the importance of handling unknown channels grows, data-driven methods for channel learning will become increasingly crucial in the field of communications.
+While the experimental results demonstrate the effectiveness of GF decoding, several opportunities exist for further enhancement. The non-convex nature of the objective function may lead to sensitivity to initial values. Although gradient-based approaches like GF decoding provide faster convergence per iteration by effectively exploiting gradient information for differentiable objective functions, stochastic optimization methods such as genetic algorithms could offer alternative approaches for exploring complex solution spaces. Future research will explore both parallel exploration with multiple random initializations and efficient stochastic optimization schemes tailored to our objective function when computational resources permit. Additionally, the current score-based channel learning framework is limited to additive noise channels, and extending it to multiplicative noise scenarios remains to be explored in the future.
+Error correcting codes and their decoding methods have evolved in tandem with the advancements in foundational hardware technology. In the era when only small-scale integrated circuits were available, algebraic codes were highly valued for their compatibility with the hardware limitations of the time. As technology progressed to enable the assembly of large-scale ASICs, the implementation of decoders for LDPC codes in ASICs became feasible, ushering in a golden era for LDPC codes. Looking ahead, the hardware suited for AI learning and inference processes, which are poised to be ubiquitous in the near future, should not only
+VOLUME 13, 2025
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+be capable of supporting the training and inference processes of generative AI models but also be versatile enough to accommodate a wide range of signal processing tasks. As AI hardware continues to evolve, error correcting codes and their decoding methods are expected to follow suit in the 21st century, adapting to the prevailing hardware environments of their times.
+
+APPENDIX TENSOR-COMPUTABLE BP DECODING It is possible to formulate log-domain BP decoding in tensorcomputable form. Let the set of edges contained in the Tanner graph be defined as
+
+E ≡ {(i, j) ∈ [m] × [n] | Hij = 1}.
+
+(88)
+
+In the following, the total number of edges contained in the Tanner graph is denoted by ε = |E|. The number of edges ε is equal to the number of 1’s contained in H. Now, assume that a bijection φ : E → [ε] is given. That is, the edges contained in E are numbered by φ. Furthermore, for all k ∈ [ε], let pk , qk be defined as the quantities that satisfy φ((pk , qk )) = k.
+Define the matrix U = {Ujk } ∈ {0, 1}n×ε and the matrix V = {Vik } ∈ {0, 1}m×ε as
+
+Ujk ≡
+
+1, 0,
+
+if qk = j otherwise,
+
+(89)
+
+Vik ≡
+
+1, 0,
+
+if pk = i otherwise.
+
+(90)
+
+As an example, define the parity-check matrix H as
+
+1 1 1 0 0 0
+
+H ≡ 0 0 1 1 0 0.
+
+(91)
+
+000111
+
+Define the numbering of edges in the Tanner graph as
+
+φ(1, 1) = 1, φ(1, 2) = 2, φ(1, 3) = 3, φ(2, 3) = 4, φ(2, 4) = 5, φ(3, 4) = 6, φ(3, 5) = 7, φ(3, 6) = 8. (92)
+
+In this case, the matrices U and V are given by:
+
+1 0 0 0 0 0 0 0
+
+0 1 0 0 0 0 0 0
+
+U
+
+=
+
+ 
+
+0
+
+ 
+
+0
+
+0 0
+
+1 0
+
+1 0
+
+0 1
+
+0 1
+
+0 0
+
+0
+
+ 
+
+0
+
+ 
+
+(93)
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+ 
+
+00000001
+
+and
+
+1 1 1 0 0 0 0 0
+
+V = 0 0 0 1 1 0 0 0.
+
+(94)
+
+00000111
+
+These matrices U and V are key matrices in rewriting the belief propagation decoding into a tensor-computable form. The details of tensor-friendly BP decoding are summarized in Algorithm 3. The vectors α and β represent check-tovariable and variable-to-check messages, respectively. The
+
+VOLUME 13, 2025
+
+vector λ denotes the log likelihood ratio vector. We can see that a dominant computation of the BP decoding process is a matrix-vector product of UT U − I ∈ Rε×ε and α ∈ Rε.
+Assume that
+• Batch processing with the batch size D. • In a GPGPU, a single thread handles dot product
+computations of O(ε) as in the thread computation model in Subsection IV-D.
+In this case, we need εD threads for executing a BP decoding process. Recall that discretized GF decoding requires only mD threads and that each thread handles O(n) processing. Because ε > n > m, the tensor-computable BP decoding in Algorithm 3 is more resource-demanding than discretized GF decoding under the simple thread computing model.
+
+Algorithm 3 Tensor-Compuatable BP Decoding 1: Initialization: Set α ≡ 0, β ≡ 0 2: for i = 1 to L do 3: Variable Node Processing:
+
+β ≡ (UT U − I)α + UT λ.
+
+(95)
+
+4: Check Node Processing:
+
+αabs ≡ 2 tanh−1
+
+exp
+
+(V T V − I) log tanh β 2
+
+,
+
+(96)
+
+αsgn ≡ 1 − 2V T mod (V (1 − sgnβ)/2) sgnβ, (97)
+
+α ≡ αsgn ⊙ αabs.
+
+(98)
+
+5: end for 6: Calculation of Posterior Probability Ratio:
+
+γ ≡ Uα + λ.
+
+(99)
+
+ACKNOWLEDGMENT The authors appreciate the inspiring discussions on the early version of GF decoding with Dr. Ayano Nakai-Kasai and Kensho Nakajima. They also thank Tomoya Kuno for creating numerical examples on score-based channel learning.
+REFERENCES
+[1] R. G. Gallager, Low Density Parity Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[2] E. Peltonen, ‘‘6G white paper on edge intelligence,’’ in 6G Research Visions, no. 8. Oulu, Finland: Univ. Oulu, 2020.
+[3] J. Achiam et al., ‘‘GPT-4 technical report,’’ 2023, arXiv:2303.08774. [4] A. Reuther, P. Michaleas, M. Jones, V. Gadepally, S. Samsi, and J. Kepner,
+‘‘AI and ML accelerator survey and trends,’’ in Proc. IEEE High Perform. Extreme Comput. Conf. (HPEC), Sep. 2022, pp. 1–10. [5] J. Carolan, C. Harrold, C. Sparrow, E. Martín-López, N. J. Russell, J. W. Silverstone, P. J. Shadbolt, N. Matsuda, M. Oguma, M. Itoh, G. D. Marshall, M. G. Thompson, J. C. F. Matthews, and T. Hashimoto, ‘‘Universal linear optics,’’ Science, vol. 349, no. 6249, pp. 711–716, 2015.
+131955
+
+T. Wadayama, L. Wei: Gradient Flow Decoding
+
+[6] J. Capmany and D. Pérez, Programmable Integrated Photonics. New York, NY, USA: Oxford Univ. Press, 2020.
+[7] S. Wang, Y. Luo, P. Zuo, L. Pan, Y. Li, and Z. Sun, ‘‘In-memory analog solution of compressed sensing recovery in one step,’’ Sci. Adv., vol. 9, no. 50, Dec. 2023, Art. no. eadj2908.
+[8] P. Zuo, Z. Sun, and R. Huang, ‘‘Extremely-fast, energy-efficient massive MIMO precoding with analog RRAM matrix computing,’’ IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 70, no. 7, pp. 2335–2339, Jul. 2023.
+[9] X. Pengfei and Z. Zhou, ‘‘Silicon-based optoelectronics for generalpurpose matrix computation: A review,’’ Adv. Photon., vol. 4, no. 4, 2022, Art. no. 044001.
+[10] H. Zhang, M. Gu, X. D. Jiang, J. Thompson, H. Cai, S. Paesani, R. Santagati, A. Laing, Y. Zhang, M. H. Yung, Y. Z. Shi, F. K. Muhammad, G. Q. Lo, X. S. Luo, B. Dong, D. L. Kwong, L. C. Kwek, and A. Q. Liu, ‘‘An optical neural chip for implementing complex-valued neural network,’’ Nature Commun., vol. 12, no. 1, p. 457, Jan. 2021.
+[11] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, ‘‘Gradient descent bit flipping algorithms for decoding LDPC codes,’’ IEEE Trans. Commun., vol. 58, no. 6, pp. 1610–1614, Jun. 2010.
+[12] T. Wadayama, K. Nakajima, and A. Nakai-Kasai, ‘‘Gradient flow decoding for LDPC codes,’’ in Proc. 12th Int. Symp. Topics Coding (ISTC), Brest, France, Sep. 2023, pp. 1–5.
+[13] T. Wadayama and L. Wei, ‘‘Generalized gradient flow decoding and its tensor-computability,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024, pp. 3356–3361.
+[14] J. Feldman, ‘‘Decoding error-correcting codes via linear programming,’’ Ph.D. thesis, Massachusetts Inst. Technol., Cambridge, MA, USA, 2003.
+[15] P. O. Vontobel, ‘‘Interior-point algorithms for linear-programming decoding,’’ in Proc. Inf. Theory Appl. Workshop, Jan. 2008, pp. 433–437.
+[16] T. Wadayama, ‘‘Interior point decoding for linear vector channels based on convex optimization,’’ IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 4905–4921, Oct. 2010.
+[17] G. Sundararajan, C. Winstead, and E. Boutillon, ‘‘Noisy gradient descent bit-flip decoding for LDPC codes,’’ IEEE Trans. Commun., vol. 62, no. 10, pp. 3385–3400, Oct. 2014.
+[18] X. Zhang and P. H. Siegel, ‘‘Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,’’ in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2013, pp. 1501–1505.
+[19] S. Barman, X. Liu, S. C. Draper, and B. Recht, ‘‘Decomposition methods for large scale LP decoding,’’ IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[20] A. Nakai-Kasai and T. Wadayama, ‘‘Ordinary differential equationbased MIMO signal detection,’’ IEEE Trans. Signal Process., vol. 72, pp. 4147–4162, 2024.
+[21] T. Wadayama and A. Nakai-Kasai, ‘‘Continuous-time sparse signal recovery,’’ IEEE Access, vol. 12, pp. 118141–118153, 2024.
+[22] M. Prabhu, C. Roques-Carmes, Y. Shen, N. Harris, L. Jing, J. Carolan, R. Hamerly, T. Baehr-Jones, M. Hochberg, V. Ceperic, J. D. Joannopoulos, D. R. Englund, and M. Soljačić, ‘‘Accelerating recurrent Ising machines in photonic integrated circuits,’’ Optica, vol. 7, no. 5, pp. 551–558, 2020.
+[23] D. F. Griffiths and D. J. Higham, Numerical Methods for Ordinary Differential Equations: Initial Value Problems. London, U.K.: Springer, 2010.
+[24] D. J. C. MacKay. Encyclopedia of Sparse Graph Codes. Accessed: Jul. 24, 2025. [Online]. Available: http://www.inference.phy.cam.ac.uk/ mackay/codes/data.html
+[25] Y. Jiang, P. T. S. DeVore, A. Mahjoubfar, and B. Jalali, ‘‘Analog logarithmic computing primitives with silicon photonics,’’ in Proc. Conf. Lasers Electro-Optics (CLEO), Jun. 2016, pp. 1–2.
+[26] T. Wadayama and S. Takabe, ‘‘Proximal decoding for LDPC codes,’’ IEICE Trans. Fundam. Electron., Commun. Comput. Sci., vol. 106, no. 3, pp. 359–367, Mar. 2023.
+[27] K. Gregor and Y. LeCun, ‘‘Learning fast approximations of sparse coding,’’ in Proc. 27th Int. Conf. Mach. Learn., Jun. 2010, pp. 399–406.
+
+[28] A. Balatsoukas-Stimming and C. Studer, ‘‘Deep unfolding for communications systems: A survey and some new directions,’’ in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Oct. 2019, pp. 266–271.
+[29] S. Takabe, M. Imanishi, T. Wadayama, R. Hayakawa, and K. Hayashi, ‘‘Trainable projected gradient detector for massive overloaded MIMO channels: Data-driven tuning approach,’’ IEEE Access, vol. 7, pp. 93326–93338, 2019.
+[30] D. Ito, S. Takabe, and T. Wadayama, ‘‘Trainable ISTA for sparse signal recovery,’’ IEEE Trans. Signal Process., vol. 67, no. 12, pp. 3113–3125, Jun. 2019.
+[31] H. He, C.-K. Wen, S. Jin, and G. Y. Li, ‘‘Model-driven deep learning for MIMO detection,’’ IEEE Trans. Signal Process., vol. 68, pp. 1702–1715, 2020.
+[32] Y. Song and S. Ermon, ‘‘Generative modeling by estimating gradients of the data distribution,’’ in Proc. NeurIPS 2019, pp. 1–13.
+[33] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole, ‘‘Score-based generative modeling through stochastic differential equations,’’ in Proc. 10th Int. Conf. Learn. Represent. (ICLR), 2021, pp. 399–406.
+[34] B. Efron, ‘‘Tweedie’s formula and selection bias,’’ J. Amer. Stat. Assoc., vol. 106, no. 496, pp. 1602–1614, Dec. 2011.
+[35] A. P. Worthen and W. E. Stark, ‘‘Unified design of iterative receivers using factor graphs,’’ IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 843–849, Feb. 2001.
+TADASHI WADAYAMA (Member, IEEE) was born in Kyoto, Japan, in May 1968. He received the B.E., M.E., and D.E. degrees from Kyoto Institute of Technology, in 1991, 1993, and 1997, respectively. In 1995, he started to work with the Faculty of Computer Science and System Engineering, Okayama Prefectural University, as a Research Associate. From April 1999 to March 2000, he was with the Institute of Experimental Mathematics, Essen University, Germany, as a Visiting Researcher. In 2004, he moved to Nagoya Institute of Technology as an Associate Professor. Since 2010, he has been a Full Professor with Nagoya Institute of Technology. His research interests include coding theory, information theory, and coding and signal processing for digital communication/storage systems. He is a member of IEICE.
+LANTIAN WEI (Member, IEEE) was born in Hubei, China, in 1995. He received the B.E. degree from Dalian University, China, in 2017, and the M.E. and Ph.D. degrees from Gifu University, Japan, in 2020 and 2023, respectively. He is currently a Postdoctoral Researcher with Nagoya Institute of Technology. His research interests include signal processing, wireless communications, and machine learning. He is a member of IEICE.
+
+131956
+
+VOLUME 13, 2025
+
+

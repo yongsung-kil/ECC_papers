@@ -1,0 +1,557 @@
+926
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+A 75-Gb/s/mm2 and Energy-Efficient LDPC Decoder Based on a Reduced Complexity
+Second Minimum Approximation Min-Sum Algorithm
+Henry Lopez , Hsun-Wei Chan, Kang-Lun Chiu, Pei-Yun Tsai , and Shyh-Jye Jerry Jou
+
+Abstract— This article presents a high-throughput and lowrouting complexity low-density parity check (LDPC) decoder design based on a novel second minimum approximation minsum (SAMS) algorithm. The routing congestion is mitigated by reducing the required interconnections in the critical path of the routing network. The implementation and postlayout results with 28-nm 1P9M CMOS process show that the proposed design can achieve a throughput of 10.5 Gb/s for a millimeter-wave 60-GHz baseband system while satisfying the low bit error rate (BER) requirements (10−7). The proposed design reduces the wiring in the routing network by 21% and improves the area by 12% compared to the conventional min-sum (MS) and normalized MS (NMS) algorithm. Additional hardware optimizations are obtained by considering the internal message passing resolution based on the BER and signal-to-noise ratio (SNR) requirements for a practical baseband system. The power consumption is efficiently reduced by the employment of a shared address generator that exploits the degree of parallelism to reduce the switching activity on a group of memory elements. The LDPC decoder is implemented with a core area of 0.14 mm2, power consumption of 81 mW at 312.5 MHz, and the area and power efficiency of 75 Gb/s/mm2 and 10.2 pJ/bit, respectively.
+Index Terms— Low-density parity check (LDPC) decoder, minsum (MS) algorithm, normalized MS (NMS), offset MS (OMS).
+I. INTRODUCTION
+L OW-DENSITY parity check (LDPC) was first introduced by Gallager [1] in 1962, and its rediscovery is attributed to MacKay [2], who, in 1999, reported the near Shannon limit performance capacity of the LDPC decoder. Since then,
+Manuscript received July 3, 2019; revised October 14, 2019; accepted November 12, 2019. Date of publication December 17, 2019; date of current version March 20, 2020. This work was supported in part by Mediatek, Inc., in part by Quanta Computer, in part by the Taiwan Ministry of Science and Technology, in part by Taiwan TSIA, in part by Chunghwa Telecom, and in part by the University Shuttle Program of TSMC. (Corresponding author: Henry Lopez.)
+H. Lopez is with the EECS International Graduate Department, National Chiao Tung University, Hsinchu 30010, Taiwan (e-mail: hlopezd005@gmail.com).
+H.-W. Chan, K.-L. Chiu, and S.-J. J. Jou are with the Electronics Engineering Department, National Chiao Tung University, Hsinchu 30010, Taiwan (e-mail: johnny31009.ee03g@nctu.edu.tw; jmkevin.ee04g@g2.nctu.edu.tw; jerryjou@mail.nctu.edu.tw).
+P.-Y. Tsai is with the Electrical Engineering Department, National Central University, Taoyuan 32001, Taiwan (e-mail: pytsai@ee.ncu.edu.tw).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TVLSI.2019.2955925
+
+it has become one of the most efficient techniques for error correction. Its attractiveness relies on the extreme sparseness of the parity check matrix and the high degree of parallelism that can be achieved, which makes it very suitable for high speed in wireline and wireless communication systems, such as IEEE 802.3an [3], IEEE802.11ad [5], and IEEE802.11ay [6]. Moreover, the low-density nature of the parity check matrix contributes to both good distance properties and a relatively low computational complexity of the decoding process. Despite the outstanding performance as reported in the literature and the abovementioned properties, the implementation of LDPC decoders still imposes great challenges, especially for high-throughput and low-power requirements. Although the algorithm complexity is relatively low, the area has been reported [7] to be highly influenced by the heavy routing. Furthermore, due to the stagnation in wired interconnect scaling in advanced CMOS process technologies, the wire delays are no longer insignificant [8], as an increase in the delay of a net that lies on a critical path can cause a design to miss its target frequency. Moreover, in heavy congested designs, the place and route (PR) tool may even fail to route while targeting a specific utilization rate. In the literature, hardware complexity has been extensively addressed from both an algorithmic and architectural perspective. From an algorithmic approach, the well-known sum-product (SP) algorithm [9] achieves a good decoding performance but requires large hardware complexity. Instead, the suboptimal min-sum (MS) algorithm [10] represents an alternative method with reduced complexity at the expense of acceptable degradation in the decoding performance. Additional variations of the MS algorithm, such as normalized MS (NMS) [11] and offset MS (OMS) [12], focus on reducing the performance gap between the SP and MS algorithms.
+From the architectural perspective, it is desirable for key LDPC decoder design architectures to be capable of satisfying a high-throughput demand over 10 Gb/s while, at the same time, reducing the amount of power/Gb/s with scalability for system-on-chip (SoC) of future mmW systems. In this context, the BER performance, throughput, and latency are usually traded off for reductions in the hardware complexity [13]–[17], [19]–[22], which also contributes, in a great extent, to the mitigation of the routing congestion.
+
+1063-8210 © 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+927
+
+For instance, the serial message passing with unrolled fullparallel architecture proposed in [25] is able to provide very high throughput. However, the area and energy efficiency are significantly degraded compared to a design with the single-minimum approach, such as the variable weight MS, simplified variable weight MS (vwMS/svwMS) algorithms proposed in [23], or the relaxed MS second minimum emulated (RMS-2ME) algorithm proposed in [24]. The vwMS/svwMS and RMS-2ME algorithms reduce the routing congestion by broadcasting only the first minimum from the check nodes (CNs) to the adjacent variable nodes (VNs). The VNs then compute an estimated of the second minimum when required. Thus, the single-minimum approach can be used to reduce the routing congestion at the expense of negligible degradation in the bit error rate (BER) and an increase in computational complexity at the VNs. Nevertheless, high-throughput and low-latency applications demand architectures with a high degree of parallelism; in that case, the vwMS/svwMS and RMS-2ME algorithms would indeed reduce the routing complexity, yet they would still introduce significant overhead in the computational complexity at the VN.
+In this article, the routing congestion on the LDPC decoder is relaxed by broadcasting the first minimum to the adjacent VNs and proposing reduced complexity architecture for the second minimum estimator. The low complexity of the estimator allows the VNUs in the LDPC decoder to be implemented with a high degree of parallelism and reduced power consumption. Additional hardware optimizations are introduced by considering the finite precision of the messages and the overall system requirements, such as BER and signalto-noise ratio (SNR) for a millimeter-wave 60-GHz baseband system. The ability to mitigate the heavy routing congestion while maintaining reduced computational complexity at the VN unit (VNU) makes the proposed design suitable for highthroughput applications where a high degree of parallelism is required. The main contributions of this article are highlighted as follows.
+1) The proposal of an LDPC decoder architecture based on a novel second minimum approximation MS (SAMS) algorithm with reduced complexity second minimum estimator, suitable for implementations with a high degree of parallelism in practical applications.
+2) The introduction of a general guideline for the generation of a dynamic offset during the decoding process, resulting in a second minimum estimator with strengthening BER performance, suitable for applications under different SNR conditions.
+3) As a consequence of the abovementioned two improvements, we propose a design with area and energy efficiency, capable of satisfying the highthroughput demand of a practical single-carrier (SC) baseband system with a BER requirement of 10−7 for reliable communication. The resulting decoder architecture exploits the low routing complexity characteristic of the vwMS/svwMS and RMS-2ME algorithms with improved computational complexity at the VNs.
+
+Fig. 1. Parity check matrix and its corresponding tanner graph.
+
+4) The introduction of a VNU with memory elements controlled by a shared address generator suitable for low-power designs.
+This article is organized as follows. Section II provides an overview of the belief propagation (BP) and the MS algorithm. Section III introduces the proposed second minimum approximation approach. Section IV presents the proposed decoder architecture. Sections V and VI show the performance simulation and implementation results. Finally, Section VII presents the concluding remarks.
+
+II. OVERVIEW ON BP AND MS ALGORITHMS
+
+An LDPC code is defined by its parity check matrix H and can be represented in a Tanner graph, as shown in Fig. 1. The left vertices are called VNs, and the right vertices are called constraint or CNs. The set of code words consists of all binary assignments to the VNs such that at each constraint node, the modulo-2 addition (binary XOR operation) of the VN connected to the constraint node is equal to zero. In essence, the decoding algorithm is to determine an estimated decoded vector Vˆ = {Vˆ1, Vˆ2, . . . , VˆN }T such that
+
+H ◦ Vˆ = 0
+
+(1)
+
+is satisfied. This expression represents additions and multiplications over the Galois field (GF), GF(2) for binary LDPC code. The BP algorithm (also known as the SP algorithm) performs decoding by passing messages iteratively between VNs and CNs until the code word is correctly decoded or the maximum number of iterations is reached. There are three important probabilities associated with the message passing, namely intrinsic (int), a posteriori (post), and extrinsic (ext) probability.
+The intrinsic probability P(Vi = x) represents the probability that the variable Vi takes on the value x and is obtained from the transmission channel, whereas the a posteriori probability is a conditional probability for the variable Vi based on the knowledge of the event E and is mathematically expressed as
+
+PEpost(Vi = x ) = P(Vi = x |E).
+
+(2)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+928
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+These two probabilities are related through Bayes’ Theorem as
+
+P (Vi
+
+=
+
+x|E) =
+
+1 P(E)
+
+P ( E |Vi
+
+=
+
+x ) P(Vi
+
+=
+
+x)
+
+(3)
+
+posteriori
+
+extrinsic
+
+intrinsic
+
+where the extrinsic term represents the probability of event E
+
+conditioned on Vi . Given a parity check matrix H with row degree λ and
+
+column degree ρ, the objective function C of the whole
+
+decoding task can be split into subobjective functions [28]
+
+C j with degree λ. Thus, the original decoding problem can be
+
+tackled by solving subproblems with lower complexity.
+
+The MS algorithm and its variations, such as NMS and
+
+OMS, have been widely adopted due to their reduced com-
+
+plexity. The CN C j sends the extrinsic C2V message to the
+
+Vi node and up⎧dates it at each iter⎫ation through
+
+⎨λ
+
+⎬
+
+Rejx,it = ⎩
+
+sign
+
+Qlp,ojst
+
+⎭
+
+min
+l∈1...λ,l=i
+
+Qlp,ojst
+
+(4)
+
+l=1,l=i
+
+where Qip,ojst is the message received at the C j node from the Vi node. Correspondingly, at each iteration, the VN Vi performs an estimation Vˆi based on a majority rule to decide whether
+its value is a logic 0 or 1 based on
+
+ρ
+
+Qipost = L PVini t +
+
+Rejx,it
+
+(5)
+
+l=1
+
+through
+
+Vˆi =
+
+0,
+
+if
+
+Q
+
+post i
+
+≥
+
+0
+
+1, otherwise
+
+(6)
+
+where the L(x) notation is used to indicate that the intrinsic
+
+message is in the logarithmic domain as in [24]. The V2C
+
+message from Vi to the C j node is updated excluding the
+
+value received from C j through the expression
+
+⎛
+
+⎞
+
+ρ
+
+Qip,ojst = α ⎝L PVini t +
+
+Rejx,it⎠
+
+(7)
+
+l=1,l= j
+
+where α is the normalizing factor introduced by the NMS algorithm to account for overestimation in the message.
+In Section III, (4) will be modified to propose a routing aware and reduced complexity decoder architecture that alleviates the routing congestion.
+
+III. PROPOSED SAMS
+
+In (4), the message from parity CN C j to its adjacent VN Vi (C2V message) is evaluated using the minimum value among all the adjacent Vls connected to C j , excluding the value from Vi itself to prevent the formation of two-node loops between C j and Vi . In practice, this is implemented by computing and sending the first and second minimum (m1 and m2) to all the adjacent VNs. The second minimum is subsequently used at the Vi node whenever the first minimum computed at the C j node corresponds to the same value coming from Vi . Mathematically, this is expressed as
+
+Rejx,it(Vi ) =
+
+m2, if i = index of m1 m1, otherwise.
+
+(8)
+
+In this respect, the routing network in the C2V direction is considered as the critical part in the routing, as it requires routing resources for both m1 and m2. Furthermore, the presence of m2 renders the routing network inefficient due to the large number of nets it introduces and the low utilization rate it receives compared to m1. It has been shown in (vwMS,svwMS) [23] and (RMS-2ME) [24] that it is possible to reduce the routing congestion by computing only m1 at the parity CN and using an estimated value of m2 at the VN whenever m2 is required. The vwMS/svwMS approaches obtain an estimated value of m2 by adding an offset γ to the first minimum. This offset is updated according to the number of iterations during the decoding process. Therefore, additional memory is required to store different values of γ . The RMS-2ME computes the V2C message through a relaxed (normalized) OMS algorithm with relaxation factor β as
+
+V2Ci, j = β ∗
+
+V2Ci(,l
+
+−1) j
+
++
+
+V2Ci(,l)j
+
+.
+
+(9)
+
+The computational complexity of (9) is simplified by proposing a fixed value β = 0.5, which is easily implemented with a shift operation. However, (9) still requires memory to store the V2C message from the previous l − 1 iteration. The RMS-2ME also adopts the single-minimum approach with a constant offset in order to reduce the memory requirements for γ compared to the vwMS/svwMS algorithms. In both the vwMS/svwMS and RMS-2ME algorithms, the VN uses the received message m1 or an estimated value (mˆ2) in replacement of m2 as
+
+Rej,xit =
+
+mˆ2 = m1 + γ , if i = index of m1
+
+m1,
+
+otherwise.
+
+(10)
+
+From the vwMS/svwMS and RMS-2ME algorithms, it can be concluded that it is possible to reduce the routing congestion at the expense of higher computational complexity at the VN. Nonetheless, high-throughput implementations demand a high degree of parallelism. This implies that any increase on the computational complexity of the VN will strongly impact the overall area efficiency and power consumption of the decoder. Quantization schemes have also been taken into account in this context to introduce important hardware optimizations, such as in [22].
+The following analysis and modifications presented here are based on a heuristic approach that takes into account practical implementation requirements (internal word length, SNR, and BER) targeting a high-throughput architecture with low computational and routing complexity.
+For finite precision and reduced word length (q) of the internal messages, the range of values of the magnitude of Qipost given as {−2(q−1) ∼ 2(q−1) − 1} is significantly small. Moreover, according to (4) and (8), the values of m1 and m2 are given in magnitude form with m2 ≥ m1. Hence, the value of m2 can be estimated based on the information provided by m1. In this context, the operation at the parity CN can be expressed as
+
+Rejx,it =
+
+λ
+sign Qlp,ojst
+l=1
+
+min
+l∈1...λ
+
+Qlp,ojst .
+
+(11)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+929
+
+TABLE I APPROXIMATION ERROR (ε)
+
+Subsequently, at the VN, the single input m1 = |Rejx,it| is used to compute an estimated mˆ2 as
+
+mˆ2 = m1 + γ
+
+(12)
+
+in which the value of γ can be chosen such that the error
+incurred in due to the approximation is reduced. This approximation error (ε) is computed as the difference between m2 and the estimated mˆ2 as
+
+ε = |m2 − mˆ2|
+
+(13)
+
+while assuming a specific internal worldlength q. For instance,
+with q = 3, the range of absolute values (in integer form) for m1 lies in {0∼ 2(q−1) − 1} and that of m2 lies in {m1 ∼ 2(q−1) − 1}. Table I shows the range of m2 and the spe-
+cific value of m2 that would result in the largest approximation error with given values of q, γ, and m1. Since the value of mˆ2 is saturated at 2(q−1) − 1, (12) is more suitably expressed as
+
+mˆ2 = min m1 + γ , 2(q−1) − 1 .
+
+(14)
+
+As can be appreciated in Cases A and B shown in Table I, the difference between m2 and mˆ2 is smaller for γ = 1 compared to the case when γ = 2. As for γ = 2, ε = 2 occurs the most often, whereas for γ = 1, ε = 1 is most likely to occur. In the Case C with q = 4, setting γ = 3 would reduce the occurrence of the largest error (ε = 4). Thus, for small q (q = 3 or 4 bits), the offset γ can be chosen based on q as γ = (2(q−1) − 1)/2
+. However, for
+larger quantization schemes, the designer should consider the
+overall performance of the decoder as well as the value of the
+first minimum; otherwise, as Table I suggests, the estimation error ε would keep increasing due to the larger dynamic range. In a more general form, the value of γ can be dynamically
+generated during the decoding process based on the dynamic
+
+range according to a given quantization scheme and the value of the first minimum m1 as
+
+γ = 2(q−1) − 1 − m1 ∗ σ /2
+
+(15)
+
+where σ is an adjustable design parameter ranging from 0 to 1 and is used to define the slope and the initial value of γ . Equation (15) is based on the following two important properties of the decoding process.
+1) For any given quantization scheme, lower values of m1 are associated with higher uncertainty in the messages (unreliable messages).
+2) Under normal conditions, the reliability (magnitude) of the messages increases with the number of decoding iterations and the SNR conditions.
+In this regard, (15) includes both the dynamic range related to the quantization scheme and the information from m1 to dynamically adjust the value of γ during the decoding process. As can be seen from (15), the value of γ decreases as the reliability of the message m1 increases, and its initial value and slope can be tuned by adjusting σ for different word length conditions. Thus, (15) provides a general guideline to dynamically generate the appropriate offset γ during the decoding process.
+In the remainder of this article, the MS or NMS algorithm with a single minimum for the C2V message and second minimum approximation based on (12) and (15) is referred to as SAMS.
+
+IV. PROPOSED ARCHITECTURE
+Depending on the structure of the parity check matrix and the system requirements, the LDPC decoding can adopt a certain level of parallelism. A fully parallel architecture would result in a design with high complexity; hence, the reported architectures [14]–[17] split the parity check matrix into small blocks that are implemented with reduced hardware resources. For instance, in row-based layer scheduling, a block is composed of multiple rows [14], whereas in column-based scheduling [15], a block consists of multiple columns. The work presented in [14], [16], and [17] tackles the routing congestion through the architectural approaches by reducing the number of multiplexers in the routing network. Multiple coding rates are supported by combining the rows of less dense matrices into a single row that shares similar interconnections with those for higher coding rate. Additional switches are then inserted to handle the special cases where the matrices differ. The row-based layer scheduling can exploit larger parallelism at the VNs compared to the column-based scheduling. Moreover, compared to the flooding method, row-based layer scheduling is also known to attain a faster convergence due to its intermediate message updating property.
+This section presents an LDPC decoder design based on the IEEE802.11ad standard with row-based layer-scheduling and the second minimum approximation presented earlier. Furthermore, based on the specifications for an mmW 60-GHz baseband system, the decoder is implemented with reduced internal word length to further improve the hardware complexity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+930
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+Fig. 3. LDPC decoder architecture.
+a V2C routing network, a C2V routing network, and an early termination for power management.
+
+Fig. 2. Parity check matrices for IEEE802.11ad.
+A. Parity Check Matrices of IEEE802.11ad
+The parity check matrices H for four different coding rates are shown in Fig. 2. The quasi-cycle (QC) structure of these matrices allows multiple coding rates to be implemented with shared architecture. The number shown in each entry indicates either a circular shift applied to the identity matrix Iz×z or the null submatrix 0z×z, with z equal to 42. All the parity check matrices are defined with 16 entries. Consequently, any code word generated has a word length (N) equal to 672 b. According to row degree (λ) and column degree (ρ) defined by the nonzero entries in each matrix, the parity check equations are connected to at most λ (λ <= 16) VNs, and each VN is connected to at most ρ (ρ <= 4) parity check equations.
+The original parity check matrices have been row-permuted and partitioned into four layers to enhance the hardware sharing across different coding rates. The number of rows assigned to each layer Li is based on the size of the corresponding parity check matrix. For instance, each layer is defined with two rows for coding rate 1/2, whereas for the coding rate 5/8, the layers are defined with two rows for L1 and L2 and a single row for L3 and L4. The parity check matrices for coding rates 3/4 and 13/16 are more dense; hence, each layer is defined with a single row. As shown in Fig. 2, the complexity of the design for the four different coding rates is dominated by the parity check matrix of coding rate 3/4. The rest of the coding rates can be easily implemented with hardware sharing through switches handled by the control system.
+The design methodology presented in this article for variable code rates can be easily extended to the parity check matrices defined on IEEE 802.11ay standard and, in general, to any set of matrices satisfying the QC and regular structure. The overall architecture of the LDPC decoder is shown in Fig. 3. It consists of 42 CN units (CNUs), 16 VN groups (CNGs),
+
+B. CN Units
+As stated in Section IV-A, the parity check matrices are split into four layers, each consisting of 42 CNs. Rowbased layer scheduling processes one layer per cycle; thus, the LDPC decoder is implemented with 1/4 of the total CNUs, and the hardware is reused for different layers. Each CNU performs the sorting of 8 and 16 inputs to compute the first minimum (m1) based on (11). As can be observed from Fig. 4(b), the CNU consists of two eight-input sorters and one two-input sorter. Depending on the coding rate and the number of rows per layer, the CNU either sends the results from the eight-input sorters or the output from the two-input sorter. As the second minimum (m2) is no longer required, the computational complexity at the CNU is also reduced compared to the architecture of the conventional MS and NMS algorithms, as shown in Fig. 4(a) and (b).
+C. VNU and VNG
+In the row-based layer scheduling, the VNs are implemented with full parallelism. In accordance with the parity check matrices, there are 16 VNGs, each VNG consisting of 42 VNUs. According to the column degree, a VNU is connected to at most one parity check equation in each layer; hence, a single V2C message is updated in each VN updating operation. Each VNU includes a memory unit consisting of four registers to temporarily store the message from each layer, an accumulator, a signed magnitude to two’s complement converter (SM to 2’s Comp), and the proposed second minimum estimator (m2 estimator). At the beginning of the decoding process, the memory registers are initialized to 0 and the accumulator set with the log-likelihood ratio (LLR) of the data obtained from the channel. At each cycle, during the message updating operation, the VNU receives m1 from one of the adjacent CNs and estimates mˆ2 based on (12) and (15). This operation requires only two adders. Moreover, for 3-b quantization, the second minimum estimator is further simplified and implemented with a 2-b comparator, as shown in Fig. 5. The message m1 or mˆ2 is then two’s complemented and added,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+931
+
+Fig. 4. (a) Existing CNU architecture with first and second minimums for conventional MS and NMS algorithms. (b) Proposed CNU architecture with SAMS.
+
+Fig. 6. Timing diagram of register in each VNU.
+
+Fig. 5. VNG composed of 42 VNUs.
+as described in (5). A decision Vˆi is taken based on the sign of the accumulator as in (6), and the V2C message is updated based on (7). This process is repeated for each layer and iteration until the code word is correctly decoded or the maximum number of iterations is reached. Although N VNUs are implemented in parallel, only 1/4 of the register in each VNU is active at each clock cycle, as shown in Figs. 5 and 6. By defining T as the time required for one iteration (four cycles), it can be observed that each register will be in idle mode for (3/4)T of the time. Given that each VNU is defined with four registers, the total savings are proportional to (3/4)T × 4 × N. Thus, the shared address generator can be used together with clock gating techniques to effectively reduce the switching activity and improve power consumption. Furthermore, early termination is used as an additional power management technique to stop the decoding process as soon as the code word is correctly decoded.
+In general, the proposed second minimum estimator, as expressed in (14) and (15), offers four important advantages compared to the existing vwMS/svwMS and RMS-2ME algorithms.
+
+1) The proposed approach removes the requirement of memory elements to store the offset compared to the vwMS/svwMS algorithms.
+2) The proposed approach computes the offset γ for the second minimum estimator and dynamically updates it during the decoding process with the computational complexity of at most two adders in the VN.
+3) The dynamic nature of (15) allows the SAMS approach to adapt to different quantization schemes and SNR conditions during the decoding process, resulting in a fast convergence rate that closely follows the performance of the conventional NMS algorithm.
+4) Finally, the value of σ can be chosen so that its implementation requires only left-shift operations. Therefore, no computational complexity is added when multiplying by σ .
+The high parallelism of the VNs represents a key factor for a high-throughput design. In order to maintain a low power budget under these circumstances, it is vital to reduce the complexity of the VNU as well, which is accomplished through the abovementioned improvements introduced by the SAMS approach. Table II summarizes these improvements compared to the existing vwMS/svwMS and RMS-2ME algorithms.
+The complexity of the VNU including memory resources related to γ is highlighted in Table II. As shown in Table II, the vwMS/svwMS algorithms dynamically update the offset γ during the decoding process and can be applied with designs of different word length requirements. Nonetheless, this method requires additional memory resources to store the offset for the second minimum estimator. In Table II, M is used to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+932
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+TABLE II COMPARISON OF THE COMPLEXITY IN THE VNU WITH RESPECT TO THE EXISTING METHODS
+
+represent the number of offset values stored in memory, N is the number of VNs of the decoder, and q is the word length of each offset value. In contrast, the RMS-2ME removes the memory requirements for γ, at the cost of losing the ability to update γ during the decoding operation due to the use of a fixed value. Moreover, the RMS-2ME algorithm would still require ρ × N storage elements to update the V2C message, where ρ is the degree of the VN. In the proposed SAMS, σ can be chosen as a fraction whose denominator is a power of 2 and implemented with a left-shift operation. Therefore, mˆ2 is computed with at most two adders. Moreover, γ is updated dynamically during the decoding process without any additional memory requirement. As can be seen in Section V, this dynamic updating capability of γ introduces significant improvements in the convergence rate of the decoder and allows the decoder to adaptable under different word lengths and SNR conditions.
+D. Routing Network
+The routing network uses multiplexers to establish the interconnections between CNUs and VNUs across different layers and multiple coding rates. The conventional MS and NMS algorithms require routing for the first and second minimums (for m1 and m2) through the C2V routing network. The utilization rate for m1 and m2 is determined based on the row degree λ as (λ − 1)/λ and 1/λ, respectively. In particular, for coding rates 1/2 and 3/4, each parity check equation would be defined with λ equal to 8 and 16, respectively. Therefore, in this case, the message m2 would be utilized with a ratio of 1/8 and 1/16, respectively, which is significantly low compared to the utilization rate of m1 (i.e., 7/8 and 15/16). Thus, the larger number of routing resources introduced by m2 renders the C2V routing inefficient. The proposed SAMS approach tackles this issue by sending only m1 through the C2V routing network, as shown in Fig. 4(b). In other words, computational and routing resources are dedicated only for m1, effectively mitigating the routing congestion with a very efficient C2V routing network.
+The number of nets at both ends of the routing network for the MS and NMS as well as the proposed SAMS algorithm is calculated as
+C2Vinput = q × z × number of messages
+and
+C2Voutput = q × N × number of messages.
+
+TABLE III NUMBER OF NETS WITH q -b QUANTIZATION SCHEME
+For instance, Table III shows how the total number of interconnections in the routing network would be reduced by the SAMS based on the parameters defined by the parity check matrices shown in Fig. 2. Indeed, a 27% of reduction in the number of wires would be obtained with q = 6, whereas a reduction of 21% would be achieved with q = 3. Section V shows the BER performance of the proposed algorithm while considering different configurations for the internal word length and SNR conditions.
+V. PERFORMANCE SIMULATION Although there are several factors that affect the BER performance of the LDPC decoder, the algorithm employed for decoding has always been crucial. In addition, the precision of the input and internal messages is also a key aspect that influences the BER performance, the hardware complexity, and the power consumption of the design. Hence, the precision needs to be considered based on the overall system requirements, such as BER and SNR. The simulation results presented here target the applications with the IEEE802.11ad standard for SC system to support BPSK and 16-QAM modulation with multicoding rate. The simulations for the overall baseband system are based on channel models for indoor environment with omni-TX, omni-RX, line-of-sight (LOS) specifications, and additional nonideal effects, such as carrier frequency offset (CFO), sampling clock offset (SCO), and phase noise (PN), which are properly compensated at the inner receiver, as in [18]. The proposed LDPC decoder has been
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+933
+
+Fig. 7. Diagram for the receiver in the digital baseband SC system.
+
+Fig. 8. BER performance with coding rates 1/2 and 3/4 under AWGN and 16-QAM modulation.
+integrated in a baseband processor together with the analog ADC/DAC components, as shown in Figs. 7 and 13.
+For the sake of comparison, the BER performance simulations for the LDPC decoder are based on AWGN with 16-QAM modulation, including coding rates 1/2 and 3/4. According to the receiver sensitivity as specified in the IEEE802.11ad standard, the SC baseband system with 16-QAM modulation is required to satisfy a BER of 3 × 10−7 based on a minimum system SNR of 16.52 and 18.52 dB (i.e., minimum Eb/No ratio of 14.8 and 15.8 dB) for coding rates 1/2 and 3/4, respectively. For simplicity, in the remainder of this article, the term SNR is used to refer to the Eb/No ratio. The BER performance simulations for 3-b quantization scheme after four iterations with coding rates 1/2 (CR12) and 3/4 (CR34) are shown in Fig. 8. The first and the second numbers in the parenthesis [e.g., x(a, b)] indicate the input and internal word lengths, respectively. Moreover, the NMS algorithm is known to attain better BER performance compared to the conventional MS algorithm; therefore, the NMS algorithm is used for comparison purposes. The NMS algorithm with hard decision input (1-b input) and 6-b internal word length [NMS (1, 6)] is included in this simulation as an upper
+
+bound reference. On the other hand, the NMS with 3-b input (soft decision) and 6-b internal word length [NMS (3, 6)] represents a lower bound reference. The BER performance of the proposed design with SAMS (3, 3) falls in between these two cases and can be adjusted by defining an appropriate internal word length.
+As shown in Fig. 8, there are two factors for BER degradation in the SAMS: the first is the reduction of the internal word length, and the second is the approximation error in mˆ2. By comparing the CR34 NMS (3, 6) with the CR34 NMS (3, 3), we can see that there is a 0.43-dB degradation due to the reduction in the internal word length. Furthermore, a comparison of the CR34 NMS (3, 3) with the CR34 SAMS (3, 3) reveals a 0.5-dB degradation due to the approximation error in the second minimum. On the other hand, the coding rate 1/2 shows degradation of 1.5 and 0.3 dB due to the reduced internal word length and the approximation error in the second minimum, respectively. The slightly higher performance degradation experienced by coding rate 1/2 is related to the characteristics of the parity check matrices.
+As can be observed from Fig. 2, the same set of VNs affects more parity check equations with CR12 compared to the case with CR34; consequently, degradation due to internal precision in the VNs representation has a higher impact with CR12 compared to the case with CR34. As shown in Section IV-D, the second minimum m2 (also mˆ2) has higher utilization rate in CR12 compared to CR34; therefore, approximation errors related to mˆ2 are expected to have a higher impact on CR12. However, this effect is not easily observed due to the better error correction capability of CR12 compared to CR34.
+The level of degradation in the BER performance introduced by the SAMS approach is tightly related to the approximation error ε, which varies according to the SNR and the number of decoding cycles. As shown in Fig. 9, for a 3-b quantization scheme, at higher SNR (8 and 9 dB) values, most of the VNs reach their stable state (maximum absolute value) after a few cycles; therefore, the approximated mˆ2 takes on the value m2 or remains close to m2 with higher probability. At lower SNR conditions, a large number of VNs are unstable, and the probability of P(ε = 0) is reduced, resulting in degradation of the BER performance. Similar behavior can be observed in Fig. 10, where the BER performance with four iterations is evaluated under different word length conditions
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+934
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+Fig. 11. BER performance of SAMS, vwMS, and conventional NMS with coding rates 1/2 and 6-b quantization scheme under AWGN and 16-QAM modulation.
+
+Fig. 9. P(ε = 0) for coding rate 3/4 using the SAMS approach with 3-b input and 3-b internal word length.
+
+TABLE IV SIMULATION PARAMETERS
+
+Fig. 10. BER performance with different word lengths for coding rates 1/2 and 3/4 under AWGN and 16-QAM modulation.
+with simulation parameters α and σ defined for (7) and (15), respectively, as shown in Table IV.
+There are inflection points at which significant improvements associated with the increase in the word length begin to be observed. As can be seen, these inflection points are located near 4 and 6 dB for coding rates 1/2 and 3/4, respectively. Increasing the number of iterations with Eb/No before these inflection points would introduce substantial improvements in the performance. However, as shown by the lower bound established by CR12 NMS (6, 6) in Figs. 10 and 11, BER smaller than 10−6 with a practical number of decoding iterations can only be achieved with Eb/No higher or equal to 4 dB. Otherwise, increasing the number of iterations with smaller Eb/No would lead to an increase in power consumption and degradation of the throughput, even with the conventional
+
+NMS algorithm. Therefore, the proposed method with 3-b quantization scheme is applicable for practical applications targeting Eb/No as low as 7 dB and as low as 4 dB in the case of quantization scheme with 6 b.
+The BER performance and convergence rate of the proposed SAMS, the existing vwMS, and the conventional NMS algorithm are shown in Fig. 11. The proposed SAMS outperforms the existing vwMS by introducing considerable improvements in the convergence rate. Furthermore, for SNR larger than 4 dB, it is possible to achieve performance results close to the performance provided by the conventional NMS with only a slight increment in the number of iterations. This is not the case for vwMS/svwMS and RMS-2ME, in which 30 and 100 iterations have been reported to obtain acceptable BER performance, respectively. The vwMS/svwMS, shown in [23], uses a lookup table to update γ based on the number of iterations (with parameters shown in Table IV). On the other hand, the proposed SAMS algorithm updates γ based on the reliability of m1, which allows the SAMS algorithm to adapt under different SNR conditions and converge faster to an acceptable BER performance compared to the existing vwMS algorithm, as demonstrated in Fig. 11. As can be observed, the existing vwMS algorithm provides slightly better
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+935
+
+TABLE V m2 ESTIMATOR
+
+BER performance for SNR lower than 3 dB compared to the SAMS approach; however, the performance is not maintained as γ is updated (increased) solely based on the number of iterations and without any knowledge about the reliability of the messages during the decoding process. The RMS2ME is not compared here considering it was optimized with fixed offset values for low hardware complexity with 4-b quantization and OMS algorithm.
+The slight degradation observed for Eb/No lower than 4 dB can be considered negligible; first, because it does not affect significantly the BER convergence of the decoder, and second, because the SC baseband system is intended to operate beyond the 4-dB region as specified by the receiver sensitivity in the IEEE802.11ad standard. Indeed, as shown in Figs. 8 and 9, the decoder based on the SAMS algorithm can provide acceptable BER performance with a small number of iterations, even with a quantization scheme with word length as low as 3 b. For quantization schemes with word length larger than 3 bits, the decoder can provide BER performance comparable to that of the conventional NMS with only a slight increase in the number of iterations, as shown in Figs. 10 and 11. Therefore, the SAMS approach represents a viable option with improved performance compared to hard decision decoding and reduced hardware complexity compared to the existing vwMS and the well-known and widely adopted NMS algorithm for softdecision decoding. Although a larger number of iterations can improve the BER performance, four iterations have been used to highlight the practical implementation and power-saving capabilities of a decoder with the SAMS algorithm.
+VI. IMPLEMENTATION AND MEASUREMENT RESULTS
+The overall digital baseband receiver shown in Fig. 7 was fabricated with 28-nm CMOS technology. Fig. 13(a) presents the die micrograph of the chip including the LDPC decoder and the rest of the digital baseband transceiver and analog ADC/DAC components for the SC system. The LDPC decoder’s block boundary is also roughly marked. In order to get a precise estimation of the routing improvement, power consumption, and area, a standalone block APR of the LDPC decoder has also been carried out, as shown in Fig. 13(b). The proposed LDPC decoder can be placed and routed with a 70% utilization rate. Compared to the overall digital baseband transceiver system, it occupies a 13% of the total area and consumes a 5% of the total power.
+The maximum number of iterations available for decoding is determined by the modulation scheme and the overall SC system parallelism. With 16-QAM modulation and the outer receiver implemented with 8× input parallelism, the input
+
+Fig. 12. Routing of the LDPC decoder with NMS algorithm and SAMS approach implemented with 3-b input and 3-b internal word length. (a) Wire length at each metal layer for the NMS and the proposed design with SAMS. (b) Number of via cut introduced for the NMS and the proposed design with SAMS.
+buffer becomes full every 21 cycles; therefore, the decoder has a maximum of 5.25 iterations available for decoding. As shown in Fig. 8, the LDPC decoder is able to achieve a BER lower than 10−7 for the target SNR region, even with reduced internal precision. Thus, to further improve the hardware complexity, the SAMS approach is adopted with 3-b quantization for both input and internal word lengths [proposed SAMS (3, 3)]. Under these conditions, the operation performed by the m2 estimator at the VNU is summarized in Table V. As can be observed from Table V, with the exception of input m1 = 01, the bit b0 of mˆ2 is set to 1, and the bit b1 follows the corresponding input bit. Therefore, the m2 estimator is implemented through a 2-b comparator with simplified hardware complexity, as shown in Fig. 5. Furthermore, on average, the decoder completes the decoding process in two iterations; thus, early termination and clock gating are used to reduce the power consumption of the decoder.
+As reported by the APR tools, the proposed design with SAMS introduces significant improvements on the routing of the decoder compared to a design based on the NMS algorithm. As shown in Fig. 12(a), the accumulated wire length has been reduced proportionally at each metal layer. Similar
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+936
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+TABLE VI IMPLEMENTATION RESULTS AND OVERVIEWS
+
+Fig. 13. (a) Die micrograph of the fabricated chip, including the digital baseband with LDPC decoder and analog ADC/DAC for the 60-GHz SC system operating at 10 Gb/s. (b) Standalone layout view of the proposed LDPC decoder occupying 13% of the total area in the digital baseband transceiver system.
+
+improvements in the number of Vias in each layer are reported in Fig. 12(b). As observed in Fig. 12(a) and (b), Metal1 (M1) is reserved for power, and most of the routing is carried out by the APR tool using M2 up to M6. The total wire length and via count reduction are reported to be 19% and 17%, respectively. The proximity of the actual reduction in the total wire length (19%) to the estimate derived from Table III (21%) indicates that the C2V routing was indeed a major contributor to the overall routing congestion in the LDPC decoder. The area and power distribution of the proposed LDPC decoder design are shown in Fig. 14. As can be seen, the VNUs occupy most of the area and account for most of the power consumption due to the VNUs being implemented with full parallelism.
+
+The measurement results are shown in Table VI together with an overview of the related state-of-the-art designs. Note that normalization is not included in Table VI as there are many factors related to technology node, which is difficult to take into account; furthermore, different articles report power consumption under different SNR conditions, and thus, a completely fair comparison is not possible. Instead, the gate count, area efficiency, and energy efficiency are used to provide an insight into the improvements.
+As shown in Table VI, the decoder achieves a throughput of 10.5 Gb/s with the maximum number of iterations and up to 21 Gbp/s (with 2.5 iterations on average). Moreover, the design occupies a core area of 0.14 mm2 with a 70% utilization density and power consumption of 81 mW at 312.5 MHz.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+937
+
+The same hardware optimization approach can be applied for parity check matrices defined in standards, such as IEEE802.11ay, IEEE802.11an, and, in general, with parity check matrices with QC and regular structure.
+
+Fig. 14. Postlayout area and power distribution of the proposed LDPC decoder design.
+These results correspond to an area and energy efficiency of 75 Gb/s/mm2 and 10.2 pJ/bit, respectively. The power consumption is reported at the target 10−7 BER to ensure that the decoder also satisfies the throughput requirements within the four iterations, as reported in the simulation. As can be seen in Fig. 8 and Table VI, the NMS (1, 6) is able to provide similar BER performance; yet, it requires the same internal word length and comparable hardware complexity (in terms of the gate count) as the design presented in [14]. For a fair comparison, the NMS (1, 6) has been implemented with 28 nm and similar specifications as the architecture presented in [14]. The proposed SAMS (3, 3) introduces a total reduction of 71.4% in the power consumption and an area reduction of 54.8% compared to a design with conventional NMS algorithm [NMS (1, 6)]. Although the major improvements come from the reduction of the internal word length, the SAMS approach also contributes with an 11.6% in the total reduction of the area, as reported by the APR and standalone postlayout simulation tools.
+The design presented in vwMS [23] uses a parity check matrix with different dimensions and is difficult to directly compare with the proposed design; however, it is included in Table VI as a reference. Its implementation with a 90-nm technology shows a degraded area efficiency and large power consumption; yet, it presents satisfactory energy efficiency for the IEEE 802.11an standard. The design presented in [31] employs a stochastic approach, in which the bit-serial characteristic of the stochastic computation allows the decoder to be implemented with a 90% utilization density and a high frequency. Nonetheless, it consumes a larger gate count and requires a higher number of decoding cycles that degrade the throughput. In contrast, the designs in [29] and [30] achieve high throughput at the expense of degraded area and energy efficiency due to the area overhead. The design in [17] introduces a pipeline stage at the CNUs for higher clock frequency. Although a throughput of 9 Gb/s is achieved, the energy efficiency is affected by the power consumption of the additional registers inserted for pipelining. Design architectures with loop unrolling as those presented in [32] and [33] seem to be promising approaches for their high-throughput capability with multiframe processing. Nonetheless, the major drawback is the large area overhead. The proposed design uses the SAMS approach to mitigate the routing congestion and exploits the system requirements to reduce the hardware complexity and power consumption in the LDPC decoder.
+
+VII. CONCLUSION
+A high-throughput and energy-efficient LDPC decoder design was presented in this article. The design was based on a low-complexity second minimum approximation that allows the decoder to be implemented with reduced routing complexity at the expense of acceptable BER degradation for practical applications. The implementation of the LDPC decoder had been carried out based on the IEE802.11ad standard specifications and row-based layer scheduling. The implementation results with 28-nm 1P9M CMOS process show that the proposed design achieves a high throughput of 10.5 Gb/s while consuming only 81 mW at 312.5 MHz with an area of 0.14 mm2. Moreover, reductions in the internal word length based on the system requirements allow the design to be implemented with an area and energy efficiency of 75 Gb/s/mm2 and 10.2 pJ/bit, respectively. These results represent significant improvements compared to the existing state-of-the-art architectures. Simulation results show that the proposed SAMS is able to achieve BER performance comparable to the conventional NMS algorithm with only a slight increase in the number of iterations. This makes the SAMS approach suitable for a wide range of applications, including wireline and wireless applications. Moreover, the low complexity and fast convergence allow the SAMS algorithm to be implemented with a high degree of parallelism while satisfying a low power budget. Therefore, the proposed design with the SAMS algorithm represents a viable alternative with reduced routing complexity for high-throughput applications.
+
+REFERENCES
+
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf.
+
+Theory, vol. IT-8, pp. 21–28, Jan. 1962.
+
+[2] D. J. C. Mackay, “Good error-correcting codes based on very sparse
+
+matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431,
+
+Mar. 1999.
+
+[3] IEEE Standard for Information Technology—Telecommunications and
+
+Information Exchange Between Systems—Local and Metropolitan Area
+
+Networks—Specific Requirements Part 3: Carrier Sense Multiple Access
+
+With Collision Detection (CSMA/CD) Access Method and Physical
+
+Layer Specifications, IEEE Standard 802.3-2002, Sep. 2006.
+
+[4] Part 15.3: Wireless Medium Access Control (MAC) Physical
+
+Layer (PHY) Specifications for High Rate Wireless Personal Area
+
+Networks (WPANs), IEEE Standard P802.15.3c, 2009.
+
+[5] PHY/MAC
+
+Complete
+
+Proposal
+
+Specification,
+
+IEEE Standard 802.11-10/0433r, IEEE 802.11 Task Group AD,
+
+May 2010.
+
+[6] Draft Standard for Information Technology—Telecommunications and
+
+Information Exchange Between Systems—Local and Metropolitan Area
+
+Networks—Specific Requirements—Part 11: Wireless LAN Medium
+
+Access Control (MAC) and Physical Layer (PHY) Specifications—
+
+Amendment 2: Enhanced Throughput for Operation in License-Exempt
+
+Bands Above 45 GHz, Standard P802.11ay/D3.0, Feb. 2019.
+
+[7] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2
+
+low-density parity-check code decoder,” IEEE J. Solid-State Circuits,
+
+vol. 37, no. 3, pp. 404–412, Mar. 2002.
+
+[8] R. Brain, “Interconnect scaling: Challenges and opportunities,” in IEDM
+
+Tech. Dig., San Francisco, CA, USA, Dec. 2016, pp. 9.3.1–9.3.4.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+938
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 4, APRIL 2020
+
+[9] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. San Mateo, CA, USA: Morgan Kaufmann, 1988.
+[10] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[11] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[12] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[13] N. Onizawa, T. Ikeda, T. Hanyu, and V. C. Gaudet, “3.2-Gb/s 1024-b rate-1/2 LDPC decoder chip using a flooding-type updateschedule algorithm,” in Proc. 50th Midwest Symp. Circuits Syst., Montreal, QC, Canada, Aug. 2007, pp. 217–220.
+[14] S.-W. Yen, S.-Y. Hung, C.-L. Chen, H.-C. Chang, S.-J. Jou, and C.-Y. Lee, “A 5.79-Gb/s energy-efficient multirate LDPC codec chip for IEEE 802.15.3c applications,” IEEE J. Solid-State Circuits, vol. 47, no. 9, pp. 2246–2257, Sep. 2012.
+[15] H. Motozuka, N. Yosoku, T. Sakamoto, T. Tsukizawa, N. Shirakata, and K. Takinami, “A 6.16 Gb/s 4.7 pJ/bit/iteration LDPC decoder for IEEE 802.11ad standard in 40 nm LP-CMOS,” in Proc. IEEE Global Conf. Signal Inf. Process. (GlobalSIP), Orlando, FL, USA, Dec. 2015, pp. 1289–1292.
+[16] S. Ajaz and H. Lee, “Reduced-complexity local switch based multi-mode QC-LDPC decoder architecture for Gbit wireless communication,” Electron. Lett., vol. 49, no. 19, pp. 1246–1248, Sep. 2013.
+[17] S. Ajaz and H. Lee, “Multi-Gb/s multi-mode LDPC decoder architecture for IEEE 802.11ad standard,” in Proc. IEEE Asia– Pacific Conf. Circuits Syst. (APCCAS), Ishigaki, Japan, Nov. 2014, pp. 153–156.
+[18] C. Y. Liu et al., “Dual-mode all-digital baseband receiver with a feedforward and shared-memory architecture for dual-standard over 60 GHz NLOS channel,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 64, no. 3, pp. 608–618, Mar. 2017.
+[19] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-passing schedules for LDPC decoding,” IEEE Trans. Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[20] J. Chen, Y. Zhang, and R. Sun, “An improved normalized min-sum algorithm for LDPC codes,” in Proc. IEEE/ACIS 12th Int. Conf. Comput. Inf. Sci. (ICIS), Niigata, Japan, Jun. 2013, pp. 509–512.
+[21] I. Tsatsaragkos and V. Paliouras, “Approximate algorithms for identifying minima on min-sum LDPC decoders and their hardware implementation,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 62, no. 8, pp. 766–770, Aug. 2015.
+[22] I. Tsatsaragkos and V. Paliouras, “A reconfigurable LDPC decoder optimized for 802.11n/ac applications,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 1, pp. 182–195, Jan. 2018.
+[23] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+[24] S. Hemati, F. Leduc-Primeau, and W. J. Gross, “A relaxed min-sum LDPC decoder with simplified check nodes,” IEEE Commun. Lett., vol. 20, no. 3, pp. 422–425, Mar. 2016.
+[25] R. Ghanaatian et al., “A 588-Gb/s LDPC decoder based on finitealphabet message passing,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[26] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), San Antonio, TX, USA, vol. 2, Nov. 2001, p. 1036.
+[27] S. Ajaz and H. Lee, “Area efficient half row pipelined layered LDPC decoder for gigabit wireless communications,” in Proc. Int. SoC Design Conf. (ISOCC), Gyeongju, South Korea, Nov. 2015, pp. 287–288.
+[28] X. Huang, “Deriving the normalized min-sum algorithm from cooperative optimization,” in Proc. IEEE Inf. Theory Workshop-ITW Chengdu, Punta del Este, Uruguay, Oct. 2006, pp. 204–208.
+
+[29] M. Weiner, M. Blagojevic, S. Skotnikov, A. Burg, P. Flatresse, and B. Nikolic, “A scalable 1.5-to-6Gb/s 6.2-to-38.1 mW LDPC decoder for 60 GHz wireless networks in 28 nm UTBB FDSOI,” IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, San Francisco, CA, USA, Feb. 2014, pp. 464–465.
+[30] M. Li et al., “An energy efficient 18 Gbps LDPC decoding processor for 802.11ad in 28 nm CMOS,” in Proc. IEEE Asian Solid-State Circuits Conf. (A-SSCC), Xiamen, China, Nov. 2015, pp. 1–5.
+[31] X. R. Lee, C. L. Chen, H. C. Chang, and C. Y. Lee, “A 7.92 Gb/s 437.2 mW stochastic LDPC decoder chip for IEEE 802.15.3c applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 62, no. 2, pp. 507–516, Feb. 2015.
+[32] M. Li, V. Derudder, C. Desset, A. Dewilde, A. Bourdoux, and Y. Huang, “A 100 Gbps LDPC decoder for the IEEE 802.11ay standard,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Hong Kong, Dec. 2018, pp. 1–5.
+[33] M. Milicevic and P. G. Gulak, “A multi-Gb/s frame-interleaved LDPC decoder with path-unrolled message passing in 28-nm CMOS,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 10, pp. 1908–1921, Oct. 2018.
+Henry Lopez received the B.S. and M.S. degrees in electronics engineering from National Chiao Tung University (NCTU), Hsinchu, Taiwan, in 2013 and 2015, respectively, where he is currently working toward the Ph.D. degree in the EECS International Graduate Program.
+His research interests include design and implementation of VLSI architectures, digital signal processing, and wireless communication systems in general.
+Hsun-Wei Chan received the B.S. degree in electronics engineering from National Dong Hwa University, Hualien, Taiwan, in 2014. He is currently working toward the Ph.D. degree at the Electronics Engineering Department, National Chiao Tung University, Hsinchu, Taiwan.
+His research interests include digital IC design, digital signal processing, and wireless communication baseband systems.
+Kang-Lun Chiu received the B.S. degree in electronics engineering and the B.S. degree in electrical engineering from National Dong Hwa University, Hualien, Taiwan, in 2014 and 2015, respectively. He is currently working toward the Ph.D. degree at the Electronics Engineering Department, National Chiao Tung University, Hsinchu, Taiwan.
+His research interests include digital wireless communication systems, digital signal processing, and digital VLSI systems’ design.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+LOPEZ et al.: 75-Gb/s/mm2 AND ENERGY-EFFICIENT LDPC DECODER
+
+939
+
+Pei-Yun Tsai received the B.S., M.S., and Ph.D. degrees in electrical engineering from National Taiwan University, Taipei, Taiwan, in 1994, 1996, and 2005, respectively.
+From 1996 to 2000, she worked at ASUStek, Taipei. Since 2006, she has been working at the Department of Electrical Engineering, National Central University, Taoyuan, Taiwan, where she is currently a Professor. Her research interests include digital signal processing algorithms and VLSI design for wireless communication systems and biomedical systems. Prof. Tsai has been serving as a TC Member for the ISCAS MSPC Track since 2013. Since 2015, she has been serving as a TPC Member for the Asian Solid-State Circuits Conference (ASSCC) in the SoC Subcommittee and a TC Member of signal processing systems for the Asian–Pacific Signal and Information Processing and Association (APSIPA). Since 2016, she has been serving as a TC Member of the design and implementation of signal processing systems (DISPS) for the IEEE Signal Processing Society. She received the Acer Longtern Award and the First Asian Solid-State Circuit Conference Student Design Contest Outstanding Award in 2005. She also received the MXIC Golden Silicon Awards in 2005, 2010, and 2016. In 2011 and 2014, she received the Outstanding Chip Design Award Honorable Mention from the Chip Implementation Center, Taiwan.
+
+Shyh-Jye Jerry Jou received the B.S. degree in electrical engineering from National Cheng Kung University, Tainan, Taiwan, in 1982, and the M.S. and Ph.D. degrees in electronics from National Chiao Tung University, Hsinchu, Taiwan, in 1984 and 1988, respectively.
+He joined the Electrical Engineering Department, National Central University, Chung-Li, Taiwan, from 1990 to 2004, where he became a Professor in 1997. Since 2004, he has been a Professor with the Electronics Engineering Department, National Chiao Tung University, where he served as the Chairman from 2006 to 2009. He was appointed as the Director General of the Ministry of Science and Technology, where he was in charge of Science Education and International Cooperation Department from January 2016 to December 2017. From August 2011 to December 2015, he was the Vice President for International Affair of the National Chiao Tung University. He was a Visiting Research Professor with the Coordinated Science Laboratory, University of Illinois at Urbana– Champaign, Champaign, IL, USA, during the 1993–1994 and 2010 academic years. In summer 2001, he was a Visiting Research Consultant with the Communication Circuits and Systems Research Laboratory, Agere Systems, Allentown, PA, USA. He has published more than 100 IEEE journal and conference articles. His research interests include design and analysis of high-speed, low-power mixed-signal integrated circuits, communication, and bioelectronics integrated circuits and systems. Dr. Jou received the Outstanding Engineering Professor Awards from the Chinese Institute of Engineers and the Chinese Institute of Electrical Engineering in 2011 and 2013, respectively. He has served as the 2006 Chapter Chair of IEEE Circuits and Systems Society Taipei Chapter, the 2009– 2010 Distinguished Lecturer of the CAS Society, and the Track Chair of the Nanoelectronics and Gigascale Systems from 2011 to 2013. He has also served as the Technical Program Chair or the Co-Chair for the IEEE VLSIDAT, the International IEEE Asian Solid-State Circuit Conference, and the IEEE Biomedical Circuits and Systems. He also serves as the conference chair and the TPC chair for many IEEE conferences, such as the Conference Chair of the IEEE VLSI-DAT and International Workshop on Memory Technology, Design, and Testing. He was a Guest Editor of the IEEE JOURNAL OF SOLIDSTATE CIRCUITS in November 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:22 UTC from IEEE Xplore. Restrictions apply.
+
+

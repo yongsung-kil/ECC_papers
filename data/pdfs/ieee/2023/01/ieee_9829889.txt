@@ -1,0 +1,353 @@
+768
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+Improving 3-D NAND SSD Read Performance by Parallelizing Read-Retry
+Jinhua Cui , Member, IEEE, Zhimin Zeng, Jianhang Huang , Weiqi Yuan, and Laurence T. Yang , Fellow, IEEE
+
+Abstract—With the bit density improvement and the 3-D flash techniques, modern NAND flash-memory-based solid-state disks (SSDs) dramatically increase the flash storage capacity. However, in high-density SSDs, the long read latency overheads due to massive read-retry steps have become a serious performance concern to develop flash memory in storage devices. In this article, we proposed a parallel read-retry scheme (PaRR) to utilize the readretry characteristics among flash memory cells. Specifically, when reading the multiple data pages simultaneously, PaRR reduces the read-response time by parallelizing read-retry operations. PaRR reduces the number of read-retry operations by parallelizing read-retry steps with the different aggressive read reference voltages if simultaneously reading the data pages that exhibit virtually equivalent reliability characteristic. Our evaluation shows that PaRR improves the I/O performance by 33.77% on average compared with the state-of-the-art scheme.
+Index Terms—Flash memory, parallel, process similarity (PS), process variation (PV), read-retry.
+I. INTRODUCTION
+N AND flash-memory-based solid-state disks (SSDs) are widely deployed as a storage medium due to their high performance and large capacity. With the continuing technology scaling, the bit density improvement, and the 3-D flash technologies, SSDs dramatically boost the storage capacity [10], [36], [43]. However, while modern SSDs are yielded by these advanced technologies, flash memory is becoming increasingly unreliable and more error prone [6], [20], [25], [41].
+To guarantee the reliability of modern SSDs, modern SSDs employ the strong error correction code (ECC), e.g., lowdensity parity-check (LDPC) code [18], to detect and correct
+Manuscript received 19 January 2022; revised 14 April 2022 and 6 July 2022; accepted 11 July 2022. Date of publication 14 July 2022; date of current version 20 February 2023. This work was supported in part by the National Natural Science Foundation of China under Grant 61902136 and Grant 61932010, and in part by the Fundamental Research Funds for the Central Universities under Grant 2019kfyXJJS090. This article was recommended by Associate Editor Z. Shao. (Corresponding author: Jinhua Cui.)
+Jinhua Cui, Zhimin Zeng, and Weiqi Yuan are with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan 430074, Hubei, China (e-mail: cjhnicole@gmail.com; zengzhimin@hust.edu.cn; u201914891@hust.edu.cn).
+Jianhang Huang is with the School of Electronic and Information Engineering, Xi’an Jiaotong University, Xi’an 710049, Shaanxi, China (e-mail: huangjhsx@gmail.com).
+Laurence T. Yang is with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan 430074, Hubei, China, and also with the Department of Computer Science, St. Francis Xavier University, Antigonish, NS B2G 2W5, Canada (e-mail: ltyang@ieee.org).
+Digital Object Identifier 10.1109/TCAD.2022.3191256
+
+the raw bit errors in flash memory. When one or more bits in flash memory are corrupted by errors, the user data can be reconstructed with the redundancy parity data of ECC. However, if the number of error bits exceeds the error correction capability of ECC, ECC will fail to recover the original data. Then, a read-retry step built into the SSD controller can be performed to read the same data again with the slightly adjusted read reference voltages (RRVs).
+While the read-retry mechanism has been implemented in modern SSDs to compensate for the threshold voltage distribution shift due to the reliability issue, it is achieved at the sacrifice of the read performance. The SSD controller will repeat the read-retry step with the slightly adjusted RRVs until it either successfully reads out data or is unable to read the data using all the RRVs that are available in the SSD controller. Therefore, when multiple read-retry steps are performed, the read performance can deteriorate dramatically.
+In the literature, considerable effort has been invested to reduce the read-retry latency to enhance the read performance. The tuned starting RRVs approaches [4], [32], [40] fetch data with the recorded starting RRVs that are saved by the previous read operations, therefore reducing the number of read-retry operations until the read operation succeeds. However, given that the DRAM space is a precious resource, it is not always preferable to allocate the large DRAM space to record these latest RRVs at the required granularity. Furthermore, the periodical update overhead for updating the latest RRVs is prohibitively high. The model-based approaches calculate RRVs for the read operation using the estimated the shift of voltage states, with the models of the threshold voltage distribution [29], [31], [35]. However, given that there are diverse sources of flash errors in modern SSDs, it is very challenging to get an accurate model. Park et al. [36] pipelined the consecutive read-retry steps using the particular CACHE READ command and reduced the sensing latency in the read operation, such that the read-response time can be minimized.
+Unfortunately, the long read latency penalty due to a massive read-retry steps remains a major concern for modern 3-D flash-based SSDs. In this article, a novel parallel read-retry scheme (PaRR) is proposed to utilize the read-retry characteristics among the flash memory cells, eliminating the read performance penalty in modern 3-D flash-based SSDs. First, a parallel read scheduling strategy (PRS) is designed to explore possibilities in scheduling the multiple read requests in parallel. Second, to parallel read the multiple subpages with the different read-retry steps, the parallel read-retry strategy (PRR)
+
+1937-4151 c 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+769
+
+(a)
+(b)
+Fig. 1. Architecture of modern SSDs. (a) SSD internals. (b) Block internals with different technologies.
+is designed. PRR reduces the read-response time by parallelizing read-retry operations. Third, to parallel read the multiple subpages with the same read-retry steps, the aggressive PRR (APR) is designed. APR parallels the read-retry steps with the different aggressive RRVs. We evaluate and verify that PaRR improves the I/O performance over the state-of-the-art schemes.
+The key contributions are summarized as follows. 1) We propose PRR to effectively reduce the read-response
+time by repeatedly parallelizing read-retry operations. 2) We introduce APR, which effectively reduces the number
+of read-retry operations, when simultaneously reading multiple pages that exhibit virtually equivalent reliability characteristic. The key idea of APR is to parallel read-retry steps with the different aggressive RRVs. 3) We evaluate and verify that PaRR improves the I/O performance over the state-of-the-art schemes. In the remainder of this article, background is presented in Sections II and III, respectively. Section IV presents the design details of PaRR. Section V lists the experimental settings and analyzes the results. Section VI presents more related work and Section VII concludes this article.
+II. BACKGROUND We give a brief background on the basics of SSDs, read operation, single-operation-multiple-location (SOML) read operation, and modern 3-D flash memory.
+A. Basics of Flash-Based SSDs Modern NAND flash memory-based solid-state drives are
+hierarchically organized, as shown in Fig. 1. The host interface controller is contained for transferring commands and data between SSDs and CPU. The flash translation layer (FTL) plays a critical role in the SSD firmware to sustain the compatibility with HDDs, which processes the I/O requests
+
+from CPU and accesses to physical flash memory. FTL consists of: 1) data allocation (DA); 2) garbage collection (GC); 3) wear leveling (WL); and 4) bad block manager (BBM). The upper file system sends I/O requests that contain the essential information, e.g., logical address number (LPN), size, and so on. The basic I/O unit of the host system is a sector, whereas the I/O unit of the flash memory is a page that is several times the size of the sector, e.g., 16 kB. Due to the different I/O units between a host system and SSD, the address mapping must be required for SSD. The FTL provides the logical sector updates by maintaining a mapping table (MPT) of LPN from a host system to a physical address number (PPN) in the flash memory. The SDRAM/DRAM buffer stores the mapping table of FTL and temporarily buffers write request data. Beneath FTL, the flash interface controller serves requests with three basic operations (read/write/erase) between FTL and physical flash memory.
+Inside SSDs, the hierarchical multilevel-parallelism flash memory structure is organized to accelerate the read/write bandwidth of SSDs. There are four levels of parallelism inside SSDs, including the channel-level parallelism, chip-level parallelism, die-level parallelism, and plane-level parallelism. Specifically, multiple flash memory chips are connected to a flash channel, while each channel can be accessed independently to maximize parallel data access performance, e.g., four channels in Fig. 1. Each flash chip is comprised of several flash dies, while each die then hosts several flash planes. Each plane contains a number of flash blocks, where one block is the unit for the erase operation. Each block consists of multiple pages, depending on the circuit structure and density technology of the block, as shown in Fig. 1(b). Note that one page is the unit for both the read and write operations. While a singlelevel cell (SLC) flash block stores 1-bit data in each flash cell, the multilevel cell (MLC) flash block allows each flash cell to maintain 2-bit data. The advanced 3-D flash block vertically stacks pages along the vertical Z direction to achieve significant storage capacity improvement, as shown in Fig. 1(b). For all types of flash cells, the endurance of flash cells is specified as a fixed number of program/erase (P/E) cycles.
+B. NAND Read Operation
+A flash read operation is performed with the following three basic stages: 1) data sensing; 2) data transferring; and 3) data decoding. In the data sensing stage, the page data are accessed from the target flash memory array to the data register. Then, in the data transferring stage, the sensed page data are deported to the SSD controller through the flash-to-controller bus. Finally, in the data decoding stage, the ECC engine (e.g., LDPC) decodes the transferred page data while correcting the erroneous bits. Due to the multibit-cell technology and the 3-D flash technology, the reliability of modern high-density flash memory degrades, making more bits corrupted by errors. As a result, even strong ECC becomes inadequate to correct the numerous error bits.
+One common solution to deal with the deteriorated flash reliability problem is the read-retry mechanism. When one read failure occurs, the read-retry operation accesses the same
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+770
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+Fig. 2. Structure of the SOML read circuit.
+
+Fig. 3. (a) Cross-sectional view of the 3-D flash cell structure. (b) Top-down view. (c) 3-D flash memory organization.
+
+data page again with the slightly adjusted RRVs. The readretry mechanism tries to adjust the threshold voltage value to the optimal RRV value, reducing the raw bit-error-rate (RBER) of the data page. The SSD controller repeats the above readretry steps until either the read operation succeeds or the read failure occurs after all the RRVs are tried by the read-retry mechanism.
+According to the above read steps, the flash read latency TREAD can be calculated as
+TREAD = (Tsense + Ttransfer + Tdecode) × (NRR + 1) (1)
+where Tsense, Ttransfer, and Tdecode are the latency of data sensing, the latency of data transferring, and the latency of data decoding, respectively. NRR (NRR ≥ 0) means the number of read-retry steps. The recent research indicates that the readretry step occurs very frequently under the modest operating conditions (e.g., 0 P/E cycle and 3-month retention time), and the value of NRR is even more than 25 under the worst case conditions (e.g., 2K P/E cycles and 12-month retention time for 3-D TLC NAND flash) [36]. Thus, the long read latency overheads due to a massive read-retry steps have become a serious performance concern to develop flash memory in storage devices.
+C. SOML Read Operation
+In SSDs, the granularity of read operation is one flash page (e.g., 16 kB). Given that the basic I/O unit of a host system is usually a sector of 4 kB, the difference in the page size between a host system and SSDs becomes bigger. Accessing the full page for the small I/O read requests (the read requests which are much smaller than the 16 kB reads, e.g., 4 or 8 kB) is unnecessary, which can degrade the throughput performance. To overcome this challenge, the SOML read operation is proposed [24].
+SOML read operation simultaneously accesses several intrachip subpages (only part of flash page, e.g., 4 or 8 kB of one page). Fig. 2 illustrates how SOML read can speed up the throughput performance. Assume that there is one small subread1 that needs to access the part of page 0 on block 0 (the blue box), and another small subread that needs to access the part of page 0 on block 1 (the blue box). Under the conventional read operation, we need to read the two
+
+full pages in order. When enabling the SOML read opera-
+tion, these two small subreads can be serviced in parallel. The flash read latency for the SOML read operation TRSOEAMDL can be calculated as
+
+TRSOEAMDL = Max f × Triead , i ∈ [1, G]
+
+(2)
+
+where Triead is the read latency for the ith subread of SOML read, f (f ≥ 1) is the impact factor of the read latency in SOML read operation, e.g., 1.063 [24], and G is the maximal granularity of SOML read (e.g., 2 or 4). G specifies the maximal number of subreads that can be parallel read in SOML read. By default, G is set as 2 in this article. (Unless otherwise stated, we keep using this configuration.)
+However, several constraints restrict the construction of an SOML read from small subreads.
+1) Bitline Requirement: SOML read operation can be performed by accessing the subpages that do not share the same set of bitlines. For example, any two full-page2 reads cannot be combined to one SOML read (e.g., page 3 on block 0 with the purple box, and page 2 on block 1 with the yellow box).
+2) Block Requirement: SOML read operation can be performed by accessing the subpages that do not share the same set of block decoders. For example, multiple subreads in the same flash block cannot simultaneously execute as an SOML read. As a result, these hardware constraints become a major challenge when adopting the SOML read operation in modern flash memory storage systems.
+
+D. 3-D NAND Flash Memory
+As mainstream SSDs employ 3-D NAND flash technology to boost the flash memory capacity, we briefly discuss the 3-D flash architecture and its variability characterization.
+To remarkably improve storage density, 3-D NAND flash technology stacks flash cells in the vertical direction. Fig. 3(a) and (b) presents the 3-D charge trap flash cell structure with the front view and the top view, respectively. Different from the planar flash (i.e., 2-D flash), the most modern 3-D flash cell employs the charge trap transistor to store charges. Inside the 3-D flash cell, the substrate is surrounded by the tunnel oxide, charge trap, gate oxide, and then control gate, from
+
+1the read request that only needs to fetch the partial data of one data page.
+
+2We use terms full-page and page interchangeably.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+771
+
+inside to outside. The two ends of the substrate are the source and the drain of 3-D flash cell.
+With the high scalability of the 3-D flash cell, a single etching can vertically punch through multiple layers (i.e., z direction) and connect the 3-D flash cells from these layers. Fig. 3(c) illustrates the 3-D flash memory organization. The N 3-D flash cells in vertical direction from N layers are connected through a bitline. All these N 3-D flash cells share one charge trap. The M 3-D flash cells in the same layer are grouped into a wordline. Depending on the number of bits stored in one flash cell, a wordline may include one or multiple pages, i.e., one page for SLC flash memory, two pages for MLC flash memory, three pages for TLC flash memory, and four pages for QLC flash memory. All these pages from N layers are aligned to form a flash block.
+As shown in Fig. 3(c), 3-D flash memory exhibits nonnegligible vertical interlayer process variation (PV) and horizontal intralayer process similarity (PS) [40]. Due to the physical process characteristic of etching technology, the flash cells from different layers have different-diameter cylinders. Bigger diameter for the flash cells at the topmost layers, and smaller diameter for the flash cells at bottom layers. This interlayer variability leads to a significant RBER variation for 3-D flash cells from different layers. This is because, under a bigger diameter of the flash cell, charges are harder to leak away, making charge stability greater. With the higher stability, RBER of the flash cell is lower, and vice versa. On the other hand, the flash cells on the same layer show the homogeneous characteristics. This is because, the same etching step is used for these flash cells, making the homogeneous diameter between these cells. This intralayer similarity leads to similar RBER characteristics for these intralayer flash cells.
+III. MOTIVATION
+As previously described, it has become a major challenge to develop high-read-performance flash memory storage systems to meet the increasing performance demand of modern applications.
+Exploiting the read parallelism can dramatically reduce the average read waiting time of the read requests, thereby boosting the read performance of the NAND flash memory-based storage system. There are two conventional ways to parallel read. First, SSDs exploit the multiple levels of parallelism inside SSDs for multiple read requests to improve the read performance. However, parallel reads are not easy to trigger execution. Although there are four levels of parallelism inside SSDs, we can execute parallel read only when fetching data from the multiple specific pages that do not conflict with each other (e.g., multiplane read operation accesses two data pages at the same time that must have the same die, block, and page addresses). The strict constraints restrict the ratio of parallel read to regular reads, so the read performance is not significantly improved as the common expectation. Second, except the multiple pages can be read in parallel, the finegrained multiple subpages can also be accessed simultaneously to improve the read performance, if employing SOML read operation. As the number of subpage read requests increases,
+
+(a)
+(b)
+Fig. 4. Breaking one page into multiple subpages provides new solution for reducing the completion time for read requests: when adopting (a) baseline read scheme and (b) PaRR.
+the read performance improvement can be great. However, the performance improvement is much smaller when workloads contain a plentiful of full-page reads. In fact, any two fullpage reads cannot be accessed by the SOML read operation, due to the hardware constraint of unshared bitlines. As two pages inevitably share the same set of bitlines, it is impossible to read two pages in parallel with the SOML read operation.
+To summarize, the performance enhancement caused by parallel reads is limited only under few scenarios. Also, a majority of the workloads issue page read requests, which are bigger than the page size, cannot boost the read performance with SOML read operation. This observation motivated us to rethink how to exploit parallel read for full-page read requests fully. We next show one motivating example that motivates our design of the PaRR.
+A motivating example is shown in Fig. 4. Two read requests (requests A and B) targeting the same flash chip arrive at the time T0. Assume that by exploiting the regular parallelism inside SSDs or SOML read operation, the two read requests cannot be read in parallel. We assume the numbers of readretry operations for requests A and B are 6 and 7, respectively. When adopting a conventional read scheme, request A is first serviced to access the corresponding data, and then we deal with request B. Assume that it takes 1 time unit to service one read-retry step. As shown in Fig. 4(a), request A is completed at time T7, and then request B is completed at time T15. Therefore, the final completion time for these two read requests is T15.
+One read request can be split into the multiple subreads according to the targeting data location. As shown in Fig. 4, we can divide request A into subreads A1 and A2, where subread A1 accesses the first half of the page and subread A2 accesses the latter part of the same page. The read-retry steps for the two subreads are basically the same, i.e., 6 for both A1 and A2. This is because the two subpages within the same page are programmed/erased simultaneously. Then, these subpages have endured the same retention time and P/E cycles. As the main sources of data errors are retention time error and P/E error, the data errors are almost uniformly distributed in one full page. As a result, the read-retry step for each subpage within that page is almost the same. Therefore, if the SSD controller temporarily saves the recently used RRVs of subread A1, we can use the RRVs at the beginning of subread A2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+772
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+Then, the read-retry step for subread A2 can be reduced to 0. However, this read partition scheme, in general, requires more read-response time (7 time units for the subread A1, and 1 time unit for subread A2, so the total is 8 time units), when comparing with the conventional read scheme (7 time units for request A, including 1 time unit for read and 6 time units for the extra six read-retry steps).
+Alternatively, in this article, we explore how to leverage parallel read to reduce the read-response time. The basic idea is to identify subreads that can be performed in parallel with SOML read operation. Although the two read requests A and B cannot be read in parallel with the regular SOML read, two SOML reads can be performed when the two read requests are strategically divided into the multiple subreads. As shown in Fig. 4(b), the subreads A1 and B2 are executed by one SOML read operation first. The response time of one SOML read operation is determined by the response time of the slowest subread, even if other subreads can finish early. As subread A1 can be completed at time T7 and subread B2 will be read out at time T8, the response time of the SOML read operation is T8. After that, another SOML read services A2 and B1. As the SSD controller temporarily saves the RRVs of the subreads A1 and B2, this second SOML read can be read out with one time unit (SOML read completes at the time T9). Therefore, the final completion time for these two read requests is drastically reduced to time T9, which is faster than the conventional read scheme (at time T15). However, indiscriminately servicing subreads in parallel is unnecessary as some requests are delayed in service [e.g., T9 for request A in Fig. 4(b), while T7 for request A in Fig. 4(a)]. Therefore, in Section IV, we design the improved version of the PaRR.
+IV. PROPOSED MECHANISMS
+In this section, we first outline the system architecture of the proposed PaRR and then elaborate its major components. Finally, we discuss the power-off recovery and analyze its overhead.
+A. System Overview
+Fig. 5 presents an overview of the NAND flash memorybased SSD that has PaRR embedded in the FTL. PaRR is composed of three components: 1) a PRS; 2) a PRR; and 3) an APR. PRS is designed to explore possibilities in scheduling read requests to the previous reads in the read request queue (RRQ) in parallel. The design goal of PRR is to reduce the read-response time by repeatedly parallelizing read the subpages with the different read-retry steps, whereas APR aims to optimize parallel read the flash pages with the same read-retry steps. Overall, PaRR integrates both PRR and APR optimizations to improve the read performance of NAND flash memory-based SSD. Next, we elaborate on the three components of the PaRR scheme.
+B. Parallel Read Scheduling Strategy
+The design goal of the PRS is to maximize the concurrent reads when scheduling read requests to RRQ.
+
+Fig. 5. System overview with PaRR.
+
+After the address translation for one read request, the FTL scheduling unit (FSU) schedules the read request to RRQ of the targeting flash chip [13]. Note that each flash chip maintains the separate RRQ and the write request queue (WRQ), where reads are often prioritized over writes to provide the critical read performance. In the conventional data execution process, FSU dispatches the read request into the end of RRQ, and FSU adopts a first-input, first-output (FIFO) with the conditional queue size to process these reads at each chip.
+In contrast, in this article, PRS dispatches one read request to RRQ with a prerequisite check. PRS first predicates the RBER of the read targeting flash data page. By using the reliability model derived from previous work [30], [39], the RBER can be calculated as
+
+RBER = RBERcycle(PE) + RBERretention(RT) + RBERreaddisturb(RC) + RBERvariation(LC) (3)
+
+where PE is the current P/E cycle, and RT is the data retention time. RC is the read count, and LC is the page location. (Note that the regular SSD already keeps track of the P/E cycle and retention time, for ensuring SSD lifetime and reliability [36]. To get the read count, a counter is added for each wordline to maintain the read count. When querying the counter of the targeting wordline, we can get the read count.) RBERcycle denotes the bit error rate caused by the P/E cycles. RBERretention denotes the bit error rate caused by the retention time. RBERreaddisturb denotes the bit error rate caused by the read disturbance. RBERvariation denotes the bit error rate caused by the PV. The concrete RBER model can be determined by the offline profiling of NAND flash chip with the different conditions (PE, RT, RC, and LC). Since retention time effect is also affected by temperature, the temperature factor can be considered in (3) through Arrhenius’ law [1], [7], [19], [42]. As RT is the retention time under room temperature in (3), we can scale it under any temperature as follows:
+
+thigh = troom × exp
+
+Ea × Kb
+
+1− 1 Thigh Troom
+
+(4)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+773
+
+Fig. 6. Parallel read in PRR.
+where troom is the retention time under room temperature Troom, and thigh is the corresponding retention time under high temperature Thigh. Kb is the Boltzmann constant, which is set as 8.62 × 10−5 eV/K. Ea is activation energy constant, e.g., 1.1 eV. With the above RBER model, we can accurately predict the bit error rate of the read targeting page.
+If RBER is within the error correction capability of the default ECC in SSD, this incoming read is dispatched to the end of RRQ as usual. Otherwise, the read in the head of RRQ is first selected as the victim read. PRS checks the blockdecoder constraint for the incoming read and the victim read (these two reads should access the data that do not have the same set of block decoders). For example, if the maximal granularity of SOML read G is 2, one read needs to access data on an odd block, and another read needs to access data on an even block. If the block-decoder constraint is satisfied, these two reads get serviced with parallel read. Otherwise, the next read in RRQ is selected as the new victim read, and PRS tries to check the block-decoder requirement again with the victim read. If all the reads in RRQ cannot meet the block-decoder constraint, this incoming read is dispatched to the end of RRQ as usual. As RRQ has the conditional queue size (e.g., 64), the prerequisite check overhead is very small. Our experiments observe that most of the time RRQ only has one read on it (max. 23 reads), where the check overhead is negligible.
+When the multiple reads get serviced with parallel read, PRS further provides a 1-bit flag (PRmethod) in this parallel read node to state which PRR (or APR, we will elaborate them in detail in Sections IV-B and IV-C) is used. In the parallel read node, if the RBER value differences of the multiple reads are small, PRmethod is set to 1 (i.e., APR will be used). Otherwise, PRmethod is set to 0, that means PRR will be used to service these reads.
+C. Parallel Read Retry
+The design goal of the PRR is to reduce the read-response time by parallelizing read-retry operations.
+Fig. 6 illustrates how to simultaneously issue multiple fullpage reads in PRR, which includes the following three phases: 1) executing read division for each full-page read ( 1 ); 2) performing Nread SOML reads for the recombined subreads, where Nread means the number of reads in the parallel read
+
+node ( 2 ); and 3) performing regular read command to the failed reads of the second phase ( 3 ).
+Read Division in PRR: As the multiple reads in the parallel read node cannot be directly serviced in parallel by exploiting the regular parallelism inside SSD or SOML read operation, PRR first needs to do the read division ( 1 in Fig. 6). The each full-page read in the parallel read node of RRQ needs to be broken down into the fine-grained subreads, according to Nread. PRR breaks down each full-page read into the smaller Nread subreads, which are allocated to the targeting data page sequentially and evenly. In order to parallel read R0 and R1 in Fig. 6, R0 needs to be composed of two parts: 1) the subread R0.1 that targets the first half part of page 12 and 2) the subread R0.2 that targets the latter part of page 12. Similarly, R1 is divided into two subreads R1.1 and R1.2.
+SOML Reads in PRR: Based on the bitline requirements of SOML read, PRR selects the Nread adequate subreads to perform parallel subreads by issuing an SOML read command. As shown in Fig. 6, the subreads R0.1 and R1.2 can be performed by one SOML read, as these two subreads target different sets of bitlines. Then, the subreads R0.2 and R1.1 can be performed by another SOML read.
+After the first SOML read (the subreads R0.1 and R1.2) finishes with the completion of one subread, the SSD controller temporarily saves the recently used RRVs of these subreads (both the successful short-latency subread R0.1, and the unaccomplished long-latency subread R1.2). Then, the second SOML read (the subreads R0.2 and R1.1) is issued to simultaneously service the satisfactory subreads. PRR processes subread R0.2 with the saved RRVs of R0.1, whereas PRR processes subread R1.1 with the next RRVs of R1.2 (relative to the saved RRVs of R1.2). As the subreads R0.2 and R0.1 belong to the same read request R0, the optimal RRVs are basically the same. As PRR has saved the RRVs of the successful subread R0.1, subread R0.2 can succeed without triggering one read-retry step with the saved RRVs of R0.1. After this SOML read finishes, the short-latency read R0 successfully reads out the targeting data page, as both of the two subreads have been serviced (R0.1 and R0.2). However, the long-latency subread R1.1 may also fail in this second SOML read. Then, the SSD controller temporarily saves the RRVs of the unaccomplished long-latency subread R1.1.
+Regular Read in PRR: After applying these successive Nread SOML reads, long-latency read may fail while short-latency read completes. As PRR has saved the RRVs, we leverage the regular read command to read out the long-latency read, but starting with the next RRVs of the unaccomplished subread R1.1 ( 3 in Fig. 6). PRR uses one time unit to complete the read R1, as shown in Fig. 6. As a result, the read-response time of this long-latency read will reduce dramatically. With the above steps, all the read requests in the parallel read node are completed.
+Given that the latest RRVs are temporarily saved by the SSD controller, RRVs are only used for a short period of time (at the time while executing the parallel read). The memory overhead of RRVs is negligible.
+Handling the Misidentification Pages in PRR: Owing to the random error factors (e.g., the initial charge loss effect and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+774
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+Fig. 7. Parallel read in APR.
+circuit fluctuations) in the RBER model, the RBER predictions may be inaccurate. When this misidentification rarely occurs, PRR still works. When the first SOML read finishes, all the subreads are completed successfully. With the saved RRVs of the successful subreads, the second SOML read can fetch data out without triggering the read-retry step. Then, the regular reads of the third phase are not needed any more. Therefore, PRR also dramatically reduces the read-response time when handing the data pages with the same read-retry steps.
+D. Aggressive Parallel Read-Retry
+The design goal of the APR is to reduce the number of read-retry operations by parallelizing read-retry steps with the different aggressive RRVs.
+Fig. 7 illustrates how to simultaneously issue multiple reads in APR, which also includes the following three phases: 1) executing read division for each full-page read ( 1 ); 2) performing one SOML read for the multiple recombined subreads ( 2 ); and 3) performing Nread regular reads ( 3 ).
+Read Division in APR: Similar to PRR, every read in the parallel read node first needs to be broken down into the finegrained subreads, according to Nread ( 1 in Fig. 7). In order to simultaneously issue R2 and R3 in APR, R2 is composed of two parts: 1) the subread R2.1 that reads the first half part of the page 35 in block 3 and 2) the subread R2.2 that reads the latter part of the page 35 in block 3. R3 is divided into the two subreads R3.1 and R3.2, as well.
+SOML Read in APR: Based on the bitline requirements of SOML read, APR selects the Nread appropriate subreads to perform parallel subreads by issuing an SOML read command. When APR invokes a read-retry step for all the subreads, it reads the pages again with the different aggressive RRVs ( 2 in Fig. 7). Assuming that there are N read-retry steps, RRVs are VREF, VR1EF, VR2EF, . . . , VRNE−F1, VRNEF, respectively. VREF specifies the RRVs used at first, whereas VRi EF means the RRVs used at the ith read-retry step. Under the 1st readretry step in APR, the first subread accesses the data page with VR1EF, and the second subread accesses the page with VR2EF. After this read-retry step and if reads still fail, the first subread reads the same page again with VR3EF, and the second
+
+subread reads the data page with VR4EF, and so on. When one subread successfully reads out data, APR temporarily saves the recently used RRVs of the successful subread.
+To parallel read R2 and R3 in Fig. 7, the subreads R2.1 and R3.2 are combined into one SOML read. When invoking a read-retry operation, R2.1 reads the data page again with the 1st RRVs, VR1EF, meanwhile, R3.2 reads the data page again with the 2nd RRVs, VR2EF. As the optimal read-reference voltages should be VR5EF in this example, another read-retry operation will be invoked. Then, VR3EF and VR4EF will be used in the next read-retry step. Finally, R2.1 reading the data page with VR5EF will succeed. After the SOML read is finished, one subread has been completed at most, due to the different aggressive RRVs used for these subreads.
+Regular Reads in APR: After applying one SOML read, the Nread regular reads (e.g., R2 and R3) can be then invoked to read out data pages with the last saved RRVs of the successful subread ( 3 in Fig. 7). Using the last saved RRVs, all the regular reads will finish without triggering the read-retry step.
+Handling the Misidentification Pages in APR: Owing to the random error factors (e.g., the initial charge loss effect, circuit fluctuations) in the RBER model, the RBER predictions may be inaccurate. When this misidentification rarely occurs, APR still works. The only difference is that some regular reads are completed with more than one read-retry step in the third phase of APR. Note that these subsequent reads using the latest RRVs can read out data pages with the reduced read-retry steps when comparing with the traditional read scheme.
+Feasibility: It is to be noted that the proposed APR is practical. This is because much prior work proposes strategies set the different RRVs for the different data locations [17], [32], [45], which is similar to APR that we apply the different RRVs for the multiple subreads of an SOML read. When performing a read operation to access a page in a block (the traditional scenario), the flash controller applies the corresponding RRVs to the selected WL while a pass voltage is applied to all unselected WLs of the selected NAND-strings. In the same manner, when performing an SOML read operation to access multiple subpages in multiple blocks (APR case), the flash controller can apply the corresponding different RRVs to the selected multiple WLs while a pass voltage is applied to all unselected WLs.
+E. Scalability: When Extending to High-Density MLC/TLC SSDs
+PaRR can still work under high-density MLC/TLC NAND flash memory. But the efficiency of PaRR under high-density flash memory is not that effective.
+PRR Used for High-Density Flash Memory: PRR can be directly used for high-density flash memory. For example, R0 and R1 are both arriving at time 0 in Fig. 8. Assume that R0 accesses LSB page 12 on block 1, and R1 accesses CSB page 26 on block 2. To simplify the discussion, assume that reading one CSB page needs 2 time units, while reading one LSB page needs 1 time unit. Then, the final completion time for these two read requests is T20 under PRR. If adopting a conventional read scheme, the final completion time for these
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+775
+
+TABLE I MAIN SSD SPECIFICATION
+
+Fig. 8. Parallel read in PRR used for high-density flash.
+two read requests is T28. Therefore, the read-response time can be reduced when compared with the conventional read scheme.
+APR Used for High-Density Flash Memory: APR can be used for high-density MLC/TLC flash memory, but only used for the same type of multiple pages (e.g., the multiple LSB pages, or the multiple CSB pages, or the multiple MSB pages). Therefore, we leave the design of more effective schemes in high-density flash memory in our future work.
+F. Power-Off-Recovery and Overhead Analysis
+Power-Off-Recovery: The temporarily saved last RRVs are maintained in the internal DRAM space of SSD, both under PRR and APR. When a sudden power-off occurs, the saved last RRVs information will be lost. Similar to the traditional poweroff recovery process, the mapping table can be rebuilt with the metadata information stored in the out-of-bound (OOB) area of flash pages. In addition, the interrupted parallel read in PaRR restarts. Since sudden power-offs are rare, the interrupted read overhead is not critical.
+Preferably, we can further leverage the fact that flash industry heavily employs capacitor-backed RAM as a durable buffer to address the lost in voltages information [38], [44]. As the size of the temporarily saved last RRVs is very small, we can directly save them in the cap-backed RAM to prevent the accidental loss in a sudden power-off. The RAM storage overhead is negligible.
+Overhead Analysis: PaRR, while improving the read performance of SSD, introduces two extra types of overheads: 1) storage overhead and 2) firmware overhead. Note that PaRR can be implemented in the SSD controller firmware and, thus, PaRR requires no change to NAND flash chips, or any other hardware in SSD.
+For the firmware overhead, PaRR dispatchs read requests to RRQ with checking conditions. The RBER predicting overhead is negligible as it can be obtained directly from the RBER model. Since RRQ has the conditional queue size (e.g., 64), the prerequisite check overhead is also very small.
+For the storage overhead, PaRR needs memory space for temporarily saving the last RRVs. As RRVs are temporarily used only under a period of PRR and APR, the memory
+
+overhead is negligible. Then, in PRS, the read node used for parallel read should include information for multiple subreads, which is slightly bigger than the conventional read nodes. However, as the length of the intrachip RRQ is not too long, e.g., 64, the latency benefit is always higher than its node overhead.
+V. EXPERIMENT AND ANALYSIS
+In this section, we present the experimental methodology and the setting details, and then analyze the results with comparison to the state-of-the-art schemes.
+A. Methodology
+We implemented PaRR in the event-driven SSD simulator, SSDSim [16], to evaluate the effectiveness of our proposed scheme. The simulated 256-GB capacity 3-D flash-based SSD has 48 horizontal layers, and the simulated SSD has four channels, each of which is connected to 2 NAND flash memory chips. The key NAND flash parameters are listed in Table I. The latency of sensing one data page, the latency of transferring one data page, the latency of decoding one data page are 90, 16, and 20 µs, respectively. The maximal granularity of SOML read is set as 2.
+The number of read-retry operations NRR for each read is decided by the different operating conditions (P/E cycle and retention time) and the location conditions (read count, pagesensitive in 3-D flash). Based on settings in previous work [7], [23], [36], [40], using the location, read count, P/E-cycle count, and retention time of data pages, NRR for each read operation is decided individually with the RBER model. As the location conditions are fixed for each read request, we vary the operating conditions in SSD to collect the results. As the publicly accessible I/O traces lack the information about the exact time when each page was initially written, we assume the same last write time for every page at the beginning of a trace. When a data page is newly written or updated during running tests, the last write time of the data page is then updated. Following this methodology, the retention time can be calculated as the length of time since a data page was programmed recently.
+We used 12 real-world public I/O traces, which are obtained from the well-known Microsoft Research Cambridge and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+776
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+TABLE II CHARACTERISTICS OF THE EVALUATED I/O WORKLOADS
+
+Fig. 9. Normalized average I/O response time under different schemes.
+
+OpenStor [21], [33]. These workloads are widely used in the previous studies [7], [9], [27], [34]. In total, we study 16 traces to ensure that we cover a diverse set of real data workloads. Table II summarizes characteristics of our disk traces in terms of total I/Os, read ratio, write ratio, total size, and the different size ratio with the different access granularity. The total I/Os means the number of total requests, and the read/write ratio means that the percentage of read/program operations in the traces. The total size shows the data page size of total requests.
+In the experiments, these schemes are implemented. 1) Baseline: This scheme supports the state-of-the-art PIQ
+strategy [15] to exploit the multiple levels of parallelism inside SSDs for multiple full-page read requests, and SOML read operation to parallel read the multiple subpages. 2) PRR: This scheme is built on top of the Baseline. PRR reduces the read-response time by repeatedly parallelizing read-retry operations. 3) APR: This scheme is built on top of the Baseline. APR aims to optimize parallel read the flash pages with the same read-retry steps, with the different aggressive RRVs. 4) PaRR: This is the scheme proposed in this work, which integrates both PRR and APR optimizations, to effectively improve the I/O performance of flash memory-based storage system.
+B. I/O Performance Comparison
+1) Average I/O Response Time Comparison: To show the efficiency of PaRR on the I/O performance improvement, Fig. 9 plots the average I/O response time comparison under different operating conditions, normalized to Baseline. We make three key observations from Fig. 9.
+
+First, the designed techniques significantly outperform the Baseline. On average, PRR and APR reduce the response time by 31.98%, and 21.79% on average (up to 66.38% and 69.81%) compared to the Baseline, respectively. Then, PaRR which integrates both PRR and APR optimizations, further improves the I/O performance. PaRR reduces the I/O response time by 33.77% on average (up to 81.81%) over the Baseline.
+Second, the performance improvement of PRR is more significant than that of APR. This is because the chance of triggering parallel read of PRR is higher than that of APR, which is more obvious in PaRR. On average, under PaRR, the number of parallel read nodes, where PRmethod is equal to 0 (PPR is used), is 194 013. The number of the parallel read node where PRmethod is equal to 1 (APR is used), is only 19 151. Then, the improvement of PRR is more remarkable than APR in PaRR.
+Third, if the operating conditions are worse, the proposed techniques can improve the more I/O performance. There are four different operating conditions in the results: 1) case 1 (0 P/E-cycle and 3-month retention time); 2) case 2 (1K P/Ecycle and 3-month retention time); 3) case 3 (1K P/E cycles and 6-month retention time); and case 4 (2K P/E cycles and 6-month retention time). As can be observed, for all the traces, the I/O performance improvement of PaRR increases when SSD becomes older. For example, from case 1 to case 4, the average I/O performance improvement is from 13.45% to 43.15%. This is because, when the flash chip becomes older, the read-retry steps are bigger for each read command (on average 4.5 under case 1, 16 under case 4). As a result, under the aged SSD with more read-retry steps, the efficiency of PaRR is more remarkable, significantly improving the I/O performance of flash storage system.
+2) Average Read-Response Time Comparison: To further understand the reason behind the observed I/O performance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+777
+
+Fig. 10. Normalized average read-response time comparison.
+
+Fig. 11. Normalized average write-response time comparison.
+
+Fig. 12. I/O performance comparisons among PaRR and the state-of-the-art schemes.
+
+improvements, we next plot the normalized average readresponse time under different read schemes in Fig. 10. It is observed that on average, PaRR achieves 35.58% readresponse time reduction compared to the Baseline. The read performance improvement comes from two aspects: first, due to the read parallelism of the pages with the different read-retry steps both in PRR and PaRR, the read-response time can be reduced. Second, due to the read parallelism of the pages with the same read-retry steps both in APR and PaRR, the number of read-retry steps can be reduced, reducing the read-response time. Overall, the results clearly demonstrate the effectiveness of PaRR in improving read performance.
+3) Average Write Response Time Comparison: Next, we plot the average write response time comparison under different operating conditions, normalized to Baseline, as shown in Fig. 11. Interestingly, we find that the write performance improvement is also significant, although the proposed PaRR scheme is designed to improve read performance. As shown in Fig. 11, PaRR reduces the average write response time by 32.24%, compared to the Baseline. This is because SSDs have the characteristics of asymmetric I/O latencies for read and write operations, and SSDs always schedule the read operations with a higher priority compared to the write operations. Therefore, writes need to wait for the completion of all the reads in the I/O queue. Consequently, reducing the overall read-response time in PaRR also shortens the write-response time simultaneously.
+
+read-retry steps. Here, we compare the normalized I/O performance under the state-of-the-art read-retry optimization schemes and summarize the results in Fig. 12, i.e., modelRRVS [29], tunedRRVs [40], PnAR2 [36], and PnAR2+PaRR, respectively. All the results are normalized to Baseline. The modelRRVs scheme reads the data pages with the calculated RRVs using the threshold voltage distribution model. The tunedRRVs scheme reduces the read-retry steps by reusing the RRVs that have been used for other data pages exhibiting PS characteristics. The PnAR2 scheme pipelines the consecutive read-retry steps, reducing the sensing latency of the read operation.
+As shown in Fig. 12, it is observed that modelRRVs reduces the average response time over the Baseline. As tunedRRVs reuses the RRVs known for each flash layer, tunedRRVs significantly improves the I/O performance. Furthermore, PnAR2 further improves the I/O performance when compared with tunedRRVs. This is because, PnAR2 leverages the CACHE READ command to efficiently reduce the read-response time. The PnAR2+PaRR scheme, that is built on top of PnAR2, further improves I/O performance significantly. Compared with PnAR2, PnAR2+PaRR reduces the average response time by up to 39.23% (7.21% on average). Hence, we conclude that our PaRR scheme effectively complements the existing stateof-the-art schemes to further eliminate the read performance penalty of modern SSDs.
+
+C. Comparisons With Other Schemes
+Several state-of-the-art schemes have been proposed to alleviate the read performance penalty by optimizing the
+
+VI. RELATED WORK
+We briefly discuss related prior work that aims to mitigate the read-retry overheads in NAND flash memory-based SSDs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+778
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+RRV-Related Proposals: The tuned starting RRVs approaches fetch data with the recorded starting RRVs that are saved by previous read operations within the required granularity (e.g., block level in ROR [4] and layer level [32], [40]), therefore reducing the read-retry steps for the read operations. These approaches assume that some data pages exhibit PS characteristics, such that the recorded RRVs are very close to the actual optimal RRVs. However, given that DRAM space is a precious resource, it is not always preferable to allocate large DRAM space to record these latest RRVs at the required granularity. Furthermore, the periodical update overhead for updating the latest RRVs is prohibitively high. In addition, the read-retry steps cannot be avoided entirely, as at least three retry steps exist in the aged SSD [36].
+Model-based approaches calculate RRVs for read operation using the estimated the shift of voltage states in flash cells with their different models of the threshold voltage distribution [29], [31], [35]. Similarly, these approaches read data pages with the calculated RRVs that are close to the optimal RRVs. Therefore, they reduce the number of read-retry steps of read operations. However, given that there are diverse sources of flash errors in modern SSDs, it is very challenging to get the accurate models.
+Li et al. [23] proposed a sentinel-cell approach to reduce the read-retry steps, by utilizing the error characteristics among flash cells. As errors are nearly uniformly distributed in one wordline, the sentinel cells that are a small set of spare cells in each page store the known data patterns. Then, when reading the targeting page, the page’s errors can be accurately estimated, read can be started with the near-optimal RRVs such that it reduces the number of read-retry operations.
+Park et al. [36] pipelined the consecutive read-retry steps using the particular CACHE READ command and reduces the sensing latency in the read operation, such that the total read latency can be minimized. However, due to the pipelined readretry steps, there is always one more page sensing than the traditional read scheme. The more number of page sensing, the more deteriorated read disturbance. Therefore, the deteriorated read disturbance is an extremely critical issue, especially for read-intensive applications.
+Even though all the above works help alleviate the retryinduced problems, in all cases, modern 3-D SSDs incur the read-retry step even under a zero retention time; that is, the read-retry overhead is not addressed in any of these prior works. Our proposal can be combined with them to further improve the read performance.
+Refresh-Related Proposals: There is a large body of prior work to reduce the retry overhead by leveraging data refresh in SSDs [5], [6], [8], [11], [12], [14], [26], [28]. To avoid the read failure, before the errors surpass the error correction capability of ECC, the refresh request periodically reads the data out, corrects possible errors, and then remaps the stored data into a new location. Hence, these approaches result in the reduction of the overall number of read-retry steps in the long run. As the reliability issue in the modern SSDs is quite deteriorated, refresh should be triggered frequently. Furthermore, the refresh request interferes with the user I/O requests, degrading the
+
+I/O performance of the storage device. In addition, the flash endurance is highly correlated with the program/erase (P/E) cycles. The frequent writes in the refresh requests contribute to severe write amplification, thus degrading the flash memory lifetime.
+Parallel-Read-Related Proposals: Considerable research efforts have been devoted to thoroughly investigating the importance of exploiting the internal parallelism in SSDs by reading data pages in parallel.
+Prior works [2], [3], [22] propose to execute page-level read operations in parallel under specified conditions to thoroughly exploit the internal parallelism of SSDs, therefore achieving bandwidth improvement without sacrificing read-response time. However, given that parallel reads do not easily trigger execution, the strict constraints of parallel reads restrict the I/O performance enhancement in SSDs.
+Except the page-level parallel reads, Park et al. [37] proposed the fine-grained subpage-parallel read scheme to simultaneously access multiple subpages that come from one same data page. SOML read [24] is proposed to improve the intrachip read parallelism by enabling the parallel read of multiple subpages that can come from different pages under the same flash chip. Nie et al. [34] regrouped the subpage requests into the SOML read operation by exploiting the interlayer PV, reducing the wait time of some subpage requests such that improves the read performance.
+Note that given the above parallel read related proposals help to improve the I/O performance, these works cannot address the read-retry overheads in SSDs directly. Different from these works, systems using our scheme can reduce the read-retry steps while improving the I/O performance synchronously.
+VII. CONCLUSION
+In this article, we proposed a PaRR for 3-D NAND flashbased SSDs. To parallel read the flash pages, PaRR can reduce the read-response time by parallelizing read-retry operations. Furthermore, PaRR reduces the read-retry steps with the different aggressive RRVs, if simultaneously reading the data pages that exhibit virtually equivalent reliability characteristic. The results demonstrated that PaRR improves the I/O performance when compared with the state-of-the-art schemes.
+REFERENCES
+[1] S. Arrhenius, “Über die dissociationswärme und den einfluss der temperatur auf den dissociationsgrad der elektrolyte,” Zeitschrift für Physikalische Chemie, vol. 4, no. 1, pp. 96–116, 1889.
+[2] S. Bai and X.-L. Liao, “A parallel flash translation layer based on page group-block hybrid-mapping method,” IEEE Trans. Consum. Electron., vol. 58, no. 2, pp. 441–449, May 2012.
+[3] A. Berman, “High-performance solid state drive with parallel read scheme,” in Proc. 9th Non-Volatile Memory Syst. Appl. Symp. (NVMSA), 2020, pp. 1–6.
+[4] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. Int. Symp. High-Perform. Comput. Archit. (HPCA), 2015, pp. 551–563.
+[5] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. Int. Conf. Comput. Des. (ICCD), 2012, pp. 94–101.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+CUI et al.: IMPROVING 3-D NAND SSD READ PERFORMANCE BY PARALLELIZING READ-RETRY
+
+779
+
+[6] J. Cui, C. Liu, J. Liu, J. Huang, and L. T. Yang, “Exploiting uncorrectable data reuse for performance improvement of flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 6, pp. 1785–1798, Jun. 2022.
+[7] J. Cui, J. Liu, J. Huang, and L. T. Yang, “SmartHeating: On the performance and lifetime improvement of self-healing SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 40, no. 1, pp. 52–65, Jan. 2021.
+[8] J. Cui, J. Liu, J. Huang, H. Zhu, and L. T. Yang, “ApproxRefresh: Enabling uncorrectable data reuse on flash memory with approximate read awareness,” in Proc. ACM SIGPLAN/SIGBED Conf. Lang. Compilers Tools Embedded Syst. (LCTES), 2020, pp. 26–37.
+[9] J. Cui, W. Liu, J. Huang, and L. T. Yang, “ADS: Leveraging approximate data for efficient data Sanitization in SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 6, pp. 1771–1784, Jun. 2022.
+[10] J. Cui, Y. Zhang, L. Shi, C. J. Xue, W. Wu, and J. Yang, “ApproxFTL: On the performance and lifetime improvement of 3-D NAND flashbased SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 10, pp. 1957–1970, Oct. 2018.
+[11] Y. Di, L. Shi, C. Gao, Q. Li, C. J. Xue, and K. Wu, “Minimizing retention induced refresh through exploiting process variation of flash memory,” IEEE Trans. Comput., vol. 68, no. 1, pp. 83–98, Jan. 2019.
+[12] Y. Di, L. Shi, K. Wu, and C. J. Xue, “Exploiting process variation for retention induced refresh minimization on flash memory,” in Proc. Des. Autom. Test Europe Conf. Exhibit. (DATE), 2016, pp. 391–396.
+[13] N. Elyasi, M. Arjomand, A. Sivasubramaniam, M. T. Kandemir, C. R. Das, and M. Jung, “Exploiting intra-request slack to improve SSD performance,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2017, pp. 375–388.
+[14] E. Farjallah, J.-M. Armani, V. Gherman, and L. Dilillo, “Improvement of the tolerated raw bit error rate in NAND flash-based SSDS with selective refresh,” Microelectron. Rel., vol. 96, pp. 37–45, May 2019.
+[15] C. Gao et al., “Exploiting parallelism for access conflict minimization in flash-based solid state drives,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 37, no. 1, pp. 168–181, Jan. 2018.
+[16] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and S. Zhang, “Performance impact and interplay of ssd parallelism through advanced commands, allocation strategy and data granularity,” in Proc. Int. Conf. Supercomput., 2011, pp. 96–107.
+[17] C.-H. Hung et al., “Layer-aware program-and-read schemes for 3D stackable vertical-gate BE-SONOS NAND flash against cross-layer process variations,” IEEE J. Solid-State Circuits, vol. 50, no. 6, pp. 1491–1501, Jun. 2015.
+[18] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. USENIX Conf. File Storage Technol. (FAST), 2013, pp. 243–256.
+[19] M. Kim et al., “RealWear: Improving performance and lifetime of SSDs using a NAND aging marker,” Perform. Eval., vol. 145, no. 3, pp. 120–121, 2021.
+[20] M. Kim et al., “Evanesco: Architectural support for efficient data sanitization in modern flash-based storage systems,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2020, pp. 1311–1326.
+[21] M. Kwon et al., “TraceTracker: Hardware/software co-evaluation for large-scale i/o workload reconstruction,” in Proc. IEEE Int. Symp. Workload Characterization (IISWC), 2017, pp. 87–96.
+[22] B. Li et al., “Maximizing bandwidth management FTL based on read and write asymmetry of flash memory,” in Proc. 36th Int. Conf. Massive Storage Syst. Technol. (MSST), 2020, pp. 1–10.
+[23] Q. Li et al., “Shaving retries with sentinels for fast read over highdensity 3D flash,” in Proc. Annu. Int. Symp. Microarchit. (MICRO), 2020, pp. 483–495.
+[24] C.-Y. Liu, J. B. Kotra, M. Jung, M. T. Kandemir, and C. R. Das, “SOML read: Rethinking the read operation granularity of 3D NAND SSDs,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2019, pp. 955–969.
+[25] C.-Y. Liu, Y. Lee, M. Jung, M. T. Kandemir, and W. Choi, “Prolonging 3D NAND SSD lifetime via read latency relaxation,” in Proc. Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS), 2021, pp. 730–742.
+[26] R. Liu, C.-L. Yang, and W. Wu, “Optimizing NAND flash-based SSDs via retention relaxation,” in Proc. USENIX Conf. File Storage Technol. (FAST), vol. 11, 2012, p. 80.
+[27] W. Liu, J. Cui, J. Liu, and L. T. Yang, “MLCache: A space-efficient cache scheme based on reuse distance and machine learning for NVMe SSDs,” in Proc. Int. Conf. Comput.-Aided Des. (ICCAD), 2020, pp. 1–9.
+
+[28] Y. Luo, Y. Cai, S. Ghose, J. Choi, and O. Mutlu, “WARM: Improving NAND flash memory lifetime with write-hotness aware retention management,” in Proc. IEEE Symp. Massive Storage Syst. Technol. (MSST), Aug. 2015, pp. 1–14.
+[29] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Enabling accurate and practical online flash channel modeling for modern MLC NAND flash memory,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2294–2311, Sep. 2016.
+[30] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “HeatWatch: Improving 3D NAND flash memory device reliability by exploiting selfrecovery and temperature awareness,” in Proc. Int. Symp. High-Perform. Comput. Archit. (HPCA), Feb. 2018, pp. 504–517.
+[31] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “HeatWatch(draft): Optimizing 3D NAND read operations with selfrecovery and temperature awareness,” in Proc. Int. Symp. High-Perform. Comput. Archit. (HPCA), 2018, pp. 1–14.
+[32] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,” Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 3, p. 37, 2018.
+[33] D. Narayanan, A. Donnelly, and A. Rowstron, “Write off-loading: Practical power management for enterprise storage,” ACM Trans. Storage, vol. 4, no. 3, pp. 1–23, 2008.
+[34] S. Nie, Y. Zhang, W. Wu, and J. Yang, “Layer RBER variation aware read performance optimization for 3D flash memories,” in Proc. Des. Autom. Conf. (DAC), Jul. 2020, pp. 1–6.
+[35] N. Papandreou et al., “Reliability of 3D NAND flash memory with a focus on read voltage calibration from a system aspect,” in Proc. 19th Non-Volatile Memory Technol. Symp. (NVMTS), 2019, pp. 1–4.
+[36] J. Park, M. Kim, M. Chun, L. Orosa, J. Kim, and O. Mutlu, “Reducing solid-state drive read latency by optimizing read-retry,” in Proc. 26th ACM Int. Conf. Archit. Support Program. Lang. Oper. Syst., vol. 1, 2021, pp. 702–716.
+[37] J. Park, M. Kim, S. Lee, and J. Kim, “Improving I/O performance of large-page flash storage systems using subpage-parallel reads,” in Proc. IEEE 7th Non-Volatile Memory Syst. Appl. Symp. (NVMSA), 2018, pp. 25–30.
+[38] T. Pott. “Supercapacitors Have the Power to Save you From Data Loss.” 2014. [Online]. Available: http://www.theregister.co.uk/2014/09/ 24/storage_supercapacitors/
+[39] Z. Shen, L. Han, C. Ma, Z. Jia, T. Li, and Z. Shao, “Leveraging the interplay of RAID and SSD for lifetime optimization of flash-based SSD RAID,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 40, no. 7, pp. 1395–1408, Jul. 2021.
+[40] Y. Shim, M. Kim, M. Chun, J. Park, Y. Kim, and J. Kim, “Exploiting process similarity of 3D flash memory for high performance SSDs,” in Proc. Int. Symp. Microarchit. (MICRO), vol. 1, 2019, pp. 211–223.
+[41] A. S. Spinelli, C. M. Compagnoni, and A. L. Lacaita, “Reliability of NAND flash memories: Planar cells and emerging issues in 3D devices,” Computers, vol. 6, no. 2, p. 16, 2017.
+[42] Method for Developing Acceleration Models for Electronic Component Failure Mechanisms, Standard JESD91a, 2003.
+[43] Q. Xiong et al., “Characterizing 3D floating gate NAND flash: Observations, analyses, and implications,” ACM Trans. Storage, vol. 14, no. 2, pp. 1–31, 2018.
+[44] S. Yan et al., “Tiny-tail flash: Near-perfect elimination of garbage collection tail latencies in NAND SSDs,” ACM Trans. Storage, vol. 13, no. 3, pp. 1–26, 2017.
+[45] V. Ye, “The solution to bit error non-uniformity of 3D NAND,” in Proc. Flash Memory Summit, 2017, pp. 1–26.
+Jinhua Cui (Member, IEEE) received the B.S. degree from Southwest University, Chongqing, China, in 2012, and the Ph.D. degree in computer science from Xi’an Jiaotong University, Xi’an, Shaanxi, China, in 2018.
+She was also a visiting Ph.D. student with the Computer Science Department, University of Pittsburgh, Pittsburgh, PA, USA. She is currently an Associate Professor with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China. Her current research interests include NAND flash memory-based storage system, approximate storage, big data, and cloud computing.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+780
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 42, NO. 3, MARCH 2023
+
+Zhimin Zeng received the B.S. degree from the Dalian University of Technology, Dalian, China, in 2021. He is currently pursuing the M.S. degree with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China.
+His research interests include nonvolatile memory and machine learning.
+
+Weiqi Yuan is currently pursuing the B.S. degree with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China.
+His research interests include nonvolatile memory and AI.
+
+Jianhang Huang received the B.S. and M.S. degrees from Xi’an Jiaotong University, Xi’an, Shaanxi, China, in 2012 and 2015, respectively, where he is currently pursuing the Ph.D. degree under the guidance of Prof. W. Wu.
+His major research interests include cluster rendering, distributed tracing, and flash-memory-based storage system.
+
+Laurence T. Yang (Fellow, IEEE) received the B.E. degree in computer science and technology from Tsinghua University, Beijing, China, in 1992, and the Ph.D. degree in computer science from the University of Victoria, Victoria, BC, Canada, in 2006.
+He is currently a Professor with the School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China, and the Department of Computer Science, St. Francis Xavier University, Antigonish, NS, Canada. His research has been supported by the National Sciences and Engineering Research Council and the Canada Foundation for Innovation. His research interests include parallel and distributed computing, embedded and ubiquitous/pervasive computing, and big data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:09:48 UTC from IEEE Xplore. Restrictions apply.
+
+

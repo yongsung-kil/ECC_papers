@@ -1,0 +1,397 @@
+2026 6th Middle East and North Africa Communications Conference (MENACOMM) | 979-8-3315-5056-1/26/$31.00 ©2026 IEEE | DOI: 10.1109/MENACOMM69507.2026.11532867
+
+Would Learning Help? Adaptive CRC–QC-LDPC Selection for Integrity in 5G-NR V2X
+
+Sarah Al-Shareeda†§lxxvii, Gulcihan Ozdemir†, Arouj Fatima∗∗, Ma˘da˘lin-Dorin Popxi, Bander A. Jabrx, Yasser Bin Salamahx, and Jacques Demerjian¶‡‡
+†Informatics Institute, Istanbul Technical University, Turkey §Center for Automotive Research (CAR), The Ohio State University, USA
+lxxvii
+Department of Computer System and Technology, University of Malaya, Malaysia ∗∗Emerging Energy Contracting Est., Bahrain
+xi Computer and Information Technology Department, Politehnica University of Timis¸oara, Romania x Computer Engineering and Electrical Engineering Departments, King Saud University, Riyadh, Saudi Arabia
+¶LaRRIS, Faculty of Sciences, Lebanese University, Lebanon ‡‡Faculty of Arts and Sciences, Holy Spirit University of Kaslik (USEK), Lebanon
+{alshareeda, ozdemirg}@itu.edu.tr, arouj26@gmail.com, madalin.pop@upt.ro,
+{bjabr,ybinsalamah}@ksu.edu.sa, jacques.demerjian@ul.edu.lb
+
+Abstract—Vehicle-to-everything (V2X) communications impose stringent physical-layer integrity requirements, particularly under short-packet transmission and mobility-induced channel variation. This paper studies whether standard-compliant online selection of Cyclic Redundancy Check (CRC) polynomials and Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) coding rates can reduce silent (undetected) errors in 5G New Radio (5GNR) V2X links. The joint configuration problem is formulated as a lightweight Contextual Bandit (CB) with a small, discrete action space, and a discounted LinUCB policy is evaluated against greedy online adaptation and a conservative fixed baseline. A 5G-NR-compliant physical-layer simulation is developed using Sionna, modeling mobility through time-correlated Rayleigh fading, where vehicle speed governs channel correlation, and non-stationary interference via a two-state Markov process. The learning agent operates on coarse receiver feedback, including a noisy Signal-to-Noise Ratio (SNR) estimate and indicators of burst interference and deep fades, and targets minimization of the Undetected Error Probability (PUE) while accounting for the Detected Error Probability (PDE). Overall, our objective is to delineate the mobility regimes in which learning-assisted CRC–QC-LDPC configuration improves physical-layer integrity in 5G-NR V2X systems. Our results indicate that learningassisted adaptation is most effective at low to moderate mobility, reducing PUE by up to 50–70% relative to greedy selection in the low-SNR regime (−5 to 5 dB) and approaching the best fixed configuration at higher Eb/N0. At high mobility (≥ 180 km/h), fast channel decorrelation weakens temporal predictability, limiting the effectiveness of online learning and reducing performance differences across policies.
+Index Terms—5G-NR, V2X, CRC, QC-LDPC, PUE, mobility, time-correlated fading, bursty interference, Contextual Bandits
+
+is ensured through a concatenated error-control architecture that combines Cyclic Redundancy Check (CRC) codes for error detection with powerful Forward Error Correction (FEC) schemes, most notably Quasi-Cyclic Low-Density ParityCheck (QC-LDPC) codes. These mechanisms are standardized and highly optimized; however, their configuration remains largely rule-based and quasi-static, determined primarily by payload length, service type, and nominal coding rate, rather than instantaneous channel dynamics or decoder outcomes. Such fixed, standard-compliant configurations are designed through extensive offline analysis and have proven effective under quasi-stationary channel assumptions, prioritizing determinism, low complexity, and certification feasibility [2].
+
+I. INTRODUCTION
+5G New Radio (5G-NR) systems are designed to support Vehicle-to-Everything (V2X) services operating under Ultra-Reliable Low-Latency Communication (URLLC) requirements, where stringent reliability targets and millisecondlevel latency constraints are fundamental to safety-critical operation [1]. At the physical layer, see Fig. 1, integrity
+
+Fig. 1: 5G-NR V2X protocol stack supporting both the direct PC5 sidelink and the Uu air interface, highlighting PHYlayer CRC-based error detection and QC-LDPC-based error correction mechanisms considered in this work.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+In highly mobile V2X environments, wireless channel conditions can vary rapidly due to mobility-induced fading, Doppler effects, and bursty interference [3], [4]. These dynamics can rapidly invalidate the assumptions under which offline physical-layer configurations are selected. While fixed configurations are robust under nominal operating conditions, their lack of adaptability may lead to inconsistent performance under such dynamics, particularly in short-packet integritysensitive regimes. In these regimes, Undetected Errors (UE) are of particular concern, as erroneous packets that pass CRC verification cannot be mitigated through retransmission and may silently corrupt higher-layer processing, directly compromising physical-layer integrity [5] where even small increases in the UE Probability (PUE) can have a disproportionate impact on safety-critical operation. Recent performance evaluations of 5G-NR V2X sidelink communication further emphasize that maintaining low latency and high reliability under realistic vehicular mobility remains challenging, especially in the presence of dynamic interference and fast channel decorrelation [6].
+A substantial body of literature has investigated errorcontrol design and optimization in 5G-NR systems, as depicted in Fig. 2. Prior studies examine CRC polynomial design, decoder optimizations, and integrated coding architectures [7]– [13], as well as joint CRC–LDPC and CRC–polar coding strategies for reducing the PUE [14]–[24]. In parallel, Machine Learning (ML) techniques have been proposed for decoderlevel adaptation and parameter tuning [25]–[27]. While these approaches demonstrate performance gains under static or mildly varying conditions, they predominantly assume offline configuration, decoder-centric adaptation, or stationary channel behavior. Consequently, no existing studies address online, learning-assisted joint CRC and QC-LDPC configuration under mobility-induced non-stationarity using standardcompliant components, nor do they explicitly analyze regimes in which learning-based adaptation may adversely affect physical-layer integrity. This work addresses this challenge by proposing a learning-assisted framework for adaptive selection of CRC and QC-LDPC configurations in 5G-NR V2X systems. The joint selection of error detection and error correction parameters is formulated as a lightweight online learning problem using a Contextual Bandit (CB) framework. The CB learning agent operates on coarse channel context, including a noisy Signal-to-Noise Ratio (SNR) estimate and indicators of bursty interference and deep-fade events, and selects, at each transmission opportunity, a CRC polynomial and a QCLDPC coding rate to minimize PUE while accounting for the Detected Error Probability (PDE). The main contributions of this paper are summarized as follows:
+C1. we simulate a 5G-NR-compliant physical-layer framework incorporating 3GPP CRC polynomials, true 5GNR QC-LDPC construction, Binary Phase-Shift Keying (BPSK) transmission, mobility-induced time-correlated Rayleigh fading, bursty interference, soft-input BeliefPropagation (BP) decoding, and CRC verification.
+
+C2. we formulate a joint CRC–QC-LDPC configuration problem as a CB task, enabling efficient online adaptation over a small, discrete, standard-compliant decision space. The proposed CB formulation aligns naturally with the discrete and standardized configuration space of 5G-NR, enabling fast online adaptation without modifying existing procedures or introducing significant computational overhead.
+C3. we design of an integrity-aware learning objective centered on minimizing the PUE while accounting for PDE, enabling systematic identification of operating regimes in which learning improves integrity robustness and those in which fixed configurations remain preferable.
+Fig. 2: Literature landscape and Addressed Research Question.
+Through comprehensive evaluation across CRC types, QCLDPC code rates, and mobility levels, this study identifies regimes in which learning-assisted adaptation improves integrity robustness and those in which mobility-induced nonstationarity renders fixed configurations more reliable than adaptive policies. Specifically, high mobility can invalidate the temporal consistency assumptions required for effective learning, making fixed conservative configurations preferable in some URLLC V2X scenarios. The remainder of the paper is organized as follows. Sections II presents the proposed learning-assisted joint configuration framework. Section III reports experimental results and analysis. Finally, Section IV concludes the work and discusses directions for future work.
+II. SYSTEM MODEL AND LEARNING-ASSISTED CONFIGURATION FRAMEWORK
+This section formalizes our system model, depicted in Fig. 3, and the proposed learning-assisted framework for adaptive joint selection of CRC polynomials and QC-LDPC coding rates in 5G-NR V2X links. We consider a single-link 5GNR V2X physical-layer transmission between one transmitter and one receiver. Medium-access contention, packet collisions,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3: Our Learning-Assisted standard-compliant 5G-NR physical-layer processing chain.
+
+sidelink resource competition, and multi-user scheduling effects are intentionally excluded in order to isolate physicallayer integrity effects arising from coding, decoding, and mobility-induced channel dynamics. The model captures how a standard 5G-NR link behaves under mobility and limited channel knowledge, and uses this to frame adaptive CRC–QCLDPC selection as a lightweight CB problem.
+
+A. Transmitter-Side Physical-Layer Encoding Model
+
+We consider packet-based 5G-NR physical-layer transmissions over discrete time instances indexed by t. At each instance, an information block
+
+at ∈ {0, 1}m
+
+(1)
+
+is processed by a standard-compliant CRC-QC-LDPC encod-
+ing chain. CRC encoding interprets at as a polynomial over GF (2) and appends l parity bits generated by dividing at(x)xl by a generator polynomial gCRC(x) of degree l. The resulting remainder bt is concatenated with the payload at to form a CRC-augmented sequence
+
+ut ∈ {0, 1}k, k = m + l.
+
+(2)
+
+In this work, we consider standard CRC polynomials defined by 3GPP TS 38.212, namely CRC-6, CRC-11, CRC16, and CRC-24A, which offer different trade-offs between detection capability and redundancy overhead and are routinely employed in 5G-NR systems. In short-packet V2X transmissions, CRC effectiveness is particularly critical, as limited redundancy and structured decoding errors can increase the likelihood of UEs. The CRC-protected sequence ut is subsequently encoded using a 5G-NR QC-LDPC encoder constructed from standardized Base Graphs (BG 1 or BG 2). A lifting factor Z expands the selected BG into a full paritycheck matrix; the encoded codeword is generated via the corresponding generator matrix G as
+
+ct = utG mod 2 ∈ {0, 1}n.
+
+(3)
+
+Due to their structured nature, QC-LDPC codes exhibit nonrandom residual decoding errors under soft-decision BP decoding, which interact non-trivially with CRC detection. Consequently, CRC and LDPC performance cannot be treated independently when assessing PUE. Next, ct is mapped to BPSK symbols according to 0 → +1 and 1 → −1, yielding c˜t ∈ {−1, +1}n codeword to be transmitted over the channel described below.
+
+B. Mobility-Affected Channel and Interference Model
+
+Transmission of c˜t takes place in complex baseband over a flat-fading wireless channel with additive noise,
+
+c˜˜t = htc˜t + wt,
+
+(4)
+
+where ht ∈ C denotes the complex channel coefficient capturing amplitude fading and phase rotation, and wt represents circularly symmetric complex Additive White Gaussian Noise (AWGN). To capture V2X mobility effects, the channel coefficient ht evolves according to a time-correlated Rayleigh fading process,
+
+ht = ρht−1 + 1 − ρ2 zt,
+
+(5)
+
+where zt ∼ CN (0, 1) is an i.i.d. complex Gaussian innovation term and ρ ∈ [0, 1] controls the temporal correlation of the
+
+channel. The correlation coefficient ρ depends on the relative
+
+transmitter-receiver speed through the maximum Doppler fre-
+
+quency
+
+v
+
+fD = s f0,
+
+(6)
+
+where v denotes the relative vehicle speed, f0 is the carrier frequency, and s is the speed of light. Under the classical Jakes model, the one-step temporal correlation over the transmission interval T is approximated as
+
+ρ ≈ J0(2πfDT ) ,
+
+(7)
+
+with J0(·) denoting the zero-order Bessel function of the first kind. Beyond fading and thermal noise wt, the received signal may also be impaired by intermittent non-stationary external interference, which is modeled explicitly using a two-state Markov process. Let It ∈ {0, 1} denote the interference state at transmission instance t, where It = 1 corresponds to a burst-interference state. The interference dynamics follow
+
+Pr(It = 1 | It−1 = 0) = p01, Pr(It = 1 | It−1 = 1) = p11. (8)
+When interference is active, the effective noise variance experienced at the receiver increases accordingly. The interpretation and normalization of the noise term wt w.r.t. the operating SNR per bit Eb/N0 are specified in the receiver-side processing described in the following subsection.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+C. Receiver-Side Physical-Layer Decoding
+At the receiver, the noisy channel output c˜˜ is processed to recover the transmitted information and to assess physicallayer integrity. The operating signal quality is parameterized by Eb/N0. For coded transmission with effective rate Rt, the corresponding symbol-level SNR under BPSK modulation satisfies Rt Eb/N0. In the complex baseband model, thermal noise wt is represented as circularly symmetric complex AWGN with variance σ2 per complex dimension. The receiver employs a nominal noise variance
+
+σ2
+
+=
+
+2Rt
+
+1 · 10 Eb/N0
+10
+
+,
+
+(9)
+
+which is consistent with the assumed BPSK signaling and is used for soft demodulation unless otherwise stated.
+At the receiver, coherent soft demodulation is performed using Log-Likelihood Ratios (LLRs). For the ith received symbol at transmission instance t, the LLR is computed as
+
+Lt,i
+
+=
+
+2
+
+ℜ{ht∗c˜˜t,i} σ2
+
+.
+
+(10)
+
+The LLRs quantify the reliability of the received symbols and
+
+serve as soft inputs to an iterative BP decoder operating on
+
+the Tanner graph of the selected QC-LDPC code. If the BP
+
+decoder fails to converge within the prescribed number of
+
+iterations, the decoding attempt is immediately classified as
+
+a DE, and CRC verification is not performed. If the decoder
+
+converges, it outputs an estimate u˜t of the CRC-protected systematic bit sequence ut, which is subsequently subjected to CRC verification using the same CRC polynomial applied
+
+at the transmitter. If the CRC check fails, the transmission is
+
+classified as a DE.
+
+An UE occurs when u˜t ≠ ut while CRC verification
+
+succeeds, causing the erroneous payload to be accepted as
+
+valid. Over a horizon of M transmissions, the PUE is defined
+
+as
+
+1M
+
+PUE = M
+
+U Et.
+
+(11)
+
+t=1
+
+The PUE is therefore a critical integrity metric in reliabilityand safety-oriented communication systems. Unlike DEs, UEs cannot be mitigated through retransmission or higher-layer recovery mechanisms once accepted, resulting in silent data corruption. This risk is particularly severe in short-packet V2X communications under high mobility, where channel nonstationarity and structured residual decoding errors increase the likelihood of CRC verification failure. Accordingly, minimizing PUE constitutes the primary physical-layer integrity objective of this work.
+
+D. Learning-based CRC-LDPC Configuration Framework
+Having defined the transmitter processing, mobility-affected channel, and receiver-side integrity events, we now address the core objective of this work: adaptive selection of CRCQC-LDPC configurations to minimize (11) under time-varying V2X conditions. To achieve this objective, we employ a
+
+lightweight learning agent based on a CB formulation. At each transmission instance, the CB observes a low-dimensional context derived from delayed receiver-side feedback, selects a joint CRC-QC-LDPC configuration, and receives a scalar reward reflecting both throughput and physical-layer integrity. This interaction pattern naturally maps the adaptive configuration problem to a contextual multi-armed bandit setting, where learning is driven by observed transmission outcomes rather than explicit channel state information.
+1) Context Definition under Partial Observability: The transmitter has no access to the instantaneous channel realization ht or the instantaneous interference state It. Instead, it relies on a low-dimensional context vector constructed from delayed and imperfect receiver-side feedback,
+
+observationt = 1 λt−1 λ2t−1 It−1 Ideep,t−1 T . (12)
+
+Here, λt−1 denotes a noisy estimate (in dB) of the effective received SNR during the previous transmission instance. This estimate captures the combined effects of the channel realization ht−1, the selected coding rate Rt−1, and the operating Eb/N0, and is consistent with the signal and noise models defined earlier. The quadratic term λ2t−1 is included to account for mild nonlinear dependence of decoding reliability on the observed signal quality within an otherwise linear contextual model. The indicator It−1 corresponds to the interference state in the two-state Markov model defined earlier, with It−1 = 1 indicating the presence of burst interference during the previous transmission. The term Ideep,t−1 denotes the occurrence of a deep fade, inferred at the receiver when the channel magnitude |ht−1| falls below a predefined threshold. Both indicators are derived from receiver-side observations and fed back in a highly quantized form.
+2) Configuration Space and Action Definition: At each transmission instance t, the transmitter selects a joint CRC–QC-LDPC configuration
+
+actiont(cfg) ∈ A,
+
+(13)
+
+from a finite, standard-compliant configuration set A = {(CRCi, Rj)}, where CRCi denotes a selected CRC polynomial and Rj denotes a valid 5G-NR QC-LDPC coding rate. The block length n is fixed, while the effective coding rate
+
+k
+
+Rt = n
+
+(14)
+
+varies with the selected CRC length and QC-LDPC ratematching configuration. In this study, four CRC polynomials and three LDPC rates are considered, yielding a total of |A| = 12 possible configurations.
+3) Integrity-Aware Reward Model: Each transmission instance yields a scalar reward that prioritizes physical-layer integrity while incorporating throughput. The reward at transmission instance t is defined as
+
+rewardt = Rt I{DEt = 0∧U Et = 0}−ΩDE DEt−ΩUE U Et, (15)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+where DEt ∈ {0, 1} and U Et ∈ {0, 1} denote the DE and UE indicators defined in II-C. The weights satisfy ΩUE > ΩDE > 0, reflecting the more severe impact of UEs on data integrity.
+Having formulated adaptive CRC–QC-LDPC selection as a CB problem, a concrete learning algorithm is required to map observed context to configuration decisions while balancing exploration and exploitation under non-stationary channel conditions. Among CB methods, Linear Upper Confidence Bound (LinUCB) algorithms are particularly well suited to this setting due to their ability to exploit a linear reward structure, operate with low computational complexity, and provide principled uncertainty-driven exploration. To further account for mobility-induced non-stationarity and intermittent interference, a discounted variant of LinUCB is adopted, which gradually downweights outdated observations and enables rapid adaptation to evolving wireless conditions.
+At each transmission instance t, the transmitter observes the context vector observationt and selects a configuration according to
+
+action(tcfg)
+
+=
+
+arg
+
+max
+action∈A
+
+θaTction observationt+
+
+(16)
+
+α observationtTAa−c1tionobservationt ,
+
+where α > 0 controls the exploration–exploitation trade-off. Here, θaction denotes the current estimate of the linear reward model associated with configuration action, and Aaction is a regularized covariance matrix capturing the discounted
+second-order statistics of past context observations for that
+configuration.
+After the transmission outcome is observed, only the statistics associated with the selected configuration action(tcfg) are updated using an exponential discount factor γ ∈ (0, 1]:
+
+Aactiont ← γAactiont + observationt observationTt , (17)
+
+Bactiont ← γBactiont + rewardt observationt, (18)
+
+where Baction accumulates the discounted correlation be-
+
+tween observed rewards and context features for configuration
+
+action. The corresponding parameter estimate is then obtained
+
+as
+
+θaction = Aa−c1tionBaction.
+
+(19)
+
+The complete learning-assisted CRC–QC-LDPC configuration procedure is summarized in Algorithm 1.
+This framework enables efficient online adaptation while explicitly exposing the sensitivity of learning-based configuration to mobility-induced non-stationarity, which is examined in the subsequent performance evaluation.
+
+III. SIMULATION AND RESULTS DISCUSSION
+This section evaluates whether standard-compliant online selection of CRC and QC-LDPC configurations can reduce the PUE under mobility-induced channel non-stationarity, and identifies the mobility regimes in which learning-based adaptation remains beneficial vs. those in which conservative fixed configurations are preferable. The evaluation is intentionally
+
+restricted to a single transmitter-receiver link in order to isolate physical-layer integrity effects arising from coding, decoding, and time-varying channel dynamics. Medium-access contention, packet collisions, sidelink resource competition, and multi-user scheduling are excluded and left for future work. All experiments are implemented in Python 3.11 using the Sionna physical-layer library to ensure faithful realization of 5G-NR QC-LDPC construction, soft-input BP decoding, and CRC verification. Simulations are executed on Google Colab using NVIDIA A100 GPUs [28], [29]. Hardware acceleration is used solely to enable large-scale rare-event Monte Carlo evaluation and does not affect the underlying physicallayer models or learning behavior. Table I summarizes the simulation parameters and environment settings.
+
+TABLE I: Simulation Parameters and Settings
+
+Parameter Payload length m
+CRC candidates C
+LDPC block length n LDPC information size k Code rates R BPSK Modulation Carrier frequency fc Transmission interval T Mobility regimes v SNR observation noise
+Learning algorithm
+Training length
+Validation length
+Evaluation Eb/N0 grid Rare-event trials
+URLLC latency model
+Packet delay budget
+Reward weights
+
+Value / Description
+256 information bits per packet CRC-6 (0x27), CRC-11 (0x307), CRC-16 (0x1021), CRC-24A (0x1864CF B) 576 {288, 384, 432} {1/2, 2/3, 3/4} 0 → +1, 1 → −1 5.9 GHz 1 msec {0, 60, 120, 180, 250} km/h N (0, 0.82) dB added to γˆ Discounted LinUCB: α = 2.0, γ = 0.998, λ = 1.0 Ttrain = 6000 steps per speed (LinUCB and Greedy) Tval = 6000 steps per speed (FixedBest selection) {−5, 0, 5, 10, 15, 20, 25} dB 30,000 trials per (v, Eb/N0, policy) point B = 20 MHz, TTI=1 msec, base stack 0.5 msec, iter cost 0.08 msec PDB = 5 msec wg = 1.0, wDE = 0.2, wUE = 5.0, wDM = 3.0
+
+Algorithm 1 Discounted LinUCB for Adaptive CRC-QC-
+
+LDPC Selection
+
+1: Initialize: Aaction ← I, Baction ← 0 for all action ∈ A 2: for each transmission instance t = 1, 2, . . . do
+
+3: Observe context vector observationt 4: for each action ∈ A do
+
+5:
+
+Compute parameter estimate θaction (19)
+
+6:
+
+Compute
+
+U CBaction = θaTction observationt
+
++α observationtTAa−c1tionobservationt
+
+7: end for
+
+8:
+
+Select action(tcfg) = arg maxaction∈A U CBaction
+
+9: Transmit using the selected CRC-QC-LDPC pair
+
+10: Observe rewardt 11: Update statistics for actiont(cfg) as in (17) and (18) 12: end for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+A. Integrity Metrics and Rare-Event Evaluation
+The primary integrity metric is the PUE = Pr{CRC passes ∧ a˜t ≠ at}, which captures silent corruption events that cannot be mitigated by retransmission or higherlayer recovery once a CRC check passes. For completeness, the PDE is also reported. Both probabilities are estimated empirically over a finite number of transmission trials. Because UEs are rare at moderate-to-high Eb/N0, evaluation is conducted in a rare-event regime. When no UEs are observed, a conservative 95% confidence upper bound is reported.
+
+B. Policies Compared: Online Adaptation vs Conservative Fixing
+We compare three policies that represent distinct adaptation philosophies:
+1) Discounted LinUCB (proposed): an uncertainty-aware CB that balances exploitation and exploration using confidence bounds, with exponential discounting to prioritize recent observations and track non-stationarity.
+2) Greedy contextual policy: a purely myopic online strategy that selects the configuration with the best empirical performance so far (equivalently LinUCB with α = 0), and therefore reacts strongly to noisy feedback and may oscillate under non-stationarity.
+3) FixedBest: an offline-selected single configuration that minimizes PUE for a given mobility regime and then remains fixed during operation, serving as a conservative integrity benchmark.
+This comparison directly tests whether online adaptation remains beneficial as mobility increases, or whether a fixed conservative configuration provides stronger integrity guarantees under severe non-stationarity.
+C. Online Adaptation Dynamics Under Mobility
+Fig. 4 reports the running-average PUE during training for LinUCB and greedy policies across mobility regimes. At v = 0 km/h, both policies converge rapidly and stably, consistent with near-stationary channel conditions. As mobility increases, convergence slows and variability increases due to reduced temporal correlation in the fading process and noisier context-feedback alignment. At high mobility (v = 180 and 250 km/h), both policies exhibit persistent fluctuations, indicating that short-term observations become less predictive of near-future conditions. This behavior anticipates the regime in which learning-based adaptation may lose its advantage.
+D. Decoder Quality Check via PDE
+Before interpreting UE trends, we verify that the underlying BP decoding behavior is not itself changing across policies in a way that could confound integrity comparisons. As defined in Section II-C, DEs arise from BP decoder failure or CRC rejection and therefore reflect intrinsic decoder reliability under the operating channel conditions. Table II summarizes PDE across all policies, mobility regimes, and Eb/N0 values. The mean PDE remains tightly bounded (24%-26%) with
+
+Fig. 4: Online learning dynamics under mobility-induced channel variation.
+
+differences below 1.3% points, and no systematic dependence on policy or mobility is observed. This indicates that the observed integrity differences if any are primarily driven by the CRC-QC-LDPC configuration choices rather than by policydependent decoder behavior.
+
+TABLE II: Decoder Quality via PDE
+
+Policy LinUCB Greedy FixedBest
+
+Mean 0.2525 0.2449 0.2574
+
+Max 0.9996 0.9098 0.9789
+
+Min < 10−6 < 10−6 1.67 × 10−4
+
+E. PUE vs. Eb/N0 Across Mobility Regimes
+Fig. 5 reports rare-event estimates of PUE vs. Eb/N0 for all policies and mobility regimes. Three regime-level observations emerge:
+• Low mobility (v = 0 km/h): all policies achieve low PUE as Eb/N0 increases. LinUCB closely tracks FixedBest and improves over greedy in the low-to-mid Eb/N0 region, indicating that uncertainty-aware exploration does not compromise integrity in quasi-stationary conditions.
+• Moderate mobility (v = 60 and 120 km/h): learningassisted adaptation provides the clearest integrity benefit. In the low Eb/N0 regime (−5 to 5 dB), LinUCB achieves substantially lower PUE than greedy, consistent with its discounting and confidence-driven exploration. At higher Eb/N0 (10–25 dB), LinUCB approaches FixedBest, indicating that online adaptation remains effective as UEs become rare.
+• High mobility (v = 180 and 250 km/h): the advantage of online adaptation diminishes. LinUCB and greedy exhibit similar PUE, while FixedBest provides the most stable UE protection across Eb/N0. This behavior is consistent with the training dynamics in Fig. 4: when temporal correlation is weak, recent observations become less predictive, limiting the effectiveness of learning.
+To further isolate the effect of mobility, Fig. 6 summarizes PUE vs. speed using SNR-averaged values. The greedy policy
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 5: Rare-event evaluation of PUE vs. Eb/N0 under different mobility regimes.
+
+exhibits the strongest sensitivity to speed, reflecting its myopic response to noisy short-term feedback. LinUCB consistently improves over greedy at low and moderate mobility, but the gap narrows at high mobility, where PUE saturates. In contrast, FixedBest remains largely insensitive to speed, with substantially smaller variation across the entire range. This confirms the intended trade-off: adaptation is most valuable when the channel is non-stationary but still predictable over the feedback horizon; when mobility breaks this predictability, conservative configuration becomes the safer integrity strategy.
+Fig. 6: Rare-event evaluation of PUE vs. vehicle speed under averaged SNR values.
+F. Interpreting Configuration Choices Across Mobility Regimes
+To explain the regime-dependent trends observed above, Table III summarizes the CRC–QC-LDPC configurations preferred by each policy across mobility levels. FixedBest converges to a single conservative pairing for mobility regimes beyond 60 km/h, explaining its stability under increasing speed. LinUCB, in contrast, adapts its preferred configuration as mobility increases, generally shifting toward stronger CRCs and lower code rates as the channel becomes less temporally correlated. This adaptive behavior is beneficial at moderate
+
+mobility, where contextual feedback retains predictive value, but yields diminishing returns at high mobility, where frequent configuration changes cannot reliably track fast channel evolution. These findings reinforce the core finidng that learningassisted joint configuration can improve 5G-NR integrity under realistic mobility, but must be deployed with awareness of the mobility regime, since severe non-stationarity would favor conservative fixed configurations.
+IV. CONCLUSION AND FUTURE WORK
+In this study, we examined whether a 5G-NR V2X communication system can reduce silent (undetected) errors by adapting its physical-layer error-detection and error-correction settings online as vehicles move and channel conditions change. Using only standard-compliant CRC polynomials and QC-LDPC coding rates, we formulated joint configuration selection as a lightweight CB problem and evaluated a discounted LinUCB policy against a greedy online baseline and a conservative fixed configuration in a Sionna-based 5GNR physical-layer simulation with mobility-induced timecorrelated fading and non-stationary interference. Results show that learning-assisted adaptation is effective at low to moderate mobility, where recent feedback remains predictive: in this regime, LinUCB reduced the PUE by up to 50–70% compared to greedy selection in the low-SNR range (−5 to 5 dB) and closely approached the best fixed configuration at higher Eb/N0. These gains arise because the learning agent adapts toward stronger CRCs and lower coding rates, such as CRC24A with R = 1/2 at 60 km/h and CRC11 with R = 2/3 at 120 km/h. At high mobility (≥ 180 km/h), channel conditions decorrelate rapidly, the benefit of online learning diminishes, and a conservative fixed strategy consistently selecting CRC16 with R = 3/4 provides the most stable protection across SNR. Overall, the results indicate that learning-assisted joint CRC–QC-LDPC configuration can improve physicallayer integrity in V2X systems when mobility-induced nonstationarity is moderate, but must be mobility-aware, as severe non-stationarity favors conservative fixed operation. Future work will extend this framework to multi-link and multivehicle scenarios, incorporate more realistic contention-based
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III: Preferred CRC-QC-LDPC Configurations Across Mobility Regimes
+
+Speed (km/h) 0 60 120 180 250
+
+FixedBest Configuration CRC11 + R = 3/4 (k = 432, n = 576) CRC16 + R = 3/4 (k = 432, n = 576) CRC16 + R = 3/4 (k = 432, n = 576) CRC16 + R = 3/4 (k = 432, n = 576) CRC16 + R = 3/4 (k = 432, n = 576)
+
+LinUCB Preferred Configuration CRC11 + R = 3/4 (k = 432, n = 576) CRC24A + R = 1/2 (k = 288, n = 576) CRC11 + R = 2/3 (k = 384, n = 576) CRC11 + R = 1/2 (k = 288, n = 576) CRC16 + R = 2/3 (k = 384, n = 576)
+
+delayed feedback, and develop mobility-aware mechanisms that safely switch between adaptive and fixed configurations.
+ACKNOWLEDGMENT
+This work was supported by the Research Fund of the Istanbul Technical University. Project Number: 47198. The authors thank Prof. Khaled Abdel-ghaffar from the Department of Electrical and Computer Engineering, University of California Davis, for his valuable comments regarding the encoding background.
+REFERENCES
+[1] Jorge Horta, Mario Siller, and Salvador Villarreal-Reyes. Cross-layer latency analysis for 5g nr in v2x communications. PLOS ONE, 20(1):1– 36, 01 2025.
+[2] Douglas H Morais. 5g/5g-advanced overview. In 5G/5G-Advanced, Wi-Fi 6/7, and Bluetooth 5/6: A Primer on Smartphone Wireless Technologies, pages 103–148. Springer, 2025.
+[3] Sarah Al-Shareeda, Vignesh Srinivasan, Mohammad AlMudhaf, Yasser Bin Salamah, Bander Jabr, and Fusun Ozguner. Evaluating handover impact on ibc-authenticated task offloading in c-v2x vtens. In 2025 IEEE Vehicular Networking Conference (VNC), pages 1–8, 2025.
+[4] Sarah Yaseen Abdulrazzaq Al-Shareeda. Enhancing security, privacy, and efficiency of vehicular networks. PhD thesis, The Ohio State University, 2017.
+[5] Waqar Anwar, Andreas Traßl, Norman Franchi, and Gerhard Fettweis. On the reliability of nr-v2x and ieee 802.11bd. In 2019 IEEE 30th Annual International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC), pages 1–7, 2019.
+[6] Joa˜o Guerra, Miguel Lu´ıs, and Pedro Rito. Performance evaluation of 5g new radio v2x sidelink for coexisting traffic. IEEE Access, 13:131400– 131410, 2025.
+[7] Philip Koopman and Tridib Chakravarty. Cyclic redundancy code (crc) polynomial selection for embedded networks. In International Conference on Dependable Systems and Networks, 2004, pages 145– 154, 2004.
+[8] Khaled AS Abdel-Ghaffar. Encoding cyclic redundancy checked sequences. In 2025 5th IEEE Middle East and North Africa Communications Conference (MENACOMM), pages 1–6. IEEE, 2025.
+[9] Tsonka Baicheva, Peter Kazakov, and Miroslav Dimitrov. Some comments about crc selection for the 5g nr specification. IEEE Access, 2024.
+[10] Abdulbary Naji, Xingfu Wang, Ping Liu, Ammar Hawbani, Liang Zhao, XiaoHua Xu, and Fuyou Miao. Netcrc-nr: In-network 5g nr crc accelerator. IEEE TOC, 2025.
+[11] Yuqing Ren, Hassan Harb, Yifei Shen, Alexios Balatsoukas-Stimming, and Andreas Burg. A generalized adjusted min-sum decoder for 5g ldpc codes: Algorithm and implementation. IEEE TCAS-I, 2024.
+[12] Anuj Verma and Rahul Shrestha. High-throughput and hardwareefficient asic-chip fabrication of reconfigurable ldpc/polar decoder for mmtc and urllc 5g-nr applications. IEEE TCAS-I, 2024.
+[13] Cheng-Hung Lin, Chih-Heng Cheng, Yue-Fang Kuo, and Cheng-Kai Lu. Hybrid bp/fast-sscf polar decoder for 5g beyond consumer communications. IEEE TCE, 2025.
+[14] Khawla A Alnajjar, Sara Al Ali, Hawraa Albanna, Hamda Aljasmi, Sara Almaazmi, Sara Alduhoori, Sam Ansari, Abir Hussain, and Soliman Mahmoudf. Channel coding technologies in next-generation wireless systems. In 2024 21st International Multi-Conference on Systems, Signals & Devices (SSD), pages 27–32. IEEE, 2024.
+
+[15] Mody Sy. Demystifying 5g polar and ldpc codes: A comprehensive review and foundations. IEEE Access, 12:1–12, 2024.
+[16] Zeynep B Kaykac Egilmez, Luping Xiang, Robert G Maunder, and Lajos Hanzo. A soft-input soft-output polar decoding algorithm for turbodetection in mimo-aided 5g new radio. IEEE TVT, 71(6):6454–6468, 2022.
+[17] Mingyang Zhu, Ming Jiang, and Chunming Zhao. Adaptive belief propagation decoding of crc concatenated nr ldpc and polar codes. IEEE TCOM, 70(8):4991–5003, 2022.
+[18] Ming Zhan, Kan Yu, Fang Wu, Qiang Zhou, Yichen Luo, Shiqing Zhang, Jianwu Zhang, and Zhibo Pang. High throughput joint error detection and correction based on grand-mo and crc. IEEE TCE, 2024.
+[19] Alexander Sauter, A Oguz Kislal, Giuseppe Durisi, Gianluigi Liva, Bala´zs Matuz, and Erik G Stro¨m. Undetected error probability in the short blocklength regime: Approaching finite-blocklength bounds with polar codes. IEEE TCOM, 2025.
+[20] Tirthadip Sinha and Jaydeb Bhaumik. Performance analysis of nr polar codes at short information blocks for control channels. Wireless Personal Communications, 138(2):879–890, 2024.
+[21] Shajeel Iqbal, Anders Lund, Metodi P Yankov, Thomas G Nørgaard, and Søren Forchhammer. Hardware architecture of channel encoding for 5g new radio physical downlink control channel. In ICC 2023-IEEE International Conference on Communications, pages 2258–2263. IEEE, 2023.
+[22] Salima Belhadj and Moulay Lakhdar Abdelmounaim. On error correction performance of ldpc and polar codes for the 5g machine type communications. In 2021 IEEE International IOT, Electronics and Mechatronics Conference (IEMTRONICS), pages 1–4. IEEE, 2021.
+[23] Linfang Wang, Dan Song, Felipe Areces, Thomas Wiegart, and Richard D Wesel. Probabilistic shaping for trellis-coded modulation with crc-aided list decoding. IEEE TCOM, 71(3):1271–1283, 2023.
+[24] M Moazam Azeem, Raouf Abozariba, and A Taufiq Asyhari. Exploiting short block and concatenated codes for reliable communications within the coexistence of 5g-nr-u and wifi. IEEE TVT, 72(2):1893–1908, 2022.
+[25] Madhavsingh Indoonundon, Tulsi Pawan Fowdur, Zoran S Bojkovic, and Dragorad A Milovanovic. Ai-based channel coding for 5g/6g. In Driving 5G Mobile Communications with Artificial Intelligence towards 6G, pages 327–351. CRC Press, 2023.
+[26] Mario Hernandez and Fernando Pinero. 5g ldpc linear transformer for channel decoding. arXiv preprint arXiv:2501.14102, 2025.
+[27] Anusha Gunturu, Avani Agrawal, Ashok Kumar Reddy Chavva, and Saikrishna Pedamalli. Machine learning based early termination for turbo and ldpc decoders. In 2021 IEEE Wireless Communications and Networking Conference (WCNC), pages 1–7. IEEE, 2021.
+[28] Sarah Al-Shareeda, Sema F. Oktug, Yusuf Yaslan, Gokhan Yurdakul, and Berk Canberk. Does twinning vehicular networks enhance their performance in dense areas? In 2024 IEEE 21st Consumer Communications and Networking Conference (CCNC), pages 1–6, 2024.
+[29] Sarah Al-Shareeda, Muhammad Saim, Bander Jabr, Yasser Bin Salamah, Faisal Alanazi, Gokhan Yurdakul, Fusun Ozguner, and Umit Ozguner. When pedestrians hesitate: Ppo-based rl collision avoidance in uncertain scenarios. In 2025 International Conference on Smart Applications, Communications and Networking (SmartNets), pages 1–7, 2025.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:00 UTC from IEEE Xplore. Restrictions apply.
+
+

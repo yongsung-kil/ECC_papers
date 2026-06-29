@@ -1,0 +1,571 @@
+Proceedings of the Argentine School of Micro-Nanoelectronics, Technology and Applications 2008
+
+Parallel Architecture for Decoding LDPC Codes on High Speed Communication Systems
+Damia´n A. Morero, Graciela Corral-Briones, and Mario R. Hueda
+Digital Communications Research Laboratory - National University of Cordoba - CONICET Av. Ve´lez Sarsfield 1611 - Co´rdoba (X5016GCA) - Argentina Emails: dmorero, gcorral, mhueda@com.uncor.edu
+
+Abstract—This paper presents a novel parallel architecture for decoding LDPC codes. The proposed architecture has low memory and interconnection requirements, becoming attractive for high speed applications such as fiber optic communications and high density magnetic recording. As an example, the implementation on an FPGA of a TPC/SPC code using the proposed architecture will also be described.
+I. INTRODUCTION
+The use of iterative decoders based on Low Density Parity Check (LDPC) codes has allowed to reach information rates close to Shannon’s channel capacity [1]. SISO (Soft Input/Soft Output) decoding of LDPC codes using the SumProduct Algorithm (SPA) requires approximately one order of magnitude less calculations than equivalent Turbo Codes [2]. Nevertheless, the implementation complexity of SISO LDPC detectors is one of the main obstacles that conditions its viability on commercial integrated circuits. High interconnection complexity and important amounts of memory are required. This issue becomes more important on high-speed applications where parallel processing schemes are needed.
+Different low-complexity architectures for implementing LDPC codes have been proposed. [3] describes one that has as drawback a degradation on the decoder performance due to a simplification on the SPA algorithm. Architectures described in [2] y [4] have high requirements of memory and interconnection. [5] y [6] show architectures focused on implementing LDPC codes with particular structural properties. The present paper introduces a new architecture for implementing a wide family of LDPC codes. It operates in a parallel fashion without requiring approximations on the SPA algorithm, and requires a reduced amount of memory and interconnection complexity. These features make the architecture desirable for implementing on integrated circuits.
+The rest of the paper is organized as follows. Section II gives a brief introduction to LDPC codes. Section III explains the decoding algorithm. Section IV describes the proposed novel architecture that implements the algorithm explained on the previous section. Section V shows the results after
+0 The present paper has been supported by SeCyT-UNC and ClariPhy Argentina S.A.
+
+implementing on an FPGA the architecture proposed on Section IV. Finally, section VI presents the conclusions.
+II. LOW-DENSITY PARITY CHECK CODES
+An LDPC code is a linear block code defined by a sparse1 parity check matrix H, of dimensions (m × n). This matrix defines a code of length n and dimension k, where k = n − rank(H). A parity check matrix H has a bipartite graph associated with it, called Tannel graph (TG), which fully characterizes the code. The Tanner graph is composed of two types of nodes: variable nodes vi and check nodes ci. The nodes vi and cj represent the i-th coded bit or column of H, and the j-th check equation or row of H respectively. In a TG, connections exist only between a variable node and a check node. vi is connected to cj if and only if Hj,i = 0, where the indices j and i mean H’s row and column respectively. The degree of a TG’s node is determined by the number of connections the node has; i.e. the degree of vi and cj represent the number of non-zero elements on the i-th column and on the j-th row of H respectively. If all vi nodes have the same degree γ and all ci nodes the same degree ρ, then the code is said to be regular. Let V be a set of variable nodes and C a set of check nodes. If vi ∈ V and cj ∈ C, the set of neighbors of vi and ci is denoted as g(vi) ∈ C and g(cj) ∈ V respectively; i.e. g(vi) = {cj ∈ C : Hj,i = 0} and g(cj) = {vi ∈ V : Hj,i = 0}.
+This paper focuses on regular LDPC codes that hold the following structural property. That is: PV = {Vq : Vq ⊂ V ∧ Vq ∩ Vw=q = ∅ ∧ ∪qVq = V } is a partition of V and with the following properties:
+• P1: ∀Vq ∈ PV it is true that g(Vq) = C • P2: ∀Vq ∈ PV , let vi, vj ∈ Vq where i = j; therefor it
+is true that g(vi) ∩ g(vj) = ∅.
+A partition PV fulfilling the properties mentioned above is called a Variable-node Partition with Full Check-node Connectivity (VPFCC); and a code in which it is possible to create a partition of this nature is said to be a VPFCCcode. The architecture proposed in this paper to implement
+1A sparse matrix is a matrix populated primarily with zeros.
+
+ISBN 978-987-655-003-1 EAMTA 2008
+
+107
+
+IEEE Catalog number CFP0854E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:11 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of the Argentine School of Micro-Nanoelectronics, Technology and Applications 2008
+
+Tanner Graph
+B1 C1
+B2
+B3 C2
+B4
+B5 C3
+B6
+B7 C4
+B8
+B9 C5
+P1
+P2 C6
+P3
+P4 C7
+P5
+P6 C8
+P7
+
+Structure of the Tanner Graph
+C1 C2 C3 C4
+
+B1 B2 B4 B5 B7 B8 P1 P2
+Bit
+
+B3 P5 B6 P6 B9 P7 P3 P4
+Parity
+
+C5 C6 C7 C8
+Check
+
+C1: P1 = B1 + B4 + B7 mod(2) C2: P2 = B2 + B5 + B8 mod(2) C3: P3 = B3 + B6 + B9 mod(2) C4: P4 = P5 + P6 + P7 mod(2) C5: P5 = B1 + B2 + B3 mod(2) C6: P6 = B4 + B5 + B6 mod(2) C7: P7 = B7 + B8 + B9 mod(2) C8: P4 = P1 + P2 + P3 mod(2)
+
+Figure 1. 2D-TPC/SPC(4,3)2 code: the Tanner graph and its structure.
+
+an LDPC decoder is grounded on these specific properties of a partition PV .
+There are several LDPC codes that satisfy the characteristic properties of VPFCC-codes. A set of these are the Turbo Product Codes based on Single Parity Check (TPC/SPC). [7], [8] y [9] suggest that these codes are suitable for iterative detection schemes for magnetic recording. In fact, the implementation of a TPC/SPC code is described in this paper to illustrate the proposed decoding architecture. The utility the VPFCC property of an LDPC code has on the new architecture will be analyzed in Section IV. Next, the main characteristics of TPC/SPC codes will be briefly described.
+A. TPC/SPC Codes
+A TPC/SPC code is built through a multi-dimensional array of code words derived from other previously defined code or codes. The codes used for building the multidimensional array are called base codes. Typical base codes are: Hamming, BCH, and simple parity check codes. Within TPC codes, those based on bi-dimensional arrays (denoted as 2D-TPC) are of special interest. A 2D-TPC code consisting of two component codes C1 and C2 with parameters (n1, k1, d1, G1) and (n2, k2, d2, G2) respectively, has parameters (n1n2, k1k2, d1d2, G1 ⊗ G2); where n, k, d, G are the length, dimension, minimum distance, and generator matrix of the code respectively, and ⊗ represents the Kronecker product. Within the 2D-TPC codes, the attention is focused on those based on single parity check codes (SPC) of length N and dimension N −1, denoted as 2D-TPC/SPC(N ,N −1)2 [7], [8] y [9]. Fig. 1 shows the TG and its structure for a 2DTPC/SPC(4,3)2 code.
+2D-TPC/SPC codes are all VPFCC-codes. This can be seen through the 2D-TPC/SPC(4,3)2 example code of Fig. 1, from
+
+which the partition PV = {V1, V2, V3, V4} is built, where:
+V1 = {B1, B5, B9, P4} V2 = {B2, B6, P7, P1} V3 = {B3, P6, B7, P2} V4 = {P5, B4, B8, P3}.
+
+It can be verified that this partition holds properties (P1) and (P2), making 2D-TPC/SPC(4,3)2 a VPFCC-code. This result can be generalized to a 2D-TPC/SPC(N ,N − 1)2 code by creating a partition PV = {Vi : i = 1, . . . , N }, where Vi is the i-th modular-diagonal from the square array of N × N variable nodes. The modular-diagonal of a N × N square array of elements xi,j is defined as the sets
+Dk = {xi,j : i = 1, . . . , N ∧ j = (i + k − 1)mod(N )}. (1)
+
+III. THE SUM-PRODUCT ALGORITHM
+
+Let bi be the i-th bit of the code word. The Sum-Product Algorithm (SPA) [10] takes as input the a priori log-likelihood ratio of each bit:
+
+AprLLRi = ln
+
+P (bi = 1) P (bi = 0)
+
+.
+
+(2)
+
+It then iterates on the computation of the a posteriori loglikelihood ratio:
+
+ApoLLRi = ln
+
+PC (bi = 1) PC (bi = 0)
+
+,
+
+(3)
+
+where
+
+PC (bi) =
+
+P (b1, . . . , bn | AprLLR1, . . . , AprLLRn),
+
+bj : j=i
+
+being P (·|·) the joint probability function of the code word given the a priori information. One iteration of the SPA
+algorithm consists of two steps. In the first one (A), messages are calculated and sent from the variable nodes vi to the check nodes cj, M (vi → cj). In the second step (B), messages are calculated and sent from the check nodes cj to the variable nodes vi, M (cj → vi). Steps (A) and (B) are repeated as many times as required iterations. Finally, in a third step (C), the ApoLLR is computed. Summarizing, the calculations performed on each step are the followings:
+
+A. Messages from variable to check nodes:
+
+M (vi → cj) = AprLLRi +
+
+M (ck → vi) (4)
+
+ck ∈g(vi )\cj
+
+B. Messages from check to variable nodes:
+
+⎧
+
+⎫
+
+⎨
+
+⎬
+
+M (cj → vi) = φ−1 ⎩
+
+φ M (vk → cj) ⎭ (5)
+
+vk∈g(cj )\vi
+
+where φ(x) = ln [tanh (x/2)], φ−1(x) = 2 tanh−1 (ex).
+
+ISBN 978-987-655-003-1 EAMTA 2008
+
+108
+
+IEEE Catalog number CFP0854E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:11 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of the Argentine School of Micro-Nanoelectronics, Technology and Applications 2008
+
+(sign) (abs) (sign) (abs)
+
+BCV
+
+FIFO
+
+L
+
+U
+
+T
+
++ +
+
+FIFO
+
+−
++
+
+L
+
+U
+
+T
+
+Messages Related to V1
+
+B1
+
+C1
+
+C1
+
+B2
+
+B3
+
+C2
+
+C2
+
+B4
+
+B5
+
+C3
+
+C3
+
+B6
+
+B7
+
+C4
+
+C4
+
+B8
+
+B9
+
+C5
+
+C5
+
+P1
+
+P2
+
+C6
+
+C6
+
+P3
+
+P4
+
+C7
+
+C7
+
+P5
+
+P6
+
+C8
+
+C8
+
+P7
+
+Messages Related to V2
+
+B1
+
+C1
+
+C1
+
+B2
+
+B3
+
+C2
+
+C2
+
+B4
+
+B5
+
+C3
+
+C3
+
+B6
+
+B7
+
+C4
+
+C4
+
+B8
+
+B9
+
+C5
+
+C5
+
+P1
+
+P2
+
+C6
+
+C6
+
+P3
+
+P4
+
+C7
+
+C7
+
+P5
+
+P6
+
+C8
+
+C8
+
+P7
+
+BVC
+BApoLLR
+Figure 2. The BCV block computes recursively the messages M (cj → vi). The BVC block computes in parallel the messages M (vi → cj ). The BApoLLR computes the a posterior information ApoLLRi. All the blocks correspond to one code of the 2D-TPC/SPC family.
+
+Messages Related to V3
+
+B1
+
+C1
+
+C1
+
+B2
+
+B3
+
+C2
+
+C2
+
+B4
+
+B5
+
+C3
+
+C3
+
+B6
+
+B7
+
+C4
+
+C4
+
+B8
+
+B9
+
+C5
+
+C5
+
+P1
+
+P2
+
+C6
+
+C6
+
+P3
+
+P4
+
+C7
+
+C7
+
+P5
+
+P6
+
+C8
+
+C8
+
+P7
+
+Messages Related to V4
+
+B1
+
+C1
+
+C1
+
+B2
+
+B3
+
+C2
+
+C2
+
+B4
+
+B5
+
+C3
+
+C3
+
+B6
+
+B7
+
+C4
+
+C4
+
+B8
+
+B9
+
+C5
+
+C5
+
+P1
+
+P2
+
+C6
+
+C6
+
+P3
+
+P4
+
+C7
+
+C7
+
+P5
+
+P6
+
+C8
+
+C8
+
+P7
+
+Figure 3. Partition of the computation flow of messages on a SPA algorithm using the VPFCC property of the 2D-TPC/SPC(4,3)2 code.
+
+C. A posteriori log-likelihood ratio (ApoLLR) computation:
+
+ApoLLRi = AprLLRi +
+
+M (ck → vi) (6)
+
+ck ∈g(vi )
+
+The computation in steps (A), (B), and (C) is performed in independent blocks named BVC, BCV, and BApoLLR respectively. As the BCV block, which computes messages M (cj → vi), consumes most of the computational requirements of the SPA algorithm, a modified version is usually implemented. This version is based on the following approximation:
+
+φ−1 φ(a) + φ(b)
+
+= 2 tanh−1 tanh
+
+a 2
+
+· tanh
+
+b 2
+
+= sign(a) · sign(b) · min{|a|, |b|} + log
+
+1 + e−|a+b| 1 + e−|a−b|
+
+≈ sign(a) · sign(b) · min{|a|, |b|}.
+
+In this way, the computation of the check to variable messages can be rewritten in the following way:
+
+M ∗(cj → vi) =
+
+min
+
+M (vk → cj)
+
+⎡vk∈g(cj )\vi
+
+(7) ⎤
+
+·⎣
+
+sign(M (vk → cj))⎦
+
+vk∈g(cj )\vi
+
+IV. PROPOSED ARCHITECTURE
+The proposed implementation architecture is based on the order that messages M (vi → cj) and M (cj → vi) are computed and evaluated. Fig. 2 shows the BVC and BCV block architectures used to compute the messages M (vi → cj) and M (cj → vi), respectively. The BVC block works in a parallel way while the BCV blocks do it recursively, minimizing thus
+their complexity. Fig. 4 shows the complete architecture of a SPA decoder with two iterations for a 2D-TPC/SPC(4,3)2
+code. The system parallelism is 4, i.e., on each clock cycle 4 values of AprLLR and ApoLLR input and output respectively. The input and output sequence corresponds with the partition elements PV = {Vi : i = 1, . . . , 4} described in Section II. Fig. 3 shows how messages of the SPA algorithm are computed when the partition PV is used. Property (P2) of PV prevents a conflict between M (vi → cj) messages, i.e., on each clock cycle there will not be two M (vi → cj) messages arriving at the same check node. Property (P1) ensures that, on
+each clock cycle, all check nodes will have input information available. As Fig.3 shows, only N = 4 variables nodes are updated on each clock cycle. Due to this property, only 4 BVC blocks need to be implemented instead of the N 2 = 16 that a full parallel architecture would need. Multiplexers shown in
+Fig. 4 interconnect the 4 BVC blocks with the corresponding BCV blocks of each set Vi of the partition PV .
+For the case of the 2D-TPC/SPC(N ,N − 1)2 family of codes, the proposed architecture presents the following char-
+
+ISBN 978-987-655-003-1 EAMTA 2008
+
+109
+
+IEEE Catalog number CFP0854E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:11 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of the Argentine School of Micro-Nanoelectronics, Technology and Applications 2008
+
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+
+BVC BVC BVC BVC
+
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+BCV
+FIFO
+BCV
+
+BApoLLR BApoLLR BApoLLR BApoLLR
+
+Figure 4. SISO decoder architecture with two SPA iterations for the 2D-TPC/SPC(4,3)2 code.
+
+acteristics:
+• The partition of the computation flow in the SPA algorithm saves the need to store the M (vi → cj) and M (cj → vi) messages, which are computed and used on demand.
+• The possibility to use a recursive architecture for the BCV block while maintaining a parallel processing of the whole decoder reduces the implementation complexity.
+• Only N BVC blocks are implemented, instead of N 2.
+The architecture of Fig. 4 can be easily generalized to any other LDPC code fulfilling the VPFCC property. Besides, the proposed technique can be implemented recursively without major modifications. This allows to do several SPA iterations by only instantiating the hardware that corresponds to an iteration, e.g. the first half of the architecture shown in Fig. 4.
+V. FPGA IMPLEMENTATION
+The synthesis of the proposed architecture was performed on an FPGA Virtex 5 (XC5VLX330) from Xilinx. The decoder was designed for the 2D-TPC/SPC(32,31)2 code with the following parameters: (n = 1024, k = 961, d = 4) and rate R = 0.9384. All the signals present in the decoder were digitized using 8 bits precision variables. The resources used were: 16952 registers out of 297369 (8.18%) and 14402 lookup tables (LUTs) out of 207360 (6.95%).
+VI. CONCLUSIONS
+This paper proposed a novel parallel architecture for decoding VPFCC-type LDPC codes. This architecture is suitable for
+
+working on high speed applications, requiring low memory
+and interconnection complexity. These features make the
+architecture attractive for implementing iterative decoders on
+integrated circuits.
+REFERENCES
+[1] D. J. C. Mackay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEE Electronics Letters, vol. 33, no. 66, pp 457-8, March 1997.
+[2] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recording channels,” IEEE Trans. Magnetics, vol. 37, no. 2, pp. 748-55, March 2001.
+[3] ——, “High throughput low-density parity-check decoder architectures,” IEEE, 2001.
+[4] C. Howland and A. Blanksby, “A 220mw 1Gb/s 1024-bit rate-1/2 low density parity check code decoder,” IEEE Custom Integrated Circuits Conference, 2001.
+[5] E. Liao, E. Yeo, and B. Nikolic, “Low-density parity-check code constructions for hardware implementation,” IEEE Communications Society, 2004.
+[6] M. Karkooti, P. Radosavljevic, and J. R. Cavallaro, “Configurable, high throughput, irregular LDPC decoder architecture: Tradeoff analysis and implementation,” IEEE ASAP, 2006.
+[7] J. Li, K. Narayanan, and C. Georghiades, “Product accumulate codes: A class of codes with near-capacity performance and low decoding complexity,” IEEE Trans. on Inf. Theory. vol. 50, no. 1, pp. 31-46, January 2004.
+[8] J. Li, K. R. Narayanan, E. Kurtas, and C. N. Georghiades, “On the performance of high-rate TPC/SPC codes and LDPC codes over partial response channels,” IEEE Trans. on Communications, vol. 50, no. 5, pp. 723-734, May 2002.
+[9] J. Li, E. Kurtas, K. R. Narayanan, and C. N. Georghiades, “On the performance of turbo product codes over partial response channels,” IEEE Trans. on Communications, vol. 37, no. 4, pp. 1932-1934, July 2001.
+[10] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. on Inf. Theory, vol. 47, no. 2, pp. 498-519, February 2001.
+
+ISBN 978-987-655-003-1 EAMTA 2008
+
+110
+
+IEEE Catalog number CFP0854E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:11 UTC from IEEE Xplore. Restrictions apply.
+
+

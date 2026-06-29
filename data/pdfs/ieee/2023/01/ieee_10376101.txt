@@ -1,0 +1,536 @@
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT) | 978-1-6654-5731-6/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISCIT57293.2023.10376101
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+A Non-uniform Quantization-based Hardware Architecture for BP Decoding of Polar Codes
+Xinyi Gu, Mohammad Rowshan, Yixuan Xie, and Jinhong Yuan, Fellow, IEEE School of Electrical Eng. and Telecom., University of New South Wales (UNSW), Sydney, Australia
+xinyi.gu@student.unsw.edu.au, {m.rowshan, yixuan.xie, j.yuan}@unsw.edu.au
+
+Abstract—Belief propagation (BP) decoding of polar codes benefits from the high parallelism in hardware implementation and consequently provides high throughput compared to successive cancellation-based decoding algorithms. As the evolved log-likelihood ratios (LLRs) in the decoding process have a wide dynamic range, the quantization error can degrade the error correction performance of the BP decoder. To reduce the quantization error in a uniform quantization scheme, we may need to use more bits for each LLR value which is not desirable due to the required memory space. In this paper, we design an efficient hardware architecture for non-uniformly quantized LLR messages in BP decoding where the arithmetic operations on logarithmically compressed messages are replaced with the mapping to precomputed results in lookup tables. By employing 5-bit non-uniform quantization, the designed BP decoder architecture reduces the required memory space by 37.5 percent compared to 8-bit uniform quantization while additionally improving the block error rate (BLER) by more than 0.1 dB in high SNR regimes. Compared to uniform quantization, the BLER improvement of the designed architecture is up to 0.4 dB when both quantization schemes use 5 bits for LLRs.
+Index Terms—Polar codes, belief propagation, decoding, hardware architecture, quantization.
+I. INTRODUCTION
+Polar codes can achieve channel capacity under a lowcomplexity successive cancellation (SC) decoding given infinite code length [1]. Since the error correction performance of SC decoder in finite block lengths is not satisfactory, various SC-based and belief propagation (BP)-based decoding algorithms were proposed. Introduced in [2], SC list (SCL) decoding provides a near maximum likelihood (ML) performance with a sufficiently large list size L at the cost of high computational complexity. Moreover, the precoding of polar codes by adding CRC bits [3] or by convolutional transformation [4]–[6] (a.k.a PAC codes) give an additional boost to the performance of polar codes. Nevertheless, their high computational complexity results in relatively low throughput.
+Initially employed to decode polar codes in [7], BP decoder is an iterative message passing algorithm [8] that is widely used in the decoding of low-density parity check (LDPC) codes. From a practical standpoint, BP decoders offer a significant advantage over SC-based decoders as the operations on the factor graph (FG) can be executed in parallel, providing the potential for higher throughput and lower latency. The
+The work was supported in part by the Australian Research Council (ARC) Discovery Project under Grant DP220103596.
+
+hardware architectures of BP decoders have been improved in [9]–[11], [13]–[15] in terms of throughput, reduce latency, and minimize memory requirements.
+In this work, our focus is on the quantization of the messages in BP decoding. The choice of quantization scheme for hardware implementation varies depending on the tolerance of the quantization error and the dynamic range of the messages. Non-uniform quantization schemes have been developed for SC-based decoders [16] to reduce memory requirements. As the iterative structure of BP decoders typically requires large memory resources, it can be employed. However, the hardware implementation of a non-uniform quantization is challenging due to introducing additional latency and difficulty in an efficient way of designing it. To the best of our knowledge, there is no hardware implementation of a non-uniform quantizer in the literature for any kind of polar decoder.
+The main contribution of this work is the development of an efficient hardware architecture based on non-uniformly quantized messages for BP decoding. In the proposed design, by leveraging lookup tables, the arithmetic operations of the logarithmic mapping are replaced with pre-computed results to preserve throughput in a pipeline-based architecture. To evaluate and verify the design, we use a field programmable gate array (FPGA) platform. The numerical results reveal that under a similar BLER for uniform and non-uniform quantization, the designed architecture can reduce the required memory space by 37.5 percent compared to 8-bit uniform quantization. Compared to uniform quantization, the designed architecture demonstrates a BLER improvement of up to 0.4 dB when both quantization schemes use 5 bits for log-likelihood ratios (LLRs).
+
+II. PRELIMINARIES
+
+Polar codes of length N = 2n are constructed based on
+
+the n-th Kronecker power of binary Walsh-Hadamard matrix
+
+G2 =
+
+1 1
+
+0 1
+
+, that is, GN
+
+= G2⊗n. Let u = (u0, u1 · · · uN−1)
+
+denote the input row vector, within which K bits are infor-
+
+mation. The coordinates of these bits are selected based on
+
+the reliabilities of the subchannels, denoted as the information set A of polar codes. The remaining N − K bits in Ac are
+
+known as frozen bits. There are various methods [18] based
+
+on density evolution or Bhattacharyya bound as metrics for
+
+subchannel reliability used to construct polar codes for additive
+
+white Gaussian noise (AWGN) channels. The codeword vector
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-5731-6/23/$31.00 ©2023 IEEE
+
+363
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+
+x = (x0, x1 · · · xN−1) can be obtained by x = uGN .
+
+For signals transmitted over AWGN channel, the received
+
+signal y = x + w, where vector y = (y0, y1 · · · yN−1)
+
+refers to the channel output and w is the noise vector. For
+
+0 ≤ i ≤ N − 1, the LLR of the channel output can be derived
+
+as: Li
+
+=
+
+2yi σ2
+
+=
+
+4yi N0
+
+,
+
+where
+
+σ2
+
+is the variance of
+
+additive noise.
+
+Fig. 1: Fundamental block computation of BP decoder.
+The belief propagation (BP) decoder is a widely used softin soft-out decoding algorithm for polar codes, operating iteratively on a (n + 1)-layer of factor graph (FG). Each layer contains N nodes for evolving the LLRs along the FG. We use (i, j), 0 ≤ i ≤ N − 1 and 0 ≤ j ≤ n, for the node representation in the FG, which has different permutations. This work adopts the FG used in [17]. The terms channel LLRs and evolved LLRs refer to the LLRs estimated at the channel outputs and at the nodes during the BP decoding, respectively. The decoding of BP employs two tables L and R, propagating messages in opposite directions. The layers are denoted as Lj and Rj. Initialized with channel LLRs in layer Ln, the left propagating message Li,j is known as a measure of a posterior information. Right propagating message Ri,j stores a measure of a prior information. The values at layer R0 are set to 0 or ∞ depending on whether the bits are information or frozen bits. The message propagation process is illustrated in Fig. 1. Each iteration updates messages in L and R layer-by-layer with the following computations:
+
+III. A LOOKUP TABLE-BASED NON-UNIFORM QUATIZATION
+
+A non-uniform quantizer is used to reduce the range of the
+
+LLRs while maintaining the decoding performance of the BP
+
+decoder. The LLR of the channel output follows the Gaussian
+
+distribution
+
+Li
+
+∼
+
+N
+
+(
+
+2·(±1) σ2
+
+,
+
+4 σ2
+
+).
+
+Since
+
+2 σ2
+
+is a constant
+
+scaling factor for signals transmitted under a specific SNR,
+
+it can be factored out, bringing the range of channel LLRs for
+
+the decoder smaller. For example, the range of channel LLRs
+
+over
+
+an
+
+AWGN
+
+channel
+
+is
+
+[−10, +10].
+
+When
+
+2 σ2
+
+is
+
+factored
+
+out, it can be brought down to approximately [−2, +2], which
+
+covers over 98% of the values. Additionally, factoring out the
+
+scalar helps compress the range of the evolved LLRs for the
+
+BP decoder.
+
+To further compress the range of evolved LLRs for a limited
+
+number of quantized levels, a base-2 logarithmic function is
+
+applied to the channel LLRs. With a LLR λi, the mapping gives the compressed LLR Λi as:
+
+Λi = sign(λi) · log2(|λi| + 1).
+
+(3)
+
+The mid-tread scheme is employed to quantize the channel LLRs. The quantized values Λˆi become:
+
+Λˆ i =
+
+Λi + 1 ∆2
+
+· ∆,
+
+(4)
+
+where ∆ refers to the step sizes, which are designed to be different for the channel LLRs and evolved LLRs to cover the whole range of LLRs for BP decoding. The compressed values are mapped onto a limited number of quantized levels, which reduces the number of bits needed to represent each LLR value. The compression function allows us to represent a wider range of LLR values with fewer bits.
+
+5-bit Non-uniform Quantization 5
+
+Base 2 Logarithmic Function
+
+4
+
+5-bit Non-uniform Quantization
+
+Li(,tj+1) = f Li(,tj)+1, L(i+t)2n−j ,j+1 + Ri(+t)2n−j ,j L(i+t+21n)−j ,j = Li(+t)2n−j ,j+1 + f L(i,tj)+1, Ri(,tj)
+
+(1)
+
+Ri(,tj++11) = f Ri(,tj), Li(+t)2n−j ,j+1 + Ri(+t)2n−j ,j Ri(+t+21n)−j ,j+1 = Ri(+t)2n−j ,j + f Ri(,tj), Li(,tj)+1,
+where function f denotes min-sum operation, i.e.
+
+, (2)
+
+f (x, y) = sign(x) · sign(y) · min(|x|, |y|),
+
+for reducing the computational complexity of the hardware implementation at the cost of degradation in error correction performance. To compensate for the loss in performance, a constant scalar α is introduced, and hence f (x, y) = α · sign(x) · sign(y) · min(|x|, |y|) [11], [13]. The G-matrixbased early stopping condition is employed [13], enabling the decoder to check for convergence and terminate before reaching the maximum set number of iterations.
+
+3
+
+2
+
+1
+
+0
+
+-1
+
+-2
+
+-3
+
+-4
+
+-5
+
+-20 -15 -10
+
+-5
+
+1 0.5
+0 -0.5
+-1
+
+-2 -1
+
+0
+
+1
+
+2
+
+0
+
+5
+
+10
+
+15
+
+20
+
+Fig. 2: Base-2 logarithmic non-uniform mapping.
+The target quantization is 5-bit and the total number of quantized levels is 25 = 32. Considering the sign bit, 24 = 16
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+364
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+
+TABLE I: LLR range before and after the mapping for the 5-bit non-uniform quantization.
+
+Channel LLR Evolved LLR
+
+Quantized Level [0.0, 8] [9, 10] [11, 15]
+
+Step Size ∆ 0.2 0.2 0.5
+
+Λi [0, 1.6] [1.8, 2.0] [2.5, 4.5]
+
+λi [0, 2.03] [2.48, 3.0] [4.66, 21.63]
+
+levels need to be designed. The LLR represents the reliability of the corresponding bit. A larger absolute value of LLR indicates higher reliability. Since the decoder is more sensitive to small values of LLR, a fine resolution is selected for the channel LLR, while a rough resolution is for evolved LLRs. To balance the limited quantized levels in the 5-bit non-uniform quantization between the channel LLRs and evolved LLRs , 9 levels are assigned for channel LLRs and the rest 7 levels are designed for evolved LLRs. The proposed 5-bit non-uniform quantization scheme is given in TABLE I and is shown in Fig. 2. Step sizes for channel LLRs are designed to be 0.2 so that the quantized range covers [−2.0314, +2.0314]. If the values exceed the range, they will be treated as saturated and clipped to the edges. The step size for evolved LLRs is designed to be uniform at 0.5. The total range of the LLRs for the designed BP decoder is [−21.627, +21.627].
+As the whole decoding range of the LLRs is mapped into the logarithmic domain, computations of the BP decoder are no longer linear. During the decoding, two input levels of evolved LLRs are converted back to the values according to Fig. 2. The computations are carried out for the LLR values, and the results are compressed and mapped to the quantization levels again using (3) for storage.
+To implement this 5-bit non-uniform quantizer efficiently in hardware, a look-up table (LUT) based scheme is employed. Instead of computing the conversions in real-time, lookup tables are pre-built, including all the possible results of addition and subtractions for different levels. As a result, with two input quantized levels, the non-linear results can be obtained by searching the LUT, which reduces the computational complexity and allows for high throughput in the hardware implementations. The LUT can be built as shown in TABLE II, where LUT+ and LUT− represent the LUTs for addition and subtraction respectively. Notations mag(a) and mag(b) are used to denote the magnitudes of the two inputs of LUT. The computations of non-linear addition and subtraction are represented in the form of add(mag(b), mag(a)) and sub(mag(b), mag(a)). The input mag(a) is added or subtracted with the [0, 15] levels and the output is selected based on the other input mag(b).
+
+TABLE II: The precomputed LUT+-mag(a) and LUT−-mag(a) where mag(a) ∈ [0, 15] for 4-bit non-uniform
+additions and subtractions.
+
+mag(b)
+
+LUT+-mag(a) add(0,mag(a)) add(1,mag(a))
+... add(15,mag(a))
+
+LUT−-mag(a) sub(0,mag(a)) sub(1,mag(a))
+... sub(15,mag(a))
+
+Fig. 3: Top-level architecture of the BP decoder.
+
+IV. THE PROPOSED HARDWARE ARCHITECTURE
+
+In this section, we present the hardware architecture of the BP decoder as a whole and the architecture designed for the LUT-based quantizer.
+The top-level architecture of the BP decoder is drawn in Fig. 3 with two inputs and two outputs. The inputs are the channel LLRs Ln and a prior LLRs R0, which are the rightmost and leftmost layers in the FG for the two propagating tables respectively. When either meeting early stopping conditions or reaching the maximum iterations, the BP decoder outputs the decoded sequence and an indicator representing the completion of the decoding.
+The BP decoding processes in sub-modules are described as follows:
+
+• The controller generates the control signals for the sub-
+
+modules to initiate their operations. It also manages the
+
+reading and writing operations of the memory.
+
+• Each processing element (PE) represents one fundamental
+
+block computation (i.e. the min-sum operations) in the FG
+
+of the BP decoder, in which the LUT-based non-uniform
+
+quantization
+
+is designed.
+
+In
+
+total,
+
+N 2
+
+PEs are
+
+employed
+
+in parallel to update one layer of FG.
+
+• RAM is a dual port memory block. It writes in outputs
+
+from PEs, storing values for the two propagating tables
+
+of the BP decoder. Addresses of the RAM are generated
+
+from the controller. To avoid reading and writing to the
+
+same address simultaneously, a feedback loop is built
+
+permuting the output of PEs and outputting the permuted
+
+sequence as inputs of PEs for the next clock cycle (CC).
+
+• Permutations are carried out through two sets of buffers at
+
+the outputs of RAM and PEs respectively, which are fixed
+
+between the layers based on the adopted FG. Multiplexers
+
+are used to select the inputs of PEs according to the
+
+propagating directions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+365
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+
+• The early stopping unit is divided into three steps: hard decision, re-encoding, and comparison to check whether the information in the two propagating tables has converged and the BP decoder needs to be terminated.
+
+A. Processing Element (PE)
+
+Computations in BP decoders require LLRs from both L and R tables to update information on a specific node in FG, as shown in Fig. 1. Each PE corresponds to one block of FG and updates two nodes in one layer simultaneously, with four inputs (two from L and two from R) and two outputs.
+The computations (1) and (2) can be summed into a pair of calculations for updating two tables for the BP decoder. According to Fig. 3 and 4, we use re to denote the sequence reading from the RAM and wr for the sequence that is written into the RAM, from which the four inputs of the PEs are segmented. Thus, (1) and (2) can be re-written as:
+
+wri(t+1) = f wri(t), wri(+t)1 + re(i+t)1 wri(+t+11) = wri(+t)1 + f wri(t), rei(t)
+
+.
+
+(5)
+
+Fig. 5: The design of “LUT-based Q” block in the processing element.
+
+Fig. 4: The architecture of Processing element for BP decoder.
+The structure of PE is illustrated in Fig. 4. The min-sum operations involve two steps: a) finding the minimum and b) summation of two LLRs. The “min” block in the figure selects the smaller value from the two input LLRs to obtain the minimum. Since the designed quantization is non-uniform, a LUT-based searching scheme is employed for the summation computation instead of a conventional adder. The unit block for this computation is labeled as “LUT-based Q” in Fig. 4 and the detailed design is presented in Fig. 5, where “mag” and “sign” refer to the magnitude and the sign of the input LLRs, respectively.
+For the designed 5-bit non-uniform quantizer, the number of quantized levels is 2(Q−1) = 16. To increase the throughput, an architecture consisting of a set of LUTs is introduced for addition and subtraction, respectively, allowing the input magnitude to be added to or subtracted from all quantization levels simultaneously. That is, for an arbitrary
+
+input level a, 0 ≤ mag(a) ≤ 15, one “LUT-based Q” block performs 16 LUTs for addition and 16 LUTs for subtraction simultaneously. Recall that the input and output of the PEs are in the logarithmically compressed domain and the PEs are actually performing the required operation (non-linear addition or subtraction) in this domain.TABLE II shows the content of LUTs in Fig. 5.
+At the output, the results of adding to or subtracting from a are obtained in the form of two bit-sequences. Each bitsequence consists of 2(Q−1) · (Q − 1) = 64 bits, which are indexed as [0, 63]. Every 4 bits (as the output of one of the LUTs) in the sequence represent the result of the addition or subtraction operation on a (i.e. one of the 2Q−1 levels). The output of the summation computation directly selects the wires with the corresponding index based on the other input b, 0 ≤ b ≤ 15, i.e. the results with index [4 · b, 4 · b + 1, 4 · b + 2, 4 · b + 3] will be selected. Multiplexers are used to select the sign and whether the magnitude should be obtained through addition or subtraction. The process in the LUT-based quantizer is demonstrated in Example 1.
+Example 1. Suppose we have two inputs, a = 5 and b = 2, for the LUT-based quantized operation. The selection of the outputs for addition and subtraction based on input a = 5 is highlighted in blue in TABLE III. In the bit-sequences coming out from addition and subtraction parts of “LUTbased Q” block, the bits with indexes [8, 11] are selected. Then, the multiplexer chooses one of the outputs based on the result of sign(a) ⊕ sign(b). Recall that the operations to obtain results in TABLE III are non-linear and are precomputed in the logarithm domain while considering saturated at 15.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+366
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+
+TABLE III: The lookup tables used for subtraction and addition when b = 2 for 5-bit non-uniform quantization. The
+LUT’s output is highlighted in blue when a = 5.
+
+mag(b) 2
+
+LUT+-5 add(0,5) = 5 add(1,5) = 5 add(2,5) = 6
+... add(14,5) = 14 add(15,5) = 15
+
+LUT−-5 sub(0,5) = 5 sub(1,5) = 4 sub(2,5) = 3
+... sub(14,5) = 13 sub(15,5) = 14
+
+performance of FPGA implementation for the proposed 5-bit non-uniform quantization is presented and compared with the simulation result in Fig. 8.
+
+10-1
+
+Polar Code (1024, 512), Iterations = 60
+
+floating point
+
+10-2
+
+uniform Q = 8 uniform Q = 5 propsed non-unifrom Q = 5
+
+b=0
+
+b=1
+
+b=2
+
+b = 15
+
+64 bits
+
+addition
+
+0 1 0 1 0 1 0 1 0 1 1 0…1 1 1 1
+
+64 bits
+
+subtraction
+
+0 1 0 1 0 1 0 0 0 0 1 1…1 1 1 0
+
+index: 0 1 2 3 4 5 6 7 8 9 10 11 … 60 61 62 63
+
+Fig. 6: Extracting the operation (add/sub) result from the bit-sequence based on the input b in Example 1.
+
+Since the original addition and subtraction operations are replaced by the precomputed LUT-based non-uniform quantized operations, the increase in resource usage is relatively small. The LUT searches are conducted in parallel, resulting in a time complexity of one lookup table search concatenated with two multiplexers, which helps maintain the throughput compared to the conventional uniform quantization. However, the power consumption of this lookup table-based scheme increased as it performs a number of LUT searches in parallel. This design prioritizes better throughput, smaller memory, and improved error performance over energy efficiency.
+V. NUMERICAL RESULTS AND DISCUSSIONS
+In this section, the verification of the designed BP decoder is discussed. Implementation results are given in terms of throughput, latency, memory, resources, energy consumption, and error correction performance. The Xilinx ZC706 Systemon-Chip (SoC) evaluation platform is used to verify the designed lookup table-based BP decoder for polar codes of lengths 64, 128, 256, 512 and 1024.
+We evaluate the BP decoder with the binary phase-shift keying (BPSK) modulation over the AWGN channel. The polar codes are constructed using the universal bit-channel reliability sequence specified in the 5G standard [12]. In Figure 7, we compare the error correction performance of the proposed 5-bit non-uniform quantization scheme with that of the BP decoder using floating-point arithmetic, as well as the results obtained using floating-points, uniform quantization schemes with Q = 5 and Q = 8 for the optimized minsum BP decoder with a scalar [13]. To ensure good error correction performance, the maximum number of iterations is set to 60 for the BP decoder to converge in most cases. It can be observed that the proposed non-uniform quantization scheme not only outperforms the 8-bit uniform quantization but also eliminates the performance degradation caused by the min-sum approximation, approaching the error correction performance of the BP decoder to the performance of floatingpoint LLRs at high SNR regimes. The onboard error correction
+
+BLER
+
+10-3
+
+10-4
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 [dB]
+
+Fig. 7: Performance comparison of the proposed 5-bit non-uniform quantization with uniform quantization.
+
+10-1
+
+Polar Code (1024, 512), Iteration = 60
+
+floating point
+
+propesed non-unifrom Q = 5
+
+FPGA implementation Q = 5
+
+10-2
+
+BLER
+
+10-3
+
+10-4
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 [dB]
+
+Fig. 8: Performance comparison between the results of the MATLAB-based simulation and the FPGA implementation for the architecture based on 5-bit non-uniform quantization.
+
+The resource usage and performance of the FPGA design for the BP decoder with different code lengths are evaluated at SNR= 4 dB and are summarized in TABLE IV. The design employs one clock cycle (CC) for updating one layer in the L and R tables of the BP decoder. Therefore, the required CCs for one iteration are equal to the number of layers that need to be updated in both tables. The average latency of the designed structure can be calculated as: Avg. Latency = (number of cycles per iteration) · (Avg. iterations). The coded throughput can then be acquired as:
+
+Throughput(T) = fcc · N ,
+
+(6)
+
+Avg. Latency
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+367
+
+2023 22nd International Symposium on Communications and Information Technologies (ISCIT)
+
+TABLE IV: Hardware performance of polar codes for the designed BP decoder with maximum iteration = 60 when transmitting over the AWGN channel with SNR= 4 dB.
+
+(N,K)
+(64, 32) (128, 64) (256, 128) (512, 256) (1024, 512)
+
+fcc (MHz) 250 230 200 160 130
+
+Avg. Latency (Cycles) 28.8 46.2 57.6 66.2 97.8
+
+Throughput (Gbps) 0.56 0.64 0.89 1.24 1.36
+
+LUT
+6043 11188 21578 40668 79041
+
+FF
+2543 3653 5873 7739 14014
+
+BRAM
+4.5 9.0 18.0 36.0 71.5
+
+Energy (nJ/bit) 1.69 2.06 2.18 2.70 3.27
+
+where fcc refers to the maximum clock frequency that the FPGA design can operate at while maintaining proper functionality. The number of iterations required for the BP decoder to converge varies depending on the noise of the channel, resulting in a variable average number of required iterations. Therefore, the latency and throughput of the BP decoder are SNR-dependent. Since this work does not focus on improving throughput, there are several hardware schemes that can be applied to increase the throughput of the BP decoder.
+The block RAM (BRAM) size varies depending on the FPGA model, and its usage determines the memory requirements of the design. The number of required BRAM also depends on the length of the read and write bit sequence for each CC. In the case of BP decoder, the memory usage is related to the LLRs that evolve along the FG of the corresponding code length. Applying the proposed 5-bit non-uniform quantization method can achieve a better error performance than the BP decoder with the uniform quantization scheme and can save memory. Compared with the 8-bit uniform quantization scheme, about 37.5% of the memory can be saved, that is the total required memory for the BP decoder can be reduced by (8 − 5) · 2 · N · n = 6 · N · n bits.
+VI. CONCLUSION
+In this paper, we propose a hardware architecture design for the main operations in the BP decoding process for the non-uniformly quantized LLRs. In this design, all the addition and subtraction operations are performed in the logarithmic compressed domain based on lookup tables, i.e., no actual computation is carried out, but the operation is simple mapping to the precomputed results of additions and subtractions. As the quantized messages in the BP decoding process are logarithmically compressed, this design can significantly reduce the memory requirement for BP decoding. The verification of the proposed design on the FPGA platform shows no BLER degradation compared to software implementation while reducing the required resources for the decoder. The designed architecture maintains the throughput of the architecture based on uniformly quantized messages with a relatively small increment in energy consumption. As future work, we suggest employing different quantization schemes for different layers in the BP decoder, as it might reduce the quantization bits for the propagating information in the BP decoder.
+
+REFERENCES
+[1] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051-3073, Jul. 2009.
+[2] I. Tal and A. Vardy, “List Decoding of Polar Codes,” in IEEE Transactions on Information Theory, vol. 61, no. 5, pp. 2213-2226, May 2015.
+[3] Niu K and Chen K, “CRC-aided decoding of polar codes,” in IEEE communications letters, vol 16, no. 10, pp. 1668-1671, 2012.
+[4] E. Arıkan, “From sequential decoding to channel polarization and back again,” 2019, arXiv preprint arXiv:1908.09594.
+[5] M. Rowshan, A. Burg and E. Viterbo, “Polarization-adjusted Convolutional (PAC) Codes: Fano Decoding vs List Decoding,” in IEEE Trans. on Vehicular Tech., vol. 70, no. 2, pp. 1434-1447, Feb. 2021.
+[6] X. Gu, M. Rowshan, J. Yuan, “Selective Reverse PAC Coding for Sphere Decoding,” 2022, arXiv:2212.00254. [Online]. Available: http://arxiv.org/abs/2212.00254
+[7] E. Arıkan, “A performance comparison of polar codes and Reed-Muller codes,” in IEEE Communications Letters, vol. 12, no. 6, pp. 447-449, 2008.
+[8] Kschischang F R, Frey B J, Loeliger H A, “Factor graphs and the sumproduct algorithm,” in IEEE Transactions on information theory, vol. 47, no. 2, pp. 498-519, 2001.
+[9] Park Y S, Tao Y, Sun S, et al, “A 4.68 Gb/s belief propagation polar decoder with bit-splitting register file,” in IEEE Symposium on VLSI Circuits Digest of Technical Papers, pp. 1-2, 2014.
+[10] Abbas S M, Fan Y Z, Chen J, et al, “High-throughput and energyefficient belief propagation polar code decoder,” in IEEE Transactions on very large scale integration (VLSI) systems, vol. 25, no. 3, pp. 10981111, 2016.
+[11] Sha J, Liu X, Wang Z, et al, “A memory efficient belief propagation decoder for polar codes,” in China Communications, vol. 12, no. 5, pp. 34-41, 2015.
+[12] “5G; NR; Multiplexing and channel coding,” 3GPP, France, Jul. 2020. [13] Yuan B, Parhi K K, “Early stopping criteria for energy-efficient low-
+latency belief-propagation polar code decoders,” in IEEE transactions on signal processing, vol. 62, no. 24, pp. 6496-6506, 2014. [14] Ren Y, Zhang C, Liu X, et al, “Efficient early termination schemes for belief-propagation decoding of polar codes,” in IEEE 11th International Conference on ASIC (ASICON), pp. 1-4, 2015. [15] Simsek C, Turk K, “Simplified early stopping criterion for beliefpropagation polar code decoders,” in IEEE Communications Letters, vol. 20, no. 8, pp. 1515-1518, 2016. [16] Rowshan M, Viterbo E, Micheloni R, et al, “Logarithmic non-uniform quantization for list decoding of polar codes,” in IEEE 11th Annual Computing and Communication Workshop and Conference (CCWC), pp. 1161-1166, 2021. [17] Pamuk A, “An FPGA implementation architecture for decoding of polar codes,” in IEEE 8th International symposium on wireless communication systems, pp. 437-441, 2011. [18] H. Vangala, E. Viterbo, and Y. Hong, “A comparative study of polar code constructions for the AWGN channel,” 2015, arXiv:1501.02473. [Online]. Available: http://arxiv.org/abs/1501.02473
+
+ACKNOWLEDGMENT
+The authors would like to thank Jinyu Chen for the useful discussion.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:06:55 UTC from IEEE Xplore. Restrictions apply.
+368
+
+

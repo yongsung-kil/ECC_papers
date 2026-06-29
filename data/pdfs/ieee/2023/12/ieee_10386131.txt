@@ -1,0 +1,155 @@
+High-Speed Compilation of Large-Scale Stochastic Circuits
+
+Alex Ilov Aalto University, Espoo, Finland
+alex.ilov@aalto.fi
+
+Alexandru Paler Aalto University, Espoo, Finland
+alexandru.paler@aalto.fi
+
+2023 IEEE International Conference on Rebooting Computing (ICRC) | 979-8-3503-8204-4/23/$31.00 ©2023 IEEE | DOI: 10.1109/ICRC60800.2023.10386131
+
+Abstract—Stochastic computing (SC) is executed on bitstreams which encode probabilities into the ratio between the number of one bits and the length of the stream. SC is successfully applied, for example, to image processing and beliefpropagation (BP) of low-density parity-check (LDPC) codes. With increased interest into SC, there is a gap with respect to the available scalable design automation tools needed for the fast prototyping of SC circuits. We bridge this gap by starting from the BitSAD.jl library, and implement data structures and methods to achieve orders of magnitude speed-ups for the compilation of SC circuits. We demonstrate the speedups by compiling BP decoders for LDPC codes. Our improvements enable the compilation of circuits which were previously out of reach for the tools. Our methods pave the way towards scalable design automation of SC.
+1. Background
+Stochastic Computing (SC) was first proposed as a computational paradigm in the 1960s [1]. SC is operating on information digitised as probabilities, and is sitting inbetween digital and analog computers. In SC numbers are probabilities encoded into bit streams (with the help of stochastic random number generators): the stored probability value is the ratio between the number of one bits in the stream and the total stream length. SC received, initially, little attention as digital computers have been found fit for general-purpose computation, and with transistors becoming cheaper, the main benefits of SC have diminished from an economics point of view.
+Just like in a classical architecture, the computing elements of a SC circuit are gates and flip-flops organised in networks. A circuit is a finite automata, whose inputs are Bernoulli sequences of logic levels representing numerical analog variables (the probabilities as real numbers). The outputs of the automata are Bernoulli sequences, too. A computation is determined by the relationship between the generating probabilities of input and output sequences, together with the mappings between analog variables into probabilities [2]. There are three types of mappings from analog variables to probabilities: unipolar, two-line bipolar, and single-line bipolar.
+SC keeps hardware costs low while error tolerance is inherently high (i.e. for long enough streams, bit flips are
+
+Figure 1. top) Multiplication using an AND gate [1]; bottom) Stochastic stream generator [3].
+not affecting the encoded probability). The functionality of simple logic gates can be described via probabilities, as shown by the following equations for an AND gate and an OR gate.
+p(AN D(A, B)) = p(A)p(B) p(OR(A, B)) = p(A) + p(B) − p(A)p(B)
+SC reduces complex arithmetic, such as multiplication, to simple bit-wise operations applied between the bitstreams. This is shown in Figure 1. Implementation of higher level building blocks in the SC paradigm are known: adders, divisors, multiplexers etc. [1], and [2] describes stochastic multipliers, squarers, summers, and integrators. Consequently, arithmetic units in stochastic circuits are lowcomplexity and inherently error tolerant.
+However, SC has some disadvantages too. Computation times are longer and accuracy relatively low due to the probabilistic nature of the digitised data. Computational time tends to grow exponentially with respect to precision [1]. At the same time, Stochastic Number Generators (SNGs), where bitstream processing is largely dependent on the quality of the pseudo-random numbers driving computation, remain a relatively unexplored bottle-neck of SC architectures. The operation of an SNG is illustrated in Fig. 1.
+1.1. LDPC decoding using SC
+One of the main applications of SC is the decoding of low-density parity-check (LDPC) codes [4] and polar codes [5]. LDPC codes are powerful error-correcting codes first introduced by Gallager [6] and now used in mainstream standards such as the IEEE 2009 (WiFi) and ETSI 2005 (Digital Video Broadcasting). LDPC codes can be used for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2. Converting a stochastic circuit, implemented as a Julia function, into the Verilog hardware description language. The code is traced into a tape structure of length M with a bookmaking scheme of width N.
+
+sending data over noisy channels at close to the Shannon limit (theoretical maximum). The application of LDPC codes is also considered a promising candidate for quantum error correction [7].
+LDPC decoding involves finding the closest valid code word to the one received over a possibly noisy channel. Algorithms, such as the sum-product algorithm [8], are probabilistic in nature and based on belief propagation (BP). Application-specific integrated circuit implementations of SC-based LDPC decoders have been presented in [8]. Another hardware implementation is proposed by utilising XOR and Update blocks at the core of the stochastic LDPC decoding circuit [9].
+In general, BP is a good fit for SC [10]. The BP algorithm works iteratively. The initial probability calculator generates initial values using the received bits and the known channel behavior. SNGs convert these probabilities to stochastic numbers. The main stochastic core receives the initial probabilities and generates new probabilities which are fed back through multiplexers for use in later iterations - this is the part of the circuit which performs most of the computation. The final probabilities are converted to binary numbers and a parity check is performed on them [1].
+1.2. Motivation: Compilation Bottlenecks
+The current technological trends and new computational needs have created enough grounds for revitalising interest in SC thanks to its potential in domains that require massively parallel solutions. For example, transforming large volumes of data, such as in image processing, where pixel transformations are rather simple, but computationally intensive due to the very large number of pixels in the image. Such a function can be trivially parallelised in stochastic hardware, as demonstrated in a smart image-sensing chip [11].
+There is a limited set of tools for designing, compiling, and simulating stochastic circuits. There exist open source implementations of libraries for stochastic computing, most notably BitSAD [12], which is written in the Julia programming language. BitSAD is capable of compiling circuits
+
+Figure 3. Tracing a Julia function into a Ghost tape, followed by postprocessing the tape into atomic operations.
+down to Hardware Description Language and simulating them. However, BitSAD relies on the Ghost library [13] for code tracing which lacks performance optimisations for large-scale circuits.
+With BitSAD, Verilog descriptions of the SC hardware are obtained as follows: 1) a Julia script describes the computation that will later be compiled to SC; 2) the script is traced, meaning that the entire call stack is recorded in a data structure called a tape; 3) the tape is iteratively processed by replacing tape calls into atomic SC operations. The Verilog compilation method is depicted in Fig. 2.
+For example, the code a=b*c*d will be translated in the first step into a tape consisting of a=b*c, a=a*d, which will then result into a = AND(b, c), a = AND(a, d), and finally that tape will be translated into the corresponding Verilog code.
+More exactly, the generation of the tape is accomplished by running the function and recording all operations, such as variable assignments, arithmetic, and function calls, onto the tape. The processing of the tape includes decomposition of function calls, and complex expressions are unrolled into variable and constant assignments as well as arithmetic (Fig. 1). This involves replacing function call tape entries with their equivalent operations, at unpredictable locations along the tape – this requires random access to the tape. Fig. 3 depicts the typical post-processing of the tape initially constructed by tracing a Julia function.
+BitSAD is relying on a library called Ghost for achieving the workflow that involves the tape. The latest version of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE 1. COMPARISON OF CIRCUIT COMPILATION TIMES WITH DIFFERENT BITSAD TAPE IMPLEMENTATIONS.
+
+Circuit distance 3 5 10 15 20
+
+Circuit properties Parity check matrix size
+6x13 20x41 90x181 210x421 380x761
+
+BitSAD tape size 16145 146689 2831489
+15447089 50785489
+
+Vector tape (original) 434.695 > 1 hr > 1 hr > 1 hr > 1 hr
+
+Compilation time (s)
+
+Linked list tape Bookmarked linked list tape
+
+1.270
+
+0.642
+
+278.321
+
+7.338
+
+> 1 hr
+
+126.237
+
+> 1 hr
+
+892.954
+
+> 1 hr
+
+> 1 hr
+
+Ghost implements the tape as a Julia vector data structure which is a dynamically allocated array. Hence, certain operations such as random access and appending elements up to the pre-allocated size can be done in constant time. However, the array data type introduces significant performance bottlenecks:
+• during the processing of the tape, operations such as growing the tape in size, which happens extremely often for large circuits, results in continuous reallocations of the underlying array.
+• insertion and deletion of elements at locations that are not the very end of the tape, which happens often in post-processing when expanding function calls into atomic operations, results in constant shifting of tape elements past the point of insertion or deletion this has a linear overhead in complexity in the worst case scenario.
+In the process of compiling SC circuits for large-distance LDPC decoders, the previous bottlenecks proved extremely limiting. In the following section we replace the data structure of the tape, and present a bookmarking method for partially emulating the needed random access patterns.
+2. Methods
+The identified bottle necks are within the Ghost library. Therefore this library is a prime candidate for optimisation in its code tracing logic and implementation of the tape data structure. Improving Ghost will speed up the compilation and simulation of stochastic circuits via BitSAD too.
+First, we replace the array tape with a custom version of a linked list. The linked list will avoid the frequent and costly element shifting that is bundled with the array-based implementation. Moreover, the structure can be further optimised via caching of frequently used locations within the tape.
+Insertion and deletion are the bottlenecks, and we design the data structure accordingly. With a linked list, insertion at the start and end of the tape can be done in constant time by utilising a doubly linked list data structure where each element is a node that keeps references to both of its neighbours. This includes the head and the tail of the structure referencing one another, in a circular fashion. In that case inserting and deleting elements simply involves finding the desired location and creating or deleting an element followed by adjusting the correct references in itself as well as its neighbouring elements.
+
+Figure 4. Indexing the tape via a bookmarking scheme. The bookmarked node is fetched first, in constant time. The desired tape node is located at (M mod N) nodes past the bookmark, where N is the bookmark distance and M is the desired tape index.
+In practice, for the purpose of this work, the DataStructures [14] Julia library was used as a starting point for implementing a doubly linked list with constant time insertion and deletion at the start and end of the structure. We had to implement, on our own, a double linked list and started by extending the MutableLinkedList type. Linked lists do not offer random access, and we had to emulate this such that the BitSAD API remains unchanged – insertion and deletion complexity becomes linear with ”walking” the tape up to the desired location.
+Furthermore, the linear overhead at insertion and deletion can be reduced by using bookmarks. Our ”bookmarking” scheme uses pointers to tape cells. The bookmarks are kept for regular intervals (e.g. 1000). For example, if there is a call to element index 1003, first the bookmark to element 1000 is used and then the linked list iterates to 1003. This method is depicted in Fig. 4. This way, random access complexity is equal to the interval value in the worst case, rather than the whole structure’s length - i.e. a linear scan. The resulting structure and access scheme is depicted in Fig. 2.
+3. Results
+The methods proposed were evaluated in the context of compiling a Belief Propagation decoder, initially modelled as a Julia function, into a SC circuit. In order to benchmark the new data structure and the bookmarks mechanism, we implemented these in Ghost and used it to compile very straightforward BP LDPC decoders.
+We focused on a class of quantum error correcting codes known as surface codes [7], because it is straightforward to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+generate a new code for a given distance d. The surface code is represented by its parity check matrix, and the matrix will be automatically compiled into BitSAD primitives and operations which are then processed using the workflow from Fig. 3. We benchmarked the performance by compiling surface code BP decoders for code distances 3, 5, 10, 15, 20. The sizes of the circuits grow quadratically with their distance. For example, the distance 20 decoder will be almost twice as large as the distance 15. The values were chosen only as a way to test the scaling of the code, and not because of any other criteria. All our simulations were executed on a Macbook Pro i5 2GHz with 16 GB RAM.
+The linked list and the bookmarks had a positive impact on two aspects: a) speed of compilation; b) memory footprint of the compiler. In order to offer intuition about the number of calls to the tape with our improvements, Table 2 lists the function calls for vector and linked list implementations. Linked List bookmark distance used is 1000. The circuit is a belief propagation decoder for a surface code of distance three.
+
+TABLE 2. PROFILING THE COMPILATION OF A STOCHASTIC CIRCUIT.
+
+Function insert push
+
+Average time per call
+
+Vector
+
+LList
+
+3.32ms 91.9ns
+
+5.68µs 8.15µs
+
+% total time Vector LList 35.99 0.01 0.01 0.99
+
+Table 1 lists the performance gains after implementing the optimisations to the BitSAD and Ghost libraries. There are significant speedups for BP decoders of surface codes up to distance 15. We set a compilation timeout of 1h. In doing so, we are not able to compile a distance 20 decoder. Nevertheless, the bookmarked linked list offers great performance advantages: we are able to compile a distance 15 decoder. It should be noted that when running the code on ARM processors we observed even higher speed-ups.
+Furthermore, the memory footprint was greatly reduced. For a circuit distance of 3, the original tape implementation would result in 4.62 thousand allocations with a total allocation size of 97.815 GB, while after the improvements it uses only about 130 MB. The memory footprint of the final optimised implementation using a bookmarked linked list is shown in Table 3. The bookmarking distance 1000 was chosen empirically, and future work will investigate the influence of the bookmark on the performance of our approach.
+
+TABLE 3. MEMORY FOOTPRINT OF THE CIRCUIT COMPILATION
+
+LDPC distance 3 5 10 15
+
+Number of allocations 3163111 31759388 772502014
+5588315077
+
+Total allocation size 125.84 MB 1.26 GB 31.59 GB 234.20 GB
+
+4. Conclusion
+This work is a first step towards establishing a toolset for compiling and simulating large-scale stochastic circuits.
+
+We identified performance bottlenecks in a state of the art compiler of SC circuits. The major improvement to the bottlenecks was the development and implementation of a novel data structure for storing the elements of the SC, which are later translated to Verilog.
+Our novel data structure and methods improve the performance of stochastic circuit compilation into Verilog. This, in turn, enables faster prototyping and simulation of SC hardware. Future work will focus on making use of hardware acceleration (e.g. GPUs, vectorized instructions in CPUs) to speed-up the compilation and simulation of SC.
+Acknowledgment
+This research was developed in part with funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking (QB) program under award no. HR00112230007 and HR001121S0026 contracts].
+References
+[1] A. Alaghi and J. P. Hayes, “Survey of stochastic computing,” ACM Transactions on Embedded computing systems (TECS), vol. 12, no. 2s, pp. 1–19, 2013.
+[2] B. R. Gaines, “Stochastic computing systems,” Advances in Information Systems Science: Volume 2, pp. 37–172, 1969.
+[3] S. Faraji, M. H. Najafi, B. Li, D. Lilja, and K. Bazargan, “Energyefficient convolutional neural networks with deterministic bit-stream processing,” 03 2019, pp. 1757–1762.
+[4] W. J. Gross and V. C. Gaudet, Stochastic computing: techniques and applications. Springer, 2019.
+[5] B. Yuan and K. K. Parhi, “Belief propagation decoding of polar codes using stochastic computing,” in 2016 IEEE International symposium on circuits and systems (ISCAS). IEEE, 2016, pp. 157–160.
+[6] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[7] Z. Babar, P. Botsinis, D. Alanis, S. X. Ng, and L. Hanzo, “Fifteen years of quantum ldpc coding and improved decoding strategies,” iEEE Access, vol. 3, pp. 2492–2519, 2015.
+[8] A. Naderi, S. Mannor, M. Sawan, and W. J. Gross, “Delayed stochastic decoding of ldpc codes,” IEEE Transactions on Signal Processing, vol. 59, no. 11, pp. 5617–5626, 2011.
+[9] W. J. Gross, V. C. Gaudet, and A. Milner, “Stochastic implementation of ldpc decoders,” in Conference Record of the Thirty-Ninth Asilomar Conference onSignals, Systems and Computers, 2005. IEEE, 2005, pp. 713–717.
+[10] J. S. Friedman, L. E. Calvet, P. Bessie`re, J. Droulez, and D. Querlioz, “Bayesian inference with muller c-elements,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 63, no. 6, pp. 895–904, 2016.
+[11] T. Hammadou, M. Nilson, A. Bermak, and P. Ogunbona, “A 96 /spl times/ 64 intelligent digital pixel array with extended binary stochastic arithmetic,” in 2003 IEEE International Symposium on Circuits and Systems (ISCAS), vol. 4, 2003, pp. IV–IV.
+[12] K. Daruwalla, H. Zhuo, R. Shukla, and M. Lipasti, “Bitsad v2: Compiler optimization and analysis for bitstream computing,” ACM Trans. Archit. Code Optim., vol. 16, no. 4, Nov. 2019. [Online]. Available: https://doi.org/10.1145/3364999
+[13] A. Zhabinski, M. Harradon, J. Weidner, and K. Daruwalla, “Ghost julia code tracer,” https://github.com/dfdx/Ghost.jl, 2022.
+[14] “Ghost - julia code tracer,” https://github.com/JuliaCollections/ DataStructures.jl, 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+

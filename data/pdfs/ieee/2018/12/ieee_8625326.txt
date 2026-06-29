@@ -1,0 +1,612 @@
+1
+978-1-5386-7048-4/18/$31.00 ©2018 IEEE
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing 
+Decoding LDPC Codes on Binary Erasure Channels
+using Deep Recurrent Neural-Logic Layers
+Ali Payani
+School of Electrical and
+Computer Engineering
+Georgia Institute of Technology
+Atlanta, Georgia 30332–0250
+Email:payani@ece.gatech.edu
+Faramarz Fekri
+School of Electrical and
+Computer Engineering
+Georgia Institute of Technology
+Atlanta, Georgia 30332–0250
+Email:fekri@ece.gatech.edu
+Abstract—Iterative algorithms based on belief propagation can
+perform very close to optimal ML decoding for long LDPC codes.
+However, for short LDPC codes over Binary Erasure Channels
+(BEC) their performance drops significantly. In this paper, we
+introduce an iterative LDPC decoder over BEC by using our
+novel deep recurrent neural logic networks that learns Boolean
+logic algebra. It turned out that the neural logic network is
+capable of learning discrete algorithmic tasks and suitable for
+decoding LDPC codes. We show that the proposed decoding
+method can outperform the belief propagation algorithm for
+short LDPC code while using significantly fewer number of
+iterations. We further demonstrate that the proposed model is
+able to generalize very well. In other words, the model that was
+trained for specific settings such as channel erasure, parity check
+matrix, and code length, when tested under various other settings,
+still performed almost as if it was trained for those new settings.
+I. INTRODUCTION
+Coding for binary Erasure Channels (BEC) is widely studied
+by the research community. It is known that Maximum
+Likelihood (ML) decoding over a BEC channel can be reduced
+to solving a set of linear equations; which can be implemented
+with the complexity O(ν3) for ν erased bits in a general
+case. However, in most practical applications this approach is
+infeasible even for moderate length codes. As a result, some
+forms of iterative algorithms (based on a message passing
+algorithm) are often used to obtain a sub-optimal solution for
+decoding Low Density Parity Check (LDPC) codes. These
+iterative algorithms can perform very close to the optimal ML
+decoding bounds for sufficiently long LDPC codes. However,
+for short length codes, they do not perform as well. In [1]
+and [2], authors introduced augmented steps to the Belief
+Propagation (BP) algorithm to increase its performance when
+the standard BP decoding fails due to stopping sets. However,
+such approaches further increase the complexity of the LDPC
+decoding. Moreover, in real-time applications, it is desirable to
+decode the messages in batches to increase the speed. As such,
+Deep Neural Networks (DNN), if successful in learning how
+to decode, with their suitable structures for batch processing
+in parallel can prove to be a viable alternative.
+Over the last few years, DNNs have been successfully used
+in many applications. In particular, deep models based on
+Convolution Neural Networks (CNNs) and Recurrent Neural
+Networks (RNNs) have improved the state of the art in various
+topics such as natural language processing [3], image and
+video processing [4], and Speech recognition [5], just to
+name a few. In decoding, we have virtually unlimited training
+examples. Since learning a decoder is basically a supervised
+learning task, the application of DNN in designing an efficient
+decoder may seem trivial at first. However, there exist several
+challenges. Even though we have as many training examples
+as we need, there are 2m different possible codewords for a
+message of length m; which is prohibitive even for a rather
+short message (e.g., ∼100 bits). Thus, the deep network
+should be able to learn the decoding algorithm instead of
+learning just the non-linear approximation as in Multi-Layer
+Perceptron (MLP) layers. In most deep algorithm learning tasks,
+autoregressive models such as Recurrent Neural Networks
+(RNNs) are deployed which allow for recursion through
+intermediate results, and consequently learning some kinds
+of algorithms to solve the problem in an iterative fashion. For
+example in [6], the authors successfully employed RNNs to
+design a very efficient decoder for convolutional and turbo
+codes over additive white Gaussian noise (AWGN) channels
+and in [7] the authors proposed a framework for soft decoding
+of linear codes of arbitrary length. However, as we have shown
+in [8], typical neural network layers often fail to learn the exact
+logical flow in discrete (Binary) arithmetic. This is specially
+true for decoding LDPC codes over BEC. In [8], we proposed
+a new architecture that is designed specifically for learning
+logical flows in discrete algorithmic tasks. We have shown
+that the proposed logical representation layers are able to
+learn the underlying logical flows that exist in many discrete
+algorithmic protocols. In this paper, we present a recurrent
+model based on the logical representation layers, referred as a
+recurrent neural logic network, for decoding LDPC over BEC.
+In Section II, we present the outline of deep recurrent network
+for decoding. Then, in Section III, we introduce the neural
+logical representation layers and show how they can be fit into
+the decoding problem. Training the model and experimental
+results are then presented follow by the conclusion at the end.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:15:04 UTC from IEEE Xplore.  Restrictions apply. 
+2
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing 
+II. RECURRENT NEURAL DECODER
+In most practical LDPC decoders, a variant of the iterative
+algorithm is often used. These iterative algorithms are mainly
+based on the Message Passing (MP) algorithm. In MP, a unique
+message from each variable node is sent to every connected
+check node in the forward path. Likewise in the backward
+path, every check node computes a proper response message
+which is sent back to each variable node it is connected to, and
+hence the name message passing. Under certain simplifying
+independence assumptions, one can view the messages in the
+MP algorithm as the belief (i.e., estimated probabilities) of the
+model regarding the values of each particular variable node in
+the graph.
+Our objective is to employ deep neural networks to learn an
+iterative (recurrent) algorithm by exploiting the structure of the
+parity check matrix. While by iterating between variable nodes
+and check nodes, the model learns some forms of the message
+passing scheme, we make no probabilistic assumptions and
+we let the network learn an efficient iterative algorithm. This
+allows (at least in theory) for learning a more complicated
+model with possible performance improvements over the belief
+propagation scheme.
+Let H ∈{0, 1}r×n be the parity check matrix for a length
+n regular LDPC code with parameters (dv, dc), i.e., H has dv
+and dc non-zero elements in each column and row, respectively.
+We assign vector Vi ∈Rdimv, i ∈{1, . . . , n} to each variable
+node and similarly vector Cj ∈Rdimc, j ∈{1, . . . , r} to each
+check node. Corresponding to the ith variable node at the
+time stamp t where t ∈{1, . . . , tmax}, we define two sets
+of functions F (t)
+i
+: Rdc×dimv →Rdimc (from the variable
+node to the check node) and G (t)
+i
+: Rdv×dimc →Rdimv (from
+the check node to the variable node). Here, dimv and dimc
+denote the dimensions of the representation used in variable
+nodes and check nodes, respectively. In soft decoding using
+belief propagation, the erasure bits are usually represented by
+a real valued scalar (0.5). However, we choose the one-hot
+representations of depth 3 for each variable node, which is
+more suitable for our model. In our representation, the three bit
+positions in the one-hot vector are correspond to values of ’0’,
+’1’, and ’e’ (erasure), respectively. For example, if the bit value
+is ’0’, the vector is [1, 0, 0]. The dimension dimc of check-node
+vectors is a design parameter of the model which controls the
+amount of information that can be sent from each check node
+to variable nodes. We formulate the recursive formula for each
+variable node vi at time stamp t + 1 as:
+v(t+1)
+i
+= G (t)
+i
+
+V ec( C(t+1)
+i
+)
+
+, where
+(1)
+C(t+1)
+i
+= {C(t+1)
+j
+|H(j, i) = 1, j ∈{1, . . . , r} }
+(2)
+also,
+C(t+1)
+j
+= F (t)
+i
+
+V ec( V(t)
+i,j )
+
+, where
+(3)
+V(t)
+i,j = {V (t)
+i′ |H(j, i′) = 1, i′ ∈{1, . . . , n} }
+(4)
+where V ec(S) generate a vector by concatenates all the vectors
+in set S. Further, we can exclude the intrinsic information (the
+information that each node already possesses about itself) as
+in the BP algorithm, i.e.
+V(t)
+i,j = {V (t)
+i′ |H(j, i′) = 1, i′ ∈{1, . . . , n}, i′ ̸= i }
+(5)
+However, our experiments later showed that although using
+extrinsic information slightly increases the speed of the conver-
+gence, it has no significant effect on the network performance
+and the model can learn the desired algorithm regardless.
+III. NEURAL LOGIC LAYERS FOR DECODING OVER BEC
+The learning of the model involves adjusting the trainable
+weights of the set of forward and backward functions, i.e,
+F (t)
+i (·)’s and G (t)
+i (·)’s. While these two sets of functions can
+be designed in general using a typical MLP architecture, we
+encountered an slow convergence and in some cases poor
+generalization performance for decoding over BEC. Albeit
+the impressive performance of the typical MLP layers in
+many applications, these architectures suffer from a basic
+limitation that is inherent in any general purpose design of
+neural networks. While using sufficient number of weights and
+(hidden) layers, we could in theory approximate any function
+by using MLP, in practice this is not always possible. As
+we have shown in [8], this is specially evident in learning
+many algorithmic tasks where we are dealing with discrete
+input/output and the network is to learn some logical flow
+of the information. To address this, in [8], we introduced a
+new set of neural layers which are designed specifically for
+representing binary logic algebra. In this new paradigm, we
+use Boolean algebra instead of typical non-linear weighted
+summations used in a regular MLP design
+¯x
+=
+1 −x
+,
+¯y = 1 −y
+(6a)
+x
+
+y
+=
+xy
+(6b)
+x
+
+y
+=
+¯x
+
+¯y
+=
+1 −(1 −x)(1 −y)
+(6c)
+x ⊗y
+=
+(x
+
+¯y)
+
+(¯x
+
+y)
+=
+x + y −2xy (6d)
+In order to learn any one of the possible Boolean functions
+that can be defined over the set of n binary elements of input
+vector x ∈{0, 1}n, we use the membership weights defined
+in the range of [0, 1] and we encourage these weights to
+approach either 0 (no membership) or 1 (full membership)
+using a sigmoid function with a constant multiplier, i.e.
+σ(cx) where c > 1. By using these basic elements, we can
+define the logical conjunction function formed from a (trainable)
+subset of elements from the vector xn as
+yconj =
+n
+
+i=1
+
+1 −σ(cwi) (1 −xi)
+
+.
+(7)
+Likewise, we define the disjunction function with the help of
+the De Morgan Law as
+ydisj = 1 −
+n
+
+i=1
+(1 −σ(cwi) xi).
+(8)
+Any arbitrary complex Boolean function can be expressed
+as both a standard Disjunctive Normal Form (DNF) and a
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:15:04 UTC from IEEE Xplore.  Restrictions apply. 
+3
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing 
+Conjunctive Normal Form (CNF). In the DNF form, the
+Boolean function is expressed by the disjunction of the sub-
+expressions which are consisted of only conjunctions. This is
+correspond to applying a disjunctive layer on the output of a
+conjunction layer in our logical representation layers. Likewise,
+the CNF form is correspond to applying a conjunction layer
+on the output of a disjunctive layer. As such, we may combine
+our proposed conjunctive and disjunctive layers to form two
+new multilayer structures denoted as CNF and DNF layers.
+To further increase the representational power of our logical
+layers, we designed the XOR logical layers by application of
+carefully designed mask vectors {M (1), . . . , M (k)} of length
+n, where k = [ n
+2 ], such that
+M (i)
+j
+=
+
+−1
+if j > k −i + 1  j < 2k −i + 2
+1
+else
+(9)
+and
+yXOR =
+k
+
+t=1
+σ(c (
+ xn × (Mk
+t ⊙W)T  −.5)).
+(10)
+Here, W is the membership weight vector of length n and
+c ≫1 is a constant. The complete proof of the above formula
+is give in [8]. The proposed XOR functions are created by
+applying k masks. However, when the dimension of the input
+vector is large, this can lead to slow convergence. Alternatively,
+we use simpler mechanism that consists of only one mask,
+but we let the network learn its weights instead of the using
+fixed masks defined in (9) . Further details can be found in
+[8]. We call these simplified functions SXOR functions. Using
+these basic elements of the logical representation, we design
+the functions F (t)
+i (·)’s and G (t)
+i (·)’s as it is depicted in Fig.
+1.
+IV. TRAINING
+For training, we define the loss function at time t as the
+average softmax cross-entropy between the estimated values
+of the variable nodes and the correct codeword vector, both
+represented as one-hot vectors of length n and depth 3, i.e.
+L(t) = −1
+n
+n
+
+i=1
+3
+
+b=1
+xib log(v′(t)
+ib )
+(11)
+v′
+i = softmax(vi)
+(12)
+We may consider these options for designing the forward and
+backward function sets (i.e. (4) and (2)):
+• Option 1: Use the same two functions F(·) and G (·) for
+all the time stamps and variable nodes, i.e. sharing the
+weights across both dimensions.
+• Option 2: Share functions across the time dimension but
+use different functions F i(·)’s and G i(·) for each variable
+node.
+• Option 3: Do not share at all, i.e., choose different
+functions F (t)
+i (·)’s and G (t)
+i (·)’s for different time stamps
+and different variable nodes.
+𝑉𝑉𝑗𝑗𝑗
+SXOR
+𝐶𝐶𝑗𝑗
+SXOR
+𝑉𝑉𝑗𝑗2
+𝑉𝑉𝑗𝑗𝑑𝑑𝑐𝑐
+AND
+(a) Function F(.) from a variable node to a check node
+𝐶𝐶𝑖𝑖𝑖
+SXOR
+𝐶𝐶𝑖𝑖2
+𝐶𝐶𝑖𝑖𝑑𝑑𝑣𝑣
+AND
+AND
+CNF
+𝑉𝑉𝑖𝑖
+(b) Function G (.) from a check node to a variable node
+Fig. 1.
+Logical functions used in forward/backward operations
+Although Option 1 may seem to be the most rigid and inflexible
+of all, our experimental results surprisingly show that its
+convergence speed is the fastest among the other options. While
+it requires a significantly fewer number of trainable parameters,
+it offers the best overall performance specially for the case
+of regular LDPC codes. For irregular LDPC codes, Option 2
+provides more flexibility over the first option and performs
+better. Sharing weights across the time dimension facilitates
+learning a repetitive algorithmic task. In particular, instead of
+training the model using a large number of iterations (time
+stamps), we can train using only a few iterations and let the
+model learn a recursive algorithm. Consequently, both Options
+1 and 2 provide good generalizations. Moreover, it allows to
+limit the number of iterations (to increase the training speed
+and reduce complexity) in the training phase while running
+the model for many more iterations in the test time to obtain
+much improved results. On the other hand, although Option
+3 performs well when tested for the exact number of training
+iterations, its accuracy cannot be improved by iterating beyond
+the number of training iterations because the weights are not
+shared across time. As such, Option 3 performs relatively poor.
+When the number of iterations in the training phase is small
+(i.e. tmax < 3), we can train the model by minimizing L(tmax).
+However, when the number of iterations is large, this approach
+usually leads to no convergence or very slow convergence
+specially at the beginning of the training. To cope with this
+problem, in the beginning of training, we must include the loss
+functions from all the time stamps but then gradually remove
+the effect of the earlier time stamps in the loss function. That
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:15:04 UTC from IEEE Xplore.  Restrictions apply. 
+4
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing 
+is
+L =
+tmax
+
+t=1
+α(tmax−t)L(t)
+(13)
+where the value of α is reduced from 1 to 0 gradually as we
+progress in the training.
+Further, training the model with different functions F (t)
+i (·)s
+and G (t)
+i (·), as in Options 2 and 3, can be extremely slow in the
+beginning. This phenomena can be explained by observing that
+the network has to adjust too many parameters and randomly
+initialized weights can create too many local minimums at
+the early stages of the training. To alleviate this, we can use
+an approach similar to the weight push mechanism in [9].
+Let W (t)
+i
+be the set of weight matrices for all the functions
+F (t)
+i (·)s and G (t)
+i (·). We can introduce a push term to the loss
+function that is proportional to the average variance of the set
+of weights across the index set (i, (t)), i.e.,
+Ltotal = L + β var{W (t)
+i
+}
+(14)
+This would encourage uniformity of the weights at the
+beginning of training. We then gradually decrease the parameter
+β during the training.
+V. EXPERIMENTS
+A. Convergence Speed
+We use Gallager algorithm[10] for creating random parity
+check matrices used in our experiments. In order to avoid
+over-fitting, instead of repeating the training samples, for each
+training batch we create a new set of randomly generated
+codewords in which each bit is erased independently with the
+probability ϵ. In all the experiments we use batch size of 100
+codewords and we train the model using ADAM [11] optimizer
+with the learning rate of 0.003. The dimensions of SXOR and
+AND (conjunction) layers in designing F ()’s and F ()’s are
+set to 100 and we use dimc = 30. As shown in Fig. 2, the
+Fig. 2.
+Convergence speed of the LDPC decoder models
+model in Option 1 has the fastest conversion speed. It reaches
+the optimal performance in approximately 500 epochs whereas
+Option 2 reaches this level after 3000 epochs if we do not
+incorporate the push mechanism.
+B. Performance
+Fig. 3 depicts the decoding performance in terms of the
+average number of decoding errors per bit (BER) and also the
+average number of block (frame) errors (FER) for a half-rate
+regular (3, 6) LDPC code of length 48, and compare it to the
+results of the belief propagation (BP) algorithm. Here, we train
+(a) Bit Error
+(b) Block Error
+Fig. 3.
+Performance comparison between the neural logic decoder and BP
+the model (by sharing all functions according to Option 1) using
+only 3 iterations (i.e. tmax = 4). After the training finished
+(model converged), we test the model using 10 iterations for
+the total of 100k randomly selected testing codewords. For the
+BP algorithm, we evaluate the performance using 50 iterations.
+As it is apparent from Fig. 3, our proposed model outperforms
+the BP algorithm for the (3,6) regular LDPC code. While the
+results are shown for a typical randomly generated code, we
+obtained the same level of performance improvements for all
+the test cases. As we increased the code length from 48 to
+values above 132, we noticed that while our model achieves its
+optimal results using significantly fewer iterations than BP, the
+performance gap between the two methods reduces for higher
+lengths.
+C. Generalizations
+In most of approaches based on deep neural networks,
+while the models are usually able to outperform the classical
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:15:04 UTC from IEEE Xplore.  Restrictions apply. 
+5
+2018 IEEE 10th International Symposium on Turbo Codes & Iterative Information Processing 
+approaches, the generalization is limited and the models must
+be re-trained for each particular different settings. In contrast,
+our proposed decoder model using a recurrent neural logic
+layer scheme is able to generalize very well under various
+settings and situations for which it has not been trained. To
+demonstrate this, we randomly generate three half-rate codes
+with parity check matrices H1 and H2 of code length 48 and
+H3 of code length 132. We trained the model using only H1
+for erasure probability ϵ = 0.2. Then, we tested the model
+generalization. Specifically, our model can generalize well for
+3 variations:
+1) Erasure Probability: We trained the model using only one
+specific erasure probability and evaluate its performance
+under different erasure probability settings. As it is
+apparent from the first row of Table I, the decoder
+performance when tested for ϵ = .3 does not depend on
+whether the model has been trained on ϵ = .3 or ϵ = .2..
+It is worth noting that while the performance of the model
+is not dependent on the specific value of the erasure
+probability that we used in training, the convergence
+speed depends on it. Through our experiments, we
+noticed that an erasure value of around 0.2 offers the
+best convergence speed for the half-rate regular codes
+that we used.
+2) Parity Check Matrix: More importantly, our model is
+not dependent on the specific code that is used in the
+training as long as we are using codes with similar
+(dv, dc) parameters. As it is depicted by the second row
+of Table I, the model that has been trained for H1 still
+provides very good performance when it is used for
+evaluating the code associated with H2.
+3) Code Length: This means that we can train the model
+using a smaller code size and the model can generalize
+well under larger code lengths if other parameters of
+the code remains the same. Since the dimension of the
+learnable functions only depends on the weight degrees
+(i.e., (dv, dc)) of the LDPC code, the same model can be
+used in different code lengths. In particular, as the third
+row of Table I shows the performance of the model
+trained on a (48, 24) LDPC code when tested on a
+(132, 66) code is only slightly less than the optimal
+performance for a model that is trained specifically for
+the latter code. We have to note that although the model
+generalizes very well, one have the option of fine tuning
+the model for the specific set of new parameters. For
+example, one may train the model using a shorter code
+size (to increase the training speed) and then use the
+weights of the trained model as the initial values for the
+new model for longer codes. This option would make
+the training of a larger model more efficient since it only
+needs a few epochs to fine tune and reach the optimal
+results.
+VI. CONCLUSION
+We proposed a novel paradigm for decoding LDPC codes
+over binary erasure channels by using recurrent neural logic
+TABLE I
+EVALUATING THE GENERALIZATION PERFORMANCE OF THE MODEL
+Train Setting
+Test Setting
+Test Generalization
+Performance (BER)
+Test Optimal
+Performance (BER)
+H1, ϵ = .2
+H1, ϵ = .3
+0.01480
+0.01476
+H1, ϵ = .2
+H2, ϵ = .3
+0.00891
+0.00832
+H1, ϵ = .2
+H3, ϵ = .3
+0.0014
+0.0013
+layers. We demonstrated that the proposed method outperforms
+the bit error rate performance of the belief propagation
+algorithm for short length LDPC codes while having the same
+performance for longer codes but requiring fewer iterations.
+We also demonstrated the generalization properties of the
+proposed method in terms of various parameters such as erasure
+probability, the parity check matrix, and code lengths.
+ACKNOWLEDGMENT
+This work is partially funded by NSF CCSS program under
+award No. 1609823.
+REFERENCES
+[1] H. Pishro-Nik and F. Fekri, “On decoding of low-density parity-check
+codes over the binary erasure channel,” IEEE Transactions on Information
+Theory, vol. 50, no. 3, pp. 439–454, 2004.
+[2] B. N. Vellambi and F. Fekri, “Results on the improved decoding algorithm
+for low-density parity-check codes over the binary erasure channel,” IEEE
+transactions on information theory, vol. 53, no. 4, pp. 1510–1520, 2007.
+[3] R. Collobert and J. Weston, “A unified architecture for natural language
+processing: Deep neural networks with multitask learning,” in Proceed-
+ings of the 25th international conference on Machine learning.
+ACM,
+2008, pp. 160–167.
+[4] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “Imagenet classification
+with deep convolutional neural networks,” in Advances in neural
+information processing systems, 2012, pp. 1097–1105.
+[5] G. E. Dahl, D. Yu, L. Deng, and A. Acero, “Context-dependent pre-
+trained deep neural networks for large-vocabulary speech recognition,”
+IEEE Transactions on audio, speech, and language processing, vol. 20,
+no. 1, pp. 30–42, 2012.
+[6] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Commu-
+nication algorithms via deep learning,” arXiv preprint arXiv:1805.09317,
+2018.
+[7] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” in Communication, Control, and Computing
+(Allerton), 2016 54th Annual Allerton Conference on.
+IEEE, 2016, pp.
+341–346.
+[8] A. Payani and F. Faramarz, “Learning algorithms via neural logic
+networks,” in submitted to Thirty-Third AAAI Conference on Artificial
+Intelligence (AAAI-19), 2019.
+[9] Ł. Kaiser and I. Sutskever, “Neural gpus learn algorithms,” arXiv preprint
+arXiv:1511.08228, 2015.
+[10] R. Gallager, “Low-density parity-check codes,” IRE Transactions on
+information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[11] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+arXiv preprint arXiv:1412.6980, 2014.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:15:04 UTC from IEEE Xplore.  Restrictions apply. 

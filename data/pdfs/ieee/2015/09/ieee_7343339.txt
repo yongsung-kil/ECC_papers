@@ -1,0 +1,930 @@
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+Modified Forced Convergence Decoding of LDPC Codes with Optimized Decoder Parameters
+Muris Sarajlic´, Liang Liu, and Ove Edfors Department of Electrical and Information Technology, Lund University, Sweden
+Email: (muris.sarajlic, liang.liu, ove.edfors)@eit.lth.se
+
+Abstract—Reducing the complexity of decoding algorithms for LDPC codes is an important prerequisite for their practical implementation. In this work we propose a reduction of computational complexity targeting the highly reliable codeword bits and show that this approach can be seamlessly merged with the forced convergence scheme. We also show how the minimum achievable complexity of the resulting scheme for given performance constraints can be found by solving a constrained optimization problem, and successfully apply a gradient-descent based stochastic approximation (SA) method for solving this problem. The proposed methods are tested on LDPC codes from the IEEE 802.11n standard. Computational complexity reduction of 55% and a 75% reduction of memory access have been observed.
+I. INTRODUCTION
+Low Density Parity Check (LDPC) codes, introduced in [1] have recently become a part of a number of communication standards, like WiMAX (IEEE 802.16e), IEEE 802.11n, 802.11ad and other [2]. The primary benefit of LDPC codes lies in their excellent error correcting properties that allow the systems using them to approach the information transmission capacity of the communication channel.
+High complexity of the original decoding algorithm for LDPC codes, the iterative belief-propagation/sum-product (BP/SP) algorithm [1] has driven continuous research efforts targeting the reduction of its complexity while keeping the ensuing performance degradation at a tolerable level. Basic complexity reduction schemes [3] use mathematical approximations of the functions of the original algorithm. In a number of early termination schemes (e.g. [4]), the iterations stop as soon as some stopping criterion is met. Finally, a per-bit early termination scheme, referred to as forced convergence [5], employs a per-bit stopping criterion for the individual codeword bits.
+In [6] it has been shown how the tunability of certain parameters of reduced-complexity decoding can be exploited to find the values of the parameters that minimize the decoding complexity while maintaining satisfactory performance, for given channel conditions. This paper is the continuation of work presented in [6] with:
+1) A modification of the original forced convergence (FC) algorithm that yields a larger complexity reduction with the same performance degradation as the original FC;
+2) The use of an iterative gradient descent-like algorithm that tries to find the optimum values of the decoder parameters for given channel conditions.
+
+II. BACKGROUND
+A. General considerations
+LDPC codes [1] are linear block codes with codeword length N described by a sparse parity check matrix H with dimensions M × N . Their structure can be represented in the form of a bipartite graph [7] where codeword bits are represented by bit (variable) nodes and parity checks by parity (check) nodes, with the interconnections between variable and check nodes mapped from the parity check matrix.
+The decoding process for LDPC codes can be viewed as an iterative exchange of messages between adjacent variable and check nodes. In this work, a low-complexity approximation of the BP/SP algorithm, the offset min-sum (OMS) algorithm [3] is used in the analysis.
+The order in which messages are exchanged between variable nodes and check nodes (message passing scheduling) has a direct impact on both the performance of the decoding algorithm and on the complexity of its implementation. In the so-called layered scheduling scheme [4], [8], which is used in the decoding algorithm in this work, c-nodes and their adjacent v-nodes are grouped in layers, and the exchange of messages between v-nodes and c-nodes is done for each layer separately, in a sequential fashion.
+B. Forced convergence: theoretic background
+Each v-node has an associated aposteriori LLR value, commonly denoted as Qv. The sign of Qv maps to bit values 0 and 1. The magnitude of Qv corresponds to the amount of “confidence” that the v-node has in its sign. As the iterations of the decoding algorithm progress it can be observed how (for SNRs after the “turbo cliff”) the magnitudes of Qv evolve towards +∞ or −∞. This indicates that the nodes become increasingly confident that they are a 0 or a 1 as iterations progress.
+It can then be reasonable to stop the updating of Qv for the very confident nodes, i.e. the nodes for which the magnitude of Qv crosses some predefined threshold θ. Value of Qv is therefore held at some fixed Qv,frozen for the remainder of the decoding process. This is referred to as forced convergence. Depending on the value of θ, forced convergence will result in certain performance degradation, but will also introduce a complexity reduction. By tuning the value of θ, the performance can therefore be finely traded for complexity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-6782-0/15/$31.00 ©2015 IEEE
+
+440
+
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+III. MODIFIED OFFSET MIN-SUM ALGORITHM WITH
+LAYERED SCHEDULING AND FORCED CONVERGENCE
+
+In this work, a modification of the original layered OMS
+
+algorithm with FC is introduced. To explain the nature of
+
+the modification, a concise overview of the message passing
+
+activities in the original algorithm will be given first.
+
+One layer is assumed to be the group of v-nodes connected
+
+to one c-node. The set of v-nodes connected to c-node c is
+
+denoted by N (c). Then, at iteration i, for each layer c and each
+
+v-node v belonging to this layer, the following three operations
+
+are performed:
+
+1) Qtemp calculation: Q(tei)mp,vc = Q(vi) − Rc(iv−1)
+
+2) Rcv calculation:
+
+⎡
+
+⎤
+
+Rc(iv) = ⎣
+
+sign(Qt(ei)mp,v c)⎦ ×
+
+v ∈N (c)\v
+
+max
+
+v
+
+min
+∈N (c)\v
+
+|Qt(ei)mp,v
+
+c|
+
+−
+
+ω,
+
+0
+
+3) Qv update: Q(vi) = Q(tei)mp,vc + Rc(iv)
+The Qtemp,vc can be seen as the message in which v informs c about its own sign and how confident it is that this is the actual value of its sign. On the other hand, Rcv is the total knowledge that other v-nodes in the layer have about the sign of v. It can be seen from the above expressions that the value of Rcv is influenced by Qtemp values in the layer that have the smallest magnitudes. V-nodes that are strongly convinced about their sign will send “strong” Qtemp messages of large magnitude that will not influence the value of Rcv. Therefore, the Qtemp messages for these “confident” nodes can be approximated by some constant value which is large
+enough.
+Since the forced convergence approach also targets the “con-
+fident” v-nodes, it is natural to combine it together with the Qtemp approximation that was just described. The modified Qtemp calculation rule can then be formulated as follows:
+
+Q(tei)mp,vc =
+
+Qv,f rozen Qv(i) − Rc(iv−1)
+
+if v is frozen otherwise
+
+(1)
+
+The complete pseudocode formulation of the modified al-
+gorithm is given in Algorithm I. The completed notation is as follows: Pv are the apriori v-node LLRs (obtained from symbols received from the channel), ω is the offset value, a standard part of the offset min-sum algorithm. X(·) is a hard bit decision operator (converting Qv to 0 or 1), Q = [Q1 Q2 . . . QN ] is the codeword LLR vector and GF2{·} denotes operations in Galois field over {0, 1}.
+
+IV. OPTIMIZING THE LDPC DECODER PARAMETERS
+A. Problem formulation
+It has been shown in [6] that, for a general vector ρ of environment settings (such as SNR or fading properties) and minimum performance requirement F ERc (expressed in terms of the frame error rate FER), the value of the threshold θ that
+
+Algorithm I: Layered OMS with FC and extrinsic message simplification
+
+1: for all v-nodes v and c-nodes c do
+
+Initialization
+
+2: Rcv ← 0 3: Qv ← Pv 4: end for
+
+5: Inact = ∅
+
+6: for iterations i to Imax do 7: for all c do
+
+8:
+
+for all v ∈ N (c) do
+
+9:
+
+if v ∈ Inact then
+
+Qtemp calculation
+
+10:
+
+Qtemp ← Qv
+
+11:
+
+else
+
+12:
+
+Qtemp ← Qv − Rcv
+
+13:
+
+end if
+
+14:
+
+end for
+
+15:
+
+Qmin1 ← min {|Qtemp,vc|}
+
+v∈N (c)
+
+16:
+
+Qmin2 ← min {|Qtemp,vc|}
+
+v∈N (c),
+
+v=vmin1
+
+17:
+
+Qmin1 ← max{Qmin1 − ω, 0}
+
+18:
+
+Qmin2 ← max{Qmin2 − ω, 0}
+
+Rcv calculation
+
+19:
+
+S=
+
+sig n(Qtemp,vc )
+
+v∈N (c)
+
+20:
+
+for all v ∈ N (c) AND v ∈/ Inact do
+
+21:
+
+if v = vmin1 then
+
+22:
+
+Rcv ← sign(Qvc) · S · Qmin2
+
+23:
+
+else
+
+24:
+
+Rcv ← sign(Qvc) · S · Qmin1
+
+25:
+
+end if
+
+26:
+
+Qv ← Qtemp,vc + Rcv Qv update and thresholding
+
+27:
+
+if |Qv| > θ then
+
+28:
+
+|Qv| ← θ
+
+29:
+
+v :∈ Inact
+
+30:
+
+end if
+
+31:
+
+end for
+
+32: end for 33: if GF2{H · X QT } = 0 then
+
+34:
+
+stop iterations
+
+35: end if
+
+36: end for
+
+minimizes the computational complexity C(θ, ρ) of the decoding algorithm is found by solving the general optimization
+
+problem
+
+minimize C(θ, ρ)
+
+θ
+
+(2)
+
+subject to FER(θ, ρ) ≤ FERc
+
+In order to achieve optimum complexity reduction, the optimum value of θ should be found and applied for any value of the current environment settings. Put in simple terms, it should be adapted to the channel.
+This work uses an analytical model of the computational complexity that is drawn from the algorithm structure. In the derivation of the model, tilde ( ˜ ) will be used to denote random terms. Layers will be indexed by l, decoding algorithm iterations by i and individual decoded blocks (different runs of the decoding algorithm) by b. The number of active v-nodes (nodes that have not yet been frozen) in layer l (and at iteration i and block b) is denoted by n˜(ab,i,l). The total number of vnodes adjacent to the c-node in layer l and the total number of c-nodes in the code (both deterministic and following from the code construction) are denoted by n(l) and |c|, respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+441
+
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+Number of iterations performed in the decoding of block b is denoted by I˜(b).
+
+It should be pointed out that the number of active nodes n˜(ab,i,l) and the number of iterations I˜(b) are discrete random variables; the randomness of n˜a(b,i,l) is the consequence of applying FC, and I˜(b) is random due to the early termination
+
+(parity check at the end of each iteration). Probability mass functions fN (n˜a(b,i,l); θ, ρ) and fI (I˜(b); θ, ρ) are parameterized by θ and ρ. Owing to the inherent complexity of the LDPC
+
+code structure and the nonlinearity of the decoding algorithm,
+
+these pmfs are in general case extremely hard (if not impos-
+
+sible) to obtain in closed form.
+
+As in [6], the complexity is given in the number of additions
+
+(assumed equivalent in complexity as comparisons) performed
+
+per decoded block. Complexity analysis of the decoding
+
+algorithm is based on the complexity analysis for a single layer l:
+
+• Complexity of the Qtemp calculation section in one layer
+
+is
+
+C˜Q(bt,eim ,l)p = n˜(ab,i,l)
+
+(3)
+
+• Complexity of the Rcv calculation section depends on the number of different |Qtemp,vc| values among which the two minimum elements are chosen. This number is denoted by n˜x(b,i,l). The set of values of |Qtemp,vc| from which the two minimum elements are picked is formed
+by |Qtemp,vc| from active nodes, and a single θ value representing all the frozen nodes. Therefore
+
+n˜(xb,i,l) = min{n˜a(b,i,l) + 1, n(l)}
+
+(4)
+
+and the complexity of this section is
+
+C˜R(bc,vi,l) = n˜x(b,i,l) + log2 n˜(xb,i,l) + 2,
+
+(5)
+
+derived from the optimum complexity of finding two
+
+minimum elements in an unsorted array [9] and the four
+
+additions in lines 17 and 18.
+
+• Finally, the complexity of the Qv update and thresholding
+
+section is
+
+C˜Q(bv,i,l) = 2n˜(ab,i,l)
+
+(6)
+
+Total complexity of decoding one layer is
+
+C˜(b,i,l) = 3n˜a(b,i,l) + n˜(xb,i,l) + log2 n˜(xb,i,l) + 2, (7)
+
+and the complexity of decoding one block is then
+
+I˜(b) |c|
+
+C˜(b) =
+
+C˜ (b,i,l)
+
+(8)
+
+i=1 l=1
+
+Finally, a sample mean of C˜(b) over a window of W blocks is taken as an estimate of the complexity C(θ, ρ):
+
+Cˆ(θ, ρ)
+
+=
+
+C˜
+
+=
+
+1 W
+
+W
+
+C˜ (b)
+
+=
+
+1 W
+
+W
+
+I˜(b)
+
+|c|
+C˜ (b,i,l)
+
+(9)
+
+b=1
+
+b=1 i=1 l=1
+
+If environment conditions ρ are assumed constant over W
+
+blocks and if additionally there is no dependence between noise or decoded data between different blocks, C˜(b) can
+
+be assumed to be an i.i.d. random variable coming from an unknown discrete pmf. Then, from the central limit theorem it follows that the distribution of Cˆ(θ, ρ) is approximately
+
+N C(θ, ρ), σC2 (θ, ρ) ,
+
+(10)
+
+with C(θ, ρ) = E[Cˆ(θ, ρ)]. Note that C(θ, ρ) is not available in closed form; it is only possible to obtain its (noisy) estimate Cˆ(θ, ρ).
+In order to solve the optimization problem (2), FER(θ, ρ) needs to be obtained as well. Similar to C(θ, ρ), FER(θ, ρ) is not known in closed form and has to be estimated. This can be done in the usual way of counting block errors over a window of W blocks and then dividing by W. Formally,
+
+FER(θ, ρ)
+
+=
+
+1 W
+
+W
+
+1(b) err
+
+,
+
+(11)
+
+b=1
+
+where
+
+1(b) err
+
+is
+
+an
+
+indicator
+
+function
+
+equal
+
+to
+
+1
+
+when
+
+block
+
+b
+
+is in error, and 0 otherwise. Values of the indicator function
+
+are Bernoulli distributed, and it is well known [10] that for a
+
+large enough W , FER(θ, ρ) is approximately distributed as
+
+N
+
+FER(θ,
+
+ρ),
+
+FER(θ,
+
+ρ)(1 − W
+
+FER(θ,
+
+ρ))
+
+(12)
+
+We can therefore conclude that, instead of the cost and constraint functions from (2), in practice we can only obtain their noisy estimates:
+
+Cˆ(θ, ρ) = C(θ, ρ) + η,
+
+(13)
+
+FER(θ, ρ) = FER(θ, ρ) + ,
+
+(14)
+
+where, following from (10) and (12), η and are approximately zero-mean Gaussian with pdf parameterized by ρ and θ.
+Optimization of θ is then performed using the noisy function estimates and is formulated as
+
+minimize Cˆ(θ, ρ)
+
+θ
+
+(15)
+
+subject to FER(θ, ρ) ≤ φc,
+
+with φc being the new value of the constraint that accounts for the random nature of FER and introduces a “safety margin”.
+
+B. Problem solution
+A family of optimization methods, known collectively as stochastic approximation methods is known to be applicable to optimization problems in which the cost function is not known and can only be observed through its noisy estimates (measurements), like in (15). The first stochastic approximation (SA) method was proposed by Kiefer and Wolfowitz in [11] and has been followed by a host of similar methods (e.g. simultaneous perturbation SA by Spall, [12]).
+SA methods are based on the classic gradient descent algorithm, in which a starting point is chosen and the optimum is approached iteratively by following the direction of the negative gradient. The difference between the deterministic
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+442
+
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+Algorithm II: Stochastic approximation with feasible set projection
+
+1: Initialize θ0
+
+2: for k from 0 to Imax − 1 do
+
+3:
+
+ak
+
+=
+
+a (k+1)α
+
+,
+
+ck
+
+=
+
+c (k+1)γ
+
+4: if (θk − ck) < 0 OR FER(θk − ck, ρ) > φc then
+
+5:
+
+stop iterations
+
+6: end if
+
+7: 8:
+
+∂ˆ ∂θ
+
+C
+
+(θk
+
+θk+1 =
+
+,θρk )−=akCˆ∂(∂ˆθθkC+(cθkk,ρ, ρ)2−c)kCˆ
+
+(θk
+
+−ck
+
+,ρ)
+
+9: end for
+
+10: if FER(θk, ρ) ≤ φc AND θk ≥ 0 then 11: θˆ∗ = θk 12: else 13: θˆ∗ = θk−1 14: end if
+
+Fig. 1: System diagram and output timeline
+
+gradient descent and SA is that SA uses a noisy estimate of the gradient instead of its actual value.
+For the constrained problem (15), the iterates have to be confined to the set of feasible points; this is modeled by a projection operator ΠΘ that projects the iterates back onto the feasible set Θ. The recursive expression for SA with feasible set projection, applied to the optimization problem (15) is given by
+
+θk+1 = ΠΘ
+
+θk
+
+−
+
+ak
+
+∂ˆ ∂θ
+
+C (θk ,
+
+ρ)
+
+,
+
+(16)
+
+with
+
+the
+
+“gradient
+
+estimate”
+
+∂ˆ ∂θ
+
+C
+
+(θk
+
+,
+
+ρ)
+
+calculated
+
+as
+
+∂ˆ ∂θ
+
+C
+
+(θk
+
+,
+
+ρ)
+
+=
+
+Cˆ(θk
+
++
+
+ck, ρ) − Cˆ(θk 2ck
+
+−
+
+ck, ρ)
+
+(17)
+
+The SA-based iterative algorithm with feasible set projection for estimating θ∗ that solves (15) at a given environment
+setting ρ is given by Algorithm II.
+
+Some practical information regarding the optimization al-
+
+gorithm:
+
+• Feasible set Θ is defined as
+
+Θ = θ ≥ 0 | FER(θ) ≤ φc
+
+(18)
+
+Negative values of θ produce undefined behaviour of
+
+the OMS-FC algorithm, hence the nonnegative constraint imposed on θ. • Projection Πθ is implemented in lines 4-6 and 10-14 of the algorithm. • Initial point θ0 and the finite difference step θ0 − c0 are considered to be in Θ.
+
+• Following the practical advice given in [13], the parameters α, γ, a and c of the sequences ak and ck are chosen as follows:
+
+– α = 0.602, γ = 0.101
+
+– At the first iteration, a is set to
+
+Δθ0
+
+∂ˆ ∂θ
+
+C
+
+(θ0
+
+,ρ)
+
+where Δθ0
+
+is the desired step in the first iteration.
+
+– Value of c is set to the estimated value of the standard deviation of Cˆ(θ, ρ).
+
+• The new value of the constraint φc is determined from confidence intervals for FER(θ, ρ) from property (12). It is the value that, when chosen as the constraint, guarantees with a certain probability that the actual FER(θ, ρ) will be smaller or equal than the original constraint FERc.
+Fig. 1 shows the block diagram of the complete system for the optimization of LDPC decoder parameters, together with the timeline of the decoder outputs (naturally, averaged over the entire duration of one slot). From this diagram it is evident that this is a “black box” optimization method in which a controller unit, implementing Algorithm II, chooses the inputs to the system, estimates the gradient of the cost function from the observed system outputs and decides on the new input values based on the gradient estimate.
+
+V. SIMULATION AND RESULTS
+The described reduced complexity decoding algorithm and the optimization algorithm were tested in three different setups, based on three different LDPC codes from the IEEE 802.11n standard [2], with code rates and blocklengths given in Table I.
+
+TABLE I: LDPC codes used in the simulations
+
+Code 1 Code 2 Code 3
+
+R = 1/2, N = 1944 R = 1/2, N = 648 R = 3/4, N = 648
+
+The selected channel is AWGN and the modulation for all three setups is QPSK. The rates of the codes determine their operational SNR ranges. Codes 1 and 2 are suitable for use at low SNRs, whereas code 3 is better suited for use in the mid-SNR range. Different values of SNR are chosen as different states of the environment setting ρ. Three decoders are compared in terms of complexity:
+1) The plain OMS decoder, without FC 2) A “lazy” (that is, non-adaptive) OMS FC decoder with
+extrinsic message simplification that uses one value of θ over the entire tested range of SNR values. This value of θ is selected as minimum θ that satisfies the performance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+443
+
+F ER(θˆ∗) θˆ∗
+
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+Complexity (additions/iteration/bit)
+
+Estimate of optimum θ
+
+
+
+
+code 1
+
+
+
+code 2
+
+code 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eb/N0(dB) FER at optimum θ
+
+Complexity of different decoders
+
+
+plain OMS, code 1
+
+lazy (θ = 13), code 1
+
+
+
+adaptive, code 1
+
+plain OMS, code 2
+
+
+
+lazy (θ = 12), code 2
+
+adaptive, code 2
+
+plain OMS, code 3
+
+
+
+lazy (θ = 13), code 3
+
+adaptive, code 3
+
+
+
+ 
+
+F ERc
+
+code 1 code 2 code 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eb/N0(dB)
+
+Fig. 2: Estimate of optimum θ and FER at θˆ∗
+
+requirement for all SNRs, while yielding a complexity reduction compared to plain OMS. 3) An “optimized” OMS FC decoder with extrinsic message simplification using the estimated optimum value of the threshold, θˆ∗ (provided by the SA algorithm) at each SNR point.
+Averaging window length W in the optimization is set to 1000. At each SNR point, optimization is run for 10 different random seeds, and the final value is the sample mean of the results obtained from these different runs. Performance constraint FERc is set to 10−2, and for W = 1000 and P r(FER ≤ FERc) = 0.95 this translates to φc = 5.4 · 10−3.
+In Fig. 2 the values of θˆ∗ at each SNR are given together with FER(θˆ∗) (averaged over 50 000 blocks and therefore considered the “true” value). The obtained values of FER confirm that the performance constraint FER ≤ 10−2 is satisfied at every θˆ∗. It was observed that, at high SNRs, θˆ∗ for code 3 do not follow the same trend of decrease with SNR as in the two other codes due to a limited number of optimization iterations (set to 100). With a larger number of iterations it is possible to attain smaller values of θˆ∗ at these SNRs.
+The complexity, normalized by the maximum number of iterations and the number of information bits in the block, and the savings of lazy and adaptive schemes compared with the plain OMS scheme are shown in Fig. 3. Complexity C(θ) for all three decoders is averaged over 50 000 blocks and is therefore considered the “true” value. The results lend themselves to a comparison with the results in [6], since the same code (IEEE 802.11n, R=1/2, N=648) is analyzed in both works. In [6], optimum θ (found by a grid search) yielded maximum complexity savings of 35% compared to plain OMS for this particular code and the original OMS FC algorithm. In this work, the modified OMS FC algorithm achieves a 53% complexity reduction at the same SNR point, thereby confirming that the simple extrinsic message modification in (1)
+
+&RPSOH[LW\VDYLQJV
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eb/N0(dB)
+
+Complexity savings
+
+
+
+
+
+
+
+
+adaptive, code 1
+
+
+
+lazy (θ = 13), code 1
+
+
+
+adaptive, code 2
+
+lazy (θ = 12), code 2
+
+
+
+adaptive, code 3
+
+lazy (θ = 13), code 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eb/N0(dB)
+
+Fig. 3: Comparison of complexities for different decoders and codes
+
+Node activity reduction at optimum θ
+
+
+1RGHDFWLYLW\VDYLQJV
+
+
+
+
+
+
+
+adaptive, code 1
+
+adaptive, code 2
+
+
+
+adaptive, code 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eb/N0(dB)
+
+Fig. 4: Comparison of node activity savings for different codes with adaptive decoding
+
+can result in significant savings of computational complexity. It can also be observed that the channel-adaptive decoder can bring in additional 5 - 12% of complexity reduction compared to the “lazy” decoder, emphasizing the general notion that adapting the system to its environment is beneficial for system performance. It should be noted that the controller in Fig. 1 is of negligible complexity compared to the decoder.
+In actual hardware implementations of decoders, a large part of total energy consumption is due to memory access activities [14]. It is therefore beneficial to estimate the reduction in memory access when analyzing decoding schemes with reduced complexity. Although this heavily depends on the actual
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+444
+
+2015 IEEE 26th International Symposium on Personal, Indoor and Mobile Radio Communications - (PIMRC): Fundamentals and PHY
+
+Complexity (additions/iteration/bit)
+
+Convergence of the optimization algorithm
+
+
+code 2, SNR = 3 dB
+
+
+
+code 2, SNR = 6 dB
+
+C(θˆ∗), code 2, 3 dB
+
+
+
+C(θˆ∗), code 2, 6 dB
+
+
+
+
+
+
+
+          
+
+Block no.
+
+×  
+
+Fig. 5: Convergence behaviour of the SA optimization algorithm at different SNRs
+
+extrinsic messages corresponding to highly reliable bits can be simply approximated with the aposteriori LLRs, thereby reducing the computational complexity. It is additionally proposed that this modification is merged with the forced convergence scheme. It has been shown how the computational complexity of the resulting decoding algorithm can be modeled analytically, and how a gradient-descent based optimization scheme can be successfully applied to this model to find the maximum complexity reduction that the algorithm can achieve under some predefined performance constraints. The overall results show significant reduction of computational as well as memory access complexity, indicating high energy efficiency of a possible hardware implementation of the algorithm. Finally, it is shown that maximum complexity reduction is achieved if the parameters of the decoder are adapted to the environment.
+
+implementation and memory design, some conclusions can be drawn from the structure of the algorithm. It can be identified that most memory access activity (reading/writing) will occur in “Qtemp calculation” and “Qv update” sections of the decoding algorithm. Since both of these sections are performed when the v-node is active, it can then be safely assumed that the reduction in memory access will be proportional to the reduction of the number of active nodes. The node activity of the channel-adaptive OMS FC algorithm (at θˆ∗) is therefore compared to the plain OMS and the corresponding reduction is presented in Fig. 4. A very high (up to 75%) decrease of vnode activity suggests that the presented complexity reduction scheme can be expected to yield a highly energy efficient hardware implementation, both in terms of computations as well as memory access.
+Finally, we shortly turn to practical implications of using the SA algorithm to find the optimum θ. Fig. 5 shows the rate of convergence of the optimization algorithm for two single runs (i.e. without averaging over different seeds) at different values of SNR. At the lower SNR value, the iterations stop after approximately 50 000 decoded blocks because the performance constraint is violated; at the higher SNR, they continue until the maximum number of iterations is exhausted, but the process can be seen to converge after around 100 000 decoded blocks. To put this into time perspective, we assume information bitrate of 100 Mbps. Given that one block of code 2 has 324 information bits, the convergence times for the two described cases are then ≈ 0.16s and ≈ 0.32s, respectively. That indicates that SA can be used to tune the decoder to the optimum value of θ in real-time, provided that the channel is static or with very low mobility. The benefit of this approach lies in the fact that the optimization algorithm is of negligible complexity compared to the decoding algorithm and also in the fact that it does not need any channel information (conversely, θˆ∗ produced by the algorithm implicitly contains a channel estimate).
+VI. CONCLUSION
+This work proposes a modified rule for calculating the extrinsic messages in the LDPC decoding algorithm, in which the
+
+ACKNOWLEDGMENT
+The work presented is a part of the Digitally Assisted Radio
+Evolution (DARE) project, and the authors would like to
+thank the Swedish Foundation for Strategic Research (SSF)
+for providing the funds for the project.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] IEEE 802.11n-2012, IEEE Standard for Information TechnologyTelecommunications and information exchange between systems, Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications [Online]. Available: http://standards.ieee.org/getieee802/download/802.11-2012.pdf
+[3] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and X.Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Tran. Comm., vol.53, no.8, pp.1288-1299, Aug. 2005.
+[4] D.E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” IEEE Workshop on Signal Process. Syst., 2004., pp.107-112, Oct. 2004.
+[5] E. Zimmermann, P. Pattisapu, P. K. Bora, and G. Fettweis, “Reduced Complexity LDPC Decoding Using Forced Convergence,” Proc. 7th Int. Symp. on Wireless Personal Multimedia Commun., Padova, Italy, Sep. 2004, vol. 3, pp. 243246, WA2-2.
+[6] M. Sarajlic´, L. Liu, O. Edfors, “Reducing the Complexity of LDPC Decoding Algorithms: An Optimization-Oriented Approach”, Personal Indoor and Mobile Radio Communications (PIMRC), 2014 IEEE 25th International Symposium on, Sep. 2014.
+[7] R.M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol.27, no.5, pp.533-547, Sep. 1981.
+[8] E. Sharon, S. Litsyn, J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” Proc. 23rd IEEE Conv. of Elec. and Electron. Engineers in Israel, 2004., pp.223-226, Sept. 2004.
+[9] P. V. Ramanan, L. Hyafil, “New algorithms for selection”, J. of Algorithms, vol. 5, no. 4, pp. 557-578, Dec. 1984.
+[10] M. C. Jeruchim, P. Balaban, K. S. Shanmugan, Simulation of Communication Systems, 2nd ed. New York: Kluwer Academic Publishers, 2002.
+[11] J. Kiefer and J. Wolfowitz, “Stochastic estimation of the maximum of a regression function”, Ann. Math. Stat., vol. 23, pp. 462-466, 1952.
+[12] J. C. Spall, “Multivariate stochastic approximation using a simultaneous perturbation gradient approximation”, IEEE Trans. Autom. Control, vol. 37, no. 3, pp. 332-341, 1992.
+[13] J. C. Spall, “Implementation of the simultaneous perturbation algorithm for stochastic optimization,” IEEE Trans. Aerosp. Electron. Syst., vol. 34, no. 3, pp. 817-823, Jul. 1998.
+[14] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. 42nd Asilomar Conf. on Signals, Systems and Computers, pp. 11371142, Oct. 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:37:34 UTC from IEEE Xplore. Restrictions apply.
+445
+
+

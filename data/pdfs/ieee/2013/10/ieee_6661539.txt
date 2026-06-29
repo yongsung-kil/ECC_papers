@@ -1,0 +1,661 @@
+FPGA accelerator of Quasi Cyclic EG-LDPC Codes decoder for NAND flash memories
+
+Syed Azhar Ali Zaidi, Muhammad Awais, Carlo Condo, Maurizio Martina, Member, IEEE and Guido Masera, Senior Member, IEEE
+Department of Electronics and Telecommunication, Politecnico di Torino, Italy
+
+Abstract—High rate low density parity check (LDPC) codes that are employed in NAND flash memories are required to have excellent error correcting performance and should avoid error floors at low bit error rate. For evaluating the performance of error correcting codes FPGA based accelerators are used. This paper presents a high speed, partially parallel and flexible decoder design for evaluating the performance of regular Quasi cyclic LDPC codes. We have targeted euclidean geometry (EG) LDPC codes which have high code rate and good error correcting performance. The throughput of the decoder is increased by using a fully parallel check node processor along with the layered decoding algorithm. The proposed decoder is implemented on XILINX XC7V2000T FPGA device. Synthesis results show that the proposed decoder is 60% faster as compared to the previously published FPGA implementations and is also capable of decoding high circulant weight EG-LDPC codes.
+I. Introduction
+Low density parity check (LDPC) codes have gained huge attention since their rediscovery by MacKay and Neal [1] in 1996 and have become serious competitors to the turbo codes. Due to the capability of performing near Shannon limit, LDPC codes are used in several standards such as WLAN (IEEE 802.11n), WIMAX (IEEE 802.16e) and in data storage systems. Recently, interests have been shown to use LDPC codes with soft decision decoding in NAND flash memories [2] [3] because of the degradation in the storage reliability due to continuous technology scaling and the use of multilevel-per-cell (MLC) storage. The bit error rate (BER) requirements in NAND flash memory is around 10−13 − 10−16 after applying the error correcting code [4]. Evaluation of the error correcting performance of LDPC codes through computer simulations requires a huge amount of time, especially for long codes with high row weights. Therefore, it is necessary to use dedicated high speed simulators for this purpose. Due to the reconfigurability and high speed, field programmable gate arrays (FPGAs) are excellent candidates for evaluating the performance of LDPC codes. Large page size in NAND Flash memories (current NAND flash memories mostly have page size of 4K bytes) requires long LDPC codes with high code rate. Long LDPC codes which have good error correcting performance are mostly computer generated. The encoding of these LDPC codes is difficult due to the lack of the regular structure in the code. Kou and Lin [5] have described the algebraic construction of LDPC codes based on finite geometry. The authors have given four classes of LDPC codes based on Euclidean and projective geometries over finite fields. These LDPC codes can be encoded easily with the help of linear feedback shift registers as they are
+
+either cyclic or quasi cyclic. Their minimum distance is good and the minimum girth of these codes is six. Euclidean geometry LDPC (EG-LDPC) codes are a class of finite geometry LDPC codes which have shown good error correcting performance compared with the equivalent computer generated LDPC codes [5]. Huang et al. [6] have shown that these LDPC codes have good error floor performance because they do not have harmful trapping sets with size smaller then their minimum weights. In this paper we present a generalized, high throughput architecture for these high circulant and row weight regular quasi cyclic EG-LDPC codes. State of the art reports several FPGA based accelerators for structured and unstructured LDPC codes [7]–[10]. However, most of these implementations are either serial or rely on architecture aware LDPC codes. The serial architectures have low throughput and therefore require more than a month of time to achieve the BERs of 10−13 −10−14. For example, the architecture given in [7] has a peak throughput of 240MB/s and therefore, require 48 days to achieve the BER of 10−13. The partially parallel architecture proposed in [10] has an average throughput of 1.35 Gbps for (2048,1723) RSbased LDPC codes using the normalised min-sum algorithm. However, the throughput of this architecture depends upon the circulant size as the parallelism factor is equal to the number of circulants. Therefore, the throughput scales down with increase in circulant size. Moreover, all these architectures use the flooding schedule decoding algorithm, which requires two times the number of iterations as compared to the layered decoding. To the best of our knowledge, there are no generalized and parallel FPGA based implementations in the literature for high circulant weight LDPC matrices because it is difficult to find the conflict free memory mapping for these matrices. The authors in [11] have given the ASIC implementation of (69615,66897) EG-LDPC code. The purpose of this work is to implement an FPGA based accelerator which supports these high circulant weight LDPC matrices and is targeted for high rate LDPC codes. Besides EG-LDPC codes our architecture is flexible enough to decode any regular quasi cyclic LDPC code. The proposed partially parallel decoder architecture is area efficient, fully reconfigurable and has high throughput. Due to the high row weight of EG-LDPC codes a compact representation of check to variable message is used to reduce the size of the check to variable message memory. For high throughput, a pipelined fully parallel check node processor (CNP) is used along with the layered decoding algorithm which decreases the number of iterations by 50%, therefore, increasing the throughput 2 times. The flexible CNP can support any check node degree by changing only few
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+parameters in the VHDL code. The rest of the paper is organized as follows. Section II gives the introduction and the construction of EG-LDPC codes. Section III describes the decoding algorithm used in this work. The decoder architecture is explained in section IV. Section V describes the program used for the preprocessing of the parity check matrix. Implementation and results of the decoder are given in section VI and section VII concludes the paper.
+
+II. Euclidean Geometry LDPC Codes
+
+Low density parity check codes are defined as the null
+
+space of a y × z parity check matrix. The set of codewords c
+
+are in the null space of a parity check matrix H, if and only
+
+if H.cT = 0. LDPC codes are graphically represented by a
+
+bipartite graph called the Tanner graph. The y parity checks
+
+are represented by y check nodes and the z codeword bits are
+
+represented by z bit nodes in the Tanner graph. There is a
+
+connection between the ith check node and the jth bit node
+
+if Hij = 1. In decoding LDPC codes, messages are passed
+
+between the check nodes and the bit nodes. The message is
+
+the probability of a check node or a bit node to be a given
+
+value.
+The m-dimensional euclidean geometry over Galois field 2s, denoted as EG(m,2s), has n = 2ms points and J = (2(m - 1)s)(2ms - 1)/(2s - 1) lines [5]. Each point is an m-tuple over GF(2s).
+
+The all zero m-tuple is called the origin and is denoted as 0. A
+line in EG(m,2s) is a one-dimensional subspace and therefore
+it consists of ρ = 2s points. There are γ = (2ms - 1)/(2s - 1) lines intersecting at one point. Each point in EG(m,2s) can
+be regarded as an element in GF(2ms) which is an extension
+of GF(2s). Let α be a primitive element of the GF(2ms), then α0, α1, . . . . , α2ms - 2 are the z = 2ms - 1 non-origin points of EG(m,2s). Let αi and αj be two linearly independent points in EG(m,2s). Then, the set of the following points constitute a
+
+line
+
+{αi + βαj} {αi + βαj : β ∈ GF(2s)}
+
+(1)
+
+which passes through the point αi. There are y = (2(m - 1)s 1)(2ms - 1)/(2s - 1) total lines in EG(m,2s) that do not pass
+through the origin. Let p = (p0, p1, . . . , pz-1) be a z-tuple over GF(2) whose components corresponds to the 2ms - 1 non-origin points of the EG(m,2s). The component pi corresponds to the point αi, where 0 ≤ i <2ms - 2. Let l be a line which does not pass through the origin, then a z-tuple (p0, p1, . . . , pz-1) based on l can be formed whose ith component is 1 if αi is a point on
+the line and 0 otherwise. This z-tuple is called the incidence
+vector of the line. In constructing the parity check matrix HE(1G) (m, s) of EG-LDPC codes we remove the origin point and all the lines passing
+through the origin point. The parity check matrix of EG-LDPC
+codes, therefore, consists of y rows, which are the incidence
+vectors of all the lines which do not pass through the origin, and z = 2ms - 1 columns which corresponds to the non-origin points of EG(m,2s). The columns are called the intersecting vectors of the points. The row weight of the matrix is ρ = 2s and the column weight of the matrix is γ = (2ms - 1)/(2s
+- 1) - 1. The null space of this matrix gives a regular LDPC code, CE(1G) (m, s) of length z = 2ms - 1. This is called type-I m-dimensional EG-LDPC code. This is a cyclic code and has a minimum distance of at least γ + 1 = (2ms - 1)/(2s - 1). The
+
+parity check matrix of type-I EG-LDPC codes can be divided
+
+into K = (2(m - 1)s - 1) / (2s - 1) cyclic classes, where each
+
+cyclic class contains 2ms - 1 incidence vectors i.e.
+
+HE(1G)
+
+=
+
+
+
+H(0) H(1)
+...
+
+
+
+(2)
+
+H(K)
+
+For each class we can choose a representative vector and the
+
+rest of the incidence vectors are formed by cyclically shifting
+
+the representative vector 2ms - 1 times. If we take the transpose
+
+of
+
+the
+
+HE(1G) (m,s),
+
+then
+
+the
+
+resulting [
+
+parity
+
+check
+
+matrix ]
+
+H(E2G) (m, s) = [H(E1G) (m, s)]T = H(0) H(1) · · · H(K) (3)
+
+HE(2G) (m,s) has - 1) columns.
+
+2ms − 1 rows and y = The row and column
+
+(2(m - 1)s weights
+
+- 1)(2ms are γ =
+
+- 1)/(2s 2s and
+
+ρ = (2ms − 1)/(2s − 1) − 1. The null space of HE(2G) (m,s) gives type-II m-dimensional EG-LDPC code, CE(2G) (m,s). This code
+
+is quasi-cyclic i.e. every K cyclic shifts of codeword results
+
+in another codeword. The minimum distance of this code is at least 2s + 1. The rank of both HE(1G) (m,s) and HE(2G) (m,s) is the same, therefore, CE(1G) (m,s) and CE(2G) (m,s) have the same number of parity check symbols. The parity check matrix of
+
+type-II EG-LDPC codes has only one row and K columns of
+
+circulant.
+
+III. Decoding Algorithm
+The near optimal Sum Product algorithm (SPA) [12] for decoding LDPC codes involves complex function that requires the use of dedicated LUTs for implementation. This results in the increased hardware complexity. Among low complexity approximations of SPA [13], Min-Sum algorithm (MS) [14] simplifies the SPA algorithm by replacing the complex function by simple operations hence reduces the hardware complexity. However it suffers a small performance degradation compared to the SPA algorithm. The performance of the MS algorithm can be improved by multiplying the check node message in MS algorithm by a constant number α between 0 and 1. This is called the normalized min-sum algorithm (NMS) [15]. In this work NMS algorithm is used with horizontal layered LDPC decoding [16]. The NMS algorithm is explained as follows. Let N(i) denotes the set of all variable nodes (VNs) involved in the check node (CN) i and N(i)\j is the set of all variable nodes involved in the ith CN except VN j. Let c j and y j are the transmitted and received codeword bits, respectively. Let L j, qi(jk), ri(jk) and R(jk) denote the received intrinsic information, check to variable (CTV) message, variable to check (VTC) message and the a posterior probability (APP) at kth iteration, respectively. The steps involved in the NMS algorithm are given in Algorithm 1.
+
+IV. Generalized Decoder Architecture
+The proposed pipelined decoder architecture is shown in Fig. 1. There are P fully parallel check node processors in the architecture. Let N x and Ny be the number of sub matrices in the x and y direction, respectively. All the sub-matrices are processed at the same time and a group of P/Ny = N p processors are used to process one row of sub-matrices. One CNP process
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+Min Mem1 Index Mem1
+Min Mem2
+Index Mem2
+Min MemP
+Index MemP
+
+Ny Groups
+Barrel shifter Min Mem NpxNp
+Barrel shifter Index Mem
+NpxNp Barrel shifter
+Min Mem NpxNp
+Barrel shifter Index Mem
+NpxNp
+Barrel shifter Min Mem NpxNp
+Barrel shifter Index Mem
+NpxNp
+Barrel shifter Min Mem NpxNp
+Barrel shifter Index Mem
+NpxNp
+
+Pipeline Registers
+
+Pipeline Registers
+
+Sign Mem1
+
+Sign Mem2
+Group1
+
+Sign MemP
+
+NpxNp Barrel Shifter
+
+NpxNp Barrel Shifter
+
+Group1
+
+NpxNp Barrel Shifter
+
+NpxNp Barrel Shifter
+
+GroupNy
+
+Pipeline regs
+
+Pipeline regs
+
+Sign Mem1
+
+Sign Mem2
+
+Sign MemP
+
+GroupNx
+
+NpxNp Barrel Shifter
+
+NpxNp Barrel Shifter
+
+Group1
+
+NpxNp Barrel Shifter
+
+NpxNp Barrel Shifter
+
+GroupNy
+
+Pipeline regs
+
+Pipeline regs
+
+CN Processor1
+
+CN Processor2
+
+CN ProcessorP
+
+APP shift reg1
+
+APP shift reg2
+
+Channel LLR
+
+LLR Mem
+
+APP shift regNx
+
+Figure 1: Decoder Architecture
+
+Pipeline Registers
+APP(k-1)
+APP Update
+APP(k)
+Pipeline stage
+
+Algorithm 1 Normalized Min Sum Layered Decoding
+
+1. Initialization: ∀ CNi, i ϵ {1, · · · , y} do qi(j0) = 0 and ∀ V N j , j ϵ {1, · · · , z}
+do R(j0) = L j 2. CN Update Rule:
+∀ CNi, i ϵ {1, · · · , y} and ∀ V N j, j ϵ {1, · · · , z} do
+
+r(jk) = R(∏ jk−1) − qi(kj−1)
+
+(4)
+
+qi(kj) =
+
+sgn{ri(kj′)} ×
+
+j′ϵN(i)\ j
+
+min
+j′ ϵ N (i)\
+
+j
+
+|
+
+ri(kj′)|
+
+×
+
+α
+
+(5)
+
+R(jk) = ri(kj ) + qi(kj)
+
+(6)
+
+Estimated codeword is Cˆ = (cˆ1, cˆ2, · · · , cˆN), where element
+
+cˆ j is calculated as
+
+cˆ j = 10
+
+if R(jk) > 0 else
+
+(7)
+
+If HCˆT = 0 then stop, with correct codeword Cˆ.
+
+one block which consists of s/N p = Nr consecutive rows of a parity check matrix, where s is the size of the sub-matrix. For euclidean geometry LDPC codes described in section II, Ny = 1, therefore, one group of P = N p processors are used to process the parity check matrix. Therefore to process a parity check matrix Nr + 6 clock cycles are required in each iteration where 6 cycles are required due to the pipeline stages. In our design we have supported two factors of parallelism, i) the parallelism P is a power of two and ii) P is a factor of the
+
+number of rows in the parity check matrix. For EG-LDPC codes and for the first case of parallelism, all the processors in a sub-matrix process Nr rows except the last one which process Nr−1 rows. Therefore, in the last cycle of the iteration the writing of APP is disabled for that processor. Due to the high row weight of Quasi-cyclic EG-LDPC codes, the memory required to store the CTV messages will be high. Therefore, a compact representation of CTV message is used in which only the first and the second minimum values are stored along with the index of the first minimum. Then all the CTV messages are recovered from these three data in the next iteration. Dual port SRAMs are used for the Min, Index and sign memories (left and top blocks in Fig. 1). There is one group of Minimum and Index memory for each block of the matrix. The size of the Min Mem is Nr ×2× Nb bits, where Nb is the no. of bits for the magnitude of the CTV message. The Min Mem stores the first minimum and the second minimum value of all the check nodes in a block. The index of the first minimum is stored in the index memory which is Nr×log2(dc) bit memory, where dc is the degree of the check node. There are N x groups of sign memories, where each group consists of P sign memories. The size of the sign memory is Nr × w bits, where w is the weight of the sub-matrix. Due to the high row weight and the layered decoding, shift register is used to store the LLRs of variable nodes. There are N x shift registers and the size of each register is s × q bits, where q is the no of bits to represent LLRs. Initially the intrinsic information is loaded in parallel in all shift registers and therefore, it requires s clock cycles to load the data into the shift register. There are Ny groups of barrel shifters connecting Min, Index and each group of sign memories with the CNPs. As the shift register is used as LLR memory so the data is shifted Nr times after each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+From APP Shift reg
+
+APP_in wxq
+
+From Min mem
+From Index mem
+
+min1_2_m
+Im_m log2dc - 1:0
+
+From Sign Mem sgn_m wx1
+
+To Sign Mem
+sgn_CTV wx1
+
+PE1
+
+PE2
+
+PEw
+
+Group1
+
+abs_op sgn_op
+
+wxNb
+
+wx1
+
+CTV_p wx(Nb+2)
+
+From Sign Mem
+sgn_m wx1
+
+To Sign Mem
+sgn_CTV wx1
+
+APP_in wxq
+
+From APP Shift reg
+
+PE1
+
+PE2
+
+PEw
+
+GroupNx
+abs_op sgn_op wxNb wx1
+
+CTV_p wx(Nb+2)
+
+To Min Mem
+
+Min1_2 2*Nb
+
+Pipeline registers
+
+To Index Mem
+
+min1 min2
+Im log2dc - 1:0
+
+Min_Ind_det dc to 2
+
+Pipeline registers
+
+Sgn_prod
+
+Sgn_prod dc to 1
+
+Figure 2: Check Node Processor
+
+Pipeline registers
+To APP update Module
+Pipeline stages
+
+iteration. Therefore, the barrel shifters are used to connect the Min, Index and sign memory associated with a block to the CNP processing that block. The CNP is shown in Fig. 2. The fully parallel CNP consists of N x groups of processing elements (PEs), a Minimum detector and a sign product unit. Each group of PEs consists of w PEs. In each sub-iteration of k-th iteration, the first and the second minimum value (min1 2 m[2 × Nb − 1 : 0]) and the index of the variable having the first minimum value (Im m[log2dc − 1 : 0]) computed by the CNP in the (k − 1)-th iteration are applied to all the PEs of each group. Each group receives w sign bits from the sign memory. As the matrix is quasi cyclic, therefore, the connections between the shift register and the PEs of CNPs are fixed. Therefore, each group receives w APPs from these fixed locations of shift register. The blocks involved in the PE are shown in Fig. 3. The Recovery CTV block recovers the CTV message from the two
+
+SN sel PE_No
+min1_2_m Im_m sign_m
+
+- Recovery qij (k-1)
+CTV
+
+Sgn_prod
+
+Quant rij (k) 2's-
+
+izer
+
+SM
+
+Rj (k-1)
+
+min1 min2
+
+Min Selector
+
+SM- qij (k) 2's
+
+-
+
+sgn_op abs_op sgn_CTV
+CTV_p
+
+(a)
+
+u+vxw
+
+SN +
+
+>
+
+0
+
+PE_no
+
+(v + 1) x w - 1
+
+1
+
+0
+
+w-
+(b)
+
+1
+
+sel
+
+Figure 3: Processing Element(PE). (a) Structure of PE. (b) PE No
+
+minima, the index of the first minimum and the sign of the
+
+CTV message. The index of the minimum is compared with
+
+the identifier of the PE and if they are equal value the second
+
+minimum is given as the magnitude of CTV message otherwise
+
+the first minimum is given. The PEs are numbered from 0 to
+
+dc − 1. As mentioned above, after the first iteration the data
+
+in the shift register are shifted left Nr times and therefore the
+
+blocks within a row of sub-matrices are switched among the
+
+CNPs in case of N p greater than one. In the k-th iteration the
+
+CNP y process the block which was processed by the CNP
+
+y + 1 in the (k − 1)-th iteration and the CNP N p process the
+
+block which was processed by CNP 1 in the previous iteration.
+
+Therefore, to compare the index of the minimum value with
+
+the correct identifier of PE it is necessary to find the shift in
+
+the order of the PEs between the CNP y and y + 1 and the
+
+CNP N p and 1. For one CNP the constant numbers required
+
+for that purpose are equal to N x, one for each group of PEs.
+
+These constant numbers are added to the PEs identifier to find
+
+the correct number. The total constant numbers required are
+
+equal to P × N x. The PE no block shown in figure 3(b) is
+
+generated in case of N p greater than 1. In the first iteration
+
+the sel input is 0 and therefore, the PE number is given as
+
+u + v × w where u is from 0 to w − 1 and v is from 0 to N x − 1.
+
+In the other iterations the sel input is set to 1 and therefore, the
+
+shifted order of the PE is given as an output. After quantizing to q bits the 2’s-SM block converts the VTC message ri(kj) into
+sign magnitude form where the magnitude is multiplied by the
+
+normalization factor α which is 0.25 in this work. So Eq. 5 is
+
+modified as follows
+
+∏
+
+q(ikj) =
+
+sgn{ri(kj′)} ×
+
+j′ϵN(i)\ j
+
+min
+j′ ϵ N (i)\
+
+j
+
+|
+
+ri(kj′)
+
+×
+
+α|
+
+(8)
+
+This results in the reduction of two bits in the magnitude of VTC message and therefore the magnitude of the VTC can be represented in Nb = q−3 bits. These magnitudes are processed by the minimum finder unit and hence the area and the path
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+delay of the minimum finder unit is also reduced due to the reduction in the no of bits for the minimum value. This also results in the reduction in the size of the Min memory. The SM2’s block converts the CTV message into the 2’s complement form. The structure of Min Ind det unit is shown in figure 4. The tree structured approach given in [17] is used for the minimum blocks. Each min module output the first and the second minimum value and the index of the first minimum value. These modules are generated conditionally depending upon the degree of the CNP. E.g. in case of degree equal to 20, only min16 and min4 modules will be generated. The hierarchy is extended in the same fashion to support any degree of CNP. In Fig. 4 only the case of degree up to 31 is shown for simplicity. The CU and the Ind modules give the first and the second minimum and the index of the first minimum up to that point. The M S module connected to min module gives the highest Nb bit value as the first and the second minimum and zero as Index to the CU and the Ind module if that min is not generated, otherwise the outputs from the min module is given as inputs to the CU and Ind modules. In Fig. 4 the M S module is shown for the min16 module and the case of Nb = 4 is considered. The k16 parameter is either 1 or 0 depending upon whether min16 module is generated or not. The pipeline stages are not shown in the diagram for simplicity. The Sgn prod module is generated in the same fashion as the Min Ind det module. The APP Update module updates the LLRs and quantize them to q bits. For parallel decoder there can be a case where one variable is involved in more than one CNP. For that case the equation for the APP update is modified as follows
+
+R(jk) = R(jk−1) + ΣCN (qi(kj) − qi(kj−1))
+
+(9)
+
+Therefore the APP Update module adds the CTV p inputs from the CNPs of all the variables which are involved in more than one CNP and then the LLR is updated and quantized to q bits.
+
+V. Matrix Evaluation and Automatic VHDL Code Generation
+To evaluate the parity check matrix and to achieve the design time flexibility a program is written in MATLAB. The
+
+Conditionally Generated Modules
+based on dc
+
+min16 M_S
+
+Xin dcxNb
+
+min8 M_S min4 M_S
+
+min2 M_S
+
+“1111” 0
+
+Xl 1 (Last input
+
+In case of odd dc)
+
+K1
+
+CU1 Ind1
+
+CU
+
+min1
+
+min2
+
+CU
+
+Ind
+
+Im
+
+CU
+
+Ind
+
+k16
+
+Ind
+
+“1111” 0
+
+min1
+
+1
+
+min1
+
+“1111” 0
+
+min2
+
+1
+
+min2
+
+“0000” 0
+
+Im
+
+1
+
+Im
+
+M_S
+
+Figure 4: Structure of Minimum Finder
+
+parity check matrix is preprocessed by this program. The program calculates the different parameters of the parity check matrix such as the block length, no. of submatrices in the X and Y direction, weight and size of each submatrix, degree of the CNP, No. of rows processed by a CNP and the parameters for the generation of min modules. These parameters are written to a VHDL file. The program also finds the P × N x array of constant numbers which are shift amounts as described in section IV. This array of constant numbers is also written to the parameter file. We have achieved the design time flexibility by generating the VHDL code of LLR mem and the APP update module for the given parity check matrix with the help of this program. After evaluating the given matrix the program automatically generates the VHDL code of these modules and writes them to the corresponding VHDL files. For APP update module the program finds the variables which are involved in more than one CNP and for LLR mem the program finds the connections of the PEs of CNPs with the LLR memory and then automatically generates the VHDL code of these modules.
+VI. Results
+The decoder is simulated in Modelsim SE6.4a. The performance of the decoder is evaluated by comparing the results of the simulation with results obtained from a C simulator. The synthesis, mapping, placement and routing is done in Xilinx ISE 14.1. The implementation of the decoder is done on Xilinx Virtex 7 XC7V2000T. We generated three type-II quasi cyclic EG-LDPC matrices in MATLAB. The first one is a 511 × 4599 matrix which consists of 1 × 9 array of 511 × 511 submatrices. The null space of this matrix gives a (4599,4227) EG-LDPC code with rate 0.919. The row and column weight of this matrix are 72 and 8 respectively. The second one is a 1023 × 8176 EGLDPC matrix which is based on the finite decomposition of the euclidean geometry. This matrix consists of 2 × 16 array of 511 × 511 submatrices. The row and column weight of this matrix are 32 and 4 respectively. The third matrix used is the 4095 × 69615 matrix which consists of 1 × 17 array of 4095 × 4095 submatrices. The null space of this matrix gives a (69615,66897) EG-LDPC code with rate 0.96. The row and column weight of this matrix are 272 and 16 respectively. Table I shows the synthesis results of the decoder for these three EG-LDPC codes. The number of bits for the LLR are set as 7, 1 bit for the sign, 4 bits for the magnitude and two bits for the fractional part. The resources consumed by the hardware depends upon the block length, row weight of the matrix and the parallelism factor P. As mentioned in section IV, the decoder takes s clock cycles for loading the intrinsic information in the LLR memory and Nr + 6 cycles for completing the iteration. Therefore, the throughput per
+
+Table I: Synthesis Results for type-II EG-LDPC codes
+
+EG-LDPC code fclk
+Parallelism Slice Registers Slice 6-input LUTs Block RAMs
+Throughput
+
+(4599,4227) 214.35MHz
+8 CNPs 55578 (2%) 88035 (7%)
+44 (3%) 1.69 Gbps
+
+(8176,7154) 230.83MHz
+16 CNPs 77657 (3%) 104290 (8%) 144 (11%) 3.24Gbps
+
+(69615,66897) 179.74MHz 8 CNPs
+571917 (23%) 682124 (55%)
+76 (5%) 2.72 Gbps
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+Table II: Throughput Comparison
+
+fclk Parallelism Throughput (1 iter)
+
+[8] 192.6MHz 4 CPUs & 32 VPUs 2.04 Gbps
+
+This work 230.83MHz
+16 CNPs 3.24 Gbps
+
+Table III: Area Comparison With Existing ASIC Implementation of (69615,66897) EG-LDPC code
+
+fclk CMOS Technology Datapath Area (mm2) Normalized Area @45nm (mm2)
+
+[11] 172MHz 130nm
+20.73 2.59
+
+This work 179MHz
+45nm 1.63 1.63
+
+iteration of the decoder can be calculated as follows
+
+TP
+
+=
+
+z × fclk s + Nr + 6
+
+(10)
+
+In Table I the throughput is given for one iteration. From Software Simulations of (69615,66897) EG-LDPC matrix it is found that an average of 2 to 3 iterations are required to decode one frame at higher SNRs achieving an average throughput of 906.67 Mbps. Therefore, the emulator can achieve BER of 10−13 within 13 days. The throughput can be further increased by increasing the parallelism factor. To the best of our knowledge there are no FPGA based implementations in the open literature for such high circulant weight LDPC matrices. Therefore, it is difficult to make a comparison with the existing architectures. However, for the sake of completeness we took the low circulant weight matrix of (8176,7154) EG-LDPC code. Table II shows the throughput comparison of our architecture with the partially parallel architecture for structured LDPC codes given in [8]. The reported fast emulator given in [10] has the same architecture as [8] but without the parallel enhancement, so we have not included this architecture in the comparison. Table II shows that our architecture has high throughput as compared to the architecture in [8] and is also capable of decoding high circulant weight LDPC codes. To compare the area of the proposed decoder with the already existing ASIC implementation of (69615,66897) EG-LDPC code [11], we use 45nm CMOS standard cell libraries and Synopsys Design vision tool for simulation, synthesis and static timing analysis. Table III shows the ASIC design results. We use the same number of bits for LLR and the parallelism factor as used in [11]. We use the scaling factor of 8 for comparing the decoder area of [11] against the 45nm technology. Table III shows that the proposed decoder is also area efficient as compared to the decoder architecture in [11].
+
+VII. Conclusion
+In this paper we have presented a generalized architecture for quasi-cyclic LDPC codes especially targeting high rate and high circulant weight EG-LDPC codes because of their good error correcting and error floor performance as shown in the literature. The design time flexibility is achieved, by evaluating the given parity check matrix and the automatic generation of VHDL code for different modules, with the help of a program written in MATLAB. The throughput of the architecture is increased by designing a fully parallel check node processor
+
+and using the layered decoding algorithm. The flexible CNP designed is capable of supporting any check node degree. We designed different EG-LDPC matrices and the decoder is implemented and synthesized on a XILINX XC7V2000T device for these codes. Comparison with the existing architectures show that our architecture has a high throughput and low area than the previously published implementations.
+References
+[1] D. J C MacKay and R. M. Neal. Near shannon limit performance of low density parity check codes. Electronics Letters, 33(6):457–458, 1997.
+[2] G. Dong, N. Xie, and T. Zhang. On the Use of Soft-Decision ErrorCorrection Codes in NAND Flash Memory. Circuits and Systems I: Regular Papers, IEEE Transactions on, 58(2):429–439, 2011.
+[3] J. Kim, D.H. Lee, and W. Sung. Performance of rate 0.96 (68254, 65536) EG-LDPC code for NAND Flash memory error correction. In Communications (ICC), 2012 IEEE International Conference on, pages 7029–7033, 2012.
+[4] N. Mielke, T. Marquart, N. Wu, J. Kessenich, H. Belgal, Eric Schares, F. Trivedi, E. Goodness, and L.R. Nevill. Bit error rate in NAND Flash memories. In Reliability Physics Symposium, 2008. IRPS 2008. IEEE International, pages 9–19, 2008.
+[5] Yu., S. Lin, and M.P.C. Fossorier. Low-density parity-check codes based on finite geometries: a rediscovery and new results. Information Theory, IEEE Transactions on, 47(7):2711–2736, 2001.
+[6] Q. Huang, Q. Diao, S. Lin, and K. Abdel-Ghaffar. Cyclic and QuasiCyclic LDPC Codes on Constrained Parity-Check Matrices and Their Trapping Sets. Information Theory, IEEE Transactions on, 58(5):2648– 2671, 2012.
+[7] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright. Gen03-6: Investigation of error floors of structured low-density paritycheck codes by hardware emulation. In Global Telecommunications Conference, 2006. GLOBECOM ’06. IEEE, pages 1–6, 2006.
+[8] Z. Wang and Z. Cui. Low-Complexity High-Speed Decoder Design for Quasi-Cyclic LDPC Codes. Very Large Scale Integration (VLSI) Systems, IEEE Transactions on, 15(1):104–114, 2007.
+[9] H. Zhong, T. Zhong, and E.F. Haratsch. Quasi-Cyclic LDPC Codes for the Magnetic Recording Channel: Code Design and VLSI Implementation. Magnetics, IEEE Transactions on, 43(3):1118–1123, 2007.
+[10] F. Angarita, V. Torres, A. Perez-Pascual, and J. Valls. High-throughput FPGA-based emulator for structured LDPC codes. In Electronics, Circuits and Systems (ICECS), 2012 19th IEEE International Conference on, pages 404–407, 2012.
+[11] J. Kim, J. Cho, and W. Sung. A high-speed layered min-sum LDPC decoder for error correction of NAND Flash memories. In Circuits and Systems (MWSCAS), 2011 IEEE 54th International Midwest Symposium on, pages 1–4, 2011.
+[12] F.R. Kschischang, B.J. Frey, and H.-A. Loeliger. Factor graphs and the sum-product algorithm. Information Theory, IEEE Transactions on, 47(2):498–519, 2001.
+[13] M. Martina, G. Masera, S. Papaharalabos, P.T. Mathiopoulos, and F. Gioulekas. On practical implementation and generalizations of max* operator for turbo and ldpc decoders. Instrumentation and Measurement, IEEE Transactions on, 61(4):888–895, 2012.
+[14] N. Wiberg. Codes and decoding on general graphs. PhD thesis, Linkoping University, Linkoping, Sweden.
+[15] J. Chen and M.P.C. Fossorier. Near optimum universal belief propagation based decoding of LDPC codes and extension to turbo decoding. In Information Theory, 2001. Proceedings. 2001 IEEE International Symposium on, pages 189–, 2001.
+[16] H. Ding, S. Yang, W. Luo, and M. Dong. Design and Implementation for High Speed LDPC Decoder with Layered Decoding. In Communications and Mobile Computing, 2009. CMC ’09. WRI International Conference on, volume 1, pages 156–160, 2009.
+[17] C.L. Wey, M.D. Shieh, and S.Y. Lin. Algorithms of finding the first two minimum values and their hardware implementation. Circuits and Systems I: Regular Papers, IEEE Transactions on, 55(11):3430–3437, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:26:38 UTC from IEEE Xplore. Restrictions apply.
+
+

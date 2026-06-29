@@ -1,0 +1,414 @@
+Endurance Prediction and Error Reduction in NAND Flash Using Machine Learning
+
+Barry Fitzgerald Department of Electrical and
+Electronic Engineering Limerick Institute of Technology
+Limerick, Ireland Email: barry.fitzgerald@lit.ie
+
+Damien Hogan NVMdurance Ltd. Limerick, Ireland
+
+Conor Ryan Computer Science and Information Systems University of Limerick
+Limerick, Ireland Email: conor.ryan@ul.ie
+
+Joe Sullivan Department of Electrical and
+Electronic Engineering Limerick Institute of Technology
+Limerick, Ireland Email: joe.sullivan@lit.ie
+
+Abstract—NAND flash is rapidly becoming the media of choice for data storage, due in part to its speed and low power consumption. However, flash wears out through repeated program-erase (P-E) cycling, causing the raw bit error rate (RBER) to increase. Error correction codes (ECCs) are used to detect and correct errors in a sector of data called a codeword. An uncorrectable error occurs when the number of bit errors in a codeword exceeds a certain level, meaning the data cannot be recovered.
+This research uses machine learning to predict how far each sector of a NAND device can be cycled before it becomes uncorrectable by ECC, thereby enabling the controller to better manage the flash. We characterise a number of flash metrics to investigate their suitability for use as inputs to the prediction model, and determine the impact of each metric on the accuracy of the model. We show for the first time that it is possible to reliably make such predictions, achieving an overall accuracy of greater than 99% when the model was tested on unseen data.
+I. INTRODUCTION
+NAND flash devices have a number of error sources, including retention errors, read errors and program disturb errors. The RBER from all of these error sources increases with P-E cycling [1]. These raw bit errors must be corrected by ECC, which associates parity bits with a sector of data bits (typically 1KB or 2KB) to form a codeword. To ensure the number of errors in a codeword does not exceed the ECC limit, NAND manufacturers specify a P-E cycling limit which should not be exceeded. This is called the endurance specification. However, there is a large variation in quality of physical sectors from device-to-device and within individual devices (block-to-block, page-to-page). NAND manufacturers specify their endurance ratings very conservatively to account for this, even though most sectors are capable of far exceeding this rating.
+As process geometries have scaled down, flash cells have become smaller and more densely packed, resulting in an increase in cell-to-cell interference. This has led to current NAND Flash devices having significantly higher RBER than previous-generation devices. Traditional algebraic ECCs such as Bose-Chaudhuri-Hocquenghem (BCH) codes require increased parity overhead to handle this higher RBER [2], so there has been a shift in the industry towards more advanced error correction codes such as low-density paritycheck (LDPC) codes [3].
+
+If the first read (known as the hard read) fails, LDPC performs extra soft reads, by offsetting the read reference point, to determine the probability that a bit has been read correctly. This greatly improves the error correction capability, but the additional soft reads can dramatically slow down the performance of the system [3]. The proportion of total reads that require additional soft reads is termed the trigger rate, and it is desirable to minimise this for performance purposes.
+The motivation for this research is to pre-emptively identify these worst-case sectors and to predict how far each sector can be P-E cycled before uncorrectable errors occur. This will reduce the uncorrectable error rate of traditional BCH engines, and the trigger rate of LDPC engines. It may also allow for reduced-complexity ECC engines for latest-generation flash devices, and will enable the controller to optimise its NAND management and usage.
+For example, NAND Flash controllers use wear leveling to reduce the uncorrectable error rate by spreading P-E cycles evenly across all blocks within a device. This prevents individual blocks from being excessively cycled and wearing out prematurely. Using our proposed model, rather than spreading the wear evenly among blocks, the wear leveling algorithm could be modified such that blocks predicted to reach higher cycling levels are cycled more frequently than blocks predicted to reach lower cycling levels. We believe that the data required to make the prediction for each block could be obtained as a background task when the controller is idle, thereby incurring no latency overhead.
+This research focuses on devices from a sub-20nm multilevel cell (MLC) flash family, with an endurance rating of 5K P-E cycles. More than 27 million sectors from a population of devices were grouped into a number of predefined P-E cycling levels beyond the endurance rating, for the purpose of answering the following three specific research questions:
+1) Which metrics, to be determined through characterisation, are most suitable as inputs to the prediction model?
+2) What is the impact of each identified metric on the accuracy of the model?
+3) When all identified inputs are used in conjunction with each other, what is the achievable accuracy of the model?
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+The remainder of this paper is structured as follows: Section II provides an overview of the flash memory devices used in this research, while Section III outlines the hardware experiments performed. Section IV analyses the data gathered in terms of its suitability for endurance prediction. Section V discusses all aspects of the machine learning model, including the results of each experiment, with Section VI concluding the paper.
+II. NAND FLASH OVERVIEW
+NAND devices are made up of blocks of flash cells. Blocks are arranged in a matrix as shown in Fig. 1.
+
+III. EXPERIMENTAL DESIGN
+A custom-designed test system was developed, capable of P-E cycling NAND devices and reading back data at various cycling points. Bit error rates were determined by comparing data read back to previously programmed random data. The test system was also capable of measuring the time taken for program and erase operations.
+In total, 6,675 blocks were tested across 45 devices. Blocks were split into ten cycling levels: from 6K to 15K in 1K steps. P-E cycling was performed over 500 hours at 81◦C, as per the JEDEC specification for testing the endurance of solid state drives [4].
+Within each device, eight blocks were assigned to each of the 6K - 10K cyling levels, and seven blocks were assigned to each of the 11K - 15K cycling levels. This is summarized in Table I
+
+TABLE I NUMBER OF BLOCKS AND CODEWORDS CYCLED TO EACH LEVEL. THERE
+ARE 4,096 CODEWORDS PER BLOCK.
+
+Fig. 1. Blocks consist of a number of rows of flash cells called wordlines (WLs), and a number of columns called bitlines (BLs). Each wordline contains four pages: MSB and LSB even for even-numbered BLs; MSB and LSB odd for odd-numbered BLs.
+
+Cycling Level
+6,000 Cycles 7,000 Cycles 8,000 Cycles 9,000 Cycles 10,000 Cycles 11,000 Cycles 12,000 Cycles 13,000 Cycles 14,000 Cycles 15,000 Cycles
+Total
+
+Blocks per Device
+8 8 8 8 8 7 7 7 7 7
+75
+
+Total Blocks
+712 712 712 712 712 623 623 623 623 623
+6675
+
+Total Codewords
+2,916,352 2,916,352 2,916,352 2,916,352 2,916,352 2,551,808 2,551,808 2,551,808 2,551,808 2,551,808
+27,340,800
+
+Blocks consist of a number of rows of flash cells called wordlines (WLs), and a number of columns called bitlines (BLs). For MLC devices, each Flash cell stores two bits, a Least Significant Bit (LSB) and a Most Significant Bit (MSB). A collection of LSBs on a wordline forms an LSB page, and a collection of MSBs forms an MSB page. The devices used in this research contain four pages per wordline: LSB and MSB even for cells connected to even-numbered bitlines; LSB and MSB odd for cells connected to odd-numbered bitlines. Each page is 16,384 bytes long, and there are 512 pages per block.
+NAND devices are programmed on a page basis but can only be erased on a block basis. Pages must be programmed in sequential order, meaning that even pages on a wordline are programmed before odd pages. When an even page is programmed, the subsequent programming of the odd page on the same wordline disturbs the even page data. This means that even and odd pages have different error characteristics [1].
+Pages are subdivided into eight sectors of 2,048 bytes each. The user data stored in each sector, plus parity bits stored associated with that data, make up an ECC codeword. The parity bits are stored in the spare area at the end of each page.
+For the remainder of this paper, the term codeword applies to the physical 2,048-byte sector used to store user data. We do not generate or store ECC parity data.
+
+Each cycling level was sub-divided into 1,000 intervals, such that the interval for the 6K level was 6 cycles, for the 7K level was 7 cycles etc. At the end of each interval, the following data was recorded for each codeword:
+1) Number of errors in that codeword. 2) Program time for the page that codeword belongs to. 3) Erase time for the block that codeword belongs to.
+At the end of cycling, the number of codeword errors was recorded. Greater than 100 errors was deemed a fail; otherwise the codeword was deemed to have passed. This level was chosen arbitrarily and is within the typical range of error correction capability achievable with BCH or ’hard-decode’ LDPC for a 2,048-byte codeword.
+IV. DATA ANALYSIS
+The first goal of this research was to identify metrics that could be used as inputs to the prediction model. Metrics that exhibit different patterns of behaviour on different areas of a device, and metrics that change in a predictable way as the device degrades, are ideal inputs to the machine learning model.
+Previous research has shown that RBER is correlated with wordline location, possibly due to process variations [1]. This
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+Average Errors per Codeword 0 2 4 6 8 10 12 14
+Average Errors per Codeword 0 2 4 6 8 10 12 14
+
+means that the page associated with a codeword should be a good indicator of whether that codeword is likely to have higher or lower errors. Therefore we characterised the RBER per page across all pages tested.
+Similarly, studies have shown that various metrics change with cycling, such as RBER [1], program time [5] and erase time [6]. We therefore analysed the change in these metrics over the first 5K P-E cycles of life. We studied the average trend with cycling for all codewords tested for these metrics, and also the variation across codewords.
+Finally, we studied the post-cycling distribution of errors for each cycling level, to investigate how cycling level impacts codeword error rate (CWER).
+A. BER Variation Across Pages
+The average errors per codeword was recorded for each of the 512 pages. A subset of this data is shown in Fig. 2. The pages for eight consecutive wordlines, WL67 - WL74, are depicted. Since there are four pages per wordline - LSB even, LSB odd, MSB even, MSB odd - there are 32 pages shown.
+
+1) BER vs Cycling: The average codeword RBER, for each page type, as a function of cycling is shown in Fig. 3. As expected, RBER increases with cycling. However the average RBER for each page type is different, with even pages displaying higher errors than odd pages. Moreover, the slope of the RBER increase is also different for each page type.
+Codeword Error Variation with P−E Cyling
+Page Type LSBe LSBo MSBe MSBo
+
+Codeword Errors by Wordline
+
+0
+
+1000
+
+2000
+
+3000
+
+4000
+
+5000
+
+Number of P−E Cycles
+
+Fig. 3. Average codeword RBER as a function of cycling for each page type.
+
+WL67 WL68 WL69 WL70 WL71 WL72 WL73 WL74
+
+LSBe
+
+Page Type
+
+LSBo
+
+MSBe
+
+MSBo
+
+Fig. 2. Average codeword errors per page for 8 consecutive wordlines.
+It can be seen that each of the four page types per wordline have different bit error rates. However there is also a difference across wordlines, with groups of four consecutive wordlines displaying similar patterns of BER. For example, the BER for LSB even pages increases from WL67 to WL70. It then decreases for WL71 and follows a similar increasing pattern to WL74. This pattern broadly repeats for all wordlines in a block.
+This finding is supported by [1], which found that BER is correlated with wordline location, possibly due to process variations.
+B. Cycling Effects
+BER, program time and erase time are known to change with P-E cycling. To investigate whether this change could have predictive value we have characterised the impact of cycling on these metrics.
+
+2) Program Time vs Cycling: Fig. 4 shows the average page program time for each page type as a function of cycling. It shows that MSB pages take approximately ten times longer to program than LSB pages. The program time for LSB pages is approximately 200us, with LSB odd pages taking slightly longer to program than LSB even. MSB odd pages take approximately 1,800us, with MSB even pages taking approximately 2,100us.
+The difference is because LSB pages use a coarse programming algorithm, whereas MSB pages use a much more fine grained programming algorithm for the precise placement of charge. MSB even pages require even more precise placement of charge than MSB odd pages due to the disturb mechanism they experience from the programming of odd pages on the same wordline [1], as outlined in Section II.
+Such differences in programming time for different page types have been noted in the literature [5], which also noted a 10-15% reduction in program time as the device wears out with cycling. While our results show a 12% reduction in program time over the first 5,000 cycles for LSB pages, MSB pages actually increase by 2% and 4% respectively for even and odd pages. The devices studied in [5] were relatively largegeometry devices (50nm+) from 2009. This program time increase for current sub-20nm planar MLC devices has not previously been reported in the literature.
+3) Erase Time vs Cycling: The average block erase time as a function of cycling is shown in Fig. 5. It shows that the time to erase a block gets longer as the block wears out, increasing from approximately 1,900us at the beginning of life
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+Program Time Variation with P−E Cyling
+
+500 1000 1500 2000 2500
+
+Average Page Program Time [us]
+
+Page Type
+LSBe LSBo MSBe MSBo
+
+0
+
+0
+
+1000
+
+2000
+
+3000
+
+4000
+
+5000
+
+Number of P−E Cycles
+
+Fig. 4. Average program time as a funtion of cycling for each page type.
+
+to 5,500us after 5,000 cycles. This trend is in keeping with the literature [6].
+
+Erase Time Variation with P−E Cyling
+
+found to have come from two blocks that had an extremely high proportion of failing codewords, meaning they were defective blocks.
+We postulate that the rate of change of these metrics is indicative of the quality of the underlying flash and the likelihood of high errors. This is supported by previous research [7] which cycled NAND blocks to destruction (the point at which pages could no longer be programmed and blocks no longer erased), and used program and erase time to predict the cycling level at which this occurred. That study found better results were achieved when program and erase times at more than one cycling point were used as inputs, indicating the rate of change of these timings was more valuable than a one-point measurement.
+Our research is fundamentally different to this, in that rather than cycling to the point where pages or blocks become non-functional (in excess of 100K cycles) and predicting the number of cycles at which this occurs, we cycle to much lower cycling levels and predict the number of errors per codeword. As well as using program and erase time, we have identified other metrics (outlined in this section), such as errors per codeword and page number, that we believe will contribute to the predictive power of the model. Nevertheless, we believe that the rate of change finding in [7] is applicable to our study too.
+
+4500
+
+3500
+
+Average Block Erase Time [us]
+
+0
+
+1000
+
+2000
+
+3000
+
+4000
+
+5000
+
+Number of P−E Cycles
+
+TABLE II STATISTICAL VARIATION (ACROSS ALL CODEWORDS TESTED) IN THE CHANGE IN CODEWORD ERRORS, PROGRAM TIME AND ERASE TIME FROM 10 CYCLES TO 5K CYCLES (P T5K - P T10). THE MINIMUM, FIRST QUARTILE, MEDIAN, THIRD QUARTILE AND MAXIMUM VALUES ARE
+PRESENTED.
+
+Metric
+Errors LSBe Errors LSBo Errors MSBe Errors MSBo
+tProg LSBe tProg LSBo tProg MSBe tProg MSBo
+tErase
+
+Min
+-146 -39 -113 -34
+-2127 -2078 -2295 -1961
+716
+
+1st Qu.
+5 2 7 3
+-83 -84 -6 -4
+2190
+
+Median
+8 3 9 5
+-1 -2 2 78
+2240
+
+3rd Qu.
+11 5 13 7
+1 0 90 116
+2892
+
+Max
+145 171 203 107
+1988 2072 2202 1891
+4502
+
+2500
+
+1500
+
+Fig. 5. Average erase time as a funtion of cycling.
+4) Statistical Analysis: Table II shows the statistical variation (across all codewords tested) in the change in codeword errors (Errors), program time (tProg) and erase time (tErase) from 10 cycles to 5K cycles (pt5K - pt10). The minimum, first quartile, median, third quartile and maximum values are presented.
+These statistics show that there is significant variability in the rate of change of these metrics with cycling, across the population of codewords. Each metric also has some extreme outliers, including some with the wrong polarity. For example, the minimum value of pt5K - pt10 errors was negative, indicating that some codewords had fewer errors after 5K cycles than after 10 cycles. Such non-normal behaviour was
+
+C. BER Distributions by Cycling Level
+The cumulative distribution of codeword errors after each cycling level is shown in Fig. 6. The mean number of bit errors per codeword increases with cycling level, as expected. However, across all cycling levels, the mean number of bit errors per codeword is far below the 100 bit limit. At 6K cycles there are an average of just 10 errors per codeword, rising to 30 at 15K cycles.
+Fig. 6 shows that there is a distribution tail that exceeds the 100 bit limit. This is highlighted more clearly by the complementary cumulative distribution function, shown in Fig. 7.
+Fig. 7 illustrates that no codewords fail the 100 bit limit at 6K or 7K cycles. All cycling levels above this do have failing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+Codeword Error Cumulative Distributions
+
+CWER vs RBER
+
+CWER 0.0000 0.0005 0.0010 0.0015
+
+80 100
+
+60
+
+Cumulative Probability [%]
+
+40
+
+Cycling Levels
+6K 7K 8K 9K 10K 11K 12K 13K 14K 15K
+
+0
+
+50 100 150 200 250 300 350
+
+Errors Per Codeword
+
+0.0006 0.0008 0.0010 0.0012 0.0014 RBER
+Fig. 8. CWER vs RBER for each of the 10 cycling levels.
+
+20
+
+0
+
+CCDF
+
+1e−04
+
+1e−02
+
+1e+00
+
+Fig. 6. Cumulative Distribution Function of raw codeword bit errors by cycling level after cycling.
+Codeword Error CCDF
+Cycling Levels 6K 7K 8K 9K 10K 11K 12K 13K 14K 15K
+
+determined by the codeword error distribution tails rather than the mean RBER. This is highlighted by the fact that the 15K cycling level has the highest mean RBER but the 12K cycling has the highest tail. This finding is supported by a recent largescale study of SSD failure rates in the field, which found that mean RBER is not a good indicator of CWER [9].
+V. MACHINE LEARNING MODEL
+The goal of this research was to investigate if a machine learning model could be developed which, when given metrics and measurements from the device as it is being cycled, would predict whether a codeword would pass or fail at a given cycling level. Models that predict a binary output such as this are termed classification models.
+
+1e−06
+
+0
+
+50 100 150 200 250 300 350
+
+Errors Per Codeword
+
+Fig. 7. Complementary Cumulative Distribution Function of raw codeword bit errors by cycling level after cycling.
+
+codewords, with the 12K cycling level having the highest proportion of failing codewords. The proportion of failing codewords (out of all codewords tested) is termed codeword error rate (CWER).
+Fig. 8 shows CWER plotted against RBER for each cycling level. RBER is calculated as the mean number of bit errors per codeword from Fig. 6, divided by the total number of bits per codeword (16,384)
+Fig. 7 and Fig. 8 highlight an important finding. Firstly, Fig. 7 shows that the vast majority of codewords are capable of exceeding the manufacturer’s endurance specification of 5K cycles. Secondly, CWER is generally regarded as being a strong function of mean RBER [8]. However, Fig. 8 shows that this is not the case. Fig. 7 illustrates that CWER is actually
+
+A. Machine Learning Method
+Previous research compared multiple machine learning methods for building a classification model to predict the point of destruction of Flash blocks [10]. This study was an extension of [7], as discussed in Section IV-B4, which used program and erase times to predict the number of cycles at which pages or blocks became non-functional. It found that Support Vector Machines (SVMs) gave the most accurate predictions. For this reason, SVMs were chosen as the machine learning method used in this research.
+SVMs are one of the most popular machine learning classification techniques [11]. They work by trying to find a separating hyperplane between the two classes of data. If the data is not linearly separable (as is usually the case for complex classification problems), it is mapped to a higher dimensional space using kernel techniques.
+This research used the machine learning library e1071 [12] as part of the R programming language [13] to build and test the SVM models. The SVM was first tuned on the data to find the best values of the internal parameters cost and gamma, using the svm.tune function in R.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+B. Model Data
+1) Data Sampling: Due to the extemely imbalanced dataset (99.97% of all codewords tested passed) the model could simply predict that all codewords pass and achieve 99.97% accuracy. In cases like this, additional criteria are used to evaluate the model in the form of sensitivity and specificity.
+Sensitivity is a measure of the true positive rate (TPR). For this research, a positive is taken to be a passing codeword, so TPR is the proportion of passing codewords that are predicted to pass. Specificity is a measure of the true negative rate (TNR), or the proportion of failing codewords that are predicted to fail. Accuracy is the total proportion of correct predictions and as such is the average of sensitivity and specificity.
+It is important that the model performs well on both sensitivity and specificity. Precicting that all codewords pass will results in very high accuracy and sensitivity (99.97%), but very poor specificity. In order to balance the sensitivity versus specificity the majority class of passing codewords needs to be subsampled so that both classes are similar sizes. There are 7,857 failing codewords in the dataset, so 7,857 passing codewords (out of more than 27 million) were randomly chosen to make up the dataset.
+2) Model Inputs and Outputs: For each of the 15,714 data points in the dataset (7,857 failing codewords; 7,857 randomly-chosen passing codewords), a number of metrics were chosen for investigation as suitable inputs to the model. Based on the data analysis discussed in Section IV, the following metrics were selected: page number, program time, erase time and codeword errors.
+Some or all of these metrics, along with cycling level, were used as inputs to train the model. In practice, these metrics would be measured for a codeword and supplied to the model, along with the cycling level of interest. The model will then predict if the codeword will pass or fail at that cycling level. For example, the input metrics would first be passed to the model together with a cycling level of 6K. If the model predicted a pass, the same inputs would be passed with a cyling level of 7K, and so on until a cycling level is reached for which the model predicts a fail. This is the predicted endurance level for that codeword.
+The output from the model is the classification result: 1 if it predicts the codeword will have more than 100 errors; otherwise 0.
+3) Model Training and Testing: Typically when building machine learning models, a subset of data is removed from the data set and reserved to test the model, and the remaining data is used to train the model. A common approach is to use k-fold cross validation, in which the data is evenly split into k groups. Following this, k machine learning runs are performed. In each run, 1 group is used to test the model and the remaining k-1 groups are used to train the model. A different group is used for testing for each of the k runs. Results are then averaged across the k runs to give a representation of how well the system can generalise to solve the problem.
+
+This research divided the 15,714 data points into 9 groups of 1,746 data points each. Eight of these groups were used for 8-fold cross validation and average results were calculated in terms of accuracy, sensitivity and specificity, as defined in Section V-B1. The ninth group was used a hold-out test set, to test a model trained on the other eight groups.
+C. Model Baseline
+Table III shows the number of codewords that pass and fail at each cycling level, and also whether the majority of codewords pass or fail at each cycling level. The total number of codewords is slightly different for each cycling level due to the random sampling of the majority class.
+
+TABLE III NUMBER OF CODEWORDS THAT PASS AND FAIL AT EACH CYCLING LEVEL.
+
+Cycling Level 6,000 Cycles 7,000 Cycles 8,000 Cycles 9,000 Cycles 10,000 Cycles 11,000 Cycles 12,000 Cycles 13,000 Cycles 14,000 Cycles 15,000 Cycles
+Total
+
+Pass 862 896 817 787 842 709 747 743 721 733
+7857
+
+Fail 0 0 40 57
+1577 232 3335 463 883 1270
+7857
+
+Majority Pass Pass Pass Pass Fail Pass Fail Pass Fail Fail
+
+If the model used only the cycling level as its input, it would predict the majority class for each cycling level.
+For example, it would predict that all codewords from the 6K, 7K, 8K, 9K, 11K and 13K cycling levels will pass. This is a total of 4,814 codewords predicted to pass, out of 7,857 that actually pass, giving a sensitivity of 61.3%.
+Similarly, the model would predict that all codewords from the 10K, 12K, 14K and 15K cycling levels will fail. This is a total of 7,065 codewords predicted to fail, out of 7,857 that actually fail, giving a specificity of 89.9%. The overall accuracy of the model (the average of sensitivity and specificity) is 75.6%.
+These figures are therefore used as the baseline accuracy for the model i.e. they represent how accurately the model would predict a passing or failing codeword across all cycling levels if the model was given no other input information.
+D. Metric Comparison
+Table IV shows the accuracy (Acc), specificity (Sp) and sensitivity (Sn) of the model for different input metrics. Results shown are the average results from the 8-fold cross validation discussed in Section V-B
+The baseline results used cycling level as the only input to the model. It can be seen that the average cross validation results match the theoretical baseline results presented in Section V-C extremely closely.
+Other results are for a single metric used in conjunction with cycling level as inputs to the model. In the case of program time (tProg), erase time (tErs) and codeword errors,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE IV ACCURACY, SPECIFICITY & SENSITIVITY OF MODEL FOR DIFFERENT INPUT FEATURES. BASELINE IS WHEN THE ONLY INPUT IS CYCLING LEVEL. OTHER METRICS ARE USED in conjunction WITH CYCLING LEVEL. 1PT METRICS ARE MEASUREMENTS TAKEN AFTER 5K CYCLES. 2PT METRICS ARE MEASUREMENTS TAKEN AFTER 10 CYCLES & 5K CYCLES.
+
+Features Theoretical Baseline
+Actual Baseline
+Page number
+tProg 1pt tProg 2pt
+tErs 1pt tErs 2pt
+CW errors 1pt CW errors 2pt
+
+Acc 75.6 75.56
+86.48
+83.85 86.03
+87.71 89.45
+91.09 95.00
+
+Sp 89.9 89.92
+93.90
+88.70 89.13
+86.05 89.56
+91.97 95.73
+
+Sn 61.3 61.20
+79.07
+78.99 82.93
+89.36 89.33
+90.21 94.27
+
+E. Final Model
+Finally, a model was trained and tested using all the metrics compared in Table IV as inputs: page number; tProg 2pt; tErs 2pt; and CW errors 2pt. Table V presents the results in terms of accuracy, specificity and sensitivity for both the hold-out test set and the cross validation average.
+
+TABLE V ACCURACY, SPECIFICITY & SENSITIVITY OF FINAL MODEL, WHICH COMBINED ALL SUITABLE METRICS AS INPUTS. AVERAGE RESULTS FROM THE 8-FOLD CROSS VALIDATION ARE PRESENTED, TOGETHER WITH THE
+RESULTS FROM THE HOLD-OUT TEST SET.
+
+Validation Method Cross Validation Average
+Hold-out Test
+
+Acc 99.35 99.08
+
+Sp 99.50 99.43
+
+Sn 99.20 98.74
+
+1pt and 2pt results are presented. 1pt means that a single measurement, after 5K cycles, was used as an input to the model. 2pt means that two measurements - one after 10 cycles and one after 5K cycles - were used as inputs to the model.
+Results show that all the metrics selected improve the accuracy of the model. All metrics that used 2pt measurements showed an improvement in accuracy when the second measurement point was added. This proves that the rate of change of BER and program/erase timings with cycling is a valuable metric for predicting post-cycling errors.
+The metric that provided the most value was codeword errors, improving the accuracy from 75.56% to 91.09% when the errors at 5K cycles were used as an input. This increased to 95% when the errors at 10 cycles were added.
+The next most valuable metric was erase time, improving the accuracy from 75.56% to 87.71% for a 1pt measurement and to 89.45% for a 2pt measurement. This is a surprising result. Since erase time applies to a whole block and there are 4,096 codewords per block, it was not expected to have enough granularity to provide value at the codeword level.
+Closer examination of the data showed that 90% of the codewords that failed at 10K cycles came from a single defective block, and 90% of codewords that failed at 12K cycles also came from a single defective block. The model was able to use those blocks’ erase time to identify that they were defective and predict that the majority of codewords would fail, leading to substantial improvements in the prediction accuracy.
+Page number and 2pt program time provide similar improvements in overall accuracy, up to approximately 86% from the baseline of 75.56%. However, page number gives superior results for specificity at the expense of sensitivity, indicating that it is better at predicting failing codewords. Conversely, program time has higher sensitivity and lower specificity, indicating that it is more valuable for predicting passing codewords.
+
+It can be seen that the overall accuracy for both methods of validation (cross-validation and hold-out test) exceeds 99%. Furthermore, the sensitivity and specificity are well balanced, indicating that the model can predict passing codewords and failing codewords equally well.
+VI. CONCLUSIONS AND FUTURE WORK
+This research gathered large-volume data from currentgeneration NAND flash devices. A number of performance metrics were characterised, such as raw bit error rate as a function of page number and P-E cycles, and program/erase timings as a function of P-E cycles. The purpose was to find flash metrics that could be measured while the device was P-E cycling, and use them to predict the true endurance of individual flash codewords.
+Having identified suitable metrics, machine learning models were built which used them to predict whether a codeword would pass or fail at different cycling levels. The impact of each metric on the accuracy of the model was assessed. It was found that each of the selected metrics improved the accuracy of the model. Furthermore, it was shown that when using error rate and timing data measured from the flash device while cycling, better results are achieved with measurements taken at more than one cycling point.
+Finally, prediction accuracy was shown to be greater than 99% when a model was built that used all of the selected metrics. This is a remarkable result and highlights the potential of this technique for real-world applications.
+The models built in this research were based on data taken immediately after cycling. This work will be extended to incorporate other error sources such as retention and read disturb. We propose to develop individual models for each of the dominant NAND error mechanisms.
+REFERENCES
+[1] Y. Cai, E. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND Flash memory: Measurement, characterization, and analysis,” in Design, Automation Test in Europe Conference Exhibition (DATE), 2012, March 2012, pp. 521–526.
+[2] F. Sun, K. Rose, and T. Zhang, “On the use of strong bch codes for improving multilevel nand flash memory storage capacity,” in in IEEE Workshop on Signal Processing Systems (SiPS): Design and Implementation, 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+[3] P. Khayat, M. Kaynak, S. Parthasarathy, and S. S. Tehrani, “Performance characterization of ldpc codes for large-volume nand flash data,” in 2015 IEEE International Memory Workshop (IMW), May 2015, pp. 1–4.
+[4] “Jesd218a - solid state drive (ssd) requirements and endurance test method,” JEDEC, Standard, 2011.
+[5] L. M. Grupp, A. M. Caulfield, J. Coburn, S. Swanson, E. Yaakobi, P. H. Siegel, and J. K. Wolf, “Characterizing Flash memory: anomalies, observations, and applications,” in Proceedings of the 42nd Annual IEEE/ACM International Symposium on Microarchitecture, ser. MICRO 42. New York, NY, USA: ACM, 2009, pp. 24–33.
+[6] P. Desnoyers, “Empirical evaluation of NAND Flash memory performance,” SIGOPS Oper. Syst. Rev., vol. 44, pp. 50–54, March 2010.
+[7] D. Hogan, T. Arbuckle, and C. Ryan, How Early and with How Little Data? Using Genetic Programming to Evolve Endurance Classifiers for MLC NAND Flash Memory. Springer Berlin Heidelberg, 2013.
+[8] N. Mielke, T. Marquart, N. Wu, J. Kessenich, H. Belgal, E. Schares, F. Trivedi, E. Goodness, and L. Nevill, “Bit error rate in NAND Flash memories,” in Reliability Physics Symposium, 2008. IRPS 2008. IEEE International, May 2008, pp. 9–19.
+[9] B. Schroeder, R. Lagisetty, and A. Merchant, “Flash reliability in production: The expected and the unexpected,” in 14th USENIX Conference on File and Storage Technologies (FAST 16). Santa Clara, CA: USENIX Association, 2016, pp. 67– 80. [Online]. Available: http://usenix.org/conference/fast16/technicalsessions/presentation/schroeder
+[10] T. Arbuckle, D. Hogan, and C. Ryan, “Learning predictors for flash memory endurance: A comparative study of alternative classification methods,” Int. J. Comput. Intell. Stud., vol. 3, no. 1, pp. 18–39, Jan. 2014. [Online]. Available: http://dx.doi.org/10.1504/IJCISTUDIES.2014.058644
+[11] K. R. Muller, S. Mika, G. Ratsch, K. Tsuda, and B. Scholkopf, “An introduction to kernel-based learning algorithms,” Trans. Neur. Netw., vol. 12, no. 2, pp. 181–201, Mar. 2001. [Online]. Available: http://dx.doi.org/10.1109/72.914517
+[12] D. Meyer, E. Dimitriadou, K. Hornik, A. Weingessel, and F. Leisch, e1071: Misc Functions of the Department of Statistics, Probability Theory Group (Formerly: E1071), TU Wien, 2017, r package version 1.6-8. [Online]. Available: https://CRAN.R-project.org/package=e1071
+[13] R Core Team, R: A Language and Environment for Statistical Computing, R Foundation for Statistical Computing, Vienna, Austria, 2013. [Online]. Available: http://www.R-project.org/
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+

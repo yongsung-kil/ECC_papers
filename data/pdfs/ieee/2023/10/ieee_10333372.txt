@@ -1,0 +1,677 @@
+Neural Adjusted Min-Sum Decoding for LDPC
+Codes
+Haochen Yu, Ming-Min Zhao, Ming Lei and Min-Jian Zhao College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou 310027, China
+Email: {22131101, zmmblack, lm1029, mjzhao}@zju.edu.cn
+
+2023 IEEE 98th Vehicular Technology Conference (VTC2023-Fall) | 979-8-3503-2928-5/23/$31.00 ©2023 IEEE | DOI: 10.1109/VTC2023-Fall60731.2023.10333372
+
+Abstract—In this work, we propose a neural adjusted minsum (NAMS) decoder for low-density parity-check (LDPC) codes. In particular, we improve the traditional normalized min-sum (NMS) decoder by introducing a selection mechanism to adjust the check-node update step, where either the min-sum rule or the belief propagation (BP) rule is selected. Besides, we unfold the modified decoder into a model-driven neural network, where layer-dependent trainable parameters are introduced as weights in the Tanner graph and optimized by gradient descent-based methods during network training. Simulation results demonstrate that the proposed NAMS decoder is able to provide superior error-correction performance as compared to the neural NMS decoder, with only slightly increased computational complexity. Moreover, in certain circumstances, the proposed NAMS decoder even outperforms the neural BP decoder, with much lower computational complexity.
+Index Terms—LDPC codes, belief propagation, min-sum decoding, deep learning, deep unfolding, model-driven.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes which were first discovered by Gallager [1] in the 1960s have been shown to achieve near-Shannon-limit performance under belief propagation (BP) decoding algorithms [2], [3]. BP is a classic decoding algorithm, also known as sum-product algorithm, which is based on the idea of iteratively updating probability information using factor graphs and it is able to achieve performance close to maximum likelihood (ML) decoding. However, the BP decoder involves a large number of multiplication and hyperbolic tangent operations, resulting in high computational complexity. As a result, the min-sum (MS) decoder was introduced [4], which simplifies the update of check nodes in the BP decoder. Compared with BP, the MS decoder has much lower computational complexity at the cost of certain performance degradation.
+The performance loss of the MS decoder as compared to the original BP decoder can be partially compensated by using a normalization factor or an offset factor [5], and the resulting decoders are known as normalized MS (NMS) and offset MS (OMS), respectively. Furthermore, these decoders can be further improved by properly adjusting and optimizing the underlying normalization/offset coefficients, as mentioned in [6]. Besides, an adjusted MS (AMS) decoder was proposed in [7], which further improves the OMS and NMS decoders by modifying the check node updating rule and it was shown to achieve close to BP performance.
+The authors are with College of Information Science and Electronic Engineering, Zhejiang University, and also with Zhejiang Provincial Key Laboratory of Information Processing, Communication and Networking (IPCAN), Hangzhou 310027, China (Emails: {22131101, zmmblack, lm1029, mjzhao}@zju.edu.cn). This work was supported in part by the National Key R&D Program of China under Grant 2018YFB1802303, and the Fundamental Research Funds for the Central Universities 226-2022-00195.
+
+In recent years, with the vigorous development of machine learning technologies, deep learning has become a popular technique to solve signal processing tasks for communication systems [8]. Specifically, the authors in [9] proposed to use deep neural networks (DNN) for one-shot decoding of random and structured codes, and it was shown that using DNN can achieve near-ML performance for very short codes. In [10], the authors proposed a neural network-aided normalized minsum decoder, where the normalization factors are inferred from the input log-likelihood ratio (LLR) by a pre-trained DNN. However, such data-driven neural networks that are regarded as black boxes usually exhibit poor interpretability, and training such black-box-based networks requires a lot of training time in addition to a huge data set. Therefore, deep unfolding has gained significant attention as a modeldriven deep learning approach that transforms an iterative algorithm into a fixed-depth network while maintaining the original algorithm’s structure [11]. Some parameters of the original algorithm can be treated as trainable parameters and optimized using gradient-based methods. Based on this idea, the work [12] introduced a neural BP (NBP) decoder, which unfolds the traditional BP decoder into a partially connected neural network and it was shown to improve the decoding performance. Besides, linear programming based decoders assisted by deep unfolding were proposed in [13] and [14], which are shown to achieve much better performance than BP-based decoders but with higher computational complexity. To lower the complexity, the authors in [15] proposed a neural OMS (NOMS) decoder and a neural NMS (NNMS) decoder, which are able to achieve comparable performance as compared to those presented in [12]. In additon, the work [16] introduced a NNMS decoder for protograph LDPC codes, which is constructed by a special parameter-sharing mechanism.
+In this work, we aim to improve the decoding performance of the NNMS decoder by proposing a neural adjusted MS (NAMS) decoder. Specifically, we first introduce a neural network based selection mechanism to automatically adjust the check node updating rule efficiently. Then, we propose to assign a learnable weight to each check node processing in each iteration and improve the decoding performance via network training. Numerical results show that the proposed NAMS decoder is able to achieve superior performance as compared to the NNMS decoder, and even outperforms the NBP decoder under certain conditions.
+II. PRELIMINARIES
+Throughout this work, we consider LDPC codes of length N , each defined by an M × N parity check matrix H. Let
+
+979-8-3503-29A28u-th5o/2ri3z/e$d3l1ic.0e0ns©ed20u2s3e IliEmEitEed to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:04 UTC from IEEE Xplore. Restrictions apply.
+
+I = {1, 2, . . . , N } and J = {1, 2, . . . , M } denote the index
+
+sets of variable nodes and check nodes, respectively, and let dj, j ∈ J , denote the degree of the j-th check node, which means
+
+that there are dj ‘1’s in the j-th row of H. Suppose that a codeword x = [x1, x2, · · · , xN ] ∈ C, where C is the codebook, is
+
+transmitted over a memoryless binary-input symmetric output
+
+channel, and a corrupted codeword y is received. To recover
+
+the original message from y (contaminated by noise), iterative
+
+decoding algorithms can be employed, among which the BP
+
+decoder is the most popular.
+
+Specifically, the BP decoder can be constructed from the
+
+Tanner graph, which is a graphical representation of the parity
+
+check matrix that describes the code. A Tanner graph is a
+
+bipartite graph that defines two sets of nodes, i.e., variable
+
+nodes and check nodes. Each of the bits in the codeword
+
+corresponds to a variable node, and each of the parity-
+
+check equations (rows of H) corresponds to a check node.
+
+If H(i, j) = 1, then the i-th check node is connected with the
+
+j-th variable node, otherwise it is not connected. In the BP
+
+decoder, messages are transmitted over edges and exchanged
+
+between the variable nodes and check nodes. In particular,
+
+each node calculates its outgoing messages over some edges,
+
+based on all incoming messages it receives over all the other
+
+edges. The commonly used message in BP decoder is the bit
+
+LLR. Given the noisy received signal vector y corresponding
+
+to a transmitted codeword x, the LLR of the j-th bit in x is
+
+defined as
+
+Lj
+
+=
+
+log
+
+Pr(xj Pr(xj
+
+= =
+
+0 |y ) .
+1 |y )
+
+(1)
+
+Based on the above, the traditional BP decoder can be summarized as follows.
+1) Initialization: The j-th variable node is assigned an a posteriori LLR accoding to (1). For every position (i, j) such that H(i, j) = 1, we define Lv2c(i, j) as the message from the i-th variable node to the j-th check node and let Lv2c(i, j) = Lj .
+2) Check-node update: Compute the message passing from the i-th check node to the j-th variable node as follows:
+
+
+
+
+
+LcB2Pv (i, j) = 2 tanh−1 
+
+1 tanh( 2 Lv2c(i, k)) , (2)
+
+k∈Nv (i)\j
+
+where Nv(i) represents the set of variable nodes that are connected to the i-th check node.
+3) Variable-node update: Compute the message passing from the j-th variable node to the i-th check node, which is given by
+
+We define xˆj as the estimated bit value at the j-th variable node. If LLRj < 0, xˆj = 1; otherwise xˆj = 0. Finally, output xˆ and terminate the decoding process.
+As can be observed, calculating of hyperbolic tangent functions and many multiplications is required in the checknode update step of the BP decoder, which incurs high computational complexity. To address this issue, the MS algorithm is proposed which approximate (2) as follows:
+
+LM c2vS (i, j) =
+
+sgn(Lv2c(i, k)) min |Lv2c(i, k)| .
+
+k∈Nv (i)\j
+
+k∈Nv (i)\j
+
+(5)
+
+However, the above MS approximation tends to produce larger
+
+messages than BP, which makes the propagated information
+
+overestimated, causing a non-negligible performance loss. As
+
+such, several enhanced MS decoders are proposed to shrink
+
+the messages that are enlarged by the MS approximation, such
+
+as the NMS decoder which adds a normalization factor α in
+
+(5), i.e.,
+
+LNc2M v S (i, j) = α
+
+sgn(Lv2c(i, k))
+
+k∈Nv (i)\j
+
+(6)
+
+min |Lv2c(i, k)| ,
+k∈Nv (i)\j
+
+or the OMS decoder which adds an offset correction term β in (5) as follows:
+
+LOc2Mv S (i, j) =
+
+sgn(Lv2c(i, k))
+
+k∈Nv (i)\j
+
+(7)
+
+max min |Lv2c(i, k)| − β, 0 .
+k∈Nv (i)\j
+
+Besides the above improved MS decoders, the AMS combines the advantages of the BP and MS decoders. Specifically, in the check-node update step, the AMS decoder outputs messages by either the BP rule (2) or the MS rule (5). Assuming that for the i-th check node, the incoming message with the smallest magnitude is from the k-th variable node, i.e., k = arg min |Lv2c(i, j)|, then the magnitudes of the outgoing
+j∈Nv (i)
+messages from the i-th check node to other connected variable nodes except the k-th variable node are set to Lv2c(i, k), which is the same as the MS rule. As for the message from the ith check node to the k-th variable node, the AMS decoder utilizes the BP rule, i.e., the outgoing message along this edge is computed via (2). Compared to the MS decoder, the AMS decoder slightly increases the computational complexity, but it is able to improve the decoding performance substantially.
+
+Lv2c(i, j) = Lj +
+
+Lc2v(k, j),
+
+(3)
+
+k∈Nc (j )\i
+
+where Nc(j) represents the set of check nodes that are connected to the j-th variable node.
+4) Hard decision: Repeat steps 2 and 3 until the maximum iteration number is reached. Then, compute the final soft output for the j-th variable node as
+
+LLRj = Lj +
+
+Lc2v(i, j).
+
+(4)
+
+i∈Nc (j )
+
+III. PROPOSED NAMS DECODER
+In this section, we first present the proposed NAMS decoder, where deep learning techniques are employed to automatically choose the check node updating rule and optimize the weights in the Tanner graph. Then, a two-step training approach is proposed to train the proposed NAMS decoder efficiently. Finally, a detailed complexity analysis is carried out to evaluate the complexity of the proposed decoder and the existing stateof-the-arts.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:04 UTC from IEEE Xplore. Restrictions apply.
+
+one iteration
+
+Output
+
+check node update sublayer
+...
+
+check node update sublayer
+...
+
+check node update sublayer
+...
+
+...
+
+variable node
+
+variable node
+
+variable node
+
+update sublayer
+
+update sublayer
+
+update sublayer
+
+...
+
+...
+
+...
+
+input
+
+Lt-1v2c(i,j)
+...
+
+Y λ(i,j)=1?
+
+BP rule
+
+N MS rule
+
+α(i,j) Ltc2v(i,j)
+
+Fig. 1. Network structure of the proposed NAMS decoder.
+
+A. NAMS Decoder
+
+The structure of the proposed NAMS decoder is illustrated
+
+in Fig. 1. As can be seen, the proposed network is mainly
+
+composed of an input layer, T hidden layers, and an output
+
+layer, where T also represents the maximum iteration number.
+
+The input of the decoder is the received LLR vector as defined
+
+in (1), while the final output is the hard decision result, i.e.,
+
+xˆ. All the hidden layers are of size E, where E denotes the
+
+number of edges in the Tanner graph. For ease of exposition,
+
+we let t denote the hidden layer index, which corresponds to
+
+the t-th iteration in the decoding process. Each hidden layer
+
+further includes two sublayers corresponding to variable node
+
+update and check node update, respectively. The variable node
+
+update sublayer outputs the messages from variable nodes to
+
+check nodes, which are defined in (3), while its inputs are the
+
+output of the previous check node update sublayer as well as
+
+the received LLR. The check node update sublayer, similarly,
+
+outputs the messages from check nodes to variable nodes.
+
+However, in this work, we propose a different strategy for
+
+updating the check nodes.
+
+As mentioned in the previous section, the traditional AMS
+
+decoder employs the BP rule for the edge that carries the
+
+message with the smallest magnitude. This implies that in
+
+the AMS decoder, the check node updating rule is mainly
+
+determined by the input LLR, but is irrelevant to the code
+
+structure (e.g., the loops in the Tanner graph) and the number
+
+of iterations. However, this may lead to the accumulation and
+
+amplification of probability estimation errors, especially dur-
+
+ing the early iterations, which eventually affects the decoding
+
+performance. Moreover, due to the specific code structure,
+
+the approximation errors caused by the MS rule vary for
+
+each check node, i.e., some nodes may experience significant
+
+overestimation, while others exhibit quite precise estimations.
+
+To illustrate this phenomenon, we calculate the check node
+
+outputs using both the BP and MS rules, and then plot the
+
+normalized misestimation level in Fig. 2, which is defined as
+
+follows:
+
+LcM2vS (i, j) −
+
+LcB2Pv (i, j)
+
+i∈Nc (j )
+dj
+
+i∈Nc (j )
+LM c2vS (i, j)
+
+.
+
+(8)
+
+i∈Nc (j )
+
+Note that a higher misestimation level indicates a higher degree of overestimation caused by the MS approximation. In this figure, a [30, 150] LDPC code defined in the 5G standard [17] is considered and the misestimation level is averaged over 100 decoding processes. As can be seen, the misestimation levels are significantly higher in the early iterations as compared to those in the latter ones. Besides, different check nodes exhibit distinct behaviors in terms of the misestimation level. Therefore, employing the BP rule only once for each check node per iteration as in the AMS decoder is inefficient.
+
+t=2
+1
+
+t=6
+1
+
+misestimation level misestimation level
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0 0 20 40 60 80 100 120
+check node index
+
+0 0 20 40 60 80 100 120
+check node index
+
+Fig. 2. Average misestimation level of each check node in different iterations.
+
+To address these issues, we propose to use a neural network aided selection mechanism in the check node update sublayer. In order to automatically select the check node updating rule, a discrete vector λ ∈ {0, 1}T E×1 is introduced as a trainable parameter. In particular, if λ(t, e(i,j)) = 1, where e(i,j) is the index of the edge that passes the message from the i-th check node to the j-th variable node, then the corresponding message in the t-th iteration is calculated via the BP rule; otherwise the MS rule is employed. In this way, the decoder can be trained to learn appropriate check node updating rules, understanding when and where to utilize the BP rule can minimize the performance loss caused by the MS approximation. However, it is difficult to train discrete variables the discrete vector λ directly. Therefore, the sigmoid function is utilized to encapsulate λ and enable its trainability, based on which the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:04 UTC from IEEE Xplore. Restrictions apply.
+
+check node update rule becomes
+
+Lc2v(i, j) = sigmoid(λ(t, e(i,j)))LcB2Pv (i, j) + sigmoid(1 − λ(t, e(i,j)))LM c2vS(i, j).
+
+(9)
+
+Note that after proper training, the values of {λ(t, e(i, j))} should be close to 0 or 1, and the detailed training approach will be introduced in the following subsection.
+Moreover, we propose to incorporate a multiplicative normalization factor vector α ∈ RT E×1 as trainable edge weights during message passing. These weights are supposed to further correct the messages biased by the updating rule in (5), and combat the negative effects caused by the cycles in the Tanner graph. Thus, the final output of the check node update sublayer can be obtained by
+
+α(t, 
+
+e(i,j))LM c2vS
+
+(i,
+
+j),
+
+if
+
+λ(t, e(i,j)) = 0;
+
+
+
+LNc2Av MS (i, j) =
+
+ 
+
+α(t,
+
+e(i,j))LcB2Pv
+
+(i,
+
+j),
+
+if
+
+λ(t, e(i,j)) = 1.
+
+(10)
+
+B. Training the NAMS Decoder
+
+In this subsection, we propose a two-step training approach for the proposed NAMS decoder. In the first step, we train the selection parameters in λ with fixed normalization factors in α. Then, in the second step, with given check node update rule (BP or MS) obtained in the first step, the weights in α are further trained to improve the error-correction performance. 1
+Specifically, in the first step, to reduce the computational complexity of the proposed NAMS decoder, the selection parameter vector λ should be a sparse vector with more zeros than ones, such that the MS rule is activated more frequently. Therefore, we propose to add a penalty term in the loss function to penalize the ones in λ. Besides, based on the multi-loss training method [12], our loss function is designed as follows:
+
+−1 T N
+
+Loss = 2
+
+xj log(xˆj,t) + (1 − xj) log(1 − xˆj,t)
+
+t=1 j=1
+
+TE
+
++L
+
+λ(t, e),
+
+t=1 e=1
+
+(11)
+
+where xˆj,t and xj are the j-th output in the t-th iteration
+
+and the actual j-th component of the transmitted codeword,
+
+and L is a penalty coefficient that controls the sparsity level
+
+of λ. Since the proposed NAMS decoder is an improved
+
+version of the MS/BP/AMS decoders, it can be readily proved
+
+that the all-zero assumption holds for the NAMS decoder,
+
+i.e., if the channel is symmetric, then the probability that
+
+the NAMS decoder fails is independent of the transmitted
+
+codeword. Therefore, the elements in x can be simply set
+
+to zeros during network training, which simplifies the overall
+
+training procedure.
+
+1It is important to mention that theoretically λ and α can also be trained jointly, however, the performance of this joint training approach is inferior to the two-step approach in our simulations.
+
+In the second step, since λ has been optimized and fixed, the general structure of the proposed NAMS decoder is determined. To further improve the decoding performance, we train the edge weights in the Tanner graph, i.e., {α(t, e(i,j))}. Different from the first step, only the multi-loss term, i.e., the first term on the right hand side of (11), is employed as the loss function. Additionally, we utilize an iterationby-iteration greedy training approach, which means that the proposed NAMS decoding network is growing from a onelayer network with only one iteration to a multi-layer network with T iterations, and each time only the weights in the last layer are learnable.
+
+C. Complexity Analysis
+
+Table I summarizes the required numbers of operations for check node updating in one iteration of various BPbased decoders, where CMP, XOR and MUL denote compare, exclusive or and multiplication, respectively, and Λ is defined as the average sparsity rate of λ, i.e.,
+
+TE
+
+λ(t, e)
+
+Λ = t=1 e=1
+
+,
+
+(12)
+
+TE
+
+which is about 14% in our simulations.
+
+As can be seen from the table, the computational complexity
+
+of the proposed NAMS decoder is slightly higher than the
+
+MS/NMS/NNMS decoders since the BP rule is introduced and
+
+the tanh(·) function is required to be calculated. However,
+
+its complexity is much lower than the NBP decoder, because
+
+the BP rule is only seldomly used thanks to the proposed
+
+selection mechanism. Besides, as expected, the NBP and the
+
+proposed NAMS decoders require more multiplications due to
+
+the introduced weights in the Tanner graph.
+
+TABLE I NUMBERS OF OPERATIONS REQUIRED FOR CHECK NODE UPDATING IN
+ONE ITERATION.
+
+Decoder
+BP MS NMS AMS NNMS NBP proposed NAMS
+
+CMP -
+≈ 2E ≈ 2E ≈ 2E ≈ 2E
+≈ 2E
+
+Operations
+
+XOR
+
+MUL
+
+-
+
+≈ 2E
+
+2E
+
+-
+
+2E
+
+E
+
+2(E − M )
+
+≈ 2M
+
+2E
+
+E
+
+-
+
+≈ 3E
+
+2(1 − Λ)E ≈ (2Λ + 1)E
+
+tanh 2E
+2M 2E 2ΛE
+
+IV. NUMERICAL RESULTS
+In this section, we present simulation results to illustrate the decoding performance of the proposed NAMS decoder. The platform used for neural network training is TensorFlow. In the backpropagation stage, the Adam optimizer is employed to optimize the trainable parameters [18]. In all of our simulations, we assume that the codewords are transmitted over additive white Gaussian noise (AWGN) channels with binary
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:04 UTC from IEEE Xplore. Restrictions apply.
+
+phase shift keying (BPSK) modulation. In addition, two LDPC codes defined in the 5G standard [17], i.e., C1 [30,150] and C2 [176,528], are used for performance comparison in the following.
+Generally, training data plays an important role in network optimization. To improve the generalizability of the considered neural network based decoders over the entire signal-to-noise ratio (SNR) regime, especially for the relatively high or low SNRs, the training SNRs are set to [1, 2, . . . , 5] dB for C1 and [1.5, 2.0, . . . , 3.5] dB for C2. Besides, we build the training data set by generating 72000 training samples for each SNR level, and the mini-batch-based method is employed to train the network, where each mini-batch contains 120 blocks of data. All-zero codewords are chosen as the transmission codewords and the learning rate is set to 0.001.
+
+comparison of various decoders for C2 with T = 6 and T = 10 iterations, where Λ ≈ 15.40%. From this figure, similar trends as in Fig. 3 can be observed, which validate the effectiveness of the proposed NAMS decoder.
+V. CONCLUSION
+In this work, we proposed a new neural network based decoder, namely NAMS, which automatically learns the check node updating rule via a properly designed selection mechanism. Simulation results showed that the proposed NAMS decoder provides superior error-correction performance with slightly higher computational complexity as compared to NNMS decoder. Moreover, when the iteration number is large, it even outperforms the NBP decoder in the high SNR regime.
+
+BLER BLER
+
+T=6
+100
+
+T=10
+100
+
+10-1 10-1
+
+10-2
+
+10-2 BP AMS
+
+BP 10-3 AMS
+
+NMS 10-3 NBP
+NNMS
+
+NMS
+10-4 NBP NNMS
+
+NAMS
+
+NAMS
+
+10-4
+
+10-5
+
+2
+
+3
+
+4
+
+5
+
+6
+
+2
+
+3
+
+4
+
+5
+
+6
+
+EbN0(dB)
+
+EbN0(dB)
+
+Fig. 3. BLER performance of the NAMS decoder for C1.
+
+BLER BLER
+
+T=6
+100
+
+T=10
+100
+
+10-1 10-1
+
+10-2
+
+10-2 BP AMS
+
+BP 10-3 AMS
+
+NMS 10-3 NBP
+NNMS
+
+NMS
+10-4 NBP NNMS
+
+NAMS
+
+NAMS
+
+10-4
+
+10-5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+EbN0(dB)
+
+EbN0(dB)
+
+Fig. 4. BLER performance of the NAMS decoder for C2.
+First, we present the BLER performance of our NAMS decoder for C1 with T = 6 and T = 10 iterations in Fig. 3, where the BP, AMS, NMS with α = 0.8, NBP and NNMS decoders are employed as baselines. In all the curves, at least 100 error frames are collected for each SNR point, and the sparsity rate Λ of the proposed NAMS decoder is about 13.84% for C1. It can be observed that when T = 6, the proposed NAMS decoder shows better performance than BP, AMS, NMS, NNMS decoder. Especially, the NAMS decoder outperforms the NNMS decoder by 0.15-0.4 dB, with only slightly increased computational complexity. Besides, when T = 10, the performance of the NAMS decoder is even better than the NBP decoder in the high SNR regime. This is mainly due to the reduced number of BP iterations in the proposed decoder, making the corresponding neural network easier to train. Then in Fig. 4, we show the BLER performance
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inform. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. J. C. Mackay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” IEEE Electron Lett., vol. 32, no. 18, pp. 1645–1646, 1996.
+[3] R. McEliece, D. MacKay, and J.-F. Cheng, “Turbo decoding as an instance of pearl’s "belief propagation" algorithm,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 140–152, 1998.
+[4] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, 1999.
+[5] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, 2005.
+[6] X. Wu, Y. Song, M. Jiang, and C. Zhao, “Adaptive-normalized/offset min-sum algorithm,” IEEE Commun. Lett., vol. 14, no. 7, pp. 667–669, 2010.
+[7] 3GPP TSG-RAN WG1_87, R1-1612083, “Adjusted min-sum decoders for LDPC codes,” Qualcomm Inc., Reno, USA, 14-18 Nov. 2017.
+[8] T. O’Shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cogn. Commun. Netw., vol. 3, no. 4, pp. 563–575, 2017.
+[9] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in 51st Ann. Conf. Inf. Sciences Syst. (CISS), 2017, pp. 1–6.
+[10] H. Shi, M. Zhong, Z. Luo, and C. Li, “Low complexity neural networkaided nms LDPC decoder,” in Proc. Comput., Commun. IoT Appl. (ComComAp), 2021, pp. 227–231.
+[11] J. R. Hershey, J. L. Roux, and F. Weninger, “Model-based inspiration of novel deep architectures,” 2014. [Online]. Available: http://arxiv.org/abs/1409.2574
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), 2016, pp. 341–346.
+[13] Y. Wei, M.-M. Zhao, M.-J. Zhao, and M. Lei, “ADMM-based decoder for binary linear codes aided by deep learning,” IEEE Commun. Lett., vol. 24, no. 5, pp. 1028–1032, May 2020.
+[14] Y. Liu, M.-M. Zhao, C. Wang, M. Lei, and M.-J. Zhao, “PDD-based decoder for LDPC codes with model-driven neural networks,” IEEE Commun. Lett., vol. 26, no. 11, pp. 2532–2536, Nov. 2022.
+[15] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Beâery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, 2018.
+[16] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph LDPC codes,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1983–1999, 2021.
+[17] TS 38.212, V16.7.0, “Multiplexing and channel coding,” 3GPP, Release 16, Sep. 2019.
+[18] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014. [Online]. Available: https://arxiv.org/abs/1412.6980
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:48:04 UTC from IEEE Xplore. Restrictions apply.
+
+

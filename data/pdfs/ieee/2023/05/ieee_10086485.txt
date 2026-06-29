@@ -1,0 +1,344 @@
+IEEE COMMUNICATIONS LETTERS, VOL. 27, NO. 5, MAY 2023
+
+1247
+
+3.8-Gbps Polar Belief Propagation Decoder on GPU
+Yuxing Chen , Xinyuan Qiao , Keyue Deng , Suwen Song , and Zhongfeng Wang , Fellow, IEEE
+
+Abstract— In this work, a high-throughput belief propagation (BP) decoder of polar codes on graphics processing unit (GPU) is proposed for software-defined communication systems. The decoder is jointly optimized from algorithm and architecture aspects. From the algorithm aspect, the storage pattern and computation flow are optimized to reduce complexity. From the architecture aspect, different granularities of parallelism are extensively exploited to achieve high throughput. Equipped with these techniques, a high-speed GPU-based BP decoder is developed, and experimental results show that the proposed decoder can improve the normalized throughput by 64.1% to 294.1% compared to the state-of-the-art GPU-based BP decoder.
+Index Terms— Polar code, GPU, low-complexity design, parallel decoding, belief propagation.
+
+I. INTRODUCTION
+P OLAR codes and low-density parity-check (LDPC) codes have been adopted in the 5th generation communication standard as channel coding schemes. The belief propagation (BP) decoding algorithms for polar and LDPC codes possess inherent high parallelism, which can be exploited to achieve high throughput. Application-specific integrated circuits (ASICs) and field-programmable gate arrays (FPGAs) are usually applied to implement high-throughput polar and LDPC decoders [1], [2]. Although decoders based on ASICs and FPGAs can achieve high speed, hardware-based solutions are cost-prohibitive and lack flexibility. The emerging communication paradigms (e.g. software-defined network, softwaredefined radio, network function virtualization) not only require high speed, but also demand high flexibility [3], [4]. In recent years, software LDPC BP decoders [5], [6], [7] and polar BP decoders [8], [9], [10] are implemented on graphics processing units (GPUs) to achieve both high speed and high flexibility. Successive cancellation list (SCL) decoding has better error-correction performance than BP, at the expense of increased complexity [1]. Besides, SCL characterizes serial message updating and thus suffers low decoding throughput. Alternatively, the BP decoding possesses high parallelism and can be efficiently implemented on GPU.
+
+Fig. 1. (a) The factor graph of an (8, 4) polar code. (b) A processing element.
+
+Polar codes are based on the concept of channel polarization,
+
+i.e., some channels are more reliable than the others [11].
+
+According to the channel reliability, the positions of the source
+
+vector u = [u1, u2, . . . , un] are categorized into two sets, information set I and frozen set F. The information set I
+
+is constituted of k positions of u over the top k most reliable
+
+channels, while the other n − k positions belong to the frozen
+
+set F. The information bits are only placed in I, and constant
+
+zeros are assigned in F. The source vector u is encoded into
+
+the codeword x by multiplying the polar transform matrix
+
+G, i.e., x = uG, where G = F⊗m, and F⊗m is the m-th
+
+Kronecker power of F =
+
+10 11
+
+. Besides, the polar code can
+
+be represented by a factor graph. Fig. 1(a) illustrates the factor
+
+graph of an (8, 4) polar code, where n = 8, k = 4, m = 3.
+
+II. POLAR CODES
+
+B. BP Decoding Algorithm
+
+A. Basics of Polar Codes
+For an (n, k) polar code, n = 2m represents the codeword length and k denotes the number of information bits.
+Manuscript received 17 November 2022; revised 11 January 2023 and 22 February 2023; accepted 24 March 2023. Date of publication 29 March 2023; date of current version 10 May 2023. This work was supported by the National Key R&D Program of China under Grant 2022YFB4400604. The associate editor coordinating the review of this letter and approving it for publication was M. Battaglioni. (Corresponding authors: Suwen Song; Zhongfeng Wang.)
+The authors are with the School of Electronic Science and Engineering, Nanjing University, Nanjing 210023, China (e-mail: yxing.chen@ outlook.com; xyqiao@smail.nju.edu.cn; kkeyuedeng@163.com; suwsong@ sina.com; zfwang@nju.edu.cn).
+Digital Object Identifier 10.1109/LCOMM.2023.3262859
+
+The BP decoding algorithm follows an iterative message passing scheme over the factor graph. As shown in Fig. 1(a), there are m stages (divided by dashed lines) in the factor graph. Each stage contains n/2 processing elements (PEs). PEs are marked with grey boxes in Fig. 1(a). Each PE is connected with four nodes (drawn as black circles in Fig. 1), di,j , di,j+n/2, di+1,2j−1, di+1,2j . Each node is associated with two unidirectional log-likelihood ratio (LLR) messages. Take node di,j in Fig. 1(b) as an example, where 0 < i ⩽ m and 0 < j ⩽ n. Both the left-to-right message Ri,j, and the right-to-left message Li,j pass through node di,j. A decoding iteration is a round trip over the factor graph, i.e., first update the Ri,j messages from stage 1 to m, and then update the
+
+1558-2558 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:23 UTC from IEEE Xplore. Restrictions apply.
+
+1248
+
+IEEE COMMUNICATIONS LETTERS, VOL. 27, NO. 5, MAY 2023
+
+Li,j messages from stage m to 1. The message updating follows (1-4),
+
+Ri+1,2j−1 = g(Ri,j , Li+1,2j + Ri,j+n/2),
+
+(1)
+
+Ri+1,2j = g(Ri,j , Li+1,2j−1) + Ri,j+n/2,
+
+(2)
+
+Li,j = g(Li+1,2j−1, Li+1,2j + Ri,j+n/2), (3)
+
+Li,j+n/2 = g(Ri,j , Li+1,2j−1) + Li+1,2j ,
+
+(4)
+
+where 0 < i ⩽ m, 0 < j ⩽ n. Besides, g(a, b) can be approximated by the normalized min-sum method, i.e.,
+
+g(a, b) = α · sgn(a) · sgn(b) · min(|a|, |b|),
+
+(5)
+
+where α is the normalized factor, sgn is the sign operation, min is the minimum operation, and | | is the absolute operation. All the left-to-right messages Ri,j in the factor graph form the left-to-right matrix R, where Ri,j is at the i-th column and the j-th row. The size of matrix R is n × (m + 1). For instance, for an n = 2 polar code,
+
+R=
+
+R1,1 R1,2
+
+R2,1 R2,2
+
+.
+
+(6)
+
+Similarly, all the right-to-left messages Li,j in the factor graph form the right-to-left matrix L. Column i of matrix R (L) is denoted as Ri (Li).
+We consider BPSK modulated codewords transmitted over
+the binary-input AWGN channel. The noise of the channel
+is a Gaussian random variable with zero mean and variance σ. Let y = [y1, y2, . . . , yn] denote the channel output. The initialization of the decoding has three jobs: ➀ Lm+1,j is set as 2yj/σ2 for 0 < j ≤ n. ➁ For j ∈ I, R1,j is set as zero, otherwise R1,j is set as positive infinite. ➂ The remaining messages are initialized as zeros.
+The estimated source vector uˆ = [uˆ1, uˆ2, . . . , uˆn] is updated at the end of each iteration, according to
+
+uˆj =
+
+0, if j ∈ F or L1,j ⩾ 0 1, otherwise.
+
+(7)
+
+The decoding terminates when reaching the pre-set maximum number of iteration tmax or meeting the early exit criterion. The criterion of the early exit is that the estimated source vector remains unchanged between te adjacent iterations. In this work, te is set as three.
+
+III. IMPLEMENTATION OF POLAR DECODER ON GPU
+The target of our work is to design an efficient polar decoder on GPU, optimized from both the algorithm aspect and the architecture aspect. From the algorithm aspect, we propose different strategies to reduce the storage and computation complexity. From the architecture aspect, efficient parallelism, mapping, and transfer strategies are developed to enhance the throughput.
+
+A. Hardware and Software of GPU
+In the level of hardware, a GPU possesses several streaming multiprocessors (SMPs) and a large amount of low-speed global memory. Each SMP contains multiple streaming processors (SPs) and a small amount of high-speed shared memory. Let the number of SMPs in a GPU be Nsmp. Denote the size of
+
+Fig. 2. (a) The memory access patterns during the update of R. (b) The memory access patterns during the update of L.
+the shared memory per SMP as Ssm. In the level of software, a GPU kernel function typically generates a large number of threads to exploit data parallelism. All the threads generated by a kernel during an invocation are collectively called a grid. Each grid consists of one or more thread blocks. All blocks in a grid have the same number of threads. As for the relationship between hardware and software, blocks are executed by SMPs and threads are executed by SPs. An efficient storage scheme to fully utilize the shared memory is the key to high speed.
+B. Reduce the Complexity of the Algorithm
+1) Storage Complexity: In the state-of-the-art GPU-based polar BP decoder [8], the storage of matrix R occupies n(m + 1) elements. Likewise for the storage of matrix L. Therefore, the storage of left-to-right and right-to-left messages requires 2n(m + 1) memory elements in total. The large amount of storage limits the throughput and causes messages of long polar codes can not be accommodated in the highspeed shared memory. Reducing the storage consumption is critical for increasing the speed. In this work, the memory profiling is carried out to discover the patterns of memory access in detail. The profiling for an n = 8 polar code is shown in Fig. 2. Each R (L) matrix possesses 8×4 = 32 boxes, and each box corresponds to one element Ri,j (Li,j) in the matrix. The column index and the row index of the elements appear respectively at the top and on the left hand side of each matrix. Fig. 2(a) illustrates the memory access patterns during the update of left-to-right messages from stage 1 to 3, and Fig. 2(b) illustrates the memory access patterns during the update of right-to-left messages from stage 3 to 1. In each stage, the boxes in green are read out and delivered to the PEs. After calculations of PEs, new messages are written into the boxes in blue diagonal line. For concise elaboration, we first present the following notations. Read and write operations are denoted as τ (·) and ω(·). We use ≺ to denote precedence in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:23 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: 3.8-Gbps POLAR BELIEF PROPAGATION DECODER ON GPU
+
+TABLE I STORAGE COMPLEXITY ANALYSIS
+
+1249
+
+Fig. 3. The memory access patterns of the low-complexity storage scheme.
+time. For example, τ (Li) ≺ ω(Ri) shows that the decoder reads out Li before the decoder writes into Ri.
+We carefully investigate the characteristics of the memory access patterns in Fig. 2. The characteristics during the update of R and L are similar. Therefore, we mainly consider memory operations during the update of R hereinafter. In Fig. 2(a), it is discovered that τ (Li) ≺ ω(Ri) ≺ τ (Ri) at i ∈ {2, 3, 4}. To go a step further, this characteristic is not only satisfied for n = 8 polar codes, but also the other polar codes, which is proved in Property 1.
+Property 1: During the left-to-right propagation, at any i ∈ {2, 3, . . . , m + 1},
+τ (Li) ≺ ω(Ri) ≺ τ (Ri). Proof: In stage ϕ of the left-to-right propagation, τ (Rϕ), τ (Lϕ+1), ω(Rϕ+1) are performed. In stage ϕ+1 of the left-toright propagation, τ (Rϕ+1), τ (Lϕ+2), ω(Rϕ+2) are performed. Besides, the left-to-right update is serially from stage 1 to m, and operations in stage ϕ precede those in stage ϕ + 1. Thus,
+ω(Rϕ+1) ≺ τ (Rϕ+1). Since the read operations precede the write operations in each stage, we have
+τ (Lϕ+1) ≺ ω(Rϕ+1) in stage ϕ. Therefore, using these two relationships, we get
+τ (Lϕ+1) ≺ ω(Rϕ+1) ≺ τ (Rϕ+1), for all ϕ ∈ {1, 2, . . . , m}. We complete the proof by variable substitution.
+Because of Property 1, Li and Ri can be stored at the same place without conflict. Thus, we propose a low-complexity storage scheme to integrate the storage of R and L matrices into one message matrix M. Fig. 3 illustrates the details of the proposed scheme. The read and write operations involved in matrix M in each stage during the left-to-right propagation are shown in Fig. 3. The red line separates M into two parts. The left part stores left-to-right messages, and the right part stores right-to-left messages. In stage i of the left-to-right propagation, first, messages in column i (Ri,j messages) and column i+1 (Li+1,j messages) are read from M. Second, after message updating by equations (1-2), new Ri+1,j messages are written into column i + 1 of M. With the aid of the proposed scheme, we only need n(m+ 1) memory elements to store the left-to-right and right-to-left messages for a polar codeword. By denoting the element at i-th column and the j-th row in matrix M as Mi,j, the message updating equation (1) could be expressed as Mi+1,2j−1 = g(Mi,j , Mi+1,2j +Mi,j+n/2). Similar results could be obtained for the other message updating equations.
+2) Computation Complexity: We carefully investigate the message update during each stage in Fig. 2. It is discovered that the last column of matrix R will not be read out, since it does not turn green. To go a step further, this property is
+
+TABLE II COMPUTATION COMPLEXITY ANALYSIS
+not only satisfied for n = 8 polar codes, but also other polar codes with different n, which is proved in Property 2.
+Property 2: Messages Rm+1,j (0 < j ≤ n) will not be utilized in the message update.
+Proof: In (1-4), the equal sign divides the formulas into the left side and the right side. Only messages on the right side of the formulas will be taken as inputs. Since 0 < i ⩽ m, only R1,j, R2,j, . . . , Rm,j will be utilized, but Rm+1,j will not be utilized.
+Because of Property 2, stage m of the left-to-right propagation could be eliminated, and the modified scheme is named the low-complexity propagation scheme. When adopting the low-complexity propagation scheme, in each iteration of the decoding, the left-to-right update starts from stage 1 and ends at stage m − 1.
+Besides, the multiplication operation in (5) could be simplified [6]. Simulation results show that, the error rate performance exhibits the best, when the normalized factor α is chosen around 0.9. We set α as 0.9375, and multiplying α is converted into subtraction and shift operations, i.e., α · z = z − (z >> 4). Since subtraction and shift operations are much simpler than multiplication operations, the complexity is reduced.
+3) Complexity Analysis: The proposed decoder is equipped with the complexity-reduced techniques introduced above.
+The storage complexity of the proposed decoder and the state-of-the-art BP decoder is shown in Table I. Compared to [8], the storage consumption for left-to-right and rightto-left messages is reduced by 50%. The low storage per codeword benefit of the proposed storage scheme enables more decoding tasks to be loaded on a GPU, which helps increase the throughput significantly.
+The computation complexity per iteration of the proposed decoder and the state-of-the-art BP decoder is shown in Table II. Note that the complexity of multiplying +1 or −1 and the sign operation can be ignored [12]. In addition, the complexity of absolute operation can be ignored, since the absolute of a number equals to multiplying itself with its sign, i.e. |z| = sgn(z) · z. As for the decoder presented in [8], the computation for each message follows (1-4), which requires one multipilication, one addition and one comparison. Besides, 2nm messages need to be computed in each iteration. In terms of the proposed decoder, the computation for each message requires two additions, one comparison, and one shift. With the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:23 UTC from IEEE Xplore. Restrictions apply.
+
+1250
+
+IEEE COMMUNICATIONS LETTERS, VOL. 27, NO. 5, MAY 2023
+
+Fig. 4. The top-level architecture of the proposed GPU-based polar decoder.
+
+Fig. 5. The mapping between PEs and threads for (a) n ⩽ 2048 and (b) n = 4096.
+aid of the proposed propagation scheme, n(2m − 1) messages need to be computed in each iteration. The complexity of the shift operation can be ignored. Thus, the total number of operations can be calculated and is listed in Table II. The overall computation complexity is reduced compared to [8].
+C. Architectural Designs
+In this subsection, we first develop the top-level architecture of the proposed decoder. Then, the design details are introduced from the grid level and the stream level.
+1) Top-Level Architectural Design: The overall architecture of the proposed decoder is illustrated in Fig. 4. First, the received codewords are transmitted from CPU to GPU. One block (marked as the purple box) is assigned to decode one polar codeword. The number of threads per block is labelled as Nt/b. In each block, the decoding includes initialization, left to right update from stage 1 to m − 1, right to left update from stage m to 1, estimated source vector update, and termination judgment, all of which are carried out parallely by Nt/b threads. At last, the decoded source vector are transmitted from GPU to CPU.
+2) Grid-Level Architectural Design: As for a single polar codeword, the messages propagation between stages are serial, but messages in each stage are parallelly updated. For n ⩽ 2048, we configure each thread to accomplish the calculations of a PE (Fig. 5(a)). A stage possesses n/2 PEs. Thus, the number of threads per block Nt/b is set as n/2 when n ⩽ 2048. After the update of each stage, threads in the same block are synchronized, as marked with the red dashed line. Because the maximum number of threads per block is 1024, Nt/b is set as 1024 for n > 2048. In [8], each thread maps to
+
+a PE when n > 2048, and PEs in the same stage are partially
+
+updated, which limits the speed. To handle this, we allocate
+
+each thread to finish the calculations of several PEs. Take
+
+n = 4096 as an example (Fig. 5(b)), each thread dominates
+
+the calculations of two PEs. Therefore, all PEs in the same
+
+stage are updated in parallel.
+
+During the iterative decoding procedure, left-to-right and
+
+right-to-left messages are intensely accessed. To shorten mem-
+
+ory access time, those messages are stored in the shared
+
+memory (marked as green boxes in Fig. 4). Equipped with the
+
+proposed storage scheme, the storage of left-to-right and right-
+
+to-left messages for one codeword needs n(m + 1) memory
+
+elements. Each message is stored in the eight-bit data type
+
+(int8_t) to save space. Therefore, left-to-right and right-to-left
+
+messages for a single codeword occupy n(m + 1)B shared
+
+memory, where B is the short form for byte. Therefore, the
+
+number
+
+of
+
+blocks
+
+per
+
+SMP
+
+Nb/s
+
+is
+
+given
+
+by
+
+⌊
+
+Ssm n(m+1)B
+
+⌋,
+
+where ⌊ ⌋ denotes the floor operator. The number of blocks
+
+per grid Nb/g is set as Nsmp × Nb/s. 3) Stream-Level Architectural Design: Because of the early
+
+exit, the number of decoding iterations varies with polar
+
+codewords. Thus, the execution time of blocks in each kernel
+
+differs, which leads to workload imbalance among SMPs and
+
+lowers the resource utilization. To balance the workloads,
+
+we use multiple streams to launch multiple simultaneous
+
+kernels. The number of streams is denoted as Nst. Besides, the
+
+data transfer time between CPU and GPU is non-negligible.
+
+To handle the problem, asynchronous data transfer functions
+
+(cudaMemcpyAsync) are launched to overlap the kernel exe-
+
+cution and data transfer.
+
+IV. RESULTS AND DISCUSSIONS
+Simulations are performed on an Intel Xeon Silver 4210R CPU and an NVIDIA RTX 3090 GPU (1.395GHz, Nsmp = 82, Ssm = 100KB). According to Section III-C, we can calculate the number of blocks per grid, i.e., Nb/g = 1640, 738, 328, 82 for code lengths 512, 1024, 2048, 4096 respectively. The decoding process includes the data transfer from CPU to GPU, the BP decoding, and the data transfer from GPU to CPU. Rate-0.5 polar codewords with different lengths (n = 512, 1024, 2048, 4096) are used in the experiments.
+Fig. 6 shows the bit-error-rate performance and the average iteration number of the proposed BP decoder on GPU.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:23 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: 3.8-Gbps POLAR BELIEF PROPAGATION DECODER ON GPU
+TABLE III THROUGHPUT COMPARISONS WITH OTHER WORKS
+
+1251
+
+throughput by 64.1% to 294.1%. Besides, the normalized throughput of the proposed decoder is lower than the LDPC BP decoders [5], [6], and is higher than the simplified SCL decoder [13].
+
+Fig. 6. (a) Bit-error-rate and (b) average iteration numbers versus Eb/N0.
+
+V. CONCLUSION
+This work presents a high-speed polar BP decoder implementation on GPU, which achieves 3.8 Gbps throughput. The decoder is fully optimized from both the algorithm and the architecture aspects. The presented GPU-based decoder possesses both high speed and high flexibility, and is suitable for software-defined communication systems. Future work might research on enhanced BP decoders for better error rate performance.
+
+Fig. 7. Throughput under different Eb/N0.
+
+The maximum iteration number and the number of streams
+
+in our work are set the same as the latest BP work [8], i.e.,
+
+tmax = 40, Nst = 5. The bit-error-rate of SCL with list size
+
+four is also included in Fig. 6(a). Compared to the SCL, the BP
+
+decoding has about 0.7dB performance loss. However, the
+
+BP decoder can achieve higher speed than SCL. Besides, the
+
+enhanced BP [1] and hybrid decoding [9] algorithms have been
+
+proposed to reach the error rate performance of SCL, where
+
+the proposed methods could also be applied to increase the
+
+speed. Fig. 7 draws the throughput under different Eb/N0. For
+
+n = 1024 polar code, the throughput can reach 3.8 Gbps.
+
+For fair comparison, the normalized throughput (Mbps per
+
+SMP per GHz) used in [8] is taken as a figure-of-merit,
+
+which
+
+is
+
+calculated
+
+by
+
+Throughput Nsmp ×Frequency
+
+.
+
+Table
+
+III
+
+lists
+
+the
+
+throughput comparisons with other GPU-based decoders at
+
+Eb/N0 = 3.0. The normalized throughput of the proposed
+
+decoder outperforms related polar BP works. Compared to [9],
+
+the proposed decoder improves the normalized throughput
+
+by 1240%. Compared to the state-of-the-art GPU-based BP
+
+decoder [8], the proposed decoder improves the normalized
+
+REFERENCES
+[1] Y. Shen, W. Song, Y. Ren, H. Ji, X. You, and C. Zhang, “Enhanced belief propagation decoder for 5G polar codes with bit-flipping,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 5, pp. 901–905, May 2020.
+[2] Y. Chen, H. Cui, and Z. Wang, “High-throughput LDPC-CC decoders based on storage, arithmetic, and control improvements,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 69, no. 3, pp. 1069–1073, Mar. 2022.
+[3] L. Zhang, C. Lin, W. Yan, Q. Ling, and Y. Wang, “Real-time OFDM signal modulation classification based on deep learning and softwaredefined radio,” IEEE Commun. Lett., vol. 25, no. 9, pp. 2988–2992, Sep. 2021.
+[4] T. Suzuki, S.-Y. Kim, J.-I. Kani, and T. Yoshida, “Low-latency PON PHY implementation on GPUs for fully software-defined access networks,” IEEE Netw., vol. 36, no. 2, pp. 108–114, Mar. 2022.
+[5] S. Keskin and T. Kocak, “GPU-based gigabit LDPC decoder,” IEEE Commun. Lett., vol. 21, no. 8, pp. 1703–1706, Aug. 2017.
+[6] J. Yuan and J. Sha, “4.7-Gb/s LDPC decoder on GPU,” IEEE Commun. Lett., vol. 22, no. 3, pp. 478–481, Mar. 2018.
+[7] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang, and J. R. Cavallaro, “GPU-based, LDPC decoding for 5G and beyond,” IEEE Open J. Circuits Syst., vol. 2, pp. 278–290, 2021.
+[8] Z. Liu, R. Liu, Z. Yan, and L. Zhao, “GPU-based implementation of belief propagation decoding for polar codes,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2019, pp. 1513–1517.
+[9] S. Cammerer, B. Leible, M. Stahl, J. Hoydis, and S. T. Brink, “Combining belief propagation and successive cancellation list decoding of polar codes on a GPU platform,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Mar. 2017, pp. 3664–3668.
+[10] L. B. K. Reddy and N. Chandrachoodan, “A GPU implementation of belief propagation decoder for polar codes,” in Proc. 46th Asilomar Conf. Signals, Syst. Comput. (ASILOMAR), Nov. 2012, pp. 1272–1276.
+[11] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[12] B. Dai, R. Liu, C. Gao, and Z. Mei, “Noisy gradient descent bit-flipping decoder based on adjustment factor for LDPC codes,” IEEE Commun. Lett., vol. 22, no. 6, pp. 1152–1155, Jun. 2018.
+[13] Z. Liu, R. Liu, and H. Zhang, “High-throughput adaptive list decoding architecture for polar codes on GPU,” IEEE Trans. Signal Process., vol. 70, pp. 878–889, 2022.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:23:23 UTC from IEEE Xplore. Restrictions apply.
+
+

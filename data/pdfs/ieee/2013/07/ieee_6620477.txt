@@ -1,0 +1,779 @@
+2013 IEEE International Symposium on Information Theory
+
+Efficient Iterative LP Decoding of LDPC Codes with Alternating Direction Method of Multipliers
+
+Xiaojie Zhang Samsung R&D America, Dallas, Texas 75082
+Email: eric.zhang@samsung.com
+
+Paul H. Siegel University of California, San Diego, CA 92093
+Email: psiegel@ucsd.edu
+
+Abstract—In this paper, we propose an efficient messagepassing algorithm to solve the LP decoding problem. This algorithm is based on the alternating direction method of multipliers (ADMM), a classic technique in convex optimization theory that is designed for parallel implementation. The computational complexity of ADMM-based LP decoding is largely determined by the method used to project a vector of real values to the parity polytope of a given parity check. The key contribution of this paper is a novel, efficient projection algorithm that can substantially improve the decoding speed of the ADMM-based LP decoder.
+I. INTRODUCTION
+Alternating direction method of multipliers (ADMM) is a classic optimization technique that was developed in the 1970s, which combines the benefits of dual decomposition and augmented Lagrangian methods for constrained optimization [1]. The use of ADMM in LP decoding was first suggested by Barman et al. [2]. The LP problem in decoding LDPC codes is a constrained convex optimization problem, which is readily solved by ADMM techniques [1, Chapter 5]. A key component in solving constrained optimization problems with ADMM is the method used to project a vector of real values to the convex set of feasible solutions, known as the fundamental polytope in the context of LP decoding [5]. In [2], Barman et al. proposed a projection algorithm, which was further improved in [3]. This algorithm is based on the fact that a constrained convex polytope defined by a parity check can be expressed as the convex hull of a set of “slices,” where each slice is the convex hull of all binary vectors of the same even weight. Hence, for a given vector, the algorithm first sorts the coordinates of a vector in descending order and characterizes two slices whose convex hull contains the projection; then, it finds the projection of the ordered vector by solving a quadratic program. However, the ordering of all coordinates that is required before projecting any given vector increases the complexity of the algorithm.
+In this paper, we propose a novel and efficient projection algorithm for ADMM-based LP decoding. Based on the cut search algorithm (CSA) introduced in [4], the proposed algorithm can efficiently determine whether a vector is inside the check polytope without first ordering its coordinates. At the same time, if the vector lies outside the polytope, the algorithm identifies the hyperplane containing the projection. Our software implementation of ADMM-based LP decoding demonstrates that the proposed projection algorithm is more
+
+computationally efficient than the “two-slice” projection algorithm proposed in [2] and [3].
+The remainder of the paper is organized as follows. In Section II, we review the formulation of LP decoding and its ADMM presentation. In Section III, we describe the proposed projection algorithm. Section IV presents some complexity analysis and numerical results, and Section V concludes the paper.
+
+II. FORMULATION OF LP DECODING
+A. LP Relaxation of ML Decoding
+Consider a binary linear block code C of length n and a corresponding m × n parity-check matrix H. Each row of H corresponds to a parity check, or check node in the Tanner graph, indexed by J = {1, . . . , m}, and each column corresponds to a codeword symbol, or variable node in the Tanner graph, indexed by I = {1, . . . , n}. Let Nj = {i ∈ I : Hji = 1} be the index set of neighboring variables of check j ∈ J, and analogously let Ni = {j ∈ J : Hji = 1} be the index set of neighboring checks of variable i ∈ I. The degree of check j is denoted by dj = |Nj|, and the degree of variable i is di = |Ni|, where for a set X , |X | denotes its cardinality. Finally, let Nj(k) ∈ Nj be the kth element in Nj, 1 ≤ k ≤ |Nj|.
+A codeword y ∈ C is transmitted across a memoryless binary-input output-symmetric (MBIOS) channel, resulting in a received vector r. Assuming that the transmitted codewords are equiprobable, the ML decoder finds the solution to the following optimization problem
+
+minimize γT u
+
+(1)
+
+subject to u ∈ C,
+
+where ui ∈ {0, 1}, i ∈ I, and γ is the vector of log-likelihood ratios (LLR) defined as
+
+γi = log
+
+Pr ( Ri = ri| ui = 0) Pr ( Ri = ri| ui = 1)
+
+.
+
+The transfer matrix Tj selects from an n-vector the coordinates corresponding to the dj neighboring variables of check
+
+j. For example, if the jth row of parity-check matrix H is
+
+hj = (0, 1, 0, 1, 0, 1, 0), then the corresponding transfer matrix
+
+is
+
+⎡
+
+⎤
+
+0100000
+
+Tj = ⎣0 0 0 1 0 0 0⎦ .
+
+0000010
+
+978-1-4799-0446-4/13/$31.00 ©2013 IEEE
+
+1501
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE International Symposium on Information Theory
+
+Hence, Tjx has dimension |Nj|. Definition 1: The check polytope, Pd, is the convex hull of
+all binary vectors of length d with an even number of 1s, i.e.,
+
+Pd conv x ∈ {0, 1}d | x has an even number of 1s .
+
+Note that the definition of the check polytope resembles that of the parity polytope [6], the difference being that, in the latter, the number of 1s in x is odd.
+Feldman et al. [5] shown that the ML decoding problem in (1) can be relaxed to the following optimization problem:
+
+minimize γT u
+
+(2)
+
+subject to Tju ∈ Pdj ∀j ∈ J.
+
+B. ADMM formulation
+
+One way to solve the optimization problem (2) is to use ADMM, which is intended to combine the decomposability of dual ascent with the superior convergence properties of the method of multipliers [1]. In order to make the LP decoding problem perfectly fit the ADMM template given in [1, p. 33], we first rewrite (2) as follows
+
+minimize γT x
+
+(3)
+
+subject to Tjx = zj, zj ∈ Pdj , ∀j ∈ J.
+
+The augmented Lagrangian (using the scaled dual variable)
+
+is then
+
+Lρ(x,
+
+z,
+
+y)
+
+=
+
+γT
+
+x
+
++
+
+ρ 2
+
+Tj x − zj + yj
+
+2 2
+
+−
+
+ρ 2
+
+yj 22,
+
+j∈J
+
+j∈J
+
+(4)
+
+where yj ∈ Rdj is the scaled dual variable and ρ > 0 is
+
+called the penalty parameter.
+
+So, the scaled form of ADMM for this problem consists of
+
+the following iterations
+
+⎛
+
+⎞
+
+xk+1
+
+:=
+
+argmin
+x
+
+⎝γ T
+
+x
+
++
+
+ρ 2
+
+j∈J
+
+Tj x − zjk + yjk 22⎠
+
+(5)
+
+zjk+1 := ΠPdj Tj xk+1 + yjk
+
+(6)
+
+yjk+1 := yjk + Tj xk+1 − zjk+1,
+
+(7)
+
+where ΠPd (u) is the Euclidean projection of vector u on Pd. After some simplification, the ADMM-based decoding al-
+gorithm can be expressed in the form of an iterative messagepassing algorithm, as described in Algorithm 1. Each check j updates its outgoing messages based on the received messages from its neighboring variables (i.e., xi for i ∈ Nj), and its locally stored yj from the previous iteration. For each variable, the variable update computation uses only the incoming messages from neighboring checks, as can be seen in (10). As with other message-passing decoding algorithms, one can compute the updates for all the checks simultaneously, and likewise for all the variables.
+In Step 1 of Algorithm 1, there can be different ways to initialize x. For example, we can set
+
+xi =
+
+0 1
+
+if γi ≥ 0 if γi < 0.
+
+(11)
+
+Algorithm 1 Iterative ADMM-based LP decoding algorithm
+1: Initialization: Properly initialize x, zj, and yj ∀j ∈ J. 2: Check update: For each check j ∈ J, update zj and yj
+using (6) and (7), respectively. We rewrite them as
+
+w ← Tj x + yj zj ← ΠPdj (w) yj ← w − zj . (8) The message transmitted to neighboring variables is
+
+Lj→i ← (zj )i − (yj )i.
+
+(9)
+
+3: Variable update: For each variable i ∈ I, the messages
+
+transmitted to its neighboring checks are the same, and
+
+are computed using (5), which can be rewritten as
+
+⎛
+
+⎞
+
+xi
+
+←
+
+1 di
+
+⎝
+j
+
+Lj
+∈Ni
+
+→i
+
+−
+
+γi ρ
+
+⎠
+
+.
+
+(10)
+
+4: Stopping criterion: If j∈J Tjx − zj 2 < pri and j∈J zkj − zkj −1 2 < dual, where pri > 0 and dual > 0
+are feasibility tolerances, the ADMM algorithm converges
+and x is the optimal solution; otherwise, go to Step 2.
+
+If this x is not a valid codeword, then one starts the ADMM decoding; otherwise, it is the ML codeword. The scaled dual variable yj can be set to be all zeros for all j ∈ J. The initialization of zj does not affect the ADMM decoding. Note that different initializations of x, zj, and yj can only affect the number of iterations required to converge, and they would not change the optimal solution obtained by ADMM (within the feasibility tolerances).
+In Algorithm 1, except for the projection ΠPdj in (8), the computations are quite straightforward, involving only additions and multiplications, and are standard update procedures of ADMM taken from [1]. However, the projection ΠPdj of a given vector onto the check polytope of dimension dj has to be specially designed, and the efficiency of the projection algorithm directly determines the complexity of ADMM decoding. In the next section, we will introduce the key contribution in this paper, which is an efficient algorithm that projects any given vector onto the check polytope.
+III. EFFICIENT PROJECTION ONTO CHECK POLYTOPE
+In [2] and [3], two projection algorithms were proposed. They are based on the so-called “two-slice” representation of any vector in the check polytope, whereby any given vector can be expressed as a convex combination of two binary vectors of Hamming weight r and r +2, for some even integer r. The Majorization Theorem [7] is used to characterize the convex hull of the two slices, where a sorting of all coordinates of the given vector is required to decide if it is within the check polytope. If the given vector is outside the polytope, the projection algorithm involves two steps: the vector is first projected onto a scaled version of one of the two slices, and then the residual is projected onto another scaled slice [2]. Find the appropriate scaling value is difficult, however. In [3],
+
+1502
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE International Symposium on Information Theory
+
+this issue is addressed by expressing the projection problem as quadratic program after the two slices have been characterized by the majorization method.
+In this section, we propose a new, more efficient projection algorithm. We first use the cut search algorithm (CSA), introduced in [4], to determine the facet of the polytope in which the projection point lies. We then use an efficient algorithm to project the vector onto this facet.
+
+A. Cut Search Algorithm
+From [5], we know that the check polytope Pd of dimension d can be described by a set of box constraints and parity inequalities as follows
+
+0 ≤ ui ≤ 1, ∀i ∈ [d]
+
+(12)
+
+ui − ui ≤ |V | − 1, ∀V ⊆ [d] with |V | odd. (13)
+
+i∈V
+
+i∈V c
+
+Define by θV the indicator vector of set V such that
+
+1 if i ∈ V θV,i = −1 if i ∈ V c,
+
+where V c = [d] \ V is the complement of V . Then, the inequality (13) can be written as
+
+θTV u ≤ |V | − 1.
+For a given vector u ∈ [0, 1]d, if there exists a set V ∈ [d] of odd cardinality such that
+
+θVT u > |V | − 1,
+
+(14)
+
+then u lies outside the check polytope. The violated parity inequality (14) is called a cut at u, and the corresponding V of odd cardinality is called a cutting set. The following result shows that, for a given vector, there exists at most one cutting set.
+Proposition 1 (Th. 1 in [8]): If at any given point u ∈ [0, 1]d, one of the parity inequalities in (13) is violated, the rest of them are satisfied with strict inequality.
+In [4], Proposition 1 served as the motivation for a highly efficient technique for finding cuts, the Cut Search Algorithm (CSA), was introduced. The CSA is shown in Algorithm 2, from which it is clear that, to determine whether a given vector lies inside the check polytope or not, the algorithm visits every coordinate only once, and no ordering of the coordinates is required.
+
+B. Projection onto the Check Polytope
+It can be seen from Definition 1 that the check polytope Pd lies inside the [0, 1]d hypercube, i.e., Pd ⊂ [0, 1]d. This means that all points outside the hypercube are also outside the check polytope. To find the check polytope projection of a vector outside the hypercube, we first check with CSA whether or not its projection onto the hypercube is also in the check polytope. If the hypercube projection is outside the check polytope, the cut found by CSA can be further used to find the check polytope projection, as will be shown later in this subsection.
+
+Algorithm 2 Cut search algorithm
+
+Input: vector u ∈ [0, 1]d. Output: indicator vector θ ∈ {−1, 1}d of cutting set V (if
+
+exists) 1
+1: θi ← −1
+
+if
+
+ui
+
+>
+
+1 2
+
+otherwise
+
+2: if the cardinality of set {i : θi > 0} is even then
+
+3:
+
+i∗ ← argmin
+
+1 2
+
+− ui
+
+.
+
+i
+
+4: θi∗ ← −θi∗ .
+
+5: end if
+
+6: V = {i : θi > 0}. 7: if θT u > |V | − 1 then
+
+8: return θ is the indicator vector of cutting set V , and
+
+u ∈/ Pd.
+
+9: else
+
+10: return No cut found, and u ∈ Pd.
+
+11: end if
+
+The projection of any vector onto the hypercube can be
+
+done easily by applying a threshold on all coordinates. Let
+
+z = Π[0,1]d (u) be the [0, 1]d projection of vector u ∈ Rd;
+
+then we have
+
+⎧
+
+⎪⎨ 1 if ui > 1
+
+zi
+
+=
+
+⎪⎩
+
+0 ui
+
+if ui < 0 otherwise.
+
+(15)
+
+It is easy to verify that the z computed in (15) is indeed the Euclidean projection of u onto the [0, 1]d hypercube. If z ∈
+
+Pd, then z is exactly ΠPd (u), and the projection is completed. Therefore, in the remaining part of this subsection, we focus on vectors whose [0, 1]d projection z = Π[0,1]d (u) is outside the check polytope, i.e., z ∈/ Pd. From Proposition 1, there exists only one set V of odd cardinality such that θTV z > |V | − 1. We will make use of the following relationship between u and its [0, 1]d projection, z.
+
+Proposition 2: Given a vector u ∈ Rd, let z = Π[0,1]d (u). If there exists a cut θTV z > |V | − 1, then ui ≥ zi for all i ∈ V and ui ≤ zi for all i ∈ V c. This implies θTV u ≥ θTV z, where equality holds if and only if z = u.
+
+The proposed projection algorithm is based on the following
+
+result.
+
+Theorem 3: For a given vector u ∈ Rd, let z = Π[0,1]d (u).
+
+If V is a cutting set for z, i.e., θVT z > |V | − 1, then ΠPd (u)
+
+must be on the facet of Pd defined by V , i.e., ΠPd (u) ∈
+
+FV
+
+x ∈ [0, 1]d | θVT x = |V | − 1 .
+
+Proof: Proposition 1 implies that the cutting set V for z
+
+is unique and that for any vector x ∈ FV ∩ [0, 1]d, x ∈ Pd.
+
+Suppose that ΠPd (u) = w ∈ Pd, but w ∈/ FV ; then, w must
+
+satisfy θTV w < |V | − 1.
+
+Let s = θTV z − |V | + 1 > 0, t = |V | − 1 − θTV w > 0, and
+
+define
+
+vector
+
+v
+
+=
+
+t s+t
+
+z
+
++
+
+s s+t
+
+w.
+
+Then,
+
+θTV v
+
+=
+
+s
+
+t +
+
+t
+
+θTV
+
+z
+
++
+
+s
+
+s +
+
+t
+
+θVT
+
+w
+
+=
+
+|V
+
+|−
+
+1,
+
+1503
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE International Symposium on Information Theory
+
+which implies v ∈ FV . The vector v is also in the convex hypercube [0, 1]d because it is a linear combination of z and
+w. Hence, by Proposition 1, we have v ∈ Pd. Since z is the projection of u onto the [0, 1]d hypercube,
+then it follows from (15) that for any x ∈ [0, 1]d, we have the
+following equality
+
+|ui − xi| = |ui − zi| + |zi − xi|, 1 ≤ i ≤ d.
+
+(16)
+
+From the definition of v, we have
+
+zi
+
+−
+
+vi
+
+=
+
+s
+
+s +
+
+t (zi
+
+−
+
+wi),
+
+1 ≤ i ≤ d.
+
+(17)
+
+Setting x = v and substituting (17) into (16), we get
+
+|ui
+
+−
+
+vi|
+
+=
+
+|ui
+
+−
+
+zi|
+
++
+
+s
+
+s +
+
+t |zi
+
+−
+
+wi|
+
+≤ |ui − zi| + |zi − wi|
+
+= |ui − wi|.
+
+Since z = w, the inequality above cannot hold with equality
+
+for all i, hence
+
+u−v
+
+2 2
+
+<
+
+u − w 22. Because the check
+
+polytope is convex, the Euclidean projection of any vector
+
+onto it is unique. This contradicts the assumption that w is
+
+the Euclidean projection of u onto Pd.
+
+Now the only thing needed to complete the projection
+
+is an efficient algorithm to solve the following optimization
+
+problem: for any given vector u ∈/ Pd,
+
+minimize
+
+u−x
+
+2 2
+
+(18)
+
+subject to 0 ≤ xi ≤ 1, i = 1, . . . , d
+
+θTV x = |V | − 1,
+
+Since the optimization problem (18) has differentiable convex objective and constraint functions, any points that satisfy the Karush-Kuhn-Tucker (KKT) conditions are optimal solutions. With some algebra, omitted due to space limitations, the solution to (18) can be expressed as
+
+x∗ = Π[0,1]d (u − ν∗θV ) ,
+
+(19)
+
+where ν∗ is a scalar such that θV x∗ = |V | − 1. Algorithm 3 describes an efficient method for computing the
+scalar ν∗. Its complexity is |T | log(|T |, where |T | is usually much smaller than d. By combining Algorithms 2 and 3, we can determine the projection of any given point onto the check polytope, as described in Algorithm 4. This algorithm can be incorporated into Step 2 (check update) in the ADMM-base LP decoder, Algorithm 1.
+In terms of computational efficiency, Algorithm 4 compares favorably to the two-slice projection algorithms proposed in [2] and [3]. In the two-slice algorithms, the determination of whether or not a given point lies inside the check polytope requires that the coordinates of the point be ranked in descending order. In contrast, the proposed algorithm finds the cutting facet on which the projection of the point lies by visiting each coordinate only once. For a point outside the check polytope, the two-slice algorithms represent the projection in a form similar to that in (19). However, the underlying optimization
+
+Algorithm 3 Solving optimization problem (18)
+
+Input: vector u ∈ Rd and vector θV ∈ {−1, 1}d. Output: solution of optimization problem (18) in terms of ν∗.
+1: T ← {ui − 1 | ui > 1} ∪ {−ui | ui < 0}, δ ← θVT u −
+|V | + 1, and ζ = d.
+
+2: if T = ∅ then
+
+3: Sort elements in T = {ti} such that ti ≥ ti+1.
+
+4: for i = 1 to |T | do
+
+5:
+
+if δ/ζ > ti then
+
+6:
+
+Exit to line 12.
+
+7:
+
+else
+
+8:
+
+δ ← δ − ti and ζ ← ζ − 1.
+
+9:
+
+end if
+
+10: end for
+
+11: end if 12: return ν∗ ← δ/ζ is optimal solution.
+
+Algorithm 4 Efficient check polytope projection algorithm
+Input: vector u ∈ Rd. Output: the projection ΠPd (u) ∈ Pd.
+1: Run Algorithm 2 with input Π[0,1]d (u). 2: if cutting set V is found then 3: Run Algorithm 3 with input parameters u and θV , then
+get output ν∗. 4: return Π[0,1]d (u − ν∗θV ). 5: else
+6: return Π[0,1]d (u). 7: end if
+
+problem that they solve requires rank ordering of a set of size 2d + 2 and may also need to check all of the elements in the set before finding the optimal scalar ν∗ [3, Algorithm. 2]. In contrast, the proposed Algorithm 3 only considers the coordinates whose values lie outside the interval [0, 1], and the calculation which uses them is relatively much simpler. As we will show in Section IV, with the same ADMM parameters, the iterative ADMM-based LP decoder incorporating the proposed algorithm runs at least 3 times faster than the one based upon the improved two-slice projection algorithm in [3].
+
+IV. NUMERICAL RESULTS
+
+To demonstrate the improved performance offered by the
+
+proposed ADMM-based LP decoder, we compare its per-
+
+formance to that of several other LDPC decoders, such as
+
+an ADMM-based LP decoder using the two-slice projection
+
+algorithm [3], an adaptive LP (ALP) decoder [9], and a
+
+floating-point box-plus SPA decoder [11]. We apply these
+
+decoders to two LDPC codes of different lengths, rates, and
+
+degree distributions, namely a rate-0.77, (3,13)-regular LDPC
+
+code
+
+of
+
+length
+
+1057
+
+[10]
+
+and
+
+a
+
+rate-
+
+1 3
+
+irregular
+
+LDPC
+
+code
+
+of length 1920 [10]. The frame error rate (FER) curves are
+
+based on Monte Carlo simulations that generated at least 200
+
+error frames for each point in the plots.
+
+The performance of the ALP decoder can be viewed as the
+
+1504
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE International Symposium on Information Theory
+
+Frame Error Rate (FER)
+
+100 10−1 10−2 10−3 10−4 10−5 10−63
+
+ADMM ADMM ADMM ADMM ADMM ADMM ALP
+
+Tmax Tmax Tmax Tmax Tmax Tmax
+
+= = = = = =
+
+20 30 50 100 200 500
+
+Floating-point SPA
+
+3.25
+
+3.5
+
+3.75
+
+4
+
+Eb/N0 (dB)
+
+4.25
+
+4.5
+
+Fig. 1. FER comparison of ADMM-base LP decoder with various maximum number of iterations for (1057,833) LDPC code on AWGNC.
+
+Avg. CPU run−time per frame (ms)
+
+3.5
+
+ALP
+
+Modified ALP
+
+3
+
+ADMM [3]
+
+floating−point SPA
+
+2.5
+
+Proposed ADMM
+
+2
+
+Modified ADMM
+
+1.5
+
+1
+
+0.5
+
+0
+
+FER ≈ 6×10−5
+
+(a) Rate 0.77 and length 1057.
+
+Avg. CPU run−time per frame (ms)
+
+150
+
+ALP
+
+Modified ALP
+
+ADMM [3]
+
+Floating−point SPA
+
+100
+
+Proposed ADMM
+
+Modified ADMM
+
+50
+
+0
+
+FER ≈ 5×10−4
+
+(b) Rate 0.33 and length 1920.
+
+Fig. 2. Average simulation time for decoding one codeword.
+
+best that ADMM-based LP decoders can achieve by solving the standard LP decoding problem (3). It can be seen that the error-rate performance of ADMM-based LP decoding with Tmax = 100 is already very close to that of ALP decoding, and with Tmax = 200, it essentially achieves the ALP decoder performance. We can also see that the error-rate curves of all of the LP decoders are steeper than that of the SPA decoder. (A similar phenomenon was observed in [4].)
+Fig. 2 presents an intuitive way of comparing the computational complexity of different decoding algorithms. It compares the average decoding time when we implement these algorithms using C++ code on a desktop PC. The SPA decoder is implemented in software with messages represented as double-precision floating-point numbers, and the pair-wise box-plus SPA is computed in the manner described in [11]. The SPA decoder iterations stop as soon as a codeword is found, or when the maximum allowable number of iterations Tmax = 200 have been attempted. To ensure a fair comparison with the two-slice projection algorithm in [2], we incorporated into our C++ platform for ADMM-based LP decoders the C++ code obtained from the website [12] of one of the authors of [2].
+The simulation time is averaged over one million frames for each decoder, and the channel condition is set to let all decoders achieve approximately the same FER as shown in the figures. We can see that, compared to the two-slice projection algorithm in [3], the proposed projection algorithm significantly improves the efficiency of the ADMM-based LP decoder, especially for low-rate codes. The modified ALP
+
+(MALP) decoding algorithm [9], which is much faster than the standard LP decoder proposed by Feldman et al. in [5], uses the open-source GNU Linear Programming Kit (GLPK) as its LP solver. From the simulation results, we can see that all ADMM-based LP decoders are faster than MALP, especially for the low-rate code, where the decoding time is reduced by more than 3 orders of magnitude. This is because the generalpurpose LP solver used in MALP does not take advantage of the sparsity of the constraints in the LP decoding of LDPC codes. The modified ADMM uses early termination and overrelaxation to further improve the decoding speed by a factor of 2. Details can be found in [13].
+
+V. CONCLUSION
+
+In this paper, we propose an efficient message-passing
+
+algorithm to solve the LP decoding problem based on ADMM.
+
+The computational complexity of ADMM-based LP decoding
+
+is largely determined by the method used to project a vector
+
+of real values to the check polytope of a given parity check.
+
+We proposed a novel, efficient projection algorithm that can
+
+substantially improve the decoding speed of the ADMM-based
+
+LP decoder.
+
+ACKNOWLEDGMENT
+
+This research was supported in part by the Center for Magnetic Recording Research at UCSD, by UC Lab Fees Research Program, Award No. 09-LR-06-118620-SIEP, and by NSF Grant CCF-1116739.
+
+REFERENCES
+[1] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Foundations and Trends in Machine Learning, vol. 3, no. 1, pp. 1–122, 2011.
+[2] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” Proc. 46th Allerton Conf. Commun., Control, Computing, Monticello, IL, Sep. 2011, pp. 253–260.
+[3] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” arXiv:1204.0556 [cs.IT], 2012.
+[4] X. Zhang and P. Siegel, “Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes,” IEEE Trans. Inform. Theory, vol. 58, no. 10, pp. 6581–6594, Oct. 2012.
+[5] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inform. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[6] M. Yannakakis, “Expressing combinatorial optimization problems by linear programs,” J. Computer and System Sciences, vol. 43, no. 3, pp. 441–466, 1991.
+[7] A. Marshall, I. Olkin, and B. Arnold, Inequalities: Theory of Majorization and its Applications. New York: Springer, 2010.
+[8] M. H. Taghavi and P. H. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inform. Theory, vol. 54, no. 12, pp. 5396– 5410, Dec. 2008.
+[9] M. H. Taghavi, A. Shokrollahi, and P. H. Siegel, “Efficient implementation of linear programming decoding,” IEEE Trans. Inform. Theory, vol. 57, no. 9, pp. 5960–5982, Sep. 2011.
+[10] D. J. C. MacKay, Encyclopedia of Sparse Graph Codes. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data.html
+[11] X. Hu, E. Eleftheriou, D. Arnold, and A. Dholakia, ”Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Globecom, San Antonio, Nov. 2001, pp. 1036–1036E.
+[12] C++ ADMM Decoder by X. Liu. [Online]. Available: https://sites. google.com/site/xishuoliu/codes
+[13] X. Zhang and P. Siegel, “Efficient iterative LP decoding of LDPC codes with Alternating Direction Method of Multipliers,” to be submitted to IEEE Trans. Inform. Theory.
+
+1505
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:47:03 UTC from IEEE Xplore. Restrictions apply.
+
+

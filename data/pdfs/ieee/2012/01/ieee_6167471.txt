@@ -1,0 +1,540 @@
+International Conference on Computing, Networking and Communications, Data Storage Technology and Applications Symposium
+
+Robust Decoder Architecture for Multi-level Flash Memory Storage Channels
+Ravi Motwani and Chong Ong, Intel Corporation, NAND Storage Group, ravi.h.motwani@intel.com, chong.ong@intel.com
+
+Abstract
+Multi-level-cell (MLC) flash memory comprises of cells which can be programmed to multiple levels. Recent MLC flash memory systems support 3 bits per cell to 4 bits per cell which means that the individual cells are programmed to 8 or 16 distinct levels respectively. MLC flash has higher raw bit error rate (rber) than the single bit per cell flash. This calls for the use of sophisticated error control coding (ECC) schemes like LDPC codes.
+The flash memory channel is usually modeled with level distributions having Gaussian probability density function. However, the Gaussian distribution is not a good fit for practical NAND channels. Even for the beginning of life of the flash memory device, this model has to be replaced by a more realistic model. With erases and re-writes, the channel towards the end of life of the device is far from Gaussian and floating-gate to floating-gate coupling and charge loss not only increases the raw bit error rate but causes the level distributions to become asymmetric.
+Given such channel impairments, if the LDPC decoder assumes Gaussian level distributions, its performance can degrade considerably. Hence, modifications are required in the decoding algorithm to cope up with the channel distortions. In order to keep the hardware costs within limits, simple schemes with minimal hardware increase are desirable to keep up the performance. In this paper, the flash channel degradations are first enlisted and then simple solutions are proposed which keep the performance in check as the flash memory transits from a channel with moderate impairments to the end of life condition, where the level distributions for the different levels are highly asymmetric.
+
+normalized number of cells
+
+re-write cause the rber to increase as the oxide layer gets compromised [1, 2, 3]. The bit error rate for an MLC-flash is worse as compared to the single bit per cell flash and the requirements on the output bit error rate are very stringent. Hence, for MLCflash, use of advanced error correction schemes like LDPC codes becomes inevitable.
+LDPC decoders need soft information input in order to realize their full correction capability. The common LDPC decoding algorithm like the min-sum decoder or the 2-D normalization minsum decoder perform very well for the AWGN channel model [4]. As mentioned, the AWGN channel model is a misfit for the flash channel. Further, the flash channel degrades considerably over the life of the device, and if an error control coding scheme like LDPC code is used, the LDPC decoder is expected to adapt to the varying channel. Due to the time varying and non-Gaussian nature of the channel, appropriate changes to the decoder architecture are required. The architectural design challenge is to have a decoder which keeps up the performance throughout the life of the device with minimal increase in hardware.
+ideal level distribution broadened level distribution R1 1
+0.8
+0.6
+0.4
+
+1 Introduction
+
+0.2
+
+The flash memory channel is modeled with levels having Gaussian distribution. For 3 bits per cell flash, the closest communications channel model to the flash channel is 8-PAM modulation with additive-white Gaussian noise (AWGN). The mean of the Gaussian distribution depends on the ideal programmed voltage. For the 3 bits per cell case, Figure 1 shows the 8 levels and their ideal distributions in magenta color.
+The channel impairments for the flash memory consists of charge loss which decides the retention, inter-cell interference due to floating-gate to floating-gate coupling, and the erase and
+
+0
+
+−3
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+threshold voltage
+
+Figure 1. Three bits per cell Flash Memory voltage levels for the 8 levels for ideal and broadened distributions.
+
+For the 3 bits per cell flash, the eight levels experience different degradations with time. The three types of impacts
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:01:54 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-0009-4/12/$26.00 ©2012 IEEE
+
+492
+
+which lead to an increase in the raw bit error rate are 1. Floating-gate to floating-gate coupling (FGFG). FGFG causes inter-cell interference, which causes the distributions of the levels to broaden [1, 3]. This impact also called as program disturb causes a shift in the mean of the distributions [3]. In particular, the impact of FGFG on level-0 is most significant since it leads the distribution of level-0 to have a much higher above edge variance and a much larger shift of the mean value. This shift in the level distributions is shown by the blue distributions in Figure 1. 2. Single bit charge loss (SBCL)- Due to charge loss from the highest voltage programmed cells, level-7 loses more charge with time leading to a much higher below edge sigma. 3. Long Tails- The Gaussian distributions shown in Figure 1 for the different levels are far from the practical scenario. A more realistic assumption is a split-Gaussian distribution with one variance on the left side of mean and another variance on the right side of the mean value. In the realistic model, the distribution for each level is characterized by the mean, the below edge variance and the above edge variance. The asymmetry in the distributions which can lead to a tail of a distribution to have a considerable area in the high-confidence region of its neighboring level is called as the long tail effect. 4. Misplacements during programming of the middle and upper page due to errors in lower and middle page reads.
+1.1 Floating-Gate to Floating-Gate Coupling
+Flash memory comprises of grid of cells arranged in a rectangular lattice. A cell is a floating-gate and the information is stored as charge in these floating-gates. A write consists of programming the cell by Fowler-Nordhiem tunneling till it is programmed to the ideal voltage value. However, due to programming time constraints, some tolerance is accepted and the actual programming voltage is allowed to be within some range of the ideal. Due to the capacitive coupling between neighboring cells, the threshold voltage of the cell changes depending on the amount of coupling with the neighbors and their charge levels. This phenomenon called as inter-cell-interference (ICI) can be from mild to extreme. Particularly, the cell at the lowest voltage level will have its threshold voltage substantially increased if there is coupling with neighbors which have high charge.
+Depending on the programming method, the floating-gate coupling causes the level-0 sandwiched between two level-7 patterns ( the adjacent level-7 - level-0 - level-7 pattern) to have a increase in the threshold voltage if the neighbors are programmed after it. Thus program disturb which is a consequence of FGFG coupling can cause the level-7 - level-0 - level-7 pattern (abbreviated henceforth as 7-0-7) to migrate to a 7-1-7 or 7-2-7 pattern, if the two level-7’s are programmed after the level-0 is programmed.
+In order to combat ICI, constrained coding is a possible solution [5, 6, 9]. Constrained coding entails forbidding certain level patterns so that effects of ICI are contained. For the example above, a constrained code can be employed which either elim-
+
+inates or substantially reduces the 7-0-7 patterns from the level information to be programmed into the NAND.
+Constrained coding requires spare bits, so it adds to the redundancy and decoding constrained codes causes error propagation which has to be combated by either using more sophisticated decoders which can add to the complexity and hardware or by adding more redundancy. Since constrained coding may not be a viable solution for applications which cannot afford extra overhead bits or encoding/decoding complexity, alternative solutions have to be explored. In the next section we propose pragmatic methods to address the mitigation of program disturb effects.
+1.2 Single-bit charge loss
+SBCL means charge loss of the high voltage level patterns like level-7 and level-6 which drift to the level-6 and level-5 patterns respectively. SBCL causes the distribution of the level-7 pattern to have a much higher below edge variance than expected. Hence, program disturb and SBCL both cause the tails of the distributions for level-0 and level-7 to flatten. Since program disturb and SBCL are mirror problems, the solution for both the problems is also the same.
+1.3 Long Tails
+Towards the end of life of the NAND, the levels have a distribution with a much higher variance than the beginning of life of the memory. Also the below edge variance of the distribution and the above edge variance values are different. Strictly speaking, the distribution is not Gaussian, a split-Gaussian is a better approximation. Also, each level has a different value of below edge variance and above edge variance. This asymmetry of the distributions of the different levels is called as long tail effect since it causes the tails of the cumulative distribution function (cdf) of the different levels to flatten.
+1.4 Misplacements
+While programming the MLC 3 bits per cell NAND, the sequence is to first program the lower page followed by the middle page and then the upper page. Misplacements occur when the read of the lower page to program the middle page has errors. This causes the NAND to program the cell to a level different from the actual intended level. Subsequently, while programming the upper page, these errors carry forward.
+Further, errors during read of the middle page while programming the upper page will cause the NAND to program the cell to an erroneous level. The misplacement errors occur while programming and only the lower and middle page can suffer from them, hence misplacement errors remain localized to the read pages wherein they occur during programming.
+All the channel impairments listed in the above subsections call for various modifications in the LDPC decoding scheme so
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:01:54 UTC from IEEE Xplore. Restrictions apply.
+493
+
+as to not adversely impact its performance. In the next section, we address simple decoder modifications which address each of the above-mentioned effect.
+
+2 LDPC Decoder Modification for Mitigation of Channel Impairments
+
+To combat FGFG coupling, constrained codes have been proposed [5, 6, 9]. Constrained codes add to the redundancy and in applications which cannot afford extra spare area and encoding/decoding hardware, alternate solutions are to be explored.
+Effectively, program disturb and SBCL lead to level-0 distribution to have a higher above edge variance and level-7 (and maybe level-6) to have a higher below edge variance. Hence, program disturb and SBCL can also be categorized as long tail effects and a method to combat long tails can be used to combat all these impairments. Hence, we are left with two problems to address- one is to combat long tails and the second to combat misplacements.
+2.1 Combating Long Tails
+
+Long tails effectively cause the level distributions to deviate
+from an ideal Gaussian distribution. For the sake of simplicity,
+consider only two levels, say level-0 and level-1. Let the above edge variance of level-0 be σ12 and the below edge variance of level-1 be σ02. The variances are so labelled since level-0 corresponds to bit 1 of the upper page and level-1 corresponds to bit 0
+of the upper page. Due to program disturb, the above edge vari-
+ance of level-0 will be much higher compared to the below edge variance of level-1, σ12 > σ02. While reading the upper page, the reference voltage is applied in the valley between level-0 and
+level-1 which is shown as R1 in Figure 1. Since the LDPC decoder needs soft input, the read voltage value r is mapped to the log-likelihood-ratio (LLR). By definition, the LLR as a function of the read level information r is
+
+LLR(r)
+
+=
+
+log
+
+p(r|x p(r|x
+
+= =
+
+0) 1)
+
+In the above equation if we assume that level-0 has a mean voltage level of −a and level-1 has a mean voltage level of a, then
+
+LLR(r)
+
+=
+
+log
+
+√1 2π σ0 2
+
+exp
+
+√1 2πσ1 2
+
+exp
+
+−
+
+(r−a)2 2σ0 2
+
+−
+
+(r+a)2 2σ1 2
+
+=
+
+log
+
+σ1 σ0
+
++
+
+(r2
+
++ a2)(σ02 2σ02σ12
+
+−
+
+σ12)
+
++
+
+ra(σ02 + σ12) σ02 σ12
+
+The LLR which would be a linear function of the level voltage
+
+for Gaussian distributions with same variance modifies to a non-
+
+linear function of the level voltage. Hence, a non-linear mapping
+
+of the read voltage can be done to generate the LLRs which are
+
+input to the LDPC decoder. As mentioned before, since program
+
+disturb and SBCL effects are long tails, the above LLR modifica-
+
+tion method works for combating all these effects.
+
+However, specifically for program disturb, instead of performing the non-linear mapping from the read voltage to the LLR, we suggest another alternative method. To combat program disturb, the LDPC decoder can be modified such that it takes into account the fact that a 7-1-7 pattern is suspect and with a certain probability is a 7-0-7 pattern transited to a 7-1-7 pattern due to program disturb.
+Since the soft information is quantized to 7 bits, a read from the NAND which gives soft information can be made adaptive. Whenever a level-1 is read while reading the upper page, we check if this level-1 has neighbors which are both level-7’s. If they are, then the magnitude of the soft information is clipped down to account for its being a potential level-0 mapped to a level-1 due to program disturb.
+Other options have also been tried, like flagging that bit 0 from level-1 with an erasure, if the neighbors are level-7’s. However, the best results are obtained by clipping the magnitude of the LLR, since erasures leads to substantial loss of information.
+The mitigation of long tails by modification of the LLR values can be explained intuitively. Since the high confidence 0 bit can be a consequence of a 1 mapping to a 0 due to program disturb, the high reliability for the 0 bit has to be clipped to avoid the LDPC decoder from being mislead.
+The same LLR modification method can also be used to combat SBCL. Since a level-6 read can be a level-7 mapped to a level6 due to SBCL, the bit 0 read due to level-6 trigger for the upper page must have its reliability clipped if its neighbors are low voltage cells. As mentioned earlier, the problem of program disturb and SBCL is actually the same problem, one occurring for erase level cells and the other for the highest voltage level cells. It is not surprising that the solution is also the same, since for both the cases a bit 0 is not reliable and hence its LLR magnitude has to be attenuated if its neighbors are either high voltage levels or low voltage levels respectively [7, 8].
+Long tails can also be handled by the similar LLR modifications. Since long tails cause the above edge variance and the below edge variance of the distributions to have different values, proper LLR modification as derived here compensates for long tails. Towards end of life, a different LLR value for each level information is required to keep up the performance of the LDPC decoder.
+2.2 Combating Misplacements
+For MLC NAND flash, the lower page is first programmed. Subsequently, the middle page is programmed and to program the middle page the lower page information has to be read. While reading the lower page information, errors may occur and a 1 can be read as a 0 and vice versa. If this error occurs, then the final programmed voltage is in error. This impairment, termed as misplacement can be compensated for during the LDPC decoding. Misplacements can be single sided or double sided. Say, only two levels are programmed. In single sided misplacements, level1 is always correctly programmed, but level-0 can be erroneously programmed to level-1. This is called as single sided misplacement. Double sided misplacements occur when both levels can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:01:54 UTC from IEEE Xplore. Restrictions apply.
+494
+
+be incorrectly read with the same probability. Let the double-
+
+sided misplacement probability (which is known), be α. If α = 0
+
+(no misplacements), and the two levels have Gaussian distribu-
+
+tion with variance σ2, then the LLR as a function of the voltage
+
+r
+
+is
+
+given
+
+by
+
+LLR(r)
+
+=
+
+2ar σ2
+
+.
+
+However,
+
+if
+
+α
+
+>
+
+0,
+
+then
+
+LLR(r)
+
+=
+
+log
+
+p(r|x p(r|x
+
+= =
+
+0) 1)
+
+=
+
+log
+
+√(1−α) 2πσ2
+
+exp
+
+√α 2πσ2
+
+exp
+
+−
+
+(r−a)2 2σ2
+
+−
+
+(r−a)2 2σ2
+
++
+
+√α 2πσ2
+
+exp
+
++
+
+√(1−α) 2πσ2
+
+exp
+
+−
+
+(r+a)2 2σ2
+
+−
+
+(r+a)2 2σ2
+
+UBER vs RBER for LDPC with Long Tails 10−4 10−5 10−6
+
+=
+
+log
+
+ex√p(−α1 ) 2πσ2
+
+exp
+
+−
+
+(r−a)2 2σ2
+
++
+
+ex√p(−α2 ) 2πσ2
+
+exp
+
+−
+
+(r+a)2 2σ2
+
+,
+
+ex√p(−α2 ) 2πσ2
+
+exp
+
+−
+
+(r−a)2 2σ2
+
++
+
+ex√p(−α1 ) 2πσ2
+
+exp
+
+−
+
+(r+a)2 2σ2
+
+[where α1 = log(1 − α) and α2 = log(α),]
+
+= log exp exp
+
+2ar σ2
+
+−
+
+α1
+
+2ar σ2
+
+−
+
+α2
+
++ exp(−α2) + exp(−α1)
+
+10−7
+
+exp = log
+exp
+
+2ar σ2
+
++
+
+(α2
+
+−
+
+α1)
+
++1
+
+2ar σ2
+
++ exp(α2 − α1)
+
+UBER
+
+10−8
+
+LDPC Decoder with no VM LDPC Decoder with VM=2.5
+
+|LLR(r)| ≈ min
+
+2ar σ2
+
+, |α2 − α1|
+
+10−9
+
+LDPC decoder with Long Tails mitigation
+
+= min
+
+2ar σ2
+
+, | log(α) − log(1 − α)|
+
+10−10
+
+Hence the effect of misplacements is to clip the LLR values. This
+
+10−11 10−12 10−13
+0.015
+
+0.02
+
+0.025
+
+RBER
+
+Figure 2. Simulation Results of LDPC Decoding with the Proposed Long Tails Mitigation
+
+is also intuitively clear, since the high confidence 0 can be a con-
+
+sequence of a 1 mapping to a 0 or vice-versa due to misplace-
+
+ment. The reliability has to be clipped and values larger than
+
+some threshold which depends on the misplacement probability
+
+should not be allowed as they mislead the LDPC decoder. In
+
+0.03 single sided misplacement, only the LLR for the un-misplaced bit is clipped, since it is not as reliable as the misplaced bit.
+
+The misplaced bit is assigned the LLR value according to the
+
+LLR(r)
+
+=
+
+2ar σ2
+
+equation.
+
+3 Simulation Results
+
+Simulations were performed with a rate 0.8571 LDPC code
+
+with codeword size of 2 KiloBytes. We define the uncorrectable
+
+bit error rate (UBER) as the codeword failure rate per user infor-
+
+mation bit. Our target UBER is 1e-12 and we attain the target
+
+for an rber of 1.9e-2, provided there are no channel impairments.
+
+The soft information is quantized to 7 bits, hence 128 values of
+
+LLR are possible.
+
+For long tails, we define the variance mismatch as the ratio
+
+of the variance of the above edge of the distribution of level-0
+
+and the variance of the below edge of the level-1 distribution ,
+
+hence the variance mismatch (VM)
+
+= . σl2evel−0
+σl2evel−1level−1
+
+If the vari-
+
+ance mismatch is 2.5, we get appreciable degradation as shown in
+
+Figure 2, compared to the no variance mismatch case as seen in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:01:54 UTC from IEEE Xplore. Restrictions apply.
+495
+
+Figure 2. If we clip the LLRs of the 0 bit (the level-1 reads) if the neighbor cells have level-7, the performance improves. We just clip the highest reliability LLR and this gets the UBER of 1e-12 for an rber of 1.875e-2. This shows the amount of degradation suffered by the LDPC decoder if it is mis-informed about a high confidence 0 bit.
+To demonstrate the misplacements mitigation algorithm, simulations were performed with single sided misplacement probability of 1%. When LLR clipping is performed for a single sided misplacement case, the target UBER is attained for an input rber of 1.8e-2 as shown in Figure 3.
+For both the methods, the implementation scheme is very simple and consists of just LLR clipping. For program disturb mitigation, extra reads of neighboring cells is required since their level information is used by the algorithm.
+
+is far from Gaussian and the LDPC decoder has to be modified in order to take into account these channel impairments. In our patents [6, 7, 8], we proposed various methods based on just LLR modification which are able to improve the performance of the LDPC decoder appreciably. These methods are elaborated in this paper. Long tails is a more general channel impairment and includes program disturb and SBCL effects. A method to combat long tails was proposed which can be used to combat program disturb and SBCL effects. Moreover another alternate method exclusively for combating program disturb was also proposed. An LLR modification to combat misplacements was elaborated in section 2.2. The efficacy of the proposed methods were substantiated with Monte-Carlo based simulation results.
+5 References
+
+UBER vs RBER for LDPC with misplacements 10−4
+
+[1] J.D. Lee et-al., “Effects of Floating-Gate Interference on NAND Flash Memory Cell Operation”, IEDL, Vol. 23, No. 5,
+
+pp. 264- 266, 2002
+
+10−5
+
+[2] J. Brewer et-al., “Nonvolatile Memory Technologies with
+
+Emphasis on Flash”, IEEE Press Series on Microelectronic Sys-
+
+10−6
+
+tems, Chapter 6, 2008.
+
+[3] Jim Cooke, “The Inconvenient Truths of NAND Flash
+
+10−7
+
+Memory,” Flash Memory Summit 2007.
+
+[4] Juntan Zhang, Fossorier, M., Daqing Gu, Jinyun
+
+10−8
+
+Zhang, “Improved min-sum decoding of LDPC codes using 2-
+
+UBER
+
+dimensional normalization,” Global Telecommunications Con-
+
+10−9
+
+ference, 2005, GLOBECOM ’05, IEEE , vol.3, no., pp. 6 pp.,
+
+LDPC Decoder with no misplacements
+
+28 Nov.-2 Dec. 2005.
+
+10−10
+
+LDPC Decoder with 1% misplacements
+
+[5] A. Berman, Y. Birk, “Mitigating Inter-Cell Coupling Ef-
+
+LDPC decoder with misplacement mitigation fects in MLC NAND Flash via Constrained Coding”, Flash Mem-
+
+10−11
+
+ory Summit 2010.
+
+[6] R. Motwani, “Error Resilient constrained coding to over-
+
+10−12
+
+come program disturb and SBCL impact,” Intel IDF no. 83321
+
+10−13
+
+(patent application pending). [7] R. Motwani, “Misplacement mitigation using LDPC de-
+
+10−14 0.015
+
+0.02
+
+0.025
+
+RBER
+
+coder modification,” Intel IDF no. 85023, 82642 (patent applica0.03 tion pending).
+[8] R. Motwani, “Mitigating the impact of Program Disturb
+
+and SBCL impairments using odd and even page level informa-
+
+Figure 3. Simulation Results of LDPC Decoding with the Proposed Misplacement Mitigation
+
+tion,” Intel IDF no. 82732 (patent application pending). [9] R. Motwani, “Hierarchical Constrained Coding for Float-
+ing Gate Coupling Mitigation in Flash Memory,” Proc. Global
+
+Telecommunications Conference, 2011, GLOBECOM ’2011,
+
+IEEE.
+
+4 Conclusions
+
+NAND flash memory suffers from various channel impairments. The FGFG coupling causes program disturb and SBCL causes charge loss of the high voltage cells. Misplacements cause the final programmed cells to be programmed to an incorrect level and the end of life condition level distributions look asymmetric, since the below edge variance of the distribution has a different value from the above edge variance. Consequently, the channel
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:01:54 UTC from IEEE Xplore. Restrictions apply.
+496
+
+

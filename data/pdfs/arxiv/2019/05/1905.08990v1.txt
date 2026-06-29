@@ -1,0 +1,682 @@
+MIST: A Novel Training Strategy for Low-latency
+Scalable Neural Net Decoders
+Kumar Yashashwi*, Deepak Anand*, Sibi Raj B Pillai*, Prasanna Chaporkar*, K Ganesh† *Department of Electrical Engineering, Indian Institute of Technology Bombay, India †Manufacturing & Supply Chain Center of Competence, McKinsey & Company, India
+Email: *{kryashashwi, deepakanand, bsraj, chaporkar}@ee.iitb.ac.in, †k ganesh@mckinsey.com
+
+arXiv:1905.08990v1 [eess.SP] 22 May 2019
+
+Abstract—In this paper, we propose a low latency, robust and scalable neural net based decoder for convolutional and low-density parity-check (LPDC) coding schemes. The proposed decoders are demonstrated to have bit error rate (BER) and block error rate (BLER) performances at par with the state-ofthe-art neural net based decoders while achieving more than 8 times higher decoding speed. The enhanced decoding speed is due to the use of convolutional neural network (CNN) as opposed to recurrent neural network (RNN) used in the best known neural net based decoders. This contradicts existing doctrine that only RNN based decoders can provide a performance close to the optimal ones. The key ingredient to our approach is a novel Mixed-SNR Independent Samples based Training (MIST), which allows for training of CNN with only 1% of possible datawords, even for block length as high as 1000. The proposed decoder is robust as, once trained, the same decoder can be used for a wide range of SNR values. Finally, in the presence of channel outages, the proposed decoders outperform the best known decoders, viz. unquantized Viterbi decoder for convolutional code, and belief propagation for LDPC. This gives the CNN decoder a significant advantage in 5G millimeter wave systems, where channel outages are prevalent.
+Index Terms—Deep learning, channel decoding, machine learning, neural net decoders, 5G mmWave
+I. INTRODUCTION
+Efficient communication of messages over a noisy channel is governed by information theoretic principles. While communication efficiency, measured in terms of the successful transmission rate, can be optimized using careful code design, computational efficiency is also of at most importance in modern wireless devices. In fact thoughtful design of encoding and decoding schemes such as convolutional, turbo, LDPC and polar have successively pushed the operational rates closer to the maximum possible limit, known as Shannon capacity of the channel [1]. In conjunction with iterative decoding, the computational complexity also stays within manageable limits, making these schemes good candidates for current and future wireless standards. Recently, new decoding schemes based on deep-learning have shown to have good performance for decoding polar codes [2]. This was later extended to turbo and convolutional codes [3].
+The most attractive feature of a learning based decoder is that it provides a kind of universality to the decoding scheme, i.e. the same network architecture can be properly trained to decode on a variety of channels. This leads to a certain ease of implementation, which along with parallel processing can
+
+also bring hardware advantages. Another significant advantage of learning based methods over conventional decoding approaches is that they can be made more agnostic to the exact statistics of the underlying channel. More specifically, while variations from the designed system parameters can be harmful for even the optimal MAP decoder, a learning based decoder is more robust against channel variations [4]. In other words, the network can be trained to guard against channel variations also, albeit at the expense of some training cost, an one time expenditure. In communication systems, deep learning has also been shown to be highly useful in tasks such as estimating channel state information (CSI) [5], noise parameter estimation [6] and modulation recognition [7]. Designing neural net based decoder for convolutional and LDPC coding schemes is the main aim of the current paper.
+Some references to the prior work is in order here. In [8], a deep learning based auto-encoder strategy for designing an end-to-end communication system was proposed for low block lengths. In fact an error correction performance comparable to that of (7, 4, 3) Hamming code was demonstrated, under suitable assumptions on the channel model. [6] proposes a CNN based method to estimate noise parameters and use it in tandem with belief propagation decoder to reduce the decoding error rates for LDPC codes. Short BCH codes are decoded using RNN based methods in [9]. In [2], a Multi Layer Perceptron (MLP) based method for decoding polar codes is proposed. This work is extended in [10], where decoders for polar codes using CNN and RNN are proposed, and their accuracy and time complexity are compared with MLP. It is shown that though RNN based decoder has worse time complexity, it achieves the lowest error rates among other deep learning based methods. This work also argues that the achieved performance can be close to optimal only when at least 90% of the codewords are used for training. Furthermore, the CNN decoding performance was shown to be inferior even with this disproportionate training requirement. Clearly, such training constraints are only feasible for low blocklengths like 32. In their seminal paper, Kim et al. have proposed RNN based decoder for recursive convolutional codes [3]. The proposed decoder achieves close to optimal performance and can also scale to higher block lengths. The training was done using a sufficiently large, yet computationally feasible set of input codewords. In spite of these desirable characteristics, the decoder in [3] has high decoding latency that limits its use in practice. While CNNs are known to have low computational
+
+x m Encoder
+
+BPSK
+
+b
+
+y
+
+Channel
+
+Neural Net
+
+mˆ
+
+Figure 1: System model
+
+latency, their performance so far was perceived poor when compared to the RNNs. The main question is whether one can realize a CNN based decoder which can perform on par with RNN decoders, at comparable blocklengths. In this paper, we show that the key to building such a CNN is to employ an efficient training mechanism. In fact, our novel training scheme in conjunction with a better network architecture allows for building low latency CNN decoders for both convolutional and LDPC codes.
+The key contributions of the paper are:
+• A novel Mixed-SNR Independent Samples based Training (MIST) scheme is proposed. With this training scheme, it is shown that deep learning based CNN decoders for convolutional codes can be designed, achieving better BER and BLER performance than that of a hard Viterbi decoder. • CNN based decoders with MIST are shown to achieve similar performance as the state-of-the-art RNN based decoders for convolutional codes, that too with less than 1% of the codebook used for training, as against the existing 90% training requirement [10]. • The same neural net architecture can be trained using MIST to decode LDPC codes. In fact this decoder achieves a better performance than that of the popular bit flipping algorithm [1]. • The proposed method achieves a lower BER compared to both hard and soft decoding techniques for convolutional and LDPC codes when there are random outages in a channel. The issue of random outages are expected to play a key role in 5G systems [11]. • Finally, MIST procedure scales well with blocklength. In our experiments using comparable blocklengths, it achieves 8 times lower latency than existing state-of-the-art neural net methods, while guaranteeing the same BER and BLER performance.
+Rest of the paper is organized as follows: Section III describes the proposed training strategy and neural net architecture. Section IV compares the performance of the proposed method with the RNN decoder and traditional decoding methods. Section V gives concluding remarks.
+
+II. SYSTEM MODEL
+
+The problem of designing an optimal decoder can be for-
+
+mulated as follows. Consider a typical communication system
+
+shown in Figure 1, where an l−bit dataword m ∈ {0, 1}l is
+
+encoded to n−length codeword x ∈ {0, 1}n. Here n is the
+
+blocklength,
+
+and
+
+r
+
+=
+
+l n
+
+is
+
+called
+
+the
+
+rate
+
+of
+
+the
+
+code.
+
+Let
+
+m ∈ M , where M = {0, 1} . The chosen codeword x is
+
+modulated to yield the baseband transmitted symbols b. In
+
+this paper we assume binary phase shift keying (BPSK) as the
+
+digital modulation scheme. The received baseband waveform
+
+after sampling yields the observation vector y. We consider an
+
+AWGN model in which y is given by
+
+y = b +z,
+
+(1)
+
+where z is a real zero-mean Gaussian noise vector of covariance matrix σ 2In, independent of the transmitted symbols. While the above model depicts a block-coding scheme, with
+slight abuse of terminology, this also applies to non-block
+coding schemes like convolutional codes. Note that the same
+system model is considered in previous work on deep learning
+based decoder design [2], [3], [10]. The decoder’s goal now is to find a mapping f : ℜn → M such that:
+
+f (y) = arg max P(m|y).
+
+(2)
+
+m∈M
+
+A learning based decoder effectively learns the function f during the training stage, typically using labelled data comprising input codewords and the corresponding noisy received vectors. Next, we describe the proposed method.
+
+III. PROPOSED METHOD
+In this section, we explain our training procedure, neural net design, choice of hyperparameters, and the optimization performed for tuning weights of the neural net. Recall that our objective is to decode convolutional and LDPC codes. The training procedure plays a key role in determining the performance of a neural net. For most classification problems, conventional training methods partition the given labelled data into three sets, viz. 1) training dataset, 2) validation dataset and 3) testing dataset. The training dataset is first used to train the network, i.e., weights in the neural net are tuned to minimize an appropriately chosen loss function. Subsequently, validation data is used to detect over-fitting, and following that the hyperparameters of the network are tuned to eliminate the over-fitting. The training and validation steps are typically iterated until the hyperparameters are tuned to yield the desired level of accuracy. Once the neural net is optimized, the results are shown on the testing data.
+Note that decoding is effectively a classification problem, thus the three step methodology described above is universally employed for decoding schemes also (see [3] and [4] for details). However, for a typical classification problem, training is done using a fixed labelled dataset, as obtaining more data is often expensive. On the other hand, for a given encoding rule and channel probability law, the training data for a decoder can be generated easily. We leverage this to propose a training procedure that generate labelled training data on-thefly. Thus, unlike the classification framework which employs a fixed fraction of the codewords in training, we randomize the set of inputs during the training stages, yielding significant advantages while decoding. Another key difference in our training methodology is the way in which we account for various SNR values encountered by the decoder. Note that the previous works use an appropriately chosen SNR for training, and this does not change during the training process. In contrast, the proposed training method randomly samples SNR value from a desired range for each training codeword. We call our training strategy as Mixed-SNR Independent Sampling based Training (MIST), which is described next.
+Before getting into further details, it is worthwhile to note that extensive simulations were conducted before a satisfactory CNN architecture emerged, and the two above-mentioned
+
+essential training features of MIST give dramatic performance improvements from conventionally trained CNNs.
+
+A. Mixed-SNR Independent Sampling based Training (MIST)
+Let S be the set of SNR values for which a decoder has to be designed. The training is done using batches of valid codewords generated for the coding scheme under consideration. Here, we are interested in convolutional and LDPC codes. The following steps are performed β times to obtain a training batch with β codewords.
+• Uniformly sample a SNR value from S and set the noise variance as SNR−1. The noise vector z is then found by independently sampling the noise distribution n times. • Sample a message m from M , generate the codeword x(m), and output symbols y using (1).
+Let the training batch be denoted as y1, y2, . . . , yβ , having dimensions β × n. The training batch is feedforwarded to the neural net that outputs a -dimensional vector pˆ . The mean squared error (MSE) between pˆ and m is calculated as:
+
+∑ ∑ L(m, pˆ ) = 1 β (mi j − pˆi j)2,
+β i=1 j=1
+
+(3)
+
+where mi j (pˆi j, resp.) denotes jth value in vector mi (pˆ i, resp.). The function L(·, ·) in equation (3) is our loss function, and it is back-propagated to learn the weights of the neural net using the Adam optimizer [2]. Choosing a sufficiently small learning rate for the CNN training is now important, however, too small a value will delay the convergence of the learning algorithm. Experimental validation suggests a suitable initial learning rate of 10−3. A new training batch is generated in each iteration.
+The key differences between the existing training strategies and MIST are as follows:
+(a) Existing works fix the training and validation datawords in the beginning, and use the same in every training iteration. On the contrary, MIST generates the training data randomly using Monte-Carlo technique in every training iteration. (b) MIST does not require any separate validation data for hyperparameter tuning as over-fitting is highly improbable. Rather, as explained in Section III-B, hyperparameters are tuned directly based on the value of loss function. (c) Existing works train the network for a single suitable SNR value, and then tests on different SNR values. In MIST, each sample in a batch is allowed to have randomly chosen SNR from the given set S .
+
+Some advantages of MIST are:
+(1) Since the storage requirements of the training data is low in MIST, the network can be trained on a larger set of datawords even for a large block lengths. (2) As the training samples vary across training iterations, the neural net actually learns the decoding technique instead of becoming a simple recording and reading algorithm, thus avoiding an overfit to the training data. (3) As the noise is varied across samples, the neural net gets to see the samples corresponding to various SNRs. This helps it tune the decoding function to accommodate varying SNR.
+
+Mean square error
+
+10−0.5 10−1
+
+Kernel size:3, (10,10,10) kernels Kernel size:3, (10,30,30) kernels Kernel size:3, (10,50,50) kernels Kernel size:6, (10,50,50) kernels Kernel size:12, (10,50,50) kernels Kernel size:24, (10,50,50) kernels
+
+10−1.5 0
+
+500 1,000 1,500 2,000 2,500 3,000
+Iterations
+
+Figure 2: Training procedures to decide on hyperparameters for 3 layer CNN. Each entry in legend denotes the kernel size used in all the 3 layers followed by the number of kernels in each layer.
+
+(4) MIST allows for a low complexity neural net to perform close to optimal with significantly less decoding time per message than that of the existing neural net based approaches.
+Next we describe the neural net architecture used for decoding.
+
+B. Network Architecture
+Among different deep learning based approaches, we choose CNNs. One-dimensional CNN kernels are capable of learning the decoding algorithm as it models the sense of sequence necessary for learning dependencies among encoded message bits. Moreover CNNs have lower training and testing complexity, which are highly desired. The architecture of a CNN is decided by 3 hyperparameters, viz. 1) number of layers, 2) number of kernels in each layer, 3) kernel size in each layer. We reiterate that extensive computational experiments led to the final working architecture and hyperparameters presented below.
+Having a network architecture with 2 layers was found insufficient to achieve reasonable performance in most of our experiments. While this behaviour dramatically changed with 3 layers, our experiments further showed that increasing layers beyond 3 did not improve the performance by much. In order to choose the number of kernels, we started with lower values and systematically increased the number till reasonable performance was achieved. This is depicted in Figure 2, where the error performance for various kernel choices are listed. While choosing about 50 kernels for the last two layers gave reasonable results, the first layer could operate with just 10 kernels. Increasing the number of kernels beyond 50 did not provide much improvement in the error rate. These comparisons were done for a kernel size of 3. Once the number of kernels are fixed, the kernel size is determined. Since a codeword has a fixed bit sequence, a larger sequence context is required by the CNN to learn the decoding scheme. Thus using a larger kernel size can help reducing the error further, this is illustrated in Figure 2. Notice that when the kernel size is 3, the error is higher compared to the case when kernel size is 6. While increasing the kernel size to 12 and then 24 decreases the error further, no noticeable improvement was obtained after this. The activation function used in each convolutional layer is rectified linear unit (ReLU).
+The convolution was performed by padding with zeros at signal edges. Since MIST ensures no overfit, dropouts are
+
+Table I: Network architecture for the proposed decoders
+
+Layer Conv1 (ReLU) Batch normalization Conv2 (ReLU) Batch normalization Conv3 (ReLU) Batch normalization Dense (Sigmoid)
+
+Output shape (β , n, 10) (β , n, 10) (β , n, 50) (β , n, 50) (β , n, 50) (β , n, 50) (β , l)
+
+1000 200 100
+
+CNN Bi-GRU
+
+[10]. However, as evident from Figure 4, the training strategy MIST with a carefully designed CNN architecture achieves the same performance as the RNN based method. Moreover, CNN decoders have nearly 8 times less decoding latency when compared to RNN decoders, as shown in Fig. 3 2. The time to decode a codeword becomes extremely important when comparing different decoders. To understand the impact of findings in Fig. 3, note that for n = 1000, a processor running a single thread can maintain a speed of about 170Kbps while employing a Bi-GRU decoder, while a similar processor will achieve a rate of 1.25Mbps using the proposed decoder. Thus, the proposed CNN based decoder performs on par with the state-of-the-art complex RNN based decoders in terms of BER and BLER, albeit at a much lower latency.
+Now that the usefulness of the proposed training method and network architecture is established, next we show the performance of the CNN decoder for LDPC codes.
+
+Block Length
+
+0 0.5 1 1.5 2 2.5 3 Time (milliseconds)
+Figure 3: Average time taken to decode a dataword using CNN decoder and Bi-GRU decoder for blocklength 100, 200 and 1000.
+not used while training the deep network. It is experimentally verified that adding dropout does not reduce the loss function any further. Once the signal features are extracted from the convolutional layer, it is passed through the dense layer having neurons with sigmoid activation to get the posterior probability corresponding to each message bit. This posterior probability is quantized to obtain the message bits. The experimentally obtained CNN architecture is given in Table I 1. The same neural net design is used for decoding both convolutional as well as LDPC codes.
+IV. RESULTS AND DISCUSSION
+We present the BER and BLER curves for the CNN decoder in AWGN channels, against the available SNR. The performance is evaluated on 109 samples for each SNR value. Comparison with analytically derived decoders is performed for both convolutional and LDPC codes.
+
+A. Decoding of convolutional encoding method
+
+Generating polynomials for convolutional codes with good
+
+minimum distance properties are readily available [1]. For
+
+illustration,
+
+the
+
+performance
+
+on
+
+a
+
+non-systematic
+
+rate-
+
+1 2
+
+code
+
+is compared against a hard Viterbi decoder (same code and
+
+comparison as in [3]). The code polynomials in octal notation
+
+are (5, 7). The minimum free distance is 5 for this code [1].
+
+In Figure 4, comparisons using block lengths 100, 200 and
+
+1000 for different SNR values is shown. Here, the CNN
+
+decoder is compared with the state-of-the-art RNN-based
+
+method proposed in [3]. The architecture in [3] uses 2 bi-
+
+direction Gated Recurrent Units (bi-GRU) layers with batch
+
+normalization followed by a final dense layer with sigmoid
+
+activation. So far the general perception in literature is that
+
+recurrent layers outperform CNN based decoders, see [3], [4],
+
+1Code available at https://github.com/kryashashwi/MIST CNN Decoder
+
+B. Decoding of LDPC Codes
+We consider a rate 1/2 regular LDPC (10, 20) code here. The received noisy signal is used against the original message to train the decoder. The same network architecture described in Table I is used for training purpose. The decoding performance is compared against the bit flipping (BF) method for LDPC codes. In Figure 5, performance comparisons are given for block lengths of 100, 200 and 1000. For both BER and BLER, the CNN decoder outperforms the BF decoder.
+To further evaluate the decoder performance, we now compare the CNN decoder with soft decoding schemes.
+C. Comparison with soft decoding schemes
+For comparing the performance on decoding convolutional codes, the unquantized Viterbi decoder is used as a reference. This is presented in Fig. 6a and 6b. Although the CNN decoder outperforms the hard Viterbi decoder, it still has got some way to go in reaching the optimal unquantized Viterbi decoder. For LDPC codes, the belief propagation (BP) decoder performs better than the CNN decoder in terms of both BER and BLER as shown in Fig. 6c and 6d. Thus, more work is required for any existing learning based method, be it CNN or RNN, to perform at the level of any near-optimal soft decoding scheme. However, this situation dramatically changes when the channel statistics are not exactly known. In particular, for models having channel variations which are not exactly tracked at the receiver, the optimal decoder design is much more complex. An optimal decoder designed for a particular channel law may fare poorly due to the mismatched decoding when the encountered channel is different. However, a properly trained CNN scheme can still offer reliability, which we now demonstrate by experiments.
+D. Random channel outages
+In systems like mmWave 5G links, random channel outages can occur. During an outage, the channel SNR suddenly drops
+2Time comparison made on machine having Ubuntu 16.04, Intel 8 core i7− 7700k@4.2 GHz, 64 GB RAM, Nvidia GeForce GTX Titan-X 12 GB GPU.
+
+BER
+
+BLER
+
+10−1
+
+100 10−1
+
+10−2
+
+10−1
+
+10−2
+
+BER
+
+BLER
+
+10−3
+
+10−4
+
+Viterbi Decoder Bi-GRU Decoder
+CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+10−2
+
+Viterbi Decoder
+
+Bi-GRU Decoder
+
+10−3
+
+CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+10−3
+
+10−4
+
+Viterbi Decoder
+
+Bi-GRU Decoder
+
+10−5
+
+CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+(a) BER Vs SNR (n=100)
+100
+
+10−1
+
+10−2
+
+Viterbi Decoder
+
+Bi-GRU Decoder
+
+10−3
+
+CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+BER
+
+(b) BLER Vs SNR (n=100)
+
+10−1
+
+10−2
+
+10−3
+
+10−4 10−5
+
+Viterbi Decoder Bi-GRU Decoder
+CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+BLER
+
+(c) BER Vs SNR (n=200)
+100
+
+10−1
+
+10−2
+
+Viterbi Decoder
+
+Bi-GRU Decoder
+
+CNN Decoder
+
+10−3−4
+
+−2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+(d) BLER Vs SNR (n=200)
+
+(e) BER Vs SNR (n=1000)
+
+(f) BLER Vs SNR (n=1000)
+
+Figure 4: BER and BLER comparison of Hard Viterbi decoder, Bi-GRU decoder and CNN decoder.
+
+100
+
+10−1
+
+BLER
+
+10−0.1 10−0.2
+
+BER
+
+10−1
+
+BF Decoder
+
+CNN Decoder
+
+10−2−4
+
+−2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+(a) BER Vs SNR (n=100)
+100
+
+10−0.3
+
+BF Decoder CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+(b) BLER Vs SNR (n=100)
+
+BF Decoder
+
+CNN Decoder
+
+10−2−4
+
+−2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+(c) BER Vs SNR (n=200)
+100
+
+BLER
+
+10−0.05
+
+10−1
+
+BER
+
+10−0.1 10−0.2
+
+10−0.1
+
+BF Decoder CNN Decoder
+
+−4 −2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+BF Decoder
+
+CNN Decoder
+
+10−2−4
+
+−2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+10−0.3
+
+BF Decoder
+
+CNN Decoder
+
+10−0.4−4 −2 0
+
+2
+
+4
+
+6
+
+SNR (dB)
+
+(d) BLER Vs SNR (n=200)
+
+(e) BER Vs SNR (n=1000)
+
+(f) BLER Vs SNR (n=1000)
+
+Figure 5: BER and BLER comparison of Bit flipping based decoder and CNN decoder
+
+BER
+
+BLER
+
+to a lower value before getting restored to its proper level. This results in different noise distributions within the same code block, a condition akin to arbitrary varying channels in information theory [12]. In 5G systems, the SNR difference can get as high as 20dB [11]. In order to show the robustness of
+
+the CNN decoder, a channel where each symbol independently
+experiences outage with probability α is considered. The SNR during an outage is taken as −10dB. We compare the performance of an appropriately trained CNN decoder with hard and unquantized Viterbi decoder for α = 0.3 and α = 0.5,
+
+BER
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+10−5 10−6
+
+Unquantized Viterbi Bi-GRU Decoder CNN Decoder
+
+−4 −2 0
+
+2
+
+4
+
+SNR (dB)
+
+BLER
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+Unquantized Viterbi Bi-GRU Decoder CNN Decoder
+
+−4 −2 0
+
+2
+
+4
+
+SNR (dB)
+
+(a) BER Vs SNR (Conv. code) (b) BLER Vs SNR (Conv. code)
+100 10−1
+
+unknown channel quality changes. The same experiment is now repeated for LDPC codes. Fig. 7c and 7d compare the CNN decoder with bit flipping as well as belief propagation methods for α = 0.3 and α = 0.5. For this case, CNN decoder outperforms the bit flipping method. It outperforms the belief propagation method when α = 0.5 and gives comparable performance for α = 0.3.
+This shows that the CNN decoder not only is robust, but also can outperform analytically derived decoders when channel conditions are varying randomly. The application of CNN decoder can become even more important with real world systems where the channel model is not analytically available. We leave this application as a future work.
+
+BLER
+
+BER
+
+10−2
+
+10−3
+
+BP Decoder CNN Decoder
+
+−4 −2 0
+
+2
+
+4
+
+SNR (dB)
+
+10−1
+
+BP Decoder CNN Decoder
+
+−4 −2 0
+
+2
+
+4
+
+SNR (dB)
+
+(c) BER Vs SNR (LDPC code) (d) BLER Vs SNR (LDPC code)
+
+Figure 6: Comparison of CNN decoders with the optimal decoding techniques for convolutional code (figures (a) and (b)) and LDPC code (figures (c) and (d)). Here, n = 200.
+
+BER
+
+10−0.4 10−0.6
+
+Hard Viterbi Unquantized CNN Decoder
+
+10−0.8
+
+10−1
+
+10−1.2
+
+−4 −2 0 2 4 6 8 10 SNR (dB)
+(a) α = 0.3 (Conv. code)
+100
+BF Decoder BP Decoder CNN Decoder
+
+BER
+
+BER
+
+10−0.4 10−0.5 10−0.6 10−0.7
+
+Hard Viterbi Unquantized CNN Decoder
+
+−4 −2 0 2 4 6 8 10 SNR (dB)
+(b) α = 0.5 (Conv. code)
+
+10−0.4 10−0.6
+
+BF Decoder BP Decoder CNN Decoder
+
+BER
+
+10−1
+−4 −2 0 2 4 6 SNR (dB)
+
+8 10
+
+(c) α = 0.3 (LDPC code)
+
+10−0.8 −4 −2
+
+0246 SNR (dB)
+
+8 10
+
+(d) α = 0.5 (LDPC code)
+
+Figure 7: BER Vs SNR comparison of CNN decoders with the existing decoding techniques for channel with random outage. Here, n = 200. (a) and (b) show BER comparison of three convolutional code decoders, viz. CNN decoder, quantized and unquantized Viterbi decoders for outage probabilities α as 0.3 and 0.5, resp. (c) and (d) show BER comparison of three LDPC decoders, viz. CNN decoder, bit-flipping and log simple belief propagation decoders with α as 0.3 and 0.5, resp.
+
+the results are presented in Fig. 7a and 7b respectively. Clearly the CNN decoder outperforms the Viterbi decoder for both the cases. Notice that the unquantized Viterbi decoder is optimal for a fixed channel, but becomes mismatched in presence of
+
+V. CONCLUSION
+In this paper, we proposed a novel training strategy called MIST, and showed that CNN based neural net decoders can be trained for convolutional and LDPC codes. The training method is scalable to higher block lengths. The proposed decoder matches the state-of-the-art RNN based decoder in their performance while providing significantly lower decoding latency. Furthermore, when the channel suffers random outages, the neural net based decoders outperform even the analytically derived decoders which are optimal for a fixed channel law.
+Designing decoders for arbitrary varying channels is left as a future work. Improving the CNN architecture to match soft decoding schemes for fixed channels is another open problem of interest.
+REFERENCES
+[1] S. Lin and D. J. Costello, Error control coding. Pearson Education India, 2001.
+[2] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learningbased channel decoding,” in 2017 51st Annual Conf. on Information Sciences and Systems (CISS). IEEE, 2017, pp. 1–6.
+[3] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” arXiv preprint arXiv:1805.09317, 2018.
+[4] N. Farsad and A. Goldsmith, “Neural network detection of data sequences in communication systems,” IEEE Trans. on Signal Processing, vol. 66, no. 21, pp. 5663–5678, 2018.
+[5] H. Ye, G. Y. Li, and B.-H. Juang, “Power of deep learning for channel estimation and signal detection in ofdm systems,” IEEE Wireless Comm. Letters, vol. 7, no. 1, pp. 114–117, 2018.
+[6] F. Liang, C. Shen, and F. Wu, “An iterative bp-cnn architecture for channel decoding,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 144–159, 2018.
+[7] K. Yashashwi, A. Sethi, and P. Chaporkar, “A learnable distortion correction module for modulation recognition,” IEEE Wireless Comm. Letters, vol. 8, no. 1, pp. 77–80, 2019.
+[8] T. OShea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. on Cognitive Comm. and Networking, vol. 3, no. 4, pp. 563–575, 2017.
+[9] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Beery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[10] W. Lyu, Z. Zhang, C. Jiao, K. Qin, and H. Zhang, “Performance evaluation of channel decoding with deep neural networks,” in 2018 IEEE International Conf. on Comm. (ICC). IEEE, 2018, pp. 1–6.
+[11] T. S. Rappaport, S. Sun, R. Mayzus, H. Zhao, Y. Azar, K. Wang, G. N. Wong, J. K. Schulz, M. Samimi, and F. Gutierrez, “Millimeter wave mobile communications for 5g cellular: It will work!” IEEE Access, vol. 1, pp. 335–349, 2013.
+[12] A. El Gamal and Y.-H. Kim, Network Information Theory. Cambridge university press, 2011.
+
+

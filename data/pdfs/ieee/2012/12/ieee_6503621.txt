@@ -1,0 +1,898 @@
+Globecom 2012 - Symposium on Selected Areas in Communications
+
+Choosing “green” codes by simulation-based modeling of implementations
+Karthik Ganesan†, Yang Wen†, Pulkit Grover‡, Andrea Goldsmith‡, Jan Rabaey† †-University of California, Berkeley ‡-Stanford University
+{karthik.ganesan,yw}@berkeley.edu, pulkit@stanford.edu, andrea@wsl.stanford.edu, jan@eecs.berkeley.edu
+
+Abstract— How do we design an error correcting code and a corresponding decoding implementation to minimize not just the transmit power, but the sum of transmit and decoding power? Recent interest in this question has led to new fundamental results that show the traditional approach of designing the code and the decoder implementation in isolation can be suboptimal. However, joint design of codes and their corresponding decoder implementations can be hard simply because of the sheer number of possibilities for both, and the human effort often required in optimizing the decoder implementation for a given code. In this paper, we suggest taking a middle-path between analyzing theoretical models of decoding and building decoder implementations. Based on circuit simulations of power consumption of decoders for simple regular LDPC codes, we develop circuit models for the decoding power for larger and more complex (but still regular) LDPC codes. These models are then used to search for the best code and corresponding decoder (within a limited set) for a given communication distance and error probability.
+Index Terms— Joint design of codes and decoders, circuit models for decoding power, system-level power consumption, iterative message-passing decoding, low-density parity-check (LDPC) codes.
+I. INTRODUCTION
+The design of error correcting codes and their corresponding decoders is usually done in isolation. The code is often designed first with the goal of minimizing the gap from Shannon capacity [1] and attaining the target error probability. To reflect the concerns of implementation, the code is usually chosen from a family of codes that can be decoded with low “complexity1” [3]. On the implementation side, decoders are carefully designed (see e.g. [4]) for the chosen code with the goal of consuming low power while achieving the required decoding throughput2. This “division of labor” has been extremely successful and forms the paradigm behind many modern long-distance communication system designs.
+However, this approach can be suboptimal for shortdistance communication, where the power consumed in decoding can dominate transmit power [5], [6]. For instance, while irregular LDPC codes approach capacity for many channels (e.g. [7]), the 10 GBASE-T standard for communication within a data-center [8] uses regular LDPC codes because they require less decoding power (due to reasons explained in [5]). In short-distance wireless communication systems (e.g. wireless LAN, or the 60 GHz band [6]), it has
+1This complexity is often measured in the “number of operations” in an approximate order sense. In practice, these complexity notions often do not correlate well with the power consumed by the decoder (see e.g. [2]).
+2“Decoding throughput” is the rate of decoding, measured in information bits per second.
+
+been proposed to use uncoded transmission in order to do away with the decoding altogether. Is that the “optimal” strategy? How do we design codes and corresponding decoder implementations so that the total (transmit + decoding)3 power, is minimized?
+Shannon-theoretic limits, complemented by modern coding-theoretic constructions [3], have provided codes that are provably good for minimizing transmit power. Can we develop a parallel approach in order to minimize the total system power? With simplistic encoding/decoding models, the issue of fundamental limits on total (transmit + encoding + decoding) power has been addressed in some recent works [5], [9], [10], [11], [12]. These fundamental limits abstract power consumed in computational nodes [5], [11], [12] and wiring [10], [9] in the encoder/decoder implementation and can provide insights into the choice of the code and its corresponding decoding algorithm.
+While such theoretical insights can serve to guide the choice of the code family, the simplicity of these theoretical models, which (to an extent) is needed4 in order to be able to obtain fundamental bounds, also limits their applicability. Even if the models are refined further, the large-deviations techniques used [5], [9] are usually tight only in asymptopia (even though the obtained bounds are non-asymptotic). Thus, at reasonably high error probability (e.g. 10−6) and small distances (e.g. less than five meters), it is unlikely that the bounds themselves can be used to give precise answers on what codes to use.
+Given the limitations of the fundamental bounds, how do we search for a total-power-efficient code & decoder? After all, for a given blocklength, there are super-exponentially many possible codes. Further, for each code, there are many possible decoding algorithms. Even when the code and its corresponding decoding algorithm are fixed, there are many possible implementation architectures. Even today, the design and optimized implementation of just a single decoder requires significant effort. It is therefore infeasible to implement and measure the power consumption of every code and decoder in order to determine the best combination for a given application.
+In this work, we instead take a middle path that mixes theory and practice. First, observing the order-optimality of
+3Work is currently under progress for accounting for processing power in the ADCs and the equalizers.
+4In a nutshell, the models assume that any synchronous VLSI circuit is a set of computational nodes connected to each other using wires. The simplicity of the models is by necessity: they have to be general and yet analyzable.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-4673-0921-9/12/$31.00 ©2012 IEEE
+
+3286
+
+regular LDPC codes in some theoretical models [5] (namely those where computational nodes consume all the power), we restrict our attention to regular LDPC codes5. In order to be able to make an educated choice of degrees of the LDPC code and the code girth, in Section IV, we develop models of decoding power consumption for simple decoding algorithms and regular LDPC codes. These models are developed by rigorously simulating (post-layout) power consumption for some simple codes and decoders, breaking down the circuit power into its constituents (e.g. power consumed in computation at nodes, wires, etc.), and generalizing these constituents of power to all structurally similar codes.
+Fig. 1: The question this work addresses: what is the most power-efficient pairing of a code & decoding algorithm for a given distance and error probability ? Shannon theory provides the answer at large distances, ignoring the decoding power. Including decoding power in the optimization brings out another dimension of the problem: the path-loss of communication. The question therefore ties in the distance of communication with the joint choice of code & decoding algorithm.
+These models allow for an exploration of the transmit and decoding power for different codes & decoding algorithms without requiring actual decoder implementations. Traditional Shannon-theoretic analysis yields transmitpower-centric results, which are plotted as “waterfall” curves (with corresponding “error-floors,” see e.g. [13]) demonstrating how close the code performs to the ideal Shannon limit. There, the channel path-loss can usually be ignored because it shows up as a scaling factor for the term to be optimized, namely, the transmit power, thereby not affecting the optimizing code. Since we are interested in total power, the path-loss affects the code choice. For simplicity of understanding, we translate path-loss into a more relatable metric — communication distance — using a simple model of path-loss. The resulting question is crystallized in Fig. 1: What code and corresponding decoding algorithm minimize the total (i.e. transmit + decoding) power for a given transmit distance and error probability?
+In Section V, we present our optimization results for this question for the limited class of codes and decoders we consider. The results show a gradual increase in the complexity of both the code design and its corresponding decoding algorithm as the communication distance is increased, or as the target error probability is lowered. Our hope is that this method of presenting optimizing codes and corresponding decoders can help designers choose codes and their decoders with additional insight and guidance. While the results here
+5While this is a start, we believe that at small blocklengths it is important to investigate other (more classical) coding techniques such as RS codes and BCH codes.
+
+are merely suggestive of what the true optimal code & decoding algorithm would look like, the larger goal is to simulate and model a larger number of codes and decoders before implementing them.
+II. PROBLEM STATEMENT
+
+Suppose we want to design a point-to-point communica-
+
+tion system that operates over a given channel. We are given
+
+a target error probability , communication distance , and
+
+system data-rate
+
+that the link must operate at. Our
+
+general goal is to find the joint choice of code & decoding algorithm ( ∗, ∗) such that
+
+( ∗, ∗) = arg min (
+∈ ,∈
+
+( , )+
+
+( , )) ,
+
+where
+
+(, )+
+
+( , ) is the minimum required
+
+transmit + decoding power for ( , ) to satisfy the system
+
+error-probability, distance, and data-rate requirements. In this
+
+work, we consider to be the set of regular, binary LDPC
+
+codes of variable-node (VN) degrees 3 ≤ ≤ 5, check-
+
+node (CN) degrees 4 ≤ ≤ 13, and code girths ∈ {6, 8}.
+
+In addition, for variable nodes of degree = 3, we also
+
+include codes of girths 10, 12, and 14 in our analysis.
+
+Because of our focus on simple decoders, we consider
+
+to be a set consisting of only two iterative message-passing
+
+decoding algorithms that pass one-bit (Gallager-A [14]) or
+
+two-bit (as proposed in [15]) messages.
+
+III. SYSTEM MODEL, ASSUMPTIONS, AND NOTATION
+
+The channel is assumed to be binary-input AWGN with
+
+flat-fading, with noise variance 2 =
+
+, where is the
+
+Boltzmann constant (1.38×10−23 J/K), is the temperature
+
+(300 K) and is the passband bandwidth of the channel.
+
+The power is assumed to decay with the path-loss model of
+
+1/ , where is the path-loss coefficient. The transmission
+
+strategy uses BPSK or square-QAM modulation, mapping
+
+codeword bits to constellation symbols. We assume the
+
+transmitter signals at a rate of symbols/s and that the
+
+minimum square constellation size ( ) which satisfies the
+
+system data-rate requirement is chosen. Explicitly, is
+
+always the smallest square of an even integer for which:
+
+≥2
+
+/( ×
+
+)
+
+Here,
+
+() is the rate of the code: 1 − for regular
+
+LDPC codes. The decoder is assumed to perform a hard-
+
+decision on the observed channel outputs before starting the
+
+decoding process, thereby first recovering noisy codeword
+
+bits transmitted through a Binary Symmetric Channel (BSC)
+
+before decoding them.
+
+The received SNR (
+
+)
+0
+
+for
+
+our
+
+system
+
+is
+
+obtained
+
+as
+
+a function of system parameters and transmit power ,
+
+assuming the power-law propagation model:
+
+where quency
+
+0=
+
+( ) log2(
+
+, )
+
+is the wavelength of transmission at center frein Hz, and = 3 × 108/ . The channel error
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3287
+
+probability for BPSK transmissions is simply:
+
+(√ )
+
+ℎ=ℚ
+
+0,
+
+and the channel error probability for -ary square QAM
+
+is [16]:
+
+ℎ
+
+=
+
+1 √ log2(
+
+√ log2 (
+∑
+) =1
+
+) (1−2− )√ ∑
+=0
+
+−1
+
+[⌊ (−1)
+
+×√2
+
+⌋ −1
+
+(
+
+⌊
+
+× 2 −1 −
+
+×√2
+
+−1
+
++
+
+1 ⌋) 2
+
+⎛
+
+√
+
+⎞⎤
+
+×2ℚ ⎝(2 + 1)
+
+3 0 log2( ) ( − 1) ⎠⎦
+
+program for this LDPC code generation algorithm can be found online at [20]. The CAD flow used for simulating decoding power and throughput for the chosen codes is detailed in the full online version of this paper [21, Appendix I] and a flow diagram is presented in Fig. 2.
+
+where ℚ is the right-tail cumulative density function of
+
+the standard normal distribution, ℚ(
+
+)=
+
+√1 2
+
+∫∞
+
+−2 2
+
+.
+
+Hence, ℎ can be determined from , , and . For a
+
+target , the required channel error probability ℎ can be
+
+determined for each decoding algorithm (see Fig. 3), which
+
+can be used to find the minimum required
+
+to meet all
+
+the system-level specifications when using a given pairing of
+
+code & decoding algorithm.
+
+For presenting our results in Section V, we assume the
+
+decoding throughput is required to be greater than or equal
+
+to
+
+= 7 Gb/s. We assume a channel center frequency
+
+of = 60 GHz and a bandwidth of = 7 GHz.
+
+The communication distances considered in this work are
+
+significantly larger than the wavelength of transmission (≈
+
+0.5 cm) so that the “far-field approximation” applies.
+
+IV. MODELING THE DECODER IMPLEMENTATION
+Given a code & decoding algorithm, we would like to calculate the required decoding power, , and achievable decoding throughput . Even within the family of regular LDPC codes and specified decoding algorithms, the decoding circuits can be implemented in multiple ways: they can range from fully-parallel to bit-serial [13]. The choice of decoder architecture, implementation technology, and even process-specific transistor options can have a significant impact on the decoding power [17]. In this work, we only model synchronous, fully-parallel decoding architectures in 90 nm CMOS processes with 7 metal-layers and a standard threshold voltage option. However, a true solution to the optimization problem described in Section II would require optimization of + over not just codes and decoding algorithms, but also decoder architectures, implementation technologies, and process options.
+A. Simulation methodology
+Our models for large-degree LDPC codes are constructed based on post-layout simulations of four simple decoders for two simple codes. The codes are both (3, 4)-regular LDPC codes (of girth 6 and 8) that are decoded using one-bit and two-bit message-passing decoding algorithms. The codes are generated using the guess-and-test algorithm in [18] and [19] and are of blocklength 20 and 36 respectively. The MATLAB
+
+Fig. 2: A diagram of the CAD flow used for designing and simulating onebit and two-bit decoders for (3, 4)-regular LDPC codes of girth 6 and 8.
+
+B. Generalizing the model
+
+Even with our imposed restrictions on the LDPC code
+
+girth, degrees, and decoder message-passing bits, creating a
+
+decoding model that applies to all combinations of these code
+
+parameters requires many simplifying assumptions. Decoders
+
+are assumed to operate at a fixed supply voltage (chosen to
+
+be 0.6 V: the minimum supply voltage used in our initial
+
+simulations for which all decoders meet timing constraints).
+
+The number of decoding iterations, ( ), is always assumed
+
+to be equal to the maximum number of independent iterations
+
+for the code (i.e.,
+
+()
+
+=
+
+⌊
+
+−2 4
+
+⌋).
+
+Any
+
+larger
+
+number
+
+of iterations introduces correlations in messages, rendering
+
+density-evolution analysis [3] of error probability invalid6.
+
+Any smaller number of iterations over-invests in interconnect
+
+power [2]. A figure showing the values as a function of
+
+channel error probabilities ℎ for (3, 4)-regular LDPC codes
+
+decoded using one-bit and two-bit decoding algorithms for
+
+1, 2, or 3 independent iterations is given in Fig. 3.
+
+6Note that in practice, decoding is often run for a larger number of
+
+iterations because at large blocklengths, there is often a decrease in error
+
+probability as the number of iterations is increased. However, in that case,
+
+the density-evolution algorithm does not yield the correct error probability
+
+as it will vary based on the specific code construction. For convenience of
+
+modeling and analysis in this paper, we assume
+
+(
+
+)=⌊
+
+−2 4
+
+⌋.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3288
+
+It is also assumed that “minimum”-blocklength (of codes found using the algorithm in [18] for girths between 6 and 10, [22] for girth 12 codes, and [23] for even larger girths) codes are chosen for given , , and . Hence, the blocklength ( ( , , )) is expressed as a function of these code-parameters. Because our initial simulations were performed on codes of short blocklength, it is likely that the wire-length and chip-area estimations described in [21, Appendix II] become inaccurate for large blocklength codes (e.g. those with girths exceeding 12). In this paper, we sidestep this issue and include some of these codes in our analysis in Section V, but acknowledge that a thorough calibration of the decoding implementation model is needed at such large girths.
+
+Here, ( , , , ) and ( , , , ) are the mod-
+
+eled power consumption of a single VN and CN, respectively,
+
+in the decoder, and
+
+( , , , ) is the modeled
+
+power consumption of a single message-passing interconnect
+
+in the decoder. Note that ( , , ) is equal to the total
+
+number of VNs in the decoder, ( , , ) × is equal to
+
+the total number of CNs, and ( , , ) × × is equal
+
+to the total number of message-passing interconnects. Hence,
+
+this expression is simply a sum of the power consumed by all nodes and interconnects in the circuit7. The modeling
+
+and justification of VN and CN power is detailed in [21,
+
+Appendix III] and the modeling of interconnect power is
+
+detailed in [21, Appendix IV].
+
+C. Satisfying the Required Decoding Throughput
+
+Fig. 3: log10( ) vs. log10( ℎ) for decoders for (3, 4) regular LDPC codes and one and two bit message-passing decoding algorithms. Here
+is the number of message-passing bits and is the number of independent
+decoding iterations.
+
+Our final models for the minimum decoding clock period
+
+, maximum decoding clock frequency
+
+, and
+
+decoding throughput
+
+as functions of , , , are:
+
+( , , , )= ( , )+
+
+− (, , , )
+
++ +2 ( , , , )+ ( , )
+
+( , , , )=(
+
+( , , , ))−1
+
+() ( , , )× 1−
+
+( , , , )= ( )×
+
+(, , , )
+
+Fixing the supply voltage for a given decoder and using the fastest possible decoder clock frequency only allows the decoder to achieve a single throughput. How then do we ensure that our communication system’s data-rate requirement
+(see Section III) is met and what is the required decoding power at this point? For example, in Fig. 4, we show the decoding power vs. decoding throughput for two different hypothetical decoders at a fixed supply voltage. Decoder B requires more power than Decoder A, but it also provides a higher throughput for the same fixed supply voltage. What happens when the application demands throughput that is twice A’s throughput ( , ): can we only use Decoder B? Another possibility is to use two copies of Decoder A in parallel. Together they require twice the power of a single Decoder A and provide twice the throughput, shown by the point ‘2A’ in Fig. 4. In this scenario, we assume that the communication system architecture is modified so that two separate codewords are transmitted at twice the throughput of a single Decoder A. We then assume a multiplexer at the receiver passes a separate codeword to each of the parallel decoders, which decode the two codewords independently.
+(Rdec,B , Pdec,B )
+B
+2A
+
+Decoding power
+(Watts) Pdec
+
+Here, ( , ) is the modeled critical-path logic delay
+
+through a single VN,
+
+and
+
+− ( , , , ) are
+
+the modeled setup time and CLK-Q delay, respectively, for
+
+the message-passing flip-flop at the end of the VN critical
+
+path,
+
+( , , , ) is the modeled worst-case message-
+
+passing interconnect delay, and ( , ) is the modeled
+
+critical-path logic delay through a single CN. The modeling
+
+and justification for each of these components is detailed
+
+in [21, Appendix II].
+
+The final model for the decoding power is:
+
+( , , , )= ( , , )× ( , , , )
+
++ ( , , )× × ( , , , )
+
++ ( , , )×
+
+××
+
+(, , , )
+
+A
+(Rdec,A, Pdec,A)
+
+(0,0)
+
+Decoding throughput Rdec
+(information bits decoded/sec)
+
+Fig. 4: Comparing decoding power vs. decoding throughput for two decoders, A and B for a fixed supply voltage.
+
+We therefore allow for any integer multiple of copies of the same decoder to be used in parallel in order to meet the decoding throughput requirement for the system. One difficulty is that operating two identical decoders in parallel simply doubles the decoding throughput and doubles the decoding power. What if we want a decoding throughput
+
+7In simulations and results from [2], the average percentage of the total decoding power consumed by the other sources (e.g. the global clock-tree) is found to be less than 10% and those components are therefore ignored.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3289
+
+that is, say, 1.5 times the throughput for a single decoder?
+
+In other words, can we interpolate between the points ‘A’
+
+and ‘2A’ in Fig. 4? In cases where integer multiples of
+
+a single decoder’s throughput do not exactly reach
+
+,
+
+we first find the minimum number of parallel decoders that
+
+when combined exceed the required throughput. Calling this
+
+minimum number of decoders , we then assume that the
+
+clock frequency of each of the parallel decoders is slowed
+
+down until the overall throughput of the parallel combination
+
+is exactly
+
+. Explicitly, the formula to determine this
+
+“underclocked” frequency is:
+
+=
+
+( )× × ( , , )×
+
+Because the decoding power is modeled as being linearly
+
+proportional to the decoder clock frequency (see Section IV-
+
+B and [21, Appendix III]), we multiply each individual
+
+decoder’s power by the appropriate frequency scaling factor
+
+=
+
+( , , , ) , and then multiply the result by the
+
+number of parallel decoders to get the total power of the
+
+parallel combination:
+
+= × ( , , , )×
+
+Substituting the equations from Section IV-B which relate
+
+( , , , ) and
+
+( , , , ) and using the ex-
+
+plicit formula above for , we replace and carry out some
+
+algebra to obtain:
+
+= × (, , , )
+
+( )×
+
+× × ( , , )×
+
+×
+
+1 (, , , )
+
+=
+
+(, ,
+
+,
+
+)×
+
+( )× ( , , )×
+
+×
+
+(
+
+(, )×
+
+, )× (, ,
+
+,
+
+)
+
+= ( , , , )×
+
+(, , , )
+
+Hence, we assume that any (throughput, power) point on the line through ‘A’ and ‘2A’ in Fig. 4 can be achieved in this manner (with the obvious exception of points that have negative throughput and power). Therefore, in our analysis in Section V, we assume the decoding throughput is exactly
+and we use the decoding power numbers obtained through this linear scaling of the modeled discrete points.
+
+Fig. 5: A flowchart showing the steps involved in computing the minimum
+
++
+
+at a single point in the ( , ) space.
+
++ . A flowchart showing the steps involved in this
+
+analysis is given in Fig. 5.
+
+An example plot which shows the minimum achievable
+
++
+
+for different values at a fixed distance =
+
+2.8 m and = 3 is given in Fig. 6. The plot also shows the
+
+curve of the optimizing
+
+which achieves the minimum
+
++ , and the Shannon-limit [1] (a fundamental
+
+lower bound on the required
+
+to achieve a given )
+
+for the AWGN channel. The horizontal distance between
+
+the optimizing
+
+curve and the minimum
+
++
+
+curve in Fig. 6 corresponds to the optimizing
+
+. As
+
+decreases, this decoding power increases, indicating an
+
+increase in the total-power-minimizing decoder’s complexity.
+
+V. JOINT OPTIMIZATION OVER CODES & DECODERS
+
+Now, given a subset of codes & decoders, how should a
+
+system designer jointly choose a code & decoding algorithm
+
+to minimize the total system power? Consider the system
+
+model described in Section III and assume the path-loss
+
+coefficient is fixed and known. Then, for each choice of ( ,
+
+), each joint code & decoding algorithm choice requires
+
+some
+
++ , which is found using our optimization
+
+framework. Hence, at each point in the ( , ) space, we can
+
+compare the values obtained by all combinations of codes
+
+& decoding algorithms and find the minimum achievable
+
+Fig. 6: A plot of log10( ) vs. minimum achievable
+
++
+
+for
+
+= 3 at a fixed distance of = 2.8 m. The dashed curve shows the
+
+optimizing . The Shannon-limit for the channel is also plotted.
+
+Intuitively, it is clear that the form of this total power curve will change with communication distance. For improved understanding, we need to consider incorporating distance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3290
+
+as well in Fig. 6. Instead of representing the resulting data
+
+by three dimensional plots (that are less revealing), we use
+
+two-dimensional contour plots in the ( , ) space as was
+
+suggested in Fig. 1. An example to illustrate this method
+
+is shown in Fig. 7, which compares joint code & decoding
+
+algorithm choices for path-loss coefficient = 3. In the
+
+top plot, the contours represent regions in the ( , ) space
+
+where specific combinations minimize
+
++ , and in
+
+the bottom plot, regions in the ( , ) space are divided
+
+based on the minimum + . The best choices turn
+
+out
+
+to
+
+be
+
+rate
+
+1 2
+
+codes
+
+because
+
+lower
+
+rate
+
+codes
+
+require
+
+large constellations for a 7 Gb/s data-rate, thus requiring
+
+large transmit power for the same ℎ, and higher rate
+
+codes require larger decoding power. Some tradeoffs between
+
++ and code & decoder complexity can be observed
+
+in these plots: according to our model, to achieve minimum
+
+power, decoder message-passing bits must increase with
+
+and code girth must increase with decreasing .
+
+decoders can outperform uncoded transmission at reasonably
+
+low error probabilities and distances of a few meters. A three-
+
+dimensional plot of the gain in
+
++
+
+when uncoded
+
+transmission is excluded vs. when it is included is shown in
+
+Fig. 9 at all points in the ( , ) space.
+
+Fig. 8: Contour plot of the optimizing joint code & decoding algorithm
+
+choice (top) and plot of the lowest achievable
+
++
+
+in dBm (bottom)
+
+for regular-LDPC codes, also including uncoded BPSK as an option. For
+
+these plots, = 3. The contours in the top plot are labeled with VN degree
+
+, CN degree , code girth , and number of message-passing decoding
+
+bits of the optimizing code and decoder. A close inspection reveals the
+
+kink in the bottom plots due to the use of uncoded transmission strategy.
+
+The plot is best viewed in color.
+
+Fig. 7: Contour plot of the optimizing joint code & decoding algorithm
+
+choice (top) and lowest achievable
+
++
+
+in dBm (bottom) for
+
+regular-LDPC codes for = 3. The contours in the top plot are labeled
+
+with the VN degree ( ), CN degree ( ), code girth , and number of
+
+message-passing decoding bits of the optimizing code and decoder. The
+
+plot shows a gradual increase in the complexity of both the optimizing
+
+code and corresponding decoding algorithm as the communication distance
+
+is increased, or as the target error probability is lowered. The plot is best
+
+viewed in color.
+
+So, how does the inclusion of uncoded transmission as a possible coding strategy change the picture? Contour plots for = 3 with uncoded transmission included are given in Fig. 8. Comparing Fig. 8 with Fig. 7, we see that when uncoded transmission is included in the plots, it overtakes areas in the ( , ) space where is high and is very small. However, the plots suggest that simple codes and
+
+Fig. 9: The plot shows the relative disadvantage of excluding uncoded transmission from the set of codes in the optimization (for = 3). Uncoded transmission is better at very short distances and high target error probabilities. But when distance is larger, or is low, coding can outperform uncoded transmission even in the total power sense. The plot is best viewed in color.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3291
+
+VI. DISCUSSIONS AND CONCLUSIONS
+
+In this work we develop an optimization paradigm for
+
+jointly choosing codes & decoding algorithms for minimiz-
+
+ing total (transmit + decoding) power in point-to-point com-
+
+munication. Because of the effort required in implementing
+
+or even simulating a single decoder, we construct models for
+
+power consumed in decoding implementations for different
+
+codes and decoding algorithms based on simulations for
+
+simple codes and their corresponding decoders. Because
+
+we are interested in jointly minimizing total power, the
+
+communication distance (which could be ignored in code-
+
+choice at large distance) becomes important. This is why
+
+our results are represented in the three dimensional space of
+
+error probability, distance, and total power.
+
+Our models of decoding implementations predict that
+
+simple
+
+regular-LDPC
+
+codes
+
+of
+
+rate
+
+1 2
+
+can
+
+achieve
+
+lower
+
+error probabilities than uncoded transmission while still
+
+consuming the same total power, even at distances as low as
+
+2 meters. The results of this paper suggest the use of uncoded
+
+transmission at high error-probabilities and distances less
+
+than 1 meter. However, in these regimes, the theoretical
+
+suggestions of codes that minimize total power [5] can
+
+be misleading because they are derived in the low error
+
+probability limit. Thus in these regimes, it is possible that
+
+other code families (e.g. Reed-Solomon codes) might be
+
+more efficient in terms of total power, and hence they need
+
+to be examined.
+
+The models of decoding implementation developed in
+
+this work are fairly complicated even for simple decoding
+
+algorithms. These are therefore in stark contrast with their
+
+theoretical counterparts in [5], [9], [24], where the simplicity
+
+of the models makes the theoretical analysis more tractable.
+
+We think that a middle-ground which makes the idealized
+
+decoding models of [5], [9], [24] more realistic while keeping
+
+them analyzable is needed in order to obtain improved
+
+guidance from theory on minimizing total power in practical
+
+implementations.
+
+ACKNOWLEDGEMENTS
+This research was supported in part by the Interconnect Focus Center of the Semiconductor Research Corporation, and in part by the NSF Center for Science of Information (CSoI). We thank Anant Sahai for stimulating discussions, and Jose Moura for providing code constructions that we started our simulations with. We thank the students, faculty, staff and sponsors of the Berkeley Wireless Research Center and the Wireless Foundations group at Berkeley. In particular, Brian Richards assisted with the simulation flow and Tsung-Te Liu advised us on modeling circuits. We also acknowledge STMicroelectronics for making available the technology information that was used in our simulations. Finally, we thank the anonymous reviewers for pointing out errors in the original submission of this paper.
+
+REFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” Bell Sys. Tech. Jour., vol. 27, pp. 379–423, 623–656, Jul./Oct. 1948.
+
+[2] K. Ganesan, P. Grover, and J. Rabaey, “The power cost of overdesigning codes,” in Proc. of the 2011 IEEE Workshop on Signal Processing Systems (SiPS), Oct. 2011, pp. 128 –133.
+[3] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge University Press, 2007.
+[4] Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “An efficient 10 GBASE-T ethernet LDPC decoder design with low error floors,” IEEE Journal of Solid-State Circuits, vol. 45, no. 4, pp. 843 –855, Apr. 2010.
+[5] P. Grover, K. Woyach, and A. Sahai, “Towards a communicationtheoretic understanding of system-level power consumption,” IEEE J. Select. Areas Commun., vol. 29, no. 8, pp. 1744 – 1755, Sept. 2011.
+[6] C. Marcu, D. Chowdhury, C. Thakkar, J.-D. Park, L.-K. Kong, M. Tabesh, Y. Wang, B. Afshar, A. Gupta, A. Arbabian, S. Gambini, R. Zamani, E. Alon, and A. Niknejad, “A 90 nm CMOS low-power 60 GHz transceiver with integrated baseband circuitry,” IEEE J. SolidState Circuits, vol. 44, no. 12, pp. 3434 – 3447, 2009.
+[7] S.-Y. Chung, J. Forney, G.D., T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58 –60, Feb. 2001.
+[8] IEEE Std. 802.3an-2006: “Physical Layer and Management Parameters for 10 Gb/s Operation, Type 10GBASE-T,” amendment to IEEE Std. 802.3-2005. IEEE, Sept. 2006.
+[9] P. Grover, A. Goldsmith, and A. Sahai, “Fundamental limits on complexity and power consumption in coded communication,” in extended version of paper presented at ISIT’12, Feb. 2012,, http: //www.stanford.edu/∼pulkit/files/ISIT12FullProofs.pdf.
+[10] P. Grover and A. Sahai, “Fundamental bounds on the interconnect complexity of decoder implementations,” in Proc. of the 45th Annual Conference on Information Sciences and Systems (CISS), March 2011, pp. 1 – 6.
+[11] ——, “Green codes: Energy-efficient short-range communication,” in Proceedings of the 2008 IEEE Symposium on Information Theory, Toronto, Canada, Jul. 2008.
+[12] ——, “Time-division multiplexing for green broadcasting,” in Proceedings of the 2009 IEEE Symposium on Information Theory, Seoul, South Korea, Jul. 2009.
+[13] Z. Zhang, “Design of LDPC decoders for improved low error rate performance,” Ph.D. dissertation, UC Berkeley, Berkeley, CA, 2009.
+[14] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[15] S. Chilappagari, D. Declercq, L. Sassatelli, and B. Vasic, “Two-bit message passing decoders for LDPC codes over the binary symmetric channel,” in IEEE International Symposium on Information Theory (ISIT), July 2009, pp. 2156 –2160.
+[16] K. Cho and D. Yoon, “On the general BER expression of one and twodimensional amplitude modulations,” IEEE Trans. Commun., vol. 50, no. 7, pp. 1074 – 1080, July 2002.
+[17] A. Darabiha, A. Chan Carusone, and F. Kschischang, “Power reduction techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43, no. 8, pp. 1835 –1845, Aug. 2008.
+[18] Y. Wang, J. S. Yedidia, and S. C. Draper, “Construction of high-girth qc-LDPC codes,” Mitsubishi Electric Research Laboratories, Tech. Rep. TR2008-061, Sept. 2008.
+[19] M. P. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inform. Theory, vol. 50, no. 8, pp. 599 – 618, Aug. 2004.
+[20] K. Ganesan, “Search and verification program for LDPC codes,” April 2011, http://inst.eecs.berkeley.edu/∼karthikg/LDPCGIRTH.m.
+[21] K. Ganesan, Y. Wen, P. Grover, A. Goldsmith, and J. Rabaey, “Choosing “green” codes by simulation-based modeling of implementations,” in extended version of paper to appear in Proceedings of IEEE GLOBECOM 2012, March 2012, http://inst.eecs.berkeley.edu/ ∼karthikg/globecom2012full.pdf.
+[22] T. Zhang and K. Parhi, “Joint (3,k)-regular ldpc code and decoder/encoder design,” IEEE Trans. Signal Processing, vol. 52, no. 4, pp. 1065 – 1079, April 2004.
+[23] I. Bocharova, F. Hug, R. Johannesson, B. Kudryashov, and R. Satyukov, “Some voltage graph-based ldpc tailbiting codes with large girth,” in Proc. of the 2011 IEEE International Symposium on Information Theory (ISIT), Aug. 2011, pp. 732 –736.
+[24] P. Grover, A. Goldsmith, A. Sahai, and J. Rabaey, “Information theory meets circuit design: Why capacity-approaching codes require more chip area and power,” in Proc. of the 49th Annual Allerton Conference on Communication, Control, and Computing, Sept. 2011, pp. 1392 – 1399.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:50:50 UTC from IEEE Xplore. Restrictions apply.
+3292
+
+

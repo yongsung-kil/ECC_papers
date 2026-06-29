@@ -1,0 +1,1459 @@
+1
+Learning to Decode Quantum LDPC Codes Via Belief Propagation
+Mohsen Moradi , Vahid Nourozi , Salman Habib and David G. M. Mitchell
+
+arXiv:2603.10192v1 [cs.IT] 10 Mar 2026
+
+Abstract—Belief-propagation (BP) decoding for quantum lowdensity parity-check (QLDPC) codes is appealing due to its low complexity, yet it often exhibits convergence issues due to quantum degeneracy and short cycles that exist in the Tanner graph. To overcome this challenge, this paper proposes a reinforcementlearning (RL) approach that learns (offline) how to decode QLDPC codes based on sequential decoding trajectories. The decoding is formulated as a Markov decision process with a local, syndrome-driven state representation of the underlying RL agent. To enable fast inference, critical for practical implementation, we incrementally update our RL-based QLDPC decoder using secondorder neighborhoods that avoid global rescans. Simulation results on representative QLDPC codes demonstrate the superiority of the proposed RL-based QLDPC decoders in terms of performance and convergence speed when compared to flooding and random sequential schedules, while achieving performance competitive with state-of-the-art BP-based decoders at comparable complexity.
+Index Terms—Quantum error correction, quantum LDPC codes, CSS codes, stabilizer codes, syndrome decoding, degeneracy, Pauli noise, depolarizing channel, belief propagation, reinforcement learning, sequential scheduling, cluster-based scheduling.
+I. INTRODUCTION
+Quantum error correction is essential for reliable quantum computing, since even small physical error rates can accumulate and corrupt computations without mitigation [1], [2], [3]. Quantum low-density parity-check (QLDPC) codes have emerged as a promising class of codes for fault tolerance because they can protect multiple logical qubits with sparse stabilizer constraints. In particular, recent advances in QLDPC constructions have produced codes with constant rate and linear growth of minimum distance, making them increasingly attractive for scalable quantum architectures [4], [5], [6], [7]. However, the decoding of QLDPC codes poses significant challenges. Standard belief propagation (BP) decoding of classical LDPC codes does not result in good performance for QLDPC decoding due to the presence of numerous short cycles, which violate BP’s independence assumptions, and the phenomenon of degeneracy [1], where multiple distinct error patterns yield the same syndrome, creating symmetric pseudocodewords that can confuse the decoder. As a result, applying a conventional BP decoder for QLDPC codes typically fails to
+Mohsen Moradi, Vahid Nourozi, and David G. M. Mitchell are with the Klipsch School of Electrical and Computer Engineering, New Mexico State University, Las Cruces, NM 88003, USA (e-mail: moradi23@nmsu.edu; nourozi@nmsu.edu; dgmm@nmsu.edu).
+Salman Habib is with the Dept. of Electrical and Computer Engineering, Texas A & M University, Texarkana, TX 75503, USA (e-mail: shabib@tamut.edu).
+
+converge, frequently oscillating or getting trapped in a wrong error coset, especially at low error rates.
+Techniques attempting to maintain the low complexity of BP decoding and achieve improved performance for QLDPC codes has drawn a lot of attention [8], [9], [10], [11]; in particular, techniques to address convergence failures. Hybrid postprocessing decoders augment BP with a secondary decoding stage to correct its mistakes. For example, BP with ordered statistics decoding (BP-OSD) [12] runs BP first, then applies an OSD that solves a system of linear equations to find an error consistent with the syndrome, improving the convergence probability. Various modifications to this have been proposed, see, e.g., [13]. Likewise, BP with stabilizer inactivation (BP-SI) temporarily disables or inactivates certain check nodes (CNs) during BP when they are suspected of causing trapping sets, thereby breaking the symmetry caused by degenerate errors [14]. These hybrid strategies can close much of the performance gap of plain BP, but they come at the cost of substantially higher computation (e.g. Gaussian elimination for OSD). More recently, [15] proposes BP with localized statistics decoding (BP-LSD), which achieves performance comparable to BP-OSD while reducing post-processing cost: instead of performing a single global elimination over the entire decoding graph, LSD restricts the linear solves to multiple small, independently processed subgraphs (which can also be parallelized).
+Researchers have also investigated modifying the BP process itself. Overcomplete-check BP and its quaternary neural extension provide a low-latency, high-performance decoding framework [16]. Another work that uses the BP messagepassing process itself to improve convergence is BP guided decimation (BPGD) [17]. BPGD interleaves fixed runs of BP with decimation steps that freeze the most reliable variable nodes (VNs) (i.e., fix certain qubit error values to 0 or 1 based on high-confidence beliefs) to inject asymmetry into the decoding. By sequentially fixing VNs, BPGD shrinks the solution space and avoids the oscillations of loopy BP, reducing the failure rate due to non-convergence. This decimation approach can achieve error-rate performance on par with BP-OSD and BP-SI, without the need for expensive linearalgebra post-processing. Variants of this idea incorporating soft reliability thresholds and partial decimation have further improved BP’s efficacy at the cost of some complexity [18].
+In [19], flooding BP is replaced by sequential BP with random scheduling, which was shown to further improve the decoder performance in terms of both convergence speed and error performance. These results suggest that injecting sequential asymmetry into BP (either by decimation or scheduling) is a powerful strategy to combat the traps caused by degeneracy. In
+
+2
+
+classical coding theory, it is well known that the schedule of message updates in BP can influence its performance. Instead of the conventional flooding schedule (updating all nodes in parallel each round), one can use a sequential (serial) schedule that updates one node at a time in some order. Even a simple randomized sequential update (often called shuffled BP) can mitigate the adverse effects of short cycles and improve convergence for classical LDPC decoders [20]. Researchers have subsequently cast schedule optimization as a learning problem, using reinforcement learning (RL) agents to discover effective update sequences automatically [21], [22], [23].
+Random scheduling has been explored for decoding QLDPC codes in [19]. It was demonstrated there that processing QLDPC VNs or CNs in a fixed sequential order can stabilize BP and reduce stall patterns. For instance, a sequential BP decoder that updates each CN or VN one-by-one (instead of all-at-once) achieves a lower frame error rate (FER) than standard flooding BP on several QLDPC benchmarks for a moderate cap on the number of iterations. In fact, a sequential update strategy is shown to outperform a BP-OSD-0 decoder for some QLDPC codes, at roughly the same average decoding complexity as BP decoding. These findings underscore that the order of message updates is crucial for breaking the symmetric failures of BP on QLDPC codes.
+In this paper, we propose an RL framework for learning effective sequential schedules for BP-based decoding of QLDPC codes. Our main contributions are as follows:
+• We first establish the RL-based decoding approach in the context of Calderbank-Shor-Steane (CSS) codes for an independent Pauli X channel by casting the decoder scheduling as a Markov decision process with a local, syndrome-driven state, where for each candidate VN, the state is determined by the residual mismatch pattern on its adjacent CNs, which remains small because the Tanner graph is sparse. A Q-learning agent then selects VN updates without replacement within each BP iteration, enabling the decoder to inject controlled asymmetry purely through the update order, while maintaining the underlying sequential VN scheduling (SVNS) message-update rule;
+• To make the learned policy practical at block-lengths of interest, we develop a fast inference implementation that incrementally maintains the residual syndrome, local states, and scheduling priorities using only the secondorder neighborhood affected by a hard-decision flip, avoiding global rescans and reducing overhead;
+• We extend our proposed learning-based scheduling to depolarizing noise by using a two-stream (quaternarycoupled) SVNS update and quaternary hard decisions.
+Numerical results demonstrate the superiority of the proposed RL-based QLDPC decoders in terms of performance and convergence speed when compared to flooding and random sequential schedules, while achieving performance competitive with state-of-the-art BP-based decoders at comparable complexity. Finally, we note that our method is modular, i.e., the proposed learned sequential schedules can be combined with other techniques providing a further way to improve both convergence behavior and end-to-end decoding performance.
+
+The remainder of this paper is organized as follows. Section II reviews the necessary background on stabilizer and CSS QLDPC codes, syndrome-based decoding, and BP/SVNS message passing. In Section III, we introduce our RL formulation for state-dependent SVNS and establish the required notation. Section IV presents an efficient implementation based on incremental/local updates to reduce inference-time complexity. Section V extends the RL scheduling framework to the depolarizing channel and develops the corresponding notation and update rules. Section VI reports numerical results on several standard QLDPC codes and compares our methods with state-of-the-art decoders. Finally, Section VII concludes the paper.
+
+II. BACKGROUND
+
+A. Stabilizer and CSS QLDPC Codes
+
+Quantum stabilizer codes are the quantum analog of classical linear block codes. They are specified by a set of commuting Pauli operators (stabilizer generators) whose joint +1 eigenspace defines the codespace [1]. Each stabilizer acts as a parity-check measurement on a subset of qubits, and commutativity ensures that all stabilizers can be measured simultaneously without disturbing the encoded logical information.
+A stabilizer code with m generators can be represented by a binary symplectic matrix H = [ HX HZ ] ∈ {0, 1}m×2n, where the i-th row specifies the X-support and Z-support of the i-th stabilizer generator. The commutativity of all stabilizers is equivalent to the symplectic orthogonality condition
+
+HX HZ⊤ + HZ HX⊤ = 0 over F2.
+
+In this paper, we restrict attention to CSS codes [24], a widely
+
+used subclass of stabilizer codes. A CSS code splits into X-
+
+type and Z-type checks. In the CSS construction adopted here,
+
+we use
+
+HX =
+
+0 G2
+
+,
+
+HZ =
+
+H1 0
+
+,
+
+where H1 ∈ {0, 1}(n−k1)×n is the parity-check matrix of a classical code C1 and G2 ∈ {0, 1}k2×n is the generator matrix
+of another classical code C2. The commutativity condition reduces to G2H1⊤ = 0 (equivalently C2 ⊆ C1).
+
+B. Syndrome decoding and degeneracy (X-only channel) In this paper we first focus on the independent Pauli-X error
+channel for conceptual clarity. In this setting the physical error is a binary vector e ∈ {0, 1}n (bit flips on n qubits). The relevant syndrome component is
+s ≜ H1e ∈ {0, 1}m1 , m1 = n − k1,
+A decoder outputs an estimate eˆ such that
+H1eˆ ≡ s (mod 2).
+A key difference from classical decoding is degeneracy, where multiple distinct physical error patterns can produce the same syndrome when they differ by stabilizers [1]. In the present X-only CSS setting, if two error vectors differ by a codeword in ker(H1), they are syndrome-equivalent
+
+3
+
+and correspond to the same error coset. This degeneracy can create many competing solutions for the syndrome with similar likelihood, which complicates BP and can lead to decoding failure.
+Importantly, matching the measured syndrome is not sufficient for successful quantum decoding. Even if the decoder outputs an estimate eˆ such that H1eˆ = s, the correction can still induce a logical error if eˆ lies in a different logical coset than the true error e (i.e., if the residual difference eˆ ⊕ e contains a nontrivial logical component rather than being generated solely by stabilizers). In contrast, we call it a decoder failure when the algorithm terminates without producing any estimate eˆ that satisfies H1eˆ = s within its iteration or time budget. The main performance metric is the frame error rate (FER), defined as the probability that decoding is not successful, i.e.,
+FER ≜ Pr logical error or decoder failure .
+
+In this work we use sequential variable node scheduling
+(SVNS): instead of updating all VNs in parallel, we pick one VN vi at a time and apply one local BP-style update as in [19]. We maintain variable beliefs as log-likelihood ratios (LLRs) Li and edge messages mi→j on each Tanner-graph edge (vi, cj). A single SVNS update at a VN vi has the following steps:
+1) Compute check-to-variable messages mj→i for each neighbor j ∈ N (vi) using the standard BP tanh-product rule with the syndrome sign (−1)sj as
+
+mj→i = 2 atanh (−1)sj
+
+tanh
+
+mi′ →j 2
+
+;
+
+i′∈N (cj )\{i}
+(1)
+
+2) Update the belief at VN vi as
+
+Li ← µx +
+
+mj→i;
+
+j∈N (vi)
+
+C. Residual Mismatch We define the residual mismatch vector
+
+3) Update outgoing VN to CN messages as mi→j ← Li − mj→i, ∀j ∈ N (vi);
+
+δ ≜ s ⊕ (H1eˆ) ∈ {0, 1}m1 .
+We say that CN j is satisfied if δj = 0 and unsatisfied if δj = 1. We define the mismatch weight
+m1
+w ≜ ∥δ∥1 = δj.
+j=1
+This residual view is convenient for sequential decoding and will also serve as the basis for our RL state design.
+
+D. Sequential BP Decoding
+
+We represent H1 with a bipartite Tanner graph GH1 = (V ∪ C, E) with V = {v1, . . . , vn} and C = {c1, . . . , cm}, where each VN vi corresponds to qubit i (and the error ei), and each check node cj corresponds to the jth parity-check equation (and syndrome bit sj). An edge connects vi and cj precisely when qubit i participates in check j, i.e., E = {(vi, cj) : H1(j, i) = 1}. We use N (cj) = {i | (vi, cj) ∈ E} to denote the VN neighbors of check cj and N (vi) = {j | (vi, cj) ∈ E} to denote the CN neighbors of variable vi. BP is an iterative message-passing heuristic that operates on GH1 . Under an independent and identically distributed (i.i.d.) bit-flip model
+with flip probability px (corresponding to i.i.d. Pauli X errors), each VN is initialized with the prior LLR
+
+µx = log
+
+1 − px px
+
+.
+
+BP then iteratively exchanges messages between checks and variables to refine beliefs about e.
+In standard flooding BP, all CN updates are computed in parallel and then all VN updates are computed in parallel within each iteration. In contrast, sequential (serial) schedules update one node at a time and immediately use the new information in subsequent updates within the same iteration. Such schedules can break symmetries, propagate reliable information faster, and sometimes mitigate trapping/oscillation behavior.
+
+4) Update the hard decision as
+eˆi ← 1[Li < 0] ∈ {0, 1};
+We refer the reader to [19] for a detailed review of the SVNS decoding algorithm.
+E. Motivation for RL-based Scheduling Although sequential schedules can improve BP performance,
+the best update order depends strongly on the specific syndrome instance and the evolving decoder state. Fixed schedules (deterministic or random) may therefore be suboptimal across different errors. This motivates learning a state-dependent scheduling policy. In the next sections, we formulate VN scheduling as an RL problem and learn which VN to update next based on local, syndrome-driven features, while keeping the SVNS message-update rule itself unchanged.
+III. RL FORMULATION FOR SCHEDULING VN UPDATES We keep the SVNS update rule fixed and learn which VN to update next. The following lemma shows that if one bit of the current estimated error vector flips during an SVNS update, then the residual mismatch bits of the CNs connected to that VN also flip.
+Lemma 1. For a measured syndrome s, and the current hard estimate eˆ with the residual mismatch vector δ = s ⊕ (H1eˆ), if we flip the i-th bit of the hard estimate eˆ then the updated residual mismatch bits flip exactly on the neighboring checks of VN i.
+Proof. Let ei = (0, 0, . . . , ei = 1, 0, . . . , 0)⊤ ∈ {0, 1}n denote the i-th unit vector and define the flipped hard estimate
+eˆ′ ≜ eˆ ⊕ ei.
+By linearity over F2,
+H1eˆ′ = H1(eˆ ⊕ ei) = (H1eˆ) ⊕ (H1ei).
+
+4
+
+The updated residual mismatch vector is
+
+δ′ ≜ s ⊕ (H1eˆ′) = s ⊕ (H1eˆ) ⊕ (H1ei) = δ ⊕ (H1ei).
+
+Note that H1ei selects the i-th column of H1. Therefore, for each check index j,
+
+δj′ = δj ⊕ H1(j, i),
+so δj′ flips if and only if H1(j, i) = 1, i.e., exactly for the neighboring checks of VN vi, i.e., for j ∈ N (vi).
+
+We use this lemma to show that the updates under the learned sequential schedule are incremental and local. The components of our RL scheme are as follows:
+• Episode: sample px uniformly from a training grid Ptrain (in the numerical results we use Ptrain = {0.03, 0.04, 0.05, 0.06, 0.07}), draw e ∼ Bernoulli(px), compute s = H1e, and run SVNS with RL scheduling for up to Imax iterations;
+• Environment: the full decoder configuration: {mi→j}, {Li}, eˆ, and δ;
+• State: for each VN vi, the local state σi is computed from δ restricted to the index set N (vi);
+• Agent Action: choose which VN index i to update next. Inside each BP iteration, schedule the VNs without replacement, i.e., each VN is updated at most once per iteration maintaining a remaining set.1
+For each VN vi, let Ai = |N (vi)| and we define Amax ≜ maxi Ai. We build a local binary state vector from residual mismatch bits of its neighbor checks as
+
+bi = [ δj1 , δj2 , . . . , δjAi , 0, . . . , 0 ] ∈ {0, 1}Amax ,
+
+where (j1, . . . , jAi ) is a fixed deterministic neighbor order (e.g., sorted check indices). To define the local state σi for the VN vi, we map bi into an integer using its binary representation as
+
+Amax
+
+σi ≜
+
+bi,k 2k−1 ∈ {0, . . . , 2Amax −1},
+
+k=1
+
+Smax ≜ 2Amax .
+
+We use a state-per-action table to obtain the Q-table Q ∈ RSmax×n, where the element Q(σ, i) is the value of scheduling VN vi when its local state is σ. At each scheduling step t, for the action a we define
+
+wbefore ≜ ∥δbefore∥1,
+
+wafter ≜ ∥δafter∥1,
+
+where δbefore and δafter denote the residual mismatch vectors immediately before and after applying one SVNS update at VN vi, respectively. We then define the reward as
+
+rt
+
+≜
+
+wbefore − wafter , Aa
+
+Aa = |N (va)|.
+
+We also add a terminal bonus of +1 to the reward when wafter = 0. After action a, the one-step lookahead is
+
+best future ≜ max Q(σi′ , i′).
+i′ ∈remaining
+
+1We have also run learning with no restriction from the remaining set which produced approximately equal numerical results.
+
+Algorithm 1 summarizes the proposed Q-learning-based training procedure for learning the VN scheduling policy used in our decoder. In line 1, we initialize all Q-table entries to zero. We train for Emax episodes; in our numerical results we use Emax = 105.
+In each episode (lines 3-6), we first sample a training crossover probability px from Ptrain, generate an X-error pattern and its syndrome, and initialize the BP beliefs/messages. We then form an initial hard decision and the corresponding residual mismatch. These steps set the initial decoding state for the learning procedure.
+Next, in lines 7-29, we run the learning SVNS procedure for at most Imax BP iterations (we use Imax = 100 in our numerical results). At the beginning of each BP iteration (line 8), we define remaining as the set of VNs that have not been visited in the current SVNS iteration, and we schedule nodes without replacement by removing the selected node from remaining (line 19). Lines 9-28 iterate over the current remaining set. Line 10 checks if the residual mismatch is zero and terminates early if the decoder has converged.
+At each step, we compute the state σi for each candidate node in remaining (line 13) and select an action using the ε-greedy rule (line 14).2 We then apply one SVNS update at the chosen node and compute the corresponding reward based on the change in mismatch (lines 15-18). Lines 20-25 compute the one-step lookahead term by checking whether remaining is empty. If not, we evaluate the best future value over the remaining actions. Finally, lines 26-27 update the Q-table entry corresponding to the chosen action.
+After training, we load policy Q and run the same SVNS decoder but with ε = 0 and no Q updates to have action
+a = arg max Q(σi, i).
+i∈remaining
+In the next section, we develop local and incremental updates that significantly reduce the per-step complexity of our learned-based SVNS BP decoder while preserving its decoding performance.
+IV. FAST INFERENCE AND FAST MONTE-CARLO EVALUATION
+In this section, we define several implementation details to speed up the inference of RL-SVNS.3 The inference-time RL-SVNS decoder is defined by the following features:
+1) the same SVNS BP message-update equations (Subsection II-D), and
+2) the greedy RL policy
+a = arg max Q(σi, i).
+i∈remaining
+2With probability ε we explore by choosing a VN uniformly at random from the current remaining set, and with probability 1 − ε we exploit the learned scores by choosing
+a ∈ arg max Q(σi, i),
+i∈remaining
+breaking ties uniformly at random. 3The methods described in this section present new and extend conventional
+implementation techniques for LDPC decoders to our setting and do not change the output of the RL-SVNS decoder, rather they address the implementation challenges of the RL trained schedule. As such the paper can be read without this section.
+
+5
+
+Algorithm 1 Q-learning for SVNS VN scheduling
+
+1: Initialize Q ← 0
+
+2: for episode = 1 to Emax do
+
+3: Sample px uniformly from Ptrain
+
+4: Sample e ∼ Bernoulli(px); compute s = H1e
+
+5:
+
+Set µx = log
+
+1−px px
+
+and initialize beliefs/messages
+
+6: Initialize eˆ and residual mismatch δ = s ⊕ (H1eˆ)
+
+7: for BP-iteration = 1 to Imax do
+
+8:
+
+remaining ← {i|Ai > 0}
+
+9:
+
+for step = 1 to |remaining| do
+
+10:
+
+if δ = 0 then
+
+11:
+
+break
+
+12:
+
+end if
+
+13:
+
+Compute σi for all i ∈ remaining
+
+14:
+
+Choose a ∈ remaining by ε-greedy on Q(σi, i)
+
+15:
+
+wbefore ← ∥δ∥1
+
+16:
+
+Apply one SVNS update at a
+
+17:
+
+wafter ← ∥δ∥1
+
+18:
+
+rt ← (wbefore − wafter)/Aa
+
+19:
+
+Remove a from remaining
+
+20:
+
+if remaining is empty then
+
+21:
+
+best future ← 0
+
+22:
+
+else
+
+23:
+
+Recompute σi′ for remaining
+
+24:
+
+best future ← maxi′∈remaining Q(σi′ , i′)
+
+25:
+
+end if
+
+26:
+
+T ← rt + γ · best future
+
+27:
+
+Q(σa, a) ← Q(σa, a) + α T − Q(σa, a)
+
+28:
+
+end for
+
+29: end for
+
+30: end for
+
+so that each edge index k corresponds to exactly one nonzero entry of H1 (connecting CN jk to VN ik).
+
+During decoding we repeatedly need to iterate over (i) all edges incident to a given VN i, and (ii) all edges incident to a given CN j. If we store only the unordered list {(jk, ik)}kK=1, then identifying all incident edges of a node can require scanning all K edges. Instead, we preprocess once and build adjacency arrays: two edge-index arrays, together with pointer
+(offset) arrays that locate each node’s contiguous block of
+incident edges.
+
+CN adjacency. For each CN j ∈ [m1], define its incident-edge
+
+set
+
+Kj ≜ {k ∈ [K] | jk = j},
+
+d(jc) ≜ |Kj |.
+
+We construct an array k(c) ∈ [K]K that stores (integer
+
+representations of) all edges incident to each CN contiguously, and a pointer array p(c) ∈ {1, . . . , K}m (defined below) such
+
+that
+
+Kj ↔ k(c) pj(c) : p(jc) + d(jc) − 1 ,
+
+(3)
+
+where [a : b] denotes an integer index range and k[a : b] denotes the sub-vector of k corresponding to that index range. Thus, iterating over all neighbors of check j becomes a tight loop over a contiguous slice of k(c).
+
+VN adjacency. Similarly, for each VN i ∈ [n] define
+
+Ki ≜ {k ∈ [K] | ik = i},
+
+d(iv) ≜ |Ki|.
+
+We construct an array k(v) ∈ [K]K and pointers p(v) ∈ {1, . . . , K}n such that
+
+Ki ↔ k(v) pi(v) : p(iv) + di(v) − 1 .
+
+(4)
+
+In a baseline greedy RL-SVNS implementation, we identify the following computational bottlenecks:
+• Repeated VN selection from the remaining set; • Repeated recomputation of local states σi from neighbor-
+ing residual bits δj; • Edge-wise tanh-product computations in message up-
+dates; • Frequent syndrome computations in Monte Carlo simula-
+tion (i.e., forming s = H1e and checking H1(e ⊕ eˆ) = 0). We now describe how to reduce these bottlenecks by leveraging standard sparse-graph representations and incrementally updating key decoding quantities.
+A. Edge Indexing and Adjacency Arrays
+We represent the Tanner graph of the binary parity-check matrix H1 ∈ {0, 1}m1×n by an edge-indexed description of its nonzero entries. Let
+
+Pointer construction. Let d(jc) and di(v) be the CN and VN degrees defined above. We build the pointers by prefix sums
+
+p1(c) = 1,
+
+p(jc+)1 = pj(c) + d(jc), j = 1, . . . , m − 1,
+
+and analogously
+
+p1(v) = 1,
+
+pi(+v)1 = pi(v) + di(v), i = 1, . . . , n − 1.
+
+The arrays k(c) and k(v) are then filled by placing each edge
+index k into the next available slot of its corresponding block
+as described above. After this preprocessing, the neighborhood iteration costs O(d(iv)) (or O(d(jc))) and accesses only contiguous memory.
+Also, for each VN i, we fix a deterministic ordering of its
+incident edges (nominally the increasing order of the check indices jk). Let Ai ≜ d(iv) and write the ordered incident edges as
+ki,0, ki,1, . . . , ki,Ai−1 ∈ Ki.
+
+K ≜ {(j, i) ∈ [m1] × [n] | [H1]j,i = 1}, K ≜ |K|,
+where we use the notation [k] ≜ {1, 2, . . . , k}, k ∈ Z+, and [A]j,i to refer to the entry of matrix A in row j and column i. Fix an arbitrary but deterministic bijection
+π : {1, . . . , K} → K, π(k) = (jk, ik), k = 1, . . . , K, (2)
+
+We assign a power-of-two weight to each edge according to its local position as
+
+β(ki,t) ≜ 2t, t = 0, 1, . . . , Ai − 1.
+
+(5)
+
+These weights are local to VN i: they map the t-th neighboring check of i as the t-th bit of an integer bitmask. This will be
+
+6
+
+used in Section IV-B to maintain local states via O(1) XOR flips.
+
+Example 1. Suppose a VN i has degree Ai = 3 and its neighboring CNs (in the chosen deterministic order) are
+
+N (vi) = {j1, j2, j3},
+
+with ordered incident edges ki,0 = (j1, i), ki,1 = (j2, i), ki,2 = (j3, i). Then (5) assigns
+
+β(ki,0) = 1, β(ki,1) = 2, β(ki,2) = 4.
+
+Later, if check j2 flips its residual bit, then the state bit of VN i corresponding to edge ki,1 flips by XOR with β(ki,1) = 2 (see (7) in Section IV-B).
+
+After preprocessing, neighborhood traversals are simple range iterations over the slices as
+
+Ki ↔ k(v) p(iv) : pi(+v)1−1 ,
+
+Kj ↔ k(c) p(jc) : p(jc+)1−1 .
+
+This adjacency representation is the backbone of our fast inference implementation described later in Section IV-F.
+
+Consequently, only VNs adjacent to those flipped checks can have their states changed. Define the affected VN set (secondorder neighborhood)
+
+where
+
+Vaff (i) ≜
+
+N (cj),
+
+j∈N (vi)
+
+N (cj) ≜ {u ∈ [n] | ∃ k ∈ K s.t. (jk, ik) = (j, u)}.
+
+For sparse QLDPC graphs, |Vaff (i)| ≪ n, so we update only {σu | u ∈ Vaff (i)} using the XOR rule (7), rather than recomputing all states from scratch.
+
+Example 2. Assume Amax = 3 and consider the neighborhood
+
+N (vi) = {j4, j7}, N (cj4 ) = {i, u1, u2},
+
+N (cj7 ) = {i, u2, u3}.
+
+Fix the deterministic neighbor order at each VN and the corresponding weights β(·). For this example, assume the local orders (hence bit positions) are
+
+B. Incremental Maintenance of Local States σi Recall the residual mismatch bits
+
+δj ∈ {0, 1}, j ∈ [m1],
+
+defined from the current residual syndrome vector δ (where δj = 1 iff check j is unsatisfied). For each VN i ∈ [n], we store its local RL state as an integer bitmask. Let β : Ki → {1, 2, 4, . . . } be the per-edge power-of-two weight assignment as described in (5) (local to each VN via the fixed order ki,0, . . . , ki,Ai−1). We then define
+
+σi ≜
+
+δjk β(k) ∈ {0, 1, . . . , 2Ai − 1},
+
+(6)
+
+k∈Ki
+
+so that the t-th bit of σi (in its bit-wise binary notation) equals 1 iff the t-th neighboring check of VN i is currently unsatisfied.
+Consider any CN j ∈ [m1]. If its residual bit flips,
+
+δj ← 1 + δj in F2,
+
+then for every incident edge k ∈ K with jk = j (so π(k) = (j, ik)), exactly one bit of the neighboring VN state must flip, namely the bit corresponding to edge k. This update is
+implemented by a single bitwise XOR according to
+
+σik ← σik ⊕2 β(k),
+
+(7)
+
+where ⊕2 denotes bitwise XOR on the integer masks. Indeed, in (6) the term δjk β(k) flips between 0 and β(k), which is precisely the effect of XOR with β(k) on the corresponding
+bit. Now suppose an SVNS update at some VN i flips the current
+hard decision eˆi. By Lemma 1, only checks adjacent to i can change their residual bits, i.e., δj may flip only for j ∈ N (vi) and unchanged for j ∈/ N (vi), where the check-neighborhood of VN i is
+
+N (vi) ≜ {j ∈ [m1] | ∃ k ∈ K s.t. (jk, ik) = (j, i)}.
+
+VN i : VN u1 : VN u2 :
+VN u3 :
+
+(j4, j7) ⇒ β(kj4,i) = 1, β(kj7,i) = 2, (j4, j9) ⇒ β(kj4,u1 ) = 1, β(kj9,u1 ) = 2, (j4, j7, j10) ⇒ β(kj4,u2 ) = 1, β(kj7,u2 ) = 2,
+β(kj10,u2 ) = 4, (j7, j11) ⇒ β(kj7,u3 ) = 1, β(kj11,u3 ) = 2,
+
+where we refer to edge kja,ib meaning π(kja,ib ) = (ja, ib) from (2). Assume the current residual bits are
+
+δj4 = 1, δj7 = 0, δj9 = 1, δj10 = 0, δj11 = 1. Then the VN states from (6) are
+
+σi = 1 · δj4 + 2 · δj7 = 1, σu1 = 1 · δj4 + 2 · δj9 = 3, σu2 = 1 · δj4 + 2 · δj7 + 4 · δj10 = 1, σu3 = 1 · δj7 + 2 · δj11 = 2.
+
+Now suppose the decoder updates VN i and the hard decision flips. Then only the adjacent checks flip (parity change) according to
+
+δj4 : 1 → 0, δj7 : 0 → 1,
+while all other δj remain unchanged. Instead of recomputing all states, we apply the XOR updates (7) for every edge incident to the flipped checks.4 Updates due to j4 flipping are given by
+
+σi ← σi ⊕2 1,
+
+σu1 ← σu1 ⊕2 1,
+
+σu2 ← σu2 ⊕2 1,
+
+and updates due to j7 flipping are given by
+
+σi ← σi ⊕2 2,
+
+σu2 ← σu2 ⊕2 2,
+
+σu3 ← σu3 ⊕2 1,
+
+4We note that the sum-product algorithm may not “flip” a check with soft messages; however, we remind the reader that to determine the state of a VN we only use hard decisions.
+
+7
+
+where the last XOR uses β(kj7,u3 ) = 1 because j7 is the first neighbor of u3 in its fixed order. Carrying out the XORs gives
+σi : 1 ⊕2 1 ⊕2 2 = 2,
+σu1 : 3 ⊕2 1 = 2, σu2 : 1 ⊕2 1 ⊕2 2 = 2, σu3 : 2 ⊕2 1 = 3,
+which matches direct recomputation using the new residual bits (δj4 , δj7 ) = (0, 1).
+We note that only VNs in N (cj4 ) ∪ N (cj7 ) = {i, u1, u2, u3} were modified. All other VNs keep the same state because they are not adjacent to the flipped checks. This is exactly the second-order neighborhood effect: a flip at VN i changes checks in N (vi) (one order), which can only affect VNs in
+j∈N (vi) N (cj) (second order) and the VN i itself.
+
+C. SVNS Check-products (Cached tanh-products)
+
+In the SVNS update, each CN-to-VN message on an edge k = (j, i) involves a product over all other VN-to-CN terms incident to the same CN j. If this product is recomputed from scratch for every incident edge, then the work at check j scales as O (d(jc))2 per sweep, where dj(c) is the degree of check j. This redundancy can be eliminated by caching one product per
+check.
+Using the edge indexing described in Section IV-A, let π(k) = (jk, ik) for k ∈ [K], and with the incident-edge sets Kj and Ki. We store one VN-to-CN LLR message per edge as
+
+m(kv→c) ∈ R,
+
+k ∈ [K].
+
+As usual, the LLR-domain CN update is expressed via the tanh(·/2) transform. Define
+
+xk ≜ tanh
+
+m(kv→c) 2
+
+,
+
+k ∈ [K].
+
+(8)
+
+For each CN j ∈ [m1], we cache the product of all incident x-values according to
+
+We now define some modification for efficiency to to steps 2-4 from the conventional BP described in Section II-D.Let sj ∈ {0, 1} denote the measured syndrome bit at check j. The CN-to-VN LLR message along edge k ∈ Kj (from CN j to VN ik) is
+
+mj(c→→ikv) = 2 atanh (−1)sj prod excl(j, k) , (12)
+
+followed by clipping to [−Lmax, Lmax] to prevent overflow and to keep | tanh(·/2)| away from 1. When SVNS selects a VN i, we form its updated a-posteriori LLR as
+
+Lni ew = Li +
+
+m(jck→→vi),
+
+k∈Ki
+
+(13)
+
+where Li is the channel LLR. The hard decision is updated as eˆi ← 1[Linew < 0]. We then update the outgoing variable-tocheck messages on incident edges using the standard extrinsic
+form
+
+m(kv→c) ← clip Linew−mj(ck→→vi), [−Lmax, Lmax] ,
+
+k ∈ Ki, (14)
+
+and refresh xk via (8).
+
+Throughout, we use an incremental maintenance of the CN
+
+cache to update Pj, i.e., only the cache of check j must be
+
+updated whenever xk changes on an edge k with π(k) = (j, i). Let xkold and xknew denote the values before and after (14). If |xokld| > εth, we update in O(1) complexity using
+
+Pj
+
+←
+
+Pj
+
+·
+
+xknew xokld
+
+.
+
+(15)
+
+If |xokld| ≤ εth, we recompute Pj directly by one loop over Ej to maintain robustness. A single SVNS update at VN i modifies only: (i) the edge messages {mk(v→c) | k ∈ Ki} (hence {xk | k ∈ Ki}), and (ii) the cached products {Pj | j ∈ N (vi)}.
+All other edges and check caches remain unchanged. Thus,
+caching preserves the exact BP update rule while removing
+redundant per-edge product computations at CNs.
+
+Pj ≜
+
+xk .
+
+(9)
+
+k∈Kj
+
+Then, for an edge k ∈ Kj, the excluded product
+
+xk′
+k′∈Kj \{k}
+
+(10)
+
+is ideally obtained by the ratio
+
+prod
+
+excl(j, k) ≜
+
+Pj . xk
+
+(11)
+
+If |xk| is extremely small, the division in (11) can be unstable. In our numerical results we fix a small threshold εth > 0 and decide:
+• if |xk| > εth, use (11); • otherwise, recompute (10) directly by a single loop over
+Kj \ {k}.
+This yields the same mathematical CN update as the baseline implementation, while avoiding redundant products in typical regimes where |xk| rarely falls below εth.
+
+D. Fast Update After a Hard-decision Flip (Residual, States, and Priorities)
+Within one SVNS iteration, the greedy RL scheduler selects the next VN among those not yet processed (schedule-withoutreplacement) by comparing the scores Q(su, u). Hence, when an SVNS update at a VN i flips its hard decision eˆi, we must update only the quantities that can change the scores of the remaining nodes: the residual bits {δj} (equivalently the residual syndrome), the mismatch weight w, the local states {σu}, and the priorities of the remaining nodes used by the greedy selection mechanism.
+What follows is a local implementation of the steps defined in the previopus subsections. If eˆi flips, Lemma 1 implies that only CNs adjacent to i can flip residual status: δj may flip only for j ∈ N (vi) and unchanged for j ∈/ N (vi). Consequently, only VNs adjacent to those flipped checks can see their local states change. For sparse Tanner graphs, |Vaff (v)| ≪ n. Each flipped residual bit changes w by exactly ±1 as
+δj ← 1 ⊕ δj =⇒ w ← w + (2δj − 1),
+
+8
+
+where δj on the right-hand side denotes the new value after flipping. Thus, updating w after a flip at i costs O(|N (i)|). Local states σu are maintained by the XOR rule of Section IV-B: whenever a residual bit δj flips, each incident edge k ∈ Kj triggers an update of σik following (7). Therefore, when eˆi flips, it suffices to apply these XOR flips for all edges incident to each check in N (vi), which touches exactly the nodes in Vaff (i).
+Let R denote the set of VNs that are still remaining in the current iteration. Only nodes u ∈ R ∩ Vaff (v) can have changed state, hence only these nodes can have changed scores. Accordingly, we recompute and update the priority key of the heap (explained further in IV-E) only for this local subset as
+key(u) ← Q(σu, u), u ∈ R ∩ Vaff (i), (16)
+followed by a local data-structure repair. Since a flip at i has strictly local consequences: it can only
+change residual bits on N (vi) and only change states/scores of VNs in Vaff (vi). Hence, greedy scheduling requires priority updates only inside this second-order neighborhood.
+
+E. Greedy Selection with a Max-heap (Priority Queue) At each scheduling step we must select an index achieving
+
+u⋆ ∈ arg max Q(su, u),
+
+(17)
+
+u∈R
+
+where R is the current remaining set. A naive implementation
+
+evaluates (17) by scanning all u ∈ R, costing O(|R|) time per
+
+step. We maintain a max-heap over the indices in R with key
+
+function
+
+key(u) ≜ Q(su, u).
+
+(18)
+
+A max-heap supports: (i) extract-max (remove and return an index with maximal key) in O(log |R|) time, and (ii) changekey (update the key of a specific item and restore heap order) in O(log |R|) time.
+At the beginning of each SVNS iteration we build a heap over the active variables. Each scheduling step applies extractmax once; the extracted node is removed from R and is not reinserted within the same iteration. When a flip-update changes some states σu, we update keys only for the affected remaining nodes u ∈ R ∩ Vaff (i) as in (16), and then repair heap order locally via a change-key operation. Heap-based greedy selection results for each argmax in (17) to cost O(log |R|) time, and state-induced key updates cost O(log |R|) time per affected remaining node only, matching the second-order locality of Section IV-D.
+
+a) Initialization: Given channel LLRs {Li}ni=1 and measured syndrome bits {sj}m j=11:
+• Initialize edge messages {mk(i→j)}k∈[K] from the channel LLRs, and form {xk} via (8);.
+• Build cached products {Pj} via (9); • Initialize hard decisions eˆi = 1[Li < 0] and residual
+bits δj by comparing the measured syndrome sj to the predicted syndrome induced by eˆ (XOR accumulation over N (j)). Set w = j δj; • Initialize local states {σi} from (6). b) One BP iteration: Fix an iteration cap Imax. For each iteration:
+1) If w = 0, declare success; 2) Initialize the remaining set R to the active VNs and
+build a max-heap with keys key(u) = Q(su, u); 3) While R ≠ ∅:
+• Extract u⋆ with largest key (Section IV-E) and remove it from R;
+• Perform one SVNS update at u⋆ using cached products (Section IV-C), updating only {m(ki→j) | k ∈ Ku⋆ } and {Pj | j ∈ N (u⋆)};
+• If the hard decision at u⋆ flips, apply the local residual/state/priority updates of Section IV-D.
+If the cap is reached with w > 0, declare failure.
+V. RL SCHEDULING FOR QUATERNARY SVNS DECODING
+We now extend the RL scheduling framework from an Xonly channel to the depolarizing channel, while keeping the underlying message-update rule fixed (SVNS) and learning only which VN to update next. In particular, we keep the twostream SVNS CN/VN updates, but we (i) compute VN-to-CN messages via a quaternary-coupled extrinsic belief and (ii) make the hard decision depend on the current (freshly updated) LLR pair at the visited node. Our message updates follow the scalar-message reparameterization of conventional quaternary BP over {I, X, Y, Z} [8], as derived in [25], [26].
+A. CSS Framework and Depolarizing Prior
+Consider a CSS code specified by binary matrices (HX , HZ ) and a Pauli error pattern Q = (Q1, . . . , Qn) ∈ {I, X, Y, Z}n. We decompose Q into two binary error vectors eX , eZ ∈ Fn2 defined componentwise by
+eiX ≜ 1[Qi ∈ {Z, Y }], eiZ ≜ 1[Qi ∈ {X, Y }],
+so that the measured syndromes decompose as
+
+F. Main Inference Loop
+We now summarize how the implementation combines: (i) edge indexing and adjacency arrays (Section IV-A), (ii) cached CN products for the SVNS CN update (Section IV-C), (iii) incremental maintenance of local states (Section IV-B), (iv) flip-triggered local updates of residuals, states, and priorities (Section IV-D), and (v) greedy selection via a max-heap (Section IV-E).
+
+sX = HX eX ,
+
+sZ = HZ eZ ,
+
+where decoding aims to find a Pauli estimate consistent with (sX , sZ ).
+Under depolarizing noise with physical error rate p, each qubit satisfies
+
+Pr(Qi = I) = 1 − p,
+
+p
+
+Pr(Qi
+
+=
+
+X)
+
+=
+
+Pr(Qi
+
+=
+
+Y
+
+)
+
+=
+
+Pr(Qi
+
+=
+
+Z)
+
+=
+
+. 3
+
+9
+
+We define the Tanner-graph neighborhoods
+NX (vi) ≜ {j | HX (j, i) = 1}, NZ (vi) ≜ {j | HZ (j, i) = 1}.
+and similarly NX (cj) (resp. NZ (cj)) for the variable neighbors of check cj in the HX (resp. HZ ) graph. Let AiX ≜ |NX (vi)| and AZi ≜ |NZ (vi)|.
+
+Given any LLR pair (LZ , LX ), define the quaternary likelihood map
+
+Φi q; LZ , LX
+
+≜ exp
+
+1 2
+
+(1−2eZ
+
+(q))
+
+LZ
+
++
+
+1 2
+
+(1−2eX
+
+(q))
+
+LX
+
+.
+
+(27)
+
+Now form the extrinsic LLR pairs for each neighboring check
+
+j by computing
+
+LiX\j ≜ LXi − mjX→i,
+
+LZi \j ≜ LZi − mjZ→i. (28)
+
+B. SVNS Updates
+
+Rather than passing full 4-ary edge messages, we maintain
+
+two scalar LLR streams: one on the HX graph and one on
+the HZ graph. For each edge (j, i) in the HX Tanner graph, store LLR messages miX→j and mXj→i; for each edge (j, i) in the HZ Tanner graph, store miZ→j and mjZ→i. For all edges incident to VN vi, we initialize the VN-to-CN LLRs as
+
+mXi→j
+
+≜
+
+log
+
+Pr(Qi Pr(Qi
+
+∈ ∈
+
+{I, X}) {Y, Z})
+
+=
+
+log
+
+1
+
+−
+
+2p 3
+
+2p
+
+3
+
+≜ µdep, (19)
+
+mZi→j
+
+≜
+
+log
+
+Pr(Qi ∈ {I, Z}) Pr(Qi ∈ {X, Y })
+
+=
+
+log
+
+1
+
+−
+
+2p 3
+
+2p
+
+3
+
+= µdep. (20)
+
+A single SVNS step at VN i consists of the following BP-
+
+style refreshes on both Tanner graphs:
+
+Step 1) For each j ∈ NX (vi), update the HX -side CN-to-VN message using
+
+
+
+mXj→i = 2 tanh−1(−1)sjX
+
+tanh
+
+i′∈NX (cj )\{i}
+
+miX′→j 2
+
+ . (21)
+
+Similarly, for each j ∈ NZ (vi),
+
+Using these pairs, form the unnormalized extrinsic quaternary scores (for q ∈ {I, X, Y, Z}) according to
+
+B˜iX→j (q) ≜ κq(p) Φi q; LZi , LiX\j , B˜iZ→j (q) ≜ κq(p) Φi q; LZi \j , LXi ,
+
+j ∈ NX (vi), (29) j ∈ NZ (vi). (30)
+
+Finally, we update outgoing LLRs by grouping Pauli operators according to the component bit seen on each Tanner graph as
+
+mXi→j
+
+=
+
+log
+
+B˜iX→j (I) + B˜iX→j (X) B˜iX→j (Y ) + B˜iX→j (Z)
+
+,
+
+mZi→j
+
+=
+
+log
+
+B˜iZ→j (I) + B˜iZ→j (Z) B˜iZ→j (X) + B˜iZ→j (Y )
+
+;
+
+(31)
+
+Step 4) Now, we combine the two streams into a quaternary belief and hard decision using the freshly updated pair (LiX , LiZ ) at the visited VN. Using (26)-(27), we define
+B˜i(q) ≜ κq(p) Φi q; LZi , LXi , q ∈ {I, X, Y, Z}.
+
+Normalization gives
+
+Bi(q) =
+
+q′
+
+∈{I
+
+B˜i(q)
+,X,Y,Z}
+
+B˜i
+
+(q
+
+′
+
+)
+
+.
+
+
+
+mZj→i = 2 tanh−1(−1)sZj
+
+tanh
+
+i′∈NZ (cj )\{i}
+
+ mZi′→j  ;
+2
+(22)
+
+At each visit of VN i, we update the hard decision using the current belief (after Steps 1-3 at node i) according to
+qˆi = arg max Bi(q).
+q∈{I ,X,Y ,Z }
+
+Step 2) Form the two a-posteriori LLRs
+
+LiX = µdep+
+
+mXj→i, LZi = µdep+
+
+mZj→i;
+
+j∈NX (vi)
+
+j∈NZ (vi)
+(23)
+
+Step 3) Update VN-to-CN messages using a quaternarycoupled extrinsic belief. For each Pauli error q ∈ {I, X, Y, Z}, define the component bits
+
+We then define eˆZi ≜ 1[qˆi ∈ {X, Y }],
+
+eˆXi ≜ 1[qˆi ∈ {Z, Y }].
+
+C. Residual Mismatches and Locality Under Pauli Errors Let eˆX , eˆZ ∈ Fn2 denote the current hard estimates induced
+by qˆ = (qˆ1, . . . , qˆn). Let the residual mismatch vectors be
+δX ≜ sX ⊕ (HX eˆX ), δZ ≜ sZ ⊕ (HZ eˆZ ), (32)
+
+eX (q) ≜ 1[q ∈ {Y, Z}], eZ (q) ≜ 1[q ∈ {X, Y }]. (24)
+
+Under depolarizing noise, the induced marginal component priors are
+
+π1X
+
+=
+
+Pr(eX
+
+=
+
+1)
+
+=
+
+Pr(Q
+
+∈
+
+{Y, Z})
+
+=
+
+2p ,
+3
+
+π0X
+
+=
+
+1
+
+−
+
+2p ,
+3
+
+(25)
+
+and
+
+similarly
+
+π1Z
+
+=
+
+2p 3
+
+and
+
+π0Z
+
+=
+
+1−
+
+2p 3
+
+.
+
+To
+
+avoid
+
+double
+
+counting the marginals already injected by µdep while restoring
+
+the joint depolarizing prior (the Y -correlation), define the
+
+correction factor
+
+κq (p)
+
+≜
+
+πeXX
+
+πq (q) πeZZ
+
+(q)
+
+,
+
+πI = 1 − p,
+
+p
+
+πX
+
+= πY
+
+= πZ
+
+=
+
+. 3
+
+(26)
+
+and the scalar mismatch weight
+
+w ≜ ∥δX ∥1 + ∥δZ ∥1.
+
+(33)
+
+When the hard decision at a single VN i changes, only
+a local subset of check residuals can flip, resulting in the
+following possibilities: • If eˆXi flips (i.e., the decision changes between {I, X} and {Y, Z}), then only checks in NX (vi) can flip in δX ; • If eˆiZ flips (i.e., the decision changes between {I, Z} and {X, Y }), then only checks in NZ (vi) can flip in δZ ; • If both components flip (e.g., I ↔ Y or X ↔ Z), both
+neighborhoods will change.
+
+This locality enables efficient incremental maintenance of the RL state features defined next.
+
+10
+
+D. RL State, Action, and Reward Under Depolarizing
+
+For each VN vi, let there be local residual patterns
+
+bXi ≜ δX NX (vi), 0, . . . , 0 ∈ {0, 1}Amax ,
+
+biZ ≜
+
+δZ
+
+, 0, . . . , 0
+
+NZ (vi)
+
+∈ {0, 1}Amax ,
+
+using any fixed ordering of neighbors, where we take a single padding length Amax ≜ max{AmXax, AmZ ax} (with AXmax ≜ maxi AiX and AZmax ≜ maxi AiZ ) and pad the shorter side with zeros. By representing each pattern as a binary integer
+
+Amax −1
+
+σiX ≜
+
+biX,k 2k,
+
+k=0
+
+Amax −1
+
+σiZ ≜
+
+biZ,k 2k,
+
+k=0
+
+FER
+
+10 0 10 -1 10 -2 10 -3 10 -4 10 -5 10 -6 10 -7
+0.04
+
+BP, T = 100 BP, T = 10000 SVNS, T = 10 SVNS, T = 100 SVNS, T = 1000 RL-SVNS, T = 10 RL-SVNS, T = 100 RL-SVNS, T = 1000 RL-SVNS, T = 10000 BP-OSD-0 BPGD, GT = 88200
+
+0.05
+
+0.06
+
+0.07
+
+0.08
+
+0.09
+
+0.1
+
+X-error probability (px)
+
+we combine them into a single state integer id
+
+σi ≜ σiX + 2Amax σiZ ,
+
+(34)
+
+corresponding to the binary representation of [biZ , bXi ]. Inside each BP iteration, the agent maintains a remaining set R ⊆ {1, . . . , n} and chooses the next VN a ∈ R to apply the SVNS update described in Subsection V-B. After selecting a, we remove it from R.
+Let wbefore and wafter be the mismatch weights (33) immediately before and after applying the SVNS update at VN a (including any consequent hard-decision change and residual updates). We use the normalized reward
+
+rt
+
+=
+
+wbefore AaX
+
+− wafter + AaZ
+
+,
+
+(35)
+
+with a terminal bonus +1 if wafter = 0 (both syndromes satisfied). Using the same schedule lookahead as in the X-only setting, we define
+
+best
+
+future
+
+=
+
+max
+a′ ∈R
+
+Q(σa′
+
+,
+
+a′
+
+),
+
+and update the tabular value function as
+
+Q(σa, a) ← (1 − α)Q(σa, a) + α rt + γ best future .
+After learning, for inference we use the greedy policy a = arg maxi∈R Q(σi, i).
+Relative to the X-only RL-SVNS decoder, the only structural change under depolarizing noise is that (i) each SVNS step updates two LLR streams (21)-(31), (ii) hard decisions are quaternary, yielding (eˆX , eˆZ ), and (iii) the RL state and reward are driven by the pair of residual mismatch vectors (32) through (33)-(35).5 In addition, the outgoing VN→CN LLRs are computed from a quaternary-coupled extrinsic belief that depends on both streams (via (29)-(31)). All other RL components (action space, schedule-without-replacement, and Q-learning) remain unchanged.
+
+5Note that the state space is significantly larger than that of the X-only case; however, in our experiments, this was manageable for practical codes of interest.
+
+Fig. 1. FER for the [[882, 24, 18 ≤ d ≤ 24]] code B1 with flooding BP and SVNS-BP vs. our proposed RL-SVNS-BP decoding algorithm.
+
+VI. NUMERICAL RESULTS
+
+In our RL training (offline), we sample the channel crossover
+probability px (p for quaternary decoding) uniformly from the training grid Ptrain = {0.03, 0.04, 0.05, 0.06, 0.07}, and run the SVNS decoder with learned scheduling for at most Imax = 100 BP iterations per episode. We train for Emax = 105 episodes. The Q-table is initialized to zero and updated using tabular
+Q-learning with learning rate α = 0.1 and discount factor γ =
+0.9. Exploration follows an ε-greedy policy with ε0 = 0.6, a minimum value εmin = 0.05, and a linear decay over episodes,
+
+iter − 1
+
+εiter = max
+
+εmin, ε0
+
+1− Emax − 1
+
+,
+
+for Emax iterations.
+
+A. RL trained SVNS for Independent Pauli-X Errors
+Fig. 1 plots the error-correction performance for our proposed RL trained SVNS (RL-SVNS) decoder along with various other decoding strategies for the B1 code [[882, 24, 18 ≤ d ≤ 24]] [12]. First, comparing conventional BP flooding decoding (teal circles) and SVNS (randomly selected sequential decoding with no learning, blue circles), we see similar saturating performance as the maximum number of iterations T increases; however, the serial schedule generally converges significantly faster. For example, we observe that beyond roughly 100 iterations, increasing T yields little gain for SVNS. On the other hand, the RL-SVNS decoder (red X and magenta triangle curves) shows consistently improving performance with increasing T , surpassing that of both flooding and SVNS for small px. We note that, unlike the conventional BP decoders, the RL-SVNS does not appear to indicate an error floor in the simulated range, even with only T = 100 iterations.
+For reference, the figure also includes the BP-OSD-0 performance (green squares) as well as the limiting performance of BPGD with T = 100 (black diamond), which results in a global iteration cap of GT = 88200. Recall that, in BPGD, after each block of 100 BP iterations, one decimation is performed, followed by another 100 BP iterations, and so
+
+11
+
+TABLE I
+
+AVERAGE NUMBER OF DECODER ITERATIONS FOR STANDARD BP AND RL-SVNS ON THE [[882, 24, 18 ≤ d ≤ 24]] CODE B1 FOR DIFFERENT
+
+10 -1
+
+X -ERROR PROBABILITIES (px), CORRESPONDING TO FIG. 1.
+
+Method
+BP, T = 100 BP, T = 10000 RL, T = 100 RL, T = 10000
+
+X-error probability (px) 0.04 0.05 0.06 0.07 0.08 0.09 0.10
+16 24.01 32.3 43.6 60.38 80.58 95.12 20 36.27 129 729 2797 6364 8993 2.8 3.82 6.1 14.4 37.86 66.87 91.09 2.8 4.19 24.9 345 2125 5371 8703
+
+TABLE II PERCENTAGE OF NONCONVERGENCE FAILURES AMONG TOTAL DECODING
+ERRORS FOR BP AND RL-SVNS ON THE [[882, 24, 18 ≤ d ≤ 24]] CODE B1. RESULTS CORRESPONDING TO FIG. 1.
+
+Method
+BP, T = 100 BP, T = 10000 RL, T = 100 RL, T = 10000
+
+X-error probability (px) 0.04 0.05 0.06 0.07 0.08 0.09 0.10
+100 100 100 100 100 100 100 100 99 100 100 100 100 100 95 97 100 99 100 100 100 29 81 95 99 99 99 99
+
+10 -2
+
+FER
+
+10 -3
+
+QBP, T = 100
+
+10 -4
+
+QBP, T = 1000 QBPGD, GT = 8820
+
+RL-QSVNS, T = 100
+
+BP-OSD-0
+
+10 -5 0.04 0.05 0.06 0.07 0.08 0.09 0.1
+
+p
+
+Fig. 2. FER for the [[882, 48, 16]] code B2 over the depolarizing channel.
+
+10 0
+
+on, until convergence or until all n = 882 bits have been decimated. As reported in [17], BPGD with BP using T = 10 iterations achieves performance close to the T = 100 variant, indicating that BPGD also exhibits saturation. Finally, we note that for larger px, BPGD typically requires decimating a large fraction of the bits, which increases the average latency and computational complexity.
+Table I reports the average number of decoder iterations per frame for standard BP and RL-SVNS, corresponding to Fig. 1. At low px, where RL-SVNS achieves over two orders of magnitude lower error rate than standard BP, it also requires substantially fewer iterations on average, indicating both improved reliability and faster convergence in the lownoise regime.6 Table II reports the percentage of decoder failures due to nonconvergence among all decoding errors (i.e., logical errors plus nonconvergence events). As the table shows, RL-SVNS substantially mitigates the nonconvergence issue of the BP decoder for small px (where flooding BP displays an error floor).
+B. RL-SVNS for Depolarizing Noise
+In Fig. 2, we report the FER performance of our proposed reinforcement learning SVNS decoder on the [[882, 48, 16]] code B2 [12] under depolarizing noise. Across a range of physical error rates p, the RL trained quaternary SVNS decoder (RL-QSVNS) yields more than an order-of-magnitude FER reduction compared to conventional quaternary BP (QBP) when both decoders run for 100 iterations. Moreover, RLQSVNS improves upon the performance of the best possible quaternary BPGD (QBPGD) perforamnce and BP-OSD-0 in the plotted regime. We remind the reader that the RL-QSVNS decoding schedule was trained to jointly optimize both X and Z syndrome mismatches, which we believe accounts for the significant performance improvement observed.
+6We note that the complexity per iteration is not equal. BP and RL-SVNS have exactly the same number of VN updates per iteration, but RL-SVNS has more CN updates since CN cj will be updated |N (cj )| times.
+
+FER
+
+10 -1
+
+10 -2
+
+10 -3 QBP, T = 100
+
+10 -4
+
+QBP, T = 1000 QBPGD, GT = 1800
+
+RL-QSVNS, T = 100
+
+10 -5
+
+RL-QSVNS, T = 1000
+
+BP-OSD-0
+
+10 -6 0.04 0.05 0.06 0.07 0.08 0.09 0.1
+
+p
+
+Fig. 3. FER for the [[180, 10, 15 ≤ d ≤ 18]] code A5 over the depolarizing channel.
+
+In Figs. 3-5, we repeat the same experiment for various QLDPC codes to generally validate the behavior for codes with different structure and parameters. Fig. 3 reports the FER performance of our proposed RL-QSVNS decoder for the shorter [[180, 10, 15 ≤ d ≤ 18]] code A5 [12]. At the physical error rate p = 0.04, the learned QSVNS decoder yields about an order-of-magnitude FER reduction compared to QBP when both decoders run for 100 iterations. Again, RL-QSVNS improves upon the performance of Q-BPGD and BP-OSD-0 in the plotted regime.
+In Fig. 4, we plot the FER performance of our proposed RLQSVNS decoder on the bivariate bicycle (BB) [[144, 12, 12]] CSS code over the depolarizing channel. For comparison, we also include QBP with several iteration caps, as well as the QBPGD. For a small iteration budget, the RL-QSVNS decoder achieves lower FER than QBP, indicating faster convergence under tight latency constraints, but as the iteration cap increases, the performance of all methods becomes comparable. This suggests that this may be the limiting performance of BP-based methods. Finally, in Fig. 5, we plot the FER performance of our RL-QSVNS decoder on the longer [[288, 12, 18]] BB code for
+
+12
+
+FER
+
+10 0
+
+10 -1
+
+10 -2
+
+10 -3 QBP, T = 100
+
+10 -4
+
+QBP, T = 1000 QBPGD, GT = 1440
+
+RL-QSVNS, T = 10
+
+10 -5
+
+RL-QSVNS, T = 100
+
+RL-QSVNS, T = 1000
+
+0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 p
+
+FER
+
+10 -1
+
+10 -2
+
+10 -3
+
+10 -4
+
+10 -5
+
+QBPGD, T = 10
+
+QBPGD, T = 100
+
+10 -6
+
+RL-QSVNS-GD, T = 10
+
+RL-QSVNS-GD, T = 100
+
+10 -7
+
+0.05
+
+0.06
+
+0.07
+
+0.08
+
+0.09
+
+0.1
+
+p
+
+Fig. 4. FER for the [[144, 12, 12]] BB code over the depolarizing channel.
+
+Fig. 6. Performance of RL-QSVNS-GD (guided decimation and RL trained sequential decoding) vs. QBPGD for the [[288, 12, 18]] BB CSS code over the depolarizing channel.
+
+FER
+
+10 0
+
+10 -1
+
+10 -2
+
+10 -3
+
+10 -4
+
+QBP, T = 100
+
+QBP, T = 1000
+
+10 -5
+
+QBPGD, GT = 2880
+
+RL-QSVNS, T = 10
+
+10 -6
+
+RL-QSVNS, T = 100
+
+RL-QSVNS, T = 1000
+
+10 -7
+
+0.05
+
+0.06
+
+0.07
+
+0.08
+
+0.09
+
+0.1
+
+p
+
+FER
+
+10 -1
+
+10 -2
+
+10 -3
+
+10 -4
+
+10 -5
+
+QBPGD, T = 10
+
+QBPGD, T = 100
+
+10 -6
+
+RL-QSVNS-GD, T = 10
+
+RL-QSVNS-GD, T = 100
+
+10 -7 0.04 0.05 0.06 0.07 0.08 0.09 0.1
+
+p
+
+Fig. 5. FER for the [[288, 12, 18]] BB code over the depolarizing channel. Fig. 7. Performance of RL-QSVNS-GD for the [[882, 48, 16]] B2 code over the depolarizing channel.
+
+different iteration budgets. Here, we do see a performance advantage of RL (with similar convergence gains). In the same figure, we also report the performance of QBP with different iteration caps, as well as the performance of QBPGD. The results show that our decoder achieves about an order-ofmagnitude improvement in FER compared to the other decoders with no indication of the error floor that appears to emerge for the other decoders.
+C. RL-QSVNS with Guided Decimation
+We also evaluated a hybrid variant in which we replace the flooding BP subroutine inside QBPGD with our RL-SVNS schedule, i.e., no new learning was performed. We refer to this decoder as RL-QSVNS with guided decimation (RLQVNS-GD). Figs. 6 and 7 show the resulting FER for the [[288, 12, 18]] BB CSS code and the longer [[882, 48, 16]] B2 code, respectively, over the depolarizing channel. In both cases, the results reveal that incorporating guided decimation with RL-QSVNS yields a noticeable improvement over standard BPGD across various depolarizing probabilities p. These results
+
+indicate that the learned sequential updates supply more informative intermediate beliefs for the decimation mechanism.
+Tables III and IV report the average number of decimation steps per decoding attempt for the two methods corresponding to Figs. 6 and 7, respectively. The results show that replacing flooding (QBPGD) with learned sequential scheduling (RLQSVNS-GD) substantially reduces the number of required decimation steps across all tested values of p, with the gap widening as the channel becomes noisier. This reduction suggests that RL-QSVNS delivers more reliable soft information during the guided-decimation process, thereby decreasing the amount of decimation needed to reach a valid correction.
+VII. CONCLUSIONS
+In this paper, we proposed a novel decoding approach for QLDPC codes that learns the VN update order for sequential BP, yielding an RL trained sequential VN scheduling (RL-SVNS) decoder. To make RL-SVNS more efficient, we proposed a fast implementation that computes the RL states and update rewards using local, incrementally maintained
+
+13
+
+TABLE III AVERAGE NUMBER OF DECIMATION STEPS PER DECODING ATTEMPT FOR STANDARD QBPGD AND RL-QSVNS-GD FOR THE [[288, 12, 18]] BB CSS CODE OVER THE DEPOLARIZING CHANNEL (CORRESPONDING TO FIG. 6).
+
+Method
+BPGD, T = 10 BPGD, T = 100 RL, T = 10 RL, T = 100
+
+Depolarizing probability p 0.05 0.06 0.07 0.08 0.09 0.10
+1.09 1.16 1.32 1.73 2.95 6.77 1.01 1.01 1.05 1.24 2.09 5.12 1.00 1.00 1.03 1.15 1.77 3.95 1.00 1.00 1.01 1.07 1.50 3.50
+
+TABLE IV AVERAGE NUMBER OF DECIMATION STEPS PER DECODING ATTEMPT FOR STANDARD QBPGD AND RL-QSVNS-GD FOR THE [[882, 48, 16]] CODE
+B2 OVER THE DEPOLARIZING CHANNEL (CORRESPONDING TO FIG. 7).
+
+Method
+BPGD, T = 10 BPGD T = 100 RL, T = 10 RL, T = 100
+
+Depolarizing probability p 0.04 0.05 0.06 0.07 0.08 0.09 0.10
+1.11 1.29 1.66 2.54 4.24 7.85 16.53 1.09 1.18 1.40 1.72 2.44 3.80 8.09 1.00 1.02 1.05 1.14 1.42 2.15 4.54 1.00 1.00 1.01 1.02 1.15 1.55 2.68
+
+quantities, and performs greedy action selection efficiently using a heap-based priority structure. Numerical simulation results show that the RL-SVNS decoder provides faster decoder convergence and substantial FER improvements over both flooding BP and random sequential scheduling for a selection of representative QLDPC codes. In addition, its performance is often substantially better than BP-OSD and BPGD decoding while maintaining a complexity comparable to standard BP.
+We also demonstrated that the approach was modular, i.e., the proposed RL-SVNS schedule can be combined with other techniques, providing a further way to improve both convergence behavior and end-to-end decoding performance. We demonstrated this by combining quaternary BPGD with RL-SVNS. The resulting hybrid decoder (RL-QSVNS-GD) achieves a noticeable performance gain over standard QBPGD under the same global iteration cap, while also requiring significantly fewer decimation steps on average.
+VIII. ACKNOWLEDGMENT
+This material is based upon work supported by the National Science Foundation under Grant No. CCF-2145917.
+REFERENCES
+[1] K.-Y. Kuo and C.-Y. Lai, “Exploiting degeneracy in belief propagation decoding of quantum codes,” npj Quantum Information, vol. 8, no. 1, p. 111, 2022.
+[2] P. W. Shor, “Scheme for reducing decoherence in quantum computer memory,” Phys. Rev. A, vol. 52, pp. R2493–R2496, Oct 1995. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRevA.52.R2493
+[3] A. M. Steane, “Error correcting codes in quantum theory,” Phys. Rev. Lett., vol. 77, pp. 793–797, Jul 1996. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRevLett.77.793
+[4] J.-P. Tillich and G. Ze´mor, “Quantum LDPC codes with positive rate and minimum distance proportional to the square root of the blocklength,” IEEE Transactions on Information Theory, vol. 60, no. 2, pp. 1193–1202, 2013.
+[5] P. Panteleev and G. Kalachev, “Asymptotically good quantum and locally testable classical LDPC codes,” in Proceedings of the 54th annual ACM SIGACT symposium on theory of computing, 2022, pp. 375–388.
+
+[6] N. P. Breuckmann and J. N. Eberhardt, “Balanced product quantum codes,” IEEE Transactions on Information Theory, vol. 67, no. 10, pp. 6653–6674, 2021.
+[7] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory,” Nature, vol. 627, no. 8005, pp. 778–782, 2024.
+[8] D. Poulin and Y. Chung, “On the iterative decoding of sparse quantum codes,” Quantum Info. Comput., vol. 8, no. 10, p. 987–1000, Nov. 2008.
+[9] P. Fuentes, J. E. Martinez, P. M. Crespo, and J. Garcia-Fr´ıas, “Degeneracy and its impact on the decoding of sparse quantum codes,” IEEE Access, vol. 9, pp. 89 093–89 119, 2021.
+[10] J. Roffe, D. R. White, S. Burton, and E. Campbell, “Decoding across the quantum low-density parity-check code landscape,” Phys. Rev. Res., vol. 2, p. 043423, Dec 2020. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRevResearch.2.043423
+[11] S. Miao, A. Schnerring, H. Li, and L. Schmalen, “Quaternary neural belief propagation decoding of quantum ldpc codes with overcomplete check matrices,” IEEE Access, vol. 13, pp. 25 637–25 649, 2025.
+[12] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” Quantum, vol. 5, p. 585, 2021.
+[13] J. Roffe, L. Z. Cohen, A. O. Quintavalle, D. Chandra, and E. T. Campbell, “Bias-tailored quantum LDPC codes,” Quantum, vol. 7, p. 1005, 2023.
+[14] J. D. Crest, M. Mhalla, and V. Savin, “Stabilizer inactivation for messagepassing decoding of quantum LDPC codes,” in 2022 IEEE Information Theory Workshop (ITW), 2022, pp. 488–493.
+[15] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, “Localized statistics decoding for quantum low-density paritycheck codes,” Nature Communications, vol. 16, no. 1, p. 8214, 2025.
+[16] S. Miao, A. Schnerring, H. Li, and L. Schmalen, “Quaternary neural belief propagation decoding of quantum LDPC codes with overcomplete check matrices,” IEEE Access, vol. 13, pp. 25 637–25 649, 2025.
+[17] H. Yao, W. A. Laban, C. Ha¨ger, A. G. i. Amat, and H. D. Pfister, “Belief propagation decoding of quantum ldpc codes with guided decimation,” in 2024 IEEE International Symposium on Information Theory (ISIT), 2024, pp. 2478–2483.
+[18] M. Alinia, D. G. M. Mitchell, H. Yao, and H. D. Pfister, “Decimation strategies for belief propagation decoding of quantum LDPC codes,” in 2025 13th International Symposium on Topics in Coding (ISTC), 2025, pp. 1–5.
+[19] M. Moradi, S. Habib, V. Nourozi, and D. G. M. Mitchell, “Sequential BP-based decoding of QLDPC codes,” 2026. [Online]. Available: https://arxiv.org/abs/2602.13420
+[20] J. Zhang and M. Fossorier, “Shuffled iterative decoding,” IEEE Transactions on Communications, vol. 53, no. 2, pp. 209–213, 2005.
+[21] F. Carpi, C. Ha¨ger, M. Martalo`, R. Raheli, and H. D. Pfister, “Reinforcement learning for channel coding: Learned bit-flipping decoding,” in 2019 57th Annual Allerton Conference on Communication, Control, and Computing (Allerton), 2019, pp. 922–929.
+[22] S. Habib, A. Beemer, and J. Kliewer, “Belief propagation decoding of short graph-based channel codes via reinforcement learning,” IEEE Journal on Selected Areas in Information Theory, vol. 2, no. 2, pp. 627–640, 2021.
+[23] M. Moradi, S. Habib, and D. G. M. Mitchell, “Enhancing belief propagation decoding of polar codes: A reinforcement learning approach,” IEEE Communications Letters, vol. 29, no. 6, pp. 1285–1289, 2025.
+[24] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Physical Review A, vol. 54, no. 2, p. 1098, 1996.
+[25] K.-Y. Kuo and C.-Y. Lai, “Refined belief propagation decoding of sparsegraph quantum codes,” IEEE Journal on Selected Areas in Information Theory, vol. 1, no. 2, pp. 487–498, 2020.
+[26] C.-Y. Lai and K.-Y. Kuo, “Log-domain decoding of quantum ldpc codes over binary finite fields,” IEEE Transactions on Quantum Engineering, vol. 2, pp. 1–15, 2021.
+
+

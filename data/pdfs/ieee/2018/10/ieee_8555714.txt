@@ -1,0 +1,316 @@
+Construction of LDPC Codes Based on Deep Reinforcement Learning
+Mingxu Zhang†, Qin Huang†∗, Shuai Wang† and Zulin Wang †‡∗ †School of Electronic and Information Engineering, Beihang University, Beijing, 100191, China
+‡Collaborative Innovation Center of Geospatial Technology, Wuhan, 430079, China Email: zhangmingxu@buaa.edu.cn; qhuang.smash@gmail.com; wshuai buaa@163.com; wzulin 201@163.com
+
+Abstract—This paper proposes a novel deep reinforcement learning method for constructing low-density parity-check (LDPC) codes. In this method, both deep neural network trained by reinforcement learning and Monte Carlo tree search (MCTS) are combined to discover edge growth routes without any humandefined knowledge. Due to the great ability of prediction shown by deep reinforcement learning, the proposed method has a long-term vision for constructing codes with a potential of better performance compared with the traditional computer-search-based methods. In addition, the proposed method is flexible for constructing codes with different parameters.
+Index Terms—LDPC code, code construction, deep reinforcement learning, MCTS
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are growing to be dominant in applications requiring error control coding because of their capacity-approaching performance. LDPC codes were first discovered by Gallager in 1962 [1] and then rediscovered in late 1990s [2], [3]. Construction, encoding, decoding, performance analysis and implementation of LDPC codes have been focused and exploited by a lot of researchers ever since their rediscovery. Many LDPC codes have been adopted in various communication systems, e.g., space communication, 5G communication and data storage devices.
+In terms of construction, it can be generally classified into two categories: 1) constructions based on computer search, such as Gallager codes [1], MacKay codes [2] and progressive-edgegrowth (PEG) codes [4]; and 2) constructions based on algebraic tools, such as finite geometry codes [5].
+On one hand, the constructions based on computer search have advantages in simplicity and flexibility, i.e., they can easily be used for constructing codes given arbitrary block length and code rate. However, traditional computer-search-based methods generally lack long-term vision and optimize only the local features of the code, e.g., maximizing the length of local cycle in the process of PEG method. Thus, the performance of LDPC codes constructed based on computer search is not always good enough. On the other hand, the constructions based on algebraic
+This work was supported by NSAF under Grant U1530117, National Natural Science Foundation of China under Grant 61471022, the Fundamental Research Funds for the Central Universities and Young Elite Scientists Sponsorship Program by CAST under Grant 2017QNRC001.
+∗Corresponding authors are Qin Huang and Zulin Wang.
+
+tools indeed can guarantee that constructed codes have relatively good minimum distances and good structures with cyclic or quasi-cyclic form. However, algebraic-based methods are not flexible with code parameters.
+In order to keep both the good performance and flexibility, this paper presents a novel deep reinforcement learning method for constructing LDPC codes. Recently, deep neural networks have shown effective ability of representation and been widely used in object detection [6], machine translation [7] and speech processing [8]. Additionally, deep reinforcement learning shows great ability of prediction and long-term vision, e.g., AlphaGo [9] and AlphaGo Zero [10]. Inspired by AlphaGo Zero, we use deep neural network trained by reinforcement learning and Monte Carlo tree search (MCTS) to discover edge growth routes in code construction. Compared with other existing constructions, the significance of our proposed algorithm lies in 1) its potential of performance improvement, i.e., the long-term vision can lead the construction process towards to construct codes with good enough performance, 2) its flexibility, i.e., it is well adapted for constructing codes given arbitrary block length and code rate with required degree distribution, and 3) its simplicity, i.e., given the well-trained deep neural network, it doesn’t need to expand the graph to search like PEG method during the construction.
+The paper is organized as follows: In Section II, we prepare the preliminary for the following contents. The construction of LDPC codes based on deep reinforcement learning is proposed in Section III. Section IV presents the experiment and corresponding result. Finally, conclusions are drawn in Section V.
+
+II. PRELIMINARY
+
+A. LDPC codes
+
+An (n, k) LDPC code C is a linear block code given by the null space of an m × n parity-check matrix H that has a low density of 1s. The element in the i-th row and j-th column of H is denoted as hi,j (1 ≤ i ≤ m, 1 ≤ j ≤ n). The codeword is denoted as x = (x1, x2, · · · , xn), which should be checked by each parity-check equation. Specifically, for the i-th parity-
+check equation, it must satisfy that:
+
+n
+
+hi,jxj = 0 (mod 2).
+
+(1)
+
+j=1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:27:57 UTC from IEEE Xplore. Restrictions apply.
+978-1-5386-6119-2/18/$31.00 ©2018 IEEE
+
+Tanner graph, which corresponds to H, is a bipartite graph with m check nodes in one class and n variable nodes in the other. Formally, let V denotes the set of vertices (nodes) and E denotes the set of edges, then a Tanner graph is denoted as (V ; E). Considering the above LDPC code C, there are V = Vc ∪ Vs and E ⊆ Vc × Vs, where Vc = {c1, c2, ..., cm} is the set of check nodes and Vs = {s1, s2, ..., sn} is the set of variable nodes. Each edge has a corresponding position in H, i.e., edge (ci, sj) ∈ E if and only if hi,j = 0.
+Almost all LDPC code constructions keep the row-column constraint (RC constraint) on H: no two rows (or two columns) have more than one position in common that contains a nonzero element.
+Base on Tanner graph, an ensemble of LDPC codes can be represented by degree distribution polynomials. The degree distribution of variable nodes is defined as
+
+dv
+
+λ˜(X) = λ˜dXd−1,
+
+(2)
+
+d=1
+
+where λ˜d is the fraction of variable nodes connected to exactly d check nodes; dv denotes the maximum variable node degree. Similarly, the degree distribution of check nodes is defined as
+
+dc
+
+ρ˜(X) = ρ˜dXd−1,
+
+(3)
+
+d=1
+
+where ρ˜d is the fraction of check nodes connected to exactly d variable nodes; dc denotes the maximum check node degree.
+
+B. Deep reinforcement learning
+Deep reinforcement learning is the combination of deep neural networks and reinforcement learning.
+Deep neural network is a network with one or more hidden layers between input and output layers, whose weights are on links between units from layer to layer. A deep neural network can represent functions between input and output [11]. At each layer, every unit in this layer separately gets its value calculated by the weighted sum of units from the input of this layer, and then each unit outputs its value to the next layer after being processed by activation function, such as logistic, tanh or rectified linear unit (ReLU). A loss function can be calculated after computations flow forward from input layer to output layer. And then gradients can be computed using back-propagation algorithm backward from output layer to input layer to update the weights for minimizing the loss.
+Reinforcement learning is about an agent interacting with the environment, learning an optimal policy, by trail and error, for sequential decision making problems in a wide range of fields [12]. Besides the agent and the environment, there are four main elements of a reinforcement learning system: a policy, a reward, a value function and optionally a model of the environment [13]. A policy defines the agent’s behavior at a given time, which tells the agent which action to be taken. A reward is a single number sent by the environment to the agent on each time step. Maximizing the total reward is the agent’s aim so
+
+that the reward indicates which action is good in a short-term sight. A value function is the total amount of reward an agent can expect to accumulate over the future, which indicates the relatively good action in a long-term vision. Finally, a model is something that imitates the behavior of the environment.
+Deep reinforcement learning methods are that using deep neural networks to approximate any of these elements of reinforcement learning: policy, value function or model.
+C. Monte Carlo tree search
+MCTS is a method building and traversing a search tree with taking random sampled action at each node for finding optimal decisions of a problem [14]. It has already had a profound impact on artificial intelligence approaches for problems that can be represented as trees of sequential decisions, particularly constructions and planning problems.
+III. THE PROPOSED CODE CONSTRUCTOR BASED ON DEEP REINFORCEMENT LEARNING
+A. Architecture
+The proposed construction for LDPC codes consists of training stage and application stage. In the training stage, a deep neural network is trained by reinforcement learning and MCTS. Specifically, the data for training the current neural network are generated by code construction repeatedly through MCTS, which is guided by the latest trained network. In the application stage, the well-trained deep neural network is utilized to construct the expected LDPC code.
+A code construction process in both stage can be separated into a series of states and an action should be taken at each state. For example, constructing an (n, k) binary LDPC code C with specific degree distribution λ˜(X) and ρ˜(X) is actually setting 1s (selecting edges) step by step in an m × n matrix, started with all zero elements, to form the parity-check matrix H. The construction process consists of T states, s1, ..., sT , where T is the total number of edges. At each state st, selecting a next edge is called an action in this example. The representation of the action in matrix form is a binary m × n matrix with only one “1” element in the position corresponding to the selected edge. The available actions of a state st compose a set A(st), where each action a ∈ A(st) is selecting an edge at one of the positions with zero in the matrix at this state. Each state st is an m × n × w image stack comprising w feature planes. The first plane represents the current matrix, and the latest w − 1 actions already taken are represented by the rest planes, respectively.
+The deep neural network with parameters θ in the training stage or application stage is denoted as fθ. Given a state s as the input, this deep neural network outputs both a vector p of action probabilities and a value v evaluating the performance of the LDPC code predicted from the state, which is denoted as (p, v) = fθ(s).
+The code construction process in the application stage is that at each state st (1 ≤ t ≤ T −1), the well-trained neural network fθ outputs action probabilities pt, then an action is taken by sampling the action probabilities pt to reach the next state st+1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:27:57 UTC from IEEE Xplore. Restrictions apply.
+
+B. Training
+
+The deep neural network we proposed is trained by a novel
+
+reinforcement learning algorithm, which adopts MCTS to pro-
+
+duce the rectified action probabilities π as the training data at
+
+each state. This subsection firstly introduces the mechanism of
+
+the MCTS in this algorithm and then presents the entire training
+
+pipeline.
+
+In the training stage, at each state s, to produce probabilities
+
+π recommending actions to take, the MCTS αθ builds and
+
+traverses a search tree through a preset number of simulations,
+
+which is guided by the latest trained neural network fθ. Each node in the search tree represents a state s and each edge in
+
+the search tree is a state-action pair, denoted as (s, a). A prior
+
+probability P (s, a), a visit count N (s, a) and an action value
+
+Q(s, a) are stored in each edge (s, a). Each simulation of MCTS
+
+starts from the root state and traverses the search tree left by
+
+the last simulation. In detail, from a non-leaf node s, MCTS
+
+selects edge (s, a) that maximizes Q(s, a) + U (s, a), where
+
+U (s, a) ∝ P (s, a)/(1+N (s, a)) [9], [15]. Correspondingly, the
+
+visit count N (s, a) of the selected edge should increment by 1.
+
+Then, a child node s will be reached. The above operation,
+
+denoted as s, a → s , is repeatedly taken until s is a leaf
+
+node. At the leaf node s , MCTS expands the search tree by
+
+adding the outgoing edges from s , where each edge stores
+
+a prior probability P (s , ·). All these probabilities make up
+
+a vector P (s , ·), which is generated by the neural network,
+
+(P (s , ·), V (s )) = fθ(s ). And then, this simulation is ended with backward updating each action value Q(s, a) correspond-
+
+ing to the traversed edge (s, a) to the mean evaluation by
+
+Q(s, a) = [ s |s,a→s V (s )]/N (s, a). Once all the simulations are complete, the rectified action probabilities π = αθ(s) are
+
+returned by proportional exponentiating the visit count for each
+
+action of root state. Specifically, the probability of each action
+
+a in π is πa ∝ N (s, a)1/τ , where τ is a temperature parameter
+
+that controls the level of exploration.
+
+The entire training stage consists of a preset number of
+
+iterations. The pipeline of the i-th iteration (i ≥ 1) is presented
+
+as follows.
+
+Firstly, the training data are generated by code construction
+
+repeatedly through MCTS. Specifically, At each time-step t
+
+in the ζ-th construction process, an MCTS is executed using
+
+the trained neural network fθi−1 from the last iteration and
+
+π(ζi,)t = αθi−1 (sζ(i,)t) is returned. Then, an action is taken at
+
+state sζ(i,)t by sampling the action probabilities πζ(i,)t. When this
+
+construction process terminates at time-step T , the final reward
+
+rζ(i,)T is evaluated by performance simulation of the constructed
+
+code. The training data corresponding to each time-step t in
+
+the ζ-th construction process are stored as (sζ(i,)t, π(ζi,)t, zζ(i,)t),
+
+where zζ(i,)t is called the score of the final constructed code and
+
+zζ(i,)t = rζ(i,)T .
+
+Secondly, the deep neural network is trained by
+
+(sη(i),
+
+π
+
+(i) η
+
+,
+
+zη(i)
+
+)
+
+(1
+
+≤
+
+η
+
+≤
+
+ηmax), which are uniformly
+
+sampled from the data set {(s(ζi,)t, πζ(i,)t, zζ(i,)t)} generated by
+
+a certain amount of previous successive iterations. The
+
+parameters of neural network are updated to make the action probabilities and value (p(ηi), vη(i)) = fθ(s(ηi)) more closely match the training data (π(ηi), zη(i)), i.e., maximizing the similarity between pη(i) and πη(i) and minimizing the mean squared error between vη(i) and zη(i). Specifically, the loss function l(i) consists of the mean-squared error, cross-entropy
+and L2 weight regularization, respectively:
+
+l(i)
+
+=
+
+1 ηmax
+
+ηmax
+
+·
+
+{(zη(i)
+
+η=1
+
+− vη(i))2
+
+− π(ηi)T log pη(i)} + c||θ||2,
+
+(4)
+
+where log is element-wise operation and c is a parameter
+
+controlling the level of L2 weight regularization to prevent
+
+overfitting. The parameters θ are updated from θi−1 to θi by gradient descent to minimize the loss l(i). These new parameters
+
+θi are used in the next iteration.
+
+IV. EXPERIMENT AND RESULT
+A. Experiment
+We use the proposed method to construct a quasi-cyclic LDPC (QC-LDPC) code which has tremendous structure, leading to simplified encoder and decoder designs. The QC-LDPC code C1 designed by the proposed method is a (64, 32) binary LDPC code with circulant size of 8, whose each variable node degree dv is 3 and each check node degree dc is 6. Then the base array of the QC-LDPC code C1 is a 4 × 8 array, whose elements are 8 × 8 circulant permutation matrix (CPM) or 8 × 8 zero matrix. There are 8 different CPMs, denoted as CPMu, u = 1, ..., 8. CPMu is a square matrix, where the first row has “1” in u-th column and “0” in others and every row is the cyclic-shift one place to the right of the row above it.
+The code construction process consists of T = 24 states, s1, ..., sT , where T is the total required number of CPMs. For convenience, we construct the code column by column in the array. As a result, the relation between index t of the current state st and the index j of the current column is j = (t − 1)/dv + 1. Assuming at the state st, selecting an i-th row in the array and choosing a CPMu is called an action, denoted as at = (i, u). The representation of the action at = (i, u) in matrix form is a 4 × 8 matrix with only one nonzero element “u” in i-th row and j-th column, where j = (t − 1)/dv + 1. Each state st is a 4 × 8 × 2 image stack comprising 2 feature planes. The first plane represents the current array, and the last action is represented in the second plane.
+In training process, the score of the final constructed code is calculated with its bit error rate (BER), which is evaluated by simulation.
+The deep neural network architecture, used to discover edge growth routes, is presented in detail as follows. The input to the network is a 4 × 8 × 2 image stack defined above, which is processed by 3 convolution layers:
+1) a convolution of 32 filters of kernel size 3 × 3 with stride 1 activated by ReLU;
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:27:57 UTC from IEEE Xplore. Restrictions apply.
+
+2) a convolution of 64 filters of kernel size 3 × 3 with stride 1 activated by ReLU;
+3) a convolution of 128 filters of kernel size 3×3 with stride 1 activated by ReLU.
+The output of the third convolution layer is passed into two separate heads for computing the policy and value. The policy head applies the following layers:
+1) a convolution of 4 filters of kernel size 1 × 1 with stride 1 activated by ReLU;
+2) a fully connected layer that outputs a vector of size 4×8 = 32 with softmax activation function.
+The value head applies the following layers:
+1) a convolution of 2 filters of kernel size 1 × 1 with stride 1 activated by ReLU;
+2) a fully connected linear layer that outputs a vector of size 64;
+3) a fully connected linear layer that outputs a scalar.
+We built our deep neural network on top of the Keras based on TensorFlow and used an NVIDIA TITAN Xp GPU for accelerated training.
+B. Result
+With the trained deep neural network, the QC-LDPC code C1 is constructed. To compare the performance, a QC-LDPC code C2 is constructed by PEG method with the same parameters as the QC-LDPC code C1. The performance of C1 and C2 is shown in Fig. 1. It compares the BER and frame error rate (FER) of the both codes over additive white Gaussian noise (AWGN) channel decoded by sum product algorithm (SPA).
+
+Error Rate
+
+100 BER
+
+10-1
+
+FER- BER-
+
+FER- 10-2
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+10-7
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+Eb/N0(dB)
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. J. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, p. 1645, 1996.
+[3] D. J. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[4] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, “Progressive edge-growth Tanner graphs,” in Proc. IEEE GLOBECOM ’01, vol. 2, 2001, pp. 995– 1001.
+[5] Y. Kou, S. Lin, and M. P. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, 2001.
+[6] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE CVPR ’16, 2016, pp. 770–778.
+[7] M.-T. Luong, H. Pham, and C. D. Manning, “Effective approaches to attention-based neural machine translation,” arXiv preprint arXiv:1508.04025, 2015.
+[8] A. Graves, A.-r. Mohamed, and G. Hinton, “Speech recognition with deep recurrent neural networks,” in Proc. IEEE ISASSP ’13, 2013, pp. 6645– 6649.
+[9] D. Silver, A. Huang, C. J. Maddison, A. Guez, L. Sifre, G. Van Den Driessche, J. Schrittwieser, I. Antonoglou, V. Panneershelvam, M. Lanctot et al., “Mastering the game of go with deep neural networks and tree search,” Nature, vol. 529, no. 7587, pp. 484–489, 2016.
+[10] D. Silver, J. Schrittwieser, K. Simonyan, I. Antonoglou, A. Huang, A. Guez, T. Hubert, L. Baker, M. Lai, A. Bolton et al., “Mastering the game of go without human knowledge,” Nature, vol. 550, no. 7676, p. 354, 2017.
+[11] I. Goodfellow, Y. Bengio, A. Courville, and Y. Bengio, Deep learning. MIT press Cambridge, 2016, vol. 1.
+[12] Y. Li, “Deep reinforcement learning: An overview,” arXiv preprint arXiv:1701.07274, 2017.
+[13] R. S. Sutton and A. G. Barto, Reinforcement learning: An introduction. MIT press Cambridge, 1998, vol. 1, no. 1.
+[14] C. B. Browne, E. Powley, D. Whitehouse, S. M. Lucas, P. I. Cowling, P. Rohlfshagen, S. Tavener, D. Perez, S. Samothrakis, and S. Colton, “A survey of monte carlo tree search methods,” IEEE Trans. Comput. Intell. AI in Games, vol. 4, no. 1, pp. 1–43, 2012.
+[15] C. D. Rosin, “Multi-armed bandits with episode context,” Ann. Math. Artif. Intell., vol. 61, no. 3, pp. 203–230, 2011.
+
+Fig. 1. Performance of the LDPC codes C1 and C2.
+
+From Fig. 1 we can see that the performance of QC-LDPC code C1 is as good as C2, which means the method we proposed is as good as the PEG method.
+
+V. CONCLUSION
+In this paper, we present a novel deep reinforcement learning method for constructing LDPC codes. We combine MCTS with a deep neural network to guide the code construction state by state with long-term vision. The proposed construction method keeps flexibility for arbitrary code parameters. Experiment result shows that it has potential of performance improvement.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:27:57 UTC from IEEE Xplore. Restrictions apply.
+
+

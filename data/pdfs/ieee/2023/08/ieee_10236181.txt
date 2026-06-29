@@ -1,0 +1,313 @@
+2023 21st International Conference on Optical Communications and Networks (ICOCN) | 979-8-3503-4350-2/23/$31.00 ©2023 IEEE | DOI: 10.1109/ICOCN59242.2023.10236181
+
+Efficient FPGA-based LDPC Encoder Implementation for Optical Communication
+Systems
+Yu Liu,1 Wenhua Gu,1* Zhen Mei,1 Daying Sun1
+1Nanjing University of Science and Technology, Nanjing, China *guwenhua@njust.edu.cn
+
+Abstract—The low-density-parity-code (LDPC) code has been suggested as a forward error correction code in the ITU-T G975.1 protocol for optical communications. However, the traditional LDPC encoding method causes high latency or excessive resource usage, which may degrade the encoder’s throughput and performance. In this paper, we propose an efficient encoder implementation of the LDPC code in the ITUT G975.1 protocol based on field programmable gate arrays (FPGA). Specifically, the Richardson-Urbanke (RU) algorithm is modified by incorporating the structural characteristics of the parity check matrix that corresponds to the ITU-T G975.1 protocol, along with specific preprocessing techniques. This approach not only simplifies the encoding process but also makes it more suitable for hardware implementation. Our implementation significantly reduces resource consumption and encoding delay compared with existing methods, achieving a throughput of 10Gbps rate.
+Keywords—LDPC, encoder, 10G optical communication, hardware acceleration, FPGA implementation
+I. INTRODUCTION
+Low-density-parity-check (LDPC) code is a linear code that uses a sparse parity matrix to achieve good error correction performance. It was first proposed by Gallager in 1962 [1]. In 1999, Mackay rediscovered the LDPC code [2], which can approach the Shannon capacity limit. On the other hand, field programmable gate arrays (FPGAs) are widely used in communication systems due to their flexibility and reconfigurability. The Richardson-Urbanke (RU) algorithm is a classic and universal LDPC encoding algorithm [3]. The encoding can be implemented using a hybrid encoding algorithm based on FPGA [4]. However, due to the dense nature of the generator matrix, it requires a lot of storage resources. In addition, triangular matrices have an iterative process, and when the matrix is large, the delay is also high. A pulse code modulation (PCM) two-part method was proposed to avoid the calculation of triangular matrices and reduces latency [5], but it still required a large number of storage resources. To further improve the performance, it is necessary to study the characteristics of specific LDPC codes in the protocol and identify the most suitable encoding method.
+In this paper, we design an efficient encoder for LDPC codes of a 10Gbps optical communication system based on the ITU-T G975.1protocol [6]. The proposed method is based on the RU algorithm by taking the structure of the parity check matrix in the protocol into account.
+II. PRELIMINARIES
+A. LDPC encoding fundamentals
+
+There are two approaches for LDPC encoding: one employs the parity check matrix H, based on the equation ∗
+= ; the other uses the generation matrix G, based on the equation = ∗ , where u is the information and c is the codeword. However, G is generally dense, which results in high coding complexity. Therefore, we adopt H for encoding by using the RU-based algorithm.
+The RU encoding algorithm arranges H in an approximate lower triangular form. This is achieved through the row rearrangement of the original H.
+
+0
+
+A
+
+BT
+
+C
+
+DE
+
+Fig. 1. Approximate lower triangular form of the parity check matrix
+
+Fig. 1 shows the division of the H into six blocks, denoted as A, B, C, D, E, and T. The matrix T is lower triangular. The parity check bits are obtained by solving the following equations:
+
+= (−
+
++ ) (−
+
++) ,
+
+(1)
+
+2 =−
+
++ 1.
+
+With the above formula, the codeword = [ , , ], u is the information, , are the parity check bits. In the next section, we will leverage the specific structure of H to further simplify the FPGA implementation of the RU algorithm.
+
+B. LDPC codes for ITU-T G975.1
+The ITU-T G.975.1 standard supports a 10Gbps optical communication rate and uses LDPC codes to improve transmission distance. It yields a net coding gain of 8.02dB at an output bit error rate (BER) of 10-15. In the ITU-T G975.1 protocol, the parity check matrix H is constructed using a structured construction method with a row weight of 112 and a column weight of 7. The dimension of the H matrix is (2051,32816).
+
+As shown in Fig. 2, H contains 7 submatrices, each
+containing 293 rows of H. Each slope corresponds to 112
+square matrices !"# $%∗& of size 293, obtained by shifting the identity matrix . Here, I represents the identity matrix with
+dimensions (293, 293). The slope value slope' corresponds to the number of bits shifted each time, and j is the number of
+
+979-8-3503-4350-2/23/$31.00 ©2023 IEEE.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:37:18 UTC from IEEE Xplore. Restrictions apply.
+
+shifts according to the slope value. The resulting matrix is obtained by circularly shifting the identity matrix.
+
+Adjacent square matrices within the same slope are related
+to each other, and the (( + 1)-th square matrix is obtained by
+shifting the (-th square matrix to the right by slope' bits. The resulting !"# $)∗* is still a square matrix obtained after shifting.
+
+,
+
+!"# $.∗ !"# $0∗
+
+!"# $.∗ !"# $0∗
+
+……… ………
+
+!"# $.∗ 8 !"# $0∗ 7
+
+,
+
+!"# $1∗
+
+!"# $1∗ … … … !"# $1∗ 7
+
+=, , , ,
+
+!"# $2∗ !"# $3∗ !"# $4∗
+
+!"# $2∗ !"# $3∗ !"# $4∗
+
+……… ……… ………
+
+!"# $2∗
+
+7 7
+
+!"# $3∗ 7
+
+!"# $4∗ 7
+
++
+
+!"# $5∗
+
+!"# $5∗ … … … !"# $5∗ 6
+
+Fig. 2. Parity check matrix of the LDPC code for ITU-T G975.1
+
+III. PROPOSED LDPC ENCODER IMPLEMENTATION FOR ITU-T G975.1 PROTOCOL
+
+A. Modified RU algorithm for LDPC encoding
+The proposed modified RU algorithm for the ITU-T G975.1 protocol are described as follows.
+
+In order to employ the RU algorithm, H needs to be transformed into an approximate lower triangular form. we first swap the first 293 rows of H. This ensures that a square matrix S corresponding to the first 293 rows and the last 293 columns of H can be transformed into an identity matrix I by row swapping. The resulting matrix is the submatrix T, which is an identity matrix. Note that this row swap operation is equivalent to left-multiplying this matrix S by a permutation matrix 9:, given by = 9:; = .
+
+Next, to simplify the calculation of check bits, we turn the E matrix into a zero matrix, E and T belong to the same last 293 columns, E matrix is composed of six square matrices, given by = [ , , <, =, >, ?] , ' is a square matrix of size 293. Hence, by choosing a specific row of the identity
+matrix T, and then adding each row of ' sequentially, E can be eliminated as a zero matrix, given by (9' ) + ' = , where 9' is a permutation matrix. Since it is a binary addition, we have 9' = '.
+
+When performing the row transformation, it is inevitable
+
+that the A, B, C submatrices will be changed to the matrices : , : , : , which are also equivalent to left multiplying a
+permutation matrix, given by : = 9′*A, : = 9′*B, and C
+
+corresponds to six slopes, given by =
+
+[ , , <, =, >, ?] . After preprocessing, each slope
+
+corresponds
+
+follows:
+
+: '
+
+=
+
+to (
+
+'
+
+a +
+
+submatrix 9' :) = (
+
+'
+
+: '
+
+which
+
++ 9'9: ),
+
+is related as where 9', 9:are
+
+permutation matrices. After carrying out the preprocessing as
+
+above, the calculation of check bits , can be simplified.
+
+According to above derivations, is an identity matrix
+
+and E is a zero matrix. Then, we can obtain -1 = = ,
+
+(−
+
++ ) = , (−
+
++ ) = . Finally, the
+
+parity check bits are given by
+
+=
+
+:,
+
+=: +: .
+
+(2)
+
+It can be seen that compared with (1), solving the parity check bits with our proposed method is greatly simplified. In
+
+the calculation of (2), A , A , A are all sparse matrix multiply vectors, thus we can simplify the calculation by utilizing the location of non-zero elements in H.
+
+B. FPGA implementation of the encoder
+In our FPGA implementation, the encoder processes 64 bits of data per cycle and caches the input data using a firstin-first-out (FIFO), which is also used for output data. The encoder also maps the input information bits, sorts them into the required format for the encoder, and caches the mapped data using a FIFO. Additionally, the encoder performs bitwidth conversion for encoding. After mapping the input information bits, the submatrix A,C and the mapped information are multiplied, and an accumulation iteration is performed. The iteration result is output after the calculation is completed. The coding controller calculates the address and accesses the inverse matrix storage module to retrieve the data of the inverse matrix. The retrieved data is then multiplied with the previous iteration to derive a portion of the check bits.
+
+As shown in Fig. 3, the following circuit is used in the
+
+FPGA to implement the pre-processing process for , given
+
+by
+
+: '
+
+=
+
+(
+
+' + 9'
+
+:).
+
+Au
+
+Cyclic shift register
+
+Ciru
+
+Ciu
+
+Cyclic shift register
+
+Fig. 3. Implementation of preprocessing
+The iterative multiplication of the submatrix is implemented using a circuit structure, as shown in Fig. 4. We use this circuit to calculate the multiplication of : and
+: . This circuit can continuously shift the input information word fragment using the corresponding slope value for each shift. The shifted codeword can be accumulated with the newly entered codeword at each cycle until the iterative calculation is complete. The calculation result is then mapped, and the final output result can be obtained.
+Bit shift mapping
+
+D
+
+D
+
+D
+
+D
+
+D
+
+D
+
+slope_value
+
+Vector_slice
+
+Fig. 4. Submatrix iterative multiplication
+
+The circuit for implementing the inverse matrix
+
+multiplication operation is shown in Fig. 5. We use this circuit
+
+to obtain a portion of the check bits, given by =
+
+:.
+
+At each clock cycle, the inverse matrix data read from the read
+
+only memory (ROM) and the result of the previous level
+
+calculation are multiplied using an AND gate. The
+
+accumulation of these multiplication results is obtained using
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:37:18 UTC from IEEE Xplore. Restrictions apply.
+
+a XOR gate, which calculates a part of the parity bits. Additionally, the calculation results are cyclically shifted by the shift register to continuously update the calculated parity bits.
+Shift registers
+
+&&&& &
+Cu
+Inverse matrix storage ROM
+
+Address generator
+
+Fig. 5. Inverse matrix multiplication
+Furthermore, to improve the throughput and reduce the delay, our implementation uses a pipelining method that inserts registers to hold intermediate results after multiplying the sparse matrix by the vector. Additionally, registers are inserted to hold the data by one more level after reading out the inverse matrix from ROM. When multiplying and accumulating the data in ROM with the vector, multiple lookup tables (LUTs) are cascaded in the computation, resulting in long combinatorial logics. To address this, registers are inserted to hold the multiplication result and receive the final computation result through a shift register. This reduces the length of the critical path and improves the timing performance.
+IV. RESULTS AND CONCLUSIONS
+A. Results and Analysis
+As a comparison, we also include the encoding methods in [4] and [5], using the LDPC codes in the ITU-T G975.1 protocol. All encoder implementations are based on the Fudan Microelectronics JFM7VX690T FPGA development board. At a clock of 167.77Mhz, the FPGA resources used in this paper and other approaches in the literature to implement this protocol encoder are shown in Table I:
+
+TABLE I. FPGA RESOURCE UTILIZATION COMPARISON
+
+encoder This article
+
+slice 4318
+
+FPGA Resource Utilization
+
+BRAM
+
+Throughput
+
+99
+
+10Gbps
+
+[4]
+
+10600
+
+201
+
+105Mbps
+
+[5]
+
+5422
+
+142
+
+10Gbps
+
+In [4], the RU algorithm was also used for the FPGA implementation of LDPC encoding. Our results show that the logic and storage resources used in our implementation are
+
+lower than those used in [4]. This is due to the greedy matching used in [4], which loses the structural features of H and causes more consumption of logic and storage resources.
+In [5], the PCM two-step method was proposed. We combined the structure of H in the ITU-T G975.1 protocol and implemented it based on FPGAs. The sparse matrix multiplication vector consumes few logic resources and lower latency due to the use of the structure of H. However, for the second part of the dense matrix multiplication, the required storage space for the inverse matrix, which is a square matrix of dimension 2045, is larger, and the corresponding circuitry required for computation is also increased. Although a 10Gbps rate is achieved, more storage and logic resources are required compared to the method proposed in this paper.
+Our proposed encoding method takes advantage of the structure of H, and only row transformations are performed during preprocessing. This greatly simplifies the computation, and maintains the systematic nature of the coding. In FPGA implementation, our encoder can realize sparse matrix and vector multiplication with fewer logic resources using the operator circuit structure proposed above. In terms of storage resources, compared with the PCM two-step method, the dimension of the inverse matrix to be stored in our method is 1752, which significantly reduces storage resource usage. Additionally, the latency of our encoder is lower, meeting high throughput requirements.
+B. Conclusion
+In this paper, we designed a high-throughput encoder and coding method based on the RU algorithm for structured LDPC codes in the ITU-T G975.1 protocol. We have utilized the structural characteristics of the parity check matrix to perform fast encoding, achieving a 10Gbps throughput. Compared with existing methods, our LDPC encoder implementation, designed based on the ITU-T G975.1 protocol, is more advantageous than the implementation methods in [4] and [5], in terms of the number of logic resources, storage resource consumption, and throughputs.
+REFERENCES
+[1] Gallager R G. Low-density parity-check codes [J]. IEEE Trans. Inf. Theory, 1962, 8(1): 21-28.
+[2] MacKay D J C and Neal R M. Near Shannon limit performance of low density parity check codes [J]. Electron. Lett, 1996, 32(18): 1645-1646.
+[3] Thomas J. Richardson,Rüdiger L. Urbanke. Efficient encoding of lowdensity parity-check codes.[J]. IEEE Trans. Inf. Theory,2001,47(2).
+[4] Cohen A E, Parhi K K. A low-complexity hybrid LDPC code encoder for IEEE 802.3 an (10GBase-T) ethernet[J]. IEEE Trans. Signal Process, 2009, 57(10): 4085-4094.
+[5] Mahdi A, Kanistras N, Paliouras V. A multirate fully parallel LDPC encoder for the IEEE 802.11 n/ac/ax QC-LDPC codes based on reduced complexity XOR trees[J]. IEEE Trans. VLSI Syst, 2020, 29(1): 51-6.
+[6] ITU-T G. 975.1: Forward error correction for high bit-rate DWDM submarine systems[J]. Telecommunication Standardization Sector, 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:37:18 UTC from IEEE Xplore. Restrictions apply.
+
+

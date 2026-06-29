@@ -1,0 +1,533 @@
+IEEE REGION 8 SIBIRCON 2008
+
+1
+
+Code Construction Algorithm for Architecture Aware LDPC Codes with Low-Error-Floor
+Dariusz Kania∗ and Wojciech Sułek∗
+∗Faculty of Automatic Control, Electronics and Computer Science, Institute of Electronics Silesian University of Technology, Gliwice, Poland {dkania,wsulek}@polsl.pl
+
+Abstract— The common approach for the design of an error correction system is first to construct a code and then to define the hardware structure of the encoder and decoder. However, in the case of LDPC codes (Low-Density Parity-Check) such a constructed code is generally not well suited for a hardware implementation. It has been recognized that the code construction and hardware design must be considered jointly to facilitate LDPC decoder and encoder implementation. In this paper, an efficient decoder structure for regular and irregular LDPC codes, based on TDMP (Turbo-Decoding Message Passing) scheme is designed first. The decoder has been implemented and verified in an FPGA device. Constraints for the parity check matrix of a code to be suitable for the decoder architecture are defined. Then an algorithm for LDPC parity check matrix construction subject to these constraints is presented. The algorithm aims at improving performance of the code in the low SNR region by employing irregular codes as well as in high SNR region by reducing the number of small Stopping Sets and Trapping Sets in the Tanner graph of the code making use of a computer search technique.
+I. INTRODUCTION
+LDPC code is a linear block code defined by an M × N parity-check matrix H, which is sparse. Matrix H has a graphical representation in the form of bipartite graph, called Tanner graph, that visualizes iterative decoding algorithms, known as message passing algorithms. Regular LDPC codes were first proposed by Gallager in the 60’s [1], but forgotten for years by the researchers. Their implementation complexity was exceeding the capabilities of the accessible technology, so they were not considered for practical applications. The codes were rediscovered in the late 90’s [2], [3], and after then they are under interest of the scientific world.
+Considering an LDPC message passing decoder implementation, two challenges are encountered: how to realize the computation units and how to realize the message passing scheme. Fully parallel decoder achieves very high throughput, but for large code length it suffers from a huge number of computation units and routing lines. To achieve appropriate tradeoff between implementation complexity and decoding throughput, partially parallel decoder is of practical interest. Realizing message passing is not a trivial issue in this case, because the Tanner graph connectivity has to be realized part-by-part. Partially parallel decoder architecture consists of a reduced number of computation units, a configurable interconnection network and a message storage fabric. The parity check matrix in a block structured form enables efficient
+
+memory and interconnection network organization. The matrix is partitioned such that each block submatrix is assumed to be either a zero matrix or a permutation of rows of an identity matrix. This family of structured codes is known as Architecture-Aware LDPC (AA-LDPC) or VLSI-Oriented codes [4], [5].
+The turbo-decoding message passing algorithm (TDMP) presented in [5] has a faster convergence and reduced message storage requirements than standard two-phase message passing algorithm. However, the TDMP decoder chip, presented in [6] is capable only for regular LDPC codes. As is well known [7], the irregular codes with carefully chosen degree distribution outperform significantly the regular ones. In this paper an architecture capable for decoding regular as well as irregular AA-LDPC codes is presented. The decoder structure has been developed for FPGA devices with dual-port memories and formalized in the form of VHDL description.
+Then we present an algorithm based on computer search technique that reduces the existence of harmful structures in the Tanner graph of AA-LDPC code. These structures are small Stopping Sets and Trapping Sets and they decrease code performance in the high SNR region. The algorithm is based on searching for graphs with minimized number of cycles with low extrinsic connectivity. The algorithm is introduced and simulation results are presented in section IV.
+II. LDPC CODES OVERVIEW
+The parity-check matrix HM×N of an LDPC code C (with rate r = 1 − M/N ) represents the relation between the N bits of the codeword and the M parity-check equations in GF (2) field. Vector x is a correct codeword (x ∈ C) if the parity check condition HxT = 0 is satisfied. Another way for defining the code is a bipartite graph (Tanner graph, [8]) with bit nodes representing bits and check nodes representing parity-check equations (fig. 1). Formally, a Tanner graph (V, E) contains the set of vertices V = Vc ∪ Vb, where Vc = {c1, c2, . . . , cM } is the set of check nodes, Vb = {b1, b2, . . . , bN } is the set of bit nodes and the set of edges E such that E ⊆ Vc × Vb. The edge (cm, bn) ∈ E if and only if hmn = 0, where hmn denotes the entry of H at mth row and nth column. A Tanner graph is (dc, db)-regular if all its check nodes have degree dc and all its bit nodes have degree db.
+An ensemble of irregular Tanner graphs is characterized by degree distribution pair [7], [9]. Throughout this paper it is
+
+978-1-4244-2A1u3th4o-ri3ze/0d8lic/$en2s5e.d0u0se©li2m0ite0d8toI:EYEonEsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+2
+
+IEEE REGION 8 SIBIRCON 2008
+
+Bit-nodes
+1234567
+
+Rmn
+
+1
+
+2
+
+3
+
+Check-nodes
+
+Qnm
+⎡1 0 0 1 0 1 1⎤ H = ⎢0 1 0 1 1 1 0⎥
+⎣⎢0 0 1 0 1 1 1⎥⎦
+
+Fig. 1. Example Tanner Graph
+
+denoted by (dc, db) where dc = {dc1 , dc2 , . . . , dcM } is the check node degree sequence in which dcm denotes the degree of check node cm, and db = {db1 , db2 , . . . , dbN } is the bit node degree sequence in which dbn denotes the degree of bit node bn. For example the graph shown in fig. 1 has bit node degree distribution db = {1, 1, 1, 2, 2, 3, 2} and uniform check node degree dc = 4.
+The Tanner graph visualizes iterative message passing algo-
+rithms used for decoding. In the standard Two-Phase Message-
+Passing (TPMP), messages (beliefs) are exchanged between bit
+nodes and check nodes through the edges in both directions.
+Each node of the graph represents computation of updated
+beliefs. In the case of LLR-BP algorithm (Log-Likelihood
+Ratio Belief Propagation), messages are log-likelihood ratio
+of beliefs. Important feature is that only extrinsic information
+is passed along edges, i.e. each message does not depend on
+the belief received through the same edge.
+A. Turbo-Decoding Message Passing (TDMP)
+Turbo-Decoding Message-Passing (TDMP) algorithm [5],
+[6] constitutes a modification in message passing scheme of TPMP. Here C is considered as the concatenation of some number of codes, which means the set of rows of H is virtually
+partitioned into a number of subsets. Each subset constitutes
+a code, which will be called a subcode. A word is a correct
+codeword if it belongs to all constituent subcodes. Let Ci denote the ith subcode and its parity check matrix
+Hi, i = 1, . . . , D. The code is then C = C1 ∩ . . . ∩ CD and its parity check matrix is HM×N = H1; H2; . . . ; HD T. Furthermore, the check node set Vc of the Tanner graph of the code is partitioned as Vc = Vc1 ∪ . . . ∪ VcD. It is assumed that the rows in each submatrix Hi do not overlap (each bit node is incident to at most 1 check node in the subset Vci). The set of indexes of check nodes adjacent to bit node bn is denoted by M (n) and – similarly – the set of indexes of bit nodes adjacent to check node cm by N (m). Furthermore, N (m) \n represents the set N (m) excluding n and M (n) \m represents the set M (n) excluding m.
+Inputs to the algorithm are measures of reliability of the
+received data based on channel observations; they are called intrinsic channel reliability values and will be denoted as δn for nth bit. The TDMP algorithm determines a codeword iteratively in D sub-iterations, with one sub-iteration per constituent code Ci. Following [6], we denote Λni the extrinsic LLR reliability value for bit nth assuming that the codeword
+
+belongs to subcode Ci and λni the reliability values calculated in the previous iteration. The sum of Λn-messages for all subcodes in addition to the channel values δn is the posterior reliability value, denoted by Γn and updated at each subiteration. The Γ value calculated at previous sub-iteration is
+
+denoted by γ. The TDMP algorithm is summarized as follows.
+
+1) Initialization. Initialize posterior γ values to the intrin-
+
+sic channel reliability LLRs and the reliability messages
+
+λ for all subcodes to zeros:
+
+γn := δn = log
+
+P (xn = 0|yn) P (xn = 1|yn)
+
+(1)
+
+λin := 0, n = 1, . . . , N i = 1, . . . , D (2)
+
+where yn – received value and xn – transmitted bit.
+2) Iteration. Carry out D decoding sub-iterations corresponding to subcodes Ci, i = 1, . . . , D. For each subiteration compute extrinsic messages Λni as well as posterior reliability values Γn. At sub-iteration i: – For each m such that cm ∈ Vci, for each n ∈ N (m):
+
+Qin := γn − λin
+
+(3)
+
+Λni :=
+
+sgn Qni × ψ−1
+
+ψ |Qni | (4)
+
+n
+
+n
+
+Γn := Qin + Λin = γn − λin + Λni
+
+(5)
+
+where n ∈ N (m) \n, where cm is the check node in the subset Vci incident to bn (as we assumed, there is only one such check node). The nonlinear function ψ(x) is given by ψ(x) = ψ−1(x) = − log (tanh(x/2)).
+Store the Λ and Γ-values as λ and γ-values to be used
+as inputs in the next sub-iteration:
+
+γn := Γn, λni := Λin, n = 1, . . . , N (6)
+
+3) Stop Criterion After all sub-iterations make hard decisions x = {x1, x2, . . . , xN } such that
+
+xn :=
+
+1, 0,
+
+Γn ≤ 0 Γn > 0
+
+(7)
+
+If HxT = 0, halt the algorithm with x as output. Otherwise, go to step 2).
+The main advantages of TDMP scheme over standard TPMP are that it exhibits a faster convergence behavior (about 20%50% fewer decoding iterations, see [5]) and it allows a memory savings due to eliminating multiple bit-to-check messages.
+
+B. AA-LDPC Code Structure
+Efficient partially-parallel decoder implementation using TDMP algorithm is possible for parity-check matrices with certain constraints on their form. First, as it has been assumed, the rows of H are partitioned such that in each submatrix Hi rows do not overlap (each bit node is incident to at most 1 check node in the subset Vci). Second, in order to suitably organize memory for Γ messages, the columns of the parity-check matrix are structured as well. If the ones in any
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+DARIUSZ KANIA AND WOJCIECH SULEK: CODE CONSTRUCTION ALGORITHM
+
+3
+
+1
+
+P PP
+
+P
+
+1
+
+1
+
+H= P
+
+PP
+
+P D P=
+
+1 1
+
+P
+
+1
+
+P
+
+PPP
+
+1 1
+
+B
+
+P
+
+Fig. 2. AA-LDPC parity-check matrix
+
+row had fully random column indices, then the Γ-memory
+
+would have to contain one port per computation module.
+
+In the case of typical FPGA devices that contain dual-port
+
+memories, additional constraints on the form of columns of
+
+H allow organizing the memory access. The set of bit nodes
+
+is partitioned into B subsets Vb = Vb1 ∪ . . . ∪ VbB of P nodes, such that considering subcode Ci, each bit node from subset
+
+Vbj is adjacent to exactly one check node from subset Vci or
+
+each bit node from this subset is not adjacent to any check
+
+node of P
+
+from subset Vci. Then single memory Γ-values (corresponding to bits from
+
+word may consist single subset Vbj)
+
+that are delivered to computation modules in a single clock
+
+period by configurable interleaver that shuffles the fragments
+
+of word according to the local graph structure of the code.
+
+The Architecture-Aware LDPC code (AA-LDPC) parity
+
+check matrix is thus similar to the one shown in fig. 2. H
+
+is composed of D block-rows by B block columns of P × P
+
+permutation submatrices. Each square submatrix is assumed
+
+to be either a zero matrix or a permutation matrix obtained by
+
+permuting the rows (or columns) of an identity matrix.
+
+III. DECODER IMPLEMENTATION
+A configurable decoder, based on TDMP scheme has been implemented in the form of synthesizable VHDL model. The decoder (fig. 3) is capable for decoding any regular or irregular AA-LDPC code. Γ-memory is initialized with soft channel values δ with wordlength W . Operations are performed in computation modules called Soft-Input-Soft-Output (SISO) units. Assuming P rows in a block row, it is convenient to map the algorithm into P/L SISO modules, where L is any integer number. If the maximum throughput has to be obtained then L = 1 and P SISO modules are implemented (as in fig. 3).
+In a single time slot, messages are fed to the SISO unit in serial manner through Configurable Interconnection Network, updated, and then serially fed back to the memory. A memory word consists of P Γ-values, hence wordlength for Γ-memory equals P W and memory depth is B. H Structure Memory stores location of the permutation matrices in H and Πmemory stores respective permutations used for configuring Interconnection Network. Memory for extrinsic Λ messages is partitioned and included in SISO units as FIFO buffers. When Stop Criterion Check Module indicates correct codeword, decoding is halted and data is outputted in words of length P (the MSBs of the P Γ-messages in a single memory word are equivalent to hard decisions).
+Reliability values Γ and Λ in a hardware implementation
+
+are represented by fixed-point numbers, with two parameters: number of bits W and analog clipping threshold Am. Computations are performed under sign and magnitude representation, thus messages are quantized into 2W − 2 levels uniformly placed in the symmetrical range [−Am, Am]. The two parameters W and Am should be carefully selected to achieve the desired trade-off between decoder performance and implementation complexity.
+The wordlength W and the clipping threshold Am can be determined experimentally. Fig. 4 presents simulation results for a code with blocklength N = 2048 decoded with Matlab software (floating point messages) as well as decoder FPGA implementation with worldlength W = 8 and W = 6. It can be observed that with 8-bit messages the performance is even better than in floating point case. If 6-bit messages are applied, the performance degradation is very little and exists only in higher SNR region (about 0.05dB loss).
+Fig. 5 presents influence of the clipping threshold on the performance of a rate 0.5 regular code decoded with wordlength W = 6. It shows that this influence should not be neglected. The best results were obtained with Am = 14, the loss in performance is very little in this case.
+
+A. SISO module
+Each SISO unit realizes computation according to (3)-(5) for a single check node cm per time slot. The extrinsic messages Λ in (4) are computed by the recursive application of the CMin (corrected minimum) operator
+
+CMin(x, y) = min(x, y) − ln 1 + e−|x−y|
+
+(8)
+
+The algorithm is known as Min-Sum algorithm with correction [10], [11]. It enables approximate calculating of (4). In order to calculate the extrinsic messages efficiently, a double recursion scheme is applied. For check node cm
+
+Address Generators
+Γ Memory
+
+δ
+PW W
+
+P
+
+PW
+
+Address Generators
+
+H Structure Memory
+
+W
+Configurable Interconnection
+Network
+Permutation (Π )
+Memory
+Configurable Interconnection
+Network Stop Criterion Check Module
+Control Logic
+
+SISO Unit 1
+SISO Unit 2
+SISO Unit P
+
+Fig. 3. Decoder architecture
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+4
+
+IEEE REGION 8 SIBIRCON 2008
+
+BER
+
+-1
+10
+
+Floating Point
+
+W=8, Am=32.0
+
+-2
+
+10
+
+W=6, Am=14.0
+
+-3
+10
+
+-4
+10
+
+BER
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+SNR[dB]
+
+Fig. 4. Simulation results: regular code, rate 0.75, N=2048
+
+connected to bit nodes {bn1 , bn2 , . . . , bndc }, two auxiliary recursion variables are computed: α for forward recursion, αk+1 = CMin αk, |Qni k | and β for backward recursion, βk = CMin βk+1, |Qink+1 | . Then the magnitudes of extrinsic messages are computed as: |Λink | = CMin (αk, βk). Signs of messages are calculated separately, using another recursion scheme. Details of the algorithm can be found e.g. in [10]
+Block diagram of the SISO unit is shown in fig. 6. The forward-backward recursion is realized by two branches of pipelined processing for calculating α and β recursion variables, respectively. CMin accumulator blocks realize α and β variables calculation with accumulating intermediate results αk (βk). Outputs of the two branches are combined in CMin block. The data stream, read from memory is provided to the α-branch in natural order and in reversed order to the β-branch. Order reversing is accomplished by a LIFO* (LastIn First-Out) buffer. Thus the data stream at the output is in reverse order, however this fact is of no significance if careful memory addressing is ensured.
+B. FPGA implementation
+The VHDL description of the decoder has been functionally verified as well as synthesized and implemented in an FPGA. A few modifications in the VHDL description are
+-3
+10 SNR=2.20dB SNR=2.40dB SNR=2.50dB
+
+Mag. 2's compl. to Sign & Mag.
+sign
+
+Q
+γ+
+λ−
+
+Λ Memory (FIFO *)
+
+(Λ)clip
+
+(Γ)clip
+
+Bypass
+
+Control
+
+CMin Accumulator
+
+α LIFO *
+|Λ| CMin
+
+LIFO *
+
+CMin Accumulator β
+
+Control
+
+Bypass
+
+Sign Processor
+
+Control
+
+Control
+
+LIFO
+
+Sign & Mag. to 2's compl.
+Λ
++
+
+−
+
+Γ
+
++
+
+Clipping
+
+Fig. 6. Architecture of SISO module
+
+required to adjust the decoder to the particular AA-LDPC code and decoder parameters. These modifications can be made automatically by a software that has been created. Table I presents example Xilinx VirtexII resources utilization for a decoder with P = 32 SISO modules. The total number of utilized slices (7016) is about a half of slices available in the XC2V3000 device that has been used for decoder verification.
+TABLE I VIRTEXII FPGA RESOURCES UTILIZATION (P = 32, W = 6)
+
+Component
+SISO Engine Interconnection Networks
+Π Memory Γ Memory H Conf. Memory Stop Criterion Check Module Control logic, Address Generators
+Total
+
+BRAMs
+6 0 10 8 1 0 0 23
+
+Slices
+3776 3072
+0 0 0 38 130 7016
+
+A single sub-iteration for check node degree dc is executed in 2dc + 4 clock cycles (dc cycles for LIFO loading, dc for unloading and 4 for pipeline registers). The decoder throughput is then N/((2dc + 4)D) bits per clock cycle per decoding iteration. For SNR=2 simulations has shown that 7 iterations on average are required. The achieved average decoder throughput is then 0.87fclk assuming P = 48, rate 0.5 code with dc = 6. For fclk = 50 MHz average throughput is then about 44Mbps.
+
+-4
+10
+9 10 11 12 13 14 15 16 17 18 Clipping threshold Am
+Fig. 5. BER versus clipping threshold Am (wordlength W = 6)
+
+IV. LOW-ERROR FLOOR CODE CONSTRUCTION
+In this section an algorithm for AA-LDPC parity-check matrix construction is presented. The algorithm aims to reduce statistically the number of some structures in the Tanner graph that are harmful to code performance in the low SNR region (they cause an error-floor). First these harmful structures will be outlined.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+DARIUSZ KANIA AND WOJCIECH SULEK: CODE CONSTRUCTION ALGORITHM
+
+5
+
+Extrinsic Message Degree (EMD). An extrinsic check node to a set of bit nodes is a check node which is singly connected to the set. The Extrinsic Message Degree (EMD) of a set of bit nodes is the number of extrinsic check nodes connected to the set.
+Stopping Set. A stopping set SSv is a subset of the set of bit nodes Vb with cardinality v, such that no extrinsic check nodes are connected to SS.
+Trapping Set. A trapping set T S(v,s) is a subset of the set of bit nodes Vb with cardinality v, such that the subgraph induced by T S contains s odd-degree check nodes and strictly fewer even-degree check nodes.
+As was proved ( [12], [13]), the performance of an iteratively decoded LDPC code can be limited by the existence of small stopping sets and trapping sets. A set of variable nodes with large EMD will require additional concatenation of nodes to become a stopping set. In a bipartite graph free of degree1 bit nodes, every stopping set contains cycles. Similarly trapping sets are composed of interconnected cycles. Hence, if short cycles with small EMD are eliminated from the graph, also small stopping sets and trapping sets are eliminated.
+The parity check matrix HDP ×BP that is suitable for our decoder architecture, as discussed earlier, is an D × B matrix of P × P submatrices, where each submatrix is either an allzero or permutation of the identity matrix.
+The D × B matrix with zeros indicating the all-zero submatrices and ones indicating the permutation submatrices we call the seed matrix for the construction and respective graph we call the seed graph. The seed matrix is expanded by replacing its entries with appropriate P × P submatrices to obtain the HDP ×BP parity check matrix called covering matrix.
+We define the seed graph expansion as in [14]. Let (V, E), V = Vc ∪ Vb, E ⊆ Vc × Vb be a seed graph. Let G = {g1, . . . , gP } be a finite set with cardinality P . The graph after expansion, called covering graph has vertex sets Vc × G and Vb × G. For each e ∈ E, e = (cm, bn) we fix a permutation of G, θe. The covering edge set is then E × G = {((cm, gi), (bn, θe(gi))) : i = 1, . . . , P, e ∈ E}.
+Important fact characterizing the relationship between the cycles in the expanded matrix and the cycles in the seed matrix is as follows [14]. Let e1 ∼ e2 ∼ · · · ∼ e2k ∼ be a cycle of length 2k in the seed graph. The covering graph possesses a respective cycle of length 2k if and only if
+
+θe1 ◦ θe−21 ◦ θe3 ◦ θe−41 ◦ . . . ◦ θe2k−1 ◦ θe−21k
+
+(9)
+
+has a fixed point. Precisely, the number of cycles in the covering graph equals the number of fixed points in (9).
+In this paper the permutation matrices in the form of rotations of the diagonal identity matrix are considered, that is θe(gi) = g(i+de mod P ) where de is an integer fixed for each e ∈ E. In this case (9) can be reformulated as (for prove see [14]): for the permutation matrices in the form of the rotations of the diagonal identity matrix, the covering graph possesses a respective cycle of length 2k if:
+
+de1 − de2 + de3 − de4 + . . . + de2k−1 − de2k ≡ 0 mod P (10)
+
+The algorithm for the defined AA-LDPC parity check matrix construction is as follows.
+1) Determine the code and decoder parameters: the number of SISO units for decoder implementation and the size of submatrices P ; the size of the parity check matrix N , M determined by the desired code length and code rate of the specific application. Determine the node degree distributions dc, db. If irregular code is desired, the degree distributions can be determined by degree optimization [7].
+2) Construct the seed matrix HD×B. The (relatively small) seed matrix can be constructed in any known method for constructing LDPC parity check matrices without implementation constraints, e.g. the improved PEG (Progressive Edge Growth) as proposed in [15].
+3) For each edge ej in the seed graph, determine the cyclical shift value dej for the matrix expansion. This task is accomplished in a few steps:
+a) Determine all closed walks in the seed graph with length lower than some predetermined value Lmax and EMD lower than another value EMDmax. Determine the EMD for all the closed walks.
+b) For each closed walk, fix a value of harmfulness: the greatest for length-4 walks, then for all other walks with EMD equal 0, from the shortest to the longest, then for walks with EMD 1, and so on. For each closed walk with consecutive edges ei1 ∼ ei2 ∼ · · · ∼ ei2k ∼ define a non-congruence condition for eliminating the respective cycle in the covering graph as:
+
+dei1 −dei2 + dei3 − dei4 + . . . . . . + dei2k−1 − dei2k ≡ 0
+
+mod P
+
+(11)
+
+c) By computer search technique, determine the values dej for each j such that as many as possible inequality conditions (11) are satisfied with respect
+
+to the harmfulness value of the respective cycles,
+
+i.e. the conditions for walks with greater harmful-
+
+ness are considered first.
+
+4) Expand the seed matrix according to the determined cyclical shift values to obtain the parity check matrix HDP ×BP of the code.
+
+A number of codes has been constructed making use of presented algorithm. Performance of the obtained codes is generally not worse than performance of the codes from MacKay’s database [16] (however, those codes are not architecture aware). Figure 7 presents simulation results for a rate 0.5, regular dv = 3, N = 1008 code from this database and AA-LDPC regular code with P = 24, N = 1008 obtained with the proposed algorithm. Simulations for MacKay code has been made under Matlab environment with floating point messages and simulations for AA-LDPC code – making use of the FPGA decoder implementation with W = 6. Binary Input AWGN channel is assumed for all simulations. Performances of the two codes are almost the same.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+6
+
+IEEE REGION 8 SIBIRCON 2008
+
+BER
+
+-1
+10 MacKay's Proposed
+-2
+10
+
+-3
+10
+
+-4
+10
+
+-5
+10
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+SNR[dB]
+
+Fig. 7. Simulation results: regular codes, rate 0.5, N = 1008
+
+-1
+10 Girth Conditioned
+Proposed
+-2
+10
+
+-3
+10
+
+-4
+10
+
+-5
+10
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+SNR[dB]
+
+Fig. 8. Simulation results: irregular codes, rate 0.5, N = 1024
+
+BER
+
+In comparison with the girth conditioning algorithm [17], we aim at eliminating low EMD cycles first. This approach gives usually better performance of the code in high SNR region. Figure 8 presents simulation results for AA-LDPC code with girth 8 obtained with the algorithm [17] and code generated with proposed algorithm. For both codes, the same irregular seed graph was applied with maximum bit node degree 6. As can be observed, the proposed algorithm gives lower error floor (better performance in high SNR region).
+V. CONCLUSIONS
+The first contribution of the presented work is a configurable LDPC decoder FPGA implementation for regular and irregular codes that are Architecture Aware. The decoder is based on TDMP message passing scheme, Min-Sum algorithm with correction and double recursion. In contrast with the ASIC decoder chip presented in [6], the designed decoder can be implemented in FPGA devices and is suitable for irregular codes. It has been verified in Xilinx Virtex-II device. Throughput of the decoder is lower than the mentioned ASIC chip, but it is similar to the other known FPGA implementation results. For
+
+example the Virtex-II Pro decoder implementation presented
+in [18] has throughput 2.46 bits per cycle per iteration, which
+is less than for our decoder.
+The second contribution is the AA-LDPC code construction
+algorithm that aims at improving performance of the irregular
+codes by reducing the number of small Stopping Sets and
+Trapping Sets in the Tanner graph of the code. Simulations
+have shown that reducing these harmful structures gives gen-
+erally better results than simple girth conditioning algorithm.
+REFERENCES
+[1] Robert G. Gallager, Low-Density Parity-Check Codes, MIT Press, Cambridge, MA, 1963.
+[2] David J. C. MacKay and Radford M. Neal, “Good Codes Based on Very Sparse Matrices,” in Cryptography and Coding 5th IMA Conference, Berlin, Germany, 1995, pp. 100–111.
+[3] David J. C. MacKay, “Good Error-Correcting Codes Based on Very Sparse Matrices,” IEEE Transactions on Information Theory, vol. 45, No. 2, pp. 399–431, March 1999.
+[4] Hao Zhong and Tong Zhang, “Block-LDPC: A Practical LDPC Coding System Design Approach,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 52, No. 4, pp. 766–775, April 2005.
+[5] Mohammad M. Mansour and Naresh R. Shanbhag, “High Throughput LDPC Decoders,” IEEE Transactions on Very Large Scale Integration Systems, vol. 11, No. 6, pp. 976–996, December 2003.
+[6] Mohammad M. Mansour and Naresh R. Shanbhag, “A 640-Mb/s 2048Bit Programmable LDPC Decoder Chip,” IEEE Journal of Solid-State Circuits, vol. 41, No. 3, pp. 684–698, March 2006.
+[7] Thomas J. Richardson, M. Amin Shokrollahi, and Rdiger L. Urbanke, “Design of Capacity-Approaching Irregular Low-Density Parity-Check Codes,” IEEE Transactions on Information Theory, vol. 47, No. 2, pp. 619–637, February 2001.
+[8] R. Michael Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Transactions on Information Theory, vol. IT-27, pp. 533–547, September 1981.
+[9] Thomas J. Richardson and Rdiger L. Urbanke, “The Capacity of Low-Density Parity-Check Codes Under Message-Passing Decoding,” IEEE Transactions on Information Theory, vol. 47, No. 2, pp. 599–618, February 2001.
+[10] Xiao-Yu Hu, Evangelos Eleftheriou, Dieter M. Arnold, and Ajay Dholakia, “Efficient Implementations of the Sum-Product Algorithm for Decoding LDPC Codes,” in IEEE Globecom, San Antonio, Texas, USA, 2001, pp. 1036–1036E.
+[11] Farhad Zarkeshvari and Amir H. Banihashemi, “On Implementation of Min-Sum Algorithm for Decoding Low-Density Parity-Check (LDPC) Codes,” in IEEE Globecom, Taipei, Taiwan, 2002, pp. 1349–1353.
+[12] Changyan Di, David Proietti, I. Emre Telatar, Thomas J. Richardson, and Rdiger L. Urbanke, “Finite-Length Analysis of Low-Density ParityCheck Codes on the Binary Erasure Channel,” IEEE Transactions on Information Theory, vol. 48, No. 6, pp. 1570–1579, June 2002.
+[13] Tom Richardson, “Error Floors of LDPC Codes,” in Proc. 41st Annual. Allerton Conference on Communications, Control, and Computing, Monticello, USA, October 2003, pp. 1426–1435.
+[14] Michael E. O’Sullivan, “Algebraic Construction of Sparse Matrices with Large Girth,” IEEE Transactions on Information Theory, vol. 52, No. 2, pp. 718–727, February 2006.
+[15] Hua Xiao and Amir H. Banihashemi, “Improved Progressive-EdgeGrowth (PEG) Construction of Irregular LDPC Codes,” IEEE Communications Letters, vol. 8, No. 12, pp. 715–717, December 2004.
+[16] David J.C. MacKay, ,” Encyclopedia of Sparse Graph Codes http://www.inference.phy.cam.ac.uk/mackay/codes/ data.html.
+[17] Lei Yang, Hui Liu, and C. J. Richard Shi, “Code Construction and FPGA Implementation of a Low-Error-Floor Multi-Rate Low-Density ParityCheck Code Decoder,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 53, No. 4, pp. 892–903, April 2006.
+[18] Zhengya Zhang, Lara Dolecek, Borivoje Nikoli, Venkat Anantharam, and Martin Wainwright, “Investigation of Error Floors of Structured Low- Density Parity-Check Codes by Hardware Emulation,” in IEEE Globecom, San Francisco, CA, USA, November 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+

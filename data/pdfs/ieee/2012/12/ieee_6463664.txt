@@ -1,0 +1,242 @@
+High-Throughput FPGA-based Emulator for Structured LDPC Codes
+Fabia´n Angarita, Vicente Torres, Asuncio´n Pe´rez-Pascual and Javier Valls Instituto de Telecomunicaciones y Aplicaciones Multimedia, Universidad Polite´cnica de Valencia, 46730 Gandia, SPAIN
+Email: faanpre@iteam.upv.es, {vtorres,asperez,jvalls}@eln.upv.es
+
+Abstract— FPGA-based emulators are used to evaluate the LDPC codes performance at low bit error rates (BER). We propose an emulator for structured LDPC codes that takes advantage of the early termination in high signal-to-noise ratios (SNRs), where most of the received frames can be decoded in one iteration. Moreover, the data generation (received frames) was parallelised to avoid bottlenecks when the decoder throughput is maximum. The emulator was implemented on a Virtex-6 device for a (2048,1723) RS-Based LDPC code using the normalised-MS algorithm, achieving an average throughput of 1.35 Gbps with a single core and, 5.7 Gbps with 4 cores in a single FPGA device. The achieved throughput is 4 times faster than the state-of-theart FPGA emulators in the literature.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes [1] have received much research attention in recent years due to their remarkable coding performance and efficiency. Furthermore, they are being considered for use in a wide range of applications, such as cabled and wireless digital communications, digital video broadcasting, magnetic storage and optical networking. Software-based Monte Carlo simulations are the most common way to evaluate the performance of both LDPC code and decoding algorithm. The simulation scheme usually consists of a codeword that is transmitted over an additive white gaussian noise (AWGN) channel and then the received symbols are decoded. The decoded word is compared to the transmitted codeword to determinate if an error (frame error) has occurred and the number of bits that differ (bit error). Decoding errors are measured in frame error rate (FER) and bit error rate (BER). In order to obtain confident measures, a significant number of frame errors (e.g., about 100) must be detected. Therefore, code performance evaluation at a FER under 10−10 needs a huge number of codewords to be simulated. Due to the fact that the maximum throughput achieved by a softwarebased LDPC decoder on a high-end workstation is of the order of hundred of Kbps, months of simulation time are required.
+Recently, hardware-based emulators using field programable gate arrays (FPGAs) have been proposed to accelerate the simulations [2]–[5]. In [2] a hardware emulator based on a parallel-serial LDPC decoder, that achieves a maximum throughput of 240 Mbps is presented. A distributed parallel multicore using BEE2 cards, each one with 5 FPGA devices, is proposed in [3] to investigate the performance of LDPC codes for perpendicular magnetic recording channels. This
+
+emulator is composed of 27 parallel LDPC cores and each core achieves 175 Mbps, thereby the complete system throughput is 4.7 Gbps. In [4] a vector decoder implementation for Quasi-Cyclic codes is proposed in order to parallelise various decoders in a single FPGA device, achieving an average throughput of 1.23 Gbps with 4 parallelised decoders. The emulator presented in [5] achieves 3.8 Gbps using 4 FPGA devices in a BEE3 board, where each device contains a single emulator that achieves 158 Mbps. In this work, a low complexity hardware-based emulator for structured LDPC codes is presented. The proposed emulator achieves a higher throughput than previous works with a single core, 1.35 Gbps. Additionally, this throughput can be linearly increased by using parallel multicore. For example, a throughput of 5.4 Gbps can be achieved with 4 cores in parallel.
+The rest of paper is organised as follows. Section II introduces the structured LDPC codes and message-passing decoding algorithms. Also, in this section the normalised-MS algorithm is described as a reference. Section III shows the design details for the emulator architecture, which can be used to simulate all the message-passing decoding algorithms. In Section IV implementation results of the emulator using the normalised-MS decoding algorithm are presented, and these results are compared with other emulators from the literature. Additionally, in this section the FER and BER performance obtained for this algorithm with different quantification schemes is showed. Finally, conclusions are drawn in Section V.
+II. LDPC CODES AND DECODING ALGORITHMS
+A binary LDPC code is specified by a sparse M × N paritycheck matrix H, where M represents the number of parity checks and N represents the number of information bits in the code block. A graphical representation can be done by a bipartite Tanner graph [6] using H as incidence matrix, with M check nodes in one class and N variable nodes in the other. An edge connects the check-node Cm to the variable-node Vn if and only if H(m, n) is nonzero. Structured LDPC codes [7] are the most popular because they have a very good performance and yield low complexity hardware implementations. These codes are generated by partitioning matrix H into Mb × Nb square sub-matrices of size z × z, so M = Mb · z and N = Nb · z. For example, Fig. 1 shows a regular 12 × 20 parity-check matrix H where Mb = 3, Nb = 5 and z = 4.
+
+978-1-4673-1260-8/12/$31.00 ©2012 IEEE
+
+404
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:21 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1: Parity-check matrix example of regular-structured LDPC code.
+
+LDPC codes can be efficiently decoded with iterative
+message-passing (MP) decoding algorithms [8]. These type
+of algorithms rely on the exchange of soft messages between
+check-nodes Cm and variable nodes Vn along the edges of the graph. Among the MP algorithms, the sum-product (SP)
+gives the best decoding performance, but it requires com-
+plex computations that yield large hardware implementations.
+Moreover, an algorithm called normalised-MS [9] has similar
+performance and its complexity is considerably lower. Let us denote the set of bits that participate in check
+m by Nm = {n : H(m, n) = 1} and the set of checks that participate in bit n by Mn = {m : H(m, n) = 1}. The set Nm with bit n excluded is denoted as Nm\n and the set Mn with parity check m excluded as Mn\m. Also, let us define l = (l1, l2, . . . , lN) as the prior log-likelihood ratios (LLRs) of received symbols for an AWGN channel. The pseudocode 1
+describes the normalised-MS algorithm. At i-th iteration, first, the Vn nodes update variable-to-check messages λn,m and send them to the corresponding neighbour check-nodes. Second, Cm nodes update check-to-variable messages μm,n and send them back to the neighbour variable-nodes. The iteration process
+stops when the maximum number of iterations is reached (i = Imax) or when the algorithm converges, that is, when all the parity-check equations are satisfied (z · HT = 0).
+
+Pseudocode 1 normalised-MS algorithm
+
+1: – initialisation –
+
+2:
+
+λn(,0m) = ln, ∀n ∈ {1, . . . , N}
+
+3: – iterative process –
+
+4: for i ∈ {1, . . . , Imax}
+
+5:
+
+– check-node update –
+
+6:
+
+for m ∈ {1, . . . , M} and n ∈ Nm
+
+7:
+
+∏ μm(i,)n
+
+=
+
+n
+
+sign(λn(i,−m1) )
+∈Nm\n
+
+·
+n
+
+min
+∈Nm\n
+
+(|λn(i,−m1)
+
+|)
+
+8:
+
+– variable-node update –
+
+9:
+
+for n ∈ {1, . . . , N} and m ∈ Mn
+
+10:
+
+∑ λn(i) = ln +
+
+μm(i),n and λn(,im) = λn(i) − μm(i,)n
+
+m ∈Mn
+
+11:
+
+if z · HT = 0 : break
+
+12: – hard decision –
+
+13:
+
+zn =
+
+1 0
+
+λn(i) λn(i)
+
+≥ 0, <0
+
+∀n
+
+∈
+
+{1, . . . , N}
+
+III. HARDWARE EMULATOR ARCHITECTURE
+A detailed architecture of the hardware emulator is shown in Fig. 2. The main blocks that can be distinguished are: Symbols Generator, LDPC Decoder, Error Detection and Control. The configuration parameters are: the noise variance σ 2, the
+
+Fig. 2: Emulator core architecture.
+maximum number of iterations Imax and the number of frame errors to be detected Ferr. Next, a complete description of each block is given. The LDPC code and quantisation scheme are configured before the synthesis. To facilitate this pre-synthesis configuration we developed a Matlab script that generates a VHDL configuration package. Moreover, the implementation of other MP-based algorithm is simple because only the CNU and VNU units have to be described in VHDL code.
+A. LDPC decoder
+Among the existing architectures for MP algorithms that can be efficiently implemented on an FPGA device, we chose the memory-based partially-parallel architecture [10]. This one exploits the regularity of the structured LDPC codes achieving a good trade-off between hardware complexity and throughput. As can be seen on Fig. 2, the decoder is composed of Nb variable-node units (VNUn), Mb check-node units (CNUm), Mb · Nb memory blocks, Mm,n, that store the λn,m and μm,n messages and Nb memory blocks, Ln, which store the LLRs generated by the Symbols Generator block. Each VNUn computes the operations for z consecutive variable-nodes Vn and each CNUm computes the operations of z consecutive check-nodes Cm. Therefore, a memory block Mm,n stores 2 · z messages and a memory block Ln stores z consecutive LLRs.
+In this architecture the MP algorithm is executed as follows. First, the N = Nb · z LLRs are loaded into the Nb memory
+
+405
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:21 UTC from IEEE Xplore. Restrictions apply.
+
+blocks (Ln). Although this step requires z cycles, the decoding process can start after the first Nb data are loaded, so the latency introduced by the initialisation process is just one clock cycle. Second, the iterative decoding process is performed: at each iteration the VNUs update the Nb · z messages λn,m in z cycles and, after that, the CNUs update the Mb · z messages μm,n in z cycles, too. Thus, the total number of cycles required by iteration is 2 · z + η, where η depends on the latency of the VNU and CNU units. The iterative process ends when the parity condition is satisfied or when the maximum number of iterations is reached. The parity equations are performed by the CNUs and the VNUs compute the decoded bits. When all the parity equations results in zero, the parity condition is satisfied. The throughput of this architecture is T = (N · f )/(It · (2 · z + η) + 1), where N is the code length, f the clock frequency and It the number of iterations. Note, that for high signal-to-noise ratios (SNRs) most of the received frames can be decoded in just one iteration (i.e. maximum throughput).
+B. Symbols Generator
+This block generates the LLRs (ln) emulating the transmission of a codeword over an AWGN channel using binary phase-shift keying (BPSK) signalling. The symbol generation must allow the LDPC decoder to achieve the maximum throughput, that is when only one iteration is executed. In such a case, z blocks of Nb symbols have to be generated in z clock cycles. In order to achieve the required throughput we parallelise Nb generators as can be seen in Fig. 2. The AWGN blocks generate Gaussian noise symbols with zero mean and unitary variance. The symbols are scaled by σ 2 to obtain the required SNR, and next added to a codeword that is stored in a memory. This codeword was generated by coding a random binary message. Finally, the corrupted symbols are multiplied by 2/σ 2 in order to obtain the LLRs.
+The Gaussian noise generator (AWGN block) is implemented with the low complexity architecture proposed in [11]. An uniformly distributed random sample is produced using a 64-bits combined Tausworthe generator [12] and the obtained sample is transformed into Gaussian using an approximation of the inverse cumulative distribution function (ICDF). The Tausworthe generator yields a very high periodicity, around 2175, thereby the AWGN generator achieves a tail of ±9.4σ in the Gaussian distribution. In order to guarantee the independence between the Nb generators, 1015 values were generated with each Tausworthe generator (each one with a different seed) and, after that, we checked that the Nb · 1015 values are unmatched. In this way, we can ensure that each AWGN block produces at least 1015 independent frames.
+C. Error Detection
+In this block the LDPC decoder output is compared to the stored codeword to detect if the frame is erroneous and calculate the number of erroneous bits. The frame and bit error results are obtained at each iteration and stored in memory blocks of size Imax. When the simulation ends, the total number of generated frames and the total number of clock cycles are
+
+Fig. 3: Internal control state diagram.
+stored in registers. All these results allow a good post-analysis of the simulations, including the performance of the algorithms versus the number of iterations.
+D. Control
+This block performs two main tasks: communication with a software interface (SI) and internal control of the hardware emulator. The SI sends the configuration parameters (Ferr, Imax, σ 2 and 2/σ 2) for the simulation. Those parameters are stored in registers. The SI also sends a control signal to start the simulation and checks the status of the emulator. When the status indicates that simulation has ended, the stored data in the Error Detection block is sent to the SI. The communication between the emulator and the SI is performed via RS-232.
+The internal control state diagram is shown in Fig.3. On the start up the system state is “idle”. When the control signal start is received from the SI the simulation starts and the system changes to the “load & decode” state. In this state the System Generator block is enabled for z clock cycles to generate the LLRs. This frame is loaded into the Ln memory blocks of the LDPC decoder and, after the first LLR is written, the iterative decoding process starts. During the decoding process, the Error Detection block stores the error results at each iteration. The system moves to “check” state when the parity condition is satisfied or the iteration counter reaches Imax. The iteration counter and the parity check signal are generated by the LDPC decoder block. In this state, the frame error counter is incremented if the parity condition is unsatisfied. If the frame error counter reaches Ferr the simulation ends and the system changes to the “idle” state, otherwise, the system returns to the “load & decode” state to start the decoding of a new frame.
+IV. RESULTS
+The proposed hardware emulator was implemented for a (2048,1723) RS-Based LDPC code [13] using the normalisedMS decoding algorithm. This code is regular and structured with Mb = 6, Nn = 32 and z = 64. The quantisation scheme used for the ln, λn,m and μm,n messages is [5 : 2] (5 bits for the integer part, including the sign, and 2 bits for the fractional part). The emulator was modelled in VHDL and implemented on a Xilinx Virtex-6 XC6VLX240T-3 device. A single core design requires 8110 slices, 76 Block RAMs and 128 embedded 18 × 18 multipliers and achieves a maximum clock frequency of 300 MHz (3.3ns critical path). In the same device can be implemented up to 4 cores without frequency penalisation, so, each core can run at 300 MHz and the
+
+406
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:21 UTC from IEEE Xplore. Restrictions apply.
+
+Frame error rate (FER)
+
+10−2
+
+Bit error rate (BER)
+
+10−4
+
+10−6
+
+1.6 Average Throughput
+1.4
+1.2
+1
+
+Error Rate (FER/BER) Average Throughput [Gbps]
+
+10−8
+
+0.8
+
+10−10
+
+0.6
+
+0.4 10−12
+
+0.2
+
+3.6
+
+3.8
+
+4
+
+4.2
+
+4.4
+
+4.6
+
+4.8
+
+5
+
+Eb/N0 [dB]
+
+Fig. 4: Performance and average throughput for a (2048,1723) RS-Based LDPC code using the normalised-MS algorithm.
+
+throughput is multiplied by 4. In that case the design requires 35324 slices, 304 Block RAMs and 512 embedded multipliers.
+Fig.4 shows the performance of the normalised-MS algorithm for the (2048,1723) RS-Based LDPC code, obtained with a single core hardware simulation. The number of frame errors to be detected, Ferr, was set to 100 and the maximum number of iterations, Imax, was set to 50. The performance curves present an error floor at a BER of 10−11 (Eb/N0 = 4.6 dB), where the error floor is defined as a sudden decrease in the slope of the BER/FER curve. Fig.4 also shows the average throughput curve. Each average throughput was obtained dividing the total number of generated frames by the simulation time (total number of clock cycles/clock frequency). Note that an average throughput of 1.35 Gbps is achieved for a BER = 10−12. This point requires the transmission of 3.3×1011 frames, therefore, 6 days are needed to obtain it with one emulator core.
+Table I compares the throughput of the proposed system with other works. As can be seen, the proposed emulator throughput is at least four times better than the previous emulators. Moreover, with only 4 cores in parallel, that can be implemented in a single FPGA device, the proposed emulator achieves the highest throughput. The main issue with the parallelisation is to find all the needed seeds for the Tausworthe generator, in order to guarantee data independence.
+TABLE I: Emulator average throughput comparison.
+
+[5] [3] [2] [4] This Work
+
+Code Length (N) Throughput [Mbps] single core Throughput [Gbps] (number of cores)
+
+2304 158
+0.95 (6)
+
+4923 175
+4.70 (27)
+
+2048 240
+– –
+
+3369 332
+1.23 (4)
+
+2048 1350
+5.40 (4)
+
+V. CONCLUSION
+In this paper, we presented a high-throughput FPGA-based emulation system to evaluate the performance of structured
+
+LDPC codes and message passing-based decoding algorithms. The memory-based partially-parallel architecture was used to implement the LDPC decoder because it achieves a good tradeoff between complexity and decoding throughput. Due to the fact that for a high SNRs most of the received frames can be decoded in just one iteration, we implemented two strategies: 1) we used early termination in the decoder to short the number of iterations, and 2), the data generation was implemented in parallel to be able to generate the symbols at the maximum throughput (i.e. just one iteration).
+The emulator was implemented on a Xilinx Virtex-6 device for a (2048,1723) RS-Based LDPC code using the normalisedMS algorithm, achieving an average throughput of 1.35 Gbps at BER = 10−12 with a single core configuration and, 5.4 Gbps with 4 cores in a single FPGA device. Consequently, a this BER, which requires the transmission of 3.3 × 1011 frames, is reached with a single core in 6 days and with 4 cores in 36 hours. The achieved throughput with a single core is at least 4 times faster than the previously reported emulators.
+ACKNOWLEDGMENT
+This research was supported by Fondo Europeo de Desarrollo Regional (FEDER), the Spanish Ministerio de Ciencia e Innovacio´n, under Grant No. TEC2011-27916.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” Information Theory, IRE Transactions on, vol. 8, no. 1, pp. 21–28, jan. 1962.
+[2] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright, “Investigation of error floors of structured LDPC codes by hardware emulation,” in IEEE Global Telecomm. Conf., dec. 2006, pp. 1–6.
+[3] Y. Cai, S. Jeon, K. Mai, and B. Kumar, “Highly parallel FPGA emulation for LDPC error floor characterization in perpendicular magnetic recording channel,” Magnetics, IEEE Transactions on, vol. 45, no. 10, pp. 3761–3764, oct. 2009.
+[4] X. Chen, J. Kang, S. Lin, and V. Akella, “Accelerating FPGA-based emulation of quasi-cyclic LDPC codes with vector processing,” in Design, Automation Test in Europe Conf., apr. 2009, pp. 1530–1535.
+[5] H. Li, Y. S. Park, and Z. Zhang, “Reconfigurable architecture and automated design flow for rapid FPGA-based LDPC code emulation,” in Proceedings of the ACM/SIGDA, feb. 2012, pp. 167–170.
+[6] R. Tanner, “A recursive approach to low complexity codes,” Information Theory, IEEE Transactions on, vol. 27, no. 5, pp. 533–547, sep. 1981.
+[7] J. Lu and J. Moura, “Structured LDPC codes for high-density recording: large girth and low error floor,” Magnetics, IEEE Transactions on, vol. 42, no. 2, pp. 208–213, feb. 2006.
+[8] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” Information Theory, IEEE Transactions on, vol. 47, no. 2, pp. 599–618, feb. 2001.
+[9] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” Communications, IEEE Transactions on, vol. 53, no. 8, pp. 1288–1299, aug. 2005.
+[10] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design for quasi-cyclic ldpc codes,” Very Large Scale Integration (VLSI) Systems, IEEE Transactions on, vol. 15, no. 1, pp. 104–114, jan. 2007.
+[11] R. Gutierrez, V. Torres, and J. Valls, “Hardware architecture of a gaussian noise generator based on inversion method,” on Circuits Systems II, IEEE Transactions, To be published 2012.
+[12] P. L’Ecuyer, “Maximally equidistributed combined Tausworthe generators,” Mathematics of Computation, vol. 65, no. 213, pp. 203–213, 1996.
+[13] I. Djurdjevic, J. Xu, K. Abdel-Ghaffar, and S. Lin, “A class of LDPC codes constructed based on RS codes with two information symbols,” Communications Letters, IEEE, vol. 7, no. 7, pp. 317 – 319, july 2003.
+
+407
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:21 UTC from IEEE Xplore. Restrictions apply.
+
+

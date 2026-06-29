@@ -1,0 +1,1076 @@
+H. D. Tiwari et al.: Flexible LDPC Decoder using Stream Data Processing for 802.11n and 802.16e
+
+1505
+
+Flexible LDPC Decoder using Stream Data Processing for 802.11n and 802.16e
+
+Honey Durga Tiwari, Non-Member, Huynh Ngoc Bao, Non-Member, and Yong Beom Cho, Member, IEEE
+
+Abstract — Wireless data transmission standards like 802.16e, 802.11n, employ Low Density parity Check (LDPC) codes for error control coding. The bit flipping decoding algorithms presents a tradeoff between the error correcting capability, decoding resources and the decoding time. Software based LDPC decoders provide adaptation capabilities in system parameters such as block size and code rate. In a real-time, low-power mobile environments, the Single-Instruction Multiple-Data (SIMD) processor currently used for video processing, could also be used for the LDPC decoding. In this paper, the implementationefficient, reliability ratio-based, weighted bit flipping (IRRWBF) algorithm is presented using a flexible softwarebased LDPC decoder. Compact data structures are proposed for performing the decoding using SIMD architecture. Based on the implementation on two commonly used SIMD architecture for mobile platform, it was found that the decoding speed can be increased by more than 2000% (using 64 bit SIMD registers with vector integer calculation) and 1800% (using 128 bit SIMD registers with vector floating point calculation). Experimental results for different code lengths of 802.16e and 802.11n show that decoding time in order of 1×10-3~10×10-3 seconds is achievable. Due to significantly high throughput and flexibility, the proposed design algorithm and data structure can easily be adapted to any energy-sensitive mobile devices employing SIMD processors1.
+Index Terms — LDPC, IRRWBF decoding, SIMD, Parallel processing.
+I. INTRODUCTION
+The near Shannon limit performance of Low Density Parity Check (LDPC) codes [1] decoding algorithms like sumproduct (SP) [2], min-sum, and modified min-sum [3], has helped LDPC codes to be adopted in various digital communication standards such as DVB-S2 standard, WiMAX (802.16e), Wifi (802.11n), 10Gbit Ethernet (802.3an) and others. However, due to the logarithmic and exponential functions involved in their decoding algorithms, LDPC decoders are often criticized for their large memory requirement and long convergence time. Various VLSI hardware architectures have been proposed for real time processing of Belief Propagation (BP) based decoding
+1 This work was supported in part by the IDEC and Konkuk University. The authors are with the Department of Electronic Engineering, Konkuk University, 1 Hwayang-dong, Gwangjin-gu, Seoul 143-701, Korea. (email: honeyndt@konkuk.ac.kr, m4rbao@konkuk.ac.kr, ybcho@konkuk.ac.kr).
+
+methods. However, fully parallel architectures usually result in excessive implementation cost, while serial architectures are too slow for most applications. Apart from memory related requirements, flexibility with respect to code rate and length is also important. Due to these design and implementation problems, LDPC is still considered as optional feature in wireless standards for mobile network like 802.11n and WiBro.
+The bit-flipping based decoding methods [4] [5], mainly Implementation-Efficient Reliability Ratio-Based Weighted Bit-Flipping (IRRWBF) algorithm [6] can be considered as an efficient trade-off between error-correcting performance and decoding complexity. Reduced number of computations and absence of complex mathematical functions like logarithm and exponential calculations in IRRWBF reduces the memory requirement as compared to BP based decoding algorithms. However, sequential bit-flipping strategy often results in slow convergence.
+With the advancements in VLSI design methodologies, various code length and rate flexible LDPC decoders have been proposed [7] [8]. However, flexibility in such designs is limited to a set of pre-defined codes, and it tends to be inadequate when the support to generally defined codes is required. To overcome the design problems related to parameter adaptability, software LDPC decoders using Digital Signal Processors or Software Defined Radio (SDR) programmable hardware platforms [9] have been proposed. The performance of such software decoders is measured by their decoding speed.
+In order to achieve smaller decoding time, the inherent algorithmic parallelism of standard WBF must be considered. This data level parallelism can then be utilized for representing the data in vector form and performing the parallel calculation using Single Instruction Multiple Data (SIMD) processors [10]. In [11], [12] software LDPC decoder implementation based on graphics processing units (GPUs) and multi core architecture has been presented. However, due to their extensive resource utilization, these implementations can be considered for non-mobile platforms.
+In this paper, we present the implementation of software IRRWBF LDPC decoder using stream based processing in mobile environment. Firstly, the approach for designing parallel LDPC decoder using SIMD technology is presented. The resulting architecture is tailored to decode both IEEE 802.11n and IEEE 802.16e LDPC codes, as well as any other code of comparable complexity. Implementation and simulation of an efficient parallel LDPC decoder on SIMD
+
+Contributed Paper Manuscript received 09/14/11 Current version published 12/27/11 Electronic versioAnutphuobrilzieshdeldice1n2s/2e7d/u1s1e. limited to: Yonsei Univ. D0o0w98nl3o0a6de3d/1o1n/$J2u0n.0e024©,22002161aItE0E8E:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+1506
+processor is presented thereafter. It is shown that with IRRWBF, the decoding steps can be broken down into various stages such that the updated operations are mostly of SIMD type. In this work, the proposed parallel algorithm was programmed in different architectures such as, SIMD processor with 64 bit vector integer processing capability and SIMD processor with 128 bit vector floating point processing capability. It is shown that the parallel implementation of the IRRWBF using SIMD instruction can achieve significantly low decoding time. Hence, the proposed scheme can be used effectively in real-time software LDPC decoders for energysensitive mobile devices.
+In this manuscript, we use the conventions listed below to denote the variables, matrices and constants.
+Variables: Non-capitalized, italicized text with normal text subscripts, e.g., tc. Matrices: Capitalized and bolded text, e.g., H is the parity-check matrix. Constants: Capitalized and italicized text with italicized bold text subscripts, e.g., Wc denotes column weight (number of non-zero entries per column).
+
+II. LDPC CODES SPECIFICATION IN WIRELESS COMMUNICATION STANDARDS
+A. WiBro or IEEE 802.16e
+WiBro is the first mobile WiMax based commercial service based on IEEE 802.16e standard and provides the specification for high-speed portable Internet service. IEEE 802.16e has adopted structured LDPC as an option of channel coding scheme [13]. Each LDPC code in the set of LDPC codes is defined by a matrix H of size M-by-N, where N is the length of the code and M is the number of parity check bits in the code. The number of systematic bits is K = N - M. In IEEE 802.16e matrix H is defined as
+
+ P0,0
+
+Η
+
+
+
+   
+
+P1,0  Pmb 1,0
+
+P0,1 P1,1  Pmb 1,0
+
+   
+
+P0,nb 1 P 1,nb 1 Pmb 1,nb 1
+
+    
+
+
+
+PHb
+
+(1)
+
+where, Px,y is one of a set of a-by-a permutation matrices or a a-by-a zero matrix.
+The matrix H is expanded from a binary base matrix Hb of size mb-by-nb, where N = a × nb and M = z × mb, with a as an integer ≥ 1. The base matrix is expanded by replacing each 1 in the base matrix with a a-by-a permutation matrix, and each 0 with a a-by-a zero matrix. The base matrix size nb is an integer equal to 24. The LDPC code flexibly supports different block sizes for each code rate through the use of an expansion factor. Each base model matrix has nb = 24 columns, and the expansion factor (a factor) is equal to N/24 for code length N. In each case, the number of information bits is equal to the code rate times the coded length N. The code length in case of IEEE 802.16e ranges from 576 to 2304, while the code rate specified in the standard are 1/2, 2/3, 3/4 and 5/6.
+
+IEEE Transactions on Consumer Electronics, Vol. 57, No. 4, November 2011
+B. IEEE 802.11n
+IEEE 802.11n-2009 is an amendment to the IEEE 802.112007 wireless networking standard to improve network throughput over the two previous standards - 802.11a and 802.11g [14]. The specification of LDPC codes in IEEE 802.11n is same as that in IEEE 802.16e with the change in the permutation matrices for different code rates and code length. In total, 12 LDPC codes are defined in IEEE 802.11n using a combination of different code length (648, 1296, 1944) and code rate (1/2, 2/3, 3/4, 5/6).
+
+III. IMPLEMENTATION EFFICIENT RELIABILITY RATIO BASED WEIGHTED BIT FLIPPING
+
+A. IRRWBF algorithm
+The symbols used in IRRWBF decoding algorithm are summarized in Table I.
+TABLE I SYMBOLS USED IN IRRWBF
+
+Symbol
+Hmn i rn zn V(m) C(n) Wc Wr cr Hr Hc
+
+Meaning
+mth row, nth column of parity check matrix H, Number of decoding iterations nth bit received from the channel Hard decision of rn The set of variable nodes that participate in mth check node The set of check nodes in which nth variable node participate Column weight (number of nonzero entries per column) Row weight (number of nonzero entries per row) Code rate (= N/K) (= 1 - Wr/Wc) Row - wise packed version of H Column - wise packed version of H
+
+The original IRRWBF algorithm separates the decoding
+
+process into four steps: initialization, check node, variable
+
+node, and decision steps [4]. The operations performed at each stage in ith iteration are shown in Table II. The initialization
+
+step is performed only once and, hence, it is independent of
+
+iteration number.
+
+TABLE II ORIGINAL IRRWBF ALGORITHM
+
+Number of
+
+Unit
+
+Operations performed
+
+Computations
+
+in ith iteration
+
+Initialization
+
+Tm   rn
+
+MWr
+
+nV m
+
+Check node
+
+N
+ smi  zmi Hmn
+
+MWr
+
+n1
+
+Variable node
+
+   Eni
+
+
+
+1 rn
+
+mCn
+
+2smi 1 Tm
+
+NWc
+
+Decision
+
+Flip the bit znif for nf = arg maxn′ En′
+
+N
+
+For the software based applications, the memory requirement can be considered as the amount of the memory required for data processing. This processing memory in turn depends on the number of computations performed and the complexity of the computation. From Table II, it can be seen that the computation complexity of the IRRWBF decoding is limited to that of addition, multiplication and division. With small conversion and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+H. D. Tiwari et al.: Flexible LDPC Decoder using Stream Data Processing for 802.11n and 802.16e
+
+1507
+
+approximation, the division can be changed to a multiplication
+
+and hence, the complexity of IRRWBF is limited to that
+
+involved in addition and multiplication.
+
+For i = 1, all four steps, i.e., initialization, check node,
+
+variable node and the decision step, were performed in a
+
+single operation on multiple data generated during the
+
+previous step. In each step, the input data were not correlated;
+
+hence, data parallelism existed in the computations performed
+
+in each step. For i ≥ 2, the check node update process required
+
+only Wc updates, which were independent of each other and, hence, could be performed in parallel. Similarly, the variable
+
+node steps involved Wr updates, which were independent of each other and, hence, could also be performed in parallel.
+
+The process of finding nf = arg maxn′ En′ was merged with the calculation of En by comparing En with En-1 during the calculation of En. The decision step was the same for all i values; hence N number of calculations are performed in each
+
+iteration. Table III shows the number of operations as a
+
+function of iteration number.
+
+TABLE III NUMBER OF OPERATIONS AS A FUNCTION OF NUMBER OF ITERATIONS
+
+Step
+
+Iteration Number
+
+i=1
+
+i≥2
+
+Initialization
+
+MWr
+
+Check node
+
+MWr
+
+Variable node
+
+NWc
+
+Decision
+
+N
+
+Wc
+WrWc
+N
+
+Based on the number of computations performed in each
+
+iteration, for i iterations the total number of computations, Oc, can be given by
+
+Oc = [2MWr + NWc + Ni +Wc (i - 1)(1 + Wr)]
+
+Oc = [3NWc + Ni +Wc (i - 1)(1 + Wr)]
+
+Finally, because, in general, i >> 1, and N >> Wc(1 + Wr)
+
+Oc ≈ N[3Wc + i]
+
+(2)
+
+Equation (2) shows that the total number of decoding
+
+computations is linearly dependent on both N and the iteration
+
+number i. Although for moderate-to-high SNR, only a small
+
+number of decoder iterations are required, the total number of
+
+computations is still governed by the code length.
+
+IV. PARALLELISM AND USE OF SIMD EXTENSION IN IRRWBF
+SIMD technology is a way of packing D (usually a power of 2) like operations (e.g. 8 adds) into a single instruction. The data for the instruction operands is packed into registers capable of holding the extra data. The advantage of this format is that for the cost of doing a single instruction, D instructions worth of work are performed. This can translate into very large speedups for parallelizable algorithms. To effectively use SIMD-architecture-based decoding, effective memory access is essential. To achieve parallel computation, we use the stream-based data structure proposed in [11] for storing the parity check matrix H. Equation (3) shows an example parity check matrix H with N = 20, Wr = 4 and Wc = 3 [1]. A compact data structure, Hr, for check nodes processing was obtained by column-wise packing of the
+
+indices of the non-zero elements of H for each row. Similarly,
+
+another data structure, Hc, was obtained by row-wise packing
+
+of the indices of the non-zero elements of H for each column.
+
+Equation (4) shows the data structure of Hr and Hc.
+
+1 1 1  0 1
+
+H
+
+
+
+  0
+
+ 0
+
+ 0
+
+ 
+
+
+
+ 
+
+1
+
+ 15
+
+(3)
+
+1 2 3  20
+
+1 2 3 4 
+
+5 Hr  9
+ 
+
+6 10 
+
+7 11 
+
+8
+
+ 
+
+12  ;
+
+
+
+ 
+
+1
+
+Hc
+
+
+
+ 
+
+6
+
+11
+
+1 7 12
+
+1 8 13
+
+  
+
+5 10 15
+
+(4)
+
+5 10 15 20
+
+The dimensions of Hr (row × column) are (N - K) × Wr, while the dimensions of Hc are Wc × N. The IRRWBF algorithm can be represented as a function of Hr and Hc, as
+
+shown in Table IV.
+
+TABLE IV MODIFIED IRRWBF ALGORITHM WITH A PACKED DATA STRUCTURE
+
+Steps
+
+Operations Performed
+
+Initialization Check node Variable node Decision
+
+Wr
+ Tm  r ; Hrm, j j  1, 2,...Wr ; j 1
+
+ s  z ; i
+
+Wr i
+
+m
+
+Hrm, j
+
+j 1
+
+j  1, 2,...Wr ;
+
+  Eni
+
+
+
+1 rn
+
+Wc j0
+
+2s 1 T i Hc j ,n
+
+Hc j ,n
+
+Flip the bit znif for nf = arg maxn′ Eni '
+
+Let us consider various processing steps for i = 1 and i ≥ 2. The initialization step is performed only for i = 1. The content of the data structures is not correlated within the data structure or
+between the two data structures, i.e., the content of Hru,v is independent of Hru′,v and Hru,v′. The SIMD-architecture-based processor allows packing of the data for parallel computations. Let us consider that by using an SIMD- architecture-based processor, we can pack d data, each of b bits, for parallel computations. Hence, we may define the packed form of T as Tpa = [Tmd+1, Tmd+2, Tmd+3… Tmd+d]T (.T denotes transpose operator), where pa = 1 to M/d, while md = d(pa-1). Hence,
+
+Wr
+
+  r   r  r  r  j1 Hrmd 1, j
+    Wr
+
+ T   r    r  r  r  pa
+
+j 1 Hrmd 2, j
+
+    r  r   r  Wr
+ r    j1 Hrmd d , j
+
+Hrmd 1,1 Hrmd 2,1
+
+Hrmd 1,2 Hrmd 2,2
+
+Hrmd 1,Wr Hrmd 2,Wr
+
+Hrmd d ,1
+
+Hrmd d ,2
+
+Hrmd d ,Wr
+
+(5)
+
+We can define the packed form of the data vector as
+
+T
+
+RHrpa, j
+
+
+
+  
+
+rHrmd
+
+1,
+
+j
+
+,
+
+r , Hrmd 2, j 
+
+r
+
+Hrmd d , j
+
+ 
+
+(6)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+1508
+
+Equation (5) can then be given as
+
+Wr
+
+ Tpa  RHrpa, j
+
+(7)
+
+j 1
+
+Equation (7) represents a standard form of an SIMD
+
+instruction set, where d variables can be evaluated in parallel.
+
+Parallel forms of various variables in the check node, the
+
+variable node and the decision step can be derived in the same
+
+manner. For example, let the packed form of si be given as Sipa
+
+=
+
+S
+
+i pa
+
+
+
+
+
+si md
+
+1,
+
+j
+
+,
+
+s , i md  2, j
+
+
+
+si md
+
+
+
+d
+
+,
+
+j
+
+T
+
+and
+
+the
+
+packed
+
+form of data vector as
+
+T
+
+ZHrpa, j
+
+
+
+ 
+
+zHrmd
+
+1,
+
+j
+
+,
+
+z , Hrmd 2, j 
+
+z
+Hrmd d , j 
+
+(8)
+
+Hence, the Sipl is given as
+
+Wr
+
+ S
+
+i pa
+
+
+
+ZHrpa, j
+
+(9)
+
+j 1
+
+Let pc = 1 to N/d, while qd = d(pc-1). For i = 1 the check node computation is given in its packed form by EPpic
+
+  EPpic 
+
+1 Rpc
+
+Wc j0
+
+2SHC ij , pc
+
+1
+
+THC
+
+i j,
+
+pc
+
+(10)
+
+where,
+
+Rpc
+
+
+
+ 
+
+rqd
+
+1,
+
+rqd 2,
+
+
+
+rqd
+
+d
+
+ 
+
+,
+
+(11)
+
+SHCij, pc
+
+
+
+  
+
+sHi c
+
+j,qd
+
+1
+
+,
+
+s , i Hc j,qd 2
+
+
+
+si
+
+
+
+Hc
+
+j,qd
+
+d
+
+ 
+
+(12)
+
+THC
+
+i j,
+
+pc
+
+
+
+THc
+
+
+j,qd
+
+1
+
+,
+
+T , Hc j,qd 2
+
+
+
+T
+
+Hc j,qd d
+
+ 
+
+(13)
+
+In [15] the method to find the index of largest number in an
+
+array using streaming SIMD instruction set was presented.
+
+Using the same scheme, the decision step can be implemented
+
+using SIMD technology. Using (7), (9), (10) SIMD extension
+
+can be applied to the IRRWBF decoding algorithm and the
+
+computation time can be reduced significantly.
+
+V. EXPERIMENTAL ENVIRONMENT
+To evaluate the performance of the proposed parallel stream based IRRWBF decoding, LDPC decoders were programmed on SIMD Processor with: (i) 64 bit vector integer calculation capability working approximately at 800 MHz with 8 MB of L2 cache memory; (ii) 128 bit vector floating point calculation capability working approximately at 800 MHz with 8 MB of L2 cache memory.
+A. SIMD Processor with 64 bit vector integer calculation
+Many SIMD processors provide stream based instructions only for integer type data. In such a case all the floating point calculations are approximated to their nearest integer. A direct approximation often results in calculation error. This may increase the number of iterations required for successful LDPC decoding or even lead to non-convergence. Hence, the
+
+IEEE Transactions on Consumer Electronics, Vol. 57, No. 4, November 2011
+floating point data must first be scaled and then approximated to the nearest integer. The details of such approximations are beyond the scope of this paper. The time incurred in the scaling process is considered as a part of decoding process and is included in processing time discussed in next section. The SIMD processors that provides 64-bit-wide SIMD instructions, often allows concurrent processing of up to eight data elements (8 Bit each) in a single cycle.
+B. SIMD Processor with 128 bit vector floating point calculation
+In case of IRRWBF decoding, only the variable node step needs vector floating point calculation. For large i, conversion floating point to integer conversion time can be saved by using vector floating point calculations. The SIMD processors that provides 128-bit-wide SIMD instructions, often allows concurrent processing of up to sixteen data elements (8 Bit each) in a single cycle.
+
+VI. IMPLEMENTATION RESULTS
+In Section III, it was shown that the decoding time in IRRWBF is a function of N, i and Wc. In [6], it was concluded that the IRRWBF decoding spends a considerable percentage of time in variable node step. The higher the iteration number, the more processing time is spent on the iteration part, i.e. check node step and variable node step.
+In this paper, we define LDPC codes by (N, cr) specified in 802.11n and 802.16e standard. Amongst the 12 and 19 LDPC codes defined in 802.11n and 802.16e, respectively, the decoding time for various code lengths and code rate were calculated. Firstly, to study the effect of code length, parallel implementation of IRRWBF is analyzed using different code lengths for a given code rate of 1/2. To study the dependence of decoding time on the number of iterations, parallel implementation of IRRWBF is analyzed using the maximum code length and code rate for different decoding iterations. The matrixes used in the experimentation are listed in Table V.
+
+Wireless Standard
+IEEE 802.16e
+IEEE 802.11n
+
+TABLE V PARITY-CHECK MATRICES UNDER TEST
+
+Code length, N
+576, 1152, 1728 2304
+648, 1296 1944
+
+Code rate, cr
+1/2 1/2, 2/3, 3/4, 5/6
+1/2 1/2, 2/3, 3/4, 5/6
+
+Maximum Column Weight, Wc
+6 6, 6, 4, 4
+12 11, 8, 6 and 4
+
+The decoding time for all the LDPC codes mentioned in Table V were calculated using an SIMD Processor with 64 bit vector integer calculation capability and SIMD Processor with 128 bit vector floating point calculation capability. For decoding time comparison, 10,000 samples of input vectors were taken for each LDPC code. The decoding times reported are the averages obtained for 10,000 samples. The input samples were pre-stored and neither the initialization time nor
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+H. D. Tiwari et al.: Flexible LDPC Decoder using Stream Data Processing for 802.11n and 802.16e
+
+1509
+
+the sample generation time were included in the decoding time. Hence, the results reflect the true decoding time.
+Fig. 1 shows the decoding time for the LDPC codes specified in IEEE 802.16e standard, while Fig. 2 shows the decoding time for the LDPC codes specified in IEEE 802.11n standard.
+To measure the effect of SIMD based programming on the decoding time, percentage speed up can be calculated by comparing the decoding time of non-SIMD based implementation with SIMD based implementation. The percentage speed-up in this case can be calculated as
+
+Percentage Speed Up (%)
+
+2000 1500
+
+N = 576, NON SIMD vs. SIMD 64 bit N = 1152, NON SIMD vs. SIMD 64 bit N = 1728, NON SIMD vs. SIMD 64 bit N = 2304, NON SIMD vs. SIMD 64 bit N = 576, NON SIMD vs. SIMD 128 bit N = 1152, NON SIMD vs. SIMD 128 bit N = 1728, NON SIMD vs. SIMD 128 bit N = 2304, NON SIMD vs. SIMD 128 bit
+
+1000
+
+500
+
+Percent
+
+Speed
+
+Up
+
+
+
+  
+
+Decoding time (Non-SIMD) Decoding time (SIMD)
+
+
+
+1 
+
+100
+
+103
+
+N = 576, NON SIMD 64 bit N = 1152, NON SIMD 64 bit
+
+N = 576, SIMD 128 bit N = 1152, SIMD 128 bit
+
+N = 1728, NON SIMD 64 bit
+
+N = 1728, SIMD 128 bit
+
+N = 2304, NON SIMD 64 bit
+
+N = 2304, SIMD 128 bit
+
+N = 576, NON SIMD 128 bit
+
+N = 1152, NON SIMD 128 bit
+
+102
+
+N = 1728, NON SIMD 128 bit
+
+N = 2304, NON SIMD 128 bit
+
+101
+
+Decoding Time (ms)
+
+100 N = 576, SIMD 64 bit N = 1152, SIMD 64 bit
+
+N = 1728, SIMD 64 bit
+
+10-1
+
+101
+
+102 Code length, N
+
+N = 2304, SIMD 64 bit 103
+
+Fig. 1. Decoding time of LDPC codes specified in IEEE 802.16e standard
+
+using IRRWBF decoding
+
+N = 648, NON SIMD 64 bit
+
+N = 1296, NON SIMD 64 bit
+
+102
+
+N = 1944, NON SIMD 64 bit N = 648, SIMD 64 bit
+
+N = 1296, SIMD 64 bit
+
+N = 1944, SIMD 64 bit
+
+N = 648, NON SIMD 128 bit
+
+N = 1296, NON SIMD 128 bit
+
+N = 1944, NON SIMD 128 bit
+
+N = 648, SIMD 128 bit
+
+N = 1296, SIMD 128 bit
+
+101
+
+N = 1944, SIMD 128 bit
+
+101
+
+102
+
+103
+
+Code length, N
+
+Fig. 3. Percent increase in processing speed for various LDPC codes
+
+specified in IEEE 802.16e with different number of decoding iterations as
+
+code length is varied
+
+Percentage Speed Up (%)
+
+2200 2000 1800 1600 1400 1200 1000
+800 600 400 200
+
+N = 648, NON SIMD vs. SIMD 64 bit N = 1296, NON SIMD vs. SIMD 64 bit N = 1944, NON SIMD vs. SIMD 64 bit N = 648, NON SIMD vs. SIMD 128 bit N = 1296, NON SIMD vs. SIMD 128 bit N = 1944, NON SIMD vs. SIMD 128 bit
+
+101
+
+102
+
+103
+
+Code length, N
+
+Fig. 4. Percent increase in processing speed for various LDPC codes
+
+specified in IEEE 802.11n with different number of decoding iterations as
+
+code length is varied
+
+Fig. 5 shows the percent increase in the processing speed with various values of code length, N, when the number of decoding iterations, i, was varied in case of IEEE 802.16e.
+
+2500 2000
+
+i = 5, NON SIMD vs. SIMD 64 bit i = 1000, NON SIMD vs. SIMD 64 bit i = 5, NON SIMD vs. SIMD 128 bit i = 1000, NON SIMD vs. SIMD 128 bit
+
+Decoding Time (ms)
+
+Percentage Speed Up (%)
+
+1500
+
+100
+
+101
+
+102
+
+Code length, N
+
+103
+
+1000
+
+Fig. 2. Decoding time of LDPC codes specified in IEEE 802.11n standard
+
+using IRRWBF decoding
+
+500
+
+Fig. 3 shows the percent increase in processing speed with various iteration values, i, when the code length, N, was varied in case of IEEE 802.16e based LDPC codes, while Fig. 4 shows the result of same analysis for 802.11n based LDPC codes.
+
+4000 600 800 1000 1200 1400 1600 1800 2000 2200 2400 Code length, N
+Fig. 5. Percent increase in processing speed for various LDPC codes specified in IEEE 802.16e with different code lengths as number of decoding iterations is varied
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+1510
+For IEEE 802.11n based LDPC codes, the percent increase in the processing speed with various values of code length, N, is shown in Fig. 6.
+
+2500 2000
+
+i = 5, NON SIMD vs. SIMD 64 bit i = 1000, NON SIMD vs. SIMD 64 bit i = 5, NON SIMD vs. SIMD 128 bit i = 1000, NON SIMD vs. SIMD 128 bit
+
+Percentage Speed Up (%)
+
+1500
+
+1000
+
+500
+
+6000
+
+800
+
+1000
+
+1200
+
+1400
+
+1600
+
+1800
+
+2000
+
+Code length, N
+
+Fig. 6. Percent increase in processing speed for various LDPC codes
+
+specified in IEEE 802.11n with different code lengths as number of
+
+decoding iterations is varied
+
+The results show that the processing speed is much higher with the SIMD based implementation of IRRWBF algorithm as compared to the non SIMD version when either N or i is increased. The large percent increase supports our assertion that with the use of formatted data structure IRRWBF algorithm requires substantially less time for the check node and variable node steps even with large value of N.
+
+VII. COMPARISON WITH EXISTING SYSTEMS
+A. Parallel Weighted Bit Flipping
+Parallel WBF (PWBF) decoding was introduced in standard WBF by flipping multiple bits [16]-[18]. This was done to reduce the large time and computational resources consumption of standard BF algorithms. The PWBF decoding is based on calculation of a threshold value which defines the number of bits to be flipped. This however requires extra computation to calculate “flip signals” for each unsatisfied check node and a threshold to determine the number of bits flipped in any iteration. Although, the number of decoding iterations in PWBF is significantly reduced, the serial WBF outperforms PWBF in terms of bit error rate (BER) performance. The target of the paper is to reduce the decoding time of the WBF coding without sacrificing the BER performance. Hence, we used the data level parallelism in serial IRRWBF scheme to implement fast decoder.
+B. BP and standard WBF based decoders
+The sum-product algorithm for LDPC decoding has better BER performance than the IRRWBF LDPC decoding algorithm; however, it requires more decoding resources and takes longer decoding time. BER performance of the IRRWBF LDPC decoder was established previously in [4]-[6]. The algorithm implemented in [11] uses SIMD processing for sum-
+
+IEEE Transactions on Consumer Electronics, Vol. 57, No. 4, November 2011
+product decoding. Comparison of the proposed algorithm with that described in [11] shows that, the decoding time for sumproduct decoding is more than that of IRRWBF. Comparison of the proposed scheme with that in [6] show that the use of SIMD processing significantly reduces the decoding time.
+C. Memory requirement
+In the proposed scheme, the processing core is shared by other operations, and therefore, we consider the resource essential for LDPC decoding exclusively. Since, all the calculations are done by the processor, the memory requirement for decoding is the only resource used exclusively for the decoding. As compared to the BP decoding algorithm, the check node variable is a single bit data. Hence the amount of memory for variables can be given as
+ The memory for initialization variable: li×M (=li×N(1-cr))  The memory for hard decision bits: N  The memory for variable node message: lv×N  The memory for check node message: N  Totally required: N [li(1-cr) + lv + 2]
+Here, li and lv is the word length of the Initialization node and Variable node variables respectively.
+In case of 802.16e the maximum code length is 2304, while the smallest code rate is 5/6. Let the word length of the Initialization node and Variable node variables be 8. Hence, the maximum processing memory required for 802.16e is approximately equal to 3264 Bytes. Similarly, in case of 802.11n the maximum code length is 1944, while the smallest code rate is 5/6. Hence, the maximum processing memory required for 802.11n is equal to 2754 Bytes.
+In partial-min algorithm [19] the total amount of memory required is given by (Li +1) × N + Le× N + Σj[(Le − 1) × (km +1) + |V (j) |] where, the meaning of various terms are Li and Le are the word lengths of the intrinsic and the extrinsic information respectively. The number of check nodes is given by j. Each check node has km + 1 different LLR magnitudes. Each check node produces |V(j)| sign bits [19]. As an approximation, if we consider that each check node produces |V(j)|av sign bits, the total amount of memory required can be approximated by (Li+1)× N + Le× N + M × [(Le - 1) × (km+1) + |V(j)|av]. As an example, assume that the word lengths of the intrinsic and extrinsic information are 6 and 8 respectively and km=4 as assumed in [19] and let |V(j)|av ≈ 20. In such a case, total amount of memory required is 6960 Bytes for 802.16e and is approximately equal to 5873 Bytes for 802.11n.
+In both the cases presented above, the maximum memory requirement calculation does not include the memory required for storing the parity check matrix. In 802.16e and 802.11n based systems, the parity check matrix is represented in form of permutation matrix shift patterns. The memory requirement for storing these patterns is very small as compared to the processing memory. From the above discussion, it can be seen that the memory required for processing is reduced by more than 50 percent without the sacrifice of flexibility in terms of code rate and length.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+H. D. Tiwari et al.: Flexible LDPC Decoder using Stream Data Processing for 802.11n and 802.16e
+
+1511
+
+TABLE VI COMPARISON OF LDPC DECODERS
+
+Design
+
+Platform
+
+Code length, N
+
+Code rate, cr
+
+Decoding iteration, i
+
+Decoding time Throughput
+
+[11]
+
+Computer Graphics Processing Unit based
+
+1,908
+
+8/9
+
+50
+
+53 ms
+
+N. A.
+
+[12]
+
+RISC processor with 128-bit SIMD organization
+
+1,024
+
+1/2
+
+50
+
+1.2 ms
+
+14.3Mbps
+
+(3.2 GHz)
+
+[8]
+
+(0.18µm) 212 MHz Hardware
+
+2,304
+
+1/2
+
+10
+
+N. A.
+
+379.23 Mbps
+
+[6]
+
+Workstation
+
+2,000
+
+1/2
+
+50
+
+1396.09 ms
+
+Proposed
+
+SIMD Processor with 64 bit vector integer
+
+2304
+
+1/2
+
+50
+
+2.6 ms
+
+44.3Mbps
+
+calculation (800 MHz)
+
+Proposed SIMD Processor with 128 bit vector floating point
+
+2304
+
+1/2
+
+50
+
+2.475 ms
+
+46.55Mbps
+
+calculation (800 MHZ)
+
+N. A. – Not available in reference
+
+D. Size and decoding time
+In recent years, LDPC decoding architectures based on specialized digital signal processors have been proposed by various authors [11], [20]. Table VI shows comparisons of the proposed system with several existing systems. We chose to compare the decoding time of the proposed system with those of other SIMD-based LDPC decoders [11]. A comparison with a hardware-based design is also shown to illustrate the throughput for a given code rate and number of iterations. In general, a dedicated-hardware-based design has higher throughput compared with a software-based design. It should be noted that a software-based decoder can operate with variable code length and rate; however, hardware-based designs are often inflexible. Additionally, a dedicated hardware module requires a dedicated and sometimes a bank of parallel aligned memory; used exclusively for LDPC decoding; whereas a software decoder has no such requirement. Comparison of a dedicated-hardware-based
+
+processor with 128 bit vector floating point processing capability. The throughput and the decoding time for various LDPC codes based on IEEE 802.16e and 802.11n standard were calculated.The simulation results showed significant reductions in total decoding time that was proportional to code length and the number of decoder iterations. Comparison of the proposed implementation with existing systems show that real time decoding can be achieved without the expense of additional hardware or memory by using stream based processing in software based decoder. The simulation results also highlights the potential use of the proposed scheme in real-time LDPC decoders in energy-sensitive, embedded-processor environments that already employ multimedia acceleration technologies. The presented scheme provides low-cost and flexible software-based alternatives with performances that compare well to the expensive, long time-to-market, and hardware-dedicated typical VLSI LDPC decoder approaches.
+
+decoder [8] with the proposed design shows that with
+
+REFERENCES
+
+SIMD processing even a software-based decoder can achieve a smaller decoding time.
+The multi-core architecture can also achieve reasonably high throughput, however such design cannot be
+
+[1] R.G. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, pp. 21–28, 1962.
+[2] F. R. Kschischang, B. J. Frey, and H. A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Transactions on Information Theory, vol. 47, pp. 498–519, 2001.
+
+employed in mobile environment due to size and power limitations. Based on the comparison of the proposed design with various existing systems, it is reasonable to
+
+[3] J. Zhao, F. Zarkeshvari, and A. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Transactions on Communications, 53, pp. 549-554, 2005.
+
+conclude that the use of IRRWBF decoding with SIMDbased processing enables even a software-based design to achieve real time decoding performance.
+
+[4] J. Zhang, and M.P.C. Fossorier, “A modified weighted bit-flipping decoding of low-density parity-check codes,” IEEE Communications Letters, vol. 8, pp. 165–167, 2004.
+[5] F. Guo, and L. Hanzo, “Reliability ratio based weighted bit-flipping
+
+decoding for low-density parity-check codes,” Electronics Letters, vol.
+
+VIII. CONCLUSION In this paper, we propose a stream based parallel
+
+40, pp. 1356–1358, 2004. [6] C. H. Lee, and W. Wolf, “Implementation-efficient reliability ratio based
+weighted bit-flipping decoding for LDPC codes,” Electronics Letters,
+
+implementation of IRRWBF decoding algorithm for LDPC codes. Compact and vectorized data structures were designed to represent the computation done in
+
+vol. 41, pp. 1356–1358, 2005. [7] G. Masera, F. Quaglio, F. Vacca, “Implementation of a Flexible LDPC
+Decoder,” IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 54, pp. 542 - 546, Oct 2007.
+
+various stages of IRRWBF decoding. These data structures are suitable for parallel computing and allow a significant reduction of both the memory space and
+
+[8] Jong-Yeol Lee, Hye-Jin Ryu, “A 1-Gb/s flexible LDPC decoder supporting multiple code rates and block lengths,” IEEE Transactions on Consumer Electronics, vol. 54, pp. 417 - 424, 2008.
+[9] Sangwon Seo, Trevor Mudge, Yuming Zhu, and Chaitali Chakrabarti,
+
+processing time necessary for LDPC decoding. Capitalizing on the data-parallelism in the computation, software decoder was implemented using SIMD processor
+
+“Design and Analysis of LDPC Decoders for Software Defined Radio,” Proceedings of IEEE Workshop on Signal Processing Systems, pp. 210215, Oct 2007. [10] A. Ghuloum, E. Sprangle, J. Fang, G. Wu, X. Zhou, “A flexible parallel
+
+with 64 bit vector integer processing capability and SIMD
+
+programming model for tera-scale architectures,” Intel, pp.1-21, 2007.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+1512
+[11] G. Falcao, S. Yamagiwa, V. Silva et al. , “Parallel LDPC decoding on GPUs using a stream-based computing approach,” Journal of Computer Science and Technology, vol. 24, pp. 913-924, Sept. 2009.
+[12] G. Falcao, L. Sousa, V. Silva, “Massively LDPC Decoding on Multicore Architectures,” IEEE Transactions on Parallel and Distributed Systems, vol. 22, pp. 309-322, 2010.
+[13] IEEE P802.16e, D12: Draft IEEE Standard for Local Metropolitan Area Networks. Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems, May 2009
+[14] IEEE P802.11n, D10: Draft IEEE Standard for Local Metropolitan networks—Specific requirements. Part 11: Wireless LAN Medium Access Control (MAC), and Physical Layer (PHY) specifications: Enhancements for Higher Throughput, October 2009.
+[15] Intel Application note AP-804, “Integer Minimum or Maximum Element Search Using Streaming SIMD Extensions,” version 2.1, Intel Corporation, January 1999
+[16] Xiaofu Wu, Chunming Zhao, Xiaohu You, “Parallel Weighted BitFlipping Decoding,” IEEE Communications Letters, vol. 11, pp. 671-673, 2007.
+[17] G. Li, G. Feng, “Improved parallel weighted bit-flipping decoding algorithm for LDPC codes,” IET Communications, vol. 3, pp. 9199, 2009.
+[18] Junho Cho, Jonghong Kim, Wonyong Sung, “VLSI Implementation of a High-Throughput Soft-Bit-Flipping Decoder for Geometric LDPC Codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 57, pp. 1083-1094, 2010.
+[19] Su J.-n., Liu K, Min H, “Hardware efficient decoding of LDPC codes using partial-min algorithms,” IEEE Transactions on Consumer Electronics, vol. 52, pp. 1463-1468, 2006.
+[20] M. Gomes, V. Silva, C. Neves, and R. Marques, “Serial LDPC decoding on a SIMD DSP using horizontal-scheduling,” Proceedings of 14th European Signal Processing Conference, Florence, Italy, Sept. 4-8, 2006.
+
+IEEE Transactions on Consumer Electronics, Vol. 57, No. 4, November 2011
+BIOGRAPHIES
+Honey Durga Tiwari received a Bachelor’s in Technology degree in Electronics Engineering from Nagpur University, Nagpur, India, in 2003. He received a Master’s degree in Embedded System Design from VNIT, Visvesvaraya National Institute of Technology, Nagpur, India in 2006. He is currently working toward a Doctoral degree in Electronics Engineering at Konkuk University in Seoul, South Korea. His research interests include forward error control coding system development, hardware-software co-design of communication systems, multi-carrier systems and image processing.
+Huynh Ngoc Bao received a Bachelor’s of Science from the Information Technology Department at Ho Chi Minh University of Foreign Language and Information Technology, Ho Chi Minh City, Vietnam in 2006. He is currently working on a Master’s Degree in Electronic Engineering at Konkuk University, Seoul, Korea. His research interests include system-on-chip (SoC) design, embedded software, multi-core processor systems, and error control coding.
+Yong-Beom Cho (M’86) received a B. Sc. degree from Kyongbuk University (1981), a M.Sc. degree from the Univ. of S. Carolina (1988) and a Ph. D. degree from Case Western Reserve University, OH, United States (1992). He is currently a Professor in the Department of Electronics Engineering at Konkuk University, Seoul, Korea. His research interests include embedded system design, ASIC design, networking systems, application of image processing to mobile environments and digital communication system design for mobile and ad-hoc networks.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:29:27 UTC from IEEE Xplore. Restrictions apply.
+
+

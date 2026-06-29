@@ -1,0 +1,327 @@
+Design of GPU-Based Platform for LDPC Decoder
+Cheng-Chun Chang, Min-Yu Huang and Yang-Lang Chang*
+
+Abstract—The needs for reliable and flexible downlink communications incorporated with high volume of satellite images in the ground station have inspired the demands for high performance and flexibility computing in the field of Earth remote sensing. Low-density parity-check (LDPC) codes have had a strong impact on achieving reliable communication links. Finding a fast and reconfigurable developing platform for designing high throughput LDPC decoders has become important. In this paper, a graphic processing unit (GPU) platform is proposed to realize this practical implementation. Experimental results show that the proposed GPU-based platform is compatible to serve as a high-throughput LDPC decoder.
+Keywords— Graphic processing unit (GPU), Low-density parity-check (LDPC)
+
+I. INTRODUCTION
+Low-density parity-check (LDPC) code is a linear block code known to approach the Shannon limit via the sum-product iterative decoding algorithm. LDPC codes have been adopted in most recent communication systems such as DVB-S2, WiMAX, WI-FI and 10GBASE-T. The demands of LDPC decoders for reliable and flexible communication links in a wide variety of communication standards and configurations have inspired the development of high-performance and flexibility computing. Accordingly, finding a fast and reconfigurable developing platform for designing the high-throughput LDPC decoder has become important, especially for rapidly changing communication standards and configurations. In this paper, a new graphic-processing-unit (GPU) LDPC decoding platform is proposed to realize this practical implementation.
+For practical consideration of computational complexity and error-correction performance, LDPC decoders are implemented with iterative message-passing (MP) decoding algorithms. In the past, various structures of FPGA implementation of LDPC decoders have been reported [1-4]. To design LDPC decoders that are suitable to ASIC/FPGA implementation, a fundamental basis is to introduce some reasonable constraints in the code design and then exploiting regularities in the structure of the
+C. C. Chang is with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan (e-mail: ccchang@ntut.edu.tw).
+M. Y. Huang is with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan (e-mail: s0302151@gmail.com).
+Y. L. Chang is the corresponding author with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan (e-mail: ylchang@ntut.edu.tw).
+
+Figure 1. Tanner graph representation of an example LDPC code, and the
+parity check matrix. As pointed out in [5], such approach is efficient when the required flexibility is limited to a set of pre-defined codes, but it tends to be inadequate when the support to generally defined codes is required.
+GPU, also called general purpose GPU (GPGPU), is an attractive alternative in place where large scale and high performance computing is required. GPU consists of hundreds of cores operating at a lower clock rate, compared to conventional central processing units (CPUs). Although CPU can handle more complicated computation, GPU can make it up with many cores by taking advantages of massively parallel processing [6]. In recent years NVIDIA has provided Compute Unified Device Architecture (CUDA) as an efficient parallel programming language for GPU implementation. A GPU-based LDPC decoding implementation [7] was recently introduced. It has a throughput of 109.1 Mbps for 20,000-bit codeword length. It uses 8-bit precision to cut the computational time on the GPU and has a lower bit error rate (BER) as compared to the VLSI-based LDPC decoders with 5 or 6-bit precision.
+In our previous work [8], a novel implementation with 32-bit single-precision floating-point architecture of asynchronous data transfer for LDPC decoding was proposed to accelerate the speed-up on GPUs. In this paper, we present an improved memory-usage mechanism for effectively buffering data. The GPU-based decoder has the full advantage of implementation flexibility.
+
+978-1-4577-1005-6/11/$26.00 ©2011 IEEE
+
+3429
+
+IGARSS 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:50:18 UTC from IEEE Xplore. Restrictions apply.
+
+II.BASICS OF THE LOG-SPA DECODING ALGORITHM
+
+The notion of Tanner graph is often used to represent LDPC codes. As shown in Fig. 1, a Tanner graph is a bipartite graph with bit nodes (BNs) on one side and check nodes (CNs) on the other side. For example, a Tanner graph for a regular LDPC H matrix of M rows (related to CNs) by N columns (related to BNs) is shown in Fig. 1. In a decoding procedure, BNs are associated to a codeword while CNs are used to check the integrity of the codeword. In the decoding process, messages are exchanged along the graph edges, as illustrated in the bottom figures of Fig. 1. If an LDPC code is well designed, the messages will converge to the correct bits after a finite number of iterations.
+The log-sum-product iterative decoding algorithm (log-SPA) [9] used in our GPU-based implementation is briefly described as follows:
+
+Step 1: (Initialization) As messages are received, the initial log
+
+likelihood ratio (LLR) is computed by
+
+    LLR L qkinitial
+
+log qkinitial 0 , qkinitial 1
+
+(1)
+
+where qkinitial (0) and qkinitial (1) are the prior probabilities of zero and one for the kth BN, k 1, 2,..., N .
+
+Step 2: (Horizontal procedure) For the ith iteration,
+
+  i 1,2,3......I , L vmi n is defined as:
+
+  L vmi n
+
+log
+
+vmi n vmi n
+
+0 1
+
+¬ª«n'Nm/n
+
+Dn'
+
+m
+
+º ¼»
+
+, (2)
+
+u 2tanh1 log1 ¬«ªn'N¦m/n log u tanh 0.5 u En'm ¼º»
+
+where n and m are the indices for Hnm 1. Dnm is the
+    sign of L qni m and Enm is the amplitude of L qni m .
+
+N(m) 1,2,...,dc , where dc is the number of edges at the
+    mth CN. We note L qni m L qkinitial for i 1 .
+
+  Step 3: (Vertical procedure) For the ith iteration, L qni m is
+
+defined as:
+  L qni m
+
+  L qninitial
+
+
+
+  ª
+« ¬
+
+m
+
+¦ 'M n/
+
+m
+
+L
+
+vmi ' n
+
+º, »
+
+(3)
+
+¼
+
+where n and m are the indices for Hnm 1 . M(n) 1,2,...,dv , where dv is the number of edges at the nth BN.
+
+Step 4: (Iterations) Go to Step 2 until i I . Then the posteriori log likelihood ratio can be obtained by
+
+      L qkfinal
+
+L qkinitial
+
+
+
+ª¬«m¦M n L
+
+vmI n
+
+º ¼»
+
+.
+
+(4)
+
+Timeline
+Updating global memory for the computation of CN.
+
+Step 1: (Initialization)
+
+The codewords are transferred
+
+from host to global memory
+
+q1
+
+q2
+
+q3
+
+q4
+
+and the initial LLRs are
+
+computed.
+
+qN
+LLRs
+
+N
+
+H matrix is stored in
+
+global memory.
+
+CN
+
+1
+
+2
+
+3
+
+BN
+
+2
+
+M
+
+1
+
+Transfer to shared memory
+
+sCShtoeamprep2du:tm(iHnegomrLoi(zrvoymnn()tthasrlteoparrdeosdc/ eindurther)eadth1lrevamtdh1mr1eadth2lrevamtdh2bmrl2eoacdtkh31lrevamtdh3mr3eadth4lrevamd4m4
+
+blocks).
+
+L(v11) L(v12) L(v13) L(v14)
+
+block1
+
+Updating global memory for the computation of BN.
+
+H matrix is stored in global memory. CN
+
+1
+
+2
+
+3
+
+threadmn
+lvmn
+thbrleoacdkm21
+..L(vm1)
+ΞΞ Transfer to global memory
+
+BN N
+
+1 2
+
+M
+
+1
+
+Transfer to shared memory
+
+Step 3: (Vertical procedure)
+
+Computing L(qnm) stored
+
+threadn1 threadn2 threadn3 threadn4
+
+in shared memory (threads/ thread1lqnth1 read2lqnth2brleoacdk31lvnth3 read4lvm4
+
+blocks).
+
+L(q11) L(q12) L(q21) L(q14)
+
+block1
+
+threadn5 threadnm
+lvm5 lvmn ttbhlroecakd2n1 ..L(qn1) ΞΞ
+
+Step 4: (Iterations)
+
+The posterior LLRs are obtained. Does the iteration stop?
+
+?
+
+Transfer to global memory N
+
+Y
+
+Step 5: (Hard decision)
+
+Decoded codewords are
+stored in global memory. q1=1/0 q2=1/0 q3=1/0 q4=1/0
+
+qN=1/0
+
+Figure 2. An improved memory-usage mechanism for effectively buffering
+
+data used in our proposed GPU-based LDPC decoding.
+
+Step 5:(Hard decision) The decoded codeword is determined via hard decision by
+
+  Codewordk
+
+°­1 if ®°¯0 if
+
+L L
+
+qkfinal qkfinal
+
+t0 . 0
+
+(5)
+
+III. GPU-BASED LDPC DECODERS
+For flexible implementations of LDPC decoders among different code lengths, code rates, and code parameters (e.g., dc and dv ), we developed in this paper a parallel LDPC decoder to run on GPU platforms. First, the encoded bit stream transmitted through communication channels are transferred from the CPU host to the GPU device. The iterative procedures between CNs and BNs in GPU are next performed. The decoded bit stream is then determined by hard decision. Finally, the decoded bit stream is transferred from the GPU device back to the CPU host.
+For GPU implementation, we note that a block is needed to be set as a fundamental computing unit for the operation of GPU. The number of threads assigned to a block should be carefully selected in order to obtain efficient parallel operation and maximize the speedup. We also note that all the BNs associated with a CN have to be assigned in the same block because different blocks may terminate the computations at different time. Otherwise, it will result in troubles for data accessing between different blocks due to lack of synchronization. Consequently it is important to find an appropriate number of threads within an individual block to optimize the performance of GPU-based implementation [8].
+
+3430
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:50:18 UTC from IEEE Xplore. Restrictions apply.
+
+It should be noted that the shared memory in a block with threads has lower communication overhead compared to the global memory used in the devices of the GPU. Thus, the usage of the shared memory implemented in the proposed method is applied to the data-intensive computational tasks of the CN (horizontal procedure) and BN (vertical procedure) computations. The data with highly dependency, e.g., the elements of L(vmi n ) and L(qmi n ) in BNs and CNs respectively,
+are assigned into the same block of the shared memory with a finer granularity of parallel implementation.
+An improved memory-usage mechanism for effectively buffering data used in our proposed GPU-based LDPC decoding during a GPU kernel execution cycle is illustrated in Fig. 4. Each thread, which represents L(vmi n ) or L(qmi n ) each
+element in different blocks, is data independent to each other. These threads are grouped in warps and dispatched by blocks in one of the multiprocessors of GPU according to the principal of data dependency. In the horizontal procedure, each thread updates all the BNs associated with the same CN according to the Tanner graph, as shown in Fig. 1, and vice versa for vertical procedure.
+In Step 1, the codewords and the H matrix are transferred from host to the device (global) memory and the codewords are then translated into the corresponding initial LLRs. In order to avoid the slow accesses to global memory, a proper alignment of the global memory is needed before codewords are transferred into corresponding threads/blocks of the shared memory according to the H matrix by using the coalesced memory accesses [10]. In Step 2, the L(vmi n ) of each thread is
+computed by Eq. 2 and then is transferred into its corresponding address of global memory based on the index of block/thread assignments of H matrix as shown in Table 1. Note that these corresponding addresses of global memory also need to follow the rules of the coalesced memory accesses suggested by CUDA [10]. In Step 3, a similar method is applied to the update of L(qmi n ) by Eq. 3 of vertical procedure. Here, each thread
+updates the CNs associated with a BN of a column of H matrix as shown in Table 1. In Step 4, the posterior LLRs are updated iteratively. If the iteration stops, the hard decision is got. If the loop is not finished, the BNs and CNs decoding are sequentially operated in Step 2. In Step 5, the decoded codewords are stored in global memory.
+IV. EXPERIMENTAL RESULTS
+The experimental setup is shown in Table I. As reported in [8], the proposed GPU-based LDPC decoder was developed to run on NVIDIA Tesla C1060 GPU with 240 cores via CUDA, and was compared with its CPU code counterpart which is a serial implementation written in C to run on one Intel Xeon 5504 core. The C code used for the CPU approach is essentially identical to the code used in C & CUDA for the GPU approach. Details of the three regular H matrices used in the experiments are listed in Table II. The original CPU-based LDPC decoder
+
+Platform
+Clock rate Memory Language
+
+Table I. Experimental setup
+
+CPU Intel Xeon 5504
+(Quad-core)
+2.0 GHz
+DDR3 1600 2G*6
+C
+
+GPU Tesla C1060 – 240
+cores
+1.3 GHz
+DDR3 4G C & CUDA
+
+Table II. The H matrices used in the experiment
+
+H Matrix A B C
+
+Size 408×816 2000×4000 4000×8000
+
+Edge 4080 16000 32000
+
+Edge/Row 10 8 8
+
+with double precision was compiled using the -O2 compiler option. To boost the data throughput of LDPC decoding, a method of asynchronous data transfer (ADT) was implemented in the proposed method [8, 11]. The main advantage of ADT is that GPU can still execute the kernel while transferring data between the CPU host and the GPU device and waiting for CPU acknowledgement.
+The speedups of the proposed GPU-based LDPC over its CPU-based single-threaded version for various H matrix sizes and numbers of iterations are also shown in Fig. 3. The larger the H matrix size, the higher the obtained speedup. For a matrix size of 4,000 by 8,000 (matrix C) with 10 iterations, the execution time of LDPC decoding on the GPU is 1.808 ms whereas its original CPU-based double-precision LDPC decoder takes 490.504 ms. This corresponds to 271x speedup.
+Interesting to note, when the size of the H matrix increases, the required decoding time also increases. However, more speedups can be achieved when the GPU-based LDPC decoding is applied to a larger H matrix. Hence, the GPU approach can also compensate the increasing demands of the LDPC decoding on longer codeword length.
+V. CONCLUSION
+LDPC decoder can use the iterative message-passing algorithms to lower computational complexity while achieving superior error-correction performance. The LDPC decoding algorithm is inherently parallel and hence it is suitable for GPU massively parallel implementation. GPU is an economic and efficient alternative to FPGA for LDPC decoding implementation. In this paper, a proposed new GPU-based regular LDPC decoder is presented. The current version runs on 32-bit single precision with the log-sum-product iterative decoding algorithm. For a matrix size of 4,000 by 8,000 with 10 iterations, the proposed regular LDPC decoder has 1.808 ms execution time on Tesla C1060 GPU, whereas its original CPU-based LDPC decoder takes 490.504 ms. This corresponds to 271x speedup. Future works include developing
+
+3431
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:50:18 UTC from IEEE Xplore. Restrictions apply.
+
+Atmospheric Sounding Interferometer (IASI)", Journal of Computational Physics, in press.
+Figure 3. The comparison of speedups of the proposed GPU-based LDPC
+a double-precision LDPC decoder that takes advantage of the superior double-precision floating-point arithmetic architecture of NVIDIA Fermi GPU, as well as developing green GPU architectures for LDPC decoders.
+ACKNOWLEDGMENT This work was supported by the National Science Council, Taiwan, under Grant Nos. NSC 99-2116-M-027-003 and NSC 98-2218-E- 027-016-MY3. The authors would like to thank Dr. Bormin Huang of Space Science and Engineering Center, University of Wisconsin-Madison for his assistance in this work.
+REFERENCES
+[1] Liu, C. H., Yen, S. W., Chen, C. L., Chang, H. C., Lee, C. Y., Hsu, Y. S., and Jou, S. J., "An LDPC decoder chip based on self-routing network for IEEE 802.16e applications," IEEE Journal of Solid-State Circuits, Vol.43, Issue3, pp. 684-694, 2008.
+[2] Kienle, F., Brack, T., and Wehn, N., "A Synthesizable IP Core for WIMAX 802.16E LDPC Code Decoding," IEEE 17th International Symposium on Personal, Indoor and Mobile Radio Communications, pp. 1-5, 2006.
+[3] Seo, S., Mudge, T., Zhu, Y., and Chakrabarti, C., "Design and Analysis of LDPC Decoders for Software Defined Radio," Proc. of IEEE Workshop on Signal Processing Systems, pp. 210-215, 2007.
+[4] Shih, X. Y., Zhan, C. Z., Lin, C. H., and Wu, A. Y., "An 8.29 mm2 52 mW Multi-Mode LDPC Decoder Design for Mobile WiMAX System in 0.13 ȝm CMOS Process," IEEE Journal of Solid-State Circuits, Vol.43, Issue3, pp. 672-683, 2008.
+[5] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Trans. Circuits and Systems, vol. 53, no. 4, pp. 892-904, 2006.
+[6] J. Sanders and E. Kandrot, "CUDA by Example: An Introduction to General-Purpose GPU Programming", Addison-Wesley Professional, 2010.
+[7] Falcao, G., Silva, V., and Sousa, L., "How GPUs can outperform ASICs for fast LDPC decoding," Proc. of the 23rd international conference on Supercomputing, pp. 390-399, 2009.
+[8] C.-C. Chang, Y.-L. Chang, M.-Y. Huang, and B. Huang, ”Accelerating regular LDPC code decoders on GPUs,” IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing, 2011, in press.
+[9] Moon, Todd K., "Error Correction Coding Mathematical Methods", John Wiley & Sons, pp. 634-379, 2005.
+[10] NVIDIA, "CUDA Programming Guide v3.0", NVIDIA, 2010. [11] B. Huang, J. Mielikainen, H. Oh, and H.-L. Huang, "Development of a
+GPU-based High-Performance Radiative Transfer Model for the Infrated
+3432
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:50:18 UTC from IEEE Xplore. Restrictions apply.
+
+

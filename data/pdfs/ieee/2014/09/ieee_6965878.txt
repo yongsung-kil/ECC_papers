@@ -1,0 +1,508 @@
+Analysis of Decoding Failures of DVB-S2 LDPC Codes
+J.-C. Sibel, M. Crussie`re and J.-F. He´lard UEB, IETR
+INSA de Rennes, CNRS UMR 6164 Rennes, France
+jean-christophe.sibel@insa-rennes.fr
+
+Abstract—The DVB-S2 standard has been revealed a reliable standard for data transmission thanks to the LDPC codes. The waterfall of the bit-error rate is very abrupt to reach low values of order 10−10 in the error floor. In this paper, we propose a novel investigation on the iterative decoding of these codes by the Belief Propagation algorithm on Gaussian channels. Introducing definitions of persistent and created errors, we analyze them according to the degrees of the Tanner graph nodes and the noise power of the channel. We show that the two-degree bits used to accelerate the encoding process of the DVB-S2 are responsible for most decoding errors. This result could help design DVB-S2 codes in a more appropriate way, for instance avoiding the use of BCH codes to tackle the error floor.
+Index Terms—DVB-S2, LDPC codes, iterative decoder, decoding failures.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes invented by Gallager [1] were revealed to be very powerful in hardware applications in the 90’s [2], such that they could compete with Turbo codes. The clear advantage of LDPC codes is the low computation complexity of their iterative decoding [3]. These days, well known standards use LDPC codes to make information robust against channels noise, e.g. the wireless connections Wi-fi, Wimax and the Digital Video Broadcast by Satellite of second generation (DVB-S2). In the DVB-S2 specifications [4], several LDPC codes of different rates have been designed to face various situations (climatic changes, SNR falls) given that they are structured on a common shape.
+LDPC codes are usually decoded by the Pearl’s Belief Propagation (BP) algorithm [5]. An important aspect largely studied in the literature of DVB-S2 is the decoding complexity issue of BP. As the length of DVB-S2 codes reaches a large magnitude of 64800 bits, the BP decoder indeed introduces a non negligible computation delay. A strong effort has then been made to reduce this complexity by modifying the update equations of BP [6], and to accelerate the decoding process using dedicated architectures [7] and implementation devices as Graphics Processing Units (GPU) devices [8].
+The BP decoder is also known to provide suboptimal performance in terms of Bit-Error Rate (BER) due to the presence of loopy structures, as the trapping sets [9], in the Tanner graph of the codes. The main evidence of this sub-optimality is the error floor, brought out by Richardson [10] for LDPC codes, that is an abrupt degradation of
+
+the BER slope for high SNRs. A colossal effort has been made since this discovery to predict [11] and defeat the error floor according to several strategies: post-processing procedures [12], optimization of the degree distributions [13], construction of well-suited codes without trapping sets [14], design of iterative decoders [15] able to combat trapping sets such as multi-level decoders [16] or Generalized BP [17]. In the DVB-S2 standard, the error floor appears obvious for BER around 10−10, and to deal with it a post-processing is introduced in the form of a BCH code concatenated with the LDPC code [18]. As a consequence, the DVB-S2 standard satisfies the quasi error-free constraint defined as a frame error rate below 10−7 (i.e. a BER approximately below 10−11), but at the expense of an extra computation time. In [19] one of the first studies on the decoding issue of DVB-S2 codes is presented, indicating that the minimum distance dmin is too low to reach the quasi-error free without post-processing. Authors consequently propose a new design of codes that helps increasing dmin. However, computing dmin still remains a NP problem considering the optimal Maximum Likelihood Decoder (MLD). Other methods based on iterative decoders offer relevant approximations, as searching for near codewords in [20], but they still present a hard challenge for large LDPC codes.
+In this paper, we propose a novel study on the decoding issue of DVB-S2 codes by focusing on specific experimental results of the BP decoder. By analyzing the connectivity property of the Tanner graph nodes of DVB-S2 codes, we design a protocol to explore the connections between the decoding failures and the different degrees of the bits. This method distinguishes between harmless and harmful bits depending on the noise power of the channel, exhibiting two kinds of errors: persistent and created errors. This describes the behavior of BP, which can then help construct typical error events of DVB-S2. The experimental results show that the design of DVB-S2 codes could then be improved concerning the parity bits added by a lower triangle stair-case matrix. In all our simulations, we consider an Additive White Gaussian Channel (AWGNC) with an 8-PSK modulation and the LDPC code of rate R = 3/4. To reach low BER values, we opt for the use of many cores GPUs (Nvidia GTX 660 and Nvidia GTX 670) that offer a massive parallel implementation of BP.
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-4o7w9n9lo-a4d4e4d9o-n1/J1u4ne/$2341,2.00026©a2t 1081:404I:E31EUETC from IEEE Xplore. Restrictions apply.
+
+The paper is organized as follows. Section II is dedicated to the basics of LDPC codes, DVB-S2 codes and BP. We then describe in section III important connectivity properties about these codes. This helps design a well-suited experimental protocol in IV where we study decoding failures of BP and connect them to the bits degrees.
+
+II. PRELIMINARIES
+This section presents basics about LDPC codes and the associated iterative BP decoder.
+
+A. LDPC codes
+
+A binary LDPC code C of length N and dimension K is a subspace of F2N , made with 2K codewords, each codeword x being a vector of N bits x1, . . . , xN . Codewords are constrained by a set of M parity-check equations f1, . . . , fM , valued in {0, 1} in such a way that the prior probability
+function is defined as:
+
+1M
+
+p(x)
+
+=
+
+Z
+
+fa(xa)
+a=1
+
+(1)
+
+where Z ensures that x p(x) = 1. A word x ∈ FN2 is a codeword if and only if it satisfies all equations, i.e. p(x) =
+0. We usually represent an LDPC code by its Tanner graph
+G = (X ∪ F, E). Any bit xi (resp. any equation fa) is represented by a bit node Xi ∈ X (resp. a check node fa ∈ F). Two nodes fa and Xi are connected by an edge eia ∈ E if and only if Xi is an argument of fa. We then define neighborhoods Xa = {Xi ∈ X|eia ∈ E} and Fi = {fa ∈ F|eia ∈ E}. The connections between nodes are summarized into a parity-
+check matrix H, made with M rows and N columns, where
+H(a, i) = 1 if and only if eia ∈ E.
+
+B. DVB-S2 codes
+The DVB-S2 code of rate R = 3/4 is a strongly structured code of length N = 64800 and dimension K = 48600. The parity-check matrix H is shared into three parts, each one with bit nodes of a constant degree dv, where dv(i) = |Fi| for any Xi. We display in Fig. 1 the shape of H where the part of H with dv = 2 has a stair-case structure to accelerate the encoding process (the last node X64800 is of degree one but this does not impact our work).
+
+C. Belief Propagation
+
+Given N independent channel observations y1, . . . , yN , the Bayesian rule provides the joint probability function:
+
+1N
+
+M
+
+p(x, y) = Z pi(yi|xi) fa(xa).
+
+(2)
+
+i=1
+
+a=1
+
+The decoding process is an inference problem that consists in extracting the most likely word xˆ of this function. The
+optimal algorithm to do this task is the MLD, that is aimed at scanning the code C to find xˆ. As it is an intractable algorithm, we usually use approximate inference methods as the BP
+algorithm. BP iteratively passes messages along the edges of the Tanner graph, e.g. for any couple Xi ∈ X, fa ∈ Fi, at any iteration k ≥ 1 [4]:
+
+ni(ak) = Li +
+
+m(bki )
+
+(3)
+
+fb ∈Fi \fa
+
+m(aki) = g {n(jka−1)}Xj ∈Xa\Xi
+
+(4)
+
+where g is recursively defined as:
+
+∀(a, b, c) ∈ R3, g(a, b, c) = g(g(a, b), c)
+
+(5)
+
+such that:
+g(a, b) = sign(a)sign(b) × min{|a|, |b|} + log 1 + e−|a+b| − log 1 + e−|a−b| .(6)
+
+The
+
+quantity
+
+Li
+
+=
+
+log
+
+pi (yi |xi =0) pi (yi |xi =1)
+
+is
+
+the
+
+Log-Likelihood
+
+Ratio
+
+(LLR) of Xi. Once all messages have been computed, we
+
+calculate ˆx(k) = [xˆ(1k) . . . xˆ(Nk)] in which xˆ(ik) is the most likely
+
+bit
+
+of
+
+the
+
+log
+
+belief
+
+bi
+
+=
+
+log
+
+pi (xi =0|yi ) pi (xi =1|yi )
+
+given
+
+at
+
+iteration
+
+k
+
+by:
+
+bi(k) = Li +
+
+ma(ki),
+
+(7)
+
+fa ∈Fi
+
+xˆ(ik) =
+
+0 if bi(k) ≥ 0, 1 otherwise.
+
+(8)
+
+BP stops as soon as xˆ(k) is a codeword or messages does not vary anymore from an iteration to the next one.
+
+100 10−2 10−4
+
+waterfall error floor
+
+BER
+
+10−6 f1
+10−8
+
+H = dv = 12
+
+f16200 X1
+
+X5400
+
+dv = 3
+
+dv = 2
+
+X48600
+
+X64800
+
+10−10 10−127.60 7.70 7.80 7.90 8.00 8.10
+Es/N0(dB)
+
+Figure 1. Parity-check matrix of the DVB-S2 code with R = 3/4
+
+Figure 2. Performance of BP when decoding the DVB-S2 code R = 3/4 with 8-PSK modulation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+|Xa(d)| |Xi (dv )|
+
+We exhibit in Fig. 2 the Bit-Error Rate (BER) of the DVB-S2 LDPC code with R = 3/4 and 8-PSK modulation, decoded by BP. We observe the well-known behaviors shared by vertical dotted lines:
+• the BER waterfall for 7.75 dB ≤ Es/N0 < 8.00 dB, • the BER error floor for Es/N0 ≥ 8.00 dB.
+Now we have presented the basics of our work, we will detail an investigation on the inherent connectivity of DVBS2 LDPC codes.
+
+III. ANALYSIS OF THE DVB-S2 CODE CONNECTIVITY
+
+In this section, we introduce an analysis on DVB-S2 codes
+that will orient the study of the decoding issue. Without loss of generality, we focus on the code of dimension K = 48600, length N = 64800 and rate R = 3/4, given the genuine
+similarity between all codes of the standard. All check nodes have degree dc = 14, except f1 with a
+degree of 13, defining dc(a) |Xa|. We define and show in Fig. 3 the d-connectivity of a check node fa:
+
+|Xa(d)| = |{Xi ∈ Xa|dv(i) = d}|
+
+(9)
+
+8
+
+d = 12
+
+d=3
+
+6
+
+d=2
+
+4
+
+2
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Check node fa
+
+Figure 3. d-connectivity of a hundred check nodes fa ∈ {f1, . . . , f100} in the DVB-S2 code R = 3/4
+
+that results in:
+
+|Xa(12)| = 4.5
+
+|Xa(3)| = 7.5
+
+|Xa(2)| = 2.
+
+(12)
+
+As the standard deviation of this average is not very large considering Fig. 3, we approximate (10) by the average dconnectivity of a bit node Xi:
+
+|Xi(d)| ≈ dv(i) · |Xa(d)| − δ(dv(i), d) . (13)
+
+Fig. 4 presents the average d-connectivity of the bit nodes according to their degree. Bit nodes are mostly connected to 3-degree bit nodes although we would expect 12-degree bit nodes to be much more connected as their degree is higher. Therefore, BP messages are mostly conveyed around bit nodes of degree three. In addition, 2-degree bit nodes are significantly connected in such a way that they should exert a non-negligible influence on the decoding behavior.
+
+100 dv = 12
+
+80
+
+dv = 3
+
+dv = 2 60
+
+40
+
+20
+
+0
+i ≤ 5400 5400 < i ≤ 48600 48600 < i
+bit index i
+Figure 4. d-connectivity of the bits in the DVB-S2 code of rate R = 3/4
+
+We clearly see that all check nodes are more connected to bit
+nodes of degrees three. Consequently, we expect bit nodes not
+to be homogeneously connected to one another. To observe this, we define Xi = {Xj ∈ X|∃fa ∈ Fi ∩ Fj, fa = ∅} the bit-neighborhood of Xi and its connectivity as the size of its bit-neighborhood, that is computed as |Xi| = dv(i) · (dc − 1):
+• if dv(i) = 12 then |Xi| = 156, • if dv(i) = 3 then |Xi| = 39, • if dv(i) = 2 then |Xi| = 26.
+We define the d-connectivity of a bit node Xi as the number of bit nodes in Xi that have degree d. We compute this as:
+
+|Xi(d)| = |{Xj ∈ Xi|dv(j) = d}|
+
+=
+
+|Xa(d)| − δ(dv(i), d)
+
+(10)
+
+fa ∈Fi
+
+where δ(dv(i), d) returns one if dv(i) = d and zero otherwise. We compute the average d-connectivity of a check node fa as:
+
+1
+
+|Xa(d)| M
+
+|Xa(d)|
+
+(11)
+
+fa ∈F
+
+The d-connectivity, that can be shown similar with other code rates of the DVB-S2 standard, is helpful to study the errors at the output of the iterative decoder. Accordingly, we distinguish, in the next section, between the degrees of the bit nodes and focus on low degrees, as the most of the BP messages are passed near them.
+IV. DECODING FAILURES OF THE BP
+Here, we present experimental results about the BP algorithm used to decode DVB-S2 codes. We first have a look at the different kinds of decoding errors that BP may produce. We then study how they share between the different bit degrees.
+A. BP forced LLRs mode
+A good way to analyze the BP decoder is to submit it to extreme LLRs. In this way, we voluntary make wrong some bits and right the others, which allows us to observe strong reactions of the decoder.
+We assume that the all-zero codeword was transmitted through the channel. The channel is accordingly harmless if all the LLRs are positive. The protocol consists in assigning
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+an extremely positive LLR value +L to few bits and an extremely negative value −L to the others. Erroneous bits are not randomly chosen but belong to a common subgraph G1(22) of the code: G12 is induced by all 12-degree bit nodes, the subgraph G1(12) includes G12 and the corresponding bit-neighbors whereas G1(22) is G1(12) complemented with its bit-neighbors. This protocol has the contrary effect of an interleaver as it
+does not scatter bit-errors but forces bursts thereof. We gather
+numerous errors in a connected region of the Tanner graph, making them very hard to decode. G12 is more appropriate than G3 or G2 according to Fig. 4 given the high two-connectivity and three-connectivity of 12-degree bit nodes.
+We sort decoding errors by their origins displayed in Fig. 5:
+• created errors: bits correct before BP and wrong after,
+• persistent errors: bits wrong before and after BP.
+
+more information. Thus, we present comparative results in Fig. 6 and Fig. 7 concerning the implication of each degree in the decoding errors. Fig. 6 exhibits the BER for each degree at initial state (before BP) and at final state (after BP). Unlike 12degree bits which error rate is constantly decreased by 95 %, the number of low degree decoding errors increases as −L is decreased, e.g. two-degree decoding errors reach a large part, about 33 % at −L = −1.65 × 107, of the initial number of errors. To better understand this behavior, we display in Fig. 7 the ratio between the final and the initial number of errors for each degree.
+
+dv = 2
+
+0.30
+
+dv = 3
+
+dv = 12 0.25
+
+BER final number of errors(dv) initial number of errors(dv)
+
+0.125 0.100 0.075 0.050 0.025
+0
+
+−1.5
+
+−1.25 −L
+
+LLRs persistent created
+−1 −0.75 ·107
+
+0.20
+
+0.15
+
+0.10
+
+0.05
+
+0
+
+−1.5 −1.25
+
+−1
+
+−0.75
+
+·107 −L
+
+Figure 7. Performance of BP when decoding the DVB-S2 code R = 3/4 in forced LLRs mode
+
+Figure 5. Origins of decoding errors from BP when decoding the DVB-S2 code R = 3/4 in forced LLRs mode
+Most errors are persistent errors, the BP decoder is then powerful enough not to introduce a significant number of created errors. Persistent errors also reveal that BP is stuck into errors patterns surely related to loopy structures subgraphs of the Tanner graph [14].
+0.08
+
+0.06 0.04
+
+dv = 2 (I) dv = 3 (I) dv = 12 (I)
+
+dv = 2 (F) dv = 3 (F) dv = 12 (F)
+
+BER
+
+0.02
+
+0
+
+−1.5 −1.25
+
+−1
+
+−0.75
+
+−L
+
+·107
+
+Figure 6. BER of BP by degree when decoding the DVB-S2 code R = 3/4 in forced LLRs mode at final (F) and initial (I) states
+As harmful loops are correlated with low degree bit nodes [16], looking at the degree of the concerned bit nodes should reveal
+
+As the value −L is decreased, the ratio for two-degree bits is significantly enlarged such that it doubles the three-degree bits ratio. On the contrary, 12-degree bits are very less hard to decode as the ratio is quite constant to a low value around 5 % of the ratio of two-degree bits. When low degree bits are included in loopy subgraphs that carry errors, they cannot easily escape from the loops and are then trapped into erroneous states. On the contrary, high degree bits do not suffer from this problem as they are enough connected to be corrected by their neighbors. This is very obvious when degrees are substantially different, which is the case of DVBS2 codes. To deeply study this property in our case, we now focus on a realistic decoding considering usual LLRs.
+B. BP usual mode
+As the degrees of the bits exert much influence with forced LLRs, we now check this property in a usual mode initializing the decoder with realistic LLRs. We first evaluate the rate of created and persistent errors, see Fig. 8 (we represent by vertical dotted lines the value of Es/N0 that involves a change in the BER behavior: the waterfall and the error floor). Persistent errors prevail in the waterfall region for Es/N0 ≤ 7.9 dB. When the SNR is in the range ISNR = ]7.9 dB; 7.97 dB[, the decoder reveals a peculiar behavior as created and persistent errors are not stable. This instability has been partly explained in [21] as BP may present non-trivial phenomenon, often chaotic, in the waterfall.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+persistent
+
+0.8
+
+created
+
+0.6
+
+dv = 2
+
+0.8
+
+dv = 3
+
+dv = 12
+
+0.6
+
+Proportion of errors
+
+Proportion of errors
+
+0.4
+0.2 7.60 7.70 7.80 7.90 8.00 8.10 Es/N0 (dB)
+
+0.4 0.2
+0 7.60 7.70 7.80 7.90 8.00 8.10
+Es/N0 (dB)
+
+Figure 8. Origins of decoding errors from BP when decoding the DVB-S2 Figure 10. Proportion of errors by degree from BP when decoding the DVB-
+
+code R = 3/4 with 8-PSK modulation
+
+S2 code R = 3/4 with 8-PSK modulation
+
+This often leads errors to propagate in G more than expected. In the error floor, unlike results from the forced LLRs mode, created errors get back dominant. As persistent errors are still harmful too, we can reasonably conjecture that BP oscillates between numerous decoding states, hereby keeping several bits in a wrong state and forcing a few initially correct bits to irregularly flip iterations after iterations.
+
+We exhibit in Fig. 10 all the decoding errors, persistent and created, shared by their degrees. This summarizes the previous conclusions from Fig. 9 in the sense that two-degree bit nodes are basically responsible for the error floor, i.e. at Es/N0 ≥ 8.0 dB, whereas decoding errors in the waterfall are balanced between two-degree bit nodes and three-degree bit nodes.
+
+Proportion of persistent/created errors
+
+1 0.8
+
+dv = 2 (P) dv = 3 (P) dv = 12 (P)
+
+dv = 2 (C) dv = 3 (C) dv = 12 (C)
+
+0.6
+
+0.4
+
+0.2
+
+BER
+
+100 10−2 10−4 10−6 10−8 10−10
+
+dv = 2 dv = 3 dv = 12
+
+0 7.60 7.70 7.80 7.90 8.00 8.10
+
+10−12
+
+7.60 7.70 7.80 7.90 8.00
+
+Es/N0 (dB)
+
+Es/N0 (dB)
+
+Figure 9. Proportion of persistent (P) and created (C) errors from BP when Figure 11. Decoding errors by degree from BP when decoding the DVB-S2
+
+decoding the DVB-S2 code R = 3/4 with 8-PSK modulation
+
+code R = 3/4 with 8-PSK modulation
+
+Fig. 9 presents the proportion of bit errors shared by their degrees and their origins. In the waterfall region, Es/N0 ≥ 7.83 dB, we observe that errors mostly originate from two-
+degree bit nodes. In the ISNR interval, we see non negligible variations due to the imbalance between persistent and created errors. Concerning 12-degree bit nodes, they are easily
+decoded whatever Es/N0. The remaining errors are mainly created errors, meaning that BP oscillations mentioned earlier
+might appear at moderate values of Es/N0 and include very few high degree bit nodes, less than 0.2 % of all created errors, as evident from 12-degree curves.
+
+We end the experimental results with Fig. 11 where the
+average BER of each degree are displayed. We first see that 12-degree errors do not appear anymore in the waterfall region,
+as they are . After that, even though the difference between the BERs for dv = 2 and dv = 3 is not very large, it is substantial enough to observe the exchange in the dominance of errors at 7.83 dB. Furthermore, for Es/N0 ≥ 8.0 dB, the gap is enlarged as the BER of dv = 3 is less than 10 % of the BER of dv = 2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+V. CONCLUSION
+In this work, we have focused on the decoding errors of the DVB-S2 LDPC code R = 3/4. We have first brought up the strong links between bit nodes, indicating that twodegree and three-degree bit nodes were the most connected bit nodes. Afterwards, we have introduced a forced LLRs method to observe different origins in the decoding errors of the BP decoder. We have seen that persistent errors were more numerous than created errors, both being clearly dependent on low degree bit nodes.
+We have then presented results about the influence of the bit degree on the decoding results and we observed that threedegree bit nodes dominate before the waterfall. It has appeared that inside the waterfall an exchange occurred between the two-degree bit nodes and three-degree bit nodes whereas the error floor region was completely prevailed by two-degree errors. This work shows that the stair-case matrix used to facilitate the encoding process is responsible for the degradation of the BER at high Es/N0, making the quasi-error free constraint unsatisfied without BCH codes.
+Consequently, this work could be used to re-design DVB-S2 codes without the intervention of BCH codes, i.e. by avoiding two-degree bit nodes. In addition, the analysis of decoding errors can help build a decoding error model that maps to any Es/N0 a distribution of typical bit-errors.
+ACKNOWLEDGEMENTS
+This work was supported by the FUI project OPTISAT2.
+REFERENCES
+[1] R.G. Gallager, “Low-Density Parity-Check Codes,” Ph.D. dissertation, MIT, 1963.
+[2] D. J. C. MacKay, “Good Error-Correcting Codes Based on Very Sparse Matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, pp. 399–431, 1995.
+[3] F.R. Kschischang, B. J. Frey and H.A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, 2001.
+[4] A. Morello and V. Mignone, “DVB-S2: The Second Generation Standard for Satellite Broad-band Services,” Proc. IEEE, vol. 94, pp. 210–227, 2006.
+[5] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. Morgan Kaufmann, 1988.
+
+[6] S. Papaharalabos, M. Papaleo, P.T. Mathiopoulos, M. Neri, A. VanelliCoralli and G.E. Corazza, “DVB-S2 LDPC Decoding Using Robust Check Node Update Approximations,” IEEE Transactions on Broadcasting, vol. 54, no. 1, pp. 120–126, 2008.
+[7] J. Dielissen, A. Hekstra and V. Berg, “Low cost LDPC decoder for DVB-S2,” in Proc. Design, Automation and Test in Europe, 2006, pp. 1–6.
+[8] G. Falcao, J. Andrade, V. Silva and L. Sousa, “GPU-based DVB-S2 LDPC decoder with high throughput and fast error floor detection,” IEEE Electronic Letters, vol. 47, no. 9, pp. 542–543, 2011.
+[9] B. Vasic, S.K. Chilappagari, D.V. Nguyen and S.K. Planjery, “Trapping set ontology,” in Proc. Allerton Conference on Communication, Control and Computing, 2009, pp. 1–7.
+[10] T.J. Richardson, “Error floors of LDPC codes,” in Proc. 41st Annual Allerton Conference on Communication, Control and Computing, 2003, pp. 1426–1435.
+[11] B.K. Butler and P.H. Siegel, “Error Floor Approximation for LDPC Codes in the AWGN Channel,” in Proc. 49th Annual Allerton Conference on Communication, Control and Computing, 2011, pp. 204–211.
+[12] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, M.J. Wainwright, “Lowering LDPC Error Floors by Postprocessing,” in Proc. IEEE Global Telecommunications Conference, 2008, pp. 1–6.
+[13] S.J. Johnson and S.R. Weller, “Constraining LDPC Degree Distributions for Improved Error Floor Performance,” IEEE Communications Letters, vol. 10, no. 2, pp. 103–105, 2006.
+[14] D.V. Nguyen, S.K. Chilappagari, M.W. Marcellin and B. Vasic, “On the Construction of Structured LDPC Codes Free of Small Trapping Sets,” IEEE Transactions in Information Theory, vol. 58, no. 4, pp. 2280–2302, 2012.
+[15] Y. Han and W.E. Ryan, “LDPC Decoder Strategies for Achieving Low Error Floors,” in Proc. Information Theory and Applications Workshop, 2008, pp. 277–286.
+[16] L. Danjean, D. Declercq, S. K. Planjery, B. Vasic, “On the selection of finite alphabet iterative decoders for LDPC codes on the BSC,” in Proc. IEEE Information Theory Workshop, 2011, pp. 345–349.
+[17] J.-C. Sibel, S. Reynal and D. Declercq, “An application of Generalized Belief Propagation: splitting trapping sets in LDPC codes,” to appear in Proc. IEEE International Symposium on Information Theory, 2014.
+[18] S. Muller, M. Shreger, M. Kabutz, M. Alles, F. Kienle and N. Wehn, “A Novel LDPC Decoder for DVB-S2 IP,” in Proc. Design, Automation and Test in Europe, 2009, pp. 1308–1313.
+[19] X. Huang, J. Fan, Y. Xiao and K. Kim, “Girth 4 and Low Minimum Weights’ Problems of LDPC Codes in DVB-S2 and Solutions,” in Proc. 5th International Conference on Wireless Communications, Networking and Mobile Computing, 2009, pp. 1–4.
+[20] X.-Y. Hu, M.P.C. Fossorier and E. Eleftheriou, “On the Computation of the Minimum Distance of Low-Density Parity-Check Codes,” in Proc. IEEE International Conference on Communications, vol. 2, 2004, pp. 767–771.
+[21] J.-C. Sibel, S. Reynal and D. Declercq, “Evidence of chaos in the Belief Propagation for LDPC codes,” Chaotic Modeling and Simulations Journal, vol. 6, 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+

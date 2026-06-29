@@ -1,0 +1,435 @@
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 15, 2026
+
+2929
+
+Learning to Decode: Graph Attention Network-Gated Recurrent Unit as Channel Decoder
+Lixin Qian, Yang Lu , Senior Member, IEEE, Xuefeng Wang , Wei Chen , Senior Member, IEEE, and Bo Ai , Fellow, IEEE
+
+Abstract— Training deep learning (DL) models to address channel coding tasks has drawn increasing attention, a paradigm referred to as “learning to decode”. By constructing Tanner graphs based on parity-check matrices, graph neural networks (GNNs) have shown great promise, yet their performance can be further enhanced with more sophisticated neural architectures. This letter proposes a novel GNN-based decoder that enhances the traditional message-passing framework through the integration of a graph attention network (GAT) and a gated recurrent unit (GRU), termed GAT-GRU. Extensive experiments validate that the proposed GAT-GRU decoder outperforms conventional belief propagation (BP), weighted BP (WBP), and GNN decoders across Bose-Chaudhuri-Hocquenghem (BCH), regular low-density parity-check (LDPC), and 5G NR LDPC codes. Furthermore, GAT-GRU exhibits robust scalability to unseen code lengths and code rates, particularly for LDPC codes.
+Index Terms— Learning to decode, GNNs, channel decoding, BP, BCH, LDPC.
+I. INTRODUCTION
+CHANNEL coding is a core technology of modern wireless communication systems, designed to reliably recover transmitted information with minimal error rates and latency over noisy channels. Prominent error-correcting codes, such as low-density parity-check (LDPC) [1] and BoseChaudhuri-Hocquenghem (BCH) codes, have been integrated into numerous standards, including 5G New Radio (NR) standards, 3GPP TS 38.212. These codes are commonly represented by Tanner graphs [2], upon which the most representative decoding algorithm is the belief propagation (BP) algorithm. As demonstrated in [3], BP is able to achieve maximum a posteriori (MAP) optimality on cycle-free graphs. However, Tanner graphs of practical codes inevitably contain cycles, particularly for short-to-moderate block lengths. These cycles violate the statistical independence assumption underlying BP, leading to message correlation and oscillation. This results in suboptimal convergence and prevents the decoder from approaching the maximum likelihood (ML) performance bound [4], thereby limiting the error correction capability.
+Received 22 March 2026; accepted 26 April 2026. Date of publication 29 April 2026; date of current version 8 May 2026. This work was supported in part by the National Natural Science Foundation of China (NSFC) under Grant 62571023, Grant U2468201, and Grant 62221001; and in part by Beijing Natural Science Foundation under Grant L242086. The associate editor coordinating the review of this article and approving it for publication was M. Hua. (Corresponding author: Yang Lu.)
+Lixin Qian and Yang Lu are with the State Key Laboratory of Advanced Rail Autonomous Operation and the School of Computer Science and Technology, Beijing Jiaotong University, Beijing 100044, China (e-mail: 22331101@bjtu.edu.cn; yanglu@bjtu.edu.cn).
+Xuefeng Wang, Wei Chen, and Bo Ai are with the School of Electronic and Information Engineering, Beijing Jiaotong University, Beijing 100044, China (e-mail: 23125060@bjtu.edu.cn; weich@bjtu.edu.cn; boai@bjtu.edu.cn).
+Digital Object Identifier 10.1109/LWC.2026.3688747
+
+Extensive research efforts have focused on improving the BP algorithm. The min-sum (MS) algorithm reduced decoding complexity at the cost of a minor performance trade-off, while the offset min-sum (OMS) and normalized min-sum (NMS) algorithms achieved favorable decoding performance with low complexity [5]. Further, deep learning (DL) has been exploited to boost wireless intelligence [6]. Regarding channel decoding, DL gives rise to an innovative paradigm, termed “learning to decode”. Specifically, there are two mainstream DL frameworks, namely end-to-end frameworks and BP-iteration frameworks. For instance, the authors in [7] and [8] employed the multi-layer perceptron (MLP) and the recurrent neural network (RNN) to develop end-to-end decoders, respectively, which achieved MAP-level bit error ratio (BER) performance for short-length codes, but they were limited by the curse of dimensionality and the inability to adapt to variant code lengths. Additionally, the authors in [9] proposed a Transformer-based end-to-end decoder, which however, slightly outperformed the single-iteration BP decoder. On the other hand, the authors in [10] adopted the BP-iteration framework by assigning learnable weights to the edges of the Tanner graph, demonstrating improved performance over BP for various high-density parity-check codes. To exploit the graph structure inherent in codes, the authors in [11] proposed to replace BP iterations with graph neural networks (GNNs) [12] on linear binary block codes, which achieved competitive performance with BP and exhibited scalability to varying code parameters.
+Nevertheless, existing DL-based decoders demonstrate limited generalization capability. This letter proposes an augmented GNN-based decoder that integrates two powerful components: a graph attention network (GAT) [13] and a gated recurrent unit (GRU) [14], hence termed GAT-GRU. Specifically, we focus on a classic channel coding task involving a single-antenna transceiver over a noisy channel, with the BER adopted as the performance metric. Following the BP-iteration framework, we redesign the initialization step and propose to replace BP iterations with GAT-GRU iterations. The GAT-GRU decoder is trained using a supervised loss function that accounts for the outputs of all iterations. We conduct extensive experiments over BCH, regular LDPC, and 5G NR LDPC codes, yielding three key observations: 1) GAT-GRU generally outperforms BP [3], WBP [10], and GNN [11]; 2) GAT-GRU exhibits robust scalability to unseen code lengths and code rates for LDPC codes; 3) the inference speed of GNN-based decoders remains a bottleneck requiring further improvement. Additionally, ablation studies confirm the effectiveness of both GAT and GRU in enhancing decoding performance.
+
+2162-2345 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:47:16 UTC from IEEE Xplore. Restrictions apply.
+
+2930
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 15, 2026
+
+II. PROBLEM DEFINITION AND CONVENTIONAL METHOD
+
+A. Problem Definition
+
+Denote the original information consisting of k bits as
+
+b ∈ Fk2, where F2 represents the binary Galois field. The
+
+transmitter encodes b into a codeword c ∈ Fn2 via c = bT G, where G ∈ Fk2×n denotes the generator matrix. A codeword
+
+is
+
+valid
+
+iff
+
+it
+
+holds
+
+that
+
+Hc
+
+=
+
+0n−k ,
+
+where
+
+H
+
+∈
+
+(n−k)×n
+F2
+
+denotes the binary parity-check matrix [11]. Notably, for
+
+coding schemes such as LDPC and BCH codes, both G and
+
+H are of full rank.
+
+For Binary Phase Shift Keying (BPSK), c is modulated to
+
+form the transmit signal x ∈ Rn as follows:
+
+x = −2c + 1n ∈ {−1, 1}n.
+
+(1)
+
+Subsequently, the received signal y ∈ Rn is given by
+
+y = x + n,
+
+(2)
+
+where n ∼ N (0, ϵc2hIn) represents additive white Gaussian noise (AWGN) with ϵ2ch denoting the noise power.
+A channel decoding task entails enabling the receiver to obtain an estimation of c, denoted by c ∈ F2n, based on y and pre-defined H. Mathematically, we formulate the channel
+decoding process as a mapping given by:
+
+c = Φθ (y, H) ,
+
+(3)
+
+where θ denotes the decision variables. The corresponding task is to construct Φθ(·) and find the optimal θ⋆ such that
+
+θ⋆
+
+=
+
+arg min BER (θ)
+θ
+
+≜
+
+1 n
+
+∥c
+
+−
+
+Φθ(y, H)∥ ,
+
+(4)
+
+where BER(·) represents the BER.
+
+B. Conventional Method
+Traditionally, the BP algorithm has been widely employed for channel decoding. The overall process consists of four main stages: Tanner graph construction, initialization, BP iterations, and hard decision.
+1) Tanner Graph Construction: A Tanner graph is constructed based on H and defined as a bipartite graph G = (V ∪ U , E), where V ≜ {v1, v2, . . . , vn} denotes the set of variable nodes (VNs) and U ≜ {u1, u2, . . . , un−k} denotes the set of check nodes (CNs) [3]. Each vi corresponds to a codeword bit c[i], while each uj corresponds to a parity check equation defined by H[j,:]c = 0. An edge ⟨vi, uj⟩ ∈ E iff H[j,i] = 1. We denote the set of neighboring CNs for vi as N (vi), and the set of neighboring VNs for uj as N (uj).
+2) Initialization: Denote the initial feature of vi as Lv(0i), which is computed as
+
+Lv(0i) = LLR y[i] ≜ ln
+
+Prob c[i] = 0 | y[i] Prob c[i] = 1 | y[i]
+
+=
+
+2y[i] ϵ2ch
+
+,
+
+(5)
+
+where LLR(·) represents the log-likelihood ratio (LLR).
+The messages from uj to vi and from vi to uj are denoted by mu(0j)→vi and mv(0i)→uj , respectively, which are both initialized to 0.
+
+3) BP Iterations: During the t-th BP iteration, the message mu(tj)→vi is computed as
+
+ m(utj)→vi = 2 tanh−1 
+
+tanh
+
+ 
+
+mv(ti′−→1u)j
+
+ 
+
+.
+
+2
+
+vi′ ∈N (uj )\{vi}
+
+(6)
+
+The message m(vti)→uj is computed as
+
+mv(ti)→uj = L(v0i) +
+
+uj′ ∈N (vi)\{uj } mu(t′j)→vi .
+
+(7)
+
+After T iterations, the output feature of vi, which represents its final LLR estimation, is given by
+
+L(vTi ) = Lv(0i) +
+
+uj ∈N
+
+(vi )
+
+m(uTj
+
+) →vi
+
+.
+
+(8)
+
+4) Hard Decision: Based on the obtained {Lv(Ti )}, a hard decision is performed to derive c as
+
+c[i] =
+
+0, if Lv(Ti ) ≥ 0 1, if L(vTi ) < 0
+
+.
+
+(9)
+
+III. THE PROPOSED GAT-GRU DECODING APPROACH
+This letter extends the BP-iteration framework with two key modifications: 1) redesigning the initialization procedure; and 2) replacing BP iterations with GAT-GRU iterations.
+
+A. Initialization for GAT-GRU
+
+The embeddings of vi and uj are initialized as hv(0i) ∈ Rdh and hu(0j) ∈ Rdh , respectively, which are formulated as
+
+h(v0i) = ϕin(Lv(0i)), ∀vi ∈ V,
+
+(10)
+
+hu(0j) = 0dh , ∀uj ∈ U ,
+
+(11)
+
+where ϕin(·) : R → Rdh is implemented by a single-layer neural network, and dh denotes a predefined dimension of the hidden embeddings.
+
+B. GAT-GRU Iterations
+Denote T ′ as the number of GAT-GRU iterations during the training phase. The t′-th (t′ ∈ {1, 2, . . . , T ′}) GAT-GRU iteration enables a mapping from {hv(ti′−1), h(utj′−1)} to {L(vti′)}, which consists of three components: GAT, GRU, and a readout process.
+1) GAT: GAT consists of three sequential steps: message computation, attention score computation, and aggregation. For clarity, we take CN uj as the target node through this subsection. Then, the embedding update of VN vi follows the identical procedure but takes input of {h(utj′), hv(ti′−1)}uj and employs different learnable parameters.
+A message from a neighboring node vi to a target node uj is computed by an MLP ϕmsg(·), which takes the concatenated embeddings of the two nodes from the previous iteration as input. The message from vi to uj is computed as
+
+m(vti′→) uj = ϕmsg h(vti′−1), h(utj′−1) ∈ Rdm ,
+
+(12)
+
+where dm denotes the message dimension, and [·, ·] represents the concatenation operation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:47:16 UTC from IEEE Xplore. Restrictions apply.
+
+QIAN et al.: LEARNING TO DECODE: GRAPH ATTENTION NETWORK-GRU AS CHANNEL DECODER
+
+2931
+
+The attention score is computed as
+
+αv(ti′→) uj =
+
+exp τ sv(ti′→) uj
+
+,
+
+vi′∈N (uj ) exp
+
+τ
+
+s(t′)
+vi′ →uj
+
+(13)
+
+where τ is a learnable temperature parameter, and {s(vti′→) uj }vi denote the corresponding attention logits with sv(ti′→) uj given by
+
+s(vti′→) uj = ϕatt hu(tj′−1), hv(ti′−1) ∈ R,
+
+(14)
+
+where ϕatt(·) is a dedicated MLP. The attention-based message aggregated at uj is given by
+
+m(utj′) =
+
+(15)
+
+ρvi∈N (uj ) θmv(ti′→) uj ⊙ 1 + Clip gαv(ti′→) uj , −δ, δ
+
+,
+
+where ⊙ denotes the Hadamard product, θ and g are trainable
+
+parameters, and Clip(·, −δ, δ) represents the clip operation,
+
+which restricts the modulated value to the interval [−δ, δ]. ρ ∈
+
+{Sum, Mean, Max, Min}, which is a permutation-invariant operator and selected based on coding schemes. Then, m(utj′) is processed by an adaptive normalization operator fnorm:
+
+mu(tj′) := fnorm mu(tj′) ,
+
+(16)
+
+where fnorm can be layer normalization or a trainable scalar scaling, which is selected based on the density of H.
+2) GRU: The obtained node messages {mu(tj′)} are utilized to update node embeddings via GRU, which consists of two steps: candidate embedding computation and node embedding update.
+The candidate embedding h˜u(tj′) is computed as
+
+h˜(utj′) = ϕh mu(tj′), ru(tj′) ⊙ hu(tj′−1) ,
+
+(17)
+
+where ϕh(·) is implemented by a two-layer MLP, and r(utj′) denotes the reset gate, which is given by
+
+ru(tj′) = ϕr mu(tj′), hu(tj′−1) ,
+
+(18)
+
+where ϕr(·) is a two-layer MLP that maps Rdm+dh → R. Finally, the embedding of uj is updated by
+
+hu(tj′) = (1 − zu(tj′)) ⊙ hu(tj′−1) + zu(tj′) ⊙ h˜u(tj′),
+
+(19)
+
+where z(utj′) denotes the update gate, which is given by
+
+zu(tj′) = ϕz mu(tj′), hu(tj′−1) ,
+
+(20)
+
+where ϕz(·) is a two-layer MLP that maps Rdm+dh → R. 3) Readout: The readout process recovers the VN embed-
+dings back to LLRs, which is given by
+
+Lv(ti′) = ϕout hv(ti′) ,
+
+(21)
+
+where ϕout(·) : Rdh → R is implemented by a single-layer neural network.
+We cascade T ′ GAT-GRU iterations, with all GNNs sharing
+identical architecture and learnable parameters. Accordingly, we derive T ′ sets of LLR estimates, with the t′-th set being {L(vti′)}vi . Particularly, all T ′ sets are utilized for model training, while only the T ′-th set is fed into the hard decision (9)
+for codeword estimation.
+
+C. Loss Function
+
+The training loss function employs a multi-iteration weighted binary cross-entropy that assigns weights to the outputs of GAT-GRU iterations. The mathematical formulation of the loss function is given by
+
+L=−
+
+T ′ w(t′) 1
+
+t′ =1
+
+n
+
+n−1 i=0
+
+c[i] log
+
+σ(L(vti′))
+
++ (1 − c[i]) log 1 − σ(L(vti′)) ,
+
+(22)
+
+where
+
+w(t′)
+
+=
+
+2t′ T ′(T ′+1)
+
+is
+
+the
+
+linearly
+
+increasing
+
+weight
+
+for
+
+the t′-th iteration, and σ(·) represents the Sigmoid function.
+
+Remark 1: (Flexible implementation:) Although the
+
+decoder is trained with T ′ GAT-GRU iterations, we can
+
+flexibly implement an arbitrary number of GAT-GRU
+
+iterations in inference for better performance (≥ T ′) or faster
+
+computation (≤ T ′).
+
+IV. NUMERICAL RESULTS
+This section evaluates the proposed GAT-GRU decoder in terms of BER performance.
+
+A. Experimental Setting
+1) Datasets: We consider three types of coding schemes, i.e., BCH, regular LDPC, and 5G NR LDPC. For BCH codes, H is loaded directly from the NVIDIA Sionna [15]. For regular LDPC codes, H is randomly generated based on a specified VN degree of v = 3, CN degree of c = 6, and code length n = 100 [11]. For 5G NR LDPC codes, we utilize the NVIDIA Sionna to generate H by lifting and pruning one base graph defined in the 3GPP 5G NR standard, according to the code length and rate. Then, the training and test datasets are generated via the NVIDIA Sionna.
+2) Baselines: Three BP-based decoders from existing works are adopted as baselines: BP [3], WBP [10], and GNN [11].
+To quantitatively evaluate decoding performance, we measure the required energy per bit to noise power spectral density ratio (Eb/N0) to achieve a target BER of 10−4.
+3) Implementation Details: All models are implemented in Python 3.8 with TensorFlow 2.8 and trained on a computer equipped with a single NVIDIA Tesla T4 GPU, managed by the NVIDIA driver version 470.223.02 with CUDA 11.4. The embedding dimensions for nodes and edges are set to dh = dm = 20 for BCH codes and dh = dm = 16 for LDPC codes, respectively. The weights of the node and message update functions are shared across all nodes and all iterations. For each training batch, the SNR is sampled uniformly in accordance with the parameters in Table I.
+For BCH codes, we select layer normalization in (16). For LDPC codes, we use the trainable scalar scaling in (16). For 5G NR LDPC codes, rate-matching is inactivated during the training phase, while activated during the test phase.
+
+B. Experimental Results
+1) Performance Over BCH Code: Fig. 1 evaluates the BER performance of the GRU-GAT decoder and baselines over BCH codes with (n, k) = (63, 45). For GNN and GAT-GRU, the results of {2, 4, 8} iterations are reported with T ′ = 8,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:47:16 UTC from IEEE Xplore. Restrictions apply.
+
+2932
+
+TABLE I TRAINING HYPERPARAMETERS
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 15, 2026
+
+Fig. 2. BER performance over 5G NR LDPC codes with varying code lengths.
+
+Fig. 1. BER performance over BCH codes with (n, k) = (63, 45).
+
+while for BP and WBP, the results are based on 20 iterations. As seen, 8-iteration GAT-GRU achieves the minimum BER across nearly the entire Eb/N0 range. To achieve the target BER of 10−4, 8-iteration GAT-GRU requires the minimum Eb/N0, achieving an Eb/N0 reduction of 0.2, 0.5 and 1.3 dB compared to 8-iteration GNN, WBP and BP, respectively. Furthermore, it is remarkable that 4-iteration GAT-GRU still outperforms both BP and WBP. Notably, increasing the number of iterations leads to performance improvements for both GNN and GAT-GRU, but the performance gain tends to saturate.
+2) Performance Over 5G NR LDPC Code: Figs. 2 and 3 illustrate the BER performance over 5G NR LDPC code, considering varying code lengths (n) and code rates (R = k/n), respectively.
+Fig. 2 compares the BER performance of 10-iteration GAT-GRU, 10-iteration GNN, and 10-iteration BP. It is worth noting that both GNN and GAT-GRU are trained on codes with (n, k) = (140, 60) but test on codes with (n, k) ∈ {(140, 60), (280, 120), (420, 180)}. To achieve the target BER of 10−4, GAT-GRU achieves an Eb/N0 reduction of 0.23 and 0.11 dB over BP and GNN, respectively, for (n, k) = (140, 60). Regarding scalability to varying code lengths, GAT-GRU outperforms BP and GNN overall across the Eb/N0 range, though it exhibits slightly inferior performance to BP at low Eb/N0 levels. Nevertheless, when scaled to codes with (n, k) = (420, 180), GAT-GRU still achieves an Eb/N0 reduction of 0.14 dB over BP for the target BER.
+Fig. 3 evaluates the scalability of the GAT-GRU decoder, which is trained with (n, k, R) = (140, 60, 0.43) across
+
+Fig. 3. BER performance over 5G NR LDPC codes with varying code rates.
+different code lengths and code rates. For (n, k, R) ∈ {(280, 90, 0.32), (280, 120, 0.43), (280, 150, 0.54)}, the proposed GAT-GRU decoder consistently yields an Eb/N0 reduction relative to GNN and BP to attain the target BER.
+3) Performance Over Regular LDPC Code: Fig. 4 evaluates the BER performance across a range of code lengths n ∈ {100, 500, 1000}, where k = n − ⌊nv/c⌋. All decoders are configured with 10 iterations, and GAT-GRU and GNN are trained with n = 100. It is observed that for every code length, GAT-GRU achieves superior decoding performance than GNN and BP, with particularly notable gains in the high Eb/N0 region and for long code lengths. This result validates the scalability of GAT-GRU with respect to code length variations.
+4) Ablation Study: Table II presents ablation studies to quantify the contributions of the GAT and GRU modules within GAT-GRU, where the evaluation metric is the required Eb/N0 to achieve the target BER of 10−4. For the ablation experiments: to isolate the contribution of GAT, we remove the GAT module. To isolate the contribution of GRU, we replace the GRU module with a standard MLP. In most cases, both the GAT and GRU modules contribute to Eb/N0 reductions, even when scaling to varying code lengths. For different coding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:47:16 UTC from IEEE Xplore. Restrictions apply.
+
+QIAN et al.: LEARNING TO DECODE: GRAPH ATTENTION NETWORK-GRU AS CHANNEL DECODER
+
+2933
+
+effectiveness of GNN-based decoders across varying code lengths has been validated, additional efforts are required to accelerate inference from both algorithmic and hardware perspectives.
+
+Fig. 4. BER performance over regular LDPC codes with varying code lengths.
+TABLE II ABLATION STUDIES
+
+V. CONCLUSION
+In this letter, we have proposed a GAT-GRU decoder that enhances the BP-iteration framework for binary linear codes. Two modules, i.e., GAT and GRU, were leveraged to enhance message passing over Tanner graphs constructed based on binary parity-check matrices. Numerical results have demonstrated that GAT-GRU achieves significant BER performance improvements over conventional BP-based decoders. A key finding is that GAT-GRU exhibits strong scalability for LDPC codes with respect to varying code lengths and rates. Future work will focus on striking a better balance between decoding performance and computational complexity, with the aim of accelerating the practical deployment of DL-based channel decoders.
+ACKNOWLEDGMENT
+The authors acknowledge the suggestions provided by Prof. Dusit Niyato during the preparation and revision of this letter.
+
+TABLE III COMPLEXITY ANALYSIS OVER 5G NR LDPC CODES
+WITH (n, k) = (140, 60)
+schemes, the magnitude of the contributions from these two modules may vary. These results demonstrate that the proposed GAT-GRU decoder effectively leverages the strengths of GAT in spatial information aggregation and GRU in sequential iterative updating.
+5) Complexity Analysis: Table III presents a complexity analysis of the proposed and baseline decoders. Compared to GNN, GAT-GRU exhibits a 42.5% increase in parameter count and a 38.7% increase in computational complexity. This complexity increment stems from a linear combination of the additional module costs, i.e., GAT and GRU. Both GNN and GAT-GRU achieve lower throughput than BP, which is consistent with the observations in [11]. Although the
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IF-27, no. 5, pp. 533–547, Sep. 1981.
+[3] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[4] G. Liva, L. Gaudio, T. Ninacs, and T. Jerkovits, “Code design for short blocks: A survey,” 2016, arXiv:1610.00873.
+[5] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010.
+[6] S. Zhang et al., “Large models for aerial edges: An edge-cloud model evolution and communication paradigm,” IEEE J. Sel. Areas Commun., vol. 43, no. 1, pp. 21–35, Jan. 2025.
+[7] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2017, pp. 1–6.
+[8] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes—A syndrome-based approach,” 2018, arXiv:1802.04741.
+[9] M. Hernandez and F. Pinero, “5G LDPC linear transformer for channel decoding,” 2025, arXiv:2501.14102.
+[10] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[11] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” in Proc. IEEE Globecom Workshops (GC Wkshps), Dec. 2022, pp. 486–491.
+[12] Y. Lu et al., “Agentic graph neural networks for wireless communications and networking toward edge general intelligence: A survey,” IEEE Commun. Surveys Tuts., vol. 28, pp. 4519–4554, 2026.
+[13] P. Velicˇkovic´, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Bengio, “Graph attention networks,” 2017, arXiv:1710.10903.
+[14] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation of gated recurrent neural networks on sequence modeling,” 2014, arXiv:1412.3555.
+[15] J. Hoydis et al., “Sionna: An open-source library for next-generation physical layer research,” 2022, arXiv:2203.11854.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:47:16 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1086 @@
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+487
+
+Refined Belief Propagation Decoding of Sparse-Graph Quantum Codes
+Kao-Yueh Kuo, Member, IEEE, and Ching-Yi Lai , Member, IEEE
+
+Abstract—Quantum stabilizer codes constructed from sparse matrices have good performance and can be efficiently decoded by belief propagation (BP). A conventional BP decoding algorithm treats binary stabilizer codes as additive codes over GF(4). This algorithm has a relatively complex process of handling check-node messages, which incurs higher decoding complexity. Moreover, BP decoding of a stabilizer code usually suffers a performance loss due to the many short cycles in the underlying Tanner graph. In this paper, we propose a refined BP decoding algorithm for quantum codes with complexity roughly the same as binary BP. For a given error syndrome, this algorithm decodes to the same output as the conventional quaternary BP but the passed node-to-node messages are single-valued, unlike the quaternary BP, where multivalued node-to-node messages are required. Furthermore, the techniques of message strength normalization can naturally be applied to these single-valued messages to improve the performance. Another observation is that the message-update schedule affects the performance of BP decoding against short cycles. We show that running BP with message strength normalization according to a serial schedule (or other schedules) may significantly improve the decoding performance and error floor in computer simulation.
+Index Terms—Quantum stabilizer codes, LDPC codes, sparse matrices, belief propagation, sum-product algorithm, decoding complexity and performance, message-update schedule, message normalization.
+I. INTRODUCTION
+I N CLASSICAL coding theory, low-density parity-check (LDPC) codes and the sum-product (decoding) algorithm, proposed by Gallager, are shown to have near Shannoncapacity performance for the binary symmetric channel (BSC) and the additive white Gaussian noise (AWGN) channel [1]–[4]. The sum-product algorithm is understood as a message-passing algorithm running on the Tanner graph [5] corresponding to a parity-check matrix of the underlying linear code. This is also known as a realization of Pearl’s belief propagation (BP) algorithm [6]–[8]. It is efficient [9]–[11] and its complexity is roughly proportional to the number of edges in the Tanner graph [9], [12]. The messages or beliefs are real values that can be used to infer the conditional probabilities
+Manuscript received February 15, 2020; revised June 10, 2020; accepted July 20, 2020. Date of publication July 24, 2020; date of current version September 22, 2020. The work of Ching-Yi Lai was supported by Young Scholar Fellowship Program by Ministry of Science and Technology (MOST), Taiwan, under Grant MOST108-2636-E-009-004. (Corresponding author: Ching-Yi Lai.)
+The authors are with the Institute of Communications Engineering, National Chiao Tung University, Hsinchu 30010, Taiwan (e-mail: kykuo@nctu.edu.tw; cylai@nctu.edu.tw).
+Digital Object Identifier 10.1109/JSAIT.2020.3011758
+
+of the variables from the observed signals (e.g., error syndromes). The BP algorithm will have variable-to-check and check-to-variable messages passed around the Tanner graph according to a predefined schedule [9]. Commonly used schedules include the parallel (flooding) schedule and the serial (sequential/shuffled) schedule [13]–[15]. In practice, an important topic is to discuss message approximation and quantization with necessary compensations such as normalization and offset [16]–[18]. BP can be interpreted as a gradient descent algorithm [19], and the message normalization/offset is a strategy to adjust the update step-size so that the effects of short cycles in the Tanner graph can be mitigated [20], [21].
+The idea of error correction has been applied to protect quantum information against noise. Quantum error-correcting codes, especially the class of quantum stabilizer codes, bear similarities to classical codes [22], [23]. Calderbank, Shor, and Steane (CSS) showed that good stabilizer codes can be constructed from classical dual-containing codes [24], [25]. MacKay, Mitchison, and McFadden proposed various methods to build quantum LDPC codes from self-orthogonal sparse matrices using the CSS construction [26], and they found several good quantum codes. In particular, bicycle codes are of particular interest because of their good performance and low decoding complexity with BP [26]–[31]. There are a variety of sparse stabilizer codes constructed [32]–[41].
+We will focus on quantum information in qubits in this paper. The error discretization theorem [42] allows us to focus on a set of discrete error operators and we consider errors that are tensor product of Pauli matrices I, X, Y, and Z. In this case, decoding a stabilizer code is equivalent to decoding an additive code over GF(4) with a binary error syndrome vector [26], [27], [43].
+In non-binary BP over GF(q), a message is a vector of q real numbers that represent a distribution of the elements in GF(q). The complexity for generating a variable-to-check message is simply O(q) per edge, but the complexity for generating a check-to-variable message is O(q2) per edge1 [12], [44]. In contrast, for binary BP a scalar message suffices to represent a binary distribution (p(0), p(1)). For example, the likelihood difference (LD) δ = p(0) − p(1) and the log-likelihood ratio (LLR) = ln(p(0)/p(1)) are usually used and the corresponding BP update rules are called δ-rule and -rule, respectively
+1The complexity can be reduced to O(q log q) if the fast Fourier transform (FFT) method is appropriately used. Herein, we do not consider this method since there is additional cost running FFT and inverse FFT.
+
+2641-8770 c 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+488
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+[2], [4], [11, Sec. V-E].2 As a result, the BP decoding algorithm for a classical binary code runs 16 times faster than the quaternary BP algorithm for a quantum stabilizer code of comparable size. To reduce the quantum decoding complexity, a common strategy is to treat a binary stabilizer code as a binary classical code with doubled length [26], [29], followed by additional processes to handle the X/Z correlations [30], [45].
+On the other hand, a stabilizer code inevitably has many four-cycles in its Tanner graph, which degrade the performance of BP. To overcome this problem, additional processes are proposed, such as heuristic flipping from nonzero syndrome bits [27], (modified) enhanced-feedback [28], [29], BP-based neural network [46], augmented decoder (adding redundant rows to the parity-check matrices) [30] , and ordered statistics decoding (OSD) [31].
+In this paper, we simplify and improve the conventional quaternary BP for decoding a binary stabilizer code. Instead of passing multivalued messages (corresponding to q = 4 components) on the edges of the Tanner graph (see Fig. 6 for an example), we show that it is sufficient to pass singlevalued messages. An important observation is that the error syndrome of a binary stabilizer code, which can be considered as a quaternary code, is binary. More precisely, a syndrome bit represents the commutation relation of the error and a stabilizer generator. Consequently, a message from one node to another should reflect whether an error component is more likely to commute or anticommute with the stabilizer component. Inspired by MacKay’s δ-rule for message passing in binary linear codes [4], we derive a δ-rule based BP decoding algorithm for stabilizer codes. That is, the likelihood difference of the operators that commute or anticommute with the underlying stabilizer component is passed as a message. This greatly improves the efficiency of BP. Moreover, each of the previously-mentioned processes for BP improvement can be incorporated in our algorithm.
+To improve the performance while having low complexity for BP decoding of quantum codes, we have found two particularly useful methods. First, running the BP decoding with a serial schedule [13], [14] can improve the convergence behavior when the underlying Tanner graph has many short cycles. For illustration, we decode the [[5, 1]] code [47] and a [[129, 28]] hypergraph-product code with both serial and parallel schedules. In the case of [[5, 1]] code, the BP decoding converges quickly using the serial schedule, while it diverges using the parallel schedule. The serial schedule also outperforms the parallel schedule in the case of the [[129, 28]] hypergraph-product code. Second, adjusting message magnitudes can improve the error floor performance [16]–[18]. The techniques of message normalization and offset are simple and efficient for improving the decoding performance. In addition, both check-to-variable and variable-to-check messages can be separately adjusted. However, these techniques have not been considered in the quantum scenario probably because
+2These rules are mathematically equivalent. While the -rule is often chosen for the AWGN channel [2], the δ-rule is suitable for the BSC, as well as for our purpose of decoding quantum codes as shown in Section III. We will follow [4, eqs. (47)-(53)] to implement the δ-rule.
+
+Fig. 1.
+
+The
+
+Tanner
+
+graph
+
+of
+
+H
+
+=
+
+[
+
+1 1
+
+1 1
+
+0 1
+
+].
+
+The
+
+two
+
+squares
+
+are
+
+check
+
+nodes
+
+and the three circles are variable nodes.
+
+they are designed for binary BP decoding. In our δ-rule based BP, these techniques can be directly applied to the singlevalued messages. Moreover, all the mentioned techniques can be simultaneously applied in our BP algorithm. We have tested several quantum codes and the simulation results show that the decoding performance and error floor are improved significantly.
+This paper is organized as follows. In Section II we define the notation and review the binary BP decoding with two update schedules. In Section III we show how to efficiently compute the quaternary BP decoding for quantum stabilizer codes by single-valued message-passing. In Section IV we review the message normalization and offset algorithms, and port them to our decoding procedure. Related simulations are provided. Finally, we conclude in Section V.
+
+II. CLASSICAL BINARY BELIEF PROPAGATION DECODING
+
+Consider a classical binary [N, K] linear code C, defined by an M × N parity-check matrix H ∈ {0, 1}M×N (not necessarily of full rank) with M ≥ N − K. Suppose that a message is encoded by C and sent through a noisy channel.
+The noisy channel will introduce an N-bit random error vector E = (E1, E2, . . . , EN) corrupting the transmitted codeword. (A string (X1, X2, . . . , XN) is understood as a column vector in this paper.) Given an observed error syndrome vector z ∈ {0, 1}M, the decoding problem of our concern is to find the most likely error vector e∗ ∈ {0, 1}N such that He∗ = z
+mod 2. (From now on the modulo operation will be omitted
+without confusion.) More precisely, the maximum likelihood
+decoding is to find
+
+e∗ = arg max P(E = e|z),
+e∈{0,1}N , He=z
+
+where P(E = e|z) is the probability of channel error e con-
+
+ditioned on the observed syndrome z. The above decoding
+
+problem can be depicted as a Tanner graph and an approxi-
+
+mate solution can be obtained by belief propagation (BP) on
+
+the Tanner graph.
+
+The Tanner graph corresponding to H is a bipartite graph
+
+consisting of N variable nodes and M check nodes, and it has
+
+an edge connecting check node m and variable node n if the
+
+entry Hmn = 1. For our purpose, variable node n corresponds
+
+to the random error bit En and check node m corresponds to
+
+a parity check Hm. An example of H =
+
+110 111
+
+is shown in
+
+Fig. 1.
+
+To infer e∗, a BP algorithm computes an approximated
+
+marginal distribution Pˆ (En = en|z) ≈ P(En = en|z) for each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+KUO AND LAI: REFINED BELIEF PROPAGATION DECODING OF SPARSE-GRAPH QUANTUM CODES
+
+489
+
+error bit n and outputs eˆ = (eˆ1, eˆ2, . . . , eˆN) such that
+
+eˆn = arg max Pˆ (en|z).
+en∈{0,1}
+
+In addition, if Heˆ = z, then eˆ is the decoder output. These marginal distributions can be calculated efficiently by message
+passing on the Tanner graph. If the Tanner graph has no cycles, then the BP algorithm will output a valid error vector eˆ with Heˆ = z and the exact marginal distributions [6]–[11], i.e., Pˆ (en|z) = P(en|z) for n = 1, . . . , N. Even if there are cycles, the approximation is usually very good for a well-designed
+parity-check matrix H (e.g., no short cycles) [7], [9], [10].
+The binary BP decoding algorithm is given in Algorithm 1 [4].
+The order of message passing between the nodes is referred
+to as an updating schedule. Since the calculations at all the
+nodes in each step can be run in parallel, message passing in
+this way is said to follow a parallel schedule. Consequently,
+Algorithm 1 will be called parallel BP2 in the following. Next we briefly explain parallel BP2. Let p(n0) and pn(1) be
+the probabilities of En being 0 and 1, respectively, for n = 1, . . . , N, which are given by the underlying noisy channel. Herein we assume a memoryless binary symmetric channel (BSC) with cross probability ∈ (0, 0.5). Hence p(n0) and p(n1) are initialized as
+
+p(n0) = P(En = 0) = 1 − and pn(1) = P(En = 1) = .
+
+These channel parameters will be used in the generation of
+
+messages.
+
+A message sent from variable node n to check node m
+
+will be denoted by message n → m for simplicity, and vice
+
+versa. Let N (m) denote the set of neighboring variable nodes
+
+of check node m and let M(n) denote the set of neighbor-
+
+ing check nodes of variable node n. In BP, message dn→m
+
+(defined in (1)) will be passed from variable node n to its
+
+neighboring check node m and message δm→n (defined in (2))
+
+will be passed from check node m to its neighboring vari-
+
+able node n. The messages dn→m and δm→n will be denoted, respectively, by dmn and δmn for simplicity, meaning that they
+
+are passed on the same edge associated with Hmn. Note that each of the passed messages dmn or δmn is a real number (rep-
+
+resenting the likelihood difference), and they provide sufficient
+
+information for decoding. Let qn(0) and qn(1) be the likelihoods of En being 0 and 1,
+respectively, for n = 1, . . . , N. These quantities will be
+
+updated as in (6) and (7) after a horizontal step and a vertical
+
+step and their sizes are used to estimate En. The horizontal, vertical, and hard decision steps will be iterated until that an
+
+estimated error and the given syndrome vector are matched or
+
+a pre-defined maximum number of iterations is reached.
+
+We illustrate how parallel BP2 works with a simple but
+
+essential example, which can be extended to the quantum case
+
+later in Section III. Consider again the parity-check matrix
+
+H
+
+=
+
+[
+
+1 1
+
+1 1
+
+0 1
+
+]
+
+with
+
+Tanner
+
+graph
+
+given
+
+in
+
+Fig.
+
+1.
+
+Given
+
+error
+
+syndrome (z1, z2) ∈ {0, 1}2, H imposes the two parity-check
+
+constraints:
+
+• The first parity check H1: E1 + E2 = z1. • The second parity check H2: E1 + E2 + E3 = z2.
+
+Algorithm 1 Conventional Binary BP Decoding With a Parallel Schedule (Parallel BP2) Input: H ∈ {0, 1}M×N , z ∈ {0, 1}M, and {(p(n0), pn(1))}nN=1. Initialization. For every variable node n = 1 to N and for every m ∈ M(n), do:
+• Let qm(0n) = p(n0) and q(m1n) = pn(1). • Calculate
+
+dmn = q(m0n) − q(m1n)
+
+(1)
+
+and pass it as the initial message n → m. Horizontal Step. For every check node m = 1 to M and for every variable node n ∈ N (m), compute
+
+δmn = (−1)zm
+
+dmn
+
+(2)
+
+n ∈N (m)\n
+
+and pass it as the message m → n. Vertical Step. For every variable node n = 1 to N and for every check node m ∈ M(n), do:
+• Compute
+
+rm(0n) = (1 + δmn)/2, rm(1n) = (1 − δmn)/2,
+
+(3)
+
+qm(0n) = amn pn(0)
+
+rm(0)n,
+
+(4)
+
+m ∈M(n)\m
+
+qm(1n) = amn pn(1)
+
+rm(1)n,
+
+(5)
+
+m ∈M(n)\m
+
+where amn is a chosen scalar such that q(m0n) + q(m1n) = 1. • Update: dmn = q(m0n) − qm(1n) and pass it as the message
+n → m. Hard Decision. For every variable node n = 1 to N, compute
+
+qn(0) = pn(0)
+
+rm(0n),
+
+(6)
+
+m∈M(n)
+
+q(n1) = p(n1)
+
+rm(1n).
+
+(7)
+
+m∈M(n)
+
+Let eˆn = 0, if q(n0) > qn(1), and eˆn = 1, otherwise. • Let eˆ = (eˆ1, eˆ2, . . . , eˆN ).
+– If Heˆ = z, halt and return “SUCCESS”; – otherwise, if a maximum number of iterations is
+reached, halt and return “FAIL”;
+– otherwise, repeat from the horizontal step.
+
+For convenience, here we analyze the algorithm in terms of
+
+likelihood ratio of the first variable bit E1, denoted by LR1, and
+
+it is similar for the other error bits. When LR1 is larger than 1,
+
+E1
+
+is
+
+more
+
+likely
+
+to
+
+be
+
+0
+
+than
+
+1.
+
+Initially,
+
+LR1
+
+is
+
+p1(0) p1(1)
+
+from
+
+the channel parameters. Then it is updated at each iteration of
+
+message passing. After the first iteration, we have
+
+LR1
+
+=
+
+q1(0) q1(1)
+
+=
+
+p1(0) p1(1)
+
+×
+
+r1(01) r1(11)
+
+×
+
+r2(01) r2(11)
+
+=
+
+p(10) p(11)
+
+×
+
+p(20) p(21)
+
+(−1)z1
+×
+
+p(20)p3(0) + p(21)p(31) p2(0)p(31) + p(21)p3(0)
+
+(−1)z2 .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+490
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+Fig. dmn
+
+2. is
+
+The order of message initialized to pn(0) − pn(1)
+
+passing in Algorithm 1 (parallel BP2) for and then passed from variable node n to
+
+the example in Fig. 1. (a) Initialization: check node m. (b) Horizontal Step: For
+
+For every n every m and
+
+and for
+
+for n∈
+
+m ∈ M(n), message N (m), message δmn
+
+is computed and then passed from check node m to variable node n. (c) Vertical Step: For every n and for m ∈ M(n), message dmn is computed and then
+
+passed from variable node n to check node m. Then (b) and (c) are repeated in the following iterations.
+
+Fig. 3. The order of message passing in Algorithm 2 (serial BP2) for the example in Fig. 1. The initialization procedure is the same as in Fig. 2 (a). In Serial Update: (a) Variable node 1 receives δ11 and δ21, updates d11 and d21 and sends them to the two check nodes, respectively. (b) and (c) are similar to (a) but are with respect to variable nodes 2 and 3, respectively. Then Serial Update (a), (b), and (c) are iterated.
+
+The second and the third terms are contributed by the parity
+
+checks H1 and H2, respectively. For example, if the second
+
+syndrome bit is z2 = 0, we have E1 = E2 +E3. If E1 = 0, then
+
+(E2, E3) = (0, 0) or (1, 1); if E1 = 1, then (E2, E3) = (0, 1)
+
+or (1, 0). from H2.
+
+Thus we Passing
+
+thhaevesiangbleel-iveafluceodntrmibeustsiaognesofδmpp22((n00))
+
+p3(0) +p2(1) p3(1) p3(1) +p2(1) p3(0)
+calculated
+
+in (2) is sufficient to complete these belief updates. In the
+
+meanwhile messages dmn are updated for the next iteration. Therefore, the δ-rule works well for BP2.
+
+In parallel BP2, the messages are updated according to a
+
+parallel schedule. In general, a shuffled or serial update sched-
+
+ule may have some benefits [13], [14]. Algorithm 2, referred
+
+to as serial BP2, defines a BP decoding algorithm accord-
+
+ing to a serial schedule. A serial update can be done along
+
+the variable nodes or along the check nodes (with similar
+
+performance) [14] and in Algorithm 2 the update is along the
+
+variable nodes.
+
+Despite of the different schedules, serial BP2 and parallel
+
+BP2 have to update the same number of messages (dmn and δmn) and thus have the same computational complexity in an
+
+iteration. While parallel BP2 achieves a full parallelism in a
+
+horizontal step and a vertical step, serial BP2 tries to utilize the
+
+most updated dmn to accelerate the convergence at the cost of
+
+parallelism. (A partial parallelism is still possible by a careful
+
+design [13], [14].) For clarity, we use the example in Fig. 1 to
+
+show how the parallel and serial schedules work in Figures 2
+
+and 3. The main advantage of serial BP2 is that it converges
+
+in roughly half the number of iterations, compared to parallel
+
+BP2, to achieve the same accuracy [13], [14]. More precisely,
+
+the advantage/disadvantage of the two schedules can be under-
+
+stood as follows. If full parallelism is possible with sufficient
+
+hardware resources, each iteration of the parallel BP2 takes
+
+Algorithm 2 Binary BP Decoding According to a Serial Schedule Along the Variable Nodes (Serial BP2) Input: H ∈ {0, 1}M×N , z ∈ {0, 1}M, and {(pn(0), p(n1))}Nn=1. Initialization. Do the same as in Algorithm 1. Serial Update. For each variable node n = 1 to N, do:
+• For each check node m ∈ M(n), compute δmn = (−1)zm n ∈N (m)\n dmn and pass it as the message m → n.
+• For each m ∈ M(n), compute rm(0n) = (1 + δmn)/2, rm(1n) = (1 − δmn)/2, q(m0n) = amn pn(0) m ∈M(n)\m rm(0)n, qm(1n) = amn p(n1) m ∈M(n)\m rm(1)n, where amn is a chosen scalar such that q(m0n) + qm(1n) = 1.
+• Update: dmn = qm(0n) − qm(1n) and pass it as the message n → m.
+Hard Decision. • Do the same as in Algorithm 1, except that “repeat from the horizontal step” is replaced by “repeat from the serial update step”.
+less time. If, otherwise, only one processor is available, one iteration of BP takes roughly the same time in both schedules, but the convergence behavior of serial BP2 is usually better.
+For illustration, we consider the [13298, 3296] code defined in [4]. The performance of parallel BP2 is shown in Fig. 4 with respect to various maximum numbers of iterations. The maximum numbers of iterations for the curves from the lefthand-side to the right-hand-side are 10, 15, 20, 25, 30, 40, 50, and 100, respectively. An error bar between two crosses shows a 95% confidence interval. Similarly, the performance of serial
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+KUO AND LAI: REFINED BELIEF PROPAGATION DECODING OF SPARSE-GRAPH QUANTUM CODES
+
+491
+
+TABLE I
+THE AVERAGE NUMBER OF ITERATIONS (ITERAVG ) TO DECODE THE [13298, 3296] CODE FOR A MAXIMUM NUMBER OF 15, 30, AND 100 ITERATIONS (ITERMAX ). THE TARGET BLOCK ERROR RATE IS ≤ 10−4
+
+TABLE II COMMUTATION RELATIONS OF PAULI OPERATORS
+(0: COMMUTE, 1: ANTICOMMUTE)
+
+Fig. 4. Parallel BP2 decoding in different maximum numbers of iterations.
+
+III. QUATERNARY BP DECODING FOR QUANTUM CODES
+
+A. Tanner Graph and Belief Propagation for Quantum Stabilizer Codes
+
+We focus on binary stabilizer codes for quantum
+
+information in qubits and consider error oper-
+
+ators that are tensor product of Pauli matrices
+
+{I
+
+=
+
+[
+
+1 0
+
+0 1
+
+],
+
+X
+
+=
+
+[
+
+0 1
+
+1 0
+
+],
+
+Y
+
+=
+
+[
+
+0 i
+
+−i 0
+
+],
+
+Z
+
+=
+
+[
+
+1 0
+
+0 −1
+
+]}
+
+[22]–[25].
+
+Specifically, we consider an independent depolarizing chan-
+
+nel with rate such that the probability of Pauli errors
+
+{I, X, Y, Z} is
+
+p = pI, pX, pY , pZ = (1 − , /3, /3, /3).
+
+Fig. 5. Serial BP2 decoding in different maximum numbers of iterations.
+BP2 is shown in Fig. 5. A successful decoding is counted when the decoder converges to the actual error. Otherwise, a block error occurs, and we could have either a detected error if the syndrome is not matched after a maximum number of iterations is reached or an undetected error if the syndrome is falsely matched because the decoder converges to a wrong solution. We have the same observation by MacKay [4] that all the observed block errors are detected errors for this code. For a data point with a largest block error rate ≤ 10−4, we calculate the average number of iterations by including all the successful and block-errored cases. The average numbers of iterations for a maximum of 15, 30, and 100 iterations are given in Table I. In this case, both schedules converge well if the computational power is enough. (However, this may not be the case for BP decoding of quantum codes (due to the many short cycles) and an interesting example will be shown later in Fig. 7.)
+Unless otherwise stated, the simulations in later sections will follow the same criteria as above.
+
+The weight of an N-fold Pauli operator is the number of
+its nonidentity entries. A low-weight Pauli error occurs more
+likely than a high-weight error in a depolarizing channel.
+Since Pauli matrices either commute or anticommute with each other, we can define an inner product ·, · : {I, X, Y, Z}× {I, X, Y, Z} → {0, 1} for Pauli matrices as in Table II such that for E1, E2 ∈ {I, X, Y, Z}, E1, E2 = 1 if they anticommute with each other, and E1, E2 = 0 if they commute with each other. This inner product can be naturally extended to an inner product for N-fold Pauli operators ·, · :{I, X, Y, Z}⊗N × {I, X, Y, Z}⊗N → {0, 1}, defined by
+
+N
+
+E, F = En, Fn mod 2,
+
+(8)
+
+n=1
+
+where E = E1 ⊗ E2 ⊗ · · · ⊗ EN , F = F1 ⊗ F2 ⊗ · · · ⊗ FN ∈ {I, X, Y, Z}⊗N. Note that we use the same notation for inner
+
+product without ambiguity as the value indicates whether two
+
+N-fold Pauli operators commute with each other or not. From
+now on the tensor product ⊗ will be omitted. An [[N, K]] quantum stabilizer code is a 2K-dimensional
+subspace of C2N . It can be defined by a stabilizer check matrix S ∈ {I, X, Y, Z}M×N (not necessarily of full rank) with
+M ≥ N − K. Each row Sm of S corresponds to an N-fold
+Pauli operator that stabilizes the code space, i.e., the code
+space is contained in its (+1)-eigenspace. The matrix S is
+
+self-orthogonal with respect to the inner product (8), i.e.,
+Sm, Sm = 0 for any two rows Sm and Sm of S. In fact, the code space is the joint-(+1) eigenspace of the rows of S,
+
+and the vectors in the rowspace of S are called stabilizers [42].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+492
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+for every n ∈ N (m), where
+
+Fig. 6.
+
+The
+
+Tanner
+
+graph
+
+of
+
+S
+
+=
+
+[
+
+X Z
+
+Y Z
+
+I Y
+
+].
+
+rmWn =
+
+E|N (m): En=W, E|N (m),Sm|N (m) =zm
+
+n ∈N (m)\n qEmnn (10)
+
+for W ∈ {I, X, Y, Z}.
+• Vertical Step: At variable node n, compute qmn = (qmI n, qXmn, qYmn, qmZ n) and pass qmn as the message n → m for every m ∈ M(n), where
+
+We assume that quantum information is initially encoded
+by a noiseless stabilizer circuit [23], [48] and then the
+encoded state suffers depolarizing errors. Therefore, we may
+assume that the encoded state is corrupted by an unknown N-qubit error operator E ∈ {I, X, Y, Z}N with corresponding
+probability. To do error correction, the stabilizers {Sm : m =
+1, 2, . . . , M} are measured to determine the binary error syndrome z = (z1, z2, . . . , zM) ∈ {0, 1}M, where
+
+zm = E, Sm ∈ {0, 1}.
+
+(9)
+
+Given S and z, a decoder has to estimate an error Eˆ ∈ {I, X, Y, Z}N such that Eˆ is equivalent to E, up to a stabi-
+
+lizer, with a probability as high as possible. Note that the
+
+solution is not unique due to the degeneracy of the quantum
+
+code [27], [49].
+
+A Tanner graph corresponding to the M × N quantum stabi-
+
+lizer check matrix S can be similarly defined as in the classical
+
+case: it is a bipartite graph consisting of N variable nodes and
+
+M check nodes and it has an edge connecting check node m
+
+and variable node n if Smn = I. However, there are three types
+
+of edges corresponding to X, Y, Z, respectively. A stabilizer Sm
+
+defines a relation as in (9). An example of S =
+
+XY I ZZY
+
+is
+
+shown in Fig. 6. Thus the quantum decoding problem can be
+
+handled by a quaternary BP (denoted by BP4) on the Tanner
+
+graph.
+
+A conventional BP4 for decoding binary stabilizer codes
+
+is done as follows [27]. Initially, the channel parameters are
+
+pn = (pnI , pXn , pYn , pZn ) for n = 1, . . . , N, where
+
+pIn = P(En = I) = 1 − , and pnW = P(En = W) = /3, for W ∈ {X, Y, Z}.
+
+In the initialization step, at every variable node n, pass the message qmn = (qmI n, qXmn, qYmn, qZmn) = pn to every neighboring check node m ∈ M(n). As in [9], let E|N (m) be the restriction of E = E1E2 · · · EN to the coordinates in N (m). Note that
+E, Sm = E|N (m), Sm|N (m) for any E and Sm since only the components of Sm corresponding to N (m) are not the identity I.3 Then according to a parallel update schedule, the check
+nodes and variable nodes work as follows.
+• Horizontal Step: At check node m, compute rmn = (rmI n, rmXn, rmY n, rmZ n) and pass rmn as the message m → n
+
+3For example, if Sm = IXZ and E = E1E2E3, then E|N (m) = (E1E2E3)|N (m) = E2E3 and Sm|N (m) = XZ. Then E, Sm = E1E2E3, IXZ = E2E3, XZ = E|N (m), Sm|N (m) .
+
+qmWn = amn pWn
+
+rmW n
+
+(11)
+
+m ∈M(n)\m
+
+for W ∈ {I, X, Y, Z} and amn is a chosen scalar such that qmI n + qmXn + qYmn + qmZ n = 1. At variable node n, it also computes qWn = pWn m∈M(n) rmWn for W ∈ {I, X, Y, Z} (where normalization is not necessary). A hard decision is made by Eˆ n = arg maxW∈{I,X,Y,Z} qWn . The horizontal step and the vertical step are iterated until an estimated error Eˆ = Eˆ 1 · · · Eˆ N is valid or a maximum number of iterations is reached.
+In general, BP4 requires higher computing complexity than BP2 as mentioned in the introduction. Moreover, the δ-rule used in Algorithm 1 cannot be applied to BP4 for classical quaternary codes. While the variable-node computation (11)
+is relatively straightforward, the check-node computation (10)
+seems to have a large room for further simplification. We will show that this computation can also be simplified by a δ-rule
+in the following subsection and then we can design a BP
+algorithm for stabilizer codes so that the passed messages are single-valued as in the case of BP2 using the δ-rule. Thus the complexity of our BP decoding algorithm for stabilizer codes
+is significantly reduced, compared to the conventional BP4 for stabilizer codes.
+
+B. Refined Belief Propagation Decoding of Stabilizer Codes
+An important observation is that the error syndrome of a binary stabilizer code (9) is binary. Given the value of En, Smn for (unknown) En ∈ {I, X, Y, Z} and some Smn ∈ {X, Y, Z}, we know that En commutes or anticommutes with Smn, i.e., either En ∈ {I, Smn} or En ∈ {X, Y, Z} \ Smn. Consequently, the passed message should indicate more likely whether En ∈ {I, Smn} or En ∈ {X, Y, Z} \ Smn. For a variable node, say variable node 1, and its neighboring check node m, we know that from (9)
+
+N
+E1, Sm1 = zm + En, Smn
+n=2
+
+mod 2.
+
+In other words, the message from a neighboring check will
+tell us more likely whether the error E1 commutes or anticommutes with Sm1. This suggests that a BP decoding of stabilizer codes with single-valued messages is possible and we provide
+such an algorithm in Algorithm 3, which is referred to as parallel BP4. We simplify the notation rm( nW,Smn ) as rmWn,Smn .
+It can be shown that Algorithm 3 has exactly the same out-
+put as the conventional BP4 outlined in the previous subsection but with an improved complexity similar to BP2. (The verification is straightforward and omitted here.) In particular,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+KUO AND LAI: REFINED BELIEF PROPAGATION DECODING OF SPARSE-GRAPH QUANTUM CODES
+
+493
+
+Algorithm 3 δ-Rule Based Quaternary BP Decoding for
+
+Binary Stabilizer Codes With a Parallel Schedule (Parallel
+
+BP4)
+Input: S ∈ {I, X, Y, Z}M×N, z ∈ {0, 1}M, and initial {(pIn, pXn , pYn , pZn )}Nn=1. Initialization. For every variable node n = 1 to N and for
+
+every m ∈ M(n), do: • Let qWmn = pnW for W ∈ {I, X, Y, Z}. • Let qm(0n) = qmI n + qmSmnn and q(m1n) = 1 − qm(0n). Calculate
+
+dmn = q(m0n) − q(m1n)
+
+(12)
+
+and pass it as the initial message n → m. Horizontal Step. For every check node m = 1 to M and for every n ∈ N (m), compute
+
+δmn = (−1)zm
+
+dmn
+
+(13)
+
+n ∈N (m)\n
+
+and pass it as the message m → n. Vertical Step. For every variable node n = 1 to N and for every m ∈ M(n), do:
+• Compute
+
+rm(0n) = (1 + δmn)/2, rm(1n) = (1 − δmn)/2,
+
+(14)
+
+qmI n = pIn
+
+rm(0)n,
+
+m ∈M(n)\m
+
+(15)
+
+qmWn = pnW
+
+rmWn,Sm n , for W ∈ {X, Y, Z}. (16)
+
+m ∈M(n)\m
+
+•
+
+Let and
+
+q(m0n) q(m1n)
+
+= =
+
+amn(qmI n + qSmmnn ) amn( W ∈{X,Y,Z}\Smn
+
+qWmn),
+
+where amn is a chosen scalar such that q(m0n) + qm(1n) = 1.
+
+• Update: dmn = q(m0n) − qm(1n) and pass it as the message
+
+n → m.
+
+Hard Decision. For every variable node n = 1 to N, compute
+
+qIn = pIn
+
+rm(0n)
+
+(17)
+
+m∈M(n)
+
+qWn = pnW
+
+rmWn,Smn , for W ∈ {X, Y, Z}. (18)
+
+m∈M(n)
+
+Let Eˆ n = arg maxW∈{I,X,Y,Z} qnW . • Let Eˆ = Eˆ 1Eˆ 2 · · · Eˆ N .
+– If Eˆ , Sm = zm for m = 1, 2, . . . , M, halt and return “SUCCESS”;
+– otherwise, if a maximum number of iterations is reached, halt and return “FAIL”;
+– otherwise, repeat from the horizontal step.
+
+Algorithm 3 has a check-node efficiency 16-fold improved from BP in GF(4) as mentioned Section I.
+Comparing Algorithms 1 and 3, one can find that (12)–(18) parallel (1)–(7), respectively. However, it is highly nontrivial to obtain these expressions for Algorithm 3, especially that (16) and (18) are not direct generalizations of (5) and (7).
+Similarly to the classical case, a δ-rule based BP4 decoding algorithm with a serial schedule, referred to as serial BP4, is
+
+Algorithm 4 BP4 Decoding of Binary Stabilizer Codes With a Serial Schedule Along the Variable Nodes (Serial BP4) Input: S ∈ {I, X, Y, Z}M×N, z ∈ {0, 1}M, and initial {(pnI , pnX, pYn , pnZ )}nN=1. The remaining steps parallel those in Algorithm 2 but with cal-
+culations replaced by those correspondences in Algorithm 3.
+(Details are omitted.)
+
+given in Algorithm 4. Again, serial BP4 and parallel BP4 have the same computational complexity in an iteration.
+The update schedule of BP could affect the convergence behavior a lot for quantum stabilizer codes. We provide two examples as follows. First, the well-known [[5, 1]] code [47] can correct an arbitrary weight-one error and has a check matrix
+
+XZZX I
+
+S=
+
+I X
+
+X I
+
+Z X
+
+Z Z
+
+X Z
+
+.
+
+ZX I XZ
+
+The Tanner graph of this matrix obviously has many four-
+
+cycles. Parallel BP4 can decode all the weight-one errors,
+
+except for the error IIIYI, and the output will oscillate contin-
+
+uously as shown in Fig. 7 (a). However, serial BP4 converges
+
+very soon, as shown in Fig. 7 (b).
+
+Second, we construct a [[129, 28]] hypergraph-product
+
+code [38] by two BCH codes with parameters [7, 4, 3] and
+
+[15, 7, 5], as in [46]. This hypergraph-product code has min-
+
+imum distance dmin = 3 and also corrects an arbitrary
+
+weight-one error. Serial BP4 greatly improves the performance
+
+of parallel BP4 as shown in Fig. 8. Each data point is obtained by collecting at least 100 logical errors. By mapping the M×N
+
+check matrix S to an M × 2N binary matrix H [23], [42], one
+
+can also decode the quantum code using the algorithms in Section II but with the probabilities (pn(0), p(n1)) initialized to p(n1) = 2 /3 (see [26, eq. (40)]). The performance of using
+
+BP2 is also provided in Fig. 8. For reference, the estimated
+
+performance curves of bounded distance decoding (BDD) for
+
+minimum distance 3 or 5 are also provided. BDD has an error-
+
+correction radius t =
+
+dmin −1 2
+
+. Gallager estimated that BP can
+
+correct most errors in a radius of 2t [2] (which corresponds
+
+to dmin = 5 here). Using the serial schedule can achieve a
+
+performance near Gallager’s estimation.
+
+IV. MESSAGE NORMALIZATION AND OFFSET
+In classical BP decoding, a message often has overestimated strength due to approximation (by the min-sum algorithm) [16], [17] or cycles in the graph [18]. Normalizing or offsetting the message magnitude can be helpful. Since our δ-rule based BP algorithms for quantum stabilizer codes have only single-valued messages, the techniques of message normalization and offset can be effortlessly applied to our algorithms. By viewing BP as a gradient descent algorithm [19], one can think of message normalization/offset as adjusting the update step-size [20], [21]. The normalization/offset is defined in logarithmic domain, but can be equivalently defined in linear domain as we will do in the following.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+494
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+Fig. 7. The change of the probabilities of I, X, Y, Z, when decoding the [[5, 1, 3]] code with error IIIYI at a depolarizing error rate = 0.1.
+
+Algorithm 5 BP4 Decoding With Check-Node Messages Normalized by Parameter αc
+
+The algorithm is identical to Algorithm 3 (parallel BP4) or
+
+Algorithm 4 (serial BP4) except that rm(0n) and rm(1n) are replaced
+
+by
+
+rm(0n)
+
+=
+
+(
+
+1+δmn 2
+
+)1/αc
+
+and
+
+rm(1n)
+
+=
+
+(
+
+1−δmn 2
+
+)1/αc
+
+,
+
+respectively,
+
+for
+
+some αc > 0.
+
+Algorithm 6 BP4 Decoding With Variable-Node Messages Normalized by Parameter αv
+The algorithm is identical to Algorithm 3 (parallel BP4) or Algorithm 4 (serial BP4) except that qm(0n) and qm(1n) are replaced by q(m0n) = amn(qImn + qSmmnn )1/αv and q(m1n) = amn( W ∈{X,Y,Z}\Smn qWmn)1/αv , respectively, for some αv > 0, where amn is a chosen scalar such that qm(0n) + q(m1n) = 1.
+
+Fig. 8. Performance of decoding the [[129, 28]] hypergraph-product code.
+
+We review the log-domain computation first. Assume that the log-likelihood ratio (LLR)
+
+=
+
+ln
+
+P(E P(E
+
+= =
+
+0) 1)
+
+is to be passed. • Message Normalization: The message is normalized as Q = /α by some positive α before passing. • Message Offset: The message magnitude is offset by some positive β:
+
+Q=
+
+0,
+
+if | | < β,
+
+sign( )(| | − β), otherwise.
+
+Since β serves as a soft threshold, the performance of message offset is usually worse [17], [18], but it has a lower complexity without the multiplication in message normalization.
+Now we propose various BP decoding algorithms using message normalization/offset. First, a BP4 decoding with check-node messages normalized by parameter αc is defined in Algorithm 5. Second, a BP4 decoding with variable-node messages normalized by parameter αv is defined in Algorithm 6. Note that the function (·)1/α does not need to be perfect, which can be approximated by the method [50] using only
+
+Algorithm 7 BP4 Decoding With Check-Node Messages Offset by Parameter β The algorithm is identical to Algorithm 3 (parallel BP4) or Algorithm 4 (serial BP4) except that rm(0n) and rm(1n) are computed accordingly as follows:
+If rm(0n)/rm(1n) > eβ , update rm(0n) to rm(0n)/eβ ; if rm(1n)/rm(0n) > eβ , update rm(1n) to rm(1n)/eβ ; otherwise, set both rm(0n) and rm(1n) to 1/2.
+one multiplication and two additions. Finally, a BP4 decoding with check-node messages offset by parameter β is defined in Algorithm 7.
+To sum up, we have the following algorithms: • Parallel BP4: Algorithm 3. • Serial BP4: Algorithm 4. • Parallel/Serial BP4, normalized by αc: Algorithm 5. • Parallel/Serial BP4, normalized by αv: Algorithm 6. • Parallel/Serial BP4, offset by β: Algorithm 7. We evaluate the error performance and complexity (in terms of average number of iterations) of these algorithms by simulating quantum bicycle codes [26]. The check matrix H of a quantum bicycle code is constructed by concatenating a random sparse circulant matrix C and its transpose and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+KUO AND LAI: REFINED BELIEF PROPAGATION DECODING OF SPARSE-GRAPH QUANTUM CODES
+
+495
+
+Fig. 9. Performance of decoding the [[256, 32]] code by different αc.
+
+Fig. 11. Performance of decoding the [[256, 32]] code by different β.
+
+Fig. 10. Performance of decoding the [[256, 32]] code by different αv.
+
+Fig. 12. Complexity of decoding the [[256, 32]] code by different αc.
+
+then deleting some rows. For every data point in the simulation, at least 100 logical errors are collected. The degeneracy is considered in decoding: Decoding is successful when the estimated error is equivalent to the actual error up to some stabilizer. Otherwise, a logical error occurs, which could be either a detected error or an undetected error.
+First, we consider a [[256, 32]] quantum bicycle code with a check matrix generated by a random circulant matrix of row-weight 8 (the same parameters as an example in [46]). Although the beliefs may propagate faster in serial BP4, the effects of wrong beliefs may cause worse performance. Since wrong beliefs mostly come from over-estimated messages due to short cycles, suppressing the message strength could be helpful. We apply the normalization/offset methods (by αc, αv, and β, respectively) and the performance is improved significantly, as shown in Figures 9, 10, and 11, respectively. Stronger message (smaller ) would need larger suppression (larger αc, αv, or β). It is possible to choose different αc, αv, or β for different to achieve a better performance. The
+
+decoding complexity (evaluated by the average number of iterations) is shown in Figures 12, 13, and 14, respectively. The αc method has a lower complexity. The αv method achieves a (slightly) better performance at the cost of higher complexity. The β method needs a careful selection of the value of β (due to the threshold effect), though the final performance is not as good as the normalization method (as expected). Its possible advantage is the save of multiplication if our procedure can be transformed to work in log-domain [51].
+Next, we consider an [[800, 400]] quantum bicycle code with a check matrix generated by a random circulant matrix of row-weight 15 (the same parameters as an example in [27]). The two normalization methods (by αc and αv respectively) again greatly improve the performance (especially the αv method), as shown in Figures 15 and 16. Serial BP4 performs much better now, though it still hits a high error floor. Both normalization methods improve the error floor performance a lot. Even the worse parallel BP4 has improved error floor performance. This is very useful in practice for full parallelism. The decoding complexity is shown in Figures 17
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+496
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+Fig. 13. Complexity of decoding the [[256, 32]] code by different αv.
+
+Fig. 16. Performance of decoding the [[800, 400]] code by different αv.
+
+Fig. 14. Complexity of decoding the [[256, 32]] code by different β.
+
+Fig. 17. Complexity of decoding the [[800, 400]] code by different αc.
+
+Fig. 15. Performance of decoding the [[800, 400]] code by different αc.
+
+average number of iterations compared to no message normalization. However, it only means a faster convergence rather than a lower complexity, since the normalization requires additional multiplications.
+We can also use BP2 to decode the quantum stabilizer codes as in the previous section. The message normalization can be similarly applied in BP2. We compare BP2 and BP4 with the αv method on the [[256, 32]] code and the results are shown in Fig. 19. An expectation in [12] is that, for the same channel, a higher-order GF(q) code should perform better (assuming that there are not many short cycles). We found a result of contrary that, before applying any message normalization, BP4 performs worse than BP2 due to the many short cycles (though BP4 performs better than BP2 for larger ). After applying the message normalization (to suppress wrong beliefs), BP4 can outperform BP2, much matching the expectation in [12].
+
+and 18, respectively, in terms of average number of iterations.
+The αv methods improve the performance further at the cost of higher complexity. Applying αc (or αv) sometimes has a lower
+
+V. CONCLUSION AND FUTURE WORK
+We proposed a refined BP decoding algorithm for quantum stabilizer codes. Using δ-rule to pass single-valued
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+KUO AND LAI: REFINED BELIEF PROPAGATION DECODING OF SPARSE-GRAPH QUANTUM CODES
+
+497
+
+Fig. 18. Complexity of decoding the [[800, 400]] code by different αv.
+
+GF(q = 2m) for even m since the syndromes are binary. We have been working on this generalization.
+For the simulations in this paper, all the observed logical errors were detected errors. On the other hand, when a decoding was successful, we only observed that the output error was exactly the actual error. So there may be some room for improving the decoder by exploiting the code degeneracy. However, if a decoder performs well, the room for improvement could be small [53]. The BP performance diverges badly for bicycle codes with small row-weight [26]. For this case, exploiting the degeneracy may help and we have some ongoing work.
+An interesting question is to decode topological codes using our methods. It is plausible to apply our procedure to more sparse quantum codes [33]–[41]. Since sparse topological codes (such as the toric code [32]) may have high degeneracy, we need to consider how to take advantage of the code degeneracy in BP and this is our ongoing work.
+
+ACKNOWLEDGMENT
+The authors would like to thank four anonymous reviewers for their valuable and constructive comments on their manuscript.
+
+Fig. 19. Performance of decoding the [[256, 32]] code by different αv, with BP2/BP4 compared.
+messages improves the check-node efficiency by a factor of 16. The single-valued messages can be normalized to improve the decoding performance, which works for different update schedules. To have further improvement, additional processes (such as heuristic/feedback/training/redundant checks/OSD [27]–[31], [46]) could be incorporated if the complexity is affordable. For any improvement, the efficiency is concerned since the coherence of quantum states decays very fast.
+We considered parallel and serial schedules. It may be worth to apply/develop other fixed or dynamic (adaptive) schedules [52].
+It is straightforward to transform our single-valued messagepassing algorithm to a min-sum algorithm (further lower complexity) [9], but the message approximation and compensation would be more challenging due to short cycles [16]–[18]. It might be possible to transform our procedure to logdomain [51] to lower the message-offset complexity. It is also possible to generalize our approach to design a BP algorithm with single-valued messages for quantum codes over
+
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] R. G. Gallager, Low-Density Parity-Check Codes (Research Monograph Series), vol. 21. Cambridge, MA, USA: MIT Press, 1963.
+[3] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[4] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[5] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[6] J. Pearl, Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference. San Francisco, CA, USA: Morgan Kaufmann, 1988.
+[7] R. J. McEliece, D. J. C. MacKay, and J.-F. Cheng, “Turbo decoding as an instance of Pearl’s ‘belief propagation’ algorithm,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 140–152, Feb. 1998.
+[8] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Understanding belief propagation and its generalizations,” in Exploring Artificial Intelligence in the New Millennium, vol. 8. San Diego, CA, USA: Morgan Kaufmann Publ., 2003, pp. 236–239.
+[9] N. Wiberg, “Codes and decoding on general graphs,” Ph.D. dissertation, Dept. Elect. Eng., Linkoping Univ., Linkoping, Sweden, 1996.
+[10] S. M. Aji and R. J. McEliece, “The generalized distributive law,” IEEE Trans. Inf. Theory, vol. 46, no. 2, pp. 325–343, Mar. 2000.
+[11] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[12] M. C. Davey and D. J. C. MacKay, “Low density parity check codes over GF(q),” in Proc. IEEE Inf. Theory Workshop, Killarney, Ireland, 1998, pp. 70–71.
+[13] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[14] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-passing schedules for LDPC decoding,” IEEE Trans. Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[15] J. Goldberger and H. Kfir, “Serial schedules for belief-propagation: Analysis of convergence time,” IEEE Trans. Inf. Theory, vol. 54, no. 3, pp. 1316–1319, Mar. 2008.
+[16] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+498
+
+IEEE JOURNAL ON SELECTED AREAS IN INFORMATION THEORY, VOL. 1, NO. 2, AUGUST 2020
+
+[17] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[18] M. R. Yazdani, S. Hemati, and A. H. Banihashemi, “Improving belief propagation on graphs with cycles,” IEEE Commun. Lett., vol. 8, no. 1, pp. 57–59, Jan. 2004.
+[19] R. Lucas, M. Bossert, and M. Breitbach, “On iterative soft-decision decoding of linear binary block codes and product codes,” IEEE J. Sel. Areas Commun., vol. 16, no. 2, pp. 276–296, Feb. 1998.
+[20] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3746–3756, Aug. 2006.
+[21] M. El-Khamy and R. J. McEliece, “Iterative algebraic soft-decision list decoding of Reed–Solomon codes,” IEEE J. Sel. Areas Commun., vol. 24, no. 3, pp. 481–490, Mar. 2006.
+[22] P. W. Shor, “Scheme for reducing decoherence in quantum computer memory,” Phys. Rev. A, vol. 52, pp. 2493–2496, Oct. 1995.
+[23] D. Gottesman, “Stabilizer codes and quantum error correction,” Ph.D. dissertation, Dept. Physics, California Inst. Technol., Psadena, CA, USA, 1997.
+[24] A. R. Calderbank and P. W. Shor, “Good quantum error-correcting codes exist,” Phys. Rev. A, vol. 54, p. 1098, Aug. 1996.
+[25] A. M. Steane, “Error correcting codes in quantum theory,” Phys. Rev. Lett., vol. 77, no. 5, pp. 793–797, 1996.
+[26] D. J. C. MacKay, G. Mitchison, and P. L. McFadden, “Sparse-graph codes for quantum error correction,” IEEE Trans. Inf. Theory, vol. 50, no. 10, pp. 2315–2330, Oct. 2004.
+[27] D. Poulin and Y. Chung, “On the iterative decoding of sparse quantum codes,” Quantum Inf. Comput., vol. 8, pp. 987–1000, Nov. 2008.
+[28] Y.-J. Wang, B. C. Sanders, B.-M. Bai, and X.-M. Wang, “Enhanced feedback iterative decoding of sparse quantum codes,” IEEE Trans. Inf. Theory, vol. 58, no. 2, pp. 1231–1241, Feb. 2012.
+[29] Z. Babar, P. Botsinis, D. Alanis, S. X. Ng, and L. Hanzo, “Fifteen years of quantum LDPC coding and improved decoding strategies,” IEEE Access, vol. 3, pp. 2492–2519, 2015.
+[30] A. Rigby, J. C. Olivier, and P. Jarvis, “Modified belief propagation decoders for quantum low-density parity-check codes,” Phys. Rev. A, vol. 100, Jul. 2019, Art. no. 012330.
+[31] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” 2019. [Online]. Available: arXiv:1904.02703.
+[32] A. Y. Kitaev, “Fault-tolerant quantum computation by anyons,” Ann. Phys., vol. 303, pp. 2–30, Jan. 2003.
+[33] T. Camara, H. Ollivier, and J.-P. Tillich, “Constructions and performance of classes of quantum LDPC codes,” 2005. [Online]. Available: arXiv:quant-ph/0502086.
+[34] M. Hagiwara and H. Imai, “Quantum quasi-cyclic LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory, Nice, France, 2007, pp. 806–810.
+[35] I. B. Djordjevic, “Quantum LDPC codes from balanced incomplete block designs,” IEEE Commun. Lett., vol. 12, no. 5, pp. 389–391, May 2008.
+[36] S. A. Aly, “A class of quantum LDPC codes constructed from finite geometries,” in Proc. IEEE Global Telcommun. Conf., New Orleans, LO, USA, 2008, pp. 1–5.
+[37] K. Kasai, M. Hagiwara, H. Imai, and K. Sakaniwa, “Quantum error correction beyond the bounded distance decoding limit,” IEEE Trans. Inf. Theory, vol. 58, no. 2, pp. 1223–1230, Feb. 2012.
+[38] J.-P. Tillich and G. Zémor, “Quantum LDPC codes with positive rate and minimum distance proportional to the square root of the blocklength,” IEEE Trans. Inf. Theory, vol. 60, no. 2, pp. 1193–1202, Feb. 2014.
+[39] P. Tan and J. Li, “Efficient quantum stabilizer codes: LDPC and LDPCconvolutional constructions,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 476–491, Jan. 2010.
+[40] A. Couvreur, N. Delfosse, and G. Zémor, “A construction of quantum LDPC codes from Cayley graphs,” IEEE Trans. Inf. Theory, vol. 59, no. 9, pp. 6087–6098, Sep. 2013.
+[41] A. A. Kovalev and L. P. Pryadko, “Quantum Kronecker sum-product low-density parity-check codes with finite rate,” Phys. Rev. A, vol. 88, Jul. 2013, Art. no. 012311.
+[42] M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information. Cambridge, U.K.: Cambridge Univ. Press, 2000.
+[43] A. R. Calderbank, E. M. Rains, P. W. Shor, and N. J. A. Sloane, “Quantum error correction via codes over GF(4),” IEEE Trans. Inf. Theory, vol. 44, no. 4, pp. 1369–1387, Jul. 1998.
+[44] D. Declercq and M. P. C. Fossorier, “Decoding algorithms for nonbinary LDPC codes over GF(q),” IEEE Trans. Commun., vol. 55, no. 4, pp. 633–643, Apr. 2007.
+
+[45] N. Delfosse and J.-P. Tillich, “A decoding algorithm for CSS codes using the X/Z correlations,” in Proc. IEEE Int. Symp. Inf. Theory, Honolulu, HI, USA, 2014, pp. 1071–1075.
+[46] Y.-H. Liu and D. Poulin, “Neural belief-propagation decoders for quantum error-correcting codes,” Phys. Rev. Lett., vol. 122, May 2019, Art. no. 200501.
+[47] R. Laflamme, C. Miquel, J. P. Paz, and W. H. Zurek, “Perfect quantum error correcting code,” Phys. Rev. Lett., vol. 77, pp. 198–201, Jul. 1996.
+[48] K.-Y. Kuo and C.-Y. Lai, “The encoding and decoding complexities of entanglement-assisted quantum stabilizer codes,” in Proc. IEEE Int. Symp. Inf. Theory, Paris, France, 2019, pp. 2893–2897.
+[49] K.-Y. Kuo and C.-C. Lu, “On the hardnesses of several quantum decoding problems,” Quantum Inf. Process., vol. 19, pp. 1–17, Feb. 2020.
+[50] N. N. Schraudolph, “A fast, compact approximation of the exponential function,” Neural Comput., vol. 11, no. 4, pp. 853–862, May 1999.
+[51] H. Wymeersch, H. Steendam, and M. Moeneclaey, “Log-domain decoding of LDPC codes over GF(q),” in Proc. IEEE Int. Conf. Commun., vol. 2. Paris, France, 2004, pp. 772–776.
+[52] A. I. V. Casado, M. Griot, and R. D. Wesel, “Informed dynamic scheduling for belief-propagation decoding of LDPC codes,” in Proc. IEEE Int. Conf. Commun., Glasgow, U.K., 2007, pp. 932–937.
+[53] S. Bravyi, M. Suchara, and A. Vargo, “Efficient algorithms for maximum likelihood decoding in the surface code,” Phys. Rev. A, vol. 90, Sep. 2014, Art. no. 032326.
+Kao-Yueh Kuo (Member, IEEE) was born in Hsinchu, Taiwan. He received the Ph.D. degree from the Department of Electrical Engineering, National Tsing Hua University, Hsinchu, in 2015. Before and after his Ph.D. research, he worked for more than ten years in the communication chip design industry. He has been started his postdoctoral research with the Institute of Communications Engineering, National Chiao Tung University, Hsinchu, since 2019. His research areas include classical and quantum communication, especially in coding theory.
+Ching-Yi Lai (Member, IEEE) was born in Taipei, Taiwan. He received the B.S. and M.S. degrees in electrical engineering from National Tsing Hua University, Hsinchu, Taiwan, in 2004 and 2006, respectively, and the Ph.D. degree electrical engineering from the University of Southern California, Los Angeles, CA, USA, in 2013. He was a Postdoctoral Research Associate with the Centre for Quantum Software and Information, University of Technology Sydney from December 2013 to July 2015. Then he was a Postdoctoral Scholar with the Institute of Information Science, Academia Sinica, Taiwan, from September 2015 to July 2018. He is currently an Assistant Professor with the Institute of Communications Engineering, National Chiao Tung University, Hsinchu, Taiwan. His research interests include coding theory, information theory, fault-tolerant quantum computation, quantum algorithm, and quantum cryptography. He received the MOST Young Scholar Fellowship from the Ministry of Science and Technology, Taiwan, in 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:11:15 UTC from IEEE Xplore. Restrictions apply.
+
+

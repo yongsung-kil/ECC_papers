@@ -1,0 +1,747 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+1643
+
+Layered LDPC Decoders With Efficient Memory Access Scheduling and Mapping and Built-In Support for Pipeline Hazards Mitigation
+
+Oana Boncalo , Gyorgy Kolumban-Antal, Alexandru Amaricai , Valentin Savin , Member, IEEE, and David Declercq , Senior Member, IEEE
+
+Abstract— This paper proposes a holistic approach that addresses both the message mapping in memory banks and the pipeline-related data hazards in low-density parity-check (LDPC) decoders. We consider a layered hardware architecture using single read/single write port memory banks. The throughput of such an architecture is limited by memory access conflicts, due to improper message mapping in the memory banks, and by pipeline data hazards, due to delayed update effect. We solve these issues by: 1) a residue-based layered scheduling that reduces the pipeline related hazards and 2) off-line algorithms for optimizing the message mapping in memory banks and the message read access scheduling. Our estimates for different LDPC codes indicate that the hardware usage efficiency of our layered decoder is improved by 3%–49% when only the offline algorithms are employed and by 16%–57% when both the residue-based layered architecture and the off-line algorithms are used.
+Index Terms— Bank allocation, graph coloring, LDPC QC-LDPC, in-place memory mapping, pipeline conflicts.
+I. INTRODUCTION
+D UE to their error correction performance close to the Shannon limits, Low-Density Parity-Check (LDPC) codes have been adopted in multiple wireless communication standards (such as WiFi [1], WPAN [2], or WiMAX [3]), digital video broadcasting (DVB-S2-eXtended [4]), or in flash memory applications [5]. A typical LDPC decoder architecture consists of memory modules, interconnection networks, as well as parallel processing units. A key property of LDPC decodes is represented by their capability to accommodate different degrees of parallelism yielding different throughputcost trade-offs. In this paper, we study off-line algorithms to optimize the memory access, combined with built in architecture support for mitigating pipeline related hazards, tar-
+Manuscript received July 1, 2018; revised October 11, 2018 and November 19, 2018; accepted November 25, 2018. Date of publication December 17, 2018; date of current version March 15, 2019. This work was supported by the Franco-Romanian (ANR-UEFISCDI) Research Programme Project—DIAMOND. This paper was recommended by Associate Editor M. Martina. (Corresponding author: Oana Boncalo.)
+O. Boncalo, G. Kolumban-Antal, and A. Amaricai are with University Politehnica Timis¸oara, 300006 Timisoara, Romania (e-mail: oana.boncalo@cs.upt.ro; alexandru.amaricai@cs.upt.ro).
+V. Savin is with the CEA-LETI, MINATEC Campus, 38054 Grenoble, France (e-mail: valentin.savin@cea.fr).
+D. Declercq is with ETIS, UMR8051, Universite Paris Seine, Universite de Cergy-Pontoise, ENSEA, CNRS, 95014 Cergy-Pontoise, France (e-mail: declercq@ensea.fr).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSI.2018.2884252
+
+geting Quasy-Cyclic Low-Density Parity-Check (QC-LDPC) decoders using layered scheduling [6].
+Increasing the throughput in layered LDPC architectures can be achieved by increasing the level of parallelism at the processing unit level, which implies a larger number of simultaneous memory accesses. Furthermore, message access pattern is code dependent, and a message memory mapping is needed, such that the simultaneous memory accesses are conflict free. A key design choice is the number of ports used for the memory building blocks. Single port memories are the low cost option independent of the technology choice. In addition to this, for Field Programmable Gate Array (FPGA) devices, the cost-efficient storage resource – the Block RAM (BRAM) – does not allow more than two ports. If multi-port memories are employed, mapping is straightforward. If single port memory banks are used, then access conflicts may appear as a result of multiple messages that need to be accessed simultaneously from the same bank. The layered decoder architecture considered in this work has a multiple single port memory bank organization. Therefore, we propose message mapping off-line algorithms that try to minimize the stall clock cycles needed for message read access serialization, due to access conflicts, at the memory bank interface.
+Another speedup knob is increasing the working frequency by pipelining the design. However, this leads to delayed message write-backs in memories, and thus, to pipeline related hazards, such as Read After Write (RAW). Solving RAW hazards requires pipeline stalls that introduce stall clock cycles for all memory read interfaces. As a result, the iteration processing latency increases, decoder throughput decreases, while the hardware resource usage efficiency degrades.
+Reduction of stall cycles can be obtained by employing off-line strategies, for both message mapping in memory banks (for reducing memory access conflicts), and message read scheduling (for reducing pipeline related hazards). Approaches in [7]–[10] have dealt with the message mapping problem by translating it into an equivalent graph coloring formulation. The aforementioned papers do not address issues related to pipeline. Approaches in [11]–[14] proposed message read re-ordering strategies in order to mitigate the stall clock cycles introduced for avoiding hazards. These works only consider the case when parallelism at the processing unit level is 1 (i.e. one message is inputted per clock cycle to the processing unit), which requires a single memory bank. Hence, there is no message mapping issue.
+
+1549-8328 © 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1644
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+In this paper, we propose:
+1) Off-line algorithms for both the message mapping and read access scheduling problems, such that the decoder hardware usage efficiency is maximized. The proposed approach consists of three steps: (1) a genetic Travelling Salesman Problem (TSP) solver for coarse grain message read access scheduling minimizing pipeline stalls; (2) a hyper-graph coloring using a Modified MisraGriess (MMG) algorithm for memory mapping; (3) a fine grain message read access scheduling algorithm for in-layer message processing re-ordering that further minimizes the pipelined related stalls.
+2) A new residue-based layered decoding that relaxes the access scheduling constraints associated to the pipeline related hazards, and implement it using FPGA’s.
+This paper is organized as follows: Section II introduces the conventional QC-LDPC layered scheduling decoder and motivation; Section III formalizes the memory related problems and presents the metrics used for evaluation; Section IV presents the residue-based decoder; the off-line algorithms used for minimizing iteration latency are discussed in Section V; Section VI presents the evaluation results, while conclusions are presented in Section VII.
+
+II. LAYERED LDPC DECODER
+
+A. QC-LDPC: Notations and Principle
+
+QC-LDPC codes [15] are structured codes, characterized by
+
+a base graph, denoted by G. G is a bipartite graph, with the set
+
+of nodes divided in two disjoint subsets, M - the set of check-
+
+nodes, and N - the set of variable-nodes, and a set of labeled
+
+edges, connecting variable and check-nodes. Edge labels are
+
+also referred to as cyclic shifts, and belong to some ring of
+
+integers modulo z, Zz = {0, 1, . . . , z − 1}. The biadjacency matrix of G is the base matrix B ∈ (Zz ∪ {−1})|M|×|N|, with the (m, n) entry equal to either the corresponding edge label,
+
+if (m, n) is an edge of G, or −1, otherwise. The | | notation
+
+represents the cardinal of a set operator. We denote by N(m)
+
+the set of variable-nodes connected to check-node m ∈ M, and
+
+by M(n) the set of check-nodes connected to variable-node
+
+n ∈ N. The degree of a check-node m is dc(m) = |N(m)|.
+
+Similarly, the degree of a variable-node n is dv (n) = |M(n)|.
+
+The maximum check-node the maximum variable-node
+
+degree degree
+
+is is
+
+ddeennootteeddbbyyddmv mca xa.x
+
+, while A code
+
+is regular if both check and variable nodes have constant
+
+degree.
+
+The parity check matrix of the code, denoted by H ∈ Z2z·|M|×z·|N|, is obtained by expanding each entry of B to a square z × z matrix, as follows: non-negative entries
+
+B(m, n) ≥ 0 are replaced by square z × z matrices, defined
+
+as the cyclic shift of the identity matrix by B(m, n) positions,
+
+while −1 entries are replaced by the all-zero z × z matrix.
+
+We stress out that each check-node m ∈ M maps to a set of
+
+z check-nodes of H , denoted by H (m), and each variable-
+
+node n ∈ N maps to a set of z variable-nodes of H , denoted
+
+by H (n). Check and variable-nodes of H will be denoted by
+
+r and t, respectively, with r ∈ H (m) and t ∈ H (n), for some
+
+m ∈ M and n ∈ N. Given r ∈ H (m) and n ∈ N(m), we shall
+
+denote by t (r, n) ∈ H (n) the unique t ∈ H (n) connected to r in H (i.e. H (r, t (r, n)) = 1).
+It is worth noticing that for the purpose of this work, both the memory mapping and the pipeline issues are defined at the level of the base matrix B (with corresponding graph G), and not at the level of the parity-check matrix H . Furthermore, message mapping and scheduling strategies are not affected by the precise values of the cyclic shift values.
+
+B. Layered Scheduling Decoding Principle
+For layered scheduling, each iteration (denoted by It) is made of successive processing of groups of H matrix rows, referred to as layers, provided that each column of H has at most one non-zero entry within each layer. Typically, each layer corresponds to one row of B [6], and without loss of generality, this assumption will be implicitly made throughout the paper.
+The conventional layered decoding principle is described in Algorithm 1, where variable-node and check-node messages are denoted by α and β, respectively, while A-Posteriori LogLikelihood Ratios (AP-LLR) messages are denoted by γ , with indexes indicating the corresponding variable-node and check-node. In particular, the variable-node message read is equivalent to the AP-LLR message read, followed by the variable-node computation.
+
+Algorithm 1 Layered Scheduling Decoding
+
+Initialization:
+
+set βr,t messages to 0
+
+set γt to channel LLR values
+
+set I t = 0 and syndr ome = f alse
+
+while (I t ≤ I tmax ) and (syndr ome = f alse) do
+
+for all m ∈ M do
+
+for all r ∈ H (m) do
+
+Variable-Node: compute αr,t messages
+
+αr,t (r,n) = γt (r,n) − βr,t (r,n), ∀n ∈ N (m)
+
+Check-Node: compute βr,t messages
+
+βr,t (r,n) =
+
+si gn(αr,t (r,n)) ×
+
+n ∈ N (m )\{n}
+
+n
+
+∈
+
+min
+N (m )\{n}
+
+αr,t
+
+(r,n
+
+)
+
+,
+
+∀n
+
+∈
+
+N (m )
+
+AP-LLR update: compute γt messages
+
+γt (r,n) = αr,t (r,n) + βr,t (r,n); ∀n ∈ N (m)
+
+end for
+
+end for compute new syndrome according to sign(γ ) values set I t = I t + 1
+
+end while Offloading: output ← sign(γ )
+
+The γt messages store the sum of check-node messages and channel Log-Likelihood Ratios (LLR) contributions. Therefore, only |N|×z AP-LLR messages, and |M|×dmc ax ×z check-node messages need to be explicitly stored in
+memory. Besides the storage advantage, layered scheduling,
+also benefits from superior convergence, since AP-LLR messages γt , with t ∈ H (n), are updated dv (n) times
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1645
+
+during an iteration, opposed to once in flooded scheduling decoding. However, this requires that AP-LLR messages that are common for successive layer processing need to have their values updated, otherwise the check-node message contribution from the earlier scheduled layer is lost.
+C. Generic Layered Architectures
+A generic layered LDPC decoding architecture consists of: (i) AP-LLR message memory, (ii) routing networks, (e.g. using Barrel Shifters (BS), or hard-coded interconnect wires), (iii) check-node message memory – referred to as β memory, (iv) data processing units, and (v) control unit.
+According to Algorithm 1, data processing consists of three phases: Variable Node Unit (VNU), Check Node Unit (CNU), and AP-LLR update unit. These operations may be performed by single merged units [16], or by separate processing units [17].
+Typically, a layered architecture processes z rows from the H matrix – or 1 row from B matrix –, using z parallel processing units [11]–[13], [17]–[19]. In this case, the APLLR memory’s word size is z × q¯ bits, where q¯ is the number of bits used to represent an AP-LLR message. Solutions with reduced number of parallel processing units have been proposed in [12], by splitting the z rows by a splitting factor. This lowers the cost and the relaxes of pipeline hazards related constraints, at the cost of the throughput reduction by the splitting factor, and additional dedicated logic for handling input/output message permutations. Note that the term memory mapping for LDPC decoders, does not necessarily hold the same meaning. In the paper [20], by memory mapping it is actually understood the re-organization of data into memory due to the splitting of a B row.
+The main design choices in a typical layered decoder architecture are:
+1) Parallelism degree at processing unit level – nbanks represents the number of input messages for a Variable Check Node Unit (VCN) processing unit per clock cycle. A serial message processing (nbanks = 1) [13], [16], [21], a fully parallel VCN processing (nbanks = dmc ax ) [17], [22], or a partially parallel VCN operation (1 < nbanks < dmc ax ) may be employed. nbanks represents an important architecture parameter, since it dictates: (i ) the number of required AP-LLR memory banks, if single port memories are used, or the number of ports in multi-port memories otherwise; and (ii ) the number of BS in the routing network;
+2) Number of data-path pipeline levels – we use the nlatency parameter to denote the memory access and pipeline update delay. Increasing the nlatency value leads to higher operating frequency, but it also increases the chances of pipeline related data hazards [11], [12], especially for larger degree of processing unit parallelism (nbanks > 1).
+3) Message update strategy – determines the order in which the messages are written back to memory at the end of VCN processing. It represents a key factor in the reordering strategies for pipeline based hazard reduction
+
+techniques. The following update strategies have been proposed in literature: (i ) unconstrained output processor, that decouple the message read order from the writeback order [12], [19], (ii ) First-In First-Out (FIFO) update, consisting in the same read and write-back order [11], [23], and (iii ) reversed write-back [13], [14].
+This work addresses the case of arbitrary nbanks and nlatency values. The AP-LLR memory model is that of multiple singleport Static Random Access Memories (SRAMs) organized in nbanks banks. Each bank entry stores z messages. With respect to the message update strategy, the proposed offline algorithms for message memory mapping and access scheduling are generic; they can be configured for each writeback strategy.
+D. Motivation and Related Work for Off-Line Algorithms
+One pitfall of layered scheduling architectures is message read access ordering, which is directly affected by memory organization and pipeline choices that may require stalls to mitigate memory access conflicts and data hazards. These two problems have been previously investigated independently. The message mapping in memory banks implemented using single-port SRAM blocks can be translated into a graph coloring problem. The closest related work to the proposed solution in this work is [10]. It uses edge coloring of the resulted conflict graph and colors it using dmc ax + 1 colors (i.e. dmc ax +1 banks). This approach is valid if the resulting conflict graph is a simple graph. A key difference with respect to [10] is that we address the more complicated case of hypergraph coloring, consequence of the fact that we color the G graph. Furthermore, different than [10], which uses a relatively small number of processing units (e.g. 4, 6, 16), this work considers the case of z parallel processing units, leading to significantly lower control data storage requirements. Hence, no optimization requirements (i.e. compression) for control data storage are needed.
+Other related approaches are: the pioneering work recognizing the mapping problem for Turbo decoders in [7], which uses a simulated annealing based solution, the work in [8], where the message mapping problem has been expressed into an equivalent conflict graph coloring problem subject to Vizing’s theorem. The conflicts that could not be resolved are usually settled by stalls, or, as proposed in [24], by introducing registers and extra multiplexing logic. Alternatively, the multiple read multiple write (MRMW) strategy eliminates the needs for extra registers [9]; this strategy relies on reading and writing the messages in different memory banks. Its drawback is represented by the additional hardware overhead in both routing and control. The work in [23] addresses the message mapping for the implementation of LDPC decoding on network-on-chip architectures; although these architectures offer high degree of flexibility, the throughputs are small compared to dedicated LDPC decoder implementations, and these solutions will not be considered in this paper.
+The pipeline related hazards can be addressed by either message read access ordering strategies, or by employing forwarding hardware circuitry [21], with additional cost
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1646
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+overhead. For scheduling based solutions, all approaches transform the problem to a TSP [11]–[14], which can be solved by some heuristics (i.e simulated annealing or genetic algorithms). The type of message write-back for a given decoder architecture is a key factor influencing the re-ordering strategy. The simplest write-back strategy is represented by the unconstrained output processor, which decouples read order from write-back order entirely [12], [19]. The price for this flexibility is the cost increase for the variable to check-node messages memory. Another write-back strategy, more challenging from the scheduling perspective, is the FIFO order (i.e. read order is the same as the write-back order) [11], [23]. The reverse write-back represents the most constrained strategy, because scheduling constraints for RAW hazards among layer i and layer i + 1, and layer i and layer i + 2 may lead to conflicting decisions [13], [14]. Existing works consider only the serial processing unit, which corresponds to nbanks = 1. Generalizing these solutions to the case of parallel or semi-parallel processing, i.e. nbanks > 1, is not straightforward, being tightly linked to memory architecture choices. If single port SRAM memories are used for storing γ messages, nbanks > 1 requires first mapping, then the message read access scheduling for each respective bank.
+III. PROBLEM FORMALIZATION
+For a layered scheduling LDPC decoder, two observations for γ message mapping and access are in place: (1) different layers require messages that are mapped in different banks, therefore access conflicts need to be avoided, and (2) γ messages that are common for successive layers need to have their values updated, otherwise the β message contribution from the earlier scheduled layer is lost. The memory access and pipeline update delay (nlatency), causes a delayed update effect of γ messages that might generate RAW hazards. The message read accesses need to be scheduled such as to avoid these hazards. Hence, QC-LDPC layered decoder design is memory centric design, with data access, mapping, and writeback strategies as key issues for throughput maximization.
+A. Access Scheduling of Memory Bank Messages
+To solve the AP-LLR message memory bank mapping problem, we express it as a coloring problem of the base graph’s variable-nodes. We assume a one-to-one correspondence between a memory bank and a color. Hence, mapping AP-LLR messages is equivalent to the coloring of variable-nodes. From the graph-theory point of view, an alternative representation of the bipartite graph is that of a hypergraph. The check-nodes are the hypergraph nodes and the variable-nodes are modelled as hyperedges. This mathematical equivalence implies that we no longer have to color a simple graph subject to Vizing’s Theorem, but a structure that is more challenging to color. The problem, as argued in [25] is NP complete. In order not to confuse things, we will use the bipartite G graph coloring view in the remaining of the paper.
+Definition 1: A check-node ordering function is a bijection σ : M → {1 . . . |M|} that maps each check-node to a layer, determining the check-node processing order. Check node
+
+number refers to the natural ordering, while layer number refers to the rescheduled ordering.
+The ordering starts from one. A read clock cycle denotes a clock cycle when a read is performed from at least one bank. Conversely, by stall we understand a clock cycle when no bank read is performed. We introduce the notation Gσ , in order to emphasize that the check-node to layer mapping σ applies to a base graph G.
+Definition 2: A nbanks variable-node coloring function is a function ξ : N → {1 . . . nbanks }, where ξ(n) returns the color of variable-node n.
+We denote by Nξ (m, c) = {n | n ∈ N(m), ξ(n) = c} the set of variable-nodes in G colored with c and connected to checknode m. After determining the processing order of checknodes, and the mapping of AP-LLR messages to banks (i.e. the variable-node coloring function), the next step is to schedule their access based on the layered principle: all variable-nodes connected to a check-node are processed together with the order being of no importance. Thus, for every check-node m, and for a given color c, the order in which variable-nodes from Nξ (m, c) are accessed needs to be determined by a proper scheduling strategy. From the hardware architecture point of view, for each memory bank the read access clock-cycle for each AP-LLR message is set. Consequence of this and the choice of write-back policy, the write-back time is also set. The choice of write-back policy is modelled by the concept of processing duration of a variable-node n.
+Definition 3: The processing duration of a variable-node n connected to a check-node m, and denoted by pd(m, n), is defined as the number of clock cycles from the moment the AP-LLR message corresponding to variable-node n is read (while processing check-node m), until it is updated, and it reflects the choice of write-back policy. Hence, the interval starting with the read access clock cycle, and ending with the write-back clock cycle gives the window of time during which the message is unavailable according to Algorithm 1.
+Definition 4: The in-layer order ψ(m, n), for a check-node m, and a variable-node n ∈ N(m), fixes the message read access time of the AP-LLR message 1 corresponding to n within an iteration.
+From the ψ(m, n) function we can infer the processing order of variable-node n on check-node m, among variablenodes from Nξ (m, c), where c = ξ(n). For a graph G, the message memory mapping and read access information is expressed formally by the 3-tuple G
+σ, ξ, ψ.
+Definition 5: Given a 3-tuple G
+σ, ξ, ψ, we say that two arbitrary check-nodes m and m have an overlapping update for a common variable-node n, and denote it by the boolean function (n, m, m), iff σ (m) < σ (m), and [ψ(m, n), ψ(m, n) + pd(m, n)] ∩ ψ(m, n), ψ(m, n) + pd(m, n) 
+= ∅.
+For conventional layered scheduling the in-layer order function ψ, needs to guarantee that (n, m, m) = tr ue, ∀m, m ∈ M, σ (m) < σ (m).
+1We shall simply refer to the z AP-LLR messages γt , with t ∈ H (n), as the AP-LLR message of n
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1647
+
+Note that all read and the write-back moments are expressed
+relative to the current iteration i start, which is offset by
+the last read clock cycle of the previous iteration i − 1 plus
+the additional required in-between iteration stalls. In addition to this, the implementation dependent function i dle(m, m) of two check-nodes m and m mapped to consecutive layers σ (m) = σ (m)+1, models additional unavoidable stalls caused
+by the hardware architecture choices.
+
+B. Performance Metrics
+To measure the quality of the message mapping in memory banks, we use the number of read clock cycles needed for reading the AP-LLR messages used during an iteration processing. Given a base graph G, an nbanks coloring function ξ and a check-node m, the number of read clock cycles TG (ξ, m) is the maximum number of neighbour variable-nodes of m colored with the same color:
+
+TG (ξ,
+
+m)
+
+=
+
+max
+1≤c≤nbanks
+
+Nξ (m, c)
+
+(1)
+
+An obvious lower bound of TG (ξ, m) corresponds to the case when the coloring algorithm finds the ideal solution:
+
+TG (ξ, m) ≥ TGideal (nbanks , m) d=ef
+
+dc(m) nbanks
+
+(2)
+
+Given a base graph G, and nbanks coloring function ξ , the sum of the number of the read clock cycles needed to
+
+access the messages for all check-nodes is denoted by TG (ξ ), and lower bounded by TGideal (nbanks ).
+
+TG(ξ ) = TG (ξ, m)
+
+(3)
+
+m∈M
+
+TG (ξ ) ≥ TGideal (nbanks ) d=ef
+
+TGideal (nbanks , m) (4)
+
+m∈M
+
+The problem of finding an nbanks coloring function ξ for a graph G, with TG (ξ ) = TGideal (nbanks ) can be expressed as a
+constraint satisfaction problem. If a solution for this problem is
+
+found, then it is the ideal solution (not necessarily unique) for
+
+the coloring problem. However, it is important to emphasize
+that TGideal may not be reachable and that the optimal coloring may yield a higher number of read clock cycles with respect
+
+to the ideal. Hence, we settle for a heuristic solution, aimed at obtaining an nbanks coloring function that minimizes TG (ξ ).
+Definition 6: Given a 3-tuple G
+σ, ξ, ψ, we define the
+
+decoder iteration latency as the total number of clock cycles
+
+needed to read, process and write-back all the AP-LLR mes-
+
+sages, including those needed in order to avoid any potential
+
+hazards in-between the execution of successive iterations, and denote it by IG (ξ, σ, ψ).
+Two conditions need to be satisfied in order to avoid hazards between the execution of successive iterations i and i + 1.
+
+First, the execution of the subsequent iteration starts after
+
+the memory access reads for the last layer of iteration i are
+
+finished plus the unavoidable i dle architecture specific cycles
+
+if any. Second, all message updates of i must be finished before any read access of i + 1 take place.
+
+Definition 7: The Hardware Usage Efficiency (HUE) is
+
+defined as the fraction of the useful memory access clock
+
+cycles out of the total number of available memory accesses (IG (ξ, σ, ψ) · nbanks ).
+
+dc(m)
+
+HU E(G, σ ) =
+
+m∈M
+IG (ξ, σ, ψ) · nbanks
+
+· 100
+
+(5)
+
+It is the global metric that accounts for both mapping conflicts and pipeline stalls for the overall decoder architecture. All non-zero elements from B organized in layers need to be read and updated. The ideal case corresponds to the situation when every hardware resource is engaged in some useful processing – memory ports read data every clock cycle, while processing units processing units process this data. Hence, a read from nbanks ports consumes nbanks non-zero B elements, requiring a total of dc(m)/nbanks
+m∈M
+cycles. Another important metric is throughput (T) defined by Eq. (6)
+
+T = |N| × z × fmax
+
+(6)
+
+nit × IG (ξ, σ, ψ)
+
+with nit denoting the maximum number of iterations, and fmax represents the working frequency.
+
+IV. PIPELINE-AWARE RESIDUE-BASED LAYERED LDPC DECODER ARCHITECTURE
+Existing memory access conflicts approaches discussed in Section II-D mitigate message bank mapping conflicts, by employing solutions such as: adding extra registers and multiplexers [24], dedicated memory re-routing for changing the write-back memory bank [9], or extra memory banks [10]. However, these approaches do not solve the pipeline related RAW hazards. This work proposes a residue-based layered scheduling, that is able to allow correct update of AP-LLRs in case of overlapping updates.
+
+A. Residue-Based Layered Scheduling for Reducing RAW Stalls
+
+In order to reduce the number of stall clock cycles due to pipeline related RAW hazards, we propose the residue-based layered scheduling. More specifically, in conventional layered scheduling, the memory read access constraint enforces through the choice of ψ that no overlapping update for any variable-node n occurs ∀m, m ∈ M (where n, m, and m are defined in Def. 5). The reason is that even a small percentage of missed updates may cause significant performance degradation [23]. For residue-based layered decoding, we allow such occurrences. Consequence of this, the check-node contribution of m corresponding to n, which is not updated in memory in time for the message read access of check-node m, is stored in the form of a r esi due, and is computed as follows:
+
+δt (r,n) = βrne,tw(r,n) − βrol,dt (r,n), ∀n ∈ N (m)
+
+(7)
+
+where r  ∈ H (m), and the tags new and old refer to
+the currently and previously computed check-node message during check-node m processing. We generalize this idea of
+overlapping update for some variable-node n.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1648
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+Fig. 1. Data-flow for nlatency = 4 conventional layered decoder (left) and residue-based layered decoder with n = ∞ (right)
+
+Definition 8: Given a 3-tuple G
+σ, ξ, ψ, the sequence of overlapping updates for a variable-node n, denoted by M(n), is the maximal set of check-nodes {m1, . . . , mi , . . . , ml }, with l ≥ 2, such that (n, mi−1, mi ) = true, ∀2 ≤ i ≤ l.
+We note that for a given variable-node n, if such a sequence exists, then it is not necessarily unique. However, any two such sequences are necessarily disjoint (due to the maximality condition). Hence, any check-node m ∈ M(n) belongs to at most one overlapping sequence M(n). We define l(n, m) to be either 0, if m does not belong to any overlapping sequence, or equal to l − 1, where l is the length of the unique overlapping sequence it belongs to, otherwise. We further define the Boolean operators f ir st(n, m) and last(n, m), which return tr ue iff l(n, m) > 0 and m is the first, and respectively the last, element of the unique overlapping sequence it belongs to. For residue-based overlapping update, we define the input parameter n as the maximum allowed value, for any sequence of overlapping updates. The n parameter is input for the ψ function computation (Section V-C).
+The changes required with respect to the conventional layered decoding Algorithm 1 are the overwriting of the variable-node processing and AP-LLR update, with the modified operations described in Algorithm 2. At the start of an overlapping update sequence for variable node n, the residue values δt , with t ∈ H (n), need to be reset. In addition to this, in case of overlapping update sequence, the AP-LLR message stored in memory, γt , remains unchanged until the last checknode update occurs, when the computed residue of previously processed check-nodes is added. An example of the dataflow corresponding to a residue layered decoder is depicted in Fig. 1. Therefore, overlapping updates are carried out in a flooded schedule fashion, while non-overlapping updates are carried out in a conventional layered schedule fashion.
+B. Residue Based Layered LDPC Decoder
+The employed layered architecture is depicted in Fig. 2a. The architecture is characterized by three key parameters 
+nbanks , nlatency, n. It comprises of: (i) nbanks AP-LLR memory banks; (ii) nbanks β memories; (iii) data-processing
+
+Algorithm 2 Residue-Based Layered Scheduling Processing Modified Variable-Node: αr,t (r,n) = γt (r,n) − βro,ltd(r,n), ∀n ∈ N (m) if f ir st(n, m) then δt (r,n) = 0
+Modified AP-LLR Update: if last(n, m) then
+γt (r,n) = αr,t (r,n) + βrn,et (wr,n) + δt (r,n), ∀n ∈ N (m) else
+if |M(n)| > 1 then δt (r,n)+ = βrn,et (wr,n) − βro,ltd(r,n), ∀n ∈ N (m)
+else γt (r,n) = αr,t (r,n) + βrn,et (wr,n), ∀n ∈ N (m)
+block, consisting of the data processing units and the routing network, and (iv) control unit. We have used separate processing units – VNU, CNU and AP-LLR update –, while the BS are used to route the α and β messages, instead of the AP-LLRs, used in most layered decoding architectures. This way, cost savings are obtained, due to the lower quantization of the α and β messages with respect to the AP-LLR messages. Due to simpler control when implementing decoders for irregular LDPC codes, we use a baseline architecture with reverse write-back strategy. The stack buffer is a simple bidirectional shift register, suitable for both dc regular and quasi-regular codes (i.e. ±1 variation). Pipelining is applied in the data-processing block.
+The data-flow corresponding to the layered LDPC decoding is provided by the control unit. This includes: (i ) AP-LLR memory addresses, (ii ) shift amounts for the two barrel shifters, (iii ) control signals for processing units, and (i v) control signals for stack buffers. The control unit contains nbanks Read Only Memories (ROM), with the entries being depicted in Fig. 2b. ROM contents are generated off-line by the proposed bank mapping and scheduling algorithm, that will be presented in Section V-C.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1649
+
+Fig. 2. Generic Layered QC-LDPC architecture for residue-based LDPC decoder: (a) Overview; (b) Control ROM data entry for AP-LLR bank i; (c) AP-LLR processing block corresponding to z × γ˜ messages updated to bank i
+
+In order to relax the scheduling constraints, we employ the residue based layered decoding scheduling. The architectural modifications with respect to the baseline layered scheduling decoder consist of:
+1) Modification of the AP-LLR update unit – this unit is modified in order to perform three types of operations: (i ) conventional AP-LLR update, (ii ) storage of the residue δ message, and (iii ) AP-LLR update with residue. The appropriate operation is selected based on a opcode field within control unit’s ROM memory entry.
+2) A register file for storing the δ residue message. The write and read address for the residue register file is also encoded in the control ROM. The size of the register file is also determined by the off-line algorithm described in Section V. In case of the first overlap of an overlapping update sequence, based on the opcode(2) bit, the contribution from the register file is set to 0, while for subsequent overlaps the value from the register file is used. For successive residue computations of overlapping updates for the same AP-LLR, the register file address remains the same.
+3) Control ROM opcode information is used as follows: (i) Stack buffer: it selects the storage of either the α message from the VNU, or β information, (ii) AP-LLR update: based on the most significant opcode bit – opcode[2] it sets the RF input to 0, and based on the least significant 2 opcode bits – opcode[1 : 0] – generates the write enable to the bank memory for the currently computed γ . In case the γ write is skipped, the output of the AP-LLR update block is in fact a residual, and the write enable for the RF is generated. These working modes are described in Fig. 2b.
+
+Dependent on the opcode information, the 3 inputs for the adder of the AP-LLR update block are:
+• conventional AP-LLR update: the newly computed β from the CNU, α message on q˜ bits from the α/β buffer, and 0. The adder’s output is saved in the AP-LLR bank memory.
+• first residual computation: the newly computed β from the CNU, previous β message from the α/β buffer, and 0. The output is saved in the RF.
+• subsequent residual computation: the newly computed β from the CNU, previous β message from the α/β buffer, and residue information from RF. The output is saved in the RF.
+• AP-LLR update with residual: the newly computed β from the CNU, α message on q˜ bits from the α/β buffer, and the residue message read from the RF. The output is saved in the AP-LLR bank memory.
+The α stack buffer is also employed for storing the previous β message, used in the residual computation. Hence, we have renamed it α/β stack buffer to emphasize its double-role. Note that no hardware support is required for checking that the maximum overlap length n is reached inside the architecture. In fact, this constraint is embedded in the control ROM information generated by the off-line scheduling algorithm. The choice of n influences the size of the register file needed for each bank, which represents the main area overhead contributor for the residual-based scheduling approach.
+V. OFF-LINE ALGORITHMS AND OPTIMIZATIONS
+The inputs for the memory message mapping and message read access scheduling process are the base graph G, and the architecture specific parameters: (i) the nbanks parameter value, (ii) the update strategy for the write-back operation,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1650
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+Fig. 3. The execution order of the off-line algorithms.
+(iii) the nlatency parameter value, (iv) the maximum allowed number of successive residual updates n. The outputs, after applying the off-line algorithms and optimization steps, are: the layer processing information (i.e. number of memory accesses for each check-node in the layer order, as well as the number of stalls required after the check-node processing), and nbanks ROMs, one for each bank, storing the bank address, BS shift amounts, and valid bit information of each AP-LLR access according to the order specified by ψ. The three main steps, depicted in Fig. 3, are: the check-node ordering (Section V-A), the message mapping to memory banks (Section V-B), and the in-layer AP-LLR message read access re-ordering (Section V-C). The proposed approach is not restricted to a particular write-back strategy. Any update strategy can be included by simply overwriting the computation of the pd function.
+A. Check-Node Ordering
+This step aims at obtaining a check-node order, σ , favourable for the in-layer message read access re-ordering. It is a combinatorial optimization problem that can be expressed as a TSP [26], and solved efficiently using a genetic algorithm involving crossover and mutation [11], [12], [14]. We use a similar approach in which we only modify the fitness function to include the characteristics of the proposed residue-based schedule. The main source of pipeline stalls are the common variable-nodes between consecutive check-nodes. Thus, we define a sequence of consecutive common checknodes of length i ≤ |M|, (m1, m2, . . . , mi ), and denote it by si , if the following properties are met:
+1) Consecutiveness: m1 → m2 → · · · → mi (notation → explained below).
+2) Existence of common variable-node: N(m1) ∩ N(m2) ∩ · · · ∩ N(mi ) 
+= ∅.
+3) Maximality: If i < |M| and m is such that m → m1 or mi → m, then N(m1) ∩ N(m2) ∩ · · · ∩ N(mi ) ∩ N(m) = ∅.
+
+The m1 → m2 notation is used to denote the consecutiveness of two check-nodes m1 and m2 having either σ (m2) = σ (m1) + 1, or σ (m1) = |M| and σ (m2) = 1.
+The fitness function is depicted in Eq. (8).
+
+f (σ ) =
+
+1
+
+(8)
+
+c1· CmT + c2· Cm P
+
+The first term CmT is equal to the number of sequences si of maximum n length excluding the ones that are across two consecutive iterations. The Cm P accounts for the sequences of length larger than n plus the ones that are across two consecutive iterations of any size, since, we do not allow overlapping
+updates occurring in-between successive iterations. The later
+is very likely to introduce stalls, therefore the constant c2 is at least one order of magnitude larger than c1.
+
+B. Message Memory Bank Mapping Algorithm
+
+The problem of message memory bank mapping is equivalent to coloring the variable-nodes of G, as discussed in Section III-A. To avoid memory conflicts, a color cannot be reused more than TGideal (ξ, m) times for coloring the neighbours of an arbitrary check-node m. As further explained in Section III-A, by using an alternative hypergraph representation of G, this coloring problem can be turned into an hyperedge coloring problem. Hence, we solve this problem by a constructive greedy algorithm, inspired from the Misra-Griess (MG) algorithm for simple graphs edge coloring, followed by a genetic optimization algorithm, used to further improve the coloring solution.
+1) MMG Algorithm: The MG algorithm [27] is a polynomial time algorithm that can find an edge coloring of any simple graphs with d + 1 colors, where d is the maximum graph node degree. The MG operations for coloring an edge are: simple color, fan rotation and path inversion. In the MMG algorithm, we generalize these operations, so that they suit our specific coloring problem. The main change with respect to the original MG is the replacement of the path inversion operation with the tree inversion operation, due to the hypergraph nature of our coloring problem. However, in order to simplify the discussion hereafter, we shall describe the MMG algorithm as operating on the bipartite graph G itself, rather than on its alternative hypergraph representation. Also, different from [27], the MMG variable-node coloring may fail. Hence, an optimum coloring cannot always be achieved, and we try to minimize the extra cycles are required by bank access read serialization.
+For the purpose of this section, we extend the notion of coloring ξ to model the case of an uncolored variable-node by encoding “no color” with 0. We say that check-node m is free on color c if:
+
+Nξ (m, c) < TGideal (ξ, m)
+
+(9)
+
+A subset of the check-nodes is free on color c, if all its members are free on color c.
+Definition 9: Given a base graph G, a partial nbanks coloring function ξ , and a check-node m, we define a fan centered in m as an ordered sequence of distinct variable-nodes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1651
+
+Fig. 4. MMG coloring example. (a) Partially colored base graph. (b) Base graph after tree inversion. (c) Base graph after regenerated fan rotation, and the coloring of variable-node n3.
+
+F = (n1, n2, . . . , nb) ⊆ N(m), such that 1 < b ≤ dc(m), n1 is not colored (ξ(n1) = 0), all the other variable-nodes are colored (∀i ∈ {2 . . . b}, ξ(ni ) 
+= 0) and ∀i ∈ {1 . . . b − 1} the neighborhood of ni except m (M(ni ) \ {m}) is free on color ξ (n i +1 ).
+A fan F centered in check-node m is maximal, if n ∈ N(m) \ F, such that ξ(n) 
+= 0 and M(nb) \ {m} is free on color ξ(n).
+Given a check-node ordering σ we try to color each
+variable-nodes n connected to check-node m by successively
+applying the following operations:
+(a) Simple color: if there exists a color c1 such that m is free on c1, ξ(n) ← c1, and coloring is done.
+(b) Fan rotation: a fan F centered in check-node m, starting
+with variable-node n is generated. If after rotating F
+we can color its last variable-node, then we are done. Otherwise, undo changes and go to step (c).
+
+Algorithm 3 The Fan Rotation Operation
+
+procedure ROTATE_FAN(F)
+
+for all i ∈ {1 . . . nbanks − 1} do
+
+ξ(ni ) ← ξ(ni+1)
+
+ Permute the colors
+
+end for
+
+ξ(nb) ← 0
+
+ Remove the color of nb
+
+end procedure
+
+(c) MMG tree inversion operation: inspired by MG path inversion, it tries to make a check-node mi free on a color c1 by interchanging c1 with another color c2 using the depth first search graph traversing. Color c1 is selected in order to guarantee that all the other checknodes in M(nb) \ {m} are already free on this color. The criterion for choosing color c2 is that m is free on c2. More specifically, tree inversion attempts to make the last
+variable-node of fan F colorable with c1. Tree inversion fails when there are no more unprocessed variable-nodes,
+with the required color (c1 or c2). After the tree inversion,
+
+if F is no longer a fan, it needs to be regenerated.
+
+The new F, needs is free on color c1
+
+.toWheavuesethnebprtoopedritfyferMen(tniab t)e
+
+\ {m} from
+
+the original nb. If regeneration succeeds, F is rotated,
+
+and its last variable-node is colored with c1. Otherwise,
+
+all changes made by tree inversion are reverted and n
+
+remains uncolored.
+
+Algorithm 4 The Tree Inversion Operation
+function INVERT_TREE(m, c1, c2, pr ocessed) if Nξ (c1, m) \ pr ocessed = ∅ then return failure n ← select (Nξ (c1, m) \ pr ocessed) ξ(n) ← c2 pr ocessed ← pr ocessed ∪ {n} for all m ∈ M(n) \ {m} do if Nξ (m, c2) > TGideal (nbanks , m) then {Try conflict fix with c2, c1 interchanged} INVERT_TREE(m, c2, c1, pr ocessed)
+end for
+end function
+
+The MMG algorithm complexity is polynomial in nbanks , |M|, and |N|. To illustrate these operations, we consider the example from Fig. 4a, for nbanks = 3. Figure 4a presents the result after simple coloring operations have been performed
+for all variable-nodes, except variable-node n1, denoted by grey. First, a maximum fan F = (n1, n3, n5, n6) is built, and the colors c1 = blue and c2 = r ed are selected for tree inversion. Results after tree inversion are presented in Fig. 4b,
+with dots emphasizing the color changes. Since, n1 cannot be colored with blue, F is regenerated F = (n1, n3). After rotation (Fig. 4c), n3 is successfully colored with blue.
+2) Genetic Optimization Step: For medium and large G (i.e. |M| ≥ 12), we use GA from [28], with mutation and
+crossover customized for our problem. We use MMG and some randomly generated ξ solutions to build the initial
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1652
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+population. The fitness function is the inverse of the TG (ξ ) function. The crossover operator builds a new coloring by
+selecting all non-conflicting variable-node colors from the first
+parent, while the rest are selected from the second parent.
+A variable-node color is non-conflicting if all of its neighbor check-nodes have TG equal to TGideal . The mutation operator performs a random selection of variable-nodes, followed by
+color permutation operation with a given probability. The
+algorithm stops if the maximum runtime is reached, or the TG (ξ ) lower bound is reached.
+
+C. In-Layer Message Read Access Re-Ordering
+
+Given the σ ordering, and the memory message bank allocation function ξ , the in-layer-order function ψ is determined based on the architecture parameters: nlatency, pd function (Def. 4), and n. Note that the write-back time moment is determined by the read access time and pd. For ease of
+discussion, we denote the clock cycle of the first scheduled
+
+read and the last scheduled write-back for a color c on checknode m with r dF (m, c), and wbL(m, c) respectively.
+The underlying idea of our approach is to only fix the read access of messages that correspond to the set of candidate problematic variable-nodes, i.e. those that potentially generate
+
+RAW hazards, and leave the rest unconstrained. This strategy
+
+allows for multiple solutions to be considered at once. The
+
+set of problematic message updates, denoted by Nξ,σ (m, c),
+
+is defined as m ∈ M(n)
+
+Nξ,σ (m, c) \ {m}, and
+
+= {(n, m) | |M(n)| =
+
+n∈ n}.
+
+N(m), ξ(n) = c, If the read access
+
+time ψ(m, n) is undefined for a message corresponding to
+
+a variable-node n, the (n, m, m) in Def. 5 uses the coarser
+
+grain interval r dF (m, c), wbL (m, c) instead of the exact
+
+one ψ(m, n), ψ(m, n) + pd(m, n) .
+
+In σ order, one m check-node at a time, the proposed
+
+algorithm sets the concrete read access clock cycle values
+
+for message reads of previously scheduled check-nodes that
+
+potentially generate RAW hazards. The strategy for the in-
+
+layer re-ordering is summarized as follows:
+
+Algorithm 5 In-Layer Re-Ordering of Message Accesses of m
+
+1. For each bank (i.e. color) c compute ideal first possible
+
+read r dF (m, c) as the next read access after the last read
+
+of the previous check-node.
+
+2.
+
+For each bank c, and (n, m) read access time ψ(n, m)
+
+∈ Nξ,σ (m, c) such that the
+
+set message problematic
+
+message updates are updated first.
+
+3. Synchronize all bank accesses for check-node m, and
+
+compute exact r dF (m, c).
+
+4.
+
+For ψ (n ,
+
+each bank c, m) using the
+
+and (n, updated r
+
+m) ∈ Nξ,σ (m dF (m, c) value.
+
+,
+
+c)
+
+revise
+
+In step 1, an offset equal to TG(ξ, m) − Nξ (c, m) is added to the r dF (m, c) value, accounting for the fact that message allocation to banks might be unbalanced. In step 2 we constrain the problematic message updates by setting their access time such that their write-back clock cycle is the earliest possible. During step 3, we compute the layer start clock cycle by taking into account the previously set access times. If we
+
+use in order update, the layer start clock cycle is equal the worst case over all colors c ∈ {1 . . . nbanks }, such that all bank read accesses for m start at the same time. If reverse writeback policy is used, the layer start clock cycle is selected such that all write-back updates for all banks start at the same time. This may require the delaying of the first read for m for some banks. The last step revises the previously set read access ψ(n, m). Due to the update of the r dF (m, c) some overlaps no longer exist (i.e [r dF (m, c), wbL (m, c)] ∩ r d(m, n), r d(m, n) + pd(m, n) = ∅). Hence, their access time is unset, leaving them unconstrained. Finally, after steps 1-4 are applied for all check-nodes, the unconstrained remaining variable-node accesses are set, while doing the best effort in minimizing the stalls in-between iterations i and i +1. The iteration duration IG can now be computed.
+The solution from the in-layer algorithm previously described is improved using the tabu search method. This method walks through the search space, with the constraint that it never visits the same solution twice (i.e. each visited solution – ψ function – becomes tabu). The search starts from the ψ function given by the algorithm from above, and performs a sequence of steps in the search space attempting to minimize the iteration duration IG (ξ, σ, ψ). A tabu search step is in fact a permutation of the access order of two variable-node read messages accesses. First, we try all the permutation pairs made of a randomly chosen variable-nodes and a variable-node participating in an overlapping update (according to Def. 5), and select the best solution. If no permutations with a single random choice exist, due to the tabu constraint, a permutation of two randomly selected variable nodes is made. The walk in the search space continues until the iteration duration reaches a lower bound, or the maximum selected runtime expires.
+VI. EVALUATION AND DISCUSSION
+The first part of our evaluation focuses on the off-line algorithms. For the second part, we investigate the decoding performance by means of simulation performance curves. Furthermore, implementation results for the same code are presented and compared against decoder implementations from literature.
+1) Off-Line Algorithms Evaluation: For the off-line algorithm assessment, we use the HUE metric to assess the efficiency of the architecture for a given parameter selection and a given code. Furthermore, we estimate the extra storage cost overhead of the residue-based layered scheduling by counting the RF entries required for storing the residues. The evaluation considers 6 standard codes: 4 WiMAX codes [3], of length 2304 bits, with rates 1/2, 2/3, 3/4, 5/6, and 2 long DVB-S2X codes [4], of length 64800, with rates 28/45 and 140/180. The WiMAX codes have z = 96 and |M| = 24 columns in the base matrix, with dmc ax equal to 7, 10, 15, and 20 respectively. The DVB-S2X codes have z = 360 and |M| = 180 columns in the base matrix, and dmc ax = 10 for rate 28/45 and dmc ax = 20 for rate 140/180. The maximum allowed runtime of the genetic coloring algorithm has been set to 1 hour for the WiMAX LDPC codes, and to 2 hours for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1653
+
+the DVB-S2X codes. The architecture specific unavoidable
+idle clock cycles between two successive check-nodes m1, and m2 is equal to i dle(m1, m2) = TG (ξ, m1) − TG (ξ, m2) in the case when TG (ξ, m1) ≥ TG (ξ, m2), and 0 otherwise, consequence of the design implementation choice for the stack buffer α/β (Fig. 2a).
+For each of the selected codes, we consider several values
+for the generic layered architecture parameters nlatency (memory access and pipeline update delay) and nbanks (parallelism degree at processing unit level), defined in Section II-C, and for the residue-based overlapping update parameter n (maximum overlapping update sequence length), defined in
+Section IV-A. Precisely, the set of parameter values are nlatency ∈ {2, 3, 4, 5}, and 4 up to 6 for the nbanks parameter such that the maximum theoretical HUE is maximized (i.e. a divisor of dmc ax), and 3 different n ∈ {0, 1, ∞}. We investigate the value of the HUE in 4 distinct cases: the natural
+order message read access scheduling without any architecture support (n = 0), the case when the off-line algorithm is used for message mapping and optimized scheduling, however no architecture support for overlapping updates exists (n = 0), the case when the off-line algorithms are used and the architecture supports only length 1 overlapping sequences (n = 1), and the last case, when we use both the off-line scheduling algorithms, and we have unbounded overlapping sequences.
+Results are presented in Fig. 5. For the WiMAX codes, the HUE improvement when using the off-line algorithms with
+respect to the case when no algorithms are used is of 5% up to 49% for n = 0, of 16% up to 53% for n = 1, and of 21% up to 55% for n = ∞. For the DVB-S2X codes, the HUE improvement when using the off-line algorithms with respect
+to the case when no algorithms are used is of 3% up to 49% for n = 0, of 24% up to 57% for n = 1, and of 25% up to 57% for n = ∞. When comparing HUE for n = 1 with n = ∞, we notice in most of the cases a HUE variation of up to 27% for n = ∞.
+Furthermore, the total number of entries for the register files of all banks is reported in order to gain insight of the
+architecture cost overhead needed for supporting overlapping
+updates. Due to space constraints, only the R F overhead for two codes: WiMAX rate 3/4, and DVB-s2x rate 140/180 is reported.
+Discussion: An exact comparison with prior art is difficult,
+since the types of optimization targeted and the assumptions
+made for the decoder architecture are not exactly the same, as well as the QC-LDPC codes. A key difference with related
+work such as [8]–[10], [24], and [29] lies in the architecture
+assumptions (e.g the number of processing units 3, 4, 6, up to 16; the design for the read/write decoder stage –
+in [8] some data may be used for processing in later cycles;
+the number of messages processed per unit). These lead to different aspects that need to be considered in order to have
+an efficient implementation, such as the read register and interleave logic become more complex, the controller area is
+non-negligible For the decoder architecture considered in this
+work, the required number of ROM entries is relatively small (i.e. approximatively |M| ×dmc ax ). Strategies for mitigating the pipeline related data hazards with reverse write-back have been
+
+proposed in [13] and [14] for the case nbanks = 1. The work in [13] discusses 802.11n (WiFi) rate 1/2 standard codes for
+3 different lengths with an interesting multi-frame concept. From our findings, as well as [14] small rates such as 1/2 have a high probability of reaching 100% HUE. For WiMAX codes with nbanks = 1, our results are comparable to those in [14], having obtained slightly worse (e.g −5% for rate 1/2) or slightly better ((e.g +16% for rate 5/6)) HUE in some cases.
+2) Simulation Performance Curves: In order to assess the
+impact of residue-based scheduling on the decoding perfor-
+mance, we have performed the simulations for the Additive
+White Gaussian Noise (AWGN) channel and plotted the sta-
+tistical curves for the frame error rate (FER) for WiMAX rate 3/4 code, with nbanks = 3, and nlatency = 4, using reverse write-back for three distinct values of n: 0, 1, and Infinity (∞). The maximum number of iterations is set to 30. Results show that residual-based scheduling decoding performance curves has no notable degradation for n ∈ {0, 1}, and a negligible degradation for n = ∞, with the increase in the value of nbanks parameter. As expected, in terms of decoding performance, the residue based scheduling provides a trade-
+off between layered and flooded scheduling. Similar findings
+have been obtained for the DVB-S2X code.
+3) Implementation Results: The decoder design exploration is performed for WiMAX rate 3/4, and DVB-S2X rate 140/180 codes. We analyze two cases of nbanks 3 and 5 for the WiMAX code, and nbanks value 5 for the DVB-S2X code. In these cases, the minimum of pipeline levels is nlatency = 2, that corresponds to a data register within the CNU. We use
+BRAM blocks with no output register and write first policy.
+Two additional pipeline register locations are considered: (1) before BS α, and (2) after BS β.
+In order to select the proper parameter configuration for the
+WiMAX code, for each (nbanks , nlatency ) pair we use results depicted in Fig.5b for HUE and from Fig.5f in order to select the best candidate configuration for the n. For nlatency = 2, the case of n = 1 appears to slightly best candidate for both nbanks = 3 and nbanks = 5 case. However, manual inspection of the off-line algorithms output revealed that the
+gain in terms of iteration latency is of only 1 clock cycle, at the
+expense of 4 entries in the RF. Hence, we select in both cases n = 0. Following the same line of reasoning for nlatency = 3, we select n = 1, while for nlatency = 4 we select n = ∞. Since the processing path up to the mandatory CNU register storing partial mi n1val, mi nv2al, and mi ni1ndex is balanced with respect to the write-back, the only practical cases for nlatency are nlatency = 2 (no additional pipeline register) and nlatency = 4 (two additional pipeline registers). In addition to this, we select the decoder configuration corresponding to the best FER performance curve form from Fig. 6: nbanks = 5, nlatency = 3, and n = 1. Therefore, for the WiMAX rate 3/4 code, we implement a total of 5 decoder designs. Similarly,
+we select 2 configurations for the implementation of the DVBS2X rate 140/180 code: nbanks = 5, nlatency = 2, n = 0, and nbanks = 5, nlatency = 4, n = 1.
+Implementation results, as well as related works, are
+presented in Table I. For the throughput computation,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1654
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+Fig. 5. Evaluation for the proposed off-line algorithms for 6 standard codes using the HUE metric. (f), (h) report the total number of RF entries needed for residue-based scheduling. (a) HUE – WiMAX rate 1/2. (b) HUE – WiMAX rate 3/4. (c) HUE – WiMAX rate 5/6. (d) HUE – DVB-s2x rate 140/180. (e) HUE – WiMAX rate 2/3. (f) Total number of RF entries – WiMAX rate 3/4. (g) HUE – DVB-s2x rate 28/45. (h) Total number of RF entries – DVB-s2x rate 140/180.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+BONCALO et al.: LAYERED LDPC DECODERS WITH EFFICIENT MEMORY ACCESS SCHEDULING AND MAPPING
+
+1655
+
+TABLE I IMPLEMENTATION RESULTS FOR WIMAX AND DVB CODES FOR THE SELECTED nbanks , nlatency , n PARAMS AND RELATED WORKS
+
+Fig. 6.
+
+FER
+
+curves
+
+for
+
+Irregular
+
+WiMAX
+
+rate
+
+3 4
+
+for
+
+I tmax
+
+= 30.
+
+VII. CONCLUSION
+In this paper, we have proposed: (1) a holistic approach, based on a set of off-line algorithms, for increasing resource usage efficiency of layered scheduling LDPC decoders, and (2) a modified version for layered decoding updates – residue based layered decoding. The evaluation of the off-line mapping and scheduling algorithms performed for 6 QC-LDPC codes indicates an increase in HUE of 3% to 49% when no overlap is used, of 24% to 57% for a one layer overlap and of 25% to 57% for unlimited overlaps with respect to the case when no optimization is employed. FPGA implementation results of the selected 6 decoding architectures corresponding to WiMAX rate 3/4 irregular code, and DVB-S2X rate 140/180 code suggest that by jointly using the proposed off-line algorithms and the residue-based scheduling with unlimited update overlaps, can lead to up to 85% TAR improvements with respect to the architecture employing conventional layered scheduling.
+
+we use Eq. (6). The normalized throughput T N is the throughput for 1 decoder iteration, and, for uniformity, it is computed for all the decoders from Table I using Eq. (6). Throughput to Area Ratio (TAR) is the ratio between the T N and the implementation cost expressed in slices. The implementation results show that the residue based layered scheduling decoder implementations have a superior TAR in spite of the additional RF and pipelining implementation cost overhead.
+Regarding the comparison with other layered architectures, it is worth noting that the architecture that we employ has a wide range of features that allow a high degree of flexibility: reversed write-back policy, generic barrel shifters for routing, as well as generic parallelization degree at processing unit level. The approaches in [18] and [30] obtain increased TAR by hard-coding the the B matrix inside the decoder. Furthermore, TAR increase can be obtained by reducing message quantization [17], [31]. Substantial implementation cost reduction and frequency increase has been obtained by [17] and [31] when employing a 2-bit message quantization. Nonetheless, the increase in iteration latency due to message processing scheduling acts as a limiting factor of this gain [31].
+
+REFERENCES
+[1] Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, IEEE Standard 802.11-2016.
+[2] Wireless Medium Access Control (MAC) and Physical layer (PHY) Specifications for High Rate Wireless Personal Area Networks (WPANs) Amendment 2: Millimeter-Wave-Based Alternative Physical Layer Extension, IEEE Standard 802.15.3c-2009, 2009. [Online]. Available: http://standards.ieee.org/getieee802/download/802.15.3c-2009.pdf
+[3] Air Interface for Fixed and Mobile Broadband Wireless Access Systems, IEEE Standard 802.16e-2005, 2005.
+[4] DVB—The Family of International Standards for Digital Video Broadcasting, Second Generation Framin Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering, and Other Broadband Satelite Applications, Part 2: DVB-S2 Extensions (DVB-S2X), ETSI Standard, Oct. 2014.
+[5] K.-C. Ho, C.-L. Chen, and H.-C. Chang, “A 520k (18900, 17010) array dispersion LDPC decoder architectures for NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 4, pp. 1293–1304, Apr. 2016.
+[6] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2004, pp. 107–112.
+[7] A. Tarable, S. Benedetto, and G. Montorsi, “Mapping interleaving laws to parallel turbo and LDPC decoder architectures,” IEEE Trans. Inf. Theory, vol. 50, no. 9, pp. 2002–2009, Sep. 2004.
+[8] E. Amador, R. Pacalet, and V. Rezard, “Optimum LDPC decoder: A memory architecture problem,” in Proc. 46th ACM/IEEE Des. Autom. Conf., Jul. 2009, pp. 891–896.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+1656
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 66, NO. 4, APRIL 2019
+
+[9] A. Briki, C. Chavet, and P. Coussy, “A conflict-free memory mapping approach to design parallel hardware interleaver architectures with optimized network and controller,” in Proc. SiPS, Oct. 2013, pp. 201–206.
+[10] S. U. Reehman, C. Chavet, P. Coussy, and A. Sani, “In-place memory mapping approach for optimized parallel hardware interleaver architectures,” in Proc. Des. Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2015, pp. 896–899.
+[11] Z. Wu and K. Su, “Updating conflict solution for pipelined layered LDPC decoder,” in Proc. IEEE Int. Conf. Signal Process. Commun. Comput. (ICSPCC), Sep. 2015, pp. 1–6.
+[12] C. Marchand, J. B. Dore, L. Conde-Canencia, and E. Boutillon, “Conflict resolution for pipelined layered LDPC decoders,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2009, pp. 220–225.
+[13] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A scalable decoder architecture for IEEE 802.11n LDPC codes,” in Proc. IEEE Global Telecommun. Conf., Nov. 2007, pp. 3270–3274.
+[14] Z. Wu, D. Liu, and Y. Zhang, “Matrix reordering techniques for memory conflict reduction for pipelined QC-LDPC decoder,” in Proc. IEEE/CIC Int. Conf. Commun. China (ICCC), Oct. 2014, pp. 354–359.
+[15] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[16] O. Boncalo, P. F. Mihancea, and A. Amaricai, “Template-based QCLDPC decoder architecture generation,” in Proc. 10th Int. Conf. Inf., Commun. Signal Process. (ICICS), Dec. 2015, pp. 1–5.
+[17] T. T. Nguyen-Ly, V. Savin, X. Popon, and D. Declercq, “High throughput FPGA implementation for regular non-surjective finite alphabet iterative decoders,” in Proc. IEEE Int. Conf. Commun. Workshops, May 2017, pp. 961–966.
+[18] T. Nguyen-Ly et al., “FPGA design of high throughput LDPC decoder based on imprecise offset min-sum decoding,” in Proc. IEEE 13th Int. New Circuits Syst. Conf. (NEWCAS), Jun. 2015, pp. 1–4.
+[19] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A minimum-latency block-serial architecture of a decoder for IEEE 802.11n LDPC codes,” in Proc. IFIP Int. Conf. Very Large Scale Integr., Oct. 2007, pp. 236–241.
+[20] M. Gomes, G. Falcao, V. Silva, V. Ferreira, A. Sengo, and M. Falcao, “Flexible parallel architecture for DVB-S2 LDPC decoders,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), Nov. 2007, pp. 3265–3269.
+[21] J. Jin and C.-Y. Tsui, “An energy efficient layered decoding architecture for LDPC decoder,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 18, no. 8, pp. 1185–1195, Aug. 2010.
+[22] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[23] C. Condo, A. Baghdadi, and G. Masera, “Reducing the dissipated energy in multi-standard turbo and LDPC decoders,” Circuits Syst. Signal Process., vol. 34, no. 5, pp. 1571–1593, May 2015.
+[24] A. Briki, C. Chavet, P. Coussy, and E. Martin, “A design approach dedicated to network-based and conflict-free parallel interleavers,” in Proc. Great Lakes Symp. VLSI (GLSVLSI), New York, NY, USA, 2012, pp. 153–158, doi: 10.1145/2206781.2206819.
+[25] P. Keyngnaert, B. Demoen, B. De Sutter, B. De Bus, and K. De Bosschere, “Conflict graph based allocation of static objects to memory banks,” in Proc. 5th World Multiconf. Systemics, Cybern. Informat. (SCI), in Computer Science and Engineering, vol. 14, N. Callaos, F. Tinetti, J.-M. Champarnaud, and J. Lee, Eds. London, U.K., 2001, pp. 88–93.
+[26] J. D. C. Little, K. G. Murty, D. W. Sweeney, and C. Karel, “An algorithm for the traveling salesman problem,” Oper. Res., vol. 11, no. 6, pp. 972–989, Dec. 1963, doi: 10.1287/opre.11.6.972.
+[27] J. Misra and D. Gries, “A constructive proof of Vizing’s theorem,” Inf. Process. Lett., vol. 41, no. 3, pp. 131–133, Mar. 1992, doi: 10.1016/0020-0190(92)90041-S.
+[28] J. H. Holland, Adaptation in Natural and Artificial Systems. Cambridge, MA, USA: MIT Press, 1992.
+[29] A. H. Sani, P. Coussy, and C. Chavet, “A first step toward on-chip memory mapping for parallel turbo and LDPC decoders: A polynomial time mapping algorithm,” IEEE Trans. Signal Process., vol. 61, no. 16, pp. 4127–4140, Aug. 2013.
+[30] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory system optimization for FPGA-based implementation of quasi-cyclic LDPC codes decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 1, pp. 98–111, Jan. 2011.
+[31] V. A. Chandrasetty and S. M. Aziz, “Resource efficient LDPC decoders for multimedia communication,” Integration, vol. 48, pp. 213–220, Jan. 2015. [Online]. Available: http://www.sciencedirect.com/science /article/pii/S0167926014000613
+
+[32] S. Yes¸il and M. Arslan, “Dual port ram based layered decoding for multi rate quasi-cyclic LDPC codes,” in Proc. 12th Int. Conf. Signal Process. (ICSP), Oct. 2014, pp. 1524–1530.
+Oana Boncalo received the B.Sc. and Ph.D. degrees from the Computer and Information Technology Department, University Politehnica Timisoara (UPT), in 2006 and 2009, respectively. She has been with UPT since 2009, as a Teaching Assistant from 2009 to 2012, a Lecturer from 2012 to 2017, and as an Associate Professor since 2017. She was an Invited Researcher at University College Cork in 2012 and at the University of Cergy-Pontoise in 2016. Her main research interests include low-density parity-check decoder architectures, computer arithmetic, and reliability estimation and evaluation.
+Gyorgy Kolumban-Antal is currently pursuing the degree with the Department of Computer and Information Technology, Politehnica University of Timisoara. His main research interests include software engineering, CAD algorithms, and low-density parity-check decoder architectures.
+Alexandru Amaricai received the B.Sc. and Ph.D. degrees from the Computer and Information Technology Department, University Politehnica Timisoara (UPT). He has been with UPT since 2009, as a Teaching Assistant from 2009 to 2012, a Lecturer from 2012 to 2016, and an Associate Professor since 2016. In 2017, he was a Senior Fulbright Researcher at the University of Arizona. His main research interests include FPGA implementation of DSP algorithms.
+Valentin Savin received the master’s degree in mathematics from the École Normale Supérieure de Lyon in 1997, the Ph.D. degree in mathematics from the J. Fourier Institute, Grenoble, in 2001, and the master’s degree in cryptography, security and coding theory from the University of Grenoble 1. Since 2016, he has been a CEA Senior Expert in information and coding theory. Over the last years, he has been working on the design of lowcomplexity decoding algorithms for LDPC and polar codes and on the analysis and the optimization of LDPC codes for physical and upper layer applications.
+David Declercq (M’07–SM’12) was born in 1971. He received the Ph.D. degree in statistical signal processing from the University of Cergy-Pontoise, France, in 1998. He is the General Secretary of the National GRETSI Association. His research interests include digital communications and error-correction coding theory. He worked several years on the particular family of LDPC codes, both from the code and decoder design aspects. Since 2003, he has been developing a strong expertise on non-binary LDPC codes and decoders in high-order Galois fields GF(q).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:58 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,537 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+4385
+
+QFEC: A 9.97 Gb/s Fully Configurable Quad-Mode Decoder for LDPC, Polar, Turbo, and Convolutional Codes
+
+Yufan Yue , Kuan-Yu Chen , Xiangdong Wei , Graduate Student Member, IEEE, Tutu Ajayi , Hyunwon Chung , Graduate Student Member, IEEE, Ronald Dreslinski , Senior Member, IEEE,
+David Blaauw , Fellow, IEEE, and Hun-Seok Kim , Senior Member, IEEE
+
+Abstract—Rapidly evolving wireless channel conditions and communication standards demand adaptable forward error correction (FEC) decoders. Existing rigid architectures, designed for a single standard, exhibit limited adaptability in terms of throughput and/or coding gain, hindering the timely deployment of new applications. To overcome these limitations, we propose QFEC (quad-mode FEC decoder), a unified and highly configurable FEC decoder. QFEC enables a wide range of throughput vs. coding gain tradeoffs across QC-LDPC, Turbo, Polar, and Convolutional codes (CC) by providing full configurability for existing standards and proprietary systems. This ensures communication reliability under varying channel conditions and seamless support for both legacy and emerging communication protocols. Our hardware-unified approach leverages a shared memory and computation unit architecture that exploits the inherent commonalities in the iterative message-passing dataflow of all four code types. We attain outstanding flexibility at high data rates through an innovative combination of a fully customizable interconnect and a multi-mode computation datapath. The QFEC chip, fabricated in GF 12 nm FinFET technology, achieves 9.97 Gb/s throughput for the Optical Communication Terminal (OCT) standard and 6.52 Gb/s for 5G BG1, while consuming normalized energy efficiency (NEE) of 1.04 pJ/b and 1.53 pJ/b, respectively. This design can reach a maximum of 25.4 Gb/s using a proprietary QC-LDPC configuration. This design significantly surpasses existing solutions in flexibility by offering the broadest support for standards and parameters with a unified, efficient architecture. To the best of our knowledge, this is the first chip implementation of a fully flexible quad-mode FEC decoder for QC-LDPC, Polar, Turbo, CC codes.
+Index Terms—LDPC, polar, turbo, convolutional code, forward error correction, 5G, FEC decoder.
+I. INTRODUCTION
+R ECENT wireless communication standards have significantly broadened the array of adopted forward error
+correction (FEC) codes, encompassing Quasi Cyclic (QC)
+LDPC [1], [2], [3], [4], [5], [6], [12], [13], [14], [32], [33],
+Polar [2], [6], [15], [32], [33], Turbo [4], [6], [32], and
+Convolutional Codes (CC) [32]. For instance, the Optical
+Communication Terminal (OCT) standard utilizes both CC
+Received 12 August 2025; revised 3 November 2025, 16 January 2026, and 23 February 2026; accepted 24 February 2026. Date of publication 6 March 2026; date of current version 29 May 2026. This work was supported in part by the Defense Advanced Research Projects Agency. This article was recommended by Associate Editor L. Gan. (Corresponding author: Yufan Yue.)
+The authors are with the University of Michigan, Ann Arbor, MI 48109 USA (e-mail: funkyyue@umich.edu).
+Digital Object Identifier 10.1109/TCSI.2026.3669803
+
+and LDPC, while 3/4/5G cellular networks incorporate Turbo, Polar and LDPC. Beyond the diversity of code types, each code type offers a wide range of configurable parameters. For example LDPC code can be configured based on different base matrix dimensions, parity-check matrix (PCM) patterns, and lifting sizes. The coexistence of multiple code types and parameters is crucial for emerging technologies such as RF convergence [21], next-generation cellular networks [27], [28], [29], and satellite communications [23], [24]. The rapid evolution and ubiquitous adoption of these standards necessitate hardware interoperability and user-defined customization with application-specific parameters. Furthermore, the scenario-dependent and fast-changing conditions of channels demand a wide range of coding gains, consequently requiring a broad selection of FEC codes [25]. Adapting to these dynamic conditions and applications mandates finegrained tradeoffs between the throughput and coding gain offered by various codes and their parameters. Apart from flexibility, existing and future standards also impose stringent throughput demands, requiring 10 Gb/s for large QC-PCM sizes (e.g., 49152 × 98304) and long code lengths (e.g., 98304 bits).
+The academic community has shown considerable interest in configurable decoders [2], [4], [5], [7], [32], [33]. However, to achieve high throughput, most prior designs have relied on dedicated, rigid decoder architectures supporting only one or two code types for limited parameter ranges specified in one or two target standards. For instance, [4] developed an 802.11n/802.16e/LTE-compliant LDPC-Turbo unified decoder, leveraging an application-specific instruction-set processor (ASIP) architecture. Yet, this design’s topology is constrained by small LDPC QC-PCM and code sizes. As its memory and computation architecture is tailored for LDPC and Turbo, the design cannot extend to Polar and CC decoding. In addition, its ASIP nature introduces throughput overheads stemming from instruction branching, stalling, and fetch/decode, which would be exacerbated when the design is scaled to support a higher (e.g., 10 Gb/s) throughput. Reference [2] proposed an LDPC-Polar unified decoder tailored for 5G, incorporating standard-specific scheduling and optimization into its hardware pipelines. While demonstrating good throughput and efficiency, this architecture lacks full flexibility for various standards and parameters, and its datapath
+
+1549-8328 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4386
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+Fig. 2. Metric Memory mappings and access patterns of LDPC, Polar, and Turbo codes. Colors represent mappings between data and memory positions.
+
+Fig. 1. Dataflow similarities of LDPC, Polar, Turbo, and Convolutional decoding algorithms in the family of message-passing MAP. Red lines show the updated values in each stage of the algorithm.
+does not extend to Turbo and CC decoding. Other efforts have focused on single-code-type decoders with multiple parameters [5], [7]. Although these designs achieve high throughputs and efficiencies, their inability to reconfigure across a broad selection of standards and codes prevents them from optimally adapting to varying channel conditions. Consequently, these prior works either lack the full configurability needed for finegrained tradeoffs under channel variations or fail to meet the stringent throughput and reliability constraints of emerging applications such as satellite communication.
+The feasibility of quad-mode LDPC, Polar, Turbo, and CC unified decoders has been studied in [32]. However, the proposed design in [32] suffers from several key limitations. Specifically, it does not permit arbitrary parameter configuration, which substantially restricts its operational flexibility. Furthermore, the maximum supported LDPC PCM size is constrained below 1944×2304. This fails to accommodate the significantly larger QC-PCM sizes mandated by 5G and OCT, which can extend up to 49152 × 98304. Crucially, this previous work is simulation only and lacks chip-implementation results necessary to firmly validate that all practical physical design aspects have been adequately addressed. These critical aspects, including routing complexity, process-voltagetemperature (PVT) variations, power-distribution quality, and manufacturability, can otherwise severely degrade a chip’s ultimate performance and power efficiency.
+To address these critical technological gaps, we propose QFEC (Quad-mode FEC) decoder. The main contributions of this work are as follows:
+1) QFEC leverages transformed message-passing dataflows derived from belief propagation algorithms (Fig. 1) to strategically exploit the inherent similarities across
+
+QC-LDPC, Polar, Turbo, and Convolutional codes, thereby facilitating hardware unification. This unified approach yields significant savings in both logic and memory resources in comparison to a collection of single-mode fully-flexible decoder designs. 2) QFEC implements a hardware-friendly variant of a prior QC-LDPC memory mapping algorithm [9]. This refinement enables conflict-free access scheduling for arbitrary code parameters within a highly parallel datapath designed to support all four code types (Fig. 2). This methodology successfully meets stringent throughput requirements while simultaneously achieving reduced SRAM banking overhead. 3) QFEC integrates the compressive memory subsystem, unified computation datapath, and customizable interconnects, collectively enabling flexible parameter and standard customization alongside high throughput and efficiency. This unprecedented flexibility empowers users to achieve an optimal tradeoff between performance, power, and coding gain through fine-grained code reconfiguration. The remainder of this paper is organized as follows. Section II introduces the background on LDPC, Polar, Turbo, and CC decoding algorithms. Section III presents the resource mappings and access patterns for conflict-free operations across the four modes. Section IV details the hardware architecture of QFEC. Section V summarizes and compares QFEC’s flexibility and standard coverage. Section VI demonstrates the measurement results and flexibility analysis in comparison with prior designs. Finally, Section VII concludes the paper.
+II. QFEC ALGORITHM UNIFICATION
+To enable hardware resource sharing without significant area overhead for quad-mode decoding, we opted for a family of message-passing maximum-a-priori (MAP) algorithms, as depicted in Fig. 1. We made this choice instead of using specialized algorithms optimized for particular modes to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+
+4387
+
+enable a unified hardware architecture with reduced overhead for high throughput and quad-mode configurability. Consequently, all LDPC, Polar, Turbo, and CC decoding algorithms within our design utilize similar iterative message-passing structures. These structures rely on a dataflow graph that links parallel computing and memory units. For each decoding algorithm/mode, these message-passing patterns are deterministic and can be identified offline for the mapping onto our flexible message-passing datapath. To balance hardware efficiency and coding gain, we selected min-sum decoding [18] for LDPC, belief-propagation [20] for Polar, max-log-MAP [17] for Turbo, and Viterbi [19] for CC. All of these algorithms fall within the family of message-passing MAP algorithms, supporting our goal of a unified decoder architecture. While advanced algorithms such as Polar successive cancellation list [16] exist, we excluded them from consideration because their non-parallel structure makes them incompatible with our unified design. By using the family of message-passing MAP algorithms, our approach enables a broad range of coding gains through parameter and configuration adjustments across four supported decoding modes—rather than being restricted to a single advanced mode. The dataflow graph and associated node operations for LDPC, Polar, Turbo, and Convolutional codes are detailed in Fig. 1 and the following subsections. We have restructured the core algorithm computations by leveraging edge coordinates to explicitly demonstrate the significant dataflow similarities across all these codes.
+
+A. LDPC Min-Sum Decoding Algorithm
+Popular standards, such as 5G, Wi-Fi, have widely adopted quasi-cyclic (QC) LDPC as their FEC code types. The QC nature of this class of code enables efficient parallel hardware implementation, crucial for meeting high-throughput requirements. A codeword y is formed by multiplying the information bit sequence vector x with a binary generator matrix G in the Galois field GF(2). Concurrently, a binary QC-PCM H is determined such that GHT = 0, ensuring that the syndrome check HyT always equals 0 for all valid codewords. The dimension of H is (N − K) × N, where K represents the information length and N is the codeword length. In common standards, the QC-PCM H is typically derived from an integervalued base matrix h. With this base matrix, each non-negative element of h signifies a Z ×Z identity matrix cyclically shifted right by that amount, while each −1 represents a Z × Z empty matrix, where Z is the lifting size.
+In a QC-PCM, a row and a column specify check nodes (CNs) and variable nodes (VNs), respectively. These nodes can be represented in a bipartite graph, where each edge connecting a CN with a VN corresponds to a ’1’ in the QC-PCM H. The LDPC min-sum decoding algorithm iteratively updates CN-to-VN messages η and VN-to-CN messages λ, utilizing channel log likelihood ratio (LLR) values η0 and previously computed messages. The update is performed on all edges present in H:
+
+ηI,J
+
+=
+
+j
+
+min (λ
+J,H(I, j)=1
+
+j,I
+
+)
+
+×
+
+j
+
+Π
+J,H(I,
+
+sign(λ
+j)=1
+
+j,I
+
+)
+
+(1)
+
+λJ,I
+
+= η0,J +
+i
+
+I,HΣ(i,J)=1ηi,J
+
+(2)
+
+To update CN-to-VN messages originating from a CN, the
+
+self-excluded minimum absolute value of all messages λ j connected to that CN is computed and multiplied by the
+
+self-excluded sign product. As shown in Eq. 1, this update
+
+is calculated for all λi,k edges (VN i to CN k) in the QC-
+
+PCM during the MIN half-iteration. For updating VN-to-CN
+
+messages originating from a VN, the sum of the channel LLR
+
+η0 of that VN and all self-excluded η j is computed. As shown in Eq. 2, this update is calculated for all ηk,i edges (CN k to VN i) in the QC-PCM during the SUM half-iteration.
+
+One complete iteration involves first updating all CN-to-
+
+VN messages, followed by updating all VN-to-CN messages.
+
+A hard decision on the decoded and corrected information bits
+
+is made once an early termination criterion is satisfied (e.g.,
+
+via syndrome check) or a predefined number of iterations is
+
+reached.
+
+The decoding algorithm exhibits no data dependencies
+
+among updates within the same VN-to-CN or CN-to-VN
+
+half-iteration, which allows for a fully parallel hardware archi-
+
+tecture where all VN-to-CN or CN-to-VN updates can occur
+
+simultaneously. However, for flexible hardware architectures
+
+with multiple configurable parameters, such parallelism com-
+
+plicates the design in terms of computation, memory access,
+
+and on-chip interconnects. A linear increase in codeword
+
+length N translates to a quadratic growth in QC-PCM size.
+
+To achieve high throughput with large QC-PCM sizes and
+
+arbitrary QC-PCM patterns, the design can leverage compu-
+
+tational and memory access parallelism, allowing throughput
+
+to scale linearly with N. However, the on-chip interconnect
+
+connectivity increases quadratically with N, introducing sig-
+
+nificant challenges for timing closure and physical design.
+
+We have strategically chosen a high parallelization level at
+
+which an entire base-graph row or column can be updated
+
+within a single clock cycle. Equivalently, this design dictates
+
+that one iteration half-iteration, and
+
+reNZquciyrecslesN−ZfoKr
+
+cycles to complete the MIN the SUM half-iteration. For
+
+example, applying this to the 5G base-graph 1 configuration
+
+at Z = 64 results in a highly efficient execution schedule: the
+
+process takes only 46 cycles for the MIN half-iteration and
+
+68 cycles for the SUM half-iteration. The proposed memory
+
+mapping and scheduling hardware is developed based on
+
+flooding scheduling.
+
+B. Polar Belief-Propagation Decoding Algorithm
+The Polar belief-propagation (BP) algorithm is well-suited to our unified architecture due to its message-passing structure similar to that of LDPC min-sum decoding. An information vector x of K bits is first augmented with N − K frozen bits, and then encoded by multiplying with a binary generator matrix to generate an N-bit codeword. The decoder is aware of the frozen bit positions before decoding, and it iteratively updates all right-passing messages R, followed by all leftpassing messages L using the message-passing structure shown in Fig. 1. The decoding process begins with the initialization of the metric memory based on the frozen bit locations and channel LLRs, which correspond to the R messages entering the first column in Fig. 1. Following initialization, all nodes in the first column are activated. The edges shown in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4388
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+Polar section of Fig. 1 form a matrix. To accurately describe the corresponding pattern, we associate a coordinate (I, J)
+with each edge, and consequently, a coordinate with the messages LI,J and RI,J that pass along edge (I, J) in left and right direction. Furthermore, each processing node whose topleft edge is at coordinate (I, J) is related to four outgoing messages, specifically: LI,J, LI+2J,J, RI,J+1, and RI+2J,J+1. The details of the edge update are described as follows:
+
+LI,J = f (LI,J+1, LI+2J,J+1 + RI+2J,J )
+
+(3)
+
+LI+2J,J = LI+2J,J+1 + f (LI,J+1, RI,J )
+
+(4)
+
+RI,J+1 = f (RI,J , LI+2J,J+1 + RI+2J,J )
+
+(5)
+
+RI+2J,J+1 = RI+2J,J + f (RI,J , LI,J+1)
+
+(6)
+
+f (x, y) = sign(x) × sign(y) × min(|x|, |y|)
+
+(7)
+
+For each node, the R messages and the prior L messages retrieved from memory are used to compute the updated outgoing R messages. Once computations for all nodes in the current column are completed, this process is applied to the next right column until the R message propagation is finished across all columns. Subsequently, the L message propagation commences from the last column, where updated outgoing L messages are computed and propagated to the preceding left columns in a reverse sequential manner.
+Upon completion of both R and L message propagation through all columns, a single decoding iteration is completed. Multiple iterations are usually needed for better error correction performance. The final hard decision is determined based on the outgoing R message from the last column in the final iteration. Each L or R update involves an addition and a signed minimum operation, where the minimum absolute value is multiplied by the product of the operand signs.
+
+C. CC Viterbi Algorithm
+A recursive CC code is constructed by inputting a stream of information bits into one or more parallel linear-feedback shift registers (LFSRs) and subsequently interleaving the resulting bit streams to form the codeword vector. The LFSRs are defined by generator and feedback polynomials, which determine the GF(2) computations for the code and feedback bits based on the current register state. In practice, CC encoding can be applied to block codes of fixed length, with zero-tailing used to constrain the final LFSR state to a known state for hardware-efficient decoding.
+The Viterbi algorithm is the most commonly used method for CC decoding. It identifies the most likely sequence of LFSR state transitions by evaluating the path metric at each information bit position. To emphasize the dataflow similarities with other decoding modes, we assign a coordinate (I, J) to the left point of each edge. We then employ R, Γ, t, and s to denote the forward recursion metric, the branch metric, the path selection history, and the traceback path selection, respectively. The detailed computation is described as follows:
+
+ΓI,J
+
+=
+
+X (|
+
+x(In,J)
+
+−
+
+y(Jn)|2)
+
+(8)
+
+n
+
+RI,J+1 = RI+1,J+1 = mk=a0,x1(RIk,J + ΓIk,J )
+
+(9)
+
+tJ = argmax(RIk,J + ΓIk,J)
+
+(10)
+
+k=0,1
+
+sJ = XOR(tJ, mod(I0, 2))
+
+(11)
+
+In this context, the index Ik is calculated as Ik = k ×
+
+2D +
+
+f loor
+
+I 2
+
+,
+
+where
+
+D
+
+represents
+
+the
+
+constraint
+
+length.
+
+The above equations utilize x(In,J) to denote the nth coded
+
+parity bit corresponding to each edge (state transition), and
+
+y(Jn) represents the nth received LLR associated with that nth
+
+coded parity bit for the currently examined information bit
+
+location J.
+
+During forward propagation, the algorithm computes the
+
+branch metric Γkj for each possible transition j = 0, 1 to state k from a previous state. The metric Γkj denotes the Euclidean
+distance between the received and expected bits, given the
+
+transition j. The path metric Ak for the state k is updated
+
+as the minimum sum of the relevant branch and previous path
+
+metrics. The selection tk of the most likely predecessor state is
+
+recorded during this process. Since the encoder is terminated
+
+in the all-zero state via zero-tailing, the decoder knows the
+
+final valid state at the end of forward propagation. In the
+
+traceback phase, the decoder starts from the all-zero state
+
+and reconstructs the most probable LFSR state transition path
+
+using the recorded selections, thereby recovering the original
+
+information vector. This algorithm can be represented by the
+
+message passing structure shown in Fig. 1.
+
+D. Turbo Max-Log-MAP Algorithm
+
+A rate-1/3 parallel-concatenated Turbo code consists of two identical constituent CC encoders and a systematic output. The inputs to the two LFSRs are the systematic bits and their interleaved versions, respectively. The three output streams (systematic and two parity streams) are then interleaved together.
+We adopt a max-log-MAP decoding algorithm that approximates the original MAP algorithm with computational steps. It is more suitable for our unified message-passing hardware structure, and it is compatible with the CC Viterbi decoder architecture. To emphasize the dataflow similarities with other decoding modes, we assign a coordinate (I, J) to the left point of each edge. We then employ R, L, Γ, and M to denote the forward recursion metric, the backward recursion metric, the branch metric, and the a-priori information, respectively. The detailed computation is described as follows:
+
+ΓI,J
+
+=
+
+1 2uJ MJ
+
++
+
+1 2
+
+(
+
+xJs
+
+yJs
+
++
+
+xJpyJp)
+
+RI,J+1 = RI+1,J+1 = mk=a0,x1(RIk,J + ΓIk,J )
+
+LI0,J = LI1,J = mk=a0,x1(LI+k,J+1 + ΓI+k,J+1)
+
+MJ = i,k: muika,Jx=+1(Rik,J + Γik,J+1 + Li,J+1)
+
+− i,k: muika,Jx=+1(Rik,J + Γik,J+1 + Li,J+1)
+
+(12) (13) (14)
+(15)
+
+The index Ik is defined by the relation Ik = k × 2D +
+
+cfolomoprut2aI ti,ownsh,exreIs,JDanrdeprxeIp,sJendtesntohtee bits, for each edge (state transition).
+
+constraint length. For the
+the systematic and parity ysJ and yJp are the received
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+
+4389
+
+LLRs associated with the currently examined bit location J. The first constituent decoder then operates similarly to the Viterbi algorithm: it computes the branch metric Γ and the path metric R during the forward propagation phase, utilizing the de-interleaved systematic bits xs, the corresponding received LLRs ys, the parity bits xp, and their associated LLRs yp. During the subsequent backward propagation phase, the algorithm calculates the branch and path metrics to update the a-priori information M, rather than selecting the most probable path as is done in the standard Convolutional Code (CC) Viterbi algorithm. This updated information is transferred to the second constituent decoder after interleaving. The second decoder then processes the interleaved systematic and its corresponding parity bits, performing both forward and backward propagation to complete one iteration of a-priori information exchange. The message-passing structure of this algorithm is shown in Fig. 1. A hard decision is made when an early termination criterion is satisfied or after a predetermined number of iterations. Node computations in both Viterbi and max-logMAP algorithms involve maximum, addition, subtraction, and XOR operations.
+III. MEMORY MAPPING AND SCHEDULING
+Given the similar dataflows among LDPC, Polar, Turbo, and CC decoding algorithms in the forms of message-passing, we now discuss the memory mapping and scheduling schemes to unify support for all four decoding modes with fully flexible code parameters onto a single hardware platform. The QFEC architecture achieves this hardware unification by leveraging transformed dataflows from four different message-passing algorithms, as illustrated in Fig. 1. Our design goal is to satisfy >10 Gb/s throughput for LDPC decoding. Hence, the design must fully exploit VN and CN level parallelism for LDPC decoding. Specifically, during the MIN half-iteration, all edges associated with a single row of the base matrix (i.e., all Z CNs) must be processed within one clock cycle. Similarly, during the SUM half-iteration, all edges associated with a single column of the base matrix (i.e., all Z VNs) must be computed in each cycle.
+For flexible memory mapping and scheduling, one possible solution is to use an instruction-based domain-specific architecture such as [4] and [22]. However, these architectures often encounter either memory access conflicts caused by limited control over data movement, or a significant increase in instruction overhead when attempting to accommodate detailed scheduling which ultimately leads to reduced hardware throughput or efficiency. Alternatively, FEC decoders optimized with dedicated schedules [2], [5], [7] address these challenges by employing standard-specific memory allocation and predetermined access patterns, which streamline hardware implementation and remove scheduling bubbles. Nevertheless, such approaches come at the cost of limited flexibility without the capability to support future extensions and user-defined protocols. Prior designs seeking to provide full flexibility [6] have encountered considerable hardware complexity and ultimately support only a constrained range of arbitrary parameter configurations.
+
+To overcome these limitations, the proposed QFEC architecture achieves a unified solution through two primary mechanisms: (1) implementing a compressed, generalized scheduling method applicable to any QC-PCM in LDPC decoding and (2) re-purposing the existing LDPC QC-PCM storage resources to seamlessly support Polar and Turbo decoding, as illustrated in Fig. 2. This approach effectively balances hardware efficiency and decoding flexibility, enabling a wide range of FEC codes and configurations.
+QFEC is specifically designed to support the mapping and scheduling of fully configurable, arbitrary LDPC QC-PCMs, allowing the dimension, pattern, density, and cyclic shift configurations of any QC-PCM without restriction. This flexibility ensures compatibility not only with established standards such as 5G and OCT, but also with proprietary and emerging communication protocols. However, as the size of the QC-PCM grows, previous design approaches and algorithms become increasingly impractical; their complexity increases quadratically with code length, making direct scaling unacceptable. Therefore, existing ASIC-proven LDPC decoder implementations [2], [3], [4] are constrained to a narrow set of QC-PCM structures, limited to those defined by their specific target standards. Alternatively, some implementations [1], [5], [6] avoid memory access conflicts by reducing the level of parallelism, which comes at the cost of decreased throughput. There are prior algorithms for generalized memory mapping and scheduling. However, they exhibit significant overheads from serialized sub-matrix processing [30] or complex interconnects [31], while none of them were demonstrated in ASICs.
+Targeting large parallelism and providing support for arbitrary base graph patterns can often lead to the instantiation of a large number of memory banks to resolve access conflicts without incurring stalls. However, standard SRAMs typically require extensive peripheral circuitry, leading to significant area and power overhead. This inherent characteristic poses considerable challenges in supporting both arbitrary configurability and overall hardware efficiency. To fundamentally reduce this challenging hardware complexity overhead, QFEC implements a variant of Vizing’s coloring theorem [9] for its memory architecture co-design. The algorithm is performed offline to map only the non-empty (non-zero) base matrix entries and effectively skip the zeros, thereby producing a compressed representation of the QC-PCM. As depicted in Fig. 2 (top), the initial pass follows a row-first sequence across memory banks while mapping QC-PCM contents in row-first order. During the sum half-iteration, memory access collisions could occur if two base matrix entries from the same column reside in the same memory bank. This is resolved by swapping the current entry with a later-mapped entry that does not cause a collision. After determining the desired mapping offline, the chip is configured to use these identified deterministic, collision-free access patterns by storing a compressed representation of the memory access patterns. Rigorous validation involving 5G, Wi-Fi, OCT, WiMAX, WiGig, WRAN, ITU, and custom QC-PCMs confirms the elimination of memory collisions with 33 memory banks in our design. Furthermore, this banking bound is theoretically proven as max(dc, dv) + 1,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4390
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+Fig. 3. Top-level architecture and dataflow of IO interface logics (top right), memory subsystem (left), flexible interconnect (center) and computation datapath (right).
+
+where dc and dv represent the row and column degrees of the base graph, respectively. Additional empirical experiments demonstrate that the required storage size for each memory bank never differs by more than two units. These collective findings translate directly to an increase in memory utilization and a reduction in memory overhead when accommodating arbitrarily configurable QC-PCM patterns. An example collision-free memory access pattern for min and sum halfiterations in LDPC decoding is illustrated in Fig. 2 (middle).
+Fig. 2 (bottom) further shows that the mapping and access patterns for Polar, Turbo, and CC decoding algorithms are deterministic for any given set of code parameters. Our strategy includes an additional enhancement for Turbo codes by grouping nodes into even and odd sets, each assigned unique access patterns. Notably, the storage requirements for Turbo, Polar, and CC codes are generally less demanding than those for LDPC. Thus, QFEC enhances resource efficiency by optimizing the memory mapping architecture for LDPC metrics and then re-purposing memories to support metrics in Polar, Turbo, and CC decodings.
+IV. HARDWARE ARCHITECTURE
+The hardware architecture of the proposed QFEC decoder is depicted in Fig. 3. It comprises four distinct layers of hardware: a shared compressive memory subsystem, a flexible interconnect, a unified configurable computation datapath, and an IO interface. During each LDPC, Turbo, or Polar decoding iteration, belief metrics and LLRs are retrieved from the metric and LLR memories. These data then traverse downstream via
+
+the flexible interconnect to the appropriate processing element (PE). The PE array, working in conjunction with the reduction tree (RT), computes the updated data, which are subsequently sent back to the corresponding memory through the upstream interconnect. For CC decoding, the interconnect is bypassed and only the LLR Memory is engaged, with intermediate data being retained within the PEs for back-propagation. The selection of 4-/6-bit quantization for LDPC metric and LLR storage was determined through min-sum algorithm simulation to ensure negligible BER degradation compared to a floatingpoint implementation.
+A. Memory Subsystem
+The memory subsystem is visualized in the blue regions of Fig. 3. LDPC configurations support large QC-PCMs, with base matrix size reaching 128 × 256 and lifting size (Z) up to 384 (the actual QC-PCM width and height is Z times the base matrix width and height). The complexity of FEC decoder architectures is often dominated by the memory subsystem. Hence, implementing an efficient memory subsystem with configurable parameters that fully exploits QC-PCM sparsity is the key challenge. Achieving flexibility for large and sparse QCPCMs necessitates a configurable (de)compression hardware capable of handling all possible base matrix patterns stored in a compressed format. However, existing decoder memory architecture [1], [2], [3], [4], [5] are typically restricted to specific QC-PCM patterns, preventing them from supporting a fully flexible design. Although our prior solution in [6] supports higher flexibility, it has not been demonstrated in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+
+4391
+
+silicon, and it does not take advantage of the sparsity of QC-PCMs, incurring area overhead by storing zero-valued entries. To overcome these limitations, we utilize the memory compression (i.e., storing non-zero base matrix entries only) and access scheduling approaches described in Section III to reduce the memory storage requirements.
+To enable full flexibility of LDPC decoding, we encode the cycle-accurate QC-PCM access schedule into tuples containing the number of edges and their associated VN or CN indices, which are then stored in the Decompression Memory shown in Fig. 3. In each iteration, decoding begins with the MIN half-iteration. During this phase, the edge metrics for one base matrix row are processed per cycle. Once all rows have been processed, the FSM transitions to the SUM half-iteration, wherein one base matrix column is processed per cycle. The Decompression Memory stores, for each row or column, the edge count along with tuples containing the Metric Memory (MM) bank index, MM address, and allocated PE index for all associated edges. The Decompression Memory is accessed on a cycle-by-cycle basis, and its contents are used to generate detailed interconnect control signals, configure the PEs, and manage memory accesses.
+In LDPC decoding, the QFEC decoder is initialized with code parameters, decoding schedules, and QC-PCM shift patterns. These are written via an AXI4 interface to configuration registers, a 36.5 KB Decompression Memory, and 33 banks of 288 B Shift Memory (SM), respectively. After initialization, packets of LLRs are written back-to-back to the decoder, with decoding latency hidden by a multi-port 224 KB IO buffer. During the decoding of each LDPC codeword, LLRs are first copied to the 192 KB LLR Memory, releasing IO buffer ports, and are read out iteratively. Concurrently, CN-to-VN and VN-to-CN messages are read from 33 banks of 8 KB MM for computation. Through decoding iterations, address generation logic reads from Decompression Memory and generates appropriate sequences to access the Metric, Shift, and LLR memories, while also controlling the interconnect to ensure correct memory access between banks and PEs. Computed messages and updated soft decisions are written back into Metric and LLR memories. Finally, the 4.14 KB Reorder Buffer performs hard decision and reorders the parallel hard bits into the information vector sequence for subsequent processing. Output hard bits are stored in the IO buffer, allowing backpressure and adapting to unpredictable external system bus availability.
+For Polar/Turbo/CC decoding modes, the system repurposes the MM for Turbo/CC messages and Polar beliefs, the LR Memory for Turbo/CC extrinsic information, and the Decompression Memory for interconnect control. As the Turbo mode specifically requires an additional interleaving step before computing for the second constituent decoder, the design instantiates an extra 8 KB Interleaver Memory to support arbitrary interleaving patterns.
+This memory subsystem architecture enables support for complete arbitrary configurations for LDPC QC-PCMs, Polar frozen bit locations, and Turbo/CC code polynomials. As shown in Fig. 6, this unified memory system achieves 69.8% memory savings compared to combining flexible single-mode designs.
+
+Fig. 4. Architecture of the fully connected interconnect with split-merge and cyclic shift layers. A dataflow example is shown for a ‘min’ half-iteration in LDPC decoding, while ‘sum’ half-iteration uses the same architecture with a different schedule.
+B. Flexible Interconnect
+Achieving throughput greater than 10 Gb/s requires a fully parallel architecture, using 33 MM banks and 36 processing element (PE) instances in the proposed design. This configuration introduces a significant routing congestion challenge, an issue inherent to prior designs [6], [7], and further compounded by our system’s flexibility requirements. The randomness of QC-PCM patterns and quad-mode codec flexibility necessitate a fully connected (FC) interconnect layer, depicted in Fig. 4. As the memory subsystem is configured with the optimal schedule identified offline for each code (Section II), the FC interconnect should be configured to establish up and down links between any of the 33 memory banks and 36 PEs, with each link 256 bits wide, adhering to the same optimal access schedule. However, our experiments indicate that a brute-force synthesis and APR implementation of such an interconnect is not feasible even with state-of-the-art EDA tools, as they cannot route the design without encountering unsolvable Design Rule Check (DRC) violations and timing failures (for an 800 MHz target) caused by long wire capacitive coupling and clock noise.
+A full connection from 33 memory banks to 36 PEs requires duplicating each memory output for 36 destinations, while each destination selects one of the memory output in the FC units. Conventionally, these signals are duplicated at the SRAM boundary and subsequently routed globally to the muxes within the FC units. This method results in a significantly larger total wirelength that exacerbates signal delay, leading to a large-scale optimization problem that the EDA tool ultimately failed to converge in timing and manufacturability. To address this issue, we changed the order of signal duplication and routing to the muxes, allowing only the pre-fanout signal to be globally routed, while the duplicated signals are locally generated and routed to nearby FC units.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4392
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+TABLE I
+ROUTING COMPLEXITY AND OVERHEAD SUMMARY BETWEEN ARBITRARILY CONFIGURABLE LDPC DECODER AND ARBITRARILY
+CONFIGURABLE QUAD-MODE UNIFIED DECODER
+
+TABLE II
+DESIGN DETAILS ON BLOCK-WISE SHARING STATUS, QUANTIZATION, PIPELINE DEPTH, AREA AND OVERHEAD
+
+Since each local FC unit must select its output from 33 inputs from each of the metric memories, a split-merge layer (Fig. 3 top center) rearranges the output bytes of the metric memories in a transposed manner. This ensures that bits on the same byte location of all memories are routed together to a single local FC unit. Consequently, we reduced the global routing optimization complexity by 36x, allowing the EDA to perform a much simpler local routing problem, achieving 800 MHz in post-APR timing. After FC layer, a reverse split-merge layer then merges bytes from different FC units into memory words so that cyclic-shift (CS) and PE processing on each memory word can be done locally. Fig. 4 demonstrates details of the FC interconnect used in LDPC decoding, showing different connections for min/sum iterations for one QC-PCM row or column.
+To sustain high throughput across arbitrary QC-PCM basegraphs and lifting sizes, we provision parallelism to process one full BG row/column per cycle, which requires sizing the hardware architecture for the worst-case row/column degrees. Furthermore, accommodating a broad range of lifting sizes imposes specific constraints on the datapath; although standard barrel shifters efficiently handle arbitrary shift offsets, they generally lack support for variable shift periods. To address this, we employ a segmented cyclic-shifter architecture [8] to facilitate configurable periods ranging from 1 to 384. While this approach requires approximately 2× the area of a conventional shifter (Fig. 4, middle), it provides necessary flexibility. The architecture executes concurrent left and right logical shifts across two logarithmic shifters based on the offset, subsequently merging selected output bits determined by both the CS size and the offset. Consequently, this enables arbitrary shift sizes and offsets without necessitating massive duplications to the barrel shifter cells.
+Arbitrary cyclic shifts induce dependencies within a lifted block: for example, shifting 384 metrics together requires all 384 metrics to be available before shifting them for the worst-case dependency. To handle CS sizes exceeding memory and computation bandwidth (64 metrics per link per cycle), Serial-to-Parallel (S2P) and Parallel-to-Serial (P2S) converters are introduced before and after the 384-size cyclic shifter, as shown in Fig. 4.
+Compared to dedicated decoders, the complexity of a flexible interconnect becomes more pronounced for the large base-graph sizes (up to 128 × 256) and wide lifting-size range (1 to 384) supported in this work: the fully connected interconnect leads to approximately quadratic growth in routing/control complexity with base-graph size, while larger
+
+Fig. 5. Architecture and dataflow of PE (top & bottom left), and RU (bottom right) in different decoding modes.
+lifting size increases area super-linearly due to both expanded cyclic-shifter resources and higher on-chip bandwidth demands. While the interconnect accounts for most of the area, supporting the additional Turbo, Polar, and CC modes also introduces non-negligible overhead in compute blocks and dedicated memories, as summarized in Table II.
+C. Computation Datapath
+The unified computation datapath supporting all four code types is shown at the right of Fig. 3. It consists of two primary components: a processing element (PE) array and a reduction tree (RT). The PE array includes 36 PEs, a dedicated Turbo/CC branch metric unit, and an inter-PE crossbar. The architecture of an individual PE is detailed in Fig. 5. Each PE is equipped with a 512 B local memory for data reuse, 64 unified multimode units (MMU), and configurable multiplexers for datapath selection. These MMUs incorporate adders and simple gates that can be configured to perform a superset of the required decoding operations, such as equality check (EQC), modulo compare-select (MCS) [11], subtraction (SUB), addition (ADD), unsigned minimum (UMN), and maximum (MAX). Each MMU is designed to support 4-bit quantization for LDPC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+TABLE III PARAMETER RANGE AND CONFIGURABILITY COMPARISON WITH PRIOR FLEXIBLE DESIGNS
+
+4393
+
+decoding and 8-bit quantization for other modes. Since these other modes require less than half the data rate of LDPC, we can efficiently repurpose the 4-bit adders within each unit into functional 8-bit adders by chaining their carry bits.
+Both LDPC and Turbo decoding share a common datapath structure that accepts an array of parallel inputs and computes one (LDPC sum, Turbo) or two (LDPC min) output results. Implementing this width-reducing computation with a simple array-like architecture would result in unbalanced utilization during different stages of the algorithm. To efficiently support this computation, we implement the Reduction Tree (RT), which arranges flexible computation units in a treelike structure. Each computation unit, named a Reduction Unit (RU), is designed to perform maximum (Turbo), two-minima (LDPC), or summation (LDPC), all of which inherently share a 2:1 reduction ratio. The distinct computations are realized by configuring the adders and multiplexers within each RU according to the specific code type (Fig. 5, bottom right). In the RT, the first layer contains 36 RUs, with each subsequent layer halving the number of RUs until a single unit remains (Fig. 3). Additional bypass muxes are integrated between layers to support input arrays of configurable length. The configurable datapath that integrates the PE array and RT fulfills all computational requirements for LDPC, Polar, Turbo, and CC decoding, providing complete system flexibility. The unified datapath achieves a 17.2% logic area saving compared to the combination of flexible single-mode designs, as shown in Fig. 6. The hardware is optimized for LDPC and reused for Polar. In Fig. 5, LDPC uses all 64 MMUs per PE; Polar maps 4 MMUs per PE per codeword (Eq. 3-6), enabling 16 codewords to be decoded in parallel. Although PE bandwidth is saturated, Polar mode’s lower bandwidth demand leaves some bits unused (zero-filled), causing power overhead seen in Table IV.
+V. FLEXIBILITY ANALYSIS
+The proposed QFEC architecture stands out for its flexibility and LDPC mode efficiency, achieved through an extensive and systematic unification of key hardware resources across multiple decoding modes. As highlighted in Table II, most of the memory and interconnect infrastructure is shared by at least three decoding modes, while the flexible PE array is fully reused among all four supported code types. Only the
+
+Fig. 6. Summary of logic savings (left) and memory savings (right) from architectural unification.
+relatively small shift and interleaver memories, which are tailored for LDPC and Turbo modes, are not reused by the other modes. This deliberate hardware unification yields significant resource savings, as illustrated in Fig. 6. Compared with implementing separate single-mode, fully-flexible decoders with the same throughput (Table IV) and flexibility (Table III), the proposed unification achieves a 17.2% reduction in adder count and a 69.8% reduction in memory size. We acknowledge that while multi-mode unification conserves area by reusing memory and logic, it inherently cannot achieve the same level of hardware utilization compared to highly specialized singlemode architectures. This inefficiency arises from the natural datapath differences across the LDPC, Polar, Turbo, and CC modes. Considering that popular and emerging standards, such as 5G, Wi-Fi, and OCT, heavily favor the LDPC code for intensive payload transmission, we have specifically targeted our design toward maximal LDPC throughput and efficiency while supporting other modes with minimal overhead (Table I, Table II). Nevertheless, the additional routing/control overhead introduced by unification is small compared to savings, yielding a favorable overall area tradeoff for supporting all four decoders in a single implementation.
+A significant contribution of QFEC is its unprecedented flexibility in supporting a vast range of code parameters and protocols. By enabling comprehensive coverage of code parameters—such as QC-PCM size, code rate, and lifting sizes—QFEC provides the ability to finely tune the tradeoff between coding gain and throughput. This flexibility translates into practical advantages: given any channel condition, the decoder can consistently operate at its optimal point with standard or user-defined proprietary QC-PCMs, a capability that traditional decoders with discrete configurations cannot offer.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4394
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+TABLE IV PERFORMANCE COMPARISON WITH PRIOR DESIGNS ON LDPC (TOP) AND POLAR, TURBO, CC DECODING MODES (BOTTOM)
+
+Fig. 7. Comparison with prior flexible designs on the tradeoff between throughput and coding gain.
+
+Fig. 8. Comparison with prior flexible designs on LDPC standard coverage and configurability.
+
+As established by Gallager [10], coding gain is fundamentally governed by code parameters, and Fig. 7 illustrates how most prior designs are confined to supporting only single points or narrow ranges in the coding gain vs. throughput tradeoff space. In contrast, QFEC seamlessly covers a continuous and expansive region, achieving coding gains up to 28 dB or sustaining throughput up to 25.4 Gb/s. This makes the QFEC architecture especially appealing for applications where adaptive performance is essential for fast-varying channels to exchange heterogeneous message types.
+This flexibility is further exemplified by the extensive standard coverage achieved by the QFEC design. As summarized in Fig. 8, the proposed architecture covers a much broader selection of LDPC standards and QC-PCM sizes than previous
+
+flexible designs. While most earlier solutions are constrained to a small subset of QC-PCM configurations, QFEC is engineered to support the entire range of QC-PCM sizes required by prominent standards, including IEEE 802.x, 5G, the OCT-v1, and user-defined or proprietary protocols.
+Unlike previous hardware designs that commonly support up to two arbitrarily configurable parameters, QFEC accommodates 11 fully customizable parameters across the four supported decoding modes. These parameters include code lengths, code rates, QC-PCM-related parameters, generator polynomials, and frozen bits. Details of these flexible parameters and their corresponding ranges are summarized in Table III. This allows for extensive protocol and design space
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+
+4395
+
+Fig. 9. Die photo and summary of performance.
+
+exploration, including full coverage of LDPC QC-PCM base matrices up to 128 × 256 and arbitrary lifting sizes (Z) up to 384. The scalability and comprehensive flexibility of QFEC underscore its suitability for both current and emerging FEC standards by delivering unmatched adaptability.
+VI. MEASUREMENT RESULTS
+QFEC was fabricated in 12 nm CMOS technology, occupying an area of 32.4 mm2. A chip photograph and a summary of key performance metrics are shown in Fig. 9. QFEC delivers unmatched flexibility, supporting the most extensive throughput–coding gain tradeoff and accommodating significantly larger QC-PCM matrices compared to prior work, as discussed in Section V. Measured at 0.8 V and 637 MHz, QFEC achieves a throughput of 9.97 Gb/s per iteration for the OCT standard, and 17.95 Gb/s per iteration with a high code rate proprietary QC-PCM. Due to the quadratic complexity relation between the interconnect and the code length, detailed in Section II, we report the normalized energy efficiency (NEE) scaled with the base-matrix width to accurately capture the complexity per decoded bit. Table IV provides an extensive comparison of QFEC with other single-standard, best-flexibility FEC architectures [2], [4], [5], [7] and singleconfiguration, best-efficiency LDPC decoders [1], [3]. QFEC achieves an NEE of 1.04 pJ/bit for the OCT standard and 1.53 pJ/bit for the 5G standard. The QFEC design strategically trades peak single-mode power efficiency (e.g., when compared against standard-specific state-of-the-art designs [2], [7]) for unprecedented flexibility and unification savings. This architecture offers extensive, fine-grained configurability that extends beyond existing standards, allowing for arbitrary parameter configuration—a capability unmatched by prior art. This flexibility is essential, as it allows the decoder to dynamically optimize the trade-off between coding gain and throughput, ensuring robust performance in continuously timevarying channel conditions—such as those in inter-satellite communications with rapidly traveling satellites. The design is fully validated on silicon, demonstrating compliance for 5G Polar, OCT CC, LTE Turbo, and other proprietary protocols. The authors acknowledge that the proposed design is inferior
+
+Fig. 10. Frequency-voltage shmoo plot (left), power consumption breakdown (top-right), and mode-specific area and memory usage (bottom-right).
+in performance and efficiency in non-LDPC modes. Specifically, we have strategically traded the peak performance of non-LDPC modes for a significantly reduced area overhead in the unified architecture. As a result, the unification of nonLDPC modes into our flexible LDPC architecture is nearly cost-free, contributing only 4.93% routing overhead (Table I) and 3.8% overall area (Table II). Although having relatively lower throughput, the Polar and CC modes offer sufficient flexibility and throughput for header decoding, where the data rate is much lower than payload decoding. By exploiting both codeword-level and algorithm-level parallelism, the Polar mode achieves substantially higher throughput and, consequently, higher power consumption than the Turbo mode, as reported in the bottom portion of Table IV.
+The frequency–voltage Shmoo plot in Fig. 10 details the chip’s robust operational range: QFEC is functional from 30.7 MHz at 0.4 V up to 824 MHz at 0.9 V. At maximum voltage and with a proprietary LDPC configuration, QFEC achieves a peak throughput of 25.4 Gb/s. Fig. 10 also shows that the pipelined flexible interconnect accounts for the majority of power consumption (59.3%), reflecting the scaling law for wide parallelism and large QC-PCM support. Although block-parallel memory organizations are, in principle, insensitive to the specific LDPC base-graph pattern, achieving arbitrary QC-PCM graph patterns in hardware requires a highly flexible interconnect such that any memory bank can communicate with any PE. This flexibility incurs substantial interconnect and control overhead. The challenge is further amplified at very high throughput targets which demand increased memory and PE parallelism. Because our decoder processes an entire LDPC base-graph row/column per cycle, the interconnect must remain fully flexible at very high parallelism. Limited by routing space, capacitive coupling and crosstalk necessitate substantial timing margins to accommodate unpredictable data patterns. The above combinations of flexibility, throughput target and physical design difficulties resulted in the reported area complexity. Further optimizations, such as clock gating
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+4396
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 73, NO. 6, JUNE 2026
+
+with offline-calculated activation schedules, can further reduce power draw while maintaining performance.
+VII. CONCLUSION
+The ever-increasing demands of modern wireless standards for high-throughput and extensive adaptability present significant challenges for FEC decoder designs. Conventional flexible decoders typically provide only limited support for code types and parameters, resulting in sub-optimal configurations for dynamic scenarios and various sets of applications. QFEC directly addresses these challenges with a unified architecture supporting LDPC, Polar, Turbo, and CC decoding via transformed message passing dataflows. The architecture’s main innovations include a shared compressive memory system, a fully connected low-overhead interconnect, and a unified computation datapath, enabling extensive parameter and protocol configurability. This flexibility provides users with optimal tradeoffs between performance and coding gain through code reconfiguration. Architectural unification in QFEC leads to a 17.2% reduction in adder count and a 69.8% reduction in memory size without compromising the full flexibility for finegrained tradeoffs. Fabricated in 12 nm CMOS, QFEC achieves a high throughput up to 25.4 Gb/s and a coding gain up to 28 dB. The extensive flexibility covers a wide range of standards, including IEEE 802.x, 5G, OCT, and proprietary protocols, while maintaining a low NEE of 1.04 pJ/bit.
+ACKNOWLEDGMENT
+The views and conclusions contained in this document are those of the authors and should not be interpreted as representing the official policies, either expressed or implied, of the U.S. Government.
+REFERENCES
+[1] J. Choe and Y. Lee, “A 2.35 Gb/s/mm2 (7440, 6696) NB-LDPC decoder over GF(32) using memory-reduced column-wise trellis minmax algorithm in 28nm CMOS technology,” in Proc. IEEE Symp. VLSI Technol. Circuits (VLSI Technol. Circuits), Kyoto, Japan, Jun. 2023, pp. 1–2.
+[2] B.-S. Su, C.-H. Lee, and T.-D. Chiueh, “A 58.6/91.3 pJ/b dual-mode belief-propagation decoder for LDPC and polar codes in the 5G communications standard,” IEEE Solid-State Circuits Lett., vol. 5, pp. 98–101, 2022.
+[3] C.-H. Chen, W. Tang, and Z. Zhang, “A 2.4 mm2 130 mW MMSEnonbinary-LDPC iterative detector-decoder for 4×4 256-QAM MIMO in 65nm CMOS,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, San Francisco, CA, USA, Feb. 2015, pp. 1–3.
+[4] F. Naessens et al., “A 10.37 mm2 675 mW reconfigurable LDPC and turbo encoder and decoder for 802.11n, 802.16e and 3GPP-LTE,” in Proc. Symp. VLSI Circuits, Honolulu, HI, USA, Jun. 2010, pp. 213–214.
+[5] P. Urard, L. Paumier, V. Heinrich, N. Raina, and N. Chawla, “A 360 mW 105Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes enabling satellite-transmission portable devices,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, San Francisco, CA, USA, Feb. 2008, pp. 310–311.
+[6] Y. Yue et al., “A unified forward error correction accelerator for multimode turbo, LDPC, and polar decoding,” in Proc. ACM/IEEE Int. Symp. Low Power Electron. Design, New York, NY, USA, Aug. 2022, pp. 1–6.
+[7] M. Weiner, M. Blagojevic, S. Skotnikov, A. Burg, P. Flatresse, and B. Nikolic, “A scalable 1.5-to-6Gb/s 6.2-to-38.1 mW LDPC decoder for 60GHz wireless networks in 28nm UTBB FDSOI,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, San Francisco, CA, USA, Feb. 2014, pp. 464–465.
+
+[8] H.-M. Lam, S. Lu, H. Qiu, M. Zhang, H. Jiao, and S. Zhang, “A highefficiency segmented reconfigurable cyclic shifter for 5G QC-LDPC decoder,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 1, pp. 401–414, Jan. 2022.
+[9] S. U. Reehman, C. Chavet, P. Coussy, and A. Sani, “In-place memory mapping approach for optimized parallel hardware interleaver architectures,” in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Grenoble, France, Mar. 2015, pp. 896–899.
+[10] R. Johannesson and K. Sh. Zigangirov, “Lowdensity parity-check codes,” in Fundamentals of Convolutional Coding. Cambridge, MA, USA: MIT Press, 2015, pp. 485–566.
+[11] C. B. Shung, P. H. Siegel, G. Ungerboeck, and H. K. Thapar, “VLSI architectures for metric normalization in the Viterbi algorithm,” in Proc. IEEE Int. Conf. Commun. (ICC), vol. 4, May 1990, pp. 1723–1728.
+[12] M.-R. Li, C.-H. Yang, and Y.-L. Ueng, “A 5.28-Gb/s LDPC decoder with time-domain signal processing for IEEE 802.15.3c applications,” IEEE J. Solid-State Circuits, vol. 52, no. 2, pp. 592–604, Feb. 2017.
+[13] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2911–2924, Jun. 2024.
+[14] P. Flatresse et al., “Ultra-wide body-bias range LDPC decoder in 28nm UTBB FDSOI technology,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, Feb. 2013, pp. 424–425.
+[15] Y.-T. Chen, C.-C. Cheng, T.-L. Tsai, W.-C. Sun, Y.-L. Ueng, and C.H. Yang, “A 501 mW 7.6lGb/s integrated message-passing detector and decoder for polar-coded massive MIMO systems,” in Proc. Symp. VLSI Circuits, Kyoto, Japan, Jun. 2017, pp. C330–C331.
+[16] Y. Tao, S.-G. Cho, and Z. Zhang, “A configurable successivecancellation list polar decoder using split-tree architecture,” IEEE J. Solid-State Circuits, vol. 56, no. 2, pp. 612–623, Feb. 2021.
+[17] J. P. Woodard and L. Hanzo, “Comparative study of turbo decoding techniques: An overview,” IEEE Trans. Veh. Technol., vol. 49, no. 6, pp. 2208–2233, Nov. 2000.
+[18] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in Proc. IEEE Global Telecommun. Conf., vol. 2, 2001, pp. 1021–1025.
+[19] A. Viterbi, “Error bounds for convolutional codes and an asymptotically optimum decoding algorithm,” IEEE Trans. Inf. Theory, vol. IT-13, no. 2, pp. 260–269, Apr. 1967.
+[20] K. Niu, K. Chen, J. Lin, and Q. T. Zhang, “Polar codes: Primary concepts and practical decoding algorithms,” IEEE Commun. Mag., vol. 52, no. 7, pp. 192–203, Jul. 2014.
+[21] D. W. Bliss et al., “Enabling software-defined RF convergence with a novel coarse-scale heterogeneous processor,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Austin, TX, USA, May 2022, pp. 443–447.
+[22] K.-Y. Chen et al., “A 507 GMACs/J 256-core domain adaptive systolicarray-processor for wireless communication and linear-algebra kernels in 12nm FINFET,” in Proc. IEEE Symp. VLSI Technol. Circuits (VLSI Technol. Circuits), Honolulu, HI, USA, Jun. 2022, pp. 202–203.
+[23] X. Wei et al., “A 33.06-Gb/s reconfigurable Galois field oFEC decoder for optical intersatellite communication,” IEEE Solid-State Circuits Lett., vol. 7, pp. 331–334, 2024.
+[24] S. Choi, H. Deng, K.-Y. Chen, Y. Yue, D. Blaauw, and H. S. Kim, “ParaBase: A configurable parallel baseband processor for ultra-highspeed inter-satellite optical communications,” in Proc. 29th ACM/IEEE Int. Symp. Low Power Electron. Design, Aug. 2024, pp. 1–6.
+[25] B. Tahir, S. Schwarz, and M. Rupp, “BER comparison between convolutional, turbo, LDPC, and polar codes,” in Proc. 24th Int. Conf. Telecommun. (ICT), May 2017, pp. 1–7.
+[26] Y. Chen, S. Lu, H.-S. Kim, D. Blaauw, R. G. Dreslinski, and T. Mudge, “A low power software-defined-radio baseband processor for the Internet of Things,” in Proc. IEEE Int. Symp. High Perform. Comput. Archit. (HPCA), Barcelona, Spain, Mar. 2016, pp. 40–51.
+[27] M. Giordani and M. Zorzi, “Non-terrestrial networks in the 6G era: Challenges and opportunities,” IEEE Netw., vol. 35, no. 2, pp. 244–251, Mar. 2021.
+[28] M. Alsabah et al., “6G wireless communications networks: A comprehensive survey,” IEEE Access, vol. 9, pp. 148191–148243, 2021.
+[29] S. Chen, Y.-C. Liang, S. Sun, S. Kang, W. Cheng, and M. Peng, “Vision, requirements, and technology trend of 6G: How to tackle the challenges of system coverage, capacity, user data-rate and movement speed,” IEEE Wireless Commun., vol. 27, no. 2, pp. 218–228, Apr. 2020.
+[30] B. Xiang, D. Bao, S. Huang, and X. Zeng, “An 847–955 Mb/s 342–397 mW dual-path fully-overlapped QC-LDPC decoder for WiMAX system in 0.13 µm CMOS,” IEEE J. Solid-State Circuits, vol. 46, no. 6, pp. 1416–1432, Jun. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+YUE et al.: QFEC: A 9.97 Gb/s FULLY CONFIGURABLE QUAD-MODE DECODER
+[31] A. Tarable, S. Benedetto, and G. Montorsi, “Mapping interleaving laws to parallel turbo and LDPC decoder architectures,” IEEE Trans. Inf. Theory, vol. 50, no. 9, pp. 2002–2009, Sep. 2004.
+[32] W. Qiao, D. Liu, and S. Liu, “QFEC ASIP: A flexible quad-mode FEC ASIP for polar, LDPC, turbo, and convolutional code decoding,” IEEE Access, vol. 6, pp. 72189–72200, 2018.
+[33] A. Verma and R. Shrestha, “High-throughput and hardware-efficient ASIC-chip fabrication of reconfigurable LDPC/polar decoder for mMTC and URLLC 5G-NR applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 9, pp. 4284–4297, Sep. 2024.
+[34] H. Ji, Y. Zhang, Y. Sun, Y. Huang, X. You, and C. Zhang, “UniDec: A unified factor-graph-based decoder fully compatible with 5G NR LDPC/polar codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 72, no. 8, pp. 4235–4247, Aug. 2025.
+Yufan Yue received the dual B.S. degrees in electrical and computer engineering from Shanghai Jiao Tong University, Shanghai, China, and the University of Michigan, Ann Arbor, MI, USA, in 2020, and the M.S. degree in electrical and computer engineering from the University of Michigan in 2024, where he is currently pursuing the Ph.D. degree in electrical and computer engineering.
+His research interests include the design of reconfigurable multi-mode forward error correction accelerators, domain specific hardware architecture, and adaptive voltage scaling.
+
+4397
+Hyunwon Chung (Graduate Student Member, IEEE) received the B.S. degree in electrical engineering from Korea University, Seoul, South Korea, in 2022, and the M.S. degree in electrical and computer engineering from the University of Michigan, Ann Arbor, MI, USA, in 2024, where he is currently pursuing the Ph.D. degree.
+His research focuses on dataflow architecture and reconfigurable hardware for optimizing irregular and parallel workloads, with broader interests in energyefficient system-on-chip (SoC) design.
+Ronald Dreslinski (Senior Member, IEEE) received the B.S.E., M.S.E., and Ph.D. degrees from the University of Michigan, Ann Arbor, MI, USA, in 2001, 2003, and 2011, respectively. He is currently an Associate Professor of computer science and engineering with the University of Michigan. His work focuses on hardware and circuit designs for a post-Moore’s Law world. He received the 2015 IEEE Young Computer Architect Award.
+
+Kuan-Yu Chen received the B.S. degree in electrical engineering from the National Taiwan University, Taipei, Taiwan, in 2018, and the M.S.E. and Ph.D. degrees in electrical and computer engineering from the University of Michigan, Ann Arbor, MI, USA, in 2020 and 2024, respectively.
+He is currently a Senior Design Engineer with Tenstorrent USA Inc. His research interests include computer architecture, domain-specific programmable accelerators, and digital circuit design.
+Xiangdong Wei (Graduate Student Member, IEEE) received the dual B.S. degree in computer engineering from Shanghai Jiao Tong University, Shanghai, China, and the University of Michigan, Ann Arbor, MI, USA, in 2022, and the M.S. degree in electrical and computer engineering from the University of Michigan in 2024, where he is currently pursuing the Ph.D. degree in electrical and computer engineering.
+His research interests include energy-efficient, reconfigurable digital accelerators for baseband signal processing, and deep learning.
+Tutu Ajayi received the Ph.D. degree in electrical and computer engineering from the University of Michigan, Ann Arbor, MI, USA. He is a Research Fellow with the University of Michigan. His research interests include cross-layer computer architecture, with an emphasis on realizing research into ASIC and FPGA platforms.
+
+David Blaauw (Fellow, IEEE) received the B.S. degree in physics and computer science from Duke University in 1986 and the Ph.D. degree in computer science from the University of Illinois Urbana–Champaign in 1991. Until August 2001, he was with Motorola Inc., Austin, TX, USA, where he was the Manager of the High Performance Design Technology Group and won the Motorola Innovation Award. Since August 2001, he has been on the faculty of the University of Michigan, where he is the Kensall D. Wise Collegiate Professor of EECS. He has researched ultra-low-power wireless sensors using subthreshold operation and low-power analog circuit techniques for millimeter systems. This research received the MIT Technology Review’s “one of the year’s most significant innovations.” His research group introduced so-called nearthreshold computing, which has become a common concept in semiconductor design. He has pursued research in cognitive computing using analog, inmemory neural-networks for edge-devices and genomics for precision health. He has published over 600 papers and holds 65 patents. He received the 2016 SIA-SRC Faculty Award for lifetime research contributions to U.S. semiconductor industry. He has also received several best paper awards.
+Hun-Seok Kim (Senior Member, IEEE) received the B.S. degree in electrical engineering from Seoul National University, Seoul, South Korea, in 2001, and the Ph.D. degree in electrical engineering from the University of California, Los Angeles, Los Angeles, CA, USA, in 2010. He is currently the Samuel H. Fuller Early Career Professor in electrical and computer engineering (ECE) and an Associate Professor in electrical engineering and computer science (EECS) with the University of Michigan, Ann Arbor, MI, USA. His research interests include system analysis, novel algorithms, VLSI architectures for low power/high-performance wireless communications, signal processing, and machine-learning systems. He was a recipient of the DARPA Young Faculty Award in 2018 and the National Science Foundation (NSF) CAREER Award in 2019.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:09:34 UTC from IEEE Xplore. Restrictions apply.
+
+

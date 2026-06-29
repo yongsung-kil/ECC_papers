@@ -1,0 +1,826 @@
+A Quantitative Analysis of Fixed-Point LDPCDecoder Implementations using HardwareAccelerated HDL Emulations
+
+Matthias Korb, Tobias G. Noll
+Chair of Electrical Engineering and Computer Systems, RWTH Aachen University Schinkelstr. 2, 52062 Aachen, Germany, korb, tgn@eecs.rwth-aachen.de
+
+Abstract— Using hardware-accelerated HDL emulators of fixed-point implementations has several advantages in comparison to C-based simulations: The high degree of parallelism for example of field-programmable gate-array based hardware accelerators promise an increased emulation throughput. Furthermore, the HDL model of the considered circuit can be used in the following design process making an additional verification dispensable. For a system analysis of different low-density parity-check (LDPC) decoders such an emulator is practically inevitable from a throughput perspective: the outstanding error correction capability of those decoders allowing for biterror rates (BER) of well below 10-10 requires a simulative decoding of billions of blocks.
+In this work, an HDL-based emulator is used. The designed HDL model is highly parameterizable and includes an LDPC decoder and high-quality Box-Mullerbased white Gaussian-noise generators to create rare errorevents. Using this emulator a comparison of the decoding capability of different fixed-point decoder implementations has been performed. Additionally, accurate cost-models are used for estimating the hardware costs of the different decoder implementations which enable an identification of Pareto-optimal decoder implementations. Finally, the achievable emulator throughput is discussed and compared to the simulation throughput of a speed optimized C-model.
+I. INTRODUCTION
+The first step in designing a low-density parity-check (LDPC) decoder for a certain application is the derivation of an efficient fixed-point implementation of the decoding algorithm. Thereby, amongst others the choice of a certain word-length allows for a trade-off between decoding performance and hardware complexity. Furthermore, certain approximations might be attractive in terms of a reduction of silicon area and power dissipation. As the impact on decoding performance of a certain fixed-point algorithm highly depends on the specified LDPC code, a decoding-performance analysis has to be performed for the individual code.
+It would be possible to use a bit-true C-model to simulate the decoding performance. However, one drawback of this
+This work was partially supported by DFG (grant NO 281/11-2)
+
+approach is the limited simulation throughput of such a Cmodel. Due to the superior error-correction capability of LDPC codes many error patterns have to be simulated leading to very long simulation runs. In an early stage a combined bit-true Matlab-C-model was elaborated and optimized with respect to simulation throughput. The simulation throughput is approximately 1 million decoded symbols per second on a 2.8 GHz CPU with 32 GByte RAM. A simulation of the errorfloor, which can be as low as a bit-error rate (BER) of 10-11 [1] for LDPC codes, would require about one day for only one signal-to-noise ratio (SNR) point. A simulation of the whole system curve or even a comparison of different fixed-point implementations is not reasonable at all. Moreover, suppose a golden reference has been identified using this Matlab-C simulator. A potential HDL model required for example for a synthesized standard-cell design needs to be verified against this golden reference.
+In this work, a hardware-accelerated HDL emulator is used to emulate the decoding performance of fixed-point LDPC decoders. Using this field-programmable gate array-based (FPGA) accelerator platform a significant improvement in emulation throughput in comparison to the C-model can be expected. After an introduction to LDPC codes the designed parameterizable HDL model is described in section III. It includes a LDPC decoder and noise sources which model the communication channel. In section IV various fixed-point realizations are discussed and the emulated decoding performances are presented. Based on these results and on an estimation of the individual hardware complexities, Paretooptimal decoder implementations can be identified. Finally, in section V the emulated decoder throughput is compared to the performance of other simulation environments.
+II. LDPC CODES
+The outstanding error correction capability of LDPC codes is due to a complex receiver sided channel decoder which can be defined by a parity-check matrix H with n columns and m rows. Each column in this matrix represents one received symbol and each row represents one parity check. The number of ‘1’-entries per column dV therein defines in how many parity checks the symbol takes part. The number of ‘1’-entries per row dC defines the number of participating symbols in each
+
+978-1-467A3u-t2ho2r9iz7ed-3li/c1en2s/e$d3u1s.e0l0im©ite2d0to1:2YoInEsEeiEUniv. Downloaded on J2u9n4e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+parity check. The channel information L(ci) of each received symbol yi represents the first estimation of the corresponding sent symbol. Thereby, the sign indicates whether the sent symbol was a ‘+1’ or ‘-1’ (or ‘0’ and ‘1’, respectively). Considering for example a binary phase shift keying modulation scheme and an additive white Gaussian-noise channel with standard deviation σ this log-likelihood information is calculated as follows
+
+L(ci ) =
+
+2 ⋅ yi σ2
+
+(1)
+
+where yi is the soft information of the ith received symbol. The absolute value |L(ci)| is an indicator of the confidence in the sign with high values indicating a high confidence. In the
+
+iterative decoding process these estimations are improved
+
+based on the evaluation of the m parity checks. Therefore, if
+
+symbol i takes part in parity check j (indicated by a ‘1’-entry at
+
+position (i,j) in the parity check matrix H), a new so called A-
+
+posteriori information L(ri,j) is calculated in the first phase of a decoding iteration. If the parity check is fulfilled, the new A-
+
+posteriori information should strengthen the current estimation
+
+and, therefore, should have the same sign. Otherwise, the sign
+
+should be inverted leading to the following calculation
+
+( ) ∏ ( ) sign L(ri, j) = sign L(qi', j)
+
+(2)
+
+∀i'\i
+
+in which L(qi,j) is equal to the received channel information L(ci) for the first decoding iteration. Here only the extrinsic information of all other signs i’\i is considered to calculate the
+
+A-posteriori information for symbol i. In the initially proposed
+
+decoding algorithm [2] the absolute value of the A-posteriori
+
+information is calculated as follows
+
+∑ ( ) ( ) ( ( )) L(ri, j) = Φ−1⎝⎜⎜⎛ i' Φ
+
+L(qi', j )
+
+−Φ
+
+L(qi, j)
+
+⎟⎞ ⎟⎠
+
+=
+
+Φ −1
+
+L(R j )
+
+−
+
+Φ
+
+L(qi, j)
+
+(3)
+
+with Ф being the transcendent function
+
+Φ(x )
+
+=
+
+Φ(x)−1
+
+=
+
+−
+
+log⎝⎜⎜⎛ tanh
+
+⎜⎜⎝⎛
+
+x 2
+
+⎟⎠⎞⎟⎠⎟⎞⎟.
+
+(4)
+
+For a hardware efficient realization the temporary value L(Rj) is reused for the calculation of all A-posteriori information for one parity check as depicted in Fig. 1 a). After the initial application of the Ф function, L(Rj) is calculated in a multi-operand adder. Subsequently, for each A-posteriori information the corresponding Ф-value is subtracted before the Ф-1 function is applied. In the second phase of the decoding algorithm the estimation of the received symbol i is improved by accumulating the received symbol information and the new A-posteriori information
+
+∑ L(Qi) = L(ci) + L(ri, j') . j'
+
+(5)
+
+Instead of using this estimation of symbol i, in the
+
+following decoding iteration slightly modified values
+
+( ) L(qi, j) = L(Qi) − L ri, j
+
+(6)
+
+are derived.
+
+dC
+
+dC
+
+dC
+
+dC
+
+a) Sum-Product based
+
+b) Min-Sum based
+
+Fig. 1 Calculation of absolute A-posteriori information
+
+Due to the high computational complexity of this decoding algorithm various approximations have been proposed in the past. As a modification of equations (2), (5), and (6) would result in an unacceptable degradation of the decoding performance, in general the magnitude calculation of the Aposteriori information is considered for such approximations. A widely used approximation was introduced in [3]. It utilizes the fact that (3) can be approximated by the minimum of all absolute L(qi,j) values as follows
+
+( ( ) ) L(ri, j)
+
+=
+
+⎪⎪⎨⎩⎧2nmd iimi''ninL
+
+L qi', qi', j
+
+j
+
+( ) if L qi, j is minimum
+
+else
+
+.
+
+(7)
+
+An architecture of the magnitude calculation for this
+
+algorithm is shown in Fig. 1 b). Typically, the absolute and
+
+second minimal magnitudes are determined. Subsequently, the
+
+position of the minimum is used to select either the first or the
+
+second minimum for each A-posteriori information L(ri,j). The hardware complexity can be reduced significantly but there is
+
+an impact on the decoding performance which is mainly due to
+
+the relatively large A-posteriori magnitudes. However, it is
+
+possible to increase the decoding performance of Min-Sum
+
+based LDPC decoders by applying a post-processing function
+
+(ppf) to the minima as proposed in [4].
+
+III. HARDWARE ACCELERATED HDL EMULATOR
+In this work the decoding performance analysis of the different fixed-point decoding algorithms is done by a hardware-accelerated emulation of a parameterizable HDL model. The structure of the HDL model is illustrated in Fig. 2. It mainly consists of a white-Gaussian-noise generator and a highly parameterized LDPC-decoder model in order to support various fixed-point realizations. For the decoding of one block the noise generator produces n noise samples which are added to an n-symbols wide code vector y. The symbols of y are BPSK modulated. As the decoding performance only slightly varies for different code vectors, a predefined code vector is used throughout the emulation. Multiple noise channels can be realized in parallel to increase the throughput rate. Considering for example p parallel noise channels, it takes n/p clock cycles to generate a new noise vector y’. Additionally, an early termination strategy [10] for the LDPC decoder is introduced. Instead of emulating all decoding iterations the decoding of a block is stopped whenever the block is free of errors. As the average number of iterations IMEAN is typically smaller than the maximum number of iterations IMAX, the average number of clock cycles for decoding can be reduced significantly. The decoding of one block and the generation of a new block are done in parallel. The next block is decoded whenever the new block is generated and the decoder is idle.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u9n5e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+⎛⎜1 0 1
+
+⎜0 1 1
+
+⎜
+
+H =⎜
+
+⎜
+
+⎜⎜⎜⎝01
+
+1 0
+
+1 0
+
+0 1 0⎞⎟
+
+0 0 1⎟
+
+⎟
+
+⎟
+
+⎟
+
+1 1
+
+0 1
+
+10⎟⎟⎟⎠
+
+⎜⎛− 1⎟⎞ ⎜+ 1⎟
+
+y
+
+=
+
+⎜ ⎜
+
+⎟ ⎟
+
+⎜ − 1⎟
+
+⎜⎝+ 1⎟⎠
+
+LUT
+
+LUT
+
+LUT
+
+LUT
+
+Fig. 2 Block diagram of HDL model
+
+A. Highly Parameterizable LDPC Decoder
+The number of node instances and the network between the nodes are defined by a matrix which can be specified before compilation to allow for an emulation of various LDPC codes. Various fixed-point decoding algorithms can be supported by modifying the magnitude calculation in the check-node module. The Sum-Product check-node for example can be easily adapted to any possible fixed-point implementation of the Ф- and Ф-1-functions as they are realized using a look-up table (LUT). A similar approach is considered for the postprocessing in the Min-Sum check-node module.
+B. WGN generator
+When considering an additive white Gaussian noise channel, the noise symbols, which are added to the sent block y, need to fulfill two requirements: First of all, the samples have to be normally distributed with a given standard deviation σ(SNR). Thereby, the quality of the normal-distributed noise symbols has to allow for a generation of error events with a very low probability. Additionally, the noise samples need to be uncorrelated.
+Using the included Matlab random noise generator, which is based on the Ziggurat algorithm, we could not observe any error floor. Therefore, the Box-Muller algorithm presented in [11] and known for its high quality has been used. As this method can be efficiently realized in hardware, it is widely used in FPGA-based emulators as for example in [12]. The algorithm converts two uniformly distributed random numbers u1 and u2 in the range [0,1) and [-1,1) into two independent normally distributed variables n1 and n2. One of the basic ideas of this transformation is that a two-dimensional normal
+
+distribution is rotational-symmetric and, thus, the probability of the angle on any circle of a radius r is constant. Therefore, the normalized angle is uniformly distributed. The other idea is that the square of the radius of this distribution follows a Chisquared distribution, as the negative logarithm of a uniformly distributed variable does. These ideas allow for transformations between two uniformly distributed variables and two standard normally distributed variables. The inversion of these transformations leads to the desired generation of normally distributed noise samples out of uniformly distributed samples. The resulting flow graph is illustrated in Fig. 3.
+
+Tausworthe
+
+generator
+
+u1
+
+u2
+
+u2 0
+
+x0(SNR)
+
+a0
+
+-/+
+
++/-
+
+-/+
+
+e = −2 ⋅ log(u1)
+r = gsqrt ⋅ e
+
+h1
+
+=
+
+σ (SNR) ⋅
+
+1 gsqrt
+
+⋅ sin(2π
+
+⋅ u2)
+
+h2
+
+=
+
+σ (SNR)⋅
+
+1 gsqrt
+
+⋅ cos(2π
+
+⋅ u2)
+
+r
+
+h1
+
+h2
+
+a1
+-/+
+register stages
+
+1 2
++/-
+
+1 2
+-/+
+
+a11
+-/+
+
+1 2−11
++/-
+
+1 2−11
+-/+
+
+n1
+
+n2
+
+h1
+
+h2
+
+Fig. 3 Block diagram of WGN generator
+
+First, two uniformly distributed variables u1 and u2 have to be generated. This can for example be done using a Tausworthe generator. As the correlation of the generated normally distributed noise samples mainly depends on the correlation of these uniformly distributed noise samples the optimized Tausworthe generator presented in [13] has been realized. Therein, three linear-feedback shift registers are combined resulting in a high statistical property. The Tausworthe generator calculates a uniformly distributed 32 bits sample which can be split into the two uniformly distributed random numbers u1 and u2.
+The transformation from uniformly to normally distributed noise samples can be separated into a radius and an angle calculation. The angle calculation is a transformation of polar into Cartesian coordinates. In contrast to the algorithm presented in [11] the transformation is not realized on a unit circle but on a circle with radius σ(SNR). This modification allows for a realization of normally distributed noise samples with a user-defined standard deviation. The radius is calculated in two steps: First, a variable e is calculated which is twice the negative logarithm of u1. Then, the square root of e leads to the radius r. Finally, the radius and angle values are multiplied yielding in the two normally distributed samples n1 and n2 with a standard deviation of σ(SNR). In contrast to the original BoxMuller algorithm slightly modified radius and angles are calculated. Thereby, the radius is normalized to gsqrt and the angles to the inverse of gsqrt leading to the exact same noise samples n1 and n2. Although the Box-Muller algorithm consists of multiple transcendent functions, it can be efficiently realized in hardware. All required functions (sine, cosine, log, and exp) can be calculated using the unified Cordic algorithm. It is an
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u9n6e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+iterative algorithm wherein in each iteration the estimation of the result is improved. The advantage of this realization is that only add and shift operations are required as exemplarily illustrated in Fig. 3 for the sine calculation. Here the initial values for the Cordic algorithm are the unified distributed sample u2 and a user-defined variable
+
+x(SNR) = σ (SNR)⋅
+
+1 gsqrt
+
+⋅
+
+1 gsin/ cos
+
+(8)
+
+with gsqrt and gsin/cos being the gain of the Cordic algorithm for the root and the sine / cosine calculations. These gains
+
+depend on the performed Cordic iterations and can be defined
+
+prior to the compilation. Now the reason for the calculation of
+
+the normalized radius and angles becomes obvious: Instead of
+
+realizing a multiplier at each output of the Cordic-based
+
+square-root calculation and sine / cosine calculation it is
+
+possible to look-up the initial value of x(SNR) in a look-up
+
+table. The complexity of this table is small as only one
+
+predefined initialization value for each considered SNR has to
+
+be stored.
+
+The internal word lengths have been optimized in terms of hardware complexity and required quality of the noise symbols starting from the required quantization of the Gaussian noise
+sample. As in the following the log-likelihood ratios L(ci) will be quantized with only a few fractional bits, the main focus in this optimization is to allow for an accurate replication of the Gaussian distribution over a wide range. Thereby, the maximum sigma was chosen to be σMAX = 5·σ resulting in a supported unnormalized radius of r /gsqrt= 5. The required number of fractional bits f for the uniformly distributed unified random number u1 can then be calculated using
+
+f > σ MAX 2 . 2 ⋅ ln 2
+
+(9)
+
+For σMAX = 5·σ, a resolution of f = 19 is required but 20
+
+fractional bits were chosen to avoid quantization effects at 5·σ.
+
+The remaining 12 bits of the 32 bit unified noise sample from
+
+the Tausworthe generator are used in the angle part of the Box-
+
+Muller block. Instead of normalizing the [-1,1) uniformly distributed samples to [0,2·π), the hard-coded angles of rotation
+
+in the different stages of the Cordic block are normalized
+
+offline. The resulting samples h1 and h2 are represented using 15 fractional bits. This is sufficient, considering that the
+
+resulting noise values are quantized to only a few fractional
+
+bits.
+
+The empiric correlation between any two noise symbols
+and the empiric probability distribution function have to be
+analyzed to evaluate the quality of the white Gaussian noise
+generators. Therefore, a set of 80 million noise samples for a standard deviation of σ = 0.4462 is derived. First of all, the empirical probability density function of the generated noise
+has to follow a normal distribution with the considered
+standard deviation. The resulting empirical probability density
+functions of n1 and the internal signals are given in Fig. 4. The distribution of n1 fits well to the theoretic normal distribution in the specified range [-5·σ, 5·σ]. The empiric determination of the distribution’s four moments leads to a mean of μ = -5·10-5, an empiric standard deviation of σ = 0.4458, a skewness
+
+of -7·10-4, and a kurtosis K = 3.0013 which is very close to the kurtosis of an ideal normal distribution K = 3.
+The second required characteristic is that any two noise symbols are uncorrelated. As an analysis of this behavior is very complex, here, only the correlation of n1 and n2 and the correlation of n1/2 in two subsequent cycles shall be analyzed. As a measure for the correlation the empiric Pearson correlation coefficient can be calculated. Considering that the statistical property mainly depends on the property of u1 and u2, the correlation of these signals can be determined. The according empiric Pearson correlation coefficient is close to zero (3.1·10-4). As the Box-Muller algorithm leads to uncorrelated noise symbols if the initial uniformly distributed noise symbols are uncorrelated, the correlation coefficient of n1 and n2 is also close to zero (2.6·10-4). The empiric correlation coefficient of two subsequent noise symbols n1 (and n2) is almost zero (-8·10-4), as well.
+10-2
+
+10-4
+
+a) u1
+
+10-6 0
+
+5 10 15 20 25 30 e
+b) e
+
+pdf(r) pdf(h1)
+
+c) r
+
+d) h1
+
+e) n1
+Fig. 4 Empirical probability density functions (pdf)
+IV. PARETO-OPTIMAL DECODER IMPLEMENTATIONS
+A quantitative analysis of different fixed-point decoder implementations requires an analysis of the respective decoding performance and an estimation of the resulting VLSIimplementation costs in terms of decoder throughput and silicon area. In this chapter such a quantitative analysis is presented for various Sum-Product and Min-Sum fixed-point decoder implementations including known and new approximations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u9n7e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+A. Fixed-Point Decoding Algorithm
+1) Sum-Product Decoder A major challenge in designing a Sum-Product based
+LDPC decoder is the derivation of a quantization scheme for the two transcendent functions Ф and Ф-1. In the Sum-Productbased decoder presented in [5] the Ф-function is realized for example based on dedicated Boolean functions for each output bit and the Ф-1 function is approximated by counting the leading zeroes of the input values. Also for the Ф-1 function an arbitrary mapping of the input to the output values is possible. A first approach would be to derive a mapping function by quantizing the floating point function.
+
+Considering a specified quantization scheme of the L(qi,j) values (4 integer and 2 fractional bits are assumed in the following) the quantization scheme at the output of the Φ function is a design parameter. Various quantization schemes and Φ-1 realizations have been analyzed. The fixed-point realizations leading to the best decoding performance are illustrated in Fig. 5. Thereby, the output of the Φ function is quantized to 6 fractional bits leading to a maximum value of 1-2-6. The resulting A-posteriori information is represented using 3 integer and 2 fractional bits. Additionally, the information is saturated to the integer value 5 leading to an increased decoding performance in comparison to unsaturated A-posteriori information.
+
+Φ(|L(q)|) |L(r)|
+
+2.5
+
+6
+
+2 4
+1.5
+
+1 2
+0.5
+
+00
+
+1
+
+2
+
+3
+
+4
+
+5
+
+|L(q)|
+
+a) Φ function
+
+00
+
+0.2 0.4 0.6 0.8
+
+1
+
+b) Φ-1 function
+
+Fig. 5 Fixed point implementation Φ function
+
+As the fixed-point realization of the Φ and Φ-1 function is in fact nothing but an approximation of the accurate functions, it is also possible to find other hardware efficient approximations which model the distribution of the |L(r)| values. By gently modifying the mapping between the input and output values the hardware complexity can be reduced. Nevertheless, during these modifications a reduction of the decoding performance has to be avoided.
+
+A linear mapping function would for example be very promising as such a function can be realized in hardware very efficiently using full adders. Suppose the following linear approximation of the Φ function
+
+Φ'(x)
+
+=
+
+⎧⎪a ⎨
+
+−
+
+b
+
+⋅
+
+x
+
+if x <
+
+a b
+
+.
+
+⎪⎩ 0
+
+otherwise
+
+(10)
+
+It is possible to optimize the parameters a and b analytically by reducing the mean square of the difference between Ф and Ф’. The optimal parameter set from the mean squared difference perspective is a = 2.125 and b = 1.125 considering a binary quantization of 3 fractional bits. From a hardware perspective this choice would result in two two-operand adders.
+
+3
+
+3
+
+|L(r)|
+
+2
+
+2
+
+1
+
+1
+
+00
+
+1
+
+2
+
+3
+
+4
+
+5
+
+|L(q)|
+
+a) Φ function
+
+00
+
+0.5
+
+1
+
+1.5
+
+2
+
+b) Φ-1 function
+
+Fig. 6 Linear approximation
+
+As the input statistics of the Ф and Ф-1 function vary significantly, parts of the input range of the functions should be reproduced more accurately (see Fig. 5). Therefore, minimizing the mean error of Ф’ in the whole range is not optimal with respect to decoding performance. An emulative evaluation of the parameters for the two functions Ф and Ф-1 (aФ,opt, bФ,opt, aФ-1,opt, and bФ-1,opt) lead to the parameter set as depicted in Fig. 6. The corresponding parameters are
+
+a Φ ,opt = 1 a Φ −1 ,opt = 3
+
+bΦ ,opt = 0 .25 bΦ −1 ,opt = 0 .5
+
+.
+
+(11)
+
+As the multiplication factors are in the form 2i, the
+
+multiplication can be realized by a shift of the input operand.
+
+Therefore, the realizations of the two functions only require
+
+one two-operand adder each.
+
+2) Fixed-point Min-Sum Decoder The Min-Sum algorithm avoids the realization of the
+transcendent Φ function by replacing the confidence calculation by a minimum search according to (7). Besides the reduced hardware complexity this replacement has a second positive effect: As only one quantization scheme is required throughout the decoder loop, the number of potential fixedpoint realizations of the algorithm is limited significantly: only the realization of the post-processing function is variable. In [6] we already presented emulation results for hardware-efficient post-processing realization including efficient normalization factors. It can be shown that for the exemplary code the optimal normalization factor is 0.5 resulting in nearly the best decoding performance. Additionally, the hardware complexity in comparison to a Min-Sum based decoder without postprocessing is even reduced.
+
+Hardware-driven modifications of the algorithm have been proposed in the past to further reduce the large decoder complexity. In [7] the decoder complexity of a Min-Sum-based decoder is further reduced by modifying (7) to
+
+( )( ) ( ) L(ri, j)
+
+=
+
+⎨⎧⎪mii' n ⎩⎪
+
+L qi', j min L
+i'
+
++ qi',
+
+1
+j
+
+LSB
+
+if
+
+L qi, j is minimum
+
+else
+
+.
+
+(12)
+
+Here only the first minimum has to be calculated leading to
+
+a significant reduction in the node complexity and the second
+
+minimum is approximated by the minimum value increased by
+
+one least-significant bit (LSB). As the exact calculated
+
+minimum is sent to dC - 1 bit-nodes and the incorrect second minimum only to one bit-node, the majority of A-posteriori
+
+messages are identical to the one calculated using 7. A more
+
+extensive modification of the decoding algorithm is done in [8].
+
+The A-posteriori calculation in the check-nodes is split into
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u9n8e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+multiple parts and 7 is applied only to these sub-nodes. As in this case, only a minor number of A-posteriori information is identical to the one in the Min-Sum algorithm, this approximation significantly reduces the decoding performance.
+
+An improved approximation without any additional hardware effort is possible when considering a tree of compareselect elements (CS) to calculate the absolute minimum as illustrated in Fig. 7. Each of the CS elements compares two operands and selects the minimum. The two minima of the upper dC /2 inputs and of the lower dC /2 inputs are the remaining candidates for the absolute minimum at the input of the CS element in the last stage. When considering the maximum of these two minima as the second minima of the confidence calculation, (7) is approximated using
+
+(( )) (( )) L(ri, j)
+
+=
+
+⎨⎪⎪⎧⎪mmainx⎛⎜⎜⎛⎝
+
+min
+i'∈C j,1
+min
+
+⎪⎩
+
+⎝ i'∈C j,1
+
+L qi', j L qi', j
+
+; min i'∈C j,2
+
+L qi', j
+
+; min i'∈C j,2
+
+L qi', j
+
+⎞⎟ ⎠ ⎞⎟ ⎠
+
+( ) if L qi, j is minimum
+else
+
+(13)
+
+with Cj,1 and Cj,2 being subsets of all connected bit-nodes each including half of the input values. If the minimum and the
+
+second minimum origin from other parts of the tree, this
+
+approximation leads to the correct second minimal value.
+
+Otherwise, the second minimum is the absolute minimum of
+
+the L(qi,j) values of the other part of the tree. In this case, the approximated second minimum is larger than the correct
+
+second minimum. Considering the probability of this case is
+
+0.5 in contrast to (12), the average fraction of correct A-
+
+posteriori values is increased from (dC -1)/dC to (dC -0.5)/dC (for a code with dC=32 for example from 96.9 % to 98.4 %).
+
+dC
+
+dC
+
+Fig. 7 Hardware-efficient second-minimum approximation
+B. Area and Timing Cost Models
+A fair comparison of the presented fixed-point implementations has to consider the different decoding capabilities as well as the hardware complexity of the resulting decoder. In [9] we presented accurate area and timing costmodels of a high-throughput bit-parallel Min-Sum-based LDPC decoder. In such a decoder all bit-nodes, calculating (5) and (6), and all check-nodes, performing the calculations of (2) and (7), are instantiated in parallel. The arithmetic in the nodes as well as the communication between the nodes is realized bitparallel.
+The presented models can be used to estimate the hardware complexity of various fixed-point implementations. As these only differ in the calculation of the A-posteriori information’s magnitude generally, these models can easily be modified to support different Min-Sum approximations as well as linear approximations of Sum-Product-based decoders. However, for the fixed-point Sum-Product implementations the hardware
+
+complexity of the Φ and the Φ-1 function has to be modeled. Here the Boolean function for each output can be derived based on the considered mapping function. Then, well-known Boolean optimization tools can then be used for optimization with respect to hardware complexity. The silicon area and critical path can be approximated by a simple gate count. In the exemplary mapping depicted in Fig. 8 a) the sign magnitude conversion is integrated in the Boolean function. For this mapping function the cost model would estimate a silicon area of 151 µm2 and a critical path of 816 ns (slow corner, VDD = 0.9 V, 110°) when considering a 90-nm CMOS technology. The Boolean function has been designed in a fullcustom approach and a 90-nm CMOS technology. The resulting layout is shown in Fig. 8 b) and occupies a silicon area of 155 µm2. The critical path derived by circuit simulation is 750 ps. The comparison of the estimated and the measured features reveals a good accordance. Therefore, the integration of this modeling scheme into the decoder cost models allows for an accurate estimation of Sum-Product-based LDPC decoders.
+
+a) Quantized mapping function
+
+b) 90-nm implementation
+
+Fig. 8 Exemplary fixed-point implementation of Φ-function
+
+While all other implementations only require a modification of the check-node’s silicon area, the estimation of the routing complexity needs to be adapted for the split-row approximation proposed in [8]. A lower bound of the required routing area can be derived by assuming that the whole code is split into two parts of half the size. Hereby, the routing impact of the additional sign wires between the sub check nodes is neglected and it is assumed that each check node in the initial code is connected to dC /2 bit nodes out of each sub code. Then, the routing area could be estimated by twice the routing area of a decoder with half the block length.
+
+C. Results
+The presented HDL model is mapped to a commercial FPGA-based hardware accelerator consisting of 64 Virtex-4 FPGAs [14] for an emulation of the decoding performance. Fig. 9 shows the emulated BERs for the discussed fixed-point implementations and an exemplary LDPC code with 2048 bit and 384 check nodes taken from [15]. It can be seen that the linear approximation of the Sum-Product decoder (■) allows for a better decoding performance than the fixed-point mapping of Fig. 5 (▼). In contrast, the Min-Sum based decoder (▲) shows a decrease of decoding performance of about 0.4 dB. The normalized Min-Sum-based decoder with the hardwareefficient normalization factor 0.5 shows the best decoding performance over the complete considered SNR range (◄). When approximating the second minimum using (13) (♦),
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u9n9e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+almost the same decoding performance can be achieved. However, the error floor is higher than for the non-approximate normalized Min-Sum decoder. The more extensive split-row approximation used in [8] (•) leads to a significant degradation of the decoding performance which is approximately 0.75 dB when considering the hardware-efficient post-processing function.
+Fig. 9 Decoding performance of fixed-point algorithms (IMAX=15)
+Utilizing the modified area and timing cost models and assuming a specified decoding throughput, the resulting silicon area and the maximum number of decoding iterations IMAX for the different fixed-point realizations can be derived. The resulting decoder features considering a throughput of 6.4 Gbit/s are shown in Fig. 10.
+Fig. 10 Decoder features for different fixed-point realizations
+When considering a bit-parallel decoder the transition from a Sum-Product (▼) to a Min-Sum (▲) based decoder neither reduces the silicon area nor increases the number of supported decoding iterations significantly. The reason is the dependence of the silicon area on the realization of the global interconnect which is not affected by the transition. However, modifications of the algorithm resulting in a reduction of the global node interconnect lead to a major reduction of the silicon area. Such an example is the introduction of a word-length reducing normalization factor in a Min-Sum decoder (Δ) or the linear approximation of the Sum-Product decoder (■). Hereby, the significant reduction of the silicon area is due to the quadratic dependency of the silicon area on the number of interconnect lines (see [9]). The split-2 approximation (○) further reduces the silicon area and the critical path in comparison to the normalized Min-Sum decoder.
+As showed in [6] for the considered code complexity a realization of a partially bit-serial decoder architecture is very
+
+attractive. Due to the Φ function in Sum-Product-based decoders such a partially bit-serial approach is only possible for Min-Sum-based decoders. Considering this decoder architecture, it is possible to achieve a very small silicon area even for the non-approximate Min-Sum decoder. Compared to bit-parallel decoder implementations the number of iterations is significantly reduced.
+In general, the approximations reduce the silicon area and increase the number of iterations simultaneously. However, when comparing these approximations the impact on the decoding performance has to be taken into account. Two metrics for the decoding performance are possible: one metric is the achieved BER for a certain SNR and the second possibility is the required SNR for a certain BER. In the following the latter is considered. From an application point of view, the specified decoder throughput allows for an estimation of the supported number of decoding iterations. Considering the individual maximal number of iterations and a specified BER, the required SNR can be calculated for each decoder implementation.
+
+Tab. 1 Area and decoding performance of different fixed-point realizations
+
+Algorithm
+Sum-Product Sum-Product Lin. Approx.
+Min-Sum
+Min-Sum Norm.=0.5 Min-Sum Norm.=0.5
+2nd-Min. Approx. Min-Sum Norm.=0.5 Split-2
+
+Architecture A [mm2]
+
+Bit-Parallel
+
+4.5
+
+Bit-Parallel
+
+2.2
+
+Bit-Parallel
+
+4.1
+
+Partially Bit-Serial 2.2
+
+Bit-Parallel
+
+3.0
+
+Partially Bit-Serial 2.1
+
+Bit-Parallel
+
+2.8
+
+Partially Bit-Serial 1.8
+
+Bit-Parallel
+
+1.8
+
+Max. iterations (6.4 Gbit/s)
+32 43
+33 15 38 17 47 19 47
+
+SNR [dB] (BER = 10-9, @max. iterations)
+3.70 3.70
+4.16 4.29 3.55 3.58 3.60 3.62 4.16
+
+The decoder features in terms of silicon area, maximum number of iterations and the required SNR for a BER of 10-9 are listed in Tab. 1. The required SNRs for both Sum-Product decoders and for the normalized Min-Sum decoders with and without the second minimum approximation lie close together between 3.5 and 3.7 dB. Only the unnormalized Min-Sum and the normalized Min-Sum decoder with a split-row approximation require an SNR higher than 4 dB. Although the number of decoding iterations is significantly smaller partially bit-serial implementations based on the architecture presented in [6] allow for almost the same decoding performance. The reason is the low improvement of the decoding performance per iteration after the initial 10 iterations.
+In total three Pareto-optimal fixed-point implementations can be identified. The bit-parallel Min-Sum-based decoder with normalization allows for the best decoding performance, while the partially bit-serial version with second minimum approximation results in the smallest silicon area (in comparison to the normalized split-2 decoder the decoding performance is improved). A further Pareto-optimal decoder is the partially bit-serial Min-Sum-based decoder with normalization which shows not only a slightly decreased decoding performance but also a significant reduction in decoder area compared to the bit-parallel version.
+
+V. HARDWARE-MAPPING OF HDL MODEL
+The realization of the node interconnect of the LDPC decoder module is the main design challenge when it is realized
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J3u0n0e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+as a dedicated interconnect in a VLSI decoder macro (see for example [5]). When trying to map this communication on an FPGA or multiple FPGAs the realization is even more challenging. An automated mapping of the model to the FPGAs was impossible. Therefore, a manual adjustment during the compilation process was done. Considering the used exemplary code and a parallel instantiation of 128 Box-Mullerbased noise channels in total about 1.7 million logic slices, 2.3 million LUTs and 1 million flip flops are used.
+In favour of a high emulation throughput the applied system frequency (which is twice the frequency applied to the 64 FPGAs) should be as high as possible. However, too high clock frequencies result in timing violations inside the system which would lead to a pseudo degradation of the decoding performance. While for other building blocks the introduction of errors would immediately result in a system failure, for LDPC codes a pseudo shift of the system curve is observed. In Fig. 11 a) the emulated decoding performance of the normalized Min-Sum decoder for various system clock frequencies is shown. A rather conservative system frequency of 400 kHz was chosen to avoid even rare timing violations. However, to determine the maximal performance of the emulator the pseudo shift for various clock frequencies needs to be analyzed. The pseudo shift at a BER of 10-6 for various system clock frequencies can be seen in Fig. 11 b). The maximum clock frequency not leading to a pseudo shift is 560 kHz.
+
+a) Decoding performance (IMAX=8) b) Optimized clock frequency (@10-6)
+Fig. 11 Pseudo degradation of decoding performance due to overclocking
+In Tab. 2 the achievable decoding throughput considering the maximal clock frequency is compared to the simulation throughput of the HDL model and the speed-optimized Matlab-C model. Thereby, a maximum speed-up of a factor of 70 can be obtained in contrast to the bit-true but not cycleaccurate Matlab-C model considering early termination.
+
+Tab. 2 Comparison of simulation and emulation throughput
+
+Noise Generator
+
+Platform
+
+Decoding Throughput
+
+Throughput-Optimized Matlab-C Model
+
+Ziggurate Algorithm (Matlab Build-In)
+
+2.8 GHz CPU 32 Gbyte RAM
+
+166 kbit/s 960 kbit/s
+
+w/o early termination (I MAX =50)
+w/ early termination (SNR = 4 dB)
+
+HDL Model Modelsim Simulation
+
+Box-Muller Algorithm 2.8 GHz CPU
+
+(HDL-Model)
+
+32 Gbyte RAM
+
+540 bit/s 1.9 kbit/s
+
+w/o early termination (I MAX =50)
+w/ early termination (SNR = 4 dB)
+
+HDL Model
+
+Box-Muller Algorithm
+
+FPGA-based Emulation
+
+(HDL-Model)
+
+ZeBu-XXL @ 560 kHz
+
+11.5 Mbit/s 67.4 Mbit/s
+
+w/o early termination (I MAX =50)
+w/ early termination (SNR = 4 dB)
+
+VI. CONCLUSION
+A hardware-accelerated emulation of fixed-point LDPC decoders has been presented. The used HDL model includes a highly parameterizable LDPC decoder and high quality white Gaussian noise generators. The emulation combines various advantages: due to the high degree of parallelism in the considered FPGA-based hardware-accelerator the emulation throughput can be significantly increased in comparison to a Cmodel based simulator. Furthermore, the existence of a bit-true and cycle-accurate HDL model of the LDPC decoder simplifies a subsequent hardware design using, for example, synthesized standard cells. This parameterizable model is used to analyze the decoding capability of various fixed-point decoder implementations. Thereby, the high emulation throughput in combination with high-quality noise sources allow for an accurate comparison of the decoding performance at very low bit-error rates. Using accurate area and timing models of LDPC decoders Pareto-optimal decoder implementations for an exemplary code and throughput specification are identified.
+REFERENCES
+[1] Z. Zhengya, L. Dolecek, et al.: "Investigation of Error Floors of Structured Low-Density Parity-Check Codes by Hardware Emulation," in Global Telecommunications Conference, 2006, IEEE, 2006, pp. 1-6.
+[2] R. Gallager: "Low-density parity-check codes," Information Theory, IRE Transactions on, vol. 8, pp. 21-28, 1962.
+[3] M. P. C. Fossorier, M. Mihaljevic, et al.: "Reduced complexity iterative decoding of low-density parity check codes based on belief propagation," Communications, IEEE Transactions on, vol. 47, pp. 673-680, 1999.
+[4] C. Jinghu, M. P. C. Fossorier: "Near optimum universal belief propagation based decoding of low-density parity check codes," Communications, IEEE Transactions on, vol. 50, pp. 406-414, 2002.
+[5] A. J. Blanksby, C. J. Howland: "A 690-mW 1-Gb/s 1024-b, Rate-1/2 LowDensity Parity-Check Code Decoder," Solid-State Circuits, IEEE Journal of, vol. 37, pp. 404-412, 2002.
+[6] M. Korb, T. G. Noll: "Area- and energy-efficient high-throughput LDPC decoders with low block latency," in ESSCIRC (ESSCIRC), 2011 Proceedings of the, 2011, pp. 75-78.
+[7] A. Darabiha, A. C. Carusone, et al.: "A 3.3-Gbps Bit-Serial BlockInterlaced Min-Sum LDPC Decoder in 0.13-µm CMOS," in Custom Integrated Circuits Conference, 2007. CICC '07. IEEE, 2007, pp. 459-462.
+[8] T. Mohsenin, B. M. Baas: "High-Throughput LDPC Decoders Using A Multiple Split-Row Method," in Acoustics, Speech and Signal Processing, 2007. ICASSP 2007. IEEE International Conference on, 2007, pp. II-13-16.
+[9] M. Korb, T. G. Noll: "LDPC decoder area, timing, and energy models for early quantitative hardware cost estimates," in System on Chip (SoC), 2010 International Symposium on, 2010, pp. 169-172.
+[10] A. Darabiha, A. Chan Carusone, et al.: "Power Reduction Techniques for LDPC Decoders," Solid-State Circuits, IEEE Journal of, vol. 43, pp. 18351845, 2008.
+[11] G. Box, M. Muller: "A Note on the Generation of Random Normal Deviates," Annals Math. Statistics, vol. 29, pp. 610-611 1958
+[12] D. U. Lee, J. D. Villasenor, et al.: "A hardware Gaussian noise generator using the Box-Muller method and its error analysis," Computers, IEEE Transactions on, vol. 55, pp. 659-671, 2006.
+[13] P. L'Ecuyer: "Maximally Equidistributed Combined Tausworthe Generators," Math. Computation, vol. 65, pp. 203-213, 1996
+[14] "www.eve-team.com/products/datasheets/ax.php," in Datasheet ZeBUXXL. vol. 2011.
+[15] IEEE: "Local and metropolitan area networks--Specific requirements--Part 3: Carrier Sense Multiple Access with Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications," IEEE Unapproved Draft Std P802.3/D2.2, April 2008, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J3u0n1e 24,2026 at 09:04:35 UTC from IEEE Xplore. Restrictions apply.
+
+

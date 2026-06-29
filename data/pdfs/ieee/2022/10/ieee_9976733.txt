@@ -1,0 +1,480 @@
+XXX-X-XXXX-XXXX-X/XX/$XX.00 ©20XX IEEE
+High Throughput FPGA Implementation of LDPC
+Decoder Architecture for DVB-S2X Standard
+E. A. Likhobabin
+Moscow Institute of Physics and
+Technology
+Dolgoprudny, Moscow Region, Russia
+likhobabin.e.a@tor.rsreu.ru
+P. B. Nikishkin
+Ryazan State Radio Engineering
+University
+Gagarina str, 59/1, Ryazan, Russia
+nikishkin.p.b@tor.rsreu.ru
+A. A. Ovinnikov
+Moscow Institute of Physics and
+Technology
+Dolgoprudny, Moscow Region, Russia
+ovinnikov.a.a@tor.rsreu.ru
+E. I. Khokhryakov
+Moscow Institute of Physics and
+Technology
+Dolgoprudny, Moscow Region, Russia
+zhen_khokh@mail.ru
+R. S. Goriushkin
+Ryazan State Radio Engineering
+University
+Gagarina str, 59/1, Ryazan, Russia
+gorushkin.r.s@tor.rsreu.ru
+Abstract—This paper is devoted to the design of a decoder
+structure for
+Quasi-Cyclic
+(QC)
+Low-Density
+Parity-Check
+(LDPC) codes of the DVB-S2X standard. The quasi-cyclic form
+of the matrix representation is the most convenient for the
+hardware implementation of the LDPC decoder, so the matrices
+of the DVB-S2X standard are converted to the QC form. The
+implementation of an LDPC decoder for the DVB-S2X standard
+is a challenging task, especially because of the long code words
+and large parity-check matrices. We propose a highly parallel
+FPGA implementation of LDPC decoder design based on the
+layered architecture and Min-Sum decoding algorithm. The
+structure of the decoder consists of 360 parallel cores responsible
+for the sequential calculation of variable-to-check (VTC), check-
+to-variable (CTV) messages and update posterior probabilities
+(APPs). Block RAM memory was used to store intermediate
+values of APP and CTVs. The decoder design is applicable to all
+code rates and allows to achieve throughput up to 500 Mbps at a
+clock frequency of 250 MHz
+Keywords —Communication systems, QC codes, LDPC codes,
+error
+correction
+codes,
+min-sum
+(MS)
+algorithm,
+parallel
+decoder architecture, FPGA
+I. INTRODUCTION
+Low Density Parity-Check (LDPC) codes were initially
+proposed by Gallager in 1963 [1] but they were not used for
+almost four decades mainly due to the computational
+complexity of the algorithms. LDPC codes were then
+rediscovered by Mackay and Neal [2] in late 1990’s whereas
+the increasing computing capacity made their usage realistic.
+Due to their good error correction performance able to
+achieve up to 0.0045 dB of the Shannon’s limit at a BER of
+10−6 [3], LDPC codes were adopted in many wireless
+standards such as IEEE 802.11n/ad/ay/ax (WiFi) [4], IEEE
+802.16e (WiMAX) [5], ETSI 5G [6]. Space standards
+including DVB-S2 [7], DVB-S2X [8] and CCSDS [9] are
+also selected LDPC codes.
+The current trend towards the development of wireless
+communication systems for satellites with expected high
+throughput
+increases
+the
+need
+for
+efficient
+solutions
+providing good performance LDPC codes as well as high
+performance hardware decoder architectures.
+LDPC codes are decoded by message-passing iterative
+algorithms. The Min-Sum algorithm (MSA) is one of them.
+The MSA is a simplified Belief Propagation algorithm (BP).
+The
+key
+feature
+of
+the
+MSA
+is
+the
+reduction
+of
+computational complexity by eliminating and replacing the
+operations
+of
+calculating
+hyperbolic
+tangents.
+Simultaneously, the MSA achieves good performance close
+to BP algorithm.
+In this paper, we propose an implementation of the LDPC
+decoder for the DVB-S2X standard. The implementation of
+the decoder for the DVB-S2 standard will differ from the
+proposed one in that it will be necessary to consider the
+presence of several diagonals in the parity-check matrix. The
+solution to this problem was proposed in the articles [10-12].
+Also, we focus on the high throughput and parallelism of the
+decoder in combination with optimization of consumed
+resources. To increase parallelism and save FPGA resources,
+memory structures based on block memory (BRAM) have
+been proposed.
+The parity check matrix of DVB-S2X standard can be
+converted to a QC form [13]. The quasi-cyclic form is one of
+the most convenient for building decoders with a high
+throughput and has been widely used in recent years [14-16].
+The remainder of the paper is organized as follows: in
+section II, notations and MS algorithm are introduced. Then,
+in section III the proposed FPGA architecture of the LDPC
+decoder for QC LDPC codes is presented. The hardware
+implementation results are presented in section IV. Finally,
+section V summarizes the implementation results.
+II. DEFINITIONS AND NOTATIONS
+A regular (N, K) LDPC code is represented as a matrix H
+which includes M ≥N −K rows and N columns. Each
+column in H is associated to a bit of the codeword or
+Variable Node (VN), and each row corresponds to a parity
+check equation or Check Node (CN).
+Layered decoding was introduced by Mansour [17] and
+Hocevar [18]. Term layered decoding means that the parity
+check matrix is considered as a sequence of elementary
+matrixes, or layers. Each layer is updated in sequence.
+Layers are usually considered horizontal
+In the horizontal layered decoder based on the MSA, a
+VN is represented by its SO (Soft-Output) values. These
+values are initialized by the channel Log-Likelihood Ratio:
+��=   log �����= 0
+�����= 1
+,                          1
+2022 6th International Scientific Conference on Information, Control, and Communication Technologies (ICCT) | 978-1-6654-9367-3/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICCT56057.2022.9976733
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:38:15 UTC from IEEE Xplore.  Restrictions apply. 
+where yn is an input from the channel and cn is the n-th bit of
+a codeword.
+The next stage is iterative decoding. The variable-to-
+check (VTC) messages from the VN n to the CN m are
+iteratively calculated according to the expression:
+����= ��+
+�'∈��/�
+ 
+��'��−1
+෍
+,         2
+Where M(n) is the set of variable n checks and rmn[k] is the
+check-to-variable (CTV) message from the CN m to the VN
+n on the k-th iteration.
+The LDPC decoder calculates a hard decision value by
+calculating the APPs as follows:
+Λ��= ��+
+�'∈��
+ 
+��'��−1
+෍
+            3
+If the condition Λn > 0 is met, then the value of the n-th
+bit of the code word xn is 0, otherwise 1.
+The iterative decoding process stops when the specified
+maximum number of iterations is reached. An additional
+condition for stopping the decoding process can be the
+equality of Hx = 0, where x is the entire codeword x = [x1,
+x2, …, xN ]. If none of the termination conditions is met, then
+the CTV message rmn[k] for the CN m should be calculated:
+����=
+�'∈��/�
+ 
+�������' �
+ෑ
+× �×
+min
+�'∈��/�
+���' �
+,       
+    4
+where N(m) is the set of variable m checks.
+To compensate for the performance loss in comparison
+with the BP algorithm, expression (4) uses a normalizing
+coefficient α [19].
+III. PROPOSED DECODER ARCHITECTURE
+Decoding of LDPC codes can be two types: hard decision
+decoding and soft decision decoding. Our LDPC decoder
+uses soft decision at the input and gives hard decision at the
+output. The proposed general structure of the decoding core
+is shown in Figure 1 [20]. The LDPC decoder core consists
+of a VTC, a Min/Submin calculation blocks and a block for
+calculation CTV and APP values. The LDPC decoder core
+assumes that the APP values and its corresponding CTV
+value are received at the input one by one. In turn, the
+resulting APP values (APP_NEW) and the corresponding
+updated CTV
+(CTV_NEW) are sequentially fed to the decoder core output.
+The VTC calculation block implements the operation of
+calculating VTC values in accordance with the expression
+(5).
+����= ����−����,
+�= 1…��(5)
+where dr is the weight of the current matrix row.
+The Min/Submin calculation block selects the minimum
+and subminimum values among the dr signed values of the
+input VTCn. This block also outputs the index of the
+minimum
+value. The input data for the Min/Submin
+calculation block supplied in sequence. The dr value is
+determined according to the parity-check LDPC matrix. The
+structure in Figure 2 shows the FPGA implementation of the
+Min/Submin calculation block based on [21].
+Fig.2. The Min/Submin calculation block
+Thus, the operating time of this calculation block is dr
+clock cycles of the FPGA.
+The APP values are transmitted to the input of the LDPC
+decoder core, since the codeword size is large enough, it is
+necessary to pay attention to storing in memory these values.
+The APP memory subsystem uses the true dual-port
+block memory (BRAM) with the block size of 36 bits for
+180 addresses. The data storage structure is shown in Figure
+3. One APP value contains 9 bits, so up to 4 values can be
+Fig.1. The core of LDPC decoder structure
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:38:15 UTC from IEEE Xplore.  Restrictions apply. 
+stored in one BRAM cell. Thus, 90 BRAM is required to
+store 360 APP values. The normal frame length is 64800,
+which corresponds to 360 APP values of 180 blocks. 360
+APP values will be issued from 90 BRAM in one clock cycle
+of FPGA operation, in order to process each
+value, it is necessary to generate 360 LDPC decoder cores,
+respectively. The LDPC decoder throughput depends on two
+parameters: the number of rows and the maximum row
+weight in the parity-check matrix.
+The storage of checks-to-variable messages is built on a
+similar principle as the AP memory, but with some
+differences. For all matrices of DVB-S2X standard, the
+maximum address value equal to 660 is obtained on the
+matrix at a rate of 5/6, where the maximum row weight is 22
+and the number of layers is 30 (22*30 = 660). One BRAM
+cell also stores 4 values of 9 bits each, but the number of
+addresses has been increased to 660 (see Figure 4). This
+number of addresses is intended for storing CTV messages
+for all rows and columns of the parity-check LDPC matrix.
+IV. IMPLEMENTATION RESULTS
+The architecture presented in Figure 1 was synthesized
+on the Kintex-7 FPGA (XC7k325tfbg900 - 2) development
+board from Xilinx.
+The maximum decoder throughput is achieved in the
+DVB-S2Х standard, obtained in the form of 64 APSK
+modulation, encoding rate 5/6 and has a value of 493
+Mbit/sec. The minimum throughput is obtained at QPSK
+modulation, encoding rate 1/4 and has a value of 150
+Mbit/sec.
+RGMII interface of Tri-Mode Ethernet Media Access
+Controller (TEMAC) [22] presents down stream of receiving
+decoded signal of demodulator channel. The maximum
+physical transmit stream speed is from 1 to 2.5Gbit/sec.
+A Microblaze real-time processor [23] configures and
+controls the TEMAC. Infinite loopback test case approaches
+Fig.3. The APP memory organization in block RAM
+Fig.4. The C2B memory organization in block RAM
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:38:15 UTC from IEEE Xplore.  Restrictions apply. 
+benchmarks requirements. To achieve benchmarks higher
+than 500Mbit/sec, we apply a compiler optimization to
+“memset” processor operation in such tests as well as set up
+Jumbo’s Ethernet packet payload size to 104 bytes.
+An up stream of TEMAC is Multi Channel Direct
+Memory Access (MCDMA) controller [24]. The controller
+supports interface stream (AXIS) and provides decoder clock
+requirements from 100 to 250MHz.
+The throughput of the proposed LDPC decoder was
+calculated according to the following expression:
+�ℎ����ℎ���=
+��������× ����������ℎ× ��������
+�������������× ���������
+(6)
+Table 1 shows the decoder implementation results.
+TABLE I.
+IMPLEMENTATION RESULTS
+Kintex-7
+XC7k325
+LDPC
+Decoder
+LDPC
+Decoder,
+%
+Microblaze
+TEMAC, %
+LUT
+203800
+115864
+56,9
+19,9
+BRAMs
+445
+180
+40,5
+56
+FlipFlops
+407600
+57931
+14,2
+11,7
+DSPs
+840
+0
+0
+0,4
+V. CONCLUSION
+Layered min-sum algorithm was discussed and its short
+overview was given. This layered approach combined with
+the storage organization scheme can significantly reduce
+resource consumption and increase throughput.
+This paper presented a highly parallel LDPC decoder
+architecture. In order to solve the problem of long codewords
+and large matrices of the traditional LDPC decoder for DVB-
+S2X standard, we propose an efficient memory design. Main
+strengths of this architecture are efficient use of FPGA
+resources and its high throughput. This implementation can
+reach up to 10 Gbps per iteration.
+In summary, this architecture is area efficient, high
+throughput and can use any LDPC code from DVB-S2X
+standard. Implementation can use any block size, code rate
+and any matrix from the specified standard.
+The work was carried out at the Moscow Institute of
+Physics and Technology with the financial support of the
+Ministry of Science and Higher Education of the Russian
+Federation under the project No. 075-11-2021-047.
+REFERENCES
+[1]
+R. G. Gallager,” Low-density parity-check codes”, Cambridge, MA:
+M.I.T. Press, 1963.
+[2]
+D.J.C. MacKay, R.M. Neal,” Near Shannon limit performance of low-
+density parity check codes”, Electron. Lett., vol. 32, no. 18, pp. 1645-
+1646, Aug. 1996.
+[3]
+S. Y. Chung, G. D. Forney, T. J. Richardson, and R. L. Urbanke, “On
+the design of low-density parity check codes within 0.0045 dB of the
+Shannon limit,” IEEE Commun. Lett., vol. 5, pp. 58–60, Feb. 2001.
+[4]
+802.11n-2009 - IEEE Standard for Information technology– Local
+and metropolitan area networks– Specific requirements– Part 11:
+Wireless LAN Medium Access Control (MAC) and Physical Layer
+(PHY) Specifications Amendment 5: Enhancements for Higher
+Throughput, 29 Oct. 2009, DOI: 10.1109/IEEESTD.2009.5307322
+[5]
+802.16e-2005 - IEEE Standard for Local and Metropolitan Area
+Networks - Part 16: Air Interface for Fixed and Mobile Broadband
+Wireless Access Systems - Amendment for Physical and Medium
+Access Control Layers for Combined Fixed and Mobile Operation in
+Licensed Bands, 28 Feb. 2006, DOI: 10.1109/IEEESTD.2006.99107
+[6]
+3GPP TS 38.212 version 15.2.0 Release 15 - 3GPP Standard 5G; NR;
+Multiplexing and channel coding, Jul. 2018
+[7]
+ETSI, “Second generation framing structure, channel coding and
+modulation systems for broadcasting, interactive services and other
+broadband satellite applications (DVB-S2)” - EN 302 307 V1.2.1,
+2009.
+[8]
+Digital Video Broadcasting (DVB) - Part II: S2-Extensions (DVB-
+S2X), DVB Document A83-2, March 2014.
+[9]
+Consultative Committee for Space Data Systems (CCSDS), CCSDS
+131.0-B-2 - TM Synchronization And Channel Coding, blue book ed.,
+Washington, DC, USA, August 2011.
+[10] C. Marchand, E. Boutillon LDPC decoder architecture for DVB-S2
+and DVB-S2X standards. Proceedings of IEEE Workshop on Signal
+Processing System, 2015 DOI:10.1109/SiPS.2015.7345034.
+[11] J. Su, Z. Lu Reduced Complexity Implementation of Quasi-Cyclic
+LDPC Decoders by Parity-Check Matrix Reordering, Proceedings of
+IEEE 10th International Conference, ASIC (ASICON), Shenzhen,
+2013
+[12] C. Marchand, L. Conde-Canencia, E. Boutillon High-Speed Conflict-
+Free Layered LDPC Decoder for the DVB-S2, -T2 and-C2 Standards,
+Proceedings of IEEE Workshop on Signal Processing Systems, 2013
+[13] T. Xie, B. Li, M. Yang, Z. Yan LDPC Decoder of High Speed Multi-
+Rate DVB-S2 Based on FPGA, JNWPU, Volume 37, Number 2,
+April
+2019,
+pp.
+299
+–
+307.
+DOI:
+https://doi.org/10.1051/jnwpu/20193720299
+[14] P. Hailes; L. Xu; R.G. Maunder; B.M. Al-Hashimi; L. Hanzo A
+Flexible FPGA-Based Quasi-Cyclic LDPC Decoder, IEEE Access
+(Volume: 5 ), 20965 – 20984 pps, 03 March 2017, DOI: 10.1109/AC-
+CESS.2017.2678103
+[15] S. Mhaske; D. Uliana; H. Kee; T. Ly; A. Aziz; P. Spasojevic A
+2.48Gb/s FPGA-based QC-LDPC decoder: An algorithmic compiler
+implementation, 2015 36th IEEE Sarnoff Symposium, 20-22 Sept.
+2015, DOI: 10.1109/SARNOF.2015.7324649
+[16] K. Zhang, X. Huang, Z. Wang, ”High-Throughput Layered Decoder
+Implementation for Quasi-Cyclic LDPC Codes”, 2009, IEEE Journal
+on
+Selected
+Areas
+in
+Communications.
+27.
+985-994.
+DOI:
+10.1109/JSAC.2009.090816.
+[17] M.
+Mansour
+and
+N.
+Shanbhag.
+Low-power
+VLSI
+decoder
+architectures for LDPC codes. In International Symposium on Low
+Power Electronics and Design, ISLPED02, pages 284–289, Aug 2002.
+[18] D. Hocevar. A Reduced Complexity Decoder Architecture via
+Layered Decoding of LDPC Codes. In IEEE Workshop on Signal
+Processing Systems, SISP 2004, pages 107–112, 2004.
+[19] J. Chen and M. P. C. Fossorier, ”Density evolution for two improved
+BP-Based
+decoding
+algorithms
+of
+LDPC
+codes,”
+in
+IEEE
+Communications Letters, vol. 6, no. 5, pp. 208-210, May 2002, DOI:
+10.1109/4234.1001666.
+[20] R. Goriushkin, P. Nikishkin, E. Likhobabin, V. Vityazev, ”FPGA
+Implementation
+of
+LDPC
+Decoder
+Architecture
+for
+Wireless
+Communication Standards”, 2021 10th International Conference on
+Modern
+Circuits
+and
+Systems
+Technologies
+(MOCAST),
+Thessaloniki, Greece, 2021
+[21] Zhang, X. VLSI Architectures for Modern Error-Correcting Codes,
+2nd ed.; CRC Press: Boca Raton, FL, USA, 2016
+[22] AMD
+2022,
+Xilinx,
+accessed
+Sep
+2022,
+URL:
+https://www.xilinx.com/products/intellectual-property/temac.html
+[23] AMD
+2022,
+Xilinx
+accessed
+Sep
+2022,
+URL:
+https://www.xilinx.com/products/design-tools/microblaze.html
+[24] AMD
+2022,
+Xilinx
+accessed
+Sep
+2022,
+URL:
+https://www.xilinx.com/products/intellectual-
+property/axi_mcdma.html
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:38:15 UTC from IEEE Xplore.  Restrictions apply. 

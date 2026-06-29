@@ -1,0 +1,768 @@
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+1957
+
+Pruning and Quantizing Neural Belief Propagation Decoders
+Andreas Buchberger , Student Member, IEEE, Christian Häger, Member, IEEE, Henry D. Pfister, Senior Member, IEEE, Laurent Schmalen, Senior Member, IEEE, and Alexandre Graell i Amat, Senior Member, IEEE
+
+Abstract— We consider near maximum-likelihood (ML) decoding of short linear block codes. In particular, we propose a novel decoding approach based on neural belief propagation (NBP) decoding recently introduced by Nachmani et al. in which we allow a different parity-check matrix in each iteration of the algorithm. The key idea is to consider NBP decoding over an overcomplete parity-check matrix and use the weights of NBP as a measure of the importance of the check nodes (CNs) to decoding. The unimportant CNs are then pruned. In contrast to NBP, which performs decoding on a given fixed parity-check matrix, the proposed pruningbased neural belief propagation (PB-NBP) typically results in a different parity-check matrix in each iteration. For a given complexity in terms of CN evaluations, we show that PB-NBP yields significant performance improvements with respect to NBP. We apply the proposed decoder to the decoding of a Reed-Muller code, a short low-density parity-check (LDPC) code, and a polar code. PB-NBP outperforms NBP decoding over an overcomplete parity-check matrix by 0.27–0.31 dB while reducing the number of required CN evaluations by up to 97%. For the LDPC code, PB-NBP outperforms conventional belief propagation with the same number of CN evaluations by 0.52 dB. We further extend the pruning concept to offset min-sum decoding and introduce a pruning-based neural offset min-sum (PB-NOMS) decoder, for which we jointly optimize the offsets and the quantization of the messages and offsets. We demonstrate performance 0.5 dB from ML decoding with 5-bit quantization for the Reed-Muller code.
+Index Terms— Belief propagation, deep learning, min-sum decoding, neural decoders, pruning, quantization.
+I. INTRODUCTION
+F OR short code lengths, algebraic codes such as Bose-Chaudhuri-Hocquenghem (BCH) codes and ReedMuller (RM) codes show excellent performance under
+Manuscript received June 28, 2020; revised September 27, 2020; accepted October 22, 2020. Date of publication December 4, 2020; date of current version June 17, 2021. This work was supported in part by the European Union’s Horizon 2020 Research and Innovation Programme under the Marie Skłodowska-Curie under Grant 676448 and Grant 749798, and in part by the Swedish Research Council under Grant 2016-04253. Parts of this article have been presented at the IEEE International Symposium on Information Theory (ISIT) 2020. (Corresponding author: Andreas Buchberger.)
+Andreas Buchberger, Christian Häger, and Alexandre Graell i Amat are with the Department of Electrical Engineering, Chalmers University of Technology, SE 412 96 Gothenburg, Sweden (e-mail: andreas.buchberger@chalmers.se; christian.haeger@chalmers.se; alexandre.graell@chalmers.se).
+Henry D. Pfister is with the Department of Electrical and Computer Engineering, Duke University, Durham, NC 27708 USA (e-mail: henry. pfister@duke.edu).
+Laurent Schmalen is with Communications Engineering Laboratory, Karlsruhe Institute of Technology (KIT), 76131 Karlsruhe, Germany (e-mail: laurent.schmalen@kit.edu).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/JSAC.2020.3041392.
+Digital Object Identifier 10.1109/JSAC.2020.3041392
+
+maximum-likelihood (ML) decoding. However, achieving near-ML performance using conventional methods is computationally complex. Fueled by the advances in the field of deep learning, deep neural networks have also gained interest in the coding community [1]–[5]. In [2], belief propagation (BP) decoding is formulated in the context of deep neural networks. Instead of iterating between check nodes (CNs) and variable nodes (VNs), the messages are passed through unrolled iterations in a feed-forward fashion. Additionally, weights can be introduced at the edges, which are then optimized using stochastic gradient descent (and variants thereof). This decoding method is commonly referred to as neural belief propagation (NBP) and can be seen as a generalization of BP decoding where all individual messages are scaled by a single damping coefficient [6]. The weights in NBP can counteract the effect of short cycles by scaling messages accordingly. The concept of NBP is extended to neural offset min-sum (NOMS) in [5] by assigning an individual offset to each edge of the unrolled graph for the CN update [7], [8].
+While NBP and NOMS decoding improve upon conventional BP and offset min-sum decoding, their performance is still limited by the underlying parity-check matrix. Different parity-check matrices may yield different performances. This fact has been exploited by using redundant parity-check matrices [6], [9]–[13]. In particular, [12] proposed multiple-bases belief propagation (MBBP), which selects the best decoded codeword from multiple parallel BP decoders over different parity-check matrices. For the decoding of RM codes, [13] considered applying BP with a single damping coefficient (a single weight) to the parity-check matrix composed of all minimum-weight parity checks. In [3], NBP over paritycheck matrices containing all minimum-weight parity checks was investigated. While using large, redundant parity-check matrices yields excellent performance close to ML, it suffers from high computational complexity.
+In this paper, we propose pruning-based neural belief propagation (PB-NBP), a novel decoding approach based on NBP decoding to selecting the best parity-check equations for each iteration of the algorithm. The proposed approach starts with NBP decoding over the unrolled graph corresponding to a large overcomplete parity-check matrix of the linear block code. The key idea is to interpret the trained weights as a measure of the contribution of the corresponding CNs to the decoding process. CNs with small contribution to the decoding are then pruned. More precisely, we tie the weights of all edges emanating from a CN. CNs connected to low-magnitude-weight edges do not
+
+0733-8716 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+1958
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+play an important role in the decoding process and are pruned. Pruning results in an unrolled graph with a different set of CNs in each CN layer. This corresponds to using a different parity-check matrix for each iteration of NBP. We investigate three variants of the PB-NBP decoder—untying all weights in the resulting (unrolled) Tanner graph, using the weights obtained during the optimization process directly, and setting all weights to one. For Reed-Muller codes, we show that PB-NBP decoding outperforms NBP over the overcomplete matrix and MBBP and achieves near-ML performance. Moreover, the pruning results in a lower-complexity decoder compared to NBP over the overcomplete matrix. We also give results for an LDPC code and a polar code.
+We further extend the pruning concept to NOMS decoding, leading to the formulation of pruning-based neural offset minsum (PB-NOMS) decoding. For PB-NOMS we investigate the joint quantization of the weights, offsets, channel messages, and messages between layers. We use a straight-through estimator (STE) [14], [15] to define the gradient of the quantizer and let the quantization levels and thresholds be trainable. For various codes, we illustrate the performance of PB-NOMS for different quantizations.
+
+Fig. 1. Unrolled graph for three iterations where the blue circles denote VNs and the gray squares CNs.
+
+II. PRELIMINARIES
+Consider a linear block code C of length n and dimension k with parity-check matrix H of size m × n, m ≥ n − k. If m > n − k, we refer to the parity-check matrix as an overcomplete matrix and denote it as Hoc. The case m = n − k corresponds to a parity-check matrix with no redundant rows, which we refer to as Hstd. We denote the Tanner graph corresponding to a parity-check matrix as G = (Vv, Vc, E), consisting of a set of m CNs, Vc = {c1, . . . , cm}, a set of n VNs, Vv = {v1, . . . , vn}, and a set of edges E connecting CNs with VNs.
+For each VN v ∈ Vv we define its neighborhood
+
+N (v) {c ∈ Vc : (v, c) ∈ E}
+
+i.e., the set of all CNs connected to VN v. Equivalently, we define the neighborhood of a CN c ∈ Vc as
+
+N (c) {v ∈ Vv : (v, c) ∈ E}.
+
+Let
+
+μv(i
+
+) →cj
+
+be
+
+the
+
+message
+
+passed
+
+from
+
+VN
+
+vi
+
+∈
+
+Vv
+
+to
+
+CN
+
+cj
+
+∈
+
+Vc
+
+and
+
+μc(j
+
+) →vi
+
+the
+
+message
+
+passed
+
+from
+
+CN
+
+cj
+
+∈
+
+Vc
+
+to
+
+VN vi ∈ Vv in the -th decoding iteration. For BP decoding,
+
+the VN and CN updates are
+
+μv(i
+
+) →cj
+
+= μch,vi
+
++
+
+μc(→) vi
+
+(1)
+
+c∈N (vi)\cj
+
+and
+
+⎛
+
+⎞
+
+μc(j)→vi = 2 tanh−1⎝
+
+tanh
+
+1 2
+
+μv(→) cj
+
+⎠
+
+(2)
+
+v∈N (cj )\vi
+
+respectively, where μch,vi is the channel message. For binary transmission over the additive white Gaussian noise channel
+
+μch,vi
+
+ln
+
+pY |B(yi|bi pY |B(yi|bi
+
+= =
+
+0) 1)
+
+=
+
+2yi σ2
+
+where yi is the channel output, bi is the transmitted bit, and σ2 is the noise variance. The a posteriori log-likelihood ratio (LLR) in the -th iteration is
+
+μv(i) = μch,vi +
+
+μc(→) vi .
+
+c∈N (vi)
+
+A large contribution to the computational complexity stems from the CN update (2). A widely-used low-complexity approximation to (2) is the min-sum approximation [7]
+
+μc(j)→vi
+
+= min
+v∈N (cj )\vi
+
+μv(→) cj
+
+sign
+v∈N (cj )\vi
+
+μv(→) cj
+
+where sign(·) denotes the sign function. As this approximation
+tends to overestimate the magnitude of the messages, an additive CN- and iteration-dependent correction factor βc(j) is often introduced, leading to offset min-sum decoding [8]
+
+μc(j
+
+) →vi
+
+=
+
+max
+
+min
+v∈N (cj )\vi
+
+μv(→) cj
+
+− βc(j), 0
+
+·
+
+sign μv(→) cj . (3)
+
+v∈N (cj )\vi
+
+A. Neural Belief Propagation
+For conventional BP, the decoder iterates between VN and CN updates by passing messages along the edges connecting VNs and CNs. For a given number of iterations max, one can unroll the graph by stacking max copies of the Tanner graph. Consequently, the messages are passed in an unrolled fashion through the graph. This is illustrated in Fig. 1 for three iterations. One way to counteract the effect of short cycles on the performance of BP decoding for short linear block codes is to introduce weights for each edge of the unrolled Tanner graph [1], [2]. Due to the similarities of the weighted unrolled
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+BUCHBERGER et al.: PRUNING AND QUANTIZING NBP DECODERS
+
+1959
+
+graph with a neural network, this is referred to as NBP. For
+
+NBP, the update rules (1) and (2) are modified to
+
+⎛
+
+⎞
+
+μv(i
+
+) →cj
+
+=
+
+wv(i
+
+) →cj
+
+⎝wc(h),vi
+
+μch,vi
+
++
+
+μc(→) vi ⎠ (4)
+
+c∈N (vi)\cj
+
+and
+
+⎛
+
+μc(j
+
+) →vi
+
+=
+
+2
+
+wc(j
+
+) →vi
+
+tanh−1⎝
+
+tanh
+
+v∈N (cj )\vi
+
+1 2
+
+μv(→) cj
+
+⎞ ⎠
+(5)
+
+where wc(h),v, wv(→) c, and wc(→) v, are the channel weights, the weights on the edges connecting VNs to CNs, and the
+weights on the edges connecting CNs to VNs, respectively.
+The a posteriori LLR in the -th iteration is
+
+μv(i) = wc(h),vi μch,vi +
+
+μc(→) vi .
+
+c∈N (vi)
+
+In (4) and (5) the weights are untied over all nodes as well as over all iterations, i.e., each edge has an individual weight. In order to reduce complexity and storage requirements for NBP, the weights can also be tied. In [3], tying the weights temporally, i.e., over iterations, and spatially, i.e., all edges within a layer have the same weight, was explored. Note that setting all weights of an NBP decoder to one yields conventional BP decoding.
+
+B. Neural Offset Min-Sum Decoder
+Similar to the extension of conventional BP decoding to NBP decoding, the offset min-sum decoder can be extended to a NOMS decoder [5]. Instead of the CN- and iterationdependent offset βc( ), each edge emanating from a CN has its own offset,
+
+μc(j
+
+) →vi
+
+=
+
+ReLU
+
+min
+v∈N (cj )\vi
+
+μv(→) cj
+
+−
+
+βc(j
+
+) →vi
+
+·
+
+sign μv(→) cj (6)
+
+v∈N (cj )\vi
+
+where ReLU(·) = max(·, 0) denotes a rectified activation function commonly used in neural networks [16].
+
+III. PRUNING-BASED NEURAL BELIEF PROPAGATION DECODERS
+
+Here we propose PB-NBP. The main idea is to consider
+
+NBP over the unrolled graph starting from a large, overcom-
+
+plete parity-check matrix Hoc. We tie the weights for each
+
+CN,
+
+i.e.,
+
+wc(j
+
+) →vi
+
+=
+
+wc(j )
+
+for
+
+all
+
+vi
+
+∈
+
+N (cj),
+
+⎛
+
+⎞
+
+μc(j)→vi = 2 wc(j) tanh−1⎝
+
+tanh
+
+1 2
+
+μv(→) cj
+
+⎠. (7)
+
+v∈N (cj )\vi
+
+We view the weights as an indication of the importance of the respective CN to the decoding and use them to prune the graph by successively removing CNs associated to low weights. The resulting graph potentially consists of a different set of CNs at each CN layer. This corresponds to selecting a (potentially)
+
+different set of parity-check equations from the overcomplete parity-check matrix in each iteration of BP decoding.
+We first describe how we optimize the graph’s weights and in a second step, we present the training procedure to prune the graph.
+
+A. Optimization of the Weights
+
+The decoding process can be seen as a classification task where the channel output is mapped to a valid codeword. This task consists of 2k classes, one for each codeword. Training such a classification task is infeasible as the resulting decoder typically generalizes poorly to classes not contained in the training data [4]. Alternatively, one may consider a binary classification task for each of the n bits. As a loss function, the average bitwise cross-entropy between the transmitted bits and the VN output LLRs of the final VN layer can be used [1], [2],
+
+Γ
+
+=
+
+−
+
+1 n
+
+n
+
+log
+
+oibi (1 − oi)1−bi
+
+i=1
+
+where oi is the estimate of the probability that the i-th bit after the final iteration is one,
+
+e−μv(i max ) oi = 1 + e−μv(imax) ,
+
+and max denotes the number of decoding iterations. The optimization behavior can be improved by using a multiloss function [1], [2], where the overall loss is the average bitwise cross-entropy between the transmitted bits and the VN output LLR of each VN layer. The cross-entropy is well-suited for the bitwise classification task, but it does not necessarily result in a decoder with the lowest possible bit error rate. In fact, the bit error rate would be a more natural choice for the loss function. However, since the gradients would be zero almost everywhere, it is infeasible for optimization using gradient descent. Instead, [3] proposed a new loss function which can be regarded as soft bit error rate,
+
+1 Γ=
+n
+
+n
+(1 − oi)bi oi1−bi .
+
+(8)
+
+i=1
+
+It was empirically observed in [3] that minimizing this loss function also minimizes the bit error rate. Combining the soft bit error rate and a multiloss results in
+
+Γ˜ = (=a)
+
+1 η max−
+1 η max−
+
+max
+
+n
+
+η 1 max−
+
+n
+
+1 − oi( ) bi oi( ) 1−bi
+
+=1
+
+i=1
+
+max
+η 1 max− n
+
+n
+
+oi( )
+
+(9)
+
+=1
+
+i=1
+
+where oi( ) is the estimate of the probability that the i-th bit is one after the -th iteration, and η ∈ (0; 1] determines the contribution of intermediate layers to the overall loss. Step (a) follows from the assumption that the all-zero codeword is
+transmitted, which is a valid assumption since the channel and the decoder are symmetric. The parameter η is set close to one, i.e., all layers contribute equally to the loss, in the beginning of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+1960
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 2. Flowchart of the training process. 1 denotes the all-one matrix of appropriate size.
+
+Algorithm 1 Training Process
+
+1: H = {Hoc, . . . , Hoc} 2: W = {1, . . . , 1}
+
+3: Choose abort-criterion: Prune a certain number of CNs or
+
+stop when the loss starts to increase
+
+4: while abort-criterion not fulfilled :
+
+5: for # of batches :
+6: Sample µch according to channel model 7: Decode µch with decoder (H, W) 8: Calculate loss Γ˜ using (9) 9: Calculate gradients ∂Γ˜/∂w for all w ∈ W
+
+10: Update W using Adam
+
+11: if Avg. loss over 100 batches has not improved :
+
+12:
+
+Break
+
+13: end if
+
+14: end for
+
+15: Find the smallest CN weight and remove the corre-
+
+sponding parity-check equation from the corresponding
+
+parity-check matrix in H.
+
+16: end while
+
+17: return H, W
+
+the training. This allows for gradients to efficiently propagate to earlier layers and hence improves convergence. However, this does not correspond to the desired, final behavior of the decoder where only the output of the final layer matters. Thus, the contribution of the intermediate layers is successively decreased during training by means of decreasing η. During the final stages of training, only the last layer will contribute to the loss, corresponding to the desired, final behavior [3].
+B. Training Procedure
+Consider NBP with VN update (4) and CN update (7) over the unrolled graph of Hoc in which the weights are tied at the CNs, i.e., all messages emanating from a single CN c are weighted by the same weight wc( ). The magnitude of the weight wc( ) can now be interpreted as a measure of how much CN c contributes to the decoding at iteration . A large magnitude indicates high importance whereas a magnitude of zero indicates that the CN is irrelevant to the decoding process.
+Let H be the parity-check matrix used for decoding in the -th iteration and define H = {H1, . . . , H max}. The set is initialized with the same large overcomplete matrix Hoc for each iteration, i.e., H = {Hoc, . . . , Hoc}. Equivalently, we define a set of weights W and initialize all weights to one, i.e., we start with conventional BP. The weights in W are then optimized using the Adam optimizer [17] within the Tensorflow programming framework [18]. After the optimization has converged, we find the lowest CN weight wc( ) and set it to zero. This is equivalent to pruning the CN from the unrolled graph. As this may change the optimal value for the remaining weights, we rerun the training. We iterate between retraining and pruning CNs and monitor the loss. The optimization is stopped when the loss starts increasing. Empirically we observe that the loss is not monotone and that it is beneficial to allow the loss to increase slightly before
+
+stopping the pruning. Alternatively, one may further prune CNs to reach a desired number of parity-check equations over all iterations, i.e., a given complexity, at the expense of a larger loss. The result of the optimization is a set of parity-check matrices Hopt = {H1,opt, . . . , H } max,opt and optimized weights Wopt. The training process is illustrated in the flowchart of Fig. 2 and in Algorithm 1.
+If the matrices used to initialize H are very large, this way of optimizing the parity-check matrices is potentially complex and slow. Empirically, we observed that it is possible to simultaneously prune more than one CN in the earlier stages of the pruning process without harming the final performance. This allows for a significant speed-up of the optimization. All results in this paper are achieved by only pruning a single CN per pruning step. An in-depth analysis of different pruning schedules is left for future work.
+
+C. Complexity Discussion
+
+In the following, we provide a high-level discussion of the decoding complexity. A thorough complexity analysis would require considering hardware implementation details such as data bus requirements, impact of the degree of parallelism and structure in the graph, etc. While this is out of the scope of the paper, we note that hardware constraints can potentially be incorporated in the training process (e.g., through a modified loss function), rendering our proposed decoders adaptable to different use cases.
+On a high level, the CN update is the most complex operation in a BP decoder due to the evaluation of the tanh and inverse tanh functions. Hence, a commonly used measure for complexity is given by [19]
+
+dc( ) Vc( )
+
+(10)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+BUCHBERGER et al.: PRUNING AND QUANTIZING NBP DECODERS
+
+1961
+
+where dc( ) denotes the average CN degree in the -th iteration and Vc( ) the set of active CNs in the -th iteration. For conventional BP decoding, Vc( ) = Vc and dc( ) = dc ∀ .
+The required memory is related to the parity-check matrix itself and the number of weights that need to be stored. Since the weights are real numbers as opposed to binary values for the edges, we quantify memory requirements with the number of weights. Furthermore, the weights require additional multiplications.
+Following this discussion, we define three decoders of different complexity.
+• PB-NBP decoder D1: It uses the result from the optimization directly, i.e., Hopt and Wopt.
+• PB-NBP decoder D2: It uses the optimized set of paritycheck matrices, i.e., Hopt, but sets all weights to one, i.e., neglects Wopt.
+• PB-NBP decoder D3: It uses the optimized set of paritycheck matrices, i.e., Hopt, and additionally untied optimized weights over all iterations and edges. It is important to note that to obtain the untied weights, an extra training step with untied weights is required to obtain Wopt.
+All three decoders require the same number of CN evaluations as they operate on the same set of parity-check matrices Hopt. However, they differ in the required memory. PB-NBP decoder D3 needs to store one weight per edge, whereas PB-NBP decoder D2 does not need to store any weights. PB-NBP decoder D1 needs to store one weight per channel message and per edge emanating from a VN but only one weight per CN and hence is of lower complexity compared to PB-NBP D3 but is more complex than PB-NBP D2.
+Remark: We note that in terms of performance, pruning a CN is equivalent to setting the weights of all outgoing edges from a CN to zero. Hence, an NBP decoder could in theory be trained to yield exactly the same performance as a PB-NBP decoder. However, the NBP decoder would have a higher complexity than the PB-NBP decoder as the number of CN evaluations would not be reduced. Furthermore, empirically, we do not observe that weights converge to zero for NBP. In this light, pruning allows for a reduction in complexity as well as facilitates training. This is in line with the results in [20], where the authors observed that by iteratively pruning and retraining a vanilla neural network, the network achieves higher accuracy and converges faster than the original, unpruned network or a network pruned using a single iteration.
+D. Pruning-Based Neural Offset Min-Sum Decoder
+We extend the pruning concept to NOMS decoding. The same procedure as the one described in the previous section can be applied to find the optimal set of parity-check matrices and weights for PB-NOMS. However, since both NBP and NOMS are iterative algorithms differing only in the CN update, we hypothesize that the same set of parity-check matrices optimized for NBP performs well for NOMS. This is confirmed empirically by comparing the performance of a PB-NOMS decoder with parity-check matrices optimized
+
+using NBP and a PB-NOMS decoder with parity-check matrices optimized using NOMS.
+
+IV. QUANTIZATION OF THE PB-NOMS DECODER
+
+We consider quantization of the channel output, the mes-
+
+sages between the layers, and the weights and offsets of
+
+the PB-NOMS decoder. In particular, we consider a joint
+
+optimization of the quantization, the weights, and the offsets.
+
+To this end, we first define a symmetric mid-tread quantizer as a piecewise constant function Q(x) with 2nq − 1 quantization
+
+levels Q = q0 = 0, ±q1, . . . , ±q2(nq−1)−1 and thresholds
+
+T = t1, . . . , t2(nq−1)−1 ,
+
+⎧
+
+⎨⎪⎪⎪⎪⎪⎪⎪⎪⎪⎪0sign... (x)q1 Q(x) = ⎪⎪⎪⎪⎪⎪⎪⎪⎩⎪⎪ssiiggnn...((xx))qq2i (nq−1)−1
+
+|x| < t1, t1 ≤ |x| < t2,
+...
+ti ≤ |x| < ti+1, ...
+t2(nq−1)−1 ≤ |x|.
+
+The gradients of Q(x) with respect to x are zero except at the thresholds. During training in the back-propagation phase, these zero-gradients would cause most gradients in the network to be zero and hence prohibit the training to converge to a meaningful solution. Using the gradient of a surrogate function, referred to as STE, overcomes this issue [15]. In this work, we simply pass through the gradients with respect to x, i.e., ∂Q(x)/∂x = 1. By letting ti = (qi + qi+1)/2, the gradients with respect to the quantization levels are
+
+∂Q(x) = sign(x) ti ≤ |x| < ti+1,
+
+∂qi
+
+0
+
+else
+
+and
+
+∂Q(x) = sign(x) t2(nq−1)−1 ≤ |x|,
+
+∂ q2nq −1 −1
+
+0
+
+else
+
+for i ∈ {1, . . . 2nq−1 − 2}.
+
+Denote
+
+now
+
+as
+
+Qc(h),
+
+Qc(→) v,
+
+Qv(→) c,
+
+Q( )
+wv→c
+
+,
+
+and
+
+Qβ( )
+
+the quantizers in the -th iteration for the channel mes-
+
+sages, the CN-to-VN messages, the VN-to-CN messages, the
+
+VN-to-CN weights, and the offsets corresponding to the CN
+
+update (see (6)), respectively.
+
+In Fig. 3, we show a block diagram of the -th VN and
+
+CN layer of a (PB-)NOMS decoder. While the forward and
+
+backward pass of the training of the quantized PB-NOMS
+
+decoder take into account the quantization, the update of
+
+trainable weights during training is performed using floating
+
+point precision. To emphasize this, we depict the weights,
+
+quantized by its associated quantizer, as an input to the
+
+respective node. Further, while the quantizers are untied over
+
+the layers, i.e., each layer has its own quantization levels and
+
+thresholds, we tie the number of bits over the layers. We denote
+
+the number of bits for quantizing the channel messages as qch, the number of bits for messages passed between nodes as qm, and the number of bits for all the weights and offsets as qw.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+1962
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 3. Block diagram of the -th VN and CN layer of the unrolled
+
+(PB-)NOMS decoder with quantization. The blue circles denote VNs, the gray
+
+wsqu(cha)retsheCNvse,ctμorcsh
+
+the vector containing
+
+containing all n channel the respective weights,
+
+messages, and βc(→) v
+
+w(v→) c and the vector
+
+containing the offsets.
+
+V. NUMERICAL RESULTS
+We numerically evaluate the performance of the proposed PB-NBP and PB-NOMS decoders for RM codes, a short low-density parity-check (LDPC) code, and a polar code. As a benchmark we consider ML decoding and we compare the performance of the proposed decoders to NBP [1], NOMS [5], and MBBP decoding [12] (referred to as MBBPNX-S in [12]). The hyperparameters are provided in the appendix and the source code is available online [21].
+
+Fig. 4. Results from the training process for the RM(2, 5) code.
+
+A. Reed-Muller Code RM(2, 5)
+For the RM(2, 5) code of length n = 32 and dimension k = 16, we consider the overcomplete parity-check matrix Hoc containing all 620 parity-check equations of minimum weight and apply the training procedure described in Section III-B to it. We fix the number of iterations to six. Hence, without pruning 620 CNs need to be evaluated per CN layer, which leads to a total of 3720 CNs that need to be evaluated. Note that since Hoc has a regular CN degree and pruning does not affect the CN degree, we can neglect the average CN degree in (10) for the complexity discussion. The optimization is stopped when the loss starts to increase, which corresponds to keeping 31% of the CNs of the unrolled graph. This is shown in Fig. 4(a), where the block error rate (BLER) during the iterative pruning process is shown as a function of the number of remaining CNs. The marker highlights where the pruning is stopped. Note that this does not correspond to the minimum of the BLER as training is only stopped after the loss started to increase (see also Section III-B). To investigate the behavior of pruning, we are interested in how many CNs are pruned in each CN layer. In Fig. 4(b), we plot the distribution of surviving CNs after pruning across CN layers. We observe that in the first CN layer, about 40% of all surviving CNs are used for decoding. In later CN layers, the number of CNs decreases significantly. This observation furthermore justifies the use of a low number of iterations. In Fig. 4(c) and 4(d), we plot the histograms of the CN and VN weights in the final iteration.
+
+Fig. 5. BLER results for the RM(2, 5) code with (PB-)NBP decoding.
+In Fig. 5, we plot the BLER as a function of Eb/N0. The PB-NBP decoder D1 performs 0.38 dB away from the ML decoder at a BLER of 10−4. Removing the weights (PB-NBP D2), results in a penalty of 0.48 dB. Untying the weights in the CNs (PB-NBP D3) results in an additional gain of 0.047 dB with respect to PB-NBP D1.
+Both PB-NBP D1 and D3 outperform NBP with Hoc containing the 620 parity-check equations of minimum weight, as well as MBBP [12] with 15 randomly chosen paritycheck matrices. Furthermore, the proposed PB-NBP decoders are less complex than NBP with Hoc and MBBP, requiring 68% and 7% less CN evaluations than NBP and MBBP, respectively. PB-NBP D2 performs slightly worse than NBP, but entails the lowest complexity as no weights need to be stored. As a further comparison, we also plot the performance of a recurrent neural network (RNN)-based decoder [2]
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+BUCHBERGER et al.: PRUNING AND QUANTIZING NBP DECODERS
+TABLE I COMPLEXITY OF THE RM(2, 5) CODE. IN PARENTHESES THE FRACTION
+OF THE NUMBER OF CNS AND WEIGHTS COMPARED TO NBP WITH Hoc (DENOTED BY “1.0”)
+
+1963
+
+Fig. 7. BLER results for the RM(2, 5) code with PB-NOMS decoding and quantization.
+
+Fig. 6. Comparison of different pruning strategies for the RM(2, 5) code.
+
+using Hoc. The RNN-based decoder slightly outperforms PB-NBP D1 and PB-NBP D2 at the cost of increased complexity by a factor of three. NBP with a standard parity-check matrix with no redundant rows (i.e., containing 16 paritycheck equations) is clearly not competitive. The PB-NBP decoders also require significantly less weights than the NBP decoder with Hoc. The decoding complexity of the decoders in Fig. 5 is reported in Table I. In parentheses, we display the complexity normalized by that of NBP with Hoc.
+To assess the effectiveness of our pruning strategy, we also consider the scenarios where we randomly prune CNs (random pruning), where we prune the CN associated with the largest weight (referred to as maximum pruning), and all CNs in a single step (one-shot pruning). As it can be observed in Fig. 6, the performance of random and maximum pruning is clearly not competitive. One-shot pruning exhibits a loss of about 0.1 dB over our proposed pruning method. While one-shot pruning may speed up the training process, it is important to note that training is done offline and the final decoders have the same complexity. Furthermore, one-shot pruning requires that the final number of CNs is known a priori.
+The BLER of the PB-NOMS decoder with qm bits for the messages and qw bits for the weights is depicted in Fig. 7, where ∞ bits denotes full precision floating point. We further
+
+Fig. 8. BLER results for the RM(3, 7) code with (PB-)NBP decoding.
+set qch = qm. Floating point PB-NOMS decoding suffers from a 0.25 dB degradation over PB-NBP decoding. Further quantizing the PB-NOMS decoder increases this gap. We observe that while for qw = 5, 3 bits for the channel output and internal messages appears to be sufficient, in the case of qw = 3 using 3 bits for the channel output and internal messages leads to a significant performance degradation with respect to floating point messages. The PB-NOMS and the PB-NBP decoders require the same number of CN evaluations and weights. However, the PB-NOMS decoder is less complex, due to its simplified CN update.
+B. Reed-Muller Code RM(3, 7) For the RM(3,7) code of code length n = 128 and dimen-
+sion k = 64, we select as the overcomplete parity-check matrix Hoc the matrix containing 70000 out of 94488 randomly selected parity-check equations of minimum weight. Since in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+1964
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+TABLE II
+COMPLEXITY OF THE RM(3,7) CODE. IN PARENTHESES THE FRACTION OF THE NUMBER OF CNS AND WEIGHTS COMPARED TO NBP WITH Hoc (DENOTED BY “1.0”)
+
+the initial training phase CNs are removed in an almost random
+fashion, choosing a large random subset of all minimum-
+weight parity-check equations to initialize the training does
+not harm the optimization. To investigate the effect of the
+size of the random subsets of minimum-weight parity-check
+equations, we also consider the case where only a small,
+random subset, containing 9448 of all parity-check equations of minimum weight are selected for Hoc and denote this decoder as PB-NBP D˜1. Again, we fix the number of iterations to six. In Fig. 8, we plot the BLER for the PB-NBP decoders D1, D˜1, D2, and D3 and compare the performance to that of NBP and MBBP. Decoder PB-NBP D1 performs 0.27 dB from the ML decoder and improves upon NBP with Hoc by 0.28 dB. Removing the weights results in a degradation of 0.47 dB for decoder PB-NBP D2 with respect to PB-NBP D1. On the other hand, untying the weights results in a gain of 0.02 dB for decoder PB-NBP D3.
+Decoders PB-NBP D1, PB-NBP D2, and PB-NBP D3, require only 3.49% of the CNs and at most 21% of the weights compared to the NBP decoder with Hoc while showing a performance gain of 0.28 dB for decoder PB-NBP D3. The RNN-based decoder with Hoc requires a similar number of weights as the PB-NBP decoder D3, but is significantly more complex as it has the same number of CNs as the NBP
+decoder. However, it offers a worse performance than PB-NBP D1 and D3. As for the RM(2, 5) code, NBP using the nonredundant parity-check matrix with 64 CNs is not competitive
+(curve omitted for better readability). The complexities are
+reported in Table II. As for the RM(2, 5) code, we omit the
+scaling by the average constant CN degree. Decoder PB-NBP D˜1 demonstrates the effect of using only a
+small subset of all parity-check equations of minimum weight as the overcomplete parity-check matrix Hoc. The decoder is pruned to the same complexity as PB-NBP D1. As randomly selecting a small subset of parity-check equations essentially
+corresponds to randomly pruning CNs, we observe the same
+performance degradation as for the random pruning in the case
+of the RM(2, 5) code.
+In Fig. 9, we report BLER results for the quantized and pruned NOMS decoders. Once again, we set qch = qm. At a BLER of 10−4, with qm = qw = 5, we perform 0.5 dB from ML and with only 3 bits, we perform 0.8 dB from ML. In the figure we also compare the performance of the
+
+Fig. 9. BLER results for the RM(3, 7) code with PB-NOMS decoding and quantization. For post-training quantization and quantization-aware training, qm = qch = qw = 3 is used.
+TABLE III COMPLEXITY OF THE CCSDS LDPC CODE. IN PARENTHESES THE FRACTION OF THE NUMBER OF CNS COMPARED TO CONVENTIONAL
+BP WITH 100 DECODING ITERATIONS (DENOTED BY “1.0”)
+joint optimization of the quantizers, weights, and offsets to that of two common approaches to quantization in neural networks—post-training quantization and quantization-aware training. For post-training quantization, the decoder is trained using floating point precision and the quantizer is added after the training is completed. To this end, we use Tensorflow’s built-in quantizer, i.e., a uniform quantizer. The clipping range for the messages is set to ±8. The quantizer of the weights and offsets is clipped to the range of the weights and offsets in the respective layer. From Fig. 9, we notice that this way of quantizing is clearly not competitive. One reason for this is that the weights and offsets of the decoder may not be optimal once the quantizers are added, as quantization distorts both weights and offsets. Furthermore, a different set of weights and offsets may be able to (partially) compensate for the performance degradation due to the quantized messages. Incorporating the quantizer into the training, referred to as quantization-aware training, overcomes this. Once again, we use Tensorflow’s built-in quantizer for this, clip the messages to ±8 and the weights and offsets to the range of the weights and offsets in the respective layer. Even though quantization-aware training improves upon post-training quantization, it is limited by the initial choice of using a uniform quantizer and the clipping range for the messages. For post-training quantization, a quantizer optimized using the Lloyd-Max algorithm [22], [23]
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+BUCHBERGER et al.: PRUNING AND QUANTIZING NBP DECODERS
+
+1965
+
+Fig. 10. BLER results for the LDPC code.
+TABLE IV COMPLEXITY OF THE POLAR CODE. IN PARENTHESES THE FRACTION OF
+THE NUMBER OF CNS AND WEIGHTS COMPARED TO NBP WITH Hoc (DENOTED BY “1.0”)
+
+Fig. 11. BLER results for the polar code.
+in Table III. We remark that the decoding complexity of BP decoding does not take into account potential early stopping of the decoder. However, early stopping may also be used in the proposed PB-NBP decoders. The effects of quantization are similar to the ones observed for the Reed-Muller codes. Quantizing messages, channel output, weights, and offsets with 3 bits causes a degradation of 0.3 dB over PB-NBP D1, which corresponds to a performance of 1.8 dB from ML decoding.
+
+improves significantly over the uniform quantizers. However, as the weights and offsets are potentially suboptimal, a small degradation to the proposed joint optimization remains.
+C. Low-Density Parity-Check Code
+We consider the CCSDS LDPC code of length 128 and rate 0.5 as defined in [24]. It has CN degree 8 and half the VNs have degree 3 and half have degree 5. The code has minimum Hamming distance 14. We consider conventional BP decoding with 25 iterations, corresponding to 1600 CN updates.
+We let the overcomplete parity-check matrix Hoc contain 10000 randomly chosen parity-check equations of Hamming weight up to twenty. This causes CNs of different degrees and hence Hoc has irregular CN degree. We then design the PB-NBP decoder with six iterations and the same number of CN evaluations as for conventional BP decoding with 25 iterations. Note that as the parity-check matrices of the BP and PB-NBP decoders are of irregular CN degree, the complexity is given by (10).
+The BLER results are given in Fig. 10. PB-NBP decoder D1 outperforms conventional BP with 25 iterations by approximately 0.6 dB. Allowing 100 iterations for conventional BP reduces the gain to 0.2 dB. However, conventional BP with 100 iterations requires approximately twice the complexity of decoder PB-NBP D1. NBP with 64 CNs is again not competitive. The complexity of the different decoders is reported
+
+D. Polar Code
+We finally consider a polar code of length n = 128 and rate 0.5 defined in [25]. It has minimum Hamming distance 8 and its dual code has minimum Hamming distance 16. Following [26], we find all 98304 codewords of the dual code of minimum weight. As for the RM(3, 7) code, Hoc used for the optimization process contains 70000 randomlyselected minimum-weight parity-check equations to reduce the complexity of the training. As a target complexity, we choose the same complexity as for the RM(3, 7) code. The final complexities are reported in Table IV. Once again, we omit the scaling by the average constant CN degree.
+In Fig. 11, we plot the BLER as a function of Eb/N0. We observe a similar behavior to that of the RM codes. The PB-NBP decoder D1 performs 0.5 dB from ML and outperforms NBP with Hoc while only requiring 3.3% of its CNs evaluations and 20.2% of the weights. Switching to a quantized PB-NOMS decoder with qw = qch = qm = 3 causes a performance loss of 0.65 dB. As previously, NBP with Hstd offers the lowest complexity, but is clearly not competitive.
+VI. CONCLUSION
+We proposed a novel pruning-based neural belief propagation (PB-NBP) decoder for short linear block codes. The proposed decoder is based on pruning a large overcomplete parity-check matrix and uses different parity-check equations in each decoding iteration. For Reed-Muller codes and a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+1966
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+polar code, we demonstrated a performance close to ML decoding. For a short, standardized LDPC code, we showed that we can outperform conventional BP decoding at a reduced complexity. The proposed PB-NBP decoders outperform NBP with large overcomplete parity-check matrices while providing a lower complexity. In the case of a (3, 7) Reed-Muller code, the PB-NBP decoder outperforms the NBP decoder by 0.28 dB at a BLER of 10−4 while only requiring 3% of the check nodes and 21% of the weights. Further, it performs within 0.27 dB from ML decoding. In all scenarios, our approach outperforms the original NBP and MBBP. We also applied the proposed pruning-based decoder to NOMS and introduced a quantized pruning-based neural offset min-sum (PB-NOMS) decoder which allows joint optimization of the weights, offsets, and quantization. With messages, weights, and offsets quantized with 5 bits, PB-NOMS achieves a performance 0.5 dB and 1.7 dB from ML for a Reed-Muller and LDPC code, respectively. A polar code with 3 bits quantization performs 1 dB away from ML. The proposed approach can readily be applied to other linear block codes such as BCH codes, with similar gains over the original NBP decoder expected. Furthermore, additional constraints can be introduced in the training process to allow for a more practical decoder.
+APPENDIX HYPERPARAMETERS
+The PB-NBP decoders are trained with a batch size of 128 in the case of the Reed-Muller code RM(2, 5) and the LDPC code, and a batch size of 64 for the Reed-Muller code RM(3, 7) and the polar code. As an optimizer, the Adam optimizer with a learning rate of 0.001 is employed. Initially, η = 1.0 and every 3000 batches η is decreased by multiplying it by 0.8. After each pruning step, η is reset to its initial value. The maximum number of batches per pruning step is 105 for the RM(2, 5) and the LDPC code, and 2 ·105 for the RM(3, 7) and the polar code, but the next pruning step is performed earlier if the average loss over 100 batches stops decreasing.
+The PB-NOMS decoders are trained starting from the pruned parity-check matrices. For the RM(2, 5) and the LDPC code, we use 1.5 · 105 batches and for the RM(3, 7) and the polar code 3 · 105 batches. As for the PB-NBP decoders, the learning rate is set to 0.001 and every 3000 batches η is decreased by multiplying it by 0.8.
+ACKNOWLEDGMENT
+Parts of the simulations were performed on resources at C3SE provided by the Swedish national infrastructure for computing.
+REFERENCES
+[1] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Allerton, IL, USA, Sep. 2016, pp. 341–346.
+[2] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+
+[3] M. Lian, F. Carpi, C. Häger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Paris, France, Jul. 2019, pp. 161–165.
+[4] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Baltimore, MD, USA, Mar. 2017, pp. 1–6.
+[5] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 1361–1365.
+[6] T. Halford and K. Chugg, “Random redundant soft-in soft-out decoding of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory, Seattle, WA, USA, Jul. 2006, pp. 2230–2234.
+[7] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[8] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[9] M. Bossert and F. Hergert, “Hard- and soft-decision decoding beyond the half minimum distance—An algorithm for linear codes (Corresp.),” IEEE Trans. Inf. Theory, vol. IT-32, no. 5, pp. 709–714, Sep. 1986.
+[10] A. Kothiyal, O. Y. Takeshita, W. Jin, and M. Fossorier, “Iterative reliability-based decoding of linear block codes with adaptive belief propagation,” IEEE Commun. Lett., vol. 9, no. 12, pp. 1067–1069, Dec. 2005.
+[11] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed–Solomon codes by adapting the parity-check matrix,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3746–3756, Aug. 2006.
+[12] T. Hehn, J. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, Jan. 2010.
+[13] E. Santi, C. Häger, and H. D. Pfister, “Decoding Reed–Muller codes using minimum-weight parity checks,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Vail, CO, USA, Jun. 2018, pp. 1296–1300.
+[14] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating gradients through stochastic neurons for conditional computation,” 2013, arXiv:1308.3432. [Online]. Available: http://arxiv.org/abs/1308.3432
+[15] P. Yin, J. Lyu, S. Zhang, S. Osher, Y. Qi, and J. Xin, “Understanding straight-through estimator in training activation quantized neural nets,” in Proc. Int. Conf. Learn. Represent. (ICLR), New Orleans, LA, USA, Mar. 2019, pp. 1–30.
+[16] V. Nair and G. E. Hinton, “Rectified linear units improve restricted Boltzmann machines,” in Proc. IEEE Int. Conf. Mach. Learn. (ICML), Haifa, Israel, Feb. 2010, pp. 807–814.
+[17] D. P. Kingma and J. L. Ba, “Adam: A method for stochastic optimization,” in Proc. Int. Conf. Learn. Represent., San Diego, CA, USA, May 2015, pp. 1–15.
+[18] M. Abadi et al. (2015). TensorFlow: Large-Scale Machine Learning on Heterogeneous Systems. [Online]. Available: https://www.tensorflow.org/
+[19] B. Smith, M. Ardakani, W. Yu, and F. Kschischang, “Design of irregular LDPC codes with optimized performance-complexity tradeoff,” IEEE Trans. Commun., vol. 58, no. 2, pp. 489–499, Feb. 2010.
+[20] J. Frankle and M. Carbin, “The lottery ticket hypothesis: Finding sparse, trainable neural networks,” in Proc. Int. Conf. Learn. Represent., New Orleans, LA, USA, Mar. 2019, pp. 1–42.
+[21] A. Buchberger, C. Häger, H. D. Pfister, L. Schmalen, and A. Graell i Amat. (2020). Source Code. [Online]. Available: https://github.com/bbgra/pruning_nbp
+[22] J. Max, “Quantizing for minimum distortion,” IRE Trans. Inf. Theory, vol. 6, no. 1, pp. 7–12, Mar. 1960.
+[23] S. Lloyd, “Least squares quantization in PCM,” IEEE Trans. Inf. Theory, vol. IT-28, no. 2, pp. 129–137, Mar. 1982.
+[24] “Short block length LDPC codes for TC synchronization and channel codding (CCSDS 231.1-O-1),” Consultative Committee Space Data Syst. (CCSDS), Washington, DC, USA, Tech. Rep., Apr. 2015. [Online]. Available: https://public.ccsds.org/Pubs/231x1o1.pdf
+[25] M. Helmling et al. (2019). Database of Channel Codes and ML Simulation Results. [Online]. Available: https://www.uni-kl.de/channelcodes
+[26] M. Bardet, V. Dragoi, A. Otmani, and J.-P. Tillich, “Algebraic properties of polar codes from a new polynomial formalism,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Barcelona, Spain, Jul. 2016, pp. 230–234.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:20:26 UTC from IEEE Xplore. Restrictions apply.
+
+

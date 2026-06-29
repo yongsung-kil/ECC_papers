@@ -1,0 +1,411 @@
+Low-Power LDPC Decoding Based on Iteration Prediction
+
+Xinmiao Zhang, Fang Cai Case Western Reserve University Emails: {xinmiao.zhang, fang.cai}@case.edu
+
+C. J. Richard Shi University of Washington Email: cjshi@u.washington.edu
+
+Abstract—Low-density parity-check (LDPC) codes have very broad applications. Low-power LDPC decoder design is becoming increasingly important for wireless and other power-constraint systems. Compared to disabling or simplifying the decoder circuit, reducing the power supply voltage can bring more power reduction. Through predicting the number of iterations needed for convergence, this paper proposes to make full use of the time available for decoding and scale down the power supply voltage in the remaining decoding iterations. Novel iteration prediction schemes are developed. The proposed schemes require very small hardware overhead and do not lead to noticeable error-correcting performance loss. Compared to using the original supply voltage and powering off the decoder after convergence, the proposed schemes can bring 50% dynamic power reduction for an example LDPC code, and the power saving further increases with the signal-to-noise ratio.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes have been widely adopted in many standards and applications due to their excellent errorcorrecting performance. LDPC codes can be decoded by belief propagation (BP) and its approximations, such as the Min-sum algorithm [1], which is broadly used due to its low hardware complexity and small performance degradation compared to BP.
+For wireless and other power-constraint systems, low-power LDPC decoder design is of critical importance. Several power reduction techniques for LDPC decoding have been proposed in previous papers. Apparently, the entire LDPC decoder can be powered off using clock gating after the decoding converges. A termination scheme was proposed to stop the decoding process earlier when it is unlikely to converge within the maximum number of iterations [2]. This scheme can only lead to small power reduction when the signal-to-noise ratio (SNR) is not very low, which is required by practical applications. Further power saving has been achieved in the algorithmic level in [3], [4] by deactivating the processing of the variable nodes whose reliabilities are higher than a threshold. However, these approaches lead to performance loss and error floor. Power consumption can be also lowered by reducing memory access [5], [6] and developing simpler circuits for the check node processing [5], [7].
+Compared to disabling or simplifying the circuit, reducing the power supply voltage, Vdd, brings more significant power reduction since the power consumption is proportional to Vd2d. Pipelining and parallel processing are commonly used techniques for reducing Vdd if the throughput is kept the same. However, pipelining can not be directly employed for architectures with feedback loops, such as LDPC decoders. In parallel processing, if the sample rate remains the same, then using multiple copies of the hardware allows longer clock period and hence lower Vdd. This idea was exploited in [8] for LDPC decoders. Nevertheless, parallel processing achieves power reduction at the cost of duplicated hardware units. Alternatively, if it is known that some input samples require less computation than others, then the clock frequency can be relaxed during the processing of some
+This material is based upon work supported by the National Science Foundation under Grants No. 0846331 and 0802159.
+
+inputs without affecting the overall throughput. As a result, Vdd and hence the power consumption can be reduced without duplicating the hardware units. This is the basic idea of the dynamic voltage scaling scheme [9]. However, general digital signal processing systems were considered in [9]. Buffers need to be added to the input and output to handle the indefinite processing latency of different samples, and the voltage scaling is controlled by the data in the input buffer. As a result, there is large area overhead caused by the buffers, and the voltage scaling for an input sample is decided by future samples.
+This paper proposes to exploit dynamic voltage scaling in LDPC decoding through predicting the number of decoding iterations. Although a maximum iteration number is set to achieved desired error rate, the decoding of most received words converges within a much smaller number of iterations. Once the prediction is made, the remaining iterations can take as long time as that set for the maximum number of iterations. As a result, the clock frequency and hence power supply voltage can be reduced. Novel iteration prediction methods are proposed in this paper by making use of the number of unsatisfied check equations (NUCE). In addition, the prediction and accordingly voltage scaling are adjusted in each iteration to maximize power reduction and avoid over scaling. The proposed schemes can be implemented by simple hardware and do not lead to noticeable performance loss. Compared to using the original Vdd and turning off the decoder after convergence, the proposed schemes can bring as much as 50% dynamic power reduction for an example quasicyclic (QC) LDPC code for the SNRs simulated. Moreover, the power saving further increases with SNR.
+The structure of this paper is as follows. Section II introduces background information. The proposed power reduction and prediction schemes are presented in Section III. Section IV analyzes the achievable power reduction, and conclusions are drawn in Section V.
+II. BACKGROUND INFORMATION
+An LDPC code is a linear block code, and there is only a small number of nonzero entries in the corresponding parity check matrix H. The H matrix is associated with a Tanner graph, in which each check (variable) node represents a row (column) of H. A nonzero entry of H translates to an edge in the Tanner graph connecting the corresponding check and variable nodes. In LDPC decoding, reliability messages are iteratively passed through the edges of the Tanner graph. At the end of each decoding iteration, hard-decision for each variable node is made based on the updated a posteriori information. Denote the vector formed by all the hard-decision bits by z. z satisfies the ith check equation if zHiT = 0, where Hi is the ith row of H. The decoding converges and can be stopped when all the check equations are satisfied, i .e. zHT = 0. At this time, the z is the correct codeword.
+Low-power LDPC decoder design is crucial for power sensitive applications, such as wireless handsets and sensor nodes. Denote the total capacitance of the circuit by Ctotal, and f is the clock frequency. Assume that the decoder is active for time period T during the
+
+978-1-4673-0219-7/12/$31.00 ©2012 IEEE
+
+3041
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:50:54 UTC from IEEE Xplore. Restrictions apply.
+
+decoding of a word. Then the dynamic power consumed on decoding a word can be estimated as
+
+P = CtotalVd2df T
+
+(1)
+
+based on first-order CMOS delay models [10]. Powering off the
+decoder after the convergence or deactivating parts of the circuits reduces the T in (1). Simplifying the circuit translates to reducing Ctotal.
+As can be seen from (1), the power consumption is proportional to Vd2d. Therefore, Vdd has more significant impact on the power consumption than other parameters. In addition, Vdd is related to the propagation delay of the combinational circuit, Tpd, as [10]
+
+Tpd
+
+=
+
+CchargeVdd k(Vdd − Vth)2
+
+.
+
+(2)
+
+Here Ccharge denotes the capacitance in the data path to be charged/discharged in a single clock cycle, and Vth is the threshold voltage. Moreover, k is a parameter that depends on the technology. The minimum achievable clock period should be the sum of Tpd and the setup and hold times of the registers. The latter two are usually much smaller than Tpd when the data path is nontrivial, which is the case in LDPC decoding. Hence, the minimum achievable clock period, Tclk, is set to Tpd in this paper for the purpose of simplifying the notations.
+In most communication systems, the LDPC decoder receives words at fixed time interval T , and a maximum number of iterations, Imax, is set for the decoding. Traditionally, a single voltage supply is used, and the LDPC decoder is designed such that Imax iterations take time T . If the decoding converges earlier, then the decoder is shut down through clock gating to save power. Alternatively, if it is known that less decoding iterations are needed for a received word, then the clock frequency can be reduced so that the decoding still takes time T . In this case, the voltage supply can be lowered. To reduce the hardware complexity of voltage scaling, the available scaled voltages should be limited to a few discrete values {Vi}, i = 0, 1, . . . , d − 1, where V0 equals the original Vdd, and Vi+1 < Vi. Moreover, there should be equal number of corresponding clock frequencies to choose from. Assume each decoding iteration takes n clock cycles, and I ≤ Imax iterations are required for the decoding of a received word. Moreover, the voltage supply and clock frequency do not change during each decoding iteration. Denote the supply voltage and clock period used in iteration k by V (k) and Tclk(k), respectively. Then the power spent on the decoding is
+
+I
+P = nCtotal V 2(k),
+k=1
+
+subject to the condition that
+
+I k=1
+
+nTclk (k)
+
+≤
+
+T.
+
+On
+
+the
+
+other
+
+hand, if Vdd is used and the decoder is shut down after convergence,
+
+then the power consumption is nCtotalIVd2d. Apparently, using lower
+
+supply voltage and making full use of the allowable time for decoding
+
+can lead to significant power reduction, especially when I is much
+
+smaller than Imax. In addition, switching from one supply voltage
+
+to another only consumes negligible power and takes a few clock
+
+cycles [9]. Considering that dozens or hundreds of clock cycles are
+
+needed for each iteration of LDPC decoding, the latency overhead of
+
+switching between supply voltages is very small.
+
+In the next section, novel methods are proposed to exploit dynamic
+
+voltage scaling in LDPC decoding. The voltage scaling is achieved
+
+through predicting the number of iterations needed in the decoding
+
+instead of adding buffers to monitor the average processing speed
+
+of the input data as in [9]. Accordingly, not only the large buffers are avoided, but also the voltage scaling for the decoding of each received word can be individually controlled.
+III. DYNAMIC VOLTAGE SCALING THROUGH ITERATION PREDICTION
+It is very difficult to tell the exact number of iterations needed before the decoding starts. We propose to make use of the NUCE to predict the number of iterations left during the decoding. Then in the remaining decoding iterations, the clock frequency and hence supply voltage are reduced accordingly so that the decoding is finished in time T . Although the Min-sum algorithm is adopted to show simulation results, the prediction and voltage scaling methods proposed next are not limited by the decoding algorithm or the decoder architecture.
+A. In situ prediction
+
+350
+
+300
+
+Number of Unsatisfied Check Equations
+
+250
+
+200
+
+150
+
+100
+
+50
+
+0
+
+0
+
+5
+
+10
+
+15
+
+Iteration Number
+
+Fig. 1. Number of unsatisfied check equations for a (1270, 652) QC code
+
+Fig. 1 shows how the NUCE changes with iterations in the Minsum decoding of a (1270, 652) quasi-cyclic (QC) LDPC code under the additive white Gaussian noise (AWGN) channel. Imax is set to 15 in this example. When the NUCE becomes zero, the decoding converges and the correct codeword is found. It can be observed from Fig. 1 that for those decodable cases, the NUCE may fluctuate at the beginning, and then follows piecewise constant slopes to descend to zero. Hence, predictions can be made by finding the slope from two adjacent iterations that have large drops in the NUCE, and calculating the remaining iterations using the slope and current NUCE. Since the slop may change, it will be recalculated and the prediction will be adjusted in each decoding iteration. Moreover, it is possible that the predictions are too optimistic, and the voltages are accordingly over-scaled. In this case, previously decodable words may become undecodable in T . This leads to performance loss or error floor. To prevent it from happening, margins can be added to the predictions through multiplying a factor β to the number of remaining iterations calculated from tracking the NUCE.
+For a given predicted number of remaining iterations, the power supply can be scaled to one of the Vi as follows. For each Vi, the corresponding Tpd, denoted by Tpd,i, is pre-computed according to (2) for given decoder and technology. These Tpd,i decide the available clock periods. Assume that the clock period does not
+
+3042 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:50:54 UTC from IEEE Xplore. Restrictions apply.
+
+change during each decoding iteration. If in iteration k, a prediction
+
+is made that Ip iterations are left, then the largest clock period
+
+that does not exceed (T − n
+
+k j=1
+
+Tclk(j))/(nIp
+
+)
+
+is
+
+chosen
+
+and
+
+the corresponding Vi is selected as the power supply voltage for
+
+the next decoding iteration. Denote the NUCE in iteration k by
+
+S(k), and ∆S(k) = S(k) − S(k − 1). This in situ prediction
+
+and voltage scaling procedure is summarized in Algorithm A.
+
+Algorithm A: In situ prediction
+
+Initialization: V (1) = V0
+
+for k = 1 : Imax Compute zHT ; Stop if all check equations are satisfied
+
+A1: if ∆S(k) > D and ∆S(k − 1) > D
+
+L = (∆S(k) + ∆S(k − 1))/2
+
+A2:
+
+Ip = βS(k)/L
+
+A3:
+
+V (k) = min Vi, s.t. Tpd,i ≤ (T − n
+
+k j=1
+
+Tclk
+
+(j))/(nIp)
+
+else
+
+V (k) = V (1)
+
+In Algorithm A, D is a predefined threshold, and L can be considered as the slope of the NUCE curve. Larger D translates to more stringent condition for making predictions, and hence less power reduction. On the other hand, using a D that is too small may lead to prediction even if the NUCE is still fluctuating. The optimized value of D can be found from simulations. It should be noted that the prediction and voltage scaling are only activated when there are large drops in the NUCE in two consecutive decoding iterations. Otherwise, the initial power voltage supply is used.
+The slopes of the NUCE can be steep as shown in Fig. 1. Hence, by the time that the predictions are made based on the slopes, there may be only a few iterations left. The power reduction achievable by lowering the supply voltage only in the last few iterations can be limited.
+B. Initial prediction
+
+350
+
+350
+
+300
+
+300
+
+Number of Unsatisfied Check Equations
+
+250
+
+250
+
+200
+
+200
+
+150
+
+150
+
+100
+
+100
+
+50
+
+50
+
+0
+
+0
+
+0
+
+5
+
+10
+
+15
+
+0
+
+Iteration Number
+
+(a)
+
+5
+
+10
+
+15
+
+Iteration Number
+
+(b)
+
+Fig. 2. Number of unsatisfied check equations for a (1270, 652) QC LDPC code: (a) decodings converge by iteration 7; (b) decodings converge after iteration 7
+The power consumption can be further reduced if the supply voltage is scaled down from the beginning of the decoding. It can be observed that the NUCE at the beginning of the decoding, S(0), is usually smaller for the cases that converge in less iterations. To show this clearer, the curves that converge in seven iterations in Fig. 1 are separated from the others, and the split curves are illustrated in Fig. 2. For the decodings that converge after iteration seven, S(0) is at least 140 for the (1270, 625) code. On the other hand,
+
+S(0) for the cases that converge before iteration seven is usually much less. Inspired by this observation, we propose to make a initial prediction at the beginning of the decoding based on S(0). Simulations can be carried out to find a set of Imax − 1 threshold values Sthi (i = 1, 2, . . . , Imax − 1), such that for all the decodings that converge after iteration i, S(0) ≥ Sthi. For any given code, decoding algorithm, and communication channel, these thresholds can be found offline and stored. Once S(0) is computed at the beginning of the decoding, it is compared with the thresholds. If Sthi < S(0) < Sthi+1, then a preliminary prediction that the decoding will take i+1 iterations is made, and the scaled voltage can be chosen in a similar way as in the in situ prediction. This approach would need at least ⌈log2(Imax − 1)⌉ comparisons, which can lead to non-negligible latency if Imax is not small.
+Since the goal is to choose the scaled voltage, it can be decided directly from S(0) instead of the preliminarily predicted iteration number. For a given Vi (i = 1, 2, . . . , d − 1), the maximum number of iterations that can be finished in time T , Ii, can be computed using (2). Then d−1 thresholds SV thi are derived from simulations, such that for all the decodings that converge after iteration Ii, S(0) ≥ SV thi. Note that SV thi > SV thi+1 since Vi > Vi+1. These thresholds can be also pre-computed and stored. Then Vi is chosen if SV thi > S(0) > SV thi+1. Since only a small number of scaled voltages are available, a few comparisons are needed to decide the initial scaled voltage from S(0).
+This initial prediction can be combined with the in situ prediction. In this case, the V0 in the initialization of Algorithm A needs to be replaced by the scaled voltage chosen according to the initial
+prediction.
+
+C. Hardware Overhead
+
+As mentioned previously, the thresholds used in the initial predic-
+
+tion can be computed offline. Hence, the hardware needed for imple-
+
+menting the initial prediction is only a ROM or registers for storing
+
+d−1 thresholds, d−1 comparators, and some simple logic to process
+
+the comparison results. Usually d = 3 or 4 scaled voltages can be
+
+adopted. The major computations for the in situ prediction lie in Step
+
+A3 of Algorithm A. A2 and A3 steps can be combined as finding the
+
+largest Tpd,i such that Tpd,iβS(k) < L(ImaxTpd,0 −
+
+k j=1
+
+Tclk
+
+(j))
+
+since T = nImaxTpd,0.
+
+k j=1
+
+Tclk (j )
+
+can
+
+be
+
+computed
+
+iteratively
+
+in each decoding iteration. Then the largest Tpd,i satisfying this
+
+condition can be found after a few subtractions, multiplications and
+
+comparisons. Compared to the hardware complexity of the overall
+
+LDPC decoder, the overhead brought by the predictions and voltage
+
+scaling is very small.
+
+IV. POWER REDUCTION ANALYSIS
+In this section, the dynamic power reduction can be achieved by the proposed schemes are first presented using an example. Then how the decoding performance and achievable power saving change with the parameter β and available scaled voltages are discussed.
+Fig. 3 shows the estimated dynamic power consumption using the proposed schemes normalized to that of using Vdd and shutting down the decoder after convergence. A (1270, 652) QC LDPC code with Imax = 15 is considered in the simulations, and the frame error rate (FER) is in the range of 10−2 ∼ 10−7 for the SNRs simulated. In addition, it was assumed that Vdd = 1.1V , Vt = 0.1V , and four supply voltages, 1.1V, 1.0V, 0.9V, and 0.6V, are available. Moreover, D=15 is adopted in the in situ prediction, and the three thresholds for the initial prediction are 140, 105 and 75 in our simulations. It can be observed from Fig. 3 that the power reduction achieved by
+
+3043 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:50:54 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized Power
+
+1
+
+0.95
+
+0.9
+
+0.85
+
+0.8
+
+0.75
+
+0.7
+
+0.65 In situ Pred. (β=1.0), Initial Pred.
+
+0.6
+
+In situ Pred. (β=1.0)
+
+Initial Pred.
+
+0.55
+
+In situ Pred. (β=2.0), Initial Pred.
+
+In situ Pred. (β=2.0)
+
+0.5
+
+0.5
+
+1
+
+1.5
+
+SNR
+
+Fig. 3. Dynamic power reduction achieved through predictions for a (1270, 652) QC LDPC decoding with Imax = 15
+
+the in situ prediction only is limited for this LDPC code. The reason is that by the time that the prediction is made, there are usually only a few iterations left, and scaled voltages can be only used for a few iterations. In addition, the power saving achieved by the in situ prediction decreases when the SNR is higher. This is because that the average NUCE is smaller when the SNR is higher. However, the slope of the NUCE does not change much with SNR. Hence even fewer iterations are left when the prediction is made at higher SNR. Table I lists the average number of iterations needed for converge, Iconv, for different SNRs. Iactive is the average number of iterations that the conditions in Step A1 are satisfied and the in situ prediction is activated. It can be observed that Iactive/Iconv decreases when SNR becomes higher, which further verifies that the power reduction achieved by the in situ prediction becomes less at higher SNR. Fig. 3 also shows that the power saving contributed by the initial prediction increases with SNR. The reason is that a larger proportion of the decoding converges in a few iterations at higher SNR, and hence the voltage is scaled down from the beginning more often.
+TABLE I Iconv AND Iactive FOR DIFFERENT SNRS IN THE DECODING OF A (1270,
+652) QC LDPC CODE WITH Imax = 15
+
+SNR FER Iconv Iactive Iactive/Iconv
+
+0.5 0.07 5.22 2.19 0.42
+
+0.7 0.9 1.1
+
+1.3
+
+1.5
+
+0.01 2E-03 1.84E-04 1.20E-05 4.06E-07
+
+3.78 3.05 2.57
+
+2.23
+
+1.95
+
+1.89 1.47 1.08
+
+0.75
+
+0.46
+
+0.50 0.48 0.41
+
+0.33
+
+0.23
+
+For the (1270, 652) QC LDPC code, the initial prediction contributes more to the power saving than the in situ prediction since the NUCE tends to fluctuate for a relatively large number of iterations before it follows a steep slope to converge to zero. However, if a different code construction is used, the NUCE may fluctuate less, and the slope for convergence may be less steep. In those cases, the in situ prediction may contribute more to the power reduction.
+The parameter β is used to adjust the margin added to the in situ prediction. Larger β makes the prediction more conservative, and accordingly leads to less power reduction. On the other hand, if β is
+
+too small, previously decodable cases may become undecodable because of the over-scaled supply voltage. This will lead to performance loss or error floor. β = 1 and 2 are used for the simulation curves shown in Fig. 3. None of them lead to noticeable performance loss for the SNRs simulated. However, if β = 0.8 is adopted, there will be apparent performance degradation. When the SNR is higher, the decoding tends to converge earlier, and more likely the lowest scaled voltage can be used in the remaining decoding iterations when the in situ prediction is made. Hence, as can be seen from Fig. 3, the gap between the curves with different β tends to diminish at higher SNR.
+The set of available scaled voltages also affect the power saving and error correcting performance of the LDPC decoding. V0 is set to Vdd, and the lowest voltage in the set should be higher enough than the threshold voltage. In addition, the propagation delay is related to the inverse square of the supply voltage. Hence Vi − Vi+1 should be smaller than Vi+1 − Vi+2, so that the difference between each pair of Tpd,i and Tpd,i+1 is similar. The set of available voltages, 1.1V, 1.0V, 0.9V, and 0.6V, used in our simulations is chosen according to this guideline. However, more optimized voltage sets may be found through simulations. Using lower scaled voltages will lead to more power savings. Nevertheless, some decodable words may become undecodable if the voltages are too low. Tradeoff between power saving and error-correcting performance can be made by using different voltage sets. In addition, the value of β and voltage set need to be determined jointly from simulations.
+V. CONCLUSION
+This paper proposed to exploit dynamic voltage scaling in LDPC decoding though predicting the number of iterations needed, and two novel prediction schemes were developed. The proposed schemes have very small hardware overhead, and can achieve significant reduction on the dynamic power consumption of LDPC decoding. This work brings low-power LDPC decoder design to a new level. Future research will address iteration prediction for codes constructed using difference methods, and analyzing the achievable power reduction using more detailed models.
+REFERENCES
+[1] J. Chen, et. al., ”Reduced-complexity decoding of LDPC codes,” IEEE Trans. on Commun., vol. 53, pp. 1288-1299, Aug. 2005.
+[2] Z. Cui, L. Chen, and Z. Wang, “An efficient early stopping scheme for LDPC decoding”, Proc. 13th NASA Symp. on VLSI Design, 2007.
+[3] A. Blad, O. Gustafsson, and L. Wanhammar, “An early decision decoding algorithm for LDPC codes using dynamic thresholds,” Proc. European Conf. Circuit Theory Design, pp. 285-288, 2005.
+[4] E. Zimmermann et. al., “Reduced complexity LDPC decoding using forced convergence,” Proc. 7th Intl. Symp. Wireless Personal Multimedia Commun., pp. 12-15, 2004.
+[5] M. Mansour and N. Shanbhag, “Low-power VLSI decoder architectures for LDPC codes,” Proc. Intl. Symp. on Low Power Electronics and Design, pp. 284-289, 2002.
+[6] Y. Li, M. Elassal and M. Bayoumi, “Power efficient architecture for (3,6)regular low-density parity-check code decoder,” Proc. IEEE Intl. Symp. on Circuits and Syst., pp. IV-81, 2004.
+[7] K. He, J. Sha, L. Li, and Z. Wang, “Low power decoder design for QCLDPC codes,” Proc. IEEE Intl. Symp. on Circuits and Syst., pp. 39373940, 2010.
+[8] A. Darabiha, A. Chan Carusone, and F. R. Kschischang, “Power reduction techniques for LDPC decoder,” IEEE Journ. Solid-state Circuits, vol. 43, no. 8, pp. 1835-1845, Aug. 2008.
+[9] V. Gutnik and A. P. Chandrakasan, “Embedded power supply for lowpower DSP,” IEEE Trans. VLSI Syst., vol. 5, no. 4, pp. 425-435, Dec. 1997.
+[10] K. K. Parhi, VLSI Digital Signal Processing Systems: Design and Implementation, John Wiley and Sons, 1999.
+
+3044 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:50:54 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,923 @@
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Implementation Aspects of a Pipeline ADMM-based LP Decoding of LDPC Convolutional Codes
+Hayfa BEN THAMEUR1, Bertrand LE GAL2, Nadia KHOUJA1, Fethi TLILI1, Christophe JEGO2 1 SUPCOM, GRESCOM Lab, University of Carthage, Tunisia.
+2 Bordeaux INP, CNRS IMS, UMR 5218, Bordeaux University, France.
+
+Abstract—The enforcement of the linear programming (LP) decoding was recently extended to LDPC convolutional codes (LDPC-CC). It was demonstrated that their convolutional structure suites the message-passing based representation of the LP problem, thanks to the application of the alternating directions method of multipliers (ADMM). In this paper, a modified formulation of the ADMM-LP problem is introduced for pipeline decoding of LDPC-CCs based on the layered schedule. Moreover, an assessment of the fixed-point format required for hardware implementation is provided to evaluate the complexity of the underlying decoding algorithm. Simulations show that an 8-bit quantization scheme yields negligible error correction performances loss of about 0.05 dB regarding the floatingprecision ADMM based LDPC-CC decoder. Further, an algorithmic optimization of the Euclidean projection skipping technique, described in [1] [2], is proposed. This improved version enables to reduce the computational complexity of the decoding process without memory penalty contrary to the original formulation.
+Index Terms—802.16m, LDPC-CC, LP, ADMM, pipeline architecture, layered scheduling, fixed-point, hardware complexity.
+I. INTRODUCTION
+During the last decade, LDPC-CCs have attracted a great interest in the forward error correction area. They are considered as strong competitors to convolutional turbo codes as well as LDPC block codes (LDPC-BC) [3] for reliable decoding in many communication systems, such as wireless (WiMAX 802.16m), power-line (IEEE 1901) and optical communication systems [4]. Indeed, they provide good error correction performances and low latency features.
+The hardware performances of LDPC-CCs have been consistently assessed for the belief-propagation (BP) algorithms such as the sum-product algorithm (SPA) and its Min-Sum (MS) approximation variants [4]. In the literature, LDPC-CC decoders based on a pipeline architecture were intensively studied. The interest of the pipeline decoding stems from its reduced latency and its scalability, making it suitable for realtime and high throughput demanding applications. In fact, implementation efforts are mainly devoted to the design of one processing unit that would be replicated as many times as the number of decoding iterations [4].
+Recently, an LP technique was proposed by Feldman in [5] as an alternative to the conventional BP decoding. It yields in comparable error correction performance to the BP approaches [5] [6]. However, it suffers from high memory and computational complexities, making it impractical for hardware implementations. Later, an ADMM based version
+
+of the original LP definition was introduced in [7], such that an iterative behavior of the LP decoding becames possible. Hence, this novel decoding technique is still viable for LDPCCCs (ADMM-CC) [8] [9].
+Potentially, high hardware cost and time consuming projections are the major two practical issues of an ADMM decoder. In the literature, several strategies were investigated to address these issues. First, scheduling based optimizations were discussed in [9]. It has been shown that the horizontal layered (HL) schedule is the most memory efficient messages ordering approach for fast converging ADMM-CC decoder. Second, a hardware friendly algorithmic formulation of the Euclidean projection was proposed in [10]. Moreover, a skipping projection method was developed in [1] [2]. It consists in avoiding the projection operation whenever the evolution of the input vector is judged to be insignificant. Mainly, two manners were reported to verify if the projection can be ignored [1] [2]. Although the number of executed Euclidean projections is considerably reduced [1], extra computational and memory complexities are resulted. In this paper, a simplified formulation to estimate the projection input vector evolution without any memory overcost is provided.
+So far, ADMM hardware decoders have been designed for flooding based LDPC-BCs. Yet, a 10-bit precision scheme was found to provide floating-point like error correction performances. In this work, we draw benefits from the layered schedule and the architectural specificity of pipeline decoding of LDPC-CCs to design a low hardware cost and scalable ADMM-CC decoder that is convenient for streaming data transmission scenarios. As a matter of fact, error correction performances close to the floating-point and 10-bit schemes, within 0.05 dB, are obtained by an 8-bit precision one.
+The remainder of this paper is organized as follows: in Section II, conventional pipeline decoding of LDPC-CCs is described. In Section III, the modified ADMM-CC decoding approach is detailed. In Section IV, hardware complexity analysis is discussed and compared to BP. The proposed ADMM-CC decoder architecture is provided in Section V. Ultimately, experimental results are reported in Section VI.
+II. CONVENTIONAL PIPELINE DECODING OF LDPC-CCS
+A. LDPC Convolutional Codes
+An LDPC-CC is a linear code defined by a sparse and semi-infinite parity check matrix H [3]. It operates on semiinfinite code sequences v[0,∞] = (v0, v1, ..., vt, ...), t ∈ Z≥0,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply. 978-1-5386-1734-2/18/$31.00 ©2018 IEEE
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+that satisfy the equation: v[0,∞]HT[0,∞] = 0 . vt denotes a code block of size c bits and corresponds to an information block ut
+
+of size b bits (b < c) so that the rate of the related LDPC-CC
+
+is
+
+b c
+
+.
+
+An
+
+essential
+
+feature
+
+of
+
+the
+
+LDPC-CC
+
+[3]
+
+is
+
+that
+
+the
+
+code
+
+blocks, received at different time instants, are interconnected.
+
+Indeed, each code block vt is coupled by the encoder to the
+
+previously received ms code blocks. Thus, ms is called the
+
+memory of the considered LDPC-CC. Known as the syndrome
+
+former, the transposed form of H is usually used:
+
+H0T (0) . . . Hm T s (ms)
+
+
+
+
+
+
+
+HT[0,∞]
+
+=
+
+ 
+
+
+
+
+
+...
+
+...
+
+...
+
+  
+
+H0T (t)
+
+...
+
+Hm T s
+
+(t
+
++
+
+ms
+
+ ) 
+
+
+
+...
+
+...
+
+
+
+where HiT , i = 0, 1, ...ms are c×(c−b) submatrices. Interestingly, the semi-infinite structure of LDPC-CCs is suitable for
+streaming data transmission scenarios. This makes an LDPC-
+CC a strong candidate for evolved multimedia applications. The Tanner graph representation associated to HT is depicted
+in Fig. 1. It is a bi-partite graph that consists of check nodes (CN) and variable nodes (VN) connected with respect to HT .
+
+B. Notations
+
+Let t (∈ Z≥0) be a time instant. Jt and It are the sets
+
+of CNs and VNs that are covered by a decoding window,
+
+respectively. Jt,p (It,p) is the Jt (It) set related to the pth
+
+decoding window. During the CN j processing, let Nv(j) be
+
+the index of the set of its neighbors and Nc(j) be the index of the set of messages such that: k ∈ Nc(j) denotes the kth
+
+message sent to/by the VN i (Lk→i/Li→k), i ∈ Nv(j). γi is the
+
+channel Log-Likelihood Ratio (LLR) of the VN i, defined as:
+
+γi
+
+=
+
+-
+
+log(
+
+P P
+
+r(vˆi r(vˆi
+
+|vi |vi
+
+=1) =0)
+
+).
+
+Let
+
+dvi
+
+(dcj )
+
+denote
+
+the
+
+degree
+
+of
+
+the
+
+VN i (CN j).
+
+(a) and
+PPdcj
+
+[0,1](a) denote the Euclidean
+
+projection of the vector a onto the check polytope PPdcj [7]
+
+and onto [0,1], respectively.
+
+C. Conventional Pipeline Decoding of LDPC-CCs
+The diagonal form of the syndrome former HT of an LDPCCC induces a highly localized Tanner graph (Fig. 1). This is due to the following fact: consider two code blocks vt1 and vt2 , where t2 ≥ (t1+ ms+1), t1, t2 ∈ Z≥1, since t2 − t1 ≥ ms+1, vt1 and vt2 do not participate to any common parity check equation. The pipeline decoding of an LDPCCC exploits this structural property to split the related Tanner graph into independent windows of size (ms + 1) code blocks [3]. This allows the parallelization of P decoding iterations by assigning a separate processor to each decoding window as illustrated in Fig. 1 (ms = 2). Indeed, a processor is in charge of performing VNs and CNs updates, covered by its operating window, according to the chosen scheduling technique as well as the message-passing update rule.
+Alg. 2 describes the formalization of the MS algorithm for pipeline decoding of LDPC-CCs with the HL schedule at t. Once the code block vt is received by the first processor, its c channel LLRs (γi, i ∈ It,1) are appended to its extrinsic messages (Lvi ). Then, the Layer Processing step (Alg. 2, Step
+
+Fig.
+
+1:
+
+Tanner
+
+graph
+
+of
+
+rate
+
+1 2
+
+LDPC-CC
+
+and
+
+illustration
+
+of
+
+the conventional pipeline decoding state at time instant t.
+
+2) is performed by the P processors in parallel. Each CN represents one layer. At the jth layer of the pth processor,
+j ∈ Jt,p, only VN i neighbors, i ∈ Nv(j), are updated (Alg. 2, Step 2.1). As soon as an incoming message to the VN i
+is computed, it is added immediately to its Lvi LLR (Alg. 2, Step 2.3). After accomplishing step 2, messages related to the earliest code block of It,p are forwarded to the (p + 1)th processor. The decision step is performed at the output of the Pth processor (Alg. 2, Step 3). Consequently, an initial
+structural latency of P.(ms +1) code blocks has to be elapsed to produce a continuous output stream [3] [4].
+
+III. PIPELINE ADMM -LP DECODING FOR LDPC-CCS
+
+A. The ADMM-LP Decoding Problem
+
+In [7], it was demonstrated that the LP problem for LDPC decoding stated in [5] can be reworded to match the ADMM template. Indeed, the code sequence v was relaxed to lie in the unit hypercube and auxiliary replica variables (z) were added. Although this decoding approach was applied to LDPC-BCs [7] and teminated LDPC-CCs [9], its conventional formulation does not straightforwardly fit the semi-infinite structure of LDPC-CCs.
+Yet, since the pipeline decoding of LDPC-CCs can be performed independently over finite size windows, as described in the previous section, instead of considering the entire code sequence v[0,+∞], the ADMM-LP decoding is applied to segments of v[0,+∞]. A segment corresponds to a local code sequence v[t−ms,t] of finite length equal to (ms + 1) code blocks. Consequently, the LP problem for pipeline ADMMCC decoding is reformulated as:
+
+minimize v[0,+∞]γ[T0,+∞]
+
+(1)
+
+subject to v[t−ms,t]PjT,t = zj,t; ∀ j ∈ Jt, ∀ t ∈ Z≥0,
+
+zj,t ∈ PPdcj ,
+
+v[t−ms,t] ∈ [0.1](ms+1),
+
+where PjT,t is the transpose form of the dcj × (ms + 1) binary matrix (Pj,t) that selects out the local code sequence v[t−ms,t] involved in the CN j at time instant t. zj,t is a dcj -length vector that corresponds to v[t−ms,t] variables.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Alg. 1 HL based ADMM-LP-CC Algorithm.
+
+1: initialize all processors: (Lv, z, λ) = (∞, 0.5, 0)
+
+2: Step 1: Channel Values Processing
+
+3: ∀ i ∈ It,0, k ∈ [dvi ]: zk(0→) i = 0. < 5, λk(0→) i = 0, Lk(0→) i = 0.5
+
+4:
+
+∀
+
+i
+
+∈
+
+It,0 :
+
+δi
+
+=
+
+1 dvi
+
+,
+
+L(v1i)
+
+=
+
+δi
+
+×(
+
+Lk(0→) i
+
+k∈[dvi ]
+
+−
+
+γi µ
+
+)
+
+5: for all processors p = 1 → P do
+
+6: Step 2: Layer Processing
+
+7: for all j ∈ Jt,p do
+
+8:
+
+Step 2.1: Pre-Variable Node Activation (Pre-VNA)
+
+9:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+10:
+
+lv(pi) = [0,1] [ L(vpi) ]
+
+11:
+
+end for
+
+12:
+
+Step 2.2: Check Node Activation (CNA)
+
+13:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+14:
+
+wk(p→) i = ρlv(pi) + (1 − ρ)zk(p→−i1) − λk(p→−i1)
+
+15:
+
+zk(p→) i = Pdj [ wk(p→) i ]
+
+16:
+
+λk(p→) i = zk(p→) i − wk(p→) i
+
+17:
+
+L(kp→) i = zk(p→) i + λk(p→) i
+
+18:
+
+end for
+
+19:
+
+Step 2.3: Post-Variable Node Activation (Post-VNA)
+
+20:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+21:
+
+Lv(pi+1) = L(vpi) + δi×(Lk(p→) i − Lk(p→−i1) )
+
+22:
+
+end for
+
+23: end for
+
+24: end for
+
+25: Step 3: Hard Decision 26: ∀ i ∈ It,P : vˆi = [ L(vPi +1) ] > 0.5
+
+The augmented Lagrangian of the above problem is:
+
+µ Lµ(vt, zt, λt) = 2
+
+v[t−ms,t]PjT,t − zj,t + λj,t
+
+2 2
+
+(2)
+
+j∈Jt
+
+µ −
+2
+
+λj,t
+
+2 2
+
++
+
+v[t−ms,t]γ[Tt−ms,t],
+
+j∈Jt
+
+where µ > 0 is the penalty parameter and λ is the scaled dual
+
+variable. Interestingly, the penalized version of the ADMM-
+
+LP problem proposed in [6] is still applicable for LDPC-CCs.
+
+As a matter of fact, a penalty term is added to the objective
+
+function in (1) such that it becomes: f (v) = γ[T0,+∞]v[0,+∞]
+
++α
+
++∞ i=0
+
+g(vi),
+
+α
+
+is
+
+the
+
+penalty
+
+parameter.
+
+In
+
+the
+
+next
+
+sub-
+
+section, a description of the pipeline ADMM-CC algorithm
+
+is detailed. An over-relaxation parameter ρ is also added to
+
+improve the convergence of the underlying algorithm [7].
+
+Alg. 2 HL based MS LDPC-CC Algorithm.
+
+1: initialize all processors: (Lv, Lc→v) = (∞, 0)
+
+2: Step 1: Channel Values Processing
+
+3: ∀ i ∈ It,1, k ∈ [dvi ]: Lk(0→) i = 0 4: ∀ i ∈ It,1: L(v0i) = γi 5: for all processors p = 1 → P do
+
+6: Step 2: Layer Processing
+
+7: for all j ∈ Jt,p do
+
+8:
+
+Step 2.1: Pre-Variable Node Activation (Pre-VNA)
+
+9:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+10:
+
+L(i→ p)k = Lv(pi−1) − Lk(p→−i1)
+
+11:
+
+end for
+
+12:
+
+Step 2.2: Check Node Activation (CNA)
+
+13:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+14:
+
+sign(L(kp→) i) =
+
+sign(Li(p→) k)
+
+i ∈Nv (j)/i
+
+15:
+
+|L(kp→) i|
+
+=
+
+i
+
+min
+∈Nv (j)/i
+
+|Li(p→) k|
+
+16:
+
+end for
+
+17:
+
+Step 2.3: Post-Variable Node Activation (Post-VNA)
+
+18:
+
+for all i ∈ Nv(j), k ∈ Nc(j) do
+
+19:
+
+Lv(pi) = Li(→ p)k + Lk(p→) i
+
+20:
+
+end for
+
+21: end for
+
+22: end for
+
+23: Step 3: Hard Decision
+
+24: ∀ i ∈ It,P : vˆi = [ Lv(Pi ) ] > 0
+
+memory during the decoding process. w is a temporary vector used to compute the input vector to the Euclidean projection and update λ messages (Alg. 1, lines 14 : 16).
+On one hand, compared with the MS pipeline approach (Alg. 2), several differences can be concluded: 1) Unlike the MS, the channel LLRs (γ) are not directly fed to the first processor. Instead, it has to be computed as in Alg. 1, line 4. 2) During the ADMM-CC CNA step (Alg. 1, Step 2.2.), two messages (z,λ) have to be updated and then sent to an activated VN (Alg. 1, lines 15:16 and Alg. 2, lines 14:15). The λ variable serves as an internal state for CNs [11]. However, the same message is passed by a VN to its neighbors during the ADMM-CC VNA steps (Alg. 1, lines 10 & 21, Alg. 2, lines 10 & 19). On the other hand, the number of required processors for both LDPC-CC decoders equals the number of executed decoding iterations (P). Hence, both decoders have the same initial structural latency (sub-section II-C).
+
+B. Proposed Decoding Algorithm Description
+The presentation of the HL based pipeline unpenalized
+ADMM-CC in Alg. 1 shows that messages are exchanged
+between VNs and CNs computations in a manner similar to
+the MS one (Alg. 2). Indeed, during the Layer Processing step of the pth processor at t, outgoing messages (z,λ) from the CN j (Alg. 1, Step 2.2), j ∈ Jt,p, are calculated based on their immediately updated VN neighbors at the Pre-VNA step (Alg. 1, Step 2.1). As soon as an L(kp→) i message is counted, i ∈ Nv(j) and k ∈ Nc(j), it is added to the Lvi LLR directly (Alg. 1, line 21). Meanwhile, the information brought to the VN i by the CN j from the (p − 1)th processor (L(kp→−i1)) is subtracted. The projection of L(vpi) onto [0, 1] is said to be realized on the fly because it has not to be kept in the processor
+
+C. Simplified Skipping Projection Approach
+To drastically alleviate the computational complexity of the ADMM decoding approach, in the literature, two skipping projection algorithms were introduced [1] [2]. They aim at identifying the useless Euclidean projections that have to be avoided. Although the number of Euclidean projections can be significantly decreased, extra memory and computations are needed. As a matter of fact, the oldest input vector to the projection have to be stored to calculate the difference between it and the newest one. Thus, a simple method is therein proposed. Let wj(,pt) be the input vector of , PPdcj j ∈ Jt,p. Each element of w(p) can be expressed in two ways: the first one is described in Alg. 1 line 14 and the second one
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+can be deduced from line 16. ∆wj(,pt) can be calculated as:
+
+∆wj(,pt) = (ρlv(p) + (1 − ρ)zj(,pt) − λj(p,t)) − wj(,pt−1)
+
+(3)
+
+= (ρlv(p) + (1 − ρ)zj(,pt) − λj(p,t)) − (zj(,pt−1) − λ(jp,t−1))
+
+= ρ(lv(p) − zj(,pt−1))
+
+It is obvious that wj(,pt−1) is no more needed to be kept in the memory of processor (p) during the CN j update. Such observation permits to apply the skipping projection technique to reduce the number of Euclidean projections without any extra memory cost. Moreover, in the next section, it will be shown that the proposed formulation does not yield additional computational complexity in terms of arithmetic operations, unlike those developed in [1] [2].
+
+IV. IMPLEMENTATION COMPLEXITY ANALYSIS
+In this section, two hardware complexity metrics are considered to evaluate the pipeline ADMM-CC decoder: computational and memory complexities. Given that the HL schedule is ”CN centric”, the computational complexity of CN units (CNU) is provided in Table I. Besides, the presented formulation of the ADMM-CC in Alg. 1 makes the computational complexity of CNUs (Alg. 1, Step 2) independent of possible ADMM-CC versions (un/penalized). Furthermore, both MS and SPA approaches are chosen for comparison.
+
+A. Computational Complexity Analysis
+In Table I, floating-point like operations for CN computations of studied LDPC-CC decoders are afforded. ”+s” (s) denotes that the skipping projection is (not) considered. dc is the average degree of CNs. Indexing and Data address computations are voluntarily ignored.
+At the first sight, it can be seen that the ADMM-CC(-s) consumes 6 (3.5) times less than the MS (SPA) in terms of abs, min, max, xor & cmp operations. Indeed, for the ADMMCC(-s), the 2dc comparisons are used to project Lv messages onto [0, 1]. However, the number of add&sub operations required by the ADMM-CCs is between 2.5 and 4 times higher than both MS and SPA. All ADMM-CCs’ CNU performs 25% multiplications and divisions less than the SPA. The comparison between the Euclidean projection and the tanh function is still a challenging and critical task. Even though several algorithmic improvements of the projection were introduced [10], a sort operation of a dc-data vector is inevitable. Moreover, it was shown in [8] that the Euclidean projection is an intensive control function while tanh is a highly arithmetic operations-consuming one. Intuitively, the skipping projection strategy would be an attractive alternative to overcome the computational complexity exhibited by PPdc .
+In this paper, the skipping projection algorithm suggested in [1] is selected where the Euclidean projection is ignored once one component of |∆wj(,pt)| is larger than a fixed floor ( ). This explains the extra 2dc abs & cmp for the ADMMCC(+s). Compared to the ADMM-CC(+s) [1], a saving ranging between 12.5% and 37.5% is achieved by our simplified skipping projection algorithm in terms of add & sub arithmetic
+
+TABLE I: Comparison of The Theoretical Complexity of a CN Computation Unit for The Different LDPC-CC Decoders.
+
+arithmetic add & sub arithmetic multiply & div abs, min, max, xor, cmp
+tanh & tanh−1 Euclidean projection
+Memory reads Memory writes Memory access
+
+MS SPA
+2dc 2dc 4dc
+12dc 7dc 2dc
+2dc 2dc 2dc 2dc 4dc 4dc
+
+ADMM-CC
+
+(-s)
+
+(+s)
+
+(+s) [1]
+
+7dc 7dc(−2dc)
+
+3dc
+
+3dc
+
+2dc
+
+≤ 4dc
+
+8dc 3dc ≤ 4dc
+
+1
+
+≤1
+
+≤1
+
+3dc
+
+3dc
+
+4dc
+
+3dc
+
+3dc (-dc )
+
+4dc (-dc )
+
+6dc
+
+6dc (-dc )
+
+8dc (-dc )
+
+operations. It comes from not only the calculation of |∆wj(,pt)| as in (3) but also from easing the Lv update when the z update is skipped during the Post-VNA step. Indeed, the contribution of a CN-to-VN would be equal to the difference between the old and current value of λ. Finally, the computation of ∆wj(,pt) (as in (3)) can be reused to get wj(,pt) value when updating λ and z LLRs (Alg. 1, Step 2.2) because wj(,pt) can be also rephrased as: wj(,pt) = ∆wj(,pt) + zj(,pt−1) − λ(jp,t−1).
+To sum up, the ADMM-CC(-s) is likely to have a comparable computational complexity to MS and SPA algorithms at CN level. Meanwhile, the proposed skipping projection formulation seems to reduce the ADMM-CC decoding complexity at processor level and bring it closer to classic BP approaches.
+B. Memory Complexity Analysis
+A second useful hardware metric to compare studied LDPCCC decodings is the memory footprint (M) allocated to each processor. Let N and m be the number of Lv and CN-to-VN messages, respectively. For BP LDPC-CC decoders, M equals to (N + m). Notwithstanding, m additional memory elements are required by the ADMM-CC(-s) to store λ messages (M = N + 2m). While the ADMM-CC(+s) has the same memory footprint as ADMM-CC(-s), the one with the skipping projection proposed in [1] needs m further memory elements to store ancient w vectors (M = N + 3m).
+In terms of memory access, it can be noticed from Table I that the total memory accesses within an ADMM-CC processor can be reduced by dc memory writes if the skipping projection condition is satisfied which inherently impacts the full pipeline ADMM-CC memory complexity. This fact makes it closer to the total memory accesses needed by the processor of a BP pipeline LDPC-CC decoder. Ultimately, memory access made by the ADMM-CC(+s) [1] remains the largest one amongst studied LDPC-CC decoders
+V. PROPOSED ADMM-CC DECODER ARCHITECTURE
+A. Processor Prototype Architecture
+From a high-level perspective, the design of pipeline LDPCCC decoders starts from an isomorphic architecture which is a straightforward mapping of the Tanner graph to related hardware components of the so-called processor unit [4]. As depicted in Fig. 2, to execute P decoding iterations, P identical processors have to be sequentially chained to form a full pipeline ADMM-CC decoder (Fig. 2.b) and a classic BP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+(a)
+
+(b)
+
+Fig. 2: Pipeline Architecture of (a) the conventional BP and (b) the proposed ADMM based LDPC-CC decoders.
+
+one (Fig. 2.a). In fact, a processor is a physically independent processing unit that includes VN units (VNU), CNUs, memory elements and a routing network that controls the flow of messages along the related Tanner graph’s edges. Referring to the algorithmic formulation of the ADMM-CC approach in Alg. 1, a VNU can be disassembled into a Pre-VNU to perform Step 2.1 and a Post-VNU for updating Lv LLRs (Step 2.3), as illustrated in Fig. 3. Computations of Step 2.2 are performed by the CNU. Besides, 3 memory blocks are needed to store Lv, z and λ LLRs. Eventually, contrary to BP pipeline LDPC-CC decoders, an initialization slice is necessary to the ADMMCC decoder to calculate the input Lv LLRs based on channel LLRs (γ) (Alg. 1 Step 1).
+
+B. Quantization Scheme
+
+For hardware design of LDPC codes, memory cost is es-
+
+sentially determined by the bit-width of stored messages. Even
+
+though the memory footprint of an HL based ADMM-CC is
+
+less
+
+than
+
+the
+
+flooding
+
+based
+
+one
+
+by
+
+a
+
+factor
+
+of
+
+(1
+
++
+
+N
+
+N +2m
+
+)
+
+[9], many memory resources are still needed. Besides, the
+
+normalization of Lv LLRs by the δ factor (Alg. 1, lines 4 & 21) and the projection onto the parity polytope would entail
+
+high bit precision of the messages fraction part to maintain
+
+the ADMM-CC decoder error correction performance. Never-
+
+theless, bit-width ranging between 8 to 6 bits are sufficient for
+
+reliable pipeline decoding of BP based LDPC-CCs [4].
+
+Contrariwise to both the flooding based ADMM decoder
+
+[11] and the layered BP decoders [4], the herein propounded
+
+fixed-point representation would be specified based on the
+
+premise of retaining as much Lv values as possible since
+
+they correspond to the input/output of the HL based ADMM-
+
+CC decoder. Accordingly, the quantization scheme would be
+
+settled as follows: First, VN-to-CN messages are obtained by
+
+projecting Lv LLRs onto the unit hypercube (Alg. 1, line 10). Thus, Lv LLRs receive one integer bit and allocate the rest to
+
+fraction part. This warrants that VN information can be fully
+
+included in (z, λ) updates. Yet, a sign bit has to be given to
+
+Lv LLRs in order to cover CN-to-VN contributions (Alg. 1, line 21). Second, no sign bit and one integer bit are assigned
+
+to z messages as they lies also in the [0, 1] interval. Their
+
+fraction part has the same number of bits as Lv LLRs. This avoids to have constant bits of Lv LLRs when adding the
+
+newest information brought by CN-to-VN messages (Alg. 1,
+
+line 21). Third, the input vector (w) is also quantized. It has
+
+the same bit width as Lv messages with an additional integer
+
+Fig. 3: Proposed ADMM-CC Processor Architecture. dc = 6,
+
+code
+
+rate
+
+=
+
+1 2
+
+,
+
+z
+
+and
+
+λ
+
+memories
+
+are
+
+superposed.
+
+bit to avoid overflow. Besides, λ are signed variables that have the same bit width as z LLRs with a different fixedpoint representation. Finally, constant parameters (δ, ρ, µ) are expressed as a quotient such that its denominator is a power of 2. It means that the multiplication of the related message by the numerator of this quotient is followed by a simple shifting operation. This would sustain the desired impact of these parameters on the ADMM-CC decoder behavior.
+In the literature, it was found that, during the ADMM CN processing, up to 13 bits are allocated to exchanged messages [11]. Yet, in the next section, it will be empirically shown that with 8 bits for Lv LLRs and 6 bits for CN-to-VN messages a minor loss in correction performances is obtained.
+
+VI. EXPERIMENTAL RESULTS
+
+The Bit-Error Ratio (BER) performances of the different
+
+studied LDPC-CC decodings over the AWGN channel are
+
+depicted in Fig. 4, when P = 20 decoding iterations. The
+
+WiMAX
+
+802.16m
+
+rate
+
+1 2
+
+LDPC-CC
+
+(ms
+
+=
+
+491)
+
+is
+
+chosen
+
+for
+
+experimentations [12]. Both the ADMM-LP and the penalized
+
+ADMM-l2 algorithms are considered. ADMM-CC parameters are fixed as follows: µ = 3.0, ρ = 1.9 and α = 0.8 [6].
+
+SPA and MS FP performances are also plotted for comparison.
+
+Quantization schemes (Q) are listed in Table II.
+
+Three main observations can be concluded. First, the same
+
+BER performances are exhibited by the FP ADMM-CCs
+
+and the FX-Q1 ones. Although this quantization scheme is
+
+comparable to the one proposed in [11] (Table II), a much
+
+lower one is obtained throughout simulations. Indeed, a gain
+
+of 5 (2) bits for an Lv LLR and 6 (4) bits for CN-to-
+
+VN messages is successfully achieved by the ADMM-CC-
+
+l2 (LP) based on Q3 (Q2) compared to Q1, with a slight BER performances loss of about 0.05 dB. Unexpectedly to
+
+the intuitions drawn in the sub-section V-B and in [11], a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply.
+
+2018 IEEE Wireless Communications and Networking Conference (WCNC)
+
+TABLE II: Simulated Quantization Schemes for the 802.16m ADMM-CC Decoder. (. , .) ≡ (bit-width , fraction part width).
+
+ADMM [11] ADMM-CC
+
+γ
+(8, 7) (8, 4)
+
+Lv
+(10, 7) (13, 11)
+
+Q1
+
+z
+
+λ
+
+(13, 12) (10, 7) (12, 11) (12, 11)
+
+w
+(13, 9) (14, 11)
+
+Lv
+(10, 7) (11, 9)
+
+Q2
+
+z
+
+λ
+
+(13, 12) (10, 7)
+
+(9, 8)
+
+(9, 8)
+
+w
+(13, 9) (12, 10)
+
+Lv
+(10, 7) (8, 6)
+
+Q3
+
+z
+
+λ
+
+(13, 12) (10, 7)
+
+(6, 5)
+
+(6, 5)
+
+w
+(13, 9) (9, 7)
+
+BER for the 802.16m LDPC-CC
+
+10−2 10−4 10−6
+
+SPA:FP MS:FP ADMM-l2 :FP ADMM-l2 :FX-Q1 ADMM-l2 :FX-Q2 ADMM-l2 :FX-Q3 ADMM-LP:FP ADMM-LP:FX-Q1 ADMM-LP:FX-Q2 ADMM-LP:FX-Q3
+
+10−8
+
+1 1.3 1.6 1.9 2.2 2.5 Eb/N0 (dB)
+
+Fig.
+
+4:
+
+BER
+
+performances
+
+of
+
+studied
+
+802.16m
+
+rate
+
+1 2
+
+LDPC-
+
+CC decoders. P = 20. FP/FX: floating/fixed-point scheme.
+
+2-bit difference between the bit-width of Lv and CN-to-VN messages is tolerated (Q2,Q3). This can be justified by two reasons: 1) the significancy of z replicas is reinforced by the inclusion of the ρ parameter, since ρ has to be superior to 1 [7]. 2) an additional bit is assigned to the fraction part of the input vector w to mitigate the impact of this bit-width gap on the Euclidean projection output. Second, the penalized ADMM-CC decoder outperforms the FP-precision MS one. Yet, a gap up to 0.2 dB is attained with respect to the FP BER performances of the SPA. Besides, a loss of 0.1 dB is still observed for the unpenalized ADMM-CC regarding MS FP BER performances. Third, all ADMM-CC(+s), with
+= 10−4, yield similar FP/FX BER performances to ADMMCC(-s). Thus, they are not displayed in Fig. 4. Rather, their implementation complexities differ.
+Table III presents the complexity of the ADMM-CC-l2 at SNR= 2.05 dB. Consider the Q3 case. In one hand, 23% (15%) and 28% (14%) of the average arithmetic operations and memory accesses, respectively, are saved by the proposed ADMM-CC(+s) compared to the ADMM-CC(+s) [1] (ADMM-CC(-s)). This could lead to a perceptible reduction in power consumption while improving the throughput of the full ADMM-CC decoder. Further, 30% of the processor memory are economized when applying the provided skipping projection approach. In addition, almost half of the memory size of the Q1 based ADMM-CC-l2 processor is consumed by the Q3 based one, with nearby BER performances. Ultimately, we can assert that low cost fixed-point format is not only code dependent [11] but also ADMM variant dependent. In fact, for the 802.16m ADMM-CC decoder, simulations show that the most complexity/BER performances optimized quantization scheme is reached by the ADMM-CC-l2(+s). Hence, the
+
+TABLE III: Complexity Evaluation of the 802.16m ADMM-CC Decoders at SNR = 2.05 dB. P = 20. dc = 6.
+
+arithmetic operations /CNU memory access /CNU
+memory size /proc (Kbit)
+
+ADMM-CC-l2 Q1 (-s)
+60 36 83.64
+
+ADMM-CC-l2 (Q3) (-s) (+s) (+s) [1]
+
+60
+
+51
+
+66
+
+36
+
+31
+
+43
+
+43.3 43.3
+
+61
+
+hardware cost of the ADMM decoder explored in [11] would be potentially reduced whether the objective function changes.
+VII. CONCLUSION
+In this work, a first hardware-oriented ADMM formulation for layered based pipeline decoding of LDPC-CCs is investigated. Simulations, carried over the WiMAX 802.16m standard, show that an 8-bit quantization scheme is successfully achieved by the ADMM-CC-l2 approach with insignificant BER performances loss. Implementation costs are further reduced thanks to the proposed skipping projection algorithm. This achievement strengthen the assertion that the ADMM can be a competitive alternative to conventional BP for LDPC-CC decoders. It would also point to the avenue for future architectural optimizations of ADMM decoders to dynamically trade hardware complexity for throughput and latency constraints.
+REFERENCES
+[1] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on admm for ldpc codes,” IEEE Comm. Lett., June 2015.
+[2] X. Liu, “ADMM Decoder,” https://sites.google.com/site/xishuoliu/codes, Accessed: 2017-08-17.
+[3] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. on Inf. Theory, Sep 1999.
+[4] H. B. Thameur, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “A Survey on Decoding Schedules of LDPC Convolutional Codes and Associated Hardware Architectures,” in 22nd IEEE Symposium on Computers and Communication (ISCC 2017), Jul. 2017.
+[5] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to Decode Binary linear codes,” IEEE Trans. on Inf. Theory, March 2005.
+[6] X. Liu and S. C. Draper, “The ADMM Penalized Decoder for LDPC Codes,” IEEE Trans. on Inf. Theory, June 2016.
+[7] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition Methods for Large Scale LP Decoding,” IEEE Trans. on Inf. Theory, Dec 2013.
+[8] H. Ben Thameur, B. Le Gal, N. Khouja, F. Tlili, and C. Jego, “An LPbased algorithm for decoding terminated LDPC convolutional codes,” in 2017 International Conference on Internet of Things, Embedded Systems and Communications (IINTEC), Gafsa, Tunisia, Oct. 2017.
+[9] H. B. Thameur, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Reduced Complexity ADMM-based Schedules For LP Decoding Of LDPC Convolutional Codes,” in IEEE International Workshop on Signal Processing Systems (SiPS), Oct 2017.
+[10] M. Wasson and S. C. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in 2015 49th Asilomar Conference on Signals, Systems and Computers, Nov 2015.
+[11] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-Based ADMM-LP Decoding,” arXiv:1605.06134 [cs.IT], May 2016.
+[12] “Amendment Text Proposal on Rate Compatible LDPC-Convolutional Codes,” IEEE Std. C802.16m-09/0339, 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:04:52 UTC from IEEE Xplore. Restrictions apply.
+
+

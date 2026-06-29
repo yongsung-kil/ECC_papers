@@ -1,0 +1,292 @@
+A High-Performance FPGA-based LDPC Decoder for Solid-State Drives
+
+Yanhuan Liu, Chun Zhang, Pengcheng Song, Hanjun Jiang
+Research Institute of Tsinghua University in Shenzhen Institute of Microelectronics, Tsinghua University, Beijing, 100084, China
+Email: zhangchun@tsinghua.edu.cn
+
+Abstract—In order to improve the throughput of error correction decoding for the high-performance solid-state drives (SSDs), a semi-parallel low-density parity-check (LDPC) decoding architecture is proposed in this paper. The circuit of the LDPC decoder which can be dynamically configured with bit rate and code length is implemented using the scheduling control flow mode of single instruction multiple data (SIMD) instruction. The Peripheral Component Interconnect Express (PCIe) interface is designed and the adaptive normalization factor is applied to achieve an average improvement of 35% in throughput with a signal-to-noise ratio (SNR) of 6.08 dB. The LDPC decoder is implemented on the Xilinx VC709 FPGA. With a rate-0.94 length35840 quasi-cyclic LDPC code, the decoder achieves a throughput of 1.97 Gb/s which compares favorably with previously proposed architectures.
+Keywords— LDPC decoder; dynamic configuration; adaptive normalization factor; SSDs; FPGA; PCIe
+I. INTRODUCTION
+In the era of large data, the solid state drives gradually replace the traditional mechanical hard disks and attracts much attention from both the industry and academy. The raw bit error rate becomes higher and higher with the increasing storage density in the modern storage devices. The error correction (ECC) codec is becoming more and more important. The LDPC code replaces the traditional BCH code with its superior performance close to the Shannon limit [1]. There are some scholars researching polar code [2] while they achieve the lower throughput and need much improvement to meet the needs of today's storage devices. The data transmission technology continues to develop in the modern storage devices. Peripheral Component Interconnect Express (PCIe) interface gradually becomes peripheral interface of SSD replacing the conventional Serial ATA Express (SATAe).
+In this paper, we propose a high-performance LDPC decoder structure for NAND Flash storage media [3]. We adopt the normalized min-sum algorithm [4], a hierarchical messaging architecture [5] and the adaptive method to improve error correction capability and decoder convergence rate. The on-line programming of the matrix H is realized by introducing the instruction scheduling control flow. The designed decoder can support variable code rates and code lengths dynamically. It has a good versatility while greatly reducing the hardware overhead.
+This paper is organized as follows. Section II first shows SSD main system frame diagram and then reviews the LDPC
+This work is partly supported by the Science and Technology Program of Shenzhen, China (No. JCYJ20150504170335651).
+
+code and the corresponding Tanner Graph structure, and then introduces the dynamic normalization factor to improve the error-correcting ability and the iterative convergence rate while optimizing the normalized min-sum algorithm. Section III introduces the decoder structure, along with the key function blocks and the PCIe subsystem and then briefly describes the instruction design. In Section IV, the implementation results are provided. Finally, Section V concludes this paper.
+II. DESIGN OF CODE AND KEY ALGORITHMS
+A. SSD Main System Frame Diagram Our SSD main system frame diagram is shown in Fig. 1.
+Several modules are interconnected by AXI-4 bus for data and control signal transmission, we use PCIe interfaces to transfer data between host and AXI-4 bus, so a direct data path formed between host and NAND Flash Memory. ARM (Advanced RISC Machines) is applied as main control chip, which controls the timing of data transmission according to specific instructions. When data is written to the SSD through PCIe interfaces, data is stored into DDR3 memory first and then written into an asynchronous FIFO under the control of DMA (Direct Memory Access) through the AXI-4 data bus, which can achieve more high-speed transmission. After encoded in ECC module, data is programed into flash memory through the ONFI (Open NAND Flash Interface).
+Fig. 1. SSD Main System Frame Diagram
+B. Tanner Graph and LDPC Code The LDPC code can determine whether the decoded data is
+correct using the result of ۶ࢉࢀ(c is the decoded data sequence). The Tanner Graph [6] is an undirected graph derived from the matrix H. It can be used to analyze LDPC code as a signal flow model in decoding algorithm. Each column of the matrix H is mapped to a variable node; each row is mapped to a check node. The intersection of rows and columns with an element of “1”
+
+978-1-5090-6389-5/17/$31.00 ©2017 IEEE
+
+1232
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:14 UTC from IEEE Xplore. Restrictions apply.
+
+indicates that the variable node is connected to the check node, which is as shown in Fig. 1.
+& & &
+
+9
+
+9
+
+9
+
+9
+
+Fig. 2. The matrix H and Tanner graph
+
+The matrix H has a certain regular structure while ensuring the superior error correction performance with quasi-cyclic (QC) LDPC code which is friendly to hardware implementation [7]
+
+C. The Normalized Min-sum Algorithm
+
+In this paper, we introduce the logarithmic likelihood BP
+
+algorithm based on Gallager's belief propagation algorithm [9]
+
+[10]. And addition is achieved to replace multiplication by
+
+converting the probability to a logarithmic domain. Using the
+
+normalized min-sum algorithm, we calculate the message
+
+passed between the variable node and the check node to
+
+implement iterative decoding. In the matrix H, the row m
+
+corresponds to the check node m while the column n corresponds
+
+to the variable node n. The following markings are introduced.
+
+‫ܫ‬௡ denotes the reading loglikelihood ratio (LLR) that can be
+
+obtained from reading NAND Flash memory; ܻ௡ሺ௝ሻ denotes the
+
+LLR of the variable node n produced in ௧௛ iteration; ‫ܥ‬௠௡ሺ௝ሻ
+
+denotes the information passed from the check node m to the
+
+variable node n passed from the
+
+in ௧௛ iteration; variable node n
+
+‫ܮ‬௡௠ ሺ௝ ሻ to the
+
+denotes information check node m in ௧௛
+
+iteration; ܰሺ݉ሻ denotes a set of variable node connected with
+
+check node m; ‫ܯ‬ሺ݊ሻ denotes a set of check node connected with
+
+variable node n.
+
+Analyzing the relationship between the parity-check matrix H and the Tanner Graph, we introduce the hierarchical messaging structure which means using the result of each line to update the variable information and the new variable node information for subsequent operations. So the iterative convergence speed and throughput have been significantly improved.
+
+The normalized min-sum algorithm is described as follows:
+
+1) Initialization
+
+ܻ௡ሺ଴ሻ ൌ ‫ܫ‬௡㸪ͳ ൑ ݊ ൑ ܰሺͳሻ
+
+‫ܥ‬௠௡ሺ଴ሻ ൌ Ͳ㸪ͳ ൑ ݊ ൑ ܰ㸪ͳ ൑ ݉ ൑ ‫ܯ‬
+
+(2)
+
+2) Iteration
+
+‫ܮ‬௡௠ሺ௝ሻ ൌ ܻ௡ሺ௝ିଵሻ െ ‫ܥ‬௠௡ሺ௝ିଵሻሺ͵ሻ
+
+‫ܥ‬௠௡ሺ௝ሻ ൌ ߩ ‫ כ‬ෑ ‫݊݃ݏ‬൫‫ܮ‬௞௠ሺ௝ሻ൯ ‫ כ‬௞‫א‬ேሺ௠ሻ̳௡ห‫ܮ‬௞௠ሺ௝ሻห ሺͶሻ
+௞‫א‬ேሺ௠ሻ̳௡
+ܻ௡ሺ௝ሻ ൌ  ‫ܮ‬௡௠ሺ௝ሻ ൅ ‫ܥ‬௠௡ሺ௝ሻሺͷሻ
+
+3) Decision
+
+‫ݒ‬௡
+
+ൌ
+
+൜ͳͲǡǡ
+
+݂݅ܻ௡ ݂݅ܻ௡
+
+൐ ൏
+
+Ͳ Ͳ
+
+
+
+ሺ͸ሻ
+
+۶ ή ‫ܞ‬ሺ௝ሻ் ൌ ‫܍‬ሺ௝ሻሺ͹ሻ If ۶࢜ࢀ ൌ ૙ or  ൌ ݆௠௔௫, then finish decoding and take ‫ݒ‬௡ as the decoding result; otherwise go back to step (3). D. Adaptive Normalization Factor Analysis
+After analyzing the algorithm above, we propose to apply adaptive ߩ to compensate for performance degradation of the min-sum algorithmic approximation, which gets inspiration from [8]. ‫ܮ‬௡௠ሺ௝ሻ is quantified to a 6-bit signed integer while ‫ܥ‬௠௡ሺ௝ሻ is quantified to a 4-bit signed integer. In this paper, three scenarios are considered for ߩ, which is more comprehensive than only two in [8] and more data is collected for each ߩ when the LDPC decoder is achieved based on the Matlab platform. Fig. 3 shows the frame error rate (FER) for the (35840, 32768) LDPC code for both traditional ߩ and adaptive ߩ. It is obvious that the adaptive ߩ makes a better performance than the traditional ߩ at the same input signal to noise ratio (SNR). Fig. 4 compares the average number of iterations for different ߩ at the same input signal to noise ratio. The application of adaptive factor reduces the average number of iterations by about 26% which means that the throughput increases by about 35% when SNR is 6.08dB.
+Fig. 3. Comparison of frame-error rate (FER)
+Analyzing the above results, the optimal ߩ is closely related to the reliability of the input LLR [11]. The greater the absolute value of LLR is, the more reliable the value of the corresponding data is, which means that ߩ should be larger. The number of error bits (‫ܵܧ‬௝) will be counted in each iteration, and larger ‫ܵܧ‬௝ corresponds to less reliable LLR which means that the smaller ߩ
+Fig. 4. Comparison of average iteration number
+should be applied. This makes better performance and smarter LDPC decoder.
+
+1233
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:14 UTC from IEEE Xplore. Restrictions apply.
+
+III. DESIGN OF THE DECODER STRUCTURE
+
+A. The overall structure of the decoder
+
+Based on the above adaptive layered algorithm, we proposed
+
+a partially-parallel decoder structure which is as shown in Fig.
+
+4. The initial LLR values are stored in Y-Ram from NAND
+
+Flash memory. computation of
+
+(‫ܥ‬3௠) i௡nሺ଴Ͳሻ௧௛isitienriatitaiolinz.eTdhteoCzNermo opdruepleareixnegcuftoers
+
+the (3),
+
+and the result ‫ܮ‬௡௠ሺ௝ሻ will be stored in L-Ram. The VN module
+
+executes (4) and (5) which will generate two results. ‫ܥ‬௠௡ሺ௝ሻ will
+
+be stored in C-Ram and ܻ௡ሺ௝ሻ will be stored in Y-Ram. After ݆௧௛
+
+iteration, the module Checker will execute (7) and summarize the elements in ‫܍‬ሺ௝ሻ. The result will be sent to Center controller.
+
+If the result is zero which means the decoding output is correct,
+
+the decoding will end. Otherwise, next iteration will be continued with the suitable ߩ. We compile the information of the
+
+matrix H into a sequence of instructions which are stored in Ins-
+
+Ram. Each sub-matrix is compiled into an instruction and
+
+corresponding control signal. If another matrix H with different
+
+code rate is applied, we just need to rewrite the instructions to
+
+achieve the multi-rate decoder.
+
+As shown in Fig. 7, the CN module reads ȁ‫ܥ‬௠௡ȁሺ௝ሻ in C-Ram
+
+fisrt. Then ‫ܮ‬௠௡ሺ௝ሻ Sig-Ram is read
+
+in for
+
+L-Ram and the corresponding sign executing (3). The result ‫ܮ‬௠௡ሺ௝ሻ is
+
+bit in stored
+
+into L-Ram while the corresponding sign bit is stored into Sig-
+
+Ram.
+
+Fig. 6. The structure diagram of VN module
+
+Fig. 5. The overall structure of the decoder
+
+B. The cyclic shifter
+When a semi-parallel structure is applied to perform a decoding operation, we need to introduce a cyclic shifter to solve the alignment problem. Since the matrix H of QC-LDPC codes can be divided into many ͷͳʹ ൈ ͷͳʹ sub-matrices and each nonzero sub-matrix is generated by a unit matrix which is cyclically shifted. ܻ௡ሺ௝ሻ for each nonzero sub-matrix should be cyclically shifted to align with ‫ܥ‬௠௡ሺ௝ሻ in C-Ram, then (3) is executed in parallel and the result ‫ܮ‬௠௡ሺ௝ሻ is stored in L-Ram.
+
+C. The VN and CN module
+
+As shown in Fig. 6, the VN unit mainly performs three
+
+functions. sign bit in
+
+a) Dataȁ‫ܥ‬௠௡ȁሺ௝ሻ Sig-Ram are read
+
+from C-Ram and the corresponding to execute (5) with ‫ܮ‬௠௡ሺ௝ሻ in L-Ram
+
+and output the result ܻ௡ሺ௝ሻ; b) The appropriate normalization ȡ is
+
+selected by signal ‫ ݈݁ݏ‬which is fed back by the Check module;
+
+c) absolute values of ‫ܮ‬௠௡ሺ௝ሻ are sorted to get the minimum value
+
+which is stored into C-Ram. This operation is performed in the
+
+entire line scan.
+
+Fig. 7. The structure diagram of CN module
+D. Instruction design
+In this paper, the matrix H is compiled into the corresponding single instruction multiple data (SIMD) for controlling the whole decoder to achieve decoding and error correction [12]. A SIMD instruction is corresponding to a submatrix and relevant operations. In this paper, four types of basic instructions are designed. The N-type instruction is a regular instruction corresponding to the position of the sub-matrix in general and the general operation; The R-type instruction is a non-blocking instruction at the end of the line indicating that the relevant sub-matrix is the last sub-matrix of all rows. At this point you can use ‫ܮ‬௡௠ሺ௝ሻ to update ‫ܥ‬௠௡ሺ௝ሻand store the result in C-Ram. The M-type instruction is a matrix non-blocking instruction which indicates that the corresponding sub-matrix is the last sub-matrix in the iteration operation, so the read address in INS-Ram needs to be assigned to point the first instruction while updating C-Ram. The S-type instruction is a matrix-end blocking instruction which is used to make the CN module to keep not working for a number of cycles and wait for ܻ௡ሺ௝ሻ being updated.
+E. PCIe subsystem design
+In this paper, we apply PCIe interfaces to transfer data between the host and AXI-4 bus replacing traditional SATA interfaces to improve the data transferring rate. We design PCIe interfaces referring the IP kernel in the development tool based on XILINX VC709 FPGA. The system automatically assigns addresses after completing circuit connection. The working principle is shown in Fig. 8. First, data is written into DDR3 memory from host; then, the source address, destination address and data length are written into register file, after that, specified register is written to generate interrupt signal for MICROBLAZE. When MICROBLAZE reads interrupt vector and judges it as write operation, corresponding register content
+
+1234
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:14 UTC from IEEE Xplore. Restrictions apply.
+
+is read and the circuit performs corresponding operations controlled by MICROBLAZE. Finally, specified register is written to generate the interrupt signal which tells host that the write operation has been completed. And the host responds to reset the interrupt signal. Data transmission between the host and DDR3 becomes faster applying the PCIe interfaces, which decreases the delay of DMA operations and make AFIFO refresh in a timely manner.
+
+Fig. 8. Data communication between host and development board
+
+IV. IMPLEMENTATION AND ANALYSIS
+Based on the above design, resource utilization of the LDPC decoder which is achieved on FPGA platform is shown as TABLE I. The introduction of dynamic normalization factor leads to higher throughput and better error correction performance while adding some LUTS and logical units. TABLE II shows that the performance of the decoder in this paper is compared with other papers. The code rate in this paper is almost twice as much as that in [13] and [14], which means the higher efficiency for data transmission and storage. And the code length in this paper is almost 20 times as much as that in [13] and [14] which means that the decoder in this paper achieves a more powerful processing power. And the higher throughput is implemented in this paper, which is at the expense of more hardware overhead. The performance in this paper is competitive and it can meet the high requirement of the data transmission for high-performance storage products.
+
+TABLE I.
+
+IMPLEMENTATION RESULTS OF THIS DESIGN
+
+Implementation on VC709 FPGA board
+
+LUTs
+
+FFs
+
+BRAMs
+
+Fixed NMSA 91978 101210
+
+210
+
+DSPs 0
+
+Adaptive NMSA 98561 101809
+
+210
+
+0
+
+TABLE II.
+
+COMPARISON OF VARIOUS LDPC DECODER ARCHITECTURES
+
+FPGA Device
+Code Rate Code Length Clock Rates (MHZ)
+Iterations Throughput (Mb/s)
+
+this work XC
+7VX690T 0.94 32768 100 5
+2018
+
+[13] XC 7K410T 0.5 1944 260 8
+608
+
+[14] XC 6VLX240T 0.5 1296 181 20
+1997
+
+V. CONCLUSION
+In this paper, we design a LDPC decoder with highthroughput performance and error correction capability to meet the increasing requirement of NAND Flash memory products. The decoder is controlled by the instruction sequence so that the bit rate and the code length can be dynamically configured through compiling different matrix H. Besides, the decoder automatically adjusts the normalization factor to improve the performance while adding very few resources. The decoder is implemented on Xilinx VC709 FPGA. With (35840, 32768) LDPC code, the throughput of the decoder is 1.97 Gb/s while the original bit error rate of the input data is ͵ ൈ ͳͲିଷ, which is required in SSDs applications.
+REFERENCES
+[1] D J C MacKay and R M Neal, Near Shannon limit performance of low density parity check nodes. Electronics Letters, Mar. 1997, 33(6):457458.
+[2] Chenrong Xiong, Yi Zhong, Chun Zhang and Zhiyuan Yan, “An FPGA Emulation Platform for Polar Codes”, IEEE International Workshop on Signal Processing Systems (SiPS), 2016, Pages: 148-153.
+[3] K. Zhao, J. Li, J. Ma, R. Micheloni and T. Zhang, "Overclocking NAND Flash Memory I/O Link in LDPC-Based SSDs," in IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 61, no. 11, pp. 885-889, Nov. 2014.
+[4] Ahmed M. Sadek and Aziza I. Hussein, “Flexible FPGA implementation of Min-Sum decoding algorithm for regular LDPC codes”, 11th International Conference on Computer Engineering & Systems (ICCES), 2016: Pages: 286-292.
+[5] Mansour M M and Shanbhag N R. High-throughput LDPC decoders[J]. Very Large Scale Integration (VLSI) Systems, IEEE Transactions on, 2003, 11(6): 976-996.
+[6] R M Tanner, “A recursive approach to low complexity codes”. IEEE Trans. Inf. theory, Sep. 1981, 27(5):533–547.
+[7] Lei Chen, Jun Xu, Ivana Djurdjuvic, et al, Near-Shannon-limit quasicyclic low-density parity-check codes. IEEE Trans. Commun. Jul. 2004, 52(7):1038–1042.
+[8] Yishan Zhang, Chun Zhang, Zhiyuan Yan, et al. A high-throughput multirate LDPC decoder for error correction of solid-state drives, Year: 2015, Pages: 1-6.
+[9] Gallager R G, Low-density parity-check codes[J]. Information Theory, IRE Transactions on, 1962, 8(1): 21-28.
+[10] Joachim Hagenauger, Elke Offer and Lutz Papke. Iterative decoding of binary block abd convolutional codes. IEEE Trans. Inf. Theory, March. 1996, 42(2):429-445.
+[11] G. Lechner and J. Sayir, “Improved sum-min decoding for irregular LDPC codes”, in Proc. 6th Int. Symp. ITG-Conf. Source Channel Coding, Munich, Germany, pp. 1–6, Apr. 2006.
+[12] Virgil Petcu, Oana Boncalo, Alexandru Amaricai and Valentin Savin,” Variable throughput LDPC decoders using SIMD-based adaptive quantization”,2016 39th International Conference on Telecommunications and Signal Processing (TSP), 2016, Pages: 425 – 428.
+[13] Swapnil Mhaske, Hojin Kee, Tai Ly, Ahsan Aziz and Predrag Spasojevic “High-Throughput FPGA-Based QC LDPC Decoder Architecture”, IEEE 82nd Vehicular Technology Conference (VTC2015-Fall), 2015:1-5.
+[14] Truong Nguyen-Ly, Khoa Le, F. Ghaffari, A. Amaricai, O. Boncalo, V. Savin and D. Declercq, “FPGA design of high throughput LDPC decoder based on imprecise Offset Min-Sum decoding”, IEEE 13th International New Circuits and Systems Conference (NEWCAS), 2015, Pages: 1 – 4.
+
+1235
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:01:14 UTC from IEEE Xplore. Restrictions apply.
+
+

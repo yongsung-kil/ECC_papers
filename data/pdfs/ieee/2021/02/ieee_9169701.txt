@@ -1,0 +1,292 @@
+792
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 68, NO. 2, FEBRUARY 2021
+
+Machine Learning for LLR Estimation in Flash Memory With LDPC Codes
+Magnus Sandell , Senior Member, IEEE, and Amr Ismail
+
+Abstract—As the density of flash memory is increasing to improve storage capacity, it also becomes more vulnerable to reading errors. Hence it is common practice to employ errorcorrecting codes, such as low-density parity check (LDPC) codes. To exploit the error-correcting capability of these codes, soft input must be provided to the decoder. This means that the flash memory controller needs to be able to provide reliability values, which is usually obtained through multiple ‘soft’ reads of the cells in the form of log-likelihood ratios (LLR). However finding these reliabilities with high accuracy is not easy with very few reads. In this brief we present a novel approach to estimate the LLRs based on a previous idea by Sharon et al. for regular LDPC codes. We present a low-complexity solution using machine learning and also an extension to irregular LDPC codes. A neural network is trained with offline data (simulated or measured) for a wide range of operating conditions and can then be applied to flash memory readings. By simulations we show that this provides good performance with only a small loss compared with genie-aided LLRs.
+Index Terms—Flash memory cells, demodulation, decoding.
+I. INTRODUCTION
+N AND flash memory [1] is a ubiquitous storage medium that has become essential in many consumer products, such as flash drives, mobile phone etc. To protect the data, powerful error-correcting codes are used and to increase its reliability, the trend is to move away from hard-input codes, e.g., BCH, to soft-input codes such as LDPC. By exploiting the varying reliability of the input bits, the error-correcting code (ECC) can correct more errors and avoid memory failures. However, this requires more readings of the flash memory cells to provide a more nuanced estimate of its content. As the device changes over time (retention) and usage (wear-out), dynamic schemes are required to capture the changing nature of the memory.
+One of the challenges when providing soft readings from a flash memory cell is to find the log-likelihood ratios (LLRs). Methods based on the voltage distribution have been proposed [2] but they have assumed full knowledge of the a posteriori distribution of the cell content. These distributions
+Manuscript received July 13, 2020; accepted August 8, 2020. Date of publication August 17, 2020; date of current version January 29, 2021. This work was supported by Kioxia Corporation. This brief was recommended by Associate Editor H. Wu. (Corresponding author: Magnus Sandell.)
+The authors are with the Bristol Research and Innovation Laboratory, Toshiba Research Europe Ltd., Bristol BS1 4ND, U.K. (e-mail: magnus.sandell@toshiba-bril.com; amr.ismail@toshiba-bril.com).
+Color versions of one or more of the figures in this article are available online at https://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSII.2020.3016979
+
+can be estimated from histograms and then used to compute LLRs [3], although this involves a large number of readings. A scheme exploiting the parameters of a regular LDPC code was proposed in [4]; however it involves a costly optimisation step and is hence not suitable for real-time implementation.
+The structure of a regular LDPC, and in particular its lowdensity property, offers an excellent opportunity to estimate the errors in flash memory readings. While the method in [4] is prohibitively complex, its features can be used for simplified estimation of the LLRs. As they contain significant information about the reliability of read cells, machine learning techniques can be applied to extract this. A data set (obtained either by simulation or measurements) covering a wide range of operational circumstances, such as wear-out, data retention, read-disturb, temperature, etc, can be used to train a neural network to produce accurate estimates. Once this has been done offline, the network can be used to estimate LLRs in the flash memory controller without the need for any external information besides the cell readings. As we will show, this approach can also be extended to irregular LDPC codes.
+Our Contributions
+• Although machine learning has recently been applied to flash memories, i.e., [5], [6], it has only be used to find reading thresholds. To the best of our knowledge, it has not been used to estimate the LLR values.
+• The method in [4], described in Section III, involves a costly real-time optimisation step; instead we propose to produce LLRs with a trained neural network. By using the same feature extraction (syndrome information), we can devise a reduced-complexity solution.
+• While the algorithm in [4] is limited to regular LDPC codes, we show that the machine learning approach can be applied to irregular codes as well with good results.
+This brief is organised as follows: the flash memory is described in Section II and syndrome-based feature extraction is presented in Section III. The machine learning procedure is proposed in Section IV and simulation results are presented in Section V. Finally we draw the conclusions in Section VI.
+II. FLASH MEMORY
+The storage unit (or equivalently a cell) in flash memory is a floating gate transistor where data is stored in the form of trapped charge. The flash memory die is organized into blocks, where the cells sharing the drain electrode constitute the bitline and the cells sharing the same gate constitute the
+
+1549-7747 c 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:52:26 UTC from IEEE Xplore. Restrictions apply.
+
+SANDELL AND ISMAIL: MACHINE LEARNING FOR LLR ESTIMATION IN FLASH MEMORY WITH LDPC CODES
+
+793
+
+wordline. Each wordline consists of tens of thousands of cells and is organised into log2 M logical pages (or simply pages) where M is the number of threshold voltage levels a cell has. The logical pages are encoded separately to enable reading them individually.
+
+A. Writing Data
+A wordline to be programmed is first activated and then progressively written via incremental step-pulse programming (ISPP) [7]; the electrons are incrementally injected into the floating gate and sensed until the threshold voltage exceeds the target value. Two-phase programming can be used whereby a tentative value is programmed first and then the final value; this reduces intercell interference (ICI). As ISPP only increases electric charges, the whole block should be erased before being programmed again. The repeated program/erase (P/E) cycles wear out the flash memory cells and limit the device’s life time.
+
+Fig. 1. Soft readings of the LSB in a MLC cell.
+
+B. Reading Data
+
+A wordline to be read is first activated, then a voltage is applied to the bitlines and the source-drain current is sensed which indicates whether the threshold voltage is less than the applied gate voltage or not. Hence each reading will only give a binary answer, although multiple readings with different threshold voltages can be combined to increase the resolution of the quantisation [8].
+
+C. LLR Values
+
+When multiple readings are applied, the charge in the cell is effectively quantised to a finite value (N − 1 readings will produce N quantisation intervals). This is illustrated in Figure 1 where the LSB of an multilevel cell (MLC) is read with two hard (solid) and four soft thresholds (dashed). This creates N = 7 quantisation intervals. If a soft-input ECC is used, a read cell needs to provide a reliability measure of the quality of the reading. This usually takes the form of the LLR
+
+Ln
+
+=
+
+log
+
+Pr(b Pr(b
+
+= =
+
+0|rn 1|rn
+
+) )
+
+(1)
+
+where Pr(b|rn) is the a posteriori probability of the written data being b if the read value is rn. If r has been quantised to N possible values, we need to find an LLR for each of the N
+
+quantisation values. It is worth noting that the magnitude of
+
+the LLR in interval n is related to the probability of error pn in that interval [4]
+
+|Ln|
+
+=
+
+log
+
+1
+
+− pn pn
+
+.
+
+(2)
+
+Hence estimating the LLRs is equivalent to estimating the error rate in each quantisation interval.
+
+III. LDPC CODES
+An LDPC code can be described by its graph [9]. In Figure 2, the graph of an (8,4) LDPC code is shown. The two variables in error will propagate to the constraints and cause two of them to be unsatisfied. Here we used a regular code, i.e., all variable and constraint nodes have the same respective
+
+Fig. 2. Graph of a regular LDPC code with variable node degree dv = 2 and constraint node degree dc = 4. The shaded variable nodes are in error
+and the shaded constraint nodes indicate a failed parity check.
+
+degree, i.e., the number of connected edges; in this example,
+
+the variable degree is dv = 2 and the constraint degree is dc = 4.
+
+In [4] a method to estimate the interval error rate pn was
+
+described, where the structure of a regular LDPC code is
+
+exploited. Consider the regular LDPC code shown in Figure 2
+
+and let the number of cells read in interval n ∈ {1, . . . , N}
+
+that are connected to q ∈ {0, . . . , dv} unsatisfied constraints
+
+be denoted by Cn,q and the number of cells read in interval n
+
+by Cn =
+
+dv q=0
+
+Cn,q.
+
+The
+
+expected
+
+value
+
+of
+
+the
+
+former
+
+can
+
+be
+
+expressed as
+
+E Cn,q = P q|epn + P q|c(1 − pn) Cn
+
+= P q|e − P q|c En + P q|cCn
+
+(3)
+
+where En = pnCn is the number of bit errors in interval n, Pq|e and Pq|c are the probabilities that a bit is connected to q unsatisfied constraints given that it is wrong and correct, respectively. The latter two are illustrated in Figure 3(a) and 3(b).
+Assuming independence of bits connected to the same constraint (which roughly holds for high-girth LDPC codes [9]), these probabilities can be expressed as
+
+P q|e =
+
+dv q
+
+pqu|e 1 − p u|e dv−q
+
+P q|c =
+
+dv q
+
+pqu|c 1 − p u|c dv−q
+
+(4)
+
+where pu|e and pu|c are the probabilities that a constraint is unsatisfied given that a certain bit is wrong and correct, respec-
+tively. This is illustrated in Figure 3(c) and 3(d) and these
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:52:26 UTC from IEEE Xplore. Restrictions apply.
+
+794
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 68, NO. 2, FEBRUARY 2021
+
+Fig. 3. Conditional probabilities used in the analysis: (a) Pq|e, (b) Pq|c, (c) pq|e, (d) pq|c.
+
+have recently been applied to flash memory but only to find the reading thresholds [5], not the LLRs. Another interesting application is to solve analytically intractable problems and function approximations. Hence it could be applied to estimate the LLRs based on the counters Cn,q, which clearly contain enough information about the LLRs Ln. These counters would be the input to the ML and the LLRs would be the output. The LLRs for different quantisation intervals are quite different (in Figure 1, interval 1 will have few errors, many readings and hence a large LLR, whereas interval 2 will have more errors, fewer readings and hence a smaller LLR). Hence it is clear that each interval needs its own quantisation.
+Note that once the network has been trained, it only needs to be applied to the input Cn,q to generate the LLRs. This offers much lower complexity than solving a complex optimisation problem as in [4]. If the network has been trained for the full range of the operational environment, no further training is necessary. Below we present two approaches that can be used for solving the LLR estimation problem with machine learning.
+
+probabilities are found as [4]
+
+1 + (1 − 2p)dc−1
+
+p u|e =
+
+2
+
+1 − (1 − 2p)dc−1
+
+p u|c =
+
+2
+
+(5)
+
+where p is the overall (interval-independent) BER. The overall BER is related to the interval-dependent errors by a simple summation
+
+p
+
+=
+
+1 K
+
+N n=1
+
+En
+
+(6)
+
+where K is the total number of read cells. It is clear that there is a functional dependency between the
+variables
+
+Cn,q = P q|e(En) − P q|c(En) En + P q|c(En)Cn
+
+(7)
+
+since En affects p in (6), p affects pq|e, pq|u in (5) which in turn affect Pq|e, Pq|u in (4). In [4], several metrics were suggested to find the errors En, such as maximum likelihood and meansquared error. However this is a very complex optimisation
+task since En affects the probabilities Pq|e and Pq|c in a highly nonlinear fashion. Hence it is very complicated to estimate En directly from Cn,q using (7). Furthermore this would have to be performed online for every wordline read, which makes it
+unsuitable for practical implementation. Instead we will con-
+sider another approach with significantly reduced complexity
+in the next section.
+
+IV. MACHINE LEARNING
+One of the most talked about topics today is Machine Learning (ML), which finds a wide range of applications in areas such as healthcare, finance and social media service. However, on the PHY layer there have been very few examples of the use of ML, except for LDPC decoding [10]. They
+
+A. Regression
+The LLR for each quantisation interval can be estimated by training a network to output a continuous scalar variable. This is illustrated with a feed-forward neural network [11] in Figure 4(a). The input is the counters Cn,q, which can be viewed as an (albeit small) two-dimensional image, and the output is Ln; the network weights can be trained to minimise, e.g., the mean-squared error (MSE) between the estimated and actual LLRs. The hidden layers are 2D convolutional layers with a tan-hyp activation function.
+
+B. Classification
+
+As ML is particularly good at classification, this can be achieved by quantising the LLRs to a few possible values. It is better to be accurate in deciding if the read cell is reliable or not than to provide a large resolution in the LLRs. In order to quantise them with as small distortion as possible, we use the Lloyd-Max [12] quantising scheme. Hence we quantise the magnitude of the LLRs to a limited set of Sn values
+
+Q{|Ln|} ∈ Sn, |Sn| = Sn.
+
+(8)
+
+The classification ML network is shown in Figure 4(b). The input is the same as for regression and the output classes are the quantised values in Sn. The last layer applies the soft-max function before classification is done. One potential advantage of using classification instead of regression is that the network could be trained to provide quantised LLRs; these could be used directly with a fixed-point precision LDPC decoder.
+
+C. Training
+To train the network, we simulated codewords in a range of P/E cycles, computed the counters Cn,q and used them as the input. The 106 samples were simulated over the range of 0 to 4000 P/E cycles; in practice, they would need to represent the full range of the operational environment, such as data retention, read-disturb, temperature, etc as well. The target was the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:52:26 UTC from IEEE Xplore. Restrictions apply.
+
+SANDELL AND ISMAIL: MACHINE LEARNING FOR LLR ESTIMATION IN FLASH MEMORY WITH LDPC CODES
+
+795
+
+Fig. 5. Histogram of exact and ML estimated LLRs for the MSB, interval 6 of the MLC.
+
+Fig. 4. Machine learning networks for estimating LLRs: (a) regression, (b) classification.
+corresponding genie-aided LLRs, computed by simply counting the errors in each quantisation interval for one codeword. For the classification network, the quantisation of the LLRs were done with Sn = 8, ∀n levels including one for the maximum Lmax = 10; the latter occurs when a quantisation interval n is error-free and hence Lmax represents ‘infinite’ reliability. We used one ML network for each interval n, although future work could include classification of all intervals simultaneously. Of the simulation set, 80% was used for training and the remaining 20% as validation; 10 epochs were used to train the network. There were two hidden layers, each with 16 nodes. Note that training time is not relevant as it is offline; the real-time application of ML only requires the processing of the input Cn,q. There is no online training or updating since the training encompasses the whole range of the operational environment.
+V. RESULTS
+To evaluate the quality of the LLRs generated with the algorithm described above, we ran some simulations to estimate the error rate in a coded system.
+
+A. Simulation Model
+The NAND flash memory cells are subject to several sources of distortions, mainly intercell interference (ICI), programming noise and wear-out effects. First all cells are erased by setting them to a random Gaussian variable and then they are programmed as described in Section II-A. The vertical and horizontal ICI this produces is calculated by multiplying the added charge by the corresponding coupling coefficients [13]. We also add random telegraph noise [14] as well as retention noise [15].
+The LLRs generated by the ML regression approach are compared with the genie-aided ones in Figure 5. As can be seen, the fit is very good; even if the ML has been trained for a wide range of P/E cycles, it performs very well for a specific value.
+B. Codeword Error Simulations
+To benchmark the performance of our proposed scheme, we compared it with a common approach which is histogrambased. In [3] a method is described which is based on modelling the voltage distributions as Gaussian and then estimating the parameters of these distributions. By reading the cells multiple times, histograms can be computed and by selecting a few points, the mean and variance of the Gaussian distributions can be estimated; these are then used to compute the LLRs [2]. From the histograms, we also find the reading thresholds which are obtained from the minima between two programmed states [16].
+1) Regular LDPC Code: We simulated a triple-level cell (TLC) flash memory with a balanced Gray labelling and an (dv = 3, dc = 51)-regular LDPC code (rate 16/17) with 32768 information and 2048 parity bits. For each codeword we computed the genie-aided LLRs by simply counting the number of read cells in each quantisation interval for each written bit value. If no errors are present, a maximum LLR of Lmax = 10 was used. As a benchmark, we also considered a scheme which assigns Lmax to each interval, as well as the histogram-based algorithm in [3]. We simulated the codeword-error rate (CER) by using a sum-product LDPC decoder with 50 iterations [9],
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:52:26 UTC from IEEE Xplore. Restrictions apply.
+
+796
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS, VOL. 68, NO. 2, FEBRUARY 2021
+
+parity checks. Although this approach was presented in [4], we have proposed a reduced complexity solution as well as extended it to irregular LDPC codes. The syndrome information is used to train a neural network to estimate the reliability, i.e., LLRs, of each cells in each interval. The training is done offline with simulated or measured data covering a wide range of operating conditions. Once trained, the network can be applied to real-time flash memory readings. Both regression and classification with the machine learning were explored and simulations showed that they both offer good performance.
+
+Fig. 6. Codeword-error rate for the MSB bit of TLC with a regular LDPC code.
+Fig. 7. Codeword-error rate for the MSB bit of TLC with an irregular LDPC code.
+which is shown in Figure 6 for the MSB. The CER of the two ML approaches (regression and classification) are almost identical and outperform the fixed and histogram-based schemes, while suffering a very small degradation compared with the genie-aided benchmark.
+2) Irregular LDPC Code: The scheme in [4] is based on regular LDPC codes and hence does not apply directly to an irregular code. However the counters Cn,q still contain information about the interval-specific error rates (and hence the LLRs), even for an irregular LDPC code. Hence we applied the same ML approach as described in this brief to the irregular (64800, 58320) code (rate 9/10) used in DVB-S2 [17]. The performance of the MSB is shown in Figure 7 and as can be seen, the ML approach still offers good performance.
+VI. CONCLUSION In this brief we have presented a novel method for generating LLRs for a flash memory with LDPC codes. By exploiting the low-density property of the LDPC code, we base our algorithm on counting the number of cells which fall into a certain quantisation region and are connected to a certain number of
+
+ACKNOWLEDGMENT
+The authors would like to acknowledge the financial support
+and fruitful discussions with Kioxia Corporation.
+REFERENCES
+[1] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, “Introduction to flash memory,” Proc. IEEE, vol. 91, no. 4, pp. 489–502, Apr. 2003.
+[2] C. A. Aslam, Y. L. Guan, and K. Cai, “Read and write voltage signal optimization for multi-level-cell (MLC) NAND flash memory,” IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[3] J. Freudenberger, M. Rajab, and S. Shavgulidze, “Estimation of channel state information for non-volatile flash memories,” in Proc. IEEE Intern. Conf. Consum. Elect., Berlin, Germany, Dec. 2017, pp. 69–73.
+[4] E. Sharon and A. Bazarsky, “Dynamic memory error model estimation for read and ECC adaptations,” in Proc. Nonvolatile Mem. Workshop, San Diego, CA, USA, Mar. 2017, pp. 1–2.
+[5] Z. Mei, K. Cai, and X. He, “Deep learning-aided dynamic read thresholds design for multi-level-cell flash memories,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2850–2862, May 2020.
+[6] W. Sun and J. Zheng, “A discrete detection and decoding of MLC NAND flash memory with retention noise,” IEEE Access, vol. 8, pp. 60626–60636, 2020.
+[7] K.-D. Suh et al., “A 3.3 V 32 Mb NAND flash memory with incremental step pulse programming scheme,” IEEE J. Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, Nov. 1995.
+[8] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[9] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[10] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5G LDPC codes by machine learning,” IEEE Access, vol. 6, pp. 50179–50186, 2018.
+[11] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, MA, USA: MIT Press, 2016.
+[12] N. Jayant and P. Noll, Digital Coding of Waveforms: Principles and Applications to Speech and Video. Englewood Cliffs, NJ, USA: PrenticeHall, 1984.
+[13] G. Dong, S. Li, and T. Zhang, “Using data postcompensation and predistortion to tolerate cell-to-cell interference in MLC NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[14] C. M. Compagnoni, M. Ghidotti, A. L. Lacaita, A. S. Spinelli, and A. Visconti, “Random telegraph noise effect on the programmed threshold-voltage distribution of flash memories,” IEEE Elect. Device Lett., vol. 30, no. 9, pp. 984–986, Sep. 2009.
+[15] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[16] C. Kim et al., “A 512-Gb 3-b/Cell 64-stacked WL 3-D-NAND flash memory,” IEEE J. Solid-State Circuits, vol. 53, no. 1, pp. 124–133, Jan. 2018.
+[17] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications (DVB-S2), Rev. v1.2.1, ETSI Standard ETSI EN 302 307, Aug. 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:52:26 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,544 @@
+IEEE INFOCOM 2025 - IEEE Conference on Computer Communications Workshops (INFOCOM WKSHPS) | 979-8-3315-4370-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/INFOCOMWKSHPS65812.2025.11152889
+
+MISO-LDPC Decoding on UAV Communications: A Limited Bit-Width Learning Approach
+Shiyang Zhou1, Xianhua Niu1∗, and Chao Pu2 1School of Computer and Software Engineering, Xihua University, Chengdu, 610039, China
+2Chengdu Aerospace Communication Equipment Company, Chengdu, 610000, China Email: zhousy@xhu.edu.cn, niuxh@mail.xhu.edu.cn, bk dd@163.com
+
+Abstract—This paper proposes a low-complexity limited bitwidth (LBW) multiple-input single-output (MISO) - low density parity check (LDPC) decoding algorithm for unmanned aerial vehicle (UAV) communications. Firstly, to solve the NP-hard problem of maximum a posteriori conventional (MAP) -based MISO detection, a learning-based quantized neural network (QNN) is proposed to fit the mapping of inputs and outputs in the MISO detector, whose computational complexity increases linearly with the number of antennas and modulation order. Secondly, a low-complexity fixed-point LDPC decoder is designed, which implements LDPC decoding only using adder and XOR operations with little performance loss. Additionally, The twostep LBW decoding algorithm only uses 8-bit quantized data throughout the MISO detection and LDPC decoding, which has a significantly lower computational complexity compared with floating-point computation. Finally, the simulation results demostrate the effectiveness of our proposed LBW MISO-LDPC decoding algorithm, whose bit error rate (BER) performance is only 0.5dB away from optimal floating-point MISO-LDPC decoding algorithm.
+Index Terms—Multiple-input-single-output (MISO) detector, low density parity check (LDPC) decoder, quantized neural network (QNN), fixed-point algorithm
+I. INTRODUCTION
+Given the numerous advantages such as line-of-sight (LoS) transmissions, robust mobility, and the capability for flexible and cost-effective networking, unmanned aerial vehicle (UAV) communications are increasingly becoming a focal point of interest in both academic research and commercial applications. In particular, compared with operations involving a single UAV, the deployment of UAV swarms presents several distinct advantages. Firstly, UAV swarms exhibit stronger environmental adaptability. Secondly, UAV swarms offer higher control redundancy, which can achieve tasks that are difficult to be completed by a single UAV [1].
+In order to realize high-speed and low-complexity communication between the UAVs, multiple antennas are introduced in the transmitter to avoid high-order modulation, and due to the favorable air channel conditions, the receiver equips a single antenna to reduce the complexity [2]. Meanwhile, lowdensity parity-check (LDPC) codes have emerged as one of the most popular channel coding in wireless communications, significantly enhancing the reliability of data transmissions. In multiple-input single-output (MISO) systems, LDPC codes play a crucial role in mitigating the effects of fading and interference.
+
+Maximum a posteriori (MAP)-based MISO detectors [3] and LDPC decoders [4] offer optimal bit error rate (BER) performance. Nevertheless, MISO detection poses an NP-hard problem [5], characterized by computational complexity that escalates exponentially with the number of antennas and the modulation order. This exponential increase in complexity makes MAP-based MISO detection highly demanding in terms of computational resources. Moreover, the optimal MAP-based LDPC decoder also requires tanh and tanh−1 operations, which have a high computational complexity. Consequently, while these methods achieve superior BER performance, their practical implementation becomes increasingly challenging due to the substantial computational load required.
+To reduce the computational complexity, The work [6] proposes a turbo iterative detection-decoding receiver, where the extrinsic log-likelihood ratio (LLR) output by LDPC decoder is used to assist multiple-input multiple-output (MIMO) detection. The turbo-like method is extended to MISO systems in [7], which proposes MAP-based and signal-to-interference plus noise ratio (SINR) -sorting algorithms. However, the MISO detector relies heavily on perfect extrinsic LLR, which greatly limits the simplification of LDPC decoders. In [8], a precoded MISO system based on minimum mean square error (MMSE) detection is proposed to reduce the detection complexity at the cost of performance. Traditional analytical methods are unable to simultaneously achieve high-performance and low-complexity MISO detection. Instead, machine learning has demonstrated potential. In [9], machine learning is introduced in the MISO system to optimize beamforming vectors. To further reduce the computational complexity, fixedpoint designed quantized neural network (QNN) is proposed to reduce the bit width [10].
+Meanwhile, low-complexity LDPC decoding algorithms based on the min-sum is proposed in [11], whose BER performance is deteriorated by more than 1dB. With the proposal of density evolution theory [12], offset min-sum (OMS) is effectively designed in [13], which shows that the BER performance is only degraded by around 0.15 dB.
+The UAV is small in size and the energy is limited, which is more demanding of the low-complexity MISO-LDPC decoding algorithm. Motivated by the above factor, this paper proposes a limited bit-width (LBW) MISO-LDPC decoder. The main contributions of this paper are summarized as follows:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+Ċ
+
+Information LDPC
+
+bits
+
+Encoder
+
+Coded bits
+
+Convolutional Interleaved BPSK/QPSK Modulated
+
+Tx
+
+Interleaver
+
+bits
+
+Modulator symbols antennas
+
+UAV-to-UAV channel
+
+Decoded LDPC Deinterleaved Convolutional Extrinsic
+
+bits
+
+Decoder
+
+LLR Deinterleaver LLR
+
+MISO Detector
+
+Received
+
+Rx
+
+signals antennas
+
+Fig. 1: MISO-LDPC Communication system for UAV-to-UAV communications.
+
+• Firstly, this paper proposes a learning-based MISO detector as an alternative to the traditional MAP detector. It employs a QNN to model the mapping from received signals and channel state information (CSI) to extrinsic LLRs. This approach aims to overcome the NP-hard problem arising from increases in the number of antennas and the modulation order. By utilizing a QNN, the method effectively tackles the escalating computational complexity associated with larger antenna arrays and higher modulation schemes.
+• Then, to solve the problem of high computational complexity in LDPC decoding, this paper designs an LDPC decoder based on the fixed-point OMS algorithm, relying solely on XOR operation and adder. The low bit-width simplified decoder significantly reduces computational complexity.
+• Finally, the simulation results show that the effectiveness of our proposed LBW MISO-LDPC decoding algorithm. The BER performance is only approximately 0.5dB worse than that of the optimal MAP detection algorithm when requiring significantly fewer computational resources.
+II. SYSTEM MODEL
+We consider a typical UAV-to-UAV communication scenario, where the transmitter is equipped with Nt antennas and the receiver has a single antenna. Considering the limitation of the received signal-to-noise ratio on the channel capacity, only the Nt ≤ 4 scenario is discussed in this paper. The overall communication system is depicted in Fig. 1. At the transmitter, the information bits are encoded by LDPC, shuffled the order by a convolutional interleaver, modulated by binary phase shift keying (BPSK) / quadrature phase shift keying (QPSK) constellation. These modulated symbols are subsequently distributed across the Nt transmit antennas. Let s represent an Nt × 1 vector of transmitted symbols, and r denotes the received signals, which can be expressed as follows:
+
+r = hT s + n,
+
+(1)
+
+where n denotes complex additive white Gaussian noise with zero mean and variance of σn2 . And h is the channel power gain vector of UAV-to-UAV channel with dimension Nt × 1. Considering slow movement speed of UAVs, the impact of
+Doppler spreading is negligible. UAV-to-UAV channel can be
+described as a single-path Rice fading [14] link with LoS factor kl, in which
+
+h=
+
+kl hLoS +
+
+1 hNLoS ,
+
+(2)
+
+kl + 1
+
+kl + 1
+
+where hLoS and hNLoS represent LoS and non LoS (NLoS) components, respectively.
+This paper focuses on low-complexity implementation at the receiver. Specifically, this paper proposes a MISO-LDPC decoder with a limited bit width. This approach notably reduces computational complexity while sacrificing only little bit error rate (BER) performance.
+
+III. MISO-LDPC DECODING ALGORITHM
+A. Quantized Neural Network for MISO Detector
+For the MISO detector, the received signal r is demapped to produce soft LLRs for each of the NtM bits, where M represents the number of bits per modulation symbol. The MISO detector provides the extrinsic information to the LDPC decoder. In the case of an optimal MAP detector, For the ith bit ci of transmitted vector s, the extrinsic LLR can be calculated as follows:
+
+LD
+
+(ci)
+
+=
+
+log
+
+P P
+
+(ci (ci
+
+= =
+
+0 1
+
+|r, |r,
+
+h) h)
+
+−
+
+log
+
+P P
+
+(ci (ci
+
+= =
+
+0) ,
+1)
+
+(3)
+
+which can be transformed using the Bayesian formula:
+
+P (r |s, h ) P (s)
+
+LD
+
+(ci)
+
+=
+
+log
+
+s∈Si0
+
+P
+
+(r
+
+|s,
+
+h)P
+
+(s)
+
+−
+
+log
+
+P P
+
+(ci (ci
+
+= =
+
+0) ,
+1)
+
+(4)
+
+s∈Si1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+where Si0 (Si1) denotes the set of signals when ci = 0 (ci = 1). Given that bits are transmitted with equal probability to maximize mutual information, P (s) = 1/2NtM and
+P (ci = 0) = P (ci = 1). Consequently, (4) can be simplified
+as
+
+P (r |s, h )
+
+LD (ci) = log s∈Si0 P (r |s, h ) .
+
+(5)
+
+s∈Si1
+
+where the probability density function P (r |s, h ) is given by
+
+1
+
+r − hT s 2
+
+P (r |s, h ) = 2πσn2 exp − 2σn2
+
+.
+
+(6)
+
+It is observed that the size of Si0 (Si1) increases exponentially with Nt and M , leading to an NP-hard problem.
+In fact, the MISO detector transforms the received signal and CSI into the extrinsic information. This input-output mapping can be approximated by a function: LD (ci) = f (s, h), such as a neural network. Taking into account implementation friendliness, a fixed-point QNN is introduced as a MISO detector.
+Floating-point received signal, CSI, neural network weights and biases need to be quantized firstly. Given data to quantize these parameters v, quantizer step size s, quantized bit width b, the number of positive and negative quantization levels QP and QN , respectively, where QP = 2b−1 − 1 and QN = 2b−1. The quantized data vˆ can be represented as
+
+v = s × [clip (v/s, −QN , QP )] ,
+
+(7)
+
+where the clip function truncates the value saturation within the range [−QN ,QP ], and [x] represents the rounding operation. The low-precision quantized data v is used in forward computation of the QNN.
+The rounding function presents a challenge due to its non-differentiable weights and biases, which hinder gradientdescent training. Straight-through estimator (STE) [15] solves this problem by approximating the gradient of the rounding function to 1:
+
+∂v
+
+ 
+
+0, if
+
+v/s < −QN ,
+
+∂v
+
+= 
+
+1, if 0, if
+
+− QN ≤ v/s ≤ QP , v/s ≥ QP .
+
+(8)
+
+To quantify the parameters v more efficiently, the quantizer step size s is also designed to be trainable [10], given by
+
+∂v
+
+ 
+
+QN , if
+
+v/s < −QN ,
+
+∂s
+
+= 
+
+[v/s] − v/s, if − QN QP , if v/s ≥ QP .
+
+≤ v/s ≤ QP ,
+
+(9)
+
+The variable v and s in (8) and (9) are updated by stochastic gradient descent (SGD), assisted by v. The loss function is defined as the mean square error (MSE) between quantized true extrinsic LLR LD (ci) and the predicted LLR by the QNN Le (ci):
+
+L˜ (ci)
+
+=
+
+1 NtM
+
+Nt M i=1
+
+LˆD (ci) − Lˆe (ci)
+
+2
+.
+
+(10)
+
+The parameters v and quantizer step size s are updated by stochastic gradient descent (SGD) as (11) and (12):
+
+∂L ∂v
+
+v ← v−α
+
+,
+
+(11)
+
+∂v ∂v
+
+∂L ∂v
+
+s←s−α
+
+,
+
+(12)
+
+∂v ∂s
+
+where α denotes the learning rate. Above all, the training process of the proposed QNN-based
+MISO detector is summarized in Algorithm 1, where em represents the allowed maximum MSE for early stopping.
+
+Algorithm 1 The training of the proposed QNN-based MISO
+
+detector
+
+Input: r, h, LD output by MAP detector Output: weights and biases of the QNN.
+
+1: Initialize the weights and biases of QNN. Quantize the inputs,
+
+weights and biases.
+
+2: while L > em and epoch < epochmax do 3: for k = 1, 2, . . . , BATCH NUM do
+
+4:
+
+Calculate the forward predicted output Le.
+
+5:
+
+Calculate the stochastic MSE loss function L.
+
+6:
+
+Calculate
+
+the
+
+quantized
+
+gradient
+
+∂L ∂v
+
+.
+
+7:
+
+Update v and s by SGD as (11) and (12).
+
+8: end for
+
+9: Calculate the average loss L,
+
+10: end while
+
+B. Fixed-Point LDPC Decoder
+For LDPC decoder, MAP-based decoding algorithm passes message between variable nodes V and check nodes C. At the beginning, let the initial check node values be all zeros, and the initial variable node values are the extrinsic LLRs output by the MISO. Among them, the message passed from C to V can be represented by
+
+qi(jk) = LD (ci) +
+
+p(jk′i),
+
+j ′ ∈C (i)\j
+
+(13)
+
+where qi(jk) denotes the message passed from check node j to variable node i in iteration k, p(jki ) denotes the message passed from variable node i to check node j in iteration k, and C (i) denotes the set of the check nodes. The message p(jki ) is given
+by
+
+
+
+
+
+pj(ki ) = 2tanh−1 
+
+tanh qi(′kj−1)  , 2
+
+i′∈V (j)\i
+
+(14)
+
+in which V (j) is the set of the variable nodes. At the end of each iteration, calculate a posteriori probabil-
+ity (APP) of each bit:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+AP Pi(k) = LD (ci) +
+
+p(jk′i),
+
+j ′ ∈C (i)
+
+(15)
+
+and make a hard decision: if AP Pi ≥ 0, ci = 0, else ci = 1.
+In the decoding computation, (14) contains multiplication, tanh, and tanh−1 operations, and thus needs to be simplified. Note that p(jki ) depends mainly on the minimum value of qi(jk), and p(jki ) is an odd function with respect to qi(jk). (14) can be simplified to
+
+p(jki ) =
+
+sgn
+
+qi(′kj−1)
+
+× min
+i′∈V (j)\i
+
+qi(′kj−1)
+
+. (16)
+
+i′∈V (j)\i
+
+The min-sum operation in (16) always overestimates the value compared with (14). Therefore, the offset factor β is used to correct the estimation [13]:
+
++
+
+p(jki ) =
+
+sgn
+
+qi(′kj−1)
+
+·
+
+min
+i′∈V (j)\i
+
+qi(′kj−1)
+
+− β(k)
+
+,
+
+i′∈V (j)\i
+
+(17)
+
+where [x]+ = max (x, 0). Since qi(jk) increases with iterations,
+
+which leads to a slighter overestimation, and thus β(k) is the
+
+variable decreasing with iterations.
+
+In (17), the multiplication of sign bits can be represented
+
+by XOR operation, and thus LDPC decoder only uses adder,
+
+XOR, max and min operations, which significantly reduces the computational complexity. Moreover, as long as β(k) is
+
+designed as an integer, there is no loss of accuracy in the
+
+OMS decoding.
+
+Above all, the fixed-point LDPC decoding algorithm is
+
+summarized in Algorithm 2, where H is the parity-check
+
+matrix of the LDPC.
+
+Algorithm 2 The fixed-point LDPC decoding algorithm
+
+Input: LD (ci), β(k) Output: ci.
+
+1: Initialize pj(0i) to all zero, qi(j0) = LD (ci) , ∀j. 2: for k = 1, 2, . . . , I do
+
+3: Update check nodes as (17).
+
+4: Update variable nodes as (13).
+
+5: Update APP values as (15).
+
+6: Hard decision: if AP Pi ≥ 0, ci = 0, else ci = 1.
+
+7: if Hc = 0 then
+
+8:
+
+BREAK;
+
+9: end if
+
+10: end for
+
+IV. SIMULATION RESULTS
+In this section, we present simulation results to demonstrate the BER performance for the proposed LBW MISO-LDPC decoding algorithm. The simulations are conducted with an LoS factor Kl set to 15. A three hidden-layer fully-connected network is built to fit the MAP-based MISO detector. Each hidden layer consists of 15NtM neurons, and quantized bit width b = 8. The quantized rectified linear unit (ReLU)
+
+activation function is used at each layer. During the training phase, the RMSProp optimizer is employed with a learning rate of 0.0001, and the early-stopping parameter is set at em = 10−4. The batch size is set to 50, and the maximum number of epochs is set to 20. In LDPC decoding, an irregular codeword with a code rate of 0.5 and a code length of 1296 is used. Layered-decoding with iterations I = 10 is applied to accelerate convergence. And the offset factor β is configured to [14, 14, 14, 14, 14, 12, 12, 10, 10, 8] for each iteration, respectively.
+Fig. 2 shows the BER performance of the proposed QNNbased MISO detection algorithm with the MAP and the LP [5] algorithms. Compared with the optimal MAP algorithm, the proposed QNN-based algorithm has a performance loss of up to 0.2dB at BER = 0.1. The main reasons are the loss of precision in quantization, as well as errors in the fitting of neural networks. In addition, the performance of the proposed QNN-based algorithm is slightly better than that of the LP algorithm, since the LP algorithm approximates maximum likelihood detector (MLD) to l1 norm detection.
+Fig. 3 shows the BER performance of the proposed fixedpoint OMS-based LDPC decoding algorithm with the MAP and the min-sum [13] algorithms, and the inputs of the decoder are derived from the outputs of the MAP-based MISO detector. The results show that the proposed OMS-based algorithm is between the MAP and the min-sum algorithms. More specifically, the performance of the OMS-based algorithm is at most 0.5dB away from the optimal MAP algorithm at BER = 10−5, since the OMS-based algorithm simplifies the node update rules, and converts the data type from FLOAT32 point to INT8. Even with the simplification, the OMS-based algorithm still has a performance gain of 0.2-0.5dB compared with the min-sum algorithm.
+Fig. 4 illustrates the BER performance of the proposed LBW decoding algorithm with the serial MAP, the turbo-like MAP [7] and the LP [13] algorithms in the MISO-LDPC system. The results reveal that the serial MAP algorithm performs the best at BER = 10−5, while the turbo-like MAP algorithm shows potential in scenarios with higher modulation orders and more antennas. Compared with the serial MAP algorithm, the proposed LBW decoding algorithm has a performance loss of around 0.5dB at BER = 10−5. However, the proposed LBW only uses 8-bit quantized data, while the serial MAP algorithm uses 32 bits, which saves most of the computational complexity.
+The detailed computational complexity of the MISO-LDPC decoding algorithm mentioned above is listed in TABLE I and TABLE II, where dv and dc denote the degree of variable node and check node, respectively. It can be seen that the computational complexity of the proposed QNN-based MISO detection algorithm increases linearly with the number of antennas and modulation order, while that of other algorithms increases exponentially. Besides, None of exponential and logarithm operations are used in the proposed QNN-based MISO detection algorithm. In LDPC decoding, the proposed fixed-point OMS algorithm does not use a multiplier, tanh,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I: The computational complexity of MISO decoder.
+
+Operation FLOAT32 Multiplication INT8 Multiplication FLOAT32 Adder INT8 Adder FLOAT32 Exponential FLOAT32 Logarithm
+
+MAP 8 × 2NtM 0 2Nt M 0 2Nt M 1
+
+LP [5] 4 × 2NtM 0 3/NtM × 2NtM 0 0 0
+
+Turbo-like MAP [7] (2Nt + 3Nt/M + 10) 2NtM 0 2 × 2NtM
+0 2Nt M
+1
+
+Proposed QNN 0 690NtM + 30 (Nt + 1) 0 644NtM + 28Nt 0 0
+
+(a) BPSK modulation.
+
+(a) BPSK modulation.
+
+(b) QPSK modulation.
+
+(b) QPSK modulation.
+
+Fig. 2: BER performance of the proposed QNN-based MISO detec- Fig. 3: BER performance of the proposed fixed-point OMS-based
+
+tion algorithm with benchmark algorithms.
+
+LDPC decoding algorithm with benchmark algorithms.
+
+or tanh−1, and thus the computational complexity is much lower than that of the MAP algorithm, and close to that of the min-sum algorithm. Besides, INT8 operations in the proposed LBW MISO-LDPC decoding algorithm cost much less computing resources than FLOAT32 operations in benchmark algorithms.
+
+V. CONCLUSION
+In this paper, we have proposed a low-complexity fixedpoint MISO-LDPC decoding algorithm tailored for UAV communications. Firstly, this paper proposed a QNN-based MISO detector to solve the NP-hard problem caused by the increase
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II: The computational complexity of LDPC decoder.
+
+Operation FLOAT32 Multiplication FLOAT32 Adder INT8 Adder FLOAT32 tanh FLOAT32 tanh−1
+
+MAP [7] I (5dc − 4) I dv 0 I (dc − 1) I
+
+Min-sum [13] 0 I (dv + dc − 1) 0 0 0
+
+Proposed OMS 0 0 I (dv + dc − 1) 0 0
+
+(a) BPSK modulation.
+(b) QPSK modulation. Fig. 4: BER performance of the proposed LBW MISO-LDPC decoding algorithm with benchmark algorithms.
+of the number of antennas and modulation order. Secondly, this paper proposed a fixed-point LDPC decoder based on OMS algorithm, which replaces complex multiplication, tanh and tanh−1 operations with simple adder and XOR operations. Finally, the simulation results have revealed that the proposed fixed-point algorithm is only about 0.5dB worse than the optimal floating-point MISO-LDPC decoding, with the condition
+
+that the computational complexity is much lower than the
+benchmark algorithms.
+VI. ACKNOWLEDGE
+This work was supported in part by the National Nature
+Science Foundation of China under Grant No.62171387, in
+part by Science and Technology Program of Sichuan Province
+under Grant No.2024NSFSC0468.
+REFERENCES
+[1] Z. U. A. Tariq, E. Baccour, A. Erbad, M. Hamdi and M. Guizani, “RL-Based Adaptive UAV Swarm Formation and Clustering for Secure 6G Wireless Communications in Dynamic Dense Environments,” IEEE Access, vol. 12, pp. 125609-125628, 2024.
+[2] B. Liu, Y. Wan, F. Zhou, Q. Wu and R. Q. Hu, “Resource Allocation and Trajectory Design for MISO UAV-Assisted MEC Networks,” IEEE Trans. Veh. Technol., vol. 71, no. 5, pp. 4933-4948, May 2022.
+[3] B. Lu, G. Yue and X. Wang, “Performance analysis and design optimization of LDPC-coded MIMO OFDM systems,” IEEE Trans. Signal Process., vol. 52, no. 2, pp. 348-361, Feb. 2004.
+[4] X. Hu, E. Eleftheriou, D.-M. Arnold and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in IEEE Global Telecommun. Conf., San Antonio, TX, USA, 2001, pp. 1036-1036E.
+[5] T. Cui, T. Ho and C. Tellambura, “Linear Programming Detection and Decoding for MIMO Systems,” in Proc. Int. Symp. Inf. Theory, Seattle, WA, USA, 2006, pp. 1783-1787.
+[6] A. Matache, C. Jones and R. Wesel, “Reduced complexity MIMO detectors for LDPC coded systems,” in IEEE Mil. Commun. Conf., Monterey, CA, USA, 2004, pp. 1073-1079.
+[7] X. Xue, J. Ji, P. Su, J. Ma, B. Xia and X. Li, “Decoding Algorithm Based on LDPC for UAV MISO Ultraviolet Communication System,” IEEE Commun. Lett., vol. 28, no. 5, pp. 974-978, May 2024.
+[8] S. Zarei, W. Gerstacker and R. Schober, “Low-Complexity WidelyLinear Precoding for Downlink Large-Scale MU-MISO Systems,” IEEE Commun. Lett., vol. 19, no. 4, pp. 665-668, April 2015.
+[9] J. Kim, H. Lee, S.-E. Hong and S.-H. Park, “Deep Learning Methods for Universal MISO Beamforming,” IEEE Wireless Commun. Lett., vol. 9, no. 11, pp. 1894-1898, Nov. 2020.
+[10] S. K. Esser, J. L. McKinstry, D. Bablani, R. Appuswamy, and D. S. Modha, “Learned Step Size Quantization,” 2019. [Online]. Available: https://arxiv.org/abs/1902.08153v3.
+[11] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in IEEE Global Telecommun. Conf., San Antonio, TX, USA, 2001, pp. 1021-1025.
+[12] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599-618, Feb. 2001.
+[13] J. Chen, R. M. Tanner, C. Jones and Yan Li, “Improved min-sum decoding algorithms for irregular LDPC codes,” in Proc. Int. Symp. Inf. Theory, Adelaide, SA, Australia, 2005, pp. 1-5.
+[14] W. Khawaja, I. Guvenc, D. W. Matolak, U.-C. Fiebig and N. Schneckenburger, “A Survey of Air-to-Ground Propagation Channel Modeling for Unmanned Aerial Vehicles,” IEEE Commun. Surv. Tutorials, vol. 21, no. 3, pp. 2361-2391, thirdquarter 2019.
+[15] Y. Bengio, N. Leonard and A. Courville, “Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation,” 2013. [Online]. Available: https://arxiv.org/abs/1308.3432v1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:21:33 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,795 @@
+arXiv:2510.21600v1 [quant-ph] 24 Oct 2025
+
+Real-time decoding of the gross code memory with FPGAs.
+Thilo Maurer∗1, Markus Bu¨hler1, Michael Kr¨oner1, Frank Haverkamp1, Tristan Mu¨ller1, Drew Vandeth1, and Blake R. Johnson1
+1IBM Quantum
+Oct 24, 2025
+Abstract We introduce a prototype FPGA decoder implementing the recently discovered Relay-BP algorithm and targeting memory experiments on the [[144, 12, 12]] bivariate bicycle quantum low-density parity check code. The decoder is both fast and accurate, achieving a belief propagation iteration time of 24ns. It matches the logical error performance of a floating-point implementation despite using reduced precision arithmetic. This speed is sufficient for an average per cycle decoding time under 1 µs assuming circuit model error probabilities are less than 3 × 10−3. This prototype decoder offers useful insights on the path toward decoding solutions for scalable fault-tolerant quantum computers.
+1 Introduction
+The pursuit of fault-tolerant quantum computing promises to unlock a wide array of transformative applications. Recent advances in fault-tolerant architectures [Yod+25] have positioned quantum low-density parity check (LDPC) codes as a leading approach, with the bicycle architecture emerging as a strong candidate for realizing the first practical fault-tolerant quantum systems [IBM25]. However, a key challenge remains: the development of a viable, real-time quantum error correction (QEC) decoder tailored to quantum LDPC codes.
+Addressing this challenge involves a two-step process. First, it is essential to design a decoding algorithm that is accurate, flexible, and amenable to efficient hardware implementation [Mu¨l+25]. Second, the algorithm must be physically realized in hardware in a way that meets the stringent performance demands of fault-tolerant quantum computing. Specifically, any practical decoder must be compact and fast—where “fast” encompasses both high throughput and low latency, ensuring corrections are computed faster than new syndrome data arrives in each QEC cycle. [Ter15; Hol+20].
+Earlier this year, the Relay-BP quantum LDPC decoder was proposed [Mu¨l+25], offering a promising solution to the first step. It achieves strong accuracy and flexibility while being well-suited for hardware implementation, positioning its physical realization as the next major milestone in decoder development.
+The need for high throughput and low latency is especially pronounced in superconducting qubit architectures, where QEC cycles operate on microsecond timescales. In such systems, decoders must have ultra-low latencies. Throughput and latency are tightly coupled to the underlying technology choices. While GPU-based and AI-accelerator platforms [Bau+24] offer programmability and potential throughput advantages, they suffer from significant latency overheads due to data transfer and kernel launch delays—posing a challenge for real-time decoding.
+As a result, for both surface code decoders and quantum LDPC codes, many researchers have turned to Field Programmable Gate Arrays (FPGAs) [WLZ25; Liy+24; Cau+24; Zia+24; Lia+23; Val+21; Maa+25] or Application Specific Integrated Circuits (ASICs) [Bar+25; KAK25; BGV; Das+22]. While ASICs offer excellent performance characteristics, they are very costly to develop and less flexible. In contrast, FPGAs
+∗Contact: tmaurer@de.ibm.com
+1
+
+provide a compelling balance of performance and cost, with more straightforward setup and integration into a quantum control system — making them a practical choice for the next phase of decoder prototypes.
+In this manuscript, we present an FPGA implementation of the Relay-BP decoding algorithm [Mu¨l+25], applied to memory experiments on bivariate bicycle codes [Bra+23; Yod+25], including the Loon [[56,2,10]] and gross [[144,12,12]] codes. Building upon the work of Valls et al. [Val+21], our implementation explores the speed limits of Relay-BP in a maximally parallel computational architecture. This approach trades space for time, making it resource-intensive and pushing the boundaries of what can be achieved on a single modern FPGA.
+A factor that strongly influences the resource utilization is the numeric representation of the messages. Consequently, our study examines the sensitivity of Relay-BP decoding accuracy to reduced precision arithmetic, finding that for split X/Z-decoding as few as 4-bits of precision are sufficient to match a floating point implementation, while 6 bits are sufficient for correlated XYZ-decoding. We find that an int4 Relay-BP split X/Z decoder of a 12+1 cycle syndrome cycle on the gross code may be realized in a AMD VU19P FPGA and achieve a Relay-BP iteration time of 24ns. Under an academic circuit noise model with p < 10−3, we find that Relay-BP-1 converges in less than 10 iterations on average. Under these conditions, our FPGA solution would decode 12-cycle windows of repeated syndrome cycles in less than 240ns on average. This is faster than our anticipated syndrome collection rate of 1 µs per cycle, implying that the FPGA decoder has sufficiently low latency to avoid the backlog problem [Ter15].
+This paper is organized as follows: we first review the essential elements of decoding in order to introduce relevant notation. We then provide a summary of the Relay-BP algorithm implemented in the decoder. We introduce the architecture of our FPGA implementation, examine its resource utilization and our validation methods. Finally, we examine the performance of the decoder and provide remarks on possible next steps.
+
+2 Quantum Error Correction Decoding Framework
+
+A unified language exists [OHB25] that describes both classical and QEC decoding in terms of linear algebra, which we will utilize here. We begin by restating the definition of a decoder in that terminology:
+
+Errors and decoding Consider a check matrix H ∈ FM 2 ×N , a logical action matrix A ∈ FK2 ×N , and a probability vector p ∈ (0, 1/2)N . Errors are described by a vector e ∈ FN2 that we assume to be randomly drawn according to the distribution
+
+N −1
+Prp(e) = (1 − pj)
+j=0
+
+pj 1 − pj
+
+ej
+.
+
+An error e is related to an observed syndrome σ ∈ F2M by the check matrix with σ = He. A decoder is a classical algorithm which, given σ (and with knowledge of the objects H, A and p), proposes a correction ˆe ∈ FN2 . We say that the decoder succeeds if both Hˆe = σ and Aˆe = Ae, and that it fails otherwise.
+
+Weights Given a weight vector w ∈ (0, ∞)N , we define the weight of an error vector e as w(e) =
+
+N j=1
+
+ωj
+
+ej
+
+.
+
+We use the common weight system called the log likelihood ratio (LLR) which is defined by
+
+ωj
+
+=
+
+log
+
+1−pj pj
+
+and gives an
+
+equivalent
+
+representation for the errors.
+
+Graphical representation of check matrices For a given decoder problem, it is often useful to interpret the check matrix as a graph. For a visual representation, we let ( ) denote error nodes that correspond to columns of H and (□) denote check nodes that correspond to rows of H. Nodes are connected by an edge if there is a 1 in the corresponding location of the H matrix, which implies the resulting decoding graph, G, is bipartite. We denote the neighbors of node n in G as N (n).
+
+Decoding strategies As in [Mu¨l+25] we consider two decoding strategies. Our primary strategy for this paper is XZ-decoding which decomposes σ into σX and σZ which are independently decoded using the derived check matrices HX and HZ to obtain ˆeX and ˆeZ . These partial corrections are then combined to
+
+2
+
+12345
+
+ □1 1
+
+1
+
+0
+
+0
+
+0 e1
+
+1
+
+ □2 1
+
+
+1
+
+1
+
+0
+
+0
+
+e2 e3
+
+=
+
+0 1
+
+□3 0 0 0 1 1 e4
+
+Check matrix H
+
+e5 Syndrome σ (observed)
+
+Error e
+
+(unknown)
+
+1
+
+2
+
+3
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Figure 1: The decoding graph visually represents the check matrix: circular ( ) error nodes correspond to columns of H, and square (□) check nodes to its rows. Filled or unfilled nodes denote a corresponding value of 1 or 0 in either σ or e. The decoder relies solely on the syndrome (i.e., the values of the check nodes) to infer a candidate error. Check node i has syndrome σi = 1 if it touches an odd number of error nodes with value one.
+
+infer ˆe. XZ-decoding simplifies decoding by using smaller objects, but may degrade performance by modeling X and Z errors as independent. We also discuss the more complex decoding strategy called XYZ-decoding which directly computes a correction ˆe from the full H and σ.
+We assume a linear circuit-level noise model in which each quantum operation fails independently, with errors sampled from a discrete set of error modes. Each single-qubit unitary is followed by a Pauli X, Y , or Z error, each with probability p/3, and each two-qubit unitary by one of the 15 non-identity two-qubit Paulis with probability p/15. State preparations and measurements fail with probability p, modeled respectively by orthogonal state preparation or measurement outcome flipping. We refer to each such error mode as an error, which corresponds to a column in H and A, with its probability encoded in the associated entry of the vector p.
+
+3 Relay-BP
+For completeness, we present a compact description of the Relay-BP algorithm as introduced in [Mu¨l+25]. Relay-BP relies upon a subroutine called DMem-BP that incorporates disordered memory strength distributions into a standard belief propagation (BP) algorithm. Relay-BP builds upon DMem-BP by applying a relay ensembling technique and extending the framework to allow negative memory strengths, resulting in improved decoding performance.
+
+DMem-BP The DMem-BP algorithm operates by iteratively passing real-valued messages along the edges of a decoding graph G. Messages exchanged between check node i and error node j are denoted µi→j and νj→i, respectively. Each message conveys a local log-likelihood belief about the presence of an error at its node: negative values indicate a higher likelihood of error, while positive values suggest no error.
+The algorithm is defined by its message update rules, initialization procedure, and stopping conditions, which together govern the evolution of beliefs across the graph during decoding.
+Messages: The check-to-error messages at iteration t are:
+
+µi→j (t) = κi,j (t) (−1)σi min |νj′→i(t − 1)| ,
+
+(1)
+
+j′∈N (i)\{j}
+
+where κi,j(t) = sgn
+
+νj′→i(t − 1) .
+
+j′∈N (i)\{j}
+
+The error-to-check messages are then computed via:
+
+νj→i(t) = Λj(t) +
+
+µi′→j (t).
+
+(2)
+
+i′∈N (j)\{i}
+
+3
+
+Initialization and stopping: We initialize by setting the initial beliefs and biases as the log-likelihoods of
+
+the
+
+error
+
+priors
+
+Λj (0)
+
+=
+
+νj→i(0)
+
+=
+
+log
+
+1−pj pj
+
+and set the initial marginals from user input Mj(0) = Mj.
+
+After
+
+each iteration of message passing, we compute the new marginal Mj(t) and the hard decision eˆj(t) for each
+
+error node j:
+
+Mj(t) = Λj(t) +
+
+µi′→j (t),
+
+(3)
+
+i′∈N (j)
+
+eˆj (t)
+
+=
+
+HD Mj(t) ,
+
+for
+
+HD(x)
+
+=
+
+1 2
+
+1 − sgn(x)
+
+.
+
+If the obtained error estimate eˆj(t) satisfies the parity-check equation Heˆ(t) = σ, the algorithm is considered to have converged and the error vector eˆj(t) is returned. Otherwise we move on to the next iteration until a maximum number of iterations t = T has been reached, in which case DMem-BP is deemed unsuccessful.
+Bias term: In DMem-BP the biases are updated via the equation
+
+Λj(t) = (1 − γj)Λj(0) + γjMj(t − 1).
+
+(4)
+
+We use Γ = {γj}j∈[N] to denote real-numbers specifying the memory strength for each error node j. DMemBP therefore consists of a flexible family of decoders parameterized by the choice of memory strengths Γ. The special case of all γj = 0 reduces to the standard BP algorithm.
+
+Relay-BP-S We combine DMem-BP instances sequentially into a relay ensemble known as Relay-BP. Each DMem-BP instance is be called a leg of the relay. To describe the relay ensemble properly we require some initial setup. For a given decoding problem (H, A, p) the Relay-BP-S algorithm is fully specified by the:
+
+• number of solutions sought S, • maximum number of relay legs R, • maximum number of iterations for each leg Tr, • memory strengths for each leg Γr = {γj(r)}j∈[N],
+
+for r ∈ {1, ...R}. The first leg of Relay-BP-S applies DMem-BP initialized with marginals and memory
+
+strengths
+
+Mj (0)
+
+=
+
+log
+
+1−pj pj
+
+and Γ0 = {γj (0)}j∈[N].
+
+The rth
+
+leg’s marginals are initialized with the (r − 1)th
+
+leg’s final marginals, thereby passing information forward through the relay. Each leg stops upon finding a
+
+solution or reaching the iteration limit Tr. The algorithm stops when R legs have executed or S solutions
+
+have been found, and returns the lowest-weight solution found among all legs, where solution ˆe has weight
+
+w(ˆe) =
+
+j
+
+eˆj
+
+log
+
+1−pj pj
+
+.
+
+Pseudocode for Relay-BP is shown in Listing 1 in the appendix, and a reference
+
+software implementation is available 1.
+
+4 Realization of Relay-BP Hardware Decoder
+4.1 Decoder Architecture
+An overview of the decoder architecture is shown in Fig. 2. At the top level, the decoder receives syndrome data and outputs an update to the logical Pauli frame. The input path includes a mapping stage to match the index order of the the input data stream to the decoder configuration. A detector window processing component calculates parities of groups of measurements [Gid21], which is a pre-processing step that allows the decoding problem to be independent of a gauge degree of freedom. The architecture supports windowed decoding [Iye+12; Sko+22] by identifying the commit region in a decoding window and processing of subsequent windows incorporating non-committed detectors from prior windows. The selected detector window is passed into the core Relay decoder component.
+More specifically, we implement a (W,C)-sliding window decoder, where the window size W is statically fixed to the (bare) code distance d (i.e. W = 10 for the Loon code and W = 12 for the gross code), while
+1https://github.com/trmue/relay
+
+4
+
+Decoder FPGA
+
+Decoder Register Interface
+Syndrome Data
+Logical Pauli Frame
+Update
+
+Registers & trace-recorder
+
+High speed serial links
+
+Syndrome Mapping
+
+X-Decoder/Z-Decoder
+
+Windowing decoder
+
+Decoder Controller
+
+Detector Window Processing
+Committed detectors
+
+Relay decoder
+
+������
+Check
+
+Node
+
+������
+
+Units
+
+Controller
+
+Variable Node Units
+ê
+Convergence Checker
+
+Commit Region Identification Logical Pauli frame calculation
+
+estimate
+
+Figure 2: Overview of the Relay-BP FPGA decoder architecture. An external nest handles configuration control and includes adapters to conform the I/O data streams to the requirements of the decoder. The windowing decoder creates a window of detectors from the input data stream of syndromes and converts the output error vector ˆe into an update to the logical Pauli frame via the logical action matrix A. The central Relay decoder handles execution of the Relay-BP algorithm via a collection of specialized compute nodes the correspond 1:1 with the decoding graph G. The connectivity of G is translated into FPGA wiring defining the mapping of messages between the compute nodes.
+the commit width C remains configurable at runtime. For each decoding configuration — X, Z, or XYZ — the window processing is realized with a handshaking pipeline that supports back-pressure. See Algorithm 2 in the appendix for further details.
+Given that Relay-BP is a message passing algorithm, the central concern governing the implementation is how to arrange for multiple compute resources to access the message data with minimal contention. Building upon the strategy described by Valls et al. [Val+21], we assign a unique computational resource to every variable node and check node within the decoding graph, and use FPGA wiring to fix the interconnect between these compute units. This trivially solves the contention issue by placing message data in the wiring fabric rather than a centralized memory. Our design has Variable Node Units (VNUs) and Check Node Units (CNUs) that compute their corresponding outputs in a single FPGA clock cycle, so that two clock cycles are sufficient for a complete BP iteration in a flooding message schedule. A controller initializes these units with appropriate priors and is signaled by a convergence checker when each DMem-BP leg in the Relay-BP ensemble has found a solution. For what follows we will drop the variable t to make things simpler.
+Check Node Figure 3a illustrates the block design of the Check Node Unit (CNU). Each CNU processes a single row i of the decoding matrix, denoted rowi(H). It takes two inputs:
+• A vector of incoming messages (νj→i)j∈N (i) from neighboring variable nodes, labeled collectively as νN (i)→i.
+• The value of the local parity check (or detector), σi.
+From these inputs, the CNU computes a vector of outgoing messages µi→N (i), defined here as the tuple (κi,j(−1)σi , cj, min1, min2)j∈N (i), which forms a subset of the full message set µi→∗. The CNU operates on
+5
+
+Figure 3: a) Schematic of the check node unit (CNU). We note that the exclusive minimum is not fully calculated in the CNU. Instead only the minimum and second minimum are calculated in the CNU with the exclusive minimum being calculated in the VNU at a later time. b) Schematic of the variable node unit (VNU). c) Schematic of the Relay adder that is used in the VNUs.
+a message representation that separates sign and magnitude components, i.e., ν = (νs, νv). Importantly, the exclusive minimum and exclusive product required by equation (1) are not computed
+individually for each i,j pair. Instead, the non-exclusive minimum and product are computed once per fixed i, as they remain constant across the neighborhood. The exclusive product is then derived from these constants. For efficiency, the exclusive minimum is only partially computed within the CNU and is passed to the Variable Node Unit (VNU) for final resolution. This optimization enables synthesis tools to further streamline the design.
+To support this deferred computation, a selector value cj is included in the output, allowing the receiving
+6
+
+VNU to determine which of the two smallest elements corresponds to the appropriate exclusive minimum for node j. The complete output message is thus a vector of tuples of the form µ = (µs, µc, µmin1 , µmin2 ).
+Additionally, the value path incorporates a min-sum belief propagation scaling factor α, empirically shown to improve convergence. We adopt α = 1 − 2−t, where t ∈ N is the current iteration index [EE14]. In practice, our hardware description language (HDL) implementation of the CNU also depends on rowi(H), and we rely on synthesis tools to convert multiplexers on input and output message vectors into optimized FPGA wiring.
+Variable Node Detail of the VNU design is shown in Fig. 3b and 3c. A VNU processes one column j of the decoding matrix that we denote rowj(H), implementing both Eqns. 2 and 3. It takes three inputs:
+• A vector of incoming messages (µi→j)i∈N (j) from neighboring variable nodes, labeled collectively as µN (j)→j ;
+• The error priors Λj(0); and
+• An initialization signal, init, used by the controller to mark the first Relay-BP iteration.
+The VNU then generates a hard error decision vector eˆj, and a vector of output messages νj→N (j) which is a subset of νj→∗. For standard BP, the VNU design of Fig. 3b is sufficient and follows directly from Ref. [Val+21]. To implement DMem-BP, we replace the adder tree of Fig. 3b with the design of Fig. 3c, which adds a local pseudo-random number generator (RNG) to randomize the memory strength of each node as well as a bias term that is updated on each BP iteration. As with the CNU, we rely upon the synthesis tool to convert the muxes on the input and output vectors into wiring.
+As with the CNU, the VNU and the adder detailed in Figure 3c do not calculate the Relay-BP messages exactly as defined in equations (1) and (2). This is due to various implementation optimizations. As such the margins Mj in Figure 3c are actually the result of the full marginals after passing through a Saturation/clipping process (SAT). Here σsum is the closest representation of the full marginals.
+The execution of the Relay-BP algorithm emerges by the way in which the controller configures the VNU, passing priors from one leg to the next, and configuration of the RNG to scramble the memory strengths for each leg.
+4.2 Reduced-Precision
+Standard Belief Propagation is defined as real-valued in the log-likelihood domain. Typical implementations on standard computing architectures implement BP using IEEE floating-point values. Our empirical studies show that 16-, 32-, and 64-bit floating point representations achieve nearly identical logical error rates and BP iteration counts when applied to qLDPC decoding. We may further reduce gateware area using fixedpoint values, where fpM.N would indicate M bits being employed to represent the integer part of the values and N bits being employed to represent the fractional part of value. However, without loss of generality, one may recast BP to use purely integer values by incorporating scale factors.
+We define intN.S.M to indicate N ∈ N bits employed to represent the integer value with a scale factor S ∈ R+ to translate log-probability domain real values into the integer domain, and a scale factor M ∈ R+ related to the memory strength multiplication.
+Applying a scale factor S is a convenient choice as BP is isomorphic to this. Specifically, the following BP variables scale under S: priors Λj(0), messages µi→j and νj→i, and posteriors Mj. Memory strengths γ ∈ R for DMem-BP or Relay may be treated in a similar fashion, where their multiplication with any given rescaled log-probability domain value µint is translated as follows:
+µint · γ → ⌊µintγint/M ⌉, γint := ⌊γ · M ⌉
+where we employ standard rounding of fractional values to integers to minimize quantization errors.
+7
+
+4.2.1 Practical Considerations Our hardware implementation employs an explicit sign bit for messages µi→j and νj→i, while we use twos’ complement values for posterior values Mj, and unsigned values for priors Λj(0).
+We make the gateware-area efficient choice to restrict the memory-strength scaling factor M to powers of 2, i.e. M = 2m for some m ∈ N, such that the division-and-round by M may be implemented via a simple unsigned2 bitwise shift-right. This is equivalent to defining the number of fractional bits (as in fp0.m) to be accounted for during multiplication. Since practical values for the memory strengths range γ ∈ [−1, 1] we instead employ β = (1 − γ) ∈ [0, 2] to render β positive and instead employ:
+µint · γ → ⌊µint(M − βint)/M ⌉, βint := ⌊β · M ⌉ For example, given a Relay decoding memory strength interval of γ ∈ [−0.24, 0.66] and a memory-strength scaling factor M = 8 we work with β ∈ [0.34, 1.24] or βint ∈ [3, 10]. We further reduce the logic requirements by simplifying the multiplication: Instead of implementing a full multiplier for µintβint, we expand each bit of the bitwise representation of µint to βint, shift right by m places, then null all effective factional bits before summing resulting values for the total result. See Table 2 in the appendix for a practical example. We compare the impact of the taken approximations on BP computation for standard BP, DMem-BP and Relay-BP-S in Figure 4: For the depicted integer precision int4.2.8 the qualitative decoding runtime characteristics remain unaffected.
+Figure 4: Contour plots along the range of maximum-iteration counts for BP and DMem-BP or maximumleg counts R for Relay of logical error rate vs average BP iteration count for decoding Z syndromes of a 12 syndrome cycle and a final noiseless cycle of the gross code. We show results from standard BP as well as DMem-BP (γ0 = 0.1) and Relay-S (γ0 = 0.1, γ ∈ [−0.24, 0.66], βint ∈ [3, 10], T0 = Tr = 60), for a software implementation of Belief Propagation in float-64, as well as software emulation of the FPGA logic at int4.2.8 precision. For Relay-BP, we observe an improvement in the average number of iterations to converge for the integer implementation at a small cost to logical error rate.
+8
+
+Decoder Precision Window width Decoder Cycle Time FPGA Cycle Time Flip-Flops LUTs LUTRAM BRAM Total Power PIN Counts
+
+[[144,12,12]]-X 4-bit integer + sign 12 12 ns 4 ns 540,767 (6.62 %) 2,106,738 (51.56 %) 14,052 (1.47 %) 29.5 (1.37 %) 58.025 Watts 45 User Pins
+
+Figure 5: (Left) Floorplan of a 12-cycle gross code CSS decoder for X in an AMD XCVU19P FPGA. Colors reflects logic instantiated due to entries of the decoding matrix local to a unique syndrome cycle within the 12-cycle wide decoding matrix. (Right) Resource utilization table after synthesis and place and route. The decoder has it’s own independent clock domain, so we report it’s cycle times separately.
+
+5 Resource utilization
+
+The implementation strategy of this decoder is resource intensive, requiring large FPGAs to fit the design within a single FPGA. For the size of decoding matrix encountered in a gross code memory experiment, we used AMD’s XCVU19P FPGA, which is the second largest FPGA in AMD’s product catalog in terms of available resources such as block RAM and look-up tables (LUTs). A summary of the resource utilization of a int4 precision gross code decoder is shown in Fig. 5. Notably, the design uses over half of the available LUTs. Since the message data is stored in wiring rather than centralized memories, very little block RAM is used. Strategies to improve the resource footprint of the decoder will be discussed in a future revision of the manuscript.
+Despite the large resource utilization, we achieve timing closure of the design even when operating the decoder at a 12ns clock period, which allows an entire Relay-BP iteration to execute in 24ns. We observe similar timing performance over a range of message precisions.
+Table 1 shows a breakdown of the LUT and flip-flop usage. It becomes obvious that 97% of the LUTs are consumed in the BP decoder, where the VNUs and CNUs dominate with 67% and 23%, respectively.
+
+Component VNUs CNUs FSM BP decoder other windowing decoder HSS links other
+
+LUTs 67.2% 22.6% 0.1% 7.1% 1.0% 1.3% 0.8%
+
+Flip-Flops 36.2% 13.1% 0.4% 41.3% 2.3% 2.9% 3.7%
+
+Table 1: LUTs and flip-flops breadkown by component
+
+9
+
+Experiment Controller
+Verification program
+Expected results from software simulation
+Forwarding network
+
+X-Decoder/Z-Decoder
+
+MMIO
+Logical Pauli Frame Update
+Logical Observable
+Syndrome data
+
+decoder FPGA
+
+High speed serial links
+
+Registers & trace-
+recorder
+Syndrome mapping
+
+Windowing decoder
+Relay-BP decoder
+
+control
+
+Readouts channels
+
+Simulated
+
+Device
+
+...
+
+Syndromes
+
+Syndrome
+
+QPU
+
+Gross code
+
+Figure 6: Verification test hardness for the FPGA decoder. A real-time controller is connected to the decoder FPGA and to readout data streams from the quantum control system. Expected vs actual outputs are compared for a variety of synthetic syndrome data streams. The same harness can also forward actual measurement data if an appropriate quantum processor (QPU) is attached.
+6 Verification
+6.1 QEC hardware verification setup
+To validate the performance of the decoder and correct routing of the data, we prepare a test harness that mimics integration into a larger control system, but allows injecting synthetic syndrome data streams. This is done in addition to the analysis of the hardware simulation results, which already showed the feasibility of the implementation. The experimental setup comprises a real-time capable experiment controller which executes a verification program and feeds synthetic syndrome measurement data to the decoder FPGA via the high-speed serial links shown in Fig. 6. Our test harness may be configured to forward qubit measurement data to the decoder when integrated into IBM’s quantum control system.
+The approach to validate the Relay-BP and the surrounding sliding window decoder is to make sure that hardware results match exactly the software emulation model.
+6.2 Relay-BP decoder verification
+The Relay-BP decoder is embedded in the sliding window decoder shown in Fig. 2. For a window size of W, W syndrome cycles of data are provided to the decoder using the decoder register interface. After the decoding process finishes, we check convergence, number of BP iterations, and equivalence of the estimated error vector ˆe to that produced by software simulation. The correctness of this verification is the basis for the following sliding window decoder verification step.
+2Given the choice of employing an explicit sign bit for log-probability domain values.
+
+10
+
+6.3 Sliding window decoder verification
+The sliding window decoder is used to integrate the decoding into the system. Before using it, mappings of readout channels to syndrome and code-word bits are configured in the syndrome-mapping table. For the relay decoder the maximum number of iterations for the initial DMem-BP leg, the number of relay legs, and the maximum iterations for those legs are configured to match the software simulation settings. The readout channels are primed with the syndrome bits derived from a noise model simulation of the syndrome cycle circuit. Now the experiment controller can start the verification. The readout channels will produce syndrome readouts every 1 µs, which are routed via the high speed serial connection to the decoder FPGA. Once all syndrome bits are collected, the syndrome is put into a FIFO and once the syndrome FIFO contains enough syndromes to invoke the Relay-BP decoder (window cycle/commit cycle), the decode process is started. When the process completes, results are stored within the sliding window decoder. This is iterated when new syndromes arrive at the decoder.
+As soon as the experiment controller instructs the readout channels to generate the codeword, it is routed in the same fashion to the sliding window decoder which is calculating the logical qubit vector. This is sent back to the logical qubit storage where it can be used by the verification program to match it against the expected results from the software simulation. The process checks if the window decoding finished with valid results, the number of window decoder invocations, the correctness of the Pauli frame, the total number of BP decoder iterations, and how many sliding window decoder invocations converged.
+To get precise timing information for the individual steps the decoder FPGA provides hardware trace information which allows observation of when the decoders start and stop, when the syndromes and codewords arrived, and when the results like the logical Pauli frame are produced.
+7 Results
+
+(a) Logical error rate for various physical error rates in (b) Logical error rate for various physical error rates in
+
+the context of global decoding over 10+1 cycles for the the context of global decoding over 12+1 cycles for the
+
+Loon memory experiment.
+
+gross code memory experiment.
+
+Figure 7: Decoding performance of the integer-based Relay-N FPGA implementation for the Loon and Kookaburra memory experiments. For both the smaller code on Loon, and the gross code on Kookaburra, int4 precision is sufficient to match the accuracy of floating point in the case of split XZ decoding. Correlated XYZ decoding requires int6 precision to observe equivalent accuracy to floating point. Parameters employed: DMem-BP γ0 = 0.125, T = 12800; Relay-S γ0 = 0.125, γ ∈ [−0.24, 0.66], βint ∈ [3, 10], T0 = 80, Tr = 60, R = 600.
+
+Summary results of the accuracy of the FPGA decoder applied to both [[56, 2, 10]] and [[144, 12, 12]] memory experiments are shown in Fig. 7. The reduced precision design achieves parity in logical error rate
+
+11
+
+with a floating-point software implementation for a suitable choice of integer format. Data in decoding performance plots has been generated using existing software implementations of standard Belief Propagation, DMem-BP and Relay-BP 3, as well as a custom software implementation of the same with the specific integer arithmetic and windowing method employed with the FPGA, also acting as the reference implementation for cross-validation of the FPGA implementation.
+This design achieves high throughput and constant per-iteration latency, making it suitable for real-time quantum error correction. In particular, timing data from a split X/Z Relay-BP decoder of the gross code memory experiment completes a BP iteration in 24ns. Additional data (appendix Fig. 8) explore contours of BP iterations required for various logical error rates. At the lowest examined physical error rate of p = 10−3, we observe that the average number of iterations required for BP to converge is roughly 20. This implies that a full 12-cycle window may be decoded in 480ns, giving an average per cycle decoding time of 40ns.
+To validate the Relay-BP decoder and its integration into a sliding-window architecture, we implemented a hardware verification setup that mimics a real control system while allowing injection of synthetic syndrome streams. The test harness includes a real-time experiment controller connected to the decoder FPGA via high-speed serial links, with readout channels configured to emit precomputed syndromes from software simulations. Verification ensures hardware results match software outputs for convergence, iteration counts, and error estimates. The sliding-window decoder is tested under realistic timing constraints, using configurable mappings and iteration limits. Hardware trace data provides precise timing for decoding steps. This approach confirms correct data flow and decoding behavior, establishing readiness for integration with actual QPU hardware.
+8 Looking Forward
+We have presented the hardware realization of the Relay-BP decoder on an FPGA with high accuracy and state-of-the art per-cycle decoding times. At its core, the decoder algorithm is implemented through a fully parallelized message-passing scheme, assigning dedicated compute units to each variable and check node in the decoding graph. This eliminates memory contention by embedding message exchange in FPGA wiring. Each Variable Node Unit (VNU) and Check Node Unit (CNU) completes its computation in one clock cycle, enabling a full BP iteration in two cycles under a flooding schedule.
+To further reduce resource usage, we replace floating-point arithmetic with scaled integer representations for BP messages and priors. This approach preserves decoding accuracy while significantly reducing gateware area. Experiments confirm that low-bit integer formats (4–6 bits) achieve logical error rates comparable to floating-point BP, enabling efficient and scalable hardware implementations.
+Next steps include testing the decoder with real syndrome data, which will stress the Relay-BP algorithm’s performance under a different noise model. We also need to extend this work toward decoding logical operations and not just logical memory. Doing so will require solving additional challenges in scaling logic design and will build upon lessons learned from this prototype decoder.
+Author Contributions: Markus wrote the BP-Decoder gateware; Michael did the Nest/System integration; Thilo wrote the Windowing Decoder, the reference software model, and did the performance plots; Michael/Frank did the validation on hardware; Drew and Blake provided project and strategic direction. All authors contributed to the writing of the paper.
+Acknowledgments: The authors would like to thank Lev Bishop, Thomas Alexander, Andrew Cross, Ted Yoder, Scott Willenborg, Scott Lekuch and team, Kevin Krsulich, and Matthew Walther.
+References
+[Bar+25] Ben Barber et al. “A real-time, scalable, fast and resource-efficient decoder for a quantum computer”. In: Nature Electronics 8.1 (2025), pp. 84–91. doi: 10.1038/s41928-024-01319-5. url: https://doi.org/10.1038/s41928-024-01319-5.
+3https://github.com/trmue/relay
+12
+
+[Bau+24] [BGV]
+[Bra+23] [Cau+24] [Das+22] [EE14] [Gid21] [Hol+20] [IBM25] [Iye+12] [KAK25] [Lia+23] [Liy+24] [Maa+25] [Mu¨l+25] [OHB25] [Sko+22] [Ter15]
+
+Johannes Bausch et al. “Learning high-accuracy error decoding for quantum processors”. In: Nature 635.8040 (2024), pp. 834–840. issn: 0028-0836. doi: 10.1038/s41586- 024- 08148- 8. eprint: 2310.05900.
+Daniel Bascones, Francisco Garcia-Herrero, and Javier Valls. Exploring the FPGA and ASIC design space of belief propagation and ordered statistics decoders for Quantum Error Correction Codes. doi: https : / / doi . org / 10 . 21203 / rs . 3 . rs - 6420548 / v1. url: https : / / www . researchsquare.com/article/rs-6420548/v1.
+Sergey Bravyi et al. “High-threshold and low-overhead fault-tolerant quantum memory”. In: arXiv (2023). doi: 10.48550/arxiv.2308.07915. eprint: 2308.07915.
+Laura Caune et al. Demonstrating real-time and low-latency quantum error correction with superconducting qubits. 2024. arXiv: 2410.05202 [quant-ph]. url: https://arxiv.org/abs/ 2410.05202.
+Poulami Das et al. “AFS: Accurate, Fast, and Scalable Error-Decoding for Fault-Tolerant Quantum Computers”. In: 2022 IEEE International Symposium on High-Performance Computer Architecture (HPCA). 2022, pp. 259–273. doi: 10.1109/HPCA53966.2022.00027.
+Ahmed A. Emran and Maha Elsabrouty. “Simplified variable-scaled min sum LDPC decoder for irregular LDPC codes”. In: 2014 IEEE 11th Consumer Communications and Networking Conference (CCNC). 2014, pp. 518–523. doi: 10.1109/CCNC.2014.6940497.
+Craig Gidney. “Stim: a fast stabilizer circuit simulator”. In: Quantum 5 (2021), p. 497. doi: 10.22331/q-2021-07-06-497. eprint: 2103.02202.
+Adam Holmes et al. “NISQ+: Boosting quantum computing power by approximating quantum error correction”. In: 2020 ACM/IEEE 47th Annual International Symposium on Computer Architecture (ISCA). 2020, pp. 556–569. doi: 10.1109/ISCA45697.2020.00053.
+IBM. IBM Quantum Roadmap. 2025. url: http://www.ibm.com/downloads/documents/usen/131cf87ab63319bf (visited on 10/24/2025).
+Aravind R. Iyengar et al. “Windowed Decoding of Protograph-Based LDPC Convolutional Codes Over Erasure Channels”. In: IEEE Transactions on Information Theory 58.4 (2012), pp. 2303– 2320. issn: 0018-9448. doi: 10.1109/tit.2011.2177439. eprint: 1010.4548.
+Junichiro Kadomoto, Ren Aoyama, and Kazutoshi Kobayashi. “A 22-nm Surface Code Decoder Using Greedy Algorithm”. In: 2025 IEEE International Symposium on Circuits and Systems (ISCAS). 2025, pp. 1–5. doi: 10.1109/ISCAS56072.2025.11044096.
+Wang Liao et al. “WIT-Greedy: Hardware System Design of Weighted ITerative Greedy Decoder for Surface Code”. In: 2023 28th Asia and South Pacific Design Automation Conference (ASPDAC). 2023, pp. 209–215. url: https://ieeexplore.ieee.org/document/10044818.
+Namitha Liyanage et al. “FPGA-Based Distributed Union-Find Decoder for Surface Codes”. In: IEEE Transactions on Quantum Engineering 5 (2024), pp. 1–18. issn: 2689-1808. doi: 10.1109/ tqe.2024.3467271. url: http://dx.doi.org/10.1109/TQE.2024.3467271.
+Arshpreet Singh Maan et al. “Decoding Correlated Errors in Quantum LDPC Codes”. In: arXiv (2025). eprint: 2510.14060.
+Tristan Mu¨ller et al. Improved belief propagation is sufficient for real-time decoding of quantum memory. 2025. arXiv: 2506.01779 [quant-ph]. url: https://arxiv.org/abs/2506.01779.
+Kai R. Ott, Bence Het´enyi, and Michael E. Beverland. Decision-tree decoders for general quantum LDPC codes. 2025. arXiv: 2502.16408.
+Luka Skoric et al. “Parallel window decoding enables scalable fault tolerant quantum computation”. In: arXiv (2022). doi: 10.48550/arxiv.2209.08552. eprint: 2209.08552.
+Barbara M. Terhal. “Quantum error correction for quantum memories”. In: Rev. Mod. Phys. 87 (2 Apr. 2015), pp. 307–346. doi: 10.1103/RevModPhys.87.307. url: https://link.aps.org/ doi/10.1103/RevModPhys.87.307.
+
+13
+
+[Val+21] [WLZ25]
+[Yod+25] [Zia+24]
+
+Javier Valls et al. “Syndrome-Based Min-Sum vs OSD-0 Decoders: FPGA Implementation and Analysis for Quantum LDPC Codes”. In: IEEE Access 9 (2021), pp. 138734–138743. doi: 10. 1109/ACCESS.2021.3118544.
+Yue Wu, Namitha Liyanage, and Lin Zhong. “Micro Blossom: Accelerated Minimum-Weight Perfect Matching Decoding for Quantum Error Correction”. In: Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 2. ASPLOS ’25. ACM, Mar. 2025, pp. 639–654. doi: 10 . 1145 / 3676641 . 3716005. url: http://dx.doi.org/10.1145/3676641.3716005.
+Theodore J Yoder et al. “Tour de gross: A modular quantum computer based on bivariate bicycle codes”. In: arXiv (2025). doi: 10.48550/arxiv.2506.03094. eprint: 2506.03094.
+Abbas B. Ziad et al. Local Clustering Decoder: a fast and adaptive hardware decoder for the surface code. 2024. arXiv: 2411.10343 [quant-ph]. url: https://arxiv.org/abs/2411.10343.
+
+Appendix
+
+A Relay-BP Algorithm
+
+Algorithm 1: Relay-BP-S decoder for quantum LDPC codes
+
+Input : Parity-check matrix H, syndrome σ, error probabilities p, number of solutions to be found
+
+S, maximum number of legs of the relay R, maximum number of iterations per leg Tr, and
+
+memory strengths for each leg {γ(r)}r∈[R].
+
+Output: Solution found, Estimated error ˆe
+
+1
+
+λj ,
+
+Mj
+
+(0)
+
+←
+
+log
+
+1−pj pj
+
+,
+
+r ← 0, s ← 0, eˆ ← ∅, ωeˆ
+
+← ∞, Λj(0) ← λj;
+
+2 for r ≤ R do
+
+// Run DMem-BP
+
+3 νj→i(0) ← λj ;
+
+4 for t ≤ Tr do
+
+5
+
+Λj(t) ← (1 − γj(r))Λj(0) + γj(r)Mj(t − 1);
+
+6
+
+Compute µi→j (t)
+
+// via Eq. (1);
+
+7
+
+Compute νj→i (t)
+
+// via Eq. (2);
+
+8
+
+Compute Mj (t)
+
+// via Eq. (3);
+
+9
+
+eˆj(t) ← HD Mj(t) ;
+
+10
+
+if Hˆe(t) = σ then
+
+// BP converged;
+
+11
+
+ωr ← w(ˆe) = j eˆjλj;
+
+12
+
+s ← s + 1;
+
+13
+
+if ωr < ωeˆ then
+
+14
+
+eˆ ← eˆ(t);
+
+15
+
+ωeˆ ← ωr;
+
+16
+
+break;
+
+// Continue to next leg
+
+17
+
+t ← t + 1;
+
+18 if s = S then
+
+19
+
+break;
+
+// Found enough solutions
+
+// Reuse final marginals for the next leg 20 Mj(0) ← Mj (t); 21 r ← r + 1;
+
+22 return (s > 0), ˆe;
+
+14
+
+B Further results of decoding performance and runtimes
+
+(a) Global decoding over 10+1 cycles for the Loon memory experiment. At a gateware iteration time of 20 ns, a (10,6)-window decoding system permits up to approximately 270 BP iterations per decoding window to sustain real-time decoding.
+
+(b) Global decoding over 12+1 cycles for the Kookaburra memory experiment. At a gateware iteration time of 24 ns, a (12,8)-window decoding system permits up to approximately 333 BP iterations per decoding window to sustain real-time decoding.
+
+Figure 8: Decoding performance of the integer-based Relay-N FPGA implementation for the Loon and Kookaburra memory experiments. Contour plots along the range of physical error rates [0.001, 0.01] of the average iteration count vs. achieved logical error rates in the context of global decoding. The given real-time budgets assume a (W,C)-sliding window decoder operating over a sequence of IDLE operations spaced at 1 µs intervals. Parameters employed: DMem-BP γ0 = 0.125, T = 12800; Relay-S γ0 = 0.125, γ ∈ [−0.24, 0.66], βint ∈ [3, 10], T0 = 80, Tr = 60, R = 600.
+
+C Reduced logic implementation of the memory strength multiplication
+
+Term 15 × 7 8×7 4×7 2×7 1×7
+
+Exact 105 56 28 14 7
+
+Binary (divided by 2m) 0b1101.001 0b0111.000 0b0011.100 0b0001.110 0b0000.111
+
+Binary (decimals nulled) 0b1011.000 0b0111.000 0b0011.000 0b0001.000 0b0000.000
+
+Approximation 88 56 24 8 0
+
+Table 2: Reduced-logic implementation of memory strength multiplication: floor each term of multiplication
+by ignoring decimals before summation. In this example we multiply a (scaled) log-probability domain integer value of 15 by a scaled memory strength integer value of 7 at multiplication scale factor of M = 23 = 8.
+
+D Sliding-window decoding algorithm
+
+15
+
+Algorithm 2: Sliding-Window Decoding with Commit Region and Final Codeword
+
+Description: Enqueue incoming detectors d for a full decoding window, also accounting for the
+
+carried detector correction u. Decode the window, and update logical Pauli frame f
+
+and to be carried detector corrections before advancing to the next window.
+
+Input:
+
+Window width W (cycles), commit width C (cycles) with 1 ≤ C < W
+
+Detectors-per-cycle M , errors-per-window N˜ , data qubits nq
+
+Noiseless
+
+decoding
+
+matrix
+
+Hˆ
+
+∈
+
+M ×nq
+F2
+
+Logical
+
+readout
+
+matrix
+
+L
+
+∈
+
+K ×nq
+F2
+
+Windowed parity-check matrix H˜ ∈ F2W M×N˜
+
+Windowed
+
+logical
+
+action
+
+matrix
+
+A˜
+
+∈
+
+K×N˜
+F2
+
+Commit mask mcom ∈ F2N˜ ; Convergence mask mcvg ∈ FW 2 M
+
+Inner decoder Decode(H˜ , m, ·) returning errors ˆe ∈ F2N˜
+
+Output:
+
+Accumulated logical Pauli frame f ∈ FK2 ; Corrected observables ocorr ∈ FK2 Variables:
+
+Syndrome-cycle t, total cycles T
+
+Code-qubit
+
+codeword
+
+c
+
+∈
+
+nq
+F2
+
+;
+
+Check-qubit
+
+detectors
+
+d
+
+∈
+
+FM 2
+
+Logical Pauli frame f ∈ FK2 ; Current syndrome σ ∈ F2M
+
+Carried detector correction u ∈ FM 2
+
+Detector history D ∈ FT2 M (one block of M per cycle t < T )
+
+Window of detectors d˜ ∈ FW 2 M
+
+1 f ← 0K ; u ← s ← 0M ; t ← T ← 0 2 repeat
+
+3 if Incoming c then
+
+4
+
+σfinal ← Hˆ · c
+
+5
+
+d ← σ ⊕ σfinal
+
+// Final "noiseless" syndrome // syndrome differencing
+
+6 else if Incoming d then
+
+7
+
+d←d
+
+8 else if Incoming END then
+
+9
+
+d ← 0M
+
+10 σ ← σ ⊕ d
+
+11 D[T M : (T + 1)M ] ← d
+
+12 T ← T + 1
+
+13 if t + W < T then
+
+14
+
+repeat
+
+// update syndrome // Append new detectors
+// Accumulate full window
+
+15 d˜[0 : W M ] ← D[tM : (t + W )M ] 16 d˜[0 : M ] ← d˜[0 : M ] ⊕ u 17 ˆe ← Decode(H˜ , mcom, d˜) 18 ˆecom ← ˆe ⊙ mcvg 19 ∆f ← A˜ · ecom 20 ∆d ← H˜ · ecom 21 u ← ∆d[CM : (C + 1)M ] 22 f ← f ⊕ ∆f 23 t ← t + C
+24 until t >= T 25 ocorr ← (L · c) ⊕ f 26 return (f , ocorr).
+
+// Extract current window of detectors // Apply carry-in to the first cycle of the window
+// Inner window decoding // Reduce to commit-errors via mask
+// Effects of committed errors
+// Prepare carry for next window // Accumulate and slide by the commit stride
+// Final corrected observables
+
+16
+
+

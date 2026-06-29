@@ -1,0 +1,378 @@
+Complexity analysis of interior point methods for LP decoding
+Yifan Sun, Lara Dolecek Department of Electrical Engineering University of California Los Angeles (UCLA), CA, USA Email: ysun01@ucla.edu, dolecek@ee.ucla.edu
+
+Abstract—Linear programming (LP) decoders can outperform currently used message-passing decoders in channel coding applications, but require prohibitively large complexity on even moderately sized codes. Previous works have proposed complexity-reducing algorithms that either relax the problem or modify the number of constraints; however, little work is done in optimizing solver implementation. We show that popular LP solvers like LIPSOL may not be efficient for LP decoding (LPD), and that an equivalent dual LP problem can be solved with equal accuracy but much more quickly. We propose an improved primaldual method (iPD-MPC) whose overall runtime for both problem formulations outpreform LIPSOL. Additionally, as an alternative for memory-limited systems, we propose an improved hybrid gradient descent and Newton’s method (iGD-NM) that further decreases overall runtime. In this way, we make LPD more feasible for channel codes of practical lengths.
+Review Topic: Communication Systems I. INTRODUCTION
+A fundamental problem in coding theory is find-
+ing low-complexity decoders guaranteed to output the
+most likely transmitted codeword. This problem is be-
+coming increasingly challenging as modern codes have
+extremely large codeword lengths in order to achieve Shannon’s capacity. In [1], Feldman et al. proposed a
+relaxed linear program (LP) formulation of finding the
+maximum likelihood (ML) codeword. Unlike messagepassing decoders, LP decoding (LPD) has a maximum likelihood (ML) certificate, in that it is apparent when the
+decoded codeword is not ML, suggesting a performance
+advantage. It was then shown that LPD can be further
+improved by adding additional constraints, a technique
+that may not guarantee the improvement for message-
+passing decoders [2], [3]. Compared to the message-passing decoders, LPD is
+prohibitively complex: the number of constraints is poly-
+nomial in codeword length, and exponential in check
+node degree. (This constraint is in particular problematic
+for high-rate codes.) Not only does such high complex-
+ity prohibit the usage of long-length capacity-achieving
+codes, but it also makes it difficult to analyze decoder
+performance in the high-reliability regime, something
+that is essential in understanding the performance of
+low-density parity check (LDPC) codes. Several works
+
+have investigated techniques for reducing the complexity of LP decoding. For example, [4] and [5] have both proposed methods that introduce new variable nodes in order to limit the check degree to a manageable number. Similarily, [6] proposed an adaptive method that uses only check constraints that are violated, further reducing complexity. Additionally, [7] and [8] propose an iterative Gauss-Seidel approach to solve a softened dual LP, thus achieving complexity linear in code length.
+While these methods concentrate on relaxing the LP problem, our work focuses on optimizing the LP solver implementation. Though popular linear programming interior point solvers like LIPSOL, which use the primaldual method with a Mehrotra predictor/corrector step (PD-MPC), have been optimized for general LP problems, they are not always the best solution for an LP decoding problem. In particular, solver complexity is traditionally evaluated by the approximate number of iterations required for convergence, with less emphasis on the cost per iteration.
+We therefore present two methods, the improved primal-dual with Mehrotra’s predictor-corrector step (iPD-MPC) and the improved Newton’s method with gradient descent (iNM-GD), that minimizes runtime independently of problem formulation. (We use runtime as an easily measurable metric that indirectly indicates flop counts, memory usage, computational complexity, etc.) The iPD-MPC is fundamentally an improved LIPSOL implementation, making it easy to verify its equivalence with LIPSOL. On the other hand, iNMGD integrates several traditional approaches to reduce memory requirements. Overall, both iGD-NM and iPCMPC have computational complexity of O(n2), where n is the codeword length. This is a significant improvement over the default LIPSOL implementation, which uses O(m · 2dc−1), where m is the number of constraints and dc is the check degree, and matches the polynomial complexity of improved algorithms as in [3]. Yet, neither method requires modifying the problem formulation itself, suggesting that any such improvement can be integrated with the proposed solvers.
+In Section II, we present a matrix representation of
+
+978-1-4673-0323-1/11/$26.00 ©2011 IEEE
+
+659
+
+Asilomar 2011
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:12 UTC from IEEE Xplore. Restrictions apply.
+
+both the primal and dual LPD problem. Though both
+
+formulations decode equally well, the dual LPD problem
+
+runs much more efficiently under a typical LIPSOL
+
+solver. In Section III, we present low-complexity pre-
+
+computation steps that close this optimality gap. The
+
+resulting iPD-MPC methods are equally efficient under
+
+both formulations. Then in Section IV, we present the
+
+iNM-GD solver that runs on average as fast or faster than
+
+the primal-dual methods. This is in large part due to the
+
+primal-dual method’s significant memory requirements,
+
+and suggest that traditionally discarded interior point
+
+solvers should be revisited. II. PROBLEM FORMULATIONS
+Consider a binary linear block code C of length n
+
+and with m redundant bits. In the Tanner graph repre-
+
+sentation, this corresponds to n variable nodes and m
+
+check nodes. Let I and J be the set of variable nodes
+
+and check nodes, respectively, and use Nk to denote the neighborhood set of node k. For each j ∈ J , let Oj be the set of all odd-sized subsets of Nj. For regular codes, denote the variable node and check degree as dv and dc respectively, and therefore |Oj| = 2dc−1. In the remainder of the exposition, we consider a channel with
+
+additive noise and binary inputs.
+
+The primal LP decoding problem as presented in [1]
+
+can be stated as follows:
+
+min
+x∈C
+
+:
+
+fP
+
+γT x
+
+(1)
+
+subj. to: 0 ≤ x ≤ 1
+
+(2)
+
+BT x ≤ |L| − 1
+
+(3)
+
+where γ is the negative log-likelihood ratio of the
+
+received
+
+codeword: γi log
+
+Pr(yi|xi Pr(yi|xi
+
+= =
+
+0) 1)
+
+.
+
+Here, xi and yi are the ith values of x and y, which are the transmitted and received vectors, respectively, where
+
+x ∈ C. To aid in complexity analysis, we introduce the matrix B ∈ Rn×m|Oj| whose columns are the set of
+
+vectors βj,S[i] defin⎧ed ∀j ∈ J , S ∈ Oj: ⎪⎨1 if i ∈ S,
+
+βj,S[i] ⎩⎪−0 1elsife.i ∈ Nj \ S,
+
+In parallel, we define the vector L containing the lengths of S in the same order as the column order of βj,S in B. Because the columns of B grow exponentially with check node degree, B is usually short and wide, an important feature of LP decoding that we will exploit.
+Next, we present the dual LPD problem:
+
+min : fD
+λ,ν1 ,ν0
+
+λj,S(|S| − 1) + ν1T 1
+j,S
+
+(4)
+
+subj. to: λ, ν1, ν0 ≥ 0
+
+γ + λj,S βj,S + ν1 − ν0 = 0
+j,S
+
+where λ ∈ R|Oj|m is the dual variable of constraint (3)
+
+and ν0 ∈ Rn and ν1 ∈ Rn are the dual variables of
+
+the two inequality constraints in (2). The Karush-Kuhn-
+
+Tucker (KKT) conditions for complementary slackness
+
+dictate that (1 − xi)ν1[i] = xiν0[i] = 0, allowing the recovery of⎧xˆ:
+⎪⎨fractional if ν1[i] = ν0[i] = 0
+
+xˆ
+
+=
+
+⎪⎩10
+
+if ν1[i] else.
+
+>
+
+ν0[i]
+
+Fig. 1. Runtime of both problem formulations, using MATLAB’s linprog, its built-in LIPSOL solver. Abbreviations refer to code construction types: PG = Projective Geometry, AB = Array-based [10], T = Tanner’s construction [11], and MK = MacKay random code. After each code, the three numbers are (n,m,dc). In all cases, the dual formulation runs signifcantly faster than the primal.
+Though both formulations are equivalent, Figure 1 shows that in almost all cases, the overall runtime of the primal problem is orders of magnitude greater than that of the dual problem. However, the number of iterations and decoding performances are identical. This is partially because B is short and wide—the dual problem’s solver acts on B’s columns while the primal acts on its rows. This problem can easily be rectified by reconstructing LIPSOL’s precomputation steps to favor whichever LPD formulation is required.
+In the next few sections we will present improved LIPSOL-like implementations and compare them to LIPSOL’s performance. Since all in-house implementations are done in MATLAB, a MATLAB version of LIPSOL is also created for fair comparison. From this point on, all references to LIPSOL refers to the implementation in MATLAB’s language, and not MATLAB”s built-in method.
+III. PRIMAL-DUAL PRECOMPUTATION
+In this section, we present an improved LIPSOL implementation (iPD-MPC). In general, the primal-dual solver is the usually preferred interior point method because of good performance and fast convergence. The solver operates by calculating a Newton step at each iteration to close the gap from both primal and dual variables to their KKT solutions. Consider a generic primal problem for some vector of variables x
+min : cT x subj. to: Gx < f, Ax = b (5)
+x
+
+660
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:12 UTC from IEEE Xplore. Restrictions apply.
+
+where c is a constant coefficient vector, and G, f , A,
+
+and b specify inequality and equality constraints, respec-
+
+tively. Additionally, define ν and λ as the dual vari-
+
+ables corresponding to the primal equality and inequality
+
+constraints, respectively. Then the Karush-Kuhn-Tucker
+
+(KKT)
+
+solutions
+
+are
+
+[1⎡2]: c
+
++
+
+AT ν
+
++
+
+GT
+
+λ
+
+⎤
+
+F (x, λ, ν) = ⎣−diag(λ)(Gx − f )⎦ = 0.
+
+Ax − b
+
+and the negative gradient step towards closing the
+
+primal-dual gap is found by solving for Δx, Δλ, and
+
+Δν such that
+
+⎡⎤ Δx
+
+−∇x,λ,ν F (x, λ, ν) ⎣Δλ⎦ = F (x, λ, ν).
+
+(6)
+
+Δν
+
+⎡ Consider solving (6) for p⎤ro⎡blem ⎤(1): ⎡
+
+⎤
+
+0 I −I −B Δx
+
+ν0 − ν1 − Bλ − γ
+
+⎣⎢⎢
+
+V0 −V1
+
+X0 0 I−X
+
+0 0
+
+⎥⎥⎦ ⎢⎢⎣ΔΔνν01⎦⎥⎥ = − ⎢⎣⎢
+
+ν0 ∗ x ν1 ∗ (1 − x)
+
+⎦⎥⎥
+
+−ΛBT 0 0 A Δλ
+
+λ∗a
+
+where X, V0, V1, and Λ are diagonalized matrices of the vectors x, ν0, ν1, and λ respectively, a = L − 1 − BT x, and A = diag{a}. Although ∇x,λ,ν F (x, λ, ν) has (3n+ m·2dc−1)2 elements, only 6n+(2n+1)·2dc−1 elements are nonzero, and only mn · 2dc belong in submatrices that cannot be inverted trivially. Then Δx can first be
+recovered by solving the matrix equation using Cholesky
+factorization:
+(X−1V0 + (I − X)−1V1 + BA−1ΛBT )Δx = −γ (8)
+
+In general, ∇x,λ,ν F (x, λ, ν) is very sparse, with several diagonal subblocks. We therefore do not need to solve (6) directly. For example, LIPSOL solves (6) in several steps. First, the problem is revised so that the only
+
+and Δν0, Δν1, and Δλ by construction: Δν0 = −ν0 − X−1V0Δx, Δν1 = −ν1 + (1 − X)−1V1Δx, Δλ = −λ + A−1ΛBT Δx.
+
+inequality constraints involved are x ≥ 0 (i.e., G = I). The bottleneck step is solving the matrix equation (8),
+
+Then Δλ is recovered by solving
+
+in which the matrix is now only n × n and is symmetric.
+
+(AX−1V AT )Δλ =
+
+(7) Similarily, we can simplify the larger dual problem by
+
+b − Ax − AX−1V (AT λ + ν − c − X−1x ∗ ν) solving:
+
+and the remaining variables are constructed: Δx = X−1V (AT (λ + Δλ) − c)
+
+W0−1V0 + W1−1V1 + BWλ−1ΛBT Δzeq =
+
+(9)
+
+γ + ν0 − ν1 + W0−1V0zeq + W1−1(Zeq − I)ν1
+
+Δν = −X−1V Δx − ν.
+
++BWλ−1Λ(BT zeq − L − 1) − Bλ,
+
+Here, X, V , and Λ are diagonalized matrices of the vectors x, ν, and λ respectively, and ∗ indicates element-byelement vector multiplication (thereby yielding another vector). Without this preprocessing, a program with nv variables and nc constraints yields ∇F with (nc +2nv)2 elements and little exploitable structure. However, the matrix AX−1V AT has nc2 elements and is symmetric, and can be solved using Cholesky factorization. However, for the LPD primal problem, the number of constraints is nc = m|Oj|, which is usually much larger than the number of variables nv = n. In contrast, the dual problem has nc = n number of constraints and nv = m|Oj| + 2n variables, explaining why the LIPSOL runtime for the dual problem is much less than that of the primal problem. But, through the dual problem solution, it is only possible to infer whether or not a received bit is 0, 1, or fractional; in some cases, the actual fractional value may be desired, which requires using the primal formulation. In this case, we follow the example of the LIPSOL algorithm and attempt to reduce (6) to a system of equations where the matrix is small and symmetric, and whose number of rows increases linearly with the codeword length rather than with the number of constraints. Additionally, since the equality constraint matrix A is known and well structured in each case, it is possible to reduce the calculations further.
+
+where ω0, ω1, and ωλ and their diagonalized matrices W0, W1, and Wλ are the dual variables for ν0, ν1, and λ respectively, and zeq and its diagonalized matrix Zeq are the dual variables for the equality constraints. We can again recover the remaining variables:
+Δλ = λ−Wλ−1ΛΔωλ, Δωλ = BT (zeq −Δzeq)−ωλ −L−1, Δων1 = zeq − ω1 − 1 − Δzeq, Δων0 = −zeq − ω0 + Δzeq,
+Δν1 = ν1 − W1−1V1Δων1, Δν0 = ν0 − W0−1V0Δων0.
+This technique can be applied to each of the problem formulations, showing that in all cases, the complexity can be reduced to O(n2) rather than O(m · 2dc−1), as in LIPSOL. In actual implementation, an additional corrector step is used to correct for the quadratic complimentary slackness variables [9].
+Before discussing the results of this improvement, we introduce two concepts of codeword convergence, achieved when the quantized codeword satisfies all parity check constraints, and optimality convergence, achieved when the residual magnitude is below a certain tolerance. For traditional LP solvers like LIPSOL, termination depends on optimality convergence, for very low thresholds (e.g. ∼ 10−6). However, in most cases, codeword convergence is achieved much more quickly (with threshold values on the order of ∼ 10), and is adequate for LPD. Therefore, in all remaining simulations, terimination is
+
+661
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:12 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. Residual evolution of (i)PD-MPC scaled to accurately represent not just iterations, but time per iteration. The MATLAB implementation follows the algorithm described in [9]. The improved methods reduce the size of the matrix equation from O(m · 2dc−1) to O(n2). Stem plots are used to show when codeword convergence is acheived, which is generally before the residual levels are low enough to indicate optimality convergence.
+determined by codeword convergence, and not optimality convergence.
+Figure 2 shows the evolution of ||F ||22, where F is the constraint vector (6). This residual term takes approximately the same number of iterations for codeword convergence in both primal and dual formulations for both the LIPSOL and iPD-MPC, but when accounting for time per iteration, it converges much more slowly in the primal LIPSOL implementation than in the dual, similar the results displayed in Fig. 1. In contrast, both the primal and dual implementations of the iPD-MPC are nearly identical in time till codeword convergence, and converge more quickly than either MATLAB implementations. This observation shows that these simple matrix manipulations can allow for significant runtime decrease for little performance cost. However, further study shows that this is not the only way to decrease decoding runtime.
+IV. IMPROVED NEWTON’S METHOD/GRADIENT
+DESCENT
+A quick comparison between the runtime of the PDMPC and vanilla Newton’s method shows that on average, Newton’s method converges much more quickly than primal-dual. This is in contradiction with the literature, which suggests that on average, primal-dual converges in fewer steps than Newton’s method. However, as before, the time-per-iteration was not considered. Because MATLAB’s implementations often require significant memory, the memory-taxing primal-dual method rarely converges more quickly than a simple Newton’s method. This implies that even in a low-level or hardware implementation, the primal-dual method requires overall increased complexity over Newton’s method, if not in runtime then in memory requirements.
+As the codeword length and number of constraints grow large, the cost of computing the Hessian at each iteration is still prohibitive. Therefore, in addition to presenting the iPD-MPC, we also present an improved Gra-
+
+dient Descent/Newton’s Method (iGD-NM) algorithm,
+
+which exploits both the low complexity implementation
+
+of pure gradient descent and the more accurate step
+
+directions of Newton’s method, and is further augmented
+
+by a simple adaptive logarithmic barrier implementation
+
+for smoother convergence. First, the logarithmic barrier
+
+function is used to incorporate the inequality constraints
+
+of Problem PI into a new, unconstrained problem:
+
+minx : subj. to:
+
+fP g(x)
+
+⇒
+
+minx
+
+:
+
+fP LB
+
+fP
+
+−
+
+1 K
+
+log (g(x))
+
+(10)
+
+where K is some very large number. For reliable performance, we set K = 20 to 50. Then the following is performed at each iteration i:
+if i%R == 0 then Δx = −(∇2fP LB)−1∇fP LB
+else Δx = −∇fP LB
+end if i ← i + 1, x(i+1) ← x(i) + Δx if (∇f )2 < ρ then
+K ← αK end if if codeword converged then
+terminate end if Here, ρ is a defined threshold leavel (∼ 10−3), α is a growth factor on K (∼ 2), and R is the Newton period (∼ 5). This algorithm deviates from the traditional Newton’s method in two ways:
+1) Gradient descent tends to converge more quickly if K is small, but is more reliable if K is large. By starting with small K and guaranteeing large K upon convergence, we encourage fast initial convergence while ensuring correctness.
+2) Though gradient descent steps are easier to compute, Newton steps are more accurate and allow for faster convergence. By using a hybrid of the two, we reduce the total time until codeword convergence (about 50% decrease in runtime). In our simulations, we set R = 5, which we have found to be the most effective.
+This method is only applicable in the primal formulation since the Hessian of the dual quickly grows unmanageably large, and, unlike the constraint matrix in the primal dual formulation, is not sparse enough to be simplified using precomputation steps.
+V. PERFORMANCE Figure 4 evaluates the performance of the presented methods. All plots are generated over an AWGN channel, sweeping SNR across 10 points between 2 and 3 dB. Each decoding evolution is recorded in time and number of iterations, and each experiment is repeated until codeword convergence is achieved 10 times. The total of 100 datapoints are then averaged (Fig. 4). In general,
+
+662
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:12 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. Runtime (top) and number of iterations (bottom) until codeword convergence of several methods. Abbreviations refer to code construction types as before, and the three numbers are (n,m,dc). In general, the number of iterations for all methods excluding iGD-NM are approximately the same; in contrast, their runtimes differ significantly, with each proposed method surpassing LIPSOL. For the MacKay (816,408,6) code, the MATLAB-implemented LIPSOL ran out of memory.
+
+Fig. 3. Evolution of Newton’s method and the iGD-NM, using R = 5, ρ = 10−4,Kstart = 5, and α = 2. The x-axis is adjusted so that it reflects both the number of iterations (markers) and the time per iteration. Stem markers show when codeword convergence is achieved. The gradual increase of K causes a sawtooth-like evolution, as every time K is increased, the residual term suddenly becomes very large, and is slowly reduced again.
+we have shown that our proposed methods have faster overall runtimes than the preexisting methods. More importantly, we have shown that traditional methods, based on counting the number of iterations until convergence, may not be a good measure of algorithmic complexity, and that the complexity per iteration must also be considered. The result is that the otherwise O(m·2dc−1) problem is reduced to O(n2) merely by improving the solver. For problems like LPD, where the complexity grows very quickly, incorporating complexity-saving techniques wherever possible can allow for a wider range of numerical analysis. The results of this paper can be used to both design more efficient LP decoders for large codes and to analyze its behavior in extreme conditions (e.g. error floor analysis). Because the focus is on the primal-dual method implementation and not
+
+on modifying the LP problem itself, this optimization
+can easily be incorporated with other variational LPD
+methods.
+VI. ACKNOWLEDGEMENTS
+We would like to thank the AT&T Labs Fellowship
+Program and grant CCF-1029030 from NSF for their
+financial support.
+REFERENCES
+[1] J. Feldman et al., “Using Linear Programming to Decode Binary Linear Codes,” IEEE Trans. on Info. Theory, vol. 51, no. 3, March 2005, pp. 954-972.
+[2] C. Kelley and D. Sridhara, “On the Pseudocodeword Weight and Parity-Check Matrix Redundancy of Linear Codes,” in Proc. 2007 IEEE Info. Theory Workshop, Tahoe City, CA, Sept. 2007, pp. 1-6.
+[3] A. Dimakis et al., “Guessing Facets: Polytope Structure and Improved LP Decoder,” IEEE Trans. on Info. Theory, vol. 55, no. 8, Aug. 2009, pp. 3479-3487.
+[4] K. Yang et al., “Cascaded Formulation of the Fundamental Polytope of General Linear Block Codes,” Proc. IEEE Int’l Symp. on Inform. Theory, ISIT’07, Nice, France, June 2007, pp. 1361-1365.
+[5] M. Chertkov and M. Stepanov, “Pseudo-Codeword Landscape,” Proc. IEEE Int’l Symp. on Inform. Theory, ISIT’07, Nice, France, June 2007, pp. 1546-1550.
+[6] M. Taghavi and P. Siegel, “Adaptive Linear Programming Decoding,” Proc. IEEE Int’l Symp. on Inform. Theory, ISIT’06, Seattle, WA, July 2006, pp. 1374 - 1378.
+[7] P. Vontobel and R. Koetter, “On Low-Complexity Linear Programming Decoding of LDPC Codes,” Eur. Trans. on Telecomms., vol. 18, Apr. 2007, pp. 509-517.
+[8] D. Burshtein, “Iterative Approximate Linear Programming Decoding of LDPC Codes with Linear Complexity,” IEEE Trans. on Info. Theory, vol. 55, no.11, Nov. 2009, pp. 4835-4859.
+[9] Y. Zhang, “Solving Large-Scale Linear Programs by InteriorPoint Methods Under the MATLAB Environment,” Optimization Methods and Software, 1998.
+[10] J.L. Fan, “Array Codes as Low-Density Parity Check Codes,” Proc. of 2nd Int. Symp. on Turbo Codes, Brest, France, Sept. 2000.
+[11] R. Tanner et al., “LDPC Block and Convolutional Codes based on Circulant Matrices,” IEEE Trans on Info. Theory, vol. 50, no. 12, Dec. 2004, pp. 2966-2984.
+[12] S. Boyd and L. Vandenberghe, Convex Optimization, Cambridge, UK: Cambridge University Press, 2004, pp. 561-623.
+
+663
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:04:12 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,564 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+5429
+
+A High-Performance Stochastic LDPC Decoder Architecture Designed via Correlation Analysis
+Qichen Zhang, Graduate Student Member, IEEE, Yun Chen , Member, IEEE, Shixian Li, Student Member, IEEE, Xiaoyang Zeng, Member, IEEE, and Keshab K. Parhi , Fellow, IEEE
+
+Abstract— This paper presents an area-efficient architecture for stochastic low-density parity-check (LDPC) decoder with high throughput and excellent bit-error-rate (BER) performance. The correlation effects of a stochastic Sum-Product Algorithm (SPA) are analyzed. Based on this analysis, a variable node (VN) structure is proposed and its similarity with a correlation divider (CORDIV) is pointed out. Based on the properties of CORDIV, the area of probability tracer in the VN is reduced significantly. In order to achieve more accurate results when the check-to-variable (C2V) messages are not strong enough, the 3-3 input grouping sub-node is replaced by an adder-based 5-1 input grouping sub-node of the degree-6 VN for (2048,1723) code. An unbiased stochastic sequence generator is adopted to get more accurate results from the smaller probability tracer. Furthermore, the soft bit-flipping prior-processing and the C2V-based hard decision updating method are combined in VN to reduce the decoding latency. A (2048,1723) stochastic LDPC decoder is designed in the TSMC 65 nm process to demonstrate the proposed decoder architecture. With the aid of early termination, the decoder occupies 2.34 mm2 core area and can achieve 116.17 Gb/s at 4.4 dB and 461.99 Gb/s at 5.5 dB under 970 MHz with better decoding performance. Compared with the state-of-the-art stochastic IEEE 802.3an LDPC decoders, the proposed architecture can achieve the best throughput, throughput-to-area ratio, and BER performance.
+Index Terms— Low-density parity-check, stochastic decoder, variable node, correlation, IEEE 802.3an.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes were first invented by Gallager in 1960s [1]. These codes were later rediscovered by Mackay [2] in 1997 and have been adopted by a wide range of communication standards for the near-capacity decoding performance, such as IEEE 802.3an (10GBASE-T) [3], IEEE 802.11 (WiFi) [4], and IEEE 802.16 (WiMAX) [5].
+Manuscript received January 20, 2020; revised April 9, 2020; accepted June 11, 2020. Date of publication June 26, 2020; date of current version December 1, 2020. This work was supported in part by the National Natural Science Foundation of China under Grant 61525401 and Grant 61774049, and in part by the National Key Research and Development Programmes under Grant 2018YFB2201000. This article was recommended by Associate Editor I. Kale. (Corresponding author: Yun Chen.)
+Qichen Zhang, Yun Chen, Shixian Li, and Xiaoyang Zeng are with the State Key Laboratory of ASIC and System, Fudan University, Shanghai 200433, China (e-mail: qczhang16@fudan.edu.cn; chenyun@fudan.edu.cn; shixianli17@fudan.edu.cn; xyzeng@fudan.edu.cn).
+Keshab K. Parhi is with the Department of Electrical and Computer Engineering, University of Minnesota, MN 55455 USA (e-mail: parhi@umn.edu).
+This article has supplementary downloadable material available at https://ieeexplore.ieee.org, provided by the authors.
+Digital Object Identifier 10.1109/TCSI.2020.3003457
+
+LDPC codes are linear block codes which are defined by a sparse parity-check matrix. By mapping the rows to the check nodes (CN) and the columns to the variable nodes (VN), this matrix can be represented by a bipartite graph, called Tanner graph [6]. These codes can be decoded by using the iterative belief-propagation (BP) algorithms such as the Sum-Product Algorithm (SPA) on the graph structure [1]. In order to simplify the computation complexity, the Min-Sum Algorithm (MSA) [7] was introduced to replace the complex CN calculations in the SPA by finding minimum values.
+The architecture of the LDPC decoder can be easily realized by mapping the Tanner graph into hardware. All VNs and CNs are implemented directly in hardware in a fully-parallel architecture. Due to the parallel nature of the Tanner graph, the fully-parallel LDPC decoder can achieve very high throughput. However, a fully-parallel LDPC decoder based on SPA and MSA consumes significant area. For high code-rate LDPC codes, the number of VNs and CNs and the number of edges increase significantly. Take the (2048, 1723) codes in IEEE 802.3an as an example. If the messages in the decoder are quantized using 6 bits, then the decoder for this code contains 2048 VNs of degree-6 and 384 CNs of degree32, and 32×384×6×2 = 147456 edges are connected between these nodes. As a result, a fully-parallel decoder usually occupies large chip area. Moreover, the routing congestion leads to a lower clock frequency and degraded throughput.
+Several partly-parallel architectures [8], [9] have been proposed to solve these problems by sharing these nodes and calculating the matrix layer by layer. A 5.35 mm2 decoder which can achieve 47.7 Gb/s throughput at 5.5 dB with 700 MHz clock frequency has been described in [9]. Some digit-serial architectures [10], [11] have been proposed to transfer and calculate messages serially to reduce the number of edges. These decoders need multiple clock cycles for one decoding cycle (DC), which causes low decoding throughput compared with a fully-parallel or a partly-parallel LDPC decoder. For example, compared with [9], the decoder in [11] can achieve 20.9 Gb/s throughput at 5.5 dB with similar decoding performance. Some soft bit-flipping (SBF) architectures [12], [13] use accumulated sums of binary messages to improve the decoding performance. These decoders can achieve very small area and high throughput, but still suffer from performance loss. Compared with [9], the decoder in [12] occupies one-fourth area and achieves 3.6 times higher
+
+1549-8328 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5430
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+throughput, but suffers from nearly 0.25 dB performance loss at 10−7 bit-error-rate (BER). Some fully-parallel architectures can reduce area by approximately calculating data in CNs. In a split-row decoder [14], the matrix is split into several rows, and the CN outputs are transferred to different split rows. This architecture can achieve very high area utilization with some performance loss. The CN Unit (CNU) is partitioned into several sub-units, and the local minimum values in each sub-unit are used to calculate the final minimum values [15]. However, the chip area is still larger than desired.
+Computing using stochastic logic was proposed by Gaines in 1960s [16]. In stochastic logic, numbers are represented by unary bit streams. The bits have the same weight and can be modeled as Bernoulli random variables. In stochastic logic systems, many complex operations can be realized by simple logic gates. The outputs of stochastic logic gates are correct in the expected sense assuming the inputs are independent. However, if the stochastic logic gates are cascaded, then the outputs are degraded due to correlation. In stochastic logic decoders, the routing congestion problem can be eliminated because of the bit-serial nature of stochastic computation. However, compared with SPA or MSA, some early stochastic LDPC decoders [17], [18] suffered from worse performance due to their degraded accuracy. In [19] and [20], the Edge Memories (EM) were introduced between the VNs and CNs to trace the probabilities and correct the outputs when the inputs of VNs are considered to be wrong. The implementation results show that the stochastic LDPC decoder with probability tracers can provide decoding performance comparable to standard implementations.
+Many probability tracers have been proposed to replace the EM because of its high area consumption. The tracking forecast memory (TFM) proposed in [21] tracks the past probabilities while emphasizing recent outputs. Compared with EM, the TFM can save nearly half of the area with a similar decoding performance. Similar to the EMs, the TFMs are added to each edge. Therefore, the number of TFMs is still huge. In [22], a single majority-based tracking forecast memory (MTFM) is used to replace all TFMs in one VN leading to significant hardware reduction. In order to accelerate the decoding convergence speed, the VN initialization and bit-flipping (BF) post-processing were proposed in [23]. The check-to-variable (C2V) based node-wise probability tracer and the improved BF post-processing have been proposed in [24] to obtain higher throughput and better decoding performance. The delayed stochastic decoder (DS) presented in [25] eliminates the probability tracers so that the smallest area can be achieved. However, the decoding performance is worse than the decoders with probability tracers.
+Correlation among stochastic logic gates affects the output [26]. For example, if the two inputs of a stochastic logic AND gate are independent, then the output is the product of the two inputs; however, if the inputs are the same, then the output is the same as the input. Usually, the correlation degrades the performance of the stochastic computing system. Some methods, such as isolation and regeneration, have been introduced to overcome the effect of correlation.
+
+However, the correlation is also used to design some specific arithmetic circuits, such as dividers. In [27] and [28], the same random number generator is used to get fully correlated inputs, and the padding memory is used to store the approximated quotient. Compared with the conventional stochastic dividers, the correlation divider (CORDIV) can achieve a more accurate result using less area.
+In this paper, we propose an area-efficient architecture for stochastic LDPC decoders with high throughput and excellent BER performance, based on the correlation analysis of VN. This design can achieve higher throughput than state-of-theart probability tracer based decoders at both 4.4 dB and 5.5 dB SNR with better BER performance and comparable hardware consumption. The correlation of VN is analyzed, and based on this analysis, a decoder with the degree-6 VN based on an adder with 5-1-grouping and an unbiased stochastic sequence generator is proposed to obtain a more accurate output with a smaller probability tracer. Moreover, the SBF prior-processing and the C2V-based hard decision updating method are integrated into VNs to reduce the average decoding cycle (ADC). To verify the design, a (2048,1723) stochastic LDPC decoder is implemented in the TSMC 65 nm process. The proposed decoder occupies an area of 2.34 mm2 and supports 116.17 Gb/s at 4.4 dB and 461.99 Gb/s at 5.5 dB under 970 MHz clock frequency. To the best of our knowledge, the proposed design can achieve the highest throughput, the best throughput-to-area ratio (TAR), and the best BER performance for the stochastic IEEE 802.3an LDPC decoders.
+The rest of this paper is organized as follows. Section II presents a review of stochastic LDPC decoding, the probability tracer based VN and correlation in stochastic computing. Then, the correlation analysis and the proposed architecture are illustrated in Section III. Section IV presents the implementation and comparison results. Finally, Section V concludes the paper.
+
+II. STOCHASTIC DECODING AND CORRELATION
+
+A. Stochastic Sum Product Algorithm
+
+For an LDPC code defined by a sparse parity check matrix
+H with dimensions m × n, the CNs, ci ’s, represent the rows of H while the VNs, v j ’s, represent the columns in the corresponding Tanner graph. The set of neighboring VNs of
+cm is denoted as N(m), and the set of neighboring CNs of vn is M(n). The C2V message from cm to vn is represented
+by Pm→n and the variable-to-check (V2C) message from vn to cm is represented by Qn→m . The log-likelihood-ratio (LLR) message from channel n is denoted as Ln and its
+corresponding probability is denoted as In. For binary phase shift keying (BPSK) modulation, Ln ≥ 0 corresponds to bit “0” and Ln < 0 to “1”. When Ln ≥ 0, 0.5 ≤ In < 1, and when Ln < 0, 0 < In < 0.5. Sn represents the posterior message for each VN. The stochastic SPA is illustrated as follows:
+
+1) Initialization: The channel LLR messages are converted into probability domain and these values are used to initialize Qn→m and Sn. Pm→n is initialized as zero.
+
+eLn
+
+In
+
+=
+
+eLn
+
++
+
+. 1
+
+(1)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+
+5431
+
+Fig. 1. A sub-node of the degree-6 VN in [20] with inputs grouped as 3-3.
+
+2) CN update: where n ∈ N(m)\n:
+
+Pm→n
+
+=
+
+1 2
+
+−
+
+1 2
+
+(1 − 2Qn→m ).
+n
+
+(2)
+
+3) VN update: where m ∈ M(n)\m:
+
+Qn→m = In
+
+In m Pm→n
+
+.
+
+m Pm→n + (1 − In ) m (1 − Pm→n)
+
+(3)
+
+4) Posterior message update: the posterior messages are used to generate hard decisions:
+
+Sn = In
+
+In m Pm→n
+
+.
+
+m Pm→n + (1 − In ) m(1 − Pm→n )
+
+(4)
+
+5) Termination: The hard decisions of decoder are checked
+
+in every DC, and the decoding will terminate if all
+
+check equations are satisfied. If not, this decoding will
+
+terminate when the number of DC reaches the maximum
+
+DC.
+
+as proposed in [20]. The five C2V bits and one channel bit are divided into two degree-3 groups; one contains three C2V bits, and another contains two C2V bits and one channel bit. The outputs of two degree-3 sub-nodes are fed into one degree-2 sub-node. It is worth noting that two 2-bit internal memories (IM) and one 64-bit EM are added in these subunits. The EM works as the probability tracer in this degree-6 sub-node. The IMs and EM store the regenerative bits when the VN is in the non-hold state. When the VN is in the hold state and generates conservative bits, one bit stored in EM is selected randomly to replace the VN output [20]. This mechanism re-randomizes the stochastic input streams and reduces the latching problem caused by the conservative bits.
+The EM consists of one shift memory and some multiplexers. In this structure, one register only represents one bit. So the EM is not area efficient. For an example, the EMs occupy more than 60% of the total area in a (2048, 1723) LDPC decoder [22]. Several new probability tracers have been proposed to replace an EM. An up/down saturated counter is used in TFM [29] to reduce the number of registers in EM. For a counter, one register represents one bit in a binary number; so the information in one register is much higher than in EM. As an example, a 7-bit up/down saturated counter can replace a 64-bit EM with similar BER performance. Besides the probability tracer itself, the structure in Fig. 1 was also updated. In [22], one MTFM was used to replace the six TFMs in one VN. Seven degree-3 sub-nodes were used to replace twelve degree-3 sub-nodes in the EM structure in [29]. In [24], the C2V messages are used to update probability tracers directly to shorten the critical path and the IMs are shared in the whole VN to reduce the area. It is worth noting that, no matter how the VN structure and probability tracers change, the inputs of a high-degree VN can still be arranged into several small degree sub-nodes and merged later to avoid the latching problem. The drawbacks of this structure will be illustrated in Section III.
+
+B. Review of Different Probability Tracers
+Some prior papers have applied stochastic computing to design LDPC decoders directly, but these decoders get stuck in fixed states leading to severe BER performance loss. This phenomenon is referred as latching problem; this happens when cycles exist in the Tanner graph. As shown in [20], the latching problem happens often at high SNR region when the the values of channel LLR messages are very large or small. In this situation, the channel probabilities are close to 1 or 0 and the corresponding stochastic sequences lack randomness. So, as long as the decoder is stuck in fixed states, it is very hard to get out of the latching situation. Furthermore, the latching problem is more severe when the VN degree is high because it is harder to generate a usable bit from too many input bits.
+The probability tracers are added in VNs to re-randomize the stochastic sequences inputs and reduce the degradation caused by the latching problem. The EM in [19] is the first successful probability tracer to be used in the high degree LDPC decoders. Fig. 1 shows a sub-node structure of the degree-6 VN where inputs are grouped in 3-3 configuration
+
+C. Review of Correlation in Stochastic Computing
+
+In stochastic computing, correlation among inputs affects outputs. So it is necessary to measure the correlation between stochastic sequences before designing a stochastic computing system. In [30], correlation in stochastic logic referred as stochastic computation correlation (SCC) which is defined by the distribution of bits “1” and “0”. For two N-bit stochastic sequences corresponding to PX and PY , as shown in Fig. 2, the group of overlapping “1” bits is represented by A, overlapping “1” bits in PX and “0” bits in PY by B, overlapping “0” bits in PX and “1” bits in PY by C, and overlapping “0” bits by D. Then the SCC is defined as follows:
+
+SCC⎧(PX , PY ) ⎪⎨
+
+AD − BC
+
+i f AD> BC
+
+= ⎪⎩
+
+N
+
+·
+
+min(A+
+
+B, A+C)−(A+ AD − BC
+
+B )( A + C )
+
+Other wi se
+
+(A + B)(A + C) − N · max(A − D, 0)
+
+(5)
+
+According to the definition of SCC, SCC = 0 means the two stochastic sequences are independent, SCC = +1 represents
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5432
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+Fig. 2. Distribution of bits for SCC definition.
+Fig. 3. The structure of CORDIV in [27].
+maximum similarity, and SCC = −1 represents maximum dissimilarity.
+For almost all stochastic computation circuits, the accuracy depends on the independent inputs. However, correlation can be exploited to design some arithmetic circuits such as the divider denoted CORDIV [27] and [28]. The CORDIV structure of [27] is shown in Fig. 3 where PX < PY . The corresponding stochastic sequences of PX and PY are generated by the same random generator; therefore, the SCC(PX , PY ) = +1. The multiplexer is used to select the bits in PX whenever the bits in PY are “1”. Because all “1” bits in PX are overlapped with “1” bits in PY , the output of multiplexer equals the quotient of PX and PY . The padding memory stores the bits of quotient and generates the approximate result to extend the output to the same length of the inputs. The simulation in [27] shows that the depth of padding memory doesn’t affect the accuracy of CORDIV. Furthermore, authors in [31] eliminate the requirements of random number generator for correlated division.
+III. PROPOSED STOCHASTIC ARCHITECTURE As discussed in Section II, the SCC has a major influence on the accuracy of the stochastic computation result. So in order to generate the correct computation results, it is necessary to analyze the stochastic computation circuits under different SCC. In Section III-A, we analyze the SCC of VN and reveal three useful guidelines for the VN structure design. Following these guidelines, a VN with 5-1 input grouping, an unbiased stochastic sequences generator, and a VN combined with decoding accelerator are proposed in Section III-B, Section III-C and Section III-D, respectively. Finally, the overall architecture of LDPC decoder is described in Section III-E.
+
+A. SCC Analysis of VN
+
+As shown in Fig. 1, the degree-2 sub-node structure of VN in the stochastic LDPC decoder contains two AND gates, one OR gate, one multiplexer and one probability tracer. The two AND gates calculate two multiplications and one OR gate computes the sum of these two products. The outputs of one AND gate and one OR gate are used to get the result of the final division in (3). For the two inputs of the first AND gate, the numbers of the bits in A, B, C and D in (5) between two inputs are na, nb, nc and nd , respectively. According to the definitions of these four groups, the output of this AND gate has na “1” bits and nb + nc + nd “0” bits. Note that, for the inputs of the second AND gate with inverters at input pins, the numbers of the bits in A, B, C and D should be nd , nc, nb, na and the output has nd “1” bits and na + nb + nc “0” bits. It is worth noting that, the “1” bits in the outputs of the two AND gates are not overlapped and the numbers of four groups are na, 0, nd and nb + nc. So, the output of the OR gate has na + nd “1” bits, and nb + nc “0” bits. Finally, the output of the first AND gate and the OR gate has na, 0, nd and nb + nc for the four groups. Fig. 4 gives an example of distribution of the bits of a degree-2 VN sub-node. According to (5), the value of SCC for degree-2 VN sub-node should be:
+
+SCC(V N) = na(nb + nc) − 0 · nd = na(nb + nc) N · na − na(na + nd ) na(N − na − nd )
+
+=
+
+na (nb na (nb
+
++ nc) + nc)
+
+= +1
+
+(6)
+
+The correlation analysis of the degree-2 VN shows that
+
+the divisor and dividend in the calculation of VN are pos-
+
+itively correlated with maximum similarity. So the structure
+
+of VN corresponds to a CORDIV. It is worth noting that,
+
+no matter what correlation level between the inputs of a
+
+VN is, the inputs of the OR gate are guaranteed to be fully
+
+positively correlated and do not need random number gener-
+
+ators to generate fully positively correlated inputs in Fig. 3.
+
+Comparing the structure of VN and CORDIV, we observe that
+
+the probability tracers used in the previous stochastic LDPC
+
+decoders, such as EM, TFM, MTFM and up/down saturated
+
+counter, work as a type of padding memory in CORDIV.
+
+As mentioned in Section II, according to [27], the accuracy
+
+of the quotient in CORDIV is unaffected by the size of
+
+the padding memory. Furthermore, when the length of the
+
+sequences is short, the CORDIV with larger padding memory
+
+has worse performance because of the longer initialization
+
+time. However, the simulations in [20], [22] and [29] show
+
+that the decoding performance will improve when the size
+
+of the probability tracer becomes larger. So, if we can find
+
+the reason for this contradiction, the hardware consumption
+
+of VN can be reduced by using a smaller probability tracer.
+
+The function of the padding memory is to fill the output
+
+sequences when the divisor bits are zeros. So obviously,
+
+because of having more “0” bits than “1” bits, the smaller
+
+divisor leads to worse accuracy. It has been shown in [27]
+
+and [28] that, under the same sequence length, the Mean
+
+Square Error (MSE) of a divisor between 0 and 0.2 is about
+
+100 times worse than a divisor between 0.8 and 1. Since
+
+for an LDPC decoder, the accuracy of messages inside the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+
+5433
+
+Fig. 4. Correlation analysis of a degree-2 sub-node.
+
+Fig. 5. The value range of (a) PX PY + (1 − PX )(1 − PY ), (b) Q − PY when 0.5 ≤ PX ≤ 1 and 0 ≤ PY ≤ 0.5, (c) Q − PY when 0.5 ≤ PX ≤ 1 and 0.5 ≤ PY ≤ 1 and (d) Q − PY when 0 ≤ PX ≤ 0.5 and 0 ≤ PY ≤ 0.5.
+
+decoder influence the decoding performance and convergence speed [32], it is necessary to analyze the accuracy associated with VN computation.
+Let us take two probabilities, PX and PY , and consider the following 2-input version of (3):
+
+Q=
+
+PX PY
+
+.
+
+(7)
+
+PX PY + (1 − PX )(1 − PY )
+
+The contour graphs in Fig. 5 illustrate results of computing (7). The numbers on the contours show the value. Fig. 5a shows the value of the divisor, PX PY + (1 − PX )(1 − PY ), in (7). It is
+
+clear that, when the two inputs are in the different probability
+regions, the output will be smaller than 0.5. Thus, when
+the correct C2V messages try to correct a wrong channel message, the calculation result accuracy is low. The value of Q − PY shown in Fig. 5b is always larger than 0 and the Q − PY is an increasing function of PX . Obviously, for LDPC decoders, the larger C2V messages have better correctness ability. The values of Q − PY in the same regions are shown in Fig. 5c and 5d. The inputs of Fig. 5c are both larger than 0.5 and Q − PY > 0. In Fig. 5d, Q − PY < 0 when both inputs are smaller than 0.5. The above shows that the value
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5434
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+of probability Q is always closer than the inputs to 1 when the inputs are both larger than 0.5, or 0 when the inputs are both smaller than 0.5. So, compared with inputs, the VN will enhance the value of output when they are in the same probability region.
+The analyses of Fig. 5 reveal that, for LDPC:
+• The error correction calculation in VN is not accurate. So it should avoid multiple error correction calculations in one DC.
+• The larger correct C2V messages have better error correction ability.
+• The VN can strengthen the correct C2V messages.
+In order to increase accuracy, especially when the channel message is wrong, the VN structure should involve less intermediate divisions and group the correct C2V messages together. Theoretically, the (N − 1) −1 input grouping is the best choice for the degree-N VN. The scalability of the (N −1) −1 input grouping for lower and higher degree VN are shown in Appendix and Section S.1 of the Supplementary Material, respectively.
+
+B. Input Arrangement in 5-1 Grouping
+Consider the VN structure for a (2048, 1723) LDPC code as an example. The VN degree is 6; so for one sub-node, there are six inputs, including 5 bits from CNs and 1 bit from the channel message. The six inputs are divided into two groups of 3-inputs, and then the sub-node needs to calculate two 3-inputs division and one 2-inputs division to get the final result.
+According to the correlation analyses of VN, the 3-3 input grouping structure suffers from degraded performance. First, the two division stages result in low accuracy during error correction. Second, this structure cannot generate correct result when the C2V messages are weak or wrong C2V messages are in the same group with a wrong channel bit.
+A novel 5-1 input grouping for VN sub-node structure is proposed in this paper. The sum of the 5 C2V bits is added first. When the sum tends to 5 or 0, it means the C2V messages are more reliable. The sub-node will output bit “1” when the sum is 5 or 4 and bit “0” when the sum is 0 or 1. Then the output bit is input to a 2-bit IM and stored at the same time. When the sum is 2 or 3, which means the C2V messages are not reliable enough, then one of the bits in the IM will be selected randomly as the output of the sub-node. Then this output and the channel message bit are input to a degree-2 subnode, which is the same as in the 3-3 inputs VN structure. The complete degree-6 VN structure is shown in Fig. 8. The correction convergence speed comparison of 5-1 input grouping and 3-3 input grouping structures under different C2V message combinations are shown in Fig. 6. The two types of VNs try to correct the wrong channel probability 0.1 back to the value larger than 0.5. The 5 C2V probabilities are 0.9, 0.8, 0.7, 0.1 and X. Among these C2V probabilities, 0.1 and X are in the same group of wrong channel probability in 3-3 input grouping sub-node. The system is simulated for the worst error correction situation. One billion vectors are tested, and the ratio of the number of the result higher than
+
+Fig. 6. Correction convergence speed comparison of 5-1 and 3-3 input grouping. (a) 8-bit EM. (b) 64-bit EM.
+0.5 are recorded at every 50 clock cycles until the maximum number 700 is reached.
+In Fig. 6a, an 8-bit EM is used as the probability tracer. It is obvious to see that the convergence speed of 5-1 input grouping VN is much faster than the 3-3 VN under the same value of X. And even when X = 0.7, a VN with 5-1 grouping can achieve comparable convergence speed with X = 0.9 with 3-3 grouping. It can also be observed that, when the number of clock cycles reaches the threshold, the 3-3 VN with X = 0.8 and X = 0.7 still cannot reach nearly 100 percent correction ratio. The situation will be worse when the value of X is smaller. Furthermore, the 3-3 input grouping VN cannot work well with an 8-bit EM. In Fig. 6b, a 64-bit EM is used as the probability tracer, which is eight times larger than the 8-bit EM in Fig. 6a. The convergence speed of the 5-1 input grouping VN is still faster than the 3-3 VN. However, the 3-3 VN can achieve 100 percent correction ratio before the threshold, which means 3-3 VN can work well with larger EM. The analyses of Fig. 6 shows that, compared with 3-3 input grouping VN, the 5-1 VN can work with a much smaller probability tracer and achieve faster convergence speed.
+The contradiction about the depth of padding memory in CORDIV and the size of probability tracer in VN can now be explained. It is because the inaccurate result of a VN with 3-3 input grouping requires the probability tracer to be larger to store higher resolution probability. For the VN with 5-1 input grouping, the result of VN itself is accurate enough so that a smaller probability tracer can be applied, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+
+5435
+
+Fig. 7. The outputs of biased and unbiased stochastic sequences generators.
+the hardware consumption of this part can be significantly reduced.
+C. Unbiased Stochastic Sequences Generator It is worth noting that [27] claims that the 1-bit padding
+memory is good enough to get an accurate result. However, the size of the probability tracer in the stochastic LDPC decoder still needs to be larger. Take the up/down saturated counter as an example. The output of the probability tracer is generated by comparing the value of the counter with one random number. Also, the value of the counter can be treated as an approximation of the probability message flooding in the decoder, which needs to be represented using enough bits to avoid the data saturation.
+With a smaller size of the probability tracer, the approach to generate the output needs to be reconsidered. In a conventional approach, a random number, whose value is in the range of the size of the probability tracer, is compared with the value. When the probability tracer value is smaller, the output is bit “0” and vice versa. This method works well in prior approaches, but these make a simplification when the two values are the same. Specifically, the output bit is “1” when the two values are both minimum. So the value of the output sequences has a small bias to 1, which is unbalanced for the values smaller than 0.5. For a large probability tracer, such as a 64-bit EM, this bias is too small to degrade the final value. However, this bias cannot be ignored in a small probability tracer. For example, for the 3-bit up/down saturated counter, the bias is about 1/8. An unbiased stochastic sequence generator is proposed to solve this problem. Compared with the conventional biased generator, additional logic circuits are added to output the most significant bit (MSB) when the two input values are the same. The simulation in Fig. 7 gives an example when the value of the probability tracer is 0.25, which is smaller than 0.5. For a 7-bit up/down saturated counter, the two types of sequence generators can both generate the correct output because the bias is only 1/128. However, for a 3-bit up/down saturated counter, the unbiased generator can generate the correct result, but the output of the biased generator is about 1/8 larger than the correct result. So, for a smaller probability tracer, an unbiased stochastic sequence generator is necessary.
+D. VN Combined With Decoding Accelerator The most significant drawback of a stochastic LDPC
+decoder is its long decoding latency. Compared with no more
+
+than twenty decoding cycles in an MSA decoder, the stochastic decoder usually requires about one hundred or higher number of cycles. Although because of the simple logic and less routing congestion, the stochastic decoder can achieve smaller chip area and higher clock frequency, it cannot compensate for the throughput loss caused by the long latency. As mentioned in the correlation analyses of VN, when the C2V messages try to correct the wrong channel message, the computation tends to be less accurate. So, if the values in the IMs, the probability tracer, and the hard decision generator, which is a small up/down saturated counter, are not correct in the early stages of decoding, the VN will need a long time to reverse these values. It is much worse when the saturated values of these memories are large.
+Although the proposed VN with 5-1 input grouping makes use of a smaller probability tracer, and the saturated values are much lower than before, the reverse process is still timeconsuming. The BF post-processing is used in [23] and [24] to accelerate the decoding towards the end. The simulations show that the BF post-processing can decode successfully in just a few decoding cycles in most cases. However, a severe decoding performance loss can be observed in the high SNR region in [23] because of the worse decoding characteristic of BF. In [24], a parallel decoding flow, which lets stochastic decoding and BF post-processing work together, has been proposed. This method can eliminate performance loss when the SNR is in 4.1 to 4.5 dB region. However, the BF post-processing only aims to reduce the latency at the end of the decoding, and the slow convergence problem still exists in the whole decoding process.
+We propose a new accelerated processing to reduce the latency not only towards the end of decoding period but also during the entire decoding process. Moreover, most part of this module can be integrated into the VNs.
+The BF post-processing is still used in the proposed method, but with a new implementation structure. The whole BF post-processing consists of three main parts. The check unit is used to generate all check results, which is similar to CNU. Although the check unit structure is similar to CNU, the inputs of these two blocks are V2C bits and hard decision bits, respectively. The simulations show that these two types of bits are not the same when the decoding approaches the end, and the number of times the checks are not satisfied are not linearly to each other. So the check results of V2C bits from CNU cannot be used to replace the outputs of the check unit. The sum unit adds the outputs from the check unit to get the BF activation signal, and the flipping unit is used to flip the value of the hard decision counter in each VN when the sum of the hard decisions is larger than a threshold. The check unit and the sum unit are used to implement early termination.
+In a VN, the C2V bits are added together first, and the sum is used in each sub-node. This adder can be re-used as the flipping unit in BF post-processing. The check unit and sum unit are still used to generate the post-processing activation signal. When the decoder operates in the post-processing step, instead of V2C bits, hard decision bits are sent to the CNU. At this time, the CNU works as the check unit. The CN then generates new C2V bits by computing XOR of the hard
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5436
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+decision check results and the hard decision itself. So, if this check result is not satisfied, which is “1”, the C2V bits will be different from the hard decision bit. Then, the hard decision value will be flipped if the sum of C2V bits has a different MSB than the hard decision. A similar post-processing flow in [24] is also used to reduce the error floor at the high SNR region. The updating of IMs and probability tracer in VN stop in the post-processing stage. Then, if the post-processing cannot decode successfully, the messages stored in IMs and probability tracers will recover the stochastic decoding. The post-processing only operates once in each decoding operation.
+Inspired by the SBF algorithms in [12] and [13], a priorprocessing is proposed to accelerate the start of decoding period. The channel messages are introduced in these decoders to improve the BER performance of the hard BF algorithm. However, compared with other soft messages decoding algorithms, the performance loss is about 0.25 dB when BER = 10−7 in [12]. In the proposed VN structure, the SBF is implemented by the adder and the probability tracer as the prior-processing. At the next five DCs after the first initialization DC, the prior-processing will be active. In this stage, the value of the probability tracer is updated by the difference of the sum of the adder and 3, instead of the bits from subnodes. This is because the value in the probability tracer is symmetrical with zero. The stochastic decoding will start after the prior-processing. The duration of the prior-processing is decided by simulation. The results show a decoding performance degradation when the prior-processing works longer than five DCs. At the high SNR regions, the prior-processing can reduce the ADC with nearly no BER performance loss because of the better decoding performance of the following stochastic decoding. At the low SNR regions, there are no significant improvements because nearly no code can be decoded successfully in five DCs.
+Besides BF post-processing and SBF prior-processing, the C2V bits are used to accelerate decoding through the whole decoding process. When a wrong channel message needs to be corrected, the hard decision depends on the values in IMs and the probability tracer. When the channel message is wrong, the hard decision generator needs to wait for the C2V bits to correct the value in IMs and the probability tracer for a long time even if all the C2V bits are correct. So, the MSB of the sum of C2V bits are used to update the hard decision generator when the probability tracer is unchanged. The C2V-based hard decision updating is not as fast as BF post-processing because this method does not work in every decoding cycle. For example, it works better at the high SNR region because more channel messages are correct, and corresponding probability tracers usually stay constant. However, it can accelerate the convergence speed before the post-processing stage and reduce the overall decoding latency.
+The structure of a VN with degree-6 is shown in Fig. 8. The sum of 6 C2V bits can be used to generate the sums of 5 C2V bits in six sub-nodes with 5-1 input grouping. The relations between the sum of 6 C2V bits, the inputs, sums and outputs of six sub-nodes are shown in Table I. It can be observed that, the IM generates the output of the sub-node when the C2V
+
+TABLE I USING C2V SUM TO GENERATE THE OUTPUTS OF SUB-NODES
+Fig. 8. The structure of proposed degree-6 VN.
+sum is 3. When the C2V sum is 2 or 4, the output is generated by IM and the corresponding “0” or “1” C2V input bit. This update signal can be divided into two parts: one part from C2V sum and the other part from C2V inputs. According to the Table I, the update signal can be derived from the C2V
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+
+5437
+
+Fig. 9. The proposed architecture of stochastic LDPC decoder.
+
+sum and the corresponding C2V input:
+
+Sel = C2V · Sum[1] · Sum[2]
+
++ C2V · Sum[0] · Sum[1] · Sum[2]+ Sum[0] · Sum[1]
+
+= C2V · A + C2V · B + C
+
+(8)
+
+The update signal block in Fig. 8 generates A, B and C in (8) for all six sub-nodes, and then these three signals are combined with the corresponding C2V input bit to get the IM update signal in each sub-node. The XNOR gate works as the two AND gates and one OR gate in degree-2 subnode for the channel bit and the output of the sub-node with 5-1 input grouping. An up/down saturated counter based MTFM structure [22] is used as the probability tracer, and its size is described in the next subsection. If more than half sub-nodes are satisfied, which means more than half outputs of the XNORs are 1, the probability tracer will be updated. The MUXs contains six multiplexers for each CN. The V2C bits are chosen from the channel bit, the output of MTFM and the hard decision bit. If the sub-node is satisfied, the channel bit will be the V2C bit. If not, the output of probability tracer will be the V2C bit. In post-processing stage, the hard decision bit will be sent to the CNU which works as the check unit.
+
+E. Proposed Architecture of Stochastic LDPC Decoder
+Fig. 9 shows the proposed decoder architecture for (2048, 1723) code. The look up table (LUT) based LLR to probability block converts the 2048 channel LLR values to the corresponding channel probabilities. The 7-bit input quantization scheme is used for better ADC performance [24]. The proposed decoder uses the VN initialization method in [23] to reduce the decoding latency. The channel probabilities are re-used as VN initialization messages to initialize the values of probability tracers in VN Unit (VNU). Then, the stochastic sequences are generated by comparing the channel probabilities and random numbers. 64 linear feedback shift registers (LFSR) are used as the random number generators.
+
+Besides stochastic sequences generator, these random numbers are sent to VNU for the IMs and probability tracers. The VNU contains 2048 VNs and each VN has six 5-1 input grouping sub-nodes. To eliminate the long critical path between the adder and probability tracer in each sub-node, one register is added before MTFM. Although another six registers are needed in each VN, the reduction of the area of probability tracer can compensate this overhead. There are 384 CNs in CNU, and each CN contains one 32-input XOR gate and thirty-two 2-input XOR gates. The check unit and the sum unit generate the post processing activation signal for the VNU. When the number of wrong check results is lower than 30, which is decided by simulations, the post processing will start in VNU, CNU and Hard decision blocks. If the post processing fails in 10 decoding cycles, the stochastic decoding will recover and not return to the post-processing step in this decoding. One decoding processing will stop if all check results are satisfied or the number of decoding cycles reaches the maximum DC, which is set to 700.
+The re-decoding is used to improve the BER performance in the error-floor region. For specific decoding processing, if the decoding is still not successful after one threshold, the values of probability tracers are set to the initialization values again, and the decoding will continue until the maximum DC is reached. However, in the low SNR region, more decoding cycles are needed to correct one code. So, if the re-decoding is activated early, the decoder will terminate some codes which can be decoded successfully by long DCs and there will not be enough time to re-decode these codes successfully in the second round before the maximum DC. If the re-decoding is activated late, in the high SNR region, the remaining DCs may not be enough for further decoding. So, it is better to activate the re-decoding only in the high SNR region. To overcome this problem, the activation signal in BF post-processing is re-used to recognize the SNR region. The re-decoding threshold is set to 400 in the proposed design. The decoder will check the BF activation signal when reaching the re-decoding threshold.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5438
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+Fig. 10. The BER performance of different re-decoding methods.
+
+Fig. 12. The ADCs of different probability tracers.
+
+Fig. 11. The BER performance of different probability tracers and hard decision generators.
+If the activation signal is high, which means only a small number of errors exist and the decoder is in the high SNR region, then the re-decoding will start. Fig. 10 shows the BER performance of decoders without the re-decoding, with the conventional re-decoding method, and with the proposed re-decoding method. It can be seen that, at the low SNR region, the performance of the decoder without re-decoding and the proposed re-decoding are nearly the same, and at the high SNR region, the error-floor can be reduced by the proposed re-decoding method. That means, the re-decoding is inactive at the low SNR region and starts to work at the high SNR region in the proposed re-decoding method. Although the conventional re-decoding method can reduce the error-floor as well, the overall BER performance is worse than the proposed one.
+The up/down saturated counter is used as the probability tracer and hard decision generator in the proposed decoder. The choice of the saturated value of these blocks is determined by trade-off analysis among the BER performance, the ADC, and the hardware consumption. Fig. 11 shows the BER performance of combinations of different probability tracers and
+
+hard decision generators. For the same probability tracer and different hard decision generators, the 3-bit tracer achieves slightly better BER performance at low SNR region and nearly the same performance at high SNR region. The synthesis result shows that the 3-bit hard decision block occupies nearly 10% gate count of the whole decoder. For the same hard decision generator and different probability tracers, the 4-bit and 5-bit probability tracers have nearly the same performance, and both are better than the 3-bit tracer. Next, the ADC performance of the different probability tracers is shown in Fig. 12. At the high SNR region, the 4-bit has the best ADC performance and the 3-bit has the worst. Because the maximum sum of the adder in each VN is too close to the saturated value of the probability tracer, the prior-processing degrade the ADC performance of the 3-bit tracer. The ADC performance difference between 4-bit and 5-bit tracers is very small because of the compensation of prior-processing and C2V-based hard decision updating. At the low SNR region, the ADCs of 3-bit and 5-bit tracers are larger than the 4-bit for different reasons. The 3-bit tracer has the worst BER performance at the low SNR region; so more codes cannot be decoded successfully and the maximum decoding threshold is reached. For the 5-bit probability tracer, the largest saturated value needs a longer time to reverse, and the prior-processing and the C2V-based hard decision updating do not always work at this SNR region. So, considering the results in Fig. 11 and Fig. 12, the 4-bit up/down saturated counter is used as a probability tracer, and the 1-bit up/down saturated counter, which is just one register, is used as the hard decision generator.
+IV. PERFORMANCE EVALUATION
+A. Implementation
+The proposed (2048, 1723) stochastic LDPC decoder is synthesized by Design Compiler and then placed and routed by IC Compiler under TSMC 65 nm technology. Table II summarizes the layout details. The core occupies 2.34 mm2 silicon area, and the decoder can achieve a maximum clock frequency of 970 MHz. The ADCs of the proposed decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+TABLE II CHIP DETAILS
+
+5439
+
+Fig. 14. The decoding performance of the proposed decoder and state-ofthe-art works.
+
+Fig. 13. The ADC reduction of each proposed improvements at SNR 4.4 dB.
+
+are reduced to 17.1 at 4.4 dB and 4.3 at 5.5 dB. Due to the reductions of ADCs, the throughput can be improved to 116.17 Gb/s and 461.99 Gb/s.
+Three ADC reduction methods are proposed, including the 5-1 grouping VN, the C2V-based hard decision and the prior-processing. Compared with the state-of-the-art stochastic decoder in [24], Fig. 13 shows the ADC reduction ratios for the three methods at SNR of 4.4 dB. The 5-1 grouping VN method can reduce the ADC by about 25.6% because of the smaller probability tracer. The C2V-based hard decision method is used to accelerate decoding through the whole decoding process and can cut about 13.9% ADC. Another 18.2% ADC can be eliminated by the prior-processing before the stochastic decoding. Overall, the proposed decoder only requires about 42.3% ADC at SNR of 4.4 dB. Futhermore, because more codes can be decoded successfully by the SBF prior-processing, the improvement of the ADC reduction will be better at higher SNR regions.
+B. Comparison With State-of-Art LDPC Decoders
+The comparison of BER performance and ADC performance with other state-of-the-art stochastic and MSA LDPC decoders are shown in Fig. 14 and Fig. 15. The purely stochastic LDPC decoders in [23]–[25], and two MSA decoders in [15] and [14] are included in the decoding performance comparison. The proposed decoder can achieve comparable BER performance at low SNR region and outperform other competitors at the high SNR region. The excellent BER performance shows the superiority of the 5-1 input grouping
+
+Fig. 15. The ADCs of the proposed decoder and state-of-the-art works.
+
+structure even with much smaller probability tracers. The
+
+error floor is reached in [23] but not in the proposed one
+
+because of the re-decoding method. The frame-error-rate
+
+(FER) performance comparison is described in Section S.2 of
+
+the Supplementary Material.
+
+Fig. 15 shows the ADC performance of the proposed
+
+decoder and other high throughput stochastic LDPC decoders.
+
+It can be seen that, at the low SNR region, the proposed archi-
+
+tecture can achieve similar performance with [23] and [24]
+
+which use BF post-processing. Because of the smaller prob-
+
+ability tracer, the prior-processing and the C2V-based hard
+
+decision updating, the proposed decoder can reduce ADC by
+
+about 30% to 60% at the SNR region higher than 3.9 dB.
+
+Table III shows a detailed comparison of the proposed
+
+decoder, other stochastic decoders and two MSA decoders
+
+for (2048, 1723) LDPC codes. In order to compare under
+
+the same technology, other 90 nm designs are normalized
+
+to 65 nm. The normalized factors of clock frequency, area
+
+and throughput for 90 nm are defined as follows:
+
+•
+
+Clock frequency normalized factors:
+
+Nc =
+
+90 65
+
+•
+
+Decoding latency normalized factors: Nl
+
+=
+
+65 90
+
+• •
+
+Area
+
+normalized
+
+factors:
+
+Na
+
+=
+
+(
+
+65 90
+
+)2
+
+Throughput normalized factors: Nt =
+
+90 65
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5440
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+TABLE III COMPARISON WITH STATE-OF-THE-ART (2048, 1723) LDPC DECODERS
+
+The DS has the smallest area and the highest clock frequency among stochastic decoders because the probability tracer is not used in VN. However, this reduction sacrifices the BER performance and throughput at the lower SNR region. Among the stochastic decoders with the probability tracer, the proposed design can achieve much better ADC performance, which compensates the small gaps in clock frequency and area. Compared with [24], 113.5% and 378.7% throughput improvements and 96.2% and 339.8% TAR improvements can be achieved at SNRs of 4.4 dB and 5.5dB, respectively. Compared with the two MSA decoders, the advantages of the proposed decoder with respect to clock frequency and area can compensate the drawbacks of latency to achieve better throughput and TAR. The latency of the proposed decoder is discussed in the Section S.3 of the Supplementary Material.
+V. CONCLUSION
+This paper has presented an analysis of the correlation in the stochastic LDPC decoders and a high throughput, high BER performance, and area-efficient architecture. Based on the correlation analysis, a 5-1 input grouping VN sub-node structure and an unbiased stochastic sequence generator are proposed to increase accuracy of computation with shorter decoding latency. The SBF prior-processing and the C2V-based hard decision updating further improve the ADC performance. The proposed decoder for (2048, 1723) LDPC codes occupies 2.34 mm2 post-layout core area. The simulation results show that the proposed decoder can achieve 116.17 Gb/s with 49.65 Gb/s/mm2 TAR at 4.4 dB and 461.99 Gb/s with 197.43 Gb/s/mm2 TAR at 5.5 dB under 970 MHz with better BER performance at the high SNR region. Compared to stateof-the-art works, the proposed design has better throughput, TAR, and BER performance.
+APPENDIX PERFORMANCE RESULTS FOR THE (672, 336) AND
+(672, 588) LDPC CODES IN IEEE 802.15.3C
+In order to show the applicability in other codes, the proposed architecture is used to implement the (672, 336) and (672, 588) LDPC codes in IEEE 802.15.3c. The performance results are compared with [33] and [34].
+
+Fig. 16. The BER performance the proposed decoders and [33].
+In [33] an LDPC architecture has been presented that supports multiple code rates for the IEEE 802.15.3c applications. A fully-parallel LDPC decoder based on the (672, 588) codes is proposed with 760.3k gates to achieve 10.97 Gb/s throughput at 1063 MHz scaled in CMOS 65 nm technology. [34] proposes a 1.56 mm2, 39.9 Gb/s multirate MSA LDPC decoder for the IEEE 802.15.3c.
+The column weights of the (672, 336) and (672, 588) codes vary from 4 to 1. The 3-1 grouping sub-nodes and one 4-bit MTFM are proposed to replace the original 2-1-1 grouping sub-nodes and four 10-bit TFM probability tracers in the degree-4 VN. The SBF prior-processing and C2V-based hard decision updating method are applied to the degree-4 VNs as well.
+The BF post-processing starts to work when the number of the wrong check results is lower than 20 and 10 for the (672, 336) and (672, 588) codes, respectively. The stochastic decoding will recover if the post-processing fails after 5 DCs. The maximum DC is set to 700 and the re-decoding threshold is set to 400.
+The comparison of BER performance and ADC performance for 16-QAM with the stochastic decoder in [33] and the floating point MSA decoder in [34] are shown in Fig. 16 and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIGH-PERFORMANCE STOCHASTIC LDPC DECODER ARCHITECTURE DESIGNED VIA CORRELATION ANALYSIS
+
+5441
+
+Fig. 17. The ADCs of the proposed (672, 588) decoder and [33].
+Fig. 17. The BER performance of the proposed decoders is better than the stochastic decoder at the waterfall region. One possible reason of the performance loss between the stochastic decoders and the floating point MSA is the existence of the degree-1 VNs. A degree-1 VN only has one C2V input bit; therefore, it is hard to correct a degree-1 VN when the value of probability tracer is saturated. The proposed (672, 588) decoder can achieve much smaller ADCs than the stochastic decoder in [33]. At 9 dB, the numbers of ADCs are 12 and 57 for the proposed decoder and [33], respectively.
+The proposed (672, 588) stochastic LDPC decoder has been placed and routed under TSMC 65 nm technology. The core occupies 0.9 mm2 silicon area with 534 K gate count. Compared with [33], about 28.2% hardware resources can be saved. The proposed decoder can work at 990 MHz and the throughput can be improved to 48.51 Gb/s which is 342.2% higher than the 10.97 Gb/s in [33]. Compared with the MSA decoder in [34], about 42.3% hardware resources saving and 21.6% throughput improvement can be achieved.
+ACKNOWLEDGMENT
+The authors would like to thank Dr. Xu Chen and Dr. Ziyu Guo at the Fudan University for technology support and Di Wu at the University of Wisconsin–Madison for paper writing.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[3] Task Force, IEEE Standard P802.3an, Jun. 2006. [Online]. Available: http://www.ieee802.org/3/an/
+[4] Working Group, IEEE Standard 802.11, Jun. 2007. [Online]. Available: http://www.ieee802.org/11/
+[5] Working Group, IEEE Standard 802.16, May 2009. [Online]. Available: http://www.ieee802.org/16/
+[6] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[7] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, Mar. 2002.
+
+[8] L. Liu and C.-J.-R. Shi, “Sliced message passing: High throughput overlapped decoding of high-rate low-density parity-check codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3697–3710, Dec. 2008.
+[9] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T Ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, Apr. 2010.
+[10] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Power reduction techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43, no. 8, pp. 1835–1845, Aug. 2008.
+[11] P. A. Marshall, V. C. Gaudet, and D. G. Elliott, “Deeply pipelined digit-serial LDPC decoding,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 59, no. 12, pp. 2934–2944, Dec. 2012.
+[12] K. Cushon, S. Hemati, C. Leroux, S. Mannor, and W. J. Gross, “High-throughput energy-efficient LDPC decoders using differential binary message passing,” IEEE Trans. Signal Process., vol. 62, no. 3, pp. 619–631, Feb. 2014.
+[13] K. Cushon, P. Larsson-Edefors, and P. Andrekson, “Low-power 400-Gbps soft-decision LDPC FEC for optical transport networks,” J. Lightw. Technol., vol. 34, no. 18, pp. 4304–4311, Sep. 2016.
+[14] T. Mohsenin, D. N. Truong, and B. M. Baas, “A low-complexity message-passing algorithm for reduced routing congestion in LDPC decoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 5, pp. 1048–1061, May 2010.
+[15] C.-C. Cheng, J.-D. Yang, H.-C. Lee, C.-H. Yang, and Y.-L. Ueng, “A fully parallel LDPC decoder architecture using probabilistic minsum algorithm for high-throughput applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 9, pp. 2738–2746, Sep. 2014.
+[16] B. R. Gaines, “Stochastic computing,” in Proc. Spring Joint Comput. Conf. (AFIPS), Atlantic City, NJ, USA, Apr. 1967, pp. 149–156.
+[17] W. J. Gross, V. C. Gaudet, and A. Milner, “Stochastic implementation of LDPC decoders,” in Proc. Conf. Rec. 39th Asilomar Conf. Signals, Syst. Comput., Pacific Grove, CA, USA, Oct./Nov. 2005, pp. 713–717.
+[18] C. Winstead, V. C. Gaudet, A. Rapley, and C. Schlegel, “Stochastic iterative decoders,” in Proc. Int. Symp. Inf. Theory (ISIT), Adelaide, SA, Australia, Sep. 2005, pp. 1116–1120.
+[19] S. S. Tehrani, S. Mannor, and W. J. Gross, “An area-efficient FPGAbased architecture for fully-parallel stochastic LDPC decoding,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Shanghai, China, Oct. 2007, pp. 255–260.
+[20] S. S. Tehrani, S. Mannor, and W. J. Gross, “Fully parallel stochastic LDPC decoders,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5692–5703, Nov. 2008.
+[21] S. S. Tehrani, A. Naderi, G.-A. Kamendje, S. Mannor, and W. J. Gross, “Tracking forecast memories in stochastic decoders,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process., Taipei, China, Apr. 2009, pp. 561–564.
+[22] S. S. Tehrani, A. Naderi, G.-A. Kamendje, S. Hemati, S. Mannor, and W. J. Gross, “Majority-based tracking forecast memories for stochastic LDPC decoding,” IEEE Trans. Signal Process., vol. 58, no. 9, pp. 4883–4896, Sep. 2010.
+[23] D. Wu, Y. Chen, Q. Zhang, Y.-L. Ueng, and X. Zeng, “Strategies for reducing decoding cycles in stochastic LDPC decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 63, no. 9, pp. 873–877, Sep. 2016.
+[24] Y.-L. Ueng, C.-Y. Wang, and M.-R. Li, “An efficient combined bitflipping and stochastic LDPC decoder using improved probability tracers,” IEEE Trans. Signal Process., vol. 65, no. 20, pp. 5368–5380, Oct. 2017.
+[25] A. Naderi, S. Mannor, M. Sawan, and W. J. Gross, “Delayed stochastic decoding of LDPC codes,” IEEE Trans. Signal Process., vol. 59, no. 11, pp. 5617–5626, Nov. 2011.
+[26] M. Parhi, M. D. Riedel, and K. K. Parhi, “Effect of bit-level correlation in stochastic computing,” in Proc. IEEE Int. Conf. Digit. Signal Process. (DSP), Singapore, Jul. 2015, pp. 463–467.
+[27] T.-H. Chen and J. P. Hayes, “Design of division circuits for stochastic computing,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), Pittsburgh, PA, USA, Jul. 2016, pp. 116–121.
+[28] S.-I. Chu, “New divider design for stochastic computing,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 1, pp. 147–151, Jan. 2020.
+[29] Q. Zhang, Y. Chen, D. Wu, X. Zeng, and Y.-L. Ueng, “An area-efficient architecture for stochastic LDPC decoder,” in Proc. IEEE Int. Conf. Digit. Signal Process. (DSP), Singapore, Jul. 2015, pp. 244–247.
+[30] A. Alaghi and J. P. Hayes, “Exploiting correlation in stochastic circuit design,” in Proc. IEEE 31st Int. Conf. Comput. Design (ICCD), Asheville, NC, USA, Oct. 2013, pp. 39–46.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+5442
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 67, NO. 12, DECEMBER 2020
+
+[31] D. Wu and J. S. Miguel, “In-stream stochastic division and square root via correlation,” in Proc. 56th Annu. Design Autom. Conf., Las Vegas, NV, USA, Jun. 2019, pp. 1–6.
+[32] X. Zhang and P. H. Siegel, “Quantized iterative message passing decoders with low error floor for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 1, pp. 1–14, Jan. 2014.
+[33] X.-R. Lee, C.-L. Chen, H.-C. Chang, and C.-Y. Lee, “A 7.92 Gb/s 437.2 mW stochastic LDPC decoder chip for IEEE 802.15.3c applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 62, no. 2, pp. 507–516, Feb. 2015.
+[34] S.-W. Yen, S.-Y. Hung, C.-L. Chen, H.-C. Chang, S.-J. Jou, and C.-Y. Lee, “A 5.79-Gb/s energy-efficient multirate LDPC codec chip for IEEE 802.15.3c applications,” IEEE J. Solid-State Circuits, vol. 47, no. 9, pp. 2246–2257, Sep. 2012.
+Qichen Zhang (Graduate Student Member, IEEE) received the B.S. degree in microelectronics from Xi’an Jiaotong University, Xi’an, China, in 2013, and the M.S. degree in microelectronics and solid-state electronics from Fudan University, Shanghai, China, in 2016, where he is currently pursuing the Ph.D. degree with the School of Microelectronics. His research interests include VLSI design for channel coding, stochastic computation, and agile VLSI design.
+
+Xiaoyang Zeng (Member, IEEE) received the B.Sc. degree from Xiangtan University in 1996 and the Ph.D. degree (Hons.) from the Changchun Institute of Optics, Fine Mechanics and Physics, Chinese Academy of Sciences, in 2001.
+In 2001, he joined Fudan University, where he was a Post-Doctoral Researcher from March 2001 to February 2003. He has been with Fudan University as a faculty since 2003, where he is currently a Chair Professor and the Executing Director of the State-Key Laboratory of ASIC and System. He has published more than 200 articles on such international journals and conferences as IEEE ISSCC, IEEE JSSC, the IEEE TRANSACTIONS ON CAS, the IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, the IEEE VLSI SYMPOSIA, IEEE CICC, IEEE ESSCIRC, IEEE ASP-DAC, IEEE A-SSCC. He has applied for more than 120 patents. His research fields include information security chips, base-band processing technologies for wireless communication; mixed-signal IC designs, and ultra-low power IC methodology. Dr. Zeng received the National Science Fund for Distinguished Young Scholars in 2015, and the award of Distinguished professor of Yangtze River scholar in 2016, also award of the Science and Technology Innovation Youth Leader of the Ministry of Science and Technology in 2017. He also received the award of Top Ten New IT Youth in Shanghai in 2009, the award of Twilight scholar in Shanghai in 2011, and also the award of excellent academic leaders in Shanghai in 2015. He also serves as the Chair of the Shanghai Chapter of IEEE SSCS, a TPC member of ISSCC, a Co-Chair of the Circuit & System Division, Chinese Institute of Electronics, a member of the Steering Committee of ASPDAC and the A-SSCC technical committee, and a TPC Chair of ASICON 2009 and 2013.
+
+Yun Chen (Member, IEEE) received the B.Sc. degree from UESTC in 2000 and the Ph.D. degree from Fudan University in 2007.
+In 2007, she joined Fudan University, where she has been with faculty since March 2008. She has been with Fudan University as an Associate Professor of the State Key Laboratory of ASIC and System. She has published more than 60 articles on such international journals and conferences as IEEE ASSCC, the IEEE TRANSACTIONS ON CAS, the IEEE TRANSACTIONS ON COMMUNICATION, IEEE ASP-DAC, IEEE ICASSP, ICC, and ISCAS. She applied for more than 20 patents. Her research fields include base-band processing technologies for wireless communication and ultra-low power FEC IC design. She also serves as a Chair Secretary of the Shanghai Chapter of IEEE SSCS, a TPC Member of ASSCC, a Co-Chair of the Circuit System Division, Chinese Institute of Electronics, a member of the Steering Committee of SIPS and the ASICON technical committee.
+Shixian Li (Student Member, IEEE) received the B.S. degree in microelectronics science and engineering from Xidian University, Xi’an, China, in 2017. He is currently pursuing the M.S. degree with Fudan University, Shanghai, China.
+His research interest includes the VLSI implementation of error correcting codes.
+
+Keshab K. Parhi (Fellow, IEEE) received the B.Tech. degree from IIT Kharagpur, Kharagpur, India, in 1982, the M.S.E.E. degree from the University of Pennsylvania, Philadelphia, PA, USA, in 1984, and the Ph.D. degree from the University of California at Berkeley, Berkeley, CA, USA, in 1988.
+He has been with the University of Minnesota, Minneapolis, MN, USA, since 1988, where he is currently a Distinguished McKnight University Professor and Edgar F. Johnson Professor with the Department of Electrical and Computer Engineering. He has published more than 650 articles. He is the inventor or co-inventor of 31 patents. He has authored the textbook VLSI Digital Signal Processing Systems (New York, NY, USA: Wiley, 1999), and coedited the reference book Digital Signal Processing for Multimedia Systems (Boca Raton, FL, USA: CRC Press, 1999). His current research interests include the VLSI architecture design and implementation of signal processing, and machine learning systems, neuromorphic computing, data-driven neuroscience and biomarkers for neuro-psychiatric disorders, hardware security, and molecular computing. Dr. Parhi was a recipient of numerous awards including the 2017 Mac Van Valkenburg Award, the 2012 Charles A. Desoer Technical Achievement Award, and the 1999 Golden Jubilee Medal, from the IEEE Circuits and Systems society, the 2013 Distinguished Alumnus Award from IIT Kharagpur, the 2013 Graduate/Professional Teaching Award from the University of Minnesota, the 2004 F. E. Terman Award from the American Society of Engineering Education, the 2003 IEEE Kiyo Tomiyasu Technical Field Award, and the 2001 IEEE W. R. G. Baker Prize Paper Award. He has served as the Technical Program Co-Chair for the 1995 IEEE VLSI Signal Processing Workshop and the 1996 Application Specific Systems, Architectures, and Processors Conference, and as the General Chair for the 2002 IEEE Workshop on Signal Processing Systems. He served as a Board of Governors Elected Member for the IEEE Circuits and Systems Society from 2005 to 2007. He has served on the Editorial Boards for the IEEE TRANSACTIONS ON IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: Regular Papers and IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: Express Briefs, the IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, the IEEE TRANSACTIONS ON SIGNAL PROCESSING, the IEEE SIGNAL PROCESSING LETTERS, and the IEEE Signal Processing Magazine, and served as the Editor-in-Chief for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: Regular Papers from 2004 to 2005. He currently serves on the Editorial Board for the Journal of Signal Processing Systems (Springer). He was the Distinguished Lecturer of the IEEE Circuits and Systems Society from 1996 to 1998 and from 2019 to 2020.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:36:15 UTC from IEEE Xplore. Restrictions apply.
+
+

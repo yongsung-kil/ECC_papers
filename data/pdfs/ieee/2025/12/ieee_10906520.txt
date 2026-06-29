@@ -1,0 +1,363 @@
+IEEE EMBEDDED SYSTEMS LETTERS, VOL. 17, NO. 6, DECEMBER 2025
+
+439
+
+FPGA-Based Implementation of Single-Cycle High-Throughput LDPC Encoder for 5G New Radio
+A. Sharma , G. Purohit , Member, IEEE, and A. R. Asati , Senior Member, IEEE
+
+Abstract—This letter presents a novel architecture for a highthroughput encoder for quasi-cyclic low-density parity-check codes. This low-complexity encoder is specifically tailored for the 5th generation (5G) new radio (NR) standard. To achieve high throughput, we employ an automated approach to design customized encoders for individual base graphs using a Verilog Code Generator (VeCoGen) that we developed in MATLAB. Our proposed architecture improves efficiency by rearranging the wire indices during the hardware design language code generation stage itself, instead of performing shifting operations on the data carried by those wires on the fly. This eliminates the need for RAM (for storing base graph coefficients) and dedicated barrel shifters. The parity bits are computed in parallel, while maintaining optimal performance and gate count through effective exploitation of the base graph’s sparsity. Consequently, the encoder can be designed as a fully combinational circuit between the input and output registers, enabling the generation of the complete codeword within a single clock cycle. This results in exceptionally high throughput, optimal hardware utilization, and minimal number of XOR operations, making our approach highly effective for 5G NR applications.
+
+Fig. 1. Layout of base graphs under 5G NR. (a) For BG1 type base graphs. (b) For BG2 type base graphs.
+TABLE I LIFTING SIZES (Z VALUES) FOR 5G NR
+
+Index Terms—3GPP, 5th Generation (5G), channel coding, combinational circuits, FPGA, hardware design language (HDL), LDPC codes, new radio (NR), ultrareliable low-latency communication (uRLLC).
+I. INTRODUCTION
+I N THE era of Industry 4.0, 5G plays a crucial role in enabling applications in the biomedical and automotive sectors. Key scenarios include: 1) ultrareliable low-latency communication (uRLLC); 2) massive machinetype Communication (mMTC); and 3) enhanced mobile broadband (eMBB). To support uRLLC, significant increase in data transmission rates is required. LDPC codes, first introduced by Gallager in 1963 [1], are ideal for this, offering near-Shannon-limit error correction [2] and low-complexity encoding, making them key for high-rate data transmission.
+At the 2016 3GPP conference [3], LDPC codes were adopted for 5G New Radio (NR) data channels. As these are linear block codes, they are defined by their parity check matrices (PCMs) [1]. However, the size of a PCM can become quite large, depending on the length of the incoming message
+Received 20 January 2025; revised 18 February 2025; accepted 23 February 2025. Date of publication 27 February 2025; date of current version 16 December 2025. This manuscript was recommended for publication by Jongeun Lee. (Corresponding author: A. Sharma.)
+A. Sharma and A. R. Asati are with the Department of Electrical and Electronics Engineering, Birla Institute of Technology and Science Pilani, Pilani 333031, India (e-mail: f20180095p@alumni.bits-pilani.ac.in; abhijit_asati@pilani.bits-pilani.ac.in).
+G. Purohit is with the Advanced Information Technologies Group, Central Electronics Engineering Research Institute (CSIR-CEERI), Pilani 333031, India (e-mail: gp@ceeri.res.in).
+Digital Object Identifier 10.1109/LES.2025.3546543
+
+vector, requiring substantial RAM storage. Moreover, having such large fixed synthesized RAM for smaller message vectors would be inefficient. To address this, fixed-dimension base graphs, of types BG1 and BG2, were finalized, and the concept of lifting size (Z) was introduced to convert these base graphs into PCMs. Unique base graphs of both types were defined [3] for each of the 51 Z values listed in Table I. Each base graph has six submatrices: a Zero matrix, an Identity matrix, and four variable submatrices (A, B, D, E), as illustrated in Fig. 1.
+A base graph for a given Z is a matrix with integer values ranging from −1 to (Z−1). As explained in [3] and [9], the PCM is generated from the base graph (for a given Z) by replacing each element with a Z × Z matrix. The element ‘−1’ becomes a zero matrix, ‘0’ becomes an identity matrix, and ‘i’ transforms into an identity matrix column-shifted to the right in a circular fashion by ‘i’ positions [with i ranging from 1 to (Z-1)]. It follows that the base graph is Z2 times smaller in size than the PCM. The base graph consists of m rows and n columns, and the incoming message vector has (n-m) or Kb blocks, each containing Z bits.
+II. BACKGROUND AND RELATED WORKS
+Recent research on LDPC encoders, particularly for 5G NR, has focused on improving throughput and hardware efficiency. Nguyen et al. [4] proposed a low-complexity, high-throughput LDPC encoder leveraging the dual diagonal structure of base graphs. This design outperformed traditional methods like Gaussian elimination and Richardson–Urbanke [5] by
+
+1943-0671 c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:05 UTC from IEEE Xplore. Restrictions apply.
+
+440
+
+IEEE EMBEDDED SYSTEMS LETTERS, VOL. 17, NO. 6, DECEMBER 2025
+
+reducing memory and logic requirements. Their scalable architecture was unique for each Z. Implementing in ASIC for BG1 alone, they achieved throughputs ranging from 22.1 to 202.4 Gb/s for selected Z values (30, 64, 96, 144, and 352), with TSMC 65-nm technology and a cycle count of (n+2), using (kb+5) barrel shifters of Z bits each. Zhu et al. [6] introduced a fully parallel approach achieving 362.7 Gb/s for BG1 (Z=384) and 541.5 Gb/s for BG2 (Z=352) using (kb+6) cycles. Petrovic´ et al. [7] presented a novel FPGA-based partially parallel architecture supporting all base graphs in a single machine. Since the machine was optimized for the highest Z, its area was suboptimal for lower Z. To address this, a flexible circular shifting network was introduced, grouping Z values into three categories. Serial encoding was applied to larger Z values, while row encoding was used for the others. This improved hardware efficiency but reduced throughput for higher Z values. Liao et al. [9] implemented the architecture on an Nvidia TITAN RTX GPU, achieving throughputs of 41.8 GBPS (BG1-Z64) and 62.6 GBPS (BG1-Z96), which are similar to [4] but at a lower cost compared to ASIC implementations. Tian et al. [8] proposed a fully parallel design optimized for the maximum Z value under BG1. For smaller Z values, vacant LSB bits were padded with zeroes before being fed to the barrel shifters and XOR network, missing the opportunity to save on area and power. This results in degraded performance as Z decreases. The design, synthesized on SMIC 28-nm CMOS technology, used 64 Zbit barrel shifters and 27 clock cycles (for BG1) at 800 MHz, achieving a maximum throughput of 257.9 Gb/s. Unlike other references, [8] alone reports power consumption, with a peak dynamic power of 123.5 mW.
+A common feature in all these architectures is the heavy use of barrel shifters, RAM storage for base graph coefficients, and multicycle operations to generate the output. This letter proposes a novel approach that eliminates all these components, resulting in significantly higher throughput.
+
+employed in (4) to simplify the matrix multiplication process
+
+while maintaining its validity
+
+HCT =
+
+AB0 DE I
+
+⎡ST ⎤ × ⎣PTx ⎦ = 0T .
+PTy
+
+(4)
+
+As each element of the base graph corresponds to a Z × Z matrix, which could either be a zero matrix, identity matrix, or a column-shifted identity matrix, multiplying a block of the codeword by the base graph element would result in either a zero vector, the block itself or a shifted version of that block. Thus, base graphs not only save RAM but also simplify matrix multiplication to shift operations followed by modulo 2 sum.
+Solving (4) results in (5) and (6), which further give us (7) and (8) on simplification. Solving these yields all the parity blocks
+
+AST + BPxT + 0PyT = 0T
+
+(5)
+
+DST + EPTx + IPTy = 0T
+
+(6)
+
+PxT = B−1AST
+
+(7)
+
+PyT = EPTx + DST .
+
+(8)
+
+As illustrated in Fig. 1, the main coefficients of a base graph
+
+are located in the submatrices A, B, D, and E. Submatrix B
+
+contains a dual diagonal structure (bolded zeroes) that aligns
+
+with the forms shown in
+
+⎛
+
+⎡
+
+⎤
+
+1 0 −1 −1
+
+⎡
+
+⎤⎞
+
+0 0 −1 −1
+
+⎜⎜⎜⎝
+
+BBG1_B1
+
+=
+
+⎣⎢⎢⎢−10
+
+0 −1
+
+0 0
+
+−01⎥⎥⎥⎦
+
+, BBG1_B2
+
+=
+
+⎢⎢⎣⎢1−051
+
+0 −1
+
+0 0
+
+−01⎦⎥⎥⎥
+
+⎠⎟⎟⎟
+
+(9)
+
+1 −1 −1 0
+
+0 −1 −1 0
+
+⎛
+
+⎡
+
+⎤
+
+0 0 −1 −1
+
+⎡
+
+⎤⎞
+
+1 0 −1 −1
+
+⎜⎜⎜⎝ BBG2_B1
+
+=
+
+⎣⎢⎢⎢−11
+
+0 −1
+
+0 0
+
+−10⎥⎥⎥⎦
+
+, BBG2_B2
+
+=
+
+⎢⎢⎢⎣
+
+−1 0
+
+0 −1
+
+0 0
+
+−10⎥⎥⎥⎦
+
+⎟⎠⎟⎟. (10)
+
+0 −1 −1 0
+
+1 −1 −1 0
+
+III. ENCODING ALGORITHM FOR 5G NR
+For a given PCM, the goal of LDPC encoding is to compute the parity bits to be appended to the message to form a codeword that satisfies the condition [2] in
+
+HCT = 0T .
+
+(1)
+
+Here, H represents the PCM and C is the codeword. The
+codewords are generally systematic, as shown in (2), where Si (i ∈ {1, 2, . . . , kb}) denotes the incoming message vector blocks of a digital bitstream, followed by m parity blocks,
+each consisting of Z bits. The first four parity blocks of the
+codeword in (2) are denoted as Px while the remaining parity blocks are denoted as Py, resulting in (3). Consequently, the complete codeword is (n × Z) bits, represented as n (i.e., Kb+m) blocks of Z bits each
+
+C = S1 · · · Skb P1 · · · P4 P5 · · · Pm
+
+(2)
+
+C = S Px Py .
+
+(3)
+
+This structure ensures that the number of blocks in the codeword matches the number of columns in the base graph. Instead of directly performing matrix multiplication using the PCM [as shown in (1)], the base graph [illustrated in Fig. 1] is
+
+As matrix A has four rows, the matrix multiplication AST results in four components, where each corresponds to
+
+the modulo 2 sum of the shifted blocks of the incoming
+
+message vector. We denote these four components as λi (i ∈ {1, 2, 3, 4}). Equation (7) represents four subequations in four
+
+variables. We can derive the first four parity blocks (Px) by
+
+solving these equations. Since submatrix B can take on four
+
+different types, the calculation of the parity blocks will vary
+
+accordingly, as illustrated in equations (11)–(14) referred from [8]. Px(α1 ) and λ(iα) denote a right barrel shift operation on the block by α bits
+
+⎧ ⎪⎨⎪⎪ Px1 = ⎩⎪⎪⎪
+
+4 i=1
+
+λi
+
+,
+
+when B = BBG1_B1, BBG2_B2
+
+4 i=1
+
+λi
+
+(105 mod Z)
+,
+
+when B = BBG1_B2
+
+(11)
+
+4 i=1
+
+λi
+
+(1)
+,
+
+when B = BBG2_B1
+
+Px2 =
+
+λ1 λ1
+
++ (Px1)(1), when B = BBG1_B1, BBG2_B2 + Px1, when B = BBG1_B2, BBG2_B1
+
+(12)
+
+Px3
+
+=
+
+λ2 + Px2, when B =
+
+⎧λ3 ⎨ λ4
+
++ Px4, when B = + (Px1)(1), when
+
+BBG2_B1, BBG2_B2 BBG1_B1, BBG1_B2
+B = BBG1_B1
+
+(13)
+
+Px4
+
+=
+
+⎩
+
+λ4 λ3
+
++ +
+
+Px1, when B = BBG1_B2, BBG2_B1 (Px1)(1), when B = BBG2_B2
+
+.
+
+(14)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:05 UTC from IEEE Xplore. Restrictions apply.
+
+SHARMA et al.: FPGA-BASED IMPLEMENTATION OF SINGLE-CYCLE HIGH-THROUGHPUT LDPC ENCODER
+
+441
+
+Fig. 2. 5G compatible LDPC encoder architecture with XOR tree based combinational logic sitting between input and output registers. (a) For BG1 type base graphs. (b) For BG2 type base graphs.
+
+Fig. 3. Row-wise count of nonzero blocks in submatrices A and D of the base graph in Fig. 1, that determine the inputs for the modulo-2 sum via XOR trees in Fig. 2. (a) For BG1 type base graphs. (b) For BG2 type base graphs.
+
+Once Px has been calculated, all the blocks of Py can be calculated concurrently using (8), as illustrated in
+
+kb
+
+4
+
+Pyi =
+
+Di,jSj +
+
+Ei,kb+jPxj, i = 1, 2, . . . , m − 4. (15)
+
+j=1
+
+j=1
+
+IV. PROPOSED ARCHITECTURE
+The proposed architecture employs custom designs tailored to each base graph. We developed Verilog Code Generator (VeCoGen) in MATLAB to produce optimized hardware design language (HDL) code for each base graph. Instead of real-time shifting via barrel shifters, VeCoGen handles shifts for all matrix multiplication operations in (7) and (8) by rearranging wire indices during HDL code generation, passing them to XOR trees (XOR blocks in Fig. 2) for modulo 2 sum. As shown in Fig. 2, this eliminates the need for barrel shifters and RAM for base graph storage. Here, Ci (i ∈ {1, 2, . . . , n}) represents codeword blocks as defined in (2). Each XOR tree is customized to process only nonzero blocks. Fig. 3 shows the count of nonzero blocks in submatrices A and D of the base graph in Fig. 1. Unlike existing designs that invariably XOR kb blocks of Z bits each (1012Z XOR operations for BG1 and 420Z for BG2) during matrix multiplication for AST and DST in (5) and (6), the proposed approach leverages the sparsity of the base graph, where nonzero blocks are significantly fewer and reduces the number of XOR operations to 265Z and 420Z for BG1 and BG2, respectively. This corresponds to a 74% reduction in XOR trees for BG1 type and 65% for BG2 type.
+
+Fig. 4. System level testing of 5G compatible LDPC encoder.
+Based on Fig. 3, XOR trees in Fig. 2 are designed to compute Pi (i ∈ {1, 2, . . . , m}) blocks combinationally, feeding them to output registers in a single cycle.
+V. FPGA IMPLEMENTATION As the Z value increases, the number of bits entering and exiting the encoder grows. To test the functionality and find the operational frequency, routing to I/O ports becomes necessary. However, the limited number of FPGA I/O ports makes the FPGA implementation for higher Z values challenging. To address this, a new testing strategy is devised using Vivado’s IP integrator to design a testing apparatus. Tcl automation has been created in Xilinx Vivado to generate block designs for various Z values as shown in Fig. 4. For a particular base graph, VeCoGen is used to dump the Verilog code for the blocks “LDPC Encoder,” “LDPC Testing,” and “Control Unit.” Test message vectors are stored in block memory. On one clock edge, a test vector is passed through the “LDPC Encoder,” and on the next clock edge, the output is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:05 UTC from IEEE Xplore. Restrictions apply.
+
+442
+TABLE II FPGA IMPLEMENTATION RESULTS FOR DIFFERENT Z
+VALUES IN SET 1 FOR BG2 TYPE BASE GRAPHS
+
+IEEE EMBEDDED SYSTEMS LETTERS, VOL. 17, NO. 6, DECEMBER 2025
+TABLE IV COMPARING THE STATE-OF-THE-ART WITH THE PROPOSED ARCHITECTURE
+
+TABLE III FPGA IMPLEMENTATION RESULTS FOR DIFFERENT Z
+VALUES IN SET 1 BG1 TYPE BASE GRAPHS
+
+approach identifies wires that carry zeroes, customizing XOR trees to perform modulo-2 additions only on nonzero bits. This reduces XOR tree operations significantly, leading to an optimal gate count for the encoder.
+
+pushed into the “LDPC Testing” block. The output blocks Pi (i ∈ {1, 2, . . . , m}) are fed to the ILA over Z cycles, which probes and displays the output in Vivado GUI, which is compared against the expected output obtained from software algorithm. This approach simplifies testing large output blocks. The operational frequencies obtained from various Z values are later used to calculate throughput in the Implementation Results section. The FPGA board utilized is Zynq Ultrascale+ ZCU111 Evaluation Platform.
+
+VII. CONCLUSION
+This letter presented a single-cycle, high-throughput encoder for quasi-cyclic low-density parity-check (QC-LDPC) codes in 5G NR. Automations via Tcl and MATLAB-based VeCoGen enable design generation and testing across all Z values for BG1 and BG2. Efficiency is enhanced by limiting XOR operations to nonzero blocks through custom encoder designs for different base graphs. By removing barrel shifters and RAM, the proposed single-cycle architecture surpasses state-of-the-art designs in throughput, making it ideal for 5G eMBB and uRLLC scenarios.
+
+VI. IMPLEMENTATION RESULTS
+
+Tables II and III present the throughput, hardware utilization, and dynamic power consumption for various Z values in set 1 from Table I for both base graph types. Prevailing architectures rely on sequential shift registers to store intermediate values. However, the proposed architecture incorporates shifting during HDL code generation, resulting in a fully combinational design, which reduces the cycles needed to fill output registers from input registers, as shown in (16), to just one. The simplified throughput equation for both base graphs is given in (17). FPGA implementation for different Z values determines operating frequencies, which are used to calculate throughput. This approach eliminates the need for additional memory and exponentially increases throughput. Table IV shows that the proposed design outperforms all current state-of-the-art designs.
+
+Throughput
+
+=
+
+(Total bits at output) × (frequency)
+
+(Total cycles consumed)
+
+(16)
+
+Throughput = m × Z × (frequency).
+
+(17)
+
+Base graphs are intentionally sparse to prevent pipeline hazards during layered decoding, yet existing architectures have not leveraged this sparsity in XOR tree operations. As highlighted in [10] and [11], optimizing XOR logic for hardware implementation is essential for minimizing delay and power consumption. The proposed VeCoGen-based hardwired
+
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, Sep. 1963, p. 16.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645–1646, Aug. 1996.
+[3] Multiplexing and Channel Coding, Version 18.4.0, 3GPP Standard TS 38.212, Accessed: Sep. 27, 2024. [Online]. Available: https://www.3gpp. org/ftp/Specs/archive/38_series/38.212/
+[4] T. T. B. Nguyen, T. N. Tan, and H. Lee, “Efficient QC-LDPC encoder for 5G new radio,” Electronics, vol. 8, no. 6, p. 668, Jun. 2019.
+[5] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[6] Y. Zhu, Z. Xing, Z. Li, Y. Zhang, and Y. Hu, “High area-efficient parallel encoder with compatible architecture for 5G LDPC codes,” Symmetry, vol. 13, no. 4, p. 700, Apr. 2021.
+[7] V. L. Petrovic´, D. M. El Mezeni, and A. Radoševic´, “Flexible 5G new radio LDPC encoder optimized for high hardware usage efficiency,” Electronics, vol. 10, no. 9, p. 1106, May 2021.
+[8] Y. Tian, Y. Bai, and D. Liu, “Low-latency QC-LDPC encoder design for 5G NR,” Sensors, vol. 21, no. 18, p. 6266, Sep. 2021.
+[9] S. Liao, Y. Zhan, Z. Shi, and L. Yang, “A high throughput and flexible rate 5G NR LDPC encoder on a single GPU,” in Proc. 23rd Int. Conf. Adv. Commun. Technol. (ICACT), 2022, pp. 29–34.
+[10] G. Purohit, K. S. Raju, and V. K. Chaubey, “A new XOR-free approach for implementation of convolutional encoder,” IEEE Embed. Syst. Lett., vol. 8, no. 1, pp. 22–25, Mar. 2016.
+[11] N. Kumar, D. Kedia, and G. Purohit, “An efficient XOR-free implementation of polar encoder for reconfigurable hardware,” Integration, vol. 100, Jan. 2025, Art. no. 102291.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:24:05 UTC from IEEE Xplore. Restrictions apply.
+
+

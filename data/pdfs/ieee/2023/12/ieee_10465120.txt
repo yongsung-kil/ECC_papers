@@ -1,0 +1,604 @@
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+Soft-Output Deep Neural Network-Based Decoding
+Dmitry Artemasov, Kirill Andreev, Pavel Rybin, Alexey Frolov Center for Next Generation Wireless and IoT Skolkovo Institute of Science and Technology Moscow, Russia
+{d.artemasov, k.andreev, p.rybin, al.frolov}@skoltech.ru
+
+2023 IEEE Globecom Workshops (GC Wkshps) | 979-8-3503-7021-8/23/$31.00 ©2023 IEEE | DOI: 10.1109/GCWKSHPS58843.2023.10465120
+
+Abstract—Deep neural network (DNN)-based channel decoding is widely considered in the literature. The existing solutions are investigated for the case of hard output, i.e. when the decoder returns the estimated information word. At the same time, softoutput decoding is of critical importance for iterative receivers and decoders. In this paper, we focus on the soft-output DNNbased decoding problem. We start with the syndrome-based approach proposed by Bennatan et al. (2018) and modify it to provide soft output in the additive white Gaussian noise (AWGN) channel. The new decoder can be considered as an approximation of the maximum a-posteriori (MAP) decoder with smaller computation complexity. We discuss various regularization functions for joint DNN-MAP training and compare the resulting distributions for [64, 45] (extended Bose–Chaudhuri–Hocquenghem) eBCH code. Finally, to demonstrate the soft-output quality we consider the turbo-product code with [64, 45] eBCH codes as row and column codes. We show that the resulting DNN-based scheme is very close to the MAP-based performance and significantly outperforms the solution based on the Chase decoder. We come to the conclusion that the new method is prospective for the challenging problem of DNN-based decoding of long codes consisting of short component codes.
+Index Terms—channel decoding, machine learning, deep neural networks, soft-output, iterative codes
+I. INTRODUCTION
+Nowadays, the scope of application of machine learning algorithms and DNN is growing rapidly. In the past decade, the use of DNNs has allowed groundbreaking results to be achieved in applications such as image, video, and natural language processing [1]. All of these applications deal with natural signals. At the same time, much less attention has been devoted to the application of ML methods in communications. In this paper, we consider the application of ML algorithms for the channel decoding problem. To justify this research direction we note that the decoding problem is a classification problem: the channel output must correspond to one of the classes (codewords). The significant difference between this problem and a typical classification problem lies in the exponentially large number of classes.
+The idea to use NNs in the channel decoding problem is not new, here we mention the early papers [2], [3]. But due to the lack of computation capabilities, these methods were forgotten until a recent paper [4]. The authors of [4]
+
+consider a binary input channel with AWGN and utilize a fully connected NN as a decoder. The major ML challenge is dataset collection and labeling but in the decoding task, this problem disappears as a dataset of any size can be generated easily. At the same time, the approach of [4] suffers from the “curse of dimensionality” problem, as the number of codewords is exponential in the number of information bits. Thus, for any reasonable parameters, it is not possible to train the NN on all the codewords. The only hope is that the NN can learn the code structure by observing a small number of codewords. Note that all the practical codes are linear ones and can be defined by a basis, so the basis vectors are sufficient to learn the code structure. The main outcome of [4] is that the fully connected NN cannot learn the code structure1 and thus the such method is applicable for very short codes only. As an evolution of the deep-learning driven decoding, we highlight works utilizing the autoencoder (AE) architecture for turbo decoding schemes [5], [6]. The idea of turbo AEs is to jointly train linear or convolutional NN layers for the encoding and iterative decoding tasks. Trainable turbo decoders potentially allow to increase length of the code used in the transmission system by training each of the layers for component code decoding only. The subsequent articles propose to combine the existing decoding algorithms and NNs. The articles [7]– [13] consider belief propagation algorithm (both Sum-Product and Min-Sum modifications) which is suitable for any linear code, but shows the best results for sparse-graph codes, such as Low-Density Parity-Check (LDPC) codes [14]. The idea is to unwrap (or unroll) the underlying Tanner graph and obtain a sparse NN, which repeats the decoder operations but is equipped with trainable weights. The improvements were obtained for eBCH codes [7], [8], [12] and LDPC codes [9], [10], [13]. The next idea was to replace the activation functions, the architecture is called a hyper-network [15], [16]. Later, Cammerer et al. proposed to replace node and edge message updates with trainable functions, thus allowing NN to learn a generalized message passing algorithm [17].
+Another approach proposed in [18] is to consider the syndrome-based decoding algorithm that is suitable for any linear codes. The basic syndrome-based decoding algorithm implies the use of the mapping (syndrome to the coset leader),
+
+The research was carried at Skolkovo Institute of Science and Technology and supported by the Russian Science Foundation (project no. 23-11-00340), https://rscf.ru/en/project/23-11-00340/
+
+1we note that for structured codes, such as linear codes, the NN can work on some codewords that were not shown to it, see [4] for more details.
+
+979-8-3503-7021-8/23/$31.00 ©2023 IEEE
+
+1692
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+
+which has the exponential (in the number of parity-check bits) size. The idea of [18] is to approximate this table with a NN. We note that the syndrome does not depend on the codeword and, therefore, we do not require the NN to have a special structure, it can be arbitrary, but the best results were obtained with recurrent NNs [18]. Later a syndromebased approach was adapted to the transformer and denoising diffusion architectures [19], [20]. We also note the papers (see, e.g. [21]) devoted to DNN-based code construction. For additional literature and a more detailed overview, we refer the reader to [22].
+The papers above focus on the performance of hard-output decoding, i.e. the decoder is required to return the estimated information word. At the same time, modern receivers (such as MIMO receivers [23]) and modern codes consisting of short component codes [24] require iterative (or turbo) decoders. Soft-output decoding is of critical importance for such schemes. We note that several papers (e.g. [17], [18]) mention the possibility of obtaining a soft output by the proposed DNN architectures, but to the best of our knowledge, the quality of such output was not investigated in the literature. In what follows, we fill this gap.
+Our contribution is as follows. We start with a syndromebased approach [18] and modify it to provide soft output. The major change is the training process and the loss function, including the regularization term, which controls the soft output quality. We demonstrate the performance of the new decoder for the [64, 45] eBCH code on the binary input AWGN channel. We choose such parameters as MAP decoding is feasible for this code but has large complexity, which prevents the use of such a method in practice. Our decoder can be considered as an approximation of the MAP decoder with smaller computation complexity, in other words, we require our DNN to reproduce the MAP output. We discuss various regularization functions and compare the resulting distributions. Finally, to demonstrate soft output quality, we consider the iterative decoding scheme, namely the turbo product code with [64, 45] eBCH codes as row and column codes. We show that the resulting DNN-based scheme is very close to MAP-based performance and significantly outperforms the Chase decoder-based solution [25] in combination with the soft output calculation [26].
+The paper is organized as follows. In section II the proposed preprocessing procedure described, NN model architecture, and soft-output quality metrics are introduced and applied for distribution optimization. The section ends with the decoding performance results and their discussion. Section III provides a description of the proposed soft-decoding approach application in the TPC decoding scheme. The framework preprocessing steps for iterative decoding and model tuning steps are followed by a discussion of the results and conclusion.
+II. SOFT-INPUT SOFT-OUTPUT DNN-BASED DECODING
+A. System model
+Let us describe the system model. The user aims to transmit a k-bit information word u ∈ {0, 1}k. We assume the use of
+
+a binary linear block code C of length n and dimension k. Let H and G denote parity-check and generator matrices of the code C accordingly. The information word u is first encoded into the codeword c = (c1, . . . , cn) = uG ∈ {0, 1}n. Then the binary phase-shift keying (BPSK) modulation is applied, implying the following mapping.
+
+x = τ (c), τ (c) = (τ (c1), . . . , τ (cn)),
+where τ : {0, 1} → {1, −1}. Modulated codeword x is transmitted over the AWGN
+channel, thus the receiver obtains corrupted codeword
+
+y = x + z,
+
+where y = (y1, . . . , yn) ∈ Rn, z ∼ N (0, σ2In) and In is the identity matrix of size n × n. In what follows by Es/N0 we denote signal-to-noise ratio, Es/N0 = 1/2σ2.
+As usual [27], the input of the decoder is presented as a
+vector γ = (γ1, . . . , γn) of log-likelihood ratios, where
+
+γi
+
+=
+
+log
+
+p(yi|ci p(yi|ci
+
+= =
+
+0) 1)
+
+=
+
+2yi σ2
+
+,
+
+i = 1, . . . , n,
+
+(1)
+
+wh√ere log(·) stands for a natural logarithm and p(x) = 1/ 2πσ2 exp −x2/(2σ2) is the probability density function
+
+of a random variable distributed as N (0, σ2).
+
+Now, let us describe the decoding performance metric. Let
+
+us start with hard output decoding, and let uˆ = (uˆ1, . . . , uˆk) ∈
+
+{0, 1}k be the estimated information word. In what follows
+
+we
+
+utilize
+
+bit
+
+error
+
+rate
+
+(BER)
+
+Pb
+
+=
+
+1 k
+
+k i=1
+
+Pr[ui
+
+≠
+
+uˆi]
+
+and
+
+frame error rate (FER) Pf = Pr[u ≠ uˆ].
+
+To assess soft output quality, we compare the decoder output
+
+to the bit-wise MAP output γ∗ = (γ1∗, . . . , γn∗), where for i = 1, . . . , n we have
+
+exp (1 − c)γT
+
+γi∗
+
+=
+
+log
+
+Pr[ci Pr[ci
+
+= =
+
+0|y] 1|y]
+
+= log c∈C,ci=0 exp [(1 − c)γT ] ,
+
+(2)
+
+c∈C ,ci =1
+
+where 1 is the all-one vector, γT is the transpose of γ. We refer the reader to [28] for the derivation.
+
+B. Syndrome-based approach
+The proposed soft-output decoding framework inherits the syndrome-based structure described by Bennatan et al. [18]. The original syndrome-based decoder implementation was designed for the system with multiplicative noise and its performance was discussed for hard decision decoding. In this paper, we propose to modify the pre- and postprocessing steps to adapt the framework for soft-output decoding in the AWGN channel.
+In [18] authors propose to pass vector [|y|, s] as the input to the noise estimator, where [·, ·] denotes concatenation, |y| – reliability vector and s = bin(y)HT – binary syndrome. In such notation bin(·) implies a hard decision over the received vector. Instead, we propose to utilize the so-called soft syndrome introduced by Lugosch et al. [29] to avoid the harddecision step in preprocessing. Since there is an isomorphism
+
+1693
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+
+in between ({0, 1}, ⊕) and ({1, −1}, ∗), the syndrome can be expressed as follows
+
+si =
+
+sign(yj), ∀i ∈ [1, n − k]
+
+(3)
+
+j∈M(i)
+
+where M(i) is the set of columns in the i-th row of parity check matrix H equal to 1.
+Thus, the hard syndrome relaxation for input LLR vector γ can be introduced as
+
+s˜i = min |γj|
+
+sign(γj), ∀i ∈ [1, n − k] (4)
+
+j∈M(i)
+
+j∈M(i)
+
+For following description we denote noise estimator input vector by d = [|γ|, ˜s] ∈ R2n−k.
+The proposed decoding algorithm is summarized in Algorithm 1. The noise estimation function is denoted by F. In what follows F is chosen to be a DNN.
+
+Algorithm 1 Soft-output syndrome-based DNN decoding
+Input: γ ∈ Rn - input LLRs, ˜s ∈ Rn−k - soft syndrome Output: γˆ ∈ Rn - transmitted message LLRs estimation
+1: ˆz ← F ([|γ|, ˜s]) 2: γˆ ← γ − sign(γ) ⊙ ˆz 3: return γˆ
+
+C. NN model architecture
+The main goal of the neural network F is to estimate the noise vector, and the choice of the best architecture remains an open question [18]–[20]. In this paper, we focus on estimating the ability of the neural network framework to perform soft decoding. Based on the analysis of hard decoding quality and the time required to train different architectures, we choose a Stacked-GRU architecture [18].
+Stacked-GRU is a multi-layer Recurrent Neural Network (RNN) architecture composed of Gated Recurrent Unit (GRU) cells [30] with trainable “update” and “reset” gates. Each GRU cell can be described by the following equations (see Fig. 1 for more details).
+
+gt = σ(Wgdt + Ugqt−1 + bg),
+
+(5)
+
+rt = σ(Wrdt + Urqt−1 + br),
+
+(6)
+
+qt = tanh Whdt + Uh(rt ⊙ qt−1) + bh ,
+
+(7)
+
+qt = gt ⊙ qt + (1 − gt) ⊙ qt−1,
+
+(8)
+
+where dt is the input vector, qt - output vector, qt - candidate output vector, gt - update gate vector, rt - reset gate vector, W, U - trainable parameters matrices and b - trainable bias vectors. σ(·) denotes sigmoid function, tanh(·) hyperbolic tangent and ⊙ - Hadamard product. This architecture is widely used for Natural Language Processing (NLP).
+To form a Stacked-GRU architecture, cells are bundled in two dimensions. The first stacking dimension is similar to the general fully connected NN (FCNN) layers. The output qt of the preceding cell is passed to the feature input dt of the subsequent cell. By L we denote the total number of layers
+
+qt
+
+qt−1
+
+⊙
+
+Ur
+
+rt
+
+σ
+
+Wr
+
+⊙
+
++
+
+qt
+
+1−
+
+⊙
+
+Ug
+
+gt qˆt
+
+σ
+
+tanh
+
+Wg
+
+Uh
+
+Wh
+
+dt
+
+Fig. 1. Gated Recurrent Unit cell
+
+in the Stacked-GRU network. The second stacking dimension
+defines the recurrent structure of the network. The output of the preceding cells is passed as the hidden state qt−1 to the following cells. The initial hidden state of the network q0 is set to zero. We denote the total number of time steps by T .
+For a single input vector, Stacked-GRU NN generates T
+vectors on the outputs of the last layer. We denote matrix of stacked output vectors by Q(L) = [q1(L), . . . , q(TL)] ∈ Rnh×T , where superscript L denotes index of the last layer, subscript t denotes the GRU time step and nh denotes the hidden size of the cell. In order to reduce the size of Stacked-GRU output, its vectorized representation vec(Q(L)) is passed to the single FC
+layer. The complete architecture of the noise estimator model
+is depicted in Fig.2.
+
+··· q0
+
+zˆ
+
+q(1L) GRU(1L)
+
+q(1L)
+
+FC
+
+q2(L) GRU2(L)
+
+q2(L)
+
+···
+
+···
+
+q(12) GRU1(2)
+
+q1(2)
+
+q1(1) GRU1(1)
+
+q1(1)
+
+···
+
+q2(2) GRU(22)
+
+q2(2)
+
+···
+
+q2(1) GRU(21)
+
+q(21)
+
+···
+
+q(TL) GRU(TL)
+··· qT(2)
+GRU(T2) qT(1)
+GRUT(1)
+
+d
+
+···
+
+Fig. 2. Stacked-GRU model architecture
+
+For model training, the loss is calculated from the framework soft output and binary codeword. The Binary CrossEntropy (BCE) with sigmoid function is utilized.
+
+1n
+
+LBCE(γˆ, c) = − n ci log σ(−γˆi)+
+i=1
+
+(9)
+
+(1 − ci) log(1 − σ(−γˆi))
+
+D. Soft-output quality optimization
+
+In order to optimize the soft-output distribution we propose to introduce a regularization term into the loss function for
+
+1694
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+
+TABLE I EVALUATION OF THE NN-DECODER SOFT-OUTPUT DISTRIBUTION COMPARED TO MAP OUTPUT WITH PROPOSED REGULARIZATIONS
+
+Mean: Var: KL div.: MSE:
+
+LBCE 0.606 11.752 3.158 · 10−10 4.906
+
+LBCE + αMSELMSE 0.148 7.170
+1.219 · 10−10 3.547
+
+LBCE + αKLLKL 0.359 8.539
+1.181 · 10−10 4.759
+
+LBCE + αMLM 0.018 0.231
+3.071 · 10−10 4.864
+
+the last epochs of a model training procedure. Three types
+
+of regularization are proposed: Mean Squared Error (MSE),
+
+Kullback-Leibler (KL) divergence and moments-based. MAP
+
+3
+
+decoder output LLRs γ∗ are used as a reference.
+
+Count ·105
+
+MSE LMSE and KL divergence LKL regularizations are
+
+2
+
+defined in a pointwise manner. Moments-based regularization
+
+LM is expressed as the weighted sum of the MSEs of the first
+
+and second moments of the decoder output distributions.
+
+1
+
+BCE loss BCE+reg. MAP
+
+LMSE(γ∗, γˆ)
+
+=
+
+1 n
+
+n
+(γi∗ − γˆi)2
+
+i=1
+
+LKL(γ∗, γˆ)
+
+=
+
+n i=1
+
+γi∗
+
+·
+
+log
+
+γi∗ γˆi
+
+(10)
+
+0
+
+−20
+
+−10
+
+0
+
+10
+
+20
+
+Output LLR
+
+(11) Fig. 3. Output LLR distributions histogram for Es/N0 = 1 dB [64, 45]
+eBCH code. The moments-based approach is used for regularization.
+
+2
+LM(γ∗, γˆ) = ρM E(|γ∗|) − E(|γˆ|) +
+
+2
+
+(12)
+
+(1 − ρM) Var(|γ∗|) − Var(|γˆ|)
+
+The loss function with regularization term is expressed as
+
+L = LBCE + αRegLReg
+
+(13)
+
+where LReg is the selected regularization metric and αReg its weight coefficient.
+The results of the described regularization terms applied for the optimization of the soft output distribution of the NN decoder are summarized in Table I and depicted in Fig.3 for the moments-based approach. Table I evaluates the NN-decoder output distribution similarity to the MAP decoder in terms of metrics used for regularizations. Results are provided for NN-decoder trained on [64, 45] eBCH code with distribution evaluation on Es/N0 = 1dB. Regularization terms weights were estimated empirically: αMSE = 0.01, αKL = 1010, αM = 0.1, ρM = 0.95.
+
+E. Simulation results
+To evaluate the decoding performance of the proposed framework, the Stacked-GRU model with a hidden size of 5n, 4 layers, and 5 time-steps, as in [18], was trained on zero codewords with a batch size of 213 codewords. The initial learning rate of Adam optimizer [31] was set to 10−3 with a further decrease to 10−6 by the “reduce on plateau” scheduler. Initial training was performed with BCE loss (9) only. MAPbased regularization terms were introduced for the last epochs
+
+10−1
+
+Bit error rate
+
+10−2
+
+Chase, p = 1, . . . , 7
+
+10−3
+
+BP, 50 iter. Tanner-net, 20 iter.
+
+Soft-output DNN
+
+MAP
+
+10−4
+
+0.0
+
+1.0
+
+2.0
+
+3.0
+
+4.0
+
+Es/N0, dB
+
+Fig. 4. Bit error rate results for [64, 45] eBCH code
+
+only due to the high complexity of MAP decoding.2 For training AWGN was sampled with the uniformly distributed variance value, corresponding to the SNR range, in which code is expected to provide BER from 5·10−2 to 10−4. For [64, 45] eBCH [0, 3] dB Es/N0 training range was selected.
+The performance of soft-output DNN decoder was compared with the Chase decoder (number of least reliable positions p = 1 . . . 7), Belief propagation with 50 decoding iterations and NN-Tanner [9] with 20 decoding iterations. Results are depicted in Fig.4.
+2we note that proposed soft-output DNN can be utilized without joint DNNMAP fine tuning stage, if such is restricted by the complexity reasons. In that case the DNN output distribution is not guaranteed to match MAP.
+
+1695
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+
+n2 k2
+
+k1 n1
+
+Information block Column checks
+
+Row checks
+Checks on checks
+
+Fig. 5. TPC structure
+Algorithm 2 TPC decoding
+Input: Γ ∈ Rn1×n2 - channel output Output: Γ ∈ Rn1×n2 - transmitted message estimation
+1: Lc, Lr ← 0 2: Γ ← Γ 3: for i = 1 to N do
+Column decoding: 4: A ← ΓT − Lc 5: L0 ← Dc(A) 6: Lc ← αc(i)(L0 − A) 7: Γ ← AT + LcT
+Row decoding: 8: A ← Γ − Lr 9: L0 ← Dr(A) 10: Lr ← αr(i)(L0 − A) 11: Γ ← A + Lr 12: end for 13: return Γ
+
+B. NN TPC decoding
+To utilize the soft-output DNN decoder we pre-train the model for component code decoding, as described in Section II, and then fine-tune it in the iterative scheme.
+One of the advantages of a syndrome-based approach lies in its robustness to overfitting. The noise estimation NN-model is trained on reliability vectors and syndromes, which do not depend on the transmitted codeword. Thus, the model can be trained on a zero codeword with different realizations of noise. However, the performance of the model trained on the defined range of signal-to-noise ratios degrades for values over the range. This problem arises in the iterative schemes, since with each iteration the absolute value of the output LLRs grows. The proposed iterative decoding approach does not require training a separate model for each decoding iteration. The same pretrained DNN decoder is utilized for all TPC iterations. To solve the issue of growing LLRs we apply L1 batch normalization for the input of the decoding framework.
+In the NN-TPC decoding scheme extrinsic LLRs scale factors αc, αr are initialized as the trainable parameters, thus during the fine-tuning stage their optimal value is calculated by the gradient descent jointly with the decoding model.
+The loss function for the NN-TPC fine-tuning stage is the exponentially weighted sum of BCE loss (9) of all decoding iterations.
+
+β = [e0, . . . , e2N−1]
+
+(14)
+
+1
+
+2N
+
+LNN-TPC
+
+=
+
+2N ∥β∥1
+
+βj LBCE (Γj , C)
+j=1
+
+(15)
+
+III. NN ITERATIVE SOFT-OUTPUT DECODING
+To work in iterative decoding schemes, the decoder must be able to produce a soft output. Turbo Product Code (TPC) scheme was chosen to demonstrate the potential of using the proposed framework in iterative decoding schemes.
+A. Turbo product code
+TPC structure can be explained using the diagram in Fig.5. TPC is constructed from two component codes in the systematic form with parameters [n1, k1] and [n2, k2] respectively. The encoding is performed in two steps. Initially, the information submatrix k1 × k2 is encoded by the ”column code” producing the ”column checks” submatrix. Then the information and column check submatrices are encoded with the ”row code”, thus producing the ”row checks” and ”checkson-checks” submatrices. The aggregate code rate of TPC is R = (k1k2)/(n1n2) [27].
+The iterative TPC decoding procedure is summarized in the algorithm 2. There by N we denote the number of decoding iterations, by Dc(·), Dr(·) column and row decoding functions, by Lc ∈ Rn2×n1 , Lr ∈ Rn1×n2 extrinsic information matrices and by αc(i), αr(i) ∈ [0, 1] extrinsic LLRs scale factors on i-th iteration.
+
+Where Γj is decoded by columns/rows message LLRs on iteration ⌈j/2⌉ and C is transmitted binary TPC message.
+C. Simulation results
+To evaluate the proposed framework in an iterative decoding scheme, we use TPC with [64, 45] eBCH as component code. Soft-output DNN model was initially trained on component code, as described in II-E. Then the model was fine-tuned in the TPC decoding scheme with a learning rate 10−6 for 4000 epochs with a batch size of 256. The extrinsic scales αc, αr were initialized by the value 0.7.
+The performance of the soft-output DNN decoder is compared to the Chase-Pyndiah algorithm [26] and MAP component code decoding for N = 2 and N = 4 TPC decoding iterations and depicted in Fig.6-7.
+Further research directions are as follows. In the realworld applications with increasing requirements to latency, memory and power usage, there is a challenge of decoder complexity reduction without loss of decoding performance. DNN utilized for noise estimation in this paper has relatively high complexity (≈ 2.2 · 106 parameters). The question of optimal architecture selection for soft-output decoding is an open one. Apart from that, we point out the model weights adaptive quantization, activation functions approximation [32]
+
+1696
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE Globecom Workshops (GC Wkshps): Channel Coding beyond 5G
+
+and model weights pruning [33] as the potential directions of soft-output DNN complexity reduction.
+100
+
+10−1
+
+Frame error rate
+
+10−2
+
+10−3
+
+10−4 −2.0
+
+−1.0
+
+Chase, p = 1, . . . , 8 Soft-output DNN MAP
+
+0.0
+
+1.0
+
+2.0
+
+3.0
+
+4.0
+
+Es/N0, dB
+
+Fig. 6. FER results for TPC decoding scheme with [64, 45] eBCH as component code, 2 iterations
+
+100
+
+10−1
+
+Frame error rate
+
+10−2
+
+10−3
+
+10−4 −2.0
+
+−1.0
+
+Chase, p = 1, . . . , 8 Soft-output DNN MAP
+
+0.0
+
+1.0
+
+2.0
+
+3.0
+
+4.0
+
+Es/N0, dB
+
+Fig. 7. FER results for TPC decoding scheme with [64, 45] eBCH as component code, 4 iterations.
+
+REFERENCES
+[1] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. The MIT Press, 2016.
+[2] X.-A. Wang and S. Wicker, “An artificial neural net Viterbi decoder,” IEEE Transactions on Communications, vol. 44, no. 2, pp. 165–171, 1996.
+[3] L. G. Tallini and P. Cull, “Neural nets for decoding error-correcting codes,” in IEEE Technical Applications Conference and Workshops. Northcon/95. Conference Record, Oct 1995, pp. 89–.
+[4] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in 2017 51st Annual Conference on Information Sciences and Systems (CISS), March 2017, pp. 1–6.
+[5] M. V. Jamali, H. Saber, H. Hatami, and J. H. Bae, “ProductAE: Toward training larger channel codes based on neural product codes,” in ICC 2022 - IEEE International Conference on Communications, 2022, pp. 3898–3903.
+[6] J. Clausius, M. Geiselhart, and S. ten Brink, “Component training of turbo autoencoders,” 2023. [Online]. Available: https://arxiv.org/abs/ 2305.09216
+[7] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep Learning Methods for Improved Decoding of Linear Codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, Feb 2018.
+[8] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in proc. of IEEE International Symposium on Information Theory (ISIT), June 2017, pp. 1361–1365.
+
+[9] K. Andreev, A. Frolov, G. Svistunov, K. Wu, and J. Liang, “Deep neural network based decoding of short 5G LDPC codes,” in 2021 XVII International Symposium ”Problems of Redundancy in Information and Control Systems” (REDUNDANCY), 2021, pp. 155–160.
+[10] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph ldpc codes,” IEEE Journal on Selected Areas in Communications, vol. 39, no. 7, pp. 1983–1999, 2021.
+[11] M. Lian, F. Carpi, C. Ha¨ger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and snr adaptation,” in 2019 IEEE International Symposium on Information Theory (ISIT), 2019, pp. 161–165.
+[12] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN Decoding of Linear Block Codes,” 2017. [Online]. Available: https://arxiv.org/abs/1702.07560
+[13] B. Vasic´, X. Xiao, and S. Lin, “Learning to decode ldpc codes with finite-alphabet message passing,” in proc. of Information Theory and Applications Workshop (ITA), 2018, pp. 1–9.
+[14] R. G. Gallager, Low-Density Parity-Check Codes. MIT Press, 1963. [15] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block
+codes,” in Advances in Neural Information Processing Systems, vol. 32. Curran Associates, Inc., 2019. [16] E. Nachmani and L. Wolf, “A gated hypernet decoder for polar codes,” in proc. of IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), 2020, pp. 5210–5214. [17] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” 2022. [Online]. Available: https://arxiv.org/abs/2207.14742 [18] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes - a syndrome-based approach,” in proc. of IEEE International Symposium on Information Theory (ISIT), June 2018, pp. 1595–1599. [19] Y. Choukroun and L. Wolf, “Error correction code transformer,” 2022. [Online]. Available: https://arxiv.org/abs/2203.14966 [20] ——, “Denoising diffusion error correction codes,” 2022. [Online]. Available: https://arxiv.org/abs/2209.13533 [21] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Learn codes: Inventing low-latency codes via recurrent neural networks,” IEEE Journal on Selected Areas in Information Theory, vol. 1, no. 1, pp. 207– 216, 2020. [22] K. Niu, J. Dai, K. Tan, and J. Gao, “Deep learning methods for channel decoding: A brief tutorial,” in 2021 IEEE/CIC International Conference on Communications in China (ICCC), 2021, pp. 144–149. [23] C. Studer, “Iterative MIMO decoding: Algorithms and VLSI implementation aspects,” Ph.D. dissertation, ETH Zurich, Switzerland, Jun. 2009. [Online]. Available: http://www.nari.ee.ethz.ch/pubs/p/studerdiss09 [24] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981. [25] D. Chase, “Class of algorithms for decoding block codes with channel measurement information,” IEEE Transactions on Information Theory, vol. 18, no. 1, pp. 170–182, January 1972. [26] R. Pyndiah, “Near-optimum decoding of product codes: block turbo codes,” IEEE Transactions on Communications, vol. 46, no. 8, pp. 1003– 1010, 1998. [27] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009. [Online]. Available: https://books. google.ru/books?id=n9BNngEACAAJ [28] T. Richardson and R. Urbanke, Modern coding theory. Cambridge university press, 2008. [29] L. Lugosch and W. J. Gross, “Learning from the syndrome,” in 2018 52nd Asilomar Conference on Signals, Systems, and Computers, 2018, pp. 594–598. [30] K. Cho, B. van Merrienboer, D. Bahdanau, and Y. Bengio, “On the properties of neural machine translation: Encoder-decoder approaches,” 2014. [Online]. Available: https://arxiv.org/abs/1409.1259 [31] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2017. [32] M. Stark, “Machine learning for reliable communication under coarse quantization,” doctoralThesis, Technische Universita¨t Hamburg, 2021. [Online]. Available: http://hdl.handle.net/11420/10924 [33] S. Narang, E. Elsen, G. Diamos, and S. Sengupta, “Exploring sparsity in recurrent neural networks,” 2017. [Online]. Available: https://arxiv.org/abs/1704.05119
+
+1697
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:05:25 UTC from IEEE Xplore. Restrictions apply.
+
+

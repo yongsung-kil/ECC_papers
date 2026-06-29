@@ -1,0 +1,521 @@
+DESIGN AND ANALYSIS OF LDPC DECODERS FOR SOFTWARE DEFINED RADIO
+
+Sangwon Seo, Trevor Mudge
+Advanced Computer Architecture Laboratory University of Michigan at Ann Arbor {swseo, tnm}@umich.edu
+
+Yuming Zhu, Chaitali Chakrabarti
+Department of Electrical Engineering Arizona State University
+{yuming, chaitali}@asu.edu
+
+ABSTRACT
+Low Density Parity Check (LDPC) codes are one of the most promising error correction codes that are being adopted by many wireless standards. This paper presents a case study for a scalable LDPC decoder supporting multiple code rates and multiple block sizes on a software defined radio (SDR) platform. Since technology scaling alone is not sufficient for current SDR architectures to meet the requirements of the next generation wireless standards, this paper presents three techniques to improve the throughput performance. The techniques are use of data path accelerators, addition of memory units and addition of a few assembly instructions. The proposed LDPC decoder implementation achieved 30.4 Mbps decoding throughput for the n=2304 and R=5/6 LDPC code outlined in the IEEE 802.16e standard.
+Index Terms— LDPC, Min-sum iterative decoding, SDR, SODA, SIMD
+1. INTRODUCTION
+Low density parity check (LPDC) codes have excellent error correction performance that approaches the Shannon capacity limit [1], [2]. As a result, they have been adopted in many current and next generation wireless protocols such as DVBS2 and the IEEE 802.16e standard (WiMAX). Decoders used for LDPC codes have high throughput requirements and have been successfully implemented using ASICs and FPGAs [3]. However, the emergence of a wide variety of wireless protocols that are rapidly changing makes custom hardware for these decoders relatively time consuming and expensive to develop.
+Software Defined Radio (SDR) is a programmable hardware platform capable of supporting software implementations of wireless communication protocols for physical layers [4]. This paper presents a case study for a LDPC decoder implementation that supports multiple code rates and multiple block sizes on a SDR platform, SODA (Signal-processing On-Demand Architecture). SODA is a multiprocessor architecture, where each processor is equipped with a 32-wide SIMD (Single Instruction Multiple Data) pipeline, a scalar pipeline and scratchpad memories. When the LDPC matrix
+
+Fig. 1. LDPC matrix H and the corresponding bipartite graph
+is represented by structured submatrices, the data-level parallelism can be efficiently handled by the SIMD pipeline. However the current SODA architecture is unable to meet the high decoding throughput and the scalability requirements (multiple block sizes and multiple code rates) of the IEEE 802.16e standard. In this paper we present use of data path accelerators, addition of memory units and addition of a few assembly instructions to address the throughput and scalability requirements. The proposed LDPC decoder implementation achieves 30.4 Mbps decoding throughput for the n=2304 and R=5/6 LDPC code outlined in the IEEE 802.16e standard.
+The rest of the paper is organized as follows. Section 2 gives a brief overview of LDPC codes. Section 3 introduces SODA, the SIMD-based high-performance DSP processor for SDR and mapping of the LDPC decoder onto SODA. Section 4 describes LDPC accelerators, memory controller/buffer organization and assembly support required for the high throughput scalable LDPC decoder implementation. Section 5 presents memory and throughput analysis of the augmented architecture. Section 6 concludes the paper.
+2. LDPC BASICS
+2.1. Introduction
+A LDPC code is a class of linear block codes whose codewords satisfy a set of linear parity-check constraints [1]. These constraints are typically defined by an m-by-n parity-check matrix H, whose m rows specify each of the m constraints (the number of parity checks), and n represents the length of a codeword. H is also characterized by Wr and Wc, which represent the number of 1’s in the rows and columns, respec-
+
+1-4244-1222-6/07/$25.00 ©2007 IEEE
+
+210
+
+SiPS 2007
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+tively. A LDPC code can be represented by a bipartite graph, which consists of two types of nodes, Variable Nodes (VN) and Check Nodes (CN). Check node i is connected to variable node j whenever hij of H is non-zero. Fig. 1 describes the matrix H and the corresponding bipartite graph of a simple LDPC code.
+
+Theoretically, the LDPC decoding process finishes when all parity-check equations are satisfied. In reality, a predefined number of iterations (NUM) based on SNR is generally used.
+2.3. LDPC Matrix Partition
+
+2.2. LDPC Decoding Process
+LDPC codes are decoded iteratively using a message passing algorithm [1]. This algorithm involves exchanging the belief information among the variable nodes and check nodes that are connected by edges in the bipartite graph. Let In be the intrinsic information from the received signal, Ln be the reliable information for variable node n, Ln,m be the information conveyed from variable node n to check node m, and En,m be the extrinsic information generated in check node m that is passed to variable node n. The belief information is updated in an iterative manner and implemented in two phases. In the first phase, the variable nodes send their belief information, Ln,m, to check nodes connected to them; in the second phase, the check nodes send the updated belief information (new En,m) to the variable nodes connected to them for updating Ln (See Fig. 1). The iteration steps are summarized in Algorithm 1.
+Algorithm 1: Min-sum LDPC Decoding Algorithm
+1. Initialization: En,m = 0, Ln = In
+2. VN to CN: Ln,m = Ln - En,m 3. Update En,m: Enn,emw = f (Ln ,m|n ∈ S ⊂ N (m)) 4. Update Ln: Lnnew = Ln,m + Enn,emw 5. Repeat the steps 2,3,4 for NUM iteration times
+6. Make a decision of bit n based on the corresponding Ln value
+Here, N (m) is the set of variable nodes which are connected with check node m in the bipartite graph. Similarly, M (n) is the set of check nodes which are connected with variable node n. The decoding algorithms differ in how the function f in Step 3 of Algorithm 1 is evaluated.
+There are three options for the LDPC iterative decoding algorithm: Belief Propagation (BP), λ-min and min-sum algorithms [5]. Although BP and λ-min algorithms show better error correction performance compared to min-sum algorithm, these algorithms require a look-up table for hyperbolic function values, which requires additional memory space. The min-sum algorithm is selected here because of the limited memory size and easy computation patterns. The min-sum algorithm f is shown as follows. Here, n ∈ N (m), n = n.
+Enn,emw = - ( n sign(Ln,m)) × minn |Ln,m|
+As can be seen, the operations in the min-sum LDPC decoding algorithm are limited to addition, subtraction and finding a minimum value, all of which can be supported by our SDR architecture described in Section 3.
+
+Fig. 2. Partitioning of H into z-by-z cyclic identity matrices
+
+A LDPC matrix H has randomly distributed 1’s which re-
+
+sults in complex data routing and is a major challenge for
+
+building a high-performance and low-power LDPC decoder.
+
+[3] and [6] show that introduction of some structural regular-
+
+ity in the matrix does not degrade its error correction perfor-
+
+mance. Moreover the regularity enables partially parallel im-
+
+plementation of LDPC decoders and has been utilized in the
+
+IEEE 802.16e standard. Fig. 2 shows the partitioning of H
+
+into z-by-z cyclic identity submatrices. Here, Ix represents a
+
+cyclic identity matrix with rows shifted cyclically to the right
+
+by x positions. This characteristic reduces the routing over-
+
+head and has been exploited efficiently in our architecture.
+
+Fig.
+
+2
+
+also
+
+shows
+
+how
+
+the
+
+n z
+
+of
+
+the
+
+identity
+
+matrices
+
+along
+
+a
+
+row can be grouped to form a block row. So, in essence, the
+
+H
+
+matrix
+
+can
+
+also
+
+be
+
+partitioned
+
+into
+
+m z
+
+block
+
+rows
+
+each
+
+of
+
+size z-by-n.
+
+3. SDR ARCHITECTURE
+In this section, we present the SIMD-based SDR architecture, SODA [4]. This architecture was initially designed to support wireless protocols such as WCDMA and IEEE 802.11a.
+
+3.1. SODA Overview
+The SODA multiprocessor architecture is shown in Fig. 3. It consists of multiple data processing elements (PEs), one control processor and a global scratchpad memory, all of which are connected through a shared bus. Each SODA PE consists of five major components: 1) a 32-way, 16-bit datapath SIMD pipeline for supporting vector operations. Each datapath includes one 16-bit ALU with multiplier and a 2 readport, 1 write-port 16 entry register file. Intra-processor data movements are supported through a SIMD Shuffle Network
+
+211
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+Interconnect Bus
+
+SODA System
+Control Processor
+
+Global Scratchpad
+Memory
+
+Local Memories
+Local Memories
+Local Memories
+
+PE Execution
+Unit
+PE Execution
+Unit
+PE Execution
+Unit
+
+SODA PE
+To System
+Bus
+
+3. Local memory
+
+5. DMA
+
+Local SIMD Memory
+
+512-bit SIMD Reg. File
+
+1. SIMD pipeline
+
+Pred. Regs
+
+512-bit W
+
+SIMD
+
+B
+
+ALU+
+
+Mult
+
+SIMD
+
+Shuffle
+
+E
+
+Net-
+
+W
+
+X
+
+work
+
+B
+
+(SSN)
+
+RF
+DMA ALU
+
+Local Scalar Memory
+
+AGU
+
+E
+
+RF
+
+X
+
+Scalar RF
+AGU ALU
+
+SIMD
+
+to
+
+V
+
+S
+
+Scalar
+
+T
+
+T V
+
+(VtoS)
+
+S
+
+2. Scalar pipeline
+
+E
+
+Scalar W
+
+X
+
+ALU
+
+B
+
+4. AGU pipeline
+W B
+
+Fig. 3. SDR architecture: SODA [4]
+
+code as specified by the IEEE 802.16e standard on a SODA PE. We describe the enhancements that had to be made in terms of accelerators, memory units, and new assembly instructions to support multiple code rates and multiple block sizes. Fig. 4 shows the modified SIMD pipeline – the additional units have been shown using shaded blocks.
+
+(SSN); 2) a 16-bit datapath scalar pipeline for sequential operations. The scalar pipeline executes in lock-step with SIMD pipeline; SIMD-to-scalar and scalar-to-SIMD operations exchange data between two pipelines; 3) two local scratchpad memories for the SIMD pipeline and the scalar pipeline; 4) an AGU (Address-Generation-Unit) pipeline for providing the addresses for local memory accesses; and 5) a programmable DMA (Direct-Memory-Access) unit to transfer data between scratchpad memories and interface with the outside system (inter-processor data transfer). The SIMD pipeline, the scalar pipeline and the AGU pipeline execute in VLIW-styled lockstep manner, controlled with one program counter (PC) [4].
+3.2. LDPC on SODA
+The min-sum LDPC decoding algorithm (Algorithm 1) is map ped onto SODA in the following way. Step 2 of Algorithm 1 is applied to non-zero z-by-z submatrices. However, because Step 3 uses the Ln,m values related with check node m, the SIMD pipeline loads z values of type Ln and aligns the data in check node order by using SSN before executing Step 2. The shuffled Ln,m values for all non-zero z-by-z submatrices in one z-by-n block row are calculated in the SIMD datapath. After that, the SIMD-to-Scalar unit is used for finding the minimum Enn,emw among Wr of Ln,m values for the same check node m. Next, Enn,emw and the corresponding sign indicator are used to update a Ln value (Step 4). This procedure implies that some SIMD slices execute additions and others execute subtractions based on sign values – a feature that is supported by predicated instructions in SODA. After updating the Ln values, the data is inversely shuffled and stored in variable node order. This process is repeated for every z-by-n block row in every iteration.
+4. SCALABLE LDPC IMPLEMENTATION
+In this section, we study a scalable LDPC decoder implementation for block size n, code rate R=k/n, and (Wc, Wr)-LDPC
+
+Fig. 4. Modified SIMD pipeline in a SODA PE
+4.1. LDPC Accelerator
+In order to meet the high decoding throughput requirements, we introduce a LDPC accelerator in every SIMD slice as shown in the Fig. 4. There are only two possible Enn,emw values for check node m in Step 3 of Algorithm 1 (which are selected from Wr values of type Ln,m): the minimum Em1 and the second minimum Em2. Each LDPC accelerator expedites finding the minimum values using two compare/store units with two Wr-bit special registers, a selection register Pm and a sign register Sm, as can be seen in Fig. 5. The operation of the LDPC accelerator is summarized below.
+The Algorithm of LDPC Accelerator
+if (Ln,m <= Em1) \\ operations in Cmp&Store 1 {
+Em1 <= Ln,m; Em2 <= Em1;
+if (Ln,m < Em1) Pm = 1 << i; else Pm = 0; } else if (Ln,m < Em2) \\ operations in Cmp&Store 2 {
+Em2 <= Ln,m; } Sm = (Sm | sign(Ln,m)) << 1;
+Em1, Em2, Pm and Sm are extracted using a flush signal and these values are used to compute Em,n using the following operation (Step 7 and 14 of Algorithm 2).
+if (Pm[i] == 1) Em,n[i] = (Sm[i]) Em1, else Em,n[i] = (Sm[i]) Em2
+
+212
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+mstart=0. This is done for all non-zero Wr submatrices in a z-by-n block row. At the end of this process, BUF1 con-
+tains Wr groups of aligned Ln data (see Fig. 6). In a similar way, the memory controller fills BUF2 for Lunpdate data with another shift amount ((s − supdate) mod Wsimd) (to be described in Section. 4.3). Note that the width of BUF1 and
+BUF2 is Wsimd.
+
+Fig. 5. LDPC accelerator
+4.2. Memory Units
+A major challenge in decoding LDPC codes is the large number of data alignment operations required for every z-by-z permutation matrix. z values of type Ln need to be shuffled so that they can be correctly aligned for check node processing. If z is less than the SIMD width (Wsimd), the data alignment can be executed in one clock cycle using SSN. However, the IEEE 802.16e standard uses different z values (24, 28, 32, ..., 96) for different block sizes [7]. If z is larger than Wsimd, many clock cycles are required for data alignment operation when SSN is used. This causes a degradation in the LDPC decoding throughput performance.
+To solve the alignment issue, we propose a memory controller and buffer organization (instead of using the shuffle network) as shown in Fig. 4. BUF1 and BUF2 contain aligned Ln and Lnupdate (to be described in Section. 4.3) respectively; BUF3 contains Em1 and Em2; and BUF4 contains Pm and Sm.
+
+4.3. Modified Decoding Algorithm
+
+Algorithm 2 shows the LDPC decoding algorithm on the mod-
+
+ified SODA architecture. The Ln and Lunpdate values are aligned and stored in BUF1 and BUF2 (Steps 1 and 2 of Al-
+
+gorithm 2). The aligned values of Ln and Lnupdate (Step 5) along with Em1, Em2 (Step 4), Pm and Sm (Step 6) of the
+
+first row of the first group (see for example Group 1 in Fig. 6)
+
+are fed to the ALU unit and LDPC accelerator in each SIMD
+
+slice. These values are updated in Steps 7, 8, 9 of Algorithm
+
+2. The process is repeated for the first row of the next group
+
+(see for example Group 2 in Fig.6), and so on. After com-
+
+pleting processing of all the first rows of all the Wr groups (Step 10), the updated values of Em1, Em2, Pm and Sm are
+
+stored in their respective buffers (Steps 11, 12). The updated
+
+values are used to compute Emne,wn and Lnupdate (Step 15, 16) of the first row of each Wr group (Step 17). The process is repeated for the second row of each Wr group, and so on (Step
+18). The above schedule results in high decoding throughput
+
+performance; it reduces the number of data switches and also
+
+speeds up the operation of finding the minimum values in the
+
+min-sum decoding algorithm. After processing all the data
+
+for one z-by-n block row, the data for the next z-by-n block
+
+row is loaded into BUF1 and BUF2, and the process repeats
+
+the
+
+number
+
+of
+
+z-by-n
+
+block
+
+rows(=
+
+n(1−R) z
+
+)
+
+times.
+
+Algorithm 2: LDPC decoding algorithm in the modified SODA PE
+
+Fig. 6. Data alignment in buffers
+The memory controller handles movement of Ln data between the SIMD memory and BUF1. Since the z-by-z permutation matrices in the LDPC codes used in the IEEE 802.16e standard are circular right-shifted identity matrices, each permutation matrix can be defined by a single right-shifted amount s. The alignment operation can now be achieved by two memory copy operations described below. If the shifted amount is s and the start memory address is mstart, the memory controller first copies MEM[mstart + s ... mstart + z − 1] to BUF1, and then copies MEM[mstart ... mstart + s − 1] to BUF1. This is shown in Fig. 6 for an example where s=5,
+
+1. load aligned Ln to BUF1 2. load aligned Lunpdate to BUF2 3. load Wr for the current z-by-n block row
+4. load Em1, Em2 from BUF3 5. load Ln, Lnupdate from BUF1, BUF2 6. load Pm, Sm from BUF4 7. compute Em cu,rnr using Em1, Em2, Pm, and Sm. 8. update Ln,m = Ln + Lunpdate - Em cu,rnr 9. update Em1, Em2, Pm, and Sm using Ln,m
+10. repeat step 5 to step 9 Wr times 11. store updated Em1, Em2 (Em ne1w,Em ne2w) in BUF3 12. store updated Pm, Sm (Pmnew, Sm new) in BUF4 13. load Lnupdate from BUF2 again 14. compute Em ne,wn using Em ne1w, Em ne2w, Pmnew, and Sm new
+
+213
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+15. update Lnupdate += Em ne,wn
+
+16. store updated Lnupdate in MEM
+
+17. repeat step 12 to step 16 Wr times
+
+18. repeat step 4 to step 17
+
+z Wsimd
+
+times
+
+19.
+
+repeat step 1 to step 18
+
+n(1−R) z
+
+times.
+
+20. repeat step 1 to step 19 NUM times.
+
+In order to reduce the memory for storing Ln,m, we introduce the parameter Lunpdate, which is (-En,m + Enn,emw). In fact, the memory space is reduced by a factor of m by keeping one Lunpdate value for each check node n instead of storing all Ln,m values for every n and m combination.
+Since updated Lunpdate values are processed in check node order, inverse alignment operation is required to store the data in variable node order in memory. After Lnupdate is stored back in memory, for the next z-by-n block row computation,
+the data is realigned with a different shift amount. However,
+these two alignment operations can be reduced to one alignment operation using another shift amount supdate; instead of inverse alignment operation, Lunpdate is stored with the current shifted amount supdate and then, in the next iteration, the memory controller use ((s − supdate) mod Wsimd) as a shift amount to align Lnupdate.
+
+4.4. Assembly Support
+New assembly instructions are required for the proposed architecture to improve the decoding throughput performance. Steps 1 and 2 of Algorithm 2 are independent and can be executed in parallel. These are combined to form instruction ldpc mem2buf . Similarly steps 5 and 6 of Algorithm 2 can be executed in parallel and combined to form instruction ldbuf s. Steps 8 and 9 of Algorithm 2 can be executed in a pipelined manner through the ALU unit and the LDPC accelerator unit. We combine these two instructions and introduce a macro-operation instruction, ldpc in. To implement steps 11 and 12 of Algorithm 2, the new instruction, ldpc out.(vp), is introduced to flush Em1, Em2, Pm, and Sm from LDPC accelerators and store them in BUF3 and BUF4. The additional new assembly instructions are listed below.
+
+The New Assembly Instructions
+
+1. ldpc mem2buf Addr[Mem],Addr[BUF1],Addr[BUF2],S1,S2 : send a control signal to the memory controller : the controller loads Ln,Lunpdate from a memory and aligns the data with shift amounts (S1, S2) in BUF1 and BUF2
+2. ldbuf 3 V3,V4,Addr[BUF3] : load V3=Em1, V4=Em2 from BUF3
+3. ldbuf s V1,V2,P1,P2,Addr[BUF1],Addr[BUF2],Addr[BUF4] : load V1=Ln, V2=Lnupdate, P1=Pm, P2=Sm from BUF1, BUF2, BUF4
+
+4. ldpc in V1,V6 : 1) calculate Ln,m with V1=Ln and V6=Lunpdate − Em cu,rnr : 2) update Em1,Em2,Pm,Sm in LDPC accelerators with Ln,m.
+5. ldpc out.v V7,V8,Addr[BUF3] : extract V7=Em1, V8=Em2 from LDPC accelerators and store them in BUF3
+6. ldpc out.p P3,P4,Addr[BUF4] : extract P3=Pm, P4=Sm from LDPC accelerators and store them in BUF4
+The overhead of adding these new instructions is the increased instruction bit width and the instruction decoder complexity.
+4.5. Scalability Issues
+The proposed architecture supports different values of z and Wr corresponding to the different code sizes and code rates mandated by the IEEE 802.16e standard. The memory configuration described in Section 4.2 handles the more difficult case of when z > Wsimd. Larger z results in more computations and so a larger Wsimd would help in achieving higher decoding throughput. The penalty is the larger area, both is terms of datapath and memory, and larger power. The parameter Wr affects the decoding throughput (number of iterations in Algorithm 2). Since it also affects the buffer size and Pm, Sm registers in the LDPC accelerators, the architecture has to be designed for the largest value of Wr.
+5. ANALYSIS
+In this section, we study the required memory and buffer size, and also analyze the improvement in the decoding throughput due to the memory organization, datapath accelerators and assembly instruction support.
+5.1. Memory Size Analysis
+LDPC decoding process consists of computationally simple operations and multiple memory operations. As a result, if the memory is not organized properly, then it is highly likely that the SIMD pipeline would have to wait for the data to arrive. In a typical implementation, there are four main values that are to be stored: Ln, Ln,m, En,m, and shuffle information. For n=2304 and R=5/6 LDPC codes outlined in the IEEE 802.16e standard, a brute-force decoding method needs 3.456GB for storing the Ln,m and En,m values. Even if we consider only non-zero elements, the storage still requires 30KB (15KB+15KB), which is a still large memory space for an SDR platform. Therefore, a new scheme to reduce memory space should be considered. There is no way to reduce the storage of Ln because the data is used to decide the final decoded bit value. However, the storage for Ln,m and En,m can be significantly reduced.
+
+214
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+To reduce En,m storage size, we exploited the fact that there are only two possible Enn,emw values for check node m: Em1 and Em2. This two-minimum method reduces the re-
+quired memory space by a factor of Wr/2. For the case men-
+tioned above, the storage requirement for En,m values is re-
+duced to 1.5KB. Also, instead of storing all Ln,m values, we store Lnupdate values, thereby reducing the storage by a factor of m(=4) to 3.75KB.
+
+Storage MEM: Ln, Lunpdate BUF1: Ln BUF2: Lunpdate
+BUF3: Em1, Em2
+BUF4: Pm, Sm
+
+Size(B)
+
+4n
+
+2WsimdWr 2WsimdWr
+
+z Wszimd Wsimd
+
+4Wsimd
+
+z Wsimd
+
+n(1−R) z
+
+2Wr
+
+z Wsimd
+
+n(1−R) z
+
+Ex.(KB) 9
+3.75 3.75
+1.5
+0.94
+
+Table 1. Memory/Buffer requirements for n=2304 and R=5/6 LDPC code in the IEEE 802.16e standard
+
+6. CONCLUSION
+In this paper, we presented a software-hardware co-design case study of LDPC decoder for SDR. We first provided an overview of LDPC codes and then showed how LDPC decoding can be done by the SDR architecture. Next we showed how use of datapath accelerators, memory buffers and additional instructions can be used to improve the decoding throughput performance. We implemented a scalable LDPC decoder for the IEEE 802.16e standard. Our results show that we can achieve 30.4 Mbps decoding throughput for n=2304 and R=5/6 LDPC code.
+7. ACKNOWLEDGEMENT
+This research is supported in part by ARM Ltd., NSF CSREHS 0615135, NSF ITR 0325761 and The Korea Foundation for Advanced Studies.
+
+Table 1 summarizes the memory and buffer requirements
+
+8. REFERENCES
+
+for a block size n, code rate R=k/n, and (Wc,Wr)-LDPC code. [1] Gallager, “Low-density parity-check codes,” IRE Trans-
+
+We list the memory requirements for n=2304 and R=5/6 LDPC
+
+actions on Information Theory, vol. IT-8, no.1, pp. 21–28,
+
+code (the IEEE 802.16e standard) when Wsimd = 32, Wr = 20, and z = 96 under the column ’Ex.’ in the table.
+
+January 1962. [2] D.J.C.MacKay; R.M.Neal, “Near shannon-limit perfor-
+
+5.2. Throughput Analysis
+
+mance of low-density parity-check codes,” Electronics letters, vol. 32, pp. 1645–1646, August 1996.
+
+The data path accelerators, the memory units, and the new instructions all help in increasing the decoding throughput. For the n=2304 and R=5/6 LDPC code in the IEEE 802.16e standard and for NUM=10, the achievable clock cycle reductions
+
+[3] M.M.Mansour; N.R.Shanbhag, “High-throughput ldpc decoders,” IEEE Transactions on VLSI Systems, vol. 11, no.6, pp. 976–996, December 2003.
+
+for each of the enhancements are shown in Table 2. Here 40000 is the number of cycles in the original SODA implementation.
+
+[4] Y.Lin et. al., “Soda: A low-power architecture for software radio,” Proceedings of the 33rd Annual International Symposium on Computer Architecture (ISCA),
+
+Redn. (Cycles) % redn.
+
+2006.
+
+LDPC Accelerators 5760(40000) 14.4
+
+Memory Units
+
+6912(40000) 17.3
+
+New Instructions
+
+4608(40000) 11.5
+
+[5] F.Guilloud; E.Boutillon; J.L.Danger, “λ-min decoding algorithm of regular and irregular ldpc codes,” 3rd International Symposium on Turbo Codes & related topics,
+
+Table 2. Cycle reductions due to enhancements
+
+September 2003.
+
+[6] D.E.Hocevar, “A reduced complexity decoder architec-
+
+ture via layered decoding of ldpc codes,” IEEE Workshop
+
+The proposed SODA PE is implemented in 0.18um tech-
+
+on Signal Processing Systems, pp. 107–112, 2004.
+
+nology and is clocked at 400MHz. The LDPC decoding through-
+
+put for n=2304 and R=5/6 LDPC code can be boosted from [7] “IEEE Std 802.16e-2005,”
+
+available at
+
+18.3 Mbps to 30.4 Mbps using the proposed enhancements.
+
+http://standards.ieee.org/getieee802/download/802.16e-
+
+With technology scaling, the decoding throughput is expected
+
+2005.pdf, February 2006.
+
+to increase to around 62.2 Mbps in 90nm technology.
+
+The area and power overhead in the datapath and memory
+
+is quite small. For instance the area of the memory controller
+
+and LDPC accelerators is negligible (5.37%) compared to the
+
+original design. However the complexity of adding CISC-
+
+type instructions requires careful evaluation.
+
+215
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:02:29 UTC from IEEE Xplore. Restrictions apply.
+
+

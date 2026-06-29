@@ -1,0 +1,927 @@
+A 3.66Gb/s 275mW TB-LDPC-CC Decoder Chip for MIMO Broadcasting Communications
+
+Chih-Lung Chen, Yu-Cheng Lan, Hsie-Chia Chang, and Chen-Yi Lee Department of Electronics Engineering and Institute of Electronics,
+National Chiao Tung University, Hsinchu, Taiwan Tel: +886-3-5131369 email: lung@si2lab.org, hcchang@mail.nctu.edu.tw
+
+Abstract—In this work, a decoder chip for time-invariant tailbiting LDPC convolutional code (TB-LDPC-CC) is proposed. By modifying the layered decoding scheduling, the proposed decoding algorithm can achieve twice faster decoding convergence than the conventional flooding scheduling. Furthermore, 30.77% storage requirement is also reduced due to adaptive channel value addressing employed in memory-based decoder design. The multiple frame sizes handling ability can lower the power and adapt to multiple applications. By integrating these techniques, a TB-LDPC-CC decoder chip supporting three frame sizes is implemented in UMC 90nm CMOS technology. The decoder containing 4 processors occupies 2.18mm2 area and provides maximum throughput 3.66Gb/s under 0.8V supply and 305MHz with a 18.8pJ/bit/proc energy efficiency.
+Index Terms—LDPC-CC, tail-biting, high throughput.
+I. INTRODUCTION
+Today’s forward error correction codes in emerging wireless communication system must possess superior error-correcting capability, high decoding throughput, fine energy efficiency, and extra flexibility of code-rates and frame sizes. Low-density parity-check block codes (LDPC-BCs) perform well in errorcorrecting performance and throughput [1], but the decoder would pay extra cost in order to support multiple code-rates and frame sizes. Contrarily, turbo code can provide adjustable code-rates and frame sizes through puncturing and properly terminating, while the limited parallelism and high hardware cost are still barriers toward multi-Gbps throughput. Fortunately low-density parity-check convolutional codes (LDPCCCs), proposed in 1999 [2], have the characteristics of both LDPC and convolutional code, giving the potential of high throughput, flexible code-rates, and frame sizes.
+Even though the previous LDPC-CC decoder chip [3] achieved better energy/hardware efficiency than state-of-the-art designs [4]–[6], it could only decode continuous stream without proper codeword termination. Therefore, it is not suitable for packet-based transmission schemes such as IEEE 802.11ac/ad and LTE-Advanced applications [7], [8]. To perform codeword termination, we employ tail-biting technique instead of appending termination sequence, avoiding the performance degradation due to code-rate loss. Based on the layered normalized min-sum decoding algorithm [9], the proposed TB-LDPC-CC decoder has the following features: 1) 3 kinds of frame sizes supported by inter-processor permutation network, 2) proper termination via tail-biting technique without code-rate loss, 3) 4-stage pipelining for high operating frequency, 4) QCexpansion matrix enabling parallel decoding without memory access collision, and 5) adaptive channel value addressing with inter-row permutation network to save 30% storage requirement.
+Fig. 1 demonstrates one of possible application scenario for the proposed TB-LDPC-CC decoder. In a 4x4 MIMO
+
+0,02
+
+7%/'3& && (QFRGHU
+
+7UDQVPLWWHU
+
+7[
+
+7%/'3& && (QFRGHU
+
+7[
+
+7%/'3& && (QFRGHU
+
+7[
+
+7%/'3& && (QFRGHU
+
+7[
+
+7%/'3&&& 'HFRGHU
+
+5[
+
+3URFHVVRU 
+
+,QSXW %XIIHU 3UHSURFHVVLQJ
+
+5[
+
+3URFHVVRU 
+
+5[
+
+3URFHVVRU 
+
+5[
+
+3URFHVVRU 
+
+'HFRGHU 
+
+3URFHVVRU 
+
+3URFHVVRU 
+
+,QSXW %XIIHU
+
+,QSXW %XIIHU
+
+,QSXW %XIIHU
+
+'HFRGHU 
+
+3URFHVVRU 
+
+3URFHVVRU 
+
+'HFRGHU 
+
+3URFHVVRU 
+
+3URFHVVRU 
+
+'HFRGHU 
+
+3URFHVVRU 
+
+3URFHVVRU 
+
+&DVH  )RXU  7%/'3&&& 'HFRGHUV
+
+&DVH  7ZR  7%/'3&&& 'HFRGHUV
+
+&DVH  2QH  7%/'3&&& 'HFRGHU
+
+Fig. 1: The application scenario of TB-LDPC-CC decoder in MIMO system.
+
+system with unequal modulation, different coding schemes can be assigned to different spatial streams, which bring out 3 combinations: 1-to-1 with one (4992, 2496) LDPC-CC decoder, 2-to-2 with two (2496,1248) LDPC-CC decoders, and 4-to4 with four (1248,624) codewords decoded individually. In conventional LDPC block code decoder, four decoders are required to handle four codewords at the same time; otherwise, a large buffer is necessary to store unprocessed data.
+The rest of this paper is organized as follows. Section II reviews the encoding algorithm of TB-LDPC-CC and derives the tail-biting property examination. In Section III, the proposed code construction of TB-LDPC-CC as well as its decoding scheduling algorithm is presented. The details of decoder architecture and optimization techniques are discussed and analyzed. Moreover, Section IV reports the implementation results of proposed TB-LDPC-CC code, including bit-error rate (BER) performance and measurement results of the 90-nm chip. Finally, the conclusions are given in Section V.
+
+II. TAIL-BITING LDPC-CC
+A. Encoding of Tail-biting LDPC-CC
+Tail-biting technique could convert a convolutional code into a quasi-cyclic (QC) block code. The tail-bitten version of parity-check matrix for LDPC-CC as well as its circular decoder architecture was proposed in [10], which is obtained by wrapping the last (c − b) · ms columns of the syndrome former after t = tN time instant, where ms is the memory size of encoder and code-rate R = b/c (b < c). The wrapping operation will result in a circular Tanner graph. However, the encoding of TB-LDPC-CC by wrapping operation will need a matrix multiplication circuitry similar to encoding of LDPCBCs, which is no longer as simple as convolutional encoder.
+Another implementation for encoding the TB-LDPC-CC was proposed in [11], which used the state-space variables to cal-
+
+978-1-4799-0280-4/13/$31.00 c 2013 IEEE
+
+153
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:08:45 UTC from IEEE Xplore. Restrictions apply.
+
+culate the initial state of the encoder. This technique originally came from [12], which presented the encoding of tail-biting codes with feedback encoder. Let St denote the state vector at time instant t. Let ut be the information sequence and vt be the code bits. For the case of systematic encoding and a partial syndrome encoder, the correct initial state can be calculated from the following relationship
+
+St+1 = A(t) · St + B(t) · utT
+
+(1a)
+
+vtT = C(t) · St + D(t) · utT
+
+(1b)
+
+where A(t) is the state matrix with size of ms(c−b)×ms(c−b), B(t) denotes the input matrix with size of ms(c − b) × b, C(t) is the output matrix with size of c×ms(c−b), and D(t) denotes the feed-forward matrix with size of c×b. Note that the variables in the above equations are functions of time due to time-varying are considered. These matrices A(t), B(t), C(t) and D(t) can be
+determined from the state transitions of the partial syndrome
+encoder.
+The complete solution of (1) is given by the superposition of the zero-input solution St[zNi] and the zero-state solution St[zNs]. The zero-input solution and the zero-state solution can be derived by applying (1) recursively. The zero-input solution St[zNi] is the state achieved after t = tN time instants if the encoding started in an arbitrary state S0 and all input bits are zeros. The zero-state solution S[tzNs] denotes the state achieved after t time instants if the encoding started in the all-zero state S0 = 0 and input is the information sequence u. Then according to the tail-biting criterion, let the state at time t = tN is equal to the initial state S0, the initial state of the encoder is
+
+tN
+
+−1
+
+S0 = I + A(tN − i)
+
+· St[zNs],
+
+(2)
+
+i=1
+
+where I denotes the ms(c − b) × ms(c − b) identity matrix. As long as the matrix in (2) is invertible, the encoding
+procedure for tail-biting LDPC convolutional code can be summarized as the following steps.
+1) Determine the zero-state response S[tzNs] 2) Calculate the initial state S0 3) Perform actual encoding to obtain valid code sequence v
+
+B. Proposed Tail-biting Property Examination
+
+For a time-invariant LDPC convolutional code, the state matrix is irrelevant to time. Consequently, the equation (2) can be rewritten to
+
+S0 = I + AtN −1 · S[tzNs].
+
+(3)
+
+Assume the state matrix A is binary, we can find a matrix Z
+
+such that
+
+A=I+ Z or Z = I + A.
+
+(4)
+
+Therefore, the matrix
+
+I + AtN = I + (I + Z)tN
+
+= I + I + tN αiZi
+i=1
+
+(5)
+
+= tN αiZi = tN αi (I + A)i
+
+i=1
+
+i=1
+
+where αi ∈ {0, 1}. It is observed that if matrix I + A is invertible, then the matrix I + AtN is also invertible at time instant tN = 2n. From this relationship, we still cannot know
+if this code could be tail-bitten for any time duration or not.
+
+Fortunately, if I+A is invertible, then the time-invariant LDPC-
+
+CC can surely be tail-bitten at the encoding time duration tN = 2n. In this case, the matrix becomes
+
+I + AtN = I + (I + Z)2n = (I + A)2n .
+
+(6)
+
+The equation (6) can be easily derived from the mathematical induction. Once that I + A is invertible, the matrix I + A2n or (I + A)2n is also invertible. Hence, this kind of time-invariant
+LDPC-CC can have the tail-bitten version when the encoding time duration is equal to 2n.
+
+III. PROPOSED ALGORITHM AND ARCHITECTURE
+A. Code construction for tail-biting LDPC-CC
+The proposed code construction procedure for TB-LDPCCC is illustrated in Fig. 2. First of all, we let the diagonal entries of the information part and parity part be ones for fast encoding purpose. Secondly, according to the equation (6), the parity part of the polynomial parity check matrix is forced to be lower triangular to ensure that this code can have the tail-bitten version. And next, fill each entry with monomial polynomial to lessen the short cycles. It is worth to mention that the differences of neighbor coefficients in the same column are greater than one to avoid memory access collision in the hardware. At last, the quasi-cyclic expansion (6 by 6) is applied to obtain a larger polynomial parity-check matrix with better performance and the possibility of high parallelism decoding.
+
++
+'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+)DVW (QFRGLQJ
+
++
+
+'
+
+7DLO%LWLQJ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(a) Ensure fast encoding
+
+(b) Ensure tail-biting
+
++
+
+
+'
+
+ ' ' '     '  ' ' '    ' '  ' ' '   ' ' '  ' ' ' 
+0RQRPLDO (QWU\
+
++'
+
+, 3 3 3 ' ' ' ,
+
+
+
+
+
+
+
+3 ' , 3' 3 3 ' ' ,
+
+
+
+
+
+3' 3' , 3 3 3 ' ' ' ,
+
+
+
+3 3 3 ' ' ' , 3' 3' 3' ,
+
+4& ([SDQVLRQ
+
+(c) Assign monomial entry
+
+(d) QC expansion
+
+Fig. 2: Code construction of proposed TB-LDPC-CC.
+
+B. Decoder Architecture
+The overall block diagram of the proposed decoder is shown in Fig. 3. It is composed of 4 processors and 27 memory banks on a chip. Each processor has 7 sub-variable node unit (SVNU) array (one array contains 6 SVNUs), 6 check node units (CNUs) with one pipelining stage inside, as well as interrow permutation network and reverse inter-row permutation network to deal with different permutation parameters between rows of parity-check matrix.
+The decoding flow is carried out as follows. In the beginning, the check node to variable node (CtoV) messages are read from MEM-G1 to MEM-G8 and delivered to correct processors through inter-processor permutation networks. Then the CtoV messages are summed up with channel values in SVNU array to
+
+154
+
+2013 IEEE Asian Solid-State Circuits Conference (A-SSCC)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:08:45 UTC from IEEE Xplore. Restrictions apply.
+
+0(0* [S
+
+0(0*
+
+0(0*
+
+0(0*
+
+[S
+
+[S
+
+ [S
+
+0(0*
+ S
+
+,QWHU3URFHVVRU 3HUPXWDWLRQ 1HWZRUN
+
+
+
+
+
+
+
+
+
+S
+
+S
+
+S
+
+S
+
+[S
+
+6918 $UUD\ S
+
+6918 $UUD\
+
+6918 $UUD\
+
+6918 $UUD\
+
+S
+
+S
+
+S
+
+S
+
+&18 &18
+
+&18
+
+&18
+
+,QSXW
+//5V VHOHFWLRQ
+
+VHOHFWLRQ
+
+VHOHFWLRQ
+
+S [S
+
+S [S
+
+S [S
+
+&18
+
+&18
+
+3LSHOLQHG &18 $UUD\
+
+VHOHFWLRQ S [S
+
+VHOHFWLRQ S
+
+
+
+
+
+
+
+
+
+
+
+,QWHU5RZ 3HUPXWDWLRQ 1HWZRUN
+3URFHVVRU  3URFHVVRU  3URFHVVRU  3URFHVVRU 
+5HYHUVH ,QWHU5RZ 3HUPXWDWLRQ 1HWZRUN
+5HYHUVH ,QWHU3URFHVVRU 3HUPXWDWLRQ 1HWZRUN
+
+Fig. 3: Proposed TB-LDPC-CC decoder architecture.
+
+form the newest variable node to check node (VtoC) messages. One pipelining stage is inserted inside CNU to balance the critical path. After CNU update, output CtoV messages are combined with original messages, reversely permuted to the form of next access, and stored back to memories. As shown in Fig. 4(a), there are four pipelining stages. Since the memory read/write operations are simultaneously occurred, two-port memories are adopted in our implementation. Note that the addresses of memory access are pre-computed according to the parity-check matrix. Once the stored messages are accessed, the corresponding alignment can be performed by adaptively shifting channel values.
+
+)RXU 3LSHOLQLQJ 6WDJHV
+&/.
+
+3KDVH  5 ʌ 6 &18 &18 ʌ :
+
+3KDVH  5 ʌ 6 &18 &18 ʌ :
+
+3KDVH  5 ʌ 6 &18 &18 ʌ :
+
+3KDVH  5 ʌ 6 &18 &18 ʌ :
+
+
+ 0HPRU\ &DSDFLW\  [  [ GY [  ELWV
+GY  LQ WKLV H[DPSOH
+
+5 0HPRU\ 5HDG 6 6XE918 : 0HPRU\ :ULWH ʌ  LQWHUSURFHVVRU SHUPXWDWLRQ 
+LQWHUURZ SHUPXWDWLRQ
+
+(a) Pipelining
+
+$GDSWLYH &KDQQHO 9DOXH $GGUHVVLQJ
+
+
+
+
+
+3  
+
+$GGU  T F T T T F T T
+
+TFTT
+
+TTFTTTFT
+
+TTFT
+
+TTTFTTTF
+
+TTTF
+
+FTTTFTTT
+$GGU 
+T  &1 WR 91 0HVVDJH
+
+FTTT
+F  &KDQQHO //5V
+
+$IWHU VW DFFHVV
+$IWHU QG DFFHVV
+$IWHU UG DFFHVV
+$IWHU WK DFFHVV
+
+(b) Data format inside memory bank Fig. 4: Proposed message storage scheme, and data path.
+
+C. Error-correcting Performance
+Fig. 5 is bit-error-rate (BER) performance of the proposed TB-LDPC-CC with three frame sizes 1248, 2496, and 4992 under AWGN channel. The performance curves of layered decoding in LDPC-CC [3] and LDPC-BC [13] are also listed for comparison. It is observed that the proposed decoder with 4 iterations can achieve similar performance to [3] and [13] with 5 iterations. Furthermore, if better performance is required, the non-terminated LDPC-CC decoders, e.g. [3] and [5], will
+
+need to serially connect as many processors as the demanding maximum iteration number, indicating the performance is gained by linear growth of hardware and power consumption. On the other hand, the proposed decoder can keep on iterative decoding without hardware overhead until maximum iteration is reached or early-termination condition is satisfied. It is a kind of trade-off between error-correcting performance and decoding time. The BER performance with 20 iterations is closed to their mother code (48,24,21,1) LDPC-CC.
+
+%LW(UURU5DWH
+
+
+
+3URSRVHG 'HFRGHU
+
+,WHUDWLRQ 
+
+,WHUDWLRQ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0RWKHU &RGH ,WHUDWLRQ 
+
+ 
+
+
+29$&& ,WHUDWLRQ 
+
+
+
+ /'3&&& >@
+
+/RJ%3 $OJRULWKP ,WHUDWLRQ 
+
+
+
+ ,((( F >@
+
+
+  FEPV7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(E1 G%
+
+Fig. 5: BER performance under AWGN channel.
+
+IV. IMPLEMENTATION RESULTS
+Fabricated in UMC 90nm 1P9M CMOS process, our test chip with 4 pipelining stages integrates the layered scheduling with adaptive channel value addressing, parallel architecture for QC expansion, and inter-processor permutation network dealing with multiple frame sizes. The chip micrograph and the key features of test chip are shown in Fig. 6. The proposed decoder can support three frame sizes 1248, 2496, and 4992. Moreover, since the LDPC-CC code is properly tail-bitten, every processor can decode individual codeword for different iterations.
+
+0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 *
+
+ XP
+0(0 33 * 0(0 33 * 0(0 3333 *
+0(0 3 * 0(0 3 * 0(0 %8)
+7%/'3&&& 'HFRGHU 0(0 %8)
+0(0 %8) 0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 *
+
+0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 *
+
+0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 *
+
+ XP
+
+.H\ )HDWXUHV )(& 7\SH )UDPH 6L]H
+&RQVWUDLQW /HQJWK ,WHUDWLRQ
+6XSSO\ 9ROWDJH 7KURXJKSXW 3RZHU
+
+7KLV :RUN 7%/'3&&&   
+ 
+ a  9  a  *ESV  a  P:
+
+Fig. 6: Chip micrograph and key features of proposed decoder.
+
+0(0 3 * 0(0 3 * 0(0 3 * 0(0 3 *
+
+The performance of our test chip are compared with stateof-the-art designs in Table I. The decoder including 104.8Kb two-port SRAMs occupies 2.18mm2 area (excluding three IO buffers). Measurement results in Fig. 7 show that the decoder draws 275mW under 0.8V supply voltage while operating at 305MHz. Since the expansion factor equals 6, the information throughput of the TB-LDPC-CC decoder achieves 1.83 Gb/s under 4 decoding iterations with an energy efficiency of 37.6pJ/bit/proc. When supply voltage is scaled to 1.2V as shown in Fig. 7, the throughput can be enhanced to 2.1 Gb/s with larger power consumption.
+Compared with other LDPC-CC decoders [3], [5], this work provides similar performance but more flexible frame sizes
+
+2013 IEEE Asian Solid-State Circuits Conference (A-SSCC)
+
+155
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:08:45 UTC from IEEE Xplore. Restrictions apply.
+
+7KURXJKSXW *EV 3RZHU P:
+7KURXJKSXW *EV 3RZHU P:
+
+)UDPH 6L]H  # %(5 
+
+0D[ WKURXJKSXW
+
+'HFRGHU 3RZHU
+
+
+
+
+
+
+
+    
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+)UDPH 6L]H  # %(5 
+
+0D[ WKURXJKSXW
+
+'HFRGHU 3RZHU
+
+
+
+
+
+
+
+    
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     6XSSO\ 9ROWDJH 9
+
+     6XSSO\ 9ROWDJH 9
+
+(a) Frame size 1248
+
+(b) Frame size 2496
+
+7KURXJKSXW *EV 3RZHU P:
+
+)UDPH 6L]H  # %(5 
+
+0D[ WKURXJKSXW
+
+'HFRGHU 3RZHU
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+     6XSSO\ 9ROWDJH 9
+(c) Frame size 4992
+Fig. 7: Measured throughput/power of three frame sizes.
+
+than [3]; higher throughput, less area, and better energy efficiency than [5]. Compared with the LDPC-BC decoder [13], this work has scalable error-correcting performance and 19% less normalized area (2.18mm2 vs 2.68mm2) with higher chip utilization (90.2% vs 73.3%). Compared with the Turbo decoder [14], this work achieves much higher throughput with lower power and less die area. In summary, our proposed TBLDPC-CC decoder outperforms state-of-the-art designs and is an excellent error-control code for MIMO-based communication systems.
+
+TABLE I: Chip summary and the comparison with state-of-the-art designs.
+
+3XEOLFDWLRQ
+
+7KLV :RUN
+
+-66&  >@ 7&$6,  >@ -66&  >@ ,66&&  >@
+
+)(& 7\SH
+
+7%/'3&&&
+
+/'3&&&
+
+/'3&&&
+
+/'3&%&
+
+7XUER &RGH
+
+6WDQGDUG
+
+
+
+
+
+
+
+,((( F
+
+/7(
+
+&RQVWUDLQW /HQJWK D &RGH5DWH
+
+ 
+
+
+
+
+
+    
+
+
+
+    
+
+ 
+
+&026 7HFKQRORJ\
+
+QP
+
+QP
+
+QP
+
+QP
+
+ P
+
+,QSXW 4XDQWL]DWLRQ
+
+ ELWV
+
+ ELWV
+
+ ELWV
+
+ ELWV
+
+
+
+3URFHVVRU  ,WHUDWLRQ
+
+
+
+
+
+
+
+
+
+
+
+0HPRU\
+
+ NE
+
+ NE
+
+
+
+
+
+ NE
+
+&KLS 8WLOL]DWLRQ 'HFRGHU $UHD
+
+  PP
+
+  PP
+
+  PP
+
+  PP
+
+  PP
+
+0D[ &ORFN )UHTXHQF\
+
+ 0+]
+
+ 0+] E
+
+ 0+]
+
+ 0+] E
+
+ 0+]
+
+0D[ 'DWD 5DWH 'HFRGHU 3RZHU (QHUJ\ (IILFLHQF\
+
+ *EV  *EV
+
+F
+
+G
+
+ P:
+
+ 
+  
+
+
+F
+
+G
+
+ *EV E
+
+ 0EV
+
+ P:
+
+ P:
+
+E
+
+ S-ELWSURF
+
+ S-ELWSURF
+
+E
+
+ *EV E
+ P: E
+ S-ELWLWHU E
+
+ 0EV  P:  S-ELWLWHU
+
+D  WKLV WHUP LV UHSODFHG E\ EORFN VL]H LQ /'3&%& DQG 7XUER FRGH
+E  PHDVXUHG DW %(5  a  ZLWKRXW HDUO\WHUPLQDWLRQ IRU FRGHUDWH ò F  PHDVXUHG DW %(5  IRU FRGHUDWH ò IUDPH VL]H  9 DQG ,WHUDWLRQ  G  PHDVXUHG DW %(5  IRU FRGHUDWH ò IUDPH VL]H  9 DQG ,WHUDWLRQ 
+
+
+  S-ELWSURF
+
+&RPSDULVRQ ZLWK 6WDWHRIWKHDUW :RUNV
+
+
+
+>@ ,66&& 
+
+
+
+7XUER
+
+ 
+
+>@ 7&$6,  7KLV :RUN
+
+
+
+0HDVXUHG DW ,  >@ -66&  
+
+>@ -66& 
+
+
+
+/'3&%&
+
+ 7KLV :RUN
+
+
+
+0HDVXUHG DW , 
+
+V. CONCLUSION
+In this paper, a TB-LDPC-CC decoder design targeting high-
+throughput, low-cost, and better energy-efficiency is presented.
+The test chip supporting three frame sizes is implemented in
+90nm CMOS technology. The decoder with 4 processors occupies 2.18mm2 and achieves maximum throughput 3.66Gb/s under 0.8V supply with 18.8pJ/bit/proc energy efficiency. The
+proposed solutions would make LDPC-CC more competitive to
+the other error-control codes.
+ACKNOWLEDGMENT
+This work is funded by NSC, Taiwan, R.O.C., under grant
+NSC 100-2221-E-009-044-MY3 and NSC 101-2628-E-009-
+013-MY3. The authors would like to thank LiteOn IT Corp.,
+ATU program (eNES), and National Chip Implementation Cen-
+ter for funding, chip fabrication and testing assistance.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181 –2191, Sep. 1999.
+[3] C.-L. Chen, Y.-H. Lin, H.-C. Chang, and C.-Y. Lee, “A 2.37-Gb/s 284.8 mW rate-compatible (491,3,6) LDPC-CC decoder,” IEEE Journal of Solid-State Circuits, vol. 47, no. 4, pp. 817–831, 2012.
+[4] M. Tavares, E. Matus, and G. Fettweis, “On the structured parallelism of decoders for LDPC convolutional codes - an algebraic description,” in IEEE International Symposium on Circuits and Systems (ISCAS), May 2009, pp. 2453–2456.
+[5] T. Brandon, J. Koob, L. van den Berg, Z. Chen, A. Alimohammad, R. Swamy, J. Klaus, S. Bates, V. Gaudet, B. Cockburn, and D. Elliott, “A compact 1.1-Gb/s encoder and a memory-based 600-Mb/s decoder for LDPC convolutional codes,” IEEE Transactions on Circuits and Systems I, vol. 5, no. 5, pp. 1017–1029, May 2009.
+[6] Z. Chen, T. Brandon, D. Elliott, S. Bates, W. Krzymien, and B. Cockburn, “Jointly designed architecture-aware LDPC convolutional codes and highthroughput parallel encoders/decoders,” IEEE Transactions on Circuits and Systems I, vol. 57, no. 4, pp. 836–849, Apr. 2010.
+[7] Wireless LAN medium access control (MAC) and physical layer (PHY) specifications: Enhancements for very high throughput for operation in bands below 6GHz, IEEE Std. P802.11ac draft 1.0, 2011.
+[8] Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications - Amendment 3: Enhancements for Very High Throughput in the 60GHz band, IEEE Std. P802.11ad draft 5.0, 2011.
+[9] A. E. Pusane, M. Lentmaier, K. S. Zigangirov, and J. Costello, D. J., “Reduced complexity decoding strategies for LDPC convolutional codes,” in IEEE International Symposium on Information Theory (ISIT 2004), 2004, p. 490.
+[10] M. Tavares, K. S. Zigangirov, and G. Fettweis, “Tail-biting LDPC convolutional codes,” in IEEE International Symposium on Information Theory (ISIT 2007), June 2007, p. 2341 V2345.
+[11] M. B. Tavares, “On low-density parity-check convolutional codes: Constructions, analysis and VLSI implementation,” Ph.D. dissertation, Jorg Vogt Verlag, 2010.
+[12] C. Weiss, C. Bettstetter, and S. Riedel, “Code construction and decoding of parallel concatenated tail-biting codes,” IEEE Transactions on Inform. Theory, vol. 47, no. 1, p. 366 V386, Jan. 2001.
+[13] S.-W. Yen, S.-Y. Hung, C.-L. Chen, H.-C. Chang, S.-J. Jou, and C.-Y. Lee, “A 5.79-Gb/s energy-efficient multirate LDPC codec chip for IEEE 802.15.3c applications,” IEEE Journal of Solid-State Circuits, vol. PP, no. 99, pp. 1–12, 2012.
+[14] C. Studer, C. Benkeser, S. Belfanti, and Q. Huang, “A 390Mb/s 3.57mm2 3GPP-LTE turbo decoder ASIC in 0.13μm CMOS,” in IEEE International Solid-State Circuits Conference Digest of Technical Papers (ISSCC), 2010.
+
+(QHUJ\ (IILFLHQF\ Q-ELWSURF
+
+*EV *EV
+*EV *EV
+0ESV 0ESV
+
+ 
+156
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7KURXJKSXW *EV
+
+Fig. 8: The comparison with previous works.
+
+2013 IEEE Asian Solid-State Circuits Conference (A-SSCC)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:08:45 UTC from IEEE Xplore. Restrictions apply.
+
+

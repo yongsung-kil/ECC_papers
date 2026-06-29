@@ -1,0 +1,477 @@
+A High-Throughput QC-LDPC Encoder 
+ 
+ 
+Yifan Ding  
+Wuhan National Laboratory 
+ for Optoelectronics,  
+Huazhong University of  
+Science and Technology 
+Wuhan, China 
+yifanding@hust.edu.cn 
+Qiang Cao 
+Wuhan National Laboratory 
+ for Optoelectronics, 
+Huazhong University of  
+Science and Technology 
+Wuhan, China 
+caoqiang@hust.edu.cn 
+Jie Yao 
+Wuhan National Laboratory 
+ for Optoelectronics, 
+Huazhong University of  
+Science and Technology 
+Wuhan, China 
+jackyao@hust.edu.cn 
+Abstract—Low Density Parity Check (LDPC) codes have 
+been widely used in communication and storage fields to support 
+high reliability of data channel. Quasi-cyclic (QC)-LDPC as a 
+regular code can sufficiently exploit hardware parallelism of 
+Field-Programmable Gate Array (FPGA) to accelerate the 
+encoding/decoding performance. However, existing FPGA 
+encoders are generally dedicated to a specialized LDPC code 
+and hardware platform with limited flexibility. In this paper, to 
+achieve high throughput and flexibility simultaneously, we 
+propose a High-level synthesis (HLS) based QC-LDPC encoder 
+microarchitecture. The encoder designs a fine-grained partially-
+parallel iterative process execution to exploit intra-codeword 
+parallelism by fully leveraging capability of HLS . The proposed 
+encoder further optimizes data-layout and HLS-function 
+implementation. The encoding throughput of the proposed 
+encoder achieves 98.4Gbps higher than the state-of-the-art QC-
+LDPC encoder by up to 𝟏𝟒. 𝟕𝟓×.  
+Keywords—QC-LDPC encoder, vector matrix multiplication, 
+HLS, FPGA 
+I. INTRODUCTION  
+Low-density parity-check(LDPC) codes, proposed by 
+Gallager in 1963, are considered to achieve channel capacity 
+near Shannon limit with strong error-correction ability. Quasi-
+cyclic LDPC (QC-LDPC) as a subset of LDPC codes has a 
+regular code structure benefiting hardware implementation, 
+thus broadly adopted in communication (e.g. IEEE 802.16e 
+and CCSDS) and data storage. Emerging storage and network 
+technology have been demanding high-throughput QC-LDPC 
+hardware encoders to build their own reliable and fast data 
+channels upon highly-noisy physical channels. 
+Researchers have proposed various QC-LDPC encoders 
+including LU decomposition[1], forward substitution[2] and 
+RU algorithm[3]. However, these algorithms adopt specific 
+codes with their unique features such as dual-diagonal matrix 
+and approximate lower triangular matrix. Their optimized 
+implementations are dedicated to specific encoding 
+architectures without flexibility for code adjustment. Vector 
+matrix multiplication (VMM) algorithm is relatively general 
+and widely used in most encoders. However, existing VMM 
+encoders such as Yasotharan[4] Nguyen[5] Cohen[6], do not 
+fully exploit hardware parallelism due to serial process[4] or 
+parallel process but with a limited bit-width of data access per 
+cycles. 
+Besides, in traditional, these encoding algorithms are 
+manually described by hardware-description language (e.g., 
+verilog) to implement Register-Transfer Level (RTL) 
+hardware upon FPGA. This development generally is long, 
+error-prone, more importantly, strict coupled with a targeted 
+hardware, code, and algorithm. Recently, High-level synthesis 
+(HLS) as an automated design process is widely used to 
+transform high-level behavior description to low-level 
+Register-Transfer Level (RTL) structure, thus improving the 
+hardware development productivity and quality of result. 
+However, HLS generally lacks precise and detailed semantic 
+descriptions to characterize a specific and complex hardware 
+implementation as QC-LDPC encoding. 
+To sufficiently leverage HLS to implement a high-
+bandwidth and flexible LDPC FPGA encoders, we propose a 
+high 
+throughput 
+pipelined 
+QC-LDPC 
+encoding 
+microarchitecture to exploit both data and hardware 
+parallelism. The encoder designs an efficient fine-grained 
+partially parallel encoding architecture to effectively reap 
+intra-codeword parallelism.  
+We implement and evaluate the encoder. Compared to the 
+RTL-based VMM implementation from Hariri [7], it 
+improved the throughput by 2.39× with lower code length, 
+lower code rate, and higher frequency. Compared to the state-
+of-art implementation based on RTL [8], the proposed 
+encoder’s throughput outperforms it by 14.75× [9]. 
+The main contributions of this paper are: 
+1) 
+We design a fine-grained partially-parallel encoding 
+microarchitecture to exploit intra-codeword. 
+2) 
+We utilize HLS to accurately implement the encoder 
+in real FPGA hardware, and evaluate its throughput, 
+flexibility and scalability. 
+The rest of this paper is organized as follows. Sec. II 
+introduces the encoding procedure of QC-LDPC code and 
+HLS. Sec. III elaborates the decoder design. Sec. IV evaluate 
+ 
+ 
+Fig. 1: Partially parallel VMM algorithm 
+1bit
+1bit
+1bit
+1bit
+X
+X
+X
+X
+2023 Asia Communications and Photonics Conference/2023 International Photonics and Optoelectronics Meetings (ACP/POEM) | 979-8-3503-1261-4/23/$31.00 ©2023 IEEE | DOI: 10.1109/ACP/POEM59049.2023.10369210
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:56:05 UTC from IEEE Xplore.  Restrictions apply. 
+the effectiveness of the proposed encoder. Sec. V concludes 
+this paper. 
+II. BACKGROUND 
+A. LDPC 
+A (n,k) Low-density parity-check(LDPC) code is 
+composed of k information bits (i.e., dataword) and n coded 
+bits (i.e., codeword)with the code rate as rate=k/n. The 
+dataword s multiplies the k × n generator matrix to obtain the 
+codeword c, as denoted in the equation: 
+𝑐 =  𝑠𝐺                                    (1) 
+When G has a high density with many non-zero elements, 
+the encoding computation consumes considerable hardware 
+resources. Researchers attempt to avoid dense G by acquiring 
+specific algorithms leveraging the sparsity of the parity check 
+matrices (PCM). 
+Quasi-cyclic (QC)-LDPC as a subset of LDPC codes has 
+a relatively regular generator matrix with circular shifting 
+feature. QC-LDPC facilitates the hardware implementation 
+and is widely used in many communication standards (e.g., 
+WiFi, DVB-S2 and 5G NR) and in data storage (e.g., solid-
+state drives). 
+B. Encoding Algorithm 
+Prior works have proposed direct multiplication of 
+dataword with generator matrix [6], [10]. However, their 
+generator matrices are quite dense. 
+Several works proposed forward substitution algorithm 
+solving a set of linear equations defined by the sparse PCM. 
+Because of the feature of a particular code like the double 
+diagonal of IEEE 802.16e. The linear equations can be solved 
+iteratively. All parity bits are obtained by a few clock cycles.  
+Richardson-Urbanke (RU) is another popular algorithm 
+used in many works [3], [11]. Its PCM is an approximate 
+lower-triangular matrix constructed by basic row and column 
+permutations. The PCM is divided into six parts. Then the 
+parity check bits of the codeword are computed by solving a 
+set of equations [12]. The algorithm is complex as temporary 
+matrices need to be computed. The processing cycles for each 
+operation is linear to the sparsity of the submatrices. Although 
+the hardware complexity is low because of the sparsity of 
+PCM, the extra control logic is relatively complex. 
+In this article, we consider a general direct generator 
+matrix multiplication algorithm, which can be applied to 
+different codes. When an LDPC code is systematic, the left 
+part of the generator matrix G is a large k × k identity matrix, 
+the computation can be simplified into two steps. A replication 
+of the dataword and a vector matrix multiplication. The 
+encoding algorithm can be generally called as vector-matrix 
+multiplication (VMM) [1]. 
+C. Pipelined Partially-Parallel Encoding 
+Partially parallel VMM uses the circular shift feature of 
+QC-LDPC to exploit parallelism in three dimensions as 
+shown in Fig. 1. The generator matrix consists of a set of 
+submatrices with a size of z × z. z is expansion factor. The 
+super r row and c column of the generator matrix are 
+composed of rows and columns of its all submatrices, 
+respectively. The encoding computation is parallel between 
+super rows, but is serial inside super rows. The encoding is 
+performed in two steps in each cycle. First, r vectors 
+composed of one element of the dataword multiply with r 
+rows of the matrix. Second, the results are added to the 
+codeword buffer. Then the resting rows of the submatrices 
+are calculated iteratively and the whole computation is 
+completed in z cycles. These operations are under GF(2). The 
+computation uses AND gate arrays and XOR gate trees. The 
+codeword buffers connect to the XOR gate trees and are part 
+of the addition operation in every cycle. 
+D. HLS 
+The FPGA designers employ Verilog or VHDL to 
+describe 
+Register-Transfer 
+Level 
+(RTL) 
+circuit 
+implementation with long and error-prone development 
+process [13]. Recently,  
+High-level synthesis (HLS) automatically transforms 
+behavior description using high-level language (e.g., C/C++) 
+into RTL-level hardware implementation, to accelerate 
+development and verification. With  rapid advancement of 
+HLS, software engineers conveniently use C/C++ to design 
+domain-specific hardware accelerators without consideration 
+the details of underlying FPGA hardware. There are popular 
+production-level HLS toolchains, e.g., Mentor Graphics 
+Catapult, Intel HLS Compiler and Xilinx Vivado HLS 
+(renamed as Vitis HLS) as used in this work. The Vitis HLS 
+design is developed with C/C++ or OpenCL with pragmas 
+that guide the hardware synthesis.  
+Considering that a high-level abstract logic cannot map to 
+a variety of low-circuit implementations without detailed 
+specifications, HLS depends on some pragmas such as 
+PIPELINE, UNROLL and DATAFLOW to accurately 
+describe the behavior of expressions. Take PIPELINE as an 
+example, PIPELINE guides building a pipeline upon every 
+single expression no matter in a loop or function. HLS 
+internally schedules the implementation based on its own 
+delay models with an available frequency. To fully exploit 
+the hardware running the targeted algorithm as QC-LDPC 
+encoding, the designers still carefully consider hardware-
+implementation 
+details 
+to 
+specifically 
+describe 
+the 
+corresponding behaviors using HLS. 
+III. DESIGN 
+The encoder consists of 𝑟 ×  𝑐 PEs. Inside each encoding 
+PE, we propose a fine-grained pipeline to execute the partially 
+parallel encoding as in Fig. 2. Firstly, a dataword from the 
+hls::stream interface is buffered in a temporary memory 
+through high bit width. Vector Splitter reads and splits the 
+dataword into the super-row’s number of vector chunks. 
+Secondly, Cells in each super column perform computation in 
+two steps: 1) the vector chunks are encoded in parallel for 
+different cells of different super rows; 2) the results are added 
+by XOR trees. Finally, Vector Aggregator aggregates the 
+results and combines them with the dataword to generate the 
+whole codeword. These three steps are not pipelined due to 
+data dependency. 
+The sequential three steps of encode PE are described in 
+HLS. As shown in Fig. 3, the stream data is read in line 3. 
+Then the stream data in_tmp is separated into chunks in_m in 
+line 5-8.  The multiple cells are implemented with a loop at 
+line 9-13. The codeword chunks aggregate at line 14-16. The 
+codeword out_tmp streamed out at line 17. 
+Cell Array in the encoder performs partially parallel 
+encoding. The cell array’s size is defined by the number of the 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:56:05 UTC from IEEE Xplore.  Restrictions apply. 
+super rows and the super columns. Let's take an example that 
+z of 8, c of 4, r of 4. The cell array is 4×4, either of which can 
+be adjusted flexibly according to different codes using HLS 
+fast development flow. 
+In partially parallel process, the computations between 
+Cells are fully parallel and pipelined intra-Cell. Different rows 
+of the submatrices are multiplied iteratively. Each cell stores 
+one submatrix and pipelines the vector-vector multiplication 
+of different rows.  
+The identical Cells multiplicate the chunks with 
+submatrices in parallel. Inside each cell, the computation is 
+pipelined and executed in eight cycles serially which is 
+tunable with varying codes. The submatrix is stored in shift 
+registers. To start, the registers are initialized with the first row 
+of each submatrix. A group of 8 AND and XOR gates 
+performs the multiplication of row vectors of the submatrix 
+and dataword vectors. Then the next row of the submatrix is 
+obtained by shifting the connected registers. And the next 
+operation executes in the following cycle. After 8 cycles, Cells 
+finish vector matrix multiplication in partially parallel. The 
+results of these multiplications in the same column are added 
+up into one bit of the encoded codeword buffer.  
+The codeword buffer would be refreshed with the latest 
+result of VMM computation in every cycle. XOR trees 
+inferred by HLS add the temporary results up and write the 
+result in the buffer.  
+HLS can be used to describe such a fine-grained level with 
+the help of HLS pragmas. However, the structure description 
+and the use of pragmas are still challenging. We carefully 
+design the code structure, maneuvering the connection of 
+signals and compiling pragmas. XOR trees accumulate the 
+temporary vector matrix multiplication results with the 
+preceding result to refresh the codeword buffer with the latest 
+result. The branches of them are the VMM results from cells 
+of the same super column in different super rows. Then the 
+addition operations are done by pure combinational circuits, 
+XOR gates, which introduce high throughput.  
+The XOR trees generate the parity bits of a codeword. The 
+whole codeword is obtained by concatenating the dataword. 
+Two parts of codeword buffer is inferred. The dataword is 
+directly stored in the first part with direct connections. The 
+other part buffer the parity bits result from XOR trees. The 
+two part of codeword buffer is filled in parallel improving the 
+throughput of Encode PE, improving the encoder throughput. 
+The RTL design generated by HLS always consumes the 
+minimum hardware maintaining correct behavior. HLS uses 
+various optimization to realize it. For example, bitwidth 
+analysis lowers the number of bits required by datapath 
+operators, and the speculation step can allow the operation to 
+execute anytime in the control region which may discard 
+certain operation [13]. 
+IV. EVALUATION 
+A. Experiment Setup 
+We use Xilinx hardware development platform Vitis to 
+implement the encoder. We employ a server with two Intel 
+Xeon E5-2670s and 128GB memory. The FPGA hardware is 
+Alveo U50 data center acceleration card from Xilinx with 
+8GB of HBM offering total bandwidth of 316 GB/s, the 
+FPGA can be connected to the server through PCIe Gen3x 16. 
+Theoretically, the PCIe bandwidth can be doubled. With the 
+help of HLS, the design is conveniently ported to any other 
+FPGA platform. We are running on an official firmware 
+(Xilinx_u50_gen3x16_xdma_201920_3) and the version of 
+Vitis is 2020.2, the version of XRT is 2.8.743. 
+B. Performance  
+The encoding architecture recommended in CCSDS is 
+used as the baseline design with only the column parallelism. 
+We implement the baseline and proposed design  in four 
+different code rates 1/2, 2/3, 3/4, 5/6 and the code length is 
+set to 1536. 
+The throughput of out encoder increases with the code 
+rate. Because more datawords are encoded as the code rate 
+rises, and more datawords are encoded in parallel. In Fig.4, 
+the peak throughput reaches 5019.95Mbps and outperforms 
+the baseline by up to 17.62×. Note that the throughput for the 
+baseline is fixed, because only the column parallelism is 
+considered, the datawords are encoded sequentially. And the 
+throughput also is affected by the datawords loading relating 
+to the constant clock frequency in this experiment. The 
+throughput of the proposed encoder at code rate 1/2 is 
+noticeably lower than the others due to the pipeline failure of 
+the HLS tool, there are 768 operations should be pipelined, 
+which exceeds the tool limit. 
+As shown in Fig. 5, Hardware consumption decreases as 
+the code rate increases due to the fewer parity check bits. The 
+proposed encoder increases hardware consumption by up to 
+ 
+ 
+Fig. 2: Encode PE architecture 
+cell
+cell
+cell
+cell
+…
+…
+…
+…
+…
+cell
+cell
+cell
+cell
+…
+cell
+cell
+cell
+cell
+…
+cell
+cell
+cell
+cell
+…
+Vector Splitter
+Vector Aggregator
+Encode PE
+dataword chunk
+(n-k)/z
+× k/z
+codeword chunk
+k
+z
+z
+n
+ 
+ 
+Fig. 3: Encode PE HLS code 
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:56:05 UTC from IEEE Xplore.  Restrictions apply. 
+19.31% to improve the overall throughput significantly, 
+indicating high hardware efficiency. Because we employ 
+VMM algorithm, the simple logic gate-based computation 
+architecture consumes quite little hardware resource. So, the 
+extra hardware consumption introduced by partially parallel 
+architecture is considerably little. 
+V. CONCLUSION 
+In this work, we propose a two-level pipelined QC-LDPC 
+microarchitecture. We design a three-stage coarse-grained 
+word-stream pipeline to serve varying codes. We further 
+present a fine-grained encoding operation both on row and 
+column by exploiting the QC-LDPC feature. We leverage 
+HLS to accurately implement the microarchitecture while 
+flexibly adjusting to different codes in a scalable way. 
+Experimental results show that this design’s throughput 
+achieves 98.4 Gbps which is higher than the state-of-the-art 
+QC-LDPC encoder by up to 14.75×. 
+ACKNOWLEDGMENT 
+This work was supported in part by National key research 
+and development program of China No. 2018YFA0701800 
+and Key Research and Development Project of Hubei 
+No.2022BAA042. 
+REFERENCES 
+[1] 
+A. Mahdi and V. Paliouras, “A low complexity-high throughput qc-
+ldpc encoder,” IEEE Transactions on Signal Processing, vol. 62, no. 10, 
+pp. 2696–2708, 2014. 
+[2] 
+H. Zhiyong, S. Roy, and P. Fortier, “Encoder architecture with 
+throughput over 10 gbit/sec for quasi-cyclic ldpc codes,” in 2006 IEEE 
+International Symposium on Circuits and Systems (ISCAS), 
+Conference Proceedings, p. 4 pp. 
+[3] 
+Z. Hao and Z. Tong, “Block-ldpc: a practical ldpc coding system design 
+approach,” IEEE Transactions on Circuits and Systems I: Regular 
+Papers, vol. 52, no. 4, pp. 766–775, 2005. 
+[4] 
+H. Yasotharan and A. C. Carusone, “A flexible hardware encoder for 
+systematic low-density parity-check codes,” in 2009 52nd IEEE 
+International Midwest Symposium on Circuits and Systems, 
+Conference Proceedings, pp. 54–57. 
+[5] 
+T. T. B. Nguyen, T. Nguyen Tan, and H. Lee, “Efficient qc-ldpc 
+encoder for 5g new radio,” Electronics, vol. 8, no. 6, p. 668, 2019. 
+[Online]. Available: https://www.mdpi.com/2079-9292/8/6/668 T. T. 
+B. Nguyen, T. Nguyen Tan, and H. Lee, “Efficient qc-ldpc encoder for 
+5g new radio,” Electronics, vol. 8, no. 6, p. 668, 2019. [Online]. 
+Available: https://www.mdpi.com/2079-9292/8/6/668 
+[6] 
+A. E. Cohen and K. K. Parhi, “A low-complexity hybrid ldpc code 
+encoder for ieee 802.3an (10gbase-t) ethernet,” IEEE Transactions on 
+Signal Processing, vol. 57, no. 10, pp. 4085–4094, 2009. 
+[7] 
+A. A. A. Hariri, F. Monteiro, L. Sieler, and A. Dandache, “A high 
+throughput configurable parallel encoder architecture for quasi-cyclic 
+low-density parity-check codes,” in 2013 IEEE 19th International 
+OnLine Testing Symposium (IOLTS), Conference Proceedings, pp. 
+163–166. 
+[8] 
+V. L. Petrovic, D. M. El Mezeni, and A. Radosevic, “Flexible 5g new 
+radio ldpc encoder optimized for high hardware usage efficiency,” 
+Electronics, 
+vol. 
+10, 
+no. 
+9, 
+2021. 
+[Online]. 
+Available: 
+https://www.mdpi.com/2079-9292/10/9/1106 
+[9] 
+A. Mahdi, N. Kanistras, and V. Paliouras, “A multirate fully parallel 
+ldpc encoder for the ieee 802.11n/ac/ax qc-ldpc codes based on reduced 
+complexity xor trees,” IEEE Transactions on Very Large Scale 
+Integration (VLSI) Systems, vol. 29, no. 1, pp. 51–64, 2021. 
+[10] Y. M. Gu, W. Lee, and B. Kim, “Telemetry standard 106-17 ldpc 
+encoder design using hls,” Journal of the Korean Society for 
+Aeronautical and Space Sciences, vol. 48, no. 10, pp. 831–835, 2020. 
+[11] C. P. Fewer, M. F. Flanagan, and A. D. Fagan, “A versatile variable 
+rate ldpc codec architecture,” IEEE Transactions on Circuits and 
+Systems I: Regular Papers, vol. 54, no. 10, pp. 2240–2251, 2007. 
+[12] T. Richardson and R. Urbanke, “Efficient encoding of low-density 
+paritycheck codes,” IEEE Transactions on Information Theory, vol. 47, 
+no. 2, pp. 638–656, 2001. 
+[13] R. Nane, V.-M. Sima, C. Pilato, J. Choi, B. Fort, A. Canis, Y. T. Chen, 
+H. Hsiao, S. Brown, F. Ferrandi, J. Anderson, and K. Bertels, “A survey 
+and evaluation of fpga high-level synthesis tools,” IEEE Transactions 
+on Computer-Aided Design of Integrated Circuits and Systems, vol. 35, 
+no. 10, pp. 1591–1604, 2016. 
+ 
+ 
+ 
+ 
+Fig. 4: The throughput of baseline is constant while that 
+of the proposed encoder increases with code rate 
+ 
+ 
+Fig. 5: The proposed encoder hardly increases the 
+hardware consumption  
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:56:05 UTC from IEEE Xplore.  Restrictions apply. 

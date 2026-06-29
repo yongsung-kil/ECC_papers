@@ -1,0 +1,257 @@
+Implementation of a High Throughput LDPC Codec in FPGA for QKD System
+
+Cong Hui*, Yonggang Wang and Xiaoming Lu
+
+Department of Modern Physics, University of Science and Technology of China, Hefei 230026, China * Email: huicong@mail.ustc.edu.cn
+
+Abstract-The contribution of this paper is implementing a high throughput LDPC codec in FPGA for quantum key distribution (QKD) system. By software, the throughput of error correction in QKD system via LDPC codec could only reach 1.8Mbps, which is not satisfactory for high speed QKD systems. Thus, it is desirable that LDPC error correction is realized in FPGA to increase the throughput. LDPC codec is implemented according to IEEE802.16e standard. The encoder directly uses a parity-check matrix of lower triangular structure without the construction of generator matrix, so that it effectively reduce the encoding complexity of Richardson encoding algorithm. The decoder uses the BP Min-Sum algorithm to balance performance and complexity. The codec is implemented in an Altera Arria II EP2AGX260 FPGA with a 2304-bit code length and 2/3 code rate. The partly parallel decoding structure achieves a 99.95 Mbps processing throughput on the condition that the maximum number of iterations for each code block is 20. The achievable throughput is much higher than the requirements of current QKD systems.
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) encoding/decoding method was introduced early in 1962 by Gallager [1], but draw much attention until the work of Mackay in 1995. Because of the sparseness of the parity-check matrix, the LDPC codec can decode with high efficiency and maintain a linear relationship between the decoding complexity and the code length, in particular for a large code length. Because LDPC codes can achieve an error correction performance approaching to the Shannon limit, it becomes very attractive in channel coding field. In addition to the high performance, its partly parallel decoding algorithm could simplify the hardware implementation. LDPC codes has been widely used in many applications, such as wireless communication systems, deep-space communication systems, storage systems and quantum key distribution systems.
+In this paper, we implement the LDPC codec in FPGA for error correction in a high speed QKD system. According to IEEE802.16e standard, Richardson encoding algorithm [2] and BP Min-Sum decoding algorithm [3, 4] are explored for hardware implementation and the LDPC code rate is chosen as 2/3 by the simulation of a MATLAB
+
+program. The LDPC codec is implemented in an Altera Arria II FPGA (EP2AGX260) with a 2304-bit code length. The hardware codec can run at 100 Mhz system clock, the processing throughput is measured as 99.95 Mbps.
+
+II. ALGORITHMS
+
+A. Richardson Encoding Algorithm We use the LDPC code parity-check matrix H recom-
+mended by IEEE802.16e standard for encoding combined with Richardson method. By Gaussian elimination, the parity-check matrix H is brought into an equivalent lower triangular form as shown in Fig. 1. In H matrix, A is (N-k-g)×k, B is (N-k-g)×g, C is g×k, D is g×g, E is g×(N-k-g), and T is (N-k-g)×(N-k-g). All these matrices are sparse and T is lower triangular with ones along the diagonal. Then the N-bits codeword c is divided into three parts as c=(s, p , p ). s is a systematic part with the length
+12
+of k, and p , p are the parity-check parts with the
+12
+lengths of g and N-k-g respectively.
+
+k
+A
+N-k
+
+g
+
+N-k-g
+
+1
+
+1
+
+0
+
+B
+
+N-k-g
+
+T 1
+
+CDEg
+
+N
+Fig. 1. The parity-check matrix H in lower triangular form
+
+According to the equation HcT=0, we can derive the following two equations:
+
+AsT+BpT+TpT=0
+
+(1)
+
+12
+
+-ET-1A+C sT+ -ET-1B+D pT=0
+
+(2)
+
+1
+
+Then from (1) and (2) we conclude that
+
+pT1=( ET-1A+C )sT
+
+(3)
+
+pT2 =T-1 (AsT +Bp1T)
+
+(4)
+
+978-1-467A3u-9th7o1r9iz-e3d/1l6ic/e$n3s1e.0d0u©se2l0im16iteIdEEtoE: Yonsei Univ. Downloaded on June 24,2026 at 15:01:23 UTC from IEEE Xplore. Restrictions apply.
+
+From (3) and (4), a summary of the encoding procedure is given in Fig. 2.
+
+Input s
+
+f1=AsT
+
+f2=CsT
+
+f3=T-1f1
+
+p1T=f4+f2
+
+f4=Ef3
+
+f5=Bp1T
+
+f6=f1+f5
+
+p2T=T-1f6
+
+codeword c=(s,p1,p2)
+
+Fig. 2. Diagram of encoding procedure based on Richardson algorithm
+
+B. BP Min-Sum Decoding Algorithm Standard belief propagation (BP) algorithm for LDPC
+decoding is considered to be difficult to implement in FPGA due to its complex check nodes update functions. Thus, we choose the BP Min-Sum algorithm for decoding which requires much less hardware resources for the check nodes update functions.
+A (N, N-M) LDPC code, c, is the null space of a sparse M×N parity-check matrix, H. It can also be described by Tanner graph. Tanner graph of an LDPC code consists of two set of nodes. Check nodes represent the rows of H and variable nodes represent the columns. In this algorithm, extrinsic messages are passed between check and variable nodes in the form of log-likelihood ratios (LLRs). Let P represent the LLRs of posterior probability of the codeword c; Rim.n represent the message passing from check node m to variable node n in the ith iteration; Qmi ,n represent the message passing from variable node n to check node m in the ith iteration. The decoding algorithm consists of the following steps [5]: 1) Initialize P00,n=L(c), Rm0 ,n=0. 2) Update the variable nodes:
+
+Qim,n=Pim-1,n − Rmi-1,n (Hm,n ≠ 0)
+
+3) Update the check nodes:
+
+Rmi ,n=
+
+sgn Qim,n'
+
+n'≠n
+
+∙ max min
+n'≠n
+
+Qim,n'
+
+− δ,0
+
+4) Update the value of P:
+
+Pim,n=Qmi ,n+Rmi ,n (Hm,n ≠ 0)
+
+5) Obtain the codeword c according to the updated P after all rows are processed. If HcT=0 or i exceeds
+
+limit, stop decoding and go to step 6. Otherwise set i=i+1 and go to step 2. 6) Output the results of decoding. The decoding procedure is shown in Fig. 3.
+
+codeword c
+
+P0=L(c)
+
+Update Q Q=P-R
+
+Update R R=f(Q)
+
+No,line+1 No,line=1
+
+Update P P=Q+R
+
+Last line ?
+
+Maximum i
+
+of iterations ?
+
+yes
+
+Decode failed
+
+Yes
+Obtain updated c
+
+No
+check HcT=0？
+
+Decode
+yes
+successful
+
+Fig. 3. The decoding process based on BP Min-Sum algorithm
+
+III. IMPLEMENTATION AND RESULTS
+
+A. Encoder Module There are large numbers of matrix multiplications in the
+encoding procedure as shown in Fig. 2. In general, matrix multiplication is complex and requires high resources consumption in FPGA if matrices are ruleless. But the parity-check matrix H in IEEE802.16e standard is special for its sparsity. H is composed of many basic sub-matrices of size 96×96 . Most of the sub-matrices are cyclic-shift identity matrices and the others are null matrices. So that matrix multiplication can be actually optimized as each non-zero sub-matrix multiplying the corresponding subsegment of the codeword, which can be implemented by cyclic-shift of the sub-segments. Then we use the 96-bit barrel shifter structure to realize matrix multiplications conveniently in FPGA. Fig. 4 shows the structure of one row of matrix multiplication in FPGA.
+
+96
+multiplexer
+sub-segment 1
+
+barrel shifter
+
+codeword s
+
+96
+multiplexer
+sub-segment 2
+
+barrel shifter
+
+bitwise xor
+
+96
+multiplexer
+sub-segment n-1
+96
+multiplexer
+sub-segment n
+
+barrel shifter barrel shifter
+
+Result of one row
+
+Fig. 4. Structure of one row of matrix multiplication in FPGA
+
+B. Decoder Module Before implement the decoder in hardware, an applica-
+ble code rate should be determined for QKD system first. We generate 50000 pairs of random codewords with the length of 2304-bit, and the bit error rate of codewords is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:23 UTC from IEEE Xplore. Restrictions apply.
+
+evenly distributed in the range [0, 0.11]. Then we use MATLAB to simulate the performance of LDPC decoding algorithm with 1/2, 2/3, 3/4, 5/6 code rate respectively. The maximum number of iterations is limited to 20. The simulation results are shown in Fig. 5. As the error rate of codewords in QKD system is distributed in [2%, 4%], we finally choose the 2/3 code rate to ensure that error correction failure probability is less than 0.01.
+In decoding procedure, the most important step is updating the values of Q, R and P for each row in the paritycheck matrix H. The values of Q, R and P of 96 continuous rows can be updated in parallel because of H is composed of basic sub-matrices of size 96×96 and sub-matrices have the cyclic-shift structure. In FPGA, P-values are stored in 96 dual-port RAMs, Q-values and R-values are updated and stored in 96 updating units. We also design a dedicated ROM to store the messages of H. The decoder structure in FPGA is shown in Fig. 6.
+0 10
+CodeRate = 1/2 CodeRate = 2/3 CodeRate = 3/4 CodeRate = 5/6 -1 10
+-2 10
+0 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1
+Error Rate of Input Codewords
+Fig. 5. The failure probability of error correction with the change of the input codewords error rate
+
+Error Correction Failure Probability
+
+Fig. 6. Implementation structure of LDPC decoder in FPGA
+
+C. Resource Utilization and Test Result A 2304-bit, 2/3 code rate LDPC codec is implemented
+in an Altera Arria II EP2AGX260 FPGA. The FPGA resource utilization is listed in Table 1.
+
+Table 1. FPGA resource utilization statistics
+
+Resource
+
+Encoder
+
+Decoder
+
+Combinational ALUTs 5087/205200(2.5%)
+
+50021/205200(24.3%)
+
+Total registers
+
+16615
+
+46131
+
+Total pins
+
+25/692(3.6%)
+
+26/692(4%)
+
+Total block memory bits 84224/8755200(<1%) 65536/8755200(<1%)
+
+The system clock of the LDPC codec is 100 Mhz. Encoding process costs only 9 clock cycle and outputs 2304bit codeword at one time. Thus, the maximum throughput of the LDPC encoder can reach 25.6Gbps. As for decoding respect, the maximum throughput can reach 99.95 Mbps due to the iterative calculation in decoding process. This speed is much higher than the requirements of QKD system.
+IV. CONCLUSION
+We have implemented a high throughput LDPC codec in an Altera Arria II FPGA for QKD system. Richardson encoding algorithm and BP Min-Sum algorithm are successfully adapted for hardware realization. The LDPC codec has been used in our high-speed real-time QKD system, which has a 1 Ghz photon repetition rate [6].
+ACKNOWLEDGEMENT
+This work is supported by the National Natural Science Foundation of China (Grant Nos. 61201239, 61205118, 11304397 and 61475148).
+REFERENCES
+[1] Gallager, Robert. "Low-density parity-check codes." IRE Transactions on information theory 8.1: 21-28. (1962)
+[2] Richardson, Thomas J., and Rüdiger L. Urbanke. "Efficient encoding of low-density parity-check codes." IEEE Transactions on Information Theory 47.2: 638-656. (2001)
+[3] Fossorier, Marc PC, Miodrag Mihaljevic, and Hideki Imai. "Reduced complexity iterative decoding of low-density parity check codes based on belief propagation." IEEE Transactions on communications 47.5: 673-680. (1999)
+[4] Darabiha, Ahmad, Anthony Chan Carusone, and Frank R. Kschischang. "A bit-serial approximate min-sum LDPC decoder and FPGA implementation." 2006 IEEE International Symposium on Circuits and Systems. (2006)
+[5] Darabiha, Ahmad, Anthony Chan Carusone, and Frank R. Kschischang. "Block-interlaced LDPC decoders with reduced interconnect complexity." IEEE Transactions on Circuits and Systems II: Express Briefs 55.1: 74-78. (2008)
+[6] Xiaoming Lu. Research and design on real-time high-speed SERDES-based dual phase modulating quantum key distribution system: [D]. Hefei: University of Science and Technology of China, 2016.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:01:23 UTC from IEEE Xplore. Restrictions apply.
+
+

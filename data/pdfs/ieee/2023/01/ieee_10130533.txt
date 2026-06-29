@@ -1,0 +1,865 @@
+Received 23 April 2023, accepted 18 May 2023, date of publication 22 May 2023, date of current version 1 June 2023. Digital Object Identifier 10.1109/ACCESS.2023.3278975
+
+Channel Model and Decoder With Memory for DNA Data Storage With Nanopore Sequencing
+
+BELAID HAMOUM 1 AND ELSA DUPRAZ 2, (Member, IEEE)
+1Lab-STICC, CNRS UMR 6285, Université Bretagne Sud, 56321 Lorient, France 2Lab-STICC, UMR CNRS 6285, IMT Atlantique, 29238 Brest, France
+Corresponding author: Elsa Dupraz (elsa.dupraz@imt-atlantique.fr)
+This work was supported in part by the Labex Cominlabs from the French National Research Agency under Grant ANR-10-LABX-07-01 and in part by the PEPR MolecularXiv.
+ABSTRACT This paper investigates channel coding for DNA data storage, a recent and emerging paradigm in which both substitution errors and synchronization errors (insertions, deletions) are introduced in the stored data. The paper first proposes a novel and accurate statistical channel model to represent errors introduced by the DNA data storage support. The channel model takes the form of a k-order Markov Model which allows to capture both memory in the sequence of channel errors, and statistical dependency between errors and input sequence. The model probabilities are inferred on two sets of data: one set of experimental data, and one set of genomic data. In both cases, we observe a superior accuracy, evaluated from the Kulback-Leibler divergence, of our channel model compared to existing ones. Second, the paper investigates the design of error-correction solutions dedicated to the proposed channel model. It considers a concatenated code construction built from a convolutional decoder which aims to correct synchronization errors, and from an outer LDPC code which corrects residual substitution errors. While this construction was already investigated for i.i.d. errors, this paper shows how to include all the knowledge of the proposed channel model into the convolutional decoder. Numerical results show that the proposed decoding algorithm significantly improves the decoding performance in terms of BER and FER, at the price of an increased decoding complexity.
+INDEX TERMS DNA storage channel model, coding for DNA data storage, concatenated codes, convolutional decoders, BCJR algorithm.
+
+I. INTRODUCTION DNA data storage is seen as an emerging and promising alternative to conventional storage supports, due to higher density and greater durability. In DNA data storage, information is stored by synthesizing a digital sequence into a DNA molecule built from a sequence of bases A,C,G,T. The original information can be retrieved by using a DNA sequencer such as the Oxford Nanopore Technology (ONT) MinION sequencer which we consider in this work. Recent progress in both the synthesis and sequencing technologies pave the way for the development of cost-effective and competitive DNA data storage solutions in the next few years.
+Unfortunately, sequencing still introduces a large amount of substitution, insertion, and deletion errors in the read data.
+The associate editor coordinating the review of this manuscript and approving it for publication was Parul Garg.
+
+Insertions and deletions break sequence synchronization, and they cannot be corrected with conventional error-correction methods designed for data storage or wireless communications. Therefore, from a channel coding perspective, two key challenges should be addressed in order to make DNA data storage more practical: (i) develop accurate statistical channel models to represent errors that occur during the DNA data storage process, (ii) design powerful error-correction solutions that can handle the three types of errors. This paper aims to address both of these challenges in a cohesive manner, by first introducing an accurate channel model and then incorporating the model knowledge into the decoder.
+Statistical channel models allow to run extensive insilico simulations, before implementing expensive in-vitro experiments. Regarding DNA data storage, a wide range of works consider non-uniform independent and identically distributed (i.i.d.) error models [1], [2], [3], [4]. But it is
+
+VOLUME 11, 2023
+
+This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+52075
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+shown in [5] that the error statistics are highly dependent on the input sequence, and contain memory, making the i.i.d. assumption unrealistic. To account for these dependencies, a first set of simulators have employed Deep-Learning (DL) based approaches, such as DeepSimulator [6], [7], which utilizes Deep Neural Networks (DNNs), or the approach of [8] which uses Generative Adversarial Networks (GANs). However, these simulators are trained for specific sequence lengths, and the training process is computationally expensive. Furthermore, DL-based simulators are not completely appropriate in our context, since the channel probabilities are not explicit and cannot be incorporated into the design of the decoder. Alternatively, PBSIM2 [9] considers transition probabilities over a sequence of quality scores, and samples errors from the quality scores according to a fixed distribution between error events. But we observed on experimental data that the event distribution is not fixed and varies with the input sequence. In addition, BadRead [10] uses transition probabilities estimated from experimental data to randomly substitute length-k sequences with other length-k′ sequences. However, in Badread, the user has to specify many parameters such as the average reads-length or the total amount of errors, and the channel accuracy heavily depends on the considered parameters.
+This paper introduces a new and accurate statistical channel model that is defined by a set of probabilities over the error events and does not require any additional parameter. Given that the MinION sequencer reads k symbols at a time, our channel model relies on a k-order Markov Model in order to take into account both memory in the successive error events, and statistical dependency between errors and input sequence. We describe how to train the model using two different datasets: one smaller dataset of experimental data passed through the entire DNA storage process, and one larger dataset of genomic data. Numerical evaluation of the Kullback-Leibler divergence demonstrates that our model more accurately represents the actual DNA data storage process than existing models [6], [7], [10]. Lastly, we introduce a dynamic channel model, which allows to smoothly adjust the channel probabilities inferred from the datasets, in order to simulate a wider range of error probabilities in numerical experiments. It is worth mentioning that in our previous work [11] where the channel model was introduced, only one dataset was used for training, and the dynamic channel model was not presented.
+Second, this paper addresses the design of efficient error-correction solutions for DNA data storage. The first error-correction solutions proposed for synchronization errors were based on Varshamov-Tenengolts (VT) codes [12], which can correct only one deletion or one insertion. These solutions were further extended to correct one burst of insertions and deletions [13], [14], or a few errors [15], [16], or to consider constrained codes together with the correction of a single error [17]. While solutions that guarantee the correction of a fixed number of errors are interesting from a theoretical perspective, they may not be sufficient
+52076
+
+in our context, since our channel model reveals a large and random amount of errors of the three types. Therefore, recent works consider either Convolutional Codes (CC) [18], [19], [20], Low Density Parity Check (LDPC) codes [21], [22], [23], [24], or Polar codes [25], which use modified decoders that can correct not only substitutions, but also insertions and deletions. It is worth mentioning that the above works only consider non-uniform i.i.d. channel models.
+In this work, we start from the concatenated code construction of [19], which is built from an inner CC designed to re-synchronize the sequence (i.e., eliminate all insertions and deletions, correct a part of the substitutions), and from an outer LDPC code which corrects the remaining substitution errors. We consider this construction due to its good error-correction capabilities for error rates between 1% and 10% (when using an i.i.d. channel), which aligns with the error rates observed in our model. In this paper, we propose to modify the convolutional decoder of [19] so as to incorporate the statistics of our channel model. This involves expanding the space of states used in the BCJR algorithm, and adapting the forward recursion, backward recursion, and branch metric computation based on our model. Numerical results show that although the modified BCJR decoder has a much larger complexity than in the i.i.d. case, it leads to significant performance improvement in terms of Bit Error Rate (BER) and Frame Error Rate (FER) compared to the decoder of [19]. It is worth noting that a similar work on adapting the concatenated code construction for our channel model [11] was done in [26]. However, [26] only introduced the new space of states, while we describe the practical implementation of all the decoding steps. In addition, [26] evaluated the theoretical performance of the decoder in terms of achievable information rate, while we present numerical BER and FER values to evaluate the practical decoder performance.
+The outline of the paper is as follows. Section II describes the DNA data storage workflow. Section III-B introduces the channel model with memory. Section IV presents the considered concatenated code construction. Section V explains how to integrate our channel model into convolutional decoders. Section VI shows numerical results.
+II. DNA DATA STORAGE This section outlines the main two physical processes involved in DNA data storage: synthesis and sequencing. In what follows, we use 1, J to denote the set of integers between 1 and J .
+A. CHEMICAL SYNTHESIS DNA synthesis consists of converting digital data into DNA strands, where each DNA strand is formed by different combinations of nucleotides A, C, G, and T [27]. There exists different synthesis techniques, each with different constraints (maximum length for the input sequences, costs, etc.). In this work, we consider chemical synthesis [27], [28], in which oligonucleotides (short DNA molecules) are synthesized and
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+then assembled to form the ordered sequences of nucleotides. The synthesis produces thousands of DNA molecules, each representing a copy of the same synthesized sequence. In this work, we assume that synthesis does not introduce any error, as observed in [5]. Formally, in what follows, we use x = (x1, · · · , xN ) to denote the sequence of digits to be synthetized, where each digit xt takes values in a quaternary alphabet. Depending on the purpose, we either consider that xt ∈ {A, C, G, T }, or that xt ∈ GF(4), where GF(4) is the Galois Field of order 4, and there is a one-to-one correspondence between the alphabet {A, C, G, T } and GF(4).
+
+B. NANOPORE SEQUENCING DNA sequencing consists of reading the DNA strands to produce a digital signal. In this work, we consider the ONT MinION sequencer, which has the ability to read at high speed but with a high rate of error [29]. In the MinION sequencer, DNA strands pass through a so-called nanopore. For each group of k successive nucleotides
+
+kmert = (xt−k+1, xt−k+2, · · · , xt ),
+
+(1)
+
+called k-mer, the nanopore outputs a specific electrical current level ct . The next k-mer
+
+kmert+1 = (xt−k+2, xt−k+3, · · · , xt+1),
+
+(2)
+
+produces the current level ct+1. Therefore, two successive levels ct and ct+1 are produced from two k-mers with k −1 bases in common. A significant number of DNA strands
+are processed by the sequencer, which outputs a large number
+of current levels sequences.
+Then, a software called basecaller transforms the
+sequences of current levels into digital sequences. In this
+work, we employed Guppy and Bonito basecallers, which are both built from Deep-Learning approaches. We use y(j)
+to denote the J digital sequences output by the basecaller, where j ∈ 1, J , and y(tj) takes values in a quaternary alphabet {A, C, G, T } or GF(4). The read sequence y(j) is of length P(j), and typically P(j) ̸= N . This is because the sequencer and the
+basecaller not only introduce substitutions, but also insertions
+and deletions in the read sequences, and error patterns vary
+from sequence to sequence [5].
+
+III. CHANNEL MODEL From an information-theoretic perspective, the successive three previous steps (synthesis, sequencing, basecalling) can be modeled as a channel. This section introduces a new channel model, which turns out to be very useful for the design and performance evaluation of error-correction codes dedicated to DNA data storage. The software for the channel simulator is available online: https://github.com/BHam-1/DNArSim.
+
+A. NOTATION In what follows, we use Ins, Del, Sub, as abbreviations for Insertion, Deletion, Substitution, respectively. In addition, Match stands for ‘‘no error’’. In order to represent the channel
+
+VOLUME 11, 2023
+
+effect, we consider an event sequence e of length N , where et ∈ {Ins, Del, Sub, Match} is the channel event at position t. Interestingly, the sequences e and x have the same length N , and event et applies to input symbol xt . More into details, et = Del means that the symbol xt is deleted from the sequence, and et = Sub means that the base value of xt is replaced by another base value. In addition, et = Ins means that one or several symbols are inserted just after xt . We denote by Lt the insertion length, that is the number of symbols inserted at position t. To make this notation clear, we introduce the following example.
+Example 1: Consider an input sequence of length N = 7:
+x = [A, C, G, A, T , G, A],
+and one output sequence of length P = 8:
+y = [A, C, C, C, G, T , T , A].
+The corresponding sequence of channel events that generated y from x is the sequence of length N = 7:
+e = [Match, Ins, Match, Sub, Match, Del, Match].
+The channel inserted two symbols after x2, substituted symbol x4, and deleted x6. In addition the insertion length at position 2 is L2 = 2.
+
+B. PROPOSED CHANNEL MODEL WITH MEMORY
+Our proposed channel model captures the statistical dependency between the event sequence e and the input sequence x, by considering that event et depends on kmert . This is consistent with the way the MinION sequencer operates, by reading one k-mer at a time. The MinION sequencer typically uses k = 6, but our model is flexible and can be adapted to different values of k, which will affect the model accuracy. Thus, our channel can be viewed as a Markov model of order k. Our model also captures some internal memory in e, by considering that previous event et−1 can affect current event et . This allows to represent bursts of errors.
+Our statistical channel model is described by the following set of conditional probability distributions. First, the conditional probability distribution
+
+P(et |kmert , et−1)
+
+(3)
+
+of events et ∈ {Ins, Del, Sub, Match}, given kmert and previous event et−1, captures the error dependency with the current k-mer, and allows to consider bursts of errors through
+the dependency to et−1. Second, given an insertion et = Ins at position t, the conditional probability distribution
+
+P(Lt |kmert , et = Ins)
+
+(4)
+
+of the insertion length Lt ∈ 1, Lmax depends on the read kmert . Note that a deletion at position t is always of length 1. Third, given a substitution et = Sub,
+
+P(Bt |kmert , et = Sub)
+
+(5)
+
+is the conditional probability distribution to substitute the last base xt of kmert by the base Bt , where Bt ̸= xt .
+
+52077
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+We further assume that the previous three probability distributions (3), (4), (5), do not vary with t ∈ k, N − 1 .
+For t ∈ 2, k , since no complete k-mer was observed already, we consider conditional probability distributions
+
+P(et |xt ), P(Lt |xt , et = Ins), P(Bt |xt , et = Sub), (6)
+
+which only depend on the input value xt . Finally, we observed from experimental data that the probabilities to get an insertion or a deletion are higher at the first position t = 1 and at the last one t = N , compared with middle positions t ∈ 2, N − 1 , and that these probabilities do not depend much on the input sequence. Therefore, we allow for different probability distributions
+
+P(e1), P(L1|e1 = Ins)
+
+(7)
+
+and
+
+P(eN ), P(LN |eN = Ins),
+
+(8)
+
+for t = 1 and t = N , respectively. Given that substitutions are not affected by the previous remark, we still consider P(B1|x1, e1 = Sub) and P(BN |kmerN , eN = Sub) at the first and last position, respectively.
+
+C. MODEL TRAINING The next step is to estimate all the previous probability distributions from some sets of data. In this work, we trained the model using two distinct sets of data, each with specific characteristics: one set of experimental data, and one set of genomic data.
+
+1) SET of EXPERIMENTAL DATA (SetE)
+
+We first used a set of experimental data, callet SetE, that
+
+passed through the full DNA data storage process described
+
+in Section II. This set was generated from U = 9 input
+
+sequences x(u) (u ∈ 1, U ), called the reference sequences,
+
+each providing Ju output sequences y(u,j) (u ∈ 1, U , j ∈
+
+1, Ju ), for a total of J =
+
+9 u=1
+
+Ju
+
+=
+
+34604
+
+read
+
+sequences
+
+obtained after basecalling. In addition, 6 of the reference
+
+sequences have N = 500 nucleotides, and the 3 other ones
+
+have length N = 1000 nucleotides. As a first step for training, each read sequence y(u,j) was
+aligned with its reference sequence x(u). The alignments
+
+were done using the ggsearch36 tool from the FASTA soft-
+
+ware [30]. This tool performs global to global alignments, that
+
+is to say that the whole read (from first to last base) is aligned
+
+against the whole reference. In a second step, we used the
+
+aligned reads to estimate conditional probabilities involving each k-mer contained in the sequences x(u). For instance,
+
+we estimated the conditional probabilities P(et = D|kmert = β, et−1 = D′) as
+
+N(et = D, kmert = β, et−1 = D′) N(kmert = β, et−1 = D′)
+
+(9)
+
+where N(.) counts the number of occurences of the event over all the aligned-read pairs (x(u), y(u,j)), D, D′ ∈
+
+52078
+
+{Ins, Del, Sub, Match}, and β is a specific k-mer that can be any sequence of k bases. The other probability terms were estimated by following the same approach. At the end, the overall error probability over this dataset is high, about 10%.
+The first advantage of this set of experimental data is that the reference sequences x(u) are perfectly known, which makes the comparisons between the reads and the reference very reliable. On the other hand, this set contains only a small amount of data, due to high DNA synthesis costs. This leads to plenty of unobserved combinations (kmert , et−1 = E), over the 4k+1 possible ones. In our case, when a given combination (kmert , et−1 = E) was left unobserved, we estimated the corresponding probabilities by averaging over all observed combinations.
+2) SET of GENOMIC DATA (SetG) Genomic data are much more accessible than experimental data, as they can be obtained from various genomic databases. In this work, we considered a set of genomic data called SetG, that contains U = 7 strains (sub-types) [31] of the Streptococcus thermophilus bacteria [32]. In this case, the reference sequences x(u) contain about 106 bases, while the reads y(u,j) correspond to subsequences of x(u), and contain between 103 and 105 bases. This makes it impossible to use global alignments. In addition, there is no ground truth that states from which part of the reference x(u) a given read y(u,j) is produced. Thus, for the genomic dataset, we performed local alignments with a tool called minimap2 [33], which is very efficient in performing local alignments of very long sequences in a timely manner. In addition, we eliminated from the training set the reads y(u,j) with a low-scoring alignment. We then used the same approach described in (9) in order to estimate all the probability terms. The overall error probability over this dataset is about 3%, which is significantly lower than for the experimental dataset. Note that since for SetE the reference sequences x(u) and the reads y(u,j) have the same length, global alignment is equivalent to local alignment.
+The main advantage of genomic data is that it offers a significantly larger quantity of data. All possible combinations (et = D, kmert = β, et−1 = D′) were observed, with a sufficient amount of each. However, this dataset introduces another type of bias since the training discards low-scoring alignments, i.e., sequences that have a high amount of errors. This explains why it gives a lower error probability compared to the experimental dataset.
+D. DYNAMIC CHANNEL MODEL The two datasets provide two realistic channel models, with similar underlying characteristics but varying error rates. This will allow for the evaluation of the proposed error-correction codes under different conditions. To expand the performance evaluation even further, we propose a modified version of our channel model, which enables to consider various
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+FIGURE 1. Concatenated coding scheme.
+
+and intermediate levels of errors. This modified channel is
+referred to as the dynamic channel model.
+Starting from a set of conditional probabilities obtained
+from one or the other training dataset, we introduce a unique scaling parameter α, and evaluate a new set of probabilities P(α)(et = D|kmert = β, et−1 = D′) defined for D ∈ {Ins, Del, Sub} as
+
+P(α)(et = D|kmert = β, et−1 = D′)
+
+= αP(et = D|kmert = β, et−1 = D′),
+
+(10)
+
+and for D = Match as
+
+P(α)(et = D|kmert = β, et−1 = D′) = (1 − α)P(et = D|kmert = β, et−1 = D′). (11)
+
+By construction, this new set of probabilities satisfies the
+normalization condition. It also allows to consider different channel error rates by varying the parameter α, as will be shown in the simulation section. For simplicity, we do not change other probability terms P(Lt |kmert , et = Ins) and P(Bt |kmert , et = Sub), given that they have less impact (for the first one), or no impact (for the second one) on the overall
+error probability.
+
+IV. CONCATENATED CODES This section describes the concatenated code construction of [19], which we consider in this paper. As outer code, we consider an LDPC code defined by its parity check matrix H with rate R0. According to [19], the considered LDPC code may be either binary or non-binary. In this section as well as in our numerical simulations, we only consider the case of a non-binary LDPC code in GF(4) which matches the channel alphabet. As inner code, we consider a binary CC with generator polynomial and rate Ri. This inner code takes k bits as input, provides n bits as outputs, and has m registers. The CC aims to resynchronize the sequence, which means correcting all insertions and deletions, and it also corrects a part of the substitutions. The LDPC code corrects residual substitution errors. The concatenated coding scheme is depicted in Figure 1. We now describe its encoding and decoding steps.
+
+A. ENCODERS The outer LDPC code takes as input a quaternary sequence u of length K , and outputs a sequence of symbols in GF(4),
+
+VOLUME 11, 2023
+
+which is then converted into a binary sequence w of length N0. The inner convolutional encoder outputs a binary sequence
+v of length Nb, which is then converted into a sequence z of length N = Nb/2 in GF(4). Finally, the sequence x is computed as
+
+x = z + r,
+
+(12)
+
+where r is a random offset sequence of length N with symbols in GF(4), and where the sum is in GF(4). It was shown in [34] that the offset sequence r significantly improves the convolutional decoder performance under synchronization errors. At the end, the sequence x is synthetized as a DNA molecule.
+
+B. DECODERS
+After sequencing, the DNA storage channel outputs the J sequences y(j) in GF(4). We apply the inner convolutional decoder to J ′ < J sequences y(j). This decoder consists of a BCJR algorithm [35] which takes as inputs sequences in GF(4), and outputs Log Likelihood Ratios (LLRs) over bits. It also takes into account the offset sequence. We then convert the LLRs over bits onto LLRs over quaternary symbols, and pass them to a standard non-binary LDPC decoder, assuming that the convolutional decoder corrected all insertions and deletions, and that residual substitution errors are statistically independent. The LDPC decoder outputs a sequence uˆ of length K . In what follows, we introduce an updated version of the convolutional decoder of [19] and [34], in order to take all the knowledge provided by our channel model into account.
+
+V. CONVOLUTIONAL DECODERS When designing the convolutional decoder, the first difficulty resides in the fact that insertions and deletions break the Markov property in the sequence of states [34]. Therefore, the convolutional decoder of [34] introduces an additional drift variable that restores the Markov property.
+In this section, we first present the decoder of [34] which assumes an i.i.d. channel model. Then, we adapt this decoder to account for: (i) the memory in the sequence of error events, (ii) the dependency between error events and k-mers. We begin by describing the decoders for a single sequence y of length P, and later explain how to handle multiple sequences y(j).
+
+A. STATE-OF-THE-ART DECODER WITH DRIFTS (DEC1) The decoder of [19] and [34] is referred to as Dec1 in the remaining of the paper. We provide a detailed description of this decoder in order to establish notation and ensure that the paper is self-contained. When introducing the two other decoders, we will only highlight the differences compared to Dec1.
+
+1) STATES OF THE DECODER The successive internal states of the CC are denoted st , where t ∈ 0, N . For instance, if the CC has 4 states, st takes values in {S0, S1, S2, S3}. Further, [34] introduces an additional state
+52079
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+variable dt , called the drift. The drift dt represents the delay at time t in the sequence, that is
+
+dt = Nb(INS)t − Nb(DEL)t ,
+
+(13)
+
+where Nb(INS)t (respectively Nb(DEL)t ) is the number of insertions (respectively deletions) that occurred before trans-
+mitting the symbol xt . Between time instants t and t + 1, we assume that there is a maximum of Imax insertions and of 1 deletion. As a result, dt+1 lies in the interval dt − 1, dt + Imax . Overall, between time instants t = 0 and t = N , we assume that dt lies in the interval Dmin, Dmax . Both Imax, Dmin, and Dmax, are parameters of the decoder. Overall, the state of the decoder is denoted by the pair
+
+σ t = (st , dt ).
+
+(14)
+
+Figure 2 shows the trellis of the decoder, with state σ t evolving between successive time instants t = 0, t = 1, and t = 2.
+
+2) A POSTERIORI PROBABILITY COMPUTATION The CC decoder aims to compute a posteriori probabilities P(wt |y), where
+
+P(wt |y)
+
+=
+
+P(wt , y) P(y)
+
+(15)
+
+and
+
+P(wt , y) =
+
+P(y, σ t , σ t+1).
+
+(16)
+
+(σ t ,σ t+1):wt
+
+During probability computation, the drift variable dt allows to maintain a Markov property in the sequence of states in the sense that P(y, σ t , σ t+1) can be decomposed as
+
+P(y, σ t , σ t+1) = αt (σ t )βt+1(σ t+1)γt (σ t , σ t+1) (17)
+
+where
+
+αt (σ t ) = P(y1(t−1)n+dn, σ t )
+
+(18)
+
+βt+1(σ t+1) = P(yTtn+d′n+1|σ t+1)
+
+(19)
+
+γt (σ t , σ t+1) = P(y(tnt−+1d)′nn+dn+1, σ t+1|σ t )
+
+(20)
+
+are evaluated from a forward recusion, backward recursion, and branch metric computation, which is the typical approach used in the BJCR algorithm. In the previous equations and in what follows, d refers to the current drift value dt , and d′ refers to the next drift value dt+1. We often use d, d′ instead of dt , dt+1, for improved readability of the equations.
+
+3) FORWARD AND BACKWARD RECURSIONS The forward recursion computes αt (σ t ) for all t ∈ 1, N as
+
+αt (σ t ) = αt−1(σ t−1)γt (σ t−1, σ t )
+
+(21)
+
+σ t−1
+
+where α0(σ 0) is initialized as
+
+α0(σ 0) =
+
+1, 0,
+
+if σ 0 = (0, 0) otherwise.
+
+(22)
+
+52080
+
+FIGURE 2. Partial trellis diagram for Dec1, for time instants t = 0, t = 1, t = 2, with Imax = 1 and dt+1 ∈ dt − 1, dt + 1 .
+
+FIGURE 3. Lattice structure used to compute branch metrics in Dec1.
+
+The backward recursion computes βt−1(σ t ) for all t ∈ 0, N − 1 as
+
+βt (σ t ) = βt+1(σ t+1)γt (σ t , σ t+1)
+
+(23)
+
+σ t+1
+
+where βN (σ N ) is initialized as
+
+βN (σ N ) =
+
+1, 0,
+
+if σ N = (0, P−N ) otherwise.
+
+(24)
+
+4) BRANCH METRIC COMPUTATION The branch metric γt (σ t , σ t+1) can be expressed as
+
+γt (σ t , σ t+1) = P(wt )P(yt(nt−+1d)′nn+dn+1, dt+1|dt , st , st+1) (25)
+
+where P(wt ) = 1/4. The branch metric is evaluated by using an efficient algorithm based on a lattice structure [36], see an
+
+example in Figure 3. This lattice allows us to compute the
+probability to pass from state σ t to state σ t+1, which corresponds to the emission of a certain symbol x˙ = x(ttn−1)n+1. We consider the observed sequence Py = y(tnt−+1d)′n+d+1, whose length corresponds to passing from drift dt to drift dt+1.
+We recursively compute the probabilities Fi,j at lattice nodes [i, j], such that ∀i ∈ 0, 1 , ∀j ∈ 0, Imax + 1 ,
+
+1
+
+Fi,j = Pd Fi−1,j + 4 PiFi,j−1 + Q(x˙i|y˙j)Fi,j−1
+
+(26)
+
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+where
+
+
+
+ Pm, if x˙i = y˙j
+
+Q(x˙i|y˙j)
+
+=
+
+
+
+1 3
+
+Ps,
+
+otherwise.
+
+(27)
+
+In these expressions, Pd is the probability of a deletion, Pi is the probability of an insertion, Pm is the probability of a match, and Ps is the probability of a substitution. Note that in the decoder of [19], these probabilities come from the i.i.d.
+model. The computation is initialized as
+
+1, if i = 0 and j = 0
+
+Fi,j = 0, if i < 0 or j < 0.
+
+(28)
+
+Moving vertically on the lattice means that a deletion
+
+occurred, represented by the first term in (26). Moving hor-
+
+izontally on the lattice means that an insertion occurred,
+
+represented
+
+by
+
+the
+
+second
+
+term
+
+in
+
+(26),
+
+where
+
+the
+
+factor
+
+1 4
+
+represents the uniform probability to insert any base A, C,
+
+G, or T. Moving horizontally on the lattice means that either
+
+a match occurred if x˙i = y˙j, or a substitution occurred if
+
+x˙i ̸= y˙j. Both cases are represented by the third term of (26),
+
+where
+
+1 3
+
+represent
+
+the
+
+uniform
+
+probability
+
+to
+
+substitute
+
+the
+
+current base x˙ by any of the three possible ones. Finally, after
+
+computing the last lattice node F1,Imax+1, we get
+
+1
+
+γt (σ t , σ t+1) = 4 F1,dt+1−dt +1.
+
+(29)
+
+Note that in our implementation, we first evaluate the lattice
+for the largest possible gap Imax + 1 between dt and dt+1, and we then extract partial values F1,dt+1−dt +1 from the lattice computation, for dt+1 − dt + 1 < Imax + 1. This is more efficient than generating one lattice per possible value
+dt+1 − dt .
+
+B. TAKING PREVIOUS ERROR EVENTS INTO ACCOUNT (DEC2)
+We now extend the previous decoder to consider the memory between successive error events. This decoder will be referred to as Dec2 in the following. Note that this decoder is only presented here in order to next simplify the description of the third decoder taking into account our full channel model. Numerical simulation results will show that Dec2 does not improve the decoding performance compared to Dec1.
+
+1) STATES OF THE DECODER The state of the decoder is now given by a triplet
+
+σ t = (st , dt , et ),
+
+(30)
+
+where et ∈ {Ins, Del, Sub, Match} is the last edition observed before emitting symbol xt . The edition variable et is added in order to preserve the Markov property when considering the previous error event et−1. This results in a larger trellis which has 4 times more nodes than for Decoder 1, see Figure 4 for an example. In addition, at time instant t = 0, we assume that the channel starts with a Match.
+
+VOLUME 11, 2023
+
+FIGURE 4. Partial trellis diagram for Dec2, for time instants t = 0, t = 1, t = 2, with Imax = 1 and dt+1 ∈ dt − 1, dt + 1 .
+
+2) A POSTERIORI PROBABILITY COMPUTATION
+With this new state definition, relation (17) remains valid. To evaluate P(y, σ t , σ t+1), we still use forward, backward recursions, and branch metric computation, each with modified expressions.
+
+3) FORWARD AND BACKWARD RECURSIONS The forward recursion is still evaluated from (21), but the initialization is modified as
+
+α0(σ 0) =
+
+1, 0,
+
+if σ 0 = (0, 0, M ) otherwise.
+
+(31)
+
+in order to consider the initial edit e0 = M . In the same way, the backward recursion is still evaluated from (23), but the
+
+initialization is modified as
+
+
+
+ Pm, if σ N = (0, P − N , M )
+
+
+
+
+
+  
+
+Ps
+
+,
+
+if σ N = (0, P−N , S)
+
+
+
+βN (σ N ) = Pd , if σ N = (0, P − N , D)
+
+(32)
+
+   
+
+Pi,
+
+if σ N = (0, P−N , I )
+
+
+
+ 
+
+0,
+
+otherwise.
+
+to take into account the final event eN .
+
+4) BRANCH METRIC COMPUTATION Branch metric computation is more impacted by the additional state variable et . The branch metric γt (σ t , σ t+1) is now calculated as
+γt (σ t , σ t+1) = P(wt )P(yt(nt−+1d)′nn+dn+1, dt+1, et+1|dt , et , st , st+1), (33)
+and it is again evaluated recursively from a lattice. Howerver, now a 3D lattice is needed to account for the additional paths resulting from the dependency to previous errors. This
+
+52081
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+FIGURE 5. 3D Lattice structure used to compute branch metrics in Dec2, for et = M and et+1 = D.
+
+new lattice contains four plans, where each plan represents a particular edition et ∈ {M , S, D, I }, as shown in Figure 5. The moving rules are the same as in the lattice for Decoder 1, except for the fact that we can now move from a plan to another one, depending on the considered edition et . For instance, in the case of an insertion, we should move horizontally from toward the insertion plan, see green arrows in Figure 5.
+The recursive computation is initialized as
+
+Fi,j,e =
+
+1, 0,
+
+if i = 0 and j = 0 and e = et if i < 0 or j < 0.
+
+(34)
+
+We now define Pe1→e2 as the probability to observe edition e2 ∈ {M , S, D, I } given that the previous edition was e1 ∈ {M , S, D, I }. The probabilities at successive nodes in the
+lattice can be calculated recursively by using the following
+formulas:
+
+Fi,j,M = Pm→mFi−1,j−1,M + Ps→mFi−1,j−1,S
++ Pd→mFi−1,j−1,D + Pi→mFi−1,j−1,I 1 Fi,j,S = 3 (Pm→sFi−1,j−1,M + Ps→sFi−1,j−1,S + Pd→sFi−1,j−1,D + PsFi−1,j−1,I )
+Fi,j,D = Pm→d Fi−1,j,M + Ps→d Fi−1,j,S
++ Pd→d Fi−1,j,D + Pi→d Fi−1,j,I 1 Fi,j,I = 4 (Pm→iFi,j−1,M + Ps→iFi,j−1,S + Pd→iFi,j−1,D + Pi→iFi,j−1,I )
+
+(35)
+
+where
+
+Fi,j,S = 0, if x˙i = y˙j
+
+(36)
+
+Fi,j,M = 0, if x˙i ̸= y˙j.
+
+At the end, we get
+
+52082
+
+γt (σ t , σ t+1)
+
+=
+
+1 4
+
+F1,dt
+
++1
+
+−dt
+
++1,et
+
++1
+
+.
+
+(37)
+
+FIGURE 6. Partial trellis diagram for Dec3, for time instants t = 4, t = 5, t = 6, with Imax = 1 and dt+1 ∈ dt − 1, dt + 1 .
+
+C. TAKING K-MERS INTO ACCOUNT (DEC3) In the third decoder, in addition to previous error events, we also consider the statistical dependency between the error event and the current k-mer. This decoder is referred to as Dec3.
+
+1) STATES OF THE DECODER The state of the decoder is now given by a quadruplet
+
+σ t = (st , dt , et , ηt ),
+
+(38)
+
+where ηt is a vector of length K which gives the current kmer. Especially, if
+
+ηt = [η1(t), η2(t), · · · , ηK(t)],
+
+then
+
+ηtC1 = [η2(t), η3(t), · · · , ηK(t), xt+1],
+
+where xt+1 is the symbol emitted at time instant t +1. At time t = 0, this new state variable is initialized as η0 = ∅. In addition, for t < K , we consider ηt = [η1(t), η2(t), · · · , ηt(−t)1, ηt(t)]. This results in a larger trellis which has 2k times more nodes
+than the trellis of Dec2, see Figure 6.
+
+2) A POSTERIORI PROBABILITY COMPUTATION
+With this new state definition, (17) remains valid. To evaluate the three terms in P(y, σ t , σ t+1), we still use a forward recursion, backward recursion, and branch metric computation, which we now describe.
+
+3) FORWARD AND BACKWARD RECURSIONS The forward recursion is still evaluated from (21), with initialization given by (31). The backward recursion is still
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+evaluated from (23), but the initialization is updated as
+
+
+
+ 
+
+P(M
+
+|ηN
+
+),
+
+if σ N = (0, P − N , M )
+
+
+
+   
+
+P(S |ηN
+
+),
+
+if σ N = (0, P − N , S)
+
+βN (σ N ) = P(D|ηN ), if σ N = (0, P − N , D) (39)
+
+   
+
+P(I
+
+|ηN
+
+),
+
+if σ N = (0, P − N , I )
+
+
+
+ 
+
+0,
+
+otherwise.
+
+to take into account the k-mers.
+
+4) BRANCH METRIC COMPUTATION The branch metric γt (σ t , σ t+1) is now evaluated as
+γt (σ t , σ t+1)
+= P(wt )P(y(tnt−+1d)′nn+dn+1, dt+1, et+1, ηt+1|dt , et , ηt , st , st+1) = P(wt )P(yt(nt−+1d)′nn+dn+1, dt+1, et+1|dt , et , ηt+1, st , st+1)
+(40)
+since ηt+1 is entirely determined by ηt and by the transition from internal state st to st+1. The branch metric is evaluated from the same 3D lattice used for Decoder 2 and shown in Figure 5. However, compared to Decoder 2, the recursive computation over the lattice now takes into account the observed k-mer ηt .
+We now consider the probability P(et+1|ηt , et ) of edit et+1 ∈ {M , S, D, I } conditioned to the k-mer ηt , and to the previous edit et ∈ {M , S, D, I }. We use the following formula to recursively compute the probabilities throughout the lattice:
+
+Fi,j,M
+
+= P(M |ηt+1, M )Fi−1,j−1,M + P(M |ηt+1, S)Fi−1,j−1,S
+
++ P(M |ηt+1, D)Fi−1,j−1,D + P(M |ηt+1, I )Fi−1,j−1,I
+
+Fi,j,S
+
+=
+
+1 3
+
+(P(S
+
+|ηt
+
++1,
+
+M
+
+)Fi−1,j−1,M
+
++ P(S|ηt+1, S)Fi−1,j−1,S
+
++ P(S|ηt+1, D)Fi−1,j−1,D + P(S|ηt+1, I )Fi−1,j−1,I )
+
+Fi,j,D
+
+= P(D|ηt+1, M )Fi−1,j,M + P(D|ηt+1, S)Fi−1,j,S
+
++ P(D|ηt+1, D)Fi−1,j,D + P(D|ηt+1, I )Fi−1,j,I
+
+Fi,j,I
+
+=
+
+1 4
+
+(P(I
+
+|ηt+1,
+
+M
+
+)Fi,j−1,M
+
++
+
+P(I |ηt+1, S)Fi,j−1,S
+
++ P(I |ηt+1, D)Fi,j−1,D + P(I |ηt+1, I )Fi,j−1,I ) (41)
+
+At the end, we get
+
+1 γt (σ t , σ t+1) = 4 F1,dt+1−dt +1,et+1 ,
+
+(42)
+
+as for Dec2.
+
+D. DECODING WITH SEVERAL SEQUENCES
+The previous three decoders consider only one output sequence y, while the DNA storage channel produces J sequences y(j). In [19], it is proposed to decode each sequence
+
+VOLUME 11, 2023
+
+FIGURE 7. Boxplots of error event probabilities depending on the previous event. This shows the probability repartition over k-mers for each event.
+
+y(j) independently and separately, and to aggregate the results a posteriori by relying on the following formula:
+
+P(wt |y(1), y(2), · · · , y(J)) =
+
+J j=1
+
+P(wt
+
+,
+
+y(j))
+
+P(wt )J−1
+
+.
+
+(43)
+
+Note that such aggregation could be realized at different levels of the decoding, but it was shown in [19] that it is more efficient to do it after applying the inner CC decoder. Note that [19] also proposed an alternative technique that is more efficient but also more complex to take into account multiple sequences directly within the CC decoder. Given that Dec2 and Dec3 are already very complex, we leave for future works the investigation of this other technique.
+
+VI. SIMULATION RESULTS In this section, we first present numerical results for the channel models. We then investigate the performance of the proposed convolutional decoder.
+
+A. CHANNEL MODELS
+We first evaluate the proposed channel model against existing ones. In [11], we compared the edit maps of different models, and found that our model was visually the most similar to experimental data. Here, alternatively, we first provide statistics of error events in order to justify the assumptions of our model. We then use a more systematic approach which is based on the Kulback-Leibler (KL) divergence [37], [38] to evaluate the similarity between the simulated sequences for each model and the reference sequences.
+
+1) CHANNEL STATISTICS
+We now show some statistics of our model trained from the set of genomic data SetG. Indeed, in SetG, all k-mers appear a sufficient amount of time, which avoids any bias that could be introduced by unobserved k-mers. In this part, we consider k = 6, which is in accordance with the way the MinION sequence works.
+First, Figure 7 shows the repartition of probabilities over k-mers for each event INS, DEL, SUB, depending on the
+
+52083
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+TABLE 1. For the model trained on SetG, over 4096 k-mers with k = 6, number of times the largest probability is for event either INS, DEL, or SUB (columns) with respect to the previous error event (rows). For instance, when the previous error event is a Match (fist row), for 687 of the k-mers, the probability of an insertion is larger than the probability of a deletion or a substitution.
+TABLE 2. When there is a substitution error, probability that the symbol in the row is replaced by the symbol in the column. For instance, the probability that base C is substituted by base A is 0.35. Note that passing from e.g., base A to A is not an error, this is why there are no values specified in the diagonal.
+previous event. For instance, we see that when the previous event is a substitution (bottom left figure), the average insertion probability is around 0.02, while the average deletion probability is around 0.25. This allows to conclude that event probabilities depend on both the current k-kmer, and the previous error event, as we consider in our model. Then, Table 1 shows the number of k-mers for which the probability of a given error event is the largest among all error events, depending on the previous event. For instance, when the previous event is a Match, 1830 k-mers have a larger substitution error probability, while 687 k-mers have a larger insertion probability. This confirms the observations made from Figure 7. Finally, Table 2 shows the probability to replace a base by another one, under a substitution error. For instance, the probability to substitute a G by an A is 0.756, while the probability to substitute a G by a C is only 0.0755. This shows that substitution probabilities are non-uniform over bases, as we consider in our model.
+Note that the channel simulator PBSIM2 [9] considers probabilities over quality scores, where probabilities depend on the current k-mer as in our model. However, PBSIM2 considers a fixed ratio between error event probabilities, and samples errors first from the quality scores, and second from the predefined ratio. This is in contradiction with the statistics of Table 1, which instead show that there is no fixed ratio between error events (e.g. for some kmers, insertion probability is larger than deletion probability, and for other k-mers, this is the opposite). In addition, PBSIM2 considers uniform substitution probabilities over bases, which enters in contradiction with the statistics of Table 2.
+We next investigate the accuracy of our channel model against other models, for which the underlying assumptions do not enter into direct contradiction with the statistics shown in this section.
+52084
+
+2) KL DIVERGENCE We now compare our model against three different existing models: (i) the i.i.d. model, (ii) DeepSimulator, as a representative of DL-based methods, (iii) BadRead, for which event probabilities directly depend on the k-mers, as in our model. We here consider the two datasets, namely SetE and SetG, given that they have some different characteristics.
+Starting with the set of experimental data SetE, Figure 8 shows the KL divergence with respect to the memory order k for the i.i.d. channel, DeepSimulator, BadRead, and our model. The channel models were all trained on SetE, except for DeepSimulator. Then, the KL divergence was averaged over the sequences of SetE. First note that only the curve for our model varies with k, because this is a parameter of our model only. Second, we observe that our model has the lowest KL divergence, while the i.i.d. model surprinsingly comes second. We see that for our model, k = 1 gives a better KL divergence than the i.i.d. model, because it still takes into account memory in successive events et , and dependency with the input symbol xt . In addition, we see that for our model, when k is large enough, the KL divergence is close (but not equal) to 0, which means that our model trained on SetE represents accurately the dataset SetE, even for a value of k as small as 9 or 10.
+Then, in Figure 9, BadRead and DeepSimulator were taken from their own knowledge (from the online code), while our model as well as the i.i.d. model were trained on SetG. The KL divergence values were then calculated over SetE. One first important remark is that in this case, the KL divergence values are much higher than in Figure 8, because the models were trained on a dataset and evaluated on another one. Interestingly, our model again shows the lowest KL divergence over all the models, and the i.i.d. model still comes second. It is worth noting that this time, the value k = 6 is the one that provides the lowest KL divergence, while the KL values start increasing again from k = 7. This suggests that k = 6 leads to a better generalization capability for our model, which is consistent with the way the MiniON sequencer works (with k = 6). Therefore, in what follows, we only consider our model with k = 6.
+B. CC DECODERS PERFORMANCE We now evaluate the performance of the three CC decoders, by running Monte-Carlo simulations over our memory channel model. We consider the two versions of our memory channel model, i.e., the one trained on the experimental data SetE, and the one trained on the genomic data SetG. Both versions are considered because the overall error rates differ between the two models, as explained in Section III. Each simulation run generates a random binary sequence w, uniformly at random. Then w is encoded with a (kc = 1, nc = 2, Kc = 3) CC of rate 1/2, which uses the generator polynomial δpoly = [δ2 + 1, δ2 + δ + 1], and outputs a binary encoded sequence x of a certain length N . We consider values N ∈ {54, 204}, which falls in the range of length of DNA
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+FIGURE 8. KL divergence for different channel models compared with SetE. Except for DeepSimulator, all the other channel models were trained on SetE.
+
+FIGURE 10. FER and BER with respect to the number of sequences J, over the memory channel model trained onto SetE, for N=54. Dashed lines represent the BER and plain lines represent the FER.
+
+FIGURE 9. Kullback-Leibler divergence between channel models simulation results and SetE. BadRead and DeepSimulator use their own knowledge. Our channel model and the i.i.d channel model were trained on SetG.
+
+FIGURE 11. FER and BER with respect to the number of sequences J, over the memory channel model trained onto SetG, for N=204. Dashed lines represent the BER and plain lines represent the FER.
+
+molecules produced by current synthesis techniques [39]. The sequence x is then passed through our memory channel model, and the CC decoder takes as input J sequences output by the channel. For each considered value J , we perform a maximum of 50000 simulation runs to evaluate the FER and BER of each decoder, and stop the evaluation after 100 frames in error.
+Figure 12 shows the FER and BER with respect to J , of the three decoders over the memory channel model trained onto SetE, for N = 54. We observe that Dec3 has the best performance both in terms of FER and BER, with a clear performance gain compared to Dec1 of [19]. This can be explained by the fact that Dec3 fully takes into account the channel model. The performance gain is even more significant when the number of sequences J increases. More surprisingly, we also observe that Dec2 performs worst, most probably because this decoder only partially takes into account our channel model. Note that we also observed that the decoder that considers partial channel model through the state
+VOLUME 11, 2023
+
+σ t = (st , dt , ηt ) (e.g., et is replaced by ηt ) also performs worst than Dec1.
+In addition, Figure 11 shows the FER and BER with respect to J , of the three decoders over the memory channel model trained onto SetG, for N = 204. In this setup as well, we observe that Dec3 has a better performance than Dec1, and that Dec2 still performs poorly. Note that the FER and BER values are lower in Figure 11 than in Figure 10, because the overall error probability on SetG is lower than on SetE.
+C. CONCATENATED CODES PERFORMANCE In order to evaluate the concatenated code construction, we now consider the dynamic channel model introduced in Section III-D. Starting with the set of probabilities obtained from the genomic data, we consider various parameters α which provide different channel error rates. The channel error rate for a given α was numerically evaluated from Monte Carlo simulations. Table 3 provides the measured error rates for each considered value of α.
+52085
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+TABLE 3. Error probability with respect to the value of α for the dynamic channel model starting from the set of probabilities estimated from SetG. The error probabilities were estimated from Monte-Carlo simulations.
+
+FIGURE 12. FER with respect to the overall error rate for the dynamic channel model, for the CC Dec3, and for the concatenated code construction with Dec3 and a NB-LDPC decoder, with N = 50.
+FIGURE 13. BER with respect to the overall error rate for the dynamic channel model, for the CC Dec3, and for the concatenated code construction with Dec3 and a NB-LDPC decoder, with N = 50.
+We now consider the concatenated code construction introduced in Section IV, with the same CC considered in the previous simulation results, used together with a regular non-binary LDPC code of rate R = 4/5 in GF(4), and with N = 50. In the decoding part, we consider Dec3 followed by a standard BP decoder in GF(4). Figure 12 shows the FER with respect to the channel error probability, for various values of J for the CC alone, and for J = 1 for the full concatenated code construction. Figure 13 shows the same curves but in terms of BER. In both cases, we observe a significant gain of the concatenated construction with J = 1 compared to the CC alone with J = 1. In addition, in terms of FER, the concatenated constructions with J = 1 and J = 2 outperform the CC decoder alone with J = 3. For the BER, while the
+52086
+
+concatenated construction with J = 2 is best, the same construction with J = 1 is not as good as the CC decoder alone with J = 3. One explanation is that the CC decoder alone is known to perform poorly in terms of FER, while it already has a fairly good BER performance. This also illustrates the tradeoff between the coding rate and the number of sequences used for decoding.
+VII. CONCLUSION This paper introduced a new channel model for DNA data storage, which can be seen as a Markov model of order k and was trained on experimental and genomic datasets. The proposed model was shown to be more accurate than existing ones through numerical evaluation of the KL divergence. Additionally, this work improved the CC decoder of [19] by incorporating the knowledge of the channel model, resulting in better BER and FER performance. Future works will focus on reducing the complexity of the proposed decoder.
+ACKNOWLEDGMENT The authors acknowledge Emeline Roux for kindly providing the experimental and genomic datasets used in this work.
+REFERENCES
+[1] C. Yang, J. Chu, R. L. Warren, and I. Birol, ‘‘NanoSim: Nanopore sequence read simulator based on statistical characterization,’’ GigaScience, vol. 6, no. 4, Apr. 2017, Art. no. gix010.
+[2] E. A. G. Baker, S. Goodwin, W. R. McCombie, and O. M. Ramos, ‘‘Silico: A simulator of long read sequencing in PacBio and Oxford nanopore,’’ BioRxiv, p. 076901, Sep. 2016.
+[3] L. Conde-Canencia and L. Dolecek, ‘‘Nanopore DNA sequencing channel modeling,’’ in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Oct. 2018, pp. 258–262.
+[4] E. G. S. Antonio, T. Heinis, L. Carteron, M. Dimopoulou, and M. Antonini, ‘‘Nanopore sequencing simulator for DNA data storage,’’ in Proc. Int. Conf. Vis. Commun. Image Process. (VCIP), Dec. 2021, pp. 1–5.
+[5] R. Heckel, G. Mikutis, and R. N. Grass, ‘‘A characterization of the DNA data storage channel,’’ Sci. Rep., vol. 9, no. 1, p. 9663, Jul. 2019.
+[6] Y. Li, R. Han, C. Bi, M. Li, S. Wang, and X. Gao, ‘‘DeepSimulator: A deep simulator for nanopore sequencing,’’ Bioinformatics, vol. 34, no. 17, pp. 2899–2908, Sep. 2018.
+[7] Y. Li, S. Wang, C. Bi, Z. Qiu, M. Li, and X. Gao, ‘‘DeepSimulator1.5: A more powerful, quicker and lighter simulator for nanopore sequencing,’’ Bioinformatics, vol. 36, no. 8, pp. 2578–2580, Apr. 2020.
+[8] S. Kang, Y. Gao, J. Jeong, S. Park, J. Kim, J. No, H. Jeon, J. W. Lee, S. Kim, H. Park, and A. No, ‘‘Generative adversarial networks for DNA storage channel simulator,’’ IEEE Access, vol. 11, pp. 3781–3793, 2023.
+[9] Y. Ono, K. Asai, and M. Hamada, ‘‘PBSIM2: A simulator for long-read sequencers with a novel generative model of quality scores,’’ Bioinformatics, vol. 37, no. 5, pp. 589–595, May 2021.
+[10] R. Wick, ‘‘Badread: Simulation of error-prone long reads,’’ J. Open Source Softw., vol. 4, no. 36, p. 1316, Apr. 2019.
+[11] B. Hamoum, E. Dupraz, L. Conde-Canencia, and D. Lavenier, ‘‘Channel model with memory for DNA data storage with nanopore sequencing,’’ in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[12] R. R. Varshamov and G. M. Tenengol’ts, ‘‘A code that corrects single unsymmetric errors,’’ Avtomatika Telemekhanika, vol. 26, no. 2, pp. 288–292, 1965.
+VOLUME 11, 2023
+
+B. Hamoum, E. Dupraz: Channel Model and Decoder With Memory for DNA Data Storage
+
+[13] V. Levenshtein, ‘‘Asymptotically optimum binary code with correction for losses of one or two adjacent bits,’’ Problemy Kibernet, vol. 19, pp. 293–298, Jan. 1967.
+[14] C. Schoeny, A. Wachter-Zeh, R. Gabrys, and E. Yaakobi, ‘‘Codes correcting a burst of deletions or insertions,’’ IEEE Trans. Inf. Theory, vol. 63, no. 4, pp. 1971–1985, Apr. 2017.
+[15] V. I. Levenshtein, ‘‘Binary codes capable of correcting deletions, insertions, and reversals,’’ Sov. Phys.-Dokl., vol. 10, no. 8, pp. 707–710, 1966.
+[16] A. S. J. Helberg and H. C. Ferreira, ‘‘On multiple insertion/deletion correcting codes,’’ IEEE Trans. Inf. Theory, vol. 48, no. 1, pp. 305–308, Jan. 2002.
+[17] X. Lu and S. Kim, ‘‘Design of nonbinary error correction codes with a maximum run-length constraint to correct a single insertion or deletion error for DNA storage,’’ IEEE Access, vol. 9, pp. 135354–135363, 2021.
+[18] S. Chandak, J. Neu, K. Tatwawadi, J. Mardia, B. Lau, M. Kubit, R. Hulett, P. Griffin, M. Wootters, T. Weissman, and H. Ji, ‘‘Overcoming high nanopore basecaller error rates for DNA storage via basecaller-decoder integration and convolutional codes,’’ in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2020, pp. 8822–8826.
+[19] A. Lenz, I. Maarouf, L. Welter, A. Wachter-Zeh, E. Rosnes, and A. G. I. Amat, ‘‘Concatenated codes for recovery from multiple reads of DNA sequences,’’ in Proc. IEEE Inf. Theory Workshop (ITW), Apr. 2021, pp. 1–5.
+[20] S. R. Srinivasavaradhan, S. Gopi, H. D. Pfister, and S. Yekhanin, ‘‘Trellis BMA: Coded trace reconstruction on IDS channels for DNA storage,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2021, pp. 2453–2458.
+[21] S. Chandak, K. Tatwawadi, B. Lau, J. Mardia, M. Kubit, J. Neu, P. Griffin, M. Wootters, T. Weissman, and H. Ji, ‘‘Improved read/write cost tradeoff in DNA-based data storage using LDPC codes,’’ in Proc. 57th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2019, pp. 147–156.
+[22] F. Wang, D. Fertonani, and T. M. Duman, ‘‘Symbol-level synchronization and LDPC code design for insertion/deletion channels,’’ IEEE Trans. Commun., vol. 59, no. 5, pp. 1287–1297, May 2011.
+[23] R. Shibata, G. Hosoya, and H. Yashima, ‘‘Design of irregular LDPC codes without markers for insertion/deletion channels,’’ in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[24] L. Deng, Y. Wang, M. Noor-A-Rahim, Y. L. Guan, Z. Shi, E. Gunawan, and C. L. Poh, ‘‘Optimized code design for constrained DNA data storage with asymmetric errors,’’ IEEE Access, vol. 7, pp. 84107–84121, 2019.
+[25] H. D. Pfister and I. Tal, ‘‘Polar codes for channels with insertions, deletions, and substitutions,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2021, pp. 2554–2559.
+[26] I. Maarouf, E. Rosnes, and A. G. I. Amat, ‘‘Achievable information rates and concatenated codes for the DNA nanopore sequencing channel,’’ 2022, arXiv:2212.07287.
+[27] M. Hao, J. Qiao, and H. Qi, ‘‘Current and emerging methods for the synthesis of single-stranded DNA,’’ Genes, vol. 11, no. 2, p. 116, Jan. 2020.
+[28] R. A. Hughes and A. D. Ellington, ‘‘Synthetic DNA synthesis and assembly: Putting the synthetic in synthetic biology,’’ Cold Spring Harbor Perspect. Biol., vol. 9, no. 1, Jan. 2017, Art. no. a023812.
+[29] Y. Wang, Y. Zhao, A. Bollas, Y. Wang, and K. F. Au, ‘‘Nanopore sequencing technology, bioinformatics and applications,’’ Nature Biotechnol., vol. 39, no. 11, pp. 1348–1365, Nov. 2021.
+[30] W. R. Pearson, ‘‘Finding protein and nucleotide similarities with FASTA,’’ Current Protocols Bioinf., vol. 53, no. 1, pp. 3.9.1–3.9.25, Mar. 2016.
+[31] W. Li, D. Raoult, and P.-E. Fournier, ‘‘Bacterial strain typing in the genomic era,’’ FEMS Microbiol. Rev., vol. 33, no. 5, pp. 892–916, Sep. 2009.
+[32] E. Roux, A. Nicolas, F. Valence, G. Siekaniec, V. Chuat, J. Nicolas, Y. Le Loir, and E. Guédon, ‘‘The genomic basis of the streptococcus thermophilus health-promoting properties,’’ BMC Genomics, vol. 23, no. 1, p. 210, Mar. 2022.
+
+[33] H. Li, ‘‘minimap2: Pairwise alignment for nucleotide sequences,’’ Bioinformatics, vol. 34, no. 18, pp. 3094–3100, Sep. 2018.
+[34] V. Buttigieg and N. Farrugia, ‘‘Improved bit error rate performance of convolutional codes with synchronization errors,’’ in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2015, pp. 4077–4082.
+[35] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, ‘‘Optimal decoding of linear codes for minimizing symbol error rate (Corresp.),’’ IEEE Trans. Inf. Theory, vol. IT-20, no. 2, pp. 284–287, Mar. 1974.
+[36] L. Bahl and F. Jelinek, ‘‘Decoding for channels with insertions, deletions, and substitutions with applications to speech recognition,’’ IEEE Trans. Inf. Theory, vol. IT-21, no. 4, pp. 404–411, Jul. 1975.
+[37] S. Kullback and R. A. Leibler, ‘‘On information and sufficiency,’’ Ann. Math. Statist., vol. 22, no. 1, pp. 79–86, 1951.
+[38] J. M. Joyce, Kullback–Leibler Divergence. Berlin, Germany: Springer, 2011, pp. 720–722.
+[39] E. M. LeProust, B. J. Peck, K. Spirin, H. B. McCuen, B. Moore, E. Namsaraev, and M. H. Caruthers, ‘‘Synthesis of high-quality libraries of long (150mer) oligonucleotides by a novel depurination controlled process,’’ Nucleic Acids Res., vol. 38, no. 8, pp. 2522–2540, May 2010.
+BELAID HAMOUM received the B.Sc. degree in computer science from Université Mouloud Mammeri de Tizi-Ouzou, Algeria, and the M.Sc. degree in embedded systems and the Ph.D. degree in telecommunications from Université Bretagne Sud, France, in 2019 and 2022, respectively. During the Ph.D. degree, he was hosted with IMT Atlantique, France, and he visited the Technical University of Munich, Germany. His research interests include DNA data storage, channel modeling, channel coding, error-correcting codes, and data analysis.
+ELSA DUPRAZ (Member, IEEE) was born in Paris, France. She received the master’s degree in advanced systems of radio-communications from ENS Cachan and Paris-Sud University, France, in 2010, and the Ph.D. degree in physics from Paris-Sud University, in 2013. From January 2014 to September 2015, she held a postdoctoral position with ETIS (ENSEA, University CergyPointoise, CNRS, France) and the ECE Department, University of Arizona, USA. Since October 2015, she has been an Assistant Professor with IMT Atlantique. Her research interests include coding and information theory, with a special interest in distributed source coding, LDPC codes, and energy-efficient channel codes.
+
+VOLUME 11, 2023
+
+52087
+
+

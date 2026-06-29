@@ -1,0 +1,481 @@
+25.1
+
+Binary de Bruijn on-Chip Network for a Flexible Multiprocessor LDPC Decoder
+
+Hazem Moussa
+
+Amer Baghdadi
+
+Michel Jézéquel
+
+Institut TELECOM; TELECOM Bretagne; CNRS Lab-STICC FRE 3167
+
+Technopôle Brest Iroise, 29238 Brest, FRANCE
+
+{firstname.lastname@telecom-bretagne.eu}
+
+ABSTRACT
+This paper proposes a novel on-chip interconnection network adapted to a flexible multiprocessor LDPC decoder based on the de Bruijn network. The main characteristics of this network – including its logarithmic diameter, scalable aggregate bandwidth, and optimized routing technique– allow it to efficiently support the communication intensive nature of the application. We present a detailed hardware implementation of the routers and the network interfaces as well as the packet format and the routing algorithm. The latter is a parallelized version of the shortest path with deflection routing algorithm. In order to evaluate the performance of the proposed network, a generic RTL VHDL description has been developed and synthesized with CMOS STMicroelectronics 0.18 µm technology. The flexibility and the scalability of this onchip communication network enable it to be used for any kind of LDPC code.
+Categories and Subject Descriptors
+C.1.2. [Processor Architectures]: Multiple Data Stream Architectures (Multiprocessors) – Interconnection architectures. C.2.1. [ComputerCommunication Networks]: Network Architecture and Design – Network communications, Network topology, Packet-switching networks. E.4. [Coding and Information Theory]: Error control codes.
+General Terms
+Algorithms, Design, Performance.
+Keywords
+Flexible LDPC Decoder, De Bruijn graph, Multiprocessor, NoC.
+1. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes [1] are a powerful class of error correcting codes able to reach performance very close to the Shannon limit. Providing very high decoding throughput and communications performance, they are more and more proposed in vast number of upcoming standards like DVB-S2 [2], WiFi (IEEE 802.11n) [3], and WiMax (IEEE 802.16e) [4].
+LDPC codes are linear block codes whose parity check matrix H is
+
+sparse and where all the codewords satisfy the relation HcT = 0.
+The code can also be described by a bipartite graph, called Tanner graph [5], made up of two types of nodes: variable nodes (VNs) corresponding to the bits of a codeword and check nodes (CNs) corresponding to the parity constraints (Figure 1). An edge in the graph represents a one in the parity check matrix.
+check nodes
+variable nodes
+Figure 1. Tanner graph of an LDPC code LDPC codes are divided into two classes: regular codes and irregular codes. The former are characterized by the fact that the number of "1s" in each line (respectively each column) of the parity check matrix is constant, whereas it is not the case for irregular codes. Thus, the number of edges connected to a node of the graph being defined as the degree of that node, the node degree will be identical for all the nodes in the case of a regular code, and different for an irregular one.
+The decoding process is done by an iterative message-passing algorithm called "Belief Propagation Algorithm". Each iteration is usually carried out in two steps: first, each VN sends a softinformation message on its probable value to all the adjacent CNs, then each CN returns a soft-information to qualify the likelihood of the considered variable according to the associated parity-check equation. Furthermore, to avoid probability multiplications, decoding is generally performed in the logarithmic domain with a Log-Likelihood Ratio (LLR) leading to the "Sum-Product" algorithm. Nevertheless, the decoder complexity can be reduced through sub-optimal decoding algorithms, where the number of messages is minimized.
+Finally, the iterations stop if the maximum number of iterations is reached or if a codeword is decoded. However, the computations being relatively simple, implementation issues mainly come from the communication structure between the VNs and CNs. Indeed, the communications rapidly become intensive because they depend on the number of nodes, the node degrees and the number of iterations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u2n9e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+V1
+
+V2
+
+VM-1
+
+VM
+
+M Variable Node Processors
+
+V1
+VNP
+
+V2
+VNP
+
+VM-1
+VNP
+
+VM
+VNP
+
+TANNER GRAPH EDGES
+
+COMMUNICATION STRUCTURE
+
+VNP
+
+VN_2_CN MEMORY
+
+CNP
+
+ROM
+
+P1
+
+P2
+
+PN-1
+
+PN
+
+CNP
+P1
+
+CNP
+P2
+
+CNP
+PN-1
+
+CNP
+PN
+
+CN_2_VN MEMORY
+
+N Check Node Processors
+
+(a)
+
+(b)
+
+Figure 2. (a) Generalized architecture of an LDPC decoder, (b) Serial LDPC decoder architecture
+
+For example, in the DVB-S2 standard, the codeword length can be up to 64800 bits and the decoder has to iterate 30 times with up to 300000 data to exchange at each iteration. This huge quantity of data requires an efficient interconnection structure, which represents a challenge for the decoder implementation.
+Moreover, the codes defined for digital communication applications like DVB-S2 represent only a subset of the currently existing codes. Consequently, to be able to decode any type of present and future codes, a flexible decoder must be designed in order to support regular and irregular codes taking into account the variation of the parity check matrices, the codeword lengths and the code rates.
+In this paper, we propose an on-chip interconnection network supporting the intensive communications generated by a flexible LDPC decoder. The network is based on the de Bruijn graph [6] topology. We also describe a parallelized version of the shortest path with deflection routing algorithm guaranteeing that packets will cross routers in only one clock cycle.
+The remainder of the paper is organized as follows. Section 2 presents a state of the art in LDPC decoder design and focuses particularly on partially-parallel implementations. Then section 3 details the architecture of the proposed network, including topology, routing algorithm, packet format, routers and network interfaces. Section 4 presents the synthesis results and provides comparison analyses. Finally, section 5 concludes the paper.
+2. RELATED WORK ON LDPC DECODER DESIGN
+As the LDPC decoding algorithm is based on the Tanner graph, two types of processors are necessary: Variable Node Processors (VNP) and Check Node Processors (CNP). Thus, we can define the architecture of a decoder as being a system made up of VNPs and CNPs as well as an interconnection structure allowing the exchange of messages between processors.
+Mapping the Tanner graph on this architecture consists in: (1) associating one or more nodes (VN or CN) to one processor (VNP or CNP) and (2) implementing Tanner graph edges through a corresponding message addressing in the interconnection structure (Figure 2-a).
+Thus, three types of decoder hardware implementation exist: no parallelism or serial architectures where there is only one processor to treat the VNs and one processor for the CNs (Figure 2-b), full parallelism where the number of processors is equal to the number of nodes (variable and check) (Figure 2-a), and partial parallelism where the number of processors for each of the two types of nodes is lower than the total number of nodes (Figure 2-
+
+a).
+These three types of decoder hardware implementation can be compared in terms of area, throughput, and flexibility. Indeed, serial architectures have a minimum area cost with a complete flexibility but the throughput is very low. At the opposite, full parallel architectures have no flexibility, a maximum throughput, and the area cost is prohibitive. Finally, the partially-parallel architectures are in between because the area cost is reduced, and they offer high flexibility with very high throughputs.
+Consequently, the solution offering the best compromise in terms of area, throughput, and flexibility is the partially-parallel architecture. However, it introduces a problem of conflicts for access to the memories containing the exchanged messages (softinformation).
+This is why several solutions have been proposed in order to avoid or to alleviate the effects of conflicts. We can divide them into two approaches [7]: the first one is a joint design of LDPC codes and decoders to simplify the decoding, whereas the second approach does not impose any constraints in the construction of the code.
+2.1 Joint Code-Decoder Design
+Here, the parity check matrix of the codes is structured in order to simplify the interconnection between the VNs and CNs leading to a memory organization which avoids conflicts.
+For example, in [8], the authors build the parity check matrix starting from a macro-matrix made up of macro-rows and macrocolumns. Each sub-matrix is obtained on the basis of the identity matrix via row permutations under the constraint of not having more than one "1" in each column. The selected structure simplifies the decoder since the exchanged messages can be retrieved from memories with a simple addressing scheme (i.e. shift registers). Moreover, each macro-row can be processed independently and thus more macro-rows can be evaluated at the same time, which leads to a higher decoding throughput.
+In [9], a decoder based on the same approach as [8] is proposed, but it differs in the implementation of the decoder. The VNP and CNP exchange their messages by means of memories and via "router" and "inverse-router" networks which are simplified by the code construction. Several other papers address the construction of codes. In particular, these codes have been selected, for example, for the DVB-S2 standard [10] since both encoder and decoder architectures are greatly simplified by their structure.
+2.2 Code Independent Decoder Design
+The decoders resulting from the joint code-decoder design approach are designed to support one class of LDPC codes. In
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u3n0e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+order to handle the diverse existing and future LDPC codes, flexible architectures are mandatory.
+However, in this case, the memory access conflicts become more complex to avoid. Indeed, in the previous approach, avoiding these conflicts was done by the code construction. In the codeindependent approach, in order to alleviate the conflicts, a flexible interconnection network integrating an adequate routing algorithm is required.
+A solution based on a 2D-mesh network can be found in [11]. Regular and irregular codes with different block sizes and code rates are supported by using configuration memories.
+We can also find in [12] a solution based on an heterogeneous network (MDN) whose topology is a randomly generated graph with non-regular node degrees. However, this solution implies reductions in the achievable throughput, increasing the decoding latency. The implementation of the MDN network requires many resources, which must be taken into account in the decoder design because it leads to an increase in area and power consumption.
+Finally, in [13], the authors propose to apply the permutation network scheme of Tarable with a modified version of the belief propagation algorithm. The Tarable scheme ensures interleaving without conflicts in a flexible decoder thanks to a mapping function. Moreover, a Beneš network replaces the two original crossbars used for the permutation network because, with the new algorithm, only one scrambling is necessary and the data are read in the natural order.
+However, these network architectures remain limited in terms of scalability, area or latency. That is why the need for a scalable network, with an optimal diameter to reduce latency, that is not area costly and that can easily route the packets, led us to propose a de Bruijn network as the communication structure.
+
+3. BINARY DE BRUIJN NETWORK
+The de Bruijn network topology is based on the directed de Bruijn graph [6]. A de Bruijn digraph dB(k, m) consists of N=km nodes, where each node is represented as a vector of size m in the k-ary number system. For our network, we chose the binary system, thus the nodes are interconnected by unidirectional links according to the following rule: the node vmvm-1….v1 has its two output edges connected with nodes vm-1vm-2…v10 and vm-1vm-2…v11. Figure 3 illustrates the case of a de Bruijn graph with 16 nodes.
+
+8
+
+12
+
+1144
+
+4
+
+10
+
+13
+
+0
+
+9
+
+6
+
+15
+
+22
+
+5
+
+11
+
+1
+
+3
+
+7
+
+Figure 3. Binary de Bruijn graph with 16 nodes
+The choice of the de Bruijn network was, above all, based on its appropriateness to support the communication patterns generated by a flexible multiprocessor LDPC decoder. Flexibility implies supporting various LDPC codes and parameters, and thus various parity-check matrices and induced communication profiles. In fact, the structure of the de Bruijn network allows any N-to-N communication profile to be routed efficiently thanks to a reduced latency (maximum latency of log2N without deflection). Conventional topologies with an enhanced locality characteristic,
+
+suitable for typical embedded applications, are not adequate for the considered communication profiles.
+Moreover, thanks to de Bruijn topology path diversity, communication conflicts are alleviated because the conflicting packets can be deflected appropriately until they attain the targeted processor rather than being blocked or buffered. Binary de Bruijn topology with its two output edges nodes allows reducing the complexity of the obtained on-chip network while preserving the minimum required path diversity
+In addition, the binary de Bruijn network has a logarithmic optimal diameter equal to log2(N), with N the number of routers. Then, it is a direct network reducing the number of routers. Moreover, its recursive structure makes it highly scalable. Indeed, a graph of order m can be obtained by replacing every edge of the graph of order m-1 with a node, and then inserting a directed edge between pairs of nodes that corresponds to consecutively directed edges in the de Bruijn graph of order m-1.
+Finally, the widely-studied de Bruijn graph has been proposed as a communication network suitable for VLSI implementation [14]. NASA developed an 8192-processor de Bruijn network used by a Viterbi decoder for the Galileo space mission to Jupiter [15]. A generalized version of the de Bruijn graph has been recently proposed as a reliable network topology for Network on Chip design [16].
+
+3.1 Network Architecture and Processor
+Mapping
+Figure 4 presents the schematic view of a complete de Bruijn network for N=8 processors. (m=3). Each processor is connected to a network interface and each network interface connected to a router. In this example, the node 4 or 100 has an edge to the node 000 (or 0) and to the node 001 (or 1).
+
+RT
+
+RT
+
+NI
+
+NI
+
+P3
+
+P1
+
+P7 NI RT
+
+P RT NI
+
+5
+
+P RT NI
+
+2
+
+P RT NI
+
+0
+
+P6
+
+P4
+
+NI
+
+NI
+
+RT
+
+RT
+
+Figure 4. Schematic view of an 8-processor network with processors, routers, and network interfaces
+
+The network topology construction is described in the above section. The architecture of the routers and the network interfaces are detailed in the following sections. The implemented routing algorithm is also specified as well as the strategy to manage the conflicting packets and the packet format.
+
+Concerning the mapping of LDPC nodes on the processors connected by the de Bruijn network, as the decoder architects are semi-parallel, the VNs and CNs are allocated to each processor according to the size of the soft-information memories, the code rate, and the nodes degree. Indeed, the code rate gives the information of the number of VNs and CNs. Moreover, because the sum of all the VNs degrees is equal to the sum of all the CNs degrees, so half of the processors can be allocated to process VNs and half to process CNs. However, each processor having a soft-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u3n1e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+combinatorial transcoder
+
+parallel comparators
+
+information memory which contains the messages of the nodes associated with the processor, so according to the considered memory size and the degree of each node, we can estimate the number of nodes which can be associated with each processor. Indeed, the sum of the node degrees to be allocated to one processor must be equal to (or lower than) the memory depth.
+Furthermore, the edges of the Tanner graph are mapped through the packet addressing. Indeed, the targeted processor identifier with the destination memory write address represent the Tanner edge between a VN (resp. CN) and a CN (resp. VN).
+3.2 Routing Algorithm and Packet Arbitration
+The shortest path routing algorithm [17] was chosen because of its ability to reduce latencies. However, the algorithm calculating the shortest path output being naturally sequential, the packet transmissions from the inputs to the outputs of the router can take between 1 and log2(N) clock cycles, N being the number of routers.
+Therefore, to bring the number of cycles back to one, we modified the algorithm of [17] by unrolling the “for” loop, and proposed another method to compute the shortest path output. Indeed, with the aim to compute the shortest path router output, we compare bit sub-sets of the current and destination router identifiers in order to choose one bit of the destination router identifier which will be used as the router output port number as shown in Table 1. With this parallelized version, all the comparisons can be done concurrently and thus, we can obtain the shortest path router output in only one clock cycle.
+Table 1. Parallelized version of the shortest path router output calculation
+computeShortestOutput (currRt, destRt) { cmp_1 = compare_eq_1(currRt[0],destRt[log2(N)-1]); cmp_2 = compare_eq_2(currRt[1:0],destRt[log2(N)-1:log2(N)-2]); ... cmp_log2N_1 = compare_eq_log2N_1(currRt[log2(N)-2:0],destRt[log2(N)-1:1]);
+if(cmp_log2N_1) { return destRt[0];
+} ... } else if(cmp_2) {
+return destRt[log2(N)-3]; } else if(cmp_1) {
+return destRt[log2(N)-2]; } else {
+return destRt[log2(N)-1]; }}
+In order to reduce the size of routers by avoiding packet buffering when two packets want to borrow the same output, the routing algorithm was supplemented by a mechanism deflecting one of the packets [17]. The most common way to choose the packet to be deflected is to use round-robin arbitration. We can improve this arbitration by deflecting the “youngest” packet. This requires storing “age” information (Time Stamp TS) within the packet updated at each hop.
+Moreover, in [18], the authors propose to improve the packet arbitration inside a parallel turbo decoder thanks to a defined priority criterion. This criterion represents the contribution of the packets to the convergence of the iterative process. Consequently, we also propose to apply this criterion for iterative LDPC decoding with the effect of adding a priority field in the packet header. The arbitration is then modified with, first, a priority comparison, followed, if necessary, by a TS comparison and then a switch to the round-robin scheme in the case of equality.
+
+3.3 Packet Format
+A packet is divided into two parts: the header and the payload. The header is composed of several fields: the identifier of the destination node on k bits, 2k being the number of routers in the network, a value indicating the number of cycles run since the entrance of the packet into network (TS) coded on 6 bits, and a priority field on 4 bits used with the preceding field in the arbitration of the conflicting packets inside a router.
+
+Concerning the payload, it is made up of the write address in the
+
+destination
+
+memory
+
+with
+
+a
+
+width
+
+of
+
+  log2( max (degree(p)×nbnode(p))) + 1 bits and of the soft-
+
+processors
+
+information (LLR) on 8 bits.
+
+3.4 Router
+Each of the input/output ports of a de Bruijn router has an associated control signal used to validate the data passing through the port. Moreover, there is an output signal corresponding to the read request of the emission FIFO contained in the network interface. Indeed, the packets from the processor are memorized in a FIFO until they can enter the network. The architecture of a router (Figure 5) is divided into two parts: the operative unit and the control unit.
+
+valid_to_proc_0 valid_to_proc_1 dataout_to_proc_0 dataout_to_proc_1 valid_from_proc read_request datain_from_proc
+
+datain_from_rt_0 datain_from_rt_1
+
+0
+
+0
+
+dataout_to_rt_0
+
+1
+
+1
+
+1 0
+
+1
+
+0
+
+dataout_to_rt_1
+
+input0_sel input1_sel switch_config
+
+valid_from_rt_0 valid_from_rt_1
+
+CONTROL UNIT
+
+valid_to_rt_0 valid_to_rt_1
+
+Figure 5. Router architecture
+The first one is composed of flip-flops and registers to synchronize the input/output ports. There are also multiplexers to implement the packet switching and the selection between the packets coming from upstream routers and those coming from the processor. Indeed, packets coming from upstream routers have highest priority. This arbitration technique, besides the Time Stamp information and the deflecting routing, enable to avoid deadlocks.
+The control unit generates the multiplexer selection signals as well as the validity signals according to the routing algorithm and conflicting packet arbitration. The latter is done by using a comparator for the priority field and a comparator for the TS field. Two multiplexers are thus necessary to choose the arbitration methods and another multiplexer to select the address field of the highest priority packet.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u3n2e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+data_to_proc wr_address
+wen full
+valid_from_proc data_from_proc
+
+F.S.M. FIFO FIFO F.S.M.
+Control Unit
+F.S.M. FIFO
+
+valid_from_netw_0 data_from_netw_0 data_from_netw_1 valid_from_netw_1 valid_to_netw
+rd_rqst data_to_netw
+
+According to shortest outputs calculation function, (log2(N) - 1) comparators with size 1 bit to (log2(N) - 1) bits between the current router identifier and that of the destination router of the highest priority packet are used in addition to a transcoder.
+3.5 Network Interface
+The network interface (Figure 6) manages the packet flow in both directions, from the processor to the network and vice versa. The interface contains a table for the construction of the packet header according to the parity check matrix of the code. Moreover, the packets are stored at the output of the interface in a FIFO, whereas at the input, two FIFOs memorize the packets coming from the network. However, as only one packet can leave the interface at a time, a multiplexer is required to choose between one of the two buffers. Furthermore, a basic flow control is implemented between a processor and its network interface by the means of the emission FIFO’s "full" signal. Indeed, the processor must wait until the FIFO is not full before again being able to emit the packets.
+Header Table
+Figure 6. Network interface
+4. SYNTHESIS AND RESULT ANALYSIS
+In order to evaluate the performance of our architecture, we developed a program in C language automatically generating a description in generic RTL VHDL of the complete system (routers and network interfaces). Then, we used ST 0.18 µm technology to synthesize the system with a priority field of 4 bits, a payload of 8 bits and a TS of 6 bits. We compared the results obtained with other previously proposed LDPC Decoder architectures for a given codeword size around 1024 bits and based on an interconnection network whose different topologies are: 2D-mesh [11], MDN [12] and Beneš [19]. They also differ at the level of design parameters: the degree of parallelism which represents the total number of node processors, the message quantization and the targeted technology. This is why we indicate in Table 2 for each network: its topology, the targeted technology, the area in mm², the system clock frequency in MHz, the estimated aggregate bandwidth in Gbps, the message size in bits, the degree of parallelism and the codeword size. The points of comparison are area, frequency, aggregate bandwidth, scalability, and flexibility.
+
+Table 2. Comparison ASIC synthesis results in terms of area,
+
+frequency and aggregate bandwidth
+
+Ref
+
+[11] [12] [19] Proposed
+
+Topology
+
+2D-mesh MDN Beneš de Bruijn
+
+Technology (µm)
+
+0.16 0.18 0.13 0.18
+
+Network Area (mm²)
+
+25 7.92 0.98 3.56
+
+Decoder Freq. (MHz) 500 200 245 266
+
+Aggregate Bw (Gbps) 400 19.2 62.72 85.12
+
+Message size (bit)
+
+32
+
+4
+
+8
+
+8
+
+Degree of Parallelism
+
+25
+
+12 32
+
+16
+
+Code
+
+1024, 1024, 1024, 1024
+
+3/4
+
+1/2 1/2 1/4-7/8
+
+Area, frequency and aggregate bandwidth are directly related to the targeted technology, the decoder's degree of parallelism, the message quantization and the complexity of the networking elements. Consequently, trying to compare the values quantitatively is difficult. Nevertheless, taking into consideration the results that we obtained in terms of area, frequency and aggregate bandwidth, we can conclude that the use of a de Bruijn network as an interconnection structure for a flexible multiprocessor LDPC decoder offers a very good trade-off between flexibility and performance (scalability, frequency, area). Indeed, we can use a comparison metric considering the ratio between aggregate bandwidth and occupied area. This combined metric measures the architecture efficiency which is almost the best for the de Bruijn network.
+Regarding scalability, the recursive structure of the Beneš, the 2Dmesh, and the de Bruijn networks makes them highly scalable. The MDN network scalability is poor because the network structure is not recursive and it is randomly built by a complex algorithm based on a constructive heuristic.
+Although flexible, the Beneš network [19] requires a precalculation related to the code to configure the switches. The MDN [12] uses a general approach to network design with random graphs as basic topologies. This network lacks flexibility because all permutation patterns must be simulated prior to their use in order to determine buffer size at design-time. Finally, the 2D-mesh network [11] is designed for a flexible decoder. However, the described network can only manage codes with a maximum codeword size of 1024 bits. Consequently, the de Bruijn network, allowing to support any LDPC code, constitutes the most flexible solution.
+Besides the above analyzed on-chip networks, other solutions exist using a barrel-shifter communication structure [10]. Although this structure is generally area efficient, the drawback with the barrel shifter concerns its flexibility where the decoder can process only a sub-class of LDPC codes based on specific permutation matrices. Moreover, the LDPC codes must be adapted in order to be decoded by barrel-shifter based architectures.
+To finish, Table 3 summarizes the complexity of the de Bruijn network for an unspecified N number of routers in terms of area, aggregate bandwidth and latency.
+The evolution of average latency taking into account deflections and according to the number of processors is illustrated in Figure 11 (for a random traffic pattern and a network load of 10%). It clearly shows the logarithmic increase of latency with the number of processors. We thus pass from 4 cycles of average latency for an 8-processor network to 5 cycles (respectively 7, 10, 14, 19 and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u3n3e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+22 cycles) for a network of 16 processors (respectively 32, 64, 128, 256 and 512 processors).
+
+Table 3. Complexity estimation of the de Bruijn network
+
+in terms of area, aggregate bandwidth and latency De Bruijn
+
+Frequency
+
+266 MHz
+
+# of RTs Area of one RT Total Area
+
+O(N) O(log22N) O(N x log22N)
+
+Aggregate Bandwidth (Gbps)
+
+(
+
+log
+
+2( max (deg processors
+
+ree(p)×nbnode(p)))
+
++
+
+9) x Freq x N
+
+Latency Min / Max w/o deflection (cyc.)
+
+1
+
+log2N
+
+Average Latency with deflection
+
+Figure 7
+
+Average latency vs. Network size
+25
+
+20
+
+Average latency (cyc.)
+
+15
+
+10
+
+5
+
+0
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+Network size (#processors)
+
+Figure 7. Variation of average latency according to the number of processors
+
+5. CONCLUSION
+In this paper, we have presented the architecture of a new on-chip interconnection network based on the de Bruijn graph and dedicated to a flexible multiprocessor LDPC decoder. We have detailed the topology and the network architecture, the packet format as well as the routers and the network interfaces. We have also proposed to use priorities specific to LDPC codes for the arbitration of conflicting packets and we have described a parallel implementation of the shortest path routing algorithm. The results obtained in terms of flexibility, scalability, area and latencies demonstrate the efficiency of the de Bruijn network. We are now exploring the use of this network for other iterative digital communication applications.
+
+6. REFERENCES
+[1] Gallager, R. G., 1962. Low Density Parity Check Codes. IRE Trans. Information Theory, 21-28.
+[2] European Telecommunications Standards Institue (ETSI). Digital Video Broadcasting (DVB) Second generation framing structure for broadband satellite applications.
+[3] IEEE 802.11n., 2006. Wireless LAN Medium Access Control and Physical Layer specifications: Enhancements for Higher Throughput. IEEE P802.11n/D1.0.
+[4] IEEE 802.16e., 2005. Air Interface for Fixed and Mobile Broadband Wireless Access Systems. IEEE P802.16e/D12
+
+Draft.
+[5] Tanner, R. M., 1981. A recursive approach to low complexity codes. IEEE Trans. Inform. Theory, 533-547.
+[6] De Bruijn, N.G., 1946. A Combinatorial Problem. Koninklijke Nederlandse Akademie v. Wetenschappen 49, 758–764.
+[7] Quaglio, F., 2006. Implementation of Architectures for High Performance and Flexible Decoders. Ph.D. Thesis, Politecnico di Torino, Italy.
+[8] Mansour, M. M., and Shanbhag, N. R., 2003. High Throughput LDPC Decoders. IEEE Trans. VLSI Syst., 976996.
+[9] Chen, Y., and Hocevar, D., 2003. A FPGA and ASIC implementation of rate 1/2, 8088-b irregular low density parity check decoder. in Global Telecommunications Conference, 113-117.
+[10] Brack, T., Kienle, F., and Wehn, N., 2006. Disclosing the LDPC Code Decoder Design Space. In Design, Automation and Test in Europe.
+[11] Theocharides, T., Link, G., Vijaykrishnan, N., and Irwin, M. J., 2005. Implementing LDPC Decoding on a Network-onChip. in Proc. of the International Conference on VLSI Design, 134-137.
+[12] Kienle, F., Thul, M. J., and Wehn, N., 2003. Implementation Issues of Scalable LDPC-Decoders. in Proc. 3rd International Symposium on Turbo Codes and Related Topics, Brest, France, 291–294.
+[13] Quaglio, F., Vacca, F., Castellano, C., Tarable, A., and Masera, G., 2006. Interconnection Framework for HighThroughput, Flexible LDPC Decoders. in Proc. Design, Automation and Test in Europe Conference and Exhibition.
+[14] Samatham, M. R., and Pradhan, D. K., 1989. The de Bruijn multiprocessor network: A versatile parallel processing and sorting network for VLSI. IEEE Transactions on Computers, 567-581.
+[15] Rowley, R. A., Bose, B., 1993. Fault-tolerant ring embedding in de Bruijn networks. IEEE Transactions on Computers, 1480-1486.
+[16] Hosseinabady, M., Kakaoee, M. R., Mathew, J., and Pradhan D. K., 2007. Reliable Network-on-Chip Based on Generalized de Bruijn Graph. in Proc. High Level Design Validation and Test Workshop, 3-10.
+[17] Francalanci, C., and Giacomazzi, P., 2006. High-Performance Self-Routing Algorithm for Multiprocessor Systems with Shuffle Interconnections. IEEE Transactions on Parallel and Distributed Systems, 38-50.
+[18] Moussa, H., Muller, O., Baghdadi, A., Jezequel, M., 2007. Butterfly and Benes-Based on-Chip Communication Networks for Multiprocessor Turbo Decoding. in Proc. of the conference on Design, Automation and Test in Europe.
+[19] Masera, G., Quaglio, F., and Vacca, F., 2007. Implementation of a Flexible LDPC Decoder. IEEE Transactions on Circuits and Systems, 542-546.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J4u3n4e 24,2026 at 05:43:10 UTC from IEEE Xplore. Restrictions apply.
+
+

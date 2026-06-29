@@ -1,0 +1,2848 @@
+7870
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Decomposition Methods for Large Scale LP Decoding
+Siddharth Barman, Xishuo Liu, Stark C. Draper, Member, IEEE, and Benjamin Recht, Member, IEEE
+
+Abstract—When binary linear error-correcting codes are used over symmetric channels, a relaxed version of the maximum likelihood decoding problem can be stated as a linear program (LP). This LP decoder can be used to decode error-correcting codes at bit-error-rates comparable to state-of-the-art belief propagation (BP) decoders, but with significantly stronger theoretical guarantees. However, LP decoding when implemented with standard LP solvers does not easily scale to the block lengths of modern error correcting codes. In this paper, we draw on decomposition methods from optimization theory, specifically the alternating direction method of multipliers (ADMM), to develop efficient distributed algorithms for LP decoding. The key enabling technical result is a “two-slice” characterization of the parity polytope, the polytope formed by taking the convex hull of all codewords of the single parity check code. This new characterization simplifies the representation of points in the polytope. Using this simplification, we develop an efficient algorithm for Euclidean norm projection onto the parity polytope. This projection is required by the ADMM decoder and its solution allows us to use LP decoding, with all its theoretical guarantees, to decode large-scale error correcting codes efficiently. We present numerical results for LDPC codes of lengths more than 1000. The waterfall region of LP decoding is seen to initiate at a slightly higher SNR than for sum-product BP, however an error floor is not observed for LP decoding, which is not the case for BP. Our implementation of LP decoding using the ADMM executes as fast as our baseline sum-product BP decoder, is fully parallelizable, and can be seen to implement a type of message-passing with a particularly simple schedule.
+Index Terms—Alternating direction method of multipliers (ADMM), belief propagation (BP), decomposition methods, error floors, Euclidean projection, graphical models, iterative algorithms, linear programming (LP) decoding, low-density parity check (LDPC) codes, parity polytope, permutohedron.
+I. INTRODUCTION
+W HILE the problem of error correction decoding dates back at least to Hamming’s seminal work in the 1940s [1], the idea of drawing upon techniques of convex optimization
+Manuscript received April 11, 2012; revised February 25, 2013; accepted April 29, 2013. Date of publication September 10, 2013; date of current version November 19, 2013. This work was supported in part by the National Science Foundation under Grants CCF-1217058 and CCF-1148243 and in part by the Office of Naval Research under Award N00014-13-1- 0129. The work in this paper was performed while the authors were affiliated with the University of Wisconsin, Madison. This paper was presented in part at the Allerton Conference on Communication, Control, and Computing, Monticello, IL, USA, 2011.
+S. Barman is with the Center for the Mathematics of Information, California Institute of Technology, CA 91125 USA (e-mail: barman@caltech.edu).
+X. Liu is with the Department of Electrical and Computer Engineering, University of Wisconsin, Madison, WI 53706 USA (e-mail: xliu94@wisc.edu).
+S. C. Draper is with the Department of Electrical and Computer Engineering, University of Toronto, ON M5S 3G4, Canada (e-mail: stark.draper@utoronto. ca).
+B. Recht is with the Department of Computer Sciences, University of Wisconsin, Madison, WI 53706 USA (e-mail: brecht@cs.wisc.edu).
+Communicated by D. Burshtein, Associate Editor for Coding Techniques. Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org. Digital Object Identifier 10.1109/TIT.2013.2281372
+
+to solve such problems apparently dates only to Feldman’s 2003 Ph.D. thesis [2], [3]. Feldman and his collaborators showed that, for binary codes used over symmetric channels, a relaxed version of the maximum likelihood (ML) decoding problem can be stated as a linear program (LP). Considering graph-based low-density parity-check (LDPC) codes, work by Feldman et al. and later authors [4]–[7] demonstrates that the bit-error-rate performance of LP decoding is competitive with that of standard sum-product (and min-sum) belief propagation (BP) decoding. Furthermore, LP decoding comes with a certificate of correctness (ML certificate) [3]—verifying with probability 1 when the decoder has found the ML codeword and, if a high-quality expander [8], [9] or high-girth [10] code is used, LP decoding is guaranteed to correct a constant number of bit flips.
+A barrier to the adoption of LP decoding is that solving Feldman’s relaxation using generic LP algorithms is not computationally competitive with BP. This is because standard LP solvers do not automatically exploit the rich structure inherent to the LP. Furthermore, unlike BP, standard solvers do not have a distributed nature, limiting their scalability via parallelized (and hardware-compatible) implementation. In this paper we draw upon large-scale decomposition methods from convex optimization to develop an efficient, scalable algorithm for LP decoding. The result is a suite of new techniques for efficient error correction of modern graph-based codes, and insight into the elegant geometry of a fundamental convex object of error-correction, the parity polytope.
+A real-world motivation for developing efficient LP decoding algorithms comes from applications that have extreme reliability requirements, while suitably designed LDPC codes decoded using BP can achieve near-Shannon performance in the “waterfall” regime where the SNR is close to the code’s threshold, they often suffer from an “error floor” in the high-SNR regime. This limits the use of LDPCs in applications such as magnetic recording and fiber-optic transport networks. Error floors result from weaknesses of arrangements in the graphical structure of the code (variously termed “pseudocodewords,” “near-codewords,” “trapping sets,” “instantons,” “absorbing sets” [11]–[15]), from the suboptimal BP decoding algorithm, and from the particulars of the implementation of BP. Two natural approaches to improve error floor performance are to design codes with fewer problematic arrangements [16]–[21] or to develop improved decoding algorithms. As LP decoders have been observed to have lower error rate at high SNRs compared to BP decoding [7], [22]–[24], the approach taken herein is the latter.
+A second motivation is that an efficient LP decoder can help to develop closer and closer approximations of ML decoders. This is due to the strong theoretical guarantees associated with LP solvers. When the optimum vertex identified by an LP decoder is integer, the ML certificate property ensures that that
+
+0018-9448 © 2013 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7871
+
+vertex corresponds to the ML codeword. When the optimum vertex is noninteger (a “pseudocodeword”), one is motivated to tighten the relaxation to eliminate the problematic pseudocodeword, and try again. Various methods for tightening LP relaxations have been proposed [25], [26], [6]. In some settings, one can regularly attain ML performance with few additional constraints [22].
+In this paper, we produce a fast decomposition algorithm based on the alternating direction method of multipliers [27] (ADMM). This is a classic technique in convex optimization and has gained a good deal of popularity lately for solving problems in compressed sensing [28] and MAP inference in graphical models [29]. As we describe below, when we apply the ADMM algorithm to LP decoding, the algorithm is a message passing algorithm that bears a striking resemblance to BP. Variable nodes update their estimates of their true values based on information (messages) from parity check and measurement nodes. The parity check nodes produce estimated assignments of local variables based on information from the variable nodes.
+To an optimization researcher, our application of ADMM would appear quite straightforward. However, our second contribution, beyond a naive implementation of ADMM, is a very efficient computation of the estimates at the parity checks. Each check update requires the computation of a Euclidean projection onto the aforementioned parity polytope. In Section IV, we demonstrate that this projection can be computed in linearithmic time in the degree of the check. This in turn enables us to develop LP decoders with computational complexity comparable to (and sometimes much faster than) BP decoders.
+The structure of the decoding LP has been examined before in pursuit of efficient implementation. The first attempt was by Vontobel and Koetter [5], [30] where the authors used a coordi-
+
+II. BACKGROUND
+
+In this paper, we consider a binary linear LDPC code of
+
+length defined by a
+
+parity-check matrix . Each of
+
+the parity checks, indexed by
+
+, corre-
+
+sponds to a row in the parity check matrix . Codeword sym-
+
+bols are indexed by the set
+
+. The neighbor-
+
+hood of a check , denoted by
+
+, is the set of indices
+
+that participate in the th parity check, i.e.,
+
+. Similarly, for a component ,
+
+.
+
+Given a vector
+
+, the th parity-check is said to
+
+be satisfied if
+
+is even. In other words, the set of
+
+values assigned to the for
+
+have even parity. We
+
+say that a length- binary vector is a codeword,
+
+,
+
+if and only if (iff) all parity checks are satisfied. In a regular
+
+LDPC code there is a fixed constant , such that for all checks
+
+,
+
+. Also for all components
+
+,
+
+is a fixed constant. For simplicity of exposition, we focus our
+
+discussion on regular LDPC codes. Our techniques and results
+
+extend immediately to general LDPC codes and to high-density
+
+parity check codes as well.
+
+To denote compactly the subset of coordinates of that par-
+
+ticipate in the th check, we introduce the matrix . The matrix
+
+is the binary
+
+matrix that selects out the compo-
+
+nents of that participate in the th check. For example, say the
+
+neighborhood of the th check,
+
+, where
+
+. Then, for all
+
+the
+
+th entry of
+
+is one and the remaining entries are zero. For any codeword
+
+and for any , is an even parity vector of dimension
+
+. In other words, we say that
+
+for all
+
+(a “local
+
+codeword” constraint) where is defined as
+
+(1)
+
+nate-ascent method to develop distributed message-passing type algorithms to solve the LP. Their method requires scheduling updates cyclically on all edges in order to guarantee convergence. However, when their approach is matched with an appropriate message-passing schedule, as determined by Burshtein in [23] and [31], converge to the optimal solution can be attained with a computational complexity which scales linearly with the block length. Further, interior-point [32]–[35] and revised-simplex [36] approaches have also been applied. In a separate approach Yedida et al. in [22] introduced “Difference-Map BP” decoding which is a simple distributed algorithm that seems to recover the performance of LP decoding, but does not have con-
+
+Thus, is the set of codewords (the codebook) of the length-
+
+single parity-check code.
+
+We begin by describing maximum likelihood (ML) decoding
+
+and the LP relaxation proposed by Feldman et al. Say vector
+
+is received over a discrete memoryless channel described by
+
+channel law (conditional probability)
+
+,
+
+for all
+
+. Since the development is
+
+for binary codes
+
+. There is no restriction on . Max-
+
+imum likelihood decoding selects a codeword
+
+that maxi-
+
+mizes
+
+, the probability that was received given that
+
+was sent. For discrete memoryless channel ,
+
+vergence guarantees. In this paper, we frame the LP decoding problem in the tem- mizes
+plate of ADMM. ADMM is distributed, has strong convergence ratio,
+
+. Equivalently, we select a codeword that maxi. Let be the negative log-likelihood . Since
+
+guarantees, simple scheduling, and, in general, has been observed to be more robust than coordinate ascent. In addition, we an
+
+, ML decoding reduces to determining
+
+that minimizes
+
+. Thus, ML de-
+
+do not have to update parameters between iterations in ADMM. In Section II, we introduce the LP decoding problem and introduce notation. We set up the general formulation of ADMM problems in Section III and specialize the formulation to the LP decoding problem. In Section IV, we present our main technical contributions wherein we develop the efficient projection algorithm. We present numerical results in Section V and make some final remarks in Section VI.
+
+coding requires minimizing a linear function over the set of codewords.1
+
+1This derivation applies to all binary-input DMCs. In the simulations
+
+of Section V, we focus on the binary-input additive white Gaussian noise
+
+(AWGN) channel. To help make the definitions more tangible, we now
+
+summarize how they specialize for the binary symmetric channel (BSC)
+
+with crossover probability . For the BSC
+
+. If
+
+then
+
+and if
+
+then
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7872
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Feldman et al. [3] show that ML decoding is equivalent to a key step toward the development of an efficient decoding al-
+
+minimizing a linear cost over the convex hull of all codewords. gorithm. Its smaller description complexity also makes our for-
+
+In other words, minimize
+
+subject to
+
+. The mulation particularly well suited for high-density codes whose
+
+feasible region of this program is termed the “codeword” poly- study we leave for future work.
+
+tope. However, this polytope cannot be described tractably.
+
+Feldman’s approach is first to relax each local codeword con-
+
+straint
+
+to
+
+where
+
+III. DECOUPLED RELAXATION AND OPTIMIZATION ALGORITHMS
+
+(2) In this section, we present the ADMM formulation of the
+
+The object is called the “parity polytope.” It is the code-
+
+word polytope of the single parity-check code (of dimension ).
+
+Thus, for any codeword
+
+, is a vertex of for all .
+
+When the constraints
+
+are intersected for all
+
+the resulting feasible space is termed the “fundamental” poly-
+
+LP decoding problem and summarize our contributions. In Section III-A, we introduce the general ADMM template. We specialize the template to our problem in Section III-B. We state the algorithm in Section III-C and frame it in the language of message-passing in Section III-D.
+
+tope. Putting these ingredients together yields the LP relaxation
+
+that we study
+
+A. ADMM Formulation
+
+(3)
+The statement of the optimization problem in (3) makes it apparent that compact representation of the parity polytope is crucial for efficient solution of the LP. Study of this polytope
+
+To make the LP (3) fit into the ADMM template, we relax
+
+to lie in the hypercube,
+
+, and add the auxiliary
+
+“replica” variables
+
+for all
+
+. We work with a
+
+decoupled parameterization of the decoding LP
+
+dates back some decades. In [37], Jeroslow gives an explicit representation of the parity polytope and shows that it has an expo-
+
+nential number of vertices and facets in . Later, in [38], Yan-
+
+nakakis shows that the parity polytope has small lift, meaning
+
+that it is the projection of a polynomially faceted polytope in
+
+(4)
+
+a dimension polynomial in . Indeed, Yannakakis’ representa-
+
+tion requires a quadratic number of variables and inequalities. The alternating direction method of multiplies works with an
+
+This is one of the descriptions discussed in [3] to state the LP augmented Lagrangian which, for this problem, is decoding problem.
+
+Yannakakis’ representation of a vector
+
+consists of
+
+variables
+
+for all even
+
+. Variable indicates the
+
+contribution of binary (zero/one) vectors of Hamming weight
+
+(5)
+
+to . Since is a convex combination of even-weight binary
+
+vectors,
+
+. In addition, variables are used
+
+to indicate the contribution to , the th coordinate of made
+
+by binary vectors of Hamming weight . Overall, the following
+
+set of inequalities over
+
+variables characterize the parity
+
+polytope (see [38] and [3] for a proof)
+
+Here
+
+for
+
+are the Lagrange multipliers and
+
+is a fixed penalty parameter. We use and to succinctly
+
+represent the collection of and , respectively. Note that
+
+the augmented Lagrangian is obtained by adding the two-norm
+
+term of the residual to the ordinary Lagrangian. The Lagrangian
+
+without the augmentation can be optimized via a dual subgra-
+
+dient ascent method [39], but our experiments with this ap-
+
+proach required far too many message passing iterations for
+
+practical implementation. The augmented Lagrangian smoothes
+
+the dual problem leading to much faster convergence rates in
+
+practice [40]. For the interested reader, we provide a discussion
+
+of the standard dual ascent method in Appendix.
+
+Let and denote the feasible regions for variables and
+
+, respectively:
+
+and we use
+
+to mean that
+
+, the -fold
+
+product of . Then, we can succinctly write the iterations of
+
+This LP can be solved with standard solvers in polynomial ADMM as time. However, the quadratic size of the LP prohibits its solution
+
+with standard solvers in real-time or embedded decoding appli-
+
+cations. In Section IV-B, we show that any vector
+
+can
+
+always be expressed as a convex combination of binary vectors
+
+of Hamming weight and
+
+for some even integer . Based
+
+on this observation, we develop a new formulation for the parity The ADMM update steps involve fixing one variable and mini-
+
+polytope that consists of
+
+variables and constraints. This is mizing the other. In particular, and are the th iterate and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7873
+
+the updates to the and variable are performed in an alternating fashion. We use this framework to solve the LP relaxation proposed by Feldman et al. and hence develop a distributed decoding algorithm.
+
+The -update thus corresponds to polytope.
+C. ADMM Decoding Algorithm
+
+projections onto the parity
+
+B. ADMM Update Steps
+
+The -update corresponds to fixing and (obtained
+
+from the previous iteration or initialization) and minimizing
+
+subject to
+
+. Taking the gradient of
+
+(5), setting the result to zero, and limiting the result to the
+
+hypercube
+
+, the -update simplifies to
+
+The complete ADMM-based LP decoding algorithm is spec-
+
+ified in the Algorithm 1 box. We declare convergence when the
+
+following two conditions are satisfied: 1) replicas differ from
+
+the variables by less than some tolerance
+
+, and 2) the
+
+value of each replica differs from its value in the previous iter-
+
+ation by less than .
+
+Algorithm 1 Given an -dimensional vector
+
+,
+
+parity check matrix , and parameters and , solve
+
+the decoding LP specified in (4)
+
+where
+
+and
+
+corresponds to projecting
+
+onto the hypercube
+
+. The latter can easily be accom-
+
+plished by independently projecting the components onto :
+
+setting the components that are greater than 1 or equal to 1, the
+
+components less than 0 or equal to 0, and leaving the remaining
+
+coordinates unchanged. Note that for any ,
+
+is a
+
+diagonal binary matrix with nonzero entries at if and only
+
+if participates in the th parity check
+
+. This implies
+
+that
+
+is a diagonal matrix with the th entry equal
+
+to
+
+. Hence,
+
+is a diagonal matrix
+
+with
+
+as the th diagonal entry.
+
+Componentwise, the update rule corresponds to taking the
+
+average of the corresponding replica values adjusted by the
+
+scaled dual variable
+
+and taking a step in the negative log-
+
+likelihood direction. For any
+
+, let denote the
+
+component of that corresponds to the th component of ,
+
+in other words the th component of
+
+. Similarly, let
+
+be the th component of
+
+. With this notation, the update
+
+rule for the th component of is
+
+1: Construct the negative log-likelihood vector based on
+
+received word . Construct the
+
+matrix for all
+
+.
+
+2: Initialize and as the all zeros vector for all
+
+.
+
+Initialize iterate
+
+. For simplicity, we only specify
+
+iterate when determining stopping criteria.
+
+3: repeat
+
+4: for all
+
+do
+
+5:
+
+Update
+
+.
+
+6: end for
+
+7: for all
+
+do
+
+8: Set
+
+.
+
+9: Update
+
+where
+
+onto the parity polytope.
+
+10: Update
+
+.
+
+11: end for
+
+means project
+
+12:
+
+.
+
+13: until
+
+and return .
+
+Each variable update can be done in parallel.
+
+The -update corresponds to fixing and and minimizing
+
+subject to
+
+for all
+
+. The relevant
+
+observation here is that the augmented Lagrangian is separable
+
+with respect to the and hence the minimization step can be
+
+decomposed (or “factored”) into separate problems, each
+
+of which be solved independently. This decouples the overall
+
+problem, making the approach scalable.
+
+We start from (5) and concentrate on the terms that involve
+
+. For each
+
+the update is to find the that minimizes
+
+A convergence analysis for ADMM is provided in [27]. We base the following analysis on [41, Th. 1]. The output of ADMM decoding satisfies the order relation
+
+where we recall that is the cost vector, is the number of
+
+checks, is the check dimension, is the ADMM penalty pa-
+
+rameter, and where and are, respectively, the number of
+
+iterations and the solution to the LP decoding problem. Since
+
+for LDPC codes
+
+,
+
+Since the values of and are fixed, so are
+
+and
+
+.
+
+Setting
+
+and completing the square we get that This means that for a given
+
+, ADMM outputs vector
+
+the desired update is
+
+with
+
+iterations, such that
+
+. For each it-
+
+eration, the -update has
+
+complexity, the -update has
+
+complexity, and the -update has
+
+complexity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7874
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Combining the above results, the complexity of ADMM de-
+
+coding is given by the following proposition.
+
+Proposition 1: Let be a solution of the LP decoding
+
+problem. For any
+
+, Algorithm 1 will, in
+
+time,
+
+determine a vector that satisfies the following bound:
+
+We note that the experiments we present in Section V demonstrate that this convergence estimate is frequently conservative; we often see convergence in a dozen iterations or fewer. (See Fig. 6, for experiments regarding iteration requirements.)
+
+D. ADMM Decoding as Message-Passing Algorithm
+
+We now present a message-passing interpretation of the
+
+ADMM approach to LP decoding as presented in Algorithm 1.
+
+For simplicity, we establish this interpretation by identifying
+
+messages passed between variable nodes and check nodes on a Tanner graph.
+
+We denote by
+
+the replica associated with the edge
+
+joining variable node
+
+and check node
+
+, where
+
+indicates the th iteration. Note that
+
+for all
+
+, where is the value of at th iteration
+
+in Algorithm 1. The “message”
+
+is passed
+
+from variable node to check node at the beginning of the
+
+th iteration. Incoming messages to check node are denoted
+
+as
+
+. The can also be
+
+interpreted as the messages passed from check node to the
+
+variable nodes in
+
+, denoted as
+
+. Let
+
+and
+
+. Then, for all
+
+IV. GEOMETRIC STRUCTURE OF PROJECTION ONTO
+
+, AND EFFICIENT
+
+In this section, we develop our efficient projection algorithm.
+
+Recall that
+
+and that
+
+. Generically, we say that a point
+
+if and only
+
+if there exist a set of
+
+such that
+
+where
+
+and
+
+. In contrast to this generic represen-
+
+tation, the initial objective of this section is to develop a novel
+
+“two-slice” representation of any point
+
+: namely that
+
+any such vector can be written as a convex combination of vec-
+
+tors with Hamming weight and
+
+for some even integer
+
+. We will then use this representation to construct an efficient
+
+projection.
+
+We open the section in Section IV-A by describing the struc-
+
+tured geometry of and laying out the results that will follow
+
+in ensuing sections. In Section IV-B, we prove a few necessary
+
+lemmas illustrating some of the symmetry structure of the parity
+
+polytope. In Section IV-C, we develop the two-slice represen-
+
+tation and connect the -norm of the projection of any
+
+onto
+
+to the (easily computed) “constituent parity” of the
+
+projection of onto the unit hypercube. In Section IV-D, we
+
+present the projection algorithm.
+
+A. Introduction to the Geometry of
+In this section, we discuss the geometry of . We develop intuition and foreshadow the results to come. We start by making a few observations about .
+1) First, we can classify the vertices of by their weight. We do this by defining , the constant-weight analog of , to be the set of weight- vertices of :
+
+(6)
+
+The -update can be rewritten as
+
+i.e., the constant-weight- subcode of . Since all elements of are in some for some even ,
+. This gives us a new way to think about characterizing the parity polytope
+
+The update is
+
+2) Second, we define to be the convex hull of ,
+
+(7)
+
+With this interpretation, it is clear that the ADMM algorithm decouples the decoding problem and can be performed in a distributed manner.
+Another nice way to see the decoupling of the decoding
+
+This object is a “permutahedron,” so termed because it is the convex hull of all permutations of a single vector; in this case a length- binary vector with ones. Of course,
+
+problem, and the connection to message passing, is to use
+
+the normal factor graph formalism [42]. Then, in a manner
+
+similar to that taken in [22, Sec. III-A], replicas are associated
+
+with edges of the normal graph and one creates a dynamics of replicas, alternately trying to satisfy equality and parity-check constraints. The dynamics of ADMM are, in general, distinct
+
+3) Third, define the affine hyperplane consisting of all vectors whose components sum to as
+
+from those of the “Divide-and-Conquer” algorithm studied in
+
+[22] but related, as recently shown in [43].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7875
+
+Third, in Section IV-C, we show that given a point
+
+that we wish to project onto , it is easy to identify the con-
+
+stituent parity of the projection. To express this formally, let
+
+be the projection of onto . Then, our statement
+
+is that we can easily find the even integer such that
+
+can be expressed as a convex combination of vectors in
+
+and
+
+.
+
+Finally, in Section IV-D, we develop our projection algo-
+
+rithm. In short, our approach is as follows: given a vector
+
+we first compute , the constituent parity of its projection. Given
+
+the two-slice representation, projecting onto is equivalent
+
+to determining an
+
+, a vector
+
+, and a vector
+
+such that the norm of
+
+is
+
+minimized.
+
+In [45], we showed that, given , this projection can be
+
+accomplished in two steps. We first scale
+
+by the convex
+
+weighting parameter to obtain
+
+and project onto
+
+. Then, we
+
+project the residual onto
+
+. The object
+
+is
+
+Fig. 1. Parity polytope
+
+can be expressed as the convex hull of “slices”
+
+through , each of which contains all weight- vertices. These sets,
+
+are permutahedra. They are all orthogonal to the line segment connecting the
+
+origin to the all-ones vector. The geometry is sketched for
+
+.
+
+an ball with box constraints. Projection onto
+
+can be
+
+done efficiently using a type of waterfilling. Since the function
+
+is convex in we
+
+can perform a 1-D line search (using, for example, the secant
+
+method [46, p. 188]) to determine the optimal value for and
+
+where is the length- all-ones vector. We can visualize as a “slice” through the parity polytope defined as the
+intersection of with . In other words, a definition of equivalent to (7) is
+
+thence the desired projection. In contrast to the original approach, in Section IV-D, we de-
+velop a far more efficient algorithm that avoids the pair of projections and the search for . In particular, taking advantage of the convexity in we use majorization to characterize the
+
+convex hull of
+
+and
+
+in terms of a few linear con-
+
+straints (inequalities). As projecting onto the parity polytope is
+
+equivalent to projecting onto the convex hull of the two slices,
+
+we use the characterization to express the projection problem
+
+for an even integer. 4) Finally, we note that the are all parallel. This follows
+since all vectors lying in any of these permutahedra are orthogonal to . We can think of the line segment that con-
+
+as a quadratic program, and develop an efficient method that directly solves the quadratic program. Avoiding the search over yields a considerable speed-up over the original approach taken in [45].
+
+nects the origin to as the major axis of the parity polytope
+
+with each “slice” orthogonal to the axis.
+
+B. Permutation Invariance of the Parity Polytope and Its
+
+The above observations regarding the geometry of
+
+are Consequences
+
+illustrated in Fig. 1. Our development will be as follows: first,
+
+in Section IV-B, we draw on a theorem from [44] about the ge-
+
+ometry of permutahedra to assert that a point
+
+is in
+
+if and only if a sorted version of is majorized (see Definition
+
+1) by the length- vector consisting of ones followed by
+
+zeros (the sorted version of any vertex of ). This allows us
+
+to characterize the easily.
+
+Second, we rewrite any point
+
+as, per our second
+
+point above, a convex combination of points in slices of dif-
+
+ferent weights . In other words,
+
+Let us first describe some of the essential features of the parity
+
+polytope that are critical to the development of our efficient pro-
+
+jection algorithm. First, note the following proposition.
+
+Proposition 2:
+
+if and only if is in the parity
+
+polytope for every
+
+permutation matrix .
+
+This proposition follows immediately because the vertex set
+
+is invariant under permutations of the coordinate axes.
+
+Since we will be primarily concerned with projections onto
+
+the parity polytope, let us consider the optimization problem
+
+where
+
+and the are the convex weightings. We de-
+
+velop a useful characterization of , the “two-slice” Lemma
+
+(8)
+
+2, that shows that two slices always suffices. In other words, we
+
+can always write
+
+where
+
+, The optimal of this problem is the Euclidean projection of
+
+,
+
+, and
+
+, where
+
+onto , which we denote by
+
+. Again using the
+
+is the largest even integer less than or equal to . We term the symmetric nature of , we can show the useful fact that if
+
+lower weight the “constituent” parity of the vector.
+
+is sorted in descending order, then so is
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7876
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Proposition 3: Given a vector
+
+, the component-wise
+
+ordering of
+
+is same as that of .
+
+Proof: We prove the claim by contradiction. Write
+
+and suppose that for indices and we have
+
+but
+
+. Since all permutations of are in the parity poly-
+
+tope, we can swap components and of to obtain another
+
+vector in . Under the assumption
+
+and
+
+,
+
+we have
+
+. This inequality implies that
+
+, and hence
+
+we get that the Euclidean distance between and is greater
+
+than the Euclidean distance between and the vector obtained
+
+by swapping the components.
+
+These two propositions allow us to assume through the re-
+
+mainder of this section that our vectors are presented sorted in
+
+descending order unless explicitly stated otherwise.
+
+The permutation invariance of the parity polytope also lets
+
+us employ powerful tools from the theory of majorization to
+
+simplify membership testing and projection. The fundamental
+
+theorem we exploit is based on the following definition.
+
+Definition 1: Let and be -vectors sorted in decreasing
+
+order. The vector majorizes if
+
+Lemma 1: A sorted vector nonnegative coefficients
+
+if and only if there exist such that
+(11)
+
+(12)
+
+(13)
+
+Proof: First, note that every vertex of
+
+of weight
+
+satisfies these inequalities with
+
+and
+
+for
+
+.
+
+Thus,
+
+must satisfy (11)–(13). Conversely, if satisfies
+
+(11)–(13), then is majorized by the vector
+
+where is a vector consisting of ones followed by zeros. is contained in as are all of its permutations. Thus, we
+conclude that is also contained in . While Lemma 1 characterizes the containment of a vector in , the relationship is not one-to-one; for a particular
+there can be many sets that satisfy the lemma. We will next show that there is always one assignment of with only two nonzero .
+
+Our results rely on the following theorem, which states that
+
+a vector lies in the convex hull of all permutations of another
+
+vector if and only if the former is majorized by the latter (see
+
+[44] and references therein).
+
+Theorem 1: Suppose and are -vectors sorted in de-
+
+creasing order. Then, is in the convex hull of all permutations
+
+of if and only if majorizes .
+
+To gain intuition for why this theorem might hold, suppose
+
+that is in the convex hull of all of the permutations of . Then,
+
+with being permutation matrices,
+
+,
+
+and
+
+. The matrix
+
+is doubly stochastic,
+
+and one can immediately check that if
+
+and is doubly
+
+stochastic, then majorizes .
+
+To apply majorization theory to the parity polytope, begin
+
+with one of the permutahedra . We recall that is equal
+
+to the convex hull of all binary vectors with weight , equiv-
+
+alently the convex hull of all permutations of the vector con-
+
+sisting of ones followed by
+
+zeros. Thus, by Theorem 1,
+
+is in if and only if
+
+(9)
+
+(10)
+
+C. Constituent Parity of the Projection
+
+For
+
+, let
+
+denote the “even floor” of , i.e.,
+
+the largest even integer such that
+
+. Define the “even-
+
+ceiling,”
+
+similarly. For a vector , we term
+
+the constituent parity of vector . In this section, we will show
+
+that if
+
+has constituent parity , then it can be written
+
+as a convex combination of binary vectors with weight equal to
+
+and . This result is summarized by the following lemma.
+
+Lemma 2 (“Two-Slice” Lemma): A vector
+
+iff
+
+can be expressed as a convex combination of vectors in
+
+and
+
+where
+
+.
+
+Proof: Consider any (sorted)
+
+. Lemma 1 tells us
+
+that there is always (at least one) set that satisfy (11)–(13).
+
+Letting be defined as in the lemma statement, we define to be
+
+the unique scalar between zero and one that satisfies the relation
+
+:
+
+(14)
+
+Then, we choose the following candidate assignment:
+
+,
+
+, and all other
+
+. We show that this choice
+
+satisfies (11)–(13) which will in turn imply that there is a
+
+and a
+
+such that
+
+.
+
+First, by the definition of , (11) and (13) are both satisfied.
+
+Further, for the candidate set the relations (12) and (13) simplify
+
+to
+
+The parity polytope is simply the convex hull of all of
+
+(15)
+
+the with even. Thus, we can use majorization to provide
+
+an alternative characterization of the parity polytope to that of
+
+(16)
+
+Yannakakis or Jeroslow.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7877
+
+To show that (15) is satisfied is straightforward for the cases
+
+and
+
+. First consider any
+
+. Since
+
+,
+
+for all , and there are only terms,
+
+(15) must hold. Second, consider any
+
+. We use (16)
+
+to write
+
+. Since
+
+this is upper bounded by
+
+which
+
+we recognize as the right-hand side of (15) since
+
+and
+
+.
+
+It remains to verify only one more inequality in (15) namely
+
+the case when
+
+, which is
+
+Proof: Let
+
+. Since is majorized by a sorted
+
+binary vector of weight then, by Theorem 1,
+
+which,
+
+in turn, implies
+
+.
+
+We conclude this section by showing that we can easily com-
+
+pute the constituent parity of
+
+without explicitly com-
+
+puting the projection of .
+
+Lemma 3: For any vector
+
+, let
+
+, the pro-
+
+jection of onto
+
+and denote by
+
+the projection
+
+of onto the parity polytope. Then,
+
+To show that the above inequality holds, we maximize the right-
+
+hand side of (12) across all valid choices of
+
+and show that
+
+the resulting maximum is exactly
+
+. Since this maximum
+
+is attainable by some choice of
+
+and our choice meets that
+
+bound, our choice is a valid choice.
+
+The details are as follows: since
+
+any valid choice
+
+for
+
+must satisfy (11) which, for
+
+, is
+
+(17)
+
+To see that across all valid choice of
+
+the largest value
+
+attainable for the right-hand side is precisely
+
+consider
+
+the LP
+
+That is, we can compute the constituent parity of the projec-
+
+tion of by projecting onto
+
+and computing the even
+
+floor.
+
+Proof: Let
+
+and
+
+. We
+
+prove the following fact: given any
+
+with
+
+there exists a vector
+
+such that
+
+,
+
+,
+
+and
+
+. The implication of this fact will
+
+be that any vector in the parity polytope with norm strictly
+
+greater that cannot be the projection of . Similarly, we can
+
+also show that any vector with norm strictly less than
+
+cannot be the projection on the parity polytope.
+
+First we construct the vector based on and . Define the
+
+set of “high” values to be the coordinates on which is greater
+
+than , i.e.,
+
+. Since by assumption
+
+we know that
+
+. Consider the test
+
+vector defined componentwise as
+
+if otherwise.
+
+Note that
+
+. The vector differs
+
+from only in . Thus, by changing (reducing) components
+
+of in the set we can obtain a vector such that
+
+.
+
+The first two constraints are simply (11) and (13). Recognizing In particular, there exists a vector with
+
+such that
+
+, the dual program is
+
+for
+
+and
+
+for
+
+. Since the
+
+norm of is even and it is in
+
+we have by Corollary 1 that
+
+.
+
+We next show that for all
+
+,
+
+. The
+
+inequality will be strict for at least one yielding
+
+Setting
+
+,
+
+, the other primal vari-
+
+and thereby proving the claim.
+
+able to zero,
+
+, and
+
+, satisfies the We start by noting that
+
+so
+
+for all .
+
+Karush–Kuhn–Tucker (KKT) conditions for this primal/dual Hence, if
+
+for some we must also have
+
+, in
+
+pair of LPs. The associated optimal cost is
+
+. Thus, the which case
+
+since is the projection of onto .
+
+right-hand side of (17) is at most
+
+.
+
+In summary,
+
+iff
+
+and when
+
+then
+
+We have proved that if
+
+then the choice of
+
+. Therefore, if
+
+then
+
+. Thus, for all
+
+and as in (14) satisfies the requirements of Lemma we get
+
+where the first inequality is strict
+
+1 and so we can express as
+
+. The con- for at least one . Since
+
+for
+
+this means that
+
+verse—given a vector that is a convex combination of vectors
+
+for all where the inequality is strict for at
+
+in
+
+and
+
+it is in —holds because
+
+least one value of . Overall,
+
+and both
+
+.
+
+(by construction) and
+
+(by assumption). Thus,
+
+A useful consequence of Theorem 1 is the following cannot be the projection of onto . Thus, the norm
+
+corollary.
+
+of the projection of ,
+
+. A similar argument
+
+Corollary 1: Let be a vector in
+
+. If
+
+is an shows that
+
+and so
+
+must lie in
+
+even integer then
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7878
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+D. Projection Algorithm
+In this section, we formulate a quadratic program (problem PQP) for the projection problem and then develop an algorithm (Algorithm 2) that efficiently solves the quadratic program.
+
+Algorithm 2 Given
+
+determine its projection on ,
+
+Given a vector
+
+, set
+
+. From
+
+Lemma 3, we know that the constituent parity of
+
+is . We also know that if is sorted in descending order then
+
+will also be sorted in descending order. Let be a
+
+matrix with diagonal entries set to 1,
+
+for
+
+, and zero everywhere else
+
+1: Permute to produce a vector whose components are
+
+sorted in decreasing order, i.e.,
+
+. Let
+
+be the corresponding permutation matrix, i.e.,
+
+.
+
+2: Compute
+
+.
+
+3: Assign
+
+4: if
+
+then
+
+5: return
+
+.
+
+6: end if
+
+7: if
+
+then
+
+8:
+
+.
+
+9: else
+
+10:
+
+.
+
+11: end if
+
+12: Define as in (22).
+
+13: if
+
+then
+
+14: return
+
+.
+
+15: end if
+
+16: Assign
+
+,
+
+.
+
+17: Construct the set of breakpoints
+
+by
+
+merging the sorted points in and so that entries in
+
+satisfy
+
+.
+
+18: Initialize as the smallest index such that
+
+.
+
+19: Initialize as the largest index such that
+
+.
+
+20: Initialize sum
+
+.
+
+21: for
+
+to do
+
+22: Set
+
+.
+
+23: if
+
+then
+
+24: Update
+
+.
+
+25: Update
+
+.
+
+26: else
+
+27: Update
+
+28: Update
+
+.
+
+29: end if
+
+30: if
+
+and
+
+then
+
+31:
+
+32: if
+
+then break
+
+33: else if
+
+then
+
+34:
+
+35: end if
+
+36: end for
+
+37: if
+
+then
+
+38: Compute
+
+.
+
+39: else
+
+40:
+
+41:
+
+42:
+
+43:
+
+44:
+
+45: end if
+
+46: return
+
+.
+
+...
+
+... ...
+
+...
+
+The constraint that has to be sorted in decreasing order can
+
+be stated as
+
+, where is the all-zeros vector.
+
+In addition, Lemma 2 implies that is a convex combination
+
+of vectors of Hamming weight and
+
+. Using inequality
+
+(15), we get that a -vector
+
+, with
+
+(18)
+
+is a convex combination of vectors of weight and
+
+iff it
+
+satisfies the following bounds:
+
+(19)
+
+where denotes the th largest component of . As we saw
+
+in the proof of Lemma 1, the fact that the components of are
+
+no more than one implies that inequalities (19) are satisfied for
+
+all
+
+. Also, (18) enforces the inequalities for
+
+.
+
+Therefore, inequalities in (19) for
+
+and
+
+are
+
+redundant. Note that in addition we can eliminate the variable
+
+by solving (18) giving
+
+[see also (14)].
+
+Therefore, for a sorted vector , we can write the projection onto
+
+as the optimization problem
+
+(20) (21)
+
+The last two constraints can be simplified as follows: first,
+
+constraint (20) simplifies to
+
+. Next, define
+
+the vector
+
+(22)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7879
+
+we can rewrite inequality (21) as
+
+. Using these simpli- Assume now that
+
+. Taking the directional deriva-
+
+fications yields the final form of our quadratic program.
+
+tive with respect to increasing, we obtain the following:
+
+Problem PQP:
+
+(23) (24) (25) (26)
+The projection algorithm we develop efficiently solves the KKT conditions of PQP. The objective function is strongly convex and the constraints are linear. Hence, the KKT conditions are not only necessary but also sufficient for optimality. To formulate the KKT conditions, we first construct the Lagrangian with dual variables , , , , , and :
+
+(29)
+
+proving that
+
+is a decreasing function of . Therefore,
+
+by the mean value theorem, there exists a
+
+such
+
+that
+
+.
+
+First note that
+
+is feasible for problem PQP. We
+
+need only to verify (25). Recalling that is defined as
+
+, we get the lower bound
+
+The KKT conditions are then given by stationarity of the Lagrangian, complementary slackness, and feasibility
+(27)
+
+The components of
+
+are all less than one, so
+
+. Combining this with the equality
+
+tells us that
+
+. We there-
+
+fore find that
+
+is no more than
+
+.
+
+To complete the proof, we need only find dual variables to
+
+certify the optimality. Setting , , and to zero, and and
+
+to the values required to satisfy (27) provides the necessary
+
+assignments to satisfy the KKT conditions.
+
+Lemma 4 thus certifies that all we need to do to compute the
+
+projection is to compute the optimal . To do so, we use the fact
+
+that the function
+
+is a piecewise linear function of . For
+
+a fixed , define the active set to be the indices where
+
+is
+
+strictly between 0 and 1
+
+(30)
+
+Let the clipped set be the indices where is equal to 1
+
+A vector that satisfies (27) and the following orthogonality
+
+conditions is equal to the projection of onto .
+
+To proceed, set
+
+and define the pa-
+
+rameterized vector
+
+Let the zero set be the indices where
+
+(31) is equal to zero
+(32)
+
+(28) Note that with these definitions, we have
+
+The following lemma implies that the optimizer of PQP, i.e.,
+
+, is
+
+for some
+
+.
+
+(33)
+
+Lemma 4: There exists a
+
+such that
+
+satisfies the KKT conditions of the quadratic program PQP.
+
+Proof: Note that when
+
+we have that
+
+Our algorithm simply increases until the active set changes,
+
+and is ordered differently from and
+
+keeping track of the sets
+
+, , and
+
+. We break the
+
+. Consequently,
+
+cannot be the projection onto
+
+for interval
+
+into the locations where the active set changes,
+
+. At the other boundary of the interval, when
+
+and compute the value of
+
+at each of these breakpoints
+
+we have
+
+. If
+
+, then
+
+until
+
+. At this point, we have located the appropriate
+
+by Corollary 1. But since is the closest point in
+
+to , active set for optimality and can find by solving the linear
+
+it must also be the closest point in .
+
+(33).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7880
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+The breakpoints themselves are easy to find: they are the values of where an index is set equal to one or equal to zero. First, define the following sets:
+The sets and concern the largest components of ; and the smallest components. The set of possible breakpoints is
+
+V. NUMERICAL RESULTS AND IMPLEMENTATION
+
+In this section, we present simulation results for the ADMM
+
+decoder and discuss various aspects of our implementation. In
+
+Section V-A, we present word-error-rate (WER) results for two
+
+particular LDPC codes as well as for an ensemble of random
+
+-regular LDPC codes. We note that numerical results for
+
+the
+
+Tanner code [47] is reported in our previous work
+
+[45]. In Section V-B, we discuss how the various parameters
+
+choices in ADMM affect decoding performance, as measured
+
+by error rate and by decoding time.
+
+A. Performance Comparisons Between ADMM and BP Decoding
+
+In this section, we present simulation results of ADMM de-
+
+coding and compare to sum-product BP decoding. The parame-
+
+The following proposition reduces the search space by iden- ters used for ADMM are as follows: 1) error tolerance
+
+,
+
+tifying unnecessary breakpoints.
+
+2) penalty
+
+, 3) maximum number of iterations
+
+Proposition 4:
+
+and
+
+.
+
+and 4) over-relaxation parameter (cf. Section V-B)
+
+Proof: If
+
+, then
+
+. The maximum number of iterations for BP decoding is also
+
+. Therefore
+
+. If
+
+, then 1000. We discuss parameter choices in detail in Section V-B.
+
+for all
+
+, we have
+
+. This means that for all
+
+,
+
+and hence cannot be .
+
+In addition,
+
+. This is because for all
+
+, we have
+
+. Therefore, cannot be
+
+the projection.
+
+The proposition above indicates that the points in and
+
+are not necessary when identifying . The reason is that the
+
+only possible solution in these two sets is
+
+.
+
+However, since is the smallest breakpoint, we can directly
+
+solve for by inspecting the second smallest breakpoint and
+
+use (33). This procedure is captured in Algorithm 2. We use
+
+as the set of breakpoints
+
+in Algorithm 2. This set contains at most points.
+
+To summarize, our Algorithm 2 sorts the input vector, com-
+
+putes the set of breakpoints, and then marches through the
+
+breakpoints until it finds a value of
+
+with
+
+.
+
+Since we will also have
+
+, the optimal will lie
+
+in
+
+and can be found by solving (33). In the algorithm
+
+box for Algorithm 2, is the largest and is the smallest index
+
+in the active set. We use to denote the sum of the elements
+
+in the active set and the total sum of the vector at the current
+
+break point. Some of the awkward if statements in the main
+
+for loop take care of the cases when the input vector has many
+
+repeated entries.
+
+Algorithm 2 requires one sort (sorting the input vector) and
+
+inspections of at most breakpoints. Thus, the total complexity
+
+of the algorithm is linear plus the time for the sort, which is
+
+. We make two remarks on the computational com-
+
+plexity of Algorithm 2. First, is small for LDPC codes. Thus,
+
+the asymptotic complexity is less important. The complexity
+
+from the sorting operation is negligible. Second, we can con-
+
+sider Algorithm 2 as the check node operation. Compared with
+
+an exact sum-product BP check node update, where hyperbolic
+
+tangents and logarithms are used, our algorithm uses only basic
+
+arithmetic operations and thus is more hardware friendly. We
+
+We first present results for two particular codes over the addi-
+
+tive white Gaussian noise (AWGN) channel with binary inputs.
+
+The first code is the
+
+rate-0.5,
+
+-regular Mar-
+
+gulis LDPC code [48]. The second is a
+
+rate-0.77,
+
+-regular LDPC code obtained from [49]. This code is also
+
+studied by Yedidia et al. [22]. We choose both codes as they
+
+have been chosen in the past to study error floor performance.
+
+Then, we present results for an ensemble of 100 randomly gen-
+
+erated -regular LDPC codes of length 1002 similar to [24].
+
+We simulate the binary symmetric channel (BSC) and compare
+
+ADMM with BP decoding in three aspects: error rate, number
+
+of iterations, and execution time.2
+
+In Fig. 3, we plot the WER performance of the Margulis
+
+code for the ADMM decoder and various implementations of
+
+sum-product BP decoding. As mentioned, this code has been
+
+extensively studied in the literature due to its error floor be-
+
+havior (see, e.g., [13], [48], [50]). Recently it has been noted
+
+[50], [51] that the previously observed error floor of this code
+
+is, at least partially, a result of saturation in the message LLRs
+
+passed by the BP decoder. This issue of implementation can be
+
+greatly mitigated by improving the way large LLRs are handled.
+
+Thus, alongside these previous results we plot results of our own
+
+implementation of “nonsaturating” sum-product BP, which fol-
+
+lows the implementation of [50], [51], and which matches the
+
+results reported therein. In our simulations of the ADMM de-
+
+coder, we collect more than 200 errors for all data points other
+
+than the two highest SNRs (2.8 and 3 dB), for which we col-
+
+lected 130 and 32 errors, respectively. For nonsaturating BP de-
+
+coding, we collect 43 and 13 respective errors at
+
+,
+
+2.7 dB.
+
+The first aspect to note is that while the LP decoder has a wa-
+
+terfall, the waterfall initiates at a slightly higher SNR (about 0.4
+
+dB higher in this example) than that of sum-product BP. This ob-
+
+servation is consistent with earlier simulations of LP decoding
+
+for long block lengths, e.g., those presented in [7] and [22]. It is
+
+demonstrate in numerical results that the actual run time for each 2We note that results for ADMM decoding of the iteration of ADMM decoding is similar to that for BP decoding. given in [45], results that match those given in [26].
+
+Tanner code are
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7881
+
+Fig. 2. Since there are a finite number of breakpoints (at most
+
+) and the
+
+function
+
+is linear between breakpoints, we can solve for in linear
+
+time. See (22) and (28) for definitions of and , respectively.
+
+Fig. 4. Word error rate (WER) of the
+
+LDPC code used on the
+
+AWGN channel plotted as a function of SNR. The WER performance of ADMM
+
+is compared to that of nonsaturating sum-product BP, as well as to an estimated
+
+lower-bound on ML decoding.
+
+than 200 errors except for the ADMM data at
+
+,
+
+where 29 errors are observed. In addition, we plot an estimated
+
+lower bound on maximum likelihood (ML) decoding perfor-
+
+mances. The lower bound is estimated in the following way.
+
+In the ADMM decoding simulations, we round any noninteger
+
+solution obtained from the ADMM decoder to produce a code-
+
+word estimate. If the decoder produces a decoding error, i.e., if
+
+the estimate does not match the transmitted codeword, we check
+
+if the estimate is a valid codeword. If the estimate satisfies all
+
+the parity checks (and is therefore a codeword) we also compare
+
+Fig. 3. Word error rate (WER) of the
+
+“Margulis” LDPC code
+
+used on the AWGN channel plotted as a function of SNR. The WER perfor-
+
+mance of ADMM is compared to that of nonsaturating sum-product BP, as well
+
+as to results for (saturating) sum-product BP from Ryan and Lin [48] and from
+
+MacKay and Postol [13].
+
+the probability of the estimate given the channel observations with that of the transmitted codeword given the channel observations. If the probability of estimate is greater than that of the transmitted codeword, we know that an ML decoder would also be in error. All other events are counted as ML successes (hence
+
+the estimated lower bound on ML performance). Similar to the
+
+worth mentioning that expressing BP decoding as optimization Margulis code, Fig. 4 shows that for this code the ADMM de-
+
+over the Bethe free energy is introduced in [52]. Further studies coder displays no signs of an error floor, while the BP decoder
+
+such as [53] show that BP and LP decoding, when expressed does. Further, ADMM is approaching the ML error lower bound
+
+using the Bethe free energy, are different in the objective func- at high SNRs.
+
+tion. Therefore, one should not expect identical performance as In Figs. 5–7, we present comparisons between ADMM de-
+
+the simulations demonstrate.
+
+coding and BP decoding using an ensemble of 100 randomly
+
+The second aspect to note is that, as in the prior work, we do generated
+
+-regular LDPC codes of length 1002. We elimi-
+
+not observe an error floor in ADMM decoding at WERs above nated codes that have parallel edges, thus all codes have girth of
+
+. When decoding of this code using the nonsaturating ver- at least four. However, cycles of length four or greater are not
+
+sion of sum-product, we observe a weak error floor at WERs eliminated. We will use this ensemble to understand the error
+
+near , in which regime the waterfall of ADMM is contin- performance and the computational performance of LP and of
+
+uing to steepen. In this regime, we found that the nonsaturating BP decoding. For this study, we simulate the BSC in order to
+
+BP decoder is oscillating, as discussed in [54] and [55]. We note match the settings used in [24]. All data points presented are
+
+that we have not simulated WERs at
+
+or lower due to the averaged across the 100 codes in the ensemble. For each code,
+
+limitation of our computational resources. It would be extremely we collect more than five word-errors.
+
+interesting to see the performance of ADMM decoding at WERs In Fig. 5, we plot the average word-error-rate (WER) and bit-
+
+lower than
+
+.
+
+error-rate (BER) observed for both BP and ADMM decoding.
+
+Fig. 4 presents simulation results for the rate-0.77 length- We observe similar comparisons between ADMM and BP de-
+
+1057 code. In this simulation, all data points are based on more coding found in previous examples. In particular, note the error
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7882
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Fig. 5. Word error rate (WER) and bit-error-rate (BER) of the
+
+-regular
+
+random LDPC code used on the BSC plotted as a function of crossover proba-
+
+bility. The error rate performance of ADMM is compared to that of saturating
+
+sum-product BP. Results are averaged over 100 randomly generated codes.
+
+Fig. 7. Execution time of the
+
+-regular random LDPC code used on the
+
+BSC plotted as a function of crossover probability. The execution time of
+
+ADMM is compared to that of saturating sum-product BP. Results are averaged
+
+over 100 randomly generated codes.
+
+we allow up to 1000 iterations in our simulations, the average
+
+number of iterations required by ADMM for correct decoding
+
+events is quite small at all SNRs. This means that ADMM
+
+converges quickly to a correct codeword, but more slowly to a
+
+pseudocodeword. We discuss further the effect of choice of the
+
+maximum number of iterations in Section V-B.
+
+In Fig. 7, we plot the time comparisons between ADMM and
+
+BP decoding using the same methodology. For this figure, we
+
+plot results for the saturating version of BP where we have
+
+tried to optimized our implementations. This decoder executes
+
+much more quickly than our implementation of nonsaturating
+
+BP. Both decoders are simulated on the same CPU configura-
+
+tions. We make two observations. First, when measured in terms
+
+of execution time, the computational complexity of ADMM and
+
+BP are similar. This observation holds for all crossover proba-
+
+Fig. 6. Number of iterations of the
+
+-regular random LDPC code used on
+
+the BSC plotted as a function of crossover probability. The number of iterations
+
+of ADMM is compared to that of saturating sum-product BP. Results are aver-
+
+aged over 100 randomly generated codes.
+
+bilities simulated. Second, ADMM decoding is faster than BP when decoding is correct. Combining these results with those on iteration count from Fig. 6, we conclude that the execution time for each iteration of ADMM is shorter than for BP.
+
+Given the importance of error floor effects in high reliability
+
+applications, and the outcomes of our simulations, we now make
+
+floor flare observable in BP at crossover probabilities of about some observations. One point demonstrated by these experi-
+
+0.045 and below. No such flare is evident in ADMM.
+
+ments, in particular by the simulation of the Margulis code (and
+
+In Fig. 6, we plot a comparison of the iteration requirements also argued in [50] and [51]) is that numerical precision ef-
+
+of ADMM and BP decoding for the same ensemble of codes. fects can dramatically affect code performance in the high-SNR
+
+We plot three curves for each decoder: the average number of regime. From a practical point of view, a real-world implemen-
+
+iterations required to decode, the average number of iterations tation would use fixed precision arithmetic. Thus, understanding
+
+required to decode when decoding is correct, and the average the behavior of ADMM decoding under finite precision is ex-
+
+number required when decoding is erroneous. We observe that tremely important.
+
+ADMM decoding needs more iterations to decode than BP A second point made by comparing these codes is that the
+
+does. However, the gap between the decoders is roughly con- performance of an algorithm, e.g., nonsaturating BP, can vary
+
+stant (on this log scale) meaning the ratio of iterations required dramatically from code to code (Margulis versus 1057), and
+
+is roughly constant. Thus, the trend for increased iterations at the performance of a code can vary dramatically from algo-
+
+higher crossovers is the same for both decoders. Further, both rithm to algorithm (BP versus ADMM). For each algorithm, we
+
+decoder reach the maximum number of allowable iterations might think about three types of codes [56]. The first (type-A)
+
+when errors occur. An important observations is that although would consist of codes that do not have any trapping sets, i.e., do
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7883
+
+not display an error floor, even for low-precision implementations. The second (type-B) would consist of codes whose behavior changes with precision (e.g., the Margulis code). The final (type-C) would consist of codes that have trapping sets even under infinite precision (the length-1057 code may belong to this set). Under this taxonomy, there are two natural strategies to pursue. The first is to design codes that fall in the first class. This is the approach taken in, e.g., [57], [58], [16], [59], [18], where codes of large-girth are sought. The second is to design improved algorithms that enlarge the set of codes that fall into the first class. This is the approach taken in this paper. Some advantageous numerical properties of ADMM are as follows: first, ADMM has rigorous convergence guarantees [27]. Second, ADMM has historically be observed to be quite robust to parameter choices and precision settings [27]. This robustness will be further demonstrated in Section V-B. Third, the “messages” passed in ADMM (the replica values) are inherently bounded to the unit interval (since the parity polytope is contained within the unit hypercube). Due to these numerical properties, we expect that the ADMM decoder will be a strong competitor to BP in applications that demand ultrahigh reliabilities.
+
+Fig. 8. Effect of the error tolerance on word error rate (WER). The WER of
+
+the Margulis LDPC code for the AWGN channel plotted as a function of error
+
+tolerance for three difference penalty parameters . The SNR simulated is
+
+2.2 dB. The maximum number of iterations
+
+is set equal to 1000.
+
+B. Parameter Choices
+
+In the ADMM decoding algorithm, there are a number of pa-
+
+rameters that need to be set. The first is the stopping tolerance ,
+
+the second is the penalty parameter , and the third is the max-
+
+imum allowable number of iterations . In our experiments
+
+we explored the sensitivity of algorithm behavior, in particular
+
+word-error-rate and execution-time statistics, as a function of
+
+the settings of these parameters. In this section, we present re-
+
+sults that summarize what we learned. We report results for the
+
+Margulis LDPC code as used in the AWGN channel. This is
+
+consistent with the simulations presented in the last section.
+
+We first explore the effects of the choice of and on error
+
+rate. We comment that as long as
+
+the choice of
+
+does not significantly affect the WER. This effect is also
+
+evidenced in Fig. 6 where the average number of iterations re-
+
+quired in correct decoding events is seen to be small. In Fig. 8,
+
+we plot WER as a function of the number of bits of stopping tol-
+
+erance, i.e.,
+
+. In Fig. 9, we plot WER as a function of
+
+Fig. 9. Effect of the penalty parameter on word error rate (WER). The WER
+
+of the Margulis LDPC code for the AWGN channel plotted as a function of
+
+penalty parameter . Error tolerance
+
+, and maximum number of iter-
+
+ations
+
+.
+
+. Each data point is based on more than 200 decoding errors.
+
+From these two figures, we conclude that the error perfor- from Fig. 9 that we should choose
+
+for good WER
+
+mance of the ADMM decoder depends weakly only on the set- performance, we conclude that
+
+is a good choice in
+
+tings of these two parameters. A sufficiently large parameter term of both error- and time-performance.
+
+and a moderate parameter are good enough to achieve the Overrelaxation: A significant improvement in average de-
+
+desired error rate. For instance
+
+and
+
+should coding time results from implementing an “over-relaxed” ver-
+
+do. This means that the design engineer has great latitude in the sion of ADMM. Overrelaxed ADMM is discussed in [27, Sec.
+
+choice of these parameters and can make, e.g., hardware-com- 3.4.3] as a method for improving convergence speed while re-
+
+patible choices. Furthermore, the results on ending tolerance taining convergence guarantees.
+
+give hints as to the needed precision of the algorithm. If algo- The overrelaxation parameter must be in the range
+
+rithmic precision is on the order of the needed ending tolerance, . If
+
+convergence guarantees are lost. We did simulated
+
+we expect to observe similar error rates.
+
+and observed an increase in average decoding time. In
+
+We next study the effect of parameter section, on average Fig. 11, we plot the effect on average decoding time of over-
+
+decoding time. All time statistics were collected on a 3 GHz relaxed versions of the ADMM decoder for
+
+.
+
+Intel(R) Core(TM) 2 CPU. In Fig. 10, we plot average decoding These plots are for the Margulis code simulated over the AWGN
+
+time as a function of for three SNRs. For all three the ending channel at an SNR of 2.8 dB. We observe that the average de-
+
+tolerance is fixed at
+
+. We see some variability in av- coding time drops by a factor of about 50% over the range of .
+
+erage decoding time as a function of the choice of . Recalling The improvement is roughly constant across the set of penalty
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7884
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+Fig. 10. Effect of the penalty parameter on execution time. Average execution time (in seconds) of ADMM decoding the Margulis code simulated over the AWGN channel plotted as a function of penalty parameter for three distinct SNRs.
+
+We demonstrate the effectiveness of our decoding technique
+
+on the rate-
+
+“Margulis” LDPC code, the
+
+rate-
+
+LDPC code studied in [22], and an en-
+
+semble of randomly generated
+
+-regular LDPC codes. We
+
+find that while the decoding behaviors of LP and sum-product
+
+BP are similar in many aspects there are also significant dif-
+
+ferences. On one hand, the waterfall of LP decoding initiates
+
+at slightly higher SNR than that of sum-product BP decoding.
+
+On the other, LP decoding does not seem to have an error floor.
+
+LP decoding, when implemented in a distributed, scalable
+
+manner using ADMM, is a strong competitor to BP in the
+
+high-SNR regime. It allows LP decoding to be implemented
+
+as a message-passing algorithm with a simple update schedule
+
+that can be applied to long block-length codes with execution
+
+times similar to BP.
+
+An immediate question is how to close the SNR gap that
+
+exists between LP and BP decoding at low SNRs. In recent
+
+work [60], the authors introduce a penalized LP that increases
+
+the relative cost of pseudocodewords vis-a-vis all-integer solu-
+
+tions. While the resulting optimization is (slightly) nonconvex
+
+the ADMM framework introduced herein can be applied with
+
+negligible (or no) increase in computational complexity. This
+
+slight modification closes the SNR gap between BP and LP
+
+decoding while retaining the high-SNR behavior of LP de-
+
+coding. Fully understanding the performance of the modified
+
+LP decoders introduced in [60] is an important future direction.
+
+Other interesting directions include application of the decoder
+
+to other classes of codes, study of finite-precision effects, and
+
+generalization of the two-slice representation to a larger class
+
+of easy-to-project upon polytopes.
+
+Fig. 11. Effect of the overrelaxation parameter on execution time. Average
+
+execution time for ADMM decoding the Margulis code simulated over the
+
+AWGN channel at
+
+. Execution time (in seconds) is plotted as
+
+a function of overrelaxation parameter for four different penalty parameters
+
+.
+
+APPENDIX
+We note that ADMM is not the only method to decompose LP decoding problem. Here we present another decomposition method using an (unaugmented) Lagrangian. This method is not as efficient as the ADMM decomposition. We hope to share this algorithm for readers interested in developing other decomposition methods.
+First we construct an unaugmented Lagrangian
+
+parameters studied:
+
+. By choosing the overre-
+
+laxation parameter
+
+, we can double decoding efficiency
+
+without degradation in error-rate.
+
+While we did not use overrelaxation in the experiments on
+
+parameter choices reported in Figs. 8–10, we would encourage
+
+interested readers to explore proper settings of in their
+
+implementations.
+
+the dual subgradient ascent method consists of the iterations
+
+VI. CONCLUSION
+In this paper, we apply the ADMM template to the LP decoding problem introduced in [3]. A main technical hurdle was the development of an efficient method of projecting a point onto the parity polytope. We accomplished this in two steps.
+
+Note here that the and updates are computed with respect to the iterates of the other variables, and can be done completely in parallel.
+The -update corresponds to solving the very simple LP
+
+We first introduced a new “two-slice” representation of points
+
+in the parity polytope. We then used the representation to attain
+
+the projection via an efficient waterfilling-type algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+BARMAN et al.: DECOMPOSITION METHODS FOR LARGE SCALE LP DECODING
+
+7885
+
+This results in the assignment
+where
+is the Heaviside function. For the -update, we have to solve the following LP for each :
+
+and D. Zelený for useful discussions and references. The authors would also like to note that some of the simulation results presented herein would not have been possible without the resources and the computing assistance of the University of Wisconsin (UW), Madison, Center For High Throughput Computing (CHTC) in the Department of Computer Sciences. The CHTC is supported by UW-Madison and the Wisconsin Alumni Research Foundation, and is an active member of the Open Science Grid, which is supported by the National Science Foundation and the U.S. Department of Energy’s Office of Science.
+REFERENCES
+
+(34)
+
+Maximizing a linear function over the parity polytope can be
+
+performed in linear time. First, note that the optimal solution
+
+necessarily occurs at a vertex, which is a binary vector with an
+
+even hamming weight. Let be the number of positive compo-
+
+nents in the cost vector . If is even, the vector
+
+which is equal to 1 where is positive and zero elsewhere is a
+
+solution of (34), as making any additional components nonzero
+
+decreases the cost as does making any of the components equal
+
+to 1 smaller. If is odd, we only need to compare the cost of
+
+the vector equal to 1 in the
+
+largest components and zero
+
+elsewhere to the cost of the vector equal to 1 in the
+
+largest
+
+components and equal to zero elsewhere.
+
+The procedure to solve (34) is summarized in Algorithm 3.
+
+Note that finding the smallest positive element and largest non-
+
+negative element can be done in linear time. Hence, the com-
+
+plexity of Algorithm 3 is .
+
+Algorithm 3 Given a binary -dimensional vector , maximize
+
+subject to
+
+.
+
+1: Let be the number of positive elements in .
+
+2: if is even then
+
+3: Return where
+
+if
+
+and
+
+otherwise.
+
+4: else
+
+5: Find index of the smallest positive element of .
+
+6: Find index of the largest non-positive element of .
+
+7: if
+
+then
+
+8: Return where
+
+if
+
+,
+
+, and
+
+otherwise.
+
+9: else
+
+10: Return where
+
+if
+
+and
+
+,
+
+, and
+
+for all other .
+
+11: end if
+
+12: end if
+
+While this subgradient ascent method is quite simple, it is requires significantly more iterations than the ADMM method, and thus we did not pursue this any further.
+
+ACKNOWLEDGMENT
+The authors would like to thank M. Anderson, B. Butler, E. Bach, A. Dimakis, P. Siegel, E. Telatar, Y. Wang, J. Yedidia,
+
+[1] R. W. Hamming, “Error detecting and error correcting codes,” Bell Syst. Tech. J., vol. 29, no. 2, pp. 147–160, 1950.
+[2] J. Feldman, “Decoding error-correcting codes via linear programming,” Ph.D. dissertation, MIT, , MA, USA, 2003.
+[3] J. Feldman, M. J. Wainwright, and D. Karger, “Using linear programming to decoding binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[4] P. O. Vontobel and R. Koetter, “On the relationship between linear programming decoding and min-sum algorithm decoding,” presented at the IEEE Int. Symp. Inf. Theory and Appl., Parma, Italy, Oct. 2004.
+[5] P. O. Vontobel and R. Koetter, “On low-complexity linear-programming decoding of LDPC codes,” Eur. Trans. Telecommun., vol. 18, no. 5, pp. 509–517, 2007.
+[6] M.-H. N. Taghavi and P. H. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[7] Y. Wang, J. S. Yedidia, and S. C. Draper, “Multi-stage decoding of LDPC codes,” presented at the Int. Symp. Inf. Theory, Seoul, Korea, Jul. 2009.
+[8] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” presented at the Int. Symp. Inf. Theory, Chicago, IL, USA, Jun. 2004.
+[9] C. Daskalakis, A. G. Dimakis, R. M. Karp, and M. J. Wainwright, “Probabilistic analysis of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 8, pp. 3365–3578, Aug. 2008.
+[10] S. Arora, C. Daskalakis, and D. Steuer, “Message-passing algorithms and improved LP decoding,” in Proc. 41st Annu. ACM Symp. Theory Comput., May 2009, pp. 3–12.
+[11] B. J. Frey, R. Koetter, and A. Vardy, “Signal-space characterization of iterative decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 766–781, Feb. 2001.
+[12] R. Koetter and P. O. Vontobel, “Graph-covers and iterative decoding of finite length codes,” presented at the Int. Symp. Turbo Codes Related Topics, Brest, France, 2003.
+[13] D. J. C. MacKay and M. S. Postol, “Weaknesses of Margulis and Ramanujan-Margulis low-density parity-check codes,” Electron. Notes Theor. Comput. Sci., vol. 74, no. 0, pp. 97–104, 2003.
+[14] T. Richardson, “Error floors of LDPC codes,” presented at the Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Oct. 2003.
+[15] L. Dolecek, P. Lee, Z. Zhang, V. Anatharam, B. Nikolic, and M. J. Wainwright, “Predicting error floors of structured LDPC codes: Deterministic bounds and estimates,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 908–917, Aug. 2009.
+[16] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth Tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[17] T. Tian, C. Jones, J. D. Villasenor, and R. D. Wesel, “Construction of irregular LDPC codes with low error floors,” in Proc. Int. Conf. Commun., Anchorage, AK, USA, May 2003, pp. 3125–3129.
+[18] Y. Wang, S. C. Draper, and J. S. Yedidia, “Hierarchical and highgirth QC LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 7, pp. 4553–4583, Jul. 2013.
+[19] J. Zhang, J. S. Yedidia, and M. P. C. Fossorier, “Low-latency decoding of EG LDPC codes,” J. Lightw. Technol., vol. 25, no. 9, pp. 2879–2886, Sep. 2007.
+[20] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[21] Y. Wang and M. Fossorier, “Doubly generalized LDPC codes,” in Proc. Int. Symp. Inf. Theory, Seattle, WA, USA, Jul. 2006, pp. 669–673.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+7886
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 59, NO. 12, DECEMBER 2013
+
+[22] J. S. Yedidia, Y. Wang, and S. C. Draper, “Divide and concur and difference-map BP decoders for LDPC codes,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 786–802, Feb. 2011.
+[23] D. Burshtein, “Iterative approximate linear programming decoding of LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 55, no. 11, pp. 4835–4859, Nov. 2009.
+[24] D. Burshtein and I. Goldenberg, “Improved linear programming decoding of LDPC codes and bounds on the minimum and fractional distance,” IEEE Trans. Inf. Theory, vol. 57, no. 11, pp. 7386–7402, Nov. 2011.
+[25] K. Yang, J. Feldman, and X. Wang, “Nonlinear programming approaches to decoding low-density parity-check codes,” IEEE J. Sel. Areas Commun., vol. 24, no. 8, pp. 1603–1613, Aug. 2006.
+[26] S. C. Draper, J. S. Yedidia, and Y. Wang, “ML decoding via mixedinteger adaptive linear programming decoding,” presented at the Int. Symp. Inf. Theory, Nice, France, Jul. 2007.
+[27] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Mach. Learn., vol. 3, no. 1, pp. 1–123, 2010.
+[28] M. V. Afonso, J. M. Bioucas-Dias, and M. A. T. Figueiredo, “An augmented Lagrangian approach to the constrained optimization formulation of imaging inverse problems,” IEEE Trans. Image Process., vol. 20, no. 3, pp. 681–695, Mar. 2011.
+[29] A. F. T. Martins, M. A. T. Figueiredo, P. M. Q. Aguiar, N. A. Smith, and E. P. Xing, “An augmented Lagrangian approach to constrained MAP inference,” in Proc. Int. Conf. Mach. Learning, 2011, pp. 169–176.
+[30] P. O. Vontobel and R. Koetter, “Towards low-complexity linear-programming decoding,” presented at the Int. Symp. Turbo Codes Related Topics, Munich, Germany, Apr. 2006.
+[31] D. Burshtein, “Linear complexity approximate LP decoding of LDPC codes: Generalizations and improvements,” presented at the Int. Symp. Turbo Codes Related Topics, Lausanne, Switzerland, Sep. 2008.
+[32] P. Vontobel, “Interior-point algorithms for linear-programming decoding,” presented at the UCSD Workshop Inf. Theory Apps., San Diego, CA, USA, Jan. 2008.
+[33] T. Wadayama, “Interior point decoding for linear vector channels based on convex optimization,” in Proc. Int. Symp. Inf. Theory, Toronto, CA, USA, Jul. 2008, pp. 1493–1497.
+[34] T. Wadayama, “An LP decoding algorithm based on primal path-following interior point method,” in Proc. Int. Symp. Inf. Theory, Seoul, Korea, Jul. 2009, pp. 389–393.
+[35] M.-H. N. Taghavi, A. Shokrollahi, and P. H. Siegel, “Efficient implementation of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 9, pp. 5960–5982, Sep. 2011.
+[36] H. Liu, W. Qu, B. Liu, and J. Chen, “On the decomposition method for linear programming decoding of LDPC codes,” IEEE Trans. Commun., vol. 58, no. 12, pp. 3448–3458, Dec. 2010.
+[37] R. G. Jeroslow, “On defining sets of vertices of the hypercube by linear inequalities,” Discrete Math., vol. 11, no. 2, pp. 119–124, 1975.
+[38] M. Yannakakis, “Expressing combinatorial optimization problems by linear programs,” J. Comput. Syst. Sci., vol. 43, no. 3, pp. 441–466, 1991.
+[39] D. P. Bertsekas, A. Nedic, and A. E. Ozdaglar, Convex Analysis and Optimization. Belmont, MA, USA: Athena Scientific, 2003.
+[40] J. Nocedal and S. J. Wright, Numerical Optimization, 2nd ed. New York, NY, USA: Springer-Verlag, 2006.
+[41] H. Wang and A. Banerjee, “Online alternating direction method,” presented at the Proc. 29th Int. Conf. Machine Learning, Edinburgh, Scotland, U.K., 2012.
+[42] G. D. Forney, “Codes on graphs: Normal realizations,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 520–548, Feb. 2001.
+[43] J. S. Yedidia, “The alternating direction method of multipliers as a message-passing algorithms,” presented at the Talk Delivered Princeton Workshop Count., Inference Optim., Oct. 2011.
+[44] A. Marshall, I. Olkin, and B. C. Arnold, Inequalities: Theory of Majorization and its Applications. New York, NY, USA: Springer-Verlag, 2009.
+[45] S. Barman, X. Liu, S. C. Draper, and B. H. Recht, “Decomposition methods for large-scale linear-programming decoding,” presented at the Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Sep. 2011.
+[46] M. B. Allen and E. L. Isaacson, Numerical Analysis for Applied Science. New York, NY, USA: Wiley-Interscience, 1998.
+[47] R. M. Tanner, D. Sridhara, and T. Fuja, “A class of group-structured LDPC codes,” presented at the Intl. Conf. Space-Time Absoluteness, Ambleside, U.K., 2001.
+[48] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge, U.K.: Cambridge Univ. Press, 2009.
+
+[49] D. J. C. MacKay, “Encyclopedia of sparse graph codes,” [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/data. html
+[50] B. K. Butler and P. H. Siegel, “Error floor approximation for LDPC codes in the AWGN channel,” presented at the Allerton Conf. Commun., Contr. Comput., Monticello, IL, USA, Sep. 2011.
+[51] B. K. Butler and P. H. Siegel, Arxiv Preprint 1202.2826 “Error floor approximation for LDPC codes in the AWGN channel,” 2012.
+[52] J. Yedidia, W. Freeman, and Y. Weiss, “Constructing free-energy approximations and generalized belief propagation algorithms,” IEEE Trans. Inf. Theory, vol. 51, no. 7, pp. 2282–2312, Jul. 2005.
+[53] P. O. Vontobel, ArXiv e-Prints “Counting in graph covers: A combinatorial characterization of the Bethe entropy function,” Nov. 2010.
+[54] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. J. Wainwright, “Design of LDPC decoder for improved low error rate performance: Quantization and algorithm choices,” IEEE Trans. Commun., vol. 57, no. 11, pp. 3258–3268, Nov. 2009.
+[55] T. Ruozzi, J. Thaler, and S. Tatikonda, “Graph covers and quadratic minimization,” presented at the Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Oct. 2009.
+[56] J. S. Yedidia, “A taxonomy suggested by Jonathan Yedidia in personal correspondence,” Jan. 2012.
+[57] M. E. O’Sullivan, “Algebraic constructions of sparse matrices with large girth,” IEEE Trans. Inf. Theory, vol. 52, no. 2, pp. 718–727, Feb. 2006.
+[58] M. P. C. Fossorier, “Quasicyclic, low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[59] O. Milenkovic, D. Leyba, and N. Kashyap, “Shortened array codes of large girth,” IEEE Trans. Inf. Theory, vol. 52, no. 8, pp. 3707–3722, Aug. 2006.
+[60] X. Liu, S. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” presented at the Inf. Theory Workshop, Lausanne, Switzerland, Sep. 2012.
+Siddharth Barman is currently doing post-doctorate research in approximation algorithms, combinatorial optimization, and game theory at the California Institute of Technology. Siddharth completed his Ph.D. in Computer Sciences at the University of Wisconsin-Madison in July 2012.
+Xishuo Liu obtained his Bachelor’s degree from Tsinghua University in 2009. He is currently pursuing a Ph.D. degree in the department of Electrical and Computer Engineering at the University of Wisconsin, Madison, under the supervision of Professor Stark C. Draper.
+Stark C. Draper (S’99–M’03) received the M.S. and Ph.D. degrees in electrical engineering and computer science from the Massachusetts Institute of Technology (MIT), and the B.S. and B.A. degrees in electrical engineering and history, respectively, from Stanford University.
+He is an Associate Professor of Electrical and Computer Engineering at the University of Toronto, Canada. From 2007–2013 he was an Assistant Professor and an Associate Professor at the University of Wisconsin, Madison. Before moving to the University of Wisconsin he was with the Mitsubishi Electric Research Laboratories (MERL), Cambridge, MA. He has held postdoctoral positions in the Wireless Foundations, University of California, Berkeley, and in the Information Processing Laboratory, University of Toronto. He has worked at Arraycomm, San Jose, CA, the C. S. Draper Laboratory, Cambridge, MA, and Ktaadn, Newton, MA. His research interests include communication and information theory, error-correction coding, statistical signal processing and optimization, security, and application of these disciplines to computer architecture.
+Dr. Draper has received the NSF CAREER Award, the 2010 MERL President’s Award, the UW ECE Gerald Holdridge Teaching Award, the MIT Carlton E. Tucker Teaching Award, an Intel Graduate Fellowship, Stanford’s Frederick E. Terman Engineering Scholastic Award, and a U.S. State Department Fulbright Fellowship.
+Benjamin Recht (M’03) is an Assistant Professor at the University of Wisconsin-Madison and a member of the IEEE.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:14:11 UTC from IEEE Xplore. Restrictions apply.
+
+

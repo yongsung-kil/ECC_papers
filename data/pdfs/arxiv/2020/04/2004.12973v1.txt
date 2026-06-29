@@ -1,0 +1,674 @@
+Comparison of Windowed-Decoder Configurations for Spatially Coupled LDPC Codes Under Equal-Complexity Constraints
+Janik Frenzel, M.Sc.a, Dr.-Ing. Stefan Müller-Weinfurtnerb, Dr.-Ing. Johannes Huberc, Dr.-Ing. Ralf Müllerc
+aIntel, Südwestpark 2–4, 90449, Nürnberg, Germany bCisco, Nordostpark 12, 90411 Nürnberg, Germany cFriedrich-Alexander-Universität Erlangen-Nürnberg, Digital Communications, Cauerstr. 7, 91058 Erlangen
+
+arXiv:2004.12973v1 [eess.SP] 27 Apr 2020
+
+Abstract
+Spatially Coupled Low-Density Parity-Check (SC-LDPC) codes offer excellent decoding performance and can be elegantly decoded with a Windowed Decoder (WD). We determine an efficient WD configuration with low control overhead. For fair comparisons, we normalize all configurations to the same maximal computational complexity, which is an important measure of the decoding effort in packet-based data communication systems. We determine an optimized configuration from a joint evaluation of the window size, the window update strategy, and parity check–based Early Termination (ET). Firstly, we use a variable node–centered update strategy, which omits updates of messages in some parts of the decoding window. With the complexity normalization, the window size can be increased compared to a check node–centered update strategy, which uniformly updates all messages in the decoding window. Secondly, we only require the satisfaction of the top-most parity-check equations in each window to move to the next position more quickly. Using a surprisingly large window size, the resulting WD halves the average decoding complexity of the block decoder while maintaining a rather small gap in the decoding performance.
+Keywords: LDPC codes, spatially coupled codes, windowed decoding, complexity constraints
+
+1. Introduction
+
+Spatially-Coupled (SC) Low-Density Parity-Check (LDPC) codes with Quasi-Cyclic (QC) properties [1, 2] present an appealing alternative to LDPC block codes because of their compact representation and excellent performance: A single SC-LDPC code ensemble can universally achieve the capacity of a wide range of channels [3].
+There are decoder designs in literature that are more adapted to the convolutional structure of SC-LDPC codes than a Full Block Decoder (FBD), which treats the code as a block code. On the one hand, a pipeline decoder can utilize multiple processors to perform successive iterations on different subsets of the code’s Tanner graph [1]. On the other hand, a Windowed Decoder (WD)—also called sliding-window decoder—uses a single processor to perform multiple iterations on the same subset of the graph [4, 5]. When reliability conditions are fulfilled or a maximal number of iterations is exhausted, the window slides to the next position. The decoding process resumes with some new information as windows at two successive positions overlap to a large extent.
+We assume strict resource constraints to target low-power Application-Specific Integrated Circuit (ASIC) implementations and thus prefer the single-instance WD over the pipeline decoder. Additionally, the WD has two inherent advantages over the FBD: Firstly, the required amount of memory—which is typically rather expensive in ASIC designs—is greatly reduced. Secondly, the special structure of SC-LDPC codes makes it possible to detect decoding errors at an early stage. As the decoding window usually moves unidirectionally, no further message updates are scheduled in parts of the Tanner graph that have already been processed by the decoder. Residual decoding errors in the related code symbols cannot be corrected afterwards. Alternatively, there exist proposals on special WD designs where the decoding window moves bidirectionally to prevent the decoder from getting stuck [6, 7]. However, these designs require additional control loops and are not further considered in this paper.
+With the restrictions to unidirectional decoding and low-overhead procedures to simplify hardware implementations, there remain three major aspects that determine the decoding performance and the computational complexity of a WD: Firstly, the size of the decoding window to control the amount of information processed at once. Secondly,
+
+Preprint submitted to Elsevier
+
+April 28, 2020
+
+the update strategy within the window to control which parts of the decoding window are updated. Thirdly, Early Termination (ET) to stop the decoding before a maximal number of iterations is exhausted, thereby reducing the computational complexity.
+One update strategy is to specify the window by a set of Variable Nodes (VNs) that are updated [4, 8, 9]. However, some VNs within a window then share Check Nodes (CNs) with VNs that have already moved out of that window. Messages sent along the corresponding edges are not updated any longer, i.e., they are read-only. There exist proposals on overcoming this potential drawback, e.g., by applying some form of amplification to these read-only messages [10]. A different update strategy inherently avoids this issue by defining the window by a set of CNs that are updated [5, 11]. With this strategy, messages sent along all edges connected to the involved CNs receive updates, including the messages omitted in the previously described update strategy. This CN-centered procedure nicely matches CN-wise serial update schedules that generate all outgoing messages from a CN at the same time and do so one CN after the other [12]. Such update schedules work well with the Min-Sum Algorithm (MSA) typically implemented in practice since the minimum must be found across all messages directed towards each CN [13]. Still, we also evaluate the VN-centered procedure with CN-wise serial update schedules for reasons of fairness.
+For ET, there again exist at least two distinct approaches. Many criteria in literature are based on code symbol reliabilities [9, 14]. Alternatively, the Parity-Check (PC) equations inherent to SC-LDPC codes can be used for ET just as for LDPC block codes: The decoding window moves to the next position as soon as all PC equations in the window are fulfilled [4]. We favor PC-based criteria because the most recent PC results are implicitly contained in the signs of the messages exchanged during iterative decoding when using Log-Likelihood Ratios (LLRs) and CNwise update scheduling. Hence, there is no computational overhead as the soft-value processing required for the LLRs, e.g., combination of multiples values and comparisons against a threshold, can be omitted. Still, the question remains whether all PC equations in the window should be considered for ET or just a subset of them. Although partial evaluations are proposed in [6, 15], to our best knowledge no evaluation of the computational complexity for soft-input soft-output decoding is available so far.
+In sum, a WD can be configured in different ways than an FBD. Still, to our best knowledge, no holistic evaluation of the window size, window update strategies, and PC-based ET is available in literature so far. We try to fill this gap by performing comparisons in terms of the decoding performance and, more importantly, the resulting computational complexity. The goal of this paper is to compare configurations of a WD to find a low-complexity configuration with minimal control overhead. We find that the decoding performance of a WD with the configuration determined in this paper is not far off from that of the an FBD while resulting in a significantly reduced computational complexity.
+Lastly, we use terminated codes—which are used in practical systems—instead of continuous encoding and decoding. The termination also results in a superior decoding performance [16]. We furthermore assume the use case of data packets, which usually requires all information symbols to be correctly estimated before further processing by higher layers of the communication protocol takes place. Thus, we ignore the inherent advantage in decoding latency a WD has compared to an FBD. We rather consider the time or effort it takes to decode all information symbols to measure the decoding complexity. Consequently, we limit all decoding schemes evaluated in this paper to the (approximately) same maximal number of updates of messages along the edges in the Tanner graph of the code.
+The remainder of this paper is structured as follows: Section 2 summarizes SC-LDPC codes and iterative messagepassing algorithms; Section 3 reviews WD configurations. The setup for numerical results is listed in Section 4. Numerical decoding results are presented in Section 5. The paper concludes with Section 6.
+2. Background
+This section briefly recapitulates SC-LDPC codes with QC properties and the principle of iterative decoding using message-passing algorithms. Even though only a particular set of codes is used in this paper, the concepts discussed in Section 3 are not restricted to this special code design.
+2.1. Spatially-Coupled Quasi-Cyclic LDPC Codes
+We use asymptotically regular SC-LDPC codes with QC properties [17]. QC codes offer a variety of benefits, namely compact representation and great potential for parallelization [18]. Together with the sparseness of LDPC codes enabling efficient encoding and iterative decoding, these beneficial properties are the reason QC-LDPC codes
+2
+
+are used in several applications, e.g., the 5G New Radio (NR) cellular-communications standard [19]. Although QCLDPC codes have originally been introduced by copy-and-permute operations on graphs [20], we prefer the matrix notation used in, e.g., [21]. Throughout this paper, bold symbols indicate vectors (noncapitalized letters) or matrices (capitalized letters).
+
+2.1.1. Quasi-Cyclic Low-Density Parity-Check Codes
+
+The binary Parity-Check Matrix (PCM) H of a QC-LDPC code is constructed by lifting an exponent matrix E of size M × N where M and N denote the number of blocks of CNs and VNs in H, respectively. With Z denoting the set of integers and F2 = {0, 1} denoting the binary field, we write
+
+L : E ∈ ZM×N → H ∈ F2MQ×NQ.
+
+(1)
+
+Each element E j,i of E, j = 0 . . . (M − 1), i = 0 . . . (N − 1), denotes a cyclic shift. The lifting operation L replaces the cyclic shifts E j,i by square matrices of size Q × Q where Q is the lifting factor. If E j,i ≥ 0, the substituted matrix is an identity matrix that has its rows circularly rotated to the right E j,i times.1 Otherwise, the substituted matrix is an all-zero matrix. The resulting PCM H of the binary (n, m − n) LDPC code thus has m = MQ rows and n = NQ columns. Each Q × Q sub-matrix corresponds to Q consecutive CNs and VNs, forming the respective CN and VN
+blocks.
+
+2.1.2. Terminated QC-SC-LDPC Codes
+Instead of transmitting codewords individually with respect to the exponent matrix E, several codewords can be spatially coupled. Thereby, a structure similar to convolutional codes is obtained [8]. The resulting code with memory ms is described by exponent matrices Eµ(t) with µ = 0 . . . ms that define sub-codes. The argument t denotes the time index for possibly time-varying sub-codes. The Eµ(t) have size Ms × Ns each, i.e., Ns blocks of code bits are transmitted at each time index, forming Ms blocks of PC equations. For a code with memory ms, up to ms + 1 sub-codes Eµ(t) influence each encoded code bit. The length of the entire code is defined by the coupling length L. As argued above, we focus on terminated codes and thus use a finite coupling length. The entire exponent matrix E[0,L−1] of a terminated SC-LDPC code with coupling length L has M = Ms(L + ms) rows and N = NsL columns and is described by
+
+
+
+
+
+
+
+E0(0) ...
+
+E[0,L−1] = Ems (ms)
+
+
+
+... ... ...
+
+
+
+
+
+E0(L − 1)  .
+
+Ems
+
+(L
+
+... +
+
+ms
+
+−
+
+1)
+
+(2)
+
+A code is said to be periodic with period T if Eµ(t) = Eµ(t + T ) ∀t ∀µ = 0 . . . ms. The code’s constraint length
+νs = NsQ(ms+1) corresponds to the maximal width of the support of the rows of the entire PCM H[0,L−1] = L {E[0,L−1]}. With (·)T denoting the transpose operation,2 a valid codeword c comprises the concatenation of sub-codewords c(t) ∈ F2NsQ×1 such that
+
+cT = cT(0), . . . , cT(L − 1)
+
+(3)
+
+and fulfills (with the operators ⊕ and ⊙ denoting addition and matrix–vector multiplication in F2, respectively)
+
+ms
+
+Hµ(t) ⊙ c(t − µ) = 0 ∀t
+
+(4)
+
+µ=0
+
+where Hµ(t) = L {Eµ(t)}. In (4), handling of the termination is omitted for simplicity.
+
+1The term exponent matrix comes from an alternative representation of the rotation by using an appropriate rotation matrix, which is multiplied with itself E j,i times.
+2Many coding theorists prefer row vectors over column vectors for codewords. Recent 3GPP releases however use column vectors for codewords, which is why we follow this way of notation.
+3
+
+2.1.3. Effects of the Termination
+The top-most and bottom-most ms Ms CN blocks in H[0,L−1] have smaller degrees than the ones in the middle of the PCM. This irregularity is the main reason for the excellent performance of SC-LDPC codes [16]. Since SC-LDPC codes exhibit recursive encoder structures, some effort is required to determine the termination sequence (given by the last sub-codewords in (3)) that fulfills the PC equations located at the bottom of the PCM [22]. By contrast, the fulfillment of the PC equations at the top of the PCM is trivially solved by initializing the encoder with an all-zero state.
+Furthermore, termination reduces the code rate. Let Lu denote the number of coupling instants used to transmit user data (i.e., the information symbols) and Lt denote the number of coupling instants used for the termination sequence. Then L = Lu + Lt and the length of the whole codeword is given by n = LNsQ; the number of information symbols is given by k = Lu(Ns − Ms)Q. Hence, the effective code rate is
+
+RL
+
+=
+
+k n
+
+=
+
+Lu (Ns (Lu +
+
+− Ms) Q Lt) NsQ
+
+=
+
+Lu Lu +
+
+Lt
+
+R∞
+
+(5)
+
+with the asymptotic code rate
+
+R∞
+
+=
+
+lim RL
+L→∞
+
+=
+
+Ns − Ms . Ns
+
+(6)
+
+2.1.4. Code Employed in This Paper
+We use the QC code ensembles described in [23]. The codes are asymptotically regular, i.e., all VNs have the
+same degree dv and all CNs the same degree dc if the termination is not considered [17]. Such an ensemble is in short denoted as a (dv, dc) code ensemble. Theoretic analyses for these ensembles (albeit not requiring QC sub-matrices) such as decoding thresholds are available in, e.g., [16]. We focus on codes with R∞ = 1/2, i.e., dc = 2dv. We use the smallest possible parameters to achieve that rate: Ns = 2, Ms = 1. In addition, we require fully populated matrices Eµ(t) for all µ = 0 . . . ms such that ms = dv − 1 since Ms = 1. The termination sequence comprises Lt = ms sub-codewords c(t) [22]. However, simulations are performed using only the all-zero codeword to avoid expensive
+matrix inversion. The codes are periodic with T = 3 such that reasonably large girths can be achieved according to the results in [23]. An ensemble is formed by independently and randomly choosing the cyclic shifts for each Eµ(t) from a uniform distribution with support [0, Q − 1] for each transmission. Finally, realizations where cycles of length
+4 appear in the Tanner graph are excluded from the evaluation. With respect to (3), the sub-codewords c(t) ∈ F2NsQ×1 at each coupling instant t = 0 . . . (Lu − 1) are formed in the
+following way (for Ns = 2 and Ms = 1, i.e., Ns − Ms = 1):
+
+cT(t) = bT(t), pT(t) .
+
+(7)
+
+The b(t) ∈ F2Q×1 contain information symbols whereas the p(t) ∈ F2Q×1 contain parity symbols. In the termination sequence, the c(t) only consist of parity symbols. The concatenated vector
+
+bT = bT(0), . . . , bT(Lu − 1)
+
+(8)
+
+then contains all k information symbols.
+
+2.2. Message-Passing Decoding
+Although SC-LDPC codes can be decoded like regular convolutional codes, i.e., with a Viterbi decoder, their large constraint lengths render such an approach infeasible [8]. Instead, the sparseness of the Hµ(t) enables efficient iterative decoding with belief propagation [24]. The decoding output is given in the form of hard decisions that estimate the transmitted symbols from (7):
+
+cˆT(t) = bˆT(t), pˆT(t) .
+
+(9)
+
+For iterative decoding, the reliabilities of the n symbols of the complete received word y are usually represented by Log-Likelihood Ratios (LLRs) with respect to the binary code symbols ci, i = 0 . . . (n − 1), to improve the numerical
+4
+
+stability of the iterative decoding process. Let (without loss of generality) the code symbol ci be associated with a received symbol y. Then
+
+La,i
+
+=
+
+log
+
+Pr{Ci Pr{Ci
+
+= =
+
+0 1
+
+| |
+
+Y} Y}
+
+(10)
+
+represents the LLR given the received value where the random variables Ci and Y correspond to the realizations ci and y, respectively. The updated reliabilities (incorporating extrinsic information) Li for the n code symbols, i.e., i = 0 . . . (n − 1), are calculated at the VNs with
+
+Li = La,i + Lc( j → i)
+
+(11)
+
+j∈Ec (i)
+
+where Ec(i) is the set of CNs connected to VN i and Lc( j → i) is the message from CN j to VN i [25]. The message sent from VN i to CN j in the next iteration is given by
+
+Lv(i → j) = Li − Lc( j → i).
+
+(12)
+
+In the Sum-Product Algorithm (SPA), the CN messages are computed from Ev( j), the set of VNs connected to CN j, in an optimal way [25]:
+
+tanh Lc( j → i) =
+
+tanh Lv(i → j) .
+
+(13)
+
+2
+
+2
+
+j∈Ev( j)\i
+
+Equation (13) is prohibitively complex for implementation in practice. Therefore, approximations like the MSA are often applied [13]. In its simplest form, the MSA replaces (13) by
+
+Lc( j → i) = sign{Lv(i → j)} · min |Lv(i → j)|
+
+(14)
+
+j∈Ev( j)\i
+
+j∈Ev( j)\i
+
+where the sign function is defined as
+
+
+
+sign{x} = 0
+
+if x = 0,
+
+(15)
+
+x/|x| otherwise.
+
+3. Windowed-Decoder Configurations Selected for Comparisons
+We briefly introduce our notation for the WD and review the configurations relevant to the comparisons in this paper, i.e., window update strategies and PC-based Early Termination (ET).
+3.1. Window Update Strategies
+We need to strictly differentiate the window update strategy, i.e., how the definition of the decoding window affects VN and CN updates, from update scheduling, i.e., whether message updates are performed in a serial or parallel manner. In essence, two update strategies can be distinguished. For the first strategy—called the VN-centered strategy UVN from here on—a decoding window of size W is defined by the set of VNs for W consecutive sub-codewords c(t), cf. [4, 8, 9]. When QC codes as described above are used, the window thus consists of WNs consecutive VN blocks, each of which consists of Q consecutive VNs. For the second strategy—called the CN-centered strategy UCN from here on—a decoding window of size W is defined by the set of W Ms consecutive CN blocks and all related VNs [5, 11].
+Figure 1 depicts the decoding windows for both update strategies assuming an SC-LDPC code with memory ms = 2. The shaded rectangles represent the structure of the exponent matrix E[0,L−1]: Each rectangle corresponds to one of the sub-matrices Eµ(t) with Ms CN blocks and Ns VN blocks. Moving the window to the next position means shifting it down and right by one Eµ(t) each, resulting in a large overlap between windows at two successive positions.
+A decoding window with the VN-centered strategy UVN is indicated by the thick solid line; the contained submatrices are hatched in blue. Performing updates on VNs in the window still requires access to messages sent along
+5
+
+Cc Ct
+
+Ca
+
+Cm
+
+Cr
+
+UCN
+
+UVN
+
+Figure 1: WD for W = 6 and a code with ms = 2. The shaded rectangles represent the Eµ(t). The parts of the exponent matrix for which messages are updated with the VN-centered strategy UVN are contained within the thick solid line. With the CN-centered strategy UCN, the messages for the parts contained within the dashed line are updated as well.
+
+edges related to the previous sub-matrices back-hatched in red, contained within the dashed line. However, those accesses are read-only. By contrast, the messages for both the blue and the red sub-matrices are updated with the CN-centered strategy UCN. In either case, messages along the edges corresponding to the sub-matrices outside the windows (crosshatched in gray) are not updated.
+Please note that the method of amplifying LLR magnitudes for read-only messages in case of satisfied PC equations in previous window positions as proposed in [10] cannot be applied here. That is because we use serial update scheduling throughout this paper, which gives better results but is not compatible with the method of [10].
+
+3.2. Parity-Based Early Termination and Window-Size Restrictions
+With PC-based ET, the WD moves its decoding window from position w to position w + 1 if a certain number of iterations is completed or all selected PC equations are satisfied. We focus on the following sets of CNs indicated by the vertical bar at the left-hand side of Figure 1:
+Ct Target CNs; the top-most Ms(ms + 1) blocks of CNs in a decoding window. Closely related to the so-called target VNs that are no longer updated when the window moves to the next position.
+Cc Complete CNs; all CNs in a window except for the bottom-most Msms blocks of CNs. Only connected to VNs whose edges are completely covered by the decoding window. Cc consists of the target CNs Ct and the middle CNs Cm.
+Ca All CNs in a decoding window. Ca consists of the complete CNs Cc and the remaining CNs Cr.
+Using the set Ca for ET is the most obvious approach as it corresponds to the procedure in block-code decoding. The authors of [10], however, propose using the set Ct.3 Using the set Cc, i.e., a choice in-between Ct and Ca, is proposed in [15].
+For meaningful comparisons of the various sets of PC equations for ET, the window size W should be restricted such that |Ct| < |Cc| < |Ca|. In other words, we want to exclude the cases |Ct| = |Cc| and |Cc| = |Ca|. Expressed in terms of code dimensions, these cardinalities are given by
+
+|Ct| = (ms + 1)MsQ
+
+(16)
+
+|Cc| = (W − ms)MsQ and
+
+(17)
+
+|Ca| = W MsQ.
+
+(18)
+
+|Cc| < |Ca| always holds for ms > 0. To achieve |Ct| < |Cc|, we require
+
+W > 2ms + 1.
+
+(19)
+
+In general, the window size is kept small to maximize the reduction of internal memory compared to the Full Block Decoder (FBD), cf. the selected window sizes in [5, 9, 26], and others. However, a WD with a window size smaller
+
+3The simplest choice, i.e., using only the top-most Ms blocks of PC equations in the window, would result in a poor decoding performance for Ms = 1 as is used in this paper.
+6
+
+than a certain minimal size may have a larger iterative decoding threshold than the FBD [16]. We still include small window sizes in our evaluations to highlight the effects of nonideal implementations, e.g., caused by fixed-point calculations.
+
+4. Transmission Setup and Decoder Parameters to Achieve Equal Maximal Complexity
+The simulation setup and the parameters used to achieve equal maximal computational complexity are given in this section.
+
+4.1. Transmission Parameters
+For the simulation results presented below, the (5,10) ensemble as described in Section 2 is used. The lifting factor is set to Q = 256 and the coupling length is L = 100, giving a codeword length of n = 51200. The resulting code rate is R = 0.48, i.e., the rate reduction is 4% compared to the asymptotic code rate of R∞ = 1/2. As mentioned above, simulations are performed using only the all-zero codeword. The code symbols are modulated using 16ary Quadrature Amplitude Modulation (QAM) with Gray mapping to match the rate proposed for 5G NR as given in [27]; such a setup is also used in [28]. The code symbols are used in sequence without interleaving before the QAM mapping. Scrambling as described in [29] is used such that the complex-valued QAM symbols are uniformly distributed over the whole QAM constellation.
+A fading channel with Additive White Gaussian Noise (AWGN) is used to simulate transmissions in a typical wireless communication system. The statistical model is taken from [30] as this model accords well with today’s communication systems, e.g., Wi-Fi or 5G NR. It accounts for the use of Orthogonal Frequency-Division Multiplexing (OFDM) in conjunction with Multiple-Input Multiple-Output (MIMO) transmissions. The channel is modeled by Maximum-Ratio Combining (MRC) of 4 independent propagation paths, each exhibiting Rayleigh fading. This channel setup corresponds to, e.g., 2 ×2 MIMO-OFDM with appropriate Space–Frequency Block Coding (SFBC) [31] and ideal Channel State Information (CSI) at the receiver. With sufficient interleaving in frequency, the fading coefficients are independent and identically distributed (i.i.d.) for each QAM symbol. The mean Signal-to-Noise Ratio (SNR) is indicated by Es/N0 where Es is the average energy per QAM symbol and N0 is the one-sided noise Power Spectral Density (PSD).
+
+4.2. General Decoder Configuration
+All decoders in this paper implement the decoding algorithm from [32] using fixed-point arithmetic with an LLRmagnitude resolution of 10 bit. This decoding algorithm is a blend of the accurate SPA and the approximate MSA: When processing a CN, only the outgoing message sent along the edge with the weakest incoming message is computed accurately with the SPA; the combination of all incoming messages with appropriate signs (again with the SPA) is used for all other outgoing messages.
+Furthermore, row-wise serial layered scheduling as described in [12] is applied. With QC codes and assuming Ms = 1, the Q PC equations formed by one row in E[0,L−1] are orthogonal to each other, which is why the respective CN updates can be processed in parallel without numerical dependencies. One such row is denoted as a layer. Thus, the l-th layer Ll consists of the following block of Q consecutive CNs:
+
+Ll = {lQ, lQ + 1, . . . , (l + 1)Q − 1} .
+
+(20)
+
+Serial scheduling means that the outgoing messages are updated for one layer at a time and the related symbol reliabilities are updated before updating the next layer. This procedure stands in contrast to parallel update schedules where the messages are updated for all layers before the symbol reliabilities are updated. In our WD implementation, the layers within each window are updated from top to bottom with respect to the exponent matrix E[0,L−1] from (2).
+For consistency, a decoding window of size W is assumed to always contain W layers when Ms = 1. In other words, the top layer in the first window is the top row of the exponent matrix; the bottom layer in the last window is the bottom row of the exponent matrix. Thus, there are
+
+Ω = L + ms − W + 1
+
+(21)
+
+7
+
+unique window positions and the window virtually extends beyond the left-hand or right-hand sides of E[0,L−1] during the first and last ms positions. These positions contain the CNs with reduced degrees. Formally, a window of size W at position w, w = 0 . . . (Ω − 1), is defined as the set of all layers that are updated:
+
+WW(w) = {Ll : w ≤ l < w + W} .
+
+(22)
+
+4.3. Achieving Equal Maximal Complexity
+A WD using the VN-centered update strategy UVN disregards message updates for the edges back-hatched in red in Figure 1. The key principle in this paper is to consider this difference in the number of message updates when aiming for equal overall computational complexity for all configurations. To be precise, we measure the complexity in terms of the number of message updates (with respect to the exponent matrix) to decode all k information symbols. A similar principle is applied in [33] to evaluate infinitely long, nonterminated codes. To our best knowledge, comparisons of different decoder configurations with finite-length codes, however, have not yet been proposed.
+The upper limit on the decoding complexity is given by a Full Block Decoder (FBD), i.e., a decoder with W = L + ms, performing up to Λmax,FBD = 200 iterations. We could not find significant improvements in the decoding performance with additional iterations. The WD performs an appropriate maximal number of iterations per window such that the total maximal number of message updates Imax does not surpass that of the FBD. From here on, all quantities regarding the number of message updates relates to the code’s exponent matrix, i.e., the lifting factor Q is ignored.
+Formally, let I1,FBD denote the number of message updates with a single iteration with the FBD (which equals the number of edges in the Tanner graph):
+
+M−1
+I1,FBD = |Ev( j)|
+j=0
+
+(23)
+
+where M is the number of rows in E[0,L−1]. For a WD with the CN-centered update strategy UCN, the number of message updates with a single iteration in each window is
+
+Ω−1
+
+I1C,WD(W) =
+
+|Ev( j)|
+
+w=0 j∈WW(w)
+
+(24)
+
+whereas with the VN-centered strategy UVN it is
+
+Ω−1
+
+I1V,WD(W) =
+
+|Ev( j) \ Ve(w)|
+
+w=0 j∈WW(w)
+
+(25)
+
+where Ve(w) denotes the VNs not updated at position w. Finally, the maximal computational effort Λmax,FBDI1,FBD, i.e., the number of message updates when the FBD
+performs Λmax,FBD iterations, is converted to a maximal number of iterations per window Λmax,WD(W) for the WD:
+
+Λmax,WD(W) =
+
+Λmax,FBD
+
+I1,FBD I1,WD(W
+
+)
+
+(26)
+
+where ⌊·⌋ is the floor operation. From here on, we omit subscripts and arguments related to the number of iterations or the number of message
+updates for brevity. Table 1 lists the maximal number of iterations (per window) Λmax and the corresponding maximal number of message updates Imax = ΛmaxI1 for all configurations used throughout this paper. The largest relative difference in Imax to the value targeted with the FBD is about 5% due to rounding, which we consider small enough.
+Instead of comparing UVN and UCN for the same window size and allowing different values for Λmax, we choose different window sizes such that the number of message updates per window per iteration (described by Nm in Table 1)
+
+8
+
+Decoder
+
+W Nm Λmax
+
+Imax
+
+FBD
+
+–
+
+200 200 000
+
+12 100 14 120 WD, UVN 16 140 20 180
+
+21 194 460 18 195 840 16 198 720 13 198 380
+
+10 100 WD, UCN 12 120
+14 140
+
+21 197 820 18 199 440 15 189 900
+
+Table 1: Number of message updates per window per iteration (Nm), maximal number of iterations per window (Λmax), and maximal number of message updates with Λmax iterations per window (Imax).
+
+is roughly the same for both configurations.4 Even though the match is not always perfect, a WD using UCN with a window of size W is compared to a WD using UVN with a window of size W + 2 in our simulations presented in Section 5.
+
+4.4. Metrics for Evaluation The decoding performance is evaluated by means of the Block Error Ratio (BLER) (cf. (7)–(9))
+
+Pc ≔ Pr{bˆ b}
+
+(27)
+
+and the Average Number of Message Updates (ANMU) I¯ with respect to the exponent matrix. With Early Termination (ET), I¯ ≤ Imax. Due to the differences in Imax across different configurations, we evaluate the ratio
+
+I¯
+
+ι¯ ≔
+
+(28)
+
+Imax
+
+and refer to ¯ι as the relative ANMU.
+
+5. Joint Evaluation of Early Termination and Update Strategies
+The numerical results in this section have been obtained from 106 realizations of the channel and the code ensemble each, i.e., a new code realization and a new channel realization have been generated for each new transmission. The simulation setup is described in Section 4. Our aim is to determine the configuration for a WD with the smallest resulting average computational complexity without sacrificing the decoding performance too much. We jointly consider Early Termination (ET) based on PC equations, different window update strategies, and various window sizes W as discussed in Section 3. To keep the evaluation organized, we first present results for varying window sizes W and various sets of PC equations for ET using only the VN-centered update strategy UVN. Afterwards, we present a comparison of UVN against the CN-centered update strategy UCN. In all cases, the maximal number of iterations per window was adjusted for equal maximal complexity according to Table 1. The results for a Full Block Decoder (FBD) are given for reference.
+5.1. Impact of the Window Size and Early Termination
+For the first part of this evaluation, we selected the CN sets Cc (complete CNs) and Ct (target CNs) for ET. The CN set Ca (all CNs) was excluded since PC equations at the bottom of a window are expected to almost never be satisfied. That is because the Bit Error Ratios (BERs) of the right-most VNs in the window are close to 1 [9]. We selected window sizes W ∈ {12, 16, 20} to satisfy the constraint given by (19) and to get an overview of larger windows as well.
+
+4The values for Nm assume a single decoding window in the middle of the exponent matrix. By contrast, the remaining values in Table 1 assume a terminated code with L = 100 as described above.
+9
+
+Figure 2 portrays the relative Average Number of Message Updates (ANMU) ¯ι from (28) over the SNR Es/N0. Only considering the PC equations in Ct for ET reduces ¯ι compared to considering the PC equations in Cc. The topmost PC equations in a window are formed by more reliable VNs. In addition, the smaller number of PC equations
+in Ct can become satisfied more quickly. Depending on the SNR, ι¯ is reduced by up to 49% with W = 12; up to 58% with W = 16, and by up to 60% with W = 20 when selecting the set Ct instead of Cc for ET. Moreover, any WD evaluated here converges faster than the FBD except when considering the domain of very high SNR.
+
+1
+
+W = 12, Cc
+
+W = 12, Ct
+
+0.8
+
+W = 16, Cc
+
+W = 16, Ct
+
+W = 20, Cc
+
+0.6
+
+W = 20, Ct
+
+FBD
+
+ι¯
+
+0.4
+
+0.2
+
+0
+
+6.4
+
+6.6
+
+6.8
+
+7
+
+7.2
+
+7.4
+
+7.6
+
+10 log10(Es/N0) (dB)
+
+Figure 2: Relative ANMU ¯ι over the SNR Es/N0 with various sets of PC equations for ET and various window sizes W using the update strategy UVN.
+The window size W also influences ι¯: When selecting the PC equations in Cc for ET, choosing smaller windows results in faster convergence than choosing larger windows. Since |Cc| grows with the window size, larger windows require more PC equations to be satisfied. This, in turn, requires a greater amount of message updates. When choosing Ct for ET, however, the differences between smaller and larger window sizes are much smaller because |Ct| is independent of W. In this case, a large window may actually increase the decoding complexity because more messages are updated in each iteration. This effect is especially visible in the domain of high SNR where usually a single iteration per window is sufficient to satisfy the PC equations in Ct.
+The decoding performance as measured by the Block Error Ratio (BLER) Pc from (27) is mostly determined by the window size W. As shown in Figure 3, using larger windows results in fewer residual errors because of the simplified transport of information across the whole Tanner graph. At a working point of Pc = 10−2, the gap in the SNR to the FBD constitutes around 0.25 dB with any W. The gap increases with increasing SNR where the largest gap can be observed for W = 12; the differences between the decoders with W = 16 and W = 20 are negligible. Interestingly, the choice of PC equations for ET only has a minor impact on Pc: Using the smaller set Ct results in about the same (or even a smaller) number of residual decoding errors as using the larger set Cc. Thus, the smaller number of PC equations in Ct seems sufficient to verify the estimates of the sub-codewords in the decoding window.
+Furthermore, the error floor is relatively high—even for the FBD. Despite the omission of code realizations with cycles of length 4 in the Tanner graph, the employed code ensemble does not perform well in general. The WD’s error floor is even higher than the FBD’s since the WD can easily get stuck and propagate errors due to the unidirectional decoding. Nonetheless, our main concern is the gap in the SNR at Pc = 10−2, which is a typical working point in cellular systems [34].
+Summing up, ET based on PC equations works very well. The set Ct represents the best choice for ET in all considered aspects as a very low computational complexity can be achieved this way. Additionally, a WD with a surprisingly large window size of, e.g., W = 16 seems to be an overall good choice as it pratically matches the decoding performance of a WD with W = 20 while offering a reduced computational complexity.
+
+10
+
+100
+
+10−1
+
+10−2
+
+Pc
+
+W = 12, Cc
+
+10−3
+
+W = 12, Ct
+
+W = 16, Cc
+
+W = 16, Ct
+
+10−4
+
+W = 20, Cc
+
+W = 20, Ct
+
+FBD
+
+10−5
+
+6.4
+
+6.6
+
+6.8
+
+7
+
+7.2
+
+7.4
+
+7.6
+
+10 log10(Es/N0) (dB)
+
+Figure 3: BLER Pc over the SNR Es/N0 with various sets of PC equations and various window sizes W using the update strategy UVN.
+
+5.2. Comparison of Update Strategies
+For the second part of this evaluation, we compared the two window update strategies reviewed in Section 3. Specifically, we compared a WD using UCN with window size W against a WD using UVN with window size W + 2 as argued in Section 4. Furthermore, we selected W ∈ {12, 14, 16} for UVN and thus W ∈ {10, 12, 14} for UCN as larger windows did not significantly improve the decoding performance, cf. Figure 3. Following our findings from the evaluations above, we solely considered the CN set Ct for ET.
+Figure 4 depicts the relative ANMU ι¯ for the configurations listed above. Using UCN with W = 10 results in the worst decoding complexity. All other configurations perform slightly better with only small differences among them. Using UVN results in minor advantages over using UCN. As before, all WD configurations beat the FBD in terms of computational complexity.
+
+1
+
+UVN, W = 12
+
+UVN, W = 14
+
+0.8
+
+UVN, W = 16
+
+UCN, W = 10
+
+UCN, W = 12
+
+0.6
+
+UCN, W = 14
+
+FBD
+
+ι¯
+
+0.4
+
+0.2
+
+0
+
+6.2
+
+6.4
+
+6.6
+
+6.8
+
+7
+
+7.2
+
+7.4
+
+7.6
+
+7.8
+
+10 log10(Es/N0) (dB)
+
+Figure 4: Relative ANMU over the SNR Es/N0 comparing UCN with W ∈ {10, 12, 14} against UVN with W ∈ {12, 14, 16}. The PC equations in Ct are used for ET.
+
+11
+
+The BLER Pc is shown in Figure 5. According with the results from Figure 3, the window size W is the most decisive factor for the resulting decoding performance. Still, the differences between using UVN with window size W + 2 and using UCN with window size W are negligible. Thus, the comparison with a normalized per-window complexity can indeed be considered to be fair.
+100
+
+10−1
+
+Pc
+
+10−2
+
+10−3 10−4
+
+UVN, W = 12 UVN, W = 14 UVN, W = 16 UCN, W = 10 UCN, W = 12 UCN, W = 14 FBD
+
+10−5
+
+6.2
+
+6.4
+
+6.6
+
+6.8
+
+7
+
+7.2
+
+7.4
+
+7.6
+
+7.8
+
+10 log10(Es/N0) (dB)
+
+Figure 5: BLER over the SNR Es/N0 comparing UCN with W ∈ {10, 12, 14} against UVN with W ∈ {12, 14, 16}. The PC equations in Ct are used for ET.
+Summing up the whole evaluation, using only the PC equations corresponding to the CNs in Ct is the superior choice for minimizing the computational complexity. The computational complexity is then reduced when using a medium window size (e.g., W = 16) rather than smaller or larger window sizes. Furthermore, the VN-centered update strategy UVN is the overall better update strategy: The computational complexity is improved while the decoding performance is kept at a similar level as a window of size W + 2 can be used in a fair comparison against UCN with window size W. The only downside of using UVN is the more challenging implementation in conjunction with CNwise serial scheduling and the Min-Sum Algorithm (MSA) since not all messages for all the CNs in the decoding window are updated.
+
+6. Conclusion
+Limiting a Windowed Decoder (WD) for SC-LDPC codes to the same maximal decoding complexity as a Full Block Decoder (FBD) reveals the following results: It is only possible to beat the FBD in terms of computational complexity with an optimized configuration. With the configuration derived in this paper, the resulting WD requires on average only half the decoding complexity of the FBD while simultaneously showing a gap in the SNR of only around 0.25 dB for a working point with BLER Pc = 10−2. Comparison of various update strategies shows that it may be advantageous to skip updates of some messages in the decoding window. The window can then be enlarged to achieve the same computational complexity while improving the decoding performance. Lastly, all results obtained in this paper have been achieved with configurations requiring low control overhead, making the proposed WD design very suitable for efficient hardware implementation.
+
+References
+[1] A. Jimenez Feltström, K. S. Zigangirov, Time-varying periodic convolutional codes with low-density parity-check matrix, IEEE Trans. Inf. Theory 45 (6) (1999) 2181–2191.
+[2] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, D. J. Costello, LDPC block and convolutional codes based on circulant matrices, IEEE Trans. Inf. Theory 50 (12) (2004) 2966–2984.
+12
+
+[3] S. Kudekar, T. Richardson, R. L. Urbanke, Spatially coupled ensembles universally achieve capacity under belief propagation, IEEE Trans. Inf. Theory 59 (12) (2013) 7761–7813.
+[4] A. Pusane, A. Feltström, A. Sridharan, M. Lentmaier, K. Zigangirov, D. J. Costello, Implementation aspects of LDPC convolutional codes, IEEE Trans. Commun. 56 (7) (2008) 1060–1069.
+[5] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli, G. E. Corazza, Windowed decoding of protograph-based LDPC convolutional codes over erasure channels, IEEE Trans. Inf. Theory 58 (4) (2012) 2303–2320.
+[6] S. Abu-Surra, E. Pisek, R. Taori, Spatially-coupled low-density parity check codes: Zigzag-window decoding and code-family design considerations, in: Proc. 2015 IEEE Inf. Theory Appl. Work. (ITA), San Diego, CA, USA, 2015, pp. 275–281.
+[7] K. Klaiber, S. Cammerer, L. Schmalen, S. ten Brink, Avoiding burst-like error patterns in windowed decoding of spatially coupled LDPC codes, in: Proc. 10th IEEE Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC 2018), Hong Kong, Hong Kong, 2018, pp. 1–5.
+[8] M. Papaleo, A. R. Iyengar, P. H. Siegel, J. K. Wolf, G. E. Corazza, Windowed erasure decoding of LDPC convolutional codes, in: Proc. 2010 IEEE Inf. Theory Work. (ITW), Cairo, Egypt, 2010, pp. 1–5.
+[9] N. Ul Hassan, A. E. Pusane, M. Lentmaier, G. P. Fettweis, D. J. Costello, Non-uniform window decoding schedules for spatially coupled LDPC codes, IEEE Trans. Commun. 65 (2) (2017) 501–510.
+[10] I. Ali, J.-H. Kim, S.-H. Kim, H. Kwak, J.-S. No, Improving windowed decoding of SC LDPC codes by effective decoding termination, message reuse, and amplification, IEEE Access 6 (2017) 9336–9346.
+[11] A. Beemer, C. A. Kelley, Avoiding trapping sets in SC-LDPC codes under windowed decoding, in: Proc. 2016 Int. Symp. Inf. Theory Appl. (ISITA), Monterey, CA, USA, 2016, pp. 206–210.
+[12] E. Yeo, P. Pakzad, B. Nikolic, V. Anantharam, High throughput low-density parity-check decoder architectures, in: Proc. 2001 IEEE Global Commun. Conf. (GLOBECOM), San Antonio, TX, USA, 2001, pp. 3019–3024.
+[13] M. Fossorier, M. Mihaljevic, H. Imai, Reduced complexity iterative decoding of low-density parity check codes based on belief propagation, IEEE Trans. Commun. 47 (5) (1999) 673–680.
+[14] S. Mo, L. Chen, Improved sliding window decoding of spatially coupled low-density parity-check codes, in: Proc. 2017 IEEE Inf. Theory Work. (ITW), Kaohsiung, Taiwan, 2017, pp. 126–130.
+[15] P. Kang, Y. Xie, L. Yang, J. Yuan, Reliability-based windowed decoding for spatially-coupled LDPC codes, IEEE Commun. Lett. 7798 (1089) (2018) 1322–1325.
+[16] M. Lentmaier, A. Sridharan, D. J. Costello, K. S. Zigangirov, Iterative decoding threshold analysis for LDPC convolutional codes, IEEE Trans. Inf. Theory 56 (10) (2010) 5274–5289.
+[17] D. Mitchell, R. Smarandache, M. Lentmaier, D. J. Costello, Quasi-cyclic asymptotically regular LDPC codes, in: Proc. 2010 IEEE Inf. Theory Work. (ITW), IEEE, Dublin, Ireland, 2010, pp. 1–5.
+[18] Y. Kou, S. Lin, M. P. C. Fossorier, Low-density parity-check codes based on finite geometries: a rediscovery and new results, IEEE Trans. Inf. Theory 47 (7) (2001) 2711–2736.
+[19] 3GPP, Technical Specification Group Radio Access Network; NR; Multiplexing and Channel Coding (Release 15), TS 38.212, V15.8.0 (Dec. 2019).
+[20] J. Thorpe, Low-density parity-check (LDPC) codes constructed from protographs, Interplanetary Network Progress Report 154 (2003) 1–7. [21] Seho Myung, Kyeongcheol Yang, Youngkyun Kim, Lifting methods for quasi-cyclic LDPC codes, IEEE Commun. Lett. 10 (6) (2006) 489–
+491. [22] Z. Chen, T. L. Brandon, S. Bates, D. G. Elliott, B. F. Cockburn, Efficient implementation of low-density parity-check convolutional code
+encoders with built-in termination, IEEE Trans. Circuits Syst. I 55 (11) (2008) 3628–3640. [23] V. A. Chandrasetty, S. J. Johnson, G. Lechner, Memory-efficient quasi-cyclic spatially coupled low-density parity-check and repeat-
+accumulate codes, IET Commun. 8 (17) (2014) 3179–3188. [24] D. MacKay, Good error-correcting codes based on very sparse matrices, IEEE Trans. Inf. Theory 45 (2) (1999) 399–431. [25] J. Hagenauer, E. Offer, L. Papke, Iterative decoding of binary block and convolutional codes, IEEE Trans. Inf. Theory 42 (2) (1996) 429–445. [26] M. Lentmaier, M. M. Prenda, G. P. Fettweis, Efficient message passing scheduling for terminated LDPC convolutional codes, in: Proc. 2011
+IEEE Int. Symp. Inf. Theory (ISIT), St. Petersburg, Russia, 2011, pp. 1826–1830. [27] 3GPP, Technical Specification Group Radio Access Network; NR; Physical Layer Procedures for Data (Release 15), TS 38.214, V15.8.0
+(Dec. 2019). [28] L. Schmalen, S. Ten Brink, Combining spatially coupled LDPC codes with modulation and detection, in: Proc. 9th Int. ITG Conf. Syst.
+Commun. Coding (SCC 2013), Munich, Germany, 2013. [29] 3GPP, Technical Specification Group Radio Access Network; NR; Physical Channels and Modulation (Release 15), TS 38.211, V15.8.0 (Dec.
+2019). [30] S. Müller-Weinfurtner, Coding approaches for multiple antenna transmission in fast fading and OFDM, IEEE Trans. Signal Process. 50 (10)
+(2002) 2442–2450. [31] D. Tse, P. Viswanath, Fundamentals of Wireless Communication, Cambridge University Press, Cambridge, UK, 2005. [32] C. Jones, E. Vallés, M. Smith, J. Villasenor, Approximate-min* constraint node updating for LDPC code decoding, in: Proc. 2003 IEEE
+Military Commun. Conf. (MILCOM), Boston, MA, USA, 2003, pp. 157–162. [33] M. Battaglioni, M. Baldi, E. Paolini, Complexity-constrained spatially coupled LDPC codes based on protographs, in: Proc. 2017 IEEE Int.
+Symp. Wirel. Commun. Syst. (ISWCS), Bologna, Italy, 2017, pp. 49–53. [34] 3GPP, Technical Specification Group Radio Access Network; NR; User Equipment (UE) radio transmission and reception; Part 1: Range 1
+Standalone (Release 15), TS 38.101-1, V15.8.2 (Dec. 2019).
+13
+
+

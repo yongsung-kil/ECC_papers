@@ -1,0 +1,612 @@
+ICASSP 2021 - 2021 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) | 978-1-7281-7605-5/20/$31.00 ©2021 IEEE | DOI: 10.1109/ICASSP39728.2021.9414543
+
+NEURAL LAYERED MIN-SUM DECODING FOR PROTOGRAPH LDPC CODES
+Dexin Zhang , Jincheng Dai , Kailin Tan , Kai Niu , Mingzhe Chen†‡, H. Vincent Poor†, Shuguang Cui‡
+Beijing University of Posts and Telecommunications, Beijing, 100876, China †Department of Electrical Engineering, Princeton University, Princeton, NJ, 08544, USA
+‡SRIBD and FNii, Chinese University of Hong Kong, Shenzhen, 518172, China
+
+ABSTRACT
+In this paper, layered min-sum (MS) iterative decoding is formulated as a customized neural network following the sequential scheduling of check node (CN) updates. By virtue of the lifting structure of protograph low-density parity-check (LDPC) codes, identical network parameters are shared among all derived edges originating from the same edge in the protograph, which makes the number of learnable parameters manageable. The proposed neural layered MS decoder can support arbitrary codelengths consequently. Moreover, an iteration-wise greedy training method is proposed to tune the parameters such that it avoids the vanishing gradient problem and accelerates the decoding convergence.
+Index Terms— Neural network, protograph LDPC codes, layered decoding, min-sum (MS)
+1. INTRODUCTION
+Protograph low-density parity-check (LDPC) codes [1] have been intensely investigated because they possess not only excellent error performance but also low complexities. The LDPC coding scheme in 5G NR [2] adopts the protograph structure involving two base graphs (BG1 and BG2).
+LDPC codes are typically decoded via sum-product (SP) or belief propagation (BP) [3] with high complexity. The min-sum (MS) algorithm [4] and its variants, such as normalized min-sum (NMS) and offset min-sum (OMS) [5], have been then developed to reduce the computational complexity and are therefore more suitable for practical use. As a modified version of the conventional SP algorithm, the turbo-decoding message-passing (TDMP) [6] algorithm, also referred to as layered decoding [7], was introduced to serialize the LDPC decoding process thus accelerating the decoding convergence by a factor of two in terms of iterations.
+Due to the advances in deep learning, neural networks have also attracted more attention in coding and signal processing communities [8–12]. In [9], the neural SP decoder was introduced by adding learnable weights to edges in the Tanner graph [13] and
+This work was supported in part by the National Natural Science Foundation of China under Grants 92067202 and 62001049, in part by the China Post-Doctoral Science Foundation under Grant 2019M660032, in part by the U.S. National Science Foundation under Grant CCF-1908308, in part by the National Key R&D Program of China under Grant 2018YFB1800800, in part by the Key Area R&D Program of Guangdong Province under Grant 2018B030338001, in part by Shenzhen Outstanding Talents Training Fund, and in part by Guangdong Research Project under Grant 2017ZT07X152. (Jincheng Dai and Dexin Zhang are the co-first-authors.)
+
+was trained by gradient-based methods. This weighted SP decoder can mitigate the detrimental impacts of short cycles thus presenting improvements over the plain SP decoder for various high-density parity-check (HDPC) codes. Later, more hardware-friendly neural NMS/OMS decoders [10, 11] were proposed to reduce the computational burden.
+One limitation of existing works [9–11] is that the size of neural networks increases rapidly with codelengths and iterations, incurring excessive training complexity. For this reason, current neural decoders support only short to moderate codelengths. A valid method was put forward in [14] to tackle this issue. In this paper, we extend the method to design a neural layered MS decoder for protograph LDPC codes by exploiting their lifting structure. We unfold layered MS decoding as a customized neural network where messages are delivered in a feed-forward fashion. Each decoding iteration corresponds to one layer in the neural network. Each layer is further split into variable node (VN) sublayers, check node (CN) sublayers, and decision sublayers in accordance with the sequential scheduling of CN updates. Finely tuned weights and biases are added to per edge per iteration in the protograph. Identical parameters are shared among all derived edges originating from the same edge in the protograph. Therefore, the number of parameter pairs always equals the number of edges in the protograph and is manageable. Consequently, the proposed neural layered MS decoder can support arbitrary codelengths. Meanwhile, to avoid the vanishing gradient problem in neural decoding caused by multiple iterations, we propose an iteration-wise greedy training method to update the weights and biases. The proposed training, along with the sequential scheduling, tends to optimize neural decoders as early as possible, i.e., achieving faster convergence.
+
+2. PRELIMINARIES
+
+2.1. Protograph LDPC Codes
+
+A protograph or base graph, serving as a blueprint for constructing
+
+LDPC codes of arbitrary size, is a Tanner graph with a relatively
+
+small number of nodes. A protograph consists of a set V of Nb
+
+VNs, a set C of Mb CNs, and a set E of edges. Hence, it defines
+
+an (Nb, Kb) base code where Kb = Nb − Mb. Then, an (N, K)
+
+code, i.e., a large Tanner graph with N VNs, M = N − K CNs, and
+
+corresponding edges, can be derived from the base code by a “copy-
+
+and-permute” operation.
+
+One takes Z
+
+=
+
+N Nb
+
+=
+
+K Kb
+
+copies of the
+
+base graph and then permutes the endpoints of each edge among the
+
+Z copies to integrate the separated Z base graphs into a larger one.
+
+978-1-7281-7605-5/21/$31.00 ©2021 IEEE
+
+4845
+
+ICASSP 2021
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:07:45 UTC from IEEE Xplore. Restrictions apply.
+
+The above operation is also known as “lifting,” and Z is called the “lifting factor.” Since edge-permutation is only performed within a bundle of edges derived from the same edge in the base graph, the original structural properties imposed by the base graph remain unchanged in the Z-lifted graph, i.e., the base graph encapsulates the macroscopic structure. This lifting structure allows our proposed neural layered MS decoder to apply the same correction terms to all homologous edges. The details will be presented in Section 3.
+
+2.2. Layered Iterative Decoding
+
+A layered LDPC decoder divides CNs into small subsets called lay-
+
+ers1 and split each iteration into multiple subiterations. Each subset
+
+is sequentially processed as a unit. The subsets are usually non-
+
+overlapping, i.e., any two CNs in one subset will not share the same
+
+neighboring VN(s). This scheduling method serializes the decod-
+
+ing process such that new updates become available in the same
+
+iteration, hence speeds up the convergence. Assume a codeword
+
+x = [xv] is transmitted, and y = [yv] denotes the received signal
+
+vector. The layered SP algorithm is carried out as follows.
+
+Initialization: Given the number of CN subsets S and each sub-
+
+set Cs, s = 1, 2, . . . , S. Note that
+
+S s=1
+
+Cs
+
+=
+
+C,
+
+Cp
+
+∩ Cq
+
+=
+
+∅,
+
+if
+
+p = q. Set i = 1, the maximum number of iterations is Imax. For
+
+each VN v and CN c, set
+
+v,ch
+
+=
+
+ln
+
+, Pr(xv =0|yv )
+Pr(xv =1|yv )
+
+(0) c→v
+
+=
+
+0,
+
+where
+
+Pr (xv|yv) denotes a posteriori probability of xv given yv.
+
+Step 1: For each VN v,
+
+(i) v
+
+=
+
+v,ch +
+
+(i−1) c →v
+
+,
+
+(1)
+
+c ∈M(v)
+
+where M (v) denotes the set of CNs connected to VN v. Step 2: For s = 1, 2, . . . , S, process,
+
+a) Vertical step: For each c ∈ Cs and v ∈ N (c),
+
+(i) v→c
+
+=
+
+(i) v
+
+−
+
+(i−1) c→v
+
+.
+
+(2)
+
+b) Horizontal step: For each c ∈ Cs and v ∈ N (c),
+
+
+
+(i) c→v
+
+=
+
+2 tanh−1 
+
+tanh
+
+v ∈N (c)\v
+
+
+(i)
+v →c  , (3) 2
+
+where N (c) denotes the set of VNs that participate in check c and N (c) \ v represents exclusion of v from N (c).
+
+c) Update: For each c ∈ Cs and v ∈ N (c),
+
+(i) v
+
+=
+
+(i) v→c
+
++
+
+(i) c→v
+
+.
+
+(4)
+
+Step 3: Hard decision and stopping criterion test.
+
+a)
+
+Create xˆ(i) = [xˆ(vi)] with xˆv(i) =
+
+1−sgn 2
+
+(i) v
+
+where sgn (·)
+
+denotes the sign function.
+
+b) If Hxˆ(i) = 0, where H denotes the parity-check matrix, or the maximum iteration number Imax is reached, stop decoding and go to Step 4. Otherwise, set i = i + 1 and go back
+
+to Step 1.
+
+1The “layer” here is different from the “layer” of the neural network in Section 3. The “layer” here represents the result of splitting the parity check matrix horizontally, while the “layer” in Section 3 corresponds to one decoding iteration.
+
+Step 4: Output xˆ(i) as the decoded codeword. It is straightforward to generalize the layered approach to various suboptimal versions of SP decoding, for example, the layered MS algorithm. The only difference between the two algorithms lies in CN updates, with (3) modified as
+
+
+
+
+
+(i) c→v
+
+=
+
+
+
+sgn
+
+(i) v →c
+
+ × min
+v ∈N (c)\v
+
+(i) v →c
+
+.
+
+(5)
+
+v ∈N (c)\v
+
+3. NEURAL LAYERED MIN-SUM DECODING
+The NMS and OMS algorithms are two enhanced versions of the MS algorithm. The normalizing and offset factors (denote by α and β) can be viewed as assigned weights and biases to edges in the Tanner graph, respectively. With the aid of decoding neural network, these parameters can be automatically learned to approach optimal performance. To this end, we can construct a customized sparse neural decoder with a not-fully connected structure that is a trellis representation of layered iterative decoding following the sequential scheduling of CN updates.
+
+3.1. A Neural Layered MS Decoder for Protograph Codes
+
+As shown in Fig. 1, the input layer of our neural network is a vector
+
+of size N = Nb × Z consisting of the log-likelihood ratios (LLRs) of the channel outputs, where Nb denotes the number of VNs in the base graph, Z is the lifting factor, and N is the codelength. Each
+
+following layer with index i corresponds to the i-th iteration in lay-
+
+ered MS decoding. The output layer includes N processing elements
+
+(PEs) that determine the final decoded results. Since a layered de-
+
+coder splits one conventional iteration into multiple subiterations,
+
+as mentioned in Subsection 2.2, one layer in our neural network is
+
+further split into multiple small groups accordingly. Each group con-
+
+tains successive VN sublayer ivs , CN sublayer ics, and decision sub-
+layer isd with s = 1, 2, . . . , S, and S denotes the number of CN subsets. The VN sublayer ivs and CN sublayer isc have Es × Z PEs
+
+and neurons, respectively. Here, Es is the number of edges asso-
+
+ciated with CNs belonging to the subset Cs in the base graph and
+
+S s=1
+
+Es
+
+=
+
+Eb,
+
+where
+
+Eb
+
+equals
+
+the
+
+total
+
+number
+
+of
+
+edges
+
+in
+
+the
+
+base graph. Each PE (neuron) in sublayer ivs (isc) outputs the message
+
+delivered over the edge from the associated VN (CN) to its adjacent
+
+CN (VN). The decision sublayer isd consists of Nb × Z decision el-
+
+ements (DEs) that play two roles: (i) record the latest updates; (ii)
+
+output temporary decoded results that participate in the calculation
+
+of the loss function.
+
+The messages delivered over the neural layered MS trellis are as
+
+follows. Consider the i-th layer and the s-th sublayer, and denote by e = (v, c) the index of some PE in sublayer ivs . The output message
+of this PE is
+
+
+
+ v,ch,
+
+if i = 1, s = 1,
+
+
+
+
+
+
+
+
+
+
+
+(isv )
+e
+
+=
+
+ 
+
+ 
+
+(ids−1
+v
+
+)
+
+,
+
+((i−1)Sd )
+v
+
+−
+
+((i−1)sc
+e
+
+)
+
+,
+
+if i = 1, s > 1, if i > 1, s = 1,
+
+(6)
+
+
+
+
+
+   
+
+(isd−1 )
+v
+
+−
+
+((i−1)sc
+e
+
+)
+
+,
+
+if i > 1, s > 1.
+
+4846
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:07:45 UTC from IEEE Xplore. Restrictions apply.
+
+1st layer
+…
+
+2nd layer
+
+…
+
+…
+
+…
+
+Channel LLR input layer
+
+groups
+…
+
+VN update sublayer
+
+CN update sublayer
+
+Decision sublayer
+…
+
+PEs
+
+neurons
+
+DEs
+
+1st group in 2nd layer
+
+Fig. 1. Neural network architecture of the proposed neural layered MS decoder.
+
+Output layer
+
+Similarly, for a neuron e = (v, c) in sublayer isc, we have
+
+
+
+
+
+(ics )
+e
+
+=
+
+sgn
+
+(isv )
+e
+
+×
+
+e =(v ,c),v =v
+
+(7)
+
+ReLU
+
+αe(i) ×
+
+min
+
+e =(v ,c),v =v
+
+(isv )
+e
+
+− βe(i)
+
+,
+
+where ReLU (x) = max (x, 0). Besides,
+
+0cs e
+
+=
+
+0.
+
+As for sublayer isd, on the one hand, each DE updates the mes-
+
+sage by
+
+(isd )
+v
+
+=
+
+v,ch +
+
+s
+
+(itc )
+e
+
++
+
+S
+
+(i−1)ct e
+
+,
+
+(8)
+
+t=1 e=(v,c)
+
+t=s+1 e=(v,c)
+
+on the other hand, it provides the temporary decoding information as
+
+osv = σ
+
+(isd )
+v
+
+,
+
+(9)
+
+where σ (x) = (1 + exp (−x))−1 is the sigmoid function.
+
+The output layer takes the decoding information of the last deci-
+
+sion sublayer as its final decoded results.
+
+Unlike the weighted SP decoder and the neural NMS/OMS de-
+
+coder, we introduce weights and biases simultaneously such that the
+
+degrees of freedom for optimization increase. Moreover, the weights
+
+αe(i) and biases βe(i) vary with iterations. It makes our pro-
+
+posed neural layered MS decoder a better approximation of the lay-
+
+ered SP decoder.
+
+Taking the protograph structure into account, we propose ad-
+
+ditional constraints to the weights and biases. For any e and e ,
+
+e = e , derived from the same edge e in the base graph, identical
+
+parameters are attached to the corresponding neurons in the same
+
+iteration, i.e.,
+
+αe(i) = αe(i), βe(i) = βe(i).
+
+(10)
+
+In this way, to decode LDPC codes of different codelengths derived
+
+from the same base graph, only a small weight/bias array needs to
+
+be adapted. That is, the number of parameter pairs is limited and
+
+manageable. Hence it greatly reduces the training complexity and
+
+memory cost, which makes our proposed neural layered MS decoder
+
+support arbitrary codelengths flexibly.
+
+3.2. Training the Neural Layered MS Decoder
+In this paper, we employ mean square error (MSE) between the transmitted codeword x and the output of every decision sublayer o as the loss function. Given particular weight and bias arrays α and β, the loss function can be estimated. The weights and biases can be tuned to minimize the loss function by gradient-based optimization methods that are widely used in deep learning techniques, e.g., Adam [15].
+To avoid the vanishing gradient problem incurred by the too deep network structure, a multi-loss function is employed in [10, 11] to inject the gradients directly to every layer. Here, we propose a different way: the neural network is built and trained in a greedy fashion. Once a layer is trained, its corresponding weights and biases remain constant in the process of training subsequent layers. The neural decoding network grows progressively, one layer after another. Each time, only the weights and biases of the last layer are learnable.
+An early termination mechanism is usually applied to reduce average decoding latency: the iterative decoder immediately halts once the target performance is achieved. The proposed greedy training method tends to optimize the performance of the neural layered MS decoder as early as possible and achieves faster convergence, along with the sequential scheduling. It inherently aligns with the early termination mechanism. Furthermore, for different configurations of iterations, the optimized weights and biases in the neural decoder can be reused instead of retraining.
+4. SIMULATION RESULTS
+In this section, we choose 5G NR LDPC codes as the representative of protograph LDPC codes and build the corresponding neural layered MS decoder. The signal transmission is assumed over AWGN channels and Rayleigh fading channels with the binary phase shift keying (BPSK) modulation.
+The block error rate (BLER) results of (156, 30) BG2 codes (i.e., Z = 3) are shown in Fig. 2, with Imax = 10 for layered decoding algorithms and Imax = 20 for the standard SP algorithm. As shown in Fig. 2(a), in AWGN channels, the proposed neural layered MS decoder achieves significant gains compared with the conven-
+
+4847
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:07:45 UTC from IEEE Xplore. Restrictions apply.
+
+@BLER = 10-4 @BLER = 10-2
+
+Fig. 2. BLER performance of BG2 codes with Z = 3 in (a) AWGN Fig. 4. (a) BLER performance and (b) required SNR for BLER =
+
+channels and (b) Rayleigh fading channels.
+
+10−2&10−4 in Rayleigh fading channels, with Z = 16.
+
+@BLER = 10-4 @BLER = 10-2
+
+@BLER = 10-4 @BLER = 10-2
+
+Fig. 3. Required SNR for BLER = 10−2&10−4 in (a) AWGN channels and (b) Rayleigh fading channels, with Z = 3.
+tional layered MS decoder. Interestingly, the neural layered MS decoder even outperforms the layered SP decoder in the high signal-tonoise ratio (SNR) region. The error performance of neural layered SP decoding is also provided for comparison. It can be seen that the neural layered MS decoder can achieve a similar BLER performance to its SP relative with much lower complexity. Besides, the performance of the layered SP decoder after 10 iterations is comparable to the standard SP decoder, which is implemented parallelly, after 20 iterations. The claim that layered decoding accelerates the convergence and saves half the numbers of iterations is verified. Fig. 2(b) provides the results in Rayleigh fading channels. Note that the parameters trained under AWGN are directly employed without retraining in this case. The same phenomenon as in Fig. 2(a) can be observed, which indicates the robustness of our proposed neural layered MS decoder.
+Fig. 3 shows the minimum required SNRs for different decoders to achieve BLER = 10−2 or 10−4 after a certain number of iterations, from 3 to 15, and Z = 3. In Fig. 3(a), under AWGN, the proposed neural layered MS decoder is clearly superior to the plain layered MS decoder. When the target is BLER = 10−2, the neural layered MS decoder presents very comparable performance to the layered SP decoder. For BLER = 10−4, it even slightly outperforms the latter at early iterations. Also, we provide the performance of the neural layered MS decoder that is trained by the multi-loss training method [11]. Compared with our proposed greedy training method that tends for early-optimization, the multi-loss training method inclines to optimize the final performance given a target number of it-
+
+erations. Hence, it cannot catch up with our greedy training method until the last few iterations. Similarly in Fig. 3(b), our proposed neural layered MS decoder also performs well in Rayleigh fading channels. These results imply that the proposed neural layered MS decoder can achieve faster decoding convergence.
+Fig. 4 presents the performance of different decoders with Z = 16 in Rayleigh fading channels. In Fig. 4(a), the numbers of iterations are Imax = 10 and Imax = 20 for layered decoding and flood decoding, respectively. When the codelength increases, the neural layered SP decoder still outperforms all other decoders. Though it is slightly inferior to the layered SP decoder, the proposed neural layered MS decoder involves much lower computational burdens and quite approaches layered SP decoding when the SNR is high. The performance gain of the proposed decoder versus the plain layered MS decoder remains impressive. Fig. 4(b) shows the minimum required SNRs varying with iterations. In general, the proposed neural layered MS decoder still demonstrates satisfactory convergence performance compared to the decoder based on the multi-loss training method. Accordingly, the claim that the proposed neural layered MS decoder is also applicable to protograph LDPC codes with longer codelengths is corroborated.
+The high performance of our proposed neural layered MS decoding benefits from two aspects: one is that well-learned weights and biases enable the plain MS decoding to be a better approximation of the SP algorithm, which accounts for the primary gain; the other is that well-learned parameters can partially mitigate the adverse impacts of short cycles in the Tanner graph, as stated in [9], especially for short codes.
+5. CONCLUSION
+We have presented a neural layered MS decoder for protograph LDPC codes by adding finely tuned weights and biases to edges in the base graph. By the lifting structure of protograph LDPC codes, identical parameters are shared among all edges derived from the same edge in the base graph. Furthermore, an iteration-wise greedy training method has been proposed to combat the vanishing gradient problem. Simulation results show that the proposed neural layered MS decoder can achieve impressive error performance and faster decoding convergence.
+
+4848
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:07:45 UTC from IEEE Xplore. Restrictions apply.
+
+6. REFERENCES
+[1] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” IPN Progr. Rep. 42-154, pp. 1–7, Aug. 2003.
+[2] 3GPP TS 38.212 V16.0.0, “Multiplexing and channel coding,” Dec. 2019.
+[3] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[4] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, 1999.
+[5] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[6] M. M. Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check matrix codes,” IEEE Trans. Signal Process., vol. 54, no. 11, pp. 4376–4392, Nov. 2006.
+[7] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop on Signal Processing Systems, 2004. SIPS 2004., 2004, pp. 107– 112.
+[8] M. Chen, U. Challita, W. Saad, C. Yin, and M. Debbah, “Artificial neural networks-based machine learning for wireless networks: A tutorial,” IEEE Commun. Surv. Tuts., vol. 21, no. 4, pp. 3039–3071, 2019.
+[9] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Sep. 2016, pp. 341–346.
+[10] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Info. Theory, Aachen, Germany, 2017, pp. 1361–1365.
+[11] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[12] M. Lian, F. Carpi, C. Hager, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Info. Theory, Paris, France, Jun. 2019, pp. 161–165.
+[13] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Info. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[14] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph LDPC codes,” arXiv preprint arXiv:2102.03828, 2021.
+[15] D. P. Kingma and J. L. Ba, “Adam: A method for stochastic optimization,” in Proc. International Conference on Learning Representations (ICLR), San Diego, 2015.
+4849
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:07:45 UTC from IEEE Xplore. Restrictions apply.
+
+

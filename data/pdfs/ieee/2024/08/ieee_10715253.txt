@@ -1,0 +1,421 @@
+In-Memory Bit Flipping LDPC Decoding
+Oscar Ferraz, Gabriel Falcao, and Vitor Silva Instituto de Telecomunicac¸o˜es
+Dept. of Electrical and Computer Engineering, University of Coimbra, Portugal {oscar.ferraz, gff, vitor}@co.it.pt
+
+Abstract—Low-density parity-check (LDPC) codes play an important role in several communication and storage applications by providing a versatile and efficient solution for correcting errors. Modern computing systems suffer from data movement bottlenecks, which affect parallel processing systems more dramatically. Several solutions to this bottleneck have been proposed by moving compute units where the data resides, incorporating thousands of low-complexity processing units to perform bit-wise and simple integer operations. This paper presents the first known bit flipping LDPC processing-in-memory (PiM)-based decoder in the UPMEM system. The implementation is able to achieve 2.8 Gbit/s of decoding throughput, which is competitive when compared to implementations in high-end GPUs. The source code can be found at https://github.com/oscarferraz/EUSIPCO24
+Index Terms—LDPC codes, LDPC decoding, Bit flipping decoding, Processing-in-memory, UPMEM
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are a class of errorcorrecting codes that have revolutionized modern communication and storage systems. Characterized by their sparse paritycheck matrices and capacity-approaching performance, LDPC codes efficiently correct errors in data. These codes have applications in diverse fields, such as Wi-Fi [1] and LTE [2], digital storage devices [3], and satellite communications [4], [5]. Their sparsity and ability to approach theoretical limits make LDPC codes a great candidate for ensuring reliable and efficient information exchange.
+Structured LDPC codes are well-suited for parallel processing by exploiting their Tanner graph representation, where nodes can be processed concurrently. This enables efficient hardware implementation and accelerates decoding speed, making LDPC codes attractive for high-throughput applications [6].
+The data movement bottleneck [7] is a critical challenge in modern computing systems where the rate at which data can be transferred between different components, such as processors, memory, and storage, becomes a limiting factor in overall system performance [8]. As processors continue to improve in speed and capability, the rate at which data can be moved to and from these processors has not kept pace, creating a disparity known as the memory-wall problem [9]. This bottleneck can lead to inefficient utilization of computational resources, longer processing times, and reduced system responsiveness.
+This research was funded by Instituto de Telecomunicac¸o˜es and Fundac¸a˜o para a Cieˆncia e a Tecnologia under projects UIDB/50008/2020 (DOI: 10.54499/UIDB/50008/2020), 2022.06780.PTDC (DOI: 10.54499/2022.06780.PTDC), and Ph.D. grant 2020.07124.BD.
+
+Processing-in-memory (PiM) is a solution that addresses the data movement bottleneck by performing computations directly within the memory subsystem [10]. PiM seeks to minimize this data movement by embedding processing units, such as accelerators or specialized logic, near the memory cells [11]. This allows for seamless and rapid data access, reducing latency and improving overall performance in various computing domains, including throughput energy consumption.
+A PiM-based LDPC decoder has been proposed in [12] for the Min-Sum (MS) decoding algorithm. However, the lowcomplexity UPMEM’s arithmetic logic unit (ALU) maps better to less complex algorithms, such as the case of the bit flipping (BF) decoding algorithm.
+In this paper, we present the first PiM-based BF LDPC decoder found in the literature to the best of our knowledge. We exploit the low-complexity characteristics of the decoding algorithm while leveraging the native hardware integer operation capabilities of the UPMEM’s PiM system to provide a high-throughput implementation and compare it against several graphics processing unit (GPU)-based decoders and a PiM-based MS decoder.
+
+II. LDPC CODES
+An LDPC code is defined by a low density parity-check matrix (PCM) H. This PCM can also be represented as a Tanner graph, as illustrated in Fig. 1. Their Tanner graph representation determines the number of check nodes (CNs) and variable nodes (VNs) and their connections. For instance, (1) defines an LDPC code with 6 VNs and 3 CNs. The nonzero elements of (1) dictate the connections between CNs (Sv(m) as the set of VNs connected to CN m) and VNs (Sc(n) as the set of CNs connected to VN n). This code has a CN degree of 4 (dc = 4), and a VN degree of 2 (dv = 2), meaning that each CN connects to four VNs and each VN connects to two CNs.
+
+1 0 1 1 0 1
+
+H = 1 1 0 1 1 0
+
+(1)
+
+011011
+
+Several LDPC hard decoding algorithms have been proposed in the literature since the seminal paper from Robert Gallager [13]. The decoding algorithm used in this work is a parallel multi-BF from [13], [14] (also known as Gallager BF), where the threshold is a single adaptive value inspired from [15]. This formulation allows to exploit the parallel
+
+ISBN: 978-9-4645-9361-7
+
+706
+
+EUSIPCO 2024
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:48:30 UTC from IEEE Xplore. Restrictions apply.
+
+Permutation Network
+Fig. 1. LDPC Tanner graph representation for the matrix presented in (1). The number of VNs (N ) equals the number of columns of the H matrix, while the number of CNs (M ) equals the number of rows. The non-zero entries of the H matrix define the permutation network. Data is sent through connected nodes and processed by VNs and CNs.
+and low-complexity nature of the PiM-based architecture and allows to increase the convergence of the decoding process without incurring in processing overhead by using a singlevalue adaptive threshold.
+The LDPC bit-flipping algorithm (BFA) process works by computing a z vector received over a binary symmetric channel (BSC). As depicted in the left-hand side of Fig. 2, the syndrome s is computed (using a modulo 2 addition) for all M CNs, using all the bits connected to a CN m. Next, the number of unsatisfied checks (f ) in each VN is computed by adding all syndrome bits connected to VN n. The codeword bit (zn) is flipped when the number of unsatisfied checks in a bit (fn) is
+
+higher than a threshold (t). Finally, to increase the convergence of the decoding process, an adaptive threshold is employed by decreasing t when no bits are flipped in a given iteration (t is initialized with the largest VN weight (max(dv))). This process is repeated until s = 0 or a maximum number of iterations is reached.
+III. UPMEM ARCHITECTURE
+The UPMEM PiM architecture is the first commercial realization of a PiM system implemented in hardware [16], [17]. UPMEM uses the more mature fabrication and design of 2D dynamic random access memory (DRAM). Furthermore, the UPMEM architecture allows up to 24 independent threads to perform operations in each DPU which can be viewed as an independent processing unit with dedicated memory.
+The general UPMEM architecture is described in Fig. 3. The system is controlled by a host CPU that uses both DRAM and PiM-enabled memory through a standard DDR4-2400 Dual In-Line Memory Module (DIMM). The system features 20 PiM-enabled DIMMs, working at 350 MHz, with each DIMM containing 16 PiM chips. In turn, each PiM chip contains eight DPUs (represented in the right-hand side of Fig. 3), totaling 2560 DPUs in the whole system [16].
+Each DPU has 64 MB of DRAM, or main RAM (MRAM), a faster 64 KB static random access memory (SRAM)-based scratchpad memory, or WRAM, and 24 KB of instruction RAM. It also features a 14-stage processor pipeline, allowing up to 24 threads to work in each DPU. However, to exploit performance using threads, the strategy is to fill the pipeline
+
+Bit Flipping Algorithm
+
+Time
+
+Multithread execution per DPU
+
+Synchronization Barrier
+
+...
+
+Syndrome computation (16 threads)
+
+Synchronization Barrier
+
+...
+
+Unsatisfied Checks
+computation (16 threads)
+
+Synchronization Barrier
+
+...
+
+Bit flipping (16 threads)
+
+Synchronization Barrier
+
+Threshold computation
+(1 thread)
+REPEAT UNTIL MAX # OF ITERATIONS
+
+Fig. 2. DPU code performing the BF decoding algorithm using multithreading (16 threads). The left-hand side represents the mathematical description of the BF decoding algorithm. The right-hand side depicts the BF decoding algorithm on the DPU using multihtreading (16 threads) processing and the respective synchronization steps.
+
+707
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:48:30 UTC from IEEE Xplore. Restrictions apply.
+
+DRAM
+2
+Codewords
+
+Host CPU
+
+3
+
+PIM PIM PIM PIM PIM PIM PIM PIM Chip Chip Chip Chip Chip Chip Chip Chip
+PIM PIM PIM PIM PIM PIM PIM PIM Chip Chip Chip Chip Chip Chip Chip Chip
+
+16 GB/s peak CPU-DPU Bandwith
+5
+
+64-MB MRAM Bank
+
+DMA Engine
+
+PIM Chip
+
+24-KB IRAM
+1
+64-KB WRAM
+LDPC Decoder
+Data
+
+Pipeline DISPATCH
+
+4
+
+FETCH1
+
+FETCH2
+
+FETCH3
+
+READOP1
+
+READOP2
+
+READOP3
+
+FORMAT
+
+ALU1
+
+ALU2
+
+ALU3
+
+ALU4
+
+MERGE1
+
+MERGE2
+
+x8
+
+Fig. 3. Proposed PiM LDPC decoder workflow using the UPMEM architecture. Each PiM-enabled memory comprises PiM chips, and each PiM chip contains eight DPUs. DPUs have a 14-stage pipeline and a 64 MB DRAM bank (MRAM), a faster 64 KB working SRAM (WRAM), and a 24 KB instruction RAM (IRAM). (1) The LDPC code structure is stored in the faster WRAM. (2) The codewords are received from the channel and stored in the host’s main memory. (3) The host CPU transfers the codewords from the main memory to the DPU memory for decoding, with one codeword per DPU. (4) Each codeword is decoded using the UPMEM’s ALU. (5) The corrected codeword is sent back to the CPU’s main memory. Multithreading is used with 16 threads.
+
+with one thread executing each stage of the pipeline (no performance is gained by using more than 11 threads; the last three stages of the pipeline can be executed in parallel with the first three [17]). The data in PiM-enabled memory is DPU-visible, meaning that sharing data between DPUs requires the data to travel through the computer data bus [16]. The UPMEM system can use C, C++, Java, and Python programming languages [16].
+
+IV. PIM-BASED LDPC DECODER IMPLEMENTATION
+
+In this approach, the algorithm described in the left-hand
+
+side of Fig. 2 runs in the DPU. The host CPU only orchestrates
+
+the codeword transfers and the initialization of the DPU’s
+
+code. Furthermore, to fully exploit the capabilities of the
+
+UPMEM architecture, two main strategies are employed. The
+
+first relies on the utilization of the correct type of memory.
+
+MRAM can store more data compared to the 64-KB WRAM.
+
+However, the latency between MRAM and the ALU is higher
+
+than between the scratchpad WRAM and the ALU. The data
+
+usage for storing graph connections and variables of the
+
+proposed decoder implementation uses less than 64 KB of
+
+memory, and thus, WRAM is used to store all data, as shown
+
+in Fig. 3.
+
+The second strategy exploits multithreading, as depicted in
+
+Fig. 2. As stated in the previous section, each DPU should
+
+use between 11 to 24 threads to exploit the pipeline width.
+
+This approach proposes that the number of threads should
+
+be a sub-multiple of both N and M . In this case, M and
+
+N are both powers of two. Thus, 16 threads are used in
+
+each
+
+DPU.
+
+Each
+
+thread
+
+performs
+
+M 16
+
+nodes
+
+in
+
+the
+
+Syndrome
+
+computation,
+
+N 16
+
+nodes
+
+in
+
+the
+
+Unsatisfied
+
+Checks
+
+computation
+
+and Bit flipping, and only one thread performs the Threshold
+
+computation described in the left-hand side of Fig. 2.
+
+In order to maximize the DPU utilization, several codewords
+
+are sent for each DPU from the host CPU to WRAM, as
+
+illustrated in Fig. 3. After the decoding process completes, the decoded codewords are returned to the host CPU.
+V. EXPERIMENTAL RESULTS
+A. Apparatus
+The results use three binary LDPC codes of sizes (128, 64), (256, 128), and (512, 256) recommended by CCSDS-231 [18], running five decoding iterations, without early termination to asses throughput performance. The execution time in the UPMEM system was measured using the recommended SDK functions [19]. At the time of testing, only 2557 DPUs out of 2560 were available. The proposed solution is compared to desktop and low-power GPU implementations running in the Jetson Nano, Jetson TX2, Jetson AGX Xavier, RTX 2080 Ti, and RTX 3090, with the low-power Jetsons running in the Max-N mode. The presented results incorporate device
+
+TABLE I DECODING PERFORMANCE (MBPS) FOR A SINGLE DECODER USING
+LDPC CODES OF SIZES (128, 64), (256, 128), AND (512, 256) RECOMMENDED BY CCSDS-231 [18] FOR DIFFERENT IMPLEMENTATIONS
+RANGING FROM MRAM, WRAM, AND MULTITHREADING IN THE UPMEM SYSTEMS, AND THE USING GLOBAL AND SHARED MEMORY IN
+THE GPUS. HIGHER IS BETTER.
+
+Device
+UPMEM
+Jetson Nano Jetson TX2 Jetson AGX Xavier RTX 2080 Ti RTX 3090
+
+Implementation
+MRAM, 1 Thread WRAM, 1 Thread WRAM, 16 Threads Global Mem. Shared Mem. Global Mem. Shared Mem. Global Mem. Shared Mem. Global Mem. Shared Mem. Global Mem. Shared Mem.
+
+(128, 64) 0.030 0.145 0.518 6.001 10.443 7.944 11.169 6.706 15.358 6.541 15.369 7.324 14.722
+
+Code (256, 128) 0.030 0.140 0.827 10.165 20.232 14.364 21.745 9.617 29.385 9.421 28.259 11.057 27.841
+
+(512, 256) 0.030 0.146 1.099 14.787 34.558 19.780 40.383 11.278 49.398 10.874 45.358 13.483 46.778
+
+708
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:48:30 UTC from IEEE Xplore. Restrictions apply.
+
+103
+Bit Flipping Max. Decoding Throughput (128, 64) code (Gbps)
+
+Bit Flipping Max. Decoding Throughput (256, 128) code (Gbps)
+
+Bit Flipping Max. Decoding Throughput (512, 256) code (Gbps)
+
+102
+
+Min-Sum Max. Decoding Throughput (128, 64) code (Gbps) from [12]
+
+Min-Sum Max. Decoding Throughput (256, 128) code (Gbps) from [12]
+
+Min-Sum Max. Decoding Throughput (512, 256) code (Gbps) from [12]
+
+101
+
+Max. Decoded bits per second (Gbps) 1.325
+2.115 2.814 0.295 0.419 0.743 0.133 0.135 0.109 0.048 0.041 0.041 0.376 0.378 0.306 0.134 0.115 0.114 1.569 1.666 1.393 0.525 0.464 0.466 3.515
+3.58 3.182 1.234 1.145 1.144
+7.105 7.226 7.278 3.059 2.909 2.91
+
+100
+
+10-1
+
+10-2
+
+10-3 UPMEM
+
+Nano
+
+TX2
+
+AGX Xavier
+
+RTX 2080Ti
+
+RTX 3090
+
+Fig. 4. Maximum multicodewording decoding throughput with several decoders in parallel using LDPC codes of sizes (128, 64), (256, 128), and (512, 256) recommended by CCSDS-231 [18]. The vertical axis is represented in the logarithmic scale. The blue and green bars depict the result for the BF and MS (found in [12]) decoding algorithms, respectively. Higher is better.
+
+execution time. The code used in this work can be found in [20].
+
+B. LDPC decoder performance
+
+The single decoder results are depicted in Table I. The
+
+UPMEM implementation has lower performance when com-
+
+pared to the GPU due to the device’s clock frequency. The
+
+UPMEM system runs at a 350 MHz clock frequency, while
+
+the GPUs provide clock frequencies ranging from 900 MHz
+
+to 2 GHz, improving performance by more than ten times. In
+
+the UPMEM system, using WRAM improves performance by
+
+four times compared to MRAM.
+
+In GPUs, a multi-kernel implementation was tried. How-
+
+ever, a single kernel solution was shown to yield higher
+
+performance and was chosen to perform the comparisons. The
+
+implementation
+
+uses
+
+N
+
+threads
+
+(
+
+N 2
+
+threads in the
+
+Syndrome
+
+computation and a single thread Threshold computation, while
+
+the remaining threads were stalled using a barrier). Using
+
+shared memory improves performance due to having better
+
+access times. It is also observed in GPUs that performance
+
+scales for larger codes, meaning that kernels with a higher
+
+number of threads can mask stalls with compute time. The
+
+same observation can only be seen for the multithreaded
+
+UPMEM version.
+
+The low-power Jetson’s implementations with shared mem-
+
+ory perform similarly to the RTX 2080 Ti and 3090 due to
+
+having better host-device data transfer times. In the Jetsons,
+
+the processing system and the memory are incorporated into the same chip, thus resulting in faster data transfer times. In contrast, desktop GPUs transfer data through PCI-e slots, resulting in higher data transfer times.
+Using multicodewording, the UPMEM system can achieve a performance of 2.814 Gbps by running 2557 decoders in parallel, as shown in Fig. 4. The same figure also depicts the throughput performance for the UPMEM-based MS LDPC decoder (described in [12]), reaching a decoding throughput of 0.743 Gbps i.e., a performance around four times lower compared to the BF algorithm. In order to have a fair comparison of multicodewording in GPUs, the implementations using shared memory were launched in several blocks (one decoder per block) until the occupancy rate (occupancy of the computing units per unit of time) was higher than 98%.
+The desktop GPUs can achieve higher performance (1.1 times in the 2080 Ti and 2.5 times in the 3090) than the UPMEM implementation in all codes by using hundreds of thousands of decoders in parallel, as shown in Table II.
+VI. RELATION TO PRIOR WORK
+The authors in [21] proposed the probabilistic gradient descent BF decoders in field-programmable gate array (FPGA), achieving 4.202 Gbps. One study [22] improved the previous results by proposing a probabilistic parallel BF decoder on an FPGA using two codes with N = 155 and N = 1296,
+
+709
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:48:30 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II NUMBER OF DECODERS RUNNING IN PARALLEL DURING
+MULTICODEWORDING FOR EACH PLATFORM.
+
+Device
+
+Code
+
+(128, 64) (256, 128) (512, 256)
+
+UPMEM
+2557 2557 2557
+
+Jetson Nano 4096 2048 1024
+
+Jetson TX2 32768 8192 2048
+
+Jetson AGX Xavier 524288 262144 131072
+
+RTX 2080 Ti 4456448 2228224 278528
+
+RTX 3090 4030464 2015232 1007616
+
+achieving 3.78 and 15.81 Gbps, respectively. In applicationspecific integrated circuits (ASICs), [23] presents an LDPC decoder for NAND storage in 65 nm CMOS technology, achieving 6.4 Gbps, while in [24], the modified gradient descent BF decoding scheme is able to achieve 18.6 Gbps. Although FPGA and ASIC implementations result in higher throughput decoders, GPU implementations have lower nonrecurring engineering costs and development time while providing more flexibility. In [12], the authors proposed a PiMbased MS LDPC decoder in UPMEM that achieves 743 Mbps of decoding throughput.
+VII. CONCLUSION
+The present study demonstrates the feasibility of generalpurpose PiM-based acceleration in LDPC decoders. The UPMEM system provides rudimentary processing units with low clock frequency that do not produce high throughput performance using single units. However, exploiting multiple cores that are close to memory, alleviates the data movement bottleneck and greatly increases performance, allowing the UPMEM system to compete against high-end desktop GPUs.
+Furthermore, the UPMEM system is modular and allows to increase performance by placing more PiM modules in the computing system, whereas to increase performance in GPUs is required to replace the device.
+Additionally, the comparison to the MS decoder found in [12], shows that the low complexity of the UPMEM’s ALUs, which emulates floating-point operations by using integer units, benefits the implementation of computationally simple low-bit integer decoding algorithms.
+Finally, this work provides data to researchers to understand the differences of general purpose PiM-based acceleration compared to other types of device acceleration, opening the door for new applications to be accelerated.
+REFERENCES
+[1] Y. Wu, B. Wu, and X. Zhou, “High-Performance QC-LDPC Code CoProcessing Approach and VLSI Architecture for Wi-Fi 6,” Electronics, vol. 12, no. 5, p. 1210, 2023.
+[2] Y. Shen, Y. Ren, A. T. Kristensen, X. You, C. Zhang, and A. Burg, “Improved Belief Propagation Decoding of Turbo Codes,” in ICASSP 2023 - 2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), pp. 1–5, 2023.
+[3] P. Bhuvaneshwari and C. Tharini, “Review on LDPC codes for big data storage,” Wireless Personal Communications, vol. 117, no. 2, pp. 1601– 1625, 2021.
+
+[4] J. Andrade, G. Falcao, and V. Silva, “Flexible design of wide-pipelinebased WiMAX QC-LDPC decoder architectures on FPGAs using highlevel synthesis,” Electronics letters, vol. 50, no. 11, pp. 839–840, 2014.
+[5] O. Ferraz, V. Silva, and G. Falcao, “On the Performance of Link Space Communications using NB-LDPC Codes on Embedded Parallel Systems,” in 2021 55th Asilomar Conference on Signals, Systems, and Computers, pp. 1164–1168, IEEE, 2021.
+[6] O. Ferraz, S. Subramaniyan, R. Chinthala, J. Andrade, J. R. Cavallaro, S. K. Nandy, V. Silva, X. Zhang, M. Purnaprajna, and G. Falcao, “A Survey on High-Throughput Non-Binary LDPC Decoders: ASIC, FPGA, and GPU Architectures,” IEEE Communications Surveys & Tutorials, vol. 24, no. 1, pp. 524–556, 2022.
+[7] A. Boroumand, S. Ghose, Y. Kim, R. Ausavarungnirun, E. Shiu, R. Thakur, D. Kim, A. Kuusela, A. Knies, P. Ranganathan, et al., “Google workloads for consumer devices: Mitigating data movement bottlenecks,” in Proceedings of the Twenty-Third International Conference on Architectural Support for Programming Languages and Operating Systems, pp. 316–331, 2018.
+[8] G. Falcao and J. D. Ferreira, “To PiM or Not to PiM,” Communications of the ACM, vol. 66, no. 6, pp. 48–55, 2023.
+[9] A. F. A. Furtunato, K. Georgiou, K. Eder, and S. Xavier-De-Souza, “When Parallel Speedups Hit the Memory Wall,” IEEE Access, vol. 8, pp. 79225–79238, 2020.
+[10] O. Mutlu, S. Ghose, J. Go´mez-Luna, and R. Ausavarungnirun, “A modern primer on processing in memory,” in Emerging Computing: From Devices to Systems: Looking Beyond Moore and Von Neumann, pp. 171–243, Springer, 2022.
+[11] J. D. Ferreira, G. Falcao, J. Go´mez-Luna, M. Alser, L. Orosa, M. Sadrosadati, J. S. Kim, G. F. Oliveira, T. Shahroodi, A. Nori, and O. Mutlu, “pLUTo: Enabling Massively Parallel Computation in DRAM via Lookup Tables,” in 2022 55th IEEE/ACM International Symposium on Microarchitecture (MICRO), pp. 900–919, 2022.
+[12] O. Ferraz, Y. Falevoz, V. Silva, and G. Falcao, “Unlocking the Potential of LDPC Decoders with PiM Acceleration,” in 2023 57th Asilomar Conference on Signals, Systems, and Computers, IEEE, 2023.
+[13] R. G. Gallager, “Low-density parity-check codes,” MIT Press, 1963. [14] T. K. Moon, Error correction coding: mathematical methods and
+algorithms. John Wiley & Sons, 2020. [15] M. Ismail, I. Ahmed, J. Coon, S. Armour, T. Kocak, and J. McGeehan,
+“Low latency low power bit flipping algorithms for LDPC decoding,” in 21st Annual IEEE International Symposium on Personal, Indoor and Mobile Radio Communications, pp. 278–282, IEEE, 2010. [16] UPMEM, “Introduction to UPMEM PIM. Processing-in-memory (PIM) on DRAM Accelerator (White Paper),” 2018. [17] J. Go´mez-Luna, I. E. Hajj, I. Fernandez, C. Giannoula, G. F. Oliveira, and O. Mutlu, “Benchmarking a new paradigm: An experimental analysis of a real processing-in-memory architecture,” arXiv preprint arXiv:2105.03814, 2021. [18] CCSDS, “TC Synchronization and Channel Coding,” in CCSDS 231.0B-3, 2017. [19] UPMEM, “UPMEM User Manual - Measuring performances,” 2023. Accessed: Set. 2023. Available: https://sdk.upmem.com/2023.1.0/071 MeasuringPerformances.html. [20] O. Ferraz, “A Processing in-Memory Approach for Bit Flipping LDPC Decoding,” 2023. Accessed: Mar. 2024. Available: https://github.com/ oscarferraz/EUSIPCO24. [21] K. Le, D. Declercq, F. Ghaffari, C. Spagnol, E. Popovici, P. Ivanis, and B. Vasic, “Efficient realization of probabilistic gradient descent bit flipping decoders,” in 2015 IEEE International Symposium on Circuits and Systems (ISCAS), pp. 1494–1497, 2015. [22] K. Le, F. Ghaffari, D. Declercq, B. Vasic, and C. Winstead, “A novel high-throughput, low-complexity bit-flipping decoder for LDPC codes,” in 2017 International Conference on Advanced Technologies for Communications (ATC), pp. 126–131, 2017. [23] J. Jung and I.-C. Park, “Multi-Bit Flipping Decoding of LDPC Codes for NAND Storage Systems,” IEEE Communications Letters, vol. 21, no. 5, pp. 979–982, 2017. [24] M.-R. Li, L.-M. Jhuang, and Y.-L. Ueng, “A modified gradient descent bit flipping decoding scheme for LDPC codes,” in 2017 IEEE International Workshop on Signal Processing Systems (SiPS), pp. 1–6, 2017.
+
+710
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:48:30 UTC from IEEE Xplore. Restrictions apply.
+
+

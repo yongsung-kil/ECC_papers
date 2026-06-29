@@ -1,0 +1,262 @@
+A LDPC Decoder with All Single Port Memories
+
+Ying-Hong Tian, Xiao-Jun Zhang, Zong-Sheng Lai
+East China Normal University, Shanghai, China yhtian@ee.ecnu.edu.cn
+
+Abstract—this paper proposes one LDPC decoder with all single port memories to lower requirements of logic and interconnection and save hardware cost. Considering the lower read-write speed of single port memories than that of dual port memories, the decoder needs to reduce computation complex and shorten the critical path delay so as to get high throughput. To get the purpose, the LDPC decoder uses TDMP algorithm and normalized MS algorithm to reduce computation complex, uses reusable and configurable CVPU to realize single cycle pipeline variable and check node updating calculation, uses optimized shuffle network to shorten the path delay, and uses memories dominated controller to avoid the read and write conflict of memories. The implementation results show for once iteration process the throughputs are about 890Mbps, 847Mbps, and 863Mbps for rate 0.4, 0.6, and 0.8 respectively.
+Keywords-LDPC; TDMP;MS; single port memory
+I. INTRODUCTION
+The Low-Density Parity-Check (LDPC) codes have received much attention due to their excellent performance. These codes have been proved to achieve performance near to Shannon’s limits [1]. Their decoders can be fully parallelized and potentially have high throughout and low decoding latency. As a result, LDPC codes haven been adopted in DVB-S2, WLAN (IEEE 802.11n), WiMAX (IEEE 802.16e) and DMB-T.
+LDPC codes are linear block codes defined by a sparse parity-check matrix. The sparse matrix can be classified into two classes: random or structured. Random matrices perform better than structured matrices in error correction ability, but they suffer from the complex interconnect issues. Structured matrices simplify the interconnect complexity, especially with the decoder architectures in mind. The quasi-cyclic LDPC (QC-LDPC), among structured codes, are used in all the standards mentioned above. QC-LDPC codes are defined by an array of sub-matrices, which are N x N circulant matrices with at most one “1” per column or per row. The QC-LDPC structure guarantees at least n messages can be computed in a parallel fashion with simple interconnection.
+The original LDPC decoding algorithm is Gallager’s iterative two-phase message passing algorithm (TPMP), which involves check-node update and variable-node update as two phase schedule. There are many variations and approximations that have been studied since TPMP, including the widely used sum of products (SP), min-sum (MS) and Jacobian based BSJR (named by its discoverers Bahl, Cocke, Jelinik and Raviv). Mansour and Shanbhag proposed the turbo decoding message passing (TDMP), which is sometimes also called as layered
+_____________________________
+978-1-4244-4738-1/09/$25.00 ©2009 IEEE
+This paper is supported by Foundation of Shanghai Science and Technology Committee under Grants 08700741200, Shanghai Leading Academic Discipline Project under Grants B411, open project of SIMIT, Chinese Academy of Sciences and open project of Key Laboratory of Advanced Display and System Application(shanghai university); Ministry of Education, china (P200802).
+
+decoding [2]. TDMP allows updated information to be utilized more quickly thus reducing the number of iterations required by up to 50% without performance degradation. TDMP also provides 2x throughout and significant memory advantages when compared to TPMP.
+The hardware architectures of decoders mainly have three types: full parallel, partial parallel and full series. The full series architecture is too slow and used hardly. Full parallel architecture has the fastest speed but cost too much. It often used for small code length [3]. Partial parallel architecture is widely used for the long code [4]-[6]. Because of the long code length, the hardware implementations suffer from the high parallel process, the complex interconnection, and the huge memory cost. Usually, the parallel degree is equal to the rank of submatrix in order to simplify the interconnection [5]. The interconnection can be done by shuffle network [7]-[9] to support different code rate. The huge memories are mainly used to save messages of variable nodes and check nodes. In order to achieve the high parallel process ability, dual-port memories are used in almost all current LDPC decoders. Compared with single port memories, the dual-port memories increase the area, power, demand more route wire resource, and make the control logic complex.
+In this paper, we proposed one LDPC decoder with all single-port memories for LDPC codes in the DMB-TH standard. To get the purpose, first, we reduce the decoding computation complex degree and speedup the iteration process by using TDMP algorithm and normalized MS algorithm, which are described in the section II. And then for the hardware implementation, we use some efficient techniques to shorten the delay path and increase the process ability so that we can use only all single port memories to meet decoding requirements, as described in the section III. In the section VI, the related implementation results are given and analyzed. In the section V, conclusions are drawn.
+II. LDPC DECODING
+The QC-LDPC codes are adopted in DMB-T standard. Three kinds of code rates are used: 0.4, 0.6, and 0.8. The three parity-check matrices are composed by the same style submatrices to simplify implementations. Two types of sub-matrix are used: all-zeros matrix and circulant identity matrix with different cyclic shifts. The sizes of all sub-matrices are the same, 127×127. Since the code length is 7493 bits, the submatrix column numbers of the parity-check matrices is the same, 59 columns and the sub-matrix row numbers are 35, 23, and 11 for the three rates, respectively. The variable node
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:35:29 UTC from IEEE Xplore. Restrictions apply.
+
+degrees are 6/7, 11/12, and 25/26 for the three rates, respectively.
+TDMP algorithm classifies the three parity check matrix into three mhn sub-matrices, where m is equal to 35, 23, or 11 and n is equal to 59 in the DMB-TH. All check nodes can be partitioned into m groups and all variable nodes can be partitioned into n groups. After one check-node group processing is finished, the new check nodes messages (Rmn) are immediately used to update the variable node messages (Qn). However, in previous TPMP algorithm the variable nodes are updated only when the whole check node updating have been finished. By the means, the TDMP increase the decoding speed without performance degradation. One check-node group processing and the associated variable-node group processing constitute once sub-iteration. The whole m check-node groups processing constitutes once iteration. The BCJR [2] and offset MS [6] have also been used for the TDMP. In this work the normalized MS is applied to TDMP.
+According to the above description, the whole LDPC decoding process can be programmed by pseudo-c language, shown in the followings:
+
+Rmn 0, Qn yn [Initialization]
+for i =1 : max_iteration_times [Iteration loop] for j = 1 : m [sub-iteration loop]
+
+Q'n Qn  Rmn [variable node message processing] (1)
+
+Rmn
+
+O
+nVm \ n
+
+Sign(Q'n
+
+)
+
+Min
+nVm / n
+
+(
+
+Q'
+
+n
+
+)
+
+[check node
+
+updating]
+
+(2)
+
+Qn ¦ Rmn
+
+mVn
+
+[variable node updating]
+
+(3)
+
+Q'n Rmn
+
+Among the program, yn is the initial input channel message, m is the submatrix row numbers, n is the index for code word
+bit and O is the normalized factor.
+
+Figure 1. bit format for check message Rm
+After the check node messages Rmn are got, the variable node message can be updated by the equations (3). Because we use single port memories the calculations for variable nodes and check nodes would not be done simultaneously. So the hardware resource for check node updating can be reused and reconfigured for variable node message updating. Fig. 2 shows the proposed check and variable node process unit (CVPU).
+
+Qn R1
+
+Rm R2
+
+mux0
+
+mux1
+
+Data preparation
+
++
+8 8 44
+R3
+
+SMF
+44'hffff0 mux2 000000
+x0.75 R4
+
+Qn
+
+Rm
+
+III. HARDWARE IMPLEMENTATION
+A. Reusable and Configurable CVPU
+Equation (1) and (2) are used to calculate the check node updating and the related operations include substation, sign bit continued multiplication, minimum value operation, and constant multiplication. The minimum operation in equation (2) can be realized by computing the least minimum and the second least minimum among the entire set of the messages and recording the index value related to the least minimum. When given the index for some check message, its value will be the least minimum if the index is equal to the recorded index or be the second minimum value if the index is not equal to the recorded index. According to the method, check messages Rmn of one row variable node can be saved as one data Rm. By the means some bits are saved. The bit format of the data Rm is shown in Fig. 1.
+
+Figure 2. the CVPU architecture
+R1 - R4 are registers for saving the variable node message and check message. The mux0 and mux1 select the right input data for the adder. Data preparation unit finds the minimum check message and preprocesses it as one input data of the adder. Data preparation unit also processes variable node message to provide another input for the adder. The SMF unit does the sign bit continued multiplication, finds the least minimum and the second minimum, records the related index, and forms the bit format for check message Rm. The mux2 select right data to R4. When once check message calculation begin, the R4 is initialized to maximum values for the least minimum and the second minimum. The x0.75 unit finishes the normalized operation because the normalized factor is 0.75 in this work. CVPU finishes once check node message calculation from up to down without feedback and saves the check node message to register R4. When CVPU does variable node
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:35:29 UTC from IEEE Xplore. Restrictions apply.
+
+message calculation, the old variable node message ( Q'n ) is
+firstly calculated and saved in R3, and then add R3 and R4 to get the new variable node message ( Qn ). Obviously, the adder, register R3 and data preparation unit are reused for both check node and variable node updating. Because we need the 127 CVPUs in the whole decoder architecture, the hardware saving due to reuse is significant.
+
+B. Shuffle Network
+The cyclic permutation submatrices determine the interconnect network between the variable-node memory and the CVNUs. The network can be directly implemented by s s×1 multiplexers. Generally, the network can be optimized with the well-known s×s Benes network [7], which is capable of performing any sort of permutation over s data by 2log2N-1 stages 2×1 multiplexers, where s is a power of 2. However, since only circular shifts are required for QC-LDPC decoder, an s×s Banyan network (1/2 Benes network) is preferable, because it only requires log2N stages 2x1 multiplexers. To accommodate multiple code rates, various block lengths, and different sizes of submatrices, reconfigurable networks have been proposed. These reconfigurable networks [8][9] improved Benes network structure and configured them with LUT or on the fly by auxiliary network.
+In order to get optimized shuffle network for the DMB-TH, Two valuable properties of submatrices can be utilized: One is cyclic shifts and the other is fixed size (127 x 127). So we can use more efficient network: the SS-CS network, as shown in [10]. One 5×5 SS-CS shuffle network is shown in fig. 3. Table 1 shows the SS-CS network advantages in multiplexer stages, type, total number and configuration, compared with direct implementation, general Benes networks, and Banyan network.
+
+TABLE I.
+
+DIFFERENT SHUFFLE NETWORK COMPARSION
+
+Network type
+Direct Benes Banyan SS-CS
+
+Multiplex ers Stages
+1 2log2N-1
+log2N log2N
+
+Multiplex ers type
+Sh1 2h2 2h2 2h1
+
+Total multiplexers numbers
+S S/2h˄2log2N-1˅
+S/2h log2N Shlog2N
+
+configuratio n
+simple complex complex Very simple
+
+Figure 3. 5×5 SS-CS shuffle network
+
+C. the proposed decoder architecture
+The proposed decoder architecture supporting three code rate is shown in Fig. 4. The iteration processing unit ldpcdec_iter includes 127 CVPUs and can process one submatrix in parallel. Two shuffle networks are used to route data between variable node memories SRAM_Q0-SRAM_Q7 and ldpcdec_iter. The eight parallel single port memories SRAM_Q0-SRAM_Q7 can output 127 variable node messages simultaneously to make the ldpcdec_iter works 100%. Six parallel single port memories SRAM_R0 – SRAM_R4 are used to save check node message in which one unit saves two check messages. The three Parity-check matrices are saved in one 930x13 bit ROM Rom_H. The 13 bit data tells the nonzero submatrices position and first one position of submatrices.
+
+ldpcdec_ctrl
+
+Data_h
+
+Rom_H 13x930
+
+Data bus Sram_Q0 128x59
+
+Control bus ldpcdec_iter
+CVPU 0
+
+Sram_Q1 128x59
+Sram_Q2 128x59
+
+Shuffle network
+I
+
+CVPU 1
+CVPU 2
+
+Sram_Q3 128x59
+
+Sram_Q4 128x59
+
+Addr Cen/ wen Sram_R0
+88x35
+Sram_R1 88x35
+Sram_R2 88x35
+Sram_R3 88x35
+Sram_R4 88x35
+
+Sram_Q5 128x59
+Sram_Q6 128x59
+Sram_Q7 120x59
+
+Shuffle network
+II
+
+CVPU 125
+CVPU 126
+
+Figure 4. the proposed decoder architecture
+In order to get the all single port memories implementation, the decoding control unit ldpcdec_ctrl is dominated by three kinds of memories. Namely, for check message updating calculation, the decoding system read check matrix memory Rom_H by giving read signal (read_ Rom_H) and address signal (addr_ Rom_H). The data_h from Rom_H consists of the information of the submatrix position and first one position. The information of the submatrix position is used to find the address of related variable node message in SRAM_Q0-7. The information of first one position is used to configure the two shuffle network. Then the decoding system can read SRAM_Q0-7 to get the variable node message. The SRAM_R0-4 can be red earlier since it only need to red once during one submatrix row calculation. After the check message and variable node message are ready, ldpcdec_iter can calculate the new check node message. When row_over signal is valid once check node message updating calculation is finished. The related timing is shown in Fig. 5. The whole
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:35:29 UTC from IEEE Xplore. Restrictions apply.
+
+calculation process is arranged by pipeline pattern and every stage of the pipeline takes up one cycle. The variable node message calculation is similar but it needs to read and write SRAM_Q0-7 during the process. By the memory-dominated control method, reading and writing of memories are classified clearly and so the conflict of ports can be avoided.
+
+As shown in Fig. 5, one row check node updating takes d+2 cycles due to single cycle pipeline, where d is check node degree. Similarly, the following variable node updating takes 2*d+2 cycles due to the requirement of reading and writing the variable node memories. Since the check matrix has r rows, once iteration takes r*(3*d+4) cycles. The decoding throughput can be calculated with the following equation:
+
+tp = 7493*104/(r*(3*d+4))
+
+(4)
+
+According to equation (4), we can calculate the tp is about 890Mbps, 847Mbps, and 863Mbps for rate 0.4, 0.6, and 0.8, respectively.
+
+Figure 5. memory-dominated check node message calculation process
+
+IV. IMPLEMENTATION RESULTS
+The decoder hardware architecture described in section III is written in Verilog code and simulated using ModelSim, then is synthesized, placed and routed on the Xilinx XC4VLX160 chip. Result shows the critical path delay is 9.617ns and the maximum clock frequency is 104MHz. The hardware cost of sequential elements and the combinational logic is shown in the Table II. The memories sizes are shown in Table III. Table III also compares memories used in this paper with [5] in detail. Obvious advantages are that this paper uses all single port memories and need not shuffle network configuration memory. Thus it reduces the hardware cost and lowers the difficulty of route.
+
+TABLE II.
+
+HARDWARE COST
+
+hardware
+
+Sequential Utilization Combination Utilization
+
+elements percent
+
+logic
+
+percent
+
+ldpcdec_ctrl Shuffle network
+ldpcdec_iter
+
+705 -
+20872
+
+0.66 -
+19.57
+
+519 7258 39598
+
+0.49 6.0 37.13
+
+TABLE III. MEMORIES COMPARATION
+
+Items
+algorithm Code rate Code length Size of submatrix
+Check node memroy
+Variable node memroy
+Check matrix memroy
+Shuffle network configuration memory
+
+[5]
+BCJR+TDMP 8/16:1/16:14/16
+2048 64 16x64x24 (dual port) 4x8x256 (dual port) 16x30 (single port) 96x192 (dual port)
+
+proposed MS + TDMP 0.4/0.6/0.8
+7493 127
+6x88x35 (single port) 7x128x59+120x59 (single
+port) 13x930 (single port)
+none
+
+V. CONCLUSIONS
+In this paper, one LDPC decoder with all single port memories is proposed. Considering the lower read-write speed single port memories than dual port memories, the decoder needs to reduce computation complex and shorten the critical path delay. To get the purpose, the LDPC decoder uses TDMP algorithm and scaling MS algorithm to reduce computation complex. And then it uses reusable and configurable CVPU to realize single cycle pipeline variable and check node updating calculation, uses optimized shuffle network to shorten the path delay, and uses memories dominated controller to avoid the read and write conflict of memories. The implement results shown the throughput is enough high and can meet the application requirements.
+REFERENCES
+[1] C. Berron, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error correcting coding and decoding: Turbo codes,” in IEEE Int. Conf. on Communications, 1993, pp. 1064–1070.
+[2] M. Mansour and N. Shanbhag. “High-throughput LDPC decoders”. IEEE Trans. VLSI Syst., Dec 2003, 11(6):976–996.
+[3] Darabiha, A.; Chan Carusone, A.; Kschischang, F.R. “Power Reduction Techniques for LDPC Decoders”, Solid-State Circuits, IEEE Journal of Volume 43, Issue 8, Aug. 2008 pp:1835 - 1845
+[4] S. Olcer. “Decoder architecture for array-code-based LDPC codes”. In IEEE Global Telecommunications Conference, GLOBECOM’03, volume 22, Dec. 2003, pp 2046 – 2050.
+[5] Mansour, M.M.; Shanbhag, N.R.; “A 640-Mb/s 2048-bit programmable LDPC decoder chip Solid-State Circuits”, IEEE Journal of Volume 41, Issue 3, March 2006 pp:684 – 698.
+[6] Gunnam, K.K.; Choi, G.S.; Yeary, M.B.; Atiquzzaman, M. “VLSI Architectures for Layered Decoding for Irregular LDPC Codes of WiMax”, Communications, 2007. ICC '07. IEEE International Conference on 24-28 June 2007 pp:4542 – 4547.
+[7] Benes, V.E.: ‘Optimal rearrangeable multistage connecting networks’, Bell Syst. Tech. J., 1964, 43, pp. 1641–1656
+[8] J. Tang, T. Bhatt, V. Sundaramurthy, and K.K. Parhi, “Reconfigurable shuffle network design in LDPC decoder,” Int. Conf. on Applicationspecific Systems, Architectures and Processors, (ASAP), Sep. 2006pp. 81-86.
+[9] Daesun Oh; Parhi, K.K.; “Area efficient controller design of barrel shifters for reconfigurable LDPC decoders”. Circuits and Systems, 2008. ISCAS 2008. IEEE International Symposium on. 18-21 May 2008 pp:240 – 243.
+[10] Rovini, M.; Gentile, G.; Fanucci, L “Multi-size circular shifting networks for decoders of structured LDPC codes”, Electronics Letters Volume 43, Issue 17, August 16 2007 pp:938 – 940.
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:35:29 UTC from IEEE Xplore. Restrictions apply.
+
+

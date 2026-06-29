@@ -1,0 +1,1544 @@
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+1809
+
+Improving SSD Read Latency via Coding
+
+Hyegyeong Park , Member, IEEE and Jaekyun Moon , Fellow, IEEE
+
+Abstract—We study the potential enhancement of the read access speed in high-performance solid-state drives (SSDs) by coding, given speed variations across the multiple flash interfaces and assuming occasional local memory failures. Our analysis is based on a queuing model that incorporates both read request failures and NAND element failures. The NAND element failure in the present context reflects various limitations on the memory element level such as bad blocks, dies or chips that cannot be corrected by error control coding (ECC) typically employed to protect pages read off the NAND cells. Our analysis provides a clear picture of the storage-overhead and readlatency trade-offs given read failures and NAND element failures. We investigate two different ways to mitigate the effect of NAND element failures using the notion of multi-class jobs with different priorities. A strong motivation for this work is to understand the reliability requirement of NAND chip components given an additional layer of failure protection, under the latency/storage-overhead constraints.
+Index Terms—NAND flash memory, solid-state drives, NAND component failures, distributed storage, latency analysis, queuing theory, errorcontrol coding
+Ç
+
+1 INTRODUCTION
+AS the demand continues for higher storage density in solid-state drives (SSDs), the NAND process size inevitably shrinks, resulting in considerable difficulties in maintaining yield in the NAND manufacturing process. Strong error control coding (ECC) [2], [3], [4], [5], [6] and welltailored signal processing [7], [8], [9] have been increasingly used to help relieve this burden on NAND manufacturing. For example, advanced low-density parity-check (LDPC) coding [10] is now widely deployed to protect pages read off the NAND cells, allowing raw bit error rates (RBERs) in accessing the NAND cells to drop to extremely low levels [2], [3], [4]. An unfortunate price paid is the considerable increase in the read latency as generating soft read values of the cells needed for the LDPC decoder requires multiple sensing/read operations that are highly time-consuming.
+In this work, we analyze the problem from a different perspective. We investigate the power of ECC while bringing the read access time into the picture. The read access time is the read response time, which is defined as the time taken since the read request until the controller receives the data. Specifically, we explore trade-offs between codingoverhead and read-access-time first time use of RBER and memory element failure probability. To do this, we exploit the idea and analytical tools from the studies on coding for distributed storage. A distributed storage system consists of multiple storage servers which contain information in a distributed manner. Simple replication or erasure coding is often applied across the distributed servers to improve data reliability throughout the system.
+ The authors are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea. E-mail: parkh@kaist.ac.kr, jmoon@kaist.edu.
+Manuscript received 9 Apr. 2019; revised 21 Nov. 2019; accepted 22 Feb. 2020. Date of publication 6 Mar. 2020; date of current version 6 Nov. 2020. (Corresponding author: Hyegyeong Park.) Recommended for acceptance by H. Jiang. Digital Object Identifier no. 10.1109/TC.2020.2978823
+
+While prior work exists on the use of erasure coding to improve download time of distributed storage [11], [12], [13], [14], [15], [16], here we are concerned with SSD-specific read access time and the failure event models that have not been previously used in the SSD system performance analysis. In particular, we introduce a new model for the read access time distribution reflecting a step increase in read latency that occurs every time read access fails. We also extend the (n, k) fork-join model introduced in [14] to include the following two types of failures: (a) the read failure in accessing individual NAND cells in spite of using ECCs, and (b) the NAND element failure event. The NAND element here can be the chip/ die/block/page, which is similar to the silicon element in the redundant array of independent silicon elements (RAISE) [17]. To handle such NAND element failure events, multiple priority classes are included in our analysis. While the multiple classes with different priorities are also considered in [15], [16], there the priority is introduced to model the heterogeneity of the cloud storage data and there is no consideration of the NAND-specific system modeling. Thus, the approaches cannot be directly applied to the problem at hand.
+In [2], progressive memory-sensing/LDPC-code-decoding is utilized to reduce system latency in the face of read failure events. In contrast to the work of [2], we also consider the NAND element failures. We handle the NAND element failures under the two different proposed policies, which are called instantaneous repair (IR) and postponed repair (PR) policies. The IR policy gives the NAND element failure the higher priority for service (i.e., reconstruction) under the preemptive-resume priority. On the contrary, the PR policy assigns the lower priority to the NAND element failure under the non-preemptive priority.
+The main contributions of this paper are as follows:
+1) We demonstrate how coding improves the read access time in SSDs.
+2) We present upper bounds for the mean read access time, while also considering the SSD-specific read
+
+0018-9340 ß 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See ht_tps://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1810
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+access time distribution and failure events of the copy of the data. That is, replication is optimal in repair
+
+read request and NAND element.
+
+bandwidth.1 However, replication has a high cost in terms of
+
+3) We propose two types of policies against NAND ele- storage overhead. Erasure codes such as the well-known
+
+ment failures so that the reduction of read access Reed-Solomon (RS) codes [20] have been deployed as well,
+
+time due to the proposed coding is maintained even which have the minimum storage overhead while requiring
+
+in the presence of the NAND element failures.
+
+an expensive cost in repair bandwidth.
+
+4) Through the analysis and numerical simulation After the work of Dimakis et al. [21], which introduced
+
+result, we provide necessary insights into new trade- the regenerating codes that could achieve the optimal
+
+offs related to the tolerable level of physical memory trade-off between the repair bandwidth and storage, there
+
+failure rates.
+
+has been the following line of work on efficient codes in
+
+Our contributions listed lay down a path toward more effi- terms of various resource parameters: access I/O [22],
+
+cient utilization of storage overheads under the consideration [23], locality [24], [25], [26], download time [11], [12], [13],
+
+of the target yields in the NAND manufacturing process.
+
+[14], [15], [16] and energy consumption [15]. Moreover,
+
+Compared to the conference version [1] of this work, the trade-offs among key resource parameters have been
+
+present paper adds significantly in the following ways: explored: among repair bandwidth, storage and reliability
+
+first of all, this paper suggests an improved way of miti- in [27] and among I/O, storage and network bandwidth
+
+gating the effect of NAND element failure based on a new in [28].
+
+PR policy. If the NAND element failure arises frequently
+
+the IR policy introduced in [1] can be inefficient, since all
+
+the read operations are suspended to repair the failed ele- 2.2 High-Level Coding
+
+ment as soon as a failure event occurs. Adopting the PR policy, the repair process can wait until all read requests in the queues have been processed thanks to additional coding. The present paper provides a new latency analysis including the effect of the proposed PR policy against NAND element failure. Through both analysis and numerical simulations, it is shown that the PR policy can have a significantly better latency performance for a certain range of RBERs compared to the IR policy. Also, NAND element failure modeling and corresponding repair job modeling are new in the present paper. The underlying assumptions associated with modeling are clarified with more detailed descriptions and clearly justified based on the results of previous literature.
+The rest of this paper is organized as follows. Section 2 contains a review of the relevant literature. Section 3 presents the description of the target problem and system model. In Section 4, we discuss a layered coding structure for SSDs based on the internal parallelism. In Section 5, analysis of read access time without the consideration of NAND element failures is given. In Sections 6 and 7, we provide the analysis of read access time in the existence of NAND element failures. Two different types of approaches to protect the system against NAND element failures are introduced as well. In Section 8, numerical simulation results show that the proposed layered coding gives a reduction in latency relative to the system without layered coding. A comparison between the latency performance under the two proposed policies against NAND element failures is also provided. Finally, the paper draws conclusions in Section 9.
+
+The chip level memory failure is a growing concern and a variety of techniques related to the redundant-arrayof-independent disks (RAID) already exist to address this issue [29], [30]. For example, Chipkill from IBM [31], Advanced ECC from HP [32] and redundant array of independent NAND (RAIN) from Micron [33] all provide fault tolerance on the chip level. RAISE from SandForce [17] further considers data protection on the die/block/page level. The superblock/superpage from Micron [34] is another approach to improving speed by grouping multiple blocks/ pages across chips and planes [29], [34], [35], [36]. This improves the throughput since the multiple pages with a large volume involved in the same superpage/superblock can be read/written/erased simultaneously.
+Unlike in the RAID-like systems or systems with the superblock/superpage-level parity, we also aim at reducing the read access time using codes. In the conference version [1] of this paper, we have introduced a layered coding structure boosted by outer MDS coding across NAND elements,2 in addition to the inner soft-decision ECC such as the LDPC code. Typical SSD architecture is based on an array of NAND flash memory packages. Such packages and the flash controller are interconnected with multiple channels. Data accesses can be parallelized and conducted independently over channels. The importance of exploiting internal parallelism in high-performance SSDs is thoroughly investigated in [37], [38]. The highly parallelized structure of SSDs opens up the possibility of introducing queuing theoretic analysis. In the case under consideration in this work, reducing read access time is possible
+
+via the high-level erasure coding across parallel channels,
+
+2 RELATED WORK
+2.1 Distributed Storage Coding Coding for distributed storage is an active area of research.
+
+since during the read the original data can be reconstructed by accessing any k fastest available channels out of n parallel ones.
+
+For providing fault tolerance to distributed storage, 3-repli-
+
+1. The repair bandwidth is defined as the amount of data to be
+
+cation has been widely used in the Google File System downloaded to repair one data unit failure.
+
+(GFS) [18] and Hadoop Distributed File System (HDFS) [19].
+
+2. We refer to a symbol in the erasure code as a node. Since we
+
+This method simply stores three exact copies of the original data across the distinct servers so that a failed copy of the
+
+deploy the outer MDS code across NAND elements, any NAND elements such as page/block/die/chip can be regarded as nodes. Note also that in layered coding, the outer ECC and high-level (erasure) cod-
+
+data can be recovered by accessing only one other intact ing are terms that can be used interchangeably.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1811
+
+Fig. 1. NAND flash interface as a queuing model. (a) NAND interface with n channels combating latency variations. (b) Fork-join queuing model with n queues.
+3 TARGET PROBLEM AND SYSTEM DESCRIPTION
+
+3.2 NAND Interface Modeling With Queues
+In our modeling of the SSD system, there are multiple channels3 each of which is connected to the NAND flash package which consists of multiple NAND flash chips. Each channel is assumed to have its queue due to the presence of processing speed variations across different memory chip interfaces (see Fig. 1a). The speed variations arise from the various types of random noise that degrades the accuracy of the LDPC decoder input, which in turn affects the LDPC code decoding failure probability and the number of multiple sensing/read operations to generate soft read values of the cells for the LDPC decoder. Such speed variations tend to be large especially in high-performance SSDs due to the large number of NAND chips deployed. The pages read off each channel are typically protected by ECC. Our assumption here, however, is that there are occasional hard errors that cannot be corrected at this level. This might be due to bad blocks, dies or chips. In this sense, NAND elements deployed across distinct NAND flash packages that are connected with different flash channels can be interpreted as data nodes in distributed storage with their own queue. This view is consistent with some of the existing highperformance enterprise SSD architectures [39], where separate NAND controllers or caches/buffers are employed that help smooth out the access speed variations across the parallel NAND channel interfaces [40]. Fig. 1b shows the forkjoin queuing model [41] where incoming job requests are split into n parallelized queues. The fork-join queue has been widely adopted for describing the parallel and distributed processing systems. In this paper, the NAND flash interface in Fig. 1a is modeled as a queuing model as described in Fig. 1b.
+For the reader’s convenience, key parameters extensively used in this paper are briefly defined in Table 1.
+
+3.1 Target Problem
+A failure of NAND elements such as the pages, blocks, dies or 4 LAYERED CODING STRUCTURE
+
+chips is catastrophic in that it cannot be recovered by the ECC applied over a page. In this paper, we consider the problem of mitigating failures and improving data access time by introducing high-level erasure coding. More specifically, we are interested in doing a latency analysis of the SSD system equipped with high-level erasure coding, and exploring the trade-off relationships between the coding-overhead and read access time. We further aim to investigate how the trade-
+
+In order to provide additional data protection to correct full page/block/die failures, we introduce the high-level erasure code as the outer ECC across NAND elements. It is a similar concept to striping in the RAID viewpoint. Such a combination of an inner ECC and an outer ECC across the NAND elements forms a layered coding structure in Fig. 2. Soft-decision ECCs commonly used in practical SSDs have significantly stronger error correction capability than hard-
+
+off changes in the presence of failure events. We thus define decision ECCs such as the Bose-Chaudhuri-Hocquenghem
+
+the types of failures that we are interested in as follows.
+
+(BCH) code [2]. However, an increased latency caused by
+
+Definition 1.
+
+multiple retries of read-voltage sensing is inevitable to obtain stronger error correction performance. This structure
+
+ Read request failures: LDPC code decoding failures invokes the outer ECC each time the inner ECC (e.g., LDPC
+
+that invoke additional voltage sensing
+
+codes) decoding step fails (see Fig. 3). Latency caused by
+
+ NAND element failures: occasional failures of NAND consecutive read retries of the LDPC code can be reduced
+
+elements that require data reconstruction
+
+by the help of the outer high-level erasure code. We wish to
+
+In the progressive memory sensing and decoding scheme, once the LDPC code decoding run fails, the controller increases memory sensing quantization level by one. The sensing level increment continues until the decoding succeeds or the num-
+
+improve the read access time and NAND element failure tolerance by leveraging the outer code.
+Incorporating the outer ECC in the memory system, we propose a framework wherein the NAND memory interfaces
+
+ber of retries reaches the highest sensing precision. The decoding failure events, which invoke re-sensing of the memory cells, are considered as read failure events in the present work.
+
+3. Channels refer to the paths that connect the SSD controller to the NAND flash memory to carry traffic. Multiple channels enable parallel read/write operations of data.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1812
+Notation  N Nmax Ns Pfail;i Pfða1iÞl tsenÀref tsen txfer tdec tprog Np
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+TABLE 1 Glossary of Important Notation
+Description
+rate of the read request arrivals number of possible outcomes per a sensing level maximum number of the possible outcomes in the read access time distribution maximum number of sensing level probability of read request failure at the ith sensing level
+probability that hard decision decoding fails latency of sensing reference hard-decision voltages latency of sensing a set of additional voltage levels to yield one soft-decision quantization level latency of transferring the additional data read by increasing a sensing level from the flash to the controller decoding delay of an LDPC code programming latency number of pages to be reconstructed
+
+in an SSD act as distributed data storage. Layered coding and distributed storage coding clearly have parallels in using ECCs across the distinct nodes to provide node-level data reliability.
+We consider the following storage system which is modeled using the ðn; kÞ fork-join system introduced in [14].
+Definition 2. An ðn; kÞ MDS-outer-coded layered coding system (or simply ðn; kÞ layered coding) consists of n NAND elements which are deployed across the distinct NAND flash packages.
+ Data is split into k chunks and then stored over n nodes after applying an ðn; kÞ MDS code.
+ By the property of ðn; kÞ MDS code, accessing any k out of n nodes enables reconstruction of the desired data.
+ Each incoming request of a read job is forked into n first-come-first-served (FCFS) queues and any k finished requests out of n complete the corresponding job, after which the remaining n À k unfinished requests can be discarded from the queues.
+Here we assume a negligible request cancellation overhead, which means that the queue can serve the next waiting request immediately after a request is canceled. Moreover, the encoding/decoding of the outer code requires no significant
+
+additional cost, as it takes simple exclusive OR operations as in RAID SSDs [39]. It is also noteworthy that the ðn; kÞ layered coding structure assumes that a data chunk larger than n pages is accessed at once, which is valid in usual NAND flash applications. Then, most of the data can benefit from layered coding by forming n-page groups, and there exists only a small or even a negligible portion of data that cannot.
+The nodes in layered coding are deployed in the different NAND flash packages. This allows us to assume that the failures occur independently. Although high-level coding can have a page/block/chip as a node, we confine our interest for the time being to the high-level coding with pages as its nodes for ease of presentation. Even so, the models and analyses can be easily extended to the case where high-level coding regards other NAND elements as nodes.
+For illustrative purposes, consider the fork-join model in Fig. 4 corresponding to ðn; kÞ ¼ ð10; 4Þ. This ð10; 4Þ layered coding has a page as its node. We denote each page accessed by job X by “Page X-Y”. Y denotes the index of a flash package where Page X-Y stored. This means that pages with the same X index compose a ð10; 4Þ high-level code. Read job 1 has 10 requests to access Page 1-1 to Page 1-10. When a request approaches the head of a queue, the corresponding page is accessed. In Fig. 4, since four (Pages 1-2, 1-3, 1-5, 1-8) out of ten pages for job 1 have already been
+
+Fig. 2. Example of the layered coding structure. In this example, the
+
+pages deployed across the distinct flash packages are the nodes of the
+
+outer MDS code. Each page is protected by an inner LDPC code. The
+
+shaded pages are the nodes of high-level coding represented by a box in
+
+dashed red line.
+
+Fig. 3. Flow of the ðn; kÞ MDS-coded layered coding structure.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1813
+
+Fig. 5. Hard- and soft-decision voltage sensing for the multi-level-cell (MLC) NAND flash.
+
+Fig. 4. Fork-join queuing model with n queues. For an ðn; kÞ ¼ ð10; 4Þ MDS code under consideration, accessing any four out of ten pages complete the corresponding job.
+served, the remaining six tasks for job 1 abandon (presented by dashed squares in the queues) their queues and job 1 exits the system.
+
+sensing and decoding latency to reach the ith sensing level is defined as follows.
+Definition 3. We define the memory sensing and decoding latency where decoding succeeds at the ith sensing level, for a given Ns and an integer i such that 1 i Ns by
+ti ¼ tsenÀref þ txfer þ tdec þ ði À 1Þðtsen þ txfer þ tdecÞ; (1)
+
+5 ANALYSIS OF READ ACCESS TIME
+For latency analysis, we assume that the read requests occur randomly according to the Poisson process with rate  as in [14], [15]. The read access time at each node is governed by the behavior of memory sensing and decoding as we shall see in Section 5.1. Note that it is possible to assume that the read access time at each node is independent since nodes are deployed across the different flash packages. The reason is that the LDPC decoder failure rate largely depends on read noise (system noise) and write noise (due to media as well as written input). It is obvious that the read system noise (e.g., electronic circuit noise) across different channels are independent.4
+5.1 Read Access Latency in SSDs
+Soft-decision ECCs (e.g., LDPC codes) perform significantly better than hard-decision ECCs such as the BCH codes [2]. Error correction capability of LDPC codes highly depends on the quality of input information. Such input information is computed by using the digitally quantized threshold voltage of the memory cells in a page from successive multiple read decisions. Fig. 5 illustrates progressive sensing and decoding [2] for the multi-level-cell (MLC) NAND flash channel. Once decoding fails following hard-decision sensing, the controller invokes soft-decision LDPC code decoding. To do this, the sensing level between the adjacent storage states increases by one. The procedure is repeated until LDPC code decoding succeeds or the highest sensing precision is reached. The use of soft-decision thus causes severe latency overhead due to the multiple read operations with different reference voltages.
+Let Ns denote the maximum sensing level. Based on the progressive sensing and decoding technique, the memory
+
+where tsenÀref denotes the latency of sensing reference harddecision voltages, tsen is the latency of sensing a set of additional voltage levels to yield one soft-decision quantization level (denoted by same colored lines in Fig. 5), txfer represents the latency of transferring the data read by increasing a sensing level from the flash to the controller, and tdec indicates the decoding delay of an LDPC code.
+Note that ti is undefined for i > Ns and we declare that the read from the ðn; kÞ layered coding system fails as described in Fig. 3.
+Before we discuss the distribution of the read access time, we present our assumptions as follows. Let Nmax denote the maximum number of the possible outcomes in the read access time distribution. Then, assume that (a) the possible outcomes of the read access time are scattered about ti and are represented by N ð¼ Nmax=NsÞ5 equally spaced values with a maximum dispersion of ati (on one side) to reflect the data’s spread from the mean in reality, where a is a dispersion coefficient,6 and that (b) each ith set of the N possible outcomes representing the ith sensing level satisfies the discrete uniform distribution on ½tið1 À aÞ; tið1 þ aÞ, which, as N grows, tends to a continuous distribution. The dispersion comes from the assumption that nodes of ðn; kÞ layered coding are deployed across the multiple distinct NAND flash packages. We model the local distribution associated with each sensing quantization level to be a bounded uniform distribution from the following reasons: For any given quantization level, there is clearly a minimum possible read time. The read delay is also upper-bounded because a maximum limit is always set in practice for the LDPC decoder iteration for a given quantization level. Assuming uniformity within the upper/lower bounds simply reflects the maximum uncertainty on the actual read latency inside these bounds.
+
+4. Even though the physical media age together and thus the average decoding errors may increase together between two different
+
+5. We assume that Nmax is divisible by Ns for simplicity. 6. In this assumption, the amount of spread increases as ti increases, since a is fixed. As the number of sensing increases, the uncertainties
+
+NAND chips, the media noise processes as well as the written local associated with individual read retries add up and it is natural to
+
+data are independent across different chips.
+
+assume a wider local variation with a larger number of read retries.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1814
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+The probability mass function of X is then given by
+
+pj ,
+
+Pr½X
+
+¼
+
+xj
+
+¼
+
+1 N
+
+Pr½T
+
+¼
+
+ti;
+
+(5)
+
+where the last equality in (5) follows since each set of the possible outcomes of the read access time includes N points. Plugging (4) into (5), we have the proposition. tu
+
+Fig. 6. Illustration of the read access time distribution at a page.
+In this work, we present the analysis of read access time considering two types of failure in Definition 1. The read request failure is included in the analysis by assuming the progressive sensing and decoding and using the definition of latency that grows with an increasing sensing level as in (1). In this section, we first focus on the latency analysis for the system having read failures only, and the analysis considering both the read and NAND element failures is dealt with in Sections 6 and 7.
+5.2 An Upper Bound on the Read Access Time
+
+Fig. 6 shows the read access time distribution in Proposition 4. The probability pj , Pr½X ¼ xj shall be provided in Proposition 4. Note that the probability pj , Pr½X ¼ xj highly depends on the LDPC decoding performance as described in Eqs. (4) and (5). Therefore, the relative magnitude of the probability at each sensing level may vary depending on RBER.
+Using the distribution given in Proposition 4, we state an upper bound on the mean read access time as follows.
+Theorem 5. Assuming no NAND element failure occurs, the mean read access time of the ðn; kÞ MDS-outer-coded layered coding system is upper bounded by
+
+Exact latency analysis of the ðn; kÞ fork-join system is difficult. Only bounds are known even for the ðn; kÞ fork-join system with no failure events [14]. We also focus on the
+
+S
+
+¼
+
+NX max
+j¼1
+
+X l¼nk nl xjðRj;l
+
+À
+
+RjÀ1;l Þ
+
+(6)
+
+bounds on the mean read access time. We confine our inter-
+
+est to the upper bounds as they can give enough insights into the read latency by providing the maximum average cost in terms of latency.
+For the latency analysis, let Pfail;i denote the probability of
+
+þ
+
+21ÀPNjP¼m1ajNx¼mP1ax nlP¼kÀnl¼nlkÁÀxnl2jÁÀxRjðj;Rl Àj;l
+
+Á RjÀ1;l À RjÀ1;l
+
+ Þ
+
+;
+
+(7)
+
+read request define: PfðaiiÀl 1Þ
+
+,faQiluiiÀ0r¼e11
+
+at the ith sensing level. We Pfail;i0 for integer i such that 1
+
+further i Ns
+
+and Pfða0iÞl , 1. Here, Pfða1iÞl denotes the probability that hard
+
+decision decoding fails, and Pfða0iÞl , 1 is introduced for ease
+
+of exposition and has no physical meaning. We then present
+
+the distribution of the read access time in the following
+
+proposition.
+
+Proposition 4. The probability mass function of the read access time distribution X is given by
+
+provided
+
+
+
+NX max
+j¼1
+
+X l¼nk nl xjðRj;l
+
+À
+
+RjÀ1;lÞ
+
+<
+
+1;
+
+(8)
+
+where
+
+Rj;l ,
+
+rljð1 À rjÞnÀl
+
+and
+
+rj
+
+¼
+
+1
+
+À
+
+PfðaiÀil1Þ
+
+À 1
+
+À
+
+Àj
+N
+
+À
+
+ðiÀ
+
+1ÞÞð1 À Pfail;iÞÞ.
+
+Proof. In order to obtain an upper bound, we resort to the split-merge system as in [42], [43], which is a degraded
+
+pj , Pr½X ¼ xj for 1 j Nmax
+
+version of the fork-join system where all n nodes are kept
+
+where
+
+¼
+
+1 N
+
+PfðaiiÀl 1Þð1
+
+À
+
+Pfail;i Þ;
+
+(2) from continuing with the next job until k out of n requests
+are served. The mean access time of the split-merge system is modeled as an M=G=1 system7 with the service
+
+
+
+
+
+xj ¼ti
+
+1
+
+À
+
+a
+
+þ
+
+2a NÀ
+
+1
+
+ðj
+
+À
+
+N
+
+ði
+
+À
+
+1Þ
+
+À
+
+1Þ
+
+;
+
+time governed by kth order statistic. The kth order statis-
+tic is defined as the kth smallest sample of n random vari(3) ables [45].
+
+i ¼dj=Ne :
+
+Let X1; X2; . . .; Xn be random samples from a discrete distribution with the probability mass function fXðxjÞ ¼
+
+Proof. The probability that LDPC code decoding succeeds
+
+pj, where x1 < x2 < . . . are the possible samples of X.
+
+at the ith sensing level is represented by
+
+For a sample of size n, let X1:n; X2:n; . . .; Xn:n denote the
+
+order statistics from the sample. Then the kth order sta-
+
+Pr½T ¼ ti ¼ PfðaiiÀl 1Þð1 À Pfail;iÞ for 1 i Ns:
+
+(4)
+
+From Definition 3 and the fact that the ith set of N read access time samples lies in the range of ½tið1 À aÞ; tið1 þ aÞ
+
+tistic from the sample is given by [46]
+
+Pr½Xk:n
+
+¼
+
+xj
+
+¼
+
+X l¼nk nl rljð1
+
+À
+
+rj ÞnÀl
+
+À
+
+rjl À1 ð1
+
+À
+
+ rjÀ1ÞnÀl ;
+
+as depicted in Fig. 6, we represent a sample of read access time xj as follows:
+
+where r0 ¼ 0; r1 ¼ p1; r2 ¼ p1 þ p2; . . .; rj ¼ p1 þ p2 þ . . .þ pj; . . ..
+
+
+
+
+
+xj ¼ ti
+
+1
+
+À
+
+a
+
+þ
+
+2a NÀ
+
+1
+
+ðj
+
+À
+
+N
+
+ði
+
+À
+
+1Þ
+
+À
+
+1Þ
+
+:
+
+7. An M=G=1 queue is a single-server queuing system where arrivals are Markovian and the service times have a general distribution [44].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1815
+
+(c 2 f1; 2g), where jobs of each class include nðcÞ nodes. We denominate the normal job to access the node as a regular
+
+read job. When a NAND element failure event occurs, we
+
+imagine that a virtual repair job enters the system at that
+
+moment. We give a higher priority to the repair job (class
+
+c ¼ 1) and a lower priority to the read job (class c ¼ 2). The
+
+read requests at the heads of the queues are interrupted
+
+immediately when a repair job (i.e., NAND element failure
+
+event) arrives. Read requests resume from the point of inter-
+
+Fig. 7. The reconstruction process from a NAND block failure under the ruption once the repair requests have been served. In this
+
+IR policy. When a NAND block fails, regular read jobs denoted by the square boxes are interrupted, and the virtual repair job requests appear (represented by the rectangular boxes marked by “R”) and move to the head of queues (under preemptive priority). The n À 1 intact nodes help the reconstruction of the failed node’s contents to a new location. Taking the k fastest copying requests out of n À 1 is sufficient for the reconstruction.
+
+work, we refer to such a repair policy as IR. Under the IR policy, once a block failure is detected, the
+neighbors of the failed block embark on a reconstruction phase to maintain the desired redundancy level. Here, we are speaking of the block failure since it is the most typical form of NAND element failure in practical SSDs. Through-
+
+out the remainder of our analysis, we shall focus on block
+
+For the read time distribution of (2),
+
+failures. We shall also consider the bad blocks detected by
+
+rj
+
+¼
+
+1
+
+À
+
+ PfðaiÀil1Þ 1
+
+À
+
+ j N
+
+À
+
+ði
+
+À
+
+ 1Þ 1
+
+À
+
+ Pfail;i ;
+
+the failure of the program operation, as typically happens in real SSDs. Note that bad block detection is done independently of the current read job in the queue. When the pro-
+
+(9)
+where i ¼ dj=Ne. The Pollaczek-Khinchin mean-value formula [47]
+gives the mean access time of an M=G=1 system S in terms of its first two moments.
+
+gram operation fails, the contents of the pages already written in the corresponding bad block need to be duplicated to another block. The repair process takes the k fastest copying requests out of the n À 1 nodes. For copying the contents of the failed block in the repair process, we reserve a small memory buffer space which is in line with the typical mem-
+
+S
+
+¼
+
+E½Xk:n
+
+þ
+
+E½Xk2:n 2ð1 À E½Xk:nÞ
+
+:
+
+ory buffer size in real SSDs [49], [50]. Each block typically (10) contains hundreds to thousands of pages in SSDs and the
+failed block is reconstructed in a page-by-page fashion.8
+
+The mth moment of the read access time distribution is given by
+
+NX max
+
+E½Xkm:n ¼
+
+xjm Pr½Xk:n ¼ xj
+
+j¼1
+
+¼
+
+NX max
+j¼1
+
+X l¼nk nl xmj ðRj;l
+
+À
+
+RjÀ1;lÞ;
+
+(11)
+
+Both the repair job and the read job can be described as a collection of the k fastest requests and thus be represented by the kth order statistic XðcÞ;k:nðcÞ . Note that nð1Þ ¼ n À 1 and nð2Þ ¼ n for our purposes. To reduce notational burden, we shall simply write Xk:nðcÞ instead of XðcÞ;k:nðcÞ .
+We focus on the repair from a single block failure since it is the dominant failure pattern. Multiple block failures can be handled by consecutive reconstructions from single block failures. An ðn; kÞ MDS coded storage system, in fact,
+
+where Rj;l , rjl ð1 À rjÞnÀl and rj is defined in (9). The condition in (8) is from the stability requirement
+
+for the M=G=1 queue, i.e., E½Xk:n < 1.
+
+ut
+
+tolerates n À k failures without repair. Thus, it would be possible to build a more elaborated model that continues working without entering the repair phase until t failures occur, where t ð n À kÞ is a threshold of the failure toler-
+
+Note that (7) is composed of the two separate terms that ance. However, we leave this for future work.
+
+are the mean actual read access time and mean waiting time
+
+in queues. The stability condition requirement in (8) guaran- 6.2 Analysis of Read Access Time
+
+tees the queue length not to increase without bound.
+
+Under the additional consideration of NAND element fail-
+
+6 ANALYSIS OF READ ACCESS TIME WITH
+
+ures, we also obtain an upper bound for the mean read access time by taking the split-merge system, the degraded
+
+INSTANTANEOUS REPAIR FROM NAND ELEMENT version of ðn; kÞ fork-join system. We make certain assump-
+
+FAILURES
+6.1 Repair Under the IR Policy In this section, we provide an analysis of the read access time including the presence of NAND element failures in addition to considering read request failures only as in Section 5. Queuing with breakdown or failure of queues can be interpreted as queuing with preemptive resume priority
+
+tions on the node failures and read jobs. The failures and read jobs occur randomly (according to the Poisson process with rates ð1Þ and ð2Þ, respectively). The read time in this section is identically defined to (1) even with the read failures considered (i.e., tð2Þ;i ¼ ti and xð2Þ;j ¼ xj). The repair time (or, equivalently, service time of the repair jobs) is defined similarly to (1), but the repair job essentially
+
+[48]. Under the preemptive resume priority policy, the service is interrupted when a higher priority request arrives
+
+8. Since a block failure essentially means the failure of all pages in it, the two terms - node failure and NAND element failure - are used inter-
+
+(see Fig. 7). Assume that we have two classes of priorities changeably in the remainder of this paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1816
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+consists of reconstructing the data of the failed node using information from adjacent nodes and programming it to the clean location. Thus, the memory sensing, decoding and programming latency to reach the ith sensing level is given by the following definition.
+Definition 6. We define the memory sensing and decoding latency of the repair job where decoding of the read operation for repair succeeds at the ith sensing level, for a given Ns and an integer i such that 1 i Ns as follows:
+
+trep;i ¼ ti þ tprog
+
+¼ tsenÀref þ txfer þ tdec
+
+(12)
+
+þ ði À 1Þðtsen þ txfer þ tdecÞ þ tprog;
+
+Proof. Since this proposition expands Proposition 4 for two
+
+priority classes, we have this proposition by simply replac-
+
+ing X, xj and ti with XðcÞ, xðcÞ;j and tðcÞ;i, respectively. Pfail;i which means the probability of read request failure at the
+
+ith sensing level is commonly used for both priority clas-
+
+ses to reflect the effect of the read failures; the repair job
+
+also includes sensing and decoding of the data to recon-
+
+struct the failed node.
+
+tu
+
+We also focus on obtaining an upper bound on the mean read access time as we did in Section 5.
+
+Theorem 9. Under the IR policy, the mean read access time of the repair and read job in the ðn; kÞ MDS-outer-coded layered coding system is upper bounded as follows:
+
+where tprog denotes the programming latency due to the reconstruction of a failed NAND element. We assume the block-level failure here since it represents the typical NAND element failure.
+From this definition, note that the repair job also requires to read data to reconstruct the failed node. Using Definition 6, we establish the following definition for the memory sensing and decoding latency of the repair job and read job at each sensing level under the IR policy. We discuss the number of nodes involved in each class of job as well. The parameters are based on the jobs of two different priority classes.
+Definition 7. Under the IR policy, for an ðn; kÞ MDS-outercoded layered coding system, the number of nodes involved in the repair and read job (denoted by nð1Þ and nð2Þ, respectively), and the memory sensing and decoding latency of the repair and read job where decoding of the read operation succeeds at the ith sensing level (denoted by tð1Þ;i and tð2Þ;i, respectively) for integer i such that 1 i Ns are defined as follows:
+
+nð1Þ ¼ n À 1; tð1Þ;i ¼ Nptrep;i; (repair job requests)
+
+nð2Þ ¼ n;
+
+tð2Þ;i ¼ ti :
+
+(read job requests);
+
+where Np denotes the number of pages to be reconstructed.9
+
+In the same sense as Section 5, but considering the NAND element failure events, we present the read time distribution reflecting the data’s spread from the mean in the following proposition.
+
+Proposition 8. For a priority class c 2 f1; 2g, the probability mass function of the read time distribution XðcÞ in the existence of NAND element failure events is given by
+
+ c ¼ 1 (for repair job requests)
+
+SIðR1Þ
+
+NX max ¼
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j Dðj1;lÞ
+
+þ
+
+ð1Þ 2
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ x2ð1Þ;j
+
+Djð1;lÞ
+
+Á
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j Djð1;lÞ
+
+!À1
+
+:
+
+ c ¼ 2 (for read job requests)
+
+(15)
+
+SIðR2Þ
+
+¼
+
+NX max
+j¼1
+
+X nð2Þ nð2Þ l¼k l
+
+ xð2Þ;j Dðj2;lÞ
+
+Á
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j
+
+Dðj1;lÞ
+
+!À1
+
+þ
+
+1 2
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nð1Þ nðvÞ l¼k l
+
+ ðvÞ xð2vÞ;j
+
+Dðjv;lÞ
+
+Á
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j
+
+Dðj1;lÞ
+
+!À1
+
+Á
+
+1
+
+À
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nðvÞ nðvÞ l¼k l
+
+ ðvÞ
+
+xðvÞ;j
+
+!À1 Dðjv;lÞ
+
+:
+
+(16)
+
+where rðcÞ;j ¼ 1
+
+ÀDðjPc;lÞfða,iiÀl 1RÞÀðj1c;lÞ
+
+À À
+
+ÀRNjðjcÀÀÞ1;lð,i
+
+Rðjc;lÞ
+
+, Á
+
+rlðcÞ;jð1
+
+À
+
+rÁðcÞ;j ÞnðcÞ Àl
+
+À 1Þ ð1 À Pfail;iÞ .
+
+and
+
+pðcÞ;j , Pr½XðcÞ ¼ xðcÞ;j for 1 j Nmax
+
+The stability condition is
+
+where
+
+¼
+
+1 N
+
+PfðaiiÀl 1Þð1
+
+À
+
+Pfail;i Þ;
+
+(13)
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nðvÞ nðvÞ l¼k l
+
+ ðvÞ
+
+xðvÞ;j Djðv;lÞ
+
+<
+
+1:
+
+(17)
+
+!
+
+xðcÞ;j ¼ tðcÞ;i
+
+1
+
+À
+
+a
+
+þ
+
+2a NÀ
+
+1
+
+½j
+
+À
+
+N
+
+ði
+
+À
+
+1Þ
+
+À
+
+1
+
+:
+
+(14)
+
+Proof. Let Xk:nðcÞ (c 2 f1; 2g) be the read access time distribution for the priority class c, which is based on the kth
+
+order statistic from the nðcÞ samples. Under the IR policy,
+
+the repair job and read job are given the priority classes
+
+9. We assume that the failure of program operation, if occurs, takes place when programming to the blocks in which about half of the pages
+
+c ¼ 1 and c ¼ 2, respectively. As can be seen in Definition 7, tð1Þ;i ¼ trep;i and tð2Þ;i ¼ ti. Substituting tðcÞ;i into (14)
+
+are already written. 2Np is thus the number of pages in a block.
+
+provides xðcÞ;j for the both classes. Then, we have
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1817
+
+Pr½Xk:nðcÞ ¼ xðcÞ;j
+
+¼
+
+X nðcÞ nðcÞ l¼k l
+
+ rðl cÞ;j
+
+ð1
+
+À
+
+rðcÞ;j ÞnðcÞ Àl
+
+À
+
+ rðlcÞ;jÀ1ð1 À rðcÞ;jÀ1ÞnðcÞÀl ;
+
+(18)
+
+where rðcÞ;0 ¼ 0; rðcÞ;1 ¼ pðcÞ;1; rðcÞ;2 ¼ pðcÞ;1 þ pðcÞ;2; . . .; rðcÞ;j ¼ pðcÞ;1 þ pðcÞ;2 þ . . . þ pðcÞ;j; . . ..
+For the read time distribution of (13),
+
+
+
+
+
+
+
+rðcÞ;j ¼ 1 À PfðaiiÀl 1Þ 1 À
+
+j N
+
+À
+
+ði
+
+À
+
+1Þ
+
+ð1 À Pfail;iÞ
+
+:
+
+Using (18) and xðcÞ;j obtained above, the mth moment
+of Xk:nðcÞ under the read time distribution is calculated from
+
+Fig. 8. The reconstruction process from a NAND block failure under the PR policy. Even if a NAND block fails, regular read jobs denoted by the square boxes continue to be served, and the virtual repair job requests having a lower priority appear (represented by the rectangular boxes marked by “R”) and move to the tail of queues. When the request queue is idle, the reconstruction process starts. The n intact nodes including the backup block help the reconstruction of the failed block’s contents to a new location. Taking the k fastest copying requests out of n is sufficient for the reconstruction.
+
+NX max
+
+E½Xkm:nðcÞ  ¼
+
+xðmcÞ;j Pr½Xk:nðcÞ ¼ xðcÞ;j
+
+j¼1
+
+¼
+
+NX max
+j¼1
+
+X nðcÞ nðcÞ l¼k l
+
+ xmðcÞ;j
+
+ Rðjc;lÞ
+
+À
+
+ RðjcÀÞ1;l ;
+
+(19)
+
+where Rðjc;lÞ , rlðcÞ;jð1 À rðcÞ;jÞnðcÞÀl. Since we modeled the degraded version of the pro-
+posed system under the IR policy as an M=G=1 queue
+
+class c so that jobs with a priority class lower than c have the mean latency growing without bound.
+7 ANALYSIS OF READ ACCESS TIME WITH POSTPONED REPAIR FROM NAND ELEMENT FAILURES
+7.1 Repair Under the PR Policy
+
+with preemptive resume priority, the average delay for class c, denoted by SIðRcÞ, is written as [44]
+
+SIðRcÞ þ
+
+2¼ð11ÀÀPPcvcvÀ¼EÀ¼11½11Xðkvð:vÞnÞEPðEcÞ½X½cvX¼k1k:n:nðvððvÞvÞÞÞEð1½XÀk2:P nðvÞvc¼1
+
+ðvÞE½Xk:nðvÞ Þ
+
+:
+
+(20)
+
+Substituting (19) into (20) and defining Dðjc;lÞ , Rðjc;lÞ À RðjcÀÞ1;l yield the upper bounds of the mean read access time SðcÞ
+for class c (c 2 1; 2). The condition in (17) is from the sta-
+
+bility requirement for the M=G=1 queue, namely:
+
+ð1ÞE½Xk:nð1Þ  þ ð2ÞE½Xk:nð2Þ  < 1.
+
+ut
+
+Note that (20) reduces to a form similar to (10) for c ¼ 1, since a job of class 1 cannot see any other jobs of higher priority than itself while it stays in the queue.
+The upper bound on the mean read access time of the ðn; kÞ MDS-coded memory system under read request failure and NAND element failure, SIR, is the expected time between a job arrival and the point of service completion where any k out of n requests have been served. For the system under consideration, it is given by the weighted sum of the mean read access time of two classes as follows:
+
+In Section 6, we have assumed that the read job requests are interrupted and the system enters the reconstruction phase every time the NAND element failure events occur. However, this might be impractical under certain circumstances since all the read job requests would have to be suspended and wait for the failed node to recover. To get around this issue, we introduce in this section the PR policy wherein the system suspends the repair process until the read request queue is idle. The repair process is depicted in Fig. 8.
+The desired upper bound on the mean read access time of this system can be represented as an M=G=1 queue with non-preemptive priority [48]. Under the non-preemptive priority, the service continues without interruption even if a higher priority job arrives during the service time of an undergoing job. Here we assume two classes of priority as in Section 6. For the system under consideration here, we assign a higher priority (class c ¼ 1) to the read jobs and a lower priority (class c ¼ 2) to the repair jobs (or failure events). Since the read job is given the higher priority for service, even if a node failure occurs while a read job is being performed, the intact nodes can continue the read job. The repair job is executed when there is no read request in the queue because it has a lower priority. From the assumption that the non-preemptive priority is given in this case, the repair job is not preempted by the read jobs when the repair job is being served. This modeling is justified from
+
+SIR
+
+¼
+
+ð1Þ SIðR1Þ ð1Þ
+
+þ þ
+
+ð2Þ SIðR2Þ ð2Þ
+
+:
+
+the observation that the arrival rate of the failure is generally lower compared to the arrival rate of the read jobs.
+In an attempt to simplify the problem, we assume that the number of intact blocks that can be accessed is maintained
+
+If the stability condition in (17) is not satisfied, the mean even when there occurs a block failure. To do so, suppose that
+
+latency of the corresponding M=G=1 queuing system will we have one backup block that supports the coded data read
+
+grow without bound. The violation of the stability condition from the time that a block failure occurs until the reconstruction causes the mean latency of the read job (or both the read is done. Then, we have nð1Þ ¼ nð2Þ ¼ n under the PR policy as and repair jobs) to be infinite. Namely, the violation of the described in Definition 10. Under this scenario, the actual cod-
+
+stability condition means that there exists a certain priority ing overhead of the MDS code in the proposed system is
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1818
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+k=ðn þ 1Þ instead of k=n. However, the backup block is activated only when there exists a failed block, which means that it is used for a limited time period. We thus stick to the notation of ðn; kÞ MDS-outer-coded layered coding for this system. To guarantee a seamless transition to the use of the backup block instead of the failed block, it is further assumed that job requests in the queue of the failed block can be easily moved to the queue of the new location.
+
+7.2 Analysis of Read Access Time Since we modeled the ðn; kÞ MDS-outer-coded layered coding system under the PR policy as an M=G=1 queue with non-preemptive priority, first we present the latency distribution for jobs of each class. We use the following definition of the memory sensing and decoding latency.
+Definition 10. Under the PR policy, for an ðn; kÞ MDS-outercoded layered coding system, the number of nodes involved in the read and repair job (denoted by nð1Þ and nð2Þ, respectively), and the memory sensing and decoding latency of the read and repair job where decoding of the read operation succeeds at the ith sensing level (denoted by tð1Þ;i and tð2Þ;i, respectively) for integer i such that 1 i N are defined as follows.
+
+nð1Þ ¼ n ; tð1Þ;i ¼ ti ;
+
+ðreadjobrequestsÞ
+
+nð2Þ ¼ n ; tð2Þ;i ¼ Nptrep;i : ðrepairjobrequestsÞ:
+
+Using Definition 10, we now present the mean read access time of the proposed system under the PR policy.
+
+Theorem 11. Under the PR policy, the mean read access time of the repair and read job in the ðn; kÞ MDS-outer-coded layered coding system is upper bounded as follows:
+
+ c ¼ 1 (for read job requests)
+
+SPð1RÞ
+
+NX max ¼
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j
+
+Dðj1;lÞ
+
+þ
+
+1 2
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nðvÞ nðvÞ l¼k l
+
+ ðvÞ
+
+x2ðvÞ;j
+
+Á Djðv;lÞ
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nl¼ð1kÞ nðl1Þxð1Þ;jDðj1;lÞ!À1
+
+:
+
+(21)
+
+ c ¼ 2 (for repair job requests)
+
+The stability condition is
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nðvÞ nðvÞ l¼k l
+
+ ðvÞ
+
+xðvÞ;j Djðv;lÞ
+
+<
+
+1:
+
+(23)
+
+Proof. The overall proof process is similar to the proof of Theorem 9. As in Section 6, consider Xk:nðcÞ (c 2 f1; 2g), the read access time distribution for priority class c.
+Under the PR policy, the read and repair job has the priority classes c ¼ 1 and c ¼ 2, respectively. Substituting tð1Þ;i ¼ ti and tð2Þ;i ¼ trep;i in Definition 10 into (18), Pr½Xk:nðcÞ ¼ xðcÞ;j can be similarly obtained by using the approach of the proof for Theorem 9. We then easily calculate E½Xkm:nðcÞ  associated with the PR policy by using (19). The average delay for class c under non-preemptive priority policy, denoted by SPðcRÞ , is written as [44]
+
+SPðcRÞ ¼ E½Xk:nðcÞ 
+
+þ
+
+2ð1
+
+À
+
+PcÀ1
+v¼1
+
+ðvÞEP½X2v¼k1:nðvðÞvÞÞEð1½XÀk2:P nðvÞcv¼1
+
+ðvÞE½Xk:nðvÞ Þ
+
+:
+
+(24)
+
+Substituting E½Xk2:nðcÞ  and E½Xk1:nðcÞ  which are calculated above into (24) yields the upper bounds of the mean read
+
+access time.
+
+The condition in (23) is also from the stability require-
+
+ment for the M=G=1 queue, namely: ð1ÞE½Xk:nð1Þ  þ
+
+ð2ÞE½Xk:nð2Þ  < 1. The stability condition is the same as
+
+given in (17).
+
+tu
+
+Note that (21) automatically leads to the additional latency burden due to the effect of NAND element failures as stated below.
+
+Corollary 12 (Impact of NAND element Failures). Consider an ðn; kÞ MDS-outer-coded layered coding system under the PR policy. The additional latency from NAND element failure is represented as follows:
+
+1 2
+
+NX max
+j¼1
+
+X nð2Þ nð2Þ l¼k l
+
+ ð2Þ
+
+xð22Þ;j
+
+Djð2;lÞ
+
+Á
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j
+
+Dðj1;lÞ
+
+!À1
+
+:
+
+(25)
+
+SPð2RÞ
+
+¼
+
+NX max
+j¼1
+
+X nl¼ð2kÞ nðl2Þxð2Þ;jDðj2;lÞ
+
+Proof. Substituting c ¼ 1 into (24), we have the mean read access time of the read job
+
+þ
+
+1 2
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nl¼ðvkÞ nðlvÞðvÞx2ðvÞ;jDjðv;lÞ
+
+Á
+
+1
+
+À
+
+ð1Þ
+
+NX max
+j¼1
+
+X nð1Þ nð1Þ l¼k l
+
+ xð1Þ;j
+
+Djð1;lÞ
+
+!À1
+
+Á
+
+1
+
+À
+
+X2
+v¼1
+
+NX max
+j¼1
+
+X nðvÞ nðvÞ l¼k l
+
+ ðvÞ
+
+xðvÞ;jDjðv;lÞ
+
+!À1
+
+:
+
+SPð1RÞ ¼ E½Xk:nð1Þ  þ  ð1ÞE½Xk2:nð1Þ   þ  ð2ÞE½Xk2:nð2Þ   ; 2 1 À ð1ÞE½Xk:nð1Þ  2 1 À ð1ÞE½Xk:nð1Þ 
+(26)
+which is represented by the summation of the mean service time of the read job and the mean waiting time of the read job in the queue. The summation of the first and
+
+(22)
+
+second terms in (26) is equivalent to the mean read access
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1819
+
+Fig. 9. Read access time for the layered RS codes with 1-KB LDPC codes without NAND element failures. RS codes of different rates k=n are used for comparison.
+
+Fig. 10. Read access time of the combinations of RS codes and 1-KB LDPC codes with NAND element failures under the IR policy. RS codes of different rates k=n are used for comparison.
+
+time without assuming NAND element failure events.
+
+Therefore, the last term in (26) can be regarded as an impact of NAND element failure events. Substituting E½Xk2:nð2Þ  and E½Xk:nð1Þ  associated with the PR policy into
+ ð2ÞE½Xk2:nð2Þ   ; 2 1 À ð1ÞE½Xk:nð1Þ 
+
+typical number for the NAND channels in commercial SSDs [52], while the number of nodes n is a variable. Here we only consider the storage overhead from 0 to 4. Higher storage overhead cases are excluded due to their impracticality.
+The parameters related to sensing and decoding are set to ðtsenÀref ; tsen; txfer; tdecÞ ¼ ð96 s, 96 s, 5 s, 8 s) based on the
+measurement results on 25 nm MLC NAND flash memory
+
+yields (25).
+
+ut chips [2]. Each value is normalized by tsenÀref þ txferþ tdec in
+
+The upper bound on the mean read access time of the ðn; kÞ MDS-outer-coded memory system under the PR policy is also given by the weighted sum of the read access time of two classes as follows:
+
+SPR
+
+¼
+
+ð1ÞSPð1RÞ ð1Þ
+
+þ þ
+
+ð2Þ SPð2RÞ ð2Þ
+
+:
+
+order to represent the read access time for a given RBER in
+multiples of the first hard-decision sensing and decoding delay. a is set to 0.2, which means the measured samples of the read access time are assumed to be dispersed up to 20 percent [53], [54] from ti’s.
+Fig. 9 shows the normalized mean read access time versus RBER. The bounds are fairly tight to the simulated result in all cases. We see that coding across NAND elements
+
+As stated in Section 6, if the stability condition in (23) is not satisfied, the mean latency of the repair job (or both the repair and read jobs) will increase without bound.
+In the latency analysis, we have not explicitly considered the background process that can interfere with the read requests, since this work focuses on the situation where the read operation is the major burden and how the high-level coding helps reduce read latency. In addition, as the background process occurs regardless of the use of layered coding, the present analysis will allow the assessment of the improvement in the overall latency with the use of layered coding. Moreover, although we do not consider the background process like garbage collection, we do include the effect of the failure handling process on read latency. Note that under the PR policy, the failure handling can be regarded as a background process interfering with the read process.
+
+gives improved access time. There is a consistent access time reduction when we put one or more outer ECC parity nodes compared to the case without an outer RS code. For example, with an RS code having one or more parity nodes, we see up to about a 70 percent reduction in the mean read access time in the RBER region below 0.006. We see that as the code gets stronger (larger n and/or smaller k=n), the reduction in read access time becomes more pronounced at RBERs around 0.006 to 0.008. In the RBER region around 0.008 to 0.011, there is a consistent reduction in latency up to 10 percent for the systems with layered coding. At the right end of the plot, we see that the read access time of the case without the RS code tends to diverge. The read access time has a “knee” behavior because there exist ranges of tolerable RBERs for each level of sensing. The required number of reads increases in a step-like fashion due to the need to improve the sensing level as the RBER gets worse.
+
+8 QUANTITATIVE RESULTS AND DISCUSSION
+
+Fig. 10 presents the results as the read access time versus RBER with the NAND element failures under the IR policy.
+
+For numerical simulations in this section, a 1-KB regular LDPC code of rate 0.8947 is employed as an inner ECC which is designed by using the progressive edge growth (PEG) algorithm [51]. As an outer ECC with the MDS property, an
+
+Here we assume Np ¼ 32 and consider the following two cases of NAND element failure: (Case I) ð1Þ=ð2Þ ¼ 0:01 and (Case II) ð1Þ=ð2Þ ¼ 0:1, i.e., the node failures occur 100 times and 10 times less frequently than the read request
+
+RS code is adopted. In our simulation, the number of data arrivals, respectively. The programming delay is set to
+
+blocks k to be encoded is fixed to 16, in the range of the tprog ¼ 785.5 s. This parameter is again normalized as in the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1820
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+tolerate degrading quality of individual NAND channels
+
+while maintaining the same level of read latency. Specifi-
+
+cally, the figures reveal the nontrivial trade-offs between
+
+the read access time and the overhead of outer codes. Based
+
+on this, one can be guided to design the new practical SSD
+
+system maximizing the impact of the additional storage
+
+overhead imposed to improve the read access speed, as the
+
+effect of adding additional nodes varies depending on the
+
+RBER range. For example, in Fig. 9, it is seen that the impact
+
+of two additional nodes of outer coding is several-folds
+
+larger in the RBER region around 0.005 to 0.008 compared
+
+to the remaining RBER region. This observation leads us to
+
+be able to choose the proper number of parity nodes for the
+
+outer code balancing the desired level of read access time
+
+Fig. 11. Read access time of the combinations of RS codes and 1-KB LDPC codes with NAND element failures under the IR/PR policy. RS codes of different rates k=n are used for comparison.
+
+and the storage overhead of outer ECC. In other words, this type of analysis can provide guidance on the required outer ECC overhead in achieving a certain level of read access
+
+time improvement given an estimated operating RBER.
+
+case of the parameters related to sensing and decoding. Note that n ¼ k is impossible in our setting since the system cannot tolerate even one node failure in which case the access time diverges to infinity. Although not shown, we observed that the bounds were again tight to the simulated result as in the cases without the NAND element failure.
+
+A concern may arise for the burden of using additional nodes to accommodate the parity symbols for the outer code. However, this layered coding structure offers design options for high-performance applications where top priority is placed on minimum latency at the expense of an overall code rate loss.
+
+Coding improves read access time even when there exist
+node failures, in addition to enhancing the system reliabil- 9 CONCLUSION
+
+ity. The read access time improvement is larger for Case I with less frequent failure events. For example, in Case I we see up to about a 45 percent reduction in mean read access time in the RBER region around 0.006 to 0.008, while Case II gives about a 40 percent reduction. As the failure events become more frequent, the amount of reduction in read access time gets smaller. The read access time here also has a knee behavior.
+Fig. 11 compares the normalized mean read access time under the IR and PR policies for given RBERs. If the failure events do not occur frequently, it can be easily predicted that the difference in read access time between the IR and PR policies will not be large. Thus we present the result only with ð1Þ=ð2Þ ¼ 0:1 (i.e., the node failures occur 10
+
+We have provided a queuing theoretic analysis for SSDs with parallel NAND channels with varying processing speeds. The impact of the read failure and the node failure events on the trade-off between read access time and coding overhead has been analyzed. An existing ðn; kÞ fork-join model has been extended to include the NAND-specific read access time and node failures, and tight upper bounds on the mean read access time have been derived. Two different ways to mitigate the effect of node failures have been investigated using the notion of multi-class jobs with different priorities. Tolerable limits on the qualities of the physical NAND components under access time and storage space constraints can be investigated in this way.
+
+times less frequently than the read request arrivals). Recall that the PR policy reserves one node of the outer code for backup operations. For the sake of fairness, we compare the latency of the PR policy with a rate-k=ðn À 1Þ outer code to the latency of the IR policy with a rate k=n outer code.
+The advantage of PR policy is evident when we have four additional nodes (RS code rate 16/20 for IR and 16/19 for PR) for layered coding. The PR policy performs better than the IR policy in most RBER regimes that we are interested in. However, if there are two additional nodes (RS code rate
+
+ACKNOWLEDGMENTS
+The authors would like to thank Dr. Sukkwang Park for his helpful advice and comments. This work was supported in part by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) under Grant No. NRF-2016R1A2B4011298 and Grant NRF2019R1I1A2A02061135, and in part by the BK21 Plus. This article was presented in part at the IEEE International Conference on Communications (ICC), 2017 [1].
+
+16/18 for IR and 16/17 for PR), the PR policy has poor per-
+formance compared to the IR policy in some regions where REFERENCES
+
+the latency increases rapidly according to the RBER. This is because, when using PR policy, one additional node is used to keep the read operation intact even if the node failure occurs. It would also be an interesting research topic to examine the latency gain through a more advanced model
+
+[1] H. Park and J. Moon, “Improving read access time of high-performance solid-state drives via layered coding schemes,” in Proc. IEEE Int. Conf. Commun., 2017, pp. 1–7.
+[2] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. USENIX Conf. File Storage
+
+for PR policy that does not use a backup node later.
+
+Technol., 2013, pp. 243–256.
+
+Figs. 9, 10 and 11 provide important insights into the role
+
+[3] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits
+
+of redundant coding in improving the system’s ability to
+
+Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+PARK AND MOON: IMPROVING SSD READ LATENCY VIA CODING
+
+1821
+
+[4] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[5] J. Hsieh, C. Chen, and H. Lin, “Adaptive ECC scheme for hybrid SSD’s,” IEEE Trans. Comput., vol. 64, no. 12, pp. 3348–3361, Dec. 2015.
+[6] R. Liu, M. Chuang, C. Yang, C. Li, K. Ho, and H. Li, “Improving read performance of NAND flash SSDs by exploiting error locality,” IEEE Trans. Comput., vol. 65, no. 4, pp. 1090–1102, Apr. 2016.
+[7] J. Moon, J. No, S. Lee, S. Kim, S. Choi, and Y. Song, “Statistical characterization of noise and interference in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 8, pp. 2153–2164, Aug. 2013.
+[8] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. Conf. Des. Autom. Test Europe, 2013, pp. 1285–1290.
+[9] Q. Wu and T. Zhang, “OFWAR: Reducing SSD response time using on-demand fast-write-and-rewrite,” IEEE Trans. Comput., vol. 63, no. 10, pp. 2500–2512, Oct. 2014.
+[10] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[11] N. B. Shah, K. Lee, and K. Ramchandran, “The MDS queue: Analysing the latency performance of erasure codes,” in Proc. IEEE Int. Symp. Inf. Theory, 2014, pp. 861–865.
+[12] S. Chen et al., “When queueing meets coding: Optimal-latency data retrieving scheme in storage clouds,” in Proc. IEEE Conf. Comput. Commun., 2014, pp. 1042–1050.
+[13] Y. Xiang, T. Lan, V. Aggarwal, and Y. R. Chen, “Joint latency and cost optimization for erasure-coded data center storage,” IEEE/ ACM Trans. Netw., vol. 24, no. 4, pp. 2443–2457, Aug. 2016.
+[14] G. Joshi, Y. Liu, and E. Soljanin, “Coding for fast content download,” in Proc. Annu. Allerton Conf. Commun. Control, Comput., 2012, pp. 326–333.
+[15] A. Kumar, R. Tandon, and T. C. Clancy, “On the latency and energy efficiency of distributed storage systems,” IEEE Trans. Cloud Comput., vol. 5, no. 2, pp. 221–233, Apr. 2017.
+[16] Y. Xiang, T. Lan, V. Aggarwal, and Y. Chen, “Optimizing differentiated latency in multi-tenant, erasure-coded storage,” IEEE Trans. Netw. Service Manage., vol. 14, no. 1, pp. 204–216, Mar. 2017.
+[17] DuraClass technology, [Online]. Available: https://www.ampinc. com/wp-content/uploads/2013/09/RAISE.pdf
+[18] S. Ghemawat, H. Gobioff, and S.-T. Leung, “The Google file system,” ACM SIGOPS Operating Syst. Rev., vol. 37, no. 5, pp. 29–43, 2003.
+[19] K. Shvachko, H. Kuang, S. Radia, and R. Chansler, “The hadoop distributed File System,” in Proc. IEEE Symp. Mass Storage Syst. Technol., 2010, pp. 1–10.
+[20] I. S. Reed and G. Solomon, “Polynomial codes over certain finite fields,” J. Soc. Ind. Appl. Math., vol. 8, no. 2, pp. 300–304, 1960.
+[21] A. Dimakis, P. Godfrey, Y. Wu, M. Wainwright, and K. Ramchandran, “Network coding for distributed storage systems,” IEEE Trans. Inf. Theory, vol. 56, no. 9, pp. 4539–4551, Sep. 2010.
+[22] I. Tamo, Z. Wang, and J. Bruck, “Zigzag codes: MDS array codes with optimal rebuilding,” IEEE Trans. Inf. Theory, vol. 59, no. 3, pp. 1597–1616, Mar. 2013.
+[23] I. Tamo, Z. Wang, and J. Bruck, “Access versus bandwidth in codes for storage,” IEEE Trans. Inf. Theory, vol. 60, no. 4, pp. 2028–2037, Apr. 2014.
+[24] P. Gopalan, C. Huang, H. Simitci, and S. Yekhanin, “On the locality of codeword symbols,” IEEE Trans. Inf. Theory, vol. 58, no. 11, pp. 6925–6934, Nov. 2012.
+[25] I. Tamo and A. Barg, “A family of optimal locally recoverable codes,” IEEE Trans. Inf. Theory, vol. 60, no. 8, pp. 4661–4676, Aug. 2014.
+[26] D. S. Papailiopoulos and A. G. Dimakis, “Locally repairable codes,” IEEE Trans. Inf. Theory, vol. 60, no. 10, pp. 5843–5855, Oct. 2014.
+[27] H. Park, D. Lee, and J. Moon, “LDPC code design for distributed storage: Balancing repair bandwidth, reliability, and storage overhead,” IEEE Trans. Commun., vol. 66, no. 2, pp. 507–520, Feb. 2018.
+[28] K. V. Rashmi, P. Nakkiran, J. Wang, N. B. Shah, and K. Ramchandran, “Having your cake and eating it too: Jointly optimal erasure codes for I/O, storage, and network-bandwidth,” in Proc. USENIX Conf. File Storage Technol., 2015, pp. 81–94.
+
+[29] J. Kim, E. Lee, J. Choi, D. Lee, and S. H. Noh, “Chip-level RAID with flexible stripe size and parity placement for enhanced SSD reliability,” IEEE Trans. Comput., vol. 65, no. 4, pp. 1116–1130, Apr. 2016.
+[30] Y. Li, P. P. C. Lee, and J. C. S. Lui, “Analysis of reliability dynamics of SSD RAID,” IEEE Trans. Comput., vol. 65, no. 4, pp. 1131–1144, Apr. 2016.
+[31] T. J. Dell, “A white paper on the benefits of Chipkill-correct ECC for PC server main memory,” IBM Microelectronics Division, vol. 11, pp. 1–23, 1997.
+[32] HP advanced memory protection technologies, 2008. [Online]. Available: ftp://ftp.hp.com/pub/c-products/servers/options/ c00256943.pdf
+[33] S. Shadley, “NAND flash media management through RAIN,” 2011. [Online]. Available: https://www.micron.com/ /media/ documents/products/technical-marketing-brief/brief_ssd_rain.pdf
+[34] Micron Technology, Inc., “Memory management in NAND flash arrays (TN-29–28),” 2005. [Online]. Available: https://www. micron.com/$/media/documents/products/technical-note/ nand-flash/tn2928.pdf/
+[35] C. Dirik and B. Jacob, “The performance of PC solid-state disks (SSDs) as a function of bandwidth, concurrency, device architecture, and system organization,” Proc. ACM SIGARCH Computer Architecture News, vol. 37, no. 3, pp. 279–289, 2009.
+[36] J.-U. Kang, H. Jo, J.-S. Kim, and J. Lee, “A superblock-based flash translation layer for NAND flash memory,” in Proc. ACM & IEEE Int. Conf. Embedded Softw., 2006, pp. 161–170.
+[37] F. Chen, R. Lee, and X. Zhang, “Essential roles of exploiting internal parallelism of flash memory based solid state drives in highspeed data processing,” in Proc. IEEE Int. Symp. High Perform. Comput. Architecture, 2011, pp. 266–277.
+[38] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and C. Ren, “Exploring and exploiting the multilevel parallelism inside SSDs for improved performance and endurance,” IEEE Trans. Comput., vol. 62, no. 6, pp. 1141–1155, Jun. 2013.
+[39] S. Im and D. Shin, “Flash-aware RAID techniques for dependable and high-performance flash memory SSD,” IEEE Trans. Comput., vol. 60, no. 1, pp. 80–92, Jan. 2011.
+[40] D. Ryu, “Solid state disk controller apparatus,” U.S. Patent 8 159 889, Apr. 17, 2012.
+[41] C. Kim and A. K. Agrawala, “Analysis of the fork-join queue,” IEEE Trans. Comput., vol. 38, no. 2, pp. 250–255, Feb. 1989.
+[42] R. Nelson and A. Tantawi, “Approximate analysis of fork/join synchronization in parallel queues,” IEEE Trans. Comput., vol. 37, no. 6, pp. 739–743, Jun. 1988.
+[43] E. Varki, A. Merchant, and H. Chen, “The M/M/1 fork-join queue with variable sub-tasks,” 2009. [Online]. Available: Unpublishedhttp://www.cs.unh.edu/ varki/publication/2002-nov-open.pdf
+[44] D. P. Bertsekas, R. G. Gallager, and P. Humblet, Data Networks, vol. 2. Upper Saddle River, NJ, USA: Prentice-Hall, 1992.
+[45] H. A. David and H. N. Nagaraja, Order Statistics. New York, NY, USA: Wiley, 2003.
+[46] G. Casella and R. L. Berger, Statistical Inference, vol. 2. Pacific Grove, CA, USA: Duxbury, 2002.
+[47] K. S. Trivedi, Probability & Statistics With Reliability, Queuing and Computer Science Applications. Hoboken, NJ, USA: Wiley, 2008.
+[48] L. S. C. Harrison White, “Queuing with preemptive priorities or with breakdown,” Operations Res., vol. 6, no. 1, pp. 79–95, 1958.
+[49] J. Kim, S. Seo, D. Jung, J. Kim, and J. Huh, “Parameter-aware I/O management for solid state disks (SSDs),” IEEE Trans. Comput., vol. 61, no. 5, pp. 636–649, May 2012.
+[50] Q. Wei, C. Chen, and J. Yang, “CBM: A cooperative buffer management for SSD,” in Proc. IEEE Symp. Mass Storage Syst. Technol., 2014, pp. 1–12.
+[51] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, 2005.
+[52] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. S. Manasse, and R. Panigrahy, “Design tradeoffs for SSD performance,” in Proc. USENIX Annu. Tech. Conf., 2008, vol. 8, pp. 57–70.
+[53] L. M. Grupp, J. D. Davis, and S. Swanson, “The bleak future of NAND flash memory,” in Proc. USENIX Conf. File Storage Technol., 2012, pp. 2–2.
+[54] P. Desnoyers, “What systems researchers need to know about NAND flash,” in Proc. USENIX Workshop Hot Topics Storage File Syst., 2013, Art. no. 6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+1822
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 69, NO. 12, DECEMBER 2020
+
+Hyegyeong Park (Member, IEEE) received the PhD degree in electrical engineering from the Korea Advanced Institute of Science and Technology, South Korea, in 2018, and was a postdoctoral researcher at Korea Advanced Institute of Science and Technology, South Korea. She is currently a postdoctoral fellow with the Computer Science Department, Carnegie Mellon University, Pittsburgh, Pennsylvania. Her research interests include the field of coding and information theory for distributed systems with the current focus on coding for distributed computing and distributed machine learning.
+
+Jaekyun Moon (Fellow, IEEE) received the PhD degree in electrical and computer engineering from Carnegie Mellon University, Pittsburgh, Pennsylvania. He is currently a professor of electrical engineering at Korea Advanced Institute of Science and Technology, South Korea. From 1990 through early 2009, he was with the faculty of the Department of Electrical and Computer Engineering, University of Minnesota, Twin Cities. He was consulted as chief scientist for DSPG, Inc. from 2004 to 2007. He also worked as chief technology officer at Link-A-Media Devices Corporation. His research interests are in the area of channel characterization, signal processing and coding for data storage and digital communication. He received the McKnight Land-Grant Professorship from the University of Minnesota, Minneapolis, Minnesota. He received the IBM Faculty Development Awards as well as the IBM Partnership Awards. He was awarded the National Storage Industry Consortium (NSIC) Technical Achievement Award for the invention of the maximum transition run (MTR) code, a widely used error-control/modulation code in commercial storage systems. He served as program chair for the 1997 IEEE Magnetic Recording Conference. He is also past chair of the Signal Processing for Storage Technical Committee of the IEEE Communications Society. He served as a guest editor for the 2001 IEEE JSAC issue on Signal Processing for High Density Recording. He also served as an editor for the IEEE Transactions on Magnetics in the area of signal processing and coding for 2001 to 2006.
+
+" For more information on this or any other computing topic, please visit our Digital Library at www.computer.org/csdl.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:35:55 UTC from IEEE Xplore. Restrictions apply.
+
+

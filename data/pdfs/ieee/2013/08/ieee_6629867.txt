@@ -1,0 +1,340 @@
+The Tenth International Symposium on Wireless Communication Systems 2013
+
+Stressing the BER simulation of LDPC codes in the error floor region using GPU clusters
+
+Gabriel Falcao, Joao Andrade, Vitor Silva
+
+Shinichi Yamagiwa
+
+Leonel Sousa
+
+Instituto de Telecomunicações
+
+JST Presto
+
+INESC-ID
+
+University of Coimbra, Portugal
+
+University of Tsukuba, Japan Technical University of Lisbon, Portugal
+
+Email: {gff,jandrade,vitor}@co.it.pt Email: yamagiwa@cs.tsukuba.ac.jp
+
+Email: las@inesc-id.pt
+
+Abstract—Low-Density Parity-Check (LDPC) codes are known for having excellent Bit Error Rate (BER) performance, even in the presence of quite low Signal-to-Noise Ratios (SNR). But the development of this type of error-correcting codes poses severe challenges since the design of new codes is based on heuristics such as girth and sparsity that not always provide the expected BER results and, consequently, can take long periods of time to be tested with Monte Carlo simulations using a massive amount of bits pseudo-randomly generated and transmitted over noisy channels. We address the computational complexity demanded by the LDPC decoder and the challenges imposed from the parallel architecture perspective, in particular targeting multicore systems that have the potential to deal more efficiently with computationally intensive applications. To handle the massive computational power required by the new and computationally more intensive generations of LDPC codes that demand lower error floors, namely optical communication ones, we propose using clusters of GPUs as a way to accelerate this type of Monte Carlo simulations from years or months to weeks or days.
+I. INTRODUCTION
+The rediscovery of Low-Density Parity-Check (LDPC) codes in the early nineties [1], following nearly thirty years in the shadow due to limited computational capacity [2], has been accompanied by a very strong research activity, leading to the assessment of its capacity-approaching characteristics. Since then, they have been adopted in numerous digital communication standards, both for erroneous and erasure channels. This is due to the discovery and improvement of several code design techniques, such as EXIT charts, Density-Evolution (DE) and numerous graph optimization algorithms, which are able to produce good LDPC codes that are suitable for Very Large Scale Integration (VLSI) design. However, a two-fold problem subsists. While design models may provide accurate estimates on the code’s capacity, therefore giving the error-correcting Signal to Noise Ratio (SNR) range of the code, the evaluation of the Bit Error Rate (BER) performance requires intensive Monte Carlo simulations. Given their decoding performance, a complete characterization of the BER curve may take long periods of time on conventional simulation platforms. As good performing LDPC codes achieve very low BERs in the error floor region, the more powerful the code, the higher the simulation time.
+To address this issue, we can capitalize on the availability of Graphics Processing Unit (GPU) devices to perform generalpurpose computing, namely through C/C++ based data-parallel
+
+programming models. State-of-the-art GPUs offer a peak raw performance of 2 TFLOPs in a heavily multithreaded execution flow. In this way, thousands of concurrent threads are able to collaboratively execute a parallel kernel, effectively reducing the overall execution time when compared to a conventional simulation platform, such as a Central Processing Unit (CPU). Notwithstanding, the LDPC BER simulation presents such an outstanding workload that even a modern GPU engine may fail short of delivering a BER characterization in an affordable timespan. Therefore, we must pursue the execution of BER simulation in more powerful computing systems. although Field-Programmable Gate Array (FPGA) devices can deliver outstanding computational power, the low system design flexibility associated with highly consuming development efforts, makes them less appealing for simulation roles than a GPU cluster.
+In this paper, we developed a BER simulator using a GPU cluster. Targeting such a distributed system presents challenges which need to be addressed if a linear reduction of the execution time with the number of utilized GPUs is to be achieved. Namely, reducing the cluster data management housekeeping overhead and its impact on the overall performance through the minimization of inter-node communications and efficient gathering of the simulation results. The paper is organized as follows: in Section II LDPC codes are introduced, the soft-decoding algorithm employed is briefed; in Section III, a brief introduction is given to Fermi Compute Unified Device Architecture (CUDA) GPUs; in Section IV the developed LDPC decoder, Additive White Gaussian Noise (AWGN) channel and statistical kernel are presented, addressing GPUaware parameters such as thread- and data-parallelism, as well as fixed-point data representation suitable for the LDPC decoding context; in Section V the achieved experimental results are presented and discussed and Section VI closes the paper.
+II. LDPC CODES
+An LDPC code is a linear block code characterized by a sparse parity-check matrix H [2]. Equivalently, it can be represented by a bipartite graph representation, designated by Tanner graph [3], where each column in the matrix is a Bit Node (BN) and each row in the matrix is a Check Node (CN). A BN corresponds to a codeword bit whereas a CN corresponds to a parity-check equation imposed by the
+
+,6%1
+
+9'(9(5/$**0%+ā%HUOLQā2IIHQEDFK*HUPDQ\
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:17:43 UTC from IEEE Xplore. Restrictions apply.
+
+881
+
+The Tenth International Symposium on Wireless Communication Systems 2013
+
+code, as seen in Figure 1. The parity-check matrix H has
+
+LDPC Code Tanner Graph and Soft-Decoding
+BN 0 1 2 3 4 5 6 7 CN
+11100000 0
+
+00011100 1
+H= 10010010 2
+
+BN
+
+01001001 3
+
+5
+
+L(q02)
+
+BN 0
+
+CN2
+
+L(r20)
+
+CN0 CN1 CN2 CN3
+
+L(q41)
+
+BN 4
+
+CN1
+
+L(r14)
+
+Algorithm 1 Min-Sum Soft-Decoding Algorithm
+
+Initialization:
+
+i-ii) L(qnm) = L(cn) = log
+
+P(cn = 0|yn) P(cn = 1|yn)
+
+while cHT = 0 and i = max iterations do
+
+iii) CN Processing
+
+L(rmn) = ∏n ∈N(m)\n sgn (L(qnm)) · minn ∈N(m)\n|L(qn m)| iv) BN Processing
+L(qnm) = L(cn) + ∑m ∈M(n)\m L(rm n) v) a-posteriori LLR processing
+L(Qn) = L(cn) + ∑m ∈M(n) L(rmn) vi) Hard-decision
+
+cˆn =
+
+1 ⇐ L (Qn) < 0 0 ⇐ L (Qn) > 0
+
+end while
+
+CN Processing BN Processing
+
+CN0
+
+BN BN BN BN BN BN BN BN
+
+BN
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+3
+
+Fig. 1: An LDPC code in matrix and Tanner graph representation. Soft-decoding is illustrated for BN0 and CN1.
+
+dimensions M × N, corresponding to M parity-check equations or CNs, N codeword bits or BNs and N − M information bits. Typically, LDPC codes are decoded using iterative softdecoding algorithms which apply a message-passing procedure between the Tanner graph nodes, also shown in Figure 1. Soft-decoding algorithms are derived from the Sum-Product Algorithm (SPA) [2], and due to their numerical complexity, the Min-Sum Algorithm (MSA) [4] is particularly appealing as it presents the lowest numerical complexity (even though the strategies developed for the MSA in this work could be used in other algorithms). The formalization of the MSA is presented in Algorithm 1 and executes the following procedures: i) the input information is obtained from the channel demodulator in the form of Log-Likelihood Ratios (LLRs), i.e. each bit LLR is assigned to L(cn); ii) the L(cn) messages initialize the L(qnm) messages, which are the messages sent from the BNs to their adjacent CNs; iii) the CNs use the L(qnm) to compute L(rmn) which are sent to their adjacent BNs; iv) the BNs compute new L(qnm) messages and, also v), L(Qn), the a-posteriori LLR of bit n, based on the received L(rmn); vi) from L(Qn), the decoded bit state cˆn can be inferred; and finally this procedure repeats until the codeword has been successfully decoded or a maximum number of decoding iterations has been reached.
+
+III. FERMI GPU ARCHITECTURE
+The GPU is a heavily threaded processor targeted not only for graphics applications but also for general-purpose computing. GPUs based on the Fermi architecture are comprised of dozens of Stream Multiprocessors (SMs) aggregating 32 Streaming Processors (SPs), allowing several thousands of concurrent threads execute parallel algorithms and kernels. The GPU engine usually requires explicit coding of parallel algorithms in order to extract the peak single-precision 1 ∼ 2 TFLOPs. In order to extract such performance, optimal levels of parallelism and proper usage of the GPU memory hierarchy should be defined.
+
+Host-device communication is made through the global memory space, a read-write large addressing space with very high bandwidth, but also with high latency (400∼800 clock cycles). For Lookup Table (LUT) indexing or kernel readonly parameters there is a small L1-cached memory space, designated as constant memory, offering up to 64kB of storage. While these memory spaces lie off-chip, the shared memory, a configurable 16 or 48kB space, and the register space offering 32768 32-bit registers to threads, lie on-chip.
+Threads execute synchronously in warps, groups of 32 threads residing in the same SM. There is flexibility for the parallel expression of algorithms, as the execution grid defines thread blocks, which can use the shared memory for communication and can also enforce synchronization and fencing operations. Moreover, the execution grid can be configured to the needs of parallel kernel, as up to three-dimensional grids can be defined with up to 1024 threads. It should be noted that while the optimizations outlined in this paper were made to Fermi architecture GPUs, the same optimizations are transversal to nowadays general-purpose computing GPUs as shown in [5].
+Fermi GPU Cluster Architecture:: A computer cluster is a set of connected distributed computer systems which can be seen as a single unified system. The GPU cluster employed in this work is representative of other GPU cluster topologies. Namely, there is a master node assigned with cluster management house-keeping routines and a set of dual-GPU nodes assigned with computing tasks, and are thus, designated computing nodes. The nodes are interconnected by two private networks, a high-speed Infiniband and an Ethernet network. Execution on a distributed computing system provides a considerable flexibility in both execution flow and parallelism extraction [6] and is typically targeted through the routines and algorithms provided by Message-Passing Interface (MPI) distributions.
+IV. BIT ERROR RATE SIMULATOR
+The development of the BER simulator was two-phased. First, we have concentrated on the optimization of a fast simulator for single GPU execution. Insomuch as the achieved kernels are able to present a powerful computing solution to
+
+,6%1
+
+9'(9(5/$**0%+ā%HUOLQā2IIHQEDFK*HUPDQ\
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:17:43 UTC from IEEE Xplore. Restrictions apply.
+
+882
+
+The Tenth International Symposium on Wireless Communication Systems 2013
+
+the BER estimation, we then ported the single GPU kernels for execution on a distributed system of GPUs using a MPI environment. The modular diagram of the BER simulator is presented in Figure 2.
+
+ 
+
+
+ 
+
+
+
+
+ 
+
+
+ 
+
+
+
+
+
+Fig. 2: BER simulation model. The AWGN introduces noise to the all-zero codeword and is followed by the demodulation of LLRs, consumed by the decoding module. The statistical module registers the sustained errors.
+
+A. AWGN and Demodulator Module
+Without impact to the statistical significance of the Monte Carlo simulation performed by the simulator, we have forbore the encoder and modulator modules from the simulator. As the all-zero codeword belongs to any linear block code, thus, the encoder module is unneeded. The LLRs of the all-zero codeword are simply initialized inside the AWGN channel that also computes the channel received L(cn) and initializes the L(qnm) messages, using the Quadrature Phase-Shift Keying (QPSK) modulation. This module implements a XORWOW Parallel Random Number Generator (PRNG) [7], which allows each GPU thread to sample non-overlapping regions of a pseudo-random sequence generated from the same seed. It provides a very high 2190 period and the ability to skip ahead to the i-th index of a random sequence (a feature on which the cluster simulator capitalizes).
+B. LDPC Decoder Module
+The LDPC decoder module has been the subject of extensive studies [5], [8], [9], [10], [11], which optimize and find good compromises between the GPU resources occupancy and the attained performance in the context of the LDPC decoding problem. Several parallel approaches have been exploited to achieve good decoding throughputs. Namely, several threadparallelism levels have been explored, applying layered and flooding decoding schedules, while balancing the need to fully consume the GPU resources by an increase in data-parallelism levels.
+Moreover, given the GPU execution flow and memory hierarchy characteristics, the maximum performance is extracted if memory transactions, which have a high latency, can be overlapped by arithmetic instructions. Thus, one of the most pursued ways is the increase of the decoding dataset granularity by packing several codewords onto vector types, serving a two-fold strategy. As more codewords are loaded there is an increase in the required arithmetic instructions with
+
+a similar increase in the amount of transferred data elements. However, since the memory engine provides a high latency regardless of the data variable alignment, 128-bit vector types are wrapped into 128 bytes transactions instead of transactions with a lower bitwidth, effectively increasing the overlap of arithmetic with memory instructions.
+In the developed LDPC decoder, we used a flooding decoding schedule, allowing for more threads to be active on the GPU engine. Namely, we defined N threads for the BN processing and M threads for the CN processing, thus assigning each thread to a node, in a strategy designated as thread-per-node. In this case particular decoding schedule, in the same iteration, each node is not constrained by others, and, thus, no communication is required among nodes. This leads to having all the data consumed by the threads loaded from global memory to registers, where it is computed, and stored back onto the global memory.
+Furthermore, LDPC decoding algorithms on LLR-domain are not tightly constrained by quantization errors. Hence, the LLR bitwidth can be contained to 5 ∼ 8 bits without a significant loss in performance. By defining a fixed-point 8bit precision variable to store the LLR messages, the decoder is able to decode 16 codewords at once, thus, elevating the levels of data-parallelism.
+
+C. Statistical Module
+The statistical module registers the number of error bits and codewords sustained in the transmission through the AWGN channel, but it also drives the number of iterations needed to successfully decode a batch of 16 codewords. If a single bit set to 1 is detected by the statistical module, the CPU enqueues a new decoding iteration for the decoding batch, until a maximum number of 50 iterations are issued.
+Evaluating the number of error bits and codewords in a parallel environment is particularly efficient through reduction operations. The BN kernel also computes the a-posteriori L(Qn) and performs hard-decision on a 16-bit integer array, where the i-th bit of the integer corresponds to the i-th word of the batch. Thus, we can compute the number of errors sustained at index n for all the 16 codewords, by evaluating its Hamming weight. Moreover, the same integer array can be used to compute the number of codewords which sustained errors by OR-ing each array element and compute the Hamming weight of the final result. In this way, the statistical module executes the reduction kernel provided in the CUDA SDK redefined for bit and codeword error evaluation on 16 integer array through:
+
+error {bits, codewords} = ∑ Hw (c˜n), Hw
+
+c˜n) , (1)
+
+n
+
+n
+
+where stands for the bitwise OR operation, Hw the Hamming weight, and c˜n is the concatenation of the 16 cn codewords from the batch in a 16-bit integer.
+
+,6%1
+
+9'(9(5/$**0%+ā%HUOLQā2IIHQEDFK*HUPDQ\
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:17:43 UTC from IEEE Xplore. Restrictions apply.
+
+883
+
+The Tenth International Symposium on Wireless Communication Systems 2013
+
+D. GPU Cluster Execution
+Expanding the number of hardware resources available to the BER simulator draws the need to define how these resources are utilized. Given that the BER simulator characteristics, particularly due to the LDPC decoder message connections, it would be impracticable to employ more GPUs for the execution of a single batch of 16 codewords. The best approach is to assign each GPU with its own BER simulator, each with sampling the same pseudo-random sequence for the same SNR parameter. The former is possible due to the XORWOW skipping-ahead characteristics, as previously said, and the latter by employing a subset of MPI parallel and management routines for distributed systems [6]. Thus, we are effectively elevating the data-parallelism levels of the BER simulator in order to speed up the simulation process, relying on a Single-Program Multiple-Data (SPMD) execution flow.
+Under the GPU cluster execution environment, the simulator requests an arbitrary number P of GPU devices, limited to the number of GPUs which comprise the cluster, in order to compute the BER for a given SNR. This leads to the spawning of P MPI processes on the cluster system, each computing a P-fraction of the maximum number of codewords to be simulated.
+In order to achieve a linear scalability of the BER simulation with the number of utilized GPUs, some challenges must be addressed. Inter-process communication must be as contained as possible to minimize network contention thus, withholding the overhead associated with such communication. We can address this problem by allowing the BER simulator in each GPU to run independently from one another except with a master process in charge with logging and registering the number of sustained error bits and codewords. Moreover, we can have each MPI process to write to disk at the end of the simulation and to signal the master process that its execution has finished. The master process after the completion of all processes reads all generated log files and merges the data into a final error log.
+
+V. EXPERIMENTAL RESULTS
+
+The BER simulator was profiled on a 1+16 node GPU cluster, comprising a master node equipped with an Intel i7 920, 12 GB of RAM-DDR3 and the location of the SSD disk storage, 8 NEC LX 113Rc-1G and 8 116Rc-1G GPUnodes equipped with Intel Xeon E5645 @ 2.40GHz, two Tesla M2050 cards, and 12 GB of RAM. The nodes interconnection networks are a 40 Gbit/s Infiniband network and a 1 Gbit/s ethernet network. The OS is the GNU/Linux CentOS distribution with kernel 2.6, CUDA Runtime API and CURAND library version 4.0 and MPI implementation OpenMPI 1.4.2. As a case study, we have used the N = 64800 rate 1/2 Digital Video Broadcasting - Satellite 2 (DVB-S2) code, employed in satellite communications.
+The BER simulator performance is measured in Mbit/s Ti:
+
+Ti
+
+=
+
+N
+
+× NumberSimulated T{kernel}
+
+Words
+
+[Mbit/s] ,
+
+(2)
+
+where i is the number of GPUs employed and T{kernel} represents the time taken by the BER simulator. This time is the difference between the starting time of the first process to begin execution and the finish time of the last process completing execution, evaluated through the MPI provided clock times.
+The BER simulator modules have different numerical complexities, and thus, occupy different fractions of the simulation time. For the case-study LDPC code at a SNR of 3.0 dB, well within its error floor region, the relative weight of each module is highlighted in Figure 3. The PRNG and demodulator take
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+ 
+
+Fig. 3: Relative occupancy of the BER simulator modules.
+
+4.20%, while the statistical module consumes 30.76% and the decoder module takes up roughly two thirds of the overall execution time.
+Regarding the cluster simulator scalability, we have profiled the BER simulator for a variable number of utilized GPU engines for a SNR of 2.0 dB, which also lies on the error floor of the code, yielding an average of 17.42 issued decoding iterations. The BER simulator requests 106 codewords to be simulated. With an arbitrary number of requested GPUs i, the first i/2 GPU computing nodes are occupied, and in the event i is odd the i/2-th node only has one GPU subscribed for execution. In Figure 4, the attained simulation throughput is
+
+1200 1000
+
+BER Simulator Throughput on the Cluster
+
+800
+
+T [Mbit/s]
+i
+
+600
+
+400
+
+200
+
+0 S 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 Number of GPUs
+Fig. 4: Simulation throughput Ti for i ∈ {1, 2, 4, · · · , 32} GPUs. The single GPU execution i = 1 is labelled S.
+
+represented. It is clear that the throughput achieved with a single GPU node, i.e. with 2 GPUs, is less than twice of that obtained with a single GPU. This is due to the GPU computing node system topology, where the PCIe bus is shared among both GPUs. Given that full occupancy of the GPU cluster draws PCIe overhead, the fair measure for the cluster scalability is the speedup achieved with i GPUs relative to the one achieved by 2 GPUs, i.e. by a GPU computing node.
+The scalability of the BER simulator across a variable number of GPUs is a key figure of merit to assess the suitability of the developed kernels for cluster execution under the SPMD model. The simulator scalability is presented in
+
+,6%1
+
+9'(9(5/$**0%+ā%HUOLQā2IIHQEDFK*HUPDQ\
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:17:43 UTC from IEEE Xplore. Restrictions apply.
+
+884
+
+The Tenth International Symposium on Wireless Communication Systems 2013
+
+Speedup
+
+20 Simulation Linear Speedup
+15
+10
+5
+0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 Number of GPUs
+Fig. 5: True scalability of the BER simulator for a variable number of GPUs compared with theoretical linear scalability.
+
+Figure 5 taking the dual-GPUs throughput as reference, as previously said, and scales sub-linearly to the number of employed GPU devices. Fully subscribing the GPU cluster results in a 13.49 speedup as opposed to a theoretical maximum of 16, showing the suitability of the developed kernels for distributed execution. Moreover, since 106 codewords is a relatively small workload to divide across 32 GPUs, there is a non-negligible timespan between the first and the last process that finish execution, as such timespan becomes negligible the speedup will see some improvement. Furthermore, we have omitted from the discussed experimental results whether the Infiniband or the Ethernet was being utilized for communication among the computing nodes and the master node. Since the BER simulator minimizes communication across the interconnection network, regardless of what network system is utilized, the obtained results are similar. Since the case-study
+
+Simulation Time [days]
+
+104
+
+1014 bits
+
+1015 bits
+
+1016 bits
+
+103 years
+
+102 months
+
+101
+
+weeks
+
+100 S 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 Number of GPUs
+Fig. 6: Execution time of very large data sets evaluating the rate 1/2, N = 64800 bit DVB-S2 code for a SNR of 2.0 dB in the error floor region.
+
+DVB-S2 LDPC code is the longest length code which has been standardised, with N = 64800, it may be interpreted as representative of long block length codes. Therefore, we show in Figure 6 the viability of simulating a very large number of bits on the GPU cluster and its scalability across dozens of GPUs. Clearly, a GPU computing cluster is a viable alternative to deep error floor simulations within a particular range of data set sizes. For example, emergent standards such as the ITU-T G.709, BERs of 10−15 are required [12]. In order to obtain statistical significance, at least 2000 error bits must be tested, yielding for the previous case the need to simulate ∼ 1018 bits. This would require GPU clusters composed of more than
+
+32 GPUs or, alternatively, more powerful computational resources. Nevertheless, the developed BER simulator is capable of delivering BERs as low as ∼ 10−13 in just a few days of computation.
+VI. CONCLUSIONS
+In this paper, we have proposed an efficient BER simulator for execution on both a single GPU system, and also for execution on a cluster of GPUs. We have performed a series of optimizations regarding data-parallelism and a proper exploitation of the GPU memory engine which delivers a good simulation throughput on a single GPU system. Under the cluster execution, we have adopted strategies which minimize the interconnection network usage and overhead, therefore achieving a sub-linear speedup with the number of GPUs close to the maximum obtainable theoretical peak.
+We have shown that parallel computational power is nowadays available at low-programming effort using C-based languages and constructs that enable the system designer to simulate sub-blocks of complex wireless communication systems in weeks or days instead of months.
+ACKNOWLEDGMENT
+This work was supported by Instituto de Telecomunicações and Fundação para a Ciência e Tecnologia (FCT) project PEst-OE/EEI/LA0008/2011 and grant SFRH/BD/78238/2011, under the QREN-POPH, FSE frameworks.
+The authors would like to thank...
+REFERENCES
+[1] D. MacKay and R. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes ,” Electronics Letters, vol. 32, no. 18, pp. 1645–1646, aug 1996.
+[2] R. G. Gallager, “Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, jan 1962.
+[3] M. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Transactions on Information Theory, 1981.
+[4] J. Andrade, G. Falcao, V. Silva, and V. Savin, “Near-LSPA Performance at MSA Complexity,” in Proc IEEE International Conference on Communications, June 2013, (accepted for publication).
+[5] G. Falcao, V. Silva, L. Sousa, and J. Andrade, “Portable LDPC Decoding on Multicores Using OpenCL,” Signal Processing Magazine, vol. 29, no. 4, pp. 81–109, 2012.
+[6] Pacheco, P. S., Parallel Programming with MPI. Morgan Kaufman Publishers, Inc., San Francisco, CA., 1997.
+[7] NVIDIA, CUDA Toolkit 4.0 CURAND Guide. NVIDIA, 2011. [8] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC Decoding on
+Multicore Architectures,” IEEE Transactions on Parallel and Distributed Systems, pp. 309–322, 2011. [9] G. Wang, M. Wu, Y. Sun, and J. Cavallaro, “GPU Accelerated Scalable Parallel Decoding of LDPC codes,” in Signals, Systems and Computers (ASILOMAR), 2011 Conference Record of the Forty Fifth Asilomar Conference on, 2011, pp. 2053–2057. [10] ——, “A Massively Parallel Implementation of QC-LDPC Decoder on GPU,” in Application Specific Processors (SASP), 2011 IEEE 9th Symposium on, 2011, pp. 82–85. [11] K. K. Abburi, “A Scalable LDPC Decoder on GPU,” in VLSI Design (VLSI Design), 2011 24th International Conference on, 2011, pp. 183– 188. [12] B. Smith, A. Farhood, A. Hunt, F. Kschischang, and J. Lodge, “Staircase Codes: FEC for 100 Gb/s OTN,” Journal of Lightwave Technology, vol. 30, no. 1, pp. 110–117, jan. 2012.
+
+,6%1
+
+9'(9(5/$**0%+ā%HUOLQā2IIHQEDFK*HUPDQ\
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:17:43 UTC from IEEE Xplore. Restrictions apply.
+
+885
+
+

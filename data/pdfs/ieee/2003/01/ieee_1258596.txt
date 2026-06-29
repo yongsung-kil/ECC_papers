@@ -1,0 +1,888 @@
+Decoder Architecture for Array-Code-Based LDPC Codes
+
+Sedat Ölçer
+IBM Research, Zurich Research Laboratory 8803 Rüschlikon, Switzerland
+
+Abstract—We describe a decoder architecture intended for decoding array-code-based low-density parity-check (LDPC) codes using the sum-product algorithm (SPA). The advantages of the proposed architecture as compared to the fully parallel implementation of the SPA are: reduced memory size, avoidance of complex signal interconnect patterns, and ease of programability to accommodate various code parameters. These advantages are derived from exploiting the well-defined structure of the parity-check matrix of array-code based LDPC codes. Sumproduct decoding with modified message-passing schedules are proposed to simplify the decoder implementation further.
+I. INTRODUCTION
+The “sum-product” algorithm (SPA) [1],[2] is the most commonly used algorithm for decoding low-density paritycheck (LDPC) codes. Its efficient implementation has become a topic of increasing interest, see, e.g., [3]-[5]. Implementations for very high data rates require fully parallel architectures where all symbol-node messages or all check-node messages are computed concurrently. Fully parallel implementations entail a large memory size and suffer from complicated interconnect patterns induced by the edges of the underlying graph. Programmability to accommodate various code parameters becomes an issue. Large codeword values exacerbate these difficulties.
+Here we develop a sum-product decoder architecture suited for decoding a specific family of LDPC codes, the arraycode-based LDPC codes [6],[7]. These codes represent a family of regular, deterministically constructed LDPC codes with a parity-check matrix that is akin to that of array codes. They were shown to exhibit very good performance for binary as well as multilevel transmission over the additive white Gaussian noise (AWGN) channel and to lend themselves to efficient linear-time encoding [7]. They can easily be constructed for a wide range of code parameters.
+An important aspect of our architecture is its programmability, allowing the decoder to easily accommodate different code parameters. Modifications to the regular decoding schedule permit to decrease the hardware complexity further and/or operate the decoder at higher speeds. Note that in [8] a staggered decoding schedule was proposed that decomposes each decoding iteration into a number of smaller steps during which a limited number of check nodes are processed. In contrast, for the “partial-update” schedule introduced here, all symbol and check nodes are processed at each iteration but a limited number of messages are computed.
+
+II. LDPC PARITY-CHECK MATRIX CONSTRUCTION BASED ON ARRAY CODES
+
+The array-code parity-check matrix is specified by three
+parameters: a prime number p and two integers k and j such that k, j [ p. It has dimensions jp % kp and is given by
+
+I I
+
+IL
+
+I
+
+ 
+
+I
+
+α
+
+α2
+
+L
+
+α k −1
+
+ 
+
+H = I α2
+
+α4
+
+L α 2(k −1)  ,
+
+(1)
+
+ 
+
+M
+
+M
+
+MO
+
+M
+
+ 
+
+I α j−1 α 2( j−1) L α ( j−1)(k −1) 
+
+where I is the p % p identity matrix and α is a p % p permutation matrix representing a single left or right cyclic shift. For example, for p = 5,
+
+0 1 0 0 0
+
+0 0 0 0 1
+
+0 0 1 0 0
+
+1 0 0 0 0
+
+α = 0 0 0 1 0 or α = 0 1 0 0 0 . (2)
+
+
+
+
+
+0 0 0 0 1
+
+
+
+
+
+0 0 1 0 0
+
+1 0 0 0 0
+
+0 0 0 1 0
+
+The parameters j and k specify the column and row weight of H. Efficient encoding, minimum distance properties, and performance of array-code based LDPC codes for binary as well as multilevel modulation are addressed in [7].
+III. THE SUM-PRODUCT ALGORITHM (SPA)
+Let N (m) = {n: H m,n = 1} be the set of bits that participate in parity check m and let M (n) = {m: H m,n = 1} be the set of parity checks in which bit n participates. We denote by y = [ y1,...,yN ] the received sequence that corresponds to the
+transmitted codeword x = [x1,...,xN ] . Inputs to the SPA consist of log likelihood ratios (LLRs)
+L(xn ) = ln[P(xn = 0|yn ) /P(xn = 1|yn )] determined by the channel statistics. One iteration of the algorithm is illustrated in Fig. 1 using the Tanner graph associated with the LDPC code, where symbol nodes are shown as circles and check nodes as squares.
+
+GLOBECOM 2003
+
+- 2046 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:24:29 UTC from IEEE Xplore. Restrictions apply.
+
+N(m) n
+
+symbol-node processing n
+
+Λm,n
+
+λm,n
+
+m
+
+m
+
+check-node i
+
+M(n)
+
+Fig. 1. Message-passing under sum-product decoding on a Tanner graph
+
+(not all edges are shown).
+
+Initialization:
+
+λm,n = L(xn )
+
+(3)
+
+Processing at check-node m:
+
+(a) For each n ∈ N (m) , compute
+
+Λ~m,n = ∑ φ (| λm,n' |) − φ (| λm,n |) = σ m − φ (| λm,n |)
+n' ∈N(m)
+
+(4)
+
+(b) Compute the LLR:
+
+Λm,n = φ −1 ( Λ~m,n ) ∏ sgn(λm,n' ) ⋅ sgn(λm,n )
+
+(5)
+
+n'∈N (m)
+
+Processing at symbol-node n:
+
+(a) For each m ∈ M (n) , update
+
+λm,n = L(xn ) + ∑ Λm',n −Λm,n = λn − Λm,n
+
+(6)
+
+m' ∈M(n)
+
+(b) Obtain xˆ = [xˆ1, ..., xˆ N ] such that xˆn = 0 if
+
+λn > 0 and xˆn = 1 if λn ≤ 0 .
+
+The function φ (z) , z > 0 , is defined as
+
+φ(z)
+
+=φ
+
+−1 (z)
+
+=
+
+logtanh
+
+z 2
+
+
+
+=
+
+ez
+
+log 
+
+e
+
+z
+
+−1 + 1
+
+.
+
+(7)
+
+The price to pay for a fully parallel implementation of the SPA is a large memory size and a complex interconnect structure that complicates the implementation of long LDPC codes. Programmability to accommodate different code parameters also becomes difficult. In the next section an architectural approach that significantly alleviates these problems while allowing very high data rates to be achieved is described. In particular, reducing the complexity of interconnects is considered as an important design target.
+
+IV. DECODER ARCHITECTURE
+The definition of the parity-check matrix H in Eq. (1) relies
+on the p × p permutation matrix α . Matrix α or its various
+powers specify a set of p interconnects between a block of p symbol nodes and a block of p check nodes, and vice versa. The Tanner graph of an array-code-based LDPC code can therefore be represented as shown in Fig. 2, where symbol nodes and check nodes are grouped in p-blocks and each arrow represents a group of p edges.
+Furthermore, we can view matrix α , and its powers, as
+defining the interconnect structure of a p-input p-output “switch unit” that can be set in p different configurations. We
+
+will also refer to α as an “interconnection matrix.” The
+switch unit will be addressed in more detail in Section V. These observations suggest expressing the SPA in vector
+form, where the various quantities are processed on a p-wide block basis. This idea can be exploited in different ways for a practical implementation, one of which is described next.
+p p
+p
+
+jp
+
+kp
+
+Fig. 2. Tanner graph representation for an array-code based LDPC code with parameters p, j, and k.
+The variables Λ~m,n for check-node processing are computed by first accumulating
+
+ σ qp+1 
+
+ 
+
+σ
+
+qp +
+
+2
+
+ 
+
+M
+
+σ
+
+(q
+
++1)
+
+p
+
+ 
+
+=
+
+k −1
+∑
+l=0
+
+ 
+
+φ (| λqp+1, i0q (l) |)
+
+ 
+
+  
+
+φ (| λqp+2, i1q (l) |) M
+
+  
+
+φ
+
+(|
+
+λ
+
+(
+
+q
+
++1)
+
+p,
+
+i
+
+q p −1
+
+(l
+
+)
+
+|)
+
+,
+
+i0q
+
+(l),
+
+i1q
+
+(l
+
+),...,
+
+i
+
+q p −1
+
+∈{lp
+
++
+
+1,
+
+lp
+
++
+
+2,...,
+
+(l
+
++
+
+1)
+
+p}
+
+,
+
+(8)
+
+for q = 0,1, ..., j − 1. The rest of the computations is accomplished in k steps, for l = 0, 1, ..., k − 1. At each step l, the p
+
+vectors are computed first
+
+       
+
+Λ~qp+1,i0q (l) Λ~qp+2,i1q (l )
+M Λ~(q+1) p, iqp−1(l )
+
+       
+
+=
+
+  
+
+σ qp+1 σ qp+2
+
+M σ (q+1) p
+
+     
+
+−
+
+ φ (| λ
+
+
+
+qp +1,
+
+ φ (| λ
+
+ 
+
+qp + 2,
+M
+
+φ (| λ(q+1) p,
+
+i0q (l) |)
+
+ 
+
+i1q (l ) |)
+
+ 
+
+
+
+i
+
+q p −1
+
+(l
+
+)
+
+|)
+
+,
+
+q = 0,1,..., j − 1,
+
+(9)
+
+{ } and from these the corresponding vectors of LLRs Λm,n are
+obtained by applying the operation indicated in Eq. (5) component-wise.
+
+GLOBECOM 2003
+
+- 2047 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:24:29 UTC from IEEE Xplore. Restrictions apply.
+
+The LLRs λm,n for symbol-node processing are likewise computed. First accumulate
+
+∑  λlp+1   L(xlp+1 ) 
+
+ 
+
+λ lp + 2
+
+M λ(l+1) p
+
+    
+
+=
+
+ 
+
+L(xlp+2 )
+
+ 
+
+M
+
+
+
+
+
+L(x(l+1) p )
+
++
+
+j −1
+α
+q=0
+
+(
+
+p −1) ql
+
+    
+
+Λ qp+1,i0q (l ) Λqp+2,i1q (l )
+M
+
+    
+
+ 
+
+Λ (q
+
++1)
+
+p
+
+,
+
+i qp
+
+−1
+
+(l
+
+)
+
+ 
+
+,
+
+(10)
+
+and subsequently compute for q = 0,1,..., j −1 :
+
+  
+
+λλ~~llpp++12
+
+ λ~(l
+
+M
++1)
+
+p
+
+     
+
+=
+
+ λlp+1
+
+ 
+
+λlp+2
+
+M λ(l+1) p
+
+     
+
+−α
+
+( p−1)ql
+
+    
+
+Λ qp+1,i0q (l) Λqp+2,i1q (l )
+M
+
+ 
+
+Λ (
+
+q+1)
+
+p,
+
+iqp−1(l
+
+)
+
+      
+
+.
+
+(11)
+
+The updated vector of symbol node variables is obtained by rearranging this last vector according to
+
+λ  
+
+qp+1,i0q (l )
+
+ 
+
+  
+
+λqp+2,i1q (l) M
+
+  
+
+λ  (
+
+q+1)
+
+p
+
+,
+
+i
+
+q p−1
+
+(l
+
+)
+
+ 
+
+=
+
+α
+
+r
+
+  
+
+λλ~~llpp++12
+
+ λ~(l
+
+M
++1)
+
+p
+
+     
+
+,
+
+(12)
+
+where r ∈ {0, 1, ..., p −1}. The architecture corresponding to
+the above algorithm is shown in Fig. 3. The symbol-node variables λm,n are stored in the j register banks shown on the
+right-hand side. Stored values are either circularly rotated or replaced by new updated values depending on the position selected for the multiplexors shown above the register banks. Eq. (8) is realized by the accumulators, shown at the center of Fig. 3, in conjunction with the above circular rotations. The upper [lower] switch unit implicitly performs the multiplica-
+tions with the α matrix, and its various powers, as indicated
+in Eq. (11) [Eq. (12)]. The vector provided at the output of the lower switch unit is placed in the q-th register bank. The “pseudoposterior” LLRs λn , n = 1, ..., N , are collected at the
+outputs of the left accumulators and used for final decision making. The computation of the sign term in Eq. (5), not shown in Fig. 3, is obtained similarly to the computations in Eqs. (8) and (9). In the architecture of Fig. 3, the symbol-node messages require a total of jpk storage elements, whereas the storage requirement for the check-node messages is jp, which is independent of the code length or the number of edges in the associated Tanner graph. Saving in storage of up to ~50% is thus possible with respect to a fully parallel implementation with 2jpk memory elements.
+In Fig. 3, all interconnect constraints induced by the LDPC parity-check matrix are lumped into the two identical programmable switch units, discussed in the next section.
+
+λlp +1 λ(l +1) p
+ACC:
+
+Control
+p×p switch
+unit
+
+Λ~
+qp
+
++1,
+
+i0q
+
+(l
+
+)
+
+ACC
+
+ACC
+
+ACC
+
+L( xlp +1 )
+
+L(x(l+1) p )
+
+Λ~
+(
+
+q
+
++1)
+
+p
+
+,
+
+i
+
+q p−1
+
+(l
+
+)
+
+ACC
+
+q=0
+
+λqp+1, i0q (0)
+
+λqp+1, i0q (k −1)
+
+λ(
+
+q
+
++1)
+
+p,
+
+i
+
+q p−1
+
+(0)
+
+λ(
+
+q
+
++1)
+
+p,
+
+i
+
+q p−1
+
+(
+
+k
+
+−1)
+
+q = j −1
+
+p×p switch
+unit
+Control
+: & (.)
++ +/-
+
+Λ~
+qp
+
++1,
+
+i0q
+
+(l
+
+)
+
+ACC
+
+Λ~
+(
+
+q+1)
+
+p,
+
+i
+
+q p−1
+
+(l
+
+)
+
+ACC
+
+λqp+1, i0q (0)
+
+λqp+1, i0q (k −1)
+
+λ
+(
+
+q
+
++1)
+
+p,
+
+i
+
+q p−1
+
+(0)
+
+λ
+(
+
+q
+
++1)
+
+p,
+
+i
+
+q p−1
+
+(
+
+k
+
+−1)
+
+Fig. 3. Example architecture.
+
+GLOBECOM 2003
+
+- 2048 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:24:29 UTC from IEEE Xplore. Restrictions apply.
+
+0
+
+0
+
+1
+
+1
+
+2
+
+2
+
+3
+
+3
+
+4
+
+5
+
+4 5
+
+6
+
+7
+
+6
+
+7
+
+01234567
+
+00
+
+0
+
+11
+
+4
+
+22
+
+1
+
+33
+
+5
+
+44
+
+2
+
+55
+
+6
+
+66
+
+3
+
+77
+
+7
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+BAR
+
+CROSS
+
+Fig. 4. An 8×8 (a) crossbar switch, (b) Benes switch, (c) Banyan switch and (d) possible states of a 2×2 switch element.
+
+II. IMPLEMENTATION OF THE SWITCH UNIT
+Note that, for high-speed LDPC decoding, it is desirable that the switch be “nonblocking,” i.e. that any distinct input can be routed to any distinct output for the set of connections to be made. The crossbar topology shown in Fig. 4(a) leads to the conceptually simplest nonblocking switch unit, but is not efficient because it requires P2 switching elements for a P % P switch unit (P is assumed to be a power of 2). A possible alternative is the Benes-network-based switch unit shown in Fig. 4(b). When all input-to-output connections are known in advance, as is the case for LDPC decoding, the Benes switch is nonblocking. Each switch element can be set either in the BAR state or in the CROSS state, as depicted in Fig. 4(d).The Banyan switch in Fig. 4(c) represents another possible architecture. As the number of switching elements ( log2P stages each with P/2 2%2 switching elements) is smaller than for the Benes switch, it cannot be nonblocking in general. However, the following lemma can be shown to hold.
+Lemma: If the interconnection matrix of a P % P Banyan switch is a permutation matrix representing a cyclic left or right shift, then the switch is nonblocking.
+Proof: See the Appendix.
+
+updating at each iteration first, say, all symbol-to-check messages and then all check-to-symbol messages. The architecture of Fig. 3 achieves this result through a combination of serial and parallel processing steps. It is possible to adopt different schedules with the objective of increasing processing speed and/or lowering implementation complexity.
+The schedule illustrated in Fig. 5 consists in updating, for each p-block of symbol nodes, only those messages that are intended for a single p-block of check-nodes. In this “partialupdate” schedule, each p-block of symbol nodes sends messages to a single p-block of check-nodes in a round-robin fashion in successive iterations. At the first iteration, the topmost p-block of symbol nodes sends p messages to the topmost p-block of check-nodes only. At the second iteration, the same block of symbol nodes sends messages to the middle p-block of check-nodes only and at the third iteration to the lowest p-block of check-nodes only. In general, each symbolnode block will have sent one message to all check-node blocks after j iterations. This partial-update schedule implies that only one of the j register banks in Fig. 3 is updated during each iteration, which reduces the processing time for one iteration from 2k(1 + j)t to k(2+j)t. Processing speed can typically be increased by ~60%.
+
+This result is useful for realizing the switch unit in our decoder architecture for array-code based LDPC codes. In
+that case the permutation matrix α has dimensions p % p,
+where p is a prime number. A Banyan switch realization is
+still possible because matrix α can be embedded into a larger
+P % P permutation matrix, with P > p and P a power of 2.
+This only requires introducing a multiplexing stage at the switch output (or at its input).
+III. PARTIAL-UPDATE SCHEDULES
+The most straightforward schedule for sum-product decoding (referred to, here, as “regular” schedule) consists in
+
+Fig. 5: A partial symbol-node update schedule.
+
+GLOBECOM 2003
+
+- 2049 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:24:29 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 6. BER performance for the (2209, 2024) LDPC code.
+Fig 7: BER performance for the (4489, 4224) LDPC code.
+Fig. 6 shows the bit error rate (BER) performance of the (2209, 2024) LDPC code assuming binary transmission over the AWGN channel and decoding with the regular and partial-update schedules. We see that the modified schedule leads to a loss of performance of ~0.25 dB at a BER of 10–7 when the number of iterations is limited to 20. When more iterations are allowed, the performance loss with respect to the regular schedule tends to become negligible. In Fig. 7 results obtained for the (4489, 4224) code are plotted.
+A similar partial-update schedule applied at the check nodes can be shown to result in smaller performance loss with respect to the regular schedule than is the case for the partial symbol-node updates. Clearly, other partial-update schedules, or combinations thereof, can also be devised.
+IV. CONCLUSIONS Full parallelism in the SPA implementation is needed in some applications to meet requirements on very high throughputs. An example is magnetic recording, where data rates in excess of 1 Gbit/s are becoming a reality. In many other applications where extreme data rates are not needed, such as in wireless or wired transmission systems, some amount of parallelism can be traded against significant savings in hardware complexity and power consumption. The approach described here is intended for such applications. It is, for example, suited for digital subscriber line (DSL) transmission
+
+at data rates on the order of 100 Mbit/s. Its flexibility to accommodate a wide range of code parameters is an advantage for DSL-like transmission, where different code parameters are selected in real time depending on actual channel attenuation and noise characteristics.
+APPENDIX: PROOF OF THE LEMMA
+Assume that the (P / 2) × (P / 2) switch unit is nonblocking. We will show that the P × P switch unit is then nonblocking. This requires showing that the last stage of the switch is nonblocking.
+Let α m , m = 0, 1, ..., P −1, be the matrix defining the input-
+output interconnections of the switch in the sense specified in the text, with α the P × P permutation matrix representing a single left (say) cyclic shift. Consider the n-th 2 × 2 switch element in the last stage of the switch unit, with n = 0, 1, ..., P / 2 −1. This switch element has output-port
+labels l out,1 = n and l out,2 = n + P / 2 . Then the labels of the input ports connected to these two output ports are given by l in,1 = l out,1 − m (mod P) and l in,2 = l out,2 − m (mod P) .
+Note now that the binary representations of l out,1 and l out,2 differ only in their most significant bits, denoted as msb(l out,1) and msb(l out,2 ) , respectively. We have that either msb(l in,1) = msb(l ) out,1 and msb(l in,2 ) = msb(l out,2 ) or msb(l in,1) ≠ msb(l ) out,1 and msb(l in,2 ) ≠ msb(l out,2 ) . In the former case, the 2 × 2 switch element is set in the BAR state, in the latter in the CROSS state. Thus no blocking occurs in the last stage of the switch. Finally, because the P = 2 case is trivially nonblocking, we have by induction that the switch is nonblocking for all P.
+REFERENCES
+[1] R.G. Gallager, “Low-density parity-check codes,” IRE Trans. Inform. Theory, vol. IT-8, pp. 21-28, Jan. 1962.
+[2] D.J.C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inform. Theory, vol. 45, No. 2, pp. 399-431, Mar. 1999.
+[3] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “VLSI architectures for iterative decoding in magnetic recording channels,” IEEE Trans. Magnetics, vol. 37, no. 2, pp. 748-755, Mar. 2001.
+[4] G. Al-Rawi, J. Cioffi, R. Motwani, and M. Horowitz, “Optimizing iterative decoding of low-density parity check codes on programmable pipelined architectures,” in Proc. GLOBECOM’2001, San Antonio, TX, pp. 3012-3018.
+[5] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes, “ in Proc. GLOBECOM’2001, San Antonio, TX, pp. 1036-1040.
+[6] J.L. Fan, “Array codes as low-density parity-check codes,” in Proc. 2nd Int’l Symposium on Turbo Codes and Related Topics, Brest, France, pp. 543-546, Sept. 2000.
+[7] E. Eleftheriou and S. Ölçer, “Low density parity-check codes for digital subscriber lines,” in Proc., ICC’2002, New York, NY, pp. 1752-1757.
+[8] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proc. GLOBECOM ’2001, San Antonio, TX, vol. 5 , pp. 3019-3024.
+
+GLOBECOM 2003
+
+- 2050 -
+
+0-7803-7974-8/03/$17.00 © 2003 IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:24:29 UTC from IEEE Xplore. Restrictions apply.
+
+

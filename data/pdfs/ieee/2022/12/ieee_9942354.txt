@@ -1,0 +1,691 @@
+7830
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+Decoding Short LDPC Codes via BP-RNN Diversity and Reliability-Based Post-Processing
+Joachim Rosseel , Valérian Mannoni , Member, IEEE, Inbar Fijalkow , Senior Member, IEEE, and Valentin Savin
+
+Abstract— This paper investigates decoder diversity architectures for short low-density parity-check (LDPC) codes, based on recurrent neural network (RNN) models of the beliefpropagation (BP) algorithm. We propose a new approach to achieve decoder diversity in the waterfall region, by specializing BP-RNN decoders to specific classes of errors, with absorbing set support. We further combine our approach with an ordered statistics decoding (OSD) post-processing step, which effectively leverages the bit-error rate optimization deriving from the use of the binary cross-entropy loss function. We show that a single specialized BP-RNN decoder combines better than BP with the OSD post-processing step. Moreover, combining OSD post-processing with the diversity brought by the use of multiple BP-RNN decoders, provides an efficient way to bridge the gap to maximum likelihood decoding.
+Index Terms— LDPC, short LDPC, neural network aided decoding, belief propagation, ordered statistics decoding post-processing.
+I. INTRODUCTION
+L AST years have witnessed an increased interest in research and practice of efficient error correcting codes for messages ranging from a few tens up to a few hundred bits, revived for instance by short-packet machine-to-machine communications, central to the emerging Internet of Things technology. While important progress has been made in understanding the limits of coding at short block lengths [1], the design of efficient short codes and decoding algorithms still raises many challenges [2].
+Low-density parity-check (LDPC) codes [3] are a class of error correcting codes defined by sparse bipartite graphs [4]. They are well-known for their excellent error correction performance at suitably large blocklengths, achieving near
+Manuscript received 21 June 2022; revised 17 October 2022; accepted 25 October 2022. Date of publication 8 November 2022; date of current version 19 December 2022. This work was supported by the French Agence Nationale de la Recherche (ANR), through the AI4CODE Project, under Grant ANR-21-CE25-0006. The associate editor coordinating the review of this article and approving it for publication was A. E. Pusane. (Corresponding author: Joachim Rosseel.)
+Joachim Rosseel is with the Univ. Grenoble Alpes, CEA, Leti, F38000 Grenoble, France, and also with the ETIS, CY Cergy Paris University, ENSEA, CNRS, F-95000 Cergy-Pontoise, France (e-mail: joachim. rosseel@cea.fr).
+Valérian Mannoni and Valentin Savin are with the Univ. Grenoble Alpes, CEA, Leti, F-38000 Grenoble, France (e-mail: valerian.mannoni@cea.fr; valentin.savin@cea.fr).
+Inbar Fijalkow is with the ETIS, CY Cergy Paris University, ENSEA, CNRS, F-95000 Cergy-Pontoise, France (e-mail: inbar.fijalkow@ensea.fr).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2022.3218821.
+Digital Object Identifier 10.1109/TCOMM.2022.3218821
+
+Shannon channel capacity performance under iterative belief propagation (BP) decoding [5]. For codes defined by cycle-free bipartite graphs, BP decoding outputs maximum a posteriori estimates of the coded bits [6]. However, good codes are actually defined by graphs with cycles, in which case BP decoding is known to be sub-optimal.
+First works on improving the iterative BP decoding performance actually focused on so-called high-density parity-check (HDPC) codes [7], [8], [9], [10]. These codes are defined by higher density bipartite graphs – e.g., Bose-ChaudhuriHocquenghem (BCH) codes, Reed-Muller codes, binary Golay codes, etc. – for which the standard iterative BP decoding usually yields very poor error correction performance. In [7], an adaptive BP decoding approach was proposed, in which the decoding graph used by BP is updated at each iteration, according to the output of a reliability-based decoding algorithm, such as the ordered statistics decoding (OSD) [11]. The random recurrent decoding in [8] and [9] and the multiple-bases BP decoding in [10] exploit a decoding diversity approach, in the form of different graph representations of the code, implying several BP decoders working either in serial or in parallel.
+More recently, deep neural networks have received significant interest for improving the decoding performance of short codes [12], [13], [14], [15], [16], [17]. A weighted BP decoding has been introduced in [12], where the weights are optimized using a neural network (NN). The topology of the NN mimics the BP decoding process, with unwrapped decoding iterations. The approach can be used with either a feedforward (FF) or a recurrent NN (RNN), the corresponding decoders being termed as BP-FF or BP-RNN. It has been shown in [13] that the BP-RNN is able to outperform the standard BP decoder for short BCH codes, belonging to the class of HDPC codes. Subsequently, several variants of NN-based BP decoding have been proposed in the literature. In [16], a pruning method of irrelevant check-nodes in a neural BP model has been proposed, aimed at jointly optimizing the code construction and the decoding. The design of new decoding rules for finite-alphabet iterative decoders (FAIDs), based on a quantized NN model, was proposed in [14]. Moreover, a new training method of the quantized NN model was introduced in [15], where training sets are constructed by sampling errors with trapping set support, to achieve decoding diversity for FAIDs on the binary symmetric channel. Resolving decoding failures due to trapping sets, by means of deep learning techniques, has also been recently investigated in [18].
+
+0090-6778 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+
+7831
+
+In this paper, we consider the BP-RNN decoding of short LDPC codes. One critical difficulty faced by BP decoding in the finite blocklength regime is the presence of particular structures in the bipartite graph, which prevent the decoding algorithm from converging. Examples of such structures are trapping sets [19] and absorbing sets [20], and they are closely related to the pseudo-codewords [21] and near-codewords [22] concepts. Here, we shall focus on the absorbing set concept, introduced in [20] as a combinatorial object associated with the bipartite graph, and defined independently of the particular message-passing decoding or channel noise model. For long LDPC codes, such structures are known to be responsible of the so-called error floor phenomenon, since their size may be relatively small with respect to the length of the code [20]. However, for short codes, their size may be comparable to the number of errors that the code must correct, therefore possibly inducing a significant degradation of the error correction performance in the waterfall region. To address this issue, we take a decoding diversity approach, implying several BP-RNN decoders working either in serial or in parallel, where each BP-RNN is trained to decode errors corresponding to absorbing sets of a specific type. We used a similar approach in our previous work [23], where several BP-RNN decoders working in parallel were trained by exhaustively enumerating and classifying (according to the structure of the induced subgraph) all patterns of two and three errors. The work in [23] was relevant to high coding rate LDPC codes, correcting a small number of errors. Here, we extend our previous work to lower rate codes, correcting a higher number of errors, by concentrating our attention to errors with absorbing set support. We further combine our approach with a low-order OSD post-processing step, providing an efficient way to bridge the gap to maximum likelihood (ML) decoding. The main contributions of the paper are summarized below.
+Absorbing Set Classification and Specialization of BP-RNN Decoding: We first propose a graph-search based algorithm, combining backtracking and a deep-first search like procedure, to enumerate, in an efficient way, all the absorbing sets of a given size in the bipartite graph. We then perform a fine classification of the enumerated absorbing sets, according to the degree profile of the check-nodes in the induced sub-graph, and train a specific BP-RNN decoder for each absorbing set class.
+BP-RNNs Selection and Decoding Architectures: To reduce the number of the BP-RNN decoders, we propose a selection procedure, where the selected decoders are the most complementary in terms of the errors they can decode. We then consider two decoding architectures, in which the selected BP-RNN decoders are executed in an either parallel or serial manner, and define the appropriate metrics to assess their computational complexity and decoding latency.
+OSD Post-Processing: We further combine our approach with an OSD post-processing step, applied in case none of the selected BP-RNN decoders outputs a codeword. There are two motivations behind the use of such a post-processing step. First, for short LDPC codes, the OSD complexity is limited, compatible with practical applications, especially when the OSD order is small. Here, we restrict the order of the OSD
+
+post-processing step to either 0 or 1. Second, it may benefit from the diversity brought by the use of multiple BP-RNN decoders. Indeed, we show that the coding gain brought by the use of multiple BP-RNN decoders is actually amplified by the use of the OSD post-processing, resulting in a significant improvement of the error correction performance.
+The paper is organized as follow. Section II introduces the notation and the BP-RNN decoding algorithm. Absorbing sets, as well as the tree-search based algorithm to enumerate them, their classification, and the training method used to specialize the BP-RNNs to absorbing set classes, are presented in Section III. The BP-RNNs selection, together with the parallel and serial and decoding architectures are presented in Section IV. Section V provides the details of the OSD postprocessing step. Finally, Section VI presents the numerical results, and Section VII concludes the paper.
+II. PRELIMINARIES
+A. Neural BP Decoding
+We consider an LDPC code defined by a Tanner (bipartite) graph [4] with N variable-nodes and M check-nodes, denoted respectively by n ∈ {1, . . . , N } and m ∈ {1, . . . , M }. We further denote by N (m) the set of variable-nodes connected to a check-node m, and by M(n) the set of check-nodes connected to a variable-node n.
+BP decoding consists of an iterative exchange of messages along the edges of the Tanner graph, where each message provides an estimation of the incident variable-node [24]. BP-RNN and BP-FF decoding algorithms are weighted variants of the BP decoding. Exchanged messages are multiplied by weights which are learned through an either RNN or FF-NN approach, respectively. The underlying NN contains three types of neural layers, each one corresponding to a step of the BP algorithm. The check-pass layer and the datapass layer carry out the computation of messages outgoing from check-nodes and variable-nodes, respectively. Each one of them contains a number of neurons equal to the number of edges of the Tanner graph. In addition, the a posteriori layer consists of N neurons, computing the a posteriori Log Likelihood Ratio (LLR) values of the N variable-nodes. The three layers of the NN are connected such that a check pass layer, followed by a data pass layer and an a posteriori LLR layer model one iteration of the BP decoding. In particular, it should be noted that neurons in the check-pass and data-pass layers of the NN correspond to directed edges of the Tanner graph, m → n and n → m, respectively. NN edges between these layers connect two neurons sharing either a common variable-node (i.e., m → n and n → m , with m = m ) or a common check-node (i.e., n → m and m → n , with n = n ). For more details, we refer to [12].
+The formulas below detail the calculation of messages within each layer. We denote by βm→n and αn→m the messages computed by the check-pass and data-pass layers, respectively, and by L˜n the messages computed by the a posteriori LLR layer. The observed (channel) LLR values are denoted by Lch,n, and are used to initialize αn→m messages
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7832
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+prior to the first iteration.
+
+⎛
+
+⎞
+
+βm→n = 2 tanh−1 ⎝
+
+tanh αn →m ⎠ (1) 2
+
+n ∈N (m)\{n}
+
+αn→m = Lch,n +
+
+wm →n→mβm →n
+
+(2)
+
+m ∈M(n)\{m}
+
+L˜n = Lch,n +
+
+w˜m→n βm→n
+
+(3)
+
+m∈M(n)
+
+It can be observed that weights (w, w˜) are applied only on
+
+the NN edges incoming to the data-pass (2) and a posteriori
+
+LLR (3) layers. Each weight corresponds to one specific edge
+of the NN. In (2) the weights are denoted by wm →n→m, where the subscript indicates both the corresponding neuron n → m in the data-pass layer, and the incoming NN edge from neuron m → n in the check-pass layer. In (3), the weights are denoted by w˜m→n, where the subscript indicates the corresponding neuron n in the a posteriori LLR layer, and the incoming NN edge from neuron m → n in the check-
+
+pass layer. For the BP-RNN, the weights only depend on the
+
+corresponding edges of the NN, while for the BP-FF they also depend on the iteration number (note that, to simplify
+
+notation, we have not indicated the iteration number on the
+
+above formulas). It is worth noticing that despite a lower number of trainable
+
+weights, the BP-RNN achieves similar performance to the BP-
+
+FF [13]. Therefore, we will only consider the BP-RNN model,
+
+although our work can be readily adapted to the BP-FF model.
+
+Moreover, to further reduce the number of trainable weights,
+
+we use the approach suggested in [13], with the data-pass layer
+
+computation modified as,
+
+αn→m = Lch,n + wn→m
+
+βm →n,
+
+(4)
+
+m ∈M(n)\m
+
+where the applied weight wn→m only depends on the data-pass neuron n → m. This simplification reduces the training complexity and makes it possible to reuse conventional BP decod-
+ing architectures for an efficient hardware implementation.
+
+B. Loss Function
+
+The goal of BP-RNN decoding is to map the received signal to a valid codeword. This process can be interpreted as a classification task, with one class corresponding to one codeword of the code. However, this is practically unrealistic due to the high number of classes [25]. A generally accepted method to avoid this problem is to replace the initial classification task by a simpler binary classification task for each bit. To do so, the use of the average binary cross-entropy loss function was suggested in [12] and [13]. When both the channel and the decoder are symmetric – e.g., the additive white Gaussian noise (AWGN) channel and BP-RNN decoder considered in this work – training (as well as testing) may be performed by assuming the transmitted codeword is the all-zero one. In this case, the average binary cross-entropy loss function simply writes as (see [13] for details),
+
+Loss(L˜) = − 1 N
+
+N
+
+log(σ(L˜n)),
+
+(5)
+
+n=1
+
+where the a posteriori LLR value L˜n is taken at the last decoding iteration, and σ(z) = (1+exp(−z))−1 is the sigmoid function, converting the LLR value into the probability that the decoded bit is equal to zero. The loss function (5) is then minimized during the NN training, thus minimizing the average bit error probability.
+Multi-loss functions have also been considered in [12] and nachmani2018deep (see also [25]), which take into account the a posteriori LLR values after each decoding iteration. This allows amplifying the contribution of earlier iterations to the computed gradient. In [13], multi-loss optimization has been shown to produce effective gains for high-density BCH codes, with both BP-RNN and BP-FF models. However, when sparser, cycle reduced parity check matrices where chosen for the same codes, the gain was observed to significantly reduce, or even completely vanish. The same observation was made for check-node regular matrices. In this work we consider short LDPC codes, whose parity-check matrices are both cycle-reduced and check-node regular. In our experiments, we did not observe any gain brought by multi-loss optimization compared to (5). We therefore consider the loss function in (5) to train our BP-RNN decoders.
+C. Number of Decoding Iterations
+The standard approach for NN-based BP is to both train and test the decoder for a same maximum number of decoding iterations, usually small, such as 5 or 10 iterations (e.g., [12], [13], [25]). For the BP-FF model, increasing the number of decoding iterations for training also increases the number of trainable weights, which may become computationally intractable. For the BP-RNN model, this is no longer an issue. Yet, assuming that we want to test the BP-RNN decoder for an increased number of decoding iterations, a natural question is whether it is optimal to use the same number of decoding iterations for training. At first sight, this might be the case. However, when the BP decoder does not converge, it may exhibit erratic behavior, especially during the last decoding iterations. Increasing the number of decoding iterations for training may amplify this behavior, and impair the optimization result. We will provide numerical evidence for this in Section VI-B. For the moment, this motivates us to introduce two parameters, denoted Itrain and Itest, corresponding to the maximum number of decoding iterations during the training and the testing phases, respectively.
+III. ABSORBING SET CLASSIFICATION AND SPECIALIZATION OF BP-RNN DECODING
+A. Absorbing Sets
+We consider the definition of absorbing sets from [20], [26], given below for the reader’s convenience.
+Let A ⊂ {1, . . . , N } be a set of variable-nodes. We consider the set of check-nodes connected to A at least once, which we partition in two disjoint subsets O(A) and E(A), denoting the sets of check-nodes connected to A either an odd or an even number of times, respectively. The set A is said to be an absorbing set, if any variable-node in A has strictly more neighbors in E(A) than in O(A).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+
+7833
+
+Fig. 1. Examples of absorbing sets of type 4-(2, 5).
+
+According to the above definition, if the variable-nodes in error form as absorbing set, then each of them is connected to a higher number of satisfied check-nodes (not detecting the error) than unsatisfied check-nodes (detecting the error). Such errors are likely to mislead the BP decoder, yielding a decoding failure with high probability.
+We say that an absorbing set A is of type ν-(ω, ε), where ν := |A|, ω := |O(D)| and ε := |E(D)|, and |S| denotes the number of elements in the set S (see also Fig. 1). Thus, the subgraph induced by A comprises ν variable-nodes and ω + ε check-nodes, of which ω are of odd degree and ε are of even degree. Note that absorbing sets of the same type do not necessarily induce the same subgraph. This is illustrated in Fig. 1, where two absorbing sets of type 4-(2, 5) have different induced subgraphs. To further characterize the structure of the induced subgraph, we define the check-node degree profile (of the subgraph induced by A) as Pc = (m1, m2, . . . ), where md is the number of check-nodes connected to exactly d variable-nodes in A (note that the sequence md is actually finite, of length equal to the maximum check-node degree in the subgraph induced by A). Finally, we define the extended type of A as ν-(ω, ε, Pc).
+
+B. Graph-Search Based Algorithm
+
+A brute-force search algorithm to enumerate all the trap-
+
+ping/absorbing sets of a given size ν would have to explore
+
+all the
+
+N ν
+
+candidates, which may become computationally
+
+intractable even for relatively small values of N and ν. Several
+
+exhaustive/non-exhaustive enumeration algorithms have been
+
+proposed in the literature, to enumerate elementary trapping
+
+sets (i.e., whose induced subgraphs contain only degree-1 and
+
+degree-2 check nodes) [27], [28], [29], trapping or absorbing
+
+sets for specific classes of LDPC codes [26], [30] or only small
+
+or dominant such structures [31], [32], and fully absorbing
+
+sets (i.e., where the absorbing condition is satisfied by all
+
+the variable-nodes in the graph) [33], [34]. Several of these
+
+algorithms rely on a linear programming based branch-and-
+
+bound approach, e.g., [29], [33], [34].
+
+Here, we propose a graph search based algorithm, which,
+
+to the best of our knowledge, is the first specifically developed
+
+for the exhaustive enumeration of absorbing sets, without any
+
+restriction on the structure of the Tanner graph of the absorbing
+
+sets to be enumerated. The proposed algorithm is essentially a
+
+backtracking algorithm that incrementally builds absorbing set candidates, and abandons a candidate as soon as it determines that it cannot possibly be completed to an absorbing set. Candidates are built incrementally by traversing the bipartite graph in a depth-first search (DFS) manner, that is, starting from a variable-node chosen as root, and exploring as deeply as possible before backtracking. The main difference with the standard depth-first search is that our algorithm does not visit only one, but a subset of variable-nodes at each depth level, which are chosen to increment the candidate solution.
+Let n ∈ {1, . . . , N } be a fixed variable-node, which we will refer to as root node. Our algorithm enumerates all the absorbing sets A ⊂ {1, . . . , N } containing n, of size |A| = ν. To avoid enumerating a same absorbing set multiple times (i.e., starting with different root nodes), we will further require n to be the smallest element of A, that is, A ⊂ {n, . . . , N }.
+We first expand the bipartite graph starting from the root node n, and incrementally adding check and variable nodes at an increasing distance1 from n, until the most distant node in the bipartite graph is reached. This expansion produces a rooted bipartite graph, which we will denote by H. For ≥ 0, we denote by V the set of variable-nodes at distance 2 from n (thus, V0 = {n}), and by C the set of check-nodes at distance 2 + 1 from n. Let A be any set of variable-nodes, containing n, and let C be the set of check-nodes connected to A at least once. For ≥ 0, we define A := A ∩ V and C := C ∩ C . We say that A satisfies the absorbing set condition, and we write AS_check(A ) = true, if any variable-node in A has strictly more neighbors in E(A) than in O(A). Now, the neighbors of the variable-nodes in A are check-nodes that belong to either C −1 or C , and whose degrees, in the subgraph induced by A, only depend on A −1 (for > 0), A , and A +1 (for less than the maximum depth of A). Hence, one may check the absorbing set condition for A in an incremental manner, by checking it for each subset A , which however requires the knowledge of the next level subset A +1 (except for the last level).
+The proposed algorithm incrementally builds an absorbing set A, by choosing subsets A , for ≥ 0, and checking the absorbing set condition to determine whether the current choice could possibly be completed to a valid absorbing set. For = 0, we have A0 = {n}. Consider some choice of subsets A0, . . . , A , with ≥ 0, such that ν¯ := t=0 |At| ≤ ν. We define the set of possible completions C(A0, . . . , A ), as follows:
+
+• if ν¯ = ν, then C(A0, . . . , A ) = ∅ (absorbing set size ν
+
+already reached, thus, no completion needed).
+
+• if ν¯ < ν, then
+
+(1) determine the subset N +1 ⊂ V +1 containing the
+
+descendants of the variable-nodes in A .
+
+(2)
+
+set
+
+N
+
+(≥n) +1
+
+:=
+
+N
+
++1
+
+∩
+
+{n,
+
+..
+
+.
+
+, N },
+
+and
+
+C(A0, . . . , A ) :=
+
+A
+
++1
+
+⊆
+
+N
+
+(≥n) +1
+
+|A +1| ≤ ν − ν¯
+
+. (6)
+
+1The distance between two nodes is the length (i.e., number of edges) of a shortest path connecting them.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7834
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+Procedure 1 AS_DFS(H, , A0, . . . , A )
+if > 0 and AS_check(A −1) = false then return // backtrack
+end if ν¯ ← |A0| + · · · + |A | if ν¯ = ν then
+if AS_check(A ) = true then Add A := A0 ∪ · · · ∪ A to the list of absorbing sets
+end if
+return // backtrack end if C(A0, . . . , A ) ← set of possible completions for all A +1 in C(A0, . . . , A ) do
+AS_DFS(H, + 1, A0, . . . , A , A +1) // recursive call end for
+
+Note that C(A0, . . . , A ) is a set of subsets A +1 (which may
+
+be empty, if either ν¯
+
+=
+
+ν
+
+or
+
+N
+
+(≥n) +1
+
+=
+
+∅),
+
+and
+
+which
+
+we
+
+may iterate through in any convenient order, e.g., according to
+
+increasing size of subsets A +1. The procedure 1 AS_DFS provides a recursive implemen-
+
+tation of the proposed algorithm. Given a variable-node n, the
+
+procedure is simply called from the main program with inputs
+
+AS_DFS(H, = 0, A0 = {n}). To illustrate the capability of the proposed algorithm,
+
+we consider the following two codes, both of rate 1/2, which
+
+will be subsequently used throughout this paper.
+
+Code-1 is a regular LDPC code, of length 64 bits, with variable-nodes of degree 3 and check-nodes of degree 6, constructed by using the progressive edge growth (PEG) algorithm [35]. It has girth g = 6, with multiplicity 164 (i.e., number of cycles of length g).
+Code-2 is the LDPC code from [36], known as the CCSDS LDPC code. It is of length 128 bits, with half of variable-nodes of degree 3 and the other half of degree 5, and check-nodes of degree 8. It has girth g = 6, with multiplicity 2336.
+
+In Table I, we provide the total number of different
+
+extended-type (ET) values and the total number of absorbing
+
+sets, for both Code-1 and Code-2, and absorbing set size values
+
+ν ≤ 8. We note that for Code-2 and ν = 8, a brute-force search
+
+algorithm would require exploring a number of
+
+128 8
+
+≈ 240
+
+candidates. Our algorithm enumerated all the absorbing sets of
+
+size ν = 8 in 38 minutes (Intel Xeon @2.20GHz processor).
+
+C. Training Specialized BP-RNN Decoders
+Having at our disposal an efficient algorithm to enumerate absorbing sets of a given size, we perform a fine classification of the found absorbing sets, by grouping into a same class absorbing sets with the same extended type. The goal is to train a specific BR-RNN decoder for each class. The approach bears similarity to, and is motivated by [15], [37], where decoding rules for FAIDs have been either designed or learned to correct specific trapping sets for the binary symmetric channel.
+
+TABLE I NUMBER OF EXTENDED-TYPES (ET) AND ABSORBING SETS (AS)
+
+We consider a binary-input AWGN channel, with BPSK alphabet (±1) inputs, and fixed noise variance σ2. Assuming the all-zero codeword is transmitted (see Section II-B), corresponding to the +1 input of the channel, the received word is
+given by
+
+yn = 1 + zn, zn ∼ N (0, σ2), n = 1, . . . , N, (7)
+where N (0, σ2) denotes a normal distribution, with mean 0 and variance σ2. The signal-to-noise ratio (SNR) is defined as SNR = −10 log10(σ2) dB.
+Given a received word y := (y1, . . . , yN ), we define its error set as E(y) := {n | yn ≤ 0} ⊂ {1, . . . , N }. Our goal is to construct a specific training set, containing only words y, such that E(y) is an absorbing set of a given extended type ν-(ω, ε, Pc). As a neural network specializes to trends embedded in the training set [31], we expect the trained BP-RNN to specialize in decoding words y, such that E(y)
+is, or possibly contains, an absorbing set of extended type ν-(ω, ε, Pc).
+One way to generate such a training set is to randomly generate words y according to (7), and to select those for which E(y) is an absorbing set of extended type ν-(ω, ε, Pc). This would be rather tedious and time consuming. A more efficient way is to use our knowledge of absorbing sets (determined by
+the algorithm from Section III-B), and generate Gaussian noise
+by means of a truncated Gaussian distribution, to produce errors only on desired locations. Precisely, we proceed as follows. We first chose an absorbing set A at random, from those having the desired extended type ν-(ω, ε, Pc). Then we generate a random word y = (yn = 1 + zn)n=1,...,N , with
+
+zn ∼
+
+N (0, σ2, −∞, −1), if n ∈ A N (0, σ2, −1, ∞), otherwise
+
+(8)
+
+where N (0, σ2, a, b) denotes the truncated normal distribution with mean 0 and variance σ2, taking values in the interval (a, b). Clearly, we have E(y) = A. The training set is obtained by repeating the above procedure (including the random choice of A) multiple times. This way, the training set is representative of the error class (identified by the extended type of the absorbing error set), and thus the trained BP-RNN decoder becomes specialized in decoding the errors of the class.
+To illustrate the specialization of the trained decoder, Fig. 2 shows the weight values for three BP-RNN decoders, trained
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+
+7835
+
+denoted J, as follows. We start by initializing J as the empty list, J = ∅. To add a new index, jnew to J, we use the following rule,
+
+Fig. 2. Weight profiles of various BP-RNN decoders (Code-1, SNR = 5 dB).
+for three different error classes, with corresponding extended types shown in the legend. The (unspecialized) BP-RNN decoder trained as in [13] is also shown. To avoid clutter, weight values are sorted in increasing order, and an ordered set of weight values is referred to as weight profile.2 We consider the Code-1 and show the weight profiles for the both data pass and a posteriori layers. The data pass layer is implemented as in (4), with a same weight applied on all the incoming edges to each neuron (see Section VI for a complete list of training parameters). Hence, the number of weights is the same for both the data pass and the a posteriori layers, equal to the number of edges of the Tanner graph (192 for Code-1). The weight profiles in Fig. 2 clearly indicate that weight optimization responds differently to training sets corresponding to different error classes. We exploit in the next section the diversity induced by the BP-RNN specialization.
+
+jnew = argmin |FJ ∩ Fj| ,
+
+(9)
+
+j∈{1,...,J }\J
+
+where FJ := T , if J = ∅, and FJ := ∩i∈JFi, otherwise. The above rule is applied recursively J times, until J contains all the decoder indexes j = 1, . . . , J, in a sorted order. In case
+the argmin in (9) is not unique, an arbitrary one is chosen. Note that when J = ∅, the rule (9) rewrites as jnew =
+argminj∈{1,...,J} |Fj |. Hence, the first decoder (index) added to the list is the one minimizing the word error rate. Subsequently, when J = ∅, the new decoder added to the list is the most complementary with those already in J, in the sens that
+it minimizes the number of words on which all the decoders indexed by J ∪ {jnew} fail.
+For Z ≤ J, let J(1:Z) ⊂ J be the sublist defined by the first Z indexes in J. We define
+
+DZ := {Dj | j ∈ J(1:Z)}
+
+(10)
+
+Note that DZ is an ordered list of decoders,4 which we will refer to as BP-RNN diversity of size Z (using a similar terminology to the one in [37] and [15]). The Z BP-RNN decoders in DZ may then be used with either a parallel or a serial decoding architecture, as discussed in the next section. The value of Z may be dictated by complexity reasons, or, as illustrated in Section VI-C, chosen to ensure small (negligible) degradation of the error correction performance, with respect to the case when all J BP-RNN decoders are used.
+
+IV. BP-RNNS SELECTION AND DECODING ARCHITECTURES
+A. BP-RNN Diversity Selection
+Using the procedure from Section III-C, we train one specialized BP-RNN decoder for each error class, i.e., extended type3 ν-(ω, ε, Pc), with absorbing error set size ν ≤ νmax (the choice of νmax is discussed in Section VI). Let J denote the total number of specialized BP-RNN decoders.
+Here, we propose a selection procedure to reduce the number of BP-RNN decoders, as well as to avoid similar training effects (which may arise, for instance, due to absorbing sets of a given size containing absorbing sets of smaller sizes). To do so, we assess the complementarity of the trained decoders, in terms of the errors they can decode.
+We first generate a common test set, T , containing random words y defined as in (7), which is then used to assess the individual error correction performance of each of the trained decoders. We denote by Fj ⊂ T the susbset of words on which the BP-RNN decoder Dj failed, where j = 1, . . . , J. Then, we recursively construct an ordered list of decoder indexes,
+2Note that different weight profiles indicate different sets of weight values, while similar weight profiles indicate similar sets of weight values. However, in the latter case, similar weights may apply to different edges.
+3We take off extended types for which ω = 0, as they correspond to the support of non-zero codewords. Such errors cannot be detected or corrected.
+
+B. BP-RNN Diversity Decoding Architectures
+We consider a BP-RNN diversity DZ, comprising Z BP-RNN decoders. For simplicity, we index the BP-RNN decoders in DZ from 1 to Z, thus DZ = {D1, . . . , DZ}. Fig. 3 shows the proposed parallel and serial architectures, using the Z BP-RNN decoders in DZ.
+In the parallel architecture, each decoder outputs an estimate cˆj = (cj,1, . . . , cj,N ) ∈ {0, 1}N of the transmitted codeword c, according to the sign of the corresponding LLR values at the last decoding iteration. The output of the parallel architecture is determined as the maximum likelihood (ML) codeword, among the codewords outputted by the constituent BP-RNN decoders (if any, see below). For the binary-input AWGN channel (with ±1 inputs), the ML criterion simply writes as
+
+N
+
+cˆ = argmax P (cˆj|y) = argmin yncˆj,n,
+
+(11)
+
+cˆj ∈S
+
+cˆj ∈S n=1
+
+where S := {cˆj | syndrome(cˆj) = 0} denotes the set of cˆj’s verifying the syndrome. Decoding is then successful if cˆ is
+
+equal to the transmitted codeword. If none of the BP-RNN
+
+decoders outputs a codeword, the decoding fails. In such a
+
+case, the ML criterion – or a similar bitwise maximum a
+
+posteriori criterion – may still be applied to select one of the
+
+4As a matter of fact, the three BP-RNN decoders in Fig. 2, specialized on absorbing set error classes, correspond to DZ=3.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7836
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+Fig. 3. BP-RNN diversity decoding architectures.
+
+cˆj outputs, if desired, e.g., in order to minimize the bit error rate of the decoder (however, we will only be concerned with word error rate results in this paper).
+In the serial architecture, the constituent BP-RNN decoders are run sequentially according to the order given by the sorting procedure from Section IV-A. Decoding stops as soon as a BP-RNN decoder Dj outputs a codeword cˆj (syndrome(cˆj) = 0), which becomes the output cˆ of the serial architecture. Decoding is then successful if cˆ is equal to the transmitted codeword. If none of the BP-RNN decoders outputs a codeword, decoding fails. For simplicity, in Fig. 3b, we take cˆZ as the output of the serial architecture in this case.
+The parallel architecture yields a reduced maximum decoding latency, compared to the serial one. This comes however at the cost of an increased complexity, from the both computational and hardware perspectives, since Z BP-RNN decoders must be instantiated in hardware. For the serial architecture, only one decoder may be instantiated in hardware, which may then be reused to perform sequentially the Z BP-RNNs (while updating the corresponding set of weights). The average-case computational complexity, as well as the average-case decoding latency, for the both parallel and serial architectures are discussed in the next section.
+
+C. Average-Case Complexity and Decoding Latency Metrics
+We consider a BP-RNN diversity DZ, where all the constituent decoders are set with a maximum number of decoding
+iterations Itest (see Section II-C). For a BP-RNN decoder Dj, we denote by IDj,y ≤ Itest the number of iterations performed by Dj to decode y, and define IDj := Ey(IDj,y), where E denotes the expected value operator. In practice, IDj is estimated by averaging over the decoded words y. We further
+define the average number of decoding iterations of a decoding (parallel or serial) architecture using DZ , as
+
+I(DZ ) =
+
+IDj .
+
+Dj ∈DZ
+
+(12)
+
+Note that for the serial architecture, IDj,y may be equal to zero, in case the decoding process stops before reaching Dj. Thus, IDj may be close to 0, if Dj is rarely used (unlike the parallel architecture, which uses all decoders). Since the
+computational complexity scales linearly with the number of
+decoding iterations performed by the decoder, we use the average number of decoding iterations IDZ as a measure of the average-case computational complexity of the BP-RNN
+diversity architecture. For the serial architecture, IDj may also be seen as a
+measure of the average-case decoding latency, since decoding
+iterations are performed sequentially within each constituent
+
+decoder, while the constituent decoders are also run sequentially. However, this is no longer the case for the parallel architecture. Hence, we define the decoding latency of the parallel architecture, for decoding a given word y, as
+
+LDZ ,y
+
+=
+
+max
+Dj ∈DZ
+
+IDj ,y ,
+
+(13)
+
+corresponding to the maximum number of iterations performed by the constituent decoders to decode y. Finally, the average-case decoding latency of the parallel architecture is defined as
+
+L¯(DZ ) := Ey(LDZ,y),
+
+(14)
+
+and is estimated by averaging over the decoded words y.
+
+V. OSD POST-PROCESSING FOR BP-RNN DECODERS
+
+OSD was first proposed in [11], as a decoding method
+
+capable to approach the ML decoding performance, for
+
+moderate-length linear block codes, with polynomial com-
+
+plexity. It can be used as a stand-alone decoding algorithm,
+
+exploiting the soft-output of the channel (Lch,n), or as a
+post-processing step, exploiting the output of a soft-decision decoder (L˜n, see Section II-A, for the notation).
+In OSD, variable-nodes are first sorted according to their
+
+reliability (that is the absolute value of the corresponding
+
+soft decision). The parity-check matrix of the code is then brought to a systematic form,5 H = [A | I], where A is a
+
+matrix of size M × (N − M ) and I is the identity matrix of
+
+size M × M , and so that the K := N − M columns of A correspond to the most possible6 reliable variable-nodes. By a
+
+slight abuse of language, we simply refer to variable-nodes
+
+corresponding to the columns of A as the most reliable ones,
+
+and to the remaining variable-nodes as the least-reliable ones.
+
+In OSD-0, hard-decision is made on the most reliable variable-
+
+nodes, and the least reliable ones are determined by solving
+
+the linear system given by H. Hence, decoding is successful
+
+if and only if the most reliable variable-nodes are error-
+
+free. To address the case where these variable-nodes contain
+
+errors, OSD-w considers all the possible choices of at most w
+
+errors among them. For each choice, the initial hard-decision
+
+of the corresponding variable-nodes is flipped, and the least
+
+reliable variable-nodes are determined again by solving the
+
+linear system given by H. This procedure produces a list
+
+of
+
+wK i=0 i
+
+codewords, from which the most likely one is
+
+selected, according to an ML rule, such as (11). OSD-w may
+
+5For simplicity, we assume here that the parity check-matrix is of rank M . 6Taking into account that column swaps may be needed, in case the M least reliable columns of H are not linear independent.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+TABLE II KERAS PARAMETERS
+
+7837
+
+Fig. 4. CDF of the a posteriori LLR values when decoding fails (Code-1, SNR = 4 dB, maximum number of decoding iterations Itest = 25).
+closely approach the ML decoding performance, assuming the w value (referred to as OSD order) is suitably large.
+To bridge the error correction performance gap between suboptimal BP decoding and ML decoding, [38] suggested combining BP decoding with a low-order OSD (w ≤ 1), where an OSD step is performed at the end of each iteration of the BP decoding. Here, we propose the use of OSD as a post-processing step, applied only in case that none of the constituent BP-RNN decoders (of the BP-RNN diversity DZ ) outputs a codeword. In such a case, we process one OSD using the soft-decision (a posteriori LLRs) delivered by each of the constituent BP-RNN decoders. This produces a list of Z codewords (one for the OSD post-processing of each BP-RNN decoder), and the ML rule (11) is used to determine the mostlikely one, which becomes the outputted codeword cˆ. Note that the above description applies to the both parallel and serial architectures, since OSD post-processing is only performed when all the constituent BP-RNN decoders failed to find a codeword. To reduce the complexity of the post-processing step, we also limit the order of the OSD to w ≤ 1.
+There are two main motivations behind the use of the OSD post-processing step. First, the complexity of the low-order OSD is dominated by the Gaussian elimination step, needed to bring the parity check-matrix to a systematic form. However, for LDPC codes, the sparsity of the parity-check matrix can be advantageously exploited to significantly reduce the complexity of this step. See for instance the method proposed in [39] for solving sparse linear systems, which has been adapted in [40] to derive an efficient encoding technique for LDPC codes, and in [41] to derive an efficient ML decoding algorithm for LDPC codes over erasure channels (the situation is similar for OSD, where the least reliable variable-nodes can be seen as being erased). Second, we use OSD to post-process the soft-output of BP-RNN decoders. Since the loss function (5) used to train these decoders penalizes negative LLR values, corresponding to variable-nodes in error,7 we expect such negative LLR values to have a reduced amplitude, thus reducing the probability of error on the most reliable variablenodes. This is illustrated in Fig. 4, where we plot the cumulative distribution function (CDF) of the a-posterori LLR values for the BP decoder, and for the BP-RNN decoder trained on the error class 7-(5, 8, (5, 8)). Moreover, we also expect OSD
+7Recall the all-zero codeword assumption from Section II-B.
+
+post-processing to benefit from the diversity brought by the use of multiple BP-RNN decoders, increasing the probability that at least one of these decoders has at most w errors among the most-reliable variable-nodes.
+VI. NUMERICAL RESULTS
+A. Training Settings
+We consider the two LDPC codes of rate 1/2 and length either 64 (Code-1) or 128 (Code-2) bits, detailed in Section III-B. We train one specialized BP-RNN decoder for each absorbing set error class, with error set size ν ≤ νmax.
+• For Code-1, we choose νmax = 8, which gives a total number of J = 52 error classes (see Table I8).
+• For Code-2, we choose νmax = 7, which gives a total number of J = 120 error classes (see Table I).
+For Code-2, the choice of νmax = 7 is due to complexity reasons (to limit the number of trained decoders). However, we note that for an SNR = 4 dB, in the waterfall region of Code-2, the average number of errors is N pe = 7.2, where N = 128 is the code-length, pe = Q(1/σ) = 0.0565 is the error probability of the binary-input AWGN channel, σ is the standard deviation of the Gaussian noise, and Q denotes the Q-function. For Code-1, for the same SNR = 4 dB, the size of a random error set is less than or equal to the chosen νmax = 8, with probability slightly greater than 0.99.
+All the numerical results presented in this section use the BP-RNN model from Section II-A, with the data-pass layer defined in (4). Each specialized BP-RNN is trained independently, using the training set construction method presented in Section III-C. In addition, we also train an unspecialized BPRNN decoder, according to the procedure described in [13], to provide a benchmark for the presented numerical results. We use the same SNR for training and testing, thus, all BP-RNNs are trained for each SNR value ranging from 1 dB to 6 dB, with a step of either 0.5 dB or 1 dB. The choice of the maximum number of decoding iterations during the training and the testing phases, Itrain and Itest (see Section II-C), will be discussed in the next section. Finally, we mention that we used the Keras library for training, with training parameters shown in Table II.
+B. Maximum Number of Decoding Iterations for Training and Testing
+To illustrate the discussion from Section II-C, we fix the maximum number of decoding iterations for testing our
+8Note that the total number of error classes (ET-Number) in Table I is 55, three of which correspond to the support of non-zero codewords of size either ν = 6 or ν = 8, for which training is not performed.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7838
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+Fig. 5. Impact of training parameter Itrain on the FER performance, for BP-RNN decoders using Itest = 25 (Code-1).
+TABLE III EXTENDED TYPES (ET) FOR THE SELECTED ERROR CLASSES
+
+Fig. 6. SNR for target FER = 10−4, as function of Z (Code-1).
+
+BP-RNN decoders to Itest = 25 iterations, and investigate here the impact of the maximum number of decoding iterations
+used at the training phase, Itrain. We consider the Code-1, and train all the BP-RNN decoders
+for Itrain ∈ {5, 10, 20, 25}. Fig. 5 shows the frame error rate (FER) results, using Itest = 25 iterations, for (a) the BP-RNN decoder specialized on the error class 7-(5, 8, (5, 8)), indicated as D1 in the legend,9 (b) the unspecialized BP-RNN decoder [13], and (c) the serial architecture using the 52 spe-
+cialized BP-RNN decoders. We observe no noticeable dif-
+ference on the FER performance, except in Fig. 5a, where the FER performance for Itrain = 5 is slightly degraded with respect to Itrain ∈ {10, 20, 25}. In the following, we choose Itrain = 10, which allows for faster training. We can note that similar observations hold for Code-2 (not shown here).
+
+decoders according to (10), corresponding to Z different error classes. Subsequently, we only consider BP-RNN decoders specialized on the selected error classes, but we train them again for each SNR value used for testing.10
+For Code-1, Fig. 6 shows the SNR required for achieving a target FER = 10−4, as a function of the number of selected BP-RNN decoders Z (only results for Z = 1, . . . , 20 are shown, since we observe no further improvement of the FER for higher Z values). We choose Z = 10, corresponding to an SNR loss of less than 0.1 dB, with respect to the case when all the J BP-RNN decoders are used. We use the same procedure to select a number of BP-RNN decoders for Code-2, which yields the same value Z = 10, for which the SNR loss is again less than 0.1 dB. Finally, in Table III, we show the extended types for the Z = 10 error classes, corresponding to the selected decoders.
+
+C. BP-RNN Diversity Selection
+We apply now the BP-RNN diversity selection procedure from Section IV-A, to both Code-1 and Code-2. We proceed as follows. First, we fix SNR = 5 dB, and we train J BP-RNN decoders specialized on the J error classes (J = 52 for Code-1, J = 120 for Code-2). We order these decoders according to the procedure described in Section IV-A, where we use a common test set T containing 108 noisy codewords (SNR = 5 dB) to assess their individual error correction performance. Then we select a diversity DZ of BP-RNN
+9See also Table III and the corresponding discussion from Section VI-C.
+
+D. FER Results, Complexity and Decoding Latency Evaluations
+We consider the BP-RNN diversity D10 composed of the Z = 10 BR-RNN decoders selected in the previous section, and evaluate the FER performance, as well as the average-case complexity and decoding latency, for both parallel and serial architectures from Section IV-B.
+10We have also performed simulations using the BP-RNN decoders trained for SNR = 5 dB only, and testing them on different SNR values. Our simulation results were very similar to those obtained by training again the BP-RNN decoders for the actual SNR value used for testing. We chose to show simulation results for the case where the training and testing SNR values are equal, simply for consistency reasons.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+
+7839
+
+Fig. 7. FER results, complexity and decoding latency evaluations (without OSD post-processing).
+
+Fig. 7 shows the FER results for (a) Code-1, and (b) Code-2. For comparison purposes, we also show the FER performance of the BP decoder and the BP-RNN decoder from [13], with either Itest = 25, or Itest = 250. The latter Itest value corresponds to the cumulative maximum number of iterations performed by the BP-RNN decoders in the diversity D10. First, we observe that the parallel and serial architectures exhibit virtually the same FER performance, the corresponding curves being practically superimposed one on another. Compared to the conventional BP decoding, the BP-RNN diversity D10 produces an SNR gain of approximately 0.4 dB with respect to BP(Itest = 25). This comparison is relevant to applications with strict latency requirements, since both the BP(Itest = 25) and the parallel BP-RNN diversity have the same worst-case decoding latency. By way of comparison, for Code-2, a similar gain over the conventional BP has been recently reported in [43, Fig. 6], by using an automorphism ensemble decoding (AED) approach, with 16 BP decoders working in parallel.11 If the worst-case latency constraint is relaxed, it can be observed from Fig. 7 that BP(Itest = 250) achieves similar FER performance to the BP-RNN diversity D10. Similar considerations hold for the comparison between the (unspecialized) BP-RNN [13] and the BP-RNN diversity D10, with one noticeable exception for Code-1, for which it can be observe that increasing the number of iterations from Itest = 25 to Itest = 250 does not improve the FER performance of the BP-RNN [13] decoder (or only slightly in the low FER region). Finally, we note that using only the first decoder (D1) of our specialized BP-RNN decoders yields similar FER performance to the unspecialized BP-RNN [13]. While this is not shown in the figure (to avoid clutter), it can be observed for Code-1 by comparing the FER results in Figs. 5a and 5b.
+Fig. 7c shows the average-case computational complexity and the average-case decoding latency results (Code-2 only), evaluated using (12) and (14) respectively. We compare the BP(Itest = 250) and the BP-RNN diversity D10 with either the serial or the parallel architecture, as they achieve similar FER performance. For the BP decoder and the serial D10, the average number of decoding iterations (I¯) is a measure of both average-case computational complexity and
+11We did not include the AED-16 curve from [43] in Fig. 7b, to avoid clutter. The gain reported in [43] was observed using 32 decoding iterations.
+
+average-case decoding latency. For the parallel D10, I¯ only measures the average-case computational complexity, while the average-case decoding latency is measured by L¯. While the parallel D10 has the lower worst-case latency, it can be observed that it also exhibits a reduced average-case latency in the first part of the waterfall (up to 4 dB). The serial D10 may be seen as an alternative to BP(Itest = 250), providing not only similar decoding performance, but also similar worst- and average-case computational complexity and decoding latency. Yet, both the parallel and the serial D10 retain the advantage of decoding diversity, which can be conveniently exploited by the proposed OSD post-processing step, as illustrated in the next section.
+E. FER Results Using OSD Post-Processing
+We consider low-order (w = 0, 1) OSD post-processing applied to the BP(Itest = 250), the unspecialized BPRNN(Itest = 250) decoder [13], and the BP-RNN diversity D10(Itest = 25). Since the parallel and the serial D10 exhibit similar FER performance, and OSD post-processing is only applied in case all the BP-RNN decoders composing D10 fail to find a codeword, it follows that the OSD post-processing step yields similar performance when applied to either one of the parallel or serial architecture. We simply refer to the corresponding decoder as D10-OSD, without mention of the diversity architecture.
+Simulation results are presented in Fig. 8 for (a) Code-1, and (b) Code-2. For Code-1, first we note that the BP-OSD-1 provides better performance than the unspecialized BP-RNNOSD-1. Using only the first decoder of our BP-RNN diversity (D1-OSD-1) outperforms the BP-OSD-1 by about 0.31 dB at FER = 10−4. Using all the BP-RNN diversity (D10-OSD-1) provides an extra gain of 0.12 dB, i.e., a total gain of about 0.43 dB with respect to BP-OSD-1. Furthermore, we observe that D10-OSD-1 virtually achieves the ML decoding performance, where the latter is estimated according to [11] (we also note that the OSD-3 decoder provides an accurate approximation of the ML decoding performance). Finally, a gain of 0.52 dB can be observed for D10-OSD-0 with respect to BP-OSD-0.
+For Code-2, we note that the unspecialized BP-RNN-OSD-1 provides slightly better performance than the BP-OSD-1. D10OSD-w outperforms BP-OSD-w, by 0.32 dB, for w = 0, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7840
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+Fig. 8. FER results using OSD post-processing. TABLE IV
+DECODING COMPLEXITY (IN TERMS OF THE NUMBER OF CHECK-NODE UPDATES) FOR CODE-2
+
+0.72 dB, for w = 1, at FER = 10−4. Using only the first decoder of our BP-RNN diversity, we observe that D1-OSD-1 outperforms BP-OSD-1 by about 0.11 dB. For comparison purposes, we have also included in Fig. 8b the FER performance of the Pruning Based Neural BP (PB-NBP) decoder from [16]. Several PB-NBP variants are presented in [16], we consider here the PB-NBP decoder D1 (see Fig. 6 in loc. cit.). It can be observed that D10-OSD-1 outperforms the PB-NBP decoder by 0.84 dB, our decoder achieving a FER performance at only 0.63 dB from the ML decoding.
+To further analyze the diversity obtained by D10-OSD-w, we compare it with a decoding diversity combining BP and OSD, where the latter is applied periodically throughout the BP decoding iterations [38]. Precisely, we consider BP(Itest = 250), and record the a-posteriori LLR values after every 25 decoding iterations. In case a codeword is not found after 250 decoding iterations (BP fails), we apply one OSD-w on each recorded set of a-posteriori values. Hence, the OSD-w is carried out ten times in case of a decoding failure, as with D10-OSD-w. The ML rule (11) is used afterwards to determine the final codeword.
+We restrict our attention to Code-2 and, in order to further narrow the gap to ML decoding performance, we consider OSD of order w = 1 and w = 2. The corresponding FER results are shown in Fig. 9. We observe that the proposed D10-OSD-w performs better than BP(Itest = 250) with OSD-w every 25 iterations, especially for w = 2, where it achieves a FER performance within 0.2 dB from the ML decoding. Moreover, it should be noticed that using the parallel decoding architecture from Section IV.B, the worst case latency of the D10 diversity corresponds to 25 decoding iterations, while the worst case latency of BP(Itest = 250) is equal to 250 decoding iterations. Finally, we note
+
+Fig. 9. FER results using OSD post-processing of order w = 1 and w = 2 for Code-2.
+that D10-OSD-2 exhibits a gain of 1 dB with respect to BP(Itest = 250)-OSD-2.
+VII. CONCLUSION
+We addressed the problem of enhancing the BP-RNN performance at short code length, by exploring two complementary approaches: (1) decoding diversity, derived by specializing BP-RNN decoders to specific classes of errors, and (2) reliability-based post-processing. We showed that the proposed BP-RNN diversity coupled with a parallel decoding architecture allows increasing the error correction capability, without increasing the worst-case latency. Moreover, we showed that the proposed OSD post-processing step advantageously leverage the bit-error rate optimization induced by the use of the cross-entropy loss function, as well as the diversity brought by the use of multiple BP-RNN decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+ROSSEEL et al.: DECODING SHORT LDPC CODES VIA BP-RNN DIVERSITY AND RELIABILITY-BASED POST-PROCESSING
+
+7841
+
+The proposed approach, combining decoding diversity and low-order OSD post-processing, provides an efficient way to bridge the gap to ML decoding. It also opens new perspectives for the emerging domain of NN-based decoders. Indeed, we believe that new approaches may be considered for the optimization of NN-based decoders, not to deliver the best possible bit or frame error rate performance, but merely an output that best suits the reliability-based post-processing step.
+AVAILABILITY OF DATA
+Parity check-matrices of Code-1 and Code-2, as well as the complete list of absorbing sets of size ν ≤ 8, are openly available at https://ai4code.projects.labsticc.fr/software/.
+APPENDIX EXTENDED COMPLEXITY DISCUSSION
+In this appendix, we extend the complexity discussion of Section VI-D. First, we compare BP-RNN and BP in terms of memory requirements and number of operations. Since our BP-RNN decoders use the data-pass layer defined in (4), they can be implemented using conventional BP decoding architectures. In this case, the extra memory cost for a single BP-RNN decoder with respect to the BP decoder comes from the weights storage only, and the BP-RNN decoder also requires an extra multiplication for each weight in (3) and (4).
+Since the check-node updates are the most computationally intensive operations in BP decoding, counting their number is also relevant to evaluate the complexity of a BP-based decoder [45]. In [16], the worst case complexity of the proposed PB-NBP decoder is evaluated by counting the number of check-node updates when all decoding iterations are performed. In our case, the number of check-node updates is simply given by the number of edges of the Tanner graph, multiplied by the number of decoding iterations. We can then evaluate the worst-case decoding complexity (corresponding to the maximum number of decoding iterations), the best-case complexity (corresponding to one decoding iteration only), and the average-case complexity (corresponding to the average number of decoding iterations). The corresponding results for the BP, the PB-NBP D1 [16], and the serial D10 decoders are given in Table IV. In the worst-case scenario, we observe that the serial D10 has the same decoding complexity as BP(Itest = 250), which is 4.85 times higher than that of PB-NBP D1. In the best-case scenario, the PB-NBP D1 decoder is penalized by the fact that it uses a high number of check-nodes during the first iteration (some of which may be punctured during subsequent iterations). Precisely, its first iteration comprises 640 check nodes of degree at least 8 (see [16, Fig. 4b]), giving a number of check-node updates greater than or equal to 5120. This amounts to 10 times the best-case decoding complexity (or equivalently, the complexity of 10 decoding iterations) of the serial D10 or the BP decoder. In Fig. 7c we notice that the average number of decoding iterations I¯ is equal to 10 for an SNR = 3.37 dB for both BP and serial D10. As a result, we conclude the serial D10 or BP is less complex than PB-NBP D1 in the waterfall region. To further illustrate this, we observe in Table IV that the serial D10 decoder has an
+
+average decoding complexity at SNR = 4.5 dB that is 5 times
+lower than the best-case decoding complexity of PB-NBP D1. Finally, we note that PB-NBP D1 has 2.75 times more weights than D10, due to its neural network architecture, requiring therefore a higher weight storage cost.
+REFERENCES
+[1] Y. Polyanskiy, H. V. Poor, and S. Verdú, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+[2] M. C. Cos¸kun et al., “Efficient error-correcting codes in the short blocklength regime,” Phys. Commun., vol. 34, pp. 66–79, Mar. 2019.
+[3] R. G. Gallager, Low Density Parity Check Codes (Research Monograph Series). Cambridge, MA, USA: MIT Press, 1963,.
+[4] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[5] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[6] N. Wiberg, “Codes and decoding on general graphs,” Ph.D. dissertation, Dept. Elect. Eng., Linköping University, Linköping, Sweden, 1996.
+[7] A. Kothiyal, O. Y. Takeshita, J. Wenyi, and M. Fossorier, “Iterative reliability-based decoding of linear block codes with adaptive belief propagation,” IEEE Commun. Lett., vol. 9, no. 12, pp. 1067–1069, Dec. 2005.
+[8] T. Halford and K. Chugg, “Random redundant soft-in soft-out decoding of linear block codes,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2006, pp. 2230–2234.
+[9] I. Dimnik and Y. Be’ery, “Improved random redundant iterative HDPC decoding,” IEEE Trans. Commun., vol. 57, no. 7, pp. 1982–1985, Jul. 2009.
+[10] T. Hehn, J. Huber, O. Milenkovic, and S. Laendner, “Multiple-bases belief-propagation decoding of high-density cyclic codes,” IEEE Trans. Commun., vol. 58, no. 1, pp. 1–8, Jan. 2010.
+[11] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, Sep. 1995.
+[12] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[13] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[14] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Designing finite alphabet iterative decoders of LDPC codes via recurrent quantized neural networks,” IEEE Trans. Commun., vol. 68, no. 7, pp. 3963–3974, Jul. 2020.
+[15] X. Xiao, N. Raveendran, B. Vasic´, S. Lin, and R. Tandon, “FAID diversity via neural networks,” in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[16] A. Buchberger, C. Häger, H. D. Pfister, L. Schmalen, and A. Graell i Amat, “Pruning and quantizing neural belief propagation decoders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1957–1966, Jul. 2021.
+[17] N. Doan, S. A. Hashemi, E. N. Mambou, T. Tonnellier, and W. J. Gross, “Neural belief propagation decoding of CRC-polar concatenated codes,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2019, pp. 1–6.
+[18] S. Han, J. Oh, K. Oh, and J. Ha, “Deep-learning for breaking the trapping sets in low-density parity-check codes,” IEEE Trans. Commun., vol. 70, no. 5, pp. 2909–2923, May 2022.
+[19] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Annu. Allerton Conf. Commun., Control, Comput., Oct. 2003, vol. 41, no. 3, pp. 1426–1435.
+[20] L. Dolecek, P. Lee, Z. Zhang, V. Anantharam, B. Nikolic, and M. Wainwright, “Predicting error floors of structured LDPC codes: Deterministic bounds and estimates,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 908–917, Jun. 2009.
+[21] B. J. Frey, R. Kotter, and A. Vardy, “Skewness and pseudocodewords in iterative decoding,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 1998, p. 148.
+[22] D. J. C. MacKay and M. S. Postol, “Weaknesses of Margulis and Ramanujan-Margulis low-density parity-check codes,” Electron. Notes Theor. Comput. Sci., vol. 74, no. 10, pp. 97–104, Oct. 2003.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+7842
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 12, DECEMBER 2022
+
+[23] J. Rosseel, V. Mannoni, V. Savin, and I. Fijalkow, “Error structure aware parallel BP-RNN decoders for short LDPC codes,” in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[24] V. Savin, “LDPC decoders,” in Channel Coding: Theory, Algorithms, and Applications, D. Declercq, M. Fossorier, and E. Biglieri, Eds. Amsterdam, The Netherlands: Elsevier, 2014, pp. 211–260.
+[25] M. Lian, F. Carpi, C. Häger, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2019, pp. 161–165.
+[26] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201, Jan. 2010.
+[27] M. Karimi and A. H. Banihashemi, “On characterization of elementary trapping sets of variable-regular LDPC codes,” IEEE Trans. Inf. Theory, vol. 60, no. 9, pp. 5188–5203, Sep. 2014.
+[28] Y. Hashemi and A. H. Banihashemi, “On characterization and efficient exhaustive search of elementary trapping sets of variable-regular LDPC codes,” IEEE Commun. Lett., vol. 19, no. 3, pp. 323–326, Mar. 2015.
+[29] H. Falsafain and S. R. Mousavi, “Exhaustive enumeration of elementary trapping sets of an arbitrary Tanner graph,” IEEE Commun. Lett., vol. 20, no. 9, pp. 1713–1716, Sep. 2016.
+[30] S. Abu-Surra, D. DeClercq, D. Divsalar, and W. E. Ryan, “Trapping set enumerators for specific LDPC codes,” in Proc. Inf. Theory Appl. Workshop (ITA), Jan. 2010, pp. 1–5.
+[31] S.-C. Wang, “Artificial neural network,” in Interdisciplinary Computing in Java Programming. Cham, Switzerland: Springer, 2003, pp. 81–100.
+[32] M. Karimi and A. H. Banihashemi, “Efficient algorithm for finding dominant trapping sets of LDPC codes,” IEEE Trans. Inf. Theory, vol. 58, no. 11, pp. 6942–6958, Nov. 2012.
+[33] G. B. Kyung and C.-C. Wang, “Exhaustive search for small fully absorbing sets and the corresponding low error-floor decoder,” in Proc. IEEE Int. Symp. Inf. Theory, Jun. 2010, pp. 739–743.
+[34] X. Zhang and P. H. Siegel, “Efficient algorithms to find all small errorprone substructures in LDPC codes,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), Dec. 2011, pp. 1–6.
+[35] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular progressive edge-growth Tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[36] Short Block Length LDPC Codes for TC Synchronization and Channel Codding (CCSDS 231.1-O-1), Consultative Committee for Space Data Systems (CCSDS), Reston, VA, USA, Apr. 2015.
+[37] D. Declercq, B. Vasic, S. K. Planjery, and E. Li, “Finite alphabet iterative decoders—Part II: Towards guaranteed error correction of LDPC codes via iterative decoder diversity,” IEEE Trans. Commun., vol. 61, no. 10, pp. 4046–4057, Oct. 2013.
+[38] M. P. C. Fossorier, “Iterative reliability-based decoding of low-density parity check codes,” IEEE J. Sel. Areas Commun., vol. 19, no. 5, pp. 908–917, May 2001.
+[39] B. A. LaMacchia and A. M. Odlyzko, “Solving large sparse linear systems over finite fields,” in Proc. Annu. Int. Cryptol. Conf. Adv. Cryptol. (CRYPT), 1990, pp. 109–133.
+[40] T. J. Richardson and R. L. Urbanke, “Efficient encoding of lowdensity parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[41] D. Burshtein and G. Miller, “Efficient maximum-likelihood decoding of LDPC codes over the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 50, no. 11, pp. 2837–2844, Nov. 2004.
+[42] T. Tieleman and G. Hinton, “Lecture 6.5-RMSPROP: Divide the gradient by a running average of its recent magnitude,” COURSERA, Neural Netw. Mach. Learn., vol. 4, no. 2, pp. 26–31, 2012.
+[43] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. T. Brink, “Automorphism ensemble decoding of quasi-cyclic LDPC codes by breaking graph symmetries,” IEEE Commun. Lett., vol. 26, no. 8, pp. 1705–1709, Aug. 2022.
+[44] M. Helmling et al. (2019). Database of Channel Codes and ML Simulation Results. [Online]. Available: http://www.uni-kl.de/channelcodes
+[45] B. Smith, M. Ardakani, W. Yu, and F. R. Kschischang, “Design of irregular LDPC codes with optimized performance-complexity tradeoff,” IEEE Trans. Commun., vol. 58, no. 2, pp. 489–499, Feb. 2010.
+
+Joachim Rosseel received the M.Eng. degree in signal processing from the École Nationale Supérieure of Physics, Electronics and Materials (Phelma), Grenoble, France, in 2020. He is currently pursuing the Ph.D. degree with the CEA-Leti, Université Grenoble Alpes, Grenoble, and the ETIS Laboratory, ENSEA, CNRS, CY Cergy Paris University, CergyPontoise, France. His research interests include communications systems, deep learning, channel coding, and especially neural network aided decoding for short error correcting codes.
+Valérian Mannoni (Member, IEEE) received the Ph.D. degree in electrical and computer engineering from the University of Reims Champagne-Ardenne, France, in 2004. After his Ph.D. thesis on the channel coding for the multicarrier communications, he followed with a post-doctoral position on the joint source-channel coding at France Telecom Research and Development, France. In 2006, he joined Dibcom, as a Telecommunication Engineer, and developed demodulators for terrestrial/satellite for mobile digital TV. He has also contributed to the standardization of DVB-T2. He then pursued his career at the French Ministry of Defence in order to investigate the non-cooperative wireless communication systems. Since 2015, he has been working at CEA-LETI, Wireless Communications Department, as a Research Engineer, where he contributes and leads projects on wireless communications (physical and MAC layers) and in particular for the Internet of Things and for the V2X (vehicular to everything) connectivity. He has authored over 40 articles in international journals and conference proceedings and holds three patents.
+Inbar Fijalkow (Senior Member, IEEE) received the engineering and Ph.D. degrees from TelecomParis, Paris, France, in 1990 and 1993, respectively. From 1993 to 1994, she was a Post-Doctoral Research Fellow at Cornell University, NY, USA, supported by a French Lavoisier Fellowship. Since 1994, she has been a member of ETIS Research Unit, UMR 8051, ENSEA, CNRS, CY Cergy Paris University, while teaching at ENSEA, Cergy, France. From 2000 to 2004, she was in charge of the master research program in intelligent and communicating systems (SIC). She was the Vice-Head of the French Research Group in Image and Signal Processing, GdR ISIS, from 2002 to 2004. She was the Dean of the ETIS Laboratory from 2004 to 2013. From 2015 to 2016, she was a Visiting Researcher at UC Irvine, CA, USA, funded by the French CNRS. She is currently a Full Professor at ENSEA at the “classe exceptionnelle” level and the President of section 7 of the French Research Council (CoNRS). She is the coauthor of about 190 publications. Her research interests are in signal processing for wireless communications and dirty-RF, including iterative processing, optimization and learning, and estimation theory. She is a member of several technical committees. She is a mentor in several associations for women in science and engineering. She was a past Associate Editor of IEEE TRANSACTIONS ON SIGNAL PROCESSING.
+Valentin Savin received the M.S. degree in mathematics from the École Normale Supérieure, Lyon, and Joseph Fourier University, Grenoble, in 1997, and the Ph.D. degree in mathematics from Joseph Fourier University, in 2001. From 2002 to 2004, he was a Post-Doctoral Researcher with the Institute of Mathematics of the Romanian Academy. Since 2005, he has been with CEA-LETI, first as a two-year Post-Doctoral Researcher, and then as a Permanent Researcher. He has authored more than 100 articles in international journals and peer-reviewed conference proceedings, and has been actively involved in the definition, implementation, and coordination of several French and European collaborative research projects in information and communications technology. His research interests are in classical and quantum coding techniques for data transmission, networking, and processing.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:53:23 UTC from IEEE Xplore. Restrictions apply.
+
+

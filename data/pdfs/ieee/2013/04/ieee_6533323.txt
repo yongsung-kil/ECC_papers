@@ -1,0 +1,465 @@
+2013 IEEE WCNC Workshop on Convergence of Broadcasting and Broadband Communications
+
+A High Throughput LDPC Decoder in CMMB Based on Virtual Radio
+
+Xia Pan School of Telecommunication and Information Engineering
+Nanjing University of Posts and Telecommunications Nanjing, China
+panxia0725@163.com
+
+Ming-qi Li New Media Center Shanghai Advanced Research Institute, CAS
+Shanghai,China limq@sari.ac.cn
+
+Xiao-fan Lu New Media Center Shanghai Advanced Research Institute, CAS
+Shanghai,China luxf@sari.ac.cn
+
+Rong-fang Song School of Telecommunication and Information Engineering
+Nanjing University of Posts and Telecommunications Nanjing,China
+songrf@njupt.edu.cn
+
+Abstract—LDPC (Low Density Parity Check) is widely used in many telecommunication systems due to its excellent performance. However, real-time LDPC decoder in virtual radio system is difficult to realize. Taking CMMB (China Mobile Multimedia Broadcasting) for instance, this paper proposes a method to achieve high throughput decoder based on x86 processors which support SIMD (Single Instruction Multiple Data) instructions. By utilizing Normalized Min Sum decoding algorithm, normalized parameter as well as bit width of input variables and intermediate variables are determined. Then taking advantages of SIMD instructions, updating progress of variable nodes and check nodes in LDPC decoding algorithm is parallelized. Meanwhile, memory access operations are optimized as well. Tested on Intel Core i73960X, the throughput of the LDPC decoder using multithread processing can reach 92Mbps ∼ 722Mbps. Keywords—Virtual Radio; CMMB; LDPC; SIMD; fixed-point; Multithreading
+I. INTRODUCTION
+Virtual radio[1], which is a kind of software radio[2], based on general purpose computer was proposed by V.Bose in 1999. Compared with software radio which is based on special-purpose programmable devices, virtual radio own the advantages of lower cost, shorter-developing-period, easier update and more flexible configuration. It can support multiple wireless networks and, what’s more, can support more different networks in the future. In recent years, structuring practical virtual radio system has attracted more and more attentions due to the swift development of CPU technology. In 2009, Microsoft developed a virtual radio system based on PC, which is called “Sora”[3]. It utilized ordinary commercial PC, general RF front-end and kernel drivers to realize physical layer protocol and MAC layer protocol of IEEE 802.11a/b/g. In addition, Intel and IBM also developed a wireless communication system based on general purpose PC which realized LTE and WiMax. The project, implementing virtual radio system on general purpose portable computers, was supported
+Ming-qi Li is the corresponding author (email:limq@sari.ac.cn)
+
+by the Science and Technology Commission of Shanghai Municipality [Project Number: 10DZ1500700]. It contains kernel protocol programs and multiple antennas RF front-end, aiming at being applied to wireless emergency communications and digital multimedia broadcasting networks. This research is based on this project.
+The implementation and optimization of physical layer algorithms on general purpose computers is the key of virtual radio system due to the digital signal processing algorithms and coding/decoding algorithms of error correcting code in the physical layer own the features of large computations and real time processing. As the decoding algorithm is the main part of physical layer algorithms, the realization of real-time decoding is the vital matter in virtual radio.
+Low Density Parity Check (LDPC)[4] code is a kind of linear block code. Due to its advantages like Shannon-limitapproaching performance[5], sparse check matrix and lowcomplexity decoding algorithm, it is widely used in many communication systems, like IEEE 802.11n/802.16e, DVBs2, CMMB, etc. From the very beginning of the rediscovery of LDPC, it enjoys a tremendous increasing and many efforts have been carried out in LDPC decoding algorithm and the design of decoders. Most of decoders are realized using FPGA/VLSI as semi-parallel or parallel structure[6][7], among which the highest rate can reach the level of Giga bps. However, these systems, using hardware description languages like VHDL and Verilog, are complex in structure and high in cost. Some systems are realized on GPU[8][9] and IBM CELL Broadband Engine (BE)[10] ,which maximum throughput is 160Mbps while the power consuming can be as high as 300W500W, which makes it too difficult to realize on portable terminal. There are also other approach like software-based LDPC decoder. But its throughput is too low to meet the requirements of communication systems.
+CMMB standard[11] is the first indigenous mobile multimedia broadcast standard in China and it is widely used in
+
+978-1-4799-0110-4/13/$31.00 ©2013 IEEE
+
+95
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:40 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE WCNC Workshop on Convergence of Broadcasting and Broadband Communications
+
+and Normalized BP based (Normalized Min Sum) algorithm. In this paper, Normalized Min Sum algorithm is selected for the consideration of both performance and complexity. And the Normalized Min Sum will be called NMS for short hereinafter.
+The pseudo-code of NMS is as followed. Parameters M and N are the number of rows and columns of check Matrix H, respectively.
+
+Fig. 1. Check matrix distribution of 1/2 rate LDPC in CMMB
+many cities. In the physical layer of CMMB, the outer code is Reed-solomon code while the inner code is LDPC. Measured results reported that LDPC real-time decoder cannot meet the requirements of CMMB standard. This article is focused on the optimization of LDPC decoder on general purpose computer.
+The LDPC code in CMMB standard owns the same code length of 9216 with different code rate, namely 1/2 and 3/4. The corresponding length of the information bit are 4608 and 6912, respectively. Check matrix of LDPC is a highly structured quasi cyclic matrix. Fig.1 is the distribution graph of check matrix H with rate 1/2, from which the feature of quasi cyclic can be easily observed.
+II. REALIZATION OF LDPC DECODING A. Theory of LDPC Decoding Algorithm
+First, classical LDPC decoding algorithm is an iterative decoding algorithm based on belief propagation (BP algorithm), also called sum-product algorithm[12]. The BP algorithm is a decoding method based on the Tanner graph, which contains Variable Node(VN) and Check Node(CN). As an example of LDPC with rate 1/2 in CMMB, Tanner graph of first three CNs is shown in Fig.2.
+The BP algorithm is consisted of four parts: 1)Initialization of VN messages; 2)Update CN messages in iterative process; 3)Update VN and hard decision messages in iterative process; 4)Determining the next iteration according to hard decision messages. In each iteration, CN messages are updated by connected VN messages. Then, these updated CN messages are used to update VN messages as well as VN hard decision messages. After these operations, hard decision will be conducted to determine whether the entire information sequence is decoded. Based on BP algorithm, many simplified algorithms were proposed, like BP based (Min Sum) algorithm
+VN: 0 6 7 8 12 13 18 19 20 25 26 30 31 32 5664 8270
+
+Algorithm 1 Pseudo-code of Normalized Min Sum Algorithm
+
+1: Initialization: Lq(i ∗ N + j) = LLR(j), 0 ≤ i < dc, 0 ≤
+
+j < N;
+
+2: repeat
+
+3: get the VN messages Lq temp(0) ∼ Lq temp(dv − 1)
+
+which connect with CN i, 0 ≤ i < M ;
+
+4: use above VN messages to update the CN messages:
+
+5: for i = 0 to i = M − 1 do
+
+6:
+
+Lr(i ∗ dv + j) = α · k∈[0,dv)\j sgn(Lq temp(k)) ·
+
+mink∈[0,dv)\j (|Lq temp(k)|), j ∈ [0, dv)
+
+7: end for
+
+8: get the CN messages Lr temp(0) ∼ Lr temp(dc − 1)
+
+which connect with VN j, 0 ≤ j < N ;
+
+9: Use above CN messages to update the VN messages,
+
+and get the hard decision messages:
+
+10: for j = 0 to j = N − 1 do
+
+11:
+
+Lq(i ∗ N + j) = LLR(j) + k∈[0,dc)\i Lr temp(k)
+
+Lqn(j) = LLR(j) + k∈[0,dc) Lr temp(k)
+
+12:
+
+if Lqn(j) > 0 then
+
+13:
+
+z(j) = 0
+
+14:
+
+else
+
+15:
+
+z(j) = 1
+
+16:
+
+end if
+
+17: end for
+
+18: until max iter reached or H · zT = 0
+
+The column weight and row weight of the check matrix H, in the CMMB standard, are also fixed. For example, dv = 6,dc = 3 when the rate is 1/2. According to CMMB standard, the bits obtained in decoding process need to be remapped using the bit mapping vector COL ORDER to get the final result.
+As shown in the previous analysis, there are only compare operation and add operation in each iteration, which result in massive memory access operations. Table.I reveals the total computational complexity of each operation.
+B. C Implementation of LDPC Decoding Algorithm
+This paper takes LDPC with rate 1/2 in CMMB as an example. Before iteration progress, VN messages need to be
+
+TABLE I COMPUTATION COMPLEXITY IN EACH ITERATION
+
+CN: 0
+
+1
+
+2
+
+Fig. 2. Tanner graph of 1/2 rate in CMMB
+
+Operation Compare
+Add Memory Access
+
+Comutation Complexity M (dv − 1)dv + N 2N dc
+M dv(dv + 3) + Ddc(dc + 5)
+
+96
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:40 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE WCNC Workshop on Convergence of Broadcasting and Broadband Communications
+
+initialized, namely assigning the LLR to corresponding VN messages Lq (Operation No.1 in pseudo-code). Fig.3 reveals the stored sequence of VN messages Lq after the operation No.1.
+From the above algorithm 1, operation No.3 and No.8 repeat in each iteration to obtain Lq temp and Lr temp from Lq and Lr, respectively. What’s more, the operation sequences to obtain Lq temp and Lr temp in each iteration are identical. Hence in C implementation, those sequences can be stored as look-up table, which will save time and accelerate decoding process.
+In C implementation, a look-up table q ind is used to store the mapping information between Lq temp and Lq. The generating algorithm of q ind is shown as followed in pseudo-code format. LDP C H 1 2 is a sparse check matrix given in CMMB standard.
+
+Algorithm 2 Generating Algorithm of q ind
+
+1: for i = 0 to i = M − 1 do
+
+2: for j = 0 to j = dv − 1 do 3: get the ind which is the index of CN i connected
+
+with the VN LDP C H 1 2(i, j)
+
+4:
+
+q ind(i ∗ dv + j) = (ind − 1) ∗ 9216 +
+
+LDP C H 1 2(i, j);
+
+5: end for
+
+6: end for
+
+Likewise, look-up table r ind stores the mapping information between Lr temp and Lr. The generating algorithm of r ind is omitted.
+C. Bit Width of Decoding
+According to Table.I, there are many discontinuous memory access operations and compare operations, which will reduce the decoding performance. In order to apply SIMD instructions, LDPC decoding algorithm needs a fixed-point modification, which will accelerate decoding rate by increasing number of node messages processing simultaneously and reduce memory consumption. Fixed-point[13] means converting data from floating-point notation to fixed-point notation, like char, short, int, etc, within acceptable error range. Normally the error
+
+Y-axis represent VN
+
+(0,0) X-axis Represent
+
+(3,1)
+
+(6,2)
+
+……
+
+(65, 9215)
+
+CN connected
+
+with VN sorting
+
+(1,0)
+
+(4,1)
+
+(7,2)
+
+……
+
+(1655, 9215)
+
+by row number
+
+(2,0)
+
+(5,1)
+
+(8,2)
+
+……
+
+(4596, 9215)
+
+L_q
+
+(0,0)
+
+(3,1)
+
+...
+
+(65, 9215)
+
+(1,0)
+
+(4,1)
+
+...
+
+(1655, 9215)
+
+(2,0)
+
+(5,1)
+
+...
+
+(4596, 9215)
+
+Fig. 3. VN messages initialization process
+
+performance should be less than 0.2dB between fixed-point data and floating-point data.
+In the following discussion, LDPC sequence with rate 1/2 is modulated by BPSK and transmitted over AWGN channel. Parameter α in NMS algorithm is set to 0.75 for convenience in fixed-point simulation while it is 0.77 in floating-point simulation. As the result, a fixed-point data multiply by 0.75 is equal to itself subtracting its two-bit right shift.
+In the decoding algorithm, input data LLR, intermediate variables Lq and Lr need to be converted to fixed-point. There are 3 steps in fixed-point operation. Firstly determine dynamic range and precision of LLR to select bit width. The precision is the noise range allowed over LLR (performance loss within 0.05-0.1dB). Secondly observe the influence on error performance resulting from saturated position to confirm bit width further. Saturated position is the amplitude limitation of LLR. For example, if saturated bit width is 4, the range of signed data is -7∼+7. Lastly, observe decoding process to confirm intermediate variables bit width, meanwhile, guarantee no overflow occurred.
+According to a series of simulations, when the precision is 0.5 and BER = 10−5, performance loss between fixed-point data and floating-point data is about 0.05dB. When saturated bit width is 4, the performance loss is negligible. Thus, in this paper, precision is selected as 0.5 while the bit width is 4 (1 sign bit and 3 information bits). For convenience of programming, one LLR can be stored as a char type data.
+When updating VN messages Lq, add operations are performed on intermediate variable Lr temp and the add operations may lead to overflow. According to simulation results, it is found that the iteration always end before overflow occurred. Hence, within the reasonable SNR (1∼10dB), no overflow is observed.
+Fig.4 demonstrates the BER performance of both floatingpoint and fixed-point decoding algorithm with rate 1/2 and rate 3/4 in CMMB. (10 different SNRs, 10000 frames data in each SNR, 10 iterations for each frame.) It shows that the performance of fixedpoint decoding algorithm is 0.2dB less than that of floatingpoint decoding algorithm, that is to say, the conditon of fixed-point is fulfilled.
+III. SIMD INSTRUCTION OF LDPC DECODING
+Intel x86, x86-64 and IA-64 processors are equipped with Single Instruction Multiple Data (SIMD) technology[14][15], which can improve the efficiency by processing multiple data parallel in the same time. SIMD, including MMX, SSE(Streaming SIMD Extensions), SSE, SSE2, SSE3, etc, can process 64bit integer, 128bit integer as well as double precision floating-point number. These 64bit and 128bit data can also be the combination of multiple 8bit, 16bit and 32bit data.
+In NMS algorithm, most of the time are occupied by two operations, namely operation No.6 and No.11 in Pseudocode Of NMS Algorithm. However, these operations can be optimized by utilizing SIMD technology. By storing data as m64 type or m128i type, SIMD instructions can be applied to boost the computation.
+
+97
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:40 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE WCNC Workshop on Convergence of Broadcasting and Broadband Communications
+
+BER
+
+100 10-1 10-2 10-3 10-4 10-5 10-6 10-7 10-8 10-9
+0
+
+1/2 Floating-Point NMS 1/2 Fixed-Point NMS
+
+3/4 Floating-Point NMS 3/4 fixed-Point NMS
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+SNR(dB)
+
+Fig. 4. Performance comparison between floating-point and fixed-point NMS algorithm
+
+Notably, optimization of memory access operations is the key to improve performance. By storing all the corresponding information in a m128i type array before the updating of Lr and Lq, all memory access operations in updating progress can be performed at the same time.
+As the fixed-point bit width is 8bit, a m128i type data can be the combination of 16 8bit data. The messages’ structure should be determined by the row weight and column weight of check matrix H. Denoting row weight as dv, hence t = 16/dv , namely a m128i type data can store t · dv VN messages Lq temp (the redundant bits are filled arbitrarily). Denoting column weight as dc, then s = 16/dc , namely a
+m128i type data can store s · dc CN messages Lr temp. t and s can be adjusted according to different conditions.
+The following discussion gives the main steps in the iteration: 1. Update CN messages
+Set dv = 6, that means 6 VNs connect with each CN, then t = 16/dv = 2. As mentioned before, 2 CNs (i, i + 1) can be processed simultaneously. The CN messages
+
+Lr can be obtained by the following steps: (1) combining 12 VN messages Lq (char type) into a m128i type data Lq temp[i]; (2) calculating absolute value and minimum value of Lq temp[i] by circular shifting; (3) using XOR instruction
+to get the sign bit; (4) obtaining CN messages by combining
+sign bit and minimum absolute value. Fig.5 is the flowchart
+in detail.
+2. Update VN messages Set dc = 3, that means 3 CNs connect with each VN,
+then s = 16/dc = 5. However, the VN number, 9216, is not divisible by 5. To make the algorithm work, set s = 4, namely 4 VNs (j ∼ j + 3) will be processed simultaneously. The VN messages Lq can be obtained by the following
+steps: (1) rearranging these 12 CN messages in a m128i type data Lr temp[j]; (2) summating corresponding byte; (3)
+obtaining VN messages and decoded bit sequence which is
+decided by VN hard decision messages. Following code is C
+program optimized by SIMD instructions and a0,a1,a2,a3 are
+rearrangement vectors.
+v o i d Update VN ( m128i Lr temp [ ] , char LLR [ ] , char Lq [] , char z [ ] )
+{ int i , j ; for ( i =0; i <2304; i ++) { m128i LLR 128 , Lr1 , Lr2 , Lr3 , Lq1 , Lq2 , Lq3 , Lqn , z1 , z2 ; j = i <<2; i n t 3 2 LLR1=∗( i n t 3 2 ∗ ) (&LLR [ j ] ) ; LLR 128= mm set1 epi32 ( LLR1 ) ; Lr1= mm shuffle epi8 ( Lr temp [ j ] , a1 ) ; Lr2= mm shuffle epi8 ( Lr temp [ j ] , a2 ) ; Lr3= mm shuffle epi8 ( Lr temp [ j ] , a3 ) ; Lq1= mm adds epi8 ( Lr1 , Lr2 ) ; Lq2= mm adds epi8 ( Lq1 , Lr3 ) ; Lq3= mm adds epi8 ( Lq1 , LLR 128 ) ; Lqn= mm adds epi8 ( Lq2 , LLR 128 ) ; z1= mm cmpgt epi8 ( a0 , Lqn ) ; z2= mm abs epi8 ( z1 ) ; ∗( i n t ∗) (&z [ j ] ) =z2 . m128i i32 [ 0 ] ; ∗( i n t ∗) (&Lq [ j ] ) =Lq3 . m128i i32 [ 0 ] ; ∗( i n t ∗) (&Lq [ j +9216]) =Lq3 . m128i i32 [ 1 ] ; ∗( i n t ∗) (&Lq [ j +18432]) =Lq3 . m128i i32 [ 2 ] ; }
+}
+
+4 filled bytes
+
+CN i+1
+
+CN i
+
+__m128i
+
+x
+
+q[i+1,5] ... q[i+1,0] q[i,5] ... q[i,0]
+
+For each CN, VN messages shift right one byte
+
+x
+
+q[i+1,0] ... q[i+1,1] q[i,0] ... q[i,1]
+
+x
+
+q[i+1,1] ... q[i+1,2] q[i,1] ... q[i,2]
+
+...
+
+x
+
+q[i+1,4] ... q[i+1,5] q[i,4] ... q[i,5]
+
+Get absolute values and then minimum one among corresponding bytes
+
+Get the sign of bytes in same byte position
+
+x
+
+Min11 ...
+
+Min0
+
+x
+
+Sgn11 ... Sgn0
+
+……
+
+Combine the sign and
+
+x Lr[i+1,5] ... Lr[i+1,0] Lr[i,5] ... Lr[i,0] minimum value
+
+Fig. 5. Flowchart of updating CN messages
+
+IV. DATA LEVEL PARALLELISM
+All the previous discussions are based on the assumption that the CPU owns only one core. For multi-core CPU, multithread data level decoding can be applied. Assuming T threads are available, all LLR can be assigned to T independent decoders and the T results will be synthesized to get the final result. This procedure is shown in Fig.6, which make the throughput boost a lot comparing to only one CPU core.
+In CMMB standard, the bandwidth of broadcast channel is 8MHz. By applying 16QAM modulation, during one time slot, 552960 LLR can be acquired from received data after deinterleave and demodulation, which requires p = 552960/9216 = 60 times decoding operations. If all these 60 groups LLR are transmitted to LLR FIFO and assigned to T independent threads, for example T=12, 12 groups LLR can be parallel processed in one call. All of these data will be decoded after 5 calls, instead of 60 calls.
+
+98
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:40 UTC from IEEE Xplore. Restrictions apply.
+
+2013 IEEE WCNC Workshop on Convergence of Broadcasting and Broadband Communications
+
+Demodulation Unit
+LLR FIFO T groups LLR from Demodulation Unit,9216 LLR/group
+Allocate Decoding task T groups LLR for LDPC decoder on T threads
+
+TABLE II RELATIVE THROUGHPUT OF ORIGINAL C RROGRAM AND
+SIMD OPTIMIZED PROGRAMS
+
+Operation
+Relative Throughout
+
+C Program 1x
+
+SIMD 1 Thread 8.58x
+
+SIMD 6 Thread 49.95x
+
+SIMD 12 Thread 56.85x
+
+Thread 1
+
+Thread 2
+
+LDPC decoder LDPC decoder
+
+...
+
+Thread T LDPC decoder
+
+Collect decoding results Decoding results FIFO Byte deinterleave and RS decoder
+
+Fig. 6. LDPC multithread decoder flowchart
+
+V. RESULTS OF SIMD INSTRUCTION OPTIMIZATION
+Based on the NMS decoding program utilizing pure C programming language, SIMD instructions are adopted to optimize the performance. Tested on Intel Core i7-3960 platform, the LDPC decoding throughput of pure C program, SIMD program of 1 thread, 6 threads and 12 threads are shown in Fig.7.
+Just as demonstrate in Fig.7, the throughput of SIMDoptimization program is 6.3∼10.1 times higher than the pure C program. Taking the fact that Intel Core i7-3960 owns 6 physical cores and 6 virtual cores and the virtual cores can’t work all the time, into consideration, it’s reasonable that the throughput of 12 threads is less than 2 times of 6 threads. However, comparing to single thread, 6 threads and 12 threads are 5.8 times and 6.6 times faster, respectively. All these data are listed in TABLE.II.
+
+Throughput (Mbps) Average Number of Iterations
+
+800
+
+10
+
+6 MultiThread in SIMD
+
+12 MultiThread in SIMD
+
+700
+
+Throughput in C
+
+Throughput in SIMD
+
+8
+
+600
+
+Aver-Number of Iterations
+
+500
+6
+
+400
+
+300
+
+4
+
+200
+2
+100
+
+0
+
+0
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+SNR (dB)
+
+Fig. 7. Throughput of LDPC decoder,pure C program and SIMD optimized program(1, 6 and 12 threads)
+
+VI. CONCLUSION
+In this article, a LDPC decoding algorithm based on general purpose processor architecture is analyzed, simulated and optimized. By taking advantages of SIMD instructions and multi-thread technology, the decoding program can reach the throughput of 92∼722Mbps (varying from different SNR). Throughput of optimized program achieved the requirements of CMMB, which enables the system to perform real time decoding on virtual radio.
+ACKNOWLEDGMENT
+This work was supported by National High Technology Research and Development Program (863 Program) of China under Grant No.2011AA01A105, Shanghai Committee of Science and Technology (10DZ1500700 and 11DZ1500500), Key Deployment Project of Chinese Academic of Sciences (KGZD-EW-103), and CAS strategic priority research program: No disturbing verification environment (XDA06010301).
+REFERENCES
+[1] V. Bose, M. Ismert, M. Welborn and J. Guttag, “Virtual radios,” IEEE Journal, vol.17, no.4, pp.591-602, 1999.
+[2] E.Buracchini, “The software radio concept,” IEEE Communications Magazine, vol.38, no.9, pp.138-143, 2000.
+[3] K.Tan, J.Zhang, J.Fang, et al, “Sora: High Performance Software Radio Using General Purpose Multi-core Processors,” NSDI 6th USENIX Association, 2009.
+[4] R.G. Gallager, “Low-density parity-check codes,” IRE Trans. Information theory, pp.21-28, 1962.
+[5] D.J.C. MacKay and R.M. Neal, “Near Shannon limit performance of low density parity check codes,” Electronics Letters, vol.32, no.18, 1996.
+[6] Y. Zhu, Y. Chen, D. Hocevar and M. Goel, “A Reduced-Complexity, Scalable Implementation of Low Density Parity Check (LDPC) Decoder,” IEEE Workshop. SIPS, pp.83-88, 2006.
+[7] S. Sharifi Tehrani, S. Mannor and W.J. Gross, “Fully Parallel Stochastic LDPC Decoders,” IEEE Trans. Signal Processing, vol.56, no.11, pp.5692-5703, 2008.
+[8] G. Wang, M. Wu, Y. Sun and J.R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” IEEE 9th Symposium. SASP, pp.82-85, 2011.
+[9] K.K.Abburi, “A Scalable LDPC Decoder on GPU,” 24th International Conf. VLSI Design, pp.183-188, 2011.
+[10] J. Zhao, M. Zhao, H. Yang, et al, “High Performance LDPC Decoder on CELL BE for WiMAX System,” 3th International Conf. CMC, pp.278281, 2011.
+[11] Mobile Multimedia Broadcasting (P.R.China)Part 1: Framing Structure, Channel Coding and Modulation for Channel, 2006.
+[12] S. Lin, J. Daniel and Jr. Costello, “Error Control Coding(2nd Edition),” Prentice Hall, 2004.
+[13] W. Sung and J. Kang, “Fixed-point C language for digital signal processing,” 29th Asilomar Conf. SSC, vol.2, pp.816-820, 1995.
+[14] “Intel 64 and IA-32 Architectures Optimization Reference Manual,” Order Number.248966-024, Apr. 2011. http://www.intel.com.
+[15] “Intel 64 and IA-32 Architectures Software Developers Manual,” Order Number.325462-042US, Mar. 2012. http://www.intel.com.
+
+99
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:23:40 UTC from IEEE Xplore. Restrictions apply.
+
+

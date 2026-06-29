@@ -1,0 +1,372 @@
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+1885
+
+Soft-Information LLM Fusion for LDPC-Coded Text Over Visible-Light Links
+Pham Quang Thai , Member, IEEE
+
+Abstract—This letter proposes an LDPC–LLM–LDPC receiver in which black-box language-model confidence is converted to pseudo-LLRs and fused within belief-propagation decoding, so accepted suggestions remain parity-constrained. Reliabilityguided masking, vote-based confidence gating, and adaptive LLR-scale matching control when and how strongly the LLM contributes. Experiments on an OLED-based VLC testbed, using 4-bit Qwen3-4B-Instruct over nine operating points show consistent BER reduction. Compared with text-domain LLM correction, the LLR-domain pipeline better preserves bit-level and semantic fidelity, confirmed by CER and Sentence-BERT similarity.
+Index Terms—Visible light communication, LDPC codes, belief propagation, large language models, text transmission, softdecision decoding.
+I. INTRODUCTION
+T EXT payloads are central to practical links, spanning human messaging, device status reports, machine logs, and command-and-control descriptors. In many settings, text is delivered as a delay-tolerant stream where integrity outweighs throughput and latencies of seconds are acceptable. Optical wireless communication (OWC) is maturing as a complementary short-range physical layer, with growing interest in emerging transmitters such as micro-OLED devices [1], [2], [3], [4]. While strong forward error correction (FEC) is standard, residual errors after decoding can still cause disproportionate character corruption in text, motivating receiver-side mechanisms that exploit source structure.
+Semantic and learning-based communication offers one response. Deep joint source–channel coding (DeepJSCC) and generative-AI-enabled receivers have been studied extensively [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], but endto-end neural transceivers require transmitter-side redesign and scenario-specific training, which is difficult to reconcile with deployed PHY chains and heterogeneous optical hardware. A more deployment-friendly direction is to retain conventional channel coding and introduce foundation-model assistance only at the receiver. Large language models (LLMs) provide strong linguistic priors and have been applied to error correction in speech recognition [16] and semantic correction for communication systems [17], [18]. Most existing LLM-aided schemes, however, operate as text-domain post-processors: a hard-decision decoder output is “repaired” by an LLM, dis-
+
+carding the decoder’s soft reliability information and foregoing parity-constraint re-enforcement after LLM edits.
+This letter proposes an LDPC–LLM–LDPC pipeline for delay-tolerant text in which LLM suggestions never bypass the channel code. Posteriors from an initial BP pass guide syndrome-driven masking; the LLM suggests masked characters via multi-sample voting; observable vote fractions are mapped to pseudo-LLRs and fused with first-pass posteriors for a second belief-propagation (BP) pass, constraining every accepted suggestion by parity checks. The main contributions are:
+• A modular LLR-domain LLM fusion receiver with reliability-gated interaction: syndrome-driven masking determines where to query the LLM, confidence thresholding controls when to accept suggestions, and adaptive LLR-scale matching regulates how strongly to fuse them, with explicit bypass when the LLM is insufficiently confident.
+• Experimental evaluation on an OLED-based VLC testbed with 95% bootstrap confidence intervals, an empirical harm rate, and ablations over LDPC configurations and quantization levels.
+
+II. DECODER–INTEGRATED LLM ASSISTANCE MODEL
+
+A text payload is represented in 8-bit ASCII, producing a
+
+bit vector b ∈ {0, 1}Nb . After zero-padding to multiples of
+
+K, blocks of K information bits are encoded by a systematic
+
+(N, K) LDPC code and transmitted over the visible-light
+
+link. After OOK demodulation and hard-decision slicing,
+
+residual errors are approximately independent bit flips; we
+
+therefore model the post-slicing channel as a binary sym-
+
+metric channel (BSC) with measured crossover probability
+
+p [19]. Channel log-likelihood ratios (LLRs) are initialized
+
+as
+
+Lcjh
+
+=
+
+log
+
+1
+
+− p
+
+p
+
+(1
+
+−
+
+2yj ),
+
+(1)
+
+where yj is the jth received bit. After BP decoding (up to Imax iterations with early termination on parity satisfaction), we obtain posterior LLRs L(1) and hard decisions bˆ(1). The first-pass bit error rate is
+
+Received 4 April 2026; accepted 25 April 2026. Date of publication 28 April 2026; date of current version 12 May 2026. The associate editor coordinating the review of this letter and approving it for publication was X. He.
+The author is with the Faculty of Electrical and Electronics Engineering, Ho Chi Minh City University of Technology (HCMUT), Ho Chi Minh City 72521, Vietnam, and also with Vietnam National University Ho Chi Minh City (VNUHCM), Ho Chi Minh City 71309, Vietnam (e-mail: pqthai@hcmut.edu.vn).
+Digital Object Identifier 10.1109/LCOMM.2026.3688465
+
+BER1 =
+
+1
+
+Nb
+1
+
+Nb j=1
+
+ˆbj(1) = bj
+
+.
+
+(2)
+
+If BER1 = 0, the pipeline terminates and the LLM is not invoked.
+Decoded bits are regrouped into Nc = Nb/8 bytes. Under approximate bit independence after BP convergence, the byte
+
+1558-2558 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:40 UTC from IEEE Xplore. Restrictions apply.
+
+1886
+
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+error probability is
+
+1
+
+pj
+
+=
+
+1
+
+−
+k∈B(j)
+
+1+
+
+exp
+
+−|Lk(1)|
+
+,
+
+(3)
+
+TABLE I LDPC–LLM–LDPC EVALUATION CONFIGURATION
+
+where B(j) = {8(j − 1) + 1, . . . , 8j} indexes the eight bits of
+byte j. Masking is driven by the first-pass syndrome. Let cˆ(1)
+denote the hard-decision codeword after the first BP pass and let ws = Hcˆ(1) mod 2 1 be the syndrome weight, i.e. the number of unsatisfied parity checks. The estimated number of
+residual bit errors is
+
+ne = ws/w¯c ,
+
+(4)
+
+where w¯c is the column weight of the LDPC code. Because each erroneous bit corrupts at most one byte, the masked set M consists of the ne bytes with the largest pj. If ws = 0, no bytes are masked and the LLM stage is skipped.
+Masked positions are replaced by an underscore placeholder
+and the resulting string is presented to a pretrained LLM
+with instructions to replace each placeholder with the most
+likely character while preserving all other characters and the string length. We draw S independent stochastic samples. For masked position j, let aˆj(s) denote the character returned in sample s. The majority-vote output is
+
+S
+
+aˆj
+
+=
+
+arg max
+a
+
+1[aˆj(s) = a],
+
+(5)
+
+s=1
+
+and the empirical vote fraction is
+
+1
+
+φj
+
+=
+
+S
+
+max
+a
+
+S
+
+1[aˆj(s) = a].
+
+(6)
+
+s=1
+
+The vote fraction is an observable empirical confidence proxy used for both update gating and soft-information injection. It is not claimed to be a calibrated posterior; its log-odds provides a monotone mapping into the soft-information domain whose magnitude is regulated by the adaptive scale α below and whose consistency is enforced by the second BP pass. The empirical harm rate (Section III-D) confirms that residual miscalibration does not materially degrade decoding in the tested regime.
+An LLM proposal is accepted only when
+
+j ∈ M and φj ≥ θ,
+
+(7)
+
+forming the update set U ⊆ M. Low-confidence suggestions are discarded. If U = ∅, the second decoding pass is not triggered.
+For each accepted byte j ∈ U, the vote fraction is converted to a reliability magnitude via a log-odds transform
+
+Λj
+
+=
+
+log
+
+1
+
+φj − φj
+
+.
+
+(8)
+
+Let dˆj ∈ {0, 1}8 be the 8-bit ASCII representation of aˆj . For bit k in this byte,
+
+λkLLM = (1 − 2dˆj,k) Λj , j ∈ U ,
+
+(9)
+
+and λLkLM = 0 for all bits outside updated bytes. This expresses the LLM suggestion in the same signed LLR domain used by
+
+BP, enabling soft-information fusion while treating the model
+
+as a black box.
+
+Because LLM-derived magnitudes may not match the
+
+dynamic range of decoder posteriors, we introduce a
+
+scalar weight α. Let LLDPC be the median over all bits belonging to updated bytes, and
+
+of let
+
+|φ¯L(k1=)|
+
+clip medianj∈U φj, 0.51, 0.99 . Define
+
+φ¯
+
+LLLM = log 1 − φ¯ .
+
+(10)
+
+The scale factor is
+
+α = clip β LLDPC , αmin, αmax ,
+
+(11)
+
+LLLM
+
+where β, αmin, and αmax are listed in Table I. The ratio automatically scales pseudo-LLR influence: α grows when channel
+LLRs dominate and shrinks when the LLM is overconfident relative to the decoder. If α < 10−3 or U = ∅, the second decoding is bypassed and bˆ(1) is returned.
+The vector LLLM is formed by placing λkLLM in the systematic-bit positions of the codeword and zeros in the parity
+positions: the LLM carries information only about data bits, so
+injecting pseudo-LLRs into parity positions would introduce
+noise into Tanner-graph message passing; parity-bit correction
+is handled by the second BP pass propagating improved data-
+bit estimates through check nodes. The fused LLR input to
+the second BP pass is
+
+L(2) = L(1) + α LLLM.
+
+(12)
+
+A second BP pass (identical parameters) produces bˆ(2) with
+
+BER2
+
+=
+
+1 Nb
+
+Nb
+1[ˆbj(2)
+j=1
+
+=
+
+bj ].
+
+(13)
+
+A harm event is declared when BER2 > BER1; the harm rate is the empirical fraction of such frames.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:40 UTC from IEEE Xplore. Restrictions apply.
+
+THAI: SOFT-INFORMATION LLM FUSION FOR LDPC-CODED TEXT OVER VISIBLE-LIGHT LINKS
+
+1887
+
+Let Tˆm (m ∈ {1, 2}) denote the decoded text after stage m and let T be the ground-truth text. Character error rate is
+
+CERm
+
+=
+
+1 Nc
+
+Nc
+1
+j=1
+
+tˆ(jm)
+
+= tj
+
+,
+
+(14)
+
+where tj is the jth character of T . Semantic preservation is measured by Sentence-BERT similarity [20]
+
+SBERTm = sim T , Tˆm .
+
+(15)
+
+III. EXPERIMENTAL EVALUATION
+A. Testbed, Channel Abstraction, and Trial Design
+1) VLC Testbed and Channel Abstraction: The physicallayer context is an indoor OLED-based VLC testbed in a lineof-sight (LOS) configuration. A Philips Lumiblade FL300 wm warm-white OLED panel (lit area 102.4 × 102.4 mm2, luminous flux up to 190 lm) is driven by a custom bias-tee circuit [21] that superimposes on–off keying (OOK) intensity modulation at a bit rate of 325 kbps. The optical signal is received by a Thorlabs PDA36A silicon PIN photodiode with an integrated transimpedance amplifier. Baseband waveforms are generated by a Tektronix AFG3152C arbitrary waveform generator and captured by a Hameg HM1500-2 digital oscilloscope at a sampling rate of 150 MHz. The measured end-to-end electro-optical-electrical (E–O–E) bandwidth is DC–325 kHz [22]. Measurements are taken in a controlled indoor environment with room lighting disabled; no optical filters are applied, and the ambient noise floor is approximately −45 dBm with the OLED off. Different operating points are obtained by varying link distance to realize distinct measured pre-FEC BER levels.
+Each VLC operating condition is indexed by its measured pre-FEC BER pˆ, denoted p in the figures for notational consistency. We consider nine operating points with p ∈ {0.001, 0.002, . . . , 0.009}, spanning a regime where LDPC decoding alone yields near-zero residual errors (p 0.004) and one where residual errors persist (p 0.004). LDPC and LDPC–LLM–LDPC decoding are performed offline on the captured demodulated bitstreams.
+2) LDPC and LLM Configuration: A systematic quasicyclic LDPC code with (N, K) = (1024, 512) (rate 1/2, w¯c = 3) is decoded by BP (max 50 iterations) with early termination; both passes use identical settings. The LLM is Qwen3-4B-Instruct, loaded in 4-bit quantized form via Unsloth on a single NVIDIA T4 GPU (Google Colab). The same model is also evaluated in 8-bit form to assess quantization effects. Hyperparameters are listed in Table I.
+The masking prompt reads: “You are a text repair system. The following text has errors. Characters marked ‘ ’ are uncertain. Replace each ‘ ’ with the most likely character. Do NOT change other characters. Output ONLY the corrected text with same length.”
+3) Text Corpus and Trial Methodology: Each transmitted frame carries a distinct text payload of approximately 250 words (about 104 bits after 8-bit ASCII mapping and LDPC encoding). The primary corpus is human-authored Wikipedia text (wiki40b/en, English only), with an auxiliary synthetic
+
+Fig. 1. Mean BER versus p: first LDPC pass (BER1), LDPC–LLM–LDPC pipeline (4-bit and 8-bit), and text-domain baseline (BERtext).
+subset generated by open-weight LLMs to stress-test robustness to writing style. All payloads are sanitized to a consistent 8-bit ASCII source by removing non-ASCII characters and formatting artifacts. For each measured operating point p, we capture 10 000 frames; means and 95% bootstrap CIs use 10 000 resamples over frames.
+B. Bit-Error-Rate Performance
+Fig. 1 shows the mean BER after the first LDPC pass (BER1), after the full LDPC–LLM–LDPC pipeline (BER2), and after a text-domain-only baseline (BERtext) versus crossover probability p. The text-domain baseline applies the same LLM masking and voting procedure but converts the corrected text directly back to bits without pseudo-LLR injection or a second BP pass, thereby isolating the contribution of LLR-domain fusion.
+At low impairment (p ≤ 0.002), the pipeline reduces residual BER from 3.9 × 10−6 to 1.6 × 10−6. Beyond the LDPC threshold (p ≈ 0.004), the pipeline continues to reduce residual BER, e.g., from 8.5×10−5 to 6.0×10−5 at p = 0.005 (30%) and from 2.6 × 10−4 to 1.9 × 10−4 at p = 0.009 (26%). Across the sweep, BER2 ≤ BER1 holds for the population means at every p; the gain diminishes at high p as heavier masking reduces context. The text-domain baseline yields BERtext two to three orders of magnitude worse than BER1 at every operating point (e.g., 1.1 × 10−1 versus 8.5 × 10−5 at p = 0.005), confirming that direct LLM text replacement without parity-constrained fusion is destructive. The 4-bit and 8-bit pipelines produce nearly identical BER2 across all p, confirming that 4-bit quantization introduces no meaningful performance loss.
+C. Semantic Fidelity: CER and SBERT
+Fig. 2 reports character error rate (CER) after each stage. CER follows BER trends for 8-bit ASCII: at p = 0.005 the pipeline reduces CER from 6.8 × 10−4 to 4.8 × 10−4, and at p = 0.009 from 2.0 × 10−3 to 1.5 × 10−3, confirming that BER gains translate to character-level fidelity.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:40 UTC from IEEE Xplore. Restrictions apply.
+
+1888
+
+IEEE COMMUNICATIONS LETTERS, VOL. 30, 2026
+
+Fig. 2. CER after first LDPC pass and after the full pipeline (4-bit and 8-bit) versus p.
+
+Fig. 4. Empirical harm rate Pr(BER2 > BER1) versus p (4-bit and 8-bit).
+
+Fig. 3. Sentence-BERT similarity after first LDPC pass and after the full pipeline (4-bit and 8-bit) versus p.
+Fig. 3 reports Sentence-BERT cosine similarity (all-MiniLM-L6-v2) to the ground-truth text. Similarity remains high (> 0.97) across all operating points; together with CER, this confirms that bit-level gains translate to semantic fidelity without degradation.
+D. Safety: Harm-Rate Analysis
+A harm event occurs when a frame degrades after the second stage (BER2 > BER1); Fig. 4 shows the empirical harm rate. No harm events are observed for p ≤ 0.002. For p = 0.003–0.005, harm rates remain below 3.4%, indicating that confidence gating (θ = 0.80), adaptive α scaling, and syndrome-driven masking suppress most harmful updates. At higher impairment (p ≥ 0.007), harm rises to 7–11%, consistent with reduced context under heavier masking. For p ≤ 0.005, the pipeline improves average BER (Fig. 1) with harm rate below 3.4%.
+
+Fig. 5. Per-stage latency versus p for 4-bit and 8-bit LLMs. LLM inference dominates.
+E. Latency Breakdown
+Fig. 5 shows per-stage latency (NVIDIA T4 via Google Colab). For the 4-bit pipeline, LLM inference dominates, increasing from 1.9 s at p = 0.001 to 48.3 s at p = 0.009; LDPC passes contribute 1.4–7.6 s and 35 ms–1.0 s, yielding a total of 3.4 s to 56.9 s. The 8-bit LLM is substantially slower (6.8–411 s), further justifying 4-bit quantization. The pipeline targets delay-tolerant text recovery; unoptimized timings are reported as conservative baselines.
+F. Robustness: LDPC Code Variation
+To verify that the pipeline is not tuned to a single code configuration, Table II evaluates two additional LDPC codes at four operating points. The pipeline consistently reduces BER2 below BER1 across all configurations: rate 3/4 (weaker protection, higher residual errors) and the shorter (512, 256) code both exhibit the same qualitative trend as the primary rate-1/2 code. Harm rates remain below 12% for all tested configurations at p ≤ 0.006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:40 UTC from IEEE Xplore. Restrictions apply.
+
+THAI: SOFT-INFORMATION LLM FUSION FOR LDPC-CODED TEXT OVER VISIBLE-LIGHT LINKS
+
+1889
+
+TABLE II PIPELINE PERFORMANCE ACROSS LDPC CONFIGURATIONS
+TABLE III EFFECT OF LLM VOTING SAMPLES S ON PIPELINE PERFORMANCE. (N, K) = (1024, 512), 4-BIT QUANTIZATION
+G. Sensitivity to Number of LLM Samples Table III reports performance versus voting samples S.
+BER2 and harm rate are essentially invariant to S: even S=1 achieves nearly the same reduction as S=7, while latency scales linearly. The main results use S=3 as a conservative choice.
+IV. CONCLUSION This letter presented an LDPC–LLM–LDPC receiver in which language-model assistance is injected in the LLR domain rather than used only for text-domain post-processing. Observable vote fractions are converted to pseudo-LLRs and fused before a second BP pass, so accepted suggestions remain constrained by LDPC parity checks. On an OLED-based VLC testbed, the method reduced mean BER at all nine operating points, with 25–59% relative improvement and harm rate below 3.4% for p ≤ 5×10−3. CER and Sentence-BERT gains track the BER gains, indicating preserved semantic fidelity. These results support delay-tolerant text recovery over noisy links.
+ACKNOWLEDGMENT The author acknowledge Ho Chi Minh City University of Technology (HCMUT), VNU-HCM for supporting this study.
+REFERENCES
+[1] IEEE Standard for Local and Metropolitan Area Networks—Part 15.7: Short-Range Optical Wireless Communications Amendment 1: Higher Rate, Longer Range Optical Camera Communication (OCC), IEEE Standard 802.15.7, 2025, pp. 1–52.
+
+[2] M. N. Munshi, L. Maret, B. Racine, A. P. A. Fischer, M. Chakaroun, and N. Loganathan, “2.85-Gb/s organic light communication with a 459-MHz micro-OLED,” IEEE Photon. Technol. Lett., vol. 35, no. 24, pp. 1399–1402, Dec. 15, 2023, doi: 10.1109/LPT.2023.3327612.
+[3] Y. Luo, A. Jukan, K. M. Sivalingam, X. Cao, S. Subramaniam, and G. Shen, “Recent advances in optical wireless communications for 6G, WLANs and beyond,” IEEE Wireless Commun., vol. 30, no. 5, pp. 8–9, Oct. 2023.
+[4] A. Jahid, M. H. Alsharif, and T. J. Hall, “A contemporary survey on free space optical communication: Potentials, technical challenges, recent advances and research direction,” J. Netw. Comput. Appl., vol. 200, Apr. 2022, Art. no. 103311.
+[5] Z. Lu et al., “Semantics-empowered communications: A tutorial-cumsurvey,” IEEE Commun. Surveys Tuts., vol. 26, no. 1, pp. 41–79, 1st Quart., 2024.
+[6] W. Yang et al., “Semantic communications for future internet: Fundamentals, applications, and challenges,” IEEE Commun. Surveys Tuts., vol. 25, no. 1, pp. 213–250, 1st Quart., 2023.
+[7] L. X. Nguyen, A. D. Raha, P. S. Aung, D. Niyato, Z. Han, and C. S. Hong, “A contemporary survey on semantic communications: Theory of mind, generative AI, and deep joint source-channel coding,” IEEE Commun. Surveys Tuts., vol. 28, pp. 2377–2417, 2026.
+[8] M. Kountouris and N. Pappas, “Semantics-empowered communication for networked intelligent systems,” IEEE Commun. Mag., vol. 59, no. 6, pp. 96–102, Jun. 2021.
+[9] H. Xie, Z. Qin, X. Tao, and Z. Han, “Toward intelligent communications: Large model empowered semantic communications,” IEEE Commun. Mag., vol. 63, no. 1, pp. 69–75, Jan. 2025.
+[10] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled semantic communication systems,” IEEE Trans. Signal Process., vol. 69, pp. 2663–2675, 2021.
+[11] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9, pp. 2584–2597, Sep. 2022.
+[12] Z. Weng and Z. Qin, “Semantic communication systems for speech transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8, pp. 2434–2444, Aug. 2021.
+[13] J. Feng, G. Cao, J. Liu, Z. Wang, Z. Liu, and Y. Ding, “Deep joint source-channel coding for wireless image transmission with auxiliary semantics,” Phys. Commun., vol. 73, Aug. 2025, Art. no. 102836. [Online]. Available: https://www.sciencedirect.com/science/article/pii/ S1874490725002393
+[14] X. Zhong et al., “Joint source-channel coding system for 6G communication: Design, prototype and future directions,” IEEE Access, vol. 12, pp. 17708–17724, 2024.
+[15] S. R. Pokhrel and A. Walid, “On large language model based joint source channel coding for semantic communication,” in Proc. 2nd Int. Conf. Found. Large Lang. Models (FLLM), Nov. 2024, pp. 322–329.
+[16] R. Ma, M. Qian, M. Gales, and K. Knill, “ASR error correction using large language models,” IEEE Trans. Audio, Speech Language Process., vol. 33, pp. 1389–1401, 2025.
+[17] S. Guo, Y. Wang, J. Ye, A. Zhang, P. Zhang, and K. Xu, “Semantic importance-aware communications with semantic correction using large language models,” IEEE Trans. Mach. Learn. Commun. Netw., vol. 3, pp. 232–245, 2025.
+[18] S. Park, H. Noh, and H. J. Yang, “Robust transmission of punctured text with large language model-based recovery,” IEEE Trans. Veh. Technol., vol. 75, no. 1, pp. 1–6, Jan. 2026.
+[19] S. Dimitrov and H. Haas, Principles of LED Light Communications: Towards Networked Li-Fi. Cambridge, U.K.: Cambridge Univ. Press, 2015.
+[20] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings using Siamese BERT-networks,” in Proc. Conf. Empirical Methods Natural Lang. Process. 9th Int. Joint Conf. Natural Lang. Process. (EMNLP-IJCNLP), 2019, pp. 3982–3992.
+[21] N. V. Khanh, P. Q. Thai, and V. D. Thanh, “Comparison of modulation methods for visible light communication system using organic LED,” in Proc. 13th Int. Conf. Signal Process. Commun. Syst. (ICSPCS), Dec. 2019, pp. 1–6.
+[22] N. V. Khanh, P. Quang Thai, K. Ho-Van, P. T. Dat, N. Tan Hung, and V. D. Thanh, “OLED-based visible light communication system using universal filtered multi-carrier,” in Proc. Int. Conf. Adv. Technol. Commun. (ATC), Oct. 2020, pp. 101–105.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:40 UTC from IEEE Xplore. Restrictions apply.
+
+

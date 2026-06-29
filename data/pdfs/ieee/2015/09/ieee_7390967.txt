@@ -1,0 +1,668 @@
+High-Throughput FPGA-based QC-LDPC Decoder
+Architecture
+Swapnil Mhaske∗, Hojin Kee†, Tai Ly†, Ahsan Aziz†, Predrag Spasojevic∗ ∗Wireless Information Network Laboratory, Rutgers University, New Brunswick, NJ, USA
+Email:{swapnil.mhaske@rutgers.edu, spasojev@winlab.rutgers.edu} †National Instruments Corporation, Austin, TX, USA Email:{hojin.kee, tai.ly, ahsan.aziz}@ni.com
+
+Abstract—We propose without loss of generality strategies to achieve a high-throughput FPGA-based architecture for a binary Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) code based on a circulant-1 identity matrix construction. We present a novel representation of the parity-check matrix (PCM) providing a multi-fold throughput gain. Splitting of the node processing algorithm enables us to achieve pipelining of blocks and hence layers. By partitioning the PCM into not only layers but superlayers we derive an upper bound on the two-layer pipelining depth for the compact representation. To validate the architecture, a decoder for the IEEE 802.11n (2012) QC-LDPC is implemented on the Xilinx Kintex-7 FPGA with the help of the FPGA IP compiler available in the NI LabVIEWTMCommunication System Design Suite (CSDSTM). It offers an automated and systematic compilation flow where an optimized hardware implementation from the LDPC algorithm was generated, achieving an overall throughput of 608Mb/s (at 260MHz). As per our knowledge this is the fastest implementation of the IEEE 802.11n QC-LDPC decoder using an algorithmic compiler.
+Index Terms—5G, mm-wave, QC-LDPC, Belief Propagation (BP) decoding, Min-Sum Approximation (MSA), layered decoding, FPGA, Intellectual Property (IP), IEEE 802.11n.
+I. INTRODUCTION
+For the next generation of wireless technology collectively termed as Beyond-4G and 5G (hereafter referred to as 5G), peak data rates of upto ten Gb/s with overall latency less than 1ms [1] are envisioned. However, due to the proposed operation in the 30-300GHz range with challenges such as short range of communication, increasing shadowing and rapid fading in time, the processing complexity of the system is expected to be high. In an effort to design and develop a channel coding solution suitable to such systems, in this paper, we present a high-throughput, scalable and reconfigurable FPGA decoder architecture.
+It is well known that the structure offered by QC-LDPC codes [2] makes them amenable to time and space efficient decoder implementations relative to random LDPC codes. We believe that, given the primary requirement of high decoding throughput, QC-LDPC codes or their variants (such as accumulator-based codes [3]) that can be decoded using belief propagation (BP) methods are highly likely candidates for 5G systems. Thus, for the sole purpose of validating the proposed architecture, we chose a standard compliant code, with a throughput performance that well surpasses the requirement of the chosen standard.
+
+Insightful work on high-throughput (order of Gb/s) BPbased QC-LDPC decoders is available, however, most of such works focus on an ASIC design [4], [5] which usually requires intricate customizations at the RTL level and expert knowledge of VLSI design. A sizeable subset of which caters to fullyparallel [6] or code-specific [7] architectures. From the point of view of an evolving research solution this is not an attractive option for rapid-prototyping. In the relatively less explored area of FPGA-based implementation, impressive results have recently been presented in works such as [8], [9] and [10]. However, these are based on fully-parallel architectures which lack flexibility (code specific) and are limited to small block sizes (primarily due to the inhibiting routing congestion) as discussed in the informative overview in [11]. Since our case study is based on fully-automated generation of the HDL, we compare our results with another state-of-the-art implementation [12] in Section IV. Moreover, in this paper, we provide without loss of generality, strategies to achieve a high-throughput FPGA-based architecture for a QC-LDPC code based on a circulant-1 identity matrix construction.
+The main contribution of this brief is a compact representation (matrix form) of the PCM of the QC-LDPC code which provides a multi-fold increase in throughput. In spite of the resulting reduction in the degrees of freedom for pipelined processing, we achieve efficient pipelining of two-layers and also provide without loss of generality an upper bound on the pipelining depth that can be achieved in this manner. The splitting of the node processing allows us to achieve the said degree of pipelining without utilizing additional hardware resources. The algorithmic strategies were realized in hardware for our case study by the FPGA IP [13] compiler in LabVIEWTM CSDSTM which translated the entire softwarepipelined high-level language description into VHDL enabling state-of-the-art rapid-prototyping. We have also demonstrated the scalability of the proposed architecture in an application that achieves over 2Gb/s of throughput [14].
+The remainder of this paper is organized as follows. Section II describes the QC-LDPC codes and the decoding algorithm chosen for this implementation. The strategies for achieving high throughput are explained in Section III. The case study is discussed in Section IV, and we conclude with Section V.
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-4o7w9n9lo-a8d0e9d1o-n8/J1u5ne/$2341,2.00026©a2t 1061:534I:E46EUETC from IEEE Xplore. Restrictions apply.
+
+II. QUASI-CYCLIC LDPC CODES AND DECODING
+LDPC codes are a class of linear block codes that have been shown to achieve near-capacity performance on a broad range of channels. Invented by R. Gallager [15] in 1960, they are characterized by a low-density (sparse) PCM representation. Mathematically, given k message bits, an LDPC code is a nullspace of its m × n PCM H, where m denotes the number of parity-check equations or parity-bits and n (= k + m) denotes the number of variable nodes or code bits [2]. In the Tanner graph [2] representation, the ith check node CN is connected to the jth variable node VN if H(i, j) = 1, 1 ≤ i ≤ m and 1 ≤ j ≤ n.
+
+A. Quasi-Cyclic LDPC Codes
+QC-LDPC codes belong to the class of structured codes
+that do not significantly compromise performance relative to
+randomly constructed LDPC codes. The construction of QCLDPC codes relies on an mb ×nb matrix Hb sometimes called as the base matrix which comprises of cyclically right-shifted identity and zero submatrices both of size z × z where, z ∈ Z+, 0 ≤ ib ≤ (mb − 1) and 0 ≤ jb ≤ (nb − 1), the shift value, s = Hb(ib, jb) ∈ S = {−1} ∪ {0, . . . z − 1}. The PCM matrix H is obtained by replacing s by Is if s ∈ S\{−1} and by 0 if s ∈ {−1}, where, Is is an identity matrix of size z which is cyclically right-shifted by s = Hb(ib, jb) and 0 is the all-zero matrix of size z × z.
+
+B. Scaled Min-Sum Algorithm for Decoding QC-LDPC Codes
+
+LDPC codes can be decoded using message passing (MP) or BP [15], [16] on the bipartite Tanner graph. In this work we have employed the efficient decoding algorithm presented in [17], with a pipelining schedule based on the row-layered decoding technique [18], detailed in Section III-C.
+
+Definition 1. For 1 ≤ i ≤ m and 1 ≤ j ≤ n, let vj denote the jth bit in the length n codeword and yj = vj + nj denote the
+corresponding received value from the channel corrupted by
+the noise sample nj. Let the variable-to-check (VTC) message from VN j to CN i be qij and, let the check-to-variable (CTV) message from CN i to VN j be rij. Let the a posteriori probability ratio for variable node j be denoted as pj.
+
+The steps of the scaled-MSA are given below.
+1) Initialization: The a posteriori probability as the LogLikelihood Ratio (LLR) pj for the VN j and the CTV messages are initialized,
+
+pj(0) = ln
+
+P (vj = 0|yj) P (vj = 1|yj)
+
+,
+
+1≤j≤n
+
+(1)
+
+ri(j0) = 0, 1 ≤ i ≤ m, 1 ≤ j ≤ n
+
+2) Iterative Process: During the tth decoding iteration,
+
+qi(jt) = pj(t−1) − ri(jt−1)
+
+(2)
+
+ri(jt) = a ·
+
+sign
+
+qi(kt)
+
+· min
+k∈N (i)\{j}
+
+|qi(kt)|
+
+(3)
+
+k∈N (i)\{j}
+
+p(jt) = qi(jt) + ri(jt)
+
+(4)
+
+where, 1 ≤ i ≤ m, and k ∈ N (i)\{j} represents the set of
+the VN neighbors of CN i excluding VN j.
+3) Decision Rule: 1 ≤ i ≤ m, vˆj = 0 if pj < 0 else, vˆj = 1. 4) Stopping Criteria: If vˆHT = 0 or t = tmax (maximum number of decoding iterations), declare vˆ as the decoded
+codeword.
+
+We scale the CTV messages by a factor a (set to 0.75) to compensate for the performance loss due to the MSA approximation [19]. The above algorithm provides advantages [17], [20] such as, a single processing unit is required for both CN and VN message updates, memory storage is reduced on account of the on-the-fly computation of the VTC messages qij and the algorithm converges faster than the standard MP flooding schedule requiring fewer decoding iterations.
+
+III. TECHNIQUES FOR HIGH-THROUGHPUT
+In this section, without loss of generality, we present strategies to achieve a high-throughput FPGA architecture for a MSA-based QC-LDPC decoder.
+
+A. Linear Complexity Node Processing
+The hardware elements that process equations (2)-(4) are collectively referred to as the Node Processing Unit (NPU). In equations (2)-(4), the degree of CN i is dci , the complexity of processing the minimum value (in terms of the comparisons required) is O(dc2i ). To achieve linear complexity O(dci ), in our implementation the minimum value is computed in two phases or passes: first (global) pass where the first and the second minimum (the smallest value in the set excluding the minimum value of the set) are computed and the second (local) pass where the overall minimum is computed. A similar approach is found in [21], [4]. Based on the functionality of the two passes, the NPU is divided into the Global NPU (GNPU) and the Local NPU (LNPU). A detailed algorithm is given in [20].
+
+B. z-fold Parallelization of NPUs
+The CN message computation given by equation (3) is repeated m times in a decoding iteration i.e. once for each CN. A straightforward serial implementation of this kind is slow and undesirable.
+
+Fact 1. An arbitrary submatrix Is in the PCM H corresponds to z CNs connected to z VNs on the bipartite graph, with strictly 1 edge between each CN and VN.
+
+As no CN in the set of z CNs given by Is shares a VN with another CN in the same set, we operate z NPUs in parallel (hereafter referred to as an NPU array), resulting in a z-fold
+increase in throughput.
+
+C. Layered Decoding
+The flooding schedule [15], becomes quickly intractable in hardware due to the complex interconnect pattern between the nodes of the bipartite graph and usually restricts itself to a specific code structure. In the efficient scaled-MSA algorithm
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:34:46 UTC from IEEE Xplore. Restrictions apply.
+
+(Section II-B) one can process multiple nodes at the same time if the following condition is satisfied.
+
+Fact 2. From the perspective of CN processing, two or more CNs can be processed at the same time (i.e. they are independent of each other) if they do not have one or more VNs (code bits) in common.
+
+The subset of rows satisfying Fact 2 is termed as a row-layer
+
+(hereafter referred to as a layer). In other words, given a set
+
+L = {L1, L2, . . . , LI } of I layers in H, ∀u ∈ {1, 2, . . . , I} and ∀i, i ∈ Lu, then, N (i) ∩ N (i ) = φ. We choose |Lu| = |Lu | = z [20]. From the VN or column perspective, |Lu| = z, ∀u = {1, 2, . . . , I} implies that, the columns of H are also
+
+divided into subsets of size z (called as block columns from
+
+now
+
+on)
+
+given by
+
+the
+
+set
+
+B
+
+=
+
+{B1, B2, . . . , BJ },
+
+J
+
+=
+
+n z
+
+=
+
+nb.
+
+The VNs belonging to a block column may participate in CN
+
+equations across several layers. We call the intersection of a
+
+layer and a block column as a block. Two or more layers
+
+Lu, Lu are said to be dependent with respect to the block column Bw if, Hb(u, w) = −1 and, Hb(u , w) = −1., ∀w ∈ {1, 2, . . . , J}
+
+D. Compact Representation of Hb
+Before we discuss the pipelined processing of layers, we present a novel compact (thus efficient) matrix representation leading to a significant improvement in throughput. We call 0 submatrices in H (corresponding to a −1 in Hb) as invalid blocks, since there are no edges between the corresponding CNs and VNs. The other submatrices Is are called valid blocks. In a conventional approach to scheduling for e.g. in [5], message computation is done over all the valid and invalid blocks. To avoid processing invalid blocks, we propose an alternate representation of Hb in the form of two (mβ × nβ) matrices: βI , the block index matrix (Table I) and βS, the block shift matrix (Table II). βI and βS hold the index
+
+Layers ↓
+
+Blocks −→
+
+b1
+
+b2
+
+b3
+
+b4
+
+b5
+
+b6
+
+b7
+
+b8
+
+L1
+
+0
+
+4
+
+6
+
+8
+
+10
+
+12
+
+13
+
+-1
+
+L2
+
+0
+
+2
+
+4
+
+8
+
+9
+
+13
+
+14
+
+-1
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+L12
+
+0
+
+2
+
+4
+
+7
+
+8
+
+11
+
+12
+
+23
+
+Table I: Portion of the block index matrix βI showing the valid blocks (highlighted) to be processed.
+
+locations and the shift values (and hence the connections
+between the CNs and VNs) corresponding to only the valid blocks in Hb respectively. The algorithm to construct βI is given in [20]. To quantify the benefit of this alternate
+representation, let us define the following ratio.
+
+Definition 2. Let λ denote the compaction ratio, which is the
+
+ratio of the number of columns of βI (which is the same for
+
+βS)
+
+to
+
+the
+
+number
+
+of
+
+columns
+
+of
+
+Hb.
+
+Hence,
+
+λ
+
+=
+
+J nb
+
+.
+
+The compaction ratio λ is a measure of the compaction
+
+achieved by the alternate representation of Hb. Compared
+
+to the conventional approach to scheduling node processing
+
+mentioned above, scheduling as per the βI and βS matrices
+
+improves throughput by
+
+study in Section IV, λ =
+
+of
+
+1 λ
+
+=
+
+3.
+
+1
+λ8 24
+
+times. For example, in the
+
+=
+
+1 3
+
+provides
+
+a
+
+throughput
+
+case gain
+
+E. Layer-Pipelined Decoder Architecture
+
+We now discuss the pipelined processing of blocks (hence layers) owing to the linear complexity processing shown in Section III-A.
+
+Fact 3. If a block column of βI has a particular index value appearing in more than one layer, then the layers corresponding to that value are dependent.
+
+In other words, ∀u, u ∈ {1, 2, . . . , I}, ∀w ∈ {1, 2, . . . , J}, if, βI (u, w) = βI (u , w) then, the layers Lu and Lu are dependent. To process all layers in parallel, the condition, βI (u, w) = βI (u , w) must hold for ∀u, u ∈ {1, 2, . . . , I}. Thus we rearrange the βI matrix elements from their original
+
+Layers ↓
+
+Blocks −→
+
+b1
+
+b2
+
+b3
+
+b4
+
+b5
+
+b6
+
+b7
+
+b8
+
+L1
+
+0
+
+4
+
+8
+
+13
+
+6
+
+10
+
+12
+
+-1
+
+L2
+
+9
+
+0
+
+4
+
+8
+
+13
+
+14
+
+2
+
+-1
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+L12
+
+8
+
+0
+
+2
+
+23
+
+4
+
+12
+
+7
+
+11
+
+Table II: Portion of the rearranged block index matrix βI used for our work, showing the valid blocks (highlighted) to be processed.
+
+order to get βI . If βI (u, w) = βI (u , w), u < u then stagger the execution of βI (u , w) with respect to βI (u, w) by moving βI (u , w) to βI (u , w ), w < w . Table II shows one such rearrangement of βI for the QC-LDPC code for our case study. However, some dependencies still remain (shown in blue in Table II).
+Remark 1. Although such a rearrangement has be done (for e.g. [21], [4]), here we perform rearrangement on βI that allows for much fewer degrees of freedom as J = λnb. Thus, there is an upper bound on the extent to which two layers can be pipelined with minimum overhead, we derive this bound below.
+Fig. 1(a) shows the block-level view of the NPU timing diagram without the pipelining of layers. As seen in Section III-A, the GNPU and LNPU operate in tandem and in that order, implying that the LNPU has to wait for the GNPU updates to finish. The layer-level picture is depicted in Fig. 1(c). This idling of the GNPU and LNPU can be avoided by introducing pipelined processing of blocks given by the following Lemma.
+Lemma 1. Within a superlayer (set of layers L satisfying Fact 2), while the LNPU processes messages for the blocks β (u, w), the GNPU can process messages for the blocks β (u + 1, w), u = {1, 2, . . . , |L| − 1} and w = {1, 2, . . . , J}.
+Proof. Follows directly from the layer independence condition in Fact 2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:34:46 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2: High-level decoder architecture. showing the z-fold parallelization of the NPUs with an emphasis on the splitting of the sign and the minimum computation given in equation (3). Note that, other computations in equations (2)-(4) are not shown for simplicity here. For both the pipelined and the nonpipelined versions, processing schedule for the block processing loop is as per Fig. 1(b) and that for the layer processing loop is as per Fig. 1(d).
+
+Fig. 1(b) illustrates the block-level view of this 2-layer pipelining scheme. It is important to note that, the splitting of the NPU process into two parts (Section III-A), namely, the GNPU and the LNPU (that work in tandem) is a necessary condition for Lemma 1 to hold.
+
+Definition 3. Without loss of generality, the pipelining efficiency ηp is the number of layers processed per unit time per NPU array.
+
+For the case of pipelining two layers shown in Fig. 1(d), ηp(2) =
+
+|L| |L|+1
+
+.
+
+Thus,
+
+we
+
+impose
+
+following
+
+conditions
+
+on
+
+|L|:
+
+1) Since, two layers are processed in the pipeline at any given
+
+time, |L| ∈ F = {x : x is an even factor of I}.
+
+2) Given a QC-LDPC code, |L| is a constant. This is to
+
+facilitate a symmetric pipelining architecture which is a
+
+scalable solution.
+
+3) Choice of |L| should maximize pipelining efficiency ηp, l∗ = arg max|L|∈F ηp.
+
+For example, in the case study, I = mb = 12, F = {2, 4, 6} and, l∗ = arg max|L|∈F ηp = 6.
+
+High-level Architecture: The high-level decoder architecture
+for both the versions is shown in Fig. 2. Code parameters such as βI , βs and n are stored in the ROM. A posteriori probability (APP) values and the CN messages are allocated separate RAM. The barrel shifter circularly rotates (z × f ) APP values to the right by using the shift values from the βs, effectively implementing the connections between the CNs and
+VNs. The GNPU and LNPU arrays compute messages which
+are stored back at their respective locations in the respective
+RAMs for processing the next block.
+
+IV. CASE STUDY
+We believe that the family of structured LDPC codes are highly likely candidates for 5G systems. Thus, to demonstrate the initial phase of our FPGA decoder architecture [20], we
+
+Figure 3: Bit Error Rate (BER) performance comparison between uncoded BPSK (rightmost), rate=1/2 LDPC decoder used in the case study with 4 iterations using fixed-point data representation (second from right), rate=1/2 LDPC with 8 iterations using fixed-point representation (third from right), rate=1/2 LDPC with 8 iterations using floating-point representation (leftmost).
+provide a case study based on the QC-LDPC code specified in the IEEE 802.11n (2012) standard [22]. For this code, mb × nb = 12 × 24, z = 27, 54 and 81 resulting in code lengths of n = 24 × z = 648, 1296 and 1944 bits respectively. Our implementation supports the submatrix size of z = 81 and hence is capable of supporting all the block lengths for the rate R = 1/2 code. At the time of writing this paper, we have implemented two versions, the 1x (non-pipelined, Fig. 1 (a) and (c)) and the 2x (pipelined, Fig. 1 (b) and (d)). For both versions, input LLRs from the channel and the CTV and VTC messages are represented with 6 signed bits and 4 fractional bits. Fig. 3 shows the bit-error rate (BER) performance for the floating-point and the fixed-point data representation (0.5dB worse as expected, Fig. 3) with 8 decoding iterations. The decoder algorithm for both versions was described using the FPGA IP compiler [13] in LabVIEWTM CSDSTM. We would like to emphasize here that, both the versions were described in software at the algorithmic description level and not the HDL level. The algorithmic compiler translated the high-level description to an HDL description for the case study decoder implementation. The VHDL code was synthesized, placed and routed using the Xilinx Vivado compiler on the Xilinx Kintex7 FPGA available on the NI PXIe-7975R FPGA board. The 2x version achieves an overall throughput of 608Mb/s with a clock rate of 260MHz and a latency of 5.7μs. As seen in Table III, resource usage for the 2x version is close to that of the 1x version in spite of the 1.8x gain in throughput. The FPGA IP compiler chooses to use more Flip-Flops (FFs) for data storage in the 1x version, while it uses more BRAM in 2x version. A contemporary implementation of the IEEE 802.11n LDPC decoder using high-level algorithmic description compiled to an HDL on an FPGA [12] utilizes 2% of slice registers, 3% of slice LUTs and 20.9% of Block RAMs on the Spartan-6 LX150T FPGA with a comparable BER performance. 2.06 Gb/s LDPC Decoder [23], [14]: An application of this work has been demonstrated in IEEE GLOBECOM’14 where the QC-LDPC code for our case study was decoded with a throughput of 2.06 Gb/s, validating the scalability of the architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:34:46 UTC from IEEE Xplore. Restrictions apply.
+
+GNPU array LNPU array
+
+βI'(1,1)
+
+βI'(1,2)
+
+... βI'(1,nβ)
+βI'(1,1) βI'(1,2)
+
+βI'(2,1) βI'(2,2)
+... βI'(1,nβ)
+
+... βI'(2,nβ)
+βI'(2,1) βI'(2,2)
+
+... ... βI'(2,nβ) ...
+
+1 block
+
+(a)
+
+GNPU array LNPU array
+
+βI'(1,1) βI'(1,2)
+
+... βI'(1,nβ) βI'(2,1) βI'(2,2)
+βI'(1,1) βI'(1,2)
+
+... βI'(2,nβ) βI'(3,1) βI'(3,2) ... βI'(1,nβ) βI'(2,1) βI'(2,2)
+
+... βI'(3,nβ) βI'(4,1) βI'(4,2) ... βI'(4,nβ) ... ... βI'(2,nβ) βI'(3,1) βI'(3,2) ... βI'(3,nβ) ...
+
+(b)
+
+GNPU array LNPU array
+GNPU array LNPU array
+
+L1 L1
+1 layer
+
+L1
+
+L2
+
+L1
+
+L2
+
+...
+
+Lmβ/2
+
+Lmβ/2+1
+
+Lmβ/2+2
+
+...
+
+...
+
+Lmβ/2-1
+
+Lmβ/2
+
+Lmβ/2+1
+
+...
+
+(c)
+
+L3
+
+...
+
+Lmβ/2-1
+
+Lmβ/2
+
+Lmβ/2+1 Lmβ/2+2 Lmβ/2+3
+
+...
+
+L2
+
+...
+
+Lmβ/2-2
+
+Lmβ/2-1
+
+Lmβ/2
+
+Lmβ/2+1
+
+Lmβ/2+2
+
+...
+
+1 superlayer
+
+(d)
+
+Lmβ-1
+Lmβ-1 Lmβ-2
+
+Lmβ
+
+...
+
+Lmβ ...
+
+Lmβ
+
+...
+
+Lmβ-1
+
+Lmβ
+
+...
+
+time
+
+Figure 1: Block-level view of the pipeline timing diagram for a circulant-1 identity submatrix construction based QC-LDPC code (see Section II) (a) without pipelining, (b) with pipelining. Layer-level view of the pipeline timing diagram (a) without pipelining, (b) with pipelining.
+
+1x
+
+2x
+
+Device
+
+Kintex-7k410t Kintex-7k410t
+
+Throughput(Mb/s) 337
+
+608
+
+FF(%)
+
+9.1
+
+5.3
+
+BRAM(%)
+
+4.7
+
+6.4
+
+DSP48(%)
+
+5.2
+
+5.2
+
+LUT(%)
+
+8.7
+
+8.2
+
+Table III: Resource utilization & throughput on the Xilinx Kintex-7 FPGA.
+
+V. CONCLUSION
+In this brief we have proposed techniques to achieve highthroughput performance for a MSA based decoder for QCLDPC codes. The proposed compact representation of the PCM provides significant improvement in throughput. An IEEE 802.11n (2012) decoder is implemented which attains a throughput of 608Mb/s (at 260MHz) and a latency of 5.7µs on the Xilinx Kintex-7 FPGA. The FPGA IP compiler greatly reduces prototyping time and is capable of implementing complex signal processing algorithms. There is undoubtedly more scope for improvement, nevertheless, our current results are promising.
+REFERENCES
+[1] M. Cudak, A. Ghosh, T. Kovarik, R. Ratasuk, T. Thomas, F. Vook, and P. Moorut, “Moving Towards Mmwave-Based Beyond-4G (B-4G) Technology,” in IEEE 77th VTC Spring ’13, June 2013, pp. 1–5.
+[2] D. Costello and S. Lin, Error control coding. Pearson, 2004. [3] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge
+University Press, 2009. [4] Y. Sun and J. Cavallaro, “VLSI Architecture for Layered Decoding of
+QC-LDPC Codes With High Circulant Weight,” IEEE Transactions on VLSI Systems, vol. 21, no. 10, pp. 1960–1964, Oct 2013. [5] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for QC-LDPC codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, Aug 2009. [6] N. Onizawa, T. Hanyu, and V. Gaudet, “Design of high-throughput fully parallel ldpc decoders based on wire partitioning,” IEEE Transactions on VLSI Systems, vol. 18, no. 3, pp. 482–489, Mar 2010. [7] T. Mohsenin, D. Truong, and B. Baas, “A low-complexity messagepassing algorithm for reduced routing congestion in ldpc decoders,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 57, no. 5, pp. 1048–1061, May 2010.
+
+[8] A. Balatsoukas-Stimming and A. Dollas, “FPGA-based design and implementation of a multi-Gbps LDPC decoder,” in International Conference on Field Programmable Logic and Applications (FPL), Aug 2012, pp. 262–269.
+[9] V. Chandrasetty and S. Aziz, “FPGA Implementation of High Performance LDPC Decoder Using Modified 2-Bit Min-Sum Algorithm,” in International Conference on Computer Research and Development, May 2010, pp. 881–885.
+[10] R. Zarubica, S. Wilson, and E. Hall, “Multi-gbps fpga-based low density parity check (ldpc) decoder design,” in IEEE GLOBECOM ’07, Nov 2007, pp. 548–552.
+[11] P. Schla¨fer, C. Weis, N. Wehn, and M. Alles, “Design space of flexible multigigabit ldpc decoders,” VLSI Design, vol. 2012, p. 4, 2012.
+[12] E. Scheiber, G. H. Bruck, and P. Jung, “Implementation of an LDPC decoder for IEEE 802.11n using Vivado TM High-Level Synthesis,” in International Conference on Electronics, Signal Processing and Communication Systems, 2013.
+[13] H. Kee, S. Mhaske, D. Uliana, A. Arnesen, N. Petersen, T. L. Riche, D. Blasig, and T. Ly, “Rapid and high-level constraint-driven prototyping using LabVIEW FPGA,” in IEEE GlobalSIP 2014, 2014, pp. 45–49.
+[14] S. Mhaske, D. Uliana, H. Kee, T. Ly, A. Aziz, and P. Spasojevic, “A 2.48Gb/s QC-LDPC Decoder Implementation on the NI USRP-2953R,” in arXiv.org, May 2015, pp. 1–5, http://arxiv.org/abs/1505.04339v1.
+[15] R. G. Gallager, “Low-density parity-check codes,” Information Theory, IRE Transactions on, vol. 8, no. 1, pp. 21–28, 1962.
+[16] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor graphs and the sumproduct algorithm,” Information Theory, IEEE Transactions on, vol. 47, no. 2, pp. 498–519, Feb 2001.
+[17] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient Serial MessagePassing Schedules for LDPC Decoding,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4076–4091, Nov 2007.
+[18] M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. on VLSI Systems, vol. 11, no. 6, pp. 976–996, Dec 2003.
+[19] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of ldpc codes and extension to turbo decoding,” in IEEE ISIT ’01, 2001, p. 189.
+[20] S. Mhaske, H. Kee, T. Ly, A. Aziz, and P. Spasojevic, “Strategies for High-Throughput FPGA-based QC-LDPC Decoder Architecture,” in arXiv.org, May 2015, pp. 1–10, http://arxiv.org/abs/1503.02986v3.
+[21] K. Gunnam, G. Choi, M. Yeary, and M. Atiquzzaman, “VLSI Architectures for Layered Decoding for Irregular LDPC Codes of WiMax,” in IEEE ICC ’07, June 2007, pp. 4542–4547.
+[22] “IEEE Std. for Information Technology–Telecommunications and information exchange between LAN and MAN–Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications,” IEEE P802.11-REVmb/D12, Nov 2011, pp. 1–2910.
+[23] H. Kee, D. Uliana, A. Arnesen, N. Petersen, T. Ly, A. Aziz, S. Mhaske, and P. Spasojevic, “Demonstration of a 2.06Gb/s LDPC Decoder,” in IEEE GLOBECOM ’14, Dec 2014, https://www.youtube.com/watch?v= o58keq-eP1A.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:34:46 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,470 @@
+A UNIFIED INSTRUCTION SET PROGRAMMABLE ARCHITECTURE FOR MULTISTANDARD ADVANCED FORWARD ERROR CORRECTION
+Frederik Naessens, Bruno Bougard, Siebert Bressinck, Lieven Hollevoet, Praveen Raghavan, Liesbet Van der Perre, Francky Catthoor
+
+IMEC, Leuven, Belgium {naessen, bougardb, bressinck, hollevo, ragha, vdperre, catthoor}@imec.be
+
+ABSTRACT
+The continuously increasing number of communication standards to be supported in nomadic devices combined with the fast ramping design cost in deep submicron technologies claim for highly reusable and flexible programmable solutions. Software Defined Radio (SDR) aims at providing such solutions in radio baseband architectures. Great advances were recently booked in handset-targeted SDR, covering most of the baseband processing with satisfactory performance and energy efficiency. However, as it typically depicts a magnitude higher computation load, forward error correction (FEC) has been excluded from the scope of high throughput SDR solutions and let to dedicated hardware accelerators. The currently growing number of advanced FEC options claims however for flexibility there too. This paper presents the first application-specific instruction programmable architecture addressing in a unified way the emerging turbo- and LPDC coding requirements of 3GPPLTE, IEEE802.11n, IEEE802.16(e) and DVB-S2/T2. The proposal shows a throughput from 0.07 to 1.25Mbps/MHz with efficiencies round 0.32nJ/bit/iter in turbo mode and round 0.085nJ/bit/iter in LDPC mode. The area is lower than the cumulated area of dedicated turbo and LDPC solution.
+1. INTRODUCTION
+Nowadays mobile devices are integrating an increasing variety of wireless communication and connectivity standards, each depicting a multitude of operation modes. This diversity, combined with the increasing cost of silicon implementation claims for flexible implementations wherever possible. The Tier-2 Software Defined Radio (SDR) approach, where the whole baseband functionality is run on a programmable architecture, is an attractive way to obtain that flexibility. Great advances were recently booked in SDR for mobile application. Multiple SDR processors have been proposed, covering most of the baseband processing with satisfactory performance and energy efficiency [1,2,3]. In [2,3], forward error correction is implemented on the same processor as the rest of the baseband.
+
+More recent developments have been tackling high throughput communication standards such as IEEE 802.11n and 3GPP LTE [4,5,6,7]. However, as it typically depicts a magnitude higher computation load, forward error correction (FEC) has been excluded from the scope of most of these high throughput solutions and let to loosely-coupled dedicated hardware accelerators. Lots of research is being carried out about efficient implementation of such hardwired accelerators. Early efficient high throughput architectures for turbo decoding were proposed in [8,9]. For LDPC decoding, a survey can be found in [10]. Architecture friendly codes and their efficient implementation are discussed in [11]. Recent developments relative to the implementation of the DVB-S2 LDPC standard can be found in [12,13,14]. The number of advanced FEC options for broadband communication standard is however also growing rapidly. Besides 3GPP where convolutional turbo codes are used for a while, the IEEE adopted LDPC coding schemes as optional for the third WLAN generation (IEEE 802.11n) as well as for fixed broadband wireless access (IEEE 802.16a) and their mobility extension (IEEE 802.16e). IEEE 802.16 also consider convolutional and block turbo codes as other optional schemes. Advanced forward error correction is also getting popular in broadcast standards. For instance, LDPC is used in DVB-S2/T2. Although these applications have a lower channel throughput, high throughput implementations are still required to enable multi-channel viewing and recording in set-top-boxes. Flexibility is hence required for advanced FEC too. To address this need, recent contributions were looking at application-specific instruction set processor (ASIP) implementations [15,16,17]. These solutions enable running different kind of turbo codes as well as Viterbi decoding on the same processor. However, no ASIP architectures have been presented yet that allows one to map both turbo and LDPC decoding at high throughput, with full memory architecture sharing, full datapath reuse and high energy efficiency. This paper presents the first application-specific instruction programmable architecture addressing in a unified way the emerging turbo- and LPDC coding requirements of 3GPP-
+
+978-1-4244-2924-0/08/$25.00 ©2008 IEEE
+
+31
+
+SiPS 2008
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+LTE, IEEE802.11n, IEEE802.16(e) and DVB-S2/T2. The proposal shows a throughput from 0.07 to 1.25Mbps/MHz with efficiencies round 0.32nJ/bit/iter in turbo mode and 0.085nJ/bit/iter in LDPC mode. The area is lower than the cumulated area of dedicated turbo and LDPC solutions Although the proposed architecture also depicts a reconfigurable turbo and LDPC encoder, the focus of this paper is set on the decoding structure, which is the most challenging. The remainder of this paper is structured as follows. In section 2, the basic principles of both turbo and LDPC decoding are revised and the classical way to parallelize them explained. The proposed programmable decoder architecture is detailed in section 3. Section 4 focuses on the throughput, area and power consumption estimations. As well, several instantiation use-cases are detailed. Section 5 concludes the paper.
+2. HIGH THROUGHPUT FEC DECODING
+As they perform very close to the Shannon limit, both low-density parity-check (LDPC) and turbo codes are either mandatory or optional in all emerging wireless standards. Their main drawback however is their high computational complexity. Achieving high throughput decoding hence requires a massively parallel architecture. In the next subsections the possibilities of parallel decoding within turbo and LDPC mode will be detailed.
+2.1. Parallel Turbo decoding
+Decoding a turbo code requires iterating maximum a posteriori (MAP) decoding of the constituent codes and (de)interleaving operations. We have chosen to use the logMAP with max* approximation. The parallelization of the log-MAP can be done either by augmenting the radix factor [8] or by computing in parallel multiple “windows” out of the coded block [9]. Figure 1 depicts the operation of a parallel log-MAP decoder with parallel windows. The top part (a) recalls the classical sliding windows log-MAP decoding flow [21]. A forward recursion, given by (1) is applied to the input symbol metrics (γ). Part of the backward recursion (2) is started after a window of M inputs is treated by the forward recursion. The recursion is then initialized either using a training sequence applied on the symbol metrics from the adjacent window, or using backward state metrics (β) from a previous iteration (next iteration initialization, NII). Based on the state metrics output of the forward (α) and backward (β) recursions, next to the input symbol metrics (γ), the log-MAP outputs (extrinsic information, e) can be computed. Using NII is preferred as it leads to more regular data flow. That way, as shown in the bottom part of the figure (b), the log-MAP decoding can easily be parallelized by computing several windows in parallel.
+
+α 'k (m) = max*m' (α 'k −1 (m') + γ 'k (m', m))
+
+(1)
+
+β 'k (m) = max*m' (β 'k +1 (m') + γ 'k +1 (m', m))
+
+(2)
+
+e(dk ) = max*m,m' (α'k−1 (m') + γ '1k (m, m') + β 'k (m))
+
+− max*m,m' (α'k−1 (m') + γ '0k (m, m') + β 'k (m)) − Lsyst − Lapriori (3)
+
+Besides the log-MAP, interleaving operations must also be parallelized. As interleaving means intrinsically permutation the data out of a memory, parallelizing it requires to use multiple memory banks and handle potential collision in read and write operations. For this, collision free interleaving patterns or collision-resolution architectures were proposed in [18] and [19] respectively. Later, Tarable proved in [20] that any interleaving law can be mapped onto any parallel multi-banked architecture. He also proposed an annealing algorithm that is proven to always converge to a valid mapping function.
+In this work, we are capitalizing on the multi-window log-MAP parallelization combined with Tarable’s interleaving law mapping. Contrarily as what we did in [9] however, we do not parallelize the forward and backward recursion anymore. This is to enable single instruction multiple data (SIMD) implementation of the datapath. If SIMD is used to parallelize multiple windows, a restriction is that the same operation has to be applied to all the parallelized windows at the same time. With our original parallelization [9], each “worker” (structure implementing two adjacent windows) had to operate forward and backward steps in parallel, which is impossible in SIMD. Also, for the same reason, the computation of γs, αs and βs over the branches or states are serialized.
+
+F F
+
+F F
+
+F F
+
+F F
+
+Figure 1 - Parallel log-MAP decoder
+2.2. Parallel Ldpc decoding
+When considering a (n,k) LDPC code, with k information bits and n coded bits the parity check matrix H is of
+dimension [(n-k) × n]. Simulations have shown that the
+layered decoding reduces the number of iterations needed to converge [11,22]. In layered decoding [23,24] the parity check matrix needs to be decomposable into m sub-matrices
+with size [z × n], also called super-codes as depicted on
+
+32
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2. For every super-code, the position of 1s is restricted such that, per column in a super-code, only zero or one non-zero element is allowed. For the standards in scope this property is either automatically met, through the fact that the sub-matrices within the super-codes are either zero matrices or cyclic permuted identity matrices, or can be derived.
+
+shuffler. The key idea is to hide the scrambling needed by the LDPC and interleaving required by the turbo-decoding using reconfigurable address generation units (rAGU).
+The parallel log-MAP or LDPC checknode processing are implementing the algorithms explained in section 2. The corresponding programs, written in assembly, assume a virtual address space where collisions never happen. This virtual address space is mapped to physical background memory addresses and read-in/write-out crossbar control using the rAGUs. The rAGUs are configured with look-up table (LUT).
+
+3.2. Decoder architecture
+
+Figure 2 - LDPC Layered Decoding
+
+Due to the latter property, within a layer, the check node updates and corresponding bit node updates can be done in parallel since there is only one edge from every bit node towards a check node in a layer. Intrinsically this enables z parallel processing threads each performing check node updates and message node updates corresponding to a row within the layer of the parity check matrix. An overview of the possible z values within the standards in scope is summarized in Table 1.
+
+Table 1 - z-value Within Standards in Scope
+
+Standard
+
+z value
+
+IEEE802.11n
+
+{27,54,81}
+
+IEEE802.16(e)
+
+{24,28,32, … , 92,96}
+
+DVB-S2/T2
+
+360
+
+In order to achieve the best BER performance, the turbodecoder-based approach, with the max* [11] approximation is favored. Within the z parallel processing threads, the calculation of the forward and backward recursion metrics as well as the bit node update messages can be calculated.
+
+3. UNIFIED ARCHITECTURE
+
+3.1. Concept
+
+The high degree of parallelism possible in the turbo and LDPC decoding algorithms as detailed in section 2, paves the way for a wide SIMD architecture. The decoder architecture consisting out of K processors each having a Nslot SIMD processor is depicted in Figure 3. Besides the SIMD pipeline the processor instances also contain a control unit with allocated program memory and register file, vector register file and vector cache.
+The SIMD processing is using virtual linear addressing, made possible through the shuffler and rotation engine blocks, which can perform permutations on the data stored within the background memory banks. Selection of the words within the memory banks and shuffle control is made possible through the rAGU.
+
+,QSXW ILIR
+
+RXWSXW ILIR
+
+,QSXWRXWSXW ,QWHUIDFH
+
+$*8 $*8
+
+%DFNJURXQG 0HPEDQNV
+
+$*8 $*8
+
+%DFNJURXQG 0HPEDQN V
+
+$*8
+
+%DFNJURXQG
+
+
+
+0HPEDQN V
+
+$*8
+
+5RWDWLRQ VXSSRUW
+
+6KXIIOHU 65) $OLJQHGVFUDWFKSDG
+
+65)
+
+6KXIIOHU 5RWDWLRQHQJLQH
+$OLJQHGVFUDWFKSDG
+
+&RQWURO
+
+1ZD\6,0' &RQWURO
+
+1ZD\6,0'
+
+XQLW
+
+SLSHOLQH
+
+XQLW
+
+SLSHOLQH
+
+
+
+3URJUDP PHP
+
+1[;[ELW
+95)
+
+1[<[ELW
+/,)2
+
+3URJUDP PHP
+
+1[;[ELW 1[<[ELW
+95) /,)2
+
+6KXIIOHU
+
+65) $OLJQHGVFUDWFKSDG
+
+&RQWURO XQLW
+
+1ZD\6,0' SLSHOLQH
+
+3URJUDP PHP
+
+1[;[ELW
+95)
+
+1[<[ELW
+/,)2
+
+&RQWUROLQWHUIDFH
+
+Figure 3 - Decoder Architecture of a K-processor N-slot SIMD Decoding Engine.
+
+The proposed unified ASIP architecture combines a wide SIMD datapath (implementing dedicated instruction to support both LDPC and turbo decoding) with a distributed memory architecture. The background memory is distributed with as many single-ported banks as SIMD slots. These are connected to the foreground memory with a bi-directional
+
+In case of LDPC requiring a high parallelization (like in DVB), a rotation engine connecting all processor cores, allowing a cyclic rotation of data from all background memory banks towards the aligned scratchpads, is present. In all other cases the shuffler is used to permute the data within each N-slot processor.
+
+33
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+3.3. Transparent background memory architecture
+Systematic stream, coded streams, extrinsic and apriori information in case of turbo decoding, codeword information in case of LDPC are stored into the background memory. The data is made available as a virtual linear memory map to the SIMD processor.
+The worst-case memory requirement, derived from the DVB LDPC mode, requires a memory depth of 180 words, for each SIMD processor slot and with a word size of 10-bit. A ping-pong implementation of this background memory enables streaming operation. rAGU1 controls the output of the previous decoded streams and the input of the next streams to be decoded, while rAGU2 provides the SIMD processing line with data and stores the results. Both rAGU are configured by a separate LUT, allowing a simplified addressing by the processor control unit.
+In turbo mode, the rAGU LUT implements the data mapping resulting from the annealing of the turbo-code interleaver law so that collisions are avoided both in direct read/write and interleave read/deinterleave write phases. We implemented Tarable’s annealing algorithm in a tool that generates the rAGU LUT configuration taking as input the interleaver table and the number of parallel slot to be used. Hence, received systematic, coded and extrinsic information inputs for each log-MAP window can be read or written in or from each slot in a collision-free way, either in direct logical order or in interleaved/deinterleaved logical order.
+An example of the transparent background memory usage for an arbitrary LDPC mode is depicted on Figure 4, with a dummy (36,18) code with z equal to 6, for which the H matrix is based on cyclic permuted identity matrices. Based on the parity check matrix the LUT table is made up, specifying the bank address and shuffler control allowing linear processing after the shuffler. Virtual addresses are generated by the processor control unit.
+Figure 4 - Transparant Background Memory in Example LDPC Mode
+The addressing within the LUT is done as follows. The codeword {d0…d35} was written into the memory bank, corresponding to the z SIMD-slot, using rAGU1. Within the processing of the first layer, the data is read and permuted to be used in the forward processing of the turbo based LDPC decoding. After the backward processing the updates for the
+
+codeword are permuted and written back into the memory, by addressing the LUT values within layer 1 in reverse order. Processing is done layer after layer, iteration after iteration.
+In this LDPC example, because of the fact the parity check matrix consists out of cyclic permuted identity matrices, the bank addresses for all slots are identical and the shuffler control is a cyclic shift. The architecture is not limited to this and can support different bank addresses per slot and an arbitrary permutation as shuffle control.
+
+3.4. Unified instruction set and datapath
+
+The selected turbo-decoder based LDPC decoding approach, using the max* operation uses the same mathematical expressions as the turbo decoding algorithm, leading to a unified instruction set. The basic instruction set is listed in Table 2.
+
+Table 2 - SIMD Processor Instruction Set
+
+Instruction
+
+Instruction details
+
+LOAD
+
+Load value from virtual linear memory
+
+STORE
+
+Store value through virtual linear memory
+
+PUSH
+
+Put value on vector LIFO and in local register
+
+POP
+
+Read value from vector LIFO
+
+ADD
+
+Addition
+
+SUBTRACT Subtract
+
+ACC
+
+Accumulate with local register file
+
+MAX*
+
+Max* operation
+
+4. PERFORMANCE AND DESIGN COST ESTIMATIONS
+
+From the decoder architecture detailed in section 3, specific instances can be derived. In the next subsections the trade-off between throughput, area and power is made, with varying number of slots N and number of processors K. In order to optimally support the parallelism present within the DVB LDPC mode, a 4 processor with 96-slot SIMD is required. For all other decoding modes, where the required parallelism is smaller or equal to the number of SIMD slots N, the processors could be used to handle independent decoding processes. Due to the SIMD implementation, the decoding loops need to be identical, mapping simultaneous LDPC and turbo decoding on single processor instance impossible.
+The clock frequency is set to 333MHz and implementation is derived for a 45nm CMOS low K, standard Vt technology.
+
+4.1. Throughput
+
+A behavior SystemC model mimicking the described decoder engine is used as basis for verification of the algorithmic decoding process as well as determining the throughput.
+
+34
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 4 and 5 show the throughput evolution in case of LDPC and turbo respectively, for different number of slots and processors. The number of iterations in case of LDPC and turbo is chosen equal to 25 and 6 respectively, as average operation mode of the error decoding schemes. We can observe that the maximum throughput scales linear with increasing number of processors and SIMD slots.
+
+400
+
+350 300
+
+250 LDPC Throughput 200
+(Mbps) 150
+
+100
+
+50
+
+0
+
+24
+
+48
+
+72
+
+96
+
+#slots (N)
+
+K=4
+
+K=3
+
+K=2 K=1
+
+#proce ssors (K)
+
+Figure 4 - LDPC Throughput Evolution with Number of Slots and Processors
+
+600
+
+500
+
+400
+Turbo code Throughput 300
+(Mbps) 200
+
+100
+
+0
+
+24
+
+48
+
+72
+
+96
+
+#slots (N)
+
+K=4
+
+K=3
+
+K=2 K=1
+
+#proce ssors (K)
+
+Figure 5 - Turbo Code Throughput Evolution with Number of Slots and number of Processors
+
+4.2. Area
+FEC processor is a heavily memory dominated design. As explained in Section 3, there are 7 types of memory blocks: the input and output FIFOs, the background memory, the LIFO, the register file, the rAGU LUT and the program memory. The sizes of these memories depend on the exact instance of the FEC processor chosen. The different memories of the design were generated using TSMC’s memory compiler ver. 2007.11 using 45nm CMOS low K, standard Vt technology. The dominant logic part (crossbar) was synthesized with a target clock frequency of 333MHz in worst case corner. Figure 6 shows the area evolution for different number of processor and SIMD slots. Reducing the number of slots of the processor, the width the rAGU LUT, background memory, LIFO memories reduces.
+
+As the memories are rather large, changing the width almost has a linear effect on their area. Therefore we can see that increasing the number of slots has a linear impact on the area requirement. Since increasing the number of processors implies just an extra instance of the processor, we also see a linear trend when we increase the number of processors.
+
+1.6
+
+1.4
+
+1.2
+
+1
+
+area [sqmm] 0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+
+24
+
+48
+
+72
+
+#slots (N)
+
+K=4 K=3 K=2 #processors K=1 96
+
+Figure 6 - Area Evolution with Number of Slots and Processors
+
+4.3. Power Consumption
+
+Still assuming that memories dominate, the power consumption of the processor can be computed based on profiling activity of each of the memory components. The power consumed in the crossbars is evaluated and added up. Figure 7 and 8 show the consumed energy per bit and iteration. In the considered range, it can be observed that as the number of slots increases, the energy efficiency improve. Although the crossbar power scale up with the number of slot, this is still compensated for as the SIMD independent memories (e.g. the program memory and part of the rAGU LUT) are shared more. It can also be seen that, obviously, the energy efficiency scales in a linear way to the number of processors as expected.
+The energy per bit and iteration of LDPC decoding is lower compared to turbo. However the overall decoding energy of a packet will be roughly equal due to the higher number of iterations that need to be performed in case of LDPC.
+
+0.330
+
+0.325
+
+0.320
+CTC ene rgy efficiency 0.315 (nJ/bit/ite r) 0.310
+
+0.305
+
+0.300
+
+24
+
+48
+
+72
+
+96
+
+#slots (N)
+
+K=4
+
+K=3
+
+K=2 K=1
+
+#processors (K)
+
+Figure 7 - Energy Efficiency of decoding Turbo
+
+35
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+0.090
+
+0.088
+
+0.086
+LDPC energy efficiency 0.084 (nJ/bit/ite r ) 0.082
+
+0.080
+
+0.078
+
+24
+
+48
+
+72
+
+96
+
+#slots (N)
+
+K=4
+
+K=3
+
+K=2 #processors
+
+K=1
+
+(K)
+
+Figure 8 - Energy Efficiency of LDPC decoding
+
+4.4. Use cases
+Based on the model presented above, we computed the design cost estimates for several possible instantiations of the proposed architecture, useful for implementing advanced FEC options of different existing standards. A clock frequency of 333MHz is still assumed. The architecture parameters K, M and N are adapted to the different scenario (Table 3). Maximum area and power are 1mm2 and 1W respectively. Area and power are reduced significantly for relaxed requirements, showing that the proposed architecture incurs low overhead.
+
+Table 3 - Possible instantiation of the architecture
+
+. 0 1 I>0+]@ 6FHQDULR
+
+$UHD >VTPP@
+
+3HDN3RZHU >P:@
+
+   
+
+FKDQQHO0ESV8076WXUER
+
+
+
+
+
+   
+       
+
+VLQJOHFKDQQHO0ESV+6[3$ WXUER VLQJOHFKDQQHO0ESV/7(WXUER
+0ESVQH/'3&
+
+
+ 
+
+
+ 
+
+5. CONCLUSIONS
+This paper presents the first domain-specific unified architecture capable of performing both turbo and LDPC decoding. The selected turbo-based LDPC decoding scheme has similarities with the turbo decoding algorithm, both offering possibilities for parallel processing. A combined multiprocessor and ultra-wide SIMD approach is selected to achieve scalability, high throughput and high energy efficiency in performing the decoding operations. Main innovation is the transparent collision-avoiding parallel interleaving/scrambling managed through distributed memory hierarchy and reconfigurable address generation units.
+Preliminary throughput, area and energy consumption estimations show the solution to be competitive with dedicated hardware (separated turbo and LDPC). Throughput, area and power are scaling smoothly with the number of processors and SIMD slots, matching a wide range of usage scenario and proving a high level of scalability. Energy efficiency degrades only marginally for smaller instances.
+
+6. REFERENCES
+[1] K. Van Berkel et al., “Vector Processing as an Enabler for Software Defined Radio in Handheld Device”, EURASIP Journal on Applied Signal Processing, 2005(16) 2613-2625
+[2] J. Glossner et al., “The Sandblaster SB3011 platform”, EURASIP Journal on Embedded Systems, 2007(1)
+[3] Yuan Lee et al., “SODA: A High-Performance DSP Architecture for Software-Defined Radio”, IEEE Micro, 2007
+[4] J. Glossner, “The Sandblaster 2.0 Architecture” (to be published). [5] U. Ramacher et al., “Software Defined Radio Prospects for
+Multistandard Mobile Phones”, Computer Magazine, Oct. 2007 [6] B. Bougard et al., “Energy Efficient Software Defined Radio
+Solutions for MIMO-based Broadband Communication”, Proc. European Signal Processing Conference, Poznan, Sept. 2007” [7] B. Bougard et al., “A Coarse-Grained Array based Baseband Processor for 100Mbps+ Software Defined Radio”, Design Automation and Test in Europe, March 2008 [8] M Bickerstaff et al., “A 24Mb/s radix-4 logMAP turbo decoder for 3GPP-HSDPA mobile wireless”, ISSCC, Feb 2003 [9] B. Bougard et al., “A scalable 8.7 nJ/bit 75.6 Mb/s parallel concatenated convolutional (turbo-) CODEC”, ISSCC, Feb. 2003 [10] Abu Bakar et al., “LDPC decoding: a Cognitive Radio Perspective for Next Generation (XG) Communication”, Circuit, Architecture and System Magazine, Vol. 7, Issue 3, Sept 2007 [11] M. M. Mansour and N. R. Shanbhab, “Memory-efficient turbo decoder architectures for LDPC codes”, IEEE Workshop on Signal Processing Syst. 2002, SIPS '02, pages 159 – 164, Oct 2002. [12] J. Dielissen et al “Low cost LDPC decoder for DVB-S2”, Design Automation and Test in Europe, Munich, March 2006 [13] J. Dielissen et al, “Non-fractional parallelism in LDPC decoder implementations”, Design Automation and Test in Europe, Nice, March 2007 [14] P. Urard et al., “A 360mW 105Mb/s DVB-S2 Compliant Codec based on 64800b LDPC and BCH Codes enabling SatelliteTransmission Portable Devices”, ISSCC, Feb 2008 [15] O. Muller et al., “ASIP-based Multiprocessor SoC design for simple and double binary turbo decoding”, Design Automation and Test in Europe, Munich, March 2006 [16] M. May, M. Alles, N. Wehn et al, ”A case study in reliablility-aware design: a resilient LDPC code decoder”, Design Automation and Test in Europe, Munich, March 2008 [17] Masera, G. et all, "Implementation of a Flexible LDPC Decoder," Circuits and Systems II: Express Briefs, IEEE Transactions on [see also Circuits and Systems II: Analog and Digital Signal Processing, IEEE Transactions on] , vol.54, no.6, pp.542-546, June 2007 [18] Giulietti, A.; van der Perre, L.; Strum, A., "Parallel turbo coding interleavers: avoiding collisions in accesses to storage elements," Electronics Letters , vol.38, no.5, pp.232-234, 28 Feb 2002 [19] Thul, M.J et al, "A scalable system architecture for high-throughput turbo-decoders," IEEE Workshop on Signal Processing Systems, 2002. (SIPS '02), pp. 152-158, 16-18 Oct. 2002 [20] Tarable, A.; Benedetto, S.; Montorsi, G., "Mapping interleaving laws to parallel turbo and LDPC decoder architectures", IEEE Transactions on Information Theory, vol.50, no.9, pp. 2002-2009, Sept. 2004 [21] Robertson et al., “A Comparison of Optimal and Sub-Optimal MAP Decoding Algorithms Operating in the Log Domain,” IEEE International Communication Conference, 1995 [22] R. Priewasser, M. Huemer, B. Bougard, “Trade-off analysis of decoding algorithms and architectures for multi-standard LDPC decoder”, IEEE Workshop on Signal Processing Systems, 2008. (SIPS '08), 2008 [23] D. Hocevar, “A Reduced Complexity Decoder Architecture via Layered Decoding of LDPC Codes”, IEEE Workshop on Signal Processing Systems, SISP 2004, pages 107-112, 2004. [24] M. Mansour and N. Shabhag, “High-throughput LDPC decoders”, IEEE Trans. VLSI Syst., 11(6): pages 976-996, Dec 2003.
+
+36
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:19:07 UTC from IEEE Xplore. Restrictions apply.
+
+

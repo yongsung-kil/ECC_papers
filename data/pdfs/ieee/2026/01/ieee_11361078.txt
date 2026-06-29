@@ -1,0 +1,197 @@
+IEEE PHOTONICS TECHNOLOGY LETTERS, VOL. 38, NO. 10, 15 MAY 2026
+
+635
+
+Hierarchical Approximate Min-Sum and Multi-Frame Parallel QC-LDPC Decoder for
+FPGA Optical Links
+
+Qianwu Zhang , Kun Chen , Yuanzhe Qu, Decai Liu, Junjie Zhang , Yingxiong Song , and Zhe Zheng
+
+Abstract—In this letter, we present an efficient quasi-cyclic low-density parity-check (QC-LDPC) decoder designed for resource-constrained satellite laser communication terminals. We propose a novel approximate min-sum algorithm that incorporates node grouping and hierarchical comparison, reducing comparator and multiplexer (MUX) usage by 39% and 52%, respectively, with only a negligible 0.02 dB performance degradation. To maximize hardware efficiency, we propose a multi-frame parallel architecture with asynchronous scheduling, achieving near-optimal 99.8% on-chip block RAM (BRAM) utilization and eliminating pipeline stalls. Experimental results demonstrate that the proposed decoder supports 2 Gbps binary phase-shift keying (BPSK) transmission with a minimum required received optical power (ROP) of –53 dBm.
+Index Terms—QC-LDPC decoder, approximate min-sum algorithm, FPGA, memory-efficient architecture.
+I. INTRODUCTION
+W ITH the reduced cost of satellite manufacturing and launch, free-space optical (FSO) links have emerged as a promising solution for high-capacity satellite communication systems [1], [2]. However, channel impairments such as vibration, thermal drift, jitter, and noise may severely degrade the link reliability [3]. To ensure reliable high-speed transmission over FSO links, forward error correction (FEC) plays a critical role [4].
+LDPC codes are ubiquitous in communication standards such as DVB-S2 and CCSDS [5], [6]. While QC-LDPC codes [7] and Min-Sum algorithms [8], [9] alleviate computational complexity, achieving high-throughput decoding for satellite terminals is still impeded by critical hardware bottlenecks in existing designs. Specifically, representative check node implementations [10] rely on complex sorting networks to
+
+find minimum values, consuming excessive comparators and multiplexers. Furthermore, recent parallel architectures [11], [12] often suffer from pipeline stalls and suboptimal BRAM utilization caused by rigid alignment constraints and fixed block sizes. However, a unified architecture resolving both logic complexity and memory bottlenecks remains lacking.
+In this letter, we propose an approximate min-sum decoding algorithm employing node grouping and hierarchical comparison to reduce comparators and shorten the critical path, thereby improving the clock frequency and efficiency. Based on this algorithm, we design a decoder architecture that integrates the intra-frame pipelining and inter-frame resource reuse, supporting multi-frame parallelism with asynchronous scheduling while avoiding conflicts between the check node units (CNU) and variable node units (VNU). A frame-parallel compact-packing memory strategy achieves up to 99.8% BRAM utilization on FPGA. At 2 Gbps BPSK, the decoder operates reliably with a minimum required ROP of –53 dBm and achieves comparator and multiplexer savings of up to 39% and 52%, with less than 0.02 dB performance loss.
+II. PRINCIPLES
+A. LDPC Decoder Scheme
+The NMSA provides a low-complexity approximation of the belief propagation (BP) [13] algorithm by performing computations in the logarithmic domain. Multiplicative operations are replaced by additions, greatly reducing complexity while maintaining near-optimal decoding performance. The decoding starts by initializing the log-likelihood ratio (LLR) of each variable node vi from the received channel value yi:
+
+Received 22 October 2025; accepted 13 January 2026. Date of publication 22 January 2026; date of current version 17 February 2026. This work was supported in part by the Science and Technology Commission of Shanghai Municipality (STCSM) under Grant SKLSFO2024-04, in part by the 111 Project under Grant D20031, and in part by the Academician Expert Open Fund of Beijing Smartchip Microelectronics Technology Company Ltd. (Corresponding author: Qianwu Zhang.)
+Qianwu Zhang, Kun Chen, Yuanzhe Qu, Decai Liu, Junjie Zhang, and Yingxiong Song are with the Key Laboratory of Specialty Fiber and Optical Access Networks, Shanghai University, Shanghai 200444, China, and also with Teralink Optical Corporation, Shanghai 200444, China (e-mail: zhangqianwu@shu.edu.cn; chenkun2001@shu.edu.cn; quyuanzhe@ shu.edu.cn; yuugis2@shu.edu.cn; zjj@staff.shu.edu.cn; herosf@shu.edu.cn).
+Zhe Zheng is with Beijing Smartchip Microelectronics Technology Company Ltd., Beijing 102299, China (e-mail: zhengzhe@sgchip.sgcc.com.cn).
+Color versions of one or more figures in this letter are available at https://doi.org/10.1109/LPT.2026.3656933.
+Digital Object Identifier 10.1109/LPT.2026.3656933
+
+Lv(0i )
+
+=
+
+ln
+
+Â
+
+P (yn P (yn
+
+| |
+
+xn xn
+
+= =
+
+0) 1)
+
+Ã
+
+=
+
+2yi σ2
+
+(1)
+
+where σ2 denotes the noise variance of the additive white
+Gaussian noise (AWGN) channel. This initial message is propagated as Lv(0i→) c j = Lv(0i) and Mc(0j→) vi = 0. At each iteration t, each check node c j updates its outgoing message to the
+variable node vi using the normalized min-sum rule:
+
+Mc(tj)→vi = α·
+
+Y
+
+ˇˇ
+
+sign(Lv(tb−→1)c
+
+j
+
+)
+
+·
+
+ˇˇLv(tb−→1)c
+
+j
+
+ˇ ˇ
+
+(2)
+
+vb∈N(c j)\vi
+
+where α (0, 1] is a normalization factor used to mitigate the overestimation inherent in the min-sum approximation. The set N(c j)\vi denotes all variable nodes connected to the check
+
+1041-1135 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:58 UTC from IEEE Xplore. Restrictions apply.
+
+636
+
+IEEE PHOTONICS TECHNOLOGY LETTERS, VOL. 38, NO. 10, 15 MAY 2026
+
+Fig. 2. The architecture of the proposed decoder.
+
+Fig. 1. Search Scheme. (a) TS scheme, (b) grouped scheme; (c) four-input two-output sorter; (d) two-input sorter; (e) two-input comparator.
+
+node c j, excluding vi. Each variable node vi then updates the message sent to the check node c j by accumulating messages from all other connected check nodes:
+
+Lv(ti)→c j = Lv(0i→) c j + X Mc(ta)→vi
+
+(3)
+
+ca∈N(vi)\c j
+
+where N(vi)\c j denotes all variable nodes connected to check
+
+node vi, excluding c j. The updated LLR for variable node vi
+
+is given by:
+
+Lv(ti) = Lv(0i ) + X Mc(ta)→vi
+
+(4)
+
+ca∈N(vi)
+
+A hard decision is made according to:
+
+xˆi
+
+=
+
+( 0,
+1,
+
+i f Lv(ti)≥ 0 otherwise
+
+(5)
+
+The decoding terminates when all parity checks are satisfied or the maximum iteration count is reached.
+
+B. Grouped Approximate Minimum Search Scheme
+A key challenge in hardware implementation of the NMSA lies in check node processing. Identifying the minimum and second minimum values is computationally demanding for high-degree check nodes, such as those in the CCSDS C2 code, where each node handles 32 inputs. Existing approaches can be broadly classified as sorting-based (XS) or treestructured (TS) architectures, with TS generally preferred due to lower latency and area requirements [12]. Nevertheless, scalability remains an issue as node degree increases.
+To address this issue, we propose a grouped approximation method that partitions the M incoming messages into N groups nL1(t), L2(t), · · · , L(Nt)o. This approach reduces comparator count and processing delays by limiting the comparison scope per operation. The core idea, illustrated in Fig. 1 (a) and (b), involves partitioning messages into smaller groups and processing them hierarchically. Each group contains M/N messages. Within each group, the local minimum is computed independently, which reduces the scale of each comparison operation. After intra-group processing, the N local minima are further compared through a tree-structured comparator
+
+network to obtain a global minimum (min1 global). The approximate second minimum (min2 approx) is then determined by finding the second smallest of the N local minima. This approximation avoids the complexity of finding the global second minimum.
+Our design employs three custom-designed blocks: a twoinput comparator (2S1), a two-input sorter (2S2), and a fourinput, two-output sorter (4S2). The intra-group stage requires M − N 2S1 units to find a minimum, while the inter-group stage uses N/2 2S2 units and ceil(N/4) 4S2 units to find the min1 global and the min2 approx, resulting in a total of M + N − 3 comparators and M + N − 4 MUXs. Conventional tree-based sorters typically require 2M − 3 comparators and 3M − 4 multiplexers. In contrast, the proposed method reduces the hardware requirements to M − N comparators and 2M − N multiplexers. The reduction in comparator count, along with the simplified associated logic, effectively decreases the depth of the combinational logic, thereby shortening the critical path delay.
+C. Frame-Parallel Memory Architecture for LDPC Decoding
+Memory organization critically impacts LDPC decoder performance on FPGA platforms, especially in satellite systems with limited BRAM resources. The 18-Kb Xilinx BRAMs, configurable as 36 × 512 or 18 × 1024, supports dual-port access for efficient bandwidth utilization. Leveraging this, a frame-parallel memory architecture is proposed, aligned with the CCSDS C2 LDPC submatrix (511 × 511). Setting the BRAM depth to 512 achieves 99.8% utilization (511/512). Multiple frames share BRAM blocks whose combined width matches the native 36-bit port, enabling simultaneous access without extra logic and achieving high throughput with efficient resource use.
+As shown in Fig. 2, the memory space is divided into two subgroups, each storing a complete frame in parallel. These subgroups are alternately scheduled by the CNU and VNU, enabling concurrent frame-level to read and write operations. Since the read/write sequence in each iteration is fixed, pre-loading this order into the routing network guarantees conflict-free scheduling and data distribution without pipeline stalls. A scheduling controller dynamically allocates access timing and uses handshake control for lightweight asynchronous switching between CNU and VNU. As the CNU has a latency two cycles longer than the VNU, inserting two wait cycles in the VNU aligns their access timing and ensures conflict-free memory access without additional buffering or
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:58 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: HIERARCHICAL APPROXIMATE MIN-SUM AND MULTI-FRAME PARALLEL QC-LDPC DECODER
+
+637
+
+Fig. 3. Experiment framework.
+arbitration. The dual-channel memory module concurrently handles LLR and intermediate data, sustaining continuous multi-frame parallelism with conflict-free scheduling and efficient, robust high-throughput operation.
+
+III. EXPERIMENTAL SETUP
+The experimental setup, illustrated in Fig. 3, comprises both the optical and digital modules. At the transmitter side, pseudo-random binary sequence (PRBS) data generated by the FPGA is first LDPC-encoded and subsequently mapped using BPSK before being transmitted at symbol rates of 2 Gbps, 1 Gbps, or 500 Mbps. The optical front end comprises an external cavity laser (ECL) operating at a wavelength of 1540.56 nm. The modulated optical signal is launched into the optical link, where a variable optical attenuator (VOA) is employed to precisely control the received power level, and a 50:50 optical splitter (OS) enables simultaneous monitoring of the transmitted optical power for system characterization.
+At the receiver side, the incoming optical signal is captured by a heterodyne coherent receiver consisting of a secondary ECL, a pre-amplifier EDFA, and an optical bandpass filter for out-of-band noise suppression. The filtered optical signal is subsequently detected by an integrated coherent receiver (ICR) and digitized by a 12-bit high-speed analog-to-digital converter (ADC) operating at 10GS/s, thereby ensuring sufficient quantization precision for coherent demodulation. Real-time digital signal processing implemented on a Xilinx Virtex-7 (XC7VX690T) FPGA performs frequency offset estimation, carrier phase recovery, and frame synchronization to ensure accurate alignment prior to decoding. The recovered baseband data are then processed by the proposed LDPC decoder, and the resulting decoded sequence is compared with the transmitted PRBS to evaluate the bit-error-rate (BER) performance. Hardware resource utilization is also evaluated and benchmarked against conventional architectures to assess overall decoding efficiency and implementation costs.
+IV. EXPERIMENTAL RESULTS
+Fixed-point arithmetic is widely used in LDPC decoder implementations to reduce the hardware cost while maintaining performance. MATLAB-based simulations were conducted to evaluate the different fixed-point configurations. The fractional width primarily affects the waterfall region, while the integer width determines the error floor. With a 12-bit ADC resolution, the total word length is limited to 16 bits to ensure adequate margin without loss of precision. With the normalization factor optimized at 0.75, simulations varying the fractional
+
+Fig. 4. Decoder BER performance for various fixed-point configurations; (a) effect of fractional width; (b) effect of total word length.
+width from 0 to 3 reveal that a single fractional bit yields a 0.2 dB gain over the integer-only scheme. Since further precision offers negligible improvement, a 1-bit fractional width was adopted (Fig. 4(a)).
+Next, with the fractional width fixed at 1 bit, the total word length is swept from 4 to 9 bits (fix4 1 to fix9 1). BER results (Fig. 4(b)) show steady improvement up to fix5 1, beyond which gains saturate. Although fix9 1 performs slightly better, its larger data width limits stored frames under fixed RAM width, reducing throughput to 66.7% of fix6 1. For tight resource budgets, fix4 1 remains viable with moderate degradation. Maintaining a performance margin is important to mitigate real-world impairments, such as residual ADC quantization noise or minor channel mismatches. The fix6 1 configuration operates comfortably in the saturated region, whereas fix5 1 lies near the ‘knee’ of the curve, making it more sensitive to input LLR variations. Therefore, fix6 1 is selected as the final configuration, balancing the robustness, hardware efficiency, and decoding throughput.
+We further investigated how check-node grouping affects the trade-off between the decoding performance and hardware complexity, evaluating the ROP and resource consumption at various communication rates and group sizes shown as Fig. 5. Decoder performance significantly improves with decreasing data rates. At a fixed rate, a clear trade-off emerges increasing the number of groups improves decoding performance (i.e., lowers the required ROP), but at the cost of diminishing hardware resource savings. Using two groups limits the ROP penalty to approximately 0.1 dB, while achieving comparator and MUX resource savings of up to 49% and 65%. Four groups reduce the ROP penalty to 0.05 dB while maintaining approximately 46% and 60% comparator and MUX resource savings, providing a balanced choice for moderately constrained systems. Eight groups achieve a penalty of <0.02 dB
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:58 UTC from IEEE Xplore. Restrictions apply.
+
+638
+
+IEEE PHOTONICS TECHNOLOGY LETTERS, VOL. 38, NO. 10, 15 MAY 2026
+
+rendering it highly suitable for power- and area-constrained satellite receivers.
+
+Fig. 5. Experimental results: (a) effect of code rate and node grouping on required ROP at post-LDPC BER ≤ 10−7; (b) effect of single CNU grouping on comparator and MUX resource utilization.
+TABLE I
+IMPLEMENTATION RESULTS
+
+V. CONCLUSION
+This work presents an efficient LDPC decoder architecture tailored for satellite optical wireless communication systems with stringent resource and performance constraints. By introducing a grouped approximate min-sum algorithm, the design reduces comparator usage by up to 52% and effectively shortens the critical path. Combined with intra-frame pipelining, inter-frame resource reuse, and a compact multi-frame parallel memory strategy, the architecture achieves nearoptimal BRAM utilization (511/512 blocks) while overcoming traditional throughput and storage bottlenecks. FPGA implementation results demonstrate reliable operation at 2 Gbps BPSK with a minimum required ROP of –53 dBm and only 0.02 dB performance degradation, thereby validating the proposed algorithm–architecture co-design as a practical and resource-efficient solution for next-generation satellite optical communication systems.
+
+while maintaining savings of 39% and 52%, making them ideal for high-throughput, resource-constrained designs. At 16 groups, ROP is nearly identical to the ungrouped baseline, but resource savings drop to 26% and 35%, indicating diminishing returns. These results confirm that a moderate grouping strategy can yield significant resource savings at the cost of a small, controllable degradation in performance. At a 1dB link margin, a loss of 0.02dB is negligible, so the 8-group configuration is chosen to achieve the best balance between the resource efficiency and near-benchmark performance.
+Following the completion of place-and-route, the proposed decoder operates at a 350 MHz clock frequency. With a 10-iteration schedule, it achieves a peak throughput of 2.87 Gbps, while utilizing a mere 35,719 LUTs, 38,118 FFs, and 80 BRAMs (Table I). In comparison to the designs in [11] and [12], our implementation demonstrates a throughput that is 2.4x and 2.6x higher, respectively. This enhanced performance is primarily attributed to the 350 MHz clock frequency, which represents a significant improvement over the approximately 200 MHz reported in those works, concurrently utilizing fewer logic resources. In contrast to [14], which achieves 2.67 Gbps at approximately 1.2× higher LUT/FF usage, our design attains 2.87 Gbps with superior hardware efficiency. Specifically, it achieves 80.4 Mbps/kLUT (2870 Mbps / 35.7 kLUTs), representing a 25% improvement over the 64.3 Mbps/kLUT reported in [14]. While incurring higher latency (9,447 cycles), this trade-off prioritizes the critical hardware efficiency for bulk transmission. These results demonstrate that the co-design of the grouped approximation and frame-parallel architecture achieves both high throughput and efficiency, thereby
+
+REFERENCES
+[1] G. Wang, F. Yang, J. Song, and Z. Han, “Free space optical communication for inter-satellite link: Architecture, potentials and trends,” IEEE Commun. Mag., vol. 62, no. 3, pp. 110–116, Mar. 2024.
+[2] S. Zhao and X. Ma, “A low-complexity delay-tunable coding scheme for visible light communication systems,” IEEE Photon. Technol. Lett., vol. 28, no. 18, pp. 1964–1967, Sep. 15, 2016.
+[3] A. A. Fominykh and A. A. Ovchinnikov, “Comparative analysis of polar and LDPC codes in space and satellite communication systems,” in Proc. Wave Electron. its Appl. Inf. Telecommun. Syst. (WECONF), May 2023, pp. 1–4.
+[4] Sonali, A. Dixit, and V. K. Jain, “Analytical determination of thresholds of LDPC codes in free space optical channel,” IEEE Open J. Commun. Soc., vol. 2, pp. 35–47, 2021.
+[5] Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications, Standard ETSI EN 302 307, Nov. 2014.
+[6] TM Synchronization and Channel Coding, Standard CCSDS 131.0-B-2, Washington, DC, USA, 2011.
+[7] T. M. N. Ngatched and F. Takawira, “Improved generalized low-density parity-check codes using irregular graphs,” Trans. South Afr. Inst. Electr. Engineers, vol. 94, no. 4, pp. 43–49, Dec. 2003.
+[8] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[9] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[10] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[11] J. Kang, B. Wang, Y. Zhang, and J. An, “Enhanced partially-parallel LDPC decoder for near Earth applications,” in Proc. IEEE 11th Int. Conf. Electron. Inf. Emergency Commun. (ICEIEC) IEEE 11th Int. Conf. Electron. Inf. Emergency Commun. (ICEIEC), Beijing, China, Jun. 2021, pp. 12–16.
+[12] H. Bai, K. Zhai, G. Liu, and J. Zou, “A design method of high parallelism QC-LDPC decoder based on FPGA,” in Proc. 5th Int. Conf. Inf. Commun. Signal Process. (ICICSP), Shenzhen, China, Nov. 2022, pp. 441–447.
+[13] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[14] J. Kang, J. An, and Y. Zhu, “Universal high-throughput and lowcomplexity LDPC decoder for laser communications,” IEEE Access, vol. 12, pp. 33328–33336, 2024.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:46:58 UTC from IEEE Xplore. Restrictions apply.
+
+

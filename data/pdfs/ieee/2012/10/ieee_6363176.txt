@@ -1,0 +1,712 @@
+2012 IEEE Workshop on Signal Processing Systems
+
+EFFECTS OF VARYING MESSAGE PRECISION IN DIGIT-ONLINE LDPC DECODERS
+
+Philip A. Marshall∗, Vincent C. Gaudet†, and Duncan G. Elliott∗
+
+∗Dept. of Electrical and Computer Engineering University of Alberta
+Edmonton, AB T6R 2V4 Canada
+
+†Dept. of Electrical and Computer Engineering University of Waterloo
+200 University Avenue West Waterloo, ON N2L 3G1 Canada
+
+ABSTRACT
+Increasing the pipeline depth of bit-parallel message-passing lowdensity parity-check (LDPC) decoders can be done by increasing the number of simultaneously decoded frames, or by decreasing the amount of parallelism in the decoder. In digit-serial decoders, the pipeline depth can also be increased by increasing message precision.
+Digit-online decoders are a class of digit-serial decoders that use redundant notation to allow for most-significant-digit-first processing of LLR messages. This paper examines the effect of changing the precision of LLRs on the throughput, area and energy efficiency of digit-online decoders for the irregular WiMAX rate 3/4A length 1056 block code. Both single-frame and frame-interlaced decoding are considered. Digit-online decoders have a throughput that is largely independent of message precision. Frame-interlaced decoding has a higher throughput than single-frame, but has an increased energy/bit cost.
+Index Terms— Forward error control (FEC), block codes, iterative decoding, belief propagation
+1. INTRODUCTION
+Low-density parity-check (LDPC) codes are a class of errorcorrecting codes first proposed by Gallager in [1]. They have good error performance and their decoders are simple and can be highly parallelized. They can be decoded using iterative message-passing algorithms.
+Decoders that pass messages in a bit-parallel manner require a large number of interconnect wires. This, combined with the random nature of many codes, has meant that some ASIC implementations are area-inefficient. In [2] it is shown that for bit-parallel decoders, wiring overhead generally increases as parallelism increases. The area of the decoder reported in [3] was determined more by wiring congestion than logic area.
+In an attempt to alleviate wiring concerns, bit-serial decoders pass messages serially between computation nodes [4–6]. However, since two’s complement addition cannot be done most-significantbit-first with low latency, the order bits are passed in must change at each node and continuous processing is not possible.
+The authors would like to acknowledge support from the Natural Sciences and Engineering Research Council of Canada (NSERC) and CMC Microsystems.
+
+Digit-online LDPC decoders were introduced in [7] and use redundant signed-binary notation to allow continuous most-significant digit (MSD) first processing of messages. In this paper, we extend this work by examining in detail the effect of changing message precision on the area, throughput, and energy/bit of digit-online LDPC decoders. Section 2 explains the algorithm used to decode LDPC codes. Section 3 provides an introduction to digit-online arithmetic and section 4 applies this to LDPC decoding. We analyse the effects of varying message precision in digit-online LDPC decoders in section 5 and conclude in section 6.
+
+2. LDPC DECODING
+
+A two-stage message-passing algorithm can be used to decode LDPC codes. The messages are log-likelihood ratios (LLRs) representing a priori probabilities. Each stage of processing is performed by one type of processing node: variable nodes or check nodes. To begin decoding, each variable node is initialized with LLRs from the channel. Each node passes out a set of messages based on how likely it believes each bit is a one or a zero. Decoding is finished when all code constraints are satisfied or a set iteration limit is reached.
+Equation (1) shows the degree-dv variable node update. λi represents the ith output of the variable node based on the inputs from the check nodes Lj, and Lchannel represents channel information.
+
+dv
+
+λi = Lchannel +
+
+Lj
+
+(1)
+
+j=1 j=i
+
+Updating the check-node operation with the sum-product algo-
+
+rithm is computationally expensive, so many approximate update
+
+equations exist. The simpler min-sum algorithm is one such ap-
+
+proximation. With the use of correction factors, the implementation
+
+complexity of decoders can be much lower than that of sum-product
+
+while still approaching its error performance [8, 9].
+
+Offset min-sum is one such corrected min-sum algorithm, and its
+
+check node equation is shown in (2). Lk represents the kth output of the check node, and dc represents the node degree. The minimum λmin,l is taken over all incoming edges with l = k. Since the magnitude of the offset is related to the log of the check node degree [9],
+
+offset min-sum performs better with higher check node degrees.
+
+dc
+
+Lk = max (|λmin,l| − β, 0) · sign (λl)
+
+(2)
+
+l=1 l=k
+
+978-0-7695-4856-2/12 $26.00 © 2012 IEEE
+
+7
+
+DOI 10.1109/SiPS.2012.32
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+Channel LLR
+
+{ From other
+check nodes
+
+. . .
+
+variable node pipeline
+(δv stages)
+
+Output bit
+
+} .
+. .
+
+To other check nodes
+
+{ To other
+variable nodes
+
+. . .
+
+check node pipeline
+(δc stages)
+
+} .
+. .
+
+From other variable nodes
+
+Fig. 1. System diagram of a digit-online LDPC decoder showing the path from one channel LLR to one output bit. Serialization of channel LLRs is omitted. Each pipeline stage stores one digit of a message.
+
+3. MSD-FIRST DIGIT-ONLINE ARITHMETIC
+Our discussion of digit-online arithmetic is motivated by the operations needed to build an offset min-sum decoder. Addition is required for the variable node, and sign detection is required for the hard decision. The check node requires finding the sign and magnitude of operands, finding the minimum of two operands (compareselect), subtraction of an offset, and multiplication by ±1.
+To do efficient digit-by-digit serial processing on a data stream, each output digit should be calculated as independently as possible from other output digits. Additionally, the output digits should be generated after receiving as few input digits as possible. The processing delay should be fixed and smaller than than the number of digits. Operations that satisfy these requirements are called digitonline [10–12]. These requirements ensure that the operation is done with minimum latency and minimum memory and allow for deep pipelining at the digit level.
+If the serial operands are in conventional binary notation, it is impossible to satisfy these requirements [11]. If most-significant-bit (MSB) first processing is chosen, compare-select can be done with low latency, but addition requires a latency equal to the precision. If least-significant-bit (LSB) first processing is done, low-latency addition is possible but compare-select requires a large latency.
+To solve this problem, a redundant number system is required where operands are stored using generalized digits rather than bits. This allows MSD-first addition to be performed with low latency and hence allows all calculations to be done in an MSD-to-LSD manner. One such redundant number system is signed-binary [13], which is used in our digit-online decoder. Signed-binary notation uses the digit set {1¯, 0, 1}, where ¯1 represents the value −1. This digit set allows for multiple representations of the same value due to the fact that borrows do not have to be fully propagated. As an example, 11¯ = 01, because the digit ¯1 borrows from the position before it.
+Signed-binary numbers require two bits per digit to store, but do not require a separate sign digit. The sign of the number is determined by the sign of the most-significant non-zero digit since lesssignificant digits do not have a large enough magnitude to change the sign [11, 13]. Hence signed-binary numbers require one fewer digit than two’s complement to represent the same precision, albeit using more total bits.
+
+sign(λi)
+
+λi For Each Input
+Sign/ Mag
+
+|λi|
+Offset Correction
+
+signs
+...
+
+corrected magnitudes
+...
+
+Selection Network (two minima)
+
+dc
+
+min
+
+2nd min
+
+λiIsM in
+
+sign(λi) 01
+
+For Each Output
+λiIsM in
+
+Li
+Fig. 2. Simplified architecture of a signed-binary digit-online offset min-sum parity check node. Each λiIsM in signal is false unless λi is the input with the smallest magnitude. If two or more inputs are tied for the smallest magnitude, one is chosen arbitrarily.
+4. DIGIT-ONLINE LDPC DECODING
+This section contains only a brief overview of the digit-online LDPC decoder architecture. A full discussion of the architecture can be found in [7].
+A system diagram of an digit-online LDPC decoder is shown in fig. 1. The variable nodes implement equation (1) with a simple tree of digit-online signed-binary adders.
+The check node architecture is based on equation (2) and is shown in fig. 2. Inputs are split into their sign and magnitudes, and offset correction is performed. The corrected magnitudes are partially sorted using a selection network made up of compare-select modules to find the two smallest magnitudes. This allows the extrinsic principle to be satisfied. The output corresponding to the smallest input magnitude is given the second-minimum magnitude. All other outputs are given the smallest magnitude. The output signs are determined by an XOR tree and multiplied by the output magnitudes to give the output LLRs.
+Messages flow in loops between variable nodes and check nodes. The full length of the decoding pipeline is equal to the length of the variable node pipeline (δv) plus the length of the check node pipeline (δc). Since one digit is stored in each pipeline stage, the maximum number of digits in a message l = δv+δc. However, some of these digits are used as guard digits to prevent overflow in the variable nodes. For dv,max = 4, 2 guard digits are required and for dc,max = 6, 3 guard digits are required. This overhead is required on each frame in the decoding pipeline.
+
+8 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+LDPC Code
+
+WiMAX 802.16e
+
+Codeword size
+
+1056
+
+Code Rate
+
+3/4, base matrix A
+
+Parallelism
+
+Full
+
+Variable Node Degrees
+
+2, 3, 4
+
+Check Node Degrees
+
+14, 15
+
+Decoding Algorithm
+
+Offset Min-Sum
+
+Max. Iterations
+
+10
+
+Early Termination
+
+Yes1
+
+Area
+
+Table 2, Fig. 4
+
+Clock Frequency
+
+Table 2
+
+Throughput
+
+Table 2, Fig. 3
+
+Throughput/Area
+
+Table 2, Fig. 6
+
+Energy/bit
+
+Table 3, Fig. 7
+
+1 Decoder supports early termination but results in this paper are worst-case without early termination.
+
+Table 1. Parameters of synthesized decoders. Pipeline details are shown in table 2.
+
+Based on the length of the decoding pipeline, we can compute the single-frame and frame-interlaced throughputs of the decoder with equations (3) and (4), respectively, where N is the code length, fclk is the clock frequency and niter is the number of decoding iterations.
+
+T hroughput1f
+
+=
+
+N · fclk (cycles/iteration) · niter
+
+=
+
+N · fclk (δv + δc) · niter
+
+(3)
+
+T hroughput2f
+
+=
+
+2 · N · fclk (δv + δc) · niter
+
+(4)
+
+WiMAX rate 3/4 base matrix A (which we refer to as rate 3/4A for short) codes have dv,max = 4, so the maximum useful precision is p1f = l−2 for single frame decoding, and p2f = l/2−2 for frameinterlaced decoding. A p-digit signed-binary number can store a pbit signed number without requiring an additional sign bit, so it is related to the channel quantization q by the equation q = p+1. Thus our pipeline can decode one frame at (q1f = l −1)-bit precision or two frames at a (q2f = l/2−1)-bit precision.
+The chosen code requires variable nodes of degrees 2, 3 and 4 and check nodes of degree 14 and 15. The selection networks of the degree-14 and degree-15 check nodes are both 6 levels deep. The degree-14 check node requires 25 comparisons while the degree-15 check node requires 27 comparisons. These are the optimal numbers of comparisons for (2,14) and (2,15) selection networks [14].
+To pipeline bit-parallel decoders more deeply, either more frames must be decoded at once or a partially parallel architecture must be used. Increasing the number of frames increases the complexity and size of the input buffers and control logic and is not always practical.
+Digit-online decoders can also benefit from decoding multiple frames at once, but can also increase the amount of pipelining by increasing the precision of the messages. Higher precisions require more clock cycles per iteration but result in shorter delays in each pipeline stage.
+
+5. RESULTS
+To demonstrate the effects of message precision on decoder performance, several fully parallel decoders for the irregular WiMAX rate 3/4A length 1056 code were synthesized in a TSMC 65 nm general purpose process1. All results are reported for nominal process corners and the conservative wiring model. Automatic register retiming was enabled to balance the pipeline stages without designer intervention.
+Decoder parameters are shown in table 1, and pipeline details are shown in table 2. Because of result forwarding between pipeline stages, there are many paths around the processing loop with fewer than the maximum number of registers. At the minimum pipeline depth of 4 for a degree-4 variable node there are combinational paths between input and output LLRs.
+To ensure synchronization of values, the degree-2 and degree-3 variable nodes are pipelined to the same length as the degree-4 variable nodes and each will always have at least one register between input and output. The check node requires forwarding one stage ahead due to the offset subtraction.
+Given these minimum forwarding values, the minimum number of registers in the processing loop can be found by subtracting 5 from the pipeline length. Thus a minimum pipeline length of 6 was chosen to ensure that each path contained at least one register. Additionally, 5 bits of precision are required for the optimal offset constant β to be greater than zero at efficient channel scaling.
+Published WiMAX decoders generally use a channel quantization between 5 and 8 bits [15–20]. There is little improvement to error performance beyond 8 bits [20]. Decoders with 12 or more pipeline stages are included to obtain frame-interlaced results at higher precision. It is unlikely that 11 or more bits of precision would be used in practice.
+Likewise, since error performance drops off sharply below 5 bits of precision, frame-interlaced decoders for less than 5 bits are included for comparison only and will not provide acceptable error performance.
+Each decoder pipeline was synthesized over a large range of clock frequencies. The decoder with the highest throughput/area for each pipeline was chosen to present in this paper. Increasing the pipeline length past 20 increased the synthesis times greatly and made it infeasible to generate enough synthesis results to draw meaningful conclusions from.
+Even at the pipeline lengths synthesized we are approaching the limits of clock frequency for an edge-triggered design. At higher number of pipeline stages the register clock→q and setup times become an increasingly large proportion of the clock cycle. About 100 ps of the critical path is consumed by flip-flop setup and clock→q times, which accounts for more than 20% of the delay at high frequencies.
+The important decoder performance characteristics of LDPC decoders are throughput, the throughput/area ratio (TAR), and energy efficiency.
+1Standard cells used were version 140b of the tcbn65gplus cells. Logic synthesis was performed in Synopsys Design Compiler D-2010.03-SP5.
+
+9 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+Single Frame
+
+Frame-Interlaced
+
+Pipeline δv δc Clk. Freq. Area LLR Precision Tput
+
+TAR
+
+LLR Precision Tput
+
+TAR
+
+Length
+
+(MHz) (mm2) (digits) (bits) (Gbps) (Gbps/mm2) (digits) (bits) (Gbps) (Gbps/mm2)
+
+6
+
+42
+
+575
+
+2.68
+
+4
+
+5
+
+10.1
+
+3.78
+
+1
+
+2
+
+20.2
+
+7.56
+
+7
+
+43
+
+990
+
+2.61
+
+5
+
+6
+
+14.9
+
+5.72
+
+8
+
+5 3 1205
+
+2.52
+
+6
+
+7
+
+15.9
+
+6.31
+
+2
+
+3
+
+31.8
+
+12.62
+
+9
+
+5 4 1449
+
+2.60
+
+7
+
+8
+
+17.0
+
+6.54
+
+10
+
+64
+
+1538
+
+2.70
+
+8
+
+9
+
+16.2
+
+6.01
+
+3
+
+4
+
+32.5
+
+12.02
+
+12
+
+7 5 1923
+
+2.97
+
+10
+
+11 16.9
+
+5.70
+
+4
+
+5
+
+33.8
+
+11.40
+
+14
+
+7 7 1961
+
+3.10
+
+12
+
+13 14.8
+
+4.77
+
+5
+
+6
+
+29.6
+
+9.53
+
+16
+
+7 9 2273
+
+3.12
+
+14
+
+15 15.0
+
+4.82
+
+6
+
+7
+
+30.0
+
+9.63
+
+18
+
+7 11 2381
+
+3.35
+
+16
+
+17 14.0
+
+4.18
+
+7
+
+8
+
+27.9
+
+8.35
+
+20
+
+7 13 2500
+
+3.58
+
+18
+
+19 13.2
+
+3.69
+
+8
+
+9
+
+26.4
+
+7.37
+
+Table 2. Synthesis results of decoders for the WiMAX rate 3/4A length 1056 code at various message precisions. δv is the length of the variable node pipeline and δc is the length of the check node pipeline. Decoders with an even number of pipeline stages can be operated in a single-frame high precision mode or a frame-interlaced low precision mode. The precision in digits is the number of signed-binary digits used to store each message. Two additional digits are required for each frame to prevent overflow. Since signed-binary does not require an additional sign bit, the number of bits that can be stored is one more than the number of digits. TAR is the throughput/area ratio. Throughput and TAR are worst-case assuming 10 iterations are run.
+
+Throughput (Gbps) Area (mm2)
+
+35
+30
+25
+20
+15
+10
+5 1-Frame 2-Frame
+0 0 2 4 6 8 10 12 14 16 18 20 Precision
+
+4
+
+3.5
+
+3
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+
+1-Frame
+
+2-Frame
+
+0
+
+0 2 4 6 8 10 12 14 16 18 20
+
+Precision (bits)
+
+Fig. 3. Effect of changing message precision on decoder throughput for single-frame and frame-interlaced decoding. Throughput is worst-case with no early termination.
+
+Fig. 4. Effect of changing message precision on decoder area for single-frame and frame-interlaced decoding.
+
+5.1. Throughput and Area
+The throughput for each of the synthesized decoders is shown in fig. 3. As the message precision increases, the number of clock cycles per iteration also increases. However, the depth of the pipeline increases as well, allowing the clock cycles to shorten. Thus, for single-frame decoding with message precisions from 6 to 15 bits the throughput is relatively constant. The effect on throughput is magnified for frame-interlaced decoding, but throughput is relatively flat for 3 to 7 bits of precision. Using frame-interlaced decoding results in much higher decoding throughput for a given precision.
+Fig. 4 shows the effect of changing message precision on decoder area. There is a weakly linear relationship between message precision and decoder area for single-frame decoding which is magnified for frame-interlaced decoding. The 6-stage and 7-stage
+
+decoders actually requires more area than the 8-stage decoder due to the low number of registers in the worst-case loops. Frameinterlaced decoders are larger than single-frame decoders for a given precision which is part of the cost for their increased throughput.
+The breakdown of the area for single-frame decoding is shown in fig. 5. The size of the control logic is dominated by the size of the input buffer. While the area of the control logic increases with precision, the greatest area increase is accounted for by the greater number of pipeline stages in the computation nodes. For larger numbers of pipeline stages the size of the input buffers could be decreased by allowing only frame-interlaced decoding. However, the area savings would not be significant.
+As expected, the sequential area of the processing nodes is strictly increasing as the degree of pipelining increases. The combinational area has a downward trend as more of the drive is provided
+
+10 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+2.5
+Nodes (Combinational) Nodes (Sequential) Control Logic
+2
+
+Area (mm2)
+
+1.5
+
+1
+
+0.5
+
+0
+
+4
+
+6
+
+8
+
+10 12 14 16 18 20
+
+Precision (bits)
+
+Fig. 5. Breakdown of single-frame decoder area into computation node area control logic area.
+
+Throughput/area (Gbps/mm2)
+
+14 1-Frame 2-Frame
+12
+10
+8
+6
+4
+2
+0 0 2 4 6 8 10 12 14 16 18 20 Precision (bits)
+Fig. 6. Effect of changing message precision on decoder throughput/area. Worst-case throughput with early termination disabled is used.
+
+by flip-flops and the cycle times decrease. Since area can often be reduced at the cost of throughput by
+decreasing parallelism, the area-normalized throughput or throughput/area ratio (TAR) is an important metric of decoder performance. Fig. 6 shows the throughput/area ratio at each of the message precisions available. Despite the fact that frame-interlaced decoders are larger for a given precision, they have a superior throughput/area ratio for the precisions examined.
+5.2. Energy/bit
+The energy per decoded bit results in this section are based on Synopsys power estimates. It is assumed that the true energy/bit may vary by a constant factor from the estimates but the relative energy values are informative.
+Table 3 and fig. 7 show the energy efficiency of the decoders in both single-frame and frame-interlaced decoding modes. While frame-interlaced decoding results in better throughput and throughput/area performance at a given precision, a higher energy/bit is re-
+
+Precision (bits)
+2 3 4 5 6 7 8 9 11 13 15 17 19
+
+Energy/bit (pJ/bit)
+
+1-Frame 2-Frame
+
+64
+
+88
+
+116
+
+128
+
+175
+
+142
+
+213
+
+176
+
+249
+
+199
+
+312
+
+234
+
+273
+
+351
+
+426
+
+499
+
+623
+
+746
+
+% Increase
+37% 50% 42% 56% 60%
+
+Table 3. Energy per decoded bit of decoders and % increase to energy/bit of frame-interlaced decoding. Power estimates are for low SNR where early-termination is not used.
+
+Energy/bit (pJ/bit)
+
+800
+
+700
+
+600
+
+500
+
+400
+
+300
+
+200
+
+100
+
+1-Frame
+
+2-Frame
+
+0
+
+0 2 4 6 8 10 12 14 16 18 20
+
+Precision (bits)
+
+Fig. 7. Effect of changing message precision on energy per decoded bit. Power estimates are for low SNR where early-termination is not used.
+
+quired to decode two frames at once. The energy/bit increases by about half in most of the range of precisions where both 1-frame and 2-frame results are available.
+The static power of all decoders is very small. Static power accounts for about 1.5% of total power for the 6-stage decoder and less than 1% for all others.
+Fig. 8 shows the increase to energy/bit to increase the precision by one bit at each precision. For regions where the decoders vary by two bits of precision it is assumed that the increase from each bit is equal. The marginal cost generally trends upward, suggesting that each additional bit becomes more expensive from an energy/bit standpoint. At a given precision, frame-interleaved decoding has a higher marginal energy/bit cost than single-frame in addition to the higher absolute energy/bit.
+
+11 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+Energy/bit increase for next bit (pJ/bit)
+
+70
+
+60
+
+50
+
+40
+
+30
+
+20
+
+10 1-Frame
+
+2-Frame
+
+0
+
+0
+
+2
+
+4
+
+6
+
+8 10 12 14 16 18
+
+Precision (bits)
+
+Fig. 8. Marginal energy/bit cost to increase precision by one bit. In regions where precision increases two bits at a time it is assumed that the increase from each bit is equal. Power estimates are for low SNR where early-termination is not used.
+
+6. CONCLUSION
+In this paper we have examined the effects of varying message precision in digit-online LDPC decoders for the irregular WiMAX rate 3/4A length 1056 code. We have shown that in many cases there is no throughput cost to increasing the message precision, and decoder area grows slowly with precision (e.g. tripling precision, 5 to 15 bits, results in a 1.16x increase in area). However, the cost in decoding energy efficiency is significant and must be considered when designing a digit-online decoder.
+We have demonstrated that frame-interlaced decoding is superior to single-frame decoding when it comes to throughput and throughput/area. However, frame-interlaced decoding comes at a higher energy/bit cost, so designers must consider whether the increased power consumption is acceptable.
+7. REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] Z. Zhang, V. Anatharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T Ethernet LDPC decoder design with low error floors,” in IEEE J. Solid-State Circuits, Apr. 2010, vol. 45, pp. 843–855.
+[3] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024b, rate-1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[4] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “A bitserial approximate min-sum LDPC decoder and FPGA implementation,” in Proc. 2006 IEEE Int. Symp. Circuits and Systems, May 2006, pp. 149–152.
+[5] A. Darabiha, A. Chan, and F. R. Kschischang, “A 3.3-Gbps bit-serial block-interlaced min-sum LDPC decoder in 0.13-um CMOS,” in Proc. 2007 IEEE Custom Integrated Circuits Conf., Sep. 2007, pp. 459–462.
+
+[6] T. Brandon, R. Hang, G. Block, V. C. Gaudet, B. Cockburn, S. Howard, C. Giasson, K. Boyle, P. Goud, S. S. Zeinoddin, A. Rapley, S. Bates, D. Elliott, and C. Schlegel, “A scalable LDPC decoder ASIC architecture with bit-serial message exchange,” Integration VLSI J., vol. 41, no. 3, pp. 385–39, May 2008.
+[7] P. A. Marshall, V. C. Gaudet, and D. G. Elliott, “Deeply pipelined digit-serial LDPC decoding,” IEEE Trans. Circuits Syst. I, Reg. Papers, Accepted for publication 2012, 11 pages.
+[8] J. Chen and M. P. Fossorier, “Density evolution for BP-based decoding algorithms of LDPC codes and their quantized versions,” in IEEE Global Telecommun. Conf. 2002, Nov. 2002, vol. 2, pp. 1378–1382.
+[9] S. L. Howard, C. Schlegel, and V. C. Gaudet, “Degree-matched check node decoding for regular and irregular LDPCs,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 53, no. 10, pp. 1054– 1058, Oct. 2006.
+[10] M. Ercegovac, “Online arithmetic: An overview,” in Proc. SPIE V.495: Real Time Signal Processing VII, 1984, pp. 86– 93.
+[11] M. J. Irwin and R. M. Owens, “Digit-pipelined arithmetic as illustrated by the Paste-Up system: A tutorial,” Computer, vol. 20, no. 4, pp. 61–73, Apr. 1987.
+[12] M. D. Ercegovac and T. Lang, Digital Arithmetic, Morgan Kaufmann, 2004.
+[13] A. Avizienis, “Signed-digit number representations for fast parallel arithmetic,” IRE Trans. Electronic Computers, vol. EC-10, no. 3, pp. 389–400, Sep. 1961.
+[14] D. E. Knuth, The Art of Computer Programming, Vol. 3, chapter 5.3.4, pp. 225–229, Addison-Wesley, second edition, 1998.
+[15] T.-C. Kuo and A. N. Willson, “A flexible decoder IC for WiMAX QC-LDPC codes,” in Proc. 2008 IEEE Custom Integrated Circuits Conf., Sep. 2008, pp. 527–530.
+[16] T. Brack, M. Alles, F. Kienle, and N. Wehn, “A synthesizable IP core for WiMAX 802.16e LDPC code decoding,” in IEEE 17th Int. Symp. on Personal, Indoor and Mobile Radio Commun., Sep. 2006, pp. 1–5.
+[17] C.-H. Liu, S.-W. Yen, C.-L. Chen, H.-C. Chang, C.-Y. Lee, Y.-S. Hsu, and S.-J. Jou, “An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 684–694, Mar. 2008.
+[18] X. Peng, Z. Chen, X. Zhao, D. Zhou, and S. Goto, “A 115mW 1Gbps QC-LDPC decoder ASIC for WiMAX in 65nm CMOS,” in 2011 IEEE Asian Solid State Circuits Conf., Nov. 2011, pp. 317–320.
+[19] Y.-L. Wang, Y.-L. Ueng, C.-L. Peng, and C.-J. Yang, “A lowcomplexity LDPC decoder architecture for WiMAX applications,” in 2011 Int. Symp. on VLSI Design, Automation and Test, Apr. 2011, pp. 1–4.
+[20] X.-Y. Shih, C.-Z. Zhan, C.-H. Lin, and A.-Y. Wu, “An 8.29 mm2 52 mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13 m CMOS process,” IEEE J. SolidState Circuits, vol. 43, no. 3, pp. 672–683, Mar. 2008.
+
+12 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:33:38 UTC from IEEE Xplore. Restrictions apply.
+
+

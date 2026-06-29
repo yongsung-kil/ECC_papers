@@ -1,0 +1,776 @@
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+3100615
+
+Efficient Coding Architectures for Reed–Solomon and Low-Density Parity-Check Decoders for Magnetic and Other Data Storage Systems
+
+Arijit Mondal , Satyannarayana Thatimattala, Vamshi Krishna Yalamaddi, and Shayan Srinivasa Garani
+Department of Electronic Systems Engineering, Indian Institute of Science, Bengaluru 560012, India
+High-performance error correction codes are used in high-density data storage devices to overcome noise and channel impairments. In this paper, we develop novel and efficient decoding architectures for Reed–Solomon (RS) and low-density parity-check (LDPC) codes that are used in almost all data storage devices. First, we present a high-speed low-latency hard-decision-based pipelined RS decoder architecture that computes the error locator polynomial in exactly 2t clock cycles without parallelism. The RS decoder is a two-stage pipelined engine operating at the least latency possible, thereby, significantly reducing the size of the delay buffer. The RS decoder is implemented using Cadence tools and Kintex-7 field programmable gate array (FPGA). The technology-scaled normalized throughput of the pipelined RS decoder is almost two times compared with the existing decoders. The overall processing latency is reduced by almost 80% compared with the existing designs. Second, we design a high-throughput LDPC decoder using layered and non-layered min-sum algorithm based on non-uniform quantization (NUQ) on an FPGA kit. Unlike the standard state-of-the-art uniform quantization used in virtually all decoder circuits, our NUQ technique: 1) achieves a slight performance improvement of ∼0.1 dB in the signal-to-noise ratio using equal number of bits and 2) yields 20% area savings (using 1 bit less) for the block RAMs used for storing intermediate check node and variable node messages.
+Index Terms— Berlekamp–Massey (BM) algorithm, error correction codes (ECC), field programmable gate array (FPGA), high speed, Kintex-7 FPGA, layered min-sum, low-density parity-check (LDPC), low complexity, low latency, non-uniform quantization (NUQ), Reed–Solomon (RS) decoder.
+
+I. INTRODUCTION
+P RACTICAL magnetic and flash storage technologies are pushing toward densities beyond 2 Tb/in2 [1]. To meet stringent reliability rates over such high-density storage media, efficient error correction codes are inevitably required. With the emerging TDMR technology [2], [3], high-speed, lowlatency [4], and low-power [5] detectors are needed for processing multiple tracks. These detectors are still based on 1-D designs applicable toward multi-track detection prior to error correction decoding. Though 2-D codes would be the eventual state of the art in TDMR systems, current array-based magnetic recording systems [6] still employ 1-D codes that work within a shingled recording framework [7]. Two main classes of error correction codes popularly exist; namely, algebraic and iterative codes. Algebraic-based Reed–Solomon (RS) codes and iterative-based low-density parity-check (LDPC) codes are the most commonly used error correction techniques in data storage systems. While RS decoders provide guaranteed error correction capability, carefully constructed LDPC codes guarantee low error floors with an acceptable rate of miscorrection performance [8], [9].
+RS codes are popularly used because of their guaranteed burst error correcting capability in combating thermal asperities. They are also widely used in a variety of traditional applications such as optical, satellite, wireless, and networking
+Manuscript received August 7, 2017; revised October 22, 2017; accepted November 19, 2017. Date of publication January 8, 2018; date of current version January 18, 2018. Corresponding author: S. S. Garani (e-mail: shayangs@iisc.ac.in).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TMAG.2017.2778053
+
+communications beyond data storage applications. RS codes are also used as error detection codes post iterative decoding to ensure guaranteed miscorrection error rates. Implementing a high-speed and area-efficient RS decoder architecture is always a key challenge. The state-of-the art RS decoders implemented on FGPA barely reach a maximum throughput of 2 Gbps [10]. Recently, Xilinx released an RS decoder intellectual property (IP) [11] supporting a maximum throughput of 3.2 Gbps for the RS (255, 239) code. Altera RS IP core [12] also supports a maximum throughput of 3 Gbps for the RS (204, 188) code. The main bottleneck in existing designs are throughput and latency. In this paper, we propose an efficient design for RS decoding. The technology-scaled normalized throughput (TSNT) achieved by our design is higher than most of the current ASIC designs of RS decoders [13]–[15]. Furthermore, the latency of our decoder is very low compared with the existing decoders [11], [13]–[15].
+Soft decision decoding of LDPC codes is the state-of-the-art technique in almost all commercially available storage devices. LDPC decoding admits parallelization and thus suitable for hardware implementations. The standard belief propagation algorithm or the sum–product algorithm (SPA) gives the best decoding performance [16]. However, the SPA requires a lot of complex logarithmic and multiplicative components at the check node unit (CNU). The min-sum algorithm (MSA), which is a simplification of the SPA, is well suited for hardware design owing to its simplicity [17], [18]. The traditional MSA processes the block rows in parallel, leading to a large Silicon area. The layered MSA [19], [20] is the state-of-the-art decoder architecture used in all LDPC-based decoder engines. This decoding technique is based on serial processing, yielding both signal-to-noise ratio (SNR) gains and area efficiencies
+
+0018-9464 © 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+over the traditional MSA. In order to ease design automation for building LDPC decoder circuits, uniform quantization has always been the preferred design choice. However, it is intuitive to use non-uniform quantization (NUQ) techniques to get additional gains. In this paper, we present an NUQ technique, inspired by the non-uniform implementation of non-layered min-sum decoders in [21]. However, unlike [21], we performed additions and subtractions using lookup tables (LUTs), because it gave better area performance. It was also observed in [22] that the error floors in decoders can be lowered using NUQ techniques, motivating this paper. We implemented a non-uniformly quantized layered min-sum decoder, which led to better performance than the uniform quantization for the same number of bits on a Kintex-7 XCK325T field programmable gate array (FPGA) kit. The Cadence tool chain was also used to get the gate count numbers.
+This paper is organized as follows. In Section II, we discuss the design architecture and implementation details of the RS decoder. Section III deals with the design of the layered and non-layered min-sum LDPC decoder using NUQ. In Section IV, we describe the additive white Gaussian noise (AWGN) channel emulation on hardware using the FPGA kit, used for testing the codes. We conclude this paper in Section V.
+
+II. DESIGN OF THE RS DECODER A. Background
+
+The parameters of the RS (n, k, t) code include code length (n), message length (k), and error correcting capability (t).
+1) Error Correction Procedure: To understand the error correction procedure, we use the procedure and notations followed in [23] and [24] for consistency and clarity. Let a code c(x) be corrupted by an additive error e(x) resulting in r (x). Suppose υ denotes the number of errors. Then, e(x) has the following form:
+
+υ
+
+e(x) = yi xi , 0 ≤ i ≤ n − 1
+
+(1)
+
+i =1
+
+where yi is the error magnitude at error location i . The syndromes can be calculated as
+
+υ
+
+S j = r (α j ) = e(α j ) =
+
+Yi
+
+X
+
+j i
+
+,
+
+1 ≤ j ≤ 2t
+
+(2)
+
+i =1
+
+where Yi = yi and Xi = αi . The aim is to solve the above 2t equations to get the pairs (Xi ,Yi ). Let us define a polynomial known as the error locator polynomial (x) given by
+
+υ
+(1 + Xi x ) = 0 + 1x + · · · + υ−1x υ−1 + υ x υ . (3)
+i =1
+
+The Xi values are evaluated using inverse roots of (3). Given the values Xi , the system of equations (2) are linear in Yi and can be solved. The error correction process involves a
+four-step procedure as follows.
+Step 1 (Calculation of Syndromes S j ): Syndromes can be evaluated according to (2) from r (x).
+
+TABLE I BERLEKAMP’S ITERATIVE PROCEDURE FOR FINDING THE ERROR
+LOCATOR POLYNOMIAL (x) OF AN RS CODE [23]
+
+Step 2 [Calculation of i From S j (Berlekamp)] [23]: We can compute (x) iteratively in 2t steps. Let (μ)(x)
+
+denote the error locator polynomial at μth step of the iteration.
+
+To find (x) iteratively, we start with the initialized Table I
+
+shown and proceed to fill the rest of the table entries. Let lμ be the degree of (μ)(x). Assuming that we have filled out
+
+the μth row, we find (μ + 1)st row using the procedure shown
+
+in the following.
+
+1)
+
+If dμ = (μ)(x ) and
+
+lμ i =0
+
+Sμ+1−i
+
+(i μ)
+
+lμ+1 = lμ.
+
+=
+
+0,
+
+then
+
+(μ+1)(x )
+
+=
+
+2) If dμ = 0, then we search another row ρ prior to the
+
+μth row where dρ = 0 and the number ρ − lρ in the last
+
+column of Table I having the largest value. (μ+1)(x )
+
+and lμ+1 are updated as
+
+(μ+1)(x ) = (μ)(x ) − dμdρ−1x μ−ρ ρ (x ) (4)
+
+lμ+1 = max[lμ, lρ + μ − ρ].
+
+(5)
+
+Step 3 [Calculation of Xi From i (Chien’s Search)] [23]: If α−i is a root of (x), the error is present at location i . Step 4 [Calculation of Yi (Forney’s Formula)] [23]: To evaluate the error magnitudes, we use Forney’s formula
+
+Yi
+
+=
+
+−
+
+ 
+
+(Xi −1) (Xi −1)
+
+(6)
+
+where (x ) = S1 + (S2 + 1 S1)x + (S3 + 1 S2 + 2 S1)x 2 + · · · + (Sυ + 1 Sυ−1 + · · · + υ−1 S1)x υ−1. The final step is to add e(x) obtained from Xi and Yi to r (x) to get the decoded codeword polynomial c(x).
+
+B. VLSI Architectures of the Decoder
+The hard decision RS decoder can be implemented with two popular algorithms, namely the Berlekamp–Massey (BM) algorithm and the modified Euclidean (ME) algorithm, to solve the key equation [23] toward computing the error locator polynomial. The ME algorithm is easier to understand and implement, whereas the BM algorithm is efficient in terms of computational complexity and implementation. We proceed with the BM algorithm to implement a decoder circuit on FPGA. The error values are computed using the error evaluator polynomial [23]. Pipelining is employed to the RS decoder to achieve higher throughput. The popular threestage pipelined RS decoder [25] is shown in Fig. 1. In a pipelined architecture, the overall throughput is decided by the slowest pipelined stage and its computation time. Hence, to increase the throughput with efficient area utilization, each
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+Fig. 1. Three-stage pipelined decoder with the delay buffer and each stage is separated using pipelined registers [25].
+pipelined stage should complete its computations in about the same amount of time. The key equation solver (KES) stage that computes the error locator polynomial using the BM algorithm requires 2t iterations. Given the syndromes and the error locator polynomial, Chien search and error magnitude computation (CSEMC) stage computes the error evaluator polynomial. The error locator and error evaluator polynomials are used to find the error locations and the corresponding error magnitudes. Parallelism can be employed to adjust the number of clock cycles required for the syndrome computation (SC) and the CSEMC stages. In addition, we use a delay buffer to buffer the received symbols. The size of the delay buffer depends on the latency of the decoder.
+In this paper, we present a novel low-complexity inversionless BM (iBM)-based KES architecture that takes exactly 2t cycles. We also present a novel architecture to find the error evaluator polynomial that takes t cycles. In total, our proposed architecture has the same critical path delay and hardware requirements as that of the existing iBM architectures [26]. Our RS decoder architecture has the least latency even though our KES has more critical path delay than the reformulated iBM (RiBM)-based architecture [26]. We use parallelism to ensure that the SC unit takes exactly 2t cycles as the KES stage in order to maximize the throughput. With this parallelism, we combine SC and KES stages into a single stage without affecting the throughput. Our overall RS decoder is a two-stage pipelined engine with significantly less pipeline registers and delay buffers. To maximize the throughput and minimize the latency, we make use of the efficient architecture for error locator and magnitude computation [25] coupled with the J parallel Chien search architecture [27] to find the error locations and the corresponding error magnitudes simultaneously.
+With all these available blocks, our major contribution is the following. We propose and develop a novel twostage pipelined RS decoder architecture. With this approach, the KES stage needs to wait for only two extra cycles with respect to the SC stage to initialize the BM iterative procedure. Hence, the throughput achieved by our design is almost the same as the three-stage pipelined decoder with significant improvement in latency.
+We discuss each pipeline stage as shown in Fig. 1. In most of the cases, KES determines the throughput as other blocks can employ parallelism for evaluating the polynomials at various field elements. This parallelism drives the tradeoff between throughput and area. The size of the delay buffer is determined by the latency of the pipelined decoder. This is one of the reasons to motivate us to decrease the latency. Let us examine each of the pipeline stages.
+1) Syndrome Computation : The syndromes are calculated as S j = r (α j ), 1 ≤ j ≤ 2t. We use the architecture shown
+
+in Fig. 2(a) to determine the syndromes from r (x). Initially all
+the registers “REG” are reset to zero. Once the received vector is ready, we make “load initial = 1” for one clock cycle to load the value r (i )αi into the registers REG. It results in S1 = r (α) after the adder block, which is loaded into “syndrome register.”
+Syndrome register works as a shift register with “syndrome load” as an enable signal. For the next 2t − 1 cycles, we make load initial = 0 to get the remaining syndromes into syndrome
+register. In total, the SC stage takes 2t cycles to compute
+2t syndromes.
+2) Proposed Key Equation Solver : The key steps in this
+block are to calculate the discrepancy factor dμ and the correction factor dμdρ−1x μ−ρ ρ(x ) to update (μ+1)(x ) at μth iteration for 1 ≤ μ ≤ 2t. This block can be implemented
+using the architecture shown in Fig. 2(b). We use register and
+polynomial interchangeably to refer to the same entity. The
+registers store the coefficients of the polynomial having the
+same name. We use registers μ and ρ to store the coefficients of
+(μ)(x ) and (ρ)(x ), respectively, as shown in Fig. 2(b). We also need registers for dρ, lρ, and lμ. Initially ρ , dρ, and lρ are loaded with values corresponding to μ = −1. μ and lμ are loaded with values corresponding to μ = 0 as per Table I. When the decoding iterations proceed, μ and lμ get updated when dμ = 0 with values as per (4) and (5), respectively. ρ , dρ, and lρ get updated with μ, dμ, and lμ correspondingly when dμ = 0 and μ − lμ ≥ ρ − lρ .
+a) Discrepancy factor dμ: To find dμ at every iteration, we use “temp register” of size t + 1 initialized with S2, S1, 0, . . . , 0 as shown in Fig. 2(b). As the decoding iterations proceed, the temp register is loaded with a value from
+a second index of the “syndrome register” which is rotated left
+as shown in Fig. 2(b). Temp register acts as a shift register and it is multiplied indexwise with μ register and summed to yield dμ after the adder block 1. As we will see later, output of the adder block 2 is μ + dμdρ−1x μ−ρρ. We update the μ register based on dμ using the multiplexer M2. In our Berlekamp iterative process, the syndrome register gets rotated
+2t number of times to retain the initial syndrome values which
+will be used for the next pipeline stage. The idea of rotating the
+syndrome register 2t number of times saves significant number
+of registers as we do not require another set of registers for
+storing the syndromes. b) Correction factor (dμdρ−1x μ−ρρ ): We need this to
+be computed to update the μ register. dμ and dρ are available, but μ − ρ may be any integer value. To compute x μ−ρ ρ, we need a barrel shifter to shift ρ by μ − ρ. Barrel shifter is
+a complex combinational logic that takes huge area and affects
+the maximum operating frequency, in turn the throughput. If x μ−ρ (ρ)(x ) is stored in the ρ register instead of (ρ)(x ),
+the barrel shifter can be avoided. This can be achieved by a
+simple “left shift by one” or multiplying by x before loading into ρ register as shown in Fig. 2(b). With this approach, the initial value of ρ register should be x instead of “1” before we start the iterative decoding. When dμ = 0 and μ − lμ ≥ ρ − lρ , ρ register becomes x μ. “LOAD sigma” shown in Fig. 2(b) is used to update ρ register. After 2t number of clock cycles, μ register and lμ contain the error
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+Fig. 2. SC and KES stages. (a) Parallel architecture for SCthat computes 2t syndromes in exactly 2t cycles. (b) Low-complexity KES architecture to compute the error locator polynomial (x) based on Berlekamp’s iterative procedure in exactly 2t cycles.
+TABLE II CLOCK CYCLES REQUIRED FOR EACH STAGE OF THE RS DECODER
+
+Fig. 3. Error evaluator architecture to compute (x) in exactly t cycles.
+locator polynomial (x) and υ values, respectively, which are sent to the next pipeline stage.
+3) Chien Search and Error Magnitude Computation: a) Error evaluator (x) computation: (x) can be com-
+puted similar to the dμ computation as shown in Fig. 2(b). An architecture to compute (x ) = S1 +(S2 +1S1)x +(S3 + 1 S2 + 2 S1)x 2 + · · · + (Sυ + 1 Sυ−1 + · · · + υ−1 S1)x υ−1 is shown in Fig. 3. (x) contains lμ coefficients and i is the coefficient of xi . We obtain each coefficient one-by-one using this architecture. We use a “syndrome register” that rotates left as shown in Fig. 3. We use a shift register named as “intermediate reg” initialized with S1, 0, 0, . . . , 0. As the computations proceed, this register is loaded from the second index of the syndrome register as shown in Fig. 3. This shift register is multiplied indexwise with “(x) register” obtained from KES and summed to give each coefficient of (x). We use “(x) register” of size t initialized with all zeros to store the coefficients of (x). It is a shift register with an enable signal “load” that remains high for lμ cycles to get all the coefficients into the (x) register. For t −lμ cycles, we rotate (x) register right to have 0 in the right most (least significant) position. It takes t number of cycles to compute all the coefficients of (x).
+b) Chien search: We use the J -parallel Chien search architecture presented in [27] as this is the best design for this hardware module. The parallel Chien search engine can
+
+compute the roots of a polynomial f (x ) = f0 + f1x + f2x 2 + · · · + fn xn over G F(2m). J field elements can be tested in one cycle. In our decoder, we use this architecture to evaluate (α−i ) and (α−i ) for 1 ≤ i ≤ n. For this, we need to change each constant multiplicand of the architecture to its
+inverse. c) Error magnitude computation: We need  (α−i ) to
+compute error magnitude as per Forney’s formula (6). To com-
+pute the error magnitude, we use error locator and magnitude
+computation architecture presented in [25]. In this architecture [25], even(x ) and odd(x ) are constructed using even and odd coefficients of (x), respectively. It turns out that  (α−i ) = (odd(α−i )/α−i ) over a finite field of characteristic two. J -parallel Chien search is used for even(x) and odd(x ) separately to avoid evaluating (α−i ) and  (α−i ) separately. J -parallel Chien search architecture is also used for (x) to evaluate (α−i ) to find the error magnitude at corresponding error location simultaneously. With this architecture,
+J error magnitudes generated in every clock cycle are added
+to the corresponding received symbols to get the estimated codeword. To compute the entire error vector, (n/J ) cycles
+are needed.
+4) Throughput Computation: Table II shows the clock
+cycles taken by each pipeline stage.
+The throughput of the decoder as a function of error
+correction capability is given by
+
+Throughput(t )
+
+=
+
+n×m× max{2t, t
+
+fmax
+
++
+
+n J
+
+}
+
+(Gbps)
+
+(7)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+TABLE III COMPARISON OF THE RS (255,239) DECODERS
+
+3100615
+
+TABLE IV COMPARISON OF HDL RS (255,239) DESIGNS
+
+Fig. 4. Two-stage low-latency pipelined decoder in which the SC and the KES are merged into a single stage.
+
+where n, m, t, and fmax denote the code length, symbol width, error correcting capability, and maximum operating frequency, respectively. If J is chosen such that (n/J ) = t, the throughput is maximized. Selection of J decides the tradeoff between the throughput and hardware complexities.
+The total latency of the designed RS decoder is given by sum of the cycles required for each stage as per Table II
+
+Latency = 2t + 2t + t + n = 5t + n (cycles). (8)
+
+J
+
+J
+
+5) Two-Stage Pipelined Low-Latency Decoder: Latency of the decoder can be reduced significantly without affecting the throughput much, if both the SC and the KES are merged into a single pipeline stage as shown in Fig. 4. This is possible because SC stage outputs one syndrome every clock cycle, and KES stage takes one syndrome as input for every clock cycle from an array of syndromes into the “temp register.” But, KES stage cannot start with SC stage as the “temp register” should be initialized with S2, S1, 0, . . . , 0 as shown in Fig. 2(b). So, KES stage needs to wait for an additional two clock cycles. With this, the throughput is almost the same, and the size of the delay buffer also reduces significantly. We need not use the rotating syndrome register shown in Fig. 2(b). We can use the syndrome register shown in Fig. 2(a) for loading one syndrome every clock cycle into the temp register. The latency of this decoder is given by the sum of the clock cycles required for the SC and the CSEMC stages
+
+Latency ≈ 3t + n (cycles).
+
+(9)
+
+J
+
+For the given code of interest, if we cannot afford the parallelism such that SC and CSEMC stages take almost 2t number of clock cycles, the proposed low-latency two stage pipelined architecture can be used as an alternative. This is due to the fact that, both the stages take almost the same number of clock cycles. We need not time multiplex the KES architecture
+
+with multiple SC and CSEMC blocks as in the popular threestage pipelined architecture to reduce the pipeline stalling. We can also use multiple KES copies in parallel to handle multiple received vectors and achieve higher throughput than what we achieve now.
+C. Results and Comparison
+The RS decoder with the proposed KES block was implemented using very high-speed integrated circuit hardware description language (VHDL) on a Kintex-7 FPGA KC705 Evaluation Kit. After functional verification, this RS decoder is synthesized with UMC’s 65 nm (1.2 V) and 180 nm (1.8 V) CMOS technologies using Cadence Encounter RTL Compiler. Synthesis results show that the maximum throughput is 35.29 Gbps in 65 nm technology as shown in Table III.
+1) Results of the Decoder on FPGA: In order to compare our RS decoder with other designs in the literature, we used RS (255,239) decoder over G F(28). Choosing J = 30 such that (n/J ) ≈ t = 8, results in a throughput of 24 Gbps. There is a tradeoff between area and throughput. We can save the area by choosing J = 10. However, throughput reduces to 12 Gbps. Table IV shows the comparison between our decoder with J = 10 and the RS decoder v9.0 Xilinx IP [11] for RS (255,239) on Kintex-7 FPGA. No block RAMs (BRAMs) are used in our decoder because all the needed Galois field arithmetic operations are implemented using LUTs and FFs. In the FPGA, LUTs are of different input bit lengths and often partially utilized. Hence, we cannot make a fair comparison between the hardware resources for various HDL designs. But the gain achieved in terms of throughput is almost five times with our architecture, which is a very
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+significant improvement. If the error evaluator computation and error magnitude computation with J = 10 were divided as independent pipeline stages, the throughput would become 16 Gbps. The latency of our decoder is almost nine times better than the Xilinx IP, which is very significant.
+2) Results of the Decoder Using CMOS Technology: We use the TSNT in index in Mb/s/K gates [14] to evaluate the different design performances with different fabrication technologies, that is
+TSNT = (throughput) × (technology/180 nm) . (10) Total number of gates
+Table III shows the comparison of our RS decoder with J = 10 with respect to competing decoder implementations. Our proposed 180 nm decoder TSNT value is at least 1.8 times better than existing designs, which indicates that our decoder would be much more area-efficient for the given throughput. Table III shows that our 180 nm decoder latency is reduced by almost 80% compared with the existing 180 nm designs [14], [15].
+Even though RiBM [26] has less critical path delay than our iBM-based KES, it is complex in terms of gate count. The popular CSEMC pipeline stage has almost the same critical path delay as the iBM-based architecture. If we look at the critical path delays, the critical path delay of the CSEMC stage is 2 × Tmult + ([1 + log2(n)] × Tadd). Similar to existing iBM architectures [26], the critical path delay of our iBM architecture is 2 × Tmult + ([1 + log2(t)] × Tadd). The critical path delay of the RiBM architecture is Tmult + Tadd. The overall throughput is decided by the slowest pipelined stage. Considering all these, our low-complexity iBM-based KES engine is more suitable for the overall RS decoder considering area efficiency, high throughput, and low latencies in comparison with the high complexity RiBM architecture with just the KES stage.
+Since the RiBM [26] architecture is only a KES engine and not a complete RS decoder, we have not compared the gate count with [26].
+III. DESIGN OF THE LDPC DECODER USING NON-UNIFORM QUANTIZATION
+We will now discuss the design of LDPC decoder architectures using NUQ and compare the performance of various architectural realizations. For practical reasons, we use the MSA for our hardware design. The MSA does not require complex logarithmic and trigonometrical calculations, thus avoiding the use of bulky LUTs. There is a tradeoff between speed and area in any hardware design. Non-layered MSA, which does parallel processing of block rows, can be used in scenarios demanding high throughput. On the other hand, if the lower area is required, layered MSA can be used. Layered MSA processes the block rows serially, thus achieving a low area. Also, the layered MSA provides better SNR performance than its non-layered counterpart attuned to the non-linear dynamics of the algorithm.
+We have designed LDPC decoders using both layered and non-layered MSA using NUQ. The design can easily be scaled and worked out for all code parameters of interest. This section
+
+Fig. 5. Example of a parity check matrix and the Tanner graph representation.
+is organized as follows. First, we present brief details of the decoding algorithms. Next, we provide a detailed analysis of the quantization methods used. Subsequently, we present the design architectures of the decoders followed by implementation results and comparisons.
+
+A. Background on LDPC Codes and Existing Decoders
+
+LDPC is a linear error correcting code with a sparse parity
+
+check matrix. It can be represented by a Tanner graph, con-
+
+sisting of a set of variable nodes and check nodes representing
+
+the columns and rows of a parity check matrix, respectively.
+
+A “1” in a parity check matrix implies a connection between
+
+the corresponding check node and variable node. The Tanner
+
+graph is an efficient means of visualizing the working of the
+
+algorithm. The LDPC code is called regular if the column
+
+weight (wc) and row weight (wr ) are constant. For a matrix to be called low density, wc m and wr n.
+An example Tanner graph for the parity check matrix in (11)
+
+is shown in Fig. 5
+
+⎡
+
+⎤
+
+0 1 0 1 1 0 0 ··· 1
+
+H
+
+=
+
+⎢⎢⎢⎢⎢⎣
+
+1
+1 ...
+
+0
+0 ...
+
+0
+1 ...
+
+1
+0 ...
+
+0
+1 ...
+
+1
+0 ...
+
+0
+1 ...
+
+···
+··· ...
+
+1
+0 ...
+
+⎥⎥⎥⎥⎦⎥
+
+.
+
+(11)
+
+0 1 1 0 0 1 1 ··· 0
+
+We shall now briefly discuss the decoding algorithms. 1) Non-Layered Min-Sum Algorithm: Let us consider a parity check matrix H and its associated Tanner graph. Let us assume that it contains m check nodes (C1, C2, C3, . . . , Cm ) and n variable nodes (V1, V2, V3, . . . , Vn). The MSA consists of the following steps. 1) Initial Variable to Check Node Pass: At the beginning
+of the decoding process, variable nodes receive the log-likelihood ratios (LLRs) from the channel. Variable nodes direct these values to the connecting check nodes. 2) Check to Variable Pass: In this step, the check nodes pass messages to the variable nodes they are connected to. Let us consider a check node Ck. Let it be connected to a set of variable nodes, Vl being a part of it. For the variable node Vl , the check node Ck finds minimum of absolute values received from the other variable nodes and sends it back to Vl with a sign, so that modulo 2 sum is satisfied. 3) Variable to Check Pass: In this step, the variable nodes pass messages to the check nodes they are connected to. Let us consider a variable node Vq. Let it be connected to a set of check nodes, Cr being a part of it. For the check node Cr , the variable node Vq sums up values
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+received from the other variable nodes except Cr and sends it back to Vl . The above-mentioned steps are repeated until the bits are corrected or a stopping criterion is reached. 2) Layered Min-Sum Algorithm: An array type [28] LDPC code with n block rows can be viewed as a concatenation of n layers or sub-codes. In this algorithm [19], as soon as a block row is processed, the messages are used to update the variable nodes. This can be viewed as turbo decoding message passing as introduced by Mansour and Shanbhag [20]. Let Qnm denote the message from nth variable node to mth check node and Rmn denote the messages from mth check node to nth variable node. Let the overall reliability information be denoted by P and the incoming LLRs be denoted by L. Let Rnew denote the check node messages computed in the present iteration and Rold be the check node messages computed in the previous iteration. The steps in the layered MSA are given in the following. 1) The variable nodes are initialized using the incoming LLRs as shown in
+
+P = L.
+
+(12)
+
+2) Q messages are calculated by subtracting R messages from the previous iteration as shown in (13). For the first iteration, Q messages are the same as the P messages as there are no Rold messages
+
+Q = P − Rold.
+
+(13)
+
+3) The R messages are generated using the check node processing as represented by equation
+
+Rnew = f (Q)
+
+(14)
+
+where f (.) denotes check node processing as follows. Let us assume that check node Ck is connected to n variable nodes (V1, V2, V3, . . . , Vn). For the variable node Vl, the check node Ck finds minimum of the absolute values received from the other variable nodes, and sends it back to Vl with a sign, so that modulo 2 sum is satisfied. 4) The updated P messages are then generated by adding the newly generated R messages to the Q messages. 5) The above-mentioned steps are repeated until the syndrome is satisfied or the stopping criterion is reached. Layered MSA has SNR improvement over the normal MSA. Owing to serial processing of block rows, this might be a good choice for implementations requiring low area budgets. Since the block rows are processed serially, unlike the MSA, the throughput suffers considerably. For high throughput requirements, multiple instances of the layered decoder may be a viable choice than the fully parallel decoder.
+
+B. Quantization
+In hardware, LLRs need to be represented by a finite number of bits, leading to a tradeoff between area, performance, and complexity with a choice of bit precision [29]. In order to devise a quantization scheme, we consider a (384, 4096) code with a parallelism of 128. It was found that a 5 bit quantization
+
+Fig. 6. Block diagram of LMS engine which finds optimum quantization levels.
+
+provided reasonably small SNR performance degradation of ∼0.5 dB with respect to floating point precision. If we go for higher number of bits, the SNR gap can be reduced significantly. However, there is a tradeoff; increased SNR gain comes at the cost of higher area and power. If the design demands are close to floating point performance, we can sacrifice in terms of area and power. Using 6 bit quantization instead of 5 bits would incur ∼20% increase in area. It was also found that choosing variable quantization levels boosted the performance of the decoder. NUQ has a lower bit budget for the same SNR performance and provides better performance at the same bit budget due to inherent non-linear dynamics of the algorithm.
+For storage systems, throughput, area, and power are the factors that lead to difficulty in design as one would not prefer to re-read, re-encode, and re-write back on the medium. The primary challenge in NUQ is to obtain the optimum quantization levels that would minimize the quantization error. The histogram of the LLRs evolves with each iteration due to density evolution. As the algorithm is non-linear, it is difficult to model the exact behavior of the LLRs with iterations and fitting a probability model for the same. So, we use a least mean square (LMS)-based approach for finding the optimum quantization levels during the simulations in software. Once the quantization numbers are received from the LMS engine designed on software, they are used as LUTs for hardware design of the decoder. The hardware will thus work using a fixed quantization table. The block diagram of the LMS-based approach is shown in Fig. 6.
+A frame of length N is generated using an LDPC encoder. The frame is transmitted through an AWGN channel with SNR p dB. In the receiver end, the frame is received and LLRs are generated using
+
+L
+
+=
+
+2y σ2
+
+(15)
+
+where L is the LLR, y is the received bit, and σ is the standard
+deviation of noise in the channel. Let us quantize the LLRs over b bits, i.e., 2b quantization levels, symmetrically around 0, i.e., over {±L j }2jb=−11 quantization levels. The bins need to be optimized for minimum distortion error.
+Fig. 6 shows two LDPC decoders; one using floating point precision and the second one using 2b quantization levels
+toward the formulation of the squared error.
+Let the output LLRs for the floating point precision decoder be represented by L( f ). Let the LLRs for the quantized
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+decoder at any step of the LMS algorithm be represented by L(q). Average square distortion error can be represented
+by (16). This can also be referred to as the cost function for
+optimization
+
+=
+
+N i =1
+
+(L(
+
+f
+
+)
+
+−
+
+L(q))2
+
+.
+
+(16)
+
+N
+
+Our aim is to minimize over {±L j }2jb=−11. We minimize using gradient-descent technique, where the gradient is
+
+estimated by looking into the change in over successive
+
+iteration
+
+steps.
+
+Let
+
+L
+
+(i j
+
+)
+
+represent
+
+the
+
+j th
+
+quantization
+
+level
+
+in
+
+the i th iteration. Within each iteration, there are 2b−1 steps to
+
+update each quantization level. Let
+
+(i) j
+
+be
+
+the
+
+square
+
+distortion
+
+error corresponding to j th step in i th iteration.
+
+L
+
+(i j
+
+)
+
+can
+
+be
+
+updated
+
+using
+
+(17),
+
+where
+
+μ
+
+is
+
+a
+
+constant
+
+which
+
+determines the speed of convergence
+
+L
+
+(i) j
+
+=
+
+L
+
+(i j
+
+)
+
+−
+
+μ
+
+δ
+
+δ L
+
+(i) j
+
+.
+
+(17)
+
+A closed-form expression for will involve computing the probability density function for the LLRs. This is practically difficult, since histograms must be computed and an empirical distribution function must be fit during every iteration. However, it may be noted that if the value of μ is chosen to be very small, the error in measuring the gradient can be made negligible. Therefore, we can estimate the gradient of with respect to L(ji) as
+
+δ
+
+δ
+
+L
+
+(i) j
+
+≈
+
+(i) j
+
+−
+
+L
+
+(i j
+
+)
+
+−
+
+(i −1)
+
+j
+
+L
+
+(i j
+
+−1)
+
+.
+
+(18)
+
+The gradient in (18) is an approximation, since we do not have a closed-form expression for .
+We can update {±L j }2jb=−11 using the Above-mentioned procedure for all the 2b−1 quantization levels. The abovementioned ideas can be summarized into a procedure that can be summarized in the following steps.
+Step 1: Start with ±{L1, L2, . . . , L2b−1 } as the initial quantization levels.
+Step 2: Each iteration involves 2b−1 computations. In each step, calculate the square distortion error using (16).
+Step 3: Update {±L j }2jb=−11 for each quantization level within every iteration using (17).
+Step 4: Repeat Step 3 till stabilizes or (δ /δ Li ) becomes 0.
+Table V shows the quantization schemes used in the hardware implementation using a (384, 4096) code with parallelism of 128.
+Using data-dependent noise prediction, the overall read channel in magnetic storage can be approximated with an ISI channel and AWGN, justifying the emulation of the coded system architecture over an AWGN channel. The LDPC decoder was emulated on software. At different SNRs, code failure rates were evaluated. The performance of non-layered and layered min-sum decoders are shown in Fig. 7. It can be clearly seen that there is a ∼0.3 dB performance improvement in the SNR for the layered MSA with respect to the non-layered
+
+TABLE V CODED LLRS IN UNIFORM QUANTIZATION AND NUQ
+SCHEME. s REPRESENTS THE SIGN BIT
+Fig. 7. SNR in dB versus code failure rate for layered and non-layered MSA.
+MSA for equal number of iterations. It was also seen that the layered min-sum decoder needs around half the number of iterations than the non-layered MS decoder to converge to the same error-correction performance. The performance of uniform versus non-uniform quantized layered min-sum decoders are shown in Fig. 8. Error floors can be observed for the uniform quantization at higher SNRs where its performance is almost similar to the non-uniformly quantized decoder. The algorithm is inherently non-linear, and as such, properly chosen NUQ levels lead to lesser quantization error and improved error floors. C. Design Architecture
+This section deals with the hardware architectural details of the layered LDPC decoder. Our architecture is easily adaptable to various code specifications with a re-synthesis of the RTL (i.e., rate, column weight, row weight, and so on).
+The complete architecture of the non-layered min-sum LDPC decoder is shown in Fig. 9. It can be clearly seen that the block rows are processed in parallel and the block columns
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+Fig. 8. SNR in dB versus code failure rate for layered MSA using uniform (5+0 bits), and non-uniform (4 and 5 bits).
+are processed serially. The architecture consists of basic blocks like CNUs, variable node units, barrel shifters, and MUXes for frame initialization, signed to 2’s complement converters and 2’s complement to signed converters. The basic blocks are explained with more details as follows. It should be mentioned here that the non-uniformly quantized version of the decoder will not have the sign conversion units as the additions and subtractions use LUTs. We have considered a general parity check matrix with L block rows, c block columns, and a parallelism p. The LLRs for one frame are stored in an RAM having a depth c and width p × b, where b represents the number of bits used for quantization.
+In the layered MSA [30], the block columns and block rows are processed serially. Fig. 10 shows the block diagram of the decoder. The architecture consists of CNUs, barrel shifters, adders, subtractors, and BRAM for storing the intermediate P, Q, and R messages. The CNU array is composed of p parallel CNU units, which compute the partial state for each row to produce R messages in block serial form. The R messages for each layer are stored in BRAMs of depth c and width p × b (b being the number of bits) as they would be used in subsequent iterations. We require the previous Q messages for the adder which are stored in a BRAM of depth c and width p × b. The MUX is required to supply new LLRs to the decoder when the decoder has corrected the previous frame or the maximum iteration limit is reached. Signed to 2’s complement and 2’s complement to signed converters are required before and after the CNU in the case of uniform quantization.
+The MUX at the input of the cyclic shifter takes care of the initialization for new frames. In the beginning, the output of the R select unit is set to a zero vector. The output of the subtractor is stored in a BRAM, which would be required later for the adder. The output of the subtractor is also fed to a set of barrel shifters. The CNU array receives the output of the cyclic shifter serially, and the partial stage operation starts. After c clock cycles, the partial state processing is complete, and the final state stage produces the final state for each check node in one clock cycle. After this, the R select unit within each CNU starts producing c values of check node messages serially. Thereafter, the check node messages are fed to the second set of barrel shifters to reverse the shifts applied by the first. The output of these cyclic shifters thus
+
+represent the R messages. The P messages are then computed by adding the delayed version of the Q messages (which are stored in BRAM until serial CNU produces the output) to the R messages. The R messages are then stored in a R message BRAM, which would be used in subsequent iterations. The next block row is now ready to be processed as the P messages are directed by the MUX to the subtractor. The next block row is operated in a similar way as explained before. For the next iteration i (if the syndrome has not been satisfied for iteration i − 1), the R select unit directs R messages from the previous iteration to the subtractor. The process continues till the frame has been corrected or a maximum iteration limit has been reached. The primary blocks of the decoder are explained in detail as follows.
+1) Check Node Unit: The CNU [31] in Fig. 11 emulates the operations at the check node on a Tanner graph. It sends back the minimum of the values received from a certain variable node, discounting the variable node. The CNU consists of a minimum value N1 and a second minimum value N2 finder, a partial state which stores N1 and N2 temporarily and updates them on each clock cycle, a final state which stores the final N1 and N2 value, and a sign processing unit which takes care of the sign of the LLR to be sent. Incoming variable messages are compared with two up-to-date least minimum numbers, to generate new partial state. In this state, we have N1 (first minimum value), N2 (second minimum value), and the index of N1. The final state is achieved after all the messages have been received. The R selector then assigns one of these two values (N1and N2) based on the index of N1 and sign of R messages generated by the XOR logic.
+2) Barrel Shifter: The barrel shifter contains s stages which produce shifts of 1, 2, 4, 8, 16, 32, 64, . . . , 2s−1, respectively. Each stage contains p numbers of MUXes in parallel. The shift value is determined by a signal shi f ter _b, which is an s bit signal. For any stage n, if the shi f ter _b bit connected to it is 1, a shift of 2n−1 is produced, otherwise no shift is produced. Thus the barrel shifter can produce any amount of shift required from 1 to 2s − 1 in one clock cycle. The architecture of the barrel shifter is shown in Fig. 12.
+3) Variable Node Unit: The variable node unit (used only in the non-layered decoder) in Fig. 13 emulates the computations that are done at a variable node of a Tanner graph. Variable node unit has an adder block which adds all the LLR values it receives and a subtractor which subtracts the value it receives from a check node from the partial sum and sends it back to the check node. Hard decision is also computed from the sign of the sum.
+4) Adders and Subtractors: The primary challenge in the design of an NUQ LDPC decoder is the lack of arithmetic units to realize the operations. The LLRs in this scheme are 1 to 1 mapped coded representations of the quantization levels as shown in Table V. We can implement non-uniform adders and subtractors by performing conversions between non-uniform and uniform representations before and after the adder and subtractors. Due to area required by the conversion units, we take another approach which uses a large LUTs to perform non-uniform additions and subtractions. But either of these processes are area extensive. The reason is that in FPGA,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+Fig. 9. Block diagram for non-layered min-sum LDPC decoder. The block rows, which are processed in parallel, require different amount of shifts which are provided by the barrel shifters. Another set of barrel shifters provide reverse routing. The CNU units and VNU units emulate the CNUs and VNUs of the Tanner graph. An RAM having depth c and width p × b is used to store an incoming frame. After a certain iteration, the VNU outputs are fed back to the decoder for the next iteration.
+
+Fig. 10. Block diagram of the layered decoder. Block rows are processed serially. P, Q, and R messages are stored in RAMs. Barrel shifters provide forward and reverse shifts. Syndrome check unit checks the correctness of the code before the next iteration is performed.
+
+Fig. 11. Architecture of the CNU. Q and R represent the incoming and outgoing messages, respectively.
+
+we have optimized adders and subtractors using LUTs and a carry chain. Non-uniform adders and subtractors can also be generated by doing the Karnaugh map minimization. Using this procedure, each of the output bits can be represented in sum of products form, which can then be coded in VHDL.
+5) Syndrome Check Unit: The syndrome check unit in Fig. 14 checks whether the frame has been corrected after a layer has been processed. It consists of three 1 bit barrel shifters to produce the required shift for the layers followed by XOR gates to verify the parity check equations. If the
+
+syndrome is satisfied, the next frame is loaded; otherwise the next iterations start.
+6) Architecture for SNR Degradation Due to Aging: The SNR of all storage channels degrade with time due to aging. This requires optimization of quantization parameters adjusting to channel conditions. We can have multiple LUTs for adders and subtractors for different optimal bin sizes at different SNRs. The optimum LUT can be chosen using a quality monitoring block by tracking the code failure rate. The architecture of such an adaptive decoder is shown in Fig. 15. LUT 1, LUT 2, . . . , LUT n contain the LUTs for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+Fig. 12. Barrel shifter has s stages which provide shifts of 1, 2, 4, 8, 16, 32, 64, . . . , 2s−1. shi f ter_b determines the amount of shift.
+
+Fig. 13. Architecture of the variable node unit.
+
+Fig. 15. Adaptive architecture for variable SNR channels.
+
+the adaptive quantization circuit chooses one of the LUTs by changing the inputs to the select lines of the MUX.
+
+Fig. 14. Architecture of the syndrome check unit.
+the adders and subtractors based on different bin sizes for different SNRs. The quality monitoring block monitors the code error rate. When the code error rate crosses a certain threshold,
+
+D. FPGA and Cadence Implementation and Results
+For implementation of the decoder on an FPGA kit, we have used a 4096 length code, with a parity check matrix containing 3 block rows and 32 block columns. The parallelism of the code was chosen as 128. Though we use a specific code for building the FPGA prototype, our design architecture is flexible to various parallelisms, row weights, and columns with modifications in the VHDL code. After functional verification, our designs were synthesized with UMC’s 65 nm (1.2 V) CMOS technologies using Cadence Encounter RTL Compiler. The gate count numbers are tabulated in Table VI.
+1) Implementation of the Layered LDPC Decoder Using Non-Uniform Quantization on FPGA: The LLRs were quantized to 4 bits as mentioned in Section III-C6. An RAM implemented using the IP-core directory in the XILINX ISE stores f number of frames at a certain SNR. The frames are stored in the form of 32 block columns, each having 128 × 4 bits. Each frame is loaded and fed to the decoder, for a maximum of five iterations. If it is corrected within five iterations, a register f r amecount is incremented by 1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+TABLE VI COMPARISON TABLE BETWEEN LDPC DECODERS IMPLEMENTED USING UNIFORM QUANTIZATION (5 bits) AND NUQ (4 bits) AND EXISTING WORKS
+
+We evaluate the code failure rate at a certain SNR as the ratio between the total frames not corrected and f .
+The control logic block creates 1 bit control signals like load ps, load f s, and loadr s based on the values of a counter. load ps, load f s, and loadr s load the partial state, final state, and the R select unit of the CNU, respectively. Read and write address registers for the BRAMs were also set based on the counter values. Each layer takes 77 clock cycles to process. The CNU unit takes 32 clock cycles to process the block columns, 1 clock cycle to load the final state, and another 32 clock cycles to produce the R messages in serial fashion. If we look carefully into Fig. 10, it can be clearly seen that the rest of the clock cycles are used by various units like the adder, subtractor, MUX, barrel shifters, syndrome check units, and so on. Thus it takes 77 × 3 × i number of clock cycles to process a frame as there are three layers and i number of iterations are required to process the frame. The decoder runs without any timing error for a frequency lesser than 150.015 MHz, as mentioned by post place and route report. In worst case scenario, a frame may take 5 × 3 × 77 number of clock cycles to process. Thus, we get 4096 × 4 number of bits at the end of 1155 clock cycles. We calculated the throughput to be 2.128 Gbps.
+We used the Chipscope software to visualize the outputs of the FPGA on a computer. For testing the output, a frame was passed through the decoder and outputs using chipscope (soft messages) were recorded. These outputs were then compared with the software simulation results using the same frame and noise as used in FPGA. A one-to-one match was found, thereby validating the correctness of the outputs on the FPGA.
+
+2) Implementation of the Layered LDPC Decoder Using Uniform Quantization: The FPGA implementation for the uniformly quantized LDPC decoder was similar to its nonuniform counterpart. The LLRs were quantized to 5 bits. LLRs in 2’s complement form were converted to signed magnitude for the CNU operation and then converted back using signed to 2’s complement converters and 2’s complement to signed converters, requiring two extra clock cycles, i.e., 79 clock cycles to process one layer. The control logic was similar to that mentioned in Section III-D1. Each iteration took 79 × 3 clock cycles. The throughput of our decoder is 2.577 Gbps (it may be noted that the bit throughput is higher in the case of uniform quantization as expected because more number of bits were used; but the symbol throughput is slightly higher for the non-uniform case).
+3) Implementation of the Non-Layered LDPC Decoder Using Non-Uniform Quantization: The LLRs were quantized to 4 bits. Each frame was run for a maximum of five iterations as in the layered decoder and thus incurs a performance drop of 0.3 dB compared with the layered decoder (as observed in simulations mentioned in Section III-B). If we intend to match performance of the layered and non-layered decoder, the non-layered decoder needs to run for twice the number of iterations, thus reducing the throughput by half. So, in our design, we used the same number of iterations for both the non-layered and layered decoders, thus allowing a 0.3 dB performance drop for the non-layered decoder. If we intend to match performance, the number of iterations can be changed with slight modifications in the RTL code. The control logic was similar to that mentioned in Section III-D.1. Each iteration took 74 × 3 clock cycle already mentioned. The throughput
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+of our decoder is 6.64 Gbps (it may be noted that the bit throughput is higher in the case of uniform quantization as expected, because more number of bits were used; but the symbol throughput is slightly higher for the non-uniform case).
+4) Implementation of the Non-Layered LDPC Decoder Using Uniform Quantization: The FPGA implementation for the uniformly quantized non-layered LDPC decoder was similar to its non-uniform counterpart. The LLRs were quantized to 5 bits. LLRs in 2’s complement form were converted to signed magnitude for the CNU operation and then converted back using signed to 2’s complement converters and 2’s complement to signed converters. Each iteration took 76 × 3 clock cycles. The throughput of our decoder is 8.08 Gbps.
+5) Performance Comparison: For comparing the FPGA results, we compared parameters like number of LUTs, registers, throughput, power, and so on for the proposed designs with [32] where authors implemented an uniform LDPC decoder on an FPGA Kintex 7 (410t) kit. It is clearly seen in Table VI that the numbers in terms of LUTs, registers, throughput, and so on are better in this paper. This paper achieves 1.25 times throughput using lesser resources on the FPGA board. The non-uniform decoder achieves almost the same performance using a fewer bits and resources on the board as seen in Table VI.
+The gate count numbers were compared with [33]–[35]. In [33], code length used was ∼2.5 times our code length. Though the gate count was only ∼1.7 times our gate count, the throughput of our decoder is ∼3 times higher. In [34], the code length was ∼4.5 times our code length. The gate count is only ∼ 6 times our design, the throughput is only ∼1.5 times higher than our design. In [35], the code length is again ∼4.5 times our code length. The gate count is ∼6 times higher than our design, but the throughput is only ∼1.25 times our design.
+Overall, our design is better than the existing state-of-the-art designs considering area-throughput tradeoff.
+IV. HARDWARE EMULATION OF THE AWGN CHANNEL
+To evaluate the performance of algorithms in digital storage systems, we need efficient simulation tools. Using datadependent noise prediction, the overall read channel can be approximated with an ISI channel and AWGN. Thus, rapid generation of high-quality Gaussian random numbers is useful for many emulator applications. Software delays are inherent in long-run simulations. To avoid such delays and to complete the simulation in real time, we have investigated into a hardware emulation. The set up involves a VC707 FPGA board to emulate the system. A synthesized model of the channel is used to perform the simulations at a very high speed, but we have to look for a compromise between the performance and hardware complexity. We will discuss the details of the implementation of our emulator in this section.
+A. Box–Muller Transform Method
+The Gaussian noise sample is generated in two steps as there is no direct way of generating Gaussian random numbers. Box–Muller [36] has proposed an indirect way of
+
+generating Gaussian random numbers using a transformation approach. As a first step, we generate uniform random numbers using a linear feedback shift register-based hardware using Box–Muller transformation and then convert uniform random numbers to Gaussian.
+The Box–Muller transformation approach is widely used in software simulations. It generates two Gaussian random numbers using two uniform random numbers. The uniform random numbers should be statistically independent to get two independent random numbers. The Box–Muller algorithm can be understood as representing the output random numbers as coordinates in a 2-D plane. To represent a coordinate in a 2-D plane, it requires a magnitude and a corresponding phase obtained by the following transformation.
+Let u1 and u2 be two independent uniform random numbers defined over [0, 1] then we can prove that R1 and R2 in (19) and (20) are two independent Gaussian random numbers
+
+R = −2 ln u1 cos(2π u2)
+
+(19)
+
+R2 = −2 ln u1 sin(2π u2)
+
+(20)
+
+where u1 and u2 are uniformly distributed over [0, 1].
+
+B. Hardware Architecture
+The AWGN channel emulator in our setup is a two-stage design, in which the first stage is generating independent uniform random numbers, and the second stage is transforming them into Gaussian random numbers. In most hardware designs, the Tausworthe generator has been popularly implemented for generating uniform random numbers, using feedback shift registers [36]. The conventional Tausworthe generator produces an L-bit independent uniform random number in L clock cycles. To increase the throughput, we use a pipelined design explained in the following.
+1) Improved Architecture for Tausworthe Sequence Generator: Consider the mathematical expression for Tausworthe sequence u0 = 1 and uk = x uk−1 (mod x p + x q + 1). Considerthe order of the polynomial, uk < p and p > q > 1. From [36], we have
+un+p = (un+q + un) (mod x p + x q + 1).
+Considering L = p, L number of shifts which are required to update the complete transition have to be completed in one clock cycle to generate the new random number. Following the idea in [36], we state the steps for completeness.
+Step 1: A = (an, . . . , an+p−1). Step 2: Let B = A. Shift B to the left by q bits. Then
+B = (an+q , . . . , an+p−1, 0, 0, . . . , 0).
+Step 3: Let A = A XOR B
+A = (an+p, . . . , an+p+( p−q)−1, an+( p−q), . . . , an+p−1).
+Step 4: Let B = A. Shift B to the right by q bits
+B = (0, 0, . . . , 0, an+p, . . . , an+p+q−1).
+Step 5: Let A = A XOR B
+A = (an+p, . . . , an+2 p−q−1, an+2 p−q , . . . , an+2 p−1).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+3100615
+
+IEEE TRANSACTIONS ON MAGNETICS, VOL. 54, NO. 2, FEBRUARY 2018
+
+Fig. 16. Improved Architecture for Tausworthe sequence generator [36].
+
+Fig. 18. Gaussian random number with sine phase σ = 1 and a distribution range of ±3.72σ .
+
+Fig. 17. Gaussian random number with cosine phase σ = 1 and a distribution range of ±3.72σ .
+From this, it can be seen that the p number of shifts are happening in a single clock cycle. The throughput is thus increased p times despite using two stages of XOR elements. The abovementioned design generates uniform random numbers in every clock cycle with a period of 2p − 1. The architecture of the improved Tausworthe sequence generator based on the abovementioned concept is shown in Fig. 16.
+2) Validation: We implemented the transformations using an LUT approach. A 10 bit uniform random number was generated from the Tausworthe generator. This means that there are 210 possible uniform numbers. We need three LUTs each of length 210. For cosine and sine function LUTs, the magnitude varies from +1 to −1. So, these LUTs have 12 bits in each location, out of which least 10 bits are for fractional values, 1 bit is for magnitude, and 1 bit is for sign. (−2 ln u1)1/2 representation always gives a non-negative value, implying no sign bit is required. The minimum value of u1 is 2−10 (10 bit uniform number) that gives the maximum value of +3.72 for (−2 ln u1)1/2. So, the magnitude varies from 0 to 3.72, requiring 10 bits for fractional value and 2 bits for magnitude representation. Likewise, three LUTs each of length 1024 and width of 12 bits were implemented using BRAM memories using core generator IP.
+C. Results
+A Gaussian random number generator is implemented on a VC707 FPGA board and simulated for 105 samples. The hardware is designed in such a way that it gives two random numbers in each clock cycle with the same magnitude, but variation in phase. Figs. 17 and 18 show the Gaussian random variable density function with cosine and sine phases, respectively. This signal generator was useful for our hardware circuit.
+
+V. CONCLUSION
+RS and LDPC are highly popular coding schemes of significant practical importance in storage systems. Efficient implementation of these codes is vital for realizing performance gains in hardware.
+In the first part, we proposed a high-speed low-complexity architecture for RS decoders with the lowest latency using a two-stage pipelined architecture. We addressed the tradeoff between performance and area and compared it with existing RS decoders. Our RS decoder hardware has the lowest latency and highest throughput to date on FPGA with a maximum throughput of 24 Gbps for the RS (255, 239) code. Our RS decoder synthesized using UMC 65 and 130 nm CMOS technologies has higher TSNT and lower latency than existing designs with potential applications in high-speed ECC circuits.
+In the second part of this paper, we designed a nonuniformly quantized, Area-efficient LDPC decoder based on layered and non-layered MSA for an FPGA circuit prototype. We also used Cadence tools to compare gate count numbers. Our FPGA-based LDPC design is useful for architectural evaluation of LDPC-based coded systems. The proposed layered design achieves a throughput of 2.128 Gbps at 150.015 MHz, while the non-layered design achieves a throughput of 6.64 Gbps at 150 MHz. But the resources on the board utilized by the non-layered decoder are almost three times the layered decoder. By comparing the gate count numbers with other state-of-the-art works, the throughput of the proposed design was found to be considerably better within the code specifications.
+ACKNOWLEDGMENT
+The work of A. Mondal was supported by the Space Technology Cell under Grant ISTC-311. The work of S. Thatimattala and V. K. Yalamaddi was supported by the Ministry of Electronics and Information Technology under Grant MITO0101. The work of S. S. Garani was supported in part by the Ministry of Electronics and Information Technology and in part by the Space Technology Cell.
+REFERENCES
+[1] H. J. Richter et al., “Recording on bit-patterned media at densities of 1Tb/in2 and beyond,” IEEE Trans. Magn., vol. 42, no. 10, pp. 2255–2260, Oct. 2006.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+MONDAL et al.: EFFICIENT CODING ARCHITECTURES FOR RS AND LOW-DENSITY PARITY-CHECK DECODERS
+
+3100615
+
+[2] R. Wood, M. Williams, A. Kavcic, and J. Miles, “The feasibility of magnetic recording at 10 terabits per square inch on conventional media,” IEEE Trans. Magn., vol. 45, no. 2, pp. 917–923, Feb. 2009.
+[3] S. G. Srinivasa, Y. Chen, and S. Dahandeh, “A communication-theoretic framework for 2-DMR channel modeling: Performance evaluation of coding and signal processing methods,” IEEE Trans. Magn., vol. 50, no. 3, pp. 6–12, Mar. 2014.
+[4] S. Datta and S. G. Srinivasa, “Design architecture of a 2-D separable iterative soft-output Viterbi detector,” IEEE Trans. Magn., vol. 52, no. 5, pp. 1–14, May 2016.
+[5] A. Dey, S. Jose, K. Varghese, and S. G. Srinivasa, “A high-throughput clock-less architecture for soft-output Viterbi detection,” in Proc. IEEE Int. Midwest Symp. Circuits Syst. (MWSCAS), Boston, MA, USA, Aug. 2017, pp. 779–782.
+[6] G. Mathew, E. Hwang, J. Park, G. Garfunkel, and D. Hu, “Capacity advantage of array-reader-based magnetic recording (ARMR) for next generation hard disk drives,” IEEE Trans. Magn., vol. 50, no. 3, pp. 155–161, Mar. 2014.
+[7] M. Bahrami, C. K. Matcha, S. M. Khatami, S. Roy, S. G. Srinivasa, and B. Vasic´, “Investigation into harmful patterns over multi-track shingled magnetic detection using the Voronoi model,” IEEE Trans. Magn., vol. 51, no. 12, pp. 1–7, Dec. 2015.
+[8] X. Hu, S. Parthasarathy, S. S. Garani, A. Weathers, and R. Barndt, “Interlaced iterative system design for 1K-byte block with 512-byte LDPC codewords,” U.S. Patent 8 255 768, Aug. 12, 2012.
+[9] X. Hu, S. G. Srinivasa, A. Weathers, and R. Barndt, “Trapping set based LDPC code design and related circuits, systems, and methods,” U.S. Patent 0 083 058, Apr. 7, 2011.
+[10] S. D. Mhaske, U. Ghodeswar, and G. G. Sarate, “VLSI implementation of low-complexity Reed-Solomon decoder,” in Proc. IEEE Int. Conf. Commun. Signal, Melmaruvathur, India, Apr. 2014, pp. 1214–1217.
+[11] (Nov. 18, 2015). Reed–Solomon Decoder v9.0 LogiCORE IP Product Guide, Vivado Design Suite, PG107. [Online]. Available: http://www.xilinx.com/support/documentation/ipdocumentation/ru/ rs-decoder.html.
+[12] Altera. (Nov. 17, 2015). Reed-Solomon II IP Core User Guide. UG01090. [Online]. Available: https://www.altera.com
+[13] H. A. Ahmed, H. Salah, T. Elshabrawy, and H. A. H. Fahmy, “A low energy high speed Reed–Solomon decoder using decomposed inversionless Berlekamp–Massey algorithm,” in Proc. IEEE Signals Syst. Comput., Pacific Grove, CA, USA, Nov. 2010, pp. 406–409.
+[14] B. Yuan, Z. Wang, L. Li, M. Gao, J. Sha, and C. Zhang, “Areaefficient Reed–Solomon decoder design for optical communications,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 56, no. 6, pp. 469–473, Jun. 2009.
+[15] H.-Y. Hsu, A.-Y. Wu, and J.-C. Yeo, “Area-efficient VLSI design of Reed–Solomon decoder for 10GBase-LX4 optical communication systems,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 53, no. 11, pp. 1245–1249, Nov. 2006.
+[16] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Globecom, Nov. 2001, p. 1036.
+[17] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in Proc. IEEE GLOBECOM, Nov. 2001, pp. 1021–1025.
+
+[18] Y. Cao, “An improved LDPC decoding algorithm based on min-sum algorithm,” in Proc. 11th Int. Symp. Commun. Inf. Technol. (ISCIT), Oct. 2011, pp. 26–29.
+[19] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2004, pp. 107–112.
+[20] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, no. 3, pp. 684–698, Mar. 2006.
+[21] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010.
+[22] X. Zhang and P. H. Siegel, “Quantized min-sum decoders with low error floor for LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2012, pp. 2871–2875.
+[23] S. Lin and D. J. Costello, Error Control Coding, 2nd ed. Upper Saddle River, NJ, USA: Prentice-Hall, 2004.
+[24] W. W. Peterson and E. J. Weldon, Error-Correcting Codes, 2nd ed. Cambridge, MA, USA: MIT Press, 1972.
+[25] X. Zhang, VLSI Architectures for Modern Error-Correcting Codes. Boca Raton, FL, USA: CRC Press, 2015.
+[26] D. V. Sarwate and N. R. Shanbhag, “High-speed architectures for Reed–Solomon decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 9, no. 5, pp. 641–655, Oct. 2001.
+[27] Y. Chen and K. K. Parhi, “Small area parallel Chien search architectures for long BCH codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 12, no. 5, pp. 545–549, May 2004.
+[28] S. Olcer, “Decoder architecture for array-code-based LDPC codes,” in Proc. IEEE Globecom, Dec. 2003, pp. 2046–2050.
+[29] T. Zhang, Z. Wang, and K. K. Parhi, “On finite precision implementation of low density parity check codes decoder,” in Proc. IEEE Int. Symp. Circuits Syst., May 2001, pp. 202–205.
+[30] K. K. Gunnam and G. S. Choi, “Low density parity check decoder for regular LDPC codes,” U.S. Patent 8 359 522, Jan. 22, 2013.
+[31] K. K. Gunnam, G. S. Choi, M. B. Yeary, and M. Atiquzzaman, “VLSI architectures for layered decoding for irregular LDPC codes of WiMax,” in Proc. IEEE Int. Conf. Commun., Jun. 2007, pp. 4542–4547.
+[32] S. Mhaske, D. Uliana, H. Kee, T. Ly, A. Aziz, and P. Spasojevic, “A 2.48Gb/s FPGA-based QC-LDPC decoder: An algorithmic compiler implementation,” in Proc. IEEE Sarnoff Symp., Sep. 2015, pp. 88–93.
+[33] K.-C. Ho, P.-C. Fang, H.-P. Li, C.-Y. M. Wang, and H.-C. Chang, “A 45nm 6b/cell charge-trapping flash memory using LDPC-based ECC and drift-immune soft-sensing engine,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, Feb. 2013, pp. 222–223.
+[34] M.-R. Li, H.-C. Chou, Y.-L. Ueng, and Y. Chen, “A low-complexity LDPC decoder for NAND flash applications,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Melbourne VIC, Australia, Jun. 2014, pp. 213–216.
+[35] H. Zhong, W. Xu, N. Xie, and T. Zhang, “Area-efficient min-sum decoder design for high-rate quasi-cyclic low-density parity-check codes in magnetic recording,” IEEE Trans. Magn., vol. 43, no. 12, pp. 4117–4122, Dec. 2007.
+[36] W. Cui, H. Chen, and Y. Han, “VLSI implementation of universal random number generator,” in Proc. Asia–Pacific Conf. Circuits Syst. (APCCAS), Oct. 2002, pp. 465–470.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:12:09 UTC from IEEE Xplore. Restrictions apply.
+
+

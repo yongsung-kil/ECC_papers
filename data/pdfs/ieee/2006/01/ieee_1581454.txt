@@ -1,0 +1,386 @@
+Programmable LDPC Decoder Based on the Bubble-Sort Algorithm
+
+Rohit Singhal Computer Science Texas A & M University College Station, TX - 77843.
+
+Gwan Choi Electrical Engineering Texas A & M University College Station, TX - 77843.
+
+Rabi N. Mahapatra Computer Science Texas A & M University College Station, TX - 77843.
+
+Abstract
+Low density parity check (LDPC) codes are one of the most powerful error correcting codes known. Recent research have pointed out their potential for a low cost, low latency hardware implementation. Due to this property, a lot of research has been done to find their suitability in different communication media. These codes have been shown to achieve near Shannon-limit performance in Wireless AWGN channels. At the same time these codes can result in significant power reduction in on-chip global and semi-global interconnects. These different applications demand a variety of LDPC coder decoder structures.
+This paper presents a programmable design for a parallel implementation of an LDPC decoder. The programability implies that this decoder can adapt itself to any arbitrary LDPC code for a variety of applications. This paper also presents two example configurations, with a throughput of 2.28 Gbps and 4.37 Gbps respectively.
+1 Introduction
+Almost all communication in today’s world, be it deep space communication or on-chip communication, is digital. The channel over which such communication is carried out is always non-ideal, noisy and adds undesirable errors to the signal transmitted through it. The fidelity of the signal passing through a channel can be preserved in two ways, first is to protect the signal against the error inducing phenomenon, and the second is algorithmic correction of the errors generated.
+The signal protection includes schemes like increasing the signal power. However, the recent drive towards low power mobile devices limits any increase of power. In addition to this, the transmission power is minimized to prevent any adverse effect on the other legitimate signals present. In the context of on-chip communication, another method of signal protection is bus-shielding. However, the limited area available for laying out the on-chip wires limits the use
+
+of elaborate bus-shielding set-ups. This, in most cases leaves algorithmic noise tolerance
+as the only means of reducing the errors in transmission. The methods of overcoming the existing errors may range from re-transmission to forward error correction schemes like channel coding. Turbo codes are perhaps the most powerful forward error correction tool known. They perform very close to the Shannon’s theoretical limit [1]. However, the hardware implementation of turbo codes is very complex and usually results in costly, low throughput devices.
+Low density parity check (LDPC) codes, introduced by Gallager, are a class of linear block codes that perform very close to the turbo codes [2, 3]. In the recent past, several works describing the hardware implementation of the LDPC codes have been published [4, 5, 6, 7, 8, 9, 10, 11, 12]. All these works show the potential of the a low cost and low latency implementation of LDPC decoder.
+As described in detail later, the LDPC decoding process consists of computing several updates called the check node updates and the variable node updates. The decoder architectures range from those that handle one update at a time (serial) [4] to those that compute all the updates at the same time (parallel)[5, 6]. While the serial architecture has a low hardware cost and are very easy to implement, they suffer from low throughput. On the other hand, while the parallel implementations have a very high throughput, they have a very high hardware resource requirement and have a very complex design. Several other designs that are a combination of the above are presented in [7, 8, 9, 10, 11, 12].
+The LDPC codes are linear block codes, meaning that the decoder is merely an implementation of a linear parity check matrix H. Different communication systems have different error control requirements, and hence have completely different structures of this matrix H. For the LDPC decoder hardware design to be versatile and reusable in a variety of applications, a easily programmable design is desired.
+The fast switching and adaptation to a variety of H matrices can also be exploited for
+1. Data encryption
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+2. Adapting to channel noise conditions
+Data encryption comes from the fact that both the transmitter can now switch between different H, confusing any illegitimate listeners. The designated receiver on the other hand is pre-programmed with the information about the different H and is expecting “hopping” of H. Since the switching between different H at both ends is now at the hardware level, it can be done very fast, allowing a powerful encryption.
+Another advantage of hardware programability can be found in cases when the communication channel is unpredictable. For example some transmitters employ variable rate coding in variable channels. When the channel conditions are bad, they code the information using a very powerful low rate code. While when the channel condition is good, the data may be transmitted using a very high rate code or no code at all. Having a programmable receiver, that can adapt to different transmit sequences based on the channel conditions helps receiving the data in such “hopping” systems.
+The rest of this paper is organized as follows. Section 2 describes the construction of LDPC codes, the decoding process and their performance. A brief mention of the existing LDPC decoder architectures including the serial and parallel architectures is also given. Section 3 explains a bubble sort implementation of a programmable parallel LDPC decoder. Section 4 gives the conclusion.
+2 LDPC Codes
+Gallager proposed a class of linear block codes that rival the performance of turbo codes. These linear block codes are called the LDPC codes [2, 3]. At the transmitter, redundancy bits are added to a data block of length k to derive a code word of length n. These redundancy bits are parity bits formed by linear combination of the k message bits. The rate of the code is R = k/n.
+2.1 LDPC Decoding Process
+The receiver has exactly n − k parity check equations to determine the correctness of a received word. These n − k linear equations can be uniquely represented by a parity check matrix H of size (n − k) × n, where the columns represent the received symbols and the rows represent the parity check equations. All elements of this matrix are either 0 or 1. A 1 in the (x, y) position means that the yth received symbol participates in the xth parity check equation.
+The H of a regular (n, j, ρ) LDPC code has exactly j(≥ 3) ones in each column and exactly ρ(> j) ones in each row. Let C be the set of n bit long code words, then all
+
+vectors x ∈ C satisfy the relation H.xT = O, where O is a vector having n − k zeros.
+An H matrix can also be seen as a bipartite graph, where the rows form the n − k check nodes (CN) on one side and the columns represent the n variable nodes (VN) on the other. A 1 in the (x, y) position means a connection between the yth VN and the xth CN.
+The decoding process is an iterative message passing algorithm, where updated messages run sequentially between the two sides of the bipartite graph. At each stage, updates are calculated and are called the VN update (VNU) or the CN update (CNU) respectively. The updates from the VN stage are passed on to the CN stage. The CN stage performs its own updates and passes the signal back to the VN stage.
+These updated messages are incrementally improving estimates of the transmitted bits. Each node takes the a priori probabilities of the bits as inputs and calculates the a posteriori probabilities[2] based on them. These probabilities, also known as extrinsics, are expressed as a Log Likelihood ratio (LLR) defined as
+
+L(m) = L(cm|rm) = log
+
+p(cm = 1|rm) p(cm = 0|rm)
+
+,
+
+(1)
+
+where, rm is the value received from the communication medium and cm is the binary estimate of it.
+
+2.1.1 The Variable Node
+Every VN has j LLR inputs, called Lcb,1, Lcb,2, . . . , Lcb,j from the preceding CN stage. It also has one LLR input Lch, which is the information of the bit received from the communication medium. Based on these inputs, it calculates j outputs, Lbc,1, Lbc,2, . . . , Lbc,j according to the equation (2).
+
+Lbc,i = Lch + Lcb,k.
+
+(2)
+
+k=i
+
+2.1.2 The Check Node
+The CN has ρ LLR inputs from the preceding VN stage called Lbc,1, Lbc,2, . . . , Lbc,ρ. It calculates the ρ outputs Lbc,1, Lbc,2, . . . , Lbc,ρ according to the equation (3).
+
+
+
+
+
+Lcb,i = − Sign(Lbc,k) × ψ−1  ψ(Lbc,k)(.3)
+
+k=i
+
+k=i
+
+ψ(x) = log tanh
+
+x 2
+
+.
+
+(4)
+
+ψ(x) = −ψ−1(x).
+
+(5)
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+2.2 LDPC Decoder Architectures
+Several papers showing the implementation of the LDPC decoder have been presented recently. The architectures range from a completely serial architecture [4] to a fully parallel architecture [5, 6]. The serial architecture has the advantage of low hardware requirement. It however, has a low throughput. On the other hand, although the parallel architecture permits high throughput, it is expensive in terms of hardware requirements and complexity. Several other approaches that combine advantages of both have also been developed [7, 8, 9, 10, 11, 12].
+While all these approaches emphasize the potential of LDPC codes as a powerful, low cost, low latency solution for error control, they also bring out serious concerns that need to be addressed for better decoder design. The most important issues while designing a parallel decoder architecture are
+2.2.1 Quantization
+The performance of the LDPC code improves with the precision of the LLRs used at the decoder. Even though increasing precision results in better decoder performance, it also means higher hardware requirement and therefore higher cost. Fixing the precision of the LLRs is therefore an optimization problem and is an active research area. This work describes the process of arriving at the optimal precision for LDPC Decoders via simulations for implementation in an additive white gaussian noise (AWGN) channel and a Binary Symmetric Channel (BSC). However, a unified decoder architecture for all different applications should be programmable in terms of the precision of the LLR values carried in it.
+
+FER
+
+FER
+
+(a) 100
+floating point (1/16,float) (1/8,float) (1/4,float) (1/2,float) (1,float)
+10−1
+
+10−2
+
+10−3 0
+100
+10−1
+
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+Iterations
+
+(b)
+
+floating point (1/2,float) (1/2,1/512) (1/2,1/256) (1/2,1/128) (1/2,1/64)
+
+10−2
+
+10−3 0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+Iterations
+
+Figure 1. The Comparison of Various Implementations of the LDPC decoder with (a) with varying vn (b) with varying cn at 2.3dB SNR AWGN Channel.
+
+2.2.2 Routing Complexity
+The parallel design is nothing but the implementation of the bipartite graph, including all the nodes and edges. The two parts of the bipartite graph are connected by exactly n × j edges. Implementing this many edges even for a reasonable length code poses difficult routing problems. Moreover, for each unique H, a different routing solution is required. It is imperative that a basic building structure be designed, that can be applied to various situations with minimal modification. This paper provides a parallel decoding architecture that is built with simple identical programmable blocks. Any length decoders can be built by using arrays of this basic cell. Also, programmability of this basic cell implies that it can be used with any arbitrary H.
+
+2.3 Performance of LDPC codes
+As described above, the decoding of the LDPC codes is an iterative process. LLR updates are calculated at each stage and are passed on to the next stage. These updates are called the VNU and the CNU respectively. The performance of the LPDC codes depends on the precision of the messages that are passed through. Let vn and cn be the least count of the LLR values at the VN and CN respectively. Also, lets denote the decoder implementation as ( vn, cn). Fig. 1(a) describes the LDPC code performance as a function of vn and the number of iterations, keeping cn = 0, i.e., floating point precision of the LLR at the CN. The experiments are conducted for an Additive White Gaussian Noise (AWGN) channel for a 2.3 dB
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+(a) 100
+floating point (1/4,float) (1/2,float) (1,float) (2,float) (4,float)
+10−1
+
+FER
+
+10−2
+
+10−3
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+Iterations
+
+(b) 100
+(floating point) (2,float) (2,1/32) (2,1/16) (2,1/8)
+
+10−1
+
+FER
+
+10−2
+
+10−3
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+Iterations
+
+Figure 2. The Comparison of Various Imple-
+mentations of the LDPC decoder (a) with varying vn (b) with varying cn at 10−2 BER
+BSC Channel.
+
+SNR. It is seen that the performance does not suffer until vn = 1. Again fig. 1(b) describes the LDPC code performance as a function of cn and the number of iterations, keeping vn = 1/2. It is seen that the performance does not suffer significantly until cn = 1/64. The optimal operating point is therefore selected as (1/2, 1/128). For a maximum LLR value of ±4, this corresponds to 5 bits and
+11 bits precision at the VN and CN respectively.
+The same experiment is repeated for a 10−1 BER BSC
+Channel. The results are shown in fig. 2 (a) & (b). The optimal operating point selected is (2, 1/16). Again, for a LLR value between ±4, this implies a precision of 3 bits
+and 8 bits at the VN and CN respectively.
+
+3 Programmable Parallel LDPC Decoder
+
+A parallel implementation of the decoder has exactly n × j messages going from one stage to another. An arbitrary structure of H means that these messages can start from any arbitrary location on one side and end up going to any arbitrary position on the other side. Any parallel decoder implementation will involve carrying these n×j messages from one side to the other precisely reordering them to deliver the correct message to the concerned node. This operation is similar to a sorting operation, where the output is arrived at by reordering the input values. Based on this amazing similarity, this work describes the implementation of the channel router in a parallel LDPC decoder using a bubble sort algorithm.
+3.1 Bubble Sort Algorithm
+
+The bubble sort algorithm is based on comparison of two consecutive elements of a list. If they are found to be in the right order, they are left untouched, otherwise the values are swapped. Sorting the entire list of length x involves O(x2) such comparisons.
+The reordering of n×j messages can be done in a similar fashion by doing O(n2 × j2) one-to-one comparisons. As an illustration, consider the fig. 3, where 6 messages are to be routed from one end to the other. The small cells are switching devices with two inputs and two outputs. The switch has 2 states, it either passes the messages through without swapping them, or alternately, it swaps them. The states of these 13 switches can be altered to route any of the 6 messages from any arbitrary starting position to any arbitrary ending position. Moreover, there is no critical path as all path lengths are equal.
+
+i1
+
+o1
+
+i2
+
+o2
+
+i3
+
+o3
+
+i4
+
+o4
+
+i5
+
+o5
+
+i6
+
+o6
+
+Figure 3. A Schematic for The Bubble Sort Algorithm.
+
+The routing of n×j messages in a typical LDPC decoder
+can be done in a similar fashion by laying out an array of the switching cells. Exactly n2j2/2−nj +1 switching cells are required and the longest path passes through nj − 1 cells.
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+3.2 The Switching Cell
+A switching cell consists of two inputs, two outputs and a single bit memory element. Based on the state of the memory element, the values from the inputs are passed straight through or crossed over. A schematic of such a cell is shown in fig. 4. The cell consists of a latch and 4 transmission gates. The latch stores the 1 bit state information.
+0/1
+
+i1
+
+o1
+
+i2
+
+o2
+
+Figure 4. The Schematic for the Switching Cell.
+3.3 The Nodes
+The variable nodes and the check nodes are implemented using several adders. According to equation (2), the VN has j + 1 inputs and j outputs. In most practical situations, the j of an (n, j, ρ) code is kept at 3. This means that there are exactly 4 inputs into the VN and it produces 3 outputs for the CN. A schematic implementing the euqation (2) is shown in fig. 5.
+
+j = 3, then ρ = 12. The structure of the CN is therefore left programmable, depending on the value of ρ, the inputs to the check node are changed. The basic structure of the cell remains the same. It is an add-accumulate circuit, with all the ρ inputs added together after ψ transformations and then for each output a specific value is subtracted from the accumulated sum.
+3.4 The Decoder Architecture
+The example circuit from fig. 3, that carries 6 messages from one end to another was simulated in SPICE. This involved 13 cells with the longest path passing through 5 cells. Spice simulations show that the latency of the signal passing through the 5 cells is 0.28 ns.
+Further, lets consider an example of a (1024, 3, 6) code in an AWGN channel. There are exactly 1024 × 3 =3072 messages going from one stage to another. The longest path will run through 3071 stages. This path is broken down into pipeline stages, with each stage having 20 cells in the longest path. The latency of one such stage, as shown in fig. 6, is 1.12 ns, i.e., it takes 1.12ns for the signal to propagate from one end to another. The stage has roughly 1536 × 20 cells and is shown in fig. 6. Due to this basic latency of 1.12ns, the circuit is run at a clock speed of 0.89 GHz.
+
+Lch Lcb1 Lcb2 Lcb3
+
+Lbc1 Lbc2 Lbc3
+
+Figure 5. The Schematic for the VN.
+The ρ however, depends on the rate of the code chosen. For good channels the ρ is very high, while for bad channels ρ is very low. For example, for a rate R = 1/2 code, if j = 3, then ρ = 6. Also, for a rate R = 0.75 code, if
+
+Figure 6. The Schematic for a Single Pipeline Stage of the Decoder.
+
+Based on section 2, the precision required for each message is 5 bits. Also, there are exactly 3071/20 = 154 pipeline stages. Therefore, at any given time, 154/5 = 30
+frames can be processed simultaneously. It takes exactly
+308 cycles to transmit 30 frames from one end to the other
+and leave the pipeline completely empty for reverse trans-
+mission. Assuming 20 iterations, the 30 frames will travel 2 × 20 − 1 = 39 times from one side to the other. The total processing time is therefore 308 × 39 = 12012 cycles. The throughput T is therefore
+
+T = 30F rames/12012cycles
+
+(6)
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+T = 30F rames/13.45µs
+
+(7)
+
+T = 2.23 × 106F rames/s
+
+(8)
+
+T = 2.28Gbps
+
+(9)
+
+In comparison, the Flarion FPGA based decoder [13]
+(which is fully programmable) has a throughput of 100Mbps, computed for a parallelism factor of 128, R = 0.5, n = 1024 using 20 iteration stages, with the FPGA
+operating at 100MHz. Another similar configuration for a (264, 3, 12) code op-
+erating in a BSC for 5 iterations with a 3 bit word precision will have a a throughput of 4.37Gbps. Also, having dif-
+ferent hardware instances for forward and reverse message
+passing will quadruple the throughput while doubling the
+area.
+
+4 Conclusion
+
+This paper addresses the quantization and routing problems in a typical parallel LDPC decoder design and presents a programmable and scalable LDPC decoder. The programmability makes the decoder design very versatile and allows it to adapt itself to any arbitrary H. Two example configurations of the decoder are also presented herein with 1024 bits and 264 bits as code lengths respectively. The throughput generated through them is 2.91 Gbps and 4.37 Gbps.
+
+References
+
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting codes and decoding,” in Proc. Int. Conf. Comm. ’93, May 1993, pp. 1064-1070.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inform. Theory, Jan. 1962.
+[3] T. J. Richarson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inform. Theory, vol. 47, pp. 619-637, Feb. 2001.
+[4] E. Yeo, B. Nikolic, V. Anantharam, “Architectures and implementations of low-density parity check decoding algorithms,” Circuits and Systems, The Midwest Symposium on, vol. 3 , pp. 437-440, Aug. 2002.
+[5] A.J. Blanksby, C.J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” Solid State Circuits, IEEE Journal of, March 2002. pp. 404 -412, vol:3, Issue:3.
+[6] C.J. Howland, A.J.Blanksby, “Parallel Decoding Architectures for Low Density Parity Check Codes,” Circuits and Systems, the IEEE International Symposium on, 2001. Vol: 4, Page(s): 742 -745.
+
+[7] R. Singhal, G.S. Choi, N. Mickler, P. Koteeswaran, “Scaleable check node centric architecture for LDPC decoder,” in Proc. Int. Symposium on Circuits and Systems, vol. 4, pp. 189-192, May 2004 .
+
+[8] M. Karkooti, J.R. Cavallaro, “ Semi-parallel reconfigurable architectures for real-time LDPC decoding,” in Proc. Int. Conf. on Information Technology: Coding and Computing, Vol. 1, pp. 579-585, Apr. 2004.
+
+[9] A. Selvarathiam, G. Choi, K. Narayanan, A. Prabakhar, E. Kim, “A Massively Scalable LDPC Decoder Architecture,” Circuits and Systems, IEEE International Symposium on , 2003. Volume: 3, pp. 93 -96.
+
+[10] Tong Zhang, K.K. Parhi, “Joint code and decoder design for implementation-oriented (3, k)-regular LDPC codes,” Signals, Systems and Computers, Conference Record of the Thirty-Fifth Asilomar Conference on, 2001. Volume: 2, Page(s): 1232 -1236.
+
+[11] G. Al-Rawi, J. Cioffi, M. Horowitz, “Optimizing the mapping of low-density parity check codes on parallel decoding architectures,” Information Technology, Coding and Computing, Proceedings of International Conference on, 2001, Page(s): 578 -586
+
+[12] M. M. Mansour and N. R. Shanbag, “Low-Power VLSI Decoder Architectures for LDPC Codes,” Low Power Electronics and Design, Proceedings of the 2002 International Symposium on, Page(s): 284-289.
+
+[13] Flarion
+
+Technology,
+
+vector-LDPC
+
+Coding
+
+Solution
+
+Data
+
+Sheet.
+
+http://www.flarion.com/products/vector.asp
+
+Proceedings of the 19th International Conference on VLSI Design (VLSID’06)
+1063-9667/06 $2A0u.0th0or©ized20lic0e6nsIeEd uEseElimited to: Yonsei Univ. Downloaded on June 23,2026 at 13:04:31 UTC from IEEE Xplore. Restrictions apply.
+
+

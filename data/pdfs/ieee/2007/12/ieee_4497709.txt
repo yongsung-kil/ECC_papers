@@ -1,0 +1,736 @@
+High Throughput Encoder Architecture for DVB-S2 LDPC-IRA Codes
+
+Marco Gomes, Gabriel Falcão, Alexandre Sengo, Vitor Ferreira, Vitor Silva
+Institute of Telecommunications, Department of Electrical and Computer Engineering, Faculty of Science and Technology of University of Coimbra,
+Coimbra 3030-290, Portugal Email: {marco, gff, sengo, vitorhugo, vítor}@co.it.pt
+
+Miguel Falcão
+ChipIdea Microelectronica SA, Rua Frederico Ulrich, n. 2650,
+Moreira da Maia 4470-605, Portugal Email: mfalcao@chipidea.pt
+
+Abstract—Due to their excellent bit-error-rate performance, Low Density Parity Check codes (LDPC) have been adopted by the recent Digital Video Satellite Broadcast Standard (DVB-S2). In order to simplify the encoding procedure, Irregular Repeat and Accumulate (IRA) LDPC codes have been chosen.
+This paper proposes an efficient, low delay and high throughput encoder architecture shared by all DVB-S2 LDPC-IRA codes. The architecture explores the periodic structure of the adopted codes by performing on the fly partial-parallel computation of the parity check bits.
+The architecture implementation on a XC2VP30 Virtex2P Xilinx FPGA (@131.7MHz) shows a minimum throughput of 5.93 Gb/s in worst case conditions. Synthesis results are also presented.
+Index Terms—Low-density parity-check codes; DVB-S2; encoder algorithm; parallel VLSI architecture; high throughput.
+I. INTRODUCTION
+The recent Digital Video Satellite Broadcast Standard (DVB-S2) [1], [2] has adopted a powerful forward error correcting (FEC) scheme based on the serial concatenation of BCH and Low Density Parity Check (LDPC) codes. This new FEC structure, combined with the adoption of high order modulations (QPSK, 8PSK, 16APSK and 32APSK), is able to provide capacity gains of about 30% over the previous DVB-S2 standard [3], with the LDPC codes playing a fundamental role in the improvement in performance.
+LDPC codes are linear block codes defined by sparse parity-check matrices H and, usually, represented by Tanner graphs [4]. They are decoded using low complexity iterative belief propagation algorithms operating over the Tanner graph description. However, a major drawback is their high encoding complexity caused by the fact that the generator matrix, G, is in general not sparse. In order to overcome this problem, DVB-S2 standard has adopted a special class of LDPC codes, with linear encoding complexity, known by Irregular Repeat-Accumulate (IRA) [5], [6].
+Another important issue in the design of LDPC encoder and decoder architectures for DVB-S2 is the fact that the standard supports two different frame lengths (16200 bits for low delay applications and 64800 bits otherwise) and a set of different code rates (1 4 ,1 3 , 2 5 ,1 2 , 3 5 , 2 3 , 3 4 , 4 5 , 5 6 , 8 9 and 9 10 ) for both frame lengths and different modulation
+
+schemes. For each mode of operation is defined a different LDPC code and, although they share a similar structure and properties, this still poses an enormous challenge on the development of an encoder and a decoder fully compliant with all operating modes.
+In this paper we propose a low complexity vectorized hardware architecture capable of encoding all LDPC codes defined in the DVB-S2 standard. The proposed architecture explores the properties of the adopted codes by a compacted memory mapping of the parity check equations and by performing partial-parallel computation of the parity check bits, providing a huge encoder throughput. Also, the partialparallel computation of the parity bits is performed on the fly according to the incoming flux of information bits, providing a negligible delay.
+After the conclusion of this work, the authors became aware of a similar work [7]. However, the proposed architecture is more powerful and flexible and follows a different approach.
+In the following sections we will describe in further detail the architecture of DVB-S2 LDPC encoder fully compliant with all operation modes. In section 2 we will make a short description of the LDPC-IRA codes adopted by the DVB-S2 standard. In section 3 we develop the mathematic algorithm behind our encoder architecture which we present in section 4. Finally, in section 4 are also presented synthesis results of the proposed architecture using the XC2VP30 Virtex2P Xilinx FPGA family and an estimate of the attainable throughputs which are one order of magnitude higher than the standard requirements.
+II. LDPC-IRA CODES
+The new DVB-S2 [1] standard adopted a special class of LDPC codes known by IRA codes [9] as the main solution for the FEC system. LDPC-IRA codes ally to the powerful error correction capabilities of the LDPC codes, with linear encoding complexity. In fact, although the parity check matrix H of an LDPC code is sparse, the generator matrix, G , needed for encoding usually is not sparse, leading to storage and encoding complexity problems.
+An LDPC-IRA code is characterized by a parity check matrix H of the form
+
+978-1-4244-1847-3/07/$25.00 ©2007 IEEE
+
+IEEE ICM - December 2007
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:14:20 UTC from IEEE Xplore. Restrictions apply.
+
+H(n−k )×n = A(n−k )×k B(n−k )×(n−k ) 
+
+a  00 a
+10
+ =
+ a  n−k −2,0  a
+n − k −1, 0
+
+a 01
+a 11
+a n − k − 2,1
+a n − k −1,1
+
+a 0,k −1
+a 1, k −1
+
+10 11 0 01 1
+
+a
+
+1
+
+n− k − 2,k −1
+
+a
+
+0…… 0
+
+n − k −1, k −1
+
+0    , (1)  0 1 0 1 1
+
+where B is a staircase lower triangular matrix and A is a
+
+sparse matrix.
+
+The codes defined by (1) are systematic, i.e., the codewords
+
+have the following format, c = [i p] , with the information
+
+bits, i = [i0 i1 ik−1] , being associated to the A matrix, and the parity check bits, p = [ p0 p1 pn−k −1] , to the B matrix. In terms of Tanner graph representation, this means that Check
+
+Nodes (CN) related to the code constraints, are connected to
+
+two different types of Bit Nodes (BN): the Information Nodes
+
+(IN) that represent the information bits, and the Parity Nodes
+
+(PN) associated to the parity check bits (see Figure 1).
+
+wl
+
+w3
+
+the i-th IN of that group (with i ∈{0, 1, …, M −1} ) can be
+
+obtained by:
+
+[c1 + i × q]mod(n − k),[c2 + i × q]mod(n − k),…,
+
+(3)
+
+[cwl + i × q]mod(n − k),
+
+with q = (n − k) M and M = 360 (a common factor for all
+
+DVB-S2 supported LDPC codes).
+
+III. ENCODER ALGORITHM
+
+By proper manipulation of (2) and considering the
+
+periodicity factor M = 360 common to all DVB-S2
+
+LDPC-IRA codes, we developed an efficient encoder
+
+algorithm shared by all code options (length and rate) which is
+
+able to perform partial-parallel computation of the parity
+
+check bits, increasing encoder throughput.
+
+Let’s first denote by IN (r) , the indices of the information
+
+bits that participate in the parity check node restriction r , or
+
+in terms of factor graph nomenclature, the indices of IN’s that
+
+are connected to CNr, and denote by CN(c) the indices of CN’s that are connected to INc (the letters ‘r’ and ‘c’ mean row and column of H ). Thus equations (2) can be rewritten
+
+as,
+
+p0
+
+=
+
+⊕
+z∈IN (0)
+
+iz
+
+=
+
+S0
+
+p1
+
+=
+
+⊕
+z∈IN (1)
+
+iz
+
+⊕
+
+p0
+
+=
+
+S1
+
+⊕
+
+S0
+
+p2 = S2 ⊕ p1 = S2 ⊕ S1 ⊕ S0
+
+(4)
+
+Figure 1 – Tanner graph description of a LDPC-IRA code.
+
+The bi-diagonal structure of the B sub-matrix corresponds
+
+to a zigzag connectivity between CN’s and PN’s, which
+
+allows the computation of the parity check bits directly from
+
+the A matrix, in a recursive manner, according to:
+
+p0 = a00i0 ⊕ a01i1 ⊕ ⊕ a0,k −1ik −1
+
+p1 = a10i0 ⊕ a11i1 ⊕ ⊕ a i 1,k −1 k −1 ⊕ p0
+
+, (2)
+
+pn−k −1 = a i n−k −1,0 0 ⊕ a i n−k −1,1 1 ⊕ ⊕ a i n−k −1,k −1 k −1 ⊕ pn− k −2
+where ⊕ is the GF(2) addition operator. For LDPC-IRA codes, since the A matrix is sparse, this presents an O(n) encoding complexity [5].
+A. H Periodicity
+The H matrices of the DVB-S2 LDPC codes have other properties beyond being of IRA type. Some periodicity constraints were put on the pseudo-random structure of the A matrices, which allows a significant reduction of the storage requirements with lossless code performance.
+The matrix A design technique is based on dividing the IN’s in groups of M consecutives ones. All the IN’s of a group, say group l , should have the same weight, wl , and it is only necessary to choose the CN’s that connect to the first IN of the group in order to specify the CN’s that connect to each one of the remaining M −1 IN’s of that group. The choice of the wl CN’s that are connected to the first IN of group l is pseudo-random.
+Let c1, c2, …, cwl be the indices of the CN’s that connect to the first IN of group l . The indices of the CN’s that connect to
+
+r
+
+pr
+
+=
+
+Sr
+
++
+
+pr −1
+
+=
+
+⊕
+i=0
+
+Si
+
+for r = 0, , (n − k −1) and,
+
+Sr
+
+=
+
+⊕
+z∈IN (r
+
+)
+
+iz
+
+.
+
+(5)
+
+The preceding equation (5) can be recursively computed for
+
+each CN, in the following way,
+
+for r = 0 : (n − k −1)
+
+for each z ∈ IN (r) do
+
+Sr = Sr ⊕ iz
+
+(6)
+
+end
+
+end
+
+with Sr = 0 , being the first value. Instead of processing the CN’s one by one, which requires the a priori knowledge of all information bits, we can exchange the processing order from horizontal to vertical. So, for each new information bit received by the encoder, the associated Sr values are updated according to,
+for c = 0 : (k −1)
+
+for each r ∈ CN (c) do
+
+Sr = Sr ⊕ ic
+
+(7)
+
+end
+
+end
+
+Now, considering the code periodicity, we will show how each inner cycle of (7) can be performed simultaneously for M = 360 CN’s, increasing this way the encoder throughput. According to (3), we know that for each group of M received
+information bits, say, {ic , ic+1, } , ic+M −1 , with c mod M = 0 , we
+only need to know CN (c) in order to find CN (c + j) , for j = 1, , M −1 . In fact, if CNr is connected to INc, i.e. r ∈ CN (c) , then, [(r + j × q) mod (n − k) ]∈ CN (c + j) .
+
+IEEE ICM - December 2007 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:14:20 UTC from IEEE Xplore. Restrictions apply.
+
+Consequently, the iterative encoding procedure (7) can be
+
+rewritten as,
+
+for c = 0 : M : (k − M )
+
+for each r ∈ CN (c) do
+
+Sr S(r + q) mod(n−k )
+
+= Sr = S(r +q) mod(n−k )
+
+⊕ ic . (8) ⊕ ic+1
+
+S(r + 2×q) mod(n−k )
+
+= S(r +2×q) mod(n−k )
+
+⊕ ic+2
+
+The sorting in natural order of the (14) results will be included in the encoder interleaver design. Alternatively, a similar computation approach could be followed along the columns of the S matrix, in order to obtain the parity bits in the referred order. But, in this case, we will lost the constant I/O rate of M = 360 parity bits per iteration (clock cycle) to a variable, q ≤ 135 , I/O rate encoder system.
+
+S(r +( M −1)×q) mod(n−k ) end end
+
+= S ⊕ i (r +(M −1)×q) mod(n−k )
+
+c + M −1
+
+If we store the Sr values as in the following binary matrix,
+
+ 
+
+s0
+
+sq
+
+s2q
+
+s1
+
+sq+1 s2q +1
+
+s359q
+
+ 
+
+s359q +1 
+
+S
+
+=
+
+ 
+
+s2
+
+sq+ 2 s2q + 2
+
+s359q
+
++
+
+2
+
+ 
+
+,
+
+(9)
+
+
+
+
+
+sq−1 s2q−1 s3q−1
+
+sn−k −1 (q×M )
+
+we can easily observe that all updated Sr values in (8) are in the same row of S. The only problem is that they may not be
+
+in the desired order to perform recursive computation
+
+specified by (8). However, due to the S structure, we just need
+
+to perform a cycle shift of the corresponding S row or,
+
+alternatively, a rotation of the information vector. The second
+
+solution is preferable, since we can easily vectorize the
+
+operation on S.
+
+Considering the required row, S(r mod q,:) , and the
+
+information vector, i = [ic ic+1 ic+M −1] , the inner cycle (8) can thus be written as,
+
+S(r mod q,:) = S(r mod q,:) ⊕ rotr div q (i) ,
+
+(10)
+
+where rota (⋅) is a right circular shift of a bits. Once the Sr values are known, we could easily compute the
+parity bits, pr according to the recursive operations in (4). However, this method would imply a significant encoder
+
+delay. Once again, it is possible to increase the throughput by
+
+using vectorized approaches. If we compute the checksum of
+
+all the columns of S, we obtain the following vector,
+
+q −1
+
+2q −1
+
+3q −1
+
+359 q −1
+
+ 360 q −1
+
+s
+
+=
+
+
+
+⊕
+i=0
+
+Si
+
+⊕
+i=q
+
+Si
+
+⊕
+i=2q
+
+Si
+
+,…,
+
+⊕
+i =358q
+
+Si
+
+, ⊕
+i =359q
+
+Si (1×M )
+
+(11)
+
+which could be transformed by the following matrix operation
+
+in GF(2),
+
+,… L × sT
+
+ q −1
+
+=
+
+
+
+⊕
+i=0
+
+Si
+
+2 q −1
+
+⊕
+i=0
+
+Si
+
+3q −1
+
+⊕
+i=0
+
+Si
+
+359 q −1
+
+,⊕ i=0
+
+Si
+
+ 360 q −1
+
+T
+
+⊕
+i=0
+
+Si 
+
+= s′
+
+(12)
+
+where L is an M × M lower triangular matrix of ones. Next,
+
+the vector s′ is logical shifted right of one bit in order to
+
+obtain,
+
+ q −1
+
+0
+
+⊕
+i=0
+
+Si
+
+2q −1
+⊕
+i=0
+
+Si
+
+359 q −1
+,…, ⊕ i=0
+
+Si
+
+ 
+
+=
+
+0
+
+pq −1
+
+p2q−1 ,…, p359q−1  .
+
+(13)
+
+Finally, we can now calculate M parity bits at a time, by
+
+using the following procedure,
+
+[ p0 pq p2q ,…, p359q ] = [0 pq−1 p2q−1,…, p359q−1] ⊕S(0,:)
+
+[ p1 pq+1 p2q+1,…, p359q+1] = [ p0 pq p2q ,…, p359q ]
+
+⊕S(1,:)
+
+(14) [ p2 pq+2 p2q+2 ,…, p359q+2 ] = [ p1 pq+1 p2q+1,…, p359q+1] ⊕S(2,:)
+
+IV. ENCODER ARCHITECTURE
+Based on the encoder algorithm described in the previous section, we proposed the architecture shown in Figure 2.
+The architecture is composed by three major modules which are responsible for computing the Sr values (Task 1), performing the checksum of all the columns of the S memory (Task 2) where the Sr values are stored and, finally, computing the parity check bits (Task 3), according to (10), (11) and (14), respectively.
+As it can be seen, the proposed architecture is independent of the chosen DVB-S2 LDPC-IRA code. In fact, we only need to design the S RAM for the worst case, i.e., q = 135 . Based on the code rate and frame length, we select the appropriate row of the control ROM, where the encoder control parameters are stored (the number of IN’s groups of weight w ) for each DVB-S2 LDPC code. The corresponding ROM of shifts and addresses is read sequentially in order to perform Task 1, according to (10) and (8). The addresses and shift values stored in the ROM’s can be easily obtained from the annexes B and C of DVB-S2 standard tables [1] and computed as shown in (10).
+Task 2 is performed simultaneously with Task 1. In fact, we don’t need to wait for the end of Sr computation in order to obtain the checksum of all the columns of the S memory, which would imply a long delay. Together with the Sr computation (8), we just need to perform the GF(2) addition of the current shifted information vector with the previous accumulated result.
+After Step 1, formed by tasks 1 and 2, the first 359 values of the Total GF(2) Sum register are processed by a simple combinatorial module which produces (13). Once computed, this value is written into the processed GF(2) sum register and Task 3 is realized, computing 360 parity bits per clock cycle according to (14).
+The correctness of the encoder outputs were fully verified against known encoded data.
+A. Synthesis Results
+The proposed architecture was tested on a XUP Virtex-II PRO development board (@100MHz) using the XC2VP30 Xilinx FPGA. Table 1 presents some generic HDL synthesis results and the percentage of FPGA resources occupied with the advanced synthesis targeted for minimum FPGA area usage.
+
+[ pq−1 p2q−1 p3q−1,…, pn−k−1] = [ pq−2 p2q−2 p3q−2 ,…, pn−k−2 ]⊕S(q − 1,:)
+
+IEEE ICM - December 2007 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:14:20 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2 - DVB-S2 LDPC-IRA encoder architecture.
+
+TABLE I SYNTHESIS RESULTS ON XC2VP30 VIRTEX2P XILINX FPGA.
+
+HDL Synthesis Report
+
+ROM’s
+
+3
+
+Adders / Subtractors
+
+5
+
+Counters
+
+1
+
+Registers
+
+802
+
+Comparators
+
+5
+
+Multiplexors
+
+6
+
+Logic Shifters
+
+1
+
+Xors
+
+362
+
+Consumed FPGA Resources
+
+Number of Slices
+
+32%
+
+Number of Slice Flip Flops
+
+3%
+
+Number of BRAM’s
+
+20%
+
+The timing analysis results show that it is possible to
+
+operate the circuit at a maximum clock frequency of
+
+fclk_max = 131.7 MHz , which validates the synthesis approach for a minimum FPGA area usage, since the development system
+
+is limited to a maximum clock cycle of 100MHz. Even at this
+
+speed, the proposed architecture guarantees a minimum
+
+throughput of 4.5 Gb/s for the code (16200, 9720). In fact, for
+
+a given clock cycle ( fop < ), fclk_max the attainable throughput is function of the code parameter, W (number of elements of
+
+matrix H in the compacted form given by annexes B and C of
+
+DVB-S2 standard [1]) and q . In the proposed architecture,
+
+Step 1 takes 2 clock cycles per (8) iteration (read shift and
+
+address plus GF(2) addition) and 2 clock cycles per each one
+
+of the q Step 2 iterations. Thus, the encoder throughput is
+
+given by:
+
+Throughput = frame _ length × fop .
+
+(15)
+
+(W + q) × 2
+
+The table II presents the attainable throughput for each one of the 21 DVB-S2 LDPC codes, when operating the referred FPGA at the architecture maximum clock speed, fclk_max = 131.7 MHz .
+
+V. CONCLUSIONS
+A highly efficient hardware implementation of an encoder for LDPC-IRA codes adopted for the recent DVB-S2 standard was described in this paper. By exploring periodicity
+
+properties of the adopted LDPC-IRA codes, negligible delay and extremely high throughputs are achieved for all code lengths and rates. Synthesis results show a small amount of hardware resources required, which makes this architecture a very attractive solution for an efficient encoder, with a throughput more than one order of magnitude superior to the standard requirements.
+
+TABLE II ENCODER THROUGHPUT RESULTS USING THE XC2VP30 VIRTEX2P XILINX
+
+FPGA OPERATED AT MAXIMUM CLOCK SPEED f = 131.7 MHz . clk_max
+
+LDPC Frame Length of 64800 bits LDPC Frame Length of 16200 bits
+
+Rate q
+
+W
+
+Throughput (Gb/s)
+
+Rate
+
+Q
+
+W
+
+Throughput (Gb/s)
+
+1/4 135 270
+
+10.53
+
+1/5 36 63
+
+10.78
+
+1/3 120 360
+
+8.89
+
+1/3 30 90
+
+8.89
+
+2/5 108 432
+
+7.90
+
+2/5 27 108
+
+7.90
+
+1/2 90 450
+
+7.90
+
+4/9 25 85
+
+9.70
+
+3/5 72 648
+
+5.93
+
+3/5 18 162
+
+5.93
+
+2/3 60 480
+
+7.90
+
+2/3 15 120
+
+7.90
+
+3/4 45 540
+
+7.29
+
+11/15 12 108
+
+8.89
+
+4/5 36 576
+
+6.97
+
+7/9 10 105
+
+9.28
+
+5/6 30 600
+
+6.77
+
+37/45 8 121
+
+8.27
+
+8/9 20 500
+
+8.21
+
+8/9 5 125
+
+8.21
+
+9/10 18 504
+
+8.17
+
+--- --- ---
+
+---
+
+REFERENCES
+[1] ETSI, Digital video broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broad-band satellite applications: EN 302 307 V1. 1.1, 2005.
+[2] A. Morello and V. Mignone, "DVB-S2: The second generation standard for satellite broad-band services," Proceedings of the Ieee, vol. 94, pp. 210-227, 2006.
+[3] ETSI, Digital video broadcasting (DVB); Framing structure, channel coding and modulation for 11/12 GHz satellite services, 1997.
+[4] R. M. Tanner, "A Recursive Approach to Low Complexity Codes," Ieee Transactions on Information Theory, vol. 27, pp. 533-547, 1981.
+[5] H. Jin, A. Khandekar, and R. McEliece, "Irregular repeat-accumulate codes," In. Proc. 2nd International Symposium on Turbo Codes & Related Topics, Brest, France, Sept 2000.
+[6] M. Eroz, F. W. Sun, and L. N. Lee, "DVB-S2 low density parity check codes with near Shannon limit performance," International Journal of Satellite Communications and Networking, vol. 22, pp. 269-279, 2004.
+[7] T. Yokokawa, M. Nakane and M. Kan, "A Low Complexity and Programmable Encoder Architecture of the LDPC Codes for DVB-S2," Proceedings of Turbo-Coding 2006, Munich, Germany, Åpril 2006.
+
+IEEE ICM - December 2007 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:14:20 UTC from IEEE Xplore. Restrictions apply.
+
+

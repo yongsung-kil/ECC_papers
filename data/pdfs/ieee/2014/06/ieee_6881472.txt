@@ -1,0 +1,440 @@
+EC-Cache: Exploiting Error Locality to Optimize LDPC in NAND Flash-Based SSDs
+
+Ren-Shuo Liu∗, Meng-Yen Chuang∗, Chia-Lin Yang∗†‡ Cheng-Hsuan Li∗, Kin-Chu Ho§, Hsiang-Pang Li§
+∗ Department of Computer Science and Information Engineering, National Taiwan University, Taipei, Taiwan † Graduate Institute of Networking and Multimedia, National Taiwan University, Taipei, Taiwan ‡ Graduate Institute of Electronics Engineering, National Taiwan University, Taipei, Taiwan § Macronix International Co., Ltd., Hsinchu, Taiwan
+renshuo@ntu.edu.tw; r00922059@ntu.edu.tw; yangc@csie.ntu.edu.tw r01922029@ntu.edu.tw; andyyho@mxic.com.tw; sbli@mxic.com.tw
+
+ABSTRACT
+Low-density parity-check (LDPC) is widely accepted as the baseline error-correction codes offering strong error-correcting capability for future NAND flash-based SSDs. However, LDPC incurs read performance overhead because of its complex decoding procedure. To mitigate such overhead, we propose the error-correcting cache (EC-Cache) that exploits the “error locality” of NAND flash. Error locality means that the majority of errors in reads to the same NAND flash page appear in the same positions until the page is erased. By caching detected errors, EC-Cache can correct a significant portion of errors present in a requested flash page before the associated LDPC decoding process begins. EC-Cache can greatly speed up LDPC decoding because LDPC’s latency is directly correlated to the number of errors present in the input data. Experimental results show that EC-Cache achieves up to 2.6× SSD read performance gain.
+Categories and Subject Descriptors
+B.8.1 [Performance and Reliability]: Reliability, Testing, and Fault-Tolerance; D.4.2 [Operating Systems]: Storage Management—Storage hierarchies
+Keywords
+NAND flash, SSD, cache, LDPC, bit errors
+1. Introduction
+NAND flash-based SSDs (SSDs for short) are a promising storage technology nowadays. Compared with traditional hard disk drives (HDDs), SSDs have advantages in small form factor, low power consumption, and superior performance. SSDs not only have been mature storage in mobiles, laptops, and personal computers. SSDs are also making their way into servers and datacenters.
+One design challenge of SSDs comes from the increasing overhead of error-correction codes (ECCs). SSDs have an idiosyncrasy that raw data stored in NAND flash memory (flash for short) contain a considerable number of errors. For example, modern 19 nm triple-level cell (TLC) flash can
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from Permissions@acm.org.
+DAC ’14, June 01 - 05 2014, San Francisco, CA, USA
+Copyright is held by the owner/author(s). Publication rights licensed to ACM. ACM 978-1-4503-2730-5/14/06 $15.00. http://dx.doi.org/10.1145/2593069.2593130
+
+have a raw bit error rate (BER) as high as 10−2 after 2000 program and erase (PE) cycles. To handle a BER around 10−2, many industrial and academic literatures, e.g., [7, 17], have indicated that adopting low-density parity-check codes (LDPC for short), a kind of advanced ECC, is the widely accepted solution. LDPC offers stronger error-correcting capability than conventional ECCs such as Bose-ChaudhuriHocquenghem (BCH) codes. However, LDPC’s complex decoding algorithm imposes performance overhead on SSDs [5, 18, 19].
+Retiring flash pages and relocating flash data cannot fundamentally address the aforementioned issue. As process shrinks, flash’s raw reliability degrades dramatically. Therefore, it is hard for an SSD to avoid LDPC’s decoding overhead by retiring flash pages that incur the overhead while at the same time providing high-enough endurance. Let us take SSDs serving as storage caches for example. To push the limit of SSDs’ endurance to a useful level, retiring flash pages should be frugal: flash pages are kept being used even if their BER approaches ECC limits [9]. Furthermore, for an SSD that has been used for a period of time and has a large number of PE cycles for most of its flash pages, even newly-written data can contain a considerable high BER because of write disturbs [11]. Therefore, relocating flash data is less effective.
+In this paper, we propose the error-correcting cache (ECCache) that records detected flash errors to mitigate LDPC’s overhead. Our proposal is based on two observations. First, erroneous flash cells tend to remain erroneous until they are erased. Flash represents data by injecting different amounts of charge into memory cells. Due to the non-volatility nature of flash, a flash cell can keep its charge for a long time until the cell is erased. Therefore, one can anticipate that the majority of errors in reads to the same flash page appear in the same positions. We call this “error locality”. Second, LDPC’s decoding latency directly correlates to the number of errors present in the raw data input to LDPC. With more errors needed to be corrected, an LDPC decoder needs to invoke more flash sensings and spend longer time in its decoding algorithm. Based on these two observations, the main idea of the proposed design is to cache the detected errors in memory, which is named EC-Cache. Before an LDPC decoder processes the raw data of a flash page, EC-Cache is queried to see whether the bit-error information associated with the page is available. If a hit occurs, the cached bit-error information is acquired and utilized to correct a portion of error bits in the raw data. By doing so, we can greatly reduce LDPC’s overhead on SSDs’ performance.
+To optimize EC-Cache, we need to minimize the line size for storing the bit-error information of each cached flash page. To this end, EC-Cache uses a simple-yet-effective coding scheme named offset coding. As the name suggests, with offset coding, EC-Cache records the relative offsets, instead
+
+of the absolute positions, of bit errors. Offset coding can be processed using simple hardware. More importantly, offset coding increases the number of EC-Cache lines available given fixed memory resources, and thereby maximizing the effectiveness of EC-Cache.
+The proposed EC-Cache is beneficial to scenarios where requests to SSDs exhibit temporal locality. For workloads with pure random accesses, EC-Cache neither helps nor hurts SSDs’ performance. To make a case for EC-Cache, in this work we focus on an important SSD usage scenario where SSDs serve as storage caches in a datacenter. The selectivecaching mechanism of such kind of SSDs makes requests exhibit temporal locality. For example, let us consider that in a datacenter, a server requests the following storage locations, “a, s, v, n, b, d, h, a, k, z ”, each alphabet standing for an address. Supposing that an SSD selectively caches ‘a’ and ‘d ’, the SSD experiences a stream “a, d, a” whose locality is much higher than that in the original access stream (i.e., the reuse ratio increases or the reuse distance decreases). Supposing that another server in the datacenter also accesses ‘a’ twice and ‘d ’ once, the SSD experiences a stream like “a, d, a, a, d, a” whose locality further increases. With ample locality, EC-Cache can largely improve SSDs’ read performance. In addition to SSD-based storage caches, we anticipate that EC-Cache is also effective for emerging systems with a flat memory hierarchy in which SSDs are placed close to processor cores.
+We conduct experiments in three steps to evaluate ECCache. The first two are device-level and subsystem-level experiments analyzing real flash chips and an LDPC decoder, respectively. We demonstrate that if a flash read hits EC-Cache, errors in the read data can be reduced by more than 60% before LDPC decoding begins. This can largely reduce the required flash sensing counts and decoding latency of LDPC. We then perform a system-level simulation that quantifies the benefits of EC-Cache using real workloads in which SSDs serve as the caches of HDD arrays in a datacenter. Experimental results show that EC-Cache can significantly improve SSD read response time by up to 2.6×.
+The remainder of this paper begins with background and related work. Section 3 presents the motivation of this work. Section 4 elaborates on the proposed EC-Cache design. Section 5 presents the experimental methodologies, and Section 6 presents the results. Section 7 concludes this paper.
+2. Background and Related Work
+NAND flash is a kind of non-volatile memory (NVM) made of floating-gate transistors. The threshold voltage (Vth) of the transistors can be programmed to different levels by injecting different amounts of charge on transistors’ floating gates. Different Vth levels represent different data. For example, to store N-bit data in a cell, the cell’s Vth is programmed to one of the 2N different Vth levels. Once a flash cell is programmed, the injected charge is trapped on the floating gate even if power is not supplied. This is the mechanism how flash offers non-volatility. To change the data stored in flash, an erase operation that removes all the trapped charge from floating gates is required.
+NAND flash is organized as blocks of pages. Let us take modern flash for example. A flash die consists of 2048 to 4096 blocks, a block consists of 256 to 512 pages, and a page consists of about 72 k bits (i.e., 9 kB). All bits in a page are read and written concurrently. A written page needs an erase before it can be re-written. To erase a page in a block, all the pages in the block need to be erased at the same time.
+Flash is prone to errors [11] because the Vth level read out from a cell can be different from what was written into the cell. Several non-ideal effects, including write disturbs, charge losses, electrical noises, and temperature variations, cause the errors [11, 10]. Write disturbs refer to the Vth increase of a cell when its neighboring cells are written. Charge losses from a floating gate slowly decrease the Vth of a cell over time. Because of electrical noises, if the Vth of a cell
+
+is close to read reference voltages, the read-out Vth level is unstable. A change in temperature also varies the Vth of a cell.
+Bit errors in flash behave more like transient soft errors than permanent hard errors for two reasons. First, when flash experiences more PE cycles, the non-ideal effects in flash become more apparent though, each individual cell is not permanently damaged. Prior works [2, 11] have studied such erratic behavior of flash: a flash bit can be erroneous at one write cycle and recover at another write cycle. Furthermore, many non-ideal effects in flash, such as write disturbs and charge losses, have a high correlation with the data pattern written into flash [8, 11]. Therefore, bit error positions in flash change at different write cycles as user data change.
+To handle the aforementioned transient soft errors in flash, common practices adopt ECCs in SSDs. In particular, LDPC, a kind of advanced ECC, is appealing and promising in SSD design nowadays. ECCs, including LDPC, supplement data with redundant parity bits to form codewords. With the parity bits, a codeword that has been corrupted by a certain number of errors at arbitrary positions can still be reconstructed by ECC decoding.
+LDPC’s iterative and probabilistic decoding procedure incurs read-performance overhead. Unlike conventional ECCs that take binary bits as inputs, each bit being either 1 or 0, an LDPC decoder takes the log-likelihood ratio (LLR) of each bit as inputs and iteratively refines the obtained LLRs to derive the most likely original codeword. An LLR stands for how likely the original value of an input bit is 1 versus being 0. LLRs are obtained via sensing flash cells with multiple Vth voltages. With more errors in a codeword needed to be corrected, an LDPC decoder needs to invoke more flash sensings to obtain more precise LLRs and spend more iterations in its iterative decoding algorithm, thereby incurring read-performance overhead. (More descriptions on LDPC can be found in [4, 5, 18].)
+Some prior works have aimed at mitigating LDPC’s overhead. Dong et al. [4] propose a non-uniform sensing strategy that can increase the information contained in LLRs. Zhao et al. [19, 18] propose a progressive sensing and decoding strategy that incrementally increases the precision of LLRs in a fail-and-retry manner. Dong et al. [5] further propose compressing the sensing results to reduce memory-tocontroller data transferring latency. Tanakamaru et al. [16] increase the precision of LLRs by estimating write disturbs, charge losses, and cell wear-out of each bit. In comparison, EC-Cache exploits error locality, which is not exploited in these prior works. Therefore, these related schemes can be adopted in combination with EC-Cache. In the experiments of this paper, the non-uniform sensing strategy and the progressive sensing and decoding strategy are adopted as the baseline.
+3. Motivation
+3.1 Error Locality in NAND Flash
+Flash represents data by injecting different amounts of charge into cells. Flash is non-volatile because a flash cell can keep the injected charge for a long time (e.g., three months) unless the cell is erased. Therefore, once a flash cell happens to contain an incorrect amount of charge that results in a bit error, the bit error tends to remain for a long time, too. For example, write disturbs and charge losses are the two main reasons that cause flash cells to contain an incorrect amount of charge and thereby resulting in bit errors. The former causes a flash cell to be over-programmed to a Vth level higher than the intended level; the latter causes a flash cell to have a Vth level lower than the intended level [11]. Once flash cells contain erroneous data owing to these two reasons, because of the non-volatility nature of flash, most of the cells remain erroneous until the cells are erased. One reason why not all the cells remain erroneous is because some flash errors are due to electrical noises and
+
+Write1 Read1 Read2 Erase Write2 Read3 Read4 time
+
+Error (#)
+
+716 725
+
+713 701
+
+Same-position (#)
+
+559
+
+34 553
+
+Same-position (%)
+
+77%
+
+4.8% 79%
+
+Figure 1: Errors in a representative flash page
+
+temperature variations. Cells with Vth close to the read ref-
+
+erence voltages are likely to be affected by these effects, and
+
+the errors of such cells are by nature unstable.
+
+To quantitatively demonstrate the aforementioned phe-
+
+nomenon, Figure 1 illustrates a small experiment that ana-
+
+lyzes the error positions of a page in a real flash chip. We
+
+perform the following operations on the flash chip. First,
+
+we program and erase the flash using random data for 2000
+
+cycles to reach a certain wearout degree. Then we write
+
+known random data into a block (W rite1), read one page
+
+(e.g., page i) of the block twice (Read1 and Read2), and
+
+record the number and positions of bit errors present in the
+
+readout. The two reads are separated by an hour. Then we
+
+erase the block, write another random data into the same
+
+block (W rite2), again read page i twice (Read3 and Read4)
+
+and also record error number and positions. The results first
+
+show that for page i, which consists of 72 k bits (i.e., 9 kB),
+
+there are 701 to 725 bit errors present in a read. By compar-
+
+ing the positions of errors between reads, we see that 559 out
+
+of the 725 errors in Read2 are at the same positions as that
+
+in Read1. We refer to such similarity as “error locality”.
+
+In this case, the error locality is
+
+559 725
+
+equal to 77%.
+
+Error-
+
+locality exists between Read3 and Read4 but not between
+
+Read2 and Read3: 95% of the error positions of Read3 are
+
+different from that of Read2. These results suggest that if a
+
+flash page is not erased, error locality can be about 70% to
+
+80% between two reads. A more comprehensive experiment
+
+on analyzing flash error locality is presented in Section 5.1
+
+and 6.1.
+
+3.2 LDPC Decoding Speed vs. BER
+An LDPC decoder can handle data with a high BER, but if data have a high BER, the decoding process is lengthened, and the read latency of SSDs increases. The reasons are two-fold. First, to handle more errors in data, more precise LLRs about the data are required. To increase the precision of LLRs, modern flash chips allow a page of flash cells to be sensed multiple times with different predefined read reference voltages [18]. By comparing a flash page against K read reference voltages, each cell can take one of the (K + 1 ) outcomes, and the precision of LLRs of each bit are (K + 1 ) levels (We take single-level cell (SLC) flash as an example for simplicity). The overhead of increasing LLR precision is that extra sensings cause extra flash read latency and data transfer latency. Second, LDPC’s iterative decoding algorithm corrects a portion of errors in each iteration until all the errors are corrected. Therefore, if there are many errors in the input data, the LDPC decoding process lengthens. In light of these two reasons, if we can find a simple method that reduces a portion of errors in data before LDPC decoding begins, we have a great potential to mitigate the performance overhead of LDPC.
+
+4. EC-Cache Design
+To exploit the observations we made in Section 3, we propose EC-Cache. EC-Cache stores the information of detected errors of recently-read flash pages, including the positions and valid values, to correct error bits in a requested flash page before the associated LDPC decoding process begins.
+EC-Cache is designed to speed up an LDPC decoder. As shown in Figure 2, EC-Cache is located in the RAM of an SSD and controlled by the SSD’s firmware. EC-Cache is indexed by the logical page addresses of the SSD, and each
+
+Write
+
+SSD Controller
+LDPC Encoder
+
+Write
+
+Read
+user data
+
+LDPC Decoder
+
+Assisting Unit
+
+invalidate store
+
+5
+
+3
+
+Page addr.
+
+v tag
+
+Read
+
+1 user
+
+data LDPC
+
+aquire
+
+parities
+
+NAND Flash
+
+2 A line is associated with a flash page and contains multiple EC entries
+4
+
+EC-Cache RAM
+
+An evicted line is discarded
+
+Figure 2: Block diagram of an SSD with EC-Cache
+
+cache line stores multiple EC-entries corresponding to the detected errors of a flash page (how EC-entries are formatted is explained shortly). An assisting unit is responsible for interfacing the LDPC decoder and EC-Cache. When a flash read occurs (❶), the SSD’s firmware simultaneously searches the EC-Cache. If the corresponding line is found (i.e., an EC-Cache hit), the line is acquired (❷) and merged into the raw data read from flash. By doing so, the number of errors in the raw data is reduced, and the associated LDPC decoding procedure gains speedup. If the corresponding line is not found (i.e., an EC-Cache miss), the flash read operation is served without LDPC speedup. After a flash page is processed by the LDPC decoder, the assisting unit generates EC-entries based on the errors found by the LDPC decoder to form a cache line, and the EC-Cache always keeps the newly generated line (❸). An evicted line (based on LRU) from the EC-Cache is discarded (❹). When a flash write occurs, the SSD’s firmware invalidates the corresponding line in the EC-Cache (❺) because a stale EC-Cache line is no longer applicable to the newly written data. When garbage collection occurs, the SSD’s firmware relocates live data in victim blocks and updates the corresponding logicalto-physical address mappings. The logical addresses of these relocated data are also used to invalidate EC-Cache. ECCache is in several respects different from a related proposal, error correcting pointer (ECP) [15], which aims at hiding wearout errors of NVM such as phase-change memory: ECCache can handle not only wearout errors but also other flash errors such as write errors and retention errors, and EC-Cache focuses on improving read performance.
+
+Offset: 50 150
+
+255
+
+95
+
+Raw Data
+
+50th 0
+
+200th 1
+
+455th 1
+
+550th 1
+
+Correct
+
+Data
+
+1
+
+0
+
+1
+
+0
+
+8-bit Offset
+50 150 255 95
+
+Valid Value
+1 0 1 0
+
+… …
+
+Figure 3: Illustration of offset coding
+The size of each EC-Cache line should be minimized so that as many lines as possible can be allocated given fixed memory resources. To this end, we use offset coding with a fixed offset size (which we experimentally set to 8 bits) to record bit-error information of a flash page. Let us take Figure 3 for example to explain offset coding. We can see that the 50th, 200th, and 550th bits in the raw data are erroneous, and each EC-entry consists of an 8-bit offset and a 1-bit valid-value field. As the name, offset coding, suggests, the relative offsets of bit errors are stored. In this example,
+
+Raw data Acquired EC-entries
+Generated EC-entries Correct data
+
+2 Merge
+
+1
+
+Raw-data Buffer
+
+4 Diff
+3
+Assisting Unit
+
+Input Buffer
+Iterative Decoding
+Engine
+Output Buffer LDPC Decoder
+
+Figure 4: LDPC decoder assisted by EC-Cache
+
+the first two erroneous bits can be recorded using two ECentries, (50, 1) and (150, 0), respectively. The third error
+(the 550th bit), which is 350 bits away from its preceding
+error (the 200th bit), cannot be directly stored using an 8bit offset. To handle this situation, a dummy EC-entry, (255, 1), is employed. This entry is called a dummy because
+the 455th bit (255 bits away from the preceding error) of the raw data is not erroneous actually. By introducing the dummy entry, the third error can be recorded using (95, 0).
+Figure 4 plots the assisting unit that interfaces an LDPC decoder and EC-Cache in more detail. Before raw flash data are transferred into the input buffer of the LDPC decoder (❶), a circuit merges the acquired EC-entries into the raw data (❷). This process can be done by comparing the offset stored in each EC-entry with the number of bits transferred into the input buffer and substituting raw data with the data stored in the valid-value field of the EC-entry. Data in the input buffer are processed by the iterative decoding engine, and the correct data are placed in the output buffer. When the correct data are sent out from the output buffer (❸), a circuit generates EC-entries by finding differences between the raw data and correct data to form an EC-Cache line (❹). If a line is full before all EC-entries are generated, the remaining EC-entries are discarded. We expect that both circuits for merging EC-entries into raw data and finding differences between the two buffers do not incur significant hardware overhead, and the main hardware overhead is the RAM for buffering the raw data, whose size equals to a codeword.
+Cache line number and cache line size are two key parameters of EC-Cache. A larger cache line number, which means that a larger footprint can be captured, tends to result in a higher cache hit rate; on the other hand, a larger cache line size means that more EC-entries can be stored for each cached page, thereby increasing the number of errors that can be fixed when the page is read again. Given fixed memory resources, there is a tradeoff between these two parameters because a larger cache line number means a smaller line size. With the aforementioned offset coding, we experimentally set the line size of EC-Cache to be 1 kB, i.e., one-ninth of a flash page (9 kB). This also means that EC-Cache has 8× more lines than a data cache does given the same memory resource because the size of a data cache line is 8 kB.
+EC-Cache can be combined with a data cache in an SSD, i.e., part of available memory is configured by users as ECCache, while the remaining part still serves as a data cache as usual. The optimal memory partition between the two caches depends on workload properties and the amount of memory available because the two kinds of caches have different advantages. A read hit in a data cache eliminates associated flash accesses and LDPC decoding, while a hit in EC-Cache does not. Therefore, the former brings more performance advantages for hits. However, given the same memory capacity, EC-Cache can capture more pages than a data cache, thereby resulting in a higher hit ratio. In this paper, we assume that users can profile workloads to understand the best memory partition between EC-Cache and a data cache and configure SSDs accordingly. An automatic
+
+memory-partitioning mechanism is feasible by monitoring SSD accesses at runtime, and we leave it as our future work.
+5. Experimental Methodology
+To evaluate the benefits of EC-Cache, we conduct experiments in three steps. The first two are device-level and subsystem-level experiments that analyze flash and an LDPC decoder, respectively. Based on the results obtained in the first two steps, the third one is a system-level experiment that evaluates the benefits of EC-Cache on SSDs. We describe each step as follows.
+5.1 Error Locality Analysis
+In the first experiment we measure real flash chips to quantify the per-page error locality described in Section 3.1. We build a platform that can directly read, write, and erase NAND flash chips. The core of the platform is a Xilinx Virtex-5 FPGA, which is connected with a custom-built daughter board that can host flash chips under test. The FPGA is configured with a CPU, an interface with a personal computer, and a custom flash controller IP that supports communication to and from the tested flash chips. The tested flash we use is a 19 nm TLC NAND flash chip. We program and erase flash using random data to achieve various wearout degrees. Then we write known random data, read data from the flash hourly for six hours, and collect the error positions within the read data into trace files.
+The collected traces provide information for per-page error locality, i.e., how many errors appear at the same positions as in a previous read. By performing such test with various wearout degrees, we can establish the relation between the error-reduction rate for a read hit in EC-Cache and the BER of a page. Here the error-reduction rate is defined as the percentage of errors in one read that can be fixed by the EC-entries stored in an EC-Cache line, given the read hits EC-Cache. The error-reduction rate is the same as the error locality of flash if we have large-enough EC-Cache line. Given a minimized EC-Cache line size (e.g., 1 kB), the error-reduction rate can be less than the error locality because when the BER of a flash page is high, some EC-entries associated with the page are discarded because of the limited line size.
+5.2 LDPC Simulation
+The second experiment aims at quantifying the performance gain of an LDPC decoder given that a certain percentage of errors in data are reduced in advance. The experiment is performed using a widely-used LDPC simulation framework [13] that can simulate a hardware LDPC decoder and report the decoding iteration number. The latency per iteration depends on hardware configurations, e.g., clock rate and parallelism. The LDPC code we test is a representative one constructed by the framework with 9 kb codeword size and 922 b parity size. We extend the framework to model EC-Cache’s effect that a certain percentage of errors are corrected before LDPC decoding begins. The framework can report two main LDPC performance metrics, required flash sensing counts and required decoding latency for decoding a codeword. Combined with the first experiment, the second experiment establishes the relation between the BER of a page, error-reduction rate, and the two LDPC performance metrics.
+5.3 SSD Simulation
+Based on the experimental results obtained in the first two steps, in the third step we quantify the benefits of EC-Cache on SSDs using SSDSim [1] and DiskSim [3]. Figure 5 illustrates our SSD-simulation methodology. We extend SSDSim to capture the system-level characteristics of EC-Cache (i.e., hit/miss) and that of an LDPC decoder (i.e., flash sensing counts and decoding latency). The per-page BER of the simulated SSDs follows a page BER model (❶), i.e., a normal distribution with a mean and a coefficient of variation.
+
+Page reads to SSD
+
+Page BER model 1 Page BER
+
+EC-Cache model 2 Hit/miss
+
+LDPC model
+
+3 Flash sensing counts
+
+4 Decoding latency
+
+Results obtained from the first
+two experiments
+
+SSD scheduling and flash-timing models
+Figure 5: Illustration of SSD simulation methodology
+
+When I/O requests are sent to the simulated SSD, the ECCache model is updated by the requested page addresses, and the simulator can determine whether each flash read is an EC-Cache hit or not (❷). The hit/miss result and the BER of the page together determine the flash sensing counts (❸) and decoding latency (❹) for the LDPC decoder. These two factors are further incorporated in the scheduling and flash-timing models in the SSD simulator.
+The workloads we use are requests to SSDs in the Microsoft Research Cambridge (MSRC) datacenter. The MSRC datacenter consists of 13 HDD arrays. We test three scenarios in which an SSD serves as the cache of a group of HDD arrays as listed in Table 1. The SSD adopts the SieveStore policy [14] that monitors one day’s HDD requests to predict the popular set of the HDDs, and requests to the popular set are selectively cached in the SSD for the next day. Based on simulating the SieveStore policy with the seven-day-long request traces of the MSRC datacenter [12], requests to the SSDs are obtained.
+
+Name HDD Array Name
+
+HDD Array Function
+
+Group1
+
+usr, mds, prn, hm, src2, proj, wdev
+
+User files, media server, print server, H/W monitoring, source control, project files, test web server
+
+Group2
+
+rsrch, prxy, src1, stg, ts, web
+
+Research projects, firewall/web proxy, source control, web staging, terminal server, web/SQL server
+
+Group3 All the above 13 HDD arrays
+
+Table 1: Workload descriptions
+
+The simulated SSDs are configured as eight channels, each channel connects four flash dies, and each die is 8GB. We consider that the baseline has 32MB to 256MB of RAM resources available for a data cache. The per-page BER of the simulated SSDs has a mean of 1 × 10−2, a coefficient of variation of 20%, and an upper bound of 0.014. The read, write, and erase latencies of flash are set according to modern TLC NAND flash. LDPC decoding latency per iteration ranges between 0.2 µs and 2 µs [6], depending on hardware configurations. As an intermediate value, we set this parameter to 0.5 µs. Other parameters can be found in Table 2.
+
+Parameter
+Exposed SSD size Channels Dies per channel Planes per die Blocks per plane Pages per block
+
+Value
+216 GB 8 4 2
+2048 256
+
+Parameter
+Flash page size Over-provisioning Flash read latency Flash write latency Flash erase latency LDPC decoding latency per iteration
+
+Value
+8KB 15% 150 μs 2.3 ms 3 ms 0.5 μs
+
+Table 2: SSD configurations
+
+6. Experimental Results
+6.1 Error Locality Characterization
+Figure 6 plots the error locality and error-reduction rate of the tested 19 nm TLC NAND flash. The x-axis is the BER of the page read, and each point corresponds to the error locality or error-reduction rate associated with two reads to
+
+100% 90% 80% 70% 60% 50% 40% 30% 20% 10% 0%
+0
+
+Error Locality
+
+Error-Reduction Rate
+
+Conservative error-reduction rate
+
+0.005
+
+0.01
+
+Bit Error Rate
+
+0.015
+
+Figure 6: Error locality and error-reduction rate of the tested 19 nm TLC flash
+
+the same flash page. We can see that error locality is about 70% to 80% on average. When flash BER is lower than 0.005, error locality has a higher variation because with a low BER, a higher percentage of errors are caused by electrical noises. The error-reduction rate and error locality are almost the same for BER less than 0.01. The errorreduction rate drops slightly to about 65% on average when the BER reaches 0.015. Because the error-reduction rate presents some variations, in the later experiments, we conservatively consider the error-reduction rate vs. BER as the dashed line shown in Figure 6. In addition to the 19 nm TLC flash, we test a 25 nm MLC flash from a different flash vendor and find very similar error locality and error-reduction rate results.
+
+BBaasseelliinneBeBaa(s0se%elli)innEeeC-20%EE2CC0--%2200%E%C-40%EE4CC0--%4400%%EC-60%EE6CC0--%6600%%
+
+4
+
+4
+
+44
+
+30
+
+Average Flash Sensing Counts Average Sensing Counts AAvveerraagee SSenssiinngg Coounts
+Average Decoding Latency (μs)
+
+3
+
+3
+
+33
+
+20
+
+2
+
+2
+
+22
+
+10
+
+1
+
+1
+
+11
+
+0
+
+0 0 0.00005
+
+0.01
+
+0.015
+
+0 Bit E0r0ror Rate0.005 00..000055
+
+0
+
+0
+
+0.005
+
+0.01
+
+0.015
+
+0.01 00..0011 Bit Er0ro.0r1R5ate00..001155
+
+Figure 7: Required flasBhit EsrreonrBBiRsittaiEEntrerrgroorrRcRaoatteue nts and decoding la-
+
+tency for the LDPC decoder
+
+6.2 LDPC Overhead vs. Error-Reduction Rate
+Figure 7 shows the average flash sensing counts and average decoding latency required by the tested LDPC decoder to decode a codeword. The baseline is the LDPC decoder with a zero error-reduction rate. We can see that the baseline LDPC decoder requires single flash sensing on average when the BER is lower than 0.006. However, the average sensing number increases to three when the BER approaches 0.01. We can clearly see that with an error-reduction rate of 60%, the required number of flash sensings is cut down to one on average even if flash BER is as high as 0.015. We can also see that with an error-reduction rates of 60%, the required decoding latency is reduced from 25 µs to less than 4 µs. Recall that we have shown that about 60% of errors can be corrected if a read hits EC-Cache. Therefore, EC-Cache has a great potential to reduce LDPC’s overhead.
+6.3 SSD Simulation Results
+Before presenting SSD’s read performance speedup, we show the hit rates of a data cache and EC-Cache for different workloads and different available memory sizes in Figure 8. Each subfigure is labeled with the workload name and memory size. Within each subfigure, there are five bars, labeled with ‘0’, ‘’1, ‘2’, ‘3’, and ‘4’, where ‘0’ means that none of memory is partitioned to EC-Cache, and ‘1’ stands
+
+Data-Cache Hit Rate (%)
+
+EC-Cache Hit Rate (%)
+
+Baseline
+
+Read Response Time Speedup Best Configuration
+
+Figure 8: Cache hit rate of various workloads
+for that one-fourth of the available memory are partitioned to EC-Cache, so on and so forth.
+Let us first look at Group2 in Figure 8. We can see that for Group2-32MB, configuration ‘0’ and configuration ‘3’ have a similar data-cache hit rate, but the latter has a significant EC-Cache hit rate. That means, partitioning three-fourths of the 32MB memory as EC-Cache can gain a significant ECCache hit rate (because EC-Cache has 8× more lines than a data cache does given the same memory resource) without sacrificing the data-cache hit rate obviously. Therefore, this setting shows a great potential in performance speedup. In comparison, for Group2-128MB, we can see that configuration ‘0’ can achieve a data-cache hit rate of 94%. Partitioning memory from the data cache to the EC-Cache is not beneficial because data-cache hits drops sharply. As we note earlier, a data-cache hit is more beneficial than an ECCache hit. Therefore, for Group2-128MB, configuration ‘0’ looks to be the best decision.
+Figure 9 shows the speedup of SSD’s read response time over the baseline. Configuration ‘0’ is equivalent to the baseline, which is denoted as the horizontal dashed lines. Note here that the y-axes of subfigures are not drawn at the same scale. We first see that in many cases, the proposed ECCache design can significantly outperform the baseline. We can further see that the best configuration depends on workloads and available memory size. For example, configuration ‘3’ performs the best for Group2-32MB. In comparison, for Group2-128MB, configuration ‘0’ is the best, while configuration ‘3’ causes performance degradation. Assuming that the best configuration (i.e., those circled configurations) can be manually chosen according to workload profiling, ECCache improves SSD read performance by up to 2.6× for Group1-256MB.
+7. Conclusions and Future Work
+This work aims at optimizing LDPC in NAND flash-based SSDs via exploiting the characteristic that the positions of error bits are largely identical between reads to the same flash page. Based on this characteristic, we propose ECCache that keeps the positions and valid values of errors found in recently-read flash pages. The cached information are used to reduce a significant portion of error bits before LDPC decoding begins. With less errors to correct, the LDPC decoding procedure gains speedup. To evaluate EC-Cache, we conduct comprehensive experiments, including flash characterization, LDPC simulation, and SSD simulation. Experimental results show that EC-Cache can achieve up to 2.6× speedup in read response time.
+As future work, EC-Cache can share memory resources with several components including a data cache, a write buffer, and/or a flash-translation-layer (FTL) table. Therefore, it is interesting to explore the design space of memory
+
+Figure 9: Speedup of various workloads
+sharing among these components, to investigate their allocation/eviction policies, and to design automatic memory partitioning schemes.
+Acknowledgments
+We thank the anonymous reviewers for their insightful and constructive feedback. This work is supported in part by research grants from Macronix International Co., Ltd. (103S-C05), the National Science Council of Taiwan (NSC-1022220-E-002-005-, NSC-102-2220-E-002-001-, and NSC-1002221-E-002-248-MY3), the Excellent Research Projects of National Taiwan University (103R890822), Etron Technology Inc. (103R7150), and the Industrial Technology Research Institute of Taiwan (B5-10210-2F-1).
+8. References
+[1] N. Agrawal, et al. Design tradeoffs for SSD performance. In USENIX ATC, 2008.
+[2] F. Arai, et al. Extended data retention process technology for highly reliable Flash EEPROMs of 106 to 107 W/E cycles. In IRPS, 1998.
+[3] J. S. Bucy, et al. DiskSim 4.0 (CMU-PDL-08-101). Technical report, Parallel Data Laboratory, 2008.
+[4] G. Dong, et al. On the use of soft-decision error-correction codes in NAND flash memory. IEEE Trans. Circuits Syst. Regul. Pap., 58(2):429–439, 2011.
+[5] G. Dong, et al. Reducing data transfer latency of NAND flash memory with soft-decision sensing. In ICC, 2012.
+[6] K.-C. Ho, et al. A 45nm 6b/cell charge-trapping flash memory using LDPC-based ECC and drift-immune soft-sensing engine. In ISSCC, 2013.
+[7] X. Hu. LDPC codes for flash channel. In FMS ’12, 2012. [8] J.-D. Lee, et al. Effects of floating-gate interference on NAND
+flash memory cell operation. IEEE Electron Device Lett., 23(5):264–266, 2002. [9] R.-S. Liu, et al. DuraCache: A durable SSD cache using MLC NAND flash. In DAC, 2013. [10] R. Micheloni, et al. Inside NAND Flash Memories. Springer, 2010. [11] N. Mielke, et al. Bit error rate in NAND flash memories. In IRPS, 2008. [12] D. Narayanan, et al. Write off-loading: practical power management for enterprise storage. In FAST, 2008. [13] R. M. Neal. Software for Low Density Parity Check Codes (Version of 2012-02-11), 2012. [14] T. Pritchett and M. Thottethodi. SieveStore: a highly-selective, ensemble-level disk cache for cost-performance. In ISCA, 2010. [15] S. Schechter, et al. Use ECP, not ECC, for hard failures in resistive memories. In ISCA, 2010. [16] S. Tanakamaru, et al. Highly reliable solid-state drives (SSDs) with error-prediction LDPC (EP-LDPC) architecture and error-recovery scheme. In ASP-DAC, pages 83–84, 2013. [17] E. Yeo. An LDPC-enabled flash controller in 40 nm CMOS. In FMS, 2012. [18] K. Zhao, et al. LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives. In FAST, 2013. [19] W. Zhao, et al. Reducing latency overhead caused by using LDPC codes in NAND flash memory. EURASIP J. Adv. Sig. Proc., 2012:203, 2012.
+
+

@@ -1,0 +1,1000 @@
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+1983
+
+Learning to Decode Protograph LDPC Codes
+Jincheng Dai , Member, IEEE, Kailin Tan, Student Member, IEEE, Zhongwei Si , Member, IEEE, Kai Niu , Member, IEEE, Mingzhe Chen , Member, IEEE, H. Vincent Poor , Life Fellow, IEEE,
+and Shuguang Cui , Fellow, IEEE
+
+Abstract— The recent development of deep learning methods provides a new approach to optimize the belief propagation (BP) decoding of linear codes. However, the limitation of existing works is that the scale of neural networks increases rapidly with the codelength, thus they can only support short to moderate codelengths. From the point view of practicality, we propose a high-performance neural min-sum (MS) decoding method that makes full use of the lifting structure of protograph low-density parity-check (LDPC) codes. By this means, the size of the parameter array of each layer in the neural decoder only equals the number of edge-types for arbitrary codelengths. In particular, for protograph LDPC codes, the proposed neural MS decoder is constructed in a special way such that identical parameters are shared by a bundle of edges derived from the same edgetype. To reduce the complexity and overcome the vanishing gradient problem in training the proposed neural MS decoder, an iteration-by-iteration (i.e., layer-by-layer in neural networks) greedy training method is proposed. With this, the proposed neural MS decoder tends to be optimized with faster convergence, which is aligned with the early termination mechanism widely used in practice. To further enhance the generalization ability of the proposed neural MS decoder, a codelength/rate compatible training method is proposed, which randomly selects samples from a set of codes lifted from the same base code. As a theoretical performance evaluation tool, a trajectory-based extrinsic information transfer (T-EXIT) chart is developed for various decoders.
+Manuscript received July 16, 2020; revised November 17, 2020; accepted February 8, 2021. Date of publication May 10, 2021; date of current version June 17, 2021. This work was supported in part by the National Natural Science Foundation of China under Grant 92067202, Grant 62001049, Grant 62071058, and Grant 61971062; in part by the National Key Research and Development Program of China under Grant 2018YFE0205501 and Grant 2018YFB1800800; in part by the China Post-Doctoral Science Foundation under Grant 2019M660032; in part by Qualcomm Inc.; in part by the U.S. National Science Foundation under Grant CCF-1908308; in part by the Key Area Research and Development Program of Guangdong Province under Grant 2018B030338001; in part by the Shenzhen Outstanding Talents Training Fund; and in part by the Guangdong Research Project under Grant 2017ZT07X152. (Corresponding authors: Jincheng Dai; Kai Niu.)
+Jincheng Dai, Kailin Tan, Zhongwei Si, and Kai Niu are with the Key Laboratory of Universal Wireless Communications, Ministry of Education, Beijing University of Posts and Telecommunications, Beijing 100876, China (e-mail: daijincheng@bupt.edu.cn; tankailin@bupt.edu.cn; sizhongwei@bupt.edu.cn; niukai@bupt.edu.cn).
+Mingzhe Chen is with the Department of Electrical Engineering, Princeton University, Princeton, NJ 08544 USA, and also with the Shenzhen Research Institute of Big Data and Future Network of Intelligence Institute (FNii), The Chinese University of Hong Kong, Shenzhen 518172, China (e-mail: mingzhec@princeton.edu).
+H. Vincent Poor is with the Department of Electrical Engineering, Princeton University, Princeton, NJ 08544 USA (e-mail: poor@princeton.edu).
+Shuguang Cui is with the Shenzhen Research Institute of Big Data and Future Network of Intelligence Institute (FNii), The Chinese University of Hong Kong, Shenzhen 518172, China (e-mail: shuguangcui@cuhk.edu.cn).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/JSAC.2021.3078488.
+Digital Object Identifier 10.1109/JSAC.2021.3078488
+
+Both T-EXIT and simulation results show that the optimized MS decoding can provide faster convergence and up to 1dB gain compared with the plain MS decoding and its variants with only slightly increased complexity. In addition, it can even outperform the sum-product algorithm for some short codes.
+Index Terms— Protograph LDPC codes, 5G, neural min-sum decoder, parameter-sharing, iteration-by-iteration training.
+I. INTRODUCTION
+R ECENTLY, low-density parity-check (LDPC) codes have been selected as the coding scheme for data channels in the 5G new radio (NR) system [1], [2]. LDPC codes utilize iterative decoding [3], [4] to achieve performance close to the Shannon limit [5]. A number of iterative decoding algorithms exist. Among these decoding algorithms, the standard sum-product (SP) algorithm [6], also called the belief-propagation (BP) algorithm [7], can achieve the optimal performance while its high decoding complexity hinders its practical use. Instead of the SP algorithm, the min-sum (MS) algorithm [8] and its variants, such as the normalized min-sum (NMS) and the offset min-sum (OMS) [9]–[11], have been developed to achieve the approximate the performance of the SP algorithm with much lower complexity, and thus they have been widely employed in practical systems. Multi-edge type LDPC (MET-LDPC) codes are introduced as a unified framework of structured LDPC codes in [12]. Protograph LDPC codes [13] define a subclass of MET-LDPC codes, which rely on the expansion of a smaller matrix or graph prototype (the base graph) into a full matrix or graph. With a well-designed structure, protograph LDPC codes can achieve better performance and are more suitable for an efficient encoding/decoding implementation.
+In recent years, machine learning approaches have been rapidly developing [14], [15], and they have given impressive performance in physical layer communications [16]–[18], e.g., channel estimation, decoding, etc. Particularly, in [19], learnable weights are added to the SP algorithm and tuned by the gradient-based optimization method. The resulting weighted SP decoder in [19] can efficiently mitigate the negative impact caused by the short cycles in the Tanner graph, and shows the improvements of up to 1.5dB in the signal-to-noise ratio (SNR) against the conventional SP algorithm when decoding high-density parity-check (HDPC) codes. In [20] and [21], the NMS/OMS decoders with learnable normalizing/offset factors are studied to provide more hardware-friendly neural decoders. Nevertheless, all these
+
+0733-8716 © 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1984
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+existing works [19]–[21] are on HDPC with codelengths less than 200 bits.
+As the codelength increases, the dimensions of the parity-check matrix also increase, thus increasing the parameter array of the neural decoder, and resulting in extremely high training complexity. In addition, the iterative decoding convergence rate for longer codes becomes slower, which requires more iterations (e.g., 50, or even more) corresponding to quite deep neural networks. It may lead to the vanishing gradient problem during the training process. These reasons lead to that current neural SP decoders [19]–[21] may only support short to moderate codelengths.
+In this paper, from the point view of practicality, we propose a neural MS decoding method for protograph LDPC codes that makes full use of the lifting structure to overcome the limitation of codelength. We add fine-tuned parameters to the plain MS algorithm, making it a better approximation to the SP algorithm. The proposed neural MS decoder is constructed in a special way that follows a parameter-sharing mechanism. By this means, only a small parameter array is required, whose size is only proportional to the number of edges in the base graph. This parameter-sharing mechanism efficiently reduces the training complexity and memory cost, thus overcoming the limitation of codelength in the conventional neural iterative decoders [21]. In addition, different parameters are applied to different edge-types and iterations, which enables the neural MS decoder to mitigate the message correlation due to short cycles in the Tanner graph and tends to faster convergence, especially for some short codelength cases.
+Note that the LDPC coding scheme in 5G NR [2] adopts the protograph structure, including two base graphs (BG1 and BG2), to meet the requirements of high performance, high throughput, and low decoding latency. Hence, in this paper, we choose 5G LDPC codes as a representative of the protograph LDPC code class to train and verify the proposed neural MS decoder.
+To the best of our knowledge, this is the first work to investigate neural decoding methods for protograph LDPC codes. The novelty and contribution of this paper are summarized as follows:
+• Parameter-Sharing Mechanism: For protograph LDPC codes, since the base graph encapsulates the desired macroscopic structure, the original structural properties imposed by the base graph remain unchanged in the lifted graph. Because of this, the same parameters can be shared by a bundle of edges derived from the same edge in the base graph. Accordingly, the number of parameter pairs required for training only equals the number of edges in the base code. Moreover, the same parameter settings can be employed for decoding multiple codes derived from the same base code. This parameter-sharing mechanism makes it much more memory-efficient for the practical implementation of the proposed neural MS decoder.
+• Iteration-by-Iteration Greedy Training: Departing from the well-known multi-loss training method [21], we propose an iteration-by-iteration, i.e., layer-by-layer in neural networks, greedy training method by which only parameters of the last decoding iteration are learnable, and those
+
+for previous iterations are fixed. This training process is beneficial in three ways: (i) reducing the training complexity and combat the vanishing gradient problem in deep neural MS decoders; (ii) enabling the proposed neural MS decoder to mitigate the message correlation due to short cycles and tend to faster convergence, especially for some short codelength cases. This is aligned well with the early termination mechanism widely used in practical iterative decoders; and (iii) enabling the proposed neural MS decoder, with one iteration as its training granularity, to flexibly set up the decoding configurations, i.e., the number of iterations. In this way, many parameters in the optimized MS decoder can be reused rather than retrained for every different configuration. • Codelength/Rate Compatible Training: Taking advantage of the proposed parameter sharing mechanism, to enhance the generalization ability of a trained neural MS decoder to multiple codelengths and rates, we design a training process that randomly selects samples from a set of codes with different lengths or rates, and the codes provided for selection are derived from the same base code. This training process mitigates the overfitting problem to a certain code length (implicitly, the lifting way of protograph codes) or code rate, thus improving the length/rate compatibility of a trained neural decoder. • T-EXIT Evaluation: A trajectory-based extrinsic information transfer (T-EXIT) analysis is performed for neural MS decoders. The T-EXIT computation takes into account different normalizing and offset factors on edge bundles, which permits the convergence evaluation among various decoding algorithms. It presents the superiority of neural MS decoding from theoretical perspective.
+The remainder of the paper is organized as follows. Section II briefly reviews the mainstream iterative decoding algorithms and the protograph LDPC codes. Section III describes the proposed neural MS decoding algorithm and its training method. In Section IV, damping factors are further introduced to enhance the performance of neural MS decoders. Section V introduces the T-EXIT performance analysis method. Section VI shows the performance evaluation results with T-EXIT and simulations. Finally, Section VII concludes the paper.
+II. PRELIMINARIES
+A. Notational Conventions
+In this paper, we use calligraphic characters, such as X , to denote sets. We write lowercase letters (e.g., x) to denote scalars. We use notation x to denote a vector and xi to denote the i-th element in x. The bold letters, such as X, denote matrices. Specially, the set of binary and real numbers are denoted by B and R, respectively. In addition, we use the uppercase letter (e.g., Y ) to denote random variable and the lowercase letter y to represent a realization.
+Throughout this paper, log (·) denotes “logarithm base 2”, and ln (·) stands for the “natural logarithm base e”, where the constant e = 2.71828 . . . .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+
+1985
+
+B. Iterative Decoding Algorithms
+
+As described by in [22], Tanner graph provides a complete
+
+representation of LDPC code and it aids in the description of
+
+decoding algorithms. A Tanner graph is a bipartite graph, that
+
+defines two sets of nodes: variable nodes (VNs) and check
+
+nodes (CNs). Each of the bits in the codeword corresponds
+
+to a VN, and each of the parity-check equations (rows of the
+
+parity-check matrix) corresponds to a CN. If a bit participates
+
+in a parity-check equation, there is an edge between the
+
+corresponding VN and CN.
+
+Iterative decoding algorithms are operated on the Tanner
+
+graph [6], which is a graphical representation of some parity
+
+check matrix that describes the code. The commonly used
+
+message in iterative decoding is the bit log-likelihood ratio
+
+(LLR). Given a noisy received signal vector y corresponding
+
+to a transmitted codeword x, the LLR of the v-th bit in x is
+
+defined as
+
+v
+
+=
+
+ln
+
+Pr Pr
+
+(yv (yv
+
+|xv |xv
+
+= =
+
+0) 1),
+
+(1)
+
+where the Pr (yv |xv ) denotes the transition probability from xv to yv.
+The decoding of LDPC codes can be described as iterative message exchanges between VNs and CNs. During iteration i, the message passing from VN v to CN c is
+
+(vi→) c = v +
+
+(ci−→1v),
+
+(2)
+
+c ∈N (v)\c
+
+where N (v) denotes the neighboring node set of v consisting
+
+of CNs which are adjacent to the VN v, and N (v) \c denotes
+
+the neighboring node set except the CN c.
+
+The message passing from CN c to VN v is
+
+⎛
+
+⎞
+
+c(i→) v = 2tanh−1 ⎝
+
+tanh (vi)→c ⎠ ,
+
+(3)
+
+2
+
+v ∈N (c)\v
+
+where N (c) denotes the neighboring node set of c consisting
+
+of VNs which are adjacent to the CN c, and N (c) \v denotes
+
+the neighboring node set except the VN v. At the first iteration, c(0→) v is initialized to 0 in (2).
+
+After i iterations, the soft estimation sv about the LLR for code bit xv is written as
+
+sv = v +
+
+(ci)→v ,
+
+(4)
+
+c ∈N (v)
+
+and a decision is made by
+
+xˆv
+
+=
+
+1
+
+− sgn (sv) , 2
+
+(5)
+
+where the function sgn (sv) denotes the sign of sv.
+
+The iterative decoding procedure described above is called
+
+the sum-product (SP) algorithm or the belief-propagation
+
+(BP) algorithm. To implement equation (3), the SP decoder
+
+involves hyperbolic tangent functions and many multiplica-
+
+tions. To reduce computational complexity, the min-sum (MS)
+
+algorithm [8] is used to approximate equation (3) as
+
+⎛
+
+⎞
+
+c(i→) v = ⎝
+
+sgn
+
+(vi)→c
+
+⎠ × min
+v ∈N (c)\v
+
+v(i)→c
+
+.
+
+(6)
+
+v ∈N (c)\v
+
+Compared to the SP algorithm, the MS approximation suf-
+
+fers from non-negligible performance loss. Several enhanced
+
+MS algorithms have been proposed in [9]: the normalized
+
+min-sum (NMS) adds a normalization scaling factor α to (6)
+
+as
+
+⎛
+
+⎞
+
+(ci→) v = α × ⎝
+
+sgn
+
+v ∈N (c)\v
+
+(vi)→c
+
+⎠ × min
+v ∈N (c)\v
+
+v(i)→c
+
+.
+
+(7)
+
+Another technique named the offset min-sum (OMS) adds an
+
+offset correction term to (6) as
+
+⎛
+
+⎞
+
+(ci→) v = ⎝
+
+sgn (vi)→c ⎠
+
+v ∈N (c)\v
+
+× max
+
+min
+v ∈N (c)\v
+
+v(i)→c
+
+− β, 0
+
+.
+
+(8)
+
+The OMS method avoids multiplications, making it more suitable for practical iterative decoder implementation. For NMS and OMS algorithms, the critical α and β should be optimized for every specific LDPC code by using the density evolution (DE) [10] and the recommended values are α = 0.8, β = 0.15 in [9]1 for some regular LDPC codes. They are viewed as one benchmark for comparison in many existing works [10], [11]. Thus, in this paper, we also adopt the NMS decoding with α = 0.8 and the OMS decoding with β = 0.15 as two baseline algorithms. Later, although some adaptive methods [11] were proposed to recognize the signal amplitude and noise variance, they also increase the computational complexity. Hence, there are still no analytical results for the choice of α and β, and the current optimization methods can only deal with single parameter cases.
+
+C. Protograph LDPC Codes
+Multi-edge type LDPC (MET-LDPC) codes [12] define a unified framework of structured LDPC codes. Unlike the Tanner graph of conventional LDPC codes with only a single edge-type, MET-LDPC codes provide multiple edge-types and allow exploring better codes that are optimized under specific constraints. These constraints are usually designed to improve the efficiency of encoding and decoding.
+Protograph LDPC codes [13] are a subclass of MET-LDPC codes, which is defined using a small base code. The LDPC codes adopted in 5G NR are the protograph codes [2], and Fig. 1 shows a toy example of protograph LDPC codes. A set of edge-types are defined in an (Nb, Kb) base code, where Nb and Nb − Kb equal the number of VNs and CNs in the Tanner graph corresponding to this base code, i.e., the base graph. According to the connections to these edges, variable and check node-types are determined, respectively. An (N, K) code is derived by taking Z = N/Nb = K/Kb replicas of the base graph and then permuting the edges within the same edge-type to integrate the separated Z base graph replicas
+1The normalizing factor in [9] is written as the division form, hence, the recommended value 1.25 in [9] is converted to α = 1/1.25 = 0.8 in this paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1986
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 1. A graphical demonstration of protograph LDPC codes.
+
+Fig. 2. Network structure of the proposed neural MS decoder.
+
+into a larger one. This operation is called lifting, and the derived code is also named the “Z-lifted” LDPC code. Since the edge permutation is performed only within a bundle of edges of each edge-type, the structural properties of edges and nodes (e.g., degree) in the lifted codes remain the same with that in the base code. Hence, the macroscopic structure of a protograph LDPC code can be captured by its small base graph [1]. This encapsulation property of protograph LDPC codes allows our proposed neural MS decoder to apply the same correction term to all edges of the same edge-type. The details will be presented in Section III.
+III. THE PROPOSED NEURAL MIN-SUM DECODER
+In this section, we present details of the optimized MS decoding by using customized sparse neural networks.
+A. Neural MS Decoding for Protograph LDPC Codes
+The above normalizing and offset factors can be viewed as the assigned weights and biases to the edges in the Tanner graph. Thus, to find the optimal parameters, a straightforward method is to construct an MS decoding neural network to automatically learn these parameters. To this end, according to the Tanner graph, we can construct a sparse neural decoder with a not-fully connected structure that is a trellis representation of iterative decoding. The neural network input layer is a vector of size N , which is the code block length (i.e., the number of variable nodes in the Tanner graph). All the subsequent layers in the trellis, except for the last one (i.e., all the hidden layers), are of size E, where E denotes the number of edges in the Tanner graph. For ease of exposition, we mark the hidden layer index i corresponding to the i-th iteration in the MS decoding process. Each hidden layer includes two sublayers iv and ic corresponding to VN update and CN update, respectively. The output layer contains N neurons.
+For hidden layer i, each processing element (PE) in sublayer iv outputs the message along the edge sent from the associated
+
+VN to CN, and each neuron in sublayer ic outputs the message along the edge sent from the associated CN to VN. The PE in
+the first hidden layer (sublayer 1v) corresponding to the edge e = (v, c) is connected to the v-th element in the input layer. The PEs in hidden layer i (i > 1) (sublayer iv) corresponding to the edge e = (v, c) is connected to the neurons in hidden layer (i − 1) (sublayer (i − 1)c) associated with the edges e = (v, c) for c = c. The neurons in hidden layer i (i ≥ 1) (sublayer ic) corresponding to the edge e = (v, c) is connected to the PEs in sublayer iv associated with the edges e = (v, c) for v = v.
+Regarding the protograph LDPC codes, all the E PEs or
+neurons in each hidden layer can be divided to Z clusters, each
+cluster contains Eb elements corresponding to the number of edges on the base graph, thus we have E = ZEb. Given an (Nb, Kb) base code Cb, for the Z-lifted code, we define the set Eeb denoting the Z-bundle of edges derived from eb = (vb, cb) as
+
+Eeb =(vb ,cb )
+
+e = (v, c)
+
+v = vb + λvNb, λv ∈ [[N − 1]] , c = cb + λc (Nb − Kb) , λc ∈ [[N − 1]]
+
+,
+
+(9)
+
+where the set [[N − 1]] {0, 1, · · · , N − 1}. Thus, the PEs or neurons in each cluster belong to a different set Eeb=(vb,cb). A demonstration of the neural MS decoder is given in Fig. 2.
+The messages transmitted over the neural MS decoder are
+as following. Given the number of iterations I, consider the i-th hidden layer, i = 1, 2, · · · , I, and the e = (v, c) is the index of some PE in sublayer iv. The output message of this PE is written as
+
+(ei=v()v,c) = v +
+
+e((i−1)c),
+
+e =(v,c ),c = c
+
+(10)
+
+where e(0) = 0 for all e at the initialization step. Regarding the protograph structure, for any e ∈ Eeb=(vb,cb), we can derive that e ∈ Eeb=(vb,cb) with cb = cb in (10). The output message
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+TABLE I FOUR TYPES OF NEURAL MS DECODER
+
+1987
+
+of
+
+neuron
+
+e= ⎛
+
+(v, c)
+
+in
+
+the
+
+ic-th
+
+sublayer ⎞
+
+is
+
+written
+
+as
+
+e(i=c)(v,c) = ⎝
+
+sgn (eiv) ⎠
+
+e =(v ,c),v =v
+
+×ReLU
+
+α(ei)
+
+×
+
+e
+
+min
+=(v ,c),v
+
+=v
+
+(eiv )
+
+− βe(i)
+
+,
+
+(11)
+
+where ReLU (·) is one of the most commonly used activation functions in deep learning studies,
+
+ReLU (x) = max (x, 0) .
+
+(12)
+
+Clearly, different from previous works [19]–[21], where [19]
+
+trained a weighted SP decoder and [20] trained an OMS
+
+decoder with learnable offsets, we add both normalizing
+
+factors and offset factors to (6) of the MS algorithm, i.e., the
+
+equation (11). This design is indeed consistent with classical
+
+neural networks [14] equipped with both weights and biases
+
+so that the degrees of freedom for optimization are expanded.
+
+Compared to traditional neural decoders with only weights or
+
+biases, the proposed neural MS decoding can better compen-
+
+sate for the min-sum loss, and partially mitigate the message
+
+correlation due to short cycles in the Tanner graph as a bonus.
+
+The output neuron gives the information
+
+⎛
+
+⎞
+
+ov = σ ⎝v +
+
+(eIc)⎠ ,
+
+e =(v,c )
+
+(13)
+
+where σ (x) = (1 + exp (−x))−1 is the sigmoid function, it ensures the final network output is in the range [0, 1] denoting the probability of transmitted bit xv = 0. Also, note that by setting all the weights αe(i) to 1 and all the biases βe(i) to 0, the proposed neural MS decoder regenerates the standard
+
+MS decoder as (2) and (6). The weights α(ei=)(v,c) and biases βe(=i)(v,c) within
+
+neurons vary for different iteration i for i = 1, 2, · · · , I. The
+
+message updating (2) from VNs to CNs remains unchanged
+
+which is completed within the PEs as (10). The proposed neural MS decoding method can be easily extended to the
+
+neural SP decoding method by changing the message update rule in (11) as follows:
+
+e(i=c)(v,c)
+
+⎛
+
+= α(ei) × 2tanh−1 ⎝
+
+tanh
+
+e =(v ,c),v = v
+
+(eiv ) 2
+
+⎞ ⎠ + βe(i).
+
+(14)
+
+Hereinafter, we focus on the neural MS decoding method and the neural SP decoding method is set as a comparison in Section VI.
+Proposition 1 (Parameter-Sharing Mechanism): The macroscopic structure of a protograph LDPC code can be captured by its small base graph [1]. Taking advantage of this encapsulation property of protograph LDPC codes, an additional restriction is applied to the weights and biases: for any edge pair e1 and e2 belonging to the same edge-type, i.e., e1 ∈ Eb and e2 ∈ Eb, the same values are applied to the neurons corresponding to these two edges, i.e.,
+
+αe(i1) = α(ei2), βe(i1) = βe(i2).
+
+(15a) (15b)
+
+Moreover, one parameter array may be applied to multiple lifted codes derived from the same base code.
+With the protograph-based parameter-sharing mechanism in Proposition 1, to decode a set of protograph LDPC codes derived from the same base code, only a small weight/bias array must be adapted. In particular, the size of the parameter array is proportional to the number of edge-types, or equals the number of edges in the base graph.2 Hence, compared to applying independent correction terms to every edge in the Tanner graph of every specific code [19]–[21], the proposed protograph-based parameter-sharing mechanism can efficiently reduce training complexity and memory cost. Furthermore, it breaks the limitation of codelength, thus the proposed neural MS decoder can be applied to moderate and long codelengths, which is desired for practical use.
+In practical implementation, the proposed neural MS decoder includes four basic types summarized in Table I. For iteration i, the parameter array α(i) includes Eb elements αe(i) and each one represents a different edge-type. Also, the parameter array β(i) includes Eb elements βe(i). In fact, neural MS decoding is an integrated version of NMS and OMS algorithms with fine-tuned factors so that it is named “neural normalized&offset MS (neural NOMS)”. To reduce complexity, we tie the tuned factors and introduce three simplified versions of the neural NOMS. As shown in Table I, the Type-II decoder sets the normalizing and offset factors within one iteration as two paramters and they vary as the number of iterations increases. Type-III and Type-IV are
+
+2If the base graph has parallel edges as in MET-LDPC codes [12], the conclusion is still valid since these parallel edges deliver the same LLR message so that they can share the same parameters.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1988
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+the simplified neural NMS and OMS decoding methods, respectively, and have been studied in previous work [23].
+
+B. Training the Neural MS Decoder
+
+In this paper, we use the expected cross-entropy between the transmitted codeword x and the neural MS decoder output o for the loss function, which has been proven to be effective in previous works [19]–[21], defined as
+
+L (o, x)
+
+=
+
+−1 N
+
+N
+xv
+v=1
+
+log (ov) + (1
+
+−
+
+xv) log (1
+
+−
+
+ov) ,
+
+(16)
+
+where ov and xv denote the neural network output and the v-th element of the transmitted codeword.
+Given a particular normalizing and offset vector α and β,
+
+the loss function (16) can be estimated. By computing the gradient ∇α,βL, the normalizing/offset factors can be tuned by gradient-based optimization methods which are widely used
+
+in deep learning studies, e.g., ADAM [24].
+
+To find the optimal normalizing/offset factors, a straightfor-
+
+ward training method is to construct an MS decoding neural
+
+network according to (10), (11) and (13), and tuning the weights and biases for all the I iterations, i.e., α(i) and
+
+β(i) with i = 1, 2, · · · , I, to minimize the loss function
+
+in (16). The gradients are propagated from the network layer of the I-th iteration to that of the first iteration. With a practical iteration number I, e.g., 25 or 50, the network structure is quite deep and suffers from the gradient vanishing problem when training. In addition, the generalization ability of one trained neural MS decoder to various codelengths and code rates is a key for practical use. To address these two problems, we propose two training methods as follows:
+1) Codelength/Rate Compatible Training: We do not restrict the training samples selected from some one particular code, even though it can achieve the best performance for this code. According to Proposition 1, the same parameter array can be applied to multiple codes derived from the same base graph. Therefore, to enhance the generalization ability of one trained neural MS decoder to multiple codelengths and code rates, we can train the neural network by randomly selecting samples from a set of codes C = {C1, C2, · · · } with different lengths or rates, and these codes are derived from one identical base graph Cb. In this way, one trained neural MS decoder can match multiple codes.
+2) Iteration-by-Iteration Greedy Training: To address the vanishing gradient problem in a deep neural decoder, [19]–[21] employ a multi-loss function to inject the gradients directly to every layer. In this paper, we propose a different way: the network is built and trained iteration-by-iteration greedily. Once a layer is trained, the corresponding weights and biases are fixed in the training for later iterations. The neural decoding network is growing from a one-layer network for only one iteration to a multi-layer network for I iterations; each time, only the weights/biases in the last layer are learnable.
+Compared to the multi-loss training method in [21], one would expect a performance loss under this greedy training method. However, in practice, the number of iterations used for decoding cannot be very large, i.e., I ≤ 50, the potential
+
+Fig. 3. A sketch of the reusability of hidden layers trained with the proposed iteration-by-iteration manner.
+performance loss is negligible. Although the value of I is moderate for the greedy strategy, the corresponding neural decoding network that consists of I, e.g., 25 or 50, layers has already been quite deep, which may lead to the vanishing gradient problem when directly training all I layers.
+In summary, the proposed greedy training method has the following advantages:
+• The actual network for training always has a shallow structure so as to avoid the vanishing gradient problem and reduce the training complexity.
+• Per-edge-type parameters and the greedy training method enable the neural MS decoder to mitigate the message correlation due to short cycles in the Tanner graph and tend to optimize the performance of neural decoders as early as possible, i.e., faster convergence, especially for some short codelength cases. This is consistent with the early termination mechanism widely-used in LDPC iterative decoding.
+• The one-iteration training granularity enables the neural MS decoder to flexibly set up its decoding configurations, i.e., the number of iterations. In this way, many parameters in the optimized MS decoder can be reused rather than retrained for every different configuration. As shown in Fig. 3, the neural network is trained for Imax iterations, then for any neural decoder with I (I ≤ Imax) iterations, it can be directly built by recycling the first I hidden layers in the trained neural decoder.
+Since the bit error rate (BER) could vary a lot with different iteration numbers, the SNR should be assigned to different levels during the training process. In addition, note that the weights/biases are shared among all the possible lifted codes from the same base code, to prevent overfitting to a specific code, the training set should include samples from a set of codes with multiple lifting factors Z. Therefore, a table of SNRs for multiple codes under different iteration numbers is required for training. These SNR values should be selected to have the same BER performance under a reference decoding algorithm, e.g., the SP algorithm, to make all the codes used for training are (approximately) fairly handled.
+The proposed training methods for the neural MS decoder are summarized in Algorithm 1, which can be easily extended to a batch training variant.
+IV. LEARNING TO DAMP
+Apart from optimizing the output LLR messages from CN update, one additional way is to relax [21] or damp [25]
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+TABLE II TWO TYPES OF NEURAL MS DECODER WITH DAMPING FACTORS
+
+1989
+
+Algorithm 1 Training the Neural MS Decoder
+
+Input: The base code Cb, the maximum iteration
+numbers Imax, a set of lifted codes used for training C = {C1, C2, · · · } derived from Cb, and the SNR table where SNR (i, j) denotes the
+
+training SNR for the i-th iteration of code Cj; 1 for k = 1, 2, · · · , Imax do
+// iteration-by-iteration training
+
+2 Initialize a set of neural MS decoders with shared
+
+weights and biases α(i) and β(i) with iteration
+
+i = 1, 2, · · · , k which correspond to all Cj ∈ C, respectively; 3 Weight/bias vectors for iteration i = 1, 2 · · · , k − 1 are
+
+initialized to previously learned values; 4 Initialize α(k) and β(k) corresponding to the last
+
+iteration with random values;
+
+5 repeat
+
+6
+
+Randomly select a code Cj ∈ C;
+
+7
+
+Randomly generate a codeword x of Cj;
+
+8
+
+Generate the received signal y by sending x
+
+through a BPSK modulated AWGN channel with
+
+SNR (k, j);
+
+9
+
+Feed y into the neural MS decoder corresponding
+
+to Cj and obtain output s;
+
+10
+
+Compute loss function according to (16);
+
+11
+
+Update α(k) and β(k) using gradient descent
+
+algorithm;
+
+12 until converge or reach a maximum step number;
+
+13 return α(i) and β(i) with i = 1, 2, · · · , Imax.
+
+the output LLR messages from VN update. By introducing
+
+the damping factor, the convergence rate of a neural MS
+
+decoder can be further improved [26]. In addition, the message
+
+correlation due to short cycles in the Tanner graph can be
+
+further mitigated, and thus the performance of the neural MS
+
+decoder for short codelengths is improved.
+
+At iteration i, the message is damped by obtaining a convex combination of the message computed at iteration (i − 1) and
+
+the message at iteration i, with damping factors. Hence, in the neural MS decoder, the output message of the PE e = (v, c) in sublayer iv is written as
+
+(ei=v()v,c) = γe(i)e((i−1)v) + 1 − γe(i) ˜(eiv),
+
+(17)
+
+where
+
+˜(eiv) = v +
+
+e((i−1)c ) ,
+
+e =(v,c ),c = c
+
+(18)
+
+Fig. 4. Network structure of the neural MS decoder with damping factors.
+and the damping factor 0 ≤ γe(i) < 1. Clearly, as γe(i) → 0, the decoder becomes less damped, and as γe(i) → 1, the decoder becomes more damped. When γe(i) = 0, the decoder reverts to being a normal decoder.
+Combining the damping factors, we further derive two types of neural MS decoders as Table II that follow the four basic types in Table I. For the Type-V neural MS decoder, the per-edge damping factor array of each iteration γ(i) also obeys the parameter-sharing mechanism in Proposition 1, i.e., the size of γ(i) only equals the number of edge-types. During the training phase, we also adopt the iteration-by-iteration method to avoid the vanishing gradient problem. Also, under different numbers of iterations, a number of parameters in the optimized MS decoder could be reused rather than retrained for every different configuration. The structure of a damped neural MS decoder is figuratively given in Fig. 4.
+V. T-EXIT CONVERGENCE ANALYSIS
+In this section, we perform a trajectory-based EXIT (TEXIT) convergence analysis for various decoders. EXIT chart [27], [28] is a powerful tool to analyze the convergence of iterative decoders. It tracks the mutual information (MI) transfer process during iterations. However, the conventional EXIT analysis cannot be roughly applied to protograph LDPC codes. Considering the different edge-connection properties, Liva et al. proposed the protograph EXIT (PEXIT) algorithm [29], where the MI is calculated for each VN and CN rather than degree-distribution pair. The PEXIT analysis provides a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1990
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+remarkably accurate and simple prediction of the decoding threshold for many code classes. Nevertheless, note that:
+• PEXIT is an asymptotic method used to determine the iterative decoding threshold for an LDPC decoding process assuming the number of decoding iterations is unlimited and the codelength is infinite. Since the number of iterations needed by the proposed neural MS decoder is limited and the codelength is finite, we cannot apply the PEXIT method to determine the decoding threshold and predict the asymptotic performance of the decoding process of the proposed decoder.
+• PEXIT can only be appropriately applied to SP decoding under the AWGN channel [29]. For other algorithms, e.g., MS and its variants, the critical duality relationship [6] between VN and CN cannot be accurately satisfied. Consequently, the MI update at CNs cannot be analytically calculated. Meanwhile, the updated LLRs at CNs are not Gaussian so that the MI is hard to track.
+Recently, a scattered EXIT (S-EXIT) chart method [30] was developed to optimize the degree profiles of short LDPC codes. By simulating several individual instances of a short code, one can obtain corresponding EXIT trajectories of an actual iterative decoder, and the vertices of these trajectories form a clutter. This S-EXIT method utilizes the statistics of numerous EXIT trajectories, and tracks their frequency of occurrence over the EXIT MI plane, thus enabling us to gain insight into the iterative decoding behavior. For the proposed decoder, there is no need for us to “see through the clutter” empirically as in S-EXIT since we only care about the average reliability of propagated messages.
+To evaluate the convergence performance of an iterative decoder, we track the average MI (AMI) transfer process between VNs and CNs such that we can provide a virtual representation of the iterative decoding process. This trajectory-based EXIT method is named T-EXIT.
+For iteration i, we denote IA(i,)VN (IA(i,)CN) as the a priori AMI between input LLRs (ci→−v1) (v(i→) c) and the corresponding code bits. Similarly, we denote IE(i,)VN (IE(i,)CN) as the extrinsic AMI between output LLRs (vi→) c (c(i→) v) and the code bits. The target of T-EXIT analysis is to obtain two transfer functions
+
+IE(i,)VN = Tv IA(i,)VN , IE(i,)CN = Tc IA(i,)CN .
+
+(19a) (19b)
+
+To this end, we first collect all the output LLRs of VNs and CNs at each iteration by using a number of simulated code blocks. Then, we count the probability density functions (PDFs) of these LLRs with the histogram method, and
+
+calculate the AMI as
+
+IY
+
+= I (X; Y ) =
+x∈B
+
+R
+
+pY
+
+(y|x)pX
+
+(x)
+
+log
+
+pY (y|x) pY (y)
+
+dy.
+
+(20)
+
+In this way, we can get a zigzag path that reflects the decoding
+
+trajectory. Then, by connecting the vertices at both ends of the
+zigzag path separately, we can get two curves corresponding to Tv (·) and Tc−1 (·), respectively. The specific steps of T-EXIT are summarized as following.
+
+• Initialization:
+
+Initialize the LDPC code C, the number of iterations I,
+
+the SNR, and the number of simulated blocks K (K is
+
+sufficiently large);
+
+Initialize IA(1,)VN = IE(0,)CN = 0;
+
+Initialize vectors
+
+(i) VN
+
+=
+
+∅
+
+and
+
+(i) CN
+
+=
+
+∅
+
+to
+
+record
+
+LLR
+
+messages with i = 1, 2, · · · , I;
+
+Initialize vectors bV(iN) = ∅ and b(CiN) = ∅ to record code
+
+bits, with i = 1, 2, · · · , I.
+
+• Count LLR Distributions:
+
+For k = 1, 2, · · · , K and i = 1, 2, · · · , I, run simulation
+
+by using the selected decoding algorithm so as to collect
+
+total E LLR messages v(i→) c ((ci→) v) on each edge and
+
+their corresponding code bits xv, then append them to
+
+(i) VN
+
+(
+
+(i) CN
+
+),
+
+and
+
+bV(iN)
+
+(bC(iN) ),
+
+respectively;
+
+For i = 1, 2, · · · , I, utilize
+
+(i) VN
+
+(
+
+(i) CN
+
+)
+
+and
+
+b(ViN)
+
+(b(CiN) )
+
+to count PDFs pE,VN (|0) (pE,CN (|0)), pE,VN (|1)
+
+(pE,CN (|1)), and pE,VN () (pE,CN ()) with the his-
+
+togram method, then calculate the AMI IE(i,)VN (IE(i,)CN)
+
+according to (20).
+
+• Generate the Trajectory of T-EXIT:
+
+On the EXIT plane, write 2I AMI pairs as the coordinate
+
+points, which can be expressed as: ⎧ ⎨ IA(i,)VN, IE(i,)VN = IE(i,−C1N), IE(i,)VN , ⎩ IE(i,)CN, IA(i,)CN = IE(i,)CN, IE(i,)VN ,
+
+(21)
+
+where i = 1, 2, · · · , I; Connect the adjacent coordinate points in the form
+
+IA(i,)VN, IE(i,)VN → IE(i,)CN, IA(i,)CN ,
+
+(22)
+
+where i = 1, 2, · · · , I. Then, we get the extrinsic AMI
+
+transfer trajectory.
+
+• Generate Two Transfer Functions of T-EXIT:
+
+Connect the coordinate points in the form ⎧ ⎨ IA(i,)VN, IE(i,)VN → IA(i,+V1N) , IE(i,+V1N) , ⎩ IE(i,)CN, IA(i,)CN → IE(i,+C1N) , IA(i,+C1N) ,
+
+(23)
+
+where i = 1, 2, · · · , I − 1. Then, we get two T-EXIT curves with respect to Tv (·) and Tc−1 (·), respectively.
+According to the principle of EXIT, there is a transfer
+
+relationship between the a priori AMI and the extrinsic AMI,
+
+i.e.,
+
+IA(i,)CN = IE(i,)VN, IA(i,+V1N) = IE(i,)CN.
+
+(24)
+
+For each iteration i, the extrinsic AMI from VN update IE(i,)VN dominates the system BER performance. According to (19),
+
+we can also derive that
+
+IE(i,+V1N) = Tv Tc IE(i,)VN .
+
+(25)
+
+If the iterative decoding finally converges, we have IE(i,+V1N) = IE(i,)VN IE(∗,)VN. Apparently, IE(∗,)VN is the fixed point of the function in (25), i.e.,
+
+IE(∗,)VN = Tv Tc IE(∗,)VN
+
+⇒ Tv−1 IE(∗,)VN = Tc IE(∗,)VN . (26)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES TABLE III
+BG2 CODES FOR TRAINING WITH THE CODE RATE R = 1/5
+TABLE IV BG2 CODES FOR TRAINING WITH THE NUMBER OF INFORMATION BITS K = 160
+
+1991
+
+Followed by this, the coordinate (IA(∗,)VN, IE(∗,)VN) of the fixed point on the EXIT plane is the intersection of two curves Tv (·) and Tc−1 (·). Therefore, after getting these two T-EXIT transfer functions, one can calculate the intersection coordinate
+that captures the performance at convergence under finite
+codelength and limited number of iterations.
+
+The neural MS decoders in Table I and Table II are trained under the AWGN channel with up to 25 iterations. For each iteration, the parameters are trained over 50000 batches, with 50 samples in each batch. To update the weights/biases/damping factors, we adopt the Adam optimizer [24] with an initial learning rate of 0.001. The source code used to generate the results is available on github.4
+
+VI. PERFORMANCE EVALUATION
+In this section, we construct neural MS decoders for the protograph LDPC codes defined in the 5G standard [2], and simulate the block error rate (BLER) performance over the binary phase shift keying (BPSK) modulated additive white Gaussian noise (AWGN) channel and the Rayleigh fading channel. The definition of SNR in all these results is the bit SNR, i.e., Eb/N0, where N0 denotes the noise power.
+The employed base code is BG2 (defined in [2, Table 5.3.2-3]), which has 42 rows and 52 columns in the parity-check matrix HBG2 with 197 non-zero elements.3 According to the rate-matching algorithm in [2], the two node-types corresponding to the first two columns in the parity-check matrix HBG2 are always punctured, i.e., the code bits of its lifted codes with these two node-types will never be transmitted through the channel. Therefore, the baseline code rate of BG2 codes is R = (52 − 42) / (52 − 2) = 1/5. The lifted codes given in Table III and Table IV are used for training, which are the short and medium codes due to the target codelength of BG2 and limited computational capability. The code rates in Table IV are chosen from the 5G NR modulation and coding scheme (MCS) table [31, Table 5.1.3.1-1]. A reference SNR table for training is computed for these codes, which consists of the minimum required SNRs to achieve a target BER = 0.001 under the AWGN channel and the standard SP decoding with 50 iterations.
+3One can also select the BG1, and similar results and conclusions can be observed. We do not repeatedly show the performance of codes derived from BG1 in this paper.
+
+A. Training Results
+In this part, we visually demonstrate the trained neural MS decoders. The six types of neural MS decoders in Table I and Table II are trained by randomly selecting samples from Table III.
+For the Type-I neural MS decoder, the distributions of normalizing factors (weights) and offset factors (biases) are presented in Fig. 5(a) and Fig. 5(b), respectively. For each iteration, all the weights or biases are counted as one column in Fig. 5. The weights α(i) vary with iterations, and most values concentrate on the range of 0.5 to 0.75 when i ≥ 9. For i < 9, they concentrate on the range of 0.75 to 0.9. Moreover, as the number of iterations increases, the weights tend to be smaller. The biases β(i) focus on the range of 0.05 to 0.15 for any iteration i ∈ [1, 25].
+For the Type-II neural MS decoder, the plots of weights and biases are shown in Fig. 6. Apparently, compared to the training results of the Type-I decoder, since each iteration only corresponds to one weight α(i) and bias β(i), we can observe that α(i) concentrates on the range of 0.8 to 1. However, the bias β(i) varies a lot with the iteration, which increases from 0.05 to 0.6 for i ≤ 19. Then, it stays on a stable value around 0.4 for i > 19. That is quite different from stateof-the-art normalizing and offset factors α = 0.8, β = 0.15 in [9] because we jointly optimize these two factors. For the Type-III and Type-IV neural MS decoders, the plots of weights and biases are shown in Fig. 7, respectively. Since only one
+4The code is available in https://github.com/KyrieTan/Neural-ProtographLDPC-Decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1992
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 5. Distributions of weights and biases for the Type-I neural MS decoder.
+
+Fig. 8. Plot of damping factors for the Type-VI neural MS decoder.
+
+Fig. 6. Plots of weights and biases for the Type-II neural MS decoder.
+
+B. T-Exit Analysis
+
+Fig. 7. Plots of weights and biases for the Type-III and Type-IV neural MS decoders, respectively.
+weight or bias is added to each iteration, that is equivalent to single variable optimization so that the results are different from that in Fig. 6. The weights decrease with iteration i, but the biases increase with the iterations.
+As for the damping factors of Type-V and Type-VI decoders, we exemplarily show the damping factors of the Type-VI neural MS decoder in Fig. 8. Clearly, all damping factors γ(i) concentrate on the range of 0.15 to 0.2. It means the decoder tends to be less damped, which gives more confidence to the current iteration.
+
+As a theoretical performance evaluation tool, the T-EXIT analysis results are given in this part. The neural MS decoder is trained by randomly selecting samples from Table III. Two T-EXIT charts for BG2 LDPC codes under the AWGN channel are shown in Fig. 9, where the number of decoding iterations is I = 25. With Z = 3 in Fig. 9(a), the extrinsic AMI transfer trajectories of various decoders overlap such that they are somewhat indistinguishable. However, it can be seen from the zoomed area that the extrinsic AMI increment step of the proposed neural MS decoder is superior to others, which only falls behind the SP decoder. When the codelength becomes longer (Z = 16 in Fig. 9(b)), the difference between extrinsic AMI transfer trajectories becomes more obvious. Although the SP decoder achieves the maximum extrinsic AMI after 25 iterations which corresponds to the best error correction performance, the final extrinsic AMI IE(2,5C)N of the neural MS decoder closely follows.
+As shown in Table V, we also calculate the intersection coordinate for each pair of T-EXIT curves Tv (·) and Tc−1 (·) in Fig. 9. The intersection ordinate IE(∗,)VN reflects the performance at convergence. For the short codelength with Z = 3, the proposed neural MS decoding can finally outperform SP decoding and achieve the optimal performance. For the longer codelength with Z = 16, SP decoding is the most prominent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+
+1993
+
+Fig. 9. Two T-EXIT charts for the BG2 LDPC codes under the AWGN channel with I = 25 iterations. The code with the lifting size Z = 3 is shown in (a), where the SNR is 4dB. The code with the lifting size Z = 16 is shown in (b), where the SNR is 1.5dB.
+
+TABLE V INTERSECTION COORDINATES OF Tv (·) AND Tc−1 (·)
+while neural MS decoding closely follows. These results are consistent with the simulation results in Subsection VI-C, and imply the superiority of the proposed neural MS decoding.
+C. Simulation Results The BLER results under the AWGN channel with I = 25
+iterations of (150, 30) and (800, 160) BG2 codes are given in Fig. 10, whose lifting sizes are Z = 3 and Z = 16. The six types of neural MS decoders are trained by randomly selecting samples from Table III. For comparison, the BLER curves of SP, MS, NMS (with a widely-used constant normalizing term α = 0.8) and OMS (with a widely-used constant offset correction term β = 0.15) decoding algorithms are provided as benchmarks. Note that if we individually optimize α or β for each specific code, the performance of NMS and OMS algorithms may be somewhat improved. However, comparing the proposed algorithm with these algorithms is unfair because we apply only one parameter array to multiple codes due to the use of codelength/rate compatible training method. In this figure, we also compare the proposed method with the neural SP decoding method. The two test codes in Fig. 10 are referred
+
+to as the “matched training and testing” cases, i.e., they have been selected as samples during the training process.
+For the short code of Z = 3, we observe that all neural MS decoders present gains with respect to the original MS decoder. The Type-I neural MS decoder outperforms OMS and NMS by 0.4dB and 0.2dB, respectively. Equipped with damping factors, the performance of Type-V&VI neural MS decoders can be further improved in the low SNR region. More interestingly, it can even outperform SP decoding in the high SNR region. The reasons for this performance gain are twofold as explained in Subsection VI-D. As for the longer code with Z = 16, the gains of neural MS decoders versus the original MS decoder become larger, and the Type-I neural MS decoder outperforms OMS and NMS by 0.5dB and 0.3dB, respectively. Compared to SP decoding, although there exists some slight performance loss of the Type-I neural MS decoder, it involves much lower complexity and quite closely approaches SP decoding in the high SNR region. Meanwhile, the trained decoders show good generalization ability to different codelengths due to the length compatible training method. In addition, from the results of damped neural MS decoders, we find that using per-edge-type damping factors (Type-V) does not improve much upon using single parameter per-iteration (Type-VI). Hence, the Type-VI neural MS decoder with only one damping factor γ(i) on each iteration achieves a better tradeoff between performance and complexity.
+Fig. 11 shows the BLER results under the Rayleigh fading channel, where the code configurations are the same as that in Fig. 10. The neural network parameters trained under the AWGN channel in Fig. 10 are directly used in this figure. It is interesting to observe that the proposed neural MS decoding still performs well especially in the high SNR region. With Z = 16, the proposed neural MS decoder outperforms the standard SP decoding, which is different from that under the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1994
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 10. BLER performance of BG2 codes with lifting sizes Z = 3 in (a) and Z = 16 in (b) under the AWGN channel, where the number of iterations is I = 25.
+
+Fig. 11. BLER performance of BG2 codes with lifting sizes Z = 3 in (a) and Z = 16 in (b) under the Rayleigh fading channel, where the number of iterations is I = 25.
+
+AWGN channel. These results imply that the trained neural decoder presents good robustness under the Rayleigh fading channel.
+Fig. 12 shows the SNR required for various decoders with a certain number of iterations to achieve BLER = 10−2 or 10−4 under the AWGN channel. The neural MS decoder is trained by randomly selecting samples from Table III. The results in Fig. 12(a) (Z = 3) and Fig. 12(b) (Z = 16) correspond to the “matched training and testing” cases, and the results in Fig. 12(c) (Z = 8) and Fig. 12(d) (Z = 30) correspond to the “mismatched training and testing” cases, i.e., these two lifting sizes are not included in the training set of Table III.
+
+With Z = 3 in Fig. 12(a), considering the SNR required to achieve BLER = 10−2, the neural MS decoder outperforms the standard MS decoder more than 0.5dB, and it is quite close to the standard SP decoder. Fig. 12(a) also gives the required SNRs to achieve BLER = 10−4, in this high SNR region, the neural MS decoder can even outperform the SP decoder at early iterations. In this case, we also show the performance of the neural MS decoder under the conventional multi-loss training [21] with I = 25. The proposed greedy training method tends to optimize the performance of neural decoders as early as possible, i.e., faster convergence. However, the traditional multi-loss training [21] tends to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+
+1995
+
+Fig. 12. SNR required to achieve BLER = 10−2 or 10−4 under the AWGN channel, (a) shows the (150, 30) code with Z = 3, (b) shows the (800, 160) code with Z = 16, (c) shows the (400, 80) code with Z = 8, and (d) shows the (1500, 300) code with Z = 30.
+
+optimize the performance for the target number of iterations, i.e., good results can only be observed at the final output. Hence, given I = 25, we can observe that these two training methods finally achieve similar performance when the number of iterations finally reaches 25, though the proposed training method still presents some gain at this point. Fig. 12(b) shows the required SNRs to achieve BLER = 10−2 when Z = 16. Though still better than the MS/NMS/OMS algorithms, the performance of neural MS decoding is slightly inferior to SP decoding. For the required SNRs to achieve BLER = 10−4 in Fig. 12(b), we observe that the neural MS decoder and the SP decoder achieve the same performance, which implies the superiority of the neural MS deocder in the high SNR region.
+The results of mismatched training and testing are shown in Fig. 12(c) and Fig. 12(d). The proposed neural MS decoder still provides stable performance gain versus MS decoding and approach SP decoding, which implies the generalization ability of the neural MS decoder. With Z = 8, the proposed neural MS decoding method outperforms SP decoding at
+
+BLER = 10−4. For longer codes, e.g., Z = 30, it may not outperform SP decoding. The explanations about these observations are given in Subsection VI-D.
+Fig. 13 shows the SNR required for various decoders to achieve BLER = 10−2 or 10−4 under the Rayleigh fading channel. From this figure, we can see that, with Z = 3, the performance gain of neural MS decoding versus SP decoding can reach 0.6dB at BLER = 10−4, which is larger than that of 0.4dB under the AWGN channel. With Z = 16, neural MS decoding also outperforms SP decoding at BLER = 10−4.
+The BLER results with I = 25 iterations of (532, 160) and (1360, 160) BG2 codes are given in Fig. 14, whose code rates are R = 0.3008 and R = 0.1172, respectively. All these neural MS decoders are trained by randomly selecting samples from Table IV, and these code rates are chosen from the 5G NR MCS table [31, Table 5.1.3.1-1]. We also observe that the neural MS decoder outperforms the traditional MS/NMS/OMS decoders. In addition, it approaches SP decoding in the high SNR region. These results imply the generalization ability of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1996
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+Fig. 13. SNR required to achieve BLER = 10−2 or 10−4 under the Rayleigh fading channel, (a) shows the (150, 30) code with Z = 3, (b) shows the (800, 160) code with Z = 16 in (b).
+
+Fig. 14. BLER performance of BG2 codes under the AWGN channel with K = 160 and code rates R = 0.3008 (i.e., (532, 160) code) in (a) and R = 0.1172 (i.e., (1360, 160) code) in (b), the number of iterations I = 25.
+
+the neural MS decoder to different code rates due to the rate
+
+TABLE VI
+
+compatible training method.
+
+NUMBER OF SHORT CYCLES FOR DIFFERENT LIFTING SIZES Z OF BG2
+
+D. Discussion About the Gains of Neural MS Decoding
+Combing all the simulation results, we can summarize the following conclusions:
+• For short codelengths, e.g., Z = 3, the proposed neural MS decoding method can provide superior BLER performance with respect to the standard MS/NMS/OMS decoding methods. In the high SNR region, it can even outperform the SP decoding method.
+• For medium or long codelengths, e.g., Z = 16, the proposed neural MS decoding can approach the performance of SP decoding but may not surpass SP.
+
+To explain the gains achieved by the proposed neural MS decoding, in Table VI, we count the number of short cycles of the aforementioned codes. Clearly, some short cycles exist,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+TABLE VII OPERATIONS REQUIRED FOR ONE ITERATION
+
+1997
+
+e.g., 4-cycles, especially for short codes. As the lifting size increases, the number of 4-cycles decreases rapidly.
+Following previous works [9] and [21], the gains achieved by the proposed algorithm stems from two aspects:
+1) Better Approximation to the SP Algorithm: Well-learned weights (normalizing factors) and biases (offset factors) make the neural MS decoding method a better approximation to the SP algorithm. This property contributes to most of the performance gain. It is inherently aligned with the conventional optimization of MS decoding by introducing one normalizing or offset factor [9], which should be individually optimized by using the DE algorithm for each specific LDPC code [10]. In our work, we can optimize multiple weights and biases in parallel, and thus the degrees of freedom for optimization are expanded. Therefore, more gains can be observed with respect to the single parameter optimization.
+2) Mitigating the Effects of Short Cycles: Well-learned parameters can further mitigate the effects of short cycles, which is aligned with the performance gain stated by Nachmani et al. in [21]. Indeed, this can be seen more clearly for HDPC codes as seen in [21]. This inference is based on the fact that there exist a large number of short cycles in the Tanner graph of HDPC codes. In comparison, sophisticated LDPC codes may efficiently eliminate short cycles; nevertheless, in this paper, we design neural MS decoding for protograph LDPC codes. For this special but widely-used case, each code is lifted from the base graph, which adds flexibility while also inevitably introducing some short cycles, e.g., 4-cycles. From Table VI, we find that there indeed exist some short cycles, especially for short codes, i.e., small lifting sizes. From this conceptual perspective, we reasonably interpret the additional gain achieved by the proposed neural MS decoding.
+For medium or long codelengths, as shown in Table VI, the number of short cycles decreases a lot so that SP decoding presents good performance. At this time, the main task of the neural MS decoder is to compensate for the approximation loss of MS decoding so that it may not surpass SP decoding.
+We present the neural SP decoding results as a supplementary proof of the above explanations in Fig. 10. The results show that it can also beat standard SP decoding. Combining with the cycle distribution results in Table VI, we verify
+
+the statement of restraining short cycles by neural decoding. However, we also observe that the performance gain of neural SP decoding with respect to the proposed neural MS decoding is trivial in the high SNR region, i.e., the BLER performance of neural MS decoding is quite close to that of neural SP decoding. It means that well-learned weights and biases in the neural MS decoder are already enough to compensate for the loss of MS approximation and mitigate the effects of short cycles like that in the neural SP decoder.
+E. Complexity Comparison
+Table VII summarizes the required operations for one iteration of the six types of neural MS decoder in Table I and Table II, along with SP, MS, NMS, and OMS algorithms. E denotes the number of edges in the Tanner graph of LDPC codes. The neural MS decoders avoid computing hyperbolic tangent functions, and they have a complexity roughly the same with NMS and OMS. Since different weights and biases are engaged per iteration, the neural MS decoders require additional memory to store the parameters. Also, it should be noted that the cost of damping operation in the Type-V&VI decoders is not only the additional 2E multiplications “×” but also the additional memory to store the previous iteration’s LLRs. The neural SP decoder is of the highest complexity.
+VII. CONCLUSION AND FUTURE TRENDS
+In this paper, a set of neural MS decoding algorithms for protograph LDPC codes has been presented. In these algorithms, weights and biases are added to the edges corresponding to the CN to VN updating equation of the MS algorithm, which renders neural MS decoding a better approximation to the SP. To mitigate the impact of short cycles in iterative decoding, the weights and biases are allowed to take different values for different iterations. Exploiting the lifting structure of protograph LDPC codes, the same parameter has been shared among a bundle of edges which are derived from the same edge in the base graph. A low-complexity iterationby-iteration training mechanism has been proposed for tuning the parameters, which also avoids the vanishing gradient problem. The proposed training method enables the neural MS
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+1998
+
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 39, NO. 7, JULY 2021
+
+decoder to achieve better performance with faster convergence. Combined with damping factors, the performance of the neural MS decoder can be further improved. The proposed neural MS decoders have similar complexity compared to MS/NMS/OMS and are much more hardware-friendly than SP. Results have shown that the performance of neural MS decoding is consistently better than original MS/NMS/OMS algorithms, and is close to or even better than the SP algorithm.
+There exist many issues to be addressed in the future. One of them is the quantization of neural decoder parameters, we can investigate the influence of quantized parameters on the neural MS decoder. In addition, the similar method to compensate for the loss of message quantization in hardware implementation of protograph LDPC decoding is worth to be studied.
+ACKNOWLEDGMENT
+The authors would like to thank Kai Chen and Dexin Zhang for their suggestions on this work.
+REFERENCES
+[1] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[2] Multiplexing and Channel Coding, Release 16, 3GPP Standard TS 38.212, V16.0.0, Dec. 2019.
+[3] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[4] M. P. C. Fossorier, “Iterative reliability-based decoding of low-density parity check codes,” IEEE J. Sel. Areas Commun., vol. 19, no. 5, pp. 908–917, May 2001.
+[5] S.-Y. Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[6] S. Lin and D. J. Costello, Error Control Coding, 2nd ed. Upper Saddle River, NJ, USA: Prentice-Hall, 2004.
+[7] J. Pearl, Probabilistic Reasoning in Intelligent Systems, San Mateo, CA, USA: Morgan Kaufmann, 1988.
+[8] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[9] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[10] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[11] X. Wu, Y. Song, M. Jiang, and C. Zhao, “Adaptive-normalized/offset min-sum algorithm,” IEEE Commun. Lett., vol. 14, no. 7, pp. 667–669, Jul. 2010.
+[12] T. Richardson and R. Urbanke, “Multi-edge type LDPC codes,” presented at the Workshop Honoring Prof. Bob McEliece 60th Birthday. Pasadena, CA, USA: California Institute of Technology, May 2002.
+[13] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” IPN Progr. Rep. [Online]. Available: http://ipnpr.jpl. nasa.gov/tmo/progress_report/42-154/154C.pdf
+[14] M. Chen, U. Challita, W. Saad, C. Yin, and M. Debbah, “Artificial neural networks-based machine learning for wireless networks: A tutorial,” IEEE Commun. Surveys Tuts., vol. 21, no. 4, pp. 3039–3071, 1st Quart., 2019.
+[15] M. Chen, Z. Yang, W. Saad, C. Yin, H. V. Poor, and S. Cui, “A joint learning and communications framework for federated learning over wireless networks,” IEEE Trans. Wireless Commun., vol. 20, no. 1, pp. 269–283, Jan. 2021.
+[16] Z. Qin, H. Ye, G. Y. Li, and B.-H.-F. Juang, “Deep learning in physical layer communications,” IEEE Wireless Commun., vol. 26, no. 2, pp. 93–99, Apr. 2019.
+[17] H. He, S. Jin, C.-K. Wen, F. Gao, G. Y. Li, and Z. Xu, “Modeldriven deep learning for physical layer communications,” IEEE Wireless Commun., vol. 26, no. 5, pp. 77–83, Oct. 2019.
+
+[18] T. Wang, C.-K. Wen, H. Wang, F. Gao, T. Jiang, and S. Jin, “Deep learning for wireless physical layer: Opportunities and challenges,” China Commun., vol. 14, no. 11, pp. 92–111, Nov. 2017.
+[19] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Monticello, IL, USA, Sep. 2016, pp. 341–346.
+[20] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 1361–1365.
+[21] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[22] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[23] M. Lian, F. Carpi, C. Hager, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Paris, France, Jul. 2019, pp. 161–165.
+[24] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in Proc. Int. Conf. Learn. Represent. (ICLR), San Diego, CA, USA, 2015. [Online]. Available: https://arxiv.org/abs/1412.6980
+[25] T. L. Narasimhan and A. Chockalingam, “Channel hardening-exploiting message passing (CHEMP) receiver in large-scale MIMO systems,” IEEE J. Sel. Topics Signal Process., vol. 8, no. 5, pp. 847–860, Oct. 2014.
+[26] M. Pretti, “A message-passing algorithm with damping,” J. Statist. Mech., Theory Pract., vol. 2005, Nov. 2005, Art. no. P11008.
+[27] S. ten Brink, “Convergence behavior of iteratively decoded parallel concatenated codes,” IEEE Trans. Commun., vol. 49, no. 10, pp. 1727–1737, Oct. 2001.
+[28] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density parity-check codes for modulation and detection,” IEEE Trans. Commun., vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[29] G. Liva and M. Chiani, “Protograph LDPC codes design based on EXIT analysis,” in Proc. IEEE Global Telecommun. Conf. (IEEE GLOBECOM), Washington, DC, USA, Nov. 2007, pp. 3250–3254.
+[30] M. Ebada, A. Elkelesh, S. Cammerer, and S. ten Brink, “Scattered EXIT charts for finite length LDPC code design,” in Proc. IEEE Int. Conf. Commun. (ICC), Kansas City, MO, USA, May 2018, pp. 1–7.
+[31] Physical Layer Procedures for Data, Release 16, 3GPP Standard TS 38.214, V16.0.0, Dec. 2019.
+Jincheng Dai (Member, IEEE) received the B.S. and Ph.D. degrees from the Beijing University of Posts and Telecommunications, Beijing, China, in 2014 and 2019, respectively. He is currently with the Key Laboratory of Universal Wireless Communications, Ministry of Education, Beijing University of Posts and Telecommunications. His current research interests include information theory, machine learning, and wireless communications. He was a recipient of the China Education Society of Electronics Excellent Doctoral Dissertation Award in 2019, and the Best Paper Award of Chinese Institute of Electronics Information Theory Conference in 2015. He was served as a Co-Chair for workshop in IEEE WCNC.
+Kailin Tan (Student Member, IEEE) received the B.S. degree from the Beijing University of Posts and Telecommunications, Beijing, China, in 2020, where he is currently pursuing the M.S. degree with the School of Artificial Intelligence. His current research interests include machine learning and wireless communications.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+DAI et al.: LEARNING TO DECODE PROTOGRAPH LDPC CODES
+
+1999
+
+Zhongwei Si (Member, IEEE) received the Ph.D. degree from the KTH Royal Institute of Technology, Sweden, in 2013. She joined the Beijing University of Posts and Telecommunications in 2013, where she is currently an Associate Professor. Her research interests include wireless communications, information theory, and data mining.
+Kai Niu (Member, IEEE) received the B.S. degree in information engineering and the Ph.D. degree in signal and information processing from the Beijing University of Posts and Telecommunications (BUPT), Beijing, China, in 1998 and 2003, respectively. He is currently a Professor with the School of Artificial Intelligence, BUPT. His research interests include coding theory and its applications, space-time codes, and broadband wireless communications. Since 2008, he has been a Senior Member with the Chinese Institute of Electronics (CIE) and a Committee Member of the Information Theory Chapter of CIE. He also serves as an Associate Editor for the IEEE COMMUNICATIONS LETTERS.
+Mingzhe Chen (Member, IEEE) received the Ph.D. degree from the Beijing University of Posts and Telecommunications, Beijing, China, in 2019. From 2016 to 2019, he was a Visiting Researcher with the Department of Electrical and Computer Engineering, Virginia Tech. He is currently a Post-Doctoral Researcher with the Electrical Engineering Department, Princeton University. His research interests include federated learning, reinforcement learning, virtual reality, unmanned aerial vehicles, and wireless networks. He was a recipient of the 2020 IEEE International Conference on Communications (ICC) Best Paper Award and the 2020 IEEE Global Communications Conference (GLOBECOM) Best Paper Award. He was an Exemplary Reviewer of IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS in 2018 and IEEE TRANSACTIONS ON COMMUNICATIONS in 2018 and 2019. He has served as a Co-Chair for workshops on edge learning and wireless communications in several conferences, including IEEE ICC, IEEE GLOBECOM, IEEE Wireless Communications and Networking Conference, and IEEE International Conference on Computer Communications. He also serves as a Guest Editor for IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS (JSAC) Special Issue on Distributed Learning over Wireless Edge Networks.
+
+H. Vincent Poor (Life Fellow, IEEE) received the Ph.D. degree in EECS from Princeton University in 1977 and the D.Eng. Honoris Causa degree from the University of Waterloo in 2019.
+From 1977 to 1990, he was on the Faculty of the University of Illinois at Urbana-Champaign. Since 1990, he has been on the Faculty with Princeton University, where he is currently the Michael Henry Strater University Professor of Electrical Engineering. From 2006 to 2016, he worked as the Dean of the Princeton’s School of Engineering and Applied Science. He has also held visiting appointments at several other universities, including most recently at Berkeley and Cambridge. His research interests include information theory, machine learning, and network science, and their applications in wireless networks, energy systems, and related fields. Among his publications in these areas is the forthcoming book Machine Learning and Wireless Communications (Cambridge University Press, 2021). He is a member of the National Academy of Engineering and the National Academy of Sciences. He is a Foreign Member of the Chinese Academy of Sciences, the Royal Society, and other national and international academies. Recent recognition of his work includes the 2017 IEEE Alexander Graham Bell Medal.
+Shuguang Cui (Fellow, IEEE) received the Ph.D. degree in electrical engineering from Stanford University, Stanford, CA, USA, in 2005. He has been working as an Assistant Professor, an Associate Professor, a Full Professor, and the Chair Professor of electrical and computer engineering with the University of Arizona, Texas A&M University, UC Davis, and CUHK, Shenzhen, respectively. He has also been the Executive Dean of the School of Science and Engineering, CUHK, and the Executive Vice Director of the Shenzhen Research Institute of Big Data. His current research interests include data driven large-scale system control and resource management, large data set analysis, the IoT system design, energy harvesting-based communication system design, and cognitive network optimization. He is a member of the Steering Committee for IEEE Transactions on Big Data and the Chair of the Steering Committee for IEEE Transactions on Cognitive Communications and Networking. He was also a member of the IEEE ComSoc Emerging Technology Committee. He was elected as an IEEE Fellow in 2013, an IEEE ComSoc Distinguished Lecturer in 2014, and IEEE VT Society Distinguished Lecturer in 2019. He has received the IEEE ICC Best Paper Award in 2020, the ICIP Best Paper Finalist 2020, and the IEEE Globecom Best Paper Award in 2020. He was a recipient of the IEEE Signal Processing Society 2012 Best Paper Award. He has served as the general co-chair and TPC co-chairs for many IEEE conferences. He has also been serving as the Area Editor for IEEE Signal Processing Magazine, and an Associate Editor for IEEE TRANSACTIONS ON BIG DATA, IEEE TRANSACTIONS ON SIGNAL PROCESSING, IEEE JSAC Series on Green Communications and Networking, and IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS. He has been the elected member for IEEE Signal Processing Society SPCOM Technical Committee from 2009 to 2014 and the elected Chair for IEEE ComSoc Wireless Technical Committee from 2017 to 2018. He was selected as the Thomson Reuters Highly Cited Researcher and listed in the Worlds’ Most Influential Scientific Minds by ScienceWatch in 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:16:01 UTC from IEEE Xplore. Restrictions apply.
+
+

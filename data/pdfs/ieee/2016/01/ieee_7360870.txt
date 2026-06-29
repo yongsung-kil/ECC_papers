@@ -1,0 +1,1151 @@
+1098
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+A Survey of FPGA-Based LDPC Decoders
+Peter Hailes, Lei Xu, Robert G. Maunder, Senior Member, IEEE, Bashir M. Al-Hashimi, Fellow, IEEE, and Lajos Hanzo, Fellow, IEEE
+
+Abstract—Low-density parity check (LDPC) error correction decoders have become popular in communications systems, as a benefit of their strong error correction performance and their suitability to parallel hardware implementation. A great deal of research effort has been invested into LDPC decoder designs that exploit the flexibility, the high processing speed, and the parallelism of field-programmable gate array (FPGA) devices. FPGAs are ideal for design prototyping and for the manufacturing of small-production-run devices, where their in-system programmability makes them far more cost-effective than application-specific integrated circuits (ASICs). However, the FPGA-based LDPC decoder designs published in the open literature vary greatly in terms of design choices and performance criteria, making them a challenge to compare. This paper explores the key factors involved in FPGA-based LDPC decoder design and presents an extensive review of the current literature. In-depth comparisons are drawn amongst 140 published designs (both academic and industrial) and the associated performance tradeoffs are characterized, discussed, and illustrated. Seven key performance characteristics are described, namely, their processing throughput, processing latency, hardware resource requirements, error correction capability, processing energy efficiency, bandwidth efficiency, and flexibility. We offer recommendations that will facilitate fairer comparisons of future designs, as well as opportunities for improving the design of FPGA-based LDPC decoders.
+Index Terms—Digital communication, error correction codes, low-density parity check (LDPC) codes, field programmable gate array, iterative decoding.
+I. INTRODUCTION
+L OW-DENSITY Parity Check (LDPC) codes may be employed for correcting transmission errors in communication systems. They represent a class of Forward Error Correction (FEC) codes that are currently the focus of much research within the communications community. They were first proposed by Gallager in 1962 [1], but they were considered to be too complex for practical simulation and implementation at the time of their conception, hence they were left largely untouched for decades. Apart from their excellent performance, perhaps partially motivated by the fact that the turbo codes patented during the early 1990s attracted a license-fee, in 1996 LDPC codes were rediscovered by Mackay and Neal [2], and ever since have enjoyed a renaissance. Given the increased
+Manuscript received March 4, 2015; revised November 5, 2015; accepted December 9, 2015. Date of publication December 18, 2015; date of current version May 20, 2016. The financial support of the Ph.D. studentship provided by Altera, California, USA, the grants EP/J015520/1 and EP/L010550/1 provided by EPSRC, Swindon U.K., the grant TS/L009390/1 provided by Innovate U.K., Swindon U.K., as well as the Advanced Fellow grant provided by the European Research Council is gratefully acknowledged. The research data for this paper is available at http://dx.doi.org/10.5258/SOTON/384946.
+The authors are with the School of Electronics and Computer Science, University of Southampton, Southampton SO17 1BJ, U.K. (e-mail: lh@ecs.soton.ac.uk).
+Digital Object Identifier 10.1109/COMST.2015.2510381
+
+computing power available today they have become a key component of many commercialised communication systems, including WiFi [3], WiMAX [4], DVB-S2 [5], CCSDS [6] and ITU G.hn [7].
+LDPC codes benefit from a number of appealing features that make them very attractive for implementation. The LDPC decoding algorithm can be implemented using low-complexity calculations, resulting in a relatively low design and implementation cost for the processing hardware. Like turbo codes, LDPC codes are decoded iteratively, achieving an error correction performance that is close to the theoretical limit when decoding messages that have large block lengths [8]. However, in contrast to turbo codes, there is a wide variety of possible algorithms and levels of parallelisation that may be considered for the design of LDPC decoders, presenting designers with a range of options that may be relied upon to achieve the desired characteristics.
+However, while the design of the individual processing components is relatively simple, the design of a complete LDPC decoder is subject to a complex interplay between a number of system characteristics, namely the processing throughput, processing latency, hardware resource requirements, error correction capability, processing energy efficiency, bandwidth efficiency and flexibility. These characteristics depend on a number of system parameters, namely the architecture, the LDPC code employed, the algorithm used and the number of decoding iterations. This relationship is shown in Fig. 1. Note that the bandwidth efficiency also depends on the modulation scheme chosen, as does the transmission energy efficiency, which furthermore depends on the coding gain and the error correction capability of the chosen LDPC code. To elaborate a little further in the context of Fig. 1, we can improve the error correction capability in many different ways, for example by using a stronger LDPC code or more decoding iterations. Naturally, increasing the number of iterations increases the complexity and hence reduces the processing energy efficiency, but increases the transmit energy efficiency. Hence the total energy dissipation should be considered holistically, when designing an LDPC decoder. Further similar trade-offs will emerge throughout our forthcoming discussions.
+In order to fully characterise an LDPC decoder design, it is necessary to physically implement it. Perhaps the simplest way of doing so is to use a Field-Programmable Gate Array (FPGA) device, which facilitates rapid prototyping and fast parallel logic processing. This approach is especially useful for measuring the Bit Error Rate (BER) performance, since simulations that would take days on a computer can be completed in only hours when using a custom FPGA implementation [9]. These advantages are evident from the sheer number of published
+
+1553-877X © 2015 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1099
+
+Fig. 1. FPGA-based LDPC decoder system parameters and characteristics.
+
+FPGA-based LDPC decoder designs that exist in the open liter-
+
+ature, which will be compared later in this paper. Furthermore,
+
+the decoding techniques and implementation-oriented research
+
+presented alongside these designs has been of significant benefit
+
+to the wider communications research community [10]–[15]. In
+
+particular, the implementational characteristics of these FPGA- Fig. 2. Structure of this paper.
+
+based LDPC decoders are increasingly informing the holistic
+
+design of communication systems.
+
+The structure of the paper is as follows. Section II presents a
+
+In addition to their suitability for prototyping, FPGAs con- brief tutorial on the LDPC code structure and encoding, as well
+
+stitute a viable alternative to Application-Specific Integrated as describing variations on the decoding algorithms, decoder
+
+Circuits (ASICs) for the LDPC decoders of small-production- architectures and FPGA devices. Section III provides our com-
+
+run communication devices, while their programmability has parison of all FPGA-based LDPC decoders that we are aware
+
+made them attractive for software-defined radios. This paper of, whilst discussing the parameters and characteristics of an
+
+focuses exclusively on FPGA implementations of LDPC LDPC decoder in more detail. Section IV illustrates and char-
+
+decoders, since they cannot be fairly compared to ASIC acterises the observed trade-offs and relationships between the
+
+implementations, which are designed at a significantly higher various parameters and characteristics of FPGA-based LDPC
+
+development cost to have particularly high performance for decoders. Recommendations for readers interested in devel-
+
+high-production-run applications. Indeed, ASIC implementa- oping their own FPGA-based LDPC decoders are offered in
+
+tions are even difficult to compare with each other, because Section V, along with suggestions for further work in the area.
+
+some papers provide post-synthesis results, while others offer Finally, we offer our conclusions in Section VI. This structure
+
+post-layout results. Meanwhile, some papers consider only is depicted in Fig. 2.
+
+the ASIC core, while others include both the memory and
+
+Input/Output (I/O) resources. This paper has been conceived for achieving the following
+
+II. BACKGROUND
+
+aims:
+
+This section presents a tutorial on FPGA-based LDPC
+
+• Provide a tutorial on LDPC decoding, discussing both the decoders. Section II-A commences by discussing FEC, before
+
+parameters and characteristics that affect the performance LDPC codes are introduced in Section II-B. This is fol-
+
+of FPGA implementations.
+
+lowed by a discussion of how LDPC codes are decoded and
+
+• Accurately compare all implementations of FPGA-based designed in Sections II-C and II-D, respectively. The practi-
+
+LDPC decoders that we are aware of.
+
+calities of LDPC decoder implementations are then discussed
+
+• Characterise the observed trade-offs and relationships in Section II-E, which is followed by a brief introduction to
+
+between the system parameters and characteristics.
+
+FPGAs in Section II-F.
+
+• Recommend good practice to aid future designs of FPGA-
+
+based LDPC decoders, and to make published designs
+
+more comparable with each other.
+
+A. Forward Error Correction
+
+• Identify opportunities for the further enhancement of Fig. 3 shows a schematic of a simplified communications
+
+FPGA-based LDPC decoders.
+
+system, where the information message word m = {mi }iK=1 is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1100
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+(SNR) is given by Es/N0, and may also be expressed as the SNR per bit according to
+
+Eb = 1 × Es .
+
+(3)
+
+N0 R N0
+
+Fig. 3. A communications system.
+
+a vector of K bits, which is FEC encoded in order to obtain the codeword c = {c j }Nj=1, which is a vector of N > K bits. The FEC encoder converts the K -bit message word m into the N -bit codeword c by adding M = N − K parity bits to the message.
+The ratio of the message length K to the total codeword length
+N is referred to as the coding rate R,
+
+R = K = N −M.
+
+(1)
+
+N
+
+N
+
+The M additional parity bits are derived from the K message bits and hence they do not carry any information of their own. However, they are used during the FEC decoding process to allow transmission errors to be detected and even corrected, depending on the specific scheme used and on the severity of the corruption, as will be discussed below.
+Various modulation schemes can be used for modulating the codeword c onto the channel. As we shall show in Section IV-B4, Binary Phase-Shift Keying (BPSK) modulation is assumed for nearly all FPGA-based LDPC decoder research. For this reason, we also assume the employment of BPSK modulation throughout this tutorial discussion. It is important to note however, that BPSK is a very simple modulation scheme, which is rarely employed alone in practical communication schemes. Therefore, considering BPSK modulation exclusively during the design phase could result in an LDPC decoder which does not necessarily work satisfactorily in practical systems, where higher-order modulation schemes are employed. Note that our analysis in Section IV will take the specific modulation scheme that was used into consideration, when comparing the error correction performance of various FPGA-based LDPC decoders.
+BPSK generates th√e modulated symbol vector x√= {x j }Nj=1 according to x j = + Es when c j = 0 and x j = − Es when c j = 1, where Es is the transmission energy per symbol. Similarly, there are several different ways of modelling the random corruption that is imposed by the channel upon the signal x as it is transformed into the received signal y = {y j }Nj=1. In common with most FPGA-based LDPC research, we assume the Additive White Gaussian Noise (AWGN) channel model, in which a random noise signal is added to the transmitted signal,
+
+y j = x j + CN(0, N0),
+
+(2)
+
+where CN(·) is the complex normal distribution and N0 is the noise power spectral density. The Signal to Noise Ratio
+
+The corruption imposed by the channel causes y to differ from x in an unpredictable manner, potentially resulting in the demodulation of a perturbed received codeword cˆ, potentially including some transmission errors. The decoder of Figure 3 is employed to recover the message word mˆ , and without this there would be no way of correcting (or even detecting the presence of) these errors.
+The error correction capability of a FEC decoder is affected by the form of the information provided by the demodulator. Rather than using hard decisions to convert received symbols into demodulated bits, superior error correction capability can be obtained if the demodulator provides soft decisions, which are commonly expressed using the Logarithmic-Likelihood Ratio (LLR) [16]. The sign of an LLR (positive or negative) expresses what the most likely value for the corresponding bit is (0 or 1, respectively). Meanwhile, the magnitude of an LLR expresses how likely this value is, where 0 represents complete uncertainty and ∞ represents absolute certainty. The value of an LLR is calculated as
+
+c˜i
+
+=
+
+log
+
+P (ci P (ci
+
+= =
+
+0|yi ) , 1|yi )
+
+(4)
+
+where c˜i is the output LLR, ci is the transmitted bit and yi is the received symbol.
+Here, the logarithm is used because it reduces the dynamic range of the likelihood ratio, tending to produce values in the range of −10 to +10, rather than 0.0001 to 10,000. This also allows probability intersections to be calculated using additions, rather than hardware-intensive multiplication operations. LLRs are extensively used throughout the LDPC decoding process, as will be detailed below.
+When using BPSK modulation over an AWGN channel, the demodulator can convert the received signals into LLRs according to
+
+c˜i
+
+=
+
+4
+
+×
+
+R
+
+×
+
+Eb N0
+
+×
+
+Re(yi ).
+
+(5)
+
+B. LDPC Codes
+This section provides an introduction to LDPC codes, commencing with their structure and the encoding process in Section II-B1. Following this, the decoder’s Parity-Check Matrix (PCM) is introduced in Section II-B2 together with its graphical representation using factor graphs in Section II-B3.
+1) Encoding: Decoding an LDPC codeword is associated with a significantly higher complexity than the encoding process, because the decoder must consider every possible message word simultaneously, while operating on the basis of soft decision LLRs rather than hard decision bits. For this reason, we focus our attention on LDPC decoders in this paper, but the encoding process is explained briefly here for the sake of completeness.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1101
+
+As described previously, LDPC codes permit the correction of transmission errors by supplementing each K -bit message word with M parity bits in order to produce an N -bit codeword, where N = K + M [17]. Codes which include the K bits of the message word within the N bits of the codeword are referred to as systematic, while non-systematic codes have codewords which do not directly contain the original message bits. There are 2K possible permutations of the K -bit message word, each of which is mapped by the LDPC encoder to a corresponding one of 2K legitimate codeword permutations. The error correction capability of the LDPC code depends on the minimum Hamming distance between any pair of these 2K legitimate codeword permutations. Naturally high minimum distances are preferred, since these make it unlikely for a legitimate codeword to be transformed into another by the distortion introduced during transmission.
+For example, a code with a message word length of K = 6 and a codeword length of N = 10 employs M = N − K = 4 parity bits and has a coding rate of R = K/N = 3/5. In the case where the code is systematic, each codeword c may be of the form
+
+c = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10],
+
+(6)
+
+where c1 . . . c6 are the K = 6 bits of the message word m and c7 . . . c10 are the M = 4 parity bits. Each of the parity bits represents a parity check covering a specific subset of the message bits. As an example, the parity check bits may be obtained according to the following modulo-2 summations of message bits:
+
+c7 = c4 ⊕ c6
+
+(7a)
+
+c8 = c1 ⊕ c3 ⊕ c5 ⊕ c6
+
+(7b)
+
+c9 = c2 ⊕ c5
+
+(7c)
+
+c10 = c1 ⊕ c2 ⊕ c6.
+
+(7d)
+
+The design of an LDPC code’s parity check equations is subject to many complex factors, as will be briefly described in Section II-D. Using these equations, a (K × N )-element generator matrix G can be constructed to efficiently describe the encoding process. In a systematic code, G may adopt the form
+
+G = IK A ,
+
+(8)
+
+where IK is the (K × K )-element identity matrix and the
+
+columns of A represent each of the parity checks. The gen-
+
+erator matrix of the systematic code described above would
+
+therefore be
+
+⎡
+
+⎤
+
+1000000101
+
+G
+
+=
+
+⎢⎣⎢⎢⎢⎢⎢
+
+0 0 0 0
+
+1 0 0 0
+
+0 1 0 0
+
+0 0 1 0
+
+0 0 0 1
+
+0 0 0 0
+
+0 0 1 0
+
+0 1 0 1
+
+1 0 0 1
+
+1 0 0 0
+
+⎥⎥⎥⎥⎥⎥⎦
+
+.
+
+(9)
+
+0000011101
+
+Codewords can be calculated using this matrix by finding the
+modulo-2 matrix product of the message m and the generator matrix G, according to c = m × G. For example, it may be readily verified that the message m = [0 1 1 1 0 1] has the corresponding codeword c = m × G = [0 1 1 1 0 1 0 0 1 0].
+
+2) Parity-Check Matrix: In the decoder, the parity checks are used to detect the presence of transmission errors in the received codeword cˆ. Since all of the codeword bits involved in a parity check (including the parity bit itself) should have a modulo-2 summation of 0, Equations 7(a)–7(d) can be rewritten as follows:
+
+c4 ⊕ c6 ⊕ c7 = 0 c1 ⊕ c3 ⊕ c4 ⊕ c6 ⊕ c8 = 0
+c2 ⊕ c5 ⊕ c9 = 0 c1 ⊕ c2 ⊕ c6 ⊕ c10 = 0.
+
+(10a) (10b) (10c) (10d)
+
+These equations are more commonly viewed as a PCM H, which has N columns corresponding to the bits of the codeword and M rows corresponding to the parity checks. A non-zero entry in any position H ji indicates that the i-th bit ci takes part in the j-th parity check. In the case of systematic codes H is related to G according to
+
+H = AT IM .
+
+(11)
+
+Continuing our example from above, we have
+
+⎡
+
+⎤
+
+0001011000
+
+H
+
+=
+
+⎣⎢⎢
+
+1 0
+
+0 1
+
+1 0
+
+0 0
+
+1 1
+
+1 0
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+⎦⎥⎥
+
+.
+
+(12)
+
+1100010001
+
+Upon obtaining a received codeword cˆ, the syndrome s can be calculated according to s = cˆ × HT . In the case where cˆ is a
+
+legitimate codeword permutation, the syndrome will equate to
+
+a vector of zeros. This may be demonstrated by re-using the
+
+codeword calculated in the previous subsection, which equates to a (1 × M)-element vector of 0s when multiplied by HT .
+
+Note however that an LDPC H matrix of the form shown
+
+in (12) is very unusual in practice. As it will be explained in
+
+Section II-C1, the decoder’s error correction ability is dictated
+
+by the number of non-zero entries in each row or column, which
+
+is referred to as its weight. More specifically, columns with a
+
+weight of 1 can result in the decoder being unable to correct
+
+some transmission errors. This can be avoided by modifying the
+
+PCM H using elementary row operations (modulo-2 additions
+
+and swaps). In the case of the above example, this may lead to:
+
+⎡
+
+⎤
+
+1001101011
+
+H
+
+=
+
+⎢⎢⎣
+
+0 1
+
+1 1
+
+1 1
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+1 1
+
+0 1
+
+1 0
+
+⎥⎥⎦
+
+.
+
+(13)
+
+0101111010
+
+This modified H avoids any weight-1 columns, while still checking the same distribution of parity bits that was added to codewords by the generator matrix G of (9). Note however that this toy-example PCM is still unusual for a realistic LDPC code. Specifically, the PCM used in an LDPC decoding should be sparse, containing far fewer non-zero entries than 0s. Clearly, the H of (13) does not satisfy this constraint, owing to its codeword length of N = 10, which is very short compared to practical LDPC codewords, which tend to be hundreds or even thousands of bits long.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1102
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+while the message r˜4−9 is sent from the 4th CN c4 to the 9th VN v9. The messages provided as inputs to a node are
+
+processed by activating that node, causing it to create new out-
+
+put messages that are sent back to the nodes it is connected
+
+to. Thus the processing of the LDPC decoder is delegated to
+
+the many individual calculations performed by the individual
+
+nodes, rather than being a single monolithic global equation.
+
+An important facet of the belief propagation algorithm is that
+
+any message sent to a particular node does not depend on the
+
+message received from that node. For example, CN c2 is connected to VNs v2, v3, v5, v8 and v10; however, the message r˜2−5
+
+it sends to v5 will be calculated based only on the messages it
+
+has received from v2, v3, v8 and v10.
+
+Fig. 4. A factor graph for an example LDPC code.
+
+Nodes are activated in an order determined by the LDPC
+
+decoder’s schedule. This has a significant effect upon the LDPC
+
+Owing to its significance in the decoding process, the PCM
+H is commonly used to define a particular LDPC code design.
+As discussed later in Section II-D, creating a H matrix that
+achieves a strong error correction capability is a complex task,
+so this is usually the first aspect of the code to be designed.
+Following this, the generator matrix G can be derived from H,
+by following the reverse of the process described above.
+3) Factor Graphs: The PCM H can also be visualised
+graphically using a factor graph, which is also known as a
+Tanner graph [18]. This is exemplified in Fig. 4 for the PCM
+of (13). A factor graph is comprised of two sets of connected
+nodes, namely N Variable Nodes (VNs) for representing the
+columns of H and M Check Nodes (CNs) for representing
+the rows. The connections P˜i above each VN in Fig. 4 pertain to LLRs
+associated with the N codeword bits of cˆ. An edge connects the i-th VN vi to the j-th CN c j if there is a non-zero element in the i-th column and j-th row of H, H ji = 1. To illustrate this, all of the edges that are connected to the 1st CN c1 in Fig. 4 are shown with thicker lines. These edges are connected to the 1st, 4th, 5th, 9th and 10th VNs, in accordance to the position of the
+1s in the top row of H in (13).
+The degree of a node is defined as the number of other nodes
+that it is connected to and is equal to the corresponding row or
+column weight in H. The degree of the CNs Dc and the degree of the VNs Dv are important parameters in an LDPC code. If all CNs have the same degree Dc and all VNs have the same degree Dv, the LDPC code is said to be regular. If either value varies from node to node, the code is said to be irregular and Dc and Dv can be expressed as the average degree over all nodes. For example, the factor graph of Fig. 4 is irregular with Dc = 5.75 and Dv = 2.3. In any case, the number of 1s in the PCM H must be the same regardless, whether it is viewed row-by-row or column-by-column, giving Dc × M = Dv × N , with Dv = Dc × (1 − R).
+
+decoder’s error correction capability, as well as on its other characteristics. Many different schedules exist and the most common options will be outlined in Section II-C1. Following this, variations of the specific calculations performed within CNs and VNs will be presented in Sections II-C2 and II-C3 respectively.
+1) Scheduling: The schedule of the LDPC decoding process determines the order in which VNs and CNs are processed, as well as whether multiple nodes are processed in parallel. Many scheduling variations exist, but the three most common schedules are described here, namely flooding [20], Layered Belief Propagation (LBP) [21] and Informed Dynamic Scheduling (IDS) [22].
+Flooding is perhaps the most conceptually simple LDPC decoding schedule. Here, the factor graph is processed in an iterative manner, where each iteration comprises the simultaneous activation of all CNs, followed by the simultaneous activation of all VNs [19]. An example of this schedule is depicted in Fig. 5. It can be seen that at first the CNs c1–c4 shown in dark grey calculate their messages, which are then sent along every edge (in bold) to every receiving VN, shown in light grey. In the second half-iteration, the VNs are shown in dark grey to indicate that they are performing calculations, while the CNs are only receiving messages, so they are shown in light grey.
+While Layered Belief Propagation also operates in an iterative manner, it processes the nodes more sequentially within each iteration, activating only one or a specific subset of nodes at a time [21]. LBP is commonly operated in a CN-centric manner, processing each CN in turn. Once a CN has been activated, all of its connected VNs are activated before moving on to the next CN. Once every CN has been processed, the iteration is complete. Using Fig. 6 as an example, LBP may commence each decoding iteration by activating CN c1 first, sending messages to each of its connected VNs: v1, v4, v5, v7, v9 and v10. Each of these VNs may then be acti-
+
+C. LDPC Decoding
+
+vated, sending new messages to each of their connected CNs, except c1. Following this, c2 may be activated, allowing it to
+
+LDPC codes are typically decoded using a belief propagation make use of the new information received from v5 and v10
+
+(BP) algorithm in which messages – typically in the form of alongside the information previously received from its other
+
+LLRs – are iteratively passed in both directions along the edges connected VNs. This process continues until every CN has
+
+between connected nodes [19]. For example, Fig. 4 illustrates been activated, which then marks the end of one decoding a message q˜4−1 sent from the 4th VN v4 to the 1st CN c1, iteration.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1103
+
+Fig. 5. An example of the flooding schedule.
+
+LBP has the advantage that the information obtained during
+
+an iteration is available to aid the remainder of the iteration.
+
+Owing to this however, it does not have the same high level
+
+of parallelism as the flooding schedule, possibly resulting in a
+
+lower processing throughput and a higher processing latency.
+
+It can also be seen that M CN activations and Dc × M VN
+
+activations occur per iteration, resulting in a higher computa-
+
+tional complexity per iteration, when compared to the flooding
+
+schedule. However, it will also be shown in Section II-C2
+
+that CN activations can be significantly more computationally Fig. 6. An example of the layered belief propagation schedule.
+
+expensive than the VN activations, hence the increased cost is
+
+manageable. Additionally, LBP tends to converge to the cor-
+
+rect codeword using fewer iterations and therefore with lower to each of its connected CNs. These CNs then calculate new
+
+computational complexity than flooding [17], resulting in lower residuals for each of their edges as the difference between its
+
+complexity overall.
+
+new message and its previous message. All of the residuals in
+
+Informed Dynamic Scheduling inspects the messages that the graph are then compared for the sake of identifying the new
+
+are passed between the various nodes, selecting to activate maximum, before the process is repeated.
+
+whichever node is expected to offer the greatest improvement in Using Fig. 7 as before, suppose that at the start of the iterative
+
+belief [22]. This requires IDS to perform additional calculations decoding process, the message r˜3−8 from CN c3 is identified as
+
+in order to determine which node to activate at each stage of the having the highest magnitude of all the check-to-variable mes-
+
+decoding process. However, IDS facilitates convergence using sages in the graph. Owing to this, r˜3−8 is passed to the VN v8, fewer node activations than in either flooding or LBP, which which is then activated, in order to obtain the message q˜8−2
+
+may lead to a lower complexity overall.
+
+which is then passed to c2. The CN c2 can then be activated to
+
+During IDS, the difference between the previous message calculate new residuals for its other four edges, as the differ-
+
+sent over an edge and the message that is obtained using ence between their previous messages and their new messages
+
+recently-updated information [23] is calculated. This difference that have been obtained using the updated information from v8.
+
+is termed the residual, and represents the improvement in belief These new residuals are then compared with the others from the
+
+that is achieved by the new message. Like the LBP schedule, previous step, allowing a new global maximum to be identified,
+
+IDS is commonly centred on the CNs. At the start of the itera- to inform the next step of the decoding process. Note that the
+
+tive decoding process, the residual for each output of each CN is next highest residual within the factor graph does not necessar-
+
+calculated as the magnitude of the message to be sent over that ily have to originate from the most recently updated CN c2. In
+
+edge. The message with the greatest residual is identified, and the example seen in Fig. 7, it can be seen that c2 is activated the receivingAuVthNoriziesdtlhiceennseadctuisvealtimedite,dsteon: YdoinnsgeiuUpndiva. tDeodwnmloeasdseadgoensJuneto24c,2a0l2c6ualta1te5:5r4e:s3i7dUuTaClsfrobmutIEiEt EisXpr˜l1o−re4. RfreosmtrictCionNs acp1plyto. VN v4 that
+
+1104
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+for which we use the notation a˜ b˜, referred to as the boxplus operator [27]. Inverting (4) and substituting into (14) yields:
+
+a˜ b˜ = 2 tanh−1 tanh a˜ × tanh b˜
+
+(15)
+
+2
+
+2
+
+= sign (a˜) × sign b˜ × min |a˜|, |b˜|
+
++ log 1 + e−|a˜+b˜| − log 1 + e−|a˜−b˜| . (16)
+
+The SPA uses the full version of (15) given above, which leads to strong error correction performance but a high computational complexity. The MSA, on the other hand, is a reduced-complexity approximation of the SPA [28], using (16) without the correction factor terms, according to
+
+a˜ b˜ = sign (a˜) × sign b˜ × min |a˜|, |b˜| .
+
+(17)
+
+Fig. 7. An example of informed dynamic scheduling.
+
+is sent. This implies that there is no single straightforward concept of iterations in IDS, since it is possible for a particular CN to be updated several times before another is updated once.
+2) Check Node Calculations: The calculations performed within the CNs vary between different LDPC decoding algorithms. Of the many that exist, the two most common LDPC decoding algorithms are the Sum-Product Algorithm (SPA) [24] and the Min-Sum Algorithm (MSA) [25].
+When the j-th CN is activated, the LLR r˜j−i that it passes to VN vi is a function of the inputs gleaned from all other connected VNs, except for vi [26]. In CN c j , this message will represent the probabilities that the bit at vi should be 0 or 1, which is determined by whether parity check j has already been fulfilled by the bits of the other connected VNs. This is achieved by calculating the probability that c j is receiving an even number of 1s from its other edges. For two LLR operands a˜ and b˜ this equates to
+
+r˜ j−i
+
+=
+
+log
+
+P (a P (a
+
+= =
+
+0) P (b 0) P (b
+
+= =
+
+0) 1)
+
++ +
+
+P (a P (a
+
+= =
+
+1) P (b 1) P (b
+
+= =
+
+1) , 0)
+
+(14)
+
+Note however that the complexity reduction offered by the MSA is attained at the cost of a degraded LDPC error correction capability. This degradation may be mitigated by adding a low-complexity approximation to the correction factor terms to (17) or by multiplying (17) by a scaling factor, which may be optimised during the design of the LDPC decoder.
+3) Variable Node Calculations: The calculations performed in the VNs do not generally vary between algorithms. As in the operation of the CNs, the message q˜i− j passed from VN vi to CN c j is obtained as the sum of the LLRs received from all other edges, including the LLR P˜i provided on the edge from the demodulator [26]. When using a schedule that requires the simultaneous update of the outputs provided to all of the VN’s edges (such as the flooding schedule), the forwardbackward algorithm [24] may be used to minimise the number of additions required by the VN. In other schedules, small internal memories may be used to store the results of some intermediate additions [21].
+The VNs are also used for deciding the values of the reconstructed codeword bits. Each corresponding codeword LLR L˜ i is calculated as the sum of the LLRs received on the edges from all connected CNs, as well as on the edge from the demodulator. The polarity of the resultant LLR is then used to make a hard decision for the value of the corresponding bit of the reconstructed codeword cˆ. More specifically, if L˜ i < 0 then cˆi is set to 1, whereas if L˜ i ≥ 0 then cˆi is set to 0. If the reconstructed codeword has a zero-valued syndrome s = cˆ × HT , then the iterative decoding process may be considered to have been a success and the process may be terminated. If not, then the iterative decoding process may be continued until a zero-valued syndrome is obtained or until an affordable complexity limit is reached. Practical LDPC decoder designs may also include other stopping criteria, as discussed later in Section II-E3.
+D. LDPC Code Construction
+In addition to the size of the factor graph and the degrees of its nodes, the position of the edges within the factor graph also has a significant impact on the associated error correction performance, as well as upon the decoding complexity. Some
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1105
+
+of the main objectives when designing the PCM H is to avoid creating stopping sets [29] and short cycles [30] in the corresponding factor graph, which are associated with an eroded error correction performance. A number of techniques have been proposed for placing edges within the factor graph have been proposed, as summarised in the following subsections.
+1) Random Codes: Unstructured randomly-designed codes potentially achieve the best LDPC error correction performance, owing to the maximised degree of freedom that is afforded, when placing edges in this manner [31]. However, this is achieved at the cost of having to implement complex unstructured routing or memory lookup tables, in order to exchange LLRs between the variable and CNs. A straightforward recursive algorithm for creating unstructured PCMs of this form involves placing a 1 at a random unfilled location in H, then checking to see whether doing so has violated any design constraints, such as the maximum node degrees, stopping sets or cycle lengths. If the placement is valid, the algorithm will continue and repeat the process for the next randomly placed 1. This is repeated until the desired number of edges have been positioned. If a randomly placed 1 is not valid, then it will be rejected and a new location will be tried instead. This algorithm is conceptually very simple, but whether the process can successfully complete and how quickly is unpredictable.
+2) Pseudorandom Codes: The original LDPC code construction method proposed by Gallager [1] involves stacking Dc number of submatrices on top of each other. Each submatrix has the dimensions M/Dc × N , with each column having a weight of 1 and each row having a weight of Dv. The top matrix is pseudo-randomly generated, and random column permutations are applied to it in order to obtain all other submatrices.
+Similarly to this, Mackay [2] proposed a code construction method, which involves constructing the PCM H on a column-by-column basis, where the columns are generated pseudorandomly with appropriate weight, before being concatenated horizontally. Again, this process must be performed in a recursive manner, so that the row weights can be checked after each column is added. If Dc has been exceeded for any row, then the current column is regenerated.
+3) Quasi-Cyclic Codes: An LDPC code wherein the cyclic shift of any legitimate codeword permutation by s places to the left or right yields another legitimate codeword permutation is termed Quasi-Cyclic (QC), while the code is termed cyclic in the special case of s = 1. The PCMs of QC codes are semistructured, based on an upper matrix of elements which each represent an equally-sized square submatrix [32]. If a particular element in the upper matrix has a value of 0, then the corresponding submatrix is a null matrix. Otherwise, the submatrix is an identity matrix, which has been cyclically shifted a number of times according to the corresponding value in the upper matrix [33]. Adopting this structure facilitates low complexity memory addressing and routing for the hardware implementation, since the location of every edge in each submatrix can be determined using only knowledge of the relatively small upper matrix. This advantage can be achieved without incurring a significant sacrifice in error correction performance. Owing to this benefit, QC-LDPC codes are employed by a number
+
+of communications standards, including DVB-S2 [5], IEEE 802.11 (WiFi) [3] and IEEE 802.16 (Mobile WiMAX) [4].
+4) Repeat-Accumulate Codes: Repeat-accumulate (RA) codes constitute another type of semi-structured codes. Like QC codes, RA codes benefit from simpler encoding/decoding than random codes, without imposing an unacceptable loss in error correction performance. The PCMs of RA codes are composed of two horizontally-concatenated submatrices H1 and H2, where H2 is an (M × M)-element dual-diagonal matrix. This structure allows each parity bit to be calculated using only the previous parity bit and a subset of the message bits, leading to the accumulation alluded to in the code’s name.
+5) Progressive Edge Growth Algorithm: Whilst not a code structure itself, the Progressive Edge Growth (PEG) algorithm [34] is an important technique of constructing codes having an excellent error correction performance. The operation of the PEG algorithm is VN-centric, focusing on each VN in turn in order to place edges. The algorithm repeatedly constructs a set of CNs as candidates for the VN to connect to. From this set, the subset of nodes having the lowest degree is extracted and one of these is randomly selected. This approach results in LDPC codes that have approximately regular degree distributions.
+The PEG algorithm constructs a tree structure, alternating between the connection of VNs to CNs and vice versa. At each stage only nodes that are not already in the tree are considered for inclusion. This process continues until there are no remaining options meeting this constraint. The PEG algorithm then places an edge in the location that is identified as maximising the length of the resultant cycle within the graph, before continuing the algorithm with the selection of a different VN. In this way, a factor graph having no short cycles can be created, yielding a strong error correction performance.
+E. LDPC Decoding Architectures
+The implementation of a practical LDPC decoder is subject to numerous design decisions, such as the degree of parallelism, the representation of the LLRs and the stopping criteria. These three factors are discussed in the following subsections.
+1) Parallelism: The inherent parallelism of the belief propagation algorithm facilitates the design of fully-parallel LDPC decoder architectures, in which every VN and CN in the factor graph is implemented separately in hardware [35]. Fullyparallel decoders can achieve very high processing throughputs by performing all of the VN updates and all of the CN updates simultaneously, using the flooding schedule of Fig. 5. However, this is achieved at the cost of excessive hardware resource consumption. For long codes comprising thousands of bits, the inter-node routing may require a greater area than the nodes themselves [36], rendering this architecture impractical for many decoder designs. Additionally, significant further hardware resources are required for implementing flexible routing, using a Benesˇ network [37], for example. Otherwise, fullyparallel decoders are completely inflexible, only supporting the single code that they are designed for.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1106
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+By contrast, decoders associated with a fully-serial architecture implement just a single one of each node type in hardware. This hardware is time-multiplexed between the various nodes of the LDPC decoder, using memories to store interim results [35]. Fully-serial decoders require few hardware resources but suffer from a very low processing throughput, since each decoding iteration could require thousands of clock cycles. However, since all of the factor graph edges are represented by memory addresses, fully-serial decoders can be readily adapted at run-time to implement a different LDPC factor graph, by rearranging the memory accesses.
+In order to strike a compromise between the high processing throughput of fully-parallel architectures and the more modest hardware requirement of fully-serial architectures, many LDPC decoders implement a number of time-multiplexed nodes in a so-called partially-parallel fashion. This parametrizable degree of parallelism facilitates control over the trade-off between processing throughput and hardware resource requirements. Furthermore, this approach is of particular benefit when any structure within the PCM H can be exploited in the configuration of the nodes implemented in hardware. For this reason, QC codes are particularly suited to partially-parallel implementations.
+2) Representation of LLRs: Another architectural consideration is the digital representation of the LLRs passed between nodes. The algorithms described earlier can be modified to replace the LLRs with single-bit hard decisions, but this causes them to suffer from a significant error correction performance loss. In general, increasing the resolution and range of the two’s complement fixed point LLR representation by using a greater bit width has a positive effect on the error correction performance [38], at the cost of increasing the hardware resources required.
+It is therefore desirable for a designer to quantify the effect of the fixed-point bit width on the performance of a chosen decoding algorithm, in order to determine the smallest number of bits that are required in order to achieve a satisfactory error correction performance. This may be achieved using Extrinsic Information Transfer (EXIT) charts [39], which have been conceived by ten Brink for characterising the operation of iterative decoding algorithms. More specifically, EXIT charts visualize the quality of the LLRs output by the VNs and CNs as functions of the quality of the LLRs provided to the corresponding inputs. By plotting these EXIT functions for LDPC decoders employing a range of fixed-point bit widths, a designer can quantify at a glance, how each representation improves or degrades the quality of the LLRs and hence the resultant error correction performance of the LDPC decoder [40]. This eliminates the requirement to run multiple time-consuming BER simulations.
+Further to this, some designs have demonstrated that the hardware requirement can be reduced by using non-uniform quantisation schemes [41], by sending the bits of the LLR in a serial fashion rather than in parallel [42], or by utilising stochastic [36] or non-binary [43] number representations. However, these methods can also have adverse effects on the node complexity and the decoding throughput, requiring yet further investigation.
+
+3) Stopping Criteria: The design of an LDPC decoder also has to consider how to terminate the decoding process. Commonly, checks are carried out following each decoding iteration to determine whether the current state of the recovered codeword is a legitimate permutation or not, signalling whether or not decoding has been successful. These checks are performed based on the output of the VNs, as mentioned previously in Section II-C3.
+Occasionally however, a received frame is corrupted in such a way that it can never be corrected. In this case, the iterative decoding process would loop infinitely, unless other criteria for stopping it were implemented. Owing to this, a maximum iteration or complexity limit may be imposed. When this limit is reached, the iterative decoding process is terminated and decoding is deemed to have failed. In implementations where a low hardware resource requirement is a greater priority than high processing throughput, the iteration limit may be the only stopping criterion imposed. Here, every received message is decoded using the same number of iterations, without early stopping. In this case, the parity checks are only used at the end of the iterative decoding process, in order to determine whether the recovered codeword is valid or not. Early stopping can also be used to detect that no error correction progress is being made with successive decoding iterations, allowing the decoding process to fail and terminate before the iteration limit is reached.
+F. FPGAs
+FPGAs are digital logic devices that can be flexibly programmed to perform a variety of digital functions, using a Hardware Description Language (HDL). Their main advantages are their in-field-programmability, as well as their highspeed very-parallel logic processing. Owing to these benefits, FPGAs are desirable for a multitude of applications, including software-defined radio, ASIC prototyping, digital signal processing, cryptography and computer hardware emulation. This section presents a simplified view of their internal structure, followed by a discussion of the main differences and similarities between different makes and models of FPGAs, and how they may be compared to each other.
+1) Structure: The internal structure of an FPGA typically comprises a variable number of three main programmable elements, namely logic blocks, RAM blocks and I/O blocks [44]. The inputs and outputs of these blocks are linked by programmable routing, as shown in the sample schematic of Fig. 8.
+The most fundamental design of a logic block comprises a Lookup Table (LUT) and a Flip-Flop (FF), as shown in Fig. 8. A LUT is a digital structure that can be programmed to perform any combinatorial function of its inputs, thus mimicking any possible combination of logic gates. Typically, FPGA LUTs have 4–6 inputs, which are used to select a value for a single output bit. Increasing the number of LUT inputs typically allows the same HDL design to be implemented using fewer LUTs, therefore reducing the amount of FPGA routing required. However, the hardware resources required by a LUT
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1107
+TABLE I COMPARISON OF FPGAS AVAILABLE FROM ALTERA AND XILINX
+
+Fig. 8. FPGA structure.
+increase exponentially with its number of input bits, hence very large LUTs are impractical [44]. The output of each LUT can optionally be connected to a corresponding FF, for facilitating synchronous operation. Alternatively, the LUT output can be connected directly to the inter-block routing channels. These channels can be programmed to connect any set of logic block outputs to any set of logic block inputs, subject to the FPGA size constraints.
+Instead of logic blocks, some locations within an FPGA structure may contain a RAM block for storing intermediate calculation results. The size of these RAM blocks depends on the particular FPGA being used, as does their access control. More specifically, some FPGAs provide dual-port RAMs, which allow reading and writing to two different locations simultaneously. Some FPGAs may also include additional heterogeneous blocks, such as hardware multipliers and embedded processor cores, alongside non-volatile memory for storing the FPGA configuration when it is turned off [44].
+2) FPGA Vendor Conventions: The two main vendors of FPGAs are Xilinx and Altera. Their respective FPGAs share a number of similarities, but also exhibit some differences. Some Altera FPGAs, such as the first four generations of the Cyclone family, follow the structure outlined above, operating on the basis of so-called “Logic Elements” (LEs), each of which comprises one 4-input Lookup Table (4LUT) and one FF. However, more recent Altera FPGAs are structured around “Adaptive Logic Modules” (ALMs), each of which comprises two FFs and multiple small LUTs. These ALMs also contain extra logic that optionally allows the LUTs to be combined in a variety of ways, offering the functionality of larger LUTs.
+
+By contrast, the logic resources of Xilinx FPGAs are quantified in terms of “slices”, each of which contains several LUTs and FFs. The nature and quantity of the hardware resources available within each slice varies depending on the model and generation of the FPGA. Earlier models of Xilinx FPGAs, such as the Virtex 2, employ a simple slice structure which is based on 4LUTs, while more recent models utilise 6-input Lookup Tables (6LUTs) and a more complex slice structure that allows them to be used in a larger number of configurations.
+3) Comparing FPGAs: Due to the differences outlined above, comparing the hardware resources employed by the various designs implemented on different FPGAs is not straightforward. To this end, we propose an approximate metric based on the fundamental building blocks of FPGAs, namely the 4LUT and the FF [45]. We refer to this metric as equivalent logic blocks (ELBs), since it attempts to approximate the number of simple logic blocks comprising one 4LUT and one FF that would be required to implement each design. When calculating the number of ELBs, the LUT resources within each Altera ALM are considered to be equal to two 4LUTs, since this is one of the operating modes they offer. Similarly, to compensate for the increased size of 6LUTs compared to 4LUTs, and the additional logic that accompanies 6LUTs within Xilinx slices, each Xilinx 6LUT is considered to be approximately equal to two 4LUTs. Once this has been taken into consideration, we assume that the number of ELBs required by a design is given by the maximum of the number 4LUTs and the number of FFs that it requires.
+Table I presents an overview of the main generations and models of FPGAs available from Altera and Xilinx, along with the year of their release and the maximum number of ELBs available within the largest FPGA from each family.
+Note that the proposed ELB metric is by no means perfect, since it does not consider the overhead associated with routing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1108
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+between logic elements or the use of additional FPGA blocks, such as memory or embedded multipliers. However, it does serve as a functional approximation of the hardware requirements associated with each design considered, if they were all implemented on the same FPGA. Measuring the usage only in terms of these fundamental building blocks permits a comparison between modern FPGA models and much older designs, which would not otherwise be possible.
+III. COMPARISON OF DECODERS
+A comprehensive review of published FPGA-based LDPC decoder designs is presented in this section. The analysis of Table II considers both the parameters that are chosen by the designers, as well as the characteristics that may be measured based on the design. Each of these is discussed and characterised in Sections III-A and III-B, together with explanations and discussions of the symbols used in Table II where applicable. The entries in Table II have been sourced from both academic publications and commercially-available soft IP cores. Unfortunately, the licensers of these commercial designs were often unwilling to divulge many of the parameters and characteristics required for this analysis, resulting in several incomplete sets of results. Furthermore, none of the licensers were willing to provide pricing information for the purposes of this survey, preventing the comparison of this interesting but non-technical characteristic of their IP.
+Note that Table II presents a condensed version of our findings, showing only the most significant parameters and characteristics. In the case of references that present multiple FPGA-based LDPC decoder designs, only a representative subset has been reproduced here. A full version of our survey results may be downloaded from [46].
+A. Parameters
+In this section, we consider the parameters of FPGA-based LDPC decoders, which include all factors of the design that are specified by the designer. These include which LDPC PCMs to support, the decoding algorithm to employ and the number of decoding iterations used. These parameters are discussed in Sections III-A1, III-A3 and III-A4 respectively. Section IIIA2 describes the architectural parameters, namely the degree of parallelism, LLR representation, clock frequency, flexibility and choice of FPGA.
+1) LDPC PCMs: One of the most fundamental features of an LDPC decoder is the selection of the PCMs that it is designed to support. Decoders may support just one PCM, be tailored to a family of related PCMs or may be designed to be completely flexible. As discussed in Section II-B, each PCM H has a number of parameters, namely N , M, Dc and Dv. However, the total number of edges in the corresponding factor graph can be considered to encompass all of these factors, representing the overall size and complexity of the code, as listed in Table II.
+2) Architecture: Architectural decisions influence the physical implementation and hardware used by the decoder. As
+
+described in Section II-E, the primary architectural parameter is the degree of parallelism, which may be classified as fullyparallel, partially-parallel or fully-serial. This parameter may be quantified by the total number of Processing Units (PUs) instantiated by the decoder, as listed in Table II. Frequently these processors perform the function of individual VNs and CNs, although some designs use a different approach.
+The operand width of the LLR representation, as listed in Table II, is also a measurable parameter, which affects the LDPC decoder’s error correction performance. Designs using a higher number of bits may be expected to have superior error correction performance than their counterparts employing fewer bits. However, this is typically achieved at the cost of a larger hardware resource requirement or a lower processing throughput.
+The quantisation scheme used in the LLR representation may be either uniform or non-uniform, as denoted by a ‘U’ or an ‘N’ in Table II, respectively. In uniform quantisation schemes, the entire range of representable LLR values has a constant resolution, allowing the VN and CN functions to be implemented using straightforward binary arithmetic. By contrast, non-uniform quantisation schemes typically adopt a finer resolution for lower LLR magnitudes and a lower resolution for larger magnitudes. This facilitates a more beneficial trade-off between range and resolution, but makes the associated processing significantly more complex. Many authors (e.g. [42], [47], [48]) mention the number of bits used in their FPGA-based LDPC decoders, but do not detail the quantisation scheme employed. Since non-uniform schemes require significantly more details than uniform representations, these cases are assumed to employ uniform quantisation and are marked with an asterisk in Table II.
+The maximum achievable clock frequency of an FPGAbased LDPC decoder depends largely on the capabilities of the FPGA employed, but also on some design decisions such as the critical path length. For example, designs that process entire VNs or CNs in a single clock cycle typically have long critical paths, while designs that only perform one arithmetic or logical operation per clock cycle typically have much shorter critical paths. Based on this observation, the clock frequency is included as a parameter in this analysis. The majority of authors have explicitly stated the clock frequency at which their decoder operates. However, in some cases (eg. [76]) we have derived the clock frequency from other data, as indicated by an asterisk in Table II.
+Many decoder architectures are highly optimised to the specific characteristics of the single LDPC PCM that they are designed to support (eg. [43], [62], [74]). By contrast, some other designs instead adopt a more general architecture (eg. [57], [60], [66]), sacrificing performance for the flexibility to switch between several supported PCMs at run-time. A decoder’s flexibility may be considered to be both a figure of merit and an architectural decision that is made by the designer, allowing it to be regarded as a characteristic or as a parameter. However, we show in Section IV-A that adding flexibility to a design can only be achieved as a trade-off against some other desirable characteristics. For this reason, we treat flexibility as a characteristic in this paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1109
+
+TABLE II COMPARISON OF FPGA LDPC DECODERS
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1110
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+TABLE II (Continued.)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1111
+
+TABLE II (Continued.)
+
+The selection of an FPGA for the implementation of an LDPC decoder may have a significant impact upon its performance. The selected FPGA dictates the number of logic elements, memory blocks and I/O pins that are available for all processing and routing. Additionally, some FPGAs facilitate higher clock frequencies than others when implementing the same design, depending on the process technology employed. Unfortunately it is impossible to fairly compare the capabilities of all FPGAs numerically. For this reason, Table II simply states which FPGA has been employed for each LDPC decoder considered.
+3) Algorithm: As discussed in Section II-C, several variations of the LDPC decoding algorithm exist. Some algorithms vary from each other only slightly, while others may employ vastly different mathematical concepts. Furthermore, different authors may use different terms to describe the same algorithm, making this parameter difficult to compare. Table II therefore only includes the terms used by the authors to describe their algorithms and no direct comparison between them is inferred.
+4) Iterations: The limit placed on the maximum number of decoding iterations has a significant effect upon the processing throughput and error correction performance of decoders operating without early stopping functionality, as well
+
+as in cases where the received frame is too corrupted to be decoded successfully. Decreasing the maximum number of iterations will increase the LDPC decoder’s processing throughput in terms of the maximum achievable bitrate, but runs the risk of allowing errors to remain in the recovered codeword that could have otherwise been corrected. Generally, it can be assumed that the number of iterations used in each considered design was selected by the author to offer the most desirable trade-off between error correction performance and processing throughput, subject to the influence of the other parameters outlined above. It is also worth noting that the maximum number of iterations is perhaps the easiest parameter to change at runtime. Owing to this, some designs (eg. [28], [67], [69]) are presented with two sets of results, namely one employing a low number of iterations for maximum processing throughput (marked with a ‘T’ in Table II), and one with a high number for maximum error correction (marked with an ‘E’ in Table II).
+Table II presents the fixed number of iterations that are employed in designs without early stopping functionality, while the average number of iterations is presented for designs employing early stopping. However, some papers proposing early stopping designs (eg. [60], [61], [64]) do not present an average number of iterations, only providing the maximum
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1112
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+limit imposed, as indicated with an asterisk in Table II. Likewise, some papers (eg. [50], [53]) do not state the number of iterations employed, but this parameter can be inferred as a function of other parameters and characteristics. These cases are marked with a double-asterisk (**) in Table II.
+B. Characteristics
+In this section, we consider all those characteristics of FPGAbased LDPC decoders, which we plan to quantify. Seven main characteristics are identified, namely processing throughput, processing latency, hardware resource requirements, transmission energy efficiency, processing energy efficiency, bandwidth efficiency and flexibility, as seen Fig. 1. Each of these is described in turn in the following sections.
+1) Processing Throughput: Perhaps the most frequentlystated characteristic of an FPGA-based LDPC decoder is its processing throughput, which is the number of bits that it can process per second. A high processing throughput is required for high-speed data transfers and video streaming applications, amongst other uses. A base station serving many users requires the sum of the individual throughputs to be high, so that each user receives a satisfactory service.
+In an LDPC decoder it is important to note the difference between encoded and decoded processing throughput. We refer to the number of codeword bits processed per second as the encoded processing throughput, while we use decoded processing throughput to quantify the number of message word bits per second. For example, half of the codeword bits generated by a 1/2-rate LDPC code are parity bits, which carry no information of their own. Therefore if the encoded processing throughput is 2 Gbps then the corresponding decoded processing throughput would be 1 Gbps. Ultimately, it is the decoded processing throughput that matters most to the user of the decoder, so we have deemed this to be the more important characteristic in comparisons. For designs where the author has only presented encoded processing throughput, we have inferred the decoded processing throughput by multiplying by the coding rate, as denoted by an asterisk in Table II. In some cases it is unclear whether the stated processing throughput is encoded or decoded. This is reflected in the Table II by allowing the stated processing throughput to span both columns. A double asterisk is used in Table II to identify designs in which the processing throughput was not explicitly stated, but has been inferred from other stated parameters and characteristics.
+2) Processing Latency: The processing latency of an FPGA-based LDPC decoder is the amount of time it requires to process a complete LDPC codeword. Low processing latency is therefore important for interactive cloud computing and safety-critical operations, where an immediate response is crucial. It may be observed that processing latency is strongly linked to processing throughput, since the processing latency can often be calculated as the message word length K divided by the decoded processing throughput. However, some decoder designs achieve a high processing throughput by decoding more than one codeword simultaneously. In these cases, the associated processing latency would be much higher than that of a decoder which achieves the same processing throughput while
+
+decoding only a single codeword at a time. For example, a decoder that decodes a single 1000-bit message word with a processing throughput of 2 Gbps would have a processing latency of 0.5 µs, while two 1 Gbps decoders operating in parallel would achieve the same processing throughput, but would have a processing latency of 1 µs. Processing latency is a key characteristic of an FPGA-based LDPC decoder, however most authors do not explicitly state it in their results, and it is therefore not included in Table II.
+3) Hardware Requirements: When implemented on an FPGA, the size and complexity of an LDPC decoder’s design is represented by how much of the FPGA’s hardware resources it utilises. Larger designs require more resources and therefore a bigger, more expensive FPGA, making smaller designs preferable. The ELB metric described in Section II-F can be used to compare the hardware resource requirements of designs implemented on different FPGAs. However, the resource requirements stated by the various authors of LDPC-based FPGA decoder designs often do not directly translate to ELBs, hence requiring further analysis to be performed as follows:
+• The conversion from 6LUTs to 4LUTs described in Section II-F is first employed to ensure that all measurements of LUTs consider an approximately equivalent quantity of hardware.
+• Subsequently, if the hardware requirement of a design is quantified only in terms of either 4LUTs or FFs, then we assume a numerically equal number of ELBs.
+• If the hardware requirement of a design is quantified in terms of both 4LUTs and FFs, then we assume that ELBs = max(4LUTs, FFs). These cases are identified using a single asterisk in Table II.
+• For designs based on Xilinx FPGAs having complex multi-element slices, we have derived a “utilisation” figure of merit, which quantifies how many LUTs/FFs are commonly used per slice. We obtained this by calculating the average utilisation of designs for which both the number of slices and the number of LUTs/FFs used is stated. These utilisation figures were found to be approximately 0.83 for LUTs and 0.36 for FFs, demonstrating that the majority of slices are used for their LUTs. For designs where the hardware utilisation is presented only in terms of slices, we assume ELBs = slices × 4LUTs per slice × 0.83. These cases are indicated in Table II using a double asterisk.
+4) Transmission Energy Efficiency: Another fundamental figure of merit for an LDPC decoder is its error correction capability, as a function of the channel’s signal to noise power ratio per bit Eb/N0, which is typically expressed in decibels. If a codeword is transmitted using a high energy per bit Eb, then the energy of the noise corrupting each bit becomes relatively smaller, causing the BER at the receiver to decrease. However, energy-efficient transmitters are desirable, because they are cheaper to run and can operate for longer without requiring new batteries, particularly since transmission energy consumption is dominant in transmitter hardware. It is therefore desirable for an LDPC decoder to be capable of correcting errors and achieving a satisfactorily low BER, even at low Eb/N0 values.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1113
+
+The error correction performance of a decoder is typically
+characterised in the form of a BER curve, showing how the BER is reduced as the channel Eb/N0 increases. In order to convert these plots into a comparable metric, we specified a desirable target BER of 10−4. For each considered design, the Eb/N0 required by the decoder in order to achieve this BER was noted. In some publications however (eg. [17], [61]),
+the error correction performance is quantified using the Frame
+Error Rate (FER) rather than BER. In these cases, we assumed that a BER of 10−4 equates to a FER of 10−2 [61], based on
+the observation that the considered designs typically have a
+message word length K of the order of 1000 bits, as well as
+a minimum Hamming distance of the order of 10 bits. These cases are indicated using a single asterisk in the Eb/N0 column of Table II.
+Quantifying the BER versus Eb/N0 facilitates a fair comparison of transmission energy for LDPC codes having different
+coding rates R, since it considers the transmission energy per
+message word bit. However, some publications present the BER as a function of the SNR Es/N0, which does not allow a fair comparison of codes having different coding rates, since it considers the transmission energy per codeword bit, Es = Eb × R. The corresponding Eb/N0 can therefore be obtained by dividing by the SNR Es/N0 by the coding rate R, which is achieved in logarithmic terms according to
+
+Eb/N0[dB] = SNR[dB] − 10 log10(R).
+
+(18)
+
+Entries calculated in this way are denoted in Table II using a double asterisk. Unfortunately some authors have erroneously labelled the x-axis of BER plots as SNR, when Eb/N0 would be more appropriate. Some of these cases were clarified via private correspondence with the authors. However, in some cases there is other evidence that the presented results are in terms of Eb/N0 rather than SNR, such as comparisons with benchmarkers or capacity bounds. In these cases, Eb/N0 is assumed and identified using a triple asterisk (***) in Table II.
+5) Processing Energy Efficiency: As for any electronic system, low processing energy consumption is desirable in the design of FPGA-based LDPC decoders. However, only a few publications ([28], [56], [73]) have included energy consumption measurements, hence this characteristic cannot be considered in our comparisons.
+6) Bandwidth Efficiency: The bandwidth efficiency of a communication system is given by the ratio of the information throughput that it can convey to the corresponding bandwidth required. For example, a scheme that conveys 500 bits per second over a channel having a bandwidth of 1 kHz has a bandwidth efficiency of 0.5 (bits/s)/Hz. For BPSK-modulated codewords using ideal Nyquist pulse shaping filters, bandwidth efficiency is numerically equal to the LDPC coding rate R. In this regard, LDPC codes with higher coding rates are more desirable, since they make more efficient use of their channel’s bandwidth.
+7) Flexibility: Flexibility is a desirable characteristic, because it allows an FPGA-based LDPC decoder to support different parity check matrices, having different coding rates, block lengths and node degrees. Some designs may support a selection of related PCMs from within a particular code
+
+family, such as the 21 PCMs included in the DVB-S2 standard [5]. Meanwhile, other designs may be completely flexible, supporting any PCM.
+Decoders may exhibit flexibility either during their design or during their operation. True run-time flexibility allows a specific codeword to be decoded using a particular PCM, immediately before decoding a different codeword using a different PCM. This allows the communication system to dynamically adapt to time-varying channel conditions, such as by decreasing the coding rate R in high-noise environments in order to improve the BER performance. However this advantage may only be achieved at the cost of requiring a more sophisticated design, typically having higher hardware resource requirements or lower processing throughput. By contrast, decoders that are only flexible at design-time may only be adapted to use a different PCM by reprogramming the FPGA, preventing a high degree of rapid reconfigurability. The degree of design-time flexibility can also be difficult to accurately quantify, since any design that is synthesised from a HDL can be modified and resynthesised fairly rapidly. Design-time flexibility has therefore not been considered in this survey.
+IV. DISCUSSIONS
+The data presented in Section III inspires a great deal of discussions and visualisation of the relationships amongst the various parameters and characteristics of FPGA-based LDPC decoders. This section commences by characterising the fundamental trade-off between desirable characteristics in Section IV-A, before identifying the parameters that affect each characteristic in Section IV-B.
+A. Trade-Offs
+As seen in Fig. 1 and discussed in Section III-B, the main measurable characteristics of an FPGA-based LDPC decoder are processing throughput, processing latency, hardware resource utilisation, transmission energy efficiency, processing energy efficiency, bandwidth efficiency and flexibility. Of these, it is the processing throughput, hardware resource utilisation, flexibility and transmission energy efficiency, which provide the clearest and most fundamental trade-off, since the other characteristics are all in some way dependent on these. The relationship amongst these four characteristics is plotted in Fig. 9.
+Note that all scatter plots presented in this paper are organised so that a decoder with desirable values for all characteristics would correspond to a data point in the top-right corner. In Fig. 9, the x-axis is plotted with the values reversed, so that decoders with smaller hardware resource requirements (preferred) are further to the right than larger ones. Meanwhile the y-axis is plotted as normal, so that decoders with the highest processing throughput are at the top. In this way, points above the trend line are superior to the average case, whilst points below it are inferior, notwithstanding the values of their other characteristics.
+It can be seen in Fig. 9 that most designs can only excel in at most three of the four characteristics presented. The trend line
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1114
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+Fig. 9. Processing throughput vs. hardware requirements vs. transmission energy efficiency vs. flexibility.
+
+presents the average processing throughput vs size trade-off, and decoders that perform above this line generally tend to suffer from poor transmission energy efficiency, whilst decoders with a high energy efficiency tend to either have larger hardware resource requirements or lower processing throughput than the average case. Any decoders that perform well in all three of these characteristics tend to be totally inflexible to any PCM changes at run-time.
+The five points in Fig. 9 having the highest processing throughput are from [28], [74], [68] and [67], all of which employ fully-parallel architectures. The design of [67] has the smallest hardware resource requirement of the four, owing to its use of only one bit per LLR. By contrast, the designs of [28], [68] and [74] use two or three bits per LLR, which is reflected in their relative hardware resource requirements. None of these high-throughput decoders have any run-time flexibility, as is typical of fully-parallel architectures. The next highest processing throughput is achieved by the design of [65], which adopts a partially-parallel rather than fully-parallel architecture, but also uses only one bit per LLR. The effect of using these small numbers of bits can be seen in these decoders’ poor transmission energy efficiency, since reducing the resolution of the LLRs impedes the associated error correction capability.
+In addition to employing single-bit LLRs, the design of [65] achieves a high processing throughput by decoding two frames at once. The designs presented in [77] use a similar technique, processing three, four or even six frames in parallel using multiple decoder copies in the same FPGA. Owing to this, these designs have a larger processing throughput than the average case, while also being flexible and having reasonable error correction performance. However, as discussed in Section III-B2, the processing latency of these decoders is much higher than their processing throughput would imply, making them less suitable for time-critical applications.
+
+The decoders presented in [36] and [45] both achieve good transmission energy efficiency, while also having higher processing throughputs (or lower hardware requirements) than the average case. Both of these designs use stochastic bitstreams to represent the LLRs, facilitating a fully-parallel architecture having single-wire serial transmission between nodes, greatly simplifying the hardware design.
+The points in the bottom-right of Fig. 9 correspond to the designs presented in [60], which employ a fully-serial architecture and so have very low hardware resource requirements, but also low processing throughput. However, these designs also have the benefit of being truly run-time flexible for any LDPC code. By contrast, the other flexible designs shown in Fig. 9, such as [17] and [61], are only flexible for a set of related PCMs.
+In addition to the trade-offs described above, Fig. 9 also demonstrates that it is difficult to consider all of the characteristics of an FPGA-based LDPC decoder at once. For example, Fig. 9 does not consider the capabilities of the FPGA that each decoder is implemented using. In particular, more recent FPGAs may be able to operate identical designs at higher clock speeds than older FPGAs. This could be crudely factored into the results by dividing the processing throughput by the clock frequency, but doing so would then negate the impact of other parameters such as the critical path length. Furthermore, no consideration is given in Fig. 9 to the processing latency of each considered design. Note, however, that by plotting the decoded processing throughput rather than the encoded processing throughput, the coding rate and the bandwidth efficiency of the LDPC code has been taken into at least partial consideration.
+B. Relationships Between Parameters and Each Characteristic
+Having established the fundamental trade-off that exists between the main characteristics of FPGA-based LDPC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1115
+
+Fig. 10. Factors affecting the processing throughput.
+
+decoders, namely processing throughput, processing latency, hardware requirements and transmission energy efficiency, the following subsections present discussions of the parameters that affect each one. A discussion of bandwidth efficiency is combined with transmission energy efficiency in Section IV-B4, but a quantitative discussion of flexibility and processing energy efficiency could not be made, owing to the lack of the required information in the publications considered.
+1) Processing Throughput: Fig. 10 characterises the strong relationship between an FPGA-based LDPC decoder’s degree of parallelism and its decoded processing throughput, confirming the expectation that designs having more parallel processors can decode a higher number of bits per second. Note that in Fig. 10 the number of parallel processing units has been divided by the number of edges in the PCM H, to remove the dependence on the LDPC code size. The shading and shapes of the markers in Fig. 10 also indicate the influence that the number of bits per LLR and the number of decoding iterations have on the processing throughput, respectively. Points above the trend line typically employ a small number of bits per LLR or iterations, evidenced by their dark shading or circular point shape. By contrast, slower-than-average designs typically employ a larger number of bits per LLR or iterations, and therefore have lighter shading or a square shape.
+Perhaps the most prominent points in Fig. 10 are the light grey circles belonging to [69], which achieve a much higher processing throughput than the trend line, despite using 8 bits per LLR. This may be explained by this design’s use of layered belief propagation with the aid of a novel joint row-column processor, which decreases the processing time of each iteration and helps to avoid memory conflicts, thereby increasing the processing throughput.
+The light triangles in the bottom-right represent the fullyserial decoders presented in [60], which achieve a low
+
+processing throughput owing to their low number of processors. Conversely, the dark points in the top-left represent the fully parallel decoders of [67] and [68], which achieve a very high processing throughput by using few bits, few iterations, a large degree of parallelism and operate on the basis of the MSA [25]. The fact that the MSA can facilitate a higher processing throughput than more complicated alternatives such as the SPA [24] is also demonstrated by comparing the results of [75] and [76], which present two very similar designs that vary in algorithm. The design in [76] suffers from a 4-5 Mbps processing throughput drop compared to [75], caused by its employment of the SPA instead of the MSA, as well as by using a non-uniform quantisation scheme for the LLRs.
+The point furthest above the trend line corresponds to the design of [65], which achieves a high processing throughput by using only a single bit per LLR, five iterations per frame and by decoding two frames simultaneously. This design also exploits the properties of quasi-cyclic LDPC codes to implement an efficient partially-parallel architecture, reducing the number of processing units required to achieve its high processing throughput.
+2) Processing Latency: As discussed above, processing latency is not treated as a quantifiable characteristic in our analysis, because the majority of publications do not quantify this characteristic of their design. However, the processing latency is dependent on the processing throughput, the message word length K , the scheduling and the number of frames that are decoded in parallel.
+Some of the decoders considered, such as that of [65] and [77], process multiple frames in parallel by instantiating several independent copies of the decoder on the same FPGA. In these cases the total processing throughput and resource requirement could be divided by the number of decoders, in order to produce results that correspond to the processing latency of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1116
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+Fig. 11. Factors affecting the hardware requirements.
+
+an equivalent design that only considers one frame at a time. However, other designs, such as [42], process multiple frames by making use of spare time within the decoding schedule, with the result that the hardware cost does not increase linearly with the processing throughput. Owing to this, it is not possible to normalise the data to only consider the processing throughput and hardware resources required for decoding one frame at a time, so the processing latency cannot be fairly inferred.
+3) Hardware Requirements: Unsurprisingly, the major contributing factor to the hardware resource requirement of an FPGA-based LDPC decoder design is its degree of parallelisation, as shown in Fig. 11. Additionally, Fig. 11 shows that the number of bits employed per LLR and the number of edges employed in the parity check matrix also have some influence on the hardware resource requirement, though the effects of these parameters are quite varied. This may be attributed to the difficulty of accurately comparing the hardware resource requirements of different designs, as well as suggesting that other factors are involved. It is however noticeable that there is a general reduction in the number of bits per LLR employed in designs with increased parallelism. This may be explained by the explosion in routing complexity upon increasing the number of PUs, which would be exacerbated by the requirement for data buses having large operand widths.
+The dark grey circles corresponding to the designs of [77] towards the bottom of Fig. 11 seemingly have a much larger hardware resource requirement than would be expected, considering the number of processing units, the number of PCM edges and the number of bits employed per LLR. However, these designs are each run-time flexible for a different family of codes, having HDL code that is automatically generated. This additional flexibility results in decoders that are not as fully
+
+optimised as one that was designed specifically for a single PCM, explaining the associated hardware overhead. This is confirmed by the observation that the run-time flexible designs of [61] also correspond to a set of points positioned very far below the trend line.
+The results of [48], [75], and [76] all sit above the trend line, despite employing a large number of bits per LLR, as well as a moderate PCM size. This may be partially attributed to their implementation of quasi-cyclic LDPC codes, using partiallyparallel architectures, leading to a very efficient use of hardware resources. Additionally, the smallest hardware resource requirement of these designs is achieved by one that uses the MSA rather than the SPA, illustrating that this algorithm requires fewer hardware resources.
+The design of [47] requires more FPGA resources than the trend line would suggest, which is remarkable considering its small PCM and number of bits per LLR. At first glance this may be attributed to its use of the uncommon array-based LDPC code. However, the design of [58] also uses an array-based code but sits above the trend line, despite employing a large number of bits per LLR and a large PCM. On closer inspection, it can be observed that the design of [47] employs a simple FPGA from an old generation, suggesting that its comparably large hardware resource requirement stems from inefficient FPGA synthesis.
+4) Transmission Energy Efficiency and Bandwidth Efficiency: The minimum SNR per bit Eb/N0 at which it becomes theoretically possible to reliably send information over a channel depends on the target bandwidth efficiency and therefore on the coding rate of the FEC code employed. A code having a lower coding rate may achieve a lower minimum transmission energy, owing to the increased number of parity bits that it employs for error correction. For this reason, we
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1117
+
+Fig. 12. Decoder performance loss from capacity.
+consider the transmission energy efficiency and the bandwidth efficiency jointly in this subsection.
+For each FPGA-based LDPC decoder considered, the theoretical Discrete-input Continuous-output Memoryless Channel (DCMC) capacity [90] was calculated, with consideration of the coding rate, modulation type and channel model employed. This was then subtracted from the value recorded in Table II for the specific Eb/N0 at which a low BER is achieved, in order to quantify the performance loss imposed by implementation factors. Here, a low performance loss is achieved by a decoder that can function very close to the theoretical limit, demonstrating that it is very good at correcting errors and very efficient in terms of transmission power and bandwidth.
+Almost all of the publications considered characterised the error correction performance of their FPGA-based LDPC decoder designs using BPSK modulation for transmission over an AWGN channel. This allows the BER performance of these designs to be presented together graphically, as shown in Fig. 12. Here, the plotted line represents the DCMC capacity, while each plotted point corresponds to a different considered decoder design. The performance loss associated with each point may be obtained as its horizontal distance from the DCMC capacity curve. It can hence be seen that despite requiring drastically different Eb/N0 levels to achieve the same BER, the designs of [41], [52], [60], [61] can all be considered to offer a strong error correction performance, when their bandwidth efficiency is also taken into consideration. Fig. 12 also illustrates that the designs of [42], [56], [67], [68], [74], [80] are comparatively poor at correcting errors, and therefore have a low transmission energy efficiency. This is at least partly due to the fact that these designs trade off their error correction performance against other desirable characteristics, as will be explained below.Note that this analysis can be readily extended to LDPC decoders designed for other modulation schemes or channel models. This may be achieved by plotting the
+
+corresponding DCMC capacity curve and characterising the error correction performance with respect to this bound.
+It is well-known that LDPC codes having longer message word lengths K are capable of performing closer to the DCMC capacity [8]. Furthermore, a higher performance loss occurs for more sparse PCMs, since these have fewer edges over which to transfer information during the decoding process. Motivated by this, Fig. 13 plots the performance loss of each design versus the number of edges in its PCM H, combining the message word length K with the complexity of the factor graph. As shown in Fig. 13, the number of edges in the PCM H is the largest contributing factor to the error correction performance loss. As may be expected, the performance loss is also influenced by the number of iterations performed and the number of bits used per LLR, as shown in Fig. 13. It may be observed that designs like those of [65], [67], and [74] perform poorly compared to the trend line, owing to their employment of a small number of bits per LLR or iterations. By contrast, a good performance may be observed for designs employing a large number of both, such as [69].
+The specific code construction principles used can explain some of the unexpected results seen in Fig. 13. The design of [50] performs closer to the DCMC capacity than would be expected from a general decoder using the same small number of iterations and bits per LLR. However, the PEG algorithm explained in Section II-D5 was used to construct the LDPC code it uses, increasing its error correction capability at the cost of producing an unstructured factor graph, which is not optimised for hardware implementation. A “cycle elimination algorithm” was used in [61] to similar effect, while the designs of [60] achieve high performance due to the completely unstructured H matrix used.
+The lowest error correction performance loss is achieved by the design of [41], which uses a structured quasi-cyclic code. In addition, this design also uses a sophisticated non-uniform quantisation scheme for the representation of LLRs, it employs a moderate number of bits per LLR and iterations, as well as implementing the full SPA. By contrast, the designs of [76] and [48] operate further away from capacity than may be expected, which is due to their use of the MSA.
+V. RECOMMENDATIONS AND FURTHER WORK
+This section presents an overview of the future development effort required of designers of FPGA-based LDPC decoders. Firstly, Section V-A provides a guide to the stages involved in designing an FPGA-based LDPC decoder. Following this, Section V-B then provides a set of recommendations for future publications which will facilitate more comprehensive comparisons amongst FPGA-based LDPC decoders in the future. Finally, Section V-C presents a list of future research opportunities that we expect to be of significant benefit to the field.
+A. Recommended Design Methodology
+As discussed above, the complex relationships between the parameters and characteristics of FPGA-based LDPC decoders imply that it is not possible to identify a single design which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1118
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+Fig. 13. Factors affecting the error correction performance.
+is superior to all others in every way. Having said this, the flowchart presented in Fig. 14 outlines a recommended series of stages for a prospective designer to complete, as a means of assisting their design process. The bullet points accompanying each stage list some of the key issues to be considered whilst completing each design element. More details about these issues can be found throughout Sections II-C — II-E.
+
+B. Recommendations
+
+In the process of collecting the data presented in this paper, it has become apparent that fairer comparisons amongst FPGAbased LDPC decoders could be facilitated in the future, by setting conventions for the type and format of data to present when proposing a new design. The following list represents our attempt at this. Our recommendation for future publications of FPGA-based LDPC decoders is to:
+• provide values for every parameter and characteristic presented in Table II;
+• ensure that all presented characteristics correspond to the same set of parameters, and if more than one parameter set is employed for demonstrating the flexibility of the design, include an equal number of full characteristic sets;
+• state both the encoded and the decoded processing throughput, as well as the formula used for calculating them;
+• state the processing latency of the decoder, or signify that it can be derived simply from the processing throughput and message word length K ;
+• provide BER simulation curves obtained using the physical hardware, plotting the results against Eb/N0[dB] and explicitly stating the channel model and modulation type used, preferably BPSK modulation for transmission over an AWGN channel;
+
+Fig. 14. Stages to consider when designing an FPGA-based LDPC decoder.
+• if possible, provide multiple BER plots for different maximum numbers of iterations;
+• provide mathematical detail about the algorithm used and endeavour to use established terminology if the same formulae have been used before;
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1119
+
+• provide power/energy consumption measurements obtained during BER simulation;
+• when mentioning flexibility, explicitly state whether the changes can be made at run-time or whether they require a new synthesis run;
+• endeavour to make it possible to compare new designs to old ones by selecting a benchmarker, and implementing a new design using exactly the same set of parameters on the same FPGA.
+In addition to adhering to the above list of guidelines to facilitate fairer comparisons between different designs, it would be of significant benefit if authors of FPGA-based LDPC decoder designs were at liberty to make their source code freely available online. Open-source code can be readily found for many of the signal processing blocks used in communications systems, but unfortunately there are very few freely-available FPGA-based LDPC decoder designs. This inevitably hinders innovation within the field, since every prospective designer is required to commence by implementing a basic structure, rather than improving an existing design. Additionally, if a reader of a published design had access to the source code, it would significantly aid their comprehension of the novel techniques that are being described. Finally, making source code freely available facilitates the employment of current FPGA-based LDPC decoder designs as benchmarkers for future designs.
+C. Further Work
+Performing the analysis described above has enabled us to identify several opportunities for further research and development in the field of FPGA-based LDPC decoders, as discussed in the following subsections.
+1) Flexible Decoders: Perhaps the biggest gap illustrated by the trade-offs described in Section IV-A is for high-speed decoders having run-time flexibility and low hardware resource cost. Run-time flexibility has huge advantages for commercial applications, since it allows a decoder to dynamically support the variety of different LDPC codes within a particular communications standard, without incurring the overhead of the time and technical intervention that is required to reprogram an FPGA. Further to this, flexible decoders can adapt automatically depending on the channel conditions without any user input, increasing the efficiency of FPGA-based LDPC decoders in consumer applications. Run-time flexibility can also be useful for research purposes, reducing the number of times FPGA has to be re-synthesised when testing multiple different codes.
+As seen in Section IV-A, decoders having a fully-serial architecture can be flexible with little or no extra hardware resource cost, but suffer in terms of their low processing throughput. Meanwhile, the extra hardware required to make a fully-parallel decoder flexible renders this approach impractical, regardless of their capacity for high processing throughputs. Initial research therefore suggests that partially-parallel decoder architectures utilising semi-structured (e.g. quasi-cyclic) LDPC codes such as those in [77] have the greatest potential for flexibility and high processing throughputs. Recent research into hierarchical quasi-cyclic codes as in [56] and [53] could be of particular interest.
+
+2) Schedules: Unfortunately, different publications have used different terminology to describe the decoding schedules adopted in their decoder designs, so a direct comparison could not be easily drawn between them in this paper. However, there is an opportunity to investigate the effects of using different schedules in two otherwise equal FPGA-based LDPC decoders, assessing their effects not only on BER performance and complexity as in previous research on scheduling, but also on processing throughput, hardware resources, processing energy and flexibility. In particular, none of the reviewed decoders operate on the basis of calculating residuals as in IDS, implying that this schedule is largely under-represented within the field despite claims of its superiority to others [22]. Further research is required to determine whether these claims are valid in practical implementations, and to investigate the architectural constraints that employing IDS would impose on an FPGA-based LDPC decoder design.
+3) Stochastic Decoders: The two stochastic decoders presented in this report, [36] and [45], performed well in terms of processing throughput, BER performance and hardware requirements. Stochastic designs are associated with their own set of advantages and challenges, offering another opportunity for further research. The serial transmission of messages between processing nodes facilitates a higher grade of feasibility for fully-parallel designs, and allows the error correction performance to be dynamically traded for processing throughput by simply increasing the number of bits used for each message.
+4) Low Processing Energy Consumption: It is unfortunate that the majority of the designs reviewed in this report did not present any information about the decoder’s energy consumption. As with all electronic devices, low energy consumption is a key figure of merit in communication systems, since it dictates how long mobile devices can function for between battery recharges, as well as dictating the cost and environmental impact of operating base station equipment. This provides a motivation to investigate the factors behind energy consumption in FPGA-based LDPC decoders, possibly by implementing some of the published designs and measuring their energy consumption directly. Drawing upon these results, FPGA-based LDPC decoders having low energy consumption could then be designed.
+5) Low Processing Latency: Similarly to processing energy consumption, processing latency is a crucial characteristic of communications hardware that was curiously underrepresented in the works reviewed here. While the processing latency may be approximated for many designs as a function of the processing throughput and message word length, the fact that it was rarely quantified implies that it was rarely a design focus. Some applications of FPGA-based LDPC decoders may require ultra-low processing latency above all other characteristics, suggesting that this is a gap in the market that is currently unfilled. Further research could be conducted to determine whether this is indeed the case, before devising new designs having ultra-low processing latency. Such designs would require large processing throughputs without processing multiple frames in parallel, so would be likely to employ very parallel architectures and low-complexity algorithms. In
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1120
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+this case, the cost of the high processing latency would be a [6] CCSDS, “CCSDS 131.0-B-2 recommendation for space data system
+
+higher hardware resource consumption and a lower transmission energy efficiency.
+
+standards; TM synchronization and channel coding,” 2011. [7] V. Oksman and S. Galli, “G.hn: The new ITU-T home networking
+standard,” IEEE Commun. Mag., vol. 47, no. 10, pp. 138–145, Oct.
+
+2009.
+
+[8] G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of
+
+VI. CONCLUSIONS
+
+low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+
+In this paper, we have assessed the practicalities and limi- [9] Y. Cai, S. Jeon, K. Mai, and B. V. K. V. Kumar, “Highly parallel
+
+tations of FPGA-based LDPC decoders. Section II presented a tutorial on LDPC codes, covering their structure, encoding
+
+FPGA emulation for LDPC error floor characterization in perpendicular magnetic recording channel,” IEEE Trans. Magn., vol. 45, no. 10, pp. 3761–3764, Oct. 2009.
+
+process, decoding process and construction techniques. A num- [10] A. Naderi, S. Mannor, M. Sawan, and W. J. Gross, “Delayed stochastic
+
+ber of practical decoder implementation decisions were then highlighted, before providing background information on the
+
+decoding of LDPC codes,” IEEE Trans. Signal Process., vol. 59, no. 11, pp. 5617–5626, Nov. 2011. [11] G. Sundararajan, C. Winstead, and E. Boutillon, “Noisy gradient descent
+
+structure of FPGAs and the differences between those produced by the main two FPGA vendors. In Section III, the results from an extensive survey were presented in a condensed form, fea-
+
+bit-flip decoding for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 10, pp. 3385–3400, Oct. 2014. [12] G. Sarkis, S. Hemati, S. Mannor, and W. J. Gross, “Stochastic decoding of LDPC codes over GF(q),” IEEE Trans. Commun., vol. 61, no. 3,
+
+turing only a subset of the rows and columns available in the
+
+pp. 939–950, Mar. 2013.
+
+online version. The remainder of Section III was then devoted to describing the parameters and characteristics used in the
+
+[13] S. S. Tehrani, C. Jego, B. Zhu, and W. J. Gross, “Stochastic decoding of linear block codes with high-density parity-check matrices,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5733–5739, Nov.
+
+evaluation, discussing the significance of each and how it was measured. Section IV then illustrated, characterised and discussed the complex interplay between all of these parameters
+
+2008. [14] L. Zhang, L. Gui, Y. Xu, and W. Zhang, “Configurable multi-rate
+decoder architecture for QC-LDPC codes based broadband broadcasting system,” IEEE Trans. Broadcast., vol. 54, no. 2, pp. 226–235, Jun.
+
+and characteristics, using plots of the results to show how each
+
+2008.
+
+one was affected by the others. Subsequently, using the experience gained from compiling the survey results, Section V
+
+[15] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. J. Wainwright, “Design of LDPC decoders for improved low error rate performance: Quantization and algorithm choices,” IEEE Trans. Commun., vol. 57,
+
+presented a list of recommendations for future publications of FPGA-based LDPC decoder designs, in order to facilitate fairer, more comprehensive comparisons in future. Finally, we have
+
+no. 11, pp. 3258–3268, Nov. 2009. [16] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput
+low-density parity-check decoder architectures,” in Proc. IEEE Global Telecommun. Conf., Nov. 2001, pp. 3019–3024.
+
+identified a number of opportunities for future FPGA-based [17] M. Karkooti, P. Radosavljevic, and J. R. Cavallaro, “Configurable LDPC
+
+LDPC decoder designs. Perhaps the most significant conclusion that can be drawn
+
+decoder architectures for regular and irregular codes,” J. Signal Process. Syst., vol. 53, nos. 1–2, pp. 73–88, May 2008. [18] R. Tanner, “A recursive approach to low complexity codes,” IEEE
+
+from the research described in this paper is that it is extremely
+
+Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+
+difficult to predict how two different FPGA-based LDPC decoder designs might compare, when they are implemented
+
+[19] L. Zhang, J. Huang, and L. L. Cheng, “Reliability-based high-efficient dynamic schedules for belief propagation decoding of LDPC codes,” in Proc. IEEE Int. Conf. Signal Process., Oct. 2012, pp. 1388–1392.
+
+using different codes, architectures, algorithms, schedules and [20] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-
+
+hardware. This in itself lends further weight to the advantage of using FPGAs for prototyping designs, utilising their
+
+passing schedules for LDPC decoding,” IEEE Trans. Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007. [21] Y.-M. Chang, A. I. V. Casado, M.-C. F. Chang, and R. D. Wesel, “Lower-
+
+re-programmability in an efficient design-implement-test devel-
+
+complexity layered belief-propagation decoding of LDPC codes,” in
+
+opment cycle. To do so requires accurate comparisons amongst competing designs to be made, which can only be achieved
+
+Proc. IEEE Int. Conf. Commun., May 2008, pp. 1155–1160. [22] A. I. Vila Casado, M. Griot, and R. D. Wesel, “Informed dynamic
+scheduling for belief-propagation decoding of LDPC codes,” in Proc.
+
+using the list of recommendations provided in Section V-B.
+
+IEEE Int. Conf. Commun., Jun. 2007, pp. 932–937.
+
+However, even having completed this process, it may still be difficult to say which design is superior, as there is such a com-
+
+[23] A. I. Vila Casado, M. Griot, and R. D. Wesel, “Improving LDPC decoders via informed dynamic scheduling,” in Proc. IEEE Inf. Theory Workshop, Sep. 2007, pp. 208–213.
+
+plex interplay of characteristics that each will inevitably have [24] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and
+
+its own advantages and disadvantages.
+
+the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+
+[25] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity
+
+min-sum algorithm for decoding LDPC codes with low error-floor,”
+
+REFERENCES
+
+IEEE Trans. Circuits Syst. I, Reg. Paper, vol. 61, no. 7, pp. 2150–2158,
+
+Jul. 2014.
+
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. [26] Y. Chen and K. K. Parhi, “Overlapped message passing for quasi-cyclic
+
+Theory, vol. IT-8, no. 12, pp. 21–28, Jan. 1962.
+
+low-density parity check codes,” IEEE Trans. Circuits Syst. I, Reg.
+
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of
+
+Paper, vol. 51, no. 6, pp. 1106–1113, Jun. 2004.
+
+low density parity check codes,” Electron. Lett., vol. 32, no. 18, p. 1645, [27] C. Spagnol, W. Marnane, and E. Popovici, “FPGA implementations of
+
+Aug. 1996.
+
+LDPC over GF(2 m) decoders,” in Proc. IEEE Workshop Signal Process.
+
+[3] Standard for Information Technology—Local and Metropolitan Area
+
+Syst., Oct. 2007, pp. 273–278.
+
+Networks—Specific Requirements—Part 11: Wireless LAN Medium [28] V. A. Chandrasetty and S. M. Aziz, “An area efficient LDPC decoder
+
+Access Control (MAC) and Physical Layer (PHY), IEEE 802.11n-2009,
+
+using a reduced complexity min-sum algorithm,” Integr. VLSI J., vol. 45,
+
+2009.
+
+no. 2, pp. 141–148, Mar. 2012.
+
+[4] Standard for Local and Metropolitan Area Networks—Part 16: Air [29] A. Orlitsky, K. Viswanathan, and J. Zhang, “Stopping set distribution
+
+Interface for Fixed Broadband Wireless Access Systems, IEEE 802.16-
+
+of LDPC code ensembles,” IEEE Trans. Inf. Theory, vol. 51, no. 3,
+
+2004, 2004.
+
+pp. 929–953, Mar. 2005.
+
+[5] ETSI. (2013). ETSI EN 302 307 v1.3.1 Digital Video Broadcasting [30] T. Tian, C. R. Jones, J. D. Villasenor, and R. D. Wesel, “Selective
+
+(DVB); Second Generation [Online]. Available: https://www.dvb.org/
+
+avoidance of cycles in irregular LDPC code construction,” IEEE Trans.
+
+standards/dvb-s2
+
+Commun., vol. 52, no. 8, pp. 1242–1247, Aug. 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+HAILES et al.: SURVEY OF FPGA-BASED LDPC DECODERS
+
+1121
+
+[31] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[32] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1788–1793, Aug. 2004.
+[33] L. Chen, J. Xu, I. Djurdjevic, and S. Lin, “Near-Shannon-limit quasicyclic low-density parity-check codes,” IEEE Trans. Commun., vol. 52, no. 7, pp. 1038–1042, Jul. 2004.
+[34] E. Eleftheriou and D. M. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[35] E. Yeo, B. Nikolic, and V. Anantharam, “Architectures and implementations of low-density parity check decoding algorithms,” in Proc. Midwest Symp. Circuits Syst., Aug. 2002, pp. 437–440.
+[36] S. S. Tehrani, S. Mannor, and W. J. Gross, “Fully parallel stochastic LDPC decoders,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5692–5703, Nov. 2008.
+[37] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible LDPC decoder,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 54, no. 6, pp. 542–546, Jun. 2007.
+[38] T. Zhang, Z. Wang, and K. K. Parhi, “On finite precision implementation of low density parity check codes decoder,” in Proc. IEEE Int. Symp. Circuits Syst., May 2001, pp. 202–205.
+[39] S. ten Brink, “Convergence behavior of iteratively decoded parallel concatenated codes,” IEEE Trans. Commun., vol. 49, no. 10, pp. 1727– 1737, Jan. 2001.
+[40] X. Zuo, R. G. Maunder, and L. L. Hanzo, “Design of fixed-point processing based LDPC codes using EXIT charts,” in Proc. IEEE Veh. Technol. Conf., San Francisco, CA, USA, Jan. 2011, pp. 1–5.
+[41] Z. Cui and Z. Wang, “A 170 Mbps (8176, 7156) quasi-cyclic LDPC decoder implementation with FPGA,” in Proc. IEEE Int. Symp. Circuits Syst., May 2006, pp. 5095–5098.
+[42] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “A bit-serial approximate min-sum LDPC decoder and FPGA implementation,” in Proc. IEEE Int. Symp. Circuits Syst., May 2006, pp. 1–4.
+[43] Y. Sun, Y. Zhang, J. Hu, and Z. Zhang, “FPGA implementation of nonbinary quasi-cyclic LDPC decoder based on EMS algorithm,” in Proc. Int. Conf. Commun. Circuits Syst., Jul. 2009, pp. 1061–1065.
+[44] I. Kuon, R. Tessier, and J. Rose, “FPGA architecture: Survey and challenges,” Found. Trends Electron. Des. Autom., vol. 2, no. 2, pp. 135–253, 2007.
+[45] S. S. Tehrani, S. Mannor, and W. J. Gross, “An area-efficient FPGAbased architecture for fully-parallel stochastic LDPC decoding,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2007, pp. 255–260.
+[46] P. Hailes, L. Xu, R. G. Maunder, B. M. Al-Hashimi, and L. L. Hanzo. (2015). Survey Results for ‘A Survey of FPGA-Based LDPC Decoders [Online]. Available: http://dx.doi.org/10.5258/SOTON/384946
+[47] P. Bhagawat, M. Uppal, and G. Choi, “FPGA based implementation of decoder for array low-density parity-check codes,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., Mar. 2005, pp. 29–32.
+[48] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Partially-parallel LDPC decoder based on high-efficiency messagepassing algorithm,” in Proc. IEEE Int. Conf. Comput. Des., Oct. 2005, pp. 503–510.
+[49] T. Zhang and K. K. Parhi, “A 54 Mbps (3,6)-regular FPGA LDPC decoder,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2002, pp. 127–132.
+[50] K. Wang, N. Liu, B. Sun, and H. Sun, “A configurable FPGA implementation of PEG-based PS-LDPC decoder,” in Proc. Int. Conf. Pervasive Comput. Signal Process. Appl., Sep. 2010, pp. 670–674.
+[51] Y. Chen and D. E. Hocevar, “A FPGA and ASIC implementation of rate 1/2, 8088-b irregular low density parity check decoder,” in Proc. IEEE Global Telecommun. Conf., Dec. 2003, pp. 113–117.
+[52] F. Demangel, N. Fau, N. Drabik, F. Charot, and C. Wolinski, “A generic architecture of CCSDS low density parity check decoder for near-earth applications,” in Proc. Conf. Des. Autom. Test Eur., Apr. 2009, pp. 1242– 1245.
+[53] V. A. Chandrasetty and S. M. Aziz, “A highly flexible LDPC decoder using hierarchical quasi-cyclic matrix with layered permutation,” J. Netw., vol. 7, no. 3, pp. 441–450, Mar. 2012.
+[54] P. Saunders and A. Fagan, “A high speed, low memory FPGA based LDPC decoder architecture for quasi-cyclic LDPC codes,” in Proc. Int. Conf. Field Program. Logic Appl., Aug. 2006, pp. 1–6.
+[55] Y.-H. Chien and M.-K. Ku, “A high throughput H-QC LDPC decoder,” in Proc. IEEE Int. Symp. Circuits Syst., May 2007, pp. 1649–1652.
+
+[56] V. A. Chandrasetty and S. M. Aziz, “A multi-level hierarchical quasicyclic matrix for implementation of flexible partially-parallel LDPC decoders,” in Proc. IEEE Int. Conf. Multimedia Expo, Jul. 2011, pp. 1–7.
+[57] F. Charot, C. Wolinski, N. Fau, and F. Hamon, “A new powerful scalable generic multi-standard LDPC decoder architecture,” in Proc. Int. Symp. Field Program. Custom Comput. Mach., Apr. 2008, pp. 314–315.
+[58] J. Sha, M. Gao, Z. Zhang, L. Li, and Z. Wang, “An FPGA implementation of array LDPC decoder,” in Proc. IEEE Asia Pac. Conf. Circuits Syst., Dec. 2006, pp. 1675–1678.
+[59] Z. Cao, J. Kang, and P. Fan, “An FPGA implementation of a structured irregular LDPC decoder,” in Proc. IEEE Int. Symp. Microw. Antenna Propag. EMC Technol. Wireless Commun., Aug. 2005, pp. 1050–1053.
+[60] S. M. E. Hosseini, K. S. Chan, and W. L. Goh, “A reconfigurable FPGA implementation of an LDPC decoder for unstructured codes,” in Proc. IEEE Int. Conf. Signals Circuits Syst., Nov. 2008, pp. 1–6.
+[61] L. Yang, H. Liu, and C. J. R. Shi, “Code construction and FPGA implementation of a low-error-floor multi-rate low-density parity-check code decoder,” IEEE Trans. Circuits Syst. I, Reg. Paper, vol. 53, no. 4, pp. 892–904, Apr. 2006.
+[62] H. Ding, S. Yang, W. Luo, and M. Dong, “Design and implementation for high speed LDPC decoder with layered decoding,” in Proc. WRI Int. Conf. Commun. Mobile Comput., Jan. 2009, pp. 156–160.
+[63] Y. Pei, L. Yin, and J. Lu, “Design of irregular LDPC codec on a single chip FPGA,” in Proc. IEEE Circuits Syst. Symp. Emerging Technol., May 2004, pp. 221–224.
+[64] M. Gomes, G. Falcão, V. Silva, V. Ferreira, A. Sengo, and M. Falcão, “Flexible parallel architecture for DVB-S2 LDPC decoders,” in Proc. IEEE Global Telecommun. Conf., Nov. 2007, pp. 3265–3269.
+[65] X. Chen, Q. Huang, S. Lin, and V. Akella, “FPGA based low-complexity high-throughput tri-mode decoder for quasi-cyclic LDPC codes,” in Proc. Annu. Allert. Conf. Commun. Control Comput., Sep. 2009, pp. 600–606.
+[66] C. Beuschel and H. Pfleiderer, “FPGA implementation of a flexible decoder for long LDPC codes,” in Proc. Int. Conf. Field Program. Logic Appl., Sep. 2008, pp. 185–190.
+[67] V. A. Chandrasetty and S. M. Aziz, “FPGA implementation of a LDPC decoder using a reduced complexity message passing algorithm,” J. Netw., vol. 6, no. 1, pp. 36–45, Jan. 2011.
+[68] V. A. Chandrasetty and S. M. Aziz, “FPGA implementation of high performance LDPC decoder using modified 2-bit min-sum algorithm,” in Proc. Int. Conf. Comput. Res. Develop., May 2010, pp. 881–885.
+[69] Z. He, S. Roy, and P. Fortier, “FPGA implementation of LDPC decoders based on joint row-column decoding algorithm,” in Proc. IEEE Int. Symp. Circuits Syst., May 2007, pp. 1653–1656.
+[70] A. Blad and O. Gustafsson, “FPGA implementation of rate-compatible QC-LDPC code decoder,” in Proc. Eur. Conf. Circuit Theory Des., Aug. 2011, pp. 777–780.
+[71] S. S. Khati, P. Bisht, and S. C. Pujari, “Improved decoder design for LDPC codes based on selective node processing,” in Proc. World Congr. Inf. Commun. Technol., Oct. 2012, pp. 413–418.
+[72] Z. Zhang, L. Dolecek, B. Nikolic, V. Anantharam, and M. Wainwright, “Investigation of error floors of structured low- density parity-check codes by hardware emulation,” in Proc. IEEE Global Telecommun. Conf., Nov. 2006, pp. 1–6.
+[73] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory system optimization for FPGA-based implementation of quasi-cyclic LDPC codes decoders,” IEEE Trans. Circuits Syst. I, Reg. Paper, vol. 58, no. 1, pp. 98–111, Jan. 2011.
+[74] R. Zarubica, S. G. Wilson, and E. Hall, “Multi-Gbps FPGA-based low density parity check (LDPC) decoder design,” in Proc. IEEE Global Telecommun. Conf., Nov. 2007, pp. 548–552.
+[75] Y. Dai, Z. Yan, and N. Chen, “Optimal overlapped message passing decoding of quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr. Syst., vol. 16, no. 5, pp. 565–578, May 2008.
+[76] N. Chen, Y. Dai, and Z. Yan, “Partly parallel overlapped sum-product decoder architectures for quasi-cyclic LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst., Oct. 2006, pp. 220–225.
+[77] H. Li, Y. S. Park, and Z. Zhang, “Reconfigurable architecture and automated design flow for rapid FPGA-based LDPC code emulation,” in Proc. ACM/SIGDA Int. Symp. Field Program. Gate Arrays, Feb. 2012, pp. 167–170.
+[78] C. Spagnol, W. Marnane, and E. Popovici, “Reduced complexity, FPGA implementation of quasi-cyclic LDPC decoder,” in Proc. Eur. Conf. Circuit Theory Des., Aug. 2005, pp. 289–292.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+1122
+
+IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 18, NO. 2, SECOND QUARTER 2016
+
+[79] M. Karkooti and J. R. Cavallaro, “Semi-parallel reconfigurable architectures for real-time LDPC decoding,” in Proc. Int. Conf. Inf. Technol. Coding Comput., Apr. 2004, pp. 579–585.
+[80] L. Xiong, Z. Tan, and D. Yao, “The moderate-throughput and memoryefficient LDPC decoder,” in Proc. Int. Conf. Signal Process., Nov. 2006, pp. 1–4.
+[81] Softjin Technologies. LDPC Decoder for DVB-S2 [Online]. Available: http://www.softjin.com/IP_Datasheet_PDF_version/LDPC_Decoder_ datasheet.pdf
+[82] Unicore Systems Ltd. (2011). CCSDS C2 LDPC Encoder/ Decoder IP Cores [Online]. Available: http://unicore.co.ua/uploads/ File/CCSDS_XX_user_manual(netlist).pdf
+[83] Unicore Systems Ltd. (2009). IEEE 802.16e (WiMAX) LDPC Decoder IP Core [Online]. Available: http://unicore.co.ua/uploads/ File/ldpc_dec_brief.pdf
+[84] Blue Rum Consulting Limited. (2013). 802.11n/802.11ac LDPC Decoder [Online]. Available: http://www.bluerum.co.uk/consulting/ datasheets/BRC008_LdpcDecRtlDs.pdf
+[85] Turbo Concept. ITU G.hn LDPC Decoder [Online]. Available: http:// www.turboconcept.com/prod_tc4400.php
+[86] Creonic GmbH. (2014). IEEE 802.11ad WiGig LDPC Decoder Product Brief [Online]. Available: http://www.creonic.com/images/ product_briefs/PB_Creonic_IEEE_802_11ad_WiGig_LDPC_Decoder_ IP.pdf
+[87] IPrium Ltd. (2013). I.6 LDPC Encoder/Decoder IP Core Short Description [Online]. Available: https://www.iprium.com/bins/pdf/ iprium_ug_i6_ldpc_codec.pdf
+[88] TrellisWare Technologies. (2014). Flexible Low-Density ParityCheck (F-LDPC) [Online]. Available: http://www.trellisware. com/products/fec-products/f-ldpc/
+[89] Logic Fruit Technologies. (2010). LDPC Decoder IP Specification [Online]. Available: http://www.logic-fruit.com/resource/LDPC Decoder IP.pdf
+[90] L. L. Hanzo, S. X. Ng, T. Keller, and W. Webb, Quadrature Amplitude Modulation. Hoboken, NJ, USA: Wiley/IEEE Press, 2004.
+Peter Hailes received the degree in electronic engineering (with mobile and secure systems) from the Department of Electronics and Computer Science, University of Southampton, Southampton, U.K., and the master’s degree (with first class) in 2013, where he is currently pursuing the Ph.D. in advanced hardware implementations of LDPC decoders. His research interests include field-programmable gate arrays, error correction coding, embedded hardware/software design, and high-level software development.
+Lei Xu received B.S.E.E. and M.S.E.E. degrees from Tsinghua University, Beijing, China, and the Ph.D. degree in wireless communication from the University of Southampton, Southampton, U.K. He has been working with Altera for more than seven years in system solution engineering and marketing. Currently, he is a Wireless System Architect, instrumental to define and drive strategic direction and solution roadmap of wireless business unit of Altera. Previously, he has worked on various wireless system solutions in Altera such as DPD, MIMO, and Turbo SIC. Prior to that, he has worked as the system algorithmic/architecture expert with VIA Technologies and Agilent Technologies on various wireless and broadcasting systems, such as DAB, DVB, GSM/WCDMA, WiFI, and LTE. He has authored over 20 leading journal and conference papers and holds 11 patents.
+
+Robert G. Maunder (S’03–M’08–SM’12) received the B.Eng. degree (Hons.) in electronic engineering in 2003 and the Ph.D. degree in wireless communications in 2007, both at the Department of Electronics and Computer Science, University of Southampton, Southampton, U.K. He became a Lecturer in 2007, and an Associate Professor in 2013, both at the University of Southampton. His research interests include joint source/channel coding, iterative decoding, irregular coding, and modulation techniques.
+Bashir M. Al-Hashimi (M’99–SM’01–F’09) is a Professor of computer engineering and the Dean of the Faculty of Physical Sciences and Engineering at University of Southampton, Southampton, U.K. He is an ARM Professor of Computer Engineering and the Co-Director of the ARM-ECS Research Centre. His research interests include methods, algorithms, and design automation tools for energy efficient of embedded computing systems. He has authored over 300 technical papers, authored or coauthored 5 books, and graduated 31 Ph.D. students.
+Lajos Hanzo (M’91–SM’92–F’04) received the M.S. degree in electronics and the Ph.D. degree from the Technical University of Budapest, Budapest, Hungary, in 1976 and 1983, respectively; the D.Sc. degree from the University of Southampton, Southampton, U.K., in 2004; and the “Doctor Honoris Causa” degree from the Technical University of Budapest in 2009. During his 38-year career in telecommunications, he has held various research and academic posts in Hungary, Germany and the U.K. Since 1986, he has been with the School of Electronics and Computer Science, University of Southampton, Southampton, U.K., where he holds the Chair in telecommunications. He has successfully supervised about 100 Ph.D. students, coauthored 20 John Wiley/IEEE Press books on mobile radio communications totalling in excess of 10 000 pages, published 1500+ research entries at IEEE Xplore, acted both as TPC and General Chair of IEEE conferences, presented keynote lectures and has been awarded a number of distinctions. Currently, he is directing a 60-strong academic research team, working on a range of research projects in the field of wireless multimedia communications sponsored by industry, the Engineering and Physical Sciences Research Council (EPSRC) U.K., the European Research Councils Advanced Fellow Grant, and the Royal Society’s Wolfson Research Merit Award. He is an enthusiastic supporter of industrial and academic liaison and offers a range of industrial courses. He is also a Governor of the IEEE Vehicular Technology Society. From 2008 to 2012, he was the Editor-in-Chief of the IEEE Press and a Chaired Professor at Tsinghua University, Beijing, China. His research is funded by the European Research Council’s Senior Research Fellow Grant. He is a Fellow of the Royal Academy of Engineering, the Institution of Engineering and Technology, and the European Association for Signal Processing. In 2009, he was recipient of the honorary doctorate by the Technical University of Budapest, and in 2015, by the University of Edinburgh, Edinburgh, U.K.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:37 UTC from IEEE Xplore. Restrictions apply.
+
+

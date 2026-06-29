@@ -1,0 +1,563 @@
+Rate-Compatible LDPC Code Decoder Using Check-Node Merging
+
+Anton Blad, Oscar Gustafsson Electronics Systems, Linko¨ping University
+SE-581 83 Linko¨ping, Sweden Email: antonb@isy.liu.se, oscarg@isy.liu.se
+
+Meng Zheng, Zesong Fei RCDCT, Modern Communication Lab, Dept. of E. E.
+Beijing Institute of Technology, Beijing, China Email: zmra@bit.edu.cn, feizesong@bit.edu.cn
+
+Abstract—The use of rate-compatible error correcting codes offers several advantages as compared to the use of fixed-rate codes: a smooth adaptation to the channel conditions, the possibility of incremental Hybrid ARQ schemes, as well as sharing of the encoder and decoder implementations between the codes of different rates. In this paper, the implementation of a decoder for rate-compatible quasi-cyclic LDPC codes is considered. Assuming the use of a code ensemble obtained through puncturing of a low-rate mother code, the decoder achieves significantly reduced convergence rates by merging the check node neighbours of the punctured variable nodes. The architecture uses the minsum algorithm with serial node processing elements to efficiently handle the wide spread of node degrees that results from the merging of the check nodes.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes [1], [2] have emerged as an error-correcting scheme for many wired and wireless technologies. Communication standards that have adopted LDPC codes as either mandatory or optional channel coding schemes include DVB-S2, IEEE 802.11n, IEEE 802.16e, and IEEE 802.3an. As the theoretical performance of LDPC codes significantly exceed those of traditional coding schemes, their use is expected to increase.
+For both traditional convolutional codes and Turbo codes, puncturing is commonly used to achieve rate-compatibility [3]. The benefits of rate-compatibility are many. Sharing of the encoder and decoder for different rates is permitted by the fact that higher-rate codes consist of a subset of the bits in the lower-rate codes. Also, rate-compatibility allows incremental redundancy communication through type-II Hybrid ARQ [3], [4] and relaying [5]. However, most of the current LDPC implementations use dedicated codes for the different rates, and only recently has rate-compatibility been investigated for LDPC codes.
+The straight-forward decoding algorithm [6] for ratecompatible LDPC codes uses the graph of the low-rate mother code and initializes the prior log-likelihood ratios of the punctured nodes to zero. However, this leads to many superfluous computations as the inputs to the punctured nodes are already known and in many cases do not affect the computations of the messages. In [7], an improved algorithm using merging of check nodes was proposed, that significantly reduces the convergence time of the decoder. In addition to reduce the average number of iterations required for convergence, the
+
+algorithm also reduces the complexity of each iteration. The algorithm was later formalized in [8] and extended to cover punctured variable nodes of arbitrary degree.
+In this paper, the problem of designing an efficient decoder architecture for rate-compatible quasi-cyclic LDPC (QCLDPC) codes utilizing check-merging is considered. There are two main considerations when designing such an architecture. First, the irregularity of the degrees of the check nodes must be efficiently handled. The decoder must also be able to dynamically and efficiently adapt to the varying degree distributions for the different puncturing sequences. Second, as the resulting parity-check matrices are generally not restricted to sub-matrices that are either zero or shifted identity matrices, the normal methods for parallelizing data accesses do not work. The proposed architecture in this paper builds upon the check-serial architecture in [9]. Being checkserial, the check node function unit efficiently handles check nodes of different degrees. The architecture also parallelizes data accesses. However, parallel check node operations no longer necessarily use independent data. The solution to this problem with data congestions is the main contribution of this paper.
+The remainder of the paper is organized as follows. In Sec. II, LDPC codes and rate-compatibility are reviewed. In Sec. III, the check-node merging decoding algorithm is discussed. Section IV describes the proposed architecture that implements the check-node merging algorithm. Finally, conclusions are in Sec. V.
+II. RATE-COMPATIBLE LDPC CODES
+An LDPC code is defined as a linear block code with a very sparse parity-check matrix H [1], [2]. Commonly, the code is visualized using a Tanner graph [10], a bipartite graph containing a set of variable nodes and a set of check nodes. The variable nodes correspond to the columns of the paritycheck matrix, and the check nodes correspond to the rows. There is an edge between a variable node and a check node if the intersection between the corresponding column and row in the parity-check matrix is one. An example of a Tanner graph is shown in Fig. 1.
+Commonly, QC-LDPC codes are used to enable efficient implementations of encoders and decoders. QC-LDPC codes are defined from a base Tanner graph by replicating the nodes.
+
+978-1-4244-9721-8/10/$26.00 ©2010 IEEE
+
+1119
+
+Asilomar 2010
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:24:32 UTC from IEEE Xplore. Restrictions apply.
+
+Variable nodes
+Check nodes
+Fig. 1. Tanner graph example
+
+Fig. 2. Example of construction of a QC-LDPC code with an expansion factor of 4.
+1 2
+3
+Fig. 3. Example of check-merging for a degree-2 punctured variable node.
+
+A code with an expansion factor of z is defined by replicating each variable node and check node z times, and replacing each edge with z permuted edges between the corresponding nodes. An example of the construction of a QC-LDPC code with an expansion factor of 4 is shown in Fig. 2.
+Decoding of LDPC codes is commonly done using the sumproduct algorithm [6], defined on the Tanner graph of the code. The algorithm iteratively passes soft bit information between the variable nodes and the check nodes until the hard decision of the pseudo-posterior bit probabilities constitute a valid codeword. The min-sum algorithm is a simplification of the sum-product algorithm that significantly reduces the memory requirements of the decoder. The proposed architecture in this paper is based on the generalized offset min-sum algorithm [11]. In the log-likelihood ratio (LLR) domain, the variableto-check message αnm from variable node n to check node m, the check-to-variable message βmn from check node m to variable n, and the pseudo-posterior bit probability λn of variable node n are defined as
+
+αnm = γn +
+
+βm n
+
+(1)
+
+⎛ m ∈M(n)\m
+
+⎞
+
+βmn = ⎝
+
+sign αn m⎠ ·
+
+n ∈N (m)\n
+
+· max min |αn m| − c, 0
+
+(2)
+
+n ∈N (m)\n
+
+λn = γn +
+
+βmn,
+
+(3)
+
+m∈M(n)
+
+where γn is the prior bit probability of variable node n, M(n) denotes the neighbors of variable node n, N (m) denotes the neighbors of check node m, and c is a positive normalization constant.
+A class of rate-compatible codes is defined as a class of codes where the codewords in the higher-rate codes can be obtained by removing bits in the codewords of lower-rate codes [3]. Thus the information content is the same in the different codes, but the amount of parity information differs. There are two main methods of defining such classes of codes: puncturing and extension. Using puncturing, a low-rate mother code is designed and the higher-rate codes are then defined by removing bits at fixed positions in the blocks. Using extension, lower-rate codes are defined from a high-rate mother code by adding additional parity bits. The methods in this paper are applicable for rate-compatible codes obtained through both puncturing and extension, but for ease of understanding it is assumed that puncturing has been used.
+
+III. CHECK NODE MERGING DECODING ALGORITHM
+
+The check node merging algorithm as proposed in [8] is briefly reviewed here. The general idea is explained by the three steps in Fig. 3:
+
+1) Define punctured variable nodes and associated purged check nodes.
+2) Merge the edges of the purged check nodes into the other neighbors of its punctured variable node.
+3) Remove the punctured variable nodes and the purged check nodes.
+Formally, given a parity-check matrix H, a set of punctured variable nodes p and a set of purged check nodes c, define the matrix H˜ by permuting the rows and columns of H such that p and c end up at the right and bottom, respectively. H˜ can then be written on the form
+
+H˜ =
+
+HA HB
+
+BA BB
+
+,
+
+where BB is square and contains p and c. Define the check node merged parity-check matrix HP as
+
+HP = HA + BABB−1HB.
+
+The matrix HP is then used to decode received blocks punctured with the sequence p.
+The main benefit of check node merging is a significant reduction in the convergence time of the decoder. Figures 4 and 5 show the block error rate and average number of iterations used for decoding the WiMAX rate-1/2 code punctured to several higher rates. As seen, using check node merging reduces the average number of iterations significantly, while also providing a performance boost. All punctured variable nodes are of degree 2.
+The schedule of the decoder and relevant definitions are shown in Fig. 6:
+
+1120
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:24:32 UTC from IEEE Xplore. Restrictions apply.
+
+Block error rate
+
+Check node processing schedule
+
+100
+
+Bit-sum block Check node group
+
+R=3/4
+
+R=3/4, merged
+
+Layer
+
+R=3/5
+
+10−1
+
+R=3/5, merged
+
+R=1/2
+
+clk k
+
+clk k+1
+
+clk k+2 clk k+3
+
+10−2
+
+clk k+4
+
+clk k+5
+
+clk k+6 clk k+7
+
+10−3
+Fig. 6. Schedule of decoder on original parity-check matrix.
+
+10−4
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+E /N [dB]
+
+b0
+
+Fig. 4. Performance of check node merging decoding algorithm used for decoding the rate-1/2 WiMAX code punctured to different rates.
+
+20 R=3/4
+
+R=3/4, merged
+
+R=3/5
+
+15
+
+R=3/5, merged
+
+R=1/2
+
+10
+
+Average number of iterations
+
+5
+
+0
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Eb/N0 [dB]
+
+Fig. 5. Average number of iterations of check node merging decoding algorithm used for decoding the rate-1/2 WiMAX code punctured to different rates.
+
+• A layer is a group of check nodes where all the involved variable nodes are independent. It may be bigger than the expansion factor of the base parity-check matrix.
+• A check node group is a number of check nodes that are processed in parallel. The variable nodes in the check node groups are processed serially, with the bit-sums for each variable node updated after each operation.
+• A bit-sum block is the bit-sums of the variable nodes involved in the check-node groups. The bit-sums in a bit-sum block are accessed in parallel and are stored in different memories. One bit-sum block is read per clock cycle, and then re-written one per clock cycle after the processing delay of the routing networks and check function units.
+
+Checkmerged layer
+
+Data congestion!
+
+Fig. 7. Schedule of decoder on check node merged parity-check matrix.
+
+An example of a check node merged parity-check matrix is shown in Fig. 7. As the sub-matrices are no longer guaranteed to have column weights of at most one, the variable nodes within a layer may be dependent. This causes problems in the example shown, where the same bit-sums are used in several parity checks, but the re-written bit-sums only contain the updates from one of them. Also, problems may arise between check node groups as updated bit-sums may not have been rewritten to the memory when needed. The proposed architecture solves the problems by computing bit-sum differences rather than updated bit-sums, then adding these to the original bitsums in a shift register with programmable feed-back to allow bit-sums to receive several updates.
+As the check nodes in a check node group are processed in parallel, check node merging can only be used if all the check nodes in the check node group are purged. This is not a major limitation, however, as puncturing sequences are normally defined on the base matrix of the code and then expanded to the used block length. Thus, at most one check node group needs to have both purged and non-purged check nodes, and this check node group is then processed by initializing the punctured variable nodes to zero.
+The complexities of the check node merged matrices of the WiMAX rate-2/3a code and the WiMAX rate-1/2 code are shown in Fig. 8. It is assumed that the maximum expansion factor of 96 is used and that the check node group size is 24. The zig-zag nature of the curves are due to check node groups that are not fully punctured. The maximum check node degrees of the same matrices are shown in Fig. 9. These naturally depend on the puncturing sequences and the set of purged
+
+1121
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:24:32 UTC from IEEE Xplore. Restrictions apply.
+
+Maximum check node degree
+
+8000
+
+7500
+
+Number of edges
+
+7000
+
+6500
+
+6000
+
+5500
+
+5000
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+0.9
+
+1
+
+Punctured rate
+
+Fig. 8. Number of edges in check node merged matrices of the WiMAX rate-2/3a code (upper) and the WiMAX rate-1/2 code (lower).
+
+50 R=1/2 R=2/3
+40
+
+30
+
+20
+
+10
+
+Decision memory Channel LLR
+
+Decision
+
+Bit-sum memory
+
+24 24 24x8
+Bit-sum update
+
+24x8
+
+24x7
+
+24x24 8-bit cyclic shift 24x24 7-bit cyclic shift
+
+24x8 24
+
+24x7
+
+CFU
+
+Counter
+rst(0)
+row input start
+
+in idx 5
+
+Counter
+rst(0)
+
+row output start
+
+out idx 5
+
+Fig. 10. Architecture of decoder utilizing check merging.
+
+in idx
+
+c2v old
+
+ChkMsg
+
+FIFO
+
+gen
+
+6
+
+c2v diff
+7
+
+S mem
+
+out idx
+FIFO
+
+ChkMsg 6 gen c2v new
+
+bitsum
+
+BitMsg sign
+
+gen v2c
+
+8
+
+magn5
+
+ms old
+Reg
+
+16
+
+MinSum update
+MinSum mem
+
+Reg ms new
+16
+
+Fig. 11. Check function unit.
+
+ms msg sign idx
+
+1 parity
+
+parity =1
+
+5 qidx
+
+CMP
+
+qidx
+
+A==B
+
+5 5 sign
+
+qmin qmin2
+
+qmin 0 qmin2 1
+
+smto2c
+
+c2v
+
+magn
+
+6
+
+Fig. 12. Check message generator.
+
+0
+
+0.4 0.5 0.6 0.7 0.8 0.9
+
+1
+
+Punctured rate
+
+Fig. 9. Maximum check node degree of check node merged matrices of WiMAX rate-2/3a code and WiMAX rate-1/2 code.
+
+check nodes that are used. These have been chosen in order to minimize the maximum check node degrees. However, the increase is significant towards the higher rates, making the check-serial architecture efficient.
+IV. CHECK NODE MERGING DECODER ARCHITECTURE
+An overview of the decoder architecture is shown in Fig. 10. The current pseudo-aposteriori bit estimates are stored in the 24 8-bit bit-sum memories. Bit-sums are read serially and routed to the correct check function unit (CFU) by the 8-bit cyclic shifter. Each CFU computes the difference between the old and the new check-to-variable message for each variable node neighbor. The updated values are then routed back through the 7-bit cyclic shifter and added to the old bit-sums. The two counters count the current input and output indexes of the neighbors of the currently processed check node.
+
+In the CFU, shown in Fig. 11, the old check-to-variable messages are stored for each of the check nodes’ neighbors. As the min-sum algorithm is used, only two values are needed. These are stored as 5-bit magnitudes along with a 5-bit index of the node with the minimum message and one bit containing the check node parity. These 16 bits are grouped together and stored in the min-sum memory. Along with the signs of each check-to-variable message stored in the S memory, the check message generator generates the old check-to-variable message in two’s complement 6-bit representation for each variable node neighbor. The old check-to-variable messages are subtracted from the bit-sum input to generate the variableto-check messages in the bit message generator. These are used by the min-sum update unit to compute the new min-sum values, which are subsequently stored in the min-sum memory. They are also sent to the second check message generator, which generates the new check-to-variable messages. The difference between the old and new check-to-variable message is computed, and sent to the bit-sum update unit.
+Figure 12 shows the check message generator, which consists of a mux to choose the correct check-to-variable message and a converter from signed magnitude to two’s complement.
+
+1122
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:24:32 UTC from IEEE Xplore. Restrictions apply.
+
+c2v
+6
+
+bitsum
+
+8
+
+9
+
+1
+
+2ctosm
+
+6
+
+5
+
+Fig. 13. Bit message generator.
+
+v2c sign v2c magn
+
+sign
+
+in idx min update
+
+O idx
+Reg
+en rst(0) 5
+row input start
+
+=1
+
+Reg
+en rst(0)
+
+O parity
+
+O parity O idx O min
+O min2
+
+ms msg
+
+1
+
+row input start
+
+offset 5
+
+msb0
+
+≥1 min2 sel &
+
+magn
+5
+
+1
+
+CMP
+
+≥1
+
+6
+
+x<O min
+
+min update
+
+CMP
+
+≥1 min2 update
+
+x<O min2
+
+5
+
+lsb
+
+msb0
+
+0
+
+O min
+Reg
+
+01
+
+en rst(31) 5
+
+min update
+
+row input start
+
+min2 sel 0
+
+O min2
+Reg
+
+O min 1
+
+en rst(31) 5
+
+min2 update
+
+row input start
+
+Fig. 14. Min-sum update unit.
+
+• An additional 24x24 7-bit cyclic shifter. • 24 8-bit shift registers with configurable length and
+arbitrary load. • Additionally, the length of the FIFO in the CFU must
+be increased to handle the larger maximum check node degrees.
+Using five bits to represent edge indexes, a maximum check node degree of 32 can be handled by the decoder. As seen in Fig. 9, for the WiMAX codes this translates to a maximum punctured rate of 6/7 for the rate-1/2 code and a maximum punctured rate of 8/9 for the rate-2/3a code.
+V. CONCLUSIONS
+In this paper, an architecture for decoding of rate-compatible QC-LDPC codes using the min-sum algorithm was suggested. The decoder uses check node merging to reduce the convergence time of the algorithm. The wide spread of check node degrees that results from the check merging is efficiently handled by the check-serial architecture. The main problem of check merging is that it removes the independence of check nodes that are computed in parallel. This problem is solved by modifying the check function unit to generate bit-sum differences, and introducing a bit-sum update unit that allows bit-sums to receive updates from several sources.
+
+Reg
+Reg Reg Reg
+
+new bitsum
+
+1
+
+1
+
+0
+
+0
+
+8 1
+
+0
+
+1
+
+9
+
+0
+
+sel (k-1) sel (k-2)
+
+sel (0) 8
+
+7
+
+old bitsum c2v diff
+
+Fig. 15. Bit-sum update unit.
+
+The bit message generator, shown in Fig. 13, generates the variable-to-check message by adding the inverted old checkto-variable message to the bit-sum and then converting the result back to signed magnitude representation.
+The min-sum update unit (MSU), shown in Fig. 14, is unchanged from the original in [9], and performs a basic search for the two minimum magnitudes in its input. A programmable offset value is used to correct for the overly optimistic estimates of the min-sum algorithm. Also, the parity of the check node is computed.
+In Fig. 15, the bit-sum update unit is shown. In the original architecture, a variable-length FIFO is used to match the delay of the old bit-sum values with the computation delay of the MSU. In the proposed architecture, muxes for reloading updated bit-sums have been added. These are used in the cases where bit-sums are required in several CFUs simultaneously, in order to update them with the new check-to-variable messages from all sources.
+The increased complexity of the check node merging decoder architecture consists of:
+
+ACKNOWLEDGMENT
+This work was financially supported by the Swedish Governmental Agency for Innovation Systems (VINNOVA) and the Chinese Ministry of Science and Technology (MOST) in the Sino-Swedish Strategic Cooperative Program on Next Generation Networks “IMT-Advanced and Beyond.”
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” Ph.D. dissertation, Massachusetts Institute of Technology, 1963.
+[2] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[3] J. Hagenauer, “Rate-compatible punctured convolutional codes (RCPC codes) and their applications,” IEEE Trans. Commun., vol. 36, no. 4, pp. 389–400, Apr. 1988.
+[4] R. Mantha and F. Kschischang, “A capacity-approaching hybrid ARQ scheme using turbo codes,” in Proc. Global Commun. Conf., 1999, pp. 2341–2345.
+[5] J. N. Laneman, G. W. Wornell, and D. N. C. Tse, “Cooperative diversity in wireless networks: efficient protocols and outage behavior,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 3062–3080, Dec. 2004.
+[6] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[7] J.-A. Kim, S.-R. Kim, D.-J. Shin, and S.-N. Hong, “Analysis of checknode merging decoding for punctured LDPC codes with dual-diagonal parity structure,” in Proc. Wireless Commun. Netw. Conf., 2007, pp. 572–576.
+[8] A. Blad, O. Gustafsson, M. Zheng, and Z. Fei, “Check-merged decoding of LDPC codes,” unpublished.
+[9] T.-C. Kuo and J. A. N. Willson, “A flexible decoder IC for WiMAX QC-LDPC codes,” in Proc. Custom Integrated Circuits Conf., 2008, pp. 527–530.
+[10] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[11] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+
+1123
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 03:24:32 UTC from IEEE Xplore. Restrictions apply.
+
+

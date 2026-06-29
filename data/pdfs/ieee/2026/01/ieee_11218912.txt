@@ -1,0 +1,1235 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+123
+
+Low Complexity Early Termination HARQ for URLLC: Analysis and Neural Network Design
+
+Faisal Nadeem , Member, IEEE, Chentao Yue , Member, IEEE, Ke Wang , Student Member, IEEE, and Mahyar Shirvanimoghaddam , Senior Member, IEEE
+
+Abstract—This paper presents the analysis and a proof-ofconcept design of the low-complexity early termination hybrid automatic repeat request (ET-HARQ) for ultra-reliable lowlatency communication (URLLC). In ET-HARQ, unfit packets are flagged for retransmission prior to decoding, a process that significantly diminishes decoding complexity and facilitates swift HARQ reporting. This characteristic makes ET-HARQ well-suited for URLLC applications. We analyze the impact of ET-HARQ on the packet error rate (PER), throughput, and complexity performance in the finite block length regime, taking into consideration cyclic redundancy check (CRC) limitations. Numerical results indicate that ET-HARQ significantly reduces the decoding complexity and improves throughput with little to no loss in the PER. In addition, ET-HARQ demonstrates resilience even with a short CRC, whereas the imperfections of a short CRC significantly impact PER reliability in standard HARQ. To validate our analysis, we also design a practical early termination mechanism involving belief propagation and neural network (BP-NN) to predict the decodability of the received packet. Testing with BCH and CRC-polar codes shows that it can reach up to a 70 % ∼ 80 % prediction accuracy with packet lengths less than 128 bits encoded with high-density linear block codes. Simulation shows that the BP-NN-based ET-HARQ has significantly lower complexity at this accuracy level than the standard HARQ with similar reliability.
+Index Terms—CRC, early decoding, fast HARQ, finite block length, low complexity decoding, ordered statistic decode, URLLC.
+I. INTRODUCTION
+T HE main focus of previous generations of mobile communication systems was to enable enhanced mobile
+broadband services for the purpose of delivering large files
+with high reliability and data rate [1]. Therefore, the com-
+munication design did not prioritize the latency of individual
+Received 19 July 2024; revised 4 February 2025 and 1 August 2025; accepted 16 October 2025. Date of publication 28 October 2025; date of current version 2 January 2026. This work was supported in part by the Australian Research Council Discovery Project under Grant DP220102736. The work of Mahyar Shirvanimoghaddam was supported in part by the European Commission, Horizon Europe MSCA Project, Flexible Channel Coding for 6G Short Packet Communication (Grant ID. 101062049) and in part by the Australian Research Council Discovery Project under Grant DP220102736. The work of Chentao Yue was supported by Australian Research Council DECRA under Grant DE250101332. The associate editor coordinating the review of this article and approving it for publication was L. Jin. (Corresponding author: Chentao Yue.)
+Faisal Nadeem, Chentao Yue, and Ke Wang are with the School of Electrical and Computer Engineering, The University of Sydney, Sydney, NSW 2006, Australia (e-mail: faisal.nadeem@sydney.edu.au; chentao.yue@ sydney.edu.au; ke.wang@sydney.edu.au).
+Mahyar Shirvanimoghaddam was with the Division of Information Science and Engineering, KTH Royal Institute of Technology, 100 44 Stockholm, Sweden. He is now with the School of Electrical and Computer Engineering, The University of Sydney, Sydney, NSW 2006, Australia (e-mail: mahyar. shirvanimoghaddam@sydney.edu.au).
+Digital Object Identifier 10.1109/TCOMM.2025.3626039
+
+data packets. As a result, long packets of data with multiple retransmission attempts of failing packets and complex encoder-decoder were successfully incorporated into the communication design to improve average packet error rate (PER) and throughput performance. The fifth generation (5G) and the future sixth generation (6G) of mobile standards are envisioned to support new services classified as Ultra-reliable low latency communication (URLLC) and massive machine type communication (mMTC) [2]. URLLC and mMTC are key enablers of services that can revolutionize many critical sectors of society, such as smart cities, smart agriculture, telehealth, industrial Internet of things for smart manufacturing, etc. [3]. Most of these services require communication with a target to achieve user plane latency below 1 ms and reliability above 99.9999% for a packet of size 32 bytes with or without retransmission [4].
+To meet such strict latency-reliability targets, the research on the design of powerful short block-length codes and efficient decoding techniques is prioritized [5], [6]. In the finite blocklength (FBL) regime, a performance gap to the Shannon limit is inevitable [7]. To address this, URLLC systems often employ mini-slot durations, allowing for one or two retransmissions of failing packets within the stringent packet-level latency budget [8]. While practical near maximum-likelihood (ML) decoding algorithms, such as order statistics decoding (OSD), can achieve performance close to the normal approximation bound [9] in the FBL regime, they come with significantly high decoding complexity [10]. Higher decoding complexity not only increases the latency but also limits the application’s scope, as many URLLC applications involve low-cost receivers with limited power. Thus, reliability, latency, and decoding complexity are intrinsically linked and equally critical for the success of URLLC [11]. For instance, while retransmissions enhance reliability by leveraging time and frequency diversity, they also introduce additional decoding effort per information block, which can increase latency. Therefore, a low-complexity decoding mechanism combined with a limited number of retransmission rounds is highly desirable for URLLC [12].
+A. Related Work
+Packet retransmission schemes such as automatic repeat request (ARQ) can enhance packet reliability by providing additional opportunities for lost packets and introducing time and frequency diversity, making the communication more resilient to channel fading and interference [13], [14]. Furthermore, retransmissions combined with error correction
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+124
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+known as hybrid-ARQ (HARQ) gradually increase the effec- etc. [25], [26]. Based on these tests, packets deemed unlikely
+
+tive packet length and improve the coding gain [15]. This to be decoded successfully are terminated early, and the
+
+ensures efficient resource utilization by dynamically adapting receiver waits for their retransmission while only promising
+
+the coding rate to channel conditions, with minimum overhead packets are selected for decoding [27]. This distinction high-
+
+[16]. Due to these reasons, HARQ has been the backbone lights a fundamental shift from traditional decoder-specific ET
+
+of contemporary communications standards such as fourth- methods toward a pre-decoding strategy that is agnostic to the
+
+generation (4G)
+
+underlying decoding algorithm. Additionally, our ET mecha-
+
+In standard HARQ, multiple retransmissions are allowed nism can complement existing decoder-specific ET methods.
+
+using feedback, where each round involves full decoding The proposed ET mechanism is designed using a compu-
+
+followed by a cyclic redundancy check (CRC) to identify the tationally efficient NN. Recently, very advanced procedures
+
+success or failing states of the packets. The full decoding of like NN-based classification of decodable and undecodable
+
+the failing packets in multiple attempts is a significant compu- packets have become more popular for their performance.
+
+tational overhead that can cause additional delays in upcoming This is because NN can exploit various quality metrics and
+
+packets [17]. Moreover, additional CRC-bits cause significant code structures to improve prediction accuracy [28], [29].
+
+throughput loss due to short block length, and fewer CRC- While NNs have also been explored for complete channel
+
+bits can cause unnecessary retransmission due to poor error decoding [30], [31], such decoders typically require massive
+
+detection capability [18]. These limitations restrict the use of architectures (100K-10M parameters) because they must solve
+
+standard HARQ retransmission for URLLC applications.
+
+the NP-hard problem of identifying the correct codeword from
+
+Significant effort has been dedicated to designing an effec- an exponential-size codebook. Moreover, recent theoretical
+
+tive HARQ scheme to facilitate URLLC applications [13], analysis [32] shows that achieving ultra-low error rates with
+
+[14], [17], [19], [20]. In the standard incremental redundancy learned decoders requires prohibitively large training sets. This
+
+HARQ (IR-HARQ) method, the transmitter sends the encoded motivates using NNs solely for pre-decoding ET classification
+
+packet with more parity bits (redundancy) whenever the decod- (decodable vs. undecodable), a simpler binary task that keeps
+
+ing fails. With each retransmission attempt of IR-HARQ, the the network dimension minimal.
+
+redundancy gradually increases, which increases the packet
+
+length and coding gain [21]. It is often assumed that the decoding process under HARQ happens instantly without any B. Contributions
+
+decoding delay. This assumption is not valid and cannot be In this paper, we study the performance of ET-HARQ
+
+ignored in the case of URLLC [13], [17], [19]. Furthermore, in terms of PER, decoding complexity, and throughput and
+
+a high percentage of packet retransmissions, with a full, decod- design an effective ET-HARQ approach. Specifically,
+
+ing attempt, after each retransmission round, can substantially • We propose ET-HARQ to highlight the nature of the
+
+increase the overall decoding complexity and delay [11]. Also,
+
+complexity-reliability trade-off with early termination. In
+
+the additional decoding delay of HARQ during retransmission
+
+ET-HARQ, the predicted undecodable packet (using the
+
+can cause queuing delays for the upcoming packets, which is
+
+early termination technique) can be dropped without per-
+
+highly deleterious for URLLC services.
+
+forming full decoding, leading to substantial complexity
+
+To reduce decoding complexity for both single transmission
+
+reduction. However, since ET-HARQ is applied in all
+
+and HARQ systems, there has been ongoing effort to develop
+
+rounds, this can lead to reliability loss. To overcome this,
+
+early termination techniques within decoders [22], [23]. For
+
+we use selective ET-HARQ, where early termination (pre-
+
+example, in belief propagation (BP) decoding, the decoder
+
+diction) is used only for calling retransmission, whereas
+
+can avoid decoding the non-convergent log-likelihood ratios
+
+in the last transmission round, all packets undergo full
+
+(LLRs) by monitoring their mean magnitude stability [24].
+
+decoding to avoid any loss of decodable packets. The
+
+Similarly, in successive cancellation (SC) decoding, using
+
+selective ET-HARQ also shows significant complexity
+
+CRC checks, the decoding can be terminated earlier. Although
+
+reduction without losing PER reliability.
+
+these early termination inside decoder reduces decoding • We analyze the PER, throughput, and complexity for the
+
+complexity to some extent, it still demands sophisticated ter-
+
+proposed ET-HARQ scheme, starting with a two-round
+
+mination criteria, and decoding all received packets, including
+
+transmission case and extending it to the general scenario.
+
+those that eventually fail, results in substantial computation
+
+Numerical simulations are conducted to evaluate the per-
+
+overhead. In HARQ, since failing packets are retransmitted,
+
+formance of the proposed ET-HARQ schemes with low
+
+attempting to decode every packet, even with a low complexity
+
+and moderate prediction accuracies. We also highlight the
+
+decoder, can be inefficient.
+
+positive impact of ET-HARQ when considering realistic
+
+To address this, we propose an early termination HARQ
+
+CRC lengths for short packet communication, which
+
+(ET-HARQ) scheme where the early termination is applied
+
+is different from most previous studies on HARQ that
+
+before decoding. It involves a strategy where packets do not
+
+assume ideal CRC and ignore its impact on reliability.
+
+go to decoding process immediately upon arrival. Instead,
+
+Our results indicate that the early terminations mech-
+
+preliminary quality tests are conducted to assess the likelihood
+
+anism can 1) significantly reduce the overall decoding
+
+of successful or failed decoding. These tests may utilize
+
+complexity at the receiver and 2) mitigate the reliability
+
+metrics like signal-to-noise ratio (SNR), log-likelihood ratios,
+
+loss introduced by the undetected errors of short CRC.
+
+or channel quality or more sophisticated techniques such as • We develop a proof-of-concept early termination mech-
+
+preamble-based detection or subcode-based partial decoding,
+
+anism using BP and NN to showcase the feasibility and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+125
+
+potential of ET-HARQ. Upon receiving a packet from the codeword length nm, SNR γ, and PER m, is approximated channel, the BP-NN-based early termination first refines by
+
+the symbol LLRs using a low-complexity BP decoder. Then, a trained NN evaluates whether the received block is decodable by a high complexity, near ML decoder.
+
+R(nm, γ, m) = C(γ) −
+
+V (γ) Q−1( nm
+
+m) log e
+
+Simulation results with Bose–Chaudhuri–Hocquenghem (BCH) codes and CRC-polar codes demonstrate that the proposed BP-NN-based ET-HARQ significantly reduces decoding complexity and increases throughput, aligning with our analysis.
+The rest of the paper is organized as follows: Section II introduces the system model and preliminaries. In Section III, we present the reliability and complexity analysis of standard HARQ for performance benchmark. We propose ET-HARQ and analyze its performance in Section IV. Section V presents numerical results for the proposed ET-HARQ scheme in various scenarios. In Section VI, we develop a BP-NN-based early termination technique, illustrating the practical potential of ET-
+
++ O log nm ,
+
+(1)
+
+nm
+
+where Q(x) = √1
+2π
+
+∞ x
+
+e−
+
+v2 2
+
+dv
+
+is
+
+the
+
+standard
+
+Q-function,
+
+and for a BI-AWGN channel at SNR γ, we have C(γ) =
+
+1
+
++
+
+H (1) (0) ln(2)
+
+,
+
+and
+
+V
+
+(γ)
+
+=
+
+H (2) (0)
+
+−
+
+H (1) (0)
+
+2
+,
+
+where
+
+H(
+
+)(0)
+
+=
+
+1 √
+
+∞
+
+e−
+
+(x−γ)2 2γ
+
+(−h(x))
+
+dx,
+
+(2)
+
+2πγ −∞
+
+and h(x) = ln 1 + e−2x [9]. Accordingly, the PER can be approximated at the m-th
+round of the transmission as [9]
+
+HARQ schemes. Finally, Section VII concludes the paper. II. SYSTEM MODEL AND PRELIMINARIES
+
+m(nm, k, γ) ≈ Q nmC(γ) − k + log2(nm) . (3) nmV (γ)
+
+A. Standard HARQ
+We consider a point-to-point discrete-time communication system in a binary-input additive white Gaussian noise (BIAWGN) channel with SNR γ. We use short block length codes with IR-HARQ to send k information bits in maximum M transmission rounds. More specifically, a binary information sequence u = [u1, u2, · · · , uk], ui ∈ {0, 1}, of length k is encoded to generate a codeword c1 = [c1, c2, · · · , cn1 ] of length n1. We use the binary phase shift keying (BPSK) modulation for bits-to-symbol mapping and generate a lengthn1 sequence of BPSK symbols, x1 = [x1, x2, · · · , xn1 ], such that xi = (−1)ci . Upon failed decoding, the receiver feedbacks negative acknowledgment (NACK), and the transmitter sends n2−n1 additional coded symbols to the receiver to increase the effective blocklength to n2 and accordingly reduce the code rate to R2 = k/n2. The transmitter keeps sending additional coded symbols to the receiver, i.e., nm −nm−1 coded symbols in the m-th transmission round, for 1 ≤ m ≤ M , upon receiving every NACK from the receiver, until all M transmission rounds are completed or the receiver successfully decodes the message and sends an acknowledgment (ACK) to the transmitter. Upon completing round m of the transmission, the receiver attempts decoding the codeword cm = [c1, c2, · · · , cnm ] of length nm and rate Rm = k/nm. To generate coded symbols, we consider puncturing of a mother code of rate RM = k/nM with generator matrix G(M) to obtain G(m), which denotes
+
+In the rest of the paper, we use m instead of m(nm, k, γ) for notational simplicity.
+Following [19], [20], we further assume that it is almost impossible that a packet could have been decoded after m − 1 transmission rounds when the receiver failed to decode it after m rounds of transmission. This assumption is formally described as follows.
+Assumption 1: Let Em denote the event that the decoding fails at the receiver after m rounds of transmissions, for m > 1, where Prob{Em} = m. Let m = Prob{Em|Em−1}, which denotes the probability that the decoding fails after m rounds of transmission, given that the decoding has failed after m − 1 rounds of transmissions. We assume that Prob{Em−1|Em} ≈ 1; indicating that if a packet failed after m transmission rounds, it almost certainly failed with m − 1 transmission rounds. Using this assumption, we can easily show that
+
+m−1 m ≈ m.
+
+(4)
+
+In fact m−1 m = Prob{Em−1}Prob{Em|Em−1} = Prob{Em ∩ Em−1}. Moreover, Prob{Em ∩ Em−1} = Prob{Em}Prob{Em−1|Em}≈Prob{Em} = m, which stems from the assumption Prob{Em−1|Em} ≈ 1.
+The assumption in (4) clarifies the process of calcu-
+lating PER and makes the subsequent analysis easier to
+follow.
+
+the generator matrix corresponding to the codeword cm of rate C. Decoding Complexity at FBL
+
+Rm, i.e., cm = uG(m).
+
+The PER calculated in (3) is based on the normal approx-
+
+B. Packet Error Rate at FBL
+
+imation [7] and can be achieved by employing the best short codes paired with a (near) ML decoding [5]. As reported in
+
+The packet length (nm) increases with each retransmis- [5] and [12], such code-decoder pairs include BCH codes sion round, and the receiver gets another chance to decode OSD and CRC-polar codes with SC list/stack decoding. Any
+
+the packet with a higher error correction ability. However, decoding algorithms can be treated as the process through
+
+short block-length packet transmission incurs performance loss which information is cleaned from noise, and there exists
+
+compared to the Shannon capacity limit due to the channel a trade-off between decoding complexity and the PER. A
+
+dispersion and limited channel observations [7]. According received codeword that is less impacted by noise can be cor-
+
+to the normal approximation [7], the achievable rate at given rectly decoded with less decoding complexity. Particularly, the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+126
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+undecodable blocks will make the decoder achieve the worst-
+
+case complexity1 because decoder must explore all potential
+
+decoding solutions [12]. Conversely, decodable blocks lead to
+
+significantly reduced decoding complexity, as decoders can
+
+terminate early upon detecting the correct output [12].
+
+Fig. 1. CRC-enabled standard HARQ.
+
+For analysis purposes, we assume near ML decoding and
+
+use the general rules to assign decoding complexity without performs full decoding of each received codeword, followed going into the exact decoding method. Let Ks(m) and Kf(m) by a CRC check to identify whether the decoding is erroneous denote the average number of operations in decoding a suc- or not. If no errors are detected in the decoded packet,
+
+cessful (decodable) or a failing (undecodable) packet of length nm, respectively. Then, we have Ks(m) ≤ Kf(m). This is because Kf(m) is the worst-case complexity of the decoder, while Ks(m) usually represents the average decoding com-
+plexity excluding decoding attempts of undecodable blocks.
+Furthermore, the decoding complexity also varies with respect to transmission rate Rm = k/nm, as Ks(m−1) ≤ Ks(m) and Kf(m−1) ≤ Kf(m), which stems from the fact that decoding lower rate codes require more operations to achieve near ML performance. Note that Ks(m) and Kf(m) can be derived from simulations or theoretical analysis for a specific decoder type
+and typical rate Rm = k/nm. In Section V, we elaborate this
+further with exact complexity expression for the OSD decoder.
+
+indicated by the CRC check being true in Fig. 1, the receiver sends an ACK, and the transmitter proceeds to the next packet. On the other hand, when the CRC check is false, a NACK is fed back to request further retransmission. After each retransmission, the receiver decodes the codeword with increased packet length due to additional parity being released. Finally, if the receiver is unable to recover a failing packet while the maximum number of transmission rounds, i.e., M is reached, the packet is dropped.
+The CRC check involves appending a fixed-length checksum to the data, calculated using a polynomial division algorithm. Upon reception, the receiver recalculates the CRC and compares it with the received CRC; any mismatch indicates the presence of errors in the data. A kC bits CRC
+
+encoding has a probability that an erroneous codeword goes
+
+D. Impact of Decoding Complexity on Latency
+
+undetected as pud = 2−kC [35]. In the study of HARQ, a
+
+In URLLC applications, decoding latency dominates the perfect CRC, capable of accurately identifying the true packet
+
+total receiving latency [1], [33], while other delay compo- decoding state, is often assumed for simplicity [20], [21]. This
+
+nents remain relatively minor. The transmission delay, which assumption is valid only when the packet length is much larger
+
+includes encoding, channel propagation, and symbol trans- than CRC bits to accommodate more CRC bits. However, it
+
+mission time, is proportional to the blocklength and thus is essential to recognize that in short packet communication
+
+remains small for short packets (n < 200). Similarly, the pro- increasing CRC-bits to improve reliability can cost significant
+
+cessing delays for operations such as demodulation, channel throughput overhead. A short CRC has a higher likelihood
+
+estimation, and synchronization are negligible due to their lin- of undetected failed packets leading to packet errors due to
+
+ear complexity and hardware-efficient implementations [34]. missed retransmission opportunities.
+
+However, the decoding delay presents a significant challenge
+
+due to the computational burden of probabilistic or algebraic decoding algorithms. These algorithms, designed to approach A. Special Case With M = 2 Transmissions
+
+ML performance in URLLC, require operations that far exceed Next, in the following three Lemmas, we derive the PER
+
+the computational requirements of other system components. reliability, throughput, and decoding complexity of HARQ
+
+For instance, the near-ML OSD decoder employed in this under non-ideal CRC when a single retransmission is allowed,
+
+work exhibits complexity that grows exponentially with the i.e., M = 2.
+
+decoding order, as detailed in Appendix. This exponential Lemma 1: The PER of CRC-enabled standard HARQ,
+
+complexity leads to substantial decoding delays that persist denoted by ζS, when M = 2 is given by:
+
+even with longer codes. The challenge is particularly acute in HARQ systems, where multiple decoding attempts may be
+
+ζS ≈ pud 1 + (1 − pud) 2,
+
+(5)
+
+required for each packet. While many HARQ studies [17], [19] assume instantaneous retransmissions and ignore decoding delays, practical implementations must account for this significant latency component. Our proposed ET mechanism specifically addresses this limitation by selectively avoiding unnecessary decoding attempts, thereby reducing the overall impact of decoding delay in retransmission systems.
+
+where m is the error probabilty in the m-th transmission round defined in (3).
+Proof: Since M = 2, there are a maximum of two rounds of transmission for each packet, i.e., m ∈ {1, 2}. The packet error probability with single transmission is 1. However, due to an imperfect CRC, pud 1 erroneous packets remain undetected and are dropped from the retransmission opportunity.
+
+III. ANALYSIS OF CRC-ENABLED STANDARD HARQ
+
+Therefore, retransmission is only requested for (1 − pud) 1 packets, detected as erroneous when m = 1. With the second
+
+The CRC-enabled standard HARQ, as summarized in Fig. 1, round of transmission, the packet length increases to n2, and governs packet transmission and retransmission. The receiver decoding is performed again to recover the failing packets.
+
+1In practice, this worst-case complexity is usually restricted by the maximum number of allowed operations (e.g., maximum visited tree nodes of SC
+
+Among these retransmitted packets, (1−pud) 1(1− 2) packets succeed, while (1 − pud) 1 2 fail, where 2 is the PER at
+
+and the maximum decoding order of the OSD).
+
+length n2 given that a packet with length n1 has failed. Then,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+127
+
+according to the assumption (4), i.e., 1 2 ≈ 2, the PER after retransmission is approximated by (1 − pud) 2. The overall PER is then pud 1 + (1 − pud) 2, which completes the proof.
+Lemma 2: The average decoding complexity of the CRC-
+enabled standard HARQ, when M = 2, is
+
+KS ≈ (1 − 1)Ks(1) + 1Kf(1)
+
++ (1 − pud) ( 1 − 2)Ks(2) + 2Kf(2) .
+
+(6)
+
+Proof: In the first round of transmission, the packet is
+decoded successfully with probability 1 − 1 and complexity Ks(1), and failed the decoding with probability 1 and complexity Kf(1). Therefore, the average decoding complexity in the first round of transmission is (1 − 1)Ks(1) + 1Kf(1). A failed packet in the first round of transmission will be detected through the CRC check with probability
+(1 − pud), and the decoding will be repeated after the second transmission round. This packet will be decoded with probability 1 − 2 and complexity Ks(2) and failed the decoding with probability 2 and complexity Kf(2). Therefore, the average complexity in the second round of transmission is (1 − pud) 1 (1 − 2)Ks(2) + 2Kf(2) , which can
+be further simplified using the assumption in (4) to (1 − pud) ( 1 − 2)Ks(2) + 2Kf(2) . The overall average decoding complexity is then the sum of average decoding complexities
+in the first and second rounds of transmission. This complete
+the proof.
+Lemma 3: The throughput of CRC-enabled standard HARQ,
+with kC-bit CRC, when M = 2, is
+
+ηS
+
+≈
+
+kI
+
+1 − ζS KSTb
+
+,
+
+(7)
+
+where kI = k − kC and Tb is the time required for a binary operation on the decoder hardware platform.
+Proof: This can be directly proved using Lemma 1 and Lemma 2, and based on the definition of throughput, which is the ratio of the average number of bits that have been successfully delivered to the receiver and the total time required for decoding them at the receiver.
+
+B. General Case With M Transmissions
+
+The analysis presented for two-round transmission can be extended to the general case with M transmission rounds. As
+illustrated in Fig. 1, the receiver follows identical decision
+steps after each transmission to either request retransmission
+or proceed to a new packet. This process continues recursively until either successful decoding or exhausting all M transmis-
+sions. Let ptm denote the probability that transmission stops after
+the m-th round (due to successful decoding or undetected error), and prm denote the probability of requesting the (m+1)th transmission (due to NACK), where 1 < m < M . The
+recursive relationships for these probabilities are:
+
+ptm ≈ ptm−1(1 − m) + ptm−1pud m,
+
+(8)
+
+pm r ≈ prm−1(1 − pud) m.
+
+(9)
+
+Here, (8) accounts for both successful decoding (1 − m) and undetected errors (pud m), while (9) represents detected errors leading to retransmission. For m = 1, these equations reduce to pt1 ≈ (1 − 1) + pud 1 and p1r ≈ (1 − pud) 1, consistent with the case described in (5).
+Using these recursive relationships, we can determine all pm t and pm r values. The packet error occurs when errors remain undetected at any transmission round or when the
+final transmission fails. Thus, the PER for a general M -round
+HARQ is:
+
+M −1
+
+ζS(M ) ≈ pud 1 +
+
+pm r −1pud m + pM t −1 M ,
+
+m=2
+
+(10)
+
+where the first term represents undetected errors in the initial
+transmission, the summation accounts for intermediate rounds,
+and the final term captures errors in the last transmission
+(which does not use CRC). Setting M = 2 in (10) retrieves (5).
+Following similar reasoning, we derive the average com-
+plexity by considering decoding attempts at each transmission
+round. The first round always requires decoding with complexity Ks(1) for success (1 − 1) or Kf(1) for failure ( 1). For subsequent rounds m > 1, decoding occurs with probability pm r −1 (the probability of reaching round m), and requires complexity Ks(m) for successful decoding (1 − m) or Kf(m) for failed attempts ( m). Thus, the average complexity for M round transmission is:
+
+KS(M ) ≈ Ks(1)(1 − 1) + Kf(1) 1
+
+M
+
++
+
+prm−1 Ks(m)(1 − m) + Kf(m) m . (11)
+
+m=2
+
+Finally, the throughput can be obtained as
+
+ηS(M
+
+)
+
+≈
+
+kI
+
+1 − ζS(M ) KS(M )Tb
+
+,
+
+(12)
+
+which is obtained similarly to (7). Remark 1: Note that our analysis framework accounts for
+various CRC failure scenarios, including those encountered in decoder-specific ET methods. A key component of our framework is the parameter pud which models the probability of undetected errors in any CRC-based error detection scheme. This parameter enables a unified analysis that is not tied to any specific decoding algorithm using CRC, making it applicable to standard HARQ, CRC-Polar codes, and other CRC-based methods [24], [36]. For example, in HARQ processes where CRCs are used for error detection, there is always a nonzero probability of undetected errors that may lead to premature retransmission termination. Our analysis captures this behavior and explicitly models the implications of such errors on system performance. This generality ensures that our proposed ET mechanism accounts for all potential CRC-based error scenarios, providing accurate predictions of throughput under realistic conditions.
+
+IV. EARLY TERMINATION HARQ WITH CRC
+Fig. 2 present the proposed ET-HARQ scheme. All the received codewords go through an early termination (ET)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+128
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 2. CRC-enabled Early Termination HARQ.
+
+mechanism. The ET mechanism utilizes some preliminary tests to predict whether the received codeword is decodable or undecodable. Based on the prediction outcome, if the packet is found to be decodable, the receiver performs full decoding; otherwise, it directly requests a retransmission through NACK. The packet with full decoding undergoes the usual retransmission via ACK or NACK based on the CRC check being true or false, respectively.
+Without loss of generality, we assume that the ET mechanism in the m-th transmission round detects a decodable packet correctly with probability αm and falsely declares a decodable packet as undecodable, with probability 1 − αm. We also assume that the early termination mechanism correctly detects the undecodable packet in the mth transmission round with probability βm, and falsely declares an undecodable packet decodable with probability 1 − βm. The confusion matrix for the early termination mechanism in the mth round of transmission is depicted in Fig. 3.
+A. Performance Analysis of ET-HARQ With CRC When M =2
+The PER of the ET-HARQ with CRC is given in the following Lemma
+Lemma 4: The PER of ET-HARQ with CRC, denoted by ζE, when M = 2 is given by:
+ζE ≈ (1 − 1)(1 − α1)(1 − α2) + 1(1 − β1)pud
++ ((1 − β1)(1 − pud) + β1) (( 1 − 2)(1 − α2) + 2) . (13)
+Proof: In the ET-HARQ, the PER is determined by considering events where packets are either declared failed after decoding with CRC or dropped due to ET mechanism, preventing further retransmission or decoding. A key event occurs when the receiver prematurely terminates decoding of a potentially decodable packet due to false prediction. In particular, the probability that a packet is decodable in the first round of transmission is 1 − 1, which is declared undecodable by the ET mechanism with probability 1−α1. After the second round of transmission, this packet is again declared undecodable with probability 1 − α2 by the ET mechanism. Therefore, the probability that a packet is decodable in the first round of transmission but is declared undecodable in both rounds of transmissions is q1 = (1 − 1)(1 − α1)(1 − α2).
+A packet in the first round of transmission is undecodable with probability 1, which can be falsely declared as decodable with probability 1 − β1. After the decoding, the probability that the CRC check falsely declares the decoding successful is pud. Therefore, the probability that in the first round of transmission, an undecodable packet goes through decoding and CRC bits are falsely checked is q2 = 1(1 − β1)pud.
+The probability that a packet is undecodable in the first round of transmission is 1, which is correctly declared as
+
+Fig. 3. Confusion matrix of the ET mechanism at the m-th transmission round.
+
+undecodable with probability β1. This packet is also undecodable in the 2nd round of transmission with probability 2. Therefore, the probability that a packet is undecodable and correctly declared undecodable in the first round of transmission and remained undecodable in the second round of transmission is q3 = 1β1 2 ≈ β1 2, where the approximation is due to (4).
+A packet is undecodable in the first round of transmission with probability 1 and will undergo retransmission, if it is declared undecodable with ET (which happens with probability β1), or if it is falsely declared decodable (with probability 1 − β1) but after the decoding, the CRC correctly detect the false decoding (which occurs with probability (1 − β1)(1 − pud). Therefore, the probability that a packet is undecodable in the first round of transmission and will undergo retransmission in the second round is 1 ((1 − β1)(1 − pud) + β1). Such a packet is decodable in the second round of transmission with probability 1 − 2, and is undecodable with probability 2. If it is decodable, it is falsely declared undecodable in the second round of transmission, with probability 1 − α2. Therefore, the probability that a packet which is undergone the second transmission round is deemed undecodable is (1 − 2)(1 − α2) + 2. Therefore, the probability that a packet is undecodable in the first round of transmission, is undergone the second round of transmission, and is deemed undecodable either through the ET mechanism or the decoding algorithm and CRC check, is q4 = 1 ((1 − β1)(1 − pud) + β1) ((1 − 2)(1 − α2) + 2). By using approximation (4) and summing q1, q2, q3, and q4, the packet error probability for the proposed ET-HARQ (shown in Fig. 2) can be obtained as in (13). Proof completes.
+Lemma 5: The average complexity of ET-HARQ with CRC, when M = 2, is given by:
+
+KE ≈ KE(1T) + (1 − 1)α1Ks(1) + 1(1 − β1)Kf(1)
+
++ ((1− 1)(1−α1) + 1β1 + 1(1−β1)(1−pud)) KE(2T)
+
++ (1− 1)(1−α1)α2Ks(2)
+
++ ( 1 − 2) (β1 + (1 − β1)(1 − pud)) α2Ks(2)
+
++ 2 (β1 + (1 − β1)(1 − pud)) (1 − β2)Kf(2),
+
+(14)
+
+where KE(1T) and KE(2T) are respectively the complexity of the ET algorithm in the first and second transmission rounds.
+Proof: We first focus on the first round of transmission.
+All packets received at the receiver will go through the ET process with complexity KE(1T). The chance for a packet to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+129
+
+be decodable and declared decodable by the ET mechanism is (1− 1)α1. Such a packet undergoes decoding with complexity Ks(1). Moreover, the chance for a packet to be undedodable and falsely declared decodable by the ET mechanism is 1(1−β1). Such a packet undergoes decoding with complexity Kf(1).
+Those packets that are declared undecodable by the ET
+mechanism in the first round of transmission or have under-
+gone decoding and CRC check failed, will go through the
+second round of transmission and accordingly the second ET process with complexity KE(2T). In fact, a packet will go through the second round of transmission, if it is decodable but was
+declared undecodable by the ET mechanism (this occurs with probability (1 − 1)(1 − α1)), if it is undecodable and was declared undecodable by the ET mechanism (which occurs with probability 1β1), or if it is undecodable but was declared decodable by the ET mechanism and after the decoding,
+the CRC checks correctly detected the unsuccessful decoding (which occurs with probability 1(1−β1)(1−pud)). Therefore, the probability that a packet will be scheduled for the second round of transmission is (1− 1)(1−α1)+ 1β1+ 1(1−β1)(1− pud), and accordingly, the average complexity contributed by the ET mechanism in the second round of transmission is given
+by the 2nd line of (14).
+If a packet is decodable in the first round but is declared
+undecodable by the ET mechanism (this occurs with probability (1 − 1)(1 − α1)), it is declared decodable in the second round with probability α2 and is decoded successfully with complexity Ks(2). In such a scenario, the average complexity is (1 − 1)(1 − α1)α2Ks(2), which is equivalent to the 3rd line of (14). Moreover, if a packet is undecodable in the first
+round and is scheduled for the second round of transmission (which occurs with probability 1 (β1 + (1 − β1)(1 − pud))), it can be decoded in the second round of transmission with probability 1 − 2, only if it is declared decodable by the ET mechanism, which occurs with probability α2. In such a scenario, the average decoding complexity will be 1 (β1 + (1 − β1)(1 − pud)) α2(1 − 2)Ks(2), which is equivalent to the line 4 of (14), by assuming 2 1 ≈ 2 according to (4).
+Finally, if a packet is undecodable in the first round and is
+scheduled for the second round of transmission, but remained
+undecodable in the second round (which occurs with probability 1 (β1 + (1 − β1)(1 − pud)) 2), it is falsely declared decodable with probability 1 − β2, and undergone decoding with complexity Kf(2). In this case, the average complexity is 1 (β1 + (1 − β1)(1 − pud)) 2(1 − β2)Kf(2), which is equivalent to the last line of (14) using the assumption (4).
+Remark 2: The throughput of ET-HARQ with kC-bit CRC, when M = 2, is given by
+
+ηE
+
+≈
+
+kI
+
+(1 − ζE) , KETb
+
+(15)
+
+where kI = k − kC and Tb is the time required for a binary
+
+operation on the decoder hardware platform.
+
+B. ET-HARQ With CRC for M Transmission Rounds
+We now extend the analysis to ET-HARQ with M transmission rounds. Similar to the analysis in Section III-B, for round
+
+m, two key probabilities determine the system behavior: the probability of transmission termination pm t and the probability of requesting retransmission pm r .
+The transmission termination probability in round m is
+
+ptm = ptm−1 [αm(1 − m) + (1 − βm) mpud] ,
+
+(16)
+
+where the first term represents correct prediction of decodable packets (αm) that are actually decodable (1 − m), and the second term accounts for incorrectly predicted decodable packets (1 − βm) that are undecodable ( m) but pass CRC check (pud).
+The probability of requesting the (m + 1)-th transmission is
+
+pm r = prm−1 [(1−αm)(1− m) + βm m + (1−β) m(1−pud)] , (17)
+comprising three scenarios: missed detection of decodable
+packets, correct prediction of undecodable packets, and incor-
+rect prediction of undecodable packets that fail CRC check. For m = 1, these probabilities initialize as p1t = α1(1 − 1) + (1−β1) 1pud and pr1 = (1−α1)(1− 1)+β1 1 +(1−β) 1(1− pud).
+Based on the above recursive relationship, the PER of ETHARQ for general M rounds can be obtained as
+
+M −1
+
+ζE(M ) = (1 − β1) 1pud +
+
+prm−1(1 − βm) mpud
+
+m=2
+
++ prM−1 [(1 − αm)(1 − M ) + M ] ,
+
+(18)
+
+where the terms represent undetected errors in the first transmission, intermediate rounds, and final transmission respectively.
+The average complexity considers both successful and failed decoding attempts weighted by their occurrence probabilities as
+
+KE(M )
+
+= Ks(1)(1 − α1)(1 − 1) + Kf(1)(1 − β1) 1
+
+M
+
++
+
+pm r −1
+
+m=2
+
+Ks(m)(1−αm)(1− m)+Kf(m)(1−βm) m . (19)
+
+The first two terms account for initial transmission complexity, while the summation captures subsequent rounds where decoding occurs only for missed detections (1 − αm) of decodable packets and false predictions (1−βm) of undecodable packets.
+Finally, the throughput can be obtained as
+
+ηE(M
+
+)
+
+≈
+
+kI
+
+(1 − ζE(M )) KE(M )Tb
+
+.
+
+(20)
+
+C. Selective ET-HARQ
+In the proposed ET-HARQ, as presented in Fig. 2, the received packets pass through the ET mechanism in each transmission round, i.e., m = 1, 2, · · · , M . Therefore, if the packet is found not decodable in all rounds by the ET, its decoding process is eliminated altogether. This can result in the loss of decodable packets if the receiver terminates its decoding
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+130
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+calling retransmissions. According to Lemma 6, the PER of selective ET-HARQ is given as
+
+ζE ≈ 1(1 − β1)pud + 2 ((1 − β1)(1 − pud) + β1)
+
+= 1(1 − β1)pud + 2(1 − β1) − 2(1 − β1)pud + 2β1
+
+= pud(1 − β1)( 1 − 2) + 2.
+
+(21)
+
+Fig. 4. Impact of CRC length on the PER at SNR=3dB.
+due to false prediction in all rounds. We can modify the ETHARQ to avoid the loss of these decodable packets by always performing full decoding in the last round of transmission. We refer to this scheme as selective ET-HARQ. The selective ET-HARQ targets to reduce the decoding complexity, without compromising the reliability performance.
+Lemma 6: The PER, average complexity, and throughput of selective ET-HARQ can be obtained from (18), (19), (20) respectively, by setting αM = 1, βM = 0, and KE(MT ) = 0.
+Proof: Setting αM = 1 implies that all the received packets in the last transmission round will always go for full decoding. Thus, setting βM = 0, which implies that no packet is dropped from full decoding in the second round, is also required. Moreover, since we avoid ET in the last round, therefore, for average complexity of selective ET-HARQ KE(MT ) = 0.
+V. NUMERICAL ANALYSIS
+A. Impact of ET With CRC
+The CRC check performs two critical functions in standard HARQ: error detection and transmission termination. However, this approach requires full ML decoding before making retransmission decisions, introducing significant computational overhead for each transmission attempt. Our proposed ET mechanism operates prior to ML decoding, complementing rather than replacing the CRC check.
+The effectiveness of standard HARQ strongly depends on CRC length. With shorter CRC lengths, the probability of undetected errors (pud) increases, causing more failed packets to be mistakenly accepted during initial transmissions. These undetected errors result in missed retransmission opportunities and degraded system reliability. The ET mechanism helps mitigate this limitation by providing an additional layer of verification before committing to full decoding. By identifying likely undecodable packets early, ET reduces unnecessary decoding attempts while preserving the error detection capabilities of CRC.
+Fig. 4 depicts the PER variation of the CRC-enabled standard HARQ and the selective ET-HARQ under the influence of CRC length. Notably, the PER performance of the selective ET-HARQ is better than that of the only CRC-enabled standard HARQ for short to medium CRC lengths. This is because the selective ET-HARQ does not solely rely on the CRC check but is also influenced by the accuracy of ET prediction for
+
+If β1 = 0, the PER (21) of selective ET-HARQ reduced to the PER of the CRC-enabled standard HARQ given in (5). Therefore, any selective ET-HARQ with β1 > 0 can mitigate the reliability loss introduced by undetected errors of short CRC. Consequently, when the ET prediction accuracy β1 is higher, the PER performance of the selective ET-HARQ improves, as shown in Fig. 4. Finally, when an adequate number of CRC bits are provided leading pud → 0, both the selective ET-HARQ and the standard HARQ exhibit the same PER reliability. This feature of selective ET-HARQ will be further verified by simulations in Section VI.
+B. PER, Decoding Complexity and Throughput
+In this section, we compare the proposed ET-HARQ and the standard HARQ schemes in terms of reliability, complexity, and throughput. For this, we fixed CRC at kC = 8 bits for all the numerical simulations and focused on the impact of the accuracy of the ET mechanism. Note that the analytical evaluation of the HARQ schemes in the previous sections, i.e, III and IV, is general and can accommodate any encoding and decoding procedure. However, in this section, we specifically consider BCH codes and the OSD decoder for numerical comparison purposes.
+When OSD exhausts all test error patterns (TEP), it leads to the worst decoding complexity, denoted as Kfm(s). This situation occurs when the packet fails. However, we employ the Probability-Based OSD (PB-OSD) algorithm which incorporates an internal early termination mechanism. PB-OSD can dynamically terminate the search once a reliable codeword is found [37], resulting in significantly reduced average complexity Ksm(s). We note that Ksm(s) depends on the SNR and order s, and Ksm(s) Kfm(s). Appendix briefly introduces OSD and gives further details on the decoding complexities. Although PB-OSD has an internal early termination mechanism, our proposed ET is further applied before the decoding process.
+The analysis until now is general and does not specify the exact ET method. In Section VI, we design a practical ET mechanism having much lower complexity than the decoding process, i.e., KE(mT) Ks(m), and sufficient prediction accuracy. Section VI-D will show that the proposed NN-based ET further reduces the complexity of PB-OSD with introducing minimal extra overhead.
+In numerical analysis of this section, we set the exact complexity of ET, i.e., KE(1T) = 15632, and KE(2T) = 60752 based on the proposed NN-based ET mechanism presented in Section VI. First, we show how an ET mechanism with even a modest prediction accuracy can yield notable complexity improvements with minimal reliability degradation.
+In Fig. 5, we examine the performance of ET-HARQ in terms of PER, throughput, and decoding complexity, with low
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+131
+
+Fig. 5(b) illustrates the decoding complexity comparison among different HARQ techniques in the low ET prediction accuracy. Notably, a significant reduction in complexity is observed with ET-HARQ compared to standard HARQ. This reduction is particularly pronounced in low to medium SNR regimes, where retransmissions are more frequent. Part of the complexity reduction with ET-HARQ is due to avoiding the decoding of many packets, including some decodable ones, which is evident in the loss of PER performance, as explained earlier. However, the selective ET-HARQ also exhibits substantial complexity reduction compared to standard HARQ. Importantly, the complexity performance gain of selective ETHARQ comes without any loss in PER performance. On the contrary, with selective ET-HARQ, we see some improvement in PER in the high SNR ranges. This indicates that the proposed ET-based retransmission offers fundamental performance compared to the retransmission mechanism adopted in standard HARQ. Since the complexity gain is mainly due to efficiently conducting retransmissions, a reduced probability of retransmission with increasing SNR gradually decreases the complexity gain in all HARQ schemes.
+Next, we present the comparison of throughput. Since the bit processing time Tb depends on hardware capabilities, we show the relative throughput gain of ET-HARQ with respect to standard HARQ as
+
+Fig. 5. Performance comparison of standard HARQ and ET-HARQ for α1 = β1 = 0.65, α2 = β2 = 0.75, k = 64, n1 = 96, n2 = 128, and kC = 8.
+and moderate ET prediction accuracy. Setting α1 = β1 = 0.65, α2 = β2 = 0.75 reflect low prediction accuracy, whereas setting α1 = β1 = 0.75, α2 = β2 = 0.85 reflect moderate prediction accuracy. Note that in this Section, we keep the ET prediction accuracy fixed across all SNRs for general analysis and simulation purposes. However the exact trend of ET prediction accuracy depends on specific mechanisms and in reality, it can vary with SNR as well.
+Fig. 5(a) shows the PER comparison of various HARQ schemes with low prediction accuracy settings. Comparing ET-HARQ and selective ET-HARQ, when ET prediction is applied in both rounds, the PER performance is worse than that of standard HARQ. This is due to a higher chance of successful packets being lost due to low ET prediction accuracy. However, the PER of selective ET-HARQ is not impacted by the loss of decodable packets in the first round because they are eventually recovered in the last round due to OSD decoding. We also observe that the PER performance of selective ET-HARQ is gradually improving compared to standard HARQ from SNR of 1.5 dB. This is due to an imperfect CRC check, which impacts the standard HARQ more than selective ET-HARQ, as explained in Sec. V-A.
+
+∆ηE
+
+=
+
+(ηE − ηS
+
+ηS) ,
+
+(22)
+
+where ηS and ηE are defined in (7) and (15), respectively. As depicted in Fig. 5(c), both ET-HARQ and selective
+ET-HARQ demonstrate significant throughput gains compared to standard HARQ. ET-HARQ particularly shows remarkable throughput gains, especially in the low and medium SNR regimes. Specifically, ET-HARQ maintains above 100% throughput gain between SNR −0.5 dB and 0.5 dB. However, this improvement is primarily due to a substantial reduction in decoding complexity rather than an improvement in PER, as explained earlier. As SNR increases, the throughput gain of ET-HARQ declines, reaching approximately 55% at 2 dB SNR. In contrast, selective ET-HARQ shows a gradual increase in throughput gain from around 25% at −0.5 dB SNR. Interestingly, at 2 dB SNR, the throughput gains of ET-HARQ and selective ET-HARQ converge closely to approximately 55%. Selective-ET-HARQ’s advantage lies in its ability to expedite retransmissions and minimize decoding complexity without dropping decodable packets, leading to notable throughput enhancements in medium SNR ranges. Finally, at high SNRs, the throughput gains diminish due to fewer retransmissions.
+In Fig. 6, we explore the impact of increasing the ET accuracy on PER, decoding complexity, and throughput performance of various HARQ schemes in a moderate prediction accuracy setting. The overall performance trends remain intact, while we see further performance enhancement with ETHARQ and selective ET-HARQ in comparison with standard HARQ. For example, Fig. 6(a) indicates marginal improvement in the PER performance of ET-HARQ. This is because, with higher ET accuracy, undecodable failing packets in the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+132
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 7. Belief-Propagation Neural-Network based Early Termination.
+
+to slight increase in ET accuracy. For selective ET-HARQ, although the throughput gain increases in all SNR regimes, we see very high throughput gain between SNR 1 dB to 2 dB. For example, the throughput gain of selective ET-HARQ is approximately 79% more than standard HARQ at 2 dB SNR. Finally, it is concluded that with ET-HARQ, even with modest early termination accuracy, substantial reductions in complexity can be achieved resulting in huge thorough gains without compromising PER significantly.
+
+Fig. 6. Performance comparison of standard HARQ and ET-HARQ for α1 = β1 = 0.75, α2 = β2 = 0.85, k = 64, n1 = 96, n2 = 128, and kC = 8.
+first round are now better identified for retransmission as well as undetected decodable packets are better identified for decoding. Note that the PER of selective ET-HARQ barely improves it is already close to the maximum due to allowed full decoding in the last round.
+Fig. 6(b) shows decoding complexity performance with increased ET accuracy. Comparing Fig. 5(b) and Fig. 6(b), it can be seen that both ET-HARQ and selective ET-HARQ exhibit further performance improvement in comparison with standard HARQ due to better ET accuracy. Specifically, the ET-HARQ exhibits notable decoding complexity reduction in Low and medium SNR regimes, whereas selective ETHARQ shows prominent complexity reduction in medium SNR regimes in comparison to the decoding complexity of baseline standard HARQ. This is because with better ET accuracy more undecodable packets can be correctly called for retransmissions without performing full decoding, leading to further average decoding complexity reduction.
+Fig. 6(c) indicates the throughput gain of ET-HARQ schemes relative to standard HARQ with increased ET accuracy. Comparing Fig. 5(c) and Fig. 6(c), we see the throughput gain of the ET-HARQ almost doubled in low SNR regimes due
+
+VI. NEURAL NETWORK-BASED EARLY TERMINATION
+In the previous section, we derive the analytical expressions involving general ET prediction parameters, i.e., αm, βm, etc. This highlights how HARQ schemes can benefit in terms of complexity through the ET mechanism. Here, we present a neural network (NN)-based ET mechanism for predicting decodable and undecodable packets. We demonstrate that even a small NN can achieve satisfactory ET accuracy and significantly enhance ET-HARQ performance.
+Fig. 7 shows the block diagram of the proposed scheme, where a pre-trained artificial NN is used to classify the incoming codeword as decodable or undecodable, indicated by 0 and 1, respectively. The statistics of channel log-likelihood ratios (LLRs) are taken as input to the classifier. Moreover, we use a few iterations of belief propagation (BP) decoding to improve the raw LLRs as the additional classifier input.
+Note that the BP is not used for decoding but only to enhance the NN performance, which should be distinguished from concatenated decoder designs such as in [36]. The ET mechanism involves offline training with labeled data. For this purpose, various codewords are generated randomly at specific SNRs. After the transmission over the AWGN channel, the input features are derived from the statistics of channel LLRs in conjunction with BP results. These features and the corresponding decoding outcomes obtained by an actual decoder are recorded as labels after the decoding process outcome. A NN is trained using these samples to predict the decodability of received noisy codewords, enabling its deployment for realtime decision-making scenarios.
+A. Preparation of Input Features
+Input features are generated using a BP decoder, which is a widely acknowledged iterative decoding method for lowdensity parity-check (LDPC) codes. BP can be applied to any linear block codes represented by a Tanner graph. More details on the BP algorithm and Tanner graph can be found in [38] and [39]. While BP achieves near-optimal error rates with LDPC codes, it is less effective with high-density codes like BCH, primarily due to the presence of small cycles in their Tanner graphs [40]. Moreover, the computational complexity of BP scales linearly with the length of the codeword [38].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+133
+
+In the m-th transmission round, let the channel LLRs of the observed symbols ym be denoted by m = [ 1, 2, . . . , nm ], where the i-th LLR is given by i = 2γyi for Binary Phase Shift Keying (BPSK) symbols. During the decoding, BP iteratively updates the LLRs between variable nodes and checks nodes along the edges of the Tanner graph. Let Ai denote the set of check nodes connected to the i-th variable node and Bj denote the set of variable nodes connected to the j-th check node. The message passing procedure in the t-th BP iteration is described as
+
+Mj(it) = i +
+
+Ei(jt−1),
+
+j ∈Ai\j
+
+(23)
+
+for all i ∈ {1, . . . , nm} and j ∈ Ai, and
+
+
+
+
+
+Ei(jt) = 2 tanh−1 
+
+tanh(Mj(it)/2) , (24)
+
+i ∈Bj \i
+
+for all j ∈ {1, . . . , nm − k} and i ∈ Bi. In (23) and (24),
+
+Mj(it) denotes the messages sent from the ith variable nodes
+
+to the jth check node, and Ei(jt) denotes the messages returned
+
+from the jth check node to the ith variable node. Particularly,
+
+Ei(j0) = 0 for all i and j. After each iteration, BP computes
+
+the updated LLR
+
+(t) m
+
+=
+
+[
+
+(t) 1
+
+,
+
+.
+
+.
+
+.
+
+,
+
+(t) nm
+
+]
+
+according
+
+to
+
+(t) i
+
+=
+
+i+
+
+Ei(jt),
+
+j∈Ai
+
+(25)
+
+which is regarded as the posterior LLR of yi. Henceforth, the
+
+prior LLR
+
+m is denoted by
+
+(0) m
+
+for
+
+consistency.
+
+The trajectory of BP, i.e., changes of Mj(it), Ei(jt),
+
+(t) i
+
+or related variables across iterations, has been widely used
+
+in evaluating decoding performance, including the extrinsic-
+
+information-transform (EXIT) chart and density evolution
+
+analysis [41]. A fast-converging trajectory indicates reliable
+
+received symbols, while an earlier convergence point suggests
+
+better error performance. This motivates using BP trajectory
+
+as the input feature for our NN-based decodability classifier.
+
+Specifically, for a BP process totaling T iterations, the follow-
+
+ing quantities are included as NN inputs:
+
+•
+
+First and second-order moments of
+
+(t) 1
+
+,
+
+.
+
+.
+
+.
+
+,
+
+(t) nm
+
+.
+
+•
+
+Information density computed from
+
+1(t), . . . ,
+
+(t) nm
+
+.
+
+•
+
+First-order moment of |
+
+(t) 1
+
+|,
+
+.
+
+.
+
+.
+
+,
+
+|
+
+(t) nm
+
+|.
+
+The information density for binary AWGN channel is com-
+
+puted as [42]
+
+nm
+ι = 1 − log(1 + exp(−xi i(t)/γ)),
+i=1
+
+where xi is the hard decision of
+
+(t) i
+
+.
+
+These
+
+quantities
+
+are
+
+calculated for iterations t = 0, . . . , T . Thus, the total number
+
+of input features is 4(T + 1).
+
+B. Neural Network-Based Early Termination Classifier
+The input configuration for the NN-based ET mechanism is described in Section VI-A. The output of the ET is a binary decision indicating whether the observed ym is decodable or undecodable. The architecture consists of four hidden layers,
+
+TABLE I PARAMETERS OF THE NN-BASED ET SYSTEM
+Fig. 8. Prediction accuracy of the NN-based ET for the (128, 64) eBCH code.
+each equipped with 64 neurons. The activation function used in all layers is the Rectified Linear Unit (ReLU). Drawing inspiration from the work in [43], our model incorporates residual shortcut connections across its layers. This innovative approach effectively counters the challenges of vanishing gradients and performance decline typically associated with increasing network depth.
+The model is trained individually for each SNR level, ensuring a balanced training set with an equal number of decodable and undecodable packets. The training set size for each SNR level is set to 105. To normalize each SNR’s input features, we subtract the mean and divide it by the feature’s variance across the dataset. Subsequently, the training dataset is organized into mini-batches of 512 samples each. We utilize the ADAM optimization algorithm, initializing it with a learning rate of 10−4.
+Moreover, we incorporate an early stopping mechanism to improve training efficiency. This mechanism halts the training process if no performance improvement is detected on the validation set, as measured against the moving average of the previous five epochs. This strategy ensures the model’s convergence while mitigating overfitting. The parameters of the NN-based ET mechanism are summarized in Table I.
+The training and validation accuracy for the (128, 64) extended Bose-Chaudhuri-Hocquenghem (eBCH) code is depicted in Fig. 8. The prediction accuracy for actual decodable and undecodable is different and also varies with SNR. At low SNR, i.e., −0.5 dB, NN-based ET exhibits ≈ 50% accuracy in identifying actual decodable packets. Whereas it correctly identifies an actual undecodable packet with accuracy ≈ 75%. The correct prediction accuracy for actual decodable packets improves significantly with SNR and reaches close to 100% in high SNR regimes. This is because high SNR regimes better outline the features indicating decodable packets and vice versa. On the other hand, the prediction accuracy for undecodable packets is high in a low SNR regime and gradually reduces with an increase in SNR. At very high
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+134
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 9. Prediction accuracy of the NN-based ET Algorithm for a (96, 64) Fig. 10. Prediction accuracy of the NN-based ET Algorithm for a (96, 64)
+
+code punctured from the (128, 64) eBCH code.
+
+code punctured from the (128, 64) eBCH code.
+
+SNRs, e.g., 2.5 dB and 3 dB, no received packets are inferred as undecodable, resulting in no recorded outcome for them. The overall prediction accuracy significantly improves with increasing SNR.
+By increasing the code rate, the prediction accuracy is expected to decrease. To demonstrate this, the training and validation accuracy for a (96, 64) code is illustrated in Fig. 9. The code is obtained by optimally puncturing the parity bits of (128, 64) eBCH codewords, where the code minimum Hamming distance is maximized. The prediction accuracy trends are similar for actual decodable and undecodable packets, and the overall accuracy for the (96, 64) code is around 70%
+C. Computational Complexity of the NN-Based ET
+According to [44], computing (23) or (25) requires an average of nm(nm−k) additions, 8nm(nm−k−1) multiplications, and nm(nm−k) divisions. Computing (24) requires an average of 2nm(nm − k) additions and 3nm(nm − k − 1) multiplications. Therefore, the complexity of BP is approximately represented as O(nm(nm − k)), which increases linearly with the codeword length nm.
+In the NN-based ET prediction, the inputs layer takes N dimensional input and maps it to a hidden layer with dimension H. Here, the primary computational burden is a matrix multiplication involving an input vector of length N and a weight matrix with dimensions N × H. Consequently, the computational complexity is O(N H). Similarly, the computational complexity between hidden layers and from the last hidden layer to the output layer is O(H2) and O(H), respectively. Thus, the total computational complexity for a forward pass in our architecture is given by O(N H + H2). Overall, the complexity of the designed ET mechanism is KEmT ≈ T O(nm(nm − k)) + O(N H + H2).
+Note that compared to the complexity of a typical near ML decoding algorithm, the complexity of the proposed NN-based ET mechanism is negligible. For example, in Appendix, it’s detailed that the complexity of OSD is significantly higher due to a large number of test error patterns, as shown in equation (26). However, for very short codes, the ET overhead becomes more prominent relative to the their efficient ML decoding operations, particularly at higher SNRs. This results in diminishing complexity and throughput gains at higher SNRs, as will be observed in simulations in Section VI-D.
+
+The proposed ET mechanism is designed with hardware implementation feasibility. The BP computation can be efficiently implemented using fixed-point arithmetic with minimal precision loss [45]. Our NN architecture is intentionally kept simple, with only four hidden layers of 64 neurons each, making it suitable for FPGA implementation. Similar lightweight neural networks have been successfully implemented on FPGAs [46], achieving processing latencies in the order of microseconds. While detailed hardware implementation is beyond the scope of this paper, these considerations demonstrate the practical feasibility of our approach.
+Remark 3: We acknowledge that training separate NNbased ET for different code lengths and SNRs introduces extra storage and training overhead, particularly in HARQ. However, our ET neural network is intentionally minimal with only 15K parameters (4 hidden layers with 64 neurons each as outlined in Table I with N × H + 3H2 + H parameters), resulting in a storage requirement of merely 20KB per model and training time of less than 10 minutes per code length on a standard GPU. This makes the approach practical for URLLC systems that typically operate with a limited set of standardized code lengths. For applications requiring broader scalability across arbitrary code lengths, advanced techniques such as Graph Neural Networks (GNN) and meta-learning offer promising solutions. GNNs can leverage the inherent graph structure of linear block codes to process different code lengths with a single set of parameters [47], while metalearning enables rapid adaptation to new code lengths with minimal fine-tuning samples [48]. These extensions are left for future work particularly for ET design.
+D. Simulation Results
+1) Complexity of the Proposed ET in Single Round Decoding: We analyze the decoding latency for a single transmission round using three schemes: (i) standard OSD without any ET, (ii) PB-OSD and (iii) PB-OSD with our external BP-NN-based ET. Throughout this paper, all simulations are conducted using Python 3.8 on an i7-10700 CPU with NVIDIA 3090 GPU. The latency measurements are obtained by processing 10,000 blocks and computing the average time per block to ensure statistical accuracy. Here we focus on decoding (96, 64) eBCH codes using OSD order 4.
+As shown in Fig. 10, the three schemes exhibit distinct latency behaviors. Standard OSD maintains a constant latency
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+135
+
+TABLE II LATENCY BREAKDOWN (MS) FOR DIFFERENT DECODING SCHEMES
+
+of approximately 980 ms across all SNRs, as it exhaustively searches through all 679,121 TEPs (see Appendix) regardless of channel conditions. PB-OSD dramatically reduces this latency through its probabilistic early stopping, achieving latencies between 64-122 ms that decrease with increasing SNR. Our proposed BP-NN-based ET further reduces the decoding latency at low SNRs, achieving 51 ms at 0 dB SNR.
+Notably, there exists a crossover point at approximately 2.5 dB where PB-OSD alone becomes more efficient than PBOSD with NN-based ET. As highlighted in Table II, this occurs because our ET mechanism introduces a fixed overhead of 5.523 ms per block. At low SNRs, the ET effectively identifies and skips the majority of undecodable blocks to decrease the overall decoding latency. However, at high SNRs, most blocks become readily decodable. reducing the benefit of NN-based ET before decoding. The fixed 5.5 ms overhead thus becomes dominant relative to the marginal gains.
+2) BCH Codes: We conduct the simulation to validate the performance of ET-HARQ with an NN-based ET mechanism. The receiver structure is shown in Fig. 7. Considering a tworound transmission, the initial transmission uses (96, 64) code, and the potential re-transmission uses (128, 64) eBCH code. The (96, 64) code results from puncturing the parity bits of the (128, 64) code; thus, they share the same information bits.
+The probability-based OSD (PB-OSD) algorithm with OSD order 4 is applied for the OSD decoding module of Fig. 7 [37]. The PB-OSD is briefly introduced in the Appendix, and its complexity is measured by (29). The complexity of NNbased ET mechanism is measured by T O(nm(nm − k)) + O(N H + H2) according to Section VI-C. Therefore, the overall complexity is measured by combining the complexities of PB-OSD and the NN-based ET for all potential decoding rounds. We apply CRC bits of length kC = 8 in the simulation, i.e., pud = 1/256.
+Fig. 11(a) shows that the selective ET-HARQ outperforms CRC-enabled standard HARQ in PER performance, as predicted by the analysis. As shown in Fig. 8, the ET-HARQ experiences significant PER degradation due to the low prediction accuracy of decodable packets, mainly due to mistakenly avoiding decoding of decodable packets in both rounds.
+The complexity of standard HARQ, ET-HARQ, and the selective ET-HARQ is compared in Fig. 11(b). As illustrated, selective ET-HARQ exhibits lower complexity than the standard HARQ, whereas ET-HARQ has the lowest complexity since it can skip the decoding process for non-decodable received symbols in the last packet transmission round, as predicted by the analysis. Using the simulation-based PER and the
+
+Fig. 11. Performance comparison of standard HARQ and ET-HARQ, when k = 64, n1 = 96, n2 = 128, kC = 8. αm and βm values are vary at each SNR, due to BP NN-based ET according to Fig. 8 and 9.
+decoding complexity, we obtain the relative throughput gain of ET-HARQ according to (22), as shown in Fig. 11(c). As shown in the figure, both ET-HARQ and selective ET-HARQ show high throughput gain in comparison with standard HARQ. We note that the complexity reduction and throughput gain are not as significant as the analytical results in Section V. We also illustrate the overhead of the NN-based ET in the selective ETHARQ, which requires approximately 2 × 104 operations per block, in contrast to the decoding complexity of over 5 × 105 operations. Consequently, the overhead of NN-based ET is negligible relative to the overall decoding complexity.
+Note that in the analysis, we keep the prediction accuracy fixed for all SNRs, which resulted in a high throughput gain in low SNRs. However, as shown in Figs. 8 and 9, the NNbased ET mechanism exhibits very low prediction accuracy for either undecodable or decodable blocks at very low or very high SNRs. Different from the analysis, here we also observe that selective ET-HARQ shows better throughput gain than ET-HARQ. This is again due to the difference between exact prediction accuracy variation with SNR in each round. Note that our focus here is to only show that the ET-HARQ will outperform the standard HARQ even with moderate prediction
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+136
+TABLE III PREDICTION ACCURACIES FOR CRC-POLAR AT DIFFERENT SNRS
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+accuracy. This however is visible even with a simple NNbased ET mechanism. One can apply more sophisticated NN models to achieve higher prediction accuracy, thereby reducing complexity further and increasing throughput.
+3) CRC-Polar Codes: To further validate the effectiveness of ET-HARQ across different coding schemes, we evaluate its performance using rate-compatible 5G CRC-polar codes. For this evaluation, we consider a three-round transmission system with a short message length of k = 16 bits and CRC length KC = 6 (i.e., pud = 1/64). The rate-compatible CRC-polar codes have blocklengths n1 = 32, n2 = 48, and n3 = 64, where the nested structure ensures that parity bits of higherrate polar codes are contained within those of lower-rate polar codes. For each transmission round, we apply PB-OSD with order 3 to achieve near-ML decoding performance, with complexity comparable to successive cancellation list (SCL) algorithm for polar codes [12]. The neural network is trained separately for each blocklength to account for their distinct error patterns. The testing accuracy is summarized in Table III.
+Figure. 12 presents the performance comparison between standard HARQ and ET-HARQ schemes using these CRCpolar codes. As shown in Fig. 11(a), the PER performance exhibits similar trends to those observed with BCH codes, with selective ET-HARQ demonstrating superior reliability compared to standard HARQ. However, ET-HARQ shows notably higher PER, particularly in the low SNR regime. This performance degradation can be attributed to the increased challenge of accurately predicting decodable packets with very short polar codes during the final transmission round
+The complexity comparison is presented in Fig. 11(b). While both ET-HARQ variants still achieve complexity reduction at low SNRs compared to standard HARQ, these gains are less pronounced at high SNRs. This behavior stems from two key factors: first, the baseline decoding complexity of short polar codes (k = 16) is much lower compared to the longer BCH codes (k = 64) shown in Fig. 11; second, the computational overhead of the neural network-based ET mechanism becomes increasingly significant relative to the polar decoding complexity, particularly at higher SNRs where decoding operations are more efficient. The throughput gain analysis in Fig. 11(c) further illustrates this complexityperformance trade-off. Both ET-HARQ schemes demonstrate moderate throughput improvements in the low SNR regime, achieving approximately 20% gain. However, these benefits progressively diminish and ultimately become negative as SNR increases, primarily due to the NN overhead becoming dominant compared to the efficient polar decoding operations.
+
+Fig. 12. Performance comparison of standard HARQ and ET-HARQ, using rate-compatible CRC-Polar codes (kC = 6) with k = 16, n1 = 32, n2 = 48, and n3 = 64.
+These results underscore a crucial design consideration: the complexity of the early termination mechanism must be carefully balanced against both the baseline decoding complexity and the code block length. The advantages of ET-HARQ may be less pronounced for codes with relatively efficient ML decoding, particularly at short block lengths.
+VII. CONCLUSION
+We proposed and analyzed the ET-HARQ system in shortpacket communication in the context of URLLC scenarios. ET-HARQ effectively identifies suitable packets for retransmission before decoding. We characterized the impact of ET-HARQ on PER, decoding complexity, and throughput with a practical CRC-enabled HARQ system to show its efficacy. Our results demonstrate that ET-HARQ offers significant decoding complexity reductions and throughput improvements without compromising PER reliability. Moreover, to validate our findings, we have proposed a practical early termination mechanism employing belief propagation and neural network techniques, achieving prediction accuracy of up to 75% for packets encoded with practical short block length codes, i.e., BCH and CRC-polar codes. Simulation results confirmed that the BP-NN-based ET-HARQ performed similarly to the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+NADEEM et al.: LOW COMPLEXITY EARLY TERMINATION HARQ FOR URLLC: ANALYSIS AND NN DESIGN
+
+137
+
+developed analysis for PER, and complexity underscoring its potential for URLLC applications.
+
+APPENDIX
+
+In a standard order-s OSD decoder, the observed sequence at the receiver is first sorted to select the k most reliable
+bit. This requires a specific permutation order denoted as κ1(.) to arrange the received symbols in order of descending magnitudes of their log-likelihood ratios and applying the
+same permutation to the columns of the generator matrix G˜ (m) = κ1(G(m)). Then the Gaussian elimination is applied to obtain the systematic form of the generator matrix as G˜ (m) = [Ik, P˜ (m)], where IK and P˜ (m) denotes the identity matrix and the parity sub-matrix corresponding to the generator matrix in the m-th transmission respectively.2 Associated with decoding order s, the OSD decoder generates a list |LTEP(s)| of test error pattern (TEP) of length k, where
+
+sk
+
+k
+
+|LTEP| =
+
++ (s − s )
+
+. (26)
+
+i
+
+s +1
+
+i=0
+
+where the order s is allowed to be non-integer. This TEP list
+
+comprises all k length sequences with hamming weight less
+
+than
+
+s
+
+and
+
+(s − s )
+
+k s +1
+
+most probable TEPs with
+
+Hamming weight s + 1. Finally, let ei denote the i-th TEP
+
+in the list. The set of candidate codewords is computed by
+
+flipping the hard-decoded received sequence r according to
+
+each TEP and mapping as
+
+c˜i = (r ⊕ ei)G˜ (m)
+
+(27)
+
+Therefore, the complexity of OSD is dominated by the total number of TEPs. Then, the total number of binary operations at a given packet length nm at the m-the transmission round is given as
+
+Kfm(s)
+
+=
+
+nmk
+
++
+
+|LTEP| 2
+
+nm−q
+
++
+
+qnm k
+
+(28)
+
+where q is the number of quantization bits. In (28), the
+
+complexity is considered as the worst-case complexity, which
+
+is fixed with respect to the decoding order s.
+
+There are many improvements in the standard OSD decod-
+
+ing that can reduce decoding complexity when the received
+
+codeword has higher reliability. For example, when the
+
+received block is decodable, OSD can apply a “stopping
+
+criterion” to early terminate the decoding process once a c˜i
+
+is likely to be the correct decoding outcome. Effective stop-
+
+ping criteria were investigated in the segmentation-discarding
+
+method [10] and PB-OSD [37]. We obtain the complexity Ksm with PB-OSD via the sim-
+ulation. Specifically, for a given SNR, an order-s PB-OSD
+
+is tuned to achieve the near ML decoding according to [37].
+
+Then, the average number of TEPs of such a PB-OSD for only
+
+decoding decodable blocks is measured from the simulation. Denoted by |LTEP| this average number of TEPs, Ksm is obtained similarly to (28), i.e.,
+
+Ksm(s)
+
+=
+
+nmk
+
++
+
+|LTEP| 2
+
+nm−q
+
++
+
+qnm k
+
+.
+
+(29)
+
+2G˜ (m) may require another minor permutation to make its columns linearly
+
+independent. We ignore these extra terms for the sake of simplicity.
+
+REFERENCES
+[1] B. S. Khan, S. Jangsher, A. Ahmed, and A. Al-Dweik, “URLLC and eMBB in 5G industrial IoT: A survey,” IEEE Open J. Commun. Soc., vol. 3, pp. 1134–1163, 2022.
+[2] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems: Applications, trends, technologies, and open research problems,” IEEE Netw., vol. 34, no. 3, pp. 134–142, May 2020.
+[3] M. Bennis, M. Debbah, and H. V. Poor, “Ultrareliable and low-latency wireless communication: Tail, risk, and scale,” Proc. IEEE, vol. 106, no. 10, pp. 1834–1853, Oct. 2018.
+[4] Service Requirements for the 5G Systems; Stage 1 (Release 16), document TS 22.261, 3GPP, Mar. 2018.
+[5] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, Feb. 2019.
+[6] M. Shirvanimoghaddam, “Primitive rateless codes,” IEEE Trans. Commun., vol. 69, no. 10, pp. 6395–6408, Oct. 2021.
+[7] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010.
+[8] J. Sachs, G. Wikstrom, T. Dudda, R. Baldemair, and K. Kittichokechai, “5G radio network design for ultra-reliable low-latency communication,” IEEE Netw., vol. 32, no. 2, pp. 24–31, Mar. 2018.
+[9] T. Erseghe, “Coding in the finite-blocklength regime: Bounds based on Laplace integrals and their asymptotic approximations,” IEEE Trans. Inf. Theory, vol. 62, no. 12, pp. 6854–6883, Dec. 2016.
+[10] C. Yue, M. Shirvanimoghaddam, Y. Li, and B. Vucetic, “Segmentationdiscarding ordered-statistic decoding for linear block codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[11] H. B. Celebi, A. Pitarokoilis, and M. Skoglund, “Latency and reliability trade-off with computational complexity constraints: OS decoders and generalizations,” IEEE Trans. Commun., vol. 69, no. 4, pp. 2080–2092, Apr. 2021.
+[12] C. Yue, V. Miloslavskaya, M. Shirvanimoghaddam, B. Vucetic, and Y. Li, “Efficient decoders for short block length codes in 6G URLLC,” IEEE Commun. Mag., vol. 61, no. 4, pp. 84–90, Apr. 2023.
+[13] J. O¨ stman, R. Devassy, G. C. Ferrante, and G. Durisi, “Low-latency short-packet transmissions: Fixed length or HARQ?,” in Proc. IEEE Globecom Workshops (GC Wkshps), Dec. 2018, pp. 1–6.
+[14] A. Anand and G. de Veciana, “Resource allocation and HARQ optimization for URLLC traffic in 5G wireless networks,” IEEE J. Sel. Areas Commun., vol. 36, no. 11, pp. 2411–2421, Nov. 2018.
+[15] A. Ahmed, A. Al-Dweik, Y. Iraqi, H. Mukhtar, M. Naeem, and E. Hossain, “Hybrid automatic repeat request (HARQ) in wireless communications systems and standards: A contemporary survey,” IEEE Commun. Surveys Tuts., vol. 23, no. 4, pp. 2711–2752, 4th Quart., 2021.
+[16] S. E. Elayoubi, P. Brown, M. Deghel, and A. Galindo-Serrano, “Radio resource allocation and retransmission schemes for URLLC over 5G networks,” IEEE J. Sel. Areas Commun., vol. 37, no. 4, pp. 896–904, Apr. 2019.
+[17] F. Nadeem, M. Shirvanimoghaddam, Y. Li, and B. Vucetic, “Nonorthogonal HARQ for URLLC: Design and analysis,” IEEE Internet Things J., vol. 8, no. 24, pp. 17596–17610, Dec. 2021.
+[18] J. C. Fricke and P. A. Hoeher, “Reliability-based retransmission criteria for hybrid ARQ,” IEEE Trans. Commun., vol. 57, no. 8, pp. 2181–2184, Aug. 2009.
+[19] C. Sahin, L. Liu, E. Perrins, and L. Ma, “Delay-sensitive communications over IR-HARQ: Modulation, coding latency, and reliability,” IEEE J. Sel. Areas Commun., vol. 37, no. 4, pp. 749–764, Apr. 2019.
+[20] B. Makki, T. Svensson, and M. Zorzi, “Finite block-length analysis of the incremental redundancy HARQ,” IEEE Wireless Commun. Lett., vol. 3, no. 5, pp. 529–532, Oct. 2014.
+[21] F. Nadeem, Y. Li, B. Vucetic, and M. Shirvanimoghaddam, “Analysis and optimization of HARQ for URLLC,” in Proc. IEEE Globecom Workshops (GC Wkshps), Dec. 2021, pp. 1–6.
+[22] B. Go¨ktepe, C. Hellge, T. Schierl, and S. Stanczak, “Distributed machine-learning for early HARQ feedback prediction in cloud RANs,” IEEE Trans. Wireless Commun., vol. 23, no. 1, pp. 31–44, Jan. 2024.
+[23] S. AlMarshed, D. Triantafyllopoulou, and K. Moessner, “Deep learningbased estimator for fast HARQ feedback in URLLC,” in Proc. IEEE 32nd Annu. Int. Symp. Pers., Indoor Mobile Radio Commun. (PIMRC), Sep. 2021, pp. 642–647.
+[24] J. Frenzel, S. Mu¨ller-Weinfurtner, J. B. Huber, and R. R. Mu¨ller, “Convergence behavior of LDPC decoding and application to early termination,” in Proc. IEEE 29th Annu. Int. Symp. Pers., Indoor Mobile Radio Commun. (PIMRC), Sep. 2018, pp. 1–6.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+138
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+[25] B. Goektepe, S. Fa¨ehse, L. Thiele, T. Schierl, and C. Hellge, “Subcodebased early HARQ for 5G,” in Proc. IEEE Int. Conf. Commun. Workshops (ICC Workshops), May 2018, pp. 1–6.
+[26] B. Makki, T. Svensson, G. Caire, and M. Zorzi, “Fast HARQ over finite blocklength codes: A technique for low-latency reliable communication,” IEEE Trans. Wireless Commun., vol. 18, no. 1, pp. 194–209, Jan. 2019.
+[27] G. Berardinelli, S. R. Khosravirad, K. I. Pedersen, F. Frederiksen, and P. Mogensen, “Enabling early HARQ feedback in 5G networks,” in Proc. IEEE 83rd Veh. Technol. Conf. (VTC Spring), May 2016, pp. 1–5.
+[28] M. E. Buckley and S. B. Wicker, “The design and performance of a neural network for predicting turbo decoding error with application to hybrid ARQ protocols,” IEEE Trans. Commun., vol. 48, no. 4, pp. 566–576, Apr. 2000.
+[29] M. Hummert, D. Wubben, and A. Dekorsy, “Neural network-based forecasting of decodability for early ARQ,” in Proc. 17th Int. Symp. Wireless Commun. Syst. (ISWCS), Sep. 2021, pp. 1–6.
+[30] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[31] Y. Choukroun and L. Wolf, “Learning linear block error correction codes,” in Proc. Int. Conf. Mach. Learn., Jul. 2024, pp. 8801–8814.
+[32] N. I. Bernardo, J. Zhu, and J. Evans, “Learning channel codes from data: Performance guarantees in the finite blocklength regime,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2023, pp. 2129–2134.
+[33] C. She et al., “Guest editorial xURLLC in 6G: Next generation ultrareliable and low-latency communications,” IEEE J. Sel. Areas Commun., vol. 41, no. 7, pp. 1963–1968, Jul. 2023.
+[34] N. Alliance, 5G E2E Technology to Support Verticals URLLC Requirements, document RP-200025, 3GPP, 2019.
+[35] J. Wolf, A. Michelson, and A. Levesque, “On the probability of undetected error for linear block codes,” IEEE Trans. Commun., vol. C-30, no. 2, pp. 317–325, Feb. 1982.
+[36] D. Zi-jian, “Reliability-based iterative decoding of LDPC codes using segmented accumulation of likelihood ratio,” in Proc. 3rd Int. Conf. Adv. Comput. Theory Eng. (ICACTE), vol. 1, Aug. 2010, pp. V1-641–V1-643.
+[37] C. Yue, M. Shirvanimoghaddam, G. Park, O.-S. Park, B. Vucetic, and Y. Li, “Probability-based ordered-statistics decoding for short block codes,” IEEE Commun. Lett., vol. 25, no. 6, pp. 1791–1795, Jun. 2021.
+[38] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[39] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 533–547, Sep. 1981.
+[40] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic´, “Multiple-bases belief-propagation for decoding of short block codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Feb. 2007, pp. 311–315.
+[41] M. El-Hajjar and L. Hanzo, “EXIT charts for system design and analysis,” IEEE Commun. Surveys Tuts., vol. 16, no. 1, pp. 127–153, 1st Quart., 2014.
+[42] H. Yang, R. C. Yavas, V. Kostina, and R. D. Wesel, “Variable-length stop-feedback codes with finite optimal decoding times for BI-AWGN channels,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2022, pp. 2327–2332.
+[43] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 770–778.
+[44] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[45] S. Shao et al., “Survey of turbo, LDPC, and polar decoder ASIC implementations,” IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2309–2333, 3rd Quart., 2019.
+[46] Y. Ma, M. Kim, Y. Cao, S. Vrudhula, and J.-S. Seo, “End-to-end scalable FPGA accelerator for deep residual networks,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2017, pp. 1–4.
+[47] V. G. Satorras and J. B. Estrach, “Few-shot learning with graph neural networks,” in Proc. Int. Conf. Learn. Represent., 2018.
+[48] T. Hospedales, A. Antoniou, P. Micaelli, and A. Storkey, “Meta-learning in neural networks: A survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 9, pp. 5149–5169, Sep. 2022.
+
+Faisal Nadeem (Member, IEEE) received the B.Sc. (Hons.) degree in electronics engineering from COMSATS University Islamabad, Pakistan, in 2011, the M.Phil. degree (Hons.) in electronics engineering from Quaid-i-Azam University, Islamabad, in 2014, and the Ph.D. degree in electrical and information engineering from The University of Sydney, Sydney, NSW, Australia, in 2022. From 2014 to 2016, he was a Research Assistant with the Communication and Signal Processing Laboratory, Quaid-i-Azam University, where he contributed to the design of low-latency OFMA-based blind transceiver systems. He later joined the Institute of Wireless Communication Technology, Shanghai Jiao Tong University, China, and contributed towards advancing scalable video broadcasting via rate-splitting techniques. He held a post-doctoral research position with the School of Electrical and Computer Engineering, The University of Sydney, where he is currently involved in research and teaching. His research focuses on the IoT, 6G, AI-enabled signal processing, low-latency and massive machine-type communications, and intelligent wireless network control for industry 5.0.
+Chentao Yue (Member, IEEE) received the bachelor’s degree (Hons.) in information engineering from Chien-Shiung Wu College, Southeast University, China, in July 2017, and the Ph.D. degree in electrical engineering from The University of Sydney, Australia, in October 2021. His research focuses on error control coding, information theory, the Internet of Things, and machine learning in these fields. He is currently an Australian Research Council (ARC) Discovery Early Career Research Award (DECRA) Fellow at The University of Sydney.
+Ke Wang (Student Member, IEEE) received the dual Bachelor of Science degree in chemical technology from The Hong Kong Polytechnic University, Hong Kong, and in chemistry from Sun Yat-sen University, Guangzhou, China, in 2015, the master’s degree in data science from The University of Sydney, Sydney, Australia, in 2021, and the Ph.D. degree in engineering from the School of Electrical and Computer Engineering, The University of Sydney. His research interests include the design and application of machine learning, deep learning, and deep reinforcement learning algorithms.
+Mahyar Shirvanimoghaddam (Senior Member, IEEE) received the B.Sc. degree (Hons.) in electrical engineering from the University of Tehran, Iran, in September 2008, the M.Sc. degree (Hons.) in electrical engineering from the Sharif University of Technology, Iran, in October 2010, and the Ph.D. degree in electrical engineering from The University of Sydney, Australia, in January 2015. He held a post-doctoral research position with the School of Electrical Engineering and Computing, University of Newcastle, Australia. He is currently an Associate Professor with the School of Electrical and Computer Engineering, The University of Sydney. His general research interests include channel coding techniques, novel decoding algorithms, and the theory of machine learning. He was a recipient of the Marie Skłodowska-Curie Actions Fellowship, hosted by KTH, Sweden, from 2023 to 2025.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:52:23 UTC from IEEE Xplore. Restrictions apply.
+
+

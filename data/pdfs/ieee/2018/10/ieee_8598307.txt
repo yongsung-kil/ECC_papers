@@ -1,0 +1,437 @@
+An Efficient Implementation of LDPC Decoders on ARM Processors
+Bing Liu, Rongke Liu, Zhanxian Liu and Ling Zhao School of Electrical and Information Engineering BeiHang University, Beijing, China
+Email: {1302liubing, rongke liu, liuzhanxian, zhaoling}@buaa.edu.cn
+
+Abstract—In this paper, we present an ARM based decoder for Low Density Parity Check (LDPC) codes. To maximize the efficiency of the parallel execution and fully utilize the ARM processors’ capacity, instruction-level parallelism optimizations are applied. Compression storage and efficient data prefetching optimizing methods are used to enhance the memory cache efficiency. The experiments are carried out on NVIDIA Jetson K1 platform. Our decoder can achieve 1.85 times speed up compared with the related work. And the decoder has better energy efficiency comparing to the decoders on x86-CPU and GPU.
+I. INTRODUCTION
+Forward error correction (FEC) technology is widely used in digital communication systems. Among FEC technologies, LDPC codes have excellent performance and are widely used in various wireless standards. Decoders with high throughput and low latency can be implemented on the Field Programmable Gate Array (FPGA) and Application Specific Integrated Circuit (ASIC) platforms. The difficulty of transplanting and modifying limits them to satisfying the flexible requirements of cognitive radio (CR) and software defined radio (SDR). In recent years, researchers focused on multi-core devices (e.g.GPU and CPU) [2]–[5], [9], [10] to seek for better flexibility. Eventually, those decoders achieved excellent throughput, which can meet the wireless standard requirements. Nevertheless, their high power consumption can’t satisfy the requirement of embedded systems in low power environment. Thus, a more efficient software decoder architecture based on the ARM platform is proposed to solve this issue [1]. However, after carefully analyzing the result, the ARM processors’ processing capacity is not fully released. Several optimization techniques can be applied to maximized the throughput of the decoder.
+This letter is organized as follows: Section II briefly introduces decoding algorithms of LDPC codes. Then we analyze the theoretical performance of the decoder. And three optimizing methods on the ARM processor platform to fully release ARM processors’ computing capacity are described in Section III. Finally, the performance analysis and comparison with other decoders on ARM, x86-CPU and GPU are displayed in Section IV.
+II. DECODING ALGORITHM
+Among soft decision algorithms, Belief Propagation (BP) algorithm can achieve excellent error code performance. How-
+
+ever, it is too difficult for ARM processors to compute large number of complex operations directly in the check node update processing. Min Sum (MS) algorithm removes these complex functions and only uses comparing and adding operations in the check node update processing, which extremely reduces the computing complexity. In order to compensate the performance loss from the approximation, Normalized Min Sum (NMS) and Offset Min Sum (OMS) was proposed. From the perspective of decoding schedule, usually, most works were based on the Two Phase Message Passing (TPMP) structure. In fact, an increasing number of works started to use Turbo Decoding Message Passing (TDMP) schedule, which is also called horizontal layered-based decoding schedule. This layered schedule reduces the computational complexity and provides some memory footprint saving.
+In this work, layered decoding algorithm is associated to the OMS algorithm, which improves the correction performances compared with the MS algorithm and has lower complexity compared with NMS algorithm [2]. Data is represented on an 8-bit format. The decoding architecture with horizontal layered-based decoding schedule refers to the architecture in [1]. The fixed-point format management is based on results given in [7], which is also as same as the related work [1].
+III. ANALYSIS AND OPTIMIZATION
+ARM Cortex-A series of multi-core processors support SIMD (Single Instruction, Multiple Data) instruction set called NEON and SIMT (Single Instruction, Multiple Thread) to achieve multiple threads computing. To completely take advantage of NEON properties, an efficient approach consists in processing 16 different frames simultaneously while using 128-bit width registers. To maximize access bandwidth, VN values from different frames have to be rearranged contiguously in memory before starting decoding. This process can be described as a matrix transposition [1]. Similarly, there is an another inverse operation of matrix transposition at the end of decoding. For multi-threading programming, we apply OpenMP directives considering the convenience of creating threads and barriers.
+A. Throughput analysis
+For the horizontal layered-based structure, the throughput can be referred to the equation 1. Let n be the code length, q denotes the number of parallel processing frames, and Texec
+
+978-1-5386-6318-9/18/$31.00 ©2018 IEEE
+
+287
+
+IEEE Workshop on Signal Processing Systems
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:02 UTC from IEEE Xplore. Restrictions apply.
+
+indicates the running time of decoding program. Then the run-
+
+time of decoding program can be decomposed into the time of
+
+transposing the input data, decoding and transposing the output
+
+data. According to the test, the transposing time is negligible
+
+comparing to the decoding time. Thus, Texec = Tdecode.The decoding time includes the instructions executing time and the
+
+total latency of memory access, both of them are proportional
+
+to the computing complexity as equation 4. In the equation 4,
+
+m represents the length of message, c represents the average
+
+row weight of the LDPC code, and i is the maximum number
+
+of iterations. Finally, the throughput can be expressed as
+
+equation 5.
+
+n×q
+
+T hroughuput =
+
+(1)
+
+Texec
+
+Texec = Ttrans + Tdecode + Tintrans
+
+(2)
+
+Tdecode = Toperate + Tmemory
+
+(3)
+
+Tdecode ∝ (n − m) × c × i
+
+(4)
+
+n×q
+
+q
+
+T hroughput =
+
+=
+
+α × (n − m) × c × i (1 − ρ) × α × c × i
+
+(5)
+
+α is the coefficient of proportion representing the computa-
+
+tion complexity and memory access latency of the decoder.
+
+ρ is the rate of the code. When ρ is certain, it is clear
+
+that the throughput is just related to the row weight, the
+
+number of iterations and parallel frames. This indicates that,
+
+the throughput of the codes who have the same average degree
+
+and rate should be the same. But this conclusion does not
+
+correspond with the result given in [1]. This discrepancy
+
+will be discussed in next chapter. Now we focus on the
+
+optimization. To speed up the throughput, what we must do
+
+is to reduce execution time and total memory access latency.
+
+The three methods presented below can reduce execution time
+
+and access memory latency.
+
+B. Instruction level parallelism optimization
+Except Cortex-A5, all of ARM Cortex-A series are superscalar processors, which can issue 2 or 3 instructions in one clock cycle. As for those processors designed for high performance like A15, A57 and A72, their micro-architectures are as similar as the demonstration shown in Fig 1. For example, the Cortex-A15 processor is a superscalar processor with out-of-order execution, which can decode 3 instructions simultaneously and issue them to the 8 execution clusters in one clock cycle. The number of blocks in one execution clusters indicates the number of pipeline stages.
+After fully optimizing the decoder, codes are the simplest without any redundant processing. However, most NEON instructions are depended on previous NEON instructions. The strong flow and data dependency reduces the efficiency of the decoder in two aspects.
+Firstly, though the A15 processor has the potential ability to rearrange instructions order using out-of-order execution and then issue 2 NEON instructions into 2 independent NEON pipelines in 1 cycle, such huge flow dependency may stall one NEON pipeline and make it idle.
+
+Fetch
+Decode, Rename & Dispatch
+
+Queue Issue
+
+Loop Cache
+
+Integer Integer
+
+Execution
+
+Writeback
+
+Multiply Floating-Point / NEON
+
+Branch
+
+Load Store
+
+Fig. 1. ARM A15 micro-architecture
+
+Secondly, when an instruction is issued into a NEON pipeline, it has to go through longer execution pipeline and takes longer clock cycles until be available to some particular related instructions by bypassing function compared to ARM instructions. Then it takes another several cycles for results to be written back to registers file. At this time, the result can be accessed by any other instruction. Take the vector add instruction called VADD in NEON as an example. According to the official manual [8], the VADD in A9 costs 3 execution cycles when the result of the operation is ready. At this time, the result might be ready as source operands by bypassing function using forwarding paths for other instructions. Then, the VADD takes 6 execution cycles to write back the result to the register file. Thus, a dependent instruction after the VADD may be blocked 4 cycles or more than 10 cycles. Normally, maximizing,comparing and shifting operations usually take 4 or 5 cycles to go through the execution pipeline. For the simple multiplying operation, the delay is up to 7 cycles. If instructions are strongly dependent on each others, more bubbles will be created in pipeline and the efficiency of the decoder will be reduced.
+To break the dependency among instructions without bringing any redundant processing, loop unrolling is the best choice. Loop unrolling can reduce the possibility of the pipeline being interrupted by branches and increase the number of uncorrelated instructions. From this aspect, we could rearrange the uncorrelated instructions order to help compiler better optimize codes.
+Considering from the view of processors, more independent instructions help the processor issue them continually into 2 NEON pipelines. At the same time, because of the out-oforder execution, more instructions without any dependency can be emitted and filled into execution pipelines instead of waiting for the previous relevant instruction to be executed. This could promote the instructions per cycle (IPC) of the decoder and reduce execution time. Thus, 4 times or more loop unrolling may have better performance. However, loop unrolling is not limitless, excessive loop unrolling increases register pressure and cause more memory access, which could bring more latency to the program. Excessive loop unrolling also increases code size, and causes an increment of instruction cache misses. The result of loop unrolling will be presented in Section IV.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:02 UTC from IEEE Xplore. Restrictions apply.
+
+C. Compression storage optimization
+Tmemory is related to the total memory footprint. The total memory footprint can be expressed as the equation 6.
+
+Fcore = ((n − m) × c + n) × q + Fp
+
+(6)
+
+Because of the structure of the LDPC matrix, the memory access of obtaining variable nodes is discontinuous in memory. We can precompute all the positions to be accessed and store in Fp [1], [2]. For those codes whose check node s number is (m-n) and the row weight is c, (m-n)×c×4 byte memory space is needed to save all the positions. For QuasiCyclic LDPC (QC-LDPC) codes, their parity check matrixes have stepped structure, which means that memory access is continuous within a certain range. This features could be used to only record M head nodes and the length of each stepped structure. Thus, this strategy only costs M×c×(4+1) byte. Usually, M is much smaller than (m-n). For unstructured codes, the strategy is degraded to normal strategy.
+For the code with length of 2304 the number of head nodes is calculated as 63. Using the above compression strategy, the Fp is reduced to 1.95KB, which Fp is used to be 28.5KB with normal strategy. And for the code whose length is 7168 containing 4096-bit message information, this method can reduce the Fp to 1.8KB, which used to be 92KB. The method can greatly reduce the memory footprint of Fp. Less memory footprint means less memory access and less access latency. Especially, for long codes whose memory footprint are large or close to cache size, this strategy can ease the cache pressure, reduce the possibility of swapping useful variables out and improve cache hit ratio when using 4 cores to decode.
+
+D. Efficient data prefetching
+Since date is transferred between memory and cache in blocks of fixed size, called cache line, there is always a cache miss taking place when accessing the data in a cache line at the first time. For the continuous memory access of CNs to VNs, we can prefetch next 2 cache lines manually to hide the latency of cache miss. However, for the noncontinuous memory access to VNs, manual data prefetching seems ineffective in the test. Similarly, lots of manual data prefetching is a burden for cache. This will decrease the throughput of decoder significantly.
+
+IV. EXPERIMENTAL RESULTS
+To evaluate the efficiency of these optimizations, the ARM Cortex-A15 processor running up to 2.2 GHz (NVIDIA Terga K1) is selected. The SoCs is composed of 4 processor cores with 2 MB of L2 cache memory using RAND strategy shared by its 4 cores. The decoder is described in C++ language and then compiled by GCC 4.8. The air throughput was evaluated on board. To obtain the average performance, the decoding time is averaged over 2 minutes.
+
+350
+
+iter=5 1core
+
+iter=5 2cores
+
+iter=5 4cores
+
+300
+
+iter=10 1core
+
+iter=10 2cores
+
+iter=10 4cores
+
+250
+
+Throughput (Mbps)
+
+200
+
+150
+
+100
+
+50
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+LDPC Codes
+
+Fig. 2. Measured throughputs for 5 and 10 layered decoding iterations (111 LDPC codes: 576×288, 960×480, 1152×576, 1248×624, 1536×768, 1920×960, 1944×972, 2304×1152, 8000×4000, 9216×4608, 16200×7560)
+
+TABLE I THROUGHPUT(MBPS) COMPARISION WITH 5 ITERATIONS
+
+Mbps None GCC Unroll×2 ×3 ×4 ×5
+
+576,1/2 200 203
+
+242
+
+258 276 262
+
+1944,1/2 170 168
+
+208
+
+214 234 228
+
+2304,1/2 198 191
+
+241
+
+257 270 251
+
+A. Performance evaluation on ARM processors
+To compare with related works, codes from 802.11a, 802.11e, CMMB and DVB standards with code lengths from 576 to 16200 are selected. These codes include QC-LDPC codes and unstructured LDPC codes. To have a better view of the promotion from manual loop unrolling, considering most codes’ row weight in the experiment are 6 or 7, 6 times or more loop unrolling is meaningless and reduces portability. So 5 times and following conditions are measured and presented in Table I.
+Its clear to find out that 4 times loop unrolling has the best throughput, because both pipeline overlap and register pressure are taken into account. However, compiling with −funrollloops dosen’t get a significant improvement comparing with no loop unrolling. The reason is that GCC compiler will choose which loop will be unrolled entirely. Those loop with complex loop control or uncertain loop condition may not be unrolled or unrolled with radical jump instructions when there are branch in the loop, especially. By disassembling the codes of related work, we find that there are too many jump instructions through the codes. Branch prediction failure will significantly bother execution pipeline and be a burden on program speed. And temporal locality, spatial locality and order locality of the instruction cache is broken by the branch. Instructions may be loaded to the L2 cache, which means that potentially useful data may be swapped out from the cache, and may increase cache misses. On the other hand, there are fewer jump instructions using manual loop unrolling. Thus, manual loop unrolling may be the best choice to speed up the program.
+We test the throughput using 1,2,4 cores and setting the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:02 UTC from IEEE Xplore. Restrictions apply.
+
+160 Proposed work Related work
+140
+
+Throughput (Mbps)
+
+120
+
+100
+
+80
+
+60
+
+40
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+LDPC Codes
+
+Fig. 3. Throughput comparison with related ARM decoder for 10 layered decoding iterations. (1-9 LDPC codes: 576×288, 960×480, 1152×576, 1248×624, 1536×768, 1944×972, 2304×1152, 9216×4608, 16200×7560)
+
+maximum iterations as 5 or 10. Results are shown in Fig 2. In theory, for codes 1 to 6 and 8 whose average row weights are 6.33, their throughput should be the same. The reason for codes 3 to 5 having higher throughput is that their head node number are about 54, quite lower than other codes with 63 head nodes. And their matrixes are more cache friendly. The average row weight of code 7 is 7.11. It has 67 head nodes. According to the equation 5, the throughput of code 7 should be about 127 Mbps for 10 iterations referring based on the throughputs of code 1, 2 and 8, which is basically as same as the result measured on board. For code 9, the memory footprint is up to 2MB + 375KB using 4 cores, which is larger than total size of L2 cache and all L1 caches, let alone codes 10 and 11. Although these codes have lower row weight, their throughput are limited by the bandwidth of memory and the size of cache. Limited by the ARMv7 architecture, only 16 128-bit width registers are available. Using processors based on ARMv8 architecture with 32 128-bit width registers, faster cache, lower power consumption, can achieve a better performance.
+B. Comparison with related works on ARM, GPU and x86CPU
+To have a better view about the improvement, we compare with the fastest decoder based on ARM so far [1]. The results with 10 iterations using 4 cores are shown in Fig 3. A significant improvement is achieved in short codes, especially for codes shorter than 2304 in the test. For those codes whose memory footprint is larger than total cache size, there is no significant difference in throughput, since the bottle neck of the decoder is the memory bandwidth and the size of cache.
+We also compare with related works on GPU and x86CPU platforms. It is interesting to find out that there is no much difference on throughput between the proposed work and related works based on GPU with TPMP schedule. Throughput of works using TDMP schedule is 3 to 4 times faster than this work. However, considering from the power consumption, they are 30 times higher than this decoder since their power
+
+TABLE II THROUGHPUT(MBPS) COMPARISION WITH GPU WORKS
+
+Codes
+
+Related Works
+
+Proposed ARM Decoder
+
+#its
+
+Target
+
+Mbps #its
+
+Mbps
+
+1944, r=1/2 10• GTX 470 [10] 40 5◦
+
+234
+
+1944, r=1/2 10• GTX Titan [9] 236 5◦
+
+234
+
+1944, r=1/2 10◦ GTX 660 [3] 927 5◦
+
+234
+
+2304, r=1/2 10• GTX 470 [10] 52 5◦
+
+270
+
+2304, r=1/2 10• GTX Titan [9] 316 5◦
+
+270
+
+2304, r=1/2 5◦ GTX 580 [5] 710 5◦
+
+270
+
+2304, r=1/2 5◦ GTX 660 [3] 864 5◦
+
+270
+
+16200, r=1/2 20• GTX 570 [4] 186 10◦
+
+60
+
+64800, r=1/2 20• GTX 570 [4] 163 10◦
+
+53
+
+with • for flooding-based iterations and ◦ for layered-based iterations.
+
+TABLE III THROUGHPUT(MBPS) COMPARISION WITH X86 CPU WORK
+
+Codes
+576, r=1/2 960, r=1/2 1248, r=1/2 1944, r=1/2 2304, r=1/2 8000, r=1/2 9216, r=1/2 16200, r=1/2
+
+Related x86 Decoder [2]
+
+#its Mbps
+
+η
+
+5◦ 2084 53.8
+
+8◦ 1111 29.2
+
+5◦ 2107 55.4
+
+5◦ 1922 50.6
+
+5◦ 2005 52.8
+
+10◦ 1710
+
+45
+
+5◦ 1182 31.1
+
+10◦ 530
+
+13.9
+
+Proposed ARM Decoder
+
+#its Mbps
+
+η
+
+5◦ 276
+
+69
+
+8◦ 175
+
+43.8
+
+5◦ 306
+
+76.3
+
+5◦ 234
+
+58.5
+
+5◦ 270
+
+67.5
+
+10◦ 114
+
+52.5
+
+5◦ 231
+
+57.8
+
+10◦ 60
+
+14.8
+
+consumption may reach more than 200W. Table II shows the results in detail.
+Excellent throughput performance with low power consumption has been achieved in [2], which may overpass most decoders based on GPU. While, under low power consumption condition, each watt of power is expected to be fully utilized. So normalized throughput η is necessary to evaluate the energy utilization rate of the decoder. It is expressed in bit per second per average power. Because there isn’t any power sensor in the SoCs, we also use the information from official data sheet, which mentions that the power consumption is 4W with 4 cores working.Results are shown in Table III. The improvement of energy utilization comes not only from the low power design of ARM chips, but also from the performance improvement of the decoder. Decoders based on new processors with ARMv8 architecture can obtain a more impressive energy utilization rate.
+
+T hroughput
+
+η=
+
+(M bps/W )
+
+(7)
+
+P
+
+V. CONCLUSION
+In this article, a more efficient software LDPC decoder based on ARM processors is presented. By using the ILP optimization, this approach could make full use of computing resource. And compression storage and efficient data prefetching are used to make sure that the decoder could maximize the use of storage bandwidth. Experimental results demonstrate that the proposed decoder is more efficient in throughput and power consumption. The throughput ranges from 50 to 160 Mbps while executing 10 layered-decoding iterations could
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:02 UTC from IEEE Xplore. Restrictions apply.
+
+satisfy the requirement of SDR and CR radio communication systems.
+REFERENCES
+[1] B.Le Gal and C. Jego, “High-throughput LDPC decoder on low-power embedded processors”, IEEE Communications Letters, vol. 19, no. 11, pp. 1861-1864, Nov. 2015.
+[2] B.Le Gal and C. Jego, “High-throughput multi-core ldpc decoders based on x86 processor”, IEEE Transactions on Parallel and Distributed Systems, vol. 27, no. 5, pp. 1373-1386, May. 2016.
+[3] B.Le Gal and C. Jego, “A high throughput efficient approach for decoding LDPC codes onto GPU devices”, IEEE Embedded Systems Letters, vol. 6, no. 2, pp. 29-32, Jun. 2014.
+[4] S. Gronroos, K. Nybom and J. Bjorkqvist,“Efficient GPU and CPU-based LDPC decoders for long codewords”, J. Analog Integr. Circuits and Signal Process., vol. 73, no. 2, pp. 583-595, 2012.
+[5] R. Li, Y. Dou, D. Zou, S. Wang, and Y. Zhang,“Efficient graphics processing unit based layered decoders for quasicyclic low-density paritycheck codes”, Concurrency Comput. Pract. Exp., vol. 27, no. 1, pp. 29-46, 2015.
+[6] R.Wang and R.Liu, “A novel puncturing scheme for polar codes”, IEEE Commun. Lett., vol. 18, no. 12, pp. 2081-2084, Dec. 2014.
+[7] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoder”, J. Signal Process. Syst., vol. 65, no. 2, pp. 185-197, Nov. 2011.
+[8] ARM, “Cortex-A9 NEON Media Processing Engine Technical Reference Manual”, 2012.
+[9] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems”, in Proc. IEEE GlobalSIP, 2013, pp. 1258-1261.
+[10] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU”, in Proc. IEEE Symp. Appl. Specific Process., pp. 82-85, 2011.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:02 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,241 @@
+2023 International Technical Conference on Circuits/Systems, Computers, and Communications (ITC-CSCC) | 979-8-3503-2641-3/23/$31.00 ©2023 IEEE | DOI: 10.1109/ITC-CSCC58803.2023.10212736
+
+Design and Implementation of Forward-Backward Processing Unit for LDPC Decoder
+
+Anusorn Wongsa School of Engineering King Mongkut’s Institute of Technology Ladkrabang
+Bangkok, Thailand 62601094@kmitl.ac.th
+
+Watid Phakphisut School of Engineering King Mongkut’s Institute of Technology Ladkrabang
+Bangkok, Thailand watid.ph@kmitl.ac.th
+
+Abstract—This paper presents an efficient scalable architecture of node processing in low-density parity-check decoder. The node processing unit is based on the forward-backward algorithm. The proposed design relies on the cyclic shifting operation of scalable vectors. The number of nodes can be simply scaled without an increase of operator. Our design supports run-time scalability with a low hardware resource and high maximum operating frequency. The result of FPGA-based synthesis shows that, for every 1 degree increase, the number of logic elements increases at near linear rate roughly 47 elements, as well as the number of registers linearly increases at 48 registers. The clock cycles also linearly increase by 2 clock cycles per degree.
+Index Terms—node processing unit, forward-backward algorithm, LDPC decoder, cyclic shift register
+I. INTRODUCTION
+Low-Density parity check (LDPC) codes were introduced in 1962 [1], which are able to achieve performance close to channel capacity. In practical implementation, the LDPC codes show the good error-correction performance in many scenarios. The LPDC codes are defined as a sparse paritycheck matrix. This sparse matrix can be represented by a simply factor graph [2]. Therefore, the LDPC codes have been adopted in many modern communication systems.
+Nowadays, despite the advance of hardware technology, the hardware implementation of LDPC codes have been posed as the challenge needed to be attracted. The aim of hardware implementation is to achieve a high throughput with low complexity. The LDPC decoder comprises the check node and variable node operations. The main challenges are the scheduling of messages and the complexity of a node operation. However, this paper will focus on the node operation, which can be classified as variable node represented codeword and check node represented bits relation. In general, each node will receive multiple inputs according to their degree. However, each node operation can be done by taking 2-input pair at a time. This requires single processing unit for computing the multiple inputs. Thus, the single processing unit has a low-complexity hardware but impose high-latency to compute all inputs. A low latency can be obtained by the multiple processing units but it will require a high complexity. By using multiple processing units, two common methods are tree structure [3] and forward-backward structure [4]. Tree structures utillize parallelization of 2-input pair calculation.
+
+This allows the operation to have the lowest latency but require more hardware resources in line with a level of parallelization. In general, the tree structure does not utilize intermediate values. Dual tree structure [5], which is another variant of tree structure, was presented to consider a calculation of intermediate values. It comprises two tree structures where the first tree calculates intermediate values and then pass to the second tree. Dual tree structure can show a small latency compared to the simple tree structure. Another approach for maximizing the use of intermediate value is forward-backward algorithm. Forward-backward algorithm can be viewed as twodirectional trellis that can parallelly calculate the values at the same time. The forward-backward structure requires only two operations but incur high-latency.
+Scalability is another significant attribute of the architecture design. The traditional approach is that the largest architecture with bypass calculation. This approach is capable of supporting an input/output size from a largest to a smallest. The forward-backward architecture has the advantage as it able to handle a different number of inputs by scaling its memory depth. For example, it can define the largest memory depth to store the different number of input and output values. In contrast to tree structure, a scalability of the architecture deals with the number of processing unit and the routing. The tree structure needs to define an architecture with a largest number of processing unit resulted in high resource requirements and a complex routing. Therefore, this paper proposes the architecture for scalable forward-backward node processing unit. Our architecture supports the multiple inputs via cyclic shift register, where intermediate values can be calculated tightly in a time frame. Our architecture is implemented on an FPGA. The results show that our architecture requires small hardware resources. The resource linearly increases with a length of LLR representation and a node degree.
+This paper is organized as follow. In section II, the preliminaries are provided. The scalable architecture for forwardbackward algorithm is discussed in Section III. The hardware implementation is presented in Section IV. The simulation results and conclusion are provided in Section V and VI, respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:25:17 UTC from IEEE Xplore. Restrictions apply.
+
+II. PRELIMINARIES
+A. LDPC Decoder
+The belief propagation decoder is used for decoding LDPC decoder. The decoder can be viewed as bipartite graph including a set of check nodes, a set of variable nodes and a set of connected edges. The decoder receives N outputs y from noisy channel to recover a codeword x. The output must be converted into probability domain using log-likelihood ratio (LLR) as
+
+L(yi)
+
+=
+
+log( P (xi P (xi
+
+= =
+
+0|yi) ) 1|yi)
+
+=
+
+−2yi σ2
+
+,
+
+(1)
+
+where i ∈ 0, 1, ..., N − 1, N is codeword length and σ2 is variance of channel outputs y. These LLR values traverse within the decoder structure, whereby the nodes act as the sender and receiver. The variable nodes represented codeword bits, are calculated as
+
+L(q) = L(y) + L(r),
+
+(2)
+
+d−1
+
+where L(q) is a output LLR of variable node. L(r) and L(y) are output LLRs of check node and channel output connected with an interested variable node, respectively. d is a node degree, which is a number of input of an interested node. The check nodes, represented the relation of codeword bits, are calculated as
+
+L(r) = 2tanh−1(
+
+L(q) tanh( )).
+
+(3)
+
+2
+
+d−1
+
+The calculation of check nodes in (3) is not practical for hardware implementation. The simplified version of this calculation, namely, min-sum algorithm, is hardware-friendly calculation of check nodes described as
+
+L(r) = ( sign(L(q))) · min(L(q)).
+
+(4)
+
+Although, the min-sum algorithm can reduce hardware complexity. The algorithm will greatly affect an error-correcting performance. An approximation of check node calculation can be compensated. There is 2 method for an compensation. First is a normalized min-sum algorithm which utilizes a multiplication of a normalization constant α as follows
+
+L(r) = ( sign(L(q))) · (α · min(L(q))),
+
+(5)
+
+where the constant α has a range of 0 to 1. Second is an offset min-sum algorithm. The algorithm introduces the correction factor by subtracting a positive constant β as follows
+
+L(r) = ( sign(L(q))) · (min(L(q)) − β), (6)
+An belief propagation algorithm for LDPC decoder can be described as following steps Step 1) calculates the channel output: Channel output y with length of N , is calculated by (1). These outputs will be
+
+Fig. 1. A structure of the forward-backward algorithm for a check or a variable node with 5-degree. Note that the box operator can be a check node or variable node operator.
+connected directly to N variable nodes. At first iteration, the inputs from channel outputs y are passed as outputs of variable nodes to check nodes. Step 2) calculates the check node output: Check nodes will calculate inputs from connected variable nodes by (3) for a conventional method or (4) for a hardware-friendly method. The outputs of check nodes are passed to inputs of variable nodes. Step 3) terminates and decide the codeword: This process can terminate the decoding processes. First, the LLR of variable nodes is calculated and make a hard decision. This will result in an estimated codeword x˜. Then, an estimated codeword is checked according to Hx˜T = 0. If x˜ is satisfied, the decoding processes can be terminated. Otherwise, the processes are continue. Step 4) calculates the variable node output: Variable nodes will calculate inputs from connected check nodes by (2). The outputs of variable nodes are sent back the check nodes according decoding structure. Step 5) repeat Step 2) to Step 4): These processes will be repeated until an iteration number is matched.
+B. Forward-backward algorithms
+Both check node and variable node within a decoder deal with a different number and length of extrinsic LLR values. These multiple inputs can be separated into a pair of input calculation as shown in Fig. 1. The forward-backward algorithm can adopt a recursive implementation to minimize the number of input calculation for both check node and variable node. The algorithm sequentially calculates a pair of input in both directions (forward-backward). Then, the algorithm will exploit an intermediate value of every pair of input calculation. Thus, a sequential implementation of these steps requires 3(d − 2) operations to perform every pair of calculation with a timing delay of (d − 2) for calculating every operations. A structure of the algorithm shows in Fig. 1.
+The algorithm of forward-backward can be described in 2 main steps Step 1) calculates the forward nodes and backward nodes: The 2-input are sequentially calculated in both forward and backward direction. First d−1 inputs are feed into the forward
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:25:17 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 2. A system of the proposed forward-backward processing, which can support a various node degree, selectable node type (check/variable node) and normalized/offset min-sum calculation.
+
+intermediate node and a backward node, a forward-backward architecture only requires 3 operations to perform a forward node, an intermediate node and a backward node as shown in Fig. 3.
+However, for the forward node or backward node, a 2input pair must be scheduled to accommodate the sequential computation of forward-backward algorithm. First, a processor of a forward node is connected to 2 cyclic shift registers for collecting input LLRs and intermediate values. Second, a processor of a backward node is connected to 2 cyclic shift registers for collecting reverse-order input LLRs and intermediate values. Last, a processor of an intermediate node is connected to 2 cyclic shift registers to store forward intermediate values and backward intermediate values. The results from a intermediate node are stored in a intermediate cyclic shift register.
+Our scalable architecture supports a various degree by scaling the length of shift register according to their node degree. For any input LLR and any reverse-order input LLR, the registers require a length of dl, where l is a length of LLR representation per degree. The forward intermediate value and backward intermediate value require the registers with a length of (d−1)l. The intermediate result requires the register a length of (d − 2)l. Therefore, the number of registers in the proposed architecture can be calculated as
+
+register counts = (2dl) + (2(d − 1)l) + ((d − 2)l). (7)
+
+Fig. 3. A hardware structure of forward-backward architecture. The structure consists of 3 processors, where the node processors are connected to the cyclic shift registers performed as inputs and outputs. The results of the forwardbackward architecture can be collected from the registers highlight in red.
+nodes, where last d−1 inputs are feed into the backward nodes. A output of each node, called intermediate value, is passed to the next node. Intermediate values from both the forward and backward nodes are sent to the intermediate nodes. Step 2) calculates the intermediate nodes: An intermediate calculation can start as soon as intermediate values from the forward and backward nodes are available. Final d results of forward-backward algorithm can be obtained from a last forward and backward node and d−2 outputs of the intermediate nodes.
+III. SCALABLE ARCHITECTURE FOR FORWARD-BACKWARD
+ALGORITHM
+An FPGA implementation of scalable architecture for forward-backward algorithm is proposed in this section, where the overall system is shown in Fig. 2. Both check and variable nodes processing within a LDPC decoder needs to support various node degrees. As stated in previous section, a forwardbackward algorithm requires 3(d − 2) operations. Since the structure consists of 3 nodes including a forward node, an
+
+The architecture with 3 processors is still able to support a various number of node degree. In general, the degrees can be varied by adjusting a timing delay of those 3 nodes, where the delay is equal to d − 2. These properties allow the forwardbackward structure to be easily implemented in hardware. Moreover, these properties made the architecture utilizes small hardware resources. However, the proposed architecture needs another clock cycle for forward-backward calculation. Moreover, the intermediate calculation will be activated after the forward-backward calculation for scheduling reasons. For the timing of the structure, the structure operates within a number of clock as
+clock cycles = ((d − 2) + 1) + (d − 2) + 3 (8)
+for any length of LLR representation and any node degree. The ((d − 2) + 1) cycles come from the forward-backward processing and the additional clock. (d − 2) cycles occur in intermediate processing. The 3 cycles are utilized by the handshake protocol and register initialization. Fig. 5 displays a timing diagram for the proposed architecture with node degree of d = 5.
+In addition, our architecture can support the punctured LLR values. All inputs have a flag bit to indicate a punctured LLR value. When a punctured value enters a check node processor, the result will be a punctured value. If a punctured value and non-puncture value are the input of variable node processor, the result will be non-puncture value. Our architecture also
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:25:17 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I THE SYNTHESIS RESULTS OF THE PROPOSED FORWARD-BACKWARD ARCHITECTURE
+
+Configuration 3-degree node 5-bit LLRs 3-degree node 7-bit LLRs 3-degree node 9-bit LLRs 4-degree node 5-bit LLRs 4-degree node 7-bit LLRs 4-degree node 9-bit LLRs 5-degree node 5-bit LLRs 5-degree node 7-bit LLRs 5-degree node 9-bit LLRs
+
+Max frequency Clock cycles Throughput LUTs Registers Pins
+
+156.25 MHz
+
+6
+
+390.625 Mbps 326
+
+120
+
+48
+
+142.53 MHz
+
+6
+
+498.855 Mbps 429
+
+148
+
+62
+
+125.85 MHz
+
+6
+
+566.325 Mbps 530
+
+176
+
+76
+
+160.13 MHz
+
+8
+
+400.325 Mbps 362
+
+156
+
+60
+
+138.99 MHz
+
+8
+
+486.465 Mbps 476
+
+196
+
+78
+
+131.56 MHz
+
+8
+
+592.020 Mbps 591
+
+236
+
+96
+
+156.10 MHz
+
+10
+
+390.250 Mbps 398
+
+192
+
+72
+
+138.87 MHz
+
+10
+
+486.045 Mbps 523
+
+244
+
+94
+
+126.28 MHz
+
+10
+
+568.260 Mbps 647
+
+296
+
+116
+
+supports the normalized and offset min-sum calculation as shown in Fig. 2.
+The proposed architecture receives the inputs and sends the outputs in parallel manner. The reason is that the forwardbackward architecture will be integrated within a belief propagation decoding architecture. This architecture allows the forward-backward architecture to access multiple LLR values at once. This parallel access can be done through pins. The number of pins required for the proposed architecture is
+
+pin counts = (l · (2d + 1)) + 6,
+
+(9)
+
+where l · d is used for input LLRs, l · d is used for output LLRs, l is for normalized/offset factor and node type and 6 is for handshake signals. The hardware implementation of the proposed architecture must allocate logic elements, memories and pins. In order to support a various node degree, the architecture can allocate the size of shift registers at the largest node degree. This configuration allows the architecture to support a number of node degree from a minimum of 3-degree to a maximum dmax-degree.
+
+IV. RESULTS
+The proposed architecture is implemented on the Intel cyclone IV E family FPGA, specifically, EP4CE115F29C7 FPGA chip. The Cyclone IV FPGA resources can be classified into 3 types e.g. LUTs, registers and pins, where LUTs and registers are located within a basic building block, called logic element. A logic element of Cyclone IV comprises 4-input LUT and a single programmable flip-flop register. A logic synthesis has been test on operational conditions of 1.2 V and 85 C.
+Table I and Fig. 4 summarize the resource requirements with a various architecture configurations. The architecture configuration consists of maximum node degree and LLR representation length. In this work, we use the configuration comprises node degree of 3, 4 and 5 and LLR with length of
+
+6, 8 and 10 bits (LLR representation length of 5, 7 and 9 bits plus a puncture flag). A system throughput can be calculated by a maximum hardware frequency and a clock cycle derived from the synthesis software as
+throughput = bit length × maximum hardware frequency , clock cycles (10)
+with a unit of bits/sec. All resource types can be easily calculated with aforemention close-form formulas, because the resources consistently increase as the configuration number such as a length of LLR representation and a node degree. However, a number of look-up table (LUT) cannot described in a close-form equation but able to show as a graph in Fig.4, whereas the number of LUTs has a direct variation with respect to the configuration number. A number of register is another resource, which differs from initial calculation, due to the sourcecode and the synthesis software. A number of synthesized registers is given as
+synthesized register counts = (36+(14l))+((d−3)·6l), (11)
+where the second term indicates a minimum node degree of 3 for the proposed architecture.
+V. CONCLUSION
+This paper presents a scalable architecture of node processing unit for LDPC decoder using the forward-backward algorithm. The architecture supports a various node degree and any LLR representation length. Our forward-backward architecture utilizes only 3 node processors. Additionally, the proposed architecture comes with bypass mechanism, which allows the node processor to calculate any number of inputs. These node processing units require small hardware requirements while fully scalable architecture is preserved. Moreover, the proposed architecture supports normalized/offset min-sum
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:25:17 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. A graph for a number of LUT requirements with respect to a node degree and a LLR representation length
+algorithm and punctured values, which are commonly used in any applications of LDPC codes.
+REFERENCES
+[1] R. G. Gallager, Low Density Parity Check Codes. Cambridege, MA: MIT Press, 1963.
+[2] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans on Information Theory, vol. IT-27, no.5, pp. 533-547, Sep 1981.
+[3] S. S. Tehrani, S. Mannor, and W. J. Gross, “Fully parallel stochastic LDPC decoders,” IEEE Trans. Signal Process., vol. 56, no. 11, pp. 5692–5703, Nov. 2008
+[4] X.-Y. Hu, E. Eleftheriou, D.-M. Arnold, and A. Dholakia, “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Glob. Telecommun. Conf., vol. 2. San Antonio, TX, USA, Nov. 2001, pp. 1–6.
+[5] Q. Lu, Z. Shen, C.-W. Sham, and F. C. M. Lau, “A parallel-routing network for reliability inferences of single-parity-check decoder,” in Proc. Int. Conf. Adv. Technol. Commun., Ho Chi Minh City, Vietnam, 2015, pp. 127–132.
+Fig. 5. A timing diagram of the proposed architecture with a total of ((d − 2) + 1) + (d − 2) + 3 clock cycles, where d = 5. The results of the forwardbackward calculation are highlighted in red.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:25:17 UTC from IEEE Xplore. Restrictions apply.
+
+

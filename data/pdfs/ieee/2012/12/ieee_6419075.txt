@@ -1,0 +1,572 @@
+A Layered QC-LDPC Decoder Architecture for
+High Speed Communication System
+Chiu-Wing Sham, Xu Chen, Wai M. Tam, Yue Zhao and Francis C.M. Lau
+Department of Electronic and Information Engineering
+The Hong Kong Polytechnic University
+Abstract—The performance of a high-throughput long-distance
+communication system such as an optical transmission system is
+limited by the Net Coding Gain (NCG) of the Forward Error
+Correction (FEC) system. Summarizing the previous research
+works, Low-Density Parity-Check (LDPC) codes form one of the
+most promising FEC schemes to be applied in high-throughput
+communication systems. Designing a practical channel coding
+scheme with high code rate, low complexity, high through-
+put and extremely low error floor has always been a very
+challenging problem. Quasi-cyclic low-density parity-check (QC-
+LDPC) codes have been promising candidates to fulfill the above
+requirements but the implementation issues remain. In this paper,
+we propose a layered QC-LDPC decoder architecture with high
+code rate, low complexity, high throughput and excellent error
+performance. The architecture has been implemented using FPGA
+and the error performance has been shown to be good.
+I. INTRODUCTION
+As the growth of the network traffic load is expected
+to be a long-term trend, there is a great need to increase
+the high network capacity. Compared with other possible
+solutions, a strong but simple Forward Error Correction (FEC)
+is the most desirable cost-effective candidate to recover the
+noisy signal in long-distance communication systems. The
+net error-correction power of a FEC system is known as
+the Net Coding Gain (NCG). Among the different coding
+schemes, Low-Density Parity-Check (LDPC) codes [1], [2]
+form one of the most promising FEC solutions. Quasi-cyclic
+LDPC (QC-LDPC) code is a class of LDPC codes with the
+parity-check matrix consisting of circulant permutation sub-
+matrices. Because of its regularized structure, the encoders
+can be implemented with very low complexity [3], [4]. It
+is evident that QC-LDPC codes represent a promising FEC
+scheme [5]–[7] for the next generation optical transport net-
+works. However, there are several challenges to be overcome.
+First, the code rate should be greater than 80%. Second, a
+higher NCG should be accomplished. It is necessary because it
+implies that repeaters can be installed with a larger separation
+distance. Hence, the cost of the optical system can be reduced.
+Third, the decoder should be implemented with a reasonable
+complexity. A decoder with a lower complexity represents a
+lower fabrication cost and lower power consumption. Min-
+sum (MS) algorithm is widely used [8]–[15] in the decoding
+process of LDPC codes because it has a lower complexity.
+Normalized/offset MS algorithms [16] are also proposed later.
+However, the quantized MS decoding becomes less accurate
+compared with the quantized Sum Product Algorithm (SPA) as
+the check-node degree increases and the code rate is high [8].
+In general, the previous architecture is not suitable for the FEC
+system of optical communication because they cannot achieve
+high code rate and NCG.
+In this paper, we propose a layered QC-LDPC decoder
+architecture with high code rate, low complexity, high through-
+put and excellent error performance. First, our proposed
+RAM-based architecture applies the dynamic storage of only
+the quantized Check node-to-Variable node (C2V) or Vari-
+able node-to-Check node (V2C) message for each connected
+variable-check pair at any time. The memory storage re-
+quirement is substantially reduced compared with existing
+architectures [14], [15]. This architecture does not require
+any shuffled network so the routing complexity is further
+reduced. Second, we propose a novel Check-Node Processor
+(CNP) which evaluates the C2V messages based on quantized
+SPA. Its complexity is similar to that of MS decoding but
+a much higher NCG can be acheived. Third, we propose a
+deep pipeline scheduling such that all the CNPs and Variable
+Node Processors (VNPs) will not be idle at any moment. The
+throughput of this decoder can be increased with a lower com-
+plexity. Fourth, we propose varying the number of iterations
+of each codeword dynamically. This allows some codewords
+that are more corrupted to go through more iterations.
+The rest of the paper is organized as follows. Section II
+reviews the basic concepts of QC-LDPC codes. Section III
+elaborates the detailed RAM-based decoder architecture. We
+explain the details of the main techniques including Dynamic
+Storage of C2V and V2C Messages, Quantized SPA Computa-
+tion in CNP and VNP and Deep Pipelined Scheduling of CN
+and VN Processes. In Section IV, we show the performance
+results in terms of hardware complexity, throughput and bit
+error performance. Section V concludes the paper.
+II. BACKGROUND
+LDPC codes can be represented by a sparse parity-check
+matrix H. Assuming that H is of size 𝑀×𝑁, then the LDPC
+codes can be alternatively described by a bipartite graph with
+𝑀CNs on one side and 𝑁VNs on the other side [2]. The
+codes are termed as regular if all the VNs and CNs have
+the same degrees 𝑑𝑣and 𝑑𝑐, respectively; otherwise, they are
+termed as irregular codes. QC-LDPC codes form a subclass
+of LDPC codes with the parity-check matrix consisting of
+circulant permutation matrix [3], [4]. The parity-check matrix
+475
+978-1-4577-1729-1/12/$26.00 ©2012 IEEE.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:04 UTC from IEEE Xplore.  Restrictions apply. 
+Message Memory (ring buffer)
+CN
+processor
+VN
+processor
+2C
+to
+SM
+SM
+to
+2C
+Layer 1
+V2C messages
+(layer 2)
+V2C messages
+(layer 1)
+CN
+processor
+VN
+processor
+2C
+to
+SM
+SM
+to
+2C
+Layer J
+V2C messages
+(layer 1)
+V2C messages
+(layer J)
+Address controller
+Reg
+Reg
+Reg
+Reg
+Reg
+Reg
+C2V messages
+(layer 1, ..., J-1)
+C2V messages
+(layer 2, ..., J)
+C2V messages
+(layer J)
+C2V messages
+(layer 1)
+Channel messages
+Channel messages
+stage: L1 s1
+stage: L1 s2
+stage: L1 s3
+stage: L1 s4
+stage: LJ s1
+stage: LJ s2
+stage: LJ s3
+stage: LJ s4
+Fig. 1: Design architecture of the proposed QC-LDPC decoder.
+of a regular QC-LDPC code is represented by
+H =
+⎡
+⎢⎢⎣
+I𝑎1,1
+I𝑎1,2
+⋅⋅⋅
+I𝑎1,𝐿
+I𝑎2,1
+I𝑎2,2
+⋅⋅⋅
+I𝑎2,𝐿
+⋅⋅⋅
+⋅⋅⋅
+⋅⋅⋅
+⋅⋅⋅
+I𝑎𝐽,1
+I𝑎𝐽,2
+⋅⋅⋅
+I𝑎𝐽,𝐿
+⎤
+⎥⎥⎦,
+(1)
+where 𝐽denotes the number of block rows, 𝐿is the number
+of block columns, I is the identity matrix of size 𝑧× 𝑧, and
+I𝑎𝑗,𝑙(1 ≤𝑗≤𝐽; 1 ≤𝑙≤𝐿) is a circulant matrix formed by
+shifting the columns of I cyclically to the right 𝑎𝑗,𝑙times with
+𝑎𝑗,𝑙’s being non-negative integers less than 𝑧. The code rate
+𝑅of H is lower bounded by 𝑅≥1 −𝐽/𝐿. If one or more of
+the sub-matrices is/are substituted by the zero matrix rendering
+non-uniform distributions of the CN degrees or VN degrees,
+the QC-LDPC code becomes an irregular code. In addition,
+layered decoding is applied in order to speed up the decoding
+convergence by accelerating message propagation [17].
+III. RAM-BASED ARCHITECTURE OF THE DECODER
+The overall architecture of the QC-LDPC decoder is il-
+lustrated in Fig. 1. In our decoder, the V2C messages are
+stored in the sign-magnitude (SM) format whereas the channel
+messages and the C2V messages are stored in the two’s
+complement (2C) format. For each of the 𝐽layers, the V2C
+messages, the channel messages and the C2V messages are
+input to the layered decoder. First, the CNPs receive the
+V2C messages and calculates the updated C2V messages.
+The new C2V messages are converted to the 2C format.
+These new C2V messages, together with the channel messages
+and other C2V messages, are then used by the VNPs to
+compute the updated V2C messages. Throughout the process,
+the read/write operations of the RAMs are controlled by the
+address controller. Once the address for each RAM is initiated
+at the beginning of the processing of each layer, it keeps
+incrementing by one so as to process the next layer. As a
+result, the address controller is a simple counter thanks to the
+quasi-cyclic structure of the QC-LDPC codes.
+Some design techniques are applied in order to achieve high
+code rate, low complexity, high throughput and excellent error
+performance by this layered QC-LPDC decoder architecture.
+First, our proposed RAM-based architecture requires the dy-
+namic storage of only the quantized C2V or V2C message for
+each connected variable-check pair as well as the quantized
+channel messages at any time. In other words, for a particularly
+memory location, it stores a C2V message at one time but
+stores a V2C message at another time, and vice versa. Second,
+a novel CNP is proposed which evaluates the C2V messages
+based on quantized SPA in order to achieve a high NCG.
+Its complexity is similar to that when MS decoding is used,
+while the processor is implemented based on a look-up table.
+Third, a deep pipeline scheduling is proposed. It allows more
+codewords to be processored simultaneously. Consequently,
+the throughput of the decoder can be increased with similar
+complexity. We show that for a code with 3 check-node groups
+per decoding layer and 4 decoding stages per hardware layer,
+the throughput can be increased by 100% compared with the
+conventional pipeline scheduling. Although more hardware
+resources are required to store the messages of the additional
+codewords, these can be easily implemented with the use of
+more RAM blocks in our RAM-based decoder architecture.
+Fourth, the number of iterations of each codeword can vary
+dynamically. We can stop the decoding process for a particular
+codeword if that codeword is found valid after checking.
+The resources (number of iterations) saved can be applied to
+decode other codewords which may need more iterations to
+converge.
+A. Dynamic Storage of C2V and V2C Messages
+In our design, the newly updated V2C messages, which
+will only be used in the next layer but not other layers,
+are converted to the SM format. Subsequently, the updated
+C2V messages (in 2C format) and the V2C messages (in SM
+format) are output. The updated C2V messages are stored in
+the RAMs corresponding to the input V2C messages, i.e.,
+the RAMs storing the input V2C messages of layer 𝑗are
+over-written by the updated C2V messages of the same layer;
+whereas the V2C messages are stored in the associated RAMs
+which are going to be accessed in the next layer. Since each
+check node is connected to 𝐿VNs (i.e., row weight = 𝐿),
+the corresponding CN requires 𝐿V2C messages from the
+same layer (i.e, Layer 𝑗) in computing the 𝐿updated C2V
+messages during the decoding process. In order to load these 𝐿
+V2C messages simultaneously to the decoder without memory
+collision, we allocate 𝐿separated RAM blocks (or simply
+RAMs) to store these V2C messages.
+B. Quantized SPA Computation in CNP and VNP
+The check-node processors are implemented based on table
+look-up approach with a binary arithmetic tree. Since each
+CNP produces 𝐿C2V messages based on 𝐿V2C messages, it
+has 𝐿inputs and 𝐿outputs. To simplify the implementation,
+we make use of components that execute the same look-up
+table (LUT) function. The LUT takes in two quantized mes-
+sage inputs and produces one quantized output message. By
+recursively using these table look-up components to perform
+476
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:04 UTC from IEEE Xplore.  Restrictions apply. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+	
+
+
+	
+
+Fig. 2: Comparison between quantized offset MS, quantized
+MS and quantized SPA.
+the computations, the operation complexity for the CNP is
+only Θ(𝐿).
+Denote the quantization step by Δ1. Assume that all
+the messages are quantized into 2𝑞+ 1 levels denoted by
+{−𝑞Δ, (−𝑞+ 1)Δ, . . . , 0, . . . , (𝑞−1)Δ, 𝑞Δ}. Then we con-
+struct the look-up table based on belief propagation with SPA,
+i.e., 𝑂(𝑖, 𝑗)
+=
+𝒬Δ
+{
+2 tanh−1 (
+tanh( 1
+2𝑖Δ) tanh( 1
+2𝑗Δ)
+)}
+,
+where 𝑖, 𝑗∈{−𝑞, −𝑞+ 1, . . . , 𝑞−1, 𝑞} and 𝒬Δ{⋅} denotes
+a quantization operation with a step size of Δ. Note that
+once the quantization step size Δ and the look-up tables are
+constructed, the decoding performance depends only on the
+indices of the quantized channel messages.
+We compare our quantized SPA with the quantized offset
+MS and the quantized MS. The error performance results are
+shown in Fig. 2. The code is a (18432, 4, 24) regular QC-
+LDPC code. The quantized offset MS uses a conventional
+non-layered scheduling with 24 iterations. For the quantized
+MS and the quantized SPA, a layered scheduling with 10
+iterations is applied. We can see that our decoding method
+with quantized SPA performs much better than the other two
+methods. The performance difference between quantized SPA
+and quantized offset MS is 0.14 dB at a bit error rate of 10−6.
+Note that this difference increases with the CN degree. For a
+code with a higher code rate, the number of block columns and
+hence the CN degree is larger. Consequently, the performance
+difference between the quantized SPA and the quantized offset
+MS becomes larger. Thus, we use our proposed quantized SPA
+in our QC-LDPC decoder because of its better performance.
+C. Deep Pipelined Scheduling of CN and VN Processors
+In this section, we investigate the utilization of the hardware.
+Consider a parity-check matrix consisting of 𝐽× 𝐿sub-
+matrices, each of size 𝑧by 𝑧. Furthermore, the check nodes
+in each layer is divided into 𝐺groups. Suppose the check
+1The quantization step can be optimized based on density evolution and
+differential evolution.
+TABLE I: Details of the QC-LDPC codes designed
+Code A
+Code B
+Code C
+Code length
+18432
+18432
+24576
+Code type
+regular
+irregular
+irregular
+𝐽
+4
+4
+4
+𝐿
+24
+24
+24
+𝑧
+768
+768
+1024
+nodes in each group are processed in parallel with 𝑆pipeline
+stages. In this conventional scheduling method, each layer of
+check nodes of a codeword therefore requires (𝐺+ 𝑆−1)
+execution cycles to be processed. Since there are 𝐽layers in
+one codeword, one iteration requires a total of 𝐽(𝐺+ 𝑆−1)
+clock cycles. The hardware is not fully utilized all the time. In
+fact, the number of pipeline holes can be easily shown equal
+to (𝑆−1) per layer and hence 𝐽(𝑆−1) per iteration. The
+wastage proportional 𝑊is thus equal to
+𝑊=
+𝐽(𝑆−1)
+𝐽(𝐺+𝑆−1) =
+(𝑆−1)
+(𝐺+𝑆−1).
+In our design, we propose filling in the pipleline holes
+by allowing more codewords to be processed at the same
+time. Since the number of codewords being processed simul-
+taneously increases and the number of execution cycles to
+complete one iteration remains the same, i.e., 𝐽(𝐺+ 𝑆−1),
+the throughput is increased.
+IV. IMPLEMENTATION AND PERFORMANCE
+Our
+decoder
+is
+implemented
+on
+an
+Altera
+Stratix
+EP4SGX530 FPGA. Three QC-LDPC codes with code rate
+5/6 are designed for this experiment. Code A is a (18432,
+4, 24) regular QC-LDPC code, Code B is a (18432, 4, 24)
+irregular QC-LDPC code and Code C is a (24576, 4, 24)
+irregular QC-LDPC code. Details of the QC-LDPC codes are
+shown in Table I. Note that Code B and Code C are irregular
+QC-LDPC codes because some of the sub-matrices in H are
+zero-matrices.
+The FPGA implementation details of the QC-LDPC de-
+coders are shown in Table II. Note that the depth of the mem-
+ory blocks equals 𝐺. All the decoders can be run at 80 MHz.
+When 10 iterations are used to decode each codeword, the
+throughputs for Code A and Code B are both 1.97 Gbps; and
+the throughput for Code C is 1.33 Gbps . We evaluate the
+error performance of the codes Code A, Code B and Code
+C using our proposed 4-bit quantized SPA decoder. The bit
+error rates (BERs) for the 4-bit quantized SPA decoder are
+obtained from the FPGA decoder. Figure 3 plots the BER
+results. Compared with Code A and Code B, Code C gives
+the lowest BER. However, an error floor appears for Code C
+when the bit-energy-to-noise-power-spectral-density (𝐸𝑏/𝑁0)
+equals 3.6 dB. At this 𝐸𝑏/𝑁0, 4.875 × 1015 bits have been
+evaluated by Code C.
+V. CONCLUSIONS
+In this paper, we have proposed a layered QC-LDPC de-
+coder architecture with high code rate, low complexity, high
+throughput and excellent error performance. The architecture
+has been successful implemented onto a FPGA and has been
+477
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:04 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE II: Implementation details of the QC-LDPC decoders.
+Code A
+Code B
+Code C
+Code C with DI
+𝐺(groups of check nodes in one layer)
+64
+64
+128
+128
+No. of CN processors for one layer
+12
+12
+8
+8
+No. of VN processors for one layer
+288
+288
+192
+192
+Depth of memory blocks
+64
+64
+128
+128
+No. of bits for each quantized message
+4
+4
+4
+4
+Combinational ALUTs
+139125
+161799
+93951
+103319
+Memory ALUTs
+18432
+17664
+31360
+31360
+Registers
+140996
+135621
+102664
+102615
+Clock frequency
+80 MHz
+80 MHz
+80 MHz
+80 MHz
+Throughput
+1.97 Gbps
+1.97 Gbps
+1.33 Gbps
+1.33 Gbps
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+Fig. 3: Bit error performance of the codes Code A, Code B
+and Code C.
+used to evaluate the error performance of different code
+designs. Such a decoder can be used for example in high-
+speed optical communication systems.
+VI. ACKNOWLEDGEMENT
+The work described in this paper was partially supported
+by a grant from Huawei Technologies Co. Ltd. and the RGC
+of the Hong Kong SAR, China (Project No. PolyU 521809).
+REFERENCES
+[1] S.-Y. Chung, J. G. Forney, T. J. Richardson, and R. Urbanke, “On the
+Design of Low-Density Parity-Check Codes within 0.0045 dB of the
+Shannon Limit,” IEEE Commun. Letters, vol. 5, no. 2, pp. 58 –60,
+February 2001.
+[2] T. Richardson and R. Urbanke, “The Capacity of Low-Density Parity-
+Check Codes under Message-Passing Decoding,” IEEE Trans. on Infor-
+mation Theory, vol. 47, no. 2, pp. 599 – 618, February 2001.
+[3] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient Encoding
+of Quasi-Cyclic Low-Density Parity-Check Codes,” IEEE Trans. on
+Commun., vol. 54, no. 1, pp. 71 – 81, January 2006.
+[4] W. Tam, F. Lau, and C. Tse, “A class of QC-LDPC codes with low
+encoding complexity and good error performance,” Communications
+Letters, IEEE, vol. 14, no. 2, pp. 169–171, 2010.
+[5] L. Chen, J. Xu, I. Djurdjevic, and S. Lin, “Near-Shannon-Limit Quasi-
+Cyclic Low-Density Parity-Check Codes,” IEEE Trans. on Commun.,
+vol. 52, no. 7, pp. 1038 – 1042, July 2004.
+[6] I. Djordjevic and B. Vasic, “High Code Rate Low-Density Parity-
+Check Codes for Optical Communication Systems,” IEEE Photonics
+Technology Letters, vol. 16, no. 6, pp. 1600 – 1602, June 2004.
+[7] I. B. Djordjevic, M. Arabaci, and L. L. Minkov, “Next Generation
+FEC for High-Capacity Communication in Optical Transport Networks,”
+Journal of Lightwave Technology, vol. 27, no. 16, pp. 3518 – 3530,
+August 2009.
+[8] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu,
+“Reduced-Complexity Decoding of LDPC Codes,” IEEE Trans. on
+Commun., vol. 53, no. 8, pp. 1288 – 1299, August 2005.
+[9] J. Zhao, F. Zarkeshvari, and A. Banihashemi, “On Implementation of
+Min-Sum Algorithm and its Modifications for Decoding Low-Density
+Parity-Check (LDPC) Codes,” IEEE Trans. on Commun., vol. 53, no. 4,
+pp. 549 – 554, April 2005.
+[10] Z. Wang and Z. Cui, “Low-Complexity High-Speed Decoder Design
+for Quasi-Cyclic LDPC Codes,” IEEE Trans. on VLSI Systems, vol. 15,
+no. 1, pp. 104 – 114, January 2007.
+[11] Y. Dai, N. Chen, and Z. Yan, “Memory Efficient Decoder Architectures
+for Quasi-Cyclic LDPC Codes,” IEEE Trans. on Circuits and Systems
+I, vol. 55, no. 9, pp. 2898 – 2911, October 2008.
+[12] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory System Optimiza-
+tion for FPGA-Based Implementation of Quasi-Cyclic LDPC Codes
+Decoders,” IEEE Trans. on Circuits and Systems I, vol. 58, no. 1, pp.
+98 –111, January 2011.
+[13] L. Liu and C.-J. Shi, “Sliced Message Passing: High Throughput
+Overlapped Decoding of High-Rate Low-Density Parity-Check Codes,”
+IEEE Trans. on Circuits and Systems I, vol. 55, no. 11, pp. 3697 –3710,
+December 2008.
+[14] J. Jin and C.-Y. Tsui, “An Energy Efficient Layered Decoding Architec-
+ture for LDPC Decoder,” IEEE Trans. on VLSI Systems, vol. 18, no. 8,
+pp. 1185 – 1195, August 2010.
+[15] Z. Wang, Z. Cui, and J. Sha, “VLSI Design for Low-Density Parity-
+Check Code Decoding,” IEEE Circuits and Systems Magazine, vol. 11,
+no. 1, pp. 52 – 69, 2011.
+[16] J. Chen and M. P. C. Fossorier, “Near-Optimum Universal Belief
+Propagation Based Decoding of Low-Density Parity Check Codes,”
+IEEE Trans. on Commun., vol. 50, p. 406 414, March 2002.
+[17] D. Hocevar, “A Reduced Complexity Decoder Architecture via Layered
+Decoding of LDPC Codes,” in IEEE Workshop on Signal Processing
+Systems, October 2004, pp. 107 – 112.
+478
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:47:04 UTC from IEEE Xplore.  Restrictions apply. 

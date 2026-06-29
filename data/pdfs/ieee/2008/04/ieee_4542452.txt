@@ -1,0 +1,468 @@
+High Throughput Partially-Parallel Irregular LDPC Decoder Based on Delta-Value Message-Passing Schedule
+
+Wen JI†, Xing LI, Takeshi IKENAGA, Satoshi GOTO
+Graduate School of Information, Production and Systems, Waseda University
+2-7 Hibikino, Wakamatsu-ku, Kitakyushu, Fukuoka 808-0135 Japan †jiwen@ruri.waseda.jp
+
+ABSTRACT
+In this paper, we propose a partially-parallel decoder architecture for irregular LDPC code targeting high throughput applications. The proposed decoder is based on a novel delta-value message-passing algorithm to facilitate the decoding throughput by removing redundant computations using the difference between the updated value and the original value. Techniques such as binary sorting, high performance pipelining are used to further speed up the messagepassing procedure. The synthesis result in TSMC 0.18 CMOS technology shows that for (648,324) irregular LDPC code, our decoder can increase 8 times in throughput, which reaches 418 Mbps at the frequency of 200MHz.
+I. INTRODUCTION
+A Low-Density Parity-Check (LDPC) code is an error correcting code first proposed by Gallager in the early 1960’s, and rediscovered by MacKay and Neal [1] in 1996. In [2][3], irregular LDPC codes are constructed enabling data transmission rates close to the Shannon Limit, the theoretical maximum. The LDPC decoding algorithm is inherently parallel and is much easier to be implemented than its comparator turbo codes, thus making it more attractive to researchers [3].
+LDPC code is very suitable for hardware implementation by utilizing a parallel decoding algorithm called Message-Passing (MP) algorithm [4]. In the last few years, researches have done on designing specific decoder architectures for LDPC implementations, seeking for the best trade-off between area, power consumption and performance. [5]-[9]
+The LDPC decoders that have been designed have the same primitive processing elements: a check functional unit (CFU) performing row operations for check nodes and bit functional unit (BFU) performing column operations for bit nodes. These processing elements are connected according to the Tanner graph, a graph representing the relation between bit nodes and check nodes. The MP algorithm exchanges messages between check nodes and bits nodes by performing row and column operations iteratively.
+The authors in [8] proposed an accelerated message-passing schedule, which only performs those column operations whose corresponding check nodes have been updated by the row operations. A partially-parallel LDPC decoder based on the accelerated MP schedule is introduced in [9] to support for irregular LDPC code.
+Although the partially-parallel irregular LDPC decoder proposed in [9] can improve the error correction performance, it suffers a main problem that the overall throughput is relatively low compared with the regular or fully-parallel irregular LDPC decoder (eg. [10], [11]). Considering the fact that throughput is an essential metric in realtime communication systems applying LDPC code, we propose an improved MP algorithm and decoder architecture for irregular LDPC
+
+decoder, in this paper, to achieve a nearly 8X speedup. The novelties of this decoder in terms of high throughput are as follows:
+
+1) A novel delta-value based message-passing algorithm is proposed to accelerate the decoding computation.
+2) An improved binary sorting scheme is designed to reduce the computation time of row operation.
+3) A fully-parallel structure of bit function unit is designed to speed up the column operation.
+4) A high performance pipeline structure is used to further speed up the message-passing procedure.
+
+The rest of the paper is organized as follows. Section II introduces the preliminary concepts and background materials. Section III discusses the improved message-passing algorithm proposed. Section IV discusses our LDPC decoder architecture. Section V shows the detailed implementation and timing of our decoder. In Section VI we demonstrate our implementation results and finally Section VII concludes.
+
+II. BACKGROUND
+
+In this section, we present the preliminary concepts, specifically, irregular LDPC code, and message-passing algorithm. The irregular LDPC codes can be defined by a parity check matrix H containing M×N sub-blocks, where M and N are the number of row-blocks and column-blocks respectively. Each sub-block matrix is a b×b square matrix, obtained through right shifting the identity matrix Ibǘb by a specific number. The parity check matrix used in this work is a 12×24 matrix (each is 27bits×27bits) defined in IEEE 802.11n standard with code rate of 1/2 and block length of 648 bits.
+
+LDPC code can be decoded iteratively using the MP algorithm
+described in [4]. Each iteration of the algorithm is composed of four
+phases: row operation, column operation, error correction and parity check. The row operation updates message Į of all check nodes using message ȕ, and sends the message to bit nodes. The column operation updates message ȕ of all bit nodes based on message Į and initial message Ȝ. The error correction calculates the tentative decision and the parity check operation decides whether another
+iteration is needed or not according to the tentative decision.
+
+The calculation of Į and ȕ value in row and column operation are
+shown in Equation (1) and (2), where Į(m,n) and ȕ(m,n) denote the message in mth row and nth column of the parity check matrix H. Ȝ(n) denotes the initial message of nth column. And A(m) and B(n) are
+defined as A(m)={n|Hmn=1} and B(n)={m|Hmn=1} respectively.
+
+ D (m, n) ( sign(E (m, nc))) u min | E (m, nc) | (1)
+
+n 'A(m)\n
+
+n 'A(m)\ n
+
+E (m, n) O(n)  ¦D (mc, n)
+
+(2)
+
+m 'B ( n ) \ m
+
+In the accelerated MP schedule proposed in [8] and [9], column
+
+operations are performed only for those bit nodes, which are in
+
+978-1-4244-1617-2/08/$25.00 ©2008 IEEE. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:48:52 UTC from IEEE Xplore. Restrictions apply.
+
+connection with the updated check nodes, right after a row operation. This schedule is demonstrated to be more efficient than the basic algorithm.
+
+III. DELTA-VALUE BASED MESSAGE-PASSING SCHEDULE
+
+In traditional or accelerated MP algorithm, the computation of ȕ for columns with a weight of 12 in the targeted parity check matrix (|B(n)|=12), requires the addition of 11 Į values and one Ȝ value according to Equation (2). This results in a five-depth addition and thus becomes the bottleneck in the design of [9]. However, we propose an improved MP schedule called Delta-Value based Message-Passing (DVMP) schedule to help solve this bottleneck problem and thus increase the throughput.
+
+0 12
+
+start
+
+01
+
+sub-block 1
+
+1
+
+1
+
+2
+
+1
+
+initialization ȕ
+
+row
+
+0 12
+
+operation
+
+0
+
+1
+
+sub-block 2
+
+1
+
+1
+
+column
+
+Į
+
+operation
+
+21
+
+error
+
+ǻĮ
+
+0 12
+
+correction
+
+0 11
+
+1 sub-block 3
+
+N parity check
+
+2
+
+1
+
+Y
+
+end
+
+(a)
+
+(b)
+
+Figure 1 Delta-value based message-passing algorithm: (a)
+
+motivation example, and (b) algorithm flowchart
+
+Let us first look at a motivation example. In a simple 3×1 parity
+check matrix, of which each sub-block is a 3×3 matrix (Figure 1(a)),
+the row operations for all the first rows in each sub-block is executed first. Then three Į values are updated, which are Į1(0,0), Į2(0,1) and Į3(0,2) respectively. In the accelerated MP algorithm, the calculation of ȕ values will be executed right after the first row operation. The computations of the first column are shown as follows:
+
+E1c(0,0) E 2c (2,0) E3c(1,0)
+
+O(0)  D2 (2,0)  D3(1,0) O(0)  D1(0,0)  D3(1,0) O(0)  D1(0,0)  D2 (2,0)
+
+Since only Į1(0,0) is changed in this column, the calculation can be simplified by adding only the updated delta-value of message Į
+shown as follows:
+
+E1c(0,0) E 2c (2,0) E3c(1,0)
+
+E1(0,0) E2 (2,0)  'D1(0,0) E3(1,0)  'D1(0,0)
+
+This new calculation method of message ȕ can remove redundant computations and reduce the total number of additions in the bottleneck column operation, especially when |B(n)| becomes larger. For the targeted parity check matrix, at most two message Į are updated after certain row operation. Based on this observation, only a small number of updated Į value is sufficient to generate a correct
+
+message ȕ. Therefore, we proposed our DVMP algorithm by only calculating the delta value of updated Į in the row operation to improve the decoding efficiency. In such scheme, the resulting ȕ can be obtained by at most 2 levels of addition in DVMP rather than 5
+levels in the accelerated MP scheme.
+
+The proposed DVMP algorithm is shown in Figure 1(b). In the initialization step, message ȕ is initialized as message Ȝ. Then the row operation is executed to update message Į according to Equation (1) and generate corresponding ǻĮ at the meantime. Next, the column operation calculates message ȕ by the updated ǻĮ values as Equation (3). The error correction calculates the tentative decision,
+based on which a parity check is done after each iteration to
+determine the termination of the decoding process.
+
+E c(m, n) E (m, n)  ¦ 'D (mc, n)
+
+(3)
+
+mcD ( n )\ m
+
+In Equation (3), D(n) are those row numbers of which the message Į has been updated since the last computation of Į(m,n) in column n. The total number of possible addition is reduced from |B(n)| to |D(n)|. And in the situation of the targeted irregular decoding matrix, this redundancy removal can improve the column operation by a saving of three level additions, which reduce both the computation time and area of hardware implementation.
+
+IV. DECODER ARCHITECTURE
+
+In this section, we present the detailed implementation of row operation module and column operation module in our DVMP schedule based LDPC decoder. We mainly discuss a modified binary sorting scheme and fully-parallel column computation techniques used that enhance the overall throughput.
+A. High-Throughput Row Operation Module
+In the calculation of Į value according to Equation (1), the minimum and second minimum ȕ value among a total of |A(m)| values in the same row should be obtained through a proper comparison scheme. In the hardware implementation in [9], a bubble sorting scheme is utilized with two registers storing the minimum value and second minimum value respectively. Each time a new ȕ is read in to compare with the current minimum one and replace it if the new one is smaller. The serial comparison scheme requires nine clock cycles in total, which is the most time consuming step in row operation.
+
+ɴ1
+
+<
+
+ɴ1
+
+ɴ2
+
+>
+
+<
+
+>
+
+ɴ3
+
+<
+
+ɴ3
+
+ɴ1
+
+ɴ4
+
+>
+
+<
+
+ɴ1
+
+>
+
+ɴ5
+
+<
+
+ɴ5
+
+ɴ5
+
+ɴ6
+
+>
+
+<
+
+>
+
+ɴ7
+
+<
+
+ɴ7
+
+ɴ8
+
+>
+
+ɴ2 <
+ɴ4
+ɴ6 <
+ɴ8
+
+ɴ3
+
+ɴ5
+
+< ɴ3
+
+< ɴ2
+
+ɴ7 ɴ2
+
+< ɴ2
+
+< ɴ2
+
+ɴ6
+
+Figure 2 Comparison schedule in row operation module
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:48:52 UTC from IEEE Xplore. Restrictions apply.
+
+In order to improve the hardware performance, a tree structure is proposed, together with a binary sort algorithm to obtain two minimum values in parallel. The modified sorting scheme requires less area and can generate the result in only five comparison steps.
+The detailed comparison procedure in row operation module is shown in Figure 2. The upper tree and the lower tree represent respectively the sorting for the minimum and the second minimum ȕ value among a total of eight values (|A(m)|=8 for the targeted matrix). In the figure, we assume the relationship between eight ȕ values in the same row (ȕ1, ȕ2,…, ȕ8) are ȕ1<ȕ2<ȕ3<ȕ4<ȕ5<ȕ6<ȕ7<ȕ8 and the resulting values are labeled on each data path. In the first step, eight ȕ values are compared in pairs. The smaller one (eg. ȕ1) is remained in the sorting tree for the minimum value while the larger one (eg. ȕ2) is eliminated to the sorting tree for the second minimum value. Then the values in both trees will continue the comparison process in pairs with the larger one in the upper tree eliminated to the lower tree. In this manner, we can get the minimum and the second minimum value at the third and the fifth step of the operation. Compared with a total 9 clock cycle comparison in [9], our proposed scheme can complete the comparison in only 2 clock cycles under the same frequency, a 4.5X speedup.
+B. DVMP-based Column Operation Module
+
+V. IMPLEMENTATION
+In this section, we present the hardware implementation of the proposed partially-parallel irregular LDPC decoder, specifically the block diagram and timing schedule.
+A. Block Diagram
+The proposed decoder is mainly composed of five parts: row operation, column operation, parity check, controller and storage parts (memory for Į value, registers for ȕ value, Ȝ value 㸪 and tentative decision value), as shown in Figure 4.
+
+䃚 Register
+
+䃐 Memory
+
+Row Operation Modules
+
+CFU_for _䠓in
+
+CFU_for _8in
+
+8
+
+4
+
+Column Operation Modules
+
+BFU_for _12in
+
+BFU_for _3in
+
+BFU_for _2in
+
+ȕ Register
+
+Tentative Decision Register
+
+As discussed in Section III, the DVMP-based column operation can update ȕ values by the addition of its original ȕ and at most two updated ǻĮ values according to Equation (3). The number of updated ǻĮ values and the exact position of each updated ǻĮ in the column operation are determined by the parity check matrix. Therefore, Equation (3) is simply achieved by two addition steps during implementation. In the first addition step, at most two updated ǻĮ values is added together. Then we compute the new ȕ value by adding the original one and the sum of ǻĮ in the second step.
+By adapting the DVMP schedule, not only the computation time of each column operation is minimized, but also the area of hardware implementation is reduced. Based on this observation, we can further improve the throughput by applying a fully-parallel column operation here.
+
+ɴ1 (m,n1)
++
+Ȉ䕧ɲ1(m’,n1) ɴ2 (m,n1)
++
+Ȉ䕧ɲ2(m’,n1)
+
+ɴ1’(m,n1) ɴ’2(m,n1)
+
+ɴ 1(m,nk)
+Ȉ䕧ɲ1(m’,nk) + ɴ1’(m,nk)
+ɴ2 (m,nk)
+Ȉ䕧ɲ2(m’,nk) + ɴ2’(m,nk)
+
+3
+
+1䠌
+
+1䠍
+
+Controller
+
+Parity Check
+
+Figure 4 Block diagram of the decoder
+In the proposed decoder, we design 12 CFUs and 24 BFUs in order to execute the computation of the same row or column in each sub-block in parallel. Since the targeted LDPC decoding matrix is irregular, two different row operation modules (CFU_for_7in and CFU_for_8in), and three different column operation modules (BFU_for_12in, BFU_for_3in, and BFU_for_2in) are designed for rows and columns with different |A(m)| and |B(n)|. The controller module generates the control signals for storage and operation modules, while parity check module does the error correction and the parity check at the end of each iteration. Message Į is only used in the row operation and is stored in memory with corresponding row address. Other messages like ȕ, which have multiple-access problem, are stored in registers.
+B. Pipeline Dataflow
+
+ɴ 12(m,n1)
+Ȉ䕧ɲ12(m’,n1) +
+
+ɴ’12(m,n1)
+
+ɴ 12(m,nk)
+
++
+
+Ȉ䕧ɲ12(m’,nk)
+
+ɴ12’(m,nk)
+
+Figure 3 Architecture of column operation module
+
+In previous implementation of the accelerated MP schedule [8][9], all N column-blocks are computed in parallel while different columns in one column-block are calculated in serial, which may require at most 11 clock cycles for column computation. In the proposed module, message ȕ of all columns, in which there exists an updated Į, are computed in parallel. A hardware implementation for computing k columns in parallel is shown in Figure 3.
+
+The resulting parallel DVMP-based column operation can be computed in one clock cycle, which is 11 times faster than the implementation in [9].
+
+In the proposed decoder, pipeline structure is utilized to achieve further speed up of the procedure, as shown in Figure 5. The row operation and column operation (including message read and write) are divided into four and three pipeline stages respectively to balance the computation time of each stage. After a further overlap of the row and column operation based on data dependency information, the message of a particular row operation and corresponding column operation can be updated after four clock cycle.
+During the first clock cycle, Į and ȕ values are read in to prepare for a row operation. In the second and third clock cycles, a tree structure comparison is conducted for the minimum and second minimum ȕ value, and corresponding Į and ᇞĮ values are obtained. In the fourth clock cycle, all related column operations are computed based on ᇞĮ values, and Į values are written into memories at meantime.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:48:52 UTC from IEEE Xplore. Restrictions apply.
+
+mth read ȕ, Į m+1th
+
+process ȕ read ȕ, Į
+
+process ȕ process ȕ
+
+write Į process ȕ
+
+write Į
+
+m+2th read ȕ, Į
+
+Row Operation
+
+m+3th
+
+process ȕ process ȕ read ȕ, Į process ȕ
+m+4th read ȕ, Į
+
+write Į process ȕ process ȕ
+
+write Į process ȕ
+
+Column Operation
+
+mth read ȕ, ‫ ڹ‬Į process 䕧Į write ȕ m+1th read ȕ, ‫ ڹ‬Į process 䕧Į
+
+write ȕ
+
+write Į
+
+m+2th read ȕ, ‫ ڹ‬Į process 䕧Į write ȕ m+3th read ȕ, ‫ ڹ‬Į process 䕧Į write ȕ m+4th read ȕ, ‫ ڹ‬Į process 䕧Į
+
+write ȕ
+
+Figure 5 Timing schedule of the decoder
+
+pipeline structure is utilized to further compact the procedure. The synthesis result demonstrates that with a little increase in hardware cost, our decoder can achieve a much higher throughput and almost the same bit error rate performance.
+
+Table 1 Implementation result
+
+Design rule LDPC Code Throughput (itr =5,SNR=3.0dB) Frequency Area(um2)
+
+Ref.[9]
+
+Proposed
+
+TSMC 0.18um CMOS
+
+802.11n 648bit rate 1/2 irregular LDPC
+
+54Mbps
+
+418Mbps
+
+200M 9,004,366
+
+200M 13,822,364
+
+Based on this proposed pipeline structure, the updated message of
+a specific row can be used after four clock cycles, in other words, the updated messages of mth row can be used by (m+4)th row operation.
+Although in [9], the updated message of the same row is used by (m+3)th row operation, our pipeline structure incurs nearly no
+performance degrading as illustrated in Figure 6. Further more, the
+proposed pipeline structure is more compact, which improves both
+the hardware utilization and throughput.
+
+䢳䢲䢲 䣔䣧䣨䢰䣝䢻䣟䢢䣫䣶䣴䢿䢷 䣲䣴䣱䣲䣱䣵䣧䣦䢢䣫䣶䣴䢿䢷
+䢳䢲䢯䢳
+
+䢳䢲䢯䢴
+
+䣄䣇䣔
+
+䢳䢲䢯䢵
+
+䢳䢲䢯䢶
+
+䢳䢲䢯䢷
+
+䢳䢲䢯䢸䢲
+
+䢲䢰䢷
+
+䢳
+
+䢳䢰䢷
+
+䢴
+
+䢴䢰䢷
+
+䢵
+
+䢵䢰䢷
+
+䢶
+
+䢶䢰䢷
+
+䣇䣤䢱䣐䣱䢪䣦䣄䢫
+
+Figure 6 Bit error rate performance
+VI. IMPLEMENTATION RESULTS
+The proposed decoder is implemented under TSMC 0.18ȝm CMOS technology. The synthesis results are listed in Table 1. Because of the pipeline structure along with the improved row and column operation modules, our proposed decoder requires only 31 clock cycles for a single iteration and five iterations for codeword correction under SNR of 3.0dB. The area of the proposed decoder listed includes the wiring area, and we compromise the device area for throughput by applying a fully-parallel column operation. Compared with the implementation result in [9], the proposed decoder can achieve almost 8 times the throughput under the same clock frequency without losing bit error rate performance.
+VII. CONCLUSIONS
+In this paper, a novel high throughput partially-parallel irregular LDPC decoder is proposed. Row operations and column operations are speeded up by a modified binary searching scheme and deltavalue based message-passing algorithm respectively. Moreover a
+
+ACKNOWLEDGEMENT
+This research is supported by CREST, JST and a grant of Knowledge Cluster Initiative, MEXT.
+REFERENCES
+[1] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. on Information Theory, Vol.47, pp.489-519, 2001.
+[2] T. J. Richardson, A. Shokrollahi, and R. Urbanke, “Design of capacity-approaching low-density parity-check codes”, IEEE Trans. Inform. Theory, vol. 47, Feb. 2001
+[3] S. Y. Chung, G. D. Forney Jr., T. J. Richardson, and R. L. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Communications letters, Vol.5, No.2 , Feb.2001.
+[4] R. G. Gallager, Low-Density Parity-Check Codes, MIT Press, Cambridge, MA, 1963
+[5] Y. Chen and D. Hocevar, “A FPGA and ASIC implementation of rate 1/2 8088-b irregular low density parity check decoder,” IEEE Global Telecommunications Conference, pp.113-117, 2003.
+[6] E. Liao, E. Yeo, and B. Nikolic, “Low-density parity-check code constructions for hardware implementation,” Proc. IEEE International Conference on Communications, Paris, pp.25732577, June 2004.
+[7] M. Mansour and N. Shanbhag, “Low power VLSI decoder architectures for LDPC codes,” Proc. of the International Symposium on Low Power Electronics and Design, pp.284289, 2002.
+[8] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga, and S. Goto, “Patially-parrallel LDPC decoder based on high efficiency message passing algorithm,” Proc. IEEE International Conference on Computer Design 2005, pp.503-510, Oct. 2005
+[9] X. Li, Y. Abe, K. Shimizu, Z. Qiu, T. Ikenaga, and S. Goto, "Cost-efficient partially-parallel irregular LDPC decoder with message passing schedule", International Symposium on Integrated Circuits, Sep. 2007.
+[10] Y. H. Chien and M. K. Ku, “A high throughput H-QC LDPC decoder”, IEEE International Symposium on Circuits and System, pp.1649-1652, 2007
+[11] Q. Wang, K. Shimizu, T. Ikenaga, and S. Goto, “A powersaved 1Gbps irregular LDPC decoder based on simplified min-sum algorithm”, VLSI Design, Automation and Test, pp.95-98, 2007
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:48:52 UTC from IEEE Xplore. Restrictions apply.
+
+

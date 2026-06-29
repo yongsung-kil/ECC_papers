@@ -1,0 +1,871 @@
+1
+Parameter-free ℓp-Box Decoding of LDPC Codes
+Qiong Wu, Fan Zhang, Hao Wang, Jun Lin and Yang Liu
+
+arXiv:1711.10767v2 [cs.IT] 24 Apr 2018
+
+Abstract—The Alternating Direction Method of Multipliers (ADMM) decoding of Low Density Parity Check (LDPC) codes has received many attentions due to its excellent performance at the error floor region. In this paper, we develop a parameter-free decoder based on Linear Program (LP) decoding by replacing the binary constraint with the intersection of a box and an ℓp sphere. An efficient ℓ2-box ADMM is designed to handle this model in a distributed fashion. Numerical experiments demonstrates that our decoder attains better adaptability to different Signal-toNoise Ratio and channels.
+Index Terms—parameter-free, ℓp-box, ADMM, LP decoding, LDPC codes
+I. INTRODUCTION
+Low Density Parity Check (LDPC) codes have been widely applied nowadays [1]. Although various decoding methods have been developed for LDPC, e.g. Belief Propagation (BP) and Min-Sum (MS) [1], [2], nearly all of the existing solutions are approximation-based (not truly Maximum Likelihood solution) and consequently suffer an early error floor, especially in the case of high Signal-to-Noise Ratio (SNR). Therefore, it is important yet challenging to develop an error-floor-free decoding scheme for LDPC with more accurate decoding performance.
+For binary LDPC codes over symmetric channels, Feldman introduced a relaxed version [3], [4] of Maximum Likelihood (ML) decoding problem which can be interpreted as a Linear Program (LP) decoding, whose certificate of correctness (ML certificate) and performance are reported in [5]. Compared with other decoding methods, such as BP and MS, LP decoding can reduce the error floor [6]. Many algorithms have been proposed for LP decoding. The most related work is the Alternating Direction Method of Multipliers (ADMM) [7] introduced in [8], which can be easily implemented in a distributed way.
+In order to obtain the ideal decoding performance, Liu et al. [9] developed a penalized-LP decoding model by adding different types of penalty terms in the objective to drive the solution away from 0.5, and reported that the ℓ2 penalty term generally achieved better error performance. However, one remaining hurdle is the difficulty in properly choosing the penalty parameter. The effect of the penalty parameter is two-fold. First, the penalty parameter closely affects the performance of the algorithm and an improper value can make the algorithm extremely inefficient. Most importantly,
+Qiong Wu, Fan Zhang and Hao Wang are with School of Information Science and Technology, ShanghaiTech University, Shanghai, P.R. China (email: {wuqiong, zhangfan4, wanghao1}@shanghaiTech.edu.cn).
+Jun Lin is with School of Electronic Science and Engineering, Nanjing University, P.R. China (email: jlin@nju.edu.cn).
+Yang Liu is with Department of Electrical and Computer Engineering, Lehigh University, PA, USA (email: liuocean613@gmail.com).
+
+the optimal solution of the penalized-LP decoding problem may vary for different penalty parameter values. As a result, the decoder often finds solutions with low accuracy. It is worth noting that the penalized-LP formulation in fact approximates the original problem via penalizing the violation of the binary constraint. Hence its optimal solution is rarely the optimal solution of the original LP decoding problem.
+In this paper, we apply a parameter-free continuous optimization model [10], which is an exact reformulation of the binary LP decoding. The binary constraint in the LP decoding is replaced by the intersection of a box and an ℓp sphere. We also design an efficient ADMM solver, which can be parallelized to reduce the computational cost. Simulation results demonstrate that the proposed model along with the ADMM solver can further bring down the error floor for large SNRs.
+II. BACKGROUND
+We consider a binary linear LDPC code C of length N , which can be defined by an M × N parity check matrix H. Each column of the parity check matrix corresponds to a codeword symbol, indexed by I := {1, 2, ..., N }. Each row of the parity check matrix corresponds to a check, which specifies a subset of codeword symbols that add to 0 (modulo 2), indexed by J := {1, 2, ..., M }. The neighborhood of check j, denoted as N (j), is the set of variables that check j constrains to add to 0. That is [11], N (j) = {i ∈ I : Hj,i = 1}.
+For a binary linear code transmitted over a symmetric memoryless channel, let X = {0, 1} be the input space, Y be the output space and P (y|x) denotes the probability that y ∈ Y is received if the codeword x ∈ X is sent over the channel. Let C be the set of possible codewords. By Bayes’ rule, the decoding problem can be modeled as arg maxx∈C P (y|x). In particular, the Maximum Log-likelihood (ML) decoding problem [3], [4] takes the form xˆ = arg maxx∈C P (y|x) = arg minx∈C γT x, where γ is a length-N vector of Log-likelihood Ratios (LLRs) with γi = log(P (yi|0)/P (yi|1)).
+Some work [8], [12] has been done in the past decades focusing on the properties of the convex hull of all possible codewords. ML decoding can be formulated as the problem of minimizing γT x over the convex hull—an Integer Programming (IP) decoding problem that is NP-hard in general [13]. Denote the subset of coordinates of x participating in the jth check as the matrix Pj, so Pj is a binary d × N matrix consisting of d components participating in the jth check. From [8], each local codeword constraint can be relaxed to satisfy Pjx ∈ PPd, where PPd is the specific expression of the convex hull of all possible codewords. The
+
+2
+
+LP decoding problem is then derived in [8], by relaxing the binary constraints
+
+min
+x
+
+γT x
+
+s.t.
+
+x ∈ [0, 1]N ,
+
+Pjx ∈ PPd, ∀j ∈ J , (1)
+
+where [0, 1]N is the N -dimensional box. The binary constraint x ∈ {0, 1}N in ML decoding is relaxed to x ∈ [0, 1]N now.
+
+The simulation results in [8] suggest that an ideal decoder
+
+should perform like BP at low SNRs. To achieve this, a
+
+penalized-LP decoding is proposed in [9] by penalizing the
+
+fractional solutions, that is, the objective of (1) is replaced
+
+with γT x +
+
+N i=1
+
+g(xi),
+
+where
+
+the
+
+penalty
+
+function g
+
+:
+
+[0, 1] → R ∪ {±∞} has three options, namely, ℓ1, ℓ2 and
+
+log penalty. That is, g1(x) = α|x − 0.5|, g2(x) = α(x − 0.5)2,
+
+g3(x) = α log(|x − 0.5|), with penalty parameter α > 0. It is
+
+reported that the ℓ2 penalty has the best error performance and
+
+the fastest convergence among the options. Other improved
+
+penalty functions are proposed and experimented in [14].
+
+III. ℓp-BOX DECODING
+
+In this section, we propose a new formulation for LP decoding. Compared to the existing formulations suitable to decentralized processing, where mixed integer formulation are usually involved, our proposed formulation is to design a continuous and exact reformulation of the LP decoding to circumvent using the traditional method to solve the IP problem, such as branch and bound and Lagrangian relaxation. The major technique used in our model is the ℓp-box recently proposed in [10] for solving IP problems. The main idea of this technique is to replace the binary constraint by the intersection of a box and an ℓp sphere with p ∈ (0, ∞):
+
+x ∈ {0, 1}N ⇔ x ∈ [0, 1]N ∩ {x :
+
+x
+
+−
+
+1 2
+
+1N
+
+p p
+
+=
+
+N 2p
+
+},
+
+(2)
+
+where 1N is the N -dimensional vector filled with all 1s. Now consider this technique in the LP decoding problem
+(1). Besides the existing box constraint [0, 1]N , we only need an additional ℓp-sphere constraint to enforce the solution to be binary, yielding the ℓp-box decoding problem:
+
+min γT x
+x
+
+s.t. x ∈ [0, 1]N ,
+
+x
+
+−
+
+1 2
+
+1N
+
+p p
+
+=
+
+N 2p
+
+,
+
+Pj
+
+x
+
+∈
+
+PPd, ∀j
+
+∈
+
+J.
+
+(3)
+
+For the penalized-LP decoding, the choice of parameters
+
+is critical to the solution performance and, unfortunately, an
+
+appropriate choice can be very intricate to obtain. If the penalty
+
+parameter is set too large, the algorithm may quickly converge
+
+to a binary point far from the global solution. On the other
+
+hand, for a too small penalty parameter, the algorithm may
+
+converge to a fractional point. Compared to the parameterized
+
+penalized-LP formulation, there is no parameter involved in
+
+(3), rescuing users from adjusting the penalty parameters
+
+according to SNR. It should be noticed that (3) is equivalent to
+
+the binary decoding problem. Therefore, the optimal solution
+
+of the binary decoding problem is the global optimal solution
+
+of (3). Furthermore, (3) is a continuous problem, and thus can
+
+be attacked by various continuous optimization algorithms.
+
+There are many options for the selection of p, and (3)
+
+becomes nonsmooth with p ∈ (0, 1]. In this paper, we use
+
+p = 2 to keep the projection of a point onto the sphere simple.
+
+IV. ℓ2-BOX ADMM
+
+In this section, we design an efficient algorithm for solving the proposed ℓ2-box decoding problem by incorporating the ℓ2-box technique in the ADMM framework.
+As discussed in previous section, we set p = 2. In order to
+apply the ADMM, we introduce two sets of auxiliary variables y and z to decouple the box and the ℓ2 sphere, resulting in an ℓ2-box decoding problem:
+
+min γT x
+x,y,z
+
+s.t. y = x,
+
+y
+
+−
+
+1 2
+
+1N
+
+2 2
+
+=
+
+N 4
+
+,
+
+x ∈ [0, 1]N
+
+(4)
+
+zj = Pjx, zj ∈ PPd, ∀j ∈ J ,
+
+where y is a N -dimensional vector and zj ∈ PPd for all j ∈ J . The ADMM works with the augmented Lagrangian
+
+Lµ1,µ2 (x, y, z, λ1, λ2) = γT x +
+
+λ1T,j(Pj x − zj ) +
+
+j∈J
+
+µ1 2
+
+Pj x− zj
+
+2 2
+
++
+
+λ2T
+
+(x
+
+−
+
+y)
+
++
+
+µ2 2
+
+x−y
+
+2 2
+
+with
+
+constants
+
+j∈J
+
+µ1 and µ2 all positive. Here λ1 is the dual variable associated
+
+with the constraint zj = Pjx and its dimension is the
+
+cardinality of |J |, and the N -dimensional λ2 is the dual
+
+variable associated with the coupling constraint y = x.
+
+Let X , Y and Z denote the feasible regions for variables
+
+x, y and z respectively, i.e., X = Y = [0, 1]N and
+
+Z = PP|N (j)| × ... × PP|N (j)| .
+number of checks J
+
+The ADMM iteration then can be elaborated as follows
+
+x-update :
+
+xk+1
+
+=
+
+arg
+
+min
+x∈X
+
+Lµ1,µ2 (x,
+
+yk,
+
+zk,
+
+λ1k ,
+
+λ2k),
+
+
+ 
+
+yk+1
+
+=
+
+arg
+
+min
+y∈Y
+
+Lµ1 ,µ2
+
+(xk+1,
+
+y,
+
+zk,
+
+λ1k ,
+
+λk2 )
+
+
+
+
+
+ 
+(y, x)-update :
+
+s.t.
+
+y
+
+−
+
+1 2
+
+1N
+
+2 2
+
+=
+
+N 4
+
+ 
+ 
+
+zk+1
+
+=
+
+arg
+
+min
+z∈Z
+
+Lµ1 ,µ2
+
+(xk+1,
+
+yk,
+
+z,
+
+λ1k ,
+
+λ2k)
+
+
+
+ s.t. zj ∈ PPd, ∀j ∈ J ,
+
+(λ1, λ2)-update :
+
+λ1k,+j 1 = λk1,j + µ1(Pj xk+1 − zjk+1), ∀j ∈ J λ2k+1 = λ2k + µ2(xk+1 − yk+1).
+
+Next, we discuss the solution of the ADMM subproblems.
+
+(a) x-update. The x-update is to minimize
+
+Lµ1,µ2 (x, y, z, λ1, λ2) subject to x ∈ [0, 1]N with
+
+fixed (y, z, λ1, λ2), The ith component of the
+
+solution of the x-update subproblem can be given
+
+explicitly by xik+1
+
+=
+
+Π[0,1]N
+
+(
+
+dk −γi −λk2,i +µ2 yik µ1|N (i)|+µ2
+
+).
+
+Here
+
+dk = j∈N (i) µ1(PjT zjk)(i) − (PjT λk1,j )(i) where (PjT zjk)(i)
+
+denotes the ith component of PjT zjk, and so forth for
+
+(PjT λ1k,j)(i), xi, λ2,i and yi.
+
+Define P = j∈J PjT Pj and Π[0,1]N as the projection
+
+operator onto the N -dimensional box [0, 1]N . Note that for
+
+any j, P = j∈J PjT Pj is an N × N diagonal binary matrix with non-zero entries at (i, i) if and only if i participates in
+
+the jth parity check, i.e., i ∈ N (j). This implies that P = j∈J PjT Pj is a diagonal matrix with the (i, i)th entry equal
+to |N (i)|. Hence P −1 is diagonal with 1/|N (i)| as the ith
+
+diagonal entry. See details of this calculation in [8].
+
+3
+
+(b) (y, z)-update. Notice that the two variables y and z are independent to each other, thus they can be updated separately. By fixing (x, z, λ1, λ2), the y-update subproblem is given by
+
+yk+1
+
+=
+
+arg min
+y∈Y
+
+Lµ1,µ2 (xk+1,
+
+y,
+
+zk,
+
+λk1 ,
+
+λ2k ),
+
+(5)
+
+s.t.
+
+y
+
+−
+
+1 2
+
+1N
+
+2 2
+
+=
+
+N 4
+
+.
+
+Thus, by eliminating the constants, (5) can be written as
+
+min
+y
+
+−
+
+µ2(xk+1
+
+−
+
+1 2
+
+1N
+
+)
+
++
+
+λk2
+
+Ty
+
+s.t.
+
+y
+
+−
+
+1 2
+
+1N
+
+2 2
+
+=
+
+N 4
+
+,
+
+which has an explicit solution: yk+1 =
+√
+
+µ2
+
+(xk+1
+
+−
+
+1 2
+
+1N
+
+)+λk2
+
+µ2
+
+(xk+1
+
+−
+
+1 2
+
+1N
+
+)+λ2k
+
+×
+
+N 2
+
++
+
+1 2
+
+.
+
+For updating z, the subproblem is to solve
+
+min
+zj
+
+µ1 2
+
+Pj xk+1 − zj
+
+2 2
+
+−
+
+λk1,jzj ,
+
+s.t. zj ∈ PPd,
+
+(6)
+
+for each j ∈ J . The solution of this subproblem can be given
+
+explicitly
+
+[9]: zjk+1
+
+=
+
+ΠPPd (Pj xk+1
+
++
+
+1 µ1
+
+λk1,j
+
+),
+
+∀j
+
+∈
+
+J,
+
+where ΠPPd is the projection operator onto the codeword
+
+polytope.
+
+(c) (λ1, λ2)-update. Note that λ1 and λ2 are also indepen-
+
+dent to each other, and thus can be updated separately:
+
+λ1k,+j1 = λk1,j + µ1(Pj xk+1 − zjk+1), ∀j ∈ J λ2k+1 = λ2k + µ2(xk+1 − yk+1).
+
+(7)
+
+The entire ℓ2-box ADMM decoding algorithm is stated in Algorithm 1.
+
+Algorithm 1 ℓ2-box ADMM decoding
+
+1: Given a M × N parity check matrix H, and parameters
+
+µ1 > 0, µ2 > 0, tolerance ǫ > 0. 2: Construct the log-likelihood vector γ and the d×N matrix
+
+Pj for all j ∈ J . 3: Initialize y, λ2, zj and λ1,j for all j ∈ J . 4: Set k = 0.
+
+5: repeat
+
+6:
+
+Update
+
+x:
+
+xki +1
+
+=
+
+Π[0,1]N
+
+(
+
+dk
+
+−γi −λ2k,i +µ2 µ1|N (i)|+µ2
+
+yik
+
+).
+
+7:
+
+Update y: yk+1 =
+
+µ2
+
+(xk
+
+−
+
+1 2
+
+1N
+
+)+λk2
+
+µ2
+
+(xk
+
+−
+
+1 2
+
+1N
+
+)+λ2k
+
+√
+
+×
+
+N 2
+
++
+
+1 2
+
+8: Update z:
+
+for all j ∈ J
+
+do
+
+zjk+1
+
+=
+
+ΠPPd (Pj xk+1
+
++
+
+1 µ1
+
+λ1k,j
+
+)
+
+9: Update λ1:
+
+for all j ∈ J do λ1k,+j1 = λk1,j + µ1(Pj xk+1 − zjk+1)
+
+10: Update λ2:
+
+λk2+1 = λ2k + µ2(xk+1 − yk+1)
+
+11: Set k = k + 1
+
+12: until max j
+
+Pj xk+1 − zjk+1 ∞ < ǫ and
+
+xk+1 − yk+1 ∞ < ǫ
+
+13: return x
+
+V. NUMERICAL EXPERIMENTS
+In this section, we design numerical experiments to test the proposed decoding model and algorithm. We use the experimental framework of Liu [9] in our test, and design a simulator that the [2640, 1320] “Margulis” code [15], which
+
+is known for its strong error-floor, with randomly added noise transmitting over an Additive White Gaussian Noise (AWGN) channel.
+Many acceleration techniques exist for ADMM [16], and the ℓ2-penalized ADMM LP decoder in our comparison is in fact an accelerated version [16]. Our algorithm, however, is simply the basic ADMM without using acceleration, since our primary focus is on the effectiveness of our proposed decoding model. The ADMM parameters in our implementation are roughly tuned to ensure the algorithm achieve an acceptable performance.
+
+A. Effectiveness of the parameter-free model
+To emphasize the advantage of our new formulation, we first show for the ℓ2-penalized ADMM LP decoder how the penalty parameter value could affect the decoding accuracy and running time.
+We consider the ℓ2-penalized ADMM LP decoder [9] in our comparison, which is reported to be the most effective and efficient among three penalty terms in [9]. In this experiment, we set SNR = 1.6dB, and the maximum number of iterations to be 1000. The decoder is terminated whenever 200 errors have been encountered. We record the Word error rate (WER) and the running time of the ℓ2-penalized ADMM for penalty parameter value varying from 0.24 to 5.0, and depict the results in Fig. 1.
+
+WER Running Time (s)
+
+100
+
+10-1
+
+10-2
+
+10-3
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+5
+
+4.5
+
+4
+
+3.5
+
+3
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+
+0
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+(a) WER versus α
+
+(b) Running time versus α
+
+Fig. 1. WER and Running time versus α
+
+From Fig. 1(a) and Fig. 1(b), we can see that the penalty parameter for the ℓ2-penalized ADMM LP decoder plays an important role in the decoding accuracy and efficiency. The algorithm becomes extremely slowly for too small or too large penalty parameter, and the WER could also be extremely large for improper parameter values. Thus users need to select an appropriate value to achieve acceptable performance. As for our proposed parameter-free decoding model, no parameter tuning task is needed for the users. It should be noticed that the WER and running time of algorithm is competitive with the best performance of the ℓ2-penalized ADMM LP decoder. Therefor, the performance of our decoder is stable in different environment. In real situations, generally SNR cannot be estimated accurately, and it is not realistic to adjust penalty parameter in real time for broadcast transmission. These disadvantages may limit the practicability of the ℓ2penalized ADMM LP decoder, while our proposed decoder does not suffer from such issue and thus is more practical in real applications.
+
+4
+
+B. Performance
+We test our proposed decoder against existing standard algorithms including the penalized ADMM decoder in [9] and the BP decoder in [8]. The decoding model parameters for each decoder are tuned to achieve the best performance, and the algorithms are terminated once 200 errors are encountered. The WER of each decoder is depicted in Fig. 2(a). To show the practicality on other type of codes, we also add a comparison on [2304, 768] WiMAX [17] in Fig. 2(b). The MS decoder and corrected MS decoder can be referred to [18]. The max iterations for BP decoder, MS decoder and corrected MS decoder are set as 60.
+
+WER WER
+
+100
+
+10-2
+
+10-4
+
+10-6
+
+10-8
+
+10-10
+
+1
+
+1.2 1.4 1.6 1.8
+
+2
+
+2.2 2.4 2.6 2.8
+
+(a) Margulis
+
+Fig. 2. WER versus different SNRs
+
+100
+
+ms
+
+10-2
+
+10-4
+
+10-6
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+3.2
+
+(b) WiMAX
+
+We can see that from Fig. 2(a), the overall performance of our proposed ℓ2-box ADMM decoder achieves lower WER than all other contemporary decoders. As the SNR turns large, the difference between decoders become increasingly significant, and this is especially the case when the SNR is between 1.8 and 2.4, where the error floor for BP starts from 2. From Fig. 2(b), we can also see a significant difference when SNR is between 4 and 4.4, where the error floor for MS occurs. Generally the error-floor effect can be caused by weak distance spectrum of the code or the decoders poor ability of escaping from local minimizers. Our experiments show that the proposed decoder is more capable of avoiding early convergence to local solutions, thus can achieve better error performance.
+
+TABLE I COMPARISON OF COMPLEXITY OF EACH DECODER
+
+Decoders Time (s) SNR=2.0dB
+SNR=2.5dB
+
+BP 0.027 0.019
+
+ℓ2-penalized 0.010 0.007
+
+ℓ2-box 0.018 0.012
+
+We also recorded CPU time needed for BP, ℓ2-penalized ADMM and ℓ2-box ADMM in Table I. The simulation results confirm that LP decoding outperforms BP decoding as re-
+ported in [6]. It can also be observed that the greatly improved
+performance on WER by our proposed decoder only cost slightly additional amount of time (less than 0.008 second).
+
+C. Choice of algorithmic parameters
+Our proposed decoder involves the ADMM parameters µ1 and µ2, which may affect the efficiency of the decoder. Fig. 3 depicts the simulations when the decoder encounter 200 errors for (µ1, µ2) ∈ [0, 200] × [0, 200] with SNR = 1.6dB.. We
+
+Fig. 3. The iterations of choice of the two parameters
+can see that for (µ1, µ2) ∈ [0, 200] × [10, 200] our proposed decoder is relatively insensitive to the choice of µ1 and µ2.
+VI. CONCLUSION
+In this paper, we have proposed a parameter-free ℓp-box formulation for LDPC decoding and implemented the new formulation with an ADMM solver. We have also developed an efficient ADMM-based algorithm to solve this newly formulated problem in a distributive manner. It should be emphasized that the proposed decoder can be easily applied to various situations with different SNR and channels since the decoding model is parameter-free.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] B. K. Butler and P. H. Siegel, “Error floor approximation for ldpc codes in the awgn channel,” IEEE Transactions on Information Theory, vol. 60, no. 12, pp. 7416–7441, 2014.
+[3] J. Feldman, “Decoding error-correcting codes via linear programming,” Ph.D. dissertation, Massachusetts Institute of Technology, 2003.
+[4] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Transactions on Information Theory, vol. 51, no. 3, pp. 954–972, 2005.
+[5] P. O. Vontobel and R. Koetter, “On low-complexity linear-programming decoding of LDPC codes,” Transactions on Emerging Telecommunications Technologies, vol. 18, no. 5, pp. 509–517, 2007.
+[6] S. Arora, C. Daskalakis, and D. Steurer, “Message passing algorithms and improved LP decoding,” in Proceedings of the forty-first annual ACM symposium on Theory of computing. ACM, 2009, pp. 3–12.
+[7] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Foundations and Trends® in Machine Learning, vol. 3, no. 1, pp. 1–122, 2011.
+[8] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Transactions on Information Theory, vol. 59, no. 12, pp. 7870–7886, 2013.
+[9] X. Liu, S. C. Draper, and B. Recht, “Suppressing pseudocodewords by penalizing the objective of LP decoding,” in Information Theory Workshop (ITW), 2012 IEEE. IEEE, 2012, pp. 367–371.
+[10] B. Wu and B. Ghanem, “ℓp-box ADMM: A versatile framework for integer programming,” arXiv preprint arXiv:1604.07666, 2016.
+[11] D. J. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE transactions on Information Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[12] K. Yang, X. Wang, and J. Feldman, “A new linear programming approach to decoding linear block codes,” IEEE Transactions on Information Theory, vol. 54, no. 3, pp. 1061–1072, 2008.
+[13] E. Berlekamp, R. McEliece, and H. Van Tilborg, “On the inherent intractability of certain coding problems (corresp.),” IEEE Transactions on Information Theory, vol. 24, no. 3, pp. 384–386, 1978.
+[14] B. Wang, J. Mu, X. Jiao, and Z. Wang, “Improved penalty functions of ADMM penalized decoder for LDPC codes,” IEEE Communications Letters, vol. 21, no. 1, pp. 234–237, 2017.
+
+5
+[15] W. Ryan and S. Lin, Channel codes: classical and modern. Cambridge University Press, 2009.
+[16] T. Goldstein, B. O’Donoghue, S. Setzer, and R. Baraniuk, “Fast alternating direction optimization methods,” SIAM Journal on Imaging Sciences, vol. 7, no. 3, pp. 1588–1623, 2014.
+[17] K. Fazel and S. Kaiser, Multi-carrier Spread-spectrum: Proceedings from the 5th International Workshop, Oberpfaffenhofen, Germany, September 14-16, 2005. Springer Science & Business Media, 2006.
+[18] W. E. Ryan et al., “An introduction to LDPC codes,” pp. 1–23, 2004.
+
+

@@ -1,0 +1,577 @@
+Cost-effectively Improving Life Endurance of MLC NAND Flash SSDs via Hierarchical Data
+Redundancy and Heterogeneous Flash Memory
+
+Shishi Tan, Ruirong Yu, Shenggang Wan, and Qiang Cao School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China 430074
+Data Storage System Laboratory, Wuhan National Laboratory for Optoelectronics, Wuhan, China 430074 Email:{shishi tan, ruirong, sgwan, caoqiang}@hust.edu.cn
+
+Abstract—As an alternative to conventional spinning HDDs, MLC NAND flash memory based SSDs suffer from a low life endurance. To cost-effectively address this problem, we propose integrating both Hierarchical data redundancy and Heterogeneous flash memory techniques into those SSDs, named as H2-SSD. By deploying across-chips data redundancy in addition to the conventional in-page ECCs, the error correction capacity of H2SSD can be dramatically enhanced. As a result, the life endurance can be significantly improved. Furthermore, an extra small sized SLC chip is deployed in H2-SSD to store the across-chips parity. Due to the high Program/Erase performance and life endurance of that SLC chip, the degradation of I/O performance induced by the hierarchical data redundancy will be slight in most cases, even under a strict synchronous parity update strategy.
+Both quantitatively analysis and trace-driven simulation are conducted to evaluate the effectiveness of H2-SSD. The results demonstrate that H2-SSD outperforms the conventional SSDs in the maximum Program/Erase cycles by 23% to 178% and suffer from a less than 10% degradation of I/O performance under most cases.
+I. INTRODUCTION
+NAND flash memory based SSDs (Solid State Drives/Disks), with high I/O performance, energy efficiency, and shock resistance, become a promising alternative to conventional spinning HDDs (Hard Disk Drives). To improve the bit density of those SSDs, MLC (Multi-Level Cell, which stores two or more bits in a memory cell) techniques are widely adopted, while the feature size of the memory cell is constantly being scaled down. However, those efforts to improve the bit density can lead to a lower life endurance of the SSDs, i.e., an SSD would wear out after a less number of P/E (Program/Erase) cycles.
+The life endurance of NAND flash memory is mainly limited by its underlying structures. In an NAND flash memory cell, an isolate layer is used to trap electrons. The P/E operations can strain that isolate layer. It leads those electrons become more probable to escape the memory cell during a certain period of retention time. Since states of the memory cell are directly determined by the number of electrons, raw bit errors (incorrect cell states) will increase with the growth of the P/E cycles.
+In-page ECCs are deployed in the NAND flash SSD to correct the raw bit errors. To maintain an acceptable uncorrectable
+
+BER (Bit Error Rate), e.g., < 10−15, the error correction capacity of the in-page ECCs should be constantly improved under an increasing raw BER. Typically, it will induce a longer decoding latency and be limited by available in-page spare bytes.
+An alternative approach is deploying extra across-chips data redundancy. Typically, only a very small portion of pages have sufficient bit errors that cannot be corrected by the in-page ECC. Since the error detection capacity of the in-page ECC is usually much stronger than its error correction capacity, most of those pages with uncorrected bit errors can be identified by the in-page ECC and reconstructed by the across-chips data redundancy. As a result, a lower uncorrectable BER can be achieved.
+Clearly, the across-chips data redundancy will induce extra I/Os to write/update the parity. All existing solutions cannot effectively address this problem. For example, CR5M [1] deploys an extra chip on each channel of an SSD. That chip acts as a write buffer to store a replica of recently written data instead of immediately writing/updating the corresponding parity. Consequentially, it can reduce the aforementioned extra writes/updates sent to the rest chips. However, the remained writes/updates can still significantly affect the write throughput of the SSD and life endurance of the rest chips. EECC [2] uses a small sized HDD to absorb those extra writes/updates on parity, but it will lose the shock resistance due to that additional HDD. Furthermore, the HDD may become the bottleneck of the overall performance under a write intensive workload.
+Different from CR5M and EECC, we believe that hierarchical data redundancy built upon heterogeneous NAND flash memory chips can be explored and exploited to costeffectively handle those extra writes/updates, which is rooted by the following two important but usually overlooked facts.
+• SLC (Single-Level Cell) flash memory far outperforms MLC flash memory in P/E performance and life endurance, e.g., 0.23ms v.s. 1.6ms (program latency), 0.7ms v.s. 3.0ms (erase latency), and 100, 000 v.s. 3, 000 (maximum P/E cycles) [3], [4]. As a result, we can deploy dedicated SLC chip to store acrosschips parity (which is similar to the parity disk in RAID-4). The SLC chip is able to well service those extra writes/updates on parity due to its high P/E performance and life endurance.
+
+978-1-4673-7891-8/15/$31.00 ©2015 IEEE
+
+336
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+• Due to the low life endurance of existing MLC flash memory, the uncorrectable bit errors are much more likely to affect the data reliability than chip failures, particularly under a write intensive workload. For example, as analyzed in Section III-A, an MLC chip wears out under its peak write throughput after about nine months even under the protection of a strong in-page ECC code. However, the nominal life of SSDs under a common write workload is more than five years [5]. It implies the chips rarely fail if the uncorrectable bit errors are not considered. Therefore, we can only focus on the uncorrectable bit errors rather than both the uncorrectable bit errors and chip failures. In other words, we can leverage an asymmetric parity generation rule to effectively reduce the cost of deploying the extra SLC chip, which makes our solution cost-effective.
+These two observations motivate us to propose a Hierarchical-data-redundancy and Heterogeneous-flashmemory based SSD, named as H2-SSD. H2-SSD leverages across-chips data redundancy to reconstruct the pages with uncorrectable bit errors. Therefore, the bit error correction capacity of H2-SSD can be dramatically improved, thus leads to much higher life endurance. Furthermore, one small sized SLC chip is deployed to store the across-chips parity which is generated by the asymmetric rule. Due to the high P/E performance and life endurance of the SLC flash memory, the extra writes/updates on the across-chips parity can be well serviced and have very slight impact on the I/O performance of H2-SSD.
+We make the following contributions in this paper.
+• We design a novel SSD architecture, named as H2SSD, which is based on a Hierarchical data redundancy scheme (in-page ECC and across-chips redundancy) and built upon Heterogeneous flash memory chips (SLC and MLC chips). A dedicated parity generation rule is proposed to effectively mine the advantages of SLC chips in P/E performance and life endurance, and reduce the extra cost of deploying the SLC chip.
+• We quantitatively compare the error correction capacity of the conventional in-page ECC and hierarchical data redundancy schemes. The comparison results demonstrate the huge benefits of the latter one on improving the life endurance. For example, the life endurance of H2-SSD is 1.23 to 2.78 times of that of conventional SSD in terms of P/E cycles.
+• We evaluate the I/O performance of H2-SSD based on a validated SSD simulator Micro-Add-on. The results collected from trace-driven simulation demonstrate that a proper number of the MLC chips can effectively mitigate the degradation of I/O performance induced by using across-chips data redundancy, even under a strict synchronous parity update strategy. For example, in an H2-SSD composed of eight MLC chips and one SLC chip, the degradation of peak throughput is less than 10%, compared to a conventional SSD consisting of eight MLC chips.
+
+The rest of this paper is organized as follows. Section II reviews the necessary background materials and related work. In Section III, we demonstrate the general and detailed design of H2-SSD. Section IV illustrates the benefits on improving the life endurance by deploying hierarchical data redundancy in H2-SSD. Section V evaluates I/O performance of H2SSD through trace-driven simulation and analyzes simulation results. We conclude our paper and summarize the future work in Section VI.
+II. BACKGROUND AND RELATED WORK
+In this section, we will review the background materials and related work about conventional in-page ECC, across-chips data redundancy, and heterogeneous flash memory techniques in SSDs.
+A. Raw Bit Errors and In-page ECCs
+Typically, an SSD is worn-out when the raw bit errors cannot be effectively hidden by in-page ECCs, i.e., the uncorrectable bit error rate exceeds a certain threshold, e.g., 10−15.
+In essential, raw bit errors in NAND flash memory are incurred by the strained oxide layer. An NAND flash memory cell resembles an MOS transistor having two gates. One is the control gate. The other surrounded by oxide is known as the floating gate. Isolated by the oxide layer, the floating gate can trap electrons, which form some non-overlapped threshold voltage windows. Program operations charge the floating gate to modify the threshold voltage of the memory cell; while erase operations remove electrons from the floating gate. The program/erase operations will significantly strain the oxide layer, which leads the electrons in the floating gate to be instable, i.e., easy to escape. As a result, the threshold voltage of the memory cell may jump into another threshold voltage window after a certain period of retention time, thus results in raw bit error(s). Furthermore, according to the observation [6], the raw bit error rate of the NAND flash memory increases exponentially as the growth of P/E cycles.
+As the MLC flash memory stores two or more bits in a cell, it usually contains much more threshold voltage windows than the SLC flash memory, e.g., the SLC flash memory cell only has two threshold windows but the MLC flash cell stores two bits has four threshold windows. Consequentially, both the threshold voltage window and the interval between two adjacent windows of the MLC flash memory become narrow. Therefore, the MLC flash memory is more likely to be affected by the escaping of electrons and suffers from a high raw bit error rate, e.g., two orders of magnitude worse than SLC flash memory under the same feature size [7], [8]. In the meantime, due to the continuously scaling-down feature size of the flash memory, the raw BER of the MLC flash memory increases rapidly [9]. To hide this high and constantly increasing raw bit error rate in MLC flash memory, complicated ECCs (Error Correction Codes) are deployed, e.g., BCH codes [10], [11], [12] and LDPC codes [13].
+BCH codes [10], [11], [12] were invented in 1959 and a type of cyclic error correction codes constructed using finite fields. The key features of BCH codes are that they have a precise control over the number of correctable symbol errors
+
+337
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+and can be decoded easily by an algebraic method known as syndrome decoding. Like all the ECC codes, the number of error bits can be detected is more than the number of bits can corrected by BCH codes.
+
+The construction of BCH codes and their encoding/decoding are based Galois Field GF (2m). For a certain BCH code, it can be represented by a 3-tuple (n, k, t). Among those three parameters, n is the length of the code word which is composed of an original data segment (message) and a
+checksum generated from that data segment, k represents the length of the data segment, and t is the maximum number of bit errors can be corrected in the code word. Typically, the
+four parameters (m, n, k, t) should satisfy Equation 1 and 2 .
+
+n=k+m×t
+
+(1)
+
+n ≤ 2m − 1
+
+(2)
+
+The decoding latency of the BCH codes will increase rapidly with the growth of their error correction/detection capacity, e.g., that latency in a (216 + 102, 216, 6) BCH code ranges from 10us to 90us, while that in a (216 + 204, 216, 12) BCH code ranges from 17us to 180us [14]. In other words, all read requests will suffer from a significantly increasing latency by using more powerful in-page BCH codes. Furthermore, the available spare bytes in the flash chips can also limit the deployment of BCH codes with stronger error correction capacity, since other storage applications, e.g., file systems [15], also use that spare bytes to improve the performance or reliability of the computer system.
+In addition, a small sized code word can be helpful to reduce the read latency [16]. As a result, the segment length of BCH codes in real-world SSD is usually smaller than the page size, e.g., 0.5KiB ∼ 4KiB [17], [18] v.s. 2KiB ∼ 16KiB [19], [4]. In other words, to use BCH codes, a page of which the size is larger than 4KiB can be first divided into several small sized segments.
+When the raw bit errors exceed the error correction capacity of the in-page ECC, they are treated as uncorrectable bit errors. To reduce those uncorrectable bit errors induced by the inadequate in-page ECC, we propose a hierarchical data redundancy scheme that uses extra across-chips data redundancy to reconstruct the data segments with uncorrectable bit errors.
+
+B. Data Redundancy across Chips
+As mentioned in Section I, the across-chips data redundancy in SSDs can further reduce uncorrectable bit errors. However, extra I/Os to write/update the parity can be induced by that across-chips data redundancy. The frequent parity writes/updates will affect the write throughput and life endurance of the SSD. To handle those extra writes/updates, solutions [1], [2] are proposed.
+Wang et al. [1] propose CR5M, which deploys an extra chip on each channel in the RAID5-structured SSD. Recently written data can be replicated to the extra chip in the same channel and protected by that replication. Therefore, the parity
+
+generated by that data need not to be updated immediately, thus reduces the write requests sent to the rest chips. A significant drawback of CR5M is the huge extra monetary cost of deploying those additional chips, particularly under a configuration that only one or two chips are actually deployed in one channel. In addition, when that extra chip is busy or full, CR5M need to writes/updates the parity on the rest chips. As a result, those rest chips will still suffer from extra writes.
+Subedi et al. [2] present a hybrid erasure-coded SSD architecture named EECC which uses a weaken in-page ECC and deploys an HDD to store parity. The HDD absorbs the parity writes/updates so that both the performance and reliability can be improved. However, the shock resistance of the system will lose by deploying that HDD, particularly in a mobile environment, e.g., laptop. In addition, EECC is mainly designed for read intensive workload, as to write dominant workload, the HDD may become the bottleneck of the whole system. Finally, the asynchronous writes/updates on parity in EECC can cause potential consistence problems.
+Similar to above approaches, our H2-SSD also employs a hierarchical data redundancy scheme including both in-page ECC and across-chips data redundancy. However, different from their methods, H2-SSD uses SLC chips with high P/E performance and life endurance to store the across-chips parity. As a result, the MLC chips will not suffer from any extra writes/updates while maintain a good shock resistance. In addition, synchronous writes/updates on parity in H2-SSD will mitigate the consistence problems.
+C. Heterogeneous Flash Memory Techniques
+Compared to MLC flash memory, SLC flash memory usually demonstrates much higher P/E performance and life endurance. Therefore, heterogeneous flash memory techniques are proposed to improve both the I/O performance and life endurance of the SSD [20], [21]. However, all existing solutions [20], [21] using heterogeneous flash memory techniques focus on exploring hot spots and exploiting the SLC chips to better service those hot spots.
+Similar to those solutions, our H2-SSD also aims at building heterogeneous flash memory based SSDs. However, the SLC chip in H2-SSD is used to absorb extra P/E operations induced by writing/updating the across-chips parity. Because of the outstanding performance of the SLC chips compared to the MLC chips, the across-chips data redundancy will have slight impact on both the overall performance and life endurance of H2-SSD in most cases.
+III. DESIGN OF H2-SSD
+In this section, we first briefly analyze the error correction capacity of existing in-page ECCs. Then, we illustrate the general and detailed design of H2-SSD. Before the discussion, we summarize symbols and variants used in this paper in Table I.
+A. Error Correction Capacity of Existing In-page ECC
+We take the BCH codes as an example for our discussion. The error correction capacity of other ECCs can be analyzed
+
+338
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I. SYMBOLS AND VARIANTS USED IN THIS PAPER
+
+Sym. & Var. m
+n k t Sp Pr Ps Pu r s c1 c2 c3
+Pstripe
+Ps2H
+
+Explanation power to construct GF (2m) for BCH codes length of the code word which is composed of an original data segment and a checksum length of the data segment maximum number of bit errors can be corrected in the code word size of an MLC page raw bit error rate ratio of segments with uncorrectable bit errors to all segments uncorrectable bit error rate number of MLC chips in H2-SSD number of parity strips on the SLC chip in a stripe of H2-SSD capacity of MLC chip to SLC chip page size of MLC chip to SLC chip number of data strips on each MLC chip in a stripe, equal to maximum of c1 and c2 ratio of stripes with raw bit errors that cannot corrected by the hierarchical data redundancy ratio of data strips with raw bit errors that cannot be corrected by the hierarchical data redundancy
+
+in the same way. To simplify our discussion, we make the following assumptions.
+• The BCH code is built upon the Galois Field GF (2m), and the corresponding 3-tuple is (n, k, t) as we mentioned in Section II-A.
+• The size of an MLC page is Sp, i.e., each page will be divided into Sp/k segments which are encoded respectively.
+• The raw bit error rate is Pr.
+As a result, the segment error rate Ps, which is the ratio of segments with uncorrectable bit errors to all segments, can be calculated according to Equation 3. And the uncorrectable BER Pu can be calculated as Equation 4.
+
+Ps =
+
+n
+
+(
+
+n i
+
+× Pri × (1 − Pr)n−i)
+
+(3)
+
+i=t+1
+
+Pu
+
+=
+
+1
+
+−
+
+(1
+
+−
+
+Ps)
+
+Sp k
+
+Sp
+
+(4)
+
+Consider the maximum P/E cycle of a production MLC chip [4]. When the segment size is 0.5KiB, the retention time is three months, and the uncorrectable BER should be lower than 10−15, the maximum P/E cycles of the MLC chip is around 7000, by using a (4213, 4096, 9) BCH code. In other words, that MLC chip will wear out in 9 months, if it is written at the maximum speed (under an 1.6ms program latency), which is much shorter than the expected life time of an SSD, e.g., 5 years [5].
+To improve the life endurance of the MLC chips, we propose our H2-SSD, which leverages a hierarchical data redundancy scheme to fix raw bit errors cannot be corrected by the in-page ECC, and uses SLC chips to store the parity to free those MLC chips from extra I/Os induced by writing/updating parity. The general design of H2-SSD is illustrated in next subsection.
+
+ZULWH UHDG GHJUDGHGUHDG
+
+66' &RQWUROOHU
+
+UHDG HUURU
+
+6/&
+
+0/&
+
+0/&
+
+0/&
+
+0/&
+
+Fig. 1. Architecture of H2-SSD
+B. General Design of H2-SSD
+To build SSDs with high raw BER tolerability thus achieving high life endurance, we propose H2-SSD, which employs both hierarchical data redundancy (in-page and across-chips) and heterogeneous flash memory techniques (SLC and MLC). More specifically, the SLC chips in H2-SSD are deployed as the dedicated parity chips. Though any write request may result in an extra write/update on the corresponding parity, the overall I/O performance and life endurance of H2-SSD may not be seriously affected due to the high P/E performance and life endurance of the dedicated SLC parity chips.
+The architecture of H2-SSD is illustrated in Figure 1. In additional to its common functions, the controller of H2SSD is also in-charge of generating across-chips parity and reconstructing segments with uncorrectable bit errors. The original data are first divided into pages and then distributed on the MLC chips. And the parity generated from the original data is distributed on the SLC chips. In H2-SSD, the acrosschips data redundancy is organized according to the logical address, due to in-place updates are not supported by NAND flash memory.
+The detailed procedures of handling read and write requests are illustrates in Figure 2(a) and 2(b), respectively. When the controller receives a write request, it splits that write request into sub-requests according to page size and mapping strategy. Then, the controller generates ECC checksums for each data segments, and across-chips parity for each stripe (the basic unit to independently recover data through acrosschips data redundancy). More specifically, for a full stripe write (all bits in a stripe are written/updated), the generation of corresponding across-chips parity will not result in extra reads; otherwise, a portion of data in the same stripe should be read from the SLC and MLC chips to conduct a read-modify write or reconstruction write, which may affect the overall I/O performance under a strict synchronous write strategy. Finally, the data/parity and their checksums are written to the MLC/SLC chips.
+The procedures of handling a read request is similar to that of a write request. After splitting the read request into subrequests, the controller fetches data and checksums from the MLC chips. Segments in those pages are first validated through the corresponding checksums. For the invalid segments, de-
+
+339
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+6WDUW
+*HWD ZULWH UHTXHVW
+6SOLWWKH UHTXHVW
+< )XOOVWULSH
+ZULWH" 1
+'RWKH SUHUHDG
+
+&DOFXODWH WKH(&& FKHFNVXPV DQGSDULW\
+GDWD
+:ULWHWKH 0/&DQG6/&
+(QG
+
+6WDUW
+
+*HWDUHDG UHTXHVW
+
+6SOLWWKH UHTXHVW5HDG WKHGDWDDQGLWV
+FKHFNVXPV
+&KHFNWKHGDWD E\XVLQJLQ
+SDJH(&&
+'DWDLV 1 YDOLG"
+< *HWWKHGDWD
+
+6HQG GHJUDGHG
+UHDGV
+5HFRQVWUXFW DQGJHWWKH
+GDWD
+(QG
+
+(a) Procedures of Handling Writes (b) Procedures of Handling Reads
+
+Fig. 2. The Procedures of Handling Writes and Reads in H2-SSD
+
+V
+
+6WULSH
+
+6
+
+6WULSH 6F
+
+6F 6F
+
+6U
+
+6UF
+
+6UF
+
+6UF
+
+6U 6U
+
+V
+6WULSH
+
+0/&&KLS
+
+6
+
+6F
+
+6F
+
+6F
+
+0/&&KLS
+
+6/&&KLS
+
+6U
+
+6UF
+
+6U
+
+6UF
+
+6UF
+
+6U
+
+'DWD6WULS
+
+3DULW\6WULS
+
+Fig. 3. Data and Parity Layout of a Stripe in H2-SSD Composed of r MLC Chips and One SLC Chip
+
+graded reads are conducted, which fetches the data and parity in the same stripe to rebuild that invalid page.
+However, the conventional across-chips data redundancy cannot be straightforwardly integrated into H2-SSD, particularly under the consideration of the cost-effectiveness of the overall system. In other words, we need to minimize the cost of deploying the SLC flash memory, since the price per GB of the SLC flash memory is usually much higher than that of the MLC flash memory. In the next two subsections, we will illustrate the detailed design of using a small sized SLC chip to service several large sized MLC chips to make H2-SSD cost-effective.
+C. Generation of Parity
+In this subsection, we demonstrate using only one small sized SLC chip to service the other large sized MLC chips in our H2-SSD. To simplify our discussion, we make the following definitions and assumptions. First, strip is the basic unit to generate parity. Second, a stripe is the basic unit that can independently recover a strip with uncorrectable bit errors by itself through across-chips data redundancy. Third, all MLC chips have the same capacity. In addition, the capacity of an MLC chip is c1 times as large as that of an SLC chip, where c1 is an integer power of 2.
+As we mentioned in Section III-A, the SSDs may be destroyed by the uncorrectable bit errors before the chip failures, particularly under a write intensive workload. Therefore, we deploy the across-chips data redundancy in H2-SSD to reconstruct data strips with uncorrectable bit errors, but not all data on a failed chip, which is different from CR5M [1] and EECC [2]. In other words, we can distribute a portion of strips in the same stripe on one chip, under the assumption that chips rarely fail. More specifically, within one stripe, we need to put the c1 × s data strips on each MLC chip at least, and the s parity strips on the SLC chip, in compensation for the low capacity of the SLC chip, as demonstrated in Figure 3.
+
+D. Strip Size and Life Endurance
+In this subsection, we demonstrate our choice on strip sizes, which can significantly influence the write throughput and life endurance of H2-SSD. To simplify the design of H2-SSD, any SLC or MLC page will not span two or more stripes to avoid read or write amplification.
+If the s parity strips in the same stripe on the SLC chip span multiple SLC pages, it will result in multiple page writes to write/update those parity strips. Consequentially, any SLC page is composed of s parity strips in the same stripe.
+We assume that the page size of the MLC chips is c2 times as large as that of the SLC chip, i.e., an MLC page contains c2 × s data strips, where c2 is also an integer power of 2. To avoid write amplifications on the SLC chip, a stripe should contain max(c1, c2) data strips on each MLC chip. In addition, if c2 is larger than c1, only c1/c2 capacity of the SLC chip is used to store parity logically.
+Before using across-chips data redundancy to reconstruct a strip, we should first make sure that strip does have uncorrectable bit errors. As a result, the strip should have its own independent ECC checksum(s), i.e., the strip is composed of one or more entire segments, which is the base unit to generate an ECC checksum as we mentioned in Section II-A. Since the segment size is adjustable as we mentioned in Section II-A, we simply assume that a strip consist of only one segment.
+Finally, it is worth to note that if we choose a smaller strip size, i.e., increase s, the strip failure tolerability of H2-SSD will increase correspondingly.
+IV. IMPROVEMENT ON LIFE ENDURANCE
+In this section, we quantitatively evaluate the improvement on life endurance by deploying the hierarchical data redundancy scheme in H2-SSD. To simplify the discussion, we make the following three assumptions in addition to those assumptions made in Section II-A.
+
+340
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+2.5E-03
+
+Conventional SSD H2-SSD
+
+2.5E-03
+
+Conventional SSD
+
+H2-SSD
+
+3.0E-03
+
+Conventional SSD
+
+H2-SSD
+
+Raw BER Tolerability Raw BER Tolerability Raw BER Tolerability
+
+2.0E-03 1.5E-03 1.0E-03 5.0E-04
+
+2.0E-03 1.5E-03 1.0E-03 5.0E-04
+
+2.5E-03 2.0E-03 1.5E-03 1.0E-03 5.0E-04
+
+0.0E+00 2
+
+4
+
+8
+
+16
+
+# MLC
+
+0.0E+00
+
+512B
+
+1K
+
+2K
+
+4K
+
+Strip Size
+
+0.0E+00
+
+486B 729B 972B 1216B Bytes for checksums
+
+(a) The strip size is 1KiB. The bytes for checksums (b) The bytes for checksums are 972 bytes (1216 × (c) The number of the MLC chips is 8. The strip size
+
+are 972 bytes (1216×80%). And the number of the 80%). The number of the MLC chips is 8. And the is 1KiB. And the bytes for checksums range from
+
+MLC chips ranges from 2 to 16.
+
+strip size ranges from 512 Bytes to 4KiB.
+
+486 bytes (1216 × 40%) to 1216 bytes (all in-page
+
+spare bytes are used to store the checksums).
+
+Fig. 4. The raw bit error tolerability by using only in-page BCH and deploying hierarchical data redundancy
+
+First, there are r MLC chips and one SLC chip in H2-SSD. Second, a stripe is composed of r × c3 × s + s strips, where c3 is equal to max(c1, c2). More specifically, there are s strips on the SLC chip, and c3 × s strips on each MLC chip. Last, each strip is an entire segment that has its own ECC checksum.
+As a result, the ratio of stripes with raw bit errors that cannot corrected by the hierarchical data redundancy to all stripes Pstripe can be calculated as Equation 5, where Ps can be calculated according to Equation 3.
+In addition, the ratio of data strips with raw bit errors that cannot be corrected by the hierarchical data redundancy to all data strips PsH2 of H2-SSD can be calculated as Equation 6. As a result, the uncorrectable bit error rate of H2-SSD can be calculated as Equation 4.
+
+r×c3×s+s
+
+Pstripe =
+
+(
+
+i=s+1
+
+r × c3 × s + s i
+
+(5)
+
+× Psi × (1 − Ps)r×c3×s+s−i)
+
+PsH2
+
+= r
+
+r × c3 × s × c3 × s +
+
+s
+
+×
+
+r×c3×s+s
+( r
+
+×
+
+c3
+
+i ×
+
+s
+
++
+
+× s
+
+i=s+1
+
+(6)
+
+r × c3 × s + s i
+
+× Psi × (1 − Ps)r×c3×s+s−i)
+
+We collect parameters of typical SLC [3] and MLC [4] chips to evaluate the improvement on life endurance by deploying the hierarchical data redundancy scheme in H2-SSD. The parameters of those chips are listed in Table II.
+More specifically, we compare the maximum raw bit error tolerability by only using the convention in-page ECC and the hierarchical data redundancy scheme according to Equation 3 and 6, where the uncorrectable BER should be lower than 10−15. The raw bit error tolerability is used to derive the life endurance in terms of P/E cycles. In addition, we explore the sensitivity of three important design parameters: the number of the MLC chips, the strip size, and in-page spare bytes to store
+
+TABLE II. PARAMETERS OF THE MLC AND SLC CHIPS
+
+Vender Model Capacity (GB) Page Size (KiB) Block Size (KiB) Spare Bytes (Byte) Erase Latency (ms) Read Latency (ms) Program Latency (ms)
+
+SLC Micron MT29F64G
+8 4 512 224 0.7 0.025 0.23
+
+MLC Micron MT29F256G
+32 16 8192 1216 3.0 0.115 1.6
+
+the ECC checksums. The evaluation results are represented in Figure 4 and Table III.
+
+TABLE III. IMPROVEMENTS ON LIFE ENDURANCE BY USING HIERARCHICAL DATA REDUNDANCY IN H2-SSD WHICH ARE DERIVED BY
+RAW BIT ERROR TOLERABILITY
+
+Strip Size 1024 bytes Checksum Bytes 972 bytes
+#MLC 8
+
+Checksum Bytes 972 bytes #MLC 8 Strip Size 1024 bytes
+
+#MLC 2 4 8 16
+Strip Size 512 bytes 1024 bytes 2048 bytes 4096 bytes Checksum Bytes 486 bytes 729 bytes 972 bytes 1216 bytes
+
+Improvement 97% 95% 93% 93%
+Improvement 178% 93% 40% 23%
+Improvement 141% 110% 93% 79%
+
+The results demonstrate the hierarchical data redundancy can significantly improve the raw BER tolerability thus dramatically increase the life endurance by 23% to 178%. For example, under a stripe size of 512 Bytes and a large checksum size that 80% of the spare bytes are used to store the BCH checksums, it can improve the life endurance by 178% in an H2-SSD composed of eight MLC and one SLC chips.
+It is worth to note that the improvement on raw bit error tolerability and life endurance is not sensitive to r the number of the MLC chips, as demonstrated in Figure 4 and Table III. For example, when the number of the MLC chips
+
+341
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+increases from 2 to 16, the improvement on life endurance only decreases from 97% to 93%. As a result, a large r can be chosen to reduce the relative extra cost of deploying the SLC chip, under the only consideration of raw bit error tolerability or life endurance. In the next section, the number of the MLC chips in H2-SSD will be evaluated from a viewpoint of I/O performance.
+As demonstrated in Table III, with the growth of the bytes for checksums of the BCH codes (using larger ratio of the in-page spare bytes to store the checksums) or the strip size, the improvement on life endurance decreases quickly. However, even when all in-page spare bytes are used to store the checksum or the strip size is 4KiB, the improvement is still significant, e.g., 79% and 23% respectively.
+V. TRACE-DRIVEN SIMULATION AND RESULT ANALYSIS
+In this section, we first describe the trace-driven simulation to evaluate the degradation of I/O performance induced by deploying across-chips data redundancy and heterogeneous flash memory schemes in H2-SSD, under a strict synchronous parity update strategy.
+A. Experiment Methodology
+Actually, under a strict synchronous parity update strategy, the SLC chip in H2-SSD may affect the overall I/O performance of H2-SSD, although it far outperforms the MLC chips in P/E performance. Consider the worst case that H2-SSD is under a pure random-write workload. Each write request sent to an MLC chip will incur a write on the SLC chip, i.e., the SLC chip will suffer from much more writes than any MLC chip. And this write amplification on the SLC chip tends to be severe with growth of the MLC chips in H2-SSD. In contrast, the relative extra cost of deploying the SLC chip will decrease with the growth of the number of the MLC chips in H2-SSD. As a result, we conduct experiments to find a proper nubmer of the MLC chips in H2-SSD, which can maintain a slight I/O performance degradation as well as a relative low extra cost of deploying the SLC chip. More specifically, we measure the normalized I/O performance of H2-SSD to the conventional SSD with the same number of MLC chips under four typical workloads with a wide range of read-write ratios. And that normalized I/O performance is reported as a function of the number of MLC chips in H2-SSD or the conventional SSD.
+Four real-world block I/O traces are used in our experiments. The F1 and F2 traces are collected from OLTP applications running at two financial institutions. The W3 trace is from a popular search engine. All above three traces are from the SPC-1 benchmark [22]. The D1 is published by Microsoft Corporation [23]. It is collected from a file server accessed by more than 3, 000 users to download various daily. The characteristics of those four traces are summarized in Table IV. The F1 trace is write intensive traces while the W3 trace is almost composed of read requests.
+Our simulation is built upon a validated SSD simulator Micro-Add-on [24]. The implementation of H2-SSD is basically according to the general and detailed design described in Section III. The modification contains about 1, 400 lines of C codes.
+
+TABLE IV.
+
+CHARACTERISTICS OF FOUR TRACES USED IN OUR SIMULATION
+
+#Reads #Writes Average Request Size
+
+F1 1235633 4099354 3.46KiB
+
+F2 3046112 653082 2.39KiB
+
+D1 12296685 5850213 25.05KiB
+
+W3 4260446
+1258 15.40KiB
+
+We still choose the flash chips used in the Section IV to evaluate the I/O performance. The I/O performance features of both the SLC and MLC chips are also summarized in Table II.
+First, close-loop measurement is conducted to find the proper ratio of the MLC chips to the SLC chip in H2-SSD, i.e., we use the I/O throughput as the metrics. More specifically, the queue depth in the close-loop measurement is 64. Then, when a proper ratio is found, we conduct open-loop measurements to understand the degradation of the average response time induced by H2-SSD under that ratio.
+B. Throughput as a Function of Number of MLC Chips
+Figure 5 represents the normalized I/O throughput of H2SSD to the conventional SSD with the same number of the MLC chips under four typical workloads as a function of the number of the MLC chips. The number of MLC chips in H2SSD ranges from 2 to 16. We do not consider the probability of degraded reads in this measurement.
+The close-loop experimental results demonstrate that the degradation of I/O throughput will increase with the growth of the number of the MLC chips in H2-SSD, which is consistent with our analysis. More specifically, for those two read-dominated workloads W3 and F2, the degradation of I/O throughput is very slight, e.g., nearly zero for the W3 workload and up to 7.3% for the F2 workload. In contrast, the degradation of I/O throughput under the F1 and D1 workloads is a bit significant, e.g., up to 13.0% and 19.5% respectively. Clearly, the I/O throughput degradation is induced by the competition on the SLC chip to write/update the across-chips parity. Due to the low read-write ratio in the F1 and D1 workloads, the competition on the SLC chip will be more severe thus leading to a high degradation of I/O throughput.
+It is worth to note that the degradation of I/O throughput under the D1 workload is even larger than that under the F1 workload which has a lower read-write ratio than the D1 workload. The requests in the D1 workload have a much larger average size compared to the F1 workload, which results in a higher load on each chip under the same queue depth and leading to a more severe competition on the SLC chip.
+In addition, when the number of the MLC chips ranges from 7 to 9, the maximum degradation of I/O throughput under all those four workloads is below 10%, and the relative extra cost of deploying the SLC chips ranges from 11.1% to 14.3%. As a result, those configurations are recommended to be applied due to the slight degradation of I/O throughput and low relative extra cost.
+C. Response Time as a Function of Request Arrival Rate
+To understand the degradation of the average response time of I/O requests in H2-SSD, we conduct open-loop measurement in an H2-SSD composed of eight MLC chips and one
+
+342
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized IOPS of H2-SSD to C-SSD
+
+100%
+
+90%
+
+80%
+
+70%
+
+60%
+
+F1
+
+50%
+
+F2
+
+40%
+
+D1
+
+30%
+
+W3
+
+20%
+
+10%
+
+0% 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
+# MLC
+
+Fig. 5. Normalized Throughput as a Function of Number of MLC Chips
+
+Mean response time: H2-SSD/C-SSD
+
+3
+
+2.8
+
+2.6
+
+2.4
+
+2.2
+
+F1
+
+2
+
+F2
+
+1.8
+
+D1
+
+1.6
+
+W3
+
+1.4
+
+1.2
+
+1 1% 2% 4% 8% 16% 32%
+
+Time scale rate
+
+Fig. 6. Normalized Average Response Time as a Function of Request Arrival Rate
+
+SLC chip, which is a recommended configuration due to its cost-effectiveness. The open-loop measurement is performed under various request arrival rate, which ranges from 1% to 32% of the peak throughput for each workload. The average I/O response time is also normalized to that of a conventional SSD composed of eight MLC chips. The experimental results are demonstrated in Figure 6.
+The experimental results demonstrate that the degradation of the average response time induced by H2-SSD is slight in most case. For example, under the F1, F2, and W3 workloads, the increase of the average response time is typically under 10%, except for the that under the F2 workload and a heavy request arrival rate. In contrast, the increase of the average response time under the D1 workload is typically beyond 20%, and up to nearly 170% at the worst case. The huge increase of the average response time is due to not only the large average request size but also the high write-read ratio of the D1 workload.
+The increase of average response time will grow with the increase of the request arrival rate under the F1, F2, and D1 workloads, which can be explained as follows. On one hand, under a slight request arrival rate, the increase of average
+
+response time is approximately in proportional to ratio of the read latency to the program latency, due to those the extra prereads induced by write requests. On the other hand, under a heavy request arrival rate, the competition on the SLC chips becomes severe. Therefore, the increase of average response time is now determined by that severe competition. Since there are almost no write requests in the W3 workload, the average response time will not increase under that workload.
+VI. CONCLUSION AND FUTURE WORK
+In this section, we first draw the conclusion and then discuss the future work of this paper.
+A. Conclusion
+To cost-effectively improve the life endurance of MLC NAND flash memory based SSDs, we propose H2-SSD, which adopts both a hierarchical data redundancy scheme (in-page ECC and across-chip data redundancy) and a heterogeneous flash memory technique (SLC and MLC flash memory chips). The across-chip data redundancy is used to reconstruct data with raw bit errors which cannot be corrected by the inpage ECC. And one extra small sized SLC chip is deployed to store parity generated by the across-chip data redundancy scheme. Quantitatively analysis and trace-driven simulation results demonstrate that H2-SSD outperforms the conventional SSDs in the maximum Program/Erase cycles by 23% to 178% with a less than 10% degradation of I/O performance in most cases.
+B. Future Work
+The future work is listed as follows:
+• We will try to solve the high degradation of I/O performance under the workloads with large sized requests.
+• Except for the monetary cost, we will further study the extra power cost induced by H2-SSD.
+• We will use parameters of various flash chips to comprehensively evaluate the effectiveness of H2SSD.
+• The I/O performance of H2-SSD at the end of its lifetime will be evaluated.
+• We will compare our work with CR5M [1] and EECC [2] in terms of I/O performance and life endurance.
+VII. ACKNOWLEDGEMENTS
+We would like to thank anonymous reviewers for their insightful comments. This research is sponsored by the National Basic Research 973 Program of China under Grant No. 2011CB302303, the National Natural Science Foundation of China under Grant No. 61300046, and the National High Technology Research and Development Program of China (863 Program) under Grant No.2013AA013203, and the Fundamental Research Funds for Central Universities, HUST,(Grant No. 2013KXYQ003), and National Universitys Special Research Fee (2015XJGH010).
+
+343
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] Y. Wang, W. Wang, T. Xie, W. Pan, Y. Gao, and Y. Ouyang, “Cr5m: A mirroring-powered channel-raid5 architecture for an ssd,” in Mass Storage Systems and Technologies (MSST), 2014 30th Symposium on. IEEE, 2014, pp. 1–10.
+[2] P. Subedi, P. Huang, X. He, M. Zhang, and J. Han, “A hybrid erasurecoded ecc scheme to improve performance and reliability of solid state drives,” in Performance Computing and Communications Conference (IPCCC), 2014 IEEE International. IEEE, 2014, pp. 1–8.
+[3] Micron Technology, “Datasheet of SLC,” https://www.micron.com/ products/nand-flash/slc-nand/16Gb#/.
+[4] ——, “Datasheet of MLC,” https://www.micron.com/products/ nand-flash/mlc-nand/128Gb.
+[5] ——, “Datasheet of SSD,” https://www.micron.com/products/ solid-state-storage/.
+[6] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in mlc nand flash memory: Measurement, characterization, and analysis,” in Design, Automation & Test in Europe Conference & Exhibition (DATE), 2012. IEEE, 2012, pp. 521–526.
+[7] L. M. Grupp, A. M. Caulfield, J. Coburn, S. Swanson, E. Yaakobi, P. H. Siegel, and J. K. Wolf, “Characterizing flash memory: anomalies, observations, and applications,” in Microarchitecture, 2009. MICRO-42. 42nd Annual IEEE/ACM International Symposium on. IEEE, 2009, pp. 24–33.
+[8] C. Zambelli, M. Indaco, M. Fabiano, S. Di Carlo, P. Prinetto, P. Olivo, and D. Bertozzi, “A cross-layer approach for new reliabilityperformance trade-offs in mlc nand flash memories,” in Proceedings of the Conference on Design, Automation and Test in Europe. EDA Consortium, 2012, pp. 881–886.
+[9] L. M. Grupp, J. D. Davis, and S. Swanson, “The bleak future of nand flash memory,” in Proceedings of the 10th USENIX conference on File and Storage Technologies. USENIX Association, 2012, pp. 2–2.
+[10] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Information and control, vol. 3, no. 1, pp. 68–79, 1960.
+[11] X. Chen and I. S. Reed, Error-control coding for data networks. Kluwer Academic Publishers, 1999.
+[12] A. Hocquenghem, “Codes correcteurs derreurs,” Chiffres (paris), vol. 2, no. 147-156, p. 116, 1959.
+[13] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, “Ldpcin-ssd: making advanced error correction codes work effectively in solid state drives.” in FAST, 2013, pp. 243–256.
+[14] P. Huang, P. Subedi, X. He, S. He, and K. Zhou, “Flexecc: partially relaxing ecc of mlc ssd for better cache performance,” in Proceedings of the 2014 USENIX conference on USENIX Annual Technical Conference. USENIX Association, 2014, pp. 489–500.
+[15] Y. Lu, J. Shu, and W. Wang, “Reconfs: a reconstructable file system on flash storage.” in FAST, 2014, pp. 75–88.
+[16] G. Wu, X. He, N. Xie, and T. Zhang, “Exploiting workload dynamics to improve ssd read latency via differentiated error correction codes,” ACM Transactions on Design Automation of Electronic Systems (TODAES), vol. 18, no. 4, p. 55, 2013.
+[17] Samsung, “NAND Flash Spare Area Assignment Standard,” http://pctuning.tyden.cz/ilustrace3/cerny/2010 SSD1/01 spare assignment standard.pdf.
+[18] Micron, “An Introduction to NAND Flash and How to Design It In to Your Next Product,” http://www.eng.umd.edu/∼blj/CS-590.26/ micron-tn2919.pdf.
+[19] M. I. Co.LTD, “Datasheet of SLC,” http://www.macronix.com/Lists/ DataSheet/Attachments/1871/MX60LF8G18AC,%203V,%208Gb, %20v1.0.pdf.
+[20] L.-P. Chang, “Hybrid solid-state disks: combining heterogeneous nand flash in large ssds,” in Design Automation Conference, 2008. ASPDAC 2008. Asia and South Pacific. IEEE, 2008, pp. 428–433.
+[21] D. Park and D. H. Du, “Hot data identification for flash-based storage systems using multiple bloom filters,” in Mass Storage Systems and
+
+Technologies (MSST), 2011 IEEE 27th Symposium on. IEEE, 2011, pp. 1–11.
+[22] Storage Performance Council, SPC-1,benchmark, http://www. storageperformance.org/results/benchmark results spc1 active/.
+[23] S. N. I. A. IOTTA Repository, http://iotta.snia.org/.
+[24] N. Agrawal, V. Prabhakaran, T. Wobber, J. D. Davis, M. S. Manasse, and R. Panigrahy, “Design tradeoffs for ssd performance.” in USENIX Annual Technical Conference, 2008, pp. 57–70.
+
+344
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:42:04 UTC from IEEE Xplore. Restrictions apply.
+
+

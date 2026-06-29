@@ -1,0 +1,585 @@
+Embedded Multicore Architectures for LDPC Decoding
+
+Gabriel Falcao Department of Electrical and Computer Engineering Instituto de Telecomunicac¸o˜es/FCTUC Universidade de Coimbra – Po´lo II 3030–290 Coimbra, Portugal
+Email: gff@co.it.pt
+
+Leonel Sousa Department of Electrical and Computer Engineering IST/INESC-ID/TU Lisbon
+R. Alves Redol, n.9 1000–029 Lisboa, Portugal
+Email: las@inesc-id.pt
+
+Vitor Silva Department of Electrical and Computer Engineering Instituto de Telecomunicac¸o˜es/FCTUC Universidade de Coimbra – Po´lo II 3030–290 Coimbra, Portugal
+Email: vitor@co.it.pt
+
+Abstract—Recently, the development of Low-Density ParityCheck (LDPC) decoding solutions has been proposed for a vast set of architectures, ranging from dedicated hardware to fully programmable ones (e.g. Cell/B.E. and graphics processing units). In this paper we propose efficient embedded programmable multicore architectures for achieving real-time LDPC decoding. The proposed multicore architectures allow to exploit data parallelism by decoding in parallel multiple codewords on the provided cores, with enough local memory capacity to store all data corresponding to the Tanner graph. Therefore, with this distributed memory and local computing approach, only a single shared bus is required to communicate the codewords. The proposed class of architectures can be prototyped on field programmable gate arrays or implemented on application specific integrated circuits, and it is validated by using the popular Cell processor, which relates very closely with the one here proposed. Finally, we discuss the related art of dedicated and programmable LDPC decoders, and discuss the advantages and disadvantages regarding the proposed solution.
+I. INTRODUCTION
+Initially proposed in the 1960’s by Robert Gallager [1], LDPC codes exhibit excellent error correction capacity. Due to advances in semiconductor industry and microelectronics over the last decades they recaptured the attention of academia and industry after the invention of Turbo-Codes [2] by Berrou et al. in 1993. Over the last years, LDPC codes have been adopted by modern communication standards, such as Digital Video Broadcasting, Satellite 2 (DVB-S2) [3], the WiMAX standard [4] for local and metropolitan area networks, or optical communications, and are being considered for 4G wireless systems.
+Decoders for LDPC codes demand intensive processing. Efficient hardware dedicated architectures and application specific integrated circuits (ASICs) have been designed to develop embedded processors [5], [6] for real time LDPC decoding, with cost and power consumption restrictions. However, since different standards employ different LDPC codes, it is important to design flexible LDPC decoders that can support different applications. More recently, more flexible solutions for designing dedicated LDPC decoders have been proposed by using a high level synthesis (HLS) methodology [7]. Although more flexible, it has to use the program-in chip-out
+
+tool to produce RTL descriptions adapted to the considered coder and its requirements.
+With the recent advances in architectures and technology, multicore computers and accelerators became popular [8], [9], namely general purpose multicore personal computers, such as the PlayStation 3’s Cell/B.E. and graphics processing units (GPUs) that can be used for general purpose processing. LDPC decoders have been also recently developed using non-conventional programmable approaches [10], [11] that exploit the increasing computational power of these multicore systems.
+This paper addresses the main challenges in the design of multicore architectures suitable for the development of programmable efficient embedded processors for LDPC decoding. Based on the experience of implementing LDPC decoders, mainly on programmable multicores [10], [12], [13], [14], [15] but also designing dedicated hardware decoders, in this paper we propose a programmable architecture that suits the fundamental requirements necessary to perform LDPC decoding with good performance at low cost. The proposed programmable architecture exploits data parallelism at different levels by processing in parallel multiple codewords. Multicores with distributed memory are used to independently decode in parallel distinct codewords, while each core exploits sub-word parallelism, a particular form of Single Instruction Multiple Data (SIMD), for individually decoding several codewords. In the proposed architecture a single shared bus is applied, since there are no dependencies between the several instances processed in parallel, and consequently the requests for communicating and synchronizing are low. The proposed architectures can be easily prototyped in field programmable gate arrays (FPGAs), by using soft-cores [16] and standard buses [17], or by designing ASICs [7].
+The paper is organized as follows. Section II summarily introduces LDPC decoding and section III describes parallelism and data structures suitable for performing LDPC decoding in parallel. Section IV proposes embedded multicore architectures with adequate characteristics for this type of processing and presents the main characteristics of their main components. Section V discusses how the proposed archi-
+
+978-1-4244-79A3ut8ho-r2iz/e1d0lic/$en2s6ed.0u0se©lim2it0ed1t0o: IYEonEseEi Univ. Downloaded on J3u4n9e 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+c0+c1+c2=0 c3+c4+c5=0 c0+c3+c6=0 c1+c4+c7=0
+
+(8 Bit Nodes checked by 4 Check Node equations) BN0 BN1 BN2 BN3 BN4 BN5 BN6 BN7 1 1 1 0 0 0 0 0 CN0
+0 0 0 1 1 1 0 0 CN1 H=
+1 0 0 1 0 0 1 0 CN2
+0 1 0 0 1 0 0 1 CN3
+
+CN0
+
+CN1
+
+CN2
+
+CN3
+
+q62
+
+r37
+
+BN0
+
+BN1
+
+BN2
+
+BN3
+
+BN4
+
+BN5
+
+BN6
+
+BN7
+
+Fig. 1. A (8, 4) linear block code example: parity-check equations, the equivalent H matrix and corresponding Tanner graph [18] representation.
+
+tecture can be prototyped in FPGA and shows experimental results obtained for the Cell/B.E. processor, which presents similarities with the one proposed. Section VI presents related art, and finally section VII closes the paper with final conclusions and remarks.
+II. LDPC CODES
+A linear binary block code (N, K), with rate = K/N and M = N − K, can be described by a binary H matrix with dimensions M × N . Also, it can be elegantly represented by a Tanner graph [18], as depicted in figure 1. In this type of graph, edges connect two distinct types of nodes:
+• Bit Nodes (BN), also called variable nodes (VN) with a BN for each one of the N variables of the linear system of equations, and;
+• Check Nodes (CN), also called restriction or test nodes with a CN for each one of the M homogeneous independent linear system of equations represented by H.
+Figure 1 shows an example for a binary (8, 4) code with N = 8 BNs and M = 4 CN parity-test equations. Each CN connects to all the BNs which have a contribution in that restriction or equation. For the other type of nodes, each BN corresponding to a ci bit of the codeword, connects to all the CN equations where bit ci participates in. The graph edges connect BNs with CNs, but never nodes of the same type, which defines a bipartite graph. Every element in H where Hmn = 1, represents a connection between BNn and CNm [1]. For regular codes, the number of ones per row/column is constant, while no restriction is imposed to this number in irregular codes. In the example of figure 1 BN0, BN1 and BN2 are updated by CN0 as indicated in the first row of H. From the second until the fourth row, it can be seen that the subsequent BNs are updated by their neighboring CNs.
+The Sum-Product Algorithm (SPA) [19] or a simplified version of it, namely the Min-Sum Algorithm (MSA) [19] described in Algorithm 1 are usually used to perform LDPC
+
+Algorithm 1 MSA
+1: {Initialization} Initializing Lqnm with log-likelihood ratios LPn received from channel
+2: while i < I and ˆc is not a codeword) {ˆc-decoded word; I-Max. number of iterations.} ∀(m, n), with Hmn = 1 in the parity check matrix H do
+3: {CN Processing:}
+
+Lrmn =
+
+sign (Lqn m) min |Lqn m| , (1)
+n ∈N(m)\n
+
+n ∈N(m)\n
+
+{by reading Lqnm data from memory and writing back Lrmn. N (m)\n represents BNs connected to CNm excluding BNn.} 4: {BN Processing:}
+
+Lqnm = LPn +
+
+Lrm n,
+
+(2)
+
+m ∈M (n)\m
+
+{by reading Lrmn and LPn data from memory and writing back
+Lqnm. M (n)\m represents CNs connected to BNn excluding
+C Nm .} 5: {Calculating the a posteriori pseudo-probabilities:}
+
+LQn = LPn +
+
+Lrm n.
+
+(3)
+
+m ∈M (n)
+
+6: {Performing hard decoding:}
+
+∀n, ˆcn = sign(LQn)
+
+(4)
+
+7: end while
+
+decoding. These algorithms are mainly organized in two main
+steps, which perform horizontal and vertical processing, as
+represented in steps 3 and 4 of Algorithm 1. In the former the update of messages circulating from CNm to BNn is performed, considering accesses to H in a row-major order. In this step, Lrmn values are produced during each iteration. Similarly, the vertical processing computes messages sent from
+BNn to CNm, assuming accesses to H in a column-major basis. In this case, in each iteration Lqnm values are updated according to the edges presented in the Tanner graph.
+
+TABLE I NUMBER OF ARITHMETIC AND MEMORY ACCESS OPERATIONS PER
+ITERATION FOR THE MSA.
+
+Min-Sum - Horizontal Processing Number of operations
+
+Comparisons abs min xor
+Memory Accesses
+
+wcM wcM (wc − 1)M wcM 3wcM
+
+Min-Sum - Vertical Processing Number of operations
+
+Additions/Subtractions Memory Accesses
+
+2wbN (3wb + 1)N
+
+Table I presents the number of operations per iteration for
+the MSA in the case of regular codes with wc and wb non-zero elements per row and column of matrix H, respectively. These values are also valid for the irregular case, if wc and wb are the average number of non-zero elements per row and column
+
+350 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+of matrix H. The number of memory accesses per iteration necessary to update the Lrmn and Lqnm values are also shown in table I. Both the number of operations and memory accesses grow with M × wc and with N × wb.
+III. PARALLELISM AND DATA REGULARIZATION FOR LDPC DECODING
+Mainly data parallelism, task parallelism, or both data and task parallel approaches can be used to target parallel systems. In this section we identify the parallelism that can be exploited to speedup LDPC decoding and discuss a compact representation for the Tanner graph having in mind the proposal and the design of an efficient embedded multicore architecture for performing LDPC decoding in real time.
+A. Parallelism to exploit
+Task parallelism can be exploited on LDPC decoding at different granularities. At the finest granularity, one task can be responsible for updating a single edge of the Tanner graph. This approach would be suitable for large number of processors without restrictions accessing the graph in memory. In a more realistic approach, each task can process a node of the Tanner graph. In this case, depending on the scheduling, if a Forward-and-Backward approach [20] is used, redundant memory accesses and extra computations can be saved. In practice, for designing hardware processors, a set of dedicated cores are used to process in parallel a sub-matrix of H, and these submatrices are sequentially processed by these cores. These approaches require synchronization and communication to process all the Tanner graph from the partitions computed in parallel.
+Figure 2 shows how task parallelism, herein defined as intracodeword parallelism, allows processing distinct nodes of the graph in parallel by different tasks (ti). It is based on the fact that the Tanner graph can be partitioned into distinct subsets. Each one of those subsets can then be processed by a different task or processing unit, in parallel, where tasks t0 to t3 are used to describe parallelism applied to the horizontal kernel of the Min-Sum algorithm [19], and tasks t0 to t7 represent the parallelism applied to the vertical kernel. To minimize the overheads introduced by redundant communications and to allow the efficient Forward-and-Backward recursion [20] to be adopted, the size of a task should not be set too small under the context of LDPC decoding. Typically, a set of nodes, for example composed by all the BNs associated to a CN for horizontal processing, or by all CNs associated to a BN for vertical processing, is assigned to a task.
+Data parallelism can be exploited on LDPC decoding by simultaneously decoding multiple codewords. SIMD is the paradigm that can be used for exploiting fine grained data parallelism, while Single Program Multiple Data (SPMD) can be used to implement multi-codeword LDPC decoding on multiple processing units [12] that have access to the information of the whole Tanner graph. The third dimension in figure 2 illustrates data parallelism, by showing different
+
+Vertical Kernel Horizontal Kernel
+
+Parallel vertical processing (Bit Nodes update)
+t0 t1 t2 t3 t4 t5 t6 t7
+11100000 00011100
+a)
+10010010 01001001
+
+t0
+
+11100000
+
+t1
+
+00011100
+
+b)
+
+t2
+
+10010010
+
+t3
+
+01001001
+
+Parallel horizontal processing (Check Nodes update)
+
+Fig. 2. Exploiting intra-codeword and multi-codeword parallelism for a) the vertical and b) horizontal kernels of the H matrix example in figure 1.
+processors decoding distinct codewords in parallel in a synchronous way. A clear advantage of data parallelism over task parallelism is that only the datapath has to be replicated for the SIMD approach, and communication and synchronization requirements are reduced to the minimum. We can point out as the main disadvantage of the proposed approach the memory capacity required to store the Tanner graph on the various processing units. Therefore, we will propose in the next subsection a compact data structure for storing the Tanner graph in memory, which can be used to efficiently exploit data multi-codeword parallelism in multicore architectures.
+B. Data Regularization
+To achieve the goal of obtaining efficient parallel algorithms for software LDPC decoders, we have developed compact data structures to represent the sparse binary H matrices and corresponding Tanner graphs. They adequately allow representing data as streams to suit the parallel processing of the SPA and MSA, which represents a different solution from the conventional Compress Row Storage (CRS) and Compress Column Storage (CCS) formats [21] used to represent sparse matrices in a compact format. In the context of parallel processing, the edges of the Tanner graph are represented using a proper addressing mechanism, which facilitates the simultaneous access to different data elements required by the SPA and MSA algorithms. The compact data structures herein proposed also suit recent parallel subword SIMD like architectures, which impose special restrictions associated with the alignment of data in memory, and simplify the simultaneous decoding of several codewords.
+We propose to represent the H matrix that defines the Tanner graph of an LDPC code using two distinct data structures, namely HBN and HCN , which are used for the horizontal and vertical processing steps, described in section II, respectively.
+
+351 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+Bit Nodes
+
+BN0 BN1 BN2 BN3 BN4 BN5 BN6 BN7
+
+n=0
+
+n=1 n=2 n=3
+
+n=4
+
+n=5 n=6 n=7
+
+rmn m=0 m=2 m=0 m=3 m=0 m=1 m=2 m=1 m=3 m=1 m=2 m=3 HCN
+
+HBN
+
+qnm n=0 n=1 n=2 n=3 n=4 n=5 n=0 n=3 n=6 n=1 n=4 n=7
+
+m=0
+
+m=1
+
+m=2
+
+m=3
+
+Check Nodes
+
+CN0 CN1 CN2 CN3
+
+Fig. 3. Data structures illustrating the Tanner graph’s irregular memory access patterns for the example shown in figure 1.
+
+HBN is generated by scanning the H matrix in a rowmajor order and by sequentially mapping into HBN only the BN edges represented by non-null elements in H, for each CN equation (in the same row). Algorithm 2 describes this procedure in detail for a matrix having M rows and N columns. Steps 5 and 6 of Algorithm 2 show that only edges representing non-null elements are collected and stored in consecutive positions inside HBN , for each row associated with a given CN. The vector wb(k) holds the number of ones
+
+Algorithm 2 Generating the compact HBN structure from the original H matrix.
+
+1: Reading a binary M × N matrix H
+
+2: idx ← 0;
+
+3: for all CNm (rows in Hmn) : do
+
+4: for all BNn (columns in Hmn) : do
+
+5:
+
+if Hmn == 1 then
+
+m−1
+
+6:
+
+HBN [idx + +] ← n +
+
+wb(k);
+
+k=0
+
+7:
+
+end if
+
+8: end for
+
+9: end for
+
+mwb (regular codes)
+
+per column k, for regular or irregular codes:
+
+M −1
+
+wb(k) =
+
+Hmk .
+
+(5)
+
+m=0
+
+In a similar way, the HCN data structure that is used in the vertical processing step is defined as a sequential
+
+representation of the edges associated with non-null elements
+in H connecting every BN to all its neighboring CNs (in the same column). HCN is generated by scanning the H matrix in a column-major order, i.e. by interchanging the order of the
+
+two for loops in Algorithm 2 and by substituting statement 6
+
+by:
+n−1
+
+HCN [idx + +] ← m +
+
+wc(k),
+
+k=0
+
+nwc (regular codes)
+
+where wc(k) should hold the number of ones per row k, which again can be regular or irregular:
+
+N −1
+
+wc(k) = Hkn.
+
+(6)
+
+n=0
+
+Both data structures are depicted in figure 3, where the example shown in figure 1 is mapped into the corresponding edge connections that form the Tanner graph. Data structures HBN and HCN depicted in figure 4 illustrate the generic irregular case. It can be seen that they represent addresses (or indices) of elements to update. HBN contains row weights in vector wc and the corresponding addresses of Lrmn data elements to be updated by corresponding Lqnm messages arriving from nodes they connect to. The structure HCN performs the opposite operation: it contains column weights in vector wb and the corresponding addresses of Lqnm elements which have to be updated by incoming Lrmn messages from connected neighboring nodes.
+The access to HBN and HCN data structures can be irregular. Multicore architectures provide resources that allow to achieve parallel/low-latency accesses to memory, typically by masking data transfers with computation [10], [22], [23], or by using efficient data alignment/resizing strategies, that facilitate parallel accesses to memory [15]. To better suit these mechanisms, data blocks to be accessed in memory should obey to specific size and address requirements, which may not be directly achievable from HBN and HCN data structures in many cases. In these cases, runtime data realignment mechanisms [15] can be applied to allow data to be accessed more efficiently, since it is not possible to align it at compile time. Also, as the memory access patterns of LDPC codes are random, they do not admit the simultaneous use of aligned memory accesses for both read and write operations of the decoding process. To overcome this difficulty we have developed data mapping transformations which allow new addresses to be contiguously accessed for one of the mentioned memory access types [10].
+
+IV. PROPOSED EMBEDDED MULTICORE ARCHITECTURES
+We propose to adopt programmable architectures supported on multicores with SIMD extension to exploit data parallelism. The requirements imposed by parallel memory accesses and the avoidance of data dependencies suggest the exploitation of data-parallelism instead of task-parallelism. It is proposed
+
+rmn/Lrmn HCN
+HBN qnm/Lqnm
+
+rs0n
+
+rs1n
+
+...
+
+rsu-1n rt0n'
+
+rt1n'
+
+... rtw-1n’
+
+a)
+
+index of index of
+qns0 qns1
+
+...
+
+index of index of index of
+qnsu-1 qn’t0 qn’t1
+
+...
+
+index of
+qn’tw-1
+
+wb
+
+wc
+
+index of index of
+
+rmi0
+
+rmi1
+
+...
+
+index of index of index of
+
+rmik-1 rm’j0
+
+rm’j1
+
+...
+
+index of
+rm’jz-1
+
+b)
+
+qi0m qi1m
+
+... qik-1m qj0m’ qj1m’
+
+... qjz-1m’
+
+Fig. 4. Generic a) HCN and b) HBN data structures developed, illustrating the Tanner graph’s irregular memory access patterns.
+
+352 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+Data I/O Controller
+
+Main Memory
+
+DMA
+
+DMA
+
+DMA
+
+Interconnect Bus
+
+Processor 1
+
+Scratchpad RAM 1
+
+Processor 2
+
+Scratchpad RAM 2
+
+Processor np
+
+Scratchpad RAM np
+
+{
+
+Instruction pool
+Data pool
+
+{
+
+Fig. 5. Embedded multicore architecture for LDPC decoding.
+
+a memory centric architecture, with each memory module holding HBN and HCN data structures, that is coupled to a core that iteratively computes the Lrmn and Lqnm values. The main characteristics of such distributed memory multicore architectures ideally are:
+• a high number of cores, or processing units, which depends of the specifications and configuration, but should individually support SIMD processing;
+• the cores do not need to support a large and complex instructions set; in fact, they can be very simple and perform appropriately with a few arithmetic and logic instructions; they should also support instructions for wide memory accesses;
+• the use of global main memory, typically slow, should be avoided;
+• each core should have a tightly coupled fast local memory; the minimum size of the scratchpad local memory should be carefully considered in order to be able of storing the data structures necessary to support HBN and HCN data structures and also the program;
+• the sharing/competition of/for resources (memory and others) should be avoided;
+• a bus is required with a minimum bandwidth to support high speed data I/O for multiple codewords in simultaneous;
+• hardware techniques, such as DMA controllers, have to be provided to autonomously manage data transfers between adjacent cores/memories.
+The cores should include a minimum instruction set, which depends on the Instruction Set Architecture (ISA) of the algorithm adopted for LDPC decoding. For the SPA should be considered, at least, floating-point instructions such as add, mul and div, and load, store and brcond instructions; while for the MSA, the instruction set should accommodate instructions
+
+for fixed-point arithmetic and logic operations, such as abs, min, add, add/sub with saturation, xor and also load, store, and brcond. Ideally, it should also include specialized intrinsic instructions for SIMD computation able of simultaneously performing operations in parallel on 8, 16, or 32-bit operands for wide ALUs (e.g. 128-bit).
+The analysis of table I allows us to estimate the number of operations Nop per decoded codeword and per iteration required by the MSA (for the sake of simplification, we assume the same cost for ALU operations and memory accesses):
+
+Nop > 12 × #Edges,
+
+(7)
+
+where #Edges = wc×M = wb×N (we assume a rate = 1/2 regular code, where N = 2 × M ) is the number of edges of the Tanner graph. In order to estimate the required minimum number of processing units, by considering a frequency of operation fop and CP O cycles per operation, the time t1 necessary to decode a single codeword is approximately:
+
+t1
+
+=
+
+Nop
+
+×
+
+#iter fop
+
+×
+
+CP O ,
+
+(8)
+
+where #iter denotes the number of iterations. The obtained throughput T hr1 can be given by:
+
+N
+
+T hr1
+
+=
+
+. t1
+
+(9)
+
+If we wish to target an aggregate throughput of T hrmin, and since the previous calculations were performed on a
+
+single processing unit, then the total number of np processors
+
+necessary to achieve T hrmin should be, at least:
+
+np ≥ T hrmin ,
+
+(10)
+
+T hr1
+
+or, equivalently:
+
+np ≥ T hrmin × Nop × #iter × CP O .
+
+(11)
+
+N × fop
+
+353 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+Let us consider a fop = 500 MHz [7], #Edges = 226800 (the number of edges of a DVB-S2 normal frame rate = 1/2 code), #iter = 10; and a SIMD processing level of 8 (where the same operation is applied in parallel to 8 data elements) which should be taken into account when performing the calculations in (11). To obtain an aggregate throughput of 90 Mbps (the standard value used in DVB-S2 [3]), with an average CP O ranging from 1 to 4, np would approximately range from 10 to 38.
+Regarding the minimum memory capacity M emCap of each processor, it should be large enough to accommodate data structures HBN and HCN , and also input data. Furthermore, it should also accommodate the program. M emCap can be estimated (in bytes) as:
+M emCap > (8 + 32) × #Edges + 32 × N + P rogram Size, (12)
+where (8 + 32) × #Edges indicates space required for the data structures, and 32 × N for input/output data. In (12) we consider the simultaneous decoding of 16 × 8-bit, 8 × 16-bit or 4 × 32-bit codewords.
+To estimate the minimum bandwidth (BW ) required for the interconnection bus, we assume input data represented with 8-bit (1 byte) precision, to support full duplex communications the system should be able of guaranteeing BW = T hrmin × 1 × 2. For a throughput of 90 Mbps used in DVB-S2, the architecture’s bus should support a bandwidth BW = 90 × 1 × 2 = 180 MByte/s. If data is represented with 32-bit (floating-point single precision) or 64-bit (floating-point double precision) then, BW = 720 MByte/s or BW = 1.44 GByte/s, respectively. The use of floating-point arithmetic may introduce improvements, namely in coding gains (BER). In fact, even considering the use of fixed-point arithmetic, by increasing the number of bits used to represent data from 6 to 8-bit precision (6-bit arithmetic is typically used in VLSI solutions), we can obtain significant coding gains [12].
+V. EXPERIMENTAL RESULTS
+The architecture in figure 5 that has several similarities with the Cell/B.E. [22], namely the distributed memory multicore structures built around a common bus. However, the ISA can be simpler, by tailoring it to LDPC decoding, data I/O buses are also simpler and, most importantly, the size of its local scratchpad memory is not limited to 256 KByte as in the Cell. Consequently, due to the existing similarities, the Cell/B.E. platform was adopted for validating and assessing the proposed embedded architecture.
+The Cell/B.E. is an heterogeneous processor [22], [24] composed by one main 64-bit PowerPC Processor Element (PPE) that communicates with eight Synergistic Processor Elements (SPEs) each having 256 KByte of scratchpad local memory for data and program, and a 128-bit wide vectorized architecture. Data transfers between the PPE (that accesses main memory) and SPEs are performed by using DMA controllers. The Memory Interface Controller (MIC) controls the access to the main memory and the peak value for its bandwidth nearly reaches 4.2 GByte/s [22].
+
+TABLE II EXPERIMENTAL SETUP FOR THE CELL/B.E. ARCHITECTURE
+
+Platform Language
+OS Processing mode
+Clock frequency Memory
+
+Setup
+
+STI PlayStation3 (PS3)
+
+C
+
+Linux (Fedora) kernel 2.6.16
+
+PPE + SPEs
+
+PPE
+
+SPE
+
+3.2 GHz 256 MByte
+
+3.2 GHz 256 KByte
+
+TABLE III PARITY-CHECK MATRICES UNDER TEST FOR THE CELL/B.E.
+
+Matrix
+p1 p2 p3 p4 p5 p6 p7 p8
+
+Size (M × N )
+480 × 576 560 × 672 480 × 960 800 × 960 576 × 1152 960 × 1152 624 × 1248 1040 × 1248
+
+# Edges (wc × M )
+– – – 3200 – –
+3952 –
+
+Edges/row (wc)
+{2,3,4} {2,3,4} {2,3,6} {2,3,4} {2,3,6} {2,3,4} {2,3,6} {2,3,4}
+
+Edges/col.) (wb)
+{20} {20} {6,7} {20} {6,7} {20} {6,7} {20}
+
+Differently from shared memory architectures, such as x86 multicores or GPUs, in the Cell/B.E. data is explicitly loaded from main memory into the local memory of a SPE and viceversa, allowing each SPE to efficiently exploit data locality. An important restriction in such architectures is related with the limited amount of local memory [22], which in practice leads to situations where data structures and program do not fit completely into the scratchpad memory of a SPE. In that case, the processing has to be performed by successively partitioning the algorithm, which significantly increases the number of data communications between PPE and SPEs, impacting the performance quite negatively.
+The LDPC decoder developed for the Cell/B.E. uses the compact structures to represent the Tanner graph depicted in figures 3 and 4. The experimental setup is depicted in table II, a cheap PS3 platform based on the Cell/B.E., with six of the eight SPEs available to the programmer. A subset of WiMAX IEEE 802.16e standard [4] irregular codes are used for testing the LPDC decoder, represented by matrices with the characteristics shown in table III. The algorithm adopted is the MSA, data elements have 8-bit precision, which allows packing 16 data elements per 128-bit memory access and using intrinsic instructions. Moreover, because there are six SPEs available, in this implementation the algorithm supports the simultaneous decoding of 96 codewords in parallel.
+Table IV shows the throughputs obtained decoding the codes in table III in 10 and 25 iterations. For 10 iterations, they approach quite well, and even surpass, the 75 Mbps required by the standard to work in (theoretical) worst case conditions. For the code with N = 576, represented by matrix p1, when running 10 iterations we obtain a throughput equal to 79.3 Mbps. For codes p7 and p8, with N = 1248 and for the
+
+354 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE IV LDPC DECODING THROUGHPUTS (MBPS) ON THE CELL/B.E. DECODING
+96 CODEWORDS IN PARALLEL RUNNING THE MSA
+
+dealing with the multiple standards. Synthesis results are provided for a 65nm CMOS technology, which allow to achieve
+
+# iter p1 p2 p3 p4 p5 p6 p7 p8
+10 79.3 78.5 79.6 78.4 79.6 78.4 79.6 78.4 25 32.5 32.2 32.6 32.1 32.6 32.1 32.6 32.1
+
+high throughput implementations for multi-rate and multilength LDPC codes. They present 3.9mm2 of area for DVB-S2 LDPC decoders and 1.3mm2 for WiMAX architectures.
+Under the context of this work on LDPC decoders, the
+
+authors of this paper have developed parallel algorithms for
+
+same number of iterations, they range from 79.6 to 78.4 Mbps. Furthermore, if we consider a lower number of iterations, for example 5 iterations of the MSA LDPC decoder instead of 10, then the throughput will approximately double to values above 145 Mbps.
+If the Cell/B.E. architecture is used for codes with size greater than p8, the throughput decreases to values equal or inferior to 9Mbps [10]. In this case, the 256 KByte of scratchpad memory of a SPE are not enough to hold the program and the complete data structures necessary to decode 16 codewords. The maximum LDPC code allowed in the case of the Cell/B.E. architecture is limited by the local memory size, which for a generic code can be described according to equation 12, by disregarding the program:
+
+LDPC decoding on GPUs [14], [15], [10]. These algorithms exploit both task and data parallelism, since parallelism with fine granularity is required in this case to maintain the 128 cores busy with a great amount of threads. Experimental results show that a throughput of 41.7 Mbps is achieved for LDPC decoding in 10 iterations and considering a matrix with characteristics similar to p3 in table III. This type of solutions leads to better results for codes represented by larger matrices H, because the communication time between the CPU and the GPU relatively decreases in comparison with the computation time.
+We have also developed dedicated hardware processors for FPGA and ASIC devices for the DVB-S2 standard. They are based on semi-parallel architectures that group a predefined number of dedicated cores, to process incoming messages
+
+M emCap = 256KByte ⇒ (#Edges+N ) <≈ M emCap/40.
+(13)
+To decode larger codes (e.g. DVB-S2 codes [3]) the size of the scratchpad memory associated to each processor should be larger (in the case of DVB-S2 codes [3], the dimension of an LDPC code can be high, with N = 16200-bit for short frame or N = 64800-bit for normal frame length). For example, the DVB-S2 [3] rate = 1/2 short frame code, which has 48600 edges, would require a local scratchpad memory with capacity superior to 2.4 MByte to hold data and structures (disregarding the program).
+These multicores can be easily prototyped on FPGAs, for example by using soft-processors (soft IP cores) (e.g. Microblaze from Xilinx [16]) and standard buses (e.g. Advanced Microcontroller Bus Architecture (AMBA) [17]). This prototype has limitations, mainly because the amount of memory available in FPGAs is limited, typically less than 1 Mbyte, the operating frequency, f op ( equation 11) of the Microblaze processor is below 400 MHz and the bandwidth of the AMBA High-performance Bus (AHB), configured for 32-bit and an operating frequency of 60 MHz, is about 240 MByte/s. Based on this prototype, a system can be described in a Hardware Description Language (HDL), such as VHDL or Verilog, and implemented as an ASIC, or becoming reusable and easily integrated in different systems and different technologies.
+
+communicating with tightly coupled memory banks through an efficient interconnection network that switches based on specific addresses (similar to those represented by HBN and HCN data structures) previously computed and stored in memory banks of the VLSI architecture [5], [6] (these banks are accessed through the interconnection network).
+The implementation on a XC2VP100 Xilinx Virtex-II FPGA, supported on a 180 cores architecture, reports logic and routing delays respectively equal to 5.99 and 7.67 ns that allow operating at a frequency superior to 73 MHz, which for 15 iterations is enough to guarantee the minimum 90 Mbps [5] required by the DVB-S2 standard [3].
+For the ASIC implementation it was used a 90 nm 8 Metal CMOS process technology [6]. As in the former implementation, an architecture with 180 cores guarantees 90 Mbps, requiring an area equivalent to 13.6 mm2, or 6.2 Mgates. For a typical voltage of operation of 1.1 V, the chip consumes approximately 185 mW.
+When compared against programmable solutions, the main disadvantages of ASICs are the use of high non-recurring engineering (NRE) costs and inflexibility. Costs associated with NRE have been increasing exponentially along with transistor capacity. Also, ASIC solutions are non-reconfigurable and they can only support a predefined set of LDPC codes. On the other hand, GPUs are flexible and reconfigurable, but have higher power consumption.
+
+VI. RELATED ART FOR LDPC DECODING
+
+VII. CONCLUSIONS
+
+Nowadays the research on new architectures for LDPC decoding is a very active area. In [25] the authors analyze the design space and present low complexity LDPC decoder architectures for the WiFi (IEEE 802.11n), WiMax and DVBS2 standards. They consider the challenges and bottlenecks faced when developing ASIC decoder architectures capable of
+
+This paper addresses the main computational characteristics of LDPC decoding and proposes programmable multicore architectures for developing embedded real-time processing systems. These architectures are designed to exploit data parallelism by decoding multiple codewords in parallel. The architecture adopts a distributed memory approach and a single
+
+355 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+common bus to communicate the messages received from the channel and the codewords. A compact representation of the Tanner graph is proposed, which allows it to be stored locally in the memory modules associated with each core. We analyze the main properties of these architectures required to achieve a given throughput, namely the minimum number of cores required, the complexity of the instruction set architecture, and the minimum bus bandwidth. The proposed architecture can be easily prototyped in FPGAs or implemented in ASICs. In order to validate our proposal, we assess a similar architecture, the Cell/B.E., for parallel LDPC decoding and we conclude that the proposed architecture achieves real-time decoding if the HBN and HCN data structures fit in the 256 KByte local memory of each Synergistic Processing Element. Experimental tests carried out on the Cell/B.E. allowed to achieve throughputs superior to 78 Mbps.
+ACKNOWLEDGMENT
+This work has been partially supported by the Portuguese Foundation for Science and Technology.
+REFERENCES
+[1] R. G. Gallager, ”Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, vol. 8, no.1, pp. 21–28, Jan 1962.
+[2] C. Berrou, A. Glavieux, and P. Thitimajshima, ”Near Shannon limit error-correcting coding and decoding: Turbo-codes (1),” Proceedings of the IEEE International Conference on Communications (ICC’93), pp. 1064–1070, Geneva, Switzerland, 1993.
+[3] EN 302 307 V1. 1.1, European Telecommunications Standards Institute (ETSI), ”Digital video broadcasting (DVB); second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broad-band satellite applications,” 2005.
+[4] ”IEEE P802.16e/D12: ’Draft IEEE Standard for Local and Metropolitan Area Networks. Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems’,” October 2005.
+[5] M. Gomes, G. Falcao, V. Silva, V. Ferreira, A. Sengo, and M. Falcao, ”Flexible Parallel Architecture for DVB-S2 LDPC Decoders,” Proceedings of the IEEE Global Telecommunications Conf. (GLOBECOM’07), pp. 3265–3269, Washington DC, USA, 2007.
+[6] G. Falcao, Parallel Algorithms and Architectures for LDPC Decoding, Ph.D. Thesis, University of Coimbra, 2010.
+[7] Y. Sun and J. R. Cavallaro, ”Scalable and Low Power LDPC Decoder Design Using High Level Algorithmic Synthesis,” Proceedings of the IEEE International System-on-Chip Conference (SOCC’09), pp. 267– 270, Belfast, Ireland, Sept. 2009.
+
+[8] G. Blake, R. G. Dreslinski, and T. Mudge, ”A Survey of Multicore Processors,” IEEE Signal Processing Magazine, vol. 26, no.6, pp. 26– 37, 2009.
+[9] H. Kim and R. Bond, ”Multicore Software Technologies,” IEEE Signal Processing Magazine, vol. 26, no.6, pp. 1–10, 2009.
+[10] G. Falcao, L. Sousa, and V. Silva, ”Massively LDPC Decoding on Multicore Architectures,” IEEE Transactions on Parallel and Distributed Systems (TPDS), accepted in Feb 2010.
+[11] Hyunwoo Ji, Junho Cho, and Wonyong Sung, ”Massively parallel implementation of cyclic LDPC codes on a general purpose graphics processing unit,” Proceedings of the IEEE Workshop on Signal Processing Systems (SiPS’09), pp. 285–290, Tampere, Finland, Oct 2009.
+[12] G. Falcao, V. Silva, and L. Sousa, ”High coded data rate and multicodeword WiMAX LDPC decoding on Cell/BE,” IET Electronics Letters, vol. 44, no.24, pp. 1415–1417, Nov 2008.
+[13] G. Falcao, L. Sousa, V. Silva, and J. Marinho, ”Parallel LDPC Decoding on the Cell/B.E. Processor,” Proceedings of the 4th International Conference on High Performance Embedded Architectures and Compilers (HiPEAC’09), pp. 389–403, Paphos, Cyprus, Springer, Vol. 5409, Jan 2009.
+[14] G. Falcao, L. Sousa, and V. Silva, ”Massive Parallel LDPC Decoding on GPU,” Proceedings of the 13th ACM SIGPLAN Symposium on Principles and practice of parallel programming (PPoPP’08), pp. 83– 90, Salt Lake City, Utah, USA, Feb 2008.
+[15] G. Falcao, V. Silva, and L. Sousa, ”How GPUs can outperform ASICs for fast LDPC decoding,” Proceedings of the 23rd International Conference on Supercomputing (ICS’09), pp. 390–399, Yorktown Heights, NY, USA, Jun 2009.
+[16] Xilinx Inc., ”MicroBlaze Processor Reference Guide,” http://www.xilinx.com/support/documentation/sw manuals/mb ref guid e.pdf, 2008.
+[17] ARM, ”AMBA Specification,” 2nd edition, 1999. [18] R. Tanner, ”A Recursive Approach to Low Complexity Codes,” IEEE
+Transactions on Information Theory, vol. 27, no.5, pp. 533–547, Sep 1981. [19] Shu Lin and Daniel J. Costello, Error Control Coding, second ed., Prentice Hall, 2004. [20] J. Zhang, and M. Fossorier, ”Shuffled Iterative Decoding,” IEEE Transactions on Communications, vol. 53, no.2, pp. 209–213, 2005. [21] C.-Y. Lin, Y.-C. Chung, and J.-S. Liu, ”Efficient Data Compression Methods for Multidimensional Sparse Array Operations Based on the EKMR Scheme,” IEEE Transactions on Computers, vol. 52, no.12, pp. 1640–1646, 2003. [22] International Business Machines Corporation, ”CELL Broadband Engine Architecture,” 2006. [23] CUDA homepage – http://developer.nvidia.com/object/cuda.html. [24] H. Hofstee, ”Power Efficient Processor Architecture and the Cell Processor,” Proceedings of the 11th International Symposium on HighPerformance Computer Architectures (HPCA’05), pp. 258–262, 2005. [25] T. Brack, M. Alles, T. Lehnigk-Emden, F. Kienle, N. Wehn, N. E. L’Insalata, F. Rossi, M. Rovini, and L. Fanucci, ”Low Complexity LDPC Code Decoders for Next Generation Standards,” Proceedings of the Design, Automation and Test in Europe (DATE’07), pp. 1–6, 2007.
+
+356 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:49:28 UTC from IEEE Xplore. Restrictions apply.
+
+

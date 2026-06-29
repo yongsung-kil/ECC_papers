@@ -1,0 +1,323 @@
+2025 13th International Symposium on Topics in Coding (ISTC) | 979-8-3315-8983-7/25/$31.00 ©2025 IEEE | DOI: 10.1109/ISTC65386.2025.11154498
+
+Learning Variable Node Selection for Improved Multi-Round Belief Propagation Decoding
+Ahmad Ismail, Raphae¨l Le Bidan, Elsa Dupraz, and Charbel Abdel Nour IMT Atlantique, Lab-STICC UMR CNRS 6285, Brest, France
+
+Abstract—Error correction at short blocklengths remains a challenge for low-density parity-check (LDPC) codes, as belief propagation (BP) decoding is suboptimal compared to maximumlikelihood decoding (MLD). While BP rarely makes errors, it often fails to converge due to a small number of problematic, erroneous variable nodes (VNs). Multi-round BP (MRBP) decoding improves performance by identifying and perturbing these VNs, enabling BP to succeed in subsequent decoding attempts. However, existing heuristic approaches for VN identification may require a large number of decoding rounds to approach ML performance. In this work, we draw a connection between identifying candidate VNs to perturb in MRBP and estimating channel output errors, a problem previously addressed by syndrome-based neural decoders (SBND). Leveraging this insight, we propose an SBND-inspired neural network architecture that learns to predict which VNs MRBP needs to focus on. Experimental results demonstrate that the proposed learning approach outperforms expert rules from the literature, requiring fewer MRBP decoding attempts to reach near-MLD performance. This makes it a promising lead for improving the decoding of short LDPC codes.
+Index Terms—LDPC codes, multi-round belief propagation, maximum-likelihood decoding, neural networks
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes [1] are powerful error-correcting codes that achieve high efficiency and low decoding complexity when decoded using iterative algorithms such as belief propagation (BP). Due to their strong performance, LDPC codes have been adopted in modern communication standards, including 5G wireless systems. While BP performs effectively at long blocklengths, its performance degrades at short blocklengths, where it remains suboptimal compared to maximum-likelihood decoding (MLD) [2].
+Significant efforts have been made to enhance BP decoding performance for short LDPC codes. A well-established approach, introduced in [3], applies an ordered statistics decoder (OSD) [4] of low order after each BP iteration. OSD leverages soft information from BP by applying a series of low-weight error patterns on the most reliable information set at BP output, and re-encoding the corresponding perturbed variable nodes (VN). This creates multiple candidate codewords at each BP iteration, thereby increasing the chances of finding the most likely one among them, but at the cost of increased complexity. To reduce this overhead, some works [5], [6] propose using OSD only as a fallback post-processing step when BP fails to converge. Another widely studied method is the multi-round
+This work has been funded by the French National Research Agency AI4CODE project (Grant ANR-21-CE25-0006). Part of it was performed using HPC resources from GENCI-IDRIS (Grant 2025-AD011016057)
+
+BP (MRBP) decoder, also known as augmented BP (ABP) [7]. MRBP builds on the observation that, when BP fails, it rarely converges to an incorrect codeword but instead does not converge at all, typically due to a few problematic erroneous VNs that prevent decoding success. To overcome this, MRBP searches for those problematic VNs by monitoring well-chosen decoding metrics, and once it finds one, perturbs its value to increase the likelihood of successful decoding in subsequent BP iterations. Various MRBP strategies have been proposed in the literature, differing in how they select the VNs to perturb, in the nature of the applied perturbation, and in the way the multiple decoding rounds are scheduled [8]–[11]. While both OSD post-processing and MRBP can boost BP towards MLD, their application usually comes at a prohibitive computational cost (very large number of re-encoding or decoding attempts).
+Learning has recently emerged as a promising approach to further enhance the performance of BP decoding. The earliest and most natural approach to supplement BP with learning is neural BP (NBP) [12], which models BP iterations as layers of a neural network (NN), incorporating trainable weights that are optimized through learning. However, in the context of LDPC codes, NBP has demonstrated so far limited performance improvement compared to standard BP, unless the number of iterations is very low. Therefore research efforts have progressively shifted towards leveraging learning to break the complexity bottleneck in improved BP-based decoders. One such line of work involves augmenting OSD post-processing with lightweight NNs [13], [14]. These NNs prove more effective at identifying the most reliable VNs at BP output, thereby reducing the number of re-encodings and enabling a reduction in the OSD maximum reprocessing order, without compromising performance. Another approach consists in supplementing MRBP with a learning architecture in charge of predicting the VNs that hinder BP decoding, as accurate predictions lead to fewer additional decoding rounds. For instance, [15] proposes to replace the expert rules devised for this purpose with a multi-layer perceptron (MLP). Yet this work does not provide conclusive evidence that a NN can be consistently more accurate at this task than a well-designed heuristic. Another related work is [16] which combines neural BP with an MRBP decoder (referred to as list-based decimation) followed by a learned decimation stage where a simple NN is used to calculate a perturbation for each VN in an automated manner. Learned decimation is shown to boost performance, but cannot work effectively without the classical MRBP stage that precedes it. Therefore, the scheme
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:42 UTC from IEEE Xplore. Restrictions apply.
+
+[16] inherits the same complexity issues as MRBP. In this work, we focus on pushing further the potential of
+learning to enhance MRBP decoding. Expanding on [15], our goal is to demonstrate that, with a proper learning architecture, NNs can accurately estimate which VNs should be perturbed, thereby outperforming expert rules and bringing MRBP performance closer to that of MLD, with fewer decoding attempts. Such a scheme could also be supplemented with the learned decimation stage of [16] for further performance gains.
+To this end, we relate the task of identifying the VNs to perturb to the problem of estimating the errors at the channel output, which is precisely the problem addressed by syndrome-based neural decoders (SBND) [17]. Since the set of VNs to perturb forms a subset of these errors, and given the demonstrated ability of SBND to accurately estimate channel errors, we propose to take advantage of these models and show how to adapt them to the VN selection problem in MRBP.
+The remainder of the paper is structured as follows. Section II provides an overview of MRBP decoding, emphasizing its key features. Section III introduces the NN-aided MRBP approach as initially proposed in [15]. In section IV, we first establish the link between MRBP and SBND, and then show how to leverage SBND to refine the NN setup of [15], with the proper adaptations. Experimental results are presented and discussed in section V. Finally, section VI concludes the paper.
+
+II. MRBP FRAMEWORK
+
+A. BP Decoding
+
+Let C be an (n, k) binary LDPC code of length n and
+
+dimension k. Let H be its parity-check matrix with size m×n,
+
+where m is the number of parity-check equations. Assume
+
+a codeword c = (c1, . . . , cn) is modulated into the binary-
+phase-shift keying (BPSK) sequence x = (x1, . . . , xn), using the mapping x = (−1)c, and transmitted over a binary-input
+
+additive white gaussian noise (BI-AWGN) channel with noise
+
+variance
+
+σ2
+
+=
+
+N0 2
+
+.
+
+Let
+
+y
+
+=
+
+(y1, . . . , yn)
+
+be
+
+the
+
+received
+
+word.
+
+Denote by Lcih the channel output LLR for the code bit i:
+
+Lich = log
+
+P (yi|ci = 0) P (yi|ci = 1)
+
+=
+
+2yi σ2
+
+.
+
+(1)
+
+Let z the hard decision on the received word y, where zi = I{yi ≤ 0} for each code bit i, and sch = zHT be the corresponding syndrome. If sch ≠ 0, BP decoding is initiated.
+BP operates iteratively, exchanging soft information in LLR
+form between VNs and check nodes (CN) in the Tanner graph.
+
+At each iteration, VNs send extrinsic messages to CNs, and
+CNs propagate updated extrinsic messages back to VNs. The a posteriori probability (APP) LLR, denoted by Lapp, is then
+computed, and the estimated code bits cˆi are obtained as I{Liapp ≤ 0}. BP terminates either when ˆcHT = 0 or a predefined maximum number of iterations l0 is reached.
+
+B. MRBP Decoding
+In scenarios where the initial BP decoding attempt fails, the rationale underlying the application of MRBP is to construct a set of VNs that, with high probability, includes the one
+
+or few VNs primarily responsible for the decoding failure. Perturbations are then applied to these VNs, followed by another round of BP decoding with l1 ≤ l0 iterations for each perturbation. Designing an MRBP decoder requires tackling three key questions: How to select the candidate VNs to be perturbed? How to perform the perturbations? How to organize the subsequent decoding attempts? 1) How to select the VNs to be perturbed? Accurate selection of the VNs to perturb is crucial for the performance of MRBP, as an informed choice can enable successful BP decoding with reduced average number of decoding attempts. A common approach consists in ranking VNs based on an appropriate reliability metric. Hereafter, a VN is considered less reliable than another if it is more likely to have contributed to the initial decoding failure. These metrics form the basis of what we refer to as expert rules, and can be classified into pre- and post-BP metrics. The channel LLR magnitude (|Lch|) serves as an example of pre-BP metric, wherein VNs with low |Lch| are classified as unreliable [7], [9]. Similarly, the magnitude of the APP LLR (|Lapp|) constitutes a post-BP metric, wherein VNs with low |Lapp| are deemed unreliable. Other post-BP metrics focus on tracking VN oscillations across decoding iterations [8], [10], [11], as frequent sign changes are generally considered as a more accurate indicator of unreliability than LLR magnitudes. A recent example is the nSMEA method [11], which quantifies oscillations by counting the number of Sign Mismatches between Extrinsic and APP LLR messages associated with each VN. 2) How to perform the perturbations? Several strategies have been proposed for perturbing the identified unreliable VNs. Here, following [15], we adopt single-bit perturbations. Specifically, let π(.) be the permutation that orders the VNs from least to most reliable based on the chosen reliability metric. Then, T distinct perturbed versions Lch,t t∈ 1,T of the received channel LLR vector Lch are generated by flipping and saturating the channel LLR of the t-th least reliable VN, while keeping all other channel LLR values unchanged:
+
+Lich,t =
+
+Lci h −∞ · sign(Lich)
+
+i ̸= π(t) , t ∈ {1, . . . , T } (2)
+i = π(t)
+
+3) How to organize the subsequent decoding attempts? Decoding attempts can be performed either sequentially or in parallel. In this work, we adopt the parallel execution strategy depicted in Fig. 1, which offers performance comparable to its sequential counterpart [7] with the additional advantage of reduced latency. Upon completion of all decoding attempts, candidate codewords are collected into a list L. The decoder decision ˆc is selected as the most-likely codeword in this list:
+
+ˆc = arg min ||y − (−1)c||.
+
+(3)
+
+c∈L
+
+III. NN-AIDED MRBP A. Principle As outlined in Section II, accurately identifying the least reliable VNs to perturb is critical to MRBP performance.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:42 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Organization of the augmented decoding rounds within the MRBP framework (Pt = single-bit perturbation applied on the t-th least reliable VN).
+
+While conventional methods rely on expert rules, the approach
+in [15] leverages an NN model for this task. Given the
+received word y = (y1, . . . , yn), the NN outputs a vector bˆ = (ˆb1, . . . , ˆbn), where each ˆbi ∈ [0, 1] represents an estimate of the probability that perturbing the channel LLR Lich of VN i will lead to successful BP decoding. Based on this output, the T VNs with the largest ˆbi values are selected as the least
+reliable VNs and targeted for perturbation.
+
+B. Architecture
+In [15] an MLP is used to predict which VNs to perturb. The MLP is made of three fully connected layers: two hidden layers with dimensions 2n and n, respectively, followed by an output layer of size n, with Rectified Linear Unit (ReLU) activation functions in-between.
+
+C. Training
+In [15], the training dataset is generated by transmitting random codewords over a BI-AWGN channel at various signal-tonoise ratio (SNR) levels, followed by BP decoding with l0 iterations. The received words that result in BP decoding failures are retained for further processing. For each such word, and for each VN i ∈ {1, · · · , n}, a single-bit perturbation is applied to Lcih, and BP decoding is executed again with l1 iterations. This process yields a binary target vector b = (b1, . . . , bn), where bi = 1 if the perturbation of VN i leads to successful BP decoding in the second attempt, and bi = 0 otherwise. The final dataset comprises the Ntr input-output pairs:
+
+D1 = yj, bj , j ∈ {1, · · · , Ntr}.
+
+(4)
+
+The goal of the training process is to optimize the NN pa-
+rameters by minimizing the discrepancy between the predicted probability vector bˆ and the true label vector b. To this end,
+[15] adopts the mean squared error (MSE) as the loss function.
+
+IV. PROPOSED LEARNED MRBP APPROACH
+The results in [15] do not conclusively demonstrate that NNs outperform well-designed expert rules in selecting unreliable VNs for perturbation. In particular, it is unclear whether the very small gains reported for certain codes are due to the selected architecture (a simple MLP), to an improper training setup ( [15] reports that augmenting the model input can help),
+
+or to more fundamental limitations of NNs in this context. These uncertainties motivate further investigation.
+We observe that the task of identifying the small set of erroneous bits responsible for BP decoding failures is closely related to the more challenging problem of estimating the full error pattern introduced by the channel, as these critical bits form a subset of the latter. Syndrome-based neural decoding (SBND), introduced in [17], has been shown to effectively estimate the most likely channel error pattern and achieve near-MLD performance for certain short codes. Motivated by these results, we propose to revisit the approach in [15] by integrating SBND to enhance the prediction of VNs to perturb. The following subsections describe the modifications made to both the network architecture and training procedure, relative to the original NN-aided MRBP framework of [15].
+A. A Different Model Architecture
+The fact that the NN-aided MRBP scheme in [15] relies on a very simple, shallow MLP to make its predictions could be a limiting factor for the performance. This is further supported by the findings in [17], which reveal that stacked Gated Recurrent Unit (GRU) networks are significantly more effective at inferring ML error patterns than MLPs. Building on this insight, we propose replacing the original MLP with a stacked GRU in the architecture of the NN-aided MRBP decoder. A stacked GRU consists of multiple layers of GRU cells, which communicate through hidden states across both time steps and layers. The hidden state dimension serves as a key hyperparameter that governs the model’s representational capacity. As we demonstrate in the following sections, this architectural shift proves to be central in improving the overall accuracy of the predictions.
+B. A Different Model Input and Training Recipe It is well established that the pair (|Lch|, sch) forms a sufficient statistic for MLD, see e.g. [17]. Given the demonstrated effectiveness of this input representation in the SBND framework, we adopt it as the input for our NN architecture. Compared to [15] which relies solely on channel LLRs, the inclusion of the syndrome introduces additional structure and error signatures that can enhance the model’s ability to identify unreliable VNs. Furthermore, this representation removes any explicit dependence on the transmitted codeword, thereby simplifying training: BP failures can now be generated using simulations of the all-zero codeword without loss of generality. The output labels are obtained following the same procedure described in Section III-C. As a result, our dataset consists of the Ntr input-output pairs:
+D2 = |Lch|, sch j, bj , j ∈ {1, · · · , Ntr}. (5)
+The drawback of incorporating the syndrome at the model’s input is that the complexity of the latter is now a function of the sum of the code length and the number of parity bits
+In contrast to [15], we formulate the task as a binary classification problem, where the model predicts, for each VN, whether it should be perturbed to enable successful decoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:42 UTC from IEEE Xplore. Restrictions apply.
+
+Accordingly, the model is trained to minimize the binary cross-
+
+entropy (BCE) loss:
+
+10 0
+
+LBCE
+
+b, bˆ
+
+1 =−
+n
+
+n
+
+bi log ˆbi + (1 − bi) log(1 − ˆbi) . (6)
+
+10 -1
+
+i=1
+
+Furthermore, we have noticed that, for most codes, gener-
+
+10 -2
+
+ating data at one carefully selected SNR point is sufficient for
+
+the model to generalize well over a large range of SNR values.
+
+10 -3
+
+Frame Error Rate (FER)
+
+V. EXPERIMENTAL RESULTS
+Experiments are conducted on a (96, 48) Quasi-Cyclic irregular LDPC code from [18], which also provides reference ML performance for this code. The dataset consists of 60M BP failure examples collected at 3 dB, using l0 = l1 = 20 iterations. All models are implemented in PyTorch and trained with the BCE loss (6) for 250 epochs. Training employs the Adam optimizer with a learning rate of 10−4 along with a Reduce-on-Plateau scheduler monitored by the validation loss.
+
+10 -4
+
+10 -5
+
+10 -6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/N0(dB)
+
+Fig. 2. FER performance as function of Eb/N0 for T = 5 MRBP decoding attempts, using different models to select the unreliable VNs to perturb.
+
+A. Choice of input representation
+To assess the impact of changing the input representation compared to the original approach of [15], we first train the MLP architecture from [15], hereafter referred to as MLPA, either with y as input (dataset D1) or with the pair (|Lch|, sch) (dataset D2). This results in two slightly different models:
+• MLPA-D1: Trained on D1, this model replicates the three-layer architecture proposed in [15], with two hidden layers of size 2n and n, respectively, followed by an output layer of size n, resulting in 46k trainable parameters.
+• MLPA-D2: Trained on D2, this model has the same architecture as MLPA-D1, but with an input size of 2n − k = 144 instead of 96. Accordingly, the size of the first hidden layer is set to 155 instead of 2n = 192, to maintain a total of 46k trainable parameters, thereby enabling a fair comparison between the two models.
+In both models, each hidden layer is followed by a ReLU activation and a dropout of 0.1. A sigmoid is applied after the output layer to turn logits into probability estimates bˆ.
+Fig. 2 compares their performance under the MRBP decoding setup outlined in Section II-B. With T = 5 decoding attempts, the five VNs marked by the models as least reliable are flipped and saturated before the second decoding round. Distinct codewords are collected, and the most-likely candidate is returned. The figure shows that training on D2 significantly improves FER performance compared to D1, confirming that providing the combination of |Lch| and sch as input does contribute to increasing the model’s accuracy.
+B. Choice of the architecture model
+Having established that the pair (|Lch|, sch) provides a more effective input representation, we now explore whether a GRUbased architecture can outperform an MLP by training the following two models on dataset D2:
+• GRU-D2: A 20.6M-parameter 5-layer stacked GRU with hidden size set to 6(2n − k) following [17]. It runs for 5 time steps, with the final hidden state passed through
+
+a fully connected layer of size n followed by a sigmoid activation. Dropout of 0.1 is applied within the GRU. • MLPB-D2: A 20.6M-parameter best-effort custom MLP featuring seven hidden layers of 1835 neurons each, with 0.1 dropout and ReLU activation in-between, and an output layer of size n followed by sigmoid activation.
+As illustrated in Fig. 2, with an equivalent number of parameters, the GRU model demonstrates superior accuracy compared to a best-effort MLP in identifying the problematic VNs for perturbation, aligning with the results in [17]. Notably, both models outperform BP decoding with 100 iterations, underscoring the efficacy of learned MRBP in enhancing BP performance. In addition, with the parallel decoding setup of Fig. 1, ignoring model inference time, the worst-case MRBP latency does not exceed l0 +l1 = 40 iterations of BP decoding.
+C. Identifying VNs to perturb: Expert vs learning-based rules
+We compare our best-performing model, GRU-D2, with the strongest expert rule we are aware of, namely nSMEA [11] (denoted by SMV in the original paper). This post-BP metric has been shown to be one of the most effective at identifying the least reliable VNs to perturb, making it a strong baseline for comparison. The least reliable VNs are the ones having the largest cumulated nSMEA values across iterations. To ensure a fair comparison with our NN-aided selection rule, we adopt the same decoding strategy as detailed in II-B with the sole modification of switching the VN selection rule from a learning-based approach to nSMEA.
+As depicted in Fig. 3, our trained model significantly outperforms the expert nSMEA rule with just one perturbation where only the least reliable VN is perturbed (T = 1). This superiority is maintained as more perturbations are tested in parallel, indicating that learning-based methods can more accurately predict which bits to perturb in MRBP decoding. On the other hand, running a 20.6M-parameter DNN for that task is significantly more complex than tracking oscillations in the messages exchanged during iterative decoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:42 UTC from IEEE Xplore. Restrictions apply.
+
+10 0
+
+10 0
+
+10 -1
+
+10 -1
+
+Frame Error Rate (FER) Frame Error Rate(FER)
+
+10 -2
+
+10 -2
+
+10 -3
+
+10 -3
+
+10 -4
+
+10 -4
+
+10 -5
+
+10 -5
+
+10 -6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Eb/N0(dB)
+
+10 -6
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0(dB)
+
+Fig. 3. FER performance as function of Eb/N0 for MRBP decoding using the model GRU-D2 or the nSMEA expert rule for unreliable VNs selection.
+
+Fig. 4. FER performance as function of Eb/N0 for MRBP with GRU-D2 model compared to other selected reference decoders on the (96, 48) code.
+
+D. Performance comparison with other selected decoders
+We compare our GRU-D2 learning-based MRBP decoder on the (96, 48) code against two reference decoders from [9] and [10]. which use different MRBP variations (expert rule and scheduling, see [9] and [10] for implementation details). As shown in Fig. 4, our model matches the performance of [9] with half the number of perturbations and surpasses [10] with the same number. These results demonstrate that the proposed learning-based approach can both reduce the number of decoding attempts and enhance MRBP performance, nearing MLD levels, compared to other existing solutions.
+In the same figure, we also provide results for a best-effort GRU-based SBND model with 39M parameters, trained on the (96, 48) code in the manner of [17]. Compared to this standalone neural decoder, our GRU-D2 learned MRBP decoder achieves superior performance with only half the number of parameters, confirming that learning is more effective at supplementing existing decoders than at replacing them.
+VI. CONCLUSION
+We have explored the integration of syndrome-based neural decoder models to enhance MRBP’s effectiveness in identifying problematic bits that hinder BP decoding success. Our findings demonstrate that learning-based approaches significantly reduce the total number of decoding attempts required to achieve successful decoding, thereby approaching the performance of MLD. However, current models have an impractically large number of parameters, prompting the need for more efficient and scalable dedicated learning architectures.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. on Inform. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, 2019.
+
+[3] M. Fossorier, “Iterative reliability-based decoding of low-density parity check codes,” IEEE J. on Sel. Areas in Commun., vol. 19, no. 5, pp. 908–917, 2001.
+[4] M. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. on Inform. Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[5] M. Jiang, C. Zhao, E. Xu, and L. Zhang, “Reliability-based iterative decoding of LDPC codes using likelihood accumulation,” IEEE Commun. Lett., vol. 11, no. 8, pp. 677–679, 2007.
+[6] M. Baldi, N. Maturo, E. Paolini, and F. Chiaraluce, “On the applicability of the most reliable basis algorithm for LDPC decoding in telecommand links,” in Int. Conf. on Inform. and Commun. Systems (ICICS), 2015.
+[7] N. Varnica, M. P. C. Fossorier, and A. Kavcic, “Augmented belief propagation decoding of low-density parity check codes,” IEEE Trans. on Commun., vol. 55, no. 7, pp. 1308–1317, 2007.
+[8] B. Gadat and C. Poulliat, “Modified augmented belief propagation for general memoryless channels,” in 9th Int. Symp. on Turbo Codes and Iterative Information Processing (ISTC), 2016, pp. 191–195.
+[9] S. Scholl, P. Schla¨fer, and N. Wehn, “Saturated min-sum decoding: An “afterburner” for LDPC decoder hardware,” in Design, Automation & Test in Europe Conf. & Exhibition (DATE), 2016, pp. 1219–1224.
+[10] P. Kang et al., “Enhanced quasi-maximum likelihood decoding of short LDPC codes based on saturation,” in IEEE Inform. Theory Workshop (ITW), 2019, pp. 1–5.
+[11] H. Lee et al., “Multi-round belief propagation decoding with impulsive perturbation for short LDPC codes,” IEEE Wirel. Commun. Lett., vol. 9, no. 9, pp. 1491–1494, 2020.
+[12] E. Nachmani et al., “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics in Signal Proc., vol. 12, no. 1, pp. 119–131, 2018.
+[13] J. Rosseel, V. Mannoni, V. Savin, and I. Fijalkow, “Sets of complementary LLRs to improve OSD post-processing of BP decoding,” in 12th Int. Symp. on Topics in Coding (ISTC), 2023, pp. 1–5.
+[14] G. Li and X. Yu, “Boosting ordered statistics decoding of short LDPC codes with simple neural network models,” IEEE Commun. Lett., vol. 28, no. 12, pp. 2714–2718, 2024.
+[15] H. Lee, Y.-S. Kil, M. Y. Chung, and S.-H. Kim, “Neural network aided impulsive perturbation decoding for short raptor-like LDPC codes,” IEEE Wirel. Commun. Lett., vol. 11, no. 2, pp. 268–272, 2022.
+[16] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. Graell i Amat, “Learned decimation for neural belief propagation decoders : Invited paper,” in IEEE Int. Conf. on Acoustics, Speech and Signal Proc. (ICASSP), 2021, pp. 8273–8277.
+[17] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes - a syndrome-based approach,” in IEEE Int. Symp. on Inform. Theory (ISIT), 2018, pp. 1595–1599.
+[18] M. Helmling et al., “Database of Channel Codes and ML Simulation Results,” http://www.rptu.de/channel-codes, 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:49:42 UTC from IEEE Xplore. Restrictions apply.
+
+

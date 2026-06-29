@@ -1,0 +1,805 @@
+Unified Decoder Architectures for Repeat-Accumulate and
+LDPC Codes
+Mohammad M. Mansour Department of Electrical and Computer Engineering
+American University of Beirut Beirut, Lebanon 1107 2020 Email: mmansour@aub.edu.lb
+
+Abstract— This paper investigates the design of high-performance decoder architectures for two promising codes — Repeat-Accumulate (RA) and LDPC codes — of large block length, in both regular and irregular forms. It addresses the decoder implementation complexity problem for such codes that stems from the “unstructured” nature of the code’s underlying Tanner graph. To decouple the complexity of the decoder from the randomness of the code structure, we extend our earlier results on LDPC codes in [1] to RA codes and identify an architectureaware (AA) graph structure that induces regularity features amenable to efficient and scalable decoder implementations. Design methods of AA-RA codes with structured graphs for which an iterative decoding algorithm performs well under message-passing are analogous to those for AA-LDPC codes. A unified decoder architecture capable of decoding both AA-RA and LDPC codes based on the staggered decoding schedule of [1] is introduced. Architectural optimizations that address the latency, memory overhead, and implementation complexity problems typical of iterative decoders for long codes are also investigated.
+I. MOTIVATION
+Iterative error correction coding techniques have been successfully applied to enhance the performance of communications systems after the sustained growth in demands for advanced multimedia, wireless, storage, and broadband services. However, the requirements of such applications are expected to continue to increase at an even higher pace, requiring the use of more aggressive coding techniques. Commonly employed iterative decoding schemes are expected to fall short of satisfying these extreme demands because they are based on short codes in order to keep the decoder complexity within tolerable bounds for a given throughput, while sacrificing error-correction performance. Indeed, a full utilization of the available bandwidth at rates close to channel capacity cannot be achieved without powerful error-control schemes based on long codes whose decoders achieve high-throughput with moderate implementation complexity.
+Probably the most successful classes of iterative codes known in the literature are Gallager’s low-density parity-check (LDPC) codes [2], Berrou et al.’s turbo codes [3], and the more recent class of ‘turbo-like’ or repeat-accumulate (RA) codes of Divsalar et al. [4]. It is well known that turbo codes are not attractive for many highspeed communications applications due to the high implementation complexity of the inner BCJR algorithm [5], especially for large block length. On the other hand, LDPC and RA codes are characterized by simpler processing under a parallel message-passing decoding algorithm [2] whichs render them attractive candidates for high speed implementations. One major challenge, however, in the decoder design for RA and LDPC codes is the random structure of the permuter which appears explicitly in the former and implicitly in the latter. The network or physical interconnect required to realize the connectivity of a code’s random bipartite graph becomes an implementation bottleneck and prohibits a parallel decoder realization. Hence, this paper focuses on LDPC and RA codes and their decoder architectures, and addresses the random permuter bottleneck in designing highthroughput LDPC and RA decoders.
+
+u k
+
+Irregular Repetition
+Code
+r1, r2, · · · , rk times
+
+k j=1
+
+rj
+
+=
+
+m
+
+Accumulator
+
+v
+
+Permuter
+
+x
+
+y
+
+n
+
+n
+
+n × n bipartite graph
+
+D
+
+side 1 degrees: r1, r2, · · · , rk side 2 degree: g, constant
+
+g−1
+
+n = m/g
+
+yj+1 = yj + xgj+i
+
+i=0
+
+u1
+
+r1
+
+u1
+
+….
+
+r2
+
+u2
+
+(a)
+
+u2 ….
+
+uv……...
+
+rk
+
+uuk k ….
+
+uk1 uk 1
+
+Random Permuter (n x n bipartite graph)
+
+g v1
+
+v2
+
+v3 …v…u ...
+
+vn1
+
+vn
+
+vy
+
+ yv
+
+……...
+
+(tail bit for
+
+y1
+
+y2
+
+y3
+
+y4
+
+ y1
+
+y2
+
+ y3
+
+y4
+
+yn yn
+
+ynt1ermination)  yn1
+
+info node
+
+parity node
+
+Check node
+
+(b)
+
+Fig. 1. RA code: (a) Systematic encoder, and (b) Tanner graph.
+
+II. RA CODES AND DECODER ARCHITECTURES
+
+Repeat-accumulate codes are composed of repetition codes and
+
+memory-1 convolutional codes concatenated through a permuter. For
+
+an input block u = (u1, · · · , uk) of k information bits, first each bit
+
+uj is repeated rj times for j = sequence of integers such that 2 ≤
+
+1, · · · rj ≤
+
+, k, rmax
+
+wanhderPe (jkr=11,
+
+·· rj
+
+·, =
+
+rk) is a m (rmax
+
+is the maximum node degree). Next, the block of m repeated bits is
+
+interleaved, and grouped into g-bit groups such that n m/g is an
+
+integer (see Fig. to the recursion
+
+1(a)). The yj+1 = yj
+
++g-bPit igg=−r01ouxpgsj
+
+are accumulated +i, j = 0, · · · , n
+
+according − 1, with
+
+y0 = 0. The code rate for an unsystematic RA code is gk/m, and
+
+gk/(gk + m) for systematic RA codes. An RA code is said to be
+
+regular if g = 1, and irregular for g > 1.
+
+Figure 1(b) shows the corresponding Tanner [6] of an RA code.
+
+The nodes of the graph are partitioned into two classes: variable
+
+nodes denoted by circles, corresponding to the coded symbols, and
+
+check nodes denoted by squares, corresponding to the parity-check
+
+equations the codewords must satisfy. There are k variable nodes
+
+on the top, called information nodes; there are n check nodes; and
+
+there are n variable nodes on the bottom, called parity nodes. An
+
+information node uj is connected to some rj check nodes. Each check node is connected to exactly g information nodes. These connections
+
+are made by the random permuter which joins the m edges between
+
+the information and check nodes. The check nodes are connected to
+
+the parity nodes in the simple zig-zag pattern shown in the figure.
+
+An extra information node and parity node that connect directly (not
+
+0-7803-8622-1/04/$20.00 ©2004 IEEE
+
+527
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:57:43 UTC from IEEE Xplore. Restrictions apply.
+
+Channel messages
+(k+1)
+Check Messages
+(m+1)
+Check Messages
+(2n+1)
+Channel messages
+(n+1)
+Channel messages
+(k+1)
+Check Messages
+(m+1)
+
+1 Info Processing Unit (IPU)
+Permuter m x log(m)
+
+Permuter m x log(m)
+2
+Check Processing Unit (CPU)
+
+1 Parity Processing Unit (PPU)
+
+(a)
+
+1 Info Processing Unit (IPU)
+Permuter m x log(m)
+
+Permuter m x log(m)
+2
+BCJR (SISO) Decoder
+
+Info Messages
+(m+1)
+Parity Messages
+(2n+1)
+Info Messages
+(m+1)
+Channel messages
+(n+1) State Metrics
+(n)
+
+(b) Fig. 2. Serial RA decoder architectures: (a) LDPC-like, and (b) turbo-like.
+
+through the permuter) to an extra check node are included. They terminate the recursion of the accumulator into a known final value.
+Note that if the accumulator or parity notes in Fig. 1 are dropped, the code/graph reduces to that of an LDPC code. Hence, an LDPC decoder is a special case of an RA decoder, and thus we focus on RA decoders in the remainder of the paper.
+
+A. Decoding RA codes
+
+An RA code is decoded based on the the iterative sum-product
+
+message-passing algorithm [4] by computing and communicating
+
+messages between neighboring nodes on the graph. All messages
+
+are assumed to be log likelihood ratios, i.e., of the form µ =
+
+log(p(0)/p(1)), and take on values on the extended real line
+
+R ∪ {−∞, ∞}. Each variable node u has an associated channel
+
+observation message λu. The outgoing message frP om a variable node u to a check node v is given by µu→v = λu + w=v µw→u. The
+
+message µv→u =
+
+from ψ−1
+
+“aPcheck
+w=u
+
+node v ψ(µw→v
+
+t”o ) “,
+
+a variable where the
+
+node u is given mapping ”ψ : R
+
+by →
+
+F2 × R+ is defined as ψ(z) =
+
+sgn(z),
+
+−
+
+log
+
+tanh
+
+|z| 2
+
+, and the
+
+sign function is defined as sgn(z) = 0 if z ≥ 0, and 1 otherwise [7].
+
+There are two main scheduling algorithms for these node com-
+
+putations [8]: 1) Two-Phase LDPC-like scheduling, as originally
+
+introduced in [9] (following [2]), in which computations are divided
+
+into two rounds, one pertaining to variable nodes and one pertaining
+
+to check nodes. In each round, all nodes are activated in parallel,
+
+sending outgoing messages to all their neighbors. 2) Turbo-like
+
+scheduling, which consists of isolating large trellis-like subgraphs,
+
+and applying locally the forward-backward BCJR algorithm [5],
+
+much like the decoding of turbo codes since the BCJR implements
+
+the message-passing algorithm efficiently on cycle-free factor graphs.
+
+A decoding iteration consists of activating all information variable
+
+nodes in parallel, and of running the BCJR algorithm over the entire
+
+accumulator trellis. Messages from check nodes are not sent to
+
+information variable nodes until the BCJR iteration is over.
+
+B. Decoding Complexity
+Figure 2 shows two serial architectures implementing the messagepassing algorithm for RA codes under both schedules. The complexity of the two architectures is summarized in Table I (b designates
+
+bit precision). Also shown in the table are the resources of a parallel architecture implementing the LDPC-like schedule (the other schedule reduces to the LDPC-like schedule when fully parallelized.) A parallel LDPC-like decoder simply mimics the topology of the Tanner graph by replacing all nodes with appropriate processing units and the graph connections by physical wires. Note that the permuter in serial architectures is implemented using memory blocks, while in parallel architectures it is implemented using direct wire connections.
+
+TABLE I
+
+COMPLEXITY OF THE MESSAGE-PASSING ALGORITHM.
+
+LDPC-like schedule
+
+Turbo-like schedule
+
+Info: 2m additions Check: 2m + 4n ψ-operations
+2m + 3n additions Parity: 2n additions
+Info: m messages Check: n(g + 2) + 1 messages Parity: 2n messages Channel: (n + k + 2) messages
+Permuter: Memory, 2m addresses
+
+Info: 2m additions Check: 3n logsum operations
+Info: m messages Check: n(g + 2) + 1 messages n state metrics Channel: (n + k + 2) messages Permuter: Memory, 2m addresses
+
+Parallel LDPC-like Decoder Info: k processing units Check: n processing units Parity: n processing units Permuter: Network, 2ng × b wires Accumulator: (2n + 1) × b wires Registers: (k + m + 1)
++(n(g + 2) + 1) + (3n + 1)
+Serial LDPC-like Decoder
+Info: 1 processing unit
+Check: 1 processing unit Parity: 1 processing unit Permuter: Memory, 2 m × log(m)
+
+—
+Serial Turbo-like Decoder Info: 1 processing unit 1 BCJR decoder Permuter: 2 m × log(m) memory
+
+For a Rate-1/3 RA code of length 48K with r = 6, g = 3, a serial LDPC-like decoder running at 100 MHz requires 2208 Kbits for storing messages, 3184 Kbits to implement the permuter, and achieves a throughput of 361 Kbits/sec using three function units. On the other hand, a parallel LDPC-like decoder running at 50 MHz still requires 2208 Kbits for storing messages in registers, but requires 1152×1024 wires to implement the permuter, delivering a throughput of 47.6 Gbits/sec using 32K function units.
+In general, parallel decoders achieve several orders of magnitude improvement in throughput over serial architectures, at the expense of a proportional increase in the number of function units. The memory permuter in serial decoders translates into a prohibitive number of on-chip wires that, in addition to the excessively large number of function units, render parallel decoders impractical to implement. On the other hand, the permuter bottleneck in serial decoders results in a very low throughput that renders serial decoders practically useless for high-end applications. Hence, permuters should be implemented efficiently in order to achieve high-throughput for long RA codes using a reasonable number of resources. This is equivalent to constructing RA codes with structured Tanner graphs, which we refer to as architecture-aware RA (AA-RA) codes, that perform well under message-passing decoding, much the same as decoding LDPC codes on structured graphs [1].
+
+III. ARCHITECTURE-AWARE RA (AA-RA) CODE DESIGN
+One desirable AA structure of a Tanner graph would be to divide the variable nodes and check nodes into clusters of size S such that if one node from a cluster connects to a node from another cluster, then there exists distinct connections between all nodes from both clusters. The connections between two clusters are done according to some permutation π, where π varies between cluster pairs.
+Figure 3(a) shows an AA Tanner graph, where the variable nodes are separated into information nodes (top) and parity nodes (bottom).
+
+528
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:57:43 UTC from IEEE Xplore. Restrictions apply.
+
+Factored S edges
+
+interleaver π1
+
+π3
+
+π2
+
+π11
+
+π12
+
+Clusters of size S
+
+based LDPC codes do posses the AA-structure. Other construction techniques that yield the AA-structure include quasi-cyclic groups introduced by Tanner in [13] to construct regular RA codes, and cyclotomic cosets to construct AA-LDPC codes [14], among others. These techniques can be extended to construct AA-RA codes as well.
+
+Factored S edges
+
+interleaver π1
+
+π3
+
+π2
+
+Transformed accumulator
+(a)
+
+π11
+
+π12
+
+Clusters of size S
+
+(b) Fig. 3. AA Tanner graph: (a) RA code, and (b) LDPC code.
+
+Information
+
+Iπ1
+
+Iπ2
+
+I
+
+Parity Iπ0
+
+Iπ3
+
+Iπ4
+
+I
+
+I
+
+Iπ5 H=
+
+Iπ6
+
+Iπ7
+
+Iπ8
+
+I
+
+I
+
+I
+
+I
+
+Iπ9
+
+Iπ10
+
+I
+
+I
+
+Iπ11
+
+Iπ12
+
+I
+
+I
+
+Fig. 4. Parity-check matrix of an AA-RA code.
+
+The graph has 12 information nodes of uniform degree r = 3 and 18 check nodes of degree g + 2 = 4, where the bottom permuter is a simple accumulator loop. Nodes are clustered into groups of S = 3 so that the graph contains 4 information node clusters and 6 check node clusters. The random permuter connects clusters of nodes as opposed to individual nodes, and accumulation takes place between check-node clusters. Instead of accumulating parities using adjacent check nodes, parities are accumulated using checks from adjacent clusters. To compute the total sum, S forward sweeps from left to right are needed on the modified accumulator. Note that the rightmost check node cluster has feedback connections to the leftmost parity node cluster. These connections must be made so that the accumulator loop has a single cycle. For comparison, Fig. 3(b) shows the Tanner graph for an architecture-aware LDPC code. Independently, Tanner in [10] proposed related ideas to explicitly construct structured regular RA codes from quasi-cyclic groups.
+The corresponding parity-check matrix H for the RA code of Fig. 3(a) can be represented as a block matrix of S × S permutation matrices as shown in Fig. 4. Iπ denotes the S × S identity matrix I with its columns permuted according to the permutation π. The dimensions of H are n × (k + n). The left portion of H corresponds to the information nodes, and contains ng/S non-zero block matrices. The right portion corresponds to the parity nodes, and contains 2n/S non-zero block matrices. The locations of the permutation matrices in H correspond to the edges in the Tanner graph.
+The challenge of constructing AA-RA codes is in choosing the various matrices Iπ in H so that the resulting code is good in the sense that it performs well under iterative decoding and possesses a large minimum distance. The most effective techniques of constructing graphs matched to the needs of iterative decoding are explicit construction techniques of algebraic nature. Ramanujan graphs are a notable example that were applied in the construction of LDPC codes [11], [12]. In [1], it was shown in addition that Ramanujan-
+
+IV. STAGGERED DECODING OF AA-RA/AA-LDPC CODES
+An AA-RA code C can be viewed as a code concatenated from a number of one-dimensional super-codes defined by the block rows of H. Each super-code has support on a subset of the k + n bits of C. Iterative decoding proceeds by decoding the super-codes in series and forwarding messages between super-codes whose supports overlap on a subset of bits, much like the decoding of standard serially concatenated turbo codes. Super-codes with overlapping supports are called neighboring super-codes. A similar concept was employed in decoding AA-LDPC codes [14], [15]. On a Tanner graph, supercodes correspond to clusters of check nodes and their neighboring information and parity node clusters. Message-passing on the Tanner graph occurs between neighboring clusters after decoding. Decoding of a single super-code is referred to as a decoding sub-iteration, and decoding of all super-codes constitute a complete decoding iteration.
+The scheduling of node computations occurs in a staggered fashion defined by the order of the super-codes in the parity-check matrix. Newly generated messages after decoding a super-code are forwarded to all neighboring super-codes. Decoding of a super-code is based on the most recent messages received from its neighbors up to the last sub-iteration.
+The decomposition of the parity-check matrix into block permutation matrices simplifies permuter implementation. Given any node, its neighbors can be determined depending on the cluster it belongs to. Clusters are connected by bundles of S edges according to certain permutations, hence the neighbors of a node can be computed in logarithmic space proportional to log S. The permuter can be implemented as an interconnection network capable of routing all permutations defined in H. The complexity of such a network realized as a Benes network [16] is proportional to S(2 log S − 1).
+The staggered schedule has reduced memory requirements to store messages compared to the two standard LDPC-like and turbo-like schedules. First, it deals with a single type of messages (extrinsic likelihood ratios) as opposed to two or three types. The second reason has to do with the (additive) update equation to compute µu→v. In the standard schedules, this equation requires that all incoming messages to a node and all outgoing messages generated from a node be saved during a decoding iteration. Further, these messages can not be overlapped. This results in a storage proportional to twice the number of edges in the Tanner graph. In the staggered schedule on the other hand, only storage proportional to the number of edges needs to be provided. Storage is provided to save extrinsic messages from all super-codes. In addition, the sum of all extrinsic messages from all super-codes is saved. The sum of the incoming messages from all neighbors to a super-code can be obtained from this total sum by simply subtracting the extrinsic messages of the super-code itself. Whenever new messages are generated from a super-code, the total sum is updated by subtracting the old messages and adding in the new messages.
+In addition to efficient scheduling of the decoding operations, algorithmic optimizations must also be applied to simplify the message computation mechanism. The update equation for µv→u is highly non-linear and involves logarithmic and transcendental functions which are difficult to implement. A reduced complexity mechanism for computing messages similar to the one used in the context of LDPC codes can be used. Computations are based on the so-called
+
+529
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:57:43 UTC from IEEE Xplore. Restrictions apply.
+
+“max-quartet” Q-function given by
+Q(x, y) = max(x, y) + max(5/8 − |x − y| /4, 0) − max(x + y, 0) − max(5/8 − |x + y| /4, 0) ≈ log(ex + ey) − log(ex+y + 1).
+The reader is referred to [14] for more details.
+V. UNIFIED AA-RA/AA-LDPC DECODER ARCHITECTURE
+Figure 5 shows the dataflow graph of the staggered decoding schedule. The SISO decoder decodes each super-code by processing S trellises in parallel, where each trellis has (g + 2) stages. The permuters π and π−1 correspond to the permutations pertaining to the super-codes. The corresponding decoder architecture and decoding operations are shown in Fig. 7. The bi-directional network implements both the permuter and its inverse, and in general has a Benes topology [16] composed of S(2 log S − 1) stages of 2 × 2 switches (see Fig. 6) controlled by a memory that stores the permutations. A super-code is decoded in g + 6 cycles by routing posterior messages through the network, decoding using the SISO engine, and storing back updated messages in Γ-Memory (i.e., storage for the γ-values).
+
+TABLE II AA-RA DECODER ARCHITECTURE PARAMETERS.
+
+Parameter
+
+Value
+
+Processing Units Message Memory Permuter Memory
+Permuter
+Throughput
+
+S SISO units “each of which process a ”(g + 2)-stage trellis (m + 2n) + (n + k) × b
+
+m 2
+
+log
+
+S
+
+bits
+
+Wires: (4bS + S) × log S
+
+(2:1)-Multiplexers: 2bS log S
+
+(k+n)b (g+6)×n×I
+
+×S
+
+×f
+
+1011
+
+1010
+
+Parallel Decoder
+
+109 AARA Decoder
+108
+
+107
+
+Throughput (bits/sec)
+
+106
+
+Serial Decoder
+
+n/S
+Channel Values
+
+Fig. 8.
+
+105
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Block length
+
+x 104
+
+AA-RA decoder throughput vs. parallel and serial decoders.
+
+x 106 2.5
+
+Fig. 5. Dataflow graph of the staggered decoding algorithm.
+
+4 x 4 Benes
+
+1
+
+1
+
+2
+
+2
+
+3
+
+3
+
+4
+
+4
+
+5
+
+5
+
+6
+
+6
+
+Memory (bits)
+
+2
+
+Parallel Decoder
+
+1.5
+
+Serial Decoder
+
+1
+AARA Decoder 0.5
+
+7
+
+7
+
+8
+
+8
+
+4 x 4 Benes
+
+Fig. 6. Architecture of an 8 × 8 Benes network.
+
+0
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Block length
+
+x 104
+
+Fig. 9. Memory comparison between AA-RA, parallel, and serial decoders.
+
+The resources of the decoder architecture for an AA-RA code are summarized in Table II. The decoder attains a throughput of
+
+Θ
+
+=
+
+(g
+
+(k + n)b + 6) × n × I
+
+×
+
+S
+
+×f
+
+bits/sec,
+
+assuming the decoder operates at a frequency of f , and I iterations are performed.
+Figures 8,9,10 compare the throughput, memory requirements, and permuter complexity of the AA-RA decoder (S = 256) with serial and parallel decoders. The AA-RA decoder has substantial advantages in terms of memory requirements and permuter complexity, while attaining a throughput that exceeds 1 Gbps at 100 MHz.
+REFERENCES
+
+[1] M. M. Mansour and N. R. Shanbhag, “On the architecture-aware structure of LDPC codes from generalized Ramanujan graphs and their decoder architectures,” in Conf. on Inf. Sciences and Systems 2003, Baltimore, Maryland, Mar. 2003, pp. 215–220.
+
+x 106 3.5
+
+3
+
+Serial Decoder
+
+Interleaver Memory
+
+2.5
+
+2 AARA Decoder Interleaver Wires
+1.5
+1
+0.5
+
+Parallel Decoder Interleaver Wires
+
+AARA Decoder Interleaver Memory
+
+0
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+Block length
+
+x 104
+
+Fig. 10. Permuter comparison between AA-RA, parallel, and serial decoders.
+
+530
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:57:43 UTC from IEEE Xplore. Restrictions apply.
+
+λ-messages
+
+λ-messages
+
+4
+
+4
+
+4
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+L
+
+RL
+
+RL
+
+RL
+
+RL
+
+RL
+
+R
+
+Read
+
+Write
+
+Write
+
+Read
+
+Dual Bi-Directional
+Network
+
+Read
+
+Write
+
+Fig. 7. AA-RA Decoder architecture.
+
+γ-messages
+
+Write
+
+Read
+
+[2] R. G. Gallager, Low-Density Parity-Check Codes, MIT Press, Cambridge, MA, 1963.
+[3] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo codes,” in IEEE Int. Conf. on Comm., 1993, pp. 1064–1070.
+[4] D. Divsalar, H. Jin, and R. J. McEliece, “Coding theorems for turbolike codes,” in Proc. of the 36th Allerton Conf. on Comm., Control, and Computing, Sep. 1998, pp. 201–210.
+[5] L. R. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. on Info. Theory, vol. 20, pp. 284–287, Mar. 1974.
+[6] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. on Info. Theory, vol. IT-27, pp. 533–547, Sep. 1981.
+[7] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” IEEE Trans. on Info. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[8] A. Roumy, S. Guemghar, G. Caire, and S. Verdu, “Design methods for irregular repeat-accumulate codes,” IEEE Trans. on Info. Theory, vol. 50, no. 8, pp. 1711–1727, Aug. 2004.
+[9] H. Jin, A. Khandekar, and R. J. McEliece, “Irregular repeat-accumulate codes,” in Proc. of 2nd Int. Conf. on Turbo Codes and Related topics, Brest, France, Sep. 2000, pp. 1–8.
+[10] R. M. Tanner, D. Sridhara, and T. Fuja, “A class of group-structured LDPC codes,” in Proc. of Int. Symp. on Comm. Theory and Applications, Ambleside, England, 2001, pp. 1–5.
+[11] J. Rosenthal and P. O. Vontobel, “Constructions of LDPC codes using
+
+Ramanujan graphs and ideas from Margulis,” in Proc. of the 38th Allerton Conf. on Comm., Control, and Computing, 2000, pp. 248–257. [12] M. M. Mansour and N. R. Shanbhag, “Construction of LDPC codes from Ramanujan graphs,” in Conf. on Info. Sciences and Systems, Princeton University, Mar. 2002. [13] R. M. Tanner, “On quasi-cyclic repeat-accumulate codes,” in Proc. of the 37th Allerton Conf. on Comm., Control, and Computing, Monticello, Illinois, Sep. 1999. [14] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Transactions on VLSI Systems, vol. 11, no. 6, pp. 976– 996, Dec. 2003. [15] M. M. Mansour and N. R. Shanbhag, “Turbo decoder architectures for low-density parity-check codes,” in Proc. IEEE Global Telecomm. Conf. 2002 (GLOBECOM’02), Taipei, Taiwan, Nov. 2002, pp. 1383–1388. [16] V. E. Benes, “Optimal rearrangeable multistage connecting networks,” Bell system technical journal, vol. 43, pp. 1641–1656, 1964.
+
+531
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 10:57:43 UTC from IEEE Xplore. Restrictions apply.
+
+

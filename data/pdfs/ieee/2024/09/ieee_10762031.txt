@@ -1,0 +1,465 @@
+2024 3rd International Conference on Electronics and Information Technology (EIT) | 979-8-3503-6915-1/24/$31.00 ©2024 IEEE | DOI: 10.1109/EIT63098.2024.10762031
+
+2024 3rd International Conference on Electronics and Information Technology (EIT)
+
+Parallel optimization design of LDPC decoder with variable normalization factor
+
+1st Kaidi Liu* School of Microelectronics Hefei University of Technology
+Hefei, China 1923201656@qq.com
+
+2nd Ziwei Guo School of Microelectronics Hefei University of Technology
+Hefei, China 524881906@qq.com
+
+Abstract—In order to solve the problem of poor decoding performance of the fixed normalization factor in the normalized minimum sum algorithm, the article proposes a variable normalization factor LDPC decoder, which improves the decoding performance compared to the fixed normalization factor. 0.2dB. At the same time, in order to solve the problems of low throughput and high storage resource usage of some parallel LDPC decoders, the parallelism of the system is increased by adopting the intra-layer parallel structure, and the consumption of storage resources is saved by time-division multiplexing of node data cache units. Experimental results show that compared with the traditional partially parallel structure, the decoder designed in this paper uses 13% more LUT resources, reduces storage resource consumption by 38%, and increases the decoding throughput by 14.5M.
+Keywords- Improved decoding algorithm; Partially parallel structure; LDPC decoder; Variable normalization factor
+I. INTRODUCTION
+LDPC code is a linear block code proposed by reference [1] in 1963. Limited by the technical level at that time, the hardware implementation of LDPC code was too complicated and did not receive much attention [2].
+In 1996, reference [3] found that LDPC code has decoding performance close to the Shannon limit. Combining with Gallager's research, a belief propagation (BP) decoding algorithm based on probability measurement was proposed. Since the BP algorithm uses the hyperbolic tangent operation, it is difficult to implement in hardware. Therefore, in 1999, reference [4] proposed the minimum sum algorithm (MSA), which approximates the hyperbolic tangent operation to the minimum value operation and the symbol operation, reducing the computational complexity of the BP algorithm. However, the MSA algorithm reduces the decoding performance of LDPC due to the use of approximate calculations. In 2002, reference [5] proposed the normalized minimum sum algorithm (NMSA) to compensate for the performance loss of the MSA algorithm by adding a correction factor to improve the algorithm performance. Selecting an appropriate correction factor can make the NMSA algorithm close to the performance of the BP algorithm [6]. Reference [7] proposed a normalization factor that varies with the number of iterations. Compared with a fixed normalization factor, this method converges faster.
+
+There are three main structures for decoder hardware implementation: fully serial[8], fully parallel[9] and partially parallel[10].In 2020, Boutillon E.[11] designed a new barrel register for the 5G LDPC decoder by adopting an additional layer expansion method, which reduced the number of multiplexers by about 40% compared with the original solution. In 2021, Kang Jing[12] increased the decoder throughput and avoided memory access conflicts by adopting parallel operations and using optimized data aligners, achieving a throughput of 1.02Gbps at a 250M clock. In 2022, E.A.Likhobabin[13] designed a QC-LDPC decoder suitable for all code rates of the DVB-S2X standard. The designed decoder uses a layered structure to achieve a throughput of 500Mbps at a 250M clock.Reference [14] uses a traditional partially parallel structure to design an LDPC decoder. The designed decoder has low resource occupancy, but the low parallelism leads to low throughput, which is not suitable for high throughput scenarios. Reference [15] uses a fully parallel structure to achieve a throughput of 4.7 Gbp/s twice, but its LUT resource consumption is as high as 170,000, and only supports one code rate. Reference [16] proposes a decoder that supports full-rate 5G LDPC. It uses a partially parallel structure with intra-layer parallelism and inter-layer seriality. Compared with the traditional partially parallel structure, it greatly improves the system throughput and occupies fewer resources than the fully parallel structure decoder. However, the storage overhead is large due to the separate storage of updated row and column data.
+In summary, in order to solve the problems of low throughput and high storage resource consumption of traditional partially parallel decoding, this paper adopts the intra-layer parallel structure to improve the throughput, and time-division multiplexing the memory to reduce the system's consumption of storage resources. At the same time, the normalization factor in the NMSA algorithm is improved to reduce the number of decoding iterations.
+II. LDPC DECODING OVERVIEW
+A. LDPC Decoding Overview
+LDPC code is a linear block code, denoted as (n, k), where n is the total code length after encoding, k is the information bit length of the source code, the check code length is , and the corresponding code rate is . The core of the LDPC code is the check matrix H of dimension . Conventional H matrices are generally generated randomly, which is difficult to implement in hardware and occupies a lot of resources. To overcome the
+
+979-8-3503-6915-1/24/$31.00 ©2024 IEEE
+
+373
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:55:30 UTC from IEEE Xplore. Restrictions apply.
+
+above problems, quasi-cyclic LDPC codes (Quasi-Cyclic LDPC, QC-LDPC) are often used in hardware implementations instead of randomly constructed LDPC codes. The check matrix H of QC-LDPC codes is expressed as follows:
+
+ E1,1 E1,2 Κ E1,n 
+
+H
+
+<
+
+ 
+
+E
+
+2,0
+
+E2,0
+
+Κ
+
+E2,n
+
+ 
+
+(1)
+
+Λ Λ
+
+Λ
+
+ 
+
+Em,0
+
+Em,2
+
+Κ
+
+Em,n
+
+ 
+
+According to formula (1), the QC-LDPC code consists of circulant submatrices of dimension . Let Aij be the number of times the first row of the identity matrix is cyclically shifted to the right, such that Aij indicates that Eij is the identity matrix; when Aij=-1, Eij is a zero matrix; when Aij=-n, Eij is a matrix composed of each row of the identity matrix cyclically shifted to the right n times. This feature can effectively reduce the difficulty of information storage in hardware implementation.
+
+B. Analysis of LDPC decoding algorithm
+LDPC decoding algorithms are mainly divided into two categories: one is the hard decision decoding algorithm, such as the bit-flipping (BF) algorithm, which has simple decoding hardware implementation but poor performance and is rarely used in engineering. The other is the soft decision decoding algorithm, such as BP and MSA. The soft decision decoding algorithm uses channel information in decoding calculation and has better performance than the hard decision decoding algorithm. This design uses the NMSA algorithm, and the specific steps are as follows:
+
+∂ Initialization. First, set the maximum number of iterations to Imax, and calculate the initial likelihood ratio information of each variable node based on the received initial sequence .
+
+L(0) (qij ) < L(Pi ) < yi
+
+(2)
+
+∂ Check node processing. Calculate the probability information that the check node passes to the variable node.
+
+ L(k) (rji )
+
+<
+
+
+
+min (|
+ii⊆R( j )\i
+
+L q (k,1) i' j
+
+|)
+i'⊆R (
+
+sgn(
+
+L(
+
+K
+
+q ,1) i'
+
+j ) \i
+
+)
+j
+
+(3)
+
+∂ Variable node processing: Update variable node information by column using updated check nodes.
+
+ L(k) (qij ) < L(Pi ) ∗
+
+L (r ) (k)
+
+j'⊆R(i)\ j
+
+j'i
+
+(4)
+
+∂ The formula for calculating the posterior probability is:
+
+ L(k) (ci ) < L(Pi ) ∗ j⊆R(i) L(k) (rji )
+
+(5)
+
+∂ Decoding decision. If L(k) (qi ) = 0 , then output yi < 0 , otherwise yi < 1.
+
+∂ Decoding verification: Determine whether formula (6) holds true based on the iterated codeword.
+
+Hyˆ T < 0
+
+(6)
+
+Before reaching the maximum number of decoding times, if it is true, the code word is output and the decoding is judged to be successful, otherwise the decoding is judged to be failed. The meanings of the symbols are listed in Table 1.
+
+Table 1 NMSA algorithm compliance meaning
+
+Symbol L(Pi)
+rj qi L(k)(rji)
+L(k)(qji)
+R(i)\j R(j)\i R(i)
+
+Meaning Initial likelihood ratio information
+Check node Variable node The information passed from the check node to the variable node in the kth iteration The information passed from the variable node to the check node in the kth iteration All check nodes connected to qi except rj All check nodes connected to rj except qi All check nodes connected to qi
+
+C. Normalization factor selection
+In the NMSA algorithm, the normalization factor changes with the signal-to-noise ratio and the number of iterations. It has no specific value and is difficult to implement in hardware. In practice, for the convenience of implementation, a fixed value is often used. For example, the decoding effect is not ideal. Therefore, reference [7] proposes a variable decoding algorithm, which has a faster decoding convergence speed than the fixed one. In reference [7], the normalization factor is 1/2 in the first iteration. Experiments show that when the normalization factor is 1/2 during iteration, the decoding performance is poor. Therefore, this paper draws on the method of reference [7], combines the actual environment of this system and the integer quantization method of NMSA, and sets the decoder to use a variable normalization factor as shown in formula (7), where n represents the number of iterations.
+
+1/ 2 ∗1/ 4,
+
+n < 1;
+
+ < 1/ 2 ∗1/ 4 ,1/ 2n∗1, n < 2,3, 4;
+
+1/ 2 ∗1/ 4,
+
+n=4
+
+（7）
+
+When implementing on FPGA, when an 8-bit binary number is multiplied by the normalization factor proposed in this paper, the result of multiplication with different normalization factors can be obtained by right shifting and adding. The specific implementation method is shown in Figure 1.
+
+374
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:55:30 UTC from IEEE Xplore. Restrictions apply.
+
+1 20 1 1 1 1 1 1 1 1
+
+1 21 0 1 1 1 1 1 1 1
+
+1 22 0 0 1 1 1 1 1 1
+
+1 23 0
+
+0
+
+01
+
+1
+
+1
+
+1
+
+1
+
+1 24 0 0 0 0 1 1 1 1
+
+1 25 0
+
+0
+
+00
+
+0
+
+1
+
+1
+
+1
+
+Figure 1. Implementation methods for different normalization factor values
+
+By shifting the input data to the right by different numbers of bits, the result of multiplying it by is obtained. This method can easily obtain the normalized result of the input data.
+The comparison results of the bit error rate of the improved algorithm with those of the literature [7] and the fixed normalization factors of 1/2 and 1/2+1/4 are shown in Figure 2. As the signal-to-noise ratio increases, the bit error rates of different algorithms decrease, but the bit error rate of the algorithm proposed in this paper is lower than that of other algorithms, proving that the decoding performance of the designed variable normalization factor is better than that of the fixed normalization factor.
+
+100
+
+10-2
+
+10-4
+
+a=0.5 a=0.75 reference [7] this article
+
+10-6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+BER
+
+Figure 2. Bit error rate of different decoding algorithms
+
+III. LDPC DECODING DEVICE HARDWARE STRUCTURE
+A. Decoder overall structure
+This thesis adopts QC-LDPC code. The check matrix H has 16×32 sub-matrices with block size b=64, that is, the check matrix scale is 1 024 ×2 048. The traditional partially parallel decoder structure is shown in Figure 3a. The variable node data and the check node data are stored separately, which requires large storage resources. At the same time, 16 parallel check node processing units (CNU) and 32 parallel variable node processing units (VNU) are used for calculation. As shown in Figure 3b, the decoder structure designed in this paper uses the same number of CNUs and VNUs as the block size b. Compared with the traditional partially parallel
+
+structure, the CNU parallelism is increased by 16 times and the VNU parallelism is increased by 8 times.
+
+N VNUs VNU
+
+Variable node Data cache
+Verification node Data cache
+
+Input data Input Buffer
+
+VNU
+M CNUs CNU
+
+Decodi ng Decoding results decision
+
+End of cache
+
+CNU Read and write control
+Control Module
+
+Decodi ng result judgment
+
+（a）Traditional structure
+
+b CNUs CNU
+
+b VNUs VNU
+
+Input data Input Buffer
+End of ca che
+
+CNU
+
+VNU
+
+Node data cache
+
+Decoding decision
+
+Read and write control
+
+Address
+
+Tra nsl ati on
+
+Decoding
+
+result judgment
+
+Control Module
+
+Decoding results
+
+（b） Improved structure
+
+Figure 3. Partially parallel decoder architecture
+
+The designed decoder combines the check node data cache unit and the variable node data cache unit shown in Figure 3b, saving 50% of the storage resources required for this module compared with the reference [16].
+B. Node data cache module
+The check matrix used in this paper has a row weight of 8 for each row and a column weight of 4 for each column. The quantization bit width of each data is 8 bits. In order to meet the system's requirements for parallelism, the node data cache module uses 64 memories to cache node data, and each memory has 16 rows. Each row of data is all non-zero numbers in the corresponding row of the check matrix, so the size of each storage unit is（8≥ 8） ≥ 16.
+As shown in Figure 4, the node data cache unit is introduced by taking the H matrix of size 4≥ 8 as an example. The 4 sub-matrices of size 3≥ 3 in the upper right corner of the H matrix are enlarged. The parts marked with 0 in the 4 submatrices are all 0 matrices and do not need to be stored in the storage unit. For example: in the upper right sub-matrix, only the diagonal elements are not 0, so only the data in the diagonal needs to be stored in the storage unit.
+Each row of the H matrix has 8 elements that need to be stored in the same address of the same memory. Therefore, according to the above rules, these 8 elements need to be stored in different bits of the same address in column order.
+
+375
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:55:30 UTC from IEEE Xplore. Restrictions apply.
+
+0 0
+
+4≥8 H Matrix
+
+Local zoom
+
+addr_1
+
+addr_2
+
+RAM_1 RAM_2 RAM_3
+
+1
+
+0
+
+1
+
+1
+
+1
+
+1
+
+0
+
+1
+
+RAM_1 RAM_2 RAM_3
+
+CNU Acces s Sequence
+
+VNU Access Sequence
+Figure 4. Schematic diagram of node information access storage unit
+
+C. Check Node Processing Unit
+The unit uses variable node information to calculate the check node information according to formula (3) and processes the data in the matrix row by row. The circuit structure is shown in Figure 5.
+
+V (k) 2c _ c1 V (k) 2c _ cm
+
+
+Sign bit
+
+XOR Circ uit
+
+D ela y Circuit
+
+Compl eme nt code
+Complement code
+
+Minim um Compa rators
+Normalized
+
+Take opp osite
+n um
+
+MUX
+
+MUX
+
+C (k∗1) 2v _ c1 C (k∗1) 2v _ cm
+
+Figure 5. Check node processing unit structure
+V(k)2c_c1~V(k)2c_cm indicates that there are m information nodes in each row of the check matrix, and m is the row weight of the matrix. When processing the check node, the input data is first divided into two paths: one path extracts its sign bit information, and then the sign bit is XORed to obtain the sign bit s1(k)~sm(k) of each data after the update. The other path takes the absolute value, and then the minimum and second minimum values in the absolute value and the position of the minimum value are found through the comparator to determine the minimum value except the current data, and then the minimum/second minimum value is normalized. The normalization method is: Substitute the number of iterations into formula (7) to determine the normalization factor The multiplication of the minimum/minimum value and is obtained by shift addition, which saves resource occupation and system delay compared with using a multiplier. Finally, the output data is judged as the minimum/sub-minimum value or the minimum/sub-minimum value complement according to the sign bits s1(k)~sm(k), and the updated check nodes C(k+1)2v_c1~C(k+1)2v_cm. are obtained.
+D. Variable Node Processing Unit
+The variable node processing unit uses the check node information to calculate the variable node information according to formula (4), which processes the data in the matrix by column. The circuit structure is shown in Figure 6.
+In Figure 6, C(k)2v_v1~ C(k)2v_vn indicates that there are n information nodes in each column of the check matrix, and n is the column weight of the matrix. The specific working
+
+method is: first, the data sent by the node data cache module is accumulated with the initial channel information L(Pi) at the corresponding position of the input cache to obtain the posterior probability value L(k+1)（ci）, and then the posterior
+probability value is subtracted from the corresponding C(k)2v_v1~ C(k)2v_vn to obtain the updated variable node information V(k+1)2C_v1~ V(k+1)2C_vn, and finally the highest bit of L(k+1)（ci） is taken out as the sign bit of the i-th variable node
+and sent to the decoding decision module.
+
+C(k) 2v _ v1
+C(k) 2v_vn
+Channel initial information
+
+Delay Circuit
+
+V (k ∗1) 2c _ v1
+Sub
+
+ACC
+
+Take symbol
+
+V (k ∗1) 2c _ vn
+
+Decoding decision
+
+Decision output
+
+Figure 6. Variable node processing module unit
+
+E. Decoding Decision Module
+Decoding judgment is to check whether the decoding result meets the conditions for exiting the iteration. When all the posterior probability values are calculated, the sequence
+yˆ < [ y1, y2 ,ϑ, yn ] is obtained. According to equation
+HyˆT < 0 , it is judged whether the decoding is successful at this
+time. If yˆ satisfies this equation, the decoding is judged to be
+successful and output yˆ as the decoding output. Otherwise, it is judged that the decoding fails and whether the maximum number of iterations has been reached. If not, the next decoding iteration is performed. Otherwise, the decoding fails and the decoding is terminated.
+The designed LDPC decoder first uses MATLAB to build an algorithm simulation model. The hardware platform uses Xilinx's XCV7X690TFFG1761-2 chip and the software platform is Vivado 2019.1 to implement a QC-LDPC decoder with a code rate of 1/2, 4 096 bits.
+The hardware implementation results of the LDPC decoder are listed in Table 2. The system works at a main frequency of 180 M. Compared with the reference [16], the designed decoder saves 38% of BRAM resources by increasing 13% of LUT resources and can achieve a throughput similar to the original structure.
+
+Table 2 Comparison of LDPC decoder hardware implementations
+
+Consumption Frequency
+
+This design
+
+180
+
+References[16]
+
+160
+
+LUT 95 724 84 712
+
+BRAM Throughput
+
+122
+
+405.5
+
+198.5
+
+391
+
+IV. VERIFICATION AND ANALYSIS
+To further verify the performance of the designed LDPC decoder, MATLAB is first used to randomly generate 10,000 packets of 1,024-bit data and encode them at a 1/2 code rate. Then, the data is modulated and Gaussian white noise is added.
+
+376
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:55:30 UTC from IEEE Xplore. Restrictions apply.
+
+Bit Error Rate
+
+Finally, the demodulated information sequence is used as the input of the FPGA decoder and the MATLAB decoding algorithm. The number of decoding iterations is set to 15. The performance comparison of the two under different signal-tonoise ratios is shown in Figure 7.
+As shown in Figure 7, the FPGA implementation result has a performance loss of about 0.05 dB compared with the MATLAB simulation. Comprehensive analysis shows that the performance loss is mainly caused by the bit width truncation in the hardware implementation and within the theoretical value range, the whole machine achieves the expected decoding performance.
+Figure 7. FPGA and MATLAB simulation comparison
+V. CONCLUSIONS This thesis proposes an improved structure to solve the problems of low throughput and high storage resource usage of the traditional partially parallel decoder structure. At the same time, a variable normalization factor algorithm is proposed to solve the problem of poor decoding performance of fixed normalization factors, which reduces the bit error rate in low signal-to-noise ratio environments. The designed decoder reduces storage resource consumption by 38%, and the throughput is increased from 391 Mb/s to 402.5 Mb/s.
+
+REFERENCES
+[1] Gallage R. Low-density parity-check codes[C]//Wiley-IEEE Press, 1960:550.
+[2] Zhang Liu. Design of efficient LDPC codec based on CCSDS standard[D]. Xi'an: Xidian University, 2022.
+[3] Mackay D. J. C, Neal R. M. Near Shannon limit performance of low density parity check codes[J]. Electronics Letters, 1996, 32(6):457-458.
+[4] Fossorier M P C, Mihaljevic M, Imai H. Reduced complexity iterative decoding of low-density parity check codes based on belief propagation[J]. IEEE Transactions on communications, 1999, 47(5): 673-680.
+[5] Chen J, Fossorier M P C. Near optimum universal belief propagation based decoding of low-density parity check codes[J]. IEEE Transactions on communications, 2002, 50(3): 406-414.
+[6] Dong Tongxin. Research on low-complexity decoding algorithm for LDPC codes[D]. Tianjin: Tianjin University, 2014.
+[7] Li Jinming, Wang Guodong, Liu Mengxin, et al. Research on encoding and decoding algorithm of LDPC codes under CCSDS standard[J]. Journal of Electronics, 2020, 48(11): 2114-2121.
+[8] Sivakumar S. VLSI implementation of encoder and decoder for lowdensity parity-check codes[D]. Texas A&M University, 2001.
+[9] Prabhakar A, Narayanan K. Memory efficient scalable decoder architectures for low density parity check codes[J]. Wireless Communication Laboratory Tech Report, Texas A&M, 2006.
+[10] Structure F. Channel Coding and Modulation for Digital Terrestrial Television[J]. ETSI EN, 1996, 300(744): V1.
+[11] EMMANUEL B, HASSAN H. Extended Barrel-Shifter for versatile QCLDPC decoders[J]. IEEE Wireless Communications Letters, 2020, 9(5): 643-647
+[12] Kang J, Wang B, Zhang Y, et al. Enhanced partially-parallel LDPC decoder for near earth applications[C]//2021 IEEE 11th International Conference on Electronics Information and Emergency Communication (ICEIEC) 2021 IEEE 11th International Conference on Electronics Information and Emergency Communication (ICEIEC). IEEE, 2021: 1216.
+[13] Likhobabin E A, Ovinnikov A A, Goriushkin R S, et al. High Throughput FPGA Implementation of LDPC Decoder Architecture for DVB-S2X Standard[C]//2022 International Conference on Information, Control, and Communication Technologies (ICCT). IEEE, 2022: 1-4.
+[14] Liu Mengmeng. Design and implementation of QC-LDPC code decoder based on FPGA[D]. Harbin: Harbin Institute of Technology, 2022.
+[15] Zhang Xingyu. Research and implementation of parallel LDPC encoding and decoding algorithm based on FPGA[D]. Hangzhou: Hangzhou Dianzi University, 2023.
+[16] NADAL J, BAGHDADI A. Parallel and flexible 5G LDPC decoder architecture targeting FPGA[J]. IEEE Transactions on Very Large Scale Integration (VLSI) Systems, 2021, 29(6): 1141-1151.
+
+377
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:55:30 UTC from IEEE Xplore. Restrictions apply.
+
+

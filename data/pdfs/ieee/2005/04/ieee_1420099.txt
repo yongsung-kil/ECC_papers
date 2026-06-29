@@ -1,0 +1,468 @@
+An Efficient R-Mesh Implementation of LDPC Codes Message-Passing Decoder
+
+Sharareh Babvey Department of Computer Science
+Georgia State University
+Atlanta, GA 30302-3994
+sbabvey1@student.gsu.edu
+José Alberto Fernández-Zepeda Department of Computer Science
+CICESE
+Ensenada, B. C. 22860, Mexico
+fernan@cicese.mx
+
+Anu G. Bourgeois Department of Computer Science
+Georgia State University
+Atlanta, GA 30302-3994
+abourgeois@cs.gsu.edu
+Steven W. McLaughlin School of Elec. and Comp. Engineering
+Georgia Institute of Technology
+Atlanta,GA 30332
+swm@ece.gatech.edu
+
+Abstract
+In this paper we propose a constant-time parallel algorithm for implementing the message-passing decoder of LDPC codes on a two dimensional RMesh, trying to keep the number of processors small. The R-Mesh provides dynamic reconfiguration, hardware reuse, and flexibility to problem changes. To decode a different code, we may simply set up the required connections between the bit-nodes and check-nodes by modifying the initialization phase of the R-Mesh algorithm. No extra wiring or hardware changes are required, as compared to other existing approaches. Moreover, the same hardware can implement the decoder in both probability and logarithm domains. We illustrate that the R-Mesh is an efficient model for parallel implementation of the decoder in terms of time complexity, flexibility to problem changes and simplicity of routing messages.
+1. Introduction
+Low-Density Parity-Check (LDPC) codes, introduced by Gallager [1, 2] are error control codes defined by sparse parity-check matrices. These efficient block codes have attracted a lot of attention due to their remarkable bit error rate and signal to noise ratio (SNR) performance and elegant decoding scheme. LDPC codes have been accepted as part of the new Digital Video Broadcasting (DVB) standard and are the leading candidates in the next generation Wireless Local
+
+Area Network (WLAN) designs with data rates over 100 Mbps. The message-passing decoder is a competent iterative algorithm for decoding LDPC codes [1-3]. This decoder is based on groups of nodes communicating with each other by computing and sending messages. The computations may be in probability or logarithm domain, where the latter domain is more practical. The time complexity of the decoder grows linearly with the code length. This is considerable, as efficient codes have long codewords. However, the parallel architecture of the decoder allows reducing its time complexity significantly.
+There are a number of parallel implementations of the LDPC decoder in the literature that can implement the decoder in constant time. Blanksby and Howland [4] discussed the issues involved in parallel versus hardware-sharing architectures, and designed a parallel architecture for a 1024-b, rate1/2 decoder, using a 1.5-V CMOS process. AlRawi et al. [5] proposed a pipelined parallel architecture and tried to optimize the node mapping and scheduling (NP-hard) to achieve minimum conflicts in memory access. Levine et al. [6] implemented the decoder using a commercial Field Programmable Gate Array (FPGA) with lookup tables whose number increased with the number of nodes. These parallel architectures can implement the decoder in constant time. However, they do not exploit hardware reuse. Each node is implemented using extra hardware, while practically a bit-node and a check-node act in serial and they may use the same hardware without increasing the time complexity. They also employ fixed connections between a bit-node and the parity checks that include it. Thus, decoding a different code (defined
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+by a different parity-check matrix) requires modifying the hardware and the internal connections between the nodes. Implementing the decoder in a different domain (probability or logarithm) requires significant hardware modifications as well.
+Reconfiguration enables hardware reuse, scalability, and performance improvement. It also accommodates algorithms that are adaptive to data and problem changes. The most important feature of the reconfigurable bus architecture is its ability to create different interconnection topologies allowing exchanging information efficiently. These architectures use their buses as a computational resource, allowing the execution of fast parallel algorithms [8-12]. Reconfigurable models have been shown to be computationally more powerful than non-reconfigurable models [7].
+In this paper we use the 2-dimensional reconfigurable mesh (R-Mesh), which is a simple and efficient reconfigurable bus-based model [7], for parallel implementation of the message-passing decoder in logarithm domain. To design the decoder in probability domain, we may use the same mesh with some minor computational modifications in the R-Mesh algorithm.
+The proposed R-Mesh decoder runs in constant time and provides hardware reuse. The same hardware implements both a bit-node and a checknode in each iteration of the algorithm. Moreover, the same hardware may be used to implement decoders for different LDPC codes defined by different parity-check matrices. To setup the required connections between the bit-nodes and check-nodes as specified by the parity-check matrix, we only need to modify the initialization phase of the R-Mesh algorithm. Thus, designing a decoder for different LDPC codes involves no hardware modifications, as compared to other existing methods.
+This paper is organized as follows: Section 2 provides a brief introduction to the R-Mesh. Sections 3 and 4 introduce the LDPC codes and the message-passing decoder in log domain, respectively. Section 5 provides an overview of the parallel scheme used for the proposed decoder implementation. Sections 6 and 7 present the proposed algorithm and concluding remarks.
+2. The R-Mesh Model
+The Reconfigurable Mesh (R-Mesh) is a parallel model of computation that utilizes dynamic reconfiguration. An M×N R-Mesh is a two dimensional array of processors with M rows and N
+
+columns. Processor P (i, j) is the processor on row i and column j of the array.
+Each processor has four ports: N, S, E, and W. These ports connect the processor to its north, south, east, and west neighboring processors through a set of fixed external connections. Each processor can also establish 15 different internal connections among its ports. These connections are the different partitions of the set of ports, and can change locally and independently at each step of an algorithm [7]. Figure 1 shows the internal connections in a 3×5 R-Mesh.
+
+0
+
+1
+
+2
+
+3
+
+4
+
+0
+
+1
+
+2
+Figure 1 The structure of a 3u5 R-Mesh
+The combination of fixed external connections and the reconfigurable internal connections form buses with different topologies that allow efficient communication among the processors. The bus with the bold lines in Figure 1 is an example of a bus connecting ports in nine processors. We assume that the propagation delay on buses is constant [7-9]. Data written on a bus can be read in constant time by all the processors connected to the same bus. In the following sections we use RMesh to implement the LDPC decoder.
+3. Low-Density Parity-Check (LDPC) Codes
+LDPC codes are linear binary block codes defined by sparse parity-check matrices [1, 2]. An M u N parity-check matrix HM u N defines an LDPC code of length N, where each codeword c = (c1 c2 c3 … cN) satisfies M parity-check constraints. In other words, the LDPC code is the set of all vectors c satisfying c u HT = 0. The sparseness of the parity-check matrix enables near optimal decoding and the randomness ensures an efficient code probabilistically [1-3].
+Definition 1: A sparse parity-check matrix HMu N, with exactly k ones in each row, and exactly j < k ones in each column defines a regular (j, k) LDPC code. Matrix H is binary and sparse. In other words, only a small fraction of the entries of H are one and the rest are zero. Therefore, j and k are both small constants compared to N [1-3].
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+For a regular (j, k) matrix HMu N, we compute E, the number of entries of H that are equal to one as:
+
+E kuM juN
+
+(1)
+
+For example, consider the parity-check matrix H
+
+introduced in Relation 2. This matrix defines a
+
+regular (2, 4) LDPC code. Each codeword c = (c1 c2 c3 c4 c5 c6) is of length 6, and satisfies three
+
+parity-check constraints. As an instance, the first
+
+constraint defined by the first row of H specifies
+
+that c1  c3  c4  c6 = 0.
+
+ª1011 01 º
+
+H
+
+««0 11
+
+0
+
+11
+
+» »
+
+(2)
+
+¬«110110 »¼
+
+An efficient visualization of the parity-check matrix is the Tanner graph. Figure 2 shows the Tanner graph for the LDPC code defined by H in Relation 2. The upper set of nodes (circles) depicts the bits of the codeword that should be decoded. These nodes are called bit-nodes. Similarly, the lower set of nodes (boxes) depicts the parity-check constraints. These nodes are called check-nodes.
+
+r1
+
+r2
+
+r3
+
+r4
+
+r5
+
+r6
+
+j=1
+
+3
+
+4
+
+6
+
+vkj vij
+
+uij
+
+Ni = {1, 3, 4, 6} for i = 1
+
+Mj = {1, 3} for j = 1
+
+i=1
+
+ukj k=3
+
+Figure 2 Tanner graph, an example. Circles depict the
+bit-nodes and boxes depict the check-nodes.
+
+The graph has an edge between bit-node j and check-node i, if the parity-check i includes bit-node j, or H (i, j) = 1. Thus, each edge in the Tanner graph represents an entry of H that is equal to one. So, the number of edges of the Tanner graph is equal to the number of ones in H for a regular code (Equation 1). In the following sections, each upward message from check-node i to bit-node j is denoted by ui,j. Similarly, each downward message from bit-node j to check-node i is denoted by vi,j. We explain these messages further in Section 4.
+
+4. The Message-Passing Algorithm
+
+The message-passing algorithm is an efficient, iterative algorithm used for decoding LDPC codes
+
+[1-3]. The algorithm is based on passing messages from the bit-nodes to the check-nodes of the Tanner graph, and vice versa per iteration. Each node operates like a processor. It first collects the incoming messages, and then computes and sends out its own message. Figures 3 and 4 show the algorithm notations and the algorithm in log domain, respectively.
+The algorithm has two stages: initialize and iterate. Let c = (c1 c2 … cN) be the codeword transmitted on the channel (channel input), R = [r1 r2 … rN] be the received signal (noisy channel output), and G2 be the variance of channel noise. Consider the Tanner graph of the parity-check matrix that defines the code. During initialization, each bit-node 1 d j d N computes its message vj = (2 / G2) u rj and sends it down to Mj, the set of all check-nodes connected to bit-node j. Figure 2 marks the edges connected to Mj = {1, 3} for the first bit-node (j = 1) of the Tanner graph of H in Relation 2. Each iteration has two different phases: check-node update and bit-node update.
+
+R >r1 r2 r3 ...rN @
+
+: Channel output
+
+vm(l,)n :Downward message from node n to parity m,
+
+in lth iteration .
+
+um(l,)n : Upward message from parity m to node n,
+
+in lth iteration.
+
+O(nl)
+
+log¨©§¨
+
+Prrn Prrn
+
+1| 0|
+
+R R
+
+¸¸¹·
+
+Mn : Set of all parities connected to node n.
+
+Mn {i : H (i, n) 1}
+
+N m : Set of all nodes connected to parity m.
+
+N m { j : H (m, j) 1}
+
+Figure 3The algorithm notations [3].
+
+Initialize 
+
+um(0,)n 0,
+
+ m {1,2,..., M} and n N m
+
+  S O(n0) 2 /V 2 u rn,  n {1,2,..., N}
+
+Iterate  for iteration counter l 1,2,...,lmax :
+
+x (Check  node update)
+
+for m {1,..., M}and n  N m :
+
+um(l,)n
+
+
+
+2
+
+tanh 1¨§¨ ¨©
+
+ jN m
+
+n
+
+¨§ tanh¨
+©¨
+
+
+
+O(jl 1)  2
+
+um(l,j1)
+
+·¸¸· ¸¸ ¸¹¹¸
+
+x (Bit  node update)
+
+for n {1,..., N}:
+
+O(nl) (2 /V 2) u rn  ¦ um(l,)n
+mMn
+vm(l,)n O(nl) - um(l),n
+
+Figure 4The decoder in logarithm domain [3].
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+Check-node update. This phase updates the upward messages for each edge of the Tanner graph (refer to Figure 2). Assume that an edge connects check-node 1 d i d M and bit-node 1 d j d N. The upward message corresponding to this edge (ui,j) is a probability measure that indicates which value of cj (cj = 1 or cj = 0) satisfies parity-check i. This probability measure is computed based on the messages received from all the bit-nodes connected to check-node i, excluding bit-node j. Thus, during the check-node update, each check-node i computes its message using its received data, and sends the message up to Ni, the set of all the bitnodes connected to check-node i. Figure 2 marks the edges connected to Ni = {1, 3, 4, 6} for the first check-node (i = 1) of the Tanner graph of H in Relation 2.
+Bit-node update. This phase updates the downward messages for each edge of the Tanner graph. The downward message corresponding to the edge that connects check-node 1 d i d M, and bit-node 1 d j d N, is denoted by vi,j. The downward message vi,j is a probability measure indicating if cj is one or zero. This measure is computed based on the messages received from all the check-nodes connected to bit-node j, excluding check-node i. Thus, during the bit-node update, each bit-node j employs its received data to update its own message and then sends it down to all the check-nodes of the Tanner graph that are connected to it (Mj).
+These messages iterate between bit-nodes and check-nodes to finally compute the a posteriori log likelihood ratio (LLR), On = log (Pr (cn = 1 | R) / Pr (cn = 0 | R)) for each bit-node n. The number of iterations is denoted with lmax in Figure 4. The algorithm converges when there are no considerable changes in the output values, or we are within the desired degree of result accuracy. Practically, this happens after a constant number of iterations (usually no more than 10 or so). Therefore, lmax is a constant [1-3]. After convergence, we use On to decode the sequence. Positive On indicates that Pr (cn = 1 | R)  Pr (cn = 0 | R), and so cn = 1. Similarly, negative On means cn is zero. For details and derivations refer to [1-3].
+5. Overview of the Proposed R-Mesh Algorithm
+We can employ multiple processors to compute multiple messages in parallel, and reduce the running time of the message-passing decoder significantly. The proposed algorithm works on the following basis. In each iteration, the processors
+
+first compute all the upward messages, and then all the downward messages in parallel. However, each processor needs messages from some other processors for updating its own messages. Thus, we should route to each processor the data it requires. However, routing each required upward or downward message to the corresponding processors makes routing complicated, and increases the hardware size.
+Instead of routing individual messages, the proposed algorithm computes a key value P, for each check-node (using the downward messages of the edges connected to the check-node) and broadcasts it to the processors that compute the upward messages for these edges. It also computes a key value S, for each bit-node (using the upward messages of the edges connected to the bit-node) and broadcasts it to the processors that compute the downward messages for these edges. We design the proposed algorithm based on the following principle.
+Principle 1: Any processor that is computing the upward (downward) message for a given edge holds the downward (upward) message corresponding to this edge locally, at the time of computation. The processors might have computed this local data or received it from other processors.
+In the R-Mesh implementation each processor computes this local data itself at the preceding check-node or bit-node update. Section 6.2 provides the details.
+The proposed algorithm updates the messages as follows. Consider the update for a given checknode m. The processors computing the upward message um,j for 1 d j d N hold vm,j locally (Principle 1). These processors team up and compute the key value P by Equation 3.
+
+P
+
+jN
+
+m
+
+tanh
+
+¨§ ¨ ©
+
+
+
+vm(l,) j 2
+
+¸· ¸ ¹
+
+(3)
+
+N m { j : H (m, j ) 1}
+
+Then, the corresponding processor computes the
+
+upward message um,k for 1 d k d N, by excluding the downward message vm,k from its received product P
+(Equation 4). According to Principle 1, the
+
+processor holds vm,k locally. Thus, we only need to route P. Note that combining Equations 3 and 4
+
+results in the same check-node update equation of
+
+the message-passing algorithm in Figure 4.
+
+   um(l,)k  2 tanh1 P / tanh  vm(l,)k / 2
+
+(4)
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+Similarly, during the update for a given bit-node n, the processors that should compute the downward message vi,n for 1 d i d M team up to compute the key value S by Equation 5.
+
+¦ S (2 / V2 )rn  ui(,ln) iM n
+
+(5)
+
+Mn {i :H (i, n) 1}
+
+Then, the corresponding processor computes the downward message vk,n for 1 d k d M, by excluding the upward message uk,n from its received summation S (Equation 6). Using Principle 1, we only need to route S to the processors. Then, each processor can use its received key value S and local data to compute its upward or downward message.
+At the end of each iteration l, the processors compute the a posteriori log likelihood ratio for each bit-node n by Equation 7. Equations 5, 6 and 7 are taken from the algorithm in Figure 4.
+
+v k(l,)n
+
+S
+
+
+
+u
+
+(l) k,n
+
+(6)
+
+¦ O(nl) (2 / V2)rn  ui(,ln) S
+
+(7)
+
+iM n
+
+Note that the bit-node update is based on binary
+
+addition and subtraction, and is simply completed
+
+by XOR operations.
+
+6. The Proposed Implementation
+
+We explain the proposed implementation in the following sections. We explain the implementation model, the inputs and the output of the algorithm. We also present the proposed algorithm in detail, and clarify it by an example. We complete the section with the algorithm time complexity analysis.
+
+6.1 The Implementation Model Consider the LDPC code defined by a given
+parity-check matrix HM×N. We use an N×M (the same size as HT) R-Mesh to implement the decoder for this code. The hardware has one row for each bit-node and one column for each check-node of the Tanner graph of H. Note that we number the rows and columns of the R-Mesh from 1 to N and 1 to M, respectively.
+Input: The algorithm inputs are, 1. R , the channel output. 2. G2, the variance of channel noise. 3. Mn, the set of the parity-checks that include bit-node 1nN. Mn = {i:H(i, n) =1} for 1didM.
+Output: The algorithm output is the a posteriori log likelihood ratio On = log (Pr (cn = 1|R) / Pr (cn =
+
+0|R)), for each bit-node n. The output On is a probability measure indicating if the bit-node is zero or one based on the channel observation.
+6.2 The Proposed Algorithm The algorithm has two stages: initialize and
+iterate. At the beginning of initialize stage, each processor sets its port configuration to {NS, EW}. This stage initializes the local variables for each of the processors, maps the Tanner graph to the RMesh by marking the processors as required, makes lists of the marked processors, and determines the head of each list. Figure 5 shows the initialize stage of the proposed algorithm. The algorithm maps the Tanner graph of the LDPC code to the R-Mesh by assigning each edge of the Tanner graph to one processor.
+Initialize  / * r,M,G , and flag are local varriables for each processor * / / * The upward and downward messages for each processor P are denoted by uP and vP * / for each processor Configure {NS,EW}. for each processor P(i,1) where 1 d i d N r read (ri ). broadcast r to row i. for all the receiving processors r The received data. for each P(i,1), where 1 d i d N /* recall that Mi {m : H (m, i) 1} * / M read Mi . broadcast M on row i. for all the receiving processors M The received data. for each processor P G read ( varriance of channel noise ).
+  vP 2 / G 2 u ri i {1,2,..., n}.
+/* mark the processors * / for all processors in each column j
+if M includes j, then flag 1. for each column j / * Make a list of nodes connected to jth parity on jth col. * / / *by neighbor localization on marked processors * /
+compute col  list j . find head of list. for each row i / * Make a list of Parities connected to node i on row i * / /* by neighbor localization on marked processors * / compute row  listi . find head of the list.
+Figure 5 Initialize stage of the proposed algorithm.
+Processor P (n, m), where 1  n  N and 1  m  M is assigned to compute messages um,n and vm,n for the edge between parity-check m and bit-node n in
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+the Tanner graph, if any. Each processor updates both the upward and downward messages of its assigned edge. If there is not an edge between parity-check m and node n in the Tanner graph then processor P (n, m) does not update any messages. The processors that contribute in updating messages set their local variable flag to one, and are referred to as marked processors. Note that there is a one to one relation between the location of ones in HT and the location of marked processors in the R-Mesh. The unmarked processors mainly set up connections among the marked processors as required. After marking the processors, neighbor localization [7] is used to make lists of the marked processors on each row (row-list) and also the marked processors on each column (col-list). The idea is to establish a bus between any two successive marked processors on a row or a column, by fusing the ports of all the unmarked processors between them. For example, to make lists on a row, each marked processor writes its index to its west port and reads from its east port to identify the first marked neighbor to its right.
+The initialize stage of the algorithm, also determines the head of each list. If the marked processors write their indices to their east ports and read from west ports then the row list is reversed. Then, the head of the list can be determined as the only marked processor without a neighbor to its left [7]. A similar method finds the head of a column list.
+During the second stage of the algorithm (iterate), the processors update the messages until convergence. Figure 6 shows the iterate stage of the proposed algorithm.
+The marked processors of each column list 1djdN team up to compute the key value Pj by Equation 3. The processors compute Pj using their downward messages and tree structure multiplication [7]. The head of each list holds the result and broadcasts to every processor in the list. Each marked processor P picks the product up, and computes its upward message uP by Equation 4 using its local data vP, and the received product P.
+Next, the marked processors of each row list 1didN team up to compute the key value S by Equation 5, using their upward messages and tree structure summation [7]. Similarly, the head of each list holds the result and broadcasts to the processors in the list. Each marked processors P picks the summation up, and computes its downward message vP by Equation 6, using its local upward message uP and the received summation S. Thus, the iteration is complete.
+
+Iterate 
+
+for iteration counter from 1 to lmax for each col  list j
+
+/ * compute P j by Equ. 3, and tree structure multiplication * /
+
+ P j
+
+tanh§¨  vP ·¸.
+
+Pmarked proc. of col list j
+
+©2¹
+
+/* The head of the list will hold P j * /
+
+Head of col  list j broadcasts P j on column j.
+
+for each marked processor P on col  list j
+
+P The received data.
+
+/* compute uP by Equation 4 * / uP 2 tanh1(P / tanh(vP / 2)). for each row  list i
+
+/ * compute S by Equation 5, and tree structuresum * /
+
+Si
+
+¦uP
+
+Pmarked proc. of rowlist i
+
+/* The head of the list will hold Si * / Head of row  list i broadcasts Si to processors on row i. for each marked processor P on row  list i
+
+S The received data.
+
+/* compute vP by Equation 6 * / vP S  uP.
+
+Figure 6 The Iterate stage of the proposed
+algorithm.
+
+The algorithm converges after a constant number of iterations lmax, as described in Section 4. After convergence, the first processor of each row n holds On, the output value for bit-node n. This output is used to decode the nth bit of the received codeword. Note that once the upward messages are computed, the same processors compute the downward messages, and no extra hardware is required. Hardware reuse reduces the number of processors and so the size of the R-Mesh. We may also replace equations 3 to 7 with the equivalent probability domain equations to design a new probability domain decoder.
+
+6.3 An Illustrative Example Figure 7 shows the hardware for the regular (2,
+4) LDPC code defined by the matrix H3×6 in Relation 2. This matrix defines LDPC code with code length n = 6, and 3 parity-check constraints. Thus, the hardware is a 6×3 R-Mesh.
+As Figure 7 shows, there is a row of processors for each bit-node and a column of processors for each check-node. Each square represents a processor. The figure also shows the marked processors, the messages they compute, and the input values Mn for each marked processor. Recall that Mn is the set of all check-nodes connected to bit-node n.
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+Note that there is a one to one relation between the location of ones in the transposition of the parity-check matrix (HT) and the location of the marked processors in the R-Mesh. The figure also shows the direction of broadcasting the key values P and S during check-node update and bit-node
+update of each iteration, respectively.
+
+S
+P
+M1 = {1, 3} u11, v11
+
+M1 = {1, 3} u31, v31
+
+M2 = {2, 3} u22, v22
+
+M2 = {2, 3} u32, v32
+
+M3 = {1, 2} u13, v13
+
+M3 = {1, 2} u23, v23
+
+M4 = {1, 3} u14, v14
+
+M4 = {1, 3} u34, v34
+
+M5 = {2, 3} u25, v25
+
+M5 = {2, 3} u35, v35
+
+M6 = {1, 2} u16, v16
+
+M6 = {1, 2} u26, v26
+
+Figure 7 The hardware implementation of the regular
+(2, 4) LDPC code defined by H in Relation 2.
+6.4 Time Analysis The following theorem analyses the time
+complexity of the proposed decoder.
+Theorem 1: The message-passing decoder of the LDPC code defined by a regular (j, k) sparse parity-check matrix HM×N, runs on an NuM R-Mesh in constant time.
+Proof: The initialize stage of the proposed algorithm (refer to Figure 5) mainly includes constant-time instructions for reading and broadcasting the input values. This stage also includes neighbor localization on columns and rows of the R-Mesh, in that order, to make onedimensional column and row lists, followed by finding the head of each list. A one-dimensional RMesh can perform both in O(1) time, as well [7].
+The message-passing algorithm converges after a constant number of iterations, denoted with lmax [1-
+
+3]. Thus, the main loop of the iterate stage (refer to
+
+Figure 6) requires a constant number of iterations.
+
+Each iteration includes computing the key values
+
+P and S. For a regular (j, k) code, the key values P
+
+and S are the product of at most k and sum of at
+
+most j < k numbers. Using tree structure
+
+operations, the R-Mesh can compute the key values
+
+in at most O(log k) time [7], where k is a constant
+
+by the definition of regular LDPC codes in Section
+
+3. After computing the key values, the R-Mesh can
+
+broadcast these values to the required processors,
+
+and update the messages in O(1) time. Thus, using
+
+the R-Mesh and the proposed algorithm, the
+
+decoder runs in constant time.
+
+Ŷ
+
+7. Conclusions
+
+We illustrated that an NuM R-Mesh implements the message-passing decoder of the LDPC code defined by a sparse parity-check matrix HM×N, in constant time. Let E be the number of edges in the Tanner graph of H or the number of ones in H. Among these NuM processors, E processors are marked and contribute in message computations. Each marked processor computes a pair of messages per iteration. The rest are mainly used to simplify routing messages. Instead of routing each and every required message, two key values are computed and broadcasted to the corresponding processors. In each of the iterations, the processors use their local data and these key values to update their messages. This approach helps reduce routing and hardware complexities significantly.
+The R-Mesh is an efficient model for implementing the message-passing decoder. It provides dynamic reconfiguration, hardware reuse, and scalability. It enables decoding LDPC codes of any length, in constant time. Decoding a different code involves no architecture changes, extra wiring, or reordering hardware blocks, as compared to other existing methods. Moreover, the same hardware implements the decoder in both logarithm and probability domains.
+References:
+[1] R. G. Gallager, “Low-Density Parity-Check Codes,” IRE Trans. Inform. Theory, vol. IT-8, pp. 21– 28, Jan. 1962. [2] R. G. Gallager, “Low-Density Parity-Check Codes,” MIT Press, Cambridge, MA, 1963. [3] John R. Barry, “Low-Density Parity-Check Codes,” http://users.ece.gatech.edu/~barry/6606/handouts/ldpc. pdf. [4] A.J. Blanksby, C. J. Howland, “A 690-mW 1Gb/s 1024-b, rate-1/2 low-density parity-check code
+
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+decoder,” IEEE Journal of Solid-State Circuits, vol. 37, pp. 404-412, March 2002. [5] G. Al-Rawi, J. Cioffi, R. Motwani, M. Horowitz, “Optimizing iterative decoding of lowdensity parity check codes on programmable pipelined parallel architectures,” IEEE Globecom Conf., vol. 5, pp 3012-3018, Nov. 2001. [6] B. Levine, R. R. Taylor, H. Schmit, “Implementation of Near Shannon Limit Error Correcting Codes Using Reconfigurable hardware,” IEEE Symposium on Field-Programmable Custom Computing Machines, pp. 217 – 226, April 2000. [7] R. Vaidynathan and J. L. Trahan, Dynamic Reconfiguration: Architectures and Algorithms, Kluwer Pub., 2003. [8] K. Nakano, “A Bibliography of Published Papers on Dynamically Reconfigurable Architectures,” Parallel Proc. Letters, vol. 5, pp. 111124, 1995. [9] Z. Guo, R. Melhem, R. Hall, D. Chiarulli, and S. Levitan, “Array processors with pipelined optical busses,” Journal of Parallel Distributed Computing, vol. 12, pp 269_282, 1991. [10] S. Pavel and S. G. Akl, “Integer sorting and routing in arrays with reconfigurable optical buses,” Proc. International Conf. on Parallel Processing, pp. 90-94, 1996. [11] C. Qiao and R. Melhem, “Time-division optical communications in multiprocessor arrays,” IEEE Trans. on Computers, vol. 42, pp 577-590, 1993. [12] J. L. Trahan, A. G. Bourgeois, Y. Pan, and R. Vaidyanathan, “An Optimal and Scalable Algorithm for Permutation Routing on Reconfigurable Linear Arrays with Optically Pipelined Buses,” Journal of Parallel and Distributed Computing, vol. 60, pp. 1125-1136, 2000.
+Proceedings of the 19th IEEE International Parallel and Distributed Processing Symposium (IPDPS’05) 1530-2075/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:01:41 UTC from IEEE Xplore. Restrictions apply.
+
+

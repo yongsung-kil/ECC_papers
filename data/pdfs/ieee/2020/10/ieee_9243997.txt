@@ -1,0 +1,284 @@
+FPGA implementation of LDPC decoder for 5G NR with parallel layered architecture and adaptive normalization
+
+Alexandr Katyushnyj1, Aleksei Krylov2, Andrey Rashich3 Peter the Great St. Petersburg Polytechnic University
+St. Petersburg, Russia 1a-katushnii@yandex.ru, 2krylov ae@spbstu.ru,
+3rashich@cee.spbstu.ru
+
+Chao Zhang4, Kewu Peng5 Tsinghua University
+Beijing, China 4z c@tsinghua.edu.cn, 5pengkewu@tsinghua.edu.cn
+
+Abstract—This paper presents the FPGA ASIC-like implementation of LDPC decoder for 5G NR BG2 and single lifting factor. The proposed implementation has two main features: architectural and algorithmic. The first is the parallel layered architecture with special offsets and inter-layer network which provides great scalability for variable lifting factors support. The second one is an adaptive normalization approach to increase decoder BER performance. The proposed implementation requires relatively small number resources of Xilinx Kintex Ultrascale FPGA and provides 1 information bit/s/cycle throughput for 10 iterations.
+Keywords—5G, LDPC, parallel layered decoder.
+I. INTRODUCTION
+Gallager proposed LDPC codes in 20th century [1], but they took their place in applications only in the current one. Fifth generation new radio (5G-NR) wireless systems use LDPC codes for channel coding in most scenarios and discard the turbo codes. 5G-NR LDPC codes [2] are Quasi-Cyclic (QCLDPC) [3] codes and two base graphs are presented in the standard [4]. The standard also presents 51 different lifting factors z for check matrices, constructed on those base graphs, as well as puncturing and shortening tools for rate matching.
+Since LDPC codes are widely used in different standards, there are many proposed architectures and hardware implementations of LDPC decoders designed for Wi-Fi, WiMax, DVB-S2, S2x, etc. All these solutions should be selected and adopted to 5G NR usage. In 5G specification there are three usage scenarios – eMBB (Enhanced Mobile Broadband), URLLC (Ultra-Reliable Low-Latency Communication) and mMTC (Massive Machine-Type Communications). These scenarios split up users with common link requirements into three groups. The highest data rate under ideal conditions is 20 Gbps with 4 ms latency specified for eMBB. This requirement creates a challenge for efficient hardware decoder architecture that also need to be flexible enough to support all lifting sizes.
+LDPC code decoding is usually performed with iterative message-passing algorithms, based on Belief-Propagation al-
+This research work was supported by Peter the Great St. Petersburg Polytechnic University in the framework of the Program “5-100-2020”, and partially sponsored by the University Collaboration Project between Peter the Great St. Petersburg Polytechnic University and Tsinghua University.
+
+gorithm (BPA). These algorithms use bipartite Tanner graph representation of LDPC and calulate two types of messages that are passed from one graph half to another. Since BPA is computationally inefficient, Min-Sum [5] algorithm (MSA) is often used as its approximation. Normalized Min-Sum algorithm (NMSA) uses additional messages normalization with a precalculated constant to make a more accurate approximation to BPA. In this work we use Adaptive Normalized MSA (ANMSA) [6], with different normalization constants depending on channel conditions and check node conditions. This further precises MSA approximation and gives an extra tuning for messages [7] since 5G NR LDPC codes are highly irregular and have many low-degree nodes and thus suffer from large performance degradation.
+LDPC MSA decoder architecture design starts with scheduler selector. Two well-known schedulers are flooded, with all messages calculated in independently within one iteration and the parallel scheduler that provide several aposteriori LLR vector updates during one iteration. The parallel scheduling is more preferable and more widely used, since it provides average number of iteration reduction and more scalable to higher block lengths. However, the layered decoder shows higher iteration duration since all layers are processed sequentially.
+Parallel Layered Decoder (PLD) [8] is a modification of layered decoder that processes all layers in parallel and thus has lower iteration duration. This helps to reduce overall decoder latency and meet 5G NR requirements. This scheduler uses a set of RAM blocks for interlayer communication and thus the decoder could be easily reconfigured for different lifting sizes modes. In order to provide parallel calculations in all layers decoder uses a set of precalculated offsets that alter the order of the parity check matrix rows processing within the current layer, in a way that eliminates interlayer interference.
+Loosely coupled algorithm (LCA) [9] is another trick that reduces decoder interconnections and makes possible PLD scheduling. In case LCA no variable-to-check messages are calculated and thus there are no explicit variable node processing units in the design. This is possible if each check node stores its output messages from previous iteration and
+
+978-1-7281-8878-2 / 20 / $ 31.00 © 2020 IEEE
+
+34
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:19:06 UTC from IEEE Xplore. Restrictions apply.
+
+Interconnection network
+
+in1
+
+out1
+
+LPU1
+
+...
+
+...
+
+in8 out8
+* ...
+
+HardDec AndSave
+
+Bus.WE
+
+Hard decision register
+
+Bus.data
+
+enable
+
+...
+
+data
+
+Out
+
+address
+
+Bus.adr
+
+adr_bias +
+
+Address overflow control
+
+in1
+
+out1
+
+HardDec AndSave
+
+Fig. 2. HardDecAndSave block architecture
+
+LPU42
+
+...
+
+...
+
+in4 out4
+
+LLR memory
+
+Other layers LPUs
+
+Control unit N×BLLR
+
+Input register
+
+Channel_LLRs
+
+...
+
+Constant ROM
+*
+Decoder iteration controller
+
+Hard_decision
+
+Information block constructor
+
+N×BLLR
+
+N×BLLR
+
+Other layers LLR memories
+
+Check Node Unit
+
+Input data source Channel LLR
+Selection unit
+
+Fig. 1. Parallel layered decoder overall architecture
+uses them during calculation on the current one to recover implicit variable-to-check messages.
+Current 5G LDPC decoder implementations are rather scarce and often do not pay attention to all aspects and requirements of 5G standard. Papers [10], [11] gives FPGA implementation results for 5G LDPC layered decoder, but proposed architecture does not support variable lifting sizes. Thus in this paper we present an effective 5G-NR LDPC decoder hardware architecture and its implementation results using FPGA Xilinx Ultrascale XCKU060.
+This paper is organized as follows. Implemented LDPC decoder hardware architecture and its main functional blocks are presented in Section II. Performance and resources results after FPGA implementation are provided in Section III. Final conclusions are drawn in Section III.
+II. DECODER HARDWARE ARCHITECTURE
+Decoder architecture (shown in Fig. 1) consists of NL Layer Processing Units (LPU), one for each layer in the decoder. Each LPU has ki input and ki output ports for communication with other layers’ LPUs. Each LPU input and output is connected toto Interconnection Network (IN), consisting of data buses that connect different layers. IN has rigid structure and does not change during decoding. Each LPU input is a bus that aggregates LLR value, write enable signal and address signal.
+Some of LPUs’ outputs are connected to HardDecAndSave blocks that collect output LLRs during each iteration and store their signs. Thus, if some iteration ends with all parities verified, then solution information block would be ready on
+
+N×Bmsg
+Check messages memory
+Fig. 3. Layer Processing Unit block architecture
+decoder output. This block is presented in Fig. 2 and consists of a hard descision register and address conversion logic, since addresses in LPU communication differ from those in codeword and output information block.
+Each LPU (see Fig. 3) has two RAM blocks, first one is for check messages from previous decoder iteration(see [9] for LCA). The second RAM is for aposteriori LLR (APLLR), it is filled with channel LLRs during the first decoding iteration and updated by other layers through Selector blocks during the following ones. The main LPU subblock is check node processing unit (CNPU) that updates APLLRs according to LCA. Fig. 3 shows bit widths for wires that depend on LLR bit width BLLR, check messages bit width Bmsg and number of LPU inputs N .
+In order to use pipeline mode for as many z cases, as possible, we set number of pipeline stages in CNPU to 1. This will cause quite long maximum combinatorial path through this block and CNPU will become the bottleneck for clock frequency used for the decoder. But in case of further ASIC implementation this drawback becomes smaller, while the decoder latency in clock cycles remain minimal, thus increasing the throughput.
+Fig. 4 shows check node unit architecture. This block performs calculations according to ANMSA loosely coupled algorithm and presented in each LPU block. Since 5G LDPC code is irregular and check node have different degrees,
+
+35
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:19:06 UTC from IEEE Xplore. Restrictions apply.
+
+out1
+
++
+
++
+
+x
+
+CV update
+
+α Register Signs and Parity bit and Selector XOR
+
+min1 min2
+
+...
+
+...
+
+...
+
+Min bus
+N-input 2-min net
+
+CV update
+
+x
+
+out2
+
++
+
++
+
+complicated interlayer interconnection network. The target clock frequency was set to be 1/14 ns ≈ 71 MHz. The synthesis results are shown in Table I. This is the summary of all logic resources, used by decoder: look-up-tables (LUTs), flip-flops (FFs) and block RAMs (BRAMs).
+
+TABLE I LDPC DECODER SYNTHESIS RESULTS IN XILINX ULTRASCALE
+XCKU060
+
+Strategy Flow AreaOptimized high Flow PerfOptimized high Flow AlternateRoutability Utilization, %
+
+LUTs 33423 32896 38889 ∼ 12
+
+FFs 24666 24543 24755 ∼4
+
+BRAMs 140.5 137.5 130.5 ∼ 13
+
+-
+
++
+
++ ...
+
+...
+
+2'sC
+
+sign mag
+
+Fig. 4. Check Node Unit block architecture
+different LPUs and their CNU have different number of input and output ports. The average check node degree for BG2 is 4.7, while the highest value is 10. This means the sorting nets in CNU have different sizes and there are different numbers of block RAMs, needed for storing check node messages and APLLRs. But even the biggest sorting net with 10 inputs still fits the design with one clock cycle per LPU calculation, since it critical path contains only 12 logic layers.
+III. IMPLEMENTATION RESULTS
+The developed LDPC decoder with parallel layered scheduler from [8] and adaptive normalization from [12] was implemented in RTL using VHDL language. The main target for development is ASIC prototyping for 65 or 45 nm technology, 500 MHz clock frequency. Thus no registers were used for pipelining, as it is done in FPGAs, not to decrease the decoder throughput. Also the preliminary decoder synthesis was made in FPGA Xilinx Ultrascale XCKU060 for verification and testing.
+Several Vivado synthesis strategies were used for project synthesis: Flow AreaOptimized high, Flow PerfOptimized high and Flow AlternateRoutability. The strategies were chosen to check different synthesis approaches: the first one performs optimizations to reduce resources, the second one works for high clock frequency (no resource sharing, insert equivalent registers, etc.) and the third one performs optimizations which creates alternative logic technology mapping for better routing results. The latter strategy is important because the decoder has rather
+
+...
+
+2'sC
+
+sign mag
+
+APLRR
+
+Check messages
+
+The target Ultrascale XCKU060 FPGA has 331680 LUTs, 663360 FFs and 1080 BRAMs total. Note that the additional multipliers, which implement the adaptive normalization, require only 1500 LUTs (6-bit width). This is not greater than 4% of decoder total LUT utilization but provides a coding gain of about 0.2 dB for BER below 10−5 [12].
+Generally, the first strategy Flow AreaOptimized high does not manage to meet the clock constraint, resulting with the worst timing slack of −3.722 ns and the maximum number of logic levels equal to 41. The other two synthesis strategies perform well and provide the worst timing slack of 0.186 ns (Flow PerfOptimized high) and 1.365 ns (Flow AlternateRoutability). The maximum number of logic levels for these strategies is 26 and 24 respectively. Such a long critical path is quite a high value for FPGAs and badly limits maximum clock frequency. ASICs in turn provide the ability to use long paths in terms of logic levels number (up to 40 and more depending on target technology), which avoids the flip-flop overusage and high processing latency and, finally, increases decoder throughput. Of course, the logic levels in FPGAs and ASICs differ from each other, but the above values provide a rough picture of synthesis results.
+The Flow AlternateRoutability strategy tends to use less BRAMs in price of higher LUTs utilization, while other two strategies utilize more BRAMs to reduce number of used LUTs.
+The overall decoder incorporates two main block types: HardDecAndSave and LPU. The LPU blocks perform all functional operations in the decoder and HardDecAndSave collects data bits for output. There are 10 HardDecAndSave blocks and 42 LPUs in the design. LPU resource consumption varies depending on the number of input LLR buses. The resource consumption by HardDecAndSave and LPU blocks is presented in Table II.
+
+TABLE II RESOURCES OF MAIN DECODER SUBBLOCKS
+
+Block HardDecAndSave LPU
+
+LUTs 384 or 780 250-1396
+
+FFs 2304 35
+
+BRAMs 0 2-3.5
+
+36
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:19:06 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III RESOURCE COMPARISON OF THE PROPOSED ARCHITECTURE WITH OTHER
+EXISTING ARCHITECTURES
+
+Resources
+LUTs
+FFs BRAMs Decoding cycles (10 iterations) Throughput, MBit/s
+
+[10] 28450 +858 MUXes 3749 NA 176640 5
+
+[11]
+30605
+NA 22 5440 87 (?)
+
+Proposed
+32896
+24543 137.5 3840 369
+
+The implemented LDPC decoder has one LPU per each layer, which processes one row of check matrix for one clock cycle. Thus it requires z clock cycles to process all check matrix rows during one decoder iteration. Decoder throughputs T Hcoded (for coded bits rate) and T Hinfo (for information bits rate) can be calculated as following:
+
+T Hcoded = NcodedFclk/(zNIter)
+
+(1)
+
+T Hinfo = 10zFclk/(zNIter) = 10Fclk/NIter
+
+where Ncoded is the coded block size, Fclk is the target clock frequency and NIter is the number of decoder iterations. Given Fclk = 71 MHz from synthesis results, z = 384 for BG2 and Ncoded = 384 · 52 = 19968 the decoder throughput is 369.2 MBit/s (coded bit rate) and 71 MBits/s (decoded bit rate). Note that the implemented decoder has 1 bit/s/cycle information bit throughput for 10 iterations.
+We compare our results with FPGA LDPC decoder implementations from [11] and [10] (III). Both papers use Xilinx 7-series architecture. In [10] the maximum clock frequency is 34 MHz, and it was used to calculate the throughput. The [11] does not provide the information about maximum clock frequency, thus we considered it to be the same as in our design. From Table III we can see that all the designs have approximately the same LUT consumption. The [10] utilizes the lowest number of FFs, while [11] has lowest number of BRAMs. Note, that our implementation provides higher throughput compared to reference designs.
+
+CONCLUSION
+The highly scalable compact FPGA ASIC-like implementation of LDPC decoder for 5G NR is presented. It is based on the known parallel layered scheduler combined with special interlayer network and adaptive normalization approach. The first two features provide very simple and approximately nonresource consuming decoder scalability for various lifting factor values. The latter one provides 0.2 dB coding gain for low BERs in price of small number of additional LUTs (< 4% of total utilization).
+If the number of supported lifting factors is greater than 1, the implemented decoder requires only interlayer network modification and does not need to change the number of PUs, various folding techniques usage and additional controllers implementation for switching between modes inside decoder.
+The proposed implementation utilizes approximately the same number of LUTs as referenced designs and has higher
+
+FFs and BRAMs consumption, but provides much higher
+throughput: 369 vs 87 and 5 MBit/s. Moreover, the proposed
+implementation naturally scales to multiple lifting factors
+support. The main limitation of the implemented decoder
+appears for small lifting factor values. For them it is necessary
+to freeze the decoder for several clock cycles during one
+iteration to provide enough time for Check messages memories
+to update. This reduces the decoder throughput.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, January 1962.
+[2] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5g new radio,” IEEE Communications Magazine, vol. 56, no. 3, pp. 28–34, March 2018.
+[3] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, 2004.
+[4] 5G;NR; Multiplexing and channel coding, document TS 38.212, V15.04.0,3GPP, dec 2018.
+[5] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[6] Y. Liu, K. Peng, C. Pan, and L. Fan, “Genie-aided adaptive normalized min-sum algorithm for ldpc decoding,” in 2015 International Wireless Communications and Mobile Computing Conference (IWCMC), Aug 2015, pp. 221–225.
+[7] T. J. Richardson, “Adjusted min-sum decoder,” Patent 20 180 109 269, April, 2018. [Online]. Available: https://www.freepatentsonline.com/y2018/0109269.html
+[8] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic ldpc codes,” IEEE Journal on Selected Areas in Communications, vol. 27, no. 6, pp. 985–994, August 2009.
+[9] Se-Hyeon Kang and In-Cheol Park, “Loosely coupled memory-based decoding architecture for low density parity check codes,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 53, no. 5, pp. 1045–1056, May 2006.
+[10] A. Verma and R. Shrestha, “A new partially-parallel vlsi-architecture of quasi-cyclic ldpc decoder for 5g new-radio,” in 2020 33rd International Conference on VLSI Design and 2020 19th International Conference on Embedded Systems (VLSID), 2020, pp. 1–6.
+[11] J. Liu, H. Wang, C. Shen, and J. Lee, “Low-complexity ldpc decoder for 5g urllc,” in 2018 IEEE Asia Pacific Conference on Postgraduate Research in Microelectronics and Electronics (PrimeAsia), 2018, pp. 43–46.
+[12] Y. Liu, K. Peng, C.-Y. Pan, and L. Fan, “Adaptive normalized minsum algorithm for ldpc decoding,” 2013 9th International Wireless Communications and Mobile Computing Conference (IWCMC), pp. 1081–1084, 2013.
+
+37
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:19:06 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,1278 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+4723
+
+LVDE: A Lightweight Threshold Voltage Distribution Estimation Strategy for
+High-Performance 3-D Nand Flash Memory
+Zhelong Piao , Debao Wei , Member, IEEE, Huqi Xiang , Liyan Qiao , Member, IEEE, and Xiyuan Peng
+
+Abstract— Low-density parity-check (LDPC) codes are now broadly employed as error correction code (ECC) solutions in NAND flash memories. With the rapid development of high-performance three-dimensional (3-D) NAND memories, mitigating the read latency caused by LDPC decoding attempts has emerged as an investigation focus. Existing investigations have demonstrated that efficient memory sensing is crucial to enhancing the efficiency of LDPC decoding attempts. The optimal memory sensing parameter options are determined by the threshold voltage distributions of NAND flash, which are difficult to be dynamically extracted during data retention. To address the issue, this article proposes an online lightweight strategy for threshold voltage distribution estimation, named LVDE. LVDE suggests a probe wordline design that uses one-read sampling to measure the threshold voltage distributions during longterm retention. Further, LVDE develops a methodology for the cross-layer estimation of threshold voltage distributions, thereby utilizing the measurements of the probe wordline to estimate those of each layer. LVDE is implemented on real flash chips to compare with numerous state-of-the-art strategies. Experimental results demonstrate that LVDE can significantly enhance the efficiency of LDPC decoding attempts and thus improve the read performance of 3-D NAND flash memory.
+Index Terms— 3-D NAND flash memory, threshold voltage distribution, retention loss, optimal read voltage, LDPC code, read performance improvement.
+I. INTRODUCTION
+THREE-DIMENSIONAL (3-D) NAND flash is now receiving widespread attention as the mainstream non-volatile memory medium. To meet the exploding data storage demands in the consumer market and data centers, the storage capacity and density of 3-D NAND flash memories have been continuously improved in recent years. This development is mainly driven by the high-bit cell and layer stacking techniques [1], [2], [3], [4], [5]. However, advanced process techniques also induce significant data reliability degradation on 3-D NAND flash memories [6], [7], [8]. To address this
+Received 1 October 2024; revised 12 December 2024; accepted 2 January 2025. Date of publication 17 January 2025; date of current version 29 August 2025. This work was supported in part by the Natural Science Foundation of Heilongjiang Province under Grant LH-2023F015, in part by the Aeronautical Science Foundation of China under Grant JZJJX20210009, and in part by the Fundamental Research Funds for the Central Universities under Grant HIT.NSFJG202209. This article was recommended by Associate Editor X. Fong. (Corresponding author: Debao Wei.)
+The authors are with the School of Electronics and Information Engineering, Harbin Institute of Technology, Harbin 150080, China (e-mail: 20B905028@ stu.hit.edu.cn; weidebao@hit.edu.cn; 23S105150@stu.hit.edu.cn; qiaoliyan@ hit.edu.cn; pxy@hit.edu.cn).
+Digital Object Identifier 10.1109/TCSI.2025.3526378
+
+issue, low-density parity-check (LDPC) codes are broadly adopted as the error correction code (ECC) solutions on 3D NAND flash memories [9]. Except for providing a considerable error correction capability of hard decisions, LDPC can further perform soft decisions utilizing the read retry mechanism of modern 3-D NAND flash, thereby significantly enhancing the error correction capacity of a memory channel. Nevertheless, the read retries caused by LDPC soft decisions can significantly degrade the memory read performance [10]. On the other hand, the error correction capability of LDPC hard decision is maximized by applying accurate optimal read voltages (Vopt ), the tracking for which can also induce significant sampling latency [11]. In summary, diminishing the read latency caused by LDPC decoding attempts has emerged as a critical target in developing high-performance 3-D NAND flash memories [12], [13], [14], [15].
+High-accuracy memory sensing, used to extract the raw information input to the LDPC decoder, is essential for improving the efficiency of LDPC decoding attempts [16]. The optimal parameters for memory sensing are determined by the threshold voltage (Vth) distributions of NAND flash. However, dynamically estimating the Vth distributions is difficult during data retention [17]. The conventional strategies generally use alternative approaches to estimate the optimal parameters, e.g., offline training a model (mapping table) between the program/erase (P/E) cycles and optimal parameters. When responding to a flash read request, this model (table) is first looked up to determine the optimal parameters based on the current P/E cycle. These approaches achieve a coarse-grained adaptivity of memory sensing to Vth distribution distortions. However, significant inter-block process variation (IBPV) has been demonstrated to exist in 3-D NAND flash memories [18], [19], [20]. When subjected to equal P/E cycles, vulnerable blocks exhibit more Vth distribution distortion due to their sensitivity to P/E cycles, whereas robust blocks exhibit less Vth distribution distortion due to their resilience to P/E cycles. In other words, IBPV causes the actual wear resulting from the P/E cycles to vary from block to block [21], [22]. As a result, a batch-level model or mapping table may cause a deviation between the predicted memory sensing parameters and the actual optimal options. On the other hand, the alternative approaches can generally only present partial memory sensing parameters for LDPC decoding, due to the lack of clear Vth distributions. As a result, few of these strategies can serve as a comprehensive solution for memory sensing.
+
+1549-8328 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4724
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+To address the above issues, this article proposes an online lightweight Vth distribution estimation strategy, named LVDE, for the extraction of optimal memory sensing parameters throughout the LDPC decoding attempts. LVDE utilizes a two-step design. In the first step, the relationship between the cell count increments within each state window and the Vth distribution drifts during long-term retention is investigated. On this basis, LVDE implements the dynamic estimation of Vth distributions on the probe wordline with one read. In the second step, the relationship between the Vth distribution mean and retention length is exploited to implement cross-layer estimation of the Vth distribution drifts, based on which LVDE develops a method to estimate the Vth distributions on each layer utilizing the measurement results of the probe wordline. At the design level, LVDE offers the following advantages: First, the sampling overhead of LVDE only consists of one wordline read, which is appreciable in practical. Second, based on the dynamically estimated complete Vth distributions, LVDE can provide comprehensive optimal memory sensing parameters throughout the LDPC decoding attempts. Third, LVDE is designed to provide efficient memory sensing rather than optimization of LDPC codes. Thus, it can be combined with various existing LDPC decoder designs to improve the memory read performance. Compared with state-of-the-art Vopt tracking designs, LVDE can reduce the average frame error rate (FER) of LDPC hard decision from 61% to 19%. Compared with state-of-the-art soft memory sensing designs, LVDE can reduce the average read latency by 45% for aging NAND flash.
+The main contributions of this article are listed as follows. 1) LVDE provides a probe wordline design where the Vth distributions over long-term retention can be measured with one read. 2) Utilizing the measurement results of the probe wordline, LVDE develops a method for estimating the Vth distributions on each layer over long-term retention without additional sampling overhead. 3) LVDE and multiple state-of-the-art designs are implemented on real flash chips for comparison. Experimental results demonstrate that compared with the state-of-theart designs, LVDE can significantly improve the efficiency of LDPC decoding attempts under various flash reliability statuses. The rest of the article is organized as follows. Section II describes the basis and background of this work. Section III elaborates the details of the proposed strategy. A series of evaluations are presented in Section IV, followed by the conclusion in Section V.
+II. BACKGROUND AND RELATED WORK
+A. Basic of 3-D NAND Flash
+Now describe the mechanism of 3-D NAND flash implementing data storage from the physical level [6]. The basic unit for 3-D NAND flash implementing data storage is called a cell. As shown in Fig. 1(a), cells are organized into the structure called block, which is the basic unit of data erasure in 3-D NAND flash. The position of a cell in a block is determined
+
+Fig. 1. Illustration of data storage based on 3-D NAND flash. (a) Layer-stacked block structure. (b) Mapping between the cell Vth and stored 3-bit data for TLC technique.
+by the index of its bitline and wordline, the former and the latter being parallel to the x- and z-axis directions, respectively. In addition, a certain number of wordlines are arranged side by side parallel to the x-y plane forms a layer. This design is the difference between 3-D NAND and 2-D NAND, for which all wordlines lie in the one x-z plane. As an example, the cell in Fig. 1(a) is indexed by the N -th cell of the 1st wordline on the 1st layer.
+Now illustrate the logical level mechanism by which 3-D NAND flash implements data storage [9]. Modern 3-D NAND flash employ high-bit cell designs to expand storage capacity. Among them, the triple-level-cell (TLC) technique, which stores 3 bits per cell, is currently the most popular design [2], [14]. Therefore, this work is carried out based on a TLC NAND flash model. As shown in Fig. 1(b), the three bits stored in a TLC cell are called the most significant bit (MSB), the center significant bit (CSB), and the least significant bit (LSB), respectively. The flash internal circuits perform the programming and reading of information based on cell threshold voltage (Vth). Specifically, the TLC technique utilizes seven read reference voltages (RRVs) to divide the entire Vth range into eight intervals, called state windows [6]. For a fresh or erased block, all the cells are in the S0 state with negative Vth and the stored data is 111. Programming, i.e., the writing operation, is to raise the cell Vth to a target state window by injecting charges into the cell. Under ideal conditions, the charges in a cell remain constant during data storage, and thus its Vth corresponds to a constant state. The read operation refers to the identification of the cell Vth, which in turn outputs the 3-bit data corresponding to the Vth state. For instance, if the data to be stored in a cell element is 011, it will be
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4725
+
+The Vopt offset for RRV Vi can be obtained by solving the equation of
+
+fi−1(v) = fi (v).
+
+(5)
+
+which can be rewritten as
+
+Fig. 2. Data errors are mitigated with the RRV tuned to the Vopt .
+
+(v−µi −1 )2
+
+−
+ai −1 e
+
+2σi2−1
+
+(v−µi )2
+
+−
+= ai e
+
+2σi2
+
+.
+
+(6)
+
+programmed to the S2 state after the data is written, and it will be identified as the S2 state and output 011 when the data is read. Additionally, bits with the same significance on
+
+a wordline form a page. Page is the base unit for reads and
+
+writes in flash memories. For TLC technique, pages consisting
+
+of MSBs, CSBs, and LSBs are named as extra pages (XPs),
+
+upper pages (UPs), and lower pages (LPs), respectively.
+
+In practice, the charge amount of a cell is variable during
+
+data storage. A left-shift error is caused when the Vth of a cell exceeds the left boundary of its raw state window, and a
+
+right-shift error is caused when it exceeds the right boundary.
+
+This work focuses on the issue of long-term retention loss,
+
+which can cause significant degradation of data reliability and
+
+thus has always been attracting extensive concern [23], [24].
+
+During a long-term retention period, charge leakage occurs
+
+in the cells, which in turn induces cell Vth degradation and a leftward drift of the Vth distributions. 3D NAND flash generally supports a read retry mechanism, which aims to tune
+
+the RRVs (i.e., the boundaries of the state window) to adapt to
+
+the Vth distribution distortion [25]. As shown in Fig. 2, for a pair of adjacent Vth distributions, data errors can be minimized by tuning the corresponding RRV from the default value to
+
+the distribution intersection, i.e., Vopt . Additionally, the RRV tuning step is generally discrete, i.e., an integer multiple of
+
+the minimum step (e.g., 7.5 mV for the experimental chip
+
+model in this work). In this article, OFFSET is used to denote
+
+the number of minimum steps for RRV tuning. For example,
+
+an RRV offset of −3 means tuning the RRV to the left by
+
+-22.5mV.
+
+Now describe how to determine the Vopt for a wordline, layer, or block of stored data. The Vth distribution of state Si can be written as
+
+fi (v)
+
+=
+
+ai
+
+−
+e
+
+(v−µi
+2σi2
+
+)2
+
+,
+
+(1)
+
+where ai , µi and σi are the amplitude, mean and standard deviation of the distribution, respectively. v is the Vth for any point on the distribution. Ni (v) denotes the number of cells extracted at v based on detecting state shifts for each read retry,
+the approach of which can be found in previous works [25]. Then, ai , µi and σi can be calculated via
+
+ai = max(N (v)),
+
+(2)
+
+µi =
+
+v · Ni (v) , Ni (v)
+
+(3)
+
+and
+
+σi =
+
+Ni (v) · (v − µi )2 , Ni (v)
+
+(4)
+
+respectively.
+
+Eq. (6) can be rewritten as a quadratic equation for v as
+
+Av2 + Bv + C = 0,
+
+(7)
+
+where A, B and C are denoted as
+
+A = σi2 − σi2−1
+
+B = 2 µi σi2−1 − µi−1σi2
+
+C = µi2−1σi2 − µi2σi2−1 − 2σi2−1σi2 ln
+
+ai ai −1
+
+.
+
+(8)
+
+Finally, the Vopt offset for RRV Vi is taken as the solution of Eq. (7) located between µi−1 and µi .
+
+B. LDPC Decoding on NAND Flash Memory
+
+An LDPC decoder can employ hard and soft decisions to
+
+implement error correction [16]. Hard decisions utilize the
+
+binary information of each bit, i.e., 0 or 1, to implement
+
+the decoding [26]. The main advantage of hard decisions lies
+
+in incurring a low latency since only reading the flash once.
+
+However, the error correction capacity of hard decisions is rel-
+
+atively weak, which limits their application to a wide range of
+
+flash reliability statuses. Soft decisions can enhance the error
+
+correction capacity by applying an appropriate log-likelihood ratio (LLR) for each bit [27], [28], [29]. For a given v
+
+interval, the LLR of a bit bi can be calculated via
+
+LLR
+
+(bi )
+
+=
+
+log
+
+p (bi p (bi
+
+= =
+
+1 0
+
+| |
+
+v) v)
+
+.
+
+(9)
+
+p (bi = 1 | v) and p (bi = 0 | v) represent the probability that the raw value of bi is 0 or 1 for a cell on the v interval, respectively. LLR = 0 indicates that bi = 0 is as likely as bi = 1. LLR<0 indicates that bi = 0 is more likely than bi = 1. LLR>0 indicates that bi = 1 is more likely than bi = 0.
+Eq. (9) can be rewritten as
+
+Rr
+
+fi (v)dv
+
+L (bi ) = log Rr
+
+Rl i ∈Sp Rr
+
+. (10)
+
+fi (v)dv −
+
+fi (v)dv
+
+Rl i
+
+Rl i ∈Sp
+
+Rl and Rr represent the left and right boundaries of the target v interval, respectively. Sp denotes the set of states where
+bi maps to 1. Fig. 3 depicts how to enhance the error correction capacity
+of an LDPC code by implementing effective memory sensing. This work uses READ VOLTAGE to represent the option for an RRV type. LDPC hard decision implements the memory sensing with one read voltage. All CSBs in region ⃝1 are read out as 0 while all CSBs in region ⃝2 are read out as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4726
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+Fig. 3. Illustration of the memory sensing for LDPC hard and soft decisions.
+
+1. However, for the cells in the colored area, incorrect LLR values, i.e., incorrect confidences, are applied to their MSBs for LDPC decoding. When the raw bit error rate (RBER) is under the error correction capacity of the LDPC hard decision, the misread CSBs can be corrected. Otherwise, it will lead to decoding failure. LDPC soft decision places multiple read voltages to implement the memory sensing. With the left read voltage, the CSB in region ⃝3 is still read as 0 while the CSB in region ⃝4 is read as 1. Thus, the confidence that the raw value of the CSBs in region ⃝4 is 0 drops to a finite value, e.g., an LLR of −a. Similarly, the LLR of CSBs in region ⃝5 is also reduced to a finite value, such as +b. By applying more accurate LLRs to the CSBs in regions ⃝4 and ⃝5 , LDPC can achieve more appreciable error correction capability for CSBs within the colored area.
+Besides, the overlapping part of a pair of adjacent Vth distributions, e.g., regions ⃝4 and ⃝5 in Fig. 3, are called an error-prone area [12]. The Vth values at the left boundary, right boundary, and the intersection (i.e., the Vopt ) of an error-prone region are critical in determining the specific offsets of the read voltages for memory sensing. Now illustrate how to determine the left and right boundaries, denoted as ViL and ViR, of the error-prone region for states Si−1 and Si . The boundary is determined when the ratio of adjacent Vth distributions on an offset reaches a set threshold R, which can be written as
+
+fi−1 ViL fi ViL
+
+fi ViR = fi−1 ViR
+
+= R.
+
+(11)
+
+In this work, R is set to 512 with reference to existing studies [28]. Eq. (11) can be rewritten as
+
+ViL − µi 2
+
+σi2
+
+−
+
+ViL
+
+− µi−1 σi2−1
+
+2
+
+= 2 ln
+
+R ai ai −1
+
+(12)
+
+and
+
+ViR − µi−1 2
+
+σi2−1
+
+−
+
+ViR − µi σi2
+
+2
+
+= 2 ln
+
+R ai−1 ai
+
+.
+
+(13)
+
+Finally, The left and right boundaries of the error-prone area
+
+are determined by the solutions of Eq. (12) and Eq. (13)
+
+located between µi−1 and µi , respectively.
+
+Additionally, by performing and counting the state shifts of
+
+two Si →
+
+Srie−a1d,sthweitchellVciLouanntdNViepiRr
+
+within the i-th error-prone area can be detected, which can
+
+also be calculated via
+
+Niepr =
+
+ViR ViL
+
+fi−1(v) + fi (v) dv.
+
+(14)
+
+Fig. 4. LDPC-based read process for NAND flash memories.
+
+The entropy of an error-prone area, denoted as Hiepr , can be calculated via
+
+P(state = i | v) =
+
+fi (v) fi (v)
+
+(15)
+
+i
+
+and
+
+Hiepr = −
+
+ViR
+ViL P(state = i | v) · log2 P(state = i | v)dv.
+
+(16)
+
+P(state = i | v) denotes the probability that the state of a cell is Si when the Vth of it lies on the v interval.
+These two metrics are used by the LDPC soft decision strategies in Section IV to determine the number of read voltages of LDPC soft decisions, which is named the READ LEVEL [12], [30]. For example, the read level is 3 for the case in Fig. 3.
+
+C. Read Latency Issues
+Fig. 4 depicts a typical LDPC-based read process for NAND flash memories. Vth sampling is first performed to extract the optimal parameter options for memory sensing A series of progressive LDPC decoding attempts would be triggered if the initial decoding attempt fails, and the read level increases during this process until the error correction succeeds or the read level reaches the upper limit. Therefore, the read latency consists of two parts. The first part is caused by the Vth sampling (step ⃝1 ). The second part is caused by the LDPC decoding attempts (steps ⃝2 , ⃝3 and ⃝4 ).
+The read latency issue due to Vth sampling is discussed first. Existing related works mainly focus on Vopt tracking, and thus the following uses the example of Vopt tracker designs to describe how to reduce the read latency caused by Vth sampling. Developing lightweight Vopt trackers has always been a critical objective in flash memory investigations. As shown in Fig. 2, the basic Vopt tracking scheme is to extract the complete Vth distributions by sampling point by point, layer by layer. For advanced high-density flash memory, where blocks are stacked in dense layers and the Vth is partitioned into multiple narrow state windows, the sampling overhead induced by this natural scheme is huge and thus not feasible in practical situations. Advanced Vopt tracer designs generally employ three approaches to reduce the sampling overhead, which are, 1) reducing read retries performed for a single errorprone area [3]; 2) utilizing inter-state estimation of Vopt [13]; and 3) utilizing inter-layer estimation of Vopt [31]. In brief,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4727
+
+reducing redundant read retries for Vopt tracking by taking full advantage of the characteristics of 3-D NAND flash memory, which in turn reduces the total Vth sampling latency.
+The total read latency Ttotal of the LDPC decoding attempts can be written as
+
+L
+Ttotal =
+i =1
+
+Tsensing · Nrief + Ttiransmission + Tdecoding
+
+. (17)
+
+Ttotal is the sum of the latencies from L-step attemps. For step i therein, the decoding latency consists of three parts. Tsensing refers to the data output latency under one set of RRV offsets, where the stored data is read out of the flash array byte by byte. Further, Tsensing is multiplied by the read retry count Nrief to give the total memory sensing latency (step ⃝2 ). Ttransmission is the transmission latency of transferring data from the flash array to the flash controller (step ⃝3 ). Tdecoding is the latency caused by LDPC decoding itself (step ⃝4 ). On the other hand, the performance of LDPC sensing determines its capability for error correction, which in turn influences the read performance of the flash memory. Therefore, the issue of reducing the read latency induced by the LDPC decoding attempts is translated into applying efficient memory sensing.
+Applying efficient memory sensing faces 3 major issues. 1) How to determine appropriate read levels for the initial LDPC decoding attempt [10], [12], [30]. Let the actual optimal read levels for the target stored data be Lo and the predicted read levels be L p. If L p<Lo, additional progressive decoding steps from L p+1 to Lo need to be performed, and the data transmission latency and decoding latency of this additional process are unnecessary and can be saved. On the other hand, if L p > Lo, then the sensing latency from the Lo+1 to L p step is redundant, which can also be saved, thereby improving the read performance. In summary, starting the decoding attempts of the LDPC with a more accurate initial read level is essential to reduce the read latency for data access. 2) How to apply accurate read voltage offsets [16], [26], [32]. Here also use Vopt as an example for illustration. Accurate Vopt tracking matters in two ways. If an LDPC decoder starts the decoding attempts with hard decisions, reading data with Vopt can minimize the RBER input to the LDPC decoder and thus improve the success rate of the LDPC hard decisions. Conversely, the probability of triggering LDPC soft decisions would increase, which in turn degrades the memory read performance due to the additional read retries performed. On the other hand, if an LDPC decoder starts the decoding attempts with soft decisions, Vopt as the baseline for all read voltages is also critical to maximize the error correction capability of the LDPC code under various read levels. The offset options for read voltages except for Vopt can cause a similar effect. 3) How to apply an accurate LLR for each bit [9], [27], [29]. Applying accurate LLRs can maximize the error correction capability of an LDPC code with the same read voltages, thereby diminishing the potential decoding attempts. Let the initial read levels be L in two cases, and in the latter case the LDPC has better error correction capability due to applying
+
+accurate LLRs. In the former case, error correction fails with L read levels, and error correction succeeds until using L+ L read levels. In the latter case, the errors are corrected with L read levels. Then case 2 reduces the read latency due to the additional L-step attempts compared with case 1.
+The above three issues can be summarized into one, i.e., the Vth distributions under various reliability stages are not clear. As previously mentioned, it is easy to determine the optimal memory sensing parameters with clear Vth distributions. Therefore, the issue of designing an efficient memory sensing strategy can be further converted into estimating the Vth distributions with a lightweight sampling overhead, which is the objective of the proposed LVDE, as shown in Fig. 4.
+D. Related Works
+There have been solid existing investigations that contribute to the read performance improvement of 3-D NAND flash memories. The following presents a brief description from the perspectives of 3D NAND characteristic investigations and optimization of LDPC hard and soft decision, respectively.
+1) 3D NAND Characteristic: Luo et al. observed the phenomena of post-programming fast retention loss and cross-layer variation in Vth distributions on 3-D NAND flash [6]. Wu et al. comprehensively characterized the degradation patterns of various flash attributes over long-term retention [33], [34]. Saikia et al. investigated the Vth drift patterns over long-term retention based on cell-level charge loss simulations [35]. Shim et al. demonstrated that the wordlines within the same layer exhibit almost equivalent reliability characteristics attributed to the strong process similarity among the wordlines [36].
+2) LDPC Hard Decision: Zhang et al. proposed to fit the Vth distributions with polynomials so as to track Vopt through the minimum points of the polynomial functions [11]. Li et al. proposed the concepts of sentinel cell and voltage to shave the read retries induced by Vopt tracking [13]. Based on this, Li et al. improved the two-state asynchronous estimation to single-state asynchronous estimation, thereby diminishing the computational overhead and space overhead incurred by algorithm implementation [37]. Ye et al. designed a method that combines the main table retry and proximal search to track Vopt , thus achieving near-zero read retry LDPC hard decoding [31]. Feng et al. investigated the relationship between random flip bit counts and Vopt offsets and proposed a design that tracks Vopt based on two consecutive page reads [38].
+3) LDPC Soft Decision: Dong et al. raised the importance of non-uniform read voltages for LDPC soft decisions, where read voltages are concentrated on error-prone areas rather than being placed uniformly over the entire Vth range [16]. Li et al. designed a read level prediction scheme that improves the read performance of 3D NAND flash memory by exploiting the intra-state, inter-state, and inter-layer asymmetry patterns [10]. Du et al. proposed to determine the read levels of the initial LDPC decoding attempt using the cell counts of the errorprone areas [12]. Wang et al. designed an entropy-based dual non-uniform read voltage placement strategy to enhance the error correction capability of LDPC soft decisions [30].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4728
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+Fig. 5. Illustration of the measurement for a probe wordline.
+
+III. THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION
+After extracting the Vth distribution parameters at the initial stage of retention, the parameters at any point during the retention period can be dynamically estimated based on the Vth distribution drifts up to that point. The LVDE elaborated in this section is designed to estimate the Vth distribution drifts during a long-term retention period, thereby implementing the Vth distribution estimation. First, the design of the probe wordline is introduced, followed by an elaboration of how to estimate the Vth distribution drifts across each layer using the probe wordline. Finally, the implementation overhead of LVDE is analyzed.
+A. Research Motivation
+The proposed LVDE exploits the following two Vth distribution characteristics of 3-D NAND flash, which have been demonstrated in a wide range of existing investigations.
+Characteristic 1: During a long-term retention period, the Vth drifts across cells with the same state and wordline are uniform [13], [28], [36].
+Characteristic 2: The mean of a Vth distribution is logarithmically related to the retention length [6], [31], [35].
+B. Probe Wordline Desgin
+Fig. 5 depicts how to measure the Vth distributions drift on the probe wordline during a long-term retention period. Let the start and end times of the period be t0 and t1, respectively. The measurement is implemented utilizing the following corollary.
+Corollary 1: The distortion of a Vth distribution on one wordline can be considered as a simple leftward drift over long-term retention.
+The explanation for Corollary 1 is provided below. As described by the first characteristic, the Vth drifts are uniform across cells of the same state on a wordline during long-term retention. Thus, the amplitude and variance of each Vth distribution remain constant for this wordline, while only the means move leftward as retention length increases.
+Furthermore, after tuning each RRV to the right with an appropriate step, the cell count of the Si state window, denoted as Ni (t), is only dependent on the Vth distributions of states Si and Si+1 and is independent of the remaining Vth distributions. Therefore, the Vth distribution drifts can be measured utilizing the cell count increments of the state windows. For example, the cell count increment of the S0 state window is induced
+
+by the leftward Vth distribution drift of the S1 state, and in turn, the cell count increment of the S0 state window can be used to calculate the Vth distribution drift of the S1 state. Similarly, with the Vth distribution drift of Si state and the cell count increment of the Si state window, the Vth distribution drift of Si+1 state can be calculated. The specific design is illustrated below.
+Step 1: The Vth distribution parameters from the S1 to S7 states at the retention time t0 are obtained. Given that the amplitude ai and the standard deviation σi are considered to be constant over the retention, f [ai , µi (t0) , σi ] is abbreviated as f (µi (t0)).
+Step 2: Cells within each state window are counted and denoted as Ni (t0), (i = 0∼7). As mentioned above, each RRV is tuned to the right with an appropriate step, denoted as V , thereby removing the right wing of the state Si within the Si+1 window. A too-low V may cause the Si+1 window to overlap the right wing of state Si . A too-high V may lead to the measurement accuracy being impacted by significant random noise at the top parts of the Vth distributions. In this work, each RRV is tuned 30 minimum steps to the right for LVDE
+implementation. The cell count within each state window of
+the probe wordline is determined using two FPGA FIFOs,
+denoted as FIFO_XP and FIFO_UP. First, The XP data is
+read and cached into the FIFO_XP, followed by the UP data
+into FIFO_UP. Then, the LP data is read byte-by-byte, with
+one byte from each FIFO read simultaneously to form a shared
+bytes, and the 8 cell states of it are identified. After processing
+all 16384 shared bytes, the cell count within each state window
+of the probe wordline is obtained. Step 3: After the retention period from t0 to t1, the cells
+within each state window is counted again and denoted as Ni (t1).
+Step 4: µ1 is first calculated. Note that
+
+V1
+
+N0(t) = NS0 +
+
+f (µ1(t)) dt,
+
+(18)
+
+−∞
+
+where NS0 Therefore,
+
+is the number of cells programmed N0(t)|tt01 can be written as
+
+to
+
+the
+
+S0
+
+state.
+
+N0(t )|tt10 =
+
+V1
+f (µ1 (t1)) dt −
+
+V1
+f (µ1 (t0)) dt.
+
+(19)
+
+−∞
+
+−∞
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4729
+
+Fig. 6. Illustration of solving the Vth distribution drift of state S1 based on the cell count increment within the state S0 window.
+
+As shown in Fig. 6, the right-hand term of Eq. (19) can be written as
+
+V1
+
+V1
+
+f (µ1 (t1)) dt −
+
+f (µ1 (t0)) dt
+
+−∞
+
+−∞
+
+V1+ µ1
+
+=
+
+f (µ1 (t0)) dt. (20)
+
+V1
+
+Hence, Eq. (19) can be rewritten as
+
+N0(t )|tt10 =
+
+V1+ µ1
+f (µ1 (t0)) dt.
+
+(21)
+
+V1
+
+N0(t)|tt10 , µ1(t0), V1 and distribution function f1 are all clear and thus the only variable, µ1, can be solved. This work solves µ1 by incrementing its value until the right-hand term
+is greater than the left-hand term in the Eq. (21).
+
+Step 5: µ for states from S2 to S7 are obtained sequentially after then. Note that
+
+Vi +1
+
+Vi +1
+
+Ni (t) =
+
+f (µi (t)) dt +
+
+f (µi+1(t)) dt. (22)
+
+Vi
+
+Vi
+
+Therefore, Ni (t)|tt10 can be written as
+
+Ni (t )|tt10 =
+
+Vi +1
+f (µi (t1)) dt
+
+Vi
+
+Vi +1
+
+−
+
+f (µi (t0)) dt
+
+Vi
+
+Vi +1
+
++
+
+f (µi+1 (t1)) dt
+
+Vi
+
+Vi +1
+
+−
+
+f (µi+1 (t0)) dt.
+
+(23)
+
+Vi
+
+Ni (t)|tt10 , µi (t0), µi (t1), µi+1(t0) and the distribution functions fi , fi+1 are all known. Therefore, the only variable, µi+1(t1), can be solved, after which µi+1 can be calculated. The
+solution approach for Eq. (23) is similar to that for Eq. (19).
+
+C. Estimation of Vth Distribution Drifts for Each Layer
+Now illustrate how the Vth distribution drifts measured on the probe wordline can be used to estimate those for each layer over a long-term retention period, which in turn estimates the Vth distributions after the period. For the layer where the probe wordline lies, the Vth distributions can be considered to be the Vth distributions of the probe wordline multiplied by a fixed factor, attributed to the intra-layer similarity [36]. As a result, the probe wordline and its layer share the equal Vth distribution drifts over a long-term retention period.
+
+The estimation for layers without probe wordline utilizes
+
+the following corollary.
+
+Corollary 2: The ratios for the Vth distribution mean drifts
+
+of any two layers remain constant over a long-term retention
+
+period.
+
+The following presents the analysis for this corollary. Let
+
+two points over a retention period be t2 and t3, respectively. The denotations t2 and t3 are used to prevent confusion
+
+with t0 and t1, not meaning that t2 is after t1 in the tim-
+
+ing. As described by the second characteristic, a logarithmic
+
+function can be used to model a Vth distribution mean over
+
+long-term state i on
+
+lraeyteenr tmio.n.TLheent ,µµimim
+
+be the can be
+
+Vth distribution written as
+
+mean
+
+of
+
+µim = kim log(t) + bim ,
+
+(24)
+
+and
+
+then,
+
+the
+
+µim
+
+t3 t2
+
+can
+
+be
+
+written
+
+as
+
+µim
+
+t3 t2
+
+=
+
+kim
+
+log (t3) + bim
+
+− kim log (t2) − bim
+
+= kim log
+
+t3 t2
+
+.
+
+(25)
+
+Let µnj be the mean of the Vth distribution of state j on layer
+
+n,
+
+then
+
+µnj
+
+t3 t2
+
+can
+
+be
+
+written
+
+as
+
+µnj
+
+t3 t2
+
+=
+
+kn j
+
+log
+
+t3 t2
+
+,
+
+(26)
+
+and the ratio of the above two drifts can be calculated as
+
+µnj
+
+t3 t2
+
+knj log
+
+t3 t2
+
+µim
+
+t3 t2
+
+=
+
+kim log
+
+t3 t2
+
+=
+
+k
+
+n j
+
+kim
+
+.
+
+(27)
+
+Note that the ratio is retention length agnostic. In addition, recent investigations have observed that the Vopt
+drifts of any two RRVs follow a linear relationship during a
+long-term retention period [13], [31]. This observation stems from the fact that Vopt is also logarithmically related to the retention length t. An analysis similar to the above can be
+made in support of this observation.
+Fig. 7 illustrates how to perform inter-layer estimation using corollary 2. Denote the ratio in Eq. (27) as kimjn. Let t4 be a retention point after t3, then it is evident that
+
+µnj
+
+t4 t3
+
+=
+
+kimj n
+
+·
+
+µim
+
+t4 t3
+
+.
+
+(28)
+
+Therefore, the be estimated as
+
+µnj long
+
+over retention as the µim
+
+period from t3 over this period
+
+to t4 can has been
+
+measured.
+
+D. Noise Suppression Design
+
+The following describes the design for improving the accu-
+
+racy of inter-layer estimation based on the probe wordline and
+
+describes how to select the probe wordline for a block.
+
+Error sources such as random telegraph noise (RTN) can
+
+cause minor measurement errors in µim Denote the random measurement error
+
+t3 t2
+on
+
+of the
+
+µim
+
+t3 t2
+
+Eq. as
+
+(28) [39]. µe, which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4730
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+Fig. 7. Illustration of the inter-layer estimation for Vth distribution drifts.
+
+has a mean of 0 and small variance (e.g., one minimum RRV offset step). Then, Eq. (28) can be rewritten as
+
+µnj
+
+t3 t2
+
+=
+
+kimj n
+
+· ( µim
+
+t3 t2
+
++ µe)
+
+=
+
+kimj n
+
+·
+
+µim
+
+t3 t2
+
++ kimj n
+
+· µe.
+
+(29)
+
+That
+
+is,
+
+the
+
+error
+
+in
+
+the
+
+estimation
+
+of
+
+µnj
+
+t4 t3
+
+is
+
+kimj n · µe,
+
+which
+
+satisfies
+
+kimj n · µe =
+
+µnj
+
+t3 t2
+
+µim
+
+t3 t2
+
+· µe.
+
+(30)
+
+For a
+
+value
+
+µnj
+
+t3 t2
+
+given
+
+layer
+
+n,
+
+both
+
+µnj
+
+t3 t2
+
+of Eq. (30) depends on
+
+and µe are
+
+µim
+
+t3 t2
+
+.
+
+The
+
+fixed, larger
+
+and the
+
+thus the value of
+
+takes, the smaller the value of the Eq. (30) takes, i.e.,
+
+the more accurate the inter-layer estimation from layer m to
+
+layer n is.
+
+On the other hand, a weighted average design is adopted to
+
+overcome the random errors in the inter-layer estimation based
+
+on a single state. Specifically, LVDE uses the seven states with
+
+positive Vth on layer m to implement the estimation for state
+
+j on layer n, which is written as
+
+µnj
+
+t4 t3
+
+=
+
+7
+wim · kimj n
+i =1
+
+· µim
+
+t4
+,
+t3
+
+(31)
+
+where wim is the weight of state i on layer m, calculated via
+
+wim =
+
+µim
+7
+
+t3
+t2 t3 .
+
+µim
+
+i =1
+
+t2
+
+(32)
+
+That is to say, for the period from t3 to t4, the weight of
+
+the estimation given by state i on layer m is determined
+
+by
+
+µim
+
+t3 t2
+
+.
+
+The
+
+larger
+
+µim
+
+t3 t2
+
+is,
+
+the
+
+larger
+
+wim
+
+is.
+
+And
+
+the
+
+random estimation errors of each state is effectively overcame
+
+by combining the results of the 7 states.
+
+Now describe how to select the probe wordline for a
+
+block. As can be seen in Eq. (30), the wordline with the
+
+most significant mean drifts has the highest confidence in
+
+implementing the inter-layer estimation, i.e., being chosen as
+
+Algorithm 1 Metadata Acquisition for LVDE
+
+Input: Retention length ta and tb. Output: The amplitudes, means and variances of the Vth
+distribution at tb, cell count within each state window at tb, wordline index of the probe wordline.
+
+1: Block programming at the start time.
+
+2: if Retention length=ta then
+
+3: Extract the Vth distributions of the wordline in the middle of each layer, denoting the amplitudes, means and
+
+variances as {ata }, {µta } and {σta }. 4: end if
+
+5: if Retention length=tb then
+
+6: Extract the Vth distributions again and denote the
+
+amplitudes, means and variances as {atb }, {µtb } and {σtb }.
+
+7: 8:
+
+Calculate the mean drift of
+
+to tb, Based
+
+doenno{teµd|ttaba}s,{sµel|ettabc}t .the
+
+each Vth wordline
+
+distribution from that exhibits the
+
+ta
+
+maximum sum of mean drifts from ta to tb as the probe
+
+wordline, denoting its index as P W .
+
+9: Obtain the cell count of each state window for the probe
+
+wordline, denoted as {Ntb }. 10: end if 11: Store {atb }, {µtb }, {σtb }, { µ|ttab }, {Ntb }, and P W
+as metadata.
+
+Algorithm 2 Flash Reads With LVDE
+
+Input: Metadata of LVDE.
+
+Output: Optimal memory sensing parameters of the LDPC
+
+decoding attempts.
+
+1: for Retention length of t do
+
+2:
+
+Measure the mean drift probe wordline from tb
+
+of to
+
+te,acdhenVottheddaisstr{ibµuPtiWonttbo}n.
+
+the
+
+3: Estimate the mean drifts of the Vth distributions on each
+
+4:
+
+Blcauayrsereerdnftrooanmm{patlbtibtut}od, et{,µ{datbet}n},o, t{meσdetbaa}nssa{n{µdµ|ttt{b}µ}a.|nttbd},vaorbitaanicnetsh{eσt }
+
+of the Vth distributions on each layer. 5: Calculate the optimal memory sensing parameters using
+
+{at }, {µt } and {σt }.
+
+6: end for
+
+the
+
+probe
+
+wordline.
+
+A
+
+metric
+
+µm
+
+t3
+|t2
+
+calculated
+
+as
+
+7
+
+t3
+
+µm
+
+t3 t2
+
+=
+
+µim .
+
+i =1
+
+t2
+
+(33)
+
+is obtained for the wordline in the middle of each layer over
+
+the period from t2 to t3. After that, the wordline with the max
+
+µm
+
+t3
+|t2
+
+is
+
+found
+
+and
+
+selected
+
+as
+
+the
+
+probe
+
+wordline.
+
+E. Joint Implementation
+The following illustrates how to coordinate the above designs to implement the proposed LVDE. Algorithm 1 describes the metadata acquisition flow of LVDE. Algorithm 2 describes the flow of applying LVDE to a flash read request that arrives at the retention length of t. In this work, the metadata is stored in the spare single-level cell (SLC) area of the flash memory and is accessed before reading the test blocks. As seen in Algorithm 1, the Vth distribution extraction operation is executed only for states with positive Vth, i.e.,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4731
+
+from S1 to S7. The read margins between the S0 and S1 states are much wider than those of the remaining adjacent state pairs [37]. Therefore, the bit errors between S0 and S1 can be effectively mitigated through optimal hard reads, with the measurement for the error-prone areas not essential. The cell counting operation is executed for all state windows. ta and tb are set to 1 hour and 1 day, respectively. The Vth distribution drift from 1-hour retention to 1-day retention is caused by the post-programming fast retention loss in 3-D NAND flash memories [6]. Besides, since read retries are only performed on the middle wordline of each layer, the equivalent number of block reads performed by each Vth distribution extraction is fewer than 10 in this work. Therefore, the read disturb induced by Vth distribution extraction can be overlooked.
+The following analyzes the adaptability of LVDE under a broader range of flash noise types. As described in Section II, this work focuses solely on retention loss, which causes leftward drifts in the Vth distributions. However, state drift can also occur to the right, particularly in the presence of certain noise factors. The implementation of Algorithm 1 is not limited by the drift direction of the Vth distribution. Take Fig. 6 as an example. If LVDE detects a decrease in the number of cells with S0 state, the Vth distribution drift of S1 state can be determined by solving for the appropriate V1- µ1. The core design of Algorithm 2 can also be extended to more general scenarios. That is, the Vth distributions of a layer can be estimated using the Vth distributions of the probe wordline and the metadata obtained in the previous two moments. It should be noted that under different noise conditions, the metadata of LVDE may need to be updated regularly during the idle periods of the flash memory device, thereby optimizing the accuracy of the cross-layer estimation [25].
+The implementation overhead incurred by LVDE is analyzed in the following, including the space overhead used for metadata storage and the additional runtime overhead due to applying the proposed strategy [31].
+1) Space Overhead: Take the popular TLC flash block containing 62 layers with a capacity of 37MB as an example. As described by the Algorithm 2, the metadata consists of four types. One is the parameters of the Vth distributions on each layer. In this work, three 16-bit fixed-point numbers were used to record the amplitude, mean, and variance of each Vth distribution. Therefore, the space overhead taken up for recording the distribution parameters is 2604 (62 × 7×3 × 2) bytes. The second is the mean drift of each Vth distribution from ta to tb in Algorithm 1. This work uses one 16-bit fixed point number to record a drift. Thus the space overhead occupied by the second type of metadata is 868 (62×7×1×2) bytes. The two remaining types of metadata are the wordline index and the cell counts within each state window at tb for the probe wordline, which occupy one and eight 16-bit fixed-point numbers (18 bytes) to be stored, respectively. In summary, the total space overhead occupied by the four types of metadata is 3490 bytes. For a block of data, the metadata of LVDE only takes up 0.009%, which is appreciable in most applications.
+2) Runtime Overhead: As Algorithm 3 describes, the runtime overhead of LVDE is incurred by the measurement for the probe wordline following Eqs. (19) and (23) and the
+
+Fig. 8. FPGA-based flash test platform.
+cross-layer estimation following Eq. (31). Taking FPGA-based flash controllers as an example, the computational operation has a time complexity of O(1) and can be executed in 500 system clock cycles. Reading out a block of data takes 37M system clock cycles. That is, the additional latency incurred by LVDE is less than 0.002% of that reading out the user data, therefore being tolerated in practice.
+IV. EXPERIMENTAL ANALYSIS
+This section first compares the sampling overhead of LVDE and multiple Vopt trackers. Subsequently, experiments are conducted on real flash chips to demonstrate LVDE’s effectiveness in enhancing the efficiency of LDPC decoding attempts.
+A. Experimental Setup
+1) Flash Setup: Micron B16A is used as the experimental chip model in this work due to its representativeness, which effectively reflects the typical characteristics and behavior patterns of mainstream flash devices. As described in Subsection III-A, the proposed LVDE is designed based on two fundamental NAND flash characteristics that have been demonstrated by solid studies. Therefore, theoretically, the proposed LVDE has strong adaptivity and can be applied to a broad range of 3D NAND flash models. The hardware differences across flash memories may lead to minor variations in strategy performance, which is tolerable generally.
+The key structural parameters of B16A are as follows. The page size is 16kB. A block consists of 744 TLC wordlines, and every 12 wordlines form a layer, i.e., a block contains 62 layers. Further, 1008 blocks form a chip. Ten flash chips are used for the evaluation experiments. Specifically, 10 normal blocks are selected on each chip, i.e., a total of 100 experimental blocks are adopted. The recommended endurance in the Micron B16A datasheet is 1500 P/E cycles, while the actual endurance of a flash model can be much higher than the recommended endurance with a strong ECC [40]. Blocks on 5 chips are used for performance evaluation of LDPC hard decisions, withstanding preprocessing of 1k, 1.5k, 2k, 2.5k, and 3k P/E cycles, respectively. Blocks on the remaining 5 chips are used for performance evaluation of LDPC soft decisions, subjected to preprocessing of 2k, 3k, 4k, 5k, and 6k P/E cycles, respectively.
+The flash chips are test with an FPGA-based platform, the photograph of which is shown in Fig. 8. Before performing each set of comparisons, random data was first written into the experimental blocks. The flash chips are placed in a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4732
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+high temperature atmosphere to accelerate data-retention loss. The conversion for the retention loss effect between high temperature and room temperature is calculated based on the Arrhenius equation. This methodology is widely adopted in the evaluation of flash memory management strategies [41]. The stored data is placed at 85◦C to undergo a retention period equivalent to that of 1 year at room temperature. During the accelerated 1-year retention period, the stored data is accessed at one-month intervals. Additionally, the actual Vth distributions are extracted throughout the tests to obtain the actual optimal memory sensing parameters.
+2) LDPC Code Setup: LDPC encoding and decoding are implemented on the PC side, thus handling the complex decoding calculations of soft decisions. The min-sum strategy is adopted as the LDPC decoding strategy for its efficiency and computational demands [28]. Each flash page contains seven codewords with a length of 18364 bits. This option can improve the efficiency of the decoding process by reducing computational complexity and isolating errors [30]. The code rate is selected as 8/9, providing strong error correction with relatively low space overhead [29]. The upper limits for the decoding iterations and the read level of the soft decision are set to 30 and 7, respectively. This is because continuing to increase these two parameters above this limit yields negligible improvement in error correction capability, but causes significant additional read latency, especially for increasing the read level. Therefore, an upper limit of 30 for the decoding iterations and an upper limit of 7 for the read level can balance the reliability and performance of a flash device, and have been adopted by numerous existing LDPC codes as typical options [12], [42].
+The unit timing parameter of each operation during the LDPC decoding attempts is set according to the previous studies [30], [43]. The latency of the LDPC hard decision is set as 25µs, and the latency of the soft decision is set as 14µs. The transmission latency is set as 20µs, and the decoding iteration latency is set as 0.5µs. The total latency of each operation is calculated by multiplying the unit latency with the corresponding count.
+3) Comparison Setup: The sampling overhead caused by LVDE is compared with that of a series of Vopt trackers, the details of which are elaborated in subsection IV-B. Layer read count is used as the quantitative evaluation metric of sampling overhead [25].
+The state-of-the-art LDPC hard decision designs, i.e., Vopt trackers, to be compared with LVDE are DRRM (ASPLOS′24) [31] and RFBC (TCAS-I′24) [38]. The BER and frame rate error (FER) are used as the metrics for evaluation [13], [17].
+The state-of-the-art LDPC soft decision designs selected for comparison are PreLDPC (TCAD′23) [12] and EBDN (TCAD′24) [30]. Specifically, PreLDPC is compared with PreLDPC-LVDE, a design with LVDE applied to PreLDPC. EBDN is compared with EBDN-LVDE, a design with LVDE applied to EBDN. Two metrics are used for comparisons. One is the performance of predicting the optimal read levels [10]. Three cases are included, where the predicted read levels are over than, equal to, or under than the actual optimal options, respectively. In this work, the predicted read level
+
+for a wordline is considered equal to the actual optimal value when the total prediction errors across all error-prone areas do not exceed 3. Another metric is the effectiveness of reducing the total read latency by applying LVDE to each state-of-theart design [12].
+B. Evaluation of the Sampling Overhead for Vopt Tracking
+Now compare the sampling overhead of LVDE and several advanced Vopt tracker designs.
+1) OCVTR [3]: OCVTR performs three reads for an error-prone area to estimate the Vopt . Thus, the sampling overhead is 1116 (62 × 3 × 6) layer reads.
+2) ECRRV [11]: As recommended in the source article [11], ECRRV extracts 10 points for each error-prone area to fit the Vth distribution, thus reducing the overhead of pointby-point sampling. Therefore, the ECRRV-induced sampling overhead is 7440 (62 × 20 × 6) layer reads
+OCVTR and ECRRV effectively address the problem of point-by-point sampling in a single error-prone area. However, since both are synchronous designs, the sampling overhead is exacerbated by the read retries performed in multiple errorprone areas.
+3) SSAE [37]: SSAE employs two approaches suggested by TSAE to reduce the sampling overhead induced by tracking Vopt [13]. One is the concept of sentinel cell. A small number of sentinel cells are attached to the end of each wordline. By comparing the difference between the written and read data patterns of the sentinel cells, the Vopt of the entire wordline can be estimated based on one read. Another concept is sentinel voltage, which is an asynchronous design. As mentioned in subsection III-B, the drifts of different Vopt over a long-term retention period are linearly correlated. By pre-learning the linear models, only the Vopt of one RRV, the sentinel voltage, needs to be measured with the sentinel cells, and the Vopt of the remaining RRVs can then be calculated. Specifically, SSAE first reads UP and LP for a wordline to obtain the Vopt of RRV V4, which is further used to estimate the Vopt of the remaining RRVs. Therefore, the SSAE-induced sampling overhead is 41.33 (62 × 2.3) layer reads.
+SSAE addresses the issue of multiple reads conducted for a single error-prone area (e.g., 3 reads for OCVTR compared to 1 read for SSAE) and the repetition of samples across multiple error-prone areas (e.g., 6 areas for OCVTR compared to 1 area for SSAE). However, sampling is still performed layer by layer, resulting in a significant read latency. Assume that LDPC hard decisions succeed on all layers with the Vopt provided by SSAE. One valid read, i.e., 62 layer reads, is essential to read out the stored data. And then, the additional read latency caused by SSAE is 67.7%.
+4) DRRM [31] & RFBC [38]: To remove the layer-bylayer sampling overhead, the approach adopted by both DRRM and RFBC is to pre-train a table offline for the flash model, which is named as optimal read voltage difference (OVD) table in DRRM. When responding to a flash read request, the Vopt on one wordline is first obtained, based on which an additional offset compensation is applied to each layer (wordline) by looking up the table, thereby adapting to the inter-layer variation in Vopt .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4733
+
+Fig. 9. Wordline BERs measured after the 1-year retention period.
+
+The following elaborates how DRRM and RFBC calibrate the Vopt for a target wordline. DRRM implements a twostep design, named main read retry table (RRT) retry and proximity-search, respectively. The former first determines a coarse-accuracy Vopt interval and the latter further determines the exact Vopt offset. The Vopt tracking loop in both processes returns the result when detecting that the LDPC decoding syndrome has taken a valley value, which results in a variable sampling overhead. For example, when DRRM performs 3 RRT retries and 3 proximity searches to track the Vopt of a wordline, the resulting sampling overhead is 0.5 (1/12 × 6) layer reads. RFBC works by considering the Vopt offsets of each RRV on the same page type to be equal. Based on twice consecutive reads of a page, RFBC counts the flip bits between the two sets of data and uses it to estimate the Vopt of all RRVs corresponding to this page type. Therefore, the sampling overhead of RFBC is 6 page reads, i.e., 0.17 (2/12) layer reads.
+5) LVDE: As described in Section III, the sampling overhead of LVDE is reading the probe wordline once. Thus, the layer read count caused by LVDE is 0.08 (1/12).
+Table I summarizes the layer read count metrics for comparisons. Compared with the essential layer reads used for reading out the stored data (62 layer reads), all three strategies proposed in 2024 achieve negligible sampling overhead. Among them, LVDE reduces the layer read counts by more than 50% compared with RFBC and DRRM, from above 0.17 to 0.08. This improvement could be particularly considerable when reading small amounts of stored data, such as 5 pages.
+C. Evaluation of LDPC Hard Decision Performance
+Fig. 9 compares the Vopt tracking accuracy of DRRM, RFBC, and LVDE using wordline BERs measured from 5 blocks subject to different P/E cycles and 1-year retention. The measured BERs consist of the RBERs obtained with the default voltages, the BERs obtained with the three read strategies, and the BERs obtained with the actual Vopt . It can be seen that LVDE exhibits the most appreciable Vopt tracking accuracy among the three designs under the 5 P/E cases. Take the case of 3k P/E as an example. The average BER of LVDE is reduced by 89% compared with the average RBER using the default voltages, and by 51% and 67% compared with the
+
+TABLE I LAYER READ COUNT COMPARISON
+average BERs of RFBC and DRRM, respectively. Besides, the percentage of BER reduction by using LVDE increases with the P/E cycle. In the 1k P/E case, LVDE only achieves a 62% reduction in BER compared with RBER. This is due to the fact that P/E wear causes an increase in the percentage of cells whose Vth exceed their raw state windows, thus making the compensation effect of RRV calibration more significant.
+Fig. 10 compares the FERs of LDPC hard decisions when applying the Vopt given by LVDE, DRRM and RFBC. The FER under each P/E case is the average result of all 10 blocks across the 12 retention lengths. Three strategies exhibit a FER of over 95% under the 1k P/E case. As the P/E cycle increases, LVDE exhibits the lowest FERs for LDPC hard decisions, whereas DRRM and RFBC exhibit relatively higher FERs. By combining the results under 5 P/E cases and 12 retention lengths, the average FERs of LDPC hard error correction with LVDE, DRRM, and RFBC are 19%, 43%, and 61%, respectively.
+Now analyzes why LVDE exhibits a higher resistance to P/E wear in tracking Vopt compared with DRRM and RFBC. This observation stems from the fact that P/E wear exacerbates the flash attribute asymmetry, including inter-layer asymmetry [13], [15], [29] and inter-state asymmetry [10], [44], [45]. Both DRRM and RFBC are subject to the former and RFBC is also subject to the later. Here are detailed elaborations.
+As described in Subsection IV-B, both DRRM and RFBC use a fixed table under varying P/E cycles for the cross-layer Vopt calibration. Although the relative relationship of Vopt between layers remains constant across P/E cycles, the absolute difference in Vopt between layers increases with the P/E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4734
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+Fig. 10. Experimental results on FERs of LDPC hard decisions.
+
+Fig. 11. Experimental results on predicting the optimal read levels.
+
+cycles. Therefore, a fixed cross-layer variation compensation table for Vopt cannot be applied throughout the entire lifespan of flash memory. In contrast, LVDE obtains the Vopt on each layer based on the real-time Vth distributions. The exacerbation of the inter-layer asymmetry caused by P/E is compensated by the factor kimjn in Eq. (21). Thus, LVDE exhibits better tolerance to P/E-induced exacerbation of inter-layer variation compared with DRRM and RFBC. On the other hand, the exacerbation of inter-state asymmetry caused by the P/E wear further diminishes the Vopt tracking capability of RFBC. As stated in Subsection IV-B, RFBC sets equal Vopt for RRVs on the same page type. However, the Vopt of the RRVs on the same page type can be significantly different. Especially for an aging block or data after a long-term retention, these differences cannot be overlooked. In contrast, LVDE and DRRM calculate the Vopt of each RRV on the same page type individually, thereby exhibiting relatively appreciable resistance to the P/E-induced inter-state asymmetry exacerbation.
+D. Evaluation of LDPC Soft Decision Performance
+This subsection evaluates the capability of improving the efficiency of LDPC decoding attempts by applying LVDE to state-of-the-art soft memory sensing designs. PreLDPC determines the read levels based on the cell counts of the errorprone areas. PreLDPC-LVDE follows the same approach as PreLDPC. The difference lies in the way of detecting the number of cells in an error-prone area. PreLDPC employs a method of counting the state shifts between twice reads whereas PreLDPC-LVDE employs a computation method based on the estimated Vth distributions, both of which are described in Section II. The EBDN pre-trains a batch-level mapping table between the entropy of an error prone area and read levels required, where the reliability status of the flash memory is divided into multiple stages according to the P/E cycles and the retention length. During data storage, the EBDN looks up the table with the P/E cycles and retention length the flash block undergoes to predict the optimal read levels. EBDNLVDE also determines the read levels based on entropy. The difference lies in the entropy value of an error-prone area is dynamically calculated by EBDN-LVDE, but not based on looking up a pre-trained table. Similar to Fig. 10, the following experimental results for each P/E case represent the average of all 10 blocks across the 12 retention lengths.
+Fig. 11 depicts the accuracy of four strategies in predicting the optimal read levels. Under the various P/E cycles, both
+
+Fig. 12. Experimental results on the read latency decline.
+PreLDPC-LVDE and EBDN-LVDE exhibit considerable performance, where the percentages of equal-type predictions are all above 97%. For PreLDPC and EBDN, on the other hand, a significant performance degradation is observed as the P/E cycle increases, and the two state-of-the-art designs exhibit different degradation patterns. PreLDPC does not exhibit a significant decrease in the probability of making an equal-type prediction, only from 73% to 61%, however, the probability of making an under-type prediction increases significantly, from 9% to 37%. The probability of EBDN making an equal-type prediction decreases significantly, from 87% to 25%. Besides, the probabilities of EBDN making over-type and under-type predictions both exhibit significant growth, from 7% to 35% for the former and from 6% to 40% for the latter.
+First analyzes the comparison between PreLDPC-LVDE and PreLDPC. PreLDPC uses a fixed-width window to detect the cell counts within the error-prone areas. States with higher Vth have larger distribution drifts during long-term retention [6]. Therefore, the cell counts within the error-prone areas increase during the retention period. Assume that the width of an error-prone area is 20 and 30 minimum offset steps at the beginning and end of a long-term retention period, respectively. Let the width set by PreLDPC for the error-prone area be 20 minimum offset steps. Therefore, PreLDPC can detect the exact cell count within the error-prone area at the beginning of retention. However, the detection window set by PreLDPC cannot completely cover the error-prone area at the end of retention. Thus, the detected cell count and the number of predicted optimal read levels are lower than the actual values. On the other hand, PreLDPC combined with LVDE can compute the dynamic cell counts within the error-prone areas based on Eq. (14), which in turn accurately predicts the optimal read levels under various retention statuses.
+Now analyzes the comparison between EBDN-LVDE and EBDN. The capability of EBDN in predicting the optimal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+PIAO et al.: LVDE: A LIGHTWEIGHT THRESHOLD VOLTAGE DISTRIBUTION ESTIMATION STRATEGY
+
+4735
+
+read levels is subjected to the IBPV. Assume the optimal read level of an error-prone area is 2 for a batch of chips under a given condition. However, the optimal read level can be 3 for a vulnerable block and 1 for a robust block due to the IBPV. Thus, EBDN will make an under-type prediction for the former and an over-type prediction for the latter. Further, IBPV is exacerbated as the P/E cycle increases [21], which induces a degradation in EBDNs capability to make accurate predictions. While for EBDN-LVDE, the entropy is dynamically calculated based on Eq. (16). As a result, the tolerance of EBDN-LVDE to IBPV is significantly enhanced compared with basic EBDN.
+Fig. 12 displays the read latency decline (%) by applying LVDE to PreLDPC and EBDN. Since the twice reads PreLDPC used to detect the cell counts within the error-prone areas can be seen as sampling overhead in Subsection IV-B, rather than latency due to the decoding attempts, this part of latency is not included in the following discussion. As P/E increases, both the read latency reduction exhibited by PreLDPC-LVDE compared with PreLDPC and EBDN-LVDE compared with EBDN exhibit significant improvement, from 9% to 37% for the former and from 16% to 45% for the latter. This observation stems from two factors. On the one hand, applying LVDE improves the error correction capability of the first decoding attempts of the state-of-theart designs. As shown in Fig. 11, the capability of the state-of-the-art designs to predict the appropriate numbers of LDPC sensing levels is significantly enhanced when combined with LVDE. Thereby, the additional read latency caused by Under-type predictions and redundant read latency caused by Over-type predictions can be effectively reduced. On the other hand, applying LVDE improves the efficiency of progressive decoding attempts for state-of-the-art designs after the initial attempt. This is attributed to the dynamic extraction of the optimal read voltages and LLRs supported by LVDE. With the same read levels, the LDPC decoding capability is enhanced by applying LVDE, thereby reducing the number of potential progressive attempts and decreasing the total read latency.
+V. CONCLUSION
+This article proposes LVDE, an online lightweight strategy to estimate the Vth distributions of 3-D NAND flash over longterm retention. LVDE implements a dynamic extraction of the Vth distribution to provide optimal memory sensing parameters for LDPC decoding attempts, including the read levels of the initial attempt, the offsets of the read voltages, and the LLR on each Vth interval divided by the read voltages. Experimental results based on real flash chips demonstrate that applying LVDE can effectively improve the efficiency of the LDPC decoding attempts and thus improve the read performance of flash memory. In future work, we plan to optimize the flash memory behavioral model exploited by LVDE, thereby improving its adaptability in complex application scenarios.
+REFERENCES
+[1] C. M. Compagnoni et al., “Reviewing the evolution of the NAND flash technology,” Proc. IEEE, vol. 105, no. 9, pp. 1609–1633, Sep. 2017.
+[2] K. Kawai et al., “A 1Tb density 3b/Cell 3D-NAND flash on a 2YYtier technology with a 300MB/s write throughput,” in IEEE Int. SolidState Circuits Conf. (ISSCC) Dig. Tech. Papers, vol. 67, Feb. 2024, pp. 244–246.
+
+[3] C. Kim et al., “A 512-Gb 3-b/cell 64-stacked WL 3-D-NAND flash memory,” IEEE J. Solid-State Circuits, vol. 53, no. 1, pp. 124–133, Jan. 2018.
+[4] M. Kim et al., “A 1Tb 3b/Cell 8th-generation 3D-NAND flash memory with 164MB/s write throughput and a 2.4Gb/s interface,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, vol. 65, Feb. 2022, pp. 136–137.
+[5] R. Micheloni, S. Aritome, and L. Crippa, “Array architectures for 3-D NAND flash memories,” Proc. IEEE, vol. 105, no. 9, pp. 1634–1649, Sep. 2017.
+[6] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,” Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 3, pp. 1–48, 2018.
+[7] C.-H. Hung et al., “Layer-aware program-and-read schemes for 3D stackable vertical-gate BE-SONOS NAND flash against cross-layer process variations,” IEEE J. Solid-State Circuits, vol. 50, no. 6, pp. 1491–1501, Jun. 2015.
+[8] Y. Pan, H. Zhang, R. Yu, Z. Lu, H. Zhang, and Z. Liu, “LightWarner: Predicting failure of 3D NAND flash memory using reinforcement learning,” IEEE Trans. Comput., vol. 72, no. 3, pp. 853–867, Mar. 2023.
+[9] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[10] Q. Li, L. Shi, Y. Cui, and C. J. Xue, “Exploiting asymmetric errors for LDPC decoding optimization on 3D NAND flash memory,” IEEE Trans. Comput., vol. 69, no. 4, pp. 475–488, Apr. 2020.
+[11] M. Zhang, F. Wu, Q. Yu, W. Liu, Y. Wang, and C. Xie, “Exploiting error characteristic to optimize read voltage for 3-D NAND flash memory,” IEEE Trans. Electron Devices, vol. 67, no. 12, pp. 5490–5496, Dec. 2020.
+[12] Y. Du, Y. Gao, S. Huang, and Q. Li, “LDPC level prediction towards read performance of high-density flash memories,” IEEE Trans. Comput.Aided Design Integr. Circuits Syst., vol. 42, no. 10, pp. 3264–3274, Oct. 2023.
+[13] Q. Li et al., “Shaving retries with sentinels for fast read over high-density 3D flash,” in Proc. 53rd Annu. IEEE/ACM Int. Symp. Microarchitecture (MICRO), Oct. 2020, pp. 483–495.
+[14] W.-L. Wu, J.-W. Hsieh, and H.-Y. Ku, “CDS: Coupled data storage to enhance read performance of 3D TLC NAND flash memory,” IEEE Trans. Comput., vol. 73, no. 3, pp. 694–707, Mar. 2024.
+[15] K.-K. Yong and L.-P. Chang, “Error diluting: Exploiting 3-D NAND flash process variation for efficient read on LDPC-based SSDs,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 11, pp. 3467–3478, Nov. 2020.
+[16] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[17] L. Cui, F. Wu, X. Liu, M. Zhang, R. Xiao, and C. Xie, “Improving LDPC decoding performance for 3D TLC NAND flash by LLR optimization scheme for hard and soft decision,” ACM Trans. Des. Autom. Electron. Syst., vol. 27, no. 1, pp. 1–20, Jan. 2022.
+[18] R. Ma et al., “BlockHammer: Improving flash reliability by exploiting process variation aware proactive failure prediction,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 12, pp. 4563–4574, Dec. 2020.
+[19] Q. Li et al., “Process variation aware read performance improvement for LDPC-based NAND flash memory,” IEEE Trans. Rel., vol. 69, no. 1, pp. 310–321, Mar. 2020.
+[20] Y. Wang, J. Huang, J. Chen, and R. Mao, “PVSensing: A processvariation-aware space allocation strategy for 3D NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 5, pp. 1302–1315, May 2021.
+[21] Y. Pan et al., “ADLPT: Improving 3D NAND flash memory reliability by adaptive lifetime prediction techniques,” IEEE Trans. Comput., vol. 72, no. 6, pp. 1525–1538, Jun. 2023.
+[22] M. Ye, Q. Li, D. Wen, T.-W. Kuo, and C. Jason Xue, “WearMeter: An accurate wear metric for NAND flash memory,” in Proc. 29th Asia South Pacific Design Autom. Conf. (ASP-DAC), Jan. 2024, pp. 442–447.
+[23] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,” in Proc. IEEE 21st Int. Symp. High Perform. Comput. Archit. (HPCA), Feb. 2015, pp. 551–563.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+4736
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 72, NO. 9, SEPTEMBER 2025
+
+[24] S. Kim, K. Lee, C. Woo, Y. Hwang, and H. Shin, “Analysis of failure mechanisms during the long-term retention operation in 3-D NAND flash memories,” IEEE Trans. Electron Devices, vol. 67, no. 12, pp. 5472–5478, Dec. 2020.
+[25] D. Wei et al., “Exploiting feature layer for read reference voltage optimization on 3-D NAND flash memory,” IEEE Trans. Consum. Electron., vol. 70, no. 1, pp. 433–444, Feb. 2024.
+[26] Z. Mei, K. Cai, and X. He, “Deep learning-aided dynamic read thresholds design for multi-level-cell flash memories,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2850–2862, May 2020.
+[27] F. Wu et al., “Using error modes aware LDPC to improve decoding performance of 3-D TLC NAND flash,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 39, no. 4, pp. 909–921, Apr. 2020.
+[28] Y. Du, S. Huang, Y. Zhou, and Q. Li, “Towards LDPC read performance of 3D Flash memories with layer-induced error characteristics,” ACM Trans. Des. Autom. Electron. Syst., vol. 28, no. 3, pp. 1–25, May 2023.
+[29] M. Zhang et al., “ALCod: Adaptive LDPC coding for 3-D NAND flash memory using inter-layer RBER variation,” IEEE Trans. Consum. Electron., vol. 69, no. 4, pp. 1068–1081, Nov. 2023.
+[30] Y. Wang, D. Wei, M. Liu, H. Feng, and L. Qiao, “EBDN: Entropybased double nonuniform sensing algorithm for LDPC decoding in TLC NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 43, no. 6, pp. 1914–1918, Jun. 2024.
+[31] M. Ye et al., “Achieving near-zero read retry for 3D NAND flash memory,” in Proc. 29th ACM Int. Conf. Architectural Support Program. Lang. Operating Syst., Apr. 2024, pp. 55–70.
+[32] Y. Lv, L. Shi, L. Luo, C. Li, C. J. Xue, and E. H.-M. Sha, “Tail latency optimization for LDPC-based high-density and low-cost flash memory devices,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 3, pp. 544–557, Mar. 2022.
+[33] Q. Xiong et al., “Characterizing 3D floating gate NAND flash: Observations, analyses, and implications,” ACM Trans. Storage, vol. 14, no. 2, pp. 1–31, May 2018.
+[34] W. Liu et al., “Characterization summary of performance, reliability, and threshold voltage distribution of 3D charge-trap NAND flash memory,” ACM Trans. Storage, vol. 18, no. 2, pp. 1–25, 2022.
+[35] R. Saikia, A. Ansari, and S. Mahapatra, “A physics-based model for long term data retention characteristics in 3D NAND flash memory,” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), Mar. 2023, pp. 1–6.
+[36] Y. Shim, M. Kim, M. Chun, J. Park, Y. Kim, and J. Kim, “Exploiting process similarity of 3D flash memory for high performance SSDs,” in Proc. 52nd Annu. IEEE/ACM Int. Symp. Microarchit., Oct. 2019, pp. 211–223.
+[37] Y. Li, G. Han, S. Huang, C. Liu, M. Zhang, and F. Wu, “Exploiting metadata to estimate read reference voltage for 3-D NAND flash memory,” IEEE Trans. Consum. Electron., vol. 69, no. 1, pp. 9–17, Feb. 2023.
+[38] H. Feng, D. Wei, S. Gu, Z. Piao, Y. Wang, and L. Qiao, “Random flip bit aware reading for improving high-density 3-D NAND flash performance,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 5, pp. 2372–2383, May 2024.
+[39] X. Jia et al., “Investigation of random telegraph noise under different programmed cell Vt levels in charge trap based 3D NAND flash,” IEEE Electron Device Lett., vol. 43, no. 6, pp. 878–881, Jun. 2022.
+[40] C. Kim, C. Park, S. Yoo, and S. Lee, “Extending lifetime of flash memory using strong error correction coding,” IEEE Trans. Consum. Electron., vol. 61, no. 2, pp. 206–214, May 2015.
+[41] Solid-state Reliability Assessment and Qualification Methodologies, JEDEC, Arlington, TX, USA, 2019.
+[42] X. Fang et al., “High-precision short-term lifetime prediction in TLC 3D NAND flash memory as hot-data storage,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 42, no. 10, pp. 3224–3235, Oct. 2023.
+[43] Y. Du, D. Zou, L. Qiao, S. Liang, and C. J. Xue, “LaLDPC: Latencyaware LDPC for read performance improvement of solid state drives,” in Proc. 33rd Int. Conf. Massive Storage Syst. Technol. (MSST), 2017, pp. 1–11.
+[44] D. Wei, Z. Piao, H. Feng, L. Qiao, C. Hu, and X. Peng, “TCSE: A target cell states elimination coding strategy for highly reliable data storage based on 3-D NAND flash memory,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 12, pp. 5299–5312, Dec. 2022.
+[45] T.-C. Yu, C.-H. Wu, and Y.-Q. Liao, “CRRC: Coordinating retention errors, read disturb errors and Huffman coding on TLC NAND flash memory,” IEEE Trans. Dependable Secure Comput., vol. 20, no. 3, pp. 2208–2220, Mar. 2022.
+
+Zhelong Piao received the B.S. degree from Harbin Institute of Technology (HIT), Harbin, China, in 2019, where he is currently pursuing the Ph.D. degree.
+His research interests include advanced NAND flash memories and embedded data processing technologies.
+Debao Wei (Member, IEEE) received the B.S. and M.S. degrees from Harbin Institute of Technology (HIT), Weihai, China, in 2009 and 2011, respectively, and the Ph.D. degree from HIT, Harbin, China, in 2016.
+He is currently an Associate Research Fellow and a Ph.D. Supervisor at the School of Electronics and Information Engineering, HIT. His research interests include highly reliable storage systems, embedded data processing systems, and flight test systems.
+Huqi Xiang received the B.S. degree from Harbin Institute of Technology (HIT), Shenzhen, China, in 2023. She is currently pursuing the M.S. degree with HIT, Harbin, China.
+Her research interests include highly reliable storage systems and error correction codes.
+Liyan Qiao (Member, IEEE) received the B.S., M.S., and Ph.D. degrees from Harbin Institute of Technology, Harbin, China, in 1996, 1998, and 2005, respectively.
+Since 2009, he has been a Professor with Harbin Institute of Technology. He has published more than 50 journal articles and conference papers. His current research interests include data acquisition technologies, mass-storage data record technologies, and test information processing.
+Xiyuan Peng received the B.S., M.S., and Ph.D. degrees from Harbin Institute of Technology, Harbin, China, in 1984, 1987, and 1992, respectively.
+He is currently a Full Professor with the Department of Test and Control Engineering, School of Electronics and Information Engineering, Harbin Institute of Technology. His current research interests include automatic test technologies, advanced diagnostics, and prognostics.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:56:33 UTC from IEEE Xplore. Restrictions apply.
+
+

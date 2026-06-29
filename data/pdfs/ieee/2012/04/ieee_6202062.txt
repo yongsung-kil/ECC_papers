@@ -1,0 +1,292 @@
+Simulation of LDPC Convolutional Decoders with CPU and GPU
+Chi H. Chan and Francis C. M. Lau Department of Electronic and Information Engineering, The Hong Kong Polytechnic University, Hong Kong
+Email: andyjv5433@gmail.com & encmlau@polyu.edu.hk
+
+Abstract—In this paper, the Sum Product Algorithm (SPA) and the Min-Sum Algorithm (MSA) are used for decoding lowdensity parity-check convolutional codes (LDPC-CCs). The two algorithms have been implemented and run on three different computing environments. The Àrst environment is a singlethreading Central Processing Unit (CPU); the second one is the multi-threading CPU based on OpenMP (Open MultiProcessing); and the third one is the multi-threading Graphics Processing Unit (GPU). The error performance of the LDPC-CCs and the simulation time taken under the three speciÀc computing environments and the two decoding algorithms are evaluated and compared. It is found that the different computing environments produce very similar error results. It is also concluded that using the GPU computing platform can reduce the simulation time substantially.
+Index Terms—CPU, error-correction code, GPU, LDPC convolutional code, OpenMP
+I. INTRODUCTION
+Low-density parity-check block code (LDPC-BC) [1]–[3] and LDPC convolutional code (LDPC-CC) [4] are counterparts of each other. The parity-check matrices of both codes are sparse. While the LDPC-BCs process data of Àxed length, LDPC-CCs can be used to process data streams of variable lengths. In packet-based communication systems, a data stream has to be divided into blocks called packets if block codes are employed. Better error correction performance can be obtained with a larger block size for LDPC-BCs. However, the decoder complexity increases with the block size. If the packets have variable lengths, such as those used in the Ethernet standard (IEEE 802.3), the overhead of each packet in the data partition can be signiÀcant if LDPC-BCs are used. In such scenarios, LDPC-CCs can be good candidates.
+One way to compare different code designs is to simulate their error performance. Traditional computing architectures are based on sequential logic where instructions are executed sequentially. Therefore, it has been difÀcult to implement fast LDPC decoders due to the complex decoding algorithm. Recently, parallel processing that uses multiple cores to execute instructions simultaneously has become matured. Applications such as medical imaging [5] and Ànancial risk modeling [6] have utilized the advantages of parallel processing to reduce the time for computing complex algorithms. With a continual reduction in the hardware cost and improvement in computation speed, this technology has become more affordable to most researchers. Consequently, it can be applied to improve the decoding speed of LDPC codes.
+
+One objective of this paper is to develop a LDPC-CC decoder using C/C++ for conventional sequential logic-based CPUs. This allows us to thoroughly study the characteristics and performance of two common LDPC-CC decoding algorithms, namely the sum-product algorithm (SPA) [7] and the min-sum algorithm (MSA) [8]. Another objective of this paper aims at implementing LDPC-CC decoding algorithms on parallel logic using OpenMP (Open Multi-Processing) as well as Graphics Processing Unit (GPU) with Compute UniÀed Device Architecture (CUDA). The performance of the parallel logic-based decoders is then compared with that of the sequential logic-based LDPC-CC decoders.
+
+II. REVIEW OF LDPC CONVOLUTIONAL CODES
+LDPC convolutional codes (LDPC-CCs) can be denoted as (ms, J, K), where ms is the syndrome former memory which represents the memory of the codeword, J and K, respectively, represent the number of 1’s in each row and in each column of HT (see below). An LDPC-CC decoder is composed of multiple concatenated, identical units called processors, as shown in Figure 1 [9]. Each processor can be considered as one decoding iteration. LDPC-CC is decoded by a pipeline decoding window. The received signal vector from the channel acts as the input of Processor 1. The output loglikelihood ratio (LLR) information of Processor 1 is then input to the Processor 2, and so on. Hard decisions are made on the outputs of the last processor to form the decoded codeword.
+The codeword of an LDPC-CC can be deÀned as v = (. . . v0 v1 v2 . . . vt . . .) where vt ∈ (GF(2))c. Moreover, vHT = 0 where
+
+⎡ H0T(0) HT = ⎢⎢⎣⎢⎢
+
+··· ...
+
+HTms (ms) H0T(t)
+
+···
+
+⎤ HTms(t + ms) ⎥⎥⎦⎥⎥ .
+
+...
+
+...
+
+(1)
+
+For a rate R = b/c code where b < c, the elements HTi (t) in HT is written as
+
+⎡ HTi (t) = ⎣⎢
+
+h1i ,1(t) ...
+
+···
+
+hi1,c−b(t) ...
+
+⎤ ⎦⎥
+
+(2)
+
+hic,1(t) · · · hic,c−b(t)
+
+978-1-4577-1415-3/12/$26.00 ©2012 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on 2Ju8n5e424,2026 at 08:43:34 UTC from IEEE Xplore. Restrictions apply.
+
+
+ReceivedCodeword InformationLLR InformationLLR InformationLLR
+
+Processor1 Processor2 Processor3
+
+Read Parity
+
+Start
+
+Check Matrix
+
+Text File
+
+End
+
+Enter Next Processor
+
+No
+
+LLR Computation in Hard Decision
+
+Yes
+
+Last Iteration?
+
+Noise Generation
+
+Initialization of channel message
+
+Updating message from
+VNs to CNs
+
+Updating message from
+CNs to VNs
+Register Shift
+
+ProcessorI
+
+Fig. 3. Flow Chart of an LDPC-CC decoder in a Single-threading CPU
+
+Decodedcodeword
+
+InformationLLR
+HardDecision
+
+Fig. 1. Block diagram of a LDPC-CC decoder.
+
+Fig. 2. Part of the Tanner graph of a rate-1/3 LDPC-CC and an illustration of the i-th decoding processor.
+
+BCs, soft messages are passed between the set of VNs and the set of CNs in the decoding of LDPC-CCs. The difference is that in the decoding of LDPC-CCs, a pipeline decoding window is adopted.
+III. IMPLEMENTATION OF DECODER
+A. CPU Single-threading Implementation
+Single-threading computing architectures are based on sequential logic and hence instructions are executed sequentially. The Áow chart of an LDPC-CC decoder for a single-threading CPU is shown in Figure 3. First, the LDPC-CC decoder reads the parity-check matrix from a text Àle. Based on the Àle, the decoder determines the size of the parity-check matrix and the coordinates of the non-zero elements in the matrix. In our simulations, we use the all-zero codeword in the transmission. Gaussian noise samples are then generated and added to the transmitted signal. Based on the noisy signals, the decoder performs the decoding process by evaluating the initial channel messages, updating the VN-to-CN messages, updating the CN-to-VN messages. For the VNs at the output of the last processor (iteration), their LLR values are computed and hard decisions are made to determined the decoded codeword.
+
+where HTi (t) has a size of c × (c − b). The LDPC-CC is time-invariant if the elements HTi (t) are the same for all t. Otherwise, the LDPC-CC is time-variant.
+In Figure 2, we show part of the Tanner graph of a rate-1/3 LDPC-CC and the i-th decoding processor. In fact, the concept of decoding an LDPC-CC is similar to that of an LDPC-BC. An LDPC-BC contains only one parity-check matrix while an LDPC-CC contains more than one, up to ms + 1, submatrices to form the parity-check matrix corresponding to each processor. In each processor, the decoding processes include (i) updating the messages of the check-node (CN) connected to the variable nodes (VNs) just entering the processor and (ii) updating the messages of the VNs going to leave the processor. Then the VNs leaving the processor serve as the inputs to the next processor.
+Assuming an additive white Gaussian noise (AWGN) channel, message-passing iterative algorithms are commonly used for decoding the LDPC codes. As in the decoding of LDPC-
+
+B. CPU Multi-threading Implementation
+In the decoding process of LDPC-CCs, a huge amount of computations will be involved and it is a critical factor affecting the decoding speed. Computations such as updating of the VN-to-CN messages and CN-to-VN messages are very intensive in the decoding algorithms. Speeding up of the decoding process can be achieved if these computations can be performed in parallel. For a multi-core CPU, multi-threading can be applied.
+OpenMP is an application programming interface (API) that supports shared memory multiprocessing programming. Its task is to divide the costly loops into different threads and to carry out the instructions simultaneously across the different cores on a multi-core CPU or multi-CPUs. Its drawback that it is more difÀcult to debug on the thread synchronization. Moreover, scalability is limited on the memory architecture because multi-core CPUs usually come with a single memory controller. In other words, the cores in a multi-core CPU share the same memory controller. Since the memory bandwidth has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 2Ju8n5e524,2026 at 08:43:34 UTC from IEEE Xplore. Restrictions apply.
+
+Start
+
+Read Parity Check Matrix
+Text File
+
+Noise Generation
+
+Initialization of channel message
+
+Start
+
+Read Parity Check Matrix
+Text File
+
+Copy Matrix to GPU device memory
+
+Initialization of channel message
+
+End
+
+Enter Next Processor
+
+No
+
+LLR Computation in Yes Hard Decision
+
+Last Iteration?
+
+Updating message from CNs to VNs
+
+Updating message from VNs to CNs
+
+Register Shift
+
+Parallel Processing
+
+End
+Copy decoding result to main
+memory
+
+Enter Next Processor
+No
+Last Iteration?
+Yes LLR Computation in Hard Decision
+
+Noise Generation
+
+Updating message from CNs to VNs
+
+Updating message from VNs to CNs
+
+Register Shift
+
+Parallel Processing on GPU
+
+Fig. 4. A Áow chart showing the decoding of LDPC convolutional codes using OpenMP.
+
+Fig. 5. A Áow chart showing the decoding of LDPC convolutional codes using CUDA.
+
+not been increased N times along with an N -core processor, there will not be an N times speed improvement using OpenMP compared with using a single-threading CPU.
+The Áow chart for decoding LDPC-CCs using OpenMP is illustrated in Figure 4. Similar to the single-threading CPU simulation, the LDPC-CC decoder using OpenMP reads a parity-check matrix from a text Àle. Based on the Àle, the decoder determines the size of the parity-check matrix and the coordinates of the non-zero elements in the matrix. Unlike the single-threading CPU simulation, the decoder using OpenMP applies multi-threading to (i) generate AWGN, (ii) updating the messages of VNs and CNs, (iii) compute LLR values for the VNs and (iv) make hard decisions on the VNs. Moreover, the loop iterations are distributed according to the number of threads speciÀed.
+C. GPU Multi-threading Implementation
+Compared with a CPU, a GPU has more die area dedicated to data processing rather than caching and Áow control so as to achieve a high computational capability. GPU is designed for intensive and highly parallel computations. Its performance can achieve over 1500 GÁops [10]. The GPU used in this paper is the Nvidia GTX460. The GPU has 7 multiprocessors (MP) and each MP contains 48 CUDA cores. Thus, there is a total of 336 CUDA cores. The design of the MPs is based on the single-instruction multiple-data (SIMD) architecture, in which multiple cores perform the same instruction on multiple data simultaneously to achieve parallelism.
+In the CUDA programming model, a GPU is a co-processor of CPU and it executes a number of threads in parallel. The decoding Áow chart using CUDA is illustrated in Figure 5. Similar to the CPU simulations, the LDPC-CC decoder using CUDA reads a parity-check matrix from a text Àle. Based on the Àle, the decoder determines the size of the paritycheck matrix and the coordinates of the non-zero elements in the matrix. After constructing the parity-check matrix for the decoder using the computer main memory, the matrix structure is copied to the GPU device memory.
+
+The generation of the AWGN, initial calculation of the LLR values, computation of the VN-to-CN messages and the CN-to-VN messages, and the hard decisions on the VNs are also processed using multi-threading in CUDA. The loop iterations are also distributed according to the number of threads speciÀed. Note that the “Register Shift” process is still performed by the CPU. In other words, data have to be copied back and forth between the device memory and the main memory in this process. Since the “data-transfer” process takes much time, the speed improvement of the GPU platform will be restricted.
+IV. SIMULATION RESULTS
+Simulations are performed using a computer with the following speciÀcations.
+• CPU: quad-core AMD Phenom II X4 945 • Clock frequency: 3.0 GHz • 8GB DDR3 1333MHz memory • GPU Nvidia GTX 460 with 1GB GDDR5 • CUDA Toolkit 4.0, SDK 4.0 • Driver 275.33 for Windows 7 Professional x64 The parameters used in the LDPCCC are ms = 3, J = 4, K = 24. The sizes of HTi (t) used are 2532 × 422, 4608 × 768 and 6144 × 1024. For each of these cases, 100 and 1000 blocks of encoded data are sent, respectively, and I = 10 decoding iterations are performed. We record the simulation time as well as the bit error rates (BERs). The “CPU simulation” platform represents the use of a single-threading CPU simulation; the “OpenMP simulation” platform represents the use of a multi-threading CPU using OpenMP simulation; the “CUDA simulation” platform represents the use of a multi-threading GPU using CUDA simulation. The relative decoding speeds (i) between GPU and singlethreading CPU and (ii) between GPU and multi-threading CPU are shown in Figure 6 and 7, respectively. The results show that the GPU outperforms the single-threading CPU for all the cases being studied. Comparing the results of the GPU and the multi-threading CPU, it is found that except for the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 2Ju8n5e624,2026 at 08:43:34 UTC from IEEE Xplore. Restrictions apply.
+
+Relative decoding speed of GPU over multithreading CPU
+
+100 Blocks - SPA 100 Blocks - MSA 1000 Blocks - SPA 1000 Blocks - MSA
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0 2532 X 422
+
+4608 X 768 Size of subblock in HT
+
+6144 X 1024
+
+Bit Error Rate (BER)
+
+(4608 X 768) - LDPC-CC - SPA - CPU (4608 X 768) - LDPC-CC - MSA - CPU 1.0E+00
+
+(4608 X 768) - LDPC-CC - SPA - CUDA (4608 X 768) - LDPC-CC - MSA - CUDA
+
+1.0E-01
+
+1.0E-02
+
+1.0E-03
+
+1.0E-04
+
+1.0E-05
+
+1.0E-06
+
+1.0E-07 0
+
+1
+
+2
+
+3
+
+signal-to-noise ratio in dB
+
+Fig. 6. Relative decoding speed between GPU and single-threading CPU.
+
+Relative decoding speed of GPU over multithreading CPU
+
+1040 Blocks - SPA 100 Blocks - MSA 1000 Blocks - SPA
+
+3.5
+
+3
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+
+0 2532 X 422
+
+4608 X 768 Size of subblock in HT
+
+1000 Blocks - MSA
+6144 X 1024
+
+Fig. 7. Relative decoding speed between GPU and multi-threading CPU.
+
+case in which HTi (t) = 2532 × 422 and MSA are used, GPU outperforms the multi-threading CPU. The exceptional case is probably due to the simplicity of the MSA plus the small block size that makes the multi-threading CPU more efÀciently. It is also observed that the speedup improvement of the GPU over with the CPU is higher when the more complicated SPA is used instead of the MSA. It is because the CUDA has a fast mathematical standard library that can execute complex function such as the hyperbolic function used in SPA.
+Finally, we compare the BER results produced by the GPU simulations with those found by CPU simulations. The curves in Figure 8 show that the BERs produced and the different platforms give very similar results.
+V. CONCLUSION
+In this paper, we have implemented three simulation platforms for low-density parity-check (LDPC) convolutional code decoders — a single-threading CPU simulation platform (“CPU simulation”); a multi-threading CPU simulation platform (“OpenMP simulation”); and a multi-threading GPU simulation platform (“CUDA simulation”). The simulation results have shown that OpenMP simulation using a quad-core CPU can run about 3 to 4 times faster than CPU simulation while CUDA simulation can run up to 5 times faster than OpenMP simulation and up to 19 times faster than CPU simulation. Moreover, the bit-error-rate (BER) results found by the CPU simulation and the CUDA simulation are almost
+
+Fig. 8. Bit error rates (BERs) found using CPU and GPU at different signalto-noise ratios (SNRs). 1000 blocks are sent and 10 iterations are used to decode each block.
+identical. In the future, we aim to further improve the decoding speed
+by performing the “Register Shift” process (which is currently done in the CPU) in the GPU. If it can be achieved, the speedup improvement will be around 100 times compared to a single-threading CPU. One method we are working on requires a modiÀcation of the data structure. Once the new results are available, we shall report them in future publications.
+ACKNOWLEDGEMENTS
+The work described in this paper was partially supported by a grant from the RGC of the Hong Kong SAR, China (Project No. PolyU 521809).
+REFERENCES
+[1] S.-Y. Chung, “On the Design of Low-Density Parity-Check Codes within 0.0045 dB of the Shannon Limit,” IEEE Communications Letters, vol. 5, pp. 58–60, Feb 2001.
+[2] W. M. Tam, F. C. M. Lau, and C. K. Tse, “A class of QC-LDPC codes with low encoding complexity and good error performance,” Communications Letters, IEEE, vol. 14, no. 2, pp. 169–171, 2010.
+[3] F. C. M. Lau, W. M. Tam, and C. K. Tse, “Increasing the local girth of irregular low-density parity-check codes based on degree-spectrum analysis,” IET Communications, vol. 5, no. 11, pp. 1506–1511, 2011. [Online]. Available: http://link.aip.org/link/?COM/5/1506/1
+[4] A. Jimenez-Feltstrom and K. Sh. Zigangirov, “Time-varying Periodic Convolutional Codes with Low-density Parity-check Matrix,” IEEE Trans. Inform. Theory, vol. IT-45, pp. 2181–2191, Sept 1999.
+[5] Medical Imaging using GPU - Nvidia. [Online]. Available: {http: //www.nvidia.com/object/medical\ imaging.html}
+[6] Key Computational Finance Applications Using CUDA. [Online]. Available: {http://www.nvidia.com/object/computational\ Ànance.html}
+[7] R. G. Gallager, “Low-density Parity-check Codes,” M.I.T. Press, Cambridge, Massachusetts, 1963.
+[8] J. Chen, A. Dholakia, and E. Eleftheriou, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, pp. 1288–1299, 2005.
+[9] S. Bates, L. Gunthorpe, A. E. Pusane, Z. Chen, K. Zigangirov, and D. Costello, “Decoders for Low-density Parity-check Convolutional Codes with large memory,” 2006 IEEE International Symposium on Circuits and Systems on Island of Kos, Greece, pp. 336–339.
+[10] Nvidia CUDA C Programming Guide Ver 4.0. [Online]. Available: http://developer.nvidia.com/nvidia- gpu- computing- documentation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 2Ju8n5e724,2026 at 08:43:34 UTC from IEEE Xplore. Restrictions apply.
+
+

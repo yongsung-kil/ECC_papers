@@ -1,0 +1,461 @@
+International Conference on Intelligent Information Hiding and Multimedia Signal Processing
+Low-complexity Real-time LDPC Encoder Design for CMMB
+
+Wang Peng, Chen Yong-en Communication Software & ASIC Design Center, Tongji University
+Shanghai, 200092, China E-mail: pengpwn@hotmail.com
+
+Abstract
+Based on modified LU decomposition theory with pivoting of sparse matrix, a low-complexity real-time LDPC encoder for CMMB was presented, which can support 2 different code rate (1/2 and 3/4). Multistaged pipeline and Pingpong buffer architectures were used to improve throughput. An efficient memory organization for storing sparse matrices was also presented. Whole design was synthesized and routed on Altera Stratix II EP2S90. Highest frequency achieved over 200 MHz, with pure encoding rate 32.44 Mbps (1/2 code rate) and 67.16 Mbps (3/4 code rate). Beside, fully-parameterized LDPC encoder can support arbitrary H matrix LDPC code with only necessary initialized data of memory blocks.
+1. Introduction
+LDPC code (Low Density Parity Check Code) was first introduced by R. G. Gallager[1] in 1962, however, it was overlooked for several decades because of high-complexity of encoding and decoding. In 1996, D. MacKay and R. M. Neal rediscovered its powerful performance as Error Correction Coding (ECC), [2]. For instance, for code rate = 1/2 and codeword length of 107, bit error rate of 10-6 can be achieved with threshold of 0.0045dB Shannon limit over AWGN channel [3], which shows the best performance as ECC up to now.
+Presently LDPC code has been widely used on magnetic record, wireless communication and other zones. For instance, LDPC code was used as channel coding in DVB-S2, IEEE 802.11n/16e, and DMB-T, etc. In Chinese Mobile Multimedia Broadcasting standard (CMMB), LDPC code was also used as Forward Error Correction Code combined with RS code[4].
+Despite of better performance compared to others codes especial Turbo codes. LDPC codes have large encoding complexity, which constitutes a main obstacle preventing its hardware implementation in modern communications.
+
+Although parity-check matrix H of LDPC code is always very sparse, its corresponding generation matrix G is mostly dense, meaning quadratic complexity to code length with direct generation matrix encoding, which is nearly infeasible for hardware implementation. So currently widely-used LDPC codes are mainly QC-LDPC codes or its evolve version, whose parity-check matrix shows block-circular pattern, so that can be encoded with lower complexity[5].
+LDPC code in CMMB is a kind of HighStructured (HS) code, but not QC-LDPC. Approach for QC-LDPC encoding can’t be used for CMMB. In this paper, based on LU decomposition of H matrix, a low-complexity LDPC encoder for CMMB was designed. To improve encoding efficiency, heuristic search strategy is used for LU decomposition with partial pivoting, leading to the lower-triangular matrix L and upper-triangular matrix U making up the LU decomposition as sparse as possible. So that LDPC encoder can be realized with very low complexity. Whole design was synthesized and routed on Stratix II EP2S90 of Altera Corporation. Highest operation frequency achieves 201.49 MHz.
+2. LDPC encoding
+2.1. General LDPC encoding algorithm
+As a kind of linear block code, LDPC code can be fully described by its parity-check matrix H. only few elements of H matrix are nonzero, meaning H is a classic sparse matrix. However, its corresponding generation matrix tends to be dense even if H is very sparse. Implementing the encoder directly through dense matrix operations is very difficult, for it will result in complexity quadratic to code lengths, which is always unrealistic when code lengths are larger. So QC-LDPC was designed to solve this problem. Parity-check matrix and generation matrix of QCLDPC codes are both block-circular, so that its encoding can be easily completed with Linear Feedback Shift-Register (LFSR)[6]. LDPC code used in IEEE 802.11n/16e, and DMB-T, etc are all QCLDPC codes.
+
+978-0-7695-3278-3/08 $25.00 © 2008 IEEE
+
+1209
+
+DOI 10.1109/IIH-MSP.2008.15
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:58:02 UTC from IEEE Xplore. Restrictions apply.
+
+Since LDPC code of CMMB is not QC-LDPC, encoding based on LFSR is unavailable for CMMB. R. M. Neal[7] designed a kind of encoding method with linear complexity. He used LU decomposition to free whole encoding process from dense inverse operation, however, it is not easy to find a good sparse LU decomposition for arbitrary H matrices. T. Richardson and R. Urbanke also developed an efficient strategy for LDPC encoding[8], called RU algorithm. But this method requires lots of preprocess on H matrix before encoder can work, which is rather time-consuming.
+2.2. LDPC encoder for CMMB
+There are 2 different LDPC code rates (1/2 and 3/4) used in CMMB standard. Both codeword lengths are 9216 bits. For 1/2 code rate, corresponding parity-check matrix H (4608×9216) data are cyclic-shifted 36 bits for each 18 rows. Similarly, parity-check matrix H for 3/4 code rate (2304×9216) takes on cyclic-shift pattern, too. H data of 3/4 are cyclic-shifted 36 bits for each 9 rows.
+H matrix pattern of 2 code rate are showed below in Figure 1:
+
+(a)
+
+(b) Figure 1 (a) 1/2 code rate H matrix for CMMB pattern Figure 1 (b) 3/4 code rate H matrix for CMMB pattern
+
+However, CMMB outputting encoded LDPC
+
+codes are not systematic, information bits and parity
+
+bits are reordered as follows: (Let s_bit represent
+
+information bit vector to be encoded, corresponding
+
+parity code vector is p_bit)
+
+CCOL _ ORDER(i)
+
+=
+
+⎧ ⎨⎩ s
+
+p _ biti _ biti+K −9216
+
+0 ≤ i ≤ 9215 − K 9216 − K ≤ i ≤ 9215
+
+(1)
+
+Here C represents outputting encoded code,
+
+COL _ORDER(i) is codeword bits mapping vector
+
+defined in CMMB standard, K is LDPC code
+
+information sequence length. K = 4608 bits for 1/2
+
+code rate, 6912 bits for 3/4 code rate.
+
+Because of this High-Structured character of H
+
+matrix, decoding complexity for CMMB LDPC code
+
+is decreased greatly, since whole H matrix can be
+
+derived from only several rows data. However, the
+
+encoded LDPC code of CMMB isn’t systematic code,
+
+meaning parity codes and information codes are
+
+mixed together, which increased encoding difficulty
+
+partly. Generation matrix G for CMMB is not sparse,
+
+too, nonzero element No. per line achieve over 1000,
+
+also no QC pattern shows in G matrix. It shall
+
+consume quite a number of storages and logical
+
+resources to encode LDPC code with direct G matrix
+
+encoding, so in this paper, LDPC encoding is
+
+achieved via sparse matrix H.
+
+The principle of LDPC encoding with H matrix
+
+is to solve parity equations H *CT = 0 , where CT is
+
+encoded codeword. Now that H matrix is sparse,
+
+while LU decomposition theory of sparse matrix has
+
+been investigated in many papers. So that parity
+
+codes can be solved with rather low complexity.
+
+Since information bits and parity bits of CMMB
+
+encoded code are mixed together, parity-check
+
+equations have to be reordered to separate s_bit and
+
+p_bit, which is just the inverse transformation of
+
+codeword bits mapping. So that new pattern parity-
+
+check
+
+equations
+
+H ' * CsysT
+
+=0
+
+was
+
+found,
+
+here
+
+CT sys
+
+is
+
+systematic form of encoded code, meaning
+
+CT sys
+
+= [ p _ bit, s _ bit]
+
+.
+
+Mapping
+
+from
+
+H
+
+to
+
+H ' is
+
+to
+
+choose COL _ ORDER(k)th column of H as kth column
+
+of H ' .
+
+Divide H ' into H p and Hs two parts,
+
+respectively corresponding to p_bit and s_bit.
+
+Continually, parity-check equations can be written:
+
+[H p , Hs ]*[ p _ bit, s _ bit] = 0
+
+(2)
+
+Because H matrix is defined in GF(2), equation
+
+(2) became:
+
+H p * p _ bit = Hs * s _ bit
+
+(3)
+
+Separated from H ' , H p is still a classic sparse
+
+matrix, so equation (3) can be solved by LU
+
+decomposition, which is especially efficient for
+
+sparse matrix.
+
+Do LU decomposition on H p , so that
+
+L *U = P * H p , where L is lower-triangular matrix and
+
+U is upper-triangular matrix. P is row-permutation
+
+primary matrix, then:
+
+L *U * p _ bit = P * Hs * s _ bit
+
+(4)
+
+Let P * Hs = Hs _ new , Hs _ new * s _ bit = z _ bit ,
+
+U * p _ bit = y _ bit , then parity-check bits p _ bit
+
+can be calculated as following steps：
+
+1. Compute sparse matrix Hs _ new multiplies
+
+information bit vector s_bit:
+
+z _ bit = Hs _ new * s _ bit = (P * Hs ) * s _ bit ;
+
+2. Solve equations L* y _ bit = z _ bit with
+
+forward substitution; 3. Solve equations U * p _ bit = y _ bit with
+
+backward substitution.
+
+Once p_bit vector is solved, reorder information
+
+vector s_bit and parity-check vector p_bit with
+
+1210 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:58:02 UTC from IEEE Xplore. Restrictions apply.
+
+H s _ new L
+
+U
+
+Figure 2 Hardware structure for LDPC encoder
+
+codeword bit mapping vector COL _ ORDER(i) ,
+then encoded LDPC codes for CMMB are generated.
+3. H matrix LU decomposition of CMMB
+LU decomposition for H matrix is only used once in the whole encoding process, so it can be completed by software on PC, while the decomposed LU results are saved in encoder hardware.
+Optimized partial pivoting strategy was used for LU decomposition, so that lower-triangular matrix L and upper-triangular matrix U are as sparse as possible, which could decrease memory requirement greatly.
+Figure (a) showed LU decomposition results of 1/2 and 3/4 code rate. For 1/2 code rate, there are 28621 nonzero elements in all in L matrix, while 21676 nonzero elements in U matrix. For 3/4 code rate, corresponding nonzero elements No. for L and U matrix are 8721 and 4747. See Figure 3 and Figure 4 for scatter plot of L, U.
+
+(a)
+
+(b)
+
+Figure 3 (a) 1/2 code rate Hp matrix LU decomposition
+
+result lower-triangular matrix L, (b) upper-triangular matrix U
+
+4. LDPC encoder design
+Stratix II EP2S90 device of Altera is chosen to implement LDPC encoding for CMMB. There are 72,768 ALUTs, equivalent 90,960 LEs in all internal chip, and memory capacity also achieves over 4.5 Mbit, which is sufficient for real-time encoding of CMMB standard.
+4.1. Decoder pipeline structure
+Since LU decomposition is completed, whole encoding process could be accomplished according to approach listed in 2.2. To improve encoding efficiency, multi-staged pipeline architectures are introduced. An overview of whole hardware encoder architecture is shown in Figure 2:
+Basically, 5 stages pipeline architectures were used in this design. Pingpong buffer was used in each stage to further improve throughput. Information bit was also buffered in each pipeline stage to ensure final outputting information codes and parity-check codes are counterparts.
+In stage 1, inputting information bits are saved into upper and lower Pingpong buffer alternately. In pipeline stage 2, 3 and 4, steps 1, 2, 3 listed in 2.2 are completed one by one. Finally, solved parity-check bits and temporarily buffered information bits are combined together and reordered by codeword bits mapping vector (named IDX table) to form outputting encoded LDPC code.
+
+4.2. Data saving of matrix and IDX table
+
+(a)
+
+(b)
+
+Figure 4 (a) 3/4 code rate Hp matrix LU decomposition
+
+lower-triangular matrix L, (b) upper-triangular matrix U
+
+It’s obvious that 3 matrix Hs_ new , L and U data
+under 2 different code rate have to be saved in hardware, still, IDX table is essential when reordering p_bit and s_bit. Enormous memories are necessary to record these data. So that saving patterns have to be designed very carefully.
+There are 3 different memory block internal to Stratix II devices: M512(512-bit), M4K(4K-bit), and
+
+1211 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:58:02 UTC from IEEE Xplore. Restrictions apply.
+
+M-RAM(512K-bit). Both M512 and M4K can be
+
+used as ROM, indicating a data initializing file is
+
+supported to be loaded when booting FPGA.
+
+However, large numbers of M512/M4K blocks have
+
+to be combined to accommodate necessary data for
+
+CMMB LDPC encoder, which will increase route
+
+difficulty greatly, highest work frequency is also
+
+limited. Although M-RAM doesn’t directly support
+
+ROM mode, its content still can be initialized from
+
+external memory after FPGA configuring completed,
+
+which is nearly equivalent to ROM. So in this paper
+
+M-RAMs are used to save sparse matrix & IDX data.
+
+, Hs_new L and U are all sparse matrix. It’s more
+
+efficient to save only nonzero elements of whole
+
+matrix, adding to IDX tables under 2 different code
+
+rate, 6 M-RAM blocks are essential. Nevertheless,
+
+there are only 4 M-RAM blocks internal to EP2S90.
+
+To fully utilize memory storage, considering actual
+
+LDPC encoder for CMMB could only work under
+
+specific code rate, i.e. matrix and IDX data under 3/4
+
+code rate are useless when encoding 1/2 code rate
+
+bits, vice versa. Hence, only matrix and IDX data
+
+under given code rate are written into M-RAMs.
+
+When alternating code rate, new matrix and IDX
+
+data are loaded, so that whole Hs_ new , L and U
+
+matrix, adding IDX data can be saved into only 4 M-
+
+RAM blocks.
+
+Set M-RAM work mode for simple dual-port
+
+RAM, 32K×16 bit. 4 M-RAM blocks save Hs_ new ,
+
+L , U and IDX table individually. Saving pattern for
+
+sparse matrix is only recording nonzero elements
+
+column index, plus 1 extra bit indicating new row
+
+starting, if elements of whole row are all zero (for
+
+instance, there are lots of rows in Hs that are allzero.), set corresponding nonzero elements column
+
+index to be a given value, which is illegal as
+
+elements column index in fact. Consequently all-zero
+
+row is denoted with very simple strategy.
+
+⎛1 0 0 1 0⎞
+
+⎜ ⎜
+
+0
+
+0
+
+0
+
+0
+
+1
+
+⎟ ⎟
+
+Take
+
+matrix
+
+⎜1 ⎜
+
+1
+
+0
+
+0
+
+0⎟ ⎟
+
+for
+
+example,
+
+this
+
+⎜0 0 0 0 0⎟
+
+⎝⎜ 0 0 1 0 1 ⎠⎟
+
+matrix will be saved as follows in Table 1, here 6 is
+
+used as all zero row nonzero element column index.
+
+Table 1 sparse matrix storage pattern
+
+Address
+
+01234567
+
+Data
+
+Nonzero Element Column index New row start flag
+
+03401624 10110110
+
+For IDX data, 9216 indices have to be recorded.
+
+Since M-RAM storage is enough to save 2 IDX data under 1/2 and 3/4 code rate, there are 9216×2 =
+
+18432 IDX indices in all to save.
+
+5. Implementation results on FPGA
+
+The LDPC encoder was implemented in Verilog HDL, whole design was synthesized and routed on Altera Stratix II EP2S90 device under Quartus II 7.2 environment. Table 2 Shows a summary of synthesis results.
+
+Table 2 LDPC encoder design statistics of FPGA
+
+Parameters
+
+Resources Used
+
+Resources Available
+
+Percentage Used
+
+ALUT
+
+581
+
+72,768
+
+0.8%
+
+Memory(bits) 2,015,232 4,520,488
+
+45%
+
+Decoder maximum work frequency is 201.49
+
+MHz, under this frequency, system pure encoding
+
+rate can achieve 32.44 Mbps (1/2 code rate) and 67.16 Mbps（3/4 code rate）, which is sufficient for
+
+CMMB standard (10.852Mbps under 1/2 code rate,
+
+16.243Mbps under 3/4 code rate.) Practically, work
+
+frequency can be decreased greatly for better power
+
+consumption while still keeping competent for
+
+CMMB LDPC encoding.
+
+6. Conclusion
+
+Based on modified LU decomposition theory for sparse matrix, a low-complexity real-time LDPC encoder for CMMB was designed, 5 stages pipelines and Pingpong buffers were adopted to improve efficiency. Whole design was synthesized on Stratix II EP2S90 device. Maximum frequency achieves the rate of over 200 MHz. With necessary M-RAM initialized data, the LDPC encoder also can support other code lengths and code rates for arbitrary H matrix pattern.
+References
+
+[1] R. Gallager. “Low-density Parity-Check codes”. IEEE Trans. on Inform. Theory, 1962, 8: pp. 21-28
+[2] D. J. C. MacKay, R. M. Neal. “Near Shannon limit performance of low-density parity check codes”. Electron. Lett, vol. 32, 1996, pp. 1645
+[3] S. Y. Chung, G. D. Forney, Jr. T.J. Richardson, R. Urbanke. “On the design of low-density parity check codes within 0.0045dB of the Shannon limit. IEEE Comm. Letters”. 2001, pp. 58-60
+[4] Mobile Multimedia Broadcasting (P. R. China) Part 1: Framing Structure, Channel Coding and Modulation for Broadcasting Channel
+[5] M.P.C. Fossorier, “Quasi-cyclic low density parity check codes from circulant permutation matrices,” IEEE Trans. on Inform. Theory, vol.50, 2004, pp. 1788-1794
+[6] Zongwang Li, Lei Chen, Lingqi Zeng, Shu Lin, “Efficient Encoding of Quasi-Cyclic Low-Density Parity-Check Codes”, IEEE Trans. on Comm. vol. 54, 2006, pp. 71-76
+[7] R. M. Neal. Sparse matrix methods and probabilistic algorithm. IMA Program On Codes, Systems, and Graphic Models, 1999
+[8] T. Richardson, R. Urbanke. “Efficient encoding of low-density parity-check codes”. IEEE Trans. on Inform. Theory, 2001, 47, pp. 638-656
+
+1212 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:58:02 UTC from IEEE Xplore. Restrictions apply.
+
+

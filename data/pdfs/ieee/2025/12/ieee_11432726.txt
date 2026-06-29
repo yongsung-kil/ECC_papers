@@ -1,0 +1,871 @@
+In-Memory Noise Estimation using LDPC Codes
+for Reliable Edge Matrix-Vector Multiplication
+Yotam Gershon
+Yuval Cassuto
+The Viterbi Faculty of Electrical and Computer Engineering, Technion - Israel Institute of Technology
+Email: {yotamgr@campus, ycassuto@ee}.technion.ac.il
+Abstract—Reliable matrix-vector multiplication (MVM) in
+edge devices is a key enabler for modern computational tasks
+such as AI inference. Novel memory technologies, such as
+MRAMs, enable highly efficient analog computation of MVM.
+While significantly improving speed and power consumption,
+these architectures suffer from reduced reliability. We introduce
+a coding scheme in which the parity constraints of the code
+are employed toward in-memory noise estimation, in addition
+to their traditional role of error correction. Our scheme relies
+on objects we call analog syndromes, which on one hand can be
+efficiently computed in memory, and on the other hand are shown
+analytically to provide more accurate estimation than classical
+logical syndromes. The scheme utilizes a previously introduced
+bilayer LDPC design with sub-block locality, and describes how
+to design the degree distributions.
+I. INTRODUCTION
+Matrix-vector multiplication (MVM) is one of the most
+widely used operations in modern computing systems, serving
+as the primary computationally intensive task in domains
+such as artificial intelligence (AI) and, in particular, ma-
+chine learning (ML) [1]. A major bottleneck in MVM speed
+and power consumption is data transfer from memory to
+processing units (PU), a challenge known as the memory
+wall [2]. This provides a constant drive for the introduc-
+tion of accelerated computing capabilities, with in-memory
+computing being one of the most promising candidates [3].
+Specifically, by employing the unique properties of novel
+memory technologies, such as magneto-resistive random ac-
+cess memories (MRAM) [4], dot-product (DP) operations
+can be performed in the analog domain. One of the most
+efficient approaches is to store the desired matrix as a memory
+array, drive the rows simultaneously based on some input
+vector’s values, and measure the accumulated conductance at
+each column (e.g. [5]). Thanks to the highly parallel nature
+of such mechanisms, they provide a significant reduction in
+MVM latency and power. This may be especially useful for
+edge devices performing AI tasks [6], [7]. However, these
+architectures suffer from challenging reliability, due to the
+combination of inherently less accurate analog computations
+and highly limited error control methods that can be embedded
+in-memory. A widely used technique is to encode the data
+being stored (in our case, the matrix) and transfer it to a PU for
+error-correction decoding. When performed frequently, this
+technique adversely affects the efficiency gain provided by
+the in-memory computing methodology.
+Work supported in part by the US-Israel BSF under grant number 2023627.
+Another promising technique is introduced by Roth in [8],
+and further generalized in [9], where redundancy columns
+are added to the desired matrix such that the resulted vector
+will follow parity constraints allowing error correction. This
+elegant methodology effectively utilizes the MVM already
+performed in-memory. The drawbacks are the expansion of
+the output vector and the non-trivial code design.
+In this paper, we introduce a middle-ground approach: we
+propose a scheme that periodically estimates the noise level
+affecting the memory cells, and when too high, transfers
+the data to an external PU for error correction and re-write.
+The key ingredient in this scheme is accurate estimation of
+the noise standard deviation from in-memory DP-computable
+objects we call analog syndromes. The estimation of bit-flip
+probability using the classical (here called logical) syndromes
+of linear codes was studied in [10], and further generalized
+in [11] to enable in-memory error estimation in general-
+purpose (not MVM) memories. Nevertheless, we show an-
+alytically that the analog syndromes offer superior estimation
+performance over logical syndromes.
+In Section II we formulate the model of in-memory DP
+computations and the problem of DP reliability. Then, in
+a similar vein to [10], [11], in Section III we perform
+a maximum likelihood (ML) estimation of the noise level
+("channel parameter") from the Hamming weight of the analog
+syndrome. We analyze the proposed estimator using the Fisher
+information, and show its performance as a function of the
+noise parameter and the degree of the parity constraints.
+In Section IV we introduce a construction of low-density
+parity check (LDPC) codes [12] that enable such in-memory
+estimation, along with out-of-memory error correction of the
+entire matrix. This construction is based on bilayer LDPC
+codes [13], incorporating sub-block locality over columns to
+enable parity-based syndrome calculation in each column,
+along with additional global layer enabling strong error cor-
+rection between columns. We describe how to design the
+check degree for the local sub-graphs for good estimation
+performance over different regions of noise levels, and how to
+design the other degree distributions for good error correction
+capability. Finally, in Section V we employ the tools from
+previous sections and suggest an architecture for reliable DP.
+II. PROBLEM FORMULATION
+We assume an 𝑛× 𝑚binary memory array capable of
+performing in-memory MVM. 𝜙(𝑥), Q(𝑥) denote the standard
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3420
+GLOBECOM 2025 - 2025 IEEE Global Communications Conference | 979-8-3315-7781-0/25/$31.00 ©2025 IEEE | DOI: 10.1109/GLOBECOM59602.2025.11432726
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 
+normal distribution’s density and tail functions, respectively.
+[𝑥1, . . . , 𝑥𝑚] mod 2 denotes the element-wise modulo 2 for
+any length-𝑚≥1 integer vector. 0, 1 denote the all-zeros
+and all-ones vectors with length that will be clear from
+the context. 𝑤𝐻(𝒙) denotes the usual Hamming weight. We
+treat logical XOR between logical elements in {0, 1} and 1-
+bit multiplication between elements in {1, −1} as the same
+under the mapping 0 ↔1, 1 ↔−1. For an irregular
+LDPC code [12] with a parity check matrix 𝐻, Λ𝑖and
+Ω𝑖denote the fractions of variable and check nodes of
+degree 𝑖in the Tanner graph [14] corresponding to 𝐻, and
+𝚲= [Λ1, . . . , Λ𝑑𝑣], 𝛀= [Ω1, . . . , Ω𝑑𝑐], are the code’s degree
+distributions. 𝑎R ≜Í𝑑𝑐
+𝑖=1 𝑖Ω𝑖denotes the average check degree.
+A. System Model
+As a basis for our model we will use a binary MVM
+architecture, like the one described in [5] using the magnetic
+tunnel junction (MTJ)-MRAM technology. The cells represent
+the logical bits of the matrix through parallel (P) and anti-
+parallel (AP) states, with low and high resistance, respectively,
+in a complementary bit-cell structure (each cell implements
+both its primary and complementary values). AP and P states
+represent −1 and 1 respectively. The 1-bit multiplication
+between an input element and a matrix element is given by
+the cell’s conductance. We model the conductance of the cell
+in the 𝑖-th row and 𝑗-th column of a 𝑛× 𝑚array as
+𝐺𝑖𝑗= 𝑔𝑖𝑗+ Δ𝑖𝑗, 𝑔𝑖𝑗∈{𝐺P, 𝐺AP} , Δ𝑖𝑗∼N
+
+0, 𝜎2
+,
+with 𝐺P > 𝐺AP representing the conductance in P and AP
+states respectively, and Δ𝑖𝑗describing a normally distributed
+conductance disturbance [15]. Different Δ𝑖𝑗elements are
+modeled as independent and identically distributed. These
+disturbances are thought of as the result of accumulated,
+slowly drifting, physical error mechanisms having spatial
+random distribution. At each MVM instance, 𝑛rows are
+activated simultaneously by the input vector 𝒗: 𝑣𝑖= 1 selects
+the primary and 𝑣𝑖= −1 the complementary value of the cell
+in the 𝑖-th row. The accumulated column conductance is
+¯𝐺𝑗≜
+𝑛
+∑︁
+𝑖=1
+𝐺𝑖𝑗(𝑣𝑖) =
+𝑛
+∑︁
+𝑖=1
+𝑔𝑖𝑗(𝑣𝑖) +
+𝑛
+∑︁
+𝑖=1
+Δ𝑖𝑗≜¯𝑔𝑗+ ¯Δ 𝑗,
+¯𝑔𝑗= 𝑛e𝐺P + 𝑛o𝐺AP = 𝑛eΔ𝐺+ 𝑛𝐺AP , ¯Δ 𝑗∼N (0, 𝑛𝜎2),
+with 𝑛e being the number of even products (−1/1 input with
+−1/1 cell) and 𝑛o = 𝑛−𝑛e the number of odd products
+(−1/1 input with 1/−1 cell), and Δ𝐺≜𝐺P −𝐺AP. We notice
+that by flipping a single matrix cell, ¯𝑔𝑗is shifted by Δ𝐺. At
+the bottom of each column, a current sampler translates the
+conductance to a quantized value based on regions of ¯𝐺𝑗. We
+assume a linear mid-tread quantizer [16] to 𝑛e (equivalent to
+the result of the original binary DP result), of the form
+𝑦𝑗≜
+ ¯𝐺𝑗−𝑛𝐺AP
+Δ𝐺
++ 1
+2
+
+=
+𝑛eΔ𝐺+ ¯Δ 𝑗
+Δ𝐺
++ 1
+2
+
+∈Z,
+(1)
+which can be achieved (for example) by a flash ADC [17].
+For the purpose of noise estimation, we disregard the fact that
+noise-free values of 𝑦𝑗are bounded to {0, 1, . . . , 𝑛}, while
+actual readout could truncate the result to this region. All the
+results can be generalized to any quantizer form with minor
+technical adjustments, which are not the main focus of this
+work. Under these considerations, 𝑦𝑗represents the result of a
+noisy binary DP between the input vector and the 𝑗-th column.
+From this point we take Δ𝐺= 1, without loss of generality,
+but keep in mind that 𝜎should be replaced with 𝜎/Δ𝐺for the
+general case, providing a degree of freedom for the design.
+B. Dot Product Reliability
+We wish to evaluate the reliability of DP operations, com-
+promised by the accumulation of disturbances Δ𝑖𝑗.
+Definition 1. 𝑥𝑗denotes the desired DP result, obtained by
+replacing ¯𝐺𝑗with the noiseless ¯𝑔𝑗in Eq. (1). Then, |𝑦𝑗−𝑥𝑗| ≥𝑡
+with 𝑡≥1 is defined as a DP error of magnitude 𝑡.
+Lemma 2. The probability of a DP error of magnitude 𝑡is
+𝜉𝑛,𝑡(𝜎) ≜2Q
+𝑡−0.5
+√𝑛𝜎
+
+.
+(2)
+Proof: 𝑦𝑗differs from 𝑥𝑗by 𝑡or more when
+ ¯Δ 𝑗
+ > (𝑡−1)+0.5,
+shifting the quantizer’s output.
+It is clear from Eq. (2) that the probability of error grows (fast)
+with the number 𝑛of rows participating in the DP. This is a
+known challenge [5] restricting row parallelism, and therefore
+the efficiency gain from computing in-memory. Our goal is to
+perform an efficient in-memory noise estimation for 𝜎. This
+allows to decide when to perform read, decode and re-write
+for noise reduction, so that a certain level of DP reliability,
+𝜉𝑛,𝑡(𝜎) ≤𝜉max is ensured.
+III. IN-MEMORY NOISE ESTIMATION
+In this section we develop the framework of in-memory
+noise estimation. The idea is to employ the MVM architecture
+for evaluating the syndrome of chosen matrix elements with
+respect to an LDPC code protecting the matrix. Throughout
+this section we assume that a set of 𝑑activated rows satisfy a
+parity constraint (as described ahead) in every column. Code
+design ensuring that property is discussed in Section IV.
+A. Analog Syndromes
+We define the notion of a syndrome in the analog DP
+domain. First, a parity constraint in that domain should be
+defined, analogous to the traditional XOR parity equations.
+Definition 3. We say that a set of 𝑑cells satisfies a parity
+constraint if it contains an even number of P-state cells.
+Following Definition 3, if we activate this set of 𝑑cells
+with 1 in the corresponding rows (without activating any more
+cells), the resultant ¯𝑔𝑗will have an even 𝑛e (i.e., 𝑛e mod 2 =
+0). We assume, as discussed above, that some set of 𝑑rows
+satisfies a parity constraint on every column simultaneously.
+We denote this 𝑑× 𝑚memory sub-array by 𝐸.
+Definition 4. The analog syndrome of 𝐸is defined by
+𝒔A(𝐸) ≜[𝑦1, . . . , 𝑦𝑚] mod 2, when 𝑦𝑗are the values from (1)
+obtained with 𝒗= 1.
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3421
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 
+0
+0.1
+0.2
+0.3
+0.4
+0
+0.1
+0.2
+0.3
+0.4
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0
+0.1
+0.2
+0.3
+0.4
+Fig. 1: Left: unsatisfied-analog-check probability 𝜌𝑢as a function of 𝜎for 𝑑= {4, 16, 64}. Right: ML estimator ˆ𝜎𝐴as a
+function of 𝑤𝐴
+𝒔/𝑚for the same 𝑑values. 𝑚= 128 in both plots.
+Remark 5. Notice that 𝒔𝐴(𝐸) ∈{0, 1}𝑚. Based on the assump-
+tion above, in the noiseless case (Δ𝑖𝑗= 0) we have 𝒔A(𝐸) = 0.
+These properties make the analog syndrome naturally analo-
+gous to the traditional logical syndrome.
+B. Maximum Likelihood Noise Estimation
+In close relation to the framework in [10], [11], we derive
+an ML estimator for 𝜎based on the syndrome’s Hamming
+weight, but here using the analog syndrome: 𝑤𝐴
+𝒔≜𝑤𝐻(𝒔A).
+Definition 6. An unsatisfied analog check is defined as a
+syndrome element that satisfies 𝑦𝑗mod 2 = 1.
+Lemma 7. The probability of an unsatisfied analog check is
+𝜌𝑢(𝜎; 𝑑) ≜2
+∞
+∑︁
+ℓ=0
+(−1)ℓQ
+ℓ+ 0.5
+√
+𝑑𝜎
+
+, 0 < 𝜎< ∞.
+(3)
+Proof: A syndrome element satisfies 𝑦𝑗mod 2 = 1 when ¯Δ𝑗
+shifts the quantizer an odd number of steps. That is, when
+(2ℓ+ 0.5) ≤
+ ¯Δ 𝑗
+ < (2ℓ+ 1.5), with ℓ∈N.
+For brevity, we use 𝜌𝑢or 𝜌𝑢(𝜎) to denote 𝜌𝑢(𝜎; 𝑑) when the
+inputs are clear from the context. Now, since ¯Δ𝑗over different
+columns are statistically independent, the syndrome’s weight
+𝑤𝐴
+𝒔follows a Binomial distribution of 𝑚trials and probability
+𝜌𝑢(𝜎). It can be readily seen that lim𝜎→0 𝜌𝑢(𝜎) = 0 since
+all terms vanish. Moreover, lim𝜎→∞𝜌𝑢(𝜎) is equivalent to
+the probability of randomly choosing an odd integer, which
+is clearly 1/2. Numerical evaluation of 𝜌𝑢(𝜎) shows that it
+monotonically increases between these limits, thus 𝜌𝑢(𝜎) is
+an invertible function.
+Theorem 8. The analog ML estimator for 𝜎is
+ˆ𝜎𝐴(𝑤𝐴
+𝒔; 𝑑) = 𝜌−1
+𝑢
+
+𝑤𝐴
+𝒔/𝑚; 𝑑
+
+, 0 < 𝑤𝐴
+𝒔< 𝑚/2 ,
+(4)
+where 𝜌−1
+𝑢(𝑥; 𝑑) is the inverse function of 𝜌𝑢(𝜎; 𝑑).
+Proof: We have P  𝑤𝐴
+𝒔= 𝑤|𝜎 =  𝑚
+𝑤
+𝜌𝑢(𝜎)𝑤(1 −𝜌𝑢(𝜎))𝑚−𝑤.
+Setting the derivative to 0 gives 𝑤= 𝑚𝜌𝑢(𝜎).
+Fig. 1 depicts 𝜌𝑢(𝜎; 𝑑) and ˆ𝜎𝐴(𝑤𝐴
+𝒔; 𝑑) for different values
+of 𝑑. For 𝜌𝑢, the vanishing and saturation can be observed
+with regions that significantly depend on 𝑑. For ˆ𝜎𝐴, it can
+be seen that different effective ranges of 𝜎can be estimated
+by different values of 𝑑. This will be further discussed in
+Section III-C. Moreover, based on the limiting behavior of
+𝜌𝑢(𝜎), it is natural to set ˆ𝜎𝐴(0; 𝑑) = 0 and ˆ𝜎𝐴(≥𝑚/2; 𝑑) =
+𝜎max(𝑑) for some
+𝜎max(𝑑) ≥ˆ𝜎𝐴(𝑚/2 −1; 𝑑).
+(5)
+C. Estimation Performance
+We now wish to study the estimation performance of (4).
+Like in [10], we rely on the fact that ML estimators are asymp-
+totically efficient [18], that is, they are asymptotically unbi-
+ased and their asymptotic variance approaches the Cramer-
+Rao lower bound (CRLB) [19]. The CRLB is obtained from
+the reciprocal of the Fisher information of 𝜎, which is derived
+in the following lemma (proof in Appendix A).
+Lemma 9. The Fisher information of 𝜎with respect to 𝑤𝐴
+𝒔is
+I𝐴(𝜎; 𝑑) =
+𝑚
+𝜌𝑢(1 −𝜌𝑢)
+"
+2
+∞
+∑︁
+ℓ=0
+(−1)ℓ
+𝑐ℓ
+√
+𝑑𝜎2 𝜙
+ 𝑐ℓ
+√
+𝑑𝜎
+#2
+,
+where 𝑐ℓ≜(ℓ+ 0.5).
+We notice that I𝐴(𝜎; 𝑑) includes the well-known 𝑚/[𝜌𝑢(1 −
+𝜌𝑢)] term that stems from the Binomial nature of 𝑤𝐴
+𝒔. The
+additional term is induced by the need to further estimate
+𝜎from the Binomial probability 𝜌𝑢. This term introduces
+interesting behavior that diverges significantly from the stan-
+dard Binomial estimation, shown in the following proposition
+(proof in Appendix B).
+Proposition 10. The Fisher information I𝐴(𝜎; 𝑑) satisfies the
+following limiting behavior.
+I𝐴(𝜎; 𝑑) ∝
+(
+𝑚(𝑑𝜎2)−2.5 exp
+
+−
+1
+8𝑑𝜎2
+	
+,
+√
+𝑑𝜎≪1
+𝑚/(𝑑𝜎4)
+,
+√
+𝑑𝜎≫1.
+Based on Proposition 10, it can be seen that I𝐴(𝜎; 𝑑) decays
+exponentially to zero as 𝜎→0, and decays polynomially to
+zero as 𝜎→∞. Taking the reciprocal and using CRLB, we
+conclude that the estimator becomes ill-conditioned (variance
+diverges) for very small or large values of 𝜎. This happens
+due to the vanishing or saturation of 𝜌𝑢at these regimes,
+causing a loss of observability on the value of 𝜎. It can also
+be seen that as 𝑑increases, the decay of Fisher information
+for 𝜎→0 gets slower, whereas the decay for 𝜎→∞gets
+faster. This suggests that as 𝑑increases, the estimator becomes
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3422
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 
+better suited for smaller values of 𝜎. These observations are
+apparent in Fig. 1 (right) showing the different ranges of 𝜎
+"covered" by each 𝑑; see further discussion in the next section.
+D. Criterion for Good Estimation
+Based on the CRLB, 1/
+√︁
+I𝐴(𝜎; 𝑑) is a lower bound on the
+estimation standard deviation of 𝜎. We can therefore introduce
+the following criterion of an estimator.
+Definition 11. Let 𝛼∈(0, 1). An estimator ˆ𝜎𝐴(𝜎; 𝑑) is said to
+be 𝛼-accurate for a value 𝜎0 if
+1/
+√︁
+I𝐴(𝜎0; 𝑑) ≤𝛼𝜎0.
+Definition 11 is illustrated in Fig. 2, where 1/
+√︁
+I𝐴(𝜎; 𝑑)
+normalized by 𝜎is shown as a function of 𝜎for different
+values of 𝑑.
+0
+0.1
+0.2
+0.3
+0.4
+10-1
+100
+Fig. 2: 1/
+√︁
+I𝐴(𝜎; 𝑑) normalized by 𝜎for different 𝑑values,
+for 𝑚= 128. 𝛼= 0.1 is shown as vertical dashed line.
+It can be seen that for 𝛼= 0.1, 𝑑= 4, 16, 64 provide 𝛼-
+accurate estimators for 𝜎∈(0.03, 0.06), 𝜎∈(0.055, 0.14)
+and 𝜎∈(0.1, 0.28), respectively.
+E. Comparison to Syndromes from Cell-Wise Hard Decision
+As a baseline for estimation performance, we examine the
+case in which we take a hard decision on each cell’s state and
+XOR the results. Recall we use Δ𝐺= 1.
+Definition 12. A cell’s hard decision is defined by
+𝑧𝑖𝑗≜
+(
+0,
+𝐺𝑖𝑗−𝐺AP ≤0.5
+1,
+𝐺𝑖𝑗−𝐺AP > 0.5 .
+It is clear from Definition 12 that the probability of a state
+flip (bit-flip) is 𝑝(𝜎) = Q
+
+0.5
+𝜎
+
+. We assume 𝑝(𝜎) < 0.5.
+Definition 13. The logical syndrome 𝒔L is defined as usual by
+𝑠𝐿
+𝑗= É𝑑
+𝑖=1 𝑧𝑖𝑗, where ⊕denotes the logical XOR.
+A set that satisfies the parity constraint from Definition 3
+results in 𝑠𝐿
+𝑗= 0 in the noiseless case. As shown in [10],
+the probability of unsatisfied logical parity constraint is
+𝑝𝑢(𝜎) = 1
+2
+
+1 −(1 −2𝑝(𝜎))𝑑
+.
+(6)
+It is further shown in [10] that the ML estimator for 𝑝(𝜎) is
+ˆ𝑝= 𝑝−1
+𝑢
+ min{2𝑤𝐿
+𝒔/𝑚, 1}, where we defined 𝑤𝐿
+𝒔≜𝑤𝐻(𝒔L).
+Since 𝑝(𝜎) is monotone increasing, the ML estimator for 𝜎
+is extracted from 𝑝(𝜎).
+Lemma 14. The logical ML estimator for 𝜎is ˆ𝜎𝐿=
+0.5
+Q−1( ˆ𝑝) ,
+and the Fisher information of 𝜎with respect to 𝑤𝐿
+𝒔is
+I𝐿(𝜎; 𝑑) =
+𝑚
+𝑝𝑢(1 −𝑝𝑢)
+
+𝑑(1 −2𝑝)𝑑−1 0.5
+𝜎2 𝜙
+0.5
+𝜎
+2
+.
+Proof: For the ML derivation, see [10] (discussing a similar
+case). The Fisher information is derived in a similar way to
+the proof of Lemma 9.
+Fig. 3 shows a comparison between inverse square-root Fisher
+information of analog and logical syndromes, for 𝑑= 4, 64.
+It can be seen that the logical syndrome does not provide
+observability of low 𝜎values. This is a problem for MVM
+because a DP error of significant magnitude (𝑡= 3) occurs
+with non-negligible probability at low 𝜎values (see vertical
+line marking the maximal 𝜎for which 𝜉𝑛,𝑡=3(𝜎) < 10−3).
+0
+0.1
+0.2
+0.3
+0.4
+10-1
+100
+Fig. 3: Comparison between 1/
+√︁
+I𝐴(𝜎; 𝑑) and 1/
+√︁
+I𝐿(𝜎; 𝑑)
+normalized by 𝜎for 𝑑= 4, 64. The maximal 𝜎for which
+𝜉𝑛,3(𝜎) < 10−3 is shown in the vertical dashed line.
+IV. CODE CONSTRUCTION AND DESIGN
+We aim to design a code that will enable both in-memory
+estimation and out-of-memory error correction. The key idea
+is to incorporate additional parity rows that are used as
+follows: (1) During standard MVM operation, the parity rows
+are not being activated and are transparent, (2) during in-
+memory noise estimation, a set of information and parity rows,
+satisfying a parity constraint (Definition 3) in all columns, are
+activated together, and (3) during error-correction, the entire
+matrix is read (information and parity rows) and decoding
+is performed. This is achieved through a bilayer LDPC code
+with a local-global structure, as introduced in [13], [20].
+A. Bilayer Code Construction
+To describe the code construction, we consider the 𝑛× 𝑚
+stored matrix 𝐶as composed from 𝑘information rows, that is,
+the original user-defined binary matrix 𝐵, and 𝑟≜𝑛−𝑘parity
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3423
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 
+rows. We further consider 𝑟= 𝑟1 +𝑟2 such that 𝑟1 is defined as
+the number of column-local parity rows, and 𝑟2 as the number
+of matrix-global parity rows. We use the column-stack vector
+of length 𝑛𝑚of the matrix to define the parity-check matrix
+structure. We use the following useful terminology for the
+construction ahead.
+Definition 15. Denote 𝑣𝐵, 𝑣𝐶as the column-stack 1 × 𝑘𝑚and
+1 × 𝑛𝑚vectors of the matrices 𝐵, 𝐶, respectively. A generator
+matrix 𝑈of size 𝑘𝑚× 𝑛𝑚is said to be in column-systematic
+form if given 𝑣𝐶= 𝑣𝐵𝑈, the first 𝑘rows of 𝐶equal 𝐵.
+Construction 1. Let 𝐻L be a parity check matrix of size
+𝑟1 × (𝑘+ 𝑟1). Let 0𝑟1,𝑟2 be the all-zeros matrix of size 𝑟1 × 𝑟2.
+Let 𝐻J be a parity matrix of size 𝑟2 ×𝑛𝑚. Let the parity check
+matrix be defined by
+𝐻=
+
+[𝐻L, 0𝑟1,𝑟2]
+...
+[𝐻L, 0𝑟1,𝑟2]
+−−−
+−−
+−−−
+𝐻J
+
+.
+(7)
+Let 𝑈be the generator matrix corresponding to 𝐻, in a
+column-systematic form. Encode an input matrix 𝐵to the
+matrix form of 𝑣𝐶= 𝑣𝐵𝑈.
+Discussion. By analyzing the Tanner graph corresponding to
+𝐻in Eq. (7), we can see that 𝐻L provides a sub-graph that
+connects each column of length 𝑘in 𝐵to 𝑟1 column-local check
+nodes. Note that 𝐻L is identical for all columns. The additional
+𝑟2 parity nodes are connected to variable nodes within different
+columns through 𝐻J, to provide strong correction capability
+when decoding the full array. Note that the check equations
+of 𝐻L also participate in the full-array decoding, in addition to
+their role in noise estimation.
+The use of Construction 1 to achieve the estimation and
+correction mechanism will be further described in Section V.
+B. Check Degrees for Good Estimation
+The check equations in 𝐻L are used for noise estimation, as
+will be discussed in details in Section V. We therefore wish the
+check degrees in 𝐻L to provide good estimation performance
+over interesting values of 𝜎.
+Definition 16. Given a check-degree distribution 𝛀for 𝐻L
+define 𝐷Ω = {𝑑: ⌊𝑟1 · Ω𝑑⌋≥1} as the set of active degrees.
+We assume 𝐷Ω is ordered with increasing degrees.
+Definition 17. Let Σ = {𝜎𝜈}𝑁
+𝜈=1 with 0 < 𝜎1 < · · · < 𝜎𝑁. A
+set of active degrees 𝐷Ω is said to be 𝛼-accurate for Σ if
+∀𝜈∈[1, . . . , 𝑁] : ∃𝑑∈𝐷Ω s.t 1/
+√︁
+I𝐴(𝜎𝜈; 𝑑) ≤𝛼𝜎𝜈.
+Definition 17 follows directly from Definition 11, while
+specifically ensuring that the set of check degrees in 𝛀
+provides estimators that "cover" together the set of 𝜎values
+in Σ in terms of 𝛼-accuracy. For example, in Fig. 2, if 𝐷Ω =
+{4, 64}, any value 𝜎∈(0.07, 0.105) would not be covered
+by 𝛀in the sense that none of the estimators for 𝑑= 4, 64
+provide 𝛼-accuracy in this range (with 𝛼= 0.1). However,
+for 𝐷Ω = {4, 16, 64}, the entire range 𝜎∈(0.03, 0.28) is
+covered. We can now design the check distribution of 𝐻L,
+using Algorithm 1. Since the average check degree 𝑎R plays
+a vital role in coding rate, the design is set to provide 𝑎R as
+close as possible to a desired value 𝑎R∗.
+Algorithm 1: Design of Local Check Degrees
+Input : 𝑟1, 𝑎R∗, Σ, 𝛼
+Do
+:
+• Find 𝐷Ω = {𝑑1, ..., 𝑑ℓ} which is 𝛼-accurate for Σ.
+• Solve the quadratic integer programming problem:
+minimize
+(Íℓ
+𝑖=1 𝛽𝑖/𝑟1 · 𝑑𝑖−𝑎R∗)2
+subject to
+0 < 𝛽𝑖∈Z,
+ℓ
+∑︁
+𝑖=1
+𝛽𝑖= 𝑟1.
+Output: Check deg. dist.
+
+Ω𝑑𝑖= 𝛽𝑖/𝑟𝑖
+	ℓ
+𝑖=1
+C. Degree-Distribution Design
+We now describe in high level the stages of designing de-
+gree distributions for 𝐻L and 𝐻J, to provide strong correction
+capability in decoding. We employ the efficient, low complex-
+ity and capacity approaching design technique introduced in
+[13]. As will be discussed in Section V, the decoding will
+be performed over the AWGN channel. Therefore, the design
+will be done for that channel, using EXIT charts [21].
+We first set the check-degree distribution of 𝐻L using
+Algorithm 1. We then design the variable-degree distribution
+of 𝐻L, following the steps in [22, Chapter 4.10.1], with a
+fixed local threshold 𝜎(𝐿)
+𝑇
+. Then, we design 𝐻J as described
+in [13, Section IV] to meet a global threshold 𝜎(𝐺)
+𝑇
+. A detailed
+exploration of this technique is outside the scope of this work.
+V. RELIABLE DOT PRODUCT ARCHITECTURE
+In this section we employ the tools from previous sec-
+tions to design an architecture for reliable in-memory DP
+operations. The key ingredient in the proposed architecture
+is to periodically estimate the noise level. If the estimated
+noise suggests a compromised DP reliability, the matrix is re-
+written to memory after read and decoding operations. The
+mechanism is implemented using the following:
+1) Encode: given a desired matrix 𝐵𝑘×𝑚, encode it using
+the code from Construction 1 to get 𝐶𝑛×𝑚. Write 𝐶to
+the memory array using the mapping 0 →1, 1 →−1.
+2) Compute and Estimate: perform MVM operations.
+Once in a predefined number of MVM cycles, perform
+noise estimation for ˆ𝜎𝐴using Algorithm 2. If 𝜉𝑛,𝑡( ˆ𝜎𝐴) >
+𝜉max, for some predefined 𝑡, perform 3).
+3) Read, decode and re-write: read the matrix from mem-
+ory. Use the belief propagation (BP) algorithm [23] over
+the log-likelihood ratio values 2𝐺𝑖𝑗/ˆ𝜎𝐴, using the global
+parity-check matrix 𝐻. Use the result ˆ𝐵and return to 1).
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3424
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 
+Algorithm 2: In-Memory Noise Estimation
+Input : 𝐶from memory, parameters 𝐻L, 𝐷Ω
+Do
+:
+• Set ˆ𝜎tmp = 𝜎max(𝑑1) // Eq. (5)
+• For 𝑖∈1, . . . , ℓ: // ℓ≜|𝐷Ω|
+– Choose a row ℎin 𝐻L with check degree 𝑑𝑖.
+– Set 𝐸as the sub-array containing the rows from 𝐶
+for which ℎis 1.
+– Calculate 𝑠𝐴(𝐸) and its weight 𝑤𝐴
+𝒔. // Def. 4
+– If 𝑤𝐴
+𝒔≥𝑚/2, break
+– If 𝑤𝐴
+𝒔> 0, update ˆ𝜎tmp ←ˆ𝜎𝐴(𝑤𝐴
+𝒔; 𝑑𝑖) // Eq. (4)
+• If 𝑖= ℓand 𝑤𝐴
+𝒔= 0, update ˆ𝜎tmp ←0
+• Update ˆ𝜎←ˆ𝜎tmp
+Output: Noise estimation ˆ𝜎
+Discussion. Algorithm 2 considers the different ranges of 𝜎
+that can be accurately estimated for each check degree. It goes
+through different degrees in 𝐷Ω of 𝐻L, and tries to estimate 𝜎
+in each. If 𝑑is too large and 𝜎is in the right divergent region of
+the estimator, 𝑤𝐴
+𝒔≥𝑚/2 is obtained with high probability, and
+there is no need to further increase 𝑑. If 𝑑is too small and 𝜎is
+in the left divergent region of the estimator, 𝑤𝐴
+𝒔= 0 is obtained
+with high probability, and 𝑑is increased, or if 𝑖= ℓ, ˆ𝜎= 0 is
+returned. Anytime 0 < 𝑤𝐴
+𝒔< 𝑚/2 is obtained, ˆ𝜎is updated.
+APPENDIX A
+PROOF OF LEMMA 9 - FISHER INFORMATION
+Proof: Since 𝑤𝐴
+𝒔is Binomial with probability 𝜌𝑢(𝜎),
+𝜕log P  𝑤𝐴
+𝒔= 𝑤|𝜎
+𝜕𝜎
+=
+ 𝑤
+𝜌𝑢
+−𝑚−𝑤
+1 −𝜌𝑢
+ 𝜕𝜌𝑢
+𝜕𝜎
+=
+𝑤−𝑚𝜌𝑢
+𝜌𝑢(1 −𝜌𝑢) · 2
+∞
+∑︁
+ℓ=0
+(−1)ℓ𝜕
+𝜕𝜎Q
+ℓ+ 0.5
+√
+𝑑𝜎
+
+.
+We use 𝜕𝑄(𝑥/𝜎)
+𝜕𝜎
+=
+𝑥
+𝜎2 𝜙  𝑥
+𝜎
+, and by substituting ℓ+ 0.5 = 𝑐ℓ,
+squaring and taking the expectation we get
+IA(𝜎; 𝑑) =
+E
+
+(𝑤𝐴
+𝒔−𝑚𝜌𝑢)2|𝜎
+
+𝜌2𝑢(1 −𝜌𝑢)2
+"
+2
+∞
+∑︁
+ℓ=0
+(−1)ℓ𝑐ℓ
+√
+𝑑𝜎2 𝜙
+ 𝑐ℓ
+√
+𝑑𝜎
+#2
+.
+Noticing that E
+
+(𝑤𝐴
+𝒔−𝑚𝜌𝑢)2|𝜎
+
+= var(𝑤𝐴
+𝒔) = 𝑚𝜌𝑢(1 −𝜌𝑢),
+we complete the proof.
+APPENDIX B
+PROOF OF PROPOSITION 10 - LIMITING BEHAVIOR
+Proof: We begin with the case where
+√
+𝑑𝜎≪1, where the
+argument of the 𝑄(·) terms in 𝜌𝑢(𝜎) are very large. In this
+regime 𝑄(𝑥) is well approximated by 𝜙(𝑥)/𝑥. Moreover, the
+decay of terms in the sum with ℓis very sharp. Thus, we have
+𝜌𝑢(𝜎) ≈2𝑄
+ 0.5
+√
+𝑑𝜎
+
+≈4
+√
+𝑑𝜎· 𝜙
+ 0.5
+√
+𝑑𝜎
+
+.
+From the same considerations of decaying terms, we have
+"
+2
+∞
+∑︁
+ℓ=0
+(−1)ℓ𝑐ℓ
+√
+𝑑𝜎2 𝜙
+ 𝑐ℓ
+√
+𝑑𝜎
+#2
+≈
+
+1
+√
+𝑑𝜎2 𝜙
+ 0.5
+√
+𝑑𝜎
+2
+.
+Plugging into I𝐴(𝜎; 𝑑) provides the desired expression.
+Now, for
+√
+𝑑𝜎≫1, we have 𝜌𝑢(𝜎) ≈1/2 (as discussed
+after Lemma 7), and the sum can be expressed as (𝑐/
+√
+𝑑𝜎2)2,
+with 𝑐= 2 Í∞
+ℓ=0(−1)ℓ𝑐ℓ𝜙(𝑐ℓ/
+√
+𝑑𝜎) < ∞(due to the decaying
+exponential terms in summation).
+REFERENCES
+[1] Y. Chen, Y. Xie, L. Song, F. Chen, and T. Tang, “A survey of accelerator
+architectures for deep neural networks,” Engineering, vol. 6, no. 3, 2020.
+[2] S. A. McKee, “Reflections on the memory wall,” Conference on
+Computing Frontiers, 2004.
+[3] A. Sebastian, M. Le-Gallo, R. Khaddam-Aljameh, and E. Eleftheriou,
+“Memory devices and applications for in-memory computing,” Nature
+Nanotechnology, Vol. 15, 2020.
+[4] Y. Li, T. Bai, X. Xu, Y. Zhang, B. Wu, H. Cai, B. Pan, and W. Zhao, “A
+survey of MRAM-centric computing: From near memory to in memory,”
+IEEE Trans. on Emerging Topics in Computing, vol. 11, no. 2, 2023.
+[5] P. Deaville, B. Zhang, and N. Verma, “A fully row/column-parallel
+MRAM in-memory computing macro with memory-resistance boosting
+and weighted multi-column ADC readout,” IEEE Journal of Solid-State
+Circuits, 2024.
+[6] M. Suri, A. Gupta, V. Parmar, and K. H. Lee, “Performance enhance-
+ment of edge-ai-inference using commodity MRAM: IoT case study,”
+in 2019 IEEE 11th International Memory Workshop (IMW), 2019.
+[7] X. Yang, Y. Mao, L. Chang, H. Wei, Y. Wang, J. Wang, C. Fan, Z. Wu,
+S. Peng, and J. Zhou, “Edge-optimized ai architecture: MRAM-based
+near memory computing macro balancing between memory capacity
+and computation,” Integrated Circuits and Systems, 2025.
+[8] R. M. Roth, “Fault-tolerant dot-product engines,” IEEE Trans. on
+Information Theory, vol. 65, no. 4, 2019.
+[9] ——, “Analog error-correcting codes,” IEEE Trans. on Information
+Theory, vol. 66, no. 7, 2020.
+[10] G. Lechner and C. Pacher, “Estimating channel parameters from the
+syndrome of a linear code,” IEEE Communications Letters, Vol. 17,
+No. 17, 2013.
+[11] Y. Gershon and Y. Cassuto, “In-memory BER estimation using syn-
+dromes of LDPC codes,” 2025 IEEE Int. Symp. on Information Theory
+(ISIT), to Appear, 2025.
+[12] R. Gallager, “Low-density parity-check codes,” IRE Trans. on Informa-
+tion Theory, Vol. 8, No. 1, 1962.
+[13] E. Ram and Y. Cassuto, “Design of bilayer and multi-layer LDPC
+ensembles from individual degree distributions, vol. 67, no. 11,” IEEE
+Trans. on Information Theory, 2021.
+[14] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans.
+on Information Theory, vol. 27, no. 5, 1981.
+[15] E. Dupraz, F. Leduc-Primeau, K. Cai, and L. Dolecek, “Turning to
+information theory to bring in-memory computing into practice,” IEEE
+BITS the Information Theory Magazine, Vol.3, No. 3, 2023.
+[16] L. Tan and J. Jiang, Digital signal processing: fundamentals and
+applications.
+Academic press, 2018.
+[17] R. J. van de Plassche, Integrated Analog-to-Digital and Digital-to-
+Analog Converters.
+Springer Science & Business Media, 2012.
+[18] G. Casella and R. L. Berger, Statistical Inference.
+Thomson Learning,
+2002.
+[19] F. Nielsen, Cramér-Rao Lower Bound and Information Geometry.
+Hindustan Book Agency, Gurgaon, 2013.
+[20] E. Ram and Y. Cassuto, “LDPC codes with local and global decoding,”
+in 2018 IEEE Int. Symp. on Information Theory (ISIT), 2018.
+[21] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density
+parity-check codes for modulation and detection,” IEEE Trans. on
+Communications, vol. 52, no. 4, 2004.
+[22] T. Richardson and R. Urbanke, Modern coding theory.
+Cambridge
+university press, 2008.
+[23] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and
+the sum-product algorithm,” IEEE Trans. on Information Theory, vol.
+47, no. 2, 2001.
+2025 IEEE Global Communications Conference Selected Areas in Communications: Cloud/Edge Computing and Networking
+3425
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:22:53 UTC from IEEE Xplore.  Restrictions apply. 

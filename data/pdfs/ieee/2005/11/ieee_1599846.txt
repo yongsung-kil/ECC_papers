@@ -1,0 +1,415 @@
+A Reconfigurable Fabric and Associated CAD Algorithms for Multirate LDPC Decoding
+
+Marghoob Mohiyuddin EECS Department
+University of California, Berkeley
+
+Amit Prakash Microsoft Corporation
+
+Xiang Wu and Adnan Aziz ECE Department
+University of Texas, Austin
+
+Abstract— We present the design of a reconfigurable VLSI architecture suitable for multirate LDPC decoding. The basic decoder fabric is a square matrix of processing elements which communicate with each other through an interconnection network. The interconnection network consists of links and switches. The connectivity between processing elements is completely defined by scheduling the interconnection network; we describe a CAD algorithm for computing efficient schedules.
+I. INTRODUCTION
+Turbo codes [1] and Low Density Parity Check codes [2] are two leading families of error correcting codes; both are capable of performing close to the Shannon limit. Of these, LDPC codes have been gaining attention due to the inherent opportunities for parallelism in their decoding, and advances in VLSI technology making it possible to decode LDPC codes with large block sizes in hardware.
+The increasing significance of LDPC codes is underlined by the fact that an LDPC code designed by Hughes was recently selected for DVB-S2, the next-generation standard for satellite digital video broadcasting. It was chosen over seven other competing codes—submitted by companies including Phillips, ST Microelectronics, and Conextant—all of which were based on turbo-coding.
+A. The Case for Multirate Coding
+Published LDPC decoders implement a single fixed LDPC code. When the raw bit-error rate varies over time, which because of movement, the environment, or multipath propagation, is the norm in wireless channels, so does the channel capacity. The precise capacity of the channel can be computed using Shannon theory; when the capacity drops below the code-rate (the ratio of data bits to total transmitted bits), the error rate in the decoded word grows rapidly.
+A communication system can adjust to changing channels by changing the parameters for transmission—transmit power, symbol time period, modulation scheme, transmit frequency, code-rate, coding scheme, network routes, etc. To achieve optimum communication, all these need to be optimized jointly.
+Changing the symbol time period, modulation scheme, and transmit frequency involves changing the RF/analog front-end mixers and filters. This is relatively less straightforward than changing the code-rate which can be done digitally, since changing the code-rate amounts to changing the number of extra bits used for error correction. For a large class of systems,
+
+there is no motivation to use a power level that is below the maximum allowed by regulatory bodies. Furthermore, any scheme which does try to optimize power must take into account the resulting change in channel capacity, which implies the achievable code-rate.
+A multirate LDPC decoder not only can support different code-rates but would also have the advantages offered by decoding in software—codes can be changed over time without changing the hardware. This makes the decoder useful for a wide variety of applications—it just needs to be reconfigured.
+Currently code-rates are changed through the use of code puncturing: predetermined bits are dropped from the codeword, effectively increasing the code rate. However, since code bits can only be dropped and not added, puncturing cannot be used for decreasing the code-rate. Furthermore, it is a (very) ad-hoc way of changing code-rates. Thus from the perspective of optimum spectrum usage, it is preferable to use different codes for different rates.
+B. Implementing LDPC decoders in hardware
+A number of hardware implementations for fixed code-rate LDPC decoders have been proposed with throughputs varying from a few tens of Megabits per second [3] to a Gigabit per second [4], [5]. Designs vary from serial implementation [6] to fully parallel implementation of the decoding algorithm [4].
+While transistors scale nicely with advances in VLSI technology, wires do not—resistance increases with reduced crosssection, coupling capacitance between wires increases since wires are close to each other, etc. Consequently, the design of interconnect, i.e., wires and associated regeneration logic, is a major issue in VLSI design, impacting delay, area, power, signal integrity, manufacturability, and design time.
+One of the key challenges in implementing LDPC decoders in hardware is that fully parallel LDPC decoding involves a large amount of irregular communication between submodules in the decoder. This is demonstrated for example by the fact that the layout area and the power consumed by the LDPC decoder designed by Blanksby et al. at Lucent [4] is completely dominated by interconnect.
+C. Our Contribution
+We present a reconfigurable fabric that can efficiently perform LDPC decoding, and a CAD algorithm that, given a code-rate, creates a high-quality LDPC code of that rate
+
+1­4244­0132­1/05/$20.00 ©2005 IEEE
+
+718
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:54:15 UTC from IEEE Xplore. Restrictions apply.
+
+which is guaranteed to be implementable within the logic and interconnect resources available on our fabric. We do this by considering interconnect very early in the design process— when designing the decoder fabric, as well as when computing LDPC codes.
+II. REVIEW OF LDPC CODES
+LDPC codes were introduced by Gallager [2]. They are a natural extension of the parity bit used for single bit-error detection. Given m message bits, an LDPC encoder constructs a codeword of length c as the m message bits followed by p check bits. Each check bit is the parity of a subset of message bits. Alternatively, a codeword satisfies a set of parity checks. The parity of all the code bits in a parity check is 0 for a codeword. This is described by a p × c matrix H = [hij], such that hij = 1 iff the i-th parity check has bit j in it. The H matrix is called the parity check matrix of the code.
+The parity check matrix can also be viewed as the incidence matrix of a bipartite graph (called its Tanner graph) with edges connecting two sets of nodes—the set of code nodes (one code node for each code bit) and the set of parity check nodes (one check node for each parity check constraint). A code node ui is connected to (parity) check node vj if the i-th code bit participates in j-th parity check. Henceforth, we shall refer to the Tanner graph of an LDPC code simply as an LDPC graph.
+Gallager [2] showed that the performance of an LDPC code is higher if its Tanner graph has large girth (a graph’s girth is the length of its shortest cycle). Therefore, in LDPC code construction techniques, girth is an important constraint.
+A. The Message Passing Decoding Algorithm
+Message passing is an iterative decoding algorithm for decoding LDPC codes. Conceptually, messages are passed between code nodes and check nodes along the edges of the LDPC graph; these messages are an estimate of the transmitted code bit and a measure of the reliability of these estimates.
+Both hard decision and soft decision [7] versions of the decoding algorithm exist. Soft decision decoding achieves much better performance than hard decision decoding, and consequently is the more commonly used decoding technique.
+A soft decision LDPC decoding algorithm is given in Algorithm 1. This algorithm operates on the log of the observed values in order to replace expensive multiplications by cheap additions. Also, note that the function φ(x) mentioned in Step 3 of the algorithm, is a nonlinear function and is typically implemented by a table-lookup in hardware.
+III. OUR FABRIC
+Fully parallel realizations of LDPC decoding have the benefits described in Section I-B, and hence, for the reasons in Section I-B, designing interconnect carefully is an especially important issue. In order to cope with channels that have a low coherence time (i.e., channels where noise levels and fading change quickly), rapid reconfigurability is also desirable.
+
+1: H = [hij] is the parity check matrix of the LDPC code.
+
+2: X = [x1, . . . , xc] is the transmitted codeword, Y = [y1, . . . , yc] is the
+
+3:
+
+received word, Define φ(x) =
+
+andh ln
+
+X(ˆex=+1[)xˆi1
+(ex −1)
+
+, ,
+
+... for
+
+, xˆc] x≥
+
+is 0.
+
+the
+
+decoded
+
+word.
+
+4: sgn(λ) and abs(λ) are sign and magnitude of message λ.
+
+5: λkij = message from i-th code node to j-th check node in k-th iteration.
+
+6: πikj = message frohm i-th checkinode to j-th code node in k-th iteration.
+
+7: k ← 0, λkij ← ln
+
+P (xi=0|yi) P (xi=1|yi)
+
+.
+
+8: while stopping criterion not met do
+
+9: k ← k + 1
+
+10: 11:
+12:
+
+for all i, j sgn(πikj abs(πikj
+
+))su==chφNt“hmaPt,hhmiim,jh==im1,1=m1=,dmjo=sgjnφ““λakmb−is1“”λ. m k−i 1
+
+””” .
+
+13: 14: 15: 16: 17:
+
+ffoorriλqfaaikillj(ll=q=ici,oλ>jdλi0ejsi00ju+n)co+htdP heP tehsnmaimt,xhˆdh,im hoj=mii=i=0=1 1e1π,lm m ksed=ioxˆj(ijπ=im ks i1a.ny neighbor of i).
+
+Algorithm 1: Soft decision decoding algorithm
+
+A. Fabric Overview
+The basic decoder fabric, depicted pictorially in Figure 1 is a square matrix of processing elements (PEs) and programmable interconnects. Each square region consisting of a PE together with its adjacent crosspoints, delineated by thick dark lines, will be referred to as a block. Each PE implements the functionality of both a code node and a check node; the justification for this will be given in Section III-B. The connectivity of the PEs in the fabric is completely defined by programming the interconnect crosspoints.
+Our fabric resembles that of FPGAs. However, there are significant differences: (1.) our PEs are designed explicitly for the numerical computations in Algorithm 1, rather than the generic Boolean functions computed by FPGA CLBs, and (2.) we provide for more programmable interconnects than is seen in FPGAs because of the relatively large amount of communication between PEs needed for LDPC decoding.
+B. PE Design
+There are several advantages to having a PE implement the functionality of both a code node and a check node: (1.) reduced design time, (2.) regular layout, (3.) the same PE can be used as a check node or a code node in different cycles, and (4.) nodes can be assigned to any PE. Our key insight into making a PE that can efficiently operate as both a check node and a code node comes from examining the function φ(x) in Algorithm 1. Note that Step 12 involves two calls to φ. The messages λkij passed from code node i to check node j in the k-th iteration, are not used directly in computing the check-tocode messages for the next round of the decoding algorithm. Thus code nodes can send the message φ(λikj ) instead of λikj without altering the algorithm.
+Each PE has a fixed number of input/output ports for communicating with other PEs. The ports can be divided into two sets—one set for code node edges and one set for check node edges. Studies show that 4-6 bits of precision suffice for soft decoding [7], [4]. We use 7 bits of precision, and communicate values serially between PEs.
+
+719
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:54:15 UTC from IEEE Xplore. Restrictions apply.
+
+PE
+
+PE
+
+PE
+
+PE
+
+(b)
+
+(c)
+
+PE
+
+PE
+
+PE
+
+PE
+
+PE
+
+PE
+
+PE
+
+PE
+
+(a)
+
+(d)
+
+(e)
+
+clock
+
+1
+
+2
+
+654321
+
+5
+
+6 3
+4
+
+PE
+
+PE
+
+PE
+
+PE
+
+Fig. 2. Possible configurations and an implementation for a routing crosspoint. Flip-flop i controls the nMOS whose gate is numbered i.
+
+Pin connection crosspoint Routing crosspoint
+Fig. 1. Floorplan for the reconfigurable fabric. Routing crosspoints are denoted by ◦ and crosspoints for connecting to PE ports are denoted by .
+C. Interconnect and Programmability
+We implement different LDPC codes by suitably programming the crosspoints. Each crosspoint can be programmed to allow the connections shown in Figure 2.
+For efficiency, it is advantageous to have two kinds of crosspoints: crosspoints for routing and crosspoints for connections to ports. A routing crosspoint routes bits between PEs, whereas a pin crosspoint is used to connect to PE ports. Figure 2 illustrates the possible configurations for a routing crosspoint; a pin crosspoint needs only 3 configurations because it is either disabled, or messages are routed from the two sides.
+1) Reconfiguration Complexity: Let nh and nv denote the number of horizontal and vertical tracks respectively per block. Let pinsch and pinscv be the number of code pins for horizontal and vertical directions respectively per block. Let pinsph and pinspv be the number of check pins for horizontal and vertical directions respectively per block. Each routing crosspoint needs 6 latches to be configured (cf. Figure 2) and each pin crosspoint needs 4 latches for configuration (since it only has 3 configurations). Therefore, the total number of configuration bits per block is 6nhnv + 4(nh + nv)(pinscv + pinspv). For a block size of N bits we need N PEs. So, the total number of configuration bits is N ·(6nhnv +4(nh +n√v)(pinscv +pinspv)).
+For a block size of 1024 bits, b = 1024 = 32, nh = nv = 32, pinsch = pinscv = 4, pinsph = pinspv = 8 so the configuration needed to define the LDPC decoder for a given code can be stored in 1.5 Megabytes of memory. Since the configuration memory is not used once the crosspoints are programmed, ROM or FLASH memories are acceptable despite their low access times. Both have very high densities (11 × 7λ2 and 6 × 5λ2 per cell respectively [8]), hence this is a reasonable amount of memory. As in [9], configuration is done on a row by row basis, which is easily implemented using shift registers in each column. The reconfiguration time is small: for the above it takes 7680 cycles to configure the system, which translates to 19.2 µs with a 400 MHz clock.
+
+IV. LDPC CODE GENERATION ALGORITHM
+The intuition behind our code construction algorithm is simple. Given the number of check nodes and the rate, we incrementally build the Tanner graph, choosing edges so that the the intermediate graph is always routable within the fabric.
+Given the matrix layout and the interconnects for the VLSI fabric proposed in Section III, PEs are assigned to the nodes of the LDPC graph randomly. Since the cells can perform both as a code node and a check node, some of the cells might be assigned to both. Edges are added between a code node and a check node only if the addition does not violate the constraints. In addition to the usual constraints for generating LDPC codes—node degrees and girth (cf. Section II) of the LDPC graph, we consider the additional constraint of routability.
+As shown in Figure 1, the fabric is partitioned into a matrix of blocks. Each block consists of a PE with a fixed number of ports for code node function and check node function each, and a fixed number of vertical and horizontal tracks. Programming the crosspoints in a block determines the path traversed by the edge through the block. An edge is routed on a block-by-block basis and a path of least “congestion” is chosen for routing.
+A. LDPC Code Generation: Prior Work
+The bit-filling algorithm [10] for LDPC generation adds code nodes to the graph. When a code node is added, all its edges are added to the graph one after another. In contrast, our algorithm assumes a fixed number of code nodes and check nodes. Our algorithm proceeds in passes. Since we want to treat the codes uniformly while adding edges, we try to add one edge each to as many check nodes as possible. This constitutes a single pass. Thus, each pass generates a 1-1 mapping from the check nodes to the code nodes. Multiple passes are done until some terminating condition is reached, e.g., the desired number of edges has been added.
+The algorithm presented in [11] is similar in spirit to ours. However, there are significant technical differences. For example, our fabric consists of a square mesh of PEs, whereas the authors of [11] work with a fabric consisting of a row of check nodes in parallel with a row of code nodes. Consequently, the physical layout of the LDPC decoder in [11] is highly eccentric for block sizes of interest (e.g., 1024 bits); in contrast
+
+720
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:54:15 UTC from IEEE Xplore. Restrictions apply.
+
+our decoders have a balanced layout. Furthermore, we support reconfigurability and have a limited number of resources for interconnecting PEs; in [11] the authors have no hard limit on the amount of wiring, and simply seek to minimize it using a cut-based measure of wiring area.
+
+B. Our Algorithm: Formalization
+
+Formally put, we need to generate an LDPC graph with the following constraints: number of code nodes is c, number of check nodes is p, average degree of code nodes is davg, girth of the graph is at least g, number of blocks is b2, and the
+fabric characteristics mentioned in Section III-C.1.
+1) Notation:
+1) U = {u1, . . . , up}, V = {v1, . . . , vc}, and P E = {pe1, . . . , peb2 } denote the set of check nodes, the set of code nodes and the set of blocks respectively.
+2) pos(pe) = (x, y) denote the two-dimensional index of block pe in the block matrix (x > 0, y > 0).
+3) Block(u) denotes the block assigned to node u (u may be a check node or a code node). dist(u, v) denotes the number of edges in the shortest path from u to v.
+4) For u ∈ U, Checksu denotes the set of nodes adjacent to u. For v ∈ V , Nv denotes the set of code nodes at distance exactly 2 from v.
+5) Similar to [10], we define for a check node u, Nui = Checksu (i = 1) and Nui = N v∈Nui−1 v (i > 1). Nu2 is the set of code nodes at distance 2 from some code node in Checksu. Thus, Nui is the set of nodes at distance 2i − 1 from the check node u.
+
+2) Main Algorithm: We recall the ideas in the bit-filling
+
+algorithm [10] for handling the girth constraints. If the current
+
+graph does not violate the girth constraints, then edge (u, v)
+
+can be added, without violating the girth constraint of g, iff
+
+dist(u, v) ≥ g − 1. Since dist(u, v) ≥ g − 1, the edge (u, v)
+
+would create a cycle of length at least g.
+
+The set Nui contains code nodes at distance 2i − 1 from
+
+check node u. Thus, the set of code nodes at distance at most
+
+g−1
+
+g − 2 from u would be Nu∗ =
+
+2
+i=1
+
+Nui .
+
+We
+
+maintain
+
+Nu∗
+
+for
+
+each check node u, and Nv for each code node v.
+
+We assume that the b2 blocks are arranged on a b × b
+
+grid. For each block, we maintain the number of vertical and
+
+horizontal tracks used up in routing. A count of the used check
+
+node pins and code node pins is also maintained for each
+
+block.
+
+Consider a single iteration of the algorithm. Our aim is to
+
+add single edges to as many check nodes as possible. Check
+
+nodes are considered one by one. A check node of minimum
+
+degree is selected randomly (Step 7). The set of S of code
+
+nodes which can be made neighbors to u (ignoring the girth
+
+constraint) is then computed by first obtaining the set of code
+
+nodes which are reachable from the check node using a routing
+
+algorithm described in the next section. The set of code nodes
+
+which can be added as neighbors of u, without violating the
+
+girth and the routing constraints, would then be C = S − Nu∗. A code node v of minimum degree is chosen randomly from
+
+C (Step 14) and added as a neighbor to u. The sets Nv and Nu∗
+
+vert vert
+
+hor
+
+hor
+
+0
+
+hor
+
+PE1
+
+PE2
+
+Fig. 3. Construction of the routing graph. hor and vert denote the number of horizontal and vertical tracks which have been used so far in the block P E1. The center node is used to compute distances between blocks.
+are then updated for the affected nodes in the LDPC graph. Updating the set Nv is easy since v now shares check node u with the other code nodes in Checksu. Updating the set Nu∗ is done efficiently by computing the set M∗ of code nodes at distance at most g − 2 from v.
+3) Routing Algorithm: The routing algorithm constructs the routing graph from the LDPC graph. Each block is represented by a set of 5 nodes (one node for each direction and one for the center to take care of pin connections) as shown in Figure 3. Edges in the routing graph either connect nodes of the same block or nodes of different blocks. Adjacency of blocks in the layout determines the edge connectivity, e.g., if block pe1 is immediately above pe2 then an edge connects the bottom node of pe1 to the top node of pe2. Edge weights are assigned such that routing chooses a path of least congestion. A path is less congested if the blocks on the path are less congested. This leads to the natural assignment of edge weights as the number of tracks being used in the direction of the edge (e.g., in Figure 3, for P E1, the weight of the vertical edges is the number of vertical tracks used up in the block). This edge assignment favors paths which pass through less congested cells and therefore ensures that tracks fill up uniformly across the blocks. After assigning the edge weights, a shortest path algorithm (e.g., Dijkstra’s algorithm) computes the routing cost of adding an edge given the current edge connections.
+A block is not used for routing if all its tracks are used up. A check node u cannot be connected to a code node v if either all the check pins in Block(u) or all the code pins in Block(v) are used up.
+V. OVERVIEW OF THE VLSI IMPLEMENTATION
+We now sketch out details of the VLSI implementation of the PEs. We use λ notation for area, where λ is half of the minimum drawn transistor length [8].
+We assume that code nodes have degree at most 8 and check nodes have degree at most 16—these are conservative estimates based on published LDPC decoders. Thus each code node needs to produce 8 partial sums, each sum representing inputs from all the adjacent check nodes except for one. These partial sums can be computed by adding all the inputs and then subtracting one input from it for each partial sum.
+
+721
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:54:15 UTC from IEEE Xplore. Restrictions apply.
+
+1: Nu∗ ← 0 (u ∈ U ), Nv ← ∅ (v ∈ V ), e ← p · davg, numedges ← 0 2: Assign blocks to the nodes in U and V {using some heuristic}
+
+3: Initialize the number of tracks and pins used in all blocks to 0.
+
+4: while not enough edges have been added do
+
+5: A ← U
+
+6: while A = ∅ do
+
+7:
+
+Select u ∈ A {using some heuristic}
+
+8:
+
+A ← A − {u}
+
+9:
+
+if u has check pins available and Nu∗ = V then
+
+10:
+
+Compute routing distances from u to all nodes
+
+11:
+
+Let S be the set of all code nodes reachable from u
+
+12:
+
+C ← S − Nu∗
+
+13:
+
+if C = ∅ then
+
+14:
+
+Select v ∈ C {using some heuristic}
+
+15:
+
+Update Nu∗, Checksu, Nv
+
+16:
+
+Update, for all v ∈ V, Nv
+
+17:
+
+numedges ← numedges + 1
+
+18:
+
+Route the edge (u, v) through blocks.
+
+Update the tracks and pins used for the blocks.
+
+Algorithm 2: Algorithm for generating LDPC codes
+
+1 32 hor, 32 vert tracks, 8 code pins, 16 chk pins Blanksby
+0.1
+
+Block Error Rate
+
+0.01
+
+0.001
+
+0.0001
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+Eb/N0(dB)
+
+Fig. 4. A comparison of the rate-1/2 code generated by our algorithm to the code used developed by Blanksby et al. Uniform quantization with 7 bit messages (4 bits for fractional part) and a maximum of 64 decoding iterations has been used.
+
+We are implementing soft decoding with 7 bits of precision. We propose using a single two input 8-bit adder in a PE. Since we need to do 15 adds to produce the sum of all output and 15 subtractions to produce 15 partial sums (one partial sum gets produced while we are adding all the inputs) we need 30 cycles to produce all the partial sums. We will have a single cycle lookup table to implement the function φ(x) (cf. Section IIA). Hence the computations for message nodes will take 31 cycles. A similar calculation will reveal that the code node computations will take 15 cycles.
+There are 32 tracks running horizontally, and 32 track running vertically through each block. Using minimum width wire and minimum separation for the tracks, each track will be 8λ wide. With minimum spacing, each block will be 256×256 λ2. An optimized full-adder cell is roughly 45 × 110 λ2, and a ROM/PLA cell is 11 × 7 λ2 [8], so this area suffices for the adder, the lookup table for φ, and control logic; For 0.13µ technology, the decoder area will be roughly 0.5mm×0.5mm.
+Since the wires are relatively long, to reduce resistance we will need to use wires wider than the minimum width, and to minimize cross-talk the spacing between wires will be larger than minimum separation. Thus, the fabric area will be dominated by the wires for communication between PEs.
+Empirically, if the code rate is below the channel capacity, the average number of iterations needed for the soft decoding algorithm in Algorithm 1 is below 5. When the code rate exceeds the channel capacity convergence takes much longer. When the code rate exceeds the channel capacity, the rate should be reduced (or transmit power increased), so when over a predetermined number of decoding operations, the average number of iterations exceeds 8, the fabric signals this to the higher protocols.
+To decode 1024-bit blocks at a line-rate of 1 Gbps, with 8 iterations per codeword, each iteration must not take more than 128 nanoseconds. Each iteration takes 46 cycles, meaning that the clock speed must be at least 360 MHz. Given that the computation per clock cycle is small—8-bit addition and table lookup, the desired performance is easily achievable.
+
+VI. RESULTS
+We implemented the proposed routing algorithm for nv = nh = 32. Figure 4 compares the performance of the generated rate-1/2 1024-bit code with the code used by Blanksby et al. [4], who did not consider implementation cost when computing the code. There is less than 0.3dB loss in coding with our code, demonstrating that our algorithm generates layout-efficient codes with little loss in coding efficiency.
+It is difficult to compare the codes constructed by our algorithms with other LDPC codes. Simply showing their implementation using standard VLSI placement and routing tools is inferior is not fair, as it is known that the implementations produced by these tools can use 2–3 times as much wiring as the optimum implementation. However, it is reasonable to say that code construction methods which do not take VLSI constraints into account will require an excessive amount of wiring, whereas our codes, by construction, can fit within the limited interconnect resources in our fabric.
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon Limit Error-Correcting Coding and Decoding: Turbo Codes,” IEEE ICC, 1993.
+[2] R. G. Gallager, “Low-Density Parity-Check Codes,” Ph.D. dissertation, MIT, Cambridge, MA, 1962.
+[3] T. Zhang and K. K. Parhi, “A 54 Mbps (3,6)-Regular FPGA LDPC Decoder,” IEEE SIPS, 2002.
+[4] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, Rate-1/2 Low-Density Parity-Check Decoder,” IEEE JSSC, Mar. 2002.
+[5] M. M. Mansour and N. R. Shanbhag, “High-Throughput LDPC Decoders,” IEEE Trans. VLSI Systems, vol. 11, 2003.
+[6] M. Cocco, J. Dielissen, M. Heijligers, A. Hekstra, and J. Huisken, “A Scalable Architecture for LDPC Decoding,” IEEE DATE, 2004.
+[7] M. Bossert, Channel Coding for Telecommunications. John Wiley and Sons, Aug. 1999.
+[8] N. H. E. Weste and D. Harris, CMOS VLSI Design: A Circuits and Systems Perspective. Addison-Wesley, 2005.
+[9] H. Shin and D. Hodges, “A 250-Mbit/s CMOS Crosspoint Switch,” IEEE JSSC, vol. 24, no. 2, 1989.
+[10] J. Campeliot, D. S. Modha, and S. Rajagopalan, “Designing LDPC Codes Using Bit-Filling,” in IEEE ICC, June 2001.
+[11] M. Mohiyuddin, A. Prakash, A. Aziz, and W. Wolf, “Synthesizing Interconnect-Efficient Low Density Parity Check Codes,” in ACM DAC, June 2004.
+
+722
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:54:15 UTC from IEEE Xplore. Restrictions apply.
+
+

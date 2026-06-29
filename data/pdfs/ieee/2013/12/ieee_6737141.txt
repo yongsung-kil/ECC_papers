@@ -1,0 +1,471 @@
+Open the Gates: Using High-level Synthesis Towards Programmable LDPC Decoders on FPGAs
+Frederico Pratas∗, Joao Andrade†, Gabriel Falcao†, Vitor Silva† and Leonel Sousa∗ ∗INESC-ID, Dept. Electrical and Computer Engineering, IST, Universidade de Lisboa, Portugal †Instituto de Telecomunicac¸o˜es, Dept. Electrical and Computer Engineering, University of Coimbra, Portugal
+
+Abstract—State-of-the-art decoders for LDPC codes adopted by several digital communication standards require a significant amount of hardware resources to achieve the desired high throughput performance. With technology scaling below the 22nm and with billions of transistors available per chip/device, the development cost and complexity of such designs represent an increasing challenge for hardware designers tackling these communication algorithms. This paper proposes a new strategy for developing flexible and totally programmable long-length LDPC decoders to target execution on FPGA devices. We exploit Maxeler’s Java-based technology to describe the LDPC decoder architecture. We compare the performance of this approach with state-of-the-art parallel computing architectures and show that for the most complex family of binary LDPC codes, real-time throughputs in the order of Mbit/s can be achieved with much lower development effort than imposed by RTL descriptions, and with tremendous power savings compared to the powerful GPUs.
+I. INTRODUCTION
+Now adopted by a vast set of communication standards, Low-Density Parity-Check (LDPC) codes have gone mainstream mostly due to unprecedented error-correcting performance. They allow working under severe Signal to Noise Ratio (SNR) channel conditions, which has fostered the research further in order to find even better Bit Error Rate (BER) performances for emerging communication standards.
+But the throughput performance of such codes comes with intensive computation, that demands the processing and exchange of likelihood probabilities ranging from hundreds to thousands of bit and check nodes per iteration until the codeword converges into a valid solution of the linear system of equations [1]. Therefore, the required computational power for real-time throughput performance cannot be achieve by using conventional computers. In the past, the solution was supported on dedicated hardware such as Application-Specific Integrated Circuits (ASICs) [2], [3], which allow obtaining excellent throughput performance. More recently, Graphics Processing Units (GPUs) [4] and other types of parallel processing architectures have been successfully addressed [5] achieving performances of the same order of magnitude.
+In this paper we propose a new and different approach for building efficient LDPC decoder architectures in FieldProgrammable Gate Arrays (FPGAs). We propose to exploit the feasibility of High-Level Synthesis (HLS) tools for implementing these complex systems. We analyze the behavior of the compiler tool supported by Maxeler’s technology [6], which is based on a friendly programming
+
+environment. Using HLS to generate the architecture allows higher flexibility, adaptability to new functionalities and lower effort/development time. We show that for different codeword lengths, distinct approaches can be more appropriately selected. The level of throughput performance achieved with this tool can be quite competitive against more traditional solutions, such as Central Processing Units (CPUs) or GPUs, reaching dozens to hundreds of Mbit/s. Regarding the latter, the solution here proposed is more favorable in terms of power consumption and adapts to embedded systems, which is also ideal in the Software-Defined Radio (SDR) context.
+II. MIN-SUM LDPC DECODING ALGORITHM
+LDPC [7] codes, a capacity-approaching class of linear block codes, can be defined by a parity-check matrix H, which defines a Tanner graph [8]. The graph assigns paritycheck equations as one type of nodes, Check Nodes (CNs), and codeword bits as another, Bit Nodes (BNs), to form a bipartite graph, where nodes are connected whenever a corresponding non-null element exists in H. Typically, LDPC codes are decoded through soft-decoding methods that define iterative message-passing algorithms on the Tanner graph: a) the channel demodulator computes a reliability measure for the state of each received bit γn, and delivers this information to BNs; b) BNs initialize αm (0)n messages from γn and send these messages to their adjacent CNs; c) CNs compute βm(i)n messages from α(mi)n and send them to their adjacent BNs; d) BNs update αm (i+n1) from βm(i)n; e) BNs also compute the a-posteriori reliability of each bit state γˆn and hard-decode it; finally, steps c) to e) are repeated until a maximum number of iterations is reached or the codeword is valid. The formalization of this procedure, according to the Min-Sum Algorithm (MSA), is highlighted in Fig. 1.
+LDPC decoding algorithms allow for either sequential and layered decoding schedules, typically exploited by Digital Signal Processors (DSPs) implementations [9], or for the canonical Two-Phased Message Passing (TPMP) scheduling approach, an attractive schedule for highly parallel architectures, as discussed next.
+III. OPENCL-BASED GPU DECODER
+In the recent past [4], [5], we have assisted to the adoption of multicore architectures with different characteristics, and consequently, to the need of a cross-platform that reduces
+
+978-1-4799-0248-4/13/$31.00 ©2013 IEEE
+
+1274
+
+GlobalSIP 2013
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:12:40 UTC from IEEE Xplore. Restrictions apply.
+
+Parity-Check Matrix
+
+(BN0) (BN1) (BN2) (BN3) (BN4) (BN5) (BN6) (BN7)
+
+
+
+
+
+(CN0) 1 1 1 0 0 0 0 0
+
+H
+
+=
+
+(CN1) (CN2)
+
+10
+
+0 0
+
+0 0
+
+1 1
+
+1 0
+
+1 0
+
+0 1
+
+00
+
+(CN3) 0 1 0 0 1 0 0 1
+
+Decoding Algorithm: Min-Sum Algorithm a, b) αm (0n) = γn
+
+c)
+
+βm(i)n
+
+=
+
+n′ ∈N (m)\n
+
+sign{αn(i′)m}
+
+×
+
+n′
+
+min
+∈N (m)\n
+
+|αn(i′)m
+
+|
+
+d) αm (i+n1) = γn +
+
+βm(i)n
+
+m′ ∈M (n)\m
+
+e) αm (i+n1) = γn +
+
+βm(i)n
+
+m′ ∈M (n)
+
+Tanner Graph
+
+α0(i0+1)
+
+BN 0
+
+γ0
+
+BN 1
+
+CN
+
+0
+
+BN
+
+2
+
+CN
+
+BN
+
+1
+
+3
+
+CN
+
+BN
+
+2
+
+4
+
+BN
+
+CN
+
+5
+
+3
+
+BN 6
+
+β3(i7)
+
+BN
+
+7
+
+Fig. 1. An LDPC code example defined by the (7, 4) Hamming code, shown as a parity-check matrix H and also in its Tanner graph representation. The Min-Sum message-passing of γ, α and β messages is exemplified on the Tanner graph, and steps a) to e) are formalized in the Decoding Algorithm box.
+
+Demodulator
+
+Processing Buffer
+--------------------codeword 0 codeword 1 ...
+codeword K-1 ---------------------
+codeword K codeword K+1 codeword K+2
+… codeword N-2 codeword N-1
+
+OpenCL Device GPU
+
+…
+
+BN BN BN BN BN BN BN BN
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+BN BN BN BN BN BN BN BN
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+CN
+
+CN
+
+CN
+
+CN
+
+0
+
+1
+
+2
+
+3
+
+Codeword N-1
+
+CN
+
+CN
+
+CN
+
+CN
+
+0
+
+1
+
+2
+
+3
+
+…
+
+Codeword K
+
+the development effort. Released in 2008, the Open Computing Language (OpenCL) standard [4] consists of a program development framework that supports multithreading and allows overcoming the challenges associated with cross-platform portability. It has since been adopted by CPU, GPU, DSP and most recently by FPGA manufacturers [6].
+A. Portable Software: Multithreaded GPU Execution
+The LDPC decoder can benefit from the high number of stream processors and multithreading capabilities of the GPUs. moreover, the data-parallelism level is scalable and may be increased in future devices to exhaust the computational resources of the GPU, thus providing even higher throughputs [4].
+We have explored a data granularity design that assigns a work-item to each node in the Tanner graph and implements two decoding kernels. Observing Figs. 1 and 2, the CN kernel executes step c) by spawning M work-items; the BN kernel computes steps d) and e) through N work-items. Also, in order to maximize the bandwidth delivered by the memory engine and comply to alignment requirements, we have employed 128-bit variables which pack 16 codewords in 8-bit fixedprecision data representation [4].
+IV. DATAFLOW DECODER
+Alternatively, in this section we exploit a different type of methodology. We propose a dataflow paradigm of computation that adapts well to the FPGAs profile, thus providing more efficient solutions at the cost of less portability. The Maxeler’s MaxCompiler [6], [10] tools, which is based on dataflow computing paradigm, represents an efficient alternative when data is central in the processing as it can address memory latency, computation latency and bandwidth bottlenecks by moving data through dataflow cores, which can compute simple or more complex operations. Data is streamed from
+
+Fig. 2. Parallel OpenCL-based LDPC decoder. The demodulator packs data onto a processing buffer that is supplied to the GPU.
+memory onto the chip where operations are performed, and it is forwarded directly from one functional unit to another when intermediate results are needed, till the final results are returned back to the memory. The distinct characteristic of this paradigm, and the main reason for it to map well into FPGAs, is its ability to decouple computation from data transfers. Namely, it allows dealing with these two dimensions independently and in parallel, thus reducing the impact of the large latency in FPGA devices.
+Maxeler’s MaxCompiler uses Java combined with specific language extensions to drive the architecture generation, as well as a C software runtime API for managing communications between dataflow engines and the CPU. Each accelerator comprises two distinct elements: Kernels (hardware datapaths) and Manager (dataflow orchestration). Since the hardware descriptions are built on top of the dataflow model concept, they can naturally fit onto the FPGA chip. High performance in a dataflow architecture can be achieved through a combination of deep-pipelining and exploiting both inter- and intra-Kernel parallelism. These dimensions are only limited by the parallelism inherent to the application, the size of the accelerator and the available space in the FPGA.
+Maxeler tools provide additional support to the users. For example, complex hardware structures that typically require non-negligible efforts in RTL design, such as configuration of hardware modules for communication and synchronization with the host (PCIe, DRAM, etc.), structures for controlling the data streaming (multiplexers, BRAMs addressing, FIFOs, etc.) and automatic data buffering for I/O are in this case transparent to the user, at the foreseeable cost of losing some control over the hardware introduced by the tool.
+
+1275
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:12:40 UTC from IEEE Xplore. Restrictions apply.
+
+Kernel 0 Kernel 1 Kernel P
+Control Latency Previous FU Next FU
+
+Host C code
+
+Maxeler RT Library
+
+GCC
+
+HOST CPU
+
+Java
+
+PCIe
+
+MaxCompiler Xilinx ISE
+
+FPGA
+
+bitstream
+
+Manager
+
+...
+
+Manager FIFO
+
+Kernel partial DVB-S2 code word (from PCIe)
+
+γ α/β
+Bank Bank
+
+γ α/β
+Bank Bank
+
+FU 0
+
+FU 1
+
+γ
+Bank
+
+α/β Bank
+
+FU N-1
+
+BN
+
+CN
+
+HD β/α
+
+HD β/α
+
+HD β/α
+
+Barrel Shifter
+
+FIFO
+
+partial Hard Decode (to PCIe)
+
+BN data-flow node
+
+γ+ β
+
+ACC R +E G
+
+CN data-flow node
+
+α
+
+Iterative MIN SUM
+
++
+γ
+
+MIN SUM
+MIN SUM
+
+R
+
+E
+
+HD
+
+G
+
+-α
+
+MIN SUM
+
+β
+
++ HD
+
+MIN SUM
+
++
+
+PN BRAM Bank
+
+Fig. 3. Dataflow version of the M -kernel parallel decoder architecture [11] for a variable number of FUs.
+
+A. Reconfigurable Hardware: Multiple Streaming Accelerators
+The dataflow solution can operate at high frequencies, including long-length codes which provide enough data to fill the processing engine.
+The proposed reconfigurable design that supports multiple streaming is presented in Fig. 3. It scales to a variable number of decoders (P ), each one consisting of a variable number of FUs (M ), according to the code size used and the available hardware resources. Each decoder is mapped into a different Kernel with one input stream (the likelihoods) and one output stream (the final word). Decoding one codeword requires running a set of iterations. During the first iteration, the input data is read from the PCIe, which depending on the size of the code, may require loading several batches of M symbols (γ’s in Fig. 3) per clock cycle. Each batch is scattered to initialize the first α messages (α/β BRAM banks in Fig. 3) and is also buffered into several BRAM banks (γ banks in Fig. 3). During the following iterations γ’s are re-streamed from the γ banks. This architecture allows using a double-buffering approach at the input, thus overlapping communication and computation and overcoming the PCIe bandwidth limitations. Moreover, it decouples Kernels from the rest of the architecture, thus supporting different clock regions and achieving maximum performance within the Kernels.
+As before, each iteration is divided into BN and CN mode. For each mode, data is re-streamed from the BRAM banks through the FUs. The FUs’ outputs are selected according to the active mode and streamed back to the BRAMs through the barrel shifter (in a feedback loop) while respecting the Tanner graph’s connections. The two modes introduce different latencies in the dataflow paths, thus extra FIFO buffers are required at certain points in the design for resynchronizing the streams. The depth of all FIFO buffers is dynamically adjustable in order to reconfigure the architecture to efficiently support different code rates. It is important to notice that, in contrast to the wide-pipeline architecture, these changes only affect the pipeline depth but do not require introducing stalls in the pipeline.
+
+V. EXPERIMENTAL RESULTS
+The apparatus and obtained results are herein discussed in light of each architecture and framework characteristics.
+A. Apparatus
+The GPU is a K20c Nvidia engine. The reconfigurable devices used are: FPGA1 a Virtex-6 LX760 board; FPGA2 a MAX2336B board (Virtex-5 LX330T). The proposed LDPC decoders are compared with state-of-the-art GPU, FPGA and ASIC decoders [3], [11] and with an FPGA-based widepipeline accelerator [12]. The profiled throughput performance, measured both in decoded bits and work-items per second, and the associated development effort are summarized in Table I. For the sake of comparison and considering the available resources, OpenCL-based decoders were all profiled for the (64800, 32400) code (B4) defined in the ETSI DVB-S2 standard for 10 decoding iterations.
+B. Throughput of the LDPC Decoders
+As expected, the explored frameworks and architectures deliver computational performances suitable for distinct application targets. In a SDR platform, the discrete GPU is packaged at unaffordable power consumption levels, delivering a decoding throughput of 340Mbit/s.
+Furthermore, dataflow engines allow for significant decoding throughputs even in the face of an order of magnitude longer LDPC code. The tested dataflow engines convey higher decoding throughputs, between 270 and 540 Mbit/s. The lowest value is achieved by the engine employing the lowest level of parallelism, with 45 FUs and only a decoding stream, while the highest value is due to 2 codeword streams in 2 stream-dedicated 90 FUs processors.
+C. Discussion
+The relevance of a high-end GPU in SDR is arguable, but it may be suitably employed in the prototyping of a base kernel for OpenCL processors.
+The developed dataflow accelerators compare favorably with the wide-pipeline SOpenCL-based one from [12]. The LDPC decoder manually coded in Register Transfer Level (RTL) [11], resynthesized for FPGA3, operates at almost half
+
+1276
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:12:40 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I THROUGHPUT, EXECUTION TIME AND DEVELOPMENT EFFORT ASSOCIATED WITH EACH PLATFORM. THE DECODERS ARE SHOWN BY THEIR DEVELOPMENT FRAMEWORK, PROCESSING DEVICES AND PARALLELISM CHARACTERISTICS: EACH STREAM IS ASSOCIATED WITH ONE CODEWORD; WIDE-PIPELINE FPGA OPENCL DECODERS MAY HAVE SIMD PROCESSING; DATAFLOW ENGINES REPLICATE THE BASED ARCHITECTURE OF [11].
+
+Framework Device
+Parallelism†
+
+GPU 2720 Streams
+
+OpenCL FPGA1
+16 Streams Single Core Pipeline [12]
+
+1 Stream 45 FUs
+
+MaxelerOS FPGA2
+2 Streams 2 Streams 2x45 FUs 2x90 FUs
+
+RTL ASIC
+1 Stream 2 Streams 45 FUs [11] 90 FUs [3]
+
+Thr. (Mbit/s)
+
+340
+
+17
+
+270
+
+450
+
+540
+
+120
+
+180
+
+Freq. (MHz)
+
+745
+
+101(CN)/163(BN)
+
+300
+
+250
+
+150
+
+133
+
+270
+
+Dev. Effort
+
+lowest
+
+low
+
+moderate moderate moderate very high very high
+
+†OpenCL decoders spawn a work-item per node in the Tanner graph; MaxelerOS decoders are dataflow engine versions of [11]
+
+of the clock frequencies obtained with the dataflow one, thus producing lower decoding throughput. The dataflow decoders developed with Maxeler’s tools were all able to deliver decoding throughputs in the hundreds of Mbit/s range, which favourably compares with the performance delivered by the ASIC decoder [3], for the same LDPC code.
+Different programming frameworks and computer architectures underneath are best employed in specific roles. Namely, the development effort shown in Table I (we defined effort as development time: lowest ∼days; low ∼days plus synthesis and P&R; moderate ∼weeks; and high and very high ∼months), shows that low data rate applications may enjoy the benefits of a lower programming effort. Nevertheless, high data rate applications do not require efforts as high as those involved in RTL project design.
+100
+10
+1
+
+K20c NVIDIA
+
+FUs 45 ax2 M
+
+FUs 2x45 ax2 M
+
+FUs 2x90 ax2 M
+
+Fig. 4. Comparing the efficiency of the GPU approach with the Maxeler’s FPGA-based one.
+
+Moreover, the power efficiency of the developed LDPC decoders is compared in Figure 4. Namely, the GPU decoder is able to decode 4.3 megabits at the expense of one Joule (Mbit/J), whereas the dataflow LDPC decoders deliver efficiencies of 54∼98 Mbit/J, with multi-stream engines achieving better power efficiencies than the single-streamed case.
+VI. CONCLUSION
+In this work, we showed that competitive decoding throughputs can be achieved for LDPC decoding by exploring new development approaches and frameworks based on high-level synthesis. The proposed dataflow decoders make seamless use of FPGAs using Java-based descriptions of the architecture, enabling high throughput performances that range from 270 up
+
+to 540 Mbit/s, with only moderate development effort, when compared with traditional RTL descriptions.
+Naturally, the range of potential applications that can benefit from such design scenarios is not limited to the SDR context and should provide equally significant improvements in other compute-intensive areas that require the development of hardware-dedicated systems.
+ACKNOWLEDGMENT
+The authors acknowledge INESC-ID and Instituto de Telecomunicac¸o˜es funded through Fundac¸a˜o para a Cieˆncia e Tecnologia (FCT) grants PEst-OE/EEI/LA0021/2013 PEst-OE/EEI/LA0008/2013, and by FCT scholarships SFRH/BD/78238/2011 and SFRH/BPD/87734/2012.
+REFERENCES
+[1] S.-Y. Chung, “On the construction of some capacity-approaching coding schemes,” Ph.D. dissertation, MIT, 2000.
+[2] A. J. Blanksby and C. J. Howland, “Parity-Check Code Decoder,” IEEE Journal of Solid-State Circuits, vol. 37, no. 3, pp. 404–412, 2002.
+[3] S. Muller, M. Schreger, and M. Kabutz, “A novel LDPC decoder for DVB-S2 IP,” in Design, Automation & Test in Europe Conference & Exhibition, 2009. DATE ’09. IEEE, Apr. 2009, pp. 1308–1313.
+[4] G. Falcao, V. Silva, L. Sousa, and J. Andrade, “Portable LDPC Decoding on Multicores Using OpenCL,” Signal Processing Magazine, vol. 29, no. 4, pp. 81–109, 2012.
+[5] G. Blake, R. G. Dreslinski, and T. Mudge, “A Survey of Multicore Processors,” Signal Processing Magazine, vol. 26, pp. 26–37, 2009.
+[6] O. Lindtjorn, R. Clapp, O. Pell, H. Fu, M. Flynn, and H. Fu, “Beyond traditional microprocessors for geoscience high-performance computing applications,” Micro, IEEE, vol. 31, no. 2, pp. 41–49, 2011.
+[7] T. Richardson and R. Urbanke, “The renaissance of Gallager’s lowdensity parity-check codes,” Communications Magazine, IEEE, vol. 41, no. 8, pp. 126–131, 2003.
+[8] M. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Transactions on Information Theory, 1981.
+[9] M. Gomes, V. Silva, C. Neves, and R. Marques, “Serial LDPC decoding on a SIMD DSP using horizontal-scheduling,” in Proc. 14th European Signal Processing Conference (EUSIPCO2006), 2006, pp. 4–8.
+[10] O. Pell and V. Averbukh, “Maximum performance computing with dataflow engines,” Computing in Science and Engineering, vol. 14, no. 4, pp. 98–103, 2012.
+[11] M. Gomes, G. Falcao, V. Silva, V. Ferreira, A. Sengo, and M. Falcao, “Flexible parallel architecture for DVB-S2 LDPC decoders,” in IEEE Global Telecommunications Conference, 2007. GLOBECOM’07, 2007, pp. 3265–3269.
+[12] G. Falcao, M. Owaida, D. Novo, M. Purnaprajna, N. Bellas, C. Antonopoulos, G. Karakonstantis, A. Burg, and P. Ienne, “Shortening Design Time through Multiplatform Simulations with a Portable OpenCL Golden-model: The LDPC Decoder Case,” in 2012 IEEE 20th International Symposium on Field-Programmable Custom Computing Machines. IEEE, May 2012, pp. 224–231.
+
+1277
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:12:40 UTC from IEEE Xplore. Restrictions apply.
+
+

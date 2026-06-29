@@ -1,0 +1,807 @@
+Optimizing Iterative Decoding of Low-Density Parity Check Codes on Programmable Pipelined Parallel Architectures
+
+Ghazi Al-Rawi
+EE Department Stanford University Stanford, CA 94305
+
+John Cioffi
+EE Department Stanford University Stanford, CA 94305
+
+Rajeev Motwani
+CS Department Stanford University Stanford, CA 94305
+
+Mark Horowitz
+EE Department Stanford University Stanford, CA 94305
+
+Abstract- This paper investigates the problem of minimizing the latency of iterative decoding of Low-density parity check codes using the sum-product algorithm on a proposed lowcomplexity programmable pipelined parallel architecture. We present heuristic techniques for solving the NP-hard combinatorial optimization problems of mapping and scheduling the processing tasks of decoding an arbitrary LDPC code on n parallel pipelined processing units so as to minimize the total number of clock cycles required to complete a single decoding iteration. We compare the quality of result and running time of the proposed techniques to those of simple randomized techniques. We also investigate the effect of using local buffering at the pipelined processing units. In the case of zero local buffering, the proposed mapping and ordering techniques offer an improvement of 75.1% over randomized alternatives for the case of n=16. The proposed mapping technique always leads to an improvement of at least 11% over randomized mapping even if infinite local buffering is used. It is shown that a speedup factor of 1.12n-0.024n2 can be achieved using a local buffer size of only 32 words†.
+I. INTRODUCTION
+It is known that Turbo codes [1] and Low-density parity check (LDPC) codes [2] are the best known coding techniques for achieving data rates that are very close Shannon capacity on binary symmetric and additive white Gaussian noise channels. Iterative decoding offers a practical way for implementing these codes. Iterative decoding techniques, in general, have recently received significant attention and various results have been reported [3-5]. The requirements of interleaving and serial recursion [6] increase the inherent latency of Turbo decoding and limits its usage in latency-sensitive applications like voice communication. On the other hand, LDPC decoding exhibits less inherent latency limitations and, in general, requires simpler processing [7]. LDPC decoding has a large amount of inherent parallelism, which if exploited efficiently, could make LDPC codes a potentially attractive coding technique for many applications, including those that are latencysensitive. Parallel implementations naturally become more attractive as VLSI integration density continues to increase and cost per transistor continues to decrease. In many applications where power consumption is a major concern like wireless communications or portable computing, parallel implementations also offer an attractive alternative, because they can lead to significant power savings by requiring the
+† This research was sponsored by National Semiconductors Corporation.
+
+system clock to run at a slower rate. It was shown in [8] that the efficiently exploited parallelism of LDPC decoding is communication limited. Another advantage of LDPC codes is that they offer flexibility in choosing coding parameters like rate and frame size, and unlike Turbo codes, there is not a small set of standardized or universally adopted set of LDPC codes. In fact, most of the construction techniques of good LDPC codes are characterized by being inherently random [9]. This makes a code-independent or programmable decoding platform extremely attractive, especially in applications where flexibility is desirable.
+A regular LDPC code is defined by a sparse M×N parity check matrix H that has 0 entries everywhere except for tc 1’s in each column and tr 1’s in each row, where tc and tr are small numbers. Irregular LDPC codes, with H matrices that have varying number of non-zero entries in each column and row, can yield better performance than the regular constructions if designed properly [10]. A LDPC code can be represented by a bipartite graph G=(V, F, E) called a “factor graph” that has H as its adjacency matrix. It consists of N variable nodes vi∈V corresponding to columns of H, and M function nodes fj∈F corresponding to rows of H. There is an edge ei,j∈E between vi and fj corresponding to each non-zero hi,j entry in H [11].
+Section III proposes a low-complexity parallel pipelined programmable architecture for implementing the sumproduct algorithm for soft decoding of LDPC codes, which is briefly introduced in section II. We mathematically model the combinatorial optimization problem of finding the best mapping and scheduling of variable and function node processing tasks that leads to the minimum conflicts in memory access and hence minimum latency of completing a single decoding iteration. Section IV then presents heuristic techniques for solving the NP-hard mapping and scheduling problems. Experimental results are presented in section V, which also investigates the effect of using local buffers at the processing units to alleviate the effect of memory access conflicts. Concluding remarks appear in section VI.
+II. ITERATIVE LDPC DECODING
+Gallager’s iterative probabilistic decoding of LDPC codes is based on evaluating the likelihood ratios associated with each information bit from information provided by disjoint parity check equations [2]. It can be implemented using the sum-product (or message-passing) algorithm [11]. We adopt the two-phase schedule, in which updates of all function
+
+0-7803-7206-9/01/$17.00 © 2001 IEEE
+3012
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+nodes are done in the first phase of the iteration, and then the
+
+updates of all variable nodes are done in the second phase.
+
+In a given phase, processing of different variable or function
+
+nodes is independent and can proceed in parallel. Let
+
+( ) LLR(µ f j →vi ) = LLR(rij ) = log rij (1) rij (0)
+
+(1)
+
+represents the message from function node fj to variable node
+
+( ) vi, where LLR denotes the Log-Likelihood Ratio, and let
+
+LLR(µvi → f j ) = LLR(qij ) = log qij (1) qij (0)
+
+(2)
+
+represents the message from variable node vi to function
+
+node fj. Then the algorithm consists of the following steps:
+
+Initialize.
+
+( ) LLR prior (vi ) = log piprior (1) piprior (0)
+
+(3)
+
+Phase 1 of the iteration: Variable node processing.
+
+LLR(qij ) =
+
+∑ LLR(rij’) + LLR prior (vi )
+
+(4)
+
+f j ’∈Nbr (vi )\{ f j }
+
+where Nbr(i) is the set of neighbors of node i in G.
+
+Phase 2 of the iteration: Function node processing.
+
+∑ LLR(rij
+
+)
+
+=
+
+φ
+
+−1
+
+ 
+
+vi ’∈Nbr
+
+(
+
+f
+
+φ (|
+j )\{vi
+
+LLR (q i ’ j
+}
+
+)
+
+|)
+
+ 
+
+⋅
+
+(5)
+
+∏ sgn(LLR(qi’j ))(−1)|Nbr( f j )|
+vi ’∈Nbr ( f j )\{vi }
+
+where
+
+φ ( x)
+
+=
+
+φ
+
+−1 (x)
+
+=
+
+−
+
+log
+
+tanh 
+
+1 2
+
+x  
+
+
+
+=
+
+log
+
+exp( x) exp( x)
+
++1 −1
+
+(6)
+
+Repeat steps 1 and 2 until a stopping criterion, like satisfying
+
+all parity checks or maximum number of iterations, is met.
+
+Compute output.
+
+∑ LLR posterior (vi ) =
+
+LLR(rij’) + LLR prior (vi )
+
+(7)
+
+f j ’∈Nbr (vi )
+
+∑ LLR extrinsic (vi ) =
+
+LLR(rij’)
+
+(8)
+
+f j’∈Nbr (vi )
+
+Using (4) and (5), we can implement the message-passing
+
+algorithm for LDPC codes using only the addition operation
+
+and a look-up table for evaluating the function φ = φ −1 . In
+
+practice a convenient way of evaluating all d sums of subsets
+
+of d-1 numbers each, for a list of d numbers z1, z2,…, zd is to
+
+∑ first, sum up the first d-1 numbers
+
+d −1 i =1
+
+zi
+
+.
+
+Then add the
+
+∑ last number for the total sum T =
+
+d i =1
+
+zi
+
+.
+
+Then for i=1, 2,
+
+…, d-1, subtract of each of the numbers to obtain the sums T-
+
+zi of the subsets. This can be implemented in a pipelined
+
+fashion using an accumulator with latched output to evaluate
+
+T and a delay line followed by a subtractor to subtract the
+
+appropriately delayed zi and obtain T-zi. Similarly, we can
+
+implement the sign multiplication in (5) using XOR gates
+
+and a delay line. In irregular LDPC codes, d can be different
+
+for different nodes processed by the same pipelined
+
+processor. If nodes with smaller degree are allowed to
+
+follow nodes with larger degree in processing order, we
+
+would need dmax/dmin extra accumulator latches. Assuming that the delay of the delay line of the pipeline can only be increased, if a node with degree di is processed after a node with degree di-1, we incur an extra delay of max(0, di-1 – di).
+III. THE PROPOSED ARCHITECTURE
+There are many ways in which the above algorithm can be implemented in parallel [8, 12]. In this paper, we chose to implement it using the following system. The system consists of n variable processors to perform variable node processing, n var2fun memory banks to store the values of edges updated by the variable nodes, n function processors to perform function node processing, and n fun2var memory banks to store the values of edges updated by function nodes, where n is the parallelization factor. It is assumed that each memory bank can be read and written at most once each cycle. It is also assumed that each processor is pipelined, i.e., it consumes at most one data element and produces at most one data element each cycle. To reduce the communication cost, we assume that each variable processor can write to a single var2fun memory bank only, but can read from any of the n fun2var memory banks. Similarly, each function processor can write to a single fun2var memory bank only, but can read from any of the n var2fun memory banks. In the first phase, the n variable processors work in parallel by reading edge data from the n fun2var memory banks and writing updated edge data into the corresponding var2fun memory banks. When the updating of all edges by variable processors is done, i.e., when all variable nodes are processed, the second phase starts, and proceeds in a similar way. This configuration is illustrated in Fig. 1. In this case, the required memory size (in words) is equal to twice the number of edges in the graph of the code. The word size is usually around 4 bits [8, 12]. By doubling the memory size, two frames can be decoded simultaneously on this pipelined architecture to double the throughput.
+It is first assumed that a processor has no local storage, and hence edges falling on the same node must be read contiguously. Meaning if processor pi decides to start processing node nj, it must read all edges falling on nj, at most one edge at a cycle, contiguously, but in any order, before it can start reading edges of the node it will process next. Later, this constraint is relaxed, and we consider the case where each processor has a local buffer of finite size. In the that case, if a processor does not find the data it needs for processing the current node in its local buffer or in the memory bank it is currently reading, it can fetch a data item needed for processing another node that it will process in the future, if available in the memory bank, and store it its local buffer. This alleviates the effect of memory misses that would otherwise occur if no local buffering is used.
+Given the graph or H matrix of a code, we want to solve the combinatorial optimization problem of minimizing conflicts in memory access and hence the latency of a single decoding iteration given the following degrees of freedom:
+
+3013
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+n fun2var m em ory banks n variable processors n var2fun m em ory banks n function processors
+
+Fig. 1. The proposed pipelined parallel architecture for the case of n=4.
+
+1. deciding which function nodes are assigned to each
+
+function processor
+
+2. deciding in which order these nodes are processed
+
+3. deciding which variable nodes are assigned to each
+
+variable processor
+
+4. deciding in which order these nodes are processed
+
+5. deciding how the n variable processors read from the
+
+n fun2var memory banks each cycle
+
+6. deciding how the n function processors read from the
+
+n var2fun memory banks each cycle
+
+To reduce the search space and potentially reduce the
+
+hardware complexity, we decided to eliminate the last two
+
+degrees of freedom and restrict the way the n processors read
+
+from the n memory banks each cycle in parallel so as to
+
+prevent memory conflicts. In particular, it is assumed that
+
+the n variable processors read cyclically from the n fun2var
+
+memory banks, and similarly, the n function processors read
+
+cyclically from the n var2fun memory banks, as illustrated in
+
+Fig. 1. This will introduce a mutual dependency between the
+
+first four degrees of freedom, and significantly reduce the
+
+size of the search space. The problem now is reduced to
+
+finding the best mapping and scheduling of variable and
+
+function nodes to the n variable and function processors,
+
+respectively that will minimize the maximum latency among
+
+the pipelined parallel processors.
+
+The problem can be mathematically modeled as follows:
+
+Let Xv and Xf be N×n×N, and M×n×M matrices that represent
+
+a solution to the problem, where Xvi,j,k=1, if variable node i is the kth node processed by variable processor j, and Xvi,j,k=0 otherwise. Similarly, Xfi,j,k=1, if function node i is the kth node processed by function processor j, and Xfi,j,k=0 otherwise. We have the following constraints:
+
+n−1 N −1
+
+n−1 M −1
+
+∑ ∑ ∑ ∑ Xvi, j,k = 1 ,
+
+Xfi, j,k = 1
+
+(9)
+
+j=0 k =0
+
+j=0 k =0
+
+which imply that every node is processed by a single
+
+processor, and only once. Define the indicator variable:
+
+Zvj,t=1, if variable processor j stalls at cycle t, because it could not find a data item that it needs at that cycle in its
+
+local buffer (if any) or in the memory bank it is reading at
+
+that cycle. Zvj,t=0 otherwise. Similarly, define the stall indicator variable Zfj,t for function processors. Then,
+
+N −1 N −1
+
+Lvp j
+
+∑ ∑ ∑ Lvpj = IPDv +
+
+degV (i ⋅ Xvi, j,k ) + Zv j,t
+
+i=0 k=0
+
+t =0
+
+(10)
+
+N N −1
+
+∑ ∑ +
+
+max(0, degV (i ⋅ Xvi, j,k−1 ) − degV (i ⋅ Xvi, j,k ))
+
+k =1 i=0
+
+is the number of cycles taken by the variable processor vpj to finish processing the variable nodes assigned to it. IPDv is the initial pipeline depth of a variable processor, and degV(i)
+
+if the degree of variable node i. The first term in (10)
+
+represents the latency to initially populate the pipeline, the
+
+second is the inherent processing latency, the third is the
+
+latency due to stalls in the pipeline, and the last term is the
+
+latency due switching from a node degree to a lower one.
+
+Similarly, the latency of a function node processor fpj is:
+
+M −1M −1
+
+L fp j
+
+∑ ∑ ∑ L fp j = IPD f +
+
+deg F (i ⋅ Xf i, j,k ) + Zf j,t
+
+i=0 k =0
+
+t =0
+
+(11)
+
+M M −1
+
+∑ ∑ +
+
+max(0, deg F (i ⋅ Xf i, j,k−1 ) − deg F (i ⋅ Xf i, j,k ))
+
+k =1 i=0
+
+The objective of the combinatorial optimization problem is:
+
+min {Ltotal
+Xv, Xf
+
+=
+
+max(Lvp
+j
+
+j
+
+)
+
++
+
+max(L
+j
+
+fp
+
+j
+
+)}
+
+(12)
+
+IV. THE PROPOSED SOLUTION
+To limit the search space, a two-stage heuristic approach for solving this problem is proposed. In the first stage, the mapping problem is solved, where we assign variable nodes to each variable processor and function nodes to each function processor. Updated values of edges incident on variable nodes mapped to processor vpi are stored in memory bank var2funi, and similarly, updated values of edges incident on function nodes mapped to processor fpi are stored in memory bank fun2vari. The fact that var2fun and fun2var memory banks are read cyclically by function and variable processors, respectively, introduces a cyclic ordering relationship between memory banks of the same type. Thus, it is convenient to model the mapping problem as a coloring problem, where we have n colors from 0 to n-1 ordered on a modulo n circle, and we like to find the best coloring or variable nodes and function nodes using these n colors. After solving this coloring problem, the scheduling problem, which is to find the best linear ordering of nodes of the same type and same color, is then solved in the second stage.
+
+A. SOLVING THE MAPPING PROBLEM
+The mapping problem is known to be NP hard [13]. Therefore, we propose a heuristic algorithm based on K-L mincut heuristic [13]. The same algorithm is used to map or color variable nodes and function nodes independently. We will focus on the case of coloring the variable nodes, and the same argument applies to function nodes. We start with a random initial coloring of variable nodes generated as follows: Using random sampling without replacement from a
+
+3014
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+pool that initially contains all N variable nodes of the graph,
+
+random nodes are assigned to color i=0 until the following
+
+∑ condition is satisfied degV (v j ) ≥| E | / n , where Ci is the v j∈Ci
+
+set of variable nodes colored with color i. Then, we move to
+
+the next color i=i+1, and so on until all nodes are colored. This random coloring ensures almost even load distribution among the n colors. We then use pairwise optimization by
+
+transferring nodes between two colors using a procedure similar to that in K-L mincut heuristic. To maintain load
+
+balancing during pairwise optimization, node moves [14]
+
+instead of node swaps are used. Node transfers from the
+
+color set with greater load to the one with lesser load are
+
+tried with the iterative improvement heuristic. Once a node
+
+is moved from one set to the other it is declared as a locked
+
+node and it will not be allowed to be moved again. The key
+
+difference in our algorithm is in the way we find the gain
+
+associated with moving a node from one color to the other,
+
+because our cost function is quite different from that of the original mincut algorithm. To minimize stalls in function
+
+processors, the set of variable nodes Nbr(fj) should be
+
+colored with almost consecutive colors on the n-color circle.
+
+The implies that the function processor that processes fj will
+
+have almost zero stalls once it starts reading edges of fj
+
+starting at the right color.
+
+Assume we are doing pairwise optimization between color
+
+sets C1 and C2. The gain associated with moving a node
+
+vi∈C1 from C1 to C2 is defined as:
+
+gain(vi ) = Cost(vi ) | − Cost(vi ) |
+
+(13)
+
+vi ∈C1
+
+vi ∈C2
+
+∑ Cost(vi ) =
+
+e
+
+2 j
+
+(14)
+
+f j∈Nbr (vi )
+
+where ej is the number of spaces in the shortest path along the n-color circle that connects all vi∈Nbr(fj). A space is a color i such that Ci∩Nbr(fj)={∅}. Notice that ej2 are summed in (14) instead of ej to emphasize larger values of ej, which we would normally like to avoid. Experimental
+results confirmed this intuition.
+
+The cost ej can be efficiently calculated as follows: Find
+
+maximum color multiplicity, rmax=maximum number of
+
+nodes in Nbr(fj) sharing the same color. Find the colors rc0,
+
+rc1, …, rcl-1 with multiplicity rmax in Nbr(fj), such that
+
+rc0<rc1<..< rcl-1. Find dmin=the length of the shortest arc
+
+connecting rc0, rc1, …, rcl-1 on the n-color circle. Then,
+
+e j = 1+ (rmax −1) ⋅ n + d min − | Nbr( f j ) |
+
+(15)
+
+dmin can be calculated by finding best starting color rci corresponding to the shortest arc as follows:
+
+for (i=0; i<l; i++) {dsi=rci-rc0;} dmin =dsl-1; for (i=1; i<l; i++){d=n-dsi+dsi-1; if (d<dmin) dmin=d;} Clearly, the most expensive operation in calculating
+
+gain(vi) is evaluating ej, therefore it is desirable to reduce the number of times we evaluate ej during a pairwise optimization run. A brute force approach would be to update
+
+gain(vi) using (13) and (14) for all unlocked nodes vi in C1∪C2 after each node move. Hence, the number of times ej is evaluated in this case is:
+
+∑ ∑ K K − j 2 ⋅ degV (vi )
+j=0 i=1
+
+≈
+
+K (K −1) 2
+
+× 2 × deg Vave
+
+(16)
+
+where K=|C1∪C2|, which is proportional to N for a fixed n, and degVave is the average degree of variable nodes. Here we assume all nodes are moved, and hence (16) is an upper
+
+bound.
+
+A smarter approach is to notice that ej depends only on how many nodes of Nbr(fj) are in C1 and how many are in C2, i.e., on |Nbr(fj)∩C1| and |Nbr(fj)∩C2| and not on which nodes are these. |Nbr(fj)∩C1| and |Nbr(fj)∩C2| change dynamically as nodes are transferred between C1 and C2. Let Sj=Nbr(fj)∩{C1∪C2}, and lj=|Sj|. Therefore, we can maintain a state record for each set Nbr(fj) with lj≠0, where the state sj=|Nbr(fj)∩C1|, and hence |Nbr(fj)∩C2|=lj−sj. We calculate once and store the value of ej2 associated with each possible state. This requires lj+1 evaluations of ej. Notice that (13) can be re-written as:
+
+∑ ∑ gain(vi ) =
+
+(e
+
+2 j
+
+|
+
+−
+
+e
+
+2 j
+
+| )=
+
+gain(vi , f j )
+
+f j∈Nbr (vi )
+
+vi ∈C1
+
+vi ∈C2
+
+f j∈Nbr (vi )
+
+(17)
+
+Hence, given sj, gain(vi, fj) can be easily evaluated as ej2(sj)−ej2(sj−1) for vi∈{Nbr(fj)∩C1}, and as ej2(sj)−ej2(sj+1) for vi∈{Nbr(fj)∩C2}. The state sj is updated as follows: If a node vi∈Nbr(fj) is moved from C1 to C2, sj=sj−1, and if a node vi∈Nbr(fj) is moved from C2 to C1, sj=sj+1. In this case, it can be shown that a weak upper bound on the number of
+
+times ej is evaluated is approximately given by:
+
+K × degVave × 2 × (deg Fmax +1)
+
+(18)
+
+which grows only linearly with K, and hence linearly with
+
+the problem size.
+
+The total costs of variable and function nodes mappings are
+
+respectively given by:
+
+∑ ∑ TMCv =
+
+e
+
+2 j
+
+, TMC f =
+
+ei2
+
+(19)
+
+f j ∈F
+
+vi ∈V
+
+In solving the mapping problem, Load-balancing is not a
+
+necessary condition for the optimal solution, since inherent
+
+processing latency contributes only one portion of the total
+
+latency of a processor as shown in (10). However, in a good
+
+final solution, this portion is expected to be the dominant
+
+one, and hence the best we can do in a non-global
+
+optimization heuristic is to ensure almost even load
+
+distribution among processors during the mapping stage.
+
+A potential disadvantage of the proposed coloring
+
+algorithm is that as n grows, our locally optimized solution
+
+may depart more from the global optimum. We can not use a
+
+recursive approach to solve this problem, because unlike to
+
+original mincut problem, the cost function minimized in each
+
+pairwise optimization is global and not local. To overcome
+
+this problem, the algorithm can be run multiple times,
+
+retaining the best solution. We tried randomized hill-
+
+3015
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+climbing heuristics like simulated evolution [15] and simulated annealing [16] to improve the mapping solution obtained by the our algorithm, but they did not lead to better results, indicating that this mapping solution is a reasonably good global solution.
+B. SOLVING THE SCHEDULING PROBLEM
+Once mapping is done, scheduling needs to be locally optimized for each processor. The scheduling in this case can be seen as an instance of the Linear Ordering problem [17], which is to find the best permutation of Q objects given a certain cost function. The problem is similar for all variable and function processors, so let us consider the case of a variable processor vpj. Let π be the order at which vpj processes the nodes assigned to it. In this case, the cost function to be minimized is given by (10). For irregular LDPC codes, to reduce the search space and hardware complexity, we force a monotonically increasing degree ordering, and optimize the order of nodes with same degree only. Thus, the forth term in (10) is forced to be zero. The processor can choose to read the edges of each node in any order to minimize the cost function. Given π, all terms of (10) can be directly calculated except the third one, which requires a numerical evaluation when a non-zero local buffer size is used. The use of local buffering minimizes the number of memory read stalls for any π. This, however, does not necessarily minimize the third term in (10), which depends on the processor pipeline stalls.
+The linear ordering problem is NP hard [18]. Therefore, only heuristic techniques can be used to solve it in practice. We adopted the node compaction technique proposed in [19]. Starting with a random initial permutation π that satisfies degree monotonicity, improvement is attempted by sequentially moving each node π(i) to the position that leads to maximum decrease in cost while leaving other nodes in the same order. Then a path graph Gp is formed by joining every two consecutive nodes in π by an edge with a weight equals the reciprocal of the minimum latency (excluding pipeline depth) of processing these two nodes only in their order in π. A maximum weight matching Mp is then computed for Gp. The end points of each edge in Mp are then compacted together into one node. The above process is applied recursively to the ordered set of compacted nodes until no more compaction can be made. The set is then uncompacted, and the whole process is repeated until no more improvement can be made.
+IV. EXPERIMENTAL RESULTS
+In optimizing the mapping and scheduling of a LDPC code on the proposed architecture, the quality of solution, i.e., the decoding latency, is more important compared to the running time of the optimization algorithm, which will need to be run only once at compile time.
+
+All experiments were performed on a PII 500MHz PC with 512MB of RAM and a Linux OS. We used a rate ½ irregular LDPC code with frame length N=1020, and M=510. Function nodes of this code have a uniform degree df=7 and variable nodes have a non-uniform degree dv∈{2, 3, 7}.
+The quality of result and running time of the proposed heuristic mapping and ordering algorithms are compared to those of simple randomized mapping and ordering algorithms. These randomized algorithms generate multiple constrained random solutions, like those used to initialize the above mapping and ordering heuristic algorithms, and keep the one with the lowest cost. Even though these randomized algorithms lead to optimized solutions, we will refer to solutions generated by these algorithms as “randomized mapping (RM)” and “randomized ordering (RO)” just to differentiate them from solutions obtained by the proposed mapping and ordering heuristics, which we will refer to as “optimized mapping (OM)” and “optimized ordering (OO)”, respectively. A randomized mapping is obtained by picking the lowest cost solution among 1000 random solutions. Similarly, a randomized ordering is obtained by picking the best among 1000 random solutions. An optimized mapping solution is obtained by picking the best solution in 10 runs of our mapping algorithm. In optimized ordering, only a single run is used.
+In both optimized and randomized mappings we independently generate 10 variable node mapping solutions and 10 function node mapping solutions. We then solve the ordering problem for a given pair of variable and function node mapping solutions to find optimized values of Lvpi and Lfpj. We use a branch and bound strategy in searching for the pair of mapping solutions with minimum total latency. This is done by observing the fact that for a given pair of variable and function node mapping solutions, Lvpi+Lfpj for any i and j is a lower bound on the total decoding latency Ltotal that can be achieved using this pair of mapping solutions. This bound is improved as Lvpi and Lfpj are found for more values of i and j.
+To be able to collect experimental data over a wide range of parameter values, the ordering problem is not optimized for the best initial state of cyclic reading. It is assume that processors vpi and fpj read from memory banks fun2vari and var2funj, respectively, at the first cycle t=0. In general, however, processors vpi and fpj can read from memory banks fun2var(i+startV)%n and var2fun(j+startF)%n, respectively, at the first cycle t=0, where 0≤startV≤n and 0≤startF≤n. In general, optimizing ordering for the best initial cyclic reading state can lead to a potential reduction in Ltotal of up to 2n, while it increases the ordering running time by a factor of n.
+Fig. 2 shows speedup versus n for the case of zero local buffering. Speedup is calculated as the ratio of total latency of a single decoding iteration for n=1, which equals 7140 cycles, to total latency for the corresponding value of n on the x-axis. Speedup is shown when various combinations of optimized and randomized mapping and ordering algorithms are used. Clearly, optimized mapping takes most of the
+
+3016
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+credit of the achieved improvement over randomized mapping randomized ordering case. In this case, if optimized ordering is also used, an improvement of 75.1% is achieved at n=16. If randomized ordering is used instead, we get an improvement of 47.2% at n=16. If randomized mapping is used, optimized ordering leads to an improvement of only 13% at n=16 compared to randomized ordering.
+
+Speedup = Latency(n=1)/Latency(n)
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+OM-OO
+
+2
+
+OM-RO
+
+RM-OO 1
+
+RM-RO
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10 11 12 13 14 15 16
+
+n
+
+Fig. 2. Speedup factor versus n with no local buffering.
+
+Speedup = Latency(n=1)/Latency(n=16)
+
+14
+
+12
+
+10
+
+8
+
+6
+
+OM-OO
+
+4
+
+OM-RO
+
+RM-OO
+
+2
+
+RM-RO
+
+0
+
+0
+
+2
+
+4
+
+8
+
+16
+
+32
+
+1000
+
+Buffer Size (Words)
+
+Fig. 3. Speedup factor versus local buffer size for n=16 case.
+
+To study the effect of local buffering at the processor site, Fig. 3 shows the speedup achieved for the case of n=16 corresponding to different local buffer sizes. Buffer size is measured in words, where a word is defined as the number of bits required to represent a single edge value. To simplify the presentation, it is assumed that same buffer size is used for variable and function processors, even though this does not have to be the case in practice. We used buffer size=1000 words to simulate the infinite buffer size case.
+First, we notice that increasing the buffer size beyond 32 words offers no significant advantage. Second, even for infinite local buffering, optimized mapping offers 11% improvement over randomized mapping, because it minimizes buffering delay. Third, optimized mapping and ordering, in general, minimize the size of local buffer required to achieve a certain speedup factor, and hence reduce the hardware cost. Forth, when optimized mapping is used, optimized ordering offers no advantage over randomized ordering when a local buffer size of more than 8 words is used. Similarly, optimized ordering offers no
+
+advantage when randomized mapping is used if local buffer size is larger than 16 words.
+Fig. 4 shows a polynomial fit to the speedup factor versus n for the case of 32-word local buffer size, and when optimized mapping and randomized ordering are used. The figure shows that a speedup, or a latency reduction, factor of 1.12n0.024n2 can be achieved using this combination.
+
+Speedup = Latency(n=1)/Latency(n)
+
+14
+
+12
+
+y = -0.0241n2 + 1.1181n - 0.1482
+
+10
+
+8
+
+6
+
+4
+
+Speedup
+
+Poly. (Speedup)
+
+2
+
+0 1 2 3 4 5 6 7 8 n 9 10 11 12 13 14 15 16
+
+Fig. 4. Speedup factor versus n for buffer size=32 word obtained using optimized mapping and randomized ordering (OM-RO)
+
+Running Time (Sec’s)
+
+20000
+
+OM
+
+15000
+
+RM
+
+OO
+
+RO
+
+10000
+
+5000
+
+0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 n
+Fig. 5. Running times for different mapping and ordering algorithms.
+Fig. 5 shows the running times for the different algorithms. We notice that the running time of the mapping algorithm grows less than linearly with n. The running times of the ordering algorithms are reported for the case of buffer size=0, which consumes the largest running time. This is because the third term in (10) is numerically evaluated in this case using the same simulator used for the finite buffer size case.
+V. CONCLUSION
+LDPC codes can be a good coding technique candidate for latency-sensitive applications. This paper addressed the issue of reducing decoding latency by exploiting the inherent parallelism in LDPC decoding. We proposed a lowcomplexity pipelined architecture for parallel iterative decoding of LDPC codes using the sum-product algorithm. We presented heuristic algorithms for optimizing the mapping and scheduling of decoding tasks on n pipelined processing units. We also investigated the effect of using local buffers of different sizes at these processing units. The
+
+3017
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+proposed mapping algorithm is based on K-L mincut heuristic, but it uses a different cost function. We proposed a suitable data structure to reduce the complexity of the gainupdate process from O(N2) to O(N). The scheduling algorithm solves the local linear ordering problem using an approach based on node compaction. The quality of solution and running time of the proposed algorithms are compared to those of simple randomized mapping and scheduling algorithms that pick the best of many constrained random solutions. It was found that optimized mapping always results in significant improvement compared to randomized mapping even when infinite local buffering is used. Optimized ordering offers an advantage over randomized ordering when zero or small local buffer size is used. A latency reduction factor of 1.12n-0.024n2 can be achieved by using a local buffer size of only 32 words.
+The proposed parallel architecture and associated compiling techniques are equally applicable to parallel codeindependent implementation of LDPC decoding on ASIC or on general-purpose parallel machines that can simulate the proposed architecture. Latency is reduced without tradingoff throughput. In fact, for the same decoding latency, throughput can be directly doubled by decoding two frames simultaneously at the cost of doubling the total required memory size.
+ACKNOWLEDGMENT
+The authors like to acknowledge Dr. Bahai of National Semiconductors for providing insightful feedback on this work.
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes,” Proc. ICC’93, Geneve, Switzerland, pp. 1064-1070, May 1993.
+[2] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. on Information Theory, pp. 21-28, Jan. 1962.
+
+[3] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inform. Theory, vol. 45, pp. 399-431, Mar. 1999.
+[4] F. Kschischang and B. Frey., “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE J. Select. Areas Commun., vol. 16, pp. 219-230, Feb. 1998.
+[5] R. McEliece, D. MacKay, and J. Cheng, “Turbo decoding as an instance of Pearls ‘Belief Propagation’ algorithm,” IEEE J. Select. Areas Commun., vol. 16, pp. 140-152, Feb. 1998.
+[6] H. Dawid and H. Meyr, “Real-time algorithms and VLSI architectures for soft output MAP convolutional decoding,” IEEE Sympos. On PIMRC’95, Germany, pp. 193-197, Sep. 1995.
+[7] B. Levine, R. Taylor, and H. Schmit, “Implementation of near Shannon limit error-correcting codes using reconfigurable hardware”, IEEE Symp. On FCCM, Los Alamitos, pp. 217-226, Apr. 2000.
+[8] G. Al-Rawi and J. Cioffi, “A highly efficient domain-programmable parallel architecture for LDPCC decoding”, ITCC2001, Las Vegas, pp. 569-577, Apr. 2001.
+[9] D. MacKay, S. Wilson, and M. Davey, ”Comparison of constructions of irregular Gallager codes,” IEEE Trans. on Comm., vol. 47, no. 10, pp. 1449-1454, Oct. 1999.
+[10] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” IEEE Trans. on Info. Theory, vol. 47, pp. 619-637, Feb. 2001.
+[11] F. Kschischang, B. Frey, and H. Loeliger, “Factor graphs and the sumproduct algorithm,” IEEE Trans. on Info. Theory, vol. 47, pp. 498-519, Feb. 2001.
+[12] E. Yeo, P. Pakzad, B. Nikolie, and V. Anantharam, “VLSI architectures for iterative decoders in magnetic recoding channels,” IEEE Trans. On Magnetics, vol. 37, no. 2, pp.748-755, Mar. 2001.
+[13] B. Karnighan and S. Lin, “An efficient heuristic for partitioning graphs”, Bell System Technical Journal, vol. 49, pp. 291-308, Feb. 1970.
+[14] P. Sadayappan and Fikrel Ercal, “Cluster-partitioning approaches to mapping parallel programs onto a hypercube”, Int. Conf. on Supercomputing, Athens, pp. 475-97, June 1987.
+[15] S. Kirkpatrick, C. Gelatt, and M. Vecchi, “Optimization by simulated annealing,” Science, vol. 220, May 1983, pp. 671-680.
+[16] Y. Saab and V. Rao, “Combinatorial optimization by stochastic evolution,” IEEE Trans. on CAD, vol. 10, pp. 525-535, Apr. 1991.
+[17] S. Kang, “Linear ordering and application to placement,” Proc. 20th Design Automation Conf., pp. 457-464, 1989.
+[18] M. Garey and D. Johnson, “Computers and intractability: a guide to the theory of NP-completeness.” New York, Freeman, 1979.
+[19] Y. Saab, “An improved linear placement algorithm using node compaction,” IEEE Trans. on CAD, vol. 15, pp. 952-958, Aug. 1996.
+
+3018
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 09:39:32 UTC from IEEE Xplore. Restrictions apply.
+
+

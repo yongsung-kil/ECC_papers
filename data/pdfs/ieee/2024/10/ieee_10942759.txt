@@ -1,0 +1,867 @@
+Channel Coding under Silicon Implementation Constraints
+Oliver Griebel , Lucas Johannsen , Claus Kestel , Matthias Herrmann and Norbert Wehn University of Kaiserslautern-Landau (RPTU), Kaiserslautern, Germany
+{oliver.griebel, lucas.johannsen, claus.kestel, mherrman, norbert.wehn}@rptu.de
+
+2024 58th Asilomar Conference on Signals, Systems, and Computers | 979-8-3503-5405-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/IEEECONF60004.2024.10942759
+
+Abstract—The slowdown in semiconductor technology advances presents challenges for next-generation communication systems. These systems require continuous improvements in error correction performance, throughput, and energy efficiency. Although transistor density continues to follow Moore’s law, there has been a notable decline in gains of interconnect delay and energy consumption. This raises two research challenges. First, data transfers contribute increasingly to the energy consumption for advanced technology nodes. Second, bridging the increasing gap between technology capabilities and demands in communication systems necessitates cross-layer optimizations. In this work, we address both issues by investigating low-density paritycheck (LDPC) and polar code decoder implementations. We quantify the energy consumption impact of different data transfer structures in the Tanner graph for high-throughput LDPC code decoder. Furthermore, we quantify the gains from cross-layer optimization only and the gains from technology advances only for high-throughput polar code decoders and compare them.
+Index Terms—ASIC Implementation, 22 nm FD-SOI, 12 nm FinFET, LDPC Codes, Polar Codes
+I. INTRODUCTION
+Advancements in silicon technology following Moore’s law [1] have enabled significant improvements in wireless communications. Between 1995 and 2020, transistor scaling reduced feature sizes by around three orders of magnitude [2]. However, recent trends indicate fewer gains with advances in technology nodes. While transistor density continues to increase, improvements in interconnect delay, and energy consumption have stagnated [3].
+Modern communication systems demand high error correction performance, high throughput, and low energy consumption. New application scenarios in 6G systems, such as virtual reality and ultra-high-definition video streaming, will require peak data rates of up to 1 Tbit/s [4]. This imposes stringent constraints on the energy consumption of the forward error correction (FEC) decoder. For instance, thermal design power constraints result in an energy budget as low as 1 pJ/bit [5].
+In this context, we discuss two research challenges. First, data transfers contribute increasingly to the energy consumption for advanced technology nodes [3]. This is especially relevant for high-throughput LDPC code decoders [6]. Introducing locality in such decoders reduces wire lengths and, thus, improves the energy consumption [7], [8]. However, this locality conflicts with the high entropy required to achieve
+The authors acknowledge the financial support by the Federal Ministry of Education and Research of Germany in the projects “FACTOR” (grant number: 16KIS1608) and “Open6GHub” (grant number: 16KISK004).
+
+good error correction performance [9]. In this paper, we present a novel methodology to quantify the energy cost of data transfers in LDPC decoder implementations. Second, bridging the increasing gap between technology capabilities and demands in communication systems necessitates crosslayer optimizations [4]. Cross-layer optimizations address code design, decoding algorithms, and architecture jointly to improve implementation efficiency. However, distinguishing and quantifying the individual contributions of cross-layer optimizations and technology advancements is challenging. In this paper, we address this challenge by implementing polar code decoders [10] in different technology nodes to isolate and compare these gains achieved through cross-layer optimizations and those resulting from technology advancements.
+LDPC decoders rely on the exchange of messages within their Tanner graphs [11]. Achieving good error correction performance requires an irregularly structured Tanner graph [12]. Thus, the nodes in the Tanner graph are connected by pseudorandomly distributed edges. By varying the degree of randomness in the code design, we adjust locality in the structure of the Tanner graph. This enables the quantification of the energy cost of data transfers by comparing LDPC code decoder implementations with different degrees of randomness.
+Polar codes enable low-complexity decoding with high locality using successive cancellation (SC) decoding. However, the error correction performance of SC decoding is limited. Successive cancellation list (SCL) decoding improves the error correction performance at the cost of increased complexity. To reduce the implementation costs of SCL decoders, numerous cross-layer optimizations were proposed, e. g., [13]–[16]. To quantify and compare gains from cross-layer optimizations and technology scaling separately, we implement different polar code decoders in two different technology nodes.
+Thus, the contributions of this paper are summarized as follows:
+• We quantify the energy cost as a function of the degree of randomness in Tanner graphs by designing seven different LDPC codes and implementing the corresponding fully node-parallel, iterative decoder architectures.
+• We quantify the gains achieved by cross-layer optimization only and the gains achieved by technology advances only at a fixed error correction performance and throughput. For this purpose, we analyze five different high-throughput SCL-based polar code decoders, each implemented in a 12 nm and a 22 nm technology node.
+
+979-8-3503-5405-8/24/$31.00 ©2024 IEEE
+
+967
+
+Asilomar 2024
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+The remainder of the paper is structured as follows. Section II covers the background on key performace indicators (KPIs), system model, code-decoder fundamentals, and the applied design flow. Section III discusses the implementation cost of randomness in Tanner graphs for LDPC decoders. Section IV examines the comparison between cross-layer optimization gains and technology advancements. Finally, Section V concludes the paper.
+
+II. BACKGROUND
+This section provides the necessary background on the accessed KPIs, the system model, LDPC and polar codes with their decoding, and the technology nodes used for implementation analysis.
+
+A. Key Performance Indicators
+In this paper, we assess two categories of KPIs to evaluate the trade-offs between communication performance and implementation efficiency:
+1) Communication KPIs: The error correction capability of the code and decoding algorithm is an essential property to determine the reliability of data transmission. Other important metrics include flexibility in code rate, codeword length (N ), and number of iterations (I), allowing the decoder to handle diverse communication scenarios effectively. We focus on the frame error rate (FER) over signal-to-noise-ratio (SNR), which is given as Eb/N0 in dB.
+2) Implementation KPIs: Numerous metrics are provided to quantify the complexity of the decoder implementations, which are listed in Table I. The derived metrics area efficiency, energy consumption per bit, and power density reflect the most crucial KPIs for high-throughput decoding.
+
+B. System Model
+The system model for data transmission applied for error correction performance evaluations is shown in Fig. 1. On the sender side, the source signals are encoded and binary phase shift keying (BPSK) modulated before being transmitted over an additive white Gaussian noise (AWGN) channel. On the receiver side, the signals are demodulated to log-likelihood ratio (LLR) values and decoded to restore the originally transmitted data. The focus of this paper is on FEC decoder implementations, highlighted in blue in Fig. 1.
+
+C. Low-Density Parity-Check Codes/Decoding
+
+An (N, K) LDPC code is a linear block code defined
+
+by
+
+a
+
+sparse
+
+binary
+
+parity-check
+
+matrix
+
+H
+
+∈
+
+(N
+F2
+
+−K )×N
+
+.
+
+A
+
+valid codeword x ∈ F2N satisfies H · xT = 0. Mapping an
+
+information word u ∈ FK2 to a codeword x can be achieved
+
+by multiplication with a generator matrix G, which is derived
+
+from H. Tanner graphs represent LDPC codes as bipartite
+
+graphs based on H. In these graphs, variable nodes (VNs)
+
+correspond to the N codeword bits, while check nodes (CNs)
+
+represent the N − K parity check constraints.
+
+Modern LDPC codes are designed to be protograph-based,
+
+irregular, systematic, and quasi-cyclic. A protograph [17] acts
+
+TABLE I IMPLEMENTATION METRICS
+
+Metric
+
+Unit
+
+Description
+
+Frequency fclk
+
+MHz
+
+The operating frequency of the
+
+decoder
+
+Throughput T
+
+Gbit/s
+
+Defined as the coded data rate,
+
+proportional to N · fclk · 1/I · π∗
+
+Latency
+
+ns
+
+The time required to decode a
+
+single codeword
+
+Core Area A
+
+mm2
+
+The silicon area occupied by
+
+the decoder core
+
+Utilization
+
+%
+
+The ratio of area occupied by
+
+transistors over core area
+
+Power Consumption P W
+
+The overall power consumed by
+
+the decoder
+
+Area Efficiency µA Energy per Bit E
+
+Gbit/s/mm2 µA = T/A
+
+pJ/bit
+
+E = P/T
+
+Power Density
+
+W/mm2
+
+P/A = µA · E
+
+∗ I = 1 for non-iterative decoders. π denotes the achievable parallelism.
+
+Source
+
+Sender Side
+
+u
+
+x
+
+Encoder
+
+Mod.
+
+Channel
+
+Receiver Side
+
+y
+
+uˆ
+
+Demod.
+
+Decoder
+
+Sink
+
+Fig. 1. System model for data transmission.
+
+as a compact base graph from which the Tanner graph is constructed through graph lifting by a factor Z, enabling structured and flexible code designs. Irregularity in the degree distributions of VNs and CNs improves error correction performance, particularly in the waterfall region [12], [18]. Systematic encoding explicitly embeds the information word u within the codeword. Quasi-cyclic construction [19] arranges H into circulant sub-matrices, enabling efficient decoder implementation.
+Decoding an LDPC code by belief propagation (BP) decoding relies on iterative message-passing over its Tanner graph. Using BP with the sum-product algorithm (SPA) [20] allows for near-optimal error correction performance [21] at the cost of high implementation complexity. To reduce implementation complexity, simplified methods like the normalized min-sum (NMS) algorithm [22] approximate the CN operation of the SPA. Efficient minimum-search operations and a normalization factor replace the multiplications.
+
+D. Polar Codes/Decoding
+
+An (N, K) polar code of length N = 2n is specified by a set
+
+of information bit indices I ⊂ [0, N ) of size K. The codeword
+
+can be obtained from an input vector u as x = u · GN , where u contains K information bits at the positions of I and N −K
+
+frozen bits (usually set to 0) at the positions of F = [0, N )\I,
+
+and GN = G⊗2 n is the n-th Kronecker power of the Arıkan
+
+kernel G2 =
+
+10 11
+
+.
+
+Polar
+
+codes
+
+following
+
+the
+
+partial
+
+order
+
+(PO) of the polarized channels [23] are completely defined by
+
+the minimal information set Imin [24].
+
+The native decoding algorithm of polar codes is the se-
+
+quential SC decoding, which can be represented by a depth-
+
+first traversal of the polar factor tree (PFT). Pruning this
+
+PFT at nodes representing specific sub-codes, i. e., Rate-0,
+
+968
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+Rate-1, repetition (REP), and single parity-check (SPC) nodes, reduces the computational complexity and latency of SCbased decoding and is denoted fast simplified SC (Fast-SSC) decoding [25]. To overcome error propagation, which limits the error correction performance of SC decoding, SCL decoding [26] considers a maximum of L parallel decoding paths resulting from path splitting, i. e., considering both values for each information bit. SCL decoding approaches maximum likelihood (ML) performance with a sufficiently large list size L. Concatenating the code with a cyclic redundancy check (CRC) assists the selection of the decoder output, and is denoted by CRC-aided (CA)-SCL decoding.
+Code design for SC decoding focuses on the channel polarization. However, especially in the short to medium code length regime, other criteria are also important. Designing symmetric polar codes with a rich automorphism group [24] enables automorphism ensemble decoding (AED) [27] and successive cancellation automorphism list (SCAL) decoding [28], which were shown to outperform SCL decoding. Furthermore, the distance spectrum of the code can be improved by pre-coding, e. g., polarization-adjusted convolutional (PAC) codes [29] or row-merged polar codes [30], to enhance the ML performance, which can be exploited by SCL decoding. It is important to note that fast simplified successive-cancellation list (Fast-SSCL) decoding [15] with specific decoders for subcodes can be applied in all SCL-based decoding algorithms.
+E. Implementation Design Flow
+To assess the implementation efficiency of the presented decoder architectures, we use the Synopsys tools Design Compiler and IC Compiler for synthesis and placement and routing (PAR), respectively. The designs are implemented in two different technologies:
+• a 12 nm fin field-effect transistor (FinFET) technology with a super-low threshold voltage transistor library under worst case process, voltage and temperature (PVT) conditions for timing (0.72 V, 125 °C), and nominal case PVT conditions for power (0.8 V, 25 °C).
+• a 22 nm fully depleted silicon on insulator (FD-SOI) technology with a super-low threshold voltage transistor library under worst case PVT conditions for timing (0.72 V, 125 °C), and nominal case PVT conditions for power (0.8 V, 25 °C).
+Values for power consumption are calculated from post-PAR netlists with back-annotated wiring data.
+III. COST OF RANDOMNESS IN TANNER GRAPHS
+In this section, we quantify the energy cost as a function of the randomness of LDPC decoders. We design codes with varying degrees of locality and implement corresponding decoders in a 12 nm and a 22 nm technology node. The analysis covers both error correction performance and implementation complexity.
+
+(a) H64 provides high locality.
+
+(b) H1 provides high randomness.
+Fig. 2. Parity check matrices of H of generated codes with different pseudorandom distribution.
+
+A. Setup
+This subsection provides an overview of the performed investigations to quantify the impact of the randomness in the Tanner graph. Specifically, the code design, decoding algorithm, decoder architecture, and decoder implementation constraints are introduced.
+1) Codes: Let L = {L1, L2, L4, . . . , L64} be an ensemble of seven protograph-based, irregular, quasi-cyclic, systematic (1536, 1280) LDPC codes, which are derived from a 4 × 24 base graph with lifting factor Z = 64. Furthermore, let Bk be the permutation matrix and Hk be the parity-check matrix of Lk ∈ L for all k ∈ {1, 2, 4, . . . , 64}. The elements bi(,kj) of Bk are elements of a predefined integer set Ωk = {i ∈ [0..63] | i mod k = 0}. These elements are chosen using the progressive edge growth (PEG) [31], which minimizes cycles in the code. Consequently, B1 may contain all integers in [0..63], B2 only integers in [0..63] that are divisible by two, B4 only integers in [0..63] that are divisible by four, and so on until B64, which may only contain zeros. In this way, we constrain the set of values Ωk that the lifting heuristic can draw from such that
+
+Ω1 ⊃ Ω2 ⊃ Ω4 ⊃ · · · ⊃ Ω64
+
+(1)
+
+and
+
+|Ωk| = 64/k.
+
+(2)
+
+Fig. 2 depicts the respective parity-check matrices H64 and H1 after the lifting procedure.
+As a result, all LDPC codes in L have the same code rate, VN and CN degree distribution, but decreasing randomness in the respective Tanner graph as we increase k. In fact, Lk contains k unconnected and therefore local sub-graphs in the following denoted as clusters. To establish a connection between the clusters while also maintaining the degree distributions we select a random entry in Bk and replace it with an integer value in [0..63] that is not an element of Ωk. Note that this step is not required for k = 1.
+The resulting Tanner graphs of the LDPC codes Lk are shown in the upper row of Fig. 3. The Tanner graph of L64 (Fig. 3a) provides the highest locality, i. e., lowest randomness, as it contains 64 clusters. The Tanner graph for
+
+969
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+(a) L64
+
+(b) L32
+
+(c) L16
+
+(d) L8
+
+(e) L4
+
+(f) L2
+
+(g) L1
+
+Fig. 3. Graph randomness in the Tanner graph (upper row) and resulting post-PAR layouts in 12 nm with equal area scaling (lower row) for the LDPC codes in L. Each column shows one Tanner graph and the respective post-PAR layout with the same number of clusters. VNs are orange, CNs are blue.
+
+Frame Error Rate
+
+100
+
+L64
+
+L32
+
+10−1
+
+L16 L8
+
+L4
+
+L2
+
+10−2
+
+L1
+
+10−3
+
+Fig. 4. Fully node-level parallel decoder architecture for sequential decoding of LDPC codes.
+L1 (Fig. 3g) provides the lowest locality, i. e., highest randomness, as it contains 1 cluster. It is crucial to note that each Tanner graph has the same number of nodes with equal node degrees, and number of edges (5120), while only the edge connections vary.
+2) Decoding Algorithm: BP decoding employs the NMS algorithm with an extrinsic message scaling factor of 0.75. Node updates follow a two-phase (flooding) schedule, with I = 8 iterations performed for each codeword.
+3) Decoder Architecture: Figure 4 shows the investigated fully node-level parallel decoder architecture. All CNs and VNs required for one decoding iteration are instantiated as CN functional unit (CFU) and VN functional unit (VFU), applying full parallelism within each iteration. The routing networks between these CN and VN stages, i. e., VN-to-CN (VN-CN) and CN-to-VN (CN-VN) routing, instantiate the edges of the Tanner graph. While the iteration stage is instantiated with full parallelism, the decoding iterations are processed sequentially on this iteration stage.
+4) Decoder Implementation: All architectures are instantiated with 6 bit quantization of the channel values and extrinsic messages. For all designs, the target frequency is set to 600 MHz with a target utilization of 60 %.
+B. Results
+The LDPC codes in L are implemented using two technology nodes. Therefore, this section presents the results for
+
+10−4 3 4 5 6 7 8 9 10
+Eb/N0 in dB
+Fig. 5. FER over SNR of the LDPC codes in L with different numbers of clusters. I = 8 iterations are performed for decoding.
+14 fully characterized LDPC decoder designs, analyzing both error correction performance and implementation complexity.
+1) Forward Error Correction Performance: The plots in Fig. 5 show the correlation between the degree of randomness in the Tanner graph and the resulting error correction performance. Despite the identical CN and VN edge degrees and number of edges in all Tanner graphs shown in Fig. 3, the locality introduced by the clustering harms the error correction performance significantly. In particular, additional clusters result in localized structures, which limits the message exchange and, thus, degrade the error correction performance. In contrast, the increased randomness in the graph reduces harmful cycles and locality which improves error correction performance.
+2) Decoder Implementation Complexity: Table II shows the implementation results of the investigated LDPC code decoders. The corresponding layouts in Fig. 3 show the reducing locality as the number of clusters decreases from 64 to 1, corresponding to increasing randomness. This is consistent with the respective locality of the Tanner graphs. Despite a constant area across all designs, the utilization increases slightly by 4 %, due to long data paths requiring additional buffers and inverters to meet the timing constraints. This results in minor variations in the achieved clock frequency, latency, and throughput. Accordingly, Fig. 6 shows that the
+
+970
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II POST-PAR RESULTS OF LDPC DECODERS WITH DIFFERENT CLUSTERING IN A 12 NM AND A 22 NM TECHNOLOGY NODE.
+
+Code Layout in Fig. Technology / (nm)
+Frequency / (MHz) Throughput / (Gbit/s) Latency / (ns) Core Area / (mm2) Utilization / (%) Power Consumption / (W) Area Efficiency / (Gbit/s/mm2) Energy per Bit / (pJ/bit) Power Density / (W/mm2)
+
+L64
+
+3a
+
+12
+
+22
+
+570 109.4 42.1 0.477
+61 0.679
+
+523 100.5 45.9 0.755
+61 0.610
+
+229 133
+
+6.20 6.07
+
+1.42 0.81
+
+L32
+
+3b
+
+12
+
+22
+
+573 110.0 41.9 0.477
+61 0.708
+
+515 98.9 46.6 0.755 61 0.623
+
+230 131
+
+6.44 6.30
+
+1.48 0.82
+
+L16
+
+3c
+
+12
+
+22
+
+577 110.7 41.6 0.477
+61 0.745
+
+518 99.6 46.3 0.756 61 0.666
+
+232 132
+
+6.73 6.69
+
+1.56 0.88
+
+L8
+
+3d
+
+12
+
+22
+
+576 110.6 41.7 0.477
+61 0.770
+
+524 100.5 45.8 0.758
+62 0.721
+
+232 133
+
+6.97 7.17
+
+1.61 0.95
+
+L4
+
+3e
+
+12
+
+22
+
+578 111.0 41.5 0.477
+62 0.842
+
+528 101.3 45.5 0.763
+62 0.794
+
+233 133
+
+7.58 7.84
+
+1.76 1.04
+
+L2
+
+3f
+
+12
+
+22
+
+596 114.4 40.3 0.479
+64 1.027
+
+555 106.6 43.2 0.778
+64 1.050
+
+239 137
+
+8.98 9.85
+
+2.15 1.35
+
+L1
+
+3g
+
+12
+
+22
+
+593 113.9 40.4 0.479
+65 1.163
+
+549 105.4 43.7 0.783
+65 1.175
+
+238 135
+
+10.20 11.15
+
+2.43 1.50
+
+Energy per Bit E in pJ/bit
+Area Efficiency µA in Gbit/s/mm2
+
+12
+
+240
+
+10
+
+Ecomb Ereg
+
+12 nm E 22 nm E
+
+200
+
+Eclk
+
+12 nm µA
+
+8
+
+Eleak
+
+22 nm µA
+
+160
+
+6
+
+120
+
+4
+
+80
+
+2
+
+40
+
+0
+
+0
+
+L64 L32 L16 L8 L4 L2 L1
+
+Code
+
+Fig. 6. Energy and area efficiency over the number of clusters of fully nodeparallel, iterative decoders for the LDPC codes in L using 12 nm (left bars) and 22 nm (right bars) technologies.
+
+area efficiency is independent of the degree of randomness in the Tanner graph by the orange and green plots for 12 nm to a 22 nm technologies, respectively.
+In contrast to area efficiency, energy consumption is significantly impacted by randomness in the Tanner graph. As randomness increases, the total power consumption increases by 1.65×, regardless of the technology. For the 12 nm designs, this results in an increased energy consumption from 6.20 pJ/bit to 10.20 pJ/bit (see Fig. 6, red line). Consequently, power density increases from 1.42 W/mm2 to 2.43 W/mm2.
+A detailed analysis of energy consumption is illustrated in Fig. 6 using bar charts. This shows that the components belonging to registers (Ereg), clock network (Eclk), and leakage (Eleak) are not influenced by the structure of the LDPC code. However, the energy consumption of the combinational logic (Ecomb) increases for increased randomness. In the 12 nm technology node, Ecomb is increased by a factor of 2.18 from L64 to L1. This reflects the increased routing complexity and additional buffers/inverters required in the designs with high randomness. These results quantify the energy cost of randomness, allowing for the first time a quantitative trade-off between energy consumption and error correction performance.
+As shown in Table II and Fig. 6, the area efficiency improves
+
+by a factor of 1.7 when moving from a 22 nm to a 12 nm technology node due to increased transistor density. However, the improvements in energy consumption are negligible, as transistor power savings are counterbalanced by increased interconnect power. Together, this leads to an increase in power density in advanced technology nodes.
+IV. CROSS-LAYER OPTIMIZATION VS. TECHNOLOGY ADVANCES
+This section compares the gains achieved solely by cross-layer optimizations with those provided by technology progress only. For this purpose, the evolution of five SCLbased polar code decoders are investigated:
+(a) a CA-Fast-SSCL-8 decoder as baseline [32], (b) Rate-1 node optimizations added to (a) [33], (c) SPC node optimizations added to (b) [34], (d) symmetric code design enabling SCAL-4 decoding in-
+cluding the optimizations from (c) [28], (e) row-merged code with SCL-3 decoding including the
+optimizations from (c) [30].
+For a comprehensive description of each optimization step, we refer the reader to the respective literature. The following subsections describe the applied cross-layer methodology, and discuss the presented results.
+A. Cross-Layer Optimization Methodology
+In a cross-layer approach, code design, decoding algorithms, architecture, and silicon implementation are jointly considered and optimized in a holistic manner. In order to ensure a fair comparison, relevant design parameters need to be constrained. In particular, we consider
+• similar code dimensions (N = 128, R ≈ 0.5), • SCL-based decoding algorithms with similar FER, • decoder design with equal throughput target (64 Gbit/s), • and the same design flow for both technology nodes.
+1) Codes: The baseline (128, 64 + 6) polar code Pa-c for steps (a) to (c) was designed according to [35] with a design SNR of 0 dB and extended by a 6-bit CRC with polynomial g(x) = x6 + x5 + 1. Step (d) applies a symmetric
+
+971
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+(d)
+
+(c)
+
+(b)
+
+y πl
+
+0
+
+0
+
+0
+
+πo−1 uˆ
+
+F
+
+1
+
+1
+
+1
+
+G
+
+2
+
+2
+
+2
+
+H
+
+3
+
+4
+
+F
+
+G
+
+4 H
+
+R0
+
+SPC Sort
+
+5 F
+
+5
+
+6
+
+G
+
+6 H
+
+REP Sort
+
+R1
+
+Sort
+
+(e)
+
+Pipeline to Incorporate Pre-Coding
+
+Fig. 7. Simplified schematic of an exemplary unrolled and pipelined polar SCL decoder architecture. Step (a) uses the basic pipeline (blocks 0F-0H) with CRC pre-coding. Components related to specific decoding algorithms are highlighted in light blue. Coloring of leaf nodes with sorters and labels of optimization steps according to Fig. 9.
+(128, 60) polar code Pd with Imin = {27}, which is wellsuited for automorphism-based decoding [27]. For step (e), a row-merged (128, 60) polar code Pe with 17 row-merges [30] is used.
+2) Decoding Algorithms: Fast-SSCL-based decoding using the minimum approximation for f -functions [36] is applied in all steps of the evolution. In step (a), Pa-c is decoded by CAFast-SSCL decoding with L = 8. According to [15], a Rate-1 node with node size Nv generates L · 2min(L,Nv) candidate paths from L input paths by applying Chase-like decoding.
+Step (b) is based on the same CA-Fast-SSCL decoding algorithm, but applies an optimized path splitting strategy in Rate-1 nodes to reduce the number of considered candidates. Based on the PO of the candidates and threshold schemes, the ExPOS Rate-1 candidate generation algorithm [33] provides a trade-off between the number of candidates and the error correction performance.
+Additionally, a similar approach is applied in SPC nodes, denoted by ExPOS SPC [34], in step (c).
+In step (d), Fast-SSCAL decoding [28] is applied for Pd. Here, permutations of the received data according to selected code automorphisms are used to initialize L diverse decoding paths, which compete against each other inside the decoder.
+In (e), Fast-SSCL decoding with dynamic frozen bits [30] is applied for the row-merged polar code Pe with low-complexity pre-coding.
+3) Decoder Architecture: For the investigations in this section, we apply a fully unrolled and deeply pipelined, highthroughput decoding architecture with optimized register insertion for a target frequency based on a timing engine [32]. A simplified schematic of the architecture for an example (16, 8) polar code is shown in Fig. 7. This pipeline consists of fully parallel building blocks implementing the decoding functions. For simplicity, we omit the illustration of the dimension of L, the delay lines with corresponding signals, and further signals like clock or path metrics (PMs).
+For steps (a) to (c), the parallel pipeline for the incorporation of the pre-coding scheme reflects an CRC-on-the-fly calculation based on every information bit estimation. The CRCs are used to select the final output candidate. In steps (b) and (c), the number of considered candidates in the sub-architectures for Rate-1 and SPC nodes are reduced by the ExPOS candidate generation algorithms, respectively.
+
+Frame Error Rate
+
+10−1
+
+10−2
+
+10−3
+
+10−4 10−5 10−6
+
+(a) CA-SCL-8 (b) CA-SCL-8 ExPOS-R1 (c) CA-SCL-8 ExPOS-SPC (d) SCAL-4 (e) Row-merged SCL-3
+
+1 1.5 2 2.5 3 3.5 4 4.5 5 5.5
+
+Eb/N0 in dB
+
+Fig. 8. FER over SNR for the code-decoder pairs in the evolution (a) to (e) of the cross-layer optimization
+
+In step (d), SCAL decoding of the symmetric Pd requires permutations of the channel values according to automorphisms and the reverse permutation of the decoder output. The parallel pre-coding pipeline is not required in this case.
+For (e), the pre-coding pipeline constitutes the extraction and buffering of repeated information bits and merging them into the nodes with corresponding dynamic frozen bits.
+4) Decoder Implementation: All architectures are instantiated with a quantization of 6 bit for the LLR values and 8 bit for PM values. A target frequency of 500 MHz, corresponding to a throughput of 64 Gbit/s, and a target utilization of 70 % is set for all polar decoder designs.
+B. Results
+All presented results are obtained with Fast-SSCL-based decoding, quantized values and the respective optimizations described for steps (a) to (e). Note, that optimizations are preserved in consecutive steps, whenever applicable.
+1) Error Correction Performance: For the cross-layer optimization methodology, we fix the error correction performance of all decoders to match the baseline CA-Fast-SSCL decoder with L = 8 in step (a). The FER in the consecutive steps is adjusted via relevant parameters of the applied decoding algorithms, as shown in the FER over SNR plots in Fig. 8. Applying ExPOS Rate-1 and SPC nodes ((b) and (c)) preserves the FER of the baseline decoder. With other codes and tailored decoding, a similar performance is achieved with smaller list sizes, i. e., (d) L = 4 for SCAL and (e) L = 3 for SCL decoding with dynamic frozen bits. For FERs below 10−4, these two even outperform CA-Fast-SSCL-8.
+2) Cross-Layer Gains: Table III presents the post-PAR implementation results for the different cross-layer optimization steps (a) to (e) in 12 nm and 22 nm technologies. Corresponding layout pictures are shown in Fig. 9, and the results for energy consumption and area efficiency are visualized in the plots in Fig. 10. For the following discussion, we use the notation (x12 nm; x22 nm) to describe the achieved improvement factors in the 12 nm and 22 nm technology nodes, respectively.
+
+972
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III POST-PAR RESULTS OF CROSS-LAYER OPTIMIZED SCL-BASED POLAR CODE DECODERS WITH N = 128 IN A 12 NM AND A 22 NM TECHNOLOGY NODE.
+
+Code Decoder Layout in Fig. Technology / (nm)
+Payload / (bit) Eb/N0 @ FER 10−5 / (dB)
+Frequency / (MHz) Throughput / (Gbit/s) Latency / (ns) Core Area / (mm2) Utilization / (%) Power Consumption / (W) Area Efficiency / (Gbit/s/mm2) Energy per Bit / (pJ/bit) Power Density / (W/mm2)
+
+CA-SCL-8
+
+9a
+
+12
+
+22
+
+64 4.8
+
+500 64.0 118.0 0.880 84 1.471 72.7 23.00 1.67
+
+475 60.8 124.2 1.438 83 1.394 42.3 22.93 0.97
+
+Pa-c
+
++ExPOS R1
+
+9b
+
+12
+
+22
+
+64 4.8
+
+500 64.0 90.0 0.422 74 0.594 151.8 9.28 1.41
+
+478 61.1 94.2 0.685 73 0.522 89.2 8.55 0.76
+
++ExPOS SPC
+
+9c
+
+12
+
+22
+
+64 4.8
+
+500 64.0 76.0 0.323 72 0.399 197.8 6.24 1.23
+
+474 60.6 80.2 0.527 72 0.380 115.1 6.27 0.72
+
+Pd
+
+SCAL-4
+
+9d
+
+12
+
+22
+
+60 4.3
+
+500 64.0 48.0 0.128 72 0.195 498.2 3.04 1.51
+
+470 60.1 51.1 0.208 72 0.175 289.4 2.91 0.84
+
+Pe
+
+SCL-3
+
+9e
+
+12
+
+22
+
+60 4.4
+
+500 64.0 38.0 0.084 76 0.153 762.2 2.39 1.82
+
+484 62.0 39.2 0.137 77 0.141 452.7 2.28 1.03
+
+(a)
+
+(b)
+
+(c)
+
+(d) (e)
+
+Fig. 9. Layouts of unrolled and pipelined SCL-based decoders ((a) to (e), see also Table III) for N = 128 in a 22 nm (top) and a 12 nm (bottom) technology with equal area scaling. Different decoding functions are represented by different colors, delay line memory is colored in black.
+The first optimization is performed on algorithmic and architecture level from step (a) to (b) by using ExPOS Rate-1 candidate generation. This optimization yields improvements of (2.1; 2.1) in area efficiency and (2.5; 2.7) in energy consumption. These savings are due to a reduced number of generated candidates, which directly impacts the size of the subsequent fully parallel rank-order sorters. Similarly, applying ExPOS SPC nodes (step (c)) provides further gains of (1.3; 1.3) in area efficiency and (1.5; 1.4) in energy consumption. In step (d), applying a code with automorphisms enables SCAL decoding which allows for a reduction of L from 8 to 4. These adaptions in code, algorithm, and architecture provide a (2.5; 2.5) times higher area efficiency and (2.1; 2.2) times better energy consumption compared to step (c). Finally, further gains of (1.5; 1.6) and (1.3; 1.3) are observed in area efficiency and energy consumption, respectively, for step (e) with SCL-3 decoding of the row-merged Pe. Here, again, the modifications in code and decoding algorithm allowed for a smaller L = 3, reducing the implementation costs of the adapted decoder architecture.
+Overall, comparing (a) to (e), area efficiency increases by
+
+24
+
+800
+
+Ecomb
+
+12 nm E
+
+21
+
+Ereg
+
+22 nm E
+
+700
+
+18
+
+Eclk Eleak
+
+12 nm µA 22 nm µA
+
+600
+
+15
+
+500
+
+Energy per Bit E in pJ/bit
+Area Efficiency µA in Gbit/s/mm2
+
+12
+
+400
+
+9
+
+300
+
+6
+
+200
+
+3
+
+100
+
+0
+
+0
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+(e)
+
+Evolution Step
+
+Fig. 10. Energy consumption and area efficiency over the evolution steps of the cross-layer optimization of fully unrolled and pipelined SCL-based polar decoders in 12 nm (left bars) and 22 nm (right bars) technologies.
+
+a factor of (10.4; 10.7) and energy consumption improves by a factor of (9.6; 10.0). The improvements in area efficiency stem from logic optimizations which reduce the number of instantiated transistors. Furthermore, this reduction in transistor count leads to relaxed wiring and reduced switching capacitances, thereby reducing energy consumption. The presented cross-layer optimization gains are similar for the 22 nm and 12 nm technology and, thus, shown to be independent of the technology node.
+3) Technology Gains: To isolate the gains by technology advancements, a pairwise comparison of the 22 nm and 12 nm results of each step (a) to (e) in the cross-layer optimization is performed. This comparison reveals that the 12 nm technology provides gains of 1.7 in terms of area efficiency over the 22 nm technology for each design. Besides that, the frequency target is slightly missed in the 22 nm technology but achieved in the 12 nm technology for all designs. However, the 12 nm technology does not reduce energy consumption compared to the 22 nm technology node. This is also visible in the energy consumption plot in Fig. 10. The technology gains of 1.7× in area efficiency and negligible impact in energy consumption observed in this investigation are consistent with the results obtained for LDPC code decoder implementations in Section III-B2.
+
+973
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+V. CONCLUSION
+This work demonstrates that randomness in Tanner graphs
+of LDPC codes significantly affects energy consumption.
+Furthermore, we have shown that cross-layer optimizations for
+polar code decoders yield far greater gains in area efficiency
+and energy consumption than those achieved through technol-
+ogy scaling alone. As advances in semiconductor technology
+slow down, implementation-aware code design and cross-
+layer optimizations are essential for future communication
+systems. However, additional power reduction strategies will
+be required to meet stringent implementation constraints,
+especially as power density is an increasingly dominant factor
+in advanced technology nodes.
+REFERENCES
+[1] G. E. Moore, “Cramming More Components onto Integrated Circuits,” Electronics, vol. 38, no. 8, Apr. 1965.
+[2] M. L. Rieger, “Retrospective on VLSI Value Scaling and Lithography,” J. Micro/ Nanolithogr. MEMS MOEMS, vol. 18, no. 04, p. 1, Nov. 2019.
+[3] IEEE, “International Roadmap for Devices and Systems, 2023 update, More Moore,” IEEE, Tech. Rep., 2023.
+[4] H. Zhang and W. Tong, “Channel Coding for 6G Extreme Connectivity—Requirements, Capabilities, and Fundamental Tradeoffs,” IEEE BITS, vol. 3, no. 1, pp. 54–66, Mar. 2023.
+[5] M. Herrmann, C. Kestel, and N. Wehn, “Energy efficient FEC decoders,” in IEEE ISTC, Montreal, QC, Canada, Aug. 2021, pp. 1–5.
+[6] R. G. Gallager, “Low-Density Parity-Check Codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[7] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mu¨ller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing,” IEEE Trans. VLSI Systems, vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[8] T. Monsees, O. Griebel, M. Herrmann, D. Wu¨bben, A. Dekorsy, and N. Wehn, “Minimum-Integer Computation Finite Alphabet Message Passing Decoder: From Theory to Decoder Implementations towards 1 Tb/s,” Entropy, vol. 24, no. 10, p. 1452, Oct. 2022.
+[9] C. E. Shannon, “A Mathematical Theory of Communication,” Bell Labs Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[10] E. Arikan, “Channel Polarization: A Method for Constructing CapacityAchieving Codes for Symmetric Binary-Input Memoryless Channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[11] R. Tanner, “A Recursive Approach to Low Complexity Codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[12] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of CapacityApproaching Irregular Low-Density Parity-Check Codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[13] V. Miloslavskaya, B. Vucetic, Y. Li, G. Park, and O.-S. Park, “Recursive Design of Precoded Polar Codes for SCL Decoding,” IEEE Trans. Commun., vol. 69, no. 12, pp. 7945–7959, Dec. 2021.
+[14] G. Sarkis, P. Giard, A. Vardy, C. Thibeault, and W. J. Gross, “Increasing the speed of polar list decoders,” in IEEE SiPS, 2014, pp. 1–6.
+[15] S. A. Hashemi, C. Condo, and W. J. Gross, “Fast and Flexible Successive-Cancellation List Decoders for Polar Codes,” IEEE Trans. Signal Process., vol. 65, no. 21, pp. 5756–5769, Nov. 2017.
+
+[16] Y. Ren, L. Zhang, L. D. Blanc, Y. Shen, X. Li, A. Balatsoukas-Stimming, C. Zhang, and A. Burg, “A Node-Based Polar List Decoder With Frame Interleaving and Ensemble Decoding Support,” IEEE Trans. Circuits Syst. I: Regul. Pap., vol. 71, no. 12, pp. 5457–5470, Dec. 2024.
+[17] J. Thorpe, “Low-density parity-check (ldpc) codes constructed from protographs,” IPN Progress Report, vol. 42, no. 154, p. 7, Aug. 2013.
+[18] M. Luby, M. Mitzenmacher, M. Shokrollahi, and D. Spielman, “Improved Low-Density Parity-Check Codes using Irregular Graphs,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 585–598, Feb. 2001.
+[19] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient Encoding of Quasi-Cyclic Low-Density Parity-Check Codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 71–81, Jan. 2006.
+[20] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[21] D. J. C. MacKay and R. M. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes,” Electronics letters, vol. 33, no. 6, pp. 457–458, Mar. 1997.
+[22] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced Complexity Iterative Decoding of Low-Density Parity Check Codes based on Belief Propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[23] C. Schu¨rch, “A partial order for the synthesized channels of a polar code,” in 2016 IEEE ISIT, Jul. 2016, pp. 220–224.
+[24] M. Geiselhart, A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “On the automorphism group of polar codes,” in IEEE ISIT, Melbourne, Australia, Jul. 2021, pp. 1230–1235.
+[25] G. Sarkis, P. Giard, A. Vardy, C. Thibeault, and W. J. Gross, “Fast Polar Decoders: Algorithm and Implementation,” IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 946–957, 2014.
+[26] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[27] C. Kestel, M. Geiselhart, L. Johannsen, S. ten Brink, and N. Wehn, “Automorphism ensemble polar code decoders for 6G URLLC,” in ITG SCC. Braunschweig, Germany: IEEE, Feb. 2023.
+[28] L. Johannsen, C. Kestel, M. Geiselhart, T. Vogt, S. T. Brink, and N. Wehn, “Successive cancellation automorphism list decoding of polar codes,” in IEEE ISTC, Brest, France, Sep. 2023, pp. 1–5.
+[29] E. Arıkan, “From sequential decoding to channel polarization and back again,” 2019.
+[30] A. Zunker, M. Geiselhart, L. Johannsen, C. Kestel, S. T. Brink, T. Vogt, and N. Wehn, “Row-Merged Polar Codes: Analysis, Design and Decoder Implementation,” IEEE Trans. Commun., pp. 1–1, 2024.
+[31] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, “Progressive edge-growth Tanner graphs,” in IEEE GLOBECOM, vol. 2, 2001, pp. 995–1001 vol.2.
+[32] C. Kestel, L. Johannsen, O. Griebel, J. Jimenez, T. Vogt, T. LehnigkEmden, and N. Wehn, “A 506Gbit/s polar successive cancellation list decoder with CRC,” in IEEE PIMRC, Aug. 2020, pp. 1–7.
+[33] L. Johannsen, C. Kestel, O. Griebel, T. Vogt, and N. Wehn, “Partial Order-Based Decoding of Rate-1 Nodes in Fast Simplified SuccessiveCancellation List Decoders for Polar Codes,” Electronics, vol. 11, no. 4, p. 560, Feb. 2022.
+[34] L. Johannsen, C. Kestel, T. Vogt, and N. Wehn, “Parallel single parity check nodes for high-throughput fast-SSCL polar code decoders,” in IEEE SOFTT, Johor Bahru, Malaysia, Nov. 2022, pp. 28–34.
+[35] I. Tal and A. Vardy, “How to Construct Polar Codes,” IEEE Trans. Inf. Theory, vol. 59, no. 10, pp. 6562–6582, Oct. 2013.
+[36] C. Leroux, I. Tal, A. Vardy, and W. J. Gross, “Hardware architectures for successive cancellation decoding of polar codes,” in IEEE Int. ICASSP, May 2011, pp. 1665–1668.
+
+974
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:06:32 UTC from IEEE Xplore. Restrictions apply.
+
+

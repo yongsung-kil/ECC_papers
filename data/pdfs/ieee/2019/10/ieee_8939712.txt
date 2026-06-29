@@ -1,0 +1,374 @@
+Performance Analysis and Implementation of LDPC for DOCSIS 3.1 Uplink
+
+Jewon Lee and Joon-Young Jung Media Broadcasting Research Section Electronics and Telecommunications Research Institute
+Daejeon, Repulbic of Korea jw_lee@etri.re.kr
+
+Abstract—Data over cable service interface specification 3.1 (DOCSIS 3.1) is released to provide multi-gigabit data service in hybrid fiber coaxial (HFC) networks. To support the data rate of DOCSIS 3.1 uplink, the low density parity check (LDPC) decoding processing speed is required as corresponding to the data rate. We implement the LDPC encoder and decoder based on the DOCSIS 3.1 uplink and verify them by the laboratory test. The results of the laboratory test show that the implemented LDPC encoder and decoder conforms to the DOCSIS 3.1 uplink.
+Keywords—DOCSIS 3.1 uplink, LDPC, codeword selection algorithm.
+I. INTRODUCTION In hybrid fiber coaxial (HFC) networks, data over cable service interface specification 3.1 (DOCSIS 3.1) is released to provide services such as 4k, cloud computing, wifi backhaul networks [1]. DOCSIS 3.1 has significant changes in the physical layer compared to previous DOCSISs. The significant changes are OFDM, wide bandwidths with up to 192 MHz per a channel, high order quadrature amplitude modulation (QAM), low density parity check (LDPC) [2]. DOCSIS 3.1 provides data rates of about 2 Gbps in downstream and 1 Gbps in upstream based on maximum bandwidth per a channel. In terms of hardware (HW) implementation, LDPC decoding processing speed is more important than anything to support the maximum data rate of DOCSIS 3.1. In the DOCSIS 3.1 downlink, 8/9 rate LDPC, which one of forward error corrections (FECs) of digital video broadcasting – cable version 2 (DVB-C2) ,is adopted. The size of the parity check matrix of 8/9 rate LDPC is 5 by 45. The parity check matrix is consisted of sub-matrices of which size is 360 by 360. In [3], the authors have proposed the LDPC decoder with 1Gbps processing speed by using three LDPC decoder cores that can process the sub-matrix in parallel in the 100 MHz system clock. In [4], in order to optimize the error correction performance of LDPC, the authors have analyzed the bit error rate (BER) performances depending on the number of bits representing log (LLR) value which is the input of LDPC and the number of iteration decoding. The DOCSIS 3.1 uplink supports up to 96 MHz bandwidth per a channel, 1024 QAM and three LDPC codewords included shortening. In the DOCSIS 3.1 uplink, in order to optimize the data transmission efficiency by reducing redundancy such as parity bits, codeword selection algorithm (CSA) is adopted. Thus, an uplink data is consisted of various codewords by the CSA, which is different the downlink data consisted of only a codeword. Therefore, in terms of HW implementation of LDPC for DOCSIS 3.1, additional considerations are required.
+
+The purpose of this paper is to review the DOCSIS 3.1 uplink and LDPC, and to verify the implemented LDPCs conforming to DOCSIS 3.1 under laboratory test.
+
+II. BACKGROUD
+A. DOCSIS 3.1 uplink The parameter of DOCSIS 3.1 uplink is defined in Table
+I.
+TABLE I. DOCIS 3.1 UPLINK PARAMETER
+
+Parameter Frequency band
+Signal type FFT time period (subcarrier spacing)
+FFT size (Max. active subcarrier)
+Min. BW (subcarrier spacing)
+Max. BW
+Modulation order
+
+Value 5-42, 5-65, 5-85, 5-117, 5-
+204MHz OFDMA 20 usec (50 kHz) 40 usec (25 kHz) 2,048 (1,900) 4,096 (3,800) 6 MHz (25kHz) 10 MHz (50 kHz) 96 MHz BPSK, QPSK, 8, 16, 32, 64, 128, 512, 1,024 QAM
+
+Minislot is the basic transmission unit of DOCSIS 3.1 uplink. The size of minislot is determined by the number of subcarriers (Q) and the number of OFDM symbols (K). The Q is 8 or 16 whether the FFT size is 2,048 or 4,096. The K is 8-36. In DOCSIS 3.1 uplink, there are two types of minislots called edge and body minislot. The first minislot must be the edge minislot when a cable modem (CM) transmits uplink signal, and all other minislots must be body minislots. Fig. 1 shows edge and body minislots in a transmission burst.
+
+Freq.
+
+Body
+
+Body
+
+TX 3
+
+Edge
+
+Edge
+
+TX 2
+
+Body
+TX 1
+
+Q=8 or 16
+
+Edge
+
+K = 6-36
+
+Time
+Fig. 1: Errors between the original signal and the decompressed signal.
+
+978-1-7281-0893-3/19/$31.00 ©2019 IEEE
+
+251
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:55:08 UTC from IEEE Xplore. Restrictions apply.
+
+ICTC 2019
+
+Probe Generator
+
+Data from PHY MAC Interface
+
+FEC Padding
+
+LDPC Encoder
+
+Scrambler
+
+Symbol Mapper
+
+Interleaver / OFDMA
+Framer
+
+Pre-EQ
+
+IFFT
+
+CP and Window
+
+Bit Loading
+
+Pilot Pattern
+
+Fig. 2: Upstream transmitter block diagram
+
+Fig. 2 shows the block diagram for upstream transmitter block. As shown in Fig. 2, the bit loading module performs to allocate the QAM symbol to each subcarrier based on signal to noise ratio (SNR) of the subcarrier. The total number of pilot pattern is 16, each of 8 patterns when the Q is 8 and 16. The probe generator is performed when the configurations of CM for the pre-equalization, signal power and ranging is required. The FEC padding module operates to match the size of data from PHY-MAC interface to grant size by adding zero padding bits. The green blocks in Fig. 2 are related to the HW implementation of LDPC.
+B. LDPCs of DOCSIS 3.1 uplink DOCSIS 3.1 adopts the quasi cyclic (QC)–LDPC. The
+Table II defines the parameter for the three LDPC codewords. In Table II, the threshold is minimum value for shortened codewords each of LDPC codes. For example, when the remaining grant size is 12,000, it is smaller than the long codeword size but larger than the threshold value of the shorted long codeword, so the last codeword of the uplink becomes the shorted long codeword. The parity check matrices are defined in Table III. For more information of the parity check matrices, refer to [1]. The number of sub-matrices except zero sub-matrices in the columns of the parity check matrix is 35 out of 45, 26 out of 33 and 15 out of 20 for the
+
+long, medium and short codeword. These values are used in HW implementation.
+
+TABLE II. LDPC PARAMETER FOR DOCSIS 3.1 UPLINK
+
+Code Codeword
+size Information
+bits Parity bits
+
+Long (8/9) 16,200
+14,400 1,800
+
+Medium (28/33) 5,940
+5,040 900
+
+Short (3/4) 1,120
+840 280
+
+Threshold
+
+11,881
+
+3,421
+
+281
+
+TABLE III. PARAMETER FOR PARITY CHECK MATRICES
+
+Row
+
+Colum
+
+Sub-matrix size
+
+Long
+
+5
+
+45
+
+360
+
+Medium
+
+5
+
+33
+
+180
+
+Short
+
+5
+
+20
+
+56
+
+C. Codeword selection algorithm The CM sends a request message including the data size
+for the uplink transmission to the cable modem termination system (CMTS) for upstream data transmission. After the CMTS receives the message, the CMTS sends to the CM a
+
+Start Setting parameter
+
+SR: size of remaining bits SL: size of long codeword (16,200) SM: size of medium codeword (5,940) SS: size of short codeword (1,120) SSP: size of short parity bits (280) SSM: size of min. short inform. Bits (420)
+
+NL: # of long codewords NM: # of medium codewords NS: # of short codewords
+
+NL++
+
+Long codewords (SR= SR - SL)
+
+Medium codewords (SR= SR - SM)
+
+Short codewords (SR= SR - SS)
+
+Yes SR ≥ SL
+No
+
+SR ≥ TL
+
+No
+
+Yes
+
+Shortened long codeword
+
+NSL++
+
+NM++ Yes SR ≥ SM
+No
+
+SR ≥ TM
+
+No
+
+Yes
+
+Shortened medium codeword
+
+NSM++
+
+NS++ Yes
+
+SR ≥ SS
+No
+
+No
+
+SR ≥ TS
+
+Yes
+
+Zero Padding
+
+SR-SSP
+
+No
+
+≥ SSM
+
+Yes
+Shortened short codeword
+
+Shortening last codeword
+
+End
+
+End
+
+TL: threshold for shortened long codeword (11,881) TM: threshold for shortened medium codeword (3,421) TS: threshold for shortened short codeword (281)
+
+Fig. 3: Codeword selection algorithm procedure
+
+NSM++ End
+
+252
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:55:08 UTC from IEEE Xplore. Restrictions apply.
+
+MAP message that includes the grant size assigned to the CM. The grant size is related to the number of minislots assigned to the CM, and means the total number of bits that the CM can transmit. The CSA calculates the type and number of odewords using the grant size and the LDPC parameter defined in Table IV.
+TABLE IV. LDPC PARAMETER FOR DOCSIS 3.1 UPLINK
+
+Code Codeword
+size Information
+bits Parity bits
+
+Long (8/9) 16,200
+14,400 1,800
+
+Medium (28/33) 5,940
+5,040 900
+
+Short (3/4) 1,120
+840 280
+
+Threshold
+
+11,881
+
+3,421
+
+281
+
+Fig. 3 shows the CSA processing procedure. It sets the parameters such as the codeword sizes, thresholds for shortening and grant size. The initial value of remaining bits size is the grant size. If SR is greater than or equal to TS, the CSA generates the last codeword as a shortened short codeword. As seen in the formula of the green block of Fig. 3, if SR-SP is greater than or equal to SSM, the last codeword is shortened to a length that is the original codeword size minus the number of minimum information bits of the short codeword, and then the length of last shortened short codeword is that the number of minimum information bits plus the number of remaining bits. Fig. 4 shows an example of codewords configured after the CSA.
+
+<The total number of bits in the grant>
+
+22584 (2823 Bytes)
+
+<Information Bits>
+19584(2448 Bytes)
+
+Filling 0xff
+20 (2.5 Bytes)
+
+19604 (2450.5 Bytes) 1. Full long codewords (if present)
+16200
+
+0xfffff
+
+14400
+
+1800
+
+6384
+
+22584
+2. Shortened long codeword (if present) 6384 < 11881, this operation is passed
+
+3. Full medium codewords (if present)
+
+16200
+
+5940
+
+14400
+
+1800 5040 900 444
+
+22584
+4. Shortened medium codewords (if present) 444 < 3421, this operation is passed
+5. Full short codewords (if present) 440 < 1120, this operation is passed
+
+6. Shortened short codewords (if present)
+
+444 > 281,
+
+if remaining bits – short parity bits >= short min infor bits
+
+444 – 280 < 420
+
+16200
+
+5520
+
+864
+
+14400
+
+1800 4620 900 584 280
+
+22584
+
+Fig. 4: An example of configured codewords after codeword selection algorithm
+
+III. IMPLEMENTATION Fig. 5 shows the structure of the HW module with LPDC encoder and decoder.
+(a)
+(b) Fig. 5: The structure of the LDPC HW module, (a) encoder (b) decoder
+The Xilinx XAUI and XAUI to FEC modules are the media access control(MAC). The MAC receives IP packets and transmits the IP packets to the width converter module. The width converter controls the bit widths of input and output and the clock speed between adjacent modules. The randomizer is a scrambler defined in DOCSIS 3.1. The symbol mapping module receives the LDPC encoder output and generates QAM symbols to transmit.
+The MAP2LLR module converts the received QAM symbols into log likelihood ratio (LLR) values. For example, when each bit-wise LLR value is represented by 7 bits in a 1024 QAM, the total number of bits is 70. The LDPC decoder module consists of three full-parallel LDPC decoders which are the structure similar to the proposed structure in [3]. Fig. 6 shows the structure of the LDPC full-parallel decoder. The parallel processing module processes 2520 bits = 360 ൈ 7 bits at a time, and the number of the parallel processing modules is 35. The number of the sub-matrix for the long codeword is maximum 35 except zero matrices based on 1 row.
+Fig. 6: The structure of the LDPC decoder
+IV. SIMULATION Fig. 7 shows the laboratory test bed for real-time verification of the LDPC encoder and decoder. Assuming that the channel environment is AWGN channel in the digital domain. The parameter for LDPC decoding is defined in Table V. Table VI shows the real-time verification results for each the QAM modulation. The SNRs in Table VI indicate the
+
+253
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:55:08 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE VI. PARAMETER FOR LDPC DECODING
+
+Codeword
+Long Medium
+Short
+
+Iteration decoding
+12
+16
+16
+
+LLR 7 bits
+
+V. CONCLUSION The DOCSIS 3.1 uplink supports about 1 Gbps data rate with 96 MHz bandwidth and 1024 QAM. The LDPC decoding processing speed should also be about 1 Gbps to achieve its required data rate. We had implemented the LDPC encoder and decoder based on the DOCSIS 3.1 uplink and verified them by the laboratory test. In future work, we process the integration of DOCSIS 3.1 uplink PHY with the implemented LDPC encoder and decoder and verify by performing the laboratory test.
+ACKNOWLEDGMENT This work was supported by Institute of Information & Communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No. 2017-000299, Development of Inband Full Duplex Transceiving Technology in Cable TV networks for Multi-giga Service)
+REFERENCES
+
+Fig. 7: The laboratory test bed
+values when the IP packet analyzer successfully receives the IP packets transmitted by the IP packet generator. Fig. 8 shows the real-time constellations for each QAM modulation under the laboratory test bed with AWGN channel.
+
+[1] CableLabs CM-SP-PHYv3.1-I16-190121, “Data-over-cable service interface specifications 3.1 – Physical layer specification,” Jan. 2019.
+[2] B. Hamzeh, M. Toy, Y. Fu, and J. Martin, “DOCSIS 3.1: scaling broadband cable to gigabit speeds,” IEEE Comm. Magazine, vol. 53, pp. 108–113, 2015.
+[3] J.-Y. Jung, D.-J. Choi, and N. Hur, “Implementation of High Speed LDPC Decode for Multi-Giga bps Cable Communication Service,” in Proc. KIBME, 2015, pp. 301-302.
+[4] J.-Y. Jung, J. Lee, D.-J. Choi, and N. Hur, “A Study on the Implementation of High-speed LDPC Decoder of Wide-band Cable Modem for Providing Multi-Gbps Data Service in Cable TV Netwroks,” in Proc. KICS, 2016, pp.536-538.
+
+TABLE V. REAL-TIME VERIFICATION RESULTS
+
+Modulation 1,024 512 256 64
+
+SNR(dB) 31 28 25 22
+
+Data rate(Mbps) 983.6 885.3 767.2 491.8
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 8: the real-time constellation snapshot (a) 1,024@SNR 31dB, (b) 512@SNR 28 dB, (c) 256@SNR 25 dB, (d) 64@SNR 22 dB
+
+254
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:55:08 UTC from IEEE Xplore. Restrictions apply.
+
+

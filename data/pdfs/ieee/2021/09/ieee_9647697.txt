@@ -1,0 +1,410 @@
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom) | 978-1-6654-4505-4/21/$31.00 ©2021 IEEE | DOI: 10.1109/MeditCom49071.2021.9647697
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+The LDPC Challenge in Software-Based 5G New
+Radio Physical Layer Processing
+Elissaios Alexios Papatheofanous∗, Dionysios Reisis†, and Konstantinos Nikitopoulos∗ ∗Wireless Systems Lab, 5G and 6G Innovation Centre, Institute for Communication Systems,
+University of Surrey, Guildford, GU2 7XH, UK †Digital Systems Team, Department of Physics, National and Kapodistrian University of Athens, Athens, Greece
+
+Abstract—While the realization of 5G has already began, we are also experiencing a paradigm shift towards Open Radio Access Network (RAN) environments. This new paradigm promotes open and flexible RAN architectures, which can benefit by the physical layer processing being executed on open-source software and general purpose processors. However, meeting the real-time latency requirements for the computationally intensive process of Low Density Parity Check (LDPC) Decoding, as defined in the 3GPP 5G New Radio (NR), poses a challenge for such software based systems. Based on that, we report the design and implementation our novel FPGA LDPC offloading prototype which we integrate and evaluate with the OpenAirInterface (OAI) codebase, the fastest growing open-source project towards supporting 5G NR. For the first time, we present a detailed quantitative analysis of the capabilities of LDPC offloading into an FPGA in the context of a 3GPP compliant system, with up to 5 times faster execution times for the decoding. Our contribution includes the finding that offloading to specialized hardware does not necessarily improve processing latency in all LDPC configurations, due to overheads related to data transfers.
+Index Terms—LDPC, FPGA, 5G-NR, Offloading
+I. INTRODUCTION
+Both domains of wireless cellular networks, namely the Radio Access Network (RAN) and the Core Network (CN), are currently being redefined to conform to the next generation of network architectures. For the RAN, the Open RAN paradigm is becoming a core principle for 5G and beyond architectures. Modern RAN environments define three main building blocks for the RAN, namely the Radio Unit (RU), the Distributed Unit (DU) and the Central Unit (CU) [1]. The RU is responsible for transmitting and receiving the radio signal and performing related functionalities such as amplification and analog-todigital conversion. The DU and CU are the main digital processing blocks of the RAN with the DU handling the physical layer processing. Based on the above concept of splitting the RAN functionalities, the Open RAN paradigm promotes flexible architectures, openness in terms of interfaces of the building blocks, vendor agnostic processing systems, and virtualization [2]. Increased attention is drawn to the approach of implementing as many RAN functionalities as possible, on software running on general purpose processors.
+There are several benefits of implementing RAN functionalities, including the physical layer processing of the DU, on software. From an operator point of view, costly base station infrastructure could be replaced by commodity multi-
+
+core systems. Even shared infrastructure could be enabled in a pay-per-use cloud scheme to further reduce operational costs. Deployment of new features would require a shorter time as it would only involve updates on a software codebase. From a research point of view the benefits are significant as well. Having access to open-source, software based and standard compliant platforms would speed up the process of validating novel ideas in a standard compliant environment and thus, promote their adoption by the wireless standards.
+The concept of software-based physical layer processing on the base station side [3]–[5] has limitations that become apparent in the context of modern network standards such as 5G New Radio (NR), where the real-time latency requirements are tighter. In 5G NR, physical layer channel coding for the physical uplink shared channel (PUSCH) and physical downlink shared channel (PDSCH) is realized as Low Density Parity Check (LDPC) coding where the LDPC decoding process is known for its high computational complexity. Related implementations in software running on general purpose processors [6], [7], report execution times up to 300us, for decoding a single code block [5]. This number can grow up to several milliseconds in the context of parameters such as poor channel conditions, increased bandwidths and increased number of users.
+In our previous works, [8], [9] a software framework based on general purpose processors was presented, aiming at accelerating 3GPP 4G Long Term Evolution (LTE) physical layer processing. Currently, in our ongoing effort towards supporting 5G NR real-time operation, we aim to accelerate physical layer processing not only by software optimizations but by also including FPGA offloading for demanding processes such as the LDPC coding. There are many strong indications that FPGAs constitute a good candidate hardware platform. The O-RAN Alliance, whose specifications play key role in the development future RAN architectures, has already identified the need for offloading LDPC to FPGAs/ASICs. Thus, the ORAN DU (O-DU) project foresees hardware accelerators for offloading Forward Error Correction (FEC) in high throughput configurations. [10]. The OpenAirInterface (OAI) [11] project as well as recent works for software-based processing targeting massive MIMO [5], all point towards offloading LDPC decoding in FPGAs and Graphics Processing Units (GPUs) for increasing throughput [12] and reducing latency.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+
+978-1-6654-4505-4/21/$31.00 ©2021 IEEE
+
+312
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+However, designing such an FPGA platform and integrating it with a software codebase comes with its own challenges. Even when using ready IP Cores there are still several design considerations that must be taken into account to fully take advantage of the FPGAs pipelining and parallelization capabilities. Furthermore, the interfacing between a host PC and an FPGA accelerator, for which PCIe is considered a standard, introduces latency overheads that can prevent the system from achieving satisfactory results. These overheads need to be studied and quantified in order to reveal potential optimization directions and to determine the configuration space for which offloading is meaningful.
+In the current work, first, in Section II, we analyze the capabilities of the current open-source software based solutions for 5G NR physical layer processing in terms of execution times and we validate that the LDPC decoding is the bottleneck. Based on that, in Section III, we contribute the design and implementation details of our own novel FPGA LDPC offloading prototype. We integrate our prototype with the OAI codebase, the most popular open-source project supporting 5G NR, where it is validated functionally and evaluated in terms of performance, in a standard compliant environment. In Section IV we present the latency improvements that we have been able to extract that include up to 5 times faster execution times for the decoding of a single code block for the most demanding LDPC configurations. We also reveal, that offloading LDPC to specialized hardware is not always efficient. Our results show that, depending on the LDPC parameters, the efficiency of offloading both the encoding and decoding process can be limited by the overheads of data transfers. Finally, in Section V we showcase related work of 5G NR LDPC processing for different platforms before concluding in Section VI.
+II. PHYSICAL LAYER PROCESSING AND LDPC IN OPEN-SOURCE SOFTWARE BASED PLATFORMS
+Several software based platforms exist providing 5G NR baseband processing. Commercial solutions in the industry are, for the most part, closed-source [13], [14] and cannot be used for research on physical layer processing. However, open-source solutions exist such as OAI [11] and srsLTE [15].
+From the above, the OpenAirInterface project is the most advanced and faster progressing open-source project towards achieving full 3GPP 5G NR compatible, real-time operation. OAI aims at providing reference implementations of key elements of 4G and 5G RAN and core network that run on general purpose processors. The DU of the RAN that OAI offers handles all the PHY processing at the base station side. For an understanding of physical layer processing requirements, we run the nr ulsim testbench of OAI, on a single core of a commodity workstation, for indicative configurations of 5G NR Modulation Coding Scheme (MCS) and Resource Blocks (RBs) and we present the execution time results in Table I.
+We observe that the total processing times of the above examples prevent real-time processing in 5G NR specification requirements. For example, for the 30kHz subcarrier spacing
+
+TABLE I OAI PUSCH PHY EXEC. TIMES
+
+Processing Block OFDM Demod. Ch.Est & Comp. QAM Demod. De-scrambling De-interleaving Rate matching
+LDPC Dec.
+
+MCS 28, RBs 106
+
+Time (us) Total %
+
+97.58
+
+10.69%
+
+36.72
+
+4.02%
+
+35.16
+
+3.85%
+
+16.78
+
+1.83%
+
+42.20
+
+4.62%
+
+106.5
+
+11.67%
+
+577.60 63.28%
+
+MCS 28, RBs 51
+
+Time (us) Total %
+
+95.18
+
+18.62%
+
+21.00
+
+4.10%
+
+16.68
+
+3.26%
+
+8.26
+
+1.61%
+
+19.7
+
+3.85%
+
+48.85
+
+9.55%
+
+281.15 55.00%
+
+the slot length, and corresponding processing time requirement, is 500us. Even at 15kHz subcarrier spacing, the 1ms time slot, is a tight requirement for Frequency Division Duplex (FDD) systems as the total processing time for both uplink and downlink slot should not exceed 1ms. It is worth noting, that even for the largest code rate of 8/9 and when limited to only 2 decoding iterations, LDPC decoding is the most demanding process, taking up even up to 63% of the total PHY receive processing time.
+The OAI development group has attempted to tackle the above issue by offloading the LDPC decoder to an FPGA board or to a GPU. However, little implementation details are available regarding the FPGA offloading as the driver and FPGA design files are closed source.
+One of the most recent implementations of 5G NR-like physical layer processing, that rely solely on open-source software running on general purpose processors, is Agora [5]. Agora reports feasibility of software-based massive MIMO based on 5G NR latency and data rate requirements. However, the Agora platform is optimized only for a number of configurations out of the large configuration space that the 5G NR specification defines. If all processing blocks and functionalities that 5G NR defined were present then the feasibility of real-time operation could become questionable. Furthermore, Agora explores frame lengths of at least 1ms and the real-time, over-the-air evaluation is performed only for 5MHz bandwidth. By using Intel’s FlexRAN LDPC decoder software implementation [16], the authors show that that LDPC decoding takes up about 58% of their total processing budget. They also report an execution time of 300us for decoding a single code block with parameters set to 1/3 code rate and 8 iterations. As the number of code blocks increases linearly with the number of users in the MIMO system, the LDPC decoding scales fast to a serious challenge. Based on the above observations, the authors point towards offloading LDPC decoding to specialized hardware accelerators like FPGAs and GPUs.
+III. FPGA LDPC OFFLOADING PROTOTYPE DESIGN
+Motivated by the analysis of the previous section, we design and implement a prototype system for offloading both LDPC encoding and decoding functions into an FPGA. The FPGA side of the system is based on the Xilinx LDPC IP Core and the prototype implementation targets a Xilinx VC707 board. For interfacing the FPGA with the workstation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+313
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+Fig. 1. High-level overview of the FPGA LDPC Offloading system.
+
+performing the software based physical layer processing, we use PCIe which is considered standard for FPGA accelerators. For implementing the PCIe interface we use the Reusable Integration Framework for FPGA Accelerators (RIFFA) [17] which is a known working solution for quick and efficient implementation of PCIe communication between an FPGA and a host PC.
+Our LDPC offloading system acts as an extension to the open-source OAI codebase. OAI seemed as the most appropriate software platform for validating our prototype. All of its software parts can be fully accessed publicly and at the same time OAI is the project that is more actively working towards fully supporting 5G NR. Thus, our FPGA LDPC accelerator will be evaluated in a standard compliant environment.
+A. High-Level Architectural Overview
+The high-level design overview of the whole system is presented in Fig. 1. The two main components are the host PC where the OAI main processing application is running and the FPGA where the LDPC processing takes place. The two components are interfacing by means of a Gen2 8-lanes PCIe link. The RIFFA framework provides all the required blocks for the interfacing, namely an interrupt based PCIe driver on the host-PC side and the IP Core on the FPGA side.
+The system is designed to allow both the LDPC encoding and decoding functionalities to be accessed independently and operate in parallel. For this, the LDPC Encoder and Decoder Wrappers that are responsible for the LDPC processing, are developed as two independent and modular VHDL blocks on the FPGA side. These blocks can be attached to any of the Channel Interfaces that the RIFFA IP Core provides to the user inside the FPGA. Then, RIFFA handles the (de-)multiplexing of all traffic transmitted to and from the FPGA side, from all available channels, on the PCIe link. On the host-PC side, two different Offloading Functions are developed and integrated with the OAI Main Processing Software, for the LDPC encoder and decoder respectively. The Offloading Functions are responsible for calling the RIFFA driver transmit and receive functions only for the particular RIFFA Channel Interface
+
+where the corresponding LDPC Encoder or Decoder Wrapper block resides. The transmit and receive driver functions are thread-safe across all different RIFFA channels and this way independent access of LDPC encoder and decoder is ensured from the PC side as well.
+The offloading system has also been designed with pipelining of code blocks in mind in order to potentially enable increased throughput. To achieve this, we make the design decision of not including any per code block configuration and status registers inside the FPGA system. Instead, we opt for a streaming architecture where code blocks carry their individual configuration and status data on a 128-bit header. The transmit and receive side, either the host-PC or the FPGA, is responsible for appending to and stripping the code blocks of their headers correspondingly.
+B. FPGA Accelerator Design
+The LDPC Encoder and Decoder Wrappers contain the LDPC IP Core instances for the encoder and decoder. They also include the required glue logic for handling the flow of code blocks to and from the PCIe IP Core to the LDPC core instances. The glue logic is based on custom VHDL and supports a streaming operation of code blocks. It includes:
+• A translation module for bidirectional translation of the RIFFA Channel Interface to the AXI4-Stream that the LDPC IP core uses.
+• Input and output buffers in the form of AXI4-Stream FIFOs.
+• Input and output FSMs that extract and append the header from and to code blocks. These FSMs are also responsible for performing run time configuration of the LDPC IP Core and handling its interfaces for correct reading and writing of data.
+C. Offloading Functions and Integration
+In order to integrate the FPGA accelerator with the OAI codebase, two different Offloading Functions are developed for the LDPC encoder and decoder respectively. The Offloading
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+314
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+Functions are, first, responsible for mapping the LDPC parameters that are provided in the OAI format to the format required by the LDPC IP Core. They formulate the 128-bit header containing the configuration parameters of the code blocks and append it to them before transmission. Then, since all 5G NR specified configurations are supported by the offloading system, the offloading functions control the size of the PCIe transmissions and receptions accordingly. Finally, they extract data from the status header of the received code blocks such as the number of LDPC decoder iterations.
+Several fixes in the data formats were also required for integration of the FPGA offloading system with the OAI codebase. These include saturation and sign inversion of LLR values on the decoder side and manipulation of the output format on the encoder side.
+
+(a) LDPC Decoding with 2 decoding iterations
+
+IV. RESULTS AND ANALYSIS
+In this section, we present the results, and corresponding analysis, of our novel FPGA LDPC offloading system. The FPGA system described in III-B is implemented on a VC707 board and is clocked at 250MHz. The board is physically mounted onto a Gen2 8-lane PCIe slot of a workstation running CentOS with a Intel(R) Xeon(R) CPU E5-1620 v3 @ 3.50GHz and 64 GB of RAM. The entire system is integrated with the nr ulsim and nr dlsim physical layer testbenches of OAI where its functionality in terms of correctness and decoding performance was validated for all OAI supported values of 5G NR Modulation Coding Scheme (MCS) and number of Resource Blocks (RBs).
+
+(b) LDPC Decoding with 5 decoding iterations
+
+A. Latency Results
+To extract execution times results the ldpctest OAI testbench is utilized in order to isolate the LDPC processing blocks. We extract results for processing a single code block/segment, on a single core and averaged over 10000 trials.
+In Figure 2, we present the execution time results for both the original OAI software LDPC decoder as well as our FPGA offloading system prototype. We also include the LDPC Decoder Wrapper processing time only. We explore both Base Graphs (BG) and the minimum and maximum the coding rates, R, that are being supported for each one, for indicative code block sizes K and for 2, 5 and 8 iterations.
+It can be observed that for only 2 iterations, offloading the LDPC decoding process for a single code block is efficient for a number of parameters configurations, as shown in Fig. 2a. Offloading relatively large code blocks with low code rates, which are more demanding in terms of processing, yields the most meaningful results in terms of speedup. For smaller code block sizes and higher core rates, the FPGA offloading approach is outperformed by the software processing. In these cases, even though the FPGA LDPC decoder processing time remains considerably low, the overhead introduced by the offloading process is greater than the time that the software requires to perform the decoding. At 8 iterations, offloading a single code block outperforms the software processing for almost every configuration with significant speedup gains.
+
+(c) LDPC Decoding with 8 decoding iterations
+Fig. 2. OAI LDPC decoder, FPGA offloading total, and FPGA processing only, execution times for minimum and maximum supported code rates, R, of each Base Graph (BG) and indicative code block sizes, K at 2, 5 and 8 iterations.
+To closely examine our findings, we present the results of the decoder latency in more detail in Table II. We show that for the less demanding code rate of 8/9 and for 2 iterations, overheads take up 90.2% of the offloading process limiting speedup to almost none. At 8 iterations, the decoder core processing time increases linearly as expected and the same applies to the entire OAI software decoder execution time as well. For the 1/3 code rate, at 8 iterations, FPGA offloading has a great advantage to software processing by being more than 5 times faster. The overheads however still remain high at 49.1% of the total offloading time.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+315
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+TABLE II FPGA LDPC DECODER OFFLOADING LATENCY
+
+LDPC Config. 8448 8/9 2It 8448 8/9 8It 8448 1/3 2It 8448 1/3 8It
+
+Per Code Block Decoder Offloading Metrics
+
+Total (us) Wrapper (us) Overhead Speedup
+
+35.82
+
+3.50
+
+90.2%
+
+1.01
+
+45.23
+
+12.79
+
+71.7%
+
+2.87
+
+53.37
+
+11.44
+
+78.6%
+
+2.28
+
+87.33
+
+44.48
+
+49.1%
+
+5.23
+
+TABLE III LDPC DECODER OFFLOADING STEPS LATENCY
+
+Total Offloading Time (us)
+Configuration Time (us)
+Transmit Time (us)
+Receive Time (us) FPGA Processing Time a (us) aIncluded in receive time.
+
+88.17±5.82 5.18±0.47 20.24±1.71 61.25±5.67
+44.48
+
+Fig. 3. OAI LDPC Encoder and FPGA offloading total, and processing only execution times, per code block, and for indicative code block sizes, K, for both Base Graphs.
+In Figure 3, we present the execution times of per code block processing for both the OAI and FPGA encoder, for a selected number of configurations. We observe that due to the less demanding nature of the LDPC encoding process, the software encoder outperforms the FPGA offloading approach in half of the configurations presented.
+The results above reveal that, surprisingly, offloading LDPC processing to an FPGA is not always efficient in achieving minimum latency. Lower and computationally intensive code rates and large code block sizes favour FPGA offloading for the LDPC decoder. However, given the appropriate combinations of the above parameters along with the number of iterations, the software can outperform the offloading approach. This is apparent especially for the LDPC encoder case. The encoding is a much less demanding process and thus, for smaller code block sizes the overheads involved in offloading are much greater than the minimal software processing time. Based on the above, how beneficial offloading can be depends on the physical layer parameters and the networking context of the system that offloading is being implemented in.
+B. Analyzing Overheads and Exploring Improvements
+We have already shown that there can be significant benefits in terms of processing latency, especially for the LDPC decoder, when offloading the process to an FPGA. However, considerable overheads are involved as well. Even for the configuration of BG1, code block size K=8448, code rate R=1/3 and 8 iterations, with the greatest speedup of 5.23, the overheads related to offloading remain at about 50% of the total time. We dissect the offloading steps for this configuration and quantify the contributions of each in Table III.
+We observe that from the total offloading time, the configuration time, that includes formulation and appending of the
+
+128-bit configuration header takes up only a small fraction. The largest share of the total execution time is taken up by the PCIe transactions.
+The reception time of 61.25us masks the LDPC Decoder Wrapper processing time of 44.48us and so, if we deduce that, we are left with 16.77us for the receive PCIe transfer. Thus, the largest contribution to the total offloading time is the PCIe transmission time of 20.24us. This is expected since the size of the transmission is about 24 times larger due to the 8-bit LLR representation of each raw bit and the inclusion of parity bits. Finally, for the PCIe transactions, non-trivial fluctuations of their time are observed due to the operating system I/O that the PCIe driver performs.
+Based on the above observations, we indicate the direction of possible future optimizations to the FPGA LDPC offloading system. First, since the PCIe protocol is optimized for larger transfers, the approach of transmitting multiple code blocks with a single PCIe transfer is the one that could provide the greatest improvements in terms of throughput with a sacrifice in latency. However, the potential challenges of realizing the above need to be explored as well. For example, from the software point of view, arranging multiple code blocks in an appropriate transmit buffer of contiguous memory, by means of memory copies, could introduce some non trivial overhead.
+Second, moving more functionalities of the 5G NR channel coding chain such as (de)segmentation, CRC calculations, rate-(de)matching and (de)interleaving, to the FPGA is worth considering. This method would accelerate the processing required for these functional blocks and increase the efficiency of offloading a code block to the FPGA. The above would require increased development effort on the FPGA side to handle the vast amount of parameters configuration that the 5G NR channel coding supports.
+Exploring possible optimizations of the PCIe driver is encouraged. For example, in contrast to an interrupt based driver, a polling driver can offer a trade off between increased CPU utilization and potentially smaller fluctuations of the PCIe reception times that should be taken into consideration.
+Furthermore, future implementations could target FPGA boards that have features dedicated to the LDPC offloading task. The Xilinx Zynq Ultrascale+ family of FPGAs can support newer generations of PCIe and also includes several instances of the Soft Decision Forward Error Correction (SDFEC) integrated block, aimed at supporting LDPC decoding and encoding and Turbo code decoding at 667MHz [18].
+Finally, based on our finding that offloading can not improve
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+316
+
+2021 IEEE International Mediterranean Conference on Communications and Networking (MeditCom)
+
+latency for all given LDPC configurations it is worth exploring the configurations for which offloading can be efficient, and corresponding parameters in the context of an entire system. These parameters could include the processing capabilities of the software platform, such as the number of cores, the channel conditions, the number of users and the kind of 5G NR use case such as Enhanced Mobile Broadband (eMBB) or UltraReliable Low-Latency Communication (URLLC).
+V. RELATED WORK
+Currently, published research work for offloading 5G NR compliant LDPC encoding and decoding to specialized hardware, integration with an entire physical layer processing system and analysis of the process is rather limited. Most notably, in [19] the authors present a GPU based accelerator integrated with OAI and the corresponding analysis.
+For a latency optimized configuration they achieve a total offloading time of 87us for BG1, code block size of 8448 bits and code rate 1/3 at 5 iterations. For the same configuration, we achieve 70.55us total time.
+The OAI project utilizes an FPGA accelerator for LDPC decoding for achieving 300Mbps throughput over the channel for an unspecified LDPC configuration [20]. The FPGA design is offered by Creonic and driver by SYRTEM, both being unavailable to the public.
+On the industry, there are a few notable efforts for offloading the entire channel coding chain of the 5G NR specification to an FPGA. Creonic offers a complete solution that includes LDPC, code blocks segmentation, rate-matching, code blocks concatenation, and CRC computation [21]. Accelercomm offers a system with similar functionalities for both the encoder and decoder chains that is also compliant with the BBdev open API. The API is currently being considered for adoption from the O-RAN Alliance specifications. Their system is integrated to the Xilinx T1 Telco Accelerator card [22].
+VI. CONCLUSION
+In this work, we report the design and implementation details of our novel FPGA LDPC offloading prototype. With our prototype, we aim to explore the capabilities of reducing latency and increasing throughput in software based, opensource, 5G NR physical layer processing systems. Towards this, we contribute our experience of integrating our FPGA accelerator with OAI which is currently one of the most advanced open-source 5G NR implementations. We present a quantitative analysis of both the benefits that can be achieved, up to 5 times faster execution times when offloading the LDPC decoding process into our FPGA, as well as where the bottlenecks lie. We show that offloading LDPC processing to an FPGA might not always be efficient, especially in less computationally demanding configurations, due to the overheads of data transfers between the two different hardware platforms. Based on that, we include further directions for optimizing the offloading system towards achieving lower execution times and increased throughput.
+
+REFERENCES
+
+[1] Parallel Wireless, “5G NR Logical Architecture and its Functional
+
+Splits.” [Online]. Available: https://www.parallelwireless.com/wp-
+
+content/uploads/5GFunctionalSplits.pdf
+
+[2] O-RAN Alliance. (2020, February) O-RAN Use Cases and
+
+Deployment Scenarios WhitePaper. [Online]. Available: https://www.o-
+
+ran.org/resources
+
+[3] K. Tan, H. Liu, J. Zhang, Y. Zhang, J. Fang, and G. Voelker, “Sora:
+
+High-Performance Software Radio Using General-Purpose Multi-Core
+
+Processors,” Commun. ACM, vol. 54, pp. 99–107, 01 2011.
+
+[4] Q. Yang, X. Li, H. Yao, J. Fang, K. Tan, W. Hu, J. Zhang, and Y. Zhang,
+
+“BigStation: enabling scalable real-time signal processingin large mu-
+
+mimo systems,” Proceedings of the ACM SIGCOMM 2013 conference
+
+on SIGCOMM, 2013.
+
+[5] J. Ding, R. Doost-Mohammady, A. Kalia, and L. Zhong, “Agora: Real-
+
+time massive MIMO baseband processing in software,” Proceedings of
+
+the 16th International Conference on emerging Networking EXperiments
+
+and Technologies, 2020.
+
+[6] Y. Xu, W. Wang, Z. Xu, and X. Gao, “AVX-512 Based Software
+
+Decoding for 5G LDPC Codes,” in 2019 IEEE International Workshop
+
+on Signal Processing Systems (SiPS), 2019, pp. 54–59.
+
+[7] W. Ji, Z. Wu, K. Zheng, L. Zhao, and Y. Liu, “Design and Implemen-
+
+tation of a 5G NR System Based on LDPC in Open Source SDR,” in
+
+2018 IEEE Globecom Workshops (GC Wkshps), 2018, pp. 1–6.
+
+[8] G. Georgis, M. Filo, A. Thanos, C. Husmann, J. C. De Luna Ducoing,
+
+R. Tafazolli, and K. Nikitopoulos, “SWORD: Towards a soft and open
+
+radio design for rapid development, profiling, validation and testing,”
+
+IEEE Access, vol. 7, pp. 186 017–186 040, 2019.
+
+[9] G. Georgis, A. Thanos, M. Filo, and K. Nikitopoulos, “A DSP Acceler-
+
+ation Framework For Software-Defined Radios On X86 64,” in ICASSP
+
+2020 - 2020 IEEE International Conference on Acoustics, Speech and
+
+Signal Processing (ICASSP), 2020, pp. 1648–1652.
+
+[10] O-RAN Alliance. (2020, August) O-RAN O-DU Low User
+
+Guide. [Online]. Available: https://docs.o-ran-sc.org/projects/o-ran-sc-o-
+
+du-phy/en/latest/
+
+[11] “OpenAirInterface 5G Radio Access Network Project.” [Online].
+
+Available: https://openairinterface.org/oai-5g-ran-project/
+
+[12] F. Kaltenberger, A. P. Silva, A. Gosain, L. Wang, and T.-T.
+
+Nguyen, “OpenAirInterface: Democratizing innovation in the 5G Era,”
+
+Computer Networks, vol. 176, p. 107284, 2020. [Online]. Available:
+
+https://www.sciencedirect.com/science/article/pii/S1389128619314410
+
+[13] Amarisoft, “Amarisoft LTE and NR network software suit.” [Online].
+
+Available: https://www.amarisoft.com/products/sovereign-5g/
+
+[14] Intel,
+
+“An
+
+Overview
+
+of
+
+FlexRAN
+
+Software
+
+Wireless
+
+Access
+
+Solutions.”
+
+[Online].
+
+Available:
+
+https://software.intel.com/content/www/us/en/develop/videos/an-
+
+overview-of-flexran-sw-wireless-access-solutions.html
+
+[15] I. Gomez-Miguelez, A. Garcia-Saavedra, P. Sutton, P. Serrano, C. Cano,
+
+and D. Leith, “srsLTE: an open-source platform for LTE evolution and
+
+experimentation,” 10 2016, pp. 25–32.
+
+[16] N. Chautru, “FlexRAN LTE and 5G NR
+
+FEC
+
+Software
+
+Development
+
+Kit
+
+Modules,”
+
+https://software.intel.com/content/www/us/en/develop/articles/flexran-
+
+lte-and-5g-nr-fec-software-development-kit-modules.html, (Accessed
+
+Apr. 6, 2021).
+
+[17] “Reusable Integration Framework for FPGA Accelerators.” [Online].
+
+Available: https://github.com/KastnerRG/riffa
+
+[18] Soft-Decision FEC Integrated Block. [Online]. Available:
+
+https://www.xilinx.com/products/intellectual-property/sd-fec.html
+
+[19] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang, and J. R. Cavallaro,
+
+“GPU-Based, LDPC Decoding for 5G and Beyond,” IEEE Open Journal
+
+of Circuits and Systems, vol. 2, pp. 278–290, 2021.
+
+[20] F. Kaltenberger, G. d. Souza, R. Knopp, and H. Wang, “The openairin-
+
+terface 5g new radio implementation: Current status and roadmap,” in
+
+WSA 2019; 23rd International ITG Workshop on Smart Antennas, 2019,
+
+pp. 1–5.
+
+[21] Creonic. (2019) 5G LDPC Decoder and HARQ Buffers
+
+Product Brief. [Online]. Available: https://www.creonic.com/wp-
+
+content/uploads/PB Creonic 5G RL15 Decoder.pdf
+
+[22] Accelercomm. (2021, February) 5G virtual baseband using L1 accel-
+
+eration. [Online]. Available: https://www.accelercomm.com/news/high-
+
+performance-accelerator-cards
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:30:44 UTC from IEEE Xplore. Restrictions apply.
+317
+
+

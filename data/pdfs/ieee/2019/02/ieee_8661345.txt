@@ -1,0 +1,585 @@
+SCC 2019 · February 11 – 14, 2019 in Rostock, Germany
+
+Static Layered Schedules and Core-Only Parity Check for the 5G New Radio LDPC Codes
+Janik Frenzel∗, Stefan Mu¨ller-Weinfurtner∗, Johannes B. Huber†, Ralf R. Mu¨ller† ∗Intel Deutschland GmbH, Nuremberg, Germany
+†Friedrich-Alexander-Universita¨t Erlangen-Nu¨rnberg (FAU), Germany
+
+Abstract—We analyze static update schedules for high-speed decoding of the Low-Density Parity-Check (LDPC) codes used in 5G New Radio (NR). Motivated by the fact that updates of Check Nodes (CNs) with smaller degrees result in larger mutualinformation (MI) gains, we propose a schedule based on the ascending order of CN degrees. Furthermore, we examine the individual bit-error rates throughout the codeword and present a Core-Only Parity Check (COPC) strategy to accelerate the decoder convergence. These two simple concepts reduce the number of iterations until convergence by up to 15% compared to a Top-to-Bottom (TtB) schedule with the full parity check.
+I. INTRODUCTION
+Gallager originally used the so-called flooding or parallel update schedule to decode Low-Density Parity-Check (LDPC) codes in an iterative manner [1]. After the rediscovery of LDPC codes in 1996 [2], it was quickly established that using a serial update schedule approximately halves the number of iterations until convergence [3]. (The number of iterations is exactly halved if the Tanner graph is cycle-free [4].)
+Serial update schedules can be categorized into static and dynamic ones and then again in node-wise and edge-wise variants. Static schedules are determined once when decoding starts; dynamic schedules adjust the update order during decoding. Node-wise schedules generate all messages sent from one node in parallel; edge-wise schedules generate one message at a time. Moreover, multiple nodes can be combined into a layer when performing node-wise updates. The QuasiCyclic (QC) structure of the LDPC codes in 5G New Radio (NR) [5] presents a prime opportunity for such parallelization.
+Most static update schedules operate layer-wise, either along the Variable Nodes (VNs) [6] or along the Check Nodes (CNs) [7]. Dynamic schedules like Residual Belief Propagation (RBP) or Informed Dynamic Scheduling (IDS) operate edge-wise or node-wise [8], [9]. IDS is still a topic of ongoing research [10] and promises excellent decoding performance. Unfortunately, the price one has to pay is an increased memory demand and additional computations as previous results must be stored and extrinsic messages may have to be re-computed [11]. Naturally, such an overhead discourages the implementation of IDS in practical high-speed decoders. Hence, we focus on static layered schedules.
+The layer update order impacts the decoding performance. Practical decoders typically do not implement the optimal Sum-Product Algorithm (SPA) [1] but rather some form of the Min-Sum Algorithm (MSA) [12]. Thus, we favor CN layers which match the MSA flow. Whereas a Top-to-Bottom (TtB)
+
+approach is used in [13], ordering layers by their respective CN degrees is suggested in [14]. Opposing our proposed schedule, CNs with large degrees are preferred. The authors of [15] describe a schedule suitable for restoring punctured VNs whereas a schedule for regular LDPC codes is presented in [16]. However, the 5G NR codes are neither regular nor is there a particularly large number of punctured VNs.
+Our contribution with this paper is twofold: Firstly, we propose a static update schedule based on an ascending order of CN degrees and evaluate its performance. Secondly, we analyze the impact of static update schedules on the individual Bit-Error Rates (BERs) and propose a Core-Only Parity Check (COPC) strategy for Early Termination (ET) which considerably lowers the computational complexity.
+The remainder of this paper is organized as follows: The fundamentals are reviewed in Section II. Section III motivates the proposed schedule by determining the gains from parity combining while different schedules and the COPC strategy are evaluated in Section IV. The paper concludes in Section V.
+
+II. BACKGROUND
+
+A. Low-Density Parity-Check Codes in 5G New Radio
+The QC-LDPC codes defined in 5G NR are constructed from protographs [5]. Such codes offer encoding in linear time w.r.t. the code length among other advantages [17]. For a compact notation, the codes are defined by Base Graphs (BGs) HBG ∈ ZM×N where M is the number of CNs and N is the number of VNs. In a process called lifting (with lifting size Zc), each element hj,i of HBG, 0 ≤ j < M and 0 ≤ i < N , is replaced by a Sub-Block (SB) formed by a Zc × Zc identity matrix whose rows are circularly rotated to the right hj,i times.
+HBG can be split into a core and a Single-Parity-Check Extension (SPCE) for Incremental-Redundancy (IR) Hybrid Automated Repeat reQuest (HARQ). Let K = N − M denote the number of information-symbol SBs, Mc the number of parity-check SBs in the core and Ne the number of VN SBs in the SPCE. Then the general form of HBG is given by
+
+HBG =
+
+A B
+
+0 I
+
+(1)
+
+where I is an identity matrix of size Ne × Ne and 0 is an all-zero matrix. A has size Mc × (K + Mc) and comprises the core of the BG whereas the remaining sub-matrices form
+
+DOI: 10.30420/454862048
+
+ISBN
+
+978-3-8007-4862-4
+Authorized licensed
+
+use
+
+limited
+
+to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+280
+June
+
+24,2026
+
+at
+
+11:44:03©U2T0C1f9roVmDIEEEEVXEpRloLreA. GReGstMrictBioHnsÂaBppelryl.in
+
+Â
+
+Offenbach
+
+SCC 2019 · February 11 – 14, 2019 in Rostock, Germany
+
+dc − 1 bits Parity dc bits xi Extension
+
+AWGN and Li Soft Output
+
+Generate Lc(i)
+
+MI
+
+I(Xi; Zi)
+
+Li −1
+
+ΔI(Xi; Zi)
+i
+
+ΔI(X; Z)
+
+I(Xi; Zi) for all symbols MI
+
+1/dc
+
+Fig. 1. Analysis of MI gain from from a single CN update. Modulation, channel transmission, demodulation and LLR computation are summarized as “AWGN and Soft Output”. Signals with dimensionality greater than 1 are indicated as such; the summation block adds up all these dc signals.
+
+the SPCE. Since the first two VN SBs are punctured, the code rate is R = K/(N − 2).
+Our proposed schedule is only meaningful for irregular LDPC codes. The code used in this paper (5G NR BG1 at R = 2/3) has the following CN-degree distribution [18]:
+
+ρc(x)
+
+=
+
+1 x3 13
+
++
+
+3 x7 13
+
++
+
+2 x8 13
+
++
+
+2 x9 13
+
++ 1 x10 + 4 x19.
+
+(2)
+
+13
+
+13
+
+B. Message-Passing Decoding
+
+In the decoder, the reliabilities of the n = N Zc symbols of a receive word z are represented by LLR values w.r.t. the
+(binary) code-word symbols xi:
+
+Li
+
+:= log
+
+Pr{Xi Pr{Xi
+
+= 0 | Z} = 1 | Z}
+
+for
+
+i = 0 . . . n − 1.
+
+(3)
+
+In message-passing algorithms, Li is updated at the VNs by
+
+Li = L(zi) +
+
+Lc(j → i)
+
+(4)
+
+j∈Ev (i)
+
+where L(zi) is the LLR for the received value zi, Ev(i) is the set of edges connected to VN i and Lc(j → i) is the extrinsic message from CN j to VN i [19]. The extrinsic message sent
+from VN i to CN j in the next iteration is given by
+
+Lv(i → j) = Li − Lc(j → i).
+
+(5)
+
+In the SPA, the CN messages are computed from Ec(j), the set of edges connected to CN j, with [19]
+
+tanh Lc(j → i) =
+
+tanh Lv(i → j) . (6)
+
+2
+
+2
+
+j ∈Ec (j )\i
+
+In its simplest form, the MSA [12] replaces (6) by
+
+Lc(j → i) = min {|Lv(i → j)|}
+j ∈Ec (j )\i
+
+·
+
+sign{Lv(i → j)}
+
+(7)
+
+j ∈Ec (j )\i
+
+where the sign function is defined as
+
+sign{x} = 0
+
+if x = 0,
+
+(8)
+
+x/|x| otherwise.
+
+Finally, the degree of CN j is given by
+
+dc(j) = |Ec(j)|.
+
+(9)
+
+C. Update Scheduling
+Given the QC structure of the 5G NR codes, a layer for rowwise scheduling most practically consists of all Zc CNs inside an SB row, resulting in M layers in total. All CNs within each layer are then orthogonal to each other and can be processed in parallel without inter-dependencies. Even more, there are several pairs of orthogonal layers in HBG, enabling further parallelization. However, coupling layers reduces the number of layer permutations that form a schedule and is thus not pursued further because of suboptimality.
+Let Lm denote the m-th layer, m ∈ M, M := {0, . . . , M − 1}. Lm is the set of all the layer’s row indices:
+Lm = {mZc, mZc + 1, . . . , (m + 1)Zc − 1} . (10)
+Algorithm 1 describes an LDPC decoder with layered update scheduling. Let (m)l∈M denote the layer update sequence. In the l-th layer update, all CNs in Lml and the VNs connected to them are updated. Parity-based Early Termination (ET) checks at the end of each iteration are omitted for brevity. An iteration is complete once all layers have been updated.
+
+Algorithm 1 Decoding with Layered Update Scheduling
+
+Input: Channel LLRs L(z) = [L(z0), . . . , L(zn−1)] Output: Updated reliabilities L = [L0, . . . , Ln−1]
+1: Initialize L = L(z)
+
+2: while decoding continues do
+
+3: for l = 0 . . . (M − 1) do
+
+4:
+
+Generate sets Ec(j)∀j ∈ Lml
+
+5:
+
+Compute all Lv(i → j) with (5)
+
+6:
+
+Compute all Lc(j → i) with (6) or (7)
+
+7:
+
+Update L with (4)
+
+8: end for
+
+9: end while 10: return L
+
+D. Information-Theoretic Quantities
+
+Let the transmitted symbols be denoted by x ∈ {0, 1} and the corresponding received values by z. The reliability of each symbol is measured by the corresponding LLR L = L(z) as in (3). Furthermore, let E{·} denote the expectation operator. For binary transmissions, the symbol-wise Mutual Information (MI) between the corresponding random variables X and Z (not to be confused with the lifting size Zc) is given by [20]
+
+I(X; Z) = H(X) − E log 1 + e(2X−1)L
+
+(11)
+
+ISBN
+
+978-3-8007-4862-4
+Authorized licensed
+
+use
+
+limited
+
+to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+281
+June
+
+24,2026
+
+at
+
+11:44:03©U2T0C1f9roVmDIEEEEVXEpRloLreA. GReGstMrictBioHnsÂaBppelryl.in
+
+Â
+
+Offenbach
+
+SCC 2019 · February 11 – 14, 2019 in Rostock, Germany
+
+ΔI(X; Z) (bit/channel use) ΔI(X; Z) (bit/channel use)
+
+10−1
+
+10−3 10−5 10−7
+
+dc = 2 dc = 5 dc = 8 dc = 11 dc = 14 dc = 17
+
+−10
+
+−5
+
+0
+
+5
+
+10
+
+15
+
+10 log10(ζ) (dB) Fig. 2. Average MI gains over ζ for several CN degrees.
+
+10−1 10−3
+
+Bit 0 Bit 1 Bit 2 Bit 3 Bit 4
+
+10−5
+
+−10
+
+−5
+
+0
+
+5
+
+10
+
+15
+
+10 log10(ζ) (dB) Fig. 3. Symbol-wise MI gains (sorted by |Li|) over ζ for dc = 5.
+
+where H(X) denotes the entropy of X, i.e.,
+
+H(X) = − E{log Pr{X = x}}.
+
+(12)
+
+[I(X; Z)] = bit/(channel use) if the binary logarithm is used. For equiprobable transmit symbols, (11) is thus simplified to
+
+I(X; Z) = 1 − E log2 1 + e(2X−1)L .
+
+(13)
+
+III. GAIN FROM CHECK-NODE PROCESSING
+To determine the optimal update schedule, we show that updates of CNs with smaller degrees benefit from greater gains of the MI between transmitted and decoded symbols. Thus, these CNs should be updated first.
+
+A. Experiment Setup
+The setup in Fig. 1 depicts a layer update with one CN of degree dc. For simplification, differing VN degrees are not considered. Results can be transferred to the entire code only if its Tanner graph is cycle-free. Otherwise, the assumption of statistically independent messages is violated after some iterations [21]. Still, our experiment is assumed to be sufficiently meaningful to legitimate our proposed update schedule.
+dc − 1 binary symbols chosen with equal a-priori probabilities are extended by a parity symbol. Since LLR values in the decoder are typically modeled with Gaussian conditional distributions, we individually transmit these symbols xi, i = 0 . . . (dc − 1), over an Additive White Gaussian Noise (AWGN) channel using Binary Phase-Shift Keying (BPSK). The a-posteriori probabilities are expressed by LLR values Li. The extrinsic messages Lc(i) (short for Lc(0 → i) since there is only one CN) are generated with the SPA update rule from (6). Finally, the updated LLR values are determined by
+
+Li = Li + Lc(i), i = 0 . . . (dc − 1).
+
+(14)
+
+Let Zi and Zi represent the symbols with LLRs Li and Li, respectively. The symbol-wise MI is determined with (13) and
+the resulting MI gains for i = 0 . . . (dc − 1) are written as
+
+ΔI(Xi; Zi) = I(Xi; Zi) − I(Xi; Zi).
+
+(15)
+
+Unless stated otherwise, we are interested in the average gain:
+
+1 dc−1
+
+ΔI(X; Z) = dc i=0 ΔI(Xi; Zi).
+
+(16)
+
+We deliberately evaluate the MI gain after the VN update instead of the input-output relation of MI at the CN to demonstrate the gain from iterative decoding more clearly.
+
+B. Results
+For the sketched results, 2 · 108 repetitions of the experiment have been conducted with dc between 2 and 19, matching the CN degrees in the 5G NR BGs. The Signal-to-Noise Ratio (SNR) ζ is given by the ratio of the average energy per symbol Es and the one-sided noise Power Spectral Density (PSD) N0:
+
+ζ = Es/N0.
+
+(17)
+
+In Fig. 2, ΔI(X; Z) is plotted over ζ for selected values of dc. The MI gain increases with decreasing degree for any SNR. With, e.g., 10 log10(ζ) = 0 dB, the difference between dc = 2 and dc = 5 is a full order of magnitude. The gain is smaller for high-degree CNs because the magnitude of the CN messages Lc(i) is mostly determined by the smallest magnitude |Li|, cf. (7). More incoming messages increase the chance that a small magnitude is encountered. Our observation coincides with the one in [22] where the MI with extrinsic messages was also found to be greater with smaller CN degrees.
+Two phenomena contribute to the progression of ΔI(X; Z) over the SNR: On the one hand, the number of errors from the transmission (in the hard decisions) usually decreases with increasing SNR. That is why the MI gain is generally increasing, too. On the other hand, the MI computed with (13) saturates to 1 for 10 log10(ζ) ≈ 8 dB, resulting in a decrease of ΔI(X; Z) for large values of ζ.
+Fig. 3 shows the individual ΔI(Xi; Zi) for dc = 5. The symbol index is determined by sorting the Li by their magnitudes, i.e., “Bit 0” is the one with the smallest |Li|. As shown in the figure, less reliable symbols have larger gains since the incoming messages over an edge are excluded from the computation of the outgoing messages. In other words, the chance of outgoing messages carrying larger magnitudes is greater if small-magnitude inputs are excluded. The difference between weak and strong symbols is most striking in the domain of high SNR where the MI saturates for reliable receive symbols. The MSA implementation proposed in [21] exploits this effect: Accurate messages are computed for the weakest symbols, leading to a near-optimal decoding performance.
+
+ISBN
+
+978-3-8007-4862-4
+Authorized licensed
+
+use
+
+limited
+
+to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+282
+June
+
+24,2026
+
+at
+
+11:44:03©U2T0C1f9roVmDIEEEEVXEpRloLreA. GReGstMrictBioHnsÂaBppelryl.in
+
+Â
+
+Offenbach
+
+SCC 2019 · February 11 – 14, 2019 in Rostock, Germany
+
+100 10−2 10−4
+
+S0
+
+S1
+
+20
+
+S2
+
+S2, COPC
+
+10
+
+S0 S1 S2 S2, COPC S2, Genie
+
+Pw ¯λ
+
+10−6
+
+2.8
+
+3
+
+3.2
+
+3.4
+
+10 log10(ζ) (dB)
+
+Fig. 4. BLER for different update schedules and PC strategies.
+
+0
+
+2.8
+
+3
+
+3.2
+
+3.4
+
+10 log10(ζ) (dB)
+
+Fig. 5. Conditional Average Number of Iterations (ANI) for different update
+
+schedules and PC strategies.
+
+IV. STATIC SERIAL UPDATE SCHEDULES
+We propose a layered schedule that orders the CNs by ascending degree. With the results from Section III, the greatest information enhancement is expected early on. Afterwards, the large-degree CNs help spread the updated knowledge faster such that the iterative process bears larger compound interest.
+A. Experiment Setup
+All results presented in this section are gathered from 108 Gray-mapped Quadrature Phase-Shift Keying (QPSK) transmissions of codewords derived from 5G NR BG11 with R = 2/3 and Zc = 256, i.e., a codeword length of n = 8960. The MSA decoder is based on [21]. Decoding performance is evaluated in terms of the Average Number of Iterations (ANI) λ¯, Block-Error Rate (BLER) Pw and individual BERs Pb.
+Receive words which do not converge to valid codewords after 50 iterations are excluded from λ¯ to measure the actual convergence speed. In other words, λ¯ is conditioned on the event of a receive word converging. Decoding is stopped as soon as all Parity Checks (PCs) are satisfied. Furthermore, we prefer having only a single decoder configuration for all transmissions regardless of the channel conditions. That is why we evaluate an “average” gain which is the result of averaging relative differences over the SNR range shown in the figures.
+B. Comparison of Update Schedules
+In the following, we compare three static layered update schedules (cf. Section II-C). As above, l = 0 . . . (M − 1).
+S0: ml = l. S1: For l > l it holds dc(ml ) ≤ dc(ml). If dc(ml ) =
+dc(ml), it holds ml > ml. S2: For l > l it holds dc(ml ) ≥ dc(ml). If dc(ml ) =
+dc(ml), it holds ml < ml. S0 is the simple Top-to-Bottom (TtB) schedule. S1 and S2 form schedules by ordering the layers according to their CN degrees; S1 in a descending manner and S2 in an ascending manner. Layers with the same CN degrees are ordered from top to bottom for S1 and from bottom to top for S2 to establish
+1All concepts can also be applied to NR BG2 due to the similar structure [5]. Indeed, simulation results indicate comparable benefits.
+
+a unique sorting order. Furthermore, these secondary sorting criteria support the general tendencies of both schedules since the high-degree CNs are located in the top rows of HBG.
+The BLER Pw for all schedules is shown in Fig. 4, the respective conditional ANI λ¯ in Fig. 5. The additional curves labeled “COPC” and “Genie” become relevant in Section IV-C. Pw is practically the same for all schedules. Compared to S0, λ¯ however decreases by up to 4.5% (3.1% on average) when S2 is used. With S1, λ¯ increases by 0.10% on average. The differences are small but nonetheless achieved with very little effort as the sorting needs to be done only once in advance. Alternatively, the resulting layer update orders could be stored for all code rates in a suitable compact format.
+C. The Core-Only Parity Check
+We further reduce the ANI by limiting the number of Parity Checks (PCs) for Early Termination (ET). In Fig. 6, the individual BERs Pb are shown for a BLER of Pw ≈ 10−2 after decoding. First of all, the QC structure results in similar error rates throughout the individual SBs. More importantly, the SPCE (right of the dashed red line) has (on average) a higher BER than the core of the BG (left of the line) since the VNs with dv = 1 have small diversity gains. In numbers (for S2), the average BER in the SPCE is Pb,SPCE ≈ 3.09 · 10−4 while the average BER in the core is Pb,core ≈ 2.63 · 10−4.
+The authors of [23] only use the PC equations of the CNs connected to the most reliable parity VNs, i.e., the VNs not containing information symbols. As shown in Fig. 6, the most reliable SB in our setup is the first one in the SPCE. Unfortunately, these VNs only form PCs with the first two punctured VN SBs, which is not enough to decide the correctness of all information symbols.
+Thus, we generalize the idea and propose a Core-Only Parity Check (COPC). Instead of the M PCs of HBG, only the Mc < M PCs in sub-matrix A are considered for ET, cf. (1). Decoding stops when these checks are satisfied. In addition to the faster convergence quantified below, the COPC also lowers the complexity of the PC itself. In Fig. 4, Fig. 5 and Fig. 6, schedule S2 with the COPC is labeled as such.
+Inspired by [23], we use a Genie benchmark. The Genie stops the decoding when all information symbols are correctly
+
+ISBN
+
+978-3-8007-4862-4
+Authorized licensed
+
+use
+
+limited
+
+to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+283
+June
+
+24,2026
+
+at
+
+11:44:03©U2T0C1f9roVmDIEEEEVXEpRloLreA. GReGstMrictBioHnsÂaBppelryl.in
+
+Â
+
+Offenbach
+
+10−2 10−3
+
+SCC 2019 · February 11 – 14, 2019 in Rostock, Germany
+
+S0
+
+S1
+
+S2
+
+S2, COPC
+
+Pb
+
+10−4 0
+
+500 1,000 1,500 2,000 2,500 3,000 3,500 4,000 4,500 5,000 5,500 6,000 6,500 7,000 7,500 8,000 8,500
+
+i (Position of bit in codeword) Fig. 6. Individual BERs for different static update schedules at Pw ≈ 10−2. The core of the BG is left of the dashed red line.
+
+decoded. Like the other criteria, this check is only performed once after each iteration. Therefore, the Genie indicator does not indicate the minimal decoding effort if the decoder could be stopped at any time. It merely indicates how well the PC indicates the correctness of the information symbols.
+The COPC’s impact on the BERs is clearly visible in Fig. 6: Pb,core remains unchanged while Pb,SPCE is increased. However, parity symbols are not required to be correctly decoded. With S2 and the COPC, λ¯ is reduced by up to 11.4% (7.31% on average) compared to S2 with all PCs or by up to 15.3% (10.2% on average) compared to S0. Finally, the average gap to the Genie indicator (with S2) is reduced from 10.1% to 3.09% with the COPC. In our setup, only about a quarter of all symbols are located in the SPCE. Thus, we expect even greater benefits at lower code rates. Anyhow, the COPC is not detrimental to Pw, which is unchanged. Applying the COPC to S0 or S1 (not shown here for brevity) does not significantly change λ¯ for these two schedules.
+V. CONCLUSION
+CNs with smaller degrees exhibit larger MI gains from a single update. Thus, we propose a static layered update schedule for the 5G NR LDPC codes which updates CNs ordered by ascending degree. Together with a Core-Only Parity Check (COPC) strategy used for Early Termination (ET), the ANI is reduced by up to 15% compared to a TtB approach. Since the sorting only needs to be done once and the COPC strategy even reduces the number of PC computations, our proposed schedule comes at no cost, especially compared against more complex proposals like IDS.
+REFERENCES
+[1] R. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[2] D. MacKay and R. Neal, “Near shannon limit performance of low density parity check codes,” IET Electron. Lett., vol. 32, no. 18, p. 1645, Aug. 1996.
+[3] Juntan Zhang and M. Fossorier, “Shuffled belief propagation decoding,” in Conf. Rec. 36th Asilomar Conf. Signals, Syst. Comput. 2002, Pacific Grove, CA, USA, Nov. 2002, pp. 8–15.
+[4] J. Goldberger and H. Kfir, “Serial schedules for belief-propagation: Analysis of convergence time,” IEEE Trans. Inf. Theory, vol. 54, no. 3, pp. 1316–1319, Mar. 2008.
+[5] Technical Specification Group Radio Access Network; NR; Multiplexing and Channel Coding (Release 15), 3GPP TS 38.212, Jun. 2018, V15.2.0.
+[6] H. Kfir and I. Kanter, “Parallel versus sequential updating for belief propagation decoding,” Elsevier Phys. A: Statist. Mech. Appl., vol. 330, no. 1–2, pp. 259–270, Dec. 2003.
+
+[7] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proc. 2001 IEEE Global Commun. Conf. (GLOBECOM), San Antonio, TX, USA, Nov. 2001, pp. 3019–3024.
+[8] G. Elidan, I. McGraw, and D. Koller, “Residual belief propagation: Informed scheduling for asynchronous message passing,” in Proc. 22nd AUAI Conf. Uncertainty Artificial Intell. (UAI 2006), Cambridge, MA, USA, Jul. 2006.
+[9] A. I. V. Casado, M. Griot, and R. D. Wesel, “Informed dynamic scheduling for belief-propagation decoding of LDPC codes,” in Proc. 2007 IEEE Int. Conf. Commun. (ICC), Glasgow, UK, Jun. 2007, pp. 932–937.
+[10] X. Liu, C. Fan, and X. Chen, “Dynamic scheduling decoding of LDPC codes based on tabu search,” IEEE Trans. Commun., vol. 65, no. 11, pp. 4612–4621, Nov. 2017.
+[11] G. Han and X. Liu, “An efficient dynamic schedule for layered beliefpropagation decoding of LDPC codes,” IEEE Commun. Lett., vol. 13, no. 12, pp. 950–952, Dec. 2009.
+[12] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[13] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. 2004 IEEE Workshop Signal Processing Syst. (SiPS), Austin, TX, USA, Oct. 2004, pp. 107–112.
+[14] M. Kim, D.-H. Kim, and Y. H. Lee, “Serial scheduling algorithm of LDPC decoding for multimedia transmission,” in Proc. 2012 IEEE Int. Symp. Broadband Multimedia Syst. and Broadcast. (BMSB), Seoul, South Korea, Jun. 2012, pp. 1–4.
+[15] J. Ha, D. Klinc, J. Kwon, and S. Mclaughlin, “Layered BP decoding for rate-compatible punctured LDPC codes,” IEEE Commun. Lett., vol. 11, no. 5, pp. 440–442, May 2007.
+[16] Hua Li, Hong Ding, Linhua Zheng, Ziwei Lei, Hui Xiong, and Tan Wang, “An efficient scheduling scheme for layered belief propagation decoding of regular LDPC codes,” in Proc. IEEE 8th Int. Congr. Ultra Modern Telecommun. Control Syst. Workshops (ICUMT 2016), Lisbon, Portugal, Oct. 2016, pp. 397–400.
+[17] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[18] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, UK: Cambridge University Press, 2008.
+[19] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2, pp. 429–445, Mar. 1996.
+[20] R. Mu¨ller and W. Gerstacker, “On the capacity loss due to separation of detection and decoding,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp. 1769–1778, Aug. 2004.
+[21] C. Jones, E. VaIles, M. Smith, and J. Villasenor, “Approximate-min* constraint node updating for LDPC code decoding,” in Proc. 2003 IEEE Military Commun. Conf. (MILCOM), Boston, MA, USA, Oct. 2003, pp. 157–162.
+[22] I. Land, P. Hoeher, and J. Huber, “Bounds on information combining for parity-check equations,” in Proc. 2004 IEEE Int. Zurich Seminar Commun. (IZS), Zu¨rich, Switzerland, Feb. 2004, pp. 68–71.
+[23] W. Stoye, “LDPC iteration control by partial parity check,” in Proc. 2009 IEEE Int. Conf. Ultra-Wideband (ICUWB), Vancouver, BC, Canada, Sep. 2009, pp. 602–605.
+
+ISBN
+
+978-3-8007-4862-4
+Authorized licensed
+
+use
+
+limited
+
+to:
+
+Yonsei
+
+Univ.
+
+Downloaded
+
+on
+
+284
+June
+
+24,2026
+
+at
+
+11:44:03©U2T0C1f9roVmDIEEEEVXEpRloLreA. GReGstMrictBioHnsÂaBppelryl.in
+
+Â
+
+Offenbach
+
+

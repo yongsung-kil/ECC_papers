@@ -1,0 +1,190 @@
+A High Throughput H-QC LDPC Decoder
+
+Yi-Hsing Chien
+Computer Science and Information Engineering National Taiwan University Taipei, Taiwan, R.O.C. d94012@csie.ntu.edu.tw
+
+Mong-Kai Ku
+Computer Science and Information Engineering National Taiwan University Taipei, Taiwan, R.O.C. mku@csie.ntu.edu.tw
+
+Abstract—In this paper, design of a high throughput lowdensity parity-check (LDPC) decoder using overlapped message passing scheduling algorithm is presented. Regular hierarchical quasi-cyclic (H-QC) LDPC code is used in this design to provide good coding performance at long code length. The two-level regular H-QC LDPC code matrix structure is exploited to parallelize the row and column decoding operations. Our scheduling algorithm re-arranges these operations across iteration boundaries to avoid memory access conflicts. The memory requirement is reduced by half compared to pipelined decoders without scheduling. A (12288, 6144) LDPC decoder implemented in FPGA achieves 298 Mbps throughput performance.
+I. INTRODUCTION
+Low-density parity-check (LDPC) code [1] is a promising candidate for next generation communication systems due to its excellent coding gain performance and efficient hardware decoder implementation. Well designed LDPC decoders can achieve lower computational complexity than Turbo decoders. LDPC codes are generally decoded by iterative message passing algorithms. Fully parallel implementation of message passing algorithm is straight forward but suffers from high hardware and routing complexity [2]. Partially parallel architecture offers trade-offs between throughput and hardware complexity. The processing elements fetch messages stored in memory to carry out portions of message passing operation. For every iteration, row operations are carried out by check functional units (CFU), followed by column operations that are done by the bit functional units (BFU). These operations take place in turn until correct LDPC codeword is obtained. However, in this scheme, one set of functional units is idle while the other set of functional units is working. The throughput of LDPC decoder can be doubled by overlapping the row operations and column operations. The challenge is how to schedule these operations such that there will be no memory access conflict.
+Several decoding architectures are implemented with scheduling concepts. Optimized decoding operation sequence can eliminate or reduce waiting time of data dependency [3]. However, the exceptions in this scheduling scheme degrade the performance and cost extra logic to handle. Ar-
+
+chitecture in [4] simultaneously decodes multiple codeword to improve throughput. The memory requirements are bigger for this approach. Modified decoding algorithm is used to reduce algorithm complexity and minimizing coding gain degradation [5]. A 102Mbps (3336, 1668) LDPC decoder design in [6] converges faster but requires more functional units and extra memories when comparing with design with scheduling [3]. The 172Mbps (8176, 7156) LDPC decoder in [7] uses a large amount of registers to achieve higher operating frequency. These designs use quasi-cyclic (QC) LDPC code that suffers from coding gain degradation and error floor at long code length.
+We propose a high throughput partially parallel LDPC decoder design with a novel scheduling algorithm for hierarchical quasi-cyclic (H-QC) LDPC codes in this paper. The regular two-level H-QC LDPC code used in this design has better coding gain performance than QC codes at long code length. The first-level scheduling algorithm fully utilizes the processing units to achieve high hardware utilization efficiency. Second-level matrix operation is carried out in parallel to increase the throughput.
+This paper is organized as follows: Section II briefly describes the structure of two-level H-QC LDPC codes, our Jump-reset scheduling algorithm and the constraint for the code matrix. Section III shows the details of our multithreaded LDPC decoder architecture with memory interleaving. Section IV presents the FPGA implementation results and conclusion.
+II. SCHEDULING ALGORITHM
+A. Hardware-Oriented Hierarchical Quasi-Cycle LDPC
+Regular quasi-cyclic LDPC (QC-LDPC) codes are hardware implementation friendly but their coding gain performance suffers from coding degradation and error floor when code length is large. By hierarchically expanding the quasi-cyclic parity check matrix using a modified progressive edge growth (PEG) algorithm [8], regular hierarchical quasi-cyclic codes (H-QC) have coding gain performance matching randomly constructed LDPC code with no appar-
+
+This work was partially supported by the National Science Council of Taiwan under Grant No. NSC 94-2215-E-002-038, NSC 94-2752-E-002008-PAE and NSC94-2220-E-002-027.
+
+1-4244-0921-7/07 $25.00 © 2007 IEEE.
+
+1649
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 01:48:46 UTC from IEEE Xplore. Restrictions apply.
+
+ent error floors at long code length. Fig. 1 illustrates the parity check matrix structure of a two-level H-QC LDPC code.
+
+⎡1 1 1 1 1 1⎤ ⎢⎢1 1 1 1 1 1⎥⎥ ⎢⎣1 1 1 1 1 1⎦⎥m×n
+
+⎡0 1 0 0⎤
+
+⎢⎢0 0 1 0⎥⎥
+
+⎢0 0 0 1⎥
+
+⎢
+
+⎥
+
+⎣1 0 0 0⎦ q1×q1
+
+⎡0 0 0 1 0 0⎤
+
+⎢⎢0 0 0 0 1 0⎥⎥
+
+⎢0 0 0 0 0 1⎥
+
+⎢⎢1 0 0 0 0 0⎥⎥
+
+⎢0 1 0 0 0 0⎥
+
+⎢
+
+⎥
+
+⎣⎢0 0 1 0 0 0⎥⎦ q2×q2
+
+Fig. 1: Structure of H-QC parity-check matrix
+
+The code matrix construction started from an m × n matrix called core matrix. We first expand the matrix by replacing the 1s and 0s with different q1 × q1 circulant permutation matrices and zero matrices, respectively. The first level of HQC LDPC codes is equivalent to QC-LDPC code whose parity-check matrix is divided into several circularly shift matrices. The first-level matrix is further expanded by replacing 1s with q2 × q2 circularly permutation matrices and 0s with q2 × q2 zero matrices. Progressive-edge growth (PEG) algorithm is employed to construct H-QC matrix with the best performance. After this matrix expansion, we get a two-level H-QC parity-check matrix with N = n × q1 × q2, M = m × q1 × q2. Flexible size of different level matrix is suitable for partial parallel decoding and multithreaded decoding.
+The first level of H-QC LDPC code is quasi-cyclic so scheduling algorithms designed for QC-LDPC code can be readily applied. In our architecture parameter q2 is a factor of parallelism. By adjusting the parameters q1 and q2 of H-QC code, we can construct codes for different code size and hardware throughput requirements.
+
+form message passing operations. CFU is responsible for row operation while BFU is responsible for column operation. The placement policy of interchanging messages is row-centric strategy because row-centric addressing is convenient for CFU data access, the BFU starting address will be staggered as shown in the following graph. The decoding schedule of a regular QC-LDPC code is shown in Fig. 2 to illustrate how the scheduling algorithm re-orders BFU and CFU operations to avoid memory access conflict. Only the operation of the first row is shown in the Fig. 2, the remaining two rows will follow the same scheduling and execute concurrently. The CFU threads start processing (Fig. 2a) from the highest BFU starting addresses. The bit functional unit (BFU) threads will not start until all the CFU threads pass the lowest BFU starting address (Fig. 2b). When the CFU threads reach the location before their initial starting addresses, their addresses are increased by half of the q1 to avoid overwriting messages that haven’t been processed by the BFU threads. These messages are shown in the white region of Fig. 2b. This operation is called CFU-Jump (Fig. 2c).
+
+W (a) CFU initial
+
+W (b) BFU reset
+
+(c)CFU-jump
+
+(d) BFU-jump
+
+B. First-Level Matrix Scheduling
+The two-level H-QC code matrix is reduced to quasicyclic form when we treat a q2 × q2 matrix as single element. Only either the word length or number of memory banks need to be increased to support concurrent processing of multiple functional units of second-level matrix. We can use the address generation logic for QC decoder unchanged.
+Overlapped pipelined QC-LDPC scheduling used in our implementation can cut the memory requirement by half compared with [4], and functional unit is utilized 100% in decoding. In [9], author proves that optimal scheduling algorithm must have constraint on the parity check matrix —W ≤ floor (q1 / 2). Our scheduling algorithm can apply when this constraint is met.
+In the iterative LDPC decoding process, check functional unit (CFU) and bit functional units (BFU) take turns to per-
+
+(e) CFU-reset M-CFU Start
+
+(f) BFU-reset M-CFU Region M-CFU End
+
+M-BFU Start
+
+M-BFU Region M-BFU End
+
+Fig. 2: Visual presentation of jump-reset scheduling algorithm
+
+At the end of Fig. 2c, BFU has processed all messages sent by CFU to complete the first iteration. BFU address needs to be incremented by half of q1 to jump over unprocessed area and catch up to the CFU. This operation is called BFU-Jump (Fig. 2d). After BFU completed processing at the end of Fig. 2d, CFU can go back to finished the messages that are skipped by the CFU-Jump operation. This operation is called CFU-Reset (Fig. 2e). BFU threads will reset addresses to their starting points in the same way to
+
+1650
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 01:48:46 UTC from IEEE Xplore. Restrictions apply.
+
+prevent messages from overwriting. This is the same operation as BFU-reset in Fig. 2b. Note the address of BFU and CFU is at exactly the same location. We can apply previous strategy to continue decoding all the messages.
+C. Second-Level Matrix Processing
+High throughput partially parallel H-QC LDPC decoder can be realized by performing second-level matrix operation in parallel. Scheduling algorithm designed for QC codes can be used with only minor change if the second-level matrix processing can be completed in one clock cycle. The second -level matrices are circulant permutation matrices with different offsets. Programmable rotators are used to shift incoming data to align the message for different shift value of second-level matrix. Messages in the same second-level matrix are store in column-major order that is convenient for BFU access. The choice of column-major order eliminates the needed for rotator before hard decision memory and channel value memories. To reduce the routing complexity of rotators in this design, the number of different secondlevel matrices is minimized. Our LDPC code generator is programmed to find a code matrix that possesses the minimum number of different second-level circulant permutation matrices while maintaining excellent coding gain performance. A code matrix with 4 different matrices is chosen for this design.
+III. DECODER ARCHITECTURE DESIGN
+A. Multi-Threaded Decoder Architecture
+Fig. 3 shows the block diagram of proposed decoder. There are m x n I-Memory for interchanging messages. Hard decision and channel value memory uses n memory banks each. Decisions computed by multiple BFUs (M-BFU) are stored in the hard decision memory and the incoming loglikelihood channel values are stored in the channel value memory. First-level scheduling is carried out by address generator and control unit. Control unit coordinates the reset operation and jump operation on address generator to comply with first-level scheduling algorithm while address generator sends the address to all memory banks.
+
+Second-level matrix processing is accomplished by programmable 4-way rotators, M-BFU and M-CFU. The rotators are placed at the output port of an I-Memory. To perform forward rotation for M-CFU and corresponding reverse rotation for M-BFU. An M-CFU processes messages from n second-level circulant permutation matrices in the same row. Similarly, M-BFU processes messages from m second-level matrices in the same column. m M-CFUs and n M-BFUs work concurrently in our architecture.
+B. Memory Organization and Interleaving
+The message memory of the proposed decoder consists of j × k memory banks. Each memory is responsible for a submatirx (q1q2 × q1q2). The total memory size requirement of proposed decoder is s × k × (j × WL + 1) where s, k, j, WL are submatrix size, row-weight, column-weight and internal word length respectively. In two-level H-QC code s is equal to s = q1 × q2. For a (12288, 6144) H-QC code with decoder WL=6bit, our decoder design only needs 307,200bits. This memory requirement is the same as requirement of traditional non-overlapped message-passing decoder. For a pipelined LDPC decoder without scheduling, the decoder must store all messages generated by the opposite type of functional units in memory to avoid contention. Thus the memory requirements need to be doubled and only half of memory is accessed in any given moment. With the proposed jump-reset scheduling algorithm, the decoder can be pipelined and the memory requirement is only half the size of traditional pipelined message-passing decoders.
+To further increase throughput, the message memory can be interleaved to enable concurrent memory access for MCFU and M-BFU. We partition memory address into even address and odd address to support concurrently access. Fig. 4 illustrates the block diagram of memory interleaving. By applying this architectural improvement, the decoder throughput can be doubled with the same clock rate.
+
+Fig. 3: Decoder block diagram
+
+Fig. 4: Memory interleaving
+C. M-CFU and M-BFU Design
+Each matrix functional unit M-CFU and M-BFU consists of q2 CFUs and BFUs respectively. M-CFU and M-BFU can carry out q2 row operations and q2 column operations in one clock cycle. The delay of CFU and BFU are carefully balanced to obtain best throughput. We use scaling min-sum algorithm as our decoding algorithm. CFU calculates the partial min equation and computers sign of outputs. The sign computation unit uses exclusive-OR (XOR) gates. We design a minimum calculation unit called min-and-convert unit
+
+1651
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 01:48:46 UTC from IEEE Xplore. Restrictions apply.
+
+to reduce latency of CFU from 4-adders delay to 3-adders delay. As shown in Fig. 5, The 2’s complement to signmagnitude conversion and the first level minimum selectors executes in parallel to reduce delay. The minimum selector shares logic with the converter to save area. The following two-level minimum computation can stay unchanged.
+
+10-1
+
+QC-LDPC SPA FP
+
+QC-LDPC HW (4+2 bit)
+
+H-QC LDPC SMSA FP
+
+10-2
+
+H-QC LDPC HW (4+2)
+
+10-3
+
+BER
+
+10-4
+
+10-5
+
+10-6
+
+1.2
+
+1.3
+
+1.4
+
+1.5
+
+1.6
+
+SNR (Eb/N0)
+
+Fig. 6: Performance comparison of floating point simulation and hardware decoder implementation for (N, K) = (12288, 6144).
+
+Fig. 5: Min-and-convert unit in optimized CFU
+The delay of BFU is 3 adders to match the delay of the CFU. 1’s complement is used in the sign-magnitude to 2’s complement converter. The sign addition task is carried out in the subsequent stages of adders.
+IV. IMPLEMENTATION RESULT AND CONCLUSIONS
+A (12288, 6144) H-QC LDPC decoder is implemented on Altera Stratix II EP2S130 FPGA device to validate our architecture design. The throughput of this 32-threaded partially parallel LDPC implementation is 298.10Mbps with number of iteration fixed at 15. The interleaved memory is not implemented in FPGA due to time constraint. Table 1 summarizes the FPGA implementation. The BER performance of our LDPC decoder is shown in Fig. 6. Comparing with QC code, the H-QC code improves the coding gain performance by about 0.1dB at BER = 10-5. The hardware implementation loss is less than 0.05dB due to the finite wordlength effect.
+
+TABLE I.
+
+DESIGN SUMMARY
+
+Code Length Device
+Frequency Throughput Logic Element
+Memory
+
+Proposed Decoder 12,288bits
+EP2S130F1020C4 96.26MHz
+298.10Mbps (15iter.) 55,491 ALUT (52.33%)
+307,200bits (4.5%)
+
+This implementation use parameters m=3, n=6, q1=64, q2=32. Therefore, N= n × q1 × q2 = 12,288 and M= m × q1 × q2 = 6144.
+
+The two-level H-QC LDPC code matrix is optimized for hardware implementation. The number of different secondlevel matrix is minimized to reduce routing and hardware complexity. Our LDPC decoder achieved the throughput by overlapped pipelining first-level CFU/BFU operation and parallel execution of second-level matrix operations. Our scheduling algorithm rearranges message passing operations across iteration boundaries to avoid memory access conflicts. The memory requirement is reduced by half compared to pipelined decoders without scheduling. We will incorporate memory interleaving in future FPGA implementations to improve throughput performance.
+REFERENCES
+[1] Gallager, R. “Low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 8, pp. 21–28, Jan. 1962.
+[2] Howland, C.; Blanksby, A., “Parallel decoding architectures for low density parity check codes,” Circuits and Systems, 2001. ISCAS 2001. IEEE International Symposium on Circuits and Systems, vol. 4, pp. 742–745, May 2001
+[3] Y. Chen and K. K. Parhi, “Overlapped message passing for quasicyclic low-density parity check codes,” IEEE Trans. Circuits and Syst. I, vol. 51, pp. 1106–1113, Jun. 2004.
+[4] Cocco, M.; Dielissen, J.; Heijligers, M.; Hekstra, A.; Huisken, J., “A scalable architecture for LDPC decoding,” Design, Automation and Test in Europe Conference and Exhibition, 2004. Proceedings , vol.3, no.pp. 88- 93 Vol.3, 16-20 Feb. 2004
+[5] Karkooti, M.; Cavallaro, J.R., “Semi-parallel reconfigurable architectures for real-time LDPC decoding,” Information Technology: Coding and Computing, 2004. Proceedings. ITCC 2004. International Conference on , vol.1, no.pp. 579- 585 vol.1, 5-7 April 2004
+[6] K. Shimizu, T. Ishikawa, N. Togawa, T. Ikenaga and S. Goto, “A Parallel LSI Architecture for LDPC Decoder Improving MessagePassing Schedule,” IEEE International Symposium on Circuits and Systems, May 2006.
+[7] Zhiqiang Cui and Zhongfeng Wang, “A 170 Mbps (8176, 7156) Quasi-Cyclic LDPC Decoder Implementation with FPGA,” IEEE International Symposium on Circuits and Systems, May 2006.
+[8] X.-Y. Hu, E. Eleftheriou, and D-M. Arnold, “Regular and irregular progressive edge-growth Tanner graphs,” IEEE Trans. Inform. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[9] Y. Dai and Z. Yan, “Optimal overlapped message passing decoding for quasi-cyclic low-density parity-check codes,” IEEE Global Telecommunications Conf. (GLOBECOM), vol. 4, pp. 2395–2399, Dec. 2005.
+
+1652
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 01:48:46 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,913 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+2909
+
+Deep-Learning for Breaking the Trapping Sets in Low-Density Parity-Check Codes
+Seokju Han , Student Member, IEEE, Jieun Oh, Member, IEEE, Kyungmok Oh, Student Member, IEEE, and Jeongseok Ha , Senior Member, IEEE
+
+Abstract— In the low-error rate regime, message-passing (MP) decoding for low-density parity-check (LDPC) codes is known to have performance degradation due to trapping sets (TSs), which often limits the use of LDPC codes for applications with low target error rates like storage devices. This work proposes a novel deep-learning based decoding algorithm which is tailored for breaking TSs. In particular, when MP decoding fails due to TSs, there exist pairs of unsatisfied check nodes (CNs) which are connected through paths only with error variable nodes (VNs), i.e., VNs with erroneous hard-decision results. The proposed algorithm efficiently identifies the paths with error VNs between unsatisfied CNs with the aid of deep-learning techniques. Then, the decoding failures are resolved by repeating the MP decoding after re-initializing the channel outputs for the error VNs in the identified paths. In addition, by analyzing the behaviors of the deep-learning based algorithm, we propose a low-complexity algorithm, called adaptive-error-path (AEP) detector. Simulation results show that the proposed algorithms efficiently break the TSs and significantly improve the error-floor performance in the low error-rate regime.
+Index Terms— Low-density parity-check (LDPC) codes, errorfloor, trapping set, deep learning.
+I. INTRODUCTION
+I N RECENT years, machine learning has achieved unprecedented successes across a wide range of areas such as image recognition [1], natural language processing [2], and playing games like Go [3]. Inspired by the successes, there have been extensive efforts to apply deep neural networks (DNNs) to problems in the field of communication, e.g., multiple-inputmultiple-output (MIMO) detection [4], channel estimation [5] and channel coding [6]–[16]. In particular, it was shown in [7]– [16] that DNNs can be trained to efficiently estimate codewords from the noisy channel observations. Nachmani et al.
+Manuscript received September 28, 2021; revised January 20, 2022 and February 24, 2022; accepted February 24, 2022. Date of publication March 8, 2022; date of current version May 18, 2022. This research was supported by Basic Science Research Program through the National Research Foundation of Korea (NRF) funded by the Ministry of Science, ICT & Future Planning (2021R1A2B5B01002204), and in part by BK21. The associate editor coordinating the review of this article and approving it for publication was L. Schmalen. (Corresponding author: Jeongseok Ha.)
+Seokju Han, Kyungmok Oh, and Jeongseok Ha are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea (e-mail: enfgui@kaist.ac.kr; ohkm0804@kaist.ac.kr; jsha@kaist.edu).
+Jieun Oh is with MediTulip Company Ltd., Cheongju 28161, South Korea (e-mail: jeoh@meditulip.com).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2022.3157314.
+Digital Object Identifier 10.1109/TCOMM.2022.3157314
+
+in [7] proposed a neural belief-propagation (BP) decoder for linear codes with high-density parity-check (HDPC) matrices such as Bose–Chaudhuri–Hocquenghem (BCH) codes. It has been generally known that a straightforward application of the BP decoding to HDPC codes results in poor error-rate performance due to the detrimental effect of cycles in HDPC matrices. On the contrary, the neural BP decoding in [7] achieves significant performance improvements over the standard BP decoding. In addition, the neural BP decoding inherits the symmetry of BP decoding, and thus, the training process for neural BP decoder can be performed with a single codeword, e.g., the all-zero codeword, which drastically simplifies the training process. The work in [7] has been investigated further in [9] where a neural BP decoder is constructed with a recurrent neural network (RNN). In [8], a neural decoder for the scaled min-sum algorithm (MSA) was proposed as a low-complexity BP decoder. To make the neural BP decoding practically more suitable, the work in [14]–[16] utilizes quantized neural networks (QNNs) to design finite precision message passing decoders. The DNN framework is also applied to the decoding of polar codes in [10]. Meanwhile, in [11], Kim et al. considered an RNN for decoding convolutional and turbo codes.
+While the DNN-based decoder [6]–[16] heralds a new dawn in decoding error-correcting codes, some hybrid approaches, i.e., traditional decoding algorithms assisted with DNNs, have also been studied in [6], [12]. In particular, Liang et al. in [6] proposed an iterative scheme for channel decoding under correlated noise. In the proposed scheme, a traditional BP decoder and a convolutional neural network (CNN) based noise estimator collaborate in such a way that they exchange their outputs. It was shown that the judiciously orchestrated cooperation between the BP decoder and neural noise estimator leads to a notable performance improvement. This work also investigates a collaboration between the DNN and the traditional decoding algorithm, e.g., the scaled MSA with uniform quantization, for low-density parity-check (LDPC) codes to address certain hard-to-correct error events associated with the decoding algorithm.
+LDPC codes [17] are known for achieving near-Shannon limit performance with message-passing (MP) decoding as the code length increases [18]. In addition to the good asymptotic performance, LDPC codes with MP decoding have outstanding error-rate performance at finite lengths. Since the MP decoding can be realized at modest complexity, many industry standards,
+
+0090-6778 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2910
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+including Wi-Fi, digital video broadcast, and 10G Ethernet, have adopted LDPC codes with MP decoding as their errorcorrecting solutions. However, MP decoding suffers from decoder failures caused by special sets of coded bits, trapping sets (TSs) [19], which leads to error-floors in the low error-rate regime. It has been a long-standing challenge to resolve the decoder failures caused by the TSs for applications with low target-error rates like storage devices. Recently, the structure of dominant TS, called elementary TS [20], [21], has been extensively investigated, and the authors in [22] studied the dominant TS for structured LDPC codes, called absorbing set. Based on the results of dominant TS analysis [20]–[22], some notable code design rules [23]–[25] were proposed to improve the error-floor performance by minimizing the number of problematic dominant TSs [23] or avoiding them [24], [25]. However, it is still known as a hard problem to identify dominant TSs in LDPC codes [26]. This work instead focuses on resolving the decoder failure caused by TSs with assistance from DNNs without prior knowledge of TSs.
+When the decoder fails due to a TS, the variable nodes (VNs) in the TS have erroneous bit-decision values. Thus, the decoding failure can be readily resolved by flipping the bit-decision values of the VNs in the TS once their locations are identified. However, unfortunately, a TS reveals itself only via indirect information, i.e., the locations of unsatisfied check nodes (CNs). Thus, there have been extensive studies [27]–[30] on resolving the decoding failure by utilizing the locations of unsatisfied CNs. For short, the VNs with erroneous and correct bit-decision values will be hereafter called error and correct VNs, respectively. As an early effort, Cavus and Daneshard in [27] proposed a post-processing scheme with a look-up table which contains mappings between locations of unsatisfied CNs and VNs constituting the TSs, i.e., the error VNs. However, implementing such a table is impractical since the size of the table grows fast with the increasing number of the TSs. Later in [28], Han and Ryan considered three strategies: 1) the bi-mode decoder, 2) the bit-pinning scheme, and 3) generalized LDPC decoding. The bi-mode decoder conducts an erasure decoding after it erases decision values of VNs in the trees rooted from unsatisfied CNs. However, the erasures may introduce stopping sets [31] and make the erasure decoding fail. Meanwhile, the bit-pinning scheme fixes bit values corresponding to some VNs in each TS to a known value. However, it requires structures of TSs and also suffers from rate loss. The scheme with generalized LDPC decoding modifies the bipartite graph representing an LDPC code in such a way that it combines unsatisfied CNs into a super-node in order to remove the deleterious subgraph. Then, MP decoding is conducted for the modified bipartite graph. While the generalized LDPC decoding prevents the decoding from failing with TSs in the original bipartite graph, it requires expensive decoding complexity.
+The difficulty of obtaining the TS structure [32] has motivated studies on breaking TSs without resorting to prior knowledge of TS. In [29], Kang et al. proposed a scheme called backtracking algorithm (BTA) utilizing the fact that each unsatisfied CN has an odd number of neighboring error VNs. The BTA repeatedly performs decoding for LDPC codes after
+
+randomly picking up a neighboring VN of an unsatisfied CN and flips the bit-decision value. The BTA provides improved error-floor performance even without requiring any knowledge of TSs. However, the scheme often needs a large number of decoding trials due to the randomness of VN selection and thus leads to excessively long latency. Thus, in [33], authors assigned scores to VNs adjacent to unsatisfied CNs in hopes of finding an error VN in the early phase. However, even if an error VN is picked up, as only one error VN is corrected in the re-decoding process, the decoder is likely to fall back into another TS. Meanwhile, later in [30], a collaborative decoding algorithm (CDA) was proposed, and the proposed decoder consists of two decoders, called main-decoder and sub-decoder. The main-decoder and sub-decoder collaborate in such a way that the decoder first lets the main-decoder perform MP decoding for channel outputs. When a TS incurs decoding failure of the main-decoder, the decoder stops the operation of the main-decoder and sends extrinsic information to the subdecoder. Then, the sub-decoder conducts the MP decoding for a reduced parity check matrix which is made by randomly removing some rows of the parity-check matrix used in the main-decoder. The row removal is introduced for the purpose of extending the separation between a pair of error VNs in a sub-graph induced by the TS, which ensures that the decoding with the reduced parity check matrix corrects some of error VNs with a high probability. Assuming that some error VNs are recovered by the sub-decoder, the main-decoder corrects the remaining error VNs with the extrinsic information given by the sub-decoder.
+The existing schemes [29], [30] in common suffer from either excessive complexity or long latency in the worst case due to the randomness of the schemes. In this paper, we propose a novel scheme to break TSs by taking advantage of a DNN to achieve improved error-floor performance. To this end, we first analyze distributions of log-likelihood ratio (LLR) values for error and correct VNs. The analysis shows that the LLR magnitudes (LMs) of correct VNs are statistically larger than that of error VNs. In addition, we show that for a pair of unsatisfied CNs, there exist error paths which are defined as paths only with error VNs and mis-satisfied CNs inside a TS. Based on these two observations, the proposed TS breaking scheme is designed in the following two steps: error-path detection and re-decoding steps. In the error-path detection step, candidates of error paths are obtained, and re-decoding is conducted in the re-decoding step after flipping the bit-decision values and re-initializing the LLR values of the VNs in the error path. On the contrary to the BTA, the proposed scheme flips decision values of multiple VNs in an error path, which prevents the TS from turning into another TS.
+One can imagine that error paths can be readily identified with the statistical discrepancy between error and correct VNs. However, simple comparisons of LMs for the detection are not a reliable way to tell error and correct VNs since the number of correct VNs far outnumbers that of error VNs. That is, there are much more correct VNs with small LMs than error VNs, even if error VNs have a higher probability of having small LMs. It should be noticed that each false alarm leads
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2911
+
+to unnecessary re-decoding which in turn increases energy consumption and latency. Thus, it is especially desirable to make the detection rate as high as possible to reduce the complexity of the proposed TS breaking scheme. To this end, this work proposes a novel error-path detector, hereafter called neural-error-path (NEP) detector, using a DNN which takes LMs in a path as its input and produces a probability for the path to be an error path. Then, the re-decoding is conducted for the paths in the descending order of the probability.
+In addition to the NEP detector, this work proposes an adaptive-error-path (AEP) detector by investigating the behaviors of the NEP detector. In many areas, it has been witnessed that machine learning provides unprecedented successes in the cases that there are no clear rules to solve problems. However, if we can understand the disciplined rule established in the DNN via the training process, it would allow one to develop more efficient algorithms without resorting to neural networks. To the best of our knowledge, there has not been any attempt in the field of error-correcting codes to analyze a trained DNN and transform the working rule of the DNN into an algorithm in a traditional fashion. In this work, based on the understanding of the NEP detector, we develop an AEP detector which chooses a small fraction of paths and evaluates the likelihoods of the selected paths to be error paths. Then, the complexity of the AEP detector can be greatly reduced compared to that of the NEP detector with negligible degradation of detection performance. The AEP detector is well suited for applications which require a low-complexity implementation of the proposed TS breaking scheme.
+Our contributions in this work are summarized as follows:
+1) A topological structure called error path will be introduced, and we characterize statistical properties of error and correct VNs.
+2) We will propose a detector based on a DNN, i.e., the NEP detector, for which the supervised learning is conducted with error paths as labeled training samples. It will be demonstrated that the proposed NEP detector can efficiently sift out error paths even in the case that the number of error paths is overwhelmed by that of non-error paths.
+3) Then, by utilizing the statistical properties of error and correct VNs, we will transform the NEP detector into a traditional algorithm, i.e., the AEP detector which is as efficient as the one with the NEP detector at a muchreduced complexity.
+The remainder of this paper is organized as follows. In Section II, background information and notations will be introduced to help the readers understand this work. In Section III, some features of TSs and statistical properties of correct and error VNs will be discussed. In addition, we will propose a decoding scheme which consists of MP decoders and an error-path detector. The proposed decoding scheme opportunistically activates the error-path detector when a decoding failure is caused by TSs. In Section IV, we will propose an error-path detector based on a DNN, i.e., the NEP detector, and also discuss how to construct training samples for supervised learning. The results from the NEP detector
+
+Fig. 1. Dominant TSs of (2640, 1320) Margulis LDPC code with a column weight of dv = 3 and a code rate of R = 0.5: (a) (12,4) TS, (b) (14,4) TS where a circle and a square indicate a VN and a CN, respectively, the filled squares represent unsatisfied CNs, and the shaded circles represent VNs in the error paths denoted by the thick lines.
+will be interpreted via a sensitivity analysis, which enables us to develop a low-complexity error-path detector. In Section V, we will propose a low-complexity error-path detector, i.e., the AEP detector. Performance of the proposed algorithms will be evaluated and compared with existing schemes in Section VI, and finally, in Section VII, we will conclude the work.
+II. PRELIMINARIES
+A binary LDPC code with a parity check matrix H of size n × m can be represented by a Tanner graph G = (V ∪ C, E), where V and C are the disjoint sets of VNs and CNs, respectively, and E is the set of edges connecting the VNs and CNs. Trapping sets (TSs) are first introduced by Richardson in [19] as a set of error VNs after a sufficient number of MP decoding iterations. An (a, b) TS is a set of a VNs which induce a subgraph with b unsatisfied CNs and any possible number of mis-satisfied CNs. Fig. 1 shows a (12, 4) and (14, 4) TSs which are the dominant TSs of the (2640, 1320) Margulis LDPC code [34]. Note that a TS becomes more problematic when b is small. That is, in MP decoding, an unsatisfied CN sends its messages to change the current bit decision values of the neighboring error VNs in a way to make its parity check satisfied. On the other hand, a missatisfied CN reinforces the current bit decision values of its neighboring VNs since the parity check is already satisfied with them. Thus, corrections of error VNs may happen in the case that the messages from unsatisfied CNs dominate the ones from satisfied CNs. However, when the number of unsatisfied CNs, i.e., b, is small, it is hard for the MP decoding to correct the error VNs. Moreover, TSs with a smaller number of VNs, a, more frequently happen, which may make the MP decoding failed. Thus, TSs with smaller values of a and b are generally believed to be harmful to MP decoding and hard to be broken, and such TSs are called dominant TSs. In this work, we consider TSs with b < τ where τ is a threshold value. Note that this work does not assume any prior knowledge of TSs, and thus the number of VNs, a, is unknown whereas the number of unsatisfied CNs, b, is revealed.
+The proposed scheme finds out error paths between pairs of unsatisfied CNs and breaks TSs by correcting the error VNs in the paths. Thus, it would be computationally more favorable
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2912
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+when a TS consists of a smaller number of unsatisfied CNs. The TSs in this work are formally defined as follows:
+Definition 1 (Trapping Set (TS)): For an LDPC code and an MP decoder with a maximum number of iterations, Imax, let Cρ represent the set of unsatisfied CNs at the ρ-th iteration. Then, the TS is defined as the set of error VNs at ρmin-th iteration where ρmin = argminρ∈{1,2,...,Imax} |Cρ|. If there are multiple choices for ρmin, the smallest one is selected. The iteration, ρmin at which the TS is obtained is referred to as trapped iteration.
+Definition 2 (Set of Unsatisfied CNs, CU ): For a TS, the set of unsatisfied CNs is denoted by CU which is given by Cρmin .
+For a pair of unsatisfied CNs in the set of unsatisfied CNs, i.e., CU , an error path is defined as follows:
+Definition 3 (Error Path of Length ): A path between a
+pair of unsatisfied CNs is called an error path of length if the path is established only with error VNs and ( − 1) missatisfied CNs. An error path of length is represented with an ordered set of error VNs, i.e., P = {vk1, vk2 , . . . , vk } where vkj ’s are the error VNs in the error path P, vkj and vkj+1 for 1 ≤ j ≤ − 1 neighbor a common mis-satisfied CN, and vk1 and vk neighbor the beginning and terminating unsatisfied CNs, respectively.
+Definition 4 (Shallow and Deep VNs): Shallow VNs are
+defined as VNs adjacent to unsatisfied CNs and the other
+remaining VNs are defined as deep VNs. Shallow and deep
+VNs in an error path are referred to as shallow error VNs and
+deep error VNs, respectively, and the sets of indices for the
+shallow and deep error VNs in an error path are denoted by VS and VD, respectively.
+Shallow and deep error VNs are collectively referred to as
+error VNs, and distinction of them will be made when it is
+necessary. According to Definition 3, an error path between c and c in CU is expressed with a set of VNs in the path whose length is given by the cardinality of the set with VNs. For example, in Fig. 1 (a), an error path between c1 and c3 is illustrated, and the path can be represented with a set P1 = {v5, v9, v11, v12, v8} whose length denoted by (P1) is five. In addition, an error path between c1 and c2 is depicted in Fig. 1 (b), and the path P2 = {v5, v9, v11, v7, v13} is also of length five. In the path P2, v5 and v13 are shallow error VNs and v9, v11 and v7 are deep error VNs. Note that a shallow error VN has satisfied and unsatisfied neighboring CNs which
+send contradicting messages to the error VN. Meanwhile,
+a deep error VN has only mis-satisfied neighboring CNs and
+receives consistent messages from its neighboring CNs.
+In this work, it is assumed that a subgraph induced by
+a TS is connected [21]. If a TS is not connected, the TS
+can be interpreted as the union of connected TSs, and thus
+errors in the TS can be resolved by repeatedly applying the
+proposed scheme to each of the connected TSs. It should
+be noted that some TSs have only one unsatisfied CN, i.e., |CU | = 1. In such a case, the definition of paths between pairs of unsatisfied CN has to be modified as paths leaving from the unsatisfied CN in CU and returning to itself. Then, some paths are of length one and contain only one
+error VN.
+
+Fig. 2. Empirical probability distribution of LMs, μ, for VNs in and out of TSs. The error and correct VNs are denoted by u˜ = 1 and u˜ = 0, respectively. The black and blue curves represent the empirical conditional and joint probability distributions, respectively.
+In this work, we assume that the transmitter sends a vector, x = (x1, x2, . . . , xn) which is the binary phaseshift keying (BPSK) modulated signal vector for a codeword u = (u1, u2, . . . , un) ∈ {0, 1}n via the mapping rule, xi = 2ui − 1. Then, the vector x is transmitted over an additive white Gaussian noise (AWGN) channel, and the receiver receives a vector of log-likelihood ratio (LLR) denoted by y = (y1, y2, . . . , yn) ∈ Rn where yi = 2(xi + ni)/σ2, and ni follows a Gaussian distribution with zero mean and a standard deviation of σ, i.e., ni ∼ N (0, σ2). For decoding the received signal vector y, this work assumes the scaled MSA [35] with a scaling factor, α = 0.75 which has been widely adopted [29], [30] as a good tradeoff between performance and complexity. It is also assumed that all messages passed between VNs and CNs are uniformly quantized between −η and +η with a step size of ΔQ. For short, we simply referred the scaled min-sum (MS) decoder with uniform quantization [29] to as MS decoder. In the case that the decoder fails due to a TS, it produces a vector of a posteriori probabilities in the LLR form and bit decision values obtained at the trapped iteration, ρmin, and they are denoted by λ = (λ1, λ2, . . . , λn) and u˜ = (u˜1, u˜2, . . . , u˜n), respectively.
+III. ARCHITECTURE OF THE PROPOSED TWO-STAGE DECODING ALGORITHM
+In this section, we will first investigate into statistical properties of LLR values for error and correct VNs when a decoder failure is caused by a TS. The details of the proposed scheme will also be introduced.
+A. Statistics of LLR Values for Error and Correct VNs
+The error VNs in a TS tend to have a slower convergence speed as compared to that of the correct VNs outside the TS [36] since the VNs in a TS receive contradicting messages
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2913
+
+from mis-satisfied and unsatisfied CNs. Thus, there must be some discrepancy between the statistics of LLR values for the VNs in and out of a TS, namely error and correct VNs. In particular, we focus on the LMs and find some distinctive differences between the statistics of LMs for error and correct VNs. The discrepancy is clearly witnessed in Fig. 2 where the empirical conditional probability distributions of LMs for error and correct VNs are depicted for the (2640, 1320) Margulis LDPC code when the decoder fails due to a TS. In this work, we assume that the all-zero codeword is transmitted, and thus u˜ = 1 and u˜ = 0 indicate the erroneous and correct bit decisions, respectively. With the assumption, the empirical distributions of LMs for the correct and error VNs are denoted by
+Pr(μ|u˜ = 0) and Pr(μ|u˜ = 1),
+respectively, where μ indicates the magnitude of λ, i.e., μ = |λ|. It is readily noticed in Fig. 2 that the average LM of correct VNs is larger than that of the error VNs.
+The results in Fig. 2 may mislead one to believe that error VNs can be easily identified by comparing the LMs. In fact, when the decoder fails due to a TS, the number of correct VNs far outnumbers that of error VNs, which is confirmed by the empirical joint probabilities,
+Pr(μ, u˜ = 0) and Pr(μ, u˜ = 1)
+depicted by the blue curves in Fig. 2. According to the joint probabilities, the threshold of maximum likelihood detection for error VNs is given by μ∗ = 0.8 at which the equality, Pr(μ∗, u˜ = 0) = Pr(μ∗, u˜ = 1) is fulfilled. However, the number of error VNs with LM less than 0.8, i.e., n · Pr(μ < μ∗, u˜ = 1), is too small, and the probability of correct VN is comparable to that of error VN when μ < μ∗, i.e., Pr(μ < μ∗, u˜ = 0) ≈ Pr(μ < μ∗, u˜ = 1), which leads to a high mis-detection probability. The statistics in Fig. 2 clearly indicate that the error VNs cannot be efficiently identified by simply comparing LMs of individual VNs. Motivated by the observations from Fig. 2, we propose a scheme to detect error paths in a TS by considering LMs of multiple VNs.
+B. The Proposed Decoding Scheme
+In this section, we will propose a decoding scheme shown in Fig. 3. The MP decoder denoted by D1 in Fig. 3 decodes the received signal y into a codeword, for which the decoder D1 performs iterations up to Imax times. As aforementioned, we assume that the MP decoders denoted by D1 and D2 are based on the scaled MSA. If a TS causes the decoder to fail, the decoder, D1 passes the LLR vector, λ at the trapped iteration to the error-path detector denoted by EPD. When b > 1, the EPD finds out paths between pairs of unsatisfied CNs by constructing trees of depth d from each unsatisfied CN, c ∈ CU . Suppose C ⊆ CU is a set of unsatisfied CNs which are encountered in the tree as descendants except for c. Then, all the paths from the root c to the unsatisfied CNs in C without traversing the other unsatisfied CNs in C are obtained from the tree and stored in a set Ω = {P1, P2, . . .}. Meanwhile, when b = 1, we consider a tree of depth one with which all
+
+Fig. 3. The proposed decoding scheme.
+
+paths are of length one leaving from the unsatisfied CN c ∈ CU and returning to itself. In some cases, it may be impractical to perform re-decoding for all the paths in Ω. To turn around the
+problem, the EPD provides a subset of error path candidates, Q ⊆ Ω with M error-path candidates, i.e., |Q| = M . The set Q is given to the re-decoding process which consists of the re-initialization and MP decoder blocks denoted by R and D2, respectively. Without loss of generality, it is assumed that the M paths in Q are sorted in the descending order of probability to be an error path. That is, P1 and PM are the most and least likely candidates of error path, respectively. The assumption allows us to denote the set Q as
+
+Q = {P1, P2, . . . , PM }.
+
+Then, each path in Q, say Pk = {vk1 , vk2 , . . . , vk } (Pk) is given to the re-initialization block R, where (Pk) indicates the length of Pk. Note that the paths are sorted in the descending order of probability to be an error path, and thus
+the one with a lower index will be first given to the re-
+initialization block. The re-initialization block produces the input vector yk = (yk,1, yk,2, . . . , yk,n) based on the received signal vector y and the candidate of error path, Pk as follows:
+
+yk,i =
+
+− sign(λi) · η for vi ∈ Pk,
+
+yi
+
+otherwise,
+
+where 1 ≤ i ≤ n, sign(x) = 1 if x ≥ 0, otherwise, sign(x) = −1, and η is the maximum value of quantized message between VNs and CNs. If the EPD finds out an
+error path, the path consists of only error VNs. Thus, the signs of LLR values for the VNs in the path, Pk, must be flipped, and the reliabilities for the VNs are set to the maximum, η. The MP decoder, D2 receives yk and carries on the iterative decoding process with a maximum number of iterations, Rmax. The re-decoding process repeats until the MP decoder D2 decodes the input vector yk into a codeword. Once the MP decoder, D2 successfully finds out a codeword, denoted by xˆk, the proposed scheme stops the re-decoding process and declares the codeword, xˆ = xˆk as its output. Otherwise, the re-decoding for the next candidate path in Q is
+conducted. In the case that none of the candidates allows the MP decoder, D2 to find out a codeword, the decoding scheme declares decoder failure.
+It is especially important for the EPD to detect the true error
+paths and put them at the higher ranks, i.e., lower indices, of the subset Q to reduce the decoding latency. To this end,
+we propose a novel DNN-based error-path detector, called
+neural-error-path (NEP) detector. The details of the proposed
+NEP detector will be discussed in Section IV.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2914
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+IV. NEURAL-ERROR-PATH DETECTOR
+In this section, we will introduce the structure of the proposed NEP detector and discuss how to construct datasets for training the NEP detector. In addition, the results of the NEP detector are analyzed in terms of LMs in error paths, which allows us to devise a low-complexity error-path detector.
+
+A. The Structure of Neural-Error-Path Detector
+In this subsection, we will describe the proposed NEP detector which performs a binary classification, i.e., the classification between error and correct paths, when a vector of LMs, μk = (μk1 , μk2 , . . . , μk ) (Pk) is given for a path Pk = (vk1 , vk2 , . . . , vk ). (Pk) The NEP detector is conducted for all the paths of length no lager than the maximum path length, max between unsatisfied CNs in CU by generating tree, T of depth d = 2 max with each c ∈ CU as the root, which is summarized in Algorithm 1. It is noticed that Algorithm 1 simply makes paths of length one with the neighboring VNs for the CN in CU when b = 1 as discussed. We consider a NEP detector based on DNN as shown in Fig. 4 where the NEP detector has nb input neurons, where nb is the same as the maximum path length, max and two output nodes producing the probabilities of being an error and non-error paths denoted by φk and 1 − φk, respectively. There are nh fully connected hidden layers in the NEP detector, and each of them has nu neurons for 1 ≤ u ≤ nh. To minimize the complexity, we have designed DNNs by reducing the number of hidden layers and neurons just before explicit degradation of detection performance appears. In the designed NEP detector, we set the numbers of hidden layers and neurons, i.e., nh and nu, to three and thirty, respectively. Each hidden layer consists of a batch normalization (BN) layer for the stability of the network and the rectified linear unit (ReLU) layer as an activation function. The output layer adopts the soft-max activation function to export a probability to be an error path, φk = Pr(Ek = 1|ξk) where ξk = (ξk,1, ξk,2, . . . , ξk,nb ) is the input to the DNN, and Ek = 1 (0, resp.) indicates the event for the path Pk to be an error path (non-error path, resp.). The probability φk will be called score hereafter and utilized at Step 12 in Algorithm 1 to select the candidate paths with the M highest scores. The decision on the error-path is denoted by Eˆk which is given by Eˆk = 1 (0, resp.) for φk > 0.5 (φk ≤ 0.5, resp.). The training of the NEP detector is conducted with the cross-entropy as a loss function which is given by
+1N C(e, φ) = − N ek log(φk) + (1 − ek) log(1 − φk),
+k=1
+where e = (e1, e2, . . . , eN ) is the vector of labels for training data, and ek = 1 (0, resp.) if the k-th path, i.e., Pk, is an error path (a non-error path, resp.), and N is the number of training samples which consist of input vectors, ξk’s, and their labels, ek ’s.
+While the number of input neurons, denoted by nb, is set to max, the lengths of paths (Pk) ≤ nb for k = 1, 2, . . . , N may vary. To turn around the practical issue, for the paths of lengths less than nb, we extend the lengths by inserting
+
+Fig. 4. The structure of DNN for the proposed NEP detector: there are three hidden layers each of which consists of thirty neurons, i.e., nh = 3 and nu = 30.
+
+average values of the LMs. That is, suppose that the vector of LM for path Pk is of length (Pk) < nb. Then, the input to the DNN, ξk is made by extending the LM vector μk as follows:
+ξk = [μk1 , . . . , μk /2 , μ¯, . . . , μ¯, μk /2 +1 , . . . , μk ] (1)
+nb −
+where = (Pk) and μ¯ = j μkj / is the average of μkj ’s. In (1), the average LMs are inserted in the middle since the contributions from the LMs of the deep error VNs are relatively weaker than those of the shallow VNs, which will be shortly discussed in Section IV-C. The LM vectors for the training are also prepared as shown in (1). Thus, it will be assumed that LM vectors are of the same length, nb.
+
+Algorithm 1 NEP Detector
+
+Input: CU = {cu1 , cu2 , . . . , cub }, μ = {μ1, μ2, . . . , μn}, M, d Output: The set of candidate error paths, Q
+
+Initialization: Ω := ∅, Ξ := ∅
+
+1 if b = 1 then
+
+2 for vj ∈ Nv(cu1 ) do
+
+3
+
+P := {vj } and ξ := {μj , μj , . . . , μj } // ξ is of length nb filled
+
+with μj
+
+4
+
+Ω := Ω ∪ {P} and Ξ := Ξ ∪ {ξ}
+
+5 else
+
+6 for c ∈ {cu1 , cu2 , . . . , cub−1 } do
+
+7
+
+CU := CU \ {c}
+
+8
+
+Generate tree, T of depth d with c as the root
+
+9
+
+for c ∈ CU ∩ C(T ) do
+
+// C(T ) is the set of CNs in T
+
+10
+
+Find the path, P from c to c in T and its normalized LM
+
+vector, ξ in (1)
+
+11
+
+Ω := Ω ∪ {P} and Ξ := Ξ ∪ {ξ}
+
+12 Output the set, Q ⊆ Ω with the highest M scores
+
+// φk ≥ φj ,
+
+∀Pk ∈ Q and Pj ∈ Ω \ Q
+
+B. Dataset and Training
+The proposed decoder targets to resolve the decoder failures in the high SNR regime due to TSs. Thus, the data for the NEP detector are collected in the high SNR regime with the assumption of the all-zero codeword. In particular, when the decoder fails with a TS, we find all paths of length less than or equal to nb between pairs of unsatisfied CNs, and each of the paths is labeled as ‘error path’ or ‘non-error
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+TABLE I TOP M DETECTION PROBABILITY FOR τ = 10
+
+2915
+
+path’. For the (2640,1320) Margulis LDPC code with nb = 5, more than 400,000 labeled paths are collected at Eb/N0 of 2.6dB as a data set which is partitioned into three sets: 1) training set, 2) validation set, and 3) test set, in the ratio of 0.7 : 0.15 : 0.15. The data in the training and validation sets are used for training and validating the NEP detector. Later, performance of the trained NEP detector is evaluated with the test data set. As discussed in Section III-A, the number of non-error paths far outnumbers that of error paths, and thus the NEP detector becomes biased with the non-error paths. To compensate for the discrepancy in the numbers of error and non-error paths, we set the proportions of error paths and non-error paths the same in the training set by using the random over-sampling [37], [38] which makes the numbers of samples for the minor and major classes equal by duplicating the samples of minor class. The training is conducted with a mini-batch size of 512 using the adaptive moment estimation (Adam) optimizer [39] with a learning rate of 0.001. The training weights and biases are initialized with a normal distribution with N (0, 0.01). In addition, we apply the L2 regularization [40] with a regularization factor of 0.01.
+C. Interpretation of Results of the Neural-Error-Path Detector
+The performance of the NEP detector is evaluated for the test set in terms of the detection probability. First, we evaluate the recall rate defined as Pr(Eˆ = 1|E = 1) which amounts to the probability of detecting error paths. In the proposed decoding scheme in Fig. 3, the EPD provides the subset, Q with the paths of M highest scores. Note that the re-decoding process either breaks the TS or makes it smaller when there is at least one error path among the M selected paths. Thus, it is highly desirable that the subset, Q contains at least one error path for a smaller M value. The row denoted by ‘Neural’ in Table I shows the probabilities for the subset Q to contain at least one error path for various M values. The probability evaluation is carried out for the test set constructed in Section IV-B, and there are 658 paths in Ω on average when the threshold τ is set to 10. The results in Table I tell that there will be at least one error path out of M = 5 candidates with a probability of more than 94%. Thus, it is clearly demonstrated that the proposed NEP detector efficiently avoids unnecessary re-decoding in the proposed decoding scheme and thus greatly reduces the overall decoding latency.
+
+Fig. 5. {1, 2, .
+
+.
+
+.
+
+Average relevance scores for , nb} \ {kmax}, i.e., S¯max
+
+aξnkmd aS¯x,
+
+ξk,kmax and ξk,j for j ∈ respectively. The bars on the
+
+labels kmax ∈ VS and kmax ∈ VD are the conditional averages when the
+
+VNs with the MLMs are shallow and deep error VNs, respectively.
+
+The average number of iterations for the re-decoding in the decoding scheme is given by
+
+M
+
+i−1
+
+i
+
+R¯ =
+
+R¯i pi (1 − pj) +Rmax (1 − pj) , (2)
+
+i=1
+
+j=1
+
+j=1
+
+(a)
+
+(b)
+
+where R¯i is the average number of iterations when the i-th candidate is an error path, pi is the probability for the i-th candidate is an error path, and Rmax is the maximum number of iterations in the re-decoding for each candidate path. In this work, we set Rmax to 20, and thus R¯ goes up to M × Rmax = 100. Note that the figure in the i-th column of Table I indicates
+the probability of the event that there is at least one error path among the first i candidates. Thus, the probability (a) in (2) is given by subtracting the probability in the (i − 1)-th column from the one in the i-th colum in Table I. In addition, the probability (b) in (2) can be obtained by subtracting the probability in the i-th column of Table I from unity. For an error path, say the i-th path, the average number of iterations R¯i is empirically obtained for the test set, which provides the average number of iterations in (2) as R¯ = 21.5.
+
+While the DNN provides a good performance, it does
+
+not reveal clear relations between the input data and the
+
+decision results. In this section, we will investigate into the
+
+hidden relations between the detection results and properties
+
+of input data, which allows us to devise a reduced complexity
+
+error-path detector with a comparable performance. There have
+
+been a few existing studies on interpreting the behaviors of
+
+trained networks [41]–[44] among which we take advantage
+
+of the sensitive analysis [42], [43] to find out the relations
+
+between the detection results and the statistical properties of
+
+the input LLR values in paths.
+
+The sensitivity analysis effectively manifests the influence
+
+of input features to the outputs utilizing squares of local
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2916
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+gradients called relevance scores, i.e.,
+
+Sj(ξk) =
+
+∂φk
+
+2
+,
+
+∂ ξk,j
+
+where j is the index of input feature, ξk is the input vector for the path Pk, i.e., ξk = {ξk,1, ξk,2, . . . , ξk,nb }, and φk is the output. The relevance score indicates how sensitively the output varies with respect to each input feature. The relevance scores can be readily calculated by utilizing the gradients obtained in the back-propagation. In Fig. 5, we analyze the relevance scores in terms of the input LM, i.e., ξk,j, which shows an interesting and useful feature. The filled and shaded bars in Fig. 5 tell the averaged relevance scores for the maximum LMs (MLMs) in paths and the other LLR values, respectively. In particular, they are respectively obtained as shown in (3) and (4)
+
+S¯max
+
+=
+
+1 |Ω|
+
+Skmax (ξk),
+
+(3)
+
+Pk ∈Ω
+
+S¯
+
+=
+
+1
+
+1
+
+nb
+
+|Ω|
+
+Pk ∈Ω
+
+nb
+
+−
+
+1
+
+j=1, j=kmax
+
+Sj (ξk ),
+
+(4)
+
+where kmax = argmaxj ξk,j . The bars on the label ‘All’ clearly show that the relevance score due to the MLM dominates the one for the other LLR values. It is also interesting to see whether the influence of MLMs depends on their locations in paths. To this end, we also analyze S¯max and S¯ for two groups of paths depending on the locations of VNs with the MLMs: 1) paths with the MLMs at shallow error VNs, i.e., kmax ∈ VS, and 2) at deep error VNs, kmax ∈ VD. The comparisons in Fig. 5 show that the MLM in a path has the largest influence to the output regardless of its position in the path. Meanwhile, it is also noticed in Fig. 5 that the MLMs of the deep VNs make weaker influence to the output as compared to those of the shallow VNs, which is why we insert the average LM in the middle of the input vector, ξk, to the NEP detector.
+The analysis of the NEP detector reveals the fact that the MLM in a path has the largest influence to the output. Thus, it is worth to see the relation between the MLM, i.e., ξkmax maxj ξk,j , and the output of the NEP detector, which is depicted in Fig. 6. It is observed in Fig. 6 that a path becomes more probable to be an error path with the smaller MLM. The lessons from the interpretation of the trained NEP detector enable us to devise a more practical error path detector which has a comparable performance at much-reduced complexity. We will introduce the reduced complexity detector in the next section.
+
+V. ADAPTIVE-ERROR-PATH DETECTOR
+In Section IV-C, we have seen that the probability for a path, say Pk, to be an error path is inversely proportional to the MLM in the path, i.e., ξkmax. Bearing the lesson in mind, we propose a low-complexity error path detector called the adaptive-error-path (AEP) detector which judiciously utilizes the results of sensitivity analysis. That is, the AEP detector finds out error paths based on MLMs in the paths. The AEP
+
+Fig. 6. The averaged output scores, i.e., φk versus the MLMs, i.e., ξkmax.
+
+Fig. 7. Path queue update process: a) a path queue with sorted order of MLMs, and b) updating queue with the found path Pk.
+
+detector consists of two processes: 1) path queue update and 2) path search as shown in Figs. 7 and 8, respectively. The path search process looks for paths between pairs of unsatisfied CNs by constructing trees with the unsatisfied CNs as their roots. As the path search process carries out, it provides paths and their MLMs to the path queue. Meanwhile, the path queue is updated with the inputs, i.e., the paths and the MLMs, given by the path search process. Details of the path queue update and path search will be shortly introduced in the subsequent sub-sections with a summary of the AEP detector in Algorithm 2.
+
+A. Path Queue Update
+
+The path queue of size M shown in Fig. 7 is comprised
+
+of M paths, denoted denoted by ξkq for 1
+
+by ≤
+
+Pkq k
+
+and the corresponding MLMs, ≤ M . In this subsection, the
+
+superscript q indicates that the parameters are related to the
+
+path queue. Each path, Pkq is expressed as a set of VNs as
+
+defined in Definition 3. The path queue update is performed in
+
+such a way that the queue always has the M smallest MLMs
+
+and associated paths among all the paths given by the path
+
+search process. The path queue is initialized by filling itself
+
+with the first M paths and their MLMs provided by the path
+
+search process in such a way that the elements in the queue are
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2917
+
+Algorithm 2 AEP/Ordered AEP Detector
+
+Input: CU = {cu1 , cu2 , . . . , cub }, μ = {μ1, μ2, . . . , μn}, M, max, O Output: The set of candidate error paths, Q Initialization: Q := ∅, ξq := ∅
+
+1 if b = 1 then
+
+2 for vj ∈ Nv (cu1 ) do // Nv (cu1 ) is the set of neighboring VNs of CN
+
+cu1
+
+3
+
+P := {vj } and ξmax := μj
+
+4
+
+Find such that ξq−1 < ξmax < ξq
+
+5
+
+Insert P and ξmax to the -th place of Q and ξq, respectively
+
+6
+
+if |Q| > M then
+
+7
+
+Q := Q[1 : M] and ξq := ξq[1 : M] // A[1 : M] indicates the
+
+first M elements in A
+
+8 else
+
+9
+
+for c ∈ {cu1 , cu2 , . . . , cub−1 } do
+
+10
+
+CU := CU \ {c}
+
+11
+
+if O = 1 then
+
+// O = 1 for ordered AEP, and O = 0 for AEP
+
+12
+
+Sort Nv (c) in the increasing order of μj , ∀ vj ∈ Nv (c)
+
+13
+
+for v ∈ Nv (c) do
+
+14
+
+Generate tree, T with c as the root and v as the single leaf node
+
+15
+
+for δ = 1 : max do
+
+16
+
+if Tv(2δ−1) = ∅ then
+
+// Tv(2δ−1) is the set of leaf VNs at
+
+depth (2δ − 1) of T
+
+17
+
+Break
+
+18
+
+for vi ∈ Tv(2δ−1) do
+
+19
+
+if μi ≤ ξM q or |Q| < M then // Nc(vi) is the set of
+
+neighboring CNs of VN vi
+
+20
+
+Extend T to CNs in Nc(vi) \ {p(vj )} // p(vi) is
+
+the parent of vi
+
+21
+
+if Tc2δ = ∅ then // Tc2δ is the set of leaf CNs at depth 2δ of
+
+T
+
+22
+
+Break
+
+23
+
+for c ∈ Tc2δ do
+
+24
+
+if c ∈ CU then
+
+25
+
+Find the path, P from c to c in T and its MLM,
+
+ξmax
+
+26
+
+Find j such that ξjq−1 < ξmax < ξjq
+
+27
+
+Insert P and ξmax to the j-th place of Q and ξq ,
+
+respectively
+
+28
+
+if |Q| > M then
+
+29
+
+Q := Q[1 : M ] and ξq := ξq[1 : M ]
+
+30
+
+else
+
+31
+
+Extend T to VNs in Nv (c ) \ {p(c )} // p(c ) is the
+
+parent of c
+
+sorted in the increasing order of the MLM. That is, in Fig. 7
+
+(a), the leftmost and rightmost elements in the path queue,
+
+denoted by P1q and PMq , respectively, have the smallest and
+
+the largest MLMs among the M paths in the queue.
+
+When a new path with its MLM, say Pk with ξkmax, is given
+
+by the path search process, the path queue checks whether
+
+there ξkmax
+
+is <
+
+a path ξjq for
+
+Pjq 1≤
+
+in the queue such j ≤ M , where ξ0q
+
+that ξjq−1 ≤ ξkmax and is assumed to be zero,
+
+which is performed at Step 26 in Algorithm 2. If so, as shown
+
+in Fig. 7 Step 27),
+
+(b), i.e.,
+
+the Pjq
+
+new path Pk takes the := Pk and ξjq := ξkmax
+
+place for Pjq (see also where the symbol, :=
+
+represents the assignment of the righthand side to the lefthand
+
+side. When there is no such path Pjq in the queue, the new
+
+path will be discarded. It is noticed that the path queue always
+
+contains paths with the smallest M MLMs among all the paths
+
+provided by the path search process, which is done at Step 29.
+
+The results in Fig. 6 tell that the M paths in the queue are
+
+Fig. 8. Path search process with AEP detector from for descendant nodes of vc2 is passed since μc2 >
+
+cξuM q1 ..
+
+The An
+
+search process error path and
+
+a non-error path between unsatisfied CNs, cu1 , cu2 are depicted. A filled
+
+circle and an empty circle mean error VN and correct VN, respectively.
+
+A filled square and an empty square mean unsatisfied CN and satisfied CN,
+
+respectively.
+
+more likely to be error paths among the paths found out by the path search process. In the next sub-section, it will be shown that the path search process can be greatly simplified using the MLMs, i.e., ξkq in the path queue.
+B. Path Search
+The path search process finds out paths between pairs of unsatisfied CNs by constructing trees of depth d = 2 max from each unsatisfied CN, c ∈ CU for |CU | > 1. For example, in Fig. 8, a tree is constructed with cu1 ∈ CU as its root, and the set of unsatisfied CNs is updated by removing the root CN, cu1 , i.e., CU = CU \ {cu1}. Suppose C ⊆ CU is a set of unsatisfied CNs which are encountered in the tree as descendants. Then, all the paths from the root, cu1, to the unsatisfied CNs in C without traversing the other unsatisfied CNs in C are obtained from the tree. Once a path is found (at Step 24), e.g., the path between cu1 and cu2 in Fig. 8, the path and the MLM in the path are given to the path queue. After all the paths are taken from the tree with cu1 , the search for paths continues for the tree of depth d with an unsatisfied CN randomly selected from CU as the root. Meanwhile, when b = 1, the length one paths with the neighboring VNs for the CN in CU are considered, which is conducted at Step 3 in Algorithm 2. The search for paths repeats until there is only one remaining unsatisfied CN in CU . While the idea looks conceptually simple, the search complexity grows exponentially fast with the increasing depth d since the number of VNs at the depth d increases as fast as O((dcdv)d/2) for a regular LDPC code with a row and column weights of dc and dv, respectively. However, the complexity issue can be cleverly resolved by taking advantage of the MLMs in the path queue. In particular, during expanding the tree from the root, the LMs of VNs at each depth are compared with the largest MLM in the path queue, i.e., ξM q , which is conducted at Step 19. For the VNs with LMs larger than or
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2918
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+equal to ξM q , the branches from the VNs are pruned, since
+
+the MLMs of paths containing the VNs must be larger than
+
+ξM q , that
+
+and ξM q
+
+the paths cannot take their places in the queue. Note becomes monotonically decreasing as the path search
+
+process proceeds, which increases the probability for a branch
+
+to be pruned and thus accelerates the path search process. The
+
+pruning technique is reflected in Algorithm 2 in such a way
+
+that the path search process is conducted for shallow VNs one
+
+by one by making a tree with a shallow VN as the single leaf
+
+node at Step 14. Once the path search process is completed
+
+for the shallow VN, the path search process is repeated for the
+
+next shallow VN, which continues for all the shallow VNs.
+
+Later, it will be shown that the pruning drastically reduces
+
+the complexity of AEP detector by comparing the complexity
+
+with that of the NEP detector.
+
+The complexity of path search process can be further
+
+reduced by carefully selecting the order of establishing paths
+
+with the VNs neighboring the root in the tree, i.e., shallow
+
+VNs. Note that the LMs of shallow VNs for the root, cu1 in Fig. 8, affect the MLMs of the paths associated with the
+
+shallow VNs. In the MSA, the magnitude of CN message
+
+from cm1 to ve2 cannot be larger than the LM of the shallow VN, ve1 . Thus, the LM of ve1 limits that of the descendent VN, ve2 which subsequently constrains the LM of ve3 via the CN, cm2 . The chain of the processes propagates down to the terminal CN, cu2 , which tells that the smaller LM of a shallow VN results in a smaller MLM value of the path
+
+with the shallow VN on average. In this work, we explore
+
+the path with the shallow VN with the smallest LM first (see
+
+Step 12), which is called ordered AEP detector. For example,
+
+in Fig. 8, there are two shallow VNs neighboring the root cu1, i.e., ve1 and vc1 . Then, we explore the path with ve1 when the LM of ve1 is less than that of vc1 . After finishing the path search process, the path queue will have the paths with
+
+the M smallest MLMs, and some of them are error paths
+
+with a high probability. For each path in the path queue, Q,
+
+the re-decoding in Section III-B will be performed. If the re-
+
+decoding fails for all the path in the queue, either a decoding
+
+failure will be declared or the EPD finds additional paths by
+
+progressively extending the search depth.
+
+The row denoted by ‘Adaptive’ in Table I shows the
+
+probabilities for the queue to contain at least one error path
+
+for different sizes of the queue. The results in Table I tell that
+
+the AEP detector has a comparable performance to that of the
+
+NEP detector. Meanwhile, the average number of iterations for the re-decoding is given by R¯ = 28.5 which is slightly larger
+
+than that of the NEP detector. While the AEP detector has the
+
+marginal performance losses in both the detection capability
+
+and the number of iteration for the re-decoding, in return, one
+
+can enjoy a significantly reduced complexity which will be
+
+discussed in the next section.
+
+C. Complexity Comparison
+In this section, we will compare complexities of the blocks in the proposed decoding scheme shown in Fig. 3, i.e., D1, EPD and re-decoding process. The complexities are summarized in Table II where the complexities are measured in terms
+
+of additions, comparisons and multiplications conducted for two scalars, and lookup table accesses. The symbols ΩN , ΩA and ΩO represent the set of paths found by the NEP, AEP and ordered AEP detectors, respectively. The symbol q(P) indicates the number of comparisons to check whether the
+path can be placed in the queue or not. That is, it checks
+whether the MLM of a path is less than the largest MLM in the path queue, i.e., ξM q . The total numbers of visited VNs during performing the AEP and ordered AEP detectors are respectively denoted by NA and NO.
+The complexity of the scaled MSA per iteration denoted
+by MSA per Iteration in Table II is directly taken from [35]. The complexity of D1 is simply Imax times the complexity per iteration where Imax indicates the maximum number of iterations. Meanwhile, the complexity of re-decoding depends both on the maximum number of iterations, Rmax and the number of error path candidate, M which are set to Rmax = 20 and M = 5, respectively. The decoding and re-decoding complexities are listed in the two rows denoted by D1, Imax = 50 and D2, M Rmax = 100. For the NEP detector, there is a nonlinear function for the soft-max activation function.
+In the complexity comparison, we assume that the soft-max
+activation is implemented with a lookup table, and the number of lookup table accesses amounts to the number of paths, ΩN . Meanwhile, the numbers of additions and multiplications for
+the NEP detector can be readily assessed based on the structure
+of the DNN in Fig. 4.
+Now, the complexity of the AEP and ordered AEP detectors
+will be discussed in detail. For the AEP and ordered AEP
+detectors, only comparisons are required during path search
+process. The required complexity is summarized in Proposi-
+tion 1.
+Proposition 1: The number of comparisons for the AEP
+detector is computed as
+
+{( (P) − 1) + q(P)} + NA,
+
+(5)
+
+P ∈ΩA
+
+and the number of additional comparisons for the ordered AEP detector is given by
+
+(|CU
+
+|
+
+−
+
+1)
+
+dc
+
+(dc − 2
+
+1)
+
+.
+
+(6)
+
+Proof: The proof is given in Appendix. Note that the parameters, e.g., the sets and lengths of paths, vary with TSs caused by different received signal vectors. Their average values are summarized in Table III where the overbar of each symbol indicates the empirical average of the corresponding symbol. In Tables II and III, the figures are the average complexities of the steps computed for a specific case with the (2640, 1320) Margulis LDPC code and a maximum path length of max = 5. It is noticed that the average number of paths for the ordered AEP detector, i.e., |Ω¯ O| in Table III, respectively, is smaller than that of the AEP detector, namely |Ω¯ A|. This is due to the fact that the ordering prunes some paths in the path search process, and the pruned paths are not included in the set of paths, i.e., ΩO. As shown in Table II, the reduced number of paths leads to the reduced overall complexity, i.e., the smaller
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2919
+
+TABLE II COMPLEXITY COMPARISON: FOR THE (2640, 1320) MARGULIS LDPC CODES WITH M = 5, d = 5, dv = 3, dc = 6, Imax = 50, AND Rmax = 20
+
+TABLE III AVERAGE VALUES OF PARAMETERS
+number of comparisons for the ordered AEP detector. The complexity comparison between the NEP and AEP detectors shows that the AEP detector achieves a significant complexity reduction. For example, the numbers of comparisons for the AEP detectors are reduced by more than ten times, and the additions and multiplications are even not required. Thus, one can enjoy the much reduced complexity of either the AEP detector or the ordered AEP detector at a marginal detection performance loss, which will be demonstrated in the next section. In addition, the complexity of AEP is negligible as compared to those of D1 and D2.
+The existing schemes, i.e., the BTA and the CDA are conducted by repeating the MS decoding after flipping suspicious bits and performing the MS decoding for the reduced parity check matrix, respectively. Thus, the complexities of the existing algorithms can be readily evaluated by counting the average numbers of MS decodings until the algorithms eventually break a TS. The complexity of BTA amounts to
+CMS × I¯MS × F¯,
+
+where CMS, I¯MS, and F¯ represent the complexity of MS decoding per iteration, the average number of iterations of MS decoding, and the average number of bit flippings. The average number of additional iterations required to break a TS is given by I¯MS × F¯ = 66.0 which is evaluated for the LDPC code in Table II at Eb/N0 = 2.6 dB. Note that the additional iterations I¯MS × F¯ in the BTA is equivalent to the average number of iterations for the re-decoding, R¯ in the proposed schemes. For the same evaluation condition, R¯ is evaluated as 21.5 and 28.5 for the NEP and the AEP detectors, respectively. Thus, the complexities of the proposed schemes are about half of the complexity for the BTA in terms of the average number of iterations. However, the NEP detector requires considerable extra complexity for the operations in the DNN while it will be shown that the NEP detector provides a meaningful performance improvement.
+Meanwhile, the complexity of CDA can also evaluated with the addition iterations of MS decodings which is given by
+(CMS,mI¯MS,m + CMS,sI¯MS,s) × I¯G,
+where CMS,m and CMS,s represent the complexities of MS decoding per iteration for the parity check matrices of the main-decoder and sub-decoder, respectively, I¯MS,m and I¯MS,s indicate the average numbers of iterations for the main-decoder and the sub-decoder, respectively, and I¯G is the average number of global iterations with the main-decoding and subdecoding. In this work, we make the parity check matrix for the sub-decoding by decimating 70% (probability of deselection, pr) of rows in the parity check matrix for the maindecoding. Thus, the complexity of CMS,s amounts to 30% of CMS,m, and we observe that I¯MS,m = 14.4, I¯MS,s = 5.0, and I¯G = 2.4. Then, the average complexity of the CDA is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2920
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+equivalent to 38.2 iterations of the main-decoder. The NEP detector has a smaller average number of iterations, i.e., 21.5. However, the required complexity for the DNN in the NEP detector may make the CDA computationally more affordable. Meanwhile, the AEP detector has smaller complexity in terms of the additional iterations (28.5 versus 38.2) while some additional complexity is necessary for the comparisons in the path search, which is however negligible as compared to the complexity of the MS decoding. Thus, the AEP detector provides better performance at smaller complexity than that of the CDA.
+
+VI. PERFORMANCE EVALUATIONS
+
+In this section, error-rate performance of LDPC codes is
+evaluated in the low error-rate regime in terms of the word
+error rate (WER). The performance evaluations are carried out with four LDPC codes: C1: the regular (2640, 1320) Margulis LDPC code with dv = 3 [34], C2: the irregular (648, 540) LDPC code in IEEE 802.11n [45], C3: the irregular (576, 432) LDPC code in WiMAX standard [46], and C4: the regular (2048,1723) RS-LDPC code in IEEE 802.3an with dv = 6 [47] to consider various factors such as code structure, code
+length, and rate. To resolve the decoding failures due to TSs,
+we employ the proposed decoding scheme in Fig. 3 where the
+MP decodings, i.e., D1 and D2 are performed with the scaled MSA [29] with a scaling factor of α = 0.75. The maximum numbers of iterations are set to Imax = 50 and Rmax = 20 for D1 and D2, respectively. In the MS decoders, VN and CN messages are uniformly quantized between −η = −7.5 and η = 7.5 with a step size of ΔQ = 0.5 as adopted in [29], [30]. For the proposed detectors, the maximum path length is set to max = 5 for C1 and max = 3 for C2, C3, and C4. The maximum path length is determined as the smallest positive integer such that the number of VNs in the tree at the depth d = 2 max becomes larger than the length of code. For example, for C1, max = 5 is the smallest positive integer such that ((dc − 1) × (dv − 1)) max−1 > 2640 where dv = 3, and dc = 6. For the irregular code, C2, max = 3 is the smallest positive integer for ((dc − 1) × (d¯v − 1)) max−1 > 648 where d¯v = 3.66 is the average column weight, and dc = 22. Meanwhile, the threshold τ is fixed to 10 for all the LDPC codes in the performance evaluations.
+The error-rate performance of the proposed decoding
+scheme is compared with two competing schemes from recent
+work: the BTA [29] and the CDA [30]. In Fig. 9, we depict WER performance of C1, i.e., the (2640,1320) Margulis LDPC code with the proposed decoding scheme in Fig. 3 and the
+competing schemes. For the performance evaluations, we train
+the proposed NEP detectors at a Eb/N0 of 2.6dB where the error-floor of WER appears. The training was also conducted at different Eb/N0 values, e.g., 2.4dB and 2.8dB, which however does not provide statistically meaningful variations.
+Thus, the NEP detector can be trained at any place where the
+error-floor appears. Considering the time to obtain training
+samples, it may be preferable to gather training samples at a Eb/N0 point where the error-floors start to appear. We set the number of re-decoding trials to M = 5. It is witnessed
+
+Fig. 9. WER performance of Margulis (2640,1320) code; MSA, BTA, CDA, AEP and NEP indicate the schemes with the MS decoder only, BTA [29], VNCRA [30], the AEP and NEP detectors, respectively.
+in Fig. 9 that the proposed decoding scheme with the NEP detector, will be called the NEP detector for short, provides a distinctive performance improvement over the one with the MS decoder only. In particular, the NEP detector has more than one order of WER performance gain over the Eb/N0 range between 2.4dB and 2.8dB. It is also noticed that the proposed decoding scheme with the AEP detector, will be called the AEP detector for short, has comparable error-rate performance to those of the NEP detector across the Eb/N0 range. Note that the AEP and ordered AEP have the same performance while the ordered AEP is more favorable in terms of complexity.
+Meanwhile, the comparison between the NEP detector and the BTA shows that the NEP detector has a performance gain by about one order of magnitude with the same number of re-decoding trials, i.e., 5, for the BTA. To compare with the CDA, we take the variable number check node removal algorithm (VNCRA) which is known to have the best performance among the algorithms introduced in [30]. In the VNCRA, we set the probability of deselection, pr, to 0.7 and allow 100 additional iterations. Then, the comparison in Fig. 9 shows that the NEP detector has performance improvement by about half orders of magnitude.
+We also evaluate WER performance for C2, i.e., the irregular (648, 540) LDPC code in IEEE 802.11n and depict the results in Fig. 10. The NEP detector is trained at Eb/N0 of 4.8dB where the WER starts to be under the influence of the errorfloor. For the performance evaluation, we set the number of re-decoding trials to M = 10. In the VNCRA, we allow 200 additional iterations for a fair comparison. The performance comparison between the NEP detector and the MS decoder in Fig. 10 clearly demonstrates that the NEP detector fairly resolves the decoding failures of the MS decoder due to TSs. In addition, one can find that the error-rate performance of AEP detector looks comparable to that of the NEP detector. The comparisons between the NEP detector and the competing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2921
+
+Fig. 10. WER performance of (648,540) code in IEEE802.11n; MSA, BTA, CDA, AEP and NEP indicate the schemes with the MS decoder only, BTA [29], VNCRA [30], the AEP and NEP detectors, respectively.
+Fig. 11. WER of (576,432) LDPC code in WiMAX standard; MSA, BTA, CDA, AEP and NEP indicate the schemes with the MS decoder only, BTA [29], VNCRA [30], the AEP and NEP detectors, respectively.
+schemes, i.e., the BTA and the CDA, manifest that the NEP detector achieves distinctive performance improvements over the competing schemes. In particular, the performance gap between the NEP detector and the BTA becomes wider as Eb/N0 increases since the WER curve of the BTA has a slower slope as compared to that of the NEP detector. The results from the proposed decoding scheme enable us to find that the decoding failures are often caused by TSs with b = 1, which is the dominant TS of C2, i.e., (4, 1) TS. In such a case, the proposed detectors find paths of length one in which the root and end nodes are the same.
+In Fig. 11, we evaluate WER performance of C3, i.e., the (576, 432) LDPC code in WiMAX standard, which is
+
+Fig. 12. WER of (2048,1723) RS-LDPC code in IEEE802.3an; MSA, BTA, CDA, AEP and NEP indicate the schemes with the MS decoder only, BTA [29], VNCRA [30], the AEP and NEP detectors, respectively.
+conducted with M = 5. The training samples for the NEP detector are obtained at Eb/N0 = 4dB where the error-floor starts to appear. The performance comparisons in Fig. 11 show that the proposed schemes, i.e. NEP and AEP, have noticeable performance improvements over the competing schemes. It is also observed that the NEP detector outperforms the AEP detector while the performance gap looks relatively small. We also analyze the results of the proposed decoding scheme and find that the error-floors are caused by (7, 1), (6, 2), and (5, 2) TSs which are efficiently broken by the proposed decoding scheme equipped with either the NEP or AEP detector.
+Finally, in Fig. 12, we evaluate WER performance of C4, i.e., the regular (2048,1723) RS-LDPC code in IEEE 802.3an. It is witnessed in Fig. 12 that the error-floor starts to appear at around Eb/N0 = 4.7dB where the training samples for the NEP detector are obtained. The performance evaluations are carried out with M = 5. The proposed detectors show considerable performance improvements over the MS decoder and the BTA. However, the proposed detectors and the CDA have similar performance. By analyzing the decoding results, we find that C4 has a (8, 8) TS as its dominant TS. It is also found that the proposed detectors and the CDA efficiently break the dominant (8, 8) TS, which is why the proposed detectors and CDA have similar performance. The performance comparisons lead to a conclusion that the proposed decoding scheme with the detectors efficiently resolves the decoding failures associated with TSs, which significantly improves the error-rate performance in the low error-rate regime.
+As a practical measure of complexity, we evaluate and compare runtimes of the proposed detectors and the existing algorithms. The runtimes are measured with MATLAB implementations for C1 and C2 on a system equipped with AMD Ryzen 7 3700X CPU. For C1, the runtimes of the BTA, CDA, NEP, AEP detectors are given by 13.22ms, 8.46ms, 10.45ms, and 8.02ms, respectively. Meanwhile, the runtimes for C2 are measured as 5.25ms, 4.66ms, 4.86ms, and 3.42ms,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+2922
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 70, NO. 5, MAY 2022
+
+respectively. The comparisons show that the AEP detector has the smallest runtime. Meanwhile, the NEP detector looks somewhat slower than the CDA but faster than the BTA while it provides the best error-rate performance.
+
+VII. CONCLUSION
+In this work, we propose a decoding scheme for LDPC codes which specifically targets at resolving decoding failures due to TSs. In particular, we propose a novel error path detector, i.e., the NEP detector, with the aid of machine learning techniques and show that decoding failures caused by TSs can be efficiently resolved by conducting re-decoding with the side-information of detected error paths. In addition, by analyzing the statistical properties of the NEP detector, we propose an adaptive error-path detector, i.e., the AEP detector which has a comparable error-path detection performance at a much-reduced complexity. By comparing the error-rate performance of the proposed decoding scheme with other existing schemes, we demonstrate that the proposed decoding scheme has remarkable performance improvements over the existing schemes. As a future work, we will investigate how to utilize the detected error paths from the proposed decoding scheme to identify unknown TS structure, which has been known as a hard problem.
+
+APPENDIX A PROOF OF PROPOSITION 1
+
+In Eq. (7), the required complexity of AEP detector can be divided into three parts as follows:
+
+{( (P) − 1) + q(P)} + NA .
+
+(7)
+
+P ∈ΩA
+
+(a)
+
+(b)
+
+(c)
+
+where the term (a), (b), and (c) indicates the complexities to find MLM of a path, P, update the path queue, compare the LM of all VNs in a tree with ξM q , respectively. In particular, the term (a) indicates the number of comparisons required to find the MLM of a path of length (P), and thus, it requires (P)− 1 comparisons for path P, which is performed in Step 25 of Algorithm 2. For the term (b), comparisons are conducted to
+find the location of a new path in the path queue, which is
+done in Step 26. The MLM of the new path is compared with
+the MLMs in the path queue, and the required number of comparisons is denoted as, q(P). Since terms (a) and (b) are necessary for each path, they are summed over the set of paths found by the (ordered) AEP detector, i.e., ΩA (ΩO, resp.). Finally, the term (c) represents the number of comparisons between the LMs of the visited VNs and ξM q which is done in Step 19. Thus, the number of comparisons amounts to the
+total number of visited VNs during the path search process, i.e., NA.
+For the ordered AEP, the shallow VNs are sorted in terms of their LMs as shown in Step 12, which requires dc(dc − 1)/2 comparisons. Since the path search is performed for |CU − 1| unsatisfied CNs, the additional complexity to sort the shallow VNs in the order AEP detector turns out to be the
+one in (6).
+
+REFERENCES
+[1] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 770–778.
+[2] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning with neural networks,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), 2014, pp. 3104–3112.
+[3] D. Silver et al., “Mastering the game of go with deep neural networks and tree search,” Nature, vol. 529, no. 7587, pp. 484–489, Jan. 2016.
+[4] N. Samuel, T. Diskin, and A. Wiesel, “Learning to detect,” IEEE Trans. Signal Process., vol. 67, no. 10, pp. 2554–2564, May 2019.
+[5] H. He, C.-K. Wen, S. Jin, and G. Y. Li, “Deep learning-based channel estimation for beamspace mmWave massive MIMO systems,” IEEE Wireless Commun. Lett., vol. 7, no. 5, pp. 852–855, Oct. 2018.
+[6] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 144–159, Feb. 2018.
+[7] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[8] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 1361–1365.
+[9] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding of linear block codes,” 2017, arXiv:1702.07560.
+[10] S. Cammerer, T. Gruber, J. Hoydis, and S. ten Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2017, pp. 1–6.
+[11] H. Kim, Y. Jiang, R. B. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in Proc. Int. Conf. Learn. Represent. (ICLR), 2018, pp. 1–19.
+[12] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes—A syndrome-based approach,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2018, pp. 1595–1599.
+[13] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[14] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Finite alphabet iterative decoding of LDPC codes with coarsely quantized neural networks,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[15] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Designing finite alphabet iterative decoders of LDPC codes via recurrent quantized neural networks,” IEEE Trans. Commun., vol. 68, no. 7, pp. 3963–3974, Jul. 2020.
+[16] X. Xiao, N. Raveendran, B. Vasic, S. Lin, and R. Tandon, “FAID diversity via neural networks,” in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5.
+[17] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[18] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[19] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Annu. Allerton Conf. Commun., Control, Comput., vol. 41, Monticello, IL, USA, Oct. 2003, pp. 1426–1435.
+[20] Y. Hashemi and A. H. Banihashemi, “On characterization and efficient exhaustive search of elementary trapping sets of variable-regular LDPC codes,” IEEE Commun. Lett., vol. 19, no. 3, pp. 323–326, Mar. 2015.
+[21] M. Karimi and A. H. Banihashemi, “Efficient algorithm for finding dominant trapping sets of LDPC codes,” IEEE Trans. Inf. Theory, vol. 58, no. 11, pp. 6942–6958, Nov. 2012.
+[22] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201, Jan. 2010.
+[23] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Finite-length construction of high performance spatially-coupled codes via optimized partitioning and lifting,” IEEE Trans. Commun., vol. 67, no. 1, pp. 3–16, Jan. 2019.
+[24] S. Naseri and A. H. Banihashemi, “Construction of girth-8 QC-LDPC codes free of small trapping sets,” IEEE Commun. Lett., vol. 23, no. 11, pp. 1904–1908, Nov. 2019.
+[25] B. Karimi and A. H. Banihashemi, “Construction of irregular protograph-based QC-LDPC codes with low error floor,” IEEE Trans. Commun., vol. 69, no. 1, pp. 3–18, Jan. 2021.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+HAN et al.: DEEP-LEARNING FOR BREAKING TRAPPING SETS IN LOW-DENSITY PARITY-CHECK CODES
+
+2923
+
+[26] A. Dehghan and A. H. Banihashemi, “Hardness results on finding leafless elementary trapping sets and elementary absorbing sets of LDPC codes,” IEEE Trans. Inf. Theory, vol. 65, no. 7, pp. 4307–4315, Jul. 2019.
+[27] E. Cavus and B. Daneshrad, “A performance improvement and error floor avoidance technique for belief propagation decoding of LDPC codes,” in Proc. IEEE 16th Int. Symp. Pers., Indoor Mobile Radio Commun. (PIMRC), vol. 4, Sep. 2005, pp. 2386–2390.
+[28] Y. Han and W. E. Ryan, “Low-floor decoders for LDPC codes,” IEEE Trans. Commun., vol. 57, no. 6, pp. 1663–1673, Jun. 2009.
+[29] J. Kang, Q. Huang, S. Lin, and K. Abdel-Ghaffar, “An iterative decoding algorithm with backtracking to lower the error-floors of LDPC codes,” IEEE Trans. Commun., vol. 59, no. 1, pp. 64–73, Jan. 2011.
+[30] S. Kang, J. Moon, J. Ha, and J. Shin, “Breaking the trapping sets in LDPC codes: Check node removal and collaborative decoding,” IEEE Trans. Commun., vol. 64, no. 1, pp. 15–26, Jan. 2016.
+[31] C. Di, D. Proietti, I. E. Telatar, T. J. Richardson, and R. L. Urbanke, “Finite-length analysis of low-density parity-check codes on the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 48, no. 6, pp. 1570–1579, Jun. 2002.
+[32] A. McGregor and O. Milenkovic, “On the hardness of approximating stopping and trapping sets,” IEEE Trans. Inf. Theory, vol. 56, no. 4, pp. 1640–1650, Apr. 2010.
+[33] P. Yang, B. Jun, J. No, and H. Park, “A new two-stage decoding scheme with unreliable path search to lower the error-floor for low-density parity-check codes,” IET Commun., vol. 11, no. 14, pp. 2173–2180, Sep. 2017.
+[34] D. J. C. MacKay and M. S. Postol, “Weaknesses of Margulis and Ramanujan-Margulis low-density parity-check codes,” Electron. Notes Theor. Comput. Sci., vol. 74, no. 10, pp. 97–104, Oct. 2003.
+[35] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[36] C. Schlegel and S. Zhang, “On the dynamics of the error floor behavior in (regular) LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 7, pp. 3248–3264, Jul. 2010.
+[37] C. X. Ling and C. Li, “Data mining for direct marketing: Problems and solutions,” in Proc. 4th Int. Conf. Knowl. Discovery Data Mining, 1998, pp. 73–79.
+[38] M. Buda, A. Maki, and M. A. Mazurowski, “A systematic study of the class imbalance problem in convolutional neural networks,” Neural Netw., vol. 106, pp. 249–259, Oct. 2018.
+[39] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in Proc. Int. Conf. Learn. Represent. (ICLR), 2015, pp. 1–15.
+[40] A. Krogh and J. A. Hertz, “A simple weight decay can improve generalization,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), 1992, pp. 950–957.
+[41] G. Montavon, W. Samek, and K.-R. Müller, “Methods for interpreting and understanding deep neural networks,” Digit. Signal Process., vol. 73, pp. 1–15, Feb. 2018.
+[42] J. M. Zurada, A. Malinowski, and I. Cloete, “Sensitivity analysis for minimization of input data dimension for feedforward neural network,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), vol. 6, May 1994, pp. 447–450.
+[43] A. H. Sung, “Ranking importance of input parameters of neural networks,” Expert Syst. Appl., vol. 15, nos. 3–4, pp. 405–411, Oct. 1998.
+[44] S. Bach, A. Binder, G. Montavon, F. Klauschen, K.-R. Müller, and W. Samek, “On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation,” PLoS ONE, vol. 10, no. 7, Jul. 2015, Art. no. e0130140.
+[45] IEEE Standard for Information Technology—Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specification, Standard 802.11, IEEE, Dec. 2016.
+[46] IEEE Standard for Local and Metropolitan Area Networks—Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands and Corrigendum 1, Standard 802.16e, IEEE, Feb. 2020.
+[47] IEEE Standard for Information Technology—Telecommunications and Information Exchange Between Systems—Local and Metropolitan Area Networks—Specific Requirements—Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications, Standard 802.3an, IEEE, Sep. 2006.
+
+Seokju Han (Student Member, IEEE) received the B.S. and M.S. degrees in electrical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2017 and 2019, respectively, where he is currently pursuing the Ph.D. degree. His research interests include error correcting codes and their applications.
+Jieun Oh (Member, IEEE) received the M.S. and Ph.D. degrees from the Department of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2011 and 2015, respectively. She worked as a Post-Doctoral Fellow at the Coding and Communications Laboratory, KAIST, from 2017 to 2018. She is currently working as a Research Fellow at MediTulip Company Ltd., as well as a Research Collaborator at the Center for Advanced Medical Computing and Analysis (CAMCA), Massachusetts General Hospital and Harvard Medical School. Her research interests include medical imaging with deep learning and machine learning.
+Kyungmok Oh (Student Member, IEEE) received the B.S. degree from the Georgia Institute of Technology, Atlanta, GA, USA, in 2013, and the B.S. and M.S. degrees in electrical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2014 and 2016, respectively, where he is currently pursuing the Ph.D. degree. His research interests include error correcting codes and their applications, particularly polar codes.
+Jeongseok Ha (Senior Member, IEEE) received the B.E. degree in electronics from Kyungpook National University, Daegu, South Korea, in 1992, the M.S. degree in electronic and electrical engineering from the Pohang University of Science and Technology, Pohang, South Korea, in 1994, and the Ph.D. degree in electrical and computer engineering from the Georgia Institute of Technology, Atlanta, GA, USA, in 2003. He is currently a Professor with the Korea Advanced Institute of Science and Technology (KAIST), Daejeon. His research interests include theories and applications of error-control codes and physical layer security. Since 2020, he has been serving as an Associate Editor for IEEE TRANSACTIONS ON COMMUNICATIONS.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:14:24 UTC from IEEE Xplore. Restrictions apply.
+
+

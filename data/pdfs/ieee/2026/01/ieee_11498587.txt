@@ -1,0 +1,432 @@
+18032
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+
+Deep-Learning-Enabled and Quantization-Aware Burst-Resilient LDPC
+Decoding for 6G Sensor and IoT Communication Systems: A Review
+Shiv Prasad Lingampally , Chakradhar Adupa , and Gyanendra Kumar Maurya
+
+Abstract—Field measurements and recent sixthgeneration (6G) mobile communication link-level studies consistently reveal that channel impairments manifest as correlated burst patterns rather than isolated symbol errors. Low-density parity-check (LDPC) codes continue to be the most widely adopted forward-error-correction scheme in these systems, yet experimental evidence indicates that conventional belief propagation (BP) decoders degrade once the burst length exceeds the code girth or lifting factor. Recent research has explored lightweight convolutional neural network (CNN) and recurrent neural network (RNN)based models to detect regions affected by burst-induced reliability loss, and these indicators are used to adjust interleaver patterns or decoder scheduling. In hardware implementations, quantization-aware training (QAT), together with structured pruning, is used to limit numerical ranges and to lower computational complexity during field-programmable gate array (FPGA) and application-specific integrated circuit (ASIC) implementation. On the contrary to earlier surveys that addressed coding structures, learning-based decoders, or hardware quantization independently, this work brings together burst modeling, graph design, neural supervision, and quantization-aware deployment within a single unified framework. These observations are directly applicable to practical sensor networks, industrial Internet of Things (IoT) deployments, and edge receivers operating under burst errors and tight power constraints. This survey is designed to serve as a practical reference for engineers and researchers working on burst-resilient next-generation communication and sensing systems.
+Index Terms— Burst-error resilience, deep-learning-assisted decoding, industrial Internet of Things (IoT), low-density parity-check (LDPC) codes, quantization-aware training (QAT), quasi-cyclic LDPC (QC-LDPC), sixth-generation (6G) wireless communication, spatially coupled LDPC (SC-LDPC), wireless sensor networks.
+
+I. INTRODUCTION
+S IXTH-GENERATION (6G) wireless systems are designed to support ultra-reliable low-latency communication (URLLC), targeting block error rates below 10−7 and endto-end latency on the order of 1 ms for mission-critical services [1], [2]. However, these targets become difficult to maintain when burst-like disturbances occur. These burst patterns may arise due to factors such as multipath fading, mobility-related handovers, or interruptions linked to
+Received 29 January 2026; revised 13 April 2026; accepted 18 April 2026. Date of publication 28 April 2026; date of current version 16 June 2026. The associate editor coordinating the review of this article and approving it for publication was Prof. Chen Yang. (Corresponding author: Shiv Prasad Lingampally.)
+The authors are with the Department of Electronics and Communication Engineering, School of Engineering, SR University, Warangal, Telangana 506371, India (e-mail: 2405c40039@sru.edu.in; chakradhar. a@sru.edu.in; gyanendrakumar.maurya@sru.edu.in).
+Digital Object Identifier 10.1109/JSEN.2026.3686615
+
+nonterrestrial or UAV-assisted communication paths, which often degrade the link reliability in practical deployments [3].
+This survey examines low-density parity-check (LDPC) decoding under burst impairments and how it interacts with learning-based supervisory modules and QAT-based hardware implementations. Broader topics such as Turbo/Polar decoding and generic ML architectures fall outside our scope. LDPC codes are widely recognized for achieving near-capacity performance over AWGN channels, owing to the sparse graph structures that enable efficient iterative message-passing decoding. When the channel produces long burst sequences, the decoder often gets stuck in trapping-like configurations, and the BLER may rise above 10−5 even at moderate SNR. Because burst errors introduce temporal correlation, the standard memory-less-channel assumption no longer holds, leading to stalled updates in specific check-node groups and reduced belief propagation (BP) convergence [3], [4].
+
+1558-1748 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+Authorized licensed useSlimeeitehdtttpos: :Y//ownwsewi U.ieneive. .Doorgw/nplouabdliecdatoionnJsu/nreig2h4ts,2/i0n2d6eaxt.h05tm:4l0f:o0r6 mUToCrefrionmforIEmEaEtioXnp.lore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18033
+
+Previous surveys on 6G channel coding typically treat burst behavior only indirectly and rarely bring all related aspects together. LDPC-oriented surveys focus on structural design, AI-assisted decoding surveys emphasize neural improvements, and hardware surveys discuss quantization separately. None of them jointly analyzes how burst statistics influence LDPC structure, how learning modules supervise decoding, and how quantization constrains real deployments.
+In most existing reviews, burst modeling, LDPC design, neural supervision, and hardware quantization are treated largely in isolation.
+This separation obscures how burst behavior influences both decoding and hardware execution. Our aim is to bring these separate topics together in one place. Several recent works explore the use of learning-based components alongside the LDPC decoder. Some works apply CNN-based classifiers to detect reliability fluctuations in the LLR stream and highlight burst-affected symbol ranges. Some researchers have used RNN-based models to adjust the iteration schedule or damping settings, while others have applied RL methods to tune interleavers or lifting choices to avoid alignment between bursts and parity cycles [5], [6].
+These learning modules assist BP by supplying auxiliary signals that influence either iteration count, damping, or interleaver selection and can help bypass harmful graph configurations without modifying the underlying LDPC code.
+In parallel, several works concentrate on LDPC structures that inherently cope better with burst errors. Spatially coupled LDPC (SC-LDPC) codes enable a progressive, wave-like decoding behavior that incrementally mitigates burst-affected regions [4], whereas quasi-cyclic LDPC (QC-LDPC) codes exploit structured lifting patterns that facilitate burst mitigation and simplify hardware implementation [7]. Several works also study windowed decoding and low-power architectures for high-throughput operation to meet high-throughput hardware requirements [8]. On the hardware side, quantization-aware training (QAT), pruning, and mixed-precision updates (for example, 8-bit extrinsic and 4-bit intrinsic messages) help cut computation and memory use. With these techniques, many field-programmable gate array (FPGA)/application-specific integrated circuit (ASIC) designs can exceed 2 Gb/s while staying within practical power limits [8].
+Here, we examine these approaches together and point out how they influence one another during design. We cover burst-channel models [such as the Gilbert–Elliott (GE)], LDPC code families (SC-LDPC, QC-LDPC, and protographbased designs), deep-learning-enhanced decoding methods, and hardware-efficient quantization workflows. In this survey, performance comparison typically relies on the following measures.
+1) Burst Coverage Ratio: The fraction of Lb-length bursts decoded successfully.
+2) Maximum Correctable Burst Length (Bmax ) : The longest contiguous burst recoverable alongside latency (<1 ms), throughput, and energy-per-bit constraints.
+
+TABLE I COMPARISON OF PRIOR SURVEYS AND THEIR COVERAGE GAPS
+Summary of Contributions: 1) A unified taxonomy linking burst-channel models, LDPC structures, neural supervisory control, and QAT-based hardware design. 2) A critical comparison of SC-LDPC, QC-LDPC, and protograph LDPC under burst stress using burst coverage ratio (BCR), Bmax, latency, and hardware metrics. 3) First consolidated review of learning-assisted LDPC decoding covering burst localization, iteration scheduling, lifting/interleaver optimization, and the reduced-precision deployment. 4) A cross-domain analysis of burst characteristics across PLC, FSO, NTN, and memory channels, revealing inconsistencies in evaluation practices. 5) We provide a codesign roadmap linking burst prediction, LDPC selection, decoding schedule, QAT deployment, and digital-twin validation. Table I reviews the ways in which earlier surveys addressed LDPC design, burst-error modeling, learning-based decoding, and hardware aspects, and it highlights the gaps that motivate the present study. Previous LDPC surveys typically address code construction or decoding, while DL-focused surveys discuss neural models without linking them to LDPC structure or decoding strategies, while deep-learning surveys analyze neural architectures without connecting them to LDPC structure. Hardware-focused works address quantization but ignore burst characteristics. Because these works address separate pieces, they do not provide a system-level perspective needed for 6G receivers, where burst statistics, graph structure, learning-based supervision, and fixed-point hardware behavior are tightly interdependent. The surveyed literature consistently indicates that quantization-aware and learning-assisted LDPC decoding frameworks can improve burst resilience and hardware efficiency compared to conventional fixed-precision BP decoders. While the reported gains vary across channel models and implementation platforms, common benefits include reduced energy consumption, improved tolerance to extended burst spans, and lower average decoding latency under correlated error conditions.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18034
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+TABLE II BURST-ERROR CHANNEL MODELS AND EVALUATION CONTEXTS USED IN LDPC-BASED STUDIES
+
+The following sections build upon these foundations to systematically examine burst-error channel models, LDPC code structures, and representative learning-assisted decoding strategies, with an emphasis on their implications for practical and hardware-aware implementations.
+
+TABLE III BURST-ERROR CHANNEL MODELS AND THEIR DESIGN IMPLICATIONS
+
+II. FOUNDATIONS A. 6G Constraints: Reliability, Latency, and Hardware Budgets
+6G URLLC aims for a BLER below 10−7 and submillisecond latency, even when the channel includes fading clusters, mobility-related disturbances, or NTN relays. Conventional BER/BLER metrics do not describe the cluster span or phase alignment; so additional burst-oriented metrics are required [16], [17], [18]. Hardware limits (5–10 pJ/bit, 1–5 Gb/s throughput) constrain decoder architectures on FPGA/ASIC platforms. In SC-LDPC sliding-window decoding (SWD), memory buffers scale with W × Nv and without scheduling optimization latency can exceed 0.5 ms at 100 MHz [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58].
+Therefore, proper evaluation should also consider: the BLER under structured burst insertion, 99th-percentile tail latency, and power and area footprints (LUT/FF/BRAM/DSP) [16], [17], [18].
+Table II summarizes the dominant burst-error channel models adopted in the literature and highlights their key characteristics and typical application contexts. These models serve as the foundational abstractions for evaluating burst-resilient LDPC decoding strategies across wireless, storage, and optical communication systems.
+Burst errors arise due to temporal correlation in channel impairments and are commonly modeled using simplified stochastic abstractions to enable tractable performance evaluation of channel codes. In the context of LDPC-based decoding, different burst-error channel models are adopted depending on the underlying physical medium, mobility conditions, and system-level constraints.
+B. Burst Error Models
+Burst errors show time correlation, so the channel stops acting like an i.i.d. noise source. The GE Markov model
+
+captures clustered “bad-state” sojourns; SHMM models represent impulsive interference in PLC/industrial settings; Fisher–Snedecor fading captures burst persistence in high mobility [23], [24], [25], [26], [27], [28], [29], [30], [31], [32], [33], [34], [35], [36], [37], [38], [39], [40], [41], [42], [43], [44], [45], [46], [151].
+Table III summarizes how different burst models behave and outlines their effect on LDPC decoder design choices. The GE and SHMM models inform interleaver depth and damping control, while mobility-induced fading determines the sliding-window size in SC-LDPC decoding. Phase-coupled alignment indicates that QC-LDPC and protograph designs must avoid circulant-cycle matching, as such alignment can activate dominant trapping sets.
+Fig. 1 shows an outline of the workflow used to build burst-tolerant LDPC decoders. Burst-channel models (e.g., GE, SHMM, and mobility-induced fading) describe the temporal structure of correlated error spans. These statistics inform LDPC code selection and construction (SC-LDPC, QC-LDPC, and protograph-based designs). When bursts align with QC-LDPC circulants, trapping sets can be activated; hence, the lifting pattern and interleaver settings become critical [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70]. These models guide practical choices such as window sizing, interleaver depth, and lifting parameters [23], [24], [25], [26],
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18035
+
+Fig. 2. Structural comparison of SC-LDPC, QC-LDPC, and protograph-based LDPC code families for burst-prone 6G systems. SC-LDPC supports wave-like decoding, QC-LDPC enables efficient hardware implementation, and protograph LDPC provides flexible graph construction with improved burst resilience.
+
+Fig. 1. Unified codesign pipeline illustrating how burst-channel statistics influence LDPC graph choices, neural supervisory modules, and quantization-aware hardware deployment.
+[27], [28], [29], [30], [31], [32], [33], [34], [35], [36], [37], [38], [39], [40], [41], [42], [43], [44], [45], [46].
+Neural modules, such as CNN-based burst detectors, recurrent neural network (RNN) controllers, and RL-based interleaver or lifting tuners, modify how the decoder reacts when a burst occurs. Mixed-precision QAT enables stable fixed-point operation within tight FPGA/ASIC power and area limits.
+C. Burst-Aware Evaluation Metrics Standard BER/BLER curves overlook parameters such as
+burst length and phase alignment [39], [40], [41], [42], [43], [44], [45], [46].
+1) Burst Coverage Ratio: Fraction of bursts of length Lb corrected at target BLER.
+2) Maximum Correctable Burst Length (Bmax ) :
+Bmax = max Lb : BLER (Lb) < 10−5, φ ∈ [0, 2π ] (1)
+3) Latency–Throughput Tradeoff: Tracks the impact of window size W and iteration budget I.
+4) Energy per Bit: QAT-enabled mixed precision preserves ≥95% BCR at 6-bit resolution while reducing power [110], [111], [112], [113], [114], [115], [116], [117], [118], [119], [120], [121], [122], [123], [124], [125].
+5) In DT-based replay setups, identical burst traces are reused for consistent testing, while HIL systems verify that the decoder behavior matches hardware [140], [141], [142], [143], [144], [145].
+III. LDPC CODE FAMILIES In 6G systems, the burst-handling ability of an LDPC code mainly depends on how its structure spreads error effects and reduces the chance of triggering trapping sets [7], [8], [9], [10]. We examine three widely deployed LDPC families— SC-LDPC, QC-LDPC, and protograph-based LDPC codes— with a focus on burst tolerance, latency characteristics, and practical hardware suitability [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58].
+
+A. Spatially Coupled LDPC
+SC-LDPC codes interconnect multiple sub-blocks through a band-diagonal parity-check structure, which enables a wave-style iterative decoding behavior [6], [16], [32]. When SWD with a window of size W is employed, the decoding wave progressively mitigates localized burst clusters, leading to strong burst-correction performance, with reported maximum correctable burst lengths Bmax of about 100–150 symbols and BCR(Lb) values above 0.90 for burst lengths up to 80 [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58]. Owing to the gradual propagation of reliability along the coupled chain, SC-LDPC codes maintain stable convergence even under correlated burst conditions [6], [16]. In practical hardware realizations, these advantages come at the cost of larger sliding-window buffers, as memory usage scales with W × Nv, and the resulting decoding latency increases with the window size, typically reaching 0.5–0.9 ms at a 100-MHz operating frequency [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58].
+Fig. 2 summarizes the structural differences among the LDPC families discussed here. SC-LDPC uses a coupled chain, which supports sliding-window operation and wavestyle decoding. QC-LDPC uses circulant lifting to support structured memory access and efficient layered scheduling. Protograph-LDPC starts from a compact base graph that is expanded by lifting, which provides control over connectivity patterns and error-floor behavior.
+B. Quasi-Cyclic LDPC
+QC-LDPC codes are constructed using circulant permutation matrices, allowing structured and predictable memory access while supporting efficient high-throughput layered decoding [17], [18], [19], [34], [35], [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70]. For QC-LDPC implementations, Deng et al. [59] reported an FPGA throughput of 2.1 Gb/s using layered decoding, while Yang et al. [63] demonstrated a 4.5 Gb/s throughput on an ASIC-oriented architecture with optimized circulant scheduling. However, QC-LDPC codes generally correct shorter bursts than SC-LDPC codes, with BCR(Lb) around 0.70–0.80 and Bmax of roughly 60–80 symbols unless a burst-aware interleaver is used [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70]. QC-LDPC codes can be vulnerable to phase-aligned
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18036
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+
+bursts because they line up with circulant boundaries [36], [85]. Earlier work seldom analyzes how QC-LDPC behaves under phase-aligned bursts that activate circulant-based trapping sets.
+
+TABLE IV COMPARISON OF LDPC CODE FAMILIES UNDER
+BURST-PRONE 6G CONDITIONS
+
+C. Protograph-Based LDPC Protograph-based LDPC codes are derived from a com-
+pact base graph in which nodes and edges specify the local connectivity structure. After lifting by a factor Z, this structure expands into a full code while preserving the original graph relationships. This construction lets designers adjust degree profiles, cycle structure, and burst-sensitive regions through targeted lifting choices and controlled edge-spreading strategies, which helps improve resilience to long or phasealigned bursts. Carefully designed protographs can achieve maximum correctable burst lengths Bmax of approximately 90–140 symbols, with BCR(Lb) values typically in the range of 0.85–0.92. This performance is close to SC-LDPC while avoiding the strict memory layout that QC-LDPC usually requires [49], [71], [72], [73], [74], [75], [76], [77], [78], [79], [80], [81], [82], [83], [84], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97]. However, the design process can be more involved because the lifting and edge-spreading choices significantly affect both burst tolerance and error-floor performance.
+D. Comparative Summary The comparison assumes SNR values of 3–6 dB under a GE
+burst model. Hybrid MD-SC and SC-QC designs can improve Bmax by approximately 20%–25%, but they typically demand extra routing resources and buffer space [49], [81], [82], [83], [84], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97]. SC-LDPC benefits from the natural wave-like progression of its decoder, which often helps it recover from localized bursts, but it also needs larger buffers and extra control over the decoding window. QC-LDPC offers the most efficient hardware implementation; however, its structured circulant patterns may require burst-aware interleaving to prevent trapping-set activation.
+The protograph-based LDPC provides greater flexibility to shape the local graph structure and improve robustness across different burst environments, although careful selection of lifting factors and edge-spreading patterns is required, as these significantly influence the resulting graph properties. Table IV presents a comparison of SC-LDPC, QC-LDPC, and protograph-based LDPC codes in terms of burst-correction capability, decoding latency, and hardware complexity. The results indicate that SC-LDPC offers stronger burst robustness, while QC-LDPC yields a more balanced compromise between error-correction performance and implementation efficiency.
+
+implicitly treats the incoming LLRs as if their reliability were fairly uniform across the Tanner graph, a condition that generally holds only under AWGN-type channels. During a burst, some parts of the LLR sequence drop noticeably, and this tends to activate familiar trapping-set patterns, increasing the error floor. Earlier studies introduced small auxiliary neural blocks around the BP loop to identify burst-prone regions, guide message updates, and adjust some structural choices using training data, while keeping the LDPC graph unchanged [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101].
+
+A. Burst Localization Networks
+Burst errors cause localized changes in LLR amplitude and correlation. One limitation in earlier work is the absence of a common evaluation setup across different neural modules, LDPC variants, and quantization levels. Using GE or 3GPP channel traces, CNN- or Transformer-based models can learn to mark the symbols that lose reliability during a burst, producing a soft mask
+
+M ∈ [0, 1]Nv .
+
+(2)
+
+Equation (2) represents the symbol indices exhibiting reduced reliability during a burst. The LDPC decoder applies selective damping and localized redecoding only in the masked regions, thereby avoiding additional iterations on parts of the codeword that have already converged. Prior studies report improvements in BCR and tail-latency behavior under burstdominated channels [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101], [152].
+
+IV. DEEP-LEARNING-ASSISTED LDPC DECODING In 6G LDPC decoding, burst errors usually show up as clusters of low-reliability LLR values, and this behavior limits the effectiveness of conventional BP. Prior research demonstrates that lightweight neural networks can monitor reliability variations in LLR patterns and guide certain BP update decisions during burst events, when bursts occur. Conventional BP
+
+B. Adaptive Iteration Scheduling
+Because the burst characteristics strongly influence when BP converges, a fixed iteration count often becomes inefficient— either too short or unnecessarily long. RNNs such as GRU or LSTM can monitor the syndrome sequence s(t) = Hz(t) along with the behavior of the LLRs to decide whether the decoder should continue or halt. These decisions reduce redundant
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18037
+
+updates, cut the average iteration count, and improve consistency when bursts occur, especially in high-mobility fading environments [102], [103], [104], [105], [106], [107], [108], [109], [110], [111], [112], [113], [114], [115], [116], [117], [118].
+
+C. Learning-Based Interleaver and Protograph Optimization
+In QC-LDPC and protograph-based designs, burst-phase alignment with structured circulants can repeatedly activate harmful trapping sets. Reinforcement-learning-based and graph neural network (GNN)-based methods have been applied to explore lifting configurations and interleaver patterns that reduce harmful trapping-set alignments while preserving the underlying hardware structure. These methods improve Bmax and burst resilience while keeping the decoder complexity roughly unchanged [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136].
+D. QAT for Deployment To meet 6G power and latency requirements, both neural
+modules and BP updates must operate under fixed-point arithmetic. In QAT, quantization is applied during training itself, allowing the neural blocks to run at 4–8-bit precision without a noticeable loss in decoding reliability. Mixed-precision arithmetic (e.g., 6-bit extrinsic, 4-bit intrinsic messages) has been shown to maintain decoding accuracy while keeping FPGA/ASIC power and silicon usage low. Existing surveys treat quantization as a standalone hardware issue, whereas in practice, it directly interacts with decoder convergence and burst recovery. Here, the interaction between quantization and decoder convergence is discussed in the context of reported QAT results for LDPC decoding, which are rarely analyzed jointly in earlier studies.
+E. Integrated Decoder Perspective In real 6G receiver implementations, these neural units are
+placed next to the BP core and contribute to four key tasks. Convolutional neural network (CNN) or Transformer networks generate soft reliability masks that the identify burst-affected regions and enable selective message updates [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101]. Recurrent units, such as GRU or LSTM regulate iteration flow based on the progression of syndrome values, thereby reducing latency and computational overhead [102], [103], [104], [105], [106], [107], [108], [109], [110], [111], [112], [113], [114], [115], [116], [117], [118].
+Fig. 3 shows the integrated neural-assisted LDPC decoding architecture. The CNN/Transformer module detects reliability degradation in burst-affected regions, guiding selective updates within the BP decoding core. The RNN-based scheduler dynamically adjusts the iteration flow to ensure timely convergence, while the RL-driven interleaver mitigates burst–cycle alignment. QAT combined with mixed-precision implementation enables energy-efficient and hardware-robust deployment on FPGA and ASIC platforms.
+
+Fig. 3. Deep-learning-assisted LDPC decoding pipeline for burstprone 6G systems. CNN/Transformer modules detect burst-affected regions, RNN units control iteration scheduling, RL-based interleavers reduce burst-cycle alignment, and QAT enables efficient FPGA/ASIC deployment.
+Reinforcement-learning and graph-neural models optimize interleaver and lifting structures to minimize burst–cycle alignment and enhance trapping-set resilience [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136]. When QAT is combined with mixed precision, the decoder maintains stable performance even under low-bit hardware implementations such as FPGA and ASIC [45], [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149]. Together, these components provide burst-awareness to the decoder while imposing only a small additional hardware cost. Their principal functions and reported performance improvements are summarized in Table V [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101], [102], [103], [104], [105], [106], [107], [108], [109], [110], [111], [112], [113], [114], [115], [116], [117], [118], [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136], [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149].
+Limitations of existing learning-assisted decoders, despite improved burst resilience, current DL-assisted LDPC designs suffer from four limitations.
+1) Lack of unified training datasets across PLC/FSO/NTN channels.
+2) Limited generalization to unseen burst distributions. 3) Absence of jointly optimized LDPC graphs for neural controllers. 4) Many works ignore quantization, leading to unrealistic power estimates. Comparison to Traditional BP: Traditional BP assumes uniform reliability and applies global updates, even when only localized regions of the codeword are affected. In these approaches, BP remains the main inference method, and the neural units simply add guidance signals that make the decoder more reliable under burst noise without adding much hardware cost [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101], [102], [103], [104], [105], [106], [107], [108],
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18038
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+
+TABLE V NEURAL ASSISTED LDPC DECODING FUNCTIONS
+AND PERFORMANCE IMPLICATIONS
+[109], [110], [111], [112], [113], [114], [115], [116], [117], [118], [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136], [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149].
+Table V depicts the neural-assisted modules integrated within the LDPC decoding pipeline. Each module contributes to a different stage of the decoding operation. CNN/Transformer models mark burst-affected regions, RNN/GRU units help determine how long decoding should continue, RL/GNN approaches improve lifting or interleaver choices, and QAT ensures that the neural parts operate reliably under low-precision hardware settings.
+V. PERFORMANCE ANALYSIS AND DESIGN IMPLICATIONS
+Several factors influence how well an LDPC decoder handles burst errors, including the code’s structure, the characteristics of the burst, and the way the decoder is controlled. The three major LDPC families considered—SC-LDPC, QC-LDPC, and protograph-based LDPC—behave differently when confronted with spatially correlated error clusters, affecting achievable burst coverage, latency, and hardware feasibility.
+SC-LDPC codes distribute reliability gradually along the coupled chain, allowing the decoder to absorb localized burst errors more effectively, which progressively disperses localized error clusters across positions. When the burst is shorter than the window length, the decoding wave typically stabilizes the affected region without requiring structural modification. However, this property comes with increased buffering and scheduling overhead, which may affect latency in strict URLLC environments [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58].
+
+QC-LDPC codes emphasize hardware regularity and throughput, benefiting from circulant-based parity-check matrices that support layered decoding and low routing complexity [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70]. However, the periodic circulant structure can create situations where certain burst positions repeatedly overlap with vulnerable cycle patterns, increasing decoding difficulty, where correlated errors reinforce absorbing sets. To mitigate this, burst-aware interleaving or circulant perturbation techniques are often necessary [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70], [85].
+Protograph-based LDPC codes sit between the other two families in terms of design freedom and implementation cost. Through edge spreading and controlled lifting, designers can adjust the local cycle structure and redistribute burst-sensitive regions across the Tanner graph [71], [72], [73], [74], [75], [76], [77], [78], [79], [80]. This allows designers to improve burst resilience while keeping degree constraints and decoding complexity nearly unchanged. Neural modules act more like supporting controllers that work alongside BP, rather than replacing the decoding process itself. Burst-localization networks identify regions of reliability collapse and enable selective message adjustment [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101]. Recurrent controllers adjust iteration flow based on syndrome evolution to reduce unnecessary updates [102], [103], [104], [105], [106], [107], [108], [109], [110], [111], [112], [113], [114], [115], [116], [117], [118]. Reinforcementguided interleaver and lifting refinement reduces structural vulnerability to burst alignment [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136]. For practical deployment, these neural components must operate under QAT together with mixed-precision arithmetic to ensure fixed-point stability on FPGA/ASIC targets [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149].
+This improves burst resilience without violating the throughput, energy, or latency constraints required in 6G edge receivers. In practice, burst tolerance reflects combined decisions in channel modeling, code design, decoding strategy, and hardware precision. When these elements are optimized separately, systems may underestimate burst vulnerability or fail to satisfy implementation constraints. A coordinated codesign approach is therefore necessary to maintain both reliability and efficiency under burst-dominated 6G conditions.
+Table VI outlines the key performance tradeoffs among SC-LDPC, QC-LDPC, protograph-based, and neural-assisted LDPC decoders. SC-LDPC offers strong burst recovery with added latency, QC-LDPC achieves strong hardware efficiency but offers lower burst resilience, protograph designs enable structural flexibility, and neural-assisted decoding achieves balanced gains in reliability, latency, and energy efficiency.
+The roadmap highlights the sequential dependencies between channel modeling, LDPC construction, neural supervision, hardware quantization, and system-level adaptation. Earlier stages focus on the accurate modeling of burst statistics, followed by the design of structurally robust LDPC graphs, then lightweight supervisory neural modules that guide
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+TABLE VI COMPARATIVE SUMMARY OF LDPC DECODING FRAMEWORKS IN BURST-PRONE 6G SYSTEMS
+
+18039
+
+decoding under correlated impairments. Precision-aware BP and QAT ensure hardware feasibility, while digital-twin feedback provides long-term adaptability. This roadmap arranges the main research directions into a workable sequence for the 2025–2030 period.
+Table VII provides a consolidated failure-oriented view of LDPC decoding behavior in burst-dominated 6G channels. This analysis connects failure causes with structural, algorithmic, and hardware mitigation steps.
+
+burst statistics of decoder performance from simulation to deployment. A unified roadmap emerges from our analysis: 1) standardized burst datasets across wireless/PLC/NTN domains; 2) LDPC graph designs co-optimized with neural supervision; 3) QAT-driven precision-allocation frameworks; and 4) digital-twin-based deployment loops that enable realtime adaptation. Such a cross-layer roadmap is largely missing in earlier surveys, yet it is essential for practical 6G implementation.
+
+VI. FUTURE RESEARCH DIRECTIONS Although recent advances have improved the robustness of LDPC decoding under burst-error conditions, several challenges remain before these techniques can be deployed in practical 6G systems. These challenges span channel modeling, LDPC graph construction, neural supervisory integration, and hardware-efficient implementation [12], [13], [14], [15], [16], [17], [18], [19], [20], [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58], [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70], [71], [72], [73], [74], [75], [76], [77], [78], [79], [80].
+A. Cross-Domain Burst Characterization Most evaluations rely on simplified stochastic burst models,
+such as the GE process [12], [14], [18], [29], which do not completely reflect the characteristics of practical 6G environments, including PLC networks, FSO links, and high-mobility NTN channels [15], [19], [27], [31]. In practice, these systems show burst patterns that shift over time and across scales, shaped by interference levels and user mobility. Future work should particularly address the following points.
+1) The unified burst-error representations across physical domains [12], [13], [14], [15], [16], [17], [18], [19], [20].
+2) Standardized datasets for reproducible evaluation [27], [31].
+3) Online burst-state estimation for real-time adaptation [18], [44].
+Improved modeling will help close the gap between simulation behavior and real deployment conditions by providing better
+
+B. Integrated Codesign of Codes, Neural Control, and Hardware
+When LDPC construction, neural add-ons, and quantization are handled independently, the resulting decoder usually fails to achieve a good balance among reliability, latency, and power use [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58], [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70].
+To achieve better reliability–latency tradeoffs, upcoming decoder designs need closer coordination between code structure, neural control, and hardware precision [153], where:
+1) LDPC graph topology and lifting patterns [71], [72], [73], [74], [75], [76], [77], [78], [79], [80];
+2) message-passing schedules and damping strategies [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101];
+3) bit-precision allocation across compute paths [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149] are optimized jointly for specific burst environments.
+C. Low-Complexity Neural Supervisory Models Neural enhancements must remain compatible with edge
+hardware constraints. Lightweight supervisory approaches have shown promise, including:
+1) CNNs on compressed LLR or syndrome domains [49], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101];
+2) GRU-based iteration control with predictable computational cost [102], [103], [104], [105], [106], [107], [108],
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18040
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+TABLE VII FAILURE MODES OBSERVED IN LDPC DECODING UNDER BURST CHANNELS
+
+[109], [110], [111], [112], [113], [114], [115], [116], [117], [118];
+3) RL/GNN-guided interleaver or lifting adaptation [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136].
+The main challenge is ensuring that these models adapt to changing channel conditions without exceeding runtime or memory limits.
+
+D. Precision-Aware Quantization and Mixed-Precision Arithmetic
+While QAT supports robust fixed-point inference, the optimal bit allocation across message updates, neural modules, and memory pathways is still not fully addressed [137], [138], [139], [140], [141], [142], [143], [144].
+Promising directions include the following. 1) Layer-wise precision sensitivity analysis [138], [142]. 2) Runtime-adaptive quantization based on channel
+state [143], [149]. 3) Approximate arithmetic tuned to LDPC convergence
+dynamics [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149]. These techniques are important for reducing energy use while maintaining reliable decoding in 6G receivers.
+E. Digital Twin-Driven Adaptive Decoding Digital twin frameworks enable real-time feedback loops
+linking measured channel conditions to decoder behavior [150]. This enables environment-aware parameter tuning,
+
+Fig. 4. Research roadmap for burst-resilient LDPC decoding in 6G systems over the 2025–2030 period. The roadmap shows the transition from burst-channel modeling and LDPC code design toward neural supervision, quantization-aware hardware implementation, and digital twin-enabled adaptive decoding.
+adaptive scheduling under mobility, and stable performance under nonstationary burst patterns.
+This feedback loop keeps testbed behavior aligned with the rapidly changing conditions seen in 6G links. Reliable burst-resilient LDPC decoding for 6G will require moving
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18041
+
+from isolated algorithmic improvements toward a unified codesign across channel modeling, LDPC structure, neural control, and hardware constraints [47], [48], [49], [50], [51], [52], [53], [54], [55], [56], [57], [58], [59], [60], [61], [62], [63], [64], [65], [66], [67], [68], [69], [70], [71], [72], [73], [74], [75], [76], [77], [78], [79], [80], [85], [86], [87], [88], [89], [90], [91], [92], [93], [94], [95], [96], [97], [98], [99], [100], [101], [102], [103], [104], [105], [106], [107], [108], [109], [110], [111], [112], [113], [114], [115], [116], [117], [118], [119], [120], [121], [122], [123], [124], [125], [126], [127], [128], [129], [130], [131], [132], [133], [134], [135], [136], [137], [138], [139], [140], [141], [142], [143], [144], [145], [146], [147], [148], [149].
+Fig. 4 illustrates a 2025–2030 research roadmap for burst-resilient LDPC decoder development, highlighting how the emphasis gradually moves from channel modeling and code design toward neural supervision, hardware-aware quantization, and digital twin–driven system adaptation.
+
+Overall, our analysis indicates the following five open research needs.
+1) Standardized cross-domain burst datasets. 2) LDPC graphs co-designed with neural supervisors. 3) Precision-aware mixed-precision BP algorithms. 4) Runtime-adaptive decoders guided by digital twins. 5) Unified evaluation benchmarks for burst metrics (BCR/Bmax/latency). These open issues shape a practical research path for future LDPC decoder designs. These findings directly support the design of field-deployable 6G sensors and industrial IoT receivers where burst noise, tight latency, and strict power budgets must be jointly addressed. The findings reviewed in this work offer practical guidance for building reliable, low-power wireless sensing networks, enhancing smart-grid monitoring systems, and strengthening industrial IoT platforms that must operate under severe burst-error and interference conditions.
+
+VII. CONCLUSION
+This survey reviewed the key methods proposed to strengthen LDPC decoding under burst-error conditions, an issue of increasing importance in 6G systems where errors often occur in correlated clusters rather than independently. These burst patterns disrupt the iterative belief-propagation process and can lead to persistent error floors. This review shows that LDPC performance under burst conditions is strongly influenced by several interacting factors: the channel characteristics, the structure of the code, the update rules used in decoding, and the chosen hardware precision.
+A comparison of spatially coupled, quasi-cyclic, and protograph-based LDPC families indicates that each family provides advantages under specific deployment requirements. Neural-assisted decoding adds adaptability by identifying burst-affected regions, adjusting iteration flow, and mitigating structural vulnerabilities in the code graph. With QAT and mixed-precision arithmetic, these methods can be deployed on FPGA/ASIC platforms with manageable hardware overhead.
+We also found that improving only the code or only the decoder is not enough to handle burst errors effectively. Meaningful progress therefore depends on a coordinated design across channel modeling, LDPC construction, neural supervision, and hardware implementation. Future work should focus on establishing unified burst-channel datasets, developing lightweight neural controllers for edge devices, precision-aware message passing, and digital-twin-driven adaptive decoding. Coordinating these aspects is essential for maintaining reliable LDPC decoding across a range of 6G environments.
+From an engineering point of view, these burst-resilient LDPC techniques provide a practical way to build low-latency and power-efficient 6G sensor and IoT receivers by combining QAT, mixed-precision processing, and lightweight neural support blocks. From a research point of view, future studies are expected to focus on common burst datasets, LDPC graph design guided by neural models, digital-twin-based adaptation, and better coordination between decoding methods and hardware limitations.
+
+REFERENCES
+[1] M. Z. Chowdhury, M. Shahjalal, S. Ahmed, and Y. M. Jang, “6G wireless communication systems: Applications, requirements, technologies, challenges, and research directions,” IEEE Open J. Commun. Soc., vol. 1, pp. 957–975, 2020, doi: 10.1109/OJCOMS.2020.3010270.
+[2] A. Gautam, P. Thakur, and G. Singh, “Advanced channel coding schemes for B5G/6G networks: State-of-the-art analysis, research challenges and future directions,” Int. J. Commun. Syst., vol. 37, no. 18, 2024, Art. no. e5855, doi: 10.1002/dac.5855.
+[3] A. A. Shamsabadi, A. Yadav, Y. Gadallah, and H. Yanikomeroglu, “Exploring the 6G potentials: Immersive, hyperreliable, and lowlatency communication,” IEEE Veh. Technol. Mag., vol. 20, no. 1, pp. 74–82, Mar. 2025, doi: 10.1109/MVT.2025.3531346.
+[4] W. An, M. Médard, and K. R. Duffy, “Keep the bursts and ditch the interleavers,” IEEE Trans. Commun., vol. 70, no. 6, pp. 3655–3667, Jun. 2022, doi: 10.1109/TCOMM.2022.3171798.
+[5] Y. Nakamura, T. Akamatsu, M. Nishikawa, and Y. Okamoto, “Performance evaluation of burst error correction by LDPC coding and iterative decoding system in magnetic tape drive,” IEEE Trans. Magn., vol. 59, no. 3, pp. 1–5, Mar. 2023, doi: 10.1109/TMAG.2022.3201898.
+[6] R. Sokolovskii, A. G. I. Amat, and F. Brännström, “Finite-length scaling of spatially coupled LDPC codes under window decoding over the BEC,” IEEE Trans. Commun., vol. 68, no. 10, pp. 5988–5998, Oct. 2020, doi: 10.1109/TCOMM.2020.3010958.
+[7] L. Song, Q. Huang, and Z. Wang, “Construction of multiple-burstcorrection codes in transform domain and its relation to LDPC codes,” IEEE Trans. Commun., vol. 68, no. 1, pp. 40–54, Jan. 2020, doi: 10.1109/TCOMM.2019.2948341.
+[8] S. Vafi, “Cyclic low density parity check codes with the optimum burst error correcting capability,” IEEE Access, vol. 8, pp. 192065–192072, 2020, doi: 10.1109/ACCESS.2020.3032837.
+[9] F. Silva, A. C. Pinheiro, J. A. N. Silveira, and C. Marcon, “A triple burst error correction based on region selection code,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 31, no. 8, pp. 1214–1222, Aug. 2023, doi: 10.1109/TVLSI.2023.3273085.
+[10] C. Tarver, M. Tonnemacher, H. Chen, J. Zhang, and J. R. Cavallaro, “GPU-based, LDPC decoding for 5G and beyond,” IEEE Open J. Circuits Syst., vol. 2, pp. 278–290, 2021, doi: 10.1109/OJCAS.2020.3042448.
+[11] T. Matsumine and H. Ochiai, “Recent advances in deep learning for channel coding: A survey,” IEEE Open J. Commun. Soc., vol. 5, pp. 6443–6481, 2024, doi: 10.1109/OJCOMS.2024.3472094.
+[12] B. Ozpoyraz, A. T. Dogukan, Y. Gevez, U. Altun, and E. Basar, “Deep learning-aided 6G wireless networks: A comprehensive survey of revolutionary PHY architectures,” IEEE Open J. Commun. Soc., vol. 3, pp. 1749–1809, 2022, doi: 10.1109/OJCOMS.2022.3210648.
+[13] N. P. Kuruvatti, M. A. Habibi, S. Partani, B. Han, A. Fellan, and H. D. Schotten, “Empowering 6G communication systems with digital twin technology: A comprehensive survey,” IEEE Access, vol. 10, pp. 112158–112186, 2022, doi: 10.1109/ACCESS.2022.3215493.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18042
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+
+[14] M. Comisso, F. Vatta, G. Buttazzoni, and F. Babich, “Coverage and throughput analysis for peer-to-peer 6G directional slotted Aloha bursty networks,” IEEE Trans. Veh. Technol., vol. 73, no. 3, pp. 4293–4308, Mar. 2024, doi: 10.1109/TVT.2023.3328781.
+[15] S. A. El-Meadawy et al., “Performance analysis of 3D video transmission over deep-learning-based multi-coded N-ary orbital angular momentum FSO system,” IEEE Access, vol. 9, pp. 110116–110136, 2021, doi: 10.1109/ACCESS.2021.3083524.
+[16] H.-Y. Kwak, J.-W. Kim, H. Park, and J.-S. No, “Optimization of SC-LDPC codes for window decoding with target window sizes,” IEEE Trans. Commun., vol. 70, no. 5, pp. 2924–2938, May 2022, doi: 10.1109/TCOMM.2022.3158307.
+[17] M. Majdzade and M. Gholami, “On the class of high-rate QCLDPC codes with girth 8 from sequences satisfied in GCD condition,” IEEE Commun. Lett., vol. 24, no. 7, pp. 1391–1394, Jul. 2020, doi: 10.1109/LCOMM.2020.2983019.
+[18] D. M. Donovan, A. Rao, E. Üsküplü, and E. S. Yazici, “QC-LDPC codes from difference matrices and difference covering arrays,” IEEE Access, vol. 11, pp. 52141–52157, 2023, doi: 10.1109/ACCESS.2023.3279327.
+[19] S. Mo, L. Chen, D. J. Costello, D. G. M. Mitchell, R. Smarandache, and J. Qiu, “Designing protograph-based quasi-cyclic spatially coupled LDPC codes with large girth,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5326–5337, Sep. 2020, doi: 10.1109/TCOMM.2020.3001029.
+[20] S. Han, J. Oh, K. Oh, and J. Ha, “Deep-learning for breaking the trapping sets in low-density parity-check codes,” IEEE Trans. Commun., vol. 70, no. 5, pp. 2909–2923, May 2022, doi: 10.1109/TCOMM.2022.3157314.
+[21] N. Ahamed, R. Swaminathan, and B. Naveen, “Blind interleaver recognition using deep learning techniques,” IEEE Access, vol. 12, pp. 158714–158730, 2024, doi: 10.1109/ACCESS.2024.3476140.
+[22] L. Chu, H. He, L. Pei, and R. C. Qiu, “NOLD: A neuralnetwork optimized low-resolution decoder for LDPC codes,” J. Commun. Netw., vol. 23, no. 3, pp. 159–170, Jun. 2021, doi: 10.23919/JCN.2021.000014.
+[23] J. Yoo and G. Ban, “Efficient deep learning model compression for sensor-based vision systems via outlier-aware quantization,” Sensors, vol. 25, no. 9, p. 2918, 2025, doi: 10.3390/s25092918.
+[24] B. Hawks, J. Duarte, N. J. Fraser, A. Pappalardo, N. Tran, and Y. Umuroglu, “Ps and Qs: Quantization-aware pruning for efficient low latency neural network inference,” Frontiers Artif. Intell., vol. 4, Jul. 2021, Art. no. 676564, doi: 10.3389/frai.2021.676564.
+[25] Y. Nevarez et al., “CNN sensor analytics with hybrid-Float6 quantization on low-power embedded FPGAs,” IEEE Access, vol. 11, pp. 4852–4868, 2023, doi: 10.1109/ACCESS.2023.3235866.
+[26] S. Emara et al., “Low-latency network-adaptive error control for interactive streaming,” IEEE Trans. Multimedia, vol. 24, pp. 1691–1706, 2022, doi: 10.1109/TMM.2021.3070134.
+[27] M. Rowshan, M. Qiu, Y. Xie, X. Gu, and J. Yuan, “Channel coding toward 6G: Technical overview and outlook,” IEEE Open J. Commun. Soc., vol. 5, pp. 2585–2685, 2024, doi: 10.1109/OJCOMS.2024.3390000.
+[28] A. Hasani, L. Lopacinski, G. Panic, and R. Kraemer, “High-throughput multi-frame decoding of QC-LDPC codes with modified rejectionbased minimum finding,” IEEE Access, vol. 10, pp. 5378–5389, 2022, doi: 10.1109/ACCESS.2022.3141493.
+[29] E. Sharma, C. P. Davey, R. C. Deo, B. D. Carter, and S. Salcedo-Sanz, “A comprehensive systematic literature review on artificial intelligence for error correction and modulation schemes in next-generation satellite communications,” Artif. Intell. Rev., vol. 58, no. 10, Jul. 2025, Art. no. 321, doi: 10.1007/s10462-025-11317-4.
+[30] D. Nicolas Bailon, J.-P. Thiers, and J. Freudenberger, “Error correction for TLC and QLC NAND flash memories using cell-wise encoding,” Electronics, vol. 11, no. 10, p. 1585, May 2022, doi: 10.3390/electronics11101585.
+[31] Z. Lu and Y. Zhang, “T-deletion-1-insertion-burst correcting codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2022, pp. 808–813, doi: 10.1109/ISIT50566.2022.9834473.
+[32] O. Griebel, B. Hammoud, and N. Wehn, “Adaptive sliding window decoding of spatially coupled low-density parity-check codes: Algorithms and energy efficient implementations,” IEEE Access, vol. 12, pp. 191140–191161, 2024, doi: 10.1109/ACCESS.2024.3517704.
+[33] D. Zoni, A. Galimberti, and W. Fornaciari, “Efficient and scalable FPGA-oriented design of QC-LDPC bit-flipping decoders for post-quantum cryptography,” IEEE Access, vol. 8, pp. 163419–163433, 2020, doi: 10.1109/ACCESS.2020.3020262.
+
+[34] H.-B. Lee and J.-W. Kim, “Modified CC-PEG algorithm for protograph-based QC-LDPC codes over non-uniform channel,” IEEE Access, vol. 12, pp. 173660–173669, 2024, doi: 10.1109/ACCESS.2024.3502712.
+[35] J. Wang, J. Zhang, Q. Zhou, and L. Zhang, “Full-length rowmultiplier QC-LDPC codes with girth eight and short circulant sizes,” IEEE Access, vol. 11, pp. 22250–22265, 2023, doi: 10.1109/ACCESS.2023.3249464.
+[36] X. Xiao, B. Vasic, S. Lin, J. Li, and K. Abdel-Ghaffar, “Quasicyclic LDPC codes with parity-check matrices of column weight two or more for correcting phased bursts of erasures,” IEEE Trans. Commun., vol. 69, no. 5, pp. 2812–2823, May 2021, doi: 10.1109/TCOMM.2021.3059001.
+[37] I. Kim, T. Kojima, and H.-Y. Song, “Some short-length girth8 QC-LDPC codes from primes of the form t2 + 1,” IEEE Commun. Lett., vol. 26, no. 6, pp. 1211–1215, Jun. 2022, doi: 10.1109/LCOMM.2022.3159560.
+[38] G. Zhang, M. Ni, Y. Hu, and Y. Yang, “Quasi-cyclic LDPC codes with girth at least eight based on disjoint difference sets,” IEEE Commun. Lett., vol. 27, no. 1, pp. 55–59, Jan. 2023, doi: 10.1109/LCOMM.2022.3218841.
+[39] D.-Y. Yun, J.-W. Kim, H.-Y. Kwak, and J.-S. No, “The cycleconcentrating PEG algorithm for protograph generalized LDPC codes,” IEEE Access, vol. 11, pp. 57285–57294, 2023, doi: 10.1109/ACCESS.2023.3284314.
+[40] M. Battaglioni, M. Baldi, and F. Chiaraluce, “Bounds on the free distance of periodically time-varying SC-LDPC codes,” IEEE Trans. Inf. Theory, vol. 70, no. 4, pp. 2419–2429, Apr. 2024, doi: 10.1109/TIT.2024.3362387.
+[41] A. E. Dehaghani, M.-R. Sadeghi, and F. Amirzade, “Improving asymptotic properties of loop construction of SC-LDPC chains over the BEC,” IEEE Commun. Lett., vol. 26, no. 3, pp. 495–499, Mar. 2022, doi: 10.1109/LCOMM.2021.3138613.
+[42] F. Abedi and M. Gholami, “On the construction of multitype quasi-cyclic low-density parity-check codes with different girth and length,” IEEE Access, vol. 9, pp. 59725–59740, 2021, doi: 10.1109/ACCESS.2021.3071846.
+[43] J. Qiu, L. Chen, and S. Liu, “A novel concatenated coding scheme: RS-SC-LDPC codes,” IEEE Commun. Lett., vol. 24, no. 10, pp. 2092–2095, Oct. 2020, doi: 10.1109/LCOMM.2020.3004917.
+[44] P. Skvortcov, T. Koike-Akino, D. S. Millar, K. Kojima, and K. Parsons, “Dual coding concatenation for burst-error correction in probabilistic amplitude shaping,” J. Lightw. Technol., vol. 40, no. 16, pp. 5502–5513, Aug. 2022, doi: 10.1109/JLT.2022.3178675.
+[45] H.-Y. Kwak, D.-Y. Yun, Y. Kim, S.-H. Kim, and J.-S. No, “Boosted neural decoders: Achieving extreme reliability of LDPC codes for 6G networks,” IEEE J. Sel. Areas Commun., vol. 43, no. 4, pp. 1089–1102, Apr. 2025, doi: 10.1109/JSAC.2025.3531553.
+[46] C.-M. Huang, “Two novel semi-/auto-adaptive SNR algorithms to efficiently train deep neural SPA decoders,” IEEE Access, vol. 10, pp. 12607–12618, 2022, doi: 10.1109/ACCESS.2022.3146336.
+[47] J. Wang, H. Huang, J. Liu, and J. Li, “Joint demodulation and error correcting codes recognition using convolutional neural network,” IEEE Access, vol. 10, pp. 104844–104851, 2022, doi: 10.1109/ACCESS.2022.3201354.
+[48] J. Liu, L. Niu, Z. Yuan, D. Yang, X. Wang, and W. Liu, “PDquant: Post-training quantization based on prediction difference metric,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Vancouver, BC, Canada, May 2023, pp. 24427–24437, doi: 10.1109/CVPR52729.2023.02340.
+[49] O. Erak and H. Abou-Zeid, “Accelerating and compressing deep neural networks for massive MIMO CSI feedback,” in Proc. IEEE Int. Conf. Commun. (ICC), May 2023, pp. 1029–1035, doi: 10.1109/ICC45041.2023.10279462.
+[50] K. Gupta and A. Asthana, “Reducing the side-effects of oscillations in training of quantized YOLO networks,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Waikoloa, HI, USA, Jan. 2024, pp. 2440–2449, doi: 10.1109/WACV57701.2024.00244.
+[51] L. Qu, Y. Mao, S. Song, and C.-Y. Tsui, “Energy-efficient channel decoding for wireless federated learning: Convergence analysis and adaptive design,” IEEE Trans. Wireless Commun., vol. 23, no. 11, pp. 17222–17235, Nov. 2024, doi: 10.1109/TWC.2024.3451949.
+[52] T.-H. Kim et al., “Effect of program error in memristive neural network with weight quantization,” IEEE Trans. Electron Devices, vol. 69, no. 6, pp. 3151–3157, Jun. 2022, doi: 10.1109/TED.2022.3169112.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18043
+
+[53] A. Ayad, M. Barhoush, J. Loh, T. Gemmeke, and A. Schmeink, “PEACE: Private and energy-efficient algorithm for cardiac evaluation on the EDGE using modified split learning and model quantization,” in Proc. 14th Int. Conf. Inf. Commun. Syst., Irbid, Jordan, 2023, pp. 1–6, doi: 10.1109/ICICS60529.2023.10330472.
+[54] X. Yang, L. Zhang, Y. Feng, and Z. Wu, “A residual CNN-based denoiser for reliable recovery of bit stream with applications to soft channel decoding,” IEEE Trans. Cognit. Commun. Netw., vol. 8, no. 4, pp. 1677–1688, Dec. 2022, doi: 10.1109/TCCN.2022.3195511.
+[55] Q. Zeng, Q. Zhou, X. He, Y. Sun, X. Li, and H. Chen, “Polar codes: Encoding/decoding and rate-compatible jointly design for HARQ system,” Intell. Converged Netw., vol. 2, no. 4, pp. 334–346, Dec. 2021, doi: 10.23919/ICN.2021.0024.
+[56] M. Zhou, H. Zhu, H. Xu, B. Zhang, and K. Xie, “A note on the girth of (3, 19)-regular Tanner’s quasi-cyclic LDPC codes,” IEEE Access, vol. 9, pp. 28582–28590, 2021, doi: 10.1109/ACCESS.2021.3058732.
+[57] E. Ram and Y. Cassuto, “Spatially coupled LDPC codes with subblock locality,” IEEE Trans. Inf. Theory, vol. 67, no. 5, pp. 2739–2757, May 2021, doi: 10.1109/TIT.2021.3059751.
+[58] H.-Y. Kwak, D.-Y. Yun, and J.-S. No, “Rate-loss mitigation of SC-LDPC codes without performance degradation,” IEEE Trans. Commun., vol. 68, no. 1, pp. 55–65, Jan. 2020, doi: 10.1109/TCOMM.2019.2952074.
+[59] L. Deng et al., “Perturbed adaptive belief propagation decoding for high-density parity-check codes,” IEEE Trans. Commun., vol. 69, no. 4, pp. 2065–2079, Apr. 2021, doi: 10.1109/TCOMM.2020.3047085.
+[60] A. A. Youssef, M. Abaza, and A. S. Alatawi, “LDPC decoding techniques for free-space optical communications,” IEEE Access, vol. 9, pp. 133510–133519, 2021, doi: 10.1109/ACCESS.2021.3116081.
+[61] Y. Luo, J. Chen, S. Qin, and D. Wu, “Dual graph learning for multivariate time series anomaly detection in IoUT,” IEEE Trans. Netw. Sci. Eng., vol. 13, pp. 1632–1646, 2025, doi: 10.1109/TNSE.2025. 3598425.
+[62] P. Li, K. Cai, G. Song, and Z. Mei, “Sneak path interferenceaware adaptive detection and decoding for resistive memory arrays,” IEEE Commun. Lett., vol. 26, no. 9, pp. 2032–2036, Sep. 2022, doi: 10.1109/LCOMM.2022.3186324.
+[63] M. Yang, L. Li, X. Liu, and I. B. Djordjevic, “Real-time verification of soft-decision LDPC coding for burst mode upstream reception in 50GPON,” J. Lightw. Technol., vol. 38, no. 7, pp. 1693–1701, Apr. 2020, doi: 10.1109/JLT.2019.2961338.
+[64] Y. Lv, H. Yin, and Y. Wang, “An adaptive ordered shiftedpruning list decoder for polar codes,” IEEE Access, vol. 8, pp. 225181–225190, 2020, doi: 10.1109/ACCESS.2020.3044877.
+[65] H. Chen et al., “An adaptive single/multiple symbol flipping decoding algorithm for non-binary LDPC codes,” IEEE Commun. Lett., vol. 27, no. 3, pp. 773–777, Mar. 2023, doi: 10.1109/LCOMM.2022. 3201236.
+[66] S. S. Yang, J. Q. Liu, Z. G. Lu, Z. L. Bai, X. Y. Wang, and Y. M. Li, “An FPGA-based LDPC decoder with ultra-long codes for continuous-variable quantum key distribution,” IEEE Access, vol. 9, pp. 47687–47697, 2021.
+[67] L.-W. Liu, M.-H. Yuan, Y.-C. Liao, and H.-C. Chang, “A 38.64Gb/s large-CPM 2-KB LDPC decoder implementation for NAND flash memories,” IEEE Open J. Circuits Syst., vol. 3, pp. 180–191, 2022, doi: 10.1109/OJCAS.2022.3203849.
+[68] H.-Y. Kwak, J.-W. Kim, and J.-S. No, “Optimizing code parameters of finite-length SC-LDPC codes using the scaling law,” IEEE Access, vol. 9, pp. 118640–118650, 2021, doi: 10.1109/ACCESS.2021.3107584.
+[69] Y. Tang, T. Yao, S. Zhu, and X. Kai, “A family of constacyclic codes over F2m + uF2m and its application to quantum codes,” Chin. J. Electron., vol. 29, no. 1, pp. 114–121, Jan. 2020, doi: 10.1049/cje.2019.10.007.
+[70] M. Zhu, D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “Error propagation mitigation in sliding window decoding of spatially coupled LDPC codes,” IEEE J. Sel. Areas Inf. Theory, vol. 4, pp. 470–486, 2023, doi: 10.1109/JSAIT.2023.3312656.
+[71] A. Das and N. A. Touba, “A new class of single burst error correcting codes with parallel decoding,” IEEE Trans. Comput., vol. 69, no. 2, pp. 253–259, Feb. 2020, doi: 10.1109/TC.2019.2947425.
+[72] J. Kawamoto and T. Kurakake, “Diagonal XOR-based FEC method to improve burst-loss tolerance for 4K/8K UHDTV transmission,” IEEE Trans. Circuits Syst. Video Technol., vol. 31, no. 5, pp. 1983–1994, May 2021, doi: 10.1109/TCSVT.2020.3014924.
+
+[73] F. Garcia-Herrero, A. Sanchez-Macian, M. San-Isidro, L. A. Aranda, and J. A. Maestro, “Efficient majority-logic Reed–Solomon decoders for single symbol correction,” IEEE Trans. Device Mater. Rel., vol. 20, no. 2, pp. 390–394, Jun. 2020, doi: 10.1109/TDMR.2020.2980754.
+[74] Y. Zhang, K. Peng, J. Song, and Y. Wu, “Quasi-cyclic spatially coupled LDPC code for broadcasting,” IEEE Trans. Broadcast., vol. 66, no. 1, pp. 187–194, Mar. 2020, doi: 10.1109/TBC.2019.2932336.
+[75] Y. Liao, M. Qiu, and J. Yuan, “Design and analysis of delayed bit-interleaved coded modulation with LDPC codes,” IEEE Trans. Commun., vol. 69, no. 6, pp. 3556–3571, Jun. 2021, doi: 10.1109/TCOMM.2021.3064941.
+[76] A. Mondal and S. S. Garani, “Efficient parallel decoding architecture for cluster erasure correcting 2-D LDPC codes for 2-D data storage,” IEEE Trans. Magn., vol. 57, no. 12, pp. 1–16, Dec. 2021, doi: 10.1109/TMAG.2021.3119723.
+[77] R. Sokolovskii, A. Graell i Amat, and F. Brännström, “On doped SC-LDPC codes for streaming,” IEEE Commun. Lett., vol. 25, no. 7, pp. 2123–2127, Jul. 2021, doi: 10.1109/LCOMM.2021.3069628.
+[78] R. Sokolovskii, A. Graell i Amat, and F. Brännström, “Finite-length scaling of SC-LDPC codes with a limited number of decoding iterations,” IEEE Trans. Inf. Theory, vol. 69, no. 8, pp. 4869–4888, Aug. 2023, doi: 10.1109/TIT.2023.3257235.
+[79] J. Lu, “(F2 + uF2)(F4 + uF4)-additive cyclic codes,” IEEE Access, vol. 10, pp. 19112–19116, 2022, doi: 10.1109/ACCESS.2022.3150426.
+[80] H. Q. Dinh, T. Bag, A. K. Upadhyay, R. Bandi, and W. Chinnakum, “On the structure of cyclic codes over Fq R S and applications in quantum and LCD codes constructions,” IEEE Access, vol. 8, pp. 18902–18914, 2020, doi: 10.1109/ACCESS.2020.2966542.
+[81] T. Lu, X. He, P. Kang, J. Xing, and X. Tang, “Parity-check matrix partitioning for efficient layered decoding of QC-LDPC codes,” IEEE Trans. Commun., vol. 71, no. 6, pp. 3207–3220, Jun. 2023, doi: 10.1109/TCOMM.2023.3261380.
+[82] Y.-Z. Yu, D. W. Lin, and T.-H. Sang, “Fast simulation of coded QAM transmission in white Gaussian noise at low packet error rates,” IEEE Open J. Commun. Soc., vol. 3, pp. 1887–1905, 2022, doi: 10.1109/OJCOMS.2022.3214578.
+[83] R. Sokolovskii, A. Graell i Amat, and F. Brännström, “Finite-length scaling of SC-LDPC codes with a limited number of decoding iterations,” IEEE Trans. Commun., vol. 70, no. 12, pp. 8071–8086, Dec. 2022, doi: 10.1109/TCOMM.2022.3223606.
+[84] S. Puducheri-Sundaravaradhan and T. E. Fuja, “Hybrid-ARQ protocols based on Tornado codes for the packet erasure channel,” IEEE Trans. Commun., vol. 69, no. 11, pp. 7139–7153, Nov. 2021, doi: 10.1109/TCOMM.2021.3106676.
+[85] C. Yi, L. Zou, Y. Li, Z. Qiu, Y. Hu, and F. C. M. Lau, “Errorcorrecting codes with large field size under non-binary segmented burst deletion/insertion channels and unknown codeword boundaries,” IEEE Trans. Commun., vol. 72, no. 10, pp. 6001–6013, Oct. 2024, doi: 10.1109/TCOMM.2024.3400908.
+[86] M. Battaglioni, K. Andrews, R. Giuliani, F. Marinelli, F. Chiaraluce, and M. Baldi, “Design and analysis of the tail sequence for short LDPC-coded space communications,” IEEE Trans. Aerosp. Electron. Syst., vol. 61, no. 6, pp. 16938–16952, Jun. 2025, doi: 10.1109/TAES.2025.3599498.
+[87] H. Liu, L. Xiao, T. Wang, J. Li, and J. Li, “Error correction codes for double burst errors correction in memories,” IEEE Access, vol. 13, pp. 116621–116631, 2025, doi: 10.1109/ACCESS.2025.3586226.
+[88] F. Long, J. Tang, L. Li, J. Chen, C. Gong, and Z. Xu, “Adaptive modulation and coding with LDPC codes and retransmission for ultraviolet communication,” IEEE Photon. J., vol. 16, no. 3, pp. 1–10, Jun. 2024, doi: 10.1109/JPHOT.2024.3392669.
+[89] X. An, C. Zhang, K. Peng, Z. He, and J. Song, “Adaptive quantized and normalized MSA based on modified MET-DE and its application for 5G-NR LDPC codes,” IEEE Access, vol. 11, pp. 101123–101133, 2023, doi: 10.1109/ACCESS.2023.3315610.
+[90] Y. Wang, Q. Wang, Y. Zhang, S. Qiu, and Z. Xing, “An area-efficient hybrid polar decoder with pipelined architecture,” IEEE Access, vol. 8, pp. 68068–68082, 2020, doi: 10.1109/ACCESS.2020.2985909.
+[91] X. Yin, J. Qian, X. Guo, and G. Lin, “An optimized algorithm to construct QC-LDPC matrix in compressed sensing,” J. Web Eng., pp. 99–116, Dec. 2020, doi: 10.13052/jwe1540-9589.19784.
+[92] S. Wang and Q. Huang, “Belief propagation with optimized pool size for non-adaptive group testing: An empirical study,” IEEE Access, vol. 10, pp. 107170–107176, 2022, doi: 10.1109/ACCESS.2022.3212730.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+18044
+
+IEEE SENSORS JOURNAL, VOL. 26, NO. 12, 15 JUNE 2026
+
+[93] M. N. Hossain et al., “Design and implementation of secure CPless multi-user OCDM transceiver for 6G wireless communication networks,” IEEE Access, vol. 12, pp. 79276–79296, 2024, doi: 10.1109/ACCESS.2024.3409473.
+[94] M. D. Gemeda, M. S. Han, A. T. Abebe, and C. G. Kang, “Design of deep learning-based 1-bit transceiver with oversampling and faster-than-nyquist (FTN) signaling,” IEEE Access, vol. 12, pp. 43968–43983, 2024, doi: 10.1109/ACCESS.2024.3380203.
+[95] S. Wang, Q. Huang, S. Zheng, and Z. Wang, “Design of non-adaptive querying policies based on error control coding,” IEEE Access, vol. 8, pp. 14513–14522, 2020, doi: 10.1109/ACCESS.2020.2966539.
+[96] N. Devroye et al., “Interpreting deep-learned error-correcting codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2022, pp. 2457–2462, doi: 10.1109/ISIT50566.2022.9834599.
+[97] J. Chen, Z. Yi, Z. Liang, and X. Wang, “Improved belief propagation decoding algorithms for surface codes,” IEEE Trans. Quantum Eng., vol. 6, pp. 1–16, 2025, doi: 10.1109/TQE.2025.3577769.
+[98] F. Ivanov, V. Morishnik, and E. Krouk, “Improved generalized successive cancellation list flip decoder of polar codes with fast decoding of special nodes,” J. Commun. Netw., vol. 23, no. 6, pp. 417–432, Dec. 2021, doi: 10.23919/JCN.2021.000038.
+[99] X. Zhong et al., “Joint source-channel coding system for 6G communication: Design, prototype and future directions,” IEEE Access, vol. 12, pp. 17708–17724, 2024, doi: 10.1109/ACCESS.2024.3360003.
+[100] Y. Gong et al., “LDPC-Hadamard code-assisted OTFS in high-mobility scenarios,” IEEE Open J. Veh. Technol., vol. 6, pp. 1849–1860, 2025, doi: 10.1109/OJVT.2025.3573073.
+[101] X. Wu, Y. Wang, and C. Li, “Low-complexity CRC aided joint iterative detection and SCL decoding receiver of polar coded SCMA system,” IEEE Access, vol. 8, pp. 220108–220120, 2020, doi: 10.1109/ACCESS.2020.3043017.
+[102] H. Q. Dinh, B. T. Nguyen, A. K. Singh, and W. Yamaka, “MDS constacyclic codes and MDS symbol-pair constacyclic codes,” IEEE Access, vol. 9, pp. 137970–137990, 2021, doi: 10.1109/ACCESS.2021.3117569.
+[103] C. Kim and J.-S. No, “New two-stage automorphism group decoders for cyclic codes,” IEEE Access, vol. 8, pp. 172123–172135, 2020, doi: 10.1109/ACCESS.2020.3022460.
+[104] H. Ju, J. Park, D. Lee, M. Jang, J. Lee, and S.-H. Kim, “On improving the design of parity-check polar codes,” IEEE Open J. Commun. Soc., vol. 5, pp. 5552–5566, 2024, doi: 10.1109/OJCOMS.2024.3447042.
+[105] C. Du, Z. Ma, L. Luo, D. Huang, and H. Wang, “On a family of quantum synchronizable codes based on the (λ(u + v)|u − v) construction,” IEEE Access, vol. 8, pp. 8449–8458, 2020, doi: 10.1109/ACCESS.2019.2963289.
+[106] S. Vafi, “Parallel concatenated block codes constructed by convolutional interleavers,” IEEE Access, vol. 9, pp. 41218–41226, 2021, doi: 10.1109/ACCESS.2021.3065236.
+[107] M. M. F. Abdullah, O. Alluhaibi, A. E. Yilmaz, and A. Kalaycioglu, “Performance enhancement of V2V communication by QC-LDPC code and NOMA-UM-MIMO techniques,” IEEE Access, vol. 13, pp. 34449–34466, 2025, doi: 10.1109/ACCESS.2025.3531511.
+[108] A. K. Ahmed and H. S. Al-Raweshidy, “Performance evaluation of serial and parallel concatenated channel coding scheme with non-orthogonal multiple access for 6G networks,” IEEE Access, vol. 10, pp. 39681–39690, 2022, doi: 10.1109/ACCESS.2022. 3166943.
+[109] R. Schiavone, R. Garello, and G. Liva, “Performance improvement of space missions using convolutional codes by CRC-aided list Viterbi algorithms,” IEEE Access, vol. 11, pp. 55925–55937, 2023, doi: 10.1109/ACCESS.2023.3283473.
+[110] D. Cruz, F. A. Monteiro, and B. C. Coutinho, “Quantum error correction via noise guessing decoding,” IEEE Access, vol. 11, pp. 119446–119461, 2023, doi: 10.1109/ACCESS.2023.3327214.
+[111] J. Hyła and W. Sułek, “Short blocklength nonbinary raptor-like LDPC coding systems design and simulation,” IEEE Access, vol. 13, pp. 3849–3863, 2025, doi: 10.1109/ACCESS.2024.3517171.
+[112] Q. J. Wang, J. Che, H. Li, Z. Luo, B. Zhang, and H. Liu, “Tanner (3, 23)-regular QC-LDPC codes: Cycle structure and girth distribution,” IEEE Access, vol. 12, pp. 26591–26609, 2024, doi: 10.1109/ACCESS.2024.3355926.
+[113] C. Li, H. Chen, Z. Wang, Y. Sun, X. Li, and T. Qin, “Twostage constructions for the rate-compatible shortened polar codes,” Tsinghua Sci. Technol., vol. 28, no. 2, pp. 269–282, Apr. 2023, doi: 10.26599/TST.2021.9010086.
+
+[114] G. Zhang, Y. Hu, D. Ren, Y. Liu, and Y. Yang, “TypeII QC-LDPC codes from multiplicative subgroup of prime field,” IEEE Access, vol. 8, pp. 142459–142467, 2020, doi: 10.1109/ACCESS.2020.3013838.
+[115] A.-M. Cuc, F. L. Morgos¸, and C. Grava, “Performance analysis of turbo codes, LDPC codes, and polar codes over an AWGN channel in the presence of inter symbol interference,” Sensors, vol. 23, no. 4, p. 1942, Feb. 2023, doi: 10.3390/s23041942.
+[116] H. Cui, J. Lin, and Z. Wang, “Information storage bit-flipping decoder for LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 11, pp. 2464–2468, Nov. 2020, doi: 10.1109/TVLSI.2020.3009270.
+[117] N. Shah and Y. Vasavada, “Neural layered decoding of 5G LDPC codes,” IEEE Commun. Lett., vol. 25, no. 11, pp. 3590–3593, Nov. 2021, doi: 10.1109/LCOMM.2021.3113610.
+[118] M. Geiselhart, M. Ebada, A. Elkelesh, J. Clausius, and S. T. Brink, “Automorphism ensemble decoding of quasi-cyclic LDPC codes by breaking graph symmetries,” IEEE Commun. Lett., vol. 26, no. 8, pp. 1705–1709, Aug. 2022, doi: 10.1109/LCOMM.2022.3174164.
+[119] M. Jiang and D. Fan, “A low-latency BF decoding of LDPC codes with dynamic thresholds,” IEEE Commun. Lett., vol. 25, no. 9, pp. 2781–2785, Sep. 2021, doi: 10.1109/LCOMM.2021.3088579.
+[120] B. Karimi and A. H. Banihashemi, “Construction of QC LDPC codes with low error floor by efficient systematic search and elimination of trapping sets,” IEEE Trans. Commun., vol. 68, no. 2, pp. 697–712, Feb. 2020, doi: 10.1109/TCOMM.2019.2953601.
+[121] S. Khittiwitchayakul, W. Phakphisut, and P. Supnithi, “Reliability ratio-based serial algorithm of LDPC decoder for turbo equalization schemes,” IEEE Trans. Magn., vol. 58, no. 2, pp. 1–5, Feb. 2022, doi: 10.1109/TMAG.2021.3081732.
+[122] I. Kim and H.-Y. Song, “Some new constructions of girth-8 QCLDPC codes for future GNSS,” IEEE Commun. Lett., vol. 25, no. 12, pp. 3780–3784, Dec. 2021, doi: 10.1109/LCOMM.2021.3120106.
+[123] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1, no. 1, pp. 178–193, May 2020, doi: 10.1109/JSAIT.2020.2987203.
+[124] S. H. Lee, M. Zhang, and J. K. Kwon, “Bit error probability performance of binary dimmable visible light communication systems,” IEEE Trans. Veh. Technol., vol. 70, no. 9, pp. 9118–9131, Sep. 2021, doi: 10.1109/TVT.2021.3100587.
+[125] L. Ma, C.-W. Sham, C. Y. Lo, and X. Zhong, “An effective multi-mode iris authentication system on a microprocessor-FPGA heterogeneous platform with QC-LDPC codes,” IEEE Access, vol. 9, pp. 163665–163674, 2021, doi: 10.1109/ACCESS.2021.3133908.
+[126] V. Ninkovic, D. Vukobratovic, C. Häger, H. Wymeersch, and A. Graell i Amat, “Autoencoder-based unequal error protection codes,” IEEE Commun. Lett., vol. 25, no. 11, pp. 3575–3579, Nov. 2021, doi: 10.1109/LCOMM.2021.3108845.
+[127] P. Panteleev and G. Kalachev, “Quantum LDPC codes with almost linear minimum distance,” IEEE Trans. Inf. Theory, vol. 68, no. 1, pp. 213–229, Jan. 2022, doi: 10.1109/TIT.2021.3119384.
+[128] E. P. da Silva and M. P. Yankov, “Adaptive turbo equalization for nonlinearity compensation in WDM systems,” J. Lightw. Technol., vol. 39, no. 22, pp. 7124–7134, Nov. 15, 2021, doi: 10.1109/JLT.2021.3111095.
+[129] E. Rosnes and M. Helmling, “Adaptive linear programming decoding of nonbinary linear codes over prime fields,” IEEE Trans. Inf. Theory, vol. 66, no. 3, pp. 1281–1317, Mar. 2020, doi: 10.1109/TIT.2019.2955504.
+[130] Sonali, A. Dixit, and V. K. Jain, “SNR-and rate-optimized LDPC codes for free-space optical channels,” IEEE Access, vol. 9, pp. 13212–13223, 2021, doi: 10.1109/ACCESS.2021.3051687.
+[131] X. Tao, Y. Xin, B. Wang, and L. Chang, “Layered construction of quasicyclic LDPC codes,” IEEE Commun. Lett., vol. 24, no. 5, pp. 946–950, May 2020, doi: 10.1109/LCOMM.2020.2973964.
+[132] X. Tao, X. Chen, and B. Wang, “On the construction of QCLDPC codes based on integer sequence with low error floor,” IEEE Commun. Lett., vol. 26, no. 10, pp. 2267–2271, Oct. 2022, doi: 10.1109/LCOMM.2022.3187435.
+[133] C. Wang, J. Li, L. Kong, F. Shu, and F. C. M. Lau, “Adaptive 2-D scheduling-based nonbinary majority-logic decoding for NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 7, pp. 1349–1353, Jul. 2020, doi: 10.1109/TCSII.2019.2935031.
+[134] V. B. Wijekoon, E. Viterbo, Y. Hong, R. Micheloni, and A. Marelli, “A novel graph expansion and a decoding algorithm for NB-LDPC codes,” IEEE Trans. Commun., vol. 68, no. 3, pp. 1358–1369, Mar. 2020, doi: 10.1109/TCOMM.2019.2961884.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+LINGAMPALLY et al.: QUANTIZATION-AWARE BURST-RESILIENT LDPC DECODING: A REVIEW
+
+18045
+
+[135] K. Yang, J. Ren, C. Tian, J. Wang, and H. V. Poor, “Decoding binary linear codes over channels with synchronization errors,” IEEE J. Sel. Areas Commun., vol. 38, no. 12, pp. 2853–2863, Dec. 2020, doi: 10.1109/JSAC.2020.3005491.
+[136] Z. Yang, Y. Fang, Y. Cheng, P. Chen, and D. J. Almakhles, “Protograph LDPC-coded BICM-ID with irregular mapping: An emerging transmission technique for massive Internet of Things,” IEEE Trans. Green Commun. Netw., vol. 5, no. 3, pp. 1051–1065, Sep. 2021, doi: 10.1109/TGCN.2021.3063224.
+[137] C. Zhang, X. Mu, J. Yuan, H. Li, and B. Bai, “Construction of multirate quasi-cyclic LDPC codes for satellite communications,” IEEE Trans. Commun., vol. 69, no. 11, pp. 7154–7166, Nov. 2021, doi: 10.1109/TCOMM.2021.3107578.
+[138] Y. Zhang, H. Wu, and M. Coates, “On the design of channel coding autoencoders with arbitrary rates for ISI channels,” IEEE Wireless Commun. Lett., vol. 11, no. 2, pp. 426–430, Feb. 2022, doi: 10.1109/LWC.2021.3131848.
+[139] M. Zhu, M. Jiang, and C. Zhao, “Adaptive belief propagation decoding of CRC concatenated NR LDPC and polar codes,” IEEE Trans. Commun., vol. 70, no. 8, pp. 4991–5003, Aug. 2022, doi: 10.1109/TCOMM.2022.3184359.
+[140] E. Balevi and J. G. Andrews, “Autoencoder-based error correction coding for one-bit quantization,” IEEE Trans. Commun., vol. 68, no. 6, pp. 3440–3451, Jun. 2020, doi: 10.1109/TCOMM.2020.2977280.
+[141] M. Webster and D. E. Browne, “Engineering quantum error correction codes using evolutionary algorithms,” IEEE Trans. Quantum Eng., vol. 6, pp. 1–14, 2025, doi: 10.1109/TQE.2025.3538934.
+[142] N. H. Mahmood, G. Berardinelli, E. J. Khatib, R. Hashemi, C. De Lima, and M. Latva-aho, “A functional architecture for 6G special-purpose industrial IoT networks,” IEEE Trans. Ind. Informat., vol. 19, no. 3, pp. 2530–2540, Mar. 2023, doi: 10.1109/TII.2022.3182988.
+[143] A.-M. Cuc, F. L. Morgos, and C. Grava, “Performances analysis of turbo codes, LDPC codes and polar codes using AWGN channel with and without inter symbol interference,” in Proc. Int. Symp. Electron. Telecommun. (ISETC), Timisoara, Romania, Nov. 2022, pp. 1–4, doi: 10.1109/ISETC56213.2022.10010114.
+[144] Q. Wang, S. Cai, and X. Ma, “Free-ride coding for constructions of coupled LDPC codes,” IEEE Trans. Commun., vol. 71, no. 3, pp. 1259–1270, Mar. 2023, doi: 10.1109/TCOMM.2023.3237253.
+[145] X. Peng, D. Yang, Y. Zhou, and S. Peng, “TlcMHCpan: A novel deep learning model for enhanced pan-specific prediction of peptideHLA binding,” IEEE Access, vol. 12, pp. 184644–184656, 2024, doi: 10.1109/ACCESS.2024.3512853.
+[146] J. Kong, “Ulam ball size analysis for permutation and multipermutation codes correcting translocation errors,” IEEE Trans. Inf. Theory, vol. 65, no. 12, pp. 7806–7828, Dec. 2019, doi: 10.1109/TIT.2019.2938987.
+[147] C. Kim, J.-W. Kim, and J.-S. No, “New design of error control codes resilient to single burst error or two random bit errors using constacyclic codes,” IEEE Access, vol. 10, pp. 131101–131108, 2022, doi: 10.1109/ACCESS.2022.3229427.
+[148] J. Fontaine, M. Ridolfi, B. Van Herbruggen, A. Shahid, and E. De Poorter, “Edge inference for UWB ranging error correction using autoencoders,” IEEE Access, vol. 8, pp. 139143–139155, 2020, doi: 10.1109/ACCESS.2020.3012822.
+[149] H. Luo et al., “Wireless blockchain meets 6G: The future trustworthy and ubiquitous connectivity,” IEEE Commun. Surveys Tuts., vol. 28, pp. 3596–3636, 2025, doi: 10.1109/COMST.2025.3593918.
+[150] A. Jagannath, J. Jagannath, and T. Melodia, “Redefining wireless communication for 6G: Signal processing meets deep learning with deep unfolding,” IEEE Trans. Artif. Intell., vol. 2, no. 6, pp. 528–536, Dec. 2021, doi: 10.1109/TAI.2021.3108129.
+[151] H. Na, H. Park, H.-Y. Kwak, and S.-K. Ahn, “Learning strategies for neural min-sum decoding of LDPC codes,” ICT Exp., vol. 11, no. 1, pp. 161–166, Feb. 2025, doi: 10.1016/j.icte.2024.09.010.
+
+[152] S. P. Tera, R. Chinthaginjala, F. Al-Turjman, and S. Ahmad, “Deep learning assisted LDPC decoding for 5G IoT networks in fading environments,” Sci. Rep., vol. 15, no. 1, Oct. 2025, Art. no. 37469, doi: 10.1038/s41598-025-21382-y.
+[153] Q. Cui et al., “Overview of AI and communication for 6G network: Fundamentals, challenges, and future research opportunities,” Sci. China Inf. Sci., vol. 68, no. 7, Jul. 2025, Art. no. 171301, doi: 10.1007/s11432-024-4337-1.
+Shiv Prasad Lingampally received the B.Tech. degree from Vardhaman College of Engineering, Shamshabad, Telangana, India, in 2014, and the M.Tech. degree from Kshatriya College of Engineering, Armoor, Nizamabad, Telangana, India, in 2018. He is currently pursuing the Ph.D. degree with the Department of Electronics and Communication Engineering, SR University, Warangal, India.
+He has a strong academic background and is actively involved in research related to deep learning-assisted LDPC decoding, 6G wireless communication, bursterror correction, and hardware-aware optimization techniques.
+Chakradhar Adupa received the Ph.D. degree in electronics and communication engineering from GITAM Deemed to be University, Visakhapatnam, Andhra Pradesh, India, in 2025, with specialization in VLSI design.
+He is an Associate Dean of Innovation and Startups, the Director of NEST, and the Director of Entrepreneurship at the Science and Technology Centre, SR University, Warangal, India. With more than a decade of academic, research, and innovation experience, he has contributed to teaching, entrepreneurship development, and IEEE activities. His expertise includes VLSI design and verification, FPGA design, embedded systems, analog and digital electronics, and entrepreneurship development. Dr. Adupa is actively involved with IEEE activities and has served in leadership roles, including Secretary of the IEEE CAS EDS Hyderabad Section. He has also organized and chaired multiple technical sessions, workshops, and entrepreneurship development programs.
+Gyanendra Kumar Maurya received the Ph.D. degree in condensed matter physics from the Indian Institute of Information Technology, Allahabad (IIIT Allahabad), Prayagraj, India, in 2023, with a focus on topological insulators and optoelectronic devices.
+He is an Assistant Professor of Electronics and Communication Engineering at SR University, Warangal, India. With over a decade of teaching and research experience, he has published more than 14 research papers. His expertise includes nanotechnology, semiconductor devices, and advanced material characterization for next-generation photodetectors.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:40:06 UTC from IEEE Xplore. Restrictions apply.
+
+

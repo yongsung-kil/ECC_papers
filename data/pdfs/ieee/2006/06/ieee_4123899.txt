@@ -1,0 +1,371 @@
+ISSC 2006, Dublin Institute of Technology, June 28-30
+
+A Low Memory FPGA Based LDPC Decoder Architecture for Quasi-Cyclic LDPC codes
+Paul Saunders and Antony D.Fagan
+DSP Research Lab, School of Electrical, Electronic and Mechanical Engineering University College Dublin, Dublirn, Ireland
+E-mail: paul. saunders@ee .ucd. ie tony. f agancucd. ie
+Abstract We propose a novel low memory fully programmable FPGA decoder architecture to decode quasi-cyclic LDPC codes. By performing optimizations at the code construction, algorithmic and architecture levels we are able to achieve significant memory storage advantages over current FPGA decoder implementations. Our decoder employs the modified turbo decoding algorithm, to achieve a memory utilisation of 71Kb using a Xilinx Virtex-4 device.
+
+I INTRODUCTION
+Low-Density Parity-Check (LDPC) codes were introduced to the coding community by Gallager in
+1962 [1] but it was not until 1995, when MacKay
+and Neal [2] rediscovered them, for their full potential to be understood. LDPC codes have currently become a topic of great interest because of their excellent error correcting ability and their highly parallelizable decoding algorithm. Over the past few years many advances have been made in the design and analysis of LDPC codes. Some of these codes now offer near Shannon capacity performance and also out perform their Turbo Code counterparts [3]. However, these theoretical advantages have not been transferred into the practical arena. The realization of an efficient and practical LDPC decoder architecture still remains a big challenge and determines how well we can exploit the potential merits of LDPC codes in real world applications.
+The typical design philosophy is to jointly consider the code design and decoder implementation. Our methodology not only considers the code design but the algorithmic and architecture design also. The code construction of most LDPC codes is typically random. which results in highly irregular hardware interconnectivity. This goes against efficient hardware implementation paradigms which require regular and structured design features. The class of quasi-cyclic LDPC codes targeted to the FPGA architecture in this paper, exhibit these design features. Secondly at the algorithmic level, the modified turbo decoding algorithm is used to address the memory overhead problem seen in current FPGA decoder implementations. Moreover, a parallel soft-input soft-output (SISO) message up-
+
+date mechanism, in the form of a message decoding
+unit (MDU), based on the Log-MAP algorithm [4]
+is used. The MDU implements the recursions of the Log-MAP algorithm using metric differences based on simple max operations. Finally at the architecture level, a scalable architecture is implemented that can decode both regular and irregular LDPC codes of varying code rates and lengths each exhibiting the quasi-cyclic structure.
+The two main contributions of this paper are as follows: firstly we present the first application of the modified turbo decoding algorithm to quasicyclic LDPC codes and secondly we are the first to provide an FPGA implementation of the modified turbo decoding algorithm. The remainder of this paper is organized as follows. We begin by discussing the theory behind LDPC codes and their graphical representation in Section II. In Section III we discuss the methods used to construct the quasi-cyclic codes that are targeted to the FPGA architecture in this paper. The modified turbo decoding algorithm which is employed in our FPGA architecture is discussed in Section IV. In Section V we present all the modules that constitute our FPGA architecture. The error correction ability of our codes as well as the final architecture statistics are given in Section VI. Section VII provides some concluding remarks.
+II LOW-DENSITY PARITY-CHECK CODES
+a) Tanner Graph Representation
+An LDPC code is a linear block code defined by a m by n sparse parity check matrix H. For block codes a vector x is a codeword if and only if it satisfies: H-x = 0. The parity-check matrix of a LDPC
+
+- 223 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+code can be represented graphically by a bipartite graph called a Tanner graph (TG) [5]. The graph
+has on one side m check nodes [Cl, C2.... Cm] corresponding to the m rows of H, and on the other, n bit nodes [b,, b2.... bn] corresponding to the n columns of H. A bit node bj is connected to a check node ci if the entry hij of H is 1. The rate of the code is at least 1 - m/n. In a regular (c, r)-
+LDPC code, bit nodes have degree c and check nodes have degree r in the graph. In an irregular (C, R)-LDPC code, the node degrees are drawn from the sets C and R respectively. Another important property of a TG is the girth or minimum cycle length of the graph. In this paper we refer to the girth of a parity-check matrix H, which is equal to the girth of the TG representation of H.
+Fig.1 shows a length 9 rate 1/3 (2,3)-LDPC code
+with a girth of 4.
+b1 b2 b3 b4 b5 b6 b7 bg bg
+Ce ,1 1, I 0 0 0 0 0 ]
+C2 Li1ji 0 1 0 0 0 0 0
+C3 O 0 1 1 1 0 0 0 0 C4 0 O O 0 1 1 o 1 0 C5 O O ° O 0 1 1 0 1
+C6 Lo o O o 0 0 1 1 1
+Cl C2 C3 C4 C5 C6
+/ I 1/
+/ bb
+I(/ 5/I/ I/I 66(
+bi b2 b3 64 b5 b6 b7 b8 b9
+Fig. 1: Tanner graph of a regular (2,3)-LDPC code of length 9
+
+b) Single Parity- Check Trellis Representation
+
+An alternative graphical representation and one on which the modified turbo decoding algorithm is based is known as the Single Parity Check Trellis (SPCT) representation. The rows of a paritycheck matrix H correspond to parity-check equations constraining the values of the bits in a codeword. Hence if the ith row contains r ones at the
+column positions [j1,02, ... X jr] then this implies that the bits [xlI, i2 7 .. . x,fI must have even par-
+ity or:
+
+xjl e xj2 b ...* xjr O
+
+(1)
+
+The set of all codewords of length r having even parity forms a code known as the Single Parity Check (SPC) code of length n = r and dimension k - r - 1 denoted as a (r,r - 1)-SPC code. The codewords of a (r, r -1)-SPC code can be represented using a trellis of length r composed of nodes and labelled edges as shown in Fig.2 A node x in the trellis is a state which represents the parity of the edge labels which begin at the
+
+0
+
+-
+
+p
+
+0
+
+(1
+
+0
+
+0
+
+Fig. 2: A trellis representation of a (5,4)-SPC code
+
+root node and end in that node. The nodes in
+the top row including the root and rightmost node correspond to even parity states whilst those in the bottom correspond to odd parity states. A sequence of edge labels beginning at the root and ending at the rightmost node defines a SPC codeword of length r. The set of all 2r-1 such sequences defines a (r, r - 1)-SPC code. A parity-check matrix H containing ri ones per row i = 1,2,....m can be represented using m trellises corresponding to (re, ri-1)-SPC codes. Using this observation we
+can convert a TG representation of a LDPC code to a SPCT representation. In the SPCT represen-
+tation a check node of degree ri is replaced by the trellis of a (ri, ri - 1)-SPC code. The edges incident on a check node in the TG are connected to the appropriate sections of the trellis corresponding to that check node. For a larger random H the connections quickly become congested. This can be represented by a random interleaver. This random interleaver creates the interconnect complexity bottleneck mentioned in Section I.
+III HARDWARE TARGETED CODE CONSTRUCTION
+Our architecture aware LDPC codes are based on
+the construction methods presented in [6] and [7].
+The construction method proposed in [6] was limited to regular codes and therefore could not take advantage of the error correcting benefits offered by irregular LDPC codes. This shortcoming was observed in [7]and the construction method was modified to include irregular codes. The construction method of [7] involves two stages, base matrix construction and matrix expansion.
+a) Base Matrix Construction
+In this step we produce an irregular (C, R) LDPC code defined by a D by B base parity-check matrix Hbase whose girth is 6 and whose degree distributions are determined by a technique known as density evolution [8]. Specifically we chose C = {2,3,4} and R = {5,6}. We begin with an
+all zero matrix Hbae, and randomly insert l's on a column by column basis into the Hbase subject
+to the girth and degree distributions mentioned above.
+b) Matrix Expansion
+We expand the base matrix Hbase generated by the above algorithm, by a factor S to obtain an
+
+- 224 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+ISSC 2006, Dublin Institute of Technology, June 28-30
+
+expanded m by n parity-check matrix H where
+m = S D and n = S B. This is illustrated in
+Fig.3. Each 0 in the base matrix is expanded to a S x S sub-matrix 0 and each 1 at position (u, v)
+is expanded to a S x S sub-matrix Iu,v which is
+obtained by right cyclic shifting a S x S identity
+matrix by ku columns. Each integer kU,v is gen-
+erated randomly. These codes are known as QuasiCyclic LDPC codes.
+
+<js,
+
+0
+
+1 0
+
+0
+
+01
+
+o
+
+Base Matrix HDXB
+
+1LEILLCiIILLZi1L
+Expanded Matrix Hmxn
+
+Fig. 3: Matrix expansion
+
+c) Properties of Quasi- Cyclic LDPC codes
+Notice that the above matrix expansion scheme is beneficial to both error-correcting performance and decoder hardware implementations. The girth of H is always greater than or equal to the girth of Hbase. The random cyclic permutation of each identity matrix further increases the value of the average cycle length, which will improve the effectiveness of the decoding algorithm. Moreover, notice that the rows within each block row do
+not overlap thus the constituent (r, r - 1)-SPC
+subcodes can be decoded in parallel without exchanging information. Furthermore, each permutation sub-matrix, IU,V7 contains one 1 per column and one 1 per row. Therefore the random interleaver discussed in Section I can be factored into smaller interleavers defined by each permuta-
+tion sub-matrTz IU,V This reduces the interconnect
+problem mentioned before. Also, the permutation sub-matrices simplify the control logic for writing to and reading from memory as well as enabling efficient and practical cyclic interleavers and deinterleavers to be implemented.
+IV THE MODIFIED TURBO DECODING ALGORITHM
+The modified turbo decoding algorithm operates on the SPCT representation of the code. We begin by tailoring the Log-MAP algorithm [4] to the SPCT representation of the code. This forms the basis of the MDUs used to calculate the SISO messages. We then provide an overall description of the turbo decoding algorithm.
+
+a) The Log-MAP Algorithm Applied to Block Codes
+The Log-MAP algorithm can be tailored to the trellis of a (r, r - 1)-SPC code. The key equations of any section of the trellis reduce to [9]:
+
+akk(O) f(ak- 1(O), ak-1(1) + Pk)
+
+(2)
+
+akk(1) f(3)k-)1(0))+ Pk, )k-1 M)
+
+(3)
+
+/k-1 (0) (: (°),iA (1) + Pk)
+
+(4)
+
+/k-1 (1) f(Ck(0) + Pk, Sk(l))
+
+(5)
+
+Ak: f(Cek-I (O k(0)), ak-1 (1) + k ())
+
+.f C0fk-1() + Ok(0) °ak-1(1) + Bk(1)) (6)
+
+Where Pk is the initial extrinsic LLR of the code bit at depth k of the trellis. Ak is the updated extrinsic LLR of the code bit at depth k of the trellis and ak(i) and Sk(i) are the intermediate forward and backward state metrics for states with parity i at depth k of the trellis. Using the Jacobian log-
+arithm [41 and metric differences [9] the key equa-
+tions become
+
+q(x, y) = max(x, y) + ln(1 -e-l-Yl )-
+
+max(x + y, 0) - ln(1 - e1x+YI)
+
+=Q(x,y) +6q(x,y)
+
+((77)
+
+Where Q(x, y) = max(x, y) - max(x + y, 0) is the
+principal part and 6q(X, y) = ln(I-eI'x-YI)-ln(1-
+e-Ix+YI) is the bivariate correction function. We
+chose to only implement Q(x, y) in hardware as this reduces the delay associated with FPGA implementations. This simplification shall be known as the modified turbo decoding algorithm. Applying this simplification, the key equations become:
+
+Aak = Q(Aak-1, P)
+
+(8)
+
+AAk- 1 = Q(Ak, Pk)
+
+(9)
+
+Ak = Q(Aak-1, Ak)
+
+(10)
+
+b) The Modified Turbo Decoding Algorithm
+Recall that for any i C {1, ... , D}, the rows in the ith block row in H do not overlap and thus can be decoded in parallel. Therefore the corresponding S (r, r 1)-SPC trellises can be decoded in parallel by S MDUs which together form a SISO decoder
+designated by Si. Each MDU implements the Log-
+MAP algorithm discussed in the previous section. Let 6 be the vector of received channel LLRs and let A be the vector of intrinsic LLRs. Then let -y denote the vector of a posteriori LLRs of the code
+bits (-y - 6+Z Ai). Decoding proceeds accord-
+ing to the extrzinsic principle which asserts that decoder Si takes as input, all information known so far about the bits excluding information generated using Si. In order to implement this, each decoder takes the vector y and subtracts the vector A2 this
+
+- 225 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+produces a vector p which is used by the MDUs. The MDUs then decode block row i using the constraints of the ith constituent code and produce a vector A, the updated extrinsic LLRs. This information is then summed with p to produce a vector r, the updated posterior LLRs. A and r become A
+and -y for the next sub-iteration. The memory sav-
+ings of our architecture are due to the fact that the multiple bit-to-check and check-to-bits messages of the sum product algorithm have been merged into a single SISO message corresponding to the posterior LLRs of the current sub-iteration.
+V THE FPGA DECODER ARCHITECTURE
+a) The Codes Targeted to the Architecture
+In this paper we will present results for two codes derived from the same D by B base parity-check matrix Hbase. Our base parity-check matrix is constructed using the methods described in Section III and contains 54 rows and 100 columns. It is then expanded by a factor of S = 32 resulting in a length 3200 rate 0.46 LDPC code. The second code is constructed by expanding Hbase by a factor of S - 64 resulting in a length 6400 rate 0.46 LDPC code. The bit error rate (BER) performance of these codes using the modified turbo and turbo decoding algorithms is shown in Section VI.
+b) A High Level Description Of The Architecture
+We chose to design the partly parallel architecture to decode the length 3200 rate 0.46 code. We also chose to use 5 bits of resolution in our design as this offered the best compromise between performance and logic utilization (See Section VI). The architecture is composed of six components namely: (1) A set of S MDUs for message computation. Each MDU decodes a row in block row i, i = 1, ... , D. (2) A dual port memory module (-y memory) of size {B}-by-{Sx b}, where b is the number of resolution bits used. This memory stores the posterior LLRs of all code bits.(3) Two dual port memory modules
+(Aleft and Aright) of size {D x [r/21 }-by-{S x b}.
+Where r is the maximum trellis size of the code. These memories store the updated reliability messages pertaining to all the constituent codes. (4) A single port memory module (H memory) of size
+{D x Fr/2]}-by-{addrL + addrR}. Where addrL
+and addrR are the number of bits needed to index -y memory. This memory stores the memory locations of the permutation sub-matrices in H. (5) A bi-directional communication network containing two cyclic interleavers and two cyclic deinterleavers used for routing the messages between -y memory and the MDUs. (6) A single port memory mod-
+ule (7r memory) of size {D x Fr/2] }-by-{21og2 (S)}.
+This memory stores the shift values of each of the
+
+permutation sub-matrices in H. These values are used by the cyclic interleavers and deinterleavers.
+
+H Memory
+141 114 160
+
+51P.
+
+>" YL
+0
+
+Mm
+
+10 10
+
+160 YR A A
+
+160
+
+e
+
+-YL S.
+
+~D
+
+160
+
+rL 160
+
+160
+
+ir-
+
+160
+
+IIL
+
+YL~~~~~~~~~~~~~~
+
+Ai 160
+Ai
+
+160
+
+160
+
+g
+
+141/
+
+|
+v
+
+Fig. 4: A block diagram of the architecture
+
+c) The Message Processing Units The structure of a MDU is shown in Fig.5.
+
+Fig. 5: The structure of a MDU
+Each MDU contains 4 inputs and 4 outputs. The 4 inputs are the left and right LLRs read from the ay and A memories. The 4 outputs are the left and right updated LLRs to be written back to the -y and A memories. The reason for providing both left and right inputs during a single clock cycle is that the a and 3 recursions performed by the MDUs are independent and can be calculated simultaneously. Therefore data corresponding to
+the left permutation sub-matrix of a block row, appears on the left input ports. Similarly, the data corresponding to the right permutation submatrix of a block row, appears on the right input ports. The data appearing on the left input port moves from left to right along the trellis. Similarly, the data appearing on the right input port moves from right to left along the trellis. The point in
+the trellis where the a and ,B recursions meet is known as the crossover point. The corresponding updated LLRs for each left and right permutation sub-matrix appears on the left and right output ports. Last In First Out (LIFO) buffers are provided to store the intermediate a and i3 values before crossover occurs. LIFO buffers are also provided to store the left and right p values which are summed with the updated A LLRs to produce the updated r LLRs.
+
+- 226 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+ISSC 2006, Dublin Institute of Technology, June 28-30
+
+d) The Memory Modules
+The -y memory is a dual-port memory module containing 100 storage locations, each 160 bits wide. Both ports are configured for reading and writing. Each A memory is a dual port memory module containing 162 storage locations each 160 bits wide. One port is configured for reading, the other for writing. The H and i7r memories are combined into a single port read only memory (RUM). There are also three control bits that are appended to each storage location. These control bits give the trellis size of the block row being decoded. They are used
+to control the read address and write address gen-
+erators as well as the timing of the MDUs. This results in a memory module containing 162 stor-
+age locations each 27 bits wide. The total memory utilization of our decoder is 71Kb or 72214 bits.
+e) The Bi-Directiornal Transport Network
+The transport network contains two 160 bit wide data paths in the forward direction and two 160 bit wide data paths in the backward direction. Each data path transports either the left or right reliability values from -y memory to the MDUs and back again. There are two cyclic interleavers in the forward direction. Each interleaver cyclicly shifts the data on its input to the left by the value stored in the ir memory. There are also two cyclic deinterleavers in the return direction. Each deinterleaver cyclicly shifts the data on its input to the right by the value stored in the ir memory. Both the interleavers and deinterleavers are implemented as 160 bit barrel shifters. Barrel shifters provide an efficient mxeans of cyclicly shifting a bit vector. They achieve this by performing the shift in stages of power of 2 i.e. in the first stage a shift of 1 is performed, in the next a shift of 2 followed by a shift of 4 etc.
+VI SIMULATION RESULTS
+a) Test Setup
+The two codes mentioned in Section III are de-
+coded using 10 iterations of the modified turbo and turbo decoding algorithms. In the simulation we assumed that both codes were modulated by BPSK modulation and transmitted over an AWGN channel. Fig.6 shows the BER curves for the length 3200 code, Ci and the length 6400 code, 02. The first set of BER curves result from the full q(x, y) function being implemented whilst the second set results from implementing the reduced
+function, Q(X,y). It can be seen from Fig.6, that the maximum
+performance degyradation wheni using Q(x, y) is
+0.5dB for Cl. This decreases to 0O4dB for 02. Next
+we decoded Ci using using Q(x, y) and fixed point arithmetic. The BER curves are shown in Fig.7,
+
+10'
+
+10
+
+10
+
+1526
+
+.b.
+
+Fig..6:.BE.Rof.C..anC. dcoe usin q(.,a y).d. th
+
+a1 s 01522
+
+Eb/No (dB)
+Fig. 7: BER curves for C2deusing Qsn(x, y) afnxddpith arithmefunticn (,y
+b)r4FPGA ArchitecuaturzSatistic The FPG.arhitctue.ws.ipleentd.uin
+
+FPA hi ad.hefialdeig showinTnable 1.~~~~~~~~......
+
+.satstcsarenP
+
+Design
+Parameter
+Slices
+No 4 Input LUTs No Bonded JOBs
+No BRAMs
+
+Resource:!s
+Used 6946 10743 172
+16
+
+Resources Available
+10752 21504 448
+72
+
+Percentage
+Used 65% 50% 38% 22%
+
+Table 1: Design statistics of the FPGA architec-
+ture
+
+- 227 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+Architecture Ours [10] [11] [12] [13] [14] [15]
+
+n
+
+3200 9216 8088 1038 6096 1536 9036
+
+No BRAMs 16 20 27 32 46 661 102
+
+Table 2: Comparison between FPGA architectures
+
+c) Comparison with other architectures
+In this section we attempt to compare our FPGA decoder's memory utilization with other FPGA implementations presented in literature. Since different devices are used the results presented in table 2 are standardized to a Xilinx Virtex-4 device. It is evident from the above table that our implementation uses less memory than the other implementations It is also worth noting that only 24% of the memory resources have been used (72214/(16x18432)). Thus a larger code (n 10000) could be decoded without increasing the number of BRAMs of the decoder.
+VII CONCLUSION
+A partly parallel FPGA architecture has been proposed based on the modified turbo decoding algorithm. The architecture achieves a memory utilisation of 71Kb for a length 3200 Quasi-Cyclic LDPC code and a BER of 10-6 at a SNR of 2.5dB over the AWGN channel. Our FPGA decoder is superior in terms of memory utilization when compared to other FPGA architectures presented in literature.
+REFERENCES
+[1] R.G.Gallager, "Low-density parity-check codes," IEEE Trans. Inform. Theory, vol. 8, pp. 21-28, Jan. 1962.
+[2] D.J.C.Mackay and R.M.Neal, "Good codes based on very sparse matrices," 5th IMA Conf. on Cryptography and Coding. Lecture Notes in Computer Science, no. 1025. Berlin - Germany: Springer, pp. 100-111, 1995.
+[3] S.-Y.Chung, G.D.J.Forney, T.Richardson, and R.Urbanke, "On the design of low-density parity-check codes within 0.0045dB of the Shannon limit," IEEE Commun. Lett., vol. 5, pp. 58-60, Feb. 2001.
+[4] P.Robertson, E.Villebrun, and P.Hoeher, "A comparison of optimal and sub-optimal map decoding algorithms operating in the log domain," Proc. IEEE Int. Conf. Commun., vol. 2, pp. 1009-1013, Jun. 1995.
+[5] R.M.Tanner, "A recursive approach to low complexity codes," IEEE Trans. Inform. Theory, vol. 27, pp. 533-547, Sep. 1981.
+[6] D.Sridhara, T.Fuja, and R.M.Tanner, "Low density parity check codes from permutation
+
+matrices," Conf. on Info. Sciences and Sys., p. (1 page), March 2001.
+[7] D. Hocevar, "LDPC code construction with flexible hardware implementation," IEEE Inter. Conf. on Commun., vol. 4, pp. 2708-2712, May 2003.
+[8] T.Richardson, A.Shokrollahi, and R.Urbanke, "Design of capacity-approaching irregular low-density parity-check codes," IEEE Trans. Inform. Theory, vol. 47, pp. 619-637, Feb. 2001.
+[9] M.M.Mansour and N.R.Shanbhag, "Turbo decoded architectures for low-density paritycheck codes," IEEE Global Telecommunications Conference, vol. 2, pp. 1383-1388, Nov. 2002.
+[10] T.Zhang and K.K.Parhi, "A 54 Mbps (3,6)regular FPGA LDPC decoder," IEEE Workshop on Signal Processing Systems, pp. 127132, Oct. 2002.
+[11] P.Bhagawat, M.Uppal, and G.Choi, "FPGA based implementation of decoder for array low-density parity-check codes," Proc. IEEE Conf. Acoustics Speech and Signal Processing, vol. 5, pp. 25-32, Mar. 2005.
+[12] Y.Chen and D.Hocevar, "A FPGA and ASIC implementation of rate 1/2, 8088-b irregular low density parity check decoder," Proc. IEEE Global Telecommunications Conference. GLOBECOM '03, vol. 1, pp. 113-
+117, Dec. 2003.
+[13] Y.Pei, L.Yin, and J.Lu, "Design of irregular LDPC codec on a single chip FPGA," Proc.
+Emerging Technologies: Frontiers of Mobile
+and Wireless Communication, vol. 1, pp. 221224, Jun. 2004.
+[14] M.Karkooti and J.R.Cavallaro, "Semi-parallel reconfigurable architectures for real-time LDPC decoding," Proc. Inter. Conf. Information Technology, Coding and Computing, vol. 1, pp. 579-585, Apr. 2004.
+[15] L.Yang, M.Shen, H.Liu, and C.-J.R.Shi, "A FPGA implementation of low-density paritycheck code decoder with multi-rate capability," Proc. Asia and South Pacific Design Automation Conference, vol. 2, pp. 760-763,
+Jan. 2005.
+
+- 228 -
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 18:29:14 UTC from IEEE Xplore. Restrictions apply.
+
+

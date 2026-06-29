@@ -1,0 +1,890 @@
+Design and Implementation of LDPC Codes for
+DVB-S2
+Manoj K. Yadav & Keshab K. Parhi Department of Electrical and Computer Engineering
+University of Minnesota Twin Cities, MN 55455 manoj,parhi@ece.umn.edu
+
+Abstract --In this paper, we present the design and FPGA implementation of 11 LDPC codes with code rates 1/4, 1/3, 2/5, 1/2, 3/5, 2/3, 3/4, 4/5, 5/6, 8/9 and 9/10 for normal frame length of 64800 bits as used in DVB-S2. Out of these 11 codes, 7 are regular and 4 are irregular. All of them have been synthesized into Xilinx Virtex-II XC2V8000 FPGA.
+
+I.
+
+INTRODUCTION
+
+Low density parity check (LDPC) codes have been proposed as the inner code for forward error correction in DVB-S2 (Digital Video Broadcast –satellite) [1]. LDPC code is a linear block code described with a binary sparse M x N parity check matrix H. Each row of the matrix H corresponds to a parity check and each column represents a demodulated symbol. The number of non-zero elements in a row or column is defined as the row weight dc or the column weight dv. If all rows and all columns are of uniform weight, the LDPC code is called a regular code. Otherwise it is an irregular code. The Tanner graph has been introduced to represent LDPC codes. Tanner graph is a bipartite graph with variable nodes on one side and constraint or check nodes on the other side. In the graph, each variable node corresponds to a received symbol, each check node corresponds to a set of parity check equations, and each edge corresponds to a non-zero entry in the parity check matrix. For example, a regular LDPC H matrix, dc = 2 and dv = 1, and its corresponding Tanner graph is shown in Fig. 1.
+
+v0 v1 v2 v3 v4 v5
+
+100010
+
+c0
+
+010100
+
+c1
+
+0 0 1 00 1
+
+c2
+
+Variable Node
+v0
+v1
+v2
+v3
+
+Check Node
+c0
+c1
+
+v4 c2
+v5
+Fig. 1. A regular H matrix and its corresponding Tanner graph
+
+The DVB-S2 standard requires LDPC codes for 11 different code rates namely 1/4, 1/3, 2/5, 1/2, 3/5, 2/3, 3/4, 4/5, 5/6, 8/9 and 9/10 for normal frame length of 64800. It also requires these codes to perform within 1 dB of the Shannon limit. Although it is possible to have random LDPC codes that satisfy these constraints, it might not be feasible to implement them. In fact the standard itself provides all these codes but it is very difficult to implement them unless we know how these codes were constructed. Unfortunately, the standard doesn’t give any detail about this.
+We have designed all these codes in such a way that using the same decoder architecture they can be synthesized into a Xilinx Virtex-II XC2V8000 FPGA. Out of these 11 codes, 7 are regular and 4 are irregular. This paper describes the details of the code construction approaches and their FPGA implementations. We first describe the decoding algorithm and decoder architecture that we have used and then code designs, followed by conclusions.
+
+II.
+
+DECODING ALGORITHM
+
+We have used modified min-sign algorithm as proposed in [3] since it provides an excellent trade-off between performance and hardware complexity. Due to lack of space, we are not providing the details here. Interested readers are advised to refer [3.]
+
+III.
+
+DECODER ARCHITECTURE
+
+The decoder structure for irregular parity check matrix is very complex. But if H is composed of Identity matrices and their cyclic-shifted matrices, then decoder structure can be greatly simplified.
+E.g., H is a 2 x 4 array of 5 x 5 circulants where each circulant is either Identity matrix or its cyclic shifted version. It has 20 bit nodes {vi}(i=1.. 20) and 10 check nodes {cj} (j= 1.. 10). Each check sum involves 4 bits and each bit is checked by 2 checks. The decoder corresponding to above H matrix is shown in Fig. 2. The decoding process can be described as follows:
+
+1­4244­0132­1/05/$20.00 ©2005 IEEE
+
+723
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 v20
+c1 ª 0 0 1 0 0  0 0 0 0 1  1 0 0 0 0  0 1 0 0 0 º c2 « 0 0 0 1 0  1 0 0 0 0  0 1 0 0 0  0 0 1 0 0 » c3 « 0 0 0 0 1  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0 » c4 « 1 0 0 0 0  0 0 1 0 0  0 0 0 1 0  0 0 0 0 1 » c5 « 0 1 0 0 0  0 0 0 1 0  0 0 0 0 1  1 0 0 0 0 » H «» c6 « 0 1 0 0 0  0 0 1 0 0  0 0 0 0 1  1 0 0 0 0 » c7 « 0 0 1 0 0  0 0 0 1 0  1 0 0 0 0  0 1 0 0 0 » c8 « 0 0 0 1 0  0 0 0 0 1  0 1 0 0 0  0 0 1 0 0 » c9 « 0 0 0 0 1  1 0 0 0 0  0 0 1 0 0  0 0 0 1 0 » c10 ¬« 1 0 0 0 0  0 1 0 0 0  0 0 0 1 0  0 0 0 0 1 ¼»
+1. Initialization: Flush received messages to both 5 x 4 receive data memories m_vi (i= 1,2 3,4) and the corresponding 5 x 6 message memories Mj_k (j = 1, 2 and k = 1,2 3,4). Here 4 are the length of received data and 6 are the length of messages. The data are stored column-wise in the both type of memories. Since our received symbols are of length 4, we sign extend them by 2 bits before saving them in message memories. 2. Check Node update: In each subsequent iteration, for all the Check-Node-Computation-Units (CUs) read the updated variable-to-check message from the message memories in the same block row and then after Check node computation write the updated check-to-variable message back to the same address as read operation in the order of offset, offset+1…4,0….offset-1. The value of offset is different for each message memory and it is basically the location of single 1 in the first row of each permutation matrix Pi,j of H. Note that here indexing start from 0 instead of 1. 3. Variable Node update: Similarly in the same iteration, for all the Variable-Node –Computation-Units (VUs) read the updated check-to-variable message from the message memories and the intrinsic messages from the received data memories in the same block column, and then after Variable node computation write the updated variable-to-check message back to the same address in the order of 0 ……4. At the same time, the decoded code bits are written to the
+
+5 x 1 decoded code word memories m_ci (i = 1,2 ,3 4).
+
+The decoding process terminates when the pre-assigned maximum number of iterations are reached.
+
+IV.
+
+DESIGN OF CODES
+
+In this section, we describe how we designed the 11 LDPC
+
+codes for DVB-S2 with code rates 1/4, 1/3, 2/5, 1/2, 3/5, 2/3,
+
+3/4, 4/5, 5/6, 8/9, 9/10 and code word length = 64800. 7 of
+
+these codes, code rate 3/5 to 9/10, are regular and rest 4, code
+
+rate 1/4 to 1/2 are irregular. Our approach has been to first try
+
+to find a regular code for a particular code rate. Only when we
+
+failed to do so then we tried for an irregular one. The reason
+
+for this preference is the ease of implementation of regular
+
+codes. Our goal has been to design codes that can use the
+
+decoder architecture described in section III and can be
+
+synthesized into a reconfigurable device like Xilinx Virtex-II
+
+XC2V8000 FPGA.
+
+The major constraint in the hardware implementation of
+
+LDPC codes comes from the memory requirement in decoder.
+
+The reason for choosing a particular device XC2V8000 can be
+
+understood from Table I.
+
+TABLE I
+
+XILINX VIRTEX-II SELECTRAM MEMORY AVAILABLE
+
+Device
+
+Blocks
+
+In Kbits
+
+XC2V2000
+
+56
+
+1,008
+
+XC2V3000
+
+96
+
+1,728
+
+XC2V4000
+
+120
+
+2,160
+
+XC2V6000
+
+144
+
+2,592
+
+XC2V8000
+
+168
+
+3,024
+
+Size of each block = 16 kbit
+
+As we can see from the table, XC2V8000 has the maximum number of SelectRAM blocks. The number of RAM blocks is the major self-imposed constraint that we have worked under.
+
+A. Regular LDPC Codes
+
+CU1
+
+M1_1
+
+M1_2
+
+M1_3
+
+M1_4
+
+To construct the regular codes, we first designed a 3/4 rate regular code based on Euclidean geometry (2, 26) [2]. The
+
+reason for using this base code is that it has been shown to
+
+CU2
+
+M2_1
+
+M2_2
+
+M2_3
+
+M2_4
+
+perform very close to the Shannon limit [2] and it also has the
+
+desired form of H that we need to use our decoder
+
+architecture. Using this base code, we have constructed all our
+
+regular codes. It is not exactly a systematic method but it has
+
+VU1
+
+VU2
+
+VU3
+
+VU4
+
+worked very well as proved by the BER performance of these
+
+codes.
+
+m_v1
+
+m_v2
+
+m_v3
+
+m_v4
+
+1. Rate 3/4 regular LDPC code
+
+m_c1
+
+m_c2
+
+m_c3
+
+m_c4
+
+The rate 3/4 base code has the following form:
+
+ª P1_1 P1_ 2 P1_ 3  P1_14 P1_15 P1_16º
+
+Fig. 2. LDPC decoder for structured (2,4) code
+
+H3 / 4
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _14 P2 _15 P2 _16»
+
+«¬«PP43
+
+_1 _1
+
+P3 P4
+
+_ _
+
+2 2
+
+P3 P4
+
+_ _
+
+3 3
+
+ 
+
+ 
+
+P3 P4
+
+_ 14 _ 14
+
+P3 P4
+
+_ 15 _ 15
+
+P3 P4
+
+__1166¼»»
+
+(1)
+
+724
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+where each Pi_j (i =1, 2, 3, 4 and j = 1, 2,….16) is a permutation matrix of size 4095 x 4095. The codeword length for this code is 16 * 4095 = 65520. But we require it to be 64800. We can get the desired length if each permutation matrix were of size 64800/16 = 4050. So basically, our problem is to convert a permutation matrix of size 4095 into 4050. To do so, we tried a very simple technique and fortunately it worked. Our technique can be understood by the an example in Fig. 3.In this example, we have showed how to convert an 8 x 8 circulant matrix into 6 x 6 circulant. As it is clear from the figure, we just remove the two ‘extra’ rows and columns. We could apply this technique to 62 circulants out of 64. For the remaining two, the location of 1’s in the first row was greater than 4050. So we randomly made 2 choices and picked the best one based on simulation. Fig. 4 shows the BER
+performance of the original code and our code. As can be seen
+from this plot, both codes perform almost exactly the same and more importantly within 1 dB away of the Shannon limit. Memory requirement :
+The memory requirement can be calculated easily by looking at the decoder architecture in Fig. 2. The factors governing the memory requirement are received symbol
+
+1 1 1 1 1
+1 1 1
+
+1 1 1
+1 1 1
+
+8 x 8 circulant
+
+6 x 6 circulant
+
+Fig. 3. Conversion of a 8x8 circulant into 6x6 circulant
+
+10-1
+
+(64800,48600)
+
+(65520,49140)
+
+10-2
+
+shannon limit
+
+10-3
+
+BER
+
+10-4
+
+10-5
+
+10-6
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+Eb/N0 in dB
+
+Fig. 4. BER vs. Eb/No for original and our H matrices
+
+length, message length used in decoding, size of each permutation matrix, number of block rows and block columns
+
+in the Parity Check matrix. It has been shown [5] that it is suffice to use 4 bits for received symbol and 6 bits for messages. For rate 3/4 code, we have used 4 and 6 bits for received symbol and messages respectively.
+
+Size of each permutation matrix = 4050 x 4050 Number of block rows = 4 Number of block columns = 16 Message length used in decoding = 6 bits Received symbol length = 4 bits Memory required for each block used for message storing = 6 * 4050 = 24300bits = 2 blocks of SelectRAM SelectRAM blocks used in message passing = 2 * 16 * 4= 128 Memory required for storing received symbol =4*4050=16020bits= 1 block of SelectRAM RAM blocks used in storing received symbols = 1 * 16 = 16 Memory required for decoded code word =1*4050 = 4050 bits = 1 block of SelectRAM SelectRAM blocks used in storing decoded code word = 1 * 16 = 16
+
+Total SelectRAM blocks used = 128 + 16 + 16 = 160 < 168
+Since we require 160 SelectRAM blocks, this justifies our choice of Xilinx Virtex-II XC2V8000.
+
+3. Rate 9/10 regular LDPC code
+
+As we mentioned earlier, we have used our rate 3/4 code to
+
+generate this code. The parity check matrix for this code has
+
+the following form:
+
+ªQ1 _ 1 Q1 _ 2 Q1 _ 3  Q1 _ 28 Q1 _ 29 Q1 _ 30 º
+
+H 9 /10
+
+«Q2 _ 1 Q2 _ 2 Q2 _ 3  Q2 _ 28 Q2 _ 29 Q2 _ 30» «¬Q3 _ 1 Q3 _ 2 Q3 _ 3  Q3 _ 28 Q3 _ 29 Q3 _ 30¼»
+
+where each Qi_j (i = 1,2,3 and j = 1, 2…30) is a permutation
+
+matrix of size 2160 x 2160. We now describe the method
+
+used for generating this code.
+
+Basically our problem is to find the location of single ‘1’ in
+
+the first row for 3 * 30 = 90 permutation metrics. Rest of the
+
+rows can be generated by simply right-shifting by one the
+
+previous row as shown in Fig. 3. But in the H matrix for rate
+
+3/4 code we only have 64 permutation matrices. Another thing
+
+to recall is the size of permutation matrix. In base code, it was
+
+4095 and here it is 64800/30 = 2160. So for many of them, we
+
+could apply the same technique as described earlier for rate
+
+3/4 code. We now describe how we generated 3 rows for
+
+above H matrix.
+
+(i) In the Ist row; for first sixteen Q1_j(j=1,2..16), the
+
+locations of single ‘1’ in the first row is same as the
+
+corresponding P1_j for rate 3/4 code. For Q1_j(j=17,18…30),
+
+we have used the corresponding locations for the
+
+P4_j(j=1,2..14) minus 2160. (ii) In the 2nd row; for Q2_j(j=1,2..16) locations are same as in
+
+corresponding P2_j. For Q2_17 and Q2_18, we have used
+
+locations for P4_15 and P4_16 respectively with 2160
+
+subtracted from them. For Q2_j(j=19..30), we have picked the
+
+locations in Pi_j that are even and then divide them by 2 going
+
+row wise in H matrix in (1).
+
+725
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+(iii) In the 3rd row : for Q3_j(j=1,2..7) locations are same as in
+
+corresponding P3_j. For Q3_j(j=8,9..16), we have used the
+
+corresponding locations for the P3_j minus 2160. For Q3_j(j=17..26), starting from the point we stopped for 2nd row
+
+in step (ii) and going row wise in (1), we have picked the
+
+remaining locations in Pi_j that are even and then divide them
+
+by 2.for the remaining Q3_j(j=27..30), again going row-wise
+
+in (1) we used the first 4 locations that were divisible by 3 and
+
+then divide them by 3.
+
+The BER performance for this code is shown in Fig.5.It
+
+performs well within 1 dB of the Shannon limit. For this code,
+
+due to memory limitation, we have used the message length to
+
+be 4 bits. 4. Rate 8/9 regular LDPC code
+
+Using methods similar to those used for rate 9/10 code, we
+
+have generated this code from (1). The parity check matrix for
+
+this code has the following form:
+
+ª P1_1 P1_ 2 P1_ 3  P1_ 25 P1_ 26 P1_ 27 º
+
+H8/ 9
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _ 25 P2 _ 26 P2 _ 27» ¬«P3_1 P3_ 2 P3_ 3  P3_ 25 P3_ 26 P3_ 27¼»
+
+where each Pi_j (i = 1,2,3 and j = 1, 2…27) is a permutation
+
+matrix of size 2400 x 2400. The BER vs Eb/No plot for this
+
+code is shown in Fig. 6. For this code, we have used 4 bits
+
+message length.
+
+5. Rate 5/6 regular LDPC code
+
+Similar to earlier codes, we have generated this code from
+
+(1). The parity check matrix for this code has the following
+
+form:
+
+ª P1_1 P1_ 2 P1_ 3  P1_16 P1_17 P1_18º
+
+H5/ 6
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _16 P2 _17 P2 _18» «¬P3_1 P3_ 2 P3_ 3  P3_16 P3_17 P3_18»¼
+
+where each Pi_j (i = 1,2,3 and j = 1, 2…18) is a permutation
+
+matrix of size 3600 x 3600. Since there are only 3 *18 = 54 <
+
+64 permutation matrices, it is easy to generate this code. The
+
+BER for this code is given in Fig. 7. For this code, we could
+
+use 6 bits message length.
+
+6. Rate 4/5 regular LDPC code
+
+Using same methods, we have generated this code from (1).
+
+The parity check matrix for this code has the following form:
+
+ª P1_1 P1_ 2 P1_ 3  P1_13 P1_14 P1_15º
+
+H4/5
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _13 P2 _14 P2 _15» «¬P3_1 P3_ 2 P3_ 3  P3_13 P3_14 P3_15¼»
+
+where each Pi_j (i = 1,2,3 and j = 1, 2…15) is a permutation
+
+matrix of size 4320 x 4320. For this code, we could directly
+
+use the locations of rate 3/4 code, as there are only 3 * 15 = 45
+
+permutation matrices and the size is even larger than 4050.
+
+Fig. 8 shows the BER for this code. Memory resources again
+
+constrain us to use 4 bits message length for this code.
+
+7. Rate 2/3 regular LDPC code Same methods led us to the construction of this code from
+(1). The parity check matrix for this code has the following form:
+
+ª P1_1 P1_ 2 P1_ 3  P1_ 7 P1_ 8 P1_ 9 º
+
+H2/3
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _ 7 P2 _8 P2 _ 9» ¬«P3_1 P3_ 2 P3_ 3  P3_ 7 P3_ 8 P3_ 9¼»
+
+where each Pi_j (i = 1,2,3 and j = 1, 2…9) is a permutation
+
+matrix of size 7200 x 7200. Its BER performance is given in
+
+Fig. 9. For this code, we have used 6 bits message length.
+
+8. Rate 3/5 regular LDPC code
+
+This code has also been generated using earlier used
+
+methods from (1). The parity check matrix for this code has
+
+the following form:
+
+H3 / 5
+
+ª P1_1 P1_ 2 P1_ 3  P1_ 8 P1_ 9 P1_10 º
+
+«P2 _1 P2 _ 2 P2 _ 3  P2 _ 8 P2 _ 9 P2 _10»
+
+«¬«PP34 __11
+
+P3 P4
+
+_ _
+
+2 2
+
+P3 P4
+
+_ _
+
+3 3
+
+ 
+
+P3 _ P4 _
+
+8 8
+
+P3 _ P4 _
+
+9 9
+
+P3 P4
+
+__1100¼»»
+
+where each Pi_j (i = 1,2,3,4 and j = 1, 2…10) is a permutation
+
+matrix of size 6480 x 6480. If we look at its BER vs Eb/N0
+
+plot in Fig. 10, we can see that we are touching the 1dB limit
+
+from Shannon limit. For this code also we have used 6 bits
+
+message length.
+
+We tried several permutation and combination to generate regular codes for the remaining 4 code rates but we couldn’t. So we had to resort to irregular codes. But as we mentioned earlier, our goal is not just to generate good codes , but also to implement them. So we restricted ourselves to structured irregular codes only.
+
+B. Irregular LDPC Codes We first describe our method in general and then we provide
+details for each of the 4 codes. To construct an LDPC code with an M x N parity check matrix, where M = p*Ms and N = p*Ns.
+
+1) Use a heuristic algorithm (such as bit-filling) to construct a group of base parity check matrices of girth 6 with the size of Ms x Ns. 2) Randomly expand each base matrix into a p* Ms x p* Ns parity check matrix. By expand we mean that replace each ‘1’ in the base matrix by a permutation matrix of size p x p and each ‘0’ by a zero matrix of size p x p. The position of single ‘1’ in each of these permutation matrices is found randomly. An example is shown in Fig. 11. The advantage of using these kinds of structured codes is that we can still use our decoder architecture of Fig 2. Though it is not exactly the same but for small base matrices it is not very difficult to use same kind of architecture.
+
+We would like to point that it is possible to generate very good irregular codes but their implementation may not be feasible. Our irregular codes have been designed by keeping in mind the hardware resources available to us in XC2V8000.
+
+1. Rate 1/2 irregular LDPC code For this code, size of base matrix is 16 x 32. It has 17
+variable nodes of degree 2, 8 variable nodes of degree 3 and 7
+
+726
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+variable nodes of degree 4. For check nodes, there are 2 with degree 4, 7 with degree 5 , 6 with degree 6 and 1 with degree 7. There are 2*17 + 3*8 + 4*7 = 86 permutation matrices each of size 2025 x 2025. The BER performance of this code is shown in Fig. 12. The message length used is 6 bits for this code.
+
+2. Rate 2/5 irregular LDPC code For this code, size of base matrix is 18 x 30. It has 8 variable
+nodes of degree 2, 13 variable nodes of degree 3 and 9 variable nodes of degree 4. For check nodes, there is 1 with degree 3, 5 with degree 4, 6 with degree 5, 4 with degree 6 and 2 with degree 7. The size of each of 2*8 + 3*13 +4*9 =91 permutation matrix is 2160 x 2160. Its BER performance is shown in Fig. 13. It is slightly over 1 db away from the Shannon limit. Due to memory limitation, we had to use 4 bits message length.
+
+3. Rate 1/3 irregular LDPC code This code’s base matrix is 24 x 36. It has 9 variable nodes of
+degree 2, 17 variable nodes of degree 3 and 10 variable nodes of degree 5. For check nodes, there are 1 with degree 3, 8 with degree 4, 8 with degree 5, 5 with degree 6 and 2 with degree 7. There are 119 permutation matrices of size 1800 x 1800. The BER for this code is shown in Fig. 14. It is about 1.5 dB away from the Shannon limit. For this code, each message is 6 bits.
+
+4. Rate 1/4 irregular LDPC code For this code, size of base matrix is 27 x 36. It has 18
+variable nodes of degree 2, 15 variable nodes of degree 3 and 3 variable nodes of degree 8. For check nodes, there are 13 with degree 3, 7 with degree 4, 5 with degree 5, 1 with degree 6 and 1 with degree 7. The size of each of 105 permutation matrices is 1800 x 1800. Its BER performance is shown in Fig. 15. It is about 1.5 dB away from the Shannon limit. The message length used is 6 bits.
+
+V.
+
+CONCLUSIONS
+
+In this paper, we have showed the construction of LDPC codes with code word length of 64800 and 11 different code rates as desired for DVB-S2. All our codes have been synthesized into Xilinx Virtex-II XC2V8000 though not all at the same time. It is possible to have all at the same time if we have more memory resources at our disposal. The minimum and maximum frequencies are 21.58 MHz and 46.46 MHz respectively. One noticeable thing is the BER performance for rate 1/3 and 1/4 codes. Again the reason is lack of enough memory. We know it for a fact that better irregular structured codes that have performance within 1 dB can be generated. But as we have stressed from the beginning itself that we have tried to generate codes that can be synthesized into our target device. It also shows the good low rate LDPC codes esp. with code rate less than 3/5 are difficult to construct.
+
+ACKNOWLEDGEMENT
+
+Authors would like to thank Lei Chen[2] for helping in the generation of our base H matrix based on EG(2,26).
+REFERENCES
+[1] http://webapp.etsi.org/exchangefolder/en_302307v010101p.pdf [2] Shu Lin, Lei Chen, Jun Xu, and Ivana Djurdjevic, “Near Shannon Limit
+Quasi-Cyclic Low-Density Parity-Check Codes,” Global Telecommunications Conference, 2003. GLOBECOM '03. IEEE, Volume: 4, 1-5 Dec:2003 Pages: 2030 - 2035 vol.4. [3] A. Anastasopoulos ,“A comparison between the sum-product and the minsum iterative detection algorithms based on density evolution”, Proc. IEEE Global Telecommunicaztion, vol. 5, pp. 3125-3129, May 2003. [4] T. Richardson, M. A. Shokrollahi and R. L. Urbanke, “Design of Capacity-Approaching Irregular Low-Density-Parity-Check Codes”, IEEE Trans. Information Theory, vol. 47, pp. 619-637, Feb. 2001. [5] Tong Zhang, Zhongfeng Wang and Keshab K. Parhi, “On finite precision implementation of Low density parity check codes decoder”, Proc. of IEEE ISCAS'2001, Sydney, Australia, May 2001. [6] S. Lin and J. D. J. Costello, “Error Control Coding: Fundamentals and Applications”, Englewood Cliffs, NJ: Prentice Hall, 1983.
+
+ª100010 º ««010100»» ¬«100001 ¼»
+
+P1,1 O O O P1,5 O O P2,2 O P2,4 O O
+P3,1 O O O O P3,6
+
+Base Matrix
+10-2
+10-3
+
+Expanded Matrix (p*Ms x p*Ns)
+Fig. 11. Matrix Expansion
+shannon limit
+
+BER
+
+10-4
+
+10-5
+
+10-6 1.5
+10-2 10-3
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0 in dB
+
+Fig. 5. BER vs. Eb/No for rate 9/10 code
+
+shannon limit
+
+BER
+
+10-4
+
+10-5
+
+10-6 1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/N0 in dB
+
+Fig. 6. BER vs. Eb/No for rate 8/9 code
+
+727
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+BER
+
+BER
+
+10-2 shannon limit
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 in dB
+
+Fig. 7. BER vs. Eb/No for rate 5/6 code
+
+10-2 shannon limit
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Eb/N0 in dB
+
+Fig. 8. BER vs. Eb/No for rate 4/5 code
+
+10-2 shannon limit
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0 in dB
+
+Fig. 9. BER vs. Eb/No for rate 2/3 code
+
+10-2 shannon limit
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0 in dB
+
+Fig. 10. BER vs. Eb/No for rate 3/5 code
+
+BER
+
+BER
+
+BER
+
+BER
+
+10-2 shannon limit
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/N0 in dB
+
+Fig. 12. BER vs. Eb/No for rate 1/2 code
+10-2 shannon limit
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+-1
+
+-0.5
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+Eb/N0 in dB
+
+Fig. 13. BER vs. Eb/No for rate 2/5 code
+
+10-2 shannon limit
+
+10-3
+
+10-4
+
+10-5
+
+10-6 -1
+10-2 10-3
+
+-0.5
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+Eb/N0 in dB
+
+Fig. 14. BER vs. Eb/No for rate 1/3 code
+
+shannon limit
+
+10-4
+
+10-5
+
+10-6 -1.5
+
+-1
+
+-0.5
+
+0
+
+0.5
+
+1
+
+1.5
+
+Eb/N0 in dB
+
+Fig. 15. BER vs. Eb/No for rate 1/4 code
+
+BER
+
+BER
+
+728
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 12:55:13 UTC from IEEE Xplore. Restrictions apply.
+
+

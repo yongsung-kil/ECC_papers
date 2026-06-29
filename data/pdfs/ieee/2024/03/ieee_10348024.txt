@@ -1,0 +1,428 @@
+694
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+CDS: Coupled Data Storage to Enhance Read Performance of 3D TLC NAND Flash Memory
+Wan-Ling Wu, Jen-Wei Hsieh , Senior Member, IEEE, and Hao-Yu Ku
+
+Abstract—Due to the strong demand of massive storage capacity, the density of flash memory has been improved in terms of technology node scaling, multi-bit per cell technique, and 3D stacking. However, these techniques also degrade read performance and reliability. The long read latency comes from increased data sensing time and time-consuming ECC decoding time. Storing multiple bits per cell results in more read reference voltages and increased latency of identifying appropriate threshold voltages. To deal with error correction, LDPC is widely used in flash memory to provide stronger ECC capability. However, LDPC incurs a long decoding latency when bit errors are numerous. In this work, we propose coupled data storage (CDS) to improve the read performance of 3D NAND flash-memory storage devices. CDS supports two modes to improve read latency: The high read-speed mode is designed to improve data sensing time with reduced voltage states, while the data correction mode is designed to mitigate bit errors and LDPC overhead. Experiment results showed that CDS could reduce 50∼66.6% read latency and 25.7∼27.5% write latency under the high readspeed mode. For the data correction mode, RBER could be decreased by 37∼52% and the lifetime could be prolonged to 1.6 to 3 times.
+Index Terms—3D TLC NAND flash memory, read performance.
+I. INTRODUCTION
+O VER the last decades, NAND flash memory has been widely used and becomes the most common storage medium in various applications such as mobile electronic equipment and enterprise cloud storage [1]. Due to the strong demand in the market for the growth of massive storage capacity, flashmemory storage density has been improved by three advanced techniques [2]. First, the technology node has been scaled down to a smaller size. Second, the bit density of each cell has been increased by the multi-bit per cell technique. It has evolved flash memory from single-level cell (SLC) to triple-level cell (TLC); furthermore, quad-level cell (QLC) [3], [4] and penta-level cell (PLC) are also debuted. Third, the organization of flash memory
+Manuscript received 21 February 2023; revised 23 October 2023; accepted 26 November 2023. Date of publication 7 December 2023; date of current version 12 February 2024. This work was supported by the National Science and Technology Council, Taiwan, under Grant MOST 111-2221-E-011-087MY3. Recommended for acceptance by P. Sainrat. (Corresponding author: Jen-Wei Hsieh.)
+The authors are with the Department of Computer Science and Information Engineering, National Taiwan University of Science and Technology, Taipei 106, Taiwan (e-mail: jenwei@mail.ntust.edu.tw).
+This article has supplementary downloadable material available at https://doi.org/10.1109/TC.2023.3338474, provided by the authors.
+Digital Object Identifier 10.1109/TC.2023.3338474
+
+has transited from 2D planar to 3D block via stacking flash cells in the vertical direction.
+However, the technology node scaling has reached its limit, i.e., 1x-nm. As the multi-bit per cell technique introduces more threshold voltage Vth levels, the noise margin between two neighboring Vth levels becomes narrower that results in higher RBER [5]. To ensure data integrity, error correction code (ECC), e.g., low-density parity check (LDPC), has been widely adopted in flash-memory storage devices [6], [7]. Although 3D NAND has been deployed in a large scale, it incurs read performance variation issue, which means reading different bits in a flash cell requires different read latencies. Taking TLC flash memory as an example, reading an MSB page takes 2x longer than reading an LSB page [8].
+As the increased read latency in high density flash memory becomes the bottleneck of read-intensive applications, several excellent works have been proposed to alleviate read performance degradation from different aspects. Duplicate voltage states exist when their lower bits are invalidated. For example, S1 (111) and S8 (110) exhibit the same data value ’11x’ when their LSB bit becomes invalid. Observing the above fact, Choi et al. proposed IDA coding technique [2] that combines duplicate voltage states to speed up page read operation since less read reference voltages are needed. Some researchers optimized read latency by leveraging the variation of read latency among page types. In FastRead [9], Chang et al. dynamically identify readintensive data and place them in short-latency pages of MLC flash memory to improve read performance. Taking both nonuniform page read latency and error characteristics of QLC flash memory into consideration, Lv et al. exploited different data hotness threshold for different page types and further distributed hot/cold-read data to short-latency/long-latency pages [10]. Both the above two researches employed data placement strategy to take advantage of placing frequently used data in short read-latency pages. However, these works did not consider the reliability issue.
+Taking the reliability issue into consideration, researchers exploited coding strategies to pre-process raw data before programming it to flash memory. The basic idea is to prune the probability of storing data in unreliable voltage states. Some researchers proposed to examine data pattern and decrease errorprone voltage states as much as possible by bit flipping so as to alleviate high bit error rate [11], [12]. Some researchers applied Huffman Coding to re-modulate the voltage level distribution and thus minimize the population of unreliable states
+
+0018-9340 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+695
+
+[13], [14], [15]. Different from previous works, our design focuses on both reduced read latency by reducing single read operations (SROs) and enhanced data reliability by mapping strategy. To be more specific, we employ a mapping strategy to suppress high RBER which causes time-consuming decoding latency. In FlexLevel [16], RBER is reduced by broadening noise margin via threshold voltage level reduction at device level. Each reduced state cell has three Vth levels, and two cells can represent nine Vth combinations. ReduceCode is proposed to use eight out of nine Vth combinations to represent three bits. Although FlexLevel can effectively improve system reliability and read performance, it is designed for MLC flash memory. Thus FlexLevel cannot be directly applied to TLC, QLC, or higher density flash memory unless ReduceCode is redesigned.
+We propose coupled data storage (CDS) to program two related data copies (referred to as coupled data) into flash pages simultaneously. CDS provides two modes, including the high read-speed mode and the data correction mode. For the high read-speed mode, a TLC device could operate with fewer read reference voltages using an MLC-like voltage distribution by storing a pair of encoded data in either lower voltage states or higher voltage states. Since the decreased read reference voltages results in a shorter read latency, the read performance could be improved. For the data correction mode, the coupled data contains the original raw data and the mapped data determined by the proposed reverse mapping tables. We exploit the property of coupled data to fix bit errors. In our design, retention errors could be suppressed by a simple adjustment equation. Note that the notion of our design could be applied to any high density NAND flash memory easily. To the best of our knowledge, this is the first work that tackles the issues for both page read variation and reliability using data storage technique.
+The rest of this paper is organized as follows: Section II summarizes the background and motivation. We elaborate the detail of the proposed CDS in Section III. A series of experiments was conducted to evaluate our design in Section IV. Finally, we conclude our work in Section V.
+II. BACKGROUND AND MOTIVATION
+A. 3D NAND Flash
+Traditional 2D planar NAND flash memory meets the demand of increasing storage capacity and reducing bit cost by shrinking the technology node to a smaller size and storing multiple bits per cell. However, manufacturers face the scaling limitation due to the degraded reliability [19]. To continue with the scaling process, 3D architecture emerges as a promising technique that stacks cells in the vertical direction. In 3D NAND flash memory, charge trap (CT) cell is usually adopted to avoid serious capacitive coupling effect (i.e., decrease the cell-tocell interference).
+Fig. 1(a) depicts the physical organization of 3D NAND flash memory. A NAND flash memory chip consists of thousands of blocks and each block is made up of a three-dimensional array of flash cells. In such a design, cells from the same bitline (i.e., along the z-axis) share the same charge trap insulator, while all the control gates in the same layer (i.e., along the x-axis)
+
+Fig. 1. 3D charge trap NAND flash memory.
+forms a wordline. Typically, a cell locates at the intersection of a horizontal wordlines (WL) and a vertical bitline (BL). Fig. 1(b) shows the structure of a CT cell. The CT layer is an insulator that holds charges, while the control oxide and tunnel oxide isolate the CT layer to prevent charges from leaking. Thus, programmed charges would not lose even when the device is power-off.
+A triple-level cell (TLC) flash memory stores n = 3 bits in each memory cell, including the least significant bit (LSB), the center significant bit (CSB), and the most significant bit (MSB). Note that a cell accommodated n bits means that 2n voltage states could be distinguished. Fig. 2 depicts the threshold voltage Vth distribution of TLC NAND flash memory and two types of conventional TLC coding. The initial state of a cell is the erased state (i.e., S1) with no electrical charge.
+Three operations are supported by NAND flash memory, including program (write), read, and erase operations. A page is the basic unit for a read/write operation, while a block is the basic unit for an erase operation. To program a cell in the target page, the controller gradually pulses a program voltage to increase Vth of the cell and verify it until the cell reaches its target state. This iterative program and verify approach is called incremental step pulse programming (ISPP) [21], [22], [23]. The erase operation resets the voltage states of all cells in a block to the erased state by ejecting electrons from their CT layer to their substrate. Note that a cell must be in the erased state before programming data, since ISPP can only
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+696
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+caused by voltage shifting. The sensitivities of voltage shifting are affected by error sources to varying degrees and may vary from state to state [22]. As different states contain different amount of charges, states with more electrons are more vulnerable to charge leakage. Compared with lower voltage states, higher voltage states may be more vulnerable to left-shifting errors (usually retention errors), but less vulnerable to rightshifting errors [12], [23], [25]. Since the retention error dominates error sources in flash memory, higher voltage states are prone to flash bit errors and probably incur high raw bit error rate (RBER).
+To serve a page read request includes three stages: a data sensing stage, a data movement stage, and an ECC decoding stage [2]. In this paper, we focus on data sensing and ECC decoding stages. The latency taken by the data sensing stage is determined by the number of SROs, which means more SROs incur a longer read latency. The degree of RBER affects the latency required by the ECC decoding stage. For data with high RBER, the decoding latency would be significantly increased.
+
+Fig. 2. Two types of conventional TLC coding [20].
+TABLE I THE NUMBER OF SROS REQUIRED FOR ORBC
+# of SROs S1 S2 S3 S4 S5 S6 S7 S8 LSB page 1 1 1 1 1 1 1 1 CSB page 1 1 2 2 2 2 2 2 MSB page 1 2 2 3 3 4 4 4
+increase the threshold voltage. For a read operation, identifying the threshold voltage of the cell is required. During the reading process, several read reference voltages Vref are applied to differentiate the voltage states, which are termed single read operations (SROs) [24].
+For multiple bits per cell flash memory, read latency varies depending on different page types due to varied number of required SROs. Taking Fig. 2(a) as an example, reading an LSB page only needs one SRO (i.e., V 4), while reading an MSB page requires four SROs (i.e., V 1, V 3, V 5, and V 7). The more number of SROs a page type requires, the longer read latency it takes. Table I summarizes the number of SROs required to identify the cell’s voltage state for Fig. 2(a). Reading an MSB page thus takes more time than reading an LSB page since more SROs are needed. Fig. 2(b) shows another example of TLC coding. There are two SROs for an LSB/MSB page read and three SROs for a CSB page read. In such a case, a CSB page read takes longer read time than an LSB or an MSB page read.
+The stored data might be misread if the threshold voltage falls within the overlapped region between two states, which is
+
+B. LDPC in Flash Memory
+Although the increased bit density and technology node scaling increase storage capacity, it also brings the challenges of reliability. To ensure data integrity, a probability-based ECC, low-density parity check (LDPC), has been used to provide stronger error correction capability. Note that ECC has a fixed error correction capability and can correct only a limited number of errors. LDPC uses hard-decision code and soft-decision code to correct errors [6], [25]. The hard-decision code applies one sensing level in the middle of two adjacent states to differentiate voltage states for data decoding. In contrast, the soft-decision code uses multiple read voltages to decode the input information. It is a step-by-step process that the read voltage between each two adjacent states will be increased if the decoding fails. This process continues until decoding success or reaching the maximum number of read voltages. By using more read voltages, the input information would be more accurate so as to achieve a higher probability of success decoding. However, such iterative processes in soft-decision code would accumulate the read latency. To sum up, the hard-decision code performs much faster than soft-decision code, but the soft-decision code has stronger error correction capability. As a result, decoding data with high RBER may incur increased decoding latency and degrade the read performance.
+C. Motivation
+In this paper, we aim to reduce flash read latency from either the data sensing stage or the ECC decoding stage. For the data sensing stage, if the number of SROs could be reduced, we could effectively reduce the read latency. Thus we propose a coupled data storage to reduce the examined number of voltage distributions, which brings long MSB/CSB read latency close to short CSB/LSB read latency. The basic idea is to divide the TLC’s eight states in half so as to make its read voltage sets similar to that in an MLC-like voltage distribution with {V 2} for a CSB read and {V 1, V 3} for an MSB read. For
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+697
+
+the ECC decoding stage, our goal is to mitigate errors incurred by unstable states and suppress high RBER. We design three reverse mapping tables for the proposed coupled data storage. When the coupled data are corrupted due to long data retention time, the data could be fixed to the originally programmed one by a simple adjustment equation. Thus the decoding latency could be shortened due to the reduced RBER. Note that the designed three reverse mapping tables could be adaptively applied to deal with different shifting directions of threshold voltage distributions for flash chips from different vendors.
+Two advantages could be brought by such a design: To begin with, read latency of data sensing can be decreased as we shrink the voltage distribution as the half of the original one. As the number of voltage states decreases, fewer SROs are required, thus reducing read latency even further. On the other hand, the probability of high RBER could be lowered. We can suppress RBER, and hence the decoding latency can be significantly reduced.
+
+III. COUPLED DATA STORAGE (CDS)
+A. Overview
+As the increasing read latency becomes a critical issue in high-density flash memory, we propose coupled data storage (CDS) to improve the read performance. The characteristics of data access pattern could be classified into four types: frequently write and frequently read data (FWFR), frequently write and infrequently read data (FWIR), infrequently write and frequently read data (IWFR), and infrequently write and infrequently read data (IWIR) [16]. Taking the tradeoff among space utilization, read performance, and reliability into consideration, we focus on data types of IWFR and IWIR. Since IWFR indicates that data are read frequently by the host, reducing the processing time of identifying the voltage states of cells (i.e., data sensing time) can improve read latency. As IWIR data means that data are read infrequently and potentially suffer severe charge leakage over a long retention time, reducing RBER could lower the possibility to trigger soft-decision decoding of LDPC and improve the latency for decoding IWIR data (i.e., ECC decoding time).
+Fig. 3 shows the system architecture of the proposed CDS. It contains four major components, including data pattern identifier, mode selector, Vth mapping module, and error mitigation module. The data pattern identifier [7], [16], [26] is adopted to find out the infrequently written data for CDS. CDS supports the high read-speed mode and the data correction mode to reduce data sensing time and ECC decoding time, thereby improving read latency. The mode selector decides which mode will be employed according to the read frequency of data. The Vth mapping module process the transition between coupled data and raw data. For the high read-speed mode, we design the reduced mapping table for IWFR data which may be read with fewer SROs, thus brings reduction on read latency. Besides, we introduce reverse mapping tables and the error mitigation module to mitigate flash bit errors by the adjustment equation before IWIR data is sent back to the host for the data correction mode.
+
+Fig. 3. System architecture of CDS.
+B. Vth Mapping Module
+As flash vendors use different coding schemes (e.g., ORBC or MBBC), the mapping between bit values and voltage states, known as data modulation, may differ as well. Previous works [11], [12], [27] are dedicated to increase the ratio of ’1’ so as to increase the proportion of the reliable Erase state (i.e., ’11’). As a result, population of error-prone states could be reduced. However, previous techniques may not be feasible when the data modulation changes. Taking flexibility into consideration, we introduce the state mapping to get rid of the limitation from specific data modulations. The state mapping could be applied to various coding styles and adapt to different NAND flash memories. Fig. 4(a) shows concept of the proposed state mapping. The state mapping maps the voltage states by the designated mapping pairings. Suppose states S1/S2/S3/S4 are mapped to the states S8/S7/S6/S5. With raw data as input, its corresponding mapping pairing would be output by the Vth mapping module, referred to as coupled data. For example, if the raw data is S2, the coupled data output by the Vth mapping module would be S7 and S2.
+In this work, the high read-speed mode and the data correction mode are proposed to alleviate long read latency. The high read-speed mode is designed to reduce the number of SROs. To achieve SROs reduction, we employ reduced voltage states (i.e., only uses the first four voltage states S1 to S4) to represent data, as shown in Fig. 4(b). The reduced mapping table realizes voltage states reduction with an MLC-like voltage distribution to achieve reduced read latency during the data sensing stage. Regarding the data correction mode, we intent to suppress the amount flash bit errors since high RBER may cause time-consuming decoding latency, leading to the performance degradation. The Vth mapping module supports three different reverse mapping tables for this mode to decrease read latency of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+698
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+TABLE II REDUCED MAPPING TABLES FOR THE HIGH READ-SPEED MODE
+(a) For Lower Voltage States Stage. S1 S2 S3 S4 S5 S6 S7 S8 plane 0 S1 S2 S3 S4 S1 S1 S1 S2 plane 1 S1 S1 S1 S1 S4 S3 S2 S2
+(b) For Higher Voltage States Stage. S1 S2 S3 S4 S5 S6 S7 S8 plane 0 S5 S6 S7 S8 S5 S5 S5 S6 plane 1 S5 S5 S5 S5 S8 S7 S6 S6
+
+enduring a long retention time, the readout coupled data probably becomes {S6, S1}. It is because Vth tends to left-shift when suffering retention errors. The error-prone coupled data could be identified since it does not match any mapping pairing in the reverse mapping table. Then we get the mapping pairing of the mapped data, where the mapping pairing of state S1 is S8. Finally, the corrected data would be the middle state between states S6 and S8, i.e., S7.
+
+Fig. 4. Illustration of coupled data storage.
+data decoding. Fig. 4(a) shows one of proposed reverse mapping tables. This mapping table demonstrates four mapping pairings: {S1, S8}, {S2, S7}, {S3, S6}, and {S4, S5}. When an error occurs in the stored data, it could be corrected by a simple adjustment equation, favoring RBER decrease. Please refer to Section III-C for the detail.
+C. Error Mitigation Module
+Retention errors caused by charge leakage may incur large amount of bit errors that ultimately exceed the ECC capability. High error rate would trigger LDPC soft-decision decoding that further deteriorate the read performance. The LDPC optimization can be realized by reducing the RBER of data [16], [28]. In this work, we use an adjustment equation to mitigate flash bit errors.
+The error mitigation module is designed to reduce overall RBER of data. As mentioned above, we design multiple reverse mapping tables for the data correction mode. Coupled data stored in flash memory should match mapping pairings in the corresponding mapping table. Bit errors are detected when coupled data do not match the mapping parings. The error mitigation module adds the Vth states of coupled data and then take average to fix the error.
+We illustrate how it works in Fig. 4(b). Assuming the originally programmed raw data is S7 and its mapped data is S2. Thus, the programmed coupled data would be {S7, S2}. After
+
+D. High Read-Speed Mode
+For m-bit per cell flash memory, the voltage window is divided into 2m different states. The more the number of voltage states, the more SROs are needed in the data sensing step for serving a read command. The basic idea of the high read-speed mode is to have TLC flash memory behave in an MLC-like manner. The MLC-like voltage distribution can be read with fewer SROs (two SROs for MSB page read and one SRO for CSB page read), resulting in a reduction in read latency. Take TLC as an example, we divide eight voltage states into lower voltage states (i.e., S1 to S4) and higher voltage states (i.e., S5 to S8). Meanwhile, we propose the reduced mapping table to convert raw data to coupled data that only used lower voltage states or higher voltage states. As a result, the stored coupled data could be read with fewer SROs.
+Table II shows the reduced mapping tables. The high readspeed mode has lower voltage states stage and higher voltage states stage. As its name suggested, lower voltage states stage only uses the lower four voltage states, while higher voltage states stage only uses the higher four voltage states. The proposed CDS takes advantage of plane-level parallelism to program coupled data to flash memory simultaneously. Note that our design is orthogonal to refresh mechanisms, e.g. [29], [30], [31], [32]; by integrating the high read-speed mode with the refresh mechanism, both reliability and performance could be achieved.
+1) Lower Voltage States Stage: In the lower voltage states stage, the coupled data would be assigned to lower voltage states (i.e., S1 to S4). Table II(a) shows the proposed reduced mapping table for the lower voltage states stage. Given a coupled data {Sx, Sy}, Sx will be written to plane 0, and Sy will be written to plane 1. We separate the raw data into two cases: (1) When the raw data belongs to lower states (S1 to S4), we place it in plane 0 and put S1 on plane 1. For example, if the to-be-written data is S3, S3 is programmed to plane 0, while S1 is programmed to plane 1. (2) When the raw data
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+699
+
+belongs to higher states (S5 to S8), we allocate it to plane 1 and put S1 on plane 0. Namely, if the to-be-written data is S6, S1 and S3 are programmed to plane 0 and plane 1, respectively. Thus the raw data could be derived from the readout coupled data. Note that when the raw data is S8, we will put S2 (rather than S1) on plane 0. It is because the coupled data {S1, S2} has already been used to represent S7. To avoid repeated combination of coupled data, the raw data S8 is represented by {S2, S2}.
+2) Higher Voltage States Stage: The voltage state of a cell can only be shifted to right since the write process involves repeatedly injecting electrons to put the cell to the desired voltage state. Considering the first stage only uses lower four voltage states, higher voltage states could still be utilized. If data becomes invalid, we could apply the higher voltage states stage with the reprogramming technique [11], [21]. Such a reprogramming technique is realized by the existing ISPP controller and would be employed in the higher voltage states stage. As shown in Table II(b), we keep all data stored in higher voltage states (i.e., S5 to S8) for this stage. Astute readers might find out that Table II(b) can be obtained by shifting all voltage states in Table II(a) to the right by four voltage states. The raw data would be translated to the associated states in a similar manner of the lower voltage states stage. For example, when the raw data is S6, S5 and S7 would be programmed to plane 0 and plane 1 simultaneously.
+Reducing the number of the voltage states from eight states to four states can bring forth two advantages: (1) As the voltage distribution becomes MLC-like with fewer reference voltages, we can get the readout data with less sensing time, thereby achieving a read latency reduction. (2) As ISPP iterations are reduced, the write latency would be approximately half of the longest latency due to the reduced voltage states. To sum up, we utilize a two-stage reduced mapping to simulate an MLC-like voltage distribution in TLC flash memory to reduce the required number of SROs. Therefore, the read latency can be improved by less data sensing time.
+E. Data Correction Mode
+Enhancing data reliability of high bit-density flash memory is another issue we would like to tackle in CDS. As shown in Fig. 5, the errors incurred by voltage shifting can be classified into left-shift errors and right-shift errors [23]. The retention error, induced by charge leakage in flash cells, dominates the left-shift errors. For the right-shift errors, P/E cycling error and cell-to-cell interference error are two main causes due to charge injection. A read failure might occur if there is a considerable voltage shifting. Due to the negative impact of voltage shifting, the readout data may probably be Si+1 or Si−1 when the originally programmed state is Si. Note that only errors caused by cells shifting to neighboring states are considered since it is uncommon for a cell to shift across more than one state [33], [34]. In other words, state Si could potentially shift to states Si+1 or Si−1, but unlikely to shift to states Si+2 or Si−2.
+1) Basic Idea: The main concept of the data correction mode is to observe coupled data’s voltage shifting and fix errors
+
+Fig. 5. Two types of voltage shifting.
+
+by analysis when errors occur. Fig. 6 illustrates how the errorprone data could be fixed by our design. Suppose the raw state is S7. Based on the full reverse mapping table (see Fig. 4a), its counterpart is S2. Assume that flash cells suffer from severe charge leakage over a long retention time, causing the cells in Si being misread as Si−1. In such a case, data shifting occurs and does not follow the designated reverse mapping parings. In this example, when reading the raw state from plane 0, S7 is misread as the lower state S6, indicating that the voltage state of the cell shifts left (see the green part). Meanwhile, the mapped state on plane 1 is identified as S1 (see the blue part). With the corresponding mapping pairings, the counterpart of the mapped state (S1), which is S8, could be obtained (see Step 3). Interestingly, the voltage state of raw data shifts to the left side, while the voltage state of the mapped state’s counterpart shifts to the right side (see Step 4). Namely, the fixed data stands in the middle of the raw state and the mapped state’s counterpart. Motivated by this finding, we propose the following adjustment equation to fix the error-prone data:
+
+Si∗
+
+=
+
+Li
+
++
+
+Remap(Ri) 2
+
+(1)
+
+where Li and Ri are the readout coupled data, and Si∗ is the fixed state of Si. In Step 4, the fixed data could be obtained by the adjustment equation (1).
+We leverage the fact that the mapped state shifts to the left side but turns to the right side after the subsequent transform process takes place to get the mapped state’s counterpart. The data correction mode uses the adjustment equation to fix corrupted data since raw state shifts to the left and the mapped state’s counterpart shifts to the right, implying that the errorfree data is in the middle state. Hence, the fixed data could be obtained by the adjustment equation (1). However, two special
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+700
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+Fig. 6. An illustrative example of data correction mode.
+
+Fig. 8. Part of the coupled data shifting.
+
+Fig. 7. Two special cases for the adjustment equation.
+
+cases should be noticed while performing the adjustment equation. As shown in Fig. 7, the most right and the most left states should be considered:
+1) Fixed state is the most right state (i.e., S8): As shown in Fig. 7(a), the fixed state S8 represents the most right state in TLC flash memory. Suppose the readout coupled data is {S7, S1}, the voltage state between S7 and S1 should be S8. In this case, the formula needs to be adjusted as follows:
+
+Si∗
+
+=
+
+Li
+
++
+
+Remap(Ri) 2
+
++
+
+8
+
+(2)
+
+2) Fixed state is the most left state (i.e., S1): Fig. 7(b) depicts that the fixed state we expected between S2 and S8 is S1. Since S1 is the most left state in TLC flash memory, if we want to get the expected fixed state, the equation needs to be adjusted as follows:
+
+2) Part of the Coupled Data Shifting: In [25], Li et al. show asymmetric errors among different states. For example, higher voltage states tend to shift more than lower voltage states over retention time. If one of the coupled data incurs cell shifting but the other one does not, we refer to it as part of the coupled data shifting. For such a case, the fixed state would not stand in the middle state but could still be speculated by the analysis of voltage shifting. Fig. 8 illustrates part of the coupled data shifting.
+Suppose the raw data is S2 and full reverse mapping table (see Fig. 4a) is adopted, in which the counterpart of S2 is S7. If the readout coupled data turns to {S2, S6}, only part of the coupled data shifts. The counterpart of the mapped state (S6) is S3. In this case, the fixed state does not stand in the middle and would be determined as 2.5 (= (2 + 3)/2). Taking the characteristic of voltage shifting into consideration, we would take the floor of the fixed state for this case (see Fig. 8a). The reason comes from the fact that states with more electrons suffering from more charge leakage over retention time; thus S7 has a higher probability of left shifting.
+On the other hand, Fig. 8(b) depicts the case that we take the ceiling of the fixed state. Similar to Fig. 8(a), the fixed state is calculated as 6.5 (= (6 + 7)/2). Since the counterpart of the mapped state located at higher voltage state, we take the ceiling of the fixed state as the mapped state is in lower voltage state1.
+
+Si∗
+
+=
+
+Li
+
++
+
+Remap(Ri) 2
+
+−
+
+8
+
+1Comparing with the mapped state, the raw state has a higher probability
+(3) of left shifting.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+701
+
+Fig. 9. Reverse mapping tables for the data correction mode.
+To sum up, the error-free data stands in the middle if the coupled data shift to neighboring states simultaneously; the state-aware analysis would be applied to correct data if only one of the coupled data shifts to its neighboring state.
+3) Reverse Mapping Tables: There are two cases of voltage shift: (1) All voltage states shift left when suffering from retention errors and shift right when suffering from program interference errors. (2) Lower voltage states shift right and higher voltage states shift left when retention errors occur. We aim to map the unstable states to the relatively stable ones, so as to fix errors when voltage shifting occurs on the coupled data. We propose three reverse mapping tables for different cases of voltage shifting. Since there are eight states in TLC flash memory, each reverse mapping table has four mapping pairings. Fig. 9 illustrates the proposed reverse mapping tables, where the unreliable states are colored in red and relatively reliable states are colored in green.
+We categorize three reverse mapping tables by shifting directions of the coupled data:
+1) The coupled data move to the same direction: When retention errors occur, both higher voltage states and lower voltage states shift to left. Suppose the mapping pairing is S7 and S2, and the coupled data shift left (i.e., S7 shifts to S6, and S2 shifts to S1) after a long retention time. We design full reverse mapping table (FRM) and centering reverse mapping table (CRM) to deal with this situation. • Full Reverse Mapping Table (FRM): Considering the case that higher voltage states are more
+
+unreliable than lower voltage states, we fold in half of the voltage window, as shown in Fig. 9(a). In FRM, S5, S6, S7, and S8 are mapped to S4, S3, S2, and S1, respectively. • Centering Reverse Mapping Table (CRM): Since some works [22], [35] claimed that S3 through S6 are more reliable, we regard S1, S2, S7, and S8 as unstable states and map them into stable states. In CRM, S3, S4, S5, and S6 are mapped to S2, S1, S8, and S7, as shown in Fig. 9(b). 2) The coupled data move to the opposite directions: Liu et al. showed that higher states suffer more serious left shifting, while lower states are sensitive to right shifting [5]. In other words, lower voltage states tend to shift left and higher voltage states tend to shift right when suffering from retention errors. Thus half reverse mapping table (HRM) is proposed to deal with this situation. • Half Reverse Mapping Table (HRM): Fig. 9(c) shows HRM, where S5, S6, S7, and S8 are mapped to S1, S2, S3, and S4, respectively. Note that each mapping pairing in HRM has the same distance between the associated voltage states. For {S1, S5}, the distance between S1 and S5 is 4; so do {S2, S6}, {S3, S7}, and {S4, S8}. Thus, HRM has no adjacent mapping pairing, such as {S4, S5} in FRM or {S2, S3} in CRM. Suppose the raw state is S2. The written coupled data is {S2, S6}, but the readout coupled data might be {S3, S5} after enduring a long retention time. It is because the lower voltage states tend to shift right (e.g., S2 shifts to S3) and the higher voltage states tend to shift left (e.g., S6 shifts to S5) when suffering from retention errors. Thus the result derived from the adjustment equation would be 2 (= (3 + 1)/2). 4) Implementation of Reverse Mapping Tables: In the data correction mode, we design three reverse mapping tables suited for different flash chips. To mitigate flash bit errors, both the coupled data shifting, e.g., {S2, S7} turns to {S1, S6}, and part of the coupled data shifting, e.g., {S2, S7} turns to {S2, S6}, are well considered. The correct result of both the coupled data shifting could be derived from the adjustment equation which is a positive integer in the range of 1 to 8. The result of part of the coupled data would not be an integer, and the stateaware voltage shifting analysis should be employed to obtain the correct result. Note that asymmetric voltage shifting comes from the varied shift amount of charges in different voltage states. As shown in Fig. 10, the percentage of state shift was analyzed under different P/E cycles with 1-year retention time on real TLC flash memory chip. The experiment result showed that there are higher percentage for higher voltage states to shift left with increased P/E cycles, e.g., S8 to S7 and S7 to S6. Even though state-aware analysis is adopted for part of the coupled data shifting to fix errors, it still exists some failure cases. Table III shows the failure cases for each reverse mapping table when only part of the coupled data shifts. Taking FRM as an example, when the readout coupled data is {S2, S6}, the originally written coupled data could be {S2, S7} or {S3, S6}. Suppose the result derived from the adjustment equation is 2.5.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+702
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+TABLE III FAILURE CASES OF THE PROPOSED REVERSE
+MAPPING TABLES
+
+Fig. 10. Percentage of state shift under different P/E cycles with 1-year retention time.
+We adopt state-aware analysis to decide whether taking ceiling or floor on the result. In this case, since the shift percentage of S7 to S6 is higher than that of S3 to S2, we take floor on the result to obtain the fixed state S2. Although the shift percentage of S3 to S2 is lower than that of S7 to S6, it still accounts for more than 5%. We refer to the voltage shift of S3 to S2 as a failure case because FRM is unable to correct data in this case. Other failure cases come from the adjacent mapping parings, e.g., {S4, S5} in FRM. If the readout coupled data is {S4, S4}, the written coupled data have two possibilities: {S5, S4} or {S4, S5}. It is hard to identify the error occurs on which plane, because both plane 0 and plane 1 have a similar probability to shift from S5 to S4. Among three reverse mapping tables, HRM has less failure cases and no adjacent mapping pairings; thus HRM provides better capability to fix part of coupled data shifting.
+F. Overhead Analysis
+
+FRM CRM HRM
+
+ReadOut Coupled Data
+(2,6) (6,2) (3,5) (5,3) (3,7) (7,3) (4,6) (6,4) (4,4) (5,5) (5,7) (7,5) (6,8) (8,6) (2,2) (3,3) (6,6) (7,7) (3,8) (8,3) (4,7) (7,4) (3,6) (6,3) (2,7) (7,2)
+
+Programmed Data Fix OK
+(2,7) (7,2) (4,5) (5,4) (3,6) (6,3) (3,6) (6,3) (4,5) (4,5) (5,8) (8,5) (5,8) (8,5) (2,3) (3,2) (6,7) (7,6) (4,8) (8,4) (4,8) (8,4) (3,7) (7,3) (3,7) (7,3)
+
+Programmed Data Fix Fail
+(3,6) (6,3) (3,6) (6,3) (2,7) (7,2) (4,5) (5,4) (5,4) (5,4) (6,7) (7,6) (6,7) (7,6) (3,2) (2,3) (7,6) (6,7) (3,7) (7,3) (3,7) (7,3) (2,6) (6,2) (2,6) (6,2)
+
+TABLE IV EXPERIMENT PARAMETERS
+
+Parameter Number of Planes per Die Number of Blocks per Plane Number of Pages per Block Page Size (bytes) Erase Latency (ms) Program Latency (ms) Read Latency (μs)
+
+Value 2
+1,980 1,152 16,384 + 1,952 4.5 ∼ 16.5 1.3 ∼ 4 45 ∼ 95
+
+This section is meant to analyze the time and storage overhead incurred by the proposed CDS. Although both the high read-speed mode and the data correction mode require two copies of data, i.e., coupled data, the time overhead could be hidden by 2-plane read/write command that reads/writes two pages simultaneously.
+For the storage overhead, we argue that it could be limited due to three reasons:
+1) Based on access behavior, data are categorized into FWFR, FWIR, IWFR, and IWIR. Taking the tradeoff among storage overhead, read performance, and reliability into consideration, we only apply the high read-speed mode to IWFR and the data correction mode to IWIR.
+2) The high read-speed mode contains lower voltage states stage and higher voltage states stages. The unused space in the lower voltage states stage could be later reclaimed in the higher voltage states stages without incurring an erase operation. However, the data correction mode does trade the storage space for the reliability.
+3) The proposed CDS is optional. It could be applied to improve read performance when the space utilization is
+
+not very high. We could turn it off and gradually reclaim the occupied space if required.
+IV. PERFORMANCE EVALUATION
+A. Experiment Setup
+We conducted a series of experiments with a real SSD testing platform to evaluate the effectiveness of the proposed CDS. To avoid process variation and minimize the distortion of experiment results, we had tested nineteen 3D TLC CT NAND chips under different P/E cycles and retention times. We heated up the tested device in an oven to simulate a specific retention time at room temperature [36], [37], [38]. The experiment parameters are summarized in Table IV. The data area of a flash-memory page is 16 KB with 1,952-byte spare area.
+To evaluate the data reliability, we collected RBER with two different metrics for reading raw data on each page, including default read levels (DRL) and optimized read levels (ORL). Fig. 11(a) shows default read levels (green lines) which were collected from the initial voltage distribution without any P/E
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+703
+
+Fig. 12. Disturbance, P/E cycles, and retention errors under TLC voltage states.
+
+Fig. 11. Read metrics for evaluating RBER of each page.
+cycle and retention time. As the increase of P/E cycles and retention time, voltage distribution would change. Fig. 11(b) shows optimized read levels (red lines) which were obtained by the read-voltage calibration with the goal to minimize error count on each page [39].
+Since the characteristics of flash memory chips vary depending on the manufacturer, we conducted a preliminary experiment to show the impact of bit errors per state. Fig. 12 shows RBER of writing data under different Vth states. In this experiment, we used default read levels to count flash bit errors. The RBER was calculated by dividing the number of bit errors by the total number of bits in a page. We classified three error types: disturbance error, P/E cycle error, and retention error. When data were programmed to flash cells and read out immediately, if some error occurred, we refer it as the disturbance error. When data were programmed to flash cells that already endured 5,000 P/E cycles, if some error occurred, we refer it as the P/E cycle error. When data were programmed to flash cells, if some error occurred after 7-day retention time, it was referred to as the retention error.
+The experiment result indicated that different Vth states have varied error type incidence probabilities. Firstly, most of retention errors occurred in higher states. Retention errors of S7 and S8 accounted for around 25.7% and 25.5% of the total,
+
+respectively. On the other hand, most of P/E cycle errors occurred in lower states. As shown in Fig. 12, about 47% of the total P/E cycle errors occurred in S3 and S4. Furthermore, the experiment result also demonstrated that the trend of RBER was in an ascending order rather than the “U” shape reported in [22], [35]. It was because manufacturers might expect S3 and S4 with lower probability of voltage shifting when suffering errors, thereby allowing small overlapped regions between the two states in the initial stage. Note that the retention errors dominated overall RBER, while P/E cycle errors had a slight impact on RBER. The same experiment was also done with P/E cycles of 1000, 2000, 3000, and 5000. Since the error trends were similar under different P/E cycles, we only showed the result of 5,000 P/E cycles in this paper.
+For the measurement, we programmed random data to flash memory cells and read out them without the ECC process. By comparing the readout data and the programmed data, we could obtain the exact number of bit errors. We compared the following two methods in our experiments:
+• Baseline: Randomized coding such that each voltage state’s scale is averaged.
+• CDS: The proposed coupled data storage with the high read-speed mode and the data correction mode.
+B. Experiment Results of High Read-Speed Mode
+1) The Statistics of Vth States: Fig. 13 illustrates the comparison of voltage distribution under the baseline and the high read-speed mode. The modulated Vth distribution showed that the cells with higher voltage states (i.e., from S5 to S8) were eliminated by the designed reduced mapping table. Additionally, the population of S1 and S2 cells are increased. Considering the states with more electrons require more SROs during a read operation (see Table I), increasing the population of states with fewer electrons as much as possible would benefit read latency. Moreover, since the reduced number of voltage states needed fewer ISPP iterations, the program latency could also be indirectly improved. To summarize, the proposed CDS with the high read-speed mode improved both read and write latency by creating an MLC-like voltage distribution.
+2) Comparison of SROs: To evaluate the effectiveness of the proposed CDS, we measured total SROs induced by read operations. In Table V, two types of coding style, ORBC and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+704
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+Fig. 14. Average read latency for all page types of TLC.
+
+Fig. 13. The statistics of Vth states under baseline and high read-speed mode.
+
+TABLE V NUMBERS OF SROS
+
+Gray Coding
+LSB page CSB page MSB page
+WL
+
+ORBC
+
+Baseline Speed Mode
+
+1
+
+1
+
+2
+
+1
+
+4
+
+2
+
+7
+
+4
+
+MBBC
+
+Baseline Speed Mode
+
+2
+
+1
+
+3
+
+1
+
+2
+
+1
+
+7
+
+3
+
+TABLE VI COMPARISON OF NORMALIZED WRITE LATENCY
+
+PE 0 PE 3K PE 7K PE 10K
+
+Avg. 1
+0.9903 0.9810 0.9788
+
+Baseline Min. 0.9165 0.9176 0.9146 0.9012
+
+Max. 1.1248 1.1122 1.1159 1.1182
+
+High Read-Speed Mode Avg. Min. Max. 0.7276 0.6669 0.8316 0.7288 0.6676 0.8241 0.7213 0.6678 0.8190 0.7167 0.6700 0.8109
+
+MBBC, were analyzed. Typically, seven SROs were required when read a TLC wordline (WL) for both the ORBC and MBBC architectures. For the ORBC architecture, reading an LSB page required one SRO (V4), reading a CSB page required two SROs (V2 and V6), and reading an MSB page required four SROs (V1, V3, V5, and V7). The proposed high read-speed mode reduced a CSB page read to one SRO and an MSB page read to two SROs. For the MBBC architecture, the high read-speed mode could reduce the number of SROs for all page types to only one time, compared with the baseline. As the reduced SROs resulted in fewer data sensing time, read latency could be improved.
+3) Comparison of Read Latency and Write Latency: Fig. 14 shows the average read latency with different TLC page types. As shown in the figure, our approach could reduce roughly 66.6% of read time for CSB pages and approximately 50% of read latency for LSB and MSB pages. Overall, the read latency could be reduced by an average of 55.6% with our approach. It was because the proposed high read-speed mode could effectively reduce the number of SROs, thus leading to a significant read latency reduction.
+Table VI compares the average/minimum/maximum write latencies between the baseline and the high read-speed mode under different P/E cycles without any retention time. All the results were normalized to the average write latency of the baseline under 0 P/E cycle without any retention time. It could be observed that the average write latency of both the baseline and the high read-speed mode slightly decreased as the number of P/E cycles increased. Furthermore, the experiment result showed that the high read-speed mode could gain a write latency reduction by 25.7% to 27.5%. The write latency reduction came from the reduced voltage states. Since only half of the eight
+
+Fig. 15. RBER under default read levels and optimized read levels.
+voltage states were used, ISPP iterations could be reduced, resulting in a smaller writing latency.
+C. Experiment Results of Data Correction Mode
+1) Comparison of RBER Under DRL and ORL: To further reduce read latency, the proposed data correction mode intends to minimize high RBER induced by error sources that cause time-consuming LDPC decoding latency. Fig. 15 compares RBER of four different operation modes: baseline, FRM, HRM, and CRM under 3,000 P/E cycles. The X-axis shows different retention times varied from 0 month to 36 months. The Y-axis shows the measured RBER. It could be observed that RBER increased largely as retention time increased. By employing DRL, RBER under 36-month retention time increased by 3.31x, compared with RBER under 3-month retention time. We also observed that the ORL significantly improved the RBER (dotted line). Since read failure occurred when the amount of bit errors exceeded ECC capability, read voltage calibration is usually adopted to avoid significant amount of errors [39]. The ORL was determined from the fine-tuned read reference voltages between two adjacent voltage states to minimize the amount
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+705
+
+Fig. 16. RBER under different P/E cycles (with optimized read levels).
+
+Fig. 17. CDF of RBER with 7-day retention time under different P/E cycles (with optimized read levels).
+
+of bit errors. The experiment result showed that the proposed data correction mode could effectively reduce RBER under both read metrics, compared with the baseline. Note that the ORL was adopted in the following analyses to evaluate the performance enhancement.
+2) Improvement of RBER Under Different P/E Cycles and Retention Times: Fig. 16 compares the baseline and the proposed HRM/CRM/FRM operation modes in terms of the average RBER. Note that ORL was adopted in the experiment. The experiment results showed that the proposed FRM, HRM, and CRM modes could averagely achieve a great RBER reduction by 37.1%, 52.7%, and 46.4%, respectively. The RBER reduction was achieved by the proposed adjustment equation that corrected voltage-shifting caused bit errors.
+Moreover, HRM exhibited lower RBER than FRM and CRM under 1,000, 2,000, 3,000, and 5,000 P/E cycles due to no adjacent mapping pairings in HRM. Another reason is that HRM had better error correction capability for part of the coupled data shifting. Furthermore, HRM was capable of dealing with cases that the coupled data shifted to opposite directions, such as S1 shifted to S2 and S8 shifted to S7 when suffering from retention errors. Thus HRM achieved the best RBER reduction.
+Fig. 17 illustrates the cumulative distribution function (CDF) of the average RBER under different P/E cycles with 7-day retention time. As shown in Fig. 17(a), about 80% of RBER was less than 0.003 for the baseline; it dropped to 0.0019 for FRM and 0.0017 for HRM and CRM under 1,000 P/E cycles. For 5,000 P/E cycles, about 80% of RBER was less than 0.007 for the baseline, and it dropped to 0.0029 for HRM, 0.0033 for CRM, and 0.004 for FRM, as can be seen in Fig. 17(d). As Fig. 17(a), Fig. 17(b), Fig. 17(c), and Fig. 17(d) all showed similar error trends, we could conclude that the proposed data correction mode effectively suppressed the growth of RBER.
+3) Analysis of Decoding Levels: To analyze the read performance improvement of the data correction mode, we estimated
+
+TABLE VII RBER AND THE CORRESPONDING DECODING LEVELS [11]
+
+Level Hard-Decision Decoding One Extra Soft-Decision Decoding Level Two Extra Soft-Decision Decoding Levels Three Extra Soft-Decision Decoding Levels Four Extra Soft-Decision Decoding Levels Five Extra Soft-Decision Decoding Levels Six Extra Soft-Decision Decoding Levels
+
+RBER <0.005 [0.005, 0.006) [0.006, 0.008) [0.008, 0.009) [0.009, 0.01) [0.01, 0.012) [0.012, 0.013]
+
+the number of decoding levels (including hard-decision code) needed for read commands, which would affect the LDPC decoding time. Given an RBER, we could surmise its decoding levels based on Table VII [11]. For example, if RBER of a page was lower than 0.005, the decoding level was regarded as 1, which represents the hard-decision decoding level; if RBER of a page was 0.0069, its decoding level was regarded as 3, including 1 hard-decision decoding level and 2 extra soft-decision decoding levels.
+Fig. 18 shows the average decoding levels required by the baseline and the proposed HRM/CRM/FRM operation modes under different P/E cycles. As shown in the figure, the proposed data correction mode could reduce 10% to 38.14% of decoding levels. It was because the data correction mode paired reliable state and unreliable state simultaneously, with which bit errors could be fixed by the proposed adjustment equation to suppress high RBER.
+4) Comparison of Endurance: To further estimate the improvement of endurance, Fig. 19 compares the number of P/E cycles that the baseline and the proposed data correction mode could endure until RBER exceeded the ECC limit. The retention time was set as one year with increased P/E cycles from 0 (initial) to 10,000. As shown in the figure, FRM and CRM extended the data lifetime by 1.6 times, compared with the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+706
+
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 73, NO. 3, MARCH 2024
+
+Fig. 18. Analysis of decoding levels under different P/E cycles (with optimized read levels).
+
+conducting a series of experiments to evaluate the effectiveness of our work.
+
+Fig. 19. RBER of different methods under different P/E cycles.
+baseline; HRM further extended the endured P/E cycles from 3,000 to 9,000 that means the data lifetime was enhanced by 3 times. The experiment result showed that the proposed data correction mode could achieve RBER reduction as well as slow down the growth trend of RBER, thus effectively prolonged the lifetime of flash-memory storage devices.
+V. CONCLUSION
+In this paper, we proposed the coupled data storage (CDS) to encode written data based on the access behavior. The goal of our design is to reduce read latency by decreasing read reference voltages during the sensing stage and mitigating RBER during the decoding stage. Our proposed CDS includes the high read-speed mode and the data correction mode. With reduced mapping tables, the high read-speed mode makes TLC memory act as MLC-like distribution and results in fewer read reference voltages as well as data sensing time. To improve the reliability, the data correction mode adopts reverse mapping tables to reduce bit errors through the proposed adjustment equation. As the growth of bit errors could be suppressed, the decoding time can be greatly reduced, thereby effectively solving the issue of long read latency. The experiment results showed that CDS with the high read-speed mode could reduce 50∼66.6% of read latency and 25.7∼27.5% of write latency. For CDS with the data correction mode, RBER could be decreased by 37∼52% and the endurance of flash memory storage device could be prolonged by 1.6 to 3 times.
+ACKNOWLEDGMENT
+We would like to express our sincere appreciation to Dr. YuHeng Liu from PHISON Electronics Corp. for his kind help in
+
+REFERENCES
+[1] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, “Introduction to flash memory,” Proc. IEEE, vol. 91, no. 4, pp. 489–502, Apr. 2003.
+[2] W. Choi, M. Jung, and M. Kandemir, “Invalid data-aware coding to enhance the read performance of high-density flash memories,” in Proc. 51st Annu. IEEE/ACM Int. Symp. Microarchit. (MICRO-51), Piscataway, NJ, USA: IEEE Press, 2018, pp. 482–493, doi: 10.1109/MICRO.2018.00046.
+[3] S. Lee et al., “A 1Tb 4b/cell 64-stacked-WL 3D NAND flash memory with 12NB/s program throughput,” in Proc. IEEE Int. Solid-State Circuits Conf. (ISSCC), 2018, pp. 340–342.
+[4] N. Shibata et al., “A 1.33Tb 4-bit/cell 3D-flash memory on a 96-wordline-layer technology,” in Proc. IEEE Int. Solid-State Circuits Conf. (ISSCC), 2019, pp. 210–212.
+[5] W. Liu et al., “Characterizing the reliability and threshold voltage shifting of 3D charge trap NAND flash,” in Proc. Des., Automat. Test Europe Conf. Exhib. (DATE), 2019, pp. 312–315.
+[6] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. 11th USENIX Conf. File Storage Technol. (FAST), San Jose, CA, USA: USENIX Association, Feb. 2013, pp. 243– 256. Accessed: Jan. 19, 2022. [Online]. Available: https://www.usenix. org/conference/fast13/technical-sessions/presentation/zhao
+[7] Y. Du, Q. Li, L. Shi, D. Zou, H. Jin, and C. J. Xue, “Reducing LDPC soft sensing latency by lightweight data refresh for flash read performance improvement,” in Proc. 54th ACM/EDAC/IEEE Des. Automat. Conf. (DAC), 2017, pp. 1–6.
+[8] J. Zhang, G. Park, M. Shihab, D. Donofrio, J. Shalf, and M. Jung, “OpenNVM: An open-sourced FPGA-based NVM controller for low level memory characterization,” in Proc. 33rd IEEE Comput. Des. (ICCD), Piscataway, NJ, USA: IEEE Press, 2015, pp. 666–673.
+[9] D.-W. Chang, W.-C. Lin, and H.-H. Chen, “FastRead: Improving read performance for multilevel-cell flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, pp. 2998–3002, Sep. 2016.
+[10] Y. Lv, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Latency variation aware read performance optimization on 3D high density NAND flash memory,” in Proc. Great Lakes Symp. VLSI (GLSVLSI), New York, NY, USA: ACM, 2020, pp. 411–414, doi: 10.1145/3386263.3406953.
+[11] S. Wu, S. Lan, J. Zhou, H. Jiang, and Z. Shen, “BitFlip: A bit-flipping scheme for reducing read latency and improving reliability of flash memory,” in Proc. IEEE MSST, 2020.
+[12] S. Tanakamaru, C. Hung, and K. Takeuchi, “Highly reliable and low power SSD using asymmetric coding and stripe bitline-pattern elimination programming,” IEEE J. Solid-State Circuits, vol. 47, no. 1, pp. 85–96, Jan. 2012.
+[13] C.-H. Wu, H.-W. Zhang, C.-W. Liu, T.-C. Yu, and C.-Y. Yang, “A dynamic Huffman coding method for reliable TLC NAND flash memory,” ACM Trans. Des. Automat. Electron. Syst., vol. 26, no. 5, pp. 1–25, Jun. 2021, Article no. 34, doi: 10.1145/3446771.
+[14] Y. Deguchi, A. Kobayashi, H. Watanabe, and K. Takeuchi, “Flash reliability boost Huffman coding (FRBH): Co-optimization of data compression and Vth distribution modulation to enhance dataretention time by over 2900x,” in Proc. Symp. VLSI Technol., 2017, pp. T206–T207.
+[15] H. Watanabe, Y. Deguchi, and K. Takeuchi, “MLC/3LC NAND flash SSD cache with asymmetric error reduction Huffman coding for tiered
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: CDS TO ENHANCE READ PERFORMANCE OF 3D TLC NAND FLASH MEMORY
+
+707
+
+hierarchical storage,” in Proc. IEEE Asian Solid-State Circuits Conf. (A-SSCC), 2017, pp. 157–160. [16] J. Guo, W. Wen, J. Hu, D. Wang, H. Li, and Y. Chen, “FlexLevel NAND flash storage system design to reduce LDPC latency,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 36, no. 7, pp. 1167–1180, Jul. 2017. [17] C.-Y. Liu, J. B. Kotra, M. Jung, M. T. Kandemir, and C. R. Das, “SOML read: Rethinking the read operation granularity of 3D NAND SSDs,” in Proc. 24th Int. Conf. Archit. Support Program. Lang. Operating Syst. (ASPLOS), New York, NY, USA: ACM, 2019, pp. 955–969, doi: https:// doi.org/10.1145/3297858.3304035 [18] S. Nie, Y. Zhang, W. Wu, and J. Yang, “Layer RBER variation aware read performance optimization for 3D flash memories,” in Proc. 57th ACM/IEEE Des. Automat. Conf. (DAC), 2020, pp. 1–6. [19] S. Tehrani et al., “Advancement in charge-trap flash memory technology,” in Proc. 5th IEEE Int. Memory Workshop, Piscataway, NJ, USA: IEEE Press, 2013, pp. 9–12. [20] S. Liu and X. Zou, “QLC NAND study and enhanced gray coding methods for sixteen-level-based program algorithms,” Microelectron. J., vol. 66, no. C, pp. 58–66, Aug. 2017. [21] K.-D. Suh et al., “A 3.3 V 32 Mb NAND flash memory with incremental step pulse programming scheme,” IEEE J. Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, Nov. 1995. [22] M. Kim, Y. Song, M. Jung, and J. Kim, “SARO: A state-aware reliability optimization technique for high density NAND flash memory,” in Proc. Great Lakes Symp. VLSI, 2018, pp. 255–260. [23] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017. [24] R. Micheloni, L. Crippa, and A. Marelli, Inside NAND Flash Memories. New York, NY, USA: Springer-Verlag, 2010. [25] Q. Li, L. Shi, Y. Cui, and C. J. Xue, “Exploiting asymmetric errors for LDPC decoding optimization on 3D NAND flash memory,” IEEE Trans. Comput., vol. 69, no. 4, pp. 475–488, Apr. 2020. [26] J.-W. Hsieh, L.-P. Chang, and T.-W. Kuo, “Efficient identification of hot data for flash memory storage systems,” ACM Trans. Storage (TOS), vol. 2, pp. 22–40, Feb. 2006. [27] Y. Zhao, W. Tong, J. Liu, D. Feng, and H. Qin, “CeSR: A cell state remapping strategy to reduce raw bit error rate of MLC NAND flash,” in Proc. 35th Symp. Mass Storage Syst. Technol. (MSST), 2019, pp. 161–171. [28] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, “EC-Cache: Exploiting error locality to optimize LDPC in NAND flash-based SSDs,” in Proc. 51st ACM/EDAC/IEEE Des. Automat. Conf. (DAC), Piscataway, NJ, USA: IEEE Press, 2014, pp. 1–6. [29] Y. Cai et al., “Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,” in Proc. IEEE 30th Int. Conf. Comput. Des. (ICCD), Sep. 2012, pp. 94–101. [30] Y. Cai et al., “Error analysis and retention-aware error management for NAND flash memory,” Intel Technol. J., vol. 17, no. 1, pp. 40–165, May 2013. [31] T. Zhang, Q. Wu, G. Dong, and Y. Pan, “Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,” in Proc. IEEE 18th Int. Symp. High Perform. Comput. Archit. (HPCA), Feb. 2012, pp. 1–10. [32] V. Mohan, S. Sankar, and S. Gurumurthi, “ReFresh SSDs: Enabling high endurance, low cost flash in datacenters,” presented at Flash Memory Summit 2012, Tech. Rep. CS-2012-05, University of Virginia, May 2012, pp. 1–20. [33] Q. Li, M. Ye, Y. Cui, L. Shi, X. Li, and C. J. Xue, “Sentinel cells enabled fast read for NAND flash,” in Proc. 11th USENIX Workshop Hot Topics Storage File Syst. (HotStorage), 2019.
+
+[34] F. Wu et al., “Using error modes aware LDPC to improve decoding performance of 3-D TLC NAND flash,” IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 39, no. 4, pp. 909–921, Apr. 2020.
+[35] D. K.-H. Yu and J.-W. Hsieh, “Differential evolution algorithm with asymmetric coding for solving the reliability problem of 3D-TLC CT flash memory storage systems,” IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 41, no. 9, pp. 2863–2876, Sep. 2022.
+[36] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “HeatWatch: Improving 3D NAND flash memory device reliability by exploiting selfrecovery and temperature awareness,” in Proc. IEEE Int. Symp. High Perform. Comput. Archit. (HPCA), Piscataway, NJ, USA: IEEE Press, 2018, pp. 504–517.
+[37] Y. Liu et al., “An abnormal negative temperature dependence of erasestate Vt retention shift in 3-D NAND flash memories,” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), Piscataway, NJ, USA: IEEE Press, 2022, pp. P30-1–P30-4.
+[38] N. Papandreou et al., “Characterization and analysis of bit errors in 3D TLC NAND flash memory,” in Proc. IEEE Int. Rel. Phys. Symp. (IRPS), 2019, pp. 1–6.
+[39] C. Gao et al., “Reprogramming 3D TLC flash memory based solid state drives,” ACM Trans. Storage (TOS), vol. 18, no. 1, pp. 1–33, 2022.
+Wan-Ling Wu received the B.S. degree from Yuan Ze University, in 2019. She is currently working toward the M.S. degree under the supervision of Prof. J.-W. Hsieh with the Department of Computer Science and Information Engineering, National Taiwan University of Science and Technology, Taipei, Taiwan. Her research interest lies on NAND flash Memory.
+Jen-Wei Hsieh (Senior Member, IEEE) received the B.S., M.S., and Ph.D. degrees in computer science and information engineering from National Taiwan University, in 1999, 2001, and 2006, respectively. He is currently a Professor with the Department of Computer Science and Information Engineering, National Taiwan University of Science and Technology. His research interests include flash memory storage systems and real-time task scheduling. He served as a Program Co-Chair of the 23rd IEEE International Conference on Embedded and RealTime Computing Systems and Applications (IEEE RTCSA 2017), Hsinchu, Taiwan, August 16–18, 2017. He served as the General Chair of the 11th IEEE Non-Volatile Memory Systems and Applications Symposium (IEEE NVMSA 2022), Taipei, Taiwan, August 23–25, 2022.
+Hao-Yu Ku received the B.S. degree from the Department of Computer Science and Information Engineering, National Taiwan University of Science and Technology, Taipei, Taiwan, in 2022. He is currently a Firmware Engineer with Innodisk Corporation. His current research interest is mainly on flash memory storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:24:45 UTC from IEEE Xplore. Restrictions apply.
+
+

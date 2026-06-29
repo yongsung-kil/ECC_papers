@@ -1,0 +1,1443 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+4187
+
+Symbol-Level Deep Learning-Based Decoders for Concatenated Codes Over Insertion/Deletion Channels
+
+E. Uras Kargı and Tolga M. Duman , Fellow, IEEE
+
+Abstract—Synchronization errors, such as insertions and deletions, pose significant challenges in communication and storage systems, including DNA data storage. Among different alternatives, serially concatenated coding schemes, where a powerful outer code is concatenated with an inner marker code, have proven effective in mitigating such errors. A common method of decoding the inner marker code is to employ the forward-backward algorithm implementing bitwise or symbolwise maximum a posteriori (MAP) detection. Recently, bit-level deep-learning based solutions have also been proposed for decoding marker codes. In this paper, we consider symbol-level deep-learning based decoders, which exploit correlations among adjacent bits to improve the decoding performance, and develop new channel detection algorithms. Unlike existing symbol-level MAP decoding approaches that can combine only two or three consecutive bits, the proposed deep-learning methods extend well beyond this limit, and achieve improved error correction performance. We also develop deep-learning based decoders for insertion/deletion channels further exacerbated by intersymbol interference, motivated by bit-patterned media recording channels and nanopore sequencing. Extensive numerical results show that the proposed symbol-level deep-learning architectures are highly effective for communication over insertion/deletion channels.
+Index Terms—Deep learning, deletion channel, insertion channel, channels with synchronization errors, concatenated codes, marker codes, recurrent neural networks, gated recurrent units, GRU, intersymbol interference.
+I. INTRODUCTION
+C HANNELS with synchronization errors, also known as insertion/deletion/substitution (IDS) channels, are
+observed in various practical applications. These channels
+delete bits or symbols from the data stream and/or add
+random bits to it. Such random deletions or insertions create
+Received 4 March 2025; revised 9 October 2025 and 12 December 2025; accepted 31 December 2025. Date of publication 19 January 2026; date of current version 9 February 2026. This work was funded by the European Union through the ERC Advanced Grant 101054904: TRANCIDS. An earlier version of this paper was presented in part at the IEEE International Conference on Communications (ICC), Denver, CO, USA, in June 2024 [DOI: 10.1109/ICC51166.2024.10622561]. The associate editor coordinating the review of this article and approving it for publication was D. Vukobratovic. (Corresponding author: Tolga M. Duman.)
+E. Uras Kargı is with the Faculty of Electrical Engineering, Mathematics and Computer Science (EEMCS), Delft University of Technology (TU Delft), 2628 XE Delft, The Netherlands (e-mail: ukargi@tudelft.nl).
+Tolga M. Duman is with the Department of Electrical and Electronics Engineering, Bilkent University, 06800 Ankara, Tu¨rkiye (e-mail: duman@ee.bilkent.edu.tr).
+Data is available on-line at https://github.com/Bilkent-CTAR-Lab/SymbolLevel-BIGRU-Decoders-for-IDS-Channels
+Digital Object Identifier 10.1109/TCOMM.2026.3655750
+
+synchronization problems at the receiver. DNA data storage, one of the emerging technologies for digital storage, is an exemplary application where such errors are observed [2]. As another example, bit-patterned media recording channels also suffer from synchronization errors [3], [4]. Furthermore, synchronization errors are observed in wireless communication systems when the receiver and transmitter clocks are mismatched.
+Motivated by the challenges faced by the above technologies, different channel models addressing synchronization errors have been developed. For example, nanopore channels refer to nanoscale pores embedded in membranes that allow the passage of DNA strands [5]. Such channels introduce not only synchronization errors but also intersymbol interference (ISI), as the current stemming from the passage of the strand is affected by the adjacent nucleotides. Another example where ISI is observed along with insertions and deletions is bit-patterned media recording systems [6].
+The capacity of channels with independent and identically distributed (i.i.d.) insertions, deletions, and substitutions, has been examined in the literature. It was proved that such channels are information stable; hence, their Shannon capacity exists [7]. However, determination of the capacity has remained elusive, while various upper and lower bounds have been developed [8], [9], [10], [11], [12].
+Practical codes for IDS channels have also been proposed, including number-theoretic and algebraic codes, convolutional codes, and concatenated codes. An important class of block codes includes Varshamov-Tenengolts (VT) codes, which are capable of correcting a limited number of deletions and insertions employing suitable syndromes [13], [14]. Convolutional codes, which can be decoded by trellis-based algorithms [15], [16], represent other examples.
+An effective solution for correcting random insertion and deletion errors is based on the concatenation of a powerful outer code with an inner marker or watermark code [17], [18]. Marker codes are sequences of bits known to both the receiver and the transmitter and are inserted regularly into the output sequence of the outer code. On the other hand, watermark sequences are added componentwise to the encoded sequence (which is forced to be sparse). The decoder implicitly looks for the positions of marker bits or the background watermark sequences to achieve synchronization over channels with bit gains or bit losses.
+
+© 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+
+4188
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+The use of low-density parity check (LDPC) codes as outer codes in the concatenated coding framework has been shown to be highly effective over IDS channels [17], [18], [19]. In particular, it has been shown that marker codes offer improved error correction over channels with synchronization errors compared to watermark codes as inner codes. With this motivation, in this paper, we focus on the concatenation of LDPC codes with marker codes for use over IDS channels.
+Recent studies have also explored stand-alone LDPC constructions for synchronization errors. Shibata et al. showed that irregular LDPC codes, with degree profiles tailored to IDS channels, can approach the symmetric information rate without relying on marker sequences [20]. Spatially coupled LDPC (SC-LDPC) codes have likewise been investigated, where windowed or iterative decoding exploits the coupling structure to achieve strong performance on IDS channels, offering a promising alternative to concatenated marker/watermark schemes [21], [22].
+Both marker codes and watermark codes over IDS channels are typically decoded using the maximum a posteriori (MAP) decoding algorithm. Specifically, the Bahl-CockeJelinek-Raviv (BCJR) algorithm is used to produce soft information about the bits encoded by the outer code (input to the inner marker or watermark code); this soft information is then employed by the outer code’s decoder to obtain estimates of the transmitted bits. While the use of the BCJR algorithm is optimal in terms of generating soft information, its complexity increases drastically when the number of insertions/deletions is large, and it may underperform if the channel parameters (e.g., insertion/deletion probabilities) are not known. It has also been shown that the performance of the MAP detector improves when MAP detection is implemented at the symbol level (considering multiple bits together) rather than the bit level [19]. Symbol-level BCJR decoders perform better than the bit-level ones because they exploit the correlations among the bits input to the channel. While derivations for the bitlevel case are easier to obtain, the symbol-level derivations are somewhat complicated, especially when the number of bits comprising each symbol exceeds two or three, and their implementation complexity is significantly higher [19].
+Deep learning techniques for channel coding have been a rapidly developing area. The research in this field started with applying basic neural networks, such as Hopfield networks, to decode simple codes with small codeword lengths. Later, multi-layer perceptrons (MLPs) with numerous hidden layers were adopted for decoding, and it was shown that it is possible to achieve MAP detection performance for small codeword lengths [23]. This has evolved into decoding convolutional codes with sequential neural network architectures, especially after the advent of novel architectures such as recurrent neural networks (RNNs) [24], [25]. Nowadays, transformers are being applied to decode channel codes [26], [27]. Neural network-based decoders aim to achieve lowlatency and high-performance decoding capabilities. Despite these advancements, decoding with neural networks becomes intractable as codeword lengths increase. Note also that neural networks are employed not only for decoding but also for constructing state-of-the-art codes, such as polar codes, through
+
+reinforcement learning [28], [29]. More recent efforts further extend the above ideas to advanced architectures and training strategies, including boosting-based learning for LDPC codes to improve error-floor behavior [30], as well as cross-attention message-passing transformers and foundation models designed for general error-correction tasks [31], [32], [33].
+To the best of our knowledge, the only study that combines deep-learning based channel decoders with IDS channels and DNA storage is a recent work introducing an end-toend autoencoder based IDS-correcting code, which employs disturbance-based discretization and a differentiable IDS channel to effectively handle synchronization errors [34]. With the overall goal of developing low complexity and robust solutions for receiver design for IDS channels, sequential bit-level deep learning architectures, namely, bi-directional gated recurrent units (BI-GRUs), are developed to estimate probabilities of the sequences encoded by outer codes within the framework of concatenated codes [1]. These results show that the error rate performance is competitive with the approaches using the BCJR algorithm-based receivers for decoding the inner code. We further note that, while BCJR-based solution requires the exact channel state information for estimating the loglikelihood ratios (LLRs), bit-level BI-GRUs are more robust and can work effectively even when the channel parameters are not known precisely.
+This paper develops symbol-level deep learning decoders to overcome the limits of existing bit- and symbol-level methods, which can only handle very small symbol groupings. We further extend these decoders to concatenated codes for IDS channels with ISI, where conventional trellis-based methods become too complicated for implementation. Such settings arise in certain applications, including bit-patterned media recording and nanopore sequencing.
+Key contributions of the paper are summarized as follows:
+• BI-GRU-based decoders are developed for channels with synchronization errors, as reported in the preliminary version of this work [1].
+• The deep-learning based decoders are extended to symbol level (each symbol comprising multiple bits) so as to take into account the correlations among likelihoods and to improve the performance of bit-level BI-GRU decoders.
+• It is shown that while the standard approach to symbollevel detectors is limited to the use of two or three-bit symbols, it is possible to break this barrier and take into account up to six bits as one symbol, and hence to exceed the performance of previously known solutions with reduced complexity.
+• Finally, the decoding architecture is extended to handle IDS channels exacerbated by ISI, and it is shown that deep-learning can offer viable solutions even in this case.
+The paper is organized as follows. Section II discusses the system model. Section III reviews the bit-level BI-GRU decoders over IDS channels. Section IV proposes symbol-level BI-GRU decoders for concatenated codes over IDS channels. Section V proposes symbol-level BI-GRU decoders adopted for IDS channels further degraded by ISI. Section VI presents some numerical examples demonstrating the performance of
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4189
+
+Fig. 1. Block diagram of the system where outer code is concatenated with a marker code.
+
+the proposed architectures. Finally, the paper is concluded in Section VII.
+
+II. SYSTEM MODEL
+
+We consider transmission over binary channels susceptible
+
+to deletions, insertions, and bit substitutions, referred to as
+
+the IDS channel model. Let Pd, Pi, and Ps represent the
+
+probabilities of deletion, insertion, and substitution events,
+
+respectively. Specifically, each bit in the sequence is either
+
+deleted with probability Pd, or replaced by two random bits with probability Pi, or transmitted incorrectly (substituted) with probability (1 − Pd − Pi)Ps, or transmitted correctly with probability (1 − Pd − Pi)(1 − Ps). Deletion, insertion, and
+
+substitution events are assumed to occur independently across
+
+different channel uses. Note that, while different models for
+
+insertions exist (see, e.g., [17]), the above channel model
+
+(also known as the Gallager model) is used in [35] and many
+
+other papers in the literature. The channel model can also be
+
+considered as a cascade of an insertion and deletion channel
+
+followed by a binary symmetric channel (BSC).
+
+We adopt a concatenated coding scheme which consists
+
+of an outer LDPC code, and an inner marker code. The
+
+marker code is employed to regain synchronization at the
+
+receiver while the powerful outer LDPC code is used to
+
+improve the error rate performance. Message vector m is
+
+encoded via the outer code with rate ro = k/n, and then the encoded sequence c is interleaved. Interleaving can be
+
+either in the bit-level or symbol-level depending on which
+
+type of estimator is used. A pre-selected marker sequence of
+
+length Nm bits is inserted into the coded bit sequence after every Nc bits. The resulting sequence x = (x1, . . . , xT ) with length T is transmitted over IDS channel, and the sequence
+
+y = (y1, . . . , yR) with length R is received. The rate of inner
+
+marker code is rm = Nc/(Nc + Nm), hence the rate of the
+
+overall
+
+code
+
+becomes
+
+r
+
+=
+
+rorm
+
+=
+
+Nc k (Nc +Nm
+
+)n
+
+.
+
+Marker sequence and insertion intervals are chosen such that
+
+the overall outer rate ro remains within the achievable-rates corresponding to a given Nc, as calculated in [19] through
+
+computation of mutual information by Monte-Carlo tech-
+
+niques. Note that marker sequences containing bit transitions
+
+(e.g., “01”) are preferred over sequences without transitions
+
+(e.g., “00”), since transitions enable insertion or deletion errors
+
+to be identified more reliably. Fig. 1 shows the block diagram
+
+of a concatenated coding approach where the inner code is a
+
+marker code, and the receiver consists of a MAP detector for
+
+decoding markers, and an outer code decoder.
+
+III. BIT-LEVEL DEEP-LEARNING BASED DECODERS FOR CONCATENATED CODES OVER IDS CHANNELS
+In this section, bit-level deep learning decoders (developed in the conference version of this work [1]) for concatenated coding with marker codes as inner codes are reviewed since symbol-level deep learning decoder counterparts are proposed as their extensions. The goal is to provide alternative methods for decoding inner marker codes over IDS channels and to address the limitations of conventional approaches, particularly, their dependence on the channel parameters for optimal performance.
+We consider two setups:
+1) Two-step decoding: A BI-GRU architecture is first trained to estimate the LLRs of the bits at the input of the marker code. These estimated LLRs are then passed to the outer LDPC decoder, which produces the final message bit estimates.
+2) One-shot decoding: Two BI-GRU architectures are cascaded. The first BI-GRU estimates the marker bits, while the second BI-GRU directly decodes the outer code, thereby combining marker decoding and message decoding into a single end-to-end process.
+For both setups, the bit-level BI-GRU-based architecture estimates the LLR of each transmitted bit, denoted by L = (L1, . . . , LT ). The estimated LLRs are first de-interleaved at the bit level, and then those corresponding to marker bits are removed because they are irrelevant for the outer code decoder, resulting in the vector L∗ = (L1, . . . , Ln). L∗ is passed to the outer code decoder (the sum-product algorithm for the first setup, or deep-learning based decoder for the second setup). The outer code estimates the information bits as mˆ = (mˆ 1, . . . , mˆ k).
+
+A. Bit-Level BI-GRU Estimators
+
+We now describe the bit-level BI-GRU estimators, which
+are utilized to compute the LLRs of the transmitted bits. In a forward RNN, the hidden state at a giventime t, h(tf), represents the prior information. Let Wr(efc) and Wi(nf) denote the recurrent weight matrix and the input weight matrix of
+the forward RNN, respectively. The input vector at time t is defined as xt = (yt−γ+1, . . . , yt, . . . , yt+γ−1) ∈ R2γ−1,
+which consists of a window of received symbols centered
+at yt. This type of input transformation is motivated by
+BCJR-based estimators, where windowing around the current
+time index is known to capture almost all relevant information
+about the received sequence for time step t. Let f denote a generic activation function. We can compute ht(f) as follows:
+
+h(tf) = f (Wr(efc)ht(−f)1 + Wi(nf)xt).
+
+(1)
+
+In a backward RNN, the hidden state at a given time t
+
+represents the information about the sequence to the right of
+
+the
+
+current
+
+input,
+
+←− h t.
+
+Let
+
+Wr(be)c
+
+and
+
+Wi(nb)
+
+denote
+
+the
+
+recurrent
+
+weight matrix and the input weight matrix of backward RNN,
+
+respectively. We can compute h(tb) as follows:
+
+h(tb) = f (Wr(ebc)h(t+b)1 + Wi(nb)xt).
+
+(2)
+
+4190
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 2. Comparison of bit-level decoders: (a) Setup 1 (two-step)—a BI-GRU first estimates LLRs for the marker code, which are then decoded by the outer LDPC decoder; BER/FER vs substitution probability; IDS with Pd = 0.03, Pi = 0; LDPC (204, 102); marker sequence [0, 1] and Nc = 10, (b) Setup 2 (one-shot)—two cascaded BI-GRUs estimate marker bits and directly decode the outer code, replacing the conventional outer decoder; Setup 2 (one-shot decoding). BER/FER vs deletion probability for a deletion-only channel (Ps = 0), using a rate-1/2 convolutional code of length 204 with generators (5, 7)octal; marker sequence [0, 1] and Nc = 10.
+
+A layer of a BI-RNN [36] combines a forward and a backward
+
+RNN described above. A linear layer with a sigmoid activation
+
+function is added on top of the final BI-RNN layer to calculate
+
+the conditional probability of xt = 1 given y. Let Wo denote
+
+the output weight matrix of the network, σ(x) be the sigmoid
+
+function,
+
+i.e.,
+
+σ(x)
+
+=
+
+1 1+e−x
+
+and
+
+[;
+
+]
+
+be
+
+the
+
+concatenation
+
+operator. We calculate the output of the network as P (xt =
+
+1|y) = σ(Wo[h(tf); h(tb)]). Then, the LLR of xt, L(xt|y) for
+
+t = {1, . . . , T } is calculated using:
+
+L(xt|y)
+
+=
+
+log
+
+P (xt P (xt
+
+= =
+
+0|y) 1|y)
+
+=
+
+log
+
+1
+
+− σ(Wo[h(tf); ht(b) σ(Wo[h(tf); ht(b)])
+
+])
+
+.
+
+(3)
+
+We implemented the BI-GRU architecture instead of basic
+
+RNNs as an LLR estimator for the marker code, since it
+
+addresses the issues of vanishing and exploding gradients
+
+commonly faced in RNNs, while also significantly improving
+
+memory capabilities compared to simple RNNs [37], [38].
+
+B. Training Details for the First Setup
+In this subsection, we present the training methodology adopted for the first setup, two-step decoding. The BI-GRU estimators are trained using a supervised learning approach: the labels are the original transmitted sequences x over an IDS channel, and the inputs are the received sequences y transformed by −2y + 1. Mapping binary inputs from the channel, originally in {0, 1}, to {−1, +1} prevents information loss that occurs when zeros contribute nothing in linear transformations. This balanced, zero-centered representation preserves the distinction between bit states and enhances both the stability and expressiveness of the neural network during training. Although many transformations are possible, we adopt the mapping 0 → 1, 1 → −1, which is also commonly used in the training of deep-learning based decoders for channel codes [23], [24], [26], [39].
+
+C. Training Details for the Second Setup
+In this subsection, we present the training methodology adopted for the second setup, one-shot decoding. In this setup, two BI-GRU networks are trained: one for estimating the markers and one for decoding convolutional codes given the outputs of the marker estimator. For the BI-GRU-based estimator, the training methodology is the same as the one described in Section III-B. For the BI-GRU decoder, the labels are the message sequences m, and the inputs are the LLR vectors L∗ obtained from the BI-GRU-based estimator. Both the BI-GRU estimators and decoders are trained in batches of size B without any fixed training dataset.
+D. Numerical Examples
+Fig. 2a compares the performance of the proposed decoder with the BCJR-based baseline under Setup 1 (two-step decoding). The results are obtained over a range of substitution probabilities for an IDS channel with Pd = 0.03 and Pi = 0, using an LDPC code of length (204, 102), marker sequence (0, 1) and Nc = 10. It is observed that the bit-level BI-GRU estimator exhibits improved performance in some cases over the baseline decoder. Specifically, when the baseline decoder uses a substitution probability of 0, for a range of deletion probabilities, the decoder outperforms the BCJR algorithm. Notably, in terms of the frame error rate (FER) performance, the bit-level deep learning decoders outperform the mismatched decoder for a wider range of channel parameters.
+BI-GRU estimators can work over a range of probabilities, without any change to their input representation or architecture. Moreover, when channel conditions are not known to the receiver, our proposed decoder can outperform baseline methods which require the channel state condition. In addition, the complexity of BI-GRU decoders can be made comparable to that of conventional methods by selecting smaller
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4191
+
+hidden layer sizes, while maintaining acceptable error-rate performance.
+Fig. 2b presents the error-rate performance under Setup 2 (one-shot decoding), where the outer code decoder is replaced by a BI-GRU. For this setup, we evaluate performance over a range of deletion-only channel parameters (Pi = 0, and Ps = 0), employing a rate-1/2 convolutional code with generators (5, 7)octal, along with the marker sequence (0, 1) and Nc = 10. In this setting, decoding is performed in a single step and we observe that the fully BI-GRU based receiver performs similarly to the baseline decoder, which employs the Viterbi algorithm with soft decision decoding (SDD) as the outer decoder, while a BCJR algorithm is used as the estimator. Given that the training objective of the BI-GRU estimator is binary classification, there appears to be enhanced compatibility with the Viterbi algorithm using hard decision decoding (HDD); the decoder using the BI-GRU estimator along with the Viterbi algorithm employing HDD performs better than the baseline approach paired with the same outer decoding algorithm for all the deletion probabilities considered.
+E. Further Discussion and Comparison With Related Work
+We elaborate on a closely related work [40], which explores bit-level deep-learning based decoders for coding over IDS channels similar to ours. In this work, carried out in parallel with the preliminary version of this paper [1], the authors propose two distinct setups: a model-based configuration within the framework of forward-backward equations and a modelfree setup, where the implementation focuses on end-to-end estimation of LLRs within a framework akin to ours. The differences between our work and [40] can be highlighted as the incorporation of a one-shot decoding approach applied to the receiver in our work, distinct preprocessing steps applied to the received bits, and variations in training methodologies (for instance, utilization of a static dataset versus simulationbased generation of mini-batches during training in our approach).
+The results in [40] are compatible with our results on bit-level decoders: the BI-GRU based estimators perform similarly to our trained decoders regarding their performance difference with the baseline decoders realized using forwardbackward equations. The model-based decoders utilizing a forward-backward algorithm aimed to estimate Pd, Ps, and Pi, perform better than the BCJR-algorithm based decoders when the channel parameters are not known to the receiver. The authors also experiment with the burst IDS channels of which the deletions and insertions are not independent for different uses and show that without knowing the channel model, one may develop BI-GRU based decoders and argue that their performance in terms of error rates is superior to those of the BCJR-based decoders.
+IV. SYMBOL-LEVEL DEEP-LEARNING BASED DECODERS
+This section proposes a novel deep-learning based method for decoding concatenated codes over IDS channels, focusing on symbol-level decoding. In [1], deep learning decoders
+
+Fig. 3. Block diagram of the proposed decoding framework. An LDPC code is concatenated with a marker code and transmitted over the IDS channel. At the receiver, a symbol-level BI-GRU estimator performs synchronization and demapper and outer code decoder estimates message bits.
+were motivated by bit-level decoding methods grounded in the forward-backward algorithm, which considers individual bits. In this section, deep-learning based decoders are adapted to the symbol-level estimators introduced in [19]. Symbollevel decoders take into account the correlations among the bits at the receiver output, which are ignored by the bit-level decoders. This is motivated by the observation that when a bit is affected by an insertion or deletion event, its adjacent bits are more influenced by these errors compared to further away bits. Therefore, when properly designed, symbol-level decoding provides enhancements over bit-level decoding. In this method, decoding is carried out at the symbol level, where the MAP algorithm is used to estimate the posterior probabilities of the symbols that consist of multiple consecutive bits instead of individual bits. While it is theoretically possible to create symbols of any length, prior work primarily focuses on 2- and 3-bit symbol-level estimators, as the MAP detector becomes too complicated for implementation beyond these values.
+Our objectives are threefold: to replace the symbol-level MAP detector with a symbol-level deep-learning based detector to estimate the symbol probabilities, to improve the error rate performance of bit-level deep-learning based detectors, and to extend the limitations of previous symbol-level decoders to handle symbols longer than three bits.
+We serially concatenate an LDPC code with a marker code, and develop a BI-GRU architecture to estimate the posterior probabilities of the symbols input to the inner code. The BI-GRU network is employed to regain synchronization at the receiver. This choice is motivated by prior work showing that BI-GRUs can replace the BCJR algorithm for convolutional codes [24], and by related research on IDS channels employing bit-level synchronizers that also adopt BI-GRUs [1], [40]. Moreover, we select the GRU architecture over LSTM networks because they use fewer parameters and a simpler gating mechanism, enabling faster training and reduced risk of overfitting while achieving comparable accuracy on many sequence-modeling tasks [37], [38]. Fig. 3 illustrates the block diagram of the proposed setup.
+A. Preliminaries and Encoding/Decoding Procedure
+Message vector m = (m1, . . . , mk) of length k, where mt ∈ {0, 1} is encoded through the outer (bit-level) code, resulting in c = (c1, . . . , cn) of length n where ct ∈ {0, 1}. The rate of the outer code is k/n. Then, the encoded sequence c is grouped into symbols of length
+
+4192
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+the outer decoder benefits from more refined soft information; however, larger M also increases computational complexity due to the more frequent usage of the demapper module.
+For S = 2, the demapper is defined as follows [19], [41], where x2t−1 ∈ {0, 1} and for t ∈ {1, . . . , n/2},
+
+Fig. 4. An illustration of symbol grouping and interleaving, where the marker sequence “01” is inserted after every 4 coded bits (Nc = 4).
+
+S, expressed as c = (s1, s2, . . . , sn/S), where each si = (c(i−1)S+1, c(i−1)S+2, . . . , ciS) for i ∈ {1, 2, . . . , n/S}. Each symbol is a group of S consecutive bits and takes values in {0, 1}S. Since message vector m is i.i.d., P (si) = 1/2S for all si ∈ {0, . . . , 2S −1}. We assume that the codeword length n is divisible by S without loss of generality; if not, zero-padding
+can be applied.
+The encoded sequence c = (s1, . . . , sn/S) is interleaved at the symbol level, resulting in cπ. Symbol-level interleaving
+permutes groups of bits rather than individual bits, and the
+interleaver is known to both the receiver and the transmitter.
+The interleaver is chosen as a random permutation. Then, a
+pre-selected marker with length Nm is inserted after every Nc coded bits, resulting in the overall code x = (x1, . . . , xT ) where T = n + Nm(n/Nc) denotes the total number of transmitted bits. This process is illustrated in Fig. 4 which
+highlights the symbol-level interleaving operation.
+The overall codeword is transmitted over the IDS channel
+and y = (y1, . . . , yR) is received, where the length of the received sequence, R, is a random variable. The proposed
+BI-GRU based estimator computes P (st | y) for each st ∈ {0, . . . , 2S − 1}, yielding a total of n/S terms. Then, the
+S-dimensional vector at time step t, Lt = P (st = 0 | y), . . . , P (st = 2S −1 | y) , is formed. For example, if S = 2,
+
+P (st = (0, 0) | y)
+
+Lt
+
+=
+
+P (st P (st
+
+= =
+
+(0, (1,
+
+1) 0)
+
+| |
+
+y) y)
+
+.
+
+P (st = (1, 1) | y)
+
+After this calculation the vector consisting of posterior prob-
+
+abilities is formed, L = (L1, . . . , Ln/S). These values are de-interleaved at the symbol level, resulting in the vector Lπ = (L1, . . . , Ln/S). Lπ is then provided as input to a combination of the outer code and the demapper module. There
+
+is a local exchange of information between the demapper and
+
+the outer-code decoder: after every No iterations of the outer-
+
+code decoder, the LLRs calculated by the outer-code decoder,
+
+denoted
+
+by
+
+Lo
+
+=
+
+(L1, . . . , Ln),
+
+where
+
+Lt
+
+=
+
+log
+
+P P
+
+(xt (xt
+
+=0|y) =1|y)
+
+,
+
+are passed to the demapper. Then, the demapper produces
+
+Φ = (ϕ1, . . . , ϕn). The demapper exploits the soft information
+
+from the outer-code decoder to update its estimates, and its
+
+output Φ is then fed back to the outer code decoder. After a
+
+total of M such local exchanges (i.e., M No iterations of the
+
+outer code decoder), hard decisions on the message bits are
+
+obtained, mˆ = (mˆ 1, . . . , mˆ k), where mˆ t ∈ {0, 1}. We note that increasing M generally improves performance because
+
+ϕ(x2t−1) P (y | x2t−1)
+
+= P (y, st | x2t−1)
+st
+
+= P (st | x2t−1)P (y | st)
+st
+
+= P (y | st)
+
+P (st, x2t | x2t−1).
+
+st
+
+x2t ∈{0,1}
+
+We expand the term P (st, x2t | x2t−1) to continue the expression:
+
+ϕ(x2t−1) = P (y | st)
+
+P (st | x2t−1, x2t)
+
+st
+
+x2t ∈{0,1}
+
+P (x2t | x2t−1)
+
+= P (y | st)
+
+P (st | x2t−1, x2t)
+
+st
+
+x2t ∈{0,1}
+
+P (x2t)
+
+where the last equality follows from the fact that the message bits are i.i.d., i.e., P (x2t | x2t−1) = P (x2t).
+
+ϕ(x2t−1) = P (y | st) P (st | x2t−1, x2t = 0)P (x2t = 0)
+st
+
++ P (st | x2t−1, x2t = 1)P (x2t = 1)
+
+eL2t
+
+=
+
+P (y | st)
+
+I{st
+
+=
+
+(x2t−1, x2t
+
+=
+
+0)} 1
+
++
+
+eL2t
+
+st
+
+1
+
++
+
+I{st
+
+=
+
+(x2t−1, x2t
+
+=
+
+1)} 1
+
++
+
+eL2t
+
+where P (y | st) is obtained from the symbol-level BI-GRU
+
+(or MAP) estimator, P (x2t) is derived from the extrinsic LLRs
+
+of
+
+the
+
+outer
+
+LDPC
+
+decoder,
+
+Lt
+
+=
+
+log
+
+P P
+
+(xt (xt
+
+=0|y) =1|y)
+
+,
+
+i.e.,
+
+eL2t P (x2t = 0) ≈ P (x2t = 0 | y) = 1 + eL2t ,
+1 P (x2t = 1) ≈ P (x2t = 1 | y) = 1 + eL2t ,
+
+and P (st | x2t−1, x2t) = I{st = (x2t−1, x2t)} is an indicator function, i.e.,
+
+I{st = (x2t−1, x2t)} =
+
+1, 0,
+
+if st = (x2t−1, x2t), otherwise.
+
+Similarly, ϕ(x2t) is calculated in the same way as ϕ(x2t−1), where x2t ∈ {0, 1} and for t ∈ {1, . . . , n/2},
+
+ϕ(x2t) P (y | x2t)
+
+= P (y | st)
+
+P (st | x2t−1, x2t)
+
+st
+
+x2t−1 ∈{0,1}
+
+P (x2t−1)
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4193
+
+Fig. 5. Illustration of the demapper module for S = 2. The demapper receives
+
+symbol-level posterior probabilities L = (L1, . . . , Ln/S ) from the BI-GRU (or MAP) estimator and extrinsic LLRs Lo from the LDPC decoder, where
+
+Lto
+
+=
+
+log
+
+P P
+
+(xt (xt
+
+=0|y) =1|y)
+
+.
+
+It
+
+computes
+
+updated
+
+probabilities
+
+for
+
+each
+
+coded
+
+bit,
+
+Φ = (ϕ1, . . . , ϕn), which are iteratively exchanged with the outer decoder
+
+after every No iterations.
+
+= P (y | st) P (st | x2t−1 = 0, x2t)P (x2t−1 = 0)
+st
+
++ P (st | x2t−1 = 1, x2t)P (x2t−1 = 1)
+
+eL2t−1
+
+=
+
+P (y | st) I{st = (x2t−1 = 0, x2t)} 1 + eL2t−1
+
+st
+
+1 + I{st = (x2t−1 = 1, x2t)} 1 + eL2t−1 .
+
+Fig. 5 shows an illustration of the demapper module for S = 2. Demapper for S = 3 performs similar steps, for t ∈ {1, . . . , n/3}, namely,
+
+ϕ(x3t) P (y | x3t)
+
+= P (y, st | x3t)
+st
+
+= P (st | x3t)P (y | st, x3t)
+st
+
+= P (st | x3t)P (y | st)
+st
+
+= P (y | st)
+
+P (st, x3t−2, x3t−1 | x3t)
+
+st
+
+x3t−2 x3t−1
+
+= P (y | st)
+
+P (x3t−2 | x3t−1, x3t)
+
+st
+
+x3t−2 x3t−1
+
+P (x3t−1 | x3t)P (st | x3t−2, x3t−1, x3t)
+
+= P (y | st)
+
+P (x3t−2)
+
+P (x3t−1)
+
+st
+
+x3t−2
+
+x3t−1
+
+P (st | x3t−2, x3t−1, x3t).
+
+where P (y | st) is obtained from the symbol-level BI-GRU (or MAP) estimator, P (x3t−2) and P (x3t−1) are derived from the extrinsic LLRs of the outer LDPC decoder as in the case of S = 2, and P (st | x3t−2, x3t−1, x3t) = I{st = (x3t−2, x3t−1, x3t)} is an indicator function.
+
+B. Symbol-Level Bi-GRU Decoders
+
+In this section, we introduce symbol-level BI-GRU based estimators. These detectors estimate P (st | y) at each time step t ∈ {1, . . . , n/S} for every symbol st ∈ {0, . . . , 2S − 1}. This estimator works slightly differently from the symbollevel MAP detector in the sense that it directly estimates the posterior term without calculating the intermediate likelihoods, P (y | st) as done in [19].
+A BI-GRU architecture with NGRU stacked layers is employed. Let denote the element-wise multiplication operator for two vectors of length n, x y = (x1y1, . . . , xnyn). The equations for the jth forward GRU layer for j ∈ {1, . . . , NGRU} are as follows [37]:
+z(tj,f) = σ Wz(j,f)ht(j−1,f) + U(zj,f)ht(−j,f1) + bz(j,f) , r(tj,f) = σ Wr(j,f)ht(j−1,f) + Ur(j,f)h(t−j,f1) + b(rj,f) ,
+h˜(tj,f) = tanh Wh(j,f)ht(j−1,f) + Uh(j,f) r(tj,f) h(t−j,f1)
+
++ bh(j,f) ,
+
+ht(j,f) = zt(j,f) h(t−j,f1) + 1 − z(tj,f)
+
+h˜ (tj,f ) .
+
+The forward GRU parameters are given by W{(j·},f) ∈ RdGRU×di(nj) and U({j·,}f) ∈ R , dGRU×dGRU with bias vectors b({j·,}f) ∈ RdGRU where dGRU denotes the hidden size of each GRU layer, and d(inj) denotes the length of the input vector to the jth layer. Note that we define ht(0,f) xt as the input to the first forward GRU layer; d(in1) corresponds to the length of xt, and di(nj) = dGRU for j > 1.
+Similarly, the backward GRU is obtained by reversing the
+
+temporal dependencies, replacing h(t−j,f1) with h(t+j,b1), and using the corresponding parameter sets W{(j·},b), U{(j·,}b), and b{(j·,}b).
+The hidden state vectors from the forward and backward GRUs at time step t, ht(j,f) and h(tj,b), are concatenated and fed into a multilayer perceptron (MLP) consisting of NMLP
+
+fully connected layers. The hidden layer dimensions of the
+
+MLP
+
+are
+
+denoted
+
+by
+
+dMLP
+
+=
+
+(dM (1)LP,
+
+.
+
+.
+
+.
+
+,
+
+d(NMLP
+MLP
+
+)
+
+),
+
+and
+
+each
+
+layer j ∈ {1, . . . , NMLP} is parameterized by a weight matrix
+
+WM (j)LP ∈ RdM (j)LP×dM (j− LP1) and a bias vector bM (j)LP ∈ R , dM (j)LP where dM (0)LP = 2dGRU corresponds to the BI-GRU output
+
+dimension.
+
+Let
+
+at(0)
+
+=
+
+[h(tNGRU ,f ) ;
+
+h(NGRU
+t
+
+,b)
+
+]
+
+denote
+
+the
+
+input
+
+to
+
+the
+
+MLP. For each MLP layer, the forward propagation is given
+
+by
+
+a(tj) = ReLU WM (j)LPat(j−1) + bM (j)LP , j = 1, . . . , NMLP.
+
+Following the hidden layers, an output layer parameterized by Wo ∈ R2S×d(MNLMPLP) and bo ∈ R2S produces the logit vector zt ∈ R2S corresponding to the 2S possible symbols,
+
+zt
+
+=
+
+Wo
+
+a(NMLP
+t
+
+)
+
++
+
+bo,
+
+zt = (zt,0, . . . , zt,2S−1).
+
+Applying the softmax function yields the posterior probability of symbol st = i given the received signal y,
+
+P (st = i | y) =
+
+exp zt,i/τ
+
+2S −1 j=0
+
+exp
+
+zt,j /τ
+
+,
+
+4194
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 6. A BI-GRU detector for bit LLRs.
+
+Fig. 7. The block diagram for the symbol-level BI-GRU estimator when γ = 2, S = 2, and Nc = 2.
+
+where τ is the temperature parameter that controls the sharp-
+
+ness of the output distribution. Fig. 6 illustrates the combined
+
+BI-GRU and MLP architecture.
+
+Another hyperparameter γ is used to convert the received
+
+vector y = (y1, . . . , yR) into inputs to the BI-GRU detector at step t: The input to the BI-GRU detector is Xt = (yt−γ, . . . , yt, . . . , yt+γ) if t corresponds to the marker index; otherwise, the input at time step t is the all-zero vector of
+
+length 2γ + 1, 02γ+1. A time step t is a marker index if
+
+t=j
+
+Nc S
+
++
+
+1
+
+for j ∈
+
+1,
+
+2,
+
+.
+
+.
+
+.
+
+,
+
+n Nc
+
+. This input represen-
+
+tation is employed by analyzing the forward and backward
+
+equations of the symbol-level MAP decoder and noting that
+
+marker sequences are compared with the received channel bits
+
+at the positions where the markers are inserted. The expression
+
+for constructing inputs, for t ∈ {1, . . . , n/S} is given as,
+
+Xt =
+
+(yt−γ , . . . , yt, . . . , yt+γ ), 02γ+1,
+
+if t = j
+
+Nc S
+
++1
+
+,
+
+otherwise,
+
+(4)
+
+where j ∈
+
+1,
+
+2,
+
+.
+
+.
+
+.
+
+,
+
+n Nc
+
+. Fig. 7 shows the block diagram
+
+for the symbol-level BI-GRU estimator when γ = 2, S = 2,
+
+and Nc = 2.
+
+C. Training Details
+The BI-GRU estimator is trained in batches of size B. For each batch, a set of random message vectors M = {m(1), . . . , m(B)} is generated, where each m(i) is encoded
+
+with the outer and inner codes to produce the corresponding codeword x(i). These codewords are transmitted through the IDS channel, yielding the received sequences Y = {y(1), . . . , y(B)}, where y(i) = (y1(i), . . . , yR(ii)) with random length Ri. During training, the pairs (y(i), m(i)) serve as input–label examples for the BI-GRU estimator. Categorical
+cross-entropy (CE) loss is used as the loss function, where yˆt,i = P (st = i | y) denotes the model prediction and yt,i is a binary indicator that equals 1 if the true symbol at time step t corresponds to class i, and 0 otherwise, i.e.,
+
+1
+
+LCE
+
+=
+
+− (n/S)B
+
+B
+
+n/S 2S −1
+yt(,bi) log(yˆt(,bi)).
+
+(5)
+
+b=1 t=1 i=0
+
+The channel conditions of the IDS channel for creating training batches (y(i), m(i)) are described by the discrete sets Pdtrain = {Pd1, . . . , PdMd }, Pstrain = {Ps1, . . . , PsMs }, and Pitrain = {Pi1, . . . , PiMi }. For each training pair, the channel parameters (Pd, Ps, Pi) are drawn independently from these sets. These channel conditions are treated as hyperparameters during training, and they must be chosen carefully to ensure that the BI-GRU estimator generalizes across the desired range of operating scenarios. For instance, if the target operating regime corresponds to deletion probabilities in the range Pd ∈ [0.02, 0.05], then the training batches should be generated using values of Pd sampled within this interval so that the network learns to generalize across all relevant conditions. However, if the training also includes unrealistically large deletion probabilities, such as Pd = 0.2 for the above example, which are never encountered in practice, the network may fail to converge. In other words, this approach is effective when the training channel conditions are chosen appropriately.
+We use the Adam optimizer [42] with a staircase learning rate decay [43], where the learning rate is exponentially decayed by parameter D every Nwd steps during training. We use the default hyperparameters of the Adam optimizer. Batch normalization layers are added between the BI-GRU layers to stabilize and accelerate training [44].
+
+D. Complexity Analysis
+In this section, we provide a computational complexity analysis of the BI-GRU–based detector and compare it with the MAP detector implemented via the forward–backward algorithm.
+We begin by analyzing the computational complexity of the BI-GRU estimator. A BI-GRU consists of several BI-GRU layers, followed by an MLP applied on top of the final BI-GRU layer. We first consider the complexity of the BI-GRU layers. A GRU layer consists of different gates: zt(j), r(tj), h˜(tj), and h(tj) for layers j ∈ {1, . . . , NGRU} and time steps t ∈ {1, . . . , n/S}. For the gates z(tj) and r(tj), a total of 2d2GRU multiplications and 2dG2 RU additions are needed, respectively. For the calculation of h˜(tj), 2dG2 RU + dGRU multiplications and 2dG2 RU additions are required, while the computation of h(tj) requires 2dGRU multiplications and 2dGRU additions. Thus, each GRU layer requires 6d2GRU + 3dGRU ≈ 6d2GRU multiplications and 6d2GRU + 2dGRU ≈ 6dG2 RU additions. Since the backward GRU layer has the
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4195
+
+same complexity as the forward GRU layer, these values are
+
+doubled. With NGRU layers and n/S time steps, the BI-GRU
+
+therefore
+
+requires
+
+approximately
+
+NGRU
+
+n S
+
+(12d2GRU
+
++
+
+6dGRU)
+
+multiplications
+
+and
+
+NGRU
+
+n S
+
+(12d2GRU
+
++
+
+4dGRU)
+
+additions.
+
+On top of the forward and backward layers, an MLP
+
+with NMLP layers is applied. Assuming all hidden layers
+
+have size dM (i)LP = dMLP for simplicity, each hidden layer
+
+requires dM 2 LP multiplications and dM 2 LP additions per time
+
+step,
+
+resulting
+
+in
+
+a
+
+total
+
+cost
+
+of
+
+NMLP
+
+n S
+
+dM 2 LP
+
+for
+
+this
+
+part.
+
+The final output layer has size 2S × dMLP, which intro-
+
+duces additional 2SdMLP multiplications and 2S additions
+
+per time step. Therefore, the total computational cost of
+
+the
+
+MLP
+
+becomes
+
+n S
+
+NMLPd2MLP + 2S dMLP
+
+multiplications
+
+and
+
+n S
+
+NMLPd2MLP + 2S
+
+additions.
+
+Combining the BI-GRU and MLP contributions, the total
+
+computational complexity of the BI-GRU estimator is approxi-
+
+mately
+
+n S
+
+12NGRUd2GRU + NMLPd2MLP + 2S dMLP
+
+multipli-
+
+cations
+
+and
+
+n S
+
+12NGRUd2GRU + NMLPd2MLP + 2S
+
+additions.
+
+We now proceed with the complexity analysis of the MAP
+
+detector. Symbol-level MAP detectors realized using the BCJR
+
+algorithm require both forward and backward recursions. At
+
+each time instance t, where t ∈ {1, . . . , T /S}, approximately 3S2R multiplications and additions are needed for both the
+
+forward and the backward recursions. Since there are T /S
+
+time instances, the total number of operations, considering
+
+both
+
+recursions,
+
+is
+
+approximately
+
+T S
+
+4
+
+·
+
+3S
+
+R.
+
+Because
+
+R
+
+≈
+
+T
+
+due to Pd ≈ Pi, which slightly changes the received sequence
+
+length, the total number of additions and multiplications
+
+becomes
+
+approximately
+
+4
+
+·
+
+3S
+
+T2 S
+
+.
+
+The key difference between the two complexity expressions
+
+lies in their exponential dependence on S. For the MAP detector, the dominant term T 23S grows exponentially in
+
+S, leading to a rapid increase in computational cost as S
+
+increases. In contrast, the BI-GRU estimator contains the
+
+term 2S, which grows more slowly and appears only as a
+
+multiplicative
+
+factor
+
+of
+
+dMLP
+
+n S
+
+and
+
+becomes
+
+non-dominant
+
+compared to the term NMLPd2MLP. As a result, the overall
+
+complexity of the BI-GRU decoder scales much more gently
+
+with S.
+
+Furthermore, the hyperparameter dGRU in the BI-GRU can be selected much smaller than T when T is large.
+
+When dGRU < T , the computational complexities of the
+
+symbol-level BI-GRU estimator and the symbol-level MAP
+
+detector become comparable. For longer codewords (larger
+
+than 500), dGRU can be chosen significantly smaller than T , which reduces the overall complexity of the BI-GRU
+
+decoder. For large n, the BI-GRU decoder can achieve a
+
+substantially lower complexity than the symbol-level MAP
+
+algorithm.
+
+Finally, we note that the complexity of BI-GRU can be
+
+further reduced through pruning techniques, which effectively
+
+decrease the computational cost, although such techniques
+
+were not considered in the above analysis. In a similar
+
+manner, the BCJR algorithm may also benefit from reduced-
+
+state methods that lower its complexity, and our remark on
+
+pruning should therefore be viewed as a parallel observation
+
+highlighting modern approaches for neural architectures rather
+
+than as a direct comparison.
+
+V. FURTHER EXTENSIONS
+In this section, we focus on channels with insertions and deletions, further exacerbated by intersymbol interference. In other words, ISI coexists with insertions and deletions. There are several examples of related channel models. For instance, the authors in [6] consider synchronization errors and ISI in bit-patterned media recording systems, leading to IDS channels with ISI. This channel model can be considered as cascade of an IDS channel followed by an ISI channel. Another related scenario is the nanopore sequencing channel [5], which also deals with ISI. Nanopore sequencing involves encoding digital data into DNA strands and passing these sequences through a nanoscale biological membrane. As nucleotides pass through the membrane, they generate current levels that the sequencer uses to identify each nucleotide. However, these current levels are affected by both the current and preceding nucleotides, leading to ISI from earlier bits.
+Our objective is to adopt the proposed symbol-level BIGRU decoders to estimate the information bits encoded by the outer code in the concatenated coding setup over IDS channels with ISI. We demonstrate that deep-learning based estimators provide effective solutions in scenarios where deriving explicit analytical expressions is not practical, and implementation complexities of traditional trellis-based MAP detectors are too high. In other words, we are interested in exploring the potential of deep-learning based decoders in even more complex settings than IDS-only channels. Specifically, we adopt the channel model in [6]; however, the general ideas can also be employed for other scenarios, including nanopore sequencing.
+
+A. An IDS Channel With ISI
+
+We consider an IDS channel with ISI, which is modeled
+
+as cascade of an IDS channel with Pi, Pd, and Ps, denoting
+
+insertion, deletion, and substitution probabilities, respectively,
+
+(described in Section II), and an ISI channel. The code-
+
+word sequence, x = (x1, x2, . . . , xT ) where each bit xi ∈
+
+{−1, +1}, is transmitted first through the IDS channel. Due to
+
+random insertions and deletions, this sequence is transformed
+
+into a new sequence x˜ = (x˜1, x˜2, . . . , x˜R) where each bit
+
+x˜i ∈ {−1, +1}. This sequence experiences ISI characterized
+
+by the channel taps h = (h0, . . . , hNT −1), where the number
+
+of channel taps is NT and hi ∈ R. The channel taps h
+
+are normalized such that
+
+NT −1 l=0
+
+|hl|2
+
+=
+
+1.
+
+Additionally,
+
+the
+
+transmitted signal is affected by additive white Gaussian noise
+
+(AWGN)
+
+zk ,
+
+which
+
+has
+
+zero
+
+mean
+
+and
+
+variance
+
+of
+
+σ2
+
+=
+
+N0 2
+
+.
+
+The
+
+signal-to-noise
+
+ratio
+
+(SNR)
+
+is
+
+defined
+
+as
+
+SNR
+
+=
+
+1 N0
+
+.
+
+The
+
+input-output relationship is given by:
+
+NT −1
+
+yk =
+
+hlx˜k−l + zk,
+
+l=0
+
+for k ∈ {1, 2, . . . , R}. The received sequence is denoted by y = (y1, . . . , yR). The overall channel model is illustrated in Fig. 8.
+We assume that the ISI channel response h is fixed, which is consistent with recording channel models where such responses are commonly observed [45]. We note, however,
+
+4196
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 8. IDS channel with ISI.
+that the proposed BI-GRU based decoder does not require explicit knowledge of h to regain synchronization. Even under moderate mismatch between the assumed and actual channel response, the decoder can adapt and maintain reliable performance, as it learns directly from data.
+B. Trellis Representation for IDS Channels With ISI
+In [6], a method is proposed to calculate the information rates of IDS channels with ISI using the forward-backward algorithm. A trellis representation is constructed to jointly represent the states due to insertions (and/or deletions) and ISI. For instance, for the case with deletions or insertions (not both) along with ISI, the trellis states are defined through Dk = (i, j), a length-2 vector, where i represents the number of deletions (or, insertions) up to the transmission of the ith bit xi (i ∈ {1, 2, 3, . . .}), and j denotes the current channel state. For example, if n insertions (n = 0, 1, . . .) occur between xk−1 and xk, the state transitions from Dk−1 = (i, j) to Dk = (i + n, j2), with the corresponding output segment ykk++ii+n used in branch calculations. Here, j2 is determined probabilistically based on the channel state at time k − 1 and the input xk.
+This trellis representation has been used to estimate achievable information rates over insertion/deletion channels with ISI using i.i.d. channel inputs. The idea is as follows. A long (simulated) codeword x = (x1, . . . , xT ), where the elements are i.i.d., is transmitted through an insertion/deletion channel with ISI, and y = (y1, . . . , yR) is obtained. Then using the forward recursion of the BCJR algorithm, the quantity p(x, y) is estimated, which is then employed to generate an estimate of the mutual information over the channel. Using long sequences, and if needed, by averaging over multiple realizations, it is possible to obtain the achievable rates with any desired accuracy for smaller insertion/deletion probabilities. It is also possible to extend this method to Markov inputs and obtain achievable rates.
+The trellis representation, with slight modifications, can also be used for decoding the inner marker codes and producing soft information about the bits (encoded by the outer code) in a concatenated coding setting over IDS channels with ISI. This is similar to the baseline methods adopted over channels with IDS only. However, the trellis complexity becomes too high due to the presence of ISI along with the insertions and deletions as implicitly implied by the trellis representation given above. Therefore, this method is not feasible for practical implementation as a decoding algorithm. As a remedy to the complexity of the standard BCJR type detection over IDS channels with ISI, deep-learning based channel detectors can be developed, which are the subject of the next section.
+
+C. System Model and Bi-GRU Estimators for IDS Channels With ISI
+The encoding follows the system models described in Section IV-A, except that bit 0 is mapped to + 1 and bit 1 is mapped to −1 prior to transmission over the IDS channel. The transmitted sequence of length T is denoted by x = (x1, . . . , xT ), where xk ∈ {−1, +1}, and the received sequence by y = (y1, . . . , yR), where yk ∈ R. The same BI-GRU estimator explained in Section IV-B is employed, retaining the same architectural details; the BI-GRU based estimator computes the posterior probabilities P (st | y) for each st ∈ {0, . . . , 2S −1} and t ∈ {1, . . . , n/S} at the symbol level, forming L = (L1, . . . , Ln/S). The input to BI-GRU at the time step t is xt = (yt−γ , . . . , yt, . . . , yt+γ ) ∈ R2γ+1.
+Similar to the networks in Section IV, the channel conditions used for training are critical and must be chosen carefully [23]. In particular, the additional parameter σtrain determines the SNR of the AWGN during training and affects the effectiveness of the training batches (y(i), m(i)) for i ∈ {1, . . . , B}, on top of the other channel conditions Pdtrain, Ptsrain, and Ptirain. The importance of selecting an appropriate noise variance for the AWGN channel in order to obtain a robust deep-learning based channel decoder was investigated in [23]. The set of test SNR values is defined as SNRtest = {SNR(1), . . . , SNRMSNR }. For each training sample in a batch, a random tuple (Pd, Ps, Pi, SNR) is drawn from the sets Pdtrain, Pstrain, Pitrain, and SNRtrain, thereby completing the construction of the training pairs. Other training details are given as in Section IV-C. We employ categorical CE as the loss function.
+VI. NUMERICAL RESULTS
+In this section, we present numerical examples on the performance of the proposed symbol-level estimators. The complete experimental configurations, including channel parameters, inner and outer code settings, and BI-GRU model parameters, are summarized in Table I. Training configurations (batch size 16, learning rate 9 × 10−4 with staircase decay factor 0.9, and 30,000 steps) are fixed across all experiments and therefore not repeated in the table. For a fair comparison, the model parameter sizes of all the BI-GRU symbol-level decoders for all S are equal in terms of N , dMLP , and dGRU . We denote the BI-GRU decoder operating at symbol size S as BI-GRU-S.
+We adopted three different irregular LDPC codes for the outer code with the following parameters: (204, 102), (504, 252), and (816, 408), obtained from [46]. We provide the corresponding parity-check matrices (H) for these LDPC codes in [47]. Testing at each point is terminated once a maximum of 30, 000 codewords or 200 frame errors is reached. The number of local iterations between the demapper and the outercode decoder is set to No = 10, after which the outer-code decoder provides updated information back to the demapper. This exchange is repeated M = 10 times in total. Similarly, when the bit-level MAP decoder is used, we set the maximum number of iterations to 100 for consistency. We assume that the baseline methods fully know the channel parameters and
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4197
+
+TABLE I
+SUMMARY OF EXPERIMENTAL CONFIGURATIONS. EACH ROW CORRESPONDS TO THE SETUP USED IN THE ASSOCIATED FIGURE, AS INDICATED IN THE FIRST COLUMN. THE “FIGURE” COLUMN EXPLICITLY MAPS EACH CONFIGURATION TO THE FIGURE WHERE ITS RESULTS ARE PRESENTED. THE TABLE LISTS CHANNEL PARAMETERS, INNER AND OUTER CODE SETTINGS, AND BI-GRU MODEL PARAMETERS. TRAINING CONFIGURATIONS (BATCH SIZE 16, LEARNING RATE 9 × 10−4 WITH STAIRCASE DECAY FACTOR 0.9, AND 30,000 STEPS) ARE FIXED ACROSS ALL EXPERIMENTS AND THEREFORE NOT REPEATED HERE
+
+Fig. 9. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {3, 5, 6}, Nc = 30, marker sequence [0, 1], and outer LDPC code with (504, 252).
+
+Fig. 10. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {2, 3, 4}, Nc = 12, marker sequence [0, 1] and, outer LDPC code with (204, 102).
+
+we denote baseline methods as BCJR − S when performing symbol-level decoding with S bits comprising each symbol.
+Selection of marker bits and their frequency and code intervals are guided by the achievable rates of the outer code for a given Nc, as established by the analysis in [19]. Some complementary results obtained with a BI-GRU estimator in [48] show similar limits for certain Nc values. Accordingly, in this paper, the marker parameters are set so that the resulting marker-code rate remains within the achievable rate bounds for the outer code.
+A. Numerical Results for IDS-Only Channels
+Fig. 9 compares the performance of symbol-level BI-GRU decoders for S ∈ {3, 5, 6} with the baseline method for S ∈ {1, 2} for deletion probabilities {0.01, 0.015, 0.02, 0.025} when Ps = 0.01 and Pi = 0 (i.e., no insertions), and with marker period Nc = 30. The outer code is the LDPC code with n = 504, k = 252. The figure shows that the FER of trained networks for symbols comprising 5, 6 bits are clearly lower than those of the baseline algorithms with S = 2. Noting that, with the baseline algorithms, the complexity increases tremendously for S > 2 and it becomes infeasible for S > 3, the performance improvements offered by the BI-GRU based channel detectors are highly significant. The bit error rate (BER) of trained networks is lower than those of the baseline algorithm for deletion probabilities Pd ∈ {0.01, 0.015} and
+
+slightly higher for Pd ∈ {0.02, 0.025}. As expected, the proposed models demonstrate consistency, as an increase in symbol length results in decreased FER and BER levels. This aligns with the assertion that performance improves for baseline and BI-GRU detectors as symbol length increases.
+We also conduct experiments using a shorter LDPC code with n = 204, k = 102. In this case, the BI-GRU decoders are trained for S ∈ {2, 3, 4}. Fig. 10 compares the performance of the symbol-level BI-GRU decoders with those of the baseline methods. For this code length, too, similar trends are observed: as the symbol length S increases, the performance curves of symbol-level BI-GRU decoders improve in terms of both BER and FER. Specifically, the BI-GRU decoder with S = 4 for FER outperforms the baseline performance with S = 2. In terms of BER, an error rate of 2 × 10−4 is achieved when Pd = 0.01 for both BI-GRU-4 and BCJR-2. Additionally, we note that in this experiment, the Pd range is wider than in previous experiments, which impacts the training process.
+Until now, we have considered the behaviors of the decoder for different deletion probabilities. We now conduct experiments to study the BI-GRU models’ performance with varying Pi and Ps. Figs. 11 and 12 illustrate how symbol-level BI-GRU models perform for different values of Ps and Pi, respectively. The performance curves in Fig. 11, those for varying Ps, show that BI-GRU-3 and BI-GRU-4 outperform the bit-level baseline performance by a considerable margin
+
+4198
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 11. BER/FER as functions of substitution probability, when channel
+conditions are Pd = 0.005 and Pi = 0.005, for S ∈ {2, 3, 4, 6}, Nc = 12, marker sequence [0, 1] and, outer LDPC code with (204, 102).
+
+Fig. 13. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {2, 3, 4}, Nc = 12, marker sequence [0, 1], and outer LDPC code with (204, 102).
+
+Fig. 12. BER/FER as functions of insertion probability, when channel
+conditions are Pd = 0.01 and Ps = 0.005, for S ∈ {3, 4}, Nc = 12, marker sequence [0, 1], and, outer LDPC code with (204, 102).
+
+Fig. 14. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {5, 6}, Nc = 30, marker sequence [0, 1] and outer LDPC code with (816, 408).
+
+in terms of both the BER and FER. Additionally, BI-GRU-4 and BI-GRU-6 surpass the 2-bit-level baseline performance, except at a substitution probability of 5 × 10−3 for FER. This experiment highlights that symbol-level BI-GRU decoders can be trained and perform well not only for various deletion probabilities but also for varying substitution probabilities.
+Similarly, the performance curves in Fig. 12, those for varying Pi, demonstrate that BI-GRU-3 and BI-GRU-4 outperform the bit-level baseline performance in terms of both the BER and FER. BI-GRU-4 also outperforms the 2-bit-level baseline performance for insertion probabilities of 0.01 and 0.02, but it remains inferior at Pi = 0.03. The final experiments are only for deletion channels without substitutions or insertions. Fig. 13 shows the error curves for deletion probabilities of 0.02, 0.03, and 0.04. Fig. 14 is an experiment with a longer LDPC code, with n = 816, k = 408. Moreover, the number of steps required by the BI-GRU estimator decreases as S increases. For example, if we decode a code with T = 600, the bit-level BI-GRU decoder requires 600 steps, BI-GRU-2 requires 300 steps, and BI-GRU-6 requires 100 steps. Therefore, for bit-level decoders in [1], the length of the LDPC code is limited by the sequence length. In contrast, by increasing S, longer LDPC codes can be decoded efficiently, enabling the use of higher code lengths due to the smaller time steps.
+
+The above results demonstrate that the symbol-level decoders provide solutions for a number of bits in each symbol up to 6, exceeding the threshold for the baseline symbollevel decoders (which were limited to S ≤ 3). Furthermore, we observe that BI-GRU decoders exhibit strong performance across different ranges of the channel parameters. For further results, the reader is referred to Chapter 4 of the first author’s M.S. thesis [48].
+Increasing S in deep learning decoders beyond some threshold presents significant challenges as well, as in the case of symbol-level MAP detectors. As S increases, the number of classes in the final layer of the symbol-level BI-GRU detector increases exponentially to 2S. While theoretically, performance improves with a higher S, practical constraints in deep learning models limit this growth.
+Although the experimental results show that the proposed method achieves noticeable performance gains only under a subset of the evaluated settings, these findings underscore its value as a scalable alternative when exact MAP decoding is difficult or intractable. In particular, by operating on longer symbols than conventional MAP decoders [19] (which can be up to 3-bit symbols), the model can leverage dependencies that are otherwise inaccessible, which is especially useful for
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4199
+
+TABLE II
+SUMMARY OF EXPERIMENTAL CONFIGURATIONS FOR IDS CHANNELS WITH ISI. EACH ROW CORRESPONDS TO ONE EXPERIMENTAL SETUP, INCLUDING CHANNEL PARAMETERS, INNER AND OUTER CODE SETTINGS, AND BI-GRU MODEL PARAMETERS. THE FIRST COLUMN (“FIGURE”) EXPLICITLY INDICATES THE FIGURE IN WHICH THE RESULTS OF THE CORRESPONDING EXPERIMENT ARE PRESENTED, ALLOWING READERS TO EASILY TRACE EACH C√ONFIGURAT√ION TO ITS VISUAL REPRESENTATION. THE ISI CHANNEL IS FIXED TO PR4 WITH IMPULSE RESPONSE h = [1/ 2, 0, −1/ 2]. TRAINING CONFIGURATIONS (BATCH SIZE 16, LEARNING RATE 9 × 10−4 WITH A STAIRCASE DECAY FACTOR OF 0.9, 30,000 STEPS, AND GRADIENT CLIPPING WITH NORM 1) ARE FIXED ACROSS ALL EXPERIMENTS AND THEREFORE NOT REPEATED HERE
+
+Fig. 15. Comparison of transformer-based symbol-level decoders and BI-GRU based symbol-level decoders. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {2, 3, 4}, Nc = 12, marker sequence [0, 1] and, outer LDPC code with (204, 102).
+
+Fig. 16. Comparison of transformer-based symbol-level decoders and BI-GRU
+based symbol-level decoders for longer LDPC code. BER/FER as functions of deletion probability, when channel conditions are Ps = 0.01 and Pi = 0, for S ∈ {3, 5, 6}, Nc = 30, marker sequence [0, 1], and outer LDPC code with (504, 252).
+
+channels with synchronization errors and additional ISI/IDS impairments. This scalability also makes the approach practical for applications such as DNA storage, where analytical models and tractable MAP rules are limited.
+As a final note, the BI-GRU is not the only possible deep learning model for addressing the synchronization errors. For instance, architectures such as transformers can also be used as alternative solutions, as also indicated in the recently published work on trace reconstruction [49]. The authors in [49] demonstrate that transformer architectures are suitable for trace reconstruction tasks in DNA storage, where multiple noisy copies of a strand are received through insertions/deletions. Therefore, we also conducted experiments with transformerbased symbol-level decoders under the same parameters as the BI-GRU networks for a fair comparison. In the transformer architecture, the attention head size is set to 12 and the dropout rate is selected as 0.1. Specifically, we performed two experiments using two different LDPC codes: one with code parameters (204, 102) and another with (504, 252). For the first experiment, whose results are depicted in Fig. 15, we used the channel parameters from Fig. 10 (Ps = 0.01, Pi = 0, and Pd ∈ [0.01, 0.03] with increments of 0.005) and evaluated the cases with symbol lengths S ∈ {2, 3, 4}. The results show that the transformer shows competitive performance for small symbol lengths, particularly for S = 2, however, its performance degrades as S increases. For the second example, Fig. 16
+
+depicts the results with the longer LDPC code (504, 252) with only S = 3 (as training with S = 5 in this case did not give a suitable result for the transformer architecture). The results show that the transformer architecture offers similar performance for S = 3, while not being suitable for S = 5. In contrast, the BI-GRU architecture remains robust and trainable even when the symbol length is increased to S = 5. In summary, the BI-GRU and transformer models exhibit similar performance for a small number of jointly considered symbols, while the transformer performance worsens as this number increases.
+
+B. Numerical Results for IDS Channels With ISI
+
+In this section, we provide numerical results for BI-GRU
+
+based receivers for concatenated codes over insertion/deletion
+
+channels with ISI. A commonly used channel model in record-
+
+ing systems, the partial response-4 (PR4) target, is employed
+
+throughout all the experiments in this section. The channel
+
+response is given by h = √1 , 0, − √1 [45]. The model
+
+2
+
+2
+
+sizes, together with the complete experimental configurations
+
+for this section, are summarized in Table II, which also high-
+
+lights their increase compared to the BI-GRU models designed
+
+for IDS channels without ISI (Table I). This adjustment is
+
+necessary because of the challenging nature of the channel,
+
+4200
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 17. BER/FER as functions of Eb/N0, when channel conditions Pd = 0.01 and Ps ∈ {0, 0.01}, for S = 2, Nc = 6, marker sequence [0, 1, 0], and, outer LDPC code with (204, 102).
+
+Fig. 18. BER/FER as functions of Eb/N0, when channel conditions Ps = 0.01 and Pd ∈ {0.01, 0.02}, for S = 2, Nc = 6, marker sequence [0, 1, 0] and, outer LDPC code with (204, 102).
+
+which is influenced by ISI channel taps and the presence of Gaussian noise. Gradient clipping with a norm of 1 is applied to control gradient magnitudes. Training the BI-GRU models for these channels is significantly more difficult than for the models in the previous section, requiring a parameter search for the learning rate and batch size. The parameters used for training include Nc ∈ {6, 12}, γ = 3, and a marker sequence of [0, 1, 0]. The networks are trained for 30,000 steps.
+Experiments are conducted to select the best value of γ among different values of the parameter γ ∈ {5, 10, 20, 40} [48]. We found that, for these examples, the model with γ = 40 outperforms the others in terms of BER and FER, and thus this value is adopted in the subsequent settings.
+Fig. 17 presents the performance of the proposed decoder under different channel conditions. The first scenario is the deletion channel with Pd = 0.01, while the second one involves a channel with both substitutions and deletions with Pd = 0.01 and Ps = 0.01. The horizontal axis represents the Eb/N0, which differs from the earlier figures where the axis typically represented the range of deletion or insertion probabilities, or other channel parameters. We employ symbollevel deep learning architectures with two bits per symbol (S = 2). As expected, the model performs better under more favorable channel conditions, with the deletion-only channel with Pd = 0.01 outperforming the channel having Pd = 0.01 and Ps = 0.01 for all the Eb/N0 values considered. A BER of 10−2 is achieved at an Eb/N0 of 2.25 dB for the BI-GRU decoder on the channel with Pd = 0.01 and Ps = 0.01, and at an Eb/N0 of 1.7 dB for the BI-GRU decoder over the deletion channel with Pd = 0.01.
+Fig. 18 shows the performance of the proposed decoder for two different deletion probabilities Pd = 0.01, and Pd = 0.02, while fixing the substitution probability at Ps = 0.01. As expected, the performance of the model for more favorable channel conditions is superior for all the Eb/N0 values considered. A BER of 5 × 10−2 is achieved at an Eb/N0 of 2.05 dB for BI-GRU based receiver for the channel with Pd = 0.01 and Ps = 0.01; while an Eb/N0 of 2.25 dB is needed for the channel with Pd = 0.02 and Ps = 0.02.
+Lastly, Fig. 19 shows the performance of the proposed decoder for Nc = 6 and Nc = 12 under the same channel
+
+Fig. 19. BER/FER as functions of Eb/N0, when channel condition Pd = 0.01, for S = 2, Nc ∈ {6, 12}, marker sequence [0, 1, 0] and, outer LDPC code with (204, 102).
+conditions for both models, i.e., for a deletion-only channel with Pd = 0.01.
+The numerical results demonstrate the powerful decoding capabilities of BI-GRU based detectors for concatenated codes over IDS channels with ISI, a scenario that has proven challenging in terms of required complexity using traditional approaches. Although the existing methods discussed in Section V-B can be adapted to the concatenated code setting where inner codes serve as markers, implementing MAP detection for these channels becomes highly complex, even at the bit level, it is simply impractical. Hence, no direct performance comparisons are provided. We conclude this section by noting that our results may pave the way for applying deep-learning based estimators to other variations of IDS channels as well.
+VII. CONCLUSION
+This paper presents symbol-level deep-learning based decoders for concatenated codes, where the inner code is a marker code, applied over IDS channels. Symbol-level decoders exploit the correlations among neighboring bits that are affected by IDS channels, resulting in improved performance. However, limitations arise in the baseline symbol-level MAP decoder, which can group up to three bits due to
+
+KARGI AND DUMAN: SYMBOL-LEVEL DEEP LEARNING-BASED DECODERS
+
+4201
+
+increased complexity. In contrast, deep-learning based symbollevel decoders can handle longer symbols exceeding this threshold, that is, they can be used even when the common baseline technique is not feasible. Symbol-level deep learning decoders represent improvements over their bit-level counterparts and improve the error rate performance while keeping the complexity at a reasonable level. We have also obtained results for IDS channels which are further degraded by ISI. Our results demonstrate that deep-learning based methods can be used to produce soft information even for these challenging models, whereas the traditional algorithms are too complex due to the tremendous increase in the number of states in the required joint trellis representation. Future research directions include pruning and quantization techniques to decrease network size and inference times, extending the proposed architectures to applications in DNA data storage, and developing reinforcement learning–based solutions for channel detection and decoding.
+ACKNOWLEDGMENT
+This work was funded by the European Union through the ERC Advanced Grant 101054904: TRANCIDS. Views and opinions expressed are, however, those of the authors only and do not necessarily reflect those of European Union or European Research Council Executive Agency. Neither European Union nor the granting authority can be held responsible for them.
+The work of E. Uras Kargı was completed when he was with the Department of Electrical and Electronics Engineering, Bilkent University, Ankara, Tu¨rkiye.
+REFERENCES
+[1] E. U. Kargı and T. M. Duman, “A deep learning based decoder for concatenated coding over deletion channels,” in Proc. IEEE Int. Conf. Commun., Jun. 2024, pp. 2797–2802.
+[2] S. M. H. T. Yazdi, H. M. Kiah, E. Garcia-Ruiz, J. Ma, H. Zhao, and O. Milenkovic, “DNA-based storage: Trends and methods,” IEEE Trans. Mol., Biol. Multi-Scale Commun., vol. 1, no. 3, pp. 230–248, Sep. 2015.
+[3] R. L. White, R. M. H. Newt, and R. F. W. Pease, “Patterned media: A viable route to 50 Gbit/in2 and up for magnetic recording?,” IEEE Trans. Magn., vol. 33, no. 1, pp. 990–995, Jan. 1997.
+[4] H. Richter et al., “Recording potential of bit-patterned media,” Appl. Phys. Lett., vol. 88, no. 22, pp. 1–3, May 2006.
+[5] L. Conde-Canencia and L. Dolecek, “Nanopore DNA sequencing channel modeling,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Mar. 2019, pp. 258–262.
+[6] J. Hu, T. M. Duman, M. F. Erden, and A. Kavcic, “Achievable information rates for channels with insertions, deletions, and intersymbol interference with I.I.D. inputs,” IEEE Trans. Commun., vol. 58, no. 4, pp. 1102–1111, Apr. 2010.
+[7] R. L. Dobrushin, “Shannon’s theorems for channels with synchronization errors,” Problems Inf. Transmiss., vol. 3, no. 4, pp. 11–26, 1967.
+[8] D. Fertonani and T. M. Duman, “Novel bounds on the capacity of the binary deletion channel,” IEEE Trans. Inf. Theory, vol. 56, no. 6, pp. 2753–2765, Jun. 2010.
+[9] D. Fertonani, T. M. Duman, and M. F. Erden, “Bounds on the capacity of channels with insertions, deletions and substitutions,” IEEE Trans. Commun., vol. 59, no. 1, pp. 2–6, Jan. 2011.
+[10] M. Rahmati and T. M. Duman, “Bounds on the capacity of random insertion and deletion-additive noise channels,” IEEE Trans. Inf. Theory, vol. 59, no. 9, pp. 5534–5546, Sep. 2013.
+[11] D. Fertonani and T. M. Duman, “Upper bounding the deletion channel capacity by auxiliary memoryless channels,” in Proc. IEEE Int. Conf. Commun., Jun. 2009, pp. 1–5.
+[12] M. Rahmati and T. M. Duman, “Upper bounds on the capacity of deletion channels using channel fragmentation,” IEEE Trans. Inf. Theory, vol. 61, no. 1, pp. 146–156, Jan. 2015.
+
+[13] R. R. Varshamov and G. M. Tenengolts, “Codes which correct single asymmetric errors,” Autom. Remote Control, vol. 26, no. 2, pp. 286–290, 1965.
+[14] W. Ferreira, W. Clarke, A. Helberg, K. Abdel-Ghaffar, and A. Vinck, “Insertion/deletion correction with spectral nulls,” IEEE Trans. Inf. Theory, vol. 43, no. 2, pp. 722–732, Feb. 1997.
+[15] M. F. Mansour and A. H. Tewfik, “Convolutional codes for channels with substitutions, insertions, and deletions,” in Proc. IEEE Global Telecommun. Conf., IEEE GLOBECOM 02, vol. 2, Nov. 2002, pp. 1051–1055.
+[16] T. G. Swart and H. C. Ferreira, “Insertion/deletion correcting coding schemes based on convolution coding,” Electron. Lett., vol. 38, no. 16, pp. 871–873, Aug. 2002.
+[17] M. C. Davey and D. J. C. Mackay, “Reliable communication over channels with insertions, deletions, and substitutions,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 687–698, Feb. 2001.
+[18] E. A. Ratzer and D. J. MacKay, “Codes for channels with insertions, deletions and substitutions,” in Proc. 2nd Int. Symp. Turbo Codes Rel. Topics, 2000, pp. 149–156.
+[19] F. Wang, D. Fertonani, and T. M. Duman, “Symbol-level synchronization and LDPC code design for insertion/deletion channels,” IEEE Trans. Commun., vol. 59, no. 5, pp. 1287–1297, May 2011.
+[20] R. Shibata, G. Hosoya, and H. Yashima, “Design and construction of irregular LDPC codes for channels with synchronization errors: New aspect of degree profiles,” IEICE Trans. Fundamentals Electron., Commun. Comput. Sci., vol. E103.A, no. 10, pp. 1237–1247, 2020.
+[21] R. Shibata and H. Yashima, “Windowed-based synchronization errorcorrection for spatially coupled codes,” IEICE Commun. Exp., vol. 11, no. 11, pp. 697–702, 2022.
+[22] R. Shibata, G. Hosoya, and H. Yashima, “Joint iterative decoding of spatially coupled LDPC codes for position errors in racetrack memories,” IEICE Trans. Fundamentals Electron., Commun. Comput. Sci., vols. E101–A, no. 12, pp. 2055–2065, 2018.
+[23] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), 2017, pp. 1–6.
+[24] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” 2018, arXiv:1805.09317.
+[25] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani, and P. Viswanath, “DEEPTURBO: Deep turbo decoder,” in Proc. IEEE 20th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2019, pp. 1–5.
+[26] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 38695–38705.
+[27] M. Levy, Y. Choukroun, and L. Wolf, “Accelerating error correction code transformers,” 2024, arXiv:2410.05911.
+[28] Y. Liao, S. A. Hashemi, J. M. Cioffi, and A. Goldsmith, “Construction of polar codes with reinforcement learning,” IEEE Trans. Commun., vol. 70, no. 1, pp. 185–198, Jan. 2022.
+[29] S. K. Mishra, D. Katyal, and S. A. Ganapathi, “A modified Q-learning algorithm for rate-profiling of polarization adjusted convolutional (PAC) codes,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), Apr. 2022, pp. 2363–2368.
+[30] H.-Y. Kwak, D.-Y. Yun, Y. Kim, S. Kim, and J. No, “Boosting learning for LDPC codes to improve the error-floor performance,” in Proc. Adv. Neural Inf. Process. Syst., 2023, pp. 22115–22131.
+[31] S.-J. Park, H.-Y. Kwak, S.-H. Kim, Y. Kim, and J.-S. No, “CrossMPT: Cross-attention message-passing transformer for error correcting codes,” 2024, arXiv:2405.01033.
+[32] Y. Choukroun and L. Wolf, “A foundation model for error correction codes,” in Proc. Int. Conf. Represent. Learn., vol. 2024, 2024, pp. 2153–2171.
+[33] Y. Choukroun and L. Wolf, “Learning linear block error correction codes,” in Proc. 41st Int. Conf. Mach. Learn., vol. 235. PMLR, Jul. 2024, pp. 8801–8814.
+[34] A. J. X. Guo, M. Wei, Y. Dai, Y. Wei, and P. Zhang, “Disturbance-based discretization, differentiable IDS channel, and an IDS-correcting code for DNA-based storage,” 2024, arXiv:2407.18929.
+[35] R. G. Gallager, “Sequential decoding for binary channels with noise and synchronization errors,” Massachusetts Inst. Technol., Lincoln Lab., Tech. Rep. 25G 2, Oct. 1961.
+[36] M. Schuster and K. K. Paliwal, “Bidirectional recurrent neural networks,” IEEE Trans. Signal Process., vol. 45, no. 11, pp. 2673–2681, Nov. 1997.
+[37] K. Cho et al., “Learning phrase representations using RNN encoder–decoder for statistical machine translation,” 2014, arXiv:1406.1078.
+[38] R. Pascanu, T. Mikolov, and Y. Bengio, “On the difficulty of training recurrent neural networks,” 2012, arXiv:1211.5063.
+
+4202
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+[39] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” in Proc. IEEE Globecom Workshops (GC Wkshps), Dec. 2022, pp. 486–491.
+[40] G. Ma, X. Jiao, J. Mu, H. Han, and Y. Yang, “Deep learning-based detection for marker codes over insertion and deletion channels,” IEEE Trans. Commun., vol. 72, no. 10, pp. 5945–5959, Oct. 2024.
+[41] F. Wang, “Coding for Insertion/Deletion Channels,” Ph.D. thesis, School Elect., Comput. Energy Eng., Arizona State Univ., Tempe, AZ, USA, 2012.
+[42] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014, arXiv:1412.6980.
+[43] K. You, M. Long, J. Wang, and M. I. Jordan, “How does learning rate decay help modern neural networks?,” 2019, arXiv:1908.01878.
+[44] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep network training by reducing internal covariate shift,” in Proc. 32nd Int. Conf. Int. Conf. Mach. Learn. -, vol. 37, 2015, p. 448.
+[45] J. Hu, T. M. Duman, E. M. Kurtas, and M. F. Erden, “Bit-patterned media with written-in errors: Modeling, detection, and theoretical limits,” IEEE Trans. Magn., vol. 43, no. 8, pp. 3517–3524, Aug. 2007.
+[46] D. J. MacKay. (2025). Encyclopedia of Sparse Graph Codes: Codes/Data. [Online]. Available: https://www.inference.org.uk/mackay/ codes/data.html
+[47] E. U. Kargı. (2025). Symbol-Level BIGRU Decoders for IDS Channels. [Online]. Available: https://github.com/Bilkent-CTAR-Lab/ Symbol-Level-BIGRU-Decoders-for-IDS-Channels
+[48] E. U. Kargı, “Deep learning based decoders for concatenated codes over insertion and deletion channels,” M.S. thesis, Dept. Elect. Electron. Eng., Bilkent Univ., Ankara, Tu¨rkiye, 2025.
+[49] J. Streit, F. Weindel, and R. Heckel, “Transformer-based decoding in concatenated coding schemes under synchronization errors,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2025, pp. 1–6.
+
+Tolga M. Duman (Fellow, IEEE) received the B.S. degree in electrical engineering from Bilkent University, Ankara, Tu¨rkiye, in 1993, and the M.S. and Ph.D. degrees in electrical engineering from Northeastern University, Boston, MA, USA, in 1995 and 1998, respectively.
+Before joining Bilkent University in September 2012, he was a Full Professor with the School of ECEE, Arizona State University. He is currently a Professor with the Electrical and Electronics Engineering Department, Bilkent University. His current research interests are in systems, with a particular focus on communications and signal processing, including wireless and mobile communications, channel coding/modulation, coding for wireless communications, information theory, and data storage systems, machine learning for communications, and semantic communications/signal processing. He was a recipient of the National Science Foundation CAREER Award, the IEEE Third Millennium medal, and European Research Council (ERC) Advanced Grant. He served on the editorial board for various journals, including IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS and IEEE COMMUNICATIONS SURVEYS AND TUTORIALS. He also served as the Editor-in-Chief for Physical Communication (Elsevier) and IEEE TRANSACTIONS ON COMMUNICATIONS.
+
+E. Uras Kargı received the B.Sc. and M.Sc. degrees in electrical and electronics engineering from Bilkent University, Ankara, Tu¨rkiye, in 2022 and 2025, respectively. He is currently pursuing the Ph.D. degree with the Networked Systems Group, Faculty of Electrical Engineering, Mathematics and Computer Science (EEMCS), TU Delft, The Netherlands.
+His research interests broadly include machine learning applications for digital communications and networked systems, online learning, deep learning, reinforcement learning, and channel coding.
+
+

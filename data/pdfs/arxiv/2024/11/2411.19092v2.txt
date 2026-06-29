@@ -1,0 +1,1734 @@
+1
+Neural Window Decoder for SC-LDPC Codes
+Dae-Young Yun, Member, IEEE, Hee-Youl Kwak, Member, IEEE, Yongjune Kim, Member, IEEE,
+Sang-Hyo Kim, Member, IEEE, and Jong-Seon No, Fellow, IEEE
+Abstract—In this paper, we propose a neural window decoder
+(NWD) for spatially coupled low-density parity-check (SC-LDPC)
+codes. The NWD augments the conventional window decoder
+(WD) by incorporating trainable neural weights. To improve
+both performance and complexity, we train these weights using
+three novel training strategies. First, we design a compact neural
+network that focuses training on the target nodes of the NWD.
+This target-specific training improves decoding performance
+while reducing complexity. Second, we introduce a non-uniform
+scheduling method for check node (CN) updates by learning
+trainable damping factors. These factors reflect the relative
+importance of CN updates, allowing the decoder to skip less
+critical updates. Finally, we address the error propagation (EP)
+problem inherent in SC-LDPC codes by introducing an EP-
+resilient weight set trained under EP scenarios. When an error
+is detected in the previous decoding window, the adaptive NWD
+switches to the EP-resilient weight set. For a practical SC-LDPC
+code of length 20000, the proposed NWD achieves a threefold
+improvement in decoding performance or a 45% reduction
+in decoding complexity, without altering the hardware-friendly
+decoding architecture.
+Index Terms—Decoding schedules, deep learning, error prop-
+agation, low-density parity-check (LDPC) codes, neural decoder,
+spatially coupled LDPC (SC-LDPC) codes, window decoding.
+I. INTRODUCTION
+T
+HE recent emergence of machine learning technologies
+has significantly impacted a broad area of technological
+fields. This influence is also prominent in the field of com-
+munications, spanning topics such as channel estimation [1],
+end-to-end communication [2], [3], and channel coding [4]–
+[8]. Particularly, the application of deep learning techniques to
+the channel coding problem has marked a significant milestone
+[7]. The pioneering work [8] has introduced neural decoders
+that integrate iterative decoding algorithms, such as belief
+propagation (BP) and min-sum (MS) algorithms, with deep
+neural networks. These neural decoders introduce trainable
+weights to attenuate messages and mitigate the detrimental
+impact of short cycles.
+In an effort to enhance the performance of neural decoders,
+a variety of machine learning techniques have been leveraged.
+Hyper-graph networks are incorporated into the neural network
+architecture to expand the model capacity [9]. Additionally,
+D.-Y. Yun and H.-Y. Kwak are with the Department of Electrical, Electronic
+and Computer Engineering, University of Ulsan, Ulsan 44610, South Korea
+(e-mail: dyyun95@gmail.com; ghy1228@gmail.com).
+Y. Kim is with the Department of Electrical Engineering at Pohang
+University of Science and Technology (POSTECH), Pohang, Gyeongbuk
+37673, South Korea (e-mail: yongjune@postech.ac.kr).
+S.-H. Kim is with the Department of Electrical and Computer Engi-
+neering, Sungkyunkwan University, Suwon 16419, South Korea (e-mail:
+iamshkim@skku.edu).
+J.-S. No is with the Department of Electrical and Computer Engineer-
+ing, INMC, Seoul National University, Seoul 08826, South Korea (e-mail:
+jsno@snu.ac.kr).
+the active learning technique [10], which involves the careful
+selection of effective training data, and the pruning method
+[11] are utilized to improve the performance of neural de-
+coders. Recently, the boosting learning technique has been
+applied to address the error-floor issue of low-density parity-
+check (LDPC) codes [12], [13]. Another distinctive approach
+to enhance the performance of neural decoders is simplifying
+the training problem. For instance, the concept of recurrent
+neural networks is employed in neural decoders [14], resulting
+in a reduction of the number of training parameters. Similarly,
+various weight sharing techniques such as spatial [15], proto-
+graph [16], and degree-based sharing [17] have been proposed.
+This approach, by leveraging domain-specific knowledge and
+structural constraints, effectively reduces the search space that
+the model needs to explore during training. This not only leads
+to a significant reduction in training complexity and memory
+requirements but also allows the model to converge to a better
+solution, ultimately enhancing decoding performance.
+With these efforts, neural decoders have gained recognition
+for their practicality and have been applied to various code
+classes, including algebraic [9], [18], LDPC [12], [13], [15],
+[19], generalized LDPC [20], and polar codes [21]. However,
+neural decoders have not yet been applied to one of the key
+counterparts of LDPC codes, namely, the spatially coupled
+LDPC (SC-LDPC) codes.
+SC-LDPC codes, first introduced in [22], have attracted
+attention due to the threshold saturation effect, where their BP
+thresholds approach the optimal maximum a posteriori (MAP)
+thresholds of uncoupled block LDPC codes [23]. SC-LDPC
+codes are constructed by coupling L disjoint LDPC blocks
+in a repetitive structure. This recurrent form enables a unique
+decoding known as window decoding [24], [25]. The window
+decoder (WD) operates on a subgraph block, referred to as a
+window, aiming to decode target variable nodes (VNs) in each
+block. After decoding within the first window is completed,
+the process advances to the subsequent window and continues
+across all L blocks. Compared to the BP decoding, the WD
+offers advantages in terms of decoding latency, complexity,
+and memory requirements.
+There are two important research directions for the WD.
+First, non-uniform scheduling is proposed to reduce decod-
+ing complexity [26]. Due to the unique structure of SC-
+LDPC codes, each CN update impacts the decoding process
+differently. The method in [26] computes a soft bit error
+rate (BER) estimation during the decoding process and omits
+CN updates that are expected to have a lesser impact on
+decoding. However, this method requires online computation
+of soft BERs during decoding, which introduces additional
+overhead. Second, an adaptive decoding strategy [27], [28] and
+the doping method [29] have been proposed to prevent error
+arXiv:2411.19092v2  [cs.LG]  28 Jan 2026
+2
+propagation (EP) of WD. A decoding failure in one window
+can adversely affect subsequent decoding, potentially leading
+to a long chain of errors, called EP [30], [31]. The adaptive
+decoding strategy [27], [28] adjusts the number of iterations
+or window size, whereas the doping method [29] modifies the
+decoding or encoding processes. However, these approaches
+have drawbacks of requiring online BER estimation or modi-
+fying the code and decoder structures.
+A. Main Contributions of This Work
+To improve WD in terms of performance, complexity, and
+robustness to EP, we propose a neural window decoder (NWD)
+and associated decoding strategies. The NWD operates in
+the same manner as the conventional WD but incorporates
+trainable weights. To the best of our knowledge, NWD is the
+first neural decoder specifically designed for SC-LDPC codes.
+In this paper, we present three primary contributions:
+1) Target-specific training: We train the NWD using target-
+specific training, wherein the loss function only includes
+target VNs in the window. By restricting the network’s
+output to the subset of VNs, the neural network is pruned,
+thereby allowing the omission of certain weights. We show
+that target-specific training converges faster with fewer
+trainable parameters and achieves a threefold improvement
+in decoding performance compared to the conventional
+WD. To ensure effective training of NWD, active learning
+[10] and normalized validation error [6] are also employed.
+2) Neural non-uniform scheduling: We introduce neural non-
+uniform scheduling to further reduce the complexity of
+the NWD. Specifically, we train the NWD with trainable
+damping factors, which mix the current CN update result
+with the previous CN message to derive the current CN
+message. A large damping factor indicates that the cur-
+rent update is less important for decoding. Based on this
+metric, we propose a systematic method to determine the
+non-uniform scheduling of the NWD, and achieve 45%
+reduction in decoding complexity without performance
+degradation compared to the WD. This scheduling method
+enables flexible performance–complexity trade-offs.
+3) Adaptive NWD: We propose an adaptive NWD scheme to
+mitigate EP of the NWD. We collect EP-inducing samples
+and train a specialized weight set, called the EP-resilient
+weight set, for EP scenarios. When a decoding failure
+is detected in the previous window, the adaptive NWD
+scheme employs the EP-resilient weight set for the current
+window; otherwise, it utilizes the plain weight set. The
+proposed adaptive scheme successfully reduces the EP
+probability without modifying the code or decoder structure
+or online BER estimation, offering an advantage over
+previous methods [27]–[29].
+Note that all three contributions stem from the distinctive
+structure of SC-LDPC codes and WD, and they are tightly in-
+terrelated through the training of NWD. The overall algorithm
+of this work is summarized in Algorithm 1.
+The rest of the paper is organized as follows. Section II
+introduces the notation and background. In Section III, we
+present the structure of NWD and target-specific training of
+Algorithm 1 Proposed Neural Window Decoder (NWD)
+Input:
+Window size W, target size T, maximum number of
+iterations ℓ, number of CN updates to be skipped R
+1: Target-specific training (Section III):
+• Build the neural network corresponding to a window
+with W and ℓ.
+• Set the loss term to include only target nodes from
+positions 1 to T.
+• Train the CN weights w(ℓ)
+C
+using actively collected
+samples [10] and normalized validation error [6].
+2: Neural non-uniform scheduling (Section IV):
+• Train NWD with damping factors γ(ℓ)
+C .
+• Quantify the importance of each CN update based on
+the trained γ(ℓ)
+C .
+• Skip R CN updates with low importance from the
+decoding process.
+3: Adaptive NWD (Section V):
+• Build the NWD to incorporate the messages passed
+from the previous windows.
+• Collect the training data using the boosting learning
+technique [13].
+• Train the EP-resilient weight set w(ℓ)
+C .
+• If an error is not detected in the previous window,
+apply the plain weight set w(ℓ)
+C .
+• Else, apply the EP-resilient weight set w(ℓ)
+C .
+NWD. In Section IV, we describe the neural non-uniform
+scheduling based on the training results of damping factors.
+The adaptive NWD, which selectively uses the EP-resilient
+weight set based on the previous window stage, is presented
+in Section V. Finally, the conclusion is given in Section VII.
+II. PRELIMINARIES
+A. SC-LDPC Codes and Window Decoding
+In this paper, we consider protograph-based SC-LDPC
+codes [32]. The protograph of SC-LDPC codes is constructed
+by the edge-spreading technique to couple every w adjacent
+LDPC blocks out of a total of L disjoint LDPC blocks
+into a single coupled chain. The parameters w and L are
+called coupling width and chain length, respectively. The base
+matrix B consists of VNs at L positions and CNs at L + w
+positions; each position contains N protograph VNs and M
+protograph CNs. By lifting this base matrix with a factor of
+z, an SC-LDPC code is constructed with Ln = LNz VNs
+and (L + w)m = (L + w)Mz CNs, where n and m are the
+number of VNs and CNs at each position. Consequently, the
+code rate is given as
+R = 1 −(L + w)m
+Ln
+=
+
+1 −M
+N
+
+−M
+N
+w
+L .
+When the uncoupled LDPC blocks possess regular VN and
+CN degrees of dv and dc, respectively, the resulting SC-LDPC
+codes are referred to as (dv, dc)-regular SC-LDPC codes. The
+protograph of the (3, 6)-regular SC-LDPC code is shown in
+3
+(a)
+…
+…
+…
+𝑊
+stage
+target VNs
+(b)
+Fig. 1. (a) A protograph of the (3, 6)-regular SC-LDPC code with w = 2
+and L = 4 constructed by the edge-spreading technique (b) window decoding
+with window size W = 6 and target size T = 1. The dotted box indicates
+the window at the third stage, where the VNs in the first T positions in the
+window serve as target VNs (dark-filled nodes), and the previous target VNs
+transmit their decision LLRs (arrows).
+Fig. 1(a), which will be used as a running example throughout
+this paper.
+The repetitive structure of SC-LDPC codes facilitates slid-
+ing window decoding that operates within a window of size
+W, aiming to decode target VNs in the first T positions of
+the window [24]. Fig. 1(b) illustrates window decoding with
+W = 6 and T = 1. Over the additive white Gaussian noise
+(AWGN) channel, the conventional WD proceeds as follows:
+The first stage begins within the window, which includes VNs
+and CNs at positions 1, . . . , W. Decoding utilizes either the
+BP (sum-product) algorithm or the MS algorithm. The n target
+VNs in the first position are decoded based on their decision
+log-likelihood ratios (LLRs). Subsequently, the window shifts
+one position to the right, and the second stage begins. This
+process is repeated L times until all Ln VNs in the entire chain
+are decoded. From the second stage onward, the previously
+decoded VNs outside the window pass their decision LLRs,
+determined in the earlier stages, to the CNs in the current
+window (see the arrows in Fig. 1(b)).
+In window decoding, if any n target VNs within a window
+stage retain bit errors after decoding, a block error is declared
+for that stage. Consequently, the block error rate (BLER) for
+SC-LDPC codes is defined as the rate of decoding failures
+for each target position. A frame error is declared when
+the decoded code frame of length Ln contains one or more
+bit errors after decoding the entire chain. The frame error
+rate (FER) refers to the proportion of frames with errors.
+While FER is the conventional reliability metric for frame-
+based transmissions, BLER is also practically important in
+applications such as real-time services, where the correct
+recovery of each block directly affects user experience.
+2
+4
+6
+8
+10
+12
+14
+16
+1
+2
+3
+4
+5
+6
+7
+8
+Iteration
+CN position
+2
+4
+6
+8
+10
+12
+14
+16
+1
+2
+3
+4
+5
+6
+7
+8
+Iteration
+CN position
+(a)
+(b)
+Fig. 2. Examples of the non-uniform decoding schedules of a (3, 6)−regular
+SC-LDPC code with W = 8, ℓ= 16 using (a) soft BER based method and
+(b) pragmatic method [26]. CN updates are only performed in the schedules
+with bold colors.
+B. Decoding Schedules for SC-LDPC Codes
+Due to the iterative nature of message-passing decoding for
+LDPC codes, various message update schedules have been
+proposed to accelerate decoding convergence and reduce com-
+plexity [33]–[35]. The uniform parallel (flooding) schedule
+updates all VNs and CNs simultaneously. In contrast, the
+uniform serial schedule processes CNs in sequence, allowing
+VNs to immediately utilize the newly updated CN messages
+[33]. Both uniform schedules guarantee that all nodes are
+updated at least once in each iteration. On the other hand, non-
+uniform schedules, such as residual BP [34] and node-wise
+scheduling [35], dynamically change the update order within
+each iteration. This results in a varying number of updates for
+each node by the end of the decoding process.
+Unlike in block LDPC codes, uniform serial schedules are
+less effective at reducing complexity in the window decod-
+ing of SC-LDPC codes [33]. To address this, several non-
+uniform schedules specifically suited for window decoding
+are proposed in [26]. The first scheme estimates soft BER
+at each iteration and skips CN updates with negligible impact,
+reusing their previous messages; it eliminates roughly 50%
+of CN updates but incurs significant real-time BER estima-
+tion overhead (Fig. 2(a)). Its pragmatic variant removes this
+overhead by presetting a fixed CN update scheduling: after
+an initial full update, the decoder skips one CN per iteration,
+starting with the furthest from the target and repeating every
+W iterations (Fig. 2(b)). This static schedule cuts CN updates
+by 35% without additional computation.
+C. Error Propagation in Window Decoding
+As shown in Fig. 1(b), the decoding of the current window
+is influenced by the decision LLRs of previously processed
+VNs. Consequently, errors from prior stages can propagate,
+leading to a long chain of errors. EP is more prevalent
+in low-latency decoding settings that use a small window
+size W and a low maximum number of iterations ℓ. While
+4
+these configurations are favorable for reducing latency, they
+also increase the likelihood of block errors and EP. The
+presence of EP significantly worsens the BLER, especially
+when transmitting long or unterminated chains [30], [31].
+To gain a deeper understanding of EP, a general Markov
+decoder model has been introduced in [29]. State Si denotes i
+consecutive block errors before the current window. Transition
+probabilities obey qJ−1 ≥qJ−2 ≥· · · ≥q0, reflecting the
+higher EP probability as the chain lengthens. This implies that
+the higher the value of i, the more severe the EP becomes.
+Therefore, it is crucial to tackle EP when i is small, at the
+early stages of propagation.
+D. Neural Min-Sum Decoding
+In this paper, we employ the neural MS decoding algorithm
+[36], which offers practical implementation with low decoding
+complexity while achieving superior performance. Let m(ℓ)
+v→c
+(m(ℓ)
+c→v) denote the message passed from VN v to CN c (and
+vice versa) during the ℓ-th iteration. Initially, these messages
+are set as m(0)
+v→c = mch
+v , m(0)
+c→v = 0, where mch
+v represents the
+channel LLR of VN v. For iteration ℓ= 1, 2, ..., ℓ, the neural
+MS algorithm updates the messages as follows:
+m(ℓ)
+v→c = mch
+v +
+X
+c′∈N(v)\c
+m(ℓ−1)
+c′→v
+(1)
+m(ℓ)
+c→v = w(ℓ)
+c→v
+
+
+Y
+v′∈N(c)\v
+sgn
+
+m(ℓ)
+v′→c
+
+
+
+min
+v′∈N(c)\v |m(ℓ)
+v′→c|,
+(2)
+where N(v) denotes the neighbors of node v. We refer to
+w(ℓ)
+c→v as CN weights as they attenuate CN messages. At the
+last iteration, the decision LLR mo
+v of VN v is calculated as
+mo
+v = mch
+v +
+X
+c′∈N(v)
+m(ℓ)
+c′→v.
+Unlike the weighted MS algorithm, which uses a heuris-
+tically optimized single weight, the neural MS algorithm
+employs a set of weights that are optimized through machine
+learning techniques within a neural network. The neural net-
+work is constructed from the Tanner graph of linear codes.
+While the neural MS algorithm demonstrates superior per-
+formance compared to the weighted MS algorithm, assigning
+distinct weights to every edge incurs significant memory re-
+quirements. To address this, various weight sharing techniques
+have been proposed, such as spatial sharing [15], protograph
+sharing, and CN sharing [16].
+In this work, we train the neural MS decoders for 1000
+epochs using the Adam optimizer [37], with 10000 samples
+per epoch drawn from multiple SNR points. Detailed training
+methods are provided in Section III-B.
+III. NEURAL WINDOW DECODER FOR SC-LDPC CODES
+In this section, we propose the NWD and its training
+methods. The trained NWD achieves superior performance to
+conventional neural decoders with lower complexity.
+A. Target-Specific Training of the NWD
+Fig. 3 shows a part of the Tanner graph included in the first
+window with W = 3 and z = 1, together with the neural
+network obtained by unrolling the Tanner graph for ℓ= 2.
+The network consists of Wn input and output nodes, along
+with 2 × ℓhidden layers. The hidden-layer nodes correspond
+to the edges of the Tanner graph; odd and even layers perform
+VN and CN message updates in (1) and (2), respectively.
+It should be noted that since the window configuration is
+repeated at each stage, training the weights in a single indepen-
+dent window is sufficient for all subsequent stages. Therefore,
+we train the NWD only for one independent window block.
+The trained weights can be reused across the entire chain
+of long SC-LDPC codes, requiring only a small number of
+weights. This weight-sharing property is a unique advantage
+of applying neural weights to window decoders over block
+decoders.
+For protograph-based SC-LDPC codes, we employ two
+weight sharing techniques to facilitate training. Protograph
+weight sharing [16] ties weights on edges from the same pro-
+tograph edge, reducing trainable weights by 1/z. Additionally,
+CN weight sharing [16] unifies weights assigned to the same
+proto CN, representing CN weights as w(ℓ)
+C
+for proto CN C
+and reducing the number of weights to WMℓ.
+We use the BLER loss [39] (1 if any block error, else 0) for
+training, since perfect block decoding per window is needed
+to prevent EP. Conventional all-inclusive training includes all
+output VNs in the loss function:
+LA = 1
+2
+
+1 −sgn
+
+min
+1≤v≤W n mo
+v
+
+.
+On the other hand, we employ target-specific training for
+NWD, restricting the loss to the first T positions:
+LT = 1
+2
+
+1 −sgn
+
+min
+1≤v≤T n mo
+v
+
+.
+(3)
+Target-specific training results in structured pruning. In Fig. 3,
+T = 1 target-specific training removes the output v3 −v6 and
+the fourth-layer e7 −e12 along with all nodes connected to
+them down to the input layer. In this example, target-specific
+training eliminates 47% of nodes and 43% of edges.
+As the edges of the neural network are pruned, the associ-
+ated CN weights are also removed. In Fig. 4, we plot the ratio
+between the number of trainable weights for target-specific
+training and that for all-inclusive training according to the
+window size W and ℓ. As shown in Fig. 4, a larger window
+size and a smaller maximum number of iterations lead to a
+greater reduction in weights. For example, with W = 18
+and ℓ= 4, the weight ratio is 0.3, indicating that target-
+specific training reduces the number of weights by 70%. In
+other words, target-specific training provides greater benefits
+in low-latency decoding scenarios, which involve using a small
+number of iterations to minimize decoding delay. Moreover,
+a larger window size is recommended to compensate for the
+performance loss from fewer iterations and prevent EP [25],
+[40]. Therefore, Fig. 4 shows that target-specific training is
+particularly advantageous in practical low-latency decoding
+scenarios.
+5
+𝑐1
+𝑣1
+𝑣2
+𝑐2
+𝑣3
+𝑣4
+𝑐3
+𝑣5
+𝑣6
+𝑒1
+𝑒4
+𝑒2
+𝑒3
+𝑒7
+𝑒8
+𝑒11
+𝑒5
+𝑒6
+𝑒9
+𝑒10
+𝑒12
+𝑣1
+𝑣2
+𝑣3
+𝑣4
+𝑣5
+𝑣6
+𝑒1
+𝑒2
+𝑒3
+𝑒4
+𝑒5
+𝑒6
+𝑒7
+𝑒8
+𝑒9
+𝑒10
+𝑒11
+𝑒12
+𝑒1
+𝑒2
+𝑒3
+𝑒4
+𝑒5
+𝑒6
+𝑒7
+𝑒8
+𝑒9
+𝑒10
+𝑒11
+𝑒12
+Target nodes
+(𝑇= 1)
+𝑣1
+𝑣2
+𝑣3
+𝑣4
+𝑣5
+𝑣6
+𝑒1
+𝑒2
+𝑒3
+𝑒4
+𝑒5
+𝑒6
+𝑒7
+𝑒8
+𝑒9
+𝑒10
+𝑒11
+𝑒12
+𝑒1
+𝑒2
+𝑒3
+𝑒4
+𝑒5
+𝑒6
+𝑒7
+𝑒8
+𝑒9
+𝑒10
+𝑒11
+𝑒12
+𝑣𝑖
+: Input nodes (←𝑚𝑣𝑖
+ch)
+𝑣𝑖
+: output nodes (→𝑚𝑣𝑖
+o )
+𝑒𝑖
+: VN →CN msg (𝑚𝑣→𝑐
+(ℓ) )
+: CN →VN msg (𝑚𝑐→𝑣
+(ℓ) )
+𝑒1
+1st hidden 
+layer
+2nd hidden 
+layer
+3rd hidden 
+layer
+4th hidden 
+layer
+Input
+layer
+Output
+layer
+1st iteration
+2nd iteration
+𝑤𝑐2→𝑣3
+1
+𝑤𝑐3→𝑣4
+1
+𝑣6
+𝑣5
+𝑣4
+𝑣2
+𝑣1
+𝑣3
+𝑤𝑐2→𝑣3
+2
+𝑤𝑐3→𝑣4
+2
+Target nodes 
+Fig. 3. A code within a window with W = 3 and ℓ= 2 is mapped to the neural network for training the NWD. The dashed lines in the network represent
+the edges that are included for all-inclusive training but are pruned for target-specific training.
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1.0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+W=6
+W=10
+W=14
+W=20
+Max iteration ℓ̅
+Max iteration തℓ
+       Weight number ratio
+𝑊= 6
+𝑊= 10
+𝑊= 14
+𝑊= 18
+Fig. 4.
+Ratio between the numbers of trainable weights for target-specific
+training and all-inclusive training. A smaller ratio indicates a greater com-
+plexity reduction effect achieved by target-specific training.
+Next, we explore the effects of target-specific training on
+the training process and decoding performance. Fig. 5 shows
+the evolution of BLERs at signal-to-noise ratio (SNR) 1.4 dB
+for NWDs with various target sizes. As the target size T
+decreases, continuous improvements on performance occur,
+resulting in better performance convergence. This indicates
+that target-specific training facilitates more effective learning
+and achieves superior decoding performance compared to all-
+inclusive training, even though it uses a simpler network with
+0.045
+0.05
+0.055
+0.06
+0.065
+0.07
+0
+200
+400
+600
+800
+1000
+BLER
+Epoch
+T=10 (all)
+T=5
+T=1 (target)
+Fig. 5.
+Evolution of BLER over training epochs for NWD with different
+target sizes T.
+fewer parameters.
+B. Training Techniques to Prevent Bias
+Since the initial study on neural decoders by [8], most
+subsequent approaches have followed a similar training proce-
+dure: Each mini-batch contains samples drawn from multiple
+SNR points. An epoch is trained over these mini-batches, and
+validation is performed using held-out samples from the same
+SNR points. The final weights are selected from the epoch
+that achieves the best validation performance.
+6
+0.6
+1
+1.4
+1.8
+2.2
+10-4
+10-3
+10-2
+10-1
+BLER
+Fig. 6.
+BLER performance for the SC-LDPC code with z = 100 and the
+NWD with W = 10, ℓ= 10. The NWDs are trained using the conventional
+method (Conv), normalized loss (Norm Loss), active learning (Active), and
+both methods combined (Prop). Training data are collected from S1, except
+for Conv using S2.
+In practice, training with equal per-SNR sample counts
+biases the model toward low-SNR data. Since errors—and
+thus nonzero BLER loss—are more frequent at low SNRs,
+their gradients dominate those at high SNRs. While the fixed
+structural pruning of the NWD offers several advantages,
+it can degrade training stability [41]. Indeed, as shown in
+Fig. 6, the NWD exhibits a pronounced training bias to-
+ward low-SNR data. The NWD trained on five SNR points,
+S1 = {0.6, 1.0, 1.4, 1.8, 2.2}, performs almost identically to
+that trained only on the two lowest points, S2 = {0.6, 1.0}.
+To address these drawbacks of the pruned NWD, we
+adopt the active learning strategy from [10]. In this ap-
+proach, mini-batches consist solely of error samples, which
+are received words that the decoder currently fails to decode,
+collected from each SNR. Because the BLER loss for these
+samples is always 1, each SNR contributes an equal total loss,
+resulting in balanced gradient updates. Additionally, we use
+the normalized validation error (NVE) [6] to fairly evaluate
+each epoch’s weights across multiple SNRs during validation.
+Fig. 6 compares the performance of NWDs trained with
+different strategies. The result shows that active learning yields
+the largest BLER improvement, while NVE offers a smaller
+but still noticeable gain—likely because it is applied only dur-
+ing validation. When combined, the two techniques enhance
+training stability across a broad SNR range and yield the best
+overall performance. Importantly, these benefits are not limited
+to the NWD, but also apply to other neural decoders whose
+optimal weights vary across SNRs.
+C. Performance Results of the NWD
+Based on the methods discussed in the previous subsections,
+we train the NWD with ℓ= 10, W = 10 for the SC-LDPC
+code with z = 100. We apply protograph CN weight sharing
+and actively collect 20 error samples from each of 5 SNR
+points in S = {1.2, 1.4, 1.6, 1.8, 2.0} to form mini-batches
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+2
+3
+0.6
+4
+0.7
+5
+0.8
+6
+0.9
+7
+1
+8
+9
+10
+Fig. 7. Distribution of trained CN weights in NWD with T = 1 target-specific
+training by CN position and iteration. The small weights (red) signify that the
+corresponding CN messages have relatively low reliability.
+of size 100. Each epoch consists of 10 mini-batches, and
+the validation phase begins after the training of each epoch
+is completed. The validation score is computed using NVE,
+evaluated on 50000 samples, 10000 from each SNR point.
+After conducting training and validation for 1000 epochs, the
+NWD with the lowest NVE is selected.
+Fig. 7 shows the distribution of trained weights in the
+NWD with T = 1 target-specific training. The empty region
+under the dotted line represents pruned weights that are not
+connected to target nodes, reducing the number of weights
+by 16%. The small weights colored in red indicate that
+the associated CN messages are relatively unreliable. Larger
+weights correspond to more reliable CNs, which are located
+near the target position and in later decoding iterations. Within
+a window, low-degree front CNs are initially more reliable than
+high-degree rear CNs, and overall CN reliability increases with
+each iteration.
+However, when focusing on the early iterations, the weights
+of middle CNs are lower than those of the rear CNs (see
+CN positions 3–10 in iteration 1). This is because unreliable
+initial messages from high-degree rear CNs require more
+than two iterations to reach the target nodes, during which
+their reliability improves. In contrast, unreliable messages
+from middle CNs are passed directly to the target nodes in
+early iterations, causing a more negative impact on decoding
+performance.
+Finally, Fig. 8(a) shows the single-window BLER for the
+conventional WD using MS with a fixed weight 0.75, NWDs
+using the neural MS, and the conventional WD using BP.
+The result shows that the NWD with target-specific training
+achieves a 0.1 dB gain at BLER = 3 × 10−4 compared to
+the WD, and also outperforms the NWD with all-inclusive
+training, despite using fewer weights. Furthermore, it matches
+the performance of the WD with the BP algorithm while
+requiring significantly lower computational complexity.
+Next, we evaluate the decoders using sliding window decod-
+ing on the entire SC-LDPC code chain of length Ln = 20000
+7
+1.2
+1.4
+1.6
+1.8
+2
+2.2
+10-4
+10-3
+10-2
+10-1
+BLER
+(a)
+1.6
+1.8
+2
+2.2
+2.4
+2.6
+10-3
+10-2
+10-1
+100
+FER
+(b)
+Fig. 8.
+(a) BLER performances of a single window block and (b) FER performances of the Ln = 20000 SC-LDPC code for the conventional WD, the
+NWD with all-inclusive training, the NWD with T = 1 target-specific training, and the conventional WD with the BP algorithm.
+and present the FER in Fig. 8(b). As decoding progresses along
+the L = 100 chain, the performance gap between decoders
+becomes more pronounced, yielding a larger FER difference
+than in BLER. The NWD with target-specific training achieves
+more than a threefold reduction in FER at Eb/N0 = 2.5 dB
+compared to the WD, and again outperforms the NWD with
+all-inclusive training. At high SNRs, it even attains a lower
+FER than the WD with BP.
+This result also highlights that the weights of the NWD are
+effective even for long SC-LDPC codes of length 20000—a
+regime in which training a neural decoder on block codes
+becomes computationally infeasible—despite the fact that the
+weights are trained within a window that is independent of the
+overall code length.
+IV. NEURAL NON-UNIFORM SCHEDULES FOR THE NWD
+In this section, we propose a systematic method to optimize
+the non-uniform schedule of the NWD based on its training
+result. In a non-uniform schedule, certain CNs skip updating
+their messages; instead, they forward the output from the
+previous iteration.
+A. Damping Factor and Schedule Importance
+Identifying which CNs to be skipped based solely on the
+trained CN weights w(ℓ)
+C
+is difficult, as these weights reflect
+message reliability rather than the significance of the updates
+themselves. To address this, we introduce damping factors
+[15], [42] into the NWD that directly indicate the importance
+of each update. Damping forms the current message by mixing
+the new update m(ℓ)
+c→v with the previous message m(ℓ−1)
+c→v .
+Accordingly, the damped CN message is obtained by applying
+damping to the CN update m(ℓ)
+c→v in (2) as follows:
+m(ℓ)
+c→v ←γ(ℓ)
+C m(ℓ−1)
+c→v + (1 −γ(ℓ)
+C )m(ℓ)
+c→v,
+(4)
+where 0 ≤γ(ℓ)
+C ≤1 denotes the damping factor for proto CN
+C at iteration ℓ. In the damped NWD, the damping factors
+γ(ℓ)
+C
+are introduced as trainable parameters along with the CN
+weights w(ℓ)
+C . As seen in (4), a larger damping factor implies
+that assigning greater weight to the previous-iteration message
+is beneficial for decoding. Since a CN update is replaced
+by previous message when γ(ℓ)
+C
+= 1 , skipping CNs with
+large γ(ℓ)
+C
+is expected to have minimal impact on decoding
+performance. To encourage many γ(ℓ)
+C
+values to approach 1,
+we add an ℓ1 regularization term, λ P |1 −γ(ℓ)
+C |, to the loss
+of the damped NWD, with λ set to 0.1 [43].
+Fig. 9(a) shows the distribution of the trained γ(ℓ)
+C values. In
+the early iterations (1 to 5), most γ(ℓ)
+C
+values are concentrated
+in the range of 0–0.1 (colored blue to white), suggesting that
+the corresponding CN updates are essential. In later iterations
+(iterations 7–10), higher γ(ℓ)
+C
+values (red) emerge, consistent
+with update saturation. Although the trained γ(ℓ)
+C values reflect
+the importance of the CN updates, the prevalence of many
+similarly small values makes it difficult to clearly determine
+which CNs to be skipped.
+Therefore, we propose a new metric, termed schedule im-
+portance, denoted γ(ℓ)
+C := γ(ℓ)
+C /N
+(ℓ)
+C . In SC-LDPC codes, the
+impact of CN update skipping on the target VNs depends
+strongly on the distance to the target VNs. To capture this
+effect, we compute the number of paths N (ℓ)
+C
+by which each
+CN can reach the target VNs at the last iteration in the
+expanded trellis graph across iterations. For example, the first
+CN at iteration 9 has 6 paths to the target VNs at iteration
+10 in the trellis graph, which means N (9)
+1
+= 6. These counts
+are then normalized within each iteration to obtain normalized
+count N
+(ℓ)
+C , which represents the relative influence of each CN
+update on the target VNs. The distribution of N
+(ℓ)
+C
+is shown
+in Fig. 9(b).
+Using this normalized reach count, we compute the schedule
+importance γ(ℓ)
+C
+= γ(ℓ)
+C /N
+(ℓ)
+C , as shown in Fig. 9(c). CNs
+8
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+2
+3
+0
+4
+0.2
+5
+0.4
+6
+0.6
+7
+0.8
+8
+1
+9
+10
+(a)
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+2
+3
+4
+0.1
+5
+0.2
+6
+0.3
+7
+8
+9
+10
+(b)
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+2
+3
+0
+4
+0.4
+5
+0.8
+6
+1.2
+7
+1.6
+8
+2+
+9
+10
+(c)
+Fig. 9. (a) Distribution of trained damping factors γ, (b) normalized target reach counts ¯
+N, and (c) schedule importance γ. CN updates with a high γ (red
+in (c)) are considered to be skipped.
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+2
+A
+A
+A
+A
+A
+A
+A
+A
+A
+D
+3
+A
+A
+A
+A
+A
+A
+A
+A
+C
+4
+A
+A
+A
+A
+A
+A
+A
+D
+D
+5
+A
+A
+A
+A
+A
+A
+B
+D
+6
+A
+A
+A
+A
+A
+B
+C
+7
+A
+A
+A
+A
+C
+D
+D
+8
+A
+A
+A
+B
+C
+D
+9
+A
+A
+B
+C
+D
+10
+A
+D
+D
+(a)
+1.7
+1.9
+2.1
+2.3
+2.5
+10-2
+10-1
+100
+FER
+(b)
+Fig. 10. (a) Non-uniform schedules based on the training results of the NWD: the points marked with A, A+B, A+B+C, and A+B+C+D indicate the active
+CN updates when skipping 29, 25, 20, and 10 CN updates, respectively. (b) FER performances with proposed neural non-uniform schedules applied to the
+WD and NWD.
+with high γ(ℓ)
+C
+are considered strong candidates for skipping.
+Comparing Fig. 9(a) and (c), later-index CNs within each
+iteration (e.g., iteration 4 and CN index 9), which have
+relatively large damping factors γ(ℓ)
+C , are more likely to be
+skipped because they have fewer paths to the target VNs
+and thus have higher γ(ℓ)
+C . Skipping such low-importance CN
+updates has minimal impact on the reliability of the target VNs
+and therefore incurs little performance degradation.
+B. Proposed Non-Uniform Schedules of the NWD
+We skip CN updates one by one according to the following
+procedure. First, we collect the schedule importance values
+γ(ℓ)
+C
+from the last active iterations at each position. Then, at
+each step, we skip the CN update with the largest γ(ℓ)
+C . The
+resulting schedules are shown in Fig. 10(a) for the cases where
+29, 25, 20, and 10 CN updates are skipped. In the figure, points
+marked with the symbol A indicate the active updates when
+29 updates are skipped, while A+B marks the active updates
+when 25 CNs are skipped, and so on.
+We determine the schedules based on the trained damping
+factors of the damped NWD. However, decoding with damping
+requires additional memory to store previous messages m(ℓ−1)
+c→v
+as described in Eq. (4). This additional cost can offset the
+complexity savings gained from scheduling. Therefore, we
+employ the damped NWD only to determine the schedule,
+while the actual decoding is performed by the plain NWD
+with the established schedule. In practice, the performance
+of the plain NWD under the proposed schedule is nearly
+indistinguishable from that of the damped NWD. Hence, the
+scheduling introduces no runtime overhead and allows the
+NWD to fully benefit from reduced complexity.
+Fig. 10(b) presents the FER of the NWD and WD using
+the schedules in Fig. 10(a). For the NWD, the schedule with
+10 inactive CNs, yielding a 26% reduction in CN updates,
+incurs almost no performance loss. Moreover, the schedule
+with 25 inactive CNs even outperforms the conventional WD,
+9
+suggesting that the NWD with appropriate scheduling can
+achieve equal or better performance than the conventional
+decoder while omitting up to 41% of CN updates. For the WD,
+performance degradation is minimal up to 10 inactive CNs, but
+beyond that, it experiences greater performance degradation
+than the NWD. Since the proposed scheduling depends on the
+NWD’s trained weights, it is less effective for the WDs with
+fixed weights.
+Note that the schedule with 29 inactive CNs coincides
+with the pragmatic schedule in [26]. The pragmatic schedule
+provides only a single scheduling option, which may lead
+to performance loss as shown in Fig. 10(b). In contrast, the
+proposed method offers multiple options along the complexity-
+performance trade-off. Furthermore, the method is not limited
+to SC-LDPC codes and can be applied to other codes with
+structural asymmetry.
+V. ADAPTIVE NWD FOR MITIGATING ERROR
+PROPAGATION
+In this section, we propose an adaptive NWD scheme to
+mitigate EP in the NWD. Previous training methods used
+the independent window configuration, where it is assumed
+that all preceding target nodes are correctly decoded. Con-
+sequently, the earliest nodes in each window are treated as
+the most reliable. When EP occurs, however, errors from
+earlier windows make these front-end nodes the least reliable,
+rendering the weights trained under the independent window
+assumption ineffective. While NWD performs well under EP-
+free conditions, it becomes vulnerable once EP begins; the
+proposed adaptive scheme addresses this limitation.
+The general Markov decoder model for window decoding
+[29] shows that it becomes increasingly difficult to recover
+from EP as the decoder progresses into deeper EP states. Thus,
+a simple yet effective strategy is to intervene as soon as an
+error is detected in the previous stage. We focus on the Markov
+model with J = 1 and aim to reduce the probability q1 of
+an error occurring in the current block given that an error
+has occurred in the previous block. We refer to q1 as the EP
+probability.
+A. Training Method for the EP-resilient Weight Set
+We propose an adaptive NWD scheme that uses the plain
+weight set w(ℓ)
+cp and switches to an EP-resilient weight set w(ℓ)
+cp
+when an error is detected in the previous stage. While the
+plain weight set w(ℓ)
+cp is trained under an independent window
+configuration, the EP-resilient weight set w(ℓ)
+cp is trained under
+a connected window configuration that includes previously
+decoded VNs connected to the front CNs, as shown in Fig. 11.
+This configuration accounts for error propagation scenarios
+from the previous stage.
+To train w(ℓ)
+cp , we use a boosting learning technique [12],
+[13], which selectively collects uncorrected codewords from
+the previous decoder in a multi-stage decoding setup. Simi-
+larly, we collect training data from the case where the previous
+window fails, regardless of the decoding results of the current
+window. For example, as shown in Fig. 11, if the 50th window
+fails, we collect the decision LLRs of target VNs in the 50th
+𝑊
+Decision LLR
+Channel LLR
+O
+X
+48th
+49th
+50th
+51st
+52nd
+…
+Window decoding of 𝐿= 100 chain
+53rd
+X
+O
+O
+O
+…
+Fig. 11. Training method for the EP-resilient weight set. When an error occurs
+in the previous block (50th), the decision LLRs of the target VNs from the
+previous block and the channel LLRs of all VNs in the current block (51st)
+are collected as training data for the EP-resilient weight set.
+CN position
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Iteration
+1
+2
+0.6
+3
+0.7
+4
+0.8
+5
+0.9
+6
+1
+7
+1.1
+8
+1.2
+9
+1.3
+10
+Fig. 12. Distribution of the trained EP-resilient weight set.
+window and the channel LLRs of all VNs in the 51st window.
+We collect 5000 samples at an SNR point of 2.0 dB, and train
+over 500 epochs. The initial weights are set to the plain weight
+set w(ℓ)
+cp . After training, the EP probability reduces from 0.781
+to 0.642, demonstrating that the EP-resilient weight set clearly
+improves robustness to EP.
+The distribution of w(ℓ)
+cp is depicted in Fig. 12. Compared
+to the distribution of the plain weight set w(ℓ)
+cp in Fig. 7, the
+weights of the front CNs are significantly smaller, reflecting
+unreliable incoming messages. Conversely, in later iterations,
+the weights for mid-to-rear CNs exceed 1, indicating that
+messages from the relatively more reliable rear nodes are
+amplified to help correct errors propagated from the front.
+B. Proposed Adaptive NWD Scheme
+The adaptive NWD should first detect errors in the previous
+window. This is done by inspecting the parity-check equations
+10
+2.3
+2.4
+2.5
+2.6
+2.7
+2.8
+2.9
+3
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+EP Probability
+Fig. 13. EP probabilities for the WD, NWD, and adaptive NWD. The adaptive
+decoder detects previous block errors using the parity check status of the
+previous CNs or a genie-aided method (Genie).
+that involve only the previously decoded target VNs (dashed
+square in Fig. 11). If any CN is unsatisfied, referred to as an
+unsatisfied CN (UCN), it indicates a prior error and triggers
+the use of the EP-resilient weight set for the current window.
+By the symmetric structure of SC-LDPC codes, the presence
+of a UCN indicates an odd-parity mismatch among the earlier
+target VNs, which implies at least one error. For reference, we
+also evaluate an ideal, genie-aided detector.
+Fig. 13 shows the average EP probability across all window
+blocks for the WD, NWD, and adaptive NWD. Compared with
+the WD, the NWD shows a higher EP probability. This gap be-
+comes more pronounced at high SNRs where the discrepancy
+in decoder inputs between EP and EP-free cases is larger [29].
+This result confirms that the NWD is more vulnerable to EP
+than the WD. Unlike the WD, which applies uniform weights
+across all positions, the NWD assumes perfect decoding in
+the previous block and assigns higher weights to the front
+positions, as in Fig. 7. Consequently, in the presence of EP,
+the NWD amplifies errors from the previous block, leading to
+an increased probability of block decoding failure.
+In contrast, the adaptive NWD with the UCN-based er-
+ror detector markedly suppresses EP, achieving a lower EP
+probability than the conventional WD. When the detector
+is ideal, as in the genie-aided case, the EP reduction is
+even more substantial. For comparison, we also evaluate an
+adaptive WD that switches between a fixed weight and the
+EP-resilient weight set based on the detected error status.
+However, the error patterns encountered during the adaptive
+WD decoding differ from those used to train the EP-resilient
+weights, yielding only a modest reduction in EP, substantially
+less than that achieved by the adaptive NWD.
+Finally, we compare the average BLER for the SC-LDPC
+code with code length Ln = 100×200 = 20000 using various
+decoders in Fig. 14. Compared with the WD, the NWD shows
+a more gradual BLER slope at high SNRs due to its higher
+EP probability at high SNRs. However, the adaptive NWD
+scheme reduces EP probability and restores the BLER slope
+2.6
+2.7
+2.8
+2.9
+3
+10-6
+10-5
+BLER
+Fig. 14. Average BLER performances of the Ln = 20000 SC-LDPC code
+for the WD, NWD, and adaptive decoders.
+at high SNRs to a level comparable to the slope of the WD.
+In addition, the adaptive NWD scheme offers practical
+implementation advantages. Unlike previous EP mitigation
+methods that require code modifications [29] or online BER
+estimation [27], the proposed scheme requires only storing
+an additional weight set in memory. Furthermore, since the
+decoder already checks CN satisfaction at each iteration for
+early stopping, the UCN-based detector incurs no additional
+latency or computational overhead, as it leverages this existing
+information.
+VI. COMPLEXITY ANALYSIS OF PROPOSED NWDS
+Table I compares the computational complexity of the pro-
+posed NWDs and conventional decoders for a single window
+of the (3, 6)-regular SC-LDPC code. We count all elementary
+operations involved in window decoding, including additions,
+comparisons, sign multiplications, weight multiplications, and
+the table lookups for tanh operations. As shown in Fig. 10(a),
+the NWD skips certain node and edge operations, and there-
+fore requires fewer operations than the WD. For instance,
+the WD using the fixed-weight MS algorithm carries out
+E¯ℓ= 540 weight multiplications, whereas the NWD reduces
+this to 444. Skipping 25 CN updates using the neural non-
+uniform schedule lowers the count further to 296.
+To evaluate the decoding complexity on modern processors,
+we follow the Horowitz energy model [44], in which a floating-
+point addition costs about 0.9 pJ, a multiplication about 3.7 pJ,
+and an on-chip SRAM access about 5 pJ. Normalizing the
+addition to 1 unit, we count a comparison as 1 unit because
+CMP is realized as a subtraction on the same ALU datapath
+[45]. A sign multiplication, realized as a sign-bit flip/XOR, is
+counted as 0.3 units [46]. A variable weight multiplication is
+counted as 4 units, and a table lookup—including the SRAM
+fetch and a small interpolation step—is counted as 6 units.
+First, comparing complexity across NWD training methods
+confirms that target-specific training uses fewer weights and
+reduces decoding complexity by 18% while achieving a lower
+11
+TABLE I
+COMPLEXITY COMPARISON OF WINDOW DECODERS FOR THE SC-LDPC CODE OF (N, M, z, ¯ℓ) = (20, 10, 100, 10),
+WHERE α IS THE COMPARISON COUNT FOR EACH CN (I.E., α = dc + ⌈logdc⌉−2 FOR THE CN DEGREE dc [47])
+Complexity per protograph
+Total Complexity
+(A + C + 0.3S
++4W + 6T )z
+Number
+of
+weights
+FER
+@ 2.5 dB
+BLER
+@ 3.0 dB
+Addition
+A = 2E¯ℓ
+Comparison
+C = αM ¯ℓ
+Sign mul.
+S = 2E¯ℓ
+Weight mul.
+W = E¯ℓ
+LUT
+T = 2E¯ℓ
+WDBP
+1080
+0
+1080
+0
+1080
+788400 (+89%)
+0
+2.74E-03
+3.91E-07
+WD
+1080
+610
+1080
+540
+0
+417400 (-)
+1
+9.25E-03
+4.98E-07
+NWD (all)
+1080
+610
+1080
+540
+0
+417400 (-)
+100
+4.04E-03
+4.32E-07
+NWD (target)
+888
+498
+888
+444
+0
+342840 (-18%)
+84
+2.56E-03
+3.33E-07
+NWD, R = 25
+592
+326
+592
+296
+0
+227960 (-45%)
+59
+9.20E-03
+2.71E-06
+Adaptive NWD
+888
+498
+888
+444
+0
+342840 (-18%)
+168
+2.56E-03
+2.18E-07
+FER. Remarkably, the NWD (target) achieves a threefold
+reduction in FER even at lower complexity than the WD.
+Furthermore, the NWD (target) even outperforms BP window
+decoding, despite its significantly lower complexity. The only
+overhead incurred by the neural decoder is memory for weight
+storage. With protograph CN sharing, the required weight
+count is MW × ¯ℓ= 100, and target-specific training further
+reduces it to 84.
+Next, applying a neural non-uniform schedule with R = 25
+reduces the complexity by 45% and the number of weights
+to 59 while maintaining similar FER to the WD. Finally,
+the adaptive NWD designed to mitigate EP maintains the
+same decoding complexity as the plain NWD, since the error
+detection process requires no additional operations. The only
+additional cost is the memory required to store the EP-resilient
+weight set, which increases the number of stored weights to
+84 × 2 = 168. Consequently, the adaptive NWD achieves
+a 35% reduction in BLER compared with the NWD with
+negligible resource overhead.
+VII. CONCLUSION
+In this paper, we presented the first neural decoder for
+SC-LDPC codes, named NWD, which achieves improved
+decoding performance with reduced complexity. The NWD
+employs a target-specific training approach that significantly
+decreases the number of trainable weights, thereby lowering
+both decoding complexity and memory requirements and
+consequently improving decoding performance. Furthermore,
+we proposed a neural non-uniform schedule derived from the
+training results, which maintains performance comparable to
+the WD while reducing decoding complexity by 45%. In
+addition, an adaptive version of NWD was introduced, which
+dynamically selects the appropriate weight set based on the
+status of the previous block. This adaptive mechanism reduces
+both EP probability and BLER without modifying the original
+code or decoder architecture.
+Overall, the proposed methods are hardware-friendly and
+introduce negligible runtime overhead, as they only require
+loading trained weights into an existing decoder. From the
+perspective of training complexity, the NWD can be efficiently
+trained with a small window configuration and subsequently
+applied to decode practical, long SC-LDPC codes. These
+advantages suggest that the NWD can enhance the overall
+performance of SC-LDPC codes and expand their applicability
+in practical communication systems.
+REFERENCES
+[1] H. He, C.-K. Wen, S. Jin, and G. Y. Li, “Deep learning-based channel
+estimation for beamspace mmWave massive MIMO systems,” IEEE
+Wireless Commun. Lett., vol. 7, no. 5, pp. 852–855, Oct. 2018.
+[2] T. O’Shea and J. Hoydis, “An introduction to deep learning for the
+physical layer,” IEEE Trans. Cognitive Commun. Netw., vol. 3, no. 4,
+pp. 563–575, Dec. 2017.
+[3] K. Muah, R. Fritschek, and R. F. Schaefer, “Learning end-to-end channel
+coding with diffusion models,” in 26th International ITG Workshop on
+Smart Antennas and 13th Conference on Systems, Communications, and
+Coding (WSA & SCC 2023), 2023, pp. 1–6.
+[4] W. R. Caid and R. W. Means, “Neural network error correcting decoders
+for block and convolutional codes,” in Proc. IEEE Global Telecommu-
+nications Conference and Exhibition (GLOBECOM), 1990, pp. 1028–
+1031.
+[5] L. G. Tallini and P. Cull, “Neural nets for decoding error-correcting
+codes,” in Proc. IEEE Tech. Appl. Conf. Workshops, 1995, pp. 89.
+[6] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-
+based channel decoding,” in Proc. Annu. Conf. Inf. Sci. Syst. (CISS),
+2017, pp. 1–6.
+[7] T. Matsumine, and O. Hideki, “Recent advances in deep learning for
+channel coding: A survey,” in IEEE Open Journal of the Communica-
+tions Society, Oct. 2024, pp. 6443–6481.
+[8] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun.,
+Control, Comput., Sep. 2016, pp. 341–346.
+[9] E. Nachmani, and L. Wolf, “Hyper-graph-network decoders for block
+codes,” Advances in Neural Information Processing Systems, vol. 32,
+2019.
+[10] I. Be’ery, N. Raviv, T. Raviv, and Y. Be’ery, “Active deep decoding of
+linear codes,” IEEE Trans. Commun., vol. 68, no. 2, pp. 728–736, 2020.
+[11] A. Buchberger, C. Hager, H. D. Pfister, L. Schmalen, and A. Graell
+I Amat, “Pruning and quantizing neural belief propagation decoders,”
+IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1957–1966, 2020.
+[12] H. Y. Kwak, D. Y. Yun, Y. Kim, S. H. Kim, and J. S. No, “Boosting
+Learning for LDPC Codes to Improve the Error-Floor Performance,”
+Advances in Neural Information Processing Systems (NeurIPS), vol. 36,
+2024.
+[13] H. Y. Kwak, D. Y. Yun, Y. Kim, S. H. Kim, and J. S. No, “Boosted
+Neural Decoders: Achieving Extreme Reliability of LDPC Codes for 6G
+Networks,” IEEE J. Sel. Areas Commun., vol. 43, no. 4, pp. 1089–1102,
+2025.
+[14] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding
+of linear block codes,” 2017, arXiv:1702.07560.
+[15] M. Lian, F. Carpi, C. H¨ager, and H. D. Pfister, “Learned belief-
+propagation decoding with simple scaling and SNR adaptation,” in Proc.
+IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2019, pp. 161–165.
+[16] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning
+to decode protograph LDPC codes,” IEEE Journal on Selected Areas in
+Communications, vol. 39, no. 7, pp. 1983–1999, May 2021.
+[17] L. Wang, C. Terrill, D. Divsalar, and R. D. Wesel, “LDPC decoding
+with degree-specific neural message weights and RCQ decoding,” IEEE
+Trans. Commun., vol. 72, no. 4, pp. 1912–1924, Apr. 2024.
+[18] X. Chen and M. Ye, “Cyclically equivariant neural decoders for cyclic
+codes,” in Proc. International Conference on Machine Learning (ICML),
+2021.
+[19] N. Shah and Y. Vasavada, “Neural layered decoding of 5G LDPC codes,”
+IEEE Commun. Lett., vol. 25, no. 11, pp. 3590–3593, 2021.
+12
+[20] H. Y. Kwak, J. W. Kim, Y. Kim, S. H. Kim, and J. S. No, “Neural Min-
+Sum Decoding for Generalized LDPC Codes,” IEEE Commun. Lett.,
+vol. 26, no. 12, pp. 2841–2845, 2022.
+[21] W. Xu, X. Tan, Y. Be’ery, Y. L. Ueng, Y. Huang, X. You, and C. Zhang,
+“Deep learning-aided belief propagation decoder for polar codes,” IEEE
+Journal on Emerging and Selected Topics in Circuits and Systems,
+vol. 10, no. 2, pp. 189–203, 2020.
+[22] A. Jim´enez Felstr¨om and K. S. Zigangirov, “Time-varying periodic
+convolutional codes with low-density parity-check matrix,” IEEE Trans.
+Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[23] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation
+via spatial coupling: why convolutional LDPC ensembles perform so
+well over the BEC,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 803–
+834, Feb. 2011.
+[24] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli,
+and G. E. Corazza, “Windowed decoding of protograph-based LDPC
+convolutional codes over erasure channels,” IEEE Trans. Inf. Theory,
+vol. 58, no. 4, pp. 2303–2320, Apr. 2012.
+[25] H. Y. Kwak, J. W. Kim, H. Park, and J. S. No, “Optimization of SC-
+LDPC codes for window decoding with target window sizes,” IEEE
+Trans. Commun., vol. 70, no. 5, pp. 2924–2938, 2022.
+[26] N. UI Hassan, A. E. Pusane, M. Lentmaier, G. P. Fettweis, and
+D. J. Costello, Jr., “Non-uniform window decoding schedules for spa-
+tially coupled LDPC codes,” IEEE Trans. Commun., vol. 65, no. 2,
+pp. 501–510, Feb. 2017.
+[27] K. Klaiber, S. Cammerer, L. Schmalen, and S. ten Brink, “Avoiding
+burst-like error patterns in windowed decoding of spatially coupled
+LDPC codes,” in Proc. IEEE 10th Int. Symp. on Turbo Codes & Iterative
+Inf. Processing, Dec. 2018, pp. 1–5.
+[28] O. Griebel, B. Hammoud and N. Wehn, “Adaptive Sliding Window
+Decoding of Spatially Coupled LDPC Codes: Algorithms and Energy-
+Efficient Implementations,” in IEEE Access, Dec. 2024, pp. 191140–
+191161.
+[29] M. Zhu, D. G. M. Mitchell, M. Lentmaier, D. J. Costello, Jr., and B. Bai,
+“Error propagation mitigation in sliding window decoding of spatially
+coupled LDPC codes,” IEEE Journal on Selected Areas in Information
+Theory, pp. 470–486, Sep. 2023.
+[30] M. Zhu, D. G. M. Mitchell, M. Lentmaier, D. J. Costello, Jr., and B. Bai,
+“Combating error propagation in window decoding of braided convolu-
+tional codes,” in Proc. IEEE International Symposium on Information
+Theory (ISIT), Jun. 2018, pp. 1380–1384.
+[31] M. Zhu, D. G. M. Mitchell, M. Lentmaier, D. J. Costello, Jr., and B. Bai,
+“Error propagation mitigation in sliding window decoding of braided
+convolutional codes,” IEEE Trans. Commun., vol. 68, no. 11, pp. 6683–
+6698, Nov. 2020.
+[32] D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, Jr., “Spatially
+coupled LDPC codes constructed from protographs,” IEEE Trans. Inf.
+Theory, vol. 61, no. 9, pp. 4866–4889, Jul. 2015.
+[33] E. Sharon, N. Presman, and S. Litsyn, “Convergence analysis of gener-
+alized serial message-passing schedules,” IEEE J. Sel. Areas Commun.,
+vol. 27, no. 6, pp. 1013–1024, Aug. 2009.
+[34] G. Elidan, I. McGraw, and D. Koller. (Jul. 2006), “Residual belief
+propagation: Informed scheduling for asynchronous message passing,”
+[Online]. Available: https://arxiv.org/abs/1206.6837
+[35] A. I. V. Casado, M. Griot, and R. D. Wesel, “LDPC decoders with
+informed dynamic scheduling,” IEEE Trans. Commun., vol. 58, no. 12,
+pp. 3470–3479, Dec. 2010.
+[36] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and
+Y. Be’ery, “Deep learning methods for improved decoding of linear
+codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131,
+Feb. 2018.
+[37] D. Kingma, and J. Ba, “Adam: A method for stochastic optimization,”
+arXiv preprint arXiv:1412.6980, 2014
+[38] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu,
+“Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun.,
+vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[39] X. Xiao, N. Raveendran, B. Vasic, S. Lin, and R. Tandon, “FAID
+diversity via neural networks,” in Proc. 11th Int. Symp. Topics Coding
+(ISTC), Aug. 2021, pp. 1–5.
+[40] K. Huang, D. G. M. Mitchell, L. Wei, X. Ma, and D. J. Costello, Jr.,
+“Performance comparison of LDPC block and spatially coupled codes
+over GF(q),” IEEE Trans. Commun., vol. 63, no. 3, pp. 592–604, Mar.
+2015.
+[41] Z. He, Z. Xie, Q. Zhu, and Z. Qin, “Sparse double descent: Where
+network pruning aggravates overfitting,” in Proc. Int. Conf. Mach. Learn.
+(ICML), Jun. 2022, pp. 8635–8659.
+[42] M. Fossorier, R. Palanki, and J. Yedidia, “Iterative decoding of multi-
+step majority logic decodable codes,” in Proc. Int. Symp. on Turbo Codes
+and Related Topics, 2003, pp. 125–132.
+[43] J. H. Friedman, T. Hastie, and R. Tibshirani, “Regularization paths for
+generalized linear models via coordinate descent,” Journal of Statistical
+Software, vol. 33, no. 1, pp. 1–22, Feb. 2010.
+[44] S. Han, X. Liu, H. Mao, J. Pu, A. Pedram, M. A. Horowitz, and
+W. J. Dally, “EIE: Efficient inference engine on compressed deep neural
+network,” ACM SIGARCH Computer Architecture News, vol. 44, no. 3,
+pp. 243–254, 2016
+[45] Intel Corporation, Intel 64 and IA-32 Architectures Software Developer’s
+Manual, Vol. 3B: System Programming Guide, Part 2, May 2011.
+[46] A. Abel and J. Reineke, “uops.info: Characterizing latency, throughput,
+and port usage of instructions on Intel microarchitectures,” in Proc.
+24th Int. Conf. Archit. Support Program. Lang. Oper. Syst. (ASPLOS),
+Providence, RI, USA, 2019, pp. 673–686.
+[47] W. Ryan and S. Lin, Channel Codes: Classical and Modern, Cambridge
+University Press, 2009.

@@ -1,0 +1,2706 @@
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+1373
+
+High-Throughput Multi-Core LDPC Decoders Based on x86 Processor
+
+Bertrand Le Gal and Christophe Jego
+
+Abstract—Low-Density Parity-Check (LDPC) codes are an efficient way to correct transmission errors in digital communication systems. Although initially targeting strictly to ASICs due to computation complexity, LDPC decoders have been recently ported to multicore and many-core systems. Most works focused on taking advantage of GPU devices. In this paper, we propose an alternative solution based on a layered OMS/NMS LDPC decoding algorithm that can be efficiently implemented on a multi-core device using Single Instruction Multiple Data (SIMD) and Single Program Multiple Data (SPMD) programming models. Several experimentations were performed on a x86 processor target. Throughputs up to 170 Mbps were achieved on a single core of an INTEL Core i7 processor when executing 20 layered-based decoding iterations. Throughputs reaches up to 560 Mbps on four INTEL Core-i7 cores. Experimentation results show that the proposed implementations achieved similar BER correction performance than previous works. Moreover, much higher throughputs have been achieved by comparison with all previous GPU and CPU works. They range from x1.4 to x8 by comparison with recent GPU works.
+Index Terms—LDPC decoding, software decoders, SIMD architecture, x86 processor, GPU, throughput, software define radio (SDR)
+Ç
+
+1 INTRODUCTION
+
+LOW-DENSITY Parity-Check codes [1] have become one of the most popular forward error correction code family that can achieve performance close to the channel capacity on a variety of transmission channel models. They were adopted in digital communication standards: WiFi (IEEE 802.11n), WiMax (IEEE 802.16e) and Digital Video Broadcasting (e.g. DVB-SX2 released in 2014). However, the drawback of high correcting efficiency comes from its decoding computation complexity. However, in recent years, many researchers have proposed some be implemented of LDPC decoders in software on multi-core or many-core devices to meet for instance, Software Defined Radio (SDR) flexibility requirements.
+Indeed, during the last decade, a modification of the computation models of software programmed devices was observed. Progress in terms of performance previously obtained by increasing clock frequencies has reached a limit. To hold this increase in performance, other techniques based on parallel processing were investigated e.g. Single Instruction Multiple Data (SIMD), Single Program Multiple Data (SPMD) and Single Instruction Multiple Threads (SIMT). These techniques are widely integrated in current processor and GPU devices. Mapping a real application onto these targets is challenging and constraints the algorithm selection.
+Pure software decoders for LDPC codes was widely studied during the last five years on multi/many-core devices due to its inherent parallel computations. However,
+
+researchers have first mainly focused on a flooding-based decoding algorithm that is not the most efficient one from the decoding performance point of view. Second, most efforts were spend on GPU devices that is not the most efficient target for LDPC decoding.
+The main contribution of our work is the following: we propose a way to efficiently implement a software LDPC decoder using both SIMD and multi-core programming models. Proposed SSE/AVX2 [2] decoders enable the support of any kind of LDPC codes and provides high throughput performance. A large set of experiments were performed to characterize the LDPC decoders and compare them to previous works. Speedup factors reach from Â5 up to Â12 were obtained compared to recent x86 CPU decoders and speedup factors from Â1:4 up to Â8 were achieved by comparison with to latests GPU works. High performance comes from the decoding algorithm choice, the H matrix transformations, the algorithmic source code optimization and the highly efficient implementation of CN computation kernels.
+The rest of the paper is organized as follow. Section 2 details the different algorithms and schedules proposed in the literature to decode LDPC codes. Section 3 introduces an exhaustive list of the related works. The mapping of the layered-based algorithm and the proposed optimizations are detailed in Section 4. Finally, the decoder efficiency is validated in Section 5.
+2 LDPC DECODING ALGORITHM
+
+ The authors are with the IMS Lab., Univ. Bordeaux, Bordeaux INP, CNRS UMR 5218, 351 cours de la liberation, 33400, Talence, France.
+E-mail: bertrand.legal@ims-bordeaux.fr,christophe.jego@enseirb-matmeca.fr.
+
+LDPC codes were originally proposed by Robert Gallager in 1962 [1] and were rediscovered by Mackay and Neal in 1996 [3]. An LDPC code is a linear block code defined by a binary
+
+Manuscript received 2 Sept. 2014; revised 13 May 2015; accepted 18 May sparse parity-check matrix called H. In the H matrix, ðn À kÞ
+
+2015. Date of publication 19 May 2015; date of current version 13 Apr. 2016. rows are associated to parity-check informations (CNy) and
+
+Recommended for acceptance by M. Acacio. For information on obtaining reprints of this article, please send e-mail to: reprints@ieee.org, and reference the Digital Object Identifier below.
+
+n columns represent received bit-node informations (VNx) with n the codeword length, k the number of information
+
+Digital Object Identifier no. 10.1109/TPDS.2015.2435787
+
+bits and ðn À kÞ the number of redundant bits. The number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1045-9219 ß 2015 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+1374
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+Fig. 1. Tanner graph representation.
+
+(OMS) and Normalized Min-Sum (NMS), provided in
+
+Equations (4) and (5), respectively. In Equations (4) and
+
+(5),  2 ½0; 1 is the offset factor and  2 ½0; 1 is the normal-
+
+ized one. These approximations: (i) drastically reduce the
+
+computation complexity of the decoding algorithm and (ii)
+
+provide negligible BER performance impacts [6],
+
+Lmi n
+
+¼
+
+ min
+ðn0 2CðmÞ=nÞ
+
+Lnði0Àm1Þ
+
+(3)
+
+of one elements in a row is defined as the row weight dcðxÞ. Similarly, the number of one elements in a column is the column weight named dvðxÞ. An LDPC code is regular if degrees dc and dv are the same for all columns and rows. A Tanner graph is also used to represent an LDPC code. As shown in Fig. 1, a Tanner graph is a bipartite graph with
+
+Lmi n
+
+¼
+
+ max min
+ðn0 2CðmÞ=nÞ
+
+Lðni0Àm1Þ
+
+À
+
+;
+
+ 0
+
+(4)
+
+Limn
+
+¼
+
+
+
+Â
+
+ min
+ðn02CðmÞ=nÞ
+
+Lðni0Àm1Þ:
+
+(5)
+
+bit nodes (VN) on one side and check nodes (CN) on the
+
+other side. For each one, at position ðy; xÞ in the H matrix,
+
+The classical scheduling for CN and VN computations
+
+an edge connects CNy and VNx in the Tanner graph. During is called the Flooding scheduling. This message passing
+
+an LDPC decoding process, n VN elements are associated to scheduling consists in an iterative process composed of four
+
+a codeword while n À k CN are executed to check the cor- different stages. A formalized description of the Flooding-
+
+rectness of the received frame. An iterative message passing based scheduling using the Min-Sum approximation can be
+
+algorithm is applied to decode LDPC codes. During the found in [7]. The flooding scheduling exhibits high compu-
+
+decoding process, messages are exchanged along the bipar- tation parallelisms. They come from the fact that there are
+
+tite graph edges.
+
+not data dependencies between CN and VN computation
+
+The Sum-Product Algorithm [4], called SPA is the most kernels. This characteristic makes flooding scheduling suit-
+
+efficient algorithm in terms of BER performance to decode able for parallel implementations. This is the main reason
+
+LDPC codes. In practices, this computation approach pro- why this scheduling was applied in most of previous works.
+
+cesses channel inputs (VN values) in the Log-Likelihood
+
+Efficient layered-based scheduling was proposed in the
+
+Ratio (LLR) domain. Computations associated to the CNs literature. Indeed, the parity check matrix can be viewed as
+
+(computations of messages from CN to VN set (Lmi n) according to received messages from VN to CN set (Lni m) in the
+Tanner Graph are the more complex ones. They update
+
+layered graph that can be sequentially decoded. Decoder iteration is then split into sublayer iterations. The layered scheduling also called Turbo-Decoding Message-Passing
+
+the messages for VN nodes according to the received mes- (TDMP) algorithms enable the decoding convergence to
+
+sages. Equations (1) and (2) detail the calculation of the sign speed-up by a factor of two. A layered-based scheduling
+
+and the magnitude of each message. In this Equation, Limn is the ith message from CNm to VNn; Lni m is the ith message
+
+from VNn to CNm; En is the information received by the
+
+decoder and then updated during the decoding iterations ;
+
+CðxÞ is the set of CN connected to VNx; CðxÞ=y is the set of
+
+CN connected to VNx, except y.
+
+2
+
+3
+
+Y signðLimnÞ ¼ 4
+
+signðLðnt0Àm1ÞÞ5
+
+(1)
+
+ðn0 2CðmÞ=nÞ
+
+called horizontal-layered scheduling was presented in [29]. In this study, we focused on the horizontal-layered scheduling that is less complex than a vertical layered one [30].
+A formalization of the TDMP scheduling using the MinSum approximation is provided in Algorithm 1. TDMP scheduling merges the two processing kernels of floodingbased approach (one for CN processing and the other one for VN processing) into a single one (kernel 2 in Algorithm 1). The resulting kernel is said to be CN centric. During a kernel 2 iteration, the overall computations
+
+2
+
+3
+
+jLmi nj
+
+¼
+
+2:
+
+Y tanhÀ14
+n0 2CðmÞ=n
+
+tanh
+
+jLnði0Àm1Þj5: 2
+
+required to evaluate a CN and the up-to-date of its linked
+
+VNs are performed together.
+
+(2)
+
+From an algorithmic point of view, TDMP scheduling
+
+has some advantages by comparison with the flooding one
+
+[31]. First, the decoding iteration number required to
+
+A simplified SPA approach, called log-SPA was pro- achieve similar correction performance is divided by two
+
+posed to simplify the CN computation complexity. It ena- [29]. So, the number of memory accesses and the computa-
+
+bles to do the CN computations in the logarithmic domain. tion complexity are also divided by two. Second, TDMP
+
+By this way, the multiplication and the division operations algorithm reduces by about 40 percent the memory foot-
+
+are removed. However, the complexity increases due to print (MF) [29]. Indeed, in TDMP algorithm, the Lnm mes-
+
+transcendental function requirements.
+
+sages are not stored in memory, they are computed on the
+
+To ease software and hardware implementations, an fly during the decoding process.
+
+approximation of Equation 2 named Min-Sum (MS) was These characteristics make this approach popular for a
+
+proposed in [5]. It removes log and tanh functions as VLSI decoder design [32], [33]. However, TDMP scheduling
+
+shown in Equation (3). However, MS computation affects is not drawback free. Flooding-based scheduling enables
+
+the correction performance. To solve this issue, optimized a fully parallel execution of computations involved in hori-
+
+approximations were proposed in [6]; Offset Min-Sum zontal and vertical kernels due to the absence of data
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1375
+
+dependencies. In TDMP scheduling, there exist data dependencies between consecutive kernel iterations. Irregular parallelism of TDMP scheduling has mainly discarded them from previous studies [8], [25], [34].
+
+Algorithm 1. Horizontal TDMP Min-Sum algorithm
+
+1: Kernel 1: Initialization
+
+2: for all m 2 C; n 2 CðmÞ do 3: Lmð0nÞ ¼ 0
+4: end for
+
+5: " Process iter max decoding iterations
+
+6: for all t ¼ 1 ! ðiter maxÞ do
+
+7: Kernel 2: For each check node in the code
+
+8: for all m 2 C do
+
+9: " Compute Lnm message
+
+10: for all n 2 CðmÞ do
+
+11:
+
+LðntmÞ ¼ En À LmðtÀn1Þ
+
+12: end for
+
+13: " Compute Lmn message
+
+14: 15:
+
+forsiaglnlðnL2mt nhCÞ ð¼mhÞQdðon0
+
+2CðmÞ=nÞ
+
+siginðLnðt0Þm
+
+i Þ
+
+16:
+
+jLmt nj ¼ minðn02CðmÞ=nÞjLðnt0Þmj
+
+17: end for
+
+18: " Immediately update En
+
+19: for all n 2 CðmÞ do
+
+20:
+
+En ¼ Lnt m þ Ltmn
+
+21: end for
+
+22: end for
+
+23: end for
+
+24: Kernel 3: Hard decision
+
+25: for all n2 V do
+
+26:
+
+c^n ¼
+
+0 if En 0 1 if En > 0
+
+27: end for
+
+based decoders achieve up to hundreds of Mbps when executing 50 flooding-based decoding iterations. These high throughputs are unbalanced by the low-correction performance that was achieved. Indeed, the reduction of decoding iteration number enables to decrease the computation complexity but also deteriorates the code correction power. In most related works the real-time throughput requirement is met when the number of decoding iteration is quite low (e.g. limited to 10 as in [21]). In Table 1, normalized throughput for the different works are provided. It corresponds to the performance that was reached when the decoder processes 50 flooding-based decoding iterations. Many authors provide interesting information concerning the performance bottlenecks. For example, Wang et al. [15] has demonstrated that the bottleneck of the LDPC decoder on GPU is due to the device slow memory accesses. Thus, many authors used LDPC complex decoding variants (e.g. SPA) to hide memory access latencies. However from a functional point of view the correction performance is similar.
+The previous works have only focused on mapping and optimizing the flooding-based scheduling on multi-core or many-core devices. Throughputs achieved by the proposed approaches are under real-time requirements for a sufficient set of decoding iterations (!30 iterations). Moreover, depending on the structure of the LDPC code (regular or irregular, QC or unstructured), throughputs achievable are highly impacted.
+For these reasons, we have considered the Horizontal TDMP algorithm. Proposed approach that explores interframe parallelism provides flexibility and quite constant throughput level independently of the LDPC code. These claims and the decoder high-efficiencies will be discussed in the experiment section.
+
+4 TDMP ALGORITHM MAPPING
+
+3 RELATED WORKS
+
+An efficient implementation of a TDMP algorithm onto a
+
+Many recent works have focused on mapping LDPC decoders onto multi-core and many-core devices. Work objectives were to achieve high or real-time decoding throughputs for different kinds of LDPC codes: short or long frame lengths, regular or irregular codes, etc. However, for some of those, high throughput performance was obtained on expensive GPU devices such as NVIDIA Tesla C2050 [11], NVIDIA Titan [21] or ATI HD5870 [18]. To achieve high-throughput performance, related works have focused on improving the mapping of such decoding algorithm onto devices using different optimization schemes such as data packing methods, memory coalescing techniques [12] or decoder stopping criteria [19].
+Table 1 summarizes the previous works. It shows that a
+
+parallel architecture is a very challenging task. Indeed, TDMP algorithm has some characteristics that make it inefficient onto programmable devices: (i) the ratio number of computations / number of memory accesses is low; (ii) the data reusing between consecutive computations is quite low; (iii) it requires a large set of memory accesses; and (iv) a large set of memory accesses are irregulars due to the H matrix structure. To achieve high-throughput onto multicore devices, TDMP algorithm description has to be adapted to efficiently take advantage of the different parallelism levels offered by the device architecture. In this section, the selected multi-core architecture is first presented. Then, the algorithmic transformations that are applied, are detailed.
+
+large set of GPU-based works are optimized for Quasi-
+
+Cyclic LDPC codes [9], [13], [15], [20], [21], [27] or regular 4.1 Selected Multi-Core Architectures
+
+LDPC codes. Applying these LDPC decoders on other kind In this study, we focused on x86 processors that are now
+
+of codes e.g. unstructured one can involve some important multi-core architectures. x86 processors were mainly
+
+performance degradations as mentioned in [15]. Some other designed to support general purpose computations. Intel
+
+approaches provide more flexibility degrees, however, their Core-i7 processors are composed of 14 to 19 pipeline stages
+
+decoding throughputs are lowers.
+
+for the instructions. They work at high clock frequencies. To
+
+Depending on the LDPC code structures, the optimiza- limit the impact of the mass memory latency, multi-level
+
+tion set and the decoding algorithms, some of the GPU- caches were introduced. These cache levels reduce memory
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1376
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+TABLE 1 Comparison of Many-Core and Multi-Core LDPC Decoders-Throughput (T/P) at 50 Flooding Iterations
+
+Work
+[8] [9] [10] [11] [12] [13] [14] [15] [16] [17] [18] [19] [20] [21] [22] [23] [7]
+[24] [25] [12]
+[12] [20] [26] [27]
+[28]
+
+Year
+2009 2010 2011 2011 2011 2011 2011 2011 2011 2011 2012 2012 2012 2013 2013 2014 2014
+2011 2011 2011
+2011 2012 2013 2013
+2013
+
+Target
+GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU GPU
+CELL/BE CELL/BE CELL/BE
+x86 x86 x86 x86
+ARM
+
+Device
+8800 GTX Tesla C1060 Tesla C1060 Fermi C2050 8800 GTX
+GTX-285 Tesla C1060
+GTX 470 GTX 470 8800 GT ATI HD5870 GTX 480 Tesla C2050 GTX TITAN GTX 580 GTX 660 Ti GTX 660
+À À À
+Xeon E5530 Core i7-950 Core i7-3960 Core i7-2600K
+Cortex-A9
+
+Code
+Reg. & Unstr. Reg. & Unstr. Reg. & Unstr.
+Irr. & QC Reg. & Unstr.
+any Irr. & Unstr.
+Irr. & QC Irr. & QC Reg. & Unstr. Irr. & Unstr. Reg. & QC Irr. & QC Irr. & QC Irr. & QC
+any any
+Irr. & QC Irr. & QC Reg. & Unstr.
+Reg. & Unstr. Irr. & QC Reg. & QC Irr. & QC
+Irr. & QC
+
+Schedule
+flooding flooding flooding flooding flooding flooding flooding flooding flooding flooding flooding flooding flooding flooding layered flooding layered
+flooding flooding flooding
+flooding flooding flooding layered
+flooding
+
+y Authors did not include the memory data transfer times between host and GPU devices.
+
+Heuristic
+SP LSPA LSPA
+MS SPA SPA SP MS LSPA SP MS LSPA MS MS NMS SP OMS
+OMS MS SPA
+SPA MS NMS OMS
+MS
+
+Data f.
+float float float fixed fixed float float float float float fixed float fixed float fixed fixed fixed
+fixed fixed fixed
+fixed fixed fixed fixed
+fixed
+
+Early T.
+no no no no no yes no yes no no no yes no can no yes yes
+no no no
+no no no no
+no
+
+Normalized T/P
+% 0:08 % 0:47 % 0:88 % 44:5 % 10:1 % 1:7
+À % 10:4 % 9:6 % 0:001 % 41:8 % 4:9 % 79:5 % 63:2 % 142 % 105 % 254 y
+% 3:9 % 16 % 14:3
+% 2:55 % 18:8 % 19 % 11:2
+% 1:4
+
+latencies when a data set is frequently reused or when data processing threads. Efficient implementations onto such
+
+prefetching can be applied. However, cache efficiency kind of architecture that provides SIMD and SPMD capa-
+
+decreases for applications that require a large set of data. bilities at the same time are challenging. Indeed, to reach
+
+Indeed, cache sizes are quite small. For instance, the latest high performance, designers have to reduce the number
+
+Intel Core-i7 CPUs have 64 KB L1 cache, 256 KB L2 cache of instructions executed by the processor to efficiency
+
+and ! 6 MB L3 cache.
+
+manage memory caches and to increase the usage rate of
+
+To improve the processing performance of video and SIMD units. In the next sections, we detailed the different
+
+signal processing applications, Intel processors have SIMD parallelism levels of the TDMP algorithm. Then the
+
+instruction sets. Intel SIMD instructions [2] enable to implementation choices and the applied optimizations
+
+simultaneously perform the same operation on multiple are detailed. data. In the most advantageous cases, SIMD computation
+
+model performs up to 16 or 32 computations in parallel. Sixteen computations are processed in parallel for processors that supports the SSE instruction set and up to 32 for processors that supports the AVX instruction set. These performance levels are reached when data set representation is 8-bit signed or 8-bit unsigned. However, using SIMD feature is not always easy and cost-free due to the algorithm computation scheduling and/or the data alignment in the memory.
+Moreover, current GPPs contain several processor cores into a single chip. For instance, Intel currently integrates up to six processor cores in its fourth generation of
+
+4.2 Parallelism Levels in the TDMP Algorithm
+To achieve high-throughput performance onto programmable targets, a software LDPC decoder has to exploit computation parallelism for taking advantage of multi-core architectures. Different parallelism levels are present in a TDMP algorithm.
+First parallelism level is located inside the CN computations (Algorithm 1, loops located at lines 10, 14 and 19). Similar computations are executed: on incoming messages to compute LnðtmÞ values, to generate outgoing messages (Lmn computations) and to update associated VN values (En
+
+Core-i7 processors. Multiple cores enable the SPMD computations). It is possible to execute in parallel such com-
+
+approach. However, the performance of n core architec- putations. However, this atomic parallelism level is hard to
+
+ture is not multiplied by n. This lower speed-up is mainly exploit and may be inefficient. This is mainly due to the low
+
+due to two properties. From an architectural point of complexity of the computations and the low computation
+
+view, the n cores share the same memory caches. More- parallelism. Indeed CN degrees are usually lower than
+
+over, from a software point of view, synchronization bar- SIMD capacity.
+
+riers are required to synchronize the processing threads.
+
+Second parallelism level is located at CN level. CN compu-
+
+Thus, data information can be exchanged between the tations can be theoretically done in parallel (Algorithm 1,
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1377
+
+line 8). However, unlike a flooding-based scheduling,
+
+a parallelism constraint exists in TDMP one. Two CN com-
+
+putations can be done in parallel only if there is no data
+
+dependency. Thus, a CN parallelism is difficult to explore
+
+and make this approach inefficient (except for QC LDPC
+
+codes under certain conditions).
+
+Third parallelism level is located at the frame level (com-
+
+plete Algorithm 1 execution). Several consecutive frames can
+
+be simultaneously decoded. Indeed, a same computation
+
+sequence is executed over the different data sets. This
+
+approach provides an efficient parallel processing approach.
+
+But it increases the frame decoding latency and also the memory requirements.
+We have decided to take advantage of massively parallel
+
+Fig. 2. Naive decoder kernel description using constant arrays that are computed off-line to store H matrix information.
+
+devices by computing a set of frames in parallel. This choice
+
+was due to the lack of regularity in CN computations and values because CN degrees are always 256. In practice,
+
+the fact that frame internal parallelism was not applicable the highest observed value is 32 for the IEEE 802.3 LDPC
+
+for unstructured LDPC codes. Contrary to previous works, code. The second one is composed of 16-bit unsigned ele-
+
+that exploited: the intra-frame parallelism only for SIMD ments. Currently, longest LDPC frames contain up to
+
+parallelization and the inter-frame parallelism only for 64,800 VNs. So, VN indices are always in the 16-bit range.
+
+multi-core parallelization [22], [25], [27], we decided to A simplified description of the CN computation kernel
+
+explored only inter-frame parallelism for both SIMD and and the constant arrays are provided in Fig. 2. The total
+
+multi-core parallelization.
+
+memory footprint called D (in bytes) of the floating-point
+
+decoder is given by:
+
+4.3 Basic Implementation of the TDMP Algorithm
+A first implementation of the TDMP decoder was done using the OMS technique and a floating point representa-
+
+D ¼ |4ffl{Âzffln} þ 4|fflfflÂ{zmfflffl} þ |2fflfflÂ{zmfflffl} þ |ðnfflfflffl{Àzfflkfflffl}Þ
+
+(7)
+
+p1
+
+p2
+
+p3
+
+p4
+
+tion. This decoder requires two memory arrays to store both LðntmÞ and En values. Memory footprint of the decoder equals to ðn þ mÞ floating point elements with n the frame length and m the number of messages (one values in the H matrix). The memory amount is 40 percent lower to one required by
+the flooding-based algorithm. Indeed, TDMP algorithms
+
+with n the frame length, m the number of messages and ðn À kÞ the number of CNs. In Equation (7), p1 represents the VN memory footprint, p2 the message memory footprint, p3 the VN indices array footprint and finally p4 the degree array footprint.
+
+removes the storage of VN-to-CN messages. TDMP is CN centric, thus CNs are executed sequentially,
+
+4.4 Data Representation Optimization
+
+Naive implementation of the LDPC decoder can take
+
+0 V0 V1 V2 V3 V4 V5 V6 V71
+
+C0½d0 ¼ 4 1 1 1 1 0 0 0 0
+
+C1½d1 C2½d2 C3½d3
+
+¼ ¼ ¼
+
+3 4 3
+
+BBB@BBB
+
+0 0 1
+
+0 1 0
+
+0 0 0
+
+1 0 1
+
+1 1 0
+
+1 0 0
+
+0 1 1
+
+0 1 0
+
+CCCACCC:
+
+C4½d4 ¼ 4 1 0 1 1 0 0 1 0
+
+advantage of SIMD capabilities. First, floating point representation is memory expensive. Moreover, SIMD units that can perform floating-point computations are more efficient (6) to process fixed-point data. Indeed, they can process four floating-point computations in SSE mode during one clock cycle or 16 8 b fixed-point ones.
+Previous works [32], [33], [35] on hardware design of an LDPC decoder have demonstrated that using a fixed-point
+
+representation instead of floating-point ones has a negligi-
+
+The proposed decoder has to be compliant with all kinds ble impact in terms of decoding performance. Thus, to
+
+of LDPC codes. This flexibility objective discards the VN decrease the memory size and to better map on SIMD units,
+
+position computation at runtime in CN kernel (Algorithm 1, an 8-bit fixed-point representation was selected. This format
+
+loop located at lines 10, 14 and 19). Indeed, contrary to is used to store both the VNs and the message values inside
+
+works that only manage QC LDPC codes, VN indices the decoding process. It enables to reduce the memory foot-
+
+computation is impossible at runtime for unstructured print by about four. Indeed, the LDPC decoder memory
+
+code. Moreover, degrees of CNs are different for irregular footprint can be expressed as:
+
+LDPC codes. Matrix provided in Equation (6) illustrates these features: C3 computation involves fV1; V3; V6g and C0 and C4 that have different degrees d0 ¼ 3 and d4 ¼ 4, respectively. To provide flexibility and to support any
+
+D ¼ |{nz} þ |{mz} þ 2|fflfflÂ{zmfflffl} þ |ðnfflfflffl{Àzfflkfflffl}Þ :
+
+(8)
+
+p1
+
+p2
+
+p3
+
+p4
+
+This reduction of the memory footprint efficiently
+
+kind of LDPC code, we have decided to compute theses decreases the decoder execution time. Indeed, reducing the
+
+constant values off-line and to store them into two con- memory footprint helps in fitting better into fast cache
+
+stant memory arrays. One array stores the CN degrees memories. This parameter is important for x86 devices [36]
+
+and another one stores the VN indices for each CN com- where memory access latency is about four clock cycles for
+
+putation. The first array is composed of 8-bit unsigned L1 cached data, 10 clock cycles for L2, 40 clock cycles for L3
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1378
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+Fig. 4. Program description after row reordering.
+
+4.6 First CN Computation Reordering
+
+Fig. 3. Data interleaving and desinterleaving processes.
+
+Processing q frames increases the memory footprint. However, the number of memory transactions that are now 128b
+
+cached data and more than thousand clock cycles for uncached ones. However, it is important to notice that fixedpoint representation has a slightly negative impact on the decoding complexity. Indeed, some novel operations have to be done in the CN computation kernel to manage the saturation of fixed-point values during the decoding process.
+
+width is still identical. Higher memory footprint of the decoder reduces the memory cache efficiency. The current decoders require to read the CN degree values in the indices array (Fig. 2) before executing each CN computation. Such memory access first increases the memory bandwidth. It pollutes the cache memory with data that might be used once. Moreover, it introduces some latency during the
+
+4.5 SIMD Parallelization
+
+CN decoding.
+
+To take advantage of SIMD properties, the most efficient approach consists in processing different frames in parallel. Processing q frames on a processor with an SIMD parallelism of q enables to achieve a 100 percent usage rate. Indeed, the computations performed by each decoder are exactly the same without branch divergence. However to be fully efficient, VN values coming from the q frames have to be reordered contiguously in memory (q ¼ 16 in SSE mode and q ¼ 32 in AVX mode). Otherwise, VN values have to
+
+A first optimization of the LDPC decoder is obtain by an H matrix transformation. Its objective is to transform an irregular LDPC matrix into a matrix composed of regular sections. Indeed, the degree value is constant for regular LDPC codes. It can then be defined as constant in the decoder description. It enables to remove the requirement of the t deg cn array in the decoder description (Fig. 2, line 1),
+
+be loaded separately from memory and packed in SIMD register before starting the computation. After the decoding process, a similar process has to be perform to save results. These packing and unpacking procedures are time consuming e.g. they necessitate q memory transactions to load VNs in SIMD registers versus only one transaction for 128b contiguous VNs.
+To remove this runtime limitation, a VN value reorder-
+
+0 V0 V1 V2 V3 V4 V5 V6 V71
+
+C0½d0 ¼ 4 1 1 1 1 0 0 0 0
+
+C2½d1 C4½d2 C1½d3
+
+¼ ¼ ¼
+
+4 4 3
+
+BBB@BBB
+
+0 1 0
+
+1 0 0
+
+0 1 0
+
+0 1 1
+
+1 0 1
+
+0 0 1
+
+1 1 0
+
+1 0 0
+
+ACCCCCC:
+
+(10)
+
+C3½d4 ¼ 3 1 0 0 1 0 0 1 0
+
+ing was processed before and after the decoding process as shown in Fig. 3. The LDPC decoder receives 16 frames to decode. Frames are composed of n LLR informations coded using a 8-bit fixed-point representation. SSE instructions such as load and store require 128-bit data width. 8-bit data from the 16 codewords are interleaved to produce a 128-bit aligned memory structure. The 16 first values of each frame are first stored, followed by the 16 next values and so on. Efficient data access during the decoding process is thus obtained. However, after the decoding, decisions have to be also reordered thanks to an inverse transformation. The impact of both transpositions is limited due to the fact that (i) they take advantage of SIMD instructions and (ii) the reordering times are independent of the number of decoding iterations. If many iterations are performed, then the reordering durations become negligible.
+SIMD parallelization of the decoder using q frames increases the decoder memory footprint. Indeed, its value becomes:
+
+Memory accesses at runtime and corresponding t deg cn array, can be removed by reordering the H matrix rows such as presented in Equation (10). Priority function used for row sorting is based on the matrix row degrees. After the transformation, rows at the top have the highest degree. In the H matrix that is in Equation (10), rows fC0; C2; C4g, have a degree of 4 where CN sub-groups bellow have a degree equals to 3.
+Grouping rows according to their degrees enables decoder description optimization. Fig. 4 presents the novel decoder description. The previous loop (Fig. 2, line 12) that processes all the CNs is split into two distinct loops. First loop (Fig. 4, Line 2) processes the three CNs whose degree is equal to 4. The constant value of 4 for CN degree is used to limit the loops (Fig. 2, lines 5 and 6). The second loop (Fig. 2, line 6) processes the two CNs whose degree equals 3. According to the final description, the t deg cn array can now be removed.
+This decoder optimization based on the H matrix row
+
+D ¼ |qfflÂ{zffln} þ q|fflfflÂ{zmfflffl} þ |2fflfflÂ{zmfflffl} þ ð|nfflfflffl{Àzfflkfflffl}Þ :
+
+p1
+
+p2
+
+p3
+
+p4
+
+(9) reordering does not affect the decoding process. Indeed, correction performance is not altered by the computation order of CNs. Memory footprint reduction that is reached
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1379
+
+by using this approach is limited. Indeed, the memory cost CNx computation, the following operations are performed:
+
+of an SIMD decoder becomes:
+
+D ¼ |qfflÂ{zffln} þ |qfflfflÂ{zmfflffl} þ |2fflfflÂ{zmfflffl} :
+
+(11)
+
+p1
+
+p2
+
+p3
+
+However, it enables to reduce the number of memory accesses at runtime. It also reduces the cache pollution and it removes the latency due to the memory accesses at the beginning of each CN processing. Finally, it improves the efficiency of the CN kernel because loop structure can be removed by compiler optimizations e.g. loop unrolling. It is important to notice that for each LDPC code (H matrix), some source codes (e.g. header files containing constants and arrays) have to be generated to provide the optimized version of the matrix.
+
+(i) position x1 of VNx1 in VN array is read from table array; (ii) based on x1 (the VN position) and VN array memory base address in memory, the physical address of VNx1 is computed; and (iii) memory read request to VNx1 is executed. From a memory access point of view, this operation
+sequence is not efficient. Operations involved during the
+VNx1 access introduce a processing latency that impacts the decoder performance. Moreover, this latency cannot be
+hidden because no other computation can be performed
+during this time.
+To reduce the memory latency involved by VNx1 access, we have chosen to precompute the physical memory
+addresses of VN values during the decoder initialization
+step. VN physical addresses are precomputed after the
+vn array memory allocation. Indeed, this vn array memory
+
+4.7 Second CN Computation Reordering
+To improve decoder performance, a second CN reordering is performed. This optimization step focuses on fast VN values reusing between consecutive CN computations. Indeed, reusing VNs as soon as possible between consecu-
+
+is allocated once. So, its physical base address is constant. This transformation enables to directly execute the VN memory load after indexed array read. Such technique removes the clock cycles that are previously spent to compute the physical address computation.
+
+tive CN computations increase cache hits and consequently reduces mass memory access penalties. A first optimization 4.9 Low-Level Optimizations
+
+has grouped the CNs according to their degree. This sec- A last round of optimizations were performed to take
+
+ond CN reordering optimization is executed for each CN advantage of x86 processor features. To achieve highest
+
+groups. CNs with different degrees are not shuffled. Equa- decoding efficiency, we first took advantage of the advanced
+
+tion (12) presents the result of such transformation on the instruction set of the processor (e.g. the SIMD instruction
+
+H matrix provided in Equation (10). Reordering optimiza- set). All kernel computations such as fmin1; min2g computa-
+
+tion swapped rows C2 and C4. This transformations is per- tions were manually optimized using some SIMD intrinsics. formed because C0 and C4 shared three VNs fV0; V2; V3g. SIMD instructions help us to reduce the computation comThus, after C0 execution, fV0; V2; V3g values are in the cache plexity of some operations. For instance, it exists an 8-bit sat-
+
+memory. C4 execution time is then reduced due to the urated addition intrinsic that can be used to replace the availability of data. This technique maximizes the number multiple x86 instructions to perform such saturated addi-
+
+of VN values that are reused during the computation of tion. Finally, we have decided to reduce as far as possible
+
+CNt and CNtþ1,
+
+the number of instruction executions. For instance, loops are unrolled when the number of iterations is constant. Loop
+
+0 V0 V1 V2 V3 V4 V5 V6 V71
+
+C0½d0 ¼ 4 1 1 1 1 0 0 0 0
+
+C4½d4 C2½d2 C1½d1
+
+¼ ¼ ¼
+
+4 4 3
+
+BBBBB@B
+
+1 0 0
+
+0 1 0
+
+1 0 0
+
+1 0 1
+
+0 1 1
+
+0 0 1
+
+1 1 0
+
+0 1 0
+
+CACCCCC:
+
+C3½d3 ¼ 3 1 0 0 1 0 0 1 0
+
+unrolling approach (i) reduces the execution time of the CN kernel (ii) enables the compiler to efficiently allocate the processor registers to store temporary data. Thus, costly stack (12) usage is removed.
+4.10 Multi-Core Assignment Finally, we optimized the TDMP decoder by taking advan-
+
+tage of the multiple cores that are available in the x86 pro-
+
+Approach demonstration is easy on a so simple example. cessors. For multi-core programing, we decided to apply
+
+However, in practice, the LDPC code construction mini- OpenMP directives like in [12], [25]. To avoid synchroniza-
+
+mizes the number of VN reusing to one VN between the tion costs involved by OpenMP [37], the most efficient
+
+overall CN. So, a second reordering criteria based on VN approach consists in the execution of distinct threads.
+
+memory addresses was applied. The objective was to benefit Threads decode different set of frames. In resume, an x86
+
+from hardware cache prefetching that efficiently foresees architecture is composed of P cores that can decode 16 Â P
+
+contiguous memory accesses. A similar technique was pre- frames in parallel in SSE mode and 32 Â P in AVX one.
+
+viously exploited to increase the throughput of GPU
+
+As LDPC decoders compute intensive loop-based kernels
+
+decoders [19].
+
+already optimized thanks to SIMD instruction set, we
+
+4.8 Memory Access Optimization
+
+have applied the #pragma omp parallel section to launch the execution of independent kernels into distinct cores. This
+
+TDMP algorithm requires a large set memory accesses at approach suits simultaneous multi-frame decoding in all
+
+runtime. Non-contiguous memory accesses to VNs are due cores such as explained in [12]. The number of threads allo-
+
+to the H matrix description. These VN accesses are man- cated and executed depends on the multi-core architecture.
+
+aged through indirect memory accesses (indicies array in In this study, four threads are fixed due to the availability of
+
+Fig.
+
+2,
+
+line
+
+3). For example, to access
+Authorized licensed use limited to:
+
+YfiornssteiVUNnivx.1DoinwvnlooalvdeeddoninJunef2o4u,2r02p6 haty1s5i:c3a6:l16cUoTrCesfroimn
+
+the x86
+IEEE Xplore.
+
+device. According
+Restrictions apply.
+
+to
+
+the
+
+1380
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+Fig. 5. BER performance of the proposed decoders compared to related work ones.
+
+OpenMP programming interface, the configuration of this LDPC decoder. The evaluation process executes the decoder
+
+characteristic is straightforward.
+
+during a period of 30 seconds to estimate G. The measure-
+
+ment of the decoding time is then averaged over the whole
+
+5 EXPERIMENTS
+A complete evaluation of the proposed parallel processing LDPC decoders1 was done. This section that details the experiments is composed of two main parts. The first one presents the x86 target experiments performed under various configurations (#iterations, #processor cores, SIMD configuration). The second one gives some performance comparisons between the proposed x86 LDPC decoders and ones from related works (CPU and GPU devices).
+The evaluation platform employed was a MacBook Pro computer that runs OS X 10.10. It is composed of an INTEL Haswell Core-i7 4960HQ CPU. This processor is running at 2:6 GHz, with 6 MB of L3 cache memory and 16 GB of DDR3 running at 1,600 MHz. It is composed of 4 cores that contains each 256 KB of unified L2 cache. L3 cache memory is shared between the four cores. Turbo-boost technology was switched on. Thus the working clock frequency of the processor reaches 3.6 GHz when a single processor core was used and 3.4 GHz when four cores were switched on.
+For all the experiments, a custom framework was used to generate the optimized C source codes (e.g. the constant definition files) according to the corresponding H matrix. These codes were then compiled with the MacOS version of INTEL C++ compiler 14 toolchain. The following compilation flags were provided to the toolchain: -march=native -fast -fopenmp -opt-prefetch -unroll-aggres-
+sive -xCORE-AVX2 -fma. To reduce as far as possible the OS impact during the performance measurement, we first disabled and closed all possible programs and services. Moreover, the x86 LDPC decoders were launched as administrator with the highest task priority (nice -n -20).
+The air throughputs of the decoder called G provided in this section are in Mbps. G corresponds to the throughput of the decoder when it executes the complete decoding pro-
+
+set of decoded frames in order to avoid spurious peak measures. Time measurements used to compute G were first obtained with the get_clocktime API function and confirmed by using the Chrono API from Boost library.
+Prior to these G performance measurements, the behaviour of the LDPC decoders were evaluated. Similar to what was implemented in [7], [33], random information were generated (MKL API), mapped (BPSK) and added to an emulated AWGN channel. BER performance curves for different LDPC codes are provided in Fig. 5. These curves compare performance of our decoders with ones reported in the related works (for ones that provides Eb/N0 curves with BPSK modulation). The number of decoding iterations is divided by two for our decoder when compared to works using a flooding scheduling, identical otherwise. Concerning the decoding variant, we used alternatively the NMS/ OMS decoder releases depending on the BER performance. G of both OMS and NMS decoders are provided in the follow section. Finally, in our case, all LDPC decoders were fixed-point implementations, quantization format is 6 bits for channel values and 8 bits inside the LDPC decoder. The fractional part is stored on 2 bits. Data format were not optimized or tweaked using approach like [32]. All BER points were obtained with at least 100 frame errors.
+This BER curves demonstrate that the implemented x86 LDPC decoder using 8 b fixed-point arithmetic provides performance often better than related works if an equivalent amount of decoding iterations is performed. This efficient performance of fixed-point decoder compared to some floating-point ones mainly comes from the fact that OMS/NMS approaches were preferred to MS one. In conclusion, one can be seen that proposed decoders: (i) efficiently decode LDPC frames; (ii) provides performance similar to related works independently of the decoding algorithm and the data format.
+
+cess: (a) codeword interleaving; (b) i decoding iterations and (c) codeword deinterleaving. It is important highlight 5.1 Experiments for an x86 Processor
+
+that early termination criterion is always switched off. Con- 5.1.1 Single Core Target
+
+sequently, i decoding iterations are always executed by the To demonstrate the efficiency of the proposed x86 deco-
+
+derss, its performance was evaluated on a set of LDPC
+
+1. Source codes can be download from http://github.com/blegal
+
+codes as shown in Table 2. This code set covers (a) short to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1381
+
+TABLE 2 Air Throughput Measurements (G) in Mbps-Single Core x86 LDPC Decoders
+
+10 layered iter. (no early termination)
+
+20 layered iter. (no early termination)
+
+id
+
+Code (n,k)
+
+Standard
+
+Type
+
+#msg
+
+degCN
+
+1 x86 core - SSE 1 x86 core - AVX 1 x86 core - SSE 1 x86 core - AVX G OMS G NMS G OMS G NMS G OMS G NMS G OMS G NMS
+
+1 576 Â 288
+
+802.11e Quasi-C. 1;824
+
+f6; 7g
+
+209
+
+183
+
+376
+
+333
+
+107
+
+93
+
+2 1;248 Â 624
+
+802.11e Quasi-C. 3;952
+
+f6; 7g
+
+207
+
+184
+
+357
+
+312
+
+105
+
+94
+
+3 1;944 Â 324
+
+802.11n Quasi-C. 6;399
+
+f19; 20g 169
+
+164
+
+256
+
+256
+
+89
+
+88
+
+4 1;944 Â 972
+
+802.11n Quasi-C. 6;966
+
+f7; 8g
+
+169
+
+152
+
+272
+
+240
+
+89
+
+80
+
+5 2;048 Â 384
+
+802.11an Quasi-C. 12;288 f32g
+
+96
+
+93
+
+134
+
+133
+
+49
+
+46
+
+6 2;304 Â 1;152
+
+802.11e Quasi-C. 7;296
+
+f6; 7g
+
+204
+
+181
+
+349
+
+311
+
+103
+
+93
+
+7 4;000 Â 2;000
+
+À
+
+Unstruct. 12;000 f6g
+
+203
+
+191
+
+321
+
+306
+
+104
+
+98
+
+8 8;000 Â 4;000
+
+À
+
+Unstruct. 24;000 f6g
+
+199
+
+186
+
+279
+
+266
+
+102
+
+97
+
+9 9;216 Â 4;608
+
+CMMB Unstruct. 27;648 f6g
+
+206
+
+188
+
+327
+
+301
+
+105
+
+98
+
+10 9;216 Â 2;304
+
+CMMB Unstruct. 27;648 f12g
+
+196
+
+186
+
+304
+
+296
+
+99
+
+98
+
+11 16;200 Â 7;560 DVB-S2 Quasi-C. 75;239 f9; 10g 123
+
+121
+
+185
+
+172
+
+64
+
+64
+
+12 20;000 Â 10;000 À
+
+Unstruct. 60;000 f6g
+
+161
+
+155
+
+256
+
+240
+
+81
+
+79
+
+13 64;800 Â 32;400 DVB-S2 Quasi-C. 226;799 f6; 7g
+
+123
+
+115
+
+199
+
+188
+
+61
+
+59
+
+198 170 192 162 143 141 153 134 70 69 184 164 169 159 141 139 173 161 163 153 101 92 131 125 102 93
+
+long codes; (b) regular and irregular codes; (c) QC and decoding execution thanks to INTEL processor internal
+
+unstructured codes; and (d) various CN degrees.
+
+registers. In Equation (14), the execution time of the decoder
+
+At first, we focused on the impact on the decoder that is equal to its latency C is split into different parts:
+
+throughput of: (a) the number of decoding iteration; (b) the with P the codeword interleaving time, PÀ1 the codeword SPA approximation; and (c) the SIMD parallelism. Experi- deinterleaving time and dec the time for the execution of
+ments were performed for 10 and 20 decoding iterations. the decoding algorithm,
+
+BER performance is similar to one obtained with a floodingbased decoder executing 20 or 40 iterations and the same
+
+C ¼ P þ dec þ PÀ1 :
+
+(14)
+
+SPA approximation. These two values for the number of iterations were chosen because they provide medium and high coding gain. Table 6 provides the throughputs in Mbps for the implemented decoders depending on the SSE/AVX configuration and the SPA approximation (NMS/OMS).
+
+The duration dec can be split (Equation (15)) in: init the duration required to initialize messages (Line 2:4, Algo 1), iter the duration to execute one decoding iteration (Line 7:22, Algo 1) and hard the duration for the hard decision kernel (Line 25:27, Algo 1),
+
+Throughputs achieved by the LDPC decoders onto an x86 processor are high in both SSE and AVX configurations. For
+
+dec ¼ init þ i Â iter þ hard:
+
+(15)
+
+20 decoding iterations, NMS AVX-based decoders that are the slowest achieved throughputs from 69 Mbps up to 170 Mbps (average ¼ 135 Mbps) whereas NMS SSEbased decoder reaches 46 Mbps up to 98 Mbps (average ¼ 83 Mbps). AVX-based decoder throughputs are closed to twice higher for short length codes by comparison with SSE-ones. However as AVX-based decoders have a memory footprint twice bigger, so their L2/L3 processor caches are more quickly saturated. Consequently, speed-up factors lower than 2 (Â1:4 for long frames) are observed. Table 5 provides the memory foot-
+
+The execution duration iter can be then described as the sum of the execution duration of the CN kernels C as shown in Equation (16). In Equation (16), Cm is the execution duration of CN kernel for a CN of degree m,
+
+X
+
+iter ¼
+
+Cm :
+
+(16)
+
+m2C
+
+Compared to dec that include i iterations of ðn À kÞ CN computations, execution times init and hard are negligible. Thus, dec can be approximated as follow:
+
+print of the decoders. Note that the average speed-up factor is still interesting (Â1:6). In terms of throughput, the NMS-based decoders are slower than OMS ones, the penalty can reach 10 percent.
+
+! X
+
+C % P þ i Â
+
+Cm þ PÀ1 :
+
+(17)
+
+m2C
+
+The decoder latency called C of the x86 decoders can be estimated using Equation (13). In order to take into account the latency introduced by the data buffering before the decoder execution, this delay has to be doubled,
+
+C
+
+¼
+
+n
+
+G Â
+
+q
+
+:
+
+(13)
+
+Execution duration required to execute P and PÀ1 depends on n, q and can be expressed as follow:
+
+
+
+P ¼
+
+n q
+
+Â Pq
+
+
+
+PÀ1 ¼
+
+n q
+
+Â PqÀ1 :
+
+(18)
+
+Consequently, the execution duration of the LDPC
+
+To explain the high throughput performance on a single decoder that process SIMD codewords is given by:
+
+x86 core, two different analyses of the decoders were performed: (i) a static one based on the binary code analysis; (ii) a dynamic one that provides factual information on the
+
+C
+
+%
+
+ n q
+
+Â
+
+ðPq
+
+þ
+
+PqÀ1 Þ
+
+þ
+
+i
+
+Â
+
+X
+m2C
+
+Cm :
+
+(19)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1382
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+TABLE 3 Characteristics of NMS-Based CN Kernels
+
+TABLE 4 Characteristics of P=PÀ1 Kernels
+
+Cn
+
+# of
+
+Kernel throughput
+
+SSE
+
+AVX
+
+degree
+
+instr.
+
+(all)
+
+(latest)
+
+Kernel
+
+Kernel
+
+6
+
+169
+
+47 cc.
+
+66 cc.
+
+# of
+
+throughput
+
+# of
+
+throughput
+
+7
+
+194
+
+52 cc.
+
+73 cc.
+
+instr. all
+
+latest instr. all latest
+
+8 9 10
+
+218 242 269
+
+58 cc. 64 cc. 71 cc.
+
+79 cc. 84 cc. 89 cc.
+
+Trans. 133 64 cc. 76 cc. 212 53 cc. 77 cc. Inv. T. 241 61 cc. 81 cc. 270 68 cc. 89 cc.
+
+12
+
+320
+
+84 cc.
+
+103 cc.
+
+19
+
+517
+
+131 cc.
+
+150 cc.
+
+20
+
+548
+
+139 cc.
+
+156 cc.
+
+measured for a SSE-based decoder. The number of instruction
+
+32
+
+858
+
+217 cc.
+
+242 cc.
+
+required to decode one codeword of 4;000 symbols is thus
+
+16 times lower (4.33E+05).
+
+For regular LDPC codes, the Equation (19) can be simplified as follow:
+
+Results provided in Table 5 give the measurement and the estimation of the number of instructions and clock cycles required to decode SIMD codewords. The difference
+
+
+
+C%
+
+n q
+
+Â ðPq þ PqÀ1 Þ þ i Â ðn À kÞ Â C :
+
+between the estimation and the measurement of the number (20) of retired instruction is low (range between 0 and 10 percent).
+For the number of clock cycles, the difference is between
+
+20 and 120 percent. These differences come from the fact that
+
+In order to obtain these different parameters required to predicted values ignore memory access times and cache
+
+validate the performance model, an analysis of the LDPC misses. These runtime measurements demonstrate that
+
+decoder binaries was performed using the Intel Architecture cache hits are high. This is due to matrix reordering and pre-
+
+Code Analyzer tool. For a given decoder, this tool performs ventive memory prefetches inserted in processing kernels.
+
+analysis of kernels under ideal conditions. The number of This cache efficiency mainly explains the very high through-
+
+instructions and clock cycles per CN kernel iteration [38] puts reported.
+
+are provided in Tables 3 and 4 for NMS CN kernels (lines 8 to 22 in Algo 1) that is the slowest one and P=PÀ1 kernels, 5.1.2 Multi-Core Target
+
+respectively. Note that the values are similar in SSE and A second experiment set is carried out on the impact of the
+
+AVX configurations.
+
+number of cores on the throughputs. The main objective
+
+In Tables 3 and 4, three values are given: (i) the number was to demonstrate the scalability of the decoders and also
+
+(#) of assembler instructions required to perform the CN to estimate the performance penalties introduced by core
+
+kernel computation; (ii) the kernel throughput (all) that is interactions (e.g. L3 cache sharing). Table 6 gives the
+
+the number of clock cycles required to execute the CN ker- throughputs of the decoders when one, two and four cores
+
+nel as a body of an infinite loop; and (iii) Kernel throughput are considered in both SSE and AVX configurations. The
+
+(latest) that is to the number of clock cycles required to multi-core decoders were performed using OpenMP direc-
+
+execute the latest kernel iteration.
+
+tives. decoding threads can thus be launched in a synchro-
+
+Kernel characteristics provided in Table 3 show that the nized way or in a stream based approach such as in [21].
+
+observed parameters increase linearly according to the CN We considered latest solution.
+
+degree. They show that: (a) about 28 instructions are neces-
+
+As expected, throughputs in multi-core mode are higher.
+
+sary to process an SIMD set of messages; (b) about seven Speed-up factor achieved for the SSE-based decoder
+
+clock cycles are required to process an SIMD set of messages. For a SSE configuration (SIMD ¼ 16), 1:75 instructions and 0:43 clock cycle are required to process in average
+
+increases from 3:0 up to 3:8. The largest gains are obtained for the shorter codes. It is mainly due to L3 cache misses that are generated by the longer frames. Indeed, the memory
+
+a message during a decoding iteration (discarding inter- footprints of the multi-core LDPC decoders are multiplied
+
+leaving and deinterleaving tasks). For the AVX mode, both by the number of processor core used. Consequently, the
+
+values are twice lower. These characteristics for both SSE number of L3 cache misses significantly increases. Observa-
+
+and AVX kernels demonstrate the effectiveness of the CN tions are similar for AVX-based decoders. The throughputs
+
+processing implementations.
+
+increase from 2:8 up to 3:5 (average ¼ 3:3). These lower
+
+To evaluate the reliability of the Equations (18) and (19), improvements mainly come from the fact that AVX-based
+
+estimations were compared to measurements. Measurements decoders have a memory footprint twice bigger than SSE
+
+were obtained using the Intel Performance Counter Monitor. ones. So the L2 and L3 processor caches are faster saturated.
+
+It enables to access some processor internal registers that pro- Concerning the processing latency, its values increase by
+
+vide statistics about e.g. number of retired instructions, cache fÂ1:1; Â1:5g depending on the LDPC frame length. As
+
+hit rates, etc. LDPC decoders previously evaluated in terms of expected, longer frames suffer from higher penalties.
+
+throughput were instrumented and then characterised. Char- These results demonstrate the approach scalability. How-
+
+acterisation results are provided in Table 5. For instance, for a ever, it is important to notice that very optimized CN kernels
+
+4;000 Â 2;000 LDPC code (code id ¼ 7), 6.93E þ 6 instructions made LDPC decoder limited by memory. In consequence
+
+were necessary to perform 20 decoding iterations according high multi-core performance may only be reach if the
+
+to the performance model and Â1:01 instructions more were amount of memory cache by core is enough important by
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1383
+
+TABLE 5 Characteristics of LDPC Decoders (NMS) When Executing 20 Layered Decoding Iterations
+
+Measured
+
+Modelized
+
+Difference
+
+Code SIMD MF id conf. (kB)
+
+Intr. /run
+
+cycles avg #L2
+
+#L3 L2 hit L3 hit MCr MCw
+
+I/R.
+
+/run IPC /run /run rate rate (GBps) (GBps)
+
+CC/R. I/R. CC/R.
+
+1
+
+SSE 41 1.10E þ 06 3.58E þ 05 3.07 262
+
+12
+
+95% 75% 0.007 0.000 1.03E þ 06 3.00E þ 05 107% 119%
+
+2
+
+SSE 89 2.37E þ 06 7.82E þ 05 3.03 519
+
+28
+
+95% 75% 0.007 0.000 2.24E þ 06 6.51E þ 05 106% 120%
+
+3
+
+SSE 153 3.80E þ 06 1.29E þ 06 2.95 7312
+
+53
+
+99% 79% 0.007 0.000 3.54E þ 06 9.18E þ 05 107% 140%
+
+4
+
+SSE 153 4.32E þ 06 1.39E þ 06 3.10 1213
+
+79
+
+93% 72% 0.008 0.000 3.89E þ 06 1.13E þ 06 111% 123%
+
+5
+
+SSE 248 6.66E þ 06 2.38E þ 06 2.79 43938 2312 95% 99% 0.014 0.001 6.63E þ 06 1.69E þ 06 100% 141%
+
+6
+
+SSE 164 4.38E þ 06 1.42E þ 06 3.08 1192
+
+98
+
+92% 90% 0.008 0.000 4.13E þ 06 1.20E þ 06 106% 118%
+
+7
+
+SSE 273 6.93E þ 06 2.40E þ 06 2.89 26056
+
+654
+
+97% 97% 0.000 0.000 6.84E þ 06 1.99E þ 06 101% 120%
+
+8
+
+SSE 547 1.39E þ 07 4.88E þ 06 2.84 22688
+
+705
+
+97% 94% 0.000 0.000 1.37E þ 07 3.98E þ 06 101% 122%
+
+9
+
+SSE 630 1.60E þ 07 5.37E þ 06 2.98 106228 3568 97% 98% 0.000 0.000 1.49E þ 07 4.41E þ 06 107% 122%
+
+10
+
+SSE 630 1.60E þ 07 5.58E þ 06 2.86 24380
+
+783
+
+97% 92% 0.000 0.000 1.58E þ 07 4.59E þ 06 101% 122%
+
+11
+
+SSE 1576 4.19E þ 07 1.48E þ 07 2.83 85505 2541 97% 91% 0.000 0.000 4.08E þ 07 1.20E þ 07 103% 123%
+
+12
+
+SSE 1367 3.48E þ 07 1.42E þ 07 2.45 21387 12617 41% 99% 0.000 0.000 3.42E þ 07 9.96E þ 06 102% 143%
+
+13
+
+SSE 4999 1.28E þ 08 5.73E þ 07 2.23 326680 230840 29% 18% 0.110 0.018 1.27E þ 08 3.68E þ 07 101% 156%
+
+1 AVX 79 1.06E þ 06 3.87E þ 05 2.75 5168
+
+12 100% 75% 0.009 0.000 1.04E þ 06 3.01E þ 05 102% 128%
+
+2 AVX 170 2.30E þ 06 8.66E þ 05 2.66 11270
+
+88
+
+99% 90% 0.009 0.000 2.25E þ 06 6.53E þ 05 102% 133%
+
+3 AVX 292 3.79E þ 06 1.58E þ 06 2.41 25414 2671 89% 100% 0.011 0.000 3.56E þ 06 9.22E þ 05 107% 171%
+
+4 AVX 292 4.15E þ 06 1.59E þ 06 2.61 19422
+
+805
+
+96% 98% 0.011 0.000 3.91E þ 06 1.14E þ 06 106% 140%
+
+5 AVX 472 6.68E þ 06 3.52E þ 06 1.90 85589 23113 73% 100% 0.000 0.000 6.65E þ 06 1.69E þ 06 100% 208%
+
+6 AVX 314 4.24E þ 06 1.62E þ 06 2.62 24130
+
+781
+
+97% 98% 0.010 0.000 4.15E þ 06 1.21E þ 06 102% 134%
+
+7 AVX 523 7.20E þ 06 2.95E þ 06 2.44 8196
+
+789
+
+90% 97% 0.011 0.000 6.88E þ 06 2.00E þ 06 105% 148%
+
+8 AVX 1047 1.44E þ 07 6.84E þ 06 2.11 17215 10411 40% 99% 0.013 0.001 1.38E þ 07 4.00E þ 06 105% 171%
+
+9 AVX 1206 1.55E þ 07 6.98E þ 06 2.21 70159 5518 92% 98% 0.011 0.000 1.50E þ 07 4.42E þ 06 103% 158%
+
+10 AVX 1206 1.66E þ 07 6.65E þ 06 2.49 38425 1628 96% 96% 0.011 0.000 1.58E þ 07 4.61E þ 06 105% 144%
+
+11 AVX 3004 4.35E þ 07 2.00E þ 07 2.17 141206 67586 52% 97% 0.036 0.013 4.09E þ 07 1.21E þ 07 106% 166%
+
+12 AVX 2617 3.60E þ 07 1.88E þ 07 1.92 83511 59748 28% 98% 0.015 0.001 3.44E þ 07 1.00E þ 07 105% 188%
+
+13 AVX 9555 1.31E þ 08 7.19E þ 07 1.82 1186047 1017927 14% 7% 0.017 0.105 1.28E þ 08 3.69E þ 07 103% 195%
+
+with: MF: the memory footprint of the decoder in kBytes; I/R: of processor instructions per decoder execution (result of the PCM getInstructionsRetired function); CC/R: number of clock cycles required to fully execute the decoder (result of the PCM getCycles function); IPC: average number of instructions retired per clock cycle; #L2/R and #L3/R: the number of L2/L3 cache requests during a decoder execution, respectively; #MCr and #MCw: memory bandwidth in read/write access
+from memory controller (getBytesReadFromMC/getBytesWrittenToMC).
+
+comparison to LDPC decoder footprint. For instance, proces- processor core that are higher than ones required in current
+
+sor such as Core-i7 with four cores and 3 MB of cache mem- digital wireless and broadcasting standards. Moreover,
+
+ory may provide much lower throughput performance.
+5.1.3 Conclusion This set of experiments has shown that the proposed LDPC decoders are efficient in terms of (a) throughput and (b) decoding latency. Selected LDPC decoding algorithms and its implementations offer throughputs onto a single
+TABLE 6 Scalability of the NMS Decoder over Multiple Processor
+Cores-Air Throughput (G) in Mbps for 20 Layered Decoding Iterations
+
+processing latency introduced by the execution is low. Consequently, the proposed decoders onto an x86 processor can be used in practical software-defined radio systems. Finally, early termination criteria was also experimented to increase the throughput of the LDPC decoders. It enables to reduce the number of decoding iterations when a set of codeword is discovered. This improvement whose impact grows up with the SNR value can be used to save energy or process more informations in average.
+5.2 Comparisons with the State of the Art
+
+Code
+id
+1 2 3 4 5 6 7 8 9 10 11 12 13
+
+G in SSE mode 1 core 2 cores 4 cores
+
+G in AVX mode 1 core 2 cores 4 cores
+
+5.2.1 x86 Processor
+In order to demonstrate the efficiency of the LDPC decoders onto a x86 processor, we have compared their performance
+
+93
+
+176
+
+310
+
+170
+
+321
+
+560 in terms of throughput with previous works. In [12], [20],
+
+94
+
+178
+
+310
+
+162
+
+318
+
+564 [26], [27], authors have optimized their LDPC decoder for
+
+88 80 46
+
+168 155 96
+
+294
+
+141
+
+276
+
+270
+
+134
+
+263
+
+168
+
+69
+
+134
+
+473 456 230
+
+x86 CPUs using SIMD and multi-core properties. Similar experiments were performed for the proposed LDPC
+
+93
+
+179
+
+314
+
+164
+
+307
+
+533 decoders. The number of decoding iterations executed by
+
+98
+
+190
+
+334
+
+159
+
+305
+
+519 proposed LDPC decoders are twice lower than related ones
+
+97
+
+185
+
+323
+
+139
+
+262
+
+445 when a flooding scheduling was applied. Moreover, in
+
+98
+
+188
+
+332
+
+161
+
+307
+
+503 related works, experiments were carried out using only the
+
+98
+
+193
+
+337
+
+153
+
+296
+
+493 SSE instruction-set. Consequently, we used for fair compari-
+
+64 79 59
+
+123 152 124
+
+212
+
+92
+
+168
+
+251
+
+125
+
+207
+
+218
+
+93
+
+171
+
+248 338 242
+
+son the same SIMD configuration. Concerning the number of processor core, the number of physical and virtual core
+
+vary depending on related works. The four physical cores
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1384
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+TABLE 7 Throughput Comparison of the Proposed x86 Decoders without Early Termination versus x86 Related Works
+
+Related work
+
+Proposed x86 decoder
+
+Comparison
+
+Code id
+
+Ref. x86 target
+
+Setup
+
+# it.
+
+G
+
+(Mbps)
+
+Setup
+
+# it.
+
+G
+
+Speed Ref.
+
+Our
+
+(Mbps) up TNDC TNDC
+
+(1,024, 512)
+
+[12] Xeon E5530 4 PC þ 4 LC 50  0.46 4 PC þ 0 LC 25  234 Â508 0:002 1:015
+
+(8,000, 4,000) [12] Xeon E5530 4 PC þ 4 LC 50  0.61 4 PC þ 0 LC 25  253 Â414 0:004 1:098
+
+(16,200, 7,560) [20] Core i7-950 4 PC þ 4 LC 20  47.4 4 PC þ 0 LC 10  530 Â11:18 0:222 2:300
+
+(64,800, 32,400) [20] Core i7-950 4 PC þ 4 LC 20  44.5 4 PC þ 0 LC 10  424 Â9:52 0:208 1:840
+
+(9,216, 4,608) [26] Core i7-3960 6 PC þ 6 LC 10  100 4 PC þ 0 LC 5  1;182 Â11:82 0:267 5:130
+
+(9,216, 2,304) [26] Core i7-3960 6 PC þ 6 LC 10  100 4 PC þ 0 LC 5  1;223 Â12:23 0:267 5:308
+
+(1,944, 972)
+
+[27] Core i7-2600K 1 PC þ 0 LC 5  30.1 1 PC þ 0 LC 5  267 Â8:87 0:495 4:635
+
+(1,944, 324)
+
+[27] Core i7-2600K 1 PC þ 0 LC 5  56.4 1 PC þ 0 LC 5  284 Â5:03 0:927 4:930
+
+with:  for flooding-based decoding iterations;  for layered-based decoding ones; G air throughput in Mbps; PC for the physical processor core and LC for logical processor core. TNDC values of related works do not take logical core into account. Indeed, logical cores provide only marginal throughput gains while they drastically impacts on the TNDC values.
+
+available in the Core-i7 4960HQ device are used for compar- Moreover, they demonstrated that using a floating-point
+
+ison with related works except for the comparison with [27]. representation or a fixed-point one has no impact on the
+
+Speedup factors achieved using proposed approach are throughput. This acknowledgements are wrong onto x86
+
+summarized in Table 7. Compared to latest related works, target. Actually, the memory footprint optimization ena-
+
+the obtained speedup factor may range from Â5 up to Â12. bles fast memory accesses to L1/L2/L3 caches. 8-bit fixed-
+
+To facilitate performance comparisons for these decoders, point representation associated with SIMD units facilitate
+
+a metric named TNDC (Throughput under Normalized high processing efficiency. Second, GPU decoders require
+
+Decoding Cost) introduced in [39] is provided. It is a lot of data and control transfers between the host CPU
+
+expressed in bit per second per processing unit per kilo- and the GPU device. Such communications that introduce
+
+Hertz. It reduces the impact of the core working frequency latencies and throughput penalties are not necessary in the
+
+and the number of processing cores in the throughput com- proposed decoders. Finally, inter-frame parallelism was
+
+parisons. According to this metric, the proposed decoder is also applied for the x86 processor. This approach provides
+
+always Â5 up to Â19 more efficient by comparison with pre- an efficient mapping of the decoding algorithm. Indeed,
+
+vious works.
+
+no non-contiguous memory access and a high usage rate
+
+5.2.2 GPU Devices
+
+of the SIMD units were observed. It mainly explain the high performance gap.
+
+In order to fairly evaluate the proposed LDPC decoders, a
+
+More precise analyses were done for the most interesting
+
+large set of experiments were performed in terms of previous works. First, for a short frame length
+
+throughput to compare with GPU related works. This sec- (2;304 Â 1;152) of the Wimax standard, a gain of Â6:3 is
+
+tion summarizes the comparison results. Note that, the achieved by comparison with [21]. Note that the GTX Titan
+
+number of decoding iterations of the proposed decoders GPU device used in [21] is one of the most powerful current
+
+equal to half of the related works except for ones that imple- GPU devices. It contains 2,688 CUDA cores. Single core
+
+ments the TDMP algorithm. Results reported in Table 8 approach that was experimented for WiFi (1;944 Â 972)
+
+clearly demonstrate that the throughputs achieved by our code achieved similar throughput performance that the
+
+decoders are always higher to the state of the art. This GTX Titan GPU-based one. Moreover, GPU-based decoders
+
+acknowledgement is true independently of the GPU previ- in [21] were optimized for low-latency processing. Thus a
+
+ous work. Speed-up factors are provided in Table 8 for a 207ms latency value is obtained for the decoding of WiMax
+
+decoder that exploits four processor cores and the AVX (2;304 Â 1;152) standard with 50 Mbps throughput. Pro-
+
+instruction set.
+
+posed decoder onto x86 processor provides only a 130ms
+
+Proposed LDPC decoders onto x86 processor using latency value with a throughput of 998 Mbps for similar
+
+multi-core (four cores) and SIMD programming provide BER performance. Second, for long frame lengths
+
+higher throughput than all published GPU works. Speed- (64;800 Â 21;600 and 64;800 Â 32;400) of the DVB-S2 stan-
+
+up factor are Â1:4 up to Â8:2 compared to recent works on dard, gains of Â4:6 and Â4:2 were observed by comparison
+
+GPU devices [7], [11], [18], [20], [21], [22], [23]. The good with [11], respectively. In this case, the lower speed-up fac-
+
+throughputs achieved by comparison with GPU decoders tors can be explained by the facts that: (a) our decoder pro-
+
+have different explanations. First, GPU devices have high- duces lots of cache miss due to the large frame length (b)
+
+latency memory accesses due to the lack of cache memory. the Tesla C2050 GPU device used in [11] is a powerful GPU
+
+Indeed, LDPC decoders require lots of memory accesses device composed of 448 CUDA cores working at a fre-
+
+and have a quite low computational complexity. The main quency of 1.1 GHz. Finally, a comparison with works that
+
+bottleneck is due to the memory accesses as demonstrated already implements TDMP algorithm [7], [22] was also
+
+in [40]. In [40], the authors have shown that switching done. However, gains of Â1:4 to Â2:3 are reached compared
+
+from complex SPA algorithm to OMS one onto a GPU to results detailed in [7], [22]. Moreover, the software
+
+device does not improve the decoder throughput. decoders presented in [22] were only dedicated to QC
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+LE GAL AND JEGO: HIGH-THROUGHPUT MULTI-CORE LDPC DECODERS BASED ON X86 PROCESSOR
+
+1385
+
+TABLE 8 Throughput Comparison of the Proposed x86 Decoders without Early Termination versus Previous GPU and CELL/BE Works
+
+Code ðn; kÞ
+
+Related work
+
+device ID
+
+# it.
+
+Ref. G (Mbps)
+
+(4,000, 2,000)
+
+[8]
+
+Tesla C1060
+
+50 
+
+(4,000, 2,000)
+
+[9]
+
+Tesla C1060
+
+10 
+
+(8,000, 4,000)
+
+[10]
+
+Tesla C1060
+
+10 
+
+(64,800, 32,400) [11]
+
+Fermi C2050
+
+30 
+
+(64,800, 21,600) [11]
+
+Fermi C2050
+
+30 
+
+(4,896, 2,448)
+
+[12]
+
+8800 GTX
+
+50 
+
+(8,000, 4,000)
+
+[12]
+
+8800 GTX
+
+50 
+
+(20,000, 10,000) [12]
+
+8800 GTX
+
+50 
+
+(2,304, 1,152)
+
+[13]
+
+GTX 285
+
+100 
+
+(1,944, 972)
+
+[15]
+
+GTX 470
+
+10 
+
+(2,304, 1,152)
+
+[15]
+
+GTX 470
+
+10 
+
+(1,944, 972)
+
+[16]
+
+GTX 470
+
+10 
+
+(2,304, 1,152)
+
+[16]
+
+GTX 470
+
+10 
+
+(4,096, 2,048)
+
+[17]
+
+8800 GT
+
+5
+
+(8,000, 4,000)
+
+[18] ATI HD5870
+
+10 
+
+(2,048, 384)
+
+[19]
+
+GTX 480
+
+10 
+
+(16,200, 7,560) [20]
+
+GTX-570
+
+20 
+
+(64,800, 32,400) [20]
+
+GTX-570
+
+20 
+
+(1,944, 972)
+
+[21]
+
+GTX TITAN
+
+10 
+
+(2,304, 1,152)
+
+[21]
+
+GTX TITAN
+
+10 
+
+(2,304, 1,152)
+
+[21] 4Â GTX TITAN 10 
+
+(1,944, 972)
+
+[22]
+
+GTX 580
+
+5
+
+(2,304, 1,152)
+
+[22]
+
+GTX 580
+
+5
+
+(2,304, 1,152)
+
+[22]
+
+Fermi C2050
+
+5
+
+(4,000, 2,000)
+
+[23]
+
+GTX 660 Ti
+
+50 
+
+(8,000, 4,000)
+
+[23]
+
+GTX 660 Ti
+
+50 
+
+(20,000, 10,000) [23]
+
+GTX 660 Ti
+
+50 
+
+(1,944, 972)
+
+[7]
+
+GTX 660
+
+5
+
+(2,304, 1,152)
+
+[7]
+
+GTX 660
+
+5
+
+(64,800, 32,400) [7]
+
+GTX 660
+
+5
+
+(960, 480)
+
+[24]
+
+Cell/BE
+
+15 
+
+(576, 288)
+
+[25]
+
+Cell/BE
+
+10 
+
+(1,248, 624)
+
+[25]
+
+Cell/BE
+
+10 
+
+(1,024, 512)
+
+[12]
+
+Cell/BE
+
+50 
+
+0:05 2:34 0:01 76 78
+8 10 9:5 0:85 40 52 39 49 0:008 209 25 186 163 237 316 1; 250
+685 710 618 107 105 100 927 864 664
+13 80 80 14
+
+Proposed x86 LDPC decoder
+
+# it.
+
+Proposed x86 LDPC decoder T/P
+
+Best
+
+1 core 4 cores 1 core 4 cores
+
+SSE
+
+SSE
+
+AVX AVX
+
+speed up
+
+25 
+
+76
+
+281
+
+123
+
+427
+
+Â8540
+
+5
+
+354
+
+1,343
+
+513
+
+1,828
+
+Â781
+
+5
+
+353
+
+1,315
+
+468
+
+1,710 Â17100
+
+15 
+
+91
+
+299
+
+120
+
+347
+
+Â4:6
+
+15 
+
+93
+
+293
+
+128
+
+327
+
+Â4:2
+
+25 
+
+78
+
+286
+
+122
+
+418
+
+Â54
+
+25 
+
+77
+
+265
+
+111
+
+384
+
+Â38
+
+25 
+
+63
+
+212
+
+98
+
+293
+
+Â30
+
+50 
+
+38
+
+130
+
+63
+
+217
+
+Â255
+
+5
+
+269
+
+1,044
+
+382
+
+1,522
+
+Â40
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â38
+
+5
+
+269
+
+1,044
+
+382
+
+1,522
+
+Â39
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â41
+
+3
+
+563
+
+2,067
+
+746
+
+2,613 Â326625
+
+5
+
+353
+
+1,315
+
+468
+
+1,710
+
+Â8:2
+
+5
+
+184
+
+717
+
+226
+
+887
+
+Â36
+
+10  121
+
+402
+
+172
+
+496
+
+Â2:6
+
+10  115
+
+450
+
+188
+
+510
+
+Â3:1
+
+5
+
+269
+
+1,044
+
+382
+
+1,522
+
+Â6:4
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â6:3
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â1:6
+
+5
+
+269
+
+1,044
+
+382
+
+1,522
+
+Â2:3
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â2:8
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â3:2
+
+25 
+
+76
+
+281
+
+123
+
+427
+
+Â3:9
+
+25 
+
+77
+
+265
+
+111
+
+384
+
+Â3:7
+
+25 
+
+63
+
+212
+
+98
+
+293
+
+Â2:9
+
+5
+
+269
+
+1,044
+
+382
+
+1,522
+
+Â1:6
+
+5
+
+347
+
+1,288
+
+508
+
+2,005
+
+Â2:3
+
+5
+
+227
+
+864
+
+311
+
+931
+
+Â1:4
+
+8
+
+185
+
+672
+
+293
+
+1,111
+
+Â85
+
+5
+
+351
+
+1,268
+
+535
+
+2,084
+
+Â26
+
+5
+
+346
+
+1,284
+
+537
+
+2,107
+
+Â26
+
+25 
+
+63
+
+217
+
+103
+
+382
+
+Â27
+
+LDPC codes. Results detailed in [7] have a Â500 higher 6 CONCLUSION
+
+processing latency. As demonstrated in the previous sections, the proposed
+LDPC decoders can reach higher throughput than GPU ones. Another advantage of proposed decoders onto x86 multi-core devices is the lower power and energy consumption. GPU devices often provide high processing throughputs, but their consumption is huge. For instance, GTX TITAN power consumption provided in NVIDIA datasheets is about 250 W and GTX 660 is around 140 W. Proposed decoders have lower power consumption requirements. In order to evaluate the power consumption of the proposed software decoder, an Intel power measurement
+
+In this article we have presented an efficient LDPC software decoder in terms of throughput for multi-core device. This LDPC decoder was implemented on an x86 processor. It supports all kinds of LDPC code (regular/irregular and quasi-cyclic/unstructured) from the same source code. Due to the efficiency of the layered-based LDPC decoding algorithm coupled to an efficient implementation, throughputs achieved onto x86 device are higher in terms of throughput that ones proposed in related works on GPU targets. Moreover, latency parameter that is a critical for SDR applications is low by comparison with GPU decoders.
+
+tool was used Intel Power Gadget version 3.0.1. The power consumption of the multi-core architecture when
+
+REFERENCES
+
+M ¼ f1; 2; 4g cores are used, is 13, 24 and 38 W, respectively. These power measurements demonstrate that proposed decoders enable to achieve higher decoding throughputs
+
+[1] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inform. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] M. Deilmann, A Guide to Vectorization with Intel C++ Compilers, Intel Corporation, Apr. 2012.
+
+and much lower power consumption compared to GPU decoders. These two characteristics made the proposed decoders an interesting approach for Software Define Radio
+
+[3] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, pp. 457– 458, 1996.
+
+systems.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+1386
+
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, VOL. 27, NO. 5, MAY 2016
+
+[4] B. M. Leiner, “LDPC Codes-a Brief Tutorial,” http://www.bernh. net/publications, Apr. 2005.
+[5] M. P. C. Fossorier, M. Mihaljevic, and H. Imai., “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[6] J. Chen and M. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[7] B. Le Gal, C. Jego, and J. Crenne, “A high throughput efficient approach for decoding LDPC codes onto GPU devices,” IEEE Embedded Syst. Lett., vol. 6, no. 2, pp. 29–32, Jun. 2014.
+[8] G. Falcao, S. Yamagiwa, V. Silva, and L. Sousa, “Parallel LDPC decoding on GPUs using a stream-based computing approach,” J. Comput. Sci. Technol., vol. 24, pp. 913–924, 2009.
+[9] Y.-L. Chang, C-C. Chang, M-Y. Huang, and B. Huang, “Highthroughput GPU-based LDPC decoding,” in Proc. SPIE Satellite Data Compression, Commun. Process. Conf., 2010, vol. 7810, pp. 1258–1261.
+[10] C.-C. Chang, Y-L. Chang, M-Y. Huang, and B. Huang, “Accelerating regular LDPC code decoders on GPUs,” IEEE Sel. Topics Applied Earth Observations Remote Sens., vol. 4, no. 3, pp. 653–659, Sep. 2011.
+[11] G. Falcao, J. Andrade, V. Silva, and L. Sousa, “GPU-based DVB-S2 LDPC decoder with high throughput and fast error floor detection,” Electron. Lett., vol. 47, no. 9, pp. 542–543, 2011.
+[12] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC decoding on multicore architectures,” IEEE Trans. Parallel Distrib. Syst., vol. 22, no. 2, pp. 309–322, Feb. 2011.
+[13] H. Ji, J. Cho, and W. Sung, “Memory access optimized implementation of cyclic and quasi-cyclic LDPC codes on a GPGPU,” J. Signal Process. Syst., vol. 64, pp. 149–159, 2011.
+[14] F. J. Martınez-Zaldıvar, A. M. Vidal-Macia, A. Gonzalez, and V. Almenar, “Tridimensional block multiword LDPC decoding on GPUs,” J. Supercomput., vol. 58, pp. 314–322, 2011.
+[15] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, “A massively parallel implementation of QC-LDPC decoder on GPU,” in Proc. Symp. Appl. Specific Processors, 2011, pp. 82–85.
+[16] G. Wang, M. Wu, Y. Sun, and J. R. Cavallaro, “GPU accelerated scalable parallel decoding of LDPC codes,” in Proc. IEEE Asilomar Conf. Signals, Syst. Comput., 2011, pp. 2053–2057.
+[17] S. Wang, S. Cheng, and Q. Wu, “A parallel decoding algorithm of LDPC codes using CUDA,” in Proc. 42nd Asilomar Conf. Signals, Syst. Comput., Oct. 2008, pp. 171–175
+[18] G. Falcao, V. Silva, L. Sousa, and J. Andrade, “Portable LDPC decoding on multicores using OpenCL,” IEEE Signal Process. Mag., vol. 29, no. 4, pp. 81–88, 2012.
+[19] S. Kang and J. Moon, “Parallel LDPC decoder implementation on GPU based on unbalanced memory coalescing,” in Proc. IEEE Conf. Commun., 2012, pp. 3692–3697.
+[20] S. Gronroos, K. Nybom, and J. Bjorkqvist, “Efficient GPU and CPU-based LDPC decoders for long codewords,” J. Analog Integrated Circuits Signal Process., vol. 73, pp. 583—595, 2012.
+[21] G. Wang, M. Wu, B. Yin, and J. R. Cavallaro, “High throughput low latency LDPC decoding on GPU for SDR systems,” in Proc. IEEE GlobalSIP Conf., 2013, pp. 1258–1261.
+[22] R. Li, J. Zhou, Y. Dou, S. Guo, D. Zou, and S. Wang, “A multistandard efficient column-layered LDPC decoder for software defined radio on GPUs,” in Proc. IEEE 14th Workshop Signal Process. Adv. Wireless Commun., 2013, pp. 724–728.
+[23] Y. Lin and W. Niu, “High throughput LDPC decoder on GPU,” IEEE Commun. Lett., vol. 18, no. 2, pp. 344–347, Feb. 2014.
+[24] J. Zhao, M. Zhao, H. Yang, J. Chen, X. Chen, and J. Wang, “High performance LDPC decoder on CELL BE for WiMAX system,” in Proc. 3rd Int. Conf. Commun. Mobile Comput., 2011, pp. 278–281.
+[25] G. Falca~o, V. Silva, L. Sousa, and J. Marinho, “High coded data rate and multicodeword WiMAX LDPC decoding on the Cell/ BE,” Electron. Lett., vol. 44, no. 24, pp. 1415–1417, 2008.
+[26] X. Pan, X. fan Lu, M. Qi Li, and R. fang Song, “A high throughput LDPC decoder in CMMB based on virtual radio,” in Proc. Wireless Commun. Netw. Conf. Workshops, 2013, pp. 95–99.
+[27] X. Han, K. Niu, and Z. He, “Implementation of IEEE 802.11n LDPC codes based on general purpose processors,” in Proc. 15th IEEE Int. Conf. Commun. Technol., 2013, pp. 218–222.
+[28] S. Gronroos and J. Bjorkqvist, “Performance evaluation of LDPC decoding on a general purpose mobile CPU,” in Proc. GlobalSIP Conf., 2013, pp. 1278–1281.
+
+[29] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. Signal Process. Syst. Workshop, 2004, pp. 107–112.
+[30] M. Li, C. A. Nour, C. Jego, and C. Douillard, “Design and FPGA prototyping of a bit-interleaved coded modulation receiver for the DVB-t2 standard,” in ProcSignal Process. Syst. Conf., 2010, pp. 162– 167.
+[31] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger, “Generic description and synthesis of LDPC decoders,” IEEE Trans. Commun., vol. 55, no. 11, pp. 2084–2091, Nov. 2007.
+[32] C. Marchand, L. Conde-Canencia, and E. Boutillon, “Architecture and finite precision optimization for layered LDPC decoders,” J. Signal Process. Syst., vol. 65, pp. 185–197, 2011.
+[33] B. Le Gal, C. Jego, and C. Leroux, “A flexible NISC-based LDPC decoder,” IEEE Trans. Signal Process., vol. 62, no. 10, pp. 2469– 2479, May 2014.
+[34] G. Falcao, L. Sousa, and V. Silva, “Embedded architectures for LDPC decoding,” in Proc. Int. Conf. Embedded Comput. Syst., 2010, pp. 349–356.
+[35] B. Le Gal and C. Jego, “GPU-like on-chip system for decoding LDPC codes,” ACM Trans. Embedded Comput. Syst., vol. 13, no. 4, pp. 1–19, 2014.
+[36] D. Levinthal, Intel Corporation, “Performance analysis guide for intel core-i7 processor and intel xeon 5500 processors,” 2009.
+[37] B. Chapman, G. Jost, and R. Van Der Pas, Using OpenMP: Portable Shared Memory Parallel Programming. Cambridge, MA, USA: MIT Press, 2008.
+[38] Intel Corporation, “Intel architecture code analyzer-user’s guide,” June 2012, document Number: 321356-001US.
+[39] Y. Ying, K. You, L. Zhou, H. Quan, and X. Zeng, “A pure software LDPC decoder on a multi-core processor platform with reduced inter-processor communication cost,” in Proc. ISCAS Symp., 2012, pp. 2609–2612.
+[40] H. Ji, J. Cho, and W. Sung, “Massively parallel implementation of cyclic LDPC codes on a general purpose graphics processing unit,” in Proc. IEEE Workshop Signal Process. Syst., 2009, pp. 285–290.
+Bertrand LE GAL received the PhD degree in information and engineering sciences and technologies from the University of South Brittany in 2005. He is currently an associate professor in the IMS Laboratory, ENSEIRB-MATMECA engineering school, France. His research currently focuses on Algorithm-Architecture-Matching on both hardware (ASIC/FPGA) and software targets (CPU/DSP/GPU). Application domain includes FEC and video processing applications.
+Christophe JEGO received a research habilitation from the University of Bretagne Sud, France, in 2009. Then, he joined the ENSEIRB-MATMECA engineering school, Bordeaux, France, as a full-time professor in 2010. Since 2013, he is a member of IEEE Signal Processing Society Technical Committee on Design and Implementation of Signal Processing Systems (DISPS). His research activities are concerned with AlgorithmArchitecture-Matching approach for FEC decoders.
+" For more information on this or any other computing topic, please visit our Digital Library at www.computer.org/publications/dlib.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:36:16 UTC from IEEE Xplore. Restrictions apply.
+
+

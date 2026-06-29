@@ -1,0 +1,518 @@
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+
+2757
+
+High-Throughput Trellis Processor for Multistandard FEC Decoding
+Zhenzhi Wu, Student Member, IEEE, and Dake Liu, Senior Member, IEEE
+
+Abstract— Trellis codes, including Low-Density Parity-Check (LDPC), turbo, and convolutional code (CC), are widely adopted in advanced wireless standards to offer high-throughput forward error correction (FEC). Designing a multistandard FEC decoder is of great challenge. In this paper, a trellis application specified instruction-set processor (TASIP) is presented for multistandard trellis decoding. A unified forward–backward recursion kernel with an eight-state parallel trellis structure is proposed. Based on the kernel, a datapath for multialgorithm and a shared memory subsystem are introduced. The flexibility and the compatibility are guaranteed by a programmable decoding flow and the trellis decoding instruction set. Synthesis results show that the area consumption is 2.12 mm2 (65 nm). TASIP provides trimode FEC decoding ability with the throughput of 533, 186, and 225 Mb/s for LDPC, turbo, and 64 states CC under the clock frequency of 200 MHz, which outperforms other trimode proposals both in area efficiency and recursion efficiency. TASIP provides high-throughput decoding for current standards, including 3rd Generation Partnership Project-Long Term Evolution, 802.16e, and 802.11n, with unified architecture and high compatibility.
+Index Terms— Application-specific instruction-set processor (ASIP), forward–backward recursion (FBR), multistandard forward error correction (FEC), single instruction multiple data (SIMD), trellis decoding.
+I. INTRODUCTION
+B ASEBAND computing platform for wireless communications needs to support multiple standards with limited power consumption and silicon area cost. It prompts the research of the highly reusable modules. Among all modules, forward error correction (FEC) decoder is essential to improve the baseband performance and supply more reliability. FEC decoder faces the situation of multiple algorithms coexisting due to its widely adoption in all 2G–4G wireless standards, including 3rd Generation Partnership Project (3GPP)-Long Term Evolution (LTE)(A), 802.11n, 802.16e, UMTS, CDMA, and GSM. In addition to the multistandard compatibility, the requirement on high throughput is another challenge contributing to excessive computation complexity. It is reported that approximately 40% of workload in baseband processing is for FEC decoding [1], [2], which equals to 10–100 GOPs/s within
+Manuscript received July 2, 2014; revised October 5, 2014; accepted December 1, 2014. Date of publication March 24, 2015; date of current version November 20, 2015. This work was supported by the National High-Tech Research and Development Program (863 Program) of China under Grant 2014AA01A705. (Corresponding author: Dake Liu.)
+The authors are with the Beijing Institute of Technology, Beijing 100081, China, and also with Linköping University, Linköping 581 83, Sweden (e-mail: zhenzhi.wu@bit.edu.cn; dake@bit.edu.cn).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TVLSI.2014.2382108
+
+a power budget of hundreds of milliwatts [3] for nowadays high-throughput standards. To offer more flexibility without breaking down the power efficiency, specialized processors are focused on. Application specific instruction-set processors (ASIPs) [4] are widely adopted to enhance the flexibility, and multicore or single instruction multiple data (SIMD) architecture is introduced to offer enough computation capability.
+Many processor-based solutions are provided for multimode decoders in recent years. Provided by Kaiserslautern’s researchers, FlexiTreP [5] is a turbo/Viterbi dual mode solution based on ASIP architecture. FlexiTreP achieves low area cost by partially parallel execution. FlexiChaP [6] is an upgraded version of FlexiTreP by adding an Low-Density Parity-Check (LDPC) datapath with high computation efficiency. In addition, Brehm et al. [7] propose a multiple ASIPs architecture. It achieves better energy efficiency by introducing an LTE turbo accelerator. In IMEC Leuven, Naessens et al. [8] introduced a multi-SIMD architecture with multiple memory banks and hierarchical permutation network for turbo/LDPC decoding. IMEC [9] also provides a trimode alternative, which enables C level compiling for programmable memory addressing with its six-core architecture. Another research project UDEC [10] leaded by Telecom Bretagne proposes an LDPC/turbo decoder based on a multi-ASIP and de Bruijn network on chip (NoC), which reaches high decoding speed and relatively low area cost. In TU Dresden, a trimode (LDPC/turbo/CC) decoder with multiple four soft-in soft-out (SISO) units is implemented and multiuser decoding is provided [11]. Project RECFEC [12] proposes a 64 processing elements structure, which can perform four algorithms (including Reed–Solomon).
+Except for the hardware level sharing provided by the highly flexible architectures, algorithm level sharing using the trellis forward–backward recursion (FBR) decoding algorithms is another research orientation. For turbo, FBR refers to Bahl–Cocke–Jelinek–Raviv (BCJR) [13] for constituent code maximum a posteriori probability (MAP) decoding. For LDPC, FBR refers to turbo-decoding message passing with BCJR routine [14]. It is also referred to layered decoding (LD) [15] with check node update (CNU) trellis topologies [16]. The resource sharing is obtained by the similarities of LDPC and turbo BCJR decoding kernel, and several multimode solutions are proposed. IMEC’s duo-mode decoder [8] is a processor architecture based on BCJR. In addition, several BCJR ASIC solutions are available. Flex-SISO [17] is an efficient and high-throughput binary turbo (bTC)/LDPC duo-mode decoder. It achieves 96 parallel degrees by 12 SISOs. A multimode ASIC solution [18]
+
+1063-8210 © 2015 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+2758
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+
+applies BCJR for duo bTC (dbTC)/bTC/LDPC decoding and achieves low power consumption. In [19], an LTE Turbo/802.11n LDPC decoder is proposed with BCJR SISOs on an Field-Programmable Gate Array platform. In another aspect, since turbo and CC have similar trellis structure, a shared architecture can be derived [20], [21].
+Most of researches above are either duo-mode missing functional coverage or lack of enough throughput for highspeed standards, such as 3GPP-LTE, 802.11n, and 802.16e. Thus, designing a quasi-cyclic LDPC (QC-LDPC)/turbo/CC trimode programmable architecture with unified FBR kernel is a valuable research orientation, and an SIMD ASIP architecture is finally proposed in this paper. It shows that the FBR oriented trellis processor can supply enough flexibility and high throughput for multistandard decoding, and the resource is shared to some extent.
+This paper is organized as follows. The FBR algorithm principles are discussed in Section II. The top-level architecture, programmable control logic, multialgorithm reused datapath, and shared memory subsystem are introduced in Sections III–VI, respectively. The throughput is discussed in Section VIII. Synthesis results and comparisons are presented in Section IX.
+II. ALGORITHM PRINCIPLES
+The FBR is selected to construct the unified computation kernel. The kernel is based on a multialgorithm compliant trellis diagram. State S in the current step is connected with three states S0 = S/2, S1 = S/2 + Ts/2, and S = S in the previous step, where Ts represents the number of trellis states. S0 and S1 are necessary for turbo and CC decoding, and S is for LDPC LD.
+Both CC and turbo codes are trellis decodable. MAP decoding using BCJR [22] algorithm provides soft output results. For turbo decoding, the forward metric α(S) of state S at time step k is obtained from previous step metrics α(Si ) and branch metrics (BMs) γ(S , S) calculated from SISO input messages (channel data and extrinsic messages from the other MAP decoder), given by
+α(S) = f γ S0, S + α S0 , γ S1, S + α S1 . (1)
+The backward metric β(S) of state S at trellis step k is obtained from successive step metrics β(Si ) and SISO input messages, as follows:
+β(S) = f γ S, S0 + β S0 , γ S, S1 + β S1 . (2)
+The a posteriori message is obtained by
+
+CC decoding. The traceback (TB) can be treated as a special backward recursion (BR). In Viterbi algorithm [22], the path metric for forward path is calculated with add-compareselect (ACS) operation, and the survival path is stored at the mean time
+
+{α(S), selk(S)} = f γ S0, S + α S0 , γ S1, S + α S1 . (4)
+
+The TB procedure is performed step by step. In each step, the transition bit is obtained and the previous state in the survival path is calculated from the transition bit, as follows:
+
+β = selk(S)
+
+(5)
+
+S=
+
+S/2, β = 1 S/2 + Ts /2, β = 0.
+
+(6)
+
+Updating S by S ← S with k decreased from K + LTB − 1 to 0, (5) and (6) are performed iteratively. The least significant bit of S is the decoded bit when k < K . K is the information length and LTB is the TB length.
+QC-LDPC codes defined in 802.11n and 802.16e can be decoded by LD algorithm with CNU by FBR. (For covering these two standards, only QC-LDPC is considered in this paper). Nonzero elements in one row of the base matrix form a chain. The current state is connected with the same state in the previous time step. Therefore, the FBR can be viewed as running in a special trellis diagram where only horizontal connection is necessary [14].
+For current step with a sublayer S, the previous state is S = S, and the recursion as follows:
+
+α(S) = f (α(S ), γ (S ))
+
+(7)
+
+β(S ) = f (β(S), γ (S)).
+
+(8)
+
+The extrinsic message (S) is obtained in the following:
+
+(S) = fL (βold(S), α(S)).
+
+(9)
+
+The f (x, y) is defined as f (x, y) = log(1 + ex+y) − log(ex + ey) for LDPC CNU update, f (x , y) = log(ex + ey) for turbo BCJR algorithm, and f (x, y) = min{x, y}, i d xmin{x, y} for Viterbi algorithm. To reduce the computation complexity, simpler functions are introduced. f (x, y) = sign(x) · sign(y) · min{|x|, |y|}, fL (x, y) = λ · sign(x) · sign(y) · min{|x|, |y|} is introduced for LDPC following the scaled-min-sum algorithm with λ = 0.75 [23], and f (x, y) = max{x, y} is applied following max-log-MAP
+algorithm [22] for turbo. In conclusion, the FBR for these three
+algorithms can be similar which enables hardware sharing.
+
+La = f(S,S )∈ +(βold(S ) + γ (S, S ) + α(S)) − f(S,S )∈ −(βold(S ) + γ (S, S ) + α(S)). (3)
+There are two constituent MAP decoders (MAP1 and MAP2) working in an alternative way, and they are executed by a time-sharing hardware.
+For CC decoding in most cases only the hard-bit output is required. In such situation, Viterbi algorithm other than MAP decoding is more preferable because of its faster recursion speed. Therefore, we apply Viterbi algorithm for the
+
+III. TOP-LEVEL ARCHITECTURE
+The SIMD architecture is selected to meet the requirements on the computational complexity. Multiple memory banks are introduced to achieve parallel data accesses and decoding bandwidth requirement. The top-level of TASIP is shown in Fig. 1. It consists of several essential modules. Global memory system (GMS) is for storing and accessing inter-SISO data and input/output data. Read permutation network (RPN) and write permutation network (WPN) are introduced for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+WU AND LIU: HIGH-THROUGHPUT TRELLIS PROCESSOR
+
+2759
+
+Fig. 1. Top-level architecture of TASIP.
+
+data shuffling and data dispatching between memory banks and SISOs. The memory banks in GMS are accessed by the addresses generated by address generation unit (AGU) and address transform unit (ATU). AGU provides the linear forward/backward addresses, and ATU transfers the linear address into access patterns. The transform rules held by ATU are defined by the turbo addressing and permuting lookup tables (LUTs) or LDPC nonzero submatrix index LUT. The control logic includes program memory, instruction fetch/decoding (IF/ID), and Direct Memory Access. The SISO array consists of SISOs and inter-SISO registers. An SISO includes a multialgorithm reused datapath for eight states forward recursion (FR) and BR parallel processing, and a group of buffers. Inter-SISO registers are mainly for turbo next iteration initialization [24] messages passing among SISOs.
+
+Fig. 2. Code segmentation for the parallel decoding. (a) Turbo code. (b) CC. (c) LDPC code.
+
+IV. PROGRAMMABLE DECODING FLOW
+A. Code Segmentation
+The received codeword need to be partitioned to fit in the proposed SIMD architecture. With respect to turbo code, parallel decoding solution discussed in [25] and [26] is adopted. The incoming log-likelihood-ratio (LLR) data is split into P windows called parallel window (PW), where P is the number of SISO units. Let K be the length of the decoded messages. Then, each segment contains 3 × K /P of messages (when the code rate is 1/3), called PW length (L P ). For saving size of the buffers, the messages are split further into sliding windows (SWs), and each SW contains L S data.
+The segmentation of CC follows the similar way as that for turbo except that extra messages (LTB equals to five times of constraint length) are necessary for each PW for the TB needs. These messages are overlapped between neighbor PWs, and therefore, the length for each PW is L P + LTB. For each SW, additional LTB data is also required.
+For an (N, K ) QC-LDPC code with N variable nodes and M(M = N − K ) check nodes, the parity-check matrix HM×N can be partitioned into R × C submatrices. Each
+
+Fig. 3. Parallel turbo decoding flow.
+submatrix is either zero matrix or shifted identity matrix with the size of Z × Z . The shift value is represented in the base matrix HBR×C . The nonzero matrices in a row (maximum Sr ) form a parallel layer, which contains Z parallel sublayers. The 8 p to 8 p + 7 sublayers are processed in the ( p + 1)th SISO. The code segmentation pattern for these three types of codes is depicted in Fig. 2.
+B. Decoding Flow Similarities
+The decoding is scheduled for turbo in Fig. 3, with two SISOs, three SWs and itmax iterations. Each iteration includes two MAP decoding named MAP1 and MAP2. They are executed alternatively. Within each MAP, P SISOs perform decoding in a similar way, hence a unified control flow is sufficient. Within each SISO, FR/BR can be performed in parallel in most of time, except that only FR is available at
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+2760
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+TABLE I FBR CONTROLLING KEY SIGNALS
+
+Fig. 4. Parallel CC decoding flow.
+
+Fig. 6. Format of the ASIP instructions for FBR.
+TABLE II FEC INSTRUCTIONS
+
+Fig. 5. Parallel LDPC decoding flow.
+the beginning and only BR is available at the end. In each SW, FR is controlled by FR window number αw, FR address (within the window) αs , and data valid signal αen, and BR with LLR calculation is controlled by BR window number βw, BR address βs, and BR valid signal βen. The linear FR address is αws = αw × L S + αs , and the linear BR address is βws = βw × L S + βs .
+In CC, BM and ACS associate with successive eight states are calculated in one cycle, and for each trellis step totally r = Ts/8 cycles are required. The TB procedure consumes one cycle for each trellis step and much faster than that of FR. Therefore, FR and BR are processed at different time avoiding dual-port request of the TB buffer. The size of the buffer can thus be half. FR is stopped when reaching the border of SW. Then, TB starts, which contains two steps: at the beginning the step of dummy TB drops the output; after reaching LTB, the valid TB starts. βw here is borrowed for denoting substep r . There are L S + LTB FR steps for the first window, and L S steps for the following windows. The BM is continuous at the border of neighbor SWs. The TB steps are always L S + LTB. The TB buffer can be cyclically reused while exceeding the capacity. Finally, the CC decoding procedure can be represented by Fig. 4.
+Fig. 5 shows an LDPC code with three parallel layers and Sr (the number of) nonzero submatrices inside each layer. Totally, three iterations are applied. In an iteration, the parallel layers are processed sequentially. Sr nonzero elements within
+
+a sublayer form a horizontal trellis, and they are processed in Sr cycles. More cycles may need when interlayer conflict exists. BR is performed after FR processing and the FR for the next parallel layer is processed at the same time with the BR processing of the current layer. The layer can be treated as SW and counted by αw and βw. For each layer, Z sublayers are executed in parallel. Because the execution of sublayers follows the same routine, only one sublayer is drawn.
+Through the observation of the decoding flows, we can conclude that only few key signals are necessary for controlling the decoding routine, as listed in Table I. The unified key signals lead to a unified instruction format and a shared hardware logic.
+C. Multialgorithm Instruction-Set Design
+Because FR address only increasing and BR address only decreasing in the trellis decoding routine, it is enough to provide only incremented and decremented vector address counters and irregular addressing is negligible.
+In another aspect, the decoding algorithms are loop dominated, requiring high-efficient nested loops executions. Instruction repeating and clock cycle-free loop accelerations are introduced and all the loop control overheads are zero after the control optimization.
+The proposed instruction format is shown in Fig. 6. The instruction name domains can be filled with FEC instructions listed in Table II; the vector domain is introduced for controlling FBR key signals, including as (for αs ), bs (for βs), aw (for αw), and bw (for βw). Each of them has two bits representing four configurations, including
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+WU AND LIU: HIGH-THROUGHPUT TRELLIS PROCESSOR
+
+2761
+
+Fig. 7. Slice of assembly code for LDPC decoding.
+increasing/decreasing, load initial data, return to zero, or keep the current state. Domain c0–c2 controls the hardware loop. In addition, a repeat domain is applied for specifying the repeat times for each instruction. A slice of assembly code for LDPC decoding is shown in Fig. 7. Take the code in line 11 as an example, it refers to increase FR step αs and decrease BR step βs, both FR and BR path is enabled. The instruction repeats for M times and costs M clock cycles in total. The LDPC is decoded layer by layer, represented by the inner hwfor, the iterations are performed by the outer hwfor. Iterations and R are initialized before the code slice given. Therefore, the hwfor is a pseudocode and is skipped when translating into the machine code.
+
+V. MULTIALGORITHM SHARED SISO
+A. Forward–Backward Recursion Datapath
+The FBR is performed in SISO. Each SISO can process eight trellis states or eight sublayers. It mainly consists of three parts, FR part for updating α state metrics, BR part for updating β state metrics, and LLR part for updating a posteriori messages and extrinsic messages.
+The data flow is shown in Fig. 8. FR following (1), (4), and (7) is performed by FR unit (FRU), where FRU is the recursion function f (x, y). The BMs γ (S , S) are calculated in forward BM update module. The a priori messages γ (S ) for LDPC are calculated by the incoming a posteriori messages subtracted by the extrinsic messages (stored at inner buffer), which is performed by SUB1. The forward state metrics are stored in α REG. In the next clock cycle, the metrics are fetched and shuffled according to the trellis structure and fed into FRU, and therefore, a fast recursion path is constructed, named as FR path. The Viterbi survival paths represented by the transition bits are stored in inner buffer for the TB needs. BR part follows the similar way. The incoming data are obtained from input buffer. Equations (2) and (8) are performed by the BR unit, and the BMs are calculated by the backward BM update (BBMU) module.
+The a posteriori and extrinsic messages for turbo are calculated in module Turbo La Update and module Turbo Le Update separately. The a posteriori messages for LDPC associate with (9) are calculated in LDPC Le
+
+Fig. 8. Reused datapath for multiple trellis decoding algorithms (control signals and addressing circuit are not shown here).
+Update module. TB is operated by the TB unit which obtains the transition bit from the inner buffer, and calculates the previous state S . The data are quantized as 8 bits, and part of the datapath is wider than 8 bits to avoid overflow.
+The a posteriori messages for LDPC are saturated to 5 bits, and the extrinsic messages are adjusted for the saturation. Instead of performing (9) directly, the adjusted extrinsic messages are SAT(S) = Sat(γ (S) + (S)) − γ (S) [27], which are calculated by ADD1 and SUB2, and stored in the inner buffer.
+B. SISO Local Buffers
+SISO buffers are introduced to provide enough data bandwidth for computing. Three buffers are introduced in each SISO and shared by multiple algorithms.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+2762
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+
+Fig. 9. Global memory system.
+Input buffer serves as the input data buffer for BR. It is designed as 64 in width and 32 in depth, and further partitioned into odd/even blocks for SW interchange. In input buffer, for turbo, the extrinsic messages (SISOIn) within an SW are recorded. For CC, channel messages (SISOIn) are recorded. For LDPC, the a priori messages (SISOIn data subtracted by the extrinsic messages) are recorded.
+Alpha buffer records the FR metrics inside an SW. It is originally designed as 72 bits (8 × 9 bits) in width and 64 in depth. The first 32 locations are for the data in one SW and the other 32 locations are for the data in the next window. In CC decoding, where the path metrics for each trellis step are more than eight data and the α REG is inadequate to keep all of them, the alpha buffer is thus used for storing them. To support nonconflict access for variable constraint lengths (the number of states), alpha buffer is split into two banks.
+Inner buffer is shared by LDPC decoding and CC decoding. It is 64 in width and 256 in depth. Each path transition consumes one bit (obtained from FRU), and therefore, all the paths for an SW consuming 64 (steps) × 256 (states) bits can be stored. It is also used for LDPC extrinsic messages storage, and the positions needed are decided by the maximum number of nonzero submatrices. Because all the base matrices defined in 802.11n and 802.16e LDPC have less than 90 nonzero submatrices, thus, the size of inner buffer is adequate for storing them.
+VI. GLOBAL MEMORY SYSTEM
+A. Memory Array
+Local memories in SISO are for reducing local read/write time. Global memories with permutation networks between SISOs are for sharing data. GMS is thus introduced, as shown in Fig. 9. GMS consists of 5 × P memory banks, which can be accessed by independent addresses. The banks are grouped into P memory groups, with five banks in each group.
+For turbo decoding, channel messages r0, r1, and r2, extrinsic a posteriori messages (EAM) from MAP1 to MAP2 La (r3), and EAM from MAP2 to MAP1 Le (r4) are stored in GMS with 8-bits quantization. r0, r1, and r2 can be stored in one bank if heterogeneous memory architecture is introduced. In MAP1, La, r0, and r1 are fetched with the FR address αs. In MAP2, r0 and Le are fetched with the interleaved address and r1 are fetched with FR address.
+
+The interleaved address differs among P memory groups. In write procedure, the extrinsic messages from SISOs are permuted by WPN and stored into GMS.
+For LDPC decoding, GMS is applied for storing a posteriori messages. Five banks within one group are combined together and shared by the same read/write address, and all groups share the same address as well. The data, 40 bits in width, corresponding to eight messages with 5-bits quantization, is supplied to and processed by one SISO. The largest parallel degree for 802.11n and 802.16e is Z = 96, and therefore, 12 groups (P = 12) are adopted. Two networks in each memory group can transfer from eight of 5-bits data to five of 8-bits data or vice versa.
+For CC decoding, to support coding rate (without puncturing) from 1/2 to 1/4, maximally four channel messages are required by each SISO, and one is for written back to memory rd . The resolution of channel messages can be up to 8 bits (only 5 bits are currently used).
+Both GMS and alpha buffer operate at the double clock frequency to avoid using dual-port memory with more silicon cost. Because the memory banks are all small modules implemented by a memory compiler with access time from 1.09 to 0.97 ns, they can easily meet the timing closure at 400 MHz.
+The a posteriori message of LDPC stored in GMS is quantized in 5-bits suffering 0.18 dB performance loss from the 8-bits implementation. Performance simulation also reveals that the error floor is relatively high (10−6 around). However, the performance with 8-bits quantization can be achieved if additional memory bandwidth is paid with an extra area consumption of 0.03 mm2.
+B. Address Transform Unit
+The addresses for GMS and the permutation routes for RPN and WPN are obtained from ATU. For P-way parallel turbo decoding, P interleaved addresses are required and supplied by LUTs. When P = 12, for supporting 3GPP-LTE turbo with N = 6144, 12 memory banks with depth of 512 and datawidth of 16-bits are required. Within the 16-bits data, the lower 12 bits are the interleaved addresses and upper 4 bits are the permutation routes. There is also a buffer for storing the addresses and permutation routes for BR path. The LUTs are designed for arbitrary interleaving pattern; however, if only quadratic permutation polynomial (QPP) interleaver are considered, the computation can be performed on-the-fly consuming much less area and the LUT cost (consuming approximately 0.15 mm2) can be saved. For LDPC decoding, an LUT (13 in width 128 in depth) is applied for obtaining the location of nonzero matrices and the corresponding rotation factors. The data are also buffered for the BR needs. CC has no requirement on address transform. When the ATU for the three decoding modes are merged into one module, the diagram is shown in Fig. 10.
+C. Permutation Network
+The RPN is constructed by two subnetworks: P to P crossbars and barrel-shifter pairs. The P to P crossbars are
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+WU AND LIU: HIGH-THROUGHPUT TRELLIS PROCESSOR
+
+2763
+
+Fig. 10. ATU with LUTs.
+
+Fig. 11. Double barrel-shifter structure for LDPC cyclic shift with the support of arbitrary parallel sublayers Z .
+
+introduced for turbo. Both accesses for La and r0 in MAP2 stage need permutations. Because each of them contains 8 bits, 16 of P-source multiplexers are necessary. In MAP1, all of the inputs (La, r0, and r1) are in direct connections without permutation. The route is precalculated and stored in ATU. For the case of QPP interleaver, the route is the integer part of the result calculated by the interleaved address divided by L P .
+For LDPC a posteriori messages, the barrel-shifter pairs are applied with the rotation factor r ot defined in HB. Because Z is variable, two logarithmic barrel shifters are necessary to be applied for rotating both toward left and right in parallel, which is called a barrel-shifter pair structure depicted in Fig. 11. Let I (i ) be the input of the network, the output is represented by
+
+O(i ) =
+
+I (i + r ot), i < Z − r ot //lshift I (i + r ot − Z ), i ≥ Z − r ot //r shift.
+
+(10)
+
+Five barrel-shifter pairs with each width of 96 (0 ≤ i < 96) are introduced for 5-bits quantized messages. The permutation operation consumes only one clock cycle both for turbo and LDPC. In CC decoding no permutation is required. Similar to RPN, WPN also contains a P to P crossbar and barrel-shifter pairs.
+
+VII. MEMORY ACCESS CONFLICT SOLUTIONS
+For LDPC decoding, when FR and BR are processed in parallel, the read-after-write conflict is an essential issue for the a posteriori messages stored in GMS, which leads to the throughput loss. In this approach, the rows of LDPC base matrix (layers) are exchanged so that the number of common nonzero submatrix elements (CEs) between neighbor layers are minimized. The sequence of elements within each layer is rescheduled further, which leads the CEs to be read as late as possible and be written as early as possible. The throughput is improved up to 60% with the layer exchanging and element rescheduling, and no performance penalty
+
+Fig. 12.
+
+Memory reallocation for turbo conflict-free access
+
+(N = 40 and P = 4). The data in bold font are fetched at a recursion step.
+
+is suffered. The remaining conflict is avoided by inserting no-operation (NOP) instructions.
+For turbo decoding, conflict may happen when the extrinsic messages and channel messages are fetched in parallel with the interleaved sequence. Simple pause (alphaen = 0, betaen = 0) instructions can be inserted, and thus more than one cycles are available for accessing the data. In another branch version of TASIP, the memory reallocation technique has been integrated which makes the memory access be conflict free. According to the interleaving pattern, the memory elements in GMS are rearranged by the graph coloring algorithm [28] or annealing procedure [29]. Then, the corresponding address table and permutation table are generated. These two tables are stored in ATU LUT memories and used for both MAP1/MAP2 stages. With this approach, the data being fetched at one time are always in different banks, so that no conflict happen. As an example, Fig. 12 shows the tables generated for the HighSpeed Packet Access turbo with code length of 40 and parallel degree of 4. Each row in the access format table contains the indexes of the data being fetched at current recursion step t. Take the second step in MAP2, for example, elements {26, 27, 29, 25} need to be fetched simultaneously. In the original linear allocation, these elements are in the same bank which leads to the access conflict. With the reallocated scheme, the data fetched from memory banks with addresses {5, 6, 9, 7} are {25, 26, 29, 27}. Then, the crossbar based permutation network reordered the sequence with route {2, 4, 3, 1}. It has been proven that arbitrary interleaving pattern is supported in this method [29] and the access conflict can be totally eliminated. However, supporting it needs extra input
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+2764
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+
+Fig. 13. 3GPP-LTE turbo throughput (six iterations).
+
+Fig. 14. Decoding throughput evaluation for 802.11n LDPC codes (six iterations).
+
+reordering procedure and extra route LUTs for the MAP1 stage, therefore, this method is verified in Register Transfer Level code but not finally implemented in the silicon design.
+
+VIII. THROUGHPUT ANALYSIS
+
+A. Turbo Decoding Throughput
+
+For each SISO, each PW is decoded in totally 2 · (L P + L S + NNOP) · itmax clock cycles, where itmax is the iterations performed, NNOP is the pipeline stalls required for written back extrinsic messages, and coefficient 2 is given by the two half MAP decoding procedures. The throughput is accordingly given by
+
+T
+
+=
+
+2
+
+·
+
+(L P
+
++
+
+LS
+
+K +
+
+NNOP)
+
+·
+
+. itmax
+
+3GPP-LTE turbo is used as a case study and the throughput
+
+is given assuming that all global memory access is conflict
+
+free. An SW of 32 and 64 messages with different parallel
+
+factor P is investigated. The throughput with respect to
+
+decoded bit length is shown in Fig. 13. It can be estimated
+
+that the decoder provides 0.3-bits/cycle decoded soft bits
+
+per four SISO, and the throughput is proportional to P.
+
+Constrained by the QPP interleaver, the maximum parallel
+
+degree P for each code length should be divisible to code
+
+length K if data accesses are conflict free, or else the memory
+
+reallocation is necessary. It also reveals a larger size of SW
+
+contributes to lower throughput especially when the code
+
+length is small, whereas smaller size of SW leads to slightly
+
+larger performance loss, and finally Ls = 32 is chosen as the optimal solution.
+
+B. LDPC Decoding Throughput
+
+In each iteration, the clock cycles used for each layer are Sr + NNOP, where NNOP cycles are inserted in each layer to avoid read-after-write dependency. The total clock cycles are (Sr + NNOP) · R, where R is the total rows in the base matrix. The number of decoded bits K is obtained after itmax iterations and the throughput is given by
+
+T
+
+K
+
+=
+
+.
+
+(Sr + NNOP) · R · itmax
+
+Fig. 15. Decoding throughput evaluation for 802.16e LDPC codes (six iterations).
+
+The throughput with respect to the code lengths for 802.11n and 802.16e are presented in Figs. 14 and 15. K has roughly positive correlation with the throughput, because the number of nonzero matrices in H is about the same even when the code rate or Z is changed.
+
+C. CC Decoding Throughput
+
+For a CC(R, 1, M) code, the code rate is 1/R, and
+TB length is 5M. Let the information message (decoded bits)
+length be K. P parallel degrees is applied and each decodes
+L P data. The forward path, including ACS and BMU costs (L P + LTB) · Ts/8. Backward path refers to TB operation costs (L S + LTB + NNOP) · W , where W is the number of SWs (L S = L P /W ). L S + LTB needs to be less than the TB memory depth. The throughput is given by
+
+K
+
+T=
+
+.
+
+(L P + LTB) · Ts/8 + (L S + LTB + NNOP) · W
+
+For the case of P = 12 and L S = 64, the normalized throughput is shown in Fig. 16.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+WU AND LIU: HIGH-THROUGHPUT TRELLIS PROCESSOR Fig. 16. Decoding throughput evaluation for CC.
+
+TABLE III MEMORY SHARING RESULTS IN TERMS OF BITS
+
+2765
+
+TABLE IV SUMMATION OF MEMORY BANDWIDTH (BITS/CYCLE)
+AND NUMBER OF BANKS
+TABLE V LOGIC SHARING IN TERMS OF μm2
+
+part of the core with the same distance to the permutation network. ATU routes in relatively less density to avoid routing congestion.
+
+Fig. 17. Layout of TASIP core (12 SISOs).
+
+A. Multialgorithm Sharing Results
+
+IX. SYNTHESIS RESULTS AND COMPARISON
+The proposed design is synthesized by Synopsys Design Compiler, then placed and routed by Cadence Encounter. The power estimation is provided by PrimeTime. ST-Microelectronic 65 nm 1.1 V low power cell library is used.
+With the configuration of P = 12 and the SW of 32 (for turbo) and 64 (for CC). The overall area cost is 2.12 mm2, wherein all memory blocks consume 1.23 mm2. The equivalent gate count for the whole design is 1135 k-gates and for the logic part is 520 k-gates. The memory blocks consume 58% of the total area. The total power consumption is 322 mW with the clock frequency of 200 MHz.
+Among all modules, SISOs and GMS are the modules consuming most of the area. Twelve SISOs with inter-SISO registers cost 66.6% of the area. Each SISO costs 5.3%, in which SISO buffers occupy 50%. GMS consists of 60 banks, each consuming 0.0066 mm2, and totally memory banks consume 19.2%. RPN and WPN cost 3% (excluding wire area). The ATU, including LUTs, costs 8%. Processor top-level and control path consume negligible area.
+The core layout for the processor is shown in Fig. 17 with floorplan density of 0.66. SISOs are placed in the outer
+
+To investigate the area cost reduction through algorithm sharing, the related combinational logic for independent algorithms are noted by macronotations (such as ifdef TurboSupport) and selectively compiled.
+1) Memory Sharing Results: We first discuss on the saving of memory cost, 3GPP-LTE Turbo, 802.11n LDPC, 802.16e LDPC, and 802.11 CC (with code rate from 1/4 to 1/2 and decoded bits length up to 4096) are separately implemented to compare the resource consumption with this TASIP solution. The memory usage is listed in Table III, bandwidth and banks are listed in Table IV. It shows that up to 41% of memory bits can be saved in total, and approximately only half of the bandwidth is required. (Turbo interleaver LUTs are not counted in.)
+2) Logic Sharing Results: The silicon area reduction through TASIP hardware sharing is discussed in the following. We compared the sharing results according to the combinational logic and noncombinational logic. From Table V, it reveals that there is no dramatically combinational logic saving. Although there are some modules shared, however, additional multiplexing routes are needed for the memory sharing and datapath sharing. In another aspect, it reveals an obvious register resources saving through the unified architecture.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+2766
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 23, NO. 12, DECEMBER 2015
+TABLE VI COMPARISON WITH STATE-OF-THE-ART MULTIMODE FEC DECODERS
+
+B. Comparison With State of the Art
+The synthesis results of TASIP are compared with all state-of-the-art trimode decoders collected till May 2014, as shown in Table VI. The results reveal that turbo decoding by this TASIP is superior to others because of the FR/BR parallel execution and multi-SISO architecture, which is highly demanded by 3GPP-LTE. Though TASIP is slower in CC decoding compared to IMEC [9], it still supplies 225 Mb/s and meets the requirements of all used standards. FlexiChaP [6] provides higher LDPC decoding area efficiency by a highly optimized independent LDPC decoding datapath. However, this proposal supplies higher throughput and better recursion efficiency, which makes it adequate for 802.16e and 802.11n LDPC decoding. TU Dresden [11] offers another trimode solution and underperformed with this proposal. RECFEC [12] offers four modes decoding (additional Reed–Solomon is included), while the silicon cost is unclear. The high recursion efficiency in this proposal enables a lower clock frequency which leads to a lower power consumption. There is also an outstanding NoC-based VLSI solution [30] supporting dbTC/bTC/LDPC decoding, however, it needs much higher clock frequency (780 MHz) for NoC or to increase the core frequency to 333 MHz to reach the 3GPP-LTE Turbo throughput. Therefore, TASIP achieves higher recursion efficiency and similar area cost, with additional CC decoding ability. In a general perspective, this solution supplies an outperforming and balanced decoding efficiency for turbo, LDPC, and CC.
+X. CONCLUSION
+In this paper, a trellis processor architecture supporting high-throughput multistandard turbo, QC-LDPC, and
+
+CC decoding is proposed. The decoding algorithm similarities are investigated and a parallel FBR decoding routine along with a code segmentation method is given. Under the FBR characteristics, a unified SIMD architecture is proposed supporting FR and BR simultaneously processing. The decoding flows are analyzed and an application specific instruction set is proposed. The software can describe the FBR routine with granularity of each recursion step and reaches clock cycle accurate and addressing accurate. The data path and memory modules are shared by the decoding algorithms which leads to an area and memory bandwidth saving. The proposed TASIP is evaluated with other trimode state-of-the-art decoders which reveals its high decoding efficiency.
+ACKNOWLEDGMENT
+The authors would like to thank Prof. M. Garrido for his valuable suggestions on this paper. They would also like to thank Dr. C. Gong and Dr. X. Li for their valuable suggestions and memory reallocation algorithm implementation for this paper.
+REFERENCES
+[1] C. H. van Berkel, “Multi-core for mobile phones,” in Proc. Design, Autom. Test Eur. Conf. Exhibit. (DATE), Apr. 2009, pp. 1260–1265.
+[2] Y. Lin et al., “SODA: A low-power architecture for software radio,” in Proc. 33rd Annu. Int. Symp. Comput. Archit. (ISCA), 2006, pp. 89–101.
+[3] J. Dielissen, N. Engin, S. Sawitzki, and K. van Berkel, “Multistandard FEC decoders for wireless devices,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 55, no. 3, pp. 284–288, Mar. 2008.
+[4] D. Liu, Embedded DSP Processor Design: Application Specific Instruction Set Processors, vol. 2. San Mateo, CA, USA: Morgan Kaufmann, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+WU AND LIU: HIGH-THROUGHPUT TRELLIS PROCESSOR
+
+2767
+
+[5] T. Vogt and N. Wehn, “A reconfigurable ASIP for convolutional and
+
+turbo decoding in an SDR environment,” IEEE Trans. Very Large Scale
+
+Integr. (VLSI) Syst., vol. 16, no. 10, pp. 1309–1320, Oct. 2008.
+
+[6] M. Alles, T. Vogt, and N. Wehn, “FlexiChaP: A reconfigurable ASIP
+
+for convolutional, turbo, and LDPC code decoding,” in Proc. 5th Int.
+
+Symp. Turbo Codes Rel. Topics, Sep. 2008, pp. 84–89.
+
+[7] C. Brehm, T. Ilnseher, and N. Wehn, “A scalable multi-ASIP architecture
+
+for standard compliant trellis decoding,” in Proc. Int. SoC Design
+
+Conf. (ISOCC), Nov. 2011, pp. 349–352.
+
+[8] F. Naessens et al., “A unified instruction set programmable architecture
+
+for multi-standard advanced forward error correction,” in Proc. IEEE
+
+Workshop Signal Process. Syst. (SiPS), Oct. 2008, pp. 31–36.
+
+[9] IMEC.
+
+(2011).
+
+Unified
+
+C-Programmable
+
+ASIP
+
+Architecture for Multi-Standard Viterbi, Turbo and LDPC
+
+Decoding. [Online]. Available: http://www.design-reuse.
+
+com/articles/28847/unified-c-programmable-asip-architecture-for-multi-
+
+standard-viterbi-turbo-and-ldpc-decoding.html
+
+[10] P. Murugappa, R. Al-Khayat, A. Baghdadi, and M. Jezequel, “A flexible
+
+high throughput multi-ASIP architecture for LDPC and turbo decoding,”
+
+in Proc. Design, Autom. Test Eur. Conf. Exhibit. (DATE), Mar. 2011,
+
+pp. 1–6.
+
+[11] S. Kunze, E. Matus, G. Fettweis, and T. Kobori, “Combining LDPC,
+
+turbo and Viterbi decoders: Benefits and costs,” in Proc. IEEE Workshop
+
+Signal Process. Syst. (SiPS), Oct. 2011, pp. 216–221.
+
+[12] A. Niktash, H. T. Parizi, A. H. Kamalizad, and N. Bagherzadeh,
+
+“RECFEC: A reconfigurable FEC processor for Viterbi, turbo,
+
+Reed–Solomon and LDPC coding,” in Proc. IEEE Wireless Commun.
+
+Netw. Conf. (WCNC), Apr. 2008, pp. 605–610.
+
+[13] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear
+
+codes for minimizing symbol error rate (Corresp.),” IEEE Trans. Inf.
+
+Theory, vol. 20, no. 2, pp. 284–287, Mar. 1974.
+
+[14] M. M. Mansour, “A turbo-decoding message-passing algorithm for
+
+sparse parity-check matrix codes,” IEEE Trans. Signal Process., vol. 54,
+
+no. 11, pp. 4376–4392, Nov. 2006.
+
+[15] Y. Sun and J. R. Cavallaro, “A low-power 1-Gbps reconfigurable LDPC
+
+decoder design for multiple 4G wireless standards,” in Proc. IEEE Int.
+
+SOC Conf., Sep. 2008, pp. 367–370.
+
+[16] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu,
+
+“Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun.,
+
+vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+
+[17] Y. Sun and J. R. Cavallaro, “Unified decoder architecture for
+
+LDPC/turbo codes,” in Proc. IEEE Workshop Signal Process.
+
+Syst. (SiPS), Oct. 2008, pp. 13–18.
+
+[18] G. Gentile, M. Rovini, and L. Fanucci, “A multi-standard flexible
+
+turbo/LDPC decoder via ASIC design,” in Proc. 6th Int. Symp. Turbo
+
+Codes Iterative Inf. Process. (ISTC), Sep. 2010, pp. 294–298.
+
+[19] J. Dion, M. Hamon, P. Penard, M. Arzel, and M. Jezequel, “Multi-
+
+standard trellis-based FEC decoder,” in Proc. Conf. Design Archit. Signal
+
+Image Process. (DASIP), Oct. 2012, pp. 1–7.
+
+[20] M. A. Bickerstaff et al., “A unified turbo/Viterbi channel decoder for
+
+3GPP mobile wireless in 0.18-μm CMOS,” IEEE J. Solid-State Circuits,
+
+vol. 37, no. 11, pp. 1555–1564, Nov. 2002.
+
+[21] M. K. Kunchamwar, D. P. Prasad, P. Hegde, P. T. Balsara, and
+
+R. Sangireddy, “Application specific instruction accelerator for multi-
+
+standard Viterbi and turbo decoding,” in Proc. 39th Int. Conf. Parallel
+
+Process. Workshops (ICPPW), Sep. 2010, pp. 34–43.
+
+[22] S. Lin and D. J. Costello, Error Control Coding, 2nd ed.
+
+Upper Saddle River, NJ, USA: Prentice-Hall, 2004.
+
+[23] Y. Sun, J. R. Cavallaro, and T. Ly, “Scalable and low power LDPC
+
+decoder design using high level algorithmic synthesis,” in Proc. IEEE
+
+Int. SoCC, Sep. 2009, pp. 267–270.
+
+[24] D. Wu, R. Asghar, Y. Huang, and D. Liu, “Implementation of a high-
+
+speed parallel turbo decoder for 3GPP LTE terminals,” in Proc. IEEE
+
+8th Int. Conf. ASIC (ASICON), Oct. 2009, pp. 481–484.
+
+[25] R. Asghar, D. Wu, A. Saeed, Y. Huang, and D. Liu, “Implementation of a radix-4, parallel turbo decoder and enabling the multi-standard support,” J. Signal Process. Syst., vol. 66, no. 1, pp. 25–41, Jan. 2012.
+[26] C.-C. Wong, Y.-Y. Lee, and H.-C. Chang, “A 188-size 2.1 mm2 reconfigurable turbo decoder chip with parallel architecture for 3GPP LTE system,” in Proc. Symp. VLSI Circuits, Jun. 2009, pp. 288–289.
+[27] W. Sulek, “On the overflow problem in finite precision turbo decoding message passing,” IEEE Trans. Commun., vol. 60, no. 5, pp. 1253–1259, May 2012.
+[28] A. H. Sani, P. Coussy, and C. Chavet, “A first step toward on-chip memory mapping for parallel turbo and LDPC decoders: A polynomial time mapping algorithm,” IEEE Trans. Signal Process., vol. 61, no. 16, pp. 4127–4140, Aug. 2013.
+[29] A. Tarable, S. Benedetto, and G. Montorsi, “Mapping interleaving laws to parallel turbo and LDPC decoder architectures,” IEEE Trans. Inf. Theory, vol. 50, no. 9, pp. 2002–2009, Sep. 2004.
+[30] C. Condo, M. Martina, and G. Masera, “VLSI implementation of a multi-mode turbo/LDPC decoder architecture,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60-I, no. 6, pp. 1441–1454, Jun. 2013. [Online]. Available: http://dx.doi.org/10.1109/TCSI.2012.2221216
+Zhenzhi Wu (S’14) is currently pursuing the Ph.D. degree in signal processing and communication with the Beijing Institute of Technology, Beijing, China.
+He is also a Visiting Scholar with Linköping University, Linköping, Sweden, for two years. His current research interests include communication specific processor design, high-performance baseband algorithms, and VLSI implementation.
+Dake Liu (SM’08) received the D.Tech. degree from Linköping University, Linköping, Sweden, in 1995.
+He has experiences in the design of communication systems and radio frequency CMOS integrated circuits. He is currently a Professor and the Head of the Institute of Application Specific Instruction Set Processors (ASIP), Beijing Institute of Technology, Beijing, China, and also a Processor with the Computer Engineering Division, Department of Electrical Engineering, Linköping University. He is the Co-Founder and Chief Technology Officer of Freehand DSP AB Ltd., Stockholm, Sweden, and the Co-Founder of Coresonic AB, Linköping, which was acquired by MediaTek, Hsinchu, Taiwan. He has authored over 100 papers on journals and international conferences and holds five U.S. patents. His current research interests include high-performance low-power ASIP and integration of on-chip multiprocessors for communications and media digital signal processing. Dr. Liu is enrolled in the China Recruitment Program of Global Experts.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:12:31 UTC from IEEE Xplore. Restrictions apply.
+
+

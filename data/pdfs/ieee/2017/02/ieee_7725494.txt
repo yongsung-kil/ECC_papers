@@ -1,0 +1,1142 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+457
+
+Optimization Techniques for the Efficient Implementation of High-Rate Layered QC-LDPC Decoders
+Huang-Chang Lee, Mao-Ruei Li, Jyun-Kai Hu, Po-Chiao Chou, and Yeong-Luh Ueng, Senior Member, IEEE
+
+Abstract— For high-rate low-density parity-check (LDPC) codes, layered decoding processing can be reordered such that the first-in-first-out (FIFO) buffer that stores variable-to-check (V2C) messages is not needed and, hence, the memory area can be minimized, but at the cost of increased data dependency. This paper presents three techniques that can be used to implement an efficient reordered layered decoder. First, with the assistance of a graph coloring method, the required minimum number of V2C sign memory banks can be theoretically determined, with the corresponding pipeline architecture also designed. After that, the integer linear programming technique is adopted so as to arrange the V2C sign memory banks in a manner that minimizes the number of pipeline stalls, thereby increasing throughput. In order to further simplify the decoder, the first minimum values are not stored if the proposed modified min-sum algorithm is used. The proposed techniques are demonstrated by implementing a rate-0.905 (18396,16644) QC-LDPC decoder using 90-nm CMOS technology. When using the proposed techniques, implementation results show that the throughput-to-area ratio (TAR) increases by 58.9% without sacrificing error-rate performance.
+Index Terms— Belief propagation, error-control codes, layered decoder, low-density parity-check (LDPC) codes.
+I. INTRODUCTION
+H IGH code rate and high decoding throughput are desired for both storage and wireline communication applications [1], [2], [31]. These demands can be met using lowdensity parity-check (LDPC) [3], [4] codes, since their inherent structures are suitable for a parallel decoding architecture, and near-capacity performance can be achieved using a simple iterative Belief Propagation (BP) algorithm. An LDPC code can be described using a Tanner graph, where the coded bits and check equations respectively represent the variable nodes and the check nodes, and the ones in the paritycheck matrix are represented as the connections between the
+Manuscript received May 15, 2016; revised July 31, 2016 and September 4, 2016; accepted September 19, 2016. Date of publication October 28, 2016; date of current version January 26, 2017. This work was supported in part by the Ministry of Science and Technology of the R.O.C. under Grant MOST 103-2622-E-007-029-CC2. This paper was recommended by Associate Editor J. Dolecek.
+H.-C. Lee is with the Department of Electrical Engineering of Chang Gung University, Taoyuan 33302, Taiwan, R.O.C. (e-mail: akula.lee@gmail.com).
+M.-R. Li, J.-K. Hu, and P.-C. Chou are with the Department of Electrical Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan, R.O.C. (e-mail: u9661201@gmail.com; jyunkai.hu@gmail.com; jesph77@gmail.com).
+Y.-L. Ueng is with the Department of Electrical Engineering and the Institute of Communications Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan, R.O.C. (e-mail: ylueng@ee.nthu.edu.tw).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCSI.2016.2612655
+
+nodes. The implementation of a fully parallel BP decoder for unstructured LDPC codes contains a highly complex interconnection network. In contrast, the implementation of a partially parallel architecture for Quasi-Cyclic (QC)-LDPC codes provides a balance between the throughput and the hardware complexity, and is more attractive for certain applications [5]–[11], [38]–[39].
+The decoding messages include variable-to-check (V2C) messages, check-to-variable (C2V) messages, and APP (a posteriori probability) values. Compared to a flooding schedule, which generates new decoding messages based on information from the previous iteration, serial schedules can use the up-to-date information from the current iteration, thereby doubling the speed of the decoding convergence. The Layered BP (LBP) [12]–[14] has become one of the most popular types of serial scheduling. When LBP is applied to QC-LDPC codes, the decoding messages corresponding to the same block row of the parity-check matrix are usually grouped into a single layer, and can be easily combined with a block-row parallel architecture [15], [16].
+For each layer, the LBP decoder generates the V2C messages based on the C2V messages from the previous iteration, together with the APP values. If the hardware-friendly minsum algorithm (MSA) [17], [18] is used, the first two minimum magnitudes of these V2C messages can be identified in order to generate the new C2V messages. The APP values are then updated as a combination of the new C2V messages and the V2C messages. Since the V2C messages from a single block row, i.e., a single layer, are used immediately after they are generated, the block-row parallel architecture stores only the APP values and the C2V messages. Using this architecture [15], [16], a high decoding throughput can be achieved, but at the cost of high decoder complexity, especially for long and high-rate codes.
+By following the structure of QC-LDPC codes, the messages corresponding to each circulant block can also be processed sequentially, and decoders based on this block parallel architecture have a better area efficiency, but at the cost of a lower decoding throughput [9], [11], [19]–[21]. Multiple clock cycles are required in order to generate the V2C messages and then update the C2V messages for all blocks corresponding to a single layer. Subsequently, the V2C messages and the new C2V messages are combined so as to sequentially update the corresponding APP values for each circulant block. In the decoding process for each layer, the V2C magnitudes are used twice, for both generating new
+
+1549-8328 © 2016 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+458
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+C2V messages and for updating the APP values, and are usually stored in a first-in-first-out (FIFO) buffer, as described in [11] and [22]. Consequently, an additional storage block is added to the block parallel architecture for the V2C messages for a single layer. In most cases, more than half of the silicon area is used for the storage of decoding messages [23].
+Many approaches have been proposed that are able to further improve the area efficiency of the block parallel architecture via a reduction in the storage requirements, meaning that the number of quantization bits that are used to represent the decoding messages can also be reduced [9]–[11], [24]. However, this is achieved at the cost of a degradation in the error rate performance. In [25] and [34], the authors proposed removing the FIFO buffer by storing the V2C messages in the same memory blocks as those used for the APP values. This means that a single memory location is used to dynamically store either the V2C message or the APP value. Although the improvement in area efficiency was not significant, since a multi-bank, multi-port memory technique was adopted in order to avoid memory access conflicts, this architecture implies that it is possible to eliminate the FIFO buffer.
+In our patent [26], the computations for the decoding messages within a single layer are reordered such that the storage requirements for the APP values can be removed, together with the FIFO buffer. The signs of the V2C messages are stored separately from the V2C magnitudes since they are required for the generation of both the C2V and the V2C messages, and are accessed more frequently. In addition, the V2C magnitudes are stored in the memory for a single layer, while the V2C signs are stored in the memory for all layers. This reordered block-parallel LBP decoder is successful because the results processed for each layer are updated to the V2C magnitudes rather than to the APP values. However, the reordered decoding operations result in a more complex data dependency. A direct solution to this problem is to introduce additional stalls in order to avoid memory access hazards. However, this will decrease the decoding throughput. As a result, although the decoder area is able to be significantly reduced by using the FIFO-free reordered LBP architecture, the throughput-to-area ratio (TAR) will be degraded if the reordered decoder described in [26] is directly implemented.
+In this paper, several techniques for minimizing both the area and the number of stalls are proposed in order to increase the TAR. First, a graph coloring method [27] is introduced that is used to theoretically determine the minimum number of banks required for the storage of the V2C signs. Multiple single-port memory banks are required so as to avoid any memory access conflicts that are potentially introduced by frequently accessing the V2C signs. The corresponding pipeline architecture is also designed. We then propose using the integer linear programming (ILP) technique [28], [29] to locate the V2C signs in the memory banks so as to determine a decoding schedule that provides the minimum number of pipeline stalls. In order to further reduce the decoder area, a modified MSA is proposed such that the storage requirement for the first minimum magnitude is removed. Finally, a hardwire implementation of the decoder for a rate-0.905 irregular (18396,16644) QC-LDPC code is completed using a
+
+combination of all three of these techniques. Implementation results based on APR (automatic place and route) show that the TAR can be increased by 58.9% when using the proposed techniques, without sacrificing error-rate performance. In addition, by using the proposed optimized reordered decoder, the TAR can be increased by 43% compared to the conventional layered decoder.
+The remainder of this paper is organized as follows. The QC-LDPC codes and the LBP using the MSA are reviewed in Section II. Also included in Section II is the proposed modified MSA. The architecture for both the conventional and the FIFO-free reordered LBP decoder are described in Section III. In Section IV, optimization techniques for the FIFO-free reordered decoder architecture are introduced. Section V describes the implementation based on the proposed techniques together with a comparison of the results. Finally, a conclusion is given in Section VI.
+
+II. ALGORITHMS
+
+A. QC-LDPC Codes
+
+QC-LDPC codes [30] can be represented using simple
+
+base matrices, and are preferred for practical implementations.
+
+Suppose that the parity-check matrix H is constructed using
+
+an M-by-N base matrix B, the parity-check matrix H then
+
+contains M block rows and N block columns constructed
+
+from z copies of B, where z is the lifting factor. The element
+
+bi, j in the i -th row and j -th column of B is expanded to the z-by-z circulant-matrix hi, j of H, where bi, j ∈ {0, 1} is considered in this work. If bi, j = 0, i.e., the expanded hi, j is an all-zero matrix, and for bi, j = 1, the corresponding hi, j sub-matrix is a weight-1 z × z circulant matrix. The total
+number of nonzero elements in B is denoted as EB. The code
+
+length and total number of check equations for parity-check
+
+matrix H containing M block rows and N block columns are,
+
+respectively, equal to N × z and M × z, and the number of
+
+1s in H is EB × z. An example of the base matrix B, where
+
+M = 3, N = 4 and E B = 9, is shown in (1)
+
+⎡
+
+⎤
+
+⎡
+
+⎤
+
+1100
+
+h1,1 h1,2 0z×z 0z×z
+
+B = ⎣ 1 1 1 1 ⎦, H = ⎣ h2,1 h2,2 h2,3 h2,4 ⎦.
+
+1011
+
+h3,1 0z×z h3,3 h3,4
+
+(1)
+
+The proposed techniques are demonstrated using a rate0.905 irregular (18396,16644) QC-LDPC code, where M = 6, N = 63, z = 292, and E B = 246. This code is constructed by applying the masking technique described in [32] to the
+RS-based LDPC codes presented in [33].
+
+B. LBP Using the Normalized MSA [18]
+When a QC-LDPC code is decoded using the BP algorithm, the decoding messages are iteratively exchanged between the variable nodes and the check nodes. In an LBP decoder, the messages corresponding to the same block row of H are usually grouped in a single layer, and the decoding process takes place serially based on the order of the sub-matrices in the same layer. After the messages for all the sub-matrices in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+459
+
+the same layer have been completely updated, the decoding
+
+process for the next layer can begin.
+
+Since the z nonzero elements in each circulant sub-matrix
+
+hi, j of H are non-overlapping, the decoding operations corresponding to the same sub-matrix can be simultaneously
+
+executed. For this reason, each of the variable nodes corre-
+
+sponding to the j -th block column is represented as v j for
+
+simplicity of presentation. Similarly, each of the check nodes
+
+corresponding to the i -th block row is represented as ci . In the
+
+k-th iteration, the APP value corresponding to v j is denoted
+
+as
+
+k j
+
+.
+
+The
+
+V2C
+
+messages
+
+propagated
+
+from
+
+vj
+
+to
+
+ci
+
+and
+
+the
+
+C2V messages propagated from ci to v j are denoted as Qik, j
+
+and Rik, j , respectively.
+
+In the k-th iteration of the decoding process, the V2C mes-
+
+sages corresponding to the sub-matrix hi, j are generated using the C2V messages from the previous iteration in combination
+
+with the APP values
+
+Q
+
+k i,
+
+j
+
+=
+
+k j
+
+−
+
+Rik,−j 1.
+
+(2)
+
+In the initial phase, the APP values for all the received code
+bits are equal to the channel log-likelihood ratios (LLRs),
+i.e., the channel values, and the initial C2V messages are all zero. Let the variable nodes neighboring check nodes ci be denoted as N (ci ), N (ci ) \ {v j } denotes the same group, although v j is exclusive. When all of the V2C messages for the i -th layer are available, the C2V messages can be generated
+using the normalized MSA (NMSA) [18]
+
+Rik, j
+
+=
+
+α
+
+×
+
+Sik, j
+
+×
+vj
+
+min
+∈N (ci )\{v
+
+j
+
+}
+
+|
+
+Q
+
+k i,
+
+j
+
+|
+
+(3)
+
+where the normalization factor α is a positive constant smaller than 1, and Sik, j is the sign of Rik, j that can be calculated as
+
+Sik, j = sgn(Qki, j ) ×
+
+sgn(
+
+Q
+
+k i,
+
+j
+
+)
+
+v j ∈N (ci )
+
+=
+
+sgn( Q
+
+k i,
+
+j
+
+).
+
+(4)
+
+v j ∈N (ci )\{v j }
+
+The APP values for each neighboring variable node can be updated once the C2V messages Rik, j are available
+
+k j
+
+=
+
+Q
+
+k i,
+
+j
+
++
+
+Rik, j .
+
+(5)
+
+C. Proposed Modified MSA
+In order to further reduce the complexity of the C2V storage implementation, a variety of approaches proposed in the previous literature were considered, including the deep-quantization method proposed in [10] and the second minimum approximation methods presented in [36] and [37]. In this paper, a modified MSA is proposed, where the necessity for storing the first minimum value in the C2V memory is completely removed. When the first minimum value is required in the recovery of the C2V message, an approximate value that is deduced from the stored second minimum value is used. When the second minimum value is greater than a pre-determined threshold Tγ , the first minimum value is represented using a small nonzero positive value γ , otherwise, it is equal to zero. In this work, both the first and second minimum values are
+
+Fig. 1. BER performance for the (18396, 16644) code using either the original or the proposed MSA.
+quantized using 5 bits, with a step size of 0.5. In other words, four quantization bits are used to represent the integer part, while one quantization bit is used to represent the fractional part. If the threshold for the second minimum value is set as Tγ = 1, the possible selections of γ , i.e., the approximate first minimum value, can be either 0.5 or 1 because Tγ ≥ γ . Since the magnitude of the first minimum value is very small in most cases, any error between the actual first minimum value and the approximate value can be limited.
+Fig. 1 shows the bit-error-rate (BER) performance for the rate-0.905 (18396,16644) QC-LDPC code, where each C2V message is represented using a 5-bit quantization. For the proposed MSA, we evaluate the performance for different combinations of Tγ and γ based on the same number of iterations, which is set to 20. It can be seen from Fig. 1 that the BER performance can be improved as both the threshold Tγ and the approximate first minimum γ reduce. For the 5-bit quantization scheme with a step size equal to 0.5, Tγ = 0.5 and γ = 0.5 can be selected as the minimum values, where the best BER performance is also achieved. Although it is possible to further improve the BER performance by using more precise quantization schemes, such as 6-bit quantization where the step size can be set to 0.25, any further reduction in Tγ and γ is not considered in this work due to the consequent degradation in area efficiency introduced as a result of the requirement for additional quantization bits. Therefore, the following discussion is based on the results when using Tγ = 0.5 and γ = 0.5. Also included in Fig. 1 is an illustration of the performance for both the original and the proposed MSAs for a different number of iterations. A degradation in BER performance can be observed if the number of iterations is insufficient, e.g., 8. However, when the number of iterations is sufficient, i.e., 50, the performance of the proposed MSA is very close to that of the original MSA. This means that the speed of the error rate convergence for the proposed MSA is slower compared to that of the original MSA.
+The reason for this slower convergence is that, according to (3), the first minimum value for a check node is used
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+460
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+TABLE I
+SIGNS OF THE CORRECTLY DECODED APP VALUES, THE CURRENT APP VALUES, AND THE UPDATED C2V MESSAGES
+
+Fig. 3. Architecture for a conventional block parallel LBP decoder [11], [22].
+
+Fig. 2. BER performance for the (18396, 16644) code using either the original MSA or the approximated MSAs, where 20 iterations are considered.
+to update all neighboring variable nodes except for the node providing the first minimum value. In other words, the majority of the variable nodes are updated based on the first minimum value.
+Table I shows the signs of the correctly decoded APP values, the current APP values, and the updated C2V messages. In both Case 1 and Case 2, the sign of the updated C2V message is different from the sign of the correctly decoded APP value, i.e., the final APP sign when the received vector is correctly decoded, meaning that an error is introduced from this update. Since the magnitude of the approximated first minimum value adopted in the proposed modified MSA is smaller compared to that of the original MSA, the impact of the erroneous update can be mitigated. In Table I, the mitigated impact is simply denoted as “smaller error”. In contrast, suppose that the sign of the updated C2V message is the same as that of the correctly decoded APP value. In Case 3, the current APP has an opposite sign compared to the corrected final result, meaning that it can then be rectified using the updated C2V message. However, compared to the original MSA, the proposed modified MSA requires additional iterations, as the magnitude of the approximated first minimum value is smaller. Since the sign for the current APP in Case 4 is correct, the update of the C2V message increases its reliability as the smaller magnitude of the approximated first minimum value will provide a smaller increment. As a result, a slower decoding convergence is introduced in both Case 3 and Case 4.
+
+A comparison of the BER performance between the deepquantization method presented in [10] and the second minimum approximation methods presented in [36] and [37] are shown in Fig. 2. The deep-quantization method proposed in [10] provides almost the same BER performance compared to original MSA. However, this method requires that both the first and second minimum values are stored, while the proposed MSA requires that only the second minimum value is stored. The storage requirement can be reduced using the second minimum approximation methods [36], [37], where only the first minimum value is stored. Although both the first minimum and second minimum approximation methods require the same amount of storage, the proposed method can provide a significant improvement in BER performance.
+In addition to the (18396, 16644) QC-LDPC code used in this work, the proposed MSA was also applied to other highrate LDPC codes, e.g. the (672, 588) code from the IEEE 802.15.3c standard. Conclusions similar to those observed from the (18396, 16644) QC-LDPC code can be made.
+III. BLOCK-PARALLEL LBP DECODER ARCHITECTURES
+A. Conventional FIFO-Based LBP Decoder Architecture [11], [22]
+Fig. 3 shows the architecture for the conventional block parallel LBP decoder presented in [11] and [22]. When a layer of the decoding process begins, the APP values are first read from the APP memory and then the V2C messages are generated based on (2). The magnitudes and signs for the V2C messages are separately stored in the FIFO buffer and the V2C sign memory, respectively. The FIFO buffer contains the V2C magnitudes for a single layer. For each check node, the neighboring V2C magnitudes are compared, and the first two minimum values are stored in the C2V registers, along with the product of all neighboring V2C signs together with the index value for the variable node with the minimum magnitude. According to (3) and (4), the C2V messages can be recovered after combining the values stored in the C2V registers with the corresponding V2C sign. The decoding process for a single layer is completed once the APP values have been updated using the C2V messages based on (5). The updated APP values for all variable nodes are written back to the APP memory.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+461
+
+B. FIFO-free Reordered LBP Decoder Architecture
+
+Since the storage requirements for the decoding messages occupy a significant percentage of the silicon area of the conventional LBP decoder, the decoder area can be efficiently reduced if any unnecessary storage of decoding messages can be avoided. According to (3) and (5), the magnitudes of the V2C messages are respectively required for the generation of both the new C2V messages and the new APP values, and the update of the APP values cannot begin before the new C2V messages are available. Since the calculation of the C2V messages requires details of the magnitudes for all the neighboring V2C messages, a FIFO buffer is required in the conventional LBP decoder in order to store the V2C magnitudes for a single layer. In contrast, when the V2C messages are generated according to (2), only the APP value corresponding to the same variable node is required. This implies that it may not be necessary to retain the APP values for all variable nodes, meaning that it is possible to remove the APP memory.
+As mentioned in Section II-A, the decoding process for each layer begins by reading all the APP values, and ends when the updated APP values are written back to the memory. In other words, the APP values are used as an ‘accumulator’ of the decoding results for each layer. If the APP memory is removed, the V2C messages may be used to assume the role of the ‘accumulator’. In order to remove the APP memory, the decoding operations implemented in the FIFO-free LBP decoder are reordered, and the V2C magnitudes are stored in the V2C memory rather than in the FIFO buffer. When the decoding process for the i -th layer of the k-th iteration begins, the computation of the V2C messages from the previous layer, i.e., the (i −1)-th layer are completed, then the C2V messages corresponding to the (i − 1)-th block row can be evaluated as:
+
+Rik−1, j
+
+=
+
+α
+
+×
+
+Sik−1, j
+
+×
+vj
+
+min
+∈N (ci−1)\{v
+
+j
+
+}
+
+|
+
+Q
+
+k i −1,
+
+j
+
+|.
+
+(6)
+
+Combining this with the V2C messages corresponding to the (i −1)-th block row, the APP values can be updated as follows:
+
+k j
+
+=
+
+Qki−1, j
+
++
+
+Rik−1, j .
+
+(7)
+
+Here, the V2C messages corresponding to the (i − 1)-th block row are obtained after reading the magnitudes from the V2C magnitude memory together with the signs from the V2C sign memory. The V2C messages corresponding to the current layer can be then generated from:
+
+Q
+
+k i,
+
+j
+
+=
+
+k j
+
+−
+
+Rik,−j 1.
+
+(8)
+
+The magnitudes and the signs of these new V2C messages are then written back to the V2C magnitude and the V2C sign memory, respectively.
+By following this process, it is worth noting that only the decoding messages corresponding to the j -th block column are updated. The next step is to process the decoding messages corresponding to the j + 1-th block column. Fig. 4 shows the difference between the conventional and the reordered FIFO-free LBP decoder presented in [26] for QC-LDPC codes constructed using full base matrices, where the timing diagram for the decoding operations performed by both decoders are
+
+Fig. 4. Timing diagrams for the conventional decoder and the reordered FIFO-free LBP decoder. The order of decoding operations for the M-th layer follows the direction of the arrows.
+Fig. 5. Architecture for a FIFO-free reordered LBP decoder [26].
+presented for a single iteration. For the conventional LBP decoder, the C2V messages and the APP values cannot be generated before all the V2C messages for a single layer have been collected. In contrast, for the reordered FIFOfree LBP decoder, the decoding processes corresponding to the individual block columns can be fully separated after reordering the operations. Since the APP values for each block column can be immediately used to generate the V2C messages once they are updated by the C2V messages, the requirement for storing the APP values can be removed. When the APP values are required for the calculation of the harddecision results, they can be evaluated using the C2V and the V2C messages based on (7). The architecture for the reordered FIFO-free LBP decoder is shown in Fig. 5. Compared to the conventional LBP decoder illustrated in Fig. 3, the APP memory is replaced by the V2C magnitude memory, and the FIFO buffer is removed.
+Take the QC-LDPC code constructed using the base matrix (1) as an example and suppose that the second layer of the conventional decoding process is being executed. For the conventional LBP decoding, the V2C messages Q2,1, Q2,2, Q2,3, and Q2,4 must first be generated and then the first two minimum magnitudes for these message will be identified in order to perform the calculation of C2V messages R2,1, R2,2, R2,3, and R2,4. Since these four V2C messages are required
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+462
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+later in order to update the APP values 1, 2, 3, and 4 later, they must be buffered in the FIFO.
+In contrast, for the reordered LBP decoding process, R1,1 will first be generated, and then the value of Q2,1 that was generated in the previous iteration will be read from the V2C memory. Following that, 1 and Q2,1 can be updated using (7) and (8), respectively. The updated value for Q2,1 can be subsequently written back to the V2C memory, and the APP value 1 can be removed. It is worth noting that decoding messages, R1,1, Q2,1, and 1, are related to the first block column only. For the second block column, the decoding process starts from the generation of R1,2, then the original value of Q2,2 is read in order to update 2, before, finally Q2,2 can be updated and written back to the memory. The process will continue until the other V2C messages, Q2,3 and Q2,4, are updated. These V2C messages are stored in the V2C memory, including a V2C magnitude memory and a V2C sign memory, rather than the FIFO buffer. As soon as all the V2C messages are updated, the first two minimum magnitudes can be identified in order to calculate R2,1, R2,2, R2,3, and R2,4, which will be used in the decoding process for the next layer. Since the APP values can be eliminated after the V2C messages are updated, and since the decoding messages that correspond to each block column are generated individually, a pipeline register is sufficient for temporarily storing the APP values.
+As can be seen from Fig. 4, the reordering operation is only applied to the blocks (circulant sub-matrices) for a single layer, thereby introducing a different layer boundary. Therefore, the reordered layered decoding can be regarded as an “operation-delayed” version of the conventional layered decoding method. The reordered layered decoding method consists of identical decoding operations and generates the same decoding messages compared to the conventional LBP decoding approach. As a result, the error-rate performance will not be affected by the reordered operations.
+IV. OPTIMIZATION TECHNIQUES FOR RE-ORDERED LBP DECODERS
+It is worth noting that the V2C sign memory of the reordered LBP decoder is not only accessed in order to write the new signs when the V2C messages are updated, but also for reading the corresponding V2C signs when recovering the C2V message. It can be expected that access to the V2C sign memory will occur more frequently than other memory modules. In order to avoid the possibility of the reordered LBP decoder being affected by access conflicts, the V2C signs are separately stored in multiple memory banks, where the minimum number of banks required can be theoretically evaluated using the graph coloring method. From Fig. 4, it can be perceived that the pipeline structure needs be redesigned after the FIFO buffer is removed. If the pipeline structure is directly implemented based on the original arrangement of the V2C sign memory, a large number of additional stalls must be inserted in order to prevent memory access hazards, and the decoding throughput will be slowed. The ILP approach is adopted so as to minimize the number of pipeline stalls, thus
+
+Fig. 6. Memory access pattern for a 3-stage pipelined decoder.
+increasing the decoding throughput. The details of the techniques employed in this work are presented in the following sub-sections.
+
+A. Optimization of the V2C Sign Memory Using the Graph Coloring Method
+
+Fig. 5 illustrates that there are three connections to the
+
+V2C sign memory, including two read access connections
+
+used for the recovery of C2V messages, and one write access
+
+connection from the updated V2C messages. These three
+
+access connections for the V2C sign memory can occur simul-
+
+taneously, and a multi-bank memory architecture is required
+
+in order to avoid access conflicts. Intuitively, the minimum
+
+number of banks required for the V2C sign memory is three.
+
+In this subsection, we will prove this conclusion by the use
+
+of the graph coloring method. It is obvious that additional
+
+memory banks may be required if the decoding process is not
+
+properly pipelined. In this subsection, we will also address the
+
+pipeline design such that the minimum number of V2C sign
+
+memory banks can be used.
+
+The decoding process for the reordered FIFO-free LBP
+
+decoder can be pipelined in order to increase the throughput,
+
+as shown in Fig. 6, where the operations for the i -th layer
+
+in the k-th iteration are presented. The decoding task ti, j
+
+corresponding to the nonzero sub-matrix hi, j can be defined as
+
+the combination of the three operations, including the recovery
+
+of the C2V messages Rik−1, j , the update for the APP values
+
+k j
+
+and the generation of the V2C messages Qik, j based on (6), (7)
+
+and (8), respectively. The pipeline contains three stages that
+
+are used to complete the decoding task, and each operation
+
+is processed during a single stage. Since the associated V2C
+
+signs are required for the recovery of the C2V messages, the
+
+V2C signs corresponding to those in the entire parity-check
+
+matrix must be stored, which occupies a significant percentage
+
+of the decoder area. Moreover, the frequency that the V2C
+
+signs are accessed is very high since they are required for
+
+the generation of both the C2V and the V2C messages. As a
+
+result, an optimization of the V2C sign memory is required
+
+in this pipelined decoder in order to ensure that there are no
+
+memory access conflicts.
+
+It can be seen form Fig. 6 that the updates to the V2C
+messages Qki, j−2 from task ti, j−2 are completed, and their signs are written back to the V2C sign memory during cycle T .
+At the same time, the update to the V2C messages Qki, j−1 from task ti, j−1 is about to begin, where, based on (8),
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+463
+
+Fig. 7. Memory access graph for a 3-stage pipeline decoder.
+
+the corresponding C2V messages Rik,−j−1 1 from the previous iteration are required. The V2C signs, i.e., sgn(Qki,−j−1 1), need to be read in order to recover Rik,−j−1 1. At the same time, task ti, j+1 also takes place where the new C2V messages Rik−1, j+1 are calculated based on the associated first two minimum
+
+V2C magnitudes in combination with the signs of the V2C
+
+messages
+
+Q
+
+k i −1,
+
+j
+
++1.
+
+As shown on the right-hand side of Fig. 6, the decoding
+
+process task that generates the messages corresponding to sub-
+
+matrix hi, j is represented as a vertex, and is denoted as ti, j . The tasks that simultaneously access the V2C sign memory
+
+are connected. For example, the connections between the
+
+three vertices corresponding to tasks ti, j−2, ti, j−1 and ti, j+1,
+
+as shown in Fig. 6, represent the instances of simultaneous
+
+access to the memory during cycle T . For the same reason,
+
+the vertices corresponding to tasks ti, j−1, ti, j , and ti, j+2 are connected during cycle T + 1, the graph corresponding to the
+
+i -th layer after the connections corresponding to the memory
+
+access during each cycle are completed is depicted in Fig. 7.
+
+Based on the description given above, it can be observed that
+
+a memory module three ports is required for the V2C signs
+
+in order to prevent memory access conflicts. Since the multi-
+
+port memory approach is not area efficient, a more attractive
+
+approach is a multi-bank memory technique that consists of
+
+several single-port memory modules, meaning that the V2C
+
+signs can be separately stored in the multiple memory banks,
+
+which can then be accessed simultaneously. This means that
+
+those tasks shown in Fig. 7 represented by the connected
+
+vertices must access different memory banks. If each memory
+
+bank is denoted using a distinct color, any two of the connected
+
+vertices must be depicted in different colors such that the V2C
+
+signs for the individual tasks can be accessed from distinct
+
+banks. It can be observed from Fig. 7 that at least four colors
+
+are required in order to accomplish the coloring of the graph,
+
+and four memory banks are required for the reordered FIFO-
+
+free LBP decoder. If memory modules that have the same
+
+storage capability are provided, the area efficiency decreases
+
+as the number of banks increases. As discussed previously,
+
+simultaneous access is only required on three occasions,
+
+meaning that three memory banks should be sufficient.
+
+It is worth noting that individual tasks are initiated at
+
+different clock cycles, and that each task accesses the V2C
+
+sign memory more than once. Therefore, these simultaneous
+
+instances of access are related to both the difference between
+
+the initiation times of the connected tasks, and the location
+
+within the stage of the pipeline where the V2C sign memory
+
+is accessed. For the case shown in Fig. 6, instances where the
+
+access to the V2C sign memory occurs are at the end of the
+
+third stage of ti, j−2, at the start of the third stage of ti, j−1, and
+
+at the start of the first stage of ti, j+1. The difference between the initiation times of tasks ti, j−2 and ti, j−1 is 1, and the value
+
+between ti, j−1 and ti, j+1 is 2, meaning that the difference in
+
+Fig. 8. Connections for the tasks that simultaneously access the V2C sign memory.
+TABLE II POSSIBLE VALUES OF a AND b FOR A 3-COLOR MEMORY ACCESS GRAPH
+time between the initiation of ti, j−2 and ti, j+1 is 1 + 2 = 3. This indicates that the combination of these locations within the stage of the pipeline and the differences between initiation times, results in a simultaneous memory access during cycle T . If the connections between the vertices can be adjusted, the required number of colors may be reduced, as can the required number of memory banks.
+Suppose that the differences between the initiation times for the tasks that simultaneously access the V2C sign memory can be adjusted to a, b and a + b, as shown in Fig. 8, where the distances between the vertices correspond to the difference between the initiation times for the tasks. In the current arrangement of the pipeline, the values of a and b are 1 and 2, respectively. The conditions for the values of a and b that allow the graph to be depicted in only three colors are stated in Theorem 1. The detailed proof of Theorem 1 is presented in the Appendix.
+Theorem 1: For an infinite graph G = (V, E), where V = {ti : i ∈ Z}, and E = {(ti , ti+δ ) : δ ∈ {a, b, a + b} and a, b ∈ Z}. If gcd(a − b, 3b) b, then graph G has three-color f : V (G) → S and |S| = 3, i.e. G can be depicted using only 3 colors.
+Based on Theorem 1, the values of a and b that can be used to achieve the least number of memory banks required are summarized in Table II. It can be observed that there is no combination of (a, b) available for the current 3-stage pipeline, i.e., a + b = 3. If the (a, b) = (2, 2) configuration from Table II is used, an additional stage must be inserted into the original pipeline in order to avoid access conflicts when using only three memory banks. In addition, the inserted stage must guarantee that the (a, b) = (2, 2) constraint is satisfied. This can be accomplished after separating the third stage of the original pipeline into two. For task ti, j in the k-th iteration, the original third stage executes the updates to the V2C messages Qik, j , where the C2V messages Rik,−j 1 obtained in the previous iteration must be recovered at the start of the stage. For the modified pipeline, as shown in Fig. 9, an additional dedicated stage is inserted that is used to recover Rik,−j 1. The required
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+464
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+Fig. 9. Memory access pattern for a 4-stage pipeline decoder.
+
+Fig. 11. Arrangement of the direct V2C sign memory and the associated task schedule.
+
+Fig. 10. Memory access graph for a 4-stage pipeline decoder.
+pipeline registers are also included in the reordered FIFO-free decoder, as shown in Fig. 5. Then, at clock cycle T + 1, the simultaneous access to the V2C sign memory occurs at the end of the fourth stage of task ti, j−2, at the start of the third stage of task ti, j , and at the start of the first stage of task ti, j+2. The differences between the initiation times for these three tasks are a = 2, b = 2 and a + b = 4, which satisfies the conditions described in Theorem 1. Using the modified pipeline, the number of memory banks required for the V2C signs can then be reduced to three.
+The modified connections between the vertices corresponding to the decoding tasks are shown in Fig. 10. It can be observed that only three colors are required if any three successive vertices are depicted in different colors, which implies that if the V2C signs accessed by successive tasks are periodically stored in different banks, then three memory banks will be sufficient.
+
+B. Joint Design of Tasks Scheduling and Memory Banks Arrangements
+
+After the decoding pipeline has been modified based on
+
+the results obtained using Theorem 1, the V2C sign memory
+
+can be implemented using only three banks. From Fig. 10,
+
+it can be seen that the V2C signs that are accessed by three
+
+successive tasks are stored in individual banks. This implies
+
+that the schedule for the decoding tasks is constrained by
+
+the bank assignments for the V2C signs. Suppose that the
+
+reordered FIFO-free LBP decoder is applied to a QC-LDPC
+
+code constructed using the base matrix B1 shown in (9), and that the tasks are processed directly by following the index
+
+of the sub-matrices in the parity-check matrix. The decoding
+
+schedule can then be determined, as shown in Fig. 11
+
+⎡
+
+⎤
+
+011011101
+
+B1
+
+=
+
+⎢⎢⎣
+
+1 1
+
+1 0
+
+0 1
+
+0 1
+
+0 0
+
+0 0
+
+0 1
+
+1 1
+
+1 1
+
+⎥⎥⎦
+
+.
+
+(9)
+
+100111010
+
+The tasks that access the V2C signs from the same memory bank are marked in the same color, and three colors are respectively assigned to banks M1, M2 and M3. The bank assignment
+
+is completed simultaneously when the schedule is arranged. The decoding tasks for each layer are scheduled matching the order of the block column indices, and each of the banks is accessed three times. The V2C signs corresponding to the same block column are constrained so that they are stored in the same bank in order to guarantee that the signs for the updated V2C messages can be written back to the same bank that they were read from. For the all-zero sub-matrices expanded from the zero elements in the base matrix, stalls are inserted in the corresponding processing cycles and are denoted as NOPs (no-operations). There are 15 stalls in the schedule, and a total of 36 clock cycles are required in order to complete a single iteration. In other words, more than onethird of the decoding processing time is occupied by stalls.
+It can be expected that the required number of clock cycles for each iteration will be reduced and hence the decoding throughput will be increased if the number of stalls can be minimized. However, the stalls cannot be arbitrarily removed. For instance, if the stall between t1,3 and t1,5 is removed and t1,5 is processed immediately after t1,3, then t1,2, t1,3 and t1,5 are processed in three successive clock cycles. As a result, the V2C signs must be accessed from different banks. Since the V2C signs used by tasks t1,2 and t1,3 are stored in banks M2 and M3, respectively, the V2C signs used by task t1,5 must be moved to bank M1. The V2C signs accessed by task t4,5 must be also moved to bank M1 based on the constraint that the V2C signs from the same block column must be stored in the same bank. Now, both tasks t4,4 and t4,5 access the V2C signs from bank M1 during the same clock cycle, which results in a memory conflict. As a result, additional stalls need to be inserted.
+Since it has been established that the V2C signs from the same block column must be stored in the same bank, a number of stalls still exist that can be intuitively removed. For example, for the fifth and the sixth clock cycles in the second layer, two NOPs are inserted and banks M2 and M3 are accessed. Since the V2C signs for tasks t2,8 and t2,9 are stored in banks M2 and M3, respectively, these two tasks can be executed earlier, replacing the NOPs in the fifth and the sixth clock cycles. In addition, the decoding tasks for the same layer can be processed in a different order without affecting the decoding results. For the final layer, task t4,8 can be executed during the second clock cycle, before t4,4, t4,5 and t4,6 are processed, meaning that three additional stalls can be avoided. The rearranged schedule is shown in Fig. 12, where the total
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+465
+
+Fig. 12. Modified arrangement for the V2C sign memory banks and the associated task schedule.
+
+number of stalls required for a single iteration is reduced
+
+from 15 to 9.
+
+It can be observed that the freedom provided by the
+
+rearrangement of the task schedule is indeed constrained by
+
+the bank assignment. The assignment can be denoted using
+
+an indicator Ii, j,b. If the V2C signs corresponding to hi, j are stored in the b-th bank, then Ii, j,b = 1, otherwise Ii, j,b = 0.
+
+There are three indicators for each nonzero sub-matrix, i.e.,
+
+b ∈ {1, 2, 3}. Consequently, only one of these is nonzero
+
+because each V2C sign can be stored in a single bank,
+
+and
+
+3 b=1
+
+Ii, j,b
+
+=
+
+1 for i
+
+∈
+
+{1 · · · M}
+
+and
+
+j
+
+∈
+
+{1 · · · N}.
+
+In addition, since the V2C signs for the same block column
+
+are stored in the same bank, I1, j,b = I2, j,b = · · · = IM, j,b, for j ∈ {1 · · · N} and b ∈ {1, 2, 3}. For the i -th block
+
+row, the number of sub-matrices whose corresponding V2C
+
+signs are stored in the b-th bank is denoted as wi,b, i.e.,
+
+N j =1
+
+Ii,
+
+j ,b =
+
+wi,b
+
+for
+
+i
+
+∈
+
+{1 · · · M}
+
+and
+
+b
+
+∈
+
+{1, 2, 3},
+
+and
+
+wi,max = maxb wi,b .
+
+The reason that the majority of the stalls are inserted is
+
+because the access time for each of the three banks must be
+
+equal. For instance, there are six tasks in the first layer of
+
+the schedule, as shown in Fig. 11. The V2C signs used by
+
+three of the tasks are stored in bank M3, and only the signs
+
+used by task t1,7 are stored in bank M1. Since bank M3 is
+
+accessed three times during the decoding process for the first
+
+layer, the same number of access instances is applied to bank
+
+M1, meaning that dummy data must be provided for two of
+
+these instances. As a result, two stalls are inserted.
+
+In general, when layered decoding corresponding to the i -th
+
+block row is executed, each of the memory banks will be
+
+accessed wi,max times. However, the V2C signs stored in the b-th bank are only able to support wi,b tasks. The number of
+
+stalls inserted to allow for the instances of dummy access to the b-th bank is wi,max −wi,b, and, hence, b3=1(wi,max −wi,b)
+stalls are inserted in the i -th layer process, and the total number
+
+of stalls required for a single iteration is
+
+M3
+
+NOPall =
+
+(wi,max − wi,b )
+
+i=1 b=1
+
+M
+
+M3
+
+= 3 × wi,max −
+
+wi,b
+
+i =1
+
+i=1 b=1
+
+M
+
+= 3 × wi,max − E B .
+
+i =1
+
+For the example code, i.e., the code defined using (9), the total number of nonzero elements E B is 21. The majority of the V2C signs for the first block row are stored in bank M3, and w1,max = w1,3 = 3. The V2C signs for the two submatrices in the second block row are stored in both banks M1 and M2, and w2,max = w2,1 = w2,2 = 2. For the third and the fourth block rows, w3,max = w3,1 = 3, and w4,max = w4,1 = w4,2 = 2. This means that the total number of stalls is 3(3 + 2 + 3 + 2) − 21 = 9, which is equal to the value indicated in Fig. 12.
+The evaluation of NOPall implies that the number of stalls can be minimized if the V2C signs for each layer are first averaged, and then stored in three banks. The ILP technique [28], [29] can be used to determine the values of all indicators Ii, j,b thereby minimizing the total number of stalls required, or equivalently
+M
+minimize 3 × wi,max
+i =1 3
+subject to Ii, j,b = 1, i ∈ {1 · · · M}, j ∈ {1 · · · N}
+b=1
+I1, j,b = I2, j,b = · · · = IM, j,b, j ∈ {1 · · · N },
+b ∈ {1, 2, 3}
+N
+wi,b = Ii, j,b, i ∈ {1 · · · M}, b ∈ {1, 2, 3}
+j =1
+wi,max ≥ wi,b, i ∈ {1 · · · M}, b ∈ {1, 2, 3}
+M3
+wi,b = E B .
+i=1 b=1
+After determining a suitable arrangement for the memory assignment with the assistance of the ILP technique, a decoding schedule that provides the minimum required number of stalls can be established based on that assignment, and the decoding tasks can be processed following the order of the V2C signs accessed from the memory banks. For the example code, all the values of wi,max for each layer are equal to 2, i.e. w1,max = w2,max = w3,max = w4,max = 2. Then for each layer, a maximum of two sub-matrices whose corresponding V2C signs are stored in the same bank, and the number of stalls can be reduced to 3(2 + 2 + 2 + 2) − 21 = 3. Fig. 13 shows the bank assignments derived using the ILP technique, and a decoding schedule that includes only 3 stalls can be established when the memory banks are accessed in the order {· · · M1, M2, M3, M1, M2, M3, · · · }. For the first layer, the task schedule will be {t1,2, t1,3, t1,9, t1,7, t1,5, t1,6}.
+For the reordered FIFO-free LBP decoder, the C2V messages corresponding to the previous layer are updated during the first stage of each task for the current layer, and can be evaluated once all the V2C messages have been collected. Since the V2C messages are generated in the final stage of each task in the previous layer, and the pipeline consists of 4 stages, three additional stalls are inserted between two successive layers, i.e., between the final task for the previous layer and the first task for the current layer, such that any data hazard can be avoided. Fortunately, when the reordered
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+466
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+Fig. 13. Modified arrangement for the V2C sign memory banks and the associated task schedule using the ILP.
+
+FIFO-free LBP decoder is applied to a QC-LDPC code constructed from a non-full base matrix, the C2V messages that are updated during the first stage of the tasks are not always generated from the previous layer. Since the order of the decoding tasks for the same layer can be exchanged without affecting the decoding results, any tasks that do not rely on messages from the previous layer can be processed during the clock cycles that were originally occupied by the stalls. It is worth noting that the schedule shown in Fig. 13 is obtained with this consideration in mind.
+V. PERFORMANCE EVALUATION
+A. Implementation Results for the Proposed Decoder
+In this work, a FIFO-free reordered decoder was implemented for a rate-0.905 irregular (18396,16644) QC-LDPC code using 90-nm technology. In order to boost the throughput, decoding messages from three circulant sub-matrices are processed in parallel. Since the stalls cannot be totally removed, 98 clock cycles are required in order to complete a single iteration, which is slightly more than E B/3 = 82. The number of quantization bits for the APP values, V2C magnitudes and C2V messages are denoted as qAPP, qV2C, and qC2V respectively, where qAPP = 6, qV2C = 5, and qC2V = 5 are used in the decoder implementation. Fig. 1 shows the associated fixed-point error-rate results for the implementation of the decoder, where Tγ = 0.5 and γ = 0.5 are adopted. Compared to the floating-point results which are not included in Fig. 1, the proposed quantization scheme introduces a degradation of 0.1 dB.
+In order to achieve the desired throughput, the C2V storage is implemented using shift registers. Fig. 14(a) shows the architecture for the C2V storage used in a conventional decoder, where a 2-to-1 multiplexer is appended to each D flip-flop. This is because multiple clock cycles are required in order to complete the processing of a single layer, but all the values are only shifted to the right registers during the final clock cycle, otherwise the C2V messages must be retained in the same register during the decoding process for the same layer.
+Considering the large number of multiplexers used in a conventional decoder, a gated-clock based architecture that
+
+Fig. 14. Architecture for the C2V storage modules for (a) a conventional decoder and (b) the proposed decoder.
+can be realized using a normal synthesis tool is used in the proposed decoder. The resultant architecture is shown in Fig. 14(b), where the appended multiplexers for all the D flip-flops are removed, and a single multiplexer is added in order to gate the clock that triggers the shift registers. The multiplexer is controlled using the same signal as was used in the original design, and data shifting can only occur during the final clock cycle for each layer. The flip-flop-based C2V memory consists of registers containing 21204 bits and occupies an area of 0.26 mm2.
+In order to balance the memory bandwidth and area, both the V2C magnitude memory and V2C sign memory are implemented using register files (RFs) generated by the memory compiler. As the size of the RFs obtained from the memory generator is limited, most of the storage blocks are realized as a combination of multiple RFs. In the implementation for the proposed decoder, the V2C sign memory consists of fifteen 128×36 single-port RFs and three 36×36 single-port RFs and occupies an area of 0.44 mm2. In addition, the V2C magnitude memory consists of 35 122 × 22 two-port RFs and occupies an area of 0.95 mm2.
+A summary of the implementation results is provided in Table III. The equivalent gate count for this decoder is 926K, where the memory components occupy 62.25% of the total area and the logic components occupy the remaining 37.75%. Fig. 15 shows a plot of the layout, where the decoder occupies an area of 4.19 mm2. When eight iterations are used, the decoder can achieve a throughput of 4.674 Gb/s at a clock rate of 200 MHz, where the power consumption is 299 mW.
+B. Comparisons With the Previous Works
+The progressive improvement in area efficiency and TAR using the proposed techniques is demonstrated in Fig. 16. A conventional LBP decoder that is implemented based on the same code is used as the base line, where a FIFO buffer
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+467
+
+TABLE III CHIP SUMMARY
+Fig. 15. Layout for the proposed (18396, 16644) decoder.
+Fig. 16. Progressive improvement in both area requirements and TAR by applying the proposed techniques, where the decoders considered here are all pipelined decoders.
+is included in the implementation, and where the memory occupies more than 82% of the total area.
+The majority of the improvement in area efficiency achieved in this work is as a result of the reduction in the memory
+
+requirements. A comparison of the storage requirements for the decoding messages between the conventional and the proposed reordered FIFO-free LBP decoder is provided in Table IV, where a parameterized form is used in order to avoid distorting the generalization. Consequently, the reduction in memory requirements can be evaluated for different combinations of code parameters, i.e., M, N, and z, etc. In this table, the values displayed in parentheses represent the actual number of bits and the area used for the memory by the (18396,16644) QC-LDPC decoder presented in this paper.
+In the conventional decoder, the V2C magnitude values are stored in the FIFO buffer. After removing the FIFO buffer, a significant reduction in the gate count can be observed from the second group of bars indicated in Fig. 16, where the equivalent area can be reduced to 75 % of the original implementation. However, if the decoding schedule is directly arranged based on the location of the nonzero sub-matrix in H, the required number of clock cycles increases to 130, and the TAR decreases due to the stalls that need to be inserted.
+The next step is to optimize the number of memory banks and minimize the number of stalls required. The results are shown in the third group of bars. The same number of V2C sign bits is stored in both the conventional decoder and the reordered FIFO-free decoder. The area required is further reduced when only three banks are used for the V2C sign memory. With the assistance of the ILP algorithm, the storage of the V2C signs is appropriately distributed across the three memory banks. The decoding schedules are arranged based on the partition of the V2C sign memory. As the required number of stalls is significantly decreased, a single iteration can be completed using 98 clock cycles. By combining both the reduction in area and the increase in throughput, the TAR is significantly increased.
+In the final step, the modified MSA presented in Section II-C is adopted. Since the first minimum values are not stored, the number of storage bits required for each check node can be reduced by qV2C, and a total of M × z × qV2C D flip-flops can be removed. In addition, more then 2000 2-input multiplexers can be removed using the gated-clock technique, meaning that the silicon area for the C2V registers in the reordered FIFO-free decoder is significantly reduced. As a result, compared to the base line decoder, the proposed architecture enables the total gate count to be reduced by about 36.5 %, while providing an increase in TAR of about 43 %. Compared to the directly-implemented reordered decoder, the TAR can be increased by 58.9% based on the proposed implementation, as can be observed from the results for group 2 and group 4 illustrated in Fig. 16.
+A comparison between the proposed reordered QC-LDPC decoder and other high-rate decoders is given in Table V, where decoders based on similar code lengths are considered. The decoding schedules include shuffled [6], flooding [8], and LBP [10]. It is worth noting that since the flooding schedule is used in [8], a larger number of iterations is required in order to achieve a compatible error-rate performance compared to the decoders that are based on either shuffled or layered schedules. In [6], a top-down design methodology, which not only includes a code construction stage but also hardware
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+468
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+TABLE IV
+MEMORY COMPLEXITY FOR BOTH THE CONVENTIONAL AND THE PROPOSED DECODERS FOR THE RATE-0.905 (18396,16644) QC-LDPC CODE, WHERE fC L K = 200 MHz, N = 63, M = 6, z = 292, AND qAP P = 6, qV 2C = 5, qC2V = 5 (UNIT: bit)
+
+TABLE V COMPARISONS OF DIFFERENT LDPC DECODERS
+
+d = gcd(a − b, 3b) b, h cannot be a multiple of 3. If h is a multiple of 3, i.e., h = 3q, q ∈ Z, then
+
+b mod d = dh mod d = d(3q) mod d
+
+3
+
+3
+
+= dq mod d = 0.
+
+optimization, was adopted in order to design an efficient highrate LDPC decoder. The technique based on deep-quantization of C2V messages adopted in the LBP decoder presented in [10] was also helpful in reducing the storage requirements. After each of these implementations is normalized to a 90nm process for fair comparison, it can be observed that the proposed reordered LBP decoder achieves the highest TAR.
+
+which can be contracted to d b. Consequently, h = 3q+r, r ∈ {1, 2}, and
+
+b = dh = d(3q + r ) = dq + dr .
+
+3
+
+3
+
+3
+
+We
+
+already
+
+know
+
+that
+
+b
+
+∈
+
+Z,
+
+meaning
+
+that
+
+dr 3
+
+∈ Z.
+
+However,
+
+since r ∈ {1, 2} and gcd(3, r ) = 1, then the greatest common
+
+divisor d has a factor 3. If we let d = 3d , d ∈ Z, we have
+
+⎧
+
+⎨⎪a
+
+=
+
+(a
+
+− b) + b
+
+=
+
+dk
+
++ dq
+
++
+
+dh 3
+
+=
+
+d (q
+
++ k) + d
+
+r
+
+⎪⎩ab
+
+= +
+
+dq + d r b = d(2q
+
++
+
+k)
+
++
+
+2d
+
+r.
+
+(10)
+
+Now consider the following color mapping function f : V (G) → S, where V = {ti : i ∈ Z} and S ∈ {1, 2, 3}:
+
+f (ti ) =
+
+3i d
+
+mod 3.
+
+(11)
+
+VI. CONCLUSION
+This paper describes a FIFO-free reordered LBP decoder where the number of stalls required is minimized. Initially, the number of memory banks required for storing the V2C sign can be minimized to three with the assistance of a graph coloring method in combination with an additional pipeline stage. Then the ILP technique is introduced and is used to determine the schedule for the decoding tasks, as well as the bank arrangement for the V2C sign memory, such that the required number of stalls can be minimized and a higher decoding throughput can be achieved. In order to further reduce the decoder area, the first minimum values are not stored if the proposed modified min-sum algorithm is used. Compared to the LDPC decoders presented in previous literature, the proposed LBP decoder provides the best hardware efficiency in terms of TAR.
+APPENDIX
+If we let d = gcd(a−b, 3b), then we can set that a−b = dk and 3b = dh, where k, h ∈ Z, and gcd(k, h) = 1. Since
+
+For the connected vertices ti and ti−b, we have
+
+f (ti ) − f (ti−b) =
+
+3i d
+
+mod 3 −
+
+3(i − b) d
+
+mod 3
+
+= 3i − 3(i − dq − d r ) mod 3
+
+d
+
+d
+
+= 3i − 3i + 3q + r mod 3
+
+d
+
+d
+
+= r mod 3 = 0.
+
+Hence, the colors for the connected vertices ti and ti−b are different. Similarly, for the connected vertices ti and ti−a , we have
+
+f (ti ) − f (ti−a ) =
+
+3i d
+
+mod 3 −
+
+3(i − a) d
+
+mod 3
+
+= 3i − 3(i − d(q +k)−d r ) mod 3
+
+d
+
+d
+
+= 3i − 3i + 3(q + k) + r mod 3
+
+d
+
+d
+
+= r mod 3 = 0.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+LEE et al.: OPTIMIZATION TECHNIQUES FOR THE EFFICIENT IMPLEMENTATION OF HIGH-RATE LAYERED QC-LDPC DECODERS
+
+469
+
+For the connected vertices ti and ti−(a+b), we have
+
+f (ti ) − f (ti−(a+b))
+
+= 3i mod 3 − 3(i − a − b) mod 3
+
+d
+
+d
+
+= 3i − 3(i −d(2q +k)−2d r ) mod 3
+
+d
+
+d
+
+= 3i − 3i + 3(2q + k) + 2r mod 3
+
+d
+
+d
+
+= r mod 3 = 0.
+
+As a result ⎧ ⎪⎨ f (ti ) = f (ti−a )
+
+⎩⎪
+
+f f
+
+(ti (ti
+
+) )
+
+= =
+
+f (ti−b) f (ti−(a+b))
+
+for i ∈ Z.
+
+(12)
+
+Then using only three colors, the depiction of the graph G is completed and any two connected vertices are in different colors.
+
+REFERENCES
+[1] Y.-L. Ueng, C.-J. Yang, K.-C. Wang, and C.-J. Chen, “A multimode shuffled iterative decoder architecture for high-rate RS-LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2790–2803, Oct. 2010.
+[2] C.-C. Cheng, J.-D. Yang, H.-C. Lee, C.-H. Yang, and Y.-L. Ueng, “A fully parallel LDPC decoder architecture using probabilistic minsum algorithm for high-throughput applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 9, pp. 2738–2746, Sep. 2014.
+[3] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA, USA: MIT Press, 1963.
+[4] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1997.
+[5] K.-C. Ho, P.-C. Fang, H.-P. Li, C.-Y. Wang, and H.-C. Chang, “A 45 nm 6 b/cell charge-trapping flash memory using LDPC-based ECC and driftimmune soft-sensing engine,” in IEEE Int. Solid-State Circuits Conf. Dig. Tech. Papers, Feb. 2013, pp. 222–223.
+[6] K.-C. Ho, C.-L. Chen, and H.-C. Chang, “A 520 k (18900, 17010) array dispersion LDPC decoder architectures for NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 4, pp. 1293–1304, Apr. 2016.
+[7] Y.-L. Wang, Y.-L. Ueng, C.-L. Peng, and C.-J. Yang, “Processing-task arrangement for a low-complexity full-mode WiMAX LDPC codec,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 415–428, Feb. 2011.
+[8] H. Zhong, W. Xu, N. Xie, and T. Zhang, “Area-efficient min-sum decoder design for high-rate quasi-cyclic low-density parity-check codes in magnetic reording,” IEEE Trans. Magn., vol. 43, no. 12, pp. 4117–4122, Dec. 2007.
+[9] J. Kim, J. Cho, and W. Sung, “A high-speed layered min-sum LDPC decoder for error correction of NAND flash memories,” in Proc. IEEE Int. Midwest Symp. Circuits Syst., Aug. 2011, pp. 1–4.
+[10] M.-R. Li, H.-C. Chou, Y.-L. Ueng, and Y. Chen, “A low-complexity LDPC decoder for NAND flash applications,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Jun. 2014, pp. 213–216.
+[11] J. Kim and W. Sung, “Rate-0.96 LDPC decoding VLSI for soft-decision error correction of NAND flash memory,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 5, pp. 1004–1015, May 2014.
+[12] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proc. IEEE Global Telecommun. Conf., San Antonio, TX, USA, Nov. 2001, pp. 3019–3024.
+[13] M. M. Mansour and N. R. Shanbhag, “Turbo decoder architectures for low-density parity-check codes,” in Proc. IEEE Global Telecommun. Conf., vol. 2. Nov. 2002, pp. 1383–1388.
+[14] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+
+[15] S.-W. Yen, S.-Y. Hung, C.-L. Chen, H.-C. Chang, S.-J. Jou, and C.-Y. Lee, “A 5.79-Gb/s energy-efficient multirate LDPC codec chip for IEEE 802.15.3c applications,” IEEE J. Solid-State Circuits, vol. 47, no. 9, pp. 2246–2257, Sep. 2012.
+[16] A. B. Stimming, N. Preyss, A. Cevrero, A. Burg, and C. Roth, “A parallelized layered QC-LDPC decoder for IEEE 802.11ad,” in Proc. New Circuits Syst. Conf. (NEWCAS), Jun. 2013, pp. 1–4.
+[17] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity-check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[18] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[19] M. M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, no. 3, pp. 684–698, Mar. 2006.
+[20] K. K. Gunnam, S. G. Choi, B. M. Yeary, and M. Atiquzzaman, “VLSI architectures for layered decoding for irregular LDPC codes of WiMax,” in Proc. IEEE ICC, Jun. 2007, pp. 4542–4547.
+[21] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[22] J. Li, K. Zhao, J. Ma, and T. Zhang, “Realizing unequal error correction for NAND flash memory at minimal read latency overhead,” IEEE Trans. Circuits Syst. II, Express Briefs, vol. 61, no. 5, pp. 354–358, May 2014.
+[23] S. Müller, M. Schreger, M. Kabutz, M. Alles, F. Kienle, and N. Wehn, “A novel LDPC decoder for DVB-S2 IP,” in Proc. Design, Autom., Test Eur. Conf. Exhibit., Apr. 2009, pp. 1308–1313.
+[24] A. Darabiha, A. Carusone, and F. R. Kschischang, “Power reduction techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43, no. 8, pp. 1835–1845, Aug. 2008.
+[25] B. Xiang, D. Bao, S. Huang, and X. Zeng, “An 847–955 Mb/s 342–397 mW dual-path fully-overlapped QC-LDPC decoder for WiMAX system in 0.13 μm CMOS,” IEEE J. Solid-State Circuits, vol. 46, no. 6, pp. 1416–1432, Jun. 2011.
+[26] Y.-L. Ueng, J.-K. Hu, and H.-C. Chou, “Layered decoding architecture with reduced number of hardware buffers for LDPC codes,” U.S. Patent 2014 0 281 786 A1, Mar. 15, 2013.
+[27] D. W. Matual and L. L. Beck, “Smallest-last ordering and clustering and graph coloring algorithms,” J. ACM, vol. 30, no. 3, pp. 417–427, Jul. 1983.
+[28] G. B. Dantzig, Linear Programming and Extensions. Princeton, NJ, USA: Princeton Univ. Press, 1963.
+[29] S. C. Fang and S. C. Puthenpura, Linear Optimization and Extensions: Theory and Algorithms. Englewood Cliffs, NJ, USA: Prentice-Hall, 1993.
+[30] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” JPL, IPN Prog. Rep. 42-154, Aug. 2003.
+[31] Y.-L. Ueng, B.-J. Yang, C.-J. Yang, H.-C. Lee, and J.-D. Yang, “An efficient multi-standard LDPC decoder design using hardware-friendly shuffled decoding,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 3, pp. 743–756, Mar. 2013.
+[32] J. Xu, L. Chen, I. Djurdjevic, S. Lin, and K. Abdel-Ghaffar, “Construction of regular and irregular LDPC codes: Geometry decomposition and masking,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 121–134, Jan. 2007.
+[33] I. Djurdjevic, J. Xu, K. Abdel-Ghaffar, and S. Lin, “Construction of low-density parity-check codes based on Reed–Solomon codes with two information symbols,” IEEE Commun. Lett., vol. 8, no. 7, pp. 317–319, Jul. 2004.
+[34] J. Jin and C.-Y. Tsui, “An energy efficient layered decoding architecture for LDPC decoder,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 18, no. 8, pp. 1185–1195, Aug. 2010.
+[35] X. Y. Shih, C. Z. Zhan, C. H. Lin, and A. Y. Wu, “An 8.29 mm2 52 mW multi-mode LDPC decoder design for mobile WiMAX system in 0.13 μm CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3, pp. 672–683, Mar. 2008.
+[36] A. Darabiha, A. C. Carusone, and F. R. Kschischang, “Power reduction techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43, no. 8, pp. 1835–1845, Aug. 2008.
+[37] F. Angarita, J. Valls, V. Almenar, and V. Torres, “Reduced-complexity min-sum algorithm for decoding LDPC codes with low error-floor,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 7, pp. 2150–2158, Jul. 2014.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+470
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–I: REGULAR PAPERS, VOL. 64, NO. 2, FEBRUARY 2017
+
+[38] Z. Wang, Z. Cui, and J. Sha, “VLSI design for low-density parity-check code decoding,” IEEE Circuits Syst. Mag., vol. 11, no. 1, pp. 52–69, Feb. 2011.
+[39] J. Sha, Z. Wang, M. Gao, and L. Li, “Multi-Gb/s LDPC code design and implementation,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 17, no. 2, pp. 262–268, Feb. 2009.
+Huang-Chang Lee received the B.S. and M.S. degrees in electrical engineering from National Chi Nan University, Taiwan, R.O.C., in 2002 and 2004, respectively, and the Ph.D. degree in electrical engineering from the National Tsing Hua University, Hsinchu, Taiwan, in 2014.
+From 2005 to 2009, he was a Circuit Designerwith an IC design service company. From 2014 to 2015, he was a postdoctoral researcher with National Tsing Hua University. Since February 2016, he has been with the faculty of the Department of Electrical Engineering, Chang Gung University, Taoyuan, Taiwan, where he is currently an Assistant Professor. His research interests include channel coding and digital signal processing, and their applications to communications.
+
+Jyun-Kai Hu received the B.S. degree in computer science and information engineering from the National Cheng Kung University, Taiwan, R.O.C., in 2011 and the M.S. degree in electrical engineering from the National Tsing Hua University, Hsinchu, Taiwan, in 2013.
+He is currently a Digital Design Engineer with Richtek Technology Corporation. His research interests include VLSI architecture design and channel coding.
+Po-Chiao Chou received the B.S. degree in electrical engineering from the National Central University, Taiwan, R.O.C., in 2012 and the M.S. degree in electrical engineering from the National Tsing Hua University, Hsinchu, Taiwan, in 2015.
+He is currently a Research and Development (R&D) Engineer with Mediatek. His research interests include channel coding and VLSI designs for channel coding.
+
+Mao-Ruei Li received the B.S. and M.S. degrees in electrical engineering in 2011 and 2013, respectively, from National Tsing Hua University, Hsinchu, Taiwan, R.O.C., where he is pursuing the Ph.D. degree in the Department of Electrical Engineering.
+His research interests include channel coding, VLSI designs for channel coding, and mixed-signal VLSI design.
+
+Yeong-Luh Ueng (M’05–SM’15) received the Ph.D. degree in communication engineering from the National Taiwan University, Taipei, Taiwan, R.O.C., in 2001.
+From 2001 to 2005, he was with a private communication technology company, where he focused on the design and development of various wireless chips. Since December 2005, he has been a member of the faculty at the National Tsing Hua University, Hsinchu, Taiwan, where he is currently an Associate Professor with the Department of Electrical Engineering and the Institute of Communications Engineering. His research interests include coding theory, wireless communications, and communication ICs.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:31:04 UTC from IEEE Xplore. Restrictions apply.
+
+

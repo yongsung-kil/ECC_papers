@@ -1,0 +1,383 @@
+100MBPS RECONCILIATION FOR QUANTUM KEY DISTRIBUTION USING A SINGLE GRAPHICS PROCESSING UNIT
+
+arXiv:2001.07979v1 [quant-ph] 22 Jan 2020
+
+Yu Guo∗ State Key Laboratory for Novel Software Technology,
+Nanjing University, Nanjing, 210046, China
+mg1833101@smail.nju.edu.cn
+
+Chaohui Gao∗ Nanjing University, Nanjing,
+210046, China * Authors contributed equally to this work
+m13578756629@163.com
+
+Dong Jiang State Key Laboratory for Novel Software Technology,
+Nanjing University, Nanjing, 210046, China
+jiangd@nju.edu.cn
+
+Lijun Chen State Key Laboratory for Novel Software Technology,
+Nanjing University, Nanjing, 210046, China
+chenlj@nju.edu.cn
+
+January 23, 2020
+ABSTRACT
+An efficient error reconciliation scheme is important for post-processing of quantum key distribution (QKD). Recently, a multi-matrix low-density parity-check codes based reconciliation algorithm which can provide remarkable perspectives for high efficiency information reconciliation was proposed. This paper concerns the improvement of reconciliation performance. Multi-matrix algorithm is implemented and optimized on the graphics processing unit (GPU) to obtain high reconciliation throughput. Experimental results indicate that GPU-based algorithm can highly improve reconciliation throughput to an average 85.67 Mbps and a maximum 102.084 Mbps with typical code rate and efficiency. This is the best performance of reconciliation on GPU platform to our knowledge.
+1 Introduction
+Quantum key distribution (QKD) allows two legitimate parts, Alice and Bob, to share unconditional secure keys through quantum channel and classical channel [1, 2]. Based on the physical principles and theories, QKD guarantees that keys are safe against eavesdropper Eve. Normally, QKD process is divided into two phases: quantum phase and post-processing classical phase. In the first phase, Alice and Bob obtain the raw key through the quantum channel respectively.
+In the second phase, in order to ensure that Alice and Bob share the same key, Bob’s raw key needs to be corrected, and the post-processing is introduced. Post-processing includes four stages: base sifting, error estimation, reconciliation [3, 4] and privacy amplification [5, 6]. Before reconciliation, Alice and Bob will get sifted key respectively. Then in reconciliation stage, Bob corrects the errors using the reconciliation algorithm to assure the consistency between their sifted key. In this stage, Alice and Bob should leak as less information as possible in this stage. The performance of reconciliation is the bottleneck of the QKD system. So the scope of this paper lies in reconciliation scheme establishing with appropriate algorithms and platforms.
+Most researches adopt belief propagation (BP) as reconciliation algorithm [3, 4]. Traditional BP algorithm uses one low-density parity-check (LDPC) code to correct the errors [7]. And BP is implemented on CPU, GPU and FPGA to breakthrough performance bottleneck [8, 9, 10, 11]. The ultimate goal of these studies is to improve the reconciliation performance.
+
+A PREPRINT - JANUARY 23, 2020
+
+Recently, a highly efficient multi-matrix algorithm was proposed by Gao et.al in Ref. [12], in which they use two or more matrices as check matrix. This algorithm was proved to be efficient and safe, it can reduce the number of iterations, increase the success rate of reconciliation and reduce the error rate after reconciliation [12]. This algorithm generates multiple syndromes to transmit and update data, and these processes involves a host of repetitive, simple operations. Furthermore, compared to other platforms, GPU is suitable for processing data-intensive computing tasks. So in order to take advantage of their similarity, we decide to realize this novel reconciliation algorithm on GPU to obtain better reconciliation performance.
+In this paper, we design and realize a novel reconciliation scheme using multi-matrix algorithm on GPU platform, called multi-matrix scheme. The primary purpose of this scheme is to break through the bottleneck of reconciliation performance. Experimental results demonstrate that multi-matrix scheme has higher throughput, success rate and lower number of iterations. After further optimization, this scheme can be extended to any key length and GPU platform. Moreover, this scheme can achieve better performance with typical code rate and efficiency. It is promising that our multi-matrix scheme is applicable in real-time QKD system [10, 13].
+The rest of this paper is organized as follows: in section 2, we give a related review of the multi-matrix algorithm and some parameter definitions. In section 3, we describe how we adopt the multi-matrix algorithm on GPU and the optimization of algorithm in detail. In section 4, experimental results are listed to show the high performance of multi-matrix algorithm. In section 5, we draw a conclusion and summary of our work.
+
+2 Preliminaries
+
+Multi-matrix BP, called MBP, use u(u > 1) matrices generated by PEG algorithm [14, 15] to correct errors simultaneously. The dimensions of these matrices are m ∗ n, where n is the length of the key and the number of variable nodes, and m the number of check nodes.
+Before reconciliation, Alice and Bob get their sifted key xT = [x1, x2, ..., xn] and yT = [y1, y2, ..., yn] (xi, yi ∈ {0, 1}) respectively. Alice and Bob share u matrices H1,H2,...,Hu. Alice calculates u syndromes (zl)T according to the formula(1), and sends them to Bob through the classical channel.
+
+(zl)T = [z1, ..., zm] = Hl · x(mod2), l ∈ {1, 2, .., u}, zj ∈ {0, 1}
+
+(1)
+
+Then Bob initializes the prior probabilities Pib(b ∈ {0, 1}), and then calculate the log likelihood ratios LPl i and variable-to-check (V2C) information LCl j→Vi for all u matrices respectively. After this, Bob updates and propagates
+check-to-variable (C2V) information. Finally, Bob goes through all variable nodes to get the value LVl i of soft-decision according to formula(2), where Nl(Vi) represents the set of adjacent variable nodes of check nodes Vi in lth matrix.
+
+u
+
+LVi = LPi +
+
+LCl j →Vi
+
+(2)
+
+l=1 Cj ∈Nl(Vi)
+
+And yT will be corrected by decoding decisions. Once zl = Hl · y (mod 2), reconciliation is considered to be successful and finished. Otherwise, the reconciliation continues until the number of iterations overtake the limit, which signifies a failing reconciliation. Detailed reconciliation process and algorithm can be found in Ref.[12].
+The reconciliation efficiency f is an important parameter[16], which shows the ratio of the actual amount of information Bob obtains to the theoretical minimum amount of information Bob needs for correcting all errors. In real applications, f is calculated according to formula (3), which is same as the single-matrix algorithm,
+
+m
+
+f=
+
+> 1,
+
+nh(e)
+
+(3)
+
+where e is the error rate of key and h(e) is the Shannon binary entropy:
+
+h(e) = −elog2e − (1 − e)log2(1 − e)
+
+(4)
+
+In the real QKD system, the value of f stages around 1.1 to 1.4. The lower f, the less information needs to be shrink in privacy amplification stage, and vice versa.
+
+2
+
+A PREPRINT - JANUARY 23, 2020
+
+3 Scheme implementation and optimization
+A.Implementation MBP is shown in Algorithm 1. There are n nodes needed to be updated in every matrix in MBP, and the process of updating is similar. Meanwhile, GPU can call thousands of threads to do some simple, repetitive calculations in parallel[17], so nodes can be updated simultaneously.
+
+Algorithm 1 Multi-matrix reconciliation algorithm
+
+1: Initialize LVl i→Cj = LlPi 2: for every parity-check matrix Hl do
+
+3: for j=1 to m do
+
+4:
+
+for every Vik ∈neighborhood of Cjk do
+
+5:
+
+Generate and propagate LlCj→Vi
+
+6:
+
+end for
+
+7: end for
+
+8: for i=1 to n do
+
+9:
+
+for every Cjk ∈ neighborhood of Vik do
+
+10:
+
+Generate and propagate LlVi→Cj
+
+11:
+
+end for
+
+12: end for
+
+13: end for
+
+14: Make decoding decisions
+
+15: if stopping rule is not satisfied then
+
+16: Go back to line2
+
+17: end if
+
+In our scheme, CPU is responsible for obtaining the matrices and key information and calling GPU. Then GPU allocate threads to start updating node information. We decide to use one thread to update one information of node. However, GPU cannot call all threads at the same time. Instead, GPU treats Warp as its basic execution unit. There are 32 threads in a Wrap, the basic execution unit of GPU. All threads in the same Wrap execute simultaneously. And GPU can call up to 80 Wraps to work at the same time[17], and it will achieve the best performance when the number of called threads is a multiple of 32, i.e. n mod 32 = 0. Our sifted key length is 220, leading to the huge and inflexible matrix. If all matrices and keys are stored in GPU, storage and computing resources will be greatly wasted.
+So we split the sifted key into k short keys of length n, i.e. k ∗ n=220. And one thread updates information of one node, in other word, n nodes need at least n threads to be updated. In this way, the size of matrices changes from m ∗ 220 to m ∗ n, which greatly reduces the use of storage resources. The process reconciliation on GPU sees in Fig. 1.
+B.GPU optimization In this work, we optimize GPU and MBP from the following three aspects to obtain the best performance: thread optimization, branch reduction, and memory optimization.
+Thread optimization. In the implementation process, the sifted key is splited into short keys, which not only makes multi-matrix scheme suitable for various key length, but also enables GPU to allocate threads reasonably. GPU allows users to divide threads into multidimensional forms logically, and different division modes affect the performance of GPU[17]. So we need to find the best division mode according to parameter n. We schedule the thread blocks in two dimensions, denoted as Block(Bx,By), and we schedule threads in two dimensions in every thread block, denoted as Thread(Tx,Ty). So in Fig. 1, all shown threads are organized two-dimensional forms in two-dimensional thread blocks logically. We test the throughput of different split methods, as shown in Table 1. As a result, we decide to use the last method, where n=216, k= 16, Block(Bx,By)=(16,8), Thread(Tx,Ty)=(32,16) to obtain the best performance.
+Branch reduction. Each thread in the same Wrap executes the same instructions. Threads with different branches in the same Warp, leading to the different instructions, will wait for each other. Those statements with branches, such as if and for statements, will reduce GPU parallelism and reconciliation throughput[17]. There are numerous branches in MBP and most of them can be trimmed. In our scheme, these branches are reduced as much as possible, and the
+
+3
+
+A PREPRINT - JANUARY 23, 2020
+
+Figure 1: Process of our multi-matrix scheme on GPU best in color.
+
+Table 1: Thread scheduling and throughput
+
+n Block T hread Throughput(Mbps)
+
+104 (16, 2) (10, 32)
+
+51.266
+
+214 (16, 16) (8, 8)
+
+55.241
+
+215 (16, 16) (16, 8)
+
+72.959
+
+216 (2, 215) (1, 1)
+
+61.326
+
+216 (16, 8) (32, 16)
+
+102.084
+
+MBP is optimized to accommodate the GPU architecture. For example, in MBP, some judge statements are replaced by some general expressions. We initialize the prior probabilities Pbi (b ∈ {0, 1}) according to formula(5).
+
+Pi1 = −(yi − e) Pi0 = 1 + (yi − e)
+
+(5)
+
+And we propagate check-to-variable(C2V) information LCj→Vi according to formula (6), where vi ∈ N (Cj)\i represents that vi is not included in the set. Using similar approaches, over 80% branches are trimmed, which improves reconciliation performance by over 10%.
+
+
+
+
+
+LCj→Vi = (−1)zj · 2tanh−1 
+
+1
+
+tanh
+
+2
+
+Lv i
+
+→Cj
+
+
+
+(6)
+
+v
+i
+
+∈N (Cj )\i
+
+Memory optimization. All matrix node information is initially stored in CPU. GPU interacts with CPU to read and write data. Usually, there will be an interaction between GPU and CPU before the next iteration begins. Through our tests, the interaction time exceeds the calculated time in one iteration. So before reconciliation, all nodes of matrices and keys are put in the global memory in GPU, and all intermediate results generated in one iteration are put in share memory and cache. During reconciliation, threads send signals to each other to synchronize data. In this way, the interaction between GPU and CPU only occur at the beginning and the end of reconciliation, leading to the improvement of GPU computing resource utilization. Also, we use coalesced global memory, which is also applied in [9], to hide the latency of global memory.
+
+4
+
+A PREPRINT - JANUARY 23, 2020
+
+4 Experimental results
+
+Optimization results. After the optimization in section 3, multi-matrix scheme implemented on the GPU achieves best reconciliation performance. Our scheme makes full use of available threads and schedules them appropriately. Also, this scheme reduces the use of memory and average iteration times. Every optimization reduce reconciliation time leading to the higher throughput, as shown in Table. 2. In this table, we compare several parameters before and after optimization. And the optimization results of each aspect are also listed in the Table.2.
+
+Table 2: Performance Comparison
+
+Parameter Least Threads Space occupation Average iterations Average iteration time(ms)
+Factor Thread Branch Memory Best Results
+
+Before OP1 After OP1
+
+u∗n∗k
+
+n
+
+u∗n∗k
+
+u∗n
+
+5.16
+
+3.71
+
+293.6
+
+164.4
+
+Throughput(Mbps)
+
+69.260
+
+48.672
+
+53.973 70.426
+
+102.084
+
+1 OP: optimization
+
+Improvement of multi-matrix. Multi-matrix algorithm has a significant improvement of reconciliation, i.e. faster reconciliation speed, higher success rate. In Fig. 2, we compare the throughput and success rate of the different schemes. Experimental results that multi-matrix scheme has higher throughput and success rate than single-matrix scheme with the increase of e. And after our optimization for algorithm and GPU, the performance of reconciliation is further improved.
+
+Figure 2: Throughput different by number of matrices and whether optimized, where error rate e is from 0.03 to 0.1, and code rate R=0.5.
+Fig. 2 displays the throughput using single-matrix scheme, 2-matrix scheme and 3-matrix scheme before and after optimization respectively. The figure clearly demonstrates that throughput increases as the number of matrices increases and the overall reconciliation performance is greatly improved after optimization. Through our tests, the ability of error correction of multi-matrix algorithm approaches saturation as the number of matrices increases. So considering computing resources, algorithm performance and other factors, we conclude that the reconciliation system achieves the best performance when the number of matrices is 3, i.e. u=3.
+5
+
+A PREPRINT - JANUARY 23, 2020
+
+Usability.
+
+Multi-matrix
+
+scheme
+
+can
+
+apply
+
+to
+
+various
+
+code
+
+rate
+
+R,
+
+which
+
+is
+
+defined
+
+as
+
+R
+
+=
+
+1−
+
+m n
+
+.
+
+We
+
+choose
+
+4
+
+typical R, i.e. 0.5, 0.6, 0.7, 0.8, and test the throughput, as shown in Fig. 3. Optimized scheme is conducted on TitanV
+
+and GTX 1060, different models of NVIDIA GPU. The experimental results imply that multi-matrix scheme can get
+
+promising performance on different GPU platform.
+
+Figure 3: Throughput with different code rate R.
+
+Fig. 3 indicates that the amount of information leaked during the reconciliation is acceptable with high reconciliation throughput. What’s more, multi-matrix scheme is easier to correct the errors with high e than single-matrix scheme. So it can achieve favorable efficiency with high throughput, as is demonstrated in Table 3, which means less information needs to be shrunk in the privacy amplification stage.
+
+Table 3: Efficiency and Throughput
+
+Efficiency R1 T2 Average iterations
+
+1.1 ≤ f < 1.15 0.5 65.578
+
+6.65
+
+1.15 ≤ f < 1.2 0.5 82.789
+
+5.00
+
+1.2 ≤ f < 1.4 0.5 95.720
+
+3.98
+
+1.1 ≤ f < 1.15 0.6 69.626
+
+6.60
+
+1.1 ≤ f < 1.15 0.7 61.903
+
+6.67
+
+1.1 ≤ f < 1.15 0.8 64.820
+
+5.97
+
+1 R: Code Rate. 2 T: Throughput (Mbps)
+
+Comparison. This experiment compares throughput in different references, which all use single-matrix algorithm. In Table 4, we compare some typical researches on different platforms with our work. We keep reconciliation efficiency in the same range and compare the reconciliation throughput. Our multi-matrix scheme performs best to our knowledge.
+
+5 Conclusion
+In this paper, a novel multi-matrix reconciliation algorithm is implemented and optimized on the GPU platform. Optimized multi-matrix scheme achieve better performance compared to single-matrix scheme, especially as the number of matrices increases. Under the premise of ensuring the reconciliation efficiency, we conduct our experiments using matrices of multiple code rate. Experimental results show that our multi-matrix scheme is the best scheme based on GPU to our knowledge. In addition, according to Ref. [10], our scheme is suitable for the real-world QKD system.
+
+6
+
+A PREPRINT - JANUARY 23, 2020
+
+Table 4: Throughput comparison
+
+Ref. [8] [8] [9] [10] [11] Our work Our work
+
+Platform GPU NVidia M2090
+CPU Inter X5675 GPU TitanXp(CV-QKD)3
+FPGA Altera Stratix V CPU i7-6700HQ GPU TitanV GPU TitanV
+
+f1 1.25 1.25 0.93 1.13 ≤ f < 1.2 1.108 1.1 ≤ f < 1.2 1.1 ≤ f < 1.3
+
+T2 30.70 9.00 30.39 55.00 57.60 70.13 85.67
+
+1 f: efficiency. 2 T: Throughput (Mbps). 3 Our works and others are based on DV-QKD.
+
+After analysis, our scheme can improve 27% to 40% key rate using the QKD system in Ref. [10].
+Funding
+This research is financially supported by the National Key Research and Development Program of China (No. 2017YFA0303700), the Major Program of National Natural Science Foundation of China (No. 11690030, 11690032), the National Natural Science Foundation of China (No. 61771236), the Natural Science Foundation of Jiangsu Province (BK20190297)
+
+References
+[1] Charles H Bennett and Gilles Brassard. Quantum cryptography: public key distribution and coin tossing. Theor. Comput. Sci., 560(12):7–11, 2014.
+[2] Nicolas Gisin, Grégoire Ribordy, Wolfgang Tittel, and Hugo Zbinden. Quantum cryptography. Reviews of modern physics, 74(1):145, 2002.
+[3] Sae-Young Chung, Thomas J Richardson, and Rüdiger L Urbanke. Analysis of sum-product decoding of low-density parity-check codes using a gaussian approximation. IEEE Transactions on Information theory, 47(2):657–670, 2001.
+[4] Yu Kou, Shu Lin, and Marc PC Fossorier. Low-density parity-check codes based on finite geometries: a rediscovery and new results. IEEE Transactions on Information theory, 47(7):2711–2736, 2001.
+[5] Charles H Bennett, Gilles Brassard, and Jean-Marc Robert. Privacy amplification by public discussion. SIAM journal on Computing, 17(2):210–229, 1988.
+[6] Charles H Bennett, Gilles Brassard, Claude Crépeau, and Ueli M Maurer. Generalized privacy amplification. IEEE Transactions on Information Theory, 41(6):1915–1923, 1995.
+[7] EO Kiktenko, AO Malyshev, AA Bozhedarov, NO Pozhar, MN Anufriev, and AK Fedorov. Error estimation at the information reconciliation stage of quantum key distribution. Journal of Russian Laser Research, 39(6):558–567, 2018.
+[8] AR Dixon and H Sato. High speed and adaptable error correction for megabit/s rate quantum key distribution. Scientific reports, 4:7275, 2014.
+[9] Xiangyu Wang, Yichen Zhang, Song Yu, and Hong Guo. High speed error correction for continuous-variable quantum key distribution with multi-edge type ldpc code. Scientific reports, 8(1):10543, 2018.
+[10] Zhiliang Yuan, Alan Plews, Ririka Takahashi, Kazuaki Doi, Winci Tam, Andrew Sharpe, Alexander Dixon, Evan Lavelle, James Dynes, Akira Murakami, et al. 10-mb/s quantum key distribution. Journal of Lightwave Technology, 36(16):3427–3433, 2018.
+7
+
+A PREPRINT - JANUARY 23, 2020 [11] Haokun Mao, Qiong Li, Qi Han, and Hong Guo. High-throughput and low-cost ldpc reconciliation for quantum
+key distribution. Quantum Information Processing, 18(7):232, 2019. [12] Chaohui Gao, Dong Jiang, Yu Guo, and Lijun Chen. Multi-matrix error estimation and reconciliation for quantum
+key distribution. Optics express, 27(10):14545–14566, 2019. [13] Boris Korzh, Charles Ci Wen Lim, Raphael Houlmann, Nicolas Gisin, Ming Jun Li, Daniel Nolan, Bruno
+Sanguinetti, Rob Thew, and Hugo Zbinden. Provably secure and practical quantum key distribution over 307 km of optical fibre. Nature Photonics, 9(3):163, 2015. [14] Xiao-Yu Hu, Evangelos Eleftheriou, and Dieter-Michael Arnold. Regular and irregular progressive edge-growth tanner graphs. IEEE Transactions on Information Theory, 51(1):386–398, 2005. [15] Xiao-Yu Hu, Evangelos Eleftheriou, and D-M Arnold. Progressive edge-growth tanner graphs. In GLOBECOM’01. IEEE Global Telecommunications Conference (Cat. No. 01CH37270), volume 2, pages 995–1001. IEEE, 2001. [16] David Elkouss, Anthony Leverrier, Romain Alléaume, and Joseph J Boutros. Efficient reconciliation protocol for discrete-variable quantum key distribution. In 2009 IEEE International Symposium on Information Theory, pages 1879–1883. IEEE, 2009. [17] David Kirk et al. Nvidia cuda software and gpu parallel computing architecture. In ISMM, volume 7, pages 103–104, 2007.
+8
+
+

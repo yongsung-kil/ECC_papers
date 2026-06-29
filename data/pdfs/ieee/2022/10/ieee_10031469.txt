@@ -1,0 +1,151 @@
+2022 19th International SoC Design Conference (ISOCC) | 978-1-6654-5971-6/22/$31.00 ©2022 IEEE | DOI: 10.1109/ISOCC56007.2022.10031469
+
+Low Power Decoder Architecture of Product Code for Storage Controller
+
+Sumin Kim, Byungmin Ahn, Bohwan Jun, Mankeun Seo, Hongrak Son, and Yong Ho Song
+Memory Business Samsung Electronics Hwaseong, Republic of Korea
+
+Abstract— Error correction codes (ECCs) are essential for correcting the errors caused by the physical characteristics of 3D NAND flash in flash solution products. In this paper, we introduce low power decoder architecture for product code. Precisely, by using Hamming product code and Chase-Pyndiah algorithm, this work takes not only the same correction capability and area as low-density parity-check decoder, but also less power with relatively simple operation for decoding. Only the log likelihood ratios of error-suspicious bits are gathered in SRAM for the next iteration of decoding, so that the power consumption and area of SRAM read/write decrease. Compared with the conventional ECC decoder with the same correction capability and area, our decoder has achieved an average power reduction of 22.4%.
+Keywords; Error correction code, Hamming product code, Chase-Pyndiah algorithm
+I. INTRODUCTION
+Storage solution products based on NAND flash have superior power efficiency and stability compared to magnetic hard disks. Moreover, thanks to its high density and speed characteristics, NAND flash has been widely used in numerous fields such as machine learning and big data processing that require enormous storage space. Nevertheless, due to the physical characteristics of NAND flash that stores data in floating gates, which is prone to errors, an error correction code (ECC) decoder is essential to correct the corrupted data.
+As the number of layers increases in 3D NAND flash memory, the bit error rate (BER) also increases, so powerful ECC such as a low-density parity-check (LDPC) code has been exploited because of high error correction capability [1]. However, power consumption also increases to correct more errors [2]. This work addresses a decoder with Hamming product code [3] for less power and same error correction capability compared to LDPC decoder. Hamming product code has structural simplicity of linear block code as well as high error correction capability of turbo code, which is widely used along with LDPC and has good performance close to Shannon limit [4]. In order to achieve such capability, Pyndiah applied the iterative decoding method capable of soft input/soft output to the linear block code based on the Chase algorithm [5].
+A decoder inside a storage controller is responsible for reading and writing data from NAND flash. In this paper, we propose a novel decoder architecture, which is suitable to read only the error suspicious bits necessary for the current iteration
+
+and write the other error suspicious bits for the next iteration, in order to reduce power compared to the conventional decoder even with the same area and correction capability. Through experiments, our proposed decoder shows 22.4% lower power compared with the latest decoder.
+II. BACKGROUND
+A. Hamming Product Code
+Product code introduced by Elias in 1954 is a linear block code to which two or more component codes are connected [6]. Hamming product code is the product code with the component code being the Hamming code. In Fig. 1, each column is a
+, , Hamming code, and each row is a , , hamming code, where is codeword length, is information bits, and is minimum Hamming distance. Consequently, we can create a long linear block code by combining short Hamming codes and the information bits can be connected to two Hamming codes. Product code performs sequential decoding on rows and columns to reduce decoding complexity as Elias suggested.
+2
+2
+
+1 1
+
+Information bits
+
+Parity bits for rows
+
+Parity bits for columns
+
+Parity bits on parity bits
+
+Figure 1. A product code with two component codes.
+
+978-1-6654-5971-6/22/$31.00 ©2022 IEEE
+
+324
+
+ISOCC 2022
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:32 UTC from IEEE Xplore. Restrictions apply.
+
+Address bank 0_0 bank 0_1 bank 0_2
+
+0123
+
+124 125 126 127
+
+R0 W0 R3 W3
+
+R0 W0 R3 W3
+
+...
+
+Extension
+
+R1 W1 R4 W4
+
+R1 W1 R4 W4
+
+R2 W2 R5 W5
+
+R2 W2 R5 W5
+
+key = 0
+
+key = 255
+
+Address bank 0_0 bank 0_1 bank 0_2
+
+128 129 130 131
+
+188 189 190 191
+
+A0 A3 A6 A9
+
+A0 A3 A6 A9
+
+...
+
+A1 A4 A7 A10
+
+AR1 WA41 AR47 WA140
+
+A2 A5 A8 A11
+
+AR2 WA52 AR58 WA151
+
+ext = 0
+
+ext = 15
+
+Figure 2. An architecture inside a decoder SRAM. R and W stand for read and write operation, respectively. A stands for either read or write operation.
+
+III. PROPOSED ARCHITECTURE
+Chase-Pyndiah algorithm needs to control log likelihood ratios (LLRs) of the suspicious bits for iterative decoding [7]. This paper focuses on the operation of reading the LLRs received from the previous iteration and writing the LLRs transmitted to the next iteration. The LLRs are stored in the SRAM of the decoder, not the register, because all LLRs are not required at every moment of one iteration, but only LLRs associated with decoding, which is sequentially processed in the iteration, are required.
+Fig. 2 shows the proposed architecture implemented in the SRAM. Each of memory banks are physically separated. R0, R1, ⋯ , R5 and W0, W1, ⋯ , W5 are 6 LLRs to read and write in one iteration, respectively. A0, A1, ⋯ , A11 are 12 LLRs to read or write in one iteration for exceptional case.
+The purpose for separating the read and write position is as follows. In a row decoding operation, the decoder reads the LLR from the SRAM according to the key index of the row iteration, and writes the LLR to the SRAM as the key index of the column iteration required for decoding in the next iteration. In the column decoding operation, the decoder sequentially performs functions in a horizontal direction from left to right in Fig. 1, and as a result, key indexes connected to a row codeword are spread to various column codewords. This means that reading from SRAM is sequential, but writing to SRAM is difficult to predict. Since two operations occur at the same time, it is necessary to separate the read position and the write position in order to cope with the unpredictable movement of the write operation.
+The SRAM limits the number of LLRs corresponding to each key, which is 6 in this paper. Nonetheless, exceptional processing is needed in case of exceeding the number of LLRs. Since the extension operation is rare, it is designed to provide more space for LLRs in order to secure error correction capability. The read and write positions are separated from in the static allocations, but the read and write positions are common in the extension allocations.
+
+TABLE I.
+
+THE COMPARISON OF AVERAGE POWER
+
+The number of errors in one codeword
+150
+
+Average power (ratio)
+
+Conventional
+
+Proposed
+
+1
+
+0.782
+
+200
+
+1
+
+0.781
+
+250
+
+1
+
+0.776
+
+IV. EXPERIMENTAL RESULT
+Table 1 shows the comparison of average power between conventional and proposed decoder. Conventional decoder has same area and correction capability with proposed decoder. The unit of result is ratio in order to show the effect of the proposed architecture. The power consumptions are measured for analyzing application specific integrated circuit power consumption at the same operating frequency. The average power is the power consumed by the one codeword with a fixed number of errors and random messages in an environment where input/output throughput is not disturbed. The proposed architecture can improve power efficiency up to 22.4% compared to the latest architecture.
+V. CONCLUSION
+In this paper, we propose low power decoder architecture of Hamming product code. In particular, it focuses on optimizing the flow of decoding LLRs in hardware. The proposed decoder has reduced the power compared to the latest decoder by 22.4% when the other conditions are the same, which are area, correction ability and operating throughput. Through the result, this paper verifies that the proposed architecture is appropriate to adopt it in storage solution products using NAND flash memory. In future work, we plan to make more competitive ECC decoders by increasing error correcting capability.
+REFERENCES
+[1] D. J. MacKay and R. M. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes,” Electronics Letters, vol. 32, no. 18, pp. 1645, 1996.
+[2] A. Darabiha, A. C. Carusone, and F. Kschischang, “Power Reduction Techniques for LDPC Decoders,” IEEE J. Solid-State Circuits, vol. 43, no.8, pp.1835–1845, Aug. 2008.
+[3] N. Nageen and V. Bhatia, "An Efficient FPGA Implementation of Turbo Product Code Decoder with Single and Double Error Correction," 2020 National Conference on Communications (NCC), Feb. 2020.
+[4] C. Berrou, A. Glavieux, and P. Thitimajshima, "Near Shannon Limit Error-correcting Coding and Decoding: Turbo-codes. 1," Proceedings of IEEE International Conference on Communications, vol. 2, pp. 1064– 1070, 1993.
+[5] R. Pyndian, A. Clavieux, A. Picart, and S. Jacq, “Near Optimum Decoding of Product Codes,” IEEE GLOBECOM, pp. 339–343, 1994.
+[6] P. Elias, “Error-free Coding,” Transactions of the IRE Professional Group on Information Theory, vol.4, no.4, pp. 29–37, 1954.
+[7] L. Li, F. Zhang, P. Zheng, and Z. Yang, “Improvements for Decoding Algorithm of Turbo Product Code,” IEEE Int. Conf. Signal Process., Commun. Comput. (ICSPCC), Aug. 2014, pp. 374.
+
+978-1-6654-5971-6/22/$31.00 ©2022 IEEE
+
+325
+
+ISOCC 2022
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:32 UTC from IEEE Xplore. Restrictions apply.
+
+

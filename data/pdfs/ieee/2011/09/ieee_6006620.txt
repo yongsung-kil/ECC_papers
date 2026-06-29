@@ -1,0 +1,3355 @@
+5960
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+Efficient Implementation of Linear Programming Decoding
+Mohammad H. Taghavi, Member, IEEE, Amin Shokrollahi, Fellow, IEEE, and Paul H. Siegel, Fellow, IEEE
+
+Abstract—While linear programming (LP) decoding provides more flexibility for finite-length performance analysis than iterative message-passing (IMP) decoding, it is computationally more complex to implement in its original form, due to both the large size of the relaxed LP problem and the inefficiency of using general-purpose LP solvers. This paper explores ideas for fast LP decoding of low-density parity-check (LDPC) codes. By modifying the previously reported Adaptive LP decoding scheme to allow removal of unnecessary constraints, we first prove that LP decoding can be performed by solving a number of LP problems that each contains at most one linear constraint derived from each of the parity-check constraints. By exploiting this property, we study a sparse interior-point implementation for solving this sequence of linear programs. Since the most complex part of each iteration of the interior-point algorithm is the solution of a (usually ill-conditioned) system of linear equations for finding the step direction, we propose a preconditioning algorithm to facilitate solving such systems iteratively. The proposed preconditioning algorithm is similar to the encoding procedure of LDPC codes, and we demonstrate its effectiveness via both analytical methods and computer simulation results.
+Index Terms—Adaptive linear programming (LP) decoding, conjugate-gradient method, interior-point methods, low-density parity-check (LDPC) codes, preconditioning.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes [1] are becoming one of the dominant means of error-control coding in the transmission and storage of digital information. By combining randomness and sparsity, LDPC codes with large block lengths can correct errors using iterative message-passing (IMP) algorithms at coding rates that are closer to the capacity than any other class of practical codes [2]. While the performance of IMP decoders for the asymptotic case of infinite lengths is studied extensively using probabilistic methods
+Manuscript received December 12, 2008; revised March 09, 2011; accepted April 12, 2011. Date of current version August 31, 2011. Part of the research on this paper was done when M. H. Taghavi was visiting EPFL in the summer of 2007. The material in this paper was presented in part at the 3rd Annual Information Theory and Applications Workshop (ITA’08), La Jolla, CA, January 2008, and in part at the 46th Annual Allerton Conference on Communication, Control, and Computing, Monticello, IL, September 2008.
+M. H. Taghavi was with the Electrical and Computer Engineering Department, University of California, San Diego, La Jolla, CA 92093-0407 USA. He is now with Qualcomm, Inc., San Diego, CA 92121 USA (e-mail: mtaghavi@ieee. org).
+A. Shokrollahi is with the School of Basic Sciences and School of Computer Science and Communications, Ecole Polytechnique Fédérale de Lausanne (EPFL), 1015 Lausanne, Switzerland (e-mail: amin.shokrollahi@epfl.ch).
+P. H. Siegel is with the Electrical and Computer Engineering Department and the Center for Magnetic Recording Research, University of California, San Diego, La Jolla, CA 92093-0401 USA (e-mail: psiegel@ucsd.edu).
+Communicated by I. Sason, Associate Editor for Coding Theory. Digital Object Identifier 10.1109/TIT.2011.2161920
+
+such as density evolution [3], the finite-length behavior of these algorithms, especially their error floors, are still not well characterized.
+Linear programming (LP) decoding was proposed by Feldman et al. [4] as an alternative to IMP decoding of LDPC and turbo-like codes. LP decoding approximates the maximum-likelihood (ML) decoding problem by a linear optimization problem via a relaxation of each of the finite-field parity-check constraints of the ML decoding into a number of linear constraints. Many observations suggest similarities between the performance of LP and IMP decoding methods [4]–[6]. In fact, the sum-product message-passing algorithm can be interpreted as a minimization of a nonlinear function, known as Bethe free energy, over the same feasible region as LP decoding [7], [8].
+Due to its geometric structure, LP decoding seems to be more amenable than IMP decoding to finite-length analysis. In particular, the finite-length behavior of LP decoding can be completely characterized in terms of pseudocodewords, which are the vertices of the feasible space of the corresponding linear program. Another characteristic of LP decoding—the ML certificate property—is that its failure to find an ML codeword is always detectable. More specifically, the decoder always gives either an ML codeword or a nonintegral pseudocodeword as the solution. On the other hand, the main disadvantage of LP decoding is its higher complexity compared to IMP decoding.
+In order to make linear programming (LP) decoding practical, it is necessary to find efficient implementations that make its time-complexity comparable to those of the message-passing algorithms. A conventional implementation of LP decoding is highly complex due to two main factors: (1) the large size of the LP problem formed by relaxation, and (2) the inability of general-purpose LP solvers to solve the LP efficiently by taking advantage of the properties of the decoding problem.
+The standard formulation of LP decoding [4] has a size that grows very rapidly with the density of the Tanner graph representation of the code. Adaptive LP (ALP) decoding was proposed in [9] to address this problem, reducing LP decoding to solving a sequence of much smaller LP problems. The size of these LP problems has been observed in practice to be independent of the degree distribution, and more specifically, a small factor (less than two) times the number of parity checks. However, this observation has not been analytically explained.
+More recently, an equivalent formulation of the LP decoding problem was proposed in [11] and [12], with a problem size growing linearly with both the code length and the maximum check node degrees. While this formulation requires solving only one LP, the overall complexity of this method in practice remains substantially higher than that of ALP decoding.
+
+0018-9448/$26.00 © 2011 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5961
+
+In this paper, we take some steps toward designing efficient LP solvers for LP decoding that exploit the inherent sparsity and structure of this particular class of problems. Our approach is based on a sparse implementation of interior-point algorithms. In an independent work, Vontobel studied the implementation and convergence of interior-point methods for LP decoding and mentioned a number of potential approaches to reduce its complexity [13]. It is also worth noting that a different line of work in this direction has been to apply iterative methods based on message-passing, instead of general LP solvers, to perform the optimization for LP decoding; e.g., see [8] and [14].
+The contributions of this paper are divided into two main parts; the results given in the first part lay the foundation and provide motivation for the techniques proposed in the second part. In the first part of our contributions, we first propose two modified versions of ALP decoding. The main idea behind these modifications is to adaptively remove a number of constraints at each iteration of ALP decoding, while adding new constraints to the problem. We prove a number of properties of these algorithms, which facilitate the design of a low-complexity LP solver. In particular, we show that the modified ALP decoders have the single-constraint property, which means that they perform LP decoding by solving a series of linear programs that each contain at most one linear constraint from each parity check. An important consequence of this property is that the constraint matrices of the linear programs that are solved have a structure similar, in terms of the locations of their nonzero entries, to that of the parity-check matrix. This and other analytical results presented in the first part are exploited later in the paper to develop a more efficient interior-point LP solver.
+In the second part, we focus on the most complex part of each iteration of the interior-point algorithm, which is solving a system of linear equations to compute the Newton step. Since these linear systems become ill-conditioned as the interior-point algorithm approaches the solution, iterative methods that are often used for solving sparse systems, such as the conjugate-gradient (CG) method, perform poorly in the later iterations of the optimization. To address this problem, we propose a criterion for designing preconditioners that take advantage of the properties of LP decoding, along with a number of greedy algorithms to search for such preconditioners. The proposed preconditioning algorithms have similarities to the encoding procedure of LDPC codes, and we demonstrate their effectiveness via both analytical methods and computer simulation results. It is important to note that, while the preconditioning techniques proposed are motivated by the structure of the (modified) ALP decoders, the applications of these techniques are not limited to solving LPs given by ALP decoders, and they can be applied to various classes of sparse LP problems, including nonadaptive LP decoding.
+The rest of this paper is organized as follows. In Section II, we review linear codes, LP decoding, and ALP decoding. In Section III, we propose some modifications to ALP decoding, and demonstrate a number of properties of ALP decoding and its variations. In Section IV, we review a class of the interior-point linear programming methods, as well as the preconditioned conjugate gradient (PCG) method for solving linear systems, with
+
+an emphasis on sparse implementation. In Section V, we introduce the proposed preconditioning algorithms to improve the PCG method for LP decoding. Some theoretical analysis and computer simulation results are presented in Section VI, and some concluding remarks are given in Section VII.
+
+II. LP DECODING
+
+A. Notation
+
+Throughout the paper, we denote scalars and column vectors
+
+by lower-case letters , matrices by upper-case letters ,
+
+and sets by calligraphic upper-case letters . We write the
+
+th element of a vector and the th element of a matrix
+
+as and , respectively. Furthermore, whenever one side
+
+of an equation or inequality is a vector and the other side is a
+
+constant such as 0, the latter is interpreted as a vector of the
+
+corresponding length with all its elements equal to that constant.
+
+The cardinality (size) of a finite set is shown by . The
+
+support set (or briefly, support) of a vector of length is the
+
+set of locations
+
+such that
+
+. Similarly,
+
+the fractional support of a vector
+
+is the set of locations
+
+such that
+
+.
+
+A binary linear code of block length is a subspace of
+
+. This subspace can be defined as the null space (kernel)
+
+of a parity-check matrix
+
+. In other words
+
+(1)
+
+Hence, each row of corresponds to a binary parity-check con-
+
+straint. The design rate of this code is defined as
+
+. In
+
+this paper, we assume that has full row rank, in which case
+
+the design rate is the same as the rate of the code.
+
+Given the
+
+parity-check matrix, , the code can also
+
+be described by a Tanner graph. The Tanner graph is a bi-
+
+partite graph containing variable nodes (corresponding to the
+
+columns of ) and check nodes (corresponding to the rows
+
+of ). We denote by
+
+the set of (indices of) vari-
+
+able nodes, and by
+
+the set of (indices of) check
+
+nodes. Variable node is connected to check node via an edge
+
+in the Tanner graph iff
+
+.
+
+The neighborhood
+
+of a check (variable) node is the
+
+set of variable (check) nodes it is directly connected to via an
+
+edge, i.e., the support set of the th row (column) of . The
+
+degree of a node is the cardinality of its neighborhood. Let
+
+be a subset of the variable nodes. We call a stopping
+
+set if there is no check node in the graph that has exactly one
+
+neighbor in . Stopping sets characterize the termination of a
+
+belief propagation erasure decoder.
+
+Each code can be equivalently represented by many different
+
+parity-check matrices and Tanner graphs. However, it is impor-
+
+tant to note that the performance of suboptimal decoders, such as
+
+message-passing or LP decoding, may depend on the particular
+
+choice of and . A low-density parity-check (LDPC) code
+
+is a linear code which has at least one sparse Tanner graph rep-
+
+resentation, where, roughly speaking, the average variable node
+
+and check node degrees are “small” with respect to or .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5962
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+A linear program (LP)1 of dimension is an optimization problem with a linear objective function and a feasible set (space) described by a number of linear constraints (inequalities or equations) in terms of real-valued variables. Each linear constraint in the LP defines a hyperplane in -dimensional space. If the solution to an LP is bounded and unique, then it is at a vertex of the feasible space, on the intersection of at least
+such hyperplanes. Conversely, for any vertex of the feasible space of an LP, there exists a choice of the coefficients of the objective function such that is the unique solution to the LP.
+
+B. LP Relaxation of Maximum-Likelihood Decoding
+
+Consider a binary linear code of length . If a codeword
+
+is transmitted through a memoryless binary-input output-
+
+symmetric (MBIOS) channel, the ML codeword given the
+
+received vector
+
+is the codeword that maximizes the
+
+likelihood of observing , i.e.,
+
+(2)
+
+For binary codes, this problem can be rewritten as the equivalent optimization problem
+
+which can be written in the equivalent form
+
+(6)
+
+We refer to the constraints of this form as parity inequalities.
+
+If the variables are zeroes and ones, these constraints will
+
+be equivalent to the original binary parity-check constraints. To
+
+see this, note that if is a subset of , with odd, and the
+
+corresponding parity inequality fails to hold, then all variable
+
+nodes in must have the value 1, while those in
+
+must
+
+have the value 0. This implies that the corresponding vector
+
+does not satisfy parity check . Conversely, if parity check fails
+
+to hold, there must be a subset of variable nodes
+
+of
+
+odd size such that all nodes in have the value 1 and all those
+
+in
+
+have the value 0. Clearly, the corresponding parity
+
+inequality would be violated. Now, given this equivalence, we
+
+relax the LP problem by replacing each binary constraint,
+
+, by a box constraint,
+
+. LP decoding can then
+
+be written as
+
+(7)
+
+(3)
+
+Lemma 1 ([4], Originally by [17]): For any check node , the
+
+where is the vector of log-likelihood ratios (LLR) defined as set of parity inequalities (5) defines the convex hull of all
+
+assignments of the variables with indices in
+
+that satisfy
+
+(4)
+
+the th binary parity-check constraint. Since the convex hull of a set of vectors in
+
+is a subset
+
+The ML decoding problem (3) is an optimization with a linear
+
+objective function in the real domain, but with constraints that
+
+are nonlinear in the real space (although, linear in
+
+). It is
+
+desirable to replace these constraints by a number of linear con-
+
+straints, such that decoding can be performed using linear pro-
+
+gramming. The feasible space of the desired LP would be the
+
+convex hull of all the codewords in , which is called the code-
+
+word polytope. Since a global minimum occurs at one of the ver-
+
+tices of the polytope, using this feasible space makes the set of
+
+potential (unique) solutions to the LP identical to the set of code-
+
+words in . Unfortunately, the number of constraints needed for
+
+this LP representation grows exponentially with the code length,
+
+therefore making this approach impractical. As an approxima-
+
+tion to ML decoding, Feldman et al. proposed a relaxed version
+
+of this problem by first considering the convex hull of the local
+
+codewords defined by each row of the parity-check matrix, and
+
+of
+
+, the set of parity inequalities for each check node au-
+
+tomatically restrict all the involved variables to the interval [0,
+
+1]. Hence, we obtain the following corollary:
+
+Corollary 1: In the formulation of LP decoding above, the box constraints for variables that are involved in at least one parity-check constraint are redundant.
+The fundamental polytope has a number of integral (binary-valued) and nonintegral (fractional-valued) vertices. The integral vertices, which satisfy all the parity-check equations as shown before, exactly correspond to the codewords of . Therefore, the LP relaxation has the ML certificate property, i.e., whenever LP decoding gives an integral solution, it is guaranteed to be an ML codeword. On the other hand, if LP decoding gives as the solution one of the nonintegral vertices, which are known as pseudocodewords, the decoder declares a failure.
+
+then intersecting them to obtain what is known as the funda-
+
+mental polytope, [6].
+
+C. Adaptive Linear Programming Decoding
+
+To describe the (projected) fundamental polytope, linear con-
+
+straints are derived from a parity-check matrix as follows. For
+
+each row
+
+of the parity-check matrix, i.e., each
+
+check node, the LP formulation includes the constraints
+
+In the original formulation of Feldman et al. for LP decoding
+
+[4], the number of parity inequalities for each check node of de-
+
+gree is equal to the number of odd-sized subsets of its neigh-
+
+borhood, which is equal to
+
+. In the same article, another
+
+formulation of the problem is presented with
+
+constraints
+
+(5) for dense parity-check matrices. Even for parity-check matrices
+
+of moderate row weights and code lengths, the number of con-
+
+1Throughout the paper, we abbreviate the terms “linear program” and “linear straints given by both formulations can be very large. In [9], a
+
+programming” both as “LP.”
+
+cutting-plane algorithm was proposed as an alternative to the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5963
+
+direct implementation of LP decoding (7). In this method, re- As we will see, many of the elegant properties of these algo-
+
+ferred to as “adaptive LP decoding” (ALP decoding), a hier- rithms are consequences of Theorem 1.
+
+archy of linear programs with the same objective function as in First, we present an alternative to using Algorithm 1 of [9]
+
+(7) are solved, with the solution to the last program being iden- for finding all the violated parity inequalities at any given point
+
+tical to that of LP decoding. The first linear program in this hi-
+
+. Consider the general form of parity inequalities in
+
+erarchy is made up of only box constraints, such that for each (6) for a given check node , and note that at most one of these
+
+, we include the constraint
+
+inequalities can be violated at . To find this inequality, if it
+
+exists, we need to find an odd-sized
+
+that minimizes
+
+(8) the left-hand side of (6). If there were no requirement that
+
+be odd, the left-hand side expression would be minimized by
+
+The solution to this initial problem corresponds to the result of an (uncoded) bit-wise hard decision based on the received vector.
+
+putting any
+
+with
+
+in . However, if such
+
+has an even cardinality, we need to select one element of
+
+to add to or remove from , such that the increase on
+
+the left-hand side of (6) is minimal. This means that is the
+
+Algorithm 1 ALP Decoding
+
+element whose corresponding value is closest to . This
+
+results in Algorithm 2, which has
+
+complexity for check
+
+1: Setup the initial LP problem with constraints from (8),
+
+and
+
+;
+
+2: Find the solution to the initial LP problem by bit-wise
+
+hard decision;
+
+3: repeat
+
+node , thus reducing the complexity of finding all the parity
+
+inequalities from
+
+with Algorithm 1 of [9] to
+
+, where is the total number of edges in
+
+the Tanner graph.2 In [18], the reader can find a more detailed
+
+discussion of this Algorithm.
+
+4:
+
+;
+
+5: Find the set of all parity inequalities and box
+
+constraints that are violated at ;
+
+Algorithm 2 Find the Violated Parity Inequality from Check Node at
+
+6: If
+
+, add the constraints in to the LP problem
+
+and solve it to obtain ;
+
+1:
+
+;
+
+7: until
+
+2: if is odd then
+
+8: Output
+
+as the solution to LP decoding.
+
+3:
+
+;
+
+4: else
+
+The adaptive LP decoding algorithm is presented here
+
+as Algorithm 1 (ALP decoding). In Step 5 of this al-
+
+gorithm, the search for all the violated parity inequal-
+
+ities can be performed using Algorithm 1 of [9] in
+
+time, without
+
+having to examine all the
+
+parity inequalities given
+
+by the original LP decoding formulation. Furthermore, based
+
+on observations, it was conjectured in [10] that there is no
+
+need to check for violated box constraints in Step 5, since they
+
+cannot be violated at any of the intermediate solutions of
+
+5:
+
+;
+
+6:
+
+if
+
+; otherwise
+
+;
+
+7: end if
+
+8: if (6) is satisfied at for this and then
+
+9: Check node does not introduce a violated parity
+
+inequality at ;
+
+10: else
+
+11: We have found the violated parity inequality from check
+
+node ;
+
+12: end if
+
+ALP decoding. In the next section, we present a proof of this
+
+conjecture.
+
+A. Modified ALP Decoding
+
+In [9], the number of iterations of ALP decoding was upper-
+
+bounded by the code length . However, it was observed in the
+
+simulations that the typical number of iterations is much smaller
+
+in practice (less than for all
+
+). Moreover, one can
+
+conclude from the following theorem that, at each iteration of
+
+ALP decoding, the number of violated parity inequalities added
+
+Definition 1: A linear inequality constraint of the form
+
+is called active at point if it holds with equality;
+
+i.e.,
+
+, and is called inactive if it holds with strict
+
+inequality; i.e.,
+
+.
+
+The following is a corollary of Theorem 1.
+
+to the problem is at most , where is the number of check Corollary 2: If one of the parity inequalities introduced by a
+
+nodes.
+
+check node is active at a point
+
+, all parity inequalities
+
+Theorem 1 ([10]): If at any given point
+
+, one of the
+
+parity inequalities introduced by a check node is violated, the
+
+rest of the parity inequalities from this check node are satisfied
+
+with strict inequality.
+
+from this check node must be satisfied at . Corollary 2 can be used to simplify Step 5 of ALP decoding
+(Algorithm 1) as follows. We first find the parity inequalities currently in the problem that are active at the current solution,
+. This can be done simply by checking if the slack variable
+
+III. PROPERTIES AND VARIATIONS OF ALP DECODING
+In this section, we prove some properties of LP and ALP decoding, and propose some modifications to the ALP algorithm.
+
+corresponding to a constraint is zero. Then, in the search for
+2During the peer-review process, we learned that an equivalent algorithm was independently proposed by Wadayama [15] for determining if a given vector is in the feasible space of the LP decoding problem.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5964
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+violated constraints, we exclude the check nodes that introduce remove all the inactive constraints that exist in the LP problem,
+
+these active inequalities.
+
+irrespective of which check node they come from. This results
+
+Now consider the linear program
+
+at an iteration of in a slightly different algorithm, which we call MALP-B de-
+
+ALP decoding, with an optimum point . This point is the coding. Although for any given decoding problem MALP-A
+
+vertex (apex) of the -dimensional cone formed by all hyper- and MALP-B algorithms generally solve different series of LP
+
+planes corresponding to the active constraints. It is easy to see subproblems, we will see later in this section that these two
+
+that among the constraints in this linear program, the inactive algorithms have very similar properties and complexities.
+
+ones are nonbinding, meaning that, if we remove the inactive The LP problems solved in the ALP and modified ALP de-
+
+constraints from the problem, remains an optimum point of coding algorithms can be written in the “standard” matrix form
+
+the feasible space. This fact motivates a modification in the ALP as
+
+decoding algorithm, where, after solving each LP, a subset of the
+
+constraints that are inactive at the solution are removed.
+
+By combining the two ideas proposed above, we obtain the
+
+modified ALP decoding algorithm A (MALP-A decoding),
+
+stated in Algorithm 3. It was conjectured in [10] that no box
+
+constraint can be violated at any intermediate solution of ALP
+
+(9)
+
+decoding. We will prove this conjecture for both ALP and MALP decoding in this section. Hence, we do not search for
+
+where matrix
+
+is called the constraint matrix.
+
+violated box constraints in the intermediate iterations of the B. Properties proposed algorithms.
+In Theorem 2 of [9], it has been shown that the sequence of
+
+Algorithm 3 MALP-A Decoding
+
+solutions to the intermediate LP problems in ALP decoding converges to that of LP decoding in at most iterations. In the fol-
+
+1: Setup the initial LP problem with constraints from (8),
+
+and
+
+;
+
+2: Find the solution to the initial LP problem by bit-wise
+
+hard decision;
+
+3: repeat
+
+4:
+
+5: for
+
+to do
+
+6: if there is no active parity inequality from check node
+
+in the problem then
+
+7: if check node introduces a parity inequality that is
+
+violated at
+
+then
+
+8: Remove the parity inequalities of check node (if any)
+
+from the current problem;
+
+lowing theorem, in addition to proving that this property holds for the two modified ALP decoding algorithms, we show three additional properties shared by all three variations of adaptive LP decoding.
+We assume that the optimum solutions to all the LP problems in the intermediate iterations of either ALP, MALP-A, or MALP-B decoding are unique. However, one can see that this uniqueness assumption is not very restrictive, since it holds with high probability if the channel output has a finite probability density function (pdf). Moreover, channels that do not satisfy this property, such as the binary symmetric channel (BSC), can be modified to do so by adding a very small continuous-domain noise to their output (or LLR vector).
+
+9: Add the new (violated) constraint to the LP problem;
+
+;
+
+10: end if
+
+11: end if
+
+12: end for
+
+13: If
+
+, solve the LP problem to obtain ;
+
+14: until
+
+15: Output
+
+as the solution to LP decoding.
+
+Theorem 2 (Properties of Adaptive LP Decoding): Let
+
+be the unique solutions to the sequence of
+
+LP problems,
+
+, solved in either ALP,
+
+MALP-A, or MALP-B decoding algorithms. Then, the fol-
+
+lowing properties hold for all three algorithms:
+
+a) The sequence of solutions
+
+satisfy all the box
+
+constraints
+
+.
+
+b) The costs of these solutions monotonically increase with
+
+In line 7 of Algorithm 3, checking if check node introduces
+
+the iteration number; i.e.,
+
+a violated parity inequality can be done using Algorithm 2 in
+
+(10)
+
+time, where is the degree of check node , and the role
+
+of the if-then structure of line 6 is to limit this processing to only c)
+
+converge to the solution of LP decoding, , in
+
+check nodes that are not currently represented in the problem
+
+at most iterations.
+
+by an active constraint. In line 8, before adding a new constraint d) Consider the set of parity inequalities included in
+
+from check node to the problem, any existing (inactive) con-
+
+which are active at its optimum solution, . Let
+
+straint is removed from the problem.
+
+be the set of indices of check nodes
+
+In each iteration of MALP-A algorithm, not all inactive
+
+that generate these inequalities. Then, is the solution
+
+constraints are removed; in line 8, we only remove inactive
+
+to an LP decoding problem
+
+with the LLR vector
+
+constraints that come from the check nodes that introduce
+
+and the Tanner graph corresponding to the check nodes
+
+violated constraints in the current iteration. An alternative
+
+in .
+
+approach would be to move this command to line 6; i.e., to The proof of this theorem is given in Appendix A.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5965
+
+The following theorem shows an interesting property of the modified ALP decoding schemes, which we call the “singleconstraint property.” This property does not hold for ALP decoding.
+Theorem 3: In the LP problem at any iteration of the MALP-A and MALP-B decoding algorithms, there is at most one parity inequality corresponding to each check node of the Tanner graph.
+Proof: We start with an LP problem consisting only of box constraints. At each iteration, if a check node introduces a violated parity inequality, the LP should not contain any active parity inequalities from check node (Corollary 2), and if the LP contains any inactive parity inequalities from this check node, both MALP-A and MALP-B remove them from the LP. Hence, at the end of the iteration, the newly-found parity inequality will be the only parity inequality from check node .
+
+box constraints given by (8) are active at the solution of LP decoding. This yields the following properties of LP decoding.
+
+Corollary 4: The solution to any LP decoding problem differs
+
+in at most
+
+coordinates from the vector obtained by making
+
+bit-based hard decisions on the LLR vector .
+
+Corollary 5: Each pseudocodeword of LP decoding has at most fractional entries.
+
+Remark 1: This bound on the size of the fractional support
+
+of pseudocodewords is tight in the sense that there are LP
+
+decoding relaxations which have pseudocodewords with ex-
+
+actly fractional entries. An example is the pseudocodeword
+
+of the (7, 4, 3) code with
+
+, given in [4].
+
+C. Connection to Erasure Decoding
+
+Corollary 3: The number of parity inequalities in any linear program solved by the MALP decoding algorithms is at most .
+
+The result above stands in contrast to the nonadaptive formu-
+
+lations of LP decoding, where the size of the LP problems grows
+
+with the check node degree. Consequently, the complexity of
+
+these two MALP algorithms can be bounded by their number
+
+of iterations times the worst-case complexity of solving an LP
+
+problem with variables and parity inequalities. Therefore,
+
+an interesting problem to investigate is how the number of itera-
+
+tions of the MALP decoding algorithms varies with the code pa-
+
+rameters, such as the length or the check node degrees, and how
+
+its behavior changes depending on whether the LP decoding
+
+output is integral or fractional. In Subsection III-D, we present
+
+some simulation results, studying and comparing ALP decoding
+
+and its modifications in terms of the number of iterations.
+
+An important consequence of the single-constraint property
+
+shown by Theorem 3 is that, in the LP problems that are solved
+
+by these two algorithms, the distribution of the nonzero ele-
+
+ments of the LP constraint matrix, , is identical to that of the
+
+parity-check matrix, , after removing the rows of that are
+
+not represented by a parity inequality in the LP. This is due to
+
+the fact that the support set of a row of , corresponding to a
+
+parity inequality, is identical to that of the row of from which
+
+it has been derived, and in addition, each row of is derived
+
+from a unique row of .
+
+As we will see later in this paper, the single-constraint prop-
+
+erty, which is not shared by LP or ALP decoding, maintains the
+
+same desirable combinatorial properties (e.g., degree distribu-
+
+tion) for that the matrix has. We exploit this key property of
+
+MALP algorithms later in Section V to design preconditioners
+
+for an interior-point LP solver. It is worth noting that a prop-
+
+erty similar to the single-constraint property was used in [15]
+
+in a different context—to reduce the number of terms added to
+
+approximate the gradient and Hessian in a quadratic program-
+
+ming-based decoding.
+
+Remember that the LP problem in the last iteration of the
+
+MALP decoding algorithms has the same solution as standard
+
+LP decoding. This solution is a vertex of the feasible set, defined
+
+by at least active inequalities from this LP problem. Hence,
+
+using Corollary 3, we conclude that at least
+
+of the initial
+
+For the binary erasure channel (BEC), the performance of belief propagation (BP), or its equivalent, the peeling algorithm [16], has been extensively studied. The peeling algorithm can be seen as performing row and column permutations to triangularize a submatrix of consisting of the columns corresponding to the erased bits. It is known that the BP and peeling decoders succeed on the BEC if and only if the set of erased bits does not contain a stopping set.
+Feldman et al. have shown in [4] that LP decoding and BP decoding are equivalent on the BEC. In other words, the success or failure of LP decoding can also be explained by stopping sets. In this subsection, we show a connection between LP decoding on the BEC and LP decoding on general MBIOS channels, allowing us to derive a sufficient condition for the failure of LP decoding on general MBIOS channels based on the existence of stopping sets.
+
+Theorem 4: Consider an LP decoding problem
+
+with
+
+LLR vector
+
+, resulting in the unique integral
+
+solution (i.e., the ML codeword) . Also, let be the result of
+
+bit-based hard decisions on ; i.e.,
+
+if
+
+, and
+
+otherwise. Then, the set
+
+of positions where and differ,
+
+does not contain a stopping set.
+
+Proof: Let’s assume, without loss of generality, that is
+
+the vector of all-zeroes, in which case, we will have
+
+(11)
+
+We form an LP erasure decoding problem
+
+with as
+
+the transmitted codeword and as the set of erased positions.
+
+has the same feasible space as
+
+, but has a
+
+new LLR vector , defined such that
+
+(12)
+
+Clearly, since
+
+, we have
+
+. We
+
+prove the theorem by showing that the all-zeroes vector is the
+
+unique solution to
+
+, as well.
+
+Assume that there is another vector
+
+such that we have
+
+(13)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5966
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+Fig. 1. Histograms of the number of iterations for ALP, MALP-A, and MALP-B decoding for a random (3,6)-regular LDPC code of length 480 at SNR = 2 dB.
+The left, middle, and right columns respectively correspond to the results of all decoding instances, decodings with integral outputs, and decodings with fractional output.
+
+Combining (12) and (13) yields
+
+column of histograms includes the results of all the decoding
+
+instances, while the second and third columns only include the
+
+decoding instances with integral and fractional outputs, respec(14) tively. From this figure, we can see that when the output is in-
+
+tegral (second column), the three algorithms have a similar be-
+
+implying that of the vector for
+
+. Therefore, using (11), the cost will be
+
+havior, and they all converge in less that 15 iterations. On the other hand, when the output is fractional (third column), the typical numbers of iterations are 2–3 times higher for all algo-
+
+rithms, so that we observe two almost nonoverlapping peaks in
+
+the histograms of the first column.
+
+(15)
+
+In Fig. 2, the average numbers of iterations of the three algorithms are plotted for both integral and fractional decoding
+
+with equality if and only if
+
+. Since, by as-
+
+sumption, is the unique solution to
+
+, we must have
+
+. Hence, is also the unique solution to
+
+. Finally, due to the equivalence of LP and BP decod-
+
+ings on the BEC, we conclude that does not contain a stopping
+
+set.
+
+Theorem 4 will be used later in the paper to design an efficient way to solve the systems of linear equations we encounter in LP decoding.
+
+outputs versus the code length. We can observe that the number of iterations for MALP-A and MALP-B decoding are significantly higher than that of ALP when the output is fractional. On the other hand, for decoding instances with integral outputs, where the LP decoder is successful in finding the ML codeword, the increase in the number of iterations for the modified ALP decoders relative to the ALP decoder is very small. Hence, the MALP decoders pay a small price in terms of the number of iterations in exchange for obtaining the single-constraint property.
+To measure the statistical deviation of the number of itera-
+
+D. Simulation Results
+
+tions from their mean, we computed the CDF of the number of iterations for each scenario, and observed that for each of the
+
+We present simulation results for ALP, MALP-A, and data points plotted in Fig. 2, the 95th percentile value is between
+
+MALP-B decoding of random (3,6)-regular LDPC codes, 2.5–6 iterations above the mean value. Moreover, our simula-
+
+where the cycles of length four are removed from the Tanner tions indicate that in the scenario examined in Fig. 1, the size of
+
+graphs of the codes. The simulations are performed in an the largest LP that is solved in each MALP-A or MALP-B de-
+
+AWGN channel with the SNR of 2 dB (the threshold of be- coding problem is smaller on average than that of ALP decoding
+
+lief-propagation decoding for the ensemble of (3,6)-regular by 17% for integral outputs and 30% for fractional outputs.
+
+codes is 1.11 dB), and include 8 different lengths, with 1000 The overall execution times of these decoding algorithms
+
+trials at each length.
+
+heavily depend on the choice of the underlying LP solver.
+
+In Fig. 1, we have plotted the histograms of the number of it- Using the simplex algorithm implementation in GLPK [19],
+
+erations using the three algorithms for length
+
+. The first we have observed that the overall execution times of the ALP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5967
+
+Fig. 2. Number of iterations of ALP, MALP-A, and MALP-B decoding versus code length for random (3,6)-regular LDPC codes at SNR = 2 dB. The solid
+curves represent the decoding instances with integral outputs, and the dashed curves represent the decoding instances with fractional outputs.
+
+and MALP algorithms are very comparable, with MALP al- The complexity of an LP solver is determined by the number
+
+gorithms sometime performing slightly faster than ALP. For a of iterations it takes to converge and the average complexity of
+
+comparison of the execution time of ALP and a number of other each iteration. The number of iterations of the simplex algorithm
+
+LP decoding approaches, we refer the reader to the simulation has been observed to be polynomial (superlinear), on average,
+
+results in Section III of [10].
+
+in the problem dimension , while its worst-case performance
+
+IV. SOLVING THE LP USING THE INTERIOR-POINT METHOD
+
+can be exponential. An intuitive way of understanding why the average number of simplex pivots to successfully solve an LP
+
+General-purpose LP solvers do not take advantage of the decoding problem is at least linear in is to note that each pivot
+
+particular structure of the optimization problems arising in LP makes one basic primal variable nonbasic (i.e., sets it to zero)
+
+decoding, and, therefore, using them can be highly inefficient. and makes one nonbasic variable basic (i.e., possibly increases
+
+In this and the next sections, we investigate how LP algorithms it from zero). Hence, starting from an initial point, it should
+
+can be implemented efficiently for LP decoding. The two major generally take at least a constant times pivots to arrive at a
+
+techniques for linear optimization used in most applications point corresponding to a binary codeword. Therefore, even if
+
+are Dantzig’s simplex algorithm [20] and the interior-point the computation of each simplex iteration were done in linear
+
+methods.
+
+time, one could not achieve a running time better that
+
+,
+
+A. Simplex Versus Interior-Point Algorithms
+
+unless the simplex method is fundamentally revised. In contrast to the simplex algorithm, for certain classes of in-
+
+The simplex algorithm takes advantage of the fact that the terior-point methods, such as the path-following algorithm, the
+
+solution to an LP is at one of the vertices of the feasible polyhe- worst-case number of iterations has been shown to be
+
+,
+
+dron. Starting from a vertex of the feasible polyhedron, it moves although these algorithms typically converge in
+
+itera-
+
+in each iteration (pivot) to an adjacent vertex, until an optimal tions [21]. Therefore, if the Newton step at each iteration can be
+
+vertex is reached. Each iteration involves selecting an adjacent computed efficiently, taking advantage of the sparsity and struc-
+
+vertex with a lower cost, and computing the size of the step to ture in the problem, one could obtain an algorithm that is faster
+
+take in order to move to that edge, and these are computed by a than the simplex algorithm for large-scale problems.
+
+number of matrix and vector operations.
+
+Interior-point methods consist of a variety of algorithms, dif-
+
+Interior-point methods generally move along a path within the fering in the way the optimization problem is approximated by
+
+interior of the feasible region. Starting from an interior point, an unconstrained problem, and how the step is calculated at each
+
+these methods approximate the feasible region in each iteration iteration. One of the most successful classes of interior-point
+
+and take a Newton-type step towards the next point, until they methods is the primal-dual path-following algorithm, which is
+
+get to the optimum point. Computation of these steps involves most effective for large-scale applications. In the following sub-
+
+solving a linear system.
+
+section we present a brief review of this algorithm. For a more
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5968
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+comprehensive description, we refer the reader to the literature The Karush–Kuhn–Tucker (KKT) conditions provide neceson linear programming and interior-point methods, e.g., [21]. sary and sufficient optimality conditions for , and can be
+written as [21, Chapter 9]
+
+B. Primal-Dual Path-Following Algorithm
+For simplicity, in this section we assume that the LP problems that we want to solve are of the form (9). However, by introducing a number of additional slack variables, we can modify all the expressions in a straighforward way to represent the case where both types of box constraints may be present for each variable.
+We first write the LP problem with variables and constraints in the “augmented” form
+
+(18) (19) (20) (21)
+where and are diagonal matrices with the entries of and on their diagonal, respectively, and denotes the all-ones vector. If we define
+
+(16)
+
+Here, to convert the LP problem (9) into the form above, we
+
+have taken two steps. First, noting that each variable in (9)
+
+is subject to exactly one box constraint of the form
+
+or
+
+, we introduce the variable vector and cost vector ,
+
+such that for any
+
+and
+
+if the
+
+former inequality is included (i.e.,
+
+), and
+
+and
+
+, otherwise. Therefore, the box constraints will
+
+all have the form
+
+, and the coefficients of the parity
+
+inequalities will also change correspondingly. Second, for any
+
+we convert the parity inequality
+
+in
+
+(9), where denotes the th row of , to a linear equation
+
+by introducing nonnegative slack variables
+
+, where
+
+, with corresponding coefficients
+
+equal to zero in the cost vector . We will sometimes refer to the
+
+first (nonslack) variables as the standard variables. The dual
+
+of the primal LP has the form
+
+where
+
+is the current primal-dual iterate, the
+
+problem of solving
+
+reduces to finding the (unique) zero
+
+of the multivariate function . In Newton’s method, is
+
+iteratively approximated by its first-order Taylor series expan-
+
+sion around
+
+(22)
+
+where
+
+is the Jacobian matrix of . The Newton di-
+
+rection
+
+is obtained by setting the
+
+right-hand side of (22) to zero, resulting in the following system
+
+of linear equations:
+
+(23)
+
+(17)
+
+where and are the dual standard and slack variables,
+
+respectively.
+
+The first step in solving the primal and dual problems is to re-
+
+move the inequality constraints by introducing logarithmic bar-
+
+rier terms into their objective functions.3 The primal and dual
+
+objective functions will thus change to
+
+and
+
+, respectively, for some
+
+, resulting in
+
+a family of convex nonlinear barrier problems , parameter-
+
+ized by , that approximate the original linear program4 Since
+
+the logarithmic term forces and to remain positive, the so-
+
+lution to the barrier problem is feasible for the primal-dual LP,
+
+and it can be shown that as
+
+, it approaches the solution to
+
+the LP problem. The key idea of the path-following algorithm
+
+is to start with some
+
+, and reduce it at each iteration, as
+
+we take one step to solve the barrier problem.
+
+where
+
+, and
+
+are the residuals of the KKT equations (18), and is
+
+the value of at iteration . If we start from a primal and dual
+
+feasible point, we will not need to compute and , as they
+
+will remain zero throughout the algorithm. However, for sake of
+
+generality, here we do not make any feasibility assumption, in
+
+order to have the flexibility to apply the equations in the general,
+
+possibly infeasible case.
+
+In the case where the LP in (16) represents an LP decoding
+
+problem, the linear system (23) has
+
+vari-
+
+ables and equations, where and , as defined earlier, denote
+
+the number of parity inequalities and the code length, respec-
+
+tively.
+
+The solution to the linear system (23) is given by
+
+(24) (25) (26)
+
+3Because of this step, interior-point methods are sometime referred to in the literature as barrier methods.
+4In all equations throughout the paper, we use natural logarithms.
+
+where
+
+(27)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5969
+
+To simplify the notation, we will henceforth drop the subscript from , but it should be noted that is a function of the
+iteration number, . Having the Newton direction, the solution is updated as
+
+(28) (29) (30)
+
+and the primal and dual step lengths,
+
+, are chosen
+
+such that all the entries of and remain nonnegative. In our
+
+experiments, we have selected these step sizes according to the
+
+following equations [21]
+
+(31)
+
+(32)
+
+where
+
+. Specifically, we have found that a value close
+
+to 0.5 is often a good choice for .
+
+Since we are interested in solving the LP and not the bar-
+
+rier program
+
+for a particular , rather than taking many
+
+Newton steps to approach the solution to , we reduce the
+
+value of each time a Newton step is taken, so that the barrier
+
+program gives a better approximation of the LP. A reasonable
+
+updating rule for is to make it proportional to the duality gap
+
+(33)
+
+that is, to update according to
+
+C. Computing the Newton Directions: Preconditioned Conjugate Gradient Method
+
+The most complex step at each iteration of the interior-point
+
+algorithm in the previous subsection is to solve the “normal”
+
+system of linear equations in (24). While these equations were
+
+derived for the primal-dual path-following algorithm, in most
+
+other variations of interior-point methods, we encounter linear
+
+systems of similar forms, as well.
+
+Algorithms for solving linear systems fall into two main cat-
+
+egories of direct methods and iterative methods. While direct
+
+methods, such as Gaussian elimination, attempt to solve the
+
+system in a finite number of steps and are exact in the absence of
+
+rounding errors, iterative methods start from an initial guess and
+
+derive a sequence of approximate solutions. Since the constraint
+
+matrix
+
+in (24) is symmetric and positive definite, the
+
+most common direct method for solving this problem is based
+
+on computing the Cholesky decomposition of this matrix. How-
+
+ever, this approach is inefficient for large-scale sparse problems
+
+due to the computational cost of the decomposition, as well as
+
+loss of sparsity. Hence, in many LP problems, e.g., network flow
+
+linear programs, iterative methods such as the conjugate gra-
+
+dient (CG) method [22] are preferred.
+
+Suppose we want to find the solution to a system of linear
+
+equations given by
+
+(35)
+
+where is a
+
+symmetric positive definite matrix. Equiva-
+
+lently, is the unique minimizer of the functional
+
+(34)
+
+The primal-dual path-following algorithm described above
+
+(36)
+
+will iterate until the duality gap becomes sufficiently small; i.e., . It has been shown that with a proper choice of the We call two nonzero vectors,
+
+-conjugate if
+
+step lengths, this algorithm takes
+
+to reduce the
+
+duality gap from to .
+
+In a feasible implementation of the algorithm, in order to ini-
+
+(37)
+
+tialize the algorithm, we need some feasible
+
+, and
+
+. Obtaining such an initial point is nontrivial, and is usu- The CG method is based on building a set of -conjugate basis
+
+ally done by introducing a few dummy variables, as well as a vectors
+
+, and computing the solution as
+
+few rows and columns to the constraint matrix. This may not
+
+be desirable for a sparse LP, since the new rows and columns
+
+will not generally be sparse. Furthermore, if the Newton direc-
+
+(38)
+
+tions are computed based on the feasibility assumption; i.e., that
+
+and
+
+, round-off errors can cause instabilities due where
+
+. Hence, the problem becomes that of
+
+to the gradual loss of feasibility. As an alternative, an infeasible finding a suitable set of basis vectors. In the CG method, these
+
+implementation of the primal-dual path-following algorithm is vectors are found in an iterative way, such that at step , the next
+
+often used, where any
+
+, and
+
+can be used basis vector is chosen to be the closest vector to the negative
+
+for initialization. This algorithm will simultaneously try to re- gradient of at the current point , under the condition that
+
+duce the duality gap and the primal-dual feasibility gap to zero. it is -conjugate to
+
+. For a more comprehensive
+
+Consequently, the termination criterion will change: we stop the description of this algorithm, the reader is referred to [23].
+
+algorithm if
+
+, and
+
+. As men- While in principle the CG algorithm requires steps to find
+
+tioned earlier, the other difference between the formulation of the exact solution , sometimes a much smaller number of it-
+
+the feasible and infeasible implementations is that in the former erations provides a sufficiently accurate approximation to the
+
+case, the residual vectors and can be replaced by zero vec- solution. The distribution of the eigenvalues of the coefficient
+
+tors in (23).
+
+matrix has a crucial effect on the convergence behavior of the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5970
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+= 1 . . . = 1920 Fig. 3. Parameters d ; x , and z , for i ; ; q at four iterations of the interior-point method for an LP subproblem of MALP decoding with n
+
+;
+
+= 627 = 2547 p
+
+;q
+
+. The variable indices, i, (horizontal axis) are permuted to sort d in increasing order.
+
+CG method (as well as many other iterative algorithms). In par- As the iterates of the interior-point algorithm become closer to
+
+ticular, it is shown that [23, Chapter 6]
+
+the solution and approaches zero, many of the ’s take very
+
+small or very large values, depending on the value of the cor-
+
+responding in the solution. This has a negative effect on the
+
+(39)
+
+spectral behavior of the CG method.
+
+, and as a result, on the convergence of
+
+When the coefficient matrix of the system of linear equa-
+
+where
+
+and
+
+is the spectral condition
+
+number of Q, i.e., the ratio of the maximum and minimum eigen-
+
+values of Q. Using this result, the number of iterations of the CG
+
+method required to reduce
+
+by a certain factor from its
+
+tions is ill-conditioned, it is common to use preconditioning. In this method, we use a symmetric positive-definite matrix as an approximation of , and instead of (35), we solve the equivalent preconditioned system
+
+initial value can be upper-bounded by a constant times
+
+.
+
+We henceforth call a matrix ill-conditioned, in loose terms, if
+
+(41)
+
+CG converges slowly in solving (35). In the interior-point algorithm, the spectral behavior of changes as a function of the diagonal elements,
+
+We hence obtain the preconditioned conjugate gradient (PCG) algorithm, summarized as Algorithm 4.
+
+of , which are, as described in the previous subsection, the square roots of the ratios between the primal
+
+Algorithm 4 Preconditioned Conjugate Gradient (PCG)
+
+variables and the dual slack variables . In Fig. 3, the
+
+evolution of the distributions of
+
+, and through
+
+the iterations of the interior-point algorithm is illustrated for
+
+an LP subproblem of an MALP decoding instance. We can
+
+observe in this figure that and are distributed in such a way
+
+that the product is relatively constant over all
+
+.
+
+This means that, although the path-following algorithm does
+
+not completely solve the barrier problems defined in IV-B, the
+
+condition (20) is approximately satisfied for all . A conse-
+
+quence of this, which can also be observed in Fig. 3, is that
+
+1: Compute an initial guess for the solution;
+
+2:
+
+;
+
+3: Solve
+
+;
+
+4:
+
+;
+
+5: for
+
+until convergence do
+
+6:
+
+;
+
+7:
+
+;
+
+8:
+
+;
+
+9:
+
+;
+
+10: Solve
+
+;
+
+11:
+
+;
+
+(40)
+
+12: 13: end for
+
+;
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5971
+
+In order to obtain an efficient PCG algorithm, we need the
+
+preconditioner to satisfy two requirements. First,
+
+should have a better spectral distribution than , so that the
+
+preconditioned system can be solved faster than the original
+
+system. Second, it should be inexpensive to solve
+
+,
+
+since we need to solve a system of this form at each step of the
+
+preconditioned algorithm. Therefore, a natural approach is to
+
+design a preconditioner which, in addition to providing a good
+
+approximation of , has an underlying structure that makes it
+
+possible to solve
+
+using a direct method in linear time.
+
+The convergence of the PCG algorithm can be determined
+
+based on the relative residual error
+
+n ; p = 4 = 3 Fig. 4. Extended Tanner graph for an LP problem with q = 7.
+
+, and
+
+(42)
+
+problems, is to find a preconditioning set,
+
+,
+
+To ensure sufficient accuracy in the calculation of the Newton steps, one can stop the PCG algorithm once this residual value is below a certain threshold. The proper value of the threshold depends on the properties of the LP problem (such as code length and SNR in LP decoding), as well as the distance of the current interior-point from the optimum; the closer we are to the optimum, the higher the accuracy needed in the calculation of the Newton steps.
+One important application of the PCG algorithm is in interior-point implementations of LP for minimum-cost network flow (MCNF) problems. For these problems, the constraint matrix in the primal LP corresponds to the node-arc adjacency matrix of the network graph. In other words, the LP primal variables represent the edges, each constraint is defined for the edges
+
+corresponding to columns of and , resulting in
+
+matrices and , such that
+
+is both
+
+easily invertible and a good approximation of
+
+. To
+
+satisfy these requirements, it is natural to select to include
+
+the variables with the highest weights, , while keeping
+
+and full rank and invertible in
+
+time. Then, the
+
+solution to
+
+in the PCG algorithm can be
+
+found by sequentially solving
+
+,
+
+and
+
+, for
+
+, and , respectively.
+
+We are interested in having a graph representation for the
+
+constraints and variables of a linear program of the form (16) in
+
+the LP decoding problem, such that the selection of a desirable
+
+can be interpreted as searching for a subgraph with certain
+
+combinatorial structures.
+
+incident to a node, and the diagonal elements,
+
+of the
+
+diagonal matrix can be interpreted as weights for the edges
+
+(variables). A common method for designing a preconditioner
+
+for
+
+is to select a set of columns of (edges) with
+
+large weights, and form
+
+, where the subscript
+
+for a matrix denotes a matrix consisting of the columns of
+
+the original matrix with indices in .
+
+It is known that at a nondegenerate solution to an MCNF
+
+problem, the nonzero variables (i.e., the basic variables) corre-
+
+spond to a spanning tree in the graph. This means that, when the
+
+interior-point method approaches such a solution, the weights of
+
+all the edges, except those defining this spanning tree, will go to
+
+zero. Hence, a natural selection for would be the set of in-
+
+dices of the spanning tree with the maximum total weight, which
+
+results in the maximum-weight spanning tree (MST) precondi-
+
+tioner. Finding the maximum-weight spanning tree in a graph
+
+can be done efficiently in linear time, and besides, due to the tree
+
+structure of the graph represented by , the matrix can be
+
+inverted in linear time, as well.5 The MST has been observed in
+
+practice to be very effective, especially at the later iterations of
+
+Definition 2: Consider an LP of the form (16) with con-
+
+straints and variables, where
+
+are slack variables.
+
+The extended Tanner graph of this LP is a bipartite graph con-
+
+sisting of variable nodes and constraint nodes, such that
+
+variable node is connected to constraint node iff is in-
+
+volved in the th constraint; i.e., is nonzero.
+
+For the linear programs in the MALP decoding algorithms,
+
+since each constraint is derived from a unique check node of
+
+the original Tanner graph, the extended Tanner graph will be a
+
+subgraph of the Tanner graph, with the addition of degree-1
+
+(slack) variable nodes, each connected to one of the constraint
+
+nodes. In general, for an iteration of MALP decoding of a code
+
+with an
+
+parity-check matrix, the extended Tanner graphs
+
+would contain
+
+constraint nodes, variable nodes cor-
+
+responding to the standard variables (bit positions), and slack
+
+variable nodes. As extended Tanner graphs are special cases of
+
+Tanner graphs, they inherit all the combinatorial concepts de-
+
+fined for Tanner graphs, such as stopping sets. A small example
+
+of an extended Tanner graph is given in Fig. 4.
+
+the interior-point method, when the operating point is close to A. Preconditioning via Triangulation
+
+the final solution.
+
+For a sparse constraint matrix, , a sufficient condition for
+
+V. PRECONDITIONER DESIGN FOR LP DECODING
+
+and to be invertible in
+
+time is that can
+
+be made upper or lower triangular, with nonzero diagonal el-
+
+Our framework for designing an effective preconditioner for ements, using column and/or row permutations. We call a pre-
+
+LP decoding, similar to the MST preconditioner for MCNF conditioning set that satisfies this property a triangular set.
+
+5Throughout the paper, we refer to solving a system of linear equations with
+M M coefficient matrix , in loose terms, as inverting , although we do not exM plicitly compute .
+
+Once an upper- (lower-) triangular form of is found, we start from the last (first) row of , and, by taking advantage of the sparsity, solve for the variable corresponding to the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5972
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+diagonal element of each row recursively in time. It is not
+
+difficult to see that there always exists at least one triangular set
+
+for any LP decoding problem; one example is the set of columns
+
+corresponding to the slack variables, which results in a diagonal
+
+.
+
+As a criterion for finding the best approximation
+
+of
+
+, we search for the triangular set
+
+that contains the columns with the highest weights, . One
+
+can consider different strategies of scoring a triangular set
+
+from the weights of its members, e.g., the sum of the weights,
+
+or the largest value of minimum weight. It is interesting to
+
+study as a future work whether given any such metric, the
+
+“maximum-weight” (or optimal) triangular set can be found in
+
+polynomial time. However, in this work, we propose a (subop-
+
+timal) greedy approach, which is motivated by the properties of
+
+the LP decoding problem.
+
+The problem of bringing a parity-check matrix into (approx-
+
+imate) triangular form has been studied by Richardson and Ur-
+
+banke [24] in the context of the encoding of LDPC codes. The
+
+authors proposed a series of greedy algorithms that are sim-
+
+ilar to the peeling algorithm for decoding in the binary erasure
+
+channel: repeatedly select a nonzero entry (edge) of the matrix
+
+(graph) lying on a weight-1 (degree-1) column or row (variable
+
+or check node), and remove both the column and row of this
+
+entry from the matrix. They showed that parity-check matrices
+
+that are optimized for erasure decoding can be made almost tri-
+
+angular using this greedy approach. It is important to note that
+
+this combinatorial approach only relies on the placement of the
+
+nonzero entries of the matrix, rather than their values.
+
+The fact that the constraint matrices of the LP problems in
+
+MALP decoding have structure similar to the corresponding
+
+parity-check matrix motivates the use of a greedy algorithm
+
+analogous to those in [24] for triangulating the matrix . How-
+
+ever, this problem is different from the encoding problem, in
+
+that we are not merely interested in making triangular, but
+
+rather, we look for the triangular submatrix with the maximum
+
+weight. In fact, as mentioned earlier, finding one triangular form
+
+of is trivial, due to the presence of the slack variables. Here,
+
+we present three greedy algorithms to search for the maximum-
+
+weight triangular set (MTS), one of which is related to the al-
+
+gorithms of Richardson and Urbanke. Throughout this section,
+
+we will also refer to the outputs of these (suboptimal) greedy
+
+algorithms, in loose terms, as the MTS, although they may not
+
+necessarily have the maximum possible weight.
+
+1) Incremental Greedy Search for the MTS: Although an
+
+ideal preconditioning set would contain the columns of the
+
+matrix that have the highest weights, in reality, the square
+
+submatrix of composed of these columns is often neither
+
+triangular nor full rank. In the incremental greedy search for the
+
+MTS, we start by selecting the highest-weight column, and try
+
+to expand the set of selected columns by giving priority to the
+
+columns of higher weights, while maintaining the property that
+
+the corresponding submatrix can be made lower-triangular by
+
+column and row permutations.
+
+Let be a set of selected columns from , where
+
+. In order to check whether the submatrix can be made
+
+lower-triangular by column and row permutations, we can treat
+
+the variable nodes corresponding to in the Tanner graph as
+
+erased bits, and use the peeling algorithm to decode them in time. For completeness, this process, which we call the
+Triangulation Step, is described in Algorithm 5.
+
+Algorithm 5 Triangulation Step
+
+1: Input: The set with
+
+, and the matrix ;
+
+2: Output: An
+
+lower-triangular submatrix , if
+
+possible;
+
+3: Initialization:
+
+, and initialize and as
+
+zero-length vectors;
+
+4: for
+
+to do
+
+5: if the minimum row degree in is not one then
+
+cannot be made lower-triangular by permutation; Declare
+
+Failure and exit the algorithm;
+
+6: Select any degree-1 row from , and let be the index
+
+of the column that contains the only nonzero entry of
+
+row ;
+
+7:
+
+;
+
+8: Set all the entries in column and row of 9: end for 10: Form by setting
+;
+
+to zero;
+
+Using the Triangulation Step as a subroutine, the incremental greedy search method, given by Algorithm 6, first sorts the columns according to their corresponding weights, (or, alternatively, ), and initializes the preconditioning set, , as an empty set. Starting with the highest-weight column and going down the sorted list of column indices, it adds each column to
+if the submatrix corresponding to the resulting set can be made lower triangular using the Triangulation Step.
+
+Algorithm 6 Incremental Greedy Search for the MTS
+
+1: Input:
+
+constraint matrix , and the set of column
+
+weights,
+
+;
+
+2: Output: A triangular set and the lower-triangular
+
+matrix ;
+
+3: Initialization:
+
+;
+
+4: Sort the column indices
+
+according to their
+
+corresponding weights, , in decreasing order, to
+
+obtain the permuted sequence
+
+, such that
+
+;
+
+5: while
+
+and
+
+do
+
+6:
+
+;
+
+7: if the Triangulation Step can bring the submatrix
+
+into the lower-triangular form then
+
+8:
+
+;
+
+9: end if
+
+10: end while
+
+We claim that, due to the presence of the slack columns in , Algorithm 6 will successfully find a triangular set of columns; i.e., it exits the while-loop (lines 5–10) only when
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5973
+
+. Assume, on the contrary, that the algorithm ends
+
+while
+
+, so that the matrix is a
+
+lower-tri-
+
+angular matrix. This means that if we add any column
+
+to , it cannot be made lower triangular, since
+
+otherwise, column would have already been added to
+
+when
+
+in the while-loop.6 However, this clearly cannot be
+
+the case, since we can produce a
+
+lower-triangular matrix
+
+, simply by adding the columns corresponding to the slack
+
+variables of the last
+
+rows of . Hence, we conclude
+
+that
+
+.
+
+2) Column-Wise Greedy Search for the MTS: Algorithm 7
+
+is a column-wise greedy search for the MTS. It successively
+
+adds the index of the maximum-weight degree-1 column of to
+
+the set , and eliminates this column and the row that shares
+
+its only nonzero entry. Matrix initially contains degree-1
+
+slack columns, and at each iteration, one such column will be
+
+erased. Hence, there is always a degree-1 column in the residual
+
+matrix, and the algorithm proceeds until columns are selected.
+
+The resulting preconditioning set will correspond to an upper-
+
+triangular submatrix .
+
+Algorithm 7 Column-wise Greedy Search for the MTS
+
+1: Input:
+
+constraint matrix , and the set of column
+
+weights
+
+;
+
+2: Output: A triangular set and the upper-triangular
+
+matrix ;
+
+3: Initialization:
+
+, and initialize and
+
+as zero-length vectors;
+
+4: Define and form
+
+as the index set of all degree-1
+
+columns in ;
+
+5: for
+
+to do
+
+6: Let
+
+be the index of the (degree-1) column of
+
+with the maximum weight, , and let be the index of the
+
+row that contains the only nonzero entry of this column;
+
+7:
+
+;
+
+8: Set all the entries in row of (including the only
+
+nonzero entry of column ) to zero;
+
+9: Update
+
+from the residual matrix, ;
+
+10: end for
+
+11: Form by setting
+
+;
+
+3) Row-Wise Greedy Search for the MTS: Algorithm 7 uses a row-wise approach for finding the MTS. In this method, we look at the set of degree-1 rows, add to the indices of all the columns that intersect with these rows at nonzero entries, and eliminate these rows and columns from . Unlike the columnwise method, it is possible that, at some iteration, there is no degree-1 row in the matrix. In this case, we repeatedly eliminate the lowest-weight column, until there is at least one degree-1 row.
+
+Algorithm 8 Row-wise Greedy Search for the MTS
+
+1: Input:
+
+constraint matrix , and the set of column
+
+weights
+
+;
+
+2: Output: A triangular set and the lower-triangular
+
+matrix ;
+
+3: Initialization:
+
+, and initialize and
+
+as zero-length vectors;
+
+4: Define and form
+
+as the index set of all degree-1
+
+rows in ;
+
+5: while is not all zeroes do
+
+6: if
+
+then
+
+7: Let
+
+be any degree-1 row of , and be the
+
+index of the column that contains the only nonzero entry
+
+of this row;
+
+8:
+
+;
+
+9: Set all the entries in column of (including the only
+
+nonzero entry of row ) to zero, and update
+
+;
+
+10: else
+
+11: Let be the index of the nonzero column of with the
+
+minimum weight, . Set all the entries in column to
+
+zero, and update
+
+;
+
+12: end if
+
+13: end while
+
+14: Diagonal Expansion: For each row of that is
+
+not represented in , append to , and append
+
+, i.e., the index of the corresponding slack
+
+column, to both and ;
+
+15: Form by setting
+
+;
+
+In addition to this difference, the number of columns in by the end of this procedure is often slightly smaller that . Hence, we perform a “diagonal expansion” step at the end, where
+columns corresponding to the slack variables are added to , while keeping it a triangular set. A problem with this expansion method is that, since the algorithm does not have a choice in selecting the slack variables added in this step, it may add columns that have very small weights.
+Let be the triangular submatrix obtained before the ex-
+pansion step. As an alternative to diagonally expanding by adding slack columns, we can apply a “triangular expansion.” In this method, we form a matrix consisting of the columns of
+that do not share any nonzero entries with the rows in vector , and apply a column-wise or row-wise greedy search to this
+matrix in order to obtain a high-weight lower-triangular submatrix . This requirement for forming ensures that the
+resulting triangular submatrices and can be concatenated as
+
+(43)
+
+6Note that if any set S of columns can be made lower triangular, any subset to form a larger triangular submatrix of . This process can be
+
+of these columns can be made lower triangular, as well.
+
+continued, if necessary, until a square
+
+triangular matrix
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5974
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+is obtained, although our experiments indicate that one ex- While the heap structure mentioned above works well here,
+
+pansion step is often sufficient to provide such a result. It is easy since no column is added to the set of remaining columns, we
+
+to see that this approach is potentially stronger than the diagonal can alternatively sort the set of all columns by their weights as
+
+expansion in Algorithm 8, since it has the diagonal expansion as a preprocessing step with
+
+complexity, thus making
+
+a special case.
+
+the complexity of the while-loop linear. Since the complexity
+
+of Steps 15 (diagonal expansion) and 16 are linear, as well, the
+
+B. Implementation and Complexity Considerations
+
+total running time of Algorithm 8 will be
+
+.
+
+The process of finding a triangular preconditioner is per-
+
+To compute the running time of Algorithm 6, note that while
+
+Step 4 has
+
+complexity, the computational complexity
+
+of the algorithm is dominated by the Triangulation Step. This
+
+subroutine has
+
+complexity, and is called
+
+times in
+
+Algorithm 6, which makes the overall complexity
+
+. An
+
+interesting problem to investigate is whether we can simplify
+
+the triangulation process in line 7 to have sublinear complexity
+
+by exploiting the results of the previous round of triangula-
+
+formed at each iteration of the interior-point algorithm. Since the values of primal variables, , do not substantially change in one iteration, we expect the MTS at each iteration to be relatively close to that in the previous iteration. Consequently, an interesting area for future work is to investigate modifications of the proposed algorithms, where the knowledge of the MTS in the previous iteration of the interior-point method is exploited to improve the complexity of these algorithms.
+
+tion, as stated in the following open problem concerning erasure
+
+decoding.
+
+VI. ANALYSIS OF THE MTS PRECONDITIONING ALGORITHMS
+
+Open Problem: Consider the Tanner graph corresponding to
+
+an arbitrary LDPC code of length . Assume that a set of bits
+
+are erased, and does not contain a stopping set in the Tanner
+
+graph. Thus, the decoder successfully recovers these erased bits
+
+using the peeling algorithm (i.e., the triangulation Algorithm 5).
+
+Now, we add a bit to the set of erased bits. Given , and the
+
+complete knowledge of the process of decoding , such as the
+
+order in which the bits are decoded, and the check nodes used,
+
+is there an scheme to verify if
+
+can be decoded by
+
+the peeling algorithm?
+
+In addition to this potential simplification, it is possible to
+
+make a number of modifications to Algorithm 6 in order to re-
+
+duce its complexity. Let be the size of the smallest stopping set
+
+in the extended Tanner graph of , which means that the subma-
+
+trix formed by any columns can be made triangular. Then,
+
+instead of initializing to be the empty set, we can immedi-
+
+ately add the
+
+highest-weight columns to , since we are
+
+guaranteed that can be made triangular. Moreover, at each
+
+iteration of the algorithm, we can consider
+
+columns to be
+
+added to , in order to reduce the number of calls to the trian-
+
+gulation subroutine. The value of can be adaptively selected
+
+to make sure that the modified algorithm remains equivalent to
+
+Algorithm 6.
+
+To assess the complexity of Algorithm 7, we need to examine
+
+Steps 8 and 11 that involve column or row operations, as well
+
+as Steps 4, 6, and 9 that deal with the list of degree-1 columns.
+
+Since there is an number of nonzero entries in each column
+
+or row of , running Step 8 times (due to the for-loop) and
+
+deriving from in Step 11 each takes time. However,
+
+one should be careful in selecting a suitable data structure for
+
+A. Performance Analysis
+
+It is of great interest to study how the proposed algorithms
+
+perform as the problem size goes to infinity. We expect that a
+
+number of asymptotic results similar to those of Richardson and
+
+Urbanke in [24] can be derived, e.g., showing that the greedy
+
+preconditioner designs perform well for capacity-approaching
+
+LDPC ensembles. However, since one of the main advantages
+
+of LP decoding over message-passing decoding is its geomet-
+
+rical structure that facilitates the analysis of its performance in
+
+the finite-length regime, in this work we focus on studying the
+
+proposed algorithms in this regime.
+
+We will study the behavior of the proposed preconditioner
+
+in the later iterations of the interior-point algorithm, when the
+
+iterates are close to the optimum. This is justified by the fact
+
+that, as the interior-point algorithm approaches the boundary of
+
+the feasible region during its later iterations, many of the primal
+
+variables, , and the dual slack variables, , approach zero,
+
+thus deteriorating the conditioning of the matrix
+
+.
+
+This is when a precoditioner is most needed. In addition, we can
+
+obtain some information about the performance of the precon-
+
+ditioner in the later iterations by focusing on the optimal point
+
+of the feasible set.
+
+Consider an LP problem in the augmented form (16) as part
+
+of ALP or MALP decoding, and assume that it has a unique op-
+
+timal solution (although parts of our analysis can be extended
+
+to the case with nonunique solutions). We denote by the triplet
+
+the primal-dual solution to this LP, and by
+
+an intermediate iterate of the interior-point method. We can par-
+
+tition the set of the columns of into the basic set
+
+storing the set
+
+, since, in each cycle of the for-loop, we
+
+(44)
+
+need to extract the element with the maximum weight, and add
+
+to and remove from this set an
+
+number of elements. By and the nonbasic set
+
+using a binary heap data structure [25], which is implementable
+
+(45)
+
+as an array, all these (Steps 6 and 9) can be done in
+
+time in the worst case. Also, the initial formation of the heap For brevity, we henceforth refer to the columns of the con-
+
+(Step 4) has complexity. As a result, the total complexity straint matrix corresponding to the basic variables as the
+
+of Algorithm 7 becomes
+
+.
+
+“basic columns.” It is not difficult to show that, for an LP
+
+Similarly, in Algorithm 8, we need a mechanism to extract with a unique solution, the number of basic variables, i.e.,
+
+the minimum-weight member of the set of remaining columns. , is at most . To see this, assume that of the standard
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5975
+
+variables
+
+are nonzero, which means that
+
+box
+
+constraints of the form
+
+are active at . Since is
+
+a vertex defined by at least active constraints in the LP, we
+
+conclude that at least parity inequalities must be active at ,
+
+thus leaving at most
+
+nonzero slack variables. We call the
+
+LP nondegenerate if
+
+, and degenerate if
+
+.
+
+It is known that the unique solution
+
+is “strictly
+
+complementary” [26], meaning that for any
+
+ei-
+
+ther
+
+and
+
+, or
+
+and
+
+. Remembering
+
+from (27) that
+
+, as the iterates of the interior-point
+
+algorithm approach the optimum, i.e., given in (34) goes to
+
+zero, we will have
+
+(46)
+
+set of positions where and differ. Hence, knowing that
+
+is the solution to an LP decoding problem, and using Theorem
+
+4, we conclude that the set does not contain a stopping set
+
+in the Tanner graph that only includes the check nodes in .
+
+Step 2: Now we return to , and consider solving
+
+,
+
+where all the basic variables are erasures, using the peeling al-
+
+gorithm. Since the slack variables which are basic are connected
+
+only to the inactive check nodes, we know from Step 1 that the
+
+erased variables can be decoded by only using the active
+
+check nodes . Once these variable nodes are peeled off the
+
+graph, we are left with the basic slack variable nodes, each of
+
+which is connected to a distinct check node in
+
+. There-
+
+fore, the peeling algorithm can proceed by decoding all of these
+
+variables. This completes the proof.
+
+Therefore, towards the end of the algorithm, the matrix
+
+will be dominated by the columns of and cor-
+
+responding to the basic set. Hence, it is highly desirable to se-
+
+lect a preconditioning set that includes all the basic columns,
+
+i.e.,
+
+, in which case
+
+becomes a better and
+
+better approximation of as we approach the optimum of the
+
+LP. In the rest of this subsection, we will show that, when the
+
+solution to the LP is integral and is sufficiently small, this
+
+property can be achieved by low complexity algorithms similar
+
+to Algorithms 7 and 8.
+
+Lemma 2: Consider the extended Tanner graph for an LP
+
+subproblem of MALP decoding. If the primal solution to
+
+is integral, the set of variable nodes corresponding to the
+
+basic set, whose definition is based on the augmented form (16)
+
+of the LP, does not contain any stopping set.
+
+Proof: Consider an erasure decoding problem
+
+on
+
+, where the basic variable nodes are erasures. We prove the
+
+lemma by showing that the peeling (or LP) decoder can success-
+
+fully correct these erasures.
+
+We denote by and the solutions to the primal LP in the
+
+(original) standard form (9) and in the augmented form (16).
+
+From part c) of Theorem 2, we know that is also the solution
+
+to a full LP decoding problem
+
+with the LLR vector
+
+and the Tanner graph comprising the standard variable nodes
+
+and the active check nodes, .
+
+We partition the basic set into and , the sets of
+
+basic standard variables and basic slack variables, respectively.
+
+We also partition the set of check nodes in into and
+
+, the sets of check nodes that generate the active and inac-
+
+tive parity inequalities of , respectively. Clearly, the neigh-
+
+bors of the slack variable nodes in are the check nodes in
+
+, since an inactive parity inequality has, by definition, a
+
+nonzero slack.
+
+Step 1: We first show that, even if we remove the check nodes
+
+in
+
+from , the set of basic standard variable nodes, ,
+
+does not contain a stopping set.
+
+Remembering the conversion of the LP in the standard form
+
+(9) with inequality constraints to the augmented form (16), we
+
+can write
+
+(47)
+
+Using, as in Theorem 4, the notation for the result of bit-based hard decision on , one can see that is identical to , the
+
+Lemma 2 shows that, under proper conditions, the submatrix of formed by only including the columns corresponding to the basic variables can be made lower triangular by column and row permutations. This suggests that looking for a maximum-weight triangular set is a natural approach for designing a preconditioner in MALP decoding. In particular, the following theorem shows that, under the conditions of Lemma 2, the incremental greedy Algorithm 6 indeed finds a preconditioning set that includes all such columns. As the interior-point algorithm progresses, the basic variables approach 1, while the nonbasic variables approach zero. Hence, referring to (46), we see that after a large enough number of iterations, the highest-weight columns of will correspond to the basic set . The following theorem shows that two of the proposed algorithms indeed find a preconditioning set that includes all such columns.
+
+Theorem 5: Consider an LP subproblem of an MALP
+
+decoding problem. If the primal solution to
+
+is integral,
+
+at the iterates of the interior-point method that are sufficiently
+
+close to the solution, both the Incremental Greedy Algorithm
+
+and the Row-wise Greedy Algorithm can successfully find a
+
+triangular set that includes all the columns corresponding to the
+
+basic set.
+
+Proof: As the interior-point algorithm progresses, the
+
+weights corresponding to the basic variables approach ,
+
+while the weights of nonbasic variables approach zero. Hence,
+
+when becomes sufficiently small, the columns corresponding
+
+to the basic set, will be the highest-weight columns of ,
+
+and according to Lemma 2, the matrix consisting of these
+
+columns can be made triangular, provided that the solution to
+
+is integral.
+
+In view of this result, the proof of the claim for the incre-
+
+mental greedy algorithm becomes straighforward: The precon-
+
+ditioning set continues to grow by one member at each it-
+
+eration, at least until it includes all the highest-weight (i.e.,
+
+basic) columns.
+
+To prove that the triangular set given by the row-wise
+
+greedy algorithm includes the basic set, as well, it is sufficient
+
+to show that none of the basic columns will be erased from
+
+(i.e., become all zeroes) in line 11 of Algorithm 8. Assume that,
+
+at some iteration, a column is selected in line 11 to be erased.
+
+Column has the minimum weight among the nonzero columns
+
+currently in . Therefore, if is a basic column and is small
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5976
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+A g :  Q : 2 Fig. 5. Progress of the residual error for different PCG implementations, solving (24) in the 8th iteration of the interior-point algorithm, in an LP with an integral
+solution. The constraint matrix has 713 rows and 2713 columns, = 48 6, and ( ) = 3 46 10 .
+
+enough, all the other nonzero columns are basic columns, as well, since the basic columns are the highest-weight columns of . This means that could be made triangular, without running out of degree-1 rows and having to erase column . So, column cannot be basic.
+
+Remark 2: The proof above suggests that Theorem 5 can be
+
+stated in more general terms. For any
+
+, let be
+
+a set consisting of the highest-weight columns of . Then, if
+
+the set of variable nodes corresponding to in the (extended)
+
+Tanner graph does not contain a stopping set, that is, can
+
+be made triangular by row and column permutations, then the
+
+preconditioning sets found by Algorithms 6 and 8 both contain
+
+.
+
+The assumption that the solution is integral does not hold for
+
+all LPs that we solve in adaptive LP decoding. On the other
+
+hand, in practice, we are often interested in solving the LP ex-
+
+actly only when LP decoding finds an integral solution (i.e.,
+
+the ML codeword). This, of course, does not mean that in such
+
+cases every LP subproblem solved in the adaptive method has
+
+an integral solution. However, one can argue heuristically that,
+
+if the final LP subproblem has an integral solution, the interme-
+
+diate LPs are also very likely to have an integral solution. To
+
+see this, remember from Theorem 2 that each intermediate LP
+
+problem that is solved in adaptive LP decoding is equivalent to
+
+a full LP decoding that uses a subset of the check nodes in the
+
+Tanner graph. Now, if LP decoding with the complete Tanner
+
+graph has an integral solution, it is natural to expect that, after
+
+removing a subset of check nodes, which can also reduce the
+
+number of cycles, the LP decoder is still very likely to find an
+
+integral solution.
+
+and our sparse implementation of the path-following inte-
+
+rior-point method. We have shown earlier that, as interior-point
+
+progresses, the matrix
+
+that needs to be inverted to com-
+
+pute the Newton steps becomes more and more ill-conditioned.
+
+We have observed that this problem becomes more severe in
+
+the later iterations of the MALP-A algorithm, where the LP
+
+problem is larger and more degenerate due to the abundance of
+
+active constraints at the optimum solution of the problem.
+
+In Figs. 5–8, we present the performance results of the PCG
+
+method for four different systems of linear equations in the
+
+form of (24), solved in the infeasible primal-dual path-fol-
+
+lowing interior-point algorithm, using the preconditioners
+
+designed by greedy Algorithms 6–8.7 In these simulations,
+
+we used a randomly-generated (3,6)-regular LDPC code of
+
+length 2000, where the cycles of length four were removed. We
+
+have measured the performance of the PCG algorithm by the
+
+behavior of the relative residual error
+
+, defined in (42)
+
+as a function of the iteration number of the PCG algorithm.
+
+In our experiments, we often start with a threshold on this
+
+error in the range 0.05–0.1, and in the latter iterations of the
+
+interior-point method, we reduce this threshold to a level in the
+
+range 0.001–0.01.
+
+In Figs. 5 and 6, we considered solving (24) in two different
+
+iterations of the interior-point algorithm for solving an LP
+
+problem. This LP problem was selected at the 6th iteration
+
+of an MALP decoding problem at
+
+dB, and the
+
+solution to the LP was integral. The constraint matrix for
+
+this LP had 713 rows and 2713 columns, and we used the PCG
+
+algorithm to compute the Newton step. Fig. 5 corresponds to
+
+finding the Newton step at the 8th iteration of the interior-point
+
+algorithm. In this scenario, the duality gap
+
+was
+
+B. Performance Simulation
+We simulated the LP decoding of (3,6)-regular LDPC codes on the AWGN channel using the MALP-A algorithm
+
+7In all the simulations of the Row-wise Greedy Search (Algorithm 8) that we present in this section, we have used a diagonal expansion, rather than a triangular expansion, as described in Subsection V-A.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5977
+
+A g = 0:22 (Q) = 2:33 2 10 Fig. 6. Progress of the residual error for different PCG implementations, solving (24) in the 18th iteration of the interior-point algorithm, in an LP with an integral
+
+solution. The constraint matrix has 713 rows and 2713 columns,
+
+, and
+
+.
+
+A g = 46:4 (Q) = 2:03 2 10 Fig. 7. Progress of the residual error for different PCG implementations, solving (24) in the 8th iteration of the interior-point algorithm, in an LP with a fractional
+
+solution. The constraint matrix has 830 rows and 3830 columns,
+
+, and
+
+.
+
+equal to 48.6, and the condition number
+
+of the problem incremental greedy preconditioning, reaching a residual error of
+
+was equal to
+
+. We have plotted the residual error
+
+in 40 iterations, has the fastest convergence, followed by
+
+of the CG method without preconditioning, as well as the the column-wise greedy preconditioner.
+
+PCG method using the three proposed preconditioner designs. To study the performance of the algorithms when the LP solu-
+
+For this problem, except during the first 10-15 iterations, the tion is not integral, we considered an LP from the 6th iteration
+
+behaviors of the three preconditioned implementations are very of an MALP-A decoding problem at
+
+dB, where
+
+similar, and all significantly outperform the CG method.
+
+the solution was fractional. The matrix had 830 rows and
+
+In Fig. 6, we solved (24) at the th iteration of the same LP, 3830 columns. Fig. 7 corresponds to the th iteration of the in-
+
+where the interior-point is much closer to the solution, with
+
+terior-point algorithm, with
+
+and
+
+,
+
+and
+
+. In this problem, the convergence while Fig. 8 corresponds to the 18th (penultimate) iteration, with
+
+of the CG method is very slow, so that in 200 iterations, the
+
+and
+
+. These parameters are
+
+residual error does not get below 0.07. The PCG method with chosen such that the scenarios in these two figures are respec-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5978
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+A g = 0:155 (Q) = 2:61 2 10 Fig. 8. Progress of the residual error for different PCG implementations, solving (24) in the 18th iteration of the interior-point algorithm, in an LP with a fractional
+
+solution. The constraint matrix has 830 rows and 3830 columns,
+
+, and
+
+.
+
+tively similar to those in Figs. 5 and 6, the main difference being are significantly more effective than the row-wise greedy al-
+
+that the decoding problem now has a fractional solution. We can gorithm in speeding up the solution of the linear system. The
+
+observe that, while the performance of the CG method is very better performance of the column-wise approach relative to the
+
+similar in Figs. 5 and 7, as well as in Figs. 6 and 8, the precon- row-wise approach can be explained by the fact that the former,
+
+ditioned implementations have slower convergence when the which searches for degree-1 columns, has more choices at each
+
+LP solution is fractional. In particular, in Fig. 8, the row-wise stage, since the columns of have lower degrees on average
+
+greedy preconditioner does not improve the convergence of the than its rows. Besides, while the column-wise algorithm is al-
+
+CG method, and is essentially ineffective.
+
+ways able to find a complete triangular preconditioning set, the
+
+To provide an overall perspective on the behavior of LP de- row-wise algorithm needs to expand the preconditioning set at
+
+coding using the schemes proposed here, in Fig. 9 we have the end by adding some slack columns that may have very low
+
+plotted three different parameters as a function of the iteration weights. Considering both the complexity and performance, the
+
+index of the interior-point method as it steps toward the solu- column-wise search (Algorithm 7) seems to be a suitable choice
+
+tion. The numbers are obtained from a single instance of LP for a practical implementation of LP decoding.
+
+decoding of a (3,6)-regular LDPC code of length 1920 at SNR A second observation that we have made in our simulations
+
+= 2 dB, as a representative of the typical behavior of a suc- is that the convergence of the PCG method cannot be well char-
+
+cessful decoding scenario at a moderate SNR. The decoding was acterized just by the condition number of the preconditioned
+
+done using the MALP-A decoding method and the column-wise matrix. In fact, we have encountered several situations where
+
+greedy preconditioning algorithm. In this decoding instance, the preconditioned matrix had a much higher condition number
+
+MALP-A took 5 iterations (i.e., solved 5 LP subproblems) to than the original matrix, yet it resulted in a much faster conver-
+
+find the correct codeword, and we have plotted the results for gence. For instance, in the scenario studied in Fig. 8, the condi-
+
+the first, third, and fifth (final) iterations. The plots show the tion number of the preconditioned matrix
+
+for both the
+
+number of PCG iterations it took to compute the Newton step, column-wise and the incremental algorithms was higher than
+
+the objective function gap (the objective function defined in (9) that of by a factor of 50–100, while these preconditioners still
+
+and (16) with its optimum value subtracted) and the current improved the convergence compared to the CG method. Indeed,
+
+value of the duality gap (as defined in (33)). We observe that the literature suggests that the speed of convergence of the CG
+
+while the objective function and duality gaps decrease exponen- can typically be better explained by the number of distinct clus-
+
+tially as the interior-point method progresses, the convergence ters of eigenvalues.
+
+of the PCG method becomes faster, although the system of linear While we studied the interior-point method in the context of
+
+equations to obtain the Newton steps becomes more and more MALP decoding, the proposed algorithms can also be applied
+
+ill-conditioned.
+
+to the LPs that may have more than one constraint from each
+
+C. Discussion
+
+check node. For instance, we have observed that the proposed implementation is also very effective for ALP decoding. How-
+
+Overall, we have observed that in very ill-conditioned prob- ever, in the absence of the single-constraint property, some of
+
+lems, the incremental and the column-wise greedy algorithms the analytical results we presented may no longer be valid.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5979
+
+VII. SUMMARY OF THE PROPOSED LP DECODING ALGORITHM
+
+VIII. CONCLUSIONS
+
+In this paper, we have proposed and studied a number of algorithms that can be used either jointly or separately in different stages of LP decoding, as well as in other applications involving optimization or systems of linear equations. To provide a high-level overview of an end-to-end LP decoder based on these algorithms, we present in Algorithm 9 a sketch of an LP decoder employing the following techniques: adaptive LP decoding (ALP/MALP), an interior-point method for solving LPs, a preconditioned conjugate-gradient method (PCG) to compute Newton steps, and a greedy preconditioner design algorithm.
+
+In this paper, we studied various elements in an efficient implementation of LP decoding. We first studied the adaptive LP decoding algorithm and two variations and demonstrated a number of properties of these algorithms. Specifically, we proposed modifications of the ALP decoding algorithm that satisfy the single-constraint property; i.e., each LP to be solved contains at most one parity inequality from each check node of the Tanner graph.
+We then studied a sparse interior-point implementation of linear programming, with the goal of exploiting the properties
+
+of the decoding problem in order to achieve lower complexity.
+
+Algorithm 9 The sketch of an end-to-end LP decoder
+
+The heart of the interior-point algorithm is the computation of the Newton step via solving an (often ill-conditioned) system of
+
+1: Setup the initial LP problem with box constraints from
+
+(8);
+
+2: repeat ALP/MALP Loop; based, e.g., on Algorithm 3
+
+3: Obtain the the augmented primal (16) and dual (17)
+
+forms of the current LP problem;
+
+4: Find initial values
+
+, and
+
+for the primal
+
+and dual standard and slack variables, and an initial value
+
+for the barrier coefficient (Lagrange multiplier);
+
+5: repeat Interior-point method loop to solve the current
+
+LP; e.g., based on the primal-dual path-following
+
+algorithm described in Subsection IV-B
+
+6: Form the normal equation (24) to compute the Newton
+
+step for the dual standard variables, ;
+
+7: Find a triangular set —defined in
+
+Subsection V-A—using one of the greedy search
+
+Algorithms 6, 7, or 8;
+
+8: Using , obtain the preconditioner matrix
+
+;
+
+9: Perform the PCG method—based on Algorithm 4—to
+
+solve for in (24), using the preconditioner ;
+
+10: Given , obtain the remaining two Newton steps
+
+and using (25) and (26);
+
+11: Calculate the primal and dual step sizes and
+
+using (31)–(32), and update , and using (28)–(30);
+
+12: Update the barrier coefficient (Lagrange multiplier)
+
+according to (34);
+
+13: Compute the duality gap as defined in (33), and
+
+feasibility gap
+
+with and
+
+defined in (23);
+
+14: until Duality gap and feasibility gap are below their
+
+corresponding thresholds
+
+linear equations. Since iterative algorithms for solving sparse linear systems, including the conjugate-gradient method, converge slowly when the system is ill-conditioned, we focused on finding a suitable preconditioner to speed up the process.
+Motivated by the properties of LP decoding, we studied a new framework for desiging a preconditioner. Our approach was based on finding a square submatrix of the LP constraint matrix which contains the columns with the highest possible weights, and at the same time, can be made lower- or upper-triangular by column and row permutations, making it invertible in linear time. We proposed a number of greedy algorithms for designing such preconditioners, and proved that, when the solution to the LP is integral, two of these algorithms indeed result in effective preconditioners. We demonstrated the performance of the proposed schemes via simulation, and we observed that the preconditioned systems are most effective when the current LP has an integral solution.
+One can imagine various modifications and alternatives to the proposed greedy algorithms for designing preconditioners. It is also interesting to investigate the possibility of finding other adaptive or nonadaptive formulations of LP decoding that result in solving the smallest possible number of LPs, while maintaining the single-constraint property. Moreover, there are several aspects of the implementation of LP decoding that are not explored in this work. These potential areas for future research include the optimal selection of the stopping criteria and step sizes for the interior-point algorithm and the CG method, as well as the theoretical analysis of the effect of preconditioning on the condition number and the eigenvalue spectrum of the linear system, similar to the study done in [27] for network flow problems.
+
+15: Given the solution to the current LP, search the set of
+
+linear constraints of LP decoding (7)—using Algorithm 2—to find all cuts (violated constraints) at this solution; 16: If any cuts were found, add them to the LP problem,
+
+APPENDIX A PROOF OF THEOREM 2
+
+and remove all or some of the inactive constraints from
+
+a) To prove the claim, we show that the solution to any linear
+
+the LP problem, according to MALP-A (Algorithm 3)
+
+program consisting of the initial (single-sided) box
+
+or MALP-B;
+
+inequalities given by (8) and any number of parity in-
+
+17: until No cuts are found
+
+equalities of the form (6) satisfies all the double-sided box
+
+18: Output the solution of the final LP as the LP decoding
+
+constraints of the form
+
+.
+
+solution.
+
+For simplicity, we first transform each variable
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5980
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+Fig. 9. Behavior of the interior-point method using PCG with column-wise greedy preconditioner search. The results are plotted for solving 3 LP subproblems at
+different iterations of the same MALP-A decoding problem at SNR = 2 dB, with a random (3,6)-regular LDPC code of length 1920.
+
+and its coefficient in the objective function, respec-
+
+box constraints
+
+. We claim that
+
+tively, into a new variable and a new coefficient ,
+
+any parity inequality of the form (49) in the LP, which
+
+where
+
+is by assumption satisfied at , is also satisfied at .
+
+To see this, note that the first sum in (49) can only either
+
+(48)
+
+increase or remain constant by moving from to , and
+
+it will be nonnegative at . Moreover, the second sum
+
+By this change of variables, we can rewrite in terms
+
+will remain constant if
+
+, or will decrease but
+
+of . In this equivalent LP, all the variables will have
+
+remain greater than or equal to one if
+
+. In both
+
+nonnegative coefficients in the objective function, and
+
+cases, inequality (49) will be satisfied at . Hence, we
+
+the box constraints (8) will all be transformed into in-
+
+have shown that there is a feasible point which has a
+
+equalities of the form
+
+. However, the transformed
+
+cost smaller than or equal to that of . This contradicts
+
+parity inequalities will still have the form
+
+the assumption that is the unique solution to the LP.
+
+Consequently, the solution to the LP should satisfy all the
+
+(49)
+
+double-sided box constraints.
+
+b) We need to show that
+
+for any
+
+although here some of the sets may have even car-
+
+. This is obvious for ALP decoding, as the feasible set
+
+dinality. To prove the claim, it suffices to show that the
+
+of contains the feasible set of
+
+. For MALP-A
+
+unique solution to this LP satisfies
+
+.
+
+and MALP-B, let
+
+be the problem obtained by re-
+
+Assume, on the contrary, that for a subset of indices
+
+moving from a subset (or all) of the parity inequal-
+
+, we have
+
+, and
+
+.
+
+ities that are inactive at its solution, . As discussed
+
+We define a new vector as
+
+earlier, these inactive inequalities are nonbinding, so the
+
+solution to
+
+must be , as well. Now,
+
+is
+
+(50)
+
+obtained by adding some new (violated) constraints to
+
+. Hence, the feasible set of
+
+strictly contains
+
+Remembering that
+
+, we will have
+
+that of
+
+, which yields
+
+.
+
+. Moreover, clearly satisfies all the double-sided c) Similar to the proof of [9, Theorem 2].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+TAGHAVI et al.: EFFICIENT IMPLEMENTATION OF LINEAR PROGRAMMING DECODING
+
+5981
+
+d) Similar to part b), let
+
+be the LP problem obtained
+
+by removing from all of the parity inequalities that
+
+are inactive at , and remember that is the solution
+
+to
+
+, as well. Clearly, all the parity inequalities in
+
+are from check nodes with indices in ; thus, the
+
+feasible space of
+
+contains that of
+
+. Hence, it
+
+remains to show that , the optimum feasible point for
+
+, is also in the feasible space of
+
+. Let
+
+be the set of indices of variable nodes that are
+
+involved in at least one of the parity inequalities in
+
+(or, equivalently, check nodes in ), and let be the set
+
+of the remaining indices. According to Corollary 2, all the
+
+parity inequalities from check nodes in are satisfied at
+
+. In addition, we can conclude from Corollary 1 that
+
+the box constraints for variables with indices in are
+
+satisfied, as well. Now, for any
+
+, the variable
+
+will be decoupled from all other variables, since it is only
+
+constrained by a box constraint according to (8). Hence, in
+
+the solution , such a variable will take the value
+
+if
+
+or
+
+if
+
+.8 Consequently, satisfies
+
+all the parity inequalities and box constraints of
+
+,
+
+and hence is the solution to this LP decoding problem.
+
+ACKNOWLEDGMENT
+The authors thank the anonymous reviewers for helpful technical comments and pointers to the literature. This work was supported in part by NSF Grant CCF-0829865.
+
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[2] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[3] T. J. Richardson and R. L. Urbanke, “The capacity of low-density parity-check codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[4] J. Feldman, M. J. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[5] P. O. Vontobel and R. Kötter, “On the relationship between linear programming decoding and min-sum algorithm decoding,” in Proc. IEEE Int. Symp. Information Theory and Applications, Parma, Italy, Oct. 2004, pp. 991–996.
+[6] P. O. Vontobel and R. Kötter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” IEEE Trans. Inf. Theory, to be published.
+[7] J. S. Yedidia, W. T. Freeman, and Y. Weiss, Understanding Belief Propagation and its Generalizations, Mitsubishi Electric Research Labs., Tech. Rep. TR2001-22, Jan. 2002.
+[8] M. J. Wainwright, T. S. Jaakkola, and A. S. Willsky, “MAP estimation via agreement on trees: Message-passing and linear programming,” IEEE Trans. Inf. Theory, vol. 51, no. 11, pp. 3697–3717, Nov. 2005.
+[9] M. H. Taghavi and P. H. Siegel, “Adaptive linear programming decoding,” in Proc. IEEE Int. Symp. Information Theory, Seattle, WA, Jul. 2006, pp. 1374–1378.
+= 0 8We assume that 
+ 6 , since otherwise, u will not have a unique optimum
+value, which contradicts the uniqueness assumption on u in the theorem.
+
+[10] M. H. Taghavi and P. H. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[11] M. Chertkov and M. Stepanov, “Pseudo-codeword landscape,” in Proc. IEEE Int. Symp. Information Theory, Nice, France, Jun. 2007, pp. 1546–1550.
+[12] K. Yang, X. Wang, and J. Feldman, “Cascaded formulation of the fundamental polytope of general linear block codes,” in Proc. IEEE Int. Symp. Information Theory, Nice, France, Jun. 2007, pp. 1361–1365.
+[13] P. O. Vontobel, “Interior-point algorithms for linear-programming decoding,” presented at the Information Theory and its Applications Workshop, La Jolla, CA, Jan./Feb. 2008.
+[14] P. O. Vontobel and R. Kötter, “On low-complexity linear-programming decoding of LDPC codes,” Europ. Trans. Telecommun., vol. 5, pp. 509–517, Aug. 2007.
+[15] T. Wadayama, “Interior point decoding for linear vector channels based on convex optimization,” IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 4905–4921, Oct. 2010.
+[16] M. G. Luby, M. Mitzenmacher, M. A. Shokrollahi, and D. A. Spielman, “Efficient erasure correcting codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 569–584, Feb. 2001.
+[17] R. G. Jeroslow, “On defining sets of vertices of the hypercube by linear inequalities,” Discrete Math., vol. 11, pp. 119–124, 1975.
+[18] X. Zhang and P. H. Siegel, “Adaptive cut generation for improved linear programming decoding of binary linear codes,” in Proc. IEEE Int. Symp. Information Theory, Saint Petersburg, Russia, Jul./Aug. 2011, pp. 1644–1648.
+[19] GNU Linear Programming Kit [Online]. Available: http://www.gnu. org/software/glpk
+[20] G. Dantzig, Linear Programming and Extensions. Princeton, NJ: Princeton Univ. Press, 1963.
+[21] D. Bertsimas and J. N. Tsitsiklis, Introduction to Linear Optimization. Belmont, MA: Athena Scientific, 1997.
+[22] M. R. Hestenes and E. Stiefel, “Methods of conjugate gradients for solving linear systems,” J. Res. Nat. Bureau Standards, vol. 49, no. 6, pp. 409––436, , Dec. 1952.
+[23] Y. Saad, Iterative Methods for Sparse Linear Systems, 2nd ed. Philadelphia, PA: SIAM, 2003.
+[24] T. J. Richardson and R. L. Urbanke, “Efficient encoding of low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[25] D. E. Knuth, The Art of Computer Programming, Vol. 3: Sorting and Searching, 2nd ed. Reading, MA: Addison-Wesley, 1998.
+[26] A. J. Goldman and A. W. Tucker, “Theory of linear programming,” in Linear Equalities and Related Systems, H. W. Kuhn and A. W. Tucker, Eds. Princeton, N. J.: Princeton Univ. Press, 1956, pp. 53–94.
+[27] J. J. Júdice, J. M. Patrício, L. F. Portugal, M. G. C. Resende, and G. Veiga, “A study of preconditioners for network interior point methods,” Comput. Optim. Appl., no. 24, pp. 5–35, 2003.
+Mohammad H. Taghavi (M’09) received the B.Sc. degree from Sharif University of Technology, Tehran, Iran, in 2003 and the M.Sc. and Ph.D. degrees from the University of California, San Diego, La Jolla, in 2005 and 2008, respectively, all in electrical engineering.
+Since 2008, Dr. Taghavi has been with Qualcomm, Inc. in San Diego, CA, conducting research and development on wireless cellular and local area networks. He has contributed to the IEEE 802.11ac and 802.11ad standards on Very High Throughput Wireless LAN, and has co-authored several patents in this area. His research interests include wireless communications, error-correcting codes, information theory, and optimization theory.
+Dr. Taghavi was a recipient of the Gold Medal of the 30th International Physics Olympiad, Padova, Italy, 1999.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+5982
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 9, SEPTEMBER 2011
+
+Amin Shokrollahi (M’97–SM’06–F’08) was born in Tehran in 1964. He received a Diplom (equivalent of an M.Sc.) from the University of Karlsruhe in 1988, and a Ph.D. in computer science from the University of Bonn in 1991. He completed a Habilitation in Basic Sciences at the University of Karlsruhe in 1998. He was a lecturer at the University of Bonn between 1991 and 1995, a senior researcher at the International Computer Science Institute in Berkeley from 1995 to 1998, Member of the Technical Staff at Bell Laboratories between 1998 and 2000, Chief Scientist of Digital Fountain between 2000 and 2009, and Professor of Mathematics and Computer Science at the Ecole Polytechnique Federale de Lausanne since 2003. He is a member of the Research Council of the Swiss National Science Foundation, Fellow of the IEEE, and a member of various other professional organizations. Amin’s research interests include coding theory, cryptography, computational number theory, computational algebra, algebraic complexity theory, and signal processing. He has over 100 publications in these areas, including the definitive book on algebraic complexity of which he is a co-author. In addition, he has over 50 granted and pending patents in the areas of coding theory and wireless communications. Within the coding community he is best known for his work on iterative decoding of graph based codes. He is the co-inventor of Tornado codes, and the inventor of Raptor codes, a class of fountain codes that has been standardized by several standardization bodies in wireless, satellite, and wired communications.
+He is also the co-inventor of Kandou signaling, a new signaling method for communication between IC components, and one of the main technologies behind the company Kandou Technologies which he co-founded in 2011. The company specializes in the design and implementation of energy and pin-efficient high speed serial links.
+He has served as a Member of Technical Program Committee of ISIT (2001, 2002, 2003, 2004, 2006, 2009), ICC (2002), ITW (2006), LATIN (2006), RANDOM (2005), Turbo Coding Conference (2008), IMA Conference on Cryptography and Coding (2007, 2009), ICALP (2000), and many others. He was the Technical Program Committee co-chair of ISIT 2007, the co-chair of the Oberwolfach Workshop on Coding Theory in 2007, the co-chair of the Dagstuhl Conference on Group Testing in 2008, and co-organizer of the DIMACS Special Year on Computational Information Theory in 2001. Since 2008 he has been a member of the Board of Governors of the Information Theory Society of IEEE.
+Dr. Shokrollahi is the co-recipient of the IEEE IT Best Paper Award 2002, the co-recipient of the IEEE Eric E. Sumner Award 2008, the recipient of the joint IEEE ComSoc/IT Best Paper Award 2008, and the recipient of the European Research Council Advanced Research Grant 2008.
+
+Paul H. Siegel (M’82–SM’90–F’97) received the S.B. and Ph.D. degrees in mathematics from the Massachusetts Institute of Technology (MIT), Cambridge, MA, in 1975 and 1979, respectively.
+He held a Chaim Weizmann Postdoctoral Fellowship at the Courant Institute, New York University. He was with the IBM Research Division in San Jose, CA, from 1980 to 1995. He joined the faculty of the School of Engineering at the University of California, San Diego in July 1995, where he is currently Professor of Electrical and Computer Engineering. He is affiliated with the California Institute of Telecommunications and Information Technology, the Center for Wireless Communications, and the Center for Magnetic Recording Research where he holds an endowed chair and served as director from 2000 to 2011. His primary research interests lie in the areas of information theory and communications, particularly coding and modulation techniques, with applications to digital data storage and transmission.
+Prof. Siegel was a member of the Board of Governors of the IEEE Information Theory Society from 1991 to 1996 and was elected to another 3-year term in 2009. He served as Co-Guest Editor of the May 1991 Special Issue on “Coding for Storage Devices” of the IEEE TRANSACTIONS ON INFORMATION THEORY. He served the same TRANSACTIONS as Associate Editor for Coding Techniques from 1992 to 1995, and as Editor-in-Chief from July 2001 to July 2004. He was also Co-Guest Editor of the May/September 2001 two-part issue on “The Turbo Principle: From Theory to Practice” of the IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS. He was co-recipient, with R. Karabed, of the 1992 IEEE Information Theory Society Paper Award and shared the 1993 IEEE Communications Society Leonard G. Abraham Prize Paper Award with B. Marcus and J. K. Wolf. He holds several patents in the area of coding and detection, and was named a Master Inventor at IBM Research in 1994. He is a member of Phi Beta Kappa and the National Academy of Engineering.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:13:32 UTC from IEEE Xplore. Restrictions apply.
+
+

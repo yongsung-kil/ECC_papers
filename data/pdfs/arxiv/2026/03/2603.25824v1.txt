@@ -1,0 +1,3272 @@
+arXiv:2603.25824v1 [cs.IT] 26 Mar 2026
+
+1
+Exploiting the Degrees of Freedom:
+Multi-Dimensional Spatially-Coupled Codes
+Based on Gradient Descent
+Ata Tanrıkulu∗, Mete Yıldırım∗, and Ahmed Hareedy, Member, IEEE
+Abstract
+Because of their excellent asymptotic and finite-length (FL) performance, spatially-coupled (SC) codes are a class of lowdensity parity-check (LDPC) codes that is gaining increasing attention. Multi-dimensional (MD) SC codes are constructed by connecting copies of an SC code via relocations in order to mitigate various sources of non-uniformity and improve performance in many data storage and data transmission systems. As the number of degrees of freedom in the MD-SC code design increases, appropriately exploiting them becomes more difficult because of the complexity growth of the design process. In this paper, we propose a probabilistic framework for the MD-SC code design, which is based on the gradient-descent (GD) algorithm, to design high performance MD codes where this challenge is addressed. In particular, we express the expected number of detrimental objects, which we seek to minimize, in the graph representation of the code in terms of entries of a probability-distribution matrix that characterizes the MD-SC code design. We then find a locally-optimal probability distribution, which serves as the starting point of the FL algorithmic optimizer that produces the final MD-SC code. We adopt a recently-introduced Markov chain Monte Carlo (MCMC) FL algorithmic optimizer that is guided by the proposed GD algorithm. We apply our framework to various objects of interest. We start from simple short cycles, and then we develop the framework to address more sophisticated cycle concatenations, aiming at finer-grained optimization. We offer the theoretical analysis as well as the design algorithms. Next, we present experimental results demonstrating that our MD codes, conveniently called GD-MD codes, have notably lower numbers of targeted detrimental objects compared with the available state-of-the-art. Moreover, we show that our GD-MD codes exhibit significant improvements in error-rate performance compared with MD-SC codes obtained by a uniform distribution.
+Index Terms
+Graph-based codes, LDPC codes, spatially-coupled codes, multi-dimensional codes, absorbing sets, gradient-descent, MCMC methods, finite-length optimization, data storage, communications.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes were introduced by Gallager in [2], and they attracted significant attention nearly thirty years later, after their reinvention by MacKay and Neal [3], [4]. Since then, LDPC codes have been among the most widely used error-correction techniques in several different applications. The performance of an LDPC code is negatively affected by detrimental configurations in the graph representation of the code, namely absorbing sets [5] formed by a combination of short cycles [6]. Spatially-coupled (SC) codes [7] are a class of LDPC codes that offer excellent asymptotic performance [8]–[10], superior finite-length (FL) performance [11]–[14], and low-latency windowed decoding that is suitable for streaming applications [15], [16]. Here, we focus on time-invariant SC codes [13], [17]. The FL performance advantage of SC codes results from the additional degrees of freedom they offer the code designer via partitioning, which are added to what lifting enables for the case of protograph-based SC codes. Those additional degrees of freedom rapidly grow with the memory of the SC code. There are various results on high performance SC code designs with low memories in the literature [13], [18], [19]. Some of these designs are optimal with respect to the number of detrimental objects [20]; others demonstrated notable performance gains in data storage and transmission systems [21]. A recent idea introduced probabilistic design of SC codes with high memories, which is based on the gradient-descent (GD) algorithm, to find locally-optimal solutions with respect to the number of detrimental objects [14]. Throughout the rest of the paper, by a short cycle, we mean a cycle of length 6 or 8, and by a detrimental object, we mean either a short cycle or a concatenation of two such cycles. These short cycles and their concatenations are common graphical substructures in a wide array of detrimental absorbing sets [14], [22].
+Multi-dimensional spatially-coupled (MD-SC) codes are a new class of LDPC codes that has excellent performance in all regions [23]–[25]. These codes can mitigate various sources of, possibly multi-dimensional, non-uniformity [26], [27] in many applications. There are various effective MD-SC code designs introduced in recent literature [28], [29]. One idea is to use informed MD relocations in order to connect M copies of a high performance SC code to construct a circulant-based, or a protograph-based, MD-SC code [22], [30], [31], which is also the idea we focus on in this work. Recently, we introduced a Markov chain Monte Carlo (MCMC) method to perform FL optimization of LDPC codes, where the optimization algorithm
+∗Ata Tanrıkulu and Mete Yıdırım have equal contribution to this work. Ata Tanrıkulu, Mete Yıldırım, and Ahmed Hareedy are with the Department of Electrical and Electronics Engineering, Middle East Technical University, 06800 Ankara, Turkey (e-mail: ata.tanrikulu@metu.edu.tr, mete.yildirim@metu.edu.tr, and ahareedy@metu.edu.tr). This work was supported in part by the TÜBI˙TAK 2232-B International Fellowship for Early Stage Researchers. Parts of this paper were presented at the IEEE International Symposium on Information Theory (ISIT) 2024 [1].
+
+2
+samples from a distribution selected such that the probability is inversely proportional to the number of detrimental objects [32]. We will employ this MCMC method for SC partitioning, MD relocation, and lifting, where for the first two, the method is guided by the output of our GD algorithms.
+An MD-SC code can be constructed using three matrices: the partitioning matrix K, the relocation matrix M, and the lifting matrix L. These matrices, as defined in Section II, represent the operations performed in each respective stage of the code design process. We summarize in the following lines how one path of the most recent literature on the topic has evolved:
+1) A GD-based probabilistic framework for SC codes, which constructs optimized SC codes with high memory m, was proposed in [14]. The key idea is designing a partitioning matrix K to achieve a reduced count of detrimental objects based on a locally-optimal probability distribution for edges across component matrices.
+2) This approach was extended in [1] to a GD-based probabilistic framework for MD-SC codes. The key idea is designing a relocation matrix M (for a given underlying SC code) to achieve a reduced count of short cycles based on a locally-optimal probability distribution for edges across auxiliary matrices, which allow MD coupling, and an FL algorithmic optimizer. The FL optimizer relies on a voting method that appeared earlier in [30] and [22], then was updated in [31]. Observe that [1] is the preliminary version of the work in this paper.
+3) Recently, a novel GD-guided MCMC framework was proposed [32] to design both a partitioning matrix K based on a locally-optimal probability distribution, which is obtained according to [14], and a lifting matrix L. For FL optimization, this approach turned out to be more effective than the proposed algorithm in [14] (and in fact more effective than the available state-of the-art FL optimization algorithms).
+In this paper, we present the first probabilistic MD-SC code design framework that enables exploiting the abundance of degrees of freedom that comes with high SC memory m and high number of MD auxiliary matrices (including the diagonal one) M . We provide a general theoretical analysis for our design framework that is applicable to arbitrary subgraphs of the Tanner graph of an MD-SC code. This includes simple objects detrimental to code performance, particularly short cycles, as well as more sophisticated configurations such as concatenations of two short cycles. Since focusing on cycles could cause unnecessary degrees of freedom being exhausted on isolated cycles that are much less problematic, this broader approach allows us to use the available degrees of freedom provided by MD-SC code design more effectively.
+Our idea is to build a probability-distribution matrix, the entries of which represent the probability that a non-zero element in the base matrix, i.e., an edge in the underlying protograph, will be associated with the corresponding component matrix at the corresponding auxiliary matrix in the MD-SC construction. We develop the objective functions representing the expected number of short cycles as well as two-cycle concatenations in terms of the aforementioned probabilities, obtain their gradients, and derive the form of the solution (see Section III and Section IV). We note that while the focus is on concatenations of two short cycles, our theoretical analysis is general for a detrimental configuration with a cycle basis having any number of cycles with arbitrary lengths. We then introduce the MD gradient-descent (MD-GRADE) algorithm (Section V-A) and the finite-length MCMC algorithm (Section V-B). Via our MD-GRADE algorithm, we find a locally-optimal distribution matrix, minimizing the expected number of target objects, and input it to the MCMC algorithm that converges on excellent FL MD-SC designs as demonstrated by the experimental results.
+Our experimental results demonstrate that the new codes, which we call GD-MD codes, have significantly lower populations of short cycles compared with the available state-of-the-art (see Table III and Table IV), as well as significantly lower numbers of detrimental objects compared with their counterparts generated via a straightforward (uniform) distribution (see Table VI). Furthermore, we show that the reduction in the number of detrimental objects has a clear and remarkably positive effect on the error-rate performance, where the performance gains can reach up to 2.81 orders of magnitude in favor of GD-MD codes (see Fig. 6). This improvement is a direct result of our framework, whereas the comparison codes exhibit an error floor or/and a degraded waterfall due to the high population of detrimental objects whose counts we aim to minimize.
+The rest of the paper is organized as follows. In Section II, we provide the necessary preliminary information related to SC and MD-SC codes together with the notation that will be used throughout the paper for these classes of codes. In Section III, we introduce our probabilistic framework focusing on short cycles, which we then generalize in Section IV through the analysis of arbitrary subgraphs and complement by a special case study on the analysis of two short-cycle concatenations. We present the algorithms used to obtain locally-optimal probability-distributions and to construct FL GD-MD codes in Section V. We then present high performance GD-MD codes designed using the proposed framework, and we provide comparisons with state-of-the-art MD-SC codes from the literature as well as MD-SC codes generated using uniform distributions, in terms of the number of detrimental objects and error-rate performance, in Section VI. Finally, we conclude the paper in Section VII. The partitioning, lifting, and relocation matrices of some of our GD-MD codes are provided in the paper appendix to ensure reproducibility of the results.
+II. PRELIMINARIES
+Let HSC in (1) be the parity-check matrix of a circulant-based (CB) SC code with parameters (γ, κ, z, L, m), where γ ≥ 3 and κ > γ are the column and row weights of the underlying block code, respectively. The SC coupling length and memory are L and m, respectively.
+
+3
+
+ H0
+
+  
+
+H... 1
+
+
+
+HSC
+
+=
+
+Hm
+
+     
+
+0......
+
+0 H0 H... 1 Hm 0...
+
+... ... ...
+
+... ... ...
+
+... ... ...
+
+0......
+
+
+  
+
+
+
+0
+
+ .
+
+H0
+
+ 
+
+H... 1
+
+   
+
+(1)
+
+00
+
+Hm
+
+HSC is obtained from some binary matrix HgSC by replacing each non-zero (zero) entry in the latter by a z × z circulant (zero)
+
+matrix, z ∈ N. Throughout the paper, the notation “g” in the superscript of any matrix refers to its protograph matrix, where
+
+each code,
+
+circulant matrix is replaced by 1 and each zero matrix is replaced and it has a convolutional structure composed of L replicas Rgi of
+
+by 0. HgSC size (L +
+
+is called m)γ × κ
+
+the protograph each, where
+
+matrix
+
+of
+
+the
+
+SC
+
+Rig = (0γi×κ)T(H0g )T (H1g )T . . . (Hgm)T (0γ(L−1−i)×κ)T T ,
+
+for i ∈ {0, 1, . . . , L−1}. Here, Hyg ’s are all of size γ×κ, γ, κ ∈ N, and they are all pairwise disjoint. The sum Hg =
+
+m y=0
+
+Hgy
+
+is
+
+called the protograph base matrix, abbreviated to the base matrix in this paper, which is the protograph matrix of the underlying
+
+block matrix H =
+
+m y=0
+
+Hy
+
+.
+
+In
+
+this
+
+paper,
+
+Hg
+
+is
+
+taken
+
+to
+
+be
+
+all-one
+
+matrix,
+
+and
+
+the
+
+SC
+
+codes
+
+have
+
+quasi-cyclic
+
+structure.
+
+The γ × κ matrix K whose entry at (i, j) is a ∈ {0, 1, . . . , m} when Hag = 1 at that entry is called the partitioning matrix.
+
+The γ × κ matrix L with L(i, j) = fi,j ∈ {0, 1, . . . , z − 1}, where σfi,j is the circulant in H lifted from the entry Hg(i, j),
+
+is called the lifting matrix. Here, σ is the z × z identity matrix cyclically shifted one unit to the left. Observe that m + 1 is
+
+the number of component matrices Hgy (or Hy) and L is the number of replicas in HSgC (or HSC).
+
+We now define the MD-SC code. The parity-check matrix HMD of the MD-SC code has the following form:
+
+ H′SC XM−1 XM−2 . . . X2
+
+X1 
+
+ X1
+
+HS′ C XM−1 . . . X3
+
+X2 
+
+ 
+
+X2
+
+HMD
+
+=
+
+ 
+
+
+
+...
+
+X1 ...
+
+HS′ C . . . X4
+
+...
+
+. . . ...
+
+X3
+
+ 
+
+...
+
+,  
+
+(2)
+
+XM −2
+
+XM −3
+
+XM −4
+
+...
+
+H′SC
+
+XM
+
+ −1
+
+XM−1 XM−2 XM−3 . . . X1 HS′ C
+
+where
+
+M −1
+
+HSC = HS′ C +
+
+Xℓ.
+
+(3)
+
+ℓ=1
+
+Here, Xℓ’s are called the auxiliary matrices. The MD-SC code is obtained from M copies of HSC on the diagonal by relocating
+
+some of its circulants from each replica of every copy of HSC to the corresponding locations in Xℓ copies (simply by shifting
+
+the circulants ℓLκz units cyclically to the left), and then by coupling them in a sliding manner as in (2). For convention, we
+
+use X0 = H′SC.
+
+Definition 1. The M (L + m)γ × M Lκ the MD protograph of HMD. Here, Xgℓ’s
+
+matrix HMg D are uniquely
+
+obtained by determined
+
+replacing H′SC by HS′gC and by the following properties:
+
+Xℓ’s
+
+with
+
+Xgℓ ’s
+
+in
+
+(2)
+
+is
+
+called
+
+1) 2)
+
+The equation HSgC Xℓ’s are obtained
+
+= H′SgC +
+
+M −1 ℓ=1
+
+Xgℓ
+
+holds.
+
+by replacing each non-zero
+
+(zero)
+
+entry
+
+in
+
+Xℓg
+
+by the z × z
+
+circulant σfi,j
+
+(the zero matrix 0z×z),
+
+z ∈ N, that has the appropriate power fi,j from the lifting matrix L.
+
+Relocations are represented by an MD mapping as follows:
+
+F : {Ci,j | 1 ≤ i ≤ γ, 1 ≤ j ≤ κ} → {0, 1, . . . , M − 1},
+where Ci,j is the circulant corresponding to 1 at entry (i, j) of the base matrix Hg, and F (Ci,j) is the index of the auxiliary matrix to which Ci,j is located. F −1(0) is the set of non-relocated circulants, and the percentage T of relocated circulants is called the MD density. Conveniently, we define the γ × κ matrix M with M(i, j) = F (Ci,j) as the relocation matrix. An MD-SC code is uniquely determined by the matrices K, L, and M, and the parameters of an MD-SC code are described by the tuple (γ, κ, z, L, m, M ).
+A cycle of length 2g (cycle-2g) in the Tanner graph of HMD is a 2g-tuple (i1, j1, i2, j2, . . . , ig, jg), where (ik, jk) and (ik, jk+1), 1 ≤ k ≤ g, jg+1 = j1, are the positions of its non-zero entries in HMD. Short cycles are detrimental to the performance of an LDPC code as they result in dependencies in decoding, negatively affecting the waterfall region, and they combine to create absorbing sets, negatively affecting the error-floor region [5], [21]. We first focus on cycles-k and then
+
+4
+
+concatenations of a cycle-k and a cycle-k′, where k, k′ ∈ {6, 8}, in this paper. We denote such concatenations via the cycle lengths as follows k-k′, and we focus on 6-6, 6-8, and 8-8 configurations. Relocations are done in order to eliminate such objects when the underlying SC code has girth, i.e., shortest cycle length, 6 or 8. The necessary and sufficient condition for a cycle-2g in HSC to create a cycle-2g in HMD, i.e., remains active, after relocations is studied in [30] and also given in the second part of Lemma 1. Practically, a cycle candidate that remains active creates multiple cycle candidates associated with
+the same cycle length, but we say it becomes “a cycle candidate” from an ontological point of view.
+
+Lemma 1. Each cycle-2g in the Tanner graph of an MD-SC code corresponds to a cycle-2g candidate in the protograph base matrix, Hg.1 We label a cycle-2g candidate in Hg as (i1, j1, i2, j2, . . . , ig, jg), where (ik, jk) and (ik, jk+1), 1 ≤ k ≤ g, jg+1 = j1, are nodes (entries) of this cycle candidate. The partitioning and relocation matrices are K and M, respectively. Then, this cycle candidate becomes a cycle-2g candidate in the SC protograph, i.e., remains active, if and only if the following
+condition is satisfied [13]:
+
+g
+
+[K(ik, jk) − K(ik, jk+1)] = 0.
+
+(4)
+
+k=1
+
+This cycle candidate becomes a cycle-2g candidate in the MD protograph, i.e., remains active, if and only if it satisfies (4) and the following condition [30]:
+
+g
+
+[M(ik, jk) − M(ik, jk+1)] ≡ 0 (mod M ).
+
+(5)
+
+k=1
+
+Finally, we also provide the definition of unlabeled absorbing and trapping sets [5], [33], which are essential for our analysis. Here, “unlabeled” means all edge weights are set to 1, which is natural for binary codes.
+
+Definition 2. (Unlabeled absorbing and trapping sets). Let V be a subset of variable nodes (VNs) in the unlabeled graph of a code. Consider the subgraph induced by V . Let O denote the set of odd-degree neighboring check nodes (CNs) of V , and let T denote the set of even-degree neighboring CNs of V . This subgraph configuration is called an (a, d) unlabeled trapping set if |V | = a and |O| = d. Moreover, an (a, d) unlabeled trapping set is said to be an unlabeled absorbing set if, in addition, each VN in V has strictly more neighbors in T than in O. Note that for a binary code, all edges are unlabeled by default. An object is said to be elementary if the degree of each associated CN is at most two. Elementary unlabeled absorbing and trapping sets will be abbreviated as UAS and UTS, respectively, for the remaining of the paper.
+
+III. NOVEL FRAMEWORK FOR PROBABILISTIC MD-SC CODE DESIGN
+In this section, we present our novel probabilistic design framework that searches for a locally-optimal probability distribution for auxiliary matrices of an MD-SC code. We start by focusing on cycles. We define a joint probability distribution over the component matrix and the auxiliary matrix (including X0) to which a 1 in the base matrix is assigned. This distribution is characterized by an (m + 1) × M so-called probability-distribution matrix. We then formulate an optimization problem and find its solution form to obtain the locally-optimal probability-distribution matrix. Finally, we express the expected number of short cycles in HMD as a function of this probability distribution. The matrix HMD will be designed based on this distribution later on in Section V. Here, our vectors are row vectors by default.
+
+A. Probabilistic Derivations
+
+In this subsection, we relate the joint probability distribution to the expected number of cycle candidates in the MD protograph. In particular, we derive the probability of cycle activeness, then use it to find the expectation, both in terms of this distribution.
+
+Definition 3. (Joint probability-distribution matrix). Let m ≥ 1 and M ≥ 2. Then,
+
+ p0,0 p0,1 . . . p0,M−1 
+
+ p1,0 p1,1 . . . p1,M−1 
+
+P=  
+
+...
+
+... . . .
+
+...
+
+  
+
+,
+
+(6)
+
+pm,0 pm,1 . . . pm,M−1 (m+1)×M
+
+where
+
+m M −1
+
+pi,j = 1
+
+(7)
+
+i=0 j=0
+
+1A cycle candidate is a way of traversing a protograph pattern to reach a cycle after partitioning/relocations/lifting (see [21]).
+
+5
+
+and each pi,j ∈ [0, 1] specifies the probability that a 1 in HgMD is assigned to the ith component of the jth auxiliary matrix. Thus, P is referred to as the (joint) probability-distribution matrix. Recall that X0 = H′SC. The two-variable coupling polynomial of an MD-SC code associated with the probability-distribution matrix P is
+
+m M −1
+
+f (X, Y ; P) =
+
+pi,j XiY j ,
+
+(8)
+
+i=0 j=0
+
+which is abbreviated as f (X, Y ) when the context is clear.
+Definition 4. For a matrix A of size k × ℓ, the vector acon = [ar]1×kℓ is defined as the vector obtained by concatenating the rows of the matrix Ak×ℓ from top to bottom, i.e., aℓi+j is the entry of A at (i, j) for 0 ≤ i ≤ k − 1 and 0 ≤ j ≤ ℓ − 1.
+Definition 5. The vector pcon corresponding to the (joint) probability-distribution matrix P is called the probability-distribution vector.
+
+Remark 1. In the FL construction of HMD via the MCMC Algorithm in Section V, relocations are performed after partitioning and lifting. The respective order in the set-up of Theorems 1, 2, and 3 below, however, is partitioning, relocations, then lifting. This change in order, of course, does not affect HMD nor the (expected) cycle counts.
+We note that expectations in Theorem 1 and Theorem 2 are L-invariant and M -invariant.
+Theorem 1. Let [·]i,j denote the coefficient of XiY j in a two-variable polynomial. Denote by P6(pcon) the probability of a cycle-6 candidate in the base matrix becoming a cycle-6 candidate in the MD protograph HMg D under random partitioning and relocations with respect to the probability-distribution vector pcon. Then, we have
+
+P6(pcon) =
+
+f 3(X, Y )f 3(X−1, Y −1) 0,b .
+
+(9)
+
+M |b
+
+Thus, the expected number N6(pcon) of cycle-6 candidates in HgMD is given by
+
+N6(pcon) = 6
+
+γ 3
+
+κ 3
+
+f 3(X, Y )f 3(X−1, Y −1) 0,b .
+
+(10)
+
+M |b
+
+Proof. Denote a cycle-6 candidate C in the base matrix Hg by (i1, j1, i2, j2, i3, j3), where (ik, jk) and (ik, jk+1), 1 ≤ k ≤ 3,
+
+j4 = j1, are edges of C in Hg. From the partitioning condition in (4) and the relocation condition in (5), P6(pcon) is given by
+
+the joint probability of both condition equations being satisfied, and this probability is derived in (11). Note that the number
+
+of cycle-6 candidates in Hg is
+
+N6(pcon) = 6
+
+γ 3
+
+κ 3
+
+P6(pcon).
+
+6
+
+γ 3
+
+κ 3
+
+,
+
+and
+
+each
+
+becomes
+
+a
+
+cycle-6
+
+candidate
+
+in
+
+HMg D
+
+with
+
+probability
+
+P6(pcon).
+
+Therefore,
+
+■
+
+3
+
+3
+
+P6(pcon) = P [K(ik, jk) − K(ik, jk+1)] = 0, [M(ik, jk) − M(ik, jk+1)] ≡ 0 (mod M )
+
+k=1
+
+k=1
+
+3
+
+=
+
+P [K(ik, jk) = xk, M(ik, jk) = uk, K(ik, jk+1) = yk, M(ik, jk+1) = vk]
+
+3 k=1
+
+(xk
+
+−yk
+
+)=0,
+
+k=1
+
+3 k=1
+
+(uk
+
+−vk
+
+)≡0
+
+(mod M )
+
+=
+
+px1,u1 px2,u2 px3,u3 py1,v1 py2,v2 py3,v3
+
+3 k=1
+
+(xk
+
+−yk
+
+)=0,
+
+3 k=1
+
+(uk
+
+−vk
+
+)≡0
+
+(mod M )
+
+
+
+
+
+=
+
+ 
+
+px1 ,u1
+
+px2 ,u2
+
+px3 ,u3
+
+py1 ,v1
+
+py2 ,v2
+
+py3 ,v3
+
+X x1+x2+x3−y1−y2−y3
+
+Y
+
+u1 +u2 +u3 −v1 −v2 −v3
+
+ 
+
+
+
+
+
+M |b xk,yk∈{0,1,...,m},
+
+uk,vk∈{0,1,...,M −1}
+
+0,b
+
+=
+
+f 3(X, Y )f 3(X−1, Y −1) 0,b .
+
+M |b
+
+(11)
+
+6
+
+Theorem 2. Denote by N8(pcon) the expected number of cycle-8 candidates (see Fig. 1) in the MD protograph. Then,
+
+N8(pcon) =
+
+w1 f 2(X2, Y 2)f 2(X−2, Y −2) 0,b + w2 f (X2, Y 2)f (X−2, Y −2)f 2(X, Y )f 2(X−1, Y −1) 0,b
+
+M |b
+
++ w3 f (X2, Y 2)f 2(X, Y )f 4(X−1, Y −1) 0,b + w4 f 4(X, Y )f 4(X−1, Y −1) 0,b ,
+
+(12)
+
+where w1 = if γ ≥ 4, and
+
+γ
+2
+w4
+
+κ
+2
+=
+
+, w2
+
+6
+
+γ 2
+
+=
+κ
+4
+
+3
+
+γ 2
+
++
+
+κ
+3
+36
+
++
+γ
+3
+
+3
+κ
+4
+
+γ
+3
+if
+
+κ 2
+
+,
+
+w3
+
+=
+
+18
+
+γ = 3, where
+
+γ
+3
+κ
+
+κ 3
+
+,
+
+≥ 4.
+
+w4
+
+=
+
+6
+
+γ 2
+
+κ 4
+
++6
+
+γ 4
+
+κ 2
+
++ 36
+
+γ 3
+
+κ 4
+
++ 36
+
+γ 4
+
+κ 3
+
++ 72
+
+γ 4
+
+κ 4
+
+Proof. Observe that there are nine protograph patterns that can produce cycles-8 after partitioning/relocations/lifting [21] (see
+
+Fig. 1). Following the logic in Theorem 1, [14, Theorem 1], and their proofs, we can derive the result above (see also [34,
+
+Chapter 5] for more details).
+
+■
+
+Remark 2. In this paper, we do not discuss cycles-4 in the analysis since removing all of them via informed lifting is easy. We also consider prime z, which implies that protograph cycles-4 cannot produce cycles-8 after lifting. Therefore, we take the weight of the term corresponding to cycle-8 candidate obtained by traversing a cycle-4 twice (see Fig. 1) w1 = 0 in the version of Algorithm 2 that handles cycles-8 in Section V-A to obtain the probability-distribution matrix. Observe also that the major contribution to cycle-8 counts comes from the candidates with 8 distinct entries (associated with the term multiplied by w4 in (12) of Theorem 2).
+
+B. Gradient-Descent MD-SC Solution Form
+In this section, we derive the gradient-descent MD-SC solution form by analyzing the Lagrangian of the objective functions presented above. This solution form is a key ingredient in the MD gradient-descent (MD-GRADE) algorithm in Section V-A. Our algorithm produces near-optimal relocation percentages for gradient-descent MD-SC (GD-MD) codes with arbitrary memory of the underlying SC code and arbitrary number of auxiliary matrices.
+
+Remark 3. The vector p∗ of the probabilities pi∗’s in the constraints of Lemma 2 and Lemma 3 introduced below is set to a locally-optimal edge distribution for the underlying SC code obtained as in [14]. Since the pi∗’s add up to 1, (7) is automatically satisfied. We chose this approach in order to apply MD relocations to the best underlying SC code. These probabilities are
+used as an input to algorithms in Section V-A. Separate design for partitioning, relocations, and lifting was shown to be the
+best approach in the literature [14], [21], [22], [31].
+
+Lemma 2. For P6(pcon) to be locally minimized subject to the constraints
+
+pi,0 + pi,1 + · · · + pi,M−1 = p∗i ,
+
+(13)
+
+for all i ∈ {0, 1, . . . , m}, where each pi,j ∈ [0, 1], it is necessary that the following equations hold for some ci ∈ R:
+
+f 3(X, Y )f 2(X−1, Y −1) i,b+j = ci,
+
+(14)
+
+M |b
+
+for all i ∈ {0, 1, . . . , m} and j ∈ {0, 1, . . . , M − 1}.
+
+Proof. Since the constraints of the optimization problem in hand satisfy the linear independence constraint qualification (LICQ),
+
+Karush-Kuhn-Tucker (KKT) conditions must hold. Note that the vector rcon to appear below is obtained by concatenating the
+
+rows of the (m + 1) × M matrix
+
+ r0 r0 . . . r0 
+
+ r1 r1 . . . r1 
+
+R=  
+
+...
+
+...
+
+...
+
+...
+
+.  
+
+(15)
+
+rm rm . . . rm
+
+We now consider the Lagrangian L6(pcon) = P6(pcon) +
+
+m i=0
+
+ri(pi∗
+
+−
+
+pi,0
+
+−
+
+pi,1
+
+−
+
+·
+
+·
+
+·
+
+−
+
+pi,M −1 )
+
+and
+
+compute
+
+its
+
+gradient
+
+as
+
+follows:
+
+m
+
+∇pcon L6(pcon) = ∇pcon P6(pcon) +
+
+ri(p∗i − pi,0 − pi,1 − · · · − pi,M−1)
+
+i=0
+
+
+
+
+
+= ∇pcon 
+
+f 3(X, Y )f 3(X−1, Y −1) 0,b − rcon =
+
+∇pcon (f 3(X, Y )f 3(X−1, Y −1)) 0,b − rcon
+
+M |b
+
+M |b
+
+=
+
+3 f 3(X, Y )f 2(X−1, Y −1)∇pcon f (X−1, Y −1) 0,b + 3 f 2(X, Y )f 3(X−1, Y −1)∇pcon f (X, Y ) 0,b − rcon
+
+M |b
+
+=6
+
+f 3(X, Y )f 2(X−1, Y −1)v1con) 0,b − rcon,
+
+(16)
+
+M |b
+
+7
+
+where the last equality follows from the polynomial-symmetry observation for any polynomial r(X, Y )
+
+r(X, Y )∇pcon f (X−1, Y −1) 0,b =
+
+r(X−1, Y −1)∇pcon f (X, Y ) 0,b .
+
+M |b
+
+M |b
+
+Here, vkcon is the vector of length (m + 1)M obtained by concatenating the rows of the following (m + 1) × M matrix (of monomials)
+
+1
+
+Y −k
+
+...
+
+Y −(M−1)k 
+
+ X−k X−kY −k . . . X−kY −(M−1)k 
+
+Vk
+
+=
+
+ 
+
+
+
+...
+
+...
+
+...
+
+...
+
+  
+
+(17)
+
+X−mk X−mkY −k . . . X−mkY −(M−1)k
+
+for k ∈ Z. When P6(pcon) reaches its local minimum, ∇pcon L6(pcon) = 01×(m+1)M , which directly leads to (14) by defining
+
+ci = ri/6 for all i ∈ {0, 1, . . . , m}.
+
+■
+
+Lemma 3. For N8(pcon) to be locally minimized subject to the constraints
+
+pi,0 + pi,1 + · · · + pi,M−1 = p∗i ,
+
+(18)
+
+for all i ∈ {0, 1, . . . , m}, where each pi,j ∈ [0, 1], it is necessary that the following equations hold for some ci ∈ R:
+
+w1 4f 2(X2, Y 2)f (X−2, Y −2) 2i,b+2j + w2 2f (X2, Y 2)f 2(X, Y )f 2(X−1, Y −1) 2i,b+2j
+M |b
+
++ w2 4f (X2, Y 2)f (X−2, Y −2)f 2(X, Y )f (X−1, Y −1) i,b+j + w3 f 2(X, Y )f 4(X−1, Y −1) −2i,b−2j + w3 2f (X2, Y 2)f (X, Y )f 4(X−1, Y −1) −i,b−j + w3 4f (X2, Y 2)f 2(X, Y )f 3(X−1, Y −1) i,b+j
+
++ w4 8f 4(X, Y )f 3(X−1, Y −1) i,b+j = ci,
+
+(19)
+
+for all i ∈ {0, 1, . . . , m} and j ∈ {0, 1, . . . , M − 1}.
+
+Proof. We consider the Lagrangian L8(pcon) = N8(pcon) +
+
+m i=0
+
+ri(pi∗
+
+−
+
+pi,0
+
+−
+
+pi,1
+
+−
+
+·
+
+·
+
+·
+
+−
+
+pi,M −1 )
+
+and
+
+compute
+
+its
+
+gradient
+
+as follows:
+
+m
+∇pcon L8(pcon) = ∇pcon (N8(pcon) + ri(pi∗ − pi,0 − pi,1 − · · · − pi,M−1))
+i=0
+
+=
+
+∇pcon w1 f 2(X2, Y 2)f 2(X−2, Y −2) 0,b + w2 f (X2, Y 2)f (X−2, Y −2)f 2(X, Y )f 2(X−1, Y −1) 0,b
+
+M |b
+
++ w3 f (X2, Y 2)f 2(X, Y )f 4(X−1, Y −1) 0,b + w4 f 4(X, Y )f 4(X−1, Y −1) 0,b − rcon
+
+=
+
+w1 4f 2(X2, Y 2)f (X−2, Y −2)v2con 0,b + w2 2f (X2, Y 2)f 2(X, Y )f 2(X−1, Y −1)v2con 0,b
+
+M |b
+
++ w2 4f (X2, Y 2)f (X−2, Y −2)f 2(X, Y )f (X−1, Y −1)v1con 0,b + w3 f 2(X, Y )f 4(X−1, Y −1)v−co2n 0,b
+
++ w3 2f (X2, Y 2)f (X, Y )f 4(X−1, Y −1)v−co1n 0,b + w3 4f (X2, Y 2)f 2(X, Y )f 3(X−1, Y −1)v1con 0,b
+
++ w4 8f 4(X, Y )f 3(X−1, Y −1)v1con 0,b − rcon.
+
+(20)
+
+When N8(pcon) reaches its local minimum, ∇pcon L8(pcon) = 01×(m+1)M , which directly leads to (19) by defining ci = ri for
+
+all i ∈ {0, 1, . . . , m}.
+
+■
+
+C. Outcomes Forecasted
+
+In this section, we compute the expected number of short cycles-k, k ∈ {6, 8}, under a specific MD probability distribution, taking into account L, M , and z (which gives an estimate, typically a useful upper bound, of what the MCMC algorithm can produce; see Section V-B). These numbers inform us what to expect from incorporating the probability-distribution matrix in designing GD-MD codes under random partitioning, relocations, and lifting.
+
+Theorem 3. After random partitioning and relocations based on a probability-distribution vector pcon, and random lifting based on a uniform distribution, the expected number E6(pcon) of cycles-6 in the Tanner graph of HMD is
+
+E6(pcon)
+
+≈
+
+N6(pcon)
+
+·
+
+(2L
+
+− 2
+
+m)
+
+·
+
+M,
+
+(21)
+
+8
+
+1 4 5
+
+3 2
+
+6
+
+7
+
+Fig. 1. Seven (out of nine) protograph patterns that can result in cycles-8 in the Tanner graph after partitioning/relocations/lifting. The transposes of P2 and P4 are excluded from the list for brevity. Light green squares are the non-zero entries specifying the cycle-candidate edges.
+
+and the expected number E8(pcon) of cycles-8 is
+
+E8(pcon) ≈ N8(pcon) · (L − m) · M,
+
+(22)
+
+where L > χ, χ is the maximum number of consecutive SC protograph replicas a cycle pattern of interest, specifically its VNs, can span, and κ ≥ 4 (see [20, Lemma 1] and [21]).
+
+Proof. Let Eobj be the expected total number of cycle-k candidates out of all cycle-k candidates {Ci | i ∈ I} in the all-one base matrix Hg that remain active after random partitioning, random relocations, and random lifting (see Remark 1). Here, I
+is the set of candidate indices. Define 1(Ci) as an indicator function on Ci being active. Then,
+
+Eobj = E
+
+1(Ci)
+
+i∈I
+
+= E[1(Ci)]
+
+i∈I
+
+=
+
+EP [1(Ci)],
+
+(23)
+
+P ∈K(C) i∈I(P )
+
+where K(C) is the set of all protograph patterns that can produce the cycle-k of interest denoted by C, I(P ) is the set of indices of all cycle candidates in Hg associated with pattern P . Moreover,
+
+EP [1(Ci)] = P(KPCi , FPCi )P(LPCi | KPCi , FPCi ),
+
+(24)
+
+where P(KPCi , FPCi ) is the probability that Ci remains active after partitioning and relocations, while P(LPCi | KPCi , FPCi ) is the probability that Ci remains active after lifting given that it arrives at this stage active (KPCi , FPCi , and LCPi are the associated events). Observe that what happens at the lifting stage depends on partitioning and relocations.
+
+First, note that there is only one pattern P , which is a cycle-6 itself, in the base matrix that can produce cycles-6 in HMD,
+
+i.e., |K(C)| = 1. Furthermore,
+
+a) P(KPCi , FPCi ) = P6(pcon),
+
+b)
+
+|I| = |I(P )| = 6
+
+γ 3
+
+κ 3
+
+,
+
+and
+
+c) P(LPCi | KPCi , FPCi ) = 1/z.
+
+Hence and using (10), Eobj can be expressed as N6(pcon)/z. Combining this with the fact that an active candidate Ci produces
+
+multiple copies after each stage (for example, z copies as a result of lifting), we obtain
+
+N6(pcon) · (L − smax + 1) · M
+
+≤ E6(pcon)
+
+≤ N6(pcon) · (L − smin + 1) · M,
+
+(25)
+
+where smin and smax are the minimum and maximum spans, in terms of replicas, of a cycle-6 pattern in HSgC. Note that smin = 1
+
+and
+
+smax
+
+=
+
+χ
+
+=
+
+m + 1.
+
+By
+
+assumption,
+
+L
+
+≫
+
+m,
+
+and
+
+thus
+
+we
+
+can
+
+take
+
+E6(pcon)
+
+≈
+
+N6(pcon) ·
+
+(2L−m) 2
+
+·M
+
+via
+
+averaging
+
+L
+
+and L − m as an estimate, which is (21).
+
+For the second part of the statement, observe that there are nine patterns in the base matrix that can produce cycles-8 in
+
+HMD [14], [21], i.e., |K(C)| = 9. We will find the expected number of cycles-8 in HMD for pattern P4 shown in Fig. 1 as this is a quite rich case.
+
+We first note that
+
+9
+
+a) P(KPC4i , FPC4i ) = M|b[f 4(X, Y )f 4(X−1, Y −1)]0,b and
+
+b)
+
+|I(P4)| = 6
+
+γ 2
+
+κ 4
+
+.
+
+Next, we show that (z − 1)(z − 2)/z3 ≤ P(LCP4i | KPC4i , FPC4i ) ≤ 1/z for lifting.
+
+Note that P4 is formed via three basic (fundamental) cycles-4. Following the arguments of [6] and [22, Theorem 3], we
+
+consider the following cases for P4 after partitioning and relocations:
+
+2.a) The three basic cycles-4 are kept.
+
+2.b) Only two basic cycles-4 are kept.
+
+2.c) No cycles-4 are kept.
+
+Suppose that the 4 edges of P4 on the first row are labeled N1, N2, N3, N4, starting from the left, and the 4 edges on the second row are labeled N5, N6, N7, N8, starting from the left (see Fig. 1). We access these edges in the following order N1,
+N5, N6, N2, N3, N7, N8, N4.
+In Case 2.a), suppose we start from the edge N1, and we trace the possible lifting choices for edges N2, N7, and N4 at the
+end of each basic cycle traversal. N2 has z − 1 options for a power of σ in order not to form a cycle-4 on the left. N7 has
+z − 2 options in order not to form a cycle-4 from the disjunctive union of the two left-most basic cycles. Finally, N4 has a single option to close the walk and form a cycle-8 [6]. Hence, P(LPC4i | KPC4i , FPC4i ) = (z − 1)(z − 2)(1)/z3 = (z − 1)(z − 2)/z3.
+In Case 2.b), suppose we start from the edge N1, and we trace the possible lifting choices for edges N2, N7, and N4 at
+the end of each basic cycle traversal. We assume the cycle that ends with N7 is the one that no longer exists. N2 has z − 1
+options for a power of σ in order not to form a cycle-4 on the left. N7 is free to receive any of the z options. Finally, N4 has a single option to close the walk and form a cycle-8 [6]. Hence, P(LPC4i | KPC4i , FPC4i ) = (z − 1)z(1)/z3 = (z − 1)/z2.
+In Case 2.c), it is clear that P(LPC4i | KPC4i , FPC4i ) = 1/z. Note that P(LPC4i | KPC4i , FPC4i ) is closer to 1/z because it is more likely to have no cycles-4, for m > 1, after random partitioning (in which case, Ci becomes a true cycle-8 in the MD protograph). Therefore, we take P(LPC4i | KPC4i , FPC4i ) = 1/z as an estimate. The other patterns can be treated in a similar fashion, and thus we take P(LPCi | KPCi , FPCi ) = 1/z for all possible cycle-8 protograph patterns.2 Hence, Eobj is approximated by N8(pcon)/z. Consequently, we obtain
+
+N8(pcon) · (L − smax + 1) · M
+
+≤ E8(pcon)
+
+≤ N8(pcon) · (L − smin + 1) · M,
+
+(26)
+
+where smin and smax are the minimum and maximum spans of a cycle-8 pattern in HSgC. Note that smin = 1 and smax = χ = 2m+1 due to the existence of structures P6 and P7 (only P7) after partitioning in the case of γ ≥ 4 (γ = 3). By assumption, L ≫ m, and thus we can take E8(pcon) ≈ N8(pcon) · (L − m) · M via averaging L and L − 2m as an estimate, which is (22). ■
+
+Remark 4. Note that the upper bound of E8(pcon) in the proof above is exact. One obtains an exact lower bound as well by studying the probabilities P(LPCi | KPCi , FPCi ) for each cycle-8 pattern, and it is in fact lower than N8(pcon) · (L − 2m) · M . However, the expected number E8(pcon) is always notably closer to the upper bound.
+
+We now discuss the value of Theorem 3 to the coding theory community.
+1) The GD-MD codes we design will have lower numbers of cycles (of length = code girth) than the upper bound of the expected number when the partitioning and lifting matrices are designed as in [14], [20] and [32]. This is expected to hold in general when we use optimized partitioning and lifting matrices designed for the underlying SC codes. As we shall see, our estimate can get close to the actual FL cycle counts.
+2) The expected number of cycles-k, k ∈ {6, 8}, in HMD decreases with the relocation percentage T . However, the rate of reduction becomes close to 0 after some T value. Hence, one can locate a threshold vector pthold where Ek(pthold) is at most, say, 5% more than the minimum Ek(pcon), which is reached by minimizing Nk(pcon). This allows us to specify an informed MD density T for the MCMC algorithm (within the margin governed by decoding latency) to potentially decrease its computational complexity.
+3) Eobj in Theorem 3 proof gives the expected number of cycle-k candidates in the all-one base matrix Hg that remain active after random partitioning, random relocation, and random lifting. In case this number is single-digit (at pthold for example), it is likely that the MCMC algorithm will eliminate all active cycles and produce an MD-SC code with girth ≥ k + 2. Provided that cycles (of length = code girth) can in fact be entirely eliminated, Eobj leads us to a threshold for the MD density to achieve this goal.
+4) Having the MD-SC degrees of freedom m, L, and M , we can choose these parameters to achieve best performance subject to the design constraints such as the length and rate. For example, if one has an allowed range for the length of the MD-SC code to design while the rate is fixed, M can be determined so that Eobj, and hence Ek(pcon), is as low as possible while the length is within the allowed range. This, of course, requires the code designer to run the MD-GRADE algorithm multiple times (see Section V-A).
+
+2Note that in all cases where the probability of remaining active is not exactly 1/z, it still is in the order of O(1/z). Thus, for sufficiently large z, using 1/z as an approximation is generally justified.
+
+10
+IV. THEORETICAL FRAMEWORK FOR OBJECTS
+In this section, we generalize the probabilistic framework previously introduced for minimizing cycle counts in MD-SC codes. In particular, we extend our analysis to arbitrary subgraphs in the Tanner graph of the code. We introduce this generalization because, although analyzing cycles is useful, cycles are not always as detrimental as other structures, particularly in codes with VN degree 4 or higher, where isolated cycles may have limited impact on the performance. Therefore, targeting more harmful structures during optimization can yield greater performance improvements. This approach also enables more efficient exploitation of the degrees of freedom provided by the relocation operation.
+A. General Case Analysis
+In this subsection, we provide a closed-form expression for the expected number of instances of any subgraph with an arbitrary topology after random partitioning and relocation operations, given the probability-distribution matrix P. From this point onward, we will refer to such subgraphs as objects, which is customary for LDPC codes.
+An object pattern is a generalization of a cycle pattern, where it represents an assignment of CNs and VNs of an object to the rows and columns of the base matrix Hg. Each such assignment induces an equivalence relation over the CNs and VNs, and consequently over the edges of the object. Hence, sets of equivalence classes over CNs, VNs, and edges are produced. Unlike the case of cycles, an object pattern inherently includes the way of edge traversal. Object patterns that define the same equivalence classes form what we call an object pattern class. The formal definitions of object pattern, object pattern class, and equivalence class are provided below (also given in [14] for SC codes).
+Definition 6. (Object pattern class). Let an object be represented by a bipartite graph G(V, C, E), where V and C denote the sets of VNs and CNs, respectively. The edge set E consists of elements ei,j for i ∈ C and j ∈ V , indicating an edge between CN i and VN j in the object graph.
+An object pattern is defined as an assignment P = (gV , gC ), where gV : V → {0, 1, . . . , κ−1} and gC : C → {0, 1, . . . , γ−1} (γ and κ are the dimensions of the base matrix of the code), subject to the following conditions:
+1) For every c ∈ C and any pair v1, v2 ∈ V such that ec,v1 , ec,v2 ∈ E, it holds that gV (v1) ̸= gV (v2). 2) For every v ∈ V and any pair c1, c2 ∈ C such that ec1,v, ec2,v ∈ E, it holds that gC (c1) ≠ gC (c2). Here, the first (second) condition implies that 2 VNs (CNs) that are connected to same CN (VN), cannot be mapped to same value in the base matrix. The collection of all such valid object patterns that additionally satisfy the below conditions is called the object pattern class associated with (V, C), denoted by P(V, C), where V and C denote the sets of equivalence classes (or partitions) over V and C, respectively. The additional conditions are: 1) For any v1, v2 ∈ V , we have gV (v1) = gV (v2) if and only if v1 ∼ v2 in the set V, i.e., v1 and v2 are equivalent. 2) For any c1, c2 ∈ C, we have gC (c1) = gC (c2) if and only if c1 ∼ c2 in the set C, i.e., c1 and c2 are equivalent. We define the equivalence relation over the edges by ec1,v1 ∼ ec2,v2 if and only if v1 ∼ v2 in V and c1 ∼ c2 in C, for all v1, v2 ∈ V and c1, c2 ∈ C. The set of all equivalence classes induced by this relation is denoted by E(V, C).
+For an object represented by the bipartite graph G(V, C, E), and an object pattern class over G denoted by P(V, C), with the set of equivalence classes E(V, C), we can say that two VNs (CNs) are equivalent under V (C) if they correspond to the same column (row) in the base matrix according to the object pattern assignment. Two edges in the bipartite graph are considered equivalent if they correspond to the same entry in the base matrix under this definition. Each element of E(V, C) thus represents a specific entry in the base matrix that is covered by the given object pattern. This leads to the notion of a matrix representation for an object pattern or an object pattern class. Examples illustrating matrix representations of various object patterns are provided later in this section.
+Note that, whenever a set of edges corresponds to the same entry in the base matrix, we also consider they correspond to the same entry in the partitioning and relocation matrices. Consequently, these edges are assigned identically with respect to both partitioning and relocation, provided they belong to the same equivalence class.
+Definition 7. (Cycle basis). A cycle basis of an object is a minimum-cardinality set of cycles such that every cycle in the object can be expressed as the disjunctive union of cycles in this set. The disjunctive union of cycles refers to the subgraph consisting of all edges that appear in an odd number of cycles, along with their neighboring VNs and CNs. We will refer to cycles in this cycle basis as fundamental cycles.
+The concept of a cycle basis is particularly important because the activeness of each object after partitioning and relocations can be determined by the activeness of its fundamental cycles, as established in [22, Theorem 1]. Therefore, the probability of the object pattern being active can be expressed as the joint probability that all of its fundamental cycles are active.
+To express this probability, we construct a polynomial referred to as the characteristic polynomial of the object pattern class. Summation of the certain coefficients of this polynomial correspond to the joint probability that all fundamental cycles remain active under random partitioning and relocations based on probability-distribution matrix P, and hence the probability that the object pattern remains active under these conditions. The formal definition of the characteristic polynomial and the proof of this
+
+11
+
+result are presented in Lemma 4. The reader may also refer to Example 1 in the next subsection to see how the characteristic polynomial is generated for a specific object pattern.
+
+Lemma 4. (Characteristic polynomial of an object pattern class). Let G(V, C, E) be the bipartite graph representation of an object, and let P(V, C) denote the corresponding object pattern class. Suppose E(V, C) is set of the equivalence classes on the edges E induced by the partitions V and C. Let S represent the cycle basis of the graph G.
+Define the mapping δ : E × S → {−1, 0, 1} as follows. For any cycle s ∈ S given by the sequence (c1, v1, c2, v2, . . . , cg, vg) and any edge e ∈ E,
+
+
+
+1 
+
+if e = eci,vi for ∃i ∈ {1, 2, . . . , g},
+
+δe,s = −1 if e = eci,vi+1 for ∃i ∈ {1, 2, . . . , g},
+
+(27)
+
+0 otherwise.
+
+Note that the cycle s is such that ci connects vi and vi+1, for all i ∈ {1, 2, . . . , g}, and vg+1 = v1. Let h(X, Y; G | V, C) be the characteristic polynomial associated with the object pattern class P(V, C), defined as:
+
+h(X, Y; G | V, C) =
+
+f
+
+X δe,s
+s
+
+,
+
+Y δe,s
+s
+
+.
+
+e¯∈E(V,C) e∈e¯ s∈S
+
+e∈e¯ s∈S
+
+(28)
+
+Then, the sum of the coefficients of the polynomial in (28) corresponding to monomials with no X components and with Y exponents that are integer multiples of M gives the probability that an object pattern from the class P(V, C) remains active in the MD protograph after random partitioning and relocation operations.
+
+Proof. For simplicity, we use E instead of E(V, C) in the proof. We define i ∈ {0, 1, . . . , m}|E| and j ∈ {0, 1, . . . , M − 1}|E|,
+
+where the elements of each of these vectors are denoted by ie and je, respectively, for ∃e ∈ E. Since all the edges that belong to the same equivalence class correspond to the same entry on the base, partitioning and
+
+relocation matrices, these edges are assigned identically for their partitioning and relocations. In particular, all the edges in the
+
+equivalence class e are assigned with ie for partitioning and with je for relocations. Then,
+
+h(X, Y; G | V, C) = f
+
+X δe,s
+s
+
+,
+
+Y δe,s
+s
+
+=
+
+
+m M −1
+
+
+
+pi,j ·
+
+
+
+X δe,s
+s
+
+i
+
+Y δe,s
+s
+
+j
+
+
+
+e¯∈E e∈e¯ s∈S
+
+e∈e¯ s∈S
+
+e∈E i=0 j=0
+
+e∈e s∈S
+
+where
+
+=
+i∈{0,1,...,m}|E|, e∈E j∈{0,1,...,M −1}|E|
+
+pie ,je
+
+X Y δe,sie δe,sje
+
+s
+
+s
+
+e∈e s∈S
+
+=
+i,j
+
+pie ,je
+e∈E
+
+X Y δe,sie δe,sje
+
+s
+
+s
+
+e∈E e∈e s∈S
+
+=
+i,j
+
+pie ,je
+e∈E
+
+X e∈E ie
+s s∈S
+
+Y e∈e δe,s
+
+e∈E je
+
+s
+
+= e∈e δe,s
+i,j
+
+pie ,je
+
+Xsks(i) Ysms(j),
+
+e∈E
+
+s∈S
+
+ks(i) = ie δe,s =
+
+ie δe,s,
+
+e∈E e∈e
+
+e∈e, e∈E
+
+(29) (30)
+
+ms(j) = je δe,s =
+
+je δe,s.
+
+e∈E e∈e
+
+e∈e, e∈E
+
+(31)
+
+Equations (30) and (31) are referred to as the alternating sums of the assignments i and j on cycle s for partitioning and
+relocations, respectively. It can be observed that for cycle s, ks(i) equals the left-hand side of (4), and ms(j) equals the left-hand side of (5). Additionally, the term e∈E pie,je appearing in (29) represents the joint probability of the assignments i and j for the object pattern, given that partitioning and relocations are performed randomly based on P.
+A cycle s remains active after partitioning and relocation operations if and only if ks(i) equals 0 and ms(j) equals an integer multiple of M . An object pattern remains active if and only if this is the case for all s ∈ S.
+Let [h(X, Y; G | V, C)]a,b denote the coefficient of the polynomial corresponding to the monomial in which the degrees of the X (resp., Y ) variables are given by the vector a ∈ Z|S| (resp., b ∈ Z|S|), with each element as (resp., bs) representing the power of Xs (resp., Ys). For brevity, we denote the situation that every element of the vector b is divisible by M as M | b. The probability that an object pattern from the class P(V, C) remains active in the MD protograph after random partitioning
+and relocation operations is the summation of probabilities over all partitioning and relocation assignments that satisfy the
+conditions required for the object pattern to be active. This probability is then:
+
+
+
+
+
+pie,je =
+
+
+
+i,j:∀s∈S,
+
+e∈E
+
+ks(i)=0, M |ms(j)
+
+M |b i,j
+
+pie ,je
+
+Xsks(i) Ysms(j) =
+
+[h(X, Y; G | V, C)]0,b ,
+
+e∈E
+
+s∈S
+
+0,b M |b
+
+(32)
+
+12
+
+where the last equality follows from (29), and it completes the proof.
+
+■
+
+In general, [h(X, Y; G | V, C)]a,b is the probability that the alternating sums of fundamental cycles for partitioning (resp., relocations) take the values in the vector a (resp., b). Our interest is of course in a specific case, where for partitioning, the only possible option for the alternating sums of fundamental cycles is to equal 0. For relocations however, the available options are all integer multiples of M , since the activeness condition is defined modulo M . Hence, we perform the summation over all b, where M | bi for all i.
+As we discussed, each object pattern in a given class corresponds to an assignment of VNs and CNs to the sets {0, 1, . . . , κ−1} and {0, 1, . . . , γ − 1}, respectively. However, due to the inherent symmetries of the object patterns, certain permutations of assigned values can result in isomorphic object patterns. These symmetry-preserving transformations are automorphisms of G under the object pattern class P(V, C). It follows that any automorphism of G under P(V, C) is a graph isomorphism that preserves the equivalence classes denoted by V and C. Therefore, each automorphism can be represented as a pair of permutations acting on the equivalence classes V and C. The set of all such automorphisms under a given object pattern class forms a group, and it is formally defined in Definition 8.
+Definition 8. (Automorphism group of an object under an object pattern class). Let an object be represented by the bipartite graph G(V, C, E), and let P(V, C) denote an object pattern class over G. An automorphism of G under P(V, C) is defined as a pair of bijections (πV , πC ), where πV : V → V and πC : C → C, such that the following conditions are satisfied:
+1) For all v ∈ V and c ∈ C, we have ec,v ∈ E if and only if eπC(c),πV (v) ∈ E. 2) For all v1, v2 ∈ V , v1 ∼ v2 if and only if πV (v1) ∼ πV (v2). 3) For all c1, c2 ∈ C, c1 ∼ c2 if and only if πC (c1) ∼ πC (c2).
+The set of all such automorphisms over G under P(V, C) forms a group under composition of permutations. This group is referred to as the automorphism group of G under P(V, C), and denoted by Aut(G | V, C).
+
+We can now use the notions of characteristic polynomial and automorphism group of an object pattern class to introduce the characteristic polynomial of an object by enumerating all patterns in the protograph base matrix. As in the case of object pattern classes, we can use this characteristic polynomial to express the expected number of active objects in the MD-SC protograph after random partitioning and relocations. The exact expression and its proof are provided in Theorem 4. Here, expectations are L-invariant and M -invariant.
+
+Theorem 4. (Characteristic polynomial of an object). Given the bipartite graph G(V, C, E) representing an object, let B(G) denote the set of all object pattern classes of G. Define the characteristic polynomial h(X, Y; G) of the object G as:
+
+|V |!|C |!
+
+κγ
+
+h(X, Y; G) =
+
+h(X, Y; G | V, C).
+
+(33)
+
+|Aut(G | V, C)| |V| |C|
+
+P (V ,C )∈B(G)
+
+Then, the expression M|b[h(X, Y; G)]0,b equals the expected number of active object patterns of G after partitioning and relocations in the MD-SC protograph.
+
+Proof. The total number of possible assignments of node indices in G that result in the partitions specified by (V, C) is
+
+given
+
+by
+
+|V|! |C|!
+
+κ |V |
+
+γ |C|
+
+,
+
+since
+
+the
+
+MD-SC
+
+code
+
+is
+
+constructed
+
+from
+
+an
+
+all-one
+
+base
+
+matrix
+
+of
+
+size
+
+γ
+
+× κ.
+
+However,
+
+each
+
+distinct assignment is counted multiple times, specifically exactly |Aut(G | V, C)| times, due to the presence of automorphisms.
+
+Therefore, the cardinality of the object pattern class P(V, C) is obtained by dividing the total number of assignments by the
+
+size of the automorphism group, leading to:
+
+|V |!|C |!
+
+κγ
+
+|P(V, C)| =
+
+.
+
+(34)
+
+|Aut(G | V, C)| |V| |C|
+
+For any object pattern P of G, let XP be a Bernoulli random variable indicating whether P is active. Define the random variable X = P XP , which is the total number of active patterns across all object patterns P of G in the protograph. Then,
+
+E[X] =
+
+E[XP ] =
+
+P[XP = 1] =
+
+[h(X, Y; G | V, C)]0,b
+
+P ∈P(V,C), P (V ,C )∈B(G)
+
+P ∈P(V,C), P (V ,C )∈B(G)
+
+P ∈P(V,C), M |b P (V ,C )∈B(G)
+
+=
+
+|P(V, C)| [h(X, Y; G | V, C)]0,b =
+
+|P(V, C)| [h(X, Y; G | V, C)]0,b
+
+P (V ,C )∈B(G)
+
+M |b
+
+M |b P(V,C)∈B(G)
+
+= [h(X, Y; G)]0,b,
+
+(35)
+
+M |b
+
+where the last equality follows from (33) and (34), and it completes the proof.
+
+■
+
+13
+B. Cycle Concatenation Analysis Our main goal is to reduce the number of absorbing and trapping sets in the Tanner graph of the MD-SC code, since these
+objects dominate the error profile of LDPC codes in the error-floor region [5], [35]. These objects are also harmful in the waterfall region as they create decoding dependencies and they subsume (or they are substructures of) low-weight codewords. Instead of developing an optimization scheme that targets every possible absorbing set, which could be inefficient and is highly complicated, we concentrate on certain elementary structures formed by concatenating two short cycles (specifically, cycles of lengths 6 and 8), as these commonly occur as subgraphs within the most problematic absorbing sets.
+Since absorbing sets have a cycle basis for each, focusing on cycles alone might initially seem logical. However, as discussed earlier, isolated cycles that are not directly connected to other cycles may not be very problematic, especially when the VN degrees are greater than three. Therefore, allocating all degrees of freedom offered by the partitioning and relocation operations solely to cycles is not efficient, which is also demonstrated in [14] and [22].
+Based on this discussion, we construct our optimization problem over configurations obtained by either concatenating two cycles-6, one cycle-6 and one cycle-8, or two cycles-8. Our main focus for these configurations is on the case where the two cycles concatenate through a chain of VN-CN-VN, since the population of these is higher compared with other types of concatenations such as VN-CN-VN-CN-VN, and they appear more frequently in detrimental absorbing sets. We refer to these objects as 6-6, 6-8, and 8-8 configurations, respectively, where the respective bipartite graphs are also shown in Fig. 2. Note that throughout the paper in the bipartite graph drawings, circles represent VNs and squares represent CNs. It should be also observed that for 6-6, 6-8, and 8-8 configurations, concatenated cycles also form a basis for these objects.
+Fig. 2. Bipartite graphs of 6-6 (top left), 6-8 (top right), and 8-8 (bottom) configurations.
+Example 1. We now focus on an example object shown in Fig. 3, which depicts the bipartite graph of the object alongside the matrix representation of a pattern that belongs to one of its object pattern classes. In this example, the VNs and CNs of the object are partitioned into five equivalence classes, labeled as vi and ci, respectively, for i ∈ {1, 2, . . . , 5}. Each VN class is assigned to a column and each CN class is assigned to a row in the matrix representation. All edges in the bipartite graph that belong to the same equivalence class correspond to the same entry in the matrix representation.
+For each fundamental cycle, we present its cycle candidate in the matrix representation to illustrate how the corresponding cycle pattern is traversed. We use the variables (X1, Y1) to represent the first fundamental cycle (a cycle-8 in this case), which is highlighted in red, and (X2, Y2) to represent the second fundamental cycle (a cycle-6), which is highlighted in blue.
+To construct the characteristic polynomial, we use the coupling polynomial f (X, Y ) for each equivalence class, that is, for each unique entry in the matrix representation, taking into account the two fundamental cycles. We label each edge on the bipartite graph with monomials X1i1 X2i2 and Y1i1 Y2i2 , where the exponents i1 and i2 are determined based on the presence of the corresponding edge in the fundamental cycles. In particular, if an edge does not participate in cycle s, then is = 0; otherwise, the powers alternate between 1 and −1 for consecutive edges of that cycle.
+The inputs of the coupling polynomial are then evaluated by multiplying the X1i1 X2i2 and Y1i1 Y2i2 terms for all edges belonging to same equivalence class. The final expression for the characteristic polynomial is obtained by multiplying the coupling polynomials of all equivalence classes, i.e., of all unique matrix entries.
+Following this procedure and referring to Fig. 3, where the powers of the X variables are indicated for each edge in the bipartite graph and for each matrix entry (Y powers are omitted for brevity), the characteristic polynomial corresponding to this object pattern class is given by f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f 3(X1, Y1)f 3(X1−1, Y1−1)f 2(X2, Y2)f 2(X2−1, Y2−1).
+
+14
+
+Fig. 3. Bipartite graph of a 6-8 configuration (left) and matrix representation of one of its object patterns (right).
+Definition 9. (Dominant object pattern classes). We denote the graphs corresponding to the 6-6, 6-8, and 8-8 configurations by G6,6, G6,8, and G8,8, respectively. An object pattern class P(V, C) with the set of equivalence classes E(V, C) for the object G2k,2l(V, C, E), where V , C, and E denote the sets of VNs, CNs, and edges, respectively, and (k, l) ∈ {(3, 3), (3, 4), (4, 4)}, is called a dominant object pattern class if it satisfies that |E| = |E(V, C)|. This condition means that none of the edges in E are equivalent to each other under any element of E(V, C), or equivalently, each edge is mapped to a distinct entry of the matrix representation of this object pattern class. Lastly, we denote the set of all dominant object pattern classes for the object G2k,2l by D(G2k,2l). Here, G2k,2l is used to refer to the graph or to the object interchangeably.
+Dominant object pattern classes are central to our analysis of these configurations and to the optimization problem that we construct. The reason behind this choice, as well as the justification for naming these pattern classes “dominant,” will be explained later in this section. It can be observed that the object pattern class in Fig. 3 is also dominant.
+Note that for a given object, there could be multiple pattern classes with the same characteristic polynomial. One example to this is the case of cycle-8, where patterns P4, P5, P6, and P7 (shown in Fig. 1) share the characteristic polynomial f 4(X, Y )f 4(X−1, Y −1). Another example is the case of 6-6, 6-8, and 8-8 configurations, where dominant object pattern classes share the same characteristic polynomial. Proof of this claim with the exact expression of characteristic polynomial is given in Lemma 5.
+Lemma 5. For the 2k-2l configurations, (k, l) ∈ {(3, 3), (3, 4), (4, 4)}, all dominant object pattern classes of this object share the following characteristic polynomial:
+h(X, Y; G2k,2l | V, C) = f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1). (36)
+Proof. The object G2k,2l is constructed by concatenating a cycle-2k (denoted by s1) and a cycle-2l (denoted by s2), connecting them through a chain of VN-CN-VN. These cycles are also the fundamental cycles of the object. Due to this construction, the fundamental cycles share exactly two edges on the bipartite graph, while the remaining edges are divided between 2k − 2 edges that belong solely to the first cycle and 2l − 2 edges that belong solely to the second cycle.
+By the definition of dominant object pattern classes, the characteristic polynomial simplifies to:
+
+h(X, Y; G2k,2l | V, C) = f
+
+X δe,s
+s
+
+,
+
+Y δe,s
+s
+
+,
+
+e∈E s∈S
+
+s∈S
+
+(37)
+
+since no two distinct edges are equivalent in a dominant object pattern class.
+
+For the two shared edges between the fundamental cycles, we assign δ values such that for one edge, δe,s1 = δe,s2 = 1, and
+
+for the other edge, δe,s1 = δe,s2 = −1, as was done in Example 1. For the remaining 2k − 2 edges belonging to the first cycle,
+
+we assign δe,s2 = 0, and set δe,s1 = 1 for half of them (i.e., k − 1 edges) and δe,s1 = −1 for the other half. Similarly, for
+
+the 2l − 2 edges belonging to the second cycle, we assign δe,s1 = 0, and set δe,s2 = 1 for half of them (i.e., l − 1 edges) and
+
+δe,s2 = −1 for the other half. With these degree assignments, the resulting characteristic polynomial matches the expression
+
+given in (36).
+
+■
+
+15
+
+Lemma 6. We denote the probability that any dominant object pattern of the object G2k,2l remains active after partitioning and relocation by P2Dk,2l(pcon), for a given distribution matrix P. From Lemma 4 and Lemma 5, it follows that:
+P2Dk,2l(pcon) =
+f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1) 0,0,b1,b2 .
+M |b1,M |b2
+(38)
+
+Here, [·]a1,a2,b1,b2 denotes the coefficient of the polynomial corresponding to the monomial in which the degrees of the variables
+X1, X2, Y1, and Y2 are given by a1, a2, b1, and b2 ∈ Z, respectively. Additionally, the gradient of P2Dk,2l(pcon) with respect to pcon is expressed as:
+
+∇pcon P2Dk,2l(pcon) = ∇pcon f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1)
+M |b1,M |b2
+
+0,0,b1 ,b2
+
+=2
+
+[f (X1X2, Y1Y2)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1)v1co,1n]0,0,b1,b2
+
+M |b1,M |b2
+
++ [(k − 1)f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−2(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1)v1co,0n]0,0,b1,b2
+
++ [(l − 1)f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−2(X2−1, Y2−1)v0co,1n]0,0,b1,b2 . (39)
+
+Here, vic,ojn is the vector of length (m + 1)M obtained by concatenating the rows of the following (m + 1) × M matrix (of monomials)
+
+ 1
+
+Y1−iY2−j
+
+...
+
+Y1−(M −1)iY2−(M −1)j
+
+
+
+
+
+Vi,j
+
+=
+
+ 
+
+
+
+
+
+X1−iX2−j ...
+
+X1−iX2−j Y1−iY2−j ...
+
+... ...
+
+X1−iX2−j Y1−(M −1)iY2−(M −1)j ...
+
+
+
+ 
+
+.
+
+
+
+
+
+X1−miX2−mj X1−miX2−mj Y1−iY2−j . . . X1−miX2−mj Y1−(M−1)iY2−(M−1)j
+
+(40)
+
+Proof. The lemma is self-explanatory given all the previous results and discussions.
+
+■
+
+We now proceed to analyze the expected number of active 6-6, 6-8, and 8-8 configurations after partitioning and relocations.
+
+We first need to determine the cardinality of each possible object pattern class. This is accomplished by examining the matrix
+
+representations of all of the relevant object pattern classes.
+
+Since these configurations consist of two cycles connected through a VN-CN-VN chain, in the matrix representation of
+
+all their pattern classes, the cycle candidates of the fundamental cycles (i.e., the traversal paths of the fundamental cycles
+
+over matrix entries) share two entries located in the same row (corresponding to the shared CN) but in different columns
+
+(corresponding to the adjacent VNs). Furthermore, in both cycle candidates, these entries are directly connected in the matrix.
+
+An example of this can be seen in Fig. 3, where the entries labeled with (c1, v1) and (c1, v2) are shared between the two cycle
+
+candidates marked in red and blue.
+
+Another condition is that the two cycle candidates must not share any additional entry directly connected to these shared
+
+entries. Otherwise, the cycles would at least share an additional CN at the connection point, forming a CN-VN-CN-VN chain,
+
+which is not the configuration we target. We exclude such cases from our analysis, as their population is relatively low and
+
+they do not frequently appear among the most detrimental absorbing sets.
+
+We group each object pattern class according to the triplet (|E|, |V|, |C|), which represents the number of spanned entries,
+
+columns, and rows in the matrix representation, respectively. To count these configurations, we developed a software algorithm
+
+for each 2k-2l configuration, (k, l) ∈ {(3, 3), (3, 4), (4, 4)}. This algorithm lists all cycles of length 2k and length 2l in an
+
+all-one submatrix of size |C| × |V| for each possible (|C|, |V|) pair. It then iteratively checks for each distinct cycle pair whether
+
+it satisfies the conditions described above, and whether all the columns and rows of this all-one submatrix are spanned by this
+
+pair of cycles. If a pair meets the required conditions, then the corresponding configuration on the matrix constitutes a valid
+
+matrix representation of the desired configuration. The algorithm counts and groups these instances according to their number
+
+of rows, columns, and total entries (edges).
+
+It can be observed that these counts correspond to the number of object patterns associated with the (|E|, |V|, |C|) triplets
+
+generated from a submatrix of size |C| × |V|. Consequently, the actual number of these object patterns in the base matrix is
+
+obtained by multiplying these counts by the combinatorial factor
+
+κ |V |
+
+γ |C|
+
+.
+
+The detailed counts are presented in Table I, and a sample matrix representation for each triplet is illustrated in Fig. 4. It
+
+should be noted that we list only the triplets corresponding to the top three highest |E| values (the highest shows last) for each
+
+configuration, as the counts for the remaining instances are significantly lower in comparison. Additionally, we only include
+
+16
+
+cases with |C| ≤ 4, since in our codes we assume γ ≤ 4, and |C| cannot exceed γ. Having said that, the same procedure can be adopted to enumerate such configurations for γ ≥ 5.
+
+TABLE I NUMBER OF OBJECT PATTERNS OF THE 6-6, 6-8, AND 8-8 CONFIGURATIONS GROUPED BY NUMBER OF ROWS, COLUMNS AND SPANNED ENTRIES OF
+THE CORRESPONDING MATRIX REPRESENTATIONS
+
+Configuration type
+
+|E |
+
+|V |
+
+|C|
+
+Number of instances of object pattern classes
+
+6-6
+
+833
+
+934
+
+10 4
+
+3
+
+44
+
+9 72
+
+κ 3κ 3
+
+γ 3γ 4
+
+36
+
+κ 4
+
+γ 3
+
+288
+
+κ 4
+
+γ 4
+
+10 4 4
+
+576
+
+κ 4
+
+γ 4
+
+6-8
+
+11 4
+
+3
+
+44
+
+44
+
+144 2,880
+
+κ 4κ
+4
+
+γ 3γ
+4
+
+1,152
+
+κ 4
+
+γ 4
+
+12 5 3 54
+
+360
+
+κ 5
+
+11,520
+
+κ 5
+
+γ 3
+
+γ 4
+
+43
+
+12 4
+
+4
+
+53
+
+54
+
+198 2,952
+
+κ 4κ
+4
+
+γ 3γ
+4
+
+1,080 10,080
+
+κ 5κ 5
+
+γ 3γ 4
+
+44
+
+1,728
+
+κ 4
+
+γ 4
+
+8-8
+
+13 5 3 54
+
+2,520 53,280
+
+κ 5κ 5
+
+γ 3γ 4
+
+44
+
+864
+
+κ 4
+
+γ 4
+
+14 5
+
+4
+
+63
+
+17,280 5,400
+
+κ κ5 6
+
+γ γ4 3
+
+64
+
+120,960
+
+κ 6
+
+γ 4
+
+Since for dominant object patterns we have |E| = |E|, it can be observed from Table I that all cases with the maximum |E| correspond to dominant object pattern cases. Hence, the table justifies the use of the term "dominant," as the number of these patterns is considerably higher compared with other object patterns, especially for γ = 4.
+Accordingly, in our algorithms, we simplify the characteristic polynomial computations for the 6-6, 6-8, and 8-8 configurations by considering only the dominant object patterns. This simplification significantly reduces the computational complexity of our algorithms without causing any considerable deviation from the exact results; further details will be discussed in Section V.
+Based on this discussion, we introduce the new notation h˜(X, Y; G2k,2l) for the approximated characteristic polynomial, which is expressed as follows:
+
+h˜(X, Y; G2k,2l) =
+
+|P(V, C)| h(X, Y; G2k,2l | V, C)
+
+P (V ,C )∈D(G2k,2l )
+
+= Λ2k,2l · f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1).
+
+(41)
+
+Here, Λ2k,2l = P(V,C)∈D(G2k,2l) |P(V, C)|, which can be obtained from the counts provided in Table I for each configuration. We define the expected number of active 6-6, 6-8, and 8-8 configurations with dominant object patterns as follows:
+
+N2Dk,2l(pcon) =
+
+Λ2k,2l ·
+
+f (X1X2, Y1Y2)f (X1−1X2−1, Y1−1Y2−1)f k−1(X1, Y1)f k−1(X1−1, Y1−1)f l−1(X2, Y2)f l−1(X2−1, Y2−1) 0,0,b1,b2 ,
+
+M |b1,M |b2
+
+(42)
+
+for (k, l) ∈ {(3, 3), (3, 4), (4, 4)}, where the coefficients Λ2k,2l are given by:
+
+Λ6,6 =
+
+36
+
+κ 4
+
+36
+
+κ 4
+
+γ 3
+
+,
+
+γ 3
+
++ 288
+
+κ 4
+
+γ 4
+
+,
+
+for γ = 3, for γ = 4,
+
+Λ6,8 =
+
+360
+
+κ 5
+
+360
+
+κ 5
+
+γ 3
+
+,
+
+γ 3
+
++ 1,152
+
+κ 4
+
+γ 4
+
++ 1,520
+
+κ 5
+
+γ 4
+
+,
+
+for γ = 3, for γ = 4,
+
+Λ8,8 =
+
+5,400
+
+κ 6
+
+5,400
+
+κ 6
+
+γ 3
+
+,
+
+γ 3
+
++ 864
+
+κ 4
+
+γ 4
+
++ 17,280
+
+κ 5
+
+γ 4
+
++ 120,960
+
+κ 6
+
+γ 4
+
+,
+
+for γ = 3, for γ = 4.
+
+These coefficients are all obtained from Table I.
+
+17
+
+(8, 3, 3)
+
+(9, 3, 4)
+
+(10, 4, 3)
+
+(10, 4, 4)
+
+(10, 4, 4)
+
+(11, 4, 3)
+
+(11, 4, 4)
+
+(12, 4, 4)
+
+(12, 5, 3)
+
+(12, 5, 4)
+
+(12, 4, 3)
+
+(12, 4, 4)
+
+(12, 5, 3)
+
+(12, 5, 4)
+
+(13, 4, 4)
+
+(13, 5, 3)
+
+(13, 5, 4)
+
+(14, 4, 4)
+
+(14, 5, 4)
+
+(14, 6, 3)
+
+(14, 6, 4)
+
+Fig. 4. Example object pattern class matrix representations of the 6-6, 6-8, and 8-8 configurations grouped by the values in (|E|, |V|, |C|).
+
+Finally, we define a joint expression for the expected number of 6-6, 6-8, and 8-8 configurations with dominant object patterns by considering a weighted sum of the individual expectations as follows:
+
+N D(pcon) = w6,6N6D,6(pcon) + w6,8N6D,8(pcon) + w8,8N8D,8(pcon),
+
+(43)
+
+where (w6,6, w6,8, w8,8) is a triplet denoting the weight values assigned to each corresponding configuration. Gradient of this expression can be evaluated using (39).
+
+V. DESIGN AND OPTIMIZATION ALGORITHMS
+In this section, we present our optimization algorithm based on gradient descent, namely MD-GRADE, which is designed to search for a locally-optimal probability-distribution matrix for the optimization problem introduced in the previous sections. We also introduce our FL optimizer, which aims to find an optimal or sub-optimal relocation arrangement for constructing the desired GD-MD code. For the FL optimization, we adapt an MCMC algorithm [32], which we recently introduced in the literature for other stages of code design such as partitioning and lifting. The MCMC algorithm is initialized with a relocation matrix generated randomly according to the probability-distribution matrix obtained by the MD-GRADE algorithm, which guides the FL optimizer to reach a better result.
+
+A. Multi-Dimensional Gradient-Descent Distributor
+Definition 10. (Coefficient array). For every multi-variable polynomial g(x1, x2, . . . , xn) with n variables, we define an ndimensional array G as the coefficient array such that:
+
+g(x1, x2, . . . , xn) =
+
+G [i1, i2, . . . , in] x1i1 xi22 . . . xinn .
+
+(44)
+
+i1 ,i2 ,...,in
+
+Each polynomial can be represented using its coefficient array. For every variable xk, where k ∈ {1, 2, . . . , n}, the index ik spans from the smallest to the largest exponent of xk with a non-zero coefficient (coefficients associated with exponents in between are allowed to be zeros). We refer to the cardinality of the set of integers that ik spans as the range of G along the k-th dimension, and the multiplication of range values along all different dimensions as the size of G.
+
+The coefficient array of an n-variable polynomial resulting from the multiplication of two n-variable polynomials can be computed using the n-dimensional discrete convolution of their respective coefficient arrays. Similarly, the coefficient array of
+
+18
+
+an n-variable polynomial obtained by multiplying a scalar with another n-variable polynomial can be computed by multiplying the scalar with each entry.
+Here, we represent n-dimensional discrete convolution between two n-dimensional arrays with G = G1 ∗ G2, where these coefficient arrays satisfy the given relation:
+
+G [i1, i2, . . . , in] =
+
+G1 [j1, j2, . . . , jn] · G2 [i1 − j1, i2 − j2, . . . , in − jn] ,
+
+(45)
+
+j1 ,j2 ,...,jn
+
+for every possible (i1, i2, . . . , in).
+In our objective functions and their gradients, we frequently use the function f (X, Y ; P) for cycles, and f (X1X2, Y1Y2; P)
+for cycle concatenations, often involving different powers of the (X, Y ) pairs. To simplify the notation, we introduce the following convention: Fi denotes the coefficient array of the polynomial f (Xi, Y i; P), and Fi,j denotes the coefficient array of f (X1iX2j, Y1iY2j; P). The first dimension of Fi corresponds to X, and the second corresponds to Y . Similarly, the first two dimensions of Fi,j correspond to X1 and X2, while the last two correspond to Y1 and Y2, respectively. That is,
+
+Fi[i1, i2] =
+
+f (Xi, Y i; P) ,
+i1 ,i2
+
+and
+
+Fi,j [i1, i2, i3, i4] =
+
+f (X1iX2j , Y1i, Y2j ; P)
+
+.
+i1 ,i2 ,i3 ,i4
+
+These coefficient arrays are computed based on the probability matrix P and powers of (X, Y ) pairs using (8) in our algorithm. It can also be seen that range of Fi along the first dimension is m|i| + 1 and it is (M − 1)|i| + 1 along the second dimension. This can be generalized for Fi,j as well. From this point onward, we will use this notation in our algorithm.
+Now, we introduce our self-defined functions in the body of the MD-GRADE algorithm:
+
+1) conv(·) is used to compute the discrete convolution of a list of coefficient arrays with the same dimension n. If the same
+input array appears multiple times in the input list, we denote this using superscript notation to indicate the number of repetitions. Specifically, if the coefficient array G appears k times in the input list, we denote it by Gk.
+We adopt two approaches to compute the discrete convolution. The first is the direct approach; when applied to two input arrays, as in conv(G1, G2), the resulting array is computed using 2n nested loops based on (45). When the length of the input list is higher, say some ℓ > 2, then the output is evaluated using the recursive relation:
+
+conv(G1, G2, G3, . . . , Gℓ) = conv (G1, conv(G2, G3, . . . , Gℓ)) .
+
+The second approach exploits the well-known property that convolution in the time domain is equivalent to element-wise multiplication in the frequency domain. Specifically, by applying the n-dimensional discrete Fourier transform (DFT) to the input coefficient arrays, performing element-wise multiplication in the frequency domain, and then applying the inverse DFT (IDFT), we can obtain the convolution result. Here, both DFT and IDFT should be applied with the ranges of the resulting array on each dimension. The rationale behind preferring the Fourier-based approach lies in computational efficiency. Convolution is the most computationally demanding component of our MD-GRADE algorithm. In the direct case, the number of arithmetic operations is O(N1N2), where N1 and N2 are the sizes of the two input arrays. In contrast, the Fourier-based method can be implemented using the fast Fourier transform (FFT) algorithm, reducing the complexity to O(N log N ), where N is the size of the resulting array. This logarithmic speed-up is particularly beneficial in the case of cycle concatenation, where higher-dimensional coefficient arrays are used, and the array sizes increase with the number of dimensions. The array size also grows with the m and M . Hence, this approach allows us to efficiently evaluate probability-distribution matrices with significantly larger m and M values. Nevertheless, we continue to use the direct approach for small-sized input arrays, as the overhead of FFT may outweigh its benefits in such cases, and use the FFT-based method when input sizes are large to optimize the overall efficiency. 2) force(·) is a function specifically defined for P. It takes the inputs P and p∗. It projects each row of P indexed by t onto the hyperplane defined by the orthogonal vector 11×M and adds the vector p∗[t]/M · 11×M via
+
+M −1
+P[t, k] ← P[t, k] + p∗[t] − P[t, ℓ] /M.
+
+ℓ=0
+
+Summations are for non-updated values. Then, it corrects its rows by making the negative entries 0 and by updating the
+
+positive entries in order not to change the sum of each row via
+
+P[t, k] ← P′[t, k] ·
+
+p∗[t]
+
+M −1 ℓ=0
+
+P′[t,
+
+ℓ]
+
+,
+
+where P′[t, k] = 0
+
+if P[t, k] < 0,
+
+P[t, k] otherwise.
+
+19
+
+The purpose of this function is to map any matrix P into the domain and feasible set of the optimization problem. The first
+
+update projects each row of the matrix P onto the hyperplane where the row-wise sums are equal to the corresponding entry in p∗. The second update assigns zero to any negative entry in P and then rescales each row to preserve its original
+
+sum. In brief, this is our way to satisfy the optimization constraints.
+
+Here, p∗ is a locally-optimal edge distribution of an SC code with parameters (γ, κ, m), obtained by [14, Algorithm 1]. It
+
+should also be noted that if an underlying SC code and its partitioning matrix are already available, the edge distribution vector
+
+derived
+
+from
+
+this
+
+partitioning
+
+matrix
+
+can
+
+be
+
+used
+
+as
+
+p∗,
+
+where
+
+here
+
+p∗[i]
+
+=
+
+1 γκ
+
+j,k 1{K(j, k) = i}, ∀i ∈ {0, 1, . . . , m}.
+
+This approach enables the code designer to generate the relocation matrix in a way that is more specifically tailored to the
+
+already-designed underlying SC code.
+
+We now introduce the MD-GRADE algorithm for the simplest case: minimizing the number of cycles-6. The algorithm begins by initializing the matrix P such that its first column is equal to the vector p∗ and all other entries are set to zero. This
+
+corresponds to the case of 0% relocation. In each iteration, the algorithm evaluates the coefficient matrices of the polynomials f (X, Y ) and f (X−1, Y −1) based on
+
+the current matrix P. It then computes the coefficient arrays of the polynomials that appear in the objective function and its
+
+gradient expressions in (10) and (14) using the convolution operation described earlier.
+
+Next, the algorithm sums up the necessary entries of these arrays to evaluate both the objective function and its gradient. To
+
+ensure numerical stability, the gradient is normalized using its L2 norm. The matrix P is then updated in the opposite direction
+
+of the gradient. Since the gradient update may push P outside the domain or the feasible set, force(·) is applied to map it
+
+back into these sets. The algorithm checks termination criteria at each iteration: whether the MD density exceeds a predefined
+
+maximum, or whether the change in the objective function between consecutive iterations falls below a certain threshold. If
+
+either condition is met, the algorithm terminates; otherwise, it proceeds to the next iteration. Finally, the algorithm returns the
+
+locally-optimal probability-distribution matrix and the corresponding expected number of cycles-6 in the resulting Tanner graph
+
+of HMD obtained by Theorem 3.
+
+Algorithm 1 Multi-Dimensional Gradient-Descent Distributor (MD-GRADE) for Cycle-6 Optimization
+
+Inputs: γ, κ, L, m, M : parameters of the MD code; p∗: locally-optimal SC edge distribution; Tmax: maximum MD density;
+
+ϵ, α: termination threshold and step size of gradient descent.
+
+Outputs: P: a (joint) locally-optimal probability-distribution matrix; E6: the expected number of cycles-6.
+
+Intermediate Variables: Fprev, Fcur: the values of the objective function in (10) at the previous and current iterations; F1, F−1 coefficient arrays for the polynomials f (X, Y ), f (X−1, Y −1); Gobj, Ggrad coefficient arrays of the polynomials
+
+appearing in the objective function and its gradient expressions; G: the gradient matrix (of size (m + 1) × M ) of the
+
+objective function, where gcon = ∇pcon N6(pcon); Tcur: current MD density. 1: P[i, 0] ← p∗[i], P[i, j] ← 0, ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {1, . . . , M − 1}.
+
+2: Fprev = 0.
+
+3: Evaluate F1 and F−1 based on P.
+
+4: 5:
+
+Gobj
+
+←6
+
+γ 3
+
+Ggrad ← 36
+
+κ γ3 3
+
+· conv(F31, F−3 1).
+
+κ 3
+
+· conv(F31, F−2 1).
+
+6: Fcur ← M|b Gobj [0, b].
+
+7: for ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {0, . . . , M − 1} do
+
+8: G[i, j] ← M|b Ggrad[i, b + j].
+
+9: end for G
+10: P ← P − α ∥gcon∥2 . 11: P ← force(P, p∗).
+
+12: Tcur ← 1 −
+
+m i=0
+
+P[i,
+
+0].
+
+13: if (Tcur < Tmax) and (|Fcur − Fprev| > ϵ) then
+
+14:
+
+Fprev ← Fcur.
+
+15: go to Step 3.
+
+16: end if
+
+17:
+
+E6 ←
+
+(2L−m) 2
+
+· M · Fcur.
+
+18: return P and E6.
+
+For the case of cycle-8, the overall structure of the algorithm remains mostly the same as in the cycle-6 case. The only difference lies in the computation of the objective function and the gradient. Specifically, we evaluate four distinct coefficient arrays for the objective function and seven distinct coefficient arrays for the gradient. Each of these arrays corresponds to a polynomial term in (12) and (19), in the same order as they appear in the equations.
+Lastly, for the case of cycle concatenation, the overall structure of the algorithm remains similar to the previous two cases, with the key difference lying in how the objective function and gradient are evaluated. Unlike the cycle-6 and cycle-8 cases, the cycle concatenation case involves minimizing a weighted sum of expected counts corresponding to multiple concatenated
+
+20
+
+Algorithm 2 Multi-Dimensional Gradient-Descent Distributor (MD-GRADE) for Cycle-8 Optimization
+
+Inputs: γ, κ, L, m, M : parameters of the MD code; p∗: locally-optimal SC edge distribution; Tmax: maximum MD density;
+
+w1, w2, w3, w4: coefficients appearing in the objective function expression; ϵ, α: termination threshold and step size of
+
+gradient descent.
+
+Outputs: P: a (joint) locally-optimal probability-distribution matrix; E8: the expected number of cycles-8.
+
+Intermediate Variables: Fprev, Fcur: the values of the objective function in (12) at the previous and current iterations; F1, F−1, F2, F−2: coefficient arrays for the polynomials f (X, Y ), f (X−1, Y −1), f (X2, Y 2), f (X−2, Y −2); G{obi}j , Gg{rja}d for i ∈ {1, 2, 3, 4}, j ∈ {1, 2, . . . , 7}: coefficient arrays of each polynomial term appearing in the objective function and its
+
+gradient expressions; G: the gradient matrix (of size (m + 1) × M ) of the objective function, where gcon = ∇pcon N8(pcon);
+
+Tcur: current MD density. 1: P[i, 0] ← p∗[i], P[i, j] ← 0, ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {1, . . . , M − 1}.
+
+2: Fprev = 0.
+
+3: Evaluate F1, F−1, F2, F−2 based on P. 4: G{ob1j} ← w1 · conv(F22, F2−2), G{ob2j} ← w2 · conv(F2, F−2, F21, F2−1), G{ob3j} ← w3 · conv(F2, F21, F−4 1),
+
+G{ob4j} ← w4 · conv(F41, F−4 1).
+
+5: Gg{r1a}d ← 4w1 · conv(F22, F−2), Gg{r2a}d ← 2w2 · conv(F2, F12, F2−1), Gg{r3a}d ← 4w2 · conv(F2, F−2, F12, F−1),
+
+Gg{r4a}d ← w3 ·conv(F21, F4−1), Gg{r5a}d ← 2w3 ·conv(F2, F1, F4−1), Gg{r6a}d ← 4w3 ·conv(F2, F12, F−3 1), G{gr7a}d ← 8w4 ·conv(F41, F−3 1).
+
+6: Fcur ←
+
+M |b
+
+4 i=1
+
+G{obi}j
+
+[0,
+
+b].
+
+7: for ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {0, . . . , M − 1} do
+
+8:
+
+G[i, j] ← M|b Gg{r1a}d[2i, b + 2j] + Gg{r2a}d[2i, b + 2j] + Gg{r3a}d[i, b + j] + Gg{r4a}d[−2i, b − 2j] + G{gr5a}d[−i, b − j] + G{gr6a}d[i, b +
+
+j] + G{gr7a}d[i, b + j].
+
+9: end for G
+10: P ← P − α ∥gcon∥2 . 11: P ← force(P, p∗).
+
+12: Tcur ← 1 −
+
+m i=0
+
+P[i,
+
+0].
+
+13: if (Tcur < Tmax) and (|Fcur − Fprev| > ϵ) then
+
+14:
+
+Fprev ← Fcur.
+
+15: go to Step 3.
+
+16: end if
+
+17: E8 ← (L − m) · M · Fcur.
+
+18: return P and E8.
+
+cycle configurations. Specifically, the objective function is formed by summing the expected counts of 6-6, 6-8, and 8-8 concatenations, each multiplied by a corresponding weight. In our implementation, we typically set the weights for cycle concatenations as (w6,6, w6,8, w8,8) = (1, 10−2, 10−4), which is natural given how detrimental each of them could be.
+Remark 5. A key difference in the cycle concatenation case is that the polynomials appearing in the objective function involve four variables. This increased dimensionality is a limiting factor due to the associated increase in computational complexity. Although the convolution operations are optimized using an FFT-based method, they still remain computationally expensive.
+To make the problem tractable, we focus only on the dominant object patterns for each cycle concatenation configuration, since all of them share the same characteristic polynomial, and their total count in the base matrix is significantly higher compared with the other object pattern classes. Including all possible configurations would dramatically increase the number of required convolution operations, making the evaluation of the probability matrix for large values of m and M computationally prohibitive. As a sanity check, we also applied the algorithm including all the configurations (without approximation) for the 6-6 case and observed that the approximated solution closely matches the actual result in terms of both the final objective value and the probability-distribution matrix.
+Remark 6. One of our key design choices in the proposed code construction is to separate the SC partitioning and the MD relocation stages in both the FL and the probabilistic continuous (the MD-GRADE) frameworks. In the FL setting, the partitioning and relocation matrices are obtained in two distinct stages. In the continuous case, we first compute the vector p∗, and then compute the matrix P while enforcing the constraint described in (13). This constraint ensures that the row sums of P remain constant, preserving the edge distribution found for partitioning.
+An alternative design approach would be to merge these two stages, at least for the probabilistic framework, and directly optimize the matrix P without separately computing p∗. To explore this, we conducted a small experiment using only the constraint from (7) and modifying the MD-GRADE algorithm accordingly. In this case, we allowed the row sums of P to vary, enforcing only that the total sum of all elements in P equals 1.
+
+21
+
+Algorithm 3 Multi-Dimensional Gradient-Descent Distributor (MD-GRADE) for Cycle-Concatenation Optimization
+
+Inputs: γ, κ, L, m, M : parameters of the MD code; p∗: locally-optimal SC edge distribution; Tmax: maximum MD density;
+
+w6,6, w6,8, w8,8: weights appearing in the objective function expression; Λ6,6, Λ6,8, Λ8,8: coefficients appearing in the
+
+objective function expression; ϵ, α: termination threshold and step size of gradient descent.
+
+Outputs: P: a (joint) locally-optimal probability-distribution matrix.
+
+Intermediate Variables: Fprev, Fcur: the values of the objective function in (43) at the previous and current iterations; F1,1, F−1,−1, F1,0, F−1,0, F0,1, F0,−1: coefficient arrays for the polynomials f (X1X2, Y1Y2), f (X1−1X2−1, Y1−1Y2−1), f (X1, Y1), f (X1−1, Y1−1), f (X2, Y2), f (X2−1, Y2−1); G{ob2jk,2l}, G{gr2akd,2l,r} for (k, l) ∈ {(3, 3), (3, 4), (4, 4)} and r ∈ {1, 2, 3}: coefficient arrays of each polynomial term appearing in the objective function and its gradient expressions for 6-6, 6-8, 8-8
+
+cycle concatenation; G: the gradient matrix (of size (m + 1) × M ) of the objective function, where gcon = ∇pcon N D(pcon);
+
+Tcur: current MD density. 1: P[i, 0] ← p∗[i], P[i, j] ← 0, ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {1, . . . , M − 1}.
+
+2: Fprev ← 0. 3: Fcur ← 0 and G = 0(m+1)×M . 4: Evaluate F1,1, F−1,−1, F1,0, F−1,0, F0,1, F0,−1 based on P.
+
+5: for (k, l) ∈ {(3, 3), (3, 4), (4, 4)} do
+
+6:
+
+G{ob2jk,2l} ← Λ2k,2l · conv(F1,1, F−1,−1, Fk1,−01, F−k−1,10, Fl0−,11, Fl0−,−11)
+
+7:
+
+G{gr2akd,2l,1} ← 2Λ2k,2l · conv(F1,1, Fk1,−01, F−k−1,10, Fl0−,11, Fl0−,−11).
+
+8:
+
+G{gr2akd,2l,2} ← 2(k − 1)Λ2k,2l · conv(F1,1, F−1,−1, F1k,−01, Fk−−1,20, Fl0−,11, Fl0−,−11).
+
+9:
+
+Gg{r2akd,2l,3} ← 2(l − 1)Λ2k,2l · conv(F1,1, F−1,−1, Fk1,−01, F−k−1,10, F0l−,11, Fl0−,−21).
+
+10: end for
+
+11: for (k, l) ∈ {(3, 3), (3, 4), (4, 4)} do
+
+12:
+
+Fcur ← Fcur + w2k,2l · M|b1 M|b2 G{obkj,l} [0, 0, b1, b2].
+
+13: for ∀i ∈ {0, 1, . . . , m} and ∀j ∈ {0, . . . , M − 1} do
+
+14:
+
+G[i, j] ← G[i, j] + w2k,2l ·
+
+Gg{r2akd,2l,2}[0, i, b1, b2 + j].
+
+M|b1 M|b2 G{gr2akd,2l,1}[i, i, b1 + j, b2 + j] + Gg{r2akd,2l,2}[i, 0, b1 + j, b2] +
+
+15: end for
+
+16: end for G
+
+17: P ← P − α ∥gcon∥2 . 18: P ← force(P, p∗).
+
+19: Tcur ← 1 −
+
+m i=0
+
+P[i,
+
+0].
+
+20: if (Tcur < Tmax) and (|Fcur − Fprev| > ϵ) then
+
+21:
+
+Fprev ← Fcur.
+
+22: go to Step 3.
+
+23: end if
+
+24: return P.
+
+We observe that the result of the joint design approach is very close to that of the separate design. This is true in terms of the final distribution matrix P, the objective function value (which is even slightly worse in the joint design case), and the row sums of P, the inferred edge distribution. This result is significant because it suggests that merging the two stages does not offer any performance improvements. Furthermore, keeping the stages separate is advantageous in terms of computational efficiency, particularly regarding the FL algorithms.
+After obtaining a locally-optimal probability-distribution matrix using the MD-GRADE algorithm, we use this matrix to initialize the FL optimizer. First, we quantize the matrix γκP, where the (i, j)-th entry after quantization represents the number of circulants in the base matrix assigned to the i-th component matrix and the j-th auxiliary matrix.
+Next, for each component matrix, we list the circulants assigned to it, which are already specified from the SC code design. Based on the quantized entries of γκP, we determine the number of circulants to be relocated from this component matrix. We then randomly select that number of circulants from the list, and randomly redistribute them across the auxiliary matrices according to the relevant row in the quantized γκP, excluding the auxiliary matrix X0.
+Instead of assigning a uniform relocation probability to each circulant, i.e., picking the circulants to relocate uniformly at random, we adopt an informed initialization strategy based on the underlying SC code. For each circulant, we count how many times it appears in the objects (e.g., cycles or cycle concatenations) that we aim to reduce their count. We then scale the relocation probabilities of the circulants proportionally to these counts, so that those most involved in harmful configurations have a higher likelihood of being relocated during the random initialization phase. We observe that this informed initialization strategy yields a better reduction in the final number of objects in the MD Tanner graph.
+
+22
+
+Remark 7. Note that the MD-GRADE algorithm provides us with a non-trivial solution. In particular, the relocation percentages for each component matrix Hi are not necessarily the same. For instance, for the input parameters (γ, κ, L, m, M ) = (3, 20, 13, 20, 4, 7), the vector of component-wise relocation percentages is [25.90 65.24 63.78 45.65 28.58], where the total relocation percentage is 35.23% (see Fig. 11 for the actual probability-distribution matrix). This vector shows that more circulants (percentage-wise) need to be relocated from the middle component matrices of the SC code than the side ones. These percentages are quite close to the final relocation percentages produced by the MCMC algorithm to design GD-GD MD Code 6, where the vector of component-wise relocation percentages is [21.74 80.00 75.00 50.00 25.00].
+
+B. Markov Chain Monte Carlo Finite-Length Optimizer
+
+We now introduce our FL algorithm for performing relocations and constructing a GD-MD code. This algorithm adapts the MCMC-based approach introduced in [32] for the relocation stage. Details related to FL partitioning and lifting are skipped since they do not represent novel contributions in this paper. However, the same MCMC approach is adopted for both stages.
+Our method relies on an MCMC technique known as Gibbs sampling [36], [37], which is used for sampling from joint probability distributions. For the optimization algorithm, we define a probability-distribution for the inputs of the problem such that the probability is inversely proportional to the objective function. In particular, our approach assigns higher probability to better solutions with lower objective function values and uses Gibbs sampling to sample from this distribution, thereby increasing the likelihood of sampling an optimal/sub-optimal solution eventually.
+Let the input of the optimization problem be the vector x, and let the objective function be C(x). Here, x is the rowconcatenated version of the relocation matrix M, and C(x) is the number of objects of interest (cycles or cycle concatenations), or a weighted sum of the numbers of different types of objects, in the Tanner graph of the GD-MD code that we aim to minimize. The probability assigned to x is defined as:
+
+P ∗(x)
+
+P (x) =
+
+,
+
+(46)
+
+Z (β )
+
+where
+
+P ∗(x) = e−βC(x), if x ∈ F,
+
+(47)
+
+0,
+
+otherwise,
+
+and Z(β) is the normalization constant given by
+
+Z(β) =
+
+e−βC(x).
+
+(48)
+
+x∈F
+
+Here, β ∈ R≥0 is a hyperparameter of the algorithm, and F is the feasible set of the problem. The update rule of Gibbs sampling is as follows:
+
+xi(t+1) ∼ P xi | x1(t+1), . . . , xi(−t+11), xi(+t)1, . . . , x(nt) =
+
+P ∗([x(1t+1) . . . xi(−t+11) xi x(i+t)1 . . . xn(t)])
+
+,
+
+M −1 xi′ =0
+
+P
+
+∗([x(1t+1)
+
+...
+
+xi(−t+11) x′i x(i+t)1
+
+...
+
+xn(t)])
+
+(49)
+
+where xi is the i-th element of x, t denotes the iteration index, and n = γκ denotes the length of x. While Gibbs sampling traditionally updates one variable at a time in sequential index order (i.e., first index, then second, and so on), it can be adapted
+
+to update a small number of variables simultaneously in a randomized order. Here, each feasible x ∈ F represents a state in a
+
+Markov chain, with the transition probabilities between states determined by (49).
+
+In our algorithm, we update a small set of entries in x per iteration, where the cardinality of updated sets is chosen as some
+
+integer δ. The algorithm maintains a list of index sets whose length is the same as that of the input vector x. Each set in the list
+
+includes one index ζ from {1, 2, . . . , n} and the δ − 1 indices of the most correlated entries, where correlation is determined
+
+based on the number of common objects of interest involving the entries corresponding to these indices.
+
+The algorithm iterates over a list of such index sets. For each set, it evaluates the conditional probability mass function
+
+(PMF) and sample the new values of the input variables using an extension of (49) to the multi-variable case (see [32, (11)]).
+
+This list is shuffled at each pass to avoid introducing systematic Markov chain transition patterns.
+
+The algorithm keeps track of the minimum objective function value observed until its current iteration, along with its
+
+corresponding input vector. These records are updated whenever a better solution is encountered during the evaluation of
+
+objective function values within the conditional probability computation.
+
+The pseudo-code of the algorithm is provided in Algorithm 4. The final relocation matrix M is obtained by reshaping the
+
+optimal input vector found by the algorithm, xopt, to the matrix format. Before executing the MCMC algorithm, we extract a list of all active objects in the underlying SC code whose instances we
+
+aim to minimize [38]. We emphasize that only elementary objects are considered in this step. The evaluation of the objective
+
+function involves iterating over this list and checking whether each object remains active for the given relocation arrangement.
+
+Specifically, a cycle concatenation is considered active if both cycles in its basis remain active after relocations [22].
+
+23
+
+Algorithm 4 Markov Chain Monte Carlo (MCMC) Finite-Length Optimizer
+
+Inputs: L: list of objects of interest; δ: cardinality of index sets; xinit: initial input vector; βinit: initial value of β; T : maximum number of iterations; M : number of auxiliary matrices.
+
+Outputs: Copt: minimum value of the objective function recorded during iterations; xopt: optimal value of the input vector resulting in the minimum objective function.
+
+Intermediate Variables: S: list of index sets; x: input vector for the current iteration; i: number of samples; β: hyper-
+parameter of the main distribution; ν: index set of entries that are updated; Z: normalizing factor for probabilities; x′, xprev: input vectors used for intermediate calculations; Pν, Pν∗: normalized and non-normalized mappings of conditional PMF values of transition probabilities between x′ and x, where x′ and x differ only at entries indexed by ν.
+
+1: Initialize S by going over L and calculating the common object counts for all entry pairs, then list d indices of the most
+
+correlated entries for each entry.
+
+2: x ← xinit. 3: Initialize Copt ← ∞, i ← 0, β ← βinit. 4: while i < T do
+
+5: Shuffle the order of S randomly.
+
+6: for each ν ∈ S do
+
+7:
+
+i ← i + 1, Z ← 0, xprev ← x.
+
+8:
+
+for each x′ν ∈ {0, 1, . . . , M − 1}δ do
+
+9:
+
+Obtain x′ by assigning its entries indexed by ν from xν′ , and taking the remaining entries from x.
+
+10:
+
+if x′ does not satisfy the constraints then
+
+11:
+
+Pν (x′) ← 0.
+
+12:
+
+else
+
+13:
+
+Evaluate C(x′).
+
+14:
+
+if C(x′) < Copt then
+
+15:
+
+Copt ← C(x′) and xopt ← x′.
+
+16:
+
+if Copt = 0 then go to Step 28.
+
+17:
+
+end if
+
+18:
+
+end if
+
+19:
+
+Pν∗(x′) ← exp(−βC(x′)).
+
+20:
+
+Z ← Z + Pν∗(x′).
+
+21:
+
+end if
+
+22:
+
+end for
+
+23:
+
+Pν ← Pν∗/Z. // Normalization to reach a probability distribution, for all x.
+
+24:
+
+Sample from the distribution Pν to reach x.
+
+25: end for
+
+26: Update MCMC internal and distribution variables. // This is to control the transition rate, see [32] for details.
+
+27: end while
+
+28: return Copt, and xopt.
+
+As discussed earlier, the initial relocation matrix is derived from the MD-GRADE algorithm. To limit the search space, allowable input vectors are constrained to lie within fixed L1 and L∞ distances from the initial vector. Additionally, we impose an upper bound on the MD density, typically set to 0.35, i.e., to 35% relocations. The main reason behind limiting the MD density is to enable low-latency windowed decoding that can take advantage of that most of the non-zero entries are within X0 and its copies, which is part of our future work. Any input vector that violates these constraints is assigned zero probability, and thus excluded from the sampling process.
+When the algorithm targets cycles, it first attempts to eliminate all instances of cycle-6. If successful, it then proceeds to minimize the number of cycle-8 instances, while ensuring that all cycle-6 candidates are inactive by assigning zero probability to any vector that would activate any of them. In the cycle concatenation case, the objective function is defined as the weighted sum of the number of active 6-6, 6-8, and 8-8 configurations. The weights are chosen as in Algorithm 3. Observe that all underlying SC codes we adopt do not have any cycles-4.
+VI. NUMERICAL RESULTS AND COMPARISONS
+In this section, we present MD-SC codes constructed using our probabilistic framework, report their short cycle and object counts, and demonstrate their error-rate performance with simulation plots. Moreover, we report the estimation results for short cycles as derived in Theorem 3. We design eight sets of MD-SC codes (MD Codes 1–8) for this section, with their parameters, codeword lengths, and design rates listed in Table II. As presented in Table II, our framework supports the design of MD-SC codes across a wide spectrum of code lengths and design rates. These codes are suitable for use in diverse application areas, including communication systems (wireless, optical, etc.) and modern data storage systems.
+
+24
+
+TABLE II PARAMETERS, LENGTHS AND DESIGN RATES OF PROPOSED MD-SC CODES WHERE EACH ENTRY REFERS TO A SET OF CODES
+
+Code name γ κ
+
+z
+
+L mM
+
+Length
+
+Design rate
+
+MD Code 1 4 17 17 10 1 3 8,670 0.74
+
+MD Code 2 3 19 23 10 2 4 17,480 0.81
+
+MD Code 3 3 17 7 50 9 13 77,350 0.79
+
+MD Code 4 4 29 29 50 19 5 210,250 0.81
+
+MD Code 5 4 24 17 30 6 3 36,720 0.80
+
+MD Code 6 3 20 13 20 4 7 36,400 0.82
+
+MD Code 7 4 13 5 10 3 5 3,250 0.60
+
+MD Code 8 4 17 7 15 4 5 8,925 0.70
+
+We use MD Codes 1–4 to examine optimization targeting cycle counts, whereas MD Codes 5–8 are generated to examine
+
+optimization targeting object counts. We refer to the FL construction method performed by the MCMC algorithm guided by a
+
+GD-based distribution as the GD-MCMC method, both for partitioning and relocation design stages. Occasionally, we drop the
+
+word “method” from “the MCMC method” and “the GD-MCMC method” for brevity. We also include codes constructed with
+
+a uniform distribution for comparison purposes. Here, by a uniform distribution for the partitioning stage, we mean that edge
+
+distribution
+
+for
+
+the
+
+underlying
+
+SC
+
+code
+
+is
+
+pUNF
+
+=
+
+1 m+1
+
+· 1.
+
+On
+
+the
+
+other
+
+hand,
+
+by
+
+a
+
+uniform
+
+distribution
+
+for
+
+the
+
+relocation
+
+stage, we mean that the relocation density is applied evenly across all component matrices and distributed uniformly among all
+
+auxiliary matrices. If we denote the edge distribution for partitioning by p and the relocation density by T , then the uniform
+
+probability-distribution matrix takes the following form:
+
+ (1 − T )p[0]
+
+T M −1
+
+p[0]
+
+...
+
+T M −1
+
+p[0]
+
+
+
+ (1 − T )p[1]
+
+PUNF
+
+=
+
+ 
+
+
+
+...
+
+T M −1
+
+p[1]
+
+...
+
+...
+
+...
+
+T M −1
+...
+
+p[1]
+
+   
+
+.
+
+(50)
+
+(1 − T )p[m]
+
+T M −1
+
+p[m]
+
+...
+
+T M −1
+
+p[m]
+
+The design methods for each set of codes are listed below in more detail:
+
+1) MD Codes 1–2: Partitioning matrices are generated using the optimal overlap (OO) method [20], since the memory is low for both codes. Lifting is performed via the MCMC, and relocations are conducted using the GD-MCMC. All three stages of the code design aim to reduce short cycle counts.
+2) MD Codes 3–4: Partitioning and relocations are both done using the GD-MCMC, while lifting is again performed via the MCMC. The design goal in all three stages is to reduce short cycle counts.
+3) MD Code 5: Three variants of the code are created, differing mainly in their partitioning and relocation distributions. One is generated by GD-based distributions for both stages (GD-GD MD Code 5), another is generated by GD distribution for partitioning and uniform distribution for relocation (GD-UNF MD Code 5), and the last is generated by uniform distributions in both stages (UNF-UNF MD Code 5). The underlying SC codes are obtained from [14, (4, 24)-BSC], where partitioning is performed using the algorithmic optimizer of [14] and lifting is done using the circulant power optimizer (CPO) of [14], which is based on that of [20]. Relocations are done using the MCMC for all variants. In all cases, the optimization targets objects (concatenated cycles) for all three design stages.
+4) MD Codes 6–8: Similar to MD Code 5, three variants (GD-GD, GD-UNF, and UNF-UNF) are generated for each code of the three. Partitioning and relocations are guided by the respective distributions and done using the MCMC, and lifting is also performed via the MCMC. Here, the design targets short cycles during the partitioning and lifting stages, and concatenated cycles (objects) during the relocation stage. The rationale is that by focusing on short cycles initially, we can eliminate most cycles-6, effectively removing 6-6 and 6-8 configurations. This allows the relocation stage to focus on reducing 8-8 configurations, which appear in many detrimental absorbing sets.
+
+For MD Codes 5–8, it should be noted that our main contribution lies in the design of the GD-GD MD codes. The GD-UNF and UNF-UNF variants are generated for comparison purposes, in order to highlight the improvement offered by our proposed framework compared with a straightforward distribution.
+In Table III, we list the short cycle counts for MD Codes 1–4, along with the relocation percentages, and the cycle counts of the corresponding underlying SC codes (which share the same design rate). All codes listed in the table are free of cycles-4, and those shown in the lower panel of the table are also free of cycles-6. For comparison, we also include two codes from [31], aligned with MD Code 1 and MD Code 2, respectively. In particular, each of these literature codes shares the same design parameters, partitioning matrices, and relocation densities with our corresponding GD-MD code. It should be noted, however, that the lifting matrices differ: ours are obtained via the MCMC algorithm, whereas theirs are generated using the CPO method.
+In [31], the authors introduce the concept of the depth of an MD-SC code, where during the relocation stage, not all M auxiliary matrices are used. Instead, only the first d ≤ M of them are utilized, where d is referred to as the depth. This approach could enable the use of a windowed decoder in multiple dimensions, which would reduce decoding latency, while
+
+25
+
+TABLE III REDUCED SHORT CYCLE COUNTS OF PROPOSED MD-SC CODES
+
+Code name [31]
+MD Code 1
+Code name [31]
+MD Code 2 MD Code 3 MD Code 4
+
+Cycle-6 count 9,078 3,366
+Cycle-8 count 249,320 206,356 15,652 1,581,080
+
+Relocation percentage
+33.82% 33.82%
+Relocation percentage
+33.33% 33.33% 31.37% 34.48%
+
+Underlying SC count
+− 25,211
+Underlying SC count
+− 282,693 164,794 2,740,036
+
+TABLE IV CYCLE-6 COUNTS OF MD-SC CODES WITH PARAMETERS (γ, κ, z, L, m, M ) = (4, 17, 17, 10, 1, 5) AND VARYING DEPTH
+
+Depth
+2 3 4 5
+
+Cycle-6 count
+
+[31] GD-MD Code
+
+20,825
+
+14,195
+
+9,775
+
+4,080
+
+5,695
+
+1,615
+
+5,610
+
+765
+
+also mitigating the effect of short cycles. They report the number of cycles-6 in the final Tanner graph of an MD-SC code with parameters (γ, κ, z, L, m, M ) = (4, 17, 17, 10, 1, 5), while varying d from 2 to 5. For comparison, we also generated MD-SC codes using the same underlying SC code, with slight modifications to our method. Specifically, in the MD-GRADE algorithm, we force the columns of the probability-distribution matrix indexed by all i such that i ≥ d to be zero at all iterations. During FL optimization, we constrain the MCMC algorithm to assign relocation values only from the set {0, 1, . . . , d−1} (Algorithm 4, Step-8 changes accordingly). In Table IV, we present our resulting cycle counts (right side) alongside those reported in [31] (left side) for direct comparison. It should be noted that all of these codes share the same relocation density, which is 26.47%. The notable reduction in cycle counts achieved by our GD-MD codes is demonstrated by the table.
+Remark 8. Although we generated MD-SC codes using the first d auxiliary matrices, the selection of which auxiliary matrices to use can be made in a more informed way. This is similar to the case of topologically-coupled codes [14], where some component matrices are deliberately set to all zeros for an SC code, and the selection of the non-zero component matrices is guided by a similar probabilistic framework through the formulation of an optimization problem. Exploring this problem could be a promising direction for future research.
+In Table V, we list the lower and upper bounds as well as the estimated cycle counts based on Theorem 3 for MD Codes 1–4, along with their corresponding actual cycle counts.
+In Table VI, we list the elementary 6-6, 6-8, and 8-8 configuration counts in the final Tanner graphs of MD Codes 5–8, for all three distribution variants (GD-GD, GD-UNF, UNF-UNF). Relocation percentages and counts of these configurations for the underlying SC codes are also provided. It should be noted that we only provide underlying SC counts for the GD-GD MD codes (where the SC code is designed using the GD algorithm).
+Remark 9. Instead of constructing an MD-SC code via relocations, one can simply increase the number of replicas to L × M of an SC code while keeping all other parameters and partitioning/lifting matrices fixed; the resulting code is referred as the extended SC code. Extended SC codes have the same length as their MD-SC counterparts, and have close design rates when L is sufficiently larger than m, ensuring a fair comparison. For two of the MD-SC codes considered in this work, we also constructed their extended SC counterparts (note that the rate loss of MD-SC codes is not higher than 0.025 for these cases). For MD Code 1, the extended SC code counterpart has 78,591 cycles-6, yielding a reduction of approximately 95.7% achieved by our MD-SC construction. Similarly, the extended SC counterpart of GD-GD MD Code 6 contains 17,287,933 many 8-8 configurations, corresponding to a reduction of about 99.3% achieved by our MD-SC construction.
+All variants of MD Code 6, GD-GD/GD-UNF variants of MD Code 7, and GD-GD/UNF-UNF variants of MD Code 8 are simulated over the additive white Gaussian noise channel (AWGNC) using a sum-product (fast Fourier transform based) decoder [14]. The results are presented in Fig. 5, Fig. 6, and Fig. 7, respectively. Note that the GD-UNF MD Code 7 exhibits an error floor, and we observe that the main cause of the faulty frames is the presence of two detrimental objects in the Tanner
+
+26
+
+TABLE V CYCLE COUNTS WITH THEIR ESTIMATED VALUES, LOWER AND UPPER BOUNDS
+
+Code Name MD Code 1 MD Code 2 MD Code 3 MD Code 4
+
+Cycle count 3,366
+206,356 15,652 1,581,080
+
+Estimate 49,782 226,650 203,340 2,553,500
+
+Lower bound 47,162 169,990 158,700 988,450
+
+Upper bound 52,402 283,310 247,970
+4,118,600
+
+TABLE VI OBJECT COUNTS OF PROPOSED MD-SC CODES AND THEIR UNDERLYING SC CODES
+
+MD Code 5
+
+Code
+Underlying SC UNF-UNF MD GD-UNF MD
+GD-GD MD
+
+6-6 configuration count 1,292 0 0 0
+
+6-8 configuration count
+859,010 580,992 357,459 44,115
+
+8-8 configuration count
+88,781,378 49,166,448 33,641,283 23,612,898
+
+Relocation percentage
+− 33.33% 34.38% 33.33%
+
+Underlying SC
+
+0
+
+MD Code 6 UNF-UNF MD
+
+0
+
+GD-UNF MD
+
+0
+
+GD-GD MD
+
+0
+
+0
+
+2,001,493
+
+−
+
+0
+
+535,535
+
+35.00%
+
+0
+
+331,058
+
+35.00%
+
+0
+
+112,931
+
+35.00%
+
+MD Code 7
+
+Underlying SC UNF-UNF MD GD-UNF MD
+GD-GD MD
+
+4,305 3,700 3,250
+0
+
+261,280 142,700 81,875 11,775
+
+5,984,110 2,053,375 1,454,000 980,750
+
+− 34.62% 34.62% 34.62%
+
+MD Code 8
+
+Underlying SC UNF-UNF MD GD-UNF MD
+GD-GD MD
+
+5,243 9,870 1,225
+0
+
+619,150 483,105 124,250
+0
+
+23,417,464 11,861,570 5,585,685 4,653,845
+
+− 33.82% 35.29% 35.29%
+
+graph of the code, namely a (4, 4) UAS and a (5, 4) elementary unlabeled oscillating set (UOS).3 The graph representations of these two objects are also presented in Fig. 8.
+Below are some takeaways from these results summarized in the tables and figures:
+1) Our probabilistic framework offers a significant reduction in the number of cycles-6 and cycles-8 for our GD-MD codes. These reductions can be as high as 95.7% relative to the extended SC counterparts, even when the rate loss is negligible (see Remark 9). More intriguingly, the GD-MD codes have remarkably lower cycle counts compared with their underlying SC codes, despite the latter having notably shorter lengths. In particular, the proposed framework offers an 86.6% reduction in cycle-6 count in the case of MD Code 1 relative to its underlying SC code, as well as reductions in cycle-8 counts ranging from 27.0% to 90.5% in the cases of MD Codes 2–4.
+2) Our GD-MD codes outperform relevant MD-SC codes in the literature [31] in terms of cycle counts. Starting with MD Code 1, which has 3,366 cycles-6, surpassing the relevant MD-SC code designed by [31, Algorithm 2], which has 9,078 cycles-6. Similarly, MD Code 2 has 206,356 cycles-8, whereas the relevant MD-SC code designed in [31] has 249,320 cycle-8. Additionally, by incorporating the concept of MD depth, where only a subset of auxiliary matrices are utilized for relocations, our method is able to generate MD-SC codes with significantly lower cycle counts compared with [31], under identical code parameters, underlying SC code, and MD density, which could be observed from Table IV.
+3) Since all three stages of the code design are performed to minimize the number of cycles for MD Codes 1–4, these numbers are lower than the estimates obtained based on Theorem 3 for our GD-MD codes. For MD Code 2, Theorem 3 gives a good indicator of the outcome of the MCMC algorithm, where the (rounded) expected number of cycles-8 is 226,650 and the actual final number of cycles-8 is 206,356. Similarly, for MD Code 4, the expected number of cycles-8 is 2,553,500, and the actual final number of cycles-8 is 1,581,080. However, the expected number of cycles-8 of MD Code 3 is 203,340 and the actual number of cycles-8 obtained is 15,652, highlighting the strength of our FL design.
+4) When we compare our GD-GD MD Codes with their underlying SC and their GD-UNF/UNF-UNF MD counterparts, we observe a substantial reduction in the number of detrimental objects. Key findings are summarized below:
+• All GD-GD MD Codes 5–8 are entirely free of elementary 6-6 configurations. In contrast, their underlying SC codes and their GD-UNF/UNF-UNF variants do contain such objects in the case of MD Codes 7 and 8.
+3A UOS is a special case of a UTS, with the condition that for each VN, the number of neighboring even-degree CNs is greater than or equal to the number of neighboring odd-degree CNs, and there exists at least one VN for which the equality holds [40].
+
+27
+
+100
+
+10-1
+
+10-2
+
+10-3
+
+FER
+
+10-4
+
+10-5
+
+10-6
+
+UNF-UNF MD Code 6
+
+10-7
+
+GD-UNF MD Code 6
+
+GD-GD MD Code 6
+
+3
+
+3.1
+
+3.2
+
+3.3
+
+3.4
+
+SNR (dB)
+
+Fig. 5. FER curves of GD-GD/GD-UNF/UNF-UNF MD Code 6 over the AWGNC. All curves correspond to codes with parameters (γ, κ, z, L, m, M ) = (3, 20, 13, 20, 4, 7).
+
+100
+
+10-1
+
+10-2
+
+FER
+
+10-3
+
+10-4
+
+10-5
+
+GD-UNF MD Code 7
+
+10-6
+
+GD-GD MD Code 7
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+SNR (dB)
+
+Fig. 6. FER curves of GD-GD/GD-UNF MD Code 7 over the AWGNC. Both curves correspond to codes with parameters (γ, κ, z, L, m, M ) = (4, 13, 5, 10, 3, 5).
+
+• Regarding elementary 6-8 configurations, GD-GD MD Code 8 contains none of these objects, even though its counterparts exhibit large populations. Additionally, for MD Code 5 and MD Code 7, the reduction percentages are:
+– Relative to GD-UNF: 87.65% and 85.62%, respectively. – Relative to UNF-UNF: 92.40% and 91.75%, respectively. – Relative to SC codes: 94.86% and 95.49%, respectively.
+• For elementary 8-8 configurations, the reduction percentages range as follows:
+– Compared with GD-UNF: from 16.68% to 65.89%. – Compared with UNF-UNF: from 51.97% to 78.91%. – Compared with SC codes: from 73.40% to 94.35%.
+Moreover, the reduction reaches up to 99.3% relative to the extended SC counterparts, while incurring only a minimal rate loss (as discussed in Remark 9).
+5) Based on the frame error rate (FER) simulations, we observe that the GD-GD MD codes exhibit considerable performance improvements over their GD-UNF and UNF-UNF counterparts. When compared with the UNF-UNF MD codes, the GDGD MD codes consistently outperform them across the entire SNR range. In particular, the FER gains reach up to 1.76 orders of magnitude at 3.35 dB SNR for MD Code 6, and up to 3.08 orders of magnitude at 2.8 dB SNR for MD Code 8. Furthermore, at 10−6 FER level, GD-GD MD Code 8 has approximately 0.2 dB SNR improvement over the corresponding UNF-UNF code. We also observe that the GD-GD MD codes outperform their GD-UNF counterparts in the high-SNR region. Both GDUNF MD Codes 6–7 exhibit an error floor, whereas the GD-GD variants achieve significant gains of FER up to 0.67 orders of magnitude at 3.33 dB SNR for MD Code 6, and up to 2.81 orders of magnitude at 2.8 dB SNR for MD Code 7.
+
+28
+
+100
+
+10-1
+
+10-2
+
+FER
+
+10-3
+
+10-4
+
+10-5
+
+UNF-UNF MD Code 8
+
+10-6
+
+GD-GD MD Code 8
+
+2.2
+
+2.4
+
+2.6
+
+2.8
+
+3
+
+SNR (dB)
+
+Fig. 7. FER curves of GD-GD/UNF-UNF MD Code 8 over the AWGNC. Both curves correspond to codes with parameters (γ, κ, z, L, m, M ) = (4, 17, 7, 15, 4, 5).
+
+Fig. 8. A (4, 4) UAS (left) and (5, 4) UOS (right) in the Tanner graph of GD-UNF Code 7, with parameters (γ, κ, z, L, m, M ) = (4, 13, 5, 10, 3, 5). These configurations are identified as the main reason behind the faulty frames in the error-floor region.
+It is important to note that the error floor is directly linked to the large number of detrimental objects present in the GD-UNF codes. As illustrated in Fig. 8, the dominant problematic structures responsible for the error floor in GD-UNF MD Code 7 Tanner graph contain elementary 6-6 and 6-8 configurations. 6) Since the number of possible relocation matrices is M γκ, the design space of our problem is extremely large and it grows rapidly with the code parameters. The main goal of our probabilistic framework is to guide the FL optimization by providing an informed initialization point that is likely near an optimal solution, effectively reducing the search space and improving the efficiency of heuristic methods such as the MCMC. Moreover, in [32], the existence of multiple recurrent classes in the Markov chain constructed by the MCMC algorithm is discussed, and it is shown that the difference between the final result of the algorithm and the locally-optimal solution within the recurrent class that the algorithm operates on is bounded by a small margin. This implies that initialization strongly influences the final outcome, particularly for the MCMC method. Our results show that when the MCMC is initialized with the MD-GRADE distribution, it achieves significantly better results than when initialized with the uniform distribution, both in object counts (see Table VI) and in error-rate performance (see Fig. 5, Fig. 6, and Fig. 7). This suggests that our probabilistic framework enables the MCMC to operate within a “good” recurrent class and to reach a better result. 7) In general, for SC codes, the locally-optimal edge distribution obtained through the framework of [14] indicates that the component matrices near the edges should contain a higher concentration of circulants, while those in the middle should exhibit lower populations. Intriguingly, for the locally-optimal probability-distribution matrices produced by the MDGRADE algorithm, we observe that the component-wise relocation percentages tend to be lower for the edge component matrices and higher for the middle ones (as discussed in Remark 7 for the specific case of GD-GD MD Code-6). Taken together, these two probabilistic frameworks suggest that to optimize FL performance, fewer circulants should be allocated to the middle component matrices during partitioning, and larger portion of them should be relocated to auxiliary matrices during relocations. Our numerical analyses, including both object counts and error-rate results, support this conclusion by demonstrating that such a non-trivial distribution of edges yields significantly improved MD-SC codes compared with those constructed with a straightforward edge distribution (such as uniform). The shape of this optimized distribution is itself noteworthy, and further investigating the underlying reasons for its effectiveness using different tools could be a promising direction for future research.
+
+29
+
+01010101010101011 10101010101010100 00000000111111111 11111111000000000
+
+20000101012002120 00000001001011010 00201200000000101 00111000000020001
+
+9 4 14 3 6 4 10 5 0 3 2 3 8 4 12 13 2 15 1 10 7 5 6 1 14 9 4 6 1 6 3 12 1 10 6 4 14 12 0 3 16 1 7 8 2 12 16 3 1 6 9 0 12 1 0 12 9 2 3 13 1 1 6 0 16 1 10 4
+
+0.3309 0.0846 0.0846 0.3309 0.0846 0.0846
+
+Fig. 9. Partitioning (top left), lifting (bottom left), relocation (top right) matrices of MD Code 1 with parameters (γ, κ, z, L, m, M ) = (4, 17, 17, 10, 1, 3), and probability-distribution matrix (bottom right) output of MD-GRADE algorithm for this code.
+
+0110120220110120222 1001001002222212111 2222212111001001000
+
+0000301100021233000 0020020010100000000 0300000013000011320
+
+7 0 0 15 0 2 8 19 0 0 12 21 0 7 0 0 0 0 0 2 2 21 0 22 10 2 0 10 17 2 17 1 6 8 6 0 11 18 1 8 3 3 20 12 13 13 1 15 3 6 18 0 14 10 13 10 18
+
+
+0.2257
+0.2153
+0.2257
+
+0.0366 0.0404 0.0366
+
+0.0343 0.0372 0.0343
+
+
+0.0366
+0.0404
+0.0366
+
+Fig. 10. Partitioning (top left), lifting (bottom left), relocation (top right) matrices of MD Code 2 with parameters (γ, κ, z, L, m, M ) = (3, 19, 23, 10, 2, 4), and probability-distribution matrix (bottom right) output of MD-GRADE algorithm for this code.
+
+VII. CONCLUSION
+MD-SC codes are being increasingly adopted in a wide range of applications. FL optimization for MD-SC code design is a computationally challenging problem, especially as more degrees of freedom become available with increasing code parameters. In this work, we introduced a probabilistic framework that efficiently exploits these available degrees of freedom to obtain improved MD-SC codes. More specifically, we defined a probability-distribution matrix whose entries represent the distribution of edges across the component and auxiliary matrices, and expressed the expected number of active detrimental objects as a function of this distribution matrix entries. Our initial analysis considered the simpler case of the expected number of active short cycles. This was then complemented by the expected number of cycles in the final Tanner graph, which acts as an estimate of the FL outcome. Such estimates can be used to predict the relocation density required to eliminate all instances of a cycle (when possible), or to determine the best achievable reduction for a given cycle under a maximum relocation percentage imposed by decoding-latency constraints. We then generalized the analysis to derive the expected number of active objects for arbitrary topologies, and finally addressed the case of two short-cycle concatenations. This latter analysis allows us to prioritize objects that are more detrimental to performance, allocating the available degrees of freedom more efficiently, since isolated cycles might not be problematic enough to justify the use of all our relocation resources focusing on them.
+We provided expressions of the gradients of the proposed objective functions as well as the solution form of locally-optimal points derived using the KKT conditions. Based on these, we developed a GD algorithm to reach these locally-optimal probability distributions. The resulting probabilistic output is then used to guide an MCMC-based FL optimization algorithm, which is itself probabilistic in nature. Combined with the MCMC method, our framework enables the design of high-performance MD-SC codes, even if the memory and the number of auxiliary matrices is high. Furthermore, when our method was considered together with the earlier probabilistic framework introduced for SC code design [14], we observed that improved FL performance is
+
+41030103003240420433 00243030404404044100 44424441041003404000
+
+12 6 4 12 0 1 5 12 6 0 7 0 4 9 3 11 11 2 12 7 6 6 6 4 2 0 9 1 3 0 1 10 6 0 2 4 6 10 10 7 1 8 8 11 6 1 2 2 5 7 5 10 1 0 1 3 11 11 1 8
+
+04040620452060010001 00400130000001005500 01030001000000100030
+
+
+0.2840
+0.0290  0.0241  0.0725
+0.2381
+
+0.0166 0.0091 0.0071 0.0101 0.0159
+
+0.0166 0.0091 0.0071 0.0101 0.0159
+
+0.0166 0.0091 0.0071 0.0101 0.0159
+
+0.0166 0.0091 0.0071 0.0101 0.0159
+
+0.0166 0.0091 0.0071 0.0101 0.0159
+
+
+0.0166
+0.0091 
+0.0071 
+0.0101
+0.0159
+
+Fig. 11. Partitioning (first), lifting (second), relocation (third) matrices of GD-GD MD Code 6 with parameters (γ, κ, z, L, m, M ) = (3, 20, 13, 20, 4, 7), and probability-distribution matrix (bottom) output of MD-GRADE algorithm for this code.
+
+30
+
+0032132030330 3301301030203 3010310303032 0323023303010
+1220402331411 1001212304132 2002101310012 2003443000300
+
+100 200 020 001
+
+0.2753
+0.0535  0.0535
+0.2753
+
+1200110 3002300 0103001 2000000
+
+0.0273 0.0155 0.0155 0.0273
+
+0.0273 0.0155 0.0155 0.0273
+
+0.0273 0.0155 0.0155 0.0273
+
+400 000 040 030
+
+0.0273
+0.0155 
+0.0155
+0.0273
+
+Fig. 12. Partitioning (top left), lifting (bottom left), relocation (top right) matrices of GD-GD MD Code 7 with parameters (γ, κ, z, L, m, M ) = (4, 13, 5, 10, 3, 5), and probability-distribution matrix (bottom right) output of MD-GRADE algorithm for this code.
+
+achieved when fewer edges are allocated to the middle component matrices during the partitioning stage, and more edges from these middle component matrices are relocated into auxiliary matrices during the relocation stage (percentage wise). Codes designed based on this distribution, referred to as GD-MD codes, consistently outperform their literature counterparts, underlying SC codes, and MD-SC codes obtained via uniform edge distributions. We observed and reported improvements both in the number of detrimental objects and in error-rate performance. For example, we identified a case where a comparison code designed using a uniform distribution exhibits higher population of the targeted detrimental objects, causing a noticeable error floor, while our GD-MD code has significantly less number of these objects, and thus exhibits an improved FER performance by up to 2.81 orders of magnitude.
+We suggest that our probabilistic MD code design framework can offer a valuable tool to scholars and engineers concerned with the reliability of modern data transmission and storage systems. Future work includes developing a deeper understanding of the edge distribution described above as well as its effectiveness in the FL design using asymptotic tools. Another promising direction is offering a joint design that integrates our GD-MD codes with state-of-the-art constrained coding schemes, such as lexicographically-ordered constrained (LOCO) codes [41], where such a combined construction has potential to be highly effective in two-dimensional magnetic recording (TDMR) systems. Finally, similar concepts can also be applied to extend the work in [42] in order to design rate-compatible MD-SC codes.
+APPENDIX
+Figures 9, 10, 11, and 12 show the partitioning, lifting, and relocation matrices of MD Code 1, MD Code 2, GD-GD MD Code 6, and GD-GD MD Code 7, respectively, along with the corresponding probability-distribution matrices generated by the MD-GRADE algorithm.
+ACKNOWLEDGMENT The authors would like to thank Canberk ˙Irimag˘zı for his assistance in carrying out this research and for his contributions in the prior version of this work [1].
+REFERENCES
+[1] C. ˙Irimag˘zı, A. Tanrıkulu, and A. Hareedy, “Probabilistic design of multi-dimensional spatially-coupled codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024, pp. 653–658.
+[2] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963. [3] D. J. C. MacKay and R. M. Neal, “Good codes based on very sparse matrices,” in Cryptography and Coding 5th IMA Conf., C. Boyd, Ed., Lecture Notes
+in Computer Science, no. 1025. Berlin, Germany: Springer, 1995, pp. 100–111. [4] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645–1646,
+Aug. 1996. [5] L. Dolecek, Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,”
+IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201, Jan. 2010. [6] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8, pp.
+1788–1793, Aug. 2004. [7] A. J. Felström and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45,
+no. 6, pp. 2181–2190, Sep. 1999. [8] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov, “Iterative decoding threshold analysis for LDPC convolutional codes,” IEEE Trans. Inf.
+Theory, vol. 56, no. 10, pp. 5274–5289, Oct. 2010. [9] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation via spatial coupling: Why convolutional LDPC ensembles perform so well over
+the BEC,” IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 803–834, Feb. 2011. [10] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief propagation,” IEEE Trans. Inf.
+Theory, vol. 59, no. 12, pp. 7761–7813, Dec. 2013. [11] D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “Spatially coupled LDPC codes constructed from protographs,” IEEE Trans. Inf. Theory, vol. 61,
+no. 9, pp. 4866–4889, Sep. 2015. [12] S. Mo, L. Chen, D. J. Costello, D. G. M. Mitchell, R. Smarandache, and J. Qiu, “Designing protograph-based quasi-cyclic spatially coupled LDPC codes
+with large girth,” IEEE Trans. Inf. Theory, vol. 68, no. 9, pp. 5326–5337, Sep. 2020. [13] M. Battaglioni, A. Tasdighi, G. Cancellieri, F. Chiaraluce, and M. Baldi, “Design and analysis of time-invariant SC-LDPC convolutional codes with small
+constraint length,” IEEE Trans. Commun., vol. 66, no. 3, pp. 918–931, Mar. 2018. [14] S. Yang, A. Hareedy, R. Calderbank, and L. Dolecek, “Breaking the computational bottleneck: Probabilistic optimization of high-memory spatially-coupled
+codes,” IEEE Trans. Inf. Theory, vol. 69, no. 2, pp. 886–909, Feb. 2023.
+
+31
+[15] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli, and G. E. Corazza, “Windowed decoding of protograph-based LDPC convolutional codes over erasure channels,” IEEE Trans. Inf. Theory, vol. 58, no. 4, pp. 2303–2320, Apr. 2012.
+[16] A. R. Iyengar, P. H. Siegel, R. L. Urbanke, and J. K. Wolf, “Windowed decoding of spatially coupled codes,” IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 2277–2292, Apr. 2013.
+[17] S. Naseri and A. H. Banihashemi, “Construction of time invariant spatially coupled LDPC codes free of small trapping sets,” IEEE Trans. Commun., vol. 69, no. 6, pp. 3485–3501, Jun. 2021.
+[18] D. G. M. Mitchell and E. Rosnes, “Edge spreading design of high rate array-based SC-LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 2940–2944.
+[19] M. Battaglioni, F. Chiaraluce, M. Baldi, and D. G. M. Mitchell, “Efficient search and elimination of harmful objects for the optimization of QC-SC-LDPC codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2019, pp. 1–6.
+[20] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Finite-length construction of high performance spatially-coupled codes via optimized partitioning and lifting,” IEEE Trans. Commun., vol. 67, no. 1, pp. 3–16, Jan. 2019.
+[21] A. Hareedy, R. Wu, and L. Dolecek, “A channel-aware combinatorial approach to design high performance spatially-coupled codes,” IEEE Trans. Inf. Theory, vol. 66, no. 8, pp. 4834–4852, Aug. 2020.
+[22] A. Hareedy, R. Kuditipudi, and R. Calderbank, “Minimizing the number of detrimental objects in multi-dimensional graph-based codes,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5299–5312, Sep. 2020.
+[23] R. Ohashi, K. Kasai, and K. Takeuchi, “Multi-dimensional spatially-coupled codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), pp. 2448–2452, Jul. 2013.
+[24] D. Truhachev, D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “New codes on graphs constructed by connecting spatially coupled chains,” in Proc. Inf. Theory and App. Workshop (ITA), Feb. 2012, pp. 392–397.
+[25] Y. Liu, Y. Li, and Y. Chi, “Spatially coupled LDPC codes constructed by parallelly connecting multiple chains,” IEEE Commun. Letters, vol. 19, no. 9, pp. 1472–1475, Sep. 2015.
+[26] S. Srinivasa, Y. Chen, and S. Dahandeh, “A communication-theoretic framework for 2-DMR channel modeling: Performance evaluation of coding and signal processing methods,” IEEE Trans. Magn., vol. 50, no. 3, pp. 6–12, Mar. 2014, Art. no. 3000307.
+[27] P. Chen, C. Kui, L. Kong, Z. Chen, and M. Zhang, “Non-binary protograph-based LDPC codes for 2-D-ISI magnetic recording channels,” IEEE Trans. Magn., vol. 53, no. 11, Nov. 2017, Art. no. 8108905.
+[28] L. Schmalen and K. Mahdaviani, “Laterally connected spatially coupled code chains for transmission over unstable parallel channels,” in Proc. Int. Symp. Turbo Codes Iterative Inf. Processing (ISTC), Aug. 2014, pp. 77–81.
+[29] D. Truhachev, D. G. M. Mitchell, M. Lentmaier, D. J. Costello, and A. Karami, “Code design based on connecting spatially coupled graph chains,” IEEE Trans. Inf. Theory, vol. 65, no. 9, pp. 5604–5617, Sep. 2019.
+[30] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Multi-dimensional spatially-coupled code design through informed relocation of circulants,” in Proc. 56th Annu. Allerton Conf. Commun., Control, and Comput., Monticello, IL, USA, Oct. 2018, pp. 695–701.
+[31] H. Esfahanizadeh, L. Tauz, and L. Dolecek, “Multi-dimensional spatially-coupled code design: Enhancing the cycle properties,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2653–2666, May 2020.
+[32] A. Tanrıkulu, M. Yıldırım, and A. Hareedy, “A Markov Chain Monte Carlo method for efficient finite-length LDPC code design” IEEE Trans. Commun., vol. 74, pp. 5979–5993, Mar. 2026.
+[33] M. Karimi and A. H. Banihashemi, “On characterization of elementary trapping sets of variable-regular LDPC codes,” IEEE Trans. Inf. Theory, vol. 60, no. 9, pp. 5188–5203, Sep. 2014.
+[34] A. Hareedy, “Graph-based error correcting codes for modern dense storage devices,” Ph.D. dissertation, Dept. of Elect. Comp. Eng., Univ. California, Los Angeles (UCLA), Los Angeles, CA, USA, 2018. [Online]. Available: https://escholarship.org/uc/item/540302hp
+[35] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Annu. Allerton Conf. Commun., Control, Comput., Oct. 2003, pp. 1426–1435. [36] S. Geman and D. Geman, “Stochastic relaxation, Gibbs distributions, and the Bayesian restoration of images,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 6, no. 6, pp. 721–741, Nov. 1984. [37] D. J. C. MacKay, Information Theory, Inference and Learning Algorithms. Cambridge, U.K.: Cambridge University Press, 2003. [38] Y. Hashemi and A. H. Banihashemi, “New characterization and efficient exhaustive search algorithm for leafless elementary trapping sets of variable-
+regular LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 12, pp. 6713–6736, Dec. 2016. [39] L. Tauz, H. Esfahanizadeh, and L. Dolecek, “Non-uniform windowed decoding for multi-dimensional spatially-coupled LDPC codes,” in Proc. IEEE Int.
+Symp. Inf. Theory (ISIT), Los Angeles, CA, USA, Jun. 2020, pp. 485–490. [40] A. Hareedy, C. Lanka, N. Guo, and L. Dolecek, “A combinatorial methodology for optimizing non-binary graph-based codes: Theoretical analysis and
+applications in data storage,” IEEE Trans. Inf. Theory, vol. 65, no. 4, pp. 2128–2154, Apr. 2019. [41] I. Guzel, D. Özbayrak, R. Calderbank, and A. Hareedy, “Eliminating media noise while preserving storage capacity: Reconfigurable constrained codes
+for two-dimensional magnetic recording,” IEEE Trans. Inf. Theory, vol. 70, no. 7, pp. 4905–4927, Jul. 2024. [42] B. Aksoy, D. Özbayrak, and A. Hareedy, “Adapt or regress: Rate-memory-compatible spatially-coupled codes,” arXiv preprint, arXiv:2509.21112, 2025.
+[Online]. Available: https://arxiv.org/abs/2509.21112.
+
+

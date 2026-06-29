@@ -1,0 +1,360 @@
+576
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 3, MARCH 2025
+
+BANQ: BayesOpt-Based Automatic Non-Uniform Quantization for SCL Polar Decoding
+Yutai Sun , Houren Ji , Yuwei Zeng , Student Member, IEEE, Yongming Huang , Fellow, IEEE, and Chuan Zhang , Senior Member, IEEE
+
+Abstract—Successive cancellation list (SCL) polar decoding is well-known for its outstanding error correction performance. To achieve a better balance between performance and complexity in SCL decoders, non-uniform quantization (NUQ) is commonly employed. NUQ strategically adjusts the quantization steps to improve the decoder’s performance within specific bitwidth constraints. However, existing NUQ schemes rely on the designers’ expertise and lack an automated design methodology. To address this issue, this letter formulates the NUQ optimization problem and solves it using Bayesian-optimization (BayesOpt), resulting in an automated NUQ scheme termed BANQ. Utilizing BayesOpt to fine-tune the quantization steps, BANQ empowers the SCL decoder to deliver enhanced error correction performance with comparable complexity. For a (512, 410) 5G polar code, compared to uniform quantization (UQ), BANQ cuts bitwidth by 20% and bit operations (BOPs) by 19.5%, achieving near floatingpoint accuracy. Furthermore, a case study verifies that BANQ can be effectively adapted for 5G LDPC min-sum decoding.
+Index Terms—Automatic non-uniform quantization, successive cancellation list, polar codes, Bayesian-optimization.
+I. INTRODUCTION
+P OLAR codes have been adopted as the standard coding scheme for 5G control channels [1], [2], [3]. The successive cancellation list (SCL) polar decoder is celebrated for its outstanding error correction performance. Nevertheless, this enhanced performance comes with the drawback of increased computational complexity. To address this, a variety of quantization strategies have been developed to reduce bitwidth requirements [4], [5], [6], [7], [8]. The robustness of the quantization for polar codes is confirmed in [4]. Generally, these quantization schemes fall into two main categories: uniform quantization (UQ) and non-uniform quantization (NUQ). Both approaches have been extensively studied in the context of polar decoders:
+For the UQ scheme, the study detailed in [5] presents a quantization approach for cyclic redundancy check (CRC)aided SCL (CA-SCL) decoders. However, the redundancy
+Received 27 July 2024; revised 5 September 2024; accepted 24 October 2024. Date of publication 13 January 2025; date of current version 10 March 2025. This work was supported in part by NSFC under Grant 62122020 and Grant 62331009; in part by the Jiangsu Provincial NSF under Grant BG2024004 and Grant BM2023016; and in part by the Fundamental Research Funds for the Central Universities. The associate editor coordinating the review of this article and approving it for publication was W. Zhang. (Corresponding author: Chuan Zhang.)
+The authors are with the LEADS, the National Mobile Communications Research Laboratory, and the Frontiers Science Center for Mobile Information Communication and Security, Southeast University, Nanjing 211189, China, and also with Purple Mountain Laboratories, Nanjing 211100, China (e-mail: chzhang@seu.edu.cn).
+Digital Object Identifier 10.1109/LWC.2024.3490609
+
+complexity renders UQ less competitive, leading researchers to explore NUQ. Regarding the NUQ scheme, the work in [6] introduces a compression function that lowers the truncation threshold and reduces the bitwidth of the log-likelihood ratio (LLR) in SCL decoders. Additionally, the authors in [7] outline an NUQ scheme based on lookup tables and quantization functions, achieving performance close to that of floatingpoint precision. These above NUQ schemes rely on the design of quantization mapping functions, requiring manual attempts and limited by expertise. Additionally, an NUQ scheme based on dynamic programming is shown in [8], which is focused on optimizing the NUQ scheme for a single variable.
+However, existing designs for NUQ mainly rely on the designers’ expertise and lack an automated design methodology. Recently, advancements in automatic quantization techniques have been developed to minimize the bitwidths of uniform quantization (UQ) schemes for approximate message passing detectors [9]. Similarly, the automatic NUQ completes the combinatorial optimization of parameters, constituting an integer programming (IP) problem. In the field of neural networks, Bayesian-optimization (BayesOpt) [10] is proposed to discover the optimal combination of hyperparameters (e.g., learning rate, dropout, and batch size).
+In this letter, we present the design of NUQ as a non-convex problem and introduce an automated optimization method to establish the NUQ mapping table. We propose a BayesOpt based NUQ (BANQ) approach, offering flexible customization of the mapping function and seamless integration with various channel decoders. Moreover, the BANQ method eliminates the need for manual input signal scaling. It is worth noting that, the proposed BANQ schemes can be utilized not only with SCL, SC heap [11], and SC stack [12] decoders but are also compatible with other types of channel decoders, such as the min-sum low-density parity-check (LDPC) decoders.
+The main contributions of this letter are listed as follows. • Parametric NUQ Design: We develop a parametric
+approach for NUQ, converting the design into a nonconvex problem, thus eliminating the need for manual scaling of channel LLR inputs. • BANQ – Automated NUQ Refinement: We introduce a solver based on BayesOpt, called BANQ, for automating the mapping and lookup tables in SCL decoders, reducing the LLR bitwidth by 20% in SCL-8 polar decoders. • Performance Evaluation: We assess the error rates and complexity of 5G polar SCL-8 decoders with BANQ. For (512, 410) polar codes, the 4-bit BANQ scheme performs similarly to its 5-bit counterpart in FER. The effectiveness of BANQ in 5G LDPC min-sum decoder is also validated.
+
+2162-2345 c 2025 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:17 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: BANQ: BayesOpt-BASED AUTOMATIC NUQ FOR SCL POLAR DECODING
+
+577
+
+The remainder of this letter is organized as follows. Section II introduces polar codes, SCL decoding, and BayesOpt. Section III details our proposed BANQ for SCL decoders. Section IV compares the complexity and error correction performance. Section V discusses BANQ in 5G min-sum LDPC decoders. Section VI concludes this letter.
+
+II. PRELIMINARIES
+
+A. Polar Codes
+A polar code with code length N = 2n and information
+length K is denoted by (N, K) polar code. In the 5G new radio (NR) standard, CRC code c with length c is usually cascaded with K information bits a of the polar code to enhance the error correction performance of the codewords. The bits [a c] are placed in the non-frozen set A of the bit sequence u, while the bits in the frozen set Ac are 0. Then the codeword x can be obtained by
+
+x = uG,
+
+(1)
+
+where the generator matrix G is the n-th Kronecker power of
+
+the
+
+kernel
+
+F
+
+=
+
+[
+
+1 1
+
+0 1
+
+].
+
+The
+
+sequence
+
+x
+
+then
+
+performs
+
+sub-
+
+block interleaving and rate matching.
+
+B. SCL Decoding
+
+SCL polar decoding is a breadth-first tree search algorithm.
+
+Unlike SC decoding, SCL decoding retains a sequence of L
+
+candidate bits at each layer. Extended paths are competed
+
+by path metrics (PMs), and paths with smaller metrics are
+
+reserved. The path metrics are calculated as
+
+PMli =
+
+PPMMliil
+
+, +|λli
+
+|,
+
+ui ui
+
+= =
+
+Hard Hard
+
+λλilil
+
+, ,
+
+(2)
+
+where λil is the LLR of the i-th bit for the l-th path, and Hard(·) is hard decision function. Finally, the decoder outputs
+
+the path that yields the smallest PM and satisfies CRC.
+
+To simplify the calculation, node based SCL decoders were
+
+proposed by introducing Rate-0 (R0), Rate-1 (R1), repeti-
+
+tion (Rep), and single parity check (SPC) nodes [13], [14].
+
+To achieve a proper trade-off between error correction
+
+performance and the calculation complexity, this letter applies
+
+the strategy to limit the number of path forks in [15].
+
+Specifically, the decoder performs a maximum of 3 path splits
+
+in an R1 node and a maximum of 2 path splits in an SPC
+
+node.
+
+C. Bayesian-Optimization
+
+BayesOpt stands out as a sequential program designed for
+
+the global optimization of closed-box functions, all without
+
+assuming any specific functional forms [10]. It is commonly
+
+used in the optimization of functions that are expensive
+
+to evaluate and is frequently employed for hyperparameter
+
+combinatorial optimization in neural networks. The term
+
+“closed-box” usually refers to a particular kind of neural
+
+network. In this letter, the “closed-box” refers to the SCL polar
+
+decoder using NUQ. Then, the BayesOpt is commonly used
+
+to solve the problems:
+
+x ∗ = min f (x ),
+
+(3)
+
+x ∈S
+
+where x is a possible parameter vector, x ∗ denotes the optimized parameter vector, S is the solution space of all feasible x , and f represents the objective function.
+Due to the fact that the objective function f is considered as a “closed-box”, the BayesOpt first treats f as a stochastic function and imposes a prior on it. After obtaining the objective function value, f (x ) is used to update the prior information, forming a posterior distribution on the objective function. Then an acquisition function is constructed and determines the next query to balance exploration of unknown solution regions and exploitation of known solution regions.
+
+III. PROPOSED BAYESOPT BASED AUTOMATIC NUQ FOR SCL POLAR DECODING
+BayesOpt is an optimization algorithm based on Bayesian inference, designed to find the optimal values of closed-box functions that are costly to evaluate. Any decoder can be regarded as a “closed-box”: given a quantization scheme, it can output the corresponding error correction performance. Therefore, to obtain a near-optimal NUQ scheme, BayesOpt can be employed as an optimization tool. However, it’s important to note that there may be multiple sets of quantization steps that yield similar error correction performance. BayesOpt’s ability to balance exploration and exploitation makes it particularly suitable for discovering these multiple near-optimal solutions.
+In this section, we first parameterize the NUQ scheme and transform the NUQ optimization problem into a parameter optimization problem with constraints. Then, we outline the solution process for this problem based on BayesOpt. The advantage of this solution process lies in its ability to automatically obtain an optimized NUQ scheme without the need for theoretical analysis of a specific decoder. We simply need to specify the type of decoder, the maximum bitwidth, and the maximum number of iterations.
+
+A. Problem Formulation
+
+We start by transforming the optimization problem of NUQ mapping into non-convex parameter optimization problems. The NUQ mapping schemes typically design quantization step sizes s by specifying a reconstruction function [7]. However, this letter takes a unique approach by designing quantization step sizes individually. An M-bit quantization scheme implies quantizing internal LLRs with M bits and PMs with (M + 1) bits, necessitating the design of 2M steps.
+Large-magnitude LLRs occur infrequently and are less sensitive in value, whereas small-magnitude LLRs are sensitive in value and have a significant impact on performance [6]. Based on this observation, we have established that the quantization step widens with increasing input amplitude. This ensures a monotonically non-decreasing sequence, represented by the design parameter vector q as the increment of the quantization step. Particularly, the first parameter q0 is the initial quantization step size, and the relationship between the quantization steps s and designed parameters q is:
+
+qi =
+
+s0, i = 0, si − si−1, i = 1, 2, . . . , 2M − 2.
+
+(4)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:17 UTC from IEEE Xplore. Restrictions apply.
+
+578
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 3, MARCH 2025
+
+Algorithm 1: Procedure of BANQ
+
+Input: Quantization bitwidth: M; Iteration number: I. Output: Quantization steps: s.
+
+i ← 0; D ← {}; Randomly generate q (0); F (q (0)) ←SCLDECODER(q (0));
+while i < I do
+
+D ← D, {q (i), F (q (i))} ;
+
+i ← i + 1; Update surrogate model S by D and (6); Estimate P (F |D) by S;
+
+Update acquisition function A; q (i) ← arg maxq A(q ); F (q (i)) ←SCLDECODER(q (i));
+
+qCa∗ l←cualrgatmeinqs(∗i)
+
+{F (q (i) by q ∗
+
+)}; and
+
+(4);
+
+This provides the basis for the optimization problem, where 2M − 1 quantization parameters require fine-tuning. To enhance the performance of the NUQ SCL polar decoder, we use the frame error rate (FER) as the objective function, akin to the reward function in [9]. Therefore, we can obtain the IP based optimization problem:
+
+min F = FER(q ),
+
+s.t. qi ≥ 0, i = 0, 1, 2, . . . , 2M − 2,
+
+(5)
+
+where FER(q) is the FER for quantization parameters q .
+
+B. Optimization Tools
+
+The BANQ procedure is outlined in Alg. 1, with the surrogate model S and acquisition function A as its core components.
+1) Surrogate Model: To estimate objective function F (q ) efficiently, a Gaussian process (GP) based surrogate model S is applied. GPs extend the multivariate Gaussian distribution into an infinite-dimensional space, finding common applications as surrogate models, especially for optimizing complex and poorly understood objective functions in signal processing [10], [16], [17]. GPs provide a probabilistic framework that allows for the modeling of uncertainty, facilitating informed decision-making regarding the sampling of the objective function [10]. The surrogate model treats the function of interest as a realization of a GP, with a specified mean function μ(q ) and covariance kernel Σ(q , q ), i.e., F (q ) ∼ N (μ, Σ). The mean function captures the expected value of the function at each point, while the covariance function encodes the relationships between different points. The kernel function’s selection, crucial for surrogate model quality, often favors the squared exponential function, as expressed in (6).
+
+Σ q,q
+
+= exp
+
+−
+
+1 2
+
+||q
+
+−
+
+q
+
+||2
+
+.
+
+(6)
+
+2) Acquisition Function: The acquisition function A plays a critical role in determining the most advantageous sample point q , for evaluation. A incorporates three distinct strategies with equal likelihood in each iteration: probability of improvement (PI), expected improvement (EI), and lower confidence
+
+Fig. 1. The optimized quantization step sizes s and mapping scheme of the 4-bit BANQ scheme for (512, 410) polar codes and SCL decoder.
+
+bound (LCB). PI assesses the likelihood that a new sample
+
+will outperform current observations. It is expressed as (7).
+
+F∗
+
+API(q ) =
+
+P (F |D)dF ,
+
+(7)
+
+−∞
+
+where prior observation is D = {q , F (q )}(0,1,2,...), and P (F |D) is estimated by the surrogate model S. F ∗ is the
+
+minimum F in past observations. API uses the surrogate model S to estimate the probability that F (q ) is less than F ∗ based
+
+on the prior observation D.
+
+Building on the principle of PI, EI captures the expected value of the improvement over F ∗, defined by:
+
+F∗
+
+AEI(q ) =
+
+(F ∗ − F )P (F |D)dF .
+
+(8)
+
+−∞
+
+LCB, meanwhile, encourages sampling in regions of high
+
+uncertainty and significant potential gain:
+
+ALCB(q ) = −μ(q ) + βσ(q ),
+
+(9)
+
+where sampling points with lower mean μ and higher variance σ are encouraged, corresponding to exploitation and exploration, respectively. σ(q ) = Σ(q , q ) is the variance, and parameter β shows the trade-off between “exploitation” and
+
+“exploration”.
+
+The acquisition function A assesses the value of parameter q for the next round of closed-box tests (SCL decoder). Therefore, the next q ∗ to be sampled is the q that maximizes
+
+A, that is:
+
+q ∗ = arg maxA(q ).
+
+(10)
+
+q
+
+3) Parameter Settings and Optimization Results: For the
+proposed BANQ scheme, the iteration number I is 1000. The trade-off parameter β for LCB in (9) is 1.96. To strike a balance between complexity and accuracy when assessing FER(q ), the maximum number of error frames is 100.
+As shown in the left part of Fig. 1, the fine-tuned quantization steps s for (512, 410) polar codes are provided. One can observe that s0 = s1 = · · · = s4, which indicates a uniform quantization for this interval. The right part of Fig. 1 depicts
+the proposed BANQ mapping scheme. Due to the fact that qi ≥ 0, the step size in the fine-tuned NUQ scheme becomes gradually wider as the input magnitude increases.
+
+C. Quantized Decoding
+Following the solving process, the quantization mapping scheme is depicted in Fig. 1. In other words, for each internal LLR (input value), its corresponding quantized value is based
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:17 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: BANQ: BayesOpt-BASED AUTOMATIC NUQ FOR SCL POLAR DECODING
+
+579
+TABLE I BOPS FOR DIFFERENT QUANTIZATION SCHEMES
+
+Fig. 2. Proposed 4-bit BANQ for (512,410) polar codes and SCL decoders.
+on the mapping scheme in Fig. 1. Notably, the proposed BANQ scheme eliminates the need for scaling the channel input LLR. The uniform width observed in each step within the blue box indicates that the quantization in this region is equivalent to UQ after scaling the channel input LLR. Furthermore, the scheme avoids the unified scaling operation of the channel LLR, eliminating the intricate design of scaling factors and the manual adjustment thereof.
+Unlike the direct addition and subtraction operators of the UQ scheme, the calculation under the NUQ scheme often involves lookup tables [7]. Utilizing the mapping table obtained through Alg. 1, the lookup tables for the Z = |X | + |Y | operation and the Z = ||X | − |Y || operation can be directly obtained. For both cases, Z3 = 0. The lookup tables for a 4-bit BANQ case are shown in Fig. 2. Through simplification with the Karnaugh map shown in Fig. 2, the addition and subtraction of BANQ can also be realized through combinational logic.
+IV. EXPERIMENTAL RESULTS
+In this section, we evaluate the complexity and the error correction performance of UQ, BANQ and the schemes in [6] and [7]. For all discussed quantization schemes, each PM consumes 1 bit more than the internal LLR. For simplicity, we denote the required bits of each scheme’s internal LLR after the scheme name (e.g., “UQ-4” is the scheme that uses 4 bits to uniformly quantize internal LLR). To enhance the error correction performance, all 4-bit and 5-bit schemes adopted set the scaling factor for the received signal to 0.2 and 0.3, respectively. In this section, the list sizes for all SCL decoders are 8, and CRC-aided fast simplified SCL decoders [14] with CRC-11 are considered for all cases.
+A. Complexity Comparison
+With the same bitwidth, UQ and NUQ share the same amount of internal LLR bitwidth. Typically, NUQ requires lookup tables or combinational logic circuits for addition and subtraction operations. We evaluate the complexity by bit operations (BOPs) performed as [18] in Table I. For all cases, the proposed BANQ-4 exhibits complexity comparable to that of UQ-4, while BANQ-5 achieves complexity similar to its 5-bit counterpart in [7]. For the (512, 410) case, compared to the 5-bit scheme in [7], the BANQ-4 scheme consumes 19.5% less complexity, while delivering comparable FER performance. Similar conclusions can be made for other cases
+
+as well: the BANQ-4 scheme reduces BOPs by more than 19% BOPs for the (256, 128), (512, 256) and (1024, 512) polar codes. Moreover, the approaches in [6] incur about 1.48 times the complexity of the BANQ-4.
+B. Error Correction Performance
+The error correction performance for different quantization schemes is depicted in Fig. 3. For both (256, 128) and (512, 256) cases in Fig. 3, the proposed quantized decoders utilize the same BANQ mapping scheme. Compared to UQ-4, BANQ-4 achieves more than 0.15 dB gains at FER = 10−3 with almost the same complexity for N = 256, while about 0.23 dB gains for N = 512. Also, the performance of BANQ-4 is comparable to the 6-bit scheme in [6] and surpasses the 5-bit scheme in [7], thereby achieving a 20% reduction in bitwidth. The BANQ-5 scheme achieves an additional performance gain of 0.10 dB and exhibits a negligible performance gap compared to the floating-point version. As the N increases, the performance gap between BANQ-4 and UQ-4 becomes larger. This is reasonable because the successive nature of the SCL decoder makes early inaccuracies irreversible later. For the scenario where N = 512 and R = 0.8, BANQ-4 outperforms UQ-4, achieving a gain of 0.26 dB at an FER of 10−3. Furthermore, the performance gap between BANQ-4, BANQ-5 and their NUQ counterparts is negligible (0.04 dB). In the context of (1024, 512) polar codes, BANQ-4 outperforms UQ-4 by 0.26 dB at an FER of 10−3, while BANQ-5 provides a 0.07 dB improvement over the 6-bit scheme discussed in [6]. It is worth mentioning that the same BANQ scheme, obtained at 2.0 dB, is used in each NUQ example across various signal-to-noise ratios (SNRs). This proves the robustness of the proposed BANQ under different SNR regions. Therefore, the BANQ consistently achieves performance comparable to its NUQ counterparts at a lower bitwidth, subtly trailing behind the floating-point one. Additionally, the BANQ can be applied to other polar decoders (e.g., SCL, SC stack, and SC heap).
+V. CASE STUDY: BANQ IN 5G MIN-SUM LDPC DECODING
+To validate the broad effectiveness of BANQ alongside various channel decoders, we present an examination of its capability to reduce complexity and enhance error correction for 5G LDPC min-sum decoders, employing 15 iterations for (1088, 352) LDPC codes and 50 iterations for (2720, 880) LDPC codes. The operations involved in the LDPC min-sum NUQ decoder consist of comparison and addition. The former can be accomplished through direct comparison, while the latter requires lookup tables or combinational logic to implement.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:17 UTC from IEEE Xplore. Restrictions apply.
+
+580
+
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 3, MARCH 2025
+
+Fig. 3. Error rate comparison for SCL-8 polar decoders with different quantization schemes.
+
+Fig. 4. Error rate comparison for min-sum LDPC decoders with different quantization schemes.
+Fig. 4 illustrates the FER performance of BANQ and the scheme in [19] for LDPC codes. For the (2720, 880) LDPC codes, the performance of BANQ-5 is on par with the widely recognized UQ-6 scheme [19], showing a performance gap of 0.20 dB in comparison to the UQ-5 approach. This indicates that our proposed approach can achieve a reduction in LLR bitwidth by 16.7% compared to the UQ method. With the same 5-bit bitwidth, BANQ outperforms the scheme in [19] by 0.10 dB at an FER of 10−3. For a (1088, 352) LDPC code, the performance of both schemes is comparable. Similar results are noted with the (1088, 352) LDPC codes, highlighting BANQ’s advantages in efficiency and reliability, and its versatility across various channel decoding scenarios.
+VI. CONCLUSION
+In this letter, we introduced parameterization to the design of NUQ schemes, formulating the optimization of these parameters as an IP problem. Then, we presented a BayesOpt based automatic NUQ scheme tailored for SCL polar decoders. The numerical results demonstrate that the BANQ-4 scheme squeezes 20% internal LLR bitwidth and 19.5% BOPs for SCL polar decoders in 5G while achieving the FER performance of its 5-bit NUQ counterpart. Meanwhile, the proposed BANQ-5 reduces 17% internal LLR bitwidth for 5G LDPC min-sum decoders while maintaining the performance of the UQ-5 scheme. In future work, our focus will be on the implementation of the proposed approach in SC heap/stack polar decoders and offset/normalized min-sum LDPC decoders.
+
+REFERENCES
+[1] E. Arıkan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[2] NR; Multiplexing and Channel Coding, Version 15.9.0, 3GPP Standard TS 38.212, 2020.
+[3] “Chairmans notes of agenda item 7.1.5 channel coding and modulation,” 3GPP, Gothenberg, Sweden, document TSG RAN WG1 Meeting #87, 3GPP R1-1613710, Nov. 2016.
+[4] S. H. Hassani and R. Urbanke, “Polar codes: Robustness of the successive cancellation decoder with respect to quantization,” in Proc. IEEE Int. Symp. Inf. Theory, 2012, pp. 1962–1966.
+[5] X. Zheng, J. Wang, and B. Tang, “Quantization of CRC-aided successive cancellation list decoder for polar codes,” in Proc. IEEE 2nd Int. Conf. Robot. Autom. Sci. (ICRAS), 2018, pp. 1–5.
+[6] Y. Dong, K. Niu, and C. Dong, “Non-uniform quantization of successive cancellation list decoder for polar codes,” in Proc. IEEE 31st Annu. Int. Symp. Person. Indoor Mobile Radio Commun. (PIMRC), 2020, pp. 1–6.
+[7] M. Rowshan, E. Viterbo, R. Micheloni, and A. Marelli, “Logarithmic non-uniform quantization for list decoding of polar codes,” in Proc. IEEE 11th Annu. Comput. Commun. Workshop Conf. (CCWC), 2021, pp. 1161–1166.
+[8] Z. Cao, H. Zhu, Y. Zhao, and D. Li, “Nonuniform quantized decoder for polar codes with minimum distortion quantizer,” IEEE Commun. Lett., vol. 25, no. 3, pp. 835–839, Mar. 2021.
+[9] Y. Ge, Z. Ji, Y. Huang, Z. Zhang, X. You, and C. Zhang, “Automatic hybrid-precision quantization for MIMO detectors,” IEEE Trans. Signal Process., vol. 71, pp. 1039–1052, Mar. 2023.
+[10] P. I. Frazier, “A tutorial on Bayesian optimization,” 2018, arXiv:1807.02811.
+[11] H. Zhou, X. Liang, C. Zhang, S. Zhang, and X. You, “Successive cancellation heap polar decoding,” in Proc. IEEE Glob. Commun. Conf. (GLOBECOM), 2016, pp. 1–6.
+[12] K. Niu and K. Chen, “Stack decoding of polar codes,” Electron. Lett., vol. 48, no. 12, pp. 695–697, 2012.
+[13] S. A. Hashemi, C. Condo, and W. J. Gross, “A fast polar code list decoder architecture based on sphere decoding,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 63, no. 12, pp. 2368–2380, Dec. 2016.
+[14] S. A. Hashemi, C. Condo, and W. J. Gross, “Fast and flexible successivecancellation list decoders for polar codes,” IEEE Trans. Signal Process., vol. 65, no. 21, pp. 5756–5769, Nov. 2017.
+[15] Y. Ren, A. T. Kristensen, Y. Shen, A. Balatsoukas-Stimming, C. Zhang, and A. Burg, “A sequence repetition node-based successive cancellation list decoder for 5G polar codes: Algorithm and implementation,” IEEE Trans. Signal Process., vol. 70, pp. 5592–5607, Oct. 2022.
+[16] S. Yang, B. Liu, Z. Hong, and Z. Zhang, “Bayesian optimization-based beam alignment for mmWave MIMO communication systems,” in Proc. IEEE Int. Symp. Person. Indoor Mobile Radio Commun. (PIMRC), 2022, pp. 825–830.
+[17] D. Lho et al., “Bayesian optimization of high-speed channel for signal integrity analysis,” in Proc. IEEE Conf. Electr. Perform. Electron. Packag. Syst. (EPEPS), 2019, pp. 1–3.
+[18] C. Baskin et al., “UNIQ: Uniform noise injection for non-uniform quantization of neural networks,” ACM Trans. Comput. Syst., vol. 37, nos. 1–4, pp. 1–15, 2021.
+[19] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:17 UTC from IEEE Xplore. Restrictions apply.
+
+

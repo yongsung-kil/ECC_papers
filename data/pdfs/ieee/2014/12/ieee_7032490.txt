@@ -1,0 +1,338 @@
+A Hardware Generator for Factor Graph Applications
+James Demma and Dr. Peter Athanas
+Bradley Department of Electrical and Computer Engineering Virginia Polytechnic and State University Blacksburg, VA, USA jdemma@vt.edu, athanas@vt.edu
+
+Abstract—
+
+A
+
+Factor
+
+Graph
+
+(FG
+
+--
+
+http://en.wikipedia.org/wiki/Factor_graph) is a structure used to
+
+find solutions to problems that can be represented as a
+
+Probabilistic Graphical Model (PGM). They consist of
+
+interconnected variable nodes and factor nodes, which iteratively
+
+compute and pass messages to each other. FG’s can be applied to
+
+solve decoding of forward error correcting codes, Markov chains
+
+and Markov Random Fields, Kalman Filtering, Fourier
+
+Transforms, and even some games such as Sudoku. In this
+
+paper, a framework is presented for rapid prototyping of
+
+hardware implementations of FG-based applications. The FG
+
+developer specifies aspects of the application, and the framework
+
+returns a design. A system of Python scripts and Verilog
+
+Hardware Description Language templates together are used to
+
+generate the HDL source code for the application. The generated
+
+designs are vendor/platform agnostic, but currently target the
+
+Xilinx Virtex-6-based ML605. The framework has so far been
+
+primarily applied to construct Low Density Parity Check
+
+(LDPC) decoders. The characteristics of a large basket of
+
+generated LDPC decoders, including contemporary 802.11n
+
+decoders, have been examined as a verification of the system and
+
+as a demonstration of its capabilities. As a further
+
+demonstration, the framework has been applied to construct a
+
+Sudoku solver.
+
+Keywords—factor graph; belief propagation; hardware generator; sum-product; min-sum; decoder; sudoku;
+
+I. INTRODUCTION
+Probabilistic Graphical Models (PGM) can be used to describe a broad scope of problems. They may be applied to speech recognition, computer vision, information coding, machine learning, and protein modeling, to name a few. At their most basic, PGMs are sets of random variables with conditional interdependencies. They are graphical, in that they can be modeled as connected graphs, with the random variables as vertices and the conditional dependencies as edges. A Factor Graph (FG) is a variation of a PGM that executes an algorithm upon the graph structure to find a solution to a set of constraints, given some initial a priori information.
+Factor graphs work in the domain of probability. A FG solver may be thought of as a probability processor. Elements within a FG communicate with one another by passing messages about what they believe they are, what they believe their neighbors to be, and how strongly they believe it. They don’t work deductively, in serial fashion. They process
+
+iteratively and in parallel, converging their beliefs on a solution. Some problems that are difficult to solve deterministically, such as those described above, can be solved probabilistically, using factor graphs.
+This work presents a system for generating factor graph solvers. It returns a hardware solver design to the user, ready for synthesis and implementation. The intended benefits are ease of creation and rapid prototyping. Development of this system has targeted an FPGA, whose reconfigurability further exemplifies the quickness with which generated designs become functional and testable.
+II. FACTOR GRAPHS EXPLAINED
+As the name implies, a FG’s structure is that of a graph, with vertices and edges. It is usually bipartite, meaning it’s vertices can be partitioned into two sets such that a vertex of one set does not share an edge with another vertex in the same set. These two sets of vertices are commonly called variable nodes and factor nodes. Edges in the graph define connections between variable and factor nodes. These connections represent channels through which the nodes communicate with one another via messages. Through iterations of this message passing, a solution is converged upon.
+The process begins by presenting the variable nodes with a priori data, which are an initial set of probabilities of values for the variable nodes. Variable and factor nodes compute messages alternately and pass them to each other; one round of message passing by both variable and factor nodes comprises an iteration. This continues until an iteration limit is reached, or a condition is met that represents a solution. In addition to calculating their messages, variable nodes also calculate a posteriori data, which are a post-computation set of probabilities of values for the variable nodes. These are more commonly referred to as beliefs. The strongest belief (that which has the highest probability) is a variable node’s hard belief. When the hard beliefs satisfy a termination condition, then they represent a solution of the factor graph.
+A variable node’s beliefs are calculated the same as joint probability. They are the product of the incoming messages from factor nodes and the a priori data. A visual representation of the belief computation is shown in the right of Fig. 1. Variable node messages are marginal probabilities. This means that they are calculated the same as the beliefs, except that computing a message to a factor node disregards the
+
+978-1-4799-5944-0/14/$31.00 ©2014 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Message and Belief Computation
+
+message received from that factor node. In Fig. 1, this marginalization is shown on the left. Actual variable node message calculation will be introduced in the next section.
+Factor node messages are calculated as marginal summaries. Such a message is a function of the incoming messages from variable nodes and an application specific factor function. It uses a marginalization computation similar to that portrayed in the left of Fig. 1. Calculation of factor messages is often very computationally complex, as it requires evaluating the factor function for all possible permutations of connected variable node domain values [1]. For this reason, factor graph applications often compute an approximation function for factor node messages [1]. Actual factor node message calculation is introduced in the next section.
+The methods by which the variable and factor nodes compute their messages constitute the algorithm executed upon a factor graph. The two algorithms that are implemented in this work are the Sum-Product algorithm and the Min-Sum algorithm.
+III. THE GENERATOR FRAMEWORK
+A. System Structure
+The system presented is a framework for generating hardware designs for factor graph solvers, and will henceforth be referred to as the Generator Framework. Its goal is to allow a developer to specify certain aspects of a factor graph and the desired computation, then produce a hardware design, ready for implementation. Factor graph problems can vary in four criteria, and these four criteria constitute the full definition of a solver. They are graph structure, factor computation, iterative algorithm, and termination. This kind of generic model for a solver permits programmability based on the defining criteria. A programmable hardware FG-Solver generator would permit easy prototyping of FG designs, reduce the time to implement a viable solver, relax the often high skill requirements inherent in hardware description language (HDL) coding, and ease the costs associated with hardware development time. The only drawback from having an auto-generated design would be loss of customizability. But for the presented work, this point is moot since the system produces Verilog HDL source code, and not black-box IP. The user may modify the design as desired.
+A system that seeks to automate the generation of FGSolver hardware designs must allow a developer to specify the desired options for the four aforementioned criteria. Ideally, such a system would not require the developer to write any source code, and would completely automate the HDL
+
+Fig. 2. Block Diagram of the FG Solver
+generation. The Generator Framework has fully accomplished this goal in some of the necessary criteria, and partially in others. The degree to which complete automation of each criteria has been achieved will be discussed in the subsequent subsections.
+The Generator Framework consists of a system of generator scripts and hardware description language templates that work in tandem to produce the HDL source code for a generated hardware design. Each module within a generated design that is dependent on any FG criteria has an associated generator script and a template. The template is a Verilog source file that is essentially a “canvas” on which the generator script may “paint.” The template contains Verilog boiler-plate code, and any code that is guaranteed not to vary with different generator parameters. Lastly, it contains tags that are used by the generator scripts to find the positions within the template where code should be inserted.
+A generator script is a Python script that takes generation parameters as command line arguments. Common parameters include the number of connections for variable and factor node modules, bit vector length for messages, and a unique design identifier. The script opens the appropriate template for writing and inserts code according to the generation parameters and the positions of insertion tags. Each tag within the template has a corresponding block of code within the generator script that will locate the tag and insert HDL code.
+B. Solver Hierarchy and Generation
+An FG Solver consists of four components. These are the Graph, Scheduler, Input Stage, and Termination module. The Graph is a structure of connected variable and factor nodes. The Scheduler controls algorithm execution. The Input Stage stores the initial a priori data. And the Termination module tests the beliefs for a solution. Fig. 2 shows a block diagram of the architecture of an FG Solver module.
+Even though the structure of an FG Solver module doesn’t vary with application, it still requires code generation and insertion. This is due to the variability of the bus widths of the initial data and belief data. The remainder of this section briefly covers the generation of each of the FG Solver components.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+represents the set of all factor nodes. A notation such as qn→m(x) should be read as, “the variable node message from node n to node m regarding discrete x.” The notation Mn should be read as, “the set of all factor nodes connected to variable node n.” Lastly, the notation Mn,m should be read as,
+“the set of all factor nodes connected to variable node n, except for m.”
+
+→ ( )= ( = )∙
+
+→()
+
+(1)
+
+∈,
+
+( )= ( = )∙
+
+→()
+
+(2)
+
+Fig. 3. 1-Domain Variable Node for the M-S Algorithm
+
+∈
+
+C. Variable Node Generation
+Variable nodes vary according to several factors, such as message representation, number of connections, domain, and computation algorithm. The generator scripts appropriately populate the interface and code body with generated code. The body of a variable node for one algorithm can be substantially different from that of another. For this reason, a different variable node generator script exists for each supported algorithm. Currently, variable nodes for two algorithms are supported: the Sum-Product algorithm (S-P), and the Min-Sum (M-S) algorithm.
+Variable node generation for the Sum-Product algorithm supports N-domain nodes with 16-bit floating-point probability representation, with any number of node connections. The domain of a variable is the number of discrete values that the node may represent. A variable node of N-domain is actually a hierarchical module, consisting of N instantiations of 1-domain variable nodes.
+The incoming messages from the factor nodes are 16*N bit wide vectors representing probabilities for each of the discrete domain elements. In an N-domain variable node, each message is split so that the respective probability values can be passed to the appropriate 1-domain variable node An N-domain variable node also outputs a hard belief, representing the discrete domain value with the highest probability. The 1domain variable node instantiations, hard belief logic, and temporary wire assignments constitute the generated code body of the N-domain variable node. See [2] for a diagram of the Ndomain variable node architecture.
+A 1-domain S-P variable node computes the probability of that node having a certain single discrete value. Its output messages are calculated according to (1) [1], and its output belief according to (2) [1]. See [2] for a diagram of the 1domain S-P variable node architecture.
+The notations of these equations, as well as those of subsequent equations, is as follows: q represents a variable node computation, r represents a factor node computation, n represents a particular variable node, m represents a particular factor node, N represents the set of all variable nodes, and M
+
+Variable node generation for the M-S algorithm supports 1domain nodes with N-bit signed integer log-likelihood representation, with any number of connections. This variable node type is intended for binary domain applications, such as decoders. A single M-S variable node stores the probability of being a zero. A 2-domain hierarchical node is unnecessary, since the probability of a one is intrinsically stored within the probability of a zero, as P(1) = 1 - P(0). Furthermore, the probability is stored as a log-likelihood ratio (LLR), as calculated in (3) [3]. Output messages are calculated according to (4) [4], and the output beliefs according to (5) [4].
+
+= log
+
+(0) (1)
+
+(3)
+
+→ ( )= ( = )+
+
+→ ( ) (4)
+
+∈,
+
+( )= ( = )+
+
+→()
+
+(5)
+
+∈
+
+A hard belief is calculated by examining the sign of the belief sum. A positive belief implies that P(0) > P(1) and so 0 is output as the hard belief. A negative belief results in a hard belief of 1. Fig. 3 shows the architecture of a 1-domain S-P variable node.
+D. Factor Node Generation
+Like a variable node, a factor node varies depending on message representation, number of connections, domain, and computation algorithm. Though unlike a variable node, a factor node does not output a belief. There exists a more fundamental difference as well. A variable node is algorithm specific. Different applications may use common variable node modules, so long as they both employ the same algorithm. A factor node however, is not just algorithm
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4. 1-Domain Factor Node for M-S Algorithm
+specific. It is also application specific. In an abstract sense, a factor node represents a constraint of the PGM used to model a problem. As different problems have different constraints, so too must a different applications use different factor nodes. Currently, the Generator Framework supports the generation of factor nodes for two applications: Min-Sum for LDPC decoders, and Sum-Product for a Sudoku solver.
+Min-Sum LDPC factor node generation supports 1-domain nodes, with N-bit signed integer LLR representation, with any number of connections. The representation of probabilities as LLRs is identical to that of the Min-Sum variable node. Output messages are calculated according to (6) [4]. Fig. 4 shows the architecture of a 1-domain M-S factor node.
+
+→ ( )=
+∈,
+
+( → ( )) ∙
+
+∈
+
+|
+,
+
+→ ( )|
+
+(6)
+
+Sum-Product Sudoku factor node generation supports Ndomain nodes, with 16-bit floating point probability representation, with any number of connections. Such Ndomain factor nodes are hierarchical, just as N-domain S-P variable nodes, and are comprised of N instantiations of 1domain factor nodes. See [2] for a diagram of the N-domain Sudoku factor node architecture. Like their variable node counterparts, the input messages are divided and routed to the inputs of the appropriate 1-domain factor nodes, and the outputs of the 1-domain factor nodes are routed and concatenated to create the output messages of the N-domain factor node
+A 1-domain S-P Sudoku factor node calculates the marginal summaries for one discrete value of the domain. It computes its output messages according to (7) [1]. See [2] for a diagram of the 1-domain S-P Sudoku factor node.
+
+→ ( )=
+
+(1 − → ( ))
+
+(7)
+
+∈,
+
+E. Graph Construction
+Graph module generation is dependent only upon the structure of the factor graph, and the quantization of the messages and beliefs. It is completely independent of application and algorithm. The graph template requires code insertion in multiple places. The most important of these insertions, and those which define the graph itself, are the variable and factor node instantiations.
+To insert the node instantiations and complete the generation of the graph module, the structure of the factor graph must be input to the Generator Framework. This is accomplished via a graph definition file. This file describes all node connections as well as the Verilog modules names for the nodes. The graph module generator uses this connection data to instantiate an appropriate number of variable nodes and factor nodes, whose module types and input and output connections are specified by the graph definition file. After module instantiations, the graph module is a complete representation of the structure of the factor graph.
+F. Algorithm Termination
+Algorithms on factor graphs are iterative. They must either cease after a number of iterations, or reach a terminating condition. Such a terminating condition represents a solution, and is dependent upon the hard belief outputs of the variable nodes. A solution is specific to an application, so different applications require different termination modules. But while the calculation of the terminating condition varies, the general structure of termination modules remains the same. The terminating condition calculation must inserted manually by the developer.
+IV. LDPC DECODER BASKET
+The requirements for the first application selection are twofold. It is intended to be developed in tandem with the Generator Framework itself. Therefore, it should be simple so that debugging the Generator Framework is less complex. Second, it should be dynamic, able to vary in response and performance given different parameters. For these reasons, Low Density Parity Check (LDPC) decoders were selected as the first application. The applicable message passing algorithm needs simple arithmetic and requires only small quantization, so debugging via an HDL simulator or logic analyzer is simplified. LDPC decoders can vary along many parameters, such as codeword length, rate, quantization, maximum permitted algorithm iterations, and the amount of noise applied to codewords. Their response and performance are accurately and precisely measured as bit error rate, average iterations, and throughput versus applied noise. So, a basket of LDPC decoders makes an excellent choice for a first application.
+An LDPC code is a linear forward error correcting code that is defined by a generator matrix and a check matrix. A message of length K, when multiplied by a KxN generator matrix G, results in a codeword of length N. A (N-K)xN check matrix H, when multiplied by a transposed codeword of length N, results in a parity vector. If the parity vector contains all zeros, then the codeword is valid.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig 5. Factor graph of LDPC code
+
+LDPC decoders map well to factor graphs. Each bit of a codeword is represented by a variable node and corresponds to a column in the check matrix H. Each parity check is represented by a factor node and corresponds to a row in H. Thus the parity check matrix H provides a direct mapping to a factor graph that represents the LDPC code. Fig. 5 shows an example factor graph representation of a small LDPC code.
+The test set for this application includes 37 designs made with the Generator Framework. Testing was conducted on a Xilinx Virtex 6 VC6VLX240T, using an ethernet I/O interface.
+First, codeword length variation is tested. The decoder response of six codeword lengths is presented, where length N ∈ {120, 200, 400, 800, 1008, 1156}. Two codes of the same length could have very different characteristics and response, resulting from differences in their graph structure. For this reason, for each length N, five codes and decoders were constructed, so that the variations in response could be averaged. Third party software was employed for code construction: LDPC-codes [5], and MainPEG [6]. All codes are rate R=1/2, which refers to the ratio of message length to codeword length. Each code is also (3,6)-regular, meaning that variable nodes are connected to three factor nodes, and factor nodes are connected to six variable nodes. This is not a strict requirement however. The code generation software will make slight modifications to variable and factor node connectivity to prevent certain structural characteristics in the factor graph that are detrimental to performance, such as cycles of length four [7]. Figs. 6 shows Bit Error Rate (BER) vs. Signal-to-Noise Ratio (SNR).
+Better performance is characterized by lower BER, and in Fig. 6 it is shown that performance increases with each step up in codeword length. This is the expected behavior; larger codewords perform better than smaller ones [4]. Decoder response is also characterized by how pronounced is the waterfall region. This is negative slope region of a data series in the plot. As codeword length increases, the waterfall region becomes more pronounced with ever increasingly negative slope, further verifying the correct response from the decoders.
+Another tested parameter variation is the maximum number of iterations (Imax) that are permitted in an execution sequence. Six different values for max iterations were attempted on a N=800, R=1/2 decoder. They are 5, 10, 15, 20, 25, and 250. Fig. 7 shows BER vs SNR for each value of Imax. As expected, solver sequences that were permitted to iterate longer resulted
+
+Fig 6. BER vs. SNR for varying N
+
+Fig 7. BER vs. SNR for varying Imax
+
+this work
+
+[8]
+
+this work [8]
+
+Length
+
+1008
+
+1000
+
+1152
+
+1152
+
+Quan
+
+4-3 (hyb-1) 4-3 (hyb-1) 4-3 (hyb-1) 4-3 (hyb-1)
+
+Device
+
+Virtex 6 LX240T
+
+Virtex 5 LX110
+
+Virtex 6 LX240T
+
+Virtex 5 LX155
+
+Registers 25,702
+
+24,012
+
+29,154
+
+27,372
+
+LUTs
+
+53,748
+
+61,761
+
+61,200
+
+72,290
+
+Clock
+
+100 MHz
+
+154.3 MHz 100 MHz 154.3 MHz
+
+Eb/N0 at 3.4 dB BER 10e-6
+
+3.5 dB
+
+3 db
+
+3.5 dB
+
+Avg. Iter. 5.6 at 3.5 dB SNR
+
+5.8
+
+5.7
+
+5.8
+
+Avg. Throughput at 3.5 db SNR
+
+6.6 Gbps
+
+14.6 Gbps 7.5 Gbps 16.9 Gbps
+
+Table 1. Comparison with Other Work
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+in lower BERs. See [2] for additional analysis of throughput, quantization effects, and rate effects.
+Table 1 shows a comparison of the generated decoders with other published work. It indicates that the decoders created with the Generator Framework have comparable performance, in terms of Eb/N0 and required iterations, to that of the work in [8], which claimed to out-perform state-of-the-art designs at the time of its publication. It also indicates that the generated decoders are more area efficient than [8], requiring far fewer lookup tables. For additional comparison and analysis, see [2].
+Application 1 has met each of its intended criteria. It served as a sort of scaffold on which to build and debug the Generator Framework. It permitted precise and accurate parameterized response testing of the designs. This application has verified the correct operation and efficiency of the generated designs, and by implication, the correct operation and efficiency of the Generator Framework.
+V. 802.11N DECODERS
+Testing many randomly generated LDPC codes has its merits. It enables a good verification of the system, and provides insight into its capabilities. But it doesn’t allow for a strict check against the known behavior of a specific code. Nor does it tell if the system can handle real-world, commercially deployed codes. To answer these questions, the second application constructed with the Generator Framework is a subset of the 802.11n decoders.
+The IEEE 802.11n wireless networking protocol specifies twelve LDPC coding schemes [9]. All are irregular block circulant LDPC codes. The twelve codes in the specification are combinations of three codeword lengths and four rates. The lengths are 648, 1296, and 1944. The rates are 1/2, 2/3, 3/4, and 5/6. For this application, all four rates of the 648-bit decoders were attempted. The Generator Framework readily produced designs for each decoder, though only three were able to be fully implemented by the Xilinx tools. The R=5/6 decoder failed to pass place-and-route, due to routing congestion issues. Fig. 8 shows a plot of BER vs. SNR for the three implemented decoders.
+The best performing code is indicated by the lowest BER. Each one of the three codes performs best within a certain region of noise. This is an expected characteristic of the codes. The codes in the 802.11 spec are engineered to have such properties so the best performing code in a given noise environment can be selected.
+A decoder can easily keep track of the average number of iterations it takes to repair noisy codewords. Fig. 9 shows a zoomed perspective of Iavg vs. SNR. Here it is shown that in three different regions of SNR, each of the codes is a best performer in one of them. The thresholds indicating the best code closely matches the BER results obtained. So, an 802.11n receiver may use Iavg as an indicator of what is the best code in a given channel noise environment. See [2] for analysis of decoder throughput.
+This FG application has served to verify its two intended points. First, it shows that the designs returned by the Generator Framework have indeed performed just as 802.11n
+
+Fig. 8. BER vs. SNR
+Fig 9. Zoomed Iavg vs SNR varying Imax
+decoders are engineered to work. And secondly, it shows that the Generator Framework is capable of constructing complex designs for real-world applications.
+VI. SUDOKU SOLVER The third and final application for this work was selected so as to be as dissimilar from the first two as possible. Its purpose is to demonstrate the robustness of the system, and to show that it is not limited to generating forward error correcting decoders. A Sudoku solver was selected for this last application. Sudoku is a puzzle that can be represented as a PGM. Commonly, a Sudoku puzzle takes the form of a 9x9 board of squares. Each row, column, and 3x3 subsection are constrained by a common rule: a number may not repeat. This problem maps very well to a FG. Each square is represented by a variable node, and each constraint is represented by a factor node. Each variable node has three connections, since each square is constrained by row, column, and subsection. And each factor node has nine connections, since each constraint (row, column, or subsection) covers nine squares. Each variable node stores a vector of probabilities, representing the chance of being each value in the domain. These vectors are calculated for each square based on the initial board state, and they represent the a priori data for the FG-Solver. A FG-Solver for a 9x9 Sudoku board would require resources far exceeding those available on the target Xilinx
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 10. Factor Graph for 4x4 Sudoku
+Fig. 11. Hard beliefs for successful execution sequence
+Virtex 6. For this reason, Application 4 is a generated solver for a 4x4 Sudoku board. Fig. 10 shows a factor graph for a 4x4 Sudoku. Here there are only 16 variable nodes and 12 factor nodes, and they are 4-domain. Connection lines in the graph represent only 48 wires (4 x 16), and there are far fewer floating point operations needed in each node since there are far fewer connections per node. A 4x4 Sudoku board is a well scaled problem for FPGA implementation.
+The system does not have the capability of outputting intermediate message data, so we cannot see the algorithm work at the lowest level. But by performing successive runs while step-wise increasing the maximum allowed iterations, we can see how the hard beliefs converge on a solution. Fig. 11 shows the hard beliefs of an execution sequence that solves in four iterations. The first board shows the initial state of the board, and each board following an arrow represents the beliefs after successive iterations.
+The purpose of this application was to demonstrate the breadth of problems that can be tackled by the designs constructed with the Generator Framework. This application has done this by solving a puzzle that is popular and understood by many, while being completely different and disjoint from the applications previously presented.
+VII. CONCLUSION The Generator Framework is capable of constructing a FGSolver for any problem that can be modeled as a factor graph, provided three criteria are met. First, the problem must be solvable by the S-P algorithm if a priori data is in probability domain, or the M-S algorithm if the a priori data is in loglikelihood domain. Second, the user must construct a custom factor node (if the current two generator scripts are
+
+insufficient), tailored to the desired algorithm and application. Finally, the user must modify the termination module to suit their application requirements.
+Certain improvements to the Generator Framework could overcome many of its existing limitations. A modification to support pipelined, partially parallel message computation could reduce resource requirements, path lengths, and routing complexity at the expense of higher message latencies and more complex control signaling. Higher message latencies could be offset to a degree by an increase in clock speed due to reduced path lengths. Support for user selectable latencies and hardware reuse, in a manner similar to Xilinx CoreGen IP configuration options, could allow for feasible implementation of much larger designs. Modifications to graph construction and control scheduling could support graph partitioning, opening the door for generating a wider variety of factor graphs, and also permitting partially parallel hardware reuse on a larger scale. Also, it is perhaps possible to support a single, generic factor node, deprecating the need for application specific custom factor nodes. Such an improvement could require that the user only supply a factor function, perhaps as a lookup table.
+The practical application of factor graphs is seemingly dominated by iterative decoding of forward error correcting codes. But they are also applied to a vast variety of other problems including software verification and bug-finding [10], machine learning and parameter estimation [11], and computer vision [12], to name a few. Software suites exist for factor graph modeling and computation, most notably OpenGM2 [13] and libDAI [14]. The broad scope of the problems being tackled by factor graphs and the fact that software suites exist for solver programming imply that there is a demand, even if only academic, for factor graph computation tools. An internet search suggests that no generic factor graph hardware computation tools exist. Still, hardware tools could play an important role. Iterative algorithms on factor graphs can be very computationally complex, and complexity can grow quickly with even a small increase problem size. This computational cost can be prohibitive for software, especially for problems that require real-time results. While lots of computation is required, much of it can be done in parallel, making factor graph applications well suited for hardware. A system for simply and quickly generating hardware designs for factor graph solvers could be both useful and desirable.
+REFERENCES
+[1] S. Khan, S. Jabbari, S. Jabbari, and M. Ghanbarinejad, “Solving Sudoku Using Probabilistic Graphical Models,” 2014. [Online]. Available: http://webdoc.cs.ualberta.ca/~jabbaria/
+[2] J. D. Demma, “A Hardware Generator for Factor Graph Applications,” M.S. Thesis, ECE Dept, Virginia Polytechnic and State Univ., Blacksburg, VA, 2014.
+[3] H.-A. Loeliger, “An introduction to factor graphs,” Signal Processing Magazine, IEEE, vol. 21, no. 1, pp. 28–41, 2004.
+[4] M. Peyiç, H. A. Baba, İ. Hamzaoğlu, and M. Keskinöz, “Low Power IEEE 802.11 n LDPC Decoder Hardware,” 2008.
+[5] R. M. Neal, “Software for Low Density Parity Check Codes,” 2012. [Online]. Available: http://www.cs.utoronto.ca/~radford/ftp/
+[6] X. Hu, E. Eletheriou, and D. Arnold, “Progressive edge-growth (PEG)
+algorithm MainPEG.” [Online]. Available: http://www.pudn.com
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+/downloads71/sourcecode/book/...detail257395.html.
+[7] S. J. Johnson, Iterative error correction: turbo, low-density parity-check and repeat-accumulate codes. Cambridge, UK ; New York: Cambridge University Press, 2010.
+[8] A. Balatsoukas-Stimming and A. Dollas, “FPGA-based design and implementation of a multi-GBPS LDPC decoder,” in Field Programmable Logic and Applications (FPL), 2012 22nd International Conference on, 2012, pp. 262–269.
+[9] International Organization for Standardization, International Electrotechnical Commission, and Institute of Electrical and Electronics Engineers, Information technology telecommunications and information exchange between systems-- local and metropolitan area networks-specific requirements. Part 11, Part 11,. Geneva; New York: ISO : IEC ; Institute of Electrical and Electronics Engineers, 2012.
+
+[10] T. Kremenek, A. Y. Ng, and D. R. Engler, “A Factor Graph Model for Software Bug Finding.,” in IJCAI, 2007, pp. 2510–2516.
+[11] K. Rohanimanesh, M. Wick, S. Singh, and A. McCallum, “MAP inference in Large Factor Graphs with Reinforcement Learning,” 2008.
+[12] S. Z. Li, Markov random field modeling in computer vision. New York: Springer-Verlag, 1995.
+[13] B. Andres, T. Beier, and J. H. Kappes, “OpenGM2,” Apr-2014. [Online]. Available: http://hci.iwr.uni-heidelberg.de/opengm2/. [Accessed: 10-Apr-2014].
+[14] J. M. Mooij, “libDAI: A free and open source C++ library for discrete approximate inference in graphical models,” The Journal of Machine Learning Research, vol. 11, pp. 2169–2173, 2010.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 17:41:48 UTC from IEEE Xplore. Restrictions apply.
+
+

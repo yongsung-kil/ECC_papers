@@ -1,0 +1,759 @@
+16th Euromicro Conference on Parallel, Distributed and Network-Based Processing
+
+Edge Stream Oriented LDPC Decoding
+
+Gabriel Falca˜o, Vitor Silva, Marco Gomes Instituto de Telecomunicac¸o˜es/FCTUC
+Dep. of Electrical and Computer Engineering University of Coimbra Portugal
+{gff, vitor, marco}@co.it.pt
+
+Leonel Sousa INESC-ID/IST Dep. of Electrical and Computer Engineering Technical University of Lisbon
+Portugal las@inesc-id.pt
+
+Abstract
+Low-Density Parity-Check (LDPC) codes are among the best error correcting codes known and have been adopted by data transmission standards, such as DVB-S2 or WiMax. They are based on binary sparse parity check matrices and usually represented by Tanner graphs. LDPC decoders require very intensive message-passing algorithms, also known as belief propagation. This paper proposes a very compact stream-based data structure to represent such a bipartite Tanner graph, which supports both regular and irregular codes. This compact data structure not only reduces the memory required to represent the graph but also puts it in an appropriate format to gather data into streams. This representation also allows to map the irregular processing behavior of the Sum Product Algorithm (SPA) used in LDPC decoding into the stream-based computing model. Stream programs were developed for LDPC decoding and the results show significant speedups obtained either using general purpose processors, or graphics processing units. The simultaneous decoding of several codewords was performed using the SIMD capabilities of modern streambased architectures available on recent processing units.
+1. Introduction
+Recent processing units have undergone increasing performance by exploiting the potential of stream-based architectures, not only in general purpose computers but also in more specific computing engines [6]. The stream computing model gathers data into a stream, processes it and then scatters the output data stream to memory again. Programming according to this type of model minimizes the memory accesses while exploits parallelism and locality of data. It allows the speeding up of applications, namely, by increasing the parallelism using Single Instruction Multiple Data (SIMD) type of processing.
+
+Low-Density Parity-Check (LDPC) codes are powerful error correcting codes (ECC) proposed by Robert Gallager in 1962 [4]. Their rediscovery by Mackay and Neal in 1996 [9] led to a growing interest on the research and development of efficient LDPC coding solutions for digital communication systems. They have been adopted by the DVBS2 standard [2], Wimax Mobile (802.16e), Wifi (802.11n), 10Gbit Ethernet (802.3an) and other new emerging standards oriented to space, optical and storage applications. LDPCs are linear (n, k) block codes defined by sparse binary parity check H matrices of dimension (n − k) × n. Usually, they are represented by bipartite graphs formed by Bit Nodes (BNs) and Check Nodes (CNs), linked by bidirectional edges also called Tanner graphs [13]. The Sum Product Algorithm (SPA) is a very efficient algorithm used for LDPC decoding [8]. It is based in the belief propagation between connected nodes as indicated by the Tanner graph edges (see figure 1).
+LDPC decoders demand very intensive computation and, therefore, a lot of research has been performed in the last few years to implement dedicated VLSI decoders [15, 3] based on fixed-point arithmetic. These decoders, in particular the ones based on the SPA, belong to the class of applications for which stream-based computing architectures can be adopted and applied, but new data representations have to be developed. Additionally, the implementation in these architectures allows floating-point arithmetic operations, so better accuracy can be expected as well as lower Bit Error Rates (BER).
+This paper proposes a SPA algorithm oriented to LDPC stream-based decoding and new data structures to efficiently represent the H matrix. The compact data representation and the development of a new stream-based approach to calculate the SPA under a specific type of recursive computing model are the main contributions of this paper. To the best of the authors’ knowledge this is also the first time LDPC decoders are investigated under a stream-based computing perspective.
+
+0-7695-3089-3/08 $25.00 © 2008 IEEE
+
+237
+
+DOI 10.1109/PDP.2008.12
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+11100000
+
+H=
+
+0 1
+
+0 0
+
+0 0
+
+1 1
+
+1 0
+
+1 0
+
+0 1
+
+0 0
+
+(8 bit nodes checked by 4 check node equations)
+
+01001001
+
+CN0
+
+CN1
+
+(i-1)
+
+r0(i0)
+
+q 20
+
+q(1i0-1)
+
+BN0
+
+BN1
+
+BN2
+
+BN3
+
+CN2
+
+CN3
+
+BN4
+
+BN5
+
+BN6
+
+Check node 0 updating bit node 0
+BN7
+
+CN0
+
+CN1
+
+q3(i1-1)
+
+CN2
+
+CN3
+
+Check node 1 updating bit node 4
+
+BN0
+
+BN1
+
+BN2
+
+r1(4i)
+
+BN3
+
+BN4
+
+q(5i1-1) BN5
+
+BN6
+
+BN7
+
+CN0
+
+CN2
+
+q(0i2-1)
+
+CN2
+
+CN3
+
+Check node 2 updating bit node 6
+
+BN0
+
+BN1
+
+BN2
+
+q(3i2-1) BN3 BN4
+
+r2(i6) BN5 BN6
+
+BN7
+
+CN0
+
+CN1
+
+CN2
+
+CN3
+
+Check node 3 updating
+
+bit node 7
+
+q4(i3-1)
+
+r3(i7)
+
+BN0
+
+BN1
+
+q(1i3-1) BN2 BN3
+
+BN4
+
+BN5
+
+BN6
+
+BN7
+
+Figure 1. Tanner graph representation of a 8 × 4 H matrix and examples of some messages being exchanged between CNm and BNn; a similar representation applies for CNs message updating.
+
+This paper is organized as follows. The next section addresses the aspects of the SPA algorithm that are important to understand the proposed stream-based LDPC decoders. The following section mentions properties of the stream computing model, while section 4 presents the data structures and the SPA flooding schedule specifically developed for stream-based computing. Section 5 reports experimental results obtained for SPA stream LDPC decoding on stream-based processors, such as general purpose processors with multimedia extensions and graphics processing units (GPUs). Finally, section 6 concludes the paper.
+
+2 SPA for LDPC Decoding
+
+The Sum Product Algorithm (SPA), as proposed by Gallager, operates in the probabilistic domain [4] [9] [8].
+
+Algorithm 1 SPA
+1: qn(0m) (0) = 1 − pn ; qn(0m) (1) = pn;
+
+pn =
+
+1 2yn
+
+;
+
+Eb N0
+
+=
+
+N 2Kσ2
+
+{Initialization}
+
+1+e σ2
+
+2: while (ˆc HT = 0 ∧ i < I) {c-decod. word;I-Max no. iterations.}
+
+do
+
+3: {For each node pair (BNn, CNm), corresponding to Hmn = 1 in the parity check matrix H of the code do:}
+
+4: {Compute the message sent from CNm to BNn, that indicates the
+
+probability of BNn being 0 or 1:}
+
+(Kernel 1 - Horizontal Processing)
+
+rm (i)n (0)
+
+=
+
+1 2
+
++
+
+1 2
+
+1 − 2qn(i′−m1) (1)
+
+(1)
+
+n′ ∈N (m)\n
+
+rm (i)n (1) = 1 − rm (i)n (0)
+
+(2)
+
+{where N (m)\n represents BN’s connected to CNm excluding B Nn .}
+
+5: {Compute message from BNn to CNm:}
+
+(Kernel 2 - Vertical Processing)
+
+qn(im) (0) = knm (1 − pn)
+
+rm (i)′n (0) (3)
+
+m′∈M (n)\m
+
+qn(im) (1) = knmpn
+
+rm (i)′n (1)
+
+(4)
+
+m′∈M (n)\m
+
+{where knm are chosen to ensure qn(im) (0) + qn(im) (1) = 1, and M (n)\m is the set of CN’s connected to BNn excluding CNm.}
+
+6: {Compute the a posteriori pseudo-probabilities:}
+
+Q(ni) (0) = kn (1 − pn)
+
+rm (i)n (0)
+
+m∈M (n)
+
+Q(ni) (1) = knpn
+
+rm (i)n (1)
+
+m∈M (n)
+
+{where kn are chosen to guarantee Q(ni) (0) + Q(ni) (1) = 1.}
+
+7: {Perform hard decoding} ∀n,
+
+cˆ(ni) = 8: end while
+
+1 ⇐ Q(ni) (1) > 0.5 0 ⇐ Q(ni) (1) < 0.5
+
+Given a (n, k) LDPC code, we assume BPSK modulation which maps a codeword c = (c1, c2, · · · , cn) into the sequence x = (x1, x2, · · · , xn), according to xi = (−1)ci. Then, x is transmitted through an additive white Gaussian noise (AWGN) channel originating the received sequence y = (y1, y2, · · · , yn), with yi = xi + ni, and ni being a random variable with zero mean and variance, σ2 = N0/2.
+SPA is depicted in Algorithm 1 [8] and it is mainly described by two horizontal and vertical intensive processing blocks defined, respectively, by equations (1), (2) and (3), (4). The former two equations calculate the message up-
+
+238 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+date from each CNm to BNn, considering accesses to H in a row basis; they indicate the probability of BNn being 0 or 1. Figure 1 exemplifies, for a particular 4 × 8 H matrix, BN0 being updated by CN0 and BN4 updated by CN1. It also shows BN6 and BN7 being updated, respectively, by CN2 and CN3. For each iteration, rm(i)n values are updated by equations (1) and (2) according to the edges defined in the Tanner graph. For the example in figure 1, r00 = f (q10, q20) and r26 = f (q02, q32).
+Similarly, the second major processing block described by equations (3) and (4) computes messages sent from BNn to CNm, assuming accesses to H in a column basis. In this case, qn(im) values hold the update defined by equations (3) and (4) for the edges connectivity indicated by the Tanner graph. Again, in figure 1 it can be seen that q00 = f (r20) and q41 = f (r34). Thus, equations (1) to (4) define very irregular memory access patterns.
+The iterative procedure is stopped if the decoded word ˆc verifies all parity check equations and ˆc HT = 0, or a maximum number of iterations is reached.
+3 Stream-based Computing
+The stream programming style decouples computation and data locality, which encourages compilers and programmers to explore more efficiently the parallelism intrinsic to a program. It is based on a gather, compute and scatter model [5].
+A stream program gathers a large amount of data from memory into input streams and applies them to one or more kernels. A kernel consists in a group of operations performed to one or more input streams, with a desired functionality implicit. A kernel can compute hundreds of operations and data parallelism may be exploited in a kernel, for example, by using SIMD processing. After computation, data feeds the input of other kernels or it is scattered to memory again. By reducing and concentrating memory accesses, this programming model converts a latency problem into a bandwidth restriction.
+A Synchronous Data Flow (SDF) graph [7] such as the one depicted in figure 2, can be used to explicitly express data dependencies and the amount of data consumed and produced at each input and output data flow node. Operations are performed by kernels that can have multiple input streams and may perform complex calculations per input data item. The input and output streams are the only external data a kernel can access.
+Some applications in the signal, image and graphics processing fields can gather and scatter data using sequential load/store operations, while others exhibit random, or at least irregular accesses to memory, which makes streaming them more challenging. For these types of memory accesses the addresses first need to be collected into indexed
+
+arrays before gathering/scattering the data. Moreover, some of them are iterative and require dynamic adjustment to be programmed in a stream-based style. It happens to be the case of the LDPC decoder based in the SPA algorithm described in the next sections.
+
+4 Stream-based LDPC decoding
+
+The H matrix defines the Tanner graph and, thus, the flow of messages being exchanged between CNs and BNs. In medium to large sized LDPC codes a huge amount of memory is required to store this matrix. Moreover, in a stream computing model this matrix has to be itself gathered into a data stream. Therefore, we propose to separately code the information about H in two independent data streams adequate to the SPA. These particular auxiliary data streams establish the order of the data in the input stream used in the flow of messages to update the BNs and the CNs. A stream-based SPA for implementing the LDPC decoder is represented in the SDF of figure 2.
+
+H
+
+H
+
+BN
+
+CN
+
+k1
+
+k2
+
+H
+
+H
+
+BN
+
+CN
+
+k1
+
+k2
+
+Kernel 1
+
+Kernel 2
+
+Kernel 1
+
+Kernel 2
+
+ps
+
+rs
+
+qs
+
+rs rs
+
+qs
+
+0
+
+0
+
+0
+
+i
+
+i
+
+i
+
+Figure 2. Synchronous Data Flow graph for a stream-based LDPC decoder: the pair Kernel 1 and Kernel 2 is repeated n times for a LDPC decoder with n iterations.
+
+According to Algorithm 1, the first Kernel 1 receives at the input the data stream ps0 (p stream 0), a constant k1 and the stream HBN that holds the necessary information to perform the SPA horizontal processing indicated in equations (1) and (2). It produces the output stream rs0 that is one of the input data streams of Kernel 2. The other inputs of this second kernel are HCN that holds information to compute the SPA vertical processing associated to equations (3) and (4), and constant k2. The last Kernel 2 produces the output stream qsi. Constants k1 and k2 represent the dimensions of the matrix.
+4.1 Mapping the Tanner Graph into an Efficient Structure for Streaming
+Algorithm 1 shows that the stream-based LDPC decoder needs different BNs and CNs update computation patterns for consecutive kernels. The input streams represent the original probabilities pn and rmn|qnm values, and the output stream corresponds to rmn|qnm updated messages. The
+
+239 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+H BN
+
+r
+
+r
+
+r
+
+r
+
+0 1 0,0 0 2 0,1 0 0 0,2 1 0 1,3
+
+r
+
+r
+
+r
+
+r
+
+1 1 1,4 0 3 1,5 1 3 2,0 2 0 2,3
+
+1
+
+2
+
+r 2,6 2
+
+2
+
+r3,1 2
+
+3
+
+r3,4 2
+
+1
+
+r3,7
+
+Figure 3. HBN structure. A row based data stream representing BN edges with circular addressing in 2D shape.
+
+H CN
+
+(Single 1 in column 2)
+
+q
+
+q
+
+q
+
+q
+
+1 2 0,0 2 1 0,1 -1 -1 0,2 1 3 1,3
+
+(Single 1 in column 5)
+
+(Single 1 in column 6)
+
+(Single 1 in column 7)
+
+q
+
+q
+
+q
+
+q
+
+q
+
+q
+
+q
+
+q
+
+2 2 1,4 -1 -1 1,5 0 0 2,0 0 3 2,3 -1 -1 2,6 0 1 3,1 1 0 3,4 -1 -1 3,7
+
+Figure 4. HCN structure. A column based data stream representing CN edges with circular addressing in 2D shape.
+
+output data stream feeds the input stream of the next pro-
+
+cessing kernel in a pipeline organization.
+
+The
+
+codeword
+
+size
+
+(dimension)
+
+and
+
+rate
+
+k n
+
+(indicating
+
+the ratio between parity and message information) imply
+
+matrices with quite different sizes. If the quantity of “1’s” is
+
+constant in all rows and if the same rule applies for columns,
+
+the code is said to be regular, otherwise, it is irregular. The
+
+latter type of codes is known to have better coding perfor-
+
+mance than the former but is more difficult to implement
+
+[8]. The stream data representation and algorithm proposed
+
+in this paper support both types of regular and irregular
+
+codes. Compact and efficient dynamic and vectorized data
+
+structures HBN and HCN are proposed to represent the
+
+message updating between connected nodes (BNn, CNm).
+
+Such structures require significantly less memory, since H
+
+is sparse, and are suitable for stream-based computing.
+
+The example of figure 1 can be used to describe the transformation performed in H in order to produce the compact data stream structures HBN and HCN. HBN codes information about edge connections used in each parity check equation (horizontal processing). This data structure is generated by scanning the H matrix in a row major order and by mapping sequentially only the BN edges associated to a single CN equation (non-null elements in a single row of H). Each element of the data structure records the address of the next entry, as a pointer, and the corresponding rmn value. The element corresponding to the last non-null element of each row in H points to the first element of this row, implementing a circular list that is used to update all the BNs connected to a single CN. Thus, a CN always knows from
+
+which BNs it should be reading information and where to update, as well. Circular addressing allows to explore a high level of parallelism. In the limit, for a multi-processor platform, a different processor can be allocated to each single edge, since the starting point becomes no longer important, due to the circular addressing feature. Although in figure 3 the elements of the structures are represented by their row and column addresses, the structures can be easily vectorized by considering the rows of the structure in sequence, using convenient 1D or 2D reshaping according to the target stream-based architecture they apply to.
+The same principle can be applied to code the information about CNs. HCN can be defined as a sequential representation of every BN connecting to all its neighboring CNs (non-null elements in a single column of H). Once again, the access between adjacent elements is circular, as illustrated in figure 4 for the H matrix given in figure 1. In this case, a careful construction of the addresses in HCN is required because every (n,m) edge must be represented exactly in the same position as it is in HBN. This meticulous positioning of the elements in HCN allows the iterative processing of consecutive inputs to be alternately performed for rm(i)n and qn(im) , guarantying that data being processed for every (n,m) edge is stored in the correct position for both situations. In fact, the in place computation here performed for horizontal and vertical processing is supported by an efficient mechanism that swaps data pointers [14] at the end of each iteration, according to the input data streams necessary for the next processing.
+Figures 3 and 4 are the resulting HBN and HCN struc-
+
+240 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+H BN
+
+….
+
+….
+
+….
+
+0 01r00r1,00r,00r1,00r,00r,00,0r0,0 01
+
+0 02r00r2,01r,10r20,1r,10r,01,1r0,1 02
+
+0 00r00r0,02r,20r00,2r,20r,02,2r0,2 00
+
+…w. ord n
+
+word 2
+
+word 1
+
+H BN
+k1
+
+H CN
+k2
+
+ps0
+
+rs
+
+Kernel 1
+
+i
+
+Kernel 2
+
+qsi
+
+Figure 5. Simultaneous decoding concept of multiple codewords using the same H matrix.
+tures corresponding to the matrix in figure 1.
+4.2 SPA Kernels Optimization and Parallelism
+The flooding schedule [8] algorithm used controls the order in which BNs and CNs are updated. It guarantees that no BN is updated before all other BNs conclude their updating procedure. This principle is adopted in this work because it allows true parallel execution of the SPA decoder.
+The circular addressing property permits that parallel processors can simultaneously access the necessary information stored in both HBN and HCN. Consequently, the overall processing time required to decode a codeword can be significantly reduced by applying parallel processing. Figure 5 represents a detail of HBN illustrating such efficient properties for the update of rm(i)n values.
+An alternative representation of the SDF in figure 2 is presented in figure 6. This compact SDF is obtained by folding the pair of kernels (Kernel 1 an Kernel 2) and by introducing an additional multiplexer. Kernel 1 initially processes the input stream ps0 according to the BN indexes defined in the input stream HBN. It produces the output stream rs0 by performing the message update from CNm to BNn. The stream rs0 directly feeds the input of Kernel 2, which in turn produces the qs0 that represents messages updated from BNn to CNm. The other input of the Kernel 2 is HCN, which defines the CN indexes from H. Only data streams communicate between kernels. Figure 6 shows that by using the multiplexer at the input of the SDF, the output stream qsi becomes the input stream of Kernel 1 for all remaining iterations after the first one. At the end, the qsi output stream conveys the codeword.
+This compact representation can be exploited to implement efficient LDPC decoders, not only because of the new compact stream oriented representations of the H matrix but also regarding the program memory and the data communication. The required program memory is reduced by the folding mechanism and the data streams can be multiplexed through a simple and efficient mechanism for swapping pointers.
+Additionally, SIMD processing capabilities of stream-
+
+Figure 6. Folded Synchronous Data Flow graph for a stream-based LDPC decoder. Kernel 1 receives input streams psi, HBN and constant k1 and produces rsi. Kernel 2 takes the output rsi of kernel 1, HCN and constant k2 as inputs and produces the output qsi, that is feedback to the input for the next iteration.
+
+based architectures can be applied to Kernel 1 and Kernel 2, by simultaneously decoding several codewords (see figure 5). Multimedia extensions on Central Processing Units (CPUs) and the multiple pixel processors on Graphics Processing Units (GPUs) are examples of SIMD computation machines explored in this paper.
+
+4.3 Memory Requirements and Computational Complexity
+
+If a good error correcting capability is required (e.g., with a Bit Error Rate in the order of 10−8 or lower), large
+
+matrices should be considered [8]. Although they are
+
+sparse, storing such information may require a considerable
+
+amount of memory.
+
+With the proposed compact data structure, the necessary
+
+memory can be significantly reduced. In fact, let us consider
+
+a standard matrix used in DVB-S2 [2] with n = 64800 in-
+
+formation bits (columns) and (n − k) = 16400 parity check
+
+equations
+
+(rows),
+
+a
+
+rate
+
+of
+
+3 4
+
+and
+
+a
+
+total
+
+number
+
+of
+
+non-null
+
+elements in H (numEdges) equal to 194400. The number
+
+of elements stored can be reduced from 106.272 × 107 to
+
+only 194400, which leads to a Storage Compression Ratio
+
+(SCR), given by (5), of 2733, less than 0.04% of the original
+
+necessary memory space.
+
+SCR
+
+=
+
+n × (n − k) numEdges ×
+
+2
+
+(5)
+
+At the same time, the overall processing time needed to access all matrix elements is reduced, improving the computational efficiency of the decoder. Considering only load/store operations, the full H storage computational complexity of the SPA algorithm decreases from O(n × (n − k)) to O(numEdges), i.e. from quadratic to linear complexity with the number of edges.
+
+241 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+test eax, eax mov edx, DWORD PTR [esi+4] movaps xmm0, xmm6 jle SHORT .loop3 npad 6 loop1: ;if(p4!=q4) cmp edx, ecx je SHORT .loop2 ;aux value0*=(p → value0 - p → value1); ;v0 = mm load ps(p4 → value0); ;v1 = mm load ps(p4 → value1); movaps xmm1, XMMWORD PTR [edx+16] movaps xmm2, XMMWORD PTR [edx] ;rv = mm sub ps(v0, v1); subps xmm2, xmm1 ;auxv0 = mm mul ps(rv, auxv0); movaps xmm1, xmm2 mulps xmm1, xmm0 movaps xmm0, xmm1 loop2: ;p4++; add edx, 128 sub eax, 1 jne SHORT .loop1 loop3:
+Figure 7. Loop describing a BN update operation on a x86 CPU with Packed Arithmetic Instructions.
+5 Experimental Results
+For a performance evaluation, we developed streambased LDPC decoders, both for general purpose processors (x86 CPU) with multimedia extensions and graphics processing units (GPUs). Stream SIMD Extensions (SSE) [12] are considered to be the evolution of the first MMX technology extensions to the Intel architecture [11]. The experimental results are documented in the following sections.
+5.1 Stream-based SPA on the CPU
+The proposed algorithm is based on efficient linked lists. It addresses only non-null elements in the H matrix and the structure used to represent the edges is similar to the one described in section 4.
+For a given H data stream representing a Tanner graph, it is possible to decode N codewords in parallel, which seems to encourage the use of Packed Instructions. In the present case, it is possible to comprise such an optimization by performing the same arithmetic operation to decode simultaneously four codewords. The optimization was performed
+
+Decoding Time (ms)
+
+450
+
+50 iterations CPU
+
+400
+
+50 iterations CPU SSE
+
+100 iterations CPU
+
+350
+
+100 iterations CPU SSE
+
+300
+
+250
+
+200
+
+150
+
+100
+
+50
+
+0 2997
+
+4080
+
+7632
+
+14688
+
+Number of Edges
+
+16000
+
+Figure 8. Decoding processing time for a Core2Duo Intel CPU.
+
+by applying SIMD processing based on the use of Arithmetic Packed Instructions, where an elementary arithmetic operation is applied to four floating-point data elements in a single instruction. In fact, instructions like subps or mulps available in the SSE allow the simultaneous subtraction or multiplication of four single-precision floating-point values, respectively.
+Figure 7 illustrates the use of the SSE instructions to update the BNs according to equations (1) and (2) in Algorithm 1. Using xmm0-xmm7 128-bit MMX registers, four floating-point elements are packed and operated together in a single instruction. Figure 8 compares the performance of an LDPC serially decoding four codewords (one by one), against LDPC decoding the same four codewords in parallel (simultaneously) using SSE instructions.
+The LDPC decoders implemented on the x86 CPU were programmed in C language and run on a Core2Duo processor T5600 @1.83GHz. All the source code was developed under the Microsoft Visual Studio .NET 2003 IDE.
+It was experimentally observed that the speedup achieved with the proposed compact representation, regarding to a brute force approach where the H matrix is fully stored in memory, is approximately equal to the ratio between the number of elements in H and the number of edges. For example, for a matrix with size 1024 × 512 and 6 BNs per row this ratio is approximately 180, while for a 4000×2000 matrix with 8 edges per row the measured ratio is over 400.
+Five matrices with dimensions 999 × 111 (2997 edges), 816 × 408 (4080 edges), 1908 × 212 (7632 edges), 4896 × 2448 (14688 edges) and 4000×2000 (16000 edges) are considered. Figure 8 presents the processing times achieved for the five different matrices. There is a significant speedup
+
+242 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+INPUT STREAM 0
+
+INPUT STREAM 2
+
+x r0/q0
+pn Flag
+
+HCN.x HCN.y
+x weight
+
+INPUT STREAM 1
+HBN.x HBN.y
+x weight
+
+MMUUXX
+
+1rst iteration?
+
+if(Flag) { //BNs update . . . . }
+FlowModel
+x ri/qi
+pn Flag
+
+else { //CNs update . . . . }
+
+x ri/qi
+pn Flag
+
+OUTPUT STREAM 0
+
+Figure 9. Flowmodel showing input and output data streams for LDPC decoding on a GPU using recursive computation.
+
+when the LDPC decoder uses SSE instructions, as depicted from matrix 999 × 111 up to 1908 × 212. Above the latter one, the speedup degrades abruptly, causing a reduction on the performance related with the cache. In fact, the time savings introduced by the use of SSE instructions seem to be unable to compensate the increase of cache misses after a certain size of the H matrix. For SSE instructions, four floating-point elements are read/written from/to memory, against only one element per non-SSE instruction. For this reason, cache misses increase when SSE instructions are used. The same program (LDPC decoder with SSE) was experimentally tested in different CPUs having L2 cache memory with twice the size of the one used in this work, and the results reinforce our previous statements. With a larger cache, the cache misses decrease and a significant gain appears even for large matrices using SSE.
+However, it is important to note that the intensity of computation depends rather on the number of edges, but not necessarily on the size of H. For a matrix with dimension 999 × 111 and 2997 edges, the obtained speedup is superior to 3.7. For that matrix, the CPU takes approximately 128ms to decode a codeword performing 100 iterations without SSE instructions, while the version implemented with SSE executes in only 34ms. For matrices bellow 14688 edges, the gain obtained using SSE is a consequence of simultaneously decoding four codewords.
+
+... vec4 qlin0 = vec4(1.0, 1.0, 1.0, 1.0); vec4 rmn0 = vec4(1.0, 1.0, 1.0, 1.0); vec2 coord0, coordINI; ... coord0 = texture2D(CaravelaTex0, coord0).yx; for(i=0; i< 7; i++) {
+qlin0 = texture2D(CaravelaTex3, coord0); rmn0 *= (1.0 - (2.0 * qlin0)); ... }
+Figure 10. A code segment showing a BN update on a GPU using OpenGL (GLSL) and Caravela.
+5.2 Stream-based SPA on the GPU
+The pixel processors of the GPU were used with data inputted as textures and the output data stream assuming the usual place of the pixel color components’ output in a graphical application. The basic idea underlying the initial approach adopted to compute the SPA on the GPU places the input H matrix into a texture and processes Kernel 1 and Kernel 2 (see figure 6) in the pixel processors. The proposed compact representation also allows to reduce data transfer between the host memory (RAM) and the video memory (VRAM), which is a very important aspect to achieve high performance with GPUs.
+Figure 9 depicts input and output data streams for the program developed for GPU and figure 10 shows a source code segment of an efficient program that makes use of SIMD multiply (∗) and subtract (−) instructions that operate in four floating-point data elements in the same texture (Red, Green, Blue, Alpha). The shader program was developed in OpenGL (GLSL) an runs on the pixel processors. We use the Caravela programming interface recently developed for stream-based computing on GPUs [14]. The Caravela library is used in the CPU side to manage the execution of the program in the GPU and to write and read data to and from the VRAM, respectively.
+In this subsection, a different implementation explores GPUs with dedicated architectures for stream-based computing [10]. The GPU used in this work is a 8800 GeForce from NVIDIA with programmable pixel processors and 768MB of RAM [1].
+Figure 11 shows the total execution times obtained when decoding the five previously mentioned matrices, either in a CPU using SSE instructions, or in a GPU. The GPU implementation not only uses the compact stream data structure developed, but also takes advantage of the parallel process-
+
+243 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+300
+
+50 iterations CPU SSE
+
+250
+
+50 iterations GPU
+
+100 iterations CPU SSE
+
+100 iterations GPU 200
+
+Decoding Time (ms)
+
+150
+
+100
+
+50
+
+0 2997
+
+4080
+
+7632
+
+14688
+
+Number of Edges
+
+16000
+
+Figure 11. Decoding processing time for a 8800 GTX GPU versus a CPU with SSE for the same five matrices used in figure 8.
+
+ing capabilities provided by the pixel processors. As before, the GPU also uses SIMD instructions (GLSL), simultaneously decoding different codewords in parallel.
+Results show that the speedup increases as the number of edges being processed also increase. Moreover, beyond a certain number of edges, a major percentage of time is wasted in the memory data transfer between the host RAM and VRAM. For matrices with 2997 and 4080 edges, the GPU processing power is not able to compensate the delay introduced by data transfer between the host and VRAM. As the size of matrices increases, the processing power gains more importance in the overall execution time. This is the main reason that explains the obtention of a better speedup for the largest matrix (16000 edges), where the GPU executes 100 iterations in less than 109ms against almost 300ms in the CPU with SSE instructions.
+Comparing the two SPA streaming implementations, CPU with SSE versus GPU, it is possible to conclude that the GPU performs better for huge quantities of data, due to its parallelism features and tremendous processing power.
+6. Conclusions
+This paper proposes a LDPC decoder using streambased architectures to perform the very intensive computation that such codes demand. Pursuing this goal, dynamic and vectorized compact data structures were created to represent all exchanged messages between the Tanner graph nodes. These data structures allow a significant reduction of the memory space and the processing time necessary for LDPC decoding. The Sum Product Algorithm was adapted to stream computing suiting different hardware platforms,
+
+which improved its efficiency. The proposed data structures and algorithms pave the way for future work in the area of stream-based applications dedicated to the intensive decoding of error correcting codes, by exploiting low cost and highly flexible alternatives against dominating hardware dedicated VLSI LDPC decoders.
+References
+[1] URL – http://www.nvidia.com/page/geforce 8800.html. [2] Digital video broadcasting (DVB); second generation fram-
+ing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broad-band satellite applications. Technical Report EN 302 307 V1. 1.1, European Telecommunications Standards Institute (ETSI), 2005. [3] G. Falca˜o, M. Gomes, J. Gonc¸alves, P. Faia, and V. Silva. HDL Library of Processing Units for an Automatic LDPC Decoder Design. In IEEE PhD. Research in Microelectronics and Electronics (PRIME), pages 349–352, Jun 2006. [4] R. G. Gallager. Low-Density Parity-Check Codes. IRE Transactions on Information Theory, 8(1):21–28, Jan 1962. [5] J. Gummaraju and M. Rosenblum. Stream Programming on General-Purpose Processors. In 38th Annual IEEE/ACM International Symposium on Microarchitecture (MICRO), pages 343–354, Nov 2005. [6] H. Hofstee. Power Efficient Processor Architecture and the Cell Processor. In 11th International Symposium on HighPerformance Computer Architecture (HPCA), pages 258– 262, Feb 2005. [7] E. Lee and D. Messerschmitt. Static Scheduling of Synchronous Data Flow Programs for Digital Signal Processing. IEEE Transactions on Computers, 36(1):24–35, Jan 1987. [8] S. Lin and D. J. Costello. Error Control Coding. Prentice Hall, second edition, 2004. [9] D. J. C. Mackay and R. M. Neal. Near Shannon Limit Performance of Low Density Parity Check Codes. IEE Electronics Letters, 32(18):1645–1646, 1996. [10] J. D. Owens, D. Luebke, N. Govindaraju, M. Harris, J. Kruger, A. E. Lefohn, and T. J. Purcell. A Survey of General-Purpose Computation on Graphics Hardware. In Eurographics 2005, pages 21–51, Aug 2005. [11] A. Peleg and U. Weiser. MMX Technology Extension to the Intel Architecture. IEEE Micro, 16(4):42–50, Aug 1996. [12] S. Raman, V. Pentkovski, and J. Keshava. Implementing streaming SIMD extensions on the Pentium III processor. IEEE Micro, 20(4):47–57, Jul–Aug 2000. [13] R. Tanner. A Recursive Approach to Low Complexity Codes. IEEE Transactions on Information Theory, 27(5):533–547, Sep 1981. [14] S. Yamagiwa and L. Sousa. Caravela: A Novel Streambased Distributed Computing Environment. IEEE Computer, 40(5):70–77, May 2007. [15] T. Zhang and K. Parhi. Joint (3,k)-regular LDPC code and decoder/encoder design. IEEE Transactions on Signal Processing, 52(4):1065–1079, Apr 2004.
+
+244 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:31 UTC from IEEE Xplore. Restrictions apply.
+
+

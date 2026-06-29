@@ -1,0 +1,1701 @@
+3528
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+ADMM Check Node Penalized Decoders for LDPC Codes
+Haoyuan Wei and Amir H. Banihashemi , Senior Member, IEEE
+
+Abstract— Alternating direction method of multipliers (ADMM) is an efficient implementation of linear programming (LP) decoding for low-density parity-check (LDPC) codes. By adding penalty terms to the objective function of the LP decoding model, ADMM variable node (VN) penalized decoding can suppress the non-integral solutions and improve the frame error rate (FER) performance in the low signal-to-noise ratio (SNR) region. In this paper, we propose a novel ADMM check node (CN) penalized decoding algorithm. Codeword solutions which satisfy all parity-check equations will have smaller penalty values than non-codeword solutions, including the non-integral solutions. We discuss the required properties of CN-penalty functions, propose a few functions that satisfy those properties, and study their performance/complexity trade-offs. We also investigate the convergence properties of the proposed algorithm and prove that its performance is independent of the transmitted codeword. Using Monte Carlo simulations and instanton analysis, we then demonstrate that the proposed CN-penalized decoder outperforms ADMM VN penalized decoders in both waterfall and error floor regions. This comes at the expense of some increase in the decoding complexity.
+Index Terms— LP decoding, alternating direction method of multipliers (ADMM), binary low-density parity-check (LDPC) codes, ADMM penalized decoding, instanton analysis.
+I. INTRODUCTION
+T HE linear programming (LP) decoding of low-density parity-check (LDPC) codes was firstly proposed by Feldman et al. [1] for binary memoryless channels. Then, LP decoding was generalized to non-binary LDPC codes, polar codes and other channels [2]–[5]. Compared to belief propagation (BP), LP decoding has in general a better error floor performance. Moreover, while LP decoding always converges to a solution, this may not be in general the case for BP, for which oscillations or chaotic behavior may occur [6]. Another important property of LP decoding, that BP lacks, is the “maximum-likelihood (ML) certificate.” This property guarantees that an integral solution of an LP decoder is the ML solution. In addition, lending the tools from optimization theory, one can analyze the complexity and the convergence of the LP decoder, and obtain bounds on its error-correcting
+Manuscript received July 19, 2020; revised December 23, 2020 and February 18, 2021; accepted March 7, 2021. Date of publication March 15, 2021; date of current version June 16, 2021. The associate editor coordinating the review of this article and approving it for publication was J. Yuan. (Corresponding author: Haoyuan Wei.)
+The authors are with the Department of Systems and Computer Engineering, Carleton University, Ottawa, ON K1S 5B6, Canada (e-mail: haoyuanwei@ sce.carleton.ca; ahashemi@sce.carleton.ca).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2021.3065976.
+Digital Object Identifier 10.1109/TCOMM.2021.3065976
+
+performance [7]–[10]. Solving the LP model by a standard LP solver, however, leads to high time complexity. Therefore, several efficient algorithms were proposed to solve the LP model with lower complexity [11]–[16]. In [16], the LP decoding model was solved by the alternating direction method of multipliers (ADMM). The ADMM framework [17] enables the full utilization of the sparseness of the LDPC code and therefore, reduces the complexity of LP decoding significantly. Recent research works on ADMM decoding of LDPC codes mainly focus on two subjects: further reducing the complexity, and improving the error correction performance.
+To reduce the complexity of ADMM decoding, most works [18]–[27] propose to simplify the check polytope projection operation, the most time-consuming and complicated component in ADMM decoding. Among them, projection algorithms in [23]–[25] have been proven to converge with linear complexity. Some other works devised better scheduling strategies to accelerate the convergence speed. For example, the layered scheduling and the node-wise scheduling were introduced in [28] and [29], respectively. The software implementation of ADMM on multi-core processors was studied in [30] to accelerate the software simulations on powerful workstations.
+In order to improve the frame error rate (FER) performance of ADMM decoding at low signal-to-noise ratios (SNR), penalty terms are added to the objective function of the LP model to penalize the pseudo-codewords. To simplify the decoding, the binary constraints for variables are relaxed in the LP model. This introduces non-binary solutions to the feasible region. These non-binary solutions are called pseudocodewords and may have smaller objective function values than the transmitted codewords (see, e.g., [31]). Since the LP model (without penalty terms) is convex, the application of the ADMM technique to this model always outputs a solution that has the smallest objective function value from the feasible region. As a result, pseudo-codewords may appear as the output and degrade the error correction performance. The additional penalty terms increase the objective value of pseudo-codewords and thus add barriers for the pseudocodewords to appear as an output.
+Several simple and efficient functions that can be used as penalty terms were given in [32]. These functions take the value of each variable as their argument and penalize the nonintegral variables in the range [0, 1]. The closer the variable to 0.5, the larger the function value would be. For irregular codes, Jiao et al. proposed the idea to assign different penalty coefficients to variable nodes with different degrees [33].
+
+0090-6778 © 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3529
+
+They efficiently optimized all penalty coefficients by differential evolution and further improved the performance of the decoder. In [34], Wang et al. used a segmented function as the penalty term and also optimized the relevant parameters by differential evolution. We call these decoders ADMM variable node (VN) penalized decoders because all of them penalize the invalid solutions with respect to each variable node independently.
+In this paper, different from existing ADMM VN-penalized decoders, we propose a novel ADMM penalized decoder with penalty terms related to check nodes (CN). There is one penalty term corresponding to each check node, which is a function of the values of all the neighboring variable nodes of the check node. We thus refer to the proposed decoder as an ADMM CN-penalized decoder. The values of penalty terms for all codewords are the same and smaller than the values for invalid solutions, including binary solutions which cannot satisfy all parity-check equations, and non-binary solutions. Therefore, invalid solutions are penalized more and are thus less likely to result in the minimum objective function value.
+The proposed decoding algorithm is different from ADMM VN-penalized decoding in three aspects. Firstly, the number of penalty terms is different. For the former, it equals the number of check nodes and for the latter, it equals the number of variable nodes. Secondly, the number of arguments used in one penalty term is different. For the proposed algorithm, it is the number of neighboring variable nodes of the corresponding check node. For the ADMM VN-penalized algorithm, it is always equal to one. This means that for ADMM CN-penalized decoding, one variable node could be penalized multiple times and several variable nodes could be penalized together. Thirdly, the design philosophies of the two decoders are different. In the proposed decoder, the unsatisfied check nodes are penalized while in the ADMM VN-penalized decoder, variable nodes with non-integer values are penalized. It should be noted that the non-integral variable nodes are also penalized indirectly in the proposed ADMM CN-penalized model. We evaluate the performance of different decoding methods in the low and high SNR regions via the Monte Carlo simulations and the instanton analysis, respectively. Monte Carlo simulations cannot be readily used in the high SNR region due to the excessive time that they take to be completed. The major contributions in this paper are summarized as follows:
+1) We propose an ADMM CN-penalized decoding model and a class of check node based penalty functions;
+2) We derive the iterative message-passing algorithm for the ADMM CN-penalized decoding model;
+3) We analyze the convergence of the ADMM CNpenalized decoding algorithm, show the all-zero assumption holds for the proposed decoder, and discuss the complexity of the proposed decoder with different penalty functions;
+4) We show that the ADMM CN-penalized decoder improves the FER performance of the ADMM based LP decoding significantly at low SNR values and in many
+
+cases, has a superior performance compared with the ADMM VN-penalized decoders; 5) We develop the instanton search algorithm for the ADMM CN-penalized decoder and use the instanton information to analyze the performance of the ADMM CN-penalized decoder in the high SNR region.
+The remainder of the paper is organized as follows. In Section II, we briefly review ADMM decoding and ADMM VN-penalized decoding. Section III presents the proposed ADMM CN-penalized decoding with different penalty functions. Section IV contains the instanton analysis technique used for the asymptotic performance estimation in the high SNR region. Simulation results are given in Section V, and conclusions are made in Section VI.
+
+II. PRELIMINARIES
+
+A. ADMM Decoding of LDPC Codes
+Suppose a binary LDPC Code C is defined by an m × n parity-check matrix H. The code can be represented by a Tanner graph composed of n variable nodes and m check nodes. An edge (vi, cj) connects the variable node vi and the check node cj if and only if Hji = 1. Let I = {1, 2, . . . , n} and J = {1, 2, . . . , m} be the index sets of variable nodes and check nodes of C, respectively. The set of neighboring check nodes of variable node i is denoted by Nv(i). The degree of variable node i, denoted by di, is the cardinality of Nv(i). Similarly, the set of neighboring variable nodes of check node j is denoted by Nc(j). The degree of check node j is denoted by dj . Suppose that a codeword is transmitted over a memoryless binary-input output-symmetric (MBIOS) channel, and y is the received vector. In [1], the authors proposed the following relaxed LP formulation to recover the transmitted symbols x:
+
+min : γT x
+
+s.t. : Pj x ∈ PPdj , ∀j ∈ J ,
+
+(1)
+
+where γ is the log-likelihood ratio (LLR) vector of length
+
+n and γi is defined as γi = log
+
+Pr(y|xi=0) Pr(y|xi=1)
+
+, in which
+
+Pr(·) denotes the probability density function, and Pj is
+
+a dj × n binary matrix that contains 1 only in the s-th
+
+row and the t-th column if xt, the t-th element of vector
+
+x, is the s-th neighboring variable node of check node j.
+
+Therefore, Pjx is a sub-vector of x that is composed of all
+
+variable nodes checked by the j-th check node. The notation
+
+PPdj is used for the convex hull of the set Pdj , and Pdj is the set of even weight binary vectors of length dj. For
+
+example, when dj = 4, PP4 is the convex hull of the set
+
+{0000, 1100, 1010, 1001, 0110, 0101, 0011, 1111}.
+
+We note that if the constraint in (1) is replaced by Pj x ∈
+
+Pdj , the model will become an integer programming (IP) model and the solution of the IP model is the maximum-
+
+likelihood (ML) solution. In contrast, the solution of the
+
+relaxed LP model (1) will be the ML solution only if the
+
+output is an integer solution. This property is called ML
+
+Certificate. Solving (1) by a general LP solver is not efficient.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3530
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+Barman et al. reformulated (1) as follows and solved it by ADMM.
+
+min : γT x
+
+s.t. : Pj x = zj, ∀j ∈ J
+
+zj ∈ PPdj , ∀j ∈ J ,
+
+(2)
+
+where zj is a vector of length dj . In (2), vector zj , instead of Pjx, is constrained by the parity-check equation of check node j. The introduction of zj makes the model fit the standard
+template of ADMM.
+
+The scaled form of ADMM solves this problem by the
+
+following iterative equations [18] :
+
+⎛
+
+⎞
+
+xk+1
+
+=
+
+arg min ⎝γT x +
+x
+
+μ 2
+
+j∈J
+
+||Pjx −
+
+zkj
+
++ λjk||22⎠
+
+zjk+1 = ΠPPdj (Pj xk+1 + λjk), ∀j ∈ J λjk+1 = λkj + (Pj xk+1 − zjk+1), ∀j ∈ J ,
+
+where ΠPPdj is the Euclidean projection onto the check polytope PPdj and λj values are Lagrangian multipliers. Parameter
+μ is the Lagrangian coefficient that is a constant and is chosen for the best FER performance. Vector zj0 and vector λj0 are initialized as vector 0.5 and vector 0, respectively.
+
+It can be seen that the above equation for updating x can
+
+be solved and reduced to the following bit-wise equation:
+
+⎛
+
+⎞
+
+xki +1
+
+=
+
+1 Π[0,1] di
+
+⎝
+
+(zjk(i)
+
+j∈Nv (i)
+
+−
+
+λjk(i) )
+
+−
+
+1 μ
+
+γi⎠,
+
+(3)
+
+where Π[0,1] is the Euclidean projection to the interval [0, 1], and zj(i) and λj(i) denote the elements of zj and λj corre-
+sponding to xi, respectively.
+
+B. ADMM VN-Penalized Decoder
+
+Simulation results show that the ADMM based LP decoder, or ADMM decoder for short, outputs non-integral solutions (pseudo-codewords) when it fails to recover the transmitted codeword. Thus, in [32], the authors introduced an ADMM penalized model to suppress the pseudo-codewords by adding a penalty function h(xi) for each variable xi to the objective function as follows:
+
+min : γT x +
+
+n
+i h(xi)
+
+s.t. : Pjx = zj, ∀j ∈ J
+
+zj ∈ PPdj , ∀j ∈ J .
+
+(4)
+
+The penalty function is an increasing function on [0, 0.5) and symmetric about 0.5. This ensures non-binary solutions have larger penalty values compared to binary solutions, with the penalty increasing as the non-integer solution gets further away from a binary solution. Due to the extra cost of penalty functions, the fractional solutions are penalized and the integer solutions are preferred.
+It should be noted that the objective function of (4) is not linear anymore, and as a result, the convergence guarantee derived from the LP model does not hold anymore. However,
+
+the ADMM technique can still be applied to solve (4) and
+
+obtain a local minimum efficiently. Moreover, this model still
+
+preserves the important ML Certificate property.
+
+It can be verified that for different objective functions in (4),
+
+the updating rules of zj and λj do not change. The change of the objective function only impacts the updating rule of xi. Generally, for any objective function f (x), the update of xi in the (k + 1)-th iteration is the farthest root from 0.5 of the
+
+following equation
+
+⎛
+
+⎞
+
+xi
+
+=
+
+1 di
+
+⎝
+
+(zjk(i)
+
+j∈Nv (i)
+
+− λjk(i)) −
+
+1 μ
+
+∂f (xk) ⎠, ∂xi
+
+(5)
+
+in
+
+which
+
+xi
+
+is
+
+the
+
+unknown
+
+variable,
+
+and
+
+∂f (xk) ∂xi
+
+is
+
+the
+
+partial
+
+derivative of f (x) with respect to xi calculated with elements
+
+of x (except for xi) in the k-th iteration. Then the calculated
+
+value of xi is projected into the interval [0, 1]. Interested
+
+readers are encouraged to refer to [17] and [32] for more
+
+details.
+
+Several penalty functions were proposed in [32] such as h1(x) = −α|x − 0.5|, h2(x) = −α(x − 0.5)2 and h3(x) = −α log(|x−0.5|), where α is called the penalty coefficient and
+
+is determined by simulations. Experiments show that decoding
+
+with h2(x) achieves the best error correction performance and
+
+average decoding time. The updating rule for xi, using h2(·)
+
+as the penalty function, is given by
+
+⎛
+
+⎞
+
+xki +1
+
+=
+
+Π[0,1] di
+
+1 −
+
+2α μ
+
+⎝
+
+(zjk(i)
+
+j ∈Nv (i)
+
+− λjk(i)) −
+
+γi μ
+
+−
+
+α ⎠. μ
+
+(6)
+
+Later, Wang et al. proposed another penalty function in [34] which is a generalization of h1(x). Their penalty function is a segmented function and each segment is in the form of −αt|x − 0.5|, but with a different penalty coefficient αt. The segment boundaries and the penalty coefficients for different segments are optimized using differential evolution. As a result, variable xi in different segments will be penalized by a different penalty function. The penalty functions introduced in [32] and [34] are all based on variable nodes. We thus call them VN-penalized functions and refer to the decoding algorithms as ADMM VN-penalized decoding algorithms.
+
+III. ADMM CN-PENALIZED DECODER
+In this section, we propose a novel ADMM CN-penalized decoding algorithm. We also discuss the properties of functions that can be used as CN-penalty functions. Several examples of CN-penalty functions and their updating rules are presented. Finally, we analyze the complexity of the ADMM CN-penalized decoder with different penalty functions.
+
+A. ADMM CN-Penalized Decoding Model
+When the ADMM decoder fails to recover the transmitted codeword, some parity-checks corresponding to the harddecision values of the solution are non-zero. The proposed algorithm penalizes such check equations so that the codeword will have a larger chance to appear as the output. We add
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3531
+
+penalty terms to the objective function of the ADMM decoding
+
+model as follows:
+
+min : γT x + α
+
+m
+j=1 g(Pj x)
+
+s.t. : Pjx = zj , ∀j ∈ J
+
+zj ∈ PPdj , ∀j ∈ J .
+
+(7)
+
+In (7), g(Pjx) is the penalty function corresponding to check node j and α is the penalty coefficient. The penalty function takes variables corresponding to the neighboring variable nodes of check node j as input. In our formulation, we do not assign different penalty coefficients to check nodes with different degrees, because the degree distribution of check nodes is often rather uniform. Thus, the impact of using different penalty coefficients is rather small. A CN-penalty function g(x) should have the following properties:
+
+1) g(x) should be able to take different number of argu-
+ments as input; 2) g(x) = g(y), if x is a permutation of y; 3) g(x) = g(y), if x is a subvector of y and the other
+elements of y are zeros; 4) g(x) should be a monotonic function of each element
+of x over [0, 1]; 5) Consider two vectors x and y of the same length, where
+an odd number of elements of x and y satisfy yi = 1 − xi, and the rest of their elements satisfy yi = xi. Then, g(x) + g(y) = a + b, where a = g(0, 0) and b = g(0, 1); 6) g(x) is partially differentiable with respect to each element of x in the interval [0, 1].
+
+For irregular LDPC codes, the degrees of check nodes are not the same. Property 1 is to accommodate check nodes with different degrees. Property 2 guarantees that the value of the penalty function will not be affected by the order of the arguments. We also note here that functions with this property are the so-called symmetric functions. Property 3 indicates that adding more zeros to a CN-penalty function does not affect the value of the function. It will be shown later that adding more ones to the inputs of the function also does not affect the value of the function, as long as the number of ones is even. Property 4 only requires the function to be monotonic with respect to each variable and the function can be monotonically increasing or decreasing with respect to different variables. This property encourages solutions that are close to 0 or 1 values. In Property 5, the only requirement on a and b is a = b. As we will see in the following, Property 5 is instrumental in proving Corollaries 1-3. The following properties are consequences of Properties 1-6, given above.
+Corollary 1: Consider a function g(x) that satisfies Properties 1 to 5, and two vectors x and y of the same length. If an even number of elements of x and y satisfy yi = 1 − xi, and the rest of their elements satisfy yi = xi, then g(x) = g(y).
+Proof: Consider vectors x and y described in the corollary, and define a vector z from x by changing an arbitrary element of x, say xi, to 1 − xi. By the construction of z, there is only one element of z, i.e., zi = 1 − xi, that differs from the
+
+elements of x. By Property 5, we thus have g(x)+g(z) = a+b.
+
+It can also be seen that there are an odd number of elements of
+
+y and z that satisfy yi = 1 − zi, and the rest of their elements are the same. Again, by Property 5, g(y)+g(z) = a+b. From
+
+g(x) + g(z) = g(y) + g(z) = a + b, we therefore conclude
+
+that g(x) = g(y).
+
+Corollary 2: For a function g(x) satisfying Properties 1 to
+
+5, all binary vectors with even weights have the same function
+
+value a = g(0, 0), and all binary vectors with odd weights have
+
+the same function value b = g(0, 1).
+
+Proof: We consider two arbitrary binary vectors x and y,
+
+both with even (or odd) weights and show that the function
+
+value is the same for both of them, and is thus equal to g(0, 0)
+
+(or g(0, 1)). First, we consider a scenario where both vectors
+
+have the same length. In this scenario, it is easy to see that
+
+regardless of whether the vectors have even or odd weights,
+
+the condition of Corollary 1 is satisfied, i.e., an even number
+
+of elements of x and y satisfy xi = 1 − yi, and the rest satisfy xi = yi. From Corollary 1, we thus have g(x) = g(y).
+
+For the second scenario where the two vectors have different
+
+lengths, the shorter vector can be appended with zeros to make
+
+the lengths equal. By Property 3, this does not change the value
+
+of the function. The proof for this scenario will then be the
+
+same as that of the first scenario.
+
+Corollary 3: For a function g(x) satisfying Properties 1 to
+
+5, the function values of a vector with elements in [0, 1] is in
+
+the range [min(a, b), max(a, b)].
+
+Proof: Suppose x = (x1, x2, x3, . . . , xn) is a vector with 0 ≤ xi ≤ 1. The function value g(x) is then bounded by g(0, x2, x3, . . . , xn) and g(1, x2, x3, . . . , xn) based on Prop-
+erty 4. The smaller value is the lower bound and the larger
+
+value is the upper bound. Similarly, g(0, x2, x3, . . . , xn) is bounded by g(0, 0, x3, . . . , xn) and g(0, 1, x3, . . . , xn). So, by recursion, g(x) is bounded by its values for two binary
+
+vectors. There are, however, only two possible function values
+
+for binary vectors, a and b, which are the function values of the
+
+even weight binary vectors and the odd weight binary vectors,
+
+respectively. This completes the proof.
+
+As noted before, by changing the objective function in the
+
+LP model, the updating rule of xi changes while the updating rules of zj and λj remain the same. The updated value of xi is the root of the following equation projected into the interval
+
+[0, 1]:
+
+⎛
+
+⎞
+
+xi
+
+=
+
+1 di
+
+⎝
+
+(zjk(i)
+
+j∈Nv (i)
+
+− λkj(i)
+
+−
+
+α ∂g(Pjxk) )− μ ∂xi
+
+γi ⎠. μ
+
+(8)
+
+In order to derive the updating rules of xi through (8),
+
+we need to find the partial derivative of g(Pjx) with respect
+
+to
+
+xi.
+
+Clearly,
+
+if
+
+xi
+
+∈/
+
+Nc(j),
+
+∂g(Pj x) ∂xi
+
+=
+
+0,
+
+since
+
+variable
+
+node i is not a neighbor of check node j and thus xi does not
+
+appear in Pjx.
+
+Similar to the approach of [18], ADMM CN-penalized
+
+decoding can be expressed in the form of an iterative message-
+
+passing algorithm, as described in Algorithm 1. In the algo-
+
+rithm, we first initialize x with the hard-decision values of the
+
+channel outputs and then start the iterations. The updating of
+
+zj and λj can be considered as the updating of a check node.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3532
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+Algorithm 1 ADMM CN-Penalized Decoding for LDPC
+
+Codes 1: Construct the matrix Pj for each j ∈ J based on the
+parity-check matrix H.
+
+2: Construct the log-likelihood vector γ based on the received
+
+vector y. 3: Initialize x0 with the hard-decision of y. Initialize λj0 with
+the all-zero vector for all j ∈ J . Initialize iteration number
+
+k = 0.
+
+4: repeat
+
+5: for all j ∈ J do
+
+6:
+
+zjk+1 = ΠPPdj (Pj xk + λkj )
+
+7:
+
+λkj +1 = λkj + (Pj xk − zjk+1)
+
+8:
+
+for all i ∈ Nc(j) do
+
+9:
+
+Ejk→+1i
+
+=
+
+(zjk(+i)1
+
+−
+
+λjk(+i)1
+
+−
+
+α μ
+
+∂
+
+g(Pj xk ∂xi
+
+)
+
+)
+
+10:
+
+end for
+
+11: end for
+
+12: for all i ∈ I do
+
+13:
+
+xki +1
+
+=
+
+Π[0,1]
+
+1 di
+
+(
+
+j∈Nv (i) (Ejk→+1i
+
+−
+
+γi μ
+
+))
+
+14: end for
+
+15: assign the hard-decision of xk+1 to xˆ
+
+16: calculate all parity-checks based on xˆ
+
+17: if all parity-checks are 0 then return xˆ
+
+18: end if
+
+19: k ← k + 1
+
+20: until k ≥ Imax return xk
+
+For ADMM based LP decoding, each check node receives its neighboring variable node values and computes its outgoing messages Ejk→+1i = zjk(+i)1 − λkj(+i)1. For ADMM CN-penalized decoding, these outgoing messages are adjusted by adding the penalty information before they are passed to the neighboring variable nodes. For each variable node, its value is updated based on the messages from its neighboring check nodes and the channel output. The termination condition of the algorithm is reaching the maximum number of iterations Imax, and the output is the value of x in the last iteration. The early termination (lines 15-18) can be optionally enabled and the output would be the hard-decision of x if all parity-checks are satisfied by the hard-decision of x.
+Proposition 1: If the output of Algorithm 1 is integer, then it is a valid codeword.
+Proof: For the implementation without considering early termination, this is true because all integer solutions in the feasible region are valid codewords. For the implementation with early termination enabled, if the early termination does not happen, then we have a situation similar to the first case. If the early termination does happen, then a binary solution that satisfies all the check node equations will be the output. This means the output is a valid codeword.
+Proposition 2: If the output of Algorithm 1 is a global minimum of model (7) and is also integer, then it is the ML solution.
+
+Proof: Suppose the global minimum is x∗. For any other codeword c,
+
+m
+
+m
+
+γT x∗ + αg(Pj x∗) ≤ γT c + αg(Pjc).
+
+j=1
+
+j=1
+
+From Proposition 1, we know x∗ is also a codeword. Then Pjx∗ and Pjc are all binary vectors containing even number
+of 1s for all j ∈ J . By Corollary 2, this implies the values of penalty terms g(Pjx∗) and g(Pjc) are the same. Therefore, we obtain γT x∗ ≤ γT c, which means x∗ is the ML solution.
+
+In the following, we prove that the failure probability of the proposed algorithm is independent of the transmitted codeword and thus one can assume, without loss of generality, that the all-zero codeword is transmitted. This assumption is used in the instanton analysis as well as in Monte Carlo simulations.
+Theorem 1: If the channel is symmetric, then the probability that Algorithm 1 fails to find the transmitted codeword is independent of the codeword that was transmitted.
+Proof: See the Appendix.
+
+B. Possible Penalty Functions
+In the following, we present three possible penalty functions.
+1)
+
+g1(x1, x2, . . . , xn)
+
+= g1(g1(x1, x2, . . . , xn−1), xn), if n > 2
+
+(9)
+
+x1 + x2 − 2 x1 x2,
+
+if n = 2.
+
+It can be shown that g1(·) satisfies Properties 1 to 6. If n = 2, this function is equivalent to the XOR operation
+
+for two binary numbers because g1(1, 1) = g1(0, 0) = 0 and g1(0, 1) = 1. The same holds true if the function has more than 2 binary arguments. For example,
+
+g1(0, 1, 0) = g1(g1(0, 1), 0) = 1 and g1(0, 1, 0, 1) = g1(g1(g1(0, 1), 0), 1) = 0. Therefore, the XOR result of the
+
+neighboring variable node values of the check node j can be
+
+formulated as g1(Pjx). For any binary vector with even (odd) weight as input, the function value is 0 (1). Also, the function
+
+value is larger than 0 and less than 1 for any other points
+
+in the range [0, 1]n. As a result, the value of g1(Pjx) is
+
+zero for a satisfied check node and positive for all other
+
+cases, as expected. For g1(·), the penalty coefficient should
+
+be selected positive to increase the objective function value
+
+for non-codeword vectors.
+
+In order to obtain the updating rule for xi, we need to
+
+find the partial derivative of g1(Pjx) with respect to xi.
+
+If xi ∈ Nc(j), based on the Property 2, we have g1(Pj x) =
+
+g1(g1(Pjx\xi), xi) = g1(Pjx\xi) + xi − 2g1(Pj x\xi)xi,
+
+where Pjx\xi is composed of all the elements of Pjx except
+
+xi,
+
+and
+
+thus
+
+∂g1(Pj x) ∂xi
+
+=
+
+1−2
+
+g1(Pj x\xi).
+
+This
+
+combined
+
+with the equation g1(Pjx\xi) =
+
+g1(Pj x)−xi 1−2xi
+
+result in
+
+∂g1(Pjx) = 1 − 2g1(Pjx) .
+
+∂xi
+
+1 − 2xi
+
+(10)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3533
+
+Based on (10), and by assuming t = 1 − 2g1(Pj xk), the updating equation for Ejk→+1i in Algorithm 1 can be written as
+
+Ejk→+1i
+
+=
+
+(zjk(+i)1
+
+−
+
+λjk(+i)1
+
+−
+
+α1 μ
+
+1
+
+t − 2xik
+
+),
+
+(11)
+
+where α1 is the penalty coefficient for the penalty function g1(·). The value of t is the same for all variable nodes connected to the same check node.
+2)
+
+n
+
+g2(x1, x2, . . . , xn) = (1 − 2xi).
+
+(12)
+
+1
+
+This function also satisfies all the requirements. For binary
+vectors containing an even (odd) number of ones, the function value is 1 (-1). For a vector with elements in the range (0, 1), the function value is in the range [−1, 1].
+If xi ∈ Nc(j), we have g2(Pjx) = g2(g2(Pjx\xi), xi) = g2(Pjx\xi)(1 − 2 xi), and thus
+
+∂ g2 (Pj x) ∂xi
+
+=
+
+−2
+
+g2 (Pj x\xi )
+
+=
+
+−2
+
+g2(Pj x) 1 − 2xi
+
+.
+
+With t = g2(Pj xk), the updating equation for Ejk→+1i in Algorithm 1 can be written as
+
+Ejk→+1i
+
+=
+
+(zjk(+i)1
+
+−
+
+λkj(+i)1
+
++
+
+α2 μ
+
+1
+
+2t − 2xik
+
+),
+
+(13)
+
+where α2 is the penalty coefficient.
+
+It can be verified that g2(x) = 1 − 2g1(x). Thus we have
+
+γT x+α2
+
+m j=1
+
+g2(Pj x)
+
+=
+
+γT x+α2
+
+m j=1
+
+(1
+
+−2g1(Pj
+
+x))
+
+=
+
+γT x + (−2α2)
+
+m j=1
+
+g1(Pj x)
+
++
+
+α2.
+
+Since
+
+the
+
+constant
+
+term
+
+α2 in the objective function does not affect the decoding result,
+
+we conclude that the decoding performance of (7) with penalty
+
+function g1(x) and penalty coefficient α1 = −2α2 is the same as that with penalty function g2(x) and penalty coefficient α2.
+3) For binary vectors, g1(x) is equivalent to XOR operation.
+
+Since binary XOR operation is simple to implement, to devise
+
+g3(·), we force the arguments of g1(x) to be binary by using the hard-decision value of x instead of x. The inclusion
+
+of hard-decision would make g3(·) non-differentiable. So,
+
+to obtain the update rule for Ej→i, we use the following
+
+approach.
+
+Let xˆ denote the hard-decision value of x. Then t =
+
+g1(Pjxˆ) is the XOR of all the elements of Pjxˆ. By replacing t in (11) with 1−2t , we obtain the following updating equation
+
+for Ej→i:
+
+Ejk→+1i
+
+=
+
+⎧ ⎨ zjk(+i)1 ⎩ zjk(+i)1
+
+− −
+
+λjk(+i)1 λkj(+i)1
+
+− +
+
+α3 , αμ3 , μ
+
+if t ⊗ xˆi = 0 if t ⊗ xˆi = 1.
+
+(14)
+
+In Algorithm 1, the hard-decision values of variables xki +1 are obtained in Line 15 and the parity-check equations are calculated in Line 16. If we re-arrange Algorithm 1 and move the calculation of each parity-check equation inside the updating operation of each check node before Line 6, we can re-use these available calculation results.
+
+TABLE I
+NUMBER OF ADDITIONAL OPERATIONS FOR DIFFERENT PENALTY FUNCTIONS IN ONE DECODING ITERATION
+
+C. Complexity Analysis
+The penalty terms introduce additional complexity to ADMM decoding. Here we calculate and compare the number of extra computations for different penalty functions in one iteration. The results are presented in Table I. For simplicity, the ADMM CN-penalized decoder with function g1(x), g2(x) and g3(x) are denoted by CNP-g1, CNP-g2 and CNP-g3, respectively. Similarly, VNP-h1 and VNP-h2 are used for the ADMM VN-penalized decoder with penalty functions h1(x) and h2(x), respectively. In our calculations, we do not count the multiplication with 2, as that can be implemented by a simple bit shifting. Table I shows that CNP-g2 is simpler than CNP-g1 having the same error correction performance. On the other hand, CNP-g3 does not require any multiplication and much simpler than CNP-g1 to implement. Table I also shows that CN-penalized decoders are generally more complex than their VN-penalized counterparts. As we will see later, this extra complexity brings with it a better error correction performance.
+
+IV. INSTANTON ANALYSIS
+
+The error correction performance of LDPC codes at high SNR values is difficult to be obtained by Monte Carlo simulations because of the huge amount of calculations and limited computational resources. Different methods have been proposed to estimate the FER performance of BP decoding at high SNR values, such as importance sampling [35]–[37], and the linear state-space model [38]. These methods are all based on the knowledge of trapping sets which are the sub-graphs of the Tanner graph that can trap the decoder. To estimate the error floor of LDPC codes, another technique, called instanton analysis, was introduced in [39]. Instantons are the set of most probable noise configurations which lead to decoding failures. Therefore, the minimum norm of the instantons can be used to predict the slope of the FER curve at high SNR values [40], [41]. More specifically, the slope of the FER curve for the AWGN channel is given by
+
+exp(− ins 22s2/2),
+
+(15)
+
+where ins is one of the instantons with the minimum norm and s2 is the SNR value. If we were to estimate the actual FER curve, the multiplicity and the curvature factor of the instantons have to be taken into account. As pointed out in [41], one may assume that the multiplicity is equal to 1. The study of the curvature factor is not conducted in the literature and is beyond the scope of this paper.
+Several algorithms have been proposed to find the instantons of LP decoding [31], [39], [42], and two instanton search algorithms for ADMM VN-penalized were presented in [32] for the AWGN channel. In this work, we use the first instanton
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3534
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+search algorithm of [32], referred to as ISA-PD, and adapt it to our CN-penalized decoder. The optimization problem for finding an instanton in the case of the ADMM CN-penalized decoder is formulated as follows:
+
+min : ||n||22
+m
+s.t. : γ(n)T w + αg(Pj w) ≤ αmg(0), (16)
+j=1
+
+where γ(n) is the LLR vector corresponding to the channel
+
+noise vector n.
+
+We assume that the all-zero codeword is transmitted,
+
+the channel noise is n and the output of the ADMM
+
+CN-penalized decoder is w. The constraint of the model is
+
+derived from the fact that the objective value of the ADMM
+
+CN-penalized decoding model for a decoding output w is less
+
+than or equal to that for the all-zero codeword. For the AWGN
+
+channel with binary phase-shift keying (BPSK) modulation,
+
+the received symbol is yi = 1 + ni. The noise component with a positive value increases the reliability of transmitting a
+
+0 and would not contribute to the decoding error. Therefore,
+
+we constrain the noise to be negative. Equivalently, to be
+
+consistent with [32], we use ni ≥ 0 and yi = 1 − ni. Then, for
+
+the AWGN channel with noise variance σ2, the LLR vector is
+
+given
+
+by
+
+γ (n)
+
+=
+
+2 σ2
+
+(1
+
+−
+
+n).
+
+The Lagrangian for this model is
+
+⎛
+
+⎞
+
+m
+
+L = ||n||22 + λ ⎝γ(n)T w + α g(Pjw) − αmg(0)⎠ .
+
+j=1
+
+By making the partial derivatives of L with respect to n
+
+and λ equal to 0, we obtain the following equations:
+
+⎧ ⎨⎪⎪
+
+2n
+
+−
+
+2λ σ2
+
+w
+
+=
+
+0
+
+⎪⎪⎩
+
+2 σ2
+
+(1
+
+−
+
+n)T
+
+w
+
++
+
+α
+
+m
+
+g(Pjw) − αmg(0) = 0.
+
+j=1
+
+By solving these equations, the solution to (16) is
+
+n∗ = w
+
+1
+
+w
+
+2 2
+
+w
+
+1−
+
+ασ2 2
+
+(mg(0)
+
+⎞⎤⎞
+
+m
+
+− g(Pjw)⎠⎦⎠ .
+
+(17)
+
+j=1
+
+The framework of the instanton search algorithm for the ADMM CN-penalized decoder is the same as Algorithm 2 in [32] except that in Line 4 the instanton is calculated by (17).
+
+V. SIMULATION RESULTS
+In this section, we first present the FER performance of our proposed ADMM CN-penalized decoders and compare them with other decoders. Then, we present our results on the error floor of the proposed decoders using instanton analysis. All simulations are performed on the AWGN channel with BPSK modulation. All points of FER curves are obtained by collecting 100 errors. As we discussed before, the decoding performance of ADMM-CNP-g1 is the same as ADMM-CNP-g2 if their penalty coefficients are related by
+
+Fig. 1. FER performance of (576, 288) WiMAX code for the proposed ADMM CN-penalized decoders in comparison with other decoders.
+α1 = −2α2. Therefore, in the following, we only report the simulation results of ADMM-CN-g1 and ADMM-CN-g3.
+A. FER Performance
+In this part, we present the simulation results of the proposed ADMM CN-penalized decoders. The Lagrangian parameter and the penalty coefficient for each code are selected for the best FER performance in the mid-range of the waterfall region. We compare the performance of the proposed decoding algorithms with those of ADMM-LP decoding in [16], ADMM VN-penalized decoding with h2(x) penalty term in [32] and the sum-product algorithm. For a fair comparison, the maximum iteration number is selected to be 100 for all algorithms. The over-relaxation coefficient [17] (for accelerating the convergence) is set to 1.9 for all three ADMM (penalized) decoding algorithms. Moreover, the Lagrangian parameter μ is set to the same value for all three ADMM (penalized) decoding algorithms.
+Fig. 1 shows the FER performance of the (576, 288) code from WiMAX standard [43] for different decoders. For this code, the parameter μ is set to 2.8. The penalty coefficient for ADMM-VNP-h2 is α = 1.9. The penalty coefficient for the two proposed ADMM-CNP decoders is α = 0.4. Fig. 1 shows that all penalized algorithms perform better than ADMM-LP. The proposed ADMM-CNP-g1 algorithm consistently outperforms the other ADMM algorithms, with a gap of about 0.25 dB from ADMM-VNP-h2. Moreover, in the low Eb/N0 region, the performance of ADMM-CNP-g1 is very close to the sum-product algorithm. With a much lower complexity compared to ADMM-CNP-g1, ADMM-CNP-g3 still outperforms ADMM-VNP-h2 at higher Eb/N0 values, but with a rather small gap.
+Fig. 2 shows the FER performance of the (1152, 864) code from WiMAX standard [43] by different decoders. For this code, the parameter μ is set to 2.8. The penalty coefficient for ADMM-VNP-h2 is α = 2.3, and the penalty coefficient for the two proposed decoders is α = 0.5. For this code, more or less the same trends as those in Fig. 1 are observed. Notable is that in Fig. 2, the performance gap between the proposed ADMM-CNP-g1 algorithm and the other ADMM algorithms is even larger. In particular, in the waterfall region, this algorithm is practically performing identically to the sumproduct algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3535
+
+TABLE II
+AVERAGE NUMBER OF ITERATIONS FOR DIFFERENT DECODERS AT DIFFERENT Eb/N0 VALUES FOR THE TWO WiMAX CODES (IMAX = 100)
+
+Fig. 2. FER performance of (1152, 864) WiMAX code for the proposed ADMM CN-penalized decoders in comparison with other decoders.
+
+Fig. 5. FER performance of (576, 288) WiMAX code for the proposed ADMM CN-penalized decoders with different Imax in comparison with other decoders.
+
+Fig. 3. FER performance of (512, 320) RS-LDPC code for the proposed ADMM CN-penalized decoders in comparison with other decoders.
+Fig. 4. FER performance of (255, 175) Finite Geometry LDPC code for the proposed ADMM CN-penalized decoders in comparison with other decoders.
+In Figs. 3 and 4, we have provided the FER performance of our proposed ADMM-CNP-g1 algorithm in comparison with the other decoding algorithms when applied to two algebraic LDPC codes. The codes used for the results of Figs. 3 and 4 are a (512, 320) RS-LDPC code [44], and a (255, 175) LDPC code constructed from the finite geometry [45], respectively. The degrees of check nodes and variable nodes for the (512, 320) RS-LDPC code are 16 and 6, respectively. The degrees of check nodes and variable nodes for the (255, 175)
+
+LDPC code are both 16. For the two codes, we choose μ = 1.8 and 1.0 for all ADMM decoders, respectively. The penalty coefficients for ADMM-VNP-h2 are α = 2.2 and 2.4, respectively. The penalty coefficients for the two proposed ADMMCNP decoders are α = 0.5 and 0.3, respectively. For both codes, both ADMM-VNP-h2 and ADMM-CNP-g1 outperform the sum-product decoder, with the proposed ADMM-CNP-g1 algorithm having the best performance.
+To study the convergence behavior of the proposed ADMM-CNP-g1 algorithm in comparison with the other ADMM algorithms, in Table II, we have provided the average number of iterations of different decoders for the two WiMAX codes at different Eb/N0 values (Imax = 100). As can be seen in Table II, the proposed algorithm has consistently the lowest average number of iterations compared to ADMM-LP and ADMM-VNP-h2 decoders. For further analysis of the convergence behavior, we have plotted the FER of the two codes under all ADMM decoding algorithms for the two values of Imax = 100 and 1000 in Figs. 5 and 6, respectively. The curves for the sum-product algorithm with Imax = 100 are also plotted as a reference. As can be seen in the figures, by increasing the maximum number of iterations, the FER performance of the proposed ADMM-CNP-g1 algorithm surpasses that of the sum-product algorithm with Imax = 100 at lower Eb/N0 values in Fig. 5, and for the whole range of simulated Eb/N0 values in Fig. 6.
+B. Instanton Analysis
+We showed in the previous subsection that the proposed ADMM-CNP-g1 outperforms ADMM-VNP-h2 within the simulated range of SNR values. For higher SNR values that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3536
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+Fig. 6. FER performance of (1152, 864) WiMAX code for the proposed ADMM CN-penalized decoders with different Imax in comparison with other decoders.
+
+Fig. 8. FER performance (simulation and error floor slope estimation) of the (155, 64) Tanner code for the proposed ADMM-CNP-g1 in comparison with other decoders.
+
+Fig. 7. The minimum instanton norm of ADMM-CNP-g1 as a function of penalty coefficient for (155, 64) Tanner code in comparison with other decoders.
+are out of the reach of simulations, we use the instanton analysis to estimate and compare the FER performance of the decoders. We first use the instanton search algorithm described in Sec. IV to find the minimum norm of the instanton for different decoders, and then estimate the slope of the error floor by (15). The instanton search algorithm is executed 3000 times with different initializations and the maximum number of iterations we used inside the instanton search algorithm is T = 100. The maximum number of iterations for the three ADMM (penalized) decoders is also 100.
+The FER performance of ADMM-CNP-g1 is affected by the penalty coefficient. The instantons are also related to the penalty coefficient. We search for the instantons of ADMM-CNP-g1 with different penalty coefficients and plot the minimum instanton norm as a function of α1. As suggested in [32], we use the lower bound fitting curves of the instanton norms to obtain a more accurate result.
+We first examine the (155, 64) Tanner code which is also used in [32]. Fig. 7 shows the minimum instanton norm of ADMM-CNP-g1 as a function of penalty coefficient α1. The LP instantons are obtained by the method proposed in [31] and the data of sum-product (BP) decoding is obtained directly from [32] and [46]. The Lagrangian coefficient is selected as 3.0. It can be seen that the minimum instanton norms
+
+of both ADMM-CNP-g1 and ADMM-VNP-h2 decrease with
+
+the increase of penalty coefficients. This implies that a larger
+
+penalty coefficient will result in a worse error correction
+
+performance at high SNR values. Fig. 7 also shows that the
+
+slopes of the two fitting curves are different, and the rate
+
+of decrease in the minimum instanton norm is higher for
+
+ADMM-CNP-g1 than it is for ADMM-VNP-h2. Based on sim-
+
+ulations in the waterfall region, the optimal penalty coefficient
+
+of ADMM-CNP-g1 for the Tanner code is around 0.4, and
+
+that of ADMM-VNP-h2 is around 2.0. From Fig. 7, we can
+
+see that the minimum instanton norm of ADMM-CNP-g1 at
+
+α1 = 0.4 is around 14.33 and the minimum instanton norm of ADMM-VNP-h2 at α1 = 2.0 is around 13.80. The minimum
+norms imply that the error floor of ADMM-CNP-g1 decreases
+
+faster than that of ADMM-VNP-h2 at high SNR values.
+
+In Fig. 8, we plot the FER asymptotics predicted by the
+
+minimum norm instanton together with Monte Carlo simula-
+
+tion results of (155, 64) Tanner code for different decoders.
+
+The
+
+SNR
+
+used
+
+in
+
+the
+
+figure
+
+is
+
+defined
+
+as
+
+2R
+
+Eb N0
+
+,
+
+where
+
+R
+
+is
+
+the
+
+code rate. The asymptotic curves are calculated by (15). The
+
+FER performance of the proposed ADMM-CNP-g1 is almost
+
+the same as that of ADMM-VNP-h2 in the low SNR region
+
+and starts to show slightly better performance at higher SNR
+
+values. Consistent with the minimal instanton norms obtained,
+
+ADMM-LP and sum-product algorithms have the best and the
+
+worst error floors, respectively.
+
+As the second example, we consider the (1152, 864)
+
+WiMAX code. Fig. 9 shows the minimum instanton norms
+
+of ADMM-CNP-g1 and ADMM-VNP-h2 as a function of
+
+the penalty coefficient. The minimum instanton norm of the
+
+ADMM-LP decoder is also provided for comparison. The
+
+parameter settings are the same as those in Sec. V-A. From
+
+Fig. 9, similar trends as in Fig. 7 can be observed. We can
+
+find that the minimum instanton norm of ADMM-CNP-g1 at
+
+α1 = 0.5 is around 8.1 and the minimum instanton norm of ADMM-VNP-h2 at α1 = 2.3 is around 7.0. The minimum norms imply that ADMM-CNP-g1 has a superior error floor
+
+compared to ADMM-VNP-h2.
+
+In Fig. 10, we plot the FER asymptotics of different
+
+decoders obtained by the minimum instanton norm along with
+
+Monte Carlo simulation results. Similar to Fig. 8, these results
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3537
+
+of the CN-penalty function, proposed a number of functions that satisfy those properties, and investigated the performance/complexity tradeoff that each offers. We also studied the convergence properties of the proposed algorithm and proved that its performance is independent of the transmitted codeword. We also developed a message-passing framework to implement the ADMM CN-penalized algorithm. Finally, we studied the performance of the proposed algorithm in the waterfall and error floor regions using Monte Carlo simulations and instanton analysis, respectively, and demonstrated that the proposed algorithm outperforms its VN-penalized counterpart in both regions.
+
+Fig. 9. The minimum instanton norm of ADMM-CNP-g1 as a function of penalty coefficient α1 for (1152, 864) code.
+
+APPENDIX PROOF OF THEOREM 1
+The authors in [32] proved a similar result for VN penalized decoders by proving that for any channel output y when transmitting a non-zero codeword c, there exists a one-to-one channel output y0 when transmitting the all-zero codeword 0, such that:
+• Pr(y|c) = Pr(y0|0); • The decoding results (failure/success) are the same for
+the two cases. Here, the elements of y0 are obtained by
+
+Fig. 10. FER curves (simulation and error floor slope estimation) of the (1152, 864) WiMAX code for the proposed ADMM-CNP-g1 in comparison with other decoders.
+
+are
+
+plotted
+
+vs.
+
+SNR,
+
+defined
+
+by
+
+2
+
+R
+
+Eb N0
+
+.
+
+The
+
+slopes
+
+of
+
+the
+
+three curves are different at high SNR values. ADMM-LP has
+
+the steepest error rate curve at high SNR values, followed by
+
+that of ADMM-CNP-g1, and finally ADMM-VNP-h2 has the
+
+asymptote with the least slope. In general, by considering the
+
+simulations and the error floor asymptotes, ADMM-CNP-g1
+
+outperforms ADMM-VNP-h2 over the entire range of SNR
+
+values, both in waterfall and error floor regions. As a final
+
+note, we observe that, in general, the dominant trapping sets
+
+of the ADMM-CNP-g1 algorithm are larger than those of the
+
+ADMM-VNP-h2 algorithm. For example, for the (1152, 864)
+
+WiMAX code at Eb/N0 = 4.8 dB (SNR = 4.53), the most
+
+dominant trapping sets for ADMM-VNP-h2 are single variable
+
+nodes of degree 2, which belong to the (1, 2) class. For
+
+ADMM-CNP-g1, however, the most dominant trapping sets
+
+are in the (6, 1) class.
+
+VI. CONCLUSION
+In this paper, we proposed ADMM CN-penalized decoding algorithms by introducing check node based penalty terms to the objective function of the LP model. These penalty terms penalize the unsatisfied check nodes and improve the FER performance of the original ADMM decoding at low SNR values significantly. We proposed some required properties
+
+yi0 =
+
+yi, if ci = 0 yi, if ci = 1,
+
+where yi is the symmetric symbol of yi at the output of the symmetric channel. For the AWGN channel with BPSK modulation, yi = −yi. For the binary symmetric channel (BSC), yi = 1 if yi = 0 and vice versa.
+We follow the same approach as in [32] and [47] to prove Theorem 1. The only differences between the
+ADMM CN-penalized decoder and the ADMM VN-penalized decoder are the updating rule of variable xi and the termination condition. The updating rule is only used to prove
+Lemma 18 in [32], and the termination condition is used to prove Lemma 19. Therefore, to prove Theorem 1, it is
+sufficient to prove that Lemmas 18 and 19 in [32] hold true under the new updating rule of xi and the new termination condition. The rest of the proof will not be repeated here.
+In the following, Lemmas 3 and 4 are the equivalent of Lemmas 18 and 19 in [32], respectively.
+We use the same simplified symbols and the same definitions for the two operators Rc and Tc with respect to a binary codeword c as in [32]:
+
+Rc(a)i =
+
+ai,
+
+if ci = 0
+
+1 − ai, if ci = 1,
+
+Tc(a)i =
+
+ai, if ci = 0 −ai, if ci = 1.
+
+Lemma 1: For any codeword c of an LDPC code and a function g(x) satisfying properties 1 to 5 defined in Sec. III-A, equation g(Rc(Pjx)) = g(Pjx) holds for any matrix Pj .
+Proof: For any codeword c, the vector Pj c contains an
+even number of 1s. So, there will be an even number of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3538
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+differences between the elements of Rc(Pj x) and Pjx. The
+
+relation between the two corresponding different elements is
+
+Rc(Pj x)i = 1 − (Pjx)i. Based on Corollary 1, we thus have
+
+g(Rc(Pj x)) = g(Pjx).
+
+Lemma 2: For any codeword c of an LDPC code and a
+
+function g(x) satisfying properties 1 to 5 defined in Sec. III-A,
+
+equation
+
+∂g(Rc(Pj x)) ∂ Rc (xi )
+
+=
+
+Tc
+
+(
+
+∂
+
+g(Pj ∂xi
+
+x)
+
+)
+
+holds
+
+for
+
+any
+
+matrix
+
+Pj .
+
+Proof: We have
+
+∂ g(Rc(Pj x)) ∂Rc(xi)
+
+=
+
+∂g(Rc(Pj x)) ∂xi
+
+1
+∂ Rc (xi ) ∂xi
+
+=
+
+∂ g (Pj x) ∂xi
+
+1 ∂Rc(xi) .
+∂xi
+
+(18)
+
+For
+
+ci
+
+=
+
+0,
+
+Rc (xi )
+
+=
+
+xi.
+
+Then
+
+∂ Rc (xi ) ∂xi
+
+=
+
+1,
+
+and
+
+from
+
+(18),
+
+we
+
+have
+
+∂g(Rc(Pj x)) ∂ Rc (xi )
+
+=
+
+∂
+
+g(Pj ∂xi
+
+x)
+
+.
+
+For
+
+ci
+
+=
+
+1,
+
+Rc (xi )
+
+=
+
+1 − xi.
+
+Then
+
+∂ Rc (xi ) ∂xi
+
+= −1
+
+and
+
+thus
+
+∂g(Rc(Pj x)) ∂ Rc (xi )
+
+=
+
+−
+
+∂
+
+g(Pj ∂xi
+
+x)
+
+.
+
+Lemma 3: Supposed that x, zj and λj are the variables in the k-th iteration and x+, zj+ and λ+j are the variables in the (k + 1)-th iteration of Algorithm 1 when decoding y. Similarly, suppose that x0, z0j and λ0j are the variables in the k-th iteration and x0,+, zj0,+ and λj0,+ are the variables in the (k + 1)-th iteration of Algorithm 1 when decoding y0. If x = Rc(x0), zj = Rc(z0j ) and λj = Tc(λ0j ), then we have x+ = Rc(x0,+), z+j = Rc(zj0,+) and λ+j = Tc(λ0j,+), where c is the transmitted codeword.
+Proof: In the following, we only prove x+ = Rc(x0,+).
+The proof for the other two equations is similar to that of [32]
+since the updating rules of zj and λj are the same here as
+in [32].
+Based on the updating rules, we have
+
+From
+
+Lemma
+
+2,
+
+we
+
+know
+
+∂g(Rc(Pj x)) ∂ Rc (xi )
+
+=
+
+−
+
+∂
+
+g(Pj ∂xi
+
+x)
+
+if
+
+ci
+
+=
+
+1. As a result,
+
+Rc(xi+)
+
+⎛
+
+= 1⎝ |Nv(i)| j
+
+zj0(i)
+
+−
+
+λj0(i)
+
+−
+
+α μ
+
+∂ g (Pj x0 ) ∂x0i
+
+⎞ − γi0 ⎠ ,
+μ
+
+which shows If ci = 0,
+
+xx0i ,i++
+
+= =
+
+RRcc((xx+i+i)). ,
+
+zj(i)
+
+=
+
+z0j(i) ,
+
+λj(i)
+
+=
+
+λ0j(i)
+
+and γi xi0,+ =
+
+= γi0. In Rc(xi+).
+
+this case also, we obtain the same We thus have x+ = Rc(x0,+).
+
+result
+
+of
+
+Lemma 4: Let ˆc (ˆc0) be the output of the decoder if y (y0) is received. Then ˆc0 = Rc(ˆc), where c is the transmitted codeword.
+Proof: For the AWGN channel with BPSK, the value of x (x0) is initialized as the hard-decision of y (y0). Then we
+have
+
+xi =
+
+0, if yi < 0 , 1, if yi ≥ 0
+
+⎧
+
+x0i
+
+=
+
+⎪⎪⎪⎨
+
+0, 0,
+
+⎪⎪⎪⎩
+
+1, 1,
+
+if yi < 0 and ci = 0 if yi ≥ 0 and ci = 1 if yi ≥ 0 and ci = 0 if yi < 0 and ci = 1
+
+= Rc(xi).
+
+For the BSC, the same conclusion x0i = Rc(xi) can be made if the value of x (x0) is initialized as y (y0). The values of zj and λj are initialized such that z0j = Rc(zj) = 0.5 and λj0 = Tc(λj) = 0. So the conditions of Lemma 3 are satisfied and thus the decoding result in the (k + 1)-th iteration satisfies
+x+ = Rc(x0,+). Let xˆ+ (xˆ0+) be the hard-decision of x+ ( x0,+), from the definition,
+
+⎛
+
+x+i
+
+=
+
+1⎝ |Nv (i)|
+
+j
+
+⎛
+
+x0i ,+
+
+=
+
+1 |Nv (i)|
+
+⎝
+
+j
+
+zj(i)
+
+−
+
+λj(i) −
+
+α μ
+
+∂ g (Pj x) ∂xi
+
+⎞ − γi ⎠ ,
+μ
+
+zj0(i)
+
+− λj0(i)
+
+−
+
+α μ
+
+∂ g(Pj x0 ) ∂xi0
+
+(⎞19) − γi0 ⎠ .
+μ
+
+(20)
+
+Two cases of ci = 1 and ci = 0 are considered. If ci = 1, xi+ = 1 − Rc(xi+). Combining this with x = Rc(x0), xi = Rc(x0i ) = 1 − xi0, zj(i) = Rc(zj0(i) ) = 1 − z0j(i), λj(i) = Tc(λ0j(i)) = −λ0j(i), and γi = −γi0, Equation (19) can be rewritten as
+
+⎛
+
+Rc(xi+) =
+
+1⎝ |Nv (i)|
+
+j
+
+zj0(i) − λ0j(i)
+
++
+
+α ∂g(Rc(Pj x0)) μ ∂Rc(x0i )
+
+− γi0 μ
+
+.
+
+xˆ+i =
+
+0, if xi+ < 0.5 1, if x+i ≥ 0.5,
+
+xˆi0+ =
+
+0, if x0i + < 0.5 1, if x0i + ≥ 0.5
+
+= Rc(xˆ+i ),
+
+⎧
+
+=
+
+⎪⎨⎪⎪ ⎪⎪⎪⎩
+
+0, 0, 1, 1,
+
+if x+i < 0.5 and ci = 0 if xi+ ≥ 0.5 and ci = 1 if xi+ ≥ 0.5 and ci = 0 if xi+ < 0.5 and ci = 1
+
+and thus xˆ+ = Rc(xˆ0+). As a result, there is an even number of differences between the binary elements of Pjxˆ+ and Pjxˆ0+, which means the weights of the two binary vectors Pjxˆ+ and Pjxˆ0+ are either both even or both odd.
+Thus, for the implementation with early termination enabled, if in the (k + 1)-th iteration, xˆ+ can make all parity-check equations equal to 0, then xˆ0+ can also make all parity-
+check equations equal to 0. In this case, the two decoders
+terminate early and the outputs of the decoders are binary vectors cˆ = xˆ+ and ˆc0 = xˆ0+, respectively. So, from xˆ+ = Rc(xˆ0+), we have cˆ0 = Rc(cˆ). (Note that the same
+argument applies to the case where the early termination is
+disabled but the algorithm ends at the maximum iteration with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+WEI AND BANIHASHEMI: ADMM CHECK NODE PENALIZED DECODERS FOR LDPC CODES
+
+3539
+
+an integer solution. As discussed before, this solution will be a codeword.) If xˆ+ does not make all parity-check equations equal to 0 until the last iteration, or the early termination is
+not enabled and the outputs are not integers, the two decoders will stop after the last iteration and we have ˆc = x+ and cˆ0 = x0,+, respectively. Again, in these two cases, we have cˆ0 = Rc(cˆ).
+REFERENCES
+[1] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[2] M. F. Flanagan, V. Skachek, E. Byrne, and M. Greferath, “Linearprogramming decoding of nonbinary linear codes,” IEEE Trans. Inf. Theory, vol. 55, no. 9, pp. 4134–4154, Sep. 2009.
+[3] M. Punekar, P. O. Vontobel, and M. F. Flanagan, “Low-complexity LP decoding of nonbinary linear codes,” IEEE Trans. Commun., vol. 61, no. 8, pp. 3073–3085, Aug. 2013.
+[4] N. Goela, S. B. Korada, and M. Gastpar, “On LP decoding of polar codes,” in Proc. IEEE Inf. Theory Workshop (ITW), Dublin, Ireland, Aug. 2010, pp. 1–5.
+[5] B.-H. Kim and H. D. Pfister, “Joint decoding of LDPC codes and finite-state channels via linear-programming,” IEEE J. Sel. Topics Signal Process., vol. 5, no. 8, pp. 1563–1576, Dec. 2011.
+[6] H. Xiao and A. H. Banihashemi, “Estimation of bit and frame error rates of finite-length low-density parity-check codes on binary symmetric channels,” IEEE Trans. Commun., vol. 55, no. 12, pp. 2234–2239, Dec. 2007.
+[7] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 82–89, Jan. 2007.
+[8] R. Smarandache and P. O. Vontobel, “Pseudo-codeword analysis of tanner graphs from projective and Euclidean planes,” IEEE Trans. Inf. Theory, vol. 53, no. 7, pp. 2376–2393, Jul. 2007.
+[9] C. Daskalakis, A. G. Dimakis, R. M. Karp, and M. J. Wainwright, “Probabilistic analysis of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 8, pp. 3565–3578, Aug. 2008.
+[10] N. Halabi and G. Even, “Improved bounds on the word error probability of RA(2) codes with linear-programming-based decoding,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 265–280, Jan. 2005.
+[11] P. O. Vontobel and R. Koetter, “Towards low-complexity linearprogramming decoding,” in Proc. 4th Int. Symp. Turbo Codes Rel. Topics (ISTC), Munich, Germany, Apr. 2006, pp. 1–9.
+[12] K. Yang, X. Wang, and J. Feldman, “A new linear programming approach to decoding linear block codes,” IEEE Trans. Inf. Theory, vol. 54, no. 3, pp. 1061–1072, Mar. 2008.
+[13] M. H. Taghavi, A. Shokrollahi, and P. H. Siegel, “Efficient implementation of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 9, pp. 5960–5982, Sep. 2011.
+[14] D. Burshtein, “Iterative approximate linear programming decoding of LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 55, no. 11, pp. 4835–4859, Nov. 2009.
+[15] D. Goldin and D. Burshtein, “Iterative linear programming decoding of nonbinary LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 59, no. 1, pp. 282–300, Jan. 2013.
+[16] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[17] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn., vol. 3, no. 1, pp. 1–122, Jan. 2011.
+[18] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in Proc. IEEE Int. Symp. Inf. Theory, Istanbul, Turkey, Jul. 2013, pp. 1501–1505.
+[19] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large scale LP decoding with low complexity,” IEEE Commun. Lett., vol. 17, no. 11, pp. 2152–2155, Nov. 2013.
+[20] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 909–912, Jun. 2015.
+
+[21] X. Jiao, J. Mu, Y.-C. He, and C. Chen, “Efficient ADMM decoding of LDPC codes using lookup tables,” IEEE Trans. Commun., vol. 65, no. 4, pp. 1425–1437, Apr. 2017.
+[22] X. Jiao, Y.-C. He, and J. Mu, “Memory-reduced look-up tables for efficient ADMM decoding of LDPC codes,” IEEE Signal Process. Lett., vol. 25, no. 1, pp. 110–114, Jan. 2018.
+[23] H. Wei and A. H. Banihashemi, “An iterative check polytope projection algorithm for ADMM-based LP decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 1, pp. 29–32, Jan. 2018.
+[24] F. Gensheimer, T. Dietz, S. Ruzika, K. Kraft, and N. Wehn, “A lowcomplexity projection algorithm for ADMM-based LP decoding,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Hong Kong, Dec. 2018, pp. 1–5.
+[25] Y. Lin, Q. Xia, W. He, and Q. Zhang, “A fast iterative check polytope projection algorithm for ADMM decoding of LDPC codes by bisection method,” IEICE Trans. Fundam. Electron., Commun. Comput. Sci., vol. 102, no. 10, pp. 1988–1991, Oct. 2019.
+[26] Z. Liang, X. Chen, X. Sun, and L. Zhai, “A reduced-complexity ADMM based decoding algorithm for LDPC codes,” in Proc. 11th Int. Conf. Wireless Commun. Signal Process. (WCSP), Xi’an, China, Oct. 2019, pp. 1–6.
+[27] Q. Xia, Y. Lin, S. Tang, and Q. Zhang, “A fast approximate check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Commun. Lett., vol. 23, no. 9, pp. 1520–1523, Sep. 2019.
+[28] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast converging ADMM-penalized algorithm for LDPC decoding,” IEEE Commun. Lett., vol. 20, no. 4, pp. 648–651, Apr. 2016.
+[29] X. Jiao, J. Mu, and H. Wei, “Reduced complexity node-wise scheduling of ADMM decoding for LDPC codes,” IEEE Commun. Lett., vol. 21, no. 3, pp. 472–475, Mar. 2017.
+[30] I. Debbabi, N. Khouja, F. Tlili, B. L. Gal, and C. Jego, “Multicore implementation of LDPC decoders based on ADMM algorithm,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Shanghai, China, Mar. 2016, pp. 971–975.
+[31] M. Chertkov and M. G. Stepanov, “An efficient pseudocodeword search algorithm for linear programming decoding of LDPC codes,” IEEE Trans. Inf. Theory, vol. 54, no. 4, pp. 1514–1520, Apr. 2008.
+[32] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[33] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM penalized decoder for irregular low-density parity-check codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 913–916, Jun. 2015.
+[34] B. Wang, J. Mu, X. Jiao, and Z. Wang, “Improved penalty functions of ADMM penalized decoder for LDPC codes,” IEEE Commun. Lett., vol. 21, no. 2, pp. 234–237, Feb. 2017.
+[35] B. Xia and W. E. Ryan, “On importance sampling for linear block codes,” in Proc. IEEE Int. Conf. Commun. (ICC), vol. 4, May 2003, pp. 2904–2908.
+[36] E. Cavus, C. L. Haymes, and B. Daneshrad, “Low BER performance estimation of LDPC codes via application of importance sampling to trapping sets,” IEEE Trans. Commun., vol. 57, no. 7, pp. 1886–1888, Jul. 2009.
+[37] A. Farsiabi and A. H. Banihashemi, “Error floor estimation of LDPC decoders—A code independent approach to measuring the harmfulness of trapping sets,” IEEE Trans. Commun., vol. 68, no. 5, pp. 2667–2679, May 2020.
+[38] B. K. Butler and P. H. Siegel, “Error floor approximation for LDPC codes in the AWGN channel,” IEEE Trans. Inf. Theory, vol. 60, no. 12, pp. 7416–7441, Dec. 2014.
+[39] M. G. Stepanov, V. Chernyak, M. Chertkov, and B. Vasic, “Diagnosis of weaknesses in modern error correction codes: A physics approach,” Phys. Rev. Lett., vol. 95, no. 22, Nov. 2005, Art. no. 228701.
+[40] M. Stepanov and M. Chertkov, “Instanton analysis of low-density paritycheck codes in the error-floor regime,” in Proc. IEEE Int. Symp. Inf. Theory, Seattle, WA, USA, Jul. 2006, pp. 552–556.
+[41] S. Chilappagari, M. Chertkov, M. Stepanov, and B. Vasic, “Instantonbased techniques for analysis and reduction of error floors of LDPC codes,” IEEE J. Sel. Areas Commun., vol. 27, no. 6, pp. 855–865, Aug. 2009.
+[42] S. K. Chilappagari, M. Chertkov, and B. Vasic, “An efficient instanton search algorithm for LP decoding of LDPC codes over the BSC,” IEEE Trans. Inf. Theory, vol. 57, no. 7, pp. 4417–4426, Jul. 2011.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+3540
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 69, NO. 6, JUNE 2021
+
+[43] IEEE Standard for Local and Metropolitan Area Networks Part 16: Air Interface for Fixed and Mobile Broadband Wireless Access Systems Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, IEEE Standard 802.16e-2005, IEEE Std 802.16-2004/Cor 1-2005 (Amendment Corrigendum to IEEE Std 802.16-2004), Feb. 2006, pp. 1–822.
+[44] I. Djurdjevic, J. Xu, K. Abdel-Ghaffar, and S. Lin, “A class of lowdensity parity-check codes constructed based on Reed–Solomon codes with two information symbols,” IEEE Commun. Lett., vol. 7, no. 7, pp. 317–319, Jul. 2003.
+[45] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[46] M. Stepanov, “Instantons causing iterative decoding to cycle,” 2011, arXiv:1108.5547. [Online]. Available: http://arxiv.org/abs/1108.5547
+[47] H. Wei, X. Liu, and S. C. Draper, “Correction to ‘the ADMM penalized decoder for LDPC codes,”’ IEEE Trans. Inf. Theory, vol. 66, no. 12, p. 8056, Dec. 2020.
+Haoyuan Wei received the B.Eng. degree in computer science and technology and the M.Eng. degree in computer technology from Xidian University in 2013 and 2016, respectively, and the Ph.D. degree in electrical and computer engineering from Carleton University in 2021. His research interests include channel coding, digital and wireless communications, coded computing, and distributed storage systems.
+
+Amir H. Banihashemi (Senior Member, IEEE) received the B.A.Sc. degree (Hons.) in electrical engineering from the Isfahan University of Technology, Isfahan, Iran, in 1988, the M.A.Sc. degree (Hons.) in communications engineering from the University of Tehran, Tehran, Iran, in 1991, and the Ph.D. degree from the Department of Electrical and Computer Engineering, University of Waterloo, Waterloo, ON, Canada, in 1997.
+From 1991 to 1994, he was with the Electrical Engineering Research Center, Department of Electrical and Computer Engineering, Isfahan University of Technology. In 1997, he joined the Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON, Canada, where he was a Natural Sciences and Engineering Research Council of Canada Post-Doctoral Fellow. He joined the Faculty of Engineering, Carleton University, in 1998, where he is currently a Professor with the Department of Systems and Computer Engineering. His research interests include coding and information theory, digital and wireless communications, network coding, theory and implementation of communication algorithms, and compressed sensing and sampling. He was the Director of the Broadband Communications and Wireless Systems Center, Carleton University, from 2005 to 2013. He has been involved in many international conferences as the chair, a member of Technical Program Committee, and a member of organizing committee. He was also a two-time recipient of NSERC Discovery Accelerator Supplement in 2008 and 2013. He has served as the Co-Chair for the Communication Theory Symposium of Globecom07, the TPC Co-Chair for the Information Theory Workshop 2007, a member of the organizing committee for the International Symposium on Information Theory 2008, and the Co-Chair for the Canadian Workshop on Information Theory 2009. He was a member of NSERC’s Electrical and Computer Engineering Evaluation Group from 2013 to 2016, the last two years as a Section Chair. He has also served as an Associate Editor for IEEE TRANSACTIONS ON COMMUNICATIONS from 2003 to 2009.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:10:59 UTC from IEEE Xplore. Restrictions apply.
+
+

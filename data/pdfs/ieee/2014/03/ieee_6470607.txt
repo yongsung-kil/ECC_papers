@@ -1,0 +1,1162 @@
+Implementation of Decoders for LDPC Block
+Codes and LDPC Convolutional
+Codes Based on GPUs
+Yue Zhao and Francis C.M. Lau, Senior Member, IEEE
+Abstract—In this paper, efficient LDPC block-code decoders/simulators which run on graphics processing units (GPUs) are proposed.
+We also implement the decoder for the LDPC convolutional code (LDPCCC). The LDPCCC is derived from a predesigned quasi-cyclic
+LDPC block code with good error performance. Compared to the decoder based on the randomly constructed LDPCCC code, the
+complexity of the proposed LDPCCC decoder is reduced due to the periodicity of the derived LDPCCC and the properties of the quasi-
+cyclic structure. In our proposed decoder architecture,  ( is a multiple of a warp) codewords are decoded together, and hence, the
+messages of  codewords are also processed together. Since all the  codewords share the same Tanner graph, messages of the 
+distinct codewords corresponding to the same edge can be grouped into one package and stored linearly. By optimizing the data
+structures of the messages used in the decoding process, both the read and write processes can be performed in a highly parallel
+manner by the GPUs. In addition, a thread hierarchy minimizing the divergence of the threads is deployed, and it can maximize the
+efficiency of the parallel execution. With the use of a large number of cores in the GPU to perform the simple computations
+simultaneously, our GPU-based LDPC decoder can obtain hundreds of times speedup compared with a serial CPU-based simulator
+and over 40 times speedup compared with an eight-thread CPU-based simulator.
+Index Terms—LDPC, LDPC convolutional code, CUDA, graphics processing unit (GPU), OpenMP, parallel computing, LDPC
+decoder, LDPCCC decoder
+Ç
+1
+INTRODUCTION
+L
+OW-DENSITY parity-check (LDPC) codes were invented by
+Gallager [1] but had been ignored for years until
+Mackay rediscovered them [2]. They have attracted much
+attention recently because they can achieve excellent error
+correcting performance based on the belief propagation
+(BP) decoding algorithm.
+However, the BP decoding algorithm requires intensive
+computations. For applications like optical communication
+[3], [4], which requires BERs down to 1015, using CPU-
+based programs to simulate the LDPC decoder is imprac-
+tical. Fortunately, the decoding algorithm possesses a high-
+data-parallelism feature, i.e., the data used in the decoding
+process are manipulated in a very similar manner and can
+be processed separately from one another. Thus, practical
+decoders with low latency and high throughput can be
+implemented with dedicated hardware such as field-
+programmable gate arrays (FPGAs) or application-specific
+integrated circuits (ASICs) [5], [6], [7], [8], [9], [10], [11],
+[12]. However, high-performance FPGAs and ASICs are
+very expensive and are nonaffordable by most researchers.
+Such hardware solutions also cost a long time to develop.
+In addition, the hardware control and interconnection
+frame are always associated with a specific LDPC code. If
+one parameter of an LDPC code/decoder changes, the
+corresponding hardware design has to be changed accord-
+ingly, rendering the hardware-based solutions nonflexible
+and nonscalable.
+Recently, graphics processing units (GPUs) used to
+process graphics only have been applied to support general
+purpose computations [13]. In fact, GPUs are highly parallel
+structures with many processing units. They support
+floating point arithmetics and can hence conduct computa-
+tions with the same precision as CPUs. GPUs are particu-
+larly efficient in carrying out the same operations to a large
+amount of (different) data. Compared with modern CPUs,
+GPUs can also provide much higher data parallelism and
+bandwidth. Consequently, GPUs can provide a cheap,
+flexible, and efficient solution of simulating an LDPC
+decoder. Potentially, the simulation time can be reduced
+from months to weeks or days when GPUs, instead of CPUs,
+are used. In addition, the GPU programming codes can be
+reused without much modification should more advanced
+GPUs be produced by manufacturers.
+In [14], [15], a compressed parity-check matrix has been
+proposed to store the indices of the passing messages in a
+cyclic or quasi-cyclic LDPC code. Further, the matrix is
+stored in the constant cache memory on the GPU for fast
+access. The messages are stored in a compressed manner
+such that the global memory can be accessed in a coalesced
+way frequently. However, the coalesced memory access
+occurs only during the data-read process and is not always
+guaranteed due to a lack of data alignment. In [13], [16],
+[17], the sum-product LDPC decoder and the min-sum
+decoder have been implemented with GPUs. Moreover, by
+combining 16 fixed-point 8-bit data to form one 128-bit
+data, the LDPC decoder in [13] decodes 16 codewords
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+663
+. The authors are with the Department of Electronic and Information
+Engineering, Hong Kong Polytechnic University, Hunghom, Kowloon,
+Hong Kong.
+Manuscript received 26 July 2012; revised 24 Jan. 2013; accepted 4 Feb. 2013;
+published online 22 Feb. 2013.
+Recommended for acceptance by S. Ranka.
+For information on obtaining reprints of this article, please send e-mail to:
+tpds@computer.org, and reference IEEECS Log Number TPDS-2012-07-0675.
+Digital Object Identifier no. 10.1109/TPDS.2013.52.
+1045-9219/14/$31.00  2014 IEEE
+Published by the IEEE Computer Society
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+simultaneously and achieves a high throughput. Although
+the method in [13] allows coalesced memory access in
+either the read or write process, coalesced memory access in
+both the read and write processes is yet to be achieved.
+Furthermore, the LDPC convolutional codes (LDPCCCs),
+first proposed in [18], have been shown to achieve a better
+error performance than the LDPC block-code counterpart of
+similar decoding complexity. There are many features of
+LDPCCC that make it suitable for real applications. First,
+the LDPCCC inherits the structure of the convolutional
+code, which allows continuous encoding and decoding of
+variable-length codes. Thus, the transmission of codewords
+with varying code length is possible. Second, the LDPCCC
+adopts a pipelined decoding architecture—in the iterative
+decoding procedure, each iteration is processed by a
+separate processor and the procedure can be performed in
+parallel. So a high-throughput decoder architecture is
+possible. In [19], [20], the concepts and realization of highly
+parallelized decoder architectures have been presented and
+discussed. To the author’s best knowledge, there is not any
+GPU-based implementation of the LDPCCC decoder yet.
+The reason may lie in the complexity structure of the
+LDPCCC compared to the LDPC block code, particularly
+the random time-varying LDPCCC.
+As will be discussed in this paper, an LDPCCC derived
+from a well-designed QC-LDPC code possesses not only the
+good BER performance, but also the regular structure that
+results in many advantages in practical implementations.
+Due to the structure inherited from the QC-LDPC code, the
+LDPCCC decoder enables an efficient and compact memory
+storage of the messages with a simple address controller.
+In this paper, we develop flexible and highly parallel
+GPU-based decoders for the LDPC codes. We improve the
+efficiency by making 1) the threads of a warp follow the
+same execution path (except when deciding whether a bit is
+a “0” or a “1”) and 2) the memory accessed by a warp be of
+a certain size and be aligned. The results show that the
+decoders based on the GPUs achieve remarkable speedup
+improvement—more than 100 times faster than the serial
+CPU-based decoder.
+We also develop a GPU-based decoder for the LDPC
+convolutional codes. We propose a decoder architecture for
+LDPCCC derived from QC-LDPC block code. By taking
+advantage of the homogeneous operations of the pipeline
+processors, we compress the index information of different
+processors into one lookup table. Combined with an
+efficient thread layout, the decoder is optimized in terms
+of thread execution and memory access. Simulation results
+show that compared with the serial CPU-based decoder, the
+GPU-based one can achieve as many as 200 times speedup.
+The GPU-based decoder, moreover, outperforms a quad-
+core CPU-based decoder by almost 40 times in terms of
+simulation time.
+2
+REVIEW OF LDPC CODES AND LDPC
+CONVOLUTIONAL CODES
+2.1
+Structure of LDPC Codes and QC-LDPC Codes
+A binary ðN; KÞ LDPC code is a linear block code specified by
+a sparse M  N parity-check matrix H, where M ¼ N  K.
+The code rate of such an LDPC code is R  K=N ¼ 1  M=N.
+The equality holds when H is full rank.
+The H matrix contains mostly 0s and relatively a small
+number of 1s. Such a sparsity structure is the key
+characteristic that guarantees good performance of LDPC
+codes. A regular LDPC code is a linear block code with H
+containing a constant number wc of 1s in each column and
+a constant number wr of 1s in each row. Moreover, wr and
+wc satisfy the equation wr ¼ wc  N
+M . Otherwise, the code is
+defined as an irregular LDPC code.
+A bipartite graph called Tanner graph [21] can be used
+to represent the codes and to visualize the message-
+passing algorithm. In the Appendix, which can be found
+on the Computer Society Digital Library at http://
+doi.ieeecomputersociety.org/10.1109/TPDS.2013.52, Fig. 6
+shows the underlying Tanner graph of the H in (6). The N
+upper nodes are called the message nodes or the variable
+nodes, and the M nodes in the lower part of Fig. 6 are
+called the check nodes. An edge in the Tanner graph
+represents the adjacency of the variable node i and the
+check node j. It corresponds to a nonzero ði; jÞth entry in
+the H matrix.
+QC-LDPC codes form a subclass of LDPC codes with the
+parity-check matrix consisting of circulant permutation
+matrices [22], [23]. The parity-check matrix of a regular
+ðJ; LÞ QC-LDPC code is represented by
+H ¼
+Pa1;1
+Pa1;2
+  
+Pa1;L
+Pa2;1
+Pa2;2
+  
+Pa2;L
+..
+.
+  
+  
+..
+.
+PaJ;1
+PaJ;2
+  
+PaJ;L
+2
+664
+3
+775;
+ð1Þ
+where J denotes the number of block rows, L is the number
+of block columns, P is the identity matrix of size p  p, and
+Paj;l (1  j  J; 1  l  L) is a circulant matrix formed by
+shifting the columns of P cyclically to the right aj;l times
+with aj;ls being nonnegative integers less than p. The code
+rate R of H is lower bounded by R  1  J=L. If one or
+more of the submatrix(matrices) is/are substituted by the
+zero matrix rendering nonuniform distributions of the
+check-node degrees or variable-node degrees, the QC-LDPC
+code becomes an irregular code.
+2.2
+Belief Propagation Decoding Algorithm for
+LPDC Codes
+LDPC codes are most commonly decoded using the BP
+algorithm [24], [25]. Referring to the Tanner graph shown in
+Fig. 6 in the Appendix, available in the online supplemental
+material, the variable nodes and the check nodes exchange
+soft messages iteratively based on the connections and
+according to a two-phase schedule.
+Given a binary (N, K) LDPC code with a parity-check
+matrix H, we define C as the set of binary codewords c that
+satisfy the equation cHT ¼ 0. At the transmitter side, a
+binary codeword c ¼ ðc0; c1; . . . ; cN1Þ is mapped into the
+sequence x ¼ ðx0; x1; . . . ; xN1Þ according to xn ¼ 1  2cn.
+We assume that x is then transmitted over an additive
+white Gaussian noise (AWGN) channel and the received
+signal vector is then given by y ¼ ðy0; y1; . . . ; yN1Þ ¼ x þ g,
+where g ¼ ðg0; g1; . . . ; gN1Þ consists of independent Gaus-
+sian random variables with zero mean and variance
+2 ¼ N0=2.
+Let n be the initial log-likelihood ratio (LLR) that the
+variable node n is a “0” to that it is a “1”, i.e.,
+664
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+n ¼ ln Prðcn ¼ 0 j ynÞ
+Prðcn ¼ 1 j ynÞ
+
+
+:
+ð2Þ
+Initially, n is calculated by n ¼ ð4=N0Þ  yn ¼ 2yn
+2
+[26].
+Define N ðmÞ as the set of variable nodes that participate in
+check node m and MðnÞ as the set of check nodes connected
+to variable node n. At iteration l, let ðlÞ
+mn be the LLR
+messages passed from variable node n to check node m; ðlÞ
+mn
+be the LLR messages passed from check node m to variable
+node n; and ðlÞ
+n be the a posteriori LLR of variable node n.
+Then, the standard BP algorithm can be described in
+Algorithm 1 in the Appendix, available in the online
+supplemental material, [2], [27].
+Note that the decoding algorithm consists of four main
+procedures: initialization, horizontal step, vertical step, and
+making hard decisions. For each of these procedures,
+multiple threads can be used in executing the computations
+in parallel, and all the threads will follow the same
+instructions with no divergence occurring, except when
+making hard decisions.
+2.3
+Structure of LDPC Convolutional Codes
+A (time-varying) semi-infinite LDPC convolutional code
+can be represented by its parity check matrix in (3).
+H½0;1¼
+H0ð0Þ
+H1ð1Þ
+H0ð1Þ
+..
+.
+..
+.
+..
+.
+Hms ðmsÞ
+Hms1ðmsÞ
+
+H0ðmsÞ
+Hms ðmsþ1Þ
+Hms1ðmsþ1Þ
+
+H0ðmsþ1Þ
+..
+.
+..
+.
+Hms ðtÞ
+Hms1ðtÞ
+
+H0ðtÞ
+..
+.
+..
+.
+..
+.
+2
+666666666666664
+3
+777777777777775
+;
+ð3Þ
+where ms is referred to as the syndrome former memory of
+the parity-check matrix. Besides, the submatrices HiðtÞ; i ¼
+0; 1; . . . ; ms, are binary ðc  bÞ  c matrices given by
+HiðtÞ ¼
+hð1;1Þ
+i
+ðtÞ
+  
+hð1;cÞ
+i
+ðtÞ
+...
+..
+.
+...
+..
+.
+..
+.
+..
+.
+hðcb;1Þ
+i
+ðtÞ
+  
+hðcb;cÞ
+i
+ðtÞ
+2
+66664
+3
+77775
+:
+If HiðtÞ are full rank for all time instant t, the matrix H in (3)
+defines a rate R ¼ b=c convolutional code ignoring the
+irregularity at the beginning.
+Definition 1. An LDPC convolutional code is called a regular
+ðms; J; KÞ-LDPC convolutional code if the parity-check
+matrix H½0;1 has exactly K ones in each row and J ones in
+each column starting from the ðms  ðc  bÞ þ 1Þth row and
+ðms  c þ 1Þth column.
+Definition 2. An ðms; J; KÞ-LDPC convolutional code is
+periodic with period T if HiðtÞ; i 2 ZZþ is periodic, i.e.,
+HiðtÞ ¼ Hiðt þ TÞ; 8i; t.
+A code sequence v½0;1 ¼ ½v0; v1; . . . ; v1 is “valid” if it
+satisfies the equation
+v½0;1HT
+½0;1 ¼ 0;
+ð3Þ
+where vi ¼ ðvð1Þ
+i ; vð2Þ
+i ; . . . ; vðcÞ
+i Þ and HT
+½0;1 is the syndrome-
+former (transposed parity-check) matrix of H½0;1.
+2.4
+Deriving LDPC Convolutional Codes from QC-
+LDPC Block Codes
+There are several methods to construct LDPC convolutional
+codes from LDPC block codes. One method is to derive
+time-varying LDPCCC by unwrapping randomly con-
+structed LDPC block codes [18] and another is by unwrap-
+ping the QC-LDPC codes [28], [29]. We consider a
+construction method by unwrapping a class of QC-LDPC
+block code. Details of the method are shown in the
+Appendix, available in the online supplemental material.
+Example 1. Consider a QC-LDPC code with four block rows
+and 24 block columns, i.e., J ¼ 4 and L ¼ 24. It is first
+divided into 4  4 equally sized subblocks,1 i.e.,  ¼ 4.
+Then, the parity-check matrix of LDPCCC is derived. The
+construction process is shown in Fig. 1.
+2.5
+Decoding Algorithm for LDPCCC
+In H½0;1, two different variable nodes connected to the
+same check node cannot be distant from each other more
+than ms time units. This allows a decoding window that
+operates on a fixed number of nodes at one time. Since any
+two variable nodes that are at least ms þ 1 units apart can
+be decoded independently, parallel implementation is
+feasible. The LDPCCC can, therefore, be decoded with
+pipelined BP decoding algorithm [18]. Specifically, for a
+maximum iteration number of I, I independent processors
+will be employed working on different variable nodes
+corresponding to different time. In each processor, the
+variable nodes and the check nodes exchange soft messages
+iteratively based on the connections and according to a
+two-phase schedule.
+Fig. 2 shows a decoder on the Tanner graph. It is based
+on the LDPCCC structure shown in Example 1. The code
+has a rate of R ¼ 5=6 and a syndrome former memory of
+ms ¼ 3. We refer the c incoming variable nodes (bits) as a
+frame. Note that every c bits form a frame and every ms þ 1
+frames are involved in the same constraints. The I
+processors can operate concurrently. At every iteration,
+every processor first updates the ðc  bÞ neighboring check
+nodes of the c variable nodes that just come into this
+processor. Then, every processor will update the c variables
+which are leaving this processor.
+The computations of the check-node updating and
+variable-node updating are based on the standard
+BP algorithm Suppose v½0;1 ¼ ½v0; v1; . . . ; v1, where vt ¼
+ðvð1Þ
+t ; vð2Þ
+t ; . . . ; vðcÞ
+t Þ is the tth transmitted codeword. Then,
+the codeword v½0;1 is mapped into the sequence
+x½0;1 ¼ ½x0; x1; . . . ; x1
+according to xt ¼ ðxð1Þ
+t ; xð2Þ
+t ; . . . ; xðcÞ
+t Þ and xðjÞ
+t
+¼ 1  2vðjÞ
+t
+(j ¼ 1; 2; . . . ; c). Assuming an AWGN channel, the received
+signal y½0;1 ¼ ½y0; y1; . . . ; y1 is further given by
+yt ¼
+
+yð1Þ
+t ; yð2Þ
+t ; . . . ; yðcÞ
+t
+
+;
+ZHAO AND LAU: IMPLEMENTATION OF DECODERS FOR LDPC BLOCK CODES AND LDPC CONVOLUTIONAL CODES BASED ON GPUS
+665
+1. Here, we use subblock to denote the ðpJ=Þ  ðpL=Þ matrix as to
+distinguish it with the submatrix within it, i.e., the p  p matrix.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+where yðjÞ
+t
+¼ xðjÞ
+t
+þ gðjÞ
+t
+and gðjÞ
+t
+is an AWGN with zero mean
+and variance 2 ¼ N0=2.
+Using the same notation as in Section 2.2, the pipelined
+BP decoding algorithm applying to LDPCCC is illustrated
+in Algorithm 2 in the Appendix, available in the online
+supplemental material. Same as the LDPC decoding
+algorithm, the LDPCCC decoding algorithm consists of
+four main procedures: initialization, horizontal step, ver-
+tical step, and making hard decisions. Moreover, for each
+of these procedures, multiple threads can be used in
+executing the computations in parallel and all the threads
+will follow the same instructions with no divergence
+occurring, except when making hard decisions.
+3
+IMPLEMENTATION OF DECODERS FOR LDPC
+CODES AND LDPCCCs
+3.1
+GPU-Based LDPC Decoder
+(Please refer to the Appendix, available in the online
+supplemental material, for a brief description of graphics
+processing unit and CUDA programming.) We implement
+our decoders using the standard BP decoding algorithm.
+According to the CUDA programming model, the granu-
+larity of a thread execution and a coalesced memory access
+is a warp. Full efficiency is realized when all threads in a
+warp take the same execution path and the coalesced
+memory access requirement is satisfied. Thus, we propose
+to decode  codewords simultaneously, where  is an
+integer multiple of a warp (i.e., multiple of 32). For each
+decoding cycle,  codewords will be input, decoded, and
+output together and in parallel.
+Recall that an LDPC code can be represented by its
+parity-check matrix or a Tanner graph. A nonzero element
+in the parity-check matrix corresponds to an edge in the
+Tanner graph.
+In the LDPC decoder, messages are bound to the edges
+in the Tanner graph (or the 1s in the parity-check matrix H).
+So we store the messages according to the positions of 1s.
+Besides, the channel messages corresponding to the variable
+nodes are required. To reuse the notation, we denote
+the data structure storing the messages between the
+variable nodes and the check nodes as H while the data
+structure storing the channel messages as V. The difficulty
+of the CUDA memory arrangement lies on the fact that for
+practical LDPC codes with good performance, the positions
+of the 1s are scattered in the parity-check matrix.
+First, in the BP decoding procedure, although there are
+two kinds of messages, namely, the variable-to-check
+messages and the check-to-variable messages, at every step
+of the iteration, only one kind of message is needed to be
+666
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+Fig. 2. Continuous decoding of LDPC convolutional code with I processors. Each circle denotes a group of c variable nodes and each square
+denotes a group of ðc  bÞ check nodes. Each edge represents the connection between the c variable node and the ðc  bÞ check nodes.
+Fig. 1. Illustration of constructing an LPDCCC from a QC-LDPC block code.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+stored, i.e., after the check-node updating step, only the
+check-to-variable messages s are stored in the H and after
+the variable-node updating step, only the variable-to-check
+messages s are stored in the H. Second, in our new
+decoder architecture,  ( is a multiple of a warp)
+codewords are decoded together and hence the messages
+of  codewords are also processed together. We number the
+distinct codewords as 0; 1; . . . ;   1 and we use the same
+notations for the messages as before, i.e., mnðÞ is the
+message from variable node n to check node m correspond-
+ing to the th codeword and mnðÞ is the message from
+check node m to variable node n corresponding to the th
+codeword. Since all the  codewords messages share the
+same Tanner graph, messages of the  distinct codewords
+corresponding to the same edge can be grouped into one
+package and stored linearly. Let pmn denote the package
+corresponding to the edge connecting variable node n and
+check node m. Then, in package pmn, mnð0Þ; mnð1Þ; . . . ;
+mnð  1Þ or mnð0Þ; mnð1Þ; . . . ; mnð  1Þ are stored
+contiguously. This is shown in Fig. 8 in the Appendix,
+available in the online supplemental material. Different
+packages pmns are aligned linearly according to their
+corresponding positions in the parity-check matrix—row-
+by-row, and left to right for each row. That implies the
+messages associated with one check node are stored
+contiguously.
+Remark. To be consistent with the use of memory locations
+in computer programming, all the indices of the data
+structures in this paper starts from 0.
+The advantage of this arrangement is obvious. Since 
+is a multiple of 32, the memory segment for every package
+is naturally aligned when the data type belongs to one of
+the required data types (i.e., with word size of 1-, 2-, 4-, or
+8-byte). In addition, the structure of the parity-check
+matrix H is shared by the  codewords. As these  data
+elements are processed together, they can be accessed by 
+contiguous threads and hence the global memory is
+always accessed in a coalesced way. We also ensure that
+the threads within a warp always follow the same
+execution path with no divergence occurring (except when
+making hard decisions on the received bits). Then, both
+the memory access and the thread execution are optimal
+and efficient.
+We also need to store the details of the parity-check
+matrix. Two lookup tables denoted by LUTc and LUTv will
+be kept. LUTc is used in the check-node updating process
+and LUTv is used in the variable-node updating process.
+The two tables store the indices of the data accessed in the
+two updating processes and both are 2D. The first
+dimension is to distinguish different check nodes, i.e.,
+LUTc½m is associated with the mth check node or the mth
+row. Each LUTc½m records the indices of the messages
+related to the mth check node. The two lookup tables are
+shared by all  codewords. An example is illustrated in the
+Appendix, available in the online supplemental material.
+The LUTc and LUTv lookup tables are stored in the constant
+or texture memory in the CUDA device so as to be cached to
+reduce the access time.
+A separate thread is assigned to process each check node
+or each variable node in the updating kernel. Hence, 
+threads can be assigned to process the data of  codewords
+simultaneously. So, a 2D thread hierarchy is launched. The
+first dimension is for identifying the different codewords,
+while the second dimension is for processing different
+check nodes or variable nodes. The thread layout is
+illustrated in Fig. 3. For each thread block, we allocate 
+threads in the threadIdx.x dimension,2 and BLy threads in
+the threadIdx.y dimension. Each thread block contains
+BLy   threads, which should be within the thread block
+size limit (1,024 for the current device). The total number of
+thread blocks is determined by the number of check nodes
+M or the number of variable nodes N. We denote BLy in
+the check-node updating kernel as BLy;cnu and the one in
+the variable-node updating kernel as BLy;vnu. Then, the
+numbers of thread blocks are given by dM=BLy;cnue and
+dN=BLy;vnue, respectively. In Fig. 3, the threads marked by
+the vertical rectangular are processing the same codeword.
+(See the Appendix, available in the online supplemental
+material, on the selection of the size of the thread block.)
+3.2
+GPU-Based LDPCCC Decoder
+The decoding algorithm and the pipelined LDPCCC
+decoder architecture have been introduced in Section 2.5.
+The LDPCCCs studied in our work are derived from QC-
+LDPC codes as described in Section 2.4. So our LDPCCC
+decoder is confined to the LDPCCCs with the parity-check
+matrix H½0;1 of this kind of structure.
+3.2.1 Data Structure
+The LDPC convolutional codes are decoded continuously.
+We will thus refer to an LDPCC code sequence v½0;1 ¼
+½v0; v1; . . . ; v1 as a code stream and vi, i ¼ 0; 1; . . . ; 1 as a
+ZHAO AND LAU: IMPLEMENTATION OF DECODERS FOR LDPC BLOCK CODES AND LDPC CONVOLUTIONAL CODES BASED ON GPUS
+667
+Fig. 3. Two-dimensional thread layout of the check-node/variable-node
+updating kernel.
+2. In CUDA, threads are linear in the threadIdx.x dimension.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+code frame or variable frame. A code stream is constrained
+with the parity-check matrix H½0;1 by
+v½0;1HT
+½0;1 ¼ 0:
+The parity-check matrix of the LDPCCC is shown in Fig. 4.
+It is seen that the check nodes are grouped into layers. Each
+variable-node frame is connected to ms þ 1 (4 here) check
+layers in the parity-check matrix. Let c denote the size of vi,
+i ¼ 0; 1; . . . ; 1 and c  b denote the size of each check layer.
+Thus, the code rate is b=c.
+We will use the same notations as in Section 2.4. The
+LDPCCC is derived from a ðJ; LÞ QC-LDPC base code HQC
+which has J  L submatrices and the size of each
+submatrix is p  p. HQC is first divided into    sub-
+blocks3 ( ¼ 4 in Fig. 4) and each subblock contains several
+submatrices. We have c ¼ L=  p and c  b ¼ J=  p.
+Referring to Section 2.4, we denote the unwrapped parity-
+check matrix of the QC-LDPC code as
+Hbase ¼
+HL
+QC
+HU
+QC
+"
+#
+:
+The H½0;1 of the derived LDPCCC is a repetition of Hbase.
+Denoting the number of edges in Hbase by E, we have
+E ¼ J  L  p.
+In designing the LDPCCC decoder, the first thing to
+consider is the amount of memory required to store the
+messages. Like the LDPC decoder, we store the messages
+according to the edges in the parity-check matrix. Let I
+denote the number of iterations in the LDPCCC decoding.
+Then I processors are required in the pipelined decoder.
+Although the parity-check matrix of the LDPCCC is semi-
+infinite, the decoder only needs to allocate memory for I
+processors. Hence, the total size of the memory required
+for storing the messages passing between the variable
+nodes and check nodes is I  E units. And the total size
+of
+the
+memory
+required
+for
+storing
+these
+channel
+messages is I  c.
+Next, we will describe the hierarchical data structure for
+the LDPCCC decoder memory space. To reuse the notation,
+we use H to denote the memory space for the messages on
+the edges and V to denote the memory space for the
+channel messages. Referring to Fig. 5, the H is a multi-
+dimensional array with two hierarchies. First, we divide the
+entire memory space into I groups corresponding to the I
+processors, and we use the first hierarchy of H as the data
+structure for each group. That is, H½i, i ¼ 0; 1; . . . ; I  1
+denote the data structure for the I processors, respectively.
+Second, recall that the parity-check matrix in Fig. 4 is
+derived from Hbase which is divided into 16 nonzero
+subblocks and each subblock has a size of ðpJ=Þ 
+ðpL=Þ. Thus, in each group, H½i is also divided into 16
+subblocks, denoted by the second hierarchy of H, namely,
+H½i½j, where j ¼ 0; 1; . . . ; 15. Every H½i½j stores the
+messages associated with one subblock. On the other hand,
+the memory for the channel messages is simpler: V½i, i ¼
+0; 1; . . . ; I  ðms þ 1Þ  1 will be allocated. Finally, to opti-
+mize the thread execution and memory access,  LDPC
+convolutional code streams are decoded simultaneously,
+where  is a multiple of a warp. Thus, every  data are
+combined into one package and take up one memory unit.
+An LDPCCC decoder uses the BP algorithm to update
+the check nodes and variable nodes. The BP decoding
+procedures are based on the parity-check matrix H½0;1.
+With the data structure to store the messages, the decoder
+also needs the structure information of H½0;1 for under-
+standing the connections between the check nodes and the
+variable nodes. This information can be used to calculate
+the index of the data being accessed during the updating.
+Due to the periodic property of the constructed LDPCCC,
+the structure of Hbase is shared by all the processors. We
+label the 16 subblocks in Hbase with the numbers 0; 1; . . . ; 15.
+In addition, in the decoder, the I check-node layers or I
+variable-node frames being updated simultaneously in the
+I processors are separated by an interval of ms þ 1. Since
+H½0;1 also has a period of T ¼ ms þ 1, at any time slot, the
+I processors require the same structure information in
+updating the check nodes or the variable nodes, as seen in
+Fig. 4. The lookup tables used in check-node updating and
+668
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+Fig. 4. The periodic structure of the parity-check matrix of the LDPCCCs.
+Fig. 5. Illustration of the procedures of an LPDCCC decoder. The
+horizontal line denotes the updating of the row. The vertical line denotes
+the updating of a column.
+3. Note that a “subblock” is different from a “submatrix”.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+variable-node updating are denoted as LUTc and LUTv,
+respectively. The two lookup tables will then store the
+labels of the subblocks in Hbase that are involved in the
+updating process. Besides, another lookup table LUTsub
+will be used to store the “shift numbers”4 of the
+submatrices in each subblock.
+Example 2. The LUTc and LUTv for the LDPCCC in Fig. 4
+are
+LUTc ¼
+1
+2
+3
+0
+6
+7
+4
+5
+11
+8
+9
+10
+12
+13
+14
+15
+2
+664
+3
+775;
+ð4Þ
+and
+LUTv ¼
+0
+4
+8
+12
+5
+9
+13
+1
+10
+14
+2
+6
+15
+3
+7
+11
+2
+664
+3
+775:
+ð5Þ
+3.2.2 Decoding Procedures
+Based on the discussion in Section 2.5, the detailed
+decoding procedures are shown in the Appendix, available
+in the online supplemental material.
+3.2.3 Parallel Thread Hierarchy
+As described in Section 3.2.1, the memory associated with
+each entry in the H matrix is a message package containing
+ messages from  code streams. So there is a straightfor-
+ward mapping between the thread hierarchy and the data
+structure. In the check-node-updating kernel (or variable-
+updating-kernel), a 2D thread hierarchy of size I  ðc  bÞ 
+ (or I  c  ) is launched, where ðc  bÞ (or c) is mapped to
+the total number of check nodes (or variable nodes) being
+updated in I processors. The size of one of the dimensions
+(i.e., ) is mapped to the number of code streams. Like in
+LDPC decoder,  will be configured as the threadIdx.x
+dimension and ðc  bÞ (or c) will be the threadIdx.y
+dimension in the CUDA thread hierarchy. The  threads
+in the threadIdx.x dimension is contiguous and will access
+the  data in each message package for coalesced access.
+3.3
+CPU-Based LDPC and LDPCCC Decoders
+We implement both the serial CPU-based LDPC decoder
+and LDPCCC decoder using the C language. As CPUs with
+multiple cores are very common nowadays, we further
+implement a multithread CPU-based LDPCCC decoder
+using OpenMP. OpenMP [30] is a portable, scalable
+programming interface for shared-memory parallel com-
+puters. It can be used to explicitly direct multithreaded,
+shared memory parallelism. A straightforward application
+of the OpenMP is to paralyze the intensive loop-based code
+with the #pragma omp parallel for directive. Then, the
+executing threads will be automatically allocated to
+different cores on a multicore CPU.
+The horizontal step and the vertical step in Algorithm 2
+involve intensive computing. On a single-core CPU, the
+updating of the different nodes are processed with a serial
+for loop. Since the updating of different nodes can be
+performed independent of one another, it is ideal to
+parallelize the for loop with the #pragma omp parallel for
+directive in the OpenMP execution on a multicore CPU.
+Hence, in our implementation, we issue multiple threads to
+both the updating of the check nodes (11) and the updating
+of the variable nodes (12) in the multithread CPU-based
+LDPCCC decoder.
+4
+RESULTS AND DISCUSSION
+4.1
+The Experimental Environment
+The CPU being used is an Intel Xeon containing four cores.
+Moreover, it can handle up to eight threads at a time. The
+serial CPU-based decoders are developed using C and the
+multithreaded CPU-based LDPCCC decoder is developed
+using OpenMP. Note that for the serial CPU-based
+decoders, only one of the four cores in the CPU will be
+utilized. The GPU used in this paper is a GTX460 containing
+336 cores and the GPU-based decoders are developed using
+CUDA C. Furthermore, in our simulations, 32 codewords
+are decoded simultaneously in the GPU decoders, i.e.,
+ ¼ 32. Details of the CPU and GPU used in our simulations
+are presented in Table 1.
+Table 2 shows the characteristics of the QC-LDPC codes
+under test. For Code A to code D, J ¼ 4 and L ¼ 24,
+thus giving the same code rate of ð24  4Þ=24 ¼ 5=6. These
+codes are further used to derived regular LDPCCCs. To
+avoid confusion, we denote the derived LDPCCCs as Codes
+A0 to D0. It can be readily shown that the (3, 4, 24)-LDPCCCs
+A0 to D0 have the same code rate of 5/6.
+Remark. Note that although QC-LDPC codes are adopted
+in the simulation, the new GPU-based LDPC decoder is
+able to decode other LDPC codes like randomly-
+constructed regular or irregular codes.
+ZHAO AND LAU: IMPLEMENTATION OF DECODERS FOR LDPC BLOCK CODES AND LDPC CONVOLUTIONAL CODES BASED ON GPUS
+669
+TABLE 1
+Simulation Environments
+4. For a QC-LDPC base matrix, the information is the “shift number” of
+each p  p submatrix (1 represents the all-zero matrix, 0 represents the
+identity matrix, l represents cyclically right-shifting the identity matrix l
+times).
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+4.2
+The Decoding Time Comparison
+To optimize the speed and to minimize the data transfer
+between the CPU (host) and the GPU (device), we generate
+and process the data, including the codeword and the
+AWGN noise, directly on the GPU. After hard decisions
+have been made on the received bits, the number of error
+bits are counted at the GPU using a “reduce program.”
+Subsequently, the number is transferred to the CPU. Since
+the data transfer occurs only at the end of the iterative
+decoding process, the transfer time (overhead) is very small
+(less than 2 percent) compared with time spent in the whole
+decoding process.
+In the following, we fix the number of decoding
+iterations and the simulation terminates after 100 block/
+frame errors are received. By recording the total number of
+blocks/frames decoded and the total time taken,5 we can
+compute the average time taken to decode one block/frame.
+4.2.1 LDPC Decoders
+The GPU-based decoder and the serial CPU-based decoder
+are tested with 30 iterations at a Eb=N0 of 3.2 dB. Table 3
+shows the number of transmitted codewords and the
+simulation times for different codes.
+We consider the average time for decoding one code-
+word for the serial CPU-based decoder, i.e., tCPU. We
+observe that tCPU increases from Code A to Code D due to
+an increasing number of edges in the codeword. Further, we
+consider the average time for decoding one codeword for
+the GPU-based decoder, i.e., tGPU. Similar to the serial CPU-
+based decoder, tGPU increases from Code A to Code D.
+Finally, we compare the simulation times of the serial
+CPU-based decoder and the GPU-based decoders by taking
+the ratio tCPU=tGPU. The results in Table 3 indicate that the
+GPU-based decoder accomplishes speedup improvements
+from 148 times to 162 times compared with the serial CPU-
+based decoder.
+4.2.2 LDPCCC Decoders
+We decode the LDPC convolutional codes A0 to D0 at a
+Eb=N0 of 3.1 dB with I ¼ 20. First, we show the average
+decoding times for Code A0 and Code C0 when different
+numbers of threads are used in the CPU-based decoders.
+The results are shown in Table 4. The serial CPU-based
+decoder corresponds to the case with a single thread. We
+observe that the decoding time is approximately inversely
+proportional to the number of threads used—up to four
+threads. However, the time does not improve much when
+the number of threads increases to six or eight. The reason is
+as follows: The CPU being used has four cores, which can
+execute up to four tasks in fully parallel. Hence, compared
+with using a single thread, there is an almost four times
+improvement when four threads are used. As the number of
+threads increases beyond four, however, the tasks of the
+threads will be scheduled. But a maximum of four threads
+can be executed on the four processors at the same time.
+Consequently, further time improvement is small when
+more than four threads are used.
+Next, we compare the decoding times of the LDPCCC
+decoders when GPU-based and CPU-based decoders are
+used to decode Code A0 to Code D0. For the CPU-based
+decoders, we consider the cases where a single thread and
+eight threads are used, respectively. Table 5 shows the
+results. As explained above, limited by the number of cores
+(four only) in the CPU, the CPU-based decoder can only
+improve the speed by about 4 times even when the number
+of threads increases from one to eight. We also observe that
+compared with the serial CPU-based decoder, the GPU-
+based LDPCCC decoder can achieve 170 to 200 times
+speedup improvement. Compared with the eight-thread
+CPU-based decoder, the GPU-based LDPCCC decoder can
+also accomplish 39 to 46 times speedup improvement.
+5
+CONCLUSION
+In this paper, efficient decoders for LDPC codes and LDPC
+convolutional codes based on the GPU parallel architecture
+are implemented. By using efficient data structure and
+thread layout, the thread divergence is minimized and the
+memory can be accessed in a coalesced way. All decoders
+are flexible and scalable. First, they can decode different
+670
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+TABLE 2
+Parity-Check Matrices of the QC-LDPC Codes Used in the
+LDPC Decoder
+They are also used to derive the LDPCCCs A0 to D0.
+5. In the case of the GPU-based decoders, the total time taken includes
+the GPU computation time, the time spent in transferring data between the
+CPU and GPU, and so on. However, as explained above, the GPU
+computation time dominates the total time while the overhead is very small.
+TABLE 3
+Decoding Time for the GPU-Based LDPC Decoder and the
+Serial CPU-Based Decoder at Eb=N0 ¼ 3:2 dB
+Thirty iterations are used. C represents the total number of decoded
+codewords, T denotes the total simulation time, and t is the average
+simulation time per codeword.
+TABLE 4
+Average LDPCCC Decoding Time (ms) per Code Frame
+for the Quad-Core CPU-Based Decoder When Different
+Numbers of Threads are Used
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+codes by changing the parameters. Hence, the programs
+need very little modification. Second, they should be run on
+the latest or even future generations of GPUs which possess
+more hardware resources. For example, if there are more
+cores/memory in the GPU, we can readily decode more
+codes, say  ¼ 64 codes as compared with  ¼ 32 codes
+used in this paper, at the same time. These are actually
+advantages of GPU parallel architecture compared to other
+parallel solutions including FPGA or VLSI. We will report
+our results in the future when we have the opportunity to
+run our proposed mechanism in other GPU families.
+Compared with the traditional serial CPU-based deco-
+ders, results show that the proposed GPU-based decoders
+can achieve 100 to 200 speedup. The actual time
+depends on the particular codes being simulated. When
+compared with the eight-thread CPU-based decoder, the
+GPU-based decoder can also accomplish 39 to 46 times
+speedup improvement. Thus, the simulation time can be
+reduced from months to weeks or days when a GPU-based
+decoder is used. In summary, our results show that the
+proposed GPU-based LDPC/LDPCCC decoder has obvious
+advantages in the decoding time compared with CPU-
+based decoders.
+ACKNOWLEDGMENTS
+The work described in this paper was substantially
+supported by a grant from the Research Grants Council of
+the Hong Kong Special Administrative Region, China
+(Project No. PolyU 519011E).
+REFERENCES
+[1]
+R.G. Gallager, Low-Density Parity-Check Codes. MIT Press, Sept.
+1963.
+[2]
+D. MacKay, “Good Error-Correcting Codes Based on Very Sparse
+Matrices,” IEEE Trans. Information Theory, vol. 45, no. 2, pp. 399-
+431, Mar. 1999.
+[3]
+I. Djordjevic, M. Cvijetic, L. Xu, and T. Wang, “Using LDPC-
+Coded Modulation and Coherent Detection for Ultra Highspeed
+Optical Transmission,” J. Lightwave Technology, vol. 25, no. 11,
+pp. 3619-3625, Nov. 2007.
+[4]
+Y. Miyata, K. Sugihara, W. Matsumoto, K. Onohara, T. Sugihara,
+K. Kubo, H. Yoshida, and T. Mizuochi, “A Triple-Concatenated
+FEC Using Soft-Decision Decoding for 100 Gb/s Optical Trans-
+mission,” Proc. Optical Fiber Comm., Collocated Nat’l Fiber Optic
+Engineers Conf., (OFC/NFOEC ’10), pp. 1-3, 2010.
+[5]
+Y. Chen and D. Hocevar, “A FPGA and ASIC Implementation of
+Rate 1/2, 8088-b Irregular Low Density Parity Check Decoder,”
+Proc. IEEE Global Telecomm. Conf. (GLOBECOM ’03), vol. 1,
+pp. 113-117, 2003.
+[6]
+I.B. Djordjevic, M. Arabaci, and L.L. Minkov, “Next Generation
+FEC for High-Capacity Communication in Optical Transport
+Networks,” J. Lightwave Technology, vol. 27, no. 16, pp. 3518-3530,
+Aug. 2009.
+[7]
+B. Levine, R.R. Taylor, and H. Schmit, “Implementation of Near
+Shannon Limit Error-Correcting Codes Using Reconfigurable
+Hardware,” Proc. IEEE Symp. Field-Programmable Custom Comput-
+ing Machines, 2000.
+[8]
+A. Pusane, A. Feltstrom, A. Sridharan, M. Lentmaier, K.
+Zigangirov, and D. Costello, “Implementation Aspects of LDPC
+Convolutional Codes,” IEEE Trans. Comm., vol. 56, no. 7, pp. 1060-
+1069, July 2008.
+[9]
+S. Bates, Z. Chen, L. Gunthorpe, A. Pusane, K. Zigangirov, and D.
+Costello, “A Low-Cost Serial Decoder Architecture for Low-
+Density Parity-Check Convolutional Codes,” IEEE Trans. Circuits
+and Systems I: Regular Papers, vol. 55, no. 7, pp. 1967-1976, Aug.
+2008.
+[10] Z. Chen, S. Bates, and W. Krzymien, “High Throughput Parallel
+Decoder Design for LDPC Convolutional Codes,” Proc. Fourth
+IEEE Int’l Conf. Circuits and Systems for Comm. (ICCSC ’08), pp. 35-
+39, May 2008.
+[11] R. Swamy, S. Bates, and T. Brandon, “Architectures for ASIC
+Implementations of Low-Density Parity-Check Convolutional
+Encoders and Decoders,” Proc. IEEE Int’l Symp. Circuits and
+Systems (ISCAS ’05), pp. 4513-4516, 2005.
+[12] C.W. Sham, X. Chen, F.C.M. Lau, Y. Zhao, and W.M. Tam, “A
+2.0 Gb/s Throughput Decoder for QC-LDPC Convolutional
+Codes,” IEEE Trans. Circuits and Systems I: Regular Papers,
+vol. 60, no. 7, pp. 1857-1869, July 2013.
+[13] G. Falcao, V. Silva, and L. Sousa, “How GPUs Can Outperform
+ASICs for Fast LDPC Decoding,” Proc. 23rd Int’l Conf. Super-
+computing, pp. 390-399, 2009.
+[14] H. Ji, J. Cho, and W. Sung, “Massively Parallel Implementation of
+Cyclic LDPC Codes on a General Purpose Graphics Processing
+Unit,” Proc. IEEE Workshop Signal Processing Systems (SiPS ’09),
+pp. 285-290, 2009.
+[15] H. Ji, J. Cho, and W. Sung, “Memory Access Optimized
+Implementation of Cyclic and Quasi-Cyclic LDPC Codes on a
+GPGPU,” J. Signal Processing Systems, vol. 3, pp. 1-11, 2010.
+[16] G. Falcao, L. Sousa, and V. Silva, “Massive Parallel LDPC
+Decoding on GPU,” Proc. 13th ACM SIGPLAN Symp. Principles
+and Practice of Parallel Programming, pp. 83-90, 2008.
+[17] G. Falcao, L. Sousa, and V. Silva, “Massively LDPC Decoding on
+Multicore Architectures,” IEEE Trans. Parallel and Distributed
+Systems, vol. 22, no. 2, pp. 309-322, Feb. 2011.
+[18] A.J. Felstrom and K. Zigangirov, “Time-Varying Periodic Con-
+volutional Codes with Low-Density Parity-Check Matrix,” IEEE
+Trans. Information Theory, vol. 45, no. 6, pp. 2181-2191, Sept. 1999.
+[19] M. Tavares, E. Matus, S. Kunze, and G. Fettweis, “A Dual-Core
+Programmable Decoder for LDPC Convolutional Codes,” Proc.
+IEEE Int’l Symp. Circuits and Systems (ISCAS ’08), pp. 532-535, May
+2008.
+[20] E. Matus, M. Tavares, M. Bimberg, and G. Fettweis, “Towards a
+GBit/s Programmable Decoder for LDPC Convolutional Codes,”
+Proc. IEEE Int’l Symp. Circuits and Systems (ISCAS ’07), pp. 1657-
+1660, May 2007.
+[21] R. Tanner, “A Recursive Approach to Low Complexity Codes,”
+IEEE Trans. Information Theory, vol. IT-27, no. 5, pp. 533-547, Sept.
+1981.
+ZHAO AND LAU: IMPLEMENTATION OF DECODERS FOR LDPC BLOCK CODES AND LDPC CONVOLUTIONAL CODES BASED ON GPUS
+671
+TABLE 5
+Decoding Time for the GPU-Based LDPCCC Decoder and the CPU-Based Decoders at Eb=N0 ¼ 3:1 dB
+I ¼ 20 processors are used. C represents the total number of decoded frames, T denotes the total simulation time, and t is the average simulation
+time per frame. CPU  1 and CPU  8 denote the use of one thread and eight threads, respectively, in the CPU-based decoder.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 
+[22] M. Fossorier, “Quasicyclic Low-Density Parity-Check Codes from
+Circulant Permutation Matrices,” IEEE Trans. Information Theory,
+vol. 50, no. 8, pp. 1788-1793, Aug. 2004.
+[23] W.M. Tam, F.C.M. Lau, and C.K. Tse, “A Class of QC-LDPC
+Codes with Low Encoding Complexity and Good Error Perfor-
+mance,” IEEE Comm. Letters, vol. 14, no. 2, pp. 169-171, Feb. 2010.
+[24] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of
+Capacity-Approaching Irregular Low-Density Parity-Check
+Codes,” IEEE Trans. Information Theory, vol. 47, no. 2, pp. 619-
+637, Feb. 2001.
+[25] T. Richardson and R. Urbanke, “Efficient Encoding of Low-
+Density Parity-Check Codes,” IEEE Trans. Information Theory,
+vol. 47, no. 2, pp. 638-656, Feb. 2001.
+[26] X. Hu, E. Eleftheriou, D. Arnold, and A. Dholakia, “Efficient
+Implementations of the Sum-Product Algorithm for Decoding
+LDPC Codes,” Proc. IEEE Global Telecomm. Conf. (GLOBECOM ’01),
+vol. 2, pp. 1036-1036E, 2001.
+[27] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X. Hu,
+“Reduced-Complexity Decoding of LDPC Codes,” IEEE Trans.
+Comm., vol. 53, no. 8, pp. 1288-1299, Aug. 2005.
+[28] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, and D. Costello,
+“LDPC Block and Convolutional Codes Based on Circulant
+Matrices,” IEEE Trans. Information Theory, vol. 50, no. 12,
+pp. 2966-2984, Dec. 2004.
+[29] A.E. Pusane, R. Smarandache, P.O. Vontobel, and D.J. Costello,
+“On Deriving Good LDPC Convolutional Codes from QC-LDPC
+Block Codes,” Proc. IEEE Int. Symp. Information Theory (ISIT ’07),
+pp. 1221-1225, 2007.
+[30] R. Chandra, Parallel Programming in OpenMP. Morgan Kaufmann,
+2001.
+[31] M. Lentmaier, D.G.M. Mitchell, G.P. Fettweis, and D.J. Costello,
+“Asymptotically Regular LDPC Codes with Linear Distance
+Growth and Thresholds Close to Capacity,” Proc. Information
+Theory and Applications Workshop (ITA ’10), pp. 1-8, 2010.
+[32] C. Nvidia, “Compute Unified Device Architecture Programming
+Guide Version 4.0,” technical report, NVIDIA Corporation, 2011.
+[33] W. Nvidia, N.
+Generation,
+and C.
+Compute,
+“Whitepaper
+Nvidia’s
+Next
+Generation
+CUDA
+Compute
+Architecture,”
+ReVision, pp. 1-22, 2009.
+[34] F. Kschischang, B. Frey, and H. Loeliger, “Factor Graphs and the
+Sum-Product Algorithm,” IEEE Trans. Information Theory, vol. 47,
+no. 2, pp. 498-519, Feb. 2001.
+Yue Zhao received the BE degree in information
+engineering from Shanghai Jiaotong University,
+China, in 2009. He was a postgraduate student
+and research assistant at the Hong Kong
+Polytechnic University, Hong Kong, from 2009
+to 2012, where he was working on algorithms
+and implementations for the LDPC decoding. He
+is currently working at the Qualcomm Research
+Center, Beijing, China.
+Francis C.M. Lau (M’93-SM’03) received the
+BEng (Hons) degree in electrical and electronic
+engineering and the PhD degree from King’s
+College London, University of London, United
+Kingdom, in 1989 and 1993, respectively. He is
+a professor and associate head at the Depart-
+ment of Electronic and Information Engineering,
+The Hong Kong Polytechnic University, Hong
+Kong. He is the coauthor of Chaos-Based Digital
+Communication Systems (Heidelberg: Springer-
+Verlag, 2003) and Digital Communications with Chaos: Multiple Access
+Techniques and Performance Evaluation (Oxford: Elsevier, 2007). He is
+also a coholder of three US patents and one pending US patent. He has
+published more than 230 papers. His main research interests include
+channel coding, cooperative networks, wireless sensor networks, chaos-
+based digital communications, applications of complex-network the-
+ories, and wireless communications. He served as an associate editor
+for IEEE Transactions on Circuits and Systems II in 2004-2005 and
+IEEE Transactions on Circuits and Systems I in 2006-2007. He was also
+an associate editor of Dynamics of Continuous, Discrete and Impulsive
+Systems, Series B from 2004 to 2007, a coguest editor of Circuits,
+Systems and Signal Processing for the special issue “Applications of
+Chaos in Communications” in 2005, and an associate editor for IEICE
+Transactions (Special Section on Recent Progress in Nonlinear Theory
+and Its Applications) in 2011. He has been a guest associate editor of
+International Journal and Bifurcation and Chaos since 2010 and an
+associate editor of IEEE Circuits and Systems Magazine since 2012. He
+is also a fellow of IET and a senior member of IEEE.
+. For more information on this or any other computing topic,
+please visit our Digital Library at www.computer.org/publications/dlib.
+672
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS,
+VOL. 25,
+NO. 3,
+MARCH 2014
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:42:54 UTC from IEEE Xplore.  Restrictions apply. 

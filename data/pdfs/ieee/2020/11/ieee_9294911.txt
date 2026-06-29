@@ -1,0 +1,265 @@
+High speed LDPC decoding for optical space link
+
+Vincent Pignoly, Bertrand Le Gal, Christophe Jego CNRS IMS Laboratory, University of Bordeaux, France
+Email: firstname.lastname@ims-bordeaux.fr
+
+Benjamin Gadat, Lyonel Barthe Airbus Defense and Space, Toulouse, France
+Email: firstname.lastname@airbus.com
+
+Abstract—In this paper, an architecture to implement horizontal layered Gallager E is proposed to decode QC-LDPC codes onto Field-Programmable Gate Array (FPGA). It arises as an attractive solution for wireless optical up-link space communication because of its low hardware complexity considering constraints in space. Very high throughput of several Gpbs is aimed. Moreover, at this bit rate, space systems imply hard inputs for the decoding process. Gallager E implementation represents an efficient trade-off between throughput, error correction capability and computational complexity. More than 1.5 Gbps are reached by the proposed decoders onto a Xilinx space-grade FPGA. One can note that higher throughput (3 Gbps) can be achieved on other recent FPGAs with increased working frequency.
+Index Terms—LDPC codes, Gallager E, FPGA, optical space communication, iterative decoding
+I. INTRODUCTION
+Low-Density Parity-Check (LDPC) codes have become one of the most popular class of forward error correction (FEC) codes. They were proposed by Gallager [1] in 1962 but were too complex for workable implementations at the time. Mackay rediscovered LDPC codes [2] in 1996 and the increasing computing capacity made the use of LDPC codes more realistic. Their performance, close to the channel capacity [3], made them adopted by many standards such as WiFi, WiMax and 5G. Space standards including DVB-S2 and CCSDS also selected LDPC codes. Wireless optical space communication is not yet standardized and the efficiency of custom couples of LDPC codes and decoders has already been recently proven for this application field [4].
+To achieve high throughput of several Gbps in optical space communication, FEC decoders are limited to hard input because of available technology. Hard input decoding presents lower error correction performance than soft input decoding. However, additive noise and fading are caused by optical channel involving high needs in terms of error correction capability. To minimize overhead of headers and signaling and because performance grows with block size, this application domain requires long codewords greater than 16k bits. Depending on channel conditions, different code rates, 1/2 and 4/5, are considered. Hardware complexity and power consumption are strongly constrained too. Lastly, a total throughput of 10 Gbps is expected.
+Recent works have been done on LDPC decoder implementation with hard inputs on binary symmetric channel (BSC). Efficient FPGA implementation of Probabilistic Gallager B (PGaB) is proposed in [5]. Hinged on Gallager B algorithm
+
+[1], this version consists in adding randomness in the processing of variable to check node messages. Then, an architecture for Probabilistic Gradient Descent Bit Flipping (PGDBF) is presented in [6]. The algorithm is an improvement of GDBF [7] where only a fraction of bits that satisfy the gradient condition is randomly chosen for flipping.
+Another way to improve hard input algorithms is to increase the dynamic of data in the decoding process. An extension of Gallager B, that uses a third possible value for messages, has been proposed in [8]. Called Gallager E algorithm, it enables the value 0 in the exchanged message alphabet. It contributes to a very significant increase of error correction capability in exchange for slightly higher memory assignation.
+Until now, Gallager E was only presented with a flooding scheduling. However, horizontal layered scheduling gives access to an important parallelism when used with Quasi-Cyclic (QC) LDPC codes. This scheduling highly considered in the literature [4] for high-throughput LDPC decoding.
+In this paper, an architecture for Gallager E algorithm is proposed for up-link optical space communication. The resulting decoder reaches application needs in terms of error correction capability, latency, throughput and hardware resource requirements.
+The rest of the paper is organised as follows. In section 2, Gallager E with horizontal-layered scheduling is introduced. Then, section 3 presents the decoding architecture implementation with a focus on the processing units. Finally, section 5 talks about decoder performance with regards to the literature.
+II. HORIZONTAL-LAYERED GALLAGER E
+A. Notations
+A LDPC code is an error correction code that is defined by a (N, M ) parity check matrix called H. The code rate R is denoted by R = K/N with K = N − M representing the number of information bits. LDPC codes can be illustrated by a Tanner graph [9] with N variable nodes (VNs) and M check nodes (CNs). CNs connected to VNi and VNs linked to CNj are noted M (i) and N (j) respectively. The number of connections for a node is called its degree. It is denoted dv(i) for VNi and dc(j) for CNj. QC-LDPC codes have a structure composed of (Z, Z) sub-matrices. Each of it is a circulant permutation of the identity matrix.
+B. Decoding algorithm
+Gallager E algorithm is an extension of Gallager B algorithm where 0 can be a voted value for message from VN
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply. 978-1-7281-6044-3/20/$31.00 ©2020 IEEE
+
+to CN. Equations (1) and (2) give the messages expression in
+Gallager E with a flooding scheduling where all v2c messages
+are first processed before all c2v at each iteration. In equation
+(1), if ωy + c2v expression is null, then the computed
+v2c message is also null. So the sign function is defined as  +1, x > 0 
+sign(x) = 0, x = 0
+−1, x < 0 It means that if there is no majority vote from a VN, instead
+of using the channel value like in Gallager B, CN is assigned to the zero value from this VN. ω(t) is a weight factor that
+represents the importance given to the channel information
+in the vote of messages from variable nodes. With 8 to 10
+decoding iterations, for all the considered LDPC codes in this paper, best tested values are ω(t) = 2 for t < 4 and ω(t) = 1
+for others.
+
+v2cij = sign ωyi +
+
+c2vki
+
+(1)
+
+CNk∈M (i)−{CNj }
+
+c2vji =
+
+v2ckj
+
+(2)
+
+VNk∈N (j)−{VNi}
+
+Horizontal layered scheduling consists in doing the iterative process by considering one check node at a time with variable nodes update between each check node computation. It usually halves the number of necessary iterations for similar error correction performance [10]. Furthermore several check nodes can be simultaneously processed if they are independent. It involves that they are not connected to the same variable node.
+The computation of c2v messages can be implemented as detailed in Algorithm 1 to decrease the complexity of decoder architecture. With the flooding scheduling in Equation (2), all v2cik messages except v2cij message are considered for c2vji computation. But for horizontal layered scheduling, it is more efficient to consider all v2cik messages first in Cj and then remove v2cij contribution depending on the aimed VN. With the product in Equation (2), it is not trivial to remove v2cij contribution because it is mathematically impossible. The proposed solution is to count the number of incoming messages equal to 0 and to use this information to compute c2v messages.
+C. Error correction performance
+Horizontal layered Gallager E algorithm has attractive error correction performance for a small number of iterations, which is essential to achieve high throughput. Figure 1 compares performance of usual decoding algorithm on the BSC. MinSum (MS) and Offset Min-Sum (OMS) use 6 bits for a posteriori LLR and 4 for messages with a horizontal layered scheduling as detailed in [5]. A (1296, 648) QC-LDPC code C1 with dv = 4, dc = 8 and Z = 54 has been considered. It appears that horizontal layered Gallager E algorithm is among the most performing algorithms. With a lower complexity
+
+Algorithm 1 Horizontal-layered Gallager E
+
+Input (received word) : y = (y1, y1, ..., yN ) ∈ {0, 1}N init
+
+t = 0, Yi = 1 − 2yi and Vi = 0 for i ∈ [1, .., N ] repeat
+
+Horizontal layered scheduling
+
+for all j ∈ [1, .., M ] do
+Cj(t) = 1, Sum0 = 0 Stage S1
+
+for all i ∈ N(j) do Variable to parity check message v2ci(jt) processing
+
+Mij =
+
+Vi ,
+
+t=0
+
+Vi − c2v(jti−1), otherwise
+
+v2ci(jt) = sign(Mij + ω(t) ∗ Yi)
+
+Check node Cj(t) processing
+
+Cj(t) =
+
+Cj(t) ,
+
+v2c(ijt) 0
+
+−Cj(t), otherwise
+
+ifv2c(ijt) = 0 then Sum0 = Sum0 + 1 end if
+
+end for
+
+Stage S2
+
+for all i ∈ N(j) do Check to variable message c2v(jti+1) processing
+
+0,
+
+Sum0 2
+
+
+
+
+
+c2v(jti)
+
+=
+
+ 0,  Cj(t) ,
+
+Sum0 = 1 and v2ci(jt) = 0 Sum0 = 1 and v2ci(jt) = 0
+
+ Cj(t) × v2c(ijt), otherwise
+
+Variable node accumulator Vi updating
+
+Vi = Mij + c2v(jti+1)
+
+end for
+
+end for
+
+t=t+1
+
+until t ≤ tmax  yi, Yi + Vi = 0 
+∀i ∈ [1, .., N ], xi = 0, Yi + Vi > 0
+
+ 1, Yi + Vi < 0 Output (decoded word) : x = (x1, x1, ..., xN ) ∈ {0, 1}N
+
+Frame Error Rate
+
+100 10−1 10−2 10−3 10−4 10−5 10−6 10−7 10−8
+
+0.01
+
+Capacity R = 0.5
+BF 300it GaB 300it GDBF 300it PGaB 300it [11] PGDBF 300it [12] GaE 10it MS 20it [11] OMS 20 it [11]
+0.02 0.03 0.04 0.06 0.08 0.1 Channel Crossover Probability
+
+Fig. 1. Performance comparison on the LDPC code N = 1296, dv = 4, dc = 8 and R = 0.5
+
+than OMS algorithm and a better error floor than PGDBF algorithm, it is a good trade-off for the aimed application.
+III. DECODER ARCHITECTURE
+The proposed decoder architecture to implement the horizontal-layered Gallager E is detailed in Figure 2. All resources are controlled by an Application-Specific Instruction set Processor (ASIP) [13] with a custom instruction set for each step of the iterative process. It enables a high level of decoder flexibility which supports all QC-LDPC codes with different code rates. Then, thanks to the quasi-cyclic structure, clusters of Z independent check nodes can be simultaneously processed. So the allocation of Z processing units is fully
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+Frame Error Rate R = 0.8 R = 0.5
+
+100 10−1 10−2 10−3 10−4 10−5 10−6 10−7
+
+(20480, 16384) Gallager E 10it (1296, 648) Gallager E 10it (1296, 648) PGDBF 300it
+(32768, 16384) Gallager E 10it
+
+0.3 0.2
+0.1 0.08 0.06 0.04 0.03 0.02
+0.01 0.008 0.006
+
+Channel Crossover Probability
+
+Fig. 2. Overall Architecture
+
+Fig. 4. Gallager E performance for QC-LDPC codes compared to channel capacity
+
+efficient with an optimum usage of hardware resources. It implies that data are exchanged in packs of Z. The memory is divided in two RAM. The first RAM stores the values of VN accumulator and their associated channel estimations. For LDPC codes with dv = 4, 4 bits are necessary for the accumulators Vi and one bit for channel information yi. So this RAM has N ×5 bits with a width of Z ×5 bits. The second RAM stores messages from check nodes. These messages are quantified on two bits because of the three possible values. The size of this RAM is twice the number of 1 in H with a width of Z × 2 bits. Only one interleaver can be used thanks to the QC-LDPC structure as done in [4]. In practice, a barrel shifter is used to implement the interleaver. At the end of the iterative decoding, a final vote is done considering VN accumulator values and channel estimation to choose the decoded K information bits.
+Processing units are described in Figure 3. They are made up of two pipeline stages such as presented in Algorithm 1. The first one computes v2c messages and CN. The second one is in charge of c2v messages and VN update. Each stage takes dc clock cycles so the full process takes 2 dc clock cycles. The Sum0 registers that count the number of null votes is composed of 2 bits. On stage S1, this register is implemented with a simple shift register with an insertion of 1 when the vote is null. It is possible because it is only necessary to know if the value of Sum0 is 0, 1 or above 2 for the computation of c2v as explained in Algorithm 1.
+Fig. 3. Processing Units of the decoder architecture
+
+IV. PERFORMANCE EVALUATION
+A. Error correction performance
+Gallager E algorithm does not present error correction loss once implemented because messages values are quantified in the theoretical algorithm. Figure 5 shows its error correction capability for the (1296, 648) LDPC codes and two home made QC-LDPC codes, especially designed for the optical space application and with friendly attributes for the decoder implementation. Their construction is based on Finite Geometry (FG) [14] with 32768x16384 for C2 and 20480x4096 for C3. These LDPC codes are irregular but with only two different possible dc values in order to make the CN execution efficient. Their average dv is 4 and Z = 256. It means that 256 processing units are assigned in the decoder implementation. It appears that these LDPC codes present a fast convergence and achieves high error correction performance even with 10 decoding iterations. It is a relevant property to reach high throughputs.
+B. Hardware complexity and performance
+Hardware implementation cost and performance of Gallager E decoder are given in Table I for the selected LDPC codes. The maximum working frequency is 309 MHz on a low speedgrade FPGA. This frequency is reached after synthesis, place and route of the decoder on a Kintex Ultrascale xcku060ffva1156-1 FPGA. This device is the pin compatible commercial part of the space-grade version xqrku060 with on-going QML-Y certification [15]. It is considered for current industrial aerospace systems. Higher frequency can be reached on other FPGAs. For example, the decoder has been implemented with 500 MHz clock constraint on the recent Zynq Ultrascale+ FPGA xczu9eg-ffvb1156-3-e.
+Table I presents the hardware complexity of the decoder, its throughput and the latency. For the two long QC-LDPC codes, the same number of LUTs and FFs is necessary. Indeed, data have the same quantification values. Moreover, both decoders contain 256 processing units. But, the (32768, 16384) code needs more RAM Blocks (BRAM) because the codeword is longer and the number of messages higher. With 10 iterations, a throughput of 1.5 Gpbs is reached. A 5356 cycles latency
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I FPGA IMPLEMENTATION RESULTS FOR DIFFERENT LDPC CODES (POST PLACE & ROUTE WORKING FREQUENCY = 250 MHZ)
+
+LDPC code
+
+Z
+
+Hardware complexity
+
+Decoder performance
+
+# LUTs # FFs # BRAM Throughput Latency
+
+(1296, 648) 54 3 239 2 382
+
+8
+
+0.31 Gbps 4.160 µs
+
+(32768, 16384) 256 13 979 10 573
+
+42
+
+1.53 Gbps 21.42 µs
+
+(20480, 4096) 256 13 979 10 573
+
+34
+
+1.51 Gbps 13.55 µs
+
+corresponds to 21.3µs. It is low and insignificant considering the frame de-interleaving process that takes several ms before FEC decoding in space optical systems. The application aims 10 Gbps so the proposed solution consists in allocating 6 elementary decoders with 9 iterations. Removing 1 iteration has an insignificant impact on BER with an increase from 4.12 × 10−9 to 4.67 × 10−9 at a crossover probability of 0.049 with the (32768, 16384) LPDC code. This solution fits in the space-grade Kintex KU060 FPGA and it leaves room in the FPGA for frame de-interleaving.
+C. Performance comparison
+
+TABLE II HARDWARE COMPLEXITY OF DIFFERENT ALGORITHMS WITH (20480,
+4096) LDPC CODE
+
+# LUTs # FFs # BRAM
+Quantification
+Max frequency Throughput
+
+Gallager B 7 833 8 379 23
+4 bits VN 1 bits MSG 347 MHz 2.10 Gbps
+
+Gallager E 13 979 10 573 34
+5 bits VN 2 bits MSG 309 MHz 1.87 Gbps
+
+OMS 49 137 26 919
+73 8 bits VN 6 bits MSG 156 MHz 0.94 Gbps
+
+Table II presents a comparison of hardware cost of horizontal layered Gallager B, Gallager E and OMS algorithms. The C3 code is considered for the comparison.Quantification of data and the complexity of processing units are different. Gallager E algorithm needs 72% less LUTs and 60% less FFs against a small loss in error correction capability compared to OMS. The increase of computational complexity between Gallager B and Gallager E algorithms is not significant regarding the impressive gain in error correction performance.
+A recent implementation is proposed for PGDBF in [6] with C1 code that reaches 5.36 Gbps for α = 0.01. At this low noise level, a few number of iterations is needed so the worst case throughput can be much lower. It needs similar resources in terms of LUT and FF than the proposed decoder used with the C2 code. But the proposed solution is the only one to take advantage of the BRAM provided by the FPGA. The proposed solution can reach more than 3 Gbps on similar FPGA. But as shown in Figure 4, Gallager E with the C2 code corrects more errors than PGDBF with the C1 code for a similar hardware complexity. Even if a fair comparison is tricky because considered decoders use different LDPC codes, the proposed decoder appears here as the best trade-
+
+off between error correction power, hardware complexity and
+throughput for the aimed application.
+V. CONCLUSION
+In this paper, a flexible high throughput QC-LDPC decoder
+is proposed in the context of wireless optical up-link space
+communication. This architectural solution is based on a new
+horizontal layered Gallager E algorithm. The association of FG
+QC-LDPC codes and Gallager E algorithm is a very efficient
+trade-off that fits for the space application.
+REFERENCES
+[1] R. Gallager, Low density parity-check codes. IRE Trans. Inform. Theory, IT-8:pp. 21–29, 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 33, no. 6, pp. 457–458, March 1997.
+[3] Sae-Young Chung, G. D. Forney, T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the shannon limit,” IEEE Communications Letters, vol. 5, Feb 2001.
+[4] V. Pignoly, B. Le Gal, C. Jego, and B. Gadat, “High data rate and flexible hardware QC-LDPC decoder for satellite optical communications,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), Dec 2018, pp. 1–5.
+[5] B. Unal, F. Ghaffari, A. Akoglu, D. Declercq, and B. Vasic´, “Analysis and implementation of resource efficient probabilistic gallager b ldpc decoder,” in 2017 15th IEEE International New Circuits and Systems Conference (NEWCAS), June 2017, pp. 333–336.
+[6] F. Ghaffari and B. Vasic, “Probabilistic gradient descent bit-flipping decoders for flash memory channels,” in 2018 IEEE International Symposium on Circuits and Systems (ISCAS), May 2018, pp. 1–5.
+[7] T. Wadayama et al., “Gradient descent bit flipping algorithms for decoding ldpc codes,” IEEE Transactions on Communications, vol. 58, no. 6, pp. 1610–1614, June 2010.
+[8] M. Mitzenmacher, “A note on low density parity check codes for erasures and errors,” in SRC Tech. Note 1998 - 017, 1998.
+[9] R. Tanner, “A recursive approach to low complexity codes,” IEEE Transactions on Information Theory, vol. 27, no. 5, 1981.
+[10] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-passing schedules for ldpc decoding,” IEEE Transactions on Information Theory, vol. 53, no. 11, pp. 4076–4091, Nov 2007.
+[11] F. Ghaffari, B. Unal, A. Akoglu, K. Le, D. Declercq, and B. Vasic´, “Efficient fpga implementation of probabilistic gallager b ldpc decoder,” in 2017 24th IEEE International Conference on Electronics, Circuits and Systems (ICECS), Dec 2017, pp. 178–181.
+[12] K. Le, F. Ghaffari, D. Declercq, and B. Vasic´, “Efficient hardware implementation of probabilistic gradient descent bit-flipping,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 64, no. 4, pp. 906–917, April 2017.
+[13] M. K. Jain, M. Balakrishnan, and A. Kumar, “ASIP design methodologies: survey and issues,” in VLSI Design 2001. Fourteenth International Conference on VLSI Design, 2001, pp. 76–81.
+[14] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” IEEE Transactions on Information Theory, vol. 47, pp. 2711–2736, 2001.
+[15] M. D. Elftmann. (2018) Xilinx On-Orbit Reconfigurable Kintex UltraScale FPGA Technology for Space. [Online]. Available: https://indico.esa.int/event/232/contributions/2161/
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+

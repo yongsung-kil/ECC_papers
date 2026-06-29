@@ -1,0 +1,1945 @@
+4976
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+Hardware-Based Linear Program Decoding With the Alternating Direction Method of Multipliers
+Mitchell Wasson , Mario Milicevic , Member, IEEE, Stark C. Draper , Senior Member, IEEE, and Glenn Gulak, Senior Member, IEEE
+
+Abstract—We present a hardware-based implementation of linear program (LP) decoding for binary linear codes. LP decoding frames error–correction as an optimization problem. In contrast, variants of belief propagation (BP) decoding frame error– correction as a problem of graphical inference. LP decoding has several advantages over BP-based methods, including convergence guarantees and better error-rate performance in high-reliability channels. The latter makes LP decoding attractive for optical transport and storage applications. However, LP decoding, when implemented with general solvers, does not scale to large blocklengths and is not suitable for a parallelized implementation in hardware. It has been recently shown that the alternating direction method of multipliers (ADMM) can be applied to decompose the LP decoding problem. The result is a message-passing algorithm with a structure very similar to BP. We present modifications to this algorithm, resulting in a more intuitive and hardware-compatible form. This is particularly true for projection onto the parity polytope: the major computational primitive for ADMM-LP decoding. Furthermore, we present results for a fixed-point Verilog implementation of ADMM-LP decoding. This implementation targets a field-programmable gate array (FPGA) platform to evaluate error-rate performance and estimate resource usage. We show that frame error rate performance well within 0.5 dB of doubleprecision implementations is possible with 10-bit messages. Finally, we outline research opportunities that should be explored en route to an application-specific integrated circuit (ASIC) implementation that is capable of Gigabit-per-second throughput.
+Index Terms—Linear programming (LP) decoding, alternating direction method of multipliers (ADMM), decomposition methods, low-density parity check (LDPC) codes, parity polytope, permutohedron, belief propagation (BP), graphical models, iterative algorithms, error floors, hardware, fixed-point, field-programmable gate array (FPGA).
+Manuscript received February 21, 2019; revised May 13, 2019; accepted June 30, 2019. Date of publication July 22, 2019; date of current version August 23, 2019. The associate editor coordinating the review of this manuscript and approving it for publication was Dr. Gwo Giun Lee. This work was supported in part by the National Science Foundation under Grant CCF-1217058, in part by the Natural Science and Engineering Research Council of Canada, including through a Discovery Grant, and in part by the Canadian Microelectronics Corporation. This paper was presented in part at the Asilomar Conference on Signals, Systems, and Computers, Pacific Grove, CA, USA, November 2015, and in part at the 42nd IEEE International Conference on Acoustics, Speech and Signal Processing, New Orleans, LA, USA, March 2017. (Corresponding author: Stark Draper.)
+M. Wasson is with Cisco, Inc., Calgary, AB T2R 0V2, Canada (e-mail: m.wasson@mail.utoronto.ca).
+M. Milicevic is with MaxLinear Inc., Irvine, CA 92618 USA (e-mail: mario.milicevic@utoronto.ca).
+S. C. Draper and G. Gulak are with the Department of Electrical and Computer Engineering, University of Toronto, ON M5S 3G4, Canada (e-mail: stark.draper@utoronto.ca; gulak@eecg.toronto.edu).
+Digital Object Identifier 10.1109/TSP.2019.2929944
+
+I. INTRODUCTION
+T HE field of error-correction coding was revolutionized in the mid-1990s by the widespread adoption (and academic study) of graph-based codes and associated belief propogation (BP) message-passing decoding algorithms [1]–[3]. A key aspect of the success of these codes was their compatibility with hardware. BP-based decoders are naturally distributed algorithms and variants such as Min-Sum map relatively easily to hardware. Graph-based codes, particularly turbo codes and low-density parity check (LDPC) codes, have been adopted in many real world systems. For example, LDPC codes have been adopted for the data channel in the “enhanced mobile broadband” (eMBB) component of the fifth-generation (5G) wireless standard. However, there are issues present with BPbased decoding algorithms. The first is their reliance on the tree assumption for the code-defining graph. In practice, tree codes are not used due to their poor distance properties [4]. This results in the use of LDPC codes without performance or convergence guarantees under BP due to graph cycles. Additionally, it is observed in practice that BP-based decoding algorithms often suffer from “error floors” in high-reliability channels [5].
+In the early 2000s, Feldman and his collaborators realized that the maximum likelihood (ML) decoding problem for binary linear codes can be rephrased as an integer program [6]. They obtained a linear program (LP) by relaxing the integer constraints. Feldman’s work applies to any binary linear code, but he concentrated on LDPC codes due to their prevalence and smaller constraint sets. These results generated much interest among coding theorists. LPs are an extremely well-studied and understood class of optimization problems, especially when contrasted with BP. For instance, LP decoding has an ML certificate property [6], such that if LP decoding fails, it fails in a detectable way (to a non-integer vertex). The relaxation can then be tightened and the LP re-run [7]. If a high-quality expander or high-girth code is used, LP decoding is guaranteed to correct a constant number of bit flips [8], [9].
+On the practical side, there was less excitement. There initially seemed to be no real-world need for such a decoder. Furthermore, traditional LP solvers did not scale easily to the blocklengths of modern error-correcting codes. Nevertheless, a number of groups did study how to build an application-specific low-complexity LP decoder [7], [10]–[12]. In particular, Barman et al. [12] built an application-specific LP decoder that was computationally competitive with BP and that had a message-passing structure with a standard schedule. They solved the LP decoding problem using the alternating direction method of multipliers
+
+1053-587X © 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4977
+
+(ADMM), a decomposition technique used in large-scale optimization [13]. This application of ADMM yielded an algorithm that scales linearly with respect to blocklength and drastically increases throughput. Able to study LP decoding performance at long blocklengths, it was observed empirically, and later confirmed theoretically, that LP decoding far outperforms BP in the high signal-to-noise ratio (SNR) regime with regard to error rates [12], [14], [15]. In this regime, LP decoders do not suffer from the same error floor effects as BP. Furthermore, Barman et al. [12] provide a convergence analysis of the ADMM-LP decoding algorithm, giving theoretical guarantees, as well as experimental measurements.
+The application of ADMM to LP decoding catalyzed significant interest. A number of generalizations of the ADMM idea were proposed. Prominently, Liu and Draper augmented the objective of LP decoding with a penalty term [16]. This closed the gap in error-rate performance between BP and LP that had initially been observed in the low-SNR (waterfall) regime, while continuing to outperform alternate methods for improving the error-floor performance of BP, e.g., [17]–[19]. We note that similar penalization-type ideas have recently been developed in the context of computer vision and massive-MIMO, e.g., [20], [21]. Additionally, LP decoding can be used as a subroutine in a multi-stage decoder that quickly approaches ML performance [22]. Thus, for applications in which reliability demands are extreme, LP decoding is an attractive alternative (or complement) to BP. Jiao et al. modified Liu’s penalization method to improve error-rate performance of irregular LDPC codes [23]. Further generalizations of ADMM-LP to non-binary and multi-permutation codes were developed in [24] and [25].
+In parallel to these theoretical developments, a number of groups investigated how to reduce the computational load of ADMM-LP while others started to think about how to implement ADMM-LP in hardware. Regarding the former, several groups made progress creating efficient methods for solving the key computational primitive of ADMM-LP decoding: Euclidean projection onto the “parity polytope” [26]–[31]. In the preliminary work that underlies this paper, Wasson and Draper investigated mapping this operation to hardware [28], [30], [32]. These initial ideas were built on by a number of other groups [33]–[37]. Several implementation papers have also considered ADMM-LP decoding in other contexts. Debbabi et al. investigated how to schedule messages more efficiently and developed a multicore implementation [38]–[40], while Ben Thameur et al. investigated fixed-point effects in the context of applying ADMM-LP to the decoding of convolutionally structured LDPC codes [41].
+While useful investigations, these studies do not demonstrate whether or not ADMM-LP decoding is viable in hardware. In this paper, we present a field-programmable gate array (FPGA)based implementation that shows that the ADMM-LP decoding algorithm can be mapped to hardware without suffering an unacceptable performance loss. First, we review the LP decoding problem and provide modifications which simplify fixed-point implementation. Next, we expand upon the ADMM-LP decoding algorithm in a novel manner, which provides a more intuitive path to hardware implementation. We then dive into the algorithmic specifics of projection onto the parity polytope. The projection algorithm we develop herein expands on developments made in [28] by providing algorithmic enhancements, an
+
+improved proof, and the inclusion of simple geometric intuition not previously published. Hardware implementations of these algorithms are then described explicitly, and direction is given on how to assemble the pieces to form a complete LP decoder.
+We present results for the [155, 64] Quasi-Cyclic (QC) LDPC code introduced by Tanner et al. [42], the [672, 546] QC-LDPC code from the IEEE 802.11ad (WiGig) standard [43], and an ensemble of (3, 6)-regular [1002, 503] QC-LDPC codes. We test code performance using an FPGA-based simulation environment. While our initial implementation requires more hardware resources than Min-Sum decoders, we show it is possible to preserve the superior error-rate performance of ADMM-LP in fixed-point. We emphasize that our objective in this paper is not to build a decoder that is more efficient than Min-Sum in terms of hardware resource utilization. In high error-rate applications, we do believe that (generally) Min-Sum will be the better choice. It is applications that must operate in the extremely low error-rate regime, traditionally dominated by error-floor effects, that is the target of ADMM-LP decoding. For these applications, we anticipate that the significant performance gain effected by ADMM-LP can offset the additional hardware costs.
+The remainder of this paper is organized as follows. Section II provides an overview of the LP decoding problem, the penalized modification that improves waterfall behavior, and a “centering” reparameterization that improves dynamic range for fixed-point hardware implementation. Section III presents the ADMM-LP algorithm, the important computational primitives, and useful geometric intuition. It also develops the algorithmic contributions of the paper. Section IV describes the hardware architecture of our fixed-point ADMM-LP decoder design. Section V presents error-rate performance and implementation results of our FPGA-based ADMM-LP decoder, and a comparison of our implementation to previously published FPGA-based decoders. Finally, Section VI concludes this paper and provides some general directions for future work.
+II. PROBLEM FORMULATION
+In this paper, we consider the decoding of binary linear codes. A binary linear code C of blocklength n is a k-dimensional subspace of F2n. Such a code can be defined as the null space of the m × n “parity-check” matrix H, i.e., C = {x ∈ {0, 1}n : Hx = 0 (mod 2)}. In general, m ≥ n − k with equality when H has full rank. The rate of C is defined to be R = k/n, which specifies the number of information bits transmitted per codeword symbol. Each row of the parity-check matrix corresponds to a check, which specifies a subset of codeword symbols that must add to 0 modulo 2. These checks are indexed by the set J = {1, . . . , m}. Each column of the parity-check matrix corresponds to a codeword symbol or variable, indexed by I = {1, . . . , n}. The neighborhood of check j, denoted Nc(j), is the set of variables that check j constrains to add to 0. That is, Nc(j) = {i ∈ I : Hj,i = 1}. Similarly, the neighborhood of variable i, Nv(i), is the set of checks in which variable i participates, Nv(i) = {j ∈ J : Hj,i = 1}.
+Given a stochastic channel model P(y|x), where y ∈ Yn is the channel output, ML decoding amounts to maximizing the model over the set of codewords. That is, we decode to arg maxx∈C P(y|x). It was shown in [6] that, when considering a binary linear code transmitted over a symmetric
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4978
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+The box constraints 0 ≤ vi ≤ 1 are not always redundant, e.g., when d = 2. In summary, LP decoding requires us to solve
+
+arg min γ x
+
+x
+
+subject to xNc(j) ∈ P P |Nc(j)| j ∈ J
+
+(4)
+
+x ∈ [0, 1]n
+
+Fig. 1. Visualization of P P 3 within the three-dimensional unit cube.
+
+memoryless channel, the ML decoding objective is linear in
+the length-n vector γ of log-likelihood ratios (LLRs) γi = log(P(yi|0)/P(yi|1)). The ML decoding problem is
+
+n
+
+arg max P(y|x) = arg min
+
+x∈C
+
+x∈C
+
+γixi
+
+=
+
+arg
+
+min
+x∈C
+
+γT x.
+
+(1)
+
+i=1
+
+We note that γ can be multiplied by any positive scalar without changing the problem.
+Having framed ML as an optimization problem with a linear objective, we are ready to develop the LP relaxation first proposed in [6]. First, denote by xS , S ⊆ I, the length-|S| vector formed with the components of x indexed by S. With this notation, we can restate the parity-check condition for a binary linear code as C = {x ∈ {0, 1}n : 1 xNc(j) = 0 (mod 2) for all j ∈ J }. Each of the m constraints in this set can be visualized as requiring that the set of codeword variables connected to any particular check must be an even-weight vertex of the unit hypercube.
+The LP decoding problem results from relaxing these constraints [6]. Instead of requiring the vector of variables connected to each check to be an even-weight vertex of the unit hypercube, LP decoding requires this set of variables to lie in the convex hull of these vertices. Visualized in Fig. 1, the convex hull of the even-weight vertices of the unit hypercube is termed the “parity polytope,” denoted P P d in d-dimensions:
+
+P P d := conv e ∈ {0, 1}d : 1 e = 0 (mod 2) . (2)
+
+The dimension d will be used as a placeholder parameter. The parity polytope P P d can be explicitly defined by a
+number of half-space inequalities [6]. Every odd-weight ver-
+tex is surrounded by even-weight vertices. Each half-space
+inequality is defined by the hyperplane that contains all these
+even-weight vertices and “cuts” off the half of the space in which the odd-weight vertex sits. Half of the 2d vertices are of odd weight, so 2d−1 half-space constraints can be used. Each such
+inequality corresponds to one of the constraints in the first line of the following description of P P d where we use the notation [d] := {1, . . . , d}. A vector v ∈ P P d if
+
+vi −
+
+vi ≤ |S| − 1 S ⊆ [d], |S| odd
+
+i∈S
+
+i∈[d]\S
+
+. (3)
+
+0 ≤ vi ≤ 1
+
+i ∈ [d]
+
+where x is constrained to [0, 1]n since a given xi is not guaranteed to participate in the parity polytope constraints. Note that LP decoding is not guaranteed to yield the ML solution. Due to the relaxation, the feasible space has fractional vertices. The failure mode of LP decoding is when one of these “pseudocodewords” is the minimal cost vertex.
+One might consider rounding the fractional components when the LP solver outputs a pseudocodeword. However, this does not solve the pseudocodeword problem. An alternative approach proposed by Liu and Draper [16] is to augment the objective of (4) with a penalty function. This approach, referred to as “penalized LP” decoding, discourages pseudocodewords by penalizing the closeness of variables to 1/2. Many penalty functions were tested in [16], but we implement only the so-called 1-penalty function, due to its good error-rate performance and algorithmic simplicity. The 1-penalized LP decoding problem is given by
+
+arg min
+
+γ
+
+x−α
+
+x
+
+−
+
+1 2
+
+1
+
+subject to xNc(j) ∈ P P |Nc(j)| j ∈ J
+
+(5)
+
+x ∈ [0, 1]n
+
+where α ≥ 0 is termed the penalty parameter. The penalty parameter tunes how severely non-binary variables should be penalized. Setting α = 0 reduces (5) to (4). The use of α = 0 causes (5) to be non-convex. This removes the ML certificate property of LP decoding. However, moderate α values have been empirically observed to improve performance in the waterfall regime [16]. Also, it is easy to conceive a two-stage decoder, which verifies if a penalized ADMM-LP solution is also the LP decoding solution, thus restoring the ML certificate.
+To this point, we have discussed prior formulations of LP decoding. We now discuss a novel transformation of LP decoding that proves useful when designing a fixed-point implementation. The previous LP decoding formulation operates inside the unit hypercube centered around 1/2. In our hardware implementation, signed integers are used to implement fixedpoint arithmetic. Therefore, to eliminate possible asymmetries, we prefer LP decoding to operate inside the unit hypercube symmetrically centered around 0. To accomplish this, the simple variable substitution xnew = xold − 1/2 can be applied to (5). The result
+
+arg min γ x − α x 1
+
+subject to
+
+xNc(j)
+
+∈
+
+P P |Nc(j)|
+
+−
+
+1 2
+
+j
+
+∈
+
+J
+
+(6)
+
+x ∈ [−1/2, 1/2]n
+
+is an equivalent optimization problem with two important dif-
+
+ferences. The first is that the objective now penalizes closeness
+
+to 0 rather than to 1/2. The second is that check neighborhoods
+
+must be in the “centered” parity polytope. The d-dimensional
+
+centered
+
+parity
+
+polytope
+
+PPd
+
+−
+
+1 2
+
+is
+
+obtained
+
+by
+
+taking
+
+every
+
+point in P P d and subtracting the length-d all-1/2 vector. For
+
+simplicity, we subsequently refer to this shifted object simply as
+
+the parity polytope, unless disambiguation is required.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4979
+
+III. ALGORITHMS
+Section III-A describes the ADMM-LP decoding algorithm. Sections III-B and III-C discuss the two key projection subroutines, onto the parity polytope and onto the probability simplex, respectively.
+
+A. ADMM Decomposition and Message Passing
+
+In a linear code, the characteristic that each component of the codeword estimate x (generally) participates in multiple check constraints inhibits the decomposability of LP decoding. A small modification is therefore introduced in [12] to apply ADMM to LP decoding. We define an auxiliary “replica” variable vector zj = xNc(j) for each check neighborhood. By substituting into (6), we arrive at the following result, which fits the ADMM template:
+
+arg min γ x − α x 1
+
+subject to
+
+x
+
+∈
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]n
+
+zj
+
+∈
+
+P P |Nc(j)|
+
+−
+
+1 2
+
+j∈J
+
+(7)
+
+zj = xNc(j)
+
+j ∈J.
+
+The ADMM decomposition for (penalized) LP decoding
+
+starts from the 2-regularized Lagrangian
+
+γ x−α x 1+
+
+λj
+
+xNc(j) − zj
+
++μ 2
+
+xNc(j) − zj
+
+2 2
+
+.
+
+j∈J
+
+j∈J
+
+We use z and λ to refer to the zj and λj in aggregate. The λj are length-|Nc(j)| dual-variable vectors that enforce the zj = xNc(j) equality constraints. The μ parameter is a positive number that determines the degree of regularization. Regularization does not change the optimization problem solution, but it accelerates algorithmic convergence [13].
+While the above regularized Lagrangian was used in previous work, we identify that μ is a redundant variable and thus, for hardware, we simplify the formulation as follows. First, note that the outputs of the additive white Gaussian noise (AWGN) channel are proportional to the LLRs, and further, channel outputs (decoder inputs) must be scaled in order to be quantized prior to decoding. The following steps allow us to absorb μ into the LLR scalings. We make the substitutions α = μα, λ = μλ and γ = μγ. These substitutions modify our choice of α, slightly change what λ represents, and linearly scale the objective function. The problem solution does not change. This results in the Lagrangian L(x, z, λ) =
+
+γ x−α x 1+
+
+1
+
+λj
+
+xNc(j) − zj
+
++ 2
+
+xNc(j) − zj 22.
+
+j∈J
+
+j∈J
+
+ADMM-LP decoding alternates, in a round-robin manner,
+between minimizing over codeword estimates x and replicas z, followed by an update of the dual variables λ. Letting X and Z represent the feasible sets of x and z (the dual variables are unconstrained), each iteration takes the form [12], [16]
+
+x ← arg minx∈X L (x, z, λ)
+
+z ← arg minz∈Z L (x, z, λ)
+
+(8)
+
+λj ← λj + xNc(j) − zj
+
+j ∈J.
+
+The x update can be decomposed into individual variable updates since the solution to its optimization problem separates
+
+Algorithm 1: Given an LLL vector γ ∈ Rn, calculate the
+
+1-penalized LP decoding from (7) using ADMM. The current estimate x is returned upon termination.
+
+1: Initialize all λj and mNv(i)→i values to 0. 2: repeat
+
+3: for i ∈ I do
+
+Variable updates
+
+4:
+
+ti ← 1⎧ mNv(i)→i − γi
+
+⎨ ti + α if ti > 0
+
+5:
+
+si
+
+←
+
+⎩
+
+ti ti
+
+−
+
+α
+
+if ti = 0 if ti < 0
+
+6:
+
+xi ←
+
+[ ] −
+
+1 2
+
+,
+
+1 2
+
+si |Nv (i)|
+
+7: end for
+
+8: for j ∈ J do
+
+9:
+
+vj ← xNc(j) + λj
+
+10:
+
+zj ←
+
+(v ) P
+
+P
+
+|Nc
+
+(j
+
+)|
+
+−
+
+1 2
+
+j
+
+11:
+
+λj ← vj − zj
+
+12:
+
+mj→Nc(j) ← 2zj − vj
+
+13: end for
+
+14: until termination
+
+Check updates
+
+into distinct calculations for each variable [12], [16]. Similarly,
+the z update can be decomposed to update each zj individually. The λ update is already expressed in a decomposed form.
+The fact that the updates decompose means that the algo-
+rithm performs a set of parallel variable updates followed by a
+set of parallel check updates. The result is a message-passing
+algorithm with a structure similar to BP. Variable update i is performed using the LLR γi and a length-|Nv(i)| vector of messages from each of its neighboring checks, denoted mNv(i)→i. Check update j is performed using the dual-variable vector λj and a length-|Nc(j)| vector of messages from each of the neighboring variables. The latter contains the current estimates
+xNc(j) of neighboring variables. The result of the update of check j is a new estimate of the associated dual variables λj, as well as a length-|Nc(j)| message vector whose components are sent to neighboring variables. This vector is denoted mj→Nc(j). Algorithm 1 presents the ADMM-LP decoding algorithm in full. The notation A(·) denotes Euclidean projection onto the set A.
+The algorithm derivation follows from finding the (constrained) solutions of ∇xL(x, z, λ) = 0 and ∇zL(x, z, λ) = 0. Observe that the Lagrangian is almost a quadratic form (other than the 1-penalty, which has a slope ±α, and is reflected in the addition or subtraction of α in line 5 of Algorithm 1). The minimization problems in (8) therefore reduce to projections in
+Euclidean space onto convex objects described by the original problem constraints (the X and Z sets). The final form of Algorithm 1 reflects a refactoring of the algorithm presented
+in [12] and [16] to yield an intuitive description with a natural
+hardware realization.
+Viewing the variable/constraint structure of ADMM-LP in (8)
+using a factor graph, we observe that the message-passing sched-
+ule followed in Algorithm 1 is the standard flooding schedule
+of BP. This view helps to highlight key differences between
+ADMM-LP and BP. A factor graph is a bipartite graph whose
+connectivity, when representing a linear code, is specified by
+the code’s parity-check matrix [3]. For each codeword variable,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4980
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+Fig. 2. A parity-check matrix and associated factor graph with messages labelled. Checks vertices are drawn as squares.
+
+there is a variable vertex. For each parity check, there is a
+
+factor (or check) vertex. Variable vertex i and check vertex j
+
+are connected if Hj,i = 1. The execution of ADMM-LP can be viewed as variable updates taking place inside variable vertices
+
+and check updates taking place inside check vertices. Messages
+
+are passed between variables and checks along the edges of
+
+the graph. To illustrate this interpretation, Fig. 2 depicts a
+
+parity-check matrix and associated factor graph, where edges
+
+are labeled with ADMM-LP messages.
+
+Note that the λj vectors do not appear in Fig. 2. Algorithm 1 shows that the vector of dual variables λj is used only within the jth check update. Therefore, dual-variable vectors serve as
+
+internal check vertex states and are not passed as messages in
+
+the factor graph sense. This is an important difference from
+
+BP, as the dual variables play an important role in improving
+
+error-floor performance [15]. A second difference is that the
+
+|Nv(i)| outgoing messages from any variable i are all equal, corresponding to the current estimate of xi. This differs from BP where, in general, all outgoing messages from a variable
+
+will differ. Despite these differences, the similarity between
+
+LP and BP decoding is apparent on a macroscopic level. The
+
+formulation of ADMM-LP as a message-passing algorithm is
+
+presented in [12], and the description of its dynamics in the
+
+error-floor regime as a jump-linear system [15] contrasts with
+
+earlier descriptions of BP as a linear system.
+
+We now examine the steps of Algorithm 1, recalling that this
+
+is where our novel refactoring of the ADMM-LP decoding algo-
+
+rithm is helpful. On line 4, variable updates first sum incoming
+
+messages and the negative LLR to form a variable estimate.
+
+Incoming messages tell the variable what value it should take on.
+
+Next, on line 5, the penalization is applied. A non-zero penalty
+
+pushes each variable estimate in the direction of its current
+
+belief. Recall that this is done to discourage fractional solutions
+
+(pseudocodewords). When α is small, the effect of penalization
+
+is reduced, making the algorithm closer to (unpenalized) LP
+
+decoding. A slight difference in Algorithm 1 from penalized
+
+LP decoding’s original derivation in [16] is that no penalty is
+
+applied if ti = 0. This modification is important in a fixed-point implementation to avoid bias in codeword estimates. On line 6,
+
+the penalized estimate is normalized by the variable degree and
+
+projected
+
+onto
+
+the
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]
+
+interval.
+
+The
+
+resulting
+
+final
+
+estimate
+
+is then passed to neighboring checks. Roughly speaking, the
+
+variable estimate is the average of the incoming messages. On
+
+line 9, the first step in the check update is to add the vector of
+
+neighboring variable estimates to the vector of dual variables (the
+
+check state vector). An updated vector of the replica estimate is
+
+obtained by projecting vj, the result of the addition, onto the parity polytope. This is where the parity polytope constraints of LP decoding are enforced. Using the projection, a new check state λj and set of outgoing messages mj→Nc(j) are calculated (possibly in parallel) on lines 11 and 12.
+The dual-variable estimates affect algorithmic progression in two major ways. First, λj acts as a momentum term on line 9. It brings vj closer to the previous value of vj, ensuring that zj does not evolve too erratically. Second, according to the pricing interpretation of duality, the λj specifies the cost of breaking the equality constraint zj = xNc(j). We can see this effect more clearly if line 12 is rewritten as mj→Nc(j) ← zj − (vj − zj) = zj − λj. Since the new λj value is the mismatch between vj and zj, line 12 compensates this mismatch by including it in the outgoing messages. At convergence, the λj subtracted off here is canceled by the λj added in to compute vj on line 9.
+Note that a termination condition is not specified in Algorithm 1. While algorithmic convergence can be used as the stopping criterion in floating-point [12], it may not be possible to obtain convergence in fixed-point to an arbitrary precision. Thus, in our implementation, we impose a fixed number of iterations, but can also terminate early if rounding the current codeword estimate produces a codeword.
+While their message-passing schedules are the same, we have already observed two differences between ADMM-LP and BP: the existence of dual variables that form the check states, and the fact that all outgoing messages from a variable node are identical. To this point, a third significant difference has been abstracted: the computational primitive of the check update, which is the Euclidean projection onto the parity polytope. A discussion of how to implement this projection efficiently in hardware is the topic of the next section.
+
+B. Parity Polytope Projection
+
+Euclidean projection of a vector v onto the d-dimensional parity polytope is specified by the quadratic program
+
+P
+
+P
+
+d
+
+−
+
+1 2
+
+(v)
+
+=
+
+arg
+
+min
+
+w∈P
+
+P
+
+d
+
+−
+
+1 2
+
+w−v
+
+2 2
+
+.
+
+(9)
+
+Projection
+
+onto
+
+the
+
+centered
+
+(P
+
+P
+
+d
+
+−
+
+1 2
+
+)
+
+and
+
+non-centered
+
+(P P d) parity polytope are similar operations related as
+
+PPd−
+
+1 2
+
+(v)
+
+=
+
+11
+
+v+ − .
+
+PPd
+
+22
+
+Barman et al. began the investigation into efficient projection onto the parity polytope [12], [44]. These researchers established a “two-slice” representation of the polytope and exploited rotational symmetry by sorting the components of v into a canonical coordinate system for projection. However, their algorithm is not well suited for hardware due to its iterative nature. X. Zhang and Siegel [26], [45] improved the method by removing the sort and de-sort operations through efficient identification of the violated cut from (3). Unfortunately, as with the first approaches, the method remains intensively iterative with high latency, input dependence, and low potential for parallelization. Simultaneously, in [26], G. Zhang et al. made a connection to projection onto the probability simplex [27]. This connection provides a clean geometric intuition, but their technique relies on a partial
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4981
+
+Fig. 3.
+
+Projection
+
+onto
+
+the
+
+parity
+
+polytope
+
+PP3−
+
+1 2
+
+:
+
+identify
+
+active
+
+facet,
+
+transform into canonical coordinate system, project onto probability simplex.
+
+sort operation that is not easy to implement in hardware (except via full sort). Thus, seeking a hardware-compatible approach, in [28], Wasson and Draper combined aspects from both of these papers. They employ the cut search technique from [26] to identify which facet to project onto, and then perform the projection onto the probability simplex as in [27]. This combination avoids the partial sort and replaces it with guaranteed linear complexity. We expand upon that work herein. We develop a centered version of the algorithm (which improves dynamic range), detail a useful geometric interpretation of the operations performed, and provide a cleaner proof.
+A geometric illustration of the main steps of Algorithm 2 is depicted in Fig. 3. First, the violated cut from (3) is identified, revealing the active facet. Next, the identified cut defines a similarity transform used to reorient the problem into a canonical orientation. The problem is thereby reduced to projection onto the (centered) probability simplex. Finally, after projecting onto the simplex, the similarity transform is inverted to yield the projection onto the parity polytope. The algorithm has a straightforward and non-iterative execution path, whose steps can largely be parallelized. This, combined with simple intuition, makes Algorithm 2 an excellent candidate for hardware adoption.
+In Algorithm 2, lines 1–7 form the facet identification portion of the projection algorithm. The objective here is to identify the vertex cut from (3) that is violated (if one is violated). This amounts to finding the closest odd-weight vertex of the unit hypercube [46]. First, the closest vertex of the hypercube is found and stored in the binary vector f . For the case of the centered polytope, considered in Algorithm 2, the actual vertex is f − 0.5. If the Hamming weight (computed on line 4) of f is odd, then the closest vertex violates the parity constraint, i.e., it is not a codeword of the single parity-check code, and we have identified a potentially violated cut. On the other hand, if the Hamming weight of f is even, the nearest vertex does not violate the parity constraint. To find the cut, we perturb the f vector in one coordinate. The coordinate to perturb corresponds to the vi that is closest to the midpoint of the unit interval. This coordinate is identified on line 5 and f is perturbed accordingly to make it of odd weight on line 6.
+Once the possibly violated cut is known, a similarity transform applied on line 8 transforms v to v˜. This aligns the identified cut with the (centered) probability simplex. This transformation is illustrated in Fig. 3, where v is the dot in Fig. 3a, v˜ is the dot in Fig. 3b, and f = [1 1 1]. The transformed point v˜ is then projected onto the (centered) probability simplex, as illustrated in Fig. 3c. After projection, the similarity transform is inverted on line 13. The similarity transform is self-inverting.
+
+Algorithm 2: Given a vector v ∈ Rd, calculate its Euclidean
+
+projection onto the parity polytope. The method returns
+
+w=
+
+P
+
+P
+
+d
+
+−
+
+1 2
+
+(v).
+
+1: for i ∈ [d] do
+
+Facet identification
+
+2:
+
+fi ←
+
+1 if vi ≥ 0 0 otherwise
+
+3: end for
+
+4: if 1 f is even then
+
+5:
+
+i∗ ← arg mini∈[d] |vi|
+
+6:
+
+fi∗ ← 1 − fi∗
+
+7: end if
+
+8: for i ∈ [d] do
+
+Similarity transform
+
+9:
+
+v˜i ← vi(−1)fi
+
+10: end for
+
+11: u˜ ←
+
+Sd
+
+−
+
+1 2
+
+(v˜)
+
+12: for i ∈ [d]
+
+Simplex projection Similarity transform
+
+13:
+
+ui ← u˜i(−1)fi
+
+14: end for
+
+15: if 1
+
+[ ] −
+
+1 2
+
+,
+
+1 2
+
+d
+
+(v˜)
+
+≥
+
+1
+
+−
+
+d 2
+
+then
+
+16:
+
+w←
+
+[ ] −
+
+1 2
+
+,
+
+1 2
+
+d
+
+(v)
+
+17: else
+
+Membership test
+
+18: w ← u
+
+19: end if
+
+The execution path up through line 14 of Algorithm 2 produces a projection onto the boundary or “shell” of the parity polytope. Through these steps, a point already inside the parity polytope, instead of being left unperturbed, would be projected onto the cut corresponding to the closest odd-weight vertex. To avoid this, we test for parity polytope membership on line 15.
+We now describe the test used for parity polytope membership. If the vector being tested is in the unit hypercube, we need only to check if the previously identified cut is violated [46]. Line 15, originally given in [45], tests the hypercube projection of v against the identified cut. This is done by taking the hypercube projection of v˜ and checking on which side of the (centered) probability simplex it lies. If the hypercube projection of v is in the parity polytope, then this must be the parity polytope projection of v since the parity polytope is a subset of the hypercube. If the hypercube projection of v is not in the parity polytope, then v is not in the parity polytope, and the projection of v onto the identified facet u is also the parity polytope projection of v.
+The previous paragraphs aim to provide the reader an understanding of Algorithm 2. We now provide a concise proof of correctness.
+We first assign a name to the similarity transform used in lines 8 and 12: Tf (e)i := ei(−1)fi where e ∈ Rd and i ∈ [d]. Next, we establish that
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(Tf
+
+(e))
+
+=
+
+Tf
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(e)
+
+(10)
+
+for all e ∈ Rd and f ∈ {0, 1}d. This follows since Tf (·) changes only the sign of the input in a component-wise manner, and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4982
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+Algorithm 3: Given a vector v ∈ Rd, calculate its Eu-
+
+clidean projection onto the centered probability simplex.
+
+This method returns w =
+
+Sd
+
+−
+
+1 2
+
+(v).
+
+1: ρ ← descendingSort (v)
+
+2: for: i ∈ [d] do
+
+Calculate possible shifts
+
+i
+
+3:
+
+ui
+
+←
+
+1 i
+
+ρj − 1
+
+j=1
+
+4: end for
+
+5: i∗ ← max {i ∈ [d] : ρi > ui} Choose shift
+
+6: for i ∈ [d] do
+
+Perform shift and clip
+
+7:
+
+wi ← max
+
+vi
+
+−
+
+ui∗
+
+−
+
+1 2
+
+,
+
+−
+
+1 2
+
+8: end for
+
+projection onto the centered hypercube is also a component-wise
+
+operation
+
+(limiting
+
+the
+
+range
+
+to
+
+be
+
+in
+
+the
+
+interval
+
+[−
+
+1 2
+
+,
+
+−
+
+1 2
+
+]).
+
+We can now argue, given v ∈ Rd and f as calculated in
+
+Algorithm 2, that
+
+1
+
+[−
+
+1 2
+
+,
+
+]1 d
+2
+
+(Tf
+
+(v))
+
+=
+
+1
+
+Tf
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v
+
+)
+
+≥1− d 2
+
+if and only if
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v)
+
+∈
+
+PPd
+
+−
+
+1 2
+
+.
+
+By applying (10) to bring Tf (·) out of the hypercube projec-
+
+tion, we arrive at the centered version of the parity polytope
+
+cut (3), applied to hypercube projection. Zhang and Siegel
+
+provide the forward implication in [26], [46], where their cut
+
+search algorithm asserts that the above cut is the only cut that
+
+needs to be tested for vectors inside the hypercube. The reverse
+
+implication is simple, since one cut being violated implies that
+
+parity polytope membership is not satisfied.
+
+Theorem 3 in [26] states that if
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v
+
+)
+
+is
+
+not
+
+in
+
+the
+
+parity
+
+polytope, then its parity polytope projection is given by
+
+arg min
+e
+
+v−e
+
+2 2
+
+subject to
+
+e∈
+
+−
+
+1 2
+
+,
+
+1 2
+
+d
+
+.
+
+(11)
+
+1
+
+Tf (e)
+
+=
+
+1
+
+−
+
+d 2
+
+If we apply the substitution e = Tf (e˜), then the problem
+
+arg min
+e˜
+
+Tf (v)
+
+− e˜
+
+2 2
+
+subject to
+
+e˜ ∈
+
+−
+
+1 2
+
+,
+
+1 2
+
+d
+
+(12)
+
+1
+
+e˜
+
+=
+
+1
+
+−
+
+d 2
+
+is produced after simplification. This is the Euclidean projec-
+
+tion of Tf (v) onto the centered probability simplex. Therefore,
+
+P
+
+P
+
+d
+
+−
+
+1 2
+
+(v)
+
+=
+
+Tf (
+
+Sd
+
+−
+
+1 2
+
+(Tf
+
+(v
+
+)))
+
+if
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v
+
+)
+
+is
+
+not
+
+in
+
+the parity polytope. Otherwise, if
+
+[−
+
+1 2
+
+,
+
+1 2
+
+]d
+
+(v)
+
+is
+
+in
+
+the
+
+parity
+
+polytope, then it serves as the parity polytope projection since
+
+the parity polytope is a subset of the hypercube.
+
+C. Simplex Projection
+
+We now consider the final important algorithm, Algorithm 3:
+
+projection onto the centered probability simplex. The centered
+
+probability
+
+simplex
+
+Sd
+
+−
+
+1 2
+
+is
+
+defined
+
+by
+
+subtracting
+
+the
+
+all-
+
+1/2 vector from the probability simplex Sd = {v ∈ Rd : 1 v =
+
+1, vi ≥ 0 ∀ i ∈ [d]}. Projection of v ∈ Rd onto the centered
+
+probability simplex is a quadratic program. Additionally, projection onto the centered and non-centered probability simplexes are related in the same manner as for the centered and noncentered parity polytope.
+Algorithm 3 presents a simplex projection method from [47], modified to project onto the centered simplex. Our interpretation of this algorithm is as follows. Computing the projection is a straightforward optimization solved through analyzing KarushKuhn-Tucker (KKT) conditions [32], [47]. The KKT conditions tell us that the projection is obtained by shifting v along the all-1s vector, clipping components that fall below 0, and ensuring non-clipped components sum to 1. The shift along the all-1s vector results from the fact that the all-1s vector is orthogonal to the simplex, as shown in Fig. 3c. The clipped components are the most negative components of v, therefore, the d possible shifts are computed from a sorted version of v. A smart way to identify the best common shift is developed in [48] and used herein. The magnitude of the common shift is computed on lines 2−5 of Algorithm 3. The shift and clip are implemented on line 7.
+
+IV. HARDWARE ARCHITECTURE
+We now build upon well-known hardware architectures for message-passing decoders to implement an ADMM-LP decoder. Our hardware architecture specifically targets FPGA devices, taking advantage of the high availability of flip-flops and internal block RAMs (BRAMs). To reduce critical path timing, we deeply pipeline our CN and VN operations using existing on-FPGA flip-flops. We also use existing on-FPGA BRAMs to store intermediate decoder messages, rather than constructing wired message-passing networks. While these design strategies work well for FPGAs, the approach in an ASIC design could be slightly different. In the following sections we provide original implementations of the check and variable processing nodes, as per the operations outlined in Algorithm 1. The Verilog register-transfer level (RTL) source code for our implementation is freely available under the MIT license [49].
+
+A. Decoder
+
+A central challenge in implementing hardware-based de-
+
+coders is the scalability of the message-passing network. We
+
+restrict our implementation to QC codes [50] and a partially-
+
+parallel architecture [51]. This simplifies message routing and
+
+memory interfacing. We implement the message-passing net-
+
+work with regularly-distributed on-chip FPGA BRAMs. Fig. 4
+
+presents an overview of our partially-parallel QC-LDPC decoder
+
+architecture for (r, s)-regular LDPC codes. The architecture is
+
+comprised of multiple memory types to store input LLRs, inter-
+
+mediate messages, and output codewords, as well as pipelined
+
+Check Node (CN) and Variable Node (VN) processing units that
+
+perform the arithmetic operations of Algorithm 1. We use an
+
+aggressive pipelining strategy that captures every intermediate
+
+result in pipeline registers.
+
+QC-LDPC codes are defined by a parity-check matrix formed
+
+by tilings of p × p circulant matrices. Each tile of a QC parity-
+
+check matrix can be either the all-zeros matrix or some addi-
+
+tion of shifted-identity matrices. The tilings naturally divide
+
+the
+
+parity-check
+
+matrix
+
+into
+
+s
+
+=
+
+n p
+
+macro-columns
+
+and
+
+r
+
+=
+
+m p
+
+macro-rows. Inside a given macro-row (column), the required
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4983
+
+Fig. 4. Partially-parallel decoder architecture for an (r, s)-regular LDPC code. The implementations of each variable- and check-node compute unit are depicted
+in Figs. 5 and 6, respectively. Each xi, γi, vj,i, and cj,i memory block, i ∈ {1, . . . , s} and j ∈ {1, . . . , r}, has a memory depth equivalent to the QC matrix expansion factor p.
+
+message locations for a check (variable) computation are the locations for the previous check (variable) plus 1 modulo p. This rich class of codes is popular in hardware implementations and standards such as IEEE 802.11ad [43].
+The first step that our decoder executes is to load LLRs into memory. We instantiate s memories, each of depth p, to store the LLRs. Each memory is read in parallel to feed LLRs into s pipelined VNs. The VNs also receive messages from a Check-to-Variable (CN-to-VN) message memory, to be discussed later. At the output of the VNs, the current variable estimates xi are written in parallel into s estimate memories, to be read from upon termination. Variable estimates are also written into Variable-to-Check (VN-to-CN) message memories. There is a VN-to-CN message memory for each shifted-identity matrix in the specification of the parity-check matrix. These memories are addressed using their corresponding shift number to ensure the messages are passed to the proper CN.
+Next, r pipelined CNs read their required messages in parallel from the VN-to-CN message memory. In addition, check states are read from check state memories, which are instantiated in the same manner as the VN-to-CN message memories. However, address shifting is not required since these memories are accessed only by CNs. When a CN computation completes, the new check states are written into check state memories and the messages are written into CN-to-VN message memories. The CN-to-VN message memories are structured in the same manner as the VN-toCN memories, with write operations using cyclic shift information. The process repeats until the maximum number of iterations is exceeded, or some early termination condition is satisfied.
+We find our current implementation of the ADMM-LP decoder to be sensitive to fixed-point quantization. Min-Sum decoders can be implemented with 5- or 6-bit message widths while suffering minimal degradation in error-rate performance compared to floating-point [52]. ADMM-LP requires larger bit-widths. We believe the higher precision is required because
+
+the result of the projection operation that CNs perform must be quantized. The quantization results in a loss of precision and a corresponding deterioration of message resolution.
+We now discuss the logic that underlies the choices we made in selecting fixed-point representations. We first note that a change in the assignment of bits between the integer and fractional parts of fixed-point LLRs amounts to a linear scaling of the LP objective. However, any scaling of the objective in an LP, e.g., of γ in (6), does not change the solution of the LP. This provides some flexibility in choosing the fixed-point representation of the LLRs. Next, we note that each message passed to a VN can be thought of as either trying to overcome the channel information or as trying to reinforce it. Thus, we allocate any extra bit-width to the integer part of a CN-to-VN message. This provides the dynamic range required to override channel LLRs. In contrast, extra bit-width allocated to VN-to-CN messages should be in the fractional part. An increase in the number of fractional bits mitigates the effect of the inexact (due to finite precision) normalization by |Nv(i)| in the VNs.
+Based on this intuition, we select fixed-point message representations to retain as much channel information as possible. We first consider the bit-width of LLRs and the estimate outputs, which correspond to the decoder’s input and output message widths, respectively. Next, we consider how many additional bits VN-to-CN and CN-to-VN messages will receive. VN-to-CN messages, as well as the estimates, lie in the centered unit hypercube. Therefore, these messages receive one sign bit and zero integer bits. Next, we assign LLRs one sign bit, zero integer bits, and allocate the remainder to fractional bits. This ensures that all channel information is visible in the estimates and the VN-to-CN messages. Experimentation shows that this fixed-point LLR representation provides the best error-rate performance [32]. The CN-to-VN messages are assigned one sign bit and the same number of fractional bits as the LLRs. This is done so the summation in the VN computation produces an output that
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4984
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+Fig. 6. Check node compute module.
+
+Fig. 5. Variable node compute module.
+does not have any constant bits for some given LLR. Finally, the check states are assigned the same representation as the CN-to-VN messages because they are computed in a similar manner.
+
+B. Variable Node
+
+Fig. 5 presents the implementation schematic of a VN,
+
+which executes lines 4–6 of Algorithm 1. The variables from
+
+Algorithm 1 are labeled in Fig. 5. A VN first sums the in-
+
+coming messages mNv(i)→i and subtracts the LLR γi. This large addition operation is performed using a pipelined adder
+
+tree with log2(|Nv(i)| + 1) adder stages with pipelining in between. The output of the adder tree has an additional
+
+log2(|Nv(i)| + 1) integer bits to prevent overflow. For clarity, we do not show pipelining registers in our implementation
+
+schematics in this section. We note here that there may be several
+
+ways to pipeline a particular design, depending on the design
+
+constraints, e.g., clock frequency, target throughput, etc.
+
+To implement penalization, the VN checks if the adder tree
+
+result ti is greater than, equal to, or less than 0. Using this information, a multiplexer then chooses to add α, 0, or −α to
+
+the adder tree output. An integer bit is added to the fixed-point
+
+representation to avoid overflow.
+
+The next step in the VN is to normalize the penalized sum si. Division is generally an expensive operation to perform, how-
+
+ever, variable degrees are constant for a given code. Therefore,
+
+division by |Nv(i)| can be performed by finding its reciprocal during RTL synthesis and computing the normalization via
+
+multiplication. The fixed-point representation of the reciprocal
+
+has one sign bit and zero integer bits. Our FPGA implementation
+
+uses an on-FPGA Digital Signal Processing (DSP) block to
+
+execute this multiplication. The reciprocal is represented with
+
+the maximum bit-width accepted by the DSP modules on the
+
+FPGA used for our error-rate simulations. Theoretically, this
+
+results in a large bit-width for the normalization output, however,
+
+unused bits are trimmed during FPGA RTL design synthesis.
+
+This normalization is trivial for certain variable degrees. For
+
+example, if |Nv(i)| is a power of 2, the normalization can be implemented by bit-shifting the fixed-point representation.
+
+Similarly, if the reciprocal of |Nv(i)| has few ones in its fixedpoint representation, soft logic can efficiently implement the
+
+resulting multiplication. Thus, to simplify the normalization
+
+step, a hardware-oriented code design approach can be taken,
+
+where |Nv(i)| is chosen to be a power of 2. To form the VN output xi, the above normalization must
+be projected onto the centered unit interval. Similar to the
+
+penalization step, the VN tests whether or not the normalized
+
+estimate
+
+is
+
+less
+
+than
+
+−
+
+1 2
+
+,
+
+greater
+
+than
+
+1 2
+
+,
+
+or
+
+between
+
+−
+
+1 2
+
+and
+
+1 2
+
+.
+
+A
+
+multiplexer
+
+selects
+
+the
+
+variable
+
+estimate
+
+to
+
+be
+
+−
+
+1 2
+
+,
+
+1 2
+
+,
+
+or
+
+the
+
+normalized estimate, respectively.
+
+The final step of the VN architecture is to format the vari-
+
+able estimate xi to the correct fixed-point representation. The VN-to-CN messages generally have a smaller bit-width than the
+
+projected estimate. Since the projected estimate is guaranteed to
+
+be
+
+between
+
+−
+
+1 2
+
+and
+
+1 2
+
+,
+
+its
+
+fixed-point
+
+representation
+
+has
+
+one
+
+sign
+
+bit and zero integer bits. Therefore, only excess fractional bits
+
+need to be removed, which causes the previously mentioned bit
+
+trimming for the normalization output. While not indicated in
+
+Fig. 5, it is very important to round (rather than truncate) in order
+
+to remove these fractional bits. Truncation, i.e., rounding down,
+
+biases decoding towards lower-weight codewords. Rounding
+
+prevents such a bias.
+
+The most complex operation in a VN is the adder
+
+tree. ADMM-LP VNs have O(|Nv(i)|) area scaling and O(log |Nv(i)|) delay scaling. Additionally, no information
+needs to be stored in the VN for use in future iterations. The
+
+result is a pipeline-friendly module.
+
+C. Check Node
+
+Fig. 6 presents the implementation schematic of a CN, which
+
+executes the operations on lines 9–12 of Algorithm 1. A CN first
+
+performs length-|Nc(j)| vector addition of the incoming mes-
+sage vector xNc(j) with the check state vector λj. The VN-to-CN messages and check states have the same bit-width, but their
+
+fixed-point representations are different. Therefore, to perform
+
+the vector addition, check states must be zero-extended to have
+
+the same number of fractional bits as the incoming messages.
+
+The components of the length-|Nc(j)| vector addition output vj have the same fixed-point representation as the extended check states, except an additional integer bit is added to prevent
+
+overflow.
+
+The vector addition output vj is fed into the parity polytope projection module. It must also be temporarily stored while the
+
+projection is computed so that it can be used to calculate CN
+
+outputs. The implementation of the parity polytope projection,
+
+the most resource intensive part of the CN, will be covered in the
+
+next subsection. The replica variable vector zj is assigned as the output of the projection module. The replica variable vector has
+
+the same bit-width as the projection input, but its fixed-point
+
+representation has one sign bit and zero integer bits since its
+
+components
+
+are
+
+guaranteed
+
+to
+
+be
+
+in
+
+[−
+
+1 2
+
+,
+
+1 2
+
+].
+
+Following parity polytope projection, new check state values
+
+and outgoing messages mj→Nc(j) are calculated in parallel using vector addition operations. Before the check state update, extra
+
+fractional bits are added to the vector addition result vj. For the outgoing message calculation, the extended vj is used with one fewer fractional bit since the parity polytope projection is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4985
+
+Fig. 7. Parity polytope projection. Note that the (dotted) facet identification module from the upper sub-figure is detailed in the lower sub-figure.
+multiplied by 2. This multiplication is performed by bit-shifting the fixed-point representation of zj.
+The final step to output λj and mj→Nc(j) from the CN is to format their fixed-point representations. To discard excess integer bits, values are saturated at the maximum or minimum that their representations allow. Rounding is performed to discard excess fractional bits. This avoids the aforementioned truncation-induced codeword biases in error-rate performance.
+In a CN, the vector addition operations have constant delay in check degree and O(|Nc(j)|) area scaling. CN complexity lies in projection onto the parity polytope. With projection, CNs have O((log |Nc(j)|)2) delay scaling and O(|Nc(j)|(log |Nc(j)|)2) area scaling. Storing the vj during the parity polytope projection computation occupies O(|Nc(j)|(log |Nc(j)|)2) area resources with O((log |Nc(j)|)2) pipeline stages.
+D. Parity Polytope Projection
+Fig. 7 presents the implementation schematic of the parity polytope projection module, whose operations are specified in Algorithm 2. The parity polytope projection begins with facet identification. Finding the closest unit hypercube vertex to the input vector v is accomplished by checking the sign bit of the fixed-point representation of v. Finding the closest odd-weight vertex is slightly more difficult. First, a length-d vector corresponding to the absolute values of v is created with d multiplexers choosing between vi and −vi for each component of v. This vector has the same fixed-point representation as v, except the sign bit can be dropped since its components are all non-negative. This vector is fed into a min tree that finds the minimum component and outputs a one-hot vector indicating the index of the minimum. If the closest vertex to v is even weight, the one-hot vector is used to flip the bit of f corresponding to the minimum absolute value component via a component-wise XOR. The complexity of this operation lies in the min tree, which has O(log d) delay and O(d) area scaling. However, v must be
+
+stored for O(log d) pipeline stages, resulting in O(d log d) area
+
+usage.
+
+With the active facet identified in f , a similarity transform
+
+is executed on v to align the active facet with the probability
+
+simplex. This is accomplished with d multiplexers choosing
+
+between vi or −vi based on the value of fi. The resulting vector v˜ uses the same fixed-point representation as v, however, since
+
+its components are guaranteed to be negative, the sign bit can be
+
+dropped and added back in later when required for computation.
+
+This operation has constant delay and linear area scaling in the
+
+dimensionality of projection d.
+
+At this algorithmic juncture, there are three operations that can
+
+take place in parallel: projection onto the unit hypercube, pro-
+
+jection onto the probability simplex, and testing parity polytope
+
+membership. Our implementation, however, does not execute
+
+these operations in parallel. Parallel execution requires knowing
+
+the depth of each operation in order to properly pad the lower
+
+latency operations with pipeline registers. This can not be done
+
+without knowing code check degrees a priori.
+
+Projection of v onto the unit hypercube is the simplest op-
+
+eration to perform. For each component of v, a multiplexer
+
+chooses
+
+between
+
+−
+
+1 2
+
+,
+
+1 2
+
+,
+
+and
+
+vi.
+
+The
+
+fixed-point
+
+representation
+
+is formatted to match the bit-width of the projection output with
+
+one sign bit and zero integer bits. This operation has constant
+
+delay and linear area scaling in d.
+
+Testing parity polytope membership involves projecting v˜
+
+onto the unit hypercube. Hypercube projection is performed
+
+in the same manner as above. This is followed by summing
+
+the resultant vector using a minimum-depth adder tree. In the
+
+adder tree, extra integer bits are added to prevent overflow. By
+
+comparing the adder tree result to a constant, we are able to
+
+determine what the projection output should be. This decision
+
+is stored with a single bit. Due to the adder tree, this operation
+
+has O(d) area scaling and O(log d) delay scaling.
+
+The implementation of simplex projection is the topic of the
+
+next subsection. Simplex projection dominates the complexity
+
+of parity polytope projection. It gives the parity polytope projection O(d(log d)2) area scaling and O((log d)2) delay scaling.
+
+Additionally, the hypercube projection of v and the active facet identifier f must be stored for the O((log d)2) pipeline stages it takes to execute the simplex projection. This uses O(d(log d)2)
+
+area. The similarity transform is applied again to the output of
+
+the simplex projection to invert itself.
+
+The stored bit indicating parity polytope membership then
+
+drives d multiplexers that choose to output the hypercube pro-
+
+jection of v, or the transformed output u of the simplex pro-
+
+jection module. Both of these possible outputs have fixed-point
+
+representations with one sign bit and zero integer bits.
+
+E. Simplex Projection
+Our algorithm for simplex projection is detailed in Algorithm 3. A schematic is depicted in Fig. 8. The components of the vector to be projected are first sorted in descending order. To sort in hardware, we require the set of operations to be performed regardless of the input vector. Sorting networks accomplish this. Sorting networks are composed of compare-swap modules, each of which can be implemented with a compare
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4986
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+Fig. 8. Simplex projection.
+
+Fig. 10. Shifts for QC parity-check matrices where “−” denotes an all-zeros matrix. Clockwise from top left: Tanner code, (3, 6) ensemble, WiGig code.
+TABLE I FIXED-POINT MESSAGE CHARACTERISTICS (MSG / BIT-WIDTH / FORMAT)
+
+Fig. 9. An example of a minimum-delay sorting network from [53], showing non-overlapping compare-swap modules for 16 inputs.
+
+operation and two multiplexers. A delay-optimal sorting network for 16 values is shown in Fig. 9.
+Knuth provides an in-depth analysis of sorting networks [53]. He explains that, in practice, the best sorting networks achieve O((log d)2) delay scaling and O(d(log d)2) area scaling. There exists a theoretical construction with better scaling, but it has prohibitively large overhead [53]. We use delay-optimal sorting networks from Knuth [53] for small vector lengths, and use Batcher’s odd-even merge sort [54] to extend to a general construction for large dimensional projections [28], [32].
+The next step of simplex projection is to calculate all partial sums (termed “prefix sum”) of the sorted vector ρ. Since we need to subtract 1 from every partial sum, we simply include −1 as part of the prefix sum input. The prefix sum operation can be performed with O(d) area scaling and O(log d) delay scaling. Ladner and Fischer describe such a construction [55]. The dth sum is computed with a minimum-depth adder tree. Other sums are calculated by reusing computations when possible, making linear area scaling possible. Extra integer bits are allocated to the fixed-point representation of the prefix sum output to prevent overflow. Note that both v and ρ must be stored during this operation, requiring O(d log d) area.
+Next, the prefix sum output vector components are normalized by their respective component indices. Component index reciprocals are found during synthesis and the normalization is performed by multiplication. As with VNs, multiplication by a power of 2 can easily be implemented with FPGA soft logic for some indices, while a multiplier DSP core is required for others. This operation has constant delay and linear area scaling in the dimension of projection.
+We wish to select the normalized partial sum with the largest index that satisfies ρi > ui as the common shift in the simplex projection. First, a length-d binary vector is created indicating the indices satisfying ρi > ui. A priority encoder is then used to create a one-hot vector indicating the largest index position satisfying ρi > ui. This is also a prefix operation, which yields the same complexity as the prefix sum [28]. However, the operation is on a binary vector, and not a fixed-point vector.
+
+The resources consumed are thus much smaller. This one-hot
+
+vector is used to select the corresponding component of u.
+
+Finally,
+
+the
+
+selected
+
+component
+
+ui∗
+
+and
+
+1 2
+
+are
+
+subtracted
+
+from
+
+all components of v. After this, each component is compared to
+
+−
+
+1 2
+
+and
+
+a
+
+multiplexer
+
+chooses
+
+between
+
+the
+
+adder
+
+results
+
+and
+
+−
+
+1 2
+
+to form the final output. The output bit-width matches the input
+
+bit-width. The output fixed-point representation has one sign
+
+bit
+
+and
+
+zero
+
+integer
+
+bits
+
+since
+
+each
+
+component
+
+is
+
+between
+
+−
+
+1 2
+
+and
+
+1 2
+
+.
+
+V. RESULTS
+We tested the hardware viability of ADMM-LP decoding using a Xilinx Kintex UltraScale FPGA board. The architecture was synthesized for the FPGA, along with wrapper logic for noise generation and data transfer to a software test bench.
+The binary-input AWGN channel is simulated using a Gaussian random number generator [56] on the FPGA to minimize simulation time. The core is a linear feedback shift register of period 2176, fed into an approximation of the inverse cumulative distribution function. We verified that FPGA-based channel simulation produced the same frame error rate (FER) results as CPU-based channel simulation for low-SNR channels.
+Three QC-LDPC codes are considered for error-rate simulation and FPGA resource usage analysis. The first is the [155, 64, 20] Tanner code [42], whose parity-check matrix is composed of 31 × 31 cyclic matrices. The second is the [672, 546] “WiGig” code from the IEEE 802.11ad (WiGig) standard [43], composed of 42 × 42 matrices. The final codes are an ensemble of five [1002, 503] (3, 6)-regular QC-LDPC codes. The five paritycheck matrices for this ensemble were created by randomly generating shifts for 167 × 167 identity matrices. The resulting factor graph girths were verified using techniques from [57]. Codes with girth less than 6 were discarded. The QC shift matrices for the three codes are provided in Fig. 10.
+Table I summarizes the fixed-point precision of each message variable as determined through experimentation to obtain FER performance close to floating-point (double-precision). Message
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4987
+
+variables are grouped by computation module and expressed as signed fixed-point numbers in the Q format [58]. An Input/Output (I/O) bit-width of 8 bits was required to guarantee error-rate performance close to double-precision implementations [32]. For internal CN-to-VN messages, it was found that two additional bits are required to achieve good FER performance in higher-reliability channels [32]. In our architecture, LLRs, CN-to-VN messages, and check states all use the same number of fractional bits. Experimentation indicates that maximizing the number of fractional bits results in the best error-rate performance [32]. That is, LLRs should have zero integer bits, and the CN-to-VN messages and check states should have two integer bits. We use the allocations shown in Table I in all of our fixed-point ADMM-LP simulations. From experimentation, we found that the smallest fixed-point representations for which our decoder functioned reliably were 6-bit I/Os and 8-bit internal messages [32].
+A. Error-Rate Performance
+The previously discussed parameter choices affect both errorrate performance and resource consumption. There are two additional parameters that affect only error-rate performance. We discuss the choice of these parameters here.
+Simulated channel outputs are saturated at some value in order to produce LLRs within the decoder’s input range. We parameterize this in terms of standard deviations of channel noise. That is, the channel output is saturated at ±(1 + aσ), where a > 0 and σ is the standard deviation of the added Gaussian noise. Experimentation revealed that our implementation is not extremely sensitive to this parameter, however, a = 1 was found to be optimal with respect to FER [32]. Therefore, we saturate channel outputs at one standard deviation beyond the transmission values ±1. The saturated channel outputs are then scaled such that the saturation values are mapped to the minimum and maximum LLR values. Recall that AWGN channel outputs are proportional to LLR values, and scaling LLRs does not change the LP decoding objective.
+The final parameter configuration is to choose a suitable penalty parameter α. The optimal penalty parameter changes with respect to SNR. Our double-precision and fixed-point implementations empirically show that larger penalty parameters perform better on low-SNR channels, while smaller penalty parameters perform better on high-SNR channels [16], [32]. Intuitively, high-SNR channels do not perturb transmissions far from optimal LP solutions, and thus do not stand to benefit from penalization. To illustrate this point, Fig. 11 shows the FER for the Tanner code as a function of the penalty parameter. Generally, for all the codes we tested, we found that setting the penalty parameter to α = 0.1 minimizes the FER.
+The number of decoding iterations also affects the error rate. Similar to BP, ADMM-LP can be configured to terminate after a fixed number of iterations, or once rounded variable estimates produce a codeword. The latter provides a more practical termination condition than algorithmic convergence, and can be used to enforce latency and throughput constraints. Fig. 12 plots FER as a function of the number of iterations allowed for the fixed-point implementation of the Tanner code. The FER does not improve substantially beyond 60 iterations. Hence, in the
+
+Fig. 11. FER as a function of the penalty parameter, under penalized ADMMLP decoding, for the Tanner code.
+Fig. 12. FER as a function of the iteration cap, under α = 0.1 penalized ADMM-LP decoding, for the Tanner code.
+remainder of our experiments, we enforce a fixed number of 60 iterations, allowing for a fair comparison of decoding latency and throughput among the three codes.
+Figs. 13–15 present the FER results for the three codes under investigation on the binary-input AWGN channel. Each plotted FER point is based on an accumulation of 100 frame errors. We present results for both penalized (α = 0.1) and unpenalized (α = 0) ADMM-LP, where the value of α refers to its setting in Algorithm 1. Double-precision simulations for ADMM-LP and BP were performed using Liu’s implementation [59]. The BP results shown were generated with Butler and Siegel’s nonsaturating version described in [17]. We also present results for our own implementation of Min-Sum decoding.
+1) Tanner Code: Fig. 13 presents the FER performance of the Tanner code. A small performance gap exists between the fixed-point and double-precision ADMM-LP implementations. At higher SNRs, all ADMM-LP implementations outperform double-precision BP and double-precision Min-Sum. The penalized ADMM-LP decoder closes the gap to double-precision BP. However, in fixed point, penalized ADMM-LP does not perform
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4988
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+TABLE II FPGA PERFORMANCE RESULTS AND RESOURCE COMPARISON
+
+Fig. 13. Tanner code: FER performance, 60 iterations, all algorithms.
+
+Fig. 14. WiGig code: FER performance, 60 iterations, all algorithms.
+
+quite as well as unpenalized ADMM-LP at Eb/N0 = 5.5 dB. These results support the conclusion that unpenalized ADMMLP is better suited to high-SNR channels.
+2) WiGig Code: Fig. 14 presents the FER performance of the WiGig code. Again, the performance of both penalized and unpenalized fixed-point ADMM-LP with 10-bit messages is very close to that of double-precision ADMM-LP. However, there is a very large performance gap between BP and ADMM-LP. This performance gap is not closed with the addition of penalization; the opposite of what has been observed with other codes [16]. The root cause of the weakness of LP decoding for this code requires further investigation. We conjecture that, in part, it may be due to the high degrees of the check nodes, resulting in more pseudocodewords, or due to the degree-one variable nodes. Another factor to consider is that significant research went into designing this standardized code for Min-Sum usage. Therefore, an argument can be made that BP and Min-Sum are performing abnormally well due to this code’s design and construction.
+3) QC-LDPC Ensemble: The FER performance of the ensemble of (3, 6)-regular QC-LDPC codes is shown in Fig. 15. Each curve is obtained by averaging the performance of the same five codes from the QC-LDPC ensemble. This experiment is a more powerful demonstration of the performance of ADMM-LP, where the addition of penalization closes the performance gap between BP and ADMM-LP. The fixed-point implementations of both penalized and unpenalized ADMM-LP achieve performance very close to double-precision.
+
+B. Resource Usage
+
+Fig. 15. (3, 6) ensemble: FER performance, 60 iterations, all algorithms.
+
+Table II summarizes the FPGA resource utilization and throughput results for the three partially-parallel decoders synthesized for the Tanner, WiGig, and QC-LDPC ensemble codes using the fixed-point message representations summarized in Table I. While the error-rate simulations were performed on
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+TABLE III COMPARISON OF FPGA-BASED LDPC DECODER IMPLEMENTATIONS
+
+4989
+
+In this work we present FPGA implementation results for both a Min-Sum decoder and ADMM-LP decoder based on the (3, 6) QC-LDPC code. The acronyms used are as follows: FP = “fully parallel,” PP = “partially parallel,” PEG = “progressive edge growth,” AC = “Altera Cyclone,” XV = “Xilinx Virtex,” and XKU = “Xilinx Kintex UltraScale.”
+
+an older Xilinx Virtex-5 FPGA, the resource utilization results presented here target a newer Xilinx Kintex Ultrascale FPGA (model XKU-115). This FPGA has 1,326,720 configurable logic block (CLB) flip-flops, 663, 360 CLB lookup tables (LUTs), a total of 75.9 Mbits of block RAM, and 5,520 DSP slices. Synthesis was performed using the Xilinx Vivado 2016.4 tool suite. Power consumption was estimated using the power utilization tool in Vivado. In general, pipeline depth and intermediate value storage have a large impact on resource consumption for all three decoders.
+1) Tanner Code: The Tanner code decoder has three degree-5 CNs and five degree-3 VNs. Each VN uses a single DSP block to perform normalization, and each CN uses two DSP blocks to perform division by 3 and division by 5.
+From Table II, we see that CNs account for the majority of resource usage. Therefore, a further breakdown of CN resource consumption is warranted. We now present a breakdown of the CLB utilization and power consumption inside a CN on a sub-component basis. In a CN, parity polytope projection accounts for 83.1% of combined CLB registers and LUTs, and 90.9% of the total power. The nested simplex projection accounts for 47.2% of combined CLB registers and LUTs, and 48.48% of the power per CN. The large amount of resources required for polytope projection are primary consumed by intermediate storage as each vj in a CN must be stored until projection is complete. Sorting consumes 11.4% of combined CLB registers and LUTs, and 13.6% of the power per CN.
+2) WiGig Code: The WiGig code decoder has one degree-16 CN, one degree-15 CN, and one degree-14 CN. It has 14 degree-3 VNs, one degree-2 VN, and one degree-1 VN. The degree-3 VNs use fewer resources than the Tanner decoder due to increased resource sharing among the 14 degree-3 VNs.
+
+Again, CNs account for the majority of resource usage. The percentage of CLB usage and power consumption inside the degree-16 CN on a sub-component basis is very similar to the degree-5 CNs of the Tanner decoder. For the WiGig decoder, the two complexity-dominating operations, sort and prefix addition, consume a larger fraction of resources.
+3) QC-LDPC Ensemble: The QC-LDPC ensemble decoder has six degree-3 VNs and three degree-6 CNs. CNs account for the majority of resource usage, and the internal CN resource breakdown is almost identical to that of the Tanner decoder.
+C. Implementation Comparison
+Table III compares our implementation for the QC-LDPC ensemble with several FPGA-based Min-Sum decoder implementations for similar code rates and blocklengths. To establish a fair basis for comparison, we also implemented a Min-Sum decoder on our FPGA, using the same LLR and internal-message bit-widths as our ADMM-LP decoder. Our fixed-point Min-Sum decoder achieves comparable error-rate performance to double-precision Min-Sum for the (3, 6) QC-LDPC ensemble code presented in Fig. 15. Compared to the five comparison works, our ADMM-LP decoder achieves better FER and bit error rate (BER) performance at the chosen operating point of Eb/N0 = 3 dB, since ADMM-LP outperforms Min-Sum. However, our ADMM-LP decoder requires more iterations and larger bit-widths, resulting in lower throughput and higher logic utilization.
+A direct comparison of area and logic utilization between designs implemented on different generations of FPGAs is not possible. First, the internal LUT and flip-flop structure of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+4990
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 19, OCTOBER 1, 2019
+
+a Xilinx CLB is not equivalent to an Altera adaptive logic module (ALM). Second, as logic and memory resources scale with CMOS technology node, ALM and CLB architectures also change between FPGA generations. As such, FPGA synthesis and place-and-route steps are highly dependent on the architecture of the target FPGA device. Nevertheless, the logic utilization numbers of Table III show that our partially-parallel ADMM-LP decoder implementation has a logic resource utilization within an order of magnitude of the partially-parallel Min-Sum comparison works implemented on Xilinx devices. As expected, our level of resource utilization for ADMM-LP is between the comparison implementations whose Min-Sum decoders realize serial and fully-parallel architectures.
+VI. DISCUSSION AND CONCLUSIONS
+In this paper, we demonstrate that ADMM-LP decoding can attain excellent error-rate performance in a fixed-point implementation. While our initial implementation requires higher precision and more logic resources than Min-Sum, this study points to numerous possible avenues for future developments to bring ADMM-LP’s resource requirements into line with those of other message-passing decoders.
+One avenue is algorithmic simplification. Just as Min-Sum can be viewed as a computationally simple approximation of Sum-Product BP, we can seek approximations of ADMM-LP that preserve its high-SNR performance. As one example, in [32] it is observed that implementing partial-sort (rather than fullsort) can result in a negligible increase in error rates.
+A second set of directions is hardware centric. For example, it is not obvious how to implement a CN or a VN unit that can handle multiple node degrees. We believe that this problem can be solved through innovative hardware sharing or algorithmic generalization. Second, ADMM-LP provides an opportunity for simplifying message-passing networks, especially in fullyparallel architectures. The same message is sent from each variable to all connected checks. Such message broadcasting can perhaps be exploited to reduce interconnect complexity.
+Finally, this study is a first step en-route to the development of a fully custom, in-silicon, application-specific integrated circuit (ASIC). An ASIC would allow for power-optimized register files and customized message-passing resources that would yield significant performance improvements not possible on FPGAs. State-of-the-art ASIC decoders currently achieve multi-Gb/s throughput with less than 200mW of power consumption [52], [65]–[67], based on Min-Sum decoding of codes with similar blocklengths and rates as the three codes explored in this work. While the power consumption of our FPGA-based ADMM-LP decoder is on the same order of magnitude as state-of-the-art ASIC Min-Sum decoders, our throughput is lower by 3-to4 orders of magnitude. Future work should explore algorithmic and architectural co-design to improve the throughput of hardware-based ADMM-LP decoders while maintaining low power consumption.
+Referring to Table III, we note that while the normalized throughput per iteration of our ADMM-LP decoder is slightly lower than that of our Min-Sum decoder, our ADMM-LP decoder achieves a BER nearly 20× better. This is the crux of the matter. If one is concerned with applications where
+
+excellent high-SNR performance is required, SNRs at which Min-Sum and Sum-Product encounter error-floor problems, then ADMM-LP will be an algorithm of great interest. Our current implementation outperforms Min-Sum with less than an order of magnitude difference in FPGA resources. Further development, and innovation, could turn ADMM-LP into the algorithm of choice in such operating regimes.
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit errorcorrecting coding and decoding: Turbo-codes,” in Proc. IEEE Int. Conf. Commun., May 1993, pp. 1064–1070.
+[2] D. J. C. MacKay and R. M. Neal, “Good codes based on very sparse matrices,” in Proc. IMA Int. Conf. Cryptography Coding, 1995, pp. 100–111.
+[3] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498– 519, Feb. 2001.
+[4] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[5] T. Richardson, “Error floors of LDPC codes,” in Proc. Allerton Conf. Commun. Control Comput., Oct. 2003, vol. 41, no. 3, pp. 1426–1435.
+[6] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[7] M. H. Taghavi and P. H. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[8] J. Feldman, T. Malkin, R. Servedio, C. Stein, and M. Wainwright, “LP decoding corrects a constant fraction of errors,” IEEE Trans. Inf. Theory, vol. 53, no. 1, pp. 82–89, Jan. 2007.
+[9] S. Arora, D. Steuer, and C. Daskalakis, “Message-passing algorithms and improved LP decoding,” in Proc. 41st Annu. ACM Symp. Theory Comput., May 2009, pp. 3–12.
+[10] P. O. Vontobel and R. Koetter, “Towards low-complexity linearprogramming decoding,” in Proc. 4th Int. Symp. Turbo Codes Related Topics, Munich, Germany, Apr. 2006, pp. 1–9.
+[11] D. Burshtein, “Iterative approximate linear programming decoding of LDPC codes with linear complexity,” IEEE Trans. Inf. Theory, vol. 55, no. 11, pp. 4835–4859, Nov. 2009.
+[12] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[13] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn., vol. 3, pp. 1–122, 2011.
+[14] X. Liu and S. C. Draper, “Instanton search algorithm for the ADMM penalized decoder,” in Proc. Int. Symp. Inf. Theory, Honolulu, HI, USA, Jun. 2014, pp. 696–700.
+[15] X. Liu and S. C. Draper, “ADMM decoding on trapping sets,” in Proc. Int. Symp. Inf. Theory, Hong Kong, Jun. 2015, pp. 2663–2667.
+[16] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[17] B. Butler and P. Siegel, “Error floor approximation for LDPC codes in the AWGN channel,” IEEE Trans. Inf. Theory, vol. 60, no. 12, pp. 7416–7441, Dec. 2014.
+[18] H.-C. Lee and Y.-L. Ueng, “LDPC decoding scheduling for faster convergence and lower error floor,” IEEE Trans. Comm., vol. 62, no. 9, pp. 3104–3113, Sep. 2014.
+[19] H.-C. Lee, P.-C. Chou, and Y.-L. Ueng, “An effective low-complexity error-floor lowering technique for high-rate QC-LDPC codes,” IEEE Commun. Lett., vol. 22, no. 10, pp. 1988–1991, Oct. 2018.
+[20] S. Shah, A. K. Yadav, C. Castillo, D. Jacobs, C. Studer, and T. Goldstein, “Biconvex relation for semidefinite programming in computer vision,” in Proc. Euro. Conf. Comput. Vision, May 2016, pp. 717–735.
+[21] O. Castañeda, S. Jacobsson, G. Durisi, M. Coldrey, T. Goldstein, and C. Studer, “1-bit massive MU-MIMO precoding in VLSI,” IEEE J. Emerg. Sel. Topics Circuits Syst., vol. 7, no. 4, pp. 508–522, Dec. 2017.
+[22] Y. Wang, J. S. Yedidia, and S. C. Draper, “Multi-stage decoding of LDPC codes,” in Proc. Int. Symp. Inf. Theory, South Korea, Jul. 2009, pp. 2151–2155.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+WASSON et al.: HARDWARE-BASED LINEAR PROGRAM DECODING WITH THE ALTERNATING DIRECTION METHOD OF MULTIPLIERS
+
+4991
+
+[23] X. Jiao, H. Wei, J. Mu, and C. Chen, “Improved ADMM Penalized decoder for irregular low-density parity-check codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 913–916, Jun. 2015.
+[24] X. Liu and S. C. Draper, “ADMM LP decoding of non-binary LDPC codes in F2m ,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2985–3010, Jun. 2016.
+[25] X. Liu and S. C. Draper, “LP-decodable multipermutation codes,” IEEE Trans. Inf. Theory, vol. 62, no. 4, pp. 1631–1648, Apr. 2016.
+[26] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in Proc. Int. Symp. Inf. Theory, Istanbul, Turkey, Jul. 2013, pp. 1501–1505.
+[27] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large scale LP decoding with low complexity,” IEEE Comm. Lett., vol. 17, no. 11, pp. 2152–2155, Nov. 2013.
+[28] M. Wasson and S. C. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in Proc. Asilomar Conf. Signals, Syst., Comput., Pacific Grove, CA, USA, Nov. 2015, pp. 1015–1020.
+[29] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 909–912, Jun. 2015.
+[30] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-based linear programming decoding via the alternating direction method of multipliers,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., Mar. 2017, pp. 1143–1147.
+[31] H. Wei and A. H. Banihashemi, “An iterative check polytope projection algorithm for ADMM-based LP decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 1, pp. 29–32, Jan. 2018.
+[32] M. Wasson, “Hardware-based linear program decoding with the alternating direction method of multipliers,” M.S. thesis, Edward S. Rogers Sr. Dept. Elect. Comput. Eng., Univ. Toronto, Toronto, ON, Canada, Aug. 2016.
+[33] X. Jiao, J. Mu, Y. He, and C. Chen, “Efficient ADMM decoding of LDPC codes using lookup tables,” IEEE Trans. Commun., vol. 65, no. 4, pp. 1425– 1437, Apr. 2017.
+[34] X. Jiao, Y. He, and J. Mu, “Memory-reduced look-up tables for efficient ADMM decoding of LDPC codes,” IEEE Signal Process. Lett., vol. 25, no. 1, pp. 110–114, Jan. 2018.
+[35] O. Samhan and S. Draper, “Reduced message-passing bit width for hardware implementation of ADMM-LP decoding,” in Proc. 29th Bian. Symp. Comm., Toronto, ON, Canada, 2018, pp. 1–5.
+[36] F. Gensheimer, T. Dietz, S. Ruzika, K. Kraft, and N. Wehn, “A lowcomplexity projection algorithm for ADMM-based LP decoding,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process., Hong Kong, 2018, pp. 1–5.
+[37] H. B. Thameur, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Hardware design of Euclidean projection modules for ADMM LDPC decoding,” in Proc. Int. Conf. Electron. Circuits Syst., Dec. 2018, pp. 73–76.
+[38] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast converging ADMM-penalized algorithm for LDPC decoding,” IEEE Commun. Lett., vol. 20, no. 4, pp. 648–651, Apr. 2016.
+[39] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Analysis of ADMMLP algorithm for LDPC decoding, a first step to hardware implementation,” in Proc. IEEE Int. Conf. Electron., Circuits, Syst., Cairo, Egypt, Dec. 2015, pp. 356–359.
+[40] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Real time LP decoding of LDPC codes for high correction performance applications,” IEEE Wireless Commun. Lett., vol. 5, no. 6, pp. 676–679, Dec. 2016.
+[41] H. B. Thameur, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Implementation aspects of a pipeline ADMM-based LP decoding of LDPC convolutional codes,” in Proc. IEEE Wireless Commun. Netw. Conf., Barcelona, Spain, 2018, pp. 1–6.
+[42] R. M. Tanner, D. Sridhara, and T. Fuja, “A class of group-structured LDPC codes,” in Proc. 6th Int. Symp. Commun. Theory Appl., Ambleside, U.K., Jul. 2001, pp. 365–370.
+[43] IEEE Standard for Information Technology–Telecommunications and Information Exchange Between Systems–Local and Metropolitan Area Networks–Specific Requirements-Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 3: Enhancements for Very High Throughput in the 60 GHz Band (Amend. to IEEE Std 802.11-2012, as Amended by IEEE Std 802.11ae-2012 and 802.11aa-2012), IEEE Std 802.11ad-2012, Dec. 2012.
+
+[44] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Proc. Allerton Conf. Comm. Control Comput., Monticello, IL, USA, Sep. 2011, pp. 253–260.
+[45] X. Zhang, “LDPC codes: Structural analysis and decoding techniques,” Ph.D. dissertation, Dept. Elect. Comput. Eng., University of California, San Diego, CA, USA, 2012.
+[46] X. Zhang and P. H. Siegel, “Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes,” IEEE Trans. Inf. Theory, vol. 58, no. 10, pp. 6581–6594, Oct. 2012.
+[47] J. Duchi, S. Shalev-Shwartz, Y. Singer, and T. Chandra, “Efficient projections onto the 1-ball for learning in high dimensions,” in Proc. 25th Int. Conf. Mach. Learn., San Diego, CA, USA, Dec. 2008, pp. 272– 279.
+[48] S. Shalev-Shwartz and Y. Singer, “Efficient learning of label ranking by soft projections onto polyhedra,” J. Mach. Learn. Res., vol. 7, pp. 1567– 1599, Jul. 2006.
+[49] M. Wasson, “Hardware-based linear program decoding with the alternating direction method of multipliers,” 2016. [Online]. Available: https://github. com/mlmitch/Hardware-Based_ADMM-LP_Decoding
+[50] Y. Kou, S. Lin, and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: A rediscovery and new results,” IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[51] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. Work. Signal Process. Syst., Oct. 2004, pp. 107–112.
+[52] Y. S. Park, D. Blaauw, D. Sylvester, and Z. Zhang, “Low-power highthroughput LDPC decoder using non-refresh embedded DRAM,” IEEE J. Solid-State Circuits, vol. 49, no. 3, pp. 783–794, Mar. 2014.
+[53] D. E. Knuth, The Art of Computer Programming: Sorting and Searching, vol. 2, 2nd ed. Redwood City, CA, USA: Addison- Wesley, 1998.
+[54] K. E. Batcher, “Sorting networks and their applications,” in Proc. AFIPS Spring Joint Comput. Conf., Apr. 1968, pp. 307–314.
+[55] R. E. Ladner and M. J. Fischer, “Parallel prefix computation,” J. ACM, vol. 27, no. 4, pp. 831–838, Oct. 1980.
+[56] G. Liu, “Gaussian noise generator. OpenCores,” 2015. [Online]. Available: http://opencores.org/project,gng
+[57] Y. Wang, S. C. Draper, and J. S. Yedidia, “Hierarchical and high-girth QC LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 7, pp. 4553–4583, Jul. 2013.
+[58] S. A. Khan, Digital Design of Signal Processing Systems: A Practical Approach. Hoboken, NJ, USA: Wiley, 2011.
+[59] X. Liu, “ADMM decoder,” 2015. [Online]. Available: https://sites. google.com/site/xishuoliu/codes
+[60] P. Bhagawat, M. Uppal, and G. Choi, “FPGA based implementation of decoder for array low-density parity-check codes,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process., Philadelphia, PA, USA, 2005, vol. 5, pp. v/29–v/32.
+[61] X. Lei, T. Zhenhui, and Y. Dongping, “The moderate-throughput and memory-efficient LDPC decoder,” in Proc. 8th Int. Conf. Signal Process., 2006, pp. 16–20.
+[62] R. Zarubica, S. G. Wilson, and E. Hall, “Multi-Gbps FPGA-based low density parity check (LDPC) decoder design,” in Proc. Global Telecommun. Conf., Nov. 2007, pp. 548–552.
+[63] V. A. Chandrasetty and S. M. Aziz, “A multi-level hierarchical quasi-cyclic matrix for implementation of flexible partially-parallel LDPC decoders,” in Proc. Int. Conf. Multimedia, Expo, Jul. 2011, pp. 1–7.
+[64] T. Nguyen-Ly et al., “FPGA design of high throughput LDPC decoder based on imprecise offset Min-Sum decoding,” in Proc. IEEE Int. New Circuits Syst. Conf., Jun. 2015, pp. 1–4.
+[65] H. Motozuka et al., “A 6.16Gb/s 4.7pJ/bit/iteration LDPC decoder for IEEE 802.11ad standard in 40nm LP-CMOS,” in Proc. IEEE Global Conf. Signal Inf. Process., Dec. 2015, pp. 1289–1292.
+[66] M.-R. Li, C.-H. Yang, and Y.-L. Ueng, “A 5.28-Gb/s LDPC decoder with time-domain signal processing for IEEE 802.15.3c,” IEEE J. Solid-State Circuits, vol. 52, no. 2, pp. 592–604, Feb. 2017.
+[67] M. Milicevic and P. G. Gulak, “A multi-Gb/s frame-interleaved LDPC decoder with path-unrolled message passing in 28-nm CMOS,” IEEE Trans. Very Large Scale Integration Syst., vol. 26, no. 10, pp. 1908–1921, Oct. 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:58:22 UTC from IEEE Xplore. Restrictions apply.
+
+

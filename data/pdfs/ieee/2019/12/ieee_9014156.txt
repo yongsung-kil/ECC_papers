@@ -1,0 +1,376 @@
+Low-Latency Neural Decoders for Linear and Non-Linear Block Codes
+Cheuk Ting Leung∗, Rajshekhar V Bhat† and Mehul Motani∗ ∗National University of Singapore, Singapore
+†Indian Institute of Technology Dharwad, India, Email: cheukting.leung@u.nus.edu, rajshekhar.bhat@iitdh.ac.in, motani@nus.edu.sg
+
+Abstract—We consider the design of efficient neural-network based algorithms, referred to as neural decoders, for decoding linear and non-linear block codes, such as Hamming and constant-weight codes, respectively. Our goal is to study the impact of the number of layers and the number of hidden nodes in each layer on the performance and generalization ability of neural decoders. Specifically, we want to find the minimum number of hidden layers and the minimum number of hidden nodes in each layer required to achieve or closely approach the performance of the optimal maximum-likelihood soft-decision (ML-SD) decoder for a given code. For the linear block codes studied, we find that when the block-length is n, a neural network with a single hidden layer with n hidden units is necessary and sufficient to achieve the performance of the ML-SD decoder. For the non-linear block codes studied, a single hidden layer with n nodes results in performance that closely approaches that of the ML-SD decoder. In both the cases, we find that training at a signal-to-noise ratio (SNR) of 0 dB gives fairly good generalization ability, meaning that the neural decoder trained at an SNR of 0 dB works well across a wide range of SNR values.
+I. INTRODUCTION
+The emerging fifth generation (5G) communication systems are expected to support a variety of services including the ultra-reliable low-latency communications (URLLC). In the physical layer, the latency can be minimized by adopting short block-length codewords [1]. In this work, our goal is to design low-latency decoders for linear and non-linear short block-length codes using fully-connected feed-forward neural networks. We cast the above problem as a supervised, multiclass, single-label classification problem.
+It is known that increasing the size (the number of hidden layers and the number of nodes in each hidden layer) of a neural network almost always improves the performance. At the least, it does not degrade the performance when the hyperparameters are tuned properly to avoid over-fitting. However, increasing the size of the neural network results in an increase in the training time, the training cost, the inference latency, and the inference cost [2]. The inference latency is precisely defined as the amount of time a trained neural network model takes to make a prediction from the time when an input is provided. Until the last few years, the researchers focused on achieving higher accuracy by training deep neural networks.
+This research is supported by the National University of Singapore and the U.S. Army Research Laboratory under Contract FA520919CA006 (WBS R263000D88597).
+
+However, since the last few years, it has been realized that deploying large neural network models is prohibitive in most practical real-time applications due to the large model size and high inference latency [3]. Hence, for applications such as URLLC, to achieve a low inference latency, it is required to design a small neural decoder, with a minimum number of layers and nodes in each layer without compromising on the performance. Towards this goal, in this work, we ask the following question: Q1: What is the minimum number of hidden layers and hidden nodes that are required for a neural decoder to achieve the performance of the maximum-likelihood soft-decision (MLSD) decoder for a given code?
+It is important to note that the earlier works which study the design of neural decoders for communication systems do not focus on the above question, as can be concluded from the literature survey below.
+A. Literature Survey
+In recent years, the application of the deep learning framework for decoding linear block codes has gained a tremendous interest, although the idea has been present for decades [4]– [9]. The work [10] uses deep learning methods to improve the performance of the standard belief propagation (BP) algorithms and demonstrates that a neural decoder can achieve the bit error rate of the standard BP decoder at 1.5 dB smaller signal-to-noise ratio for a short block-length BCH code. The neural decoder for linear block codes which is robust to overfitting is designed in [11] with a preprocessing step that feeds only the absolute values of the received noisy vectors and the syndromes of their hard decisions into the neural network and the work demonstrates a better performance compared to [10] in some cases. Compared to the state-of-the-art decoders, it is shown in [12] that a near maximum-likelihood performance for various BCH codes can be achieved with a significantly lower complexity. The work [13] designs a neural decoder for decoding polar codes via a partitioning technique and [14] uses the machine learning framework to optimize BP algorithms for decoding LDPC codes. Moreover, the authors in [15] observe that it is easier for a neural network to learn structured codes compared to random codes and that the neural network is able to generalize to codewords that it has never seen during training for structured, but not for
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-7o2w8n1lo-a0d9e6d2o-n6/J1u9ne/$2341,2.00026©a2t 1001:940I:E07EUETC from IEEE Xplore. Restrictions apply.
+
+Fig. 1: A block diagram of a communication system consisting of a transmitter, a channel and a neural decoder.
+random codes. Recently, [16] explored analytical methods for calculating the weights of neural decoders for linear block codes based on generator and parity-check matrices. In the recent years, the researchers have also considered the problem of learning novel codes using the deep learning framework [17]–[19]. Moreover, the deep learning framework has also been used for joint source-channel coding [20], [21] and equalization [22].
+B. Contributions
+As mentioned above, most of the recent works focus on the design of neural decoders for linear block codes. They do not specifically deal with the issues raised by Q1 above. The closest work to the current work is [16], in which the authors obtain a feed-forward neural decoder with two layers with the number of nodes equal to the block length of the codeword and the number of weight coefficients equal to the square of the codeword length, based on the parity check matrix of a Hamming code. Additionally, to the best of our knowledge, this work is the first one to consider the design of neural decoders for non-linear block codes. The main contributions of the paper are the following:
+• We construct a neural network model for decoding block codes corrupted by an additive white Gaussian noise (AWGN) and a method to train the neural decoder for specific codes.
+• For linear block codes with block-length n, a neural network with a single hidden layer with n hidden nodes is necessary and sufficient to achieve the performance of the ML-SD decoder.
+• For non-linear block codes with block-length n, a neural network with a single hidden layer with n nodes is sufficient to closely approach the performance of the ML-SD decoder.
+• In both the above cases, the neural network model has the minimum number of hidden layers and nodes in each hidden layer such that the performance of the neural decoder matches or closely approaches that of the ML-SD decoder.
+• Training at 0 dB signal-to-noise ratio (SNR) achieves very good generalization ability. That is, when a neural decoder is trained at 0 dB, its performance matches or closely approaches that of the ML-SD decoder over a wide range of SNRs, typically larger than when the neural decoder is trained at other SNRs.
+The remainder of the paper is organized as follows. The system model is presented in Section II. We present neural decoders and the corresponding performance results for linear codes in Section III and non-linear block codes in Section IV. We make concluding remarks in Section V.
+
+Fig. 2: A general structure of a neural decoder with an input layer (layer 0), L hidden layers (layers 1, . . . , L) and an output layer (layer L + 1). The number of nodes in the input layer, N0 = n. The number of nodes in layer l is denoted by Nlh for l = 1, . . . , L, where the superscript h stands for the word “hidden”. The number of nodes in the the output layer is NL+1 = M = 2k.
+II. SYSTEM MODEL
+The simplest form of the communication system consists of a transmitter, a channel, and a receiver. In a classical communication system, the transmitter encodes a message si, represented by k bits, into a codeword ci with n bits, for i ∈ {1, . . . , M }, where M = 2k is the number of distinct messages. The ratio, r k/n is referred to as the rate of the code. We assume when a codeword ci is transmitted, we receive y = ci + w, where w ∈ Rn is the random noise vector in which each entry is a zero mean Gaussian random variable with variance N0/2. We now describe the maximumlikelihood decoder and a neural decoder for decoding the transmitted codeword from the received vector y.
+a) Maximum-Likelihood Soft-Decision (ML-SD) Decoder: Given received vector, y, the decoder outputs one of the codewords, cˆ ∈ {c1, . . . , cM } as its guess of the transmitted codeword. The ML decoder makes an error if cˆ = ci when ci was transmitted. When messages are transmitted with equal probability, the maximum-likelihood soft-decision decoder, which outputs cˆ = ci if P (y|ck) is the maximum value for k = i, where P (y|ck) is the conditional probability of receiving y when ck was transmitted, is an optimal decoder. Here, the term “soft decision” indicates that the real-valued received vector y is directly used for decoding, unlike in the hard decision decoding, in which each received noisy symbol in y is first mapped to a valid transmitted symbol before decoding. We denote the average energy per message bit by Eb. Since a message si with k bits is mapped to the codeword ci with n bits, the average energy per coded bit, Ec = rEb.
+b) Neural Decoder: A neural network is a series of mappings from an input vector a0 ∈ RN0 to an output vector aL+1 ∈ RNL+1 through L + 1 steps:
+al = σ(Wlal−1 + bl), for l = 1, . . . , L + 1, (1)
+where Wl ∈ RNl×Nl−1 , bl ∈ RNl and σ(·) : RNl → RNl is an activation function. The layer 0 is the input layer, and layers, 1, . . . , L are the hidden layers and the layer L + 1 is the output layer. To highlight the fact that layers 1, . . . , L are hidden layers, in the rest of the paper, we denote the number of nodes in layer l ∈ {1, . . . , L} by Nlh. We use the ReLU function, σ(x) = max(0, x) as the activation function for hidden layers l = 1, . . . , L and the activation function for output layer, i.e., the layer (L + 1) is the SoftMax function,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:40:07 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I: The activation functions adopted in various layers of the neural decoder.
+
+Layer
+Input Layer (Layer 0) Hidden Layers (Layers l = 1, . . . , L)
+Output Layer (Layer L + 1)
+
+Activation
+ReLU SoftMax
+
+Number of nodes
+N0 = n Nlh
+NL+1 = 2k
+
+(σ(x))i = exp(xi)/
+
+M j=1
+
+exp(xj ),
+
+where
+
+(σ(x))i
+
+represents
+
+the ith element in the output of σ(x). We summarize this in
+
+Table I.
+
+For a neural decoder, since we need to map a received vec-
+
+tor y ∈ Rn to a codeword in the codebook with M codewords,
+
+we set N0 = n and NL+1 = M . The number of hidden layers, L and the number of nodes in each hidden layer, N1h, . . . , NLh
+are the design parameters. The neural network is trained using
+
+a set of labeled data {(y(j), x(j)), j = 1, . . . , K}, where x(j) ∈ {0, 1}NL+1 is a one-hot vector where x(ij) = 1 if ci is the transmitted codeword when y(j) is the received vector, and x(mj) = 0 for m = i. The neural network learns to decode
+
+by finding the parameters Wl’s, bl’s that minimize the average
+
+loss function:
+K
+
+loss
+
+E(a(Lj+) 1, x(j)),
+
+(2)
+
+j=1
+
+where aL(j+) 1 is the output of the neural decoder when the input
+
+vector is y(j) and the function, E(a, x)
+
+−
+
+M i=1
+
+ai
+
+log(xi),
+
+which is referred to as the categorical cross-entropy loss
+
+function.
+
+c) Training: In this process, we minimize the loss
+function for a given training data set. Training a neu-
+ral network model requires extensive example data set {(yt(rja)in, x(trja)in), j = 1, . . . , Ktrain}. The jth training example is obtained as follows.
+
+1) We uniformly sample a message s(j) ∈ {s1, . . . , sM }. Note that s(j) ∈ {0, 1}k and let x(tjra)in,i = 1 and x(tjra)in,m = 0 for all m = i if the ith message is sampled.
+2) We generate the corresponding codeword, c(j) ∈ {0, 1}n using a generator matrix, G ∈ {0, 1}k×n as follows: c(j) = s(j)T G, where s(j)T is the transpose of s(j).
+3) We then modulate the codeword, c(j), by mapping bit 0
+to −1 and bit 1 to +1. 4) To each of the n coded and modulated bits of c(j), we
+add a random Gaussian distributed noise with zero mean and variance N0/2 to obtain yt(rja)in.
+
+In the rest of the paper, we denote the training SNR by SNRT .
+
+d) Inference: We denote the data set for inference (testing) by {(yt(ejs)t, xt(jes)t), j = 1, . . . , Ktest}. We generate the above data set in the similar manner as the training data
+
+set. However, in order to test the generalization ability of the
+
+trained model, the inference data set is generated at different
+
+SNRs.
+
+In
+
+the
+
+paper,
+
+we
+
+denote
+
+the
+
+testing
+
+SNR
+
+by
+
+Eb N0
+
+.
+
+e) Bit Error Rate (BER) and Block Error Rate (BLER):
+
+A decoder makes an error when a codeword ci is transmitted and the decoder outputs cˆ = ci. The block error rate (BLER)
+
+(a) BLER v/s Testing SNR, Eb/N0 (b) BER v/s Testing SNR, Eb/N0
+
+Fig. 3: The variation of the BER and BLER with Eb/N0 in the Hamming (7,4) neural decoder when the decoder is trained at different, SNRT values.
+
+is defined as
+
+BLER = lim 1 K→∞ K
+
+K
+
+I(cˆ = c(j)),
+
+(3)
+
+j=1
+
+where I(cˆ = c) = 1 when cˆ = c and 0, otherwise. A codeword
+
+c(j) is uniformly chosen from {c1, . . . , cM } with probability 1/M . Similarly, the bit error rate (BER) is defined as
+
+BER = lim
+
+1
+
+K
+
+k
+I(sˆ(i) = s(j)(i)),
+
+(4)
+
+K→∞ kK
+
+j=1 i=1
+
+where s(j)(i) and sˆ(i) are the ith bits of the transmitted message s(j), and the predicted message, sˆ, respectively.
+
+III. NEURAL DECODERS FOR LINEAR BLOCK CODES
+In this section, we consider the (7, 4) Hamming code, the extended (8, 4) Hamming code, a (4, 3) single parity check code and a (10, 5) parity check code. We first obtain the training SNR, SNRT , that achieves the good generalization ability for the above codes. We then construct neural decoders with the minimum number of layers and nodes that is sufficient to achieve the performance of the ML-SD decoder.
+
+A. Choosing SNRT for Maximizing the Generalization Ability
+We fix the training SNR, SNRT , and test the trained model at different testing SNRs (i.e., varying Eb/N0). For a LDPC code, it has been observed in [23] that when a neural decoder is trained at a high SNRT , the trained model does not generalize well, and training at a low SNRT leads to a better generalization. We now obtain a good SNRT for the Hamming (7,4) code, extended Hamming (8,4) code, single parity check (4,3) code and parity check (10,5) code.
+In Fig. 3, we provide the BER and BLER performance for the Hamming (7,4) neural decoder. The Hamming (7,4) code is based on [24]. Compared with the ML-SD decoder, we can observe that when models are trained at 0 dB, it gives a relatively good generalization, i.e., the BER and BLER performance of the trained model match the ML-SD decoder. As SNRT increases or decreases significantly, the performance of neural decoder is deteriorated, i.e., BLER and BER increase noticeably. The same experiments are also done for the extended Hamming (8,4) code, a (4,3) single parity check code and a (10,5) parity check code, and we observe consistent results as the Hamming (7,4) case. Single
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:40:07 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4: BLER v/s number of nodes in the hidden layer N1h, for (7, 4) Hamming code, (8, 4) extended Hamming code, (4, 3) single parity check code, and (10, 5) parity check code. We set SNRT = 0 dB and Eb/N0 = 8 dB.
+
+parity check code (4,3) neural decoder achieves highest BLER
+
+and BER when the model is trained at 0 dB. Similarly, the
+
+performances of the extended Hamming (8,4) and parity check
+
+(10,5) code neural decoder trained at 0 dB match the ML-SD
+
+decoder.
+
+When training the neural decoder, selected data inputs and
+
+corresponding labels are fitted into the neural network model.
+
+After codewords pass through a channel, the probability
+
+distribution of their output is proportional to Eb/N0, i.e., in AWGN channel, for given received signal Y , the likelihood
+
+distribution of X = ci is
+
+fY |X (y|x)
+
+=
+
+fZ (y
+
+−
+
+x)
+
+=
+
+1 (2πσ2)n/2
+
+exp
+
+−
+
+y−x 2 2σ2
+
+(5)
+
+where fZ(y|x) is the joint probability density function of Gaussian noise vector Z, σ2 = N0/2 is the variance of noise. It is known that y − x is determined by Eb. When Eb/N0 increases, as we can derive from (5), the likelihood distribution of X, i.e., fY |X (y|x) will be lower, which means the output Y is more concentrated around X. Hence, noisy symbols are easier to be mapped to corresponding codewords, fewer errors occur, and the neural decoder will not see sufficient number of examples to learn the rules of MLSD decoder. On the contrary, if the input and output are generated such that the examples are spread throughout the corresponding decision region, then the neural decoder can learn the decision region more accurately, and achieve a same performance as ML-SD decoder.
+In general, training neural decoder at SNRT = 0 dB gives it a good generalization ability.
+We now study the structure of the neural decoder. From now on, we only consider the BLER as it is sufficient to compare the performance of the neural and ML-SD decoders.
+
+B. Structure of the Neural Decoder
+We first consider a neural network with one hidden layer (i.e., L = 1) and study the impact of the number of nodes in the hidden layer (N1h) on the BLER in Fig. 4. We assume a training SNR of SNRT = 0 dB and testing SNR of range Eb/N0 ∈ [−5, 8] dB. From Fig. 4, we see that the BLER of Hamming (7,4) is higher when N1h is less than 7, and the BLER attains the minimum value at N1h = 7 and remains unchanged for N1h > 7. Similarly, the BLER of the extended Hamming (8,4) code is attains the minimum value at N1h = 8
+
+(a) (7,4) Hamming code
+
+(b) (8,4) extended Hamming code
+
+(c) (4,3) single parity check code
+
+(d) (10,5) parity check code
+
+Fig. 5: BLER v/s Eb/N0 for (a) (7,4) the Hamming code, (b) the (8,4) extended Hamming code and (c) the (4,3) single parity check code, (d) the (10,5) parity check code, for various values of the number of nodes N1h with L = 1. We set SNRT = 0 dB.
+
+and remains unchanged thereafter for any N1h > 8, the BLER of the single parity (4,3) code attains the minimum at N1h = 4 and remains unchanged for N1h > 4, and the BLER of the parity check (10,5) code attains the minimum at N1h = 10 and remains unchanged for N1h > 10. Hence, from the figure, we conclude that a neural network with a single hidden layer
+
+with n nodes is necessary and sufficient to decode the linear block codes studied corrupted by AWGN noise and to match
+
+the performance of the ML-SD decoder.
+
+Fig. 5 shows the variation of the BLER with different
+testing SNRs, Eb/N0 for the considered codes. From the figure, we again note that when N1h ≥ n, the performance of the neural decoder matches that of the ML-SD decoder.
+
+The performance of the neural decoder is worse than that of
+
+the ML-SD decoder for any N1h < n.
+
+In Fig. 6, we present the variations of the BLER for the
+
+(7, 4) Hamming code with Eb/N0 for different structures of
+
+the neural network. In Fig. 6a, we fix the total number of the
+
+hidden nodes to 7, i.e., we set
+
+L l=1
+
+Nlh
+
+=
+
+7
+
+and
+
+change
+
+L
+
+and Nlh for l = 1, . . . , L to change the structure of the neural
+
+decoder. From the figure, we note that the lowest BLER is
+
+achieved when L = 1 and N1h = 7, i.e, with a neural decoder with a single hidden layer having 7 nodes.
+
+Fig. 6b shows the performance with several different structures in which the total number of nodes larger than 7. From
+
+Fig. 6b, note that even if the number of nodes in any one of the hidden layers is less than 7, the performance of such
+
+a neural network becomes worse than that of the ML-SD decoder. These results indicate that we need at least n nodes
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:40:07 UTC from IEEE Xplore. Restrictions apply.
+
+(a) Total number of hidden nodes (b) Total number of hidden nodes
+
+is fixed to 7.
+
+is greater than 7.
+
+Fig. 6: BLER v/s Eb/N0 for the (7, 4) Hamming neural decoder for various different structures of the neural network. We set SNRT = 0 dB.
+
+in each hidden layer to achieve the performance of the ML-SD decoder. These also imply that some useful information are lost if the number of nodes is smaller than the block length n of the code.
+We now summarize our observations on the impact of the structure of the neural decoder, i.e., the number of hidden layers and the number of hidden nodes in each layer of the neural decoder on the BLER performance in the following.
+
+• A neural decoder with a single hidden layer with n nodes is necessary and sufficient to achieve the BLER of the ML-SD decoder.
+• To achieve the BLER performance of the ML-SD decoder, a neural decoder with more than one hidden layer requires at least n nodes in each layer, i.e., Nlh ≥ n for l = 1, . . . , L.
+• Increasing the depth of the neural network does not contribute to the improvement of the BLER performance. Furthermore, when a deeper neural network is applied, more hidden layers lead to higher computational complexity of forward and backward propagation in both training and testing, i.e., this results in harder training and longer computation time.
+
+IV. NEURAL DECODERS FOR NON-LINEAR BLOCK CODES
+In this section, we design neural decoders for the nonlinear block codes. Specifically, we consider constant weight codes (CWC), a class of non-linear block codes in which all the codewords have the same Hamming weight, i.e., the number of ones in the codeword. A constant weight code is represented as CWC (n, d, w), where n is the block length, d is the minimum Hamming distance between the codewords and w is the Hamming weight of a codeword.
+In this section, we design decoders for CWC (34,10,6) and CWC (10,4,5). These two codes have similar properties, which contain exactly 6 and 5 ones respectively in all of their codewords. As in the previous section, we first obtain the training SNR, SNRT that achieves the maximum generalization ability for the above codes. We then obtain a neural decoder with the minimum number of layers required for closely approaching the performance of the ML-SD decoder. In all the experiments, the hyper-parameters used in models
+
+Fig. 7: BLER v/s Eb/N0 (dB) for the CWC (34,10,6) code for different values SNRT .
+Fig. 8: BLER v/s Eb/N0 (dB) for the CWC (10,4,5) code for different values of SNRT .
+are the same as those used for the linear block codes in the previous section. A. Choosing SNRT for Maximizing the Generalization Ability
+In Fig. 7 and Fig. 8, we study the variation of the BLER for the CWC (34,10,6) and the CWC (10,4,5) codes with the testing SNR, Eb/N0, when the neural decoder is trained under various different SNRT values. In both the figures, the neural decoder achieves the best performance for SNRT = 0 dB. From Fig. 7, we also note that the performance remains nearly the same for SNRT = 1, 2, 3 dB values. Moreover, the BLER performance becomes significantly worse when the SNRT values are too high or too low. B. Structure of the Neural Decoder
+Fig. 9 presents the BLER performance of the CWC (34,10,6) codes trained under different structures of neural decoders. From the figure, we note that in a neural network with a single hidden layer, the number of nodes required to closely approach the performance of the ML-SD decoder is N1h = 31. The performance drastically drops only when N1h ≤ 20. It is interesting to note that unlike in the linear block codes, in which N1h = n is the number of nodes necessary for achieving the performance of the ML-SD decoder, for the considered CWCs, the ML-SD performance can be closely
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:40:07 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 9: BLER v/s Eb/N0 (dB) of CWC (34,10,6) for different values of N1h with L = 1. We also consider a case with L = 2.
+Fig. 10: BLER v/s Eb/N0 (dB) of CWC (10,4,5) for different values of N1h with L = 1. We also consider a case with L = 2.
+approached with N1h < n. Fig. 10 shows a similar comparison for the BLER performance of the CWC (10,4,5) code trained under different structures of neural decoder. As in Fig. 9, we note that the BLER performance of the neural decoder closely approaches that of the ML-SD decoder when L = 1 and N1h = 9. We also see that for the two layer case, the performance is slightly better compared to the one layer case. Hence, we conclude that a neural decoder with a single hidden layer with N1h = n nodes is sufficient to decode the considered CWCs.
+V. CONCLUSION In this work, we designed a low-latency neural decoder, a neural network with a minimum number of hidden layers and nodes in each layer that achieves or closely approaches the block error rate of the maximum-likelihood soft-decision (ML-SD) decoder for block codes. We have considered the Hamming (7, 4), extended Hamming (8, 4), and (4, 3) and (10, 5) parity check codes, which belong to the class of linear block codes, and we have also considered the constant weight codes, CWC (34, 10, 6) and CWC (10, 4, 5), which belong to the class of non-linear block codes. We studied the BLER performance achieved by a neural decoder with various different structures, i.e., with different number of hidden layers and nodes. We found that for the considered
+
+linear block codes, a neural network with one single hidden
+layer with n nodes is necessary and sufficient to achieve the
+performance of the ML-SD decoder, where n is the block
+length. For the non-linear block codes, a neural network with
+a single hidden layer with n nodes is sufficient to closely
+approach the performance of the ML-SD decoder. We have
+also found that training at 0 dB signal-to-noise ratio achieves
+a good generalization ability for all the considered codes.
+REFERENCES
+[1] M. Shirvanimoghaddam et al., “Short block-length codes for ultrareliable low latency communications,” IEEE Commun. Mag., vol. 57, no. 2, pp. 130–137, February 2019.
+[2] C. A. Coleman et al., “DAWNBench: An end-to-end deep learning benchmark and competition,” 2017.
+[3] Y. Cheng et al., “An exploration of parameter redundancy in deep networks with circulant projections,” in IEEE ICCV, Washington, DC, USA, 2015, pp. 2857–2865.
+[4] A. Esposito et al., “A neural network for error correcting decoding of binary linear codes,” Neural Netw., vol. 7, no. 1, pp. 195–202, Jan. 1994.
+[5] S. S. I. M. M. Htay and S.-Q. Zheng, “Correcting errors in linear codes with neural network,” in Proceedings of the Twenty-Seventh Southeastern Symposium on System Theory, March 1995, pp. 386–391.
+[6] L. G. Tallini and P. Cull, “Neural nets for decoding error-correcting codes,” in IEEE Technical Applications Conference and Workshops., Oct 1995.
+[7] H. Abdelbaki et al., “Random neural network decoder for error correcting codes,” in International Joint Conference on Neural Networks, vol. 5, July 1999, pp. 3241–3245 vol.5.
+[8] J.-L. Wu, Y.-H. Tseng, and Y.-M. Huang, “Neural network decoders for linear block codes,” International Journal of Computational Engineering Science, vol. 3, pp. 235–256, 09 2002.
+[9] A. S. Hadi, “Linear block code decoder using neural network,” in IEEE International Joint Conference on Neural Networks, June 2008, pp. 1111–1114.
+[10] E. Nachmani et al., “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb 2018.
+[11] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes - A syndrome-based approach,” in IEEE ISIT, Vail, CO, USA, 2018, pp. 1595–1599.
+[12] E. Nachmani et al., “Near maximum likelihood decoding with deep learning,” CoRR, vol. abs/1801.02726, 2018. [Online]. Available: http://arxiv.org/abs/1801.02726
+[13] S. Cammerer et al., “Scaling deep learning-based decoding of polar codes via partitioning,” IEEE GLOBECOM, Dec 2017.
+[14] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5G LDPC codes by machine learning,” IEEE Access, vol. 6, pp. 50 179–50 186, 2018.
+[15] T. Gruber et al., “On deep learning-based channel decoding,” IEEE CISS, Mar 2017.
+[16] V. B. V.N. Dumachev, A.N. Kopylov, “Neural net decoders for linear block codes,” Ser. Mat. Model., vol. 12, pp. 129–136, 2019.
+[17] H. Kim et al., “Deepcode: Feedback codes via deep learning,” CoRR, vol. abs/1807.00801, 2018.
+[18] M. Kim et al., “Building encoder and decoder with deep neural networks: On the way to reality,” CoRR, vol. abs/1808.02401, 2018.
+[19] L. Huang et al., “AI coding: Learning to construct error correction codes,” CoRR, vol. abs/1901.05719, 2019.
+[20] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint sourcechannel coding of text,” CoRR, vol. abs/1802.06832, 2018.
+[21] K. Choi et al., “NECST: neural joint source-channel coding,” CoRR, vol. abs/1811.07557, 2018.
+[22] L. Brink, “Deep networks for equalization in communications,” Master’s thesis, EECS Department, University of California, Berkeley, Dec 2018.
+[23] H. Kim et al., “Communication algorithms via deep learning,” in ICLR, 2018.
+[24] R. W. Hamming, “Error detecting and error correcting codes,” The Bell system technical journal, vol. 29, no. 2, pp. 147–160, 1950.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:40:07 UTC from IEEE Xplore. Restrictions apply.
+
+

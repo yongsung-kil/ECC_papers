@@ -1,0 +1,772 @@
+Exploiting Noise Correlation for Channel Decoding
+with Convolutional Neural Networks
+Fei Liang, Cong Shen, and Feng Wu
+University of Science and Technology of China
+Email: lfbeyond@mail.ustc.edu.cn, {congshen, fengwu}@ustc.edu.cn
+Abstract—Inspired by the recent advances in deep learning, we
+propose a novel iterative belief propagation-convolutional neural
+network (BP-CNN) architecture to exploit noise correlation for
+channel decoding under correlated noise. The standard BP
+decoder is used to estimate the coded bits, followed by a CNN
+to remove the estimation errors of the BP decoder and obtain a
+more accurate estimation of the channel noise. Iterating between
+BP and CNN will gradually improve the decoding SNR and hence
+result in better decoding performance. To train a well-behaved
+CNN model, we define a new loss function which involves not
+only the accuracy of the noise estimation but also the normality
+test for the estimation errors, i.e., to measure how likely the
+estimation errors follow a Gaussian distribution. The introduction
+of the normality test to the CNN training shapes the residual
+noise distribution and further reduces the BER of the iterative
+decoding, compared to using the standard quadratic loss function.
+We carry out extensive experiments to analyze and verify the
+proposed framework.
+I. INTRODUCTION
+Channel encoding and decoding are important components
+in modern communication systems and tremendous progresses
+have been made both in coding theory and its applications.
+For example, low-density parity-check (LDPC) codes [1] are
+able to yield a performance close to the Shannon capacity for
+AWGN channels with a properly optimized encoding structure
+and the well developed belief-propagation (BP) decoding
+algorithm [2]. However, in practical communication systems,
+channels sometimes exhibit correlations in the noise samples
+due to filtering, oversampling [3], and device noise [4]. For
+example, phase noise and clock jitter in digital systems often
+cause pink noise in digital systems [4].
+A well-designed channel code may not have satisfactory
+performance if the receiver is not designed to handle noise
+correlation. Specifically, LDPC codes will encounter a perfor-
+mance degradation under colored noise [5]. The difficulty in
+addressing this issue mainly comes from the high-complexity
+introduced by the colored noise. The most straightforward
+method to address this issue is whitening, i.e. to transform
+colored noise to white noise. However, this method needs
+matrix multiplication, which is of high complexity for long-
+length codes. Furthermore, the equivalent coded symbols after
+whitening may exhibit different structure than the transmitted
+symbols, which complicates the decoding. In theory, the
+The work is supported by the National Natural Science Foundation of China
+under 61631017.
+decoder can first estimate the noise distribution, and then
+optimize the BP decoder using the estimated joint distribution.
+This approach, nevertheless, is model-based and optimizing
+the BP decoder with a joint noise distribution may also be
+highly complex when the correlation is strong. Hence, a low-
+complexity and robust decoder structure that can well exploit
+the characteristics of noise correlations and can be applied to
+different correlation models is desired.
+Recent advances in deep learning provide a new direction to
+tackle this problem. Instead of finding an algorithm based on
+a pre-defined noise model, deep learning technologies allow
+the system to learn an efficient network model directly from
+training data. Deep learning has been applied in computer
+vision [6], natural language processing [7], autonomous ve-
+hicles [8] and many other areas, and the results have been
+quite remarkable. Inspired by these advances, researchers have
+recently tried to solve communication problems (including
+channel decoding) using deep learning technologies [9]–[15].
+However, none of these works address the problem of efficient
+decoding of linear codes under correlated channel noise.
+In this paper, we design a novel receiver architecture to
+tackle the decoding problem when correlation exists in channel
+noise. This architecture concatenates a trained convolutional
+neural network (CNN) with a standard BP decoder, and the
+received symbols are iteratively processed between BP and
+CNN – hence the name iterative BP-CNN. At the receiver side,
+the received symbols are first processed by the BP decoder
+to obtain an initial decoding. Then, subtracting the estimated
+transmit symbols from the received symbols, we obtain an
+estimation of channel noise. Because of the decoding error,
+the channel noise estimation is not exact. We then feed the
+channel noise estimation into a CNN, which further removes
+the estimation errors of the BP decoder and obtains a more
+accurate noise estimation by exploiting the noise correlation
+via training. The estimation results of CNN are then subtracted
+from the received symbols and the results are fed back to
+the BP decoder again. If the CNN is trained well to provide
+an accurate estimation, less noise interference is left for
+BP decoding. Iterating between BP and CNN will gradually
+improve the decoding SNR and result in lower BER.
+The proposed iterative BP-CNN decoder has many desir-
+able properties. As we will see, increasing the number of
+BP iterations provides little improvement under strong noise
+correlation. Utilizing CNN will enhance the ability of the
+978-1-5386-3180-5/18/$31.00 ©2018 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 
+LDPC
+Encoder
+BPSK
+Modulator
++
++
+BP
++
+CNN
++
++
+-
+-
+x
+u
+s
+n
+y
+ˆxˆx
+ˆsˆs
+ˆnˆn
+˜n˜n
+BP-CNN Decoder
+BP-CNN Decoder
+ˆyˆy
+Fig. 1. The proposed iterative decoding architecture which consists of a belief
+propagation (BP) decoder and a feed-forward convolutional neural network
+(CNN).
+decoder to address noise correlation and better results can be
+obtained with fewer BP iterations. The execution of CNN is
+efficiently supported especially with the rapid development of
+AI chips. Therefore, the incremental complexity of CNN will
+not impede the application of the proposed architecture. In
+addition, this method is data driven and does not require that
+the noise correlation model has a specific format. When the
+model format changes, the proposed method still works by
+re-training the network.
+Intuitively, the reason that CNN can help channel decoding
+is similar to the success of CNN in low-level tasks in image
+processing such as image denoising [16] or image super-
+resolution [17]. This becomes more clear when we view the
+correlation in channel noise as a “feature”, which can be
+extracted by CNN. However, our problem setting is very
+different to these other applications where extracting features
+is the ultimate goal. In the iterative BP-CNN architecture, the
+goal of CNN is not only to accurately estimate the channel
+noise and depress the residual error, but also to generate
+an output that is beneficial to the BP decoder. This unique
+requirement has motivated us to develop a novel loss function
+for CNN training, which combines the effect of residual noise
+power with a Jarque-Bera normality test [18]. We will see that
+this new loss function plays an important role in the enhanced
+BP-CNN decoder.
+The rest of this paper is organized as follows. The system
+design, including the network training, is explained in detail in
+Section II. Extensive experiments is in Section III. We finally
+conclude this paper and discuss future works in Section IV.
+II. SYSTEM DESIGN
+A. System Framework
+The proposed architecture is illustrated in Fig. 1. At the
+transmitter, a block of uniformly distributed bits x of length 𝐾,
+is encoded to a binary codeword u of length 𝑁through a linear
+channel encoder. In this paper, we focus on the LDPC code,
+but the proposed method is readily applicable to other linear
+block codes. The codeword u is then mapped to a symbol
+vector s through the BPSK modulation.
+The BPSK symbols will be passed through a channel with
+additive Gaussian noise. The channel noise vector, denoted as
+n of length 𝑁, is modeled as a Gaussian random vector with
+auto-correlation matrix Σ. Note that the LDPC codeword may
+be long, and as a result the size of Σ can be significant.
+The received vector y is received and can be written as
+y = s + n.
+(1)
+The signal to noise ratio (SNR) is defined as
+SNR = 10 log
+(
+𝑃/𝜎2)
+,
+(2)
+where 𝑃is the average transmit power 𝑃= 𝔼
+[
+𝑠2]
+and 𝜎2 in
+Eqn. 2 is defined as the power of the complex noise samples.
+Since the coding performance is evaluated with BPSK, the
+effective noise only comes from the I-samples. Therefore, the
+power of real noise samples n is 𝜎2/2. Here we assume that
+the complex Gaussian noise is circularly symmetric.
+A BP decoder is then used to decode the transmitted
+information bit vector from y. Typically, there is a BPSK
+soft demodulator before the BP decoding, to calculate the
+log-likelihood ratios (LLRs) of the transmitted symbols with
+the knowledge that the channel noise follows a Gaussian
+distribution with power 𝜎2/2.
+LLR(1)
+𝑖
+= log Pr(𝑦𝑖∣𝑠𝑖= 1)
+Pr(𝑦𝑖∣𝑠𝑖= −1) = 2𝑦𝑖
+𝜎2/2,
+(3)
+where 𝑠𝑖, 𝑦𝑖denote the 𝑖th BPSK symbol and the correspond-
+ing received symbol, respectively, and the superscript (1) to
+LLR indicates that this is the LLR computation for the initial
+BP. In our system framework of Fig. 1, we omit this module
+and merge it into the BP decoder for simplicity.
+We use ˆs to denote the estimated transmit symbols. Sub-
+tracting it from the received symbols y, we obtain ˆn as
+ˆn = y −ˆs,
+(4)
+which can be viewed as an estimation of the channel noise.
+Because of the decoding errors, ˆn is not exactly the same as
+the channel noise n. We can re-write ˆn as
+ˆn = n + 𝝃,
+(5)
+where 𝝃is the error vector of noise estimation.
+We are now ready to explain the proposed BP-CNN decod-
+ing architecture, as shown in the dashed box of Fig. 1. Inspired
+by the successful application of CNNs in image denoising and
+super-resolution, and noticing that the correlation in channel
+noise n can be considered as a “feature” that may be exploited
+in channel decoding, we propose to concatenate a CNN after
+BP, to utilize this correlation to suppress 𝝃and get a more
+accurate estimation of the channel noise. The details of the
+proposed CNN and the associated training procedure will be
+presented in subsequent sections. Using ˜n to denote the CNN
+output and subtracting it from the received vector y result in
+ˆy = y −˜n = s + n −˜n = s + r
+(6)
+where r = n−˜n is defined as the residual noise. Then, the new
+vector ˆy is fed back to the BP decoder and another round of
+BP decoding is performed. Note that before the second round
+of BP iterations, the LLR values need to be updated as follows:
+LLR(2)
+𝑖
+= log Pr(ˆ𝑦𝑖∣𝑠𝑖= 1)
+Pr(ˆ𝑦𝑖∣𝑠𝑖= −1),
+(7)
+where ˆ𝑦𝑖denotes the 𝑖th element of ˆy, and the superscript
+(2) to LLR indicates that this is the LLR computation for the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 
+subsequent BPs after processing the noise estimate with CNN.
+With more iterations, the LLR can be calculated in a similar
+way.
+The CNN should be trained to let the residual noise r be
+beneficial to the subsequent BP decoding. We propose two
+strategies for training the CNN and concatenating with BP.
+1) Baseline BP-CNN. The CNN is trained to output a
+noise estimation which is as close to the true channel
+noise as possible. This is a standard method which
+can be implemented using a quadratic loss function in
+CNN training. Intuitively, an accurate noise estimation
+will result in very low power residual noise and thus
+very little interference to the BP decoding. In order to
+calculate the LLR in (7), we also need to obtain an
+empirical probability distribution of the residual noise,
+denoted as ˆ𝑃𝝃(⋅). This can be done after the network
+training is completed using the training data. Therefore,
+we have
+LLR(2)
+𝑖
+= log
+(
+ˆ𝑃𝝃(ˆ𝑦𝑖−1)/ ˆ𝑃𝝃(ˆ𝑦𝑖+ 1)
+)
+.
+(8)
+2) Enhanced BP-CNN. The baseline BP-CNN may not be
+optimal considering that the channel encoding (such as
+LDPC) is mostly optimized for the AWGN channel and
+the residual noise may not necessarily follow a Gaussian
+distribution. Therefore, another strategy is to depress the
+residual noise power and simultaneously let the residual
+noise follow a Gaussian distribution as much as possible.
+By doing this, the LLR in (7) is calculated with the
+assumption that the residual noise follows a Gaussian
+distribution:
+LLR(2)
+𝑖
+= 2ˆ𝑦𝑖/𝜎2
+r,
+(9)
+where 𝜎2
+r is the power of the residual noise which
+can be estimated using the training data. Compared to
+the baseline BP-CNN, the enhanced BP-CNN has the
+following advantages. First, the calculation of LLRs
+becomes much easier. It needs to only estimate and store
+the power of the residual noise rather than the empirical
+probability distribution. Second, it may yield a better
+performance considering the channel encoding is mostly
+optimized for the AWGN channel.
+In Section II-C, we will show how to train the network with
+the above two strategies. With a depressed influence of noise,
+the BP decoding is expected to yield a more accurate result.
+The above processes can be executed iteratively to successively
+depress the noise influence and improve the final decoding
+performance.
+B. CNN for Noise Estimation
+As mentioned before, adopting CNN for noise estimation is
+enlightened by its successful applications in computer vision.
+For some specific image restoration tasks, previous works [16],
+[17] have shown that CNN has a strong ability to restore
+images by utilizing image features. In our task, the noise
+correlation can be viewed as the feature and the CNN is trained
+to utilize the feature for an accurate noise estimation.
+
+ 	
+
+ 
+
+ 
+
+
+
+ 	
+
+
+
+Fig. 2. The adopted CNN structure for noise estimation.
+In the proposed iterative BP-CNN architecture, the adopted
+network structure, which is shown in Fig. 2, is similar to those
+used for low-level tasks in image restoration [16], [17] but with
+a conspicuous difference in that the input of our network is a
+1-D vector instead of a 2-D image. As can be seen at the first
+layer in Fig. 2, 𝑘1 feature maps are generated from the input
+data ˆn, which can be expressed as
+c1,𝑗= ReLU(h1,𝑗∗ˆn + 𝑏1,𝑗),
+(10)
+where c1,𝑗is the 𝑗th feature map at the first layer, h1,𝑗is
+the 𝑗th convolution kernel, which is essentially a 1-D vector
+of length 𝑓𝑗, 𝑏1,𝑗is the corresponding bias, and ReLU(⋅) is
+the Rectified Linear Unit function (max(𝑥, 0)) in order to
+introduce nonlinearity [19]. The bias 𝑏1,𝑗is a scalar and it
+is added to each element of the convolution output. The bias
+is added in a similar way in other layers.
+At the 𝑖th layer (𝑖> 1), the convolution operation is
+performed over all feature maps of the previous layer, which
+can be viewed as a 2-D convolution as shown in Fig. 2. The
+output can be written as
+c𝑖,𝑗= ReLU(h𝑖,𝑗∗c𝑖−1 + 𝑏𝑖,𝑗),
+(11)
+where c𝑖,𝑗is the 𝑗th feature map at the 𝑖th layer. h𝑖,𝑗is the
+𝑗th convolution kernel of size 𝑓𝑖× 𝑘𝑖−1 where 𝑘𝑖−1 is the
+number of feature maps of the previous layer. We use 𝐿to
+denote the number of total layers. At the last layer, the final
+estimation of the channel noise is
+˜n = h𝐿∗c𝐿−1 + 𝑏𝐿.
+(12)
+To summarize, the structure of a CNN is determined by its
+number of layers, filter sizes, and feature map numbers in each
+layer. These parameters need to be decided before training the
+network. For simplicity of exposition, we denote the structure
+of the network as
+{𝐿; 𝑓1, 𝑓2, .., 𝑓𝐿; 𝑘1, 𝑘2, ..., 𝑘𝐿}.
+(13)
+C. Training
+1) Loss function: It is well known in deep learning that
+the performance of a network depends critically on the choice
+of loss functions for training [20]. Generally speaking, a loss
+function is to measure the difference between the actual CNN
+output and its expected output, and it should be carefully
+defined based on the specific task of the network. In the
+proposed architecture, CNN is used to estimate the channel
+noise and its output will influence the performance of BP
+decoding in the next iteration. Therefore, a proper loss function
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 
+must be selected by fully considering the relationship between
+CNN and the following BP decoding.
+As introduced in Section II-A, to facilitate the subsequent
+BP decoding, there are two strategies to train the network. One
+is to only depress the residual noise power (baseline BP-CNN),
+and the other one is to depress the residual noise power and
+simultaneously shape its distribution (enhanced BP-CNN).
+For baseline BP-CNN, the loss function can be chosen as
+the typical residual noise power:
+LossA = ∥r∥2
+𝑁,
+(14)
+where 𝑁is the length of a coding block. Note that this is the
+widely adopted quadratic cost function in deep learning.
+For enhanced BP-CNN, how to define a proper loss function
+is an open problem. In this work, we introduce normality test
+to the loss function, so that we can measure how likely the
+residual noise samples follow a Gaussian distribution. The new
+loss function is formally defined as
+LossB = ∥r∥2
+𝑁
++ 𝜆
+(
+𝑆2 + 1
+4 (𝐶−3)2
+)
+.
+(15)
+The first term in (15) measures the power of the residual noise
+and the second term, adopted from the Jarque-Bera test [18],
+represents a normality test to determine how much a data set
+is modeled by a Gaussian distribution. 𝜆is a scaling factor
+that balances these two objectives. Specifically, 𝑆and 𝐶in
+(15) are defined as follows:
+𝑆=
+1
+𝑁
+∑𝑁
+𝑖=1 (𝑟𝑖−¯𝑟)3
+(
+1
+𝑁
+∑𝑁
+𝑖=1 (𝑟𝑖−¯𝑟)2)3/2 , 𝐶=
+1
+𝑁
+∑𝑁
+𝑖=1 (𝑟𝑖−¯𝑟)4
+(
+1
+𝑁
+∑𝑁
+𝑖=1 (𝑟𝑖−¯𝑟)2)2 ,
+(16)
+where 𝑟𝑖denotes the 𝑖th element in the residual noise vector,
+and ¯𝑟is the sample mean. In statistics, 𝑆and 𝐶are called
+skewness and kurtosis, respectively. Although the Jarque-Bera
+test is not the optimal normality test, the cost function is
+derivable and simple for training. Furthermore, experimental
+results show that it can provide a desirable output.
+2) Generating the training data: To train the network, we
+need both channel noise data n and estimated noise data ˆn
+from the BP decoding results. For the simulation results in
+Section III, we focus on the channel models with known
+(to the receiver) noise correlation functions, and thus we are
+able to generate adequate channel noise samples to train the
+network. For example, given the channel correlation matrix Σ,
+the channel noise samples can be generated by
+n = Σ1/2n𝑤,
+(17)
+where n𝑤is an AWGN noise vector. The estimated noise
+ˆn can be obtained by generating uniform distributed binary
+bits x and successively performing channel encoding, BPSK
+mapping, simulated channel interference and BP decoding.
+Another factor in generating the training data is the channel
+condition, i.e., the signal to noise ratio (SNR), which will
+determine the severity of errors of the BP decoding and hence
+affect the input to the network. We use Γ to denote a set
+of channel conditions to generate training data. If the channel
+condition is very good, very few errors exist ˆn and the network
+may not learn the robust features of the channel noise. On the
+other hand, if the channel condition is very bad, many errors
+exist in ˆn and they will mask the channel noise features, which
+is also detrimental for the network training. Therefore, we
+propose to generate training data under multiple channel SNRs
+to avoid the risk of poor performance caused by selecting a
+specific channel SNR.
+III. EXPERIMENTS
+A. Overview
+Throughout all experiments, we use a LDPC code of rate
+3/4. The code block length is 576 and the parity check
+matrix is from [21]. The experimental platform is imple-
+mented in TensorFlow [22]. The basic CNN structure is
+{4; 9, 3, 3, 15; 64, 32, 16, 1}. We follow the common practice
+to train the network. The network is initialized using the
+Xavier initialization method [23] and trained with the Adam
+optimization method [24]. The training data is generated under
+multiple channel SNRs: Γ = {0, 0.5, 1, 1.5, 2, 2.5, 3} dB. We
+adopt the stochastic gradient descent to optimize the CNN.
+Each mini-batch contains 1400 blocks of data and the data of
+each SNR occupies the same proportion. During the training
+process, we check the loss value over the validation set every
+500 iterations. Training continues until the loss does not
+drop for a consecutive period of time (eight checks in our
+experiment, which equals to 4000 iterations).
+In all experiments, the setting is the same as stated above
+unless otherwise specified. The system performance is mea-
+sured by the bit error rate (BER). In order to test BERs with
+high accuracy and low complexity, a total of 108 information
+bits are tested for high SNRs and 107 bits for low SNRs. High
+SNR causes lower BER and hence more bits are needed for
+simulation. The code is available at https://github.com/liangfei-
+info/Iterative-BP-CNN.
+The correlation matrix Σ for simulation is given by:
+𝛴𝑖,𝑗= 𝜂∣𝑖−𝑗∣
+(18)
+where 𝛴𝑖,𝑗is the (𝑖, 𝑗)th element of Σ, and 𝜂is the correlation
+coefficient. This is widely adopted in the literature [3].
+In the remainder of this section, we will analyze and verify
+the proposed iterative BP-CNN decoding architecture from
+different perspectives.
+B. Performance Evaluation
+1) BP-CNN reduces decoding BER: We first compare the
+performances of the proposed method and the standard BP
+decoder. For the BP decoder, total 50 iterations are executed
+(denoted as “BP(50)” in the figure). For the proposed method,
+we use its simplest form for testing, i.e. there is only one
+iteration between the BP decoder and the CNN. In this case,
+the receiver structure can be simply denoted as BP-CNN-
+BP. We present the comparison results for two correlation
+parameters: 𝜂= 0.8 represents a relatively strong correlation
+model and 𝜂= 0.5 represents a moderate one. In addition, the
+test results under an AWGN channel without any correlation
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 
+-3
+-2
+-1
+0
+1
+2
+3
+SNR(dB)
+10-7
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+BER
+BP(50)
+BP(25)-CNN-BP(25), baseline
+BP(25)-CNN-BP(25), enhanced
+(a) 𝜂= 0.8, strong correlation. 𝜆= 0.1.
+0
+0.5
+1
+1.5
+2
+2.5
+3
+SNR(dB)
+10-7
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+BER
+BP(50)
+BP(25)-CNN-BP(25), baseline
+BP(25)-CNN-BP(25), enhanced
+(b) 𝜂= 0.5, moderate correlation. 𝜆= 10.
+0
+0.5
+1
+1.5
+2
+2.5
+3
+SNR(dB)
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+BER
+BP(50)
+BP(25)-CNN-BP(25), baseline
+BP(25)-CNN-BP(25), enhanced
+(c) 𝜂= 0, no correlation. 𝜆= 10.
+Fig. 3. Performance comparison of BP-CNN with the standard BP decoding. Only one iteration between CNN and BP decoder is executed for the proposed
+design. The numbers in the brackets denote the BP iterations.
+(𝜂= 0) are presented to demonstrate that the proposed method
+can also work with uncorrelated noises, and thus has a wide
+range of application. Both baseline and enhanced BP-CNNs
+are tested. For enhanced BP-CNN, we set 𝜆to 0.1, 10 and 10
+for 𝜂= 0.8, 0.5 and 0, respectively.
+In order to isolate and identify the contribution of CNN,
+we have kept the total number of BP iterations the same
+in two systems. In the BP-CNN method, we execute 25 BP
+iterations in each BP decoding process (denoted as “BP(25)-
+CNN-BP(25)” in the figure), resulting in the same 50 BP
+iterations as the standard BP decoder.
+The experiment results are reported in Fig. 3. We can see
+that both baseline and enhanced BP-CNN achieve signifi-
+cant performance gains with correlated noise. In the strong
+correlation case when 𝜂= 0.8, BP-CNN can improve the
+decoding performance by approximately 3.5dB at BER=10−4.
+It should be emphasized that this performance gain cannot be
+compensated by more iterations in the standard BP decoder,
+as BP(50) already achieves a saturating performance. In the
+moderate correlation case with 𝜂= 0.5, the performance gain
+becomes smaller, because the correlation is weaker and the
+benefit of adopting a CNN is less. For the special case where
+𝜂= 0, the nominal AWGN channel, the proposed method
+performs similarly with the standard BP decoding. We thus
+conclude that the iterative BP-CNN decoding method can
+support a wide range of correlation levels, and the performance
+gains vary with the noise correlation.
+We can also compare the baseline and enhanced BP-CNN
+decoders from Fig. 3. We see that enhanced BP-CNN further
+outperforms the baseline strategy. In addition, enhanced BP-
+CNN facilitates the calculation of LLRs for the next round of
+BP decoding.
+2) BP-CNN achieves performance gain with lower com-
+plexity: Besides improving the decoding performance under
+the same number of BP iterations, another desirable feature
+of the iterative BP-CNN decoder is that it can outperform
+the standard BP decoding with lower overall complexity. To
+see this, we present another set of results in Fig. 4. The
+implementation details are the same as Fig. 3 except that in the
+BP-CNN decoder, the number of each BP decreases from 25
+to 5. For comparison, we also plot the standard BP decoding
+-3
+-2
+-1
+0
+1
+2
+3
+SNR(dB)
+10-7
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+BER
+BP(50)
+BP(12)
+BP(5)-CNN-BP(5), baseline
+BP(5)-CNN-BP(5), enhanced
+Fig. 4. BP-CNN achieves performance gains with lower complexity. 𝜂= 0.8.
+performance with 12 and 50 iterations, respectively. Ideally,
+we would like to set the BP parameters so that both methods
+have exactly the same overall complexity, and then compare
+their BER performances. However, an accurate comparison of
+the complexity associated with a BP network and a CNN is
+quite difficult. We get around this problem by comparing their
+runtime under the same computation environment. Both are
+implemented in TensorFlow and simulations are run with the
+same computation resources. This is not accurate but it gives
+an approximation. In our test environment, we observe that the
+runtime of CNN with the structure {4; 9, 3, 3, 15; 64, 32, 16, 1}
+is roughly equivalent to two BP iterations. This means that
+the chosen BP(5)-CNN-BP(5) structure in Fig. 4 has approx-
+imately the same complexity as the standard BP decoder
+with 12 iterations. We also plot BP(50) and observe that
+further increasing the complexity of standard BP provides
+some marginal gain. Hence, BP(12) represents a good-but-not-
+saturated scenario where the comparison to BP(5)-CNN-BP(5)
+is fair and meaningful.
+Due to the space limit, only the results for 𝜂= 0.8 are
+given in Fig. 4. It is clear that the baseline BP(5)-CNN-BP(5)
+decoder has comparable performance of standard BP(50), but
+with a much lower complexity. When comparing the decoding
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 
+-3
+-2.5
+-2
+-1.5
+-1
+-0.5
+0
+SNR(dB)
+10-7
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+BER
+BP(5)-CNN-BP(5)
+BP(25)-CNN-BP(25)
+2{BP(5)-CNN}-BP(5)
+3{BP(5)-CNN}-BP(5)
+4{BP(5)-CNN}-BP(5)
+Fig. 5. Multiple iterations between CNN and BP can further improve decoding
+performance with 𝜂= 0.8.
+performance with approximately the same complexity, both
+baseline and enhanced BP(5)-CNN-BP(5) decoders outper-
+form the standard BP(12) decoder.
+3) Multiple iterations between CNN and BP further improve
+the performance: Up to this point, we have only presented
+simulation results of the proposed iterative BP-CNN decoder
+with one iteration. Naturally, we can perform multiple it-
+erations between CNN and BP with the hope of further
+reducing the BER, as shown in Fig. 1. Notation-wise, we
+use 𝐾{BP(𝑛)-CNN}-BP(𝑛) to denote the iterative BP-CNN
+decoder structure with 𝐾iterations between BP and CNN,
+and 𝑛iterations inside BP. In total, 𝐾+ 1 BP(𝑛) and 𝐾
+CNN are run. Enhanced BP-CNN is adopted for this set of
+experiments. We report the simulation results with different
+𝐾’s in Fig. 5. By comparing BP(5)-CNN-BP(5) and BP(25)-
+CNN-BP(25), we see that only increasing the BP iteration
+number provides limited performance gain. However, it is
+clear that multiple iterations can achieve larger improvement.
+When 𝜂= 0.8, compared to BP(5)-CNN-BP(5), two BP-CNN
+iterations improves the decoding performance by 0.7dB at
+BER=10−4. In addition, we notice that after four BP-CNN it-
+erations, the performance improvement becomes insignificant.
+This is because the CNN has reached its maximum capacity
+and cannot further depress the residual noise power.
+IV. CONCLUSIONS AND FUTURE DIRECTIONS
+In this paper, we have designed a novel iterative BP-CNN
+decoding structure to handle correlated channel noise. The
+proposed framework serially concatenates a CNN with a BP
+decoder, and iterates between them. The BP decoder is to
+estimate the coded bits and indirectly estimate the channel
+noise. The CNN is to remove the channel noise estimation
+errors of the BP decoder by learning the noise correlation. To
+implement the framework, we have proposed to adopt a fully
+convolutional network structure and provided two strategies
+to train the network. Simulation results have shown the ef-
+fectiveness of the proposed iterative BP-CNN decoder. In our
+future work, we will try to find other loss functions which are
+more related to the BER performance. We will also consider to
+unfold the iterative structure to an open-loop system, such that
+we can design different numbers of BP iterations and CNN
+structures. Furthermore, we will also validate our approach
+with the data collected from real environment.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on
+information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] T. J. Richardson and R. L. Urbanke, “The capacity of low-density parity-
+check codes under message-passing decoding,” IEEE Trans. Inf. Theory,
+vol. 47, no. 2, pp. 599–618, Feb 2001.
+[3] S. K. Sharma, S. Chatzinotas, and B. Ottersten, “SNR estimation for
+multi-dimensional cognitive receiver under correlated channel/noise,”
+IEEE Trans. Wireless Commun., vol. 12, no. 12, pp. 6392–6405, 2013.
+[4] A. Hajimiri and T. H. Lee, “A general theory of phase noise in electrical
+oscillators,” IEEE Journal of Solid-State Circuits, vol. 33, no. 2, pp.
+179–194, 1998.
+[5] S. S. Tehrani, B. F. Cockburn, and S. Bates, “On the effects of colored
+noise on the performance of LDPC codes,” in Proc. IEEE Workshop
+Signal Process. Sys. Des. Implementation, 2006, pp. 226–231.
+[6] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+recognition,” in Proc. IEEE CVPR, 2016, pp. 770–778.
+[7] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning
+with neural networks,” in Proc. NIPS, 2014, pp. 3104–3112.
+[8] C. Chen, A. Seff, A. Kornhauser, and J. Xiao, “DeepDriving: Learning
+affordance for direct perception in autonomous driving,” in Proc. IEEE
+ICCV, 2015, pp. 2722–2730.
+[9] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” in Proc. Annu. Allerton Conf. on Commun.,
+Control, Comput., 2016, pp. 341–346.
+[10] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding
+of linear block codes,” arXiv preprint, 2017.
+[11] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc.
+IEEE ISIT, 2017.
+[12] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-
+based channel decoding,” in Proc. CISS, 2017, pp. 1–6.
+[13] S. Cammerer, T. Gruber, J. Hoydis, and S. ten Brink, “Scaling deep
+learning-based decoding of polar codes via partitioning,” arXiv preprint,
+2017. [Online]. Available: http://arxiv.org/abs/1702.06901
+[14] T. J. O’Shea, K. Karra, and T. C. Clancy, “Learning to communicate:
+Channel auto-encoders, domain specific regularizers, and attention,” in
+Proc. IEEE ISSPIT, 2016, pp. 223–228.
+[15] T. J. O’Shea, S. Hitefield, and J. Corgan, “End-to-end radio traffic
+sequence recognition with recurrent neural networks,” in Proc. IEEE
+GlobalSIM, 2016, pp. 277–281.
+[16] V. Jain and S. Seung, “Natural image denoising with convolutional
+networks,” in Proc. NIPS, 2009, pp. 769–776.
+[17] C. Dong, C. C. Loy, K. He, and X. Tang, “Image super-resolution using
+deep convolutional networks,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 38, no. 2, pp. 295–307, 2016.
+[18] T. Thadewald and H. B¨uning, “Jarque–Bera test and its competitors for
+testing normality: A power comparison,” Journal of Applied Statistics,
+vol. 34, no. 1, pp. 87–105, 2007.
+[19] V. Nair and G. E. Hinton, “Rectified linear units improve restricted
+Boltzmann machines,” in Proceedings of ICML, 2010, pp. 807–814.
+[20] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. MIT Press,
+2016.
+[21] M. Helmling and S. Scholl, “Database of channel codes and ML simu-
+lation results,” www. uni-kl. de/channel-codes, (Wimax 3/4A), University
+of Kaiserslautern, 2016.
+[22] M. Abadi, P. Barham, J. Chen, Z. Chen, A. Davis, J. Dean, M. Devin,
+S. Ghemawat, G. Irving, M. Isard et al., “Tensorflow: A system for
+large-scale machine learning,” in Proc. OSDI, 2016.
+[23] X. Glorot and Y. Bengio, “Understanding the difficulty of training deep
+feedforward neural networks.” in AISTATS, vol. 9, 2010, pp. 249–256.
+[24] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+in Proc. International Conference on Learning Representations, 2015.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:23 UTC from IEEE Xplore.  Restrictions apply. 

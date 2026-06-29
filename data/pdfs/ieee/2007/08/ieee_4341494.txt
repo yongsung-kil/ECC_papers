@@ -1,0 +1,734 @@
+Low-Complexity Architectures of a Decoder for IEEE 802.16e LDPC Codes
+Giuseppe Gentile, Massimo Rovini and Luca Fanucci Department of Information Engineering - University of Pisa
+Via G. Caruso, I-56122 Pisa - Italy {giuseppe.gentile, massimo.rovini, luca.fanucci}@iet.unipi.it
+
+Abstract
+Low-density parity-check (LDPC) codes have recently been included as error-correcting codes in IEEE 802.16e, for wireless metropolitan area networks. This paper proposes a flexible, low-complexity LDPC decoder fully compliant with all 114 codes defined by the standard. The decoder runs the layered decoding algorithm to increase the convergence speed, and relies on a semi-parallel implementation with serial processing units working in pipeline to reduce the latency. Particularly, two different architectures are considered, and their RTL/memory complexity tradeoffs are analyzed. The resulting design yields a throughput ranging from 93 to 497 Mbps by means of 15 iterations at the clock frequency of 400 MHz. Synthesis on 65 nm CMOS technology, shows a chip area less than 0.59 mm2, despite the high flexibility, which compares favourably with similar implementations.
+1 Introduction
+During the last few years, the availability of broadband access has become crucial to many users all over the world. The worldwide interoperability of microwave access (WiMAX) described by the IEEE 802.16e standard for wireless metropolitan area networks (WMAN) [2], will provide wireless alternative to conventional DSL and cable Internet connections, especially in rural and suburban areas. The long-range coverage requirements (up to 50 Km from the base station) and the high data-rate (about 70 Mbps) make a very robust forward error correction (FEC) system mandatory; indeed, low-density parity-check (LDPC) codes have been included in [2].
+First introduced by Gallager [7], and recently rediscovered by MacKay and Neal [10], LDPC codes are nowadays considered one of the most attractive FEC solutions by the industrial and scientific community. Compared with other competitors, such as Turbo codes [4], LDPC codes feature lower implementation complexity and bet-
+
+ter error correction performance for relatively short blocklengths and low signal-to-noise ratios (SNRs) [13].
+LDPC are linear block codes defined by a sparse paritycheck matrix, specifying the parity-check constraints of the bits in the codewords. They can be effectively represented by a bi-partite graph, also referred to as Tanner graph [16], in which the transmitted bits and the paritycheck constraints are represented by interconnections between variable and check nodes, as shown in figure 1. Decoding of LDPC codes goes iteratively by exchanging messages (message-passing) between the connected nodes, to improve the reliability of the received bits.
+
+Parity check matrix 10 10 10
+H= 0 1 0 1 0 0
+1000 11
+
+Varaible Nodes Check Nodes
+
+Figure 1. Description of an LDPC code.
+
+Some families of LDPC codes, known as architectureaware codes (AA-LDPC) [11], are particularly suitable for VLSI implementation; they are structured codes, whose parity-check matrix is built according to specific patterns. AA-LDPC codes reduce the area, the power and the memory requirements of the resulting decoder, and above all, decoding can be easily parallelized, allowing an effective trade-off between throughput and complexity. Finally, thanks to the negligible loss in correction performance w.r.t. random codes, AA-LDPC codes are the preferred choice of modern communication standards, such as DVB-S2 [1], IEEE 802.16e and IEEE 802.11n [3].
+Although the decoding operations can run in parallel, a serial processing unit is preferable to a parallel one, because of the lower power consumption, the reduced area and the higher flexibility in the support of different codes. As a drawback, the resulting throughput is fairly low, thus making the use of pipelining techniques mandatory.
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+In this paper, two semi-parallel, pipelined decoder architectures for IEEE 802.16e codes will be described, tradingoff memory with register-transfer-level RTL complexity, and their performance in terms of throughput will be carefully analyzed.
+
+2 The IEEE 802.16e LDPC Codes
+
+The IEEE 802.16e LDPC codes described in [2] can be conveniently arranged in six classes depending on the code rate. Actually, four code rates are supported, 1/2, 2/3, 3/4, 5/6 but two different alternatives, labelled with “A” and “B”, are defined for rates 2/3 and 3/4. Since each class comes with 19 different codeword lengths, a total of 114 codes is specified. These are AA-LDPC codes, block-wise partitioned into smaller zf × zf sub-matrices, with zf the socalled codeword size, given by:
+
+zf = 96 − 4 · f, f = 0, . . . , 18
+
+(1)
+
+Each sub-matrix can be either a circular rotation of the
+identity matrix or an all-zero matrix; this allows the very compact description of the parity-check matrix H, known as prototype matrix PH, by simply specifying the locations
+and rotations of the non-zero sub-matrices. All prototype
+matrices count 24 columns and the 19 supported codeword lengths are then given by Nf = 24 · zf .
+Furthermore, the standard defines one single PH for all
+the codes in a class, and specifies the rotations for the fundamental codeword size z0; indeed, the rotations of the remaining codes are derived according to:
+
+ 
+
+ρf
+
+= |ρ0|zf
+
+,
+
+
+
+class = 2/3A
+
+(2)
+
+ 
+
+ρf
+
+=
+
+ρ0 ·zf z0
+
+,
+
+otherwise
+
+with ρ0 and ρf the rotation of the codeword size z0 and zf , respectively.
+An example of prototype matrix is shown in figure 2, while table 1 summarizes the main features of the PH ma-
+trices defined by the standard.
+
+class
+
+columns
+
+rows
+
+# blocks
+
+row
+
+deg.
+
+d
+c
+
+1/2 2/3A 2/3B 3/4A 3/4B 5/6
+
+24 24 24
+
+24
+
+24 24
+
+12 8
+
+8
+
+6
+
+6
+
+4
+
+76 80 81
+
+85
+
+88 80
+
+{6,7} {10} {10,11} {14,15} {14,15} {20}
+
+Table 1. IEEE 802.16e code prototypes.
+
+3 Pipelined Layered Decoding
+The well-known belief propagation (BP) [18] algorithm, originally formulated in the form of flooding or two-phase
+
+0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+
+30
+
+20
+
+37
+
+11
+
+10
+
+0
+
+1
+
+36
+
+34 10
+
+18 2
+
+30
+
+00
+
+1
+
+12 2
+
+15 40
+
+3
+
+15
+
+2 13
+
+00
+
+2
+
+H= 20
+
+19 24 6
+
+30 10 29
+
+6
+
+17
+
+28 14
+
+8 39
+
+38
+
+0
+
+00 00
+
+3 4
+
+10 28 20
+
+8
+
+36
+
+9
+
+21 45
+
+00
+
+5
+
+35 25 37 21
+
+5
+
+0
+
+4 20
+
+006
+
+66
+
+4
+
+14 30
+
+3 36 14
+
+1
+
+07
+
+r =96´96 identity matrix rotated by r r =96´96 zero matrix
+
+Figure 2. Parity-check prototype matrix for codeword size z0 = 96 and rate r = 2/3A. Black squares correspond to rotations of the identity matrix, also indicated in the squares, while empty squares correspond to all-zero matrices.
+
+decoding [8], has been recently given way to the so-called layered or shuffled decoding [9, 11, 15]. The key point of layered decoding is the overlap of the traditional variable node (VN) and check node (CN) phase, so that each iteration is viewed as the concatenation of several layer elaborations or micro-iterations. Within a layer, the reliability of a bit in the received codeword, once updated, is immediately made available to next layers, thus always working on the newest information. This mechanism doubles the convergence speed w.r.t. the two-phase decoding. In a semi-parallel CN-centric formulation [8], a layer spans W parity-check equations that are processed in parallel within a micro-iteration. Considering the set N (m) of the VNs connected to the CN m and W = 1, layered decoding computes:
+
+− sign ǫm (q+,n1) =
+
+− sign yj(q)[k] − ǫm (q),j (3)
+
+j∈N (m)\n
+
+ǫm (q+,n1) = Φ−1
+
+Φ yj(q)[k] − ǫ(mq),j
+
+(4)
+
+j∈N (m)\n
+
+yn(q)[k + 1] = yn(q)[k] − ǫm (q),n + ǫ(mq+,n1)
+
+(5)
+
+yn(q)[k] being the total information or soft output (SO) of the n-th received bit at the iteration q and micro-iteration k, and ǫm,n the check-to-variable (C2V) message from CN m to VN n. At the first iteration, SOs are initialized with the channel a priori log-likelihood ratio LLRn, while ǫm,n = 0 ∀ m, n.
+The intrinsic need to guarantee the use of the most updated information layer after layer, contrasts with the low
+decoding latency requirements of the modern communication systems. A significant help to solve this issue is given by the ad-hoc design of the code: actually, the structure of
+the IEEE 802.16e codes allows the definition of layers encompassing W = zf parity-check equations, which can be
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+conveniently updated in parallel as they involve different SOs (i.e. the column weight of a layer is at most one).
+When serial processing units are implemented, elaborations are typically pipelined to further speed up decoding, so that, while a layer delivers its output, new data are being acquired by the next one. In such a scenario, particular care must be taken to properly schedule the layered decoding. Indeed, whenever a set of SOs is shared between two consecutive layers, the second one might risk using messages not updated yet, thus spoiling performance. Figure 3 shows that idle cycles (Ik) has been inserted between two layers, to delay the second one until the messages updated by to the first one are available.
+Waiting states are also necessary when two consecutive layers with decreasing degrees are processed, in order to avoid the corruption of the internal data and the overlap in time of the output sequences. To deal with this situation, Ik must be at least equal to dk − dk+1 with dk the CN degree of layer k.
+
+Time
+
+Layer K
+
+Layer K+1
+
+C NK NK NK NK NK Idle (IK) NK+1 C N N N N K+1 K+1 K+1 K+1
+
+Reading
+
+LSO
+
+C NK NK NK NK NK
+
+C = Message in common between layer K and K+1 NK,NK+1= Message not shared between layer K and K+1 LSO = Latency of the elaboration
+
+SO Updated
+
+Figure 3. Insertion of Idle cycles.
+
+Reducing the overall number of idle cycles is obviously highly desirable and it can be achieved by i) changing the sequence of layers to be processed, and ii) properly ordering the messages updated by a layer, to reduce the dependance with the following ones. Table 2 shows the results of this optimization for the six code classes in terms of idle cycles per iteration. Particularly, for class 2/3A, 3/4A, 3/4B and 5/6, idle cycles take from 19 to 34% of the iteration time; the same technique applied to classes 1/2 and 2/3B, specifically designed for layered decoding, has confirmed the sequence of layers already suggested in [2], and only few idle cycles have been added to cope with the variations of the CN degrees.
+
+4 Decoder Architecture
+
+The layered decoding algorithm is implemented with a pipelined semi-parallel architecture able to process all codes in the IEEE 802.16e standard. The large variety of codeword sizes zf , ranging from 24 to 96, calls for an high degree of flexibility in the decoder architecture. Figure 4 shows the reference template of a semi-parallel architecture, in which a cluster of z0 = 96 serial node processors (NPs), is used to support the maximum parallelism.
+Since several layers update a same block of zf SO messages but with different orders given by the prototype matrices, SOs need to be properly rotated. To this aim, a multi-dimensional circular-shifting network (MS-CS) has been inserted before the SO memory to rotate an array of zf messages so that it is stored ready for its next occurrence; in this way, differential rotations are performed. Note that C2V messages don’t need to be rotated as each block of data is used only once per iteration and always with the same order.
+Focusing on memories, they are vectorized for the maximum size z0 = 96, so that a single location of the SO and C2V memory contains z0 × NSO and z0 × Nc2v bits, respectively, with NSO and Nc2v the bits used to represent the related messages. Anyway, if a code with codeword size zf is decoded, then only zf × NSO and zf × Nc2v bits are used.
+During the acquisition of the channel LLRs, the NPs are by-passed and the MS-CS network is fed by the input buffer, which provides zf input LLRs per clock cycle.
+z 0
+
+NP #0
+
+z 0
+
+NP #1
+
+z 0
+NP #94
+z
+NP #95 0
+
+c2v Memory
+
+MS-CS
+
+z
+
+z
+
+0
+
+0
+
+z 0
+
+SO Memory
+
+LLR
+
+Input Buffer
+
+Figure 4. Architecture of the IEEE 802.16e LDPC codes decoder.
+
+Class Ik %
+
+1/2 2/3A 2/3B 3/4A 3/4B 5/6 4 31 1 16 30 20 5% 39% 1% 19% 34% 25%
+
+Table 2. Idle cycles per decoding iteration.
+
+4.1 Multi-Size Circular-Shifting Network
+The MS-CS network, shown in figure 5, is the key block for the flexibility of the overall architecture, as it has to manage 19 different codeword sizes. Since the value of zf increases by steps of 4, the circuit is composed of
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+n=z0/4=24 barrel-shifters, each one rotating a sub-array of 4 messages, plus an adaptation network (AN). Given a codeword size zf , the AN merges the outputs of nf =zf /4 barrel-shifters into one single array with size zf , ready to be stored in the SO memory.
+Each barrel-shifter is implemented with a 4 × 4 Banyan network [12] and performs the sub-rotation ρs given by:
+
+ρs = |ρ|4
+
+(6)
+
+with ρ the differential rotation of the whole network. The AN is composed of z0 24-input multiplexers driven
+by a control law which depends on the codeword size and ρ. More in detail, denoting with xp,q the q-th output of the p-th barrel-shifter with p = 0, . . . , z0 − 1 and q = 0, . . . , 3, the AN performs the following scrambling:
+
+yp,q = xp′,q
+
+p < nf , ∀q,
+
+p′ = p +
+
+q+ρ 4
+
+nf
+
+(7)
+
+yp,q = xp,q p > nf , ∀q,
+
+yp,q being the output of the AN and of the whole network. Finally, note that for the codeword size zf , the last
+24 − nf barrel-shifters and (z0 − zf ) multiplexers of the AN remain unused.
+
+barrel
+shifter #0
+
+barrel shifter
+#23
+zf
+r
+Figure 5. Multi-size circular-shifting network for IEEE 802.16e codes.
+
+Since one FIFO buffer should be added to each NP and since it has to be tailored to the maximum CN degree dc,max = 20, this strategy may easily increase the overall complexity of the decoder.
+
+P O R T
+B
+RAMs
+
+P O R T
+A
+
+Min
+
+RAMs
+
+Figure 6. FIFO-based architecture.
+
+4.3 Memory-based Decoder Architecture
+
+Aiming at reducing the complexity of the NP, it would be desirable to get rid of the FIFO buffer and re-compute the V2C messages on-the-fly at the output of the CN-core. The resulting architecture is shown in figure 7, and it relies, in principle, on three-port memories to support the additional reading of the SO and C2V messages (see port C on figure 7). To solve the problem, each RAM can be split into two dual-port banks, as shown in figure 8, allowing up to 4 concurrent accesses.
+
+RAMs
+P O R T
+B
+
+RAMs
+
+P SO late O
+
+R T
+
+C2V late
+
+C
+
+Min
+
+P O R T A
+RAMs
+
+Figure 7. Three-port-based architecture.
+
+4.2 FIFO-based Decoder Architecture
+The serial NP of figure 6, implements the update rules (3), (5) and the two-output approximation [14] of (4) based on the mod-MS operator [17]. The CN-core is equipped with two adders to properly build the input variable-tocheck (V2C) and the output SO messages.
+Because of the pipelining of the elaborations, the NP reads and writes data concurrently, and relies on dual-port memories. In such a scenario, the V2C messages, already computed on the input of the CN-core, can not be recomputed on its output and a first-in first-out (FIFO) buffer must be used for temporary storing.
+
+Data IN pA
+
+Dual Port Memory #0
+
+Data out pB
+
+Data IN pD
+
+Dual Port Memory #1
+
+Data out pC
+
+4-Port Memory
+
+Figure 8. Data path of a four-port memory.
+
+Conversely to [5], memories are not mirrored, but messages are allocated in one single bank, except for a small
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+Throughput @400MHz (Mbps) FER
+
+1000
+
+10-1
+
+IEEE 802.16e
+
+Size 96
+
+Throughput Analysis:
+
+1/2
+
+800
+
+2/3A
+
+10-2
+
+2/3B
+
+3/4A
+
+3/4B
+
+5/6
+
+600
+
+10-3
+
+IEEE 802.16e Size 96
+FER Analysis: 1/2 @ -1.1 dB 2/3A @ 0.8 dB 2/3B @ 0.9 dB 3/4A @ 1.9 dB 3/4B @ 1.8 dB 5/6 @ 3dB
+
+400
+
+10-4
+
+200 5
+
+10-5
+
+10
+
+15
+
+20
+
+25
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Iteration
+
+Iteration
+
+(a) Decoding throughput vs. number of iterations.
+
+(b) FER vs. number of iterations.
+
+Figure 9. Analysis of performance vs. decoding iterations for codeword size z0 = 96.
+
+amount of data which are stored in both the banks, with redundancy. This is done by statically allocating data to one of the two banks, with the only constraint that, when concurrent reading accesses occur, the two data are taken from different banks. Desirably, the allocation procedure results in two not-overlapping banks, having no element in common; more likely, some elements, referred to as redundant elements, need to be stored in both the banks.
+An off-line computer-search has been run to find out the best allocation strategy, minimizing the number of redundant elements. Table 3 reports the total number of locations in the two dual-port banks for the SO and C2V memories. Furthermore, it shows the percentage of redundancy w.r.t. the original number of locations used in the FIFO-based approach.
+
+bank A 16
+bank A 46
+
+bank B 15
+bank B 46
+
+SO memory
+
+total FIFO-based
+
+31
+
+24
+
+C2V memory
+
+total FIFO-based
+
+92
+
+88
+
+redundancy 29%
+redundancy 4.5%
+
+Table 3. Memory partitioning results.
+
+As opposed to the static allocation procedure described above, where a certain SO is stored in a fixed location of one or both the memory banks, data could be allocated dynamically, and their location could change during decoding. Although this solution could be effective to reduce the memory redundancy, the cost for its control heavily affects the complexity of the overall decoder.
+
+5 Implementation Results
+
+5.1 Performance analysis
+
+The performance of the LDPC decoder for IEEE 802.16e
+
+has been explored in terms of throughput and error-
+
+correction, and a preliminary analysis has been performed
+
+to properly set the number of decoding iterations. To this
+
+aim, figure 9 shows the throughput and the floating point
+
+frame error rate (FER) as a function of the iteration index,
+
+for the 6 codes with codeword size z0. The throughput has
+been evaluated at the clock frequency of 400 MHz, and in figure 9(b), the SNRs are set for a target FER of 10−4. In
+
+formula, the throughput of the decoder in information bits
+
+is given by:
+
+Γ
+
+=
+
+fclk
+
+· 24 · zf Tdec
+
+·
+
+r
+
+(8)
+
+with fclk the clock frequency, r the code rate and Tdec the decoding latency measured in clock cycles and roughly pro-
+
+portional to the number of iterations Nit. Within a same class of codes, the decoding latency Tdec is not affected by the codeword size zf as only one common prototype ma-
+trix is defined. This allows the throughput to scale linearly
+
+with zf as shown in (8). As a result of the analysis of figure 9, 15 decoding iterations could represent a good trade-
+
+off and table 4 shows the maximum and minimum through-
+
+put achieved with z0 and z18, respectively. The error correction performance has been carefully an-
+
+alyzed to set the bit-true parameters of the decoder. These
+
+can be conveniently described with the pair (Nc2v, NSO), which obey to the following rule1:
+
+NSO = Nc2v + ⌈log2 dv,max⌉ − p
+
+(9)
+
+1In the FIFO-based architecture, the V2C messages in the buffer must be represented on NSO bits as well, to not spoil the precision of (5).
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+Class
+
+1/2 2/3A 2/3B 3/4A 3/4B 5/6
+
+Γmax (Mbps) 373 361 484 445 382 497
+
+Γmin (Mbps) 93 90 121 111 96 124
+
+Table 4. Throughput at 400 MHz and 15 decoding iterations.
+
+with dv,max = 6 the maximum column weight of the prototype matrices and p the bits dropped for a reduced complexity. Figure 10 shows the FER after 15 decoding iterations, with Nc2v = 5 and NSO in the range [6,8]. The floating point curve is also traced for reference, and the analysis shows an unacceptable implementation loss (IL) with NSO = 6, while only negligible losses are observed with NSO = 7, 8. Finally, floating-point FER after 100 decoding iterations is also reported in figure 10 to show that by limiting the number of iterations to 15, the loss in the transmission SNR at the target FER of 10−4 is about 0.2 dB.
+100
+
+10-1
+
+10-2
+
+FER
+
+10-3
+
+10-4
+
+IEEE 802.16e
+
+Class 2/3A, Size 96
+
+Floating point analysis:
+
+100 Iterations
+
+15 Iterations 10-5 Bit-true analysis (15 It.)
+
+(5;6)
+
+(5;7)
+
+(5;8)
+
+10-6 -0.50 -0.25 0.00 0.25 0.50 0.75 1.00 1.25 1.50 1.75
+Es/N0 (dB)
+
+Figure 10. Fixed-point FER performance for code 2/3A with size z0 = 96.
+
+5.2 Synthesis results
+The two decoder architectures described in section 4, have been synthesized on 65 nm CMOS technology using 1.20 V standard-cell library at the clock frequency of 400 MHz. The bit-true parameters have been set to Nc2v = NLLR = 5; NSO = 7 aiming at good error-correction perfor-
+
+mance. Table 5 details the synthesis results of the RTL design
+and memories for both the FIFO-based and memory-based architecture. The complexity of the RTL design is given in µm2 as well as in equivalent Kgates2, while the overall number of bits is specified for each memory unit.
+By removing the FIFO-buffer from NPs, the memorybased architecture saves about 27% of the RTL complexity; as a drawback, the SO and C2V memories are augmented because of the added redundancy, and extra info are stored in the configuration ROMs to properly map the position of the messages within the two banks. As a result, the size in bits of the RAMs and ROMs increases of 12% and 26%, respectively. However, the reduced RTL complexity makes this solution more efficient, with an overall saving of about 7% in the decoder area.
+6 Discussion and Conclusion
+In this paper we have presented the design of a lowcomplexity decoder for IEEE 802.16e LDPC codes. Conversely to [6], the decoder implements the layered decoding algorithm for all six classes of codes; this has been achieved with the use of serial processing units working in pipeline, properly scheduled with the introduction of idle cycles to cope with the dependence between layers. Furthermore, the decoding operations have been vectorized according to the codeword size of the AA-codes defined by the standard.
+Two different architectures, named FIFO-based and memory-based, have been proposed and compared. The RTL complexity of the latter is considerably lower, but it also requires, in principle, three-port memories. However, these have been effectively implemented with two dual-port banks, with only few redundant elements stored in both the banks.
+Finally, the synthesis on 65 nm CMOS technology showed that, despite the high flexibility demanded by the IEEE 802.16e LDPC codes, the complexity of the proposed architectures remains under 0.6 mm2 and outperforms similar implementations: actually, with the same 0.13 µm CMOS technology used in [6], their complexity is about 1.83 mm2 (FIFO-based) and 1.72 mm2 (memorybased), with a saving greater than 52%.
+References
+[1] Digital video broadcasting (DVB); second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broadband satellite applications, June 2004.
+2An equivalent gate is equal to the two-input NAND-gate area, and it is 2.08 µm2 for the technology in use.
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+RTL Elements Node Processors MS-CS network Control Logic Unit
+Total
+Memory Elements SO RAM C2V RAM
+Configuration ROMs
+Total
+Decoder Area
+
+FIFO-based architecture
+
+Kgates
+
+µm2
+
+111
+
+230281
+
+45
+
+92707
+
+4.9
+
+10108
+
+161
+Bits 16128 42240 13010
+
+333096 µm2
+116870 119322 19430
+
+255622 0.59 mm2
+
+memory-based architecture
+
+Kgates
+
+µm2
+
+64
+
+132797
+
+45
+
+92707
+
+8.1
+
+16779
+
+117
+Bits 21504 44160 16440
+
+242283 µm2
+155826 124746 28005
+
+308577 0.55 mm2
+
+Table 5. Decoder Complexity Breakdown.
+
+[2] LDPC coding for OFDMA PHY. 802.16REVe Sponsor Ballot Recirculation comment, July 2004. IEEE C802.16e04/141r2.
+[3] Joint Proposal: High throughput extension to the 802.11 Standard: PHY. IEEE P802.11 Wireless LANs, Jan 2006. IEEE 802.11-05/1102r4.
+[4] C. Berrou, A. Glavieux, and P. Thitimajshima. Near shannon limit error-correcting coding and decoding: Turbo-codes. In IEEE International Conference on Communications, volume 2, pages 1064–1070, May 1993.
+[5] T. Bhatt, V. Sundaramurthy, V. Stolpman, and D. McCain. Pipelined block-serial decoder architecture for structured LDPC codes. In Proc. IEEE Conf. on Acoustics, Speech and Signal Proc., ICASSP, Apr. 2006.
+[6] T. Brack, M. Alles, F. Kienle, and N. Wehn. A synthesizable IP core for WiMAX 802.16e LDPC code decoding. In 17th International Symposium on Personal, Indoor and Mobile Communications, Sep 2006.
+[7] R. Gallager. Low-Density Parity-Check Codes. PhD thesis, Massachusetts Institutes of Technology, 1960.
+[8] F. Guilloud, E. Boutillon, J. Tousch, and J.-L. Danger. Generic description and synthesis of LDPC decoders. IEEE Trans. Commun., 2006.
+[9] D. Hocevar. A Reduced Complexity Decoder Architecture via Layered Decoding of LDPC Codes. In IEEE Workshop on Signal Processing Systems, SISP 2004, pages 107–112, 2004.
+
+[10] D. MacKay and R. Neal. Good codes based on very sparse matrices. In Springer-Verlag, editor, 5th IMA Conference on Cryptography and Coding, pages 100–111, 1995.
+[11] M. Mansour and N. Shanbhag. High-throughput LDPC decoders. IEEE Trans. VLSI Syst., 11(6):976–996, Dec 2003.
+[12] S. Olcer. Decoder architecture for array-code-based LDPC codes. In Global Telecommunications Conference, volume 4, pages 2046 – 2050, Dec 2003.
+[13] T. Richardson, A. Shokrollahi, and R. Urbanke. Design of capacity-approaching irregular low-density parity check codes. 47:619–637, Feb 2001.
+[14] M. Rovini, F. Rossi, N. L’Insalata, and L. Fanucci. Highprecision ldpc codes decoding at the lowest complexity. In 14th European Signal Processing Conference, EUSIPCO 2006, Sep 2006.
+[15] E. Sharon, S. Litsyn, and J. Goldberger. An Efficient Message-Passing Schedule for LDPC Decoding. In 23rd IEEE Convention of Electrical and Electronics Engineering in Israel, pages 223–226, Sep 2004.
+[16] R. Tanner. A recursive approach to low complexity codes. IEEE Trans. Inform. Theory, 27(5):533–547, Sep 1981.
+[17] F. Zarkeshvari and A. Banihashemi. On implementation of min-sum algorithm for decoding low-density parity-check (LDPC) codes. In Proc. IEEE GLOBECOM, volume 2, pages 1349–1353, Nov 2002.
+[18] J. Zhang and M. P. C. Fossorier. Shuffled Belief Propagation Decoding. In 36th Asilomar Conference on Signals, Systems and Computers, Nov 2002.
+
+10th Euromicro Conference on Digital System Design Architectures, Methods and Tools (DSD 2007) 0-7695-2978-X/07 $A2u5th.0o0rize©d 2lic0e0n7sed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:51:23 UTC from IEEE Xplore. Restrictions apply.
+
+

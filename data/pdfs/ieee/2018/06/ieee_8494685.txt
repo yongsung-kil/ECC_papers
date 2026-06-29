@@ -1,0 +1,557 @@
+29th Biennial Symposium on Communications (BSC 2018)
+
+1
+
+Reduced Message-Passing Bitwidth for Hardware Implementation of ADMM-LP Decoding
+Omar Samhan, Stark Draper
+
+Abstract—We consider the implementation in hardware of linear-programming (LP) decoding for low-density parity-check (LDPC) codes. Previous work has shown that the alternating direction method of multipliers (ADMM) can be applied to solve LP decoding in a message passing manner amenable to hardware. Wasson et al. demonstrated the feasibility of a hardware implementation in a field-programmable gate array (FPGA). However, the area footprint and message bit-width of the implemenation was not competitive with classic alternatives such as min-sum decoding. In this paper we leverage recent work by Jiao et al. on implementating the central computational primative of ADMMLP decoding (a certain Euclidean projection) via look-up tables (LUTs). While Jiao’s work indicated the possiblity of significant bit-width reduction, it left open a number of questions about how to translate those ideas into hardware and what algorithmic modifications would be required. In this paper we answer those questions and develop a modified version of Wasson’s ADMMLP decoding algorithm, realizing a bit-width reduction of about 50%, thereby yielding a hardware implementation of ADMM-LP decoding that is competitive with min-sum.
+I. INTRODUCTION
+L DPC codes have generated a lot of interest in the past couple of decades due to their near-Shannon capacity achieving performance and their relatively simple decoding [1], [2]. The two most notable algorithms used to decode LDPC codes are belief propagation (BP) and the min-sum algorithm, both of which rely on a message-passing framework. Implementing these algorithms on hardware is straightforward and intuitive due to their inherit distributed nature. However, BP and min-sum suffer from an error-floor phenomena at high SNR which renders them less attractive for certain applications where high reliability is critical [3].
+In [4], Feldman et al. relaxed the maximum-likelihood (ML) problem into a linear program (LP). LPs are much easier to solve and have been thoroughly studied since the 1950’s [5]. LP decoding addresses a couple of key drawbacks of BP and min-sum. First, LP decoding has been observed to suffer from little-to-no error-floor at high SNR. In addition, LP decoding has a “ML certificate” property which guarantees the ML solution if and only if the result is an integer vertex [4]. Despite its benefits over BP, LP decoding proved to be unfeasible to implement in practice for LDPC codes with large blocklengths and codes with high check degrees (the number of constraints grows exponentially in the code’s check degrees). Nevertheless, a number of research groups saw the potential of LP decoding and strove to make it feasible. Taghavi and Siegel tackled the large number of constraints through an adaptive approach. They started off with minimal constraints, and then determine if a “cut” occurred in the unit
+
+hypercube. Additional constraints were added to avoid the so-called cuts [6]. In this approach, one solves multiple LPs each with fewer number of constraints compared to basic LP decoding. Rosnes and Helming in [7], [8] and Liu and Draper in [9] took the adaptive LP decoding a step further by studying its structure and performance for non-binary and ternary fields.
+To make LP decoding viable in practice, Barman et al. applied a classic decomposition technique in optimization called the alternating direction method of multipliers (ADMM) [10]. The application of ADMM to LP decoding yields an algorithm that alternated between finding the optimal primal and dual variables. This novel approach resulted in an algorithm with a message-passing structure similar to BP and min-sum that makes it attractive for hardware. The bottleneck of the algorithm was the projection on the d-dimensional “parity-polytope”, PPd. Although the ADMM application to LP yielded a feasible solution, the error rate was observed to be inferior to BP due to non-integer vertices, candidate solutions which spawn from the LP relaxation. To divert the solution away from such non-integer vertices, Liu and Draper proposed penalizing the LP objective [11]. The penalty functions rendered the optimization problem non-convex but there was a substantial performance boost in decoding performance. The penalized ADMM-LP was also computationally competitive with BP and, thus, appealing for practice.
+A hardware implementation of ADMM-LP on a FPGA was not explored until the work by Wasson et al. [12]. These authors were able to reduce the complexity of the projection onto the PPd in [13] by exploiting the geometric structure of the PPd and transforming the problem into a simplex projection via a relatively simple operation [14]. An ADMM-LP FPGA implementation was thus proved to be viable. However, two main concerns arose with the FPGA implementation. First, its area utilization was large and, second, its check-tovariable and variable-to-check messages bit-width was wide when compared to min-sum implementations.
+More recently, Jiao et al. reduced the computation complexity of PPd projection by quantizing the vector to be projected and using a LUT to search for a pre-evaluated projection [15]. This approach came at a cost of high memory utilization for the LUT structure, one that was somewhat reduced using the rotation invariance of the PPd. From empirical results, the authors showed that the input to the PPd projection module can be based on a relatively small number of quantization levels while suffering minimal degradation in projection accuracy.
+This result inspired us to further expand on the LUTbased ADMM-LP decoder by looking at the input and output alphabet of the parity-polytope projection as opposed to just
+
+978-1-5386-5735-5/18/$31.00 ©2018 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:55:55 UTC from IEEE Xplore. Restrictions apply.
+
+2
+
+the input alphabet (as in [15]). The goal of this work is to reduce the messages’ bit-width in the FPGA implementation of [12]. This will make it more appealing for practical use and competitive with min-sum.
+An important question left open by [15] is the union of the output alphabets when the LUT-inspired input alphabets are used. The cardinality of each output alphabet directly translates into check-to-variable bit-width. Furthermore, rather than characterizing each output alphabet (the number of outputs equals the check degree) one would prefer to characterize the union of the output alphabets and use a single alphabet for all check-to-variable messages. In this paper, we study this union and find its cardinality is far smaller than the sumcardinality of the output alphabets. This demonstrates that the small alphabets proposed in [15] can translate into significant bit-width reduction. These observations are made in Sec. IV, following the problem formulation in Sec. II and the introduction of the ADMM-LP decoding algorithm in Sec. III. Beyond the observations on cardinality described above, we also find that to realize the potential bit-width savings requires some modification to the ADMM-LP decoding algorithms previous developed. The modified algorithm, and the discussion of the needed modifications, appears in Sec. V. Finally, present numerical results in Sec. VI and conclude in Sec. VII.
+
+II. PROBLEM FORMULATION
+Let C be a binary linear code of length n and dimension k over the field Fn2 . The code C can be fully defined by the parity check-matrix H of size m×n, where m = n−k, such that C = {x ∈ {0, 1}n : Hx = 0 (mod 2)}. The rate of the code R = k/n determines the amount of information sent per codeword symbol. The rows of the parity-check matrix H are the set of constraints which need to be satisfied in order to verify the membership of a codeword. Each row (check) of H is indexed by J = {1, 2, . . . , m}. Similarly, each column (variable) of H is indexed by I = {1, 2, . . . , n}. The neighborhood of check j ∈ J is the set of variable indices where the row j has non-zero entries. More formally, Nc(j) = {i ∈ I : Hj,i = 0}. Likewise, the neighborhood of variable i ∈ I is Nv(i) = {j ∈ J : Hj,i = 0}.
+Consider a stochastic binary-input output-symmetric memoryless channel with a transition probability P(y|x) where y ∈ Yn and x ∈ C are the channel output and input respectively. Then, maximum likelihood (ML) decoding over the channel is defined as arg maxx∈C P(y|x). Feldman et al. in [4] expressed ML decoding as the following optimization:
+
+xˆML = arg min γT x,
+
+(1)
+
+x∈C
+
+where γ ∈ Rn and γi = log(P(yi|xi = 0)/P(yi|xi = 1)) ∀i ∈ I. Equivalently, we can rewrite the constraints in (1) by using each row of the parity-check matrix H to enforce the code membership.
+
+xˆML = arg min γT x
+x
+
+s. t. hjx = 0 (mod 2), j ∈ J
+
+(2)
+
+x ∈ {0, 1}n,
+
+where hj is the jth row of H. Note that (2) is an integer program and thus NP-hard. Feldman et. al relaxed the problem into a linear program (LP) which is suboptimal, but tractable, in comparison with ML [4]. To get to the relaxation, we define the dj × n matrix Pj that selects the variables participating in the jth constraint (row) of the parity-check matrix H, where dj = |Nc(j)| is the degree of row j. Next, we adjust the code membership constraint to produce an equivalent problem to (1) and (2)
+
+xˆML
+
+=
+
+arg
+
+min
+x
+
+γT
+
+x
+
+s. t. 1T (Pjx) = 0 (mod 2), j ∈ J (3)
+
+x ∈ {0, 1}n,
+
+where 1 is the all-ones column vector of dimension Nc(j) . Let Pdj = {Pjx ⊂ {0, 1}dj : 1T (Pjx) = 0 (mod 2)}.
+In other words, the set Pdj contains all even-weight binary vectors of length dj. Note that Pdj is a discrete set. To turn the integer program into a LP, we relax the constraint set Pdj by taking the convex hull of the set; that is, we define a convex
+set PPdj := conv(Pdj ) and allow for non-integer solutions to satisfy the problem. The relaxed problem is
+
+xˆLP
+
+=
+
+arg
+
+min
+x
+
+γT
+
+x
+
+s. t. Pjx ∈ PPdj , j ∈ J
+
+(4)
+
+x ∈ [0, 1]n.
+
+It may not be immediately obvious that (4) is a LP. However, a set of linear inequality constraints can define PPd1 exactly [4], [10]. The linear inequalities are used to “cut” every oddweight vertex of a unit hypercube. Solving the LP (4) does not guarantee an integer solution. The optimal solution can be non-integer which signifies a failed decoding state known as a “pseudo-codeword”. However, if the solution is integer, it is guaranteed to be the ML solution as proved in [4].
+Next, we introduce the penalized approach of [11]. In this paper, we will focus solely on the 1-penalty function. The penalized optimization problem is
+
+xˆpen
+
+= arg min γT x − α
+x
+
+x − 0.5
+
+1
+
+s. t. Pdj x ∈ PPd, j ∈ J
+
+(5)
+
+x ∈ [0, 1]n,
+
+where α ≥ 0 is the penalty parameter used to tune the strength of the penalty. Note that the introduction of a penalty parameter renders the optimization problem non-convex. However, the penalized LP shows a significant improvement in the waterfall regime when compared to its non-penalized version [11], and, empirically, ADMM more often converges to the correct solution when applied to (5) at a negligible increase in computational complexity.
+
+III. THE ADMM-LP ALGORITHM The ADMM optimization technique alternates between finding the optimal primal and dual solutions. To apply ADMM to (5), we need a minor modification. We introduce auxiliary
+1For ease of notation, we will use d = Nc(j) in lieu of dj when possible.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:55:55 UTC from IEEE Xplore. Restrictions apply.
+
+3
+
+or “replica” variables. Let zj = Pjx for j ∈ J be a vector of
+
+auxiliary variables. The optimization (5) can then be written
+
+as:
+
+xˆpen
+
+= arg min γT x − α
+x
+
+x − 0.5
+
+1
+
+s. t. zj ∈ PPdj , j ∈ J
+
+(6)
+
+zj = Pjx, j ∈ J
+
+x ∈ [0, 1]n.
+
+Note that the length of vector zj depends on the degree of check node j. We can now apply ADMM to (6). We first form an 2-regularized Lagrangian,
+
+Lµ(x, z, λ) = γT x − α x − 0.5 1 + λjT (Pjx − zj)
+
+j∈J
+
+µ +
+2
+
+Pj x − zj
+
+2 2
+
+,
+
+(7)
+
+j∈J
+
+where µ is the 2-regularization constant. For ease of notation, we use z and λ to refer to the respective concatenations of all the zj and λj. ADMM updates the vectors x, z, and λ in a round-robin fashion. For example, the updates at iteration k are
+
+x(k+1) ← arg min Lµ(x, z(k), λ(k))
+x∈[0,1]n
+
+z(k+1)
+
+←
+
+arg
+
+min
+z
+
+Lµ
+
+(x(k+1)
+
+,
+
+z,
+
+λ(k))
+
+(8)
+
+λ(jk+1) ← λ(jk) + µ Pj x(k+1) − zj(k+1) ∀j ∈ J .
+
+At this point, as discussed in [10], [11], each component of the primal variable xi and the auxiliary variable zj can be updated independently making the algorithm highly parallelizable. The decomposition can be separated into alternating check and variable updates similar to belief-propagation [16].
+
+Algorithm 1 The ADMM-LP 1-penalized decoding algorithm using the updates in (8) [11], [12]. The input to the algorithm
+is the LLR vector γ and the output is the estimate x Input: γ ∈ Rn Output: x ∈ [0, 1]n
+
+1: for j ∈ J do
+
+Initialization
+
+2: λj ← 0
+
+3:
+
+zj
+
+←
+
+1 2
+
+4: end for
+
+5: repeat
+
+6: for i ∈ I do
+
+Variable updates
+
+7:
+
+ti ←
+
+j∈Nv(i) PjT zj − λj
+
+− γi/µ
+i
+
+8:
+
+si ←
+
+ti + α/µ, ti − α/µ,
+
+if ti ≥ Nv(i) /2 if ti < Nv(i) /2
+
+9:
+
+xi ←
+
+si
+[0,1] |Nv(i)|
+
+10: end for
+
+11: for j ∈ J do
+
+12:
+
+zj ←
+
+PPd
+
+Pj x
+
++
+
+λj µ
+
+Check updates
+
+13:
+
+λj ← λj + µ Pjx − zj
+
+14: end for
+
+15: until termination
+
+Note that Algorithm 1 has an explicit message-passing structure where the variable-to-check messages are x and check-to-variable messages are zj and λj. We denote the projection onto the set S as S (·). Thus, [0,1]d (·) is the projection on the d-dimensional unit hypercube. This operation is a simple element-wise thresholding function which bounds each element between 0 and 1. The most computationally expensive operation in Algorithm 1 is the parity-polytope projection, PPd · .
+
+IV. UNION OF THE PPd OUTPUT ALPHABET
+
+In this section we study the suitability of the ideas developed in [15] for hardware. Our main observation is that the union of the output alphabets of the projection routine is small. The result yields a significant decrease in the bit width of checkto-variable messages. Let v ∈ Rd, where d is the check-node degree. The element-wise uniform-quantizer, Q(v), with range [a, b], L quantization levels, and resolution τ = (b−a)/(L−1) is defined as
+
+
+
+a, 
+
+if vi ≤ a
+
+
+
+Q(vi) =
+
+a+
+
+vi −a τ
+
++
+
+0.5
+
+τ,
+
+if a < vi < b
+
+(9)
+
+
+
+b,
+
+if vi ≥ b,
+
+for i = 1, 2, . . . , d and where · denotes the floor operation. We define Y to be the element-wise input alphabet set to the PPd projection, Y = {a, a + τ, a + 2τ, . . . , a + (L − 1)τ }. Clearly, |Y| = L. Note that the input alphabet is the same for each element of the length-d quantized input vector.
+Observation 1. Let v ∈ Rd and v¯ = Q(v) ∈ Yd. Then, the output alphabet for each element, Zi for i = 1, . . . , d, is finite and by extension, the union of the output alphabet Z = ∪id=1Zi is also finite.
+The deduction from observation 1 is that the alphabets for all of Zi can be encapsulated into Z. While somewhat trivial, this provides us with some incentive to study the cardinality |Z| as the bit-width of a hardware implementation will be log2(|Z| ) .
+Observation 2. The union of the output alphabets for the PPd projection, Z, is bounded from below and above as
+
+d
+min |Zi| ≤ ∪id=1Zi ≤ |Zi| .
+i∈{1,...,d} i=1
+
+While |Z| = ∪id=1Zi , there is a large gap between the lower and upper bounds.
+
+Observation 3. Empirically, we found that |Z|
+
+Thus, log2(|Z| )
+
+log2( di=1|Zi|) .
+
+di=1|Zi|.
+
+The empirical observation (3) is key for this work. Using the simulation parameters from [15], we observed that |Z| is relatively small and can be represented using a small number of bits. The practical implication is the reduction of message bit-width between check and variable nodes when compared to the ADMM-LP FPGA implementation of [12]. However, in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:55:55 UTC from IEEE Xplore. Restrictions apply.
+
+4
+
+Algorithm 1, the input to the PPd projection is not the checkto-variable node messages Pjx but rather a shifted version of Pjx by its respective dual variable. Additionally, the checkto-variable messages, as described in Algorithm 1, are an aggregate of the PPd projection vector, zj and the updated dual-variable vector λj. Sending two variables as messages may result in a wide check-to-variable message bit-width in hardware. In [12] and [10], the check-to-variable messages are a linear combination of zj and λj, alleviating the need to send two variables. To take full advantage of the input and output alphabet reduction of the PPd projection, we next introduce a modified version of Algorithm 1.
+
+V. MODIFIED ADMM-LP ALGORITHM WITH LUTS
+In this section, we will go over the novel modification to Algorithm 1. The goal is to have the variable-to-check and check-to variable messages be the input and output to the PPd projection, respectively. Thus, the variable-to-check messages will be the input alphabet to the PPd projection and, conversely, the check-to-variable messages will be the output alphabet of the projection.
+
+Algorithm 2 Modified version of the ADMM-LP 1-penalized decoding algorithm. Check-to-variable and variable-to-check
+messages are denoted as m¯ and m, respectively Input: γ ∈ Rn Output: x ∈ [0, 1]n
+
+1: for i ∈ I do
+
+2:
+
+m¯ Nv(i)→i
+
+←
+
+1 2
+
+3:
+
+xi
+
+←
+
+1 2
+
+4: λi ← 0
+
+5: end for
+
+Initialization
+
+6: repeat
+
+7: for i ∈ I do
+
+Variable updates
+
+8:
+
+for k ∈ Nv(i) do
+
+9:
+
+vi,k ← LUT−1(m¯ k→i)
+
+10:
+
+end for
+
+11:
+
+λi ← λi + µ 1xi − vi
+
+12:
+
+ti ← 1T vi − λj − γi/µ
+
+13:
+
+si ←
+
+ti + α/µ, ti − α/µ,
+
+if ti ≥ Nv(i) /2 if ti < Nv(i) /2
+
+14:
+
+xi ←
+
+si
+[0,1] |Nv(i)|
+
+15:
+
+mi→Nv(i) ← Q(1xi + λi)
+
+16: end for
+
+17: for j ∈ J do
+
+Check updates
+
+18:
+
+uj ← PPd (mNc(j)→j )
+
+19:
+
+for k ∈ Nc(j) do
+
+20:
+
+m¯ j→k ← LUT(ui,k)
+
+21:
+
+end for
+
+22: end for
+
+23: until termination
+
+Algorithm 2 is a modified version of Algorithm 1 with a finite alphabet cardinality for the input vector to, and output vector from, the PPd projection. To make Algorithm
+
+2 compatible with the LUT-inspired alphabet, we make three key modifications.
+First, the dual-variable updates have been moved from the check to the variable nodes. This allows us to limit the check node computation to PPd projection only. The result of the first change is that the input to the check node is the same as the input to the PPd projection. Since the output of the projection is element-wise in the alphabet Z, we can have Nc(j) LUTs in each check node which map a value in Z to a particular LUT index. The dual variable update exchange is possible because the updates are element-wise. This means that the dual variable updates are not strictly bound to the check node updates. We comment that these LUTs are distinctly different from the LUT proposed in [15]. While LUT mapped the input of the projection routine to the output (and therefore worked on d-dimensional vectors), the LUTs we employ work on scalars and so are much smaller. For the projection routine, we can use the LUT-based projection, or the hardware projection routine developed by Wasson [12], or any other approach.
+The second change is the addition of a LUT(·) and LUT−1(·). At the check node, the LUT(·) operation maps the pre-evaluated finite alphabet of the (component-wise) PPd projection output to a LUT index. Note that check-to-variable messages are indexed into the LUT alphabet and are not the actual values of the projection. In other words, in contrast to [12], the check-to-variable messages are real valued numbers in fixed-point format, thus algebraic operation can be performed on those messages. Conversely, in our implementation, at the variable node, the LUT−1(·) operation is needed to convert the indices into their respective values in Z.
+The third major addition is the uniform quantizer on line 15, defined in equation (9). Note that no LUTs are needed for variable-to-check messages since the quantization naturally maps a set of finite real-valued numbers into fixed-point representations. If the algorithm is centered around zero, as in [12], this will make the quantized values map seamlessly in fixed-point (Q format).
+VI. NUMERICAL RESULTS
+In this section, we present empirical results to show the significance of Observation 3. Table II shows the componentwise and union alphabet size for a degree-6 check node. The quantization parameters were inspired by Table V in [15]. We note that, according to the results in [15], cases 1, 2 and 4 exhibit an error floor at high SNR (using the Margulis code). However, cases 3 and 5 have almost the same FER curves as the 2-penalized ADMM-LP decoder from [11]. The checkto-variable bit-width in cases 3 and 5 can be represented in hardware using 7 and 6 bits respectively. These results are a substantial improvement from the message bit-width of 10 in [12].
+In Fig 1., we present our simulation results using Algorithm 2 with the exception of curve 4 which used the ADMMLP algorithm from [11]. All the points in the Fig. 1 were simulated with the length 2640 Margulis code, for 1000 iterations, 100 frame errors were collected per data point, and with the omission of the over-relaxation parameter as
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:55:55 UTC from IEEE Xplore. Restrictions apply.
+
+5
+
+TABLE I QUANTIZATION PARAMETERS, ALPHABET RESULTS AND SIMULATION PARAMETERS
+
+Curve
+
+[a, b]
+
+τ
+
+|Y |
+
+|Z1| ,|Z2| , . . . ,|Z6|
+
+|Z |
+
+1
+
+[−1.3, 2.3] 0.5143 8
+
+17, 25, 25, 25, 25, 17
+
+29
+
+2
+
+[−1.3, 2.3] 0.24 16 67, 100, 100, 100, 100, 67 123
+
+3
+
+[−1.3, 2.3]
+
+0.4
+
+10
+
+28, 39, 39, 39, 39, 28
+
+43
+
+4
+
+double precision
+
+log2(|Z| ) 5 7 6
+
+Penalization µ α
+
+1
+
+3.0 0.6
+
+1
+
+3.0 0.6
+
+1
+
+3.9 0.8
+
+1
+
+3.0 0.6
+
+TABLE II OUTPUT ALPHABET SIZE FOR A DEGREE-6 CHECK NODE
+
+Case [a, b] τ |Y| |Z1| ,|Z2| , . . . ,|Z6| |Z|
+1 [−1.0, 2.0] 0.2 16 48, 60, 60, 60, 60, 48 61 2 [−1.0, 2.0] 0.3 11 47, 63, 63, 63, 63, 47 73 3 [−1.3, 2.3] 0.3 13 47, 63, 63, 63, 63, 47 73 4 [−0.9, 1.9] 0.4 8 28, 39, 39, 39, 39, 28 43 5 [−1.3, 2.3] 0.4 10 28, 39, 39, 39, 39, 28 43
+
+log2(|Z| )
+6 7 7 6 6
+
+projection resulted in an output which has a small alphabet size element-wise. We propose a modified the ADMM-LP algorithm to take advantage of our observation and minimize the variable-to-check and check-to-variable alphabet size. We then showed the alphabet sizes for different quantization parameters to confirm our initial observations and performed simulations to check the parameters which were suited for our setup.
+
+100 10−1 10−2
+
+Curve 1 Curve 2 Curve 3 Curve 4
+
+Frame error rate
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+1 1.2 1.4 1.6 1.8 2 2.2 2.4 Eb/N0[dB]
+
+Fig. 1. Simulation results with parameters from Table I
+
+discussed in [11] (i.e. the over-relaxation parameter was set to 1). We first used the same optimal Lagrangian and penalization parameters from [11] (µ and α respectively) and checked if those parameters were suitable for our setup. From curves 1 and 2 in Fig. 1, we observe that the parameters introduce an error floor from 2.1 dB onwards. It is worth noting that the authors in [15] changed the parameters to suit their setup. Interestingly, curve 2 performs worse than curve 1 despite the former having a higher number of quantization levels. We still do not fully understand why this is the case. The error floor phenomena proves that the choice of parameters is critical to obtain the best performance. However, after tweaking the the Lagrangian and penalization parameters, curve 3 shows minor performance loss relative to curve 4 which used double precision. Ideally, this means that using the parameters from curve 3, we can achieve an average message bit-width of 5.
+
+REFERENCES
+[1] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans Inf Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[2] F. Kschischang, B. Frey, and H. Loeliger, “Factor graphs and the sumproduct algorithm,” IEEE Trans Inf Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[3] T. Richardson, “Error floors of LDPC codes,” in Proc. Allerton Conf. Comm. Control and Computing, no. 3, Monticello, IL, Oct. 2003, pp. 1426–1435.
+[4] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[5] G. Dantzig, A. Orden, P. Wolfe et al., “The generalized simplex method for minimizing a linear form under linear inequality restraints,” Pacific J. of Maths, vol. 5, no. 2, pp. 183–195, 1955.
+[6] M. Taghavi and P. Siegel, “Adaptive methods for linear programming decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5396–5410, Dec. 2008.
+[7] E. Rosnes and M. Helmling, “On adaptive linear programming decoding of nonbinary linear codes over prime fields,” in IEEE Int. Symp. Turbo Codes and Iter. Inf. Proc., Sep. 2016, pp. 106–110.
+[8] ——, “On adaptive linear programming decoding of ternary linear codes,” in IEEE Inf Theory Workshop, Apr. 2015, pp. 1–5.
+[9] X. Liu and S. Draper, “ADMM LP decoding of non-binary LDPC codes in F2m ,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2985–3010, Jun. 2016.
+[10] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans Inf Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[11] X. Liu and S. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[12] M. Wasson, M. Milicevic, S. Draper, and G. Gulak, “Hardware-based linear program decoding with the alternating direction method of multipliers,” IEEE Trans. Signal Process., 2016, accepted.
+[13] M. Wasson and S. Draper, “Hardware based projection onto the parity polytope and probability simplex,” in Asilomar Conf on Sig, Sys and Comp, Montana, CA, Nov. 2015, pp. 1015–1020.
+[14] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large scale LP decoding with low complexity,” IEEE Communications Letters, vol. 17, no. 11, pp. 2152–2155, Nov. 2013.
+[15] X. Jiao, J. Mu, Y. He, and C. Chen, “Efficient ADMM decoding of LDPC codes using lookup tables,” IEEE Trans. on Comm., vol. 65, no. 4, pp. 1425–1437, Apr. 2017.
+[16] T. Richardson and R. Urbanke, Modern Coding Theory, 1st ed. Cambridge University Press, 2008.
+
+VII. CONCLUSION
+In this work, we studied the output alphabet of the paritypolytope projection when the input is quantized. We empirically observed that a quantized input to the parity-polytope
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:55:55 UTC from IEEE Xplore. Restrictions apply.
+
+

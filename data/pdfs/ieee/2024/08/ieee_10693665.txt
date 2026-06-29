@@ -1,0 +1,394 @@
+2024 13th Non-Volatile Memory Systems and Applications Symposium (NVMSA) | 979-8-3503-8855-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/NVMSA63038.2024.10693665
+
+Reinforcement Learning-Based Read Performance Throttling to Enhance Lifetime of 3D NAND SSD
+
+Yong-Cheng Liaw National Yang Ming Chiao Tung Univ.
+Hsinchu, Taiwan tomhot246@gmail.com
+
+Shuo-Han Chen National Yang Ming Chiao Tung Univ.
+Hsinchu, Taiwan shch@nycu.edu.tw
+
+Yu-Pei Liang National Chung Cheng University
+Chiayi County, Taiwan ypliang@cs.ccu.edu.tw
+
+Abstract—With high storage density and low cost per bit, 3D NAND flash has dominated the market of modern solid-state drives (SSDs). Nevertheless, the growing number of stacked layers and the evolving multi-bits-per-cell technology of 3D NAND flash have led to the issue of fast accumulated read disturbance. Read disturbance leads to data bit errors and requires the error correction code (ECC) scheme to remove bit errors to correct data retrieval during read operations. Nevertheless, owing to the process of read retry and reference voltage adjustment of the ECC scheme, the read performance of 3D NAND flash deteriorates as the number of error bits grows. To mitigate the unwanted impact of prolonged read latency and maintain top read performance, modern SSDs actively rewrite stored data to remove error bits when the read latency becomes higher. However, actively removing data bit errors through data rewrites could wear out the SSDs prematurely and ultimately consume the whole lifetime of SSDs. To resolve such concerns, this paper proposes lowering the number of data rewrites through throttling the read performance of 3D NAND flash-based SSDs via reinforcement learning techniques to adaptively meet the performance requirements of different applications. Trace-driven experiments have shown promising results.
+Index Terms—reinforcement learning, 3D NAND flash, read performance, SSD
+I. INTRODUCTION Owing to the significant areal density improvement, 3D NAND flash has become the mainstream material for consumer-grade solid-state drives (SSDs) and is widely utilized in mobile devices, personal computers, and laptops. Different from the conventional planner (2D) NAND flash, 3D NAND flash resolves the areal density limitation via stacking flash cells vertically and utilizing charge-trap-based flash cells to facilitate the fabrication process. In addition, data density within each cell also evolves from single-level cells (SLC) for storing 1 bit to quad-level cells (QLC) or penta-level cells (PLC) for storing 4 or 5 bits per cell, respectively. Even though the aforementioned technologies have greatly increased the storage density of SSDs at low cost, various unwanted aspects, such as read/write disturbance [3], retention errors [4], and shortened lifetime [2], have emerged. To alleviate these drawbacks, both the NAND flash controller and flash translation layer (FTL) designs have been explored extensively to carefully consider the flash cell characteristics [6]. For instance, to militate those unwanted data disturbances and data errors, error correction code (ECC) schemes, such as the Bose–Chaudhuri–Hocquenghem codes (BCH) [9] and the lowdensity parity-check (LDPC) code [15], and read reference voltage adjustment mechanisms [7] are widely studied to ensure the correctness of data retrieval.
+
+Due to the error-prone nature of NAND flash memory, ECC schemes have been deployed within existing NAND flash storage devices to ensure that the uncorrectable bit error rate meets the JEDEC standard (i.e., 10−15) [1]. Among various ECC schemes, the LDPC code is one of the most widely utilized error correction methodologies. The LDPC code is composed of several iterative read retries to sense the flash cells with different reference voltages until the stored data content can be decoded successfully with an appropriate reference voltage. Notably, each read retry can be referred to as the sensing level of LDPC codes and induces additional latency on the read path, thus degrading the read performance of NAND flash memory. To resolve such an issue, data rewrites are deployed to remove error bits and lower the number of read retries. Meanwhile, data rewrites are also a necessary measure to prevent the number of error bits from growing larger than the ECC capability; otherwise, the stored data could be lost. Nowadays, high-end SSDs actively rewrite, denoted as actively-rewrite approach in this paper, data with error bits to maintain top read performance [10]. Although data rewrites can effectively remove error bits for lower decoding latency and achieving better read performance, actively data rewrites can ultimately consume the whole lifetime of NAND flash memory under low throughput read-only workloads.
+While the ECC scheme and other proprietary mechanisms of NAND flash are executed on the NAND flash controller with various hardware accelerators, FTL is another major component of NAND flash storage devices and is designed to resolve the inherent limitations of NAND flash memory, including the erase-before-write constraint, the asymmetric access/erase unit, and the limited number of program1/erase cycles. First, under the erase-before-write constraint, the basic read/write unit of NAND flash, namely a page, can only be overwritten after erasing operations. Therefore, out-of-place updates are utilized to remap data write requests to allocatable NAND flash pages to avoid the long latency of erase operations. Second, owing to the asymmetric access/erase unit, read/write and erase operations are performed at page and block level, respectively. Notably, a block typically consists of a few hundred pages, and the number of pages within a block varies according to the manufacturer. In other words, when a block is selected to be erased, pages of the selected block could still be valid and required to be migrated before erasing the
+1The terms, “program” and “write”, are used interchangeably for referring the process of storing data into NAND flash memory.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+selected block. The aforementioned process is typically part of the garbage collection (GC) policies. Lastly, the limited number of program/erase cycles is typically resolved through the wear-leveling mechanism to evenly distribute data writes to every NAND flash page with the goal of gradually wearing out every page approximately at the same time. Although FTL has been widely studied to resolve the limitations of NAND flash memory, the lifetime consumed by data rewrites during data errors removal is often neglected with the designs of FTL.
+Even though Liu et al. [10] have proposed an intervalbased method to observe the read latency and only rewrite flash pages if the accumulated read latency grows beyond the predefined window, the interval-based method can not adaptively adjust the rewrite policy according to workloads with different characteristics. Therefore, this paper proposes utilizing the reinforcement learning (RL) techniques [13] (i.e., Q-learning) to reduce page rewrites and throttle read performance of 3D NAND flash-based SSDs adaptively while meeting the performance requirements of different applications. RL techniques have been extensively studied to resolve different real-world issues by training an agent to interact with the environment, observe status, and learn the best actions to obtain the highest rewards. RL techniques have also been deployed on SSD to reduce garbage collection latency [8] and enhance the cache efficiency [14]. However, the possibility of applying RL techniques to adjust the rewrite policy adaptively has received much less attention. The technical difficulty of this study lies in how to properly identify the environmental states that need to be observed and design a reward function for accurate action selections. Evaluation results show that the proposed RL mechanism can effectively reduce the amount of data rewrites by up to 98.59% while only prolonging the execution time by an average of 4.55% when compared with the actively-rewrite approach.
+The rest of this paper is organized as follows. The background and research motivation are summarized in Section II. Then, Section III describes the proposed strategy. Then, a series of experiments are conducted in Section IV for evaluation. Finally, Section V concludes this paper.
+II. BACKGROUND AND MOTIVATION
+A. Background
+The reinforcement learning (RL) model is a well-known machine learning approach that trains agents to interact with the environment and learn the best actions to obtain the highest rewards. Figure 1 shows the environment-agent interaction of the RL model. The environment denotes the physical world that the agent interacts with, while the agent takes action based on the states of the environment to maximize the future expected rewards. The key components of the RL model are listed as follows.
+• State (s), which represents the current environment and encompasses all the information necessary for the agent to determine an appropriate action.
+• Action (a), which contains a set of possible actions that the agent can take within a specific state.
+
+Agent
+
+State,St
+
+Reward,rt rt+1
+st+1
+
+Environment
+
+Action,at
+
+Fig. 1: Reinforcement learning (RL) Model, in which the agent selects an action, at, based on its current state, st, and the environment then provides the new state, st+1, to the agent with the reward, rt. Learning of the agent is conducted based on st, at, st+1 and rt.
+
+• Reward (r), which denotes a scalar value associated with each state-action pair for representing the immediate reward or cost incurred by performing an action within a specific state.
+• Policy (π), which is a state-action mapping that governs the agent’s behavior, and the agent learns the policy by interacting with the environment and selecting actions that yield the highest accumulated reward over time.
+Among various RL approaches, Q-learning is a widely used reinforcement learning method that allows an agent to estimate the future reward, also known as Q-values, for every state-action pair. Based on the estimated rewards, Q-learning enables the agent to choose the best action for a given state. The Q-value represents the expected accumulated reward that the agent will receive after executing a specific action in a given state and is typically stored in a data structure known as Q-table, which stores the Q-values for each state-action pair. Initially, the Q-table is populated with random values, meaning that each Q-value is randomly assigned. Then, Q-learning uses the following equation to get the new Q-value, N ew Q(s, a).
+
+N ew Q(s, a) = Q(s, a) + α(r + γ max Q(s′, a′) − Q(s, a))
+a′
+(1)
+In Equation 1, N ew Q(s, a) and Q(s, a) represents the tobe-updated and existing Q-value associated with Action a under State s, while r is the reward and can be derived through reward function according to different applications. Then, α denotes the learning rate, which indicates the step size for each iteration while moving towards a minimum of the loss function. By adjusting α, the learning speed of the agent toward the optimal answer can be controlled. Meanwhile, γ represents the discount factor and is used to control the importance of future rewards in the reinforcement learning process. On the other hand, while s′ is the state reached after the action a is taken under state s, the item, maxa′ Q(s′, a′), denotes the highest Q-value for state s′ through considering all possible actions. The corresponding action, a′, with the highest Q-value, can be considered the best action in the next state. The goal of this equation is to minimize the difference between (r + γ maxa′ Q(s′, a′)) and Q(s, a). Then, the agent gets the N ewQ(s, a) by adding the current gap to the existing Q(s, a). To achieve a balance between exploration and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+exploitation, Q-learning algorithms typically employ epsilongreedy strategies. With a probability of 1 - epsilon, the agent selects the actio n with the highest Q-value in the current state (exploitation), whereas with a probability of epsilon, the agent randomly chooses an action (exploration). This approach enables the agent to exploit the knowledge it has already acquired while also allowing it to explore new actions, which may potentially be the optimal choice for the current situation the agent is facing.
+
+(a)InitializationState (b)UpdateofQ(A,0) (c)UpdateofQ(B,1)
+
+Action Action
+
+Action Action
+
+Action Action
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+State 0
+
+0 State 1
+
+0 State 1
+
+0
+
+A
+
+A
+
+A
+
+State 0 B
+
+0 State 0 B
+
+0 State 0.95 0 B
+
+Fig. 2: Example of Q-learning with two states and two actions.
+
+To better illustrate the concept of Q-learning, a simplified example is given in Figure 2 by assuming the learning rate, α, and the discount factor, γ, are 0.5 and 0.9, respectively. First, as shown in Figure 2(a), the Q-values of all stat-action pairs are initialized as 0. Then, assuming the agent takes Action 0 under State A with the reward of 2 and transits to State B, the Qvalue associated with Action 0 in State A can be updated as follows.
+
+N ew Q(A, 0) = 0 + 0.5 · (2 + 0.9 · 0 − 0) = 1 (2)
+
+in which the first and the third 0 are the current Q-value of Action 0 in StateA in the Q-table and the second 0 is the maximum rewards the agent can get according to maxB Q(B, a‘), which represents the highest Q-value for StateB through considering all possible actions based on those recorded Q-values in the Q-table. Then, the Q(A, 0) is updated accordingly, as shown in Figure 2(b). Next, assuming the agent takes Action 1 under State B with the reward of 1 and transits to State A, the Q-value associated with Action 1 in State B can be updated as follows.
+
+N ew Q(B, 1) = 0 + 0.5 · (1 + 0.9 · 1 − 0) = 0.95 (3)
+
+in which the first 0 is the current Q-value of Q(B, 1) and, in this equation, maxA Q(A, a‘) derives 1 according to those recorded Q-values in the Q-table. Finally, the calculated Qvalue is updated based on the Q-table, as shown in Figure 2(c). By continuing Q-value updates, those Q-values are going to become optimal eventually and reflect the expected accumulated reward for taking each action under different states.
+B. Motivation
+Even though the possibility of lowering the number of rewrites has been investigated, the previous interval-based method [10] cannot adaptively fit the read performance requirements of upper-level applications. Notably, the read performance requirements refer to how severely the application’s performance would be affected by the lengthened read latency.
+
+Ͳ
+
+
+
+
+
+
+
+In other words, the read performance requirements do not nec-
+
+essarily refer to the frequency of read operations. On the other
+
+hand, the interval of the interval-based method [10] represents
+
+the tolerance of read latency of upper-level applications. If
+
+one sets the interval to infinite, there will be no rewrites, thus
+
+leading to maximum lifetime but aggravated read latency. In
+
+other words, the best practice for tweaking the length of the
+
+interval should be as long as possible while fitting the read
+
+performance requirements. Figure 3 illustrates the principle of
+
+the interval-based method, in which a fixed interval is used.
+
+(I)NoRewrite
+
+(II)RewriteTriggered
+
+CurrentRead LongRead
+
+Read Interval
+
+Fig. 3: The principle of the interval-based method, in which the rewrite policy is triggered based on a fixed interval [10].
+
+As shown in Figure 3(i), no rewrites are conducted if there are no current reads starting outside the interval. On the other hand, as illustrated in Figure 3(b), the rewrite policy is triggered if the start time of the current read falls outside the tracking interval. Then, within the interval-based method, the rewrite policy rewrites pages with long read latency if the interval is fully occupied by the data reads. Although positive improvements are demonstrated by the interval-based method, the main issue of such an approach is that the interval needs to be set repeatedly to test the application performance as well as the number of SSD rewrites. While no adaptive adjustment policy has been discussed, the technical difficulty lies on how to properly observe the states of read performance and the read performance requirement of upper-level applications to adaptively rewrite data pages with long read latency. To resolve this issue, this paper proposes a Q-learning-based read performance throttling (QLRPT) strategy to meet the read performance requirement while prolonging the lifetime of SSDs. The details of the proposed strategy are described in Section III.
+III. Q-LEARNING-BASED READ PERFORMANCE THROTTLING
+A. Overview
+Q-learning is one of the many reinforcement learning (RL) algorithms that are widely used for machine learning applications. Q-learning is well-suited for resolving problems that require a sequence of decision-making. Similar to other RL algorithms, Q-learning utilizes the agent to learn a policy for selecting actions based on the current state by estimating the reward of taking each action in that state. These value estimates are stored in a table called a Q-table. During training, the agent interacts with the environment, updating the Q-values based on the rewards received and the transitions between states. In this paper, since Q-learning is known for its simplicity and effectiveness, the Q-learning model is chosen to meet the objective of minimizing computational overhead, which
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+is crucial for the limited computation and memory resource environment of SSDs. By leveraging Q-learning, the proposed QLRPT strategy achieves efficient decision-making processes without imposing significant computational burdens, thereby ensuring optimal performance even in resource-constrained environments of SSDs.
+Moreover, the iterative nature of Q-learning lends itself well to continuous improvement through training. As each training iteration progresses, the model learns from its experiences and adjusts its decision-making strategy to maximize rewards. This adaptive capability ensures that the Q-learning model continually refines its performance over time, ultimately converging towards an optimal policy (π’) that maximizes long-term rewards. In summary, by leveraging the Q-learning approach, the proposed strategy can harness the simplicity, transparency, and adaptive nature of Q-learning to develop robust and efficient models tailored to the specific requirements of SSDbased systems.
+B. State, Action, Reward
+To implement the Q-learning algorithm, this paper identifies important states, including the inter-request interval, the access type, and the idle time of SSDs after serving requests. Unlike previous work, which suggests that the more states there are, the better, this paper argues that identifying key states can also achieve good learning results. Meanwhile, while deploying RL-assisted designs on SSDs, the smaller the number of states is, the fewer resources are consumed. In this paper, the identified states are stored in Q-table, as shown in Figure 4 with the number of total entries equal to the result of multiplying the number of statuses in each identified state. To properly consider the read performance requirement of upper-level applications, a suitable number of statuses in each identified state should also be carefully considered. In this paper, 32, 2, and 4 bins are assigned to the state of the inter-request interval, the access type, and the idle time. Then, the actions are defined as rewrite, no rewrite, expand interval, and shrink interval. These actions are carried out after read requests are served by the FTL mechanism. Therefore, the total number of entries in the Q-table is 32 · 2 · 4 = 256, while each entry requires 5 bits, 1 bit, 2 bits for the states, and 4 4-byte integers. The total size of the Q-table is 256 · 17B = 4.25KB, and have neglectable memory overhead to SSDs.
+
+State
+
+InterͲReq. AccessType
+
+A1
+
+T1
+
+A12
+
+T2
+
+A32
+
+T1
+
+A32
+
+T2
+
+IdleTime I1 I4 I2 I3
+
+Action Rewrite Norewrite Expandintv. ShrinkIntv.
+
+50
+
+0
+
+50
+
+700
+
+100
+
+100
+
+150
+
+500
+
+0
+
+50
+
+250
+
+450
+
+200
+
+200
+
+300
+
+750
+
+...
+
+Fig. 4: State and action of the proposed QLRPT strategy, in which the states of inter-arrival, access type, and idle time are divided into 32, 2, and 4 bins, respectively.
+The above states are c hosen to reflect the read performance requirements of upper-level applications. Therefore, instead of relying on the logical block address (LBA) and size of
+
+read/write requests, the above states can imply the applications‘s ability to withstand lengthened read latency. States should also be pre-trained to facilitate the initial learning speed during runtime. As for the Q-value of each action, the reward is given by comparing the actions of the Q-learning algorithm with the actions of the interval-based method with dynamic interval, denoted as a dynamic-interval method. If the Q-learning and the dynamic-interval method have identical actions, 100 is given as the Q-value. Otherwise, 0 is given. As for expanding and shrinking the interval, if the dynamicinterval method suggests rewriting while Q-learning suggests expanding or shrinking the interval, -50 is given. On the other hand, if the dynamic-interval method suggests no rewriting, 50 is given.
+
+C. Implementation Remark
+To implement the proposed QLRPT strategy, two new components, including the Q-learning component or dynamic interval component, are introduced within the FTL. The Qlearning component is dedicated to the Q-learning mechanism, encompassing the Q-table and additional data structures to store information such as request timestamps and IO latencies. The dynamic interval component implements the logic of the dynamic interval method, maintaining data structures like interval windows and read operation records. In the original read/write path, a request enters the FTL and flows through a series of processing steps before completing and returning the result. Existing approaches, such as the active rewrite mechanism, operate after the request is processed, checking read latency to determine whether to rewrite data or not. The proposed QLRPT strategy is also triggered after read request completion without introducing overhead to read requests.
+Necessary environmental information is recorded in the Qlearning component and dynamic interval component during the FTL’s request processing. Upon completing the request processing, the FTL first queries the Q-learning component to determine the appropriate action, subsequently invoking the corresponding mechanism. For example, if the action is to rewrite, the FTL initiates its internal rewrite background process or updates the dynamic-interval method’s internal values. Once the FTL completes the action, it calls the
+
+1.NewRequest 3.ReturnResult
+FlashTranslationLayer
+
+Reads completed
+
+Address Translator WearLeveler
+
+QͲlearning Background
+Rewrite
+
+4.InvokeQͲlearning 7.UpdateQ
+
+togetaction
+
+values
+
+5.Rewriteifneeded
+
+Garbage Collector
+
+Dynamic Interval
+
+6.Updateintervalif needed
+
+2.Read/Write Physicalpage
+NANDFlashMemory
+
+Fig. 5: Implementation of the proposed QLRPT strategy, which is integrated within FTL and it‘s triggered after the completion of read requests.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+AR ML IN QLRPT 1.0E+05
+
+AR ML IN QLRPT 1.0E+04
+
+AR ML IN QLRPT 1.0E+05
+
+AR ML IN QLRPT 1.0E+05
+
+Rewrittendataamount(MB) Rewrittendataamount(MB) Rewrittendataamount(MB) Rewrittendataamount(MB)
+
+1.0E+04 1.0E+03 1.0E+02
+
+1.0E+03 1.0E+02
+
+1.0E+04 1.0E+03 1.0E+02
+
+1.0E+04 1.0E+03 1.0E+02
+
+1.0E+01
+
+1.0E+01
+
+1.0E+01
+
+1.0E+01
+
+0
+1.0E+00
+hm
+
+1.0E+00
+
+0
+rsrch
+
+0
+1.0E+00
+web
+
+0
+1.0E+00
+proj
+
+Fig. 6: The accumulated amount of rewritten data. Notably, the y-axis of these figures is shown in log scale to better illustrate the differences. For workloads with high ratio of read operations, the proposed QLRPT strategy can effectively lower the amount of rewrites. On the other hand, for workloads with low ratio of read operations, the difference is not significant due to the low number of read operations.
+
+TABLE I: LDPC sensing levels and read latency [7].
+
+LDPC sensing level
+1 2 3 4 5 6 7
+
+Num. of error bits
+< 79 79 - 94 94 - 126 126 - 142 142 - 157 157 - 189 189 - 204
+
+Read latency (µs)
+95 119 143 167 191 215 239
+
+TABLE II: Read operation percentage of utilized traces.
+
+Traces hm rsrch web proj
+
+Operation count 609,309
+1,433,653 2,029,943 2,244,642
+
+Read operation 95.34% 9.51% 29.88% 94.82%
+
+dynamic interval component to obtain the action it provides and calculates the Reward. Finally, the results are submitted to the Q-learning Component to update the internal values of its Q-table. Figure 5 illustrates the positions of the two new components added by the QLRPT strategy within the FTL. The Steps 1 to 7 in the figure showcase the complete process of using the QLRPT strategy, including processing the request, returning it to the host, and the aforementioned interaction between the Q-learning component or dynamic interval component. Accordingly, the runtime overhead mainly lies in Steps 4 and 7, which can be facilitated via the multitread capability of existing SSD controllers.
+IV. PERFORMANCE EVALUATION
+A. Experiment Setup
+To evaluate the effectiveness of the proposed Q-learningbased read performance throttling mechanism, trace-drive experiments are conducted based on the real-world traces collected by Microsoft Research Cambridge (MSR) [11]. Notably, this evaluation is conducted based on a flash simulator [5], which simulates the behavior of page-level FTL and the
+
+best cost-benefit garbage collection policy. The size of the simulated flash is 64 GB with 16KB pages [12]. The proposed strategy, denoted as QLRPT and other comparisons, including the active rewrite, the maximum lifetime, and the interval-based rewrite [10] approaches, are integrated into the simulator. The above comparisons are denoted as AR, ML, and IN. While the AR approach performs rewrites immediately when the read latency is above the first sensing level, the ML approach only rewrites data content when the number of error bits is going beyond the capability of LDPC code.
+On the other hand, the IN approach is implemented based on the design proposed by Liu et al. [10] and tracks whether accumulated read latency is larger than a predefined interval or not. If accumulated read latency is larger than the interval, data with long reads are rewritten. Otherwise, no action is required. Meanwhile, the prolonged read latency with different sensing levels of LDPC code is also simulated. Table I summarizes the read latency of different LDPC sensing levels, corresponding to different number of bit errors. For those real-world traces, the percentage of the read operation is summarized in Table II to demonstrate the characteristics of those traces.
+B. Experimental Results
+As the goal of the proposed QLRPT strategy is to reduce the amount of data rewrites by adaptively meeting the read performance requirement through the RL technique, this section investigates the accumulated rewritten data amount and the accumulated execution time. As shown in Figures 6 and 7, the proposed QLRPT strategy can effectively reduce the amount of data rewrites by up to 98.59% with an average of 4.55% longer execution time when compared with the AR approach. Notably, when referring to both the figures and Table II, it can be seen that the proposed strategy can reduce the amount of data rewrites for workloads with a high percentage of read operations, while not degrading the overall execution time for workloads with a relatively low percentage of read operations. Furthermore, these experimental results also suggest that, instead of including many states within RL
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+AR ML IN QLRPT 7.0E+04
+
+AR ML IN QLRPT 1.2E+03
+
+AR ML IN QLRPT 6.0E+03
+
+AR ML IN QLRPT 3.0E+04
+
+Totalexecutiontime(second) Totalexecutiontime(second) Totalexecutiontime(second) Totalexecutiontime(second)
+
+6.0E+04 5.0E+04 4.0E+04 3.0E+04 2.0E+04 1.0E+04
+
+1.0E+03 8.0E+02 6.0E+02 4.0E+02 2.0E+02
+
+5.0E+03 4.0E+03 3.0E+03 2.0E+03 1.0E+03
+
+2.5E+04 2.0E+04 1.5E+04 1.0E+04 5.0E+03
+
+0.0E+00 hm
+
+0.0E+00
+
+rsrch
+
+0.0E+00 web
+
+0.0E+00 proj
+
+Fig. 7: The accumulated execution time. When compared with the AR approach, the execution time differences of the proposed QLRPT strategy is 4.55% on average, while the execution time of the IN approach is prolonged by 22.05% on average. This difference is a result of inactive data rewrites for worloads with low ratio of read operations.
+
+methods, identifying key states can also achieve good learning results.
+On the other hand, even though IN approach achieves a lower amount of data rewrites in the rsrch and web workloads, the IN approach induces much longer execution time, and the difference is 22.05% on average when compared with the QLRPT strategy. Notably, IN approach induces 49.80% longer execution for the web workload, when compared with the AR approach. In contrast, the proposed strategy only induces 4.3% longer latency with a 23% reduction in the amount of rewritten data. In other words, the proposed QLRPT strategy achieves fewer data rewrites for workloads with a high percentage of read operations while not degrading the performance for workloads with a relatively low percentage of read operations through adaptively adjusting its rewrite action via RL techniques.
+ACKNOWLEDGMENTS
+This work was supported in part by National Science and Technology Council under grant no. 111-2221-E-A49-198-MY3, 113-2221-E-A49-189MY3, and 113-2221-E-007-134.
+V. CONCLUSION
+To resolve the issues of fast accumulated read disturbance and aggravated read performance of 3D NAND flash, the study presents an RL-based read performance throttling mechanism with the goal of lowering data rewrites without degrading the overall execution time of workloads. In this study, the Q-table is selected as the RL technique and implemented along with existing page-based FTL. The utilized Q-learning tracks the environments through the inter-request interval, access type, and idle time. Then, an action with a higher reward is triggered to either rewrite or not rewrite the previously accessed flash page. Based on the Q-table-based RL mechanism, the proposed QLRPT strategy can effectively reduce the amount of data rewrites by up to 98.59% with an average of 4.55% longer execution time, compared with the actively-rewrite approach.
+REFERENCES
+[1] “Solid state drive (ssd) requirements and endurance test method,” June 2022. [Online]. Available: https://www.jedec.org/
+
+[2] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proceedings of the IEEE, vol. 105, no. 9, pp. 1666–1704, 2017.
+[3] Y. Cai, Y. Luo, S. Ghose, and O. Mutlu, “Read disturb errors in mlc nand flash memory: Characterization, mitigation, and recovery,” in 2015 45th Annual IEEE/IFIP International Conference on Dependable Systems and Networks, 2015, pp. 438–449.
+[4] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, “Data retention in mlc nand flash memory: Characterization, optimization, and recovery,” in 2015 IEEE 21st International Symposium on High Performance Computer Architecture (HPCA), 2015, pp. 551–563.
+[5] Y.-H. Chang and T.-W. Kuo, “A management strategy for the reliability and performance improvement of mlc-based flash-memory storage systems,” IEEE Transactions on Computers, vol. 60, no. 3, pp. 305–320, Mar 2011.
+[6] S.-H. Chen, C.-W. Tsao, and Y.-H. Chang, “Beyond address mapping: A user-oriented multiregional space management design for 3-d nand flash memory,” IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, vol. 39, no. 6, pp. 1286–1299, 2020.
+[7] S.-H. Chen, M.-C. Yang, and Y.-H. Chang, “Optimizing lifetime capacity and read performance of bit-alterable 3-d nand flash,” IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, vol. 40, no. 2, pp. 218–231, 2021.
+[8] W. Kang and S. Yoo, “q -value prediction for reinforcement learning assisted garbage collection to reduce long tail latency in ssd,” IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, vol. 39, no. 10, pp. 2240–2253, 2020.
+[9] Y. Lee, H. Yoo, I. Yoo, and I.-C. Park, “6.4gb/s multi-threaded bch encoder and decoder for multi-channel ssd controllers,” in 2012 IEEE International Solid-State Circuits Conference, 2012, pp. 426–428.
+[10] C.-Y. Liu, Y. Lee, M. Jung, M. T. Kandemir, and W. Choi, “Prolonging 3d nand ssd lifetime via read latency relaxation,” in Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, ser. ASPLOS ’21, 2021, p. 730–742.
+[11] D. Narayanan, A. Donnelly, and A. Rowstron, “Write off-loading: Practical power management for enterprise storage,” in ACM Transactions on Storage (TOS), 2008.
+[12] Samsung, “Samsung v-nand@ONLINE, http://www.samsung.com/ semiconductor/products/flash-storage/v-nand/,” 2015.
+[13] R. S. Sutton and A. G. Barto, Introduction to Reinforcement Learning. MIT Press, 2018.
+[14] S. Yoo and D. Shin, “Reinforcement Learning-Based SLC cache technique for enhancing SSD write performance,” in 12th USENIX Workshop on Hot Topics in Storage and File Systems (HotStorage 20). USENIX Association, Jul. 2020.
+[15] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in 11th USENIX Conference on File and Storage Technologies (FAST 13), San Jose, CA, Feb. 2013, pp. 243–256.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:54:24 UTC from IEEE Xplore. Restrictions apply.
+
+

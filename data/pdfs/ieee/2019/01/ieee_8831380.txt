@@ -1,0 +1,969 @@
+Received July 24, 2019, accepted August 31, 2019, date of publication September 11, 2019, date of current version September 27, 2019. Digital Object Identifier 10.1109/ACCESS.2019.2940525
+Low-Latency Adaptive Ordered Statistic Decoding of Polar Codes
+KANGJIAN QIN, (Member, IEEE), AND ZHAOYANG ZHANG , (Member, IEEE)
+College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou 310027, China Zhejiang Provincial Key Laboratory of Information Processing, Communication and Networking, Zhejiang University, Hangzhou, China
+Corresponding author: Zhaoyang Zhang (ning_ming@zju.edu.cn) This work was supported in part by the China Scholarship Council, in part by the National Key Research and Development Program of China under Grant 2018YFB1801104, and in part by the National Natural Science Foundation of China under Grant 61725104 and Grant 61631003.
+ABSTRACT Deploying polar codes in ultra-reliable low-latency communication (URLLC) is of critical importance and is currently receiving tremendous attention in both academia and industry. However, most of the state of the art polar codes decoders like progressive bit-flipping decoder (PBF) and successive cancellation list (SCL) decoder, involve strong data dependencies and suffer from huge decoding delay. This contradicts the low-latency requirement in URLLC. To address such issue, this paper appeals to the parallel computing and proposes an adaptive ordered statistic decoder (OSD). In particular, we first propose a novel codeword searching metric which proves to be hardware-friendly, and an adaptive OSD algorithm is then developed to adaptively rule out the unpromising codewords, thus significantly reducing the latency. Secondly, to further reduce the computational complexity of the proposed algorithm, we decompose the current code sequence into several independent subcodes, and by handling these subcodes with concatenated adaptive OSDs, a good trade-off between decoding latency and complexity can be achieved. Finally, numerical results show that the proposed adaptive OSD outperforms the conventional decoders in terms of block error rate (BLER) and decoding latency.
+INDEX TERMS Low latency decoding, ordered statistic decoding, polar codes.
+
+I. INTRODUCTION Ultra-reliable and low-latency communication (URLLC) is one of the most important scenarios in 5G communications and beyond. Different from the current 4G system, where block error rates (BLERs) are typical around 10−2 and time-tolerant retransmission mechanisms like HARQ can be adopted, URLLC requires more stringent BLER (from 10−9 to 10−5) which has to be achieved within millisecond order (see Fig. 1) [2]. However, the current coding schemes cannot properly handle the conflict between reliability and latency. As such, new coding methods that meet both requirements become an emerging research trend.
+Polar codes [3], as the coding scheme for control channel of enhanced mobile broadband (eMBB) in 5G [4], seem to be a promising candidate for URLLC. With progressive bit-flipping (PBF) decoding [5], superior BLER performance can be achieved with low complexity in high SNR regime. With cyclic redundancy check (CRC) aided succes-
+The associate editor coordinating the review of this manuscript and approving it for publication was Yi Fang.
+
+sive cancellation list (CA-SCL) decoder [6]–[8], polar codes outperform state-of-the-art turbo and low-density paritycheck (LDPC) codes under short block length. Although short block length can reduce the end-to-end (E2E) transmission latency, however, huge decoding latency still prevents existing SC-based decoders from being deployed in URLLC. To solve this, a simplified successive cancellation decoder was first proposed in [9] to simultaneously decode all rate1 and rate-0 constituent codes. However, the latency gain of such method is highly dependent on the distribution of unfrozen bits. To overcome this limitation, precomputation technique was introduced in [10], [11], where 50% decoding latency was saved at the cost of twice extra memory. Similar trade-off was presented in [12], where lower decoding delay is achieved but higher complexity is required. To preserve the complexity, a stage-reduced SC decoding algorithm and its low-latency architecture were introduced in [13]. Subsequently, a double thresholding algorithm and a split reduction method were proposed to further improve the latency performance of CA-SCL decoders in [14] and [15], respectively. Albeit significantly reducing the decoding latency,
+
+134226
+
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see http://creativecommons.org/licenses/by/4.0/ VOLUME 7, 2019
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+FIGURE 1. URLLC key performance indicators.
+the aforementioned SC-based decoders still suffer from data dependency, which means one data bit can only be decoded until all its former bits are derived. In this sense, the decoding latency inevitably increases with the block length.
+To avoid such data dependency, ordered statistic decoder (OSD) was proposed. Invoking a different decoding structure, OSD is well suitable for parallel implementation and is able to concurrently estimate all polar codeword bits. This parallel computing nature dramatically reduces the decoding latency. For lower BLER, a level-l OSD was developed [17]. It allows at most l-level reprocessing, yet increasing the decoding delay and complexity. The authors in [18] proposed to use a Gaussian threshold to eliminate the unpromising candidate codewords, thus consuming fewer clock cycles (CCs). However, such threshold is empirical, and it incurs an error floor in high signal-to-noise ratio (SNR) regime, which is definitely unacceptable in URLLC systems.
+To address the issues above, an adaptive OSD algorithm is developed in this paper. Specifically, a codeword searching metric is carefully designed. We show that the codeword with minimum searching metric turns out to be the most promising candidate. On this basis, codewords with large metric are considered unpromising and should be eliminated. Based on this searching metric, the adaptive OSD can easily rule out the unpromising candidates throughout the tested codewords and simplify the decoding procedure. For this reason, the decoding latency is greatly decreased. To further reduce the computational complexity, we propose to decompose the current test codeword into several independent subcodes with smaller block length, and decode them with concatenated adaptive OSDs. Due to the reduced codeword dimension, the computational complexity of adaptive OSD is further decreased, and a good trade-off between decoding complexity and latency can be achieved. Numerical results validate that the proposed adaptive OSD decoder outperforms the existing decoders in terms of decoding latency and BLER.
+VOLUME 7, 2019
+
+Our main contributions are summarized as follows: • A novel codeword searching metric is proposed, which
+proves to minimize the decoding error. Moveover, the proposed metric can be realized with only additive operation, thus is well suitable for hardware implementation. • An adaptive OSD algorithm, aiming to adaptively ruling out the unpromising candidate codewords, is developed. Due to the reduced number of test codewords, the decoding latency is dramatically decreased. • Low complexity implementation of adaptive OSD is investigated, which further reduces the complexity of overall decoding process. In addition, a concatenated adaptive OSD is proposed, which achieves a good trade-off between decoding complexity and latency.
+The remainder of this paper is organized as follows. In Section II, the preliminaries of polar codes are briefly reviewed. a codeword searching metric and an adaptive OSD algorithm are introduced in Section III. In Section IV, a concatenated adaptive OSD scheme is proposed. Section V gives the relevant numerical results and performance analysis. And finally, Section VI concludes the work.
+
+II. PRELIMINARIES To better understand the decoding latency, we first briefly review the encoding and decoding procedures of polar codes. Then, SC and SCL decoders are expounded in detail, after which their decoding latencies are also investigated.
+
+A. POLAR CODES
+
+We use aN1 to denote a sequence (a1, a2, . . . , aN ). For polar
+
+codes with block length N
+
+= 2n and kernel F2 =
+
+1 1
+
+0 1
+
+,
+
+we denote u1N as the word c1N is obtained
+
+information by cN1 = uN1
+
+sequence, and a polar codeBN F⊗2 n, where ‘⊗’ denotes
+
+the Kronecker product and BN is a permutation matrix.
+
+A coding rate R = K /N means that a set A ⊂ {1, 2, . . . , N }
+
+of cardinality K is selected as the information set (see [3]),
+and thus u1N consists of K unfrozen bits uA and N − K frozen bits uAc (all frozen bits are assumed to be zero codewords
+
+in this paper if not specified). The split-channel is defined
+
+as WN(i)(y1N , ui1−1|ui) =
+
+uiN+1∈X N −i
+
+1 2N −1
+
+WN
+
+(y1N
+
+|u1N
+
+),
+
+and
+
+the
+
+Bhattacharyya parameter Z (WN(i)) is computed to select the
+
+K most reliable split-channels to transmit unfrozen bits. For
+
+more details, we refer the reader to [3].
+
+B. SC AND SCL DECODING The received sequence from a transmitted codeword cN1 is represented as y1N . With these values, the information sequence uN1 can be estimated using a SC decoder. Since the decoder already knows the frozen bits, it only needs to
+estimate unfrozen bits using
+
+uˆi =
+
+0, 1,
+
+L(uˆi) ≥ 0 L(uˆi) < 0
+
+(1)
+
+134227
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+FIGURE 2. A decoding process for polar codes with N = 8.
+
+where
+
+L (uˆ i )
+
+ln
+
+WN(i)(y1N , WN(i)(y1N ,
+
+uˆ 1i−1 |ui uˆ i1−1 |ui
+
+= =
+
+0) 1)
+
+(2)
+
+is the log-likelihood ratio (LLR) corresponding to uˆi. With the butterfly network shown in Fig. 2, we denote the LLR
+
+from the underlying channel as Ln,i, and L0,i = L(uˆi) is LLR from the bit-channel WN(i). For other LLR that passes through in Fig. 2, it is denoted by Ll,i, where l and i correspond to the
+index of the decoding stage and the row, respectively. Then
+
+all these LLRs can be calculated using
+
+
+
+Ll,i = f (Ll+1,i; Ll+1,i+2l ) g(vˆl,i−2l ; Ll+1,i−2l ; Ll+1,i)
+
+if if
+
+i 2l
+
+is odd
+
+(3)
+
+i 2l
+
+is even
+
+where vˆ is a modulo-2 partial sum of intermediate decoded bits, 0 ≤ l < n, 1 ≤ i ≤ N . Function f and g are defined as:
+
+f (α, β)
+
+ln
+
+eα+β + 1 eα + eβ
+
+,
+
+(4)
+
+g(α, β, vˆ) (−1)vˆα + β,
+
+(5)
+
+respectively. Note that the value of vˆ is required in g function. This
+introduces strong data dependencies in SC decoding, which further increases latency. The scheduling of SC decoding for polar codes in Fig. 2 is illustrated in Fig. 3. For polar codes with block-length N = 2n, there are n decoding stages. At some stage l, a maximum of 2l LLR values can be simultaneously obtained. To finish the decoding, a stage indexed by l need to be activated 2n−l times, and each can be done in one CC. As such, the total number of CCs needed for SC decoding is
+
+n−1
+
+τSC = 2n−l = 2N − 2,
+
+(6)
+
+l=0
+
+134228
+
+FIGURE 3. The scheduling for a SC decoder with N = 8.
+
+which means the decoding latency linearly increases with the block-length in SC decoding.
+For SCL decoding, similar logic can be used. However, a SCL decoder with a list size of L inspects both options for the estimate of any unfrozen bit ui, and a sorting operation is performed to select at most L most promising decoding paths from 2L expanded paths [6]. Assuming that all the L candidate paths are decoded in parallel, and the sorting process of 2L paths can be done with 2L log2(2L) comparisons using well studied merge sort algorithm [19]. With sufficient hardware parallelization, the sorting latency is assumed to be one clock cycle in this paper. Then the decoding latency of SCL decoding is approximated by the sum of (6) and the latency for the sorting processes. For polar codes with blocklength N and coding rate R, the decoding latency under SCL decoding with a list size of L can be approximated as follows
+
+τSCL = 2N − 2 + NR − log2 L
+
+(7)
+
+One should note that, data transmitted in URLLC use much shorter block-length to reduce the E2E latency, which leads to a higher coding rate for the same size of information. In this regard, the decoding latency for a SCL decoder is much higher than that of SC decoder.
+
+III. ADAPTIVE ORDERED STATISTIC DECODING To avoid the data dependency involved in SC decoding, the parallel computing feature of OSD is firstly exploited to simultaneously decode all bits in a codeword. Then, we propose a novel codeword searching metric which efficiently finds the most likely codeword. Finally, an adaptive OSD decoding scheme is developed.
+
+A. OSD AND L-LEVEL OSD Different from the SC-based decoders whose decoding latencies extend linearly with the block-length, the OSD provides a low-latency implementation of decoding by virtue of its parallel computing for all codeword bits. For a given received sequence yN1 , we first define a permutation function λ1 which reorders y1N according to their absolute values of LLR. Using the obtained λ1, we can permute the columns of generator matrix G to get G = λ1(G), where G is a K × N submatrix
+VOLUME 7, 2019
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+of BN F2⊗n obtained by removing the rows in BN F2⊗n corresponding to Ac. Next, a new K × N matrix G is constructed
+from the permuted matrix G , whose first K columns are the
+K most reliable independent (MRI) columns of G , while the
+rest columns are generated using the rest N − K columns
+of G . Note that this operation can also be defined as a permutation function λ2, i.e., G = λ2(G ), which means G can be obtained from G using one permutation function λ = λ1λ2 by G = λ(G). Finally, the systematic form of G is denoted by Gs = [I, P], where I and P are identity matrix and check matrix, respectively.
+For decoding, the OSD concurrently performs hard decision on the first K components of λ(yN1 ) to get a1K , and for ease of exposition, aK1 is referred to as the MRI sequence in this paper. Then if there is no erroneous hard decision in MRI sequence, the final estimated codeword cˆ1N can be reconstructed in one shot decoding by
+
+cˆN1 = λ−1(a1K Gs)
+
+(8)
+
+However, there are wrong hard decisions due to the channel
+
+noise. To achieve lower BLER, a l-level (1 ≤ l ≤ K ) OSD
+
+allows at most l level reprocessing. At the i-th (1 ≤ i ≤ l)
+
+level, the decoder flips equivalent to adding an
+
+i bits of a1K . error pattern
+
+Such reprocessing is eK1 upon a1K in binary
+
+field. We use cˆ1N (eK1 ) to represent the candidate codeword
+
+corresponding to a test error pattern e1K . After all the possible
+
+candidate codewords are tested, the decoder selects the code-
+
+word cˆN1 (eK1 ) which has the smallest Euclidean distance with y1N as the final output. For notational simplicity, the vector eK1 in cˆ1N (eK1 ) is omitted throughout the rest of this paper.
+
+B. DECODING LATENCY OF L-LEVEL OSD
+Note that there is no data dependency when decoding bits in a candidate codeword cˆN1 , and all codeword bits can be derived concurrently under the matrix transposition in (8). To obtain the permutation function λ, one needs first to sort the original received sequence yN1 according to their absolute LLR values, and this process can be done with N log2 N comparisons whose latency is assumed to be one clock cycle
+under adequate parallelization. Then, the overall process of transforming G to Gs can be realized by N · min(K , N − K )2 binary operations with Gaussian elimination. Nevertheless,
+two levels of parallelism are possible, yielding K steps of at
+most K independent summations, each summation consisting
+of N independent binary additions. One should note that
+such matrix computation can be accomplished with sufficient
+hardware parallelization so its latency is negligible. Thus the
+dominant factor of decoding latency for a l-level OSD is the
+number of error patterns that are reprocessed, which can be
+approximated by
+
+lK
+
+τOSDlevel=l =
+
+i
+
+(9)
+
+i=0
+
+To reduce the number of candidate error patterns, Gaus-
+
+sian threshold was introduced for OSD [18], where only
+
+FIGURE 4. Area division using 3σ Gaussian thresholds.
+
+most reliable independent symbols with low confidences are
+
+flipped. Binary phase shift keying (BPSK) modulation under
+
+memoryless AWGN channel is considered for the ensuing
+
+analysis. Then the received symbol can be expressed by
+
+yi = xi + ni, where xi = 1 − 2ci, and ni is a Gaussian
+
+random variable with mean zero and variance σ 2
+
+=
+
+N0 2
+
+.
+
+On this basis, the probability density function (PDF) of the
+
+received symbols, i.e., N (1, σ ) and N (−1, σ ), can be divided
+
+by Gaussian thresholds like |yth| = ±(3σ − 1), into 3 areas
+
+as shown in Fig. 4.
+
+Given a received symbol lying in Area 3, there is a high
+
+probability that the transmitted symbol is +1 because the
+
+probability that the symbol −1 falls into Area 3 is rather
+
+small. Similarly, for received symbols in Area 1, they also
+
+have a high confidence. In this sense, we only need to
+
+consider the error patterns that flip the symbols in Area 2.
+
+Apparently, the smaller the absolute value of the threshold is,
+
+the less error patterns will be considered. This decreases the
+
+decoding latency while increasing the BLER performance.
+
+It is shown in [18] that when a threshold of |yth| = ±(3σ − 1)
+
+is adopted, this Gaussian threshold based OSD needs only
+
+10% clock cycles of (9) at a SNR of 1.5 dB.
+
+Nevertheless, there are some drawbacks that prevent the
+
+above scheme from being deployed in URLLC.
+
+• For the threshold-based OSD, there is a fixed non-zero
+
+probability of missing out a true error pattern, which
+
+causes an error floor in high SNR region, and this is
+
+unbearable in URLLC.
+
+• One has to experimentally determine the Gaussian
+
+threshold, and the optimal trade-off between the BLER
+
+performance and decoding complexity can hardly be
+
+found. (see [18]).
+
+• The above Gaussian threshold is based on real number,
+
+however, the received symbols and their corresponding
+
+LLRs are quantized into fixed-point values in a practical
+
+decoder, and it makes the above Gaussian threshold
+
+scheme invalid.
+
+VOLUME 7, 2019
+
+134229
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+C. A NOVEL CODEWORD SEARCHING METRIC
+
+To avoid the drawbacks of threshold-based OSD, a novel
+
+codeword searching metric is firstly proposed. For a given
+
+error pattern eK1 , its associated reconstructed corresponding BPSK modulated sequence are
+
+codeword and denoted by cˆ1N
+
+and m1N , respectively. Then the Euclidean distance between
+
+the received sequence yN1 and mN1 can be computed by
+
+N
+
+N
+
+d(mN1 , y1N ) = (1 + y2i ) − 2 miyi
+
+(10)
+
+i=1
+
+i=1
+
+As
+
+iN=1(1 + y2i ) is a constant for a certain yN1 ,
+
+N i=1
+
+miyi
+
+is
+
+commonly used as a cost function to replace the Euclidean
+
+distance, and the codeword which maximizes
+
+N i=1
+
+mi
+
+yi
+
+is
+
+taken as the final estimation.
+
+However, the multiply operations involved in cost function
+
+are impractical for hardware realization. By denoting the i-th
+element in yN1 and cˆ1N as yi and cˆi, respectively, and h(·) denotes the hard decision function, we give the following
+
+proposition which sheds light on our main result.
+
+Proposition 1: Given that all codewords have the same
+
+a priori probability, then finding a codeword that minimizes
+
+the decoding error is equivalent to searching a codeword that
+
+minimizes the metric in (11).
+
+M cˆN1
+
+|yi|
+1≤i≤N cˆi =h(yi)
+
+(11)
+
+Proof: For whole candidate codewords, the probability
+of decoding error is minimized by finding a codeword cˆN1 which maximizes the a posteriori probability P(c1N |y1N ) over the codebook C as follows
+
+cˆN1 = arg maxP(c1N |y1N )
+
+(12)
+
+c1N ∈C
+
+Since we restrict to memoryless AWGN channel, and all codewords are equiprobable, (12) is equivalent to
+
+N
+
+cˆN1 = arg max ln P(yi|ci)
+
+(13)
+
+c1N ∈C i=1
+
+Note that y1N is a determined sequence in one certain trans-
+
+mission, thus
+
+N i=1
+
+ln
+
+P(yi|1)
+
+is
+
+a
+
+constant,
+
+which
+
+means
+
+N
+
+N
+
+cˆ1N = arg max ln P(yi|ci) − ln P(yi|1)
+
+c1N ∈C i=1
+
+i=1
+
+=
+
+arg max
+c1N ∈C
+
+N i=1
+
+ln
+
+P(yi|ci) P(yi|1)
+
+=
+
+arg max
+c1N ∈C
+
+N
+(1 − ci)Li
+i=1
+
+N1
+
+1N
+
+=
+
+arg max
+cN1 ∈C
+
+i=1
+
+2 (1 − 2ci)Li
+
++
+
+2
+
+i=1
+
+Li
+
+(14)
+
+134230
+
+Note that Li
+
+=
+
+2yi σ2
+
+for AWGN channels, thus
+
+1 2
+
+N i=1
+
+Li
+
+is
+
+determined once yN1 is determined. This leads us to
+
+cˆN1
+
+=
+
+N
+arg max
+cN1 ∈C i=1
+
+1 2 (1 − 2ci)Li
+
+N
+
+= arg max |Li| −
+
+2|Li|
+
+cN1 ∈C i=1
+
+1≤i≤N
+
+cˆi =h(yi)
+
+= arg min
+
+|Li|
+
+(15)
+
+cN1 ∈C 1≤i≤N
+
+cˆi =h(yi)
+
+Finally, we have
+
+cˆN1 = arg min
+
+|yi|
+
+(16)
+
+c1N ∈C 1≤i≤N
+
+cˆi =h(yi)
+
+which completes the proof. Remarks: To calculate M cˆN1 , one only needs less than
+N additions. Since no multiplication is involved, the proposed
+searching metric can be efficiently implemented in hardware. We further note that, a promising candidate codeword cˆN1 should have a smaller M cˆN1 value according to the Proposition 1, which motivates us to skip codewords whose metric
+values are large. Specially, if current candidate codeword
+has a larger searching metric value compared to the former
+tested one, then such candidate codeword is considered to be
+unpromising and should be ruled out.
+
+D. ADAPTIVE OSD
+Capitalize on the above codeword searching metric, an algorithm is developed to adaptively eliminate the unpromising candidate codeword, so as to avoid the drawbacks caused by Gaussian threshold in Section III-B.
+Note that given an test error pattern e1K , its corresponding candidate codeword is cˆN1 (e1K ), which can be computed by adding eK1 [I, P] to cˆ1N (01K ). We refer to c˜N1 = e1K [I, P] as the codeword error pattern. On this basis, the searching metric can be decomposed into two parts
+
+M cˆ1N =
+
+|y˜i| +
+
+|y˜i|
+
+1≤i≤K ei=1
+
+K +1≤i≤N c˜i=1
+
+= D(e1K ) + R(e1K )
+
+(17)
+
+where y˜i is the i-th element of y˜N1 = λ(y1N ), and ei and c˜i is the i-th element of eK1 and c˜1N = e1K [I, P], respectively. The first part of (17) is referred to as the determined part of searching
+metric, and is denoted by D(eK1 ), which can be determined directly according to the current test error pattern eK1 . While the second part is the redundancy part, denoted by R(eK1 ), whose value can be calculated according to the redundancy
+part of codeword error pattern, i.e., c˜Nk+1. Although the codeword searching metric M cˆN1 can be
+efficiently computed given the reconstructed codeword cˆ1N , however, to reconstruct cˆ1N , its codeword error pattern c˜N1 has
+
+VOLUME 7, 2019
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+to be computed. Note that D(e1K ) can be calculated directly using eK1 , and it is more desirable to get R(eK1 ) without any reconstruction in terms of hardware implementation.
+To this end, we propose to estimate R(eK1 ) using D(eK1 ) as follows
+
+Rˆ (e1K ) = D(e1K )
+
+K +1≤i≤N |y˜i| 1≤i≤K |y˜i|
+
+(18)
+
+In this regard, the metric associated with the current candidate codeword cˆ1N can be efficiently estimated using
+
+Mˆ cˆ1N = D(e1K ) + Rˆ (eK1 )
+
+(19)
+
+Since a candidate codeword cˆ1N with smaller M(cˆ1K ) value is more likely to be the codeword that has been transmitted,
+whereas the codeword that possesses the largest M(cˆK1 ) value so far is considered to be unpromising and should be dis-
+carded, we discard cˆN1 (or its corresponding test error pattern e1K ) if Mˆ (cˆ1N ) is greater than the metric value of current most likely codeword.
+
+To implement the adaptive OSD, we use CRC to judge
+
+if the current candidate codeword is correct. The algorithm
+
+starts by checking the candidate codeword with test error pat-
+
+tern 0K1 , if it passes the CRC check, then the algorithm returns
+
+the current codeword and stops; otherwise, at most
+
+lK i=1 i
+
+reprocessing is required. The reprocessing procedure checks
+
+the remaining test error pattern in a level-by-level manner,
+
+i.e., start from patterns with hamming weight 1 to weight l.
+
+For a certain level, the error pattern with larger decimal
+
+value is checked first. The overall algorithm is summarized
+
+as Algorithm 1.
+
+Algorithm 1 Adaptive OSD Decoding
+
+Input: the received sequence y1N Output: the decoded codeword cˆ1N 1 max_level = l, cur_level = 0, eK1 = 01K 2 cˆN1 ← OSD(yN1 , e1K )
+
+// Initialization
+
+3 while CRC(cˆ1N ) = failure and cur_level < l do 4 cur_level=cur_level+1
+
+5 M cˆN1 = D(e1K ) + R(e1K )
+
+6
+
+M∗ cˆN1 ← M cˆN1
+
+7
+
+enumerate the {eK1 |
+
+K i=1
+
+ei
+
+=
+
+cur_level}
+
+8 select an untested e1K from {eK1 } in ascending order
+
+of
+
+K i=1
+
+2K
+
+−iei
+
+9 calculate Mˆ cˆ1N = D(e1K ) + Rˆ (eK1 )
+
+10 if Mˆ cˆ1N > M∗ cˆN1 then
+
+11
+
+go to step 8
+
+12 else
+
+13
+
+cˆ1N ← OSD(y1N , eK1 )
+
+14
+
+go to step 3
+
+15 return cˆ1N
+
+IV. LOW COMPLEXITY IMPLEMENTATION Although the adaptive OSD is designed to expurgate the unnecessary codeword reprocessing, however, in each reprocessing episode, there are Gaussian eliminations that dominate the complexity. In this section, we first propose to decompose the current code sequence into several independent subcodes, due to the reduced codeword dimension, the implementation complexity of adaptive OSD can be reduced. On this basis, a concatenated adaptive OSD is finally developed, which achieves a good trade-off between decoding latency and complexity.
+
+A. POLAR DECOMPOSITION
+
+Proposition 2: For a polar code with block length N = 2n,
+
+it can be decomposed into an outer code consisting of 2k (0 ≤
+
+k ≤ (n − 1)) independent subcodes with block length 2n−k ,
+
+and an inner code consisting of 2n−k independent subcodes
+
+with block length 2k .
+
+Proof: length N =
+
+For a 2n, its
+
+polar code generation
+
+cN1 = matrix
+
+uN1 BN F2⊗n GN = BN
+
+with block F⊗2 n can be
+
+decomposed as follows
+
+GN = BN (B−N1/M GN /M ) ⊗ (BM−1GM )
+= BN (B−N1/M ⊗ B−M1)(GN /M GM ) = BN (B−N1/M ⊗ B−M1)(GN /M ⊗ EM )(EN /M ⊗ GM ),
+(20)
+
+where the second and the third equalities come from the fact
+that (AB) ⊗ (CD) = (A ⊗ C)(B ⊗ D), and EM denotes the M × M identity matrix where M = 2k . By defining the
+permutation matrix N = BN (BN−1/M ⊗ B−M1), (20) can be recast as
+
+GN = (EM ⊗ GN /M ) N (EN /M ⊗ GM ),
+
+(21)
+
+where the term on the L.H.S. of N indicates the outer code, which consists of M = 2k independent subcodes with block length N /M = 2n−k ; and the term on the R.H.S of N indicates the inner code, which consists of N /M = 2n−k independent subcodes with block length M = 2k .
+Remarks: The decomposition dose not change the polar
+codeword, however, we can exploit the independency of
+decomposed inner subcodes to concurrently compute the M = 2k soft input for adaptive OSD. And each adaptive OSD faces a decoding problem that is 1/M of origi-
+nal one. In this regard, the overall complexity is reduced.
+This motivates us to use adaptive OSD to decode outer sub-
+codes, and use SC decoder to generate the soft messages for
+adaptive OSD.
+
+B. CONCATENATED ADAPTIVE OSD With polar decomposition, a concatenated adaptive OSD scheme is developed to further reduce the implementation complexity. We illustrate this scheme in Fig. 5.
+
+VOLUME 7, 2019
+
+134231
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+Algorithm 2 Concatenated Adaptive OSD Decoding
+
+Input: k (0 ≤ k ≤ (n − 1)), the received sequence yN1 Output: the estimated message uˆ1N 1 Decompose the current codeword into 2n−k inner
+
+subcodes and 2k outer subcodes.
+
+2 for i ← 1; i ≤ 2k ; i ← i + 1 do
+
+3 for j ← 1; j ≤ 2n−k ; j ← j + 1 do
+
+4
+
+L(vj(i)) ← SC decoder-j(yj(·j2−k1)·2k +1, v(ji−1))
+
+5
+
+u(i2i−n−1k)2n−k +1 ←
+
+Adaptive OSD-i(L(v(1i)), L(v(2i)), . . . , L(v(2in)−k ))
+
+6
+
+{v(1i), v(2i), . . . , v2(in)−k } ← ui(2i−n−1k)2n−k +1 · G2n−k
+
+7 return uˆ1N =
+
+ui(2i−n−1k)2n−k +1
+
+i={1,2,...2k }
+
+FIGURE 5. The concatenation of adaptive OSD.
+For a received sequence y1N , its corresponding codeword is decomposed into 2n−k inner subcodes and 2k outer subcodes. SC decoders are used to generate message Lk,i as the input to adaptive OSD (Lk,i is the i-th LLR at level k in a data flow graph like Fig. 2). In particular, for a given SC decoder-j, (1 ≤ j ≤ 2n−k ), the LLR of its first bit can be computed given y(j·j2−k1)·2k +1. Due to the independency of inner subcodes, {Lk,1, Lk,2k+1 , . . . , Lk,N −2k +1} can be obtained concurrently in one clock cycle. Under the permutation function N , we have {L(v(11)), L(v(21)), . . . , L(v(21n)−k )} = {Lk,1, Lk,2k+1 , . . . , Lk,N −2k +1} as the soft input to the adaptive OSD-1 in Fig. 5. With Algorithm 1, the adaptive OSD-1 outputs uˆ21n−k , and the intermediate codeword {vˆ1(1), vˆ2(1), . . . , vˆ2(1n)−k } can be computed. Using these intermediate codewords, the SC decoder-j (1 ≤ j ≤ 2n−k ) can compute the soft value of the second bit using vˆ(j1) and y(j·j2−k1)·2k +1, which produces {L(v(12)), L(v2(2)), . . . , L(v(22n)−k )}, and Adaptive OSD-2 could be activated in a similar manner as Adaptive OSD-1. Such process is continued until all information bits are decoded. This scheme is summarized as Algorithm 2.
+We note that the first for-loop in line 2, it corresponds to the serial decoding process of 2k concatenated adaptive OSDs, whereas the second for-loop corresponds to the decoding process for 2n−k independent inner subcodes, which can be operated concurrently. Although the codeword dimension for some adaptive OSD-i is reduced from 2n to 2n−k , however, for each concatenated adaptive OSD component, it can only be activated until all its former component OSDs have derived their estimations. This increases decoding latency compared to Algorithm 1, thus there is a trade-off between decoding latency and complexity to implement the concatenated adaptive OSD.
+C. THE TRADE-OFF BETWEEN DECODING LATENCY AND COMPLEXITY
+For all SC decoders in Fig. 5, they can be activated simultaneously. As introduced in Section II, the latency of SC
+134232
+
+FIGURE 6. The Clock cycles required by adaptive OSD and SC decoder with block-length N = 32, 64 and 128 versus Eb/N0 for coding rates R = 0.5, 0.75.
+
+decoding for a polar code with block length M = 2k is
+
+(2M − 2) clock cycles, whereas the overall complexity of
+
+SC decoding part is
+
+N M
+
+· O(M log2
+
+M ). For the adaptive
+
+VOLUME 7, 2019
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+FIGURE 7. The BLER achieved by the adaptive OSD and CA-SCL with a list size of 8 under coding rate R = 0.5, 0.75 versus Eb/N0 for block-length N = 32, 64 and 128.
+
+OSD part, its complexity is dominated by the sorting of
+
+received sequence and matrix diagonalization operations.
+
+Note that the size of input sequence for an adaptive OSD
+
+is reduced from N to N /M , and there are at most N /M
+
+information bits in ui(2i−n−1k)2n−k +1 (i = 1, 2, . . . 2k ) for each adaptive OSD, then we can estimate the decoding complexity
+
+for For
+
+a
+
+level-0
+
+adaptive
+
+OSD
+
+by
+
+O(
+
+N M
+
+log2
+
+a level-l adaptive OSD, at most
+
+N M l
+
+)
+
++ O(N
+N /M
+
+i=0 i
+
+/M )3. clock
+
+cycles are required given sufficient hardware parallelization,
+
+and the proposed concatenated adaptive OSD works in a serial manner where the current OSD-i (i = 1, 2, . . . 2k )
+
+must wait until OSD-1∼OSD-(i-1) have decoded their inter-
+
+mediate codewords {v(11), . . . , v2(1n)−k , . . . , v1(i−1), . . . , v(2in−−1k)}.
+
+Therefore, the decoding latency for all M adaptive OSD
+
+decoders can be estimated by M ·
+
+l i=0
+
+N /M i
+
+. By adding
+
+the latency of SC decoding part, the overall decoding latency
+
+of Algorithm 2 is at most (2M − 2) + M ·
+
+l i=0
+
+N /M i
+
+.
+
+Remarks: For each adaptive OSD component, the average
+
+clock cycle is strictly smaller than
+
+l i=0
+
+N /M i
+
+, and is close to
+
+1 at high SNR regime (see Fig. 6). Thus the decoding latency
+
+of Algorithm 2 is positively correlated with the value of M .
+
+For lower decoding latency, smaller M value shall be selected. Specially, when M = 20 = 1, the Algorithm 2 degrades
+
+to the Algorithm 1. By choosing an appropriate M value,
+
+Algorithm 2 achieves a good trade-off between complexity
+
+and decoding latency.
+
+V. SIMULATION RESULTS AND COMPARISONS In this section, we investigate two key performance indicators (KPIs) of polar decoding in URLLC, i.e., transmission reliability and decoding latency. The reliability feature is evaluated by the BLER performance of the proposed adaptive
+VOLUME 7, 2019
+
+OSD, whereas the decoding latency is characterized by the
+
+consumed clock cycles. Like commonly deployed in URLLC
+
+transmissions, we use short block-length polar codes with
+
+medium to high coding rates. In particular, to construct polar
+
+codes, we adopt the off-line construction scheme introduced
+
+in [20]. Also, all polar codes are concatenated with a 8-bits CRC whose generator polynomial is g(D) = D8+D5+D4+1
+
+(see [21]). In this sense, the information rate of a codeword
+
+is R
+
+=
+
+K −8 N
+
+while the coding rate seen by a polar decoder is
+
+R = K /N .
+
+A. DECODING LATENCY ANALYSIS
+The average clock cycles used by the proposed adaptive OSD are numerically compared with conventional SC-based decoders under block-length N = {32, 64, 128} and coding rates R = {0.5, 0.75} in Fig. 6. To be more specific, we use standard SC decoder [3] as the benchmark for it has the consistent decoding latency compared to its other SC-based counterparts, e.g., CA-SCL decoders. In addition, the max_level in Algorithm 1 is set to 3 in this paper to meet the requirement of ultra-reliable transmission in URLLC.
+For standard SC decoders, their decoding latency relate only to the block-length. However, the latency of Algorithm 1 relates not only to the block-length, but also to the working SNR and coding rate. For a certain coding rate, we can observe that the proposed adaptive OSD adapts to the current SNR in the sense that, more error patterns are tested when the working SNR is low, whereas for moderate or high SNR, the adaptive OSD can find the actual error pattern within much smaller clock cycles that are close to 1. On the other hand, for a certain working SNR, a higher coding rate means a larger search space, thus resulting more clock cycles.
+
+134233
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+FIGURE 8. The BLER achieved by the adaptive OSD and CA-SCL with a list size of 32 under coding rate R = 0.5, 0.75 versus Eb/N0 for block-length N = 32, 64 and 128.
+
+Nevertheless, as the working SNR approaches to the decoding threshold where BLER = 10−3 (as annotated in Fig. 6), the clock cycles used by the adaptive OSD drop dramatically, and even drop to that of ‘‘one-shot’’ decoding. This makes the proposed adaptive OSD practical in URLLC systems, where low SNR regime is actually not a regime of interest because the decoder will not be activated due to high BLER.
+B. ERROR CORRECTING PERFORMANCE We compare the BLER performance between the proposed decoder and the state of the art CA-SCL decoders in Fig. 7 and Fig. 8. Specially, list sizes of L = {8, 32} are used in CA-SCL decoders to meet the requirement of ultra-reliable transmission.
+In Fig. 7, the BLER performance achieved by the proposed adaptive OSD is compared with CA-SCL decoder with a list size of L = 8. One can observe that, the proposed adaptive OSD outperforms the CA-SCL decoder for various block-lengths under L = 8. Moreover, such gain becomes more obvious as the block-length getting smaller. It is reasonable since a smaller block-length means that a smaller number of erroneous hard decision will happen in the most reliable independent symbols. On the other hand, small block-length causes insufficient polarization of the split-channels for polar codes, which could increase its error probability under CA-SCL decoder. Additionally, the gap between CA-SCL decoder and our scheme under high coding rate is larger than that under moderate coding rates, which further indicates that the proposed adaptive OSD is more suitable for decoding polar codes with high coding rates and short block-lengths.
+134234
+
+For larger list sizes, similar conclusions can be drawn from Fig. 8. However, the gap between CA-SCL and our scheme becomes narrow. This is practical, because for a CA-SCL decoder with a list size of 32, it yields the best BLER performance over its SC-based counterparts [8]. Nonetheless, for higher coding rates and shorter block-length cases, the proposed adaptive OSD still successfully competes the CA-SCL decoder, and therefore is more preferable for URLLC scenarios.
+VI. CONCLUSION Capitalizing on the parallelizable nature of ordered statistic decoding, this paper firstly exploits a l-level OSD to avoid the data dependency involved in conventional SC-based decoding. Secondly, for the efficiency of hardware implementation, a novel codeword searching metric is developed, and we prove that the codeword with minimal metric value happens to be the codeword that minimizes the decoding error. For this reason, codewords with large metric value are considered to be unpromising and should be excluded. An adaptive OSD algorithm is then proposed following this sense. To further reduce the overall decoding complexity, we propose to divide the current codeword into several independent inner subcodes and outer subcodes. By handling these subcodes with concatenated adaptive OSD, a trade-off between decoding latency and complexity can be achieved. Finally, two key performance indicators of polar decoding in URLLC are evaluated through consumed clock cycles and BLER, respectively. We show that for messages with short block-length and high coding rate, the proposed adaptive OSD outperforms the state of the art CA-SCL decoders, and thus is more suitable for URLLC use case.
+VOLUME 7, 2019
+
+K. Qin, Z. Zhang: Low-Latency Adaptive OSD of Polar Codes
+
+ACKNOWLEDGMENT This article was presented in part at Globecom 2018 [1].
+REFERENCES
+[1] K. Qin and Z. Zhang, ‘‘Adaptive ordered statistic decoding of polar codes for URLLC systems,’’ in Proc. IEEE Globecom Workshops (GC Wkshps), Dec. 2018, pp. 1–6.
+[2] Study on Scenarios and Requirements for Next Generation Access Technologies, document TR 138 913, 3GPP, 2017.
+[3] E. Arıkan, ‘‘Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,’’ IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[4] Chairmans Notes, document 3GPP TSG RAN WG1 #87, 2016. [5] Z. Zhang, K. Qin, L. Zhang, and G. T. Chen, ‘‘Progressive bit-flipping
+decoding of polar codes: A critical-set based tree search approach,’’ IEEE Access, vol. 6, pp. 57738–57750, 2018. [6] I. Tal and A. Vardy, ‘‘List decoding of polar codes,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aug. 2011, pp. 1–5. [7] K. Chen, K. Niu, and J. R. Lin, ‘‘List successive cancellation decoding of polar codes,’’ Electron. Lett., vol. 48, no. 9, pp. 500–501, Apr. 2012. [8] I. Tal and A. Vardy, ‘‘List decoding of polar codes,’’ IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015. [9] A. Alamdar-Yazdi and F. R. Kschischang, ‘‘A simplified successivecancellation decoder for polar codes,’’ IEEE Commun. Lett., vol. 15, no. 12, pp. 1378–1380, Dec. 2011. [10] C. Zhang, B. Yuan, and K. K. Parhi, ‘‘Reduced-latency SC polar decoder architectures,’’ in Proc. IEEE ICC, Jun. 2012, pp. 3471–3475. [11] C. Zhang and K. K. Parhi, ‘‘Low-latency sequential and overlapped architectures for successive cancellation polar decoder,’’ IEEE Trans. Signal Process., vol. 61, no. 10, pp. 2429–2441, May 2013. [12] B. Li, H. Shen, D. Tse, and W. Tong, ‘‘Low-latency polar codes via hybrid decoding,’’ in Proc. 8th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Aug. 2014, pp. 223–227. [13] X. Liu, J. Sha, C. Zhang, and Z. Wang, ‘‘A stage-reduced low-latency successive cancellation decoder for polar codes,’’ in Proc. IEEE Int. Conf. Digit. Signal Process. (DSP), Jul. 2015, pp. 258–262. [14] Y. Fan, J. Chen, C. Xia, C.-Y. Tsui, J. Jin, H. Shen, and B. Li, ‘‘Lowlatency list decoding of polar codes with double thresholding,’’ in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Apr. 2015, pp. 1042–1046. [15] Y. Fan, C. Xia, J. Chen, C.-Y. Tsui, J. Jin, H. Shen, and B. Li, ‘‘A lowlatency list successive-cancellation decoding implementation for polar codes,’’ IEEE J. Sel. Areas Commun., vol. 34, no. 2, pp. 303–317, Feb. 2016. [16] Early Termination for Polar Codes, document 3GPP TSGRAN WG1 Meeting #89, R1-1708644, Qualcomm, May 2017. [17] M. P. C. Fossorier and S. Lin, ‘‘Soft-decision decoding of linear block codes based on ordered statistics,’’ IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, Sep. 1995.
+
+[18] D. Wu, Y. Li, X. Guo, and Y. Sun, ‘‘Ordered statistic decoding for short polar codes,’’ IEEE Commun. Lett., vol. 20, no. 6, pp. 1064–1067, Jun. 2016.
+[19] Merge Sort. Accessed: Jul. 2019. [Online]. Available: https://en.wikipedia. org/wiki/Merge_sort
+[20] Construction Schemes for Polar Codes, document 3GPP TSG RAN WG1 Meeting #89, R1-1701702, Huaewi, HiSilicon, Feb. 2017.
+[21] J. G. Proakis, Digital Communications. New York, NY, USA: McGraw-Hill, 1995.
+KANGJIAN QIN received the B.S. degree in telecommunication engineering from the College of Telecommunication Engineering, Xidian University, Xi’an, China, in 2015. He is currently pursuing the Ph.D. degree with the College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou, China. His research interests include 5G communications and channel coding.
+ZHAOYANG ZHANG (M’02) received the Ph.D. degree from Zhejiang University, Hangzhou, China, in 1998.
+He is currently a Qiushi Distinguished Professor with Zhejiang University. He has coauthored more than 300 peer-reviewed international journal and conference articles, including seven conference best articles. His current research interests include the fundamental aspects of wireless communications and networking, such as information theory and coding, networked signal processing and distributed learning, AI-empowered communications and networking, and synergetic sensing, communication, and computation in the Internet of Things. He was awarded the National Natural Science Fund for Outstanding Young Scholars, in 2017. He is serving as an Editor for the IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, the IEEE TRANSACTIONS ON COMMUNICATIONS, and the IET Communications and has served as the General Chair, the TPC Co-Chair, or the Symposium Co-Chair for WCSP 2013/2018, the Globecom 2014 Wireless Communications Symposium, and the VTC-Spring 2017 Workshop HMWC. He also served as a Keynote Speaker for several international conferences and workshops, such as APCC 2018 and VTC-Fall 2017 Workshop NOMA.
+
+VOLUME 7, 2019
+
+134235
+
+

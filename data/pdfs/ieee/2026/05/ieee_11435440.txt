@@ -1,0 +1,223 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–II: EXPRESS BRIEFS, VOL. 73, NO. 5, MAY 2026
+
+553
+
+Hardware-Efficient QC-LDPC Decoding Architecture With Reduced Bit-Width
+and Saturation Management
+
+Hyeongseok Moon , Student Member, IEEE, and In-Cheol Park , Senior Member, IEEE
+
+Abstract—In quantized layered low-density parity-check (LDPC) decoding, the saturated a posteriori probability (APP) value prevents extrinsic information from being correctly accumulated and overemphasizes certain error paths, making it necessary to use a larger APP representation. The proposed method compensates for the information loss caused by such saturation and eliminates the need for a larger APP bitwidth, reducing the APP bitwidth to the level of the check-to-variable message while preserving the decoding performance. This compensation is achieved by disabling APP updates when saturation occurs, starting from the iteration identified by the shortest cycles in the parity-check matrix. The proposed control preserves correct message passing and prevents the accumulation of errorpath weights in the APP. In the prototype LDPC decoder, the proposed method requires only a lightweight circuit to detect saturation, incurring a negligible area overhead and almost no degradation of processing delay. As a result, the proposed architecture reduces area and power by 15% and 25%, respectively, and achieves a throughput-to-area ratio of 25.08 Gbps/itr/mm2, while maintaining the FER performance of the 7-bit APP representation.
+Index Terms—Low-density parity-check codes, normalized min-sum algorithm, VLSI hardware implementation, 5G new-radio standard, quasi-cyclic LDPC decoder.
+I. INTRODUCTION
+L OW-DENSITY parity-check (LDPC) codes were first proposed by Gallager [1] and later rediscovered in 1997 by MacKay and Neal [2]. The LDPC codes achieve near-capacity error-correcting performance when decoded by iterative message-passing algorithms and have been widely adopted in modern communication standards, including 5G new radio (NR) [3], [4], [5], [6], [7], [8]. To enable practical hardware implementation, quasi-cyclic (QC) LDPC codes
+Received 5 January 2026; revised 27 February 2026; accepted 12 March 2026. Date of publication 16 March 2026; date of current version 4 May 2026. This work was supported in part by the Ministry of Science and ICT (MSIT), South Korea, through the Information Technology Research Center (ITRC) Support Program, supervised by the Institute of Information and Communications Technology Planning and Evaluation (IITP), under Grant IITP-2026-RS-2020-II201847; in part by IITP through the Graduate School of Artificial Intelligence Semiconductor funded by Korean Government (MSIT) under Grant IITP-2026-RS-2023-00256472; and in part by the National Research Foundation of Korea (NRF) funded by Korean Government (MSIT) under Grant RS-2024-00353377. This brief was recommended by Associate Editor F. G. Moraes. (Corresponding author: In-Cheol Park.)
+The authors are with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea (e-mail: hsmoon@ics.kaist.ac.kr; icpark@kaist.edu).
+Digital Object Identifier 10.1109/TCSII.2026.3674508
+
+and simplified decoding algorithms such as the normalized min-sum (NMS) and offset min-sum (OMS) algorithms are commonly employed [9], [10].
+Despite these techniques, LDPC decoders operating with fixed-point arithmetic still demand wide datapaths and substantial memory resources to support iterative message updates. To reduce this overhead, check-to-variable (C2V) messages, which generally exhibit a limited dynamic range, can be efficiently represented using only 5 or 6 bits. In contrast, a posteriori probability (APP) values require additional bits to reliably accumulate contributions across iterations [11], [12].
+In this context, prior work has mitigated quantization effects by employing scaling or non-uniform quantization in the message update process [13], [14]. In this work, we keep the C2V message precision unchanged and focus on the APP accumulation process. Since the APP memory and the associated datapath occupy a large portion of the overall decoder, reducing the APP bitwidth provides significant benefits in hardware efficiency. However, in layered scheduling, if the APP bitwidth is aggressively reduced, the saturation can prevent sufficient reflection of valid extrinsic information, leading to decoding failures due to overemphasized errors [15]. As the magnitudes of messages and error components tend to grow along cycles in the parity-check matrix (PCM), this brief introduces a cycle-based saturation management mechanism.
+In the proposed approach, the iteration to stop the APP update is determined based on the cycle structure of the PCM. From that iteration, the APP update is disabled once the value reaches its upper bound. This prevents the accumulation of error-path contributions while preserving correct message exchange at the beginning iterations. With the proposed approach, the APP bitwidth for all paths can be unified to that of the C2V messages, enabling a 27% reduction in APP memory size, an 18% reduction in logic area, and a 25% reduction in total decoder power consumption.
+II. BACKGROUND
+A. 5G NR LDPC Codes
+The QC-LDPC codes in 5G NR are constructed based on two base graphs (BGs), BG1 and BG2, to support a wide range of code lengths and code rates [16]. Each BG consists of core and extension sub-matrices and exhibits a raptor-like structure
+
+1558-3791 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:21 UTC from IEEE Xplore. Restrictions apply.
+
+554
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–II: EXPRESS BRIEFS, VOL. 73, NO. 5, MAY 2026
+
+to support high code rates as well as H-ARQ [17] through dual-diagonal constraints and puncturing.
+
+B. LDPC Decoding
+
+The NMS decoding starts by initializing each variable node with its intrinsic log-likelihood ratio (LLR), Iv, and setting all C2V messages to zero. For a binary phase-shift keying (BPSK) modulated additive white Gaussian noise (AWGN), the LLR corresponding to the channel output, rx, is given by
+
+Iv = rx.
+
+(1)
+
+After the initialization, each variable node v sends a variable-to-check (V2C) message, Qvc, to its connected check node c. Using the current APP value, Lv, the V2C message is defined as
+
+Qvc = Iv + X Rc v = Lv − Rcv,
+
+(2)
+
+c ∈Cv\c
+
+where Cv denotes the set of check nodes connected to v, Cv \ c is Cv − {c}, and Rcv denotes the C2V message updated in the previous iteration. In the NMS algorithm, each check node then updates the C2V message using as follows:
+
+Rˆcv = α · S · min (|Qv c|) ,
+
+(3)
+
+v ∈Vc\v
+
+where Rˆc is the updated C2V message, Vc denotes the set of
+
+all variable nodes connected to c, Vc \ v is Vc − {v}, α is the
+
+normalization
+
+factor,
+
+and
+
+S
+
+=
+
+Q
+v
+
+∈Vc \v
+
+sign(Qv
+
+c).
+
+After updating the C2V messages, each variable node
+
+updates its APP value, and the updated APP, Lˆv is given by
+
+Lˆ v = Iv + X Rc v + Rˆcv
+
+c ∈Cv\c
+
+= Lv − Rcv + Rˆcv
+
+= Qvc + Rˆcv.
+
+(4)
+
+When all layers have been processed, the tentative code-
+
+word, qˆv, results from performing a hard decision expressed
+
+below:
+
+(
+
+qˆv =
+
+0, 1,
+
+Lˆ v Lˆ v
+
+≥ <
+
+0 0
+
+.
+
+The syndrome check is to verify whether the decoded result satisfies the condition qˆv · HT = 0. If this condition is met or the maximum number of iterations is reached, the decoding
+process is terminated.
+
+C. Hardware Implementation of QC-LDPC Decoders
+Given the input LLRs, LDPC decoding exchanges messages between variable nodes and check nodes iteratively. A rowlayered, partially parallel architecture is commonly adopted, and a parallel factor of 32 is typically used to meet the 5G NR requirements [12], [18]. The overall data flow is illustrated in Fig. 1. First, during the initialization step (1), the input LLRs are written into the APP memory. As a 5G NR LDPC decoder employs QC-LDPC codes, the values in the APP memory must be cyclically shifted according to the shift values specified in the base graph. To support various lifting sizes in 5G NR,
+
+Fig. 1. Conventional QC-LDPC decoder architecture for 5G NR.
+this shifting is implemented using a QC-LDPC shift network (QSN) [19] consisting of two shifters and a merge network that combines their outputs. The data aligned by the QSN is then passed through a distributing network, which forwards the data from the APP memory to the 32 decoding function units (DFUs). Then, the node operations are performed in each DFU. The variable-node unit (VNU) generates V2C messages by combining the APP and C2V values according to (2). These messages are fed to the check-node update unit (CNU), which finds the two minima, MIN1 and MIN2, and the index of MIN1, IDX. The CNU then produces new C2V messages according to (3). Finally, the APP unit (APPU) uses the generated C2V and V2C values to compute updated APP values according to (4). A gathering network then returns the updated APP values to the corresponding APP memory.
+III. PROPOSED METHOD
+In a conventional LDPC decoder, a commonly used compromise for hardware-efficient implementations is to represent C2V messages with 5 bits and APP values with 7 bits [11], [12]. This configuration still incurs significant hardware overhead due to the wider APP bitwidth. In this section, we describe how to unify the datapath into a single 5-bit representation. In addition, we introduce a simple error-compensation method to suppress the resulting increase in decoding errors.
+A. Saturation Management for APP Values
+This brief proposes a novel node-processing method in which APP updates are disabled once saturation occurs, starting from a specific iteration. The proposed approach prevents the limited bitwidth from hindering the growth of correct information and from overemphasizing error components.
+When the updated APP value is larger than the maximum APP value allowed in a specific representation, the correct C2V message is no longer reflected into the APP in (4).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:21 UTC from IEEE Xplore. Restrictions apply.
+
+MOON AND PARK: HARDWARE-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+555
+
+In the subsequent iteration, the V2C message is computed according to (2) without accounting for saturation. In other words, the C2V message used in the previous iteration is simply subtracted, even though the C2V message has not been incorporated into the APP, leading to an incorrect message [15]. Such a loss of reliable messages facilitates the error amplification mechanism reported in [13]. In the mechanism, decoding failures in quantized LDPC decoders occur when certain small-magnitude LLR values repeatedly traverse specific node-processing cycles in the PCM and grow rapidly due to uncorrected sign errors. This phenomenon becomes more pronounced when the APP bitwidth is reduced, increasing the overall error floor. In this case, once the APP of a node becomes saturated at a certain iteration, disabling subsequent APP updates protects the correct information already embedded in the APP from being overdriven by errors. This disabling is implemented by forcing the C2V messages to zero in (2) and (4) whenever saturation is detected. Saturation is determined when the quantized APP value reaches the maximum or minimum value representable by the given APP bitwidth, which directly affects how early saturation occurs.
+This effectively makes the saturated APP behave as if it had a larger representable dynamic range than that allowed by the limited bitwidth. Furthermore, this approach controls APP saturation without modifying C2V message update, making it applicable to different bitwidths and min-sum variants including the OMS algorithm.
+
+B. Girth-Aware Update Termination
+
+For a few beginning iterations, the APP values are usually updated with low reliability. Stopping the updates can degrade the decoding performance even when they reach their minimum or maximum in the early iterations. In case of error components, on the other hand, their values accumulate as they circulate along cycles in the PCM, and once they become sufficiently large, they begin to affect the APP values. Therefore, correct messages dominate before errors grow through the cycles, which means that applying the proposed method from the first iteration can degrade the decoding performance.
+To overcome this issue, we determine iteration k based on the cycle structure of the PCM, from which the accumulation of errors is suppressed while allowing the APP values to be updated with sufficiently reliable messages. The update rules incorporating these stopping conditions are
+
+Qvc
+
+=
+
+( Lv
+
+,
+
+Lv −
+
+Rcv,
+
+if itr ≥ k, |Lv| = Lmax otherwise
+
+Lˆ v
+
+=
+
+(Qvc, Qvc +
+
+Rˆ cv ,
+
+if itr ≥ k, |Lv| = Lmax , otherwise
+
+(5)
+
+where k is the iteration at which the APP updates are disabled if they are saturated, itr is the current iteration index, and Lmax denotes the maximum representable value in a 5-bit APP representation.
+To determine the appropriate iteration k at which error amplification begins and correct messages are sufficiently incorporated into the APP values, we use the girth of the
+
+Fig. 2. FER performances achieved by applying the proposed saturation method from iteration k.
+PCM, where the girth represents the length of the shortest cycle in the PCM. Once an error enters the shortest cycle, it can immediately exert a harmful influence on the decoding process. Conservatively, correct messages can be reliably exchanged up to the iteration at which messages first propagate around the shortest cycle. Since a cycle consists of a sequence of edges and the flooding scheduling propagates messages across two edges per iteration, a message requires a number of iterations equal to half the girth to traverse the shortest cycle. In the layered scheduling, however, a message traverses a larger number of edges within a single iteration [20], which makes the shortest cycle form with fewer iterations than half the girth. In QC-LDPC codes, the PCM is generally designed with a girth of at least six [21]. Consequently, the shortest cycle is encountered at the third iteration under the flooding scheduling and typically at the first or second iteration under the layered scheduling.
+In 5G NR LDPC codes, two columns in the core part are punctured, resulting in extremely small C2V values in the first iteration. This indicates that error propagation is negligible at this iteration, allowing the iteration from which the proposed method is applied to be relaxed. Therefore, since correct message exchange can generally be guaranteed for two or three iterations, it is reasonable to set k to 3 or 4.
+Fig. 2 shows the FERs obtained by applying the proposed saturation method from a specific iteration, where the notation (a,b) represents the APP and C2V bitwidths, respectively. If the proposed saturation method is applied earlier than the fifth iteration, the FER improves. Applying it from the fifth iteration or later, however, leads to a sharp FER degradation at high Eb/N0, because larger input LLR magnitudes cause earlier APP saturation and more pronounced error propagation. This observation indicates that activating the proposed saturation mechanism from the fourth iteration is appropriate and consistent with the cycle analysis based on the girth.
+C. Proposed Hardware Implementation
+To implement the proposed method, several circuits are added to the VNU. As shown in Fig. 3, the saturation detector checks whether the incoming APP value equals the maximum
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:21 UTC from IEEE Xplore. Restrictions apply.
+
+556
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS–II: EXPRESS BRIEFS, VOL. 73, NO. 5, MAY 2026
+
+Fig. 3. Proposed decoding function unit.
+TABLE I DECODING FUNCTION UNITS COMPLEXITY
+
+Fig. 4. Error-correcting performance obtained by applying the proposed saturation method to a QC-LDPC code with a code rate of 11/12.
+
+or minimum representable value. When this condition is met, the detector asserts a saturation flag indicating that the APP value is saturated. The controller generates itr as a global control signal and broadcasts it to all VNUs. When saturation is detected, the multiplexers in both the VNU and APPU force the C2V value to zero by considering itr along with k precomputed from the given PCM. As summarized in Table I, these additional circuits introduce a small area overhead, but the reduction of APP bitwidth in the V2C path and APPU pays off the overhead, resulting in a 10% reduction in the total DFUs area and an 18% reduction in the power consumption.
+The saturation detector adds a 0.11 ns delay, resulting in a 0.54 ns VNU delay and a 1.46 ns timing slack at 500 MHz. Since this remains well below the 0.94 ns CNU critical path, the additional circuits do not affect the overall decoder delay.
+An LDPC decoder is highly memory-dominated, and its memory is divided into the C2V memory and the APP memory. To support the diverse code rates defined in 5G NR, the APP memory consists of 26 memory banks for the core part and one shared memory bank for the extension part, denoted as APP0 to APP26 in Fig. 3. When a 7-bit APP bitwidth is used, the APP memory requires 182,784 bits, whereas reducing the APP bitwidth to 5 bits yields 130,560 bits, corresponding to roughly a 25% reduction in capacity.
+IV. EVALUATION
+The effectiveness of the proposed algorithm is evaluated by comparing the (7,5)-bit case [12], the (5,5)-bit case without the proposed method, and the (5,5)-bit case with the proposed method. This evaluation is performed for the 5G NR LDPC BG1 core part with a code rate of 11/12, a codeword length of 9216, and a message length of 8448. The normalization factor in the NMS algorithm is set to 0.8, and the maximum number of iterations is set to either 10 or 30. The simulations performed with up to 30 iterations are conducted to show that
+
+Fig. 5. Error-correcting performances obtained with diverse code rates, R.
+the proposed saturation method works well under a higher iteration count. All simulations are carried out over an AWGN channel with BPSK modulation, and each result is obtained by simulating 10 million frames. Fig. 4 shows the resulting FERs. The configuration without the proposed method exhibits a high error floor, whereas the proposed method based on (5) achieves almost the same FER performance as the case that uses a 2-bit larger APP bitwidth. To verify scalability, additional experiments are conducted for 5G NR code rates of 1/2 and 2/3, corresponding to codeword lengths of 16,896 and 12,672 bits, respectively, for a message length of 8,448 bits. Fig. 5 presents the resultant FERs. For all evaluated cases, the proposed method provides FER performances that are nearly identical to those obtained with a 2-bit larger APP bitwidth.
+To evaluate the hardware cost of the proposed architecture, a prototype LDPC decoder is implemented at the RTL level and synthesized in a 28-nm CMOS technology. The prototype design uses the decoder in [12] as a baseline, and incorporates additional circuits, which are described in subsection III-C, developed for the proposed saturation method. As summarized in Table II, the overall logic area is reduced by 18%, and the APP memory area is reduced by 27%. Compared to the baseline decoder [12], consequently, the total area is reduced by 15%, and the power consumption is reduced by 25%. In addition, with a lifting size of 384, a code rate of 11/12,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:21 UTC from IEEE Xplore. Restrictions apply.
+
+MOON AND PARK: HARDWARE-EFFICIENT QC-LDPC DECODING ARCHITECTURE
+
+557
+
+TABLE II QC-LDPC DECODER COMPLEXITY FOR 5G NR
+TABLE III CHARACTERISTICS OF STATE-OF-THE-ART DECODERS
+a 4-stage pipelined architecture, and a 500 MHz operating frequency, the peak throughput is 27.43 Gbps. This throughput satisfies the maximum processing rate of 20 Gbps specified in the 5G standard. Table III compares the proposed method with state-of-the-art LDPC decoders, and the results show that the proposed saturation method enables the best performance in terms of area and power, as well as the best throughput-to-area ratio (TAR).
+V. CONCLUSION This brief has proposed a new method to reduce the bitwidth of the datapath and APP memory in implementing a QC-LDPC decoder, which yields improvements in area and power efficiency. As an error-compensation mechanism, saturation management is incorporated by determining the starting iteration from which APP updates are disabled if the APP has become saturated. To determine the starting iteration, the girth of the PCM being considered is taken into account. The net effect of the proposed saturation method is to virtually increase the APP bitwidth, and thus to make the decoding performance remain almost identical to that of two-bit larger decoders. The additional circuits required to support the proposed saturation method are very small, so the bitwidth reduction pays off the additional overhead, leading to an 18% reduction in the logic area, a 27% reduction in the APP memory area and a 25% reduction in total power consumption.
+ACKNOWLEDGMENT The authors would like to thank the IC Design Education Center (IDEC), South Korea, for supporting EDA tools.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. J. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 32, no. 18, pp. 1645–1646, 1996.
+[3] Digital Video Broadcasting (DVB); Second Generation Framing Structure, Channel Coding and Modulation Systems for Broadcasting, Interactive Services, News Gathering and Other Broadband Satellite Applications; Part 2: DVB-S2 Extensions (DVB-S2X), document EN 302 307-2 V1.1.1, Oct. 2014.
+[4] (2005). IEEE P802.3an (10GBASE-T) Task Force. [Online]. Available: http://www.ieee802.org/3/an/
+[5] Synchronization Standard for Distributed Transmission, 2007. [6] Standard for Local and Metropolitan Area Networks—Part 16: Air
+Interface for Fixed Broadband Wireless Access Systems, Standard IEEE Std 802.16, 2004. [7] Standard for Information Technology—Telecommunications and Information Exchange Between Systems—Local and Metropolitan Area Networks—Specific Requirements—Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications—Amendment 1: Enhancements for High-Efficiency WLAN, Standard IEEE Std 802.11, 2020. [8] (Nov. 2016). Chairman’s Notes of A1 7.1.5 on Channel Coding and Modulation for NR. [Online]. Available: https://www.3gpp.org/ftp/ tsgran/wg1rl1/TSGR167/Docs/R101613710.zip [9] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999. [10] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002. [11] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2911–2924, Jun. 2024. [12] B. Jang, H. Jang, S. Kim, K. Choi, and I.-C. Park, “Area-efficient QCLDPC decoding architecture with thermometer code-based sorting and relative quasi-cyclic shifting,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2897–2910, Jun. 2024. [13] H. Hatami, D. G. M. Mitchell, D. J. Costello, and T. E. Fuja, “A threshold-based min-sum algorithm to lower the error floors of quantized LDPC decoders,” IEEE Trans. Commun., vol. 68, no. 4, pp. 2005–2015, Apr. 2020. [14] D. Oh and K. K. Parhi, “Min-sum decoder architectures with reduced word length for LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 1, pp. 105–115, Jan. 2010. [15] W. Sulek, “On the overflow problem in finite precision turbo decoding message passing,” IEEE Trans. Commun., vol. 60, no. 5, pp. 1253–1259, May 2012. [16] Multiplexing Channel Coding, document TS 38.212, Apr. 2021. [Online]. Available: https://www.3gpp.org [17] T.-Y. Chen, K. Vakilinia, D. Divsalar, and R. D. Wesel, “Protographbased raptor-like LDPC codes,” IEEE Trans. Commun., vol. 63, no. 5, pp. 1522–1532, May 2015. [18] S. Lee, S. Park, B. Jang, and I.-C. Park, “Multi-mode QC-LDPC decoding architecture with novel memory access scheduling for 5G newradio standard,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 69, no. 5, pp. 2035–2048, May 2022. [19] X. Chen, S. Lin, and V. Akella, “QSN—A simple circular-shift network for reconfigurable quasi-cyclic ldpc decoders,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 57, no. 10, pp. 782–786, Oct. 2010. [20] A. Farsiabi and A. H. Banihashemi, “Error floor analysis of LDPC row layered decoders,” IEEE Trans. Inf. Theory, vol. 67, no. 9, pp. 5804–5826, Sep. 2021. [21] A. Tasdighi, A. H. Banihashemi, and M.-R. Sadeghi, “Efficient search of girth-optimal QC-LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 4, pp. 1552–1564, Apr. 2016. [22] A. Verma and R. Shrestha, “Low computational-complexity SOMSalgorithm and high-throughput decoder architecture for QC-LDPC codes,” IEEE Trans. Veh. Technol., vol. 72, no. 1, pp. 66–80, Jan. 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:08:21 UTC from IEEE Xplore. Restrictions apply.
+
+

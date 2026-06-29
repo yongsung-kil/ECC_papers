@@ -1,0 +1,128 @@
+Parallel LDPC Decoding on a GPU using OpenCL and Global Memory for Accelerators
+
+Jung-Hyun Hong and Ki-Seok Chung Department of Electronics and Computer Engineering
+Hanyang University Seoul, 133-791, Republic of Korea E-mail: jhhong34@gmail.com, kchung@hanyang.ac.kr
+
+Abstract— This paper introduces a parallel software decoder of Low Density Parity Check (LDPC) codes with an Open Computing Language (OpenCL) framework including Global Memory for ACcelerators (GMAC). The LDPC code is one of the most popular and strongest error correcting codes for mobile communication systems. OpenCL is an open standard programming framework that supports programming languages and application programming interfaces (APIs) for heterogeneous platforms. GMAC is a software implementation of Asymmetric Distributed Shared Memory (ADSM) that maintains a shared logical memory space for the host to access memory objects in the physical memory of an OpenCL device. In this paper, we parallelize the iterative LDPC decoding steps on a graphics processing unit (GPU) using OpenCL. To improve the performance of the proposed decoder, data transfer optimization techniques between the host and the GPU including pre-pinned OpenCL memory objects for GMAC are applied. In terms of the entire decoding time, the speedup of the proposed LDPC decoder over a conventional OpenCL implementation is 1.28.
+Keywords— OpenCL; GMAC; LDPC decoder
+I. INTRODUCTION
+In modern heterogeneous computing systems, various energy-efficient hardware acceleration units are employed in addition to a multi-core central processing unit (CPU) and a graphics processing unit (GPU). To fully utilize the computational power in such heterogeneous systems, Open Computing Language (OpenCL) has been proposed. OpenCL is an open standard programming framework that is independent of a specific target platform, so it supports heterogeneous computing platforms [1].
+The OpenCL programming model for heterogeneous computing relies on programmers to explicitly manage data transfers between the host and the device. Gelado et al. proposed the Asymmetric Distributed Shared Memory (ADSM) model that would maintain a shared logical memory space for CPUs to access objects in the device’s physical memory but not vice versa. ADSM allows programmers to assign data objects within the shared logical memory, which provides the run-time system with necessary information to automatically transfer data between the host and a device that
+This research was supported by Basic Science Research Program through the National Research Foundation of Korea (NRF) funded by the Ministry of Education. (NRF-2010-0024164).
+
+enhances application portability and performance [2]. In this paper, the iterative Low Density Parity Check
+(LDPC) decoding steps are parallelized in order to be effectively executed by the GPU. To improve the performance of the proposed LDPC decoder, data transfer optimization techniques for the discrete GPU are applied using a software implementation of ADSM, called Global Memory for ACcelerators (GMAC). The proposed LDPC decoder will be described in Section II. In the following section, the effectiveness of our design will be verified by performance evaluation. Finally, our conclusions are presented in Section IV.
+II. PROPOSED LDPC DECODER USING OPENCL AND GMAC Recent advances in 4G mobile communication systems
+require high transmission rate with reliability. Thus, employing powerful error correcting codes is crucial for the next generation mobile communication system. The LDPC code is one of the linear block codes for detecting and correcting errors caused by unreliable communication channels. The LDPC decoding consists of four types of operations: initialization (INIT), check node update (CNU), bit node update (BNU), and parity check operation (PC) [3]. In this paper, a data-parallel programming model using an OpenCL framework is applied to the INIT, CNU, BNU, and PC steps for the GPU execution.
+Fig. 1. Parallel LDPC decoding on the target OpenCL platform model
+As shown in Fig. 1, the OpenCL data-parallel programming model operates by concurrently executing work-items on
+
+978-1-4673-7891-8/15/$31.00 ©2015 IEEE
+
+353
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:41:29 UTC from IEEE Xplore. Restrictions apply.
+
+multiple processing elements (PEs). An instance of kernel executions is called a work-item, and work-items are grouped into a work-group. A work-item is executed by a PE at a point in the index space [1]. To execute a kernel, data to be processed must be copied from the host memory to the device memory. After processing the data on the GPU, the computation results are transferred back to the host memory. This explicit data transfer may suffer from a large latency because the request is typically handled across the relatively slow peripheral component interconnect-express (PCI-e) bus. To optimize the data transfer between general purpose CPUs and accelerators, we avoid the need for explicit data transfers between different memory spaces using GMAC APIs. GMAC is a user-level library that implements an ADSM model for heterogeneous computing frameworks [2].
+Fig. 2. Data flow of the heterogeneous computing framework and GMAC
+As shown in Fig. 2, GMAC APIs are applied to the host program to reduce the amount of data transfers between the host and the GPU by using a shared virtual memory region. A shared address space between the CPU and the GPU is built on the accelerator memory space by eclAlloc. By using this GMAC API, a single virtual address can be used by both the host program and the kernel program. The memory objects created using eclAlloc are pre-pinned, which means that they are not paged out by the operating system. Thus, data transfer is much faster with the pinned host memory source or destination [4]. The global size corresponds to the total number of work-items in the entire index space and the local size is the number of work-items that execute OpenCL kernels in parallel. These index parameters are passed by eclCallNDRange to execute the proposed LDPC decoding kernels on the GPU. Pointers of the shared memory object are used to pass the kernel arguments by eclSetKernelArg.
+After using the decoded values without additional memory copy operations on the CPU, the shared memory objects that were previously allocated using eclMalloc are released by eclFree. This semantic ensures that the GPU always accesses the shared memory region by the time a kernel operates on it. This released memory consistency model of GMAC requires fewer source code lines compared to the conventional OpenCL host program, which increases programmability and portability.
+III. EXPERIMENTAL RESULTS
+Performance evaluation results of the proposed LDPC decoding implementation are presented in this section. Hmatrices for the China Multimedia Mobile Broadcasting (CMMB) standard were used for performance evaluation [3].
+
+The host platform is composed of an Intel Xeon quad-core CPU with 3.4 GHz, 8GB of DDR3 RAM, and 64 bit Windows 7 Service pack 1. Microsoft Visual Studio 2010 was used as the host program compiler. The GPU consists of AMD Radeon HD 7800, GMAC library version 1.1.1 [5], and AMD APP SDK 2.9. The target AMD GPU consists of 14 CUs each of which contains 64 PEs.
+To evaluate performance of the proposed implementation, we compared results from four different cases: (1) no parallelization technique was applied, (2) parallelization utilizing OpenMP [6] was applied, (3) parallelization utilizing OpenCL was applied, and (4) both OpenCL and GMAC were utilized. Every OpenCL implementation executed the same GPU kernel on 64 PEs to compare the performance under the same execution environment. From Table I, it is observed that, when both OpenCL and GMAC are utilized, a speedup of 8.26 over case (1) and 1.28 over case (3) is achieved, respectively. These results verify that performance of the proposed decoder is excellent, mainly due to efficient data transfer management between the host and the GPU with OpenCL and GMAC.
+
+TABLE I.
+
+AVERAGE LDPC DECODING TIME PER FRAME
+
+(CMMB 1/2, 100,000 FRAME, MILLISECOND, VS SNR VALUE)
+
+SNR
+
+(1) C (CPU)
+
+(2) OpenMP (CPU, 4 threads)
+
+OpenCL (3) Normal (4) GMAC
+
+1
+
+24.95
+
+7.84
+
+3.87
+
+3.02
+
+1.5 12.19
+
+4.92
+
+1.87
+
+1.58
+
+2
+
+7.86
+
+2.41
+
+1.12
+
+0.84
+
+2.5 5.77
+
+1.44
+
+0.94
+
+0.70
+
+3
+
+3.07
+
+0.98
+
+0.79
+
+0.59
+
+3.5 2.35
+
+0.71
+
+0.68
+
+0.51
+
+4
+
+1.73
+
+0.63
+
+0.57
+
+0.43
+
+IV. CONCLUSION
+In this paper, we addressed a parallel software implementation of LDPC decoding algorithms. In the proposed implementation, we used both OpenCL and GMAC to achieve flexibility and high performance. Experimental results showed that the parallel software implementation of LDPC algorithms satisfied the performance requirement for CMMB by reducing the amount of data transfers between the host and the GPU.
+
+REFERENCES
+[1] Khronos OpenCL Working Group, “The OpenCL Specification Version 1.2,” Document Revision 19, 2012.
+[2] Gelado, I., Stone, J. E., Cabezas, J., Patel, S., Navarro, N., and Hwu, W. M., “An asymmetric distributed shared memory model for heterogeneous parallel systems,” ACM SIGARCH Computer Architecture News , vol. 38, no. 1, pp. 347-358, Mar. 2010.
+[3] J.-Y. Park and K.-S. Chung, “Overlapped Message Passing Technique with Resource Sharing for High Speed CMMB LDPC Decoder,” IEEE Trans. Consumer Electron., vol. 57, no. 4, pp. 1564-1570, Nov. 2011.
+[4] Advanced Micro Devices, “AMD Accelerates Parallel Processing OpenCL Programming Guide,” 2013.
+[5] https://code.google.com/p/adsm
+[6] D. Leonardo and R. Menon, “OpenMP: an industry standard API for shared-memory programming,” IEEE Computational Science & Engineering, vol. 5, no.1, pp. 46-55, Jan. 1998.
+
+354
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:41:29 UTC from IEEE Xplore. Restrictions apply.
+
+

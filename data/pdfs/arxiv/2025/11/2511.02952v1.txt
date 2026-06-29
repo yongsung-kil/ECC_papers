@@ -1,0 +1,1004 @@
+DecodeX: Exploring and Benchmarking of LDPC
+Decoding across CPU, GPU, and ASIC Platforms
+Zhenzhou Qi1, Yuncheng Yao2, Yiming Li1, Chung-Hsuan Tung1, Junyao Zheng1,
+Danyang Zhuo2, Tingjun Chen1
+Departments of Electrical and Computer Engineering1 and Computer Science2, Duke University
+Abstract
+Emerging virtualized radio access networks (vRANs) de-
+mand flexible and efficient baseband processing across het-
+erogeneous compute substrates. In this paper, we present
+DecodeX, a unified benchmarking framework for evaluat-
+ing low-density parity-check (LDPC) decoding acceleration
+across different hardware platforms. DecodeX integrates a
+comprehensive suite of LDPC decoder implementations, in-
+cluding kernels, APIs, and test vectors for CPUs (FlexRAN),
+GPUs (Aerial and Sionna-RK), and ASIC (ACC100), and can
+be readily extended to additional architectures and configu-
+rations. Using DecodeX, we systematically characterize how
+different platforms orchestrate computation–from threading
+and memory management to data movement and acceler-
+ator offload–and quantify the resulting decoding latency
+under varying Physical layer parameters. Our observations
+reveal distinct trade-offs in parallel efficiency and offload
+overhead, showing that accelerator gains strongly depend
+on data-movement and workload granularity. Building on
+these insights, we discuss how cross-platform benchmarking
+can inform adaptive scheduling and co-design for future het-
+erogeneous vRANs, enabling scalable and energy-efficient
+baseband processing for NextG wireless systems.
+1
+Introduction
+Virtualized radio access networks (vRANs) are redefining
+how next-generation cellular systems deploy baseband pro-
+cessing [7, 19–23]. By decoupling Layer-1 (L1) functions
+from dedicated hardware and running them as software on
+general-purpose or accelerated platforms, vRANs enable flex-
+ible orchestration and cloud-native elasticity. However, this
+shift also exposes severe computational and latency chal-
+lenges, particularly for the Physical layer forward error cor-
+rection (FEC) blocks such as LDPC decoding, which dom-
+inate the processing time in the 5G uplink and downlink
+chains. Recent advances in heterogeneous computing have
+introduced multiple candidate substrates for vRAN base-
+band processing acceleration: specialized software library
+on multicore CPUs (e.g., Intel FlexRAN), GPU-based solu-
+tions from both open-source (e.g., OAI CUDA LDPC) and
+vendor-optimized (NVIDIA Aerial, Sionna-RK) frameworks,
+and ASICs (e.g., Intel ACC100 eASIC). Despite their growing
+Link Layer and Above
+CPU
+HWA
+Decoding
+(dec)
+CPU
+(c) Hybrid Acceleration
+(b) Look-aside Acceleration
+(a) Inline Processing
+HWA
+Memory
+Decoding
+(dec)
+Memory
+Demodulation
+(demod)
+Equalization
+(equal)
+FFT
+(fft)
+Demodulation
+(demod)
+Equalization
+(equal)
+FFT
+(fft)
+CPU or GPU
+Memory
+Demodulation
+(demod)
+Equalization
+(equal)
+FFT
+(fft)
+Decoding
+(dec)
+Data Movement
+I/Q Signal
+Uplink Data
+L1 Processing Models
+DecodeX Platforms
+H200
+Intel Xeon CPU
+NVIDIA Jetson Orin AGX
+Intel ACC100 eASIC
+Unified Memory
+Host Network Stack
+(d)
+RTX 3090
+RTX 6000 Ada
+Figure 1: (a)–(c) Overview of L1 processing models with
+different hardware accelerators (HWAs): Inline Process-
+ing, Lookaside Acceleration, and Hybrid Acceleration. (d)
+Representative DecodeX implementations of these mod-
+els: DecodeCPU-FlexRAN (Intel Xeon CPU), DecodeGPU-
+Aerial (NVIDIA H200, RTX 3090, and RTX 6000 Ada
+GPUs), DecodeASIC-ACC100 (Intel eASIC), and DecodeGPU-
+SionnaRK (NVIDIA Jetson Orin AGX).
+availability, comprehensive benchmarking and system-level
+understanding of how these platforms execute LDPC decod-
+ing, interact with memory hierarchies, and trade off latency
+versus flexibility remains largely unexplored.
+In this paper, we present DecodeX, a cross-platform ex-
+ploration of LDPC decoding acceleration across CPU, GPU,
+and ASIC platforms. As a comprehensive benchmarking
+framework, DecodeX allows for unified evaluation across
+different kernel implementations under a consistent inter-
+face, each named Decode{HW}-{Impl}. We examine represen-
+tative implementations of DecodeX, including DecodeCPU-
+FlexRAN, DecodeGPU-Aerial, DecodeGPU-SionnaRK, and
+DecodeASIC-ACC100, which collectively capture the diver-
+sity of software and hardware acceleration models in modern
+vRAN deployments. DecodeX is readily extensible to addi-
+tional configurations such as DecodeCPU-OAI and DecodeGPU-
+BBDev, making it a versatile tool for future benchmarking
+and cross-platform analysis. We perform a detailed analysis
+of how each system organizes its decoding pipeline: from
+arXiv:2511.02952v1  [cs.NI]  4 Nov 2025
+Qi, et al.
+threading and SIMD parallelization on CPUs, offload manage-
+ment and queue-based scheduling in DPDK BBDev, to CUDA
+kernel launches and memory transfers on GPUs. Extensive
+profiling results quantify LDPC decoding latency as a func-
+tion of modulation and coding scheme (MCS), signal-to-noise
+ratio (SNR), and physical resource block (PRB) configuration
+across different DecodeX implementations. Our measure-
+ments reveal that accelerator performance is influenced not
+only by raw compute throughput but also by data-movement
+efficiency and task granularity. To further improve GPU
+utilization and latency efficiency, we extended NVIDIA’s
+PyAerial framework by introducing a parallel LDPC process-
+ing interface, enabling simultaneous decoding of multiple
+transport blocks across CUDA streams.
+Overall, DecodeX provides a comparative, system-level
+characterization of LDPC decoding across heterogeneous
+vRAN systems. Beyond benchmarking, it offers actionable
+insights for future vRAN baseband and compute co-design,
+where dynamic resource allocation across CPUs, GPUs, and
+ASICs will be essential to balancing latency, energy efficiency,
+and flexibility. To the best of our knowledge, this work presents
+the first comprehensive study of LDPC decoding performance
+across different platforms, supported by a complete suite of
+unit tests and benchmarking scripts open-sourced at [1].
+2
+Related Work and Background
+The evolution of vRANs has driven extensive research on
+leveraging heterogeneous computing platforms to accelerate
+5G L1 workloads. Prior works such as CloudRIC [23] and Sa-
+vannah [22] demonstrate that general-purpose CPUs can exe-
+cute full 5G baseband pipelines efficiently, while accelerator-
+based designs explore offloading compute-intensive kernels,
+such as forward error correction (FEC), to specialized hard-
+ware. However, these solutions often face challenges in bal-
+ancing latency, data-movement overhead, and resource shar-
+ing across heterogeneous devices, motivating the need for a
+systematic cross-platform analysis.
+5G L1 and LDPC decoding. In 5G NR, each slot consists of
+14 OFDM symbols [2], and depending on the MCS and band-
+width, multiple transport blocks (TBs) may be transmitted
+per frame. A TB corresponds to a data unit scheduled by the
+MAC layer and may span one or more slots. For data chan-
+nels, 5G NR adopts LDPC codes based on two standardized
+base graphs (BG1 and BG2) [3], each optimized for different
+code rates and lifting sizes. These quasi-cyclic codes com-
+pactly represent the parity-check matrix through circulant
+shifts, avoiding storage of large dense matrices. At the re-
+ceiver, rate de-matching reconstructs code blocks (CBs) [13]
+from TBs, followed by iterative belief-propagation decoding
+across thousands of variable and check nodes. The LDPC
+decoding configuration depends on several key parameters.
+The MCS defines the modulation order (𝑄𝑚) and determines
+the code rate after rate matching (via puncturing or repeti-
+tion). The lifting size (𝑍𝑐) expands the base graph into the full
+parity-check matrix. A single TB may be segmented into mul-
+tiple CBs, with the number of decoding iterations adapting
+to channel quality and SNR. LDPC decoding typically domi-
+nates the L1 processing latency as it involves fine-grained
+data dependencies, irregular memory access, and iterative
+message-passing updates.
+Heterogeneous acceleration. To meet real-time constraints,
+diverse acceleration strategies have been explored: CPU im-
+plementations rely on SIMD vectorization [9], eASICs like
+Intel’s ACC100 exploit deeply pipelined and deterministic ar-
+chitectures, and GPUs leverage massive parallelism for high
+iteration counts. While GPUs provide exceptional through-
+put, discrete devices often follow a lookaside offload model,
+requiring frequent host-device transfers that increase energy
+and latency overhead. Integrated platforms such as NVIDIA
+Jetson mitigate these penalties through unified memory, but
+their limited compute capacity restricts scalability for data-
+center or multi-cell vRAN deployments.
+DecodeX differs from prior efforts by providing a unified,
+cross-platform benchmarking and profiling framework for
+LDPC decoding across CPU, GPU, and ASIC architectures. It
+systematically dissects each platform’s execution pipeline,
+from threading and queue scheduling to memory movement
+and kernel launches, quantifying decoding latency across
+varying MCS, SNR, and PRB allocations.
+3
+Design of DecodeX
+3.1
+DecodeCPU-FlexRAN
+The DecodeCPU-FlexRAN platform represents a CPU-based
+inline LDPC decoding environment built upon Intel’s FlexRAN
+framework illustrated in Fig. 1(a). To compile and execute
+the FlexRAN FEC Software Development Kit (SDK) [9], sev-
+eral Intel toolchains are required, including the oneAPI Base
+Toolkit [10] and the HPC Toolkit [11]. Depending on the
+operating system kernel version and system environment, ei-
+ther the Intel icc (classic) or icx (LLVM-based) [12] compiler
+must be used to ensure compatibility with the vectorized
+kernels in the FEC SDK. These compilers enable efficient vec-
+torization through Intel’s Advanced Vector Extensions (AVX),
+which form the foundation of the high-performance LDPC
+decoder in FlexRAN. The FlexRAN LDPC decoder provides
+multiple architecture-specific implementations optimized
+for AVX2/AVX512. Given that our testbed CPUs support the
+AVX512F, we focus on AVX512, which leverages wide-lane
+SIMD parallelism to accelerate the layered belief-propagation
+decoding steps. Each decoding thread operates on 512-bit
+vector registers, processing 32 LLR values concurrently per
+iteration. Parallelism at the task level is straightforward for
+Algorithm 1: DecodeGPU-Aerial Interface (Sequen-
+tial vs. Parallel LDPC Decoding)
+1 Sequential LDPC processing:
+2 for tbIdx ←0 to nUEs −1 do
+3
+// Prepare decoder configuration, allocate soft-output buffers,
+and define tensor layouts
+4
+cuphyErrorCorrectionLDPCDecode(LLR)
+5
+// Copy decoded bits back to host memory and advance output
+pointer
+6
+gridDim = NUM_CODEWORDS
+7
+launch_kernel_driver_api(gridDim, blockDim)
+8 end
+9 Parallel LDPC processing:
+10 // Perform the same per-UE preparation (configure decoder,
+allocate memory, set tensor descriptors)
+11 cuphyErrorCorrectionLDPCTransportBlockDecode(LLRs)
+12 // Gather decoded outputs for all UEs, finalize buffers, and release
+temporary allocations
+13 gridDim = get_total_num_codewords(LLRs)
+14 launch_tb_kernel_driver_api(gridDim, blockDim)
+CPU-based LDPC processing. The smallest schedulable unit
+is a TB, and to fully utilize available CPU resources, mul-
+tiple TBs can be decoded in parallel across independent
+cores. In practice, decoding 𝑁tb transport blocks concurrently
+maps to 𝑁tb physical CPU cores (or hyperthreads), enabling
+near-linear scaling until memory bandwidth saturation. This
+design serves as a baseline reference for comparison with
+hardware-accelerated decoding platforms.
+3.2
+DecodeGPU-Aerial
+While DecodeCPU-FlexRAN demonstrates the flexibility of
+CPU-based baseband processing, its performance is funda-
+mentally limited. To improve the processing latency, recent
+research has explored offloading computationally intensive
+5G NR L1 tasks, such as LDPC decoding, to GPUs. Earlier
+implementations, such as the CUDA-based LDPC decoder in
+OAI [18] follows a lookaside model, where decoded data must
+traverse the host-device boundary for each transport block.
+Although this approach improves raw decoding throughput,
+frequent PCIe transfers and high GPU power draw introduce
+considerable latency and energy overheads. To address these
+challenges, NVIDIA’s Aerial platform re-architects the entire
+L1 processing pipeline as a fully GPU-resident data path. This
+inline acceleration enables Aerial to execute all L1 functions–
+from FFT and equalization to LDPC decoding–directly within
+GPU, minimizing data movement and realizing a practical
+pathway toward GPU-based vRAN deployments.
+NVIDIA Aerial is a cloud-native, GPU-accelerated vRAN
+software stack designed to execute the full 5G NR baseband
+pipeline, encompassing L1 and portions of MAC layer (L2)
+functions directly on the GPU. Its core components include:
+(i) cuPHY, which implements 5G NR L1 primitives such as
+FFT/IFFT, channel estimation, MIMO equalization, and LDPC
+encoding/decoding; (ii) cuMAC, which provides scheduling
+and control integration between MAC and L1 layers; and
+(iii) pyAerial, a set of Python APIs for rapid prototyping and
+testing of GPU-based signal-processing pipelines. Together,
+these modules provide a unified runtime, where baseband
+workloads are expressed as CUDA kernels operating over
+shared GPU memory. Aerial adopts an inline acceleration
+model in which baseband data is transferred directly from
+the NIC or radio front-end into GPU memory (HWA memory)
+using GPUNetIO via GPUDirect RDMA [14]. Once in device
+memory, the entire L1 chain–from OFDM demodulation to
+LDPC decoding and rate matching–is executed within the
+GPU context without host intervention. This eliminates in-
+termediate PCIe copies and enables microsecond-level kernel
+scheduling through CUDA streams and graphs. Fig. 1(a) il-
+lustrates this architecture, where the data path remains fully
+resident on the GPU, and only decoded transport blocks are
+returned to the host for higher-layer processing.
+3.3
+DecodeASIC-ACC100
+DecodeASIC-ACC100 integrates a hardware LDPC decoder
+using Intel’s ACC100 eASIC, which is dedicated to FEC ac-
+celeration in vRAN deployments and supports multiple func-
+tions, including LDPC encoding and decoding for 5G NR.
+This design follows the lookaside acceleration model, as il-
+lustrated in Fig. 1(b), where data is explicitly transferred
+between the host CPU and the accelerator through system
+memory. Access to the accelerator is managed through the
+Data Plane Development Kit (DPDK) [25], an open-source
+framework for user-space packet and data-plane processing.
+As a baseband device, the ACC100 [24] exposes a polling-
+mode driver (PMD) interface through DPDK, enabling low-
+latency interaction between user-space applications and the
+hardware accelerator. In this section, we briefly describe how
+DecodeASIC-ACC100 interacts with the ACC100 through
+DPDK’s rte_bbdev APIs, configure LDPC decoding parame-
+ters, and performance profiling.
+Driver initialization and configuration. The ACC100
+driver functions form a subset of DPDK’s rte_bbdev API
+(“baseband device” abstraction). The high-level workflow for
+initializing and executing LDPC decoding via DPDK includes
+device setup, operation configuration, and runtime execu-
+tion. During device setup, the application detects the acceler-
+ator using rte_bbdev_info_get() and initializes communica-
+tion queues via rte_bbdev_setup_queues() and rte_bbdev_
+queue_configure(). The device is then activated with rte_
+bbdev_start(). Prior to execution, input and output buffers
+are allocated, and operation descriptors are prepared. For
+LDPC decoding, each operation structure specifies the buffer
+Qi, et al.
+Bulk Enq/Deq  K = 352, CR = 0.245
+Seq. Enq/Deq - K = 352, CR = 0.245
+Bulk Enq/Deq  K 968, CR = 0.332
+Seq. Enq/Deq - K = 968, CR = 0.332
+Bulk Enq/Deq  K 1936, CR = 0.427
+Seq. Enq/Deq - K = 1936, CR = 0.427
+20 21 22 23 24 25 26 27 28
+# of Decode
+0.0
+1.0
+2.0
+3.0
+4.0
+5.0
+6.0
+Throughput (Gbps)
+31.00x
+11.70x
+31.25x
+(a) Intel ACC100
+20 21 22 23 24 25 26 27 28 29210
+# of Decode
+0.0
+1.0
+2.0
+3.0
+4.0
+5.0
+6.0
+Throughput (Mbps)
+21.60x
+14.00x
+26.80x
+11.10x
+24.00x
+25.80x
+(b) Silicom ACC100
+Figure 2: Throughput comparison between sequential and
+bulk (Algorithm. 2) LDPC enqueue and dequeue pipelines
+on the Intel and Silicom ACC100 platforms.
+pointers and decoding parameters (see §2). Once operations
+are configured, they are enqueued to the device through
+rte_bbdev_enqueue_ops(), and completion is monitored via
+active polling using rte_bbdev_dequeue_ops(). A successful
+dequeue indicates the completion of decoding for one TB.
+Runtime integration. At runtime, each OFDM symbol
+following demod (i.e., the log-likelihood ratio output, or LLR
+outputs) is reorganized into an rte_bbdev_op_data structure
+following the BBDev specification, and transferred to the
+ACC100 device via rte_memcpy(). To maximize parallelism,
+DecodeASIC-ACC100 dispatches each demodulated symbol
+immediately after demod using rte_bbdev_enqueue_ops(),
+and once all enqueue operations are issued, bulk dequeue
+requests are triggered using rte_bbdev_dequeue_ops() to col-
+lect decoded results for the entire frame. This parallel enqueue-
+dequeue strategy enables continuous data flow, allowing sub-
+sequent software tasks (e.g., fft for the next OFDM symbol) to
+execute concurrently with ongoing hardware decoding. As
+shown in Fig. 2, fully exploiting the ACC100’s intrinsic par-
+allelism through bulk enqueue/dequeue improves decoding
+throughput by up to 30× compared to sequential process-
+ing, and the same trend exists across both Intel and Silicom
+ACC100 variants (Figs. 2a and 2b).
+3.4
+DecodeGPU-SionnaRK
+The NVIDIA Jetson Orin AGX [16] platform represents a
+class of edge AI systems-on-chip (SoCs) that integrate CPU,
+GPU, and memory subsystems within a unified architec-
+ture. Unlike discrete accelerator platforms that rely on PCIe-
+based data transfers, Jetson adopts a unified memory design
+in which the CPU and GPU share a single physical DRAM
+space managed by a coherent memory controller. This design
+eliminates explicit host-device data copies and allows inter-
+mediate baseband data to be accessed directly by both CPU
+and GPU threads. From a memory management perspective,
+it behaves as a hybrid between inline and lookaside architec-
+tures, as illustrated in the bottom panel of Fig. 1. While data
+Algorithm 2: DecodeASIC-ACC100 Interface
+1 Run-Time Execution:
+2 for each received symbol do
+3
+// Read LLR buffers from DSP; enqueue:
+4
+enq += rte_bbdev_enqueue_ldpc_dec_ops(dev, q,
+ops[enq], 1)
+5
+if last UE and last uplink symbol then
+6
+𝑑𝑒𝑞←0; 𝑟𝑒𝑡𝑟𝑦←0
+7
+while 𝑑𝑒𝑞< 𝑒𝑛𝑞and 𝑟𝑒𝑡𝑟𝑦< 𝑀𝐴𝑋do
+8
+deq += rte_bbdev_dequeue_ldpc_dec_ops(dev,
+q, ops_deq[deq], enq-deq)
+9
+𝑟𝑒𝑡𝑟𝑦++
+10
+end
+11
+end
+12
+else
+13
+continue
+14
+end
+15 end
+16 RTAssert(enq == deq)
+17 // Compute BLER
+still moves between CPU and GPU contexts, the overhead is
+significantly reduced compared to traditional split-memory
+systems since both processors operate on the same physical
+memory region. This property enables efficient acceleration
+for baseband processing tasks.
+DecodeGPU-SionnaRK executes LDPC decoding through
+the Sionna-RK [17] framework, which provides a TensorFlow-
+and CUDA-based implementation of the 5G NR LDPC chain
+optimized for embedded GPU platforms. By leveraging CUDA
+streams and unified memory, LDPC decoding can be per-
+formed hybrid with other baseband kernels–such as FFT,
+channel equalization, and demodulation—without interme-
+diate buffer copies. As depicted in Fig. 1(c), demodulated
+LLRs are written directly into unified memory and imme-
+diately consumed by the LDPC decoder kernel, forming a
+continuous GPU-resident data path.
+4
+Evaluation
+Implementation. We run the FlexRAN FEC SDK on a
+dual-socket Intel Xeon Gold 6348 server with 112 hardware
+threads (2.6 GHz, AVX512-enabled), equipped with 84 MB
+L3 cache. The system runs Ubuntu 22.04 (kernel 6.8.0) with
+Intel oneAPI Base and HPC toolkits and the icx compiler for
+AVX512-optimized LDPC kernels. This platform serves as
+the CPU baseline. For full inline acceleration, we also per-
+form LDPC unit tests using NVIDIA Aerial (v25.2-cuBB) on
+a dual-socket AMD EPYC 9355 server (128 hardware threads,
+AVX512-enabled) equipped with four NVIDIA H200 NVL
+GPUs running Ubuntu 24.04 (kernel 6.8.0). To broaden our
+evaluation, we extend the analysis to additional discrete
+GPUs, including the NVIDIA RTX 3090 and RTX 6000 Ada,
+0
+10
+20
+30
+0
+10
+20
+28
+MCS Index
+50 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+100 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+150 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+200 RBs
+0.2
+0.4
+0.6
+0.8
+CPU Processing Latency (ms)
+0
+10
+20
+30
+0
+10
+20
+28
+MCS Index
+50 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+100 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+150 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+200 RBs
+0.16
+0.18
+0.20
+0.22
+ACC Processing Latency (ms)
+0
+10
+20
+28
+MCS Index
+50 RBs
+0
+10
+20
+28
+100 RBs
+0
+10
+20
+28
+150 RBs
+0
+10
+20
+28
+200 RBs
+0.16
+0.18
+0.20
+0.22
+H200 Processing Latency (ms)
+0
+10
+20
+30
+0
+10
+20
+28
+MCS Index
+50 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+100 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+150 RBs
+0
+10
+20
+30
+0
+10
+20
+28
+200 RBs
+0.16
+0.24
+0.32
+0.40
+RTX 3090 Processing Latency (ms)
+0
+10
+20
+30
+SNR (dB)
+0
+10
+20
+28
+MCS Index
+50 RBs
+0
+10
+20
+30
+SNR (dB)
+0
+10
+20
+28
+100 RBs
+0
+10
+20
+30
+SNR (dB)
+0
+10
+20
+28
+150 RBs
+0
+10
+20
+30
+SNR (dB)
+0
+10
+20
+28
+200 RBs
+0.16
+0.24
+0.32
+0.40
+RTX 6000 Ada Processing Latency (ms)
+Figure 3: LDPC decoding latency across heterogeneous platforms under varying L1 configurations. Each heatmap shows
+per-TB decoding latency (ms) as a function of MCS index and SNR level, for four PRB allocations: (1st) CPU (FlexRAN, AVX512);
+(2nd) ACC100 lookaside acceleration; and (3rd) H200 decoding via NVIDIA’s Aerial. (4th) RTX 3090 decoding via NVIDIA’s
+Aerial. (5th) RTX 6000 Ada decoding via NVIDIA’s Aerial.
+enabling cross-generation comparison of decoding latency
+and kernel efficiency. The same server hosts two LDPC ASIC
+accelerators: one Intel ACC100 and one Silicom-branded
+equivalent device, both accessed through the DPDK BBDev
+drivers. We use an NVIDIA Jetson Orin AGX edge platform
+running Ubuntu 22.04 (kernel 5.15) with CUDA-accelerated
+LDPC decoding through the Sionna-rk (v1.2.1) toolkit. This
+platform executes all LDPC decoding kernels directly in uni-
+fied system memory.
+Qi, et al.
+0
+10
+20
+30
+40
+50
+# of UEs
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+1.2
+1.4
+1.6
+LDPC Kernel Time (ms)
+Kernel Time
+Sequential
+Parallel
+Kernel Time
+Sequential
+Parallel
+0.0
+2.5
+5.0
+7.5
+10.0
+12.5
+15.0
+17.5
+GPU Utilization (%)
+GPU Utilization
+Sequential
+Parallel
+GPU Utilization
+Sequential
+Parallel
+0
+10
+20
+30
+40
+50
+# of UE
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+3.5
+4.0
+Processing Latency (ms)
+Sequential Proc.
+Parallel Proc.
+Figure 4: PyAerial LDPC decoding performance under se-
+quential and parallel processing. (a) GPU kernel execution
+time and utilization, excluding host-device data movement.
+(b) Overall LDPC decoding latency, including CPU orchestra-
+tion and data transfer overheads.
+LDPC decoding latency. Fig. 3 summarizes the LDPC de-
+coding latency across the CPU-, GPU-, and ACC100-based
+platforms for varying PRB sizes, MCS levels, and SNR values.
+We exclude Jetson AGX results from this comparison since
+its embedded-class CPU and GPU resources are not directly
+comparable to server-grade acceleration environments. Both
+ACC100 and GPU-based accelerators substantially reduce
+decoding latency compared to CPU-only execution. On the
+CPU baseline, latency varies significantly with SNR, as poor
+channel conditions increase the number of required decod-
+ing iterations, whereas ACC100 and GPU implementations
+exhibit minimal SNR sensitivity.
+Distinct scaling behaviors emerge across platforms. CPU
+decoding latency increases with PRB size, while ACC100
+latency remains nearly constant from 50 to 200 PRBs, demon-
+strating that the accelerator’s deeply pipelined architecture
+maintains throughput even under higher data volumes. H200
+GPU decoding via NVIDIA Aerial follows a similar trend,
+although PCIe orchestration overhead becomes more pro-
+nounced at smaller workloads. Across both accelerators, spe-
+cific MCSs (notably MCS-10 and MCS-17) incur higher la-
+tency, as lower code rates introduce greater redundancy and
+decoding complexity. Overall, the latency profiles of ACC100
+and H200 GPU align closely under sequential processing.
+With other GPU models, we observe that the RTX 3090
+exhibits latency behavior intermediate between the CPU and
+H200 platforms; its performance remains MCS-dependent
+and consistently higher than that of the H200. By contrast,
+the RTX 6000 Ada behaves differently from all other de-
+vices: its irregular latency pattern likely stems from archi-
+tectural differences (SM89) and the lack of native PyAerial
+support [15] for this GPU generation, meaning kernel sched-
+uling and memory handling may not align with Aerial’s opti-
+mized execution paths. This further underscores the value of
+the DecodeX benchmark in identifying software–hardware
+mismatches and guiding future vRAN deployments across
+heterogeneous GPU architectures.
+Exploring GPU parallelism. To exploit the parallelism on
+GPU, Fig. 4 compares DecodeGPU-Aerial performance under
+2 3 4
+6
+8
+10
+12
+14
+16
+Iteration Count
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+Processing Latency (ms)
+K=1936, CR=0.33
+K=4224, CR=0.33
+K=8440, CR=0.88
+Figure 5: LDPC decoding latency on DecodeGPU-SionnaRK
+across different iteration counts, with varying number of
+information bits (𝐾) and code rates (CR).
+sequential and parallel LDPC decoding. In sequential process-
+ing, the data stream for each UE is decoded independently,
+one TB at a time; while parallel processing decodes 𝑛TBs
+simultaneously across multiple CUDA grids and blocks. For
+fairness, the total data volume remains constant across both
+settings; for instance, with 10 UEs and 200 PRBs assigned,
+sequential processing assigns 20 PRBs per UE and decodes
+them sequentially, whereas parallel processing decodes all
+PRBs assigned to the 10 UEs concurrently. When consider-
+ing only the GPU kernel execution time in Fig. 4(a), parallel
+decoding achieves up to 20× smaller latency than sequential
+decoding but with increased GPU utilization. Sequential pro-
+cessing maintains a nearly constant utilization regardless of
+UE count, while parallel execution scales utilization linearly
+with the number of active streams. This observation high-
+lights that host-device data transfer and orchestration costs
+dominate the overall latency, reinforcing the advantage of
+inline processing designs such as Aerial, where data remains
+resident on the GPU to minimize transfer overhead.
+5
+Discussions
+DecodeGPU-SionnaRK on Jetson Orin AGX. We also
+present profiling results for DecodeGPU-SionnaRK as shown
+in Fig. 5. Since the current implementation does not yet
+support the full MCS set with variable code rates, we evaluate
+three representative cases: 𝐾= 1, 936 and 𝐾= 4, 224 with
+a code rate of 0.33, and 𝐾= 8, 440 with a code rate 0.88.
+Here, 𝐾denotes the number of information bits per TB. The
+overall results resemble a similar trend observed in the CPU-
+based decoding results (see Fig. 3): larger transport block
+sizes lead to higher processing latency, while varying the
+amount of redundancy (code rate) has a relatively smaller
+impact; and the processing latency also increases with the
+iteration count, which corresponds to lower-SNR decoding
+conditions. Overall, Jetson Orin AGX exhibits similar scaling
+characteristics to CPU decoding, as both the embedded GPU
+and CPU in this research-oriented platform have limited
+computational throughput compared to discrete accelerators
+such as the ACC100 or datacenter-grade GPUs.
+Optimizing GPU-based L1 processing. Our preliminary
+investigation of DecodeGPU reveals that further optimiza-
+tion can be achieved by refining how GPU kernels and CUDA
+streams are organized across the L1 processing pipeline. Fu-
+ture optimization may focus on fusing adjacent kernels or
+reusing persistent kernels to reduce kernel bring-up latency.
+Another direction is to improve stream-level parallelism by
+dynamically allocating multiple CUDA streams per group of
+subcarriers, thereby increasing concurrency across OFDM
+symbols and fully exploiting the subcarrier-level parallelism
+inherent in the 5G NR waveform. Additionally, exploring
+more fine-grained task scheduling within the GPU’s stream-
+ing multiprocessors could help maintain high utilization
+under variable TB sizes and traffic conditions.
+Energy-aware and dynamic compute resource alloca-
+tion for vRANs. Allocation of heterogeneous compute
+resources must account not only for RAN throughput and
+latency, but also for the energy consumed by computation
+and data movement, where the latter often dominates un-
+der low compute utilization. Our recent work NEXUS [20]
+explored dynamic and energy-aware baseband scheduling
+across CPU and ACC100 accelerators, demonstrating that
+joint optimization of computation and data-transfer pipelines
+can significantly improve energy proportionality in heteroge-
+neous vRAN systems. Complementary to this direction, prior
+work [4] investigates adaptive resource provisioning in large-
+scale radio deployments for balancing latency and energy
+efficiency. Unlike CPUs or dedicated accelerators, GPUs ex-
+hibit highly dynamic power behavior that depends on kernel
+concurrency, memory access intensity, and streaming multi-
+processor utilization. Future work may explore regression-
+or learning-based models that map kernel configurations
+(e.g., MCS, iteration count) to power consumption to enable
+adaptive and energy-aware scheduling.
+Coexistence with ML workloads. A frequently raised
+concern pertains to the high capital cost and suboptimal en-
+ergy efficiency of GPUs when dedicated solely to baseband
+processing. However, such concerns can be mitigated if the
+same hardware is shared dynamically with other compute-
+intensive tasks when the traffic load is low. Recent work [6]
+also advocates for a converged AI-cellular architecture, mo-
+tivating the co-location of communication and computation
+workloads to support industrial-scale AI applications. For
+instance, during non-URLLC periods or under light traffic
+conditions, GPU resources used for L1 tasks can be time-
+or spatially-partitioned to support large ML model train-
+ing and/or inference workloads. This flexible multi-tenancy
+model highlights the potential of GPU-based architectures
+to unify communication, sensing [5, 8], and computation
+workloads within in the vRAN context.
+6
+Conclusions
+We presented DecodeX, a unified benchmarking framework
+that systematically evaluates LDPC decoding performance
+across heterogeneous computing platforms, including CPUs,
+GPUs, and ASICs. Through careful implementation and de-
+tailed profiling, we highlighted how different system archi-
+tectures organize their L1 processing pipelines, and how
+factors such as kernel launch overhead, data-movement or-
+chestration shape overall decoding latency and determinism.
+As an open and extensible benchmark, DecodeX provides a
+foundation for future research on cross-platform baseband
+processing, facilitating energy-aware compute resource man-
+agement for heterogeneous vRAN systems.
+Acknowledgments
+This work was supported in part by NSF grants CNS-2211944,
+CNS-2330333, CNS-2443137, CNS-2450567, and OAC-2503010.
+This work was also supported in part by the Center for Ubiq-
+uitous Connectivity (CUbiC), sponsored by Semiconductor
+Research Corporation (SRC) and Defense Advanced Research
+Projects Agency (DARPA) under the JUMP 2.0 program.
+References
+[1] 2025. DecodeX: Exploring and Benchmarking of LDPC Decoding
+across CPU, GPU, and ASIC Platforms. https://github.com/functions-
+lab/DecodeX.
+[2] 3GPP. 2019. 5G; NR; Physical Layer Procedures for Control. Tech-
+nical Specification (TS) 38.213. 3rd Generation Partnership Project
+(3GPP). https://www.etsi.org/deliver/etsi_ts/138200_138299/138213/
+15.06.00_60/ts_138213v150600p.pdf Version 15.6.0.
+[3] 3GPP. 2020.
+5G; NR; Multiplexing and channel coding.
+Techni-
+cal Specification (TS) 38.212. 3rd Generation Partnership Project
+(3GPP). https://www.etsi.org/deliver/etsi_ts/138200_138299/138212/
+16.02.00_60/ts_138212v160200p.pdf Version 16.2.0.
+[4] Parthiban Annamalai, Minsung Kim, Anurag Khandelwal, and Lin
+Zhong. 2025. Exploring Intelligent Dynamic Resource Provisioning
+for Elastic Massive MIMO vRAN. In Proc. ACM HotMobile’25.
+[5] Xinran Fang, Wei Feng, Yunfei Chen, Ning Ge, and Yan Zhang. 2022.
+Joint communication and sensing toward 6G: Models and potential of
+using MIMO. IEEE Internet of Things Journal 10, 5 (2022), 4093–4116.
+[6] Xenofon Foukas and Bozidar Radunovic. 2025. The future of the
+industrial AI edge is cellular. In Proc. ACM HotMobile’25.
+[7] Zhihui Gao, Zhenzhou Qi, and Tingjun Chen. 2024. Mambas: Maneu-
+vering analog multi-user beamforming using an array of subarrays in
+mmWave networks. In Proc. ACM MobiCom’24.
+[8] David Hunt, Kristen Angell, Zhenzhou Qi, Tingjun Chen, and Miroslav
+Pajic. 2024. MadRadar: A black-box physical layer attack framework
+on mmWave automotive FMCW radars. In Proc. ISOC NDSS’24.
+[9] Intel. 2024. FlexRAN-FEC-SDK-Modules. https://github.com/intel/
+FlexRAN-FEC-SDK-Modules.
+[10] Intel. 2025. Intel oneAPI Base Toolkit. https://www.intel.com/content/
+www/us/en/developer/tools/oneapi/base-toolkit.html.
+[11] Intel. 2025. Intel oneAPI HPC Toolkit. https://www.intel.com/content/
+www/us/en/developer/tools/oneapi/hpc-toolkit.html.
+[12] Intel. 2025.
+Intel® oneAPI DPC++/C++ Compiler.
+https:
+//www.intel.com/content/www/us/en/developer/tools/oneapi/dpc-
+compiler.html.
+Qi, et al.
+[13] Xingqin Lin and Namyoon Lee. 2021. 5G and Beyond: Fundamentals
+and Standards (1st ed.). Springer, Cham, Switzerland.
+[14] NVIDIA. 2025. DOCA Documentation. https://docs.nvidia.com/doca/
+sdk/doca+gpunetio/index.html.
+[15] NVIDIA. 2025. Getting Started with pyAerial. https://docs.nvidia.com/
+aerial/cuda-accelerated-ran/24-3/pyaerial/getting_started.html.
+[16] NVIDIA. 2025. NVIDIA Jetson Orin. https://www.nvidia.com/en-
+us/autonomous-machines/embedded-systems/jetson-orin/.
+[17] NVIDIA. 2025. Sionna Research Kit (RK). https://nvlabs.github.io/
+sionna/rk/quickstart.html.
+[18] OpenAirInterface.
+2025.
+CUDA
+LDPC
+in
+OAI.
+https:
+//gitlab.eurecom.fr/oai/openairinterface5g/-/tree/develop/openair1/
+PHY/CODING/nrLDPC_decoder_LYC?ref_type=heads.
+[19] Zhenzhou Qi, Zhihui Gao, Chung-Hsuan Tung, and Tingjun Chen.
+2023. Programmable millimeter-wave MIMO radios with real-time
+baseband processing. In ACM WiNTECH’23.
+[20] Zhenzhou Qi, Chung-Hsuan Tung, Zhihui Gao, and Tingjun Chen.
+2025. NEXUS: Efficient and scalable multi-cell mmWave baseband pro-
+cessing with heterogeneous compute. arXiv preprint arXiv:2509.04625
+(2025).
+[21] Zhenzhou Qi, Chung-Hsuan Tung, Anuj Kalia, and Tingjun Chen. 2024.
+Savannah: A Real-time Programmable mmWave Baseband Processing
+Framework. In Proceedings of the 30th Annual International Conference
+on Mobile Computing and Networking.
+[22] Zhenzhou Qi, Chung-Hsuan Tung, Anuj Kalia, and Tingjun Chen. 2024.
+Savannah: Efficient mmWave baseband processing with minimal and
+heterogeneous resources. In Proc. ACM MobiCom’24.
+[23] Leonardo Lo Schiavo, Gines Garcia-Aviles, Andres Garcia-Saavedra,
+Marco Gramaglia, Marco Fiore, Albert Banchs, and Xavier Costa-Perez.
+2024. CloudRIC: Open radio access network (O-RAN) virtualization
+with shared heterogeneous computing. In Proc. ACM MobiCom’24.
+[24] Silicom Ltd. 2023.
+Lisbon P2 ACC100 FEC accelerator extended
+temp. https://www.silicom-usa.com/wp-content/uploads/2023/09/
+Lisbon-P2-ACC100-FEC-Accelerator-Extended-temp-1v1.pdf.
+[25] The Linux Foundation. 2023. Data plane development kit (DPDK).
+https://doc.dpdk.org/guides-21.11/tools/testbbdev.html.

@@ -1,0 +1,838 @@
+Learned Scheduling of LDPC Decoders Based on Multi-armed Bandits
+Salman Habib, Allison Beemer, and Jo¨rg Kliewer Helen and John C. Hartmann Dept. of Electrical and Computer Engineering,
+New Jersey Institute of Technology, Newark, NJ 07102
+
+Abstract— The multi-armed bandit (MAB) problem refers to the dilemma encountered by a gambler when deciding which arm of a multi-armed slot machine to pull in order to maximize the total reward earned in a sequence of pulls. In this paper, we model the scheduling of a node-wise sequential LDPC decoder as a Markov decision process, where the underlying Tanner graph is viewed as a slot machine with multiple arms corresponding to the check nodes. A fictitious gambler decides which check node to pull (schedule) next by observing a reward associated with each pull. This interaction enables the gambler to discover an optimized scheduling policy that aims to reach a codeword output by propagating the fewest possible messages. Based on this policy, we contrive a novel MAB-based node-wise scheduling (MABNS) algorithm to perform sequential decoding of LDPC codes. Simulation results show that the MAB-NS scheme, aided by an appropriate scheduling policy, outperforms traditional scheduling schemes in terms of complexity and bit error probability.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are sparse graphbased codes whose rates approach the capacity of symmetric binary input channels [1], [2]. LDPC codes are decoded via iterative algorithms, such as belief propagation (BP), which operate on the code’s Tanner graph [3]. Traditional BP decoders employ a flooding scheme, where at each iteration, all variables nodes (VNs) of the Tanner graph are updated simultaneously, followed by a simultaneous update of all check nodes (CNs). The flooding schedule is computationally intensive compared to sequential scheduling, where the nodes of a Tanner graph are updated serially based on the latest messages propagated by their neighbors. Sequential scheduling problems deal with finding the optimized order of node updates to improve the convergence speed and/or the decoding performance with respect to the flooding scheme.
+In [4], a sequential CN scheduling scheme, so-called nodewise scheduling (NS), is proposed, where the criterion for selecting the next CN depends on its residual, given by the magnitude of the difference between two successive messages emanating from that CN. In NS, all CN to VN messages corresponding to a CN with the highest residual are propagated simultaneously. Although the NS method converges faster than the flooding scheme, it computes provisional messages for updating the CN residuals in real-time, making NS more computationally intensive than the flooding scheme for the same total number of messages propagated.
+In this paper, we mitigate the computational complexity inherent in NS by employing a multi-armed bandit-based NS (MAB-NS) scheme. To the best of our knowledge, such a scheme has not been proposed in conjunction with BP
+This work was supported in part by NSF grant ECCS-1711056 and by the US Army Research Office under Cooperative Agreement Number W911NF17-2-0183.
+
+decoder scheduling in the open literature. Instead of computing residuals, the proposed MAB-NS algorithm evaluates an action-value function prior to scheduling, which determines how beneficial an action (a selected CN) is for maximizing convergence speed/performance of the decoder. We model the NS algorithm as a Markov decision process (MDP), where the Tanner graph is conceived as an m-armed slot machine with m CNs (arms), and a fictitious gambler attempts to discover the CNs that elicit the highest reward. In this paper we employ the CN residual [4] as a reward function. Repeated scheduling during the learning phase enables the gambler to estimate the action-value function, which can be viewed as a reinforcement learning (RL) task intended to optimize the CN scheduling order. We refer to this RL task as the MAB problem.
+In the following, we discuss two strategies for estimating the action-value function: by computing the Gittins indices (GIs) of all the CNs, and via Q-learning. In the GI approach, each CN is considered as an independent bandit process (with independent rewards), leading to a learning complexity that grows linearly with the number of CNs. In comparison, Qlearning is a Monte Carlo approach for estimating the actionvalue function, without explicit assumptions on the distribution of the bandit processes. However, the learning complexity in this approach can grow exponentially with the number of CNs. To lower the Q-learning complexity, we propose a novel clustering scheme where CNs are grouped into smaller clusters with separate state and action spaces.
+
+II. PRELIMINARIES A. LDPC Codes
+
+A (J, K)-regular LDPC code is defined as the null space of a sparse parity-check matrix H ∈ F2m×n, where each row
+(resp. column) of H contains K (resp. J) ones, with K m,
+
+J n. The code block length is n and its design rate is
+
+given
+
+by
+
+R
+
+=
+
+1
+
+−
+
+m n
+
+,
+
+which
+
+is
+
+equal
+
+to
+
+the
+
+actual
+
+rate
+
+if
+
+and
+
+only if the parity-check matrix is full-rank. In a sequential BP
+
+decoding step, a CN residual rma→v is defined as
+
+rma→v |ma→v − ma→v|.
+
+(1)
+
+Here, ma→v is the message sent by CN a to its neighboring VN v in the previous iteration, and ma→v is the message that CN a would send to VN v in the current iteration, if scheduled.
+Let GH = (V ∪ C, E) denote the Tanner graph corresponding to H, where V = {v0, . . . , vn−1} is a set of n VNs, C = {c0, . . . , cm−1} is a set of m CNs, and there is an edge in set E connecting vi to cj if and only if Hj,i = 1. In GH, if X ⊆ V , let N (X) be the set of all neighbors of X, and
+let O(X) be the set of neighbors of X with odd degree in
+the subgraph induced by X ∪ N (X). For A > 0, B ≥ 0, an
+(A, B) absorbing set (ABS) X is a set of VNs with |X|= A,
+
+978-1-7281-6432-8/20/$31.00 ©2020 IEEE
+
+2789
+
+ISIT 2020
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+|O(X)|= B, and the property that each VN in X has strictly fewer neighbors in O(X) than in C \ O(X) [5].
+ABSs are known to cause BP decoder failures, exhibited by a flattening of the bit error rate (BER) performance curve in the high signal-to-noise ratio (SNR) region, also known as an error-floor [5]. In particular, (3, 3) ABSs are most harmful for column weight-3 array-based (AB) LDPC codes [6], [7].
+
+G(sˆ, a) represents the long-term expected reward for taking action a in state sˆ, indicating how beneficial it would be for the gambler to take that action [8], [9]. For the Gittins scheme, the optimal arm scheduling policy for a gambler is given by
+
+πG = arg max G(sˆ, a).
+
+(3)
+
+a
+
+D. Solving the MAB Problem via Q-learning
+
+B. Multi-armed Bandits
+
+Optimal policies for MDPs can also be estimated via
+
+The MAB is a special RL problem where in each time step, Monte Carlo techniques such as Q-learning [11], [10], [12].
+
+a gambler must decide which arm of an m-armed slot machine The estimated action-value function Qt(St, At) in Q-learning
+
+to pull next in order to maximize the total reward in a series of represents the expected long-term reward achieved by the
+
+pulls. In this paper, the m-armed slot machine is modeled as a gambler at time t after taking action At in state St. To improve
+
+finite Markov decision process (MDP) [8], and the optimized the estimation in each time step, the action-value function is
+
+scheduling order of arms is obtained by solving the related adjusted according to a recursion
+
+MAB problem.
+
+Qt+1(s, a) = (1 − α)Qt(St = s, At = a)+
+
+In the remainder of the paper, let [[x]] {0, . . . , x − 1},
+where x is a positive integer. In an m-armed bandit problem, let St(0), . . . , St(m−1) represent m bandit processes (arms), where each random variable (r.v.) St(j), j ∈ [[m]], can take M possible real values. Let a state space S contain all M m possible realizations of the sequence St(0), . . . , St(m−1). Let the r.v. St ∈ [[M m]], with realization s represent the index of realization st(0), . . . , s(tm−1). Since each index corresponds to a unique realization, we also refer to St as the state of a m-armed
+slot machine at time t. If the arms are modeled as independent bandit processes, we define a r.v. Sˆt ∈ [[M ]], with realization sˆ, as the realization s(tj) of arm j. Let At ∈ [[m]] represent an action, with realization a, indicating the index of an arm
+that has been pulled by the gambler at time t, and A = [[m]]
+be an action space, where a ∈ A. Let St+1 represent a new
+state of the MDP after pulling arm At, and let s denote its
+realization. Also, let a r.v. Rt(St, At, St+1), with realization r
+be the reward yielded at time t after playing arm At in state
+St.
+
+α Rt(s, a, St+1 = f (s, a)) + β max Qt(f (s, a), a ) ,
+a ∈[[m]]
+(4)
+
+where f (s, a) represents the new state s as a function of s and
+
+a, 0 < α < 1 is the learning rate, and Qt+1(s, a) is a future action-value resulting from action a in the current state s [12,
+
+pp. 95-96]. Note that the observed state, which is a collective state St(0), . . . , St(m−1) of all m bandit processes, allows the
+gambler to incorporate any dependencies of the arms, unlike
+
+the Gittins scheme.
+
+In Q-learning, the optimal policy for the gambler, πQ(τ), in
+
+state s is determined as
+
+πQ(τ) = arg max Qτ (s, a),
+
+(5)
+
+a
+
+where τ is the total number of time steps after observing
+
+an initial state S0. Although the optimal policy is initially
+
+unknown to the gambler, with the aid of Q-learning it is
+
+possible to recursively determine the policy and the action-
+
+value function together via -greedy exploration (see Section
+
+IV for details).
+
+C. Solving the MAB Problem by Computing Gittins Indices
+
+III. MAB-BASED NODE-WISE SCHEDULING
+
+As outlined above, if an m-armed bandit problem, formulated as an MDP, is solved via Markov decision theory, the state space consists of M m possible state realizations of all the m arms. Consequently, the complexity of solving the MAB via Markov decision theory grows exponentially with the number of arms. On the other hand, if the arms are independent bandit processes, it is clear that the optimal solution to the m-armed bandit problem can be obtained by solving m 1-dimensional optimization problems, leading to an exponential complexity reduction. Hence, for a given arm with index a, one only needs to compute its action-value function, in this case known as the Gittins index (GI) G(sˆ, a), given by [9]
+
+The proposed MAB-NS is a serial decoding algorithm in which a single message passing iteration is given by messages sent from a scheduled CN to all its neighboring variable nodes, and subsequent messages sent from these variable nodes to their other CN neighbors. Sequential CN scheduling is carried out until a stopping condition is reached, or an iteration threshold is exceeded. The MAB-NS decoder applies a scheduling policy based on an action-value function to decide the CN to be scheduled next, avoiding the real-time calculation of residuals.
+Now, we consider the effect of (3, 3) ABSs on the performance of sequential decoders. Suppose that the VNs
+
+Eτ,sˆ
+
+τ −1 t=0
+
+βtRt(Sˆt,
+
+At,
+
+sˆ
+
+)|Sˆ0
+
+=
+
+sˆ,
+
+At
+
+=
+
+a
+
+v1, v2, v3 ∈ {0, 1, . . . , n − 1} of a (3, 3) ABS are initially
+
+G(sˆ, a) = max
+pτ ∈P
+
+Eτ
+
+τ −1 t=0
+
+βt|Sˆ0
+
+=
+
+sˆ, At
+
+=
+
+a
+
+, in error. In a sequential scheduling step, suppose that a neighboring CN N (vi ), i ∈ {1, 2, 3} corrects the erroneous
+
+(2) belief (LLR) of vi . Then, in the second half of the same where τ is a r.v. with realizations in {1, 2, ...} that gives the iteration, this VN can correct its CN neighbors, and these
+
+number of times the gambler plays arm a, pτ is the distribution CNs can correct the remaining VNs in the ABS. On the
+
+of τ , P represents the collection of all allowed distributions other hand, for the flooding scheme, the erroneous VN will
+
+and is determined by allowed stopping time policies, and 0 < also receive messages from the other elements of N (vi ),
+
+β < 1 is the reward discount rate. The action-value function which can potentially reinforce the error. If this is the case,
+
+2790
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+the decoder is trapped as this VN cannot correct any of its policy in Step 12 of Algorithm 1 is equivalent to scheduling
+
+neighbors. Thus we can state the following remark.
+
+the CN with the highest expected residual.
+
+Remark. Sequential scheduling techniques such as the proposed MAB-NS scheme are more likely to correct errors associated with (3, 3) ABSs than a flooding-based scheme.
+
+We define the optimal scheduling order to be the one that yields a codeword output by propagating the least number of CN to VN messages. The decoding algorithm informs the imaginary gambler of the current state of the decoder, and the reward obtained after performing an action (scheduling a
+
+CN). Based on these observations, the gambler takes future actions, to enhance the total reward earned, which alters the state of the environment and also the future reward. In this work, the reward Ra obtained by the gambler after scheduling CN a is defined as Ra = maxv∈N (a) rma→v , where rma→v is computed according to (1).
+
+The magnitude of the residual diminishes as the BP algorithm converges. Consequently, propagating CN to VN messages with relatively large residuals first is expected to lead to faster convergence of the BP algorithm [4]. Note that in our MAB problem, residuals are computed for estimating the action-value function only, which is done off-line (see Section IV for details).
+
+An iteration number (resp. iteration threshold max) of the MAB-NS scheme is analogous to a time step t (resp. stopping
+
+time τ ) discussed in Section II. Let x = [x0, . . . , xn−1] and
+
+y = [y0, . . . , yn−1] represent the transmitted and the received
+
+word, respectively, where xi ∈ {0, 1}, yi = (−1)xi + z, and
+
+z ∼ N (0, σ2). The posterior log-likelihood ratio (LLR) of xi
+
+is
+
+expressed
+
+as
+
+Li
+
+=
+
+log
+
+Pr(xi Pr(xi
+
+=1|yi =0|yi
+
+) )
+
+.
+
+The
+
+soft
+
+channel
+
+infor-
+
+mation input to the MAB-NS algorithm is a vector of LLRs
+
+denoted as L = [L0, . . . , Ln−1]. In the MAB-NS scheme, the
+
+value (or state) of CN j at the end of iteration is denoted by
+
+sˆ(j) =
+
+n−1 i=0
+
+Hj,i
+
+Lˆ (i) ,
+
+where
+
+Lˆ (i)
+
+=
+
+c∈N (vi) mc→vi + Li
+
+is the posterior LLR computed by VN vi at the end of
+
+iteration , and mc→vi is the message received by VN vi from a neighboring CN c. Let Sˆ = Sˆ(0), . . . , Sˆ(m−1), with
+
+realization ˆs = sˆ(0), . . . , sˆ(m−1), represent a soft syndrome
+
+vector of the MAB-NS scheme obtained at the end of iteration
+
+.
+
+Since we model the NS scheme as a finite MDP, it is
+necessary to quantize each CN state. Let gM (·) denote an M -level scalar quantization function that maps a real number
+to any of the closest M possible representation points set by the quantizer. Let S = S(0), . . . , S(m−1) be the quantized syndrome vector, where a realization s(j) = gM (sˆ(j)). We call S a quantized soft syndrome for the case M > 2, and a binary
+syndrome if M = 2. The state space containing all possible quantized syndromes is represented as S(M). Let S ∈ [[M m]],
+with realization s, denote the index of a realization of S , let Sˆ ∈ [[M ]], with realization sˆ, represent a quantized CN value,
+and let an action A ∈ A, with realization a, denote the index
+of a scheduled CN in iteration .
+
+The proposed MAB-NS scheme is shown in Algorithm 1. The input to this algorithm is a soft channel information vector L and a parity-check matrix H. Note that the CN scheduling
+
+Algorithm 1: MAB-NS for LDPC codes
+
+Input : L, H
+
+Output: reconstructed codeword
+
+1 Initialization:
+
+2
+
+←0
+
+3 mc→v ← 0 4 mvi→c ← Li 5 Lˆ ← L 6 Sˆ ← HLˆ
+
+// for all CN to VN messages // for all VN to CN messages
+
+7 foreach a ∈ [[m]] do
+
+8
+
+s(a) ← gM (sˆ(a))
+
+9 end
+
+// M -level quantization
+
+// decoding starts
+
+10 if stopping condition not satisfied or < max then 11 s ← index of S
+
+12 select CN a according to an optimum scheduling policy
+
+13 foreach vk ∈ N (a) do
+
+14
+
+compute and propagate ma→vk
+
+15
+
+foreach cj ∈ N (vk) \ a do
+
+16
+
+compute and propagate mvk→cj
+
+17
+
+end
+
+18
+
+Lˆ(k) ← c∈N (vk) mc→vk + Lk // update LLR
+
+of vk
+
+19
+
+end
+
+20 foreach CN j that is a neighbor of vk ∈ N (a) do
+
+21
+
+sˆ(j) ← vi∈N (j) Lˆ(i)
+
+22
+
+s(j) ← gM (sˆ(j))
+
+// update syndrome S
+
+23
+
+end
+
+24
+
+← +1
+
+// update iteration
+
+25 end
+
+Now, we address a decoding error encountered by the NS scheme which we expect to correct using MAB-NS. Undetected errors occur when the Hamming distance between the received and decoded codewords is greater than the distance between the transmitted and received ones. In the MAB-NS scheme, the gambler attempts to schedule a CN based on its expected residual instead of the immediate one. As a result, the MAB-NS scheme employs a more global decoding approach in contrast to the pure NS scheme [4] and is more likely to overcome undetected errors compared to NS.
+IV. LEARNING CN SCHEDULING POLICIES
+In our MAB problem, the gambler’s goal is to estimate, from experience, the action-value function used for implementing the CN scheduling policy shown in Step 12 of Algorithm 1. This task manifests an exploration vs. exploitation tradeoff which is typical of any RL framework. To maximize the total reward in the long-run, the gambler must schedule CNs that are known to produce high residuals (exploitation). But to discover such CNs, the gambler must select CNs that were not scheduled before (exploration). To accommodate this tradeoff, we utilize the well-known -greedy exploration scheme [8], [13]. The estimate of the action-value function improves as more CNs are scheduled by the gambler. In the following, we discuss two RL techniques for learning the action-value function used in MAB-NS: by estimating the GIs, and via Q-learning.
+
+2791
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+A. Estimating the GIs
+
+In this approach, the m CNs are assumed to be m in-
+
+dependent bandit processes, implying that scheduling a par-
+
+ticular CN does not affect the state of the remaining ones.
+
+This assumption holds in tree-like Tanner graphs where a
+
+message propagated by a CN to a VN is independent of the
+
+messages computed by all other CNs in the graph. However,
+
+in practice, Tanner graphs contain cycles that induce depen-
+
+dencies between the CN to VN messages. Nonetheless, the
+
+GI approach offers a low-complexity learning task where the
+
+size of the state space observed by the gambler increases
+
+linearly with the number of CNs in the underlying graph. Note
+
+that P (S +1|S , A ) ∈ {0, 1} as the Tanner graph is fixed and the messages are deterministically computed. We also
+
+apply a specific stopping time policy by selecting an integer
+
+∗ max
+
+∈
+
+{1, 2, . . . , }
+
+with
+
+the
+
+condition
+
+Pr(
+
+max
+
+=
+
+∗max) = 1.
+
+Based on these considerations, (2) is rewritten for our MAB
+
+problem as
+
+G(sˆ, a) = max ∗ max
+
+max
+=0
+
+−1 β R
+max −1 =0
+
+(sˆ, β
+
+a,
+
+sˆ
+
+)
+
+.
+
+(6)
+
+Since a gambler must obtain the GIs via RL, we obtain an average GI, denoted G˜(sˆ, a), over multiple realizations of L. After computing G˜(sˆ, a) for all sˆ and a, the optimum CN scheduling policy is πˆG = arg maxa G˜(sˆ, a).
+
+B. Q-learning
+
+Q-learning is an adaptive algorithm for computing optimal
+
+policies for MDPs [11], [12]. Q-learning does not rely on ex-
+
+plicit assumptions on the distribution of the bandit processes,
+
+unlike the Gittins scheme where the LLRs emanating from
+
+CNs are assumed to be independent. However, the state space
+
+observed by the gambler now grows exponentially with m.
+
+As a result, the traditional Q-learning approach suffers from a
+
+much greater learning complexity compared to the GI scheme.
+
+To overcome this problem, we propose a novel clustering
+
+strategy. A cluster is defined as a set of CNs with separate state
+
+and action spaces. Let z m represent the size (number of
+
+CNs) in a cluster. The state of a cluster with index u ∈ [[
+
+m z
+
+]],
+
+is a sub-syndrome S(u,z) = S(uz), . . . , S(uz+z−1) of the
+
+syndrome S , with a state space Su(M) containing all possible M z sub-syndromes S(u,z), where |Su(M)| |S(M)|. Hence,
+
+the total number of states observed by the gambler is upper-
+
+bounded by
+
+m z
+
+|Su(M)|. The action space of cluster u is
+
+defined as Au = [[z]].
+
+Note that the larger the size of the cluster, the greater the
+
+ability of the gambler to take into account any dependencies
+
+between CN LLRs. Hence, there exists a trade-off between
+
+the effectiveness of clustered Q-learning to take into account
+
+these dependencies, and the learning complexity which grows
+
+exponentially with the size of each cluster: the cluster size
+
+should be large enough to accommodate the dependencies of
+
+the CN messages as much as possible, but not so large that
+
+makes learning infeasible.
+
+Apart from this trade-off, clustering does not restrict Q-
+
+learning, as the reward obtained by the gambler is indifferent
+
+to the size and location of the clusters in the Tanner graph.
+
+Moreover, scheduling a CN in one cluster may affect the
+
+residuals of other CNs distributed across multiple clusters, due to their connection with a common set of VNs. Also note that in traditional Q-learning, a scheduling operation alters the state corresponding to the entire syndrome S , whereas in the clustering approach, only the states of the clusters that are connected to the neighbors of scheduled CN are affected. As a result, states of the unaffected clusters may be reused for estimating future action-values. Based on the considerations above and noting that decoder iteration is analogous to time t, (4) can be rewritten for clustered Q-learning as
+Q +1(su, au) = (1 − α)Q (su, au)+
+
+α R (su, au, f (su, au)) + β max Q (f (su , au ), au ) ,
+u ,au
+(7)
+
+where su ∈ [[M z]] and au ∈ Au are the state and action
+indices of cluster u, respectively, f (su, au) represents the new state su ∈ [[M z]] as a function of su and au, and R (su, au, su) = Rau . In clustered Q-learning, the action in optimization step is selected via an -greedy approach
+according to
+
+au =
+
+uniformly random over u and Au w.p. , πQ( ) w.p. 1 − ,
+
+(8)
+
+where
+
+πQ( )
+
+=
+
+arg maxau s.t. u∈[[
+
+m z
+
+]] Q (su, au).
+
+After
+
+suc-
+
+cessful
+
+learning,
+
+π( max)
+Q
+
+yields
+
+an
+
+optimized
+
+CN
+
+scheduling
+
+policy, where max is the maximum number of decoder itera-
+
+tions for a given input of channel information L.
+
+Algorithm 2 represents the method for clustered Q-learning.
+
+The input to this algorithm is a set L = {L0, . . . , L|L |−1} containing |L | realizations of L over which clustered Q-
+
+learning is performed, and a parity-check matrix H. This algo-
+
+rithm trains the gambler to learn the optimum CN scheduling
+
+policy for a given H. In each optimization step , the gambler
+
+performs NS for a given L. As a result, clustered Q-learning
+
+can be viewed as a recursive Monte Carlo estimation approach
+
+with L being the source of randomness.
+
+V. DECODER IMPLEMENTATION AND SIMULATION
+RESULTS
+Each element of the state vector Sˆ is quantized using
+a standard scalar quantization algorithm [14], where a realization sˆ(j) represents the “source signal” to be quantized.
+Provided that there exist a sufficiently large dataset of source
+realizations, the quantization algorithm recursively optimizes
+the boundary and the representation points of the quantizer by minimizing the distortion E[(sˆ(j) − gM (sˆ(j)))2] over the entire dataset. We generate a dataset comprising 105 realizations of sˆ(j) by randomly scheduling CNs via NS to estimate its
+distribution.
+To verify the effectiveness of learned CN scheduling based
+on GI estimation and clustered Q-learning, we apply the scheduling policies πˆG and πQ( max), respectively, in Step 12 of Algorithm 1, resulting in schemes denoted as MAB-NS-1
+and MAB-NS-2, respectively. We then utilize MAB-NS-1 and MAB-NS-2 for sequential decoding of both random (3, 6)regular and (3, 7)-array-based (AB) LDPC codes [16]. Even
+though clustering helps to reduce the state-space significantly
+
+2792
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+Algorithm 2: Clustered Q-learning
+
+Input : L , H
+
+Output: Estimated Q max (su, au) for all u 1 Initialization: Q0(su, au) ← 0 for all su, au and u
+
+2 for each L ∈ L do
+
+3
+
+←0
+
+4 Lˆ ← L
+
+5 Sˆ ← HLˆ
+
+6 foreach a ∈ [[m]] do
+
+7
+
+s(a) ← gM (sˆ(a)) // M -level quantization
+
+8 end
+
+9 while < max do
+
+10
+
+schedule CN au according to (8)
+
+11
+
+select u as cluster index of CN au
+
+12
+
+S(u,z) ← s(uz), . . . , s(uz+z−1)
+
+13
+
+su ← index of S(u,z)
+
+14
+
+foreach vi ∈ N (au) do
+
+15
+
+compute and propagate mau→vi
+
+16
+
+foreach cj ∈ N (vi) \ au do
+
+17
+
+compute and propagate mvi→cj
+
+18
+
+end
+
+19
+
+Lˆ(i) ← c∈N (vi) mc→vi + Li // update LLR
+
+20
+
+end
+
+21
+
+foreach CN j that is a neighbor of vk ∈ N (au) do
+
+22
+
+sˆ(j) ← vi∈N (j) Lˆ(i)
+
+23
+
+s(j) ← gM (sˆ(j))
+
+// update syndrome S
+
+24
+
+end
+
+25
+
+su ← index of updated S(u,z)
+
+26
+
+R (su, au, su) ← highest residual of CN au
+
+27
+
+compute Q +1(su, au) according to (7)
+
+28
+
+← +1
+
+// update iteration
+
+29
+
+end
+
+30 end
+
+compared to standard Q-learning, it is still more complex than estimating GIs. Hence, our choice of code block length for MAB-NS-1 and MAB-NS-2 is influenced by the run-time complexity of Algorithm 2. Since a large |L | is needed to accurately estimate the action-value, we found short codes, with a block length of approximately 200, to be suitable for implementing Algorithm 2 on our system with a reasonable cluster size z.
+For learning, we consider α = 0.1, β = 0.9, = 0.6, z = 7, M = 4, max = 25, for both codes, and |L |= 2.5 × 107 (resp. 5 × 107) for the (3, 6)-regular (resp. (3, 7)-AB) code. For GI estimation and clustered Q-learning, training is done according to Section IV-A and Algorithm 2, respectively, for each code, and the corresponding action-value functions are used to perform the MAB-NS-1 and MAB-NS-2 schemes, respectively. We compare the performances of MAB-NS-1 and MAB-NS-2 with existing BP decoding schemes of flooding and NS for max = 25. The BER performances of (3, 6)regular and (3, 7)-AB LDPC codes using these decoding techniques are shown in Figs. 1 and 2, respectively. These results clearly demonstrate that MAB-NS-2 is superior to the other decoding schemes in terms of BER performance, although the gain is diminished for more structured codes as AB LDPC constructions. A comparison with a (128, 64) Reed Muller code under majority logic decoding reveals a threshold of around 4.5 dB and performs therefore much worse compared to all the codes shown in Figs. 2 and 3.
+
+In Table I, we compare the average number of CN to VN messages propagated in the different decoding schemes to attain the results in Figs. 1 and 2. The numbers without (resp. with) parentheses correspond to the (3, 6)-regular and (resp. (3, 7)-AB) LDPC code. We see that MAB-NS-2 generates a lower number of CN to VN messages compared to the other schemes. Moreover, unlike NS, MAB-NS-2 avoids the computation of residuals in real-time, providing a significant reduction in message-passing complexity for short LDPC codes.
+Future work will focus on extending these promising initial results to longer LDPC codes.
+
+SNR
+flooding MAB-NS-1
+NS MAB-NS-2
+
+0
+16070 (29257) 337 (402) 324 (389) 280 (374)
+
+0.6
+13923 (27684) 299 (367) 290 (358) 236 (308)
+
+1.2
+9274 (22339) 254 (314) 256 (299) 181 (281)
+
+1.4
+7657 (17367) 253 (286) 238 (278) 162 (276)
+
+1.8
+4523 (10401) 220 (254) 222 (251) 138 (234)
+
+TABLE I: Average number of CN to VN messages propagated in various decoding schemes for a (3, 6)-regular ((3, 7)-AB) LDPC code for attaining the results shown in Figs. 1 and 2.
+
+10 -1
+
+BER
+
+10 -2
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+Eb/N0 (dB)
+
+Fig. 1: BER results using different BP decoding schemes for a (3, 6)regular LDPC code with block length n = 196.
+
+10 -1
+
+BER
+
+10 -2
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+Eb/N0 (dB)
+
+Fig. 2: BER results using different BP decoding schemes for a (3, 7)AB LDPC code with block length n = 196.
+
+2793
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan 1962.
+[2] D. J. Costello, Jr., L. Dolecek, T. Fuja, J. Kliewer, D. G. M. Mitchell, and R. Smarandache, “Spatially coupled sparse codes on graphs: theory and practice,” IEEE Comms. Mag., vol. 52, no. 7, pp. 168–176, 2014.
+[3] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 553–547, Sep 1981.
+[4] A. V. Casado, M. Griot, and R. D. Wesel, “LDPC decoders with informed dynamic scheduling,” IEEE Trans. of Comm., vol. 58, no. 12, pp. 3470–3479, Dec 2010.
+[5] L. Dolecek, Z. Zhang, V. Anantharam, M. Wainright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, pp. 181–201, Jan. 2010.
+[6] B. Amiri, A. Reisizadehmobarakeh, H. Esfahanizadeh, J. Kliewer, and L. Dolecek, “Optimized design of finite-length separable circulant-based spatially-coupled codes: An absorbing set-based analysis,” IEEE Trans. on Commun., vol. 64, no. 10, pp. 4029–4043, Oct 2016.
+[7] A. Beemer, S. Habib, C. Kelley, and J. Kliewer, “A generalized algebraic approach to optimizing SC-LDPC codes,” Proc. 55th Allerton Conf. on Communication, Control, and Computing, pp. 672–679, Oct. 2017.
+[8] R. S. Sutton and A. G. Barto, “Reinforcement learning: An introduction,” The MIT Press Cambridge, 2015.
+[9] J. C. Gittins, “Bandit processes and dynamic allocation indices,” J. R. Statist. Soc. B, vol. 41, no. 2, pp. 148–163, 1979.
+[10] F. Carpi, C. Hager, M. Martalo, R. Raheli, and H. D. Pfister, “Reinforcement learning for channel coding: Learned bit-flipping decoding,” Proc. of 57th Allerton Conf. on Communication, Control and Computing.
+[11] M. O. Duff, “Q-learning for bandit problems,” CMPSCI Technical Report 95-26, 1995.
+[12] C. J. C. H. Watkins, “Learning from delayed rewards,” PhD Thesis, King’s College, 1989.
+[13] J. Vermorel and M. Mohri, “Multi-armed bandit algorithms and empirical evaluation,” European Conference on Machine Learning (ECML), pp. 437–448, 2005.
+[14] A. Gersho and R. M. Gray, “Vector quantization and signal compression,” The Springer International Series in Engineering and Computer Science (Communications and Information Theory), vol 159. Springer, Boston, MA, 1992.
+[15] S. Chung, T. J. Richardson, and R. L. Urbanke, “Analysis of sumproduct decoding of low-density parity-check codes using a Gaussian approximation,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 657–670, Feb 2001.
+[16] J. L. Fan, “Array codes as low-density parity-check codes,” Proc. 2nd Intl. Symp. Turbo Codes and Rel. Topics, pp. 543–546, Sep 2000.
+2794
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:05:42 UTC from IEEE Xplore. Restrictions apply.
+
+

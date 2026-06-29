@@ -1,0 +1,676 @@
+2012 IEEE Information Theory Workshop
+
+Suppressing pseudocodewords by penalizing the objective of LP decoding
+
+Xishuo Liu Dept. Electrical & Comp. Engineering
+University of Wisconsin - Madison Madison, WI 53706
+email: xliu94@wisc.edu
+
+Stark C. Draper Dept. Electrical & Comp. Engineering
+University of Wisconsin - Madison Madison, WI 53706
+email: sdraper@ece.wisc.edu
+
+Benjamin Recht Department of Computer Sciences University of Wisconsin - Madison
+Madison, WI 53706 email: brecht@cs.wisc.edu
+
+Abstract—In this paper, we present a new class of decoders for low density parity check (LDPC) codes. We are motivated by the observation that the linear programming (LP) decoder has worse error performance than belief propagation (BP) decoders at low SNRs. We base our new decoders on the alternating direction method of multipliers (ADMM) decomposition technique for LP decoding. The ADMM not only efficiently solves the LP decoding problem, but also makes it possible to explore other decoding algorithms. In particular, we add various penalty terms to the linear objective of LP decoding with the goal of suppressing pseudocodewords. Simulation results show that the new decoders achieve much better error performance compared to LP decoder at low SNRs. What is more, similar to the LP decoder, no error floor is observed at high SNRs.
+I. INTRODUCTION
+Low density parity check (LDPC) codes, when paired with message passing decoding algorithms, can perform close to the Shannon limit. However, message passing is not the only choice for decoding LDPC codes. The linear programming (LP) decoder proposed by Feldman et al. [1] brings LDPC decoding to the realm of convex optimization. It has been shown that LP decoding is better than message passing algorithms in many aspects. First, the LP decoding has an “ML certificate” property. That is, if the solution from an LP decoder is an integral solution, it is the maximum likelihood (ML) solution. Second, the LP decoder provides better theoretical guarantees. Message passing algorithms are not guaranteed to converge and are observed to suffer from an “error floor”. LP decoding, on the other hand, is guaranteed to correct some fraction of errors in bit flip channels (see e.g. [2]–[4]) and, empirically, has not been observed to suffer from an error floor.
+Despite having these advantages, LP decoding has much higher computational complexity when implemented with general LP solvers. Some efficient LP decoding algorithms have been proposed, such as [5]–[10]. Among these works, [9], [10] developed a distributed, scalable, approach based on the alternating direction method of multipliers (ADMM). In [9], [10], the authors exploit the geometry of the LP decoding constraints and develop a scalable decoding algorithm that has a message passing interpretation. The simulation results from [10] reveal a drawback for LP decoding: for some large blocklength codes LP decoding performs worse than BP decoding at low SNRs. This suggests that an ideal decoder
+
+should perform like BP at low SNRs and have no error floor effects at high SNRs.
+To achieve this goal, we introduce a penalty method in this work. In a nutshell, we start with LP decoding and penalize non-integral solutions by adding a nonlinear penalty term to the objective. We then apply ADMM and obtain a low complexity algorithm as in [9]. This idea is inspired by the observation that the BP is related to minimization of the Bethe Free Energy at temperature T = 1 [11]. This objective is the sum of an LP decoding objective and the Bethe Entropy Function. Our methods replace the Bethe entropy function with a tractable penalty term to retain the high-SNR performance of LP decoding.
+The paper is organized as follows. Section II introduces the background of LP and ADMM decoding. Section III introduces the methods of decoding using penalty functions. We explore three penalty functions, 1, 2 and log-penalty functions, and present the corresponding ADMM algorithms. Simulation results are presented in Section IV. Conclusions are drawn in Section V.
+
+II. PRELIMINARIES
+
+A. LP decoding of LDPC codes
+
+Through out this paper, we consider LDPC codes of length
+
+N , each specified by an N × M parity check matrix H. Let
+
+I := {1, 2, . . . , N } denote the index set of codeword symbol
+
+and J := {1, 2, . . . , M } the index set of checks. Let di, i ∈ I
+
+and dj, j ∈ J be the degree of codeword symbol i and
+
+check node j, respectively. Consider memoryless binary-input
+
+symmetric-output (MBIOS) channels. Let X = {0, 1} be the
+
+input space and Σ the output space. Let W : X × Σ → R≥0
+
+be the channel law defined by conditional probability W (y|x),
+
+where y ∈ Σ, x ∈ X . Since the channel is memoryless,
+
+pY |X (y|x) =
+
+n i=1
+
+W
+
+(yi |xi )
+
+for
+
+x
+
+∈
+
+X n, y
+
+∈
+
+Σn.
+
+The
+
+ML decoding problem can be stated as
+
+minimize γT x subject to x ∈ C,
+
+(1)
+
+where γ is a vector of negative log-likelihood ratios, defined
+
+by γi = log
+
+W (yi|0) W (yi|1)
+
+and C is the set of possible codewords.
+
+Feldman et al. relax this integer program to the following
+
+978-1-4673-0223-4/12/$31.00 ©2012 IEEE
+
+367
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+2012 IEEE Information Theory Workshop
+
+linear program [1]
+
+minimize subject to
+
+γT x x ∈ P := conv(Cj),
+j∈J
+
+where conv(·) is the operation of taking the convex hull and conv(Cj) is the convex hull of codewords of the single-parity check code defined by the jth row of parity check matrix H. P is called the fundamental polytope. An equivalent compact
+expression is
+
+minimize γT x subject to P jx ∈ PPdj , ∀j ∈ J . (2)
+
+Here P j is the operation of selecting the sub-vector of x that participates the jth check. PPdj is the “parity polytope” of degree dj. It is define as the convex hull of all even-parity binary vectors of length dj or, equivalently, as the convex hull of all codewords of the length dj single-parity check code.
+Efficient description of P is crucial in order to develop an efficient decoding algorithm. Barman et al. characterize the geometry of PPdj in [10] and develop an efficient algorithm for projecting onto this object, which turns out to be important
+in solving the LP efficiently via ADMM. That algorithm is the
+starting point for the decoders we introduce herein.
+
+B. ADMM formulation for general optimization decoding problem
+
+We now review the ADMM formulation for LP decoding presented in [9] and introduce a generalized optimization problem over the fundamental polytope P. We refer the readers to [12] for a comprehensive description of ADMM. To rephrase LP problem using ADMM, the key is to introduce replica vectors zj, j ∈ J and write (2) in the following, equivalent, form:
+
+minimize γT x subject to P jx = zj, zj ∈ PPdj , ∀ j ∈ J . We now generalize the above objective function as
+
+minimize f (x)
+
+subject to P jx = zj, zj ∈ PPdj , ∀ j ∈ J .
+
+The augmented Lagrangian [12] for the above problem is
+
+μ Lμ(x, z, λ) = f (x)+ λj(P jx−zj)+ 2
+
+P j x−zj 22,
+
+j
+
+j
+
+where μ is some constant. The ADMM update rules are
+
+x-update: xk+1 = argmin Lμ(x, zk, λk),
+
+(3)
+
+x
+
+z-update: zk+1 = argmin Lμ(xk+1, z, λk),
+
+(4)
+
+z
+
+λ-update: λk+1 = λjk + μ P j xk+1 − zjk+1 . (5)
+
+Note that (4) is minimization over zj and therefore f (x) can be considered as a constant that does not affect the solution to the problem. Hence the solution is identical to that in [10]. Eq. (5) is also not related to f (x). Therefore when dealing
+
+with an arbitrary objective function f (·), vis-a`-vis [9], [10],
+
+we need only modify the x-update.
+
+We rephrase (3) as a coordinate-wise update rule for x:
+
+⎛
+
+⎞
+
+xi
+
+=
+
+1 di
+
+⎝
+
+j
+
+zj(i)
+
+−
+
+λ(ji) μ
+
+−
+
+1 μ
+
+(∇xf )i⎠
+
+.
+
+(6)
+
+For any objective function f (·), we can derive ∇xf to determine the update rule. Since ADMM is not restricted to linear programs, we are able to (try to) decode using any objective function on P. This means that we have the freedom to choose a good decoding objective. We leverage this observation in the next section to develop decoding methods that incorporate a penalty term into the original linear objective.
+
+III. INCORPORATING A PENALTY TERM
+Linear Programming Decoding fails when it outputs a fractional solution. Such a solution is called a pseudocodeword. Many prior works have sought to reduce the impact of pseudocodewords on decoding. These works can roughly be classified into two categories: (a) change the constraint set of LP decoding by tightening the relaxation, e.g. [13], [14] or (b) change the objective functions, e.g. [15]. We present a class of methods that fall in the second category. We add a penalty term to the objective to penalize fractional solutions. The result is that the output of the problem is more likely to be an integral solution.
+
+A. Family of penalty functions for decoding
+We now formally state our decoding algorithm. We use ADMM to try to solve the following problem:
+
+minimize γT x + g(xi)
+
+i
+
+,
+
+(7)
+
+subject to P jx ∈ PPdj , ∀j ∈ J
+
+where g : [0, 1] → R ∪ {±∞} is penalty function. For reasons to be discussed, we focus on penalty functions with the following properties:
+
+(i) g is an increasing function on (0, 1/2); (ii) g(x) = g(1 − x) for x ∈ [0, 1]; (iii) g is differentiable on (0, 1/2).
+
+Property (i) penalizes fractional solutions. Property (ii) ensures that the decoding error is independent with respect to the transmitted codeword (see Theorem 2). We impose property
+
+(iii) so that we can determine the ADMM updates exactly (cf. ∇xf in (6)). Note that introducing the penalty term turns the LP into a nonlinear and non-convex program. Thus one should
+
+not expect always to find the global solution. However we can still perform ADMM updates to obtain a local minimal. More
+
+discussions on solving non-convex problems using ADMM is
+
+found in [12, Sec. 9]. In the ADMM x-updates we solve for local solutions by
+calculating the stationary points. Note that g is an increasing function on (0, 1/2). Thus, if there are multiple stationary points, we always choose the one that is farthest from 0.5.
+The ADMM update steps are summarized in Algorithm 1.
+
+368
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+2012 IEEE Information Theory Workshop
+
+Algorithm 1 ADMM decoding on problem (7). Input: Received vector y ∈ ΣN . Output: Decoded vector x.
+
+1: Construct the dj × N selection matrix P j for all j ∈ J based on the parity check matrix H.
+
+2: Construct the log-likelihood ratio γ based on received
+
+vector y.
+
+3: Initialize λj as the all zeros vector and zj as the all 0.5 vector for all j ∈ J .
+
+4: repeat
+
+5: for all i ∈ I do
+
+6:
+
+Update xi by choosing the farthest from 0.5 root for
+
+equation
+
+xi
+
+=
+
+1 di
+
+j
+
+zj(i)
+
+−
+
+λj(i) μ
+
+−
+
+1 μ
+
+(γi
+
++
+
+g
+
+(x))
+
+.
+
+7:
+
+xi ← Π[0,1](xi) (project xi onto [0, 1]).
+
+8: end for
+
+9: for all j ∈ J do
+
+10:
+
+Set vj = P jx + λj/μ.
+
+11:
+
+Update zj ← ΠPPdj (vj ) where ΠPPdj (·) means
+
+project onto the parity polytope PPdj .
+
+12:
+
+Update λj ← λj + μ (P jx − zj).
+
+13: end for
+
+14: until maxj P jx − zj ∞ < return x.
+
+Proposition 1: If the output from Algorithm 1 is the global minimizer of (7) and it is also an integral solution, then it is the ML solution. Conversely, the ML solution is the global minimizer to (7).
+Proof: Omitted. In general, we cannot always obtain the global minimizer of a non-convex optimization problem. But, Proposition 1 is an indicator that our choice of penalty function is reasonable. Even if we cannot tell whether or not the output from the decoder is the global minimum, we can use the ML certificate property of LP decoding to test whether the solution obtained is the ML solution. Namely, if we find an integral solution we can run ADMM on original LP problem, (2), using this integral solution as initial point, thereby testing whether or not this integral solution is ML.
+Theorem 2: Decoding failures for Algorithm 1 are independent of the codeword that was transmitted.
+Proof: Omitted. Note that, in general, problem (8) is non-convex and therefore the output from decoder should be different when initialized at different points. We show decoding independence property under a different initialization in Corollary 3.
+Corollary 3: The probability of error is independent of the codeword that was transmitted if Algorithm 1 is initialized such that for each j ∈ J , zj is obtained from the solution of LP decoding (2) (i.e., at a pseudocodeword).
+Proof: Omitted. Corollary 3 implies that if we construct a two-stage decoder by concatenating an LP decoder followed by proposed penalized decoder, then the decoding failures for this two-stage decoder are independent of the codeword that was transmitted.
+
+− log(|x − 0.5|) −(x − 0.5)2
+
+penalty, g(x)
+
+−|x − 0.5|
+
+0
+
+0.5
+
+1
+
+x
+
+Fig. 1. Three penalty functions. Each functions is shifted and scaled for better view.
+
+B. Penalty functions for decoding
+We now introduce specific penalty functions that provide good error performance. Three penalty functions are considered:
+
+g1(x) = −α1|x − 0.5|, g2(x) = −α2(x − 0.5)2, g3(x) = −α3 log(|x − 0.5|),
+
+where α1, α2, α3 > 0 are constants (see Fig. 1). The respective decoding algorithms are identical to Algorithm 1
+except that Steps 6 and 7 are replaced by specific update rules (cf. (9), (11) and (13), respectively). Note that if αi = 0 (for any i ∈ {1, 2, 3}), the problem will correspond to the LP decoding (2). We show that g1 and g3 could have 2 stationary points at x-update in ADMM. We choose the stationary point farthest from 0.5 using simple thresholding.
+1) 1 penalty function: The decoding algorithm using g1(x) = −α1|x − 0.5| can be considered as running ADMM on the following problem:
+
+minimize γT x − α1 x − 0.5 1.
+
+(8)
+
+subject to P jx ∈ PPd
+
+Using results from Section III-A, we write the ADMM x-
+
+update as: f (x) = γT x − α1 x − 0.5 1. Then (∇xf )i =
+
+γi −α1 sgn(xi −0.5). Letting ti :=
+
+j
+
+z(ji)
+
+−
+
+λ(ji) μ
+
+−γi/μ,
+
+we get the update
+
+1 xi = di
+
+ti
+
++
+
+α1 μ
+
+sgn(xi
+
+−
+
+0.5)
+
+.
+
+For a given ti, there can be two solutions for xi. We update xi with the one that is farthest from 0.5. So the threshold is
+
+369
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+2012 IEEE Information Theory Workshop
+
+ti
+
+=
+
+di 2
+
+.
+
+The
+
+x-update ⎧
+
+rule
+
+is
+
+summarized
+
+in
+
+(9):
+
+⎨Π[0,1] xi = ⎩Π[0,1]
+
+1 di
+1 di
+
+ti
+
++
+
+α μ
+
+ti
+
+−
+
+α μ
+
+if ti ≥ di/2, if ti < di/2.
+
+(9)
+
+2) 2 penalty function: The decoding algorithm that uses g2(x) = −α2(x − 0.5)2 can be considered as running ADMM
+on the following problem:
+
+minimize
+
+γT x − α2
+
+x − 0.5
+
+2
+2.
+
+(10)
+
+subject to P jx ∈ PPd
+
+We write the ADMM x-update as: (∇xf )i = γi − 2α2(xi − 0.5). In this case, there is only one possible stationary point.
+The update rule is summarized in (11):
+
+xi = Π[0,1]
+
+1
+
+di
+
+−
+
+2α2 μ
+
+ti
+
+−
+
+α2 μ
+
+,
+
+(11)
+
+where ti is defined the same way as before. 3) log penalty function: For g3(x) = −α3 log(|x − 0.5|),
+we write the decoding problem as
+
+100
+1
+log
+2
+
+word-error-rate (WER)
+
+10−1 0
+
+Tmax = 200 Tmax = 1000
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+αi, i ∈ {1, 2, 3}; Eb/N0 = 1.4dB
+
+Fig. 2. Word-error-rate (WER) of the [2640, 1320] “Margulis” code for the AWGN channel plotted as a function of the choice of αi; Eb/N0 = 1.4dB.
+
+minimize γT x − α3 log(|xi − 0.5|)
+
+i
+
+. (12)
+
+subject to P jx ∈ PPd
+
+In this case, we need to go through a similar process of
+
+choosing the stationary point farthest from 0.5 as in the case
+
+of 1 penalty function. The ADMM update is summarized
+
+in (13):
+
+⎧
+
+xi
+
+=
+
+⎨Π[0,1] ⎩Π[0,1]
+
+1 4
+
++
+
+ti 2di
+
++ ci
+
+1 4
+
++
+
+ti 2di
+
+− ci
+
+if ti ≥ di/2, if ti < di/2,
+
+(13)
+
+where ti is defined as before,
+
+1 ci = 2μdi
+
+1 4
+
+di2μ2
+
++
+
+t2i μ2
+
+−
+
+ditiμ2
+
++
+
+4μdiα3.
+
+IV. NUMERICAL RESULTS
+
+In this section, we present numerical results for the decoding algorithms presented in Section III. In Section IV-A, we study the effect of choosing different parameters αi, i ∈ {1, 2, 3}. In Section IV-B, we present word-error-rate (WER) comparison between the proposed methods and other decoders.
+
+execution time (sec)
+
+0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1
+0 0
+
+log
+1
+
+Tmax = 200 Tmax = 1000
+2
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+αi, i ∈ {1, 2, 3}; Eb/N0 = 1.4dB
+
+Fig. 3. Execution time (in seconds) for decoding the [2640, 1320] “Margulis”
+code for the AWGN channel plotted as a function of the choice of αi; Eb/N0 = 1.4dB.
+
+A. Choice of parameters
+We study the effects of the choice of αi, i ∈ {1, 2, 3} for the respective updates steps of (8), (10), and (12) in Fig. 2 and Fig. 3. In these figures we presents results for the [2640, 1320] “Margulis” code [16] for an AWGN channel at Eb/N0 = 1.4dB. We fix the ADMM parameters μ = 5.5,
+= 10−5 and allow the maximum number of iterations Tmax take on the values 200 and 1000. For each data point, we collect more than 1000 errors.
+First, we see that the WER drops quickly as we start to penalize fractional solutions (increasing the αi above zero). Similarly, decoding time also improves. But the WER increases when we penalize too heavily, e.g., when α1 >
+
+0.6, α2 > 0.8 or α3 > 0.2. The WERs then drop back to a local optimum as the αi are increased and finally increase again up to unity. The globally optimal parameter choices are α1∗ = 0.6, α2∗ = 0.8 and α∗3 = 0.2. We simulated other SNRs and the optimal parameters were almost the same. Second, although different values for Tmax give almost the same performance for LP decoding (see points at αi = 0), Tmax does affect the performance when a penalty term is added.
+We see from Fig. 2 that when more iterations are allowed, the WER decreases substantially. However we see from Fig. 3 that
+more iterations consumes more time per decoding. Therefore a trade off between WER and time efficiency is inevitable when
+applying penalty methods. We also caution that the WER in
+
+370
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+2012 IEEE Information Theory Workshop
+
+100
+
+addition of a penalty term to the linear objective of LP
+
+decoding with the intent of suppressing pseudocodewords. We
+
+show that by properly choosing the penalty function we are
+
+10−2
+
+able to decode LDPC codes in a way that combines the best characteristics of both BP and LP decoders. In our simulation
+
+of the Margulis code, decoding using the 2 penalty achieves
+
+10−4
+
+better error performance than BP at low SNRs and has no observed error floor at high SNRs.
+
+WER
+
+10−6 10−8
+
+ADMM LP decoding
+BP decoding, data from [18]
+Non-saturating BP decoding
+ADMM 1 penalty ADMM 2 penalty ADMM log penalty
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb /N0 (dB )
+
+Fig. 4. Word-error-rate (WER) vs. Eb/N0 performance for the [2640, 1320] “Margulis” code.
+
+these simulations is quite high. Further study is needed at the higher SNRs where these codes are likely to be used.
+B. WER performance
+We again simulate the Margulis code in AWGN channel with same μ and settings. We set Tmax = 1000 and use optimal αi parameters identified in Section IV-A. In Fig. 4, we plot the WER as a function of SNR. Fig. 4 shows an interesting comparison between different decoders. The “nonsaturating BP” is a robust BP implementation that avoids saturating the log-likelihood ratios of the sum-product BP decoder (see [17] for details), thereby improving decoding performance in the error floor regime. We note that the ADMM LP decoder displays worse performance than BP at low SNRs. However BP has an error floor at high SNRs. Even with the non-saturating BP implementation, the slope of WER tends to be a constant at high SNRs (Eb/N0 = 2.3, 2.4, 2.5). However the slope of the WER corresponding to ADMM LP decoder continues to increase at Eb/N0 = 2.5 and 2.8.
+Our proposed decoders combine the good characteristics of the LP and BP decoders. The decoders that uses the 1 and 2 penalty function both perform as well as BP decoder at low SNRs. In addition, the slope of the WER curves of all three proposed decoders continue to increase at high SNRs. This is similar to the LP decoder. We observe that all three decoders run almost as fast as our baseline sum-product BP implementation. We also note that decoding using the 2 penalty has the best error performance and time efficiency among the three penalty functions presented. Thus, we consider the decoder that uses the 2 penalty to be a strong competitor to the classic BP algorithm.
+V. CONCLUSION
+In this paper, we demonstrate a class of efficient and powerful decoders for LDPC codes. The key idea is the
+
+ACKNOWLEDGMENT
+The authors would like to thank Professor Stephen Boyd
+and his group for discussions on adding penalty terms to
+optimization problems.
+REFERENCES
+[1] J. Feldman, M. Wainwright, and D. Karger, “Using linear programming to decode binary linear codes,” Information Theory, IEEE Transactions on, vol. 51, pp. 954 – 972, Mar. 2005.
+[2] J. Feldman, T. Malkin, R. A. Servedio, C. Stein, and M. J. Wainwright, “LP decoding corrects a constant fraction of errors,” Information Theory, IEEE Transactions on, vol. 53, pp. 82 –89, Jan. 2007.
+[3] C. Daskalakis, A. Dimakis, R. Karp, and M. Wainwright, “Probabilistic analysis of linear programming decoding,” Information Theory, IEEE Transactions on, vol. 54, pp. 3565 –3578, Aug. 2008.
+[4] S. Arora, C. Daskalakis, and D. Steurer, “Message passing algorithms and improved LP decoding,” in Proceedings of the 41st annual ACM symposium on Theory of computing, pp. 3–12, ACM, 2009.
+[5] P. O. Vontobel and R. Koetter, “Towards low-complexity linearprogramming decoding,” Turbo Codes Related Topics; 6th International ITG-Conference on Source and Channel Coding (TURBOCODING), 2006 4th International Symposium on, pp. 1 –9, Apr. 2006.
+[6] M.-H. Taghavi and P. Siegel, “Adaptive methods for linear programming decoding,” Information Theory, IEEE Transactions on, vol. 54, pp. 5396 –5410, Dec. 2008.
+[7] D. Burshtein, “Iterative approximate linear programming decoding of LDPC codes with linear complexity,” Information Theory, IEEE Transactions on, vol. 55, pp. 4835 –4859, Nov. 2009.
+[8] M. Taghavi, A. Shokrollahi, and P. Siegel, “Efficient implementation of linear programming decoding,” Information Theory, IEEE Transactions on, vol. 57, pp. 5960 –5982, Sep. 2011.
+[9] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Communication, Control, and Computing (Allerton), 2011 49th Annual Allerton Conference on, pp. 253 –260, Sep. 2011.
+[10] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” Arxiv preprint 1204.0556, 2012.
+[11] P. O. Vontobel, “Counting in Graph Covers: A Combinatorial Characterization of the Bethe Entropy Function,” Arxiv preprint 1012.0065, 2010.
+[12] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the Alternating Direction Method of Multipliers,” Machine Learning, vol. 3, no. 1, pp. 1–123, 2010.
+[13] A. Tanatmis, S. Ruzika, H. Hamacher, M. Punekar, F. Kienle, and N. Wehn, “A separation algorithm for improved LP-decoding of linear block codes,” Information Theory, IEEE Transactions on, vol. 56, pp. 3277 –3289, July 2010.
+[14] A. Dimakis, A. Gohari, and M. Wainwright, “Guessing facets: Polytope structure and improved LP decoder,” Information Theory, IEEE Transactions on, vol. 55, pp. 3479 –3487, Aug. 2009.
+[15] M. Khajehnejad, A. Dimakis, B. Hassibi, and W. Bradley, “Reweighted LP decoding for LDPC codes,” in Communication, Control, and Computing (Allerton), 2010 48th Annual Allerton Conference on, pp. 180 –187, Oct 2010.
+[16] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge University Press, 2009.
+[17] B. K. Butler and P. H. Siegel, “Error floor approximation for LDPC codes in the AWGN channel,” Arxiv preprint 1202.2826, 2012.
+[18] D. J. C. MacKay, “Encyclopedia of sparse graph codes.” Available online at http://www.inference.phy.cam.ac.uk/mackay/codes/data.html.
+
+371
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,820 @@
+arXiv:2207.01860v1 [quant-ph] 5 Jul 2022
+
+High-throughput decoder of quasi-cyclic LDPC codes with limited precision for continuous-variable quantum key distribution systems
+Chuang Zhou,1 Yang Li,1, ∗ Li Ma,1 Jie Yang,1 Wei Huang,1 Heng Wang,1 Yujie Luo,1 Francis C. M. Lau,2 Yong Li,3, † and Bingjie Xu1, ‡
+1Science and Technology on Communication Security Laboratory, Institute of Southwestern Communication, Chengdu 610041, China
+2Department of Electronic and Information Engineering, The Hong Kong Polytechnic University, Hong Kong
+3College of Computer Science, Chongqing University, Chongqing 400044, China (Dated: July 6, 2022)
+Abstract— More than Mbps secret key rate was demonstrated for continuous-variable quantum key distribution (CV-QKD) systems, but real-time postprocessing is not allowed, which is restricted by the throughput of the error correction decoding in postprocessing. In this paper, a high-throughput FPGA-based quasi-cyclic LDPC decoder is proposed and implemented to support Mbps real-time secret key rate generation for CV-QKD for the first time. A residual bit error correction algorithm is used to solve the problem of high frame errors rate (FER) caused by the limited precision of the decoder. Specifically, real-time high-speed decoding for CV-QKD systems with typical code rates 0.2 and 0.1 is implemented on a commercial FPGA, and two throughputs of 360.92Mbps and 194.65Mbps are achieved, respectively, which can support 17.97 Mbps and 2.48 Mbps real-time generation of secret key rates under typical transmission distances of 25km and 50km, correspondingly. The proposed method paves the way for high-rate real-time CV-QKD deployment in secure metropolitan area network.
+Keywords: LDPC codes, CV-QKD, Postprocessing, Error correction
+
+I. INTRODUCTION
+Based on the principle of quantum mechanism, quantum key distribution (QKD) can share unconditional security keys between two communication parties under insecure channels [1, 2]. According to the modulation methods adopted in quantum state exchanges, QKD protocols are usually divided into two categories: discrete-variable quantum key distribution (DV-QKD) and continuous-variable quantum key distribution (CVQKD). CV-QKD has attracted much attention and has made great breakthroughs in recent years [3–5] by utilizing the existing optical communication infrastructure.
+The CV-QKD protocol is comprised of two main procedures: quantum state transmission over a quantum channel and classical postprocessing over an authenticated classical public channel. After quantum state transmission, the communication parties share unidentical correlated data. Then, postprocessing is implemented to transform the correlated data to identical secure keys.
+In recent years, the secure key rate (SKR) of CVQKD has been greatly improved by robustly increasing the repetition rate of modulation and detection of coherent states [6–10]. As two main CV-QKD schemes based on Gaussian modulation coherent states [11, 12] and discrete modulation coherent states [13, 14], the repetition
+∗ yishuihanly@pku.edu.cn † yongli@cqu.edu.cn ‡ xbjpku@pku.edu.cn
+
+rates of their transceivers have been increased to above 100MHz, which can support the distribution of tens of Mbps SKR. Especially, in the latest work, a four-state discrete-modulated CV-QKD with a 5GBaud repetition rate has been experimentally demonstrated for further increasing the asymptotic SKR to sub-Gbps level [15]. However, most of reported SKRs are only obtained by simple theoretical calculation or off-line postprocessing, which is not real-time CV-QKD. The major difficulty is that the throughput of the postprocessing cannot support the real-time SKR generation in high repetition rate CV-QKD. Therefore, the development of high throughput postprocessing is of great importance for the practical application of high-rate and real-time CV-QKD.
+The common postprocessing mainly includes four steps: data sifting, parameter estimation, information reconciliation and privacy amplification. For a practical CV-QKD system, information reconciliation has an important influence on the secret key rate.
+For information reconciliation of CV-QKD, a specific error-correcting code is adapted to correct errors in sifted keys to obtain identically corrected keys. Since a CVQKD system usually works in a Gaussian channel with very low signal-to-noise ratios (SNRs), typically below 0dB, commercial error-correcting codes are not suitable for CV-QKD. Several error-correcting codes are studied for CV-QKD, such as LDPC codes [16, 17], polar codes [18, 19], and raptor codes [20–22]. Among them, a special class of LDPC codes, i.e., multi-edge-type low density parity-check (MET-LDPC) codes, is chosen as the most promising error-correcting code for CV-QKD, be-
+
+2
+
+cause its performance is very close to Shannon capacity limit and the decoding algorithm can be accelerated by using devices with parallel processing capabilities. METLDPC codes with low code rate and long code length are designed for CV-QKD [23], and high-speed implementation of the decoding algorithm for MET-LDPC codes based on graphic processing unit (GPU) is shown in [17] with a throughput of 9.17 Mbps. Multiple codewords decoding in parallel is proposed to improve the throughput to 30.39 Mbps [24], and layered decoder for Quasi-cyclic MET-LDPC (QC MET-LDPC) are proposed to further improve decoding throughput to 64.11 Mbps [25].
+Although high decoding speed of MET-LDPC codes can be achieved by using GPU, the power consumption, volume, and cost of GPU limit its application in practice. FPGA is a kind of large-scale programmable integrated device and has a series of advantages, such as parallelism, high processing speed, and low power consumption. Many FPGA-based LDPC decoders have been developed over past few decades [26–28]. Recently, FPGAbased MET-LDPC decoders for CV-QKD are also studied [29, 30] and the fixed-point number of width 19 is adopted in designing the decoder. However, according to our knowledge, a successful high-speed LDPC decoder based on FPGA for a CV-QKD system under a typical transmission distance, such as 50 km, has not been realized in the literature.
+The difficulty of a high-speed FPGA-based decoder for CV-QKD is caused by two reasons. On the one side, the on-chip hardware resource of FPGA is limited, and a finite width (precision) of the fixed-point number is required for a high-speed decoder. On the other hand, the SNR for a CV-QKD under a typical transmission distance is much less than 1, so the decoding performance is strongly associated with the decoding accuracy. However, the limited precision decreases the decoding accuracy, leading to the existence of residual error-bits after decoding and high frame errors rate (FER), which decreases the secret key rate drastically.
+In this paper, a FPGA-based decoder for CV-QKD with limited precision is studied. The characteristics of the residual error-bits are studied, and it is found that a self-defined reliability value can be used to distinguish the error bits from the correct bits [31]. So, a residual bit error correction algorithm based on reliability values is used to improve the decoding performance. The improved decoding algorithm is implemented on FPGA, and throughputs of 360.92Mbps and 194.65Mbps are achieved for code rates 0.2 and 0.1 respectively, which can support 17.97 Mbps and 2.48 Mbps real-time generation of secret key rates under transmission distance of 25km and 50km, correspondingly. The proposed method can support Mbps real-time secret key rate generation for CV-QKD, which paves the way for a large-scale deployment of high-rate real time CV-QKD systems in secure metropolitan area network.
+The rest of this paper is organized as follows. Section II gives a brief introduction into QC-LDPC codes and the
+
+iterative-decoding algorithm. The proposed architecture of the decoder and its residue error-bits erase module are introduced in Section III. Implementation results are discussed in Section IV and we analyze the corresponding secret key rate of the decoder for a CV-QKD system in Section V. Finally, Section VI draws a conclusion.
+
+II. ERROR CORRECTING SCHEME
+
+A. QC-LDPC
+
+QC-LDPC codes [32] is a class of structured LDPC codes. When implementing the decoding algorithm in FPGA, the QC structure can reduce its complexity of implementation. The parity-check matrice H of a QCLDPC code can be generated by using a cyclic permutation matrix (CPM) to replace the elements in base matrix H b. If an element in H b is ‘−1’, the CPM used to replace this element is a Z × Z zero matrix. Matrix used to replace the non-negative integer α in H b was obtained by cyclically shifting the Z × Z identity matrix to the right by α bit. An example of generating H from H b with Z = 4 is shown in Fig. 1.
+
+1 -1 2 Hb= 0 1 -1
+
+1 2 3 4 5 6 7 8 9 10 11 12
+010000000010 001000000001 000100001000 100000000100 H= 1 0 0 0 0 1 0 0 0 0 0 0 010000100000 001000010000 000110000000
+
+FIG. 1. Generating H from H b. The size of H b is 2 × 3, the size of CPM is 4 × 4, and the size of H is 8 × 12. The number 1, 2, . . . ,12 correspond to the column-index of H.
+
+B. Decoding algorithm
+
+In the proposed architecture, the layered BP decoding algorithm for QC LDPC codes[20] is employed, which achieves almost the same performance as the flooding BP algorithm with less decoding iterations. We denote u as a codeword over the BIAWGN channel and R as the received vector. Layered BP decoding algorithm is described as follows. (a)Initialize the LLR of variable nodes.
+
+Lq(0n,0)
+
+=
+
+2Rn σ2
+
+,
+
+(1)
+
+where n is the variable node index, and σ2 denotes the variance of noise in the BIAWGN channel.
+
+3
+
+(b)Update the message transmitted from variable nodes to check nodes.
+
+L(qtn,m l) = Lq(tn,l−1) − L(rtm−n1,l),
+
+(2)
+
+where m is the check node index, t is the number of iterations and l is the number of layers, when t = 1, Lr(0m,ln) = 0. (c)Update the message transmitted from check nodes to variable nodes.
+
+L(rtm,ln) = (1 − 2sm) ×
+
+sgn(L(qtn−′ 1,l))
+
+n′ ∈N (m)\n
+(3)
+
+×Φ−1(
+
+Φ(|L(qtn−′ 1,l)|)),
+
+n′ ∈N (m)\n
+
+where Φ(x) = Φ−1(x) = −ln(tanh(x/2)) , sgn(x) is
+a sign function, and N (m) is the set of variable nodes connected to the check node m. Moreover, s is the syndrome generated by s=uH T . (d)Update the total message of Variable nodes
+
+L(qtn,l) = L(qtn,m l) + L(rtm−n1,l).
+
+(4)
+
+Repeat steps (b), (c), (d) until all sub-matrices are updated and reach the maximum number of iterations. When all the layers finish updating message, t = t + 1. (e)Decide the codeword uˆ according to the total message of variable nodes.
+
+uˆn =
+
+1, 0,
+
+L(qtn,l) L(qtn,l)
+
+< ≥
+
+0 0
+
+.
+
+(5)
+
+A. Datapath
+The receiving unit output f inish storing represents it finishes storing data into the variable message storage RAM. Then, the global controller unit uses signal start to control the addr gen unit to generate read address of the variable message storage RAM and the iterative decoding starts.
+Data Lqn is read from the variable message storage RAM. By using the Shift-right unit, we will get the data that we need in the current clock period. Then, the VNU is used to execute Eq.( 2). The output of VNU is used as the input of the CNU and is stored in the FIFO buffer 2 at the same time. The function of Eq.( 3) is realized at the CNU and the output of this unit is used as the input of the total message processing unit and is written back to the check message storage RAM. The total message processing unit executes Eq.( 4) and its output is processed by the shift left unit to get the right order of Lqn . Next, Lqn will be written back to the variable message storage RAM. After finishing writing, an iteration is completed, and the value of Iter num adds one. When the value of Iter num is equal to the maximum number of iterations, the decoding stops.
+B. Fixed-point number
+When implementing the decoder based on FPGA, we adopt fixed-point number to reduce the implementation complexity. The width of the fixed-point number w = 1 + I + F, one bit for the sign, I bit for the integer part and F bit for the fraction part. In the design of the decoder, we can reduce the consumption of hardware resources by reducing the width of the fixed-point number.
+
+III. PROPOSED ARCHITECTURE
+
+C. Partial parallel and pipeline
+
+As shown in Fig. 2, the proposed architecture of the decoder contains a global controller unit (GCU), a receiving unit, a Addr gen unit, a decode decision unit, two FIFO buffers, four processing units, three types of RAMs and a residue error-bits erase module.
+The global controller unit deals with the whole procedure of decoding. The receiving unit receives the message that needs to be decoded and stores it into the variable message storage RAM with right order.
+The variable message storage RAM is used to store the value of Lqn in Eqs.( 1) and ( 4). The check node message storage RAM is used to store the value of Lrmn in Eq.( 3). The Syn RAM is used to store s in Eq.( 3). Besides, in the decode decision unit, Eq.( 5) is executed and we get the vector uˆ and its syndrome ˆs by computing uˆ = ˆsH T . Then, we read s from Syn RAM. If s is equal to ˆs, the residue error-bits erase module just outputs uˆ. Otherwise, the residue error-bits erase module starts erasing the residual error-bits in uˆ and then outputs uˆ.
+
+Parallelism is useful to improve the decoding throughput. However, restricted by the resource of the FPGA, the parallelism is limited. An MET-LDPC check matrix with a proper quasi-cycle is chosen to make full use of the parallelism.
+Pipeline structure is often adopted with the parallelism to improve the throughput. We can minimize the number of clock cycles required in the overall decoding process by using this structure. Because there is delay between reading data from the variable message storage RAM and writting them back, a suitable parity check matrix is needed to avoid read/write conflicts for pipeline structure.
+D. Residue error-bits erase module
+As mentioned above, we can reduce the consumption of hardware resources by reducing the width of the fixed-
+
+4
+
+Syn_Ram s Lrnm
+Check node unit
+
+Read address
+
+Check mess age storage
+ram
+
+Iter_num
+start stop
+
+Global controller
+unit
+
+finish_storing
+
+Lrnm
+
+Addr_gen
+
+Receiving R
+
+unit
+
+unit
+
+input
+
+Read address
+
+L(0,0) qn
+
+Lqmn
+
+Variable
+
+node
+
+unit
+
+Lrnm
+
+Lqmn
+
+Total mess age
+
+Lqmn
+
+FIFO
+
+processing
+
+buffer_2
+
+unit
+
+Lc ' qn
+
+Shift-left
+
+Lqn
+
+unit
+
+Lqn Shiftright
+unit
+
+Lqn _ L
+
+Lqn _ R
+
+FIFO
+
+buffer_1
+
+s
+
+Lqn _ L
+
+Lqn _ R
+
+Syn_Ram
+
+Variable mess age storage
+ram
+Lqn
+Decode decision
+unit
+Residue error-bits
+erase module
+output
+
+FIG. 2. The proposed architecture of FPGA-based LDPC decoder. R is the data that received from the channel. The global controller unit deals with the whole procedure of decoding and uˆ. is the decoding result.
+
+point number. However, reducing the width of the fixedpoint number also decreases its accuracy, which leads to the decrease of the decoding performance.
+A rate-0.2 QC-LDPC code is taken for example. The width of the fixed-point number is set as w = 8 (one symbol bit, 4 integer bits and 3 fraction bits) and the maximum number of decoding iterations tmax = 13 is adopted to design the decoder. As shown in Fig. 3. The red curve shows the performance of this decoder with 100 frames are decoded at each SNR. We can see that the FER is extremely high, even if in the region of high
+
+SNR. The green curve shows the decoding performance of this code when float-point number is adopted in the iterative decoding, and we can see the FER decreases obviously. It should be mentioned that the high FER is not restricted by decoding iterations. So, the FER can’t be reduced just by increasing the iterations.
+In order to improve the decoding performance of this design, we firstly analyze the decoding results. Reliability value is defined as the absolute value of Lqn in Eq.( 5). When SNR = 0.37, four failed codewords are analyzed and the corresponding reliability values of these decoded
+
+5
+
+symbols are shown in Fig. 4. The erroneous symbols are marked with red asterisk and the correct ones with blue asterisk. It can be found that the reliability values of erroneous symbols are relatively smaller than those of the correct ones. To further reveal the feature of these decoded symbols, the histogram about the correct symbols and erroneous symbols are drawn in Fig. 5(a) and Fig. 5(b).
+Hence, for a failed codeword, we can set a threshold ∆. If the reliability value of a symbol is smaller than ∆, it is added to the set of suspicious symbols, which is an erroneous symbol with high probability.
+For a rate-0.2 QC-LDPC code, we set the threshold ∆ to be 40 (the value of Lqn is in the range [-127, 127] when w = 8). For each SNR in Fig. 3, 100 codewords are decoded. Parameter N err is defined as the number of failed codewords whose maximum reliability value of erroneous symbols is smaller than ∆, which is shown in Table I. It can be found that most failed codewords are included, especially for relatively large SNRs.
+
+1
+
+0.8
+
+0.6
+
+FER
+
+0.4
+
+0.2 fix-point with erasure
+
+fix-point without erasure
+
+float-point without erasure
+
+0 0.355
+
+0.360
+
+0.365
+
+0.370
+
+0.375
+
+SNR
+
+0.380
+
+0.385
+
+0.390
+
+FIG. 3. The FER vs SNR curves of the decoder for a rate-0.2 QC-LDPC code. The code length is 80000. The range of SNR in this simulation is [0.355, 0.389] and the interval is 0.001. For each SNR, the decoding result of 100 codewords are collected under tmax = 13 , and the red/blue curve shows the decoding result of this decoder without/with residue errorbits erase module. The green curve shows the decoding result of this code when float-point number is adopted in the iterative decoding.
+
+The distribution of reliability values is similar to the description in [31], which is caused by the trapping set. In [31], the trapping set influences the error floor of LDPC codes at high SNR. For our situation, the high FER occurs not only in the error floor region, but also in the waterfall region. It is not caused by the trapping set, but by the precision of the decoder. However, we can also try to use the method in [31] to erase the residual error-bits and we implemente this method in the residue error-bits erase module.
+When the LDPC decoder with residue error-bits erase module fails decoding, this module starts running to erase the residual error-bits. The blue curve in Fig. 3 shows the final decoding performance when ∆ is set to be 40 in the residue error-bits erase module. We can observe that the decoding performance is improved greatly.
+If fact, different ∆ can be chosen for different SNRs.
+
+reliability values
+
+120 100
+80 60 40 20
+
+10000
+
+20000
+
+30000 40000 50000 locations
+
+60000
+
+70000
+
+80000
+
+FIG. 4. The reliability values of the LDPC codes after finishing decoding. The code rate is 0.2 and the code length is 80000. Four failed codewords are collected at SNR = 0.37. The erroneous symbols are marked with red asterisk and the correct ones with blue asterisk.
+
+10000
+(a) 8000
+
+number
+
+6000
+
+4000
+
+2000
+
+number
+
+0
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+reliability values
+
+60
+(b) 50
+
+40
+
+30
+
+20
+
+10
+
+0
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+reliability values
+
+FIG. 5. Histogram of decoded symbols. (a): correct symbols; (b): wrong symbols. Four failed codewords are collected at SNR = 0.37.
+
+By a large amount of simulation, the performance improvement due to modification of ∆ is not obvious. Therefore, in this paper, fixed ∆ for different SNRs is adopted for simplicity.
+In a similar way, for a rate-0.1 QC-LDPC code, we set w = 10 (one symbol bit, 4 integer bits and 5 fraction bits) and ∆ = 180 (the value of Lqn is in the range [-511, 511] when w = 10). The decoding performance (the FER vs SNR curve) of this decoder with/without residue errorbits erase module are studied. As shown in Fig. 6, it can be seen that the residue error-bits erase module can also improve the decoding performance extremely for the considered codes.
+
+6
+
+TABLE I. The number of failed codewords and the value of N err. For each SNR, the decoding result of 100 codewords are collected with tmax = 13 and ∆ = 40.
+
+SNR Number of failed codewords
+N err
+
+0.368 97 44
+
+0.371 93 51
+
+0.374 91 59
+
+0.377 88 63
+
+0.380 84 64
+
+0.383 82 79
+
+0.386 79 68
+
+0.389 79 70
+
+1
+
+0.8
+
+0.6
+
+FER
+
+0.4
+
+0.2 fix-point with erasure
+
+fix-point without erasure
+
+float-point withouterasure
+
+0 0.155
+
+0.160
+
+0.165
+
+0.170
+
+SNR
+
+0.175
+
+0.180
+
+FIG. 6. The FER vs SNR curves of the decoder for a rate-0.1 QC-LDPC code. The code length is 96000. The range of SNR in this simulation is [0.155, 0.180] and the interval is 0.001. For each SNR, the decoding result of 100 codewords are collected under tmax = 25, and the red/blue curve shows the decoding result of this decoder without/with residue error-bits erase module. The green curve shows the decoding result of this code when float-point number is adopted in the iterative decoding.
+
+IV. IMPLEMTENTATION RESULTS
+In this section, the implementation results of the FPGA-based LDPC decoder are shown. A Xilinx VC709 evaluation board with a Virtex-7 XC7VX690T FPGA is chosen to implement the decoder.
+
+A. Throughput
+
+The throughput of the decoder is a bottleneck for the real-time performance of CV-QKD system. As a result, higher throughput is the aim of designing a FPGA-based decoder. The decoding throughput can be estimated by
+
+T
+
+=
+
+f K·
+
+·N tmax
+
+,
+
+(6)
+
+where f is the frequency of clock on FPGA, N is code length, K is the clock cycles that are used to finish one iteration decoding and tmax is the maximum number of decoding iterations. Because we adopt pipeline structure to design the decoder, parameter K is roughly equivalent to the clock cycles that are used to read data from the variable message storage RAM. We use Ntotal to represent the number of nonzero elements in H and Nvar to represent the average row-weight in H. Then, the decod-
+
+ing throughput can be described as [30]
+
+T
+
+≈
+
+f ·N (Ntotal/p)tmax
+
+≈
+
+N
+
+f ·N ·p · (1 − R) · Navr
+
+· tmax
+
+≈
+
+(1 −
+
+f ·p R) · Navr
+
+· tmax ,
+
+(7)
+
+where p is the parallelism, R is the code rate of the LDPC codes. From Eq.( 7), we can see that when given an LDPC code, the throughput can be improved by using higher clock frequency, enlarging parallelism parameter p and reducing the maximum number of decoding iterations.
+To decrease the FER of this proposed decoder, we add a module to erase the error bits after the iterative decoding. De is used to represent the clock cycle delay of the residue error-bits erase module. Eq.( 7) can be modified as
+
+T
+
+≈
+
+(1
+
+−
+
+R)
+
+·
+
+f ·p Navr ·
+
+tmax
+
++
+
+De .
+
+(8)
+
+B. Decoding performance
+In the following, we investigate the performance of two QC-LDPC codes with the code length of 96000 and 80000 and code rate of 0.1 and 0.2 by using the decoding algorithm proposed in section II. Table II presents the parameters of the FPGA–based LDPC decoder for two different QC-LDPC codes and compares them with previous work.
+The width of the fixed-point number in this paper is smaller, so less storage resources (under 50%) on-chip (BRAM) are consumed in our scheme even if the parallelism parameter p is higher. Hence, we can instantiate two decoders on the FPGA. To improve the decoding performance, we add a residue error-bits erase module to decrease the FER.
+
+C. Computation complexity and security
+For the residue error-bits erase module, the resource consumption is mainly used for computing syndromes and the row weight of some matrices and all of them can be implemented by doing shift operation and XOR. Therefore, the overall computational complexity of this module is low. For the rate-0.2 LDPC code, the consumption of clock cycles of the residue error-bits erase module is approximately equal to 2.4 decoding iterations.
+
+7
+
+TABLE II. Performance of the proposed LDPC decoder and its comparison with previous work.
+
+Decoder
+FPGA device Algorithm Code rate
+Parallel parameter p Width of fixed-point number(bits)
+BRAMs of One decoder (kb) Residue error-bits erase module
+Decoder numbers Clock frequency (MHz)
+Throughput (Mbps)
+
+Yang. et al.[30]
+
+Virtex-7 XC7VX690
+
+Layered BP decoding
+
+0.43
+
+0.115
+
+64
+
+64
+
+19
+
+19
+
+31680(59.9%)
+
+30636 (57.9%)
+
+No
+
+No
+
+1
+
+1
+
+100
+
+100
+
+108.64
+
+70.32
+
+This work
+
+Virtex-7 XC7VX690
+
+Layered BP decoding
+
+0.1
+
+0.2
+
+100
+
+100
+
+10
+
+8
+
+22863 (43.21%)
+
+18144 (34.29%)
+
+Yes
+
+Yes
+
+2
+
+2
+
+100
+
+100
+
+194.65
+
+360.92
+
+TABLE III. The optimization results of secret key rate. Parameter GK represents the improvements of Kopt by using the residue error-bits erase module.
+
+R
+
+d(km)
+
+Residue error-bits erase module
+
+VA
+
+SNR
+
+Kopt(bits/pulse)
+
+GK
+
+0.2
+
+25
+
+Yes No
+
+6.3692 2.1001
+
+0.3707 0.3862
+
+0.0498 0.0117
+
+425.64%
+
+0.1
+
+50
+
+Yes No
+
+2.9221 2.9537
+
+0.1701 0.1719
+
+0.0128 0.0092
+
+139.13%
+
+For the rate-0.1 LDPC code, the consumption is approximately equal to 3 decoding iterations. Compared with the BP decoding, the residue error-bits erase module has smaller influence on the throughput of the proposed decoder. Consequently, the residue error-bits erase module is effective and efficient to reduce the FER.
+Besides, the residue error-bits erase module just works on the decoding results and there is no extra information exchange. Hence, this module brings no extra security problem to the CV-QKD system.
+
+V. INFLUENCE FOR SECRET KEY RATE
+
+Secret key rate Kt is the key indicator for QKD systems. The secret key rate per pulse of a CV-QKD system is given by [33–35]
+
+Kt = (1 − F ER)(βIAB − χBE),
+
+(9)
+
+where β is the reconciliation efficiency, IAB is the mutual information between two participants Alice and Bob, and χBE is the mutual information between Bob and Eve. As explained in [36], IAB and χBE can be described as the function of the modulation variance VA, that is, IAB = fIAB (VA) and χBE = fχBE (VA). Besides, given the error correction codes and the algorithm of information reconciliation, the reconciliation efficiency can be described as the function of VA.
+
+β
+
+=
+
+0.5 log2
+
+R (1 +
+
+SN R)
+
+=
+
+fβ (VA ).
+
+(10)
+
+The blue curve in Fig. 3 shows the relationship between FER and SNR for the rate-0.2 QC-LDPC code. Because
+
+SNR is the function of VA, we can get the fitting function of fF ER(VA) as given in [36]. Thus, the secret key rate Kt can be written as
+Kt = (1 − fF ER(VA))(fβ (VA)fIAB (VA) − fχBE (VA)). (11)
+From Eq.( 11), we can get the maximum secret key rate Kopt by optimizing the parameter VA . In a similar way, according to Fig. 6, we get the fitting function fF ER(VA) for the rate-0.1 QC-LDPC code and its optimal secret key rate.
+Table III shows the optimization results of secret key rate by the method in [36] for the decoder with/without residue error-bits erase module. We observe that, with residue error-bits erase module, the optimal secret key rate is improved up to 425.64% and 139.13% respectively, compared with that without error-bits erase module. In fact, the real-time throughput of CV-QKD is determined by the error correction throughput, the repetition rate can be increased to 360.92 pulse/s and 194.65 pulse/s correspondly. As a consequence, the proposed method in this paper can support 17.97 Mbps and 2.48 Mbps realtime generation of secret key rate under transmission distance of 25km and 50km (multiplying the optimal secret key rate and the repetiton rate).
+VI. CONCLUSION
+In this paper, a FPGA-based LDPC decoder with limited precision for CV-QKD is proposed. Fixed-point number with fewer bits is adopted to reduce the consumption of hardware resources. A residue error-bits erase module is used to reduce the FER caused by finite precision of the decoder. For the codes of rates
+
+8
+
+0.2 and 0.1, 425.64% and 139.13% improvement of secret key rates are achieved compared with that without the residue error-bits erase module, and the corresponding decoder throughputs are 194.65Mbps and 360.92 Mbps, which can support 17.97 Mbps and 2.48 Mbps real-time generation of secret key rate for CV-QKD systems under distances of 25km and 50km. The method proposed in this paper provides an effective and efficient method to support high-speed real-time CV-QKD, and paves the way for high-rate real-time CV-QKD deployment in secure metropolitan area network.
+ACKNOWLEDGMENTS
+This work was supported in part by the National Natural Science Foundation of China (Grant Nos 61901425, U19A2076, 62171418 and 62101516), the National Key Research and Development Program of China (Grant No. 2020YFA030970X), the Technology Innovation and Development Foundation of China Cyber Security (Grant No. JSCX2021JC001), the Chengdu Major Science and Technology Innovation Program (Grant No. 2021-YF08-00040-GX), the Chengdu Key Research and Development Support Program (Grants Nos 2021-YF05-02430-GX and 2021-YF09-00116-GX), the Sichuan Science and Technology Program (Grants Nos 2022YFG0330 and 2021YJ0313) and the Foundation and Advanced Research Projects of Chongqing Municipal Science and Technology Commission (China) under Grant cstc2019jcyjmsxmX0110.
+
+Appendix C outputs p data that is needed in next clock cycle from these 2p data. The check message storage RAM consists of a RAM, and the structure of this RAM is as the same as RAM L, but with different depth. The bit width of Syn Ram is p and the depth of Syn Ram is as the same as the check message storage RAM. Because s is required in both Check node unit and Decode decision unit, to save the resource of Block Ram, the Syn Ram is configured as a true dual port RAM.
+Appendix B: Addr gen unit
+After finishing storing the receiving message into RAM L and RAM R, the iterative decoding starts. GCU uses signal start and stop to control the decoding process. When the value of Iter num is equal to the maximum number of iterations, the iterative decoding stops. According to Fig. 2, Lqn and Lrmn are the inputs of the VNU. Because pipeline structure is adopted in designing this decoder, Lqn and Lrmn need to be read from the variable message storage RAM and the check message storage RAM constantly. Lrmn is read one by one, so the read address of check message storage RAM is generated by a simple counter. The read address of Lqn is computed according to the parity check matrix H and is stored in a ROM, so the read address of variable message storage RAM is read from this ROM one by one.
+Appendix C: Shift-right unit
+
+Appendix A: Memory arrangement
+
+The variable message storage RAM consists of two RAMs: RAM L and RAM R. We use N to represent the code length and p to represent the parallelism of the proposed architecture (the result of N/p is an even number). According to the structure of H in Fig. 1, Fig. 7 shows the structure of the variable message storage RAM with N = 12 and p = 2.
+
+Variable message storage ram
+
+RAM_L
+
+RAM_R
+
+Addr 0 2 1
+
+43
+
+Addr 1 6 5
+
+87
+
+Addr 2 10 9
+
+12 11
+
+FIG. 7. Structure of the variable message storage RAM, the number 1,2,3,...,12 correspond to the column index of H.
+As shown in Fig. 7, the number of Lqn that is stored in an address of both RAM L and RAM R is p, so 2p data can be read from the variable message storage RAM in a clock cycle. Then, a cyclic shift module presented in
+
+Parameter p indicates that this decoder needs to deal with p data in a clock cycle. However, 2p data are read from the variable message storage RAM. In this decoder, the Shift-right unit is designed to get p data from these 2p data. For example, as shown in Figs. 1 and 7, p = 2 and Lqn with index 2 and index 3 (we use (2, 3) to represent) are needed at the beginning of the iterative decoding. Data (1, 2) and (3, 4) are read from RAM L and RAM R. The process of this unit to get (2, 3) is demonstrated in Fig 8.
+In Fig. 8, val in and shif t num are the inputs of this unit. There are three outputs, therein, Lqn is used as the input of VNU, and Lqn L and Lqn R are stored in the FIFO buffer 1. The reason why adding p zeros at right is to make sure the three outputs have the same bit width.
+Appendix D: Shift-left unit
+The total message processing unit executes Eq.( 4) and gets the output Lq′ n . Then, Lq′ n will be written back to the RAM L and RAM R in right order by using the Shift-left unit. The structure of this unit is similar to the Shift-right unit. As shown in Fig. 9, there are three inputs and two outputs in this unit. The two outputs are
+
+9
+
+TABLE IV. Optimization of rate-0.1 and rate-0.2 MET-LDPC codes over the BI-AWGN channel. L(r,x) is the variable node degree distribution and R(x) is the check node degree distribution. σ is the code threshold that represents the maximum channel noise level at which the decoding error probability converges to zero as the code length goes to infinity.
+
+R
+
+Degree distribution
+
+σ
+
+0.1
+
+L(r,x)= 0.075r1x21x221 + 0.05r1x31x220 + 0.875r1x31 R(x)= 0.025x112 + 0.825x32x31 + 0.05x22x13
+
+2.56
+
+0.2
+
+L(r,x)= 0.1244r1x12x82 + 0.1253r1x31x210 + 0.7503r1x31 R(x)= 0.0341x112 + 0.0156x111 + 0.027x22x3 + 0.7476x23x3
+
+1.71
+
+RAM_L shift_num
+
+21
+
+43
+
+Val_in
+
+4321 add p zeros at right
+432100 right shift
+043210
+
+RAM_R
+
+Lqn _ L
+
+Lqn
+
+Lqn _R
+
+FIG. 8. The structure of Shift-right unit.
+
+FIFO
+
+Lqn _L
+
+10
+
+Lc' qn
+
+buffer_1 Lqn _R
+
+04
+
+32
+
+shift_num
+
+Val_in 043210
+Left shift 432100
+
+Total mess age processing
+unit
+
+RAM_R RAM_L
+FIG. 9. The structure of Shift-left unit.
+
+written back to RAM L and RAM R. There is clock de-
+
+lay between reading data from variable message storage RAM and writting them back, which results in the data that has been updated is covered. For example, in Fig. 2 and Fig. 7, when updating the nodes in the first layer, data (1, 2) and (3, 4) are read to update (2, 3). A few clock cycles later, data (1, 2) and (3, 4) are read again to update (4,1), At this moment, data (2, 3) has not been updated because of the clock delay. Hence, when data (1, 2) and (3, 4) are written back at the second time, data (2, 3) covers the result that has been written back at the first time.
+We denote k = z/p, then the total message processing unit will generate k values named Lq1n′ , Lq2n′ , . . . , Lqkn′ when updating the nodes in a layer. To avoid data coverage, the input of the shift-left unit is changed according to the value of c as follows:
+(1)c = 1, V al in = {Lqn L, Lq1n′ , Lqn R }. (2)1 < c < k, V al in = {Lqn L, Lqc′n , Lcqn−1R′ }. (3)c = k, V al in = { L1qn′ , Lcq′n , Lqcn−1R′ }.
+Appendix E: Construction of QC MET-LDPC codes
+Different LDPC code ensembles have different decoding performance which can be characterized by the degree distribution. At first, we use the density evolution method to get the optimized degree distribution for MET-LDPC codes. Then, we use progressive edge growth algorithm to construct QC MET-LDPC codes according to the optimized degree distributions. The optimized results of rate-0.1 and rate-0.2 MET-LDPC codes are shown in Table IV.
+
+[1] Gisin N, Ribordy G, Tittel W, et al. Quantum cryptography[J]. Reviews of modern physics, 2002, 74(1): 145.
+[2] Scarani V, Bechmann-Pasquinucci H, Cerf N J, et al. The security of practical quantum key distribution[J]. Reviews of modern physics, 2009, 81(3): 1301.
+[3] Ralph T C. Security of continuous-variable quantum cryptography[J]. Physical Review A, 2000, 62(6): 062306.
+[4] Jouguet P, Kunz-Jacques S, Leverrier A, et al. Experimental demonstration of long-distance continuousvariable quantum key distribution[J]. Nature photonics, 2013, 7(5): 378-381.
+
+[5] Huang D, Lin D, Wang C, et al. Continuous-variable quantum key distribution with 1 Mbps secure key rate[J]. Optics express, 2015, 23(13): 17511-17519.
+[6] Wang H, Pi Y, Huang W, et al. High-speed Gaussianmodulated continuous-variable quantum key distribution with a local local oscillator based on pilot-tone-assisted phase compensation[J]. Optics Express, 2020, 28(22): 32882-32893.
+[7] Huang D, Huang P, Lin D, et al. High-speed continuousvariable quantum key distribution without sending a local oscillator[J]. Optics letters, 2015, 40(16): 3695-3698.
+
+10
+
+[8] Laudenbach F, Schrenk B, Pacher C, et al. Pilot-assisted intradyne reception for high-speed continuous-variable quantum key distribution with true local oscillator[J]. Quantum, 2019, 3: 193.
+[9] Wang H, Li Y, Pi Y, et al. Sub-Gbps key rate four-state continuous-variable quantum key distribution within metropolitan area[J]. arXiv preprint arXiv:2111.09540, 2021.
+[10] Eriksson T A, Lu´ıs R S, Puttnam B J, et al. Wavelength division multiplexing of 194 continuous variable quantum key distribution channels[J]. Journal of Lightwave Technology, 2020, 38(8): 2214-2218.
+[11] Ren S, Yang S, Wonfor A, et al. Demonstration of highspeed and low-complexity continuous variable quantum key distribution system with local local oscillator[J]. Scientific Reports, 2021, 11(1): 1-13.
+[12] Wang T, Huang P, Li L, et al. Boosting higher secret key rate in quantum key distribution over mature telecom components[J]. 2021.
+[13] Roumestan F, Ghazisaeidi A, Renaudier J, et al. Demonstration of probabilistic constellation shaping for continuous variable quantum key distribution[C]//Optical Fiber Communication Conference. Optical Society of America, 2021: F4E. 1.
+[14] Roumestan F, Ghazisaeidi A, Renaudier J, et al. High-Rate Continuous Variable Quantum Key Distribution Based on Probabilistically Shaped 64 and 256QAM[C]//2021 European Conference on Optical Communication (ECOC). IEEE, 2021: 1-4.
+[15] Rueckmann M, Kleis S, Schaeffer C G. 1 GBaud continuous variable quantum key distribution using pilot tone assisted heterodyne detection[C]//Photonic Networks; 19th ITG-Symposium. VDE, 2018: 1-5.
+[16] Lin D, Huang D, Huang P, et al. High performance reconciliation for continuous-variable quantum key distribution with LDPC code[J]. International Journal of Quantum Information, 2015, 13(02): 1550010.
+[17] Milicevic M, Feng C, Zhang L M, et al. Key reconciliation with low-density parity-check codes for long-distance quantum cryptography[J]. arXiv preprint arXiv:1702.07740, 2017.
+[18] Zhang M, Hai H, Feng Y, et al. Rate-adaptive reconciliation with polar coding for continuous-variable quantum key distribution[J]. Quantum Information Processing, 2021, 20(10): 1-17.
+[19] Qian C C, Zhao S M, Mao Q. Reconciliation of continuous variable QKD using Gaussian post-selection and systematic polar code[C]//2016 8th International Conference on Wireless Communications & Signal Processing (WCSP). IEEE, 2016: 1-4.
+[20] Shirvanimoghaddam M, Johnson S J, Lance A M. Design of Raptor codes in the low SNR regime with applications in quantum key distribution[C]//2016 IEEE International Conference on Communications (ICC). IEEE, 2016: 1-6.
+[21] Zhou C, Wang X, Zhang Y, et al. Continuous-variable quantum key distribution with rateless reconciliation protocol[J]. Physical Review Applied, 2019, 12(5): 054013.
+
+[22] Asfaw M B, Jiang X Q, Zhang M, et al. Performance analysis of raptor code for reconciliation in continuous variable quantum key distribution[C]//2019 International Conference on Computing, Networking and Communications (ICNC). IEEE, 2019: 463-467.
+[23] Jeong S, Jung H, Ha J. Rate-compatible multi-edge type low-density parity-check code ensembles for continuousvariable quantum key distribution systems[J]. npj Quantum Information, 2022, 8(1): 1-10.
+[24] Wang X, Zhang Y, Yu S, et al. High speed error correction for continuous-variable quantum key distribution with multi-edge type LDPC code[J]. Scientific reports, 2018, 8(1): 1-7.
+[25] Li Y, Zhang X, Li Y, et al. High-throughput GPU layered decoder of quasi-cyclic multi-edge type low density parity check codes in continuous-variable quantum key distribution systems[J]. Scientific Reports, 2020, 10(1): 1-11.
+[26] Jin J, Tsui C Y. An energy efficient layered decoding architecture for LDPC decoder[J]. IEEE transactions on very large scale integration (VLSI) systems, 2009, 18(8): 1185-1195.
+[27] Shimizu K, Ishikawa T, Togawa N, et al. Partiallyparallel LDPC decoder based on high-efficiency messagepassing algorithm[C]//2005 International Conference on Computer Design. IEEE, 2005: 503-510.
+[28] Dai Y, Chen N, Yan Z. Memory efficient decoder architectures for quasi-cyclic LDPC codes[J]. IEEE Transactions on Circuits and Systems I: Regular Papers, 2008, 55(9): 2898-2911.
+[29] Yang S S, Lu Z G, Li Y M. High-speed post-processing in continuous-variable quantum key distribution based on FPGA implementation[J]. Journal of Lightwave Technology, 2020, 38(15): 3935-3941.
+[30] Yang S S, Liu J Q, Lu Z G, et al. An FPGA-based LDPC decoder with ultra-long codes for continuousvariable quantum key distribution[J]. IEEE Access, 2021, 9: 47687-47697.
+[31] Cui H, Lin J, Wang Z. An efficient post-processor for lowering the error floor of LDPC codes[J]. IEEE Transactions on Circuits and Systems II: Express Briefs, 2018, 66(3): 397-401.
+[32] Fossorier M P C. Quasicyclic low-density parity-check codes from circulant permutation matrices[J]. IEEE transactions on information theory, 2004, 50(8): 17881793.
+[33] Grosshans F, Grangier P. Reverse reconciliation protocols for quantum cryptography with continuous variables[J]. arXiv preprint quant-ph/0204127, 2002.
+[34] Van Assche G, Cardinal J, Cerf N J. Reconciliation of a quantum-distributed Gaussian key[J]. IEEE Transactions on Information Theory, 2004, 50(2): 394-400.
+[35] Lodewyck J, Bloch M, Garc´ıa-Patr´on R, et al. Quantum key distribution over 25 km with an all-fiber continuousvariable system[J]. Physical Review A, 2007, 76(4): 042305.
+[36] Ma L, Li Y, Yang J, et al. Global optimization of modulation variance for continuous-variable quantum key distribution system[J]. Journal of Cryptologic Research, 2021,8(4): 640–649.
+
+

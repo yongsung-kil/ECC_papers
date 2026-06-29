@@ -1,0 +1,434 @@
+The Impact of Faulty Memory Bit Cells on the Decoding of Spatially-Coupled LDPC Codes
+Jiandong Mu†, Aida Vosoughi†, Joao Andrade∗, Alexios Balatsoukas-Stimming‡, Georgios Karakonstantis§, Andreas Burg‡, Gabriel Falcao∗, Vitor Silva∗, Joseph R. Cavallaro† † Department of ECE, Rice Univ., Houston, TX, USA; ∗ Instituto de Telecomunicações, Univ. of Coimbra, Portugal § Queen’s University, Belfast, UK ‡ Telecommunications Circuits Lab, EPFL, Lausanne, Switzerland;
+
+Abstract—In this paper, we investigate the decoding performance of spatially-coupled LDPC codes in the case of faulty memory bit-cells within the storage modules of the decoder. Our study characterizes error resilience, by measuring the BER degradation from such errors and we focus on the application of error mitigation techniques that further aid the inherent error resilience. In particular, we propose mitigation strategies based on the use of methods that consider the algorithmic significance of each bit-cell fault, such as MSB protection and self-correction of messages.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are error correcting codes well-known for supporting high data rates and having only linear growth in decoding complexity under message passing decoding algorithms, such as belief propagation. Spatially-coupled LDPC (SC-LDPC) codes [1] are new capacity-approaching codes that provide superior error correcting performance with respect to block LDPC codes by combining the advantages of turbo codes and block LDPC codes. Therefore, SC-LDPC codes support high data rates as well as flexible code lengths and they also enable decoding output with fine granularity. Furthermore, the use of slidingwindow decoding algorithms solves the typical problems associated with the high decoding latency of long LDPC block codes [2], [3], making them highly appealing to the realization of powerful and yet very low latency forward error correction (FEC) systems.
+While semiconductor technology scaling continues to enhance the performance and efficiency of error correction encoder and decoder circuits for modern wireless communication systems, it also leads to considerable process variations that result in various hardware failures [4]. Embedded memories are particularly sensitive to technology variations in sub-45 nm technology nodes, meaning that they often fail to reliably retain the stored data. In addition, voltage scaling, which is commonly employed for low-power operation, worsens the memory bit-cell failure problem. Traditional memory fault mitigation techniques help in limiting the number of errors by using larger memory bit-cells or applying circuit-level error-correcting codes (ECCs), but unfortunately they incur
+This work has been partially supported by the US National Science Foundation under grants ECCS-1408370, CNS-1265332, and ECCS-1232274, Portuguese Fundação para a Ciência e Tecnologia (FCT) under grants SFRH/BD/78238/2011 and UID/EEA/50008/2013, and the Swiss NSF grant no. 200021_153640 and the EU Marie-Curie DARE grant no. 304186.
+
+high design overheads and are not energy-efficient. Therefore, as technology keeps scaling down, alternative cost-effective paradigms must be explored to address the inevitable memory unreliabilities.
+Approximate computing is such an alternative design paradigm, where 100% reliable operation requirements are relaxed in order to limit the overhead of classical fault mitigation techniques [5]. Under this new paradigm, it is possible to reduce design overheads by allowing the use of low cost unreliable memories for FEC systems [6] which exploit the system level redundancy of the communication system itself [7], as well as some additional low-overhead error mitigation techniques.
+Studies on the impact of arithmetic errors and faulty memories on FEC decoders have been explored for decoders of LDPC block codes [8]–[13], for turbo codes [14], [15], as well as for polar codes [16]. The study of the error resilience and decoding behavior of the promising class of SC-LDPC codes under unreliable memory storage, however, remains an open question. Due to the intricate decoding algorithms utilized for the decoding of SC-LDPC codes [3], the error resilience of the decoder is influenced by several factors: 1) the memories in the decoder’s architecture that are affected by bit-cell failures, 2) the error mitigation techniques that are used to address these errors, and, most importantly, 3) the decoding window and partial syndrome-check window dimensions and the overlap between consecutive decoding windows, among others. The last item, in particular, makes SC-LDPC codes distinct when compared to other ECCs [1], which have fewer degrees of freedom that can influence the error resilience to faults.
+In this paper, we study the error-resilience of SC-LDPC decoders considering some of the above-mentioned factors. Moreover, we aim to propose energy-efficient fault mitigation solutions to enable the implementation of high-performance SC-LDPC decoding under unavoidable memory unreliabilities.
+II. SPATIALLY-COUPLED LDPC CODES
+In this work, we consider a (3, 6, 72) SC-LDPC code with quasi-cyclic (QC) structure which is described by the parity check matrix described in Fig. 1. In the used protograph, there are 72 copies of sliding rectangles coupled together so that the variable node (VN) degree dv is 3 and the check node (CN) degree dc is 6 (excluding the first and last two VNs/CNs). Then the parity-check matrix entries are expanded by a factor Z,
+
+,(((
+
+
+
+$VLORPDU
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:21 UTC from IEEE Xplore. Restrictions apply.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+
+
+
+
+
+
+     
+
+
+
+ 
+  
+
+
+
+
+
+  
+
+
+ 
+
+
+
+
+
+
+
+     
+
+
+
+   
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+Figure 1. Protograph of the (3, 6, 72) SC-LDPC code [3] simulated and procedure for the sliding-window decoding algorithm [1], [2]. The boxes show the decoding window in position p=2 and in its final position p=70 for window size W =3 and partial syndrome-check window of size Ws=2.
+
+
+
+ 
+
+
+ 
+   
+
+  
+
+ 
+
+
+
+
+
+
+
+
+
+   
+
+
+Figure 2. Simulated SC-LDPC decoder architecture. Memories in red are faulty, in red and white can be faulty or reliable. There is a certain region of the LLR W memory, the one storing the LLRs exchanged in the decoding window, that holds its contents between window steps.
+
+whereupon each entry in the matrix is replaced by an identitymatrix of size Z×Z permuted by the entry value—similarly to how quasi-cyclic block LDPC codes are constructed [1], [3]. Thus, in Fig. 1 each entry denotes a Z×Z cyclically shifted identity-matrix in the SC-LDPC code.
+It is possible to decode SC-LDPC codes like block LDPC codes, but this will leave the advantages purported by SC-LDPC codes untapped and the resource usage and latency of the resulting decoder would be impractical. Alternatively, in sliding-window decoding methods the entire matrix is not decoded at once, but bits are decoded within a smaller window, called a decoding window of size W , by applying a standard message-passing algorithm. Once the bits inside the partial syndrome-check window, which is a sub-window of size Ws, have converged, the decoding window is shifted to the right by a step s so that its next position partially overlaps with the one that has just converged. This way, reliable log-likelihood ratios (LLRs) are fed to the next decoding window, thus accelerating the convergence speed.
+III. UNRELIABLE MEMORY MODEL
+The following methodology is applied to determine how the number of bit-cell failures translates to loss in bit error rate (BER). Information bits are first encoded and modulated into BPSK symbols. Then, the symbols are transmitted over an additive white Gaussian noise (AWGN) channel and, at the receiver side, symbols are demodulated and the corresponding LLRs are passed to the SC-LDPC decoder. To model the unreliable memory storage, we consider the stuck-at fault model that matches the standard failure model of embedded memories in nanometer CMOS affected by process variations [17]. In this model, each bit-cell fails independently with failure probability Ps. The bit-cell failure locations are assumed to be distributed uniformly across the entire memory. A memory block m has capacity for Wm words, with word width Bm bits, meaning that the total number of bits is Sm = Wm × Bm. The average number of stuck-at bit-cells is given by Em= Sm×Ps , which is always considered for the simulations carried out. For each Monte Carlo simulation
+
+run, a random block of information bits is generated and for each memory block m, Em cells are marked as stuck-at based on a uniform distribution. The considered SC-LDPC decoder architecture is shown in Fig. 2.
+IV. PROPOSED BER DEGRADATION MITIGATION STRATEGIES
+In this section we introduce two strategies to mitigate the effect of memory errors on the BER of SC-LDPC decoding, namely MSB protection and a self-correction technique.
+A. MSB protection
+In the LLR-based decoding domain the sign of the LLRs is used directly to perform bit-decisions. Thus, faults introduced by bit-cell failures on the most significant bit (MSB) (where the sign is stored) intuitively have a higher impact on the BER than faults in the remaining bits. This behavior has also been verified experimentally, e.g. [12]. Therefore, we use a simple unequal error mitigation strategy where only the MSB bits are protected, by using, e.g., larger and more reliable cells. We assume that the protected cells are no longer subject to bit-cell failures, i.e., Ps = 0.
+B. MSA with Self-correction
+Alternatively, instead of protecting the MSB by applying a bit-cell level technique, an algorithmic approach can be taken, relying on a self-correction mechanism. Qualitatively, the main idea behind the self-correction mechanism is that, after a certain number of iterations has been reached, the VN output messages should no longer change signs very frequently from one iteration to the next. Thus, it can be assumed with relative safety that any sign flips come from faulty bit-cells, and not from the algorithm itself. This idea was first applied to correcting the overestimation of certain LLR messages in the iterative LDPC decoding algorithm [18] and has shown its potential to mitigate the BER degradation resulting from noisy hardware in the min-sum algorithm (MSA) iterative LDPC decoder [9]. The min-sum algorithm that uses self-correction is denoted by self-corrected min-sum algorithm (SCMSA). An example of the self-correction procedure is shown in Fig. 3, under 2’s-complement.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:21 UTC from IEEE Xplore. Restrictions apply.
+
+
+
+
+
+ 
+
+
+
+  
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+ 
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+  
+
+
+
+
+
+
+
+ 
+
+
+
+
+ 
+ 
+
+
+
+ 
+
+
+ 
+ 
+
+
+
+
+
+Figure 3. VN update under MSA and SCMSA depicting the LLR exchange in
+2’s-C representation. LLRs greater or equal than 0x80 are negative, otherwise are positive. Whenever the sign-bit is due for a change between the (i − 1)-th and (i)-th iteration, the SCMSA introduces an erasure, except if an erasure had already been introduced at the (i − 1)-th iteration.
+
+Table I LIST OF EXPERIMENTS WITH THE SC-LDPC DECODER UNDER UNRELIABLE MEMORY STORAGE AND MSB PROTECTION TECHNIQUE.
+
+Experiments
+
+Unreliable Memories
+
+MSB Protection
+
+Figure
+
+I
+
+None
+
+N/A
+
+Fig. 4, Fig. 6
+
+II III
+
+Channel
+
+No Yes
+
+Fig. 4a), Fig. 6a) Fig. 4a), Fig. 6a)
+
+IV V
+
+All
+
+No Fig. 4b), Fig. 5, Fig. 6b) Yes Fig. 4b), Fig. 5, Fig. 6b)
+
+Decoding parameters: W =15, Ws=8 and s = 2×Z
+
+given in Fig. 1), it still allows us to get an idea of how the performance of SC-LDPC codes is affected by the presence of memory faults.
+Two crucial properties that make DE computationally tractable are the all-zero codeword assumption and message independence over the iterations. The stuck-at memory fault model we consider in this paper does not preserve message symmetry [13], meaning that the DE analysis cannot be restricted to the all-zero codeword. However, stuck-at faults can easily be converted to random bit-flips (which do preserve message symmetry) by assuming the existence of a simple xor-based randomization mechanism. Moreover, the presence of early termination introduces dependence between the messages of consecutive iterations. To avoid this issue, the DE results presented in the following section are obtained without early termination. For the same non-independence issue, it is unfortunately computationally infeasible to perform DE for the case where self-correction is used.
+Due to space limitations, we do not describe DE for
+100
+10-2
+
+BER
+
+V. EVALUATION METHODOLOGY
+A. Monte Carlo simulations
+We study the sensitivity of the windowed SC-LDPC decoder to faults introduced by bit-cell failures in the different memories via Monte Carlo simulations. Moreover, we also evaluate the fault mitigation techniques that exploit algorithm or bit-cell level schemes to reduce the impact of these faults. An equal mixture of both stuck-at 0 and stuck-at 1 faults are injected at a Ps probability in the different memories. The experiments carried out are summarized in Table I. First, we establish the BER performance of the SC-LDPC code when the memories operate reliably (experiment I). Then, we introduce errors in the channel memory only and on all of the memories (experiments II and IV, respectively). This study is performed for a range of bit-cell failure probabilities (Ps).
+B. Density evolution
+Density evolution (DE) is a method for analyzing the performance of ensembles of LDPC codes in the limit of infinite blocklength without the need for lengthy Monte Carlo simulations [19]. The main idea behind DE is that, under certain conditions, the probability density functions of the messages that are exchanged within the decoder over the course of the decoding iterations can be tracked analytically. The bit error rate can then be easily derived from the aforementioned message densities. While DE is not entirely accurate for the analysis of a particular, finite-length, LDPC code (like the one
+
+10-4 10-6
+
+Reliable Mem. Ps0=10-3 Ps0,MSB=10-3 Ps0=10-4 Ps0,MSB=10-4
+
+1.1
+
+1.3
+
+1.5
+
+1.7
+
+1.9
+
+2.1
+
+2.3
+
+SNR (dB)
+
+a) Experiments I, II and III. 100
+
+10-2
+
+BER
+
+10-4 10-6
+
+Reliable Mem. Ps0=10-3 Ps0,MSB=10-3 Ps0=10-4 Ps0,MSB=10-4
+
+1.1
+
+1.3
+
+1.5
+
+1.7
+
+1.9
+
+2.1
+
+2.3
+
+SNR (dB)
+
+b) Experiments I, IV and V.
+
+Figure 4. SC-LDPC BER under unreliable memory storage. Fault injection rates of Ps∈{10−4, 10−3}.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:21 UTC from IEEE Xplore. Restrictions apply.
+
+SC-LDPC codes with faulty memories in detail and we focus more on the specific results for the (3, 6, 72) SC-LDPC code ensemble to which the code in Fig. 1 belongs. We note that the DE procedure for faulty SC-LDPC code decoding can be derived relatively easily by combining the DE for SC-LDPC codes given in [20] with the faulty DE equations given in [13].
+VI. SIMULATION RESULTS
+In our simulations we follow the unreliable memory error model and simulation methodology introduced in Section III and Section V. For all Monte Carlo simulations and DE results, the LLRs are represented in 8-bit fixed-point, using a Q6.2 representation, i.e., 6 bits for sign and magnitude and 2 bits for decimal representation. A uniform distributed error with a probability of Ps∈{10−4, 10−3} is injected into the memory.
+A. Monte Carlo simulations
+
+BER
+
+10 0 10 -3 10 -6 10 -9
+0 10 0
+
+Rel. Mem.
+Ps=10 -3 Ps,MSB =10 -3 Ps=10 -4 Ps,MSB =10 -4
+
+0.5
+
+1
+
+1.5
+
+2
+
+SNR (dB)
+
+a) Experiments I, II and III.
+
+10 0
+
+10 -3
+
+BER
+
+BER
+
+10 -2 10 -4 10 -6
+
+Rel. Mem. MSA
+Rel. Mem. SCMSA Ps,SC=10 -3 Ps,MSB,SC =10 -3 Ps,SC=10 -4 Ps,MSB,SC =10 -4
+
+1.1
+
+1.3
+
+1.5
+
+1.7
+
+1.9
+
+2.1
+
+2.3
+
+SNR (dB)
+
+10 -6 10 -9
+
+Rel. Mem.
+Ps=10 -3 Ps,MSB =10 -3 Ps=10 -4 Ps,MSB =10 -4
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+SNR (dB)
+
+b) Experiments I, IV and V.
+
+Figure 5. SC-LDPC BER under unreliable memory for fault injection rates of Ps∈{10−4, 10−3} and for Experiments IV and V running the SCMSA.
+
+Figure 6. SC-LDPC BER performance for W = 15, and s = 2×Z, under unreliable memory storage for a fault injection rate of Ps∈{10−4, 10−3} for the experiments described in Table I.
+
+1) MSB protection: When bit-cell failures occur only in
+the channel memory, as seen in Fig. 4a), the memory faults
+can significantly deteriorate the BER if the fault Ps is high enough. For example, at a BER of 10−4, the SNR loss when the memory fault rate is Ps=10−4 is only 0.15 dB. For a fault rate of Ps=10−3, however, the BER is affected severely. Fortunately, MSB protection is very successful in mitigating the BER degradation due to memory faults for both Ps=10−3 and Ps=10−4, with the signal-to-noise ratio (SNR) loss being in the order of 0.1 dB.
+When all memories suffer from bit-cell failures, as expected,
+the BER performance is further degraded as shown in Fig 4b). In this case, at a BER of 10−4, the SNR loss when the memory fault rate is Ps=10−4 is about 0.2 dB, while for a memory fault rate of Ps=10−3 the SNR loss is significant and higher than what we observe in our simulations. As in the
+previous case, MSB protection is very successful in mitigating
+the impact of memory faults on the BERperformance. More
+specifically, for both memory fault rates, we observe that the SNR loss at a BER of 10−4 can again be limited to 0.1 dB.
+
+2) Self-corrected MSA: The self-correction outperforms the plain MSA algorithm, as observed in Fig. 5. Thus, two intepretations to the obtained results are possible. First, with regards to the SCMSA BER performance under reliable memories, the MSB protection is shown to be also an effective technique to improve the BER performance of the SCMSA under unreliable memory to close to the case where the memory is reliable. On the other hand, the self-correction is able to improve on the performance of the MSA by itself, even if the sign-bit, on which it depends to introduce erasures, is not protected, but only for low fault-injection rates (Ps0=10−4). For higher injection rates (Ps0=10−3), the self-correction technique is highly dependent of the MSB protection to achieve the original SCMSA performance. Unlike the case where soft-errors are introduced by faulty arithmetic units [8], [9], the BER performance achieved when stuck-at memory bit-cells are present can only be improved to its optimal level when MSB protection is also provided.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:21 UTC from IEEE Xplore. Restrictions apply.
+
+B. Density evolution analysis
+The DE results for the (3, 6, 72) SC-LDPC code ensemble (to which the code of Fig. 1 belongs) are presented in Fig. 6a) and Fig. 6b) for experiments I, II and III, and I, IV, and V, respectively. We observe that the results generally agree with the Monte Carlo simulations in the sense that the presence of errors in all memories has a much more significant effect on the BER than the presence of errors only in the channel memory and that MSB protection provides significant improvements in the BER. Note that, as DE is idealized, there is some expected mismatch between the BER vs. SNR curves. Nevertheless, DE seems to be a useful low-complexity tool for an initial evaluation, with more accurate and specific results still requiring Monte Carlo simulations.
+VII. CONCLUSION
+In this paper, we characterize the BER performance of the SC-LDPC decoder under unreliable memory storage with bitcell stuck-at faults. More specifically, the BER degradation due to memory errors is quantified and evaluated through both Monte Carlo simulations and density evolution analysis. In addition we evaluate the performance improvements obtained by using two low-overhead mechanisms to mitigate memory unreliabilities: 1) the protection of most significant bit of each word in the memory modules, 2) a message self-correction technique. We observed that both MSB protection and selfcorrection are very effective in mitigatin memory faults in SC-LDPC code decoding, and that a combination of the two methods can reduce the BER degradation to essentially zero with respect to the fault-free case for memory fault rates as high as 10−3.
+REFERENCES
+[1] D. J. Costello, L. Dolecek, T. Fuja, J. Kliewer, D. Mitchell, and R. Smarandache, “Spatially coupled sparse codes on graphs: theory and practice,” Communications Magazine, IEEE, vol. 52, no. 7, pp. 168–176, July 2014.
+[2] M. Lentmaier, M. Prenda, and G. Fettweis, “Efficient message passing scheduling for terminated LDPC convolutional codes,” in Information Theory Proceedings (ISIT), 2011 IEEE International Symposium on, July 2011, pp. 1826–1830.
+[3] S. Abu-Surra, E. Pisek, and R. Taori, “Spatially-coupled low-density parity check codes: Zigzag-window decoding and code-family design considerations,” in 2015 Information Theory and Applications Workshop, 2015.
+[4] S. Bhunia and S. Mukhopadhyay, Low-power variation-tolerant design in nanometer silicon. Springer, 2011.
+
+[5] S. Venkataramani, V. K. Chippa, S. T. Chakradhar, K. Roy, and A. Raghunathan, “Quality Programmable Vector Processors for Approximate Computing,” in Proceedings of the 46th Annual IEEE/ACM International Symposium on Microarchitecture, ser. MICRO-46. New York, NY, USA: ACM, 2013, pp. 1–12. [Online]. Available: http://doi.acm.org/10.1145/2540708.2540710
+[6] A. Sampson, J. Nelson, K. Strauss, and L. Ceze, “Approximate storage in solid-state memories,” in Proceedings of the 46th Annual IEEE/ACM International Symposium on Microarchitecture, ser. MICRO-46. New York, NY, USA: ACM, 2013, pp. 25–36. [Online]. Available: http://doi.acm.org/10.1145/2540708.2540712
+[7] C. Novak, C. Studer, A. Burg, and G. Matz, “The effect of unreliable LLR storage on the performance of MIMO-BICM,” in Signals, Systems and Computers (ASILOMAR), 2010 Conference Record of the Forty Fourth Asilomar Conference on, Nov 2010, pp. 736–740.
+[8] Ngassa, C. Kameni and Savin, V. and Declercq, D., “Analysis of MinSum based Decoders Implemented on Noisy Hardware,” in Asilomar’13: Proceedings of the Asilomar Conference on Signals, Systems, and Computers, November 2013.
+[9] C. K. Ngassa, V. Savin, and D. Declercq, “Min-sum-based decoders running on noisy hardware,” in Global Communications Conference (GLOBECOM), 2013 IEEE. IEEE, 2013, pp. 1879–1884.
+[10] M. May, M. Alles, and N. Wehn, “A Case Study in Reliabilityaware Design: a Resilient LDPC Code Decoder,” in Proceedings of the conference on Design, Automation and Test in Europe. ACM, 2008, pp. 456–461.
+[11] C.-H. Huang, Y. Li, and L. Dolecek, “Gallager B LDPC decoder with transient and permanent errors,” Communications, IEEE Transactions on, vol. 62, no. 1, pp. 15–28, January 2014.
+[12] J. Andrade, A. Vosoughi, G. Wang, G. Karakonstantis, A. Burg, G. Falcao, V. Silva, and J. R. Cavallaro, “On the Performance of LDPC and Turbo Decoder Architectures with Unreliable Memories,” in Asilomar’14: Proceedings of the Asilomar Conference on Signals, Systems, and Computers, November 2014.
+[13] A. Balatsoukas-Stimming and A. Burg, “Density evolution for minsum decoding of LDPC codes under unreliable message storage,” Communications Letters, IEEE, vol. 18, no. 5, pp. 849–852, May 2014.
+[14] J. Geldmacher, K. Hueske, and J. Gotze, “Turbo equalization for receivers with unreliable buffer memory,” in Vehicular Technology Conference (VTC Fall), 2011 IEEE, Sept 2011, pp. 1–5.
+[15] J. Geldmacher and J. Gotze, “On fault tolerant decoding of Turbo codes,” in Turbo Codes and Iterative Information Processing (ISTC), 2012 7th International Symposium on, Aug 2012, pp. 245–249.
+[16] A. Balatsoukas-Stimming and A. Burg, “Faulty successive cancellation decoding of polar codes for the binary erasure channel,” in Information Theory and its Applications (ISITA), 2014 International Symposium on, Oct 2014, pp. 448–452.
+[17] C. Roth, C. Benkeser, C. Studer, G. Karakonstantis, and A. Burg, “Data mapping for unreliable memories,” in Communication, Control, and Computing (Allerton), 2012 50th Annual Allerton Conference on, Oct 2012, pp. 679–685.
+[18] J. Andrade, G. Falcao, V. Silva, J. Barreto, N. Goncalves, and V. Savin, “Near-LSPA performance at MSA complexity,” in Communications (ICC), 2013 IEEE International Conference on, June 2013, pp. 3281– 3285.
+[19] T. Richardson, M. Shokrollahi, and R. Urbanke, “Design of capacityapproaching irregular low-density parity-check codes,” Information Theory, IEEE Transactions on, vol. 47, no. 2, pp. 619–637, Feb 2001.
+[20] M. Lentmaier, A. Sridharan, K. Zigangirov, and D. Costello, “Terminated LDPC convolutional codes with thresholds close to capacity,” in Information Theory, 2005. ISIT 2005. Proceedings. International Symposium on, Sept 2005, pp. 1372–1376.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:21 UTC from IEEE Xplore. Restrictions apply.
+
+

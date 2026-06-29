@@ -1,0 +1,1897 @@
+Nexus: Efficient and Scalable Multi-Cell mmWave
+Baseband Processing with Heterogeneous Compute
+Zhenzhou Qi, Chung-Hsuan Tung, Zhihui Gao, Tingjun Chen
+Department of Electrical and Computer Engineering, Duke University
+Abstract
+The rapid adoption of 5G New Radio (NR), particularly in
+the millimeter-wave (mmWave) spectrum, imposes stringent
+demands on the flexibility, scalability, and efficiency of base-
+band processing. While virtualized Radio Access Networks
+(vRANs) enable dynamic spectrum sharing across cells, com-
+pute resource allocation for baseband processing, especially
+in multi-cell deployments with heterogeneous workloads,
+remains underexplored. In this paper, we present Nexus,
+the first system to realize real-time, virtualized multi-cell
+mmWave baseband processing on a single server with het-
+erogeneous compute resources. Nexus integrates software-
+based digital signal processing pipelines with hardware-
+accelerated LDPC decoding, and introduces a novel frame-
+work for sharing Intel’s ACC100 eASIC across multiple CPU
+cores via virtual functions (VFs). For single-cell operation,
+Nexus employs a random forest (RAF)-based model that
+predicts the most energy-efficient resource allocation for
+the given cell configuration with microsecond-level infer-
+ence latency and high accuracy. For multi-cell scenarios,
+Nexus introduces a power-aware scheduler that incorporates
+a lightweight contention model to adjust resource allocation
+strategies under concurrent execution. Through extensive
+evaluation across various Frequency Range 2 (FR2) cell con-
+figurations, we show that Nexus supports up to 16 concurrent
+cells under full load, achieving 5.37 Gbps aggregate through-
+put, while reducing the multi-cell scheduling search space by
+orders of magnitude. These results demonstrate that virtual-
+ized, resource-aware baseband processing is both practical
+and efficient for next-generation vRAN systems.
+1
+Introduction
+5G New Radio (NR) has rapidly evolved to become the foun-
+dation for modern wireless communication systems, aiming
+to deliver ultra-high throughput, ultra-low latency, and mas-
+sive device connectivity [3]. A key feature of 5G NR is its
+flexible subcarrier spacings and slot durations to adapt to
+a variety of deployment scenarios. Combined with large
+bandwidth support and operation across diverse frequency
+ranges, including the millimeter-wave (mmWave) spectrum
+in Frequency Range 2 (FR2) [6], 5G NR is pushing the limits
+of both radio access and infrastructure design [20, 28, 29].
+To meet growing performance demands, the wireless in-
+dustry is transitioning from dedicated hardware toward cen-
+tralized Radio Access Network (RAN) [10, 12, 42], and fur-
+ther into disaggregated, software-defined architectures such
+as virtualized RAN (vRAN) [14, 16, 27] and Open RAN (O-
+RAN) [36, 40]. These architectures decouple baseband func-
+tions from specialized hardware, allowing deployment on
+general-purpose compute platforms with heterogeneous com-
+pute resources, including CPU, GPU, FPGA, and ASICs. This
+shift reduces capital expenditure and enables key capabili-
+ties such as dynamic network slicing, centralized scheduling,
+coordinated beamforming, and elastic scaling of compute
+resources across diverse baseband workloads.
+While significant research and development have focused
+on the virtualization of radio resources, e.g., dynamic Phys-
+ical Resource Block (PCB) sharing [8], little attention has
+been given to sharing computational resources in vRAN.
+These computational resources, such as CPU cores, hard-
+ware accelerators (e.g., ASICs), and memory bandwidth, are
+just as critical as radio spectrum in determining the system’s
+capacity, performance, and responsiveness. As 5G moves to-
+ward dense, high-throughput deployments, the ability to ef-
+ficiently share and schedule computational resources across
+cells becomes essential.
+In this paper, we present Nexus, the first system that en-
+ables efficient, virtualized multi-cell mmWave baseband pro-
+cessing on a single server with heterogeneous compute re-
+sources, including CPUs and ASICs. Nexus addresses the
+key challenge of scaling computational resources across
+multiple FR2 cells while guaranteeing the strict real-time
+processing deadlines imposed by 5G NR. Designing Nexus
+introduces several technical challenges. First, uplink Phys-
+ical layer (PHY) processing in FR2 with numerology 3 and
+channel bandwidths up to 400 MHz imposes extreme com-
+putational demand, especially under full traffic load. Second,
+integrating hardware accelerators such as Intel’s ACC100
+eASIC for LDPC decoding into a shared multi-core vRAN en-
+vironment requires careful coordination between CPU-based
+digital signal processing (DSP) stages and accelerator offload-
+ing, where queueing and PCIe transfer overheads can create
+unpredictable bottlenecks. Third, efficiently supporting het-
+erogeneous cells requires a resource allocation framework
+arXiv:2509.04625v2  [cs.NI]  25 Feb 2026
+Latency Modeling 
+and Adjustment
+Feasibility
+Prediction
+Single Edge
+COTS Server
+Set of CPU Cores 𝒞
+Set of VFs 𝒱
+Sharing ACC100 in Multi-Core Systems §4
+Multi-Cell Nexus 
+Instances
+Multiple 
+Cells
+Nexus Multi-Cell Instances §6
+Single Cell 
+System Profiling
+Random Forest
+based Predictor
+Nexus Scheduler §4, §5
+θ(𝒄, 𝟎| 𝒄, 𝟎) 
+Common 
+PHY
+SW Decoding
+Worker #1
+θ(𝒄, 𝟏| 𝒄, 𝒗) 
+eASIC Decoding
+𝑽(VFs)
+θ(𝒄 −𝟏, 𝟏 | 𝒄, 𝒗) 
+eASIC Decoding
+𝑽(VFs)
+eASIC Decoding
+θ(𝒄, 𝒄| 𝒄, 𝒄) 
+eASIC Decoding
+eASIC Decoding
+Common 
+PHY
+SW Decoding
+Common 
+PHY
+SW Decoding
+Agora / Savannah-mc
+When 𝒄= 𝟏, 𝒗= 𝟏
+Savannah-sc
+Common 
+PHY
+Common 
+PHY
+Common 
+PHY
+Channel 
+Estimation
+Common Uplink Baseband Stages
+(Common PHY)
+Precoder
+FFT
+Equalization
+Demodulation
+Common 
+PHY
+Common 
+PHY
+Common 
+PHY
+Common 
+PHY
+Common 
+PHY
+Scheduling 
+Decisions
+Single cell resource allocation θ(𝑪𝒅𝒔𝒑, 𝑪𝒂𝒄𝒄 |𝑪,𝑽) [Details in §4]
+(a) Nexus Overview
+(b) Resource Allocation Strategies
+Worker #2
+Worker
+Worker
+Worker
+SW Worker
+HW Worker
+Hybrid Worker
+Worker # 𝑪
+Worker #1
+Worker #2
+Worker # 𝑪
+Worker #1
+Worker #2
+Worker # 𝑪
+Worker #1
+Worker #2
+Worker # 𝑪
+Figure 1: Overview of Nexus: (a) Nexus virtualizes multi-cell
+mmWave PHY processing on a single server with heteroge-
+neous compute by sharing a set of CPU cores and a pool of
+ACC100 virtual functions (VFs) in a power-aware manner. (b)
+Resource allocation strategies for a single cell are character-
+ized by combinations of CPU cores and VFs.
+that can (i) adapt allocations to diverse PHY layer param-
+eters, and (ii) account for latency contention effects when
+multiple cells run concurrently on the same server.
+To overcome these challenges, Nexus introduces a com-
+plete system architecture (Fig. 1). It features the first de-
+tailed design for sharing ACC100 accelerators across multiple
+worker cores via virtual functions; a random forest (RAF)-
+based model that maps PHY-layer features, or cell configu-
+rations, to the most energy-efficient resources required for
+each cell; and a power-aware scheduler for both single-cell
+and multi-cell scenarios, the latter integrating a lightweight
+contention model to ensure per-cell latency guarantees un-
+der concurrent execution. We extensively evaluate Nexus
+across various deployment scenarios. At the model level, we
+characterize the performance of our RAF-based predictor in
+detail. We compare it against six baselines, including three
+deep learning (DL) models and three analytical approaches,
+showing that RAF achieves near-DL accuracy with two or-
+ders of magnitude faster inference, smaller latency variance,
+and modest model size. We further demonstrate that the RAF
+model generalizes well to unseen single-cell configurations,
+sustaining > 98% prediction accuracy. At the system level,
+we validate Nexus under diverse deployment scenarios. We
+show that Nexus supports up to sixteen concurrent cells with
+a total data rate of 5.37 Gbps using sixteen CPU cores and
+sixteen ACC100 VFs, with the ability to scale further.
+In summary, this paper makes the following contributions:
+• We present Nexus, the first system supporting real-time,
+virtualized multi-cell mmWave baseband processing on
+a single server with heterogeneous compute resources
+(CPUs and ASICs). This includes the first ACC100 sharing
+framework across multiple cores, enabling flexible offload-
+ing modes and scalable LDPC decoding;
+• We design an RAF-based model that maps cell configura-
+tions to the most energy-efficient resource allocation re-
+quired to meet the PHY processing deadline. For multi-cell
+deployments, we develop a contention-aware extension
+of the RAF scheduler that captures system-level compute
+resource contention across cells;
+• We extensively evaluate Nexus on a heterogeneous com-
+pute testbed, demonstrating robust support for up to 16
+concurrent FR2 cells at 100% traffic load, achieving over
+5.37 Gbps aggregate throughput while meeting the 3-slot
+PHY processing deadline.
+The codebase and measurements of Nexus are open-sourced [2].
+2
+Related Work
+mmWave testbeds mmWave communication has emerged
+as a key enabler for high-throughput wireless systems, with
+its expansive spectrum in the 24–52 GHz range accommo-
+dating higher data rates than sub-6 GHz technologies. The
+unique propagation characteristics in mmWave bands, such
+as higher path loss and susceptibility to blockage, have spurred
+research into advanced beamforming and beam management
+techniques that counteract short coverage ranges and ensure
+robust connectivity [15, 41]. To evaluate these strategies in
+realistic settings, a number of testbed [26, 30] have been pro-
+posed, including, programmable phased-array antennas [32],
+and prototype 5G NR FR2 equipment [46].
+PHY Baseband Processing and Virtualization Tradi-
+tional baseband processing relies on specialized hardware ac-
+celerators or Digital Signal Processors (DSPs) capable of han-
+dling computationally intensive tasks. The advancement of
+virtualization techniques and cloud-native paradigms such as
+Sora [38], BigStation [45], Agora [11], Hydra [19] and Savan-
+nah [27] have driven a shift toward software-implemented
+PHY stacks on commodity hardware, often hosted on general-
+purpose CPUs, GPUs, or specialized accelerators. This vir-
+tualization of baseband functions allows network operators
+to allocate and scale resources based on changing load con-
+ditions, while also enabling easier deployment of updates
+and new features. To the best of our knowledge, our work is
+the first to specifically target virtualized multi-cell baseband
+Number of DSP Cores ( 𝑪𝒅𝒔𝒑)
+Number of ACC Cores ( 𝑪𝒂𝒄𝒄)
+1 2 3
+2
+1
+3
+4 5
+4 5
+𝑪𝒅𝒔𝒑
+𝑽+ 𝟏
+Integer points:
+𝟐+ 𝟑+ ··· + 𝑽+ 𝟏
+=
+𝑽· (𝑽+ 𝟑)
+𝟐
+𝑪𝒂𝒄𝒄
+𝑮𝒊𝒗𝒆𝒏 𝑪
+𝑮𝒊𝒗𝒆𝒏 𝑽
+𝑮𝒊𝒗𝒆𝒏 𝑪
+(a) 𝑉≤𝐶
+Number of DSP Cores (𝑪𝒅𝒔𝒑)
+Number of ACC Cores ( 𝑪𝒂𝒄𝒄)
+1 2 3
+2
+1
+3
+4 5
+4 5
+𝑪𝒅𝒔𝒑
+𝑪
+𝑪𝒂𝒄𝒄
+𝑮𝒊𝒗𝒆𝒏 𝑪
+𝑮𝒊𝒗𝒆𝒏 𝑽
+𝑮𝒊𝒗𝒆𝒏 𝑪
+Integer points for Region 1
+/ 𝒋
+𝑪
+𝒋#𝟐
+Integer points for Region2
+𝑽−𝑪×𝑪
+𝑽−𝑪
+(b) 𝑉> 𝐶
+Figure 2: Region of resource allocations, where integer points
+in the shaded area represent valid CPU core and VF alloca-
+tions satisfying (1)–(2).
+processing in a single server, pushing beyond the typical
+single-cell or multi-server setups explored in prior literature.
+Heterogeneous Computing and Resource Sharing Re-
+cent interest in heterogeneous computing has spurred work
+on efficiently utilizing diverse processing elements [33, 39],
+such as CPUs, GPUs, and FPGAs, to tackle the demanding
+computational requirements of next-generation wireless net-
+works. While many studies have extensively explored radio
+resource sharing, for example, dynamic allocation of phys-
+ical resource blocks (PRBs) among different users [8], rela-
+tively few have focused on computational resource sharing,
+especially in environments where multiple heterogeneous
+processors coexist within the same physical infrastructure.
+This gap highlights a pressing need for strategies that can
+effectively partition, schedule, and manage such resources
+without compromising performance or scalability in high-
+frequency, high-bandwidth scenarios.
+3
+Preliminaries
+5G NR frame structure and numerology. The 5G NR
+frame structure supports multiple numerologies for opera-
+tion across a wide range of carrier frequencies, including the
+mmWave bands in FR2. FR2 spans 24.25 GHz–52.6 GHz and
+commonly utilizes numerology 3 (𝜇= 3), which corresponds
+to a subcarrier spacing (SCS) of 120 kHz. This work therefore
+focuses on 𝜇= 3. Compared to the standard 15 kHz subcar-
+rier spacing used in Frequency Range 1 (FR1, sub-6 GHz),
+the higher SCS of 120 kHz reduces OFDM symbol duration,
+making it more suitable for high Doppler spreads and low-
+latency requirements. At 𝜇= 3, each slot spans 0.125 ms with
+14 symbols, 8× shorter than the 1 ms slot at 15 kHz [5].
+Baseband Processing. Baseband processing refers to the
+digital signal processing tasks required to encode and decode
+user data for wireless transmission. Fig. 1(b) shows uplink
+operations such as FFT, channel estimation, equalization,
+demodulation, and forward error correction (FEC) before
+Table 1: Parameters of considered cell complexity, denoted by
+𝛔(𝑀, 𝐵, 𝜌𝑡, 𝜌𝑓, 𝜒) and based on [4].
+Dimension
+Notation
+Range
+Granularity
+Channel BW
+𝐵
+{100, 200, 400} MHz
+Discrete
+MIMO Size
+𝑀
+{1, 2, 4}
+Discrete
+Traffic Load
+𝜌𝑡
+[0,100] %
+6.25%
+Transmission BW %
+𝜌𝑓
+[0,100] %
+Multiple PRBs
+MCS Index
+𝜒
+{0, 1, . . . , 28}
+Integer
+the MAC layer. These tasks are performed after the radio
+unit (RU) captures the user’s signal and streams the raw
+I/Q samples to the processing unit. 5G NR functional split
+options [3] define how these tasks are partitioned across
+the radio access network (RAN). This work focuses on split
+option 8, where the entire baseband stack is centralized in
+the distributed unit (DU). This configuration enables flexi-
+ble compute resource pooling across multiple cells, which
+is critical in supporting dynamic, multi-cell vRAN deploy-
+ment. Notably, uplink baseband processing is significantly
+more computationally intensive than downlink due to the
+iterative nature of the brief propagation. As such, Nexus
+focuses exclusively on uplink processing. Prior studies such
+as FlexRAN [21] and Atlas [43] report that downlink symbol
+processing latency is typically ∼3× lower than uplink. Thus,
+demonstrating support for 100% uplink traffic load in Nexus
+implicitly ensures that the system can also sustain intensive
+downlink workloads under the 5G slot format.
+4
+Nexus for a Single Cell
+Even though Nexus is designed to virtualize baseband pro-
+cessing across multiple mmWave cells, the effectiveness of
+multi-cell scheduling fundamentally depends on accurately
+understanding how compute resource allocation impacts
+baseband processing latency for a single cell against varying
+cell configurations. Our single-cell profiling and analysis re-
+veal how CPU cores and ACC100 VFs interact, how power
+and latency trade off across resource allocations, and how
+cell configuration parameters shape computational demand.
+However, two challenges make single-cell scheduling non-
+trivial. First, the possible resource allocation space is large:
+one cell can map to many combinations of CPU cores and
+ACC100 VFs, each with different power–latency character-
+istics. Second, feasibility, defined as whether the 99.9th per-
+centile processing latency under a given allocation meets the
+strict 3-slot deadline, is not deterministic but varies non-
+linearly with different cell configurations. To address these
+challenges, we first model the single-cell allocation space
+and quantify its brute-force complexity. We then introduce a
+random forest (RAF)-based feasibility model that efficiently
+predicts whether a given allocation can meet real-time pro-
+cessing deadlines, while significantly pruning the search
+
+	
+
+
+
+
+
+
+
+
+
+
+Idle
+NUM_VF=1
+NUM_VF=2
+NUM_VF=4
+NUM_VF=3
+Figure 3: Power consumption of ACC100 with multiple VFs.
+space. This single-cell framework enables Nexus to select
+energy-efficient resource allocations, and also serves as the
+building block for the multi-cell scheduler described in §5.
+4.1
+Cell Configuration
+Let 𝛔(𝑀, 𝐵, 𝜌𝑡, 𝜌𝑓, 𝜒) denote the cell configuration, which is
+a function of the cell’s PHY parameters and workloads. Ta-
+ble 1 summarizes the range and granularity of these parame-
+ters based on the 3GPP Technical Specifications for FR2 [4].
+Specifically, we consider the DDDSU TDD frame structure,
+which allocates 52 downlink, 2 guard, and 16 uplink symbols
+across five slots, which is widely adopted in both industry
+and research [18, 22, 23], and is also recommended by 3GPP
+for its latency benefits [13]. Since we focus on uplink pro-
+cessing, 𝜌𝑡effectively has a granularity of 1/16 = 6.25%.
+The transmission BW percentage is defined relative to the
+maximum number of physical resource blocks (PRBs) sup-
+ported for a given channel bandwidth. For example, with
+a 400 MHz channel at numerology 𝜇= 3, the maximum is
+264 PRBs (see Table 5.3.2-1 in [7]). This corresponds to a
+granularity of 1/264 ≈0.38%, where each PRB corresponds
+to 12 subcarriers, i.e., 12 × 120 kHz = 1.44 MHz.
+4.2
+Optimizing Heterogeneous Compute
+Resource Allocation
+Consider a server equipped with 𝐶max CPU cores and sup-
+porting 𝑉max ACC100 accelerator virtual functions (VFs). We
+assume 𝐶max ≥𝑉max, e.g., the server used in our experiments
+is with 𝐶max = 56 and 𝑉max = 16 using a single ACC100
+accelerator card. To support a single cell using a set of CPU
+cores, C, and a set of ACC100 VFs, V, we define the single-
+cell resource allocation strategy as 𝛉(Cdsp, Cacc|C, V). Here,
+Cdsp and Cacc represent the sets of CPU cores allocated to
+software DSP and ACC100 offloading tasks, which are opti-
+mization variables given the available resources C and V.
+Since all CPU cores are considered homogeneous and equiv-
+alent, the specific sets of cores assigned to different tasks are
+irrelevant; only the number of cores allocated to each task
+matters. Therefore, without loss of generality, this single-cell
+resource allocation can be represented by 𝛉(𝐶dsp,𝐶acc|𝐶,𝑉),
+where 𝐶dsp = |Cdsp|, 𝐶acc = |Cacc|, 𝐶= |C|, and 𝑉= |V|.
+Feasible resource allocation strategies. For a given num-
+ber of 𝐶≤𝐶max and 𝑉≤𝑉max, the heterogeneous compute
+resource allocation for a single cell needs to satisfy the fol-
+lowing constraints describing the relationship between the
+DSP pipeline and utilized hardware resources:
+• Each CPU core is dedicated to either software DSP, of-
+floading LDPC decoding to ACC100, or both, i.e.,
+1 ≤𝐶= |C| = |Cdsp ∪Cacc| ≤𝐶dsp + 𝐶acc,
+1 ≤𝐶dsp ≤𝐶and 1 ≤𝐶acc ≤𝐶.
+(1)
+When ACC100 VFs are available, LDPC decoding is of-
+floaded to the hardware accelerator, while the CPU cores
+are responsible for all remaining DSP tasks.
+• Each CPU core responsible for ACC100 offloading tasks
+is mapped to a unique set of VFs, and each VF cannot be
+managed by more than one core, i.e.,
+1 ≤𝐶acc ≤𝑉.
+(2)
+For fixed values of 𝐶(≤𝐶max) and 𝑉(≤𝑉max), let 𝚯(𝐶,𝑉)
+denote the set of feasible allocations satisfying the above-
+mentioned constraints, i.e.,
+𝚯(𝐶,𝑉) =
+
+𝛉(𝐶dsp,𝐶acc|𝐶,𝑉) : (1)–(2) are satisfied
+	
+. (3)
+Fig. 2 illustrates this feasibility region (shaded areas), with
+each integer point (𝐶dsp,𝐶acc) representing one feasible re-
+source allocation strategy. It can be shown that the number
+of feasible allocations is:
+|𝚯(𝐶,𝑉)| =
+(Í𝑉
+𝑗=1(𝑗+ 1) = 𝑉(𝑉+3)
+2
+,
+if 𝑉≤𝐶,
+Í𝐶
+𝑗=2 𝑗+ (𝑉−𝐶) · 𝐶= 2𝑉𝐶+𝐶−𝐶2−2
+2
+,
+if 𝑉> 𝐶.
+(4)
+Power-aware resource optimization. Nexus addresses
+the challenge of efficiently selecting the allocation strategy
+to meet the stringent real-time PHY processing deadline in
+a virtualized baseband system, while minimizing the power
+consumption. This power-aware resource optimization is
+𝛉★:= arg min
+𝛉
+: 𝑃(𝛉) = 𝛼1𝑃1(𝐶dsp) + 𝛼2𝑃2(𝐶acc) + 𝛼3𝑃3(𝑉)
+(5)
+s.t. : L(𝛉) < 3-slot, 𝛉∈𝚯(𝐶,𝑉) from (3),
+1 ≤𝐶≤𝐶max, 1 ≤𝑉≤𝑉max.
+Here, 𝑃1(𝐶dsp), 𝑃2(𝐶acc), and 𝑃3(𝑉) denote the power con-
+sumption of DSP worker cores, ACC100 offloading cores,
+and ACC100 VFs, respectively. The weights {𝛼1, 𝛼2, 𝛼3} al-
+low system designers to bias resource selection depending
+on hardware constraints, which are set to equal in Nexus,
+i.e., 𝛼1 = 𝛼2 = 𝛼3 = 1). We use Intel’s Performance Counter
+Monitor (PCM) [1] to measure the CPU power consump-
+tion. Each active core contributes approximately 7 W of dy-
+namic power, consistent with prior studies [27], yielding
+𝑃1(𝐶dsp) + 𝑃2(𝐶acc) = 7 · 𝐶. To characterize the power con-
+sumption of the ACC100, we conduct measurements on an
+ACC100 connected to a workstation through a PCIe riser
+cable and isolate the 12 V supply for inline current measure-
+ment using a clamp meter following prior work [27, 31]. The
+measurement accuracy of this approach is validated using an
+NVIDIA GTX1070 GPU with the nvidia-smi tool. As shown
+in Fig. 3, each active ACC100 VF adds approximately 1.2 W
+power, yielding 𝑃3(𝑉) = 1.2 · 𝑉.
+4.3
+Profiling and Exploring Resource
+Allocation Strategies
+Profiling methodology. To understand how resource allo-
+cations 𝛉impact feasibility, we developed and instrumented
+the Nexus software stack to record per-frame processing
+latency across diverse cell configurations. Built on top of
+the Agora [11] and Savannah [27] codebases, Nexus extends
+support for multiple implementations, each corresponding to
+a distinct resource allocation strategy. This required substan-
+tial engineering effort to enable flexible switching between
+software-only, hardware-accelerated, and hybrid paths (§6).
+For each 𝛔under various 𝛉, we execute 20K frames and
+record the 99.9th percentile latency. Due to space limit, Fig. 4
+reports representative power–latency trade-offs with vary-
+ing (𝑀, 𝐵) and 𝜌𝑡∈{25%, 100%} under 𝑀𝐶𝑆= 17. Similar
+trends are observed when varying other cell configuration
+parameters such as 𝜌𝑓or 𝜒. From these measurements, we
+derive five key observations that guide the design of Nexus.
+Observation 1: The mapping from cell configuration
+𝛔to feasibility is highly non-linear. Our measurements
+show that whether a cell meets the 3-slot deadline can-
+not be explained by a single feature. Instead, feasibility de-
+pends on complex cross-terms—e.g., a 2×2 100 MHz cell with
+𝜌𝑡= 100% may exceed the deadline under a given allocation,
+while a 4×4 100 MHz cell at lower load may remain feasible.
+This non-straightforward mapping motivates the need for
+systematic profiling and learning–based models.
+Observation 2: A low-complexity cell can be fully han-
+dled in software by a single CPU core without requiring
+accelerator offloading, e.g., 𝛉(1, 0|1, 0). Under light traffic,
+the baseband workload processed by a single worker core
+can meet the deadline without offloading LDPC decoding to
+the accelerator. For example, a single CPU core can support
+a 1×1 400 MHz cell with 𝜌𝑡= 25% (Fig. 4a).
+Observation 3: A low-complexity cell requiring addi-
+tional decoding capacity can benefit from adding a sin-
+gle VF alongside one DSP core, e.g., 𝛉(1, 1|1, 1). Evaluat-
+ing and building on the prior work Savannah [27], 𝛉(1, 1|1, 1)
+can sustain a full traffic load (𝜌𝑡= 100%) for a 1×1 100 MHz,
+1×1 200 MHz, or 2×2 100 MHz cell. However, this resource
+allocation is inadequate with increased cell complexity. For
+instance, the same allocation can only sustain a traffic load of
+𝜌𝑡= 50% for a 1×1 400 MHz cell, 𝜌𝑡= 44% for 2×2 200 MHz,
+and 𝜌𝑡= 38% for 4×4 100 MHz. The bottleneck arises from
+software DSP stages saturating the single CPU core and from
+the rising number of MIMO streams feeding the decoder.
+Observation 4: A moderate-complexity cell can be sup-
+ported by multiple DSP cores and one VF, e.g., 𝛉(𝑐−1, 1|𝑐, 1)
+or 𝛉(𝑐, 1|𝑐, 1). Supporting moderate-complexity cells re-
+quires allocating 𝑐> 1 CPU cores to software DSP while re-
+serving a single VF for LDPC decoding. Our profiling reveals
+that the effectiveness of 𝛉(𝑐−1, 1|𝑐, 1) versus 𝛉(𝑐, 1|𝑐, 1) de-
+pends on the number of available cores. When 𝐶is small
+(e.g., two or three), the bottleneck lies in software DSP. In
+such cases, using all cores for DSP, as in 𝛉(2, 1|2, 1) for a 2×2
+200 MHz cell, outperforms 𝛉(1, 1|2, 1) and meets the deadline
+without requiring the extra core that 𝛉(2, 1|3, 1) would con-
+sume. However, as 𝐶increases, DSP no longer becomes the
+limiting factor. Here, isolating one core dedicated to ACC100
+offloading, i.e., 𝛉(𝑐−1, 1|𝑐, 1), effectively eliminates queuing
+delays at the decoder for a more stable system.
+Observation 5: A high-complexity cell (e.g., larger 𝑀,
+wider 𝐵, higher 𝜒) requires full offloading across mul-
+tiple cores and VFs, e.g., 𝛉(𝑐,𝑐|𝑐,𝑐). For high-complexity
+cells (e.g., 4×4 100 MHz), increasing the number of DSP cores
+alone cannot close the latency gap because a single VF be-
+comes the bottleneck: each additional MIMO stream pro-
+duces proportionally more code blocks, saturating the de-
+coder. While decoding a 1×1 100 MHz cell consumes only
+about 0.38 Gbps (≈5% of ACC100’s peak throughput), a 4×4
+cell scales this demand beyond a single VF’s capacity. To
+address this, we partition the ACC100 into multiple VFs, dis-
+tributing decoding tasks in parallel. Balanced configurations
+in the form of 𝛉(𝑐,𝑐|𝑐,𝑐), ∀𝑐= 1, . . . , min{𝐶,𝑉}m ensure that
+each DSP core is “paired” with its own VF, avoiding queueing
+imbalance. Across diverse cells, this balanced resource allo-
+cation strategy achieves the highest throughput, while for
+low-complexity cells, 𝛉(𝑐−1, 1|𝑐, 1) may still remain prefer-
+able due to reduced VF usage and thus power consumption.
+Reduced resource allocation space for a single cell. The
+above observations, validated through extensive experiments,
+allow us to constrain the search to a small but representative
+subset. In addition, a clear flattening effect can be observed
+from Fig. 4: as more CPU cores are added, the processing
+latency eventually stops improving. Beyond this point, allo-
+cating additional cores yields diminishing returns. Guided by
+these observations, we define the reduced feasible resource
+allocation space for a single cell as:
+𝚯′(𝐶,𝑉) = {𝛉(𝑐, 0|𝑐, 0),
+𝑐∈{1, 2, · · · , 6},
+𝛉(𝑐, 1|𝑐, 1),
+𝑐∈{1, 2, 3},
+𝛉(𝑐−1, 1|𝑐, 1),
+𝑐∈{4, 5, 6},
+𝛉(𝑐,𝑐|𝑐,𝑐),
+𝑐∈{3, 4, 5}}.
+(6)
+Unlike the full allocation space 𝚯(𝐶,𝑉) in (3), which grows
+combinatorially, the reduced set has a fixed cardinality of
+|𝚯′(𝐶,𝑉)| = 15 independent of𝐶and𝑉as long as min{𝐶,𝑉} ≥
+6, which is common for a many-core server equipped with
+a single ACC100 accelerator. For example, with 𝐶= 32 and
+𝑉= 16, the reduced set still contains only 15 configurations,
+compared to 152 in the original space.
+4.4
+Nexus’s Single-Cell Scheduler
+While the power model in (5) quantifies the cost of a given
+resource allocation, it does not establish whether that alloca-
+tion can meet the 3-slot deadline. Simple rule-based pruning
+is insufficient: while it captures broad regimes it cannot ac-
+curately characterize intermediate cases where feasibility
+hinges on subtle cross-terms and CPU-ACC100 coupling
+effects. This motivates the need for a supervised learning
+model that can generalize from profiling data and reliably
+map (𝛔, 𝛉) to feasibility.
+To overcome this challenge, Nexus augments profiling
+with a supervised learning model that generalizes feasibility
+from sampled data. Specifically, we train a random forest
+(RAF) classifier that, for each (𝛔, 𝛉) pair, outputs a confidence
+score 𝑓(𝛔, 𝛉) ∈[0, 1], representing the probability that the
+allocation 𝛉can meet the 3-slot deadline under configuration
+𝛔(see §7 for details). We then define feasibility relative to
+a decision threshold 𝜏(e.g., 𝜏= 0.5): if 𝑓(𝛔, 𝛉) ≥𝜏, the
+allocation is labeled feasible; otherwise it is infeasible. At
+runtime, given a new and potentially unseen 𝛔, Nexus’s
+single-cell scheduler evaluates each candidate 𝛉from the
+reduced search space and selects the feasible subset:
+FRAF(𝛔) =
+n
+𝛉∈𝚯′(𝐶,𝑉)
+ 𝑓(𝛔, 𝛉) ≥𝜏
+o
+.
+(7)
+Replacing the full allocation space with the reduced search
+set given by(6), Nexus’s RFA-based single-cell scheduler is:
+Optimizing single-cell resource allocation (Opt-1-Cell)
+𝛉★:=arg
+min
+𝛉∈𝚯′ (𝐶,𝑉) 𝑃(𝛉) = 7 · 𝐶+ 1.2 · 𝑉
+s.t.
+𝑓(𝛔, 𝛉) ≥𝜏.
+Solving (Opt-1-Cell) returns the most energy-efficient re-
+source allocation 𝛉★, i.e., the number of CPU cores and
+ACC100 VFs that the cell should use while still meeting
+the deadline. For example, Fig. 4d shows that while multiple
+allocations are feasible, (Opt-1-Cell) selects 𝛉(3, 1|3, 1) for a
+1×1 400 MHz cell, achieving the lowest power of 22.2 W. At
+runtime, the scheduler instantiates this decision by assign-
+ing the corresponding physical worker cores and VFs to the
+cell’s processing pipeline (see §6 for details).
+Model selection rationale. We select RAF as the feasibility
+predictor for two reasons. (i) Capturing non-linear interac-
+tions: feasibility boundaries depend on cross-terms such as
+𝜌𝑡, 𝐵, 𝑀, etc. More importantly, interactions between CPU
+and ACC100 offloading introduce additional variability (e.g.,
+bbdev queueing, PCIe transfer) that are extremely difficult to
+model analytically. (ii) Data efficiency and speed: compared
+with DL models, RAF achieves competitive accuracy with
+substantially less training data and provides real-time 𝜇s-
+level inference per (𝛔, 𝛉). As shown in §7, our evaluation
+against six baselines, demonstrates that RAF delivers the
+best balance of accuracy, inference latency, and model size.
+5
+Nexus for Multiple Cells
+Based on the single-cell resource allocation analysis, we now
+extend Nexus to support concurrent multi-cell baseband
+processing with scalability. Nexus, as illustrated in Fig. 1,
+achieves this through two key components: (i) the parallel
+instantiation of multiple single-cell processing pipelines, and
+(ii) a power-aware scheduler that allocates heterogeneous
+compute resources while considering resource contention.
+5.1
+Multi-cell Resource Allocation Model
+While the formulation 𝛉(𝐶dsp,𝐶acc|𝐶,𝑉) in §4 focuses on
+single-cell configuration, Nexus is designed to support multi-
+cell deployments. Consider the scenario where 𝑁cells need
+to be served by a pool of worker cores and ACC100 VFs.
+The 𝑖-th cell (𝑖= 1, 2, . . . , 𝑁) with cell configuration 𝛔𝑖, may
+adopt a different resource allocation strategy, denoted by
+𝛉𝑖(𝐶dsp
+𝑖
+,𝐶acc
+𝑖
+|𝐶𝑖,𝑉𝑖). In this context, we assume that all com-
+pute resources, worker cores, and VFs, are assigned in a
+non-overlapping manner across the cells, i.e.,
+C𝑖∩C𝑗= ∅and V𝑖∩V𝑗= ∅, ∀1 ≤𝑖≠𝑗≤𝑁.
+(8)
+This assumption on non-overlapping resource allocation is
+both practical and widely adopted. Academic platforms (e.g.,
+Agora [11], Hydra [19]) and industry-grade implementations
+(e.g., srsRAN [37], OAI [24], Intel FlexRAN [21]) all dedicate
+physical cores to baseband tasks by isolating cores, disabling
+hyper-threading, and using real-time priorities. Sharing cores
+across cells introduces non-deterministic context-switching
+delays: for example, on modern Intel Xeon CPUs, a single
+round of context switches among four cells can incur ≈60𝜇s,
+which is already 20% of the 3-slot deadline.
+To enable concurrent allocations, Nexus adopts a modular
+architecture with multiple processing pipelines, each bound
+to a resource allocation 𝛉𝑖∈𝚯′(𝐶𝑖,𝑉𝑖) for cell 𝑖. Pipelines
+are statically compiled but dynamically selected at runtime.
+At execution, the scheduler determines the appropriate 𝛉𝑖
+for each active cell and injects the corresponding resource
+allocation strategy as a configuration entry, activating the
+desired data path without recompilation. The modularity
+allows Nexus to support heterogeneous multi-cell deploy-
+ments with scalability and extensibility: Nexus can easily
+0.375 msec
+θ(1,0|1,0)
+θ(1,1|1,1)
+θ(c,0|c,0)
+θ(c,1|c,1)
+θ(c-1,1|c,1)
+θ(c-1,1|c,2)
+θ(c-1,1|c,3)
+θ(c-1,1|c,4)
+θ(c,c|c,c)
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(1,0|1,0) 
+θ(1,1|1,1) 
+(a)
+1×1 400 MHz - 25% 𝜌𝑡
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(1,1|1,1) 
+θ(2,0|2,0) 
+(b)
+2×2 200 MHz - 25% 𝜌𝑡
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(1,1|1,1) 
+θ(2,1|2,1) 
+(c)
+4×4 100 MHz - 25% 𝜌𝑡
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(3,1|3,1) 
+θ(3,3|3,3) 
+(d)
+1×1 400 MHz - 100% 𝜌𝑡
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(3,1|3,1) 
+θ(3,3|3,3) 
+(e)
+2×2 200 MHz - 100% 𝜌𝑡
+
+	
+
+
+
+
+
+
+
+$ !#"
+
+	
+
+
+
+
+
+	
+	
+!!
+θ(4,4|4,4) 
+θ(5,5|5,5) 
+(f)
+4×4 100 MHz - 100% 𝜌𝑡
+Figure 4: Power-latency trade-off space for Nexus across heterogeneous cell configurations. Each point represents a distinct
+resource allocation. Labeled dots indicate the most and second most energy-efficient options that Nexus is likely to select.
+incorporate future accelerators (e.g., GPUs) or hybrid pro-
+cessing models to further maximize resource utilization and
+system performance.
+5.2
+Nexus Multi-Cell Scheduler
+Given a pool of 𝐶max worker cores and 𝑉max ACC100 VFs
+that can be shared to concurrently serve 𝑁cells, Nexus aims
+to minimize the overall power consumption when allocating
+compute resources to individual cells, 𝑁cells to achieve
+minimized energy, i.e.,
+Optimizing multi-cell resource allocation (Opt-𝑁-Cell)
+{𝛉★
+𝑖}𝑁
+𝑖=1 :=arg
+min
+{𝐶𝑖},{𝑉𝑖}
+𝑁
+∑︁
+𝑖=1
+(7 · 𝐶𝑖+ 1.2 · 𝑉𝑖) ,
+s.t.
+𝑓(𝛔𝑖, 𝛉𝑖) ≥𝜏,
+∀𝑖= 1, . . . , 𝑁,
+𝛉𝑖∈𝚯′(𝐶𝑖,𝑉𝑖) from (6),
+1 ≤
+𝑁
+∑︁
+𝑖=1
+𝐶𝑖≤𝐶max,
+1 ≤
+𝑁
+∑︁
+𝑖=1
+𝑉𝑖≤𝑉max.
+(9)
+However, (Opt-𝑁-Cell) cannot be easily decomposed into
+𝑁independent single-cell resource allocation problems of
+the form (Opt-1-Cell) for two key reasons. First, the latency
+of a given cell allocation is no longer determined solely by
+its local configuration; it is also influenced by system-wide
+contention such as shared memory bandwidth and PCIe
+utilization when multiple pipelines execute concurrently.
+Second, in the multi-cell case, these limited resources, 𝐶max
+cores and 𝑉max VFs, must be partitioned among the 𝑁cells
+under the constraints described in (9). This yields a combina-
+torial search space with  𝐶max−1
+𝑁−1
+ ·  𝑉max−1
+𝑁−1
+ possible partitions.
+To address these challenges, we develop an energy-aware
+resource scheduler (Algorithm 1).
+Contention-aware feasibility adjustment via RAF con-
+fidence. Let 𝑝= 𝑓(𝛔𝑖, 𝛉(𝑘)
+𝑖
+) ∈[0, 1] denotes the RAF confi-
+dence score, which reflects how likely a configuration 𝛉(𝑘)
+𝑖
+in
+FRAF(𝛔𝑖) for cell 𝑖satisfies the 3-slot deadline in the single-
+cell setting. Through controlled experiments, we observed
+a strong correlation between 𝑝and the empirical latency
+margin, i.e., the distance between the measured 99.9-th per-
+centile latency and the 3-slot boundary. Hence, we use 𝑝as
+a proxy for how close the system is to violating the deadline:
+high 𝑝indicates substantial margin, while low 𝑝indicates
+the latency is near the boundary.
+Contention-aware latency adjustment via learned lin-
+ear model. To capture the impact of running multiple cells
+concurrently, we introduce a lightweight linear adjustment
+model that degrades the effective RAF confidence as the
+number of active cells 𝑁increases. Specifically, for cell 𝑖and
+allocation 𝛉(𝑘)
+𝑖
+, we define the adjusted confidence as
+ˆ𝑝(𝑘)
+𝑖
+(𝑁) = 𝑝(𝑘)
+𝑖
+−(𝛽0 + 𝛽1 · (𝑁−1)),
+(10)
+where 𝑝(𝑘)
+𝑖
+is the RAF confidence in the single-cell case, and
+(𝛽0, 𝛽1) are fitted from multi-cell experiments measuring
+how confidence scores shift as additional cells are activated
+(example seen in Fig. 6a). A configuration 𝛉(𝑘)
+𝑖
+is then con-
+sidered feasible under 𝑁cells if ˆ𝑝(𝑘)
+𝑖
+(𝑁) remains above a
+threshold 𝜏. This approach allows our system to combine
+Nexus single-cell scheduling with a contention-aware adjust-
+ment that generalizes to multi-cell deployments.
+Greedy initialization guided by RAF feasibility (single-
+cell oracle). For each active cell 𝑖with features 𝛔𝑖, we first
+enumerate the reduced candidate set 𝚯′(𝐶𝑖,𝑉𝑖) (15 possible
+allocations), among which we retain only the RAF-feasible
+subset
+FRAF(𝛔𝑖) =
+
+𝛉(𝑘) ∈𝚯′(𝐶𝑖,𝑉𝑖)
+ 𝑓(𝛔𝑖, 𝛉(𝑘)) ≥𝜏
+	
+,
+(11)
+where 𝑓(𝛔𝑖, 𝛉(𝑘)) = 1 indicates that the RAF classifier pre-
+dicts the 99.9-th percentile latency under (𝛔𝑖, 𝛉(𝑘)) meets
+the 3-slot deadline in the single-cell setting.
+We then order this feasible set by increasing power con-
+sumption to form
+PRAF(𝛔𝑖) =
+n
+𝛉(1), . . . ,𝛉(𝐾)  𝛉(𝑘) ∈FRAF(𝛔𝑖) ,
+𝑃(𝛉(1)) < · · · < 𝑃(𝛉(𝐾))
+o
+.
+(12)
+At runtime, we select the first 𝛉(𝑘) ∈PRAF(𝛔𝑖) whose contention-
+adjusted feasibility ˆ𝑝(𝑘)
+𝑖
+(𝑁) from (10) satisfies ˆ𝑝(𝑘)
+𝑖
+(𝑁) ≥𝜏,
+indicating the 99.9-th percentile latency is predicted to meet
+the 3-slot deadline under 𝑁-cell contention.
+Reduced resource allocation space for 𝑁cells. To sup-
+port 𝑁cells on a system equipped with 𝐶max CPU cores and
+𝑉max ACC100 VFs, a brute-force approach would require eval-
+uating all possible resource allocation combinations across
+cells. The total number of such allocations is given by:
+|{𝛉𝑖}𝑁
+𝑖=1| =
+𝐶max −1
+𝑁−1
+
+·
+𝑉max −1
+𝑁−1
+
+(13)
+Nexus addresses this challenge by leveraging its resource
+allocation scheduler, which reduces the per-cell allocation
+space to a small fixed set of 15 strategies (Eq. 12). As a result,
+the multi-cell search complexity becomes linear in 𝑁:
+|{𝛉′
+𝑖}𝑁
+𝑖=1| = 15 × 𝑁
+⇒
+O(𝑁).
+(14)
+For instance, in a 12-cell deployment with 𝐶max = 56 and
+𝑉max = 16, the full brute-force space contains ≈5 × 1012
+combinations, whereas Nexus’s scheduler evaluates only
+180, yielding orders-of-magnitude reduction.
+This reduced search space enables Nexus to adapt alloca-
+tions in real time using Algorithm 1. For example, consider
+Algorithm 1 Nexus’s multi-cell Scheduler
+Require: 𝑁cells with features {𝛔𝑖}𝑁
+𝑖=1; RAF classifier 𝑓(·) return-
+ing feasibility confidence [0, 1]; learned contention coefficients
+(𝛽0, 𝛽1); decision threshold 𝜏.
+Ensure: Total compute resource (𝐶max,𝑉max) is sufficient to sup-
+port all 𝑁cells to meet the 3-slot processing deadlines;
+PRAF(𝛔𝑖)
+ ≥1 for every active cell 𝑖.
+1: for 𝑖= 1, 2, . . . , 𝑁do
+2:
+FRAF(𝛔𝑖) ←
+n
+𝛉(𝑘)
+𝑖
+∈𝚯′(𝐶𝑖,𝑉𝑖)
+ 𝑓(𝛔𝑖, 𝛉(𝑘)
+𝑖
+) ≥𝜏
+o
+3:
+PRAF(𝛔𝑖) ←sort FRAF(𝛔𝑖) by 𝑃(·)
+⊲increasing power
+4:
+for 𝛉(𝑘)
+𝑖
+∈PRAF(𝛔𝑖) do
+5:
+obtain feasibility confidence 𝑝𝑘
+𝑖←𝑓(𝛔𝑖, 𝛉(𝑘)
+𝑖
+)
+6:
+ˆ𝑝𝑘
+𝑖←𝑝𝑘
+𝑖−(𝛽0 + 𝛽1 · (𝑁−1))
+7:
+if ˆ𝑝≥𝜏then
+8:
+𝛉𝑖(𝐶dsp
+𝑖
+,𝐶acc
+𝑖
+|𝐶𝑖,𝑉𝑖) ←𝛉(𝑘)
+𝑖
+9:
+break
+10:
+end if
+11:
+end for
+12: end for
+13: Return
+n
+𝛉𝑖(𝐶dsp
+𝑖
+,𝐶acc
+𝑖
+|𝐶𝑖,𝑉𝑖)
+o𝑁
+𝑖=1
+the 2×2 100 MHz cell in Fig. 6. In the single-cell case, Nexus
+selects 𝛉𝑖(1, 1|1, 1) with a RAF confidence of 𝑝= 0.542 as the
+most energy-efficient configuration meeting the 3-slot dead-
+line. As the number of active cells grows (𝑁≥4), contention
+degrades performance and the confidence score drops below
+the threshold (𝑝= 0.469), prompting the scheduler to escalate
+to 𝛉𝑖(3, 1|3, 1), the next entry in PRAF(𝛔𝑖), thereby restoring
+deadline compliance. A similar behavior is observed for 4×4
+100 MHz cells in Fig. 4f. While 𝛉𝑖(4, 4|4, 4) is sufficient for a
+single cell, multi-cell contention necessitates escalation to
+𝛉𝑖(5, 5|5, 5) to maintain real-time guarantees. Its effective-
+ness is further demonstrated in the evaluation (Sec.7, Fig.8).
+6
+Implementation
+Multi-cell implementation. We implement Nexus in about
+5,000 lines of C++ code, built on top of the open-source Savan-
+nah codebase [27]. Key components include a heterogeneous
+compute resource scheduler and a set of statically compiled
+processing pipelines corresponding to different resource al-
+location strategies. At runtime, Nexus reads the active cell
+configurations and selects the appropriate pre-compiled re-
+source allocation strategy without requiring recompilation
+or binary modification.
+Nexus scheduler. We implement Nexus scheduler in about
+300 lines of Python code, including feature extraction, model
+fitting, and evaluation. The model is trained offline using pro-
+filing data (detailed in §7.2), and at runtime Nexus invokes
+the scheduler during system initialization to minimize over-
+head. Specifically, the main C++ program calls the Python
+scheduler as a subprocess, interpreting each cell’s feature
+vector 𝛔via JSON input. The scheduler evaluates 𝛔with a
+set of 𝛉and outputs the required resource allocation 𝛉★
+𝑖for
+each active cell—i.e., the number of CPU cores and ACC100
+VFs needed to satisfy the 3-slot deadline. These allocations
+are returned in JSON format and immediately consumed
+by the C++ runtime, which binds the specified cores and
+VFs to each cell’s processing pipeline. Because the scheduler
+runs only at initialization, all subsequent per-slot scheduling
+decisions are handled natively in C++, ensuring ultra-low
+Python overhead during real-time operation.
+Nexus also includes over 9K example configuration files
+that cover a wide range of cell configurations and resource
+allocation strategies, which are used to generate the pro-
+filing datasets for model training and testing. To support
+system-specific adaptation, an automated batch script is also
+provided to perform single-cell profiling across different cell
+configurations, enabling users to generate training data that
+matches their hardware environment.
+ACC100 virtual function (VF) initialization. We inte-
+grate two Silicom Lisbon P2 ACC100 accelerators [34] with
+Nexus, binding both devices to DPDK’s igb_uio driver using
+the dpdk-devbind tool. One ACC100 operates with 16 VFs
+(𝑉max = 16) while the second is configured in PF mode to
+enable direct performance comparisons between VF-based
+and PF-based configurations. To manage VF addressabil-
+ity, we enable the I/O Memory Management Unit (IOMMU)
+in the system BIOS and kernel. VF configuration parame-
+ters, including Queue Groups, DDR memory allocation, and
+atomic queue settings, are configured through Intel’s bbdev
+pf_bb_config tool through customized configuration files. To
+support 𝛉𝑖(𝑐−1, 1|𝑐, 𝑣) and 𝛉𝑖(𝑐,𝑐|𝑐,𝑐), Nexus utilize DPDK’s
+threading model and the parallelism of ACC100. We adopt
+rte_thread to create RTE threads with proper CPU affinity,
+resource isolation, and memory-zone consistency under a
+single EAL environment. This implementation enables each
+VF to be attached to a worker core without launching inde-
+pendent EAL instances, supporting up to 16 concurrent VFs
+per ACC100 hardware accelerator.
+Server configuration. We perform all profiling (e.g., Fig. 4)
+and experiments using two Dell PowerEdge R750 servers,
+interconnected via a Dell EMC PowerSwitch Z29264F-ON
+using 100 G QSFP28 DAC cables. Server 1 (srv1) emulates
+the RUs, each generating baseband traffic corresponding to
+multiple UEs. It features a 64-core Intel Xeon Gold 6548N
+CPU @2.6 GHz with Ubuntu 24.04.2 LTS and an NVIDIA
+Mellanox ConnectX-6 Dx dual-port 100 GbE SmartNIC. The
+traffic streams are aggregated and streamed Server 2. Server
+2 (srv2) emulates the DUs, executing the vRAN baseband
+processing pipeline with Nexus. It is equipped with a 56-
+core Intel Xeon Gold 6348 CPU @2.6 GHz running Ubuntu
+Table 2: Random forest performance as a function of forest
+size. Inference time reported as 𝜇s/(𝛔, 𝛉) at batch size 1.
+# of Trees
+Accuracy
+Inference Time
+Model Size
+10
+98.99%
+1.42 𝜇s
+0.5 MB
+50
+99.10%
+4.45 𝜇s
+2.3 MB
+100
+99.09%
+4.24 𝜇s
+4.4 MB
+500
+99.08%
+21.30 𝜇s
+22.2 MB
+1000
+99.09%
+43.67 𝜇s
+44.4 MB
+20.04.6 LTS and an NVIDIA Mellanox ConnectX-5 dual-port
+100 GbE NIC. To ensure real-time PHY processing, specific
+CPU cores are isolated and dedicated to Nexus, which are
+also responsible for interfacing with two Silicom Lisbon P2
+ACC100 accelerators via DPDK 21.11.2. To minimize context
+switching and optimize performance, we enable performance
+mode for the CPU and execute Nexus as a real-time process
+at the highest scheduling priority on both servers. We also
+disable hyper-threading and employ thread affinity, mitigat-
+ing the impact of sharing resources among logical cores. srv2
+also runs Nexus’s scheduling framework and evaluates the
+DL-based and analytical baseline schedulers.
+7
+Evaluation
+7.1
+Experimental Setup
+We deploy Nexus with the emulated RUs and DUs instances
+on separate servers to evaluate the performance. Server-1
+emulates the RUs while Server-2 emulates the DUs. In ad-
+dition to the worker cores allocated for DSP and ACC100
+tasks (𝐶dsp, 𝐶acc), extra CPU cores are reserved for TX/RX
+streaming and master control on both the RU and DU sides.
+Due to the logging overhead, especially when processing
+large numbers of cells, the system generates substantial log
+data; for example, recording 100K frames across sixteen cells
+produces over 2.0 GB of log files. This makes it infeasible to
+sustain detailed logging beyond sixteen cells without impact-
+ing system performance. However, when logging is disabled,
+Nexus can support more cells without experiencing processing
+deferrals, demonstrating its scalability. We evaluate various
+cell configuration 𝛔(𝑀, 𝐵, 𝜌𝑡, 𝜌𝑓, 𝜒). A processing latency
+deadline of 3-slot (0.375 ms) is enforced at the 99.9th per-
+centile across all evaluations. We report results along two
+dimensions: (i) Nexus single-cell scheduler’s performance,
+and (ii) system-level multi-cell performance.
+7.2
+Single-Cell Scheduler Performance
+We first evaluate the feasibility predictors used in Nexus,
+comparing the proposed Nexus single-cell scheduler with
+six baselines, including DL and analytical models. Our eval-
+uation focuses on three metrics: (i) accuracy, which refers
+to the fraction of test samples for which the model correctly
+predicts feasibility, i.e., whether the 99.9th percentile latency
+Table 3: Deep learning model performance on CPU and GPU.
+Inference time reported as 𝜇s/(𝛔, 𝛉) at batch size 1.
+Model
+Accuracy
+Inference Time
+(CPU/GPU)
+Model Size
+MLP
+99.14%
+582/743 𝜇s
+55.1 KB
+1D CNN
+99.26%
+615/826 𝜇s
+52.9 KB
+TinyNet
+99.34%
+570/803 𝜇s
+30.1 KB
+under a given (𝛔, 𝛉) defined in §4.3 meets the 3-slot deadline.
+(ii) inference time per (𝛔, 𝛉), and (iii) model size.
+Datasets. We collect more than 9K profiling experiments
+across diverse cell configurations 𝛔(𝑀, 𝐵, 𝜌𝑡, 𝜌𝑓, 𝜒) and re-
+source allocation stragety 𝛉, spanning
+• MIMO dimension, 𝑀∈{1 × 1(SISO), 2 × 2, 4 × 4},
+• Channel BW, 𝐵∈{100 MHz, 200 MHz, 400 MHz},
+• Traffic load, 𝜌𝑡∈{25%, 50%, 75%, 100%},
+• Transmission BW percentage, 𝜌𝑓∈{25%, 50%, 75%, 100%},
+• MCS, 𝜒∈{10, 12, 17, 20}.
+For each (𝛔, 𝛉) pair, we run Nexus for 20K frames and log
+detailed timing information of all DSP stages. This raw log-
+ging produces more than 300 GB of trace data. From these
+traces, we extract the 99.9th percentile end-to-end processing
+latency. Each (𝛔, 𝛉) is labeled as feasible (=1) if the latency
+satisfies the 3-slot deadline, and infeasible (=0) otherwise,
+yielding the initial labeled dataset of 9K samples (𝛔, 𝛉).
+To broaden coverage, we further augment the dataset us-
+ing monotonicity rules observed during profiling: (i) if a
+solution is feasible for 𝜌𝑡=𝑎, then it is also feasible for all
+𝜌𝑡< 𝑎; (ii) if infeasible for 𝜌𝑡=𝑎, then it remains infeasible
+for all 𝜌𝑡≥𝑎; (iii) the same monotonicity rule applies to
+𝜌𝑓; (iv) if feasible with 𝑐CPU cores, then it is also feasible
+for any 𝑐′ > 𝑐. Similar rules also stand for 𝜌𝑓. Applying
+these rules expands the dataset to 120,596 labeled samples
+(𝛔, 𝛉). We split the dataset into train/validation/test sets in a
+60/20/20 ratio and use the same splits for RAF, DL models,
+and mathematical baselines to ensure fair comparison.
+Selecting the forest size. Table 2 reports the performance
+of the proposed Nexus single-cell scheduler under differ-
+ent forest sizes. It can be seen that prediction accuracy only
+marginally improves with larger forests–from 98.99% with 10
+trees to 99.10% with 50 trees–after which it quickly saturates.
+Both the inference time and model size grow linearly with
+the number of trees. In practice, forests with 50–100 trees
+provide a favorable tradeoff between accuracy (≈99.10%) and
+efficiency (≤5 μs per inference), and therefore, we empiri-
+cally select Nexussingle-cell scheduler with 50 trees for the
+remainder of our evaluations.
+Comparison with DL models. Table 3 compares Nexus
+single-cell scheduler against three DL models: an MLP [25,
+35] with three fully connected layers (128–64–32 neurons
+0
+20
+40
+60
+80
+100
+Traffic Load 
+t (%)
+0
+80
+160
+240
+320
+400
+Transmission Bandwidth
+(MHz)
+0
+20
+40
+60
+80
+100
+f (%)
+(a) SISO, 𝛉𝑖(1, 1|1, 1)
+0
+20
+40
+60
+80
+100
+Traffic Load 
+t (%)
+0
+80
+160
+240
+320
+400
+Transmission Bandwidth
+(MHz)
+0
+20
+40
+60
+80
+100
+f (%)
+(b) 2×2 MIMO, 𝛉𝑖(4, 0|4, 0)
+Figure 5: Nexus single-cell scheduler’s predictions with
+𝑀𝐶𝑆= 18. Confidence heatmaps are thresholded at 𝜏= 0.5
+(black dashed line). Each green/red dot corresponds to mea-
+sured 99.9th processing latency outcomes from executing
+Nexus over 20K frames.
+with ReLU activations), a 1D CNN [9] with two convolutional
+layers (32 and 64 filters, kernel size 3) followed by a dense
+layer (128 neurons), and a TinyNet [17, 44] variant with two
+depthwise-separable convolutional layers (16 and 32 filters)
+followed by global average pooling and a dense layer. The
+three DL models are trained with the same training/valida-
+tion dataset and evaluated on the same test dataset as Nexus
+single-cell scheduler to ensure a fair comparison, and they
+are evaluated on both CPU and GPU. All DL models achieve
+comparable accuracy (≈99.20%), but their inference latency
+is two orders of magnitude higher than RAF. While GPU
+execution improves throughput, it introduces non-negligible
+CPU–GPU transfer overhead, which is why GPU inference
+in our experiments is often slower than CPU inference. One
+trade-off is that Nexus single-cell scheduler consumes more
+memory than compact DL models, since each tree stores
+explicit branching nodes and split thresholds rather than
+compressed weight matrices. For example, a 50-tree RAF
+occupies about 2.2 MB, compared to ≤1 MB for the DL mod-
+els. However, this overhead is negligible in modern servers
+equipped with hundreds of gigabytes of memory and is easily
+justified by Nexus single-cell scheduler’s significantly lower
+inference latency and CPU-only deployment.
+We further examine sensitivity to input feature dimen-
+sionality. For Nexus single-cell scheduler with 50 trees, in-
+creasing the input from 4 to 6 features only increases in-
+ference latency from 3.09 𝜇s to 3.16 𝜇s (+2.4%). By contrast,
+DL inference time grows substantially: for a 1D CNN model,
+increasing from 4 to 6 features increases latency from 613 𝜇s
+to 636 𝜇s (+3.8%). While the relative percentage increases
+appear comparable, the absolute overhead is dramatically
+different: Nexus single-cell scheduler incurs an additional
+0.07 𝜇s per (𝛔, 𝛉), whereas the DL model incurs 23 𝜇s. This
+highlights that RAF inference is effectively insensitive to fea-
+ture dimensionality, whereas DL inference grows noticeably
+as features increase due to deeper/wider layers and heavier
+matrix multiplications. These results directly validate the
+rationale for adopting RAF outlined in § 4.4.
+	
+
+		
+ 
+
+ 
+
+		
+ 
+
+ 
+
+		 
+ 
+
+
+		
+ 
+
+ 
+
+
+		 
+ 
+
+𝑁≥4
+Nexus multi-cell Scheduler
+𝑁≥10
+Nexus multi-cell Scheduler
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10 11 12 13 14 15 16
+# Cells
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+99.9% Elapsed Time (ms)
+(a) Resource allocation based on single-cell Profiling
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+# Cells
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+99.9% Elapsed Time (ms)
+(b) Resource allocation based on Nexus multi-cell scheduler
+Figure 6: 99.9th percentile processing latency vs. the number of concurrently running cells for different cell configurations.
+Each group of points shows latency measurements for 𝑁cells using the same configuration. In (b), for 2×2 100 MHz cells with
+𝛉𝑖(1, 1|1, 1), latency exceeds the deadline when 𝑁≥4, prompting Nexus to escalate to 𝛉𝑖(3, 1|3, 1), restoring compliance.
+Comparison with mathematical baselines.
+We also
+compare the Nexus single-cell scheduler against three light-
+weight analytical baselines: (i) logistic regression, a linear
+classifier trained on the same features as RAF and DL; (ii)
+threshold-based heuristics, which determine feasibility by
+applying cutoffs on 𝜌𝑡, 𝐵, and 𝜌𝑓learned directly from profil-
+ing. Specifically, for each feature we identify the maximum
+feasible value observed in the training set and use these
+thresholds as decision rules; and (iii) fixed-zone rules, which
+define static feasible regions by combining such thresholds
+across features and assigning infeasible otherwise. All mod-
+els are evaluated on the same test set, which ensures that
+comparisons are consistent and fair. While these analytical
+baselines are computationally trivial, they perform poorly
+due to their inability to capture non-linear feature interac-
+tions. Logistic regression achieves 93.2% accuracy, and the
+threshold-based model reaches 92.7%. The fixed-zone rule
+performs much worse, collapsing to near-random accuracy
+(42%). These results highlight that such simple models fail to
+capture the coupling between PHY-layer features, whereas
+Nexus’s RAF scheduler achieves near-DL accuracy with sub-
+stantially higher reliability. RAF thus strikes a favorable bal-
+ance, achieving an accuracy (≈99.10%) close to that of the
+DL models at much faster inference time.
+Generalization to unseen cell configurations. We next
+evaluate whether Nexus single-cell scheduler can generalize
+beyond our dataset by testing on unseen cell configurations.
+Fig. 5 shows two examples: Fig. 5a represents a SISO cell
+with MCS18 using 𝛉𝑖(1, 1|1, 1), and Fig. 5b represents a 2×2
+MIMO cell with MCS18 using 𝛉𝑖(4, 0|4, 0), both evaluated
+under varying 𝜌𝑡and 𝜌𝑓. In these maps, green regions de-
+note configurations predicted to be feasible (meeting the
+3-slot deadline), while white regions denote infeasible al-
+locations. The green and red dots correspond to measured
+ground-truth outcomes from 20K frames (feasible/infeasible,
+respectively). It can be seen that Nexus single-cell scheduler
+achieves strong prediction accuracy of overall 98.8% even for
+these unseen configurations, with close agreement between
+predicted feasible regions and measured outcomes. By con-
+trast, traditional models such as threshold-based heuristics
+fail to capture these non-linear feasibility boundaries, yield-
+ing accuracies below 90%. These results confirm that Nexus
+single-cell scheduler is not only accurate and efficient, but
+also robust in extrapolating to new cell scenarios.
+7.3
+Multi-Cell Scheduler Performance
+All system-level evaluations are conducted at 100% 𝜌𝑡, 100%
+𝜌𝑓and 𝜒= 17 to stress-test Nexus under extreme conditions
+as MCS17 imposes a higher computational load [11, 27].
+Multi-cell with identical cell configurations and re-
+source allocations. 𝛉(1, 1|1, 1) can reliably meet the 3-slot
+processing deadline on a single core based on Nexus sched-
+uler for a cell with configurations 1×1 100 MHz, 1×1 200 MHz,
+or 2×2 100 MHz. We begin by evaluating how many such
+cells can be simultaneously supported by Nexus under ex-
+treme conditions. Fig. 6 shows the results when Nexus si-
+multaneously serves 𝑁= {1, 2, . . . , 16} cells with identical
+configurations, each handled by 𝛉𝑖(1, 1|1, 1).
+Fig. 6 shows that Nexus scales when concurrently serving
+multiple cells. As illustrated in Fig. 6a, when using 𝛉(𝑘)
+𝑖
+di-
+rectly from the single-cell prediction result, for 1×1 100 MHz
+cells, Nexus supports up to sixteen simultaneous cells using
+a total number of sixteen worker cores and sixteen ACC100
+VFs, resulting in aggregated data rate of 3.91 Gbps. However,
+1×1 200 MHz and 2×2 200 MHz cells present corner cases. As
+we are running ten 1×1 200 MHz cells or four 2×2 100 MHz
+cells, their single-cell confidence rate is already near the
+threshold under 𝛉(1, 1|1, 1), and additional parallel cells in-
+troduce contention that causes deadline violations (see §5.2).
+0.375 msec
+SISO 100MHz - θi(1, 1|1, 1)
+SISO 200MHz - θi(1, 1|1, 1)
+2x2 100MHz - θi(1, 1|1, 1)
+SISO 200MHz - θi(3, 1|3, 1)
+3
+(3,3)
+4
+(4,4)
+5
+(5,5)
+6
+(6,6)
+7
+(7,7)
+8
+(8,8)
+9
+(9,9)
+10
+(30,10)
+Number of Cells, N
+ Total Number of Cores & VFs - (C,V)
+0.0
+0.1
+0.2
+0.3
+0.4
+99.9% Elapsed Time (ms)
+Figure 7: 99.9th percentile processing latency for heteroge-
+neous cell configurations processed concurrently using the
+same resource allocation.
+In response, Nexus would transition to the next 𝛉(𝑘)
+𝑖
+in PRAF,
+which is 𝛉𝑖(3, 1|3, 1) ∀𝑖for those cells. As shown in Fig. 6b,
+by adjusting resource allocation to 𝛉𝑖(3, 1|3, 1) for each cell,
+Nexus supports up to eleven cells for both 1×1 200 MHz and
+2×2 100 MHz while meeting the 3-slot processing deadline,
+with a total number of 33 worker cores and 11 ACC100 VFs,
+resulting in an aggregated data rate of 5.37 Gbps. Our exper-
+iments are limited to eleven cells, which already occupy 55
+of the 56 available cores (including streaming and master
+cores). It is worth noting that even when the same allocation
+strategy appears unchanged across different 𝑁, the multi-cell
+scheduler is still actively evaluating feasibility through RAF
+confidence. For example, in the case of 1×1 100 MHz cells
+with 𝛉𝑖(1, 1|1, 1), the RAF confidence decreases from 𝑝=0.87
+at 𝑁=1 to 𝑝=0.53 at 𝑁=16. Although contention reduces the
+margin, the confidence remains above the threshold 𝜏, so the
+allocation is considered feasible for all sixteen cells.
+Multi-cell with heterogeneous cell configurations and
+identical resource allocations. Next, we evaluate Nexus’s
+ability to handle heterogeneous cells while employing iden-
+tical resource allocations for each cell. Fig. 7 shows the
+99.9th-percentile processing latency when Nexus concur-
+rently serves 𝑁= {3, 4, 5, 6, 7, 8, 9, 10} cells with 𝛉𝑖(1, 1|1, 1)
+or 𝛉𝑖(3, 1|3, 1). The results for 𝑁cells have 𝑁bars, corre-
+sponding to the 99.9th-percentile processing latency for each
+of the 𝑁cells. When running nine cells–five 1×1 100 MHz
+cells and four 1×1 200 MHz cells–Nexus processes all frames
+within the 3-slot deadline, achieving a total data rate of
+3.17 Gbps using overall nine worker cores and nine ACC100
+VFs, simultaneously supporting heterogeneous cell configu-
+rations.
+Multi-cell with heterogeneous cell configurations and
+heterogeneous resource allocations. Finally, we eval-
+uate the performance of Nexus in scenarios with hetero-
+geneous cell configurations that use different processing
+techniques. Fig. 8 shows the 99.9th-percentile processing
+time for individual cells when Nexus concurrently serves
+0.375 msec
+SISO 100MHz - θi(1, 1|1, 1)
+SISO 200MHz - θi(1, 1|1, 1)
+2x2 100MHz - θi(3, 1|3, 1)
+SISO 400MHz - θi(3, 1|3, 1)
+2x2 200MHz - θi(3, 1|3, 1)
+4X4 100MHz - θi(4, 4|4, 4)
+4X4 100MHz - θi(5, 5|5, 5)
+NEXUS
+3
+(5,3)
+NEXUS
+4
+(8,4)
+NEXUS
+5
+(12,8)
+min
+6
+(11,9)
+NEXUS
+6
+(12,10)
+NEXUS
+7
+(15,11)
+NEXUS
+8
+(18,12)
+NEXUS
+9
+(13,13)
+NEXUS
+10
+(14,14)
+Scheduler
+Number of Cells, N
+ Total Number of Cores & VFs - (C,V)
+0.0
+0.1
+0.2
+0.3
+0.4
+99.9% Elapsed Time (ms)
+Figure 8: 99.9th percentile processing latency for heteroge-
+neous cells with heterogeneous resource allocation. Nexus
+represents the scheduler proposed in this work, while min
+represents using resources based on single-cell profiling.
+𝑁= {3, 4, 5, 6, 7, 8, 9, 10} heterogeneous cells. When config-
+ured to serve five cells with a 5-th 4×4 100 MHz cell with
+high complexity, Nexus selects 𝛉5(4, 4|4, 4) to handle this
+cell based on Algorithm 1. Fig. 8 shows all five cells with a
+total data rate of 2.68 Gbps using 12 worker cores and eight
+ACC100 VFs are able to meet the 3-slot deadline.
+For the scenario with six cells, the prediction confidence
+for a 4×4 100 MHz cell processing latency under resource
+allocation 𝛉6(4, 4|4, 4) was estimated to be infeasible based
+on (10) and is experimentally confirmed in Fig. 8 using the
+min scheduler across six cells. In response, Nexus invokes
+its multi-cell scheduler and adjusts the resource allocation
+for this cell to 𝛉6(5, 5|5, 5). With this updated resource allo-
+cation, the latency is improved to 0.268 ms. As a result, the
+corresponding bar for the 4×4 100 MHz cell appears lower in
+the six-cell case than in the five-cell case in Fig. 8. This adap-
+tive resource reassignment enables all six cells to meet their
+real-time processing deadlines, achieving a total data rate of
+3.41 Gbps using 12 worker cores and 10 ACC100 VFs. The
+results highlight Nexus’s ability to scale to highly heteroge-
+neous deployments while maintaining real-time guarantees.
+8
+Conclusion
+In this paper, we presented Nexus, the first system to enable
+efficient virtualized, multi-cell mmWave PHY baseband pro-
+cessing on a single heterogeneous compute server. Nexus
+addresses the growing need for efficient computational re-
+source sharing in vRAN systems. We introduced detailed
+mechanisms for sharing the Intel ACC100 accelerator across
+multiple cores and Virtual Functions, supported by a RAF-
+based scheduler that minimizes power consumption while
+meeting real-time deadlines. Our evaluation demonstrates
+that Nexus supports up to sixteen concurrent cells with a
+combined data rate of 5.37 Gbps and more when logging is
+disabled across diverse deployment scenarios. By bridging
+the gap between baseband computation and resource virtual-
+ization, Nexus opens the door to scalable and energy-efficient
+vRAN architectures.
+Acknowledgments
+This work was supported in part by NSF grants CNS-2211944,
+AST-2232458, CNS-2330333, and CNS-2443137. This work
+was also supported in part by the Center for Ubiquitous Con-
+nectivity (CUbiC), sponsored by Semiconductor Research
+Corporation (SRC) and Defense Advanced Research Projects
+Agency (DARPA) under the JUMP 2.0 program. We thank
+Anuj Kalia (Microsoft), Rahman Doost-Mohammady and An-
+drew Sedlmayr (Rice University), and Danyang Zhuo (Duke
+University) for their contributions to this work.
+References
+[1] 2024. Intel Performance Counter Monitor. https://github.com/intel/
+pcm.
+[2] 2025. NEXUS: Efficient and scalable multi-cell mmWave baseband pro-
+cessing with heterogeneous compute. https://github.com/functions-
+lab/agora-mmwave.
+[3] 3GPP. 2017. Study on new radio access technology: Radio access architec-
+ture and interfaces. Technical Specification (TS) 38.801. 3rd Generation
+Partnership Project (3GPP). Version 14.0.0.
+[4] 3GPP. 2018.
+5G; NR; Physical Layer Procedures for Data.
+Tech-
+nical Specification (TS) 38.214. 3rd Generation Partnership Project
+(3GPP). https://www.etsi.org/deliver/etsi_ts/138200_138299/138214/
+15.02.00_60/ts_138214v150200p.pdf Version 15.2.0.
+[5] 3GPP. 2019. 5G; NR; Physical Layer Procedures for Control. Tech-
+nical Specification (TS) 38.213. 3rd Generation Partnership Project
+(3GPP). https://www.etsi.org/deliver/etsi_ts/138200_138299/138213/
+15.06.00_60/ts_138213v150600p.pdf Version 15.6.0.
+[6] 3GPP. 2022.
+5G; NR; User Equipment (UE) radio transmission
+and reception; Part 1: Range 1 Standalone.
+Technical Specifica-
+tion (TS) 38.101-1. 3rd Generation Partnership Project (3GPP).
+https://www.etsi.org/deliver/etsi_ts/138100_138199/13810101/17.05.
+00_60/ts_13810101v170500p.pdf Version 17.5.0.
+[7] 3GPP. 2022.
+5G; NR; User Equipment (UE) radio transmission
+and reception; Part 2: Range 2 Standalone .
+Technical Specifica-
+tion (TS) 38.101-2. 3rd Generation Partnership Project (3GPP).
+https://www.etsi.org/deliver/etsi_ts/138100_138199/13810102/17.06.
+00_60/ts_13810102v170600p.pdf Version 17.6.0.
+[8] Qing An, Santiago Segarra, Chris Dick, Ashutosh Sabharwal, and
+Rahman Doost-Mohammady. 2023. A deep reinforcement learning-
+based resource scheduler for massive MIMO networks. IEEE Trans.
+Mach. Learn. Commun. Netw. 1 (2023), 242–257.
+[9] Meliboev Azizjon, Alikhanov Jumabek, and Wooseong Kim. 2020.
+1D CNN based network intrusion detection with normalization on
+imbalanced data. In Proc. IEEE ICAIIC’20.
+[10] I Chih-Lin, Jinri Huang, Ran Duan, Chunfeng Cui, Jesse Jiang, and Lei
+Li. 2014. Recent progress on C-RAN centralization and cloudification.
+IEEE Access 2 (2014), 1030–1039.
+[11] Jian Ding, Rahman Doost-Mohammady, Anuj Kalia, and Lin Zhong.
+2020. Agora: Real-time massive MIMO baseband processing in soft-
+ware. In Proc. ACM CoNEXT’20.
+[12] Xiaoran Fan, Zhenzhou Qi, Zhenhua Jia, and Yanyong Zhang. 2018.
+Enabling concurrent IoT transmissions in distributed C-RAN. In Proc.
+ACM SenSys’18.
+[13] Rostand AK Fezeu, Jason Carpenter, Claudio Fiandrino, Eman Ra-
+madan, Wei Ye, Joerg Widmer, Feng Qian, and Zhi-Li Zhang. 2023.
+Mid-Band 5G: A measurement study in Europe and US. arXiv preprint
+arXiv:2310.11000 (2023).
+[14] Xenofon Foukas and Bozidar Radunovic. 2021. Concordia: Teaching
+the 5G vRAN to share compute. In Proc. ACM SIGCOMM’21.
+[15] Zhihui Gao, Zhenzhou Qi, and Tingjun Chen. 2024. Mambas: Maneu-
+vering analog multi-user beamforming using an array of subarrays in
+mmWave networks. In Proc. ACM MobiCom’24.
+[16] Andres Garcia-Saavedra, Xavier Costa-Perez, Douglas J Leith, and
+George Iosifidis. 2018. FluidRAN: Optimized vRAN/MEC orchestration.
+In Proc. IEEE INFOCOM’18.
+[17] Giuse. 2023. TinyNet. https://github.com/giuse/tinynet.
+[18] Global System for Mobile Communications. 2020. 5G TDD synchroni-
+sation guidelines and recommendations for the coexistence of TDD
+networks in the 3.5 GHz range. https://www.gsma.com/spectrum/wp-
+content/uploads/2020/04/3.5-GHz-5G-TDD-Synchronisation.pdf.
+[19] Junzhi Gong, Anuj Kalia, and Minlan Yu. 2023. Scalable distributed
+massive MIMO baseband processing. In Proc. USENIX NSDI’23.
+[20] David Hunt, Kristen Angell, Zhenzhou Qi, Tingjun Chen, and Miroslav
+Pajic. 2024. MadRadar: A black-box physical layer attack framework
+on mmWave automotive FMCW radars. In Proc. ISOC NDSS’24.
+[21] Intel Corporation. 2019. FlexRAN LTE and 5G NR FEC software
+development kit modules. https://www.intel.com/content/www/us/
+en/developer/articles/technical/flexran-lte-and-5g-nr-fec-software-
+development-kit-modules.html.
+[22] Nikita Lazarev, Tao Ji, Anuj Kalia, Daehyeok Kim, Ilias Marinos, Fran-
+cis Y Yan, Christina Delimitrou, Zhiru Zhang, and Aditya Akella. 2023.
+Resilient baseband processing in virtualized RANs with SlingShot. In
+Proc. ACM SIGCOMM’23.
+[23] Biraja Mahapatra. 2022.
+Intel + Radisys FlexRAN success sto-
+ries. https://networkbuilders-cdn.s3.us-east-2.amazonaws.com/Intel_
+Radisys_FlexRAN_Success_Stories_Biraja_Prasad_Mahapatra.pdf.
+[24] OpenAirInterface. 2023. openairinterface5G. https://gitlab.eurecom.
+fr/oai/openairinterface5g/blob/develop/doc/FEATURE_SET.md.
+[25] Marius-Constantin Popescu, Valentina E Balas, Liliana Perescu-
+Popescu, and Nikos Mastorakis. 2009. Multilayer perceptron and
+neural networks. WSEAS TCS 8, 7 (2009), 579–588.
+[26] Zhenzhou Qi, Zhihui Gao, Chung-Hsuan Tung, and Tingjun Chen.
+2023. Programmable millimeter-wave MIMO radios with real-time
+baseband processing. In Proc. ACM WiNTECH’23.
+[27] Zhenzhou Qi, Chung-Hsuan Tung, Anuj Kalia, and Tingjun Chen. 2024.
+Savannah: Efficient mmWave Baseband Processing with Minimal and
+Heterogeneous Resources. In Proc. ACM MobiCom’24.
+[28] Sundeep Rangan, Theodore S Rappaport, and Elza Erkip. 2014.
+Millimeter-wave cellular wireless networks: Potentials and challenges.
+Proc. of the IEEE (2014).
+[29] Theodore S Rappaport, Shu Sun, Rimma Mayzus, Hang Zhao, Yaniv
+Azar, Kevin Wang, George N Wong, Jocelyn K Schulz, Mathew Samimi,
+and Felix Gutierrez. 2013. Millimeter wave mobile communications
+for 5G cellular: It will work! IEEE Access 1 (2013), 335–349.
+[30] Dipankar Raychaudhuri, Ivan Seskar, Gil Zussman, Thanasis Korakis,
+Dan Kilper, Tingjun Chen, Jakub Kolodziejski, Michael Sherman, Zo-
+ran Kostic, Xiaoxiong Gu, et al. 2020. Challenge: COSMOS: A city-scale
+programmable testbed for experimentation with advanced wireless.
+In Proc. ACM MobiCom’20.
+[31] John W Romein and Bram Veenboer. 2018. Powersensor 2: A fast
+power measurement tool. In Proc. IEEE ISPASS’18.
+[32] Bodhisatwa Sadhu, Yahya Tousi, Joakim Hallin, Stefan Sahl, Scott K
+Reynolds, Örjan Renström, Kristoffer Sjögren, Olov Haapalahti, Nadav
+Mazor, Bo Bokinge, et al. 2017. A 28-GHz 32-element TRX phased-
+array IC with concurrent dual-polarized operation and orthogonal
+phase and gain control for 5G communications. IEEE J. Solid-State
+Circuits 52, 12 (2017), 3373–3391.
+[33] Leonardo Lo Schiavo, Gines Garcia-Aviles, Andres Garcia-Saavedra,
+Marco Gramaglia, Marco Fiore, Albert Banchs, and Xavier Costa-Perez.
+2024. CloudRIC: Open radio access network (O-RAN) virtualization
+with shared heterogeneous computing. In Proc. ACM MobiCom’24.
+[34] Silicom Ltd. 2023.
+Lisbon P2 ACC100 FEC accelerator extended
+temp. https://www.silicom-usa.com/wp-content/uploads/2023/09/
+Lisbon-P2-ACC100-FEC-Accelerator-Extended-temp-1v1.pdf.
+[35] Jaswinder Singh and Rajdeep Banerjee. 2019. A study on single and
+multi-layer perceptron neural network. In IEEE ICCMC’19.
+[36] Sameer Kumar Singh, Rohit Singh, and Brijesh Kumbhani. 2020. The
+evolution of radio access network towards open-RAN: Challenges and
+opportunities. In Proc. IEEE WCNCW’20.
+[37] srsRAN Project. 2023. srsRAN Project Documentation - Features and
+Roadmap. https://docs.srsran.com/projects/project/en/latest/general/
+source/2_features_and_roadmap.html.
+[38] Kun Tan, He Liu, Jiansong Zhang, Yongguang Zhang, Ji Fang, and
+Geoffrey M Voelker. 2011. Sora: high-performance software radio
+using general-purpose multi-core processors. Commun. ACM 54, 1
+(2011), 99–107.
+[39] Chengke Wang, Hao Nie, Weiguo Wang, Junchen Guo, Pengyu Zhang,
+Yulong Chen, Shunmin Zhu, Yuan He, and Chenren Xu. 2024. Under-
+standing 5G Performance on Heterogeneous Computing Architectures.
+IEEE Commun. Mag. (2024).
+[40] Mohamad Saalim Wani, Mathias Kretschmer, Bernd Schröder, Andreas
+Grebe, and Michael Rademacher. 2024. Open RAN: A concise overview.
+IEEE Open J. Commun. Soc. 6 (2024), 13–28.
+[41] Timothy Woodford, Xinyu Zhang, Eugene Chai, Karthikeyan Sundare-
+san, and Amir Khojastepour. 2021. Spacebeam: Lidar-driven one-shot
+mmwave beam management. In Proc. ACM MobiSys’21.
+[42] Jun Wu, Zhifeng Zhang, Yu Hong, and Yonggang Wen. 2015. Cloud
+radio access network (C-RAN): A primer. IEEE Network 29, 1 (2015),
+35–41.
+[43] Jiarong Xing, Junzhi Gong, Xenofon Foukas, Anuj Kalia, Daehyeok
+Kim, and Manikanta Kotaru. 2023. Enabling resilience in virtualized
+RANs with Atlas. In Proc. ACM MobiCom’23.
+[44] Kunran Xu, Yishi Li, Huawei Zhang, Rui Lai, and Lin Gu. 2022.
+EtinyNet: Extremely tiny network for TinyML. In Proc. AAAI’22.
+[45] Qing Yang, Xiaoxiao Li, Hongyi Yao, Ji Fang, Kun Tan, Wenjun Hu,
+Jiansong Zhang, and Yongguang Zhang. 2013. BigStation: Enabling
+scalable real-time signal processing in large MU-MIMO systems. ACM
+SIGCOMM Computer Communication Review 43, 4 (2013), 399–410.
+[46] Renjie Zhao, Timothy Woodford, Teng Wei, Kun Qian, and Xinyu
+Zhang. 2020. M-Cube: A millimeter-wave massive MIMO software
+radio. In Proc. ACM MobiCom’20.

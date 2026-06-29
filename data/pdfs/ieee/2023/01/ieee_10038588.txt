@@ -1,0 +1,805 @@
+Received 6 January 2023, accepted 1 February 2023, date of publication 6 February 2023, date of current version 10 February 2023. Digital Object Identifier 10.1109/ACCESS.2023.3242610
+
+Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+ATSUNORI SHIMAMURA 1, (Graduate Student Member, IEEE), TAKUMI TAKAHASHI 1, (Member, IEEE), SHINSUKE IBI 2, (Member, IEEE), AND SEIICHI SAMPEI1, (Life Fellow, IEEE)
+1Graduate School of Engineering, Osaka University, Suita 565-0871, Japan 2Faculty of Science and Engineering, Doshisha University, Kyotanabe 610-0394, Japan
+Corresponding author: Takumi Takahashi (takahashi@comm.eng.osaka-u.ac.jp)
+This work was supported in part by the Japan Society for the Promotion of Science (JSPS) KAKENHI, Japan, under Grant JP20K14734, Grant JP21H01332, and Grant JP22H01483.
+
+ABSTRACT We propose a novel look-up table (LUT)-based multi-user detection (MUD) algorithm to imitate approximate message passing (AMP) for uplink signal detection in massive multi-user multi-input multi-output (MU-MIMO) systems. When AMP is implemented with double-precision arithmetic, the dramatic increase in power consumption and process latency becomes a major barrier to practical application, as the system scale expands. To circumvent this issue, we design a novel referential AMP detector composed of many small LUTs cascaded hierarchically, where only informative integer-valued messages are exchanged on a factor graph (FG). Our method tracks the discrete distribution of the LUT outputs according to the multi-layer structure, and successively determines non-uniform quantization thresholds of the LUTs, using an unsupervised learning approach. Specifically, the thresholds at each level of the hierarchy, i.e., layer, are optimized by clustering with the Lloyd-Max algorithm with initial values given by the k-means++ method, in order to minimize the performance degradation caused by quantization errors. The efficacy of the proposed referential AMP detector is confirmed by numerical simulations, which show that the proposed method significantly outperforms the state-of-the-art (SotA) in terms of the bit error rate (BER) performance in various channel models. The results also indicate the referential AMP is robust to changes in wireless channels, and then clarify the reason in terms of the algorithmic structure.
+INDEX TERMS Massive MIMO detection, approximate message passing, quantization, look-up table, unsupervised learning.
+
+I. INTRODUCTION Over the last decades, massive multi-input multi-output (MIMO) technology has made tremendous strides in the enhancement of user capacity and throughput in wireless communication networks. With the explosive growth in the number of wireless terminals connected to the network, massive MU-MIMO technology will play a key role in the fifth generation (5G) advanced and future sixth generation (6G) networks [1]. The main challenge in such uplink scenarios is a reduction of computational cost for high-dimensional signal separation, i.e., MUD [2].
+The associate editor coordinating the review of this manuscript and approving it for publication was Wence Zhang .
+
+One of the promising methods to achieve low-complexity MUD is AMP [3], which is derived by rigorously approximating Gaussian belief propagation (GaBP) [4], [5]. The AMP is proven in [6] to converge toward a Bayes-optimal solution with the complexity of order O(MN ) in the large-system limit, where the input and output dimensions for MIMO, M and N , respectively, are infinity for a given compression rate ρ ≜ N /M . However, the theoretically achievable performance under AMP-based detection requires high-precision message representations and computationally complex node operations, causing high power consumption, and impractical latency [7], [8]. Thus, future wireless networks require practical signal processing implementations that use the MUD algorithms based on finite-precision message passing.
+
+13044
+
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/ VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+A solution to the challenge is LUT-based MUD, where the baseband signal processing is performed with integer precision by imitating the AMP algorithm with only search and reference processes to LUTs.1 Specifically, all arithmetic operations are replaced by simple LUT searches such that message passing is performed with only simple integer arithmetic while holding the relationship between the node inputs and outputs. However, the size of LUTs would depend exponentially on the number of possible input and output combinations; hence, it is infeasible to replace the whole process of the AMP-based detection with one huge LUT, in terms of memory usage to store the LUT and computational effort for LUT search. In order to address this issue, it was proposed in [18] and [19] to split the computation of the LUT into the successive computation of cascaded two-dimensional LUTs. This enables a significant reduction in memory usage, leading to energy-saving and low-latency signal processing required for low-cost receiver design [19], [20], [21]. A challenging issue here is how to design the LUTs with a limited number of quantization bits without severely sacrificing the communication reliability.
+The most successful area of finite-precision message passing algorithms is the sum-product algorithm (SPA) for decoding low-density parity-check (LDPC) codes [22], [23], [24], [25], [26], [27], [28]. One of the classical ways to design LUTs is finite-alphabet iterative decoding (FAID) approach [22], [23], in which the LUTs are hand-optimized to approximate the arithmetic operations as accurately as possible. The resultant quantized SPA is shown to achieve competitive performance on a binary symmetric channel (BSC) with the double-precision scheme; however, the applicable areas for FAID approach are mainly restricted to regular LDPC codes. As a more flexible strategy, the information-bottleneck (IB)based SPA decoder has been investigated [24], [25], [26], [27], [28], where the LUTs are learned in an unsupervised manner, using IB method [29], [30], [31], [32], which is fundamentally different from the FAID approach. The underlying idea is to preserve as much information as possible about the variable of interest at each iteration step of message passing algorithms, i.e., the mutual information (MI)-based optimization [18], [33], [34]. The probability density of loglikelihood ratios (LLRs) propagating between the nodes of the SPA is analytically estimated using discrete density evolution (DDE) [35], and then based on the estimated distribution, the thresholds of the LUTs are optimized via the sequential IB (sIB) algorithm [19].
+1Please note that our goal is to quantize the entire baseband signal processing for MUD, which is different from the problem setting considered in the literature [9], [10], [11], [12], where the received signal is quantized by lowresolution analog-to-digital converters (ADCs), but the subsequent signal processing is performed in double precision (i.e., the input to the system is quantized, but the internal processing is performed with double precision). In such quantized MIMO scenarios, the Bayesian inference algorithms for quantized observations have been investigated in e.g., [13], [14], [15], [16], and [17]. While it is easy to integrate these studies, their directions are essentially different.
+VOLUME 11, 2023
+
+Inspired by these works, this framework was extended to uplink MUD via AMP in [7], and it has been shown in [8] that the resultant IB-based referential AMP detector outperforms the typical SotA method in which each arithmetic process in the AMP algorithm is replaced individually with an LUT based on the entropy maximization criterion.
+However, if there is an error between the estimated probability density via DDE and the actual probability density, the quantization threshold designed by this method deviates from its appropriate value, resulting in significant performance degradation. In LDPC decoding, this is not much of an issue because both check nodes (CNs) and variable nodes (VNs) refer to binary values as original referencing values, and the noise is subject to Gaussian distribution. In contrast, the original values referenced at the factor nodes (FNs) in AMP are continuous and have a wide dynamic range due to the randomness of wireless channels, and thus one cannot expect a kind of message correction capability brought by the discreteness of the referenced variables. In addition, since Gaussianity is assumed based on the central limit theorem (CLT) for the equivalent noise consisting of interferenceplus-noise components, the distribution under the operation with finite-precision deviates significantly from the distribution estimated via DDE. In order to address these issues, several parameters are introduced to adjust the referenced double-precision AMP when estimating the distribution by DDE in [8]. However, even with these parameters, the performance degradation due to distribution mismatch cannot be fully compensated. This parameter-dependent nature also leads to vulnerability to changes in wireless channels.
+In light of the above, this article proposes a novel referential AMP algorithm based on discrete distribution tracking (DDT) that incorporates an unsupervised learning approach to eliminate cumbersome distribution estimation and achieve robust LUT design against wireless channel changes. Specifically, according to the multi-layered LUT structure that constitutes the referential AMP, the discrete distribution of the LUT outputs is actually measured starting from the shallowest layer, and the subsequent LUTs are designed sequentially based on the histogram. The threshold of each LUT is determined by considering the discrete distribution as a weighted point cloud and clustering it by the Lloyd-Max algorithm [36] from initial values obtained by the k-means++ method [37]. The above procedures are repeated until all message passing operations for a predetermined number of iterations are replaced by multi-layer LUT structures, resulting in a referential AMP designed via DDT. Our method can be positioned as an unsupervised learning-based development of the DDE-assisted method, incorporating data-driven distribution tracking.
+The contributions of the article are summarized as follows2:
+2Part of this work is due to be presented in the IEEE Global Communications Conference 2022 [38].
+13045
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+• A novel LUT-based MUD algorithm, dubbed referential AMP, is presented with the aim of achieving uplink signal detection in massive MU-MIMO systems. Our method minimizes the harmful effect of quantization errors by attributing the threshold optimization problem of LUTs at each layer to the clustering problem via DDT based on measured histograms. In addition, there is no need to consider mismatches between the estimated and actual distributions, thus eliminating adjusting parameters considered in [7] and [8].
+• Thanks to the abovementioned feature, the proposed method can imitate double-precision AMP with high accuracy for a given number of quantization bits. Numerical results show that the proposed referential AMP detector can outperform existing alternatives in terms of detection capability in uncorrelated channels with the same level of memory usage.
+• Making use of the proposed detector, a simulationbased study of the performances achieved under different channel models is performed, which shows that the referential AMP detector designed based on DDT works robustly even in correlated channels assumed in practical wireless communication environments.
+
+The rest of this article is organized as follows: Section II
+
+presents the Bayes-optimal AMP algorithm and the basic
+
+mechanism of quantization as a preliminary step. Section III
+
+presents the structure of the referential AMP detector.
+
+Section IV proposes the design of referential AMP detector
+
+using DDT. In Section V, computer simulations are con-
+
+ducted to demonstrate the efficacy of the proposed method in
+
+terms of memory usage and BER, and clarify the robustness
+
+of changes in wireless channels. Finally, Section VI con-
+
+cludes the article with a brief summary.
+
+Notation: The following notation is used unless otherwise
+
+specified. Vectors and matrices are denoted by lower- and
+
+upper-case bold-face letters, respectively. Sets of numbers
+
+in the real and complex spaces are denoted by R and C,
+
+respectively. The conjugate, transpose, and conjugate trans-
+
+pose
+
+operators
+
+are
+
+denoted
+
+by
+
+·∗,
+
+·T,
+
+and
+
+H
+·
+
+,
+
+respectively.
+
+The real and imaginary parts of a complex quantity are
+
+respectively denoted by ℜ{·} and ℑ{·}. The real-valued and
+
+complex-valued Gaussian process with mean a and variance b
+
+are denoted by N (a, b) and CN (a, b), respectively. The a × a
+
+square identity matrix is denoted by Ia. The a × 1 zero vector
+
+is denoted by 0a. The floor function is expressed as ⌊·⌋.
+
+II. PRELIMINARIES A. SIGNAL MODEL Consider a single cell MU-MIMO system composed of a base station (BS), having N ′ receive (RX) antennas and M ′ (≤ N ′) user equipment (UE) devices equipped with a single transmit (TX) antenna. The m′-th UE transmits a TX symbol xm′ ′ , that represents one of Q′ quadrature amplitude modulation (QAM) constellation points X ′ = χ1′ , . . . , χq′′ , . . . , χQ′ ′ , where the average power density of xm′ ′ is set to Es. Assuming
+13046
+
+the Gray-coded quadrature phase-shift keying (QPSK) sig-
+
+naling, X ′ ≜
+
+√ ± Es
+
+/2
+
+±
+
+√ j Es
+
+/2
+
+. The
+
+RX vector is given
+
+by
+
+y′ ≜ y′1, . . . , yn′ ′ , . . . , y′N ′ T = H′x′ + z′,
+
+(1)
+
+where x′ ≜ x1′ , . . . , xm′ ′ , . . . , xM′ ′ T ∈ X ′M′×1 denotes a TX vector, H′ ∈ CN′×M′ denotes an N ′ × M ′ MIMO channel matrix, and the entries of a complex additive white Gaussian noise (AWGN) vector z′ ≜ z′1, . . . , zn′ ′ , . . . , zN′ ′ T ∼ CN (0N′ , N0IN′ ) is an AWGN vector, where N0 is the noise power spectral density.
+For ease of algebraic manipulations, the complex-valued signal model of (1) can be rewritten using a double-sized equivalent real-valued signal model on the basis of pulse
+amplitude modulation (PAM) as [39]
+
+y = Hx + z,
+
+(2)
+
+where
+
+y≜
+
+ℜ y′ ℑ y′
+
+∈ RN ×1,
+
+H≜
+
+ℜ H′ −ℑ H′ ℑ H′ ℜ H′
+
+∈ RN ×M ,
+
+x≜
+
+ℜ x′ ℑ x′
+
+∈ X M×1,
+
+z≜
+
+ℜ z′ ℑ z′
+
+∈ RN ×1,
+
+(3)
+
+with M
+
+≜
+
+2M ′ and N
+
+≜
+
+2N ′. √
+
+The
+
+m-th
+
+PAM
+
+symbol
+
+xm
+
+in x represents one of Q (≜ Q′) PAM constellation points
+
+X = χ1, . . . , χq, . . . , χQ whose entries are amplitudes
+
+of the real and imaginary components of X ′. In the QPSK √
+signaling (Q′ = 4, Q = 2), we have X = ± Es/2 .
+
+B. BAYES-OPTIMAL AMP DETECTOR
+
+When designing a LUT-based signal processing, the original
+
+algorithm on which it is based is necessary. In this subsec-
+
+tion, we briefly review the algorithm of the Bayes-optimal
+
+AMP detector designed in accordance with the framework
+
+proposed in [3] as the original MUD algorithm.
+
+The pseudo-code of the MUD algorithm via Bayes-optimal
+
+AMP [3] based on the signal model of (2) is given in Alg. 1.
+
+For ease of notation, we refer to the equation in the i-th line
+
+of
+
+Alg.
+
+1
+
+as
+
+(A1-i),
+
+hereafter.
+
+For
+
+each
+
+variable,
+
+(k )
+·
+
+indicates
+
+the corresponding variable at the k-th iteration step, and K
+
+denotes the maximum number of AMP iterations. Besides
+
+the RX vector y and the channel matrix H, the algorithm
+
+requires only system parameters such as the noise power
+
+spectral density N0 and the maximum number of iterations K , outputting the hard-decision estimates of the TX vector x.
+
+We highlight that the message passing is performed by
+
+exchanging beliefs (i.e., likelihood information reflecting
+
+detection reliability) and soft replicas (i.e., tentative esti-
+
+mates) on the FG consisting of FNs and VN, which cor-
+
+respond to the RX symbols and TX symbols. In the FNs,
+
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+Algorithm 1 MUD algorithm via AMP
+
+Input: y, H, N0, K Output: xˆ = xˆ1, . . . , xˆm, . . . , xˆM T
+
+/* Initialization */ 1: ∀n : y˜(n0) = 0, ∀m : xˇm(1) = 0 2: ψ (0) = 0, φˇ(1) = Es/2
+
+3: for k = 1 to K do
+
+/* Belief computation in FNs */
+
+4: ∀n : yˇn(k) = iM=1hn,ixˇi(k)
+
+5:
+
+∀n : y˜n(k)
+
+= yn − yˇ(nk) +
+
+M 2
+
+φˇ (k ) ψ (k−1)
+
+y˜(nk
+
+−1)
+
+6:
+
+ψ (k)
+
+=
+
+N0 2
+
++
+
+M 2
+
+φˇ
+
+(k
+
+)
+
+/* Soft symbol computation in VNs */
+
+7:
+
+∀m : x¯m(k)
+
+=
+
+2 N
+
+8: ∀m : xˇm(k+1) =
+
+N i=1
+
+hi,m
+
+y˜ i(k )
+
++
+
+xˇm(k )
+
+√
+
+Es 2
+
+tanh
+
+N 2Es 4ψ (k)
+
+x¯m(k
+
+)
+
+9:
+
+φˇ (k+1)
+
+=
+
+Es 2
+
+−
+
+1 M
+
+M i=1
+
+xˇi(k +1)
+
+2
+
+10: end for
+
+/* Decision */
+
+11: ∀m : xˆm =
+
+Es 2
+
+sgn
+
+x¯m(K )
+
+the inter-UE interference is canceled on each RX symbol by using soft replicas of x generated in the previous iteration step, in (A1-4) and (A1-5). The residual interference-plusnoise component is approximated as a real-valued Gaussian random variable in conformity to the CLT, and then beliefs are computed based on the estimated Gaussian distribution with the effective variance ψ(k) in (A1-6). In the VNs, taking advantage of the interference cancellation mechanism and its resultant statistics, the beliefs are combined over all RX symbols in (A1-7). Finally, the soft replicas and their mean square error (MSE) used in the next iteration step are computed by Bayes-optimal denoiser on the basis of symbol-wise conditional expectation in (A1-8) and (A1-9), respectively. By iterating these steps alternately, the estimation accuracy of x can be gradually improved.
+The convergence property of iterative detection is compromised, when the system scale, i.e., the input and output dimensions, M and N , is small so as not to meet the large-system limit condition and/or there are strong spatial correlations among fading coefficients. In order to mitigate such potential issues, an adaptively scaled beliefs (ASBs) [5], [40], [41] is introduced, which is given by replacing (A1-8) with
+
+xˇm(k+1) =
+
+Es tanh 2
+
+µ(k ) x¯m(k )
+
+,
+
+(4)
+
+where the scaling parameter µ(k) is designed to be a mono-
+tonic increasing function of the number of iterations, i.e., µ(k) = κ1 · (k/K )κ2 , with the predetermined parameters (κ1, κ2).
+
+C. QUANTIZATION Consider a B-bit quantization process of an arbitrarily continuous variable a ∈ R to a natural number index (i.e., label)
+
+VOLUME 11, 2023
+
+u ∈ Q ≜ 0, 1, . . . , 2B , according to the quantization thresholds τ [u] ∈ R. Assuming the quantizer input is rounded to the range of (−γ , γ ), we can set τ [0] = −γ and τ [2B] = γ . The quantization function is defined by
+u = Q(a), if τ [u − 1] < a ≤ τ [u], u = 1, . . . , 2B. (5)
+In addition, a representative value a˙[u] ∈ R, satisfying τ [u − 1] < a˙[u] ≤ τ [u], is introduced for each label. When a is quantized to the label u, the quantization error is defined as |a − a˙[u]|, and the criteria for the quantization thresholds determine the detection performance.
+For the simplicity of hardware implementations, uniform quantization that partitions the whole space with the common quantization step is often employed; however, it is hard to mitigate the harmful effect of quantization errors as the number of quantization bits becomes small. Throughout the article, we employ non-uniform quantization.
+III. REFERENTIAL AMP Based on the preliminaries, in this section, we describe a referential AMP detector that replaces all of the internal operations in Alg. 1 with search and reference processes to LUTs. The goal of the article can now be stated concisely: design a LUT-based MUD algorithm that enables the receiver to detect the TX vector x, out of the RX vector y and the pre-estimated channel H, with only integer precision information exchange required for LUT search and reference processing. Please note that there are two phases: the phase to create the LUTbased MUD algorithm and the phase to perform the detection process using it, i.e., detection phase. In the detection phase, the RX vector y is first quantized by ADCs with an arbitrary number of bits. Regardless of its quantization bit number, y and H are input to the referential AMP detector after B-bit quantization, and the subsequent MUD processing is performed with B-bit precision by the LUT operations [8].
+The simplest way to achieve this goal is to convert the processing of each row of Alg. 1 into a single large LUT with multiple inputs and outputs including all possible combinations; however, it results in impractical memory usage to hold the LUT, making it infeasible for practical implementations. To circumvent the issue, each processing in Alg. 1 is further divided into basic arithmetic operations (i.e., additions and multiplications), each of which is replaced by a small twodimensional LUT with two inputs and one output. With the 2-to-1 LUT as a basic unit, the referential AMP detector has a hierarchical (successively multi-layer) structure consisting of a large number of 2-to-1 LUTs.
+Fig. 1 visualizes the replacement process to 2-to-1 LUTs, using the operations in (A1-4) and (A1-5) of Alg. 1, as an example, where we focus on the operation on the n-th RX symbol at the k-th iteration. To distinguish between quantization labels, we here denote a label corresponding to the variable a by u⟨a⟩. The squares L1 to L5 in Fig. 1 (b) are the 2-to-1 LUTs at each layer, each of which corresponds to each basic arithmetic operation in Fig. 1 (a). Specifically, the
+13047
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 2. 2-to-1 LUT design for addition case (B = 2).
+
+FIGURE 1. Schematic of the replacement process with 2-to-1 LUTs to obtain the LUT-based MUD algorithm, where we set to M = 4 as an example.
+
+L1 L2
+
+corresponds corresponds
+
+to to
+
+the the
+
+amdduilttiiopnliscathionn,1sxˇ2(ki−h) n1,i+×hxnˇi,(2ki)xˇ2(Miki=)1,Mi=t/h12e,
+
+and the same applies to L3 and beyond. Following the same
+
+procedure, all additions and multiplications that make up the
+
+AMP-based MUD algorithm in Alg. 1 are replaced by the
+
+2-to-1 LUTs.
+
+Since all of these 2-to-1 LUTs are generated by the same
+
+procedure, it is sufficient to focus on one of them. In the
+
+following subsection, we focus on one LUT and explain its
+
+creation procedure. Since the following explanation is not
+
+limited to a specific variable, the notation ⟨·⟩ is not used.
+
+A. 2-TO-1 LUT CONSTRUCTION Let u1, u2 ∈ Q denote input labels of a 2-to-1 LUT. Making use of these labels, addition and multiplication are respectively defined by the LUT functions as
+
+w+u1,u2 = ˙ (u1, u2),
+
+(6a)
+
+13048
+
+w×u1,u2 = ˙ (u1, u2),
+
+(6b)
+
+where wu+1,u2 , wu×1,u2 ∈ Q denote output labels of the 2-to-1 LUT. Consider the case of addition in (6a) as an example, the design procedure for a 2-to-1 LUT is shown in Fig. 2.
+
+(a) For all combinations of two input labels, the following equation is used to perform the operation between the corresponding representative values.
+
+c˙ [(u1, u2)] = a˙ [u1] + b˙ [u2] ∈ R,
+
+(7)
+
+where (u1, u2) is a two-dimensional label. The operation results are respectively stored in the corresponding location of the table, tied to two-dimensional labels. (b) The representative value of each result is quantized from 2B bits to B bits based on the designed quantization threshold. Using the quantization function in (5), the output index can be expressed as
+
+wu+1,u2 = Q (c˙ [(u1, u2)]) .
+
+(8)
+
+(c) A table storing the input-to-output correspondence of the 2-to-1 LUT is generated, which corresponds to a table form of (6a).
+
+In a similar manner, the design of the LUT corresponding to multiplication in (6b) is obtained by replacing addition on the right-hand side of (7) with multiplication. All other procedure is the same.
+By repeating the above procedure with the outputs of the 2-to-1 LUTs as the inputs of the subsequent 2-to-1 LUTs, one can convert the double-precision AMP algorithm to the referential AMP algorithm consisting of integer-precision multi-layer LUTs, as shown in Fig. 1.
+Since the performance is determined by the quantization function in (8), the quantization threshold and the representative value must be appropriately designed based on the variable distribution. This is the central issue addressed in this article and will be discussed in detail in Section IV.
+
+B. TREE STRUCTURE FOR SUMMATION Before moving on to the design of quantization function, i.e., the design of quantization threshold and representative value, we describe a method for further reducing the number of 2-to-1 LUTs required, by focusing on the tree structure for expressing summation operations in Fig. 1.
+
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 3. Multi-layer structure for summation.
+
+Fig. 3 shows a tree structure of 2-to-1 LUT to represent
+
+the summation of J terms, i.e.,
+
+J j=1
+
+aj,
+
+where
+
+the
+
+number
+
+of layers (i.e., tree-depth) is T . The white square in Fig. 3
+
+corresponds to a 2-to-1 LUT. At the first layer, there are ⌊J /2⌋
+
+LUTs, and the output labels are input to the LUTs at the
+
+subsequent layer, and the addition is sequentially conducted
+
+according to the multi-layer structure. When J is not divisible
+
+by two, an additional 2-to-1 LUT consists of one output and
+
+the remaining input. The expected sum is obtained after the
+
+T -th layer processing is completed. Here, when LUTs at
+
+the same tree-depth are approximately identical, the memory usage is further reduced to 22B · ⌊log2 J ⌋.
+
+IV. DDT-AIDED REFERENTIAL AMP DESIGN In this subsection, we describe the design of quantization function, i.e., the design of quantization threshold, and representative value of each 2-to-1 LUT. In the previous studies [7], [8], the quantization threshold is determined based on the underlying continuous distribution of the variable of interest as estimated as in [19], [20], and [21]. In this article, we investigate an unsupervised learning approach to determine the quantization threshold based on histograms of discrete variables actually measured in the referential AMP detector, in order to suppress the discrepancy between the distribution used to determine the quantization threshold and the distribution of information actually propagated inside the referential AMP.
+In this section, we describe (i) an overview of LUT design based on DDT-aided clustering method and (ii) a detailed procedure of clustering with the Lloyd-Max algorithm using initial values given by the k-means++ method.
+
+A. LUT DESIGN VIA DDT-AIDED CLUSTERING METHOD
+As mentioned earlier, the AMP detector in Alg. 1 is divided into its internal processing down to two-input arithmetic operations, which are then replaced by 2-to-1 LUTs, starting from the shallowest layer according to the hierarchical structure. Since the discrete distribution to be tracked is obtained from the measured histogram, a sufficient amount of data is required to capture the true distribution without missing the feature. The specific procedure is described below along with the process flow diagram in Fig. 4.
+First of all, we prepare R sets of RX vectors and channel matrices as a sufficient number of samples and quantize
+
+VOLUME 11, 2023
+
+them with B bits by the classical Lloyd-Max algorithm [36]. By yielding them into the multi-layer structure of the referential AMP, histograms of each variable at each layer are generated, and the discrete distribution is tracked.
+As an example,3 the following procedure is used to design a 2-to-1 LUT for a certain two-input arithmetic operation from the input discrete label vectors u1 = [u11, u12, . . . , u1R]T and u2 = [u21, u22, . . . , u2R]T. S1: For the inputs u1 and u2, the operation between the
+corresponding representative values is performed as
+∀r ∈ R : c˙r [(u1r , u2r )] = a˙ [u1r ] + b˙ [u2r ] ∈ R, (9)
+where R ≜ {1, . . . , R}. S2: Generate a histogram of c˙r [(u1r , u2r )] from the sam-
+ples obtained as a result of the operation in (9). Since each input is a discrete variable represented by B bits, the number of bins in the histogram is 22B. S3: Based on the histogram, the quantization threshold τ [u] and representative value d˙ [u] are determined, and then the operation results represented by 2B bits are quantized with B bits. S4: The quantization function in (8) is designed with (τ [u], d˙ [u]). The output of the resultant 2-to-1 LUT is used to the input to the subsequent 2-to-1 LUT according to the multi-layer structure.
+As illustrated in Fig. 4, the above LUT design procedure from the step S1 to the step S4 is performed for each 2-to-1 LUT, according to the multi-layer structure of referential AMP. The B-bit quantization in the step S3 can be attributed to the clustering problem of dividing a discrete data set of 22B scalar values into 2B classes. To solve the clustering problem and readily obtain the quantization threshold and representative value that minimizes the MSE between before and after the quantization operation, we employ the Lloyd-Max algorithm with the aid of the k-means++ method, which will be described later. Consequently, the LUTs are designed with reference to the same discrete distribution experienced by the referential AMP detector during actual operation, thus suppressing the performance degradation caused by the deviation in the probability density as described above.
+B. DETAILED PROCEDURE OF CLUSTERING (S3) In this subsection, we describe the details of the quantization process in S3 with clustering using the Lloyd-Max algorithm [36]. The Lloyd-Max algorithm is well known unsupervised approach to designing the quantizer to minimize the MSE distortion between input and discrete output values of the quantization. However, the solution to which the algorithm converges strongly relies on initial centroids (i.e., cluster centers). In order to compensate for this drawback caused by the
+3As explained in Section III, the LUT-based referential AMP detector has a multi-layer structure consisting only of the 2-to-1 LUTs. Since the quantization functions of all 2-to-1 LUTs are determined by the same procedure, it is sufficient to focus on one 2-to-1 LUT.
+13049
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 4. Overview of the referential AMP design based on the proposed DDT-aided method. Prepare R sets of RX vectors and channel matrices as inputs, and then operations consisting of T layers in AMP detector are sequentially replaced to LUTs in order from the shallowest layer to the deepest layer. Each layer receives discrete label vectors and generates LUT based on the histograms of operation results between the corresponding representative value vectors, and returns the discrete label vector of quantized operation results as the output to the next layer. The detailed procedure for designing each 2-to-1 LUT with B = 2 in t -th layer is shown at the bottom of the figure. Note that all LUTs in the same layer are identical.
+
+initial value dependence, the k-means++ method [37] can be employed to select appropriate initial centroids. With that in mind, in our method, quantization is performed in a two-step process: selecting initial centroids by the k-means++ method and clustering by the Lloyd-Max algorithm.
+First, the process of centroid initialization by the kmeans++ method with the result of (9) is shown below.
+k1) Randomly select an initial centroid cinit [1] from the discrete data set of samples in (9),
+
+S ≜ {c˙1 [(u11, u21)] , . . . , c˙R [(u1R, u2R)]} . (10)
+
+k2) For each element s of S, let D(s) be the distance to the nearest centroid. The additional centroid cinit [i] is
+k3) dReetpeermatitnheedsatecpcokr2d)infgortothtehenupmrobbearboilfitcylustse∈DrS(ssD)t2o(s)d2e.termine all initial centroids.
+For further details on each step, we refer the reader to [37]. Consequently, 2B initial centroids are obtained from 22B bins of the histogram in Step 2 of Fig. 4.
+Next, the B-bit quantization process with clustering by the Lloyd-Max algorithm is shown below.
+L1) Sort the initial centroids {cinit [1] , . . . , cinit[2B]} in ascending order and set them as the initial representative values d˙ [1] < d˙ [2] < · · · < d˙ [2B].
+L2) For every j; 1 ≤ j ≤ 2B − 1, the quantization threshold τ [j] is computed and updated as
+
+∀j τ [j] = 1 d˙ [j] + d˙ [j + 1] .
+
+(11)
+
+2
+
+Note that τ [0] and τ [2B] are pre-set to −γ and γ , respectively.
+
+13050
+
+L3) For every j; 1 ≤ j ≤ 2B, the representative value d˙ [j] is updated as
+
+1
+
+∀j d˙ [j] =
+
+s,
+
+(12)
+
+Sj s∈Sj
+
+where Sj ≜ {s ∈ S|τ [j − 1] < s ≤ τ [j]}. L4) Repeat the steps L2) and L3) until further improvement
+in MSE is negligible; then stop.
+From the above procedure, the clusters can be formed that minimize the MSE without bias, achieving the optimal quantization minimizing the MSE distortion.
+
+C. MEMORY USAGE
+The number of searches and reference operations of the referential AMP detector is in order of O(MN ) per iteration, which is naturally the same as the number of double-precision operations in the AMP-based MUD algorithm. Since it is difficult to compare memory reads with double-precision arithmetic operations in terms of computational cost, this article additionally evaluates the memory size required to hold the LUTs. Note that as the LUTs are designed offline, we do not need to focus on the order of computational complexity associated with constructing LUTs.
+The total memory usage to hold the proposed referential AMP detector is formulated from the number of two-input arithmetic operations as
+
+V = 9g + GN + 2GM ,
+
+(13)
+
+where
+
+g ≜ B · 22B · K , GJ ≜ B · 22B · K · ⌊log2 J ⌋,
+
+(14a) (14b)
+
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 5. BER performance of the proposed detector for varying designed Es/N0, where (M′, N′) = (64, 80).
+
+which is similar to that of the SotA method based on the DDE-aided IB approach [8]. As an example, in the case of (M ′, N ′, B) = (64, 96, 5), it is possible to realize the AMPbased MUD with only 307 KB of memory usage and reading of it.
+
+TABLE 1. Optimum values for designed Es/N0 for each quantization bit in uncorrelated channels.
+
+V. NUMERICAL RESULTS Computer simulations were conducted to validate the performance of the proposed referential AMP detector for uplink MUD in large MU-MIMO systems. In all subsequent simulations, the average RX power from each TX antenna was assumed to be identical on the basis of slow TX power control, and the time and frequency synchronization were assumed to be perfect. The modulation scheme was Graycoded QPSK, and the channel coding was not utilized. The MIMO channel H′ was assumed to be perfectly estimated at the BS. To demonstrate the feasibility of the proposed LUT design in practice, we evaluated the performance under various channel models. Each model will be described in detail at the beginning of each subsection, along with the system parameters.
+A. UNCORRELATED RAYLEIGH FADING CHANNELS Our assessment starts from the BER performance evaluation in uncorrelated Rayleigh fading channels, where the entries of H′ obey CN (0, 1), which aims at evaluating the fundamental performance improvement attained by the proposed method and providing a fair comparison with the SotA alternatives. Aligned with the same system parameters as those used in [8], the MIMO configuration was set to (M ′, N ′) = (64, 80) and (64, 96), respectively, and the number of AMP iterations was set to constant to K = 16. In the proposed LUT design, the ASB is not used because the system size, M and N , is large enough to meet the large-system condition and there is no spatial correlation among fading coefficients. The histograms used for DDT were generated using R = 1 × 103 sets of RX vectors and channel matrices in (9).
+Before proceeding to the presentation of simulation results on comprehensive BER performances, let us offer a simulation-based analysis focusing on the effect of Es/N0 designing the LUT on performance. Hereafter, the
+VOLUME 11, 2023
+
+Es/N0 for which the LUT is designed is referred to as designed Es/N0, and the Es/N0 for which the signal detection is actually performed is referred to as operated Es/N0. First of all, we check to what extent the detection performance of the referential AMP designed by the proposed DDT-aided clustering method depends on the designed Es/N0. Fig. 5 shows the BER performance of a referential AMP detector designed by the proposed method with different designed Es/N0 and operated at various Es/N0. The horizontal axis shows the designed Es/N0, and the vertical axis shows the BER performance. Each curve is depicted for each operated Es/N0, as shown in the legend.
+Intuitively, it would seem that the best performance is achieved when the designed Es/N0 and the operated Es/N0 match. However, focusing on the designed Es/N0 with the lowest BER for each curve, it does not vary significantly regardless of the operated Es/N0, which indicates that the number of quantization bits almost determines the designed Es/N0 that achieves the best performance over the entire Es/N0 range. This is because, since the entire algorithm is quantized, the effect of the quantization noise accumulated in the LUTs is quite large, so that at the values of Es/N0 near the operating point, the quantization noise is dominant for AWGN. It is worth noting that similar trends were observed in cases of correlated channels described below. With these results, in this article, we use a single set of LUTs which achieves the best performance over the wide Es/N0 range when evaluating the performance of the proposed method; this makes it possible to significantly reduce the memory usage. Table 1 summarizes optimum values of designed Es/N0 for each number of quantization bits, which is determined according to the results in Fig. 5.
+Our first set of results is given in Fig. 6, where the performances in terms of BER as a function of the Es/N0 in MU-MIMO systems with B ∈ {4, 5, 6} are compared:
+13051
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 6. BER performance of massive MU-MIMO systems in uncorrelated Rayleigh fading channels.
+
+• Double-precision: AMP-based detector presented in Alg. 1, which provides a performance reference highlighting the harmful effect of coarse quantization.
+• EPQ: Conventional referential AMP detector, in which the LUTs are designed based on the maximal entropy criterion, i.e., equiprobable quantization (EPQ) [42].
+• IB: Conventional referential AMP detector, in which the LUTs are designed based on the maximal MI criterion, using DDE-aided sIB algorithm [8], [19].
+• DDT: Proposed referential AMP detector, in which the LUTs are designed based on the proposed method.
+The adjusting parameters in ‘‘EPQ’’ and ‘‘IB’’ were set to the same values as in [8]. For further details about these SotA alternatives, we refer the reader to [8], [19], and [20].
+The results in Fig. 6 clearly demonstrate the efficacy of the proposed LUT design method in both configurations, especially in the number of quantization bits is small. In ‘‘EPQ,’’ the performance deteriorates dramatically for the decrease in the number of quantization bits B. This is because each 2-to-1 LUT is optimized individually to imitate the original arithmetic operation with reference to the continuous distribution, and cannot take into account the effect of accumulated quantization errors according to the multi-layer structure. In contrast, ‘‘IB’’ can improve the detection performance
+
+significantly when the number of quantization bits is large, i.e., B = 5 and 6, because the DDE estimates the probability density function (PDF) of beliefs at each layer, and then sIB algorithm determines the quantization threshold to maximize the MI between the quantized beliefs and the estimated continuous PDF [8]. However, the gap between the distribution estimated by DDE and the actual distribution of beliefs propagating inside the referential AMP detector results in a significant degradation at the operating point with respect to ‘‘Double-precision.’’ Specifically, there is about 4.0 dB, 1.5 dB, 3.0 dB, and 1.0 dB degradation at BER = 10−4 in Figs. 6(b), 6(c), 6(e), and 6(f), respectively. In addition, when the number of quantization bits is small, i.e., B = 4, and the systems running ‘‘IB’’ method exhibit high-level error floors due to the mismatch in the PDF.
+The most attractive feature is that the proposed method can reduce the error floor level for B = 4 and approach the performance of ‘‘Double-precision’’ for B = 5 and 6. These results indicate that the DDT, which tracks discrete distributions from actual measurements, is quite effective in avoiding distribution mismatches and shows the validity of quantization threshold design by clustering. Notably, in the case of B = 5, the degradation from ‘‘Double-precision’’ is suppressed to about 1.0 dB at BER = 10−4. When the
+
+13052
+
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 7. BER performance of massive MU-MIMO systems in uncorrelated Rayleigh fading channels at Es/N0 = 0 dB with respect to the predetermined maximum number of iterations K .
+
+number of quantization bits reaches B = 6, the performance of ‘‘DDT’’ is asymptotic to that of ‘‘Double-precision’’, as shown in Figs. 6(c), 6(f).
+To gain insight into the convergence behavior of LUTbased referential AMP detection, we compare in Fig. 7 the BER performances of ‘‘EPQ,’’ ‘‘IB,’’ and ‘‘DDT,’’ as a function of the predetermined maximum number of iterations K . The operated Es/N0 is fixed at 0 dB under the conditions of (M ′, N ′) = (64, 80) and (64, 96), and the other system parameters are the same as in Fig. 6.
+In both configurations, the proposed method ‘‘DDT’’ can reduce the BER with a much smaller number of iterations than the conventional methods, ‘‘EPQ’’ and ‘‘IB.’’ In the case of B = 4 in Figs. 7(a) and 7(d), due to the poor BER performances of ‘‘EPQ’’ and ‘‘IB’ and the high-level error floors, it may be difficult to compare the performances in terms of convergence speed. In contrast, in the results of B = 5 and 6, it can be clearly seen that the convergence speed of the proposed method is much faster than those of the conventional methods. More specifically, ‘‘DDT’’ can achieve BER = 10−5 within less than K = 6 in all settings with B = 5 and 6. These results are precise because the DDTaided clustering method can design the quantization functions that accurately capture the discrete distribution of information actually propagated between 2-to-1 LUTs.
+B. ROBUSTNESS TO CORRELATED CHANNELS In practice, employing a large number of antennas at a BS leads to spatial correlation among fading coefficients; hence,
+
+it is vital to confirm that our method works well even in correlated channels. In addition, it is preferable to be able to continue to use the same LUT for some changes in channel model (i.e., communication environments) for practical use. To evaluate the robustness of the LUT designed by the proposed method to changes in the wireless communication channels, in this subsection, we shift our focus to the BER performance when we use the referential AMP detector designed in uncorrelated Rayleigh fading channels in correlated channels.
+In the following evaluation, results for ‘‘IB’’ are omitted. This is because due to the nature of DDE, which estimates the distribution assuming independence of the variable, it is impossible to capture the correlation between beliefs, and sIB algorithm cannot design appropriate quantization thresholds, resulting in unstable convergence behavior of iterative detection even if the adjusting parameters are tuned. Indeed, ‘‘IB’’ is more sensitive to wireless channel changes than ‘‘EPQ.’’ Also, in addition to the referential AMP detectors designed with uncorrelated channels as in Fig. 6, ‘‘EPQ’’ and ‘‘DDT,’’ the referential AMP detector designed using the proposed method with correlated channels that actually performs signal detection ‘‘DDT (opt.),’’ is added for comparison. By comparing ‘‘DDT’’ and ‘‘DDT (opt.),’’ we can evaluate the impact of the difference between the channel model for which the LUT is designed and the channel model for which the referential AMP detector actually operates, on the performance of the proposed method.
+
+VOLUME 11, 2023
+
+13053
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 8. BER performance of massive MU-MIMO systems in correlated channels following the one-ring model, where (M′, N′) = (32, 96).
+
+1) GEOMETRIC ONE-RING MODEL
+In practice, the wireless channels between the BS and the UE exhibit a small angular spread from the perspective of the BS, as a result of local scatterers around the UE and the high placement of the BS antennas [40], [43], [44]. To represent such a spatial correlation among fading coefficients, we use the geometrical one-ring model [45], without loss of generality in (1). Assuming that isotropic scatterers exist uniformly on the 2-dimensional plane around each UE, the (i, j) element in the RX spatial correlation matrix of the m′-th UE Θm′ ∈ CN ′×N ′ can be expressed as
+
+[Θ m′ ]i,j ≜
+
+1 ψm′
+
+ψmm′ax exp[jπ (i − j) cos(ψ)]dψ, (15)
+ψ min
+
+m′
+
+which denotes the correlation coefficient between the i-th and
+j-th RX antenna elements. The antenna element spacing is
+fixed to half the wavelength, and waves from the m′-th UE are assumed to arrive in an angular spread ψm′ ≜ ψmm′ax −ψmm′in. The m′-th column vector of H′ is given by
+
+hm′ = Θ 1m/′2νm′ , νm′ ∼ CN (0N ′ , IN ′ ).
+
+(16)
+
+Based on the channel model mentioned above, computer
+simulations were conducted. The same system parameters
+were used as in Fig. 6 unless otherwise specified. The MUMIMO configuration was set to (M ′, N ′) = (32, 96). The predetermined parameters in (4) were set to (κ1, κ2) = (3, 1).4 A sector antenna with a 120◦ opening is considered, and the
+UEs are randomly and uniformly distributed inside the area. The angular spread of the RX signal was set to 10◦. Let θm′ be the azimuth position of the m′-th UE, and its spatial frequency
+
+4The predetermined parameters (κ1, κ2) were determined according to [5] so as to suppress the error floor level of BER performance via preliminary simulations. These parameters are not very sensitive to changes in system parameters, and actually this setting has been found to be robust to changes in antenna configuration and channel models via simulations.
+13054
+
+TABLE 2. Optimum values for designed Es/N0 for each quantization bit in correlated channels following the one-ring model, where (M′, N′) = (32, 96).
+
+is defined as Ωm′ = π sin(θm′ ).5 As in the case of uncorrelated channels, the designed Es/N0 is determined based on the simulation-based optimization, which is summarized in Tab. 2 for every quantization bit. The adjusting parameter in ‘‘EPQ’’ needed to account for the effect of quantization errors is also hand-optimized.
+With that clarified, the BER performances are compared in Fig. 8. It can be seen that ‘‘EPQ’’ exhibits high-level error floors and significantly deteriorates from ‘‘Doubleprecision’’ due to the adverse effect of individual optimization of each LUT. Even with relatively high-resolution quantization, i.e., B = 6, in Fig. 8(c), it cannot achieve BER = 10−4 with a reasonable Es/N0. In contrast, the performance of ‘‘DDT’’ is significantly improved as the number of quantization bits increases, and even for B = 4, it can reduce the error floor level to below BER = 10−4. Notably, the performance degradation from ‘‘Double-precision’’ at BER = 10−4 is less than 1.0 dB in both Figs. 8(b) and 8(c), which indicates that the proposed LUT design operates even in correlated channels and robustly against changes in the wireless channels.
+Another point to discuss is that the performances of ‘‘DDT’’ asymptotically approach those of ‘‘DDT (opt.)’’ in which the channel model for which the LUT is designed and the channel model for which the algorithm runs coincide, at any number of quantization bits. This is because, with the assistance of proper TX power control, the discrete distributions of the RX vector y and channel matrix H are necessarily
+
+5We enforce a minimum separation in spatial frequency between any two
+
+users
+
+for
+
+avoiding
+
+the excessive
+
+interference, where Ωmin
+
+=
+
+2.783 N′
+
+[46].
+
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+FIGURE 9. BER performance of massive MU-MIMO systems in correlated channels following the finite path model, where (M′, N′) = (8, 96).
+
+similar based on the law of large numbers. According to the mechanism of the one-ring model, a large number of paths arrive in the angular spread at the BS; thus, the entries of y and H fundamentally (and approximately in practice) follow a Gaussian distribution in conformity with CLT. In addition, the internal processing of AMP detector consists only of scalar-by-scalar operations as shown in Alg. 1; thus, it is impossible to take into account the correlation between beliefs across iterations. This is very natural in view of the fact that the AMP algorithm was designed for large-scale independent and identically distributed (i.i.d.) measurements [3]. The feature makes the AMP detector vulnerable to spatial correlation among fading coefficients; however, it also makes the referential AMP detector robust to changes in the rich scattering wireless channels.
+
+2) FINITE PATH MODEL
+In the previous subsection, we investigated the scenario where the Gaussianity is relatively high; however, such a rich scattering environment cannot always occur in practice. For example, in Millimeter-wave (mmWave) wireless communications, where diffraction and scattering rarely occur, the number of paths arriving at the receiver is limited [47], [48]. To represent such wireless channels, we use the finite path model [49], [50], without loss of generality of (1). According to the literature, the channel matrix H′ is given by a geometric model with L scatters, where each scatter contributes to a single propagation path between the BS and the UEs. The m′-th column vector of H′ can be expressed as
+
+L
+
+h′m′ =
+
+αm′,l am′,l (ωm′,l ),
+
+l=1
+
+(17)
+
+where αm′,l is the channel gain along the l-th path of the m′-th UE. This is obtained from the antenna steering vector
+
+a(ωm′,l ) ≜
+
+1, ejωm′,l , . . . , ej(N ′−1)ωm′,l
+
+T
+,
+
+(18)
+
+VOLUME 11, 2023
+
+TABLE 3. Optimum values for designed Es/N0 for each quantization bit in correlated channels following the finite path model, where (M′, N′) = (8, 96).
+where ωm′,l ≜ π sin ζm′,l with ζm′,l denoting the azimuth angle of the l-th path of the m′-th UE. The antenna element space is fixed to half the wavelength.
+Based on the channel model mentioned above, computer simulations were conducted. The same system parameters were used as in Fig. 8 unless otherwise specified. The MUMIMO configuration was set to (M ′, N ′) = (8, 96). The predetermined parameters in (4) were set to (κ1, κ2) = (3, 1). A sector antenna with a 120◦ opening is considered. The number of paths was set to L = 4, and each path gain was set to αm′,l ∼ CN (0, 1) on the basis of slow TX power control [49], [50]. The designed Es/N0 is summarized in Tab. 3 for every quantization bit, and the adjusting parameter in ‘‘EPQ’’ is also hand-optimized.
+To gain insight into the behavior of the proposed method in a poor scattering environment, we compare in Fig. 9 the BER performances. As expected, the performances of ‘‘EPQ’’ are found to be much worse than those of ‘‘Doubleprecision,’’ and exhibit high-level error floors at any quantization number of bits. In contrast, ‘‘DDT’’ can significantly reduce the error floor level and approach the double-precision scheme at BER, which indicates that the proposed method can robustly operate even in poor scattering correlated channels. However, in the high Es/N0 regime, there are performance gaps between ‘‘DDT’’ and ‘‘DDT (opt.),’’ especially for B = 4 and 5. This is clearly due to the reduced Gaussianity of the signal. In the low Es/N0 regime, the AWGN ensures the Gaussianity of the RX signal, while in the high Es/N0 regime, the multiplexed MIMO signal determines the nature of the signal. In the finite path model, the law of large numbers
+13055
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+does not work well, making it difficult to design the optimal threshold in the high Es/N0 regime.
+Based on the above, one can conclude that ‘‘DDT’’ achieves accurate signal detection at the operating point in various channel models and that the referential AMP detector designed using the proposed method is extremely robust against wireless channel changes.
+VI. CONCLUSION In this paper, we proposed a novel unsupervised learning approach to design a referential AMP detector based on DDTaided clustering method, aiming at the reduction of power consumption and memory usage for uplink MUD in massive MU-MIMO systems. The quantization thresholds are sequentially determined from the actual discrete PDF of beliefs in each layer as measured by DDT, in order to avoid the problem of mismatch between the estimated PDF and the actual PDF, which has been a bottleneck in the existing methods. The threshold design based on the measured discrete PDF uses the Lloyd-Max algorithm, which overcomes initial value dependence with the k-means++ method, minimizing information loss when replacing the LUT. The memory usage to hold the proposed referential AMP detector is similar to that of the SotA.
+In order to numerically study the benefits of the proposed method, we carried out performance assessments via MonteCarlo simulations, revealing the effectiveness of the proposed method in terms of the BER performance. The results showed that the referential AMP detector designed by the proposed method achieves BER performance asymptotically approaching that of the double-precision AMP detector in uncorrelated channels. Furthermore, it was also found that the referential AMP detector designed in uncorrelated channels works well robustly even in correlated channels. These results greatly contribute to the practical feasibility of low-complexity MUD via message passing in massive MU-MIMO systems.
+Future work includes performance analysis when the number of quantization bits is varied according to the module and the depth of layer in the algorithm, assuming the situation that low-resolution ADCs is used as the first-stage quantizer at the receiver side, as in the literature [9], [10], [11], [12]. In particular, when the number of quantization bits of the ADCs is extremely small (e.g., 1–3 bits), converting the message passing algorithm (MPA) designed based on quantization observation [13], [14], [15], [16] to the LUT-based MUD algorithm by using the proposed method may be considered.
+REFERENCES
+[1] W. Saad, M. Bennis, and M. Chen, ‘‘A vision of 6G wireless systems: Applications, trends, technologies, and open research problems,’’ IEEE Netw., vol. 34, no. 3, pp. 134–142, Oct. 2020.
+[2] S. Yang and L. Hanzo, ‘‘Fifty years of MIMO detection: The road to large-scale MIMOs,’’ IEEE Commun. Surveys Tuts., vol. 17, no. 4, pp. 1941–1988, 4th Quart., 2015.
+[3] D. L. Donoho, A. Maleki, and A. Montanari, ‘‘Message-passing algorithms for compressed sensing,’’ Proc. Nat. Academy Sci. USA, vol. 106, no. 45, pp. 18914–18919, 2009.
+13056
+
+[4] Y. Kabashima, ‘‘A CDMA multiuser detection algorithm on the basis of belief propagation,’’ J. Phys. A, Math. Gen., vol. 36, no. 43, pp. 1–12, Oct. 2003.
+[5] T. Takahashi, S. Ibi, and S. Sampei, ‘‘Design of adaptively scaled belief in multi-dimensional signal detection for higher-order modulation,’’ IEEE Trans. Commun., vol. 67, no. 3, pp. 1986–2001, Mar. 2019.
+[6] M. Bayati and A. Montanari, ‘‘The dynamics of message passing on dense graphs, with applications to compressed sensing,’’ IEEE Trans. Inf. Theory, vol. 57, no. 2, pp. 764–785, Feb. 2011.
+[7] L. Wang, T. Takahashi, S. Ibi, and S. Sampei, ‘‘A study on replica generation using LUT based on information bottleneck for MF-GaBP in massive MIMO detection,’’ in Proc. IEEE 90th Veh. Technol. Conf. (VTC-Fall), Sep. 2019, pp. 1–6.
+[8] L. Wang, T. Takahashi, S. Ibi, and S. Sampei, ‘‘Information-optimum approximate message passing for quantized massive MIMO detection,’’ IEEE Access, vol. 8, pp. 200383–200394, 2020.
+[9] J. Choi, J. Mo, and R. W. Heath Jr., ‘‘Near maximum-likelihood detector and channel estimator for uplink multiuser massive MIMO systems with one-bit ADCs,’’ IEEE Trans. Commun., vol. 64, no. 5, pp. 2005–2018, Mar. 2016.
+[10] Y.-S. Jeon, N. Lee, S.-N. Hong, and R. W. Heath Jr., ‘‘One-bit sphere decoding for uplink massive MIMO systems with one-bit ADCs,’’ IEEE Trans. Wireless Commun., vol. 17, no. 7, pp. 4509–4521, Jul. 2018.
+[11] S. Jacobsson, G. Durisi, M. Coldrey, U. Gustavsson, and C. Studer, ‘‘Throughput analysis of massive MIMO uplink with low-resolution ADCs,’’ IEEE Trans. Wireless Commun., vol. 16, no. 6, pp. 4038–4051, Jun. 2017.
+[12] Z. Shao, R. C. de Lamare, and L. T. N. Landau, ‘‘Iterative detection and decoding for large-scale multiple-antenna systems with 1-bit ADCs,’’ IEEE Wireless Commun. Lett., vol. 7, no. 3, pp. 476–479, Jun. 2018.
+[13] U. S. Kamilov, V. K. Goyal, and S. Rangan, ‘‘Message-passing dequantization with applications to compressed sensing,’’ IEEE Trans. Signal Process., vol. 60, no. 12, pp. 6270–6281, Dec. 2012.
+[14] T.-C. Zhang, C.-K. Wen, S. Jin, and T. Jiang, ‘‘Mixed-ADC massive MIMO detectors: Performance analysis and design optimization,’’ IEEE Trans. Wireless Commun., vol. 15, no. 11, pp. 7738–7752, Nov. 2016.
+[15] C. K. Wen, C. J. Wang, S. Jin, K. K. Wong, and P. Ting, ‘‘Bayes-optimal joint channel-and-data estimation for massive MIMO with low-precision ADCs,’’ IEEE Trans. Signal Process., vol. 64, no. 10, pp. 2541–2556, May 2016.
+[16] S. S. Thoota and C. R. Murthy, ‘‘Variational Bayes’ joint channel estimation and soft symbol decoding for uplink massive MIMO systems with low resolution ADCs,’’ IEEE Trans. Commun., vol. 69, no. 5, pp. 3467–3481, May 2021.
+[17] T. Takahashi, H. Iimori, K. Ando, S. Ibi, K. Ishibashi, and G. T. F. de Abreu, ‘‘Bayesian receiver design via bilinear inference for cell-free massive MIMO with low-resolution ADCs,’’ IEEE Trans. Wireless Commun., early access, Dec. 19, 2022, doi: 10.1109/TWC.2022.3228326.
+[18] B. M. Kurkoski, K. Yamaguchi, and K. Kobayashi, ‘‘Noise thresholds for discrete LDPC decoding mappings,’’ in Proc. IEEE IEEE Global Telecommun. Conf. (GLOBECOM), Nov. 2008, pp. 1–5.
+[19] J. Lewandowsky and G. Bauch, ‘‘Trellis based node operations for LDPC decoders from the information bottleneck method,’’ in Proc. 9th Int. Conf. Signal Process. Commun. Syst. (ICSPCS), Dec. 2015, pp. 1–10.
+[20] F. J. C. Romero and B. M. Kurkoski, ‘‘LDPC decoding mappings that maximize mutual information,’’ IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2391–2401, Sep. 2016.
+[21] G. Bauch, J. Lewandowsky, M. Stark, and P. Oppermann, ‘‘Informationoptimum discrete signal processing for detection and decoding–invited paper,’’ in Proc. IEEE 87th Veh. Technol. Conf. (VTC Spring), Jun. 2018, pp. 1–6.
+[22] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, ‘‘Finite alphabet iterative decoders—Part I: Decoding beyond belief propagation on the binary symmetric channel,’’ IEEE Trans. Commun., vol. 61, no. 10, pp. 4033–4045, Oct. 2013.
+[23] D. Declercq, B. Vasic, S. K. Planjery, and E. Li, ‘‘Finite alphabet iterative decoders—Part II: Towards guaranteed error correction of LDPC codes via iterative decoder diversity,’’ IEEE Trans. Commun., vol. 61, no. 10, pp. 4046–4057, Oct. 2013.
+[24] J. Lewandowsky and G. Bauch, ‘‘Information-optimum LDPC decoders based on the information bottleneck method,’’ IEEE Access, vol. 6, pp. 4054–4071, 2018.
+VOLUME 11, 2023
+
+A. Shimamura et al.: Uplink Signal Detection via Look-Up Table-Based AMP for Massive MIMO Systems
+
+[25] M. Stark, J. Lewandowsky, and G. Bauch, ‘‘Information-bottleneck decoding of high-rate irregular LDPC codes for optical communication using message alignment,’’ Appl. Sci., vol. 8, no. 10, p. 1884, Oct. 2018.
+[26] S. V. S. Ranganathan, D. Divsalar, and R. D. Wesel, ‘‘Quasi-cyclic protograph-based raptor-like LDPC codes for short block-lengths,’’ IEEE Trans. Inf. Theory, vol. 65, no. 6, pp. 3758–3777, Jan. 2019.
+[27] M. Meidlinger, G. Matz, and A. Burg, ‘‘Design and decoding of irregular LDPC codes based on discrete message passing,’’ IEEE Trans. Commun., vol. 68, no. 3, pp. 1329–1343, Mar. 2020.
+[28] M. Stark, G. Bauch, L. Wang, and R. D. Wesel, ‘‘Information bottleneck decoding of rate-compatible 5G-LDPC codes,’’ in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2020, pp. 1–6.
+[29] N. Tishby, F. C. Pereira, and W. Bialek, ‘‘The information bottleneck method,’’ 2000, arXiv:physics/0004057.
+[30] N. Slonim, ‘‘The information bottleneck: Theory and applications,’’ Ph.D. dissertation, Interdiscipl. Center Neural Comput. (ICNC), Hebrew Univ. Jerusalem, Jerusalem, Israel, 2002.
+[31] J. Lewandowsky, M. Stark, and G. Bauch, ‘‘Information bottleneck graphs for receiver design,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2016, pp. 2888–2892.
+[32] M. Meidlinger and G. Matz, ‘‘On irregular LDPC codes with quantized message passing decoding,’’ in Proc. IEEE 18th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2017, pp. 1–5.
+[33] J. K. Lee and J. Thorpe, ‘‘Memory-efficient decoding of LDPC codes,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Sep. 2005, pp. 459–463.
+[34] B. M. Kurkoski and H. Yagi, ‘‘Quantization of binary-input discrete memoryless channels,’’ IEEE Trans. Inf. Theory, vol. 60, no. 8, pp. 4544–4552, Aug. 2014.
+[35] T. J. Richardson and R. L. Urbanke, ‘‘The capacity of low-density paritycheck codes under message-passing decoding,’’ IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[36] J. Max, ‘‘Quantizing for minimum distortion,’’ IRE Trans. Inf. Theory, vol. 6, no. 1, pp. 7–12, Mar. 1960.
+[37] D. Arthur and S. Vassilvitskii, ‘‘K-means++: The advantages of careful seeding,’’ in Proc. 18th Annu. ACM-SIAM Symp. Discrete Algorithms, 2007, pp. 1027–1035.
+[38] A. Shimamura, T. Takahashi, S. Ibi, and S. Sampei, ‘‘Referential approximate message passing for quantized large MIMO detection,’’ in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2022, pp. 1594–1599.
+[39] A. Chockalingam and B. S. Rajan, Large MIMO Systems. Cambridge, U.K.: Cambridge Univ. Press, 2014.
+[40] T. Takahashi, A. Tolli, S. Ibi, and S. Sampei, ‘‘Low-complexity large MIMO detection via layered belief propagation in beam domain,’’ IEEE Trans. Wireless Commun., vol. 21, no. 1, pp. 234–249, Jan. 2022.
+[41] R. Tamaki, K. Ito, T. Takahashi, S. Ibi, and S. Sampei, ‘‘Suppression of selfnoise feedback in GAMP for highly correlated large MIMO detection,’’ in Proc. IEEE Int. Conf. Commun., May 2022, pp. 1300–1305.
+[42] R. M. Gray and D. L. Neuhoff, ‘‘Quantization,’’ IEEE Trans. Inf. Theory, vol. 44, no. 6, pp. 2325–2383, Oct. 1998.
+[43] H. Yin, D. Gesbert, M. Filippou, and Y. Liu, ‘‘A coordinated approach to channel estimation in large-scale multiple-antenna systems,’’ IEEE J. Sel. Areas Commun., vol. 31, no. 2, pp. 264–273, Feb. 2013.
+[44] D. Tse and P. Viswanath, Fundamentals of Wireless Communication. Cambridge, U.K.: Cambridge Univ. Press, 2005.
+[45] W. C. Jakes, Microwave Mobile Communications, 1st ed. Hoboken, NJ, USA: Wiley-IEEE Press, 1994.
+[46] C. A. Balanis, Antenna Theory: Analysis and Design. Hoboken, NJ, USA: Wiley-Interscience, 2005.
+[47] R. W. Heath, N. González-Prelcic, S. Rangan, W. Roh, and A. M. Sayeed, ‘‘An overview of signal processing techniques for millimeter wave MIMO systems,’’ IEEE J. Sel. Topics Signal Process., vol. 10, no. 3, pp. 436–453, Apr. 2016.
+[48] M. Xiao, S. Mumtaz, Y. Huang, L. Dai, Y. Li, M. Matthaiou, and G. K. Karagiannidis, ‘‘Millimeter wave communications for future mobile networks,’’ IEEE J. Sel. Areas Commun., vol. 35, no. 9, pp. 1909–1935, Sep. 2017.
+[49] D. Fan, F. Gao, Y. Liu, Y. Deng, G. Wang, Z. Zhong, and A. Nallanathan, ‘‘Angle domain channel estimation in hybrid millimeter wave massive MIMO systems,’’ IEEE Trans. Wireless Commun., vol. 17, no. 12, pp. 8165–8179, Dec. 2018.
+[50] L. Xu, C. Qian, F. Gao, W. Zhang, and S. Ma, ‘‘Angular domain channel estimation for mmWave massive MIMO with one-bit ADCs/DACs,’’ IEEE Trans. Wireless Commun., vol. 20, no. 2, pp. 969–982, Feb. 2021.
+
+ATSUNORI SHIMAMURA (Graduate Student Member, IEEE) received the B.E. degree in communication engineering from Osaka University, Osaka, Japan, in 2021, where he is currently pursuing the M.E. degree with the Graduate School of Engineering. His research interests include belief propagation, iterative detection, and communication theory.
+TAKUMI TAKAHASHI (Member, IEEE) received the B.E., M.E., and Ph.D. degrees in communication engineering from Osaka University, Osaka, Japan, in 2016, 2017, and 2019, respectively. From 2018 to 2019, he was a Visiting Researcher at the Centre for Wireless Communications, University of Oulu, Finland. In 2019, he joined as an Assistant Professor with the Graduate School of Engineering, Osaka University. His research interests include belief propagation, compressed sensing, signal processing, and wireless communications.
+SHINSUKE IBI (Member, IEEE) received the B.E. degree in advanced engineering from the Suzuka College of Technology, Japan, in 2002, and the M.E. and Ph.D. degrees in communication engineering from Osaka University, Japan, in 2004 and 2006, respectively. From 2005 to 2006, he was a Visiting Researcher at the Centre for Wireless Communications, University of Oulu, Finland. In 2006, he joined with the Graduate School of Engineering, Osaka University. From 2010 to 2011, he was a Visiting Researcher at the University of Southampton, U.K. In 2019, he joined with Doshisha University, where he is currently a Professor with the Faculty of Science and Engineering. His research interests include EXIT-based coding theory, iterative detection, digital signal processing, cognitive radio, and communication theory. He received the 64th and 71st Best Paper Awards from IEICE and the 24th Telecom System Technology Award from the Telecommunication Advancement Foundation.
+SEIICHI SAMPEI (Life Fellow, IEEE) received the B.E., M.E., and Ph.D. degrees in electrical engineering from the Tokyo Institute of Technology, Japan, in 1980, 1982, and 1991, respectively. From 1982 to 1993, he was with the Communications Research Laboratory, Ministry of Posts and Telecommunications. From 1991 to 1992, he was a Visiting Researcher at the University of California, Davis. In 1993, he joined with the Faculty of Engineering, Osaka University, where he is currently a Professor with the Department of Information and Communications Technology. He has been involved in the development of adaptive modulation, intelligent radio transmission/access, cognitive wireless networking, and wireless distributed network techniques. He received the Shinohara Young Engineering Award, the Achievements Award, the Communications Society Best Paper Award, the Best Paper Award from IEICE, the Telecom System Technology Award from the Telecommunication Advancement Foundation, the DoCoMo Mobile Science Award from the Mobile Communication Fund, the Ericsson Telecommunications Award, and the Shida Rinzaburo Award from the President of Council for Info-Communications Promotion Month. He is a member of the Institute of Image Information and Television Engineers (ITE) and a fellow of the Institute of Electronics, Information and Communication Engineers (IEICE).
+
+VOLUME 11, 2023
+
+13057
+
+

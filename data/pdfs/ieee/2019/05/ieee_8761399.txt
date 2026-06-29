@@ -1,0 +1,701 @@
+Neural Belief Propagation Decoding of CRC-Polar Concatenated Codes
+Nghia Doan, Seyyed Ali Hashemi, Elie Ngomseu Mambou, Thibaud Tonnellier, Warren J. Gross Department of Electrical and Computer Engineering, McGill University, Montreal, Quebec, Canada
+Email: {nghia.doan.seyyed.hashemi.elie.ngomseumambou}@mail.mcgill.ca.{thibaud.tonnellier.warren.gross}@mcgill.ca
+
+Abstract-Polar codes are the first class of error correcting codes that provably achieve the channel capacity at infinite code length. They were selected for use in the fifth generation of cellular mobile communications (SG). In practical scenarios such as SG, a cyclic redundancy check (CRC) is concatenated with polar codes to improve their finite length performance. This is mostly beneficial for sequential successive-cancellation list decoders. However, for parallel iterative belief propagation (BP) decoders, CRC is only used as an early stopping criterion with incremental error-correction performance improvement. In this paper, we first propose a CRC-polar BP (CPBP) decoder by exchanging the extrinsic information between the factor graph of the polar code and that of the CRe. We then propose a neural CPBP (NCPBP) algorithm which improves the CPBP decoder by introducing trainable normalizing weights on the concatenated factor graph. Our results on a SG polar code of length 128 show that at the frame error rate of 10-5 and with a maximum of 30 iterations, the error-correction performance of CPBP and NCPBP are approximately 0.25 dB and 0.5 dB better than that of the conventional CRC-aided BP decoder, respectively, while introducing almost no latency overhead.
+Index Terms-polar codes, SG, neural belief propagation decoding, code concatenation, cyclic redundancy check.
+I. INTRODUCTION
+Polar codes are a breakthrough in the field of channel coding as they were proved to achieve channel capacity with efficient encoding and decoding algorithms [1]. Successive cancellation (SC) and belief propagation (BP) decoding algorithms are introduced in [I] to decode polar codes. Although SC decoding can provide a low-complexity implementation, its serial nature prevents the decoder to reach a high decoding throughput. In addition, the error-correction performance of SC decoding for short to moderate polar codes does not satisfy the requirements of the fifth generation of cellular mobile communications (5G). To improve the performance of SC decoding, SC list (SCL) decoding was introduced in [2] and it was shown that SCL can provide a vast error-correction performance improvement if it is aided by a cyclic redundancy check (CRC). Based on this observation, polar codes have been selected to be used in the enhanced mobile broadband (eMBB) control channel of 5G together with a CRC [3].
+Unlike SC-based decoders, the iterative message passing process of BP decoding can be executed in parallel, hence enabling the decoder to reach high decoding throughput. However, with limited number of iterations BP decoding suffers from poor error-correction performance. Furthermore, 5G standard requires polar codes to be concatenated with an outer
+
+CRC code. Thus, several attempts have been carried out to improve the performance of BP decoding for polar codes using a CRe. In [4], CRC is used as an early termination criterion to prevent the BP decoder from processing unnecessary iterations when the correct codeword is found. In [5], a post-processing algorithm is presented which uses a CRC to detect falseconverged errors. In addition, it is observed in [6], [7] that BP decoding on a list of factor graph permutations of polar codes can benefit from CRC to achieve lower error probabilities than when no CRC is used. However, BP decoding in all of the aforementioned works is only applied on the factor graph of polar codes and the CRC is only used to verify the result of BP at each iteration, without exploiting the inherent factor graph of CRe. Note that BP decoding is used in [8]-[10] on the concatenated factor graphs of a low-density parity-check (LDPC) code and a polar code. However, this scheme is not selected for use in the eMBB control channel of 5G.
+In this paper, we first show that by running BP decoding on the CRC-polar concatenated factor graph, significant error-correction performance improvement can be achieved in comparison with the conventional CRC-aided BP decoder. We call the proposed decoding method CRC-polar BP (CPBP). We then propose a neural CPBP (NCPBP) decoder to further improve the error-correction performance of CPBP with limited number of BP iterations. We devise an efficient weightassignment scheme for NCPBP and show that the proposed scheme has fewer weights than the state-of-the-art neural BP decoder of [II] while providing a better error-correction performance. The proposed decoders are evaluated on a 5G polar code of length 128. At the frame error rate (FER) of 10-5 and with a maximum number of 30 iterations, we show that the error-correction performance of the CPBP and NCPBP decoders are approximately 0.25 dB and 0.5 dB better than that of the conventional CRC-aided BP decoder, respectively, with negligible latency overhead.
+The rest of this paper is organized as follows. Section II briefly introduces polar codes and its BP-based decoders. Section III and IV describe the proposed CPBP and NCPBP decoders, respectively. Finally, concluding remarks are drawn in Section V.
+II. PRELIMINARIES
+A. Polar Codes
+A polar code P(N, K) of length N with K information bits is constructed by applying a linear transformation to the
+
+978-1-5386-808A8u-t9h/o1r9iz/e$d31lic.0e0ns©e2d0u1s9eIlEimEitEed to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+Stage indices
+
+51
+
+52
+
+Vl Q)
+.!:! "c0
+
+represented on an unrolled factor graph, in which BP iterations are performed sequentially, Fig, Ic and Fig. Id illustrate the input and output messages of a PE for the right-to-left and leftto-right message updates on an unrolled factor graph, where the superscript i denotes the iteration number. The update rule [12] for the right-to-Ieft messages of a PE is
+
+Zti,s = f (Zti,k' rij,-sI + Zji,k )'
+
+(3)
+
+{ Zij,s = f(Zit,k' rti,-sI) + Zji,k'
+
+and for the left-to-right messages is
+
+rt.s~rt'S+l
+It .s
+
+1],5 _
+
+lj,s
+
+-
+
+I t ,S+1
+Tj,S+l lj,S+l
+
+'-':(a)
+
+rt,S
+
+li
+
+ltS+l
+
+t,S
+
+i-I
+
+rj,s
+
+_
+
+l{
+
+lJ.S+l
+
+-
+
+j,S
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 1: (a) BP decoding on the factor graph of P(8, 5) with {uo, UI, ud E AC, (b) a PE, (c) a right-to-Ieft message update
+of a PE on an unrolled factor graph, and (d) a left-to-right
+message update of a PE on an unrolled factor graph,
+
+message word u = {uo, UI, ' , , ,UN-I} as x = ucem where
+
+x = {XO,XI,.",XN-I} is the codeword, c®n is the n-th
+J, Kronecker power of the polarizing matrix C = [t ~ and
+
+n = log2 N. The vector u contains a set A of K information
+
+bits and a set AC of N - K frozen bits. The positions of the
+
+frozen bits are known to the encoder and the decoder and their
+
+values are known to be 0, The codeword x is then modulated
+
+and sent through the channeL In this paper, binary phase-shift
+
+keying (BPSK) modulation and additive white Gaussian noise
+
+(AWGN) channel model are considered, therefore, the soft
+
+vector of the transmitted codeword received by the decoder
+
+is written as
+
+y = (1 - 2x) + z,
+
+(I)
+
+where 1 is an all-one vector of size N, and Z E IRN is the AWGN noise vector with variance (J2 and zero mean, In the log-likelihood ratio (LLR) domain, the LLR vector of the transmitted codeword is
+
+LLR", = In Pr(x = Oly) = 2y,
+Pr(x = 11y) (J2
+
+(2)
+
+B, Belief Propagation Decoding of Polar Codes
+
+Fig. la illustrates BP decoding on a factor graph repre-
+sentation of P(8, 5). The messages are iteratively propagated
+through the processing elements (PEs) [12] located in each stage. An update iteration starts with a right-to-Ieft message pass that propagates the LLR values from the channel (rightmost) stage, to the information bit (leftmost) stage, and ends with the left-to-right message pass which occurs in the reverse order. Fig, Ib shows a PE with its corresponding messages, where rt,s denotes a left-to-right message, and Zt,s denotes a right-to-Ieft message of the t-th bit index at stage s. Equivalently, BP decoding of polar codes can be
+
+{ r~'k = f(rl,s' Z;,k + rj), rj,k = f(rl,s, Zl,k) + r;,s'
+
+(4)
+
+where j = t + 2s , k = s + 1, and
+
+f(x,y) = 2arctanh (tanh (~) tanh (~)),
+
+(5)
+
+for any x, y E JR. Note that implementing (5) is costly in practice, instead the following approximation of (5) is used in this paper:
+
+f(x, y) ~ j(x, y) = sgn(x) sgn(y) min(lxl, Iyl). (6)
+
+The BP decoding performs a predetermined I max update
+
+° iterations where the messages are propagated through all PEs
+in accordance with (3) and (4). Initially, for :s; t < Nand
+
+'Vi :s; I max , Z: n are set to the received channel LLR values
+
+d,o LLR""
+
+a~e set to the LLR values of the information and
+
+frozen bits as
+
+a, LLRAUAc = { +00,
+
+if tEA, if t E AC.
+
+(7)
+
+All the other left-to-right and right-to-Ieft messages of the PEs
+
+at the first iteration are set to 0, After running I max iterations,
+
+the decoder makes a hard decision on the LLR values of the
+
+t-th bit at the information bit stage to obtain the estimated
+
+message word as
+
+{o ° = A
+Ut
+
++ zI > ,
+
+if
+
+r 1max
+t,O
+
+max
+t,O - ,
+
+(8)
+
+1, otherwise,
+
+In the following sections the vector forms of the left-toright and right-to-Ieft messages at the s-th stage and the i-th iteration are denoted as l~ and r~, respectively, while that of the estimated message word is denoted as fL,
+A CRC is used for BP decoding to either early terminate the BP process [4], or to help select the correct codeword among a list of candidates [6], [7]. However, these CRC utilizations do not take into account the factor graph realization of CRC, on which the BP decoder can be applied.
+
+C Neural BP Decoding
+Neural BP decoding was introduced in [II], [13] to improve the error-correction performance of BP decoding on BoseChaudhuri-Hocquenghem (BCH) codes by assigning trainable weights to the conventional BP decoding, Neural normalized min-sum recurrent neural network (NNMS-RNN) is a powerful variant of neural BP [II] with the following weight
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+"o0=----tt-l__-ft+---+f+-----O Xo
+
+",O=------+----+-<;B--f-*l__---O Xl
+
+"2o=----tt-l__-+--t--f-++H----o Xz
+
+"3
+,o---o'------+-------e~-++_t-ttl__-O
+
+X3
+
+<X\.--,L'-C>---O:------f1+-----f+'I-------+-++_---O X4
+
+~>o-____{j'------+--+-tt+---_+--+-_o
+
+Xs
+
+,O-----<:>'---ft+-+--f--------+--{) X6
+
+'o-----<:>--+----<'--------e~-{)
+
+X7
+
+~-~
+
+CRC factor graph
+
+Polar factor graph
+
+Fig. 2: Factor graph representation of a CRC-polar concatenated code. The polar code is P(8,3) and a 2-bit CRC is used.
+
+assignment scheme for the message update rule of a PE in (3) and (4):
+
+{ l~,s = Wo f-(lti,k' WIrji,-sI + W2 lji,k) ' lj,S = W4 (W3 f-(lti,k' rti,-sI)) + W5 lij,k'
+
+(9)
+
+{ r~'k = wd(r~,s' W7lj,k + wsrj,J,
+
+rj,k = WlO(Wgj(r~,s'
+
+l~,k) + Wnrj,s'
+
+(10)
+
+where W m E ill, (0::; m ::; 11) are the trainable weights. The NNMS-RNN BP decoder suffers from a large number
+of weights which adversely affects its implementation cost. A neural normalized min-sum (NNMS) decoder was used to decode polar codes by only enabling the training for Wo, W3, W6 and Wg, while setting the other weights in (9) and (l0) to 1 [14]. However, the error-correction performance improvement of [14] with respect to the conventional BP is incremental.
+
+III. CRC-POLAR BP DECODING
+In this section, we present the CPBP decoding algorithm which exploits the concatenated factor graph of a polar code and a CRe. Fig. 2 shows the concatenated factor graph of P(8, 3) and a CRC of length 2. We run BP decoding algorithm on the concatenated factor graph to exploit the extrinsic information of the two constituent factor graphs. A similar approach was performed in [8] for a LDPC-polar concatenated code by passing the BP messages between the factor graphs of LDPC and polar code at each iteration. A direct application of the BP decoder in [8] to the CRC-polar concatenated code is not beneficial. This is due to the fact that the LDPC code is only connected to a few pre-selected information bits of polar codes which ensures the extrinsic information received by polar code is reliable enough, even in the initial iterations of BP decoding where the LLR values are not evolved yet. This is not the case for CRC-polar concatenated code since CRC is connected to all the information bits of polar code, some of which are highly unreliable during the early iterations of BP decoding.
+In order to address the above issue, we first run BP decoding on the polar code factor graph for a maximum of I thT iterations and if the BP decoding is not successful after
+
+I d1r iterations, we then continue the BP decoder on the CRCpolar concatenated factor graph. In order to determine if the decoder has succeeded, we use the CRC at each iteration as an early stopping criterion. The proposed decoding algorithm is summarized in Algorithm 1. The LLR vectors l~ and r~ at all stages and iterations are initialized as explained in Section II-B. The BP_PolarLeft and BP_PolarRight functions compute (3) and (4) at all the bit indices to perform the polar right-to-Ieft and left-to-right LLR updates, respectively. The
+lo ro, estimated message word il is obtained at every iteration by
+making a hard decision based on and which is done by executing (8) in the HardDecision function. A CRC is then applied on il and the decoding can be early terminated if the CRC is satisfied. After I d1r iterations, if the decoding is not terminated, BP decoding on the CRC-polar factor graph is carried out in the BP_CRC function. It is worth mentioning that BP decoding after I thr iterations runs on the concatenated CRC-polar factor graph at every iteration.
+
+Algorithm 1: CPBP Decoding Algorithm
+
+Input : I max , I thfl n Output: il
+
+1 Initialize l~, r~ (1 ::; i ::; Imax , 0 ::; s ::; n)
+
+2 for i +--- 1 to I max do
+
+3 for s +--- n - 1 to 0 do
+
+4
+
+L l~ +--- BP_PolarLeft (l~+I,r~-I)
+
+5
+6
+
+Lif i > I thr then rb +--- BP_CRC (lb)
+
+7 il +--- HardDecision (rb + lb)
+
+8 if il satisfies CRC then
+
+9
+
+L Terminate
+
+10 11 12
+
+l L if i ::; I max - 1 then for s +--- 1 to n - 1 do r~ +--- BP_PolarRight (l~,
+
+rLI)
+
+13 return il
+
+Fig. 3 shows the FER performance of the proposed CPBP
+algorithm in comparison with the CRC-aided BP decoder of [4], for the P(128,80) concatenated with the 16-bit CRC,
+which is selected for 5G [3]. In this figure, we set I max E
+{30,200} and we set I thr E {15,30} when I max = 30 and I d1r E {O, 50,100,150, 200} when I max = 200. We denote
+CPBP decoding with parameters I max and I thr as CPBP(Imax,!thr). Note that CPBP-(Imax,!max) is equivalent to the decoder in [4] and CPBP-(Imax,O) is the direct application
+of the approach in [8]. It can be seen that, CPBP-(30,15)
+provides a gain of almost 0.25 dB in comparison with the CRC-aided BP decoder of [4] at the target FER of 10-5 . In
+addition, among the selected I mr for I max = 200, CPBP(200,50) provides the best error-correction performance at the target FER of 10-5 . Furthermore, CPBP-(200, 50) has
+an error-correction performance gain of about 0.75 dB at
+FER = 10-5 in comparison with the CRC-aided BP decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+______ L
+
+.L
+
+.J
+
+_
+
+I
+
+I
+
+, '~~~~-=E======%======3====== ==~===~i=_==_===~:=-==-==:= : : J : : : : : :
+
+__ L
+
+.1
+
+_
+
+I
+----1------1----
+I I
+15
+
+--e---+-
+--A--
+
+5.5
+CPBP·(30,15) CPBP·(200,50) [4] ([max = 200)
+
+6
+--It-
+-+-
+
+6.5 Eb/No [dB]
+[4] ([max = 30) CPBP·(200,100)
+
+7
+-+-e-
+
+7.5
+CPBP·(200,0) CPBP·(200,150)
+
+Fig. 3: FER perfonnance of CPBP decoding for P(128,80) and a 16-bit CRC used in 5G.
+
+of [4]. It is worth mentioning that increasing I max does not improve the error probabilities of the conventional BP decoder
+in [4] at high Eb/No regime. On the contrary, the FER of the
+proposed CPBP decoder is greatly benefited from a high value of l max as observed from Fig. 3.
+We now evaluate the latency of the proposed CPBP decoding scheme and compare it with state-of-the-art. The latency of a BP-based decoder can be measured using the number of time steps required to finish the decoding process [12]. Let us consider the decoding process terminates at iteration lET (1 ~ hT ~ l max ). Then the decoding latency of a conventional BP decoder with early stopping criterion can be represented as
+
+TP,p = (2n - l)(hT - 1) + n.
+
+(11)
+
+The latency of the proposed CPBP decoder depends on when the decoding process terminates and can be represented as
+
+if I ET ~ lthf>
+otherwise. (12)
+In fact, if lET ~ l thr , (12) reverts to (11) since the CPBP decoder tenninates without traversing the CRC factor graph. It should be noted that the worst case latency of the BP decoder and the proposed CPBP decoder can be calculated using (11) and (12) respectively, by setting lET = l max .
+Fig. 4 illustrates the average latency of the proposed CPBP decoding algorithm in comparison with a conventional CRCaided BP decoder of [4] for the same code as in Fig. 3. For the proposed decoders, we set l thr E {15,30} for l max = 30,
+and l thr E {50, 100, 150, 200} for l max = 200. It can be seen
+that the proposed CPBP algorithm incurs negligible latency overhead in comparison with [4], while providing significant performance gain. Moreover, the average latency of the CPBP decoder when l max = 30 is always smaller than that of the
+CPBP decoder when l max = 200. This average latency saving
+is more significant for lower Eb/NO values. Furthermore, the
+
+10 ---
+
+5.5
+
+6
+
+6.5
+
+7
+
+7.5
+
+Eo/No [dB]
+
+--e--
+-+-
+
+7(:1'81"(30,15) 7(:1'81',(200,100)
+
+-If-
+--e-
+
+= T[4J (lma.x 30)
+TCPBP-(200,150)
+
+........ ~
+
+'7CPBP-(200,50)
+= T l4 ] (lmax 200)
+
+Fig. 4: Average decoding latency of CPBP decoding for P(128,80) and a 16-bit CRC used in 5G.
+
+worst case latency of CPBP(200,50) is 2887 time steps, and that of CPBP(30,15) is 407 time steps which is only 14% of the worst case latency of CPBP(200,50). For applications with stringent latency requirements, a small l max is needed. However, the latency saving as a result of a small l max comes at the cost of error-correction performance loss as shown in Fig. 3. In the next section, we propose a method to improve the error-correction performance of CPBP decoding for small values of l max , by using trainable weights.
+
+IV. NEURAL CRC-POLAR BP DECODING
+In this section, we propose the NCPBP decoder to improve the error-correction performance of CPBP decoding. The NCPBP decoder assigns trainable weights to the edges of the CRC-polar concatenated factor graph. Therefore, the NCPBP decoder resembles a neural network architecture by mapping the message updates of CPBP decoding to different computational layers in the neural network. In other words, each computational layer of the neural network is represented either as a set of PEs for BP decoding on the factor graph of polar codes, or as a set of operations required to perform BP decoding on the CRC factor graph. This network architecture greatly simplifies the training process since it can be adapted to recent deep learning frameworks, e.g. Tensorflow [15].
+Fig. 5 depicts the architecture of the proposed NCPBP decoder for P(8,3), with l max = 2 and l thr = O. The architecture contains the unrolled CRC-polar concatenated factor graph. Therefore, the message updates of BP decoding on polar codes at a computational layer is represented as the ones in Fig. lc and Fig. Id. In order to assign the weights
+!f to the parallel PEs at polar code computational layers, we
+represent the product of the weights W3 and W4 in (9), and the product of the weights Wg and WID in (10), as single trainable weights W3,4 and W9,10, respectively. This is due to the fact that the product of two trainable weights can be merged into one as the new weight can also be optimized during training. In addition, we merge the weights WI and W2 in (9) into Wl,2, and the weights W7 and Ws in (10) into W7,S, to further reduce the number of trainable weights. As a result, we define the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+NCPBP Iteration 1
+
+NCPBP Iteration 2
+
+Right-ta-Left Pass
+
+Stage 2
+LLRx
+
+Stage 1
+l~
+
+Stage 0 BP on eRe Factor Graph
+
+[1l
+
+l~
+
+ra
+
+Left-ta-Right Pass
+
+Stage
+o
+
+Stage 1
+
+Right-ta-Left Pass
+
+Stage 2
+
+Stage 1
+
+Stage
+a BP on eRe
+Factor Graph
+
+A polar PE layer
+
+h~
+
+hi h~
+
+~1
+UCRC
+
+h~
+
+hr
+
+ha
+
+~2
+UCRC
+
+X>-X+ Y
+y
+
+1' x----®h ---
+
+l+e x ' 1 - sgn(x)
+
+when training, when testing.
+
+2.
+
+x,y E IRN
+
+A CRC-polar layer
+
+Fig. 5: NCPBP architecture with 1max = 2 and 1thr = 0 for P(8, 3) concatenated with a 2-bit CRC.
+
+weight assignment scheme of a PE in NCPBP decoding as
+
+= WOJ(l~,k' wl,2(rj,s + lj,k))'
+
+(13)
+
+= W3,4J( ltk' d) + w5 lj,k'
+
+= W6 f-(rti ,s' W7,8 (lji,-kI + rij,)s)' = W9,10 f-(rti ,s' lti,-kI) + Wllrji,s'
+
+(14)
+
+For the BP decoding on the CRC factor graph of the proposed NCPBP decoder, we adopt the weight assignment scheme of the NNMS-RNN decoder in [11]. It should be noted that the polar code computational layers share the same set of weights in each iteration of the proposed NCPBP decoding, while this set of weights is different for different iterations. This is illustrated in Fig. 5, in which the layers depicted in the same color indicate that they use the same set of weights. On the contrary, the weights used in all the CRC layers are shared among all the decoding iterations of NCPBP. This is particularly useful in order to limit the number of required weights for NCPBP.
+The NCPBP decoding algorithm starts by a right-to-Ieft message update at iteration 1. At the i-th iteration and the s-th stage of the NCPBP decoder, l~ and T~ denote the LLR vectors of the right-to-Ieft and left-to-right message updates computed by a polar code PE layer, respectively. Furthermore,
+the output LLR vector of the CRC layer is denoted as Tb+l.
+The hard estimated values of all the stages in the polar code factor graph are obtained at the right-to-Ieft message updates, denoted as h~, while the hard estimated values derived from the CRC layer is denoted as UbRC'
+The weights of all the polar code and CRC computational layers are trained using a multiloss function defined as
+
+I max n-l
+
+I max
+
+L = L LHcE(h~,hs)
+
++ L HCE(U~RC'U),
+
+(15)
+
+i=l s=O
+
+i'=Ith.-+1
+
+where H CE is the cross-entropy function, and h s is the correct hard value vector at stage s of the polar code factor graph
+which is obtained from the training samples. Note that in the
+
+testing phase, only the hard estimated values at stage 0 of the polar code factor graph, i.e. hb (1 <:::; i <:::; 1max ), and the
+hard estimated values at the CRC layer, i.e. UbRC' (fthr < i <:::;
+1max ), are required to obtain the decoded message bits.
+We evaluate the proposed NCPBP decoder for P(128, 80) concatenated with a 16-bit CRC which is also used in Section III, and we compare the error-correction performance and latency of NCPBP with those of [4], [11], [14]. All the neural BP-based decoders in this section are trained using stochastic gradient descent with RMSPROP optimizer [16] and the learning rate is set to 0.001. We use Tensorflow [15] as our deep learning framework. Since all the considered neural BP-based decoders satisfy the symmetry conditions [17], we collect 100,000 zero codewords at each Eb/NO value for training, where Eb/NO E {4, 4.5, 5, 5.5} dB. All the weights of all the neural BP-based decoders are initialized to one and all the LLR values are clipped to be in the interval of [-20, 20]. The mini-batch size is set to 64 and each neural decoder is trained for 40 epochs. To evaluate the error-correction performance, randomly generated codewords are used during the testing phase and each decoder simulates at least 10,000 codewords until it obtains at least 50 frames in error.
+Fig. 6 compares the error-correction performance of the proposed NCPBP decoder with state-of-the-art BP-based decoders in [4], [11], [14]. We use the NNMS-1max decoder of [14] and the NNMS-RNN-1max decoder of [11] for our comparisons.
+In all the decoders, we set 1max = 30. At a target FER of
+10-5 , the proposed NCPBP decoder provides about 0.5 dB gain with respect to [4], 0.4 dB gain with respect to [14], and 0.2 dB gain with respect to [11]. Compared to the CPBP decoder of Section III, the proposed NCPBP provides 0.25 dB FER performance improvement.
+Fig. 7 illustrates the average latency requirements of the NCPBP decoder compared to the state-of-the-art decoders in [4], [11], [14]. It can be seen that while the average latency of the NCPBP decoder is similar to that of the decoders in [4], [14], it is always better than that of [11]. In addition, NCPBP incurs almost no latency overhead with respect to the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+10- 3 E-"::"":::T:'"---:_,-,_:""_::""::_-:_,-,_:""_::-:r-_-_"""'=::""::=-:=,-,=:""=::""::=-:=T""_--:::"=-:='-'=:,,"=::""::=-:=,-,=:-:r--:~
+
+=~~=====:=:==:~=:==:=:==:==J=c=:=:==:==:==: : : : : [ : : : : : : : :
+
+- - - -
+
+_ _-~ ~
+
+-------~
+
+L -- ----_
+
+I
+
+________ L
+
+_
+
+- ---------------
+
+-=--=-===='=~=-======j=:==========
+
+- - - - - - - - - - - 1I - - - --
+
+I
+
+I
+
+~~I~~~~~~~~~~~~~~~~~:=~-
+
+~~I~~~~~~~~~~~~~~~~~~~~~~=--
+
+- - - - - - - - - - , --I---------~---------~-----
+
+-------,
+
+-----------~---------~-----------
+
+I
+
+j
+
+I
+
+6
+
+6.5
+
+7
+
+__
+-----
+I
+7.5
+
+-+- -+- -&- L4J (Imax = 30)
+
+NNMS-30 LI4J
+
+NNMS-RNN-30 [IIJ
+
+-e-- CPBP-(30,15)
+
+_ _ NCPBP-(30,15)
+
+Fig. 6: FER performance of NCPBP decoding for P(128, 80) and a 16-bit CRC used in 5G.
+
+TABLE I: Number of weights required by different neural BP decoders.
+
+Decoder
+NNMS-30 [14] NNMS-RNN-30 [II] NCPBP-(30,15)
+
+Number of weights
+3840 11520 8288
+
+requirements and that it can benefit from the CRC which is present in 5G. Our results for a polar code of length 128 with 80 information bits concatenated with a CRC of length 16 show that the proposed NCPBP decoding algorithm obtains up to 0.4 dB error-correction performance improvement with respect to the state of the art, at a target frame error rate of 10-5 , while incurring negligible latency overhead,
+
+30 20
+
+,
+
+I
+
+J
+
+----f------T------l------~--
+
+I
+
+I
+
+I
+
+I
+l
+
+I
+
+I
+
+I
+
+I
+
+I
+
+I
+
+I
+
+I
+
+__
+
+~
+
+~
+
+I
+
+I
+
+I
+
+10 - 5.5
+
+~
+
+= 7[4] (lmax 30)
+
+-e-- TcPBP-(30,15)
+
+6
+-+-
+-If--
+
+6.5
+
+7
+
+7.5
+
+Eo/No [dB]
+
+T NNMS-30 [I4J TNCPBP-(30,15)
+
+-+-
+
+TNNMS-RNN-30 [II]
+
+Fig. 7: Average decoding latency of NCPBP decoding for P(128, 80) and a 16-bit CRC used in 5G,
+
+proposed CPBP decoder while having a notably smaller error probability.
+Table I shows the number of weights required for the proposed NCPBP decoder in comparison with the neural BP decoders of [11], [14]. The proposed NCPBP decoder requires 28% fewer weights with respect to the decoder in [11]. The decoder in [14] requires 46% of the weights that is required by the proposed NCPBP decoder, However, the smaller number of weights in [14] results in significant errorcorrection performance loss as shown in Fig. 6.
+V. CONCLUSION
+In this paper, we first proposed a cyclic redundancy check (CRC)-polar belief propagation (BP) (CPBP) decoding algorithm which exploits concatenated factor graphs of polar codes and CRC, by passing the extrinsic information between the two factor graphs, We showed that the proposed CPBP decoding brings significant error-correction performance improvements in comparison with a conventional BP decoder when a large maximum number of BP iterations is used. We further proposed a neural CPBP (NCPBP) decoding algorithm which further improves the error probabilities of CPBP by assigning trainable weights to the edges of the CRC-polar concatenated factor graph. We showed that the NCPBP decoding algorithm can be used in applications which require stringent latency
+
+REFERENCES
+[I] E, Ankan, "Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels," IEEE Trans. In! Theory, vol. 55, no. 7, pp. 3051-3073, July 2009.
+[2] I. Tal and A, Vardy, "List decoding of polar codes," IEEE Trans. Inf. Theory, vol. 61, no. 5, pp, 2213-2226, March 2015,
+[3] 3GPP, "Multiplexing and channel coding (Release 10) 3GPP TS 21.101 v10.4.0," Oct. 2018, [Online]. Available: http://www.3gpp.org/ftp/SpecsI2018-09/Rel-10121_seriesI211 0 l-a40.zip
+[4] Y. Ren, C. Zhang, X. Liu, and X. You, "Efficient early termination schemes for belief-propagation decoding of polar codes," in IEEE 11th Int, Con! on ASIC, Nov 2015, pp. 1--4.
+[5] S. Sun, S. Cho, and Z. Zhang, "Post-processing methods for improving coding gain in belief propagation decoding of polar codes," in 2017 IEEE Glob. Commun. Con!, Dec 2017, pp. 1-6.
+[6] A. Elkelesh, M, Ebada, S. Cammerer, and S, ten Brink, "Belief propagation decoding of polar codes on permuted factor graphs," in IEEE Wireless Commun. and Net. Con!, April 2018, pp. 1-6.
+[7] N. Doan, S. A, Hashemi, M, Mondelli, and W. J. Gross, "On the Decoding of Polar Codes on Permuted Factor Graphs," ArXiv e-prints, Jun. 2018. [Online]. Available: https://arxiv.org/abs/1806.11195
+[8] J. Guo, M, Qin, A. G, i Fabregas, and P, H. Siegel, "Enhanced belief propagation decoding of polar codes through concatenation," in IEEE Int, Symp. on In! Theory, June 2014, pp. 2987-2991.
+[9] S, M, Abbas, Y. Fan, J, Chen, and C. Tsui, "Concatenated LDPCpolar codes decoding through belief propagation," in IEEE Int. Symp. on Circuits and Systems, May 2017, pp, 1--4,
+[10] A. Elkelesh, M. Ebada, S, Cammerer, and S. ten Brink, "Improving belief propagation decoding of polar codes using scattered exit charts," in IEEE Inf. Theory Workshop, Sept 2016, pp. 91-95,
+[II] E, Nachmani, E, Marciano, L. Lugosch, W. J, Gross, D, Burshtein, and Y. Be'ery, "Deep learning methods for improved decoding of linear codes," IEEE J, of Sel. Topics in Signal Process" vol. 12, no. I, pp, 119-131, February 2018.
+[12] E. Ankan, "Polar codes: A pipelined implementation," in Proc, 4th Int. Symp, on Broad. Commun., 2010, pp. 11-14.
+[13] L. Lugosch and W. J. Gross, "Neural offset min-sum decoding," in IEEE Int Symp. on In! Theory, August 2017, pp. 1361-1365.
+[14] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, "Improved polar decoder based on deep learning," in IEEE Int. Workshop on Signal Process, Syst" November 2017, pp, 1-6,
+[15] M, Abadi, P. Barham, J. Chen, Z. Chen, A. Davis et aI., "Tensorflow: A system for large-scale machine learning," in Proc. 12th USENIX Con! on Operating Systems Design and Impl., ser. OSDI' 16, USENIX Association, 2016, pp, 265-283,
+[16] G. Hinton, N. Srivastava, and K. Swersky, "Neural networks for machine learning lecture 6a overview of mini-batch gradient descent." [Online], Available: https://cs.toronto.edu/csc321/slides/lecture_slides_lec6.pdf
+[17] T. J. Richardson and R. L. Urbanke, "The capacity of low-density paritycheck codes under message-passing decoding," IEEE Trans, Inf. Theory, vol. 47, no. 2, pp. 599-618, Feb 2001.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:29:57 UTC from IEEE Xplore. Restrictions apply.
+
+

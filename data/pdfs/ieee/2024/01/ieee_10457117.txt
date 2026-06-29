@@ -1,0 +1,227 @@
+2024 International Conference on Electronics, Information, and Communication (ICEIC) | 979-8-3503-7188-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/ICEIC61013.2024.10457117
+
+Lightweight Error Correction for In-Storage Acceleration of Large Language Model Inference
+Jinwoo Jeong1, Byungmin Ahn2, Dongmin Shin2, Jungwook Choi1† 1Department of Electronic Engineering, Hanyang University, Seoul, Korea
+2Samsung Electronics, Hwaseong, Korea
+
+Abstract—As large language models (LLMs) expand their sizes, conventional GPU-based LLM inference systems face memory bandwidth and capacity limitations. An LLM inference accelerator using NAND flash storage has been proposed to overcome these challenges. However, this necessitates a significant expansion of flash channels to ensure adequate bandwidth for inference, subsequently escalating error correction code (ECC) costs. This paper examines the impact of flash memory errors on LLM inference accuracy and explores the possibility of lightweight ECC by leveraging LLM’s inherent error resilience. We analyze the impact of 1) high-order bit indices masking for FP32 LLM parameters, 2) clipping, and 3) a dependency by parameter type of error robustness, and show that a combination of them can reduce ECC bandwidth by up to 9.38%.
+Index Terms—large language model, error correction code, NAND flash errors
+I. INTRODUCTION
+Efficiently inference of large language models (LLMs) has become vital in natural language processing tasks like text summarization, understanding, and generation. Transformerbased generative models, with their extensive parameters (e.g., 175B for GPT-3 and 530B for MT-NLG), demand significant memory capacity and bandwidth. These demands challenge the efficiency of GPU implementations: a single GPU often does not have enough DRAM capacity to accommodate these complete models and multi-GPU inference introduces considerable data communication overheads.
+NAND flash-based in-storage processing is gaining traction as it addresses both capacity and bandwidth requirements. Previous research [1], [2] extends flash channels to 128 or more to ensure adequate bandwidth for retrieving parameters from flash memory. However, this extension poses a serious problem for storage systems. In particular, sophisticated error correction code (ECC) engines are required to ensure data reliability in NAND Flash-based devices, and the hardware cost of the flash channel controller increases proportionally with the bandwidth to ensure the integrity of all data.
+†Corresponding Author (choij@hanyang.ac.kr)
+This work was supported by Samsung Electronics Co., Ltd (IO221213-0411901). And also this work was supported by the National Research Foundation of Korea(NRF) grant funded by the Korea government(MSIT) (No. RS2023-00260527), and Institute of Information & communications Technology Planning & Evaluation (IITP) under the artificial intelligence semiconductor support program to nurture the best talents (IITP-2023-RS-2023-00253914) grant funded by the Korea government(MSIT).
+
+To reduce the ECC overhead in bandwidth-enhanced flash storage systems, a viable strategy is to leverage the error patterns inherent to specific applications. Traditionally, ECC is structured to offset the most severe errors arising from imperfections and failures in flash-memory devices. Yet, if certain applications, like LLMs, naturally are tolerant to errors, this resilience can be harnessed to streamline ECC, thereby decreasing the associated hardware implementation costs. In particular, LLM uses an over-parameterization strategy that increases the number of trainable parameters to improve LLM’s accuracy. The important point is that over-parameterization allows the network to achieve a certain level of error resilience [3], which presents many opportunities for ECC.
+In this study, we assess how flash memory errors affect the accuracy of LLM inference. Our goal is to understand if the intrinsic error tolerance of LLMs can be used to reduce the need for extensive error correction. By doing so, we aim to simplify the hardware demands of ECC, a critical component for SSDs.
+II. BACKGROUND AND RELATED WORK
+A. Reliability for NAND Flash Memory
+The cause of errors in flash memory is essentially charge leakage due to wear on flash cells. The wear of flash cells becomes more severe as program/erase (P/E) cycles accumulate, and the raw bit error rate (RBER) increases exponentially. To ensure the reliability of flash-based systems, ECC must keep the uncorrectable bit error rate (UBER) below 10−15. When RBER is low, the cost of keeping UBER low is not significant, but as RBER increases, it becomes more difficult to achieve UBER requirements. High-performance low-density parity check (LDPC) code commonly used in modern SSDs can maintain reliability until RBER reaches 10−2 when performing corrections using soft information [4]. When RBER exceeds the threshold, a data recovery mechanism is triggered [5]. However, such a data recovery technique significantly degrades read performance, making it challenging for SSDs to ensure QoS. Therefore, the corresponding RBER can be assumed to be the maximum BER that can occur in a flashbased memory system.
+B. Parameter Configuration of LLMs
+Most of the modern LLMs are based on Transformer structures. Transformers represent associations between tokens with high accuracy through a mechanism called self-attention.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:17:15 UTC from IEEE Xplore. Restrictions apply.
+
+Paying attention to previous tokens makes more correctly infer the next token. Additionally, multi-head attention divides an embedding vector by the number of heads and performs attention operations on each sub-vector. This significantly improves general performance and makes it robust against loss or noise. Parameters of Transformers consist of an embedding table, normalization, and linear transformation weights such as attention or feed-forward networks. An embedding table refers to a look-up table that converts tokens into embedding vectors and vice versa. Normalization parameters are responsible for properly scaling input vectors to avoid underfitting/overfitting. Parameters of attention and feed-forward networks are used to perform simple linear transformations.
+C. Related Work
+DNN inference accuracy is dependent on where the bit errors occur. [6], [7] mitigate the ECC requirement by polarizing the reliability of MSBs and LSBs in the weights. In MLC or TLC NAND flash memory, LSB pages and MSB pages have different reliability, so error-sensitive MSBs of weight are stored in LSB pages, and error-tolerant LSBs of weight are stored in MSB pages in NAND flash. Furthermore, the LSBs are modified so that the MSBs are stored in the least errorprone state. While the LSBs are stored in flash memory with an artificial error added, the MSBs benefit from being stored in SLC mode. Applying polarization techniques to MLCs [6] shows that they can withstand more than 16K P/E cycles without ECC.
+In addition, most weights in DNN models tend to map within a certain range. To capitalize on this property, [8] stores data in an 8-bit integer format by changing it to a sign-magnitude representation. This way, the top two bits, excluding the sign, become fixed values with a high probability and can be treated as known values to maintain high inference accuracy without protecting them with ECC.
+Existing research proposes techniques to minimize the loss of weights for bit errors in flash memory. As a result, the tolerable error margin is set naively or minimally. However, LLM employs a strategy to improve performance with overparameterization. The number of parameters is expected to continue to grow, and the resulting error robustness scales with it. To design cost-effective ECC schemes, we need to quantify the tolerable error bandwidth and correlate it with the number of parameters.
+III. METHODOLOGY
+A. Flash Error Condition
+To ensure the integrity of the data that affects inference accuracy, we set an RBER as 10−2 based on modern SSDs. As discussed in Sec. II-A, ECC for NAND flash memory can satisfy reliability requirements when using soft-decision LDPC until an RBER reaches 10−2. By admitting errors under these harsh conditions, we can validate error robustness that can be leveraged over the lifetime of the flash memory.
+
+Fig. 1. Frequency of 1’s Occurrence on Exponent Bits.
+
+B. Factors Affecting LLM Accuracy
+Since bit errors occur randomly by nature, it is difficult to get reliable results if they are not controlled. Therefore, we will analyze the factors that can cause large deviations in LLM accuracy and explain how to control the corresponding errors.
+1) Accuracy Collapse: LLMs are typically trained with 32bit floating point (FP32) data type. The FP32 consists of 1 bit of sign, 8 bits of exponent, and 23 bits of mantissa, which are converted to real numbers using equation (1).
+23
+value = (−1)sign · 2(exp−127) · (1 + mant2[23 − i] · 2−i)
+i=1
+(1) Intuitively, bit errors in the sign and exponent would be catastrophic to accuracy due to their large error magnitude. Table I shows the change in inference accuracy when injecting localized errors in each part of the GPT2 small model based on FP32. As expected, errors injected at high-order bit indices cause accuracy collapse even at low BERs. However, as the order of the bit index in which errors are injected decreases, the number of errors that can be tolerated increases, and the perplexity tends to decrease. This suggests that there is a certain level of error capacity that LLM can tolerate. Therefore, we apply a bit index masking that incrementally expands the number of error-masked bits starting from the MSB. The number of masked bits is called the bit index masking level, which means the required ECC bandwidth.
+
+TABLE I ACCURACY COLLAPSE ON FP32
+
+Error Injected Part
+Sign Exp(7) Exp(6:0) Mantissa
+
+no-err
+29.94 29.94 29.94 29.94
+
+Bit Error Rate
+
+1e-8 1e-7 1e-6
+
+1e-5
+
+29.94 32.19 1.6e+27 4.3e+30
+
+inf
+
+inf
+
+inf
+
+inf
+
+29.94 30.29 40.92 8.9e+11
+
+29.94 30.29 33.66 50.13
+
+(perplexity, the lower the better)
+
+2) Weight Magnitude Clipping: As shown in Fig. 1, the frequency of occurrence of a fixed value in the upper 5 bits of the exponent is greater than 84%. This is because the parameters are constrained to values within a certain range through various regularization techniques during the training
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:17:15 UTC from IEEE Xplore. Restrictions apply.
+
+process. Storage can take advantage of this characteristic to treat those bits as known values and exclude them from needing to be protected by ECC. By clipping all parameters so that they fall between 0.0078125 and 2, the upper 5 bits of the exponent are fixed at a frequency of 100%. However, since the parameters being clipped are a small number of outliers which has a relatively large magnitude, accuracy can be compromised. And there may even be serious side effects if errors are injected, so validation is required.
+3) Parameter Diversity: As mentioned in Sec. II-B, there are different kinds of parameters in LLM, and different kinds of parameters have different sensitivities to errors. According to [9], an embedding layer requires mixed-precision quantization because the contribution of different vocabularies in the table varies greatly. On the other hand, weights for linear transformation are relatively loss-robust, allowing for more aggressive quantization [10], [11]. These differences in robustness by parameter type can be similarly seen when NAND flash errors are injected. Identifying and separately protecting error-sensitive parameter types can increase the robustness of the overall model.
+We experiment in three steps to understand the impact of each factor on the error robustness of LLM. First, we find the minimum masking level by using incrementally expansion of the bit index masking region. Second, we repeat the first step to the clipped model to check for the effects of clipping. Third, we apply a layer error mask to three types of parameters, namely embedding, normalization, and linear transformation, to understand the error sensitivity of each parameter. Finally, we put them all together to find a combination that minimizes the ECC bandwidth.
+IV. EXPERIMENTS
+A. Simulation Framework
+1) Language Model Configuration: We conduct error injection tests on models of the GPT2 series, one of the popular LLMs. The configurations of GPT2 models are shown in Table II, and small, medium, large, and X-large are referred to as S, M, L, and XL for short. The evaluation dataset is Wikitext and the accuracy metric is perplexity.
+
+TABLE II GPT2 MODEL CONFIGURATIONS
+
+GPT-2
+Small (S) Medium (M) Large (L) X-Large (XL)
+
+Embedding dimension
+768 1024 1280 1600
+
+Layers
+12 24 36 48
+
+Heads
+12 16 20 25
+
+Params (millions)
+162.52 379.71 785.64 1552.57
+
+2) Error Model: For more reasonable experiments, we generate errors based on a retention loss model [12] of MLC 3D NAND flash memory. This model can derive the threshold voltage distribution and the read reference voltage for each program state based on the P/E cycle and retention time. Since
+
+Fig. 2. GPT2 accuracy across different bit index masking levels (x-axis)
+the goal of this study is to find the minimum bandwidth that must be protected with ECC, we assume an environment with harsh RBER conditions as described Sec. II-A. Based on the NAND flash memory error model, this RBER can be reached when the retention time is more than one day for P/E cycles of 16K or more, or when the retention time is four months for P/E cycles of 11K or more.
+B. Minimum Masking Level
+Fig. 2 shows the results of the first step. It can be seen that inference accuracy is maintained starting from 12/11/8/7 levels of error masking for the GPT2 S/M/L/XL models, respectively. In other words, GPT2 small needs to mask up to the third bit of the mantissa to maintain inference accuracy, while GPT2 XL can tolerate errors in the lower 2 bits of the exponent and still maintain inference accuracy. It means that increasing the model size by overparameterization increases the tolerable error capacity. Additionally, even the relatively small GPT2 S model has only 37.5% of the required ECC bandwidth.
+C. Impact of Clipping
+Table III shows the degradation in inference accuracy when clipping fixes the upper 5 bits of the exponent. Large models like GPT2-L/XL do not show much difference from before clipping, with clipping losses only slightly amplified at the
+
+TABLE III ACCURACY DEGRADATION BY CLIPPING
+
+Model
+GPT2-S GPT2-M GPT2-L GPT2-XL
+
+No Error
+30.33 (+0.39) 22.17 (+0.46) 19.56 (+0.12) 17.87 (+0.47)
+
+Masking Level
+
+7
+
+8
+
+9
+
+-
+
+41.15 (-)
+
+33.48 (-)
+
+-
+
+27.93 (-)
+
+23.43 (-)
+
+30.57 (+3.16) 20.52 (+0.18) 19.77 (+0.13)
+
+32.06 (+12.17) 18.52 (+0.53) 18.08 (+0.58)
+
+*(-) means accuracy collapse.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:17:15 UTC from IEEE Xplore. Restrictions apply.
+
+minimum masking level. On the other hand, smaller models like the GPT2-S/M have improved error robustness, allowing them to maintain inference accuracy even when the minimum masking level is reduced to 8 or 9. This shows that clipping can improve confidence at the expense of accuracy, so by increasing the bit index masking level by one bit and applying clipping, we can increase the confidence of the LLM while reducing the ECC bandwidth.
+D. Impact of Layer Masking
+Layer masking to account for parameter diversity improves error robustness for all models. As shown in Table IV, GPT2S/M can reduce the minimum masking level to 8 through embedding layer masking, and GPT2-L/XL can improve perplexity through embedding, and normalization masking. Linear transformation weight accounts for most of the model parameters. Therefore, the number of errors that can be reduced by layer masking is large, but the perplexity improvement is too small. Considering that the cost of layer masking is ECC bandwidth, the reasonable targets for layer masking are the embedding layer and normalization parameters.
+
+TABLE IV ACCURACY IMPROVEMENT BY LAYER MASKING
+
+Model
+GPT2-S GPT2-M GPT2-L GPT2-XL
+
+Min. Masking Level
+8 8 7 7
+
+Baseline
+29.94 21.71 19.44 17.40
+
+Embed.
+
+Layer Masking L.T.
+
+Norm.
+
+34.50 (-)
+
+-
+
+-
+
+23.47 (-)
+
+-
+
+-
+
+22.62 (-4.77) 25.74 (-1.68) 21.76 (-5.65)
+
+19.28 (-0.60) 18.25 (-1.64) 18.66 (-1.22)
+
+*(-) means accuracy collapse.
+
+E. Minimum Required ECC Bandwidth
+Masking errors of an embedding layer allows accuracy to be maintained at higher error tolerances, but the cost of protecting an embedding in terms of ECC bandwidth is significant. Especially, an embedding layer takes up a large percentage of a small model. Table V shows the ECC bandwidth reduction and accuracy degradation by model size. Required ECC bandwidth refers to the bandwidth that needs to be masked after clipping.
+
+TABLE V TRADEOFF BETWEEN ECC BANDWIDTH AND INFERENCE ACCURACY
+WHEN TOLERATING BIT ERRORS
+
+Layer Masking
+Yes
+No
+
+Model
+GPT2-S GPT2-M GPT2-L GPT2-XL GPT2-S GPT2-M GPT2-L GPT2-XL
+
+Min. Masking Level
+8 8 8 7 9 9 8 8
+
+Required ECC Bandwidth
+33,14% 20.50% 15.76% 10.40% 12.50% 12.50% 9.38% 9.38%
+
+Accuracy Degradation
+33.24 (+3.30) 23.54 (+1.83) 19.83 (+0.39) 18.79 (+1.39) 33.48 (+3.54) 23.43 (+1.72) 20.52 (+1.08) 18.52 (+1.12)
+
+Masking the embedding layer increases the required ECC bandwidth despite the reduced masking level of other weights. On the other hand, the embedding layer takes up a small percentage of a large model. As the model grows, the embedding layer takes up a smaller percentage of the model and requires relatively less ECC bandwidth to mask it. This suggests that the required ECC bandwidth reduction techniques we propose will become increasingly efficient for LLMs, which continue to grow in model size due to overparameterization.
+V. CONCLUSION
+This research has shown that the hardware cost of NAND flash-based inference systems can be reduced by reducing ECC bandwidth by leveraging the error robustness of LLMs. The error robustness of the LLM increases with the depth of the layer, and the tolerable error range also increases. Among the parameters that make up the LLM, the embedding layer is the most sensitive to errors, but the impact becomes less and less as the model gets deeper. In addition, applying clipping techniques can effectively reduce the ECC bandwidth. In conclusion, for the GPT-XL model, protecting only 9.38% of the bandwidth is sufficient to maintain high inference accuracy until 16K P/E cycles of MLC NAND flash memory.
+REFERENCES
+[1] Y. Jin, S. Kim, T. J. Ham, and J. W. Lee, “Architecting a flash-based storage system for low-cost inference of extreme-scale dnns,” IEEE Transactions on Computers, vol. 71, no. 12, pp. 3153–3164, 2022.
+[2] S. Kim, Y. Jin, G. Sohn, J. Bae, T. J. Ham, and J. W. Lee, “Behemoth: A flash-centric training accelerator for extreme-scale DNNs,” in 19th USENIX Conference on File and Storage Technologies (FAST 21), pp. 371–385, USENIX Association, Feb. 2021.
+[3] R. Novak, Y. Bahri, D. A. Abolafia, J. Pennington, and J. Sohl-Dickstein, “Sensitivity and generalization in neural networks: an empirical study,” 2018.
+[4] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in 11th USENIX Conference on File and Storage Technologies (FAST 13), (San Jose, CA), pp. 243–256, USENIX Association, Feb. 2013.
+[5] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash memory based solidstate drives,” 2017.
+[6] J. Jang and J. H. Ko, “WISER: Deep Neural Network Weight-bit Inversion for State Error Reduction in MLC NAND Flash,” in 2021 Design, Automation & Test in Europe Conference & Exhibition (DATE), pp. 735–738, IEEE, 2021.
+[7] Y. Deguchi, T. Nakamura, A. Hayakawa, and K. Takeuchi, “3-D NAND flash value-aware SSD: error-tolerant SSD without ECCs for image recognition,” IEEE Journal of Solid-State Circuits, vol. 54, no. 6, pp. 1800–1811, 2019.
+[8] S.-S. Lee and J.-S. Yang, “Value-aware Parity Insertion ECC for Faulttolerant Deep Neural Network,” in 2022 Design, Automation & Test in Europe Conference & Exhibition (DATE), pp. 724–729, 2022.
+[9] I. Chung, B. Kim, Y. Choi, S. J. Kwon, Y. Jeon, B. Park, S. Kim, and D. Lee, “Extremely low bit transformer quantization for on-device neural machine translation,” CoRR, vol. abs/2009.07453, 2020.
+[10] T. Dettmers, M. Lewis, Y. Belkada, and L. Zettlemoyer, “Llm.int8(): 8-bit matrix multiplication for transformers at scale,” 2022.
+[11] E. Frantar, S. Ashkboos, T. Hoefler, and D. Alistarh, “Gptq: Accurate post-training quantization for generative pre-trained transformers,” 2023.
+[12] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,” Proceedings of the ACM on Measurement and Analysis of Computing Systems, vol. 2, no. 3, pp. 1–48, 2018.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:17:15 UTC from IEEE Xplore. Restrictions apply.
+
+

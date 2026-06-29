@@ -1,0 +1,353 @@
+2017 IEEE Computer Society Annual Symposium on VLSI
+
+A Multi-Gbps Fully Pipelined Layered Decoder for IEEE 802.11n/ac/ax LDPC Codes
+Saleh Usman, Mohammad M. Mansour, Ali Chehab Department of Electrical and Computer Engineering American University of Beirut Beirut 1107 2020, Lebanon {sau00, mmansour, chehab}@aub.edu.lb
+
+Abstract—This paper presents a fully pipelined layered decoder architecture for IEEE 802.11n/ac/ax LDPC codes, free of idle cycles. Several decoder architectures for such codes have emerged in the literature featuring throughputs in the multiGbps range. The proposed architecture surpasses the highest reported throughput for IEEE 802.11n/ac/ax LDPC codes. This is achieved 1) algorithmically, by implementing the layered LDPC decoding schedule, and 2) architecturally, by optimizing registerbased memories for IEEE 802.11n/ac LDPC codes and implementing an idle-cycle-free pipelined single-codeword datapath decoder. Register-based memories provide full bandwidth access to read and write all messages of a layer in one clock cycle. Single-codeword processing in the datapath significantly reduces memory overhead compared to other architectures that process multiple codewords to boost throughput at the expense of a larger footprint. The proposed architecture is synthesized in 40 nm CMOS process for IEEE 802.11n/ac, rate 1/2 LDPC codes. The decoder occupies an area of 0.38 mm2, runs at a frequency of 780 MHz, and achieves a throughput of 4.2 Gbps.
+Index Terms—LDPC Codes, turbo-decoding of LDPC codes, layered decoding architectures, IEEE 802.11n/ac/ax LDPC codes
+I. INTRODUCTION
+LDPC codes have become the coding scheme of choice for high performance error correction codes in many IEEE standards like 802.11n/ac/ax (WiFi), 802.11ad (WiGig) [1], [2], owing to their near-optimal performance [3]. For LDPC decoding, mainly two types of schedules are employed. One is Gallager’s standard message-passing (SMP) technique, known as the flooding schedule [4], and which consists of two distinct phases. In one phase, all variable nodes are updated, and then in the second, all the check nodes are updated. This technique was originally proposed by Gallager [4], and later used by Mackay [5] in his rediscovery of LDPC codes.
+In layered decoding [7], on the other hand, message computations carried out in one phase (say variable nodes) are immediately propagated to the other phase (connected check nodes in this case). This immediate information exchange between the two phases improves the convergence speed of layered decoders by roughly a factor of two compared to SMP decoders at high signal-to-noise ratio (SNR) [6]. Layered decoders are further divided into two types, known as row MP (RMP) decoders [7] and column MP (CMP) decoders [8], based on whether the row or column order of the parity-check matrix is followed in the decoding process. A recently pro-
+
+posed layered decoder has combined the effect of both RMP and CMP decoders and thus has improved the convergence speed of the LDPC decoder by a factor of four compared to SMP decoders [9].
+Existing architectures for high throughput LDPC decoders implement one of the three aforementioned schedules. SMP is preferred in several architectures despite its slower convergence speed to avoid the complexity of passing interdependent messages between the two types of nodes [10], [11], [12]. On the other hand, layered decoder implementations are logical option for high throughput applications like 802.11 ac/ax (WiFi), to cut the number of iterations required for decoding. To this end, several layered decoder architectures emerged which implement either the RMP or CMP schedules [14], [16]. There are two clear benefits of implementing RMP over CMP. Firstly, RMP allows memory efficient implementation of the decoder [13] and secondly it requires less number of cycles than CMP to complete one decoding iteration [18]. This is because of the property of SPCM which always has less number of rows than number of columns.
+To achieve a throughput of LDPC decoders in the Gbps range, memories-based designs become inefficient because a large number of small memory banks is required for the targeted throughput [11]. Registers-based memories are more convenient to get full bandwidth access as well as to be used as pipeline registers for one pipeline stage. For IEEE 802.11n/ac LDPC codes, not all the memory locations are needed to be accessed by each read and write port, because of SPCM structure, so the reading and writing circuitry can also be optimized for the registers-based memory designs to be used in LDPC decoders.
+Pipelining of layered decoders involves interdependent message passing between the two types of processing nodes of the decoder. The interdependency either introduces idle cycles or slows down the convergence speed. Idle cycles are introduced because of the wait time required to get updated messages from the previous layer, before starting the processing of a new layer [19]. Decoding more than one frame simultaneously is a solution to remove the idle cycles but this approach introduces memory overhead which is multiplied by the number of frames being processed simultaneously [20].
+
+2159-3477/17 $31.00 © 2017 IEEE
+
+194
+
+DOI 10.1109/ISVLSI.2017.42
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+To fully remove the idle cycles, a tradeoff on convergence speed is necessary but the effect could be minimized by selecting a shorter pipeline depth. There are few fully pipelined idle-cycle-free RMP based decoder architectures for IEEE 802.11n/ac LDPC codes but their throughputs are in Mbps range, especially for small block lengths [18], [21]. Like in [21], a pipelined RMP decoder for IEEE 802.11n/ac LDPC codes achieves a throughput of 541 Mbps for the block length of 648. The highest reported throughput for IEEE 802.11n/ac, rate 1/2 LDPC codes, is 1.76 Gbps and is presented in [20]. However, this architecture processes multiple frames and therefore introduces a memory overhead which is proportional to the number of frames being processed.
+This paper proposes fully pipelined, idle-cycle-free, RMP based decoder architecture for IEEE 802.11n/ac, rate 1/2 LDPC codes with throughput in the Gbps range. The architecture implements registers-based memories, optimized for IEEE 802.11n/ac, rate 1/2 LDPC codes to achieve targeted throughput while processing one frame at a time to avoid any memory overhead and thus getting smaller footprint. Reduction in the convergence speed of the proposed architecture is minimized by balancing it carefully with the pipeline depth. To this end, the impact of the pipeline depth on the convergence speed of IEEE 802.11n/ac LDPC code is assessed via simulations and presented in the paper. Based on this observation, an architecture with pipeline depth of 3 is developed for IEEE 802.11n/ac, rate 1/2 LDPC codes. The proposed decoder is synthesized using 40 nm CMOS process and achieves a throughput of 4.2 Gbps while occupying a chip area of 0.38 mm2. The performance of both parameters is several order better than the reported work with highest throughput in [20].
+The remainder of the paper is organized as follows. Background material related to SMP, CMP, and RMP schedules, IEEE 802.11n/ac LDPC codes, and check node computations is presented in Section II. Analysis of the effect of pipeline depth on convergence speed of IEEE 802.11n/ac LDPC codes is presented Section III. The proposed architecture is described in IV. Simulation and synthesis results are given in Section V. Finally, Section VI concludes the paper.
+II. BACKGROUND
+LDPC codes are either represented by a sparse parity-check matrix, or defined by a sparse bipartite Tanner graph consisting of variable nodes and check nodes. Variable nodes in the Tanner graph represent columns of the SPCM, and check nodes are associated with rows of the SPCM. Consider an LDPC code having N variable nodes and M check nodes in its associated Tanner graph with dm as degree of variable nodes and the degree of check nodes is dc. Let Pji denote the message computed at the jth variable node corresponding to the ith check node, and Lij be the message computed at ith check node for the jth variable node. Message computations based on the standard message passing scheduling algorithm is described next.
+
+A. Standard Message Passing (SMP)
+SMP scheduling based on a flooding scheme updates message and check nodes in two phases as follows (e.g., see [7]):
+Phase 1: Update all check node messages according to equation (1).
+
+Lij = Ψ−1
+
+Ψ(|Pj i|) ,
+
+(1)
+
+j ∈R[i]\j
+
+where Ψ(x) 0.5 log(tanh(x/2)) = Ψ−1, and R is the set of variable nodes connected to the check node. Note that the summation does not include the message of the variable node pertaining to the check node being updated.
+Phase 2: Update all variable nodes using the equation
+
+Pji = LLR[j] +
+
+Li j ,
+
+(2)
+
+i ∈C[j]\i
+
+where C is the set of check nodes connected to the variable node, and LLR’s are log-likelihood ratios (LLR) of the received channel values. As in Phase 1, the summation does not include the check node for which we are calculating the variable node value.
+For decision making in the final iteration, all check node messages are included in the summation in evaluating (2), i.e.,
+
+Λ[j] LLR[j] +
+
+Li j .
+
+(3)
+
+i ∈C[j]
+
+Here, the Λ’s denote updated channel LLR values at the end of the final decoding iteration. Hard decisions about the bits are then made based on the sign of the Λ LLR values.
+
+B. Column Message-Passing (CMP)
+This scheduling starts from the first variable node and computes its message using equation (2). Then, instead of proceeding to the second variable node, all check nodes connected to this variable node are updated first using equation (1) without waiting for the next iteration. This process of evaluating each variable node and immediately updating connected check nodes is repeated for all variable nodes in one iteration. Decision making process in the final iteration is based on evaluating (3) as in SMP.
+
+C. Row Message Passing (RMP)
+In row message-passing, decoding proceeds row-wise instead of column-wise, i.e., check node messages are computed using (1), and then all of its connected variable nodes are updated immediately using equation (2). This process is repeated for all check nodes, in one iteration. Compared to CMP, this scheme has the advantage that it involves additional computations at variable nodes that are much less expensive than check node computations. Moreover, this scheme can also be implemented in a memory efficient way [15].
+
+195 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+D. Check Node Computations
+Computing Ψ(x) in (1) is not straightforward in hardware implementations of the check node. Several low-complexity variants of (1) have been proposed in the literature [22]. The most suitable for hardware implementations is the offset minsum approximation, which is given as:
+
+Lij = max ( min |Pj i|)−β, 0
+
+(sign(Pj i)) (4)
+
+j ∈R[i]\j
+
+j ∈R[i]\j
+
+Here β is a correction factor which is to be determined empirically, and R is the set of variable nodes connected to the check node.
+
+E. LDPC Codes for IEEE 802.11n/ac (WiFi)
+
+IEEE 802.11n/ac LDPC codes support three block lengths N = 648, N = 1296 and N = 1944 and for each block length there are four code rates: R = 1/2, R = 2/3, R = 3/4 and R = 5/6 as defined in [1]. SPCM of a particular code is defined using a base matrix and a sub-block size (z). SPCM for rate 1/2 and N = 648 is shown in Fig. 1. Each entry in the base matrix represents a z × z sub-matrix. Every number in the base matrix represents the amount of circular shift given to the corresponding z × z identity matrix while each dash(-) corresponds to a z × z all zero matrix.
+
+Fig. 1. Sparse parity check matrix for N = 648, rate 1/2, and sub-matrix size z = 27
+III. DECODING PERFORMANCE EVALUATION
+In idle-cycle-free pipelined implementations of the layered LDPC decoder, the convergence speed of the decoder becomes slower because the availability of new check node values gets delayed at variable nodes. This delay is directly related to the pipeline depth of the decoder. To evaluate the loss in convergence speed as a function of the pipeline depth, floatingpoint pipelined implementations of IEEE 802.11n LDPC codes for block length 648 bits and rate 1/2 are simulated and compared against a non-pipelined (standard RMP) version. As shown in Figs. 2 and 3, the design is simulated for up to three pipeline stages. The figures show that, a pipeline depth of three is an adequate compromise between the convergence speed and pipeline depth of the proposed architecture.
+Three other design parameters that impact the decoding performance of the architecture are also investigated: word length (WL) and fraction length (FL) of quantization bits, check node correction factor β, and maximum number of iterations (Imax). Figs. 4 and 5 show simulation plots with design parameters of Imax = 10, β = 0.5, WL = 8, and FL = 2, compared against corresponding floating point implementation, pipeline depth = 3 and Imax = 10.
+
+10-1
+
+10-2
+
+10-3
+
+Bit Error Rate
+
+10-4
+
+10-5
+
+10-6
+
+Pipeline Depth=0 Pipeline Depth=1 Pipeline Depth=2 Pipeline Depth=3
+
+10-7
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/No(dB)
+
+Fig. 2. BER comparison of pipeline depths for floating point implementation of rate 1/2, IEEE 802.11n/ac LDPC codes.
+
+No. of Iterations
+
+12
+
+Pipeline Depth=0
+
+11
+
+Pipeline Depth=1
+
+Pipeline Depth=2
+
+10
+
+Pipeline Depth=3
+
+9
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/No(dB)
+
+Fig. 3. Comparison of iteration count corresponding to Fig. 2.
+
+10-1
+
+10-2
+
+Bit Error Rate
+
+10-3
+
+10-4
+
+10-5
+
+Floating Point Fixed Point
+
+10-6
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/No(dB)
+
+Fig. 4. Fixed point BER comparison (β = 0.5, WL = 8, FL = 2, Imax = 10) with corresponding floating point IEEE 802.11n/ac, rate-1/2 plot.
+
+196 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+10
+Floating Point Fixed Point 9
+
+8
+
+No. of Iterations
+
+7
+
+6
+
+5
+
+4
+
+1.5
+
+2
+
+2.5
+
+3
+
+Eb/No(dB)
+
+Fig. 5. Comparison of iteration count corresponding to Fig. 4.
+
+IV. PROPOSED DECODER ARCHITECTURE The proposed decoder uses a three stage pipelined architecture. The pipeline depth was determined during the design exploration stage. The block diagram of the proposed architecture according to pipeline stages is shown in Fig. 6, while Fig. 7 shows the corresponding timing diagram.
+
+memory implementation [15] of the decoder, while the ROM block is used to store the base matrix and the corresponding circular shifts of the IEEE 802.11n/ac LDPC codes. These memory blocks and their connections with other blocks of the decoder are shown in Fig. 8. To enable processing of one complete row of the base matrix in one clock cycle, the width of the data lines is kept z × dc × bits, where z is sub-block size, dc is the maximum degree of check nodes, and bits is the number of bits used to represent one value. Separate read and write data lines and corresponding address lines enable simultaneous read and write operations. Read operations are performed after write operations to immediately propagate the effect of newly calculated messages. This sequencing of read operations after write operations is effectively giving the throughput, equivalent to pipeline depth of 4 with a design of the proposed architecture which has pipeline depth of 3.
+
+Fig. 8. Memory blocks and their connections with other blocks
+
+Fig. 6. Block diagram of the proposed LDPC decoder architecture.
+Fig. 7. Pipelined decoding data flow of the proposed architecture.
+A. Memory Memory is organized in three blocks: LLR Mem, CN
+Mem, and a ROM block. The LLR Mem and CN Mem are implemented as registers based-memories to enable the reading and writing of all messages of a layer in a single clock cycle. The LLR Mem block saves the input channel LLRs and is updated after getting new values from the check nodes. CN Mem is the memory block used for storing the check node outputs. LLR Mem and CN Mem together enable an efficient
+
+B. Reading and Preprocessing Block
+The Reading and Preprocessing block involves an Address Generator, a Circular Shift Generator, a Subtractor module, and a Barrel Shifter module. The Address Generator, evidently, generates addresses for memory read operations based on input from the ROM block where the base matrix is saved. The Subtractor module is required for memory efficient implementation purposes since it removes the extrinsic information before passing values for further processing. The module incorporates z × dc saturated subtractors to complete the subtraction operation within one clock cycle. The Barrel Shifter and Circular Shift Generator modules implement the required circular shift operations after reading the numbers from the ROM block corresponding to each layer of the SPCM.
+Going deeper into the design of Barrel Shifter module, it consists of 6 barrel shifters that work in parallel. Based on the maximum degree of check nodes, 8 barrel shifters would have been required but after considering the base matrix, 6 barrel shifters are incorporated because in each row there are two which implement a 0 shift. Each barrel shifter has z inputs, so it circularly shifts a complete sub-block in one shot. Six such
+
+197 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+barrel shifters thus implement the shift operations for one row base matrix in one cycle, z in number CNUs are used in the
+
+of the base matrix, in parallel.
+
+proposed architecture and z = 27 for our case.
+
+Fig. 9. Architecture of the reading and preprocessing block
+C. Postprocessing and Writing Block
+This block reverses the operations of the Reading and Preprocessing block and consists of an Address Generator, a Circular Shift Generator, Subtractor and Adder modules, and a Barrel Shifter module. The Subtractor and Adder modules replace the old messages in LLR Mem with newly computed messages by subtracting the old message and adding in new messages. The Barrel Shifter module incorporates the same six barrel shifters as in the Reading and Preprocessing block and relies on the Circular Shift Generator to implement the reverse shifting operation. The Circular Shift Generator generates numbers according to the formula (z − f s), where f s is the forward shift given to the sub-block in the Reading and Preprocessing block, and z is the sub-block size.
+D. Check Node Units (CNUs)
+The Check Node Unit implements (4), which is equivalent to finding the first and second minimum among the check node inputs, the index of the first minimum value, and as well as the signs of the check node output values. The second minimum is then assigned to the index of the first minimum and all other indices are assigned the first minimum value. This process is done by the Outputs Magnitudes module in the block diagram of the CNU shown in Fig. 10. Since the check node has to process magnitudes and signs separately, a 2’s complement-to-signed-magnitude converter and its inverse are implemented after the input and before the output ports of the check node, respectively. Each CNU further consists of a Magnitude Comparator that finds first and second minimum, the index of the first minimum value, a Sign Determination unit and a β Corr. module. By using the outputs of the Outputs Magnitudes module, and the Sign Determination unit, each CNU completes implementation of (4) and produces outputs in one cycle. For IEEE 802.11n/ac, rate 1/2 LDPC codes, the maximum degree of a check node is dc = 8, so the number of inputs of each check node is 8. To process one row of the
+
+Fig. 10. Block diagram of a Check Node Unit
+
+V. VLSI SYNTHESIS RESULTS The proposed architecture has been synthesized in 40 nm TSMC process using Synopsys Design Compiler [25]. The critical path delay of the decoder turned out to be 1.28 ns. This enabled us to operate the decoder at clock speed of 780 MHz. The throughput θ that is achieved, is calculated as:
+
+θ
+
+=
+
+FL × NF Imax × C
+
+× fclk,
+
+(5)
+
+where FL and NF are the frame length and the number frames respectively, Imax is maximum number of iterations to decode one frame, C is the number of cycles to complete one decoding
+
+iteration, and fclk is the clock frequency. For the proposed architecture, FL = 648, NF = 1, Imax = 10, C = 12, and fclk = 780 MHz. This gives us a throughput of 4.2 Gpbs. VLSI synthesis results of the proposed architecture are sum-
+
+marized in Table I while the chip layout is shown in Fig. 11.
+
+TABLE I SYNTHESIS RESULTS
+
+Clock Frequency Coded Throughput
+Design Area Power Consumption
+Supply Voltage
+
+780 MHz 4.2 Gbps 0.38 mm2 218 mW
+1.21 V
+
+Fig. 11. Chip layout of the proposed LDPC decoder
+The key features of the proposed decoder chip in comparison with state-of-the-art decoders are summarized in Table II. It is evident from the comparison that the proposed
+
+198 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II COMPARISON OF PROPOSED DECODER WITH STATE-OF-THE-ART
+
+Technology Quantization Bits Clock Frequency
+Throughput Area
+Scaled Throughput Scaled Area
+
+This work
+40 nm 8
+780 MHz 4.2 Gbps 0.38 mm2
+4.2 Gbps 0.38 mm2
+
+[20]
+90 nm
+5 336 MHz 1.71 Gpbs 5.2 mm2 3.85 Gbs a 1.0 mm2 d
+
+[23]
+90 nm
+8 250 MHz 672 Mbps 3.67 mm2 1.5 Gbs a 0.72 mm2 d
+
+[24]
+45 nm
+6 815 MHz 380 Mbs 0.81 mm2 426 Mbs b 0.64 mm2 e
+
+a Throughput is scaled by 2.25 to account for the 90nm technology. b Throughput is scaled by 1.12 to account for the 45nm technology. c Throughput is scaled by 3.25 to account for the 130nm technology. d Area is scaled by 0.2 to account for the 90nm technology. e Area is scaled by 0.8 to account for the 45nm technology. f Area is scaled by 0.1 to account for the 130nm technology.
+
+[21]
+130 nm
+5 500 MHz 541 Mbs 1.85 mm2 1.76 Gbps c 0.18 mm2 f
+
+decoder surpasses the highest reported throughput for IEEE 802.11n/ac, rate 1/2 LDPC codes as reported in [20]. The occupied area of proposed decoder is a bit higher than [21] but since [21] uses 5 quantization bits while the proposed architecture utilizes 8 quantization bits so the higher area of proposed architecture is justified.
+VI. CONCLUSIONS
+A fully pipelined LDPC decoder architecture, free of idle cycles based on the RMP LDPC schedule has been presented. The decoder optimized register-based memories for IEEE 802.11n/ac, rate 1/2 LDPC codes to maintain Gbps throughput operation. The datapath of the decoder is pipelined and processes a single frame only, a simplification that achieves smaller footprint compared to existing multi-frame architectures. The impact of the pipeline depth on convergence speed of the decoder due to idle-cycle-free pipelining is analyzed through simulations. It is observed that an RMP decoder architecture with pipeline depth of 3 is an adequate compromise when RMP pipelined decoding is employed on a single frame. The proposed decoder achieves a throughput of 4.2 Gbps and this throughput surpasses the highest reported throughput for IEEE 802.11n/ac, rate 1/2 LDPC codes.
+REFERENCES
+[1] IEEE Standard for local and metropolitan area networks – Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY), IEEE Std. 802.11, 2012.
+[2] IEEE draft standard for information technology-wireless LANs-part 21: mmWave PHY specification, May 2010, IEEE Std. 802.11ad.
+[3] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low-density parity-check codes,” in IEE Electron. Lett., vol. 32, no. 18, Aug. 1996, pp. 1645.
+[4] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[5] D. MacKay, “Good error-correcting codes based on very sparse matrices,” in IEEE Trans. Inf. Theory, vol. 45, no. 2, Mar. 1999, pp. 399–431.
+[6] E. Sharon, S. Litsyn, and J. Goldberger, “An efficient message-passing schedule for LDPC decoding,” in Proc. IEEE Convention of Elect. and Electron. Engineers, Sep. 2004, pp. 223–226.
+[7] M. M. Mansour and N. Shanbhag, “High-throughput LDPC decoders,” in IEEE Trans. VLSI Syst., vol. 11, no. 6, Dec. 2003, pp. 976–996.
+[8] J. Zhang and M. Fossorier, “Shuffled belief propagation decoding,” in Proc. Asilomar Conf. Signals, Systems and Computers (Asilomar), Pacific Grove, USA, Nov. 2002.
+[9] S. Usman, M. M. Mansour, and A. Chehab, “Interlaced column-row message-passing schedule for decoding LDPC codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2016.
+
+[10] Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “An efficient 10GBASE-T ethernet LDPC decoder design with low error floors,” in IEEE J. Solid-State Circuits, vol. 45, no. 4, Apr. 2010, pp. 843–855.
+[11] M. Weiner, B. Nikolic, and Z. Zhang, “LDPC decoder architecture for high-data rate personal-area networks,” in Proc. IEEE Int. Sympos. on Circuits and Systems (ISCAS), May 2011, pp. 1784–1787.
+[12] M. Weiner, M. Blagojevic, S. Skotnikov, A. Burg, P. Flatresse, and B. Nikolic, “A scalable 1.5-to-6 Gb/s 6.2-to-38.1 mW LDPC decoder for 60 GHz wireless networks in 28 nm UTBB FDSOI,” in Proc. IEEE Int. Solid-State Circuits Conf. Dig. Tech. Papers (ISSCC), Feb. 2014, pp. 464– 465.
+[13] M. M. Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check matrix codes”, in IEEE Trans. Signal Process., vol. 54, no. 11, Nov. 2006, pp. 4376–4392.
+[14] M. M. Mansour and N. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip”, in J. Solid-State Circuits, vol. 41, no. 3, Mar. 2006, pp. 684–698.
+[15] M. M. Mansour and N. R. Shanbhag, “Memory-efficient turbo decoder architectures for LDPC coding,” in Proc. IEEE Int. Workshop on Signal Process. Systems (SiPS), Oct. 2002, pp. 159–164.
+[16] Z. Cui, Z. Wang, and X. Zhang, “Reduced-complexity column-layered decoding and implementation for LDPC codes,” in IET Commun., vol. 5, no. 15, Oct. 2011, pp. 2177–2186.
+[17] H. Kfir and I. Kanter, “Parallel versus sequential updating for belief propagation decoding:” in Physica A: Statistical Mechanics and its Applications, vol. 330, no. 1, Dec. 2003, pp. 259–270.
+[18] M. Karkooti, P. Radosavljevic, and J.R. Cavallaro, “Configurable high throughput irregular LDPC decoder architecture: tradeoff analysis and implementation,” in Proc. IEEE Int. Conf. Applications Specific Syst. (ASAP), Sep. 2006, pp. 360–367.
+[19] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A scalable decoder architecture for IEEE 802.11n LDPC codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Nov. 2007, pp. 3270–3274.
+[20] S. Kumawat, R. Shrestha, N. Daga, R. Paily, “High-throughput LDPCdecoder architecture using efficient comparison techniques & dynamic multi-frame processing schedule”, in IEEE Trans. Circuits Syst. I, vol. 62, no. 5, May 2015, pp. 1421–1430.
+[21] K. Gunnam, G. Choi, W. Wang, and M. Yeary, “Multi-rate layered decoder architecture for block LDPC codes of the IEEE 802.11n wireless standard,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS 2007), pp. 16451648.
+[22] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X-Y. Hu, “Reduced-complexity decoding of LDPC codes,” in IEEE Trans. Comm., vol. 53, no. 7, Jul. 2005, pp. 1232–1232.
+[23] C. Yu, H.-S. Chuang, et al., “Improvement on a block-seria fullyoverlapped QC-LDPC decoder for IEEE 802.11n,” in Proc. IEEE Int. Conf. Consum. Electron. (ICCE), Jan. 2014, pp. 446–447.
+[24] Y. Sun, G. Wang, J. Cavallaro, “Multi-layer parallel decoding algorithm and VLSI architecture for quasi-cyclic LDPC codes”, in Proc. IEEE Int. Sympos. on Circuits and Systems (ISCAS), May 2011, pp. 1776–1779.
+[25] Synopsys Design Compiler: “http://www.synopsys.com/Tools”.
+
+199 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:04:16 UTC from IEEE Xplore. Restrictions apply.
+
+

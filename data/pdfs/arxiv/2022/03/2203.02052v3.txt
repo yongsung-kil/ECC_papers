@@ -1,0 +1,1399 @@
+arXiv:2203.02052v3 [cs.IT] 1 Sep 2022
+
+1
+A Unified Spatially Coupled Code Design:
+Threshold, Cycles, and Locality
+Homa Esfahanizadeh∗, Eshed Ram∗, Yuval Cassuto, Senior Member, IEEE, and Lara Dolecek, Senior Member, IEEE
+Abstract
+Spatially-Coupled (SC)-LDPC codes are known to have outstanding error-correction performance and low decoding latency. Whereas previous works on LDPC and SC-LDPC codes mostly take either an asymptotic or a finite-length design approach, in this paper we present a unified framework for jointly optimizing the codes’ thresholds and cycle counts to address both regimes. The framework is based on efficient traversal and pruning of the code search space, building on the fact that the performance of a protograph-based SC-LDPC code depends on some characteristics of the code’s partitioning matrix, which by itself is much smaller than the code’s full parity-check matrix. We then propose an algorithm that traverses all nonequivalent partitioning matrices, and outputs a list of codes, each offering an attractive point on the trade-off between asymptotic and finite-length performance. We further extend the framework to designing SC-LDPC codes with sub-block locality, which is a recently introduced feature offering fast access to sub-blocks within the code block. Our simulations show that our framework results in SC-LDPC codes that outperform the state-of-the-art constructions, and that it offers the flexibility to choose low-SNR, high-SNR, or in-between SNR region as the primary design target.
+∗ H. Esfahanizadeh and E. Ram equally contributed to this paper. H. Esfahanizadeh is with the Electrical Engineering and Computer Science Department, Massachusetts Institute of Technology (MIT), Cambridge, MA 02139 USA (email: homaesf@mit.edu). E. Ram and Y. Cassuto are with Andrew and Erna Viterbi Department of Electrical and computer Engineering, Technion, Haifa, Israel (e-mail: s6eshedr@technion.ac.il; ycassuto@ee.technion.ac.il). L. Dolecek is with the Department of Electrical and Computer Engineering, University of California, Los Angeles, Los Angeles, CA 90095 USA (e-mail: dolecek@ee.ucla.edu).
+DRAFT
+
+2
+I. INTRODUCTION
+Spatially-coupled low-density parity-check (SC-LDPC) codes are a family of graph-based codes that have attracted a lot of attention thanks to their capacity-approaching performance and low-latency decoding [1], [2]. SC-LDPC codes are constructed by coupling a series of disjoint block LDPC codes into a single coupled chain. We use circulant-based (CB) LDPC codes as the underlying LDPC block codes due to their simple implementation [3]. SC-LDPC codes are known to have many desirable properties, such as threshold saturation [4] and linear-growth of the size of minimal trapping sets in typical codes from an ensemble [5]. These properties, respectively, imply good bit-error rate (BER) performance in the waterfall and error floor regions, using the belief-propagation (BP) decoder. Recently, [6] introduced SC-LDPC codes with a subblock locality feature, where in addition to the usual decoding, the codes can be decoded locally in small sub-blocks for fast read access.
+From the asymptotic perspective, density evolution (DE) techniques have been used to study the decoding threshold of SC-LDPC codes, e.g., [4], [7], among others. From the finite-length perspective, methodologies for the evaluation and optimization of the number of problematic combinatorial objects are studied, e.g., [8]–[11]. The asymptotic properties (e.g., decoding threshold) of LDPC codes are the dominant performance determinants in the low-SNR region, and the finite-length properties (e.g., number of short cycles) are the dominant ones in the errorfloor (high-SNR) region [12], [13]. This is because in the low-SNR region, the performance is typically dominated by the properties of the code’s tree ensemble, while in the high-SNR region the performance depends on the incidence of problematic combinatorial objects in the code’s graph [14]–[19].
+In this paper, we pursue a principled comprehensive approach that combines various design metrics, e.g., targeted SNR region and decoding latency. In fact, any future efficient code design can be incorporated into our proposed framework. Here, we evaluate each candidate code in
+DRAFT
+
+3
+terms of its exact threshold and cycle-counts, and extract a small set of attractive codes from a large pool of initial candidates. This approach works best when we can examine all possible codes of a given set of design parameters. However, the resulting space of candidates may blow up quickly, thus requiring efficient traversal and pruning methods. One particularly effective such method is to avoid multiple candidates that are equivalent in terms of performance. The elimination of this multiplicity can reduce the candidate list – and in turn the complexity of code design – by orders of magnitude.
+To enable the aforementioned comprehensive design approach, we formalize in this paper the notion of performance-equivalent SC-LDPC codes. It is well-known that two linear codes are equivalent in terms of most performance figures if one’s parity-check matrix can be obtained from the other’s by a sequence of row and column permutations. In Section IV we prove that for SCLDPC codes, the same property holds for the code’s partitioning matrix, which is much smaller than the full (coupled+lifted) code matrix. This motivates our exact derivation in Section III of the number of nonequivalent binary matrices with up to 3 rows, which captures all regular SC-LDPC constructions with unit memory and up to 3 check nodes in the uncoupled protograph (regular unit-memory codes have binary partitioning matrices). This exact count can be easily translated to an efficient traversal of all nonequivalent matrices, thus enabling an efficient code design. Indeed, we detail in Section IV-D a joint threshold+cycle code-design algorithm, which outputs a final list of candidates with the property that each candidate has: 1) the best threshold among all codes with equal or better cycle-counts, and 2) the best cycle-count among all codes with equal or better thresholds.
+We extend the joint threshold+cycle design approach to SC-LDPC codes with sub-block locality in Section V. Adding the local-code structure to the partitioning matrix may significantly increase the code design search space and complexity. We exploit the sub-block structure to further reduce the code-design complexity: we propose to replace the threshold calculation by an efficiently computable proxy threshold, and prove analytical results on the threshold and
+DRAFT
+
+4
+cycle-counts of two natural irregular structures of the local code. Finally, we show simulation results of codes from our proposed design algorithms, for both standard codes (no locality) and codes with sub-block locality. Our codes are shown to outperform prior constructions based on cutting-vector and optimal-overlap partitioning. The code and data used in the paper are available for public access at https://github.com/hesfahanizadeh/Unified SC LDPCL/.
+II. PRELIMINARIES Throughout this paper, matrices, vectors, and scalars are represented by uppercase bold letters (e.g., A), lowercase italic letters with an overline (e.g., a), and lowercase italic letters (e.g., a), respectively. Sets and functions are represented by calligraphic italic letters (e.g., A) and uppercase italic letters (e.g., A(·)), respectively. The matrix transpose operation, the cardinality of a set, and the factorial function are denoted by (·)T , | · |, and (·)!, respectively. The notation A = [ai,j] refers to a matrix A where ai,j is the element in row i and column j. We denote the all-one and all-zero matrices with size m × n as 1m×n and 0m×n, respectively.
+A. Construction of SC-LDPC Codes An LDPC protograph is a small bipartite graph represented by a γ × κ bi-adjacency proto-
+matrix B = [bi,j] (where γ and κ are positive integers and γ < κ), i.e., there is an edge between check node (CN) i and variable node (VN) j if and only if bi,j = 1. In general, bi,j > 1 (parallel edges) are allowed in the protograph. In this work, without loss of generality1, we focus on bi,j ∈ {0, 1}. A sparse parity-check matrix H (or its corresponding representation as a Tanner graph) is generated from B by a lifting operation with a positive integer z that is called the circulant size. The rows (resp. columns) of H corresponding to row i ∈ {1, . . . , γ} (resp. column j ∈ {1, . . . , κ}) of B, are called row group i (resp. column group j).
+1This is because parallel edges can be avoided by duplicating protograph nodes.
+DRAFT
+
+5
+
+In this paper, we use circulant-based (CB) lifting [3], where the circulants, each with size
+
+z × z, are either zero or an identity matrix shifted by a certain number of units to the left,
+
+described by the circulant power. The powers of the circulants are represented by the power
+
+matrix C = [ci,j] of size γ × κ, such that the non-zero elements in row group i and column group j in H form a single-shift identity matrix raised to the power ci,j. In our simulations, the power matrix C = [ci,j] is defined such that ci,j = α·i·j, for a constant positive integer α. This choice ensures that no length-4 cycle (cycle-4 for short) exists when the circulant size is a
+
+prime number [20]. Thus, this paper focuses on length-6 cycles (cycles-6 for short) as the most
+
+problematic cycles.
+
+Let proto-matrix B be the parity-check matrix of a protograph block code. The matrix of
+
+an SC-LDPC protograph [1] with memory m and coupling length l is constructed from B by
+
+partitioning it into m + 1 matrices B0,. . . ,Bm such that B =
+
+m k=0
+
+Bk,
+
+and
+
+stacking
+
+l
+
+replicas
+
+of [B0; B1; . . . ; Bm] (where ‘;’ represents vertical concatenation here) on the diagonal of the
+
+coupled proto-matrix BSC. For proto-matrix B of size γ × κ, the resulting coupled proto-matrix
+
+BSC has size (l + m)γ × lκ. We represent this partitioning by a matrix P = [pi,j], called
+
+partitioning matrix, where pi,j ∈ {0, 1, . . . , m, ⋆}. If pi,j = ⋆, then there is a zero in row i and
+
+column j of B. Otherwise, the non-zero element is assigned to Bpi,j . This description captures
+
+both regular and irregular SC constructions. In this work, we focus on SC codes with m = 1,
+
+thus the partitioning operation determines which (non-zero) elements are assigned to B0 and which ones are assigned to B1 (when referring to lifted graphs, we use H0 and H1).
+
+B. Extension to Codes with Sub-Block Locality (SC-LDPCL) One drawback of SC codes is their typically large block size, which increases the complexity
+and latency of decoding. To mitigate this obstacle, SC-LDPC codes with sub-block locality were developed and studied in [21]. In these codes, the block is partitioned into smaller sub-blocks, and the code is designed for both sub-block and full-block decoding. The former, called local
+DRAFT
+
+6
+decoding, allows low-latency access, and the latter, called global decoding, provides the usual high-reliability of SC-LDPC codes. There is flexibility in how to partition the code block to sub-blocks, and in this paper we define each sub-block to comprise all the VNs in one replica of the coupled SC code (hence the parameter l is also the number of sub-blocks). In local decoding, only CNs that are connected solely to VNs within the sub-block are used, and we call them local CNs (LCNs). All other CNs are called coupling CNs (CCNs) [21]. In another view, rows in P that have both 0 and 1 entries result in CCNs in the coupled matrix; we mark the number of such rows as γc. The LCNs are specified by γl γ − γc rows in P that do not mix 0 and 1 entries, and are designed to induce a non-zero asymptotic local-decoding threshold [21]. Without loss of generality, the rows of P are ordered such that the first γc rows correspond to CCNs.
+
+C. Asymptotic Analysis of Protographs: The EXIT Method
+
+The EXtrinsic Information Transfer (EXIT) method [22] is a useful tool for analyzing and
+
+designing LDPC codes in the asymptotic regime over the AWGN channel with the channel
+
+parameter σ. Let J : [0, ∞) → [0, 1) be a function that represents the mutual information between
+
+the channel input and a corresponding message passing in the Tanner graph. For a VN of degree
+
+dv in the protograph, with incoming EXIT values {Ji}id=v−1 1, the VN→CN EXIT value is
+
+
+
+
+
+dv −1
+
+Jo(uVt)(sch, J1, . . . , Jdv−1) = J
+
+(J −1(Ji))2 +sc2h,
+
+(1)
+
+i=1
+
+where s2ch = 4/σ2. For a CN of degree dc in the protograph with incoming EXIT values {Jj}jd=c−11, the CN→VN EXIT value is approximated by
+
+Jo(uCt)(J1, . . . , Jdc−1) = 1−Jo(uVt)(0, 1−J1, . . . , 1−Jdc−1) .
+
+(2)
+
+The functions Jo(uVt) and Jo(uCt) are monotonically non decreasing with respect to all their arguments. In simulations, we use approximations of J(·) and J−1(·) [22]. By alternately applying (1) and (2) for every edge in a protograph and by varying σ, a threshold value σ∗ can be found such
+
+DRAFT
+
+7
+that all EXIT values on VNs approach 1 as the number of iterations increases if and only if σ < σ∗ [23]. We mark the threshold of a protograph B by σ∗(B).
+
+D. Short-Cycle Optimization and Overlap Parameters
+Short cycles have a negative impact on the performance of block-LDPC and SC-LDPC codes under BP decoding: 1) they affect the independence of the messages exchanged on the graph, 2) they enforce upper-bounds on the minimum distance, and 3) they form combinatorial objects in the Tanner graphs that fail the iterative decoder in different known ways [8], [24].
+
+Definition 1. Consider a binary matrix B. A degree-d overlap parameter t{i1,...,id} is the number of columns in which all rows of B indexed by {i1, . . . , id} have 1s.
+
+The overlap parameters contain all the information we need to find the number of cycles in the graph represented by the matrix. We are particularly interested in cycles-6 (i.e., cycles with 6 nodes), as they are the shortest cycles for practical LDPC codes (most practical high-rate LDPC codes, in particular the codes in this paper, are designed to have girth at least 6). Consider a binary matrix B with γ rows and κ columns. The number of cycles-6 in the graph of matrix B can be expressed in terms of the overlap parameters of matrix B as follows:
+
+F (B) =
+
+A(t{i1,i2,i3}, t{i1,i2}, t{i1,i3}, t{i2,i3}) ,
+
+(3)
+
+{i1 ,i2 ,i3 }⊆{1,...,γ }
+
+where A is given by (see [8])
+
+A(t{i1,i2,i3}, t{i1,i2}, t{i1,i3}, t{i2,i3}) = t [t {i1,i2,i3} {i1,i2,i3} − 1]+[t{i2,i3} − 2]+ + t{i1,i2,i3}(t{i1,i3} − t{i1,i2,i3})[t{i2,i3} − 1]+ + (t{i1,i2} − t{i1,i2,i3})t{i1,i2,i3}[t{i2,i3} − 1]+ (4)
+
++ (t{i1,i2} − t{i1,i2,i3})(t{i1,i3} − t{i1,i2,i3})t{i2,i3} , and, [α]+ max{α, 0}. The optimization problem for identifying the optimal overlap parameters, and consequently the optimal partitioning, for designing SC-LDPC protographs with minimum
+
+DRAFT
+
+8
+number of cycles-6 is presented in [8]. The approach is called the optimal overlap (OO) partitioning, and is one of the baselines in our experimental results.
+III. REDUCING SEARCH SPACE: EQUIVALENT BINARY MATRICES
+In this section, we explore the space of all possible binary matrices of a given size γ × κ. In the next section, these binary matrices will correspond to partitioning matrices defining the SC-LDPC codes, but in the meantime, it will be instructive to think about these matrices as parity-check matrices of some protograph-based code (called proto-matrices). We introduce a combinatorial representation that allows to significantly reduce the search space size by capturing the equivalence among the codes and only keeping one candidate from each class of equivalent codes. Equivalent codes are codes whose proto-matrices can be obtained from one another by a sequence of row and column permutations. This equivalence definition is motivated by the fact that permutation of rows and columns in proto-matrices affect neither the asymptotic threshold nor the number of cycles in the protograph. In Section IV, we theoretically prove that equivalence under this definition for partitioning matrices implies performance-equivalent SC-LDPC codes. Using a new technique for representing the binary matrices, we only consider one code from each equivalence class, thereby significantly reducing the search complexity.
+Definition 2 (Column and Row Permutation). A column permutation of matrix A with κ columns is denoted by a vector πc = [ρ1, . . . , ρκ], that is a permutation of the elements in the vector [1, . . . , κ]. When A −π→c A′, A′ is obtained from A such that the j-th column of A is the ρj-th column of A′. Similarly, a row permutation of matrix A with γ rows is denoted by a vector πr = [ν1, . . . , νγ], that is a permutation of the elements in the vector [1, . . . , γ]. When A −π→r A′, A′ is obtained from A such that the i-th row of A is the νi-th row of A′. Definition 3 (Equivalent Matrices). Two binary matrices A and A′ are column-wise equivalent (resp., row-wise equivalent) if they can be obtained by column (resp., row) permutations of each
+DRAFT
+
+9
+other. Two binary matrices A and A′ are equivalent if they can be derived from each other by a sequence of row and column permutations.
+Remark 1. We use the notion of equivalence in this paper to highlight that neither decoding threshold nor the number of combinatorial objects, e.g., cycles, absorbing sets [25], trapping sets [26], etc., change with a sequence of row and column permutations of a binary matrix.
+
+We present an efficient combinatorial approach for identifying the nonequivalent binary matrices given their size. Consider a binary matrix B with size γ × κ. There are 2γ distinct choices for each column of B, i.e., [0, 0, . . . , 0]T , [0, 0, . . . , 1]T , . . . , [1, 1, . . . , 1]T . The set of all binary matrices with size γ × κ is of cardinality 2γκ. In what follows, we show that the search space is effectively much smaller due to the equivalence among matrices. Our goal is to identify the set of nonequivalent binary matrices with γ rows and κ columns, denoted by Kκ,γ, and to find a closed-form expression for its cardinality. This reduction, as we numerically verify, combined with an algorithm for iterating over nonequivalent binary matrices, allows a significantly more efficient optimization of LDPC protographs in terms of short cycles and thresholds.
+
+Definition 4 (Column Type). The type of a column of a binary matrix is defined as the decimal representation of the binary vector with the top element being the most significant bit.
+
+Definition 5 (Column Distribution). We associate with matrix B ∈ {0, 1}γ×κ a vector n(B) =
+
+[n0, n1, . . . , n2γ−1] such that for every i ∈ {0, 1, . . . , 2γ − 1}, ni is the number of columns in B
+
+with type i. We call n(B) the column distribution of B, where the term stems from the fact that
+
+for every matrix B ∈ {0, 1}γ×κ, the entries of n(B) sum up to κ, i.e.,
+
+2γ −1 i=0
+
+ni
+
+=
+
+κ.
+
+
+
+
+
+01011
+
+
+
+
+
+Example
+
+1.
+
+Consider
+
+matrix
+
+B
+
+=
+
+ 
+
+0
+
+1
+
+1
+
+1
+
+1
+
+ 
+
+.
+
+Then,
+
+n(B) = [0, 1, 1, 0, 0, 0, 1, 2].
+
+
+
+
+
+
+
+
+
+11010
+
+DRAFT
+
+10
+Since column permutations do not change the column distribution of a matrix, we identify the number of column-wise nonequivalent matrices by counting the number of distinct column distributions. We note that a family of column-wise nonequivalent matrices can include rowwise equivalent matrices. At the same time, by excluding column-wise equivalent multiplicities, some row-wise equivalent multiplicities will also be excluded. For example, consider the 2 × 2 binary matrices: for matrix [1 0; 1 1], no column permutation will lead to the row-permuted version [1 1; 1 0]; however, for matrix [1 0; 0 1], swapping the columns will yield [0 1; 1 0], i.e., swapping rows. The relation between families of column-wise nonequivalent matrices and row-wise nonequivalent matrices is not trivial, and how to derive the family of nonequivalent matrices is one contribution of this paper.
+
+A. Column-Wise Nonequivalent Binary Matrices In this part, we explore the family of column-wise nonequivalent binary matrices, their
+connection to the stars-and-bars problem in combinatorics [27], and their connection to the overlap parameters in [8]. We also derive a closed-form expression for the number of column-wise nonequivalent matrices and describe how to simply iterate over them to study their properties, e.g., threshold, cycle-counts, etc.
+
+Lemma 1. Let γ and κ be two positive integers, and let Sκ,γ be the set of all distinct column
+
+distributions for a γ × κ binary matrix, i.e.,
+
+2γ −1
+
+Sκ,γ = [n0, n1, . . . , n2γ−1] : ni ≥ 0,
+
+ni = κ .
+
+i=0
+
+Then,
+
+|Sκ,γ| =
+
+κ + 2γ − 1 κ
+
+=
+
+κ + 2γ − 1 2γ − 1
+
+.
+
+(5)
+
+Proof: The proof follows by applying the elementary stars-and-bars method [27], where each bin represents a column type and the elements are the column indices.
+
+DRAFT
+
+11
+We highlight that |Sκ,γ| is the number of column-wise nonequivalent binary matrices of size γ × κ. A recursive algorithm that iterates over all column-wise nonequivalent binary matrices is given in the Appendix as Algorithm 1.
+
+Example 2. Let κ = 11 and γ = 3. Then, there are
+
+18 7
+
+= 31, 824 column-wise nonequivalent
+
+binary matrices with γ rows and κ columns, which is 2.7·105 times smaller then the entire space
+
+{0, 1}γκ.
+
+In the next subsections, we further reduce the search space by taking into account the row permutations. In Lemma 1, we identified the set of distinct column distributions. It is somewhat challenging to calculate how many of these distributions result in equivalent matrices and thus can still be obtained from each other by a sequence of row and column permutations. In what follows, we complete this derivation, and to keep the analysis in this paper tractable, we derive the closed-form expressions only for γ ∈ {2, 3} (γ = 1 case is trivial).
+
+B. Nonequivalent Binary Matrices With γ = 2 In the following lemma, we first state necessary and sufficient conditions for two column
+distributions to correspond to a pair of equivalent matrices. Then, in a subsequent theorem, we show how to use this lemma to reduce the search space of column distributions such that it consists only of those corresponding to nonequivalent matrices, and we identify the cardinality of this reduced search space.
+Lemma 2. Two binary matrices with γ = 2 rows and with column distributions [n0, n1, n2, n3] and [m0, m1, m2, m3] are row-wise equivalent if and only if n0 = m0, n3 = m3, and either (n1 = m1, n2 = m2) or (n1 = m2, n2 = m1).
+Proof: For γ = 2, a row permutation is either the identity permutation πr = [1, 2] or a row swap πr = [2, 1]. In the latter, columns with type 0, i.e., [0, 0]T , and type 3, i.e., [1, 1]T , are
+DRAFT
+
+12
+invariant to the permutation. However, columns with type 1, i.e., [0, 1]T , map to columns with type 2, i.e., [1, 0]T , and vice versa. This concludes the proof.
+In view of Lemma 2, if a column distribution [n0, n1, n2, n3] ∈ Sκ,2 has n1 = n2, then there exists a different column distribution [n0, n2, n1, n3] ∈ Sκ,2 (i.e., n2 and n1 are swapped), such that they represent equivalent matrices. This fact readily leads to the following:
+
+Theorem 1. Let γ = 2 and κ be a positive integer, and let Kκ,2 be the set of column distributions
+
+for all 2 × κ nonequivalent binary matrices. Then,
+
+3
+
+Kκ,2 = [n0, n1, n2, n3] : ni ≥ 0, ni = κ, n1 ≤ n2 ,
+
+(6a)
+
+i=0
+
+and
+
+|Kκ,2|
+
+=
+
+1 2
+
+⌊κ/2⌋  (κ
+i=0
+
+−
+
+2i
+
++
+
+1)
+
++
+
+ κ+3 .
+3
+
+(6b)
+
+C. Nonequivalent Binary Matrices with γ = 3
+
+Similar to the discussion in Section III-B, we first identify necessary and sufficient conditions for two column distributions to correspond to a pair of equivalent matrices. Then, we use the results to enumerate the reduced search space of column distributions.
+
+Lemma 3. Two binary matrices with γ = 3 and with column distributions [n0, n1, . . . , n7] and [m0, m1, . . . , m7] are row-wise equivalent if and only if n0 = m0, n7 = m7, and
+(n1 = m1, n2 = m2, n4 = m4, n6 = m6, n5 = m5, n3 = m3), or (n1 = m1, n2 = m4, n4 = m2, n6 = m6, n5 = m3, n3 = m5), or (n1 = m2, n2 = m1, n4 = m4, n6 = m5, n5 = m6, n3 = m3), or (n1 = m2, n2 = m4, n4 = m1, n6 = m5, n5 = m3, n3 = m6), or (n1 = m4, n2 = m1, n4 = m2, n6 = m3, n5 = m6, n3 = m5), or (n1 = m4, n2 = m2, n4 = m1, n6 = m3, n5 = m5, n3 = m6).
+DRAFT
+
+13
+Proof: For γ = 3, there are eight different column types and 3! = 6 possible row permutations. The proof follows by tracking the changes in column types when applying each of the possible row permutations (from top to bottom): 1) πr = [1, 2, 3] (identity permutation), 2) πr = [2, 1, 3] 3) πr = [1, 3, 2] 4) πr = [2, 3, 1] 5) πr = [3, 1, 2] 6) πr = [3, 2, 1].
+
+Theorem 2. Let γ = 3 and κ be a positive integer, and let Kκ,3 be the set of column distributions
+
+for all 3 × κ nonequivalent binary matrices. Then,
+
+7
+Kκ,3 = [n0, n1, . . . , n7] : ni ≥ 0, ni = κ,
+i=0
+
+(n1 < n2 < n4) or (n1 = n2 < n4 and n6 ≤ n5) or
+
+(7)
+
+(n1 < n2 = n4 and n5 ≤ n3) or (n1 = n2 = n4 and n6 ≤ n5 ≤ n3) ,
+
+and |Kκ,3| = aκ + bκ + cκ, where
+
+aκ =
+
+(κ − 3(i + j) + 1), bκ =
+
+κ − 2(i + j) + 3 3
+
+− aκ,
+
+i,j∈N :
+
+i,j∈N :
+
+3(i+j)≤κ
+
+2(i+j)≤κ
+
+(8)
+
+cκ
+
+=
+
+1 6
+
+κ+7 7
+
+− 3bκ − aκ
+
+.
+
+Example 3. Let κ = 11 and γ = 3. Then, there are |K11,3| = 60 + 1,452 + 4,568 = 6,080 nonequivalent binary matrices with γ rows and κ columns, which is 1.41·106 times smaller then
+
+the cardinality of the entire space {0, 1}γκ.
+
+Example 4. Fig. 4 shows the cardinality of the search space as a function of κ for γ = 2 (left panel) and γ = 3 (right panel), using three different schemes. As we see for the exhaustive search scheme, the cardinality, i.e., 2γκ, grows exponentially with κ and quickly goes beyond the practical feasibility. However, the cardinality of the search space for the OO and our new scheme based on nonequivalent matrices remain far below the one for the exhaustive search due to their smaller growth rate with κ. Furthermore, our scheme has smaller cardinality compared to the existing setting (OO) by almost half an order of magnitude for γ = 2 and almost an order
+DRAFT
+
+14
+
+104
+
+108
+
+Search Space Cardinality
+
+103
+
+106
+
+104 102
+
+101 10
+
+20
+
+30
+
+κ
+
+102
+10 20 30 κ
+
+Exhaustive OO Non-isomprphic
+
+Fig. 1. The cardinality of the search space for binary matrices using different methods: Left: γc = 2 and Right: γc = 3.
+of magnitude for γ = 3. We finally note that evaluating each option in the search space, particularly identifying its
+decoding threshold, is computationally heavy and any reduction in the search space results in a reduction of the complexity of the design algorithm. Thus, the observed reduction of an order of magnitude in the search space in Example 4 notably reduces the design expenses.
+IV. AN ALGORITHM FOR JOINT FINITE-LENGTH ASYMPTOTIC DESIGN OF SC CODES In this section, we focus on binary partitioning matrices, i.e., P ∈ {0, 1}γ×κ corresponding to regular SC-LDPC codes with memory 1, i.e., B0 + B1 = 1γ×κ. However, the derivations in this section can be generalized to an arbitrary memory m ≥ 1 and irregular designs, i.e., P ∈ {⋆, 0, . . . , m}γ×κ. In the generalized case, the reduced search space in the previous section follows similarly by noting that the stars-and-bars method is considered with (m + 1)γ bins, or (m + 2)γ bins in case of irregular design, rather than 2γ bins. In what follows, given γ and κ, we produce a (short) list of partitioning matrices that offer a meaningful trade-off between threshold and cycle population. By meaningful we mean that no member of this list results in an SC protograph that is inferior to any other one (in the entire search space) in both the threshold
+DRAFT
+
+15
+and cycle-count properties.
+A. Reduced Search Space of SC-LDPC Codes We remind that the proto-matrix BSC of a regular SC code with memory m = 1 and coupling
+length l, in our construction, is obtained by partitioning the proto-matrix of B = 1γ×κ into B0 and B1 = B − B0, and coupling l copies of B0 = [ui,j] and B1 = [vi,j] in a diagonal structure. We introduced the partitioning matrix P = [pi,j] with size γ × κ and elements in {0, 1, ⋆} that fully characterizes the construction of a regular/irregular SC code with memory 1 as follows: If pi,j = 0, ui,j = 1 and vi,j = 0; If pi,j = 1, ui,j = 0 and vi,j = 1; If pi,j = ⋆, ui,j = vi,j = 0.
+Lemma 4 derives the congruence between coupled proto-matrices and the partitioning matrices that are used to construct them. This congruence allows searching for a coupled SC-LDPC code over a reduced search space of small (γ × κ) nonequivalent partitioning matrices. Lemma 4. Any column/row permutation of the partitioning matrix P of an SC code results in an SC proto-matrix that is a column/row permuted version of the original SC proto-matrix BSC.
+Proof: By definition, any row and column permutations on P automatically applies to both B0 and B1. This means that when P −π−c−,π→r P′, we have B0 −π−c−,π→r B0′ and B1 −π−c−,π→r B1′ . Thus, the matrix [B′1 B′0] is a row permuted version of [B1 B0] using πr, and the matrix [B0′ ; B′1] is a column permuted version of [B0; B1] using πc. In view of the diagonal structure of BSC, we can infer that B′SC which has B0′ and B1′ as component matrices is row and column permuted version of BSC, with column permutation [πc, πc + κ, . . . , πc + (l − 1)κ] and row permutation [πr, πr + γ, . . . , πr + lγ], where the addition is performed element-wise.
+In Lemma 10 in the appendix, we show that the state-of-the-art approach of constructing SC-LDPC codes with overlap parameters [8] results in a search space with similar size as the reduced search space obtained by just eliminating the column-wise equivalent options. Unlike the representation of column-wise nonequivalent matrices introduced in this paper, it is computationally difficult to iterate over all possible overlap parameters to find the best ones
+DRAFT
+
+16
+due to their dependencies. Besides, [8] does not consider the row-wise equivalence to further reduce the search space and thus results in a higher-computational complexity of the code design compared to the introduced approach in this paper.
+
+B. Cycle Enumeration in the Reduced Search Space
+
+In this paper, we focus on cycles-6 as the shortest and most problematic cycles for practical LDPC codes. However, the approach presented in this subsection can be extended to longer cycles with some modifications. Let B be a binary matrix with size γ × κ. A sequence of index pairs [i1, j1] − [i1, j2] − [i2, j2] − [i2, j3] − [i3, j3] − [i3, j1], where [i1, i2, i3] ∈ {1, . . . , γ}3, [j1, j2, j3] ∈ {1, . . . , κ}3, i1 = i2 = i3, and j1 = j2 = j3, represents a cycle-6 in B = [bi,j] iff,
+
+bi1,j1 = bi1,j2 = bi2,j2 = bi2,j3 = bi3,j3 = bi3,j1 = 1.
+
+(9)
+
+Moreover, this cycle results in z cycles in the lifted matrix H according to the power matrix C = [ci,j] (see Section II-B) iff [28], [29],
+
+ci1,j1 − ci1,j2 + ci2,j2 − ci2,j3 + ci3,j3 − ci3,j1 = 0 (mod z).
+
+(10)
+
+In general, identifying cycles-6 can be done via brute-force methods. As a result, the computational complexity can be high for practical code parameters. In what follows, we exploit the structure of the SC matrix, i.e., circulant-based and repetitive structure, to reduce the complexity.
+Due to the structure of SC codes with memory m = 1, any cycle-6 spans either one or two replicas [8]. Denote the first replica and the first two replicas of HSC as R1 and R2, respectively. Similarly, denote the first replica and the first two replicas of BSC as Q1 and Q2, respectively. Note that the corresponding power matrices can be obtained using C by simple concatenations. Let function F (·) operate on a binary matrix and output its number of cycles-6. Then, due to the repetitive and diagonal structure of SC codes [30],
+F (HSC) = lF (R1) + (l − 1)(F (R2) − 2F (R1)), (11)
+F (BSC) = lF (Q1) + (l − 1)(F (Q2) − 2F (Q1)).
+
+DRAFT
+
+17
+Matrices R1 and R2 (resp., Q1 and Q2) are often notably smaller than HSC (resp., BSC). Besides, their number of cycles-6 can be obtained using the overlap parameters, as described in (3). Finally, one can obtain F (R1) (resp., F (R2)) from F (Q1) (resp., F (Q2)) using (9) and (10).
+C. Decoding-Threshold Evaluation in the Reduced Search Space In order to evaluate the EXIT threshold (see Section II-C), we construct the coupled protograph
+according to the partitioning matrix and the coupling length, and perform EXIT calculations. For increasing values of AWGN-channel parameter σ, we apply (1) and (2) for each edge in the protograph until a threshold value is found such that all EXIT values on the VNs approach 1.
+D. An Algorithm For SC Code Design Offering A Design Trade-Off We now present our code-design algorithm. The inputs of the algorithm are the code parameters
+γ, κ, z, l, and the output is a list of protographs such that no member in this list is inferior to any other protograph in the entire search space (we say that protograph G1 is inferior to protograph G2 if G1 has both lower threshold and larger number of cycles-6 than G2 in the corresponding lifted graph). This candidate list is often very short, and it is sorted such that its first member is the protograph with the best (lowest) cycle-count and the worst (lowest) threshold, and the last member has the best threshold and worst (highest) number of cycles.
+The algorithm consists of the following steps: 1) Generate a list of nonequivalent partitioning matrices of size γ × κ (which according to
+Lemma 4 corresponds to a list of nonequivalent SC proto-matrices). 2) Calculate the number of cycles-6 in the lifted coupled graphs corresponding to each
+partitioning matrix using (9) and (10). 3) Sort the list in ascending order according to the number of cycles-6. 4) Iterate over the sorted list and for each partitioning matrix, generate the coupled protograph
+and calculate its EXIT threshold as described in Section II-C.
+DRAFT
+
+18
+5) Filter the list by removing inferior partitioning matrices using the following method: • Initialize the final list of candidates to be empty and σ∗ = 0 (σ∗ records the highest found threshold). • Iterate, in order, over the sorted list. If a member has a higher threshold than σ∗, append the partitioning matrix to the final candidate-list and update σ∗.
+Remark 2. Although in this work we use CB lifting, one can easily use any other lifting method while keeping the general structure of the algorithm. For example, one can perform the cycle optimization of step 2 over the protograph (to obtain the minimum number of cycles-6 in the protograph) and then later use a lifting optimization program as in [8].
+The output of the above algorithm is a candidate list whose first member represents a choice that has the best cycle-count properties in the list, called cycle-driven (CD) choice, and the last member has the best threshold properties in the list, called threshold-driven (TD) choice.
+V. EXTENSION TO SC-LDPC CODES WITH SUB-BLOCK LOCALITY In this section, we expand our framework of designing SC-LDPC codes with jointly optimized finite-length and asymptotic performance to also incorporate the sub-block locality feature. The first and second subsections are dedicated to designing CCNs and designing LCNs, respectively.
+A. Global Design In this subsection, we discuss the design of CCNs, i.e., the entries in the first γc rows of P, in
+order to reduce the population of short cycles and increase the global decoding threshold. Joint cycle and threshold optimization of SC codes with no locality was studied in Section IV; as we will see, adding locality introduces additional opportunities for reducing the design complexity:
+• Threshold Estimation per Partitioning Candidate: a na¨ıve approach for threshold optimization, is for every partitioning matrix in the set of nonequivalent options to construct
+DRAFT
+
+19
+the global code, i.e., l replicas of [B0; B1] (see Section II-B), and calculate its global EXIT threshold σG∗ (see Section II-C). However, this calculation can be computationally intensive since the coupled protograph is large (has many edges). As a result, instead of calculating the global threshold of the coupled protograph, we calculate a lower bound which appears implicitly in [31] as σG∗ ≥ σ∗ (B0), where σ∗ (B0) is the threshold of B0. The reason this bound is used for the design of SC-LDPC codes with sub-block locality (i.e., not in the design in Section IV) is that it gets tighter as γ increases, as is the case for SC codes with sub-block locality, and offers a good approximation to the global threshold. For codes without sub-block locality, the lower bound holds, however, it is loose and sometimes even trivial, see [21]. The complexity of calculating σ∗ (B0) is significantly smaller than the complexity of calculating σG∗ , and this reduction enables a more affordable joint cyclesthreshold optimization. • Cycle Enumeration per Partitioning Candidate: For every nonequivalent partitioning matrix (comprising both CCNs and LCNs), we calculate the number of cycles-6 in the lifted global code, as described in Section IV.
+However, in the case of codes with sub-block locality, the structure of the codes provides further simplifications. Recall from Section II-B that the matrix P has γl rows that do not mix 0 and 1 entries. This simplifies the construction algorithm in two ways: 1) there are fewer nonequivalent P matrices to search over compared to unstructured matrices with γc + γl rows, and 2) for each candidate matrix P, calculating the number of cycles-6 it induces (using (11)) is simplified because the function F (·) only needs to track overlaps among the γc CCN rows, and the cycles of the full code can be shown to be fully determined by these overlaps and the power matrix when the γl rows are all-0 (corresponding to regular local code). We next quantify the reduction of the search space due to the constraint that P has γc CCNs and γl LCNs. In particular, when traversing the space of nonequivalent matrices with γc rows, we exclude those that result in an
+DRAFT
+
+20
+all-zero or all-one rows, as these choices effectively add one or more LCNs and result in fewer than γc CCNs. We theoretically derive the impact of this reduction for γc = 2 and γc = 3 in the next propositions, whose proofs appear in the appendix.
+Proposition 5. Let γc = 2 and κ be a positive integer. The set of column distributions for all 2×κ nonequivalent matrices that do not have all-zero or all-one rows has cardinality |Kκ,2| − 2κ − 1, where |Kκ,2| is given in Theorem 1.
+Proposition 6. Let γ = 3 and κ be a positive integer. The set of column distributions for all 3 × κ nonequivalent matrices that do not have all-zero or all-one rows has cardinality |Kκ,3| − 2|Kκ,2| + (κ + 1), where |Kκ,2| and |Kκ,3| are given in Theorem 1 and Theorem 2, respectively. Example 5. Let κ = 11 and γ = 3. Then, there are 6,080 nonequivalent binary matrices with size 3 × 11. Among them, there are 5,686 matrices that do not have all-zero or all-one rows.
+After obtaining the reduced space of candidates for matrix PC, we propose using the approach discussed in Section IV-D to identify the ones that offer a meaningful trade-off between finitelength and asymptotic performance.
+B. Local Design The sub-block locality feature lets smaller contiguous parts of the long codewords to be
+decoded individually, using a local decoder and thus results in an improved decoding latency. In this sub-section, we investigate how to add irregularity into the local codes in order to improve both their decoding threshold and their cycle properties. In particular, we propose two protograph constructions for the local code of an SC-LDPCL code with parameters γl, κ, and ν, where ν ∈ {0, . . . , κ − 1} is the number of ⋆ elements in the γl × κ matrix PL. The two designs we propose have the same rate but may differ considerably in both their threshold and cycles properties.
+DRAFT
+
+21
+
+We first define some matrices that are used in the constructions. For integers α, β, and k, let
+
+Q(α, β; k) = [qi,j] and S(α, β) = [si,j] be α × β matrices, such that
+
+
+0 qi,j =
+1
+
+i=k ,
+otherwise
+
+
+0 si,j =
+1
+
+j = i ≤ min(α, β) otherwise.
+
+Let write ν = aγl+b with positive integers a and b such that b < γl. The balanced and unbalanced local-code constructions are represented by the proto-matrices BB and BU , respectively,
+
+BB = 1γl×(κ−ν) S(γl, b) Q(γl, a; γl) . . . Q(γl, a; 1) , BU = 1(γl, κ − ν) Q(γl, ν; 1) , (12)
+
+where the vertical dashed lines represent the horizontal concatenation of sub-matrices. BB and BU are both γl × κ matrices with ν zero entries; in BB, zeros are uniformly distributed among the rows, while in BU , all zeros are in the first row.
+
+Example 6. Let γl = 3, κ = 13, and ν = 10. Then,
+
+
+
+
+
+111 0 111 111 000
+
+
+
+
+
+BB
+
+=
+
+ 
+
+111
+
+1
+
+111
+
+000
+
+1
+
+11
+
+ 
+
+,
+
+
+
+
+
+
+
+
+
+111 1 000 111 111
+
+
+
+
+
+111 0 000 000 000
+
+
+
+
+
+BU
+
+=
+
+ 
+
+111
+
+1
+
+111
+
+111
+
+1
+
+1
+
+1
+
+ 
+
+.
+
+
+
+
+
+
+
+
+
+111 1 111 111 111
+
+Proposition
+
+7.
+
+Let
+
+κ,
+
+γl,
+
+and
+
+ν
+
+<
+
+κ
+
+be
+
+positive
+
+integers.
+
+If
+
+κ
+
+−
+
+⌊
+
+ν γl
+
+⌋
+
+≤
+
+ν,
+
+then
+
+σ∗(BU )
+
+≤
+
+σ ∗ (BB ).
+
+Next, we investigate the cycle properties of the balanced and unbalanced local constructions.
+
+Proposition 8. Let γl = 3, κ > 0, and ν = aγl + b < κ, and let F (BB) and F (BU ) denote the number of cycles-6 in the protograph of the balanced and unbalanced local codes, respectively. Then F (BU ) ≤ F (BB).
+
+Proposition 9. Let γl = 4, κ > 0, and ν = aγl < κ, and let F (BB) and F (BU ) denote the number of cycles-6 in the protograph of the balanced and unbalanced local codes, respectively. Then F (BU ) > F (BB).
+DRAFT
+
+22
+Remark 3. In Proposition 9, we assumed ν is divisible by γl only for simplicity. One can find a condition on ν for general case ν = aγl + b (where a ≥ 0 and 0 ≤ b < γl) such that F (BU ) > F (BB), by formulating the overlap parameters in terms of parameters a, b, and κ.
+Remark 4. For γl = 3, Propositions 7, 8 show that there is a trade-off between cycle and threshold properties of these local codes, and it is the designer discretion to choose between balanced and unbalanced schemes, depending on which feature is more desirable. This trade-off does not exist for γl = 4, where the balanced scheme has better performance in both features.
+We call an SC-LDPC code whose both global code and local code are designed to achieve the best cycle-count properties, resp., threshold properties, a locality-aware cycle-driven (LA-CD) choice, resp., locality-aware threshold-driven (LA-CD) choice.
+VI. SIMULATION RESULTS
+In our simulations, we consider parameters κ = 11, z = 67 γc = 3, m = 1, l = 5, γl ∈ {0, 2, 3}, and power matrix C = [ci,j] with ci,j = 6·i·j (mod z), which yields cycle-4 free graphs [32]. We investigate the performance of SC-LDPC codes with and without sub-block locality constructed using various methods (the new introduced methods and existing methods). Our results include the BER performance, cycle-counts, and threshold values. For Monte Carlo simulations, we observed at least 50 frame errors in every reported point.
+A. Setup 1: Regular SC-LDPC Code Without Locality In this subsection, we consider γl = 0 (SC codes with no locality), and compare four different
+design methods for P = [pi,j]: • Cutting-vector (CV) partitioning [25]: This is partitioning via a cutting vector with size γ whose elements 0 < ζ1 < . . . < ζγ are natural numbers. Then, pi,j = 0 if and only if j < ζi. We consider the cutting vector [4, 8, 11] for the simulations.
+DRAFT
+
+23
+
+TABLE I CYCLE AND THRESHOLD PROPERTIES OF VARIOUS DESIGN METHODS FOR SC-LDPC CODES WITH PARAMETERS κ = 11,
+z = 67, m = 1, l = 5. LEFT TABLE: WITHOUT LOCALITY (γ = 3); RIGHT TABLE: WITH LOCALITY (γl = 2, γc = 5).
+
+design cycles-6 σ∗
+
+CV [25] 7, 638 0.6779
+
+OO [8] 7, 571 0.6901
+
+CD
+
+3, 551 0.6851
+
+TD
+
+5, 628 0.6909
+
+design cycles-6 σ∗ LB-CV 83, 348 0.825 LB-OO 49, 714 0.8433 LA-CD 41, 540 0.8438 LA-TD 49, 044 0.8983
+
+• Optimal overlap (OO) partitioning [8]: The OO partitioning results in the minimum number of cycles-6 in the protograph SC code.
+• Cycle-driven (CD) partitioning: This is the partitioning within our reduced search space that results in the minimum number of cycles-6 in the lifted graph.
+• Threshold-driven (TD) partitioning: This is the partitioning within our reduced search space that has the maximum threshold.
+We first record the populations of cycles-6 along with the threshold values for the SC-LDPC codes that are constructed via the above methods. The results are given in the left panel of Table I, where it is shown that the CD method yields 54% reduction in the population of cycles-6 (in lifted graphs) compared to the CV method, while this reduction is less than 1% for the OO method compared to the CV method. We remind that the OO method results in the minimum number of cycles-6 in the protograph, not necessarily in the lifted graph. In terms of the asymptotic behavior, the TD method results in the highest threshold while also having fewer number of cycles compared to the CV and OO methods.
+Fig. 2 compares the BER performance for these SC-LDPC codes. The left sub-figure shows the BER performance in the low-SNR region and in particular the superiority of the TD partitioning with about half an order of magnitude compared to the CV partitioning at SNR= 2.5 dB. The right sub-figure shows the BER performance in the high-SNR region and the superiority of the CD partitioning with about one order of magnitude compared to the CV partitioning at
+DRAFT
+
+24
+10−1
+
+10−2
+
+10−5
+
+BER
+
+10−3
+
+10−6
+
+10−4 1 1.5 2 2.5 3
+SNR [dB]
+
+10−7 3 3.5 4 4.5 5 SNR [dB]
+
+CD TD CV OO
+
+Fig. 2. BER performance of various design methods for SC-LDPC codes with parameters κ = 11, z = 67, γ = 3, γl = 0, m = 1, and l = 5. Left: low-SNR region; right: high-SNR region.
+SNR= 5 dB. Moreover, there is a crossover point at SNR ≃ 3 dB, where the BER performances of CD and TD methods intersects.
+
+B. Setup 2: Regular SC-LDPC Code with Locality In this subsection, we consider γl = 2 (SC codes with locality) and PL = 0γl×κ (last γl rows
+of P are all-0, that is, the matrix B0 has γl all-1 rows). Then, we compare four different design methods for the matrix PC:
+• Locality-blind cutting-vector (LB-CV) partitioning: This is partitioning matrix PC via cutting vector [4, 8, 11] [25], similar to the case with no locality.
+• Locality-blind optimal overlap (LB-OO) partitioning: This is partitioning matrix PC via OO approach [8], ignoring the existence of the local part PL.
+• Locality-aware cycle-driven (LA-CD) partitioning: This is the optimal partitioning within our reduced search space that results in the minimum number of cycles-6.
+• Locality-aware threshold-driven (LA-TD) partitioning: This is the optimal partitioning within our reduced search space that results in the maximum threshold.
+DRAFT
+
+BER
+
+10−1
+10−2
+10−3
+10−4 1
+
+25
+
+1.5
+
+2
+
+SNR [dB]
+
+LA–CD
+
+2.5 LA–TD
+
+10−5 10−6 10−7 10−8
+2.5 3 3.5 4 4.5 5 SNR [dB]
+LB–CV LB–OO
+
+Fig. 3. BER performance of various design methods for SC-LDPC codes with sub-block locality with parameters κ = 11, z = 67, γc = 3, γl = 2, m = 1, l = 5, and PL = 0. Left: low-SNR region; right: high-SNR region.
+
+The results for population of cycles-6 in the lifted graphs along with the thresholds for SC-
+
+LDPC codes constructed with above methods are given in the right panel of Table I. As we
+
+see, the LA-CD method yields about 50% reduction in the population of cycles-6 compared to
+
+the LB-CV method, while this reduction is about 40% for the LB-OO method compared to the
+
+LB-CV method. In terms of the asymptotic behavior, the LA-TD method results in the highest
+
+threshold as motivated by the design while also having fewer number of cycles in the lifted graph
+
+compared to the LB-CV and LB-OO methods. As for the BER performance, Fig. 3 shows the
+
+results for SC-LDPC codes with sub-block locality according to the above constructions. Again,
+
+the left and right sub-figures show the performance in the low-SNR region and high-SNR region,
+
+respectively. Consistent with the design goals, the LA-TD design has superior performance in
+
+the low-SNR region, i.e., about 0.7 of an order of magnitude compared to the LB-CV method
+
+at SNR= 2 dB, while the LA-CD design has superior performance in the high-SNR region, i.e.,
+
+about one order of magnitude compared to the LB-CV method at SNR= 5 dB. Moreover, there
+
+is a crossover point at SNR ≃ 2.3 dB, where the BER performances of LA-CD and LA-TD
+
+methods intersects.
+
+DRAFT
+
+26
+
+TABLE II CYCLE AND THRESHOLD PROPERTIES OF CYCLE-DRIVEN AND THRESHOLD-DRIVEN METHODS FOR SC-LDPC CODES WITH
+SUB-BLOCK LOCALITY AND PARAMETERS κ = 11, z = 67, γc = 3, γl = 3, m = 1, AND l = 5.
+
+global design local design cycles-6 σ∗
+
+LA-CD LA-TD
+
+regular 89, 847 0.8805 unbalanced 33, 031 0.9245
+regular 137, 082 0.9568 balanced 34, 170 0.9867
+
+unbalanced 268 0.5271
+
+-
+
+balanced
+
+536 0.5979
+
+local code global code
+
+C. Setup 3: Irregular SC-LDPC Code with Locality In this subsection, we consider γl = 3 (SC codes with locality), κ = 11, ν = 8, and PL
+constructed according to balanced and unbalanced designs that were presented in Section V-B. In fact, we consider the balanced design for the local code when the LA-TD method is used for the global design, as the balanced design was shown to have superior threshold performance (see Proposition 7). Similarly, we consider the unbalanced design for the local code when the LA-CD method is used for the global design, as the unbalanced design was shown to have lower cycle-6 count for γ = 3 (see Proposition 8). We then investigate the performance of local decoding and global decoding for these construction methods (the performance of local decoding corresponds to the performance of the local LDPC code).
+Table II shows the population of cycles-6 in the lifted graphs along with the threshold values for the regular and irregular SC-LDPC codes with sub-block locality. As seen, adding unbalanced irregularity results in 63% reduction in the population of cycles-6 in the cycle-driven approach, and adding balanced irregularity further improves the decoding threshold in the threshold-driven approach. For the local codes, there is a trade-off between threshold and cycle properties of the balanced and unbalanced schemes, as expected.
+Fig. 4 compares the BER performance of the mentioned constructions using global decoding,
+DRAFT
+
+BER
+
+27
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+1
+
+1.5
+
+2
+
+2.5
+
+SNR [dB]
+
+LA-CD Regular LA-TD Regular
+
+10−5 10−6 10−7 10−8
+2.5 3 3.5 4 4.5 SNR [dB]
+LA-CD Unbalanced LA-TD Balanced
+
+Fig. 4. BER performance of the cycle-driven and threshold-driven methods for regular and irregular SC-LDPC codes with parameters κ = 11, z = 67, γc = 3, γl = 3, m = 1, and l = 5. Left: low-SNR region; right: high-SNR region.
+
+with the left sub-figure for low-SNR region and right one for high-SNR region. As shown, adding irregularity improves the performance of the threshold driven design by 0.8 order of magnitude at SNR= 2 dB. Moreover, adding irregularity improves the performance of the cycle driven design by approximately one order of magnitude at SNR= 4 dB. Fig. 5 shows the local-decoding BER performance of the balanced and unbalanced schemes corresponding to the local part of the codes in Fig. 4. As seen, the BER curves exemplify the theoretical results.
+D. Simulations over Partial Response (PR) Channel We also perform experiments over the partial response (PR) channel. We use a similar PR
+setting as in our previous work [30], which is briefly reviewed here: Our PR setting includes a magnetic recording channel model that incorporates inter-symbol interference in addition to transition jitter noise and electronic noise. The channel density is set to 1.4, and the equalization target used is [8, 14, 2]. The message is iteratively recovered via a min-sum LDPC decoding algorithm in addition to Bahl Cocke Jelinek Raviv (BCJR) detector based on pattern-dependent
+DRAFT
+
+28
+
+BER
+
+10−2
+
+10−3
+
+10−4 3
+
+45678 SNR [dB]
+Unbalanced
+
+10−5 10−6 10−7 10−8
+8
+Balanced
+
+8.5 9 9.5 10 SNR [dB]
+
+Fig. 5. Local decoding BER performance of irregular (balanced and unbalanced) codes with the parameters κ = 11, z = 67, γl = 3. Left: low-SNR region; right: high-SNR region.
+
+noise prediction. The internal iterations inside the LDPC decoder are called local iterations, while a global iteration is the one looping between the detector and the decoder. The decoder performs a specified number of local iterations (fewer if a codeword is reached) between any two successive global iterations. We use 20 global iterations and 200 local iterations for our simulations.
+Fig. 6 shows the BER comparison between three SC-LDPC code constructions: cutting vector (CV), optimal overlap (OO), and cycle-driven (CD), over PR channel model with two different level of transition jitter noise. Since our proposed threshold-driven (TD) construction optimizes the threshold for AWGN channel, we did not incorporate it in our BER evaluation over PR channel. We see that, while all having the same latency and rate, our CD construction enjoys about one order of magnitude performance improvement at SNR= 14 dB thanks to the dramatically lower number of cycles-6 compared to the CV and OO constructions in the lifted graph. This observation is supported by the fact that short cycles are sub-graphs of the detrimental combinatorial objects over PR channels [30]. The deeper error floor that is observed in the lower panel is due to lower level of the jitter noise.
+DRAFT
+
+29
+
+10−1 10−2 10−3 10−4 10−5 10−612
+
+12.5 13 13.5 SNR [dB]
+
+14 CD
+
+10−4
+10−5
+10−6
+10−712.8 13 13.2 13.4 13.6 13.8 14 SNR [dB]
+CV OO
+
+Fig. 6. BER performance over PR channel of various code constructions for SC-LDPC codes with parameters κ = 11, z = 67, γ = 3, m = 1, and l = 5. The transition jitter noise is heavier in the top panel (i.e., 70%) compared to the bottom panel (i.e., 50%)
+
+Fig. 6 highlights the importance of optimizing the partitioning matrix to improve reliability of the storage device by an order of magnitude, without any additional cost in the encoding and decoding procedure. One can further improve the performance of the code by changing the code parameters, such as increasing the row weight κ, column weight γ, increasing the field size, among others.
+VII. CONCLUSION In this paper, we proposed a novel framework to reduce the search space of block LDPC and SC-LDPC codes via only keeping one member from a family of equivalent matrices that share identical finite-length and asymptotic metrics (cycle-6 and thresholds, respectively). Then, we proposed a design method that identifies all constructions that offer a trade-off between finite-length and asymptotic performances in this reduced search space. Further, we incorporated the block locality feature into our SC-LDPC design, and proposed methods for designing both local CNs and global CNs. Our simulation results verify our theoretical derivations and show
+DRAFT
+
+30
+the outstanding performance and flexibility of the codes designed using our method. For future work, one can also incorporate additional constraints over the search space of nonequivalent matrices introduced in this paper, e.g., all columns must be at least of certain weight.
+VIII. ACKNOWLEDGEMENTS
+Research supported in part by a grant from ASRC-IDEMA, and in part by a grant from the Israel Science Foundation. The authors would like to thank Lev Tauz and Debarnab Mitra for their assistance in carrying the PR experiments.
+REFERENCES
+[1] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[2] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962. [3] R. M. Tanner, D. Sridhara, A. Sridharan, T. E. Fuja, and D. J. Costello, “LDPC block and convolutional codes based on
+circulant matrices,” IEEE Transactions on Information Theory, vol. 50, no. 12, pp. 2966–2984, Dec. 2004. [4] S. Kudekar, T. Richardson, and R. L. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief
+propagation,” IEEE Transactions on Information Theory, vol. 59, no. 12, pp. 7761–7813, Dec. 2013. [5] D. G. M. Mitchell, M. Lentmaier, and D. J. Costello, “AWGN channel analysis of terminated LDPC convolutional codes,”
+in Proc. Information Theory and Applications Workshop (ITA), La Jolla, CA, Feb. 2011, pp. 1–5. [6] E. Ram and Y. Cassuto, “Spatially coupled LDPC codes with sub-block locality,” IEEE Transactions on Information
+Theory, vol. 67, no. 5, pp. 2739–2757, 2021. [7] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov, “Iterative decoding threshold analysis for LDPC
+convolutional codes,” IEEE Transactions on Information Theory, vol. 56, no. 10, pp. 5274–5289, Oct. 2010. [8] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Finite-length construction of high performance spatially-coupled codes
+via optimized partitioning and lifting,” IEEE Transactions on Communications, vol. 67, no. 1, pp. 3–16, Jan. 2019. [9] A. Hareedy, H. Esfahanizadeh, A. Tan, and L. Dolecek, “Spatially-coupled code design for partial-response channels:
+Optimal object-minimization approach,” in IEEE Global Communications Conference (GLOBECOM), 2018, pp. 1–7. [10] D. G. M. Mitchell and E. Rosnes, “Edge spreading design of high rate array-based SC-LDPC codes,” in Proc. IEEE Int.
+Symp. Inf. Theory, Jun. 2017, pp. 2940–2944. [11] A. Beemer and C. A. Kelley, “Avoiding trapping sets in SC-LDPC codes under windowed decoding,” in Proc. IEEE Int.
+Symp. Inf. Theory and Its Applications, Oct. 2016, pp. 206–210.
+DRAFT
+
+31
+[12] B. K. Butler and P. H. Siegel, “Error floor approximation for LDPC codes in the awgn channel,” IEEE Transactions on Information Theory, vol. 60, no. 12, pp. 7416–7441, 2014.
+[13] E. Sharon and S. Litsyn, “Generating good finite length LDPC codes based on lifted graphs,” Proc. of the 44’th Allerton Conf. on Communication Control and Computing, pp. 1–10, 09 2006.
+[14] B. Vasic´, S. K. Chilappagari, and D. V. Nguyen, Failures and Error Floors of Iterative Decoders. Elsevier Inc., june 2014, pp. 299–341.
+[15] C. Di, D. Proietti, I. Telatar, T. Richardson, and R. Urbanke, “Finite-length analysis of low-density parity-check codes on the binary erasure channel,” IEEE Transactions on Information Theory, vol. 48, no. 6, pp. 1570–1579, 2002.
+[16] A. Tomasoni, S. Bellini, and M. Ferrari, “Thresholds of absorbing sets in low-density parity-check codes,” IEEE Transactions on Communications, vol. 65, no. 8, pp. 3238–3249, 2017.
+[17] C. Di, D. Proietti, I. Telatar, T. Richardson, and R. Urbanke, “Finite-length analysis of low-density parity-check codes on the binary erasure channel,” IEEE Transactions on Information Theory, vol. 48, no. 6, pp. 1570–1579, 2002.
+[18] M. Karimi and A. H. Banihashemi, “An efficient algorithm for finding dominant trapping sets of irregular LDPC codes,” in IEEE International Symposium on Information Theory Proceedings, 2011, pp. 1091–1095.
+[19] T. Richardson, “Error floors of LDPC codes,” in 41th Annual Allerton Conference on Communication, Control and Computing, Oct. 2003, pp. 1426–1435.
+[20] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Transactions on Information Theory, vol. 56, no. 1, pp. 181–201, 2010.
+[21] E. Ram and Y. Cassuto, “Spatially coupled LDPC codes with sub-block locality,” IEEE Transactions on Information Theory, vol. 67, no. 5, pp. 2739–2757, 2021.
+[22] S. Ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density parity-check codes for modulation and detection,” IEEE Transactions on Communications, vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[23] G. Liva and M. Chiani, “Protograph LDPC codes design based on EXIT analysis,” in Proc. IEEE Global Telecommunications Conference (GLOBCOM), Washington, DC, Nov. 2007, pp. 3250–3254.
+[24] R. Smarandache and P. O. Vontobel, “Quasi-cyclic LDPC codes: Influence of proto- and Tanner-graph structure on minimum hamming distance upper bounds,” IEEE Transactions on Information Theory, vol. 58, no. 2, pp. 585–607, Feb. 2012.
+[25] D. G. M. Mitchell, L. Dolecek, and D. J. Costello, “Absorbing set characterization of array-based spatially coupled LDPC codes,” in Proc. IEEE International Symposium on Information Theory (ISIT), Honolulu, HI, Jun. 2014, pp. 886–890.
+[26] M. Karimi and A. H. Banihashemi, “On characterization of elementary trapping sets of variable-regular LDPC codes,” IEEE Transactions on Information Theory, vol. 60, no. 9, pp. 5188–5203, 2014.
+[27] R. P. Stanley, Enumerative Combinatorics: Volume 1, 2nd ed. USA: Cambridge University Press, 2011. [28] A. Bazarsky, N. Presman, and S. Litsyn, “Design of non-binary quasi-cyclic ldpc codes by ace optimization,” in IEEE
+Information Theory Workshop (ITW), 2013, pp. 1–5.
+DRAFT
+
+32 [29] H. Esfahanizadeh, L. Tauz, and L. Dolecek, “Multi-dimensional spatially-coupled code design: Enhancing the cycle
+properties,” IEEE Transactions on Communications, vol. 68, no. 5, pp. 2653–2666, 2020. [30] H. Esfahanizadeh, A. Hareedy, and L. Dolecek, “Spatially coupled codes optimized for magnetic recording applications,”
+IEEE Transactions on Magnetics, vol. 53, no. 2, pp. 1–11, 2017. [31] A. R. Iyengar, M. Papaleo, P. H. Siegel, J. K. Wolf, A. Vanelli-Coralli, and G. E. Corazza, “Windowed decoding of
+protograph-based ldpc convolutional codes over erasure channels,” IEEE Transactions on Information Theory, vol. 58, no. 4, pp. 2303–2320, April 2012. [32] J. L. Fan, “Array codes as low-density parity-check codes,” in Proc. International Symposium on Turbo Codes and Iterative Information Processing (ISTC), Brest, France, Sep. 2000, pp. 543–546.
+DRAFT
+
+33
+
+APPENDICES
+
+Algorithm 1: Recursive Algorithm for Solving Star and Bar Problem
+
+Result: list = {[n0, . . . , nα−1] : ni ≥ 0 and
+
+α−1 i=0
+
+ni
+
+=
+
+β}
+
+list = {}, a = α, b = β;
+
+F (a, b, []);
+
+Function F (a, b, choice) is
+
+if a = 1 then
+
+choice = [choice, b];
+
+list = list ∪ choice;
+
+else
+
+for k ∈ {0, . . . , b} do choice′ = [choice, k] ; F (a − 1, b − k, choice′);
+
+end
+
+end
+
+Lemma 10. Consider two binary matrices A and B with size γ × κ. Let O(A) and O(B) be the set of overlap parameters for these two matrices, respectively. Then, A and B are column permuted versions of each other if and only if O(A) = O(B).
+Proof of Lemma 10. We remind that a degree-d overlap parameter t{i1,...,id} for a binary matrix is defined as the number of columns such that all the rows with indices in {i1, . . . , id} have 1s simultaneously. We show in the next lemma that the space of all distinct sets of overlap parameters and the space of all distinct column distributions have a one-to-one correspondence.
+We first prove the first direction, i.e., if O(A) = O(B), two matrices A and B are column permuted version of each other. To this end, we show that if the order of the columns does
+DRAFT
+
+34
+not matter, a binary matrix can be uniquely constructed using its overlap parameters. Thus, we conclude that two matrices A and B must be column permuted version of each other as they have the same set of overlap parameters (both are column permutation of the uniquely constructed matrix). First, we show how one can successively construct the binary matrix using its overlap parameters. For the first row, t{1} elements are selected to have value 1 and the rest are set to 0. For the second row, t{2} elements are selected to have value 1 such that t{1,2} of them belong to the columns that the first row also has 0 and (t{2} − t{1,2}) of them belong to the columns that the first row has 0. Then, the rest are set to 0. The remaining rows are formed successively in a similar fashion without any reference to the specific column order but rather with reference to the relative positions of columns. Therefore, the set of matrices that share the same set of overlap parameters must be column permuted versions of each other. The other direction is more straight forward. In fact, the number of overlaps among a set of rows of a binary matrix does not change via column permutations. Thus, if two binary matrices A and B are column permuted version of each other, O(A) = O(B).
+
+Proof of Theorem 1. Equation (6a) is a direct consequence of Lemma 2, and it ensures the distinct column distributions of equivalent matrices are considered only once by imposing the constraint n1 ≤ n2. To find the number of nonequivalent binary matrices with γ = 2 rows, we first calculate the cardinality of the set Tκ,2 ⊆ Sκ,2 defined below
+
+Tκ,2 = {[n0, n1, n2, n3] ∈ Sκ,2 : n1 = n2} .
+
+(13)
+
+Then, the number of nonequivalent matrices will follow from
+
+|Kκ,2|
+
+=
+
+|Tκ,2|
+
++
+
+1 2
+
+|Sκ,2
+
+\
+
+Tκ,2|
+
+.
+
+(14)
+
+Using (13),
+
+⌊κ/2⌋
+
+Tκ,2 =
+
+{[n0, n1, n2, n3] ∈ Sκ,2 : n1 = n2 = i}
+
+i=0
+
+⌊κ/2⌋
+Qκ,i.
+i=0
+
+DRAFT
+
+35
+
+By invoking the stars-and-bars method again, |Qκ,i| =
+
+κ−2i+2−1 2−1
+
+= κ − 2i + 1. Since the union
+
+above is disjoint, we get
+
+⌊κ/2⌋
+
+|Tκ,2| = (κ − 2i + 1).
+
+(15)
+
+i=0
+
+We remind that according to (5), |Sκ,2| =
+
+κ+3 3
+
+,
+
+and
+
+combining
+
+with
+
+(14)
+
+and
+
+(15)
+
+yields
+
+|Kκ,2|
+
+=
+
+|Tκ,2|
+
++
+
+1 2
+
+|Sκ,2|
+
+−
+
+1 2
+
+|Tκ,2|
+
+=
+
+1 2
+
+(|Sκ,2|
+
++
+
+|Tκ,2|)
+
+=
+
+1 2
+
+⌊κ/2⌋  (κ
+i=0
+
+−
+
+2i
+
++
+
+1)
+
++
+
+
+
+κ+3 3
+
+.
+
+Proof of Theorem 2. The first part is a direct consequence of Lemma 3 that ensures the distinct column distributions of equivalent matrices are only considered once by imposing appropriate constraints. For the second part, we find the number of distinct nonequivalent binary matrices with γ = 3 rows. In order to do so, we partition the column distributions in Sκ,3 into three classes: • Class-A column distributions SκA,3: column distributions that are invariant to any row per-
+mutation. In other words, for a matrix with column distribution in Class-A, all (3! out of 3!) row permutations of the matrix results in the same column distribution. • Class-B column distributions SκB,3: column distributions that are invariant to permutation of one pair of rows. In other words, for a matrix with column distribution in Class-B, 3!/2! = 3 row permutations exist that result in distinct column distributions in Class-B. • Class-C column distributions SκC,3: column distributions that are variant to any row permutation. In other words, for a matrix with column distribution in Class-A, all 3! = 6 row permutations of the matrix result in distinct column distributions in Class-C.
+
+Consequently,
+
+|Kκ,3| = |SκA,3| + |SκB,3|/3 + |SκC,3|/6.
+
+(16)
+
+DRAFT
+
+36
+
+We first identify SκA,3 as follows: SκA,3 = {[n0, n1, n2, n4, n6, n5, n3, n7] ∈ Sκ,3 : n1 = n2 = n4, n6 = n5 = n3} .
+
+Thus,
+
+SκA,3 =
+
+{[n0, n1, n2, n4, n6, n5, n3, n7] ∈ Sκ,3 : n1 = n2 = n4 = i, n6 = n5 = n3 = j} ,
+
+i,j∈N : 3(i+j)≤κ
+
+where the union is disjoint. In view of Lemma 1,
+
+SκA,3 =
+
+|{[n0, n7] : n0 + n7 = κ − 3(i + j)}| =
+
+(κ − 3(i + j) + 1) = aκ. (17)
+
+i,j∈N :
+
+i,j∈N :
+
+3(i+j)≤κ
+
+3(i+j)≤κ
+
+Next, we identify SκB,3. We define Tκ1,3,2 as the the set of column distributions that are invariant
+
+to swapping the first and second row:
+
+Tκ1,3,2 = {[n0, n1, n2, n4, n6, n5, n3, n7] ∈ Sκ,3 : n1 = n2, n6 = n5},
+
+and similarly, Tκ1,3,3 and Tκ2,,33 can be defined. Note that SκA,3 is a subset of Tκ1,3,2, Tκ1,,33, and Tκ2,3,3. Therefore,
+SκB,3 = (Tκ1,,32 \ SκA,3) ∪ (Tκ1,3,3 \ SκA,3) ∪ (Tκ2,3,3 \ SκA,3).
+
+Because of the disjoint property and since |Tκ1,,32 \ SκA,3| = |Tκ1,,33 \ SκA,3| = |Tκ2,,33 \ SκA,3| (due to the symmetry), we have |SκB,3| = 3|Tκ1,,32 \ SκA,3| = 3(|Tκ1,,32| − aκ). Besides
+
+Tκ1,,32 =
+
+{[n0, n1, n2, n3, n4, n5, n4, n7] ∈ Sκ,3 : n1 = n2 = i, n5 = n6 = j},
+
+i,j∈N : 2(i+j)≤κ
+
+where the union is disjoint. In view of Lemma 1,
+
+Tκ1,3,2 = |{[n0, n3, n4, n7] : n0 + n3 + n4 + n7 = κ − 2(i + j)}| =
+
+κ − 2(i + j) + 3 . 3
+
+i,j∈N :
+
+i,j∈N :
+
+2(i+j)≤κ
+
+2(i+j)≤κ
+
+Thus, the number column distributions in Class-B is:
+
+
+
+|SκB,3|
+
+=
+
+3
+
+ 
+
+i,j∈N : 2(i+j)≤κ
+
+κ − 2(i + j) + 3 3
+
+ − Aκ = 3bκ.
+
+(18)
+
+DRAFT
+
+37
+
+Finally, we identify SκC,3, i.e., column distributions that are variant to any permutations. We
+
+remind that the total number of column distributions is |Sκ,3|, ak of them belong to Class-A,
+
+and 3bk of them belong to Class-B. As a result,
+
+|SκC,3| =
+
+κ+7 7
+
+− ak − 3bk = 6ck.
+
+(19)
+
+Combining (16)-(19) completes the proof.
+
+Proof of Proposition 5. If matrix PC has an all-zero row, then its column distribution
+
+(n0, n1, n2, n3) satisfies n3 = 0. Further, if matrix PC has an all-zero row, n1 = 0. This is
+
+because to have an all-zero row in PC either n1 or n2 must be zero, and by definition n1 ≤ n2.
+
+Thus, using the stars-and-bars method, there exists
+
+κ+2−1 2−1
+
+= κ + 1 column distributions for PC
+
+among the nonequivalent choices that have at least one all-zero row. Similarly, there exists κ + 1
+
+column distributions for PC among the nonequivalent choices that have at least one all-one row. These two subsets of column distributions have only one common member which is a 2 × κ
+
+matrix with one all-zero row and one all-one row. Finally, using the principle of inclusion and
+
+exclusion, the number of nonequivalent matrices that do not have all-zero or all-one rows is
+
+|Kκ,2| − 2(κ + 1) + 1.
+
+Proof of Proposition 6. First, we identify the column distributions that yield matrices with allzero rows. Since we already consider nonequivalent matrices, a single all-zero row is sufficient for the matrix to be invalid for our purpose. Without loss of generality, we can assume the first row is zero, and thus n4 = n5 = n6 = n7 = 0, and the other possibilities can be considered as row permutation of this setting. Next, we quantify the possible realizations for [n0, n1, n2, n3, 0, 0, 0, 0] that result in nonequivalent matrices. This corresponds to discarding the first row that is all-zero, and identifying the cardinality of the set of column distributions for all distinct 2×κ nonequivalent binary matrices which is |Kκ,2| and is given in Theorem 1. Similarly, the number of column
+DRAFT
+
+38
+distributions that result in nonequivalent matrices with all-one rows is |Kκ,2|. Lastly, there are κ + 1 column distribution that correspond to matrices with both a full-zero row (the first row without loss of generality) and a full-one row (the second row without loss of generality), which are realizations in form of [0, 0, n2, n3, 0, 0, 0, 0, 0] and have κ + 1 possibilities.
+Proof of Proposition 7.
+Fact 11. Let σ1∗ and σ2∗ be the EXIT thresholds of (γ1, κ1)-regular and (γ2, κ2)-regular protographs. If κ1 = κ2 and γ1 ≤ γ2, then σ1∗ ≤ σ2∗, and if γ1 = γ2 and κ1 ≤ κ2, then σ1∗ ≥ σ2∗.
+Let ν = aγl + b. Consider a (γl − 1, κ − a)-regular protograph. Assume that we apply (1) and (2) on this protograph, and let xℓ(σ) and uℓ(σ) denote the resulting VN→CN and CN→VN EXIT values at iteration ℓ, respectively, given the channel parameter σ. We construct BB as follows:
+BB = 1γl×(κ−ν) − Q(γl, κ − ν; 1) 1γl×b − S(γl, b) Q(γl, κ − ν, 1) S(γl, b) Q(γl, a, γl) . . . Q(γl, a, 1) .
+In other words, BB is obtained from BB by: 1) replacing the leftmost κ − ν entries in the first row with zeros such that all VNs are γl − 1 regular, and 2) adding κ − ν + b columns of degree 1 such that all CNs are κ − a regular. We call the added degree-1 columns (VNs) “auxiliary VNs” (see Fig. 7 for an example with κ = 5, γl = 3, ν = 4). Thus, BB is (γl − 1, κ − a)-regular except for the auxiliary VNs. Next, we apply (1) and (2) on BB with a channel parameter σ for non-auxiliary VNs, while the auxiliary VNs pass through a channel with a parameter σℓ that changes in every iteration ℓ in a way that J(σℓ) = xℓ(σ). It follows that the EXIT values passing over all edges of BB equal to those passing over a (γl − 1, κ − a)-regular protograph, i.e., xℓ(σ) and uℓ(σ) for VN→CN and CN→VN messages, respectively. We match the edges in BB to the edges in BB as follows. The edges connecting the ν rightmost columns in BB match
+DRAFT
+
+39
+
+σ
+
+σℓ σℓ
+
+σ
+
+0
+e1 e2 e3
+
+0
+
+1
+
+2
+
+e4e5 e6 e7 e8 e9 e10e11
+
+A0 A1
+e1
+
+0
+e2 e3
+
+0
+
+1
+
+2
+
+e4e5 e6 e7 e8 e9 e10e11
+
+1
+
+2
+
+3
+
+4
+
+σ
+
+σ
+
+σ
+
+σ
+
+(a)
+
+1
+
+2
+
+3
+
+4
+
+σ
+
+σ
+
+σ
+
+σ
+
+(b)
+
+Fig. 7. Graph constructions for proof of Proposition 7, with κ = 5, γl = 3, ν = 4: (a) corresponds to BB and (b) corresponds to BB. A0 and A1 are auxiliary VNs. The edge matching is illustrated via edge labels {ei}1i=1 1.
+
+their identical edges in BB, and the edges connecting bottom-most γl − 1 CNs with the leftmost κ − ν VNs in BB match their identical edges in BB as well. Finally, the edges connecting the top CN with the leftmost κ − ν VNs each matches one arbitrary edge connected to an auxiliary VN (see Fig. 7).
+Given a channel parameter σ, let yℓ(σ, e) and wℓ(σ, e) be the VN→CN and CN→VN EXIT values, respectively, over some edge e in the protograph BB. From the monotonicity of (1) and (2) in their arguments and in node degrees, it can be shown by mathematical induction that for any σ and every edge e
+
+yℓ(σ, e) ≥ xℓ(σ), wℓ(σ, e) ≥ uℓ(σ), ∀ℓ ≥ 0 .
+
+(20)
+
+If we mark σ∗(dv, dc) as the asymptotic threshold of a regular (dv, dc) protograph, then (20) implies that if the channel parameter satisfies σ < σ∗(γl − 1, κ − a) then the EXIT algorithm over BB will converge to 1, thus
+
+σ∗(BB) ≥ σ∗(γl − 1, κ − a) .
+
+(21)
+
+From the sub-matrix lemma in [6, Lemma 1] we have
+
+σ∗(BU ) ≤ σ∗(γl − 1, ν) .
+
+(22)
+
+DRAFT
+
+40
+Since κ − a ≤ ν, combining (21)–(22) with Fact 11, which holds since κ − a = κ − ⌊ν/γl⌋ ≤ ν, completes the proof.
+
+Proof of Proposition 8. Consider a binary matrix B with γl = 3 rows. The number of cycles-6 can be expressed in terms of the overlap parameters of proto-matrix B as described in (3) and (4) as follows:
+F (B) = A(t{1,2,3}, t{1,2}, t{1,3}, t{2,3}) .
+
+According to our constructions, no two zeros (out of the ν zeros) are located in the same column and thus t{1,2,3} = κ−ν = κ−3a−b ≥ 1. In the balanced construction, we have t{1,2} = κ−2a−b, t{1,3} = κ − 2a − (b > 0), and t{2,3} = κ − 2a − (b > 1), where (cond) is 1 if cond is true and 0 otherwise. Thus,
+
+F (BB) =(κ − ν)(κ − ν − 1)(κ − 2a − (b > 1) − 2)
+
++(κ − ν)(a + (b > 1))(κ − 2a − (b > 1) − 1)
+
+(23)
+
++a(κ − ν)(κ − 2a − (b > 1) − 1)a(κ − ν)(κ − 2a − (b > 1)). In the unbalanced construction, we have t{1,2} = t{1,3} = κ − ν and t{2,3} = κ. Thus,
+
+F (BU ) = (κ − ν)(κ − ν − 1)(κ − 2) .
+
+(24)
+
+Comparing (23) and (24) completes the proof.
+
+Proof of Proposition 9. Consider a binary matrix B with γl = 4 rows. The number of cycles-6 in B is
+F (B) =A(t{1,2,3}, t{1,2}, t{1,3}, t{2,3}) + A(t{1,2,4}, t{1,2}, t{1,4}, t{2,4}) +A(t{1,3,4}, t{1,3}, t{1,4}, t{3,4}) + A(t{2,3,4}, t{2,3}, t{2,4}, t{3,4}).
+Again, zeros are never located in the same column according to our constructions. In the balanced construction, we have t{1,2} = t{1,3} = t{1,4} = t{2,3} = t{2,4} = t{3,4} = κ − ν/2, and
+DRAFT
+
+41
+
+t{1,2,3} = t{1,2,4} = t{1,3,4} = t{2,3,4} = κ − 3ν/4, thus
+F (BB) =4(κ − 3ν/4)(κ − 3ν/4 − 1)(κ − ν/2 − 2) + 4(κ − 3ν/4)(ν/4)(κ − ν/2 − 1) (25)
++4(ν/4)(κ − 3ν/4)(κ − ν/2 − 1) + 4(ν/4)(ν/4)(κ − ν/2). In the unbalanced construction, we have t{1,2,3} = t{1,2,4} = t{1,3,4} = κ − ν, t{2,3,4} = κ,
+t{1,2} = t{1,3} = t{1,4} = κ − ν, and t{2,3} = t{2,4} = t{3,4} = κ, thus
+
+F (BU ) = 3(κ−ν)(κ−ν −1)(κ−2)+κ(κ−1)(κ−2).
+
+(26)
+
+In view of (25) and (26), F (BB) − F (BU ) = ν2(3/2 − ν) < 0 since ν ≥ γl = 4.
+
+DRAFT
+
+

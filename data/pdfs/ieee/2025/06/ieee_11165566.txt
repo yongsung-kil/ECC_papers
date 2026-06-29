@@ -1,0 +1,652 @@
+Adaptive Quantized and Normalized QC-LDPC
+Universal Block-Parallel Decoder
+Xia An1, Chao Zhang2, Jian Song3
+Department of Electronic Engineering,
+Beijing National Research Center for Information Science and Technology (BNRist)
+State Key laboratory of Space Network and Communications
+Tsinghua University, Beijing, China
+1ax23@mails.tsinghua.edu.cn, {2z c, 3jsong}@tsinghua.edu.cn
+Abstract—As wireless communication systems evolve, new
+frameworks place increasing demands on terminal performance,
+including throughput, latency, power consumption, and size.
+Software-Defined Radio (SDR) systems have the potential to sup-
+port multiple communication standards and enabling on-demand
+upgrades due to their flexibility. However, purely software-based
+implementations for physical layer protocols reduce efficiency,
+necessitating the use of external accelerators such as FPGA
+for specialized computation. Specifically, channel decoding con-
+tributes a lot to the physical layer’s complexity, and thus is highly
+demand for FPGA specialized implementation while retaining
+the universality of the decoding architecture in some level. This
+paper presents an adaptive quantized and normalized QC-LDPC
+universal decoder based on a block-parallel architecture with
+pipeline and instruction-driven approach. The proposed decoder
+improves throughput and reduces computational complexity
+while maintaining flexibility for various QC-LDPC codes. Exper-
+imental results demonstrate that the adaptive quantization and
+normalization scheme significantly outperforms existing methods
+in terms of decoding performance and maximum frequency,
+offering a more efficient solution for SDR systems.
+Index Terms—low-density parity-check (LDPC) code, adap-
+tive quantized and normalized min-sum algorithm (AQNMSA),
+block-parallel decoding, universal decoder, 5th-Generation New
+Radio (5G-NR)
+I. INTRODUCTION
+As wireless communication systems continue to evolve,
+new communication frameworks are driving higher demands
+on performance metrics such as throughput, latency, power
+consumption, and size for terminal devices. [1] Software-
+Defined Radio (SDR) systems [2], which achieve partial soft-
+ware implementation on terminals, offer significant potential
+to support a wide range of existing communication standards
+while enabling on-demand upgrades to accommodate future
+communication technologies.
+For higher-layer communication protocols, a fully software-
+based implementation is appropriate for flexible implementa-
+tion. [3] However, for physical layer communication protocols,
+a purely software-based approach significantly reduces the
+efficiency of the communication system. Therefore, external
+accelerators, coprocessors, and other methods are typically
+employed to accelerate computation. [4]
+The corresponding author of this work is Chao Zhang.
+The channel decoding module contributes more than 40%
+of the complexity to the physical layer of a wireless com-
+munication system. [5] Thus, its decoding complexity and
+performance are crucial to the overall performance of the
+system. In SDR communication systems, the channel decoding
+module is typically implemented using Field-Programmable
+Gate Array (FPGA) [6], Graphics Processing Unit (GPU) [7],
+or multi-core Central Processing Unit (CPU) [8]. Compared
+to Application-Specific Integrated Circuit (ASIC) implemen-
+tations, GPUs and CPUs offer better reconfigurability but
+suffer from lower throughput, higher latency, and higher power
+consumption. FPGA implementations, on the other hand, are
+closer to ASIC in terms of performance, meanwhile less
+flexible and requires more development effort.
+Low-density parity-check (LDPC) codes [9] have been
+widely applied in many communication and broadcasting
+standards such as the 5th-Generation New Radio (5G-NR)
+[10] [11], Advanced Television System Committee (ATSC) 3.0
+[12], and Digital Terrestrial Multimedia Broadcast Advanced
+(DTMB-A) [13] [14]. All of the existing LDPC codes in
+specifications adopt the quasi-cyclic (QC-) structure. [15]
+In the context of LDPC decoding, iterative message passing
+(MP) algorithms are usually applied, where the optimal belief
+propagation (BP) algorithm, i.e., the sum-product algorithm
+(SPA) [16], could provide near optimal decoding threshold
+performance but requires relatively high computational re-
+sources. The min-sum algorithm (MSA) [17] and its improved
+algorithms, e.g., normalized MSA (NMSA) [18], adaptive
+NMSA (ANMSA) [19], adaptive quantized and normalized
+MSA (AQNMSA) [20], have low computational and storage
+overhead, but degraded threshold performance.
+To support the universal decoding of QC-LDPC codes,
+an FPGA-based LDPC decoder employs a block-parallel
+and instruction-driven pipeline architecture for high through-
+put and flexible reconfigurability, and an optimal instruction
+scheduling strategy is applied to the universal architecture.
+[21] However, the universal architecture leads to a degra-
+dation in decoding performance. For instance, the block-
+parallel architecture, which can effectively support decoding
+of different base graphs, is limited by the block size in terms
+of throughput. Increasing parallelism improves throughput but
+increases resource consumption while reducing area efficiency.
+2025 IEEE International Symposium on Broadband Multimedia Systems and Broadcasting (BMSB) | 979-8-3315-1998-8/25/$31.00 ©2025 IEEE | DOI: 10.1109/BMSB65076.2025.11165566
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:06 UTC from IEEE Xplore.  Restrictions apply. 
+Here we consider an alternative approach to improve the
+performance of the universal decoder, i.e., to introduce an
+adaptive quantization and normalization strategy to the uni-
+versal decoder. By reducing the quantization bit-width of the
+internal signals in the decoder, we can simultaneously increase
+the throughput and reduce the computational complexity of the
+decoder. Furthermore, thanks to the adaptive quantization and
+normalization strategy, the degradation of decoding threshold
+performance caused by the reduced quantization bit-width is
+almost negligible.
+The main contributions of this paper are summarized as
+follows:
+• We demonstrate an adaptive quantized and normalized
+QC-LDPC universal block-parallel decoder, which ap-
+plies a block-parallel decoding architecture and incor-
+porates a pipeline and instruction-driven approach. The
+decoder is capable of decoding various QC-LDPC codes
+with different base graphs and code rates, and achieves
+high throughput and low latency.
+• We develope a QC-LDPC universal codec test system
+based on FPGA. This test system was used to evaluate the
+decoding performance and resource utilization of several
+typical modes of the 5G-NR codes.
+• We compare the proposed adaptive quantization and
+normalization scheme with other schemes. Experimental
+results show the advantages of our scheme over other
+schems in terms of decoding complexity and throughput.
+The rest of the paper is organized as follows. Section
+II introduces the adaptive quantization and normalization
+strategy as well as the QC-LDPC universal block-parallel
+decoder. Section III elaborates on the FPGA implementation
+of the adaptive quantization and normalization strategy, and
+illustrates the structure of QC-LDPC universal codec test
+system. Section IV provides the experiential results of the
+universal decoder applying 5G-NR LDPC codes. Section V
+concludes the paper.
+II. ADAPTIVE QUANTIZATION AND NORMALIZATION FOR
+UNIVERSAL DECODER
+In this section, we introduce the adaptive quantization
+and normalization strategy for LDPC iterative decoding algo-
+rithms, and depict the structure of QC-LDPC universal block-
+parallel decoder with pipeline structure and instruction-driven
+approach.
+A. Adaptive Quantization and Normalization Strategy
+The adaptive quantization and normalization strategy is de-
+signed to reduce the computational complexity of the decoder
+while maintaining a good trade-off between decoding perfor-
+mance and complexity. The quantization and normalization
+process is adaptive in the sense that the decoder adjusts the
+quantization intervals and normalization factors of the internal
+signals according to the look-up table (LUT) and current
+searching indices, i.e., check-ratio and edge-type.
+The edge-type is the current node’s type of edge, which
+is determined manually by the base graph structure. The
+check-ratio is the unsatisfied check nodes rate of the
+nodes of current edge-type. In practical implementation,
+the LUT for the quantization and normalization parameters
+((check-ratio, edge-type), (T, α)) is preconfigured in the de-
+coder, and the LUT is determined by the base graph of the
+current LDPC code with multi-edge-type density evolution
+(MET-DE) tool.
+The quantization and normalization process is performed in
+the following steps through each iteration:
+1) The decoder uses the current decoding result bits
+to calculate the current unsatisfied check nodes rate
+check-ratiocur of the nodes of current edge-type.
+2) The decoder uses the edge-type and check-ratiocur of
+the current node to get the current quantization interval
+Tcur and normalization factor αcur from the LUT.
+3) The decoder uses qL, T0, and Tcur to convert the high
+bit-width output of the variable node unit (VNU) into
+the low bit-width input of the check node unit (CNU).
+4) After the CNU process is done, the decoder uses qH,
+T0, and Tcur to convert the low bit-width output of the
+CNU into a high bit-width intermediate variable, and
+multiplies it by αcur to obtain the high bit-width input
+of the VNU.
+Note that the above description is regardless of the schedul-
+ing strategy of the decoder, and for layered-scheduling, the
+VNU process is broken into two steps before and after the
+CNU process. In this case, they both needs quantization
+conversion and normalization, but use different quantization
+intervals and normalization factors.
+B. QC-LDPC Universal Block-Parallel Decoder
+The decoding process of a single node the i-th layer in
+the QC-LDPC universal decoder is shown in Algorithm 1.
+The decoder employs a block-parallel architecture and layered-
+scheduling, where the decoding process of the nodes in the
+same lifting block are performed in parallel, and the decoding
+process of each layer is executed in sequence. A QC-LDPC
+shift network (QSN) is applied to support the data shifting of
+the nodes in the same lifting block.
+We apply a 6-stage pipeline structure to the QC-LDPC uni-
+versal block-parallel decoder, which consists of the following
+stages: Instruction Processing (IP), Barrel Shifting (BS), Q
+value Calculation (QCa), Q value Comparison (QCo), A value
+Update (AU), A value Write back (AW). The function of each
+stage is as follows:
+1) IP: The IP stage is responsible for fetching the in-
+struction from the instruction memory and decoding the
+instruction to determine the operation to be performed
+in the current cycle.
+2) BS: The BS stage is responsible for shifting the input
+data to the correct position according to the instruction.
+3) QCa: The QCa stage is responsible for the VNU process
+before CNU, i.e., calculating the Q value of the current
+node based on the input data.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:06 UTC from IEEE Xplore.  Restrictions apply. 
+Algorithm 1: Decoding Process of a Single Node in
+LDPC Base Graph i-th Layer
+Input: M 1
+i , M 2
+i , lm
+i , Aj, and si,j
+Output: updated M 1
+i , M 2
+i , lm
+i , Aj, and si,j
+1 Initialization: M 1
+T ←∞, M 2
+T ←∞, lm
+T ←0, sT ←1
+2 for j ∈N(i) do
+3
+if j = lm
+i
+then
+4
+Qi,j ←Aj −si,j · M 2
+i
+5
+end
+6
+else
+7
+Qi,j ←Aj −si,j · M 1
+i
+8
+end
+9
+sT ←sT · sgn(Qi,j)
+10
+if Qi,j < M 1
+T then
+11
+M 2
+T ←M 1
+T , M 1
+T ←Qi,j, lm
+T ←j
+12
+end
+13
+else if Qi,j < M 2
+T then
+14
+M 2
+T ←Qi,j
+15
+end
+16 end
+17 M 1
+i ←M 1
+T , M 2
+i ←M 2
+T , lm
+i ←lm
+T , si ←sT
+18 for j ∈N(i) do
+19
+si,j ←si · sgn(Qi,j)
+20
+if j = lm
+i
+then
+21
+Aj ←Qi,j + si,j · M 2
+i
+22
+end
+23
+else
+24
+Aj ←Qi,j + si,j · M 1
+i
+25
+end
+26 end
+4) QCo: The QCo stage is responsible for the CNU pro-
+cess, i.e., comparing the Q values of the current node
+and updating the minimum Q value.
+5) AU: The AU stage is responsible for the VNU process
+after CNU, i.e., updating the A value of the current node
+based on the input data.
+6) AW: The AW stage is responsible for writing back the A
+value of the current node to the memory, and examining
+the termination conditions.
+III. FPGA IMPLEMENTATION OF DECODER AND CODEC
+TEST SYSTEM
+A. FPGA Implementation of Adaptive Quantized and Normal-
+ized Decoding Scheme
+To implement the check-ratio based adaptive quantization
+and normalization strategy into the QC-LDPC universal de-
+coder, we modify two modules, i.e., Q Cal and A Upd, to
+perform the quantization and normalization process. The I/O
+ports of the Q Cal and A Upd module are shown in Fig. 1,
+where the quantization bit-width and interval of the signals
+are labeled beside them. The Q Cal module is responsible for
+calculating the Q value of the current node based on the input
+data, and the A Upd module is responsible for updating the
+Q_Cal
+𝐴𝑗
+𝑀𝑖
+1
+𝑀𝑖
+2
+𝑠𝑖,𝑗
+𝑄𝑖,𝑗
+𝐿
+𝑇𝑝𝑟𝑒
+𝑞H, 𝑇0
+𝑞L, 𝑇𝑐𝑢𝑟
+𝑞L, 𝑇𝑝𝑟𝑒
+𝑞L, 𝑇𝑝𝑟𝑒
+1
+𝑞𝑇
+𝑄𝑖,𝑗
+𝐻
+𝑞H, 𝑇0
+𝑇𝑐𝑢𝑟
+𝑞𝑇
+𝛼𝑝𝑟𝑒
+𝑞𝛼
+(a) Q value Calculation
+A_Upd
+𝑄𝑖,𝑗
+𝐻
+𝑀𝑖
+1
+𝑀𝑖
+2
+𝑠𝑖,𝑗
+𝑇𝑐𝑢𝑟
+𝑞𝐻, 𝑇0
+𝑞L, 𝑇𝑐𝑢𝑟
+𝑞L, 𝑇𝑐𝑢𝑟
+1
+𝑞𝑇
+𝐴𝑗
+𝑞H, 𝑇0
+𝛼𝑐𝑢𝑟
+𝑞𝛼
+(b) A value Update
+Fig. 1: Quantization conversion and normalization.
+Exit_Chk
+𝑠𝑖,𝑗
+1
+check-ratiocur
+𝑞chk
+1
+exit_flag
+LUT
+𝑇𝑐𝑢𝑟
+𝑞𝑇
+𝛼𝑐𝑢𝑟
+𝑞𝛼
+edge-type
+𝑞edg
+Fig. 2: Generate quantization and normalization parameters.
+A value of the current node based on the input data. Here
+we introduce the quantization conversion and normalization
+process into the Q Cal and A Upd module. In other words,
+the Q Cal and A Upd module receive the input data with
+different bit-width and quantization intervals, and output the
+data with the selected bit-width and quantization intervals for
+further processing steps.
+We also modify the Exit Chk module to generate the
+current check-ratio, and to get the current quantization and
+normalization parameters Tcur and αcur from the LUT. Fig. 2
+shows the connectivity of the Exit Chk module with the LUT,
+where the check-ratio and edge-type are served as the indices
+of the LUT to get Tcur and αcur.
+B. Structure of QC-LDPC Universal Codec Test System
+In this section, we provide a detailed description of the
+structure of the QC-LDPC universal codec test system. The
+test system consists of the following modules: Binary Signal
+Generator, LDPC Encoder, Channel, LDPC Decoder, and
+Result Examination. The structure of the test system is shown
+in Fig. 3. For the channel module, we employ an open-
+source HDL code for generating additive white Gaussian noise
+(AWGN) [22]. The original information bits output by the
+Binary Signal Generator are cached into the Info Bit RAM.
+When the decoder completes the decoding operation and
+outputs the hard-decision bits, these information bits are read
+from the RAM and compared to perform the verification
+process. The results are recorded in the form of frame errors.
+Specifically, if any bit error occurs in the information bit
+positions of a single frame (or in other words, a codeword),
+it is counted as one frame error. Simultaneously, the total
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:06 UTC from IEEE Xplore.  Restrictions apply. 
+SignalTap II Logic 
+Analyzer
+Binary 
+Signal 
+Generator
+LDPC 
+Encoder
+Channel
+LDPC 
+Decoder
+Frame 
+Error 
+Count
+System 
+Sources & 
+Probes
+Info Bit 
+RAM
+FPGA
+Quartus
+In System Sources 
+& Probes Editor
+Fig. 3: QC-LDPC Universal Codec Test System
+number of frames that have undergone encoding and decoding
+is counted for subsequent frame error rate (FER) calculations.
+Both the number of frame errors and the total number of
+frames can be configured as ports of the top-level module
+in the implementation of the encoding and decoding system.
+Real-time sampling can be performed on a computer using the
+SignalTap II Logic Analyzer tool provided by Quartus.
+To reduce testing costs, some parameter ports of each
+module in the system are configured using the In System
+Sources & Probes Editor provided by Quartus, and they can
+be dynamically configured in real-time via a computer. These
+parameters include the maximum number of iterations of the
+LDPC decoder, the adaptive quantization and normalization
+LUT parameters, as well as the signal-to-noise ratio (SNR)
+of the channel. The test system is implemented on an Altera
+Stratix IV FPGA, and the decoding performance and resource
+utilization are evaluated.
+IV. EXPERIMENTAL RESULTS
+In this section, we present the experimental results of the
+QC-LDPC universal decoder applying 5G-NR LDPC codes.
+The decoder is implemented on an Altera Stratix IV FPGA,
+and the decoding performance and resource utilization are
+evaluated. We will also evaluate the performance of other
+typical schemes and compare our adaptive quantization and
+normalization scheme with others.
+The FER-SNR curves of the QC-LDPC universal decoder
+with 5G-NR LDPC code, BG1, code rate 1/3, and code length
+26112 are shown in Fig. 4. Here we choose the normalization
+parameter α = 0.75 for NMSA. From the results we can see
+that the adaptive quantization and normalization scheme with
+4-bit message passing bit-width achieves an FER of 10−4 at
+an SNR of -1.03 dB. By comparison, the NMSA with fixed
+quantization intervals require an SNR of -0.47 dB. Moreover, a
+-1.4
+-1.3
+-1.2
+-1.1
+-1
+-0.9
+-0.8
+-0.7
+-0.6
+-0.5
+SNR(dB)
+10-4
+10-3
+10-2
+10-1
+100
+FER
+NMS, QSIZE = 6, iter_max = 10
+NMS, QSIZE = 6, iter_max = 30
+NMS, QSIZE = 4, iter_max = 10
+NMS, QSIZE = 4, iter_max = 30
+AQN, QSIZE = 4, iter_max = 10
+AQN, QSIZE = 4, iter_max = 30
+Fig. 4: FER-SNR results of QC-LDPC universal decoder with
+5G-NR LDPC code, BG1, code rate 1/3, code length 26112.
+severe error floor can be observed in the NMS decoding curve,
+while the AQNMSA shows a steep descent curve. Thus, the
+adaptive quantization and normalization scheme outperforms
+the other schemes in terms of decoding performance.
+The resource utilization of the QC-LDPC universal decoder
+with 5G-NR LDPC code, BG1, code rate 1/3, and code length
+26112 is shown in Table I. The indicators for comparison
+include combinational adaptive look-up tables (Combinational
+ALUTs), Memory ALUTs, adaptive logic modules (ALMs),
+dedicated logic registers, and block memory bits. From the
+results we can see that AQNMSA with 4-bit message pass-
+ing bit-width consumes more resources compared to NMSA,
+which is due to the additional steps we introduce into the
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:06 UTC from IEEE Xplore.  Restrictions apply. 
+TABLE I: Comparison of Resource Utilization
+NMSA
+(QSIZE=6)
+NMSA
+(QSIZE=4)
+AQNMSA
+(QSIZE=4)
+Combinational ALUTs
+87802
+96216
+116066
+Memory ALUTs
+13400
+26456
+26499
+ALMs
+75572
+84459
+100784
+Dedicated Logic Registers
+30437
+48641
+48743
+Block Memory Bits
+364287
+129663
+129042
+TABLE II: Comparison of Maximum Frequency
+Fmax (MHz)
+NMSA
+(QSIZE=6)
+NMSA
+(QSIZE=4)
+AQNMSA
+(QSIZE=4)
+Slow 900mV 85C Model
+58.66
+94.73
+70.68
+Slow 900mV 0C Model
+59.51
+93.93
+71.24
+Fast 900mV 0C Model
+127.94
+259.34
+172.24
+decoder, i.e., the adaptive quantization normalization and the
+calculation of chk-ratio. Meanwhile, NMSA and AQNMSA
+with 4-bit message passing bit-width consumes less block
+memory bits compared to NMSA with 6-bit message passing
+bit-width, which is due to the reduced bit-width of the internal
+signals in the decoder.
+The comparison of the maximum frequency of the QC-
+LDPC universal decoder with 5G-NR LDPC code, BG1, code
+rate 1/3, and code length 26112 is shown in Table II. From the
+results we can see that AQNMSA with 4-bit message passing
+bit-width owns a lower maximum frequency than NMSA with
+4-bit message passing bit-width, which is due to the additional
+steps we introduce into the decoder. Meanwhile, AQNMSA
+with 4-bit message passing bit-width owns a higher maximum
+frequency than NMSA with 6-bit message passing bit-width,
+which is due to the reduced bit-width of the internal signals
+in the decoder.
+V. CONCLUSION
+In this paper, we have presented an adaptive quantized and
+normalized QC-LDPC universal block-parallel decoder based
+on a pipeline and instruction-driven approach. The proposed
+decoder improves decoding performance and throughput while
+maintaining flexibility for various QC-LDPC codes. Exper-
+imental results demonstrate that the adaptive quantization
+and normalization scheme outperforms existing methods in
+terms of decoding performance and maximum frequency, and
+meanwhile maintain a moderate FPGA resource utilization,
+offering a more efficient solution for SDR systems.
+ACKNOWLEDGMENT
+This work was supported by the National Key Re-
+search and Development Program of China under Grant
+2021YFA0716602.
+REFERENCES
+[1] W. Saad, M. Bennis, and M. Chen, “A Vision of 6G Wireless Systems:
+Applications, Trends, Technologies, and Open Research Problems,”
+IEEE Network, vol. 34, no. 3, pp. 134–142, May 2020.
+[2] A. Ibanez, J. Sanchez, D. Gomez-Barquero, J. Mika, S. Babel, and
+K. Kuehnhammer, “5G Broadcast SDR Open Source Platforms,” in 2022
+IEEE International Symposium on Broadband Multimedia Systems and
+Broadcasting (BMSB).
+Bilbao, Spain: IEEE, Jun. 2022, pp. 01–06.
+[3] W. Ji, Z. Wu, K. Zheng, L. Zhao, and Y. Liu, “Design and Implemen-
+tation of a 5G NR System Based on LDPC in Open Source SDR,” in
+2018 IEEE Globecom Workshops (GC Wkshps).
+Abu Dhabi, United
+Arab Emirates: IEEE, Dec. 2018, pp. 1–6.
+[4] X. Lu, L. Ni, S. Jin, C.-K. Wen, and W.-J. Lu, “SDR Implementation of a
+Real-Time Testbed for Future Multi-Antenna Smartphone Applications,”
+IEEE Access, vol. 5, pp. 19 761–19 772, 2017.
+[5] I. Gomez, M. Camatel, J. Bracke, V. Marojevic, A. Gelonch, F. Vacca,
+and G. Masera, “ALOE-Based Flexible LDPC Decoder,” in 2010 13th
+Euromicro Conference on Digital System Design: Architectures, Methods
+and Tools.
+Lille, France: IEEE, Sep. 2010, pp. 314–320.
+[6] X. Cai, M. Zhou, T. Xia, W. H. Fong, W.-T. Lee, and X. Huang, “Low-
+Power SDR Design on an FPGA for Intersatellite Communications,”
+IEEE Transactions on Very Large Scale Integration (VLSI) Systems,
+vol. 26, no. 11, pp. 2419–2430, Nov. 2018.
+[7] R. Li, X. Zhou, H. Pan, H. Su, and Y. Dou, “A High-Throughput LDPC
+Decoder Based on GPUs for 5G New Radio,” in 2020 IEEE Symposium
+on Computers and Communications (ISCC).
+Rennes, France: IEEE,
+Jul. 2020, pp. 1–7.
+[8] Y. Xu, W. Wang, Z. Xu, and X. Gao, “AVX-512 Based Software
+Decoding for 5G LDPC Codes,” in 2019 IEEE International Workshop
+on Signal Processing Systems (SiPS). Nanjing, China: IEEE, Oct. 2019,
+pp. 54–59.
+[9] R. Gallager, “Low-density parity-check codes,” IRE Transactions on
+Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[10] 3rd Generation Partnership Project, “Technical specification group radio
+access network; nr.; multiplexing and channel coding (release 16), 3gpp
+ts 38.212 v16. 5.0 (2021-03),” 2021.
+[11] F. Li, C. Zhang, K. Peng, A. E. Krylov, A. A. Katyushnyj, A. V. Rashich,
+D. A. Tkachenko, S. B. Makarov, and J. Song, “Review on 5G NR LDPC
+Code: Recommendations for DTTB System,” IEEE Access, vol. 9, pp.
+155 413–155 424, 2021.
+[12] K.-J. Kim, S. Myung, S.-I. Park, J.-Y. Lee, M. Kan, Y. Shinohara, J.-W.
+Shin, and J. Kim, “Low-density parity-check codes for atsc 3.0,” IEEE
+Transactions on Broadcasting, vol. 62, no. 1, pp. 189–196, 2016.
+[13] J. Song, C. Zhang, K. Peng, J. Wang, C. Pan, F. Yang, J. Wang, H. Yang,
+Y. Xue, Y. Zhang, and Z. Yang, “Key technologies and measurements
+for dtmb-a system,” IEEE Transactions on Broadcasting, vol. 65, no. 1,
+pp. 53–64, 2019.
+[14] C. Zhang, K. Peng, Z. He, Y. Xue, and H. Yang, “High robust broad-
+casting over dtmb-a with low-rate ldpc codes,” China Communications,
+vol. 19, no. 3, pp. 192–201, 2022.
+[15] R. Tanner, D. Sridhara, A. Sridharan, T. Fuja, and D. Costello, “LDPC
+Block and Convolutional Codes Based on Circulant Matrices,” IEEE
+Transactions on Information Theory, vol. 50, no. 12, pp. 2966–2984,
+Dec. 2004.
+[16] N. Wiberg, H.-A. Loeliger, and R. Kotter, “Codes and iterative decoding
+on general graphs,” European Transactions on telecommunications,
+vol. 6, no. 5, pp. 513–525, 1995.
+[17] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative
+decoding of low-density parity check codes based on belief propagation,”
+IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680,
+1999.
+[18] J. Chen and M. Fossorier, “Near optimum universal belief propagation
+based decoding of low-density parity check codes,” IEEE Transactions
+on Communications, vol. 50, no. 3, pp. 406–414, 2002.
+[19] L. Fan, C. Pan, K. Peng, and J. Huang, “Adaptive normalized min-
+sum algorithm for ldpc decoding,” in 2013 9th International Wireless
+Communications and Mobile Computing Conference (IWCMC), 2013,
+pp. 1081–1084.
+[20] X. An, C. Zhang, K. Peng, Z. He, and J. Song, “Adaptive Quantized
+and Normalized MSA Based on Modified MET-DE and Its Application
+for 5G-NR LDPC Codes,” IEEE Access, vol. 11, pp. 101 123–101 133,
+2023.
+[21] F. Li, C. Zhang, and K. Peng, “An Optimal Block-Scheduling Algorithm
+for Pipelined Block-Parallel LDPC Decoder,” in 2022 IEEE Interna-
+tional Symposium on Broadband Multimedia Systems and Broadcasting
+(BMSB), Jun. 2022, pp. 1–6.
+[22] G. Liu, “Gaussian Noise Generator (GNG) Verilog IP Core[CP/OL].
+(2016-07-28)[2022-04-25]. https://github.com/liuguangxi/gng.” 2016.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:26:06 UTC from IEEE Xplore.  Restrictions apply. 

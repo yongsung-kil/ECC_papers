@@ -1,0 +1,603 @@
+IEEE 2008 Custom Intergrated Circuits Conference (CICC)
+
+A Flexible Decoder IC for WiMAX QC-LDPC Codes
+
+Tzu-Chieh Kuo and Alan N. Willson, Jr. Electrical Engineering Department
+University of California, Los Angeles, CA 90095-1594, USA
+
+Abstract-A programmable and power-efficient decoder IC employing the layered-decoding message-passing algorithm and the low-complexity offset-based Min-Sum check algorithm for irregular QC-LDPC codes is presented. The iterative decoder can be reconfigured to decode all the QC-LDPC codes defined in the Mobile WiMAX standard. Specifically, the decoder achieves a throughput of 68 Mbps at a 100-MHz clock rate for the rate-1/2 length-2304 code with ten iterations, and occupies a core area of 3.4 mm2 in 0.18-µm CMOS technology and dissipates estimated 165 mW from a 1.8-V supply. It is 53% smaller, 86% lower in complexity, and has better energy efficiency than other published WiMAX LDPC decoder ASICs, to the best of our knowledge.
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes have been included as optional codes in new standards such as in the IEEE 802.11n (Wi-Fi) and 802.16e (Mobile WiMAX) standards [1] due to their excellent coding gains. These LDPC codes are based on structured irregular quasi-cyclic (QC) codes with great levels of scalability for supporting multiple code structures of various code rates and code lengths. Therefore, a decoder for these applications must be very flexible and reconfigurable. Additionally, the hardware implementation must be energyefficient and have low complexity in order to be practically integrated into VLSI chips for portable devices. The decoder chip presented here sufficiently addresses these important design considerations by incorporating many optimization techniques at the algorithm and the architecture levels, and consequently our decoder is significantly smaller than other WiMAX LDPC decoders and exhibits better energy efficiency.
+First, the decoder is based on the layered-decoding message-passing algorithm in [2] and the offset-based MinSum check algorithm in [3]. Fig. 1 illustrates the operating principle of the decoding algorithms, where the columns and the rows of a parity-check matrix H are shown as bit nodes and check nodes, respectively. A bit node and a check node are connected if they share a common entry in H. The matrix is divided into blocks (layers) of non-overlapping parity-check rows (check nodes), and check messages are indirectly exchanged between these block rows through a Bit-Sum memory that contains the a posteriori log-likelihood ratio (APLLR) of the coded bits (bit nodes). A check message represents the AP-LLR estimate for a coded bit by a check node, based on the information (bit messages) provided by its neighboring bit nodes. The estimate of AP-LLRs improves with each iteration of message exchange.
+In general, the layered decoding algorithm provides approximately a factor of two improvement in decoding convergence speed. The update of check messages by a check
+
+Example base model matrix
+Hbm
+block column
+0123
+0 210− 1 0−21
+
+Parity-check matrix H
+bit-node
+012 345 678 9AB
+0 001 010 100 000 1 100 001 010 000 2 010 100 001 000 3 100 000 001 010 4 010 000 100 001 5 001 000 010 100
+
+Layered decoding message-passing
+Bit-Message Check-Message Blk BitSum
+Chk BlkRow #0
+Chk BlkRow #1
+Execution Time Iter #0 Iter #1
+
+block row check-node
+
+Fig. 1. Layered-decoding message passing for QC-LDPC codes.
+node is performed in a check-function unit (CFU) implementing the Min-Sum check algorithm, in which the magnitudes of the check messages are obtained from the two smallest magnitudes of the bit messages it receives, rather than complicated computations over all its bit messages. This simplifies the computation complexity, and the decoding performance loss of this sub-optimal algorithm is compensated using an offset value to reduce the overestimated check message magnitude.
+At the architecture level, the decoder is based on a partialparallel architecture, in which multiple CFUs are implemented to process blocks of non-overlapping check nodes in parallel [4]. The computation in a CFU is performed sequentially; therefore, the CFUs can operate with different code structures of irregular check degrees. Although the maximum parallelism factor of WiMAX codes is 96, our decoder chip employs only a subset of 24 CFUs because the PHY data rate of current Mobile WiMAX is lower than 40 Mbps [5]. This achieves a significant complexity reduction. In addition, our initial implementation shows that memories in a low-complexity decoder could consume more than 60% of its total power dissipation. Therefore, we have developed consolidated memory architectures for power reduction, and this also simplifies the design tasks in place-and-route with a reduced number of memory instances. Finally, the power dissipation has been further reduced using the clock gating technique. The chip architecture is described in the following section.
+II. CHIP ARCHITECTURE
+Fig. 2 shows the architecture of the decoder chip. It consists of a code-configuration memory with interface, a central control block, a multi-bank Bit-Sum memory (BM), a message-routing network using cyclic shifters, CFUs, and a decision output memory. The decoder has 24 CFUs available, and the number of CFUs enabled (P) depends on the number of
+
+978-1-4244-2018-6/08/$25.00 ©2008 IEEE
+
+TP-09-1
+
+527
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+Prog
+
+Code Config Memory
+
+Prog Ctrl
+
+Channel LLR
+
+Addr Gen
+CycS Ctrl
+CFU Ctrl
+
+Bit-Sum Memory
+
+24x8
+
+24x8
+
+24 8
+
+24x24 Cyclic Shifter 242x42x424CCycylciclicSShihftifeter r
+
+24x8 8
+24
+CFU CCFFUU
+
+24x8
+
+Output Ctrl
+
+24
+Decision Memory
+
+Decision
+Fig. 2. Chip block diagram.
+
+check nodes (M) in H. P must be a factor of M so that APLLRs can be effectively organized in the BM. The 5-bit LLRs of coded bits received from the channel are first stored in the BM as the initial estimates of the 8-bit AP-LLRs, and then the AP-LLRs are iteratively updated by the decoder. When processing a block of P consecutive check nodes in the CFUs, the code parameters, including the check degree (dc), the cyclic-shift value and the block column number, are retrieved from the configuration memory to drive miscellaneous controllers. The cyclic shift value and the block column number are used to identify the specific bit nodes connecting to the check nodes in the process. The AP-LLRs of these bit nodes are sequentially retrieved from the BM and routed to their destination CFUs through the cyclic shifters. In turn, the new AP-LLRs obtained from the CFUs are then put back in the BM while their signs are also stored in the output memory as hard decisions. The operation continues to work on the next block of P check nodes. When all check nodes in H have been processed by the CFUs, a new iteration starts over from the first block of check nodes. The decoding operation stops when a programmable iteration number is reached or when all the parity checks are satisfied, and the decoded bits are ready to be sent out through an output interface.
+A. Check Function Unit
+The implementation of a CFU is shown in Figs. 3 and 4. In check-node processing, the CFU sequentially subtracts the old
+
+qj (BitSum) 8
+
+q jm 8
+
+Depth-d c FIFO 8
+
+16 BitMsg Input EdgeIdx 5
+
+Gen SignMsg
+
+MinSum 16
+
+BitSum Update
+
+REG REG
+
+Mag 5
+
+Update
+
+old SignMsg
+S Memory
+
+16
+
+MS
+
+1
+q parity
+16
+
+old MS msg
+
+Memory new
+MS msg
+
+Updated qj
+(BitSum) 8
+parity_met
+
+Fig. 3. CFU block diagram.
+
+Row Input Start
+
+dc CMP
+
+reset
+
+(A==B)
+
+Input Counter
+
+qj
+
+EdgeIdx
+
+8
+
+sign Chk Msg 1 9
+
+old
+
+q parity
+
+Generator
+6
+
+MS msg { q idx,q min,q min2 }
+
+Bit-Msg Generator
+
+clk Ovfl
+
+5 EdgeIdx
+
+8
+
+8
+
+1
+
+5 LSBs
+0 1
+
+ovf 05
+1
+
+1 31
+
+Input EdgeIdx q jm SignMsg
+Mag
+
+M UX M UX
+MUX MUX
+
+Check Message Generator
+
+sign
+
+EdgeIdx 5
+
+q idx
+
+5
+
+CMP (A == B)
+
+q min q min2
+
+5 0
+5
+1
+
+056 1
+
+cin q jm
+msg
+new MS msg
+
+Row Output Start
+
+Bit-Sum Update
+
+dc CMP (A==B)
+
+reset
+Output Counter clk
+
+1 EdgeIdx
+
+sign q parity
+
+sign Chk Msg 1 Generator 6
+
+8 9
+Ovfl
+
+updated qj
+(BitSum) 8
+
+{ q idx,q min,q min2 }
+
+Input 5 EdgeIdx
+
+SignMsg Mag
+
+offset
+
+5
+
+5
+
+6
+
+msb0
+1 O_min
+1 msb1
+
+O_min2 1 msb2
+
+LSBs 5
+
+msb0 0 N_min
+
+MUX
+
+0 O_min
+
+M UX
+
+1 min2 sel
+0 N_min2
+1
+
+min2_sel min_update min2_update
+row input start
+
+Min-Sum Update
+
+row input start
+
+MS msg
+
+rst (to 0) O_idx
+
+q idx
+
+Reg
+
+clk & min_update
+
+row input start
+
+rst (to 0) Reg
+
+O_parity
+
+q parity
+
+clk
+
+rst (to 31) O_min
+
+q min
+
+Reg
+
+clk & min_update
+
+rst (to 31) O_min2
+
+q min2
+
+Reg
+
+clk & min2_update
+
+Fig. 4. CFU block diagram, continued.
+check messages from the incoming AP-LLRs qj’s to generate the bit messages qjm’s. The magnitudes of the qjm’s are compared in the Min-Sum update block to obtain the new MS message, which is then used to produce the new check messages to combine with the corresponding qjm’s in the BitSum update block to produce the new AP-LLRs. An MS message of a check node contains its tentative parity value (qparity), the two smallest magnitudes ({qmin, qmin2}) of its bit messages, and the index (qidx) of the bit node producing qmin. It is created by a sequential search over the bit messages as shown in the schematic of the Min-Sum update block.
+All the check messages of a check node are produced from its MS message and the individual sign values of its bit messages, as shown in the schematic of the check-message generator block. Notice that a negative check message is represented as a 1s complement number with an additional carry-in signal that is used by the adders in the succeeding stages; therefore the addition required for 2’s complement negation has been removed. The subtraction in the bit-message generation block has been simplified to an addition by inverting the sign signal of the check message. Furthermore, the reduction of check message magnitudes by a programmable offset value is effectively implemented on bit messages in the
+
+TP-09-2
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+528
+
+Min-Sum update block, in which the delay path is less critical than in the Bit-Sum update block. The data qjm’s and qj’s are saturated to eight bits, while the magnitudes are saturated to five bits for the reduction of computation complexity with very little performance degradation. The sign values and the MS message, rather than the individual check messages, are put into memories for producing the old check messages in the next iteration. This significantly reduces the number of memory bits required, especially for high check-degree codes. The clock signals of the registers are gated off when there are no updates available. Furthermore, the small memories in the 24 CFUs are grouped together whenever a centralized memory consumes less power than the distributed ones.
+The CFUs work on new check nodes while their Bit-Sum update blocks are still generating the updated AP-LLRs for current check nodes. However, when the operation arrives at the end of the current layer, the decoder is put into wait cycles for the CFUs to complete if the next layer overlaps the current layer. The numbers of wait cycles required depend on the given parity-check matrix, therefore they are also obtained from the code configuration memory. A parity check is assumed to be satisfied if its tentative parity value qparity is zero. If all parity checks in the current iteration have been satisfied, the decoding operation can be early terminated for saving power if this feature is enabled.
+B. Bit-Sum Memory
+A partial-parallel LDPC decoder typically contains many small memory instances that cause inefficiency in area and power dissipation due to the duplicated row and column decoders in the memory instances. In order to minimize the power consumption, the BM is implemented with six memory banks as shown in Fig. 5, rather than 24 memory banks to supply AP-LLRs for the 24 independent CFUs as in a conventional partial-parallel architecture. Each memory bank has 96 words with each word containing the AP-LLRs of four adjacent bit nodes. The maximum code length supported is
+
+clk wadr wen
+4x8
+
+wr_clk wr_addr wr_en
+
+BM 0 (96x32)
+
+D
+
+Q
+
+clk2 radr0 ren[0]
+24x8 From CFUs
+
+rd_clk rd_addr rd_en
+
+BM AUX 0 en[3:0] en[0]_d
+8 Reg
+
+MUX
+
+clk2 & en[0] en[1]_d
+
+MUX
+
+8
+
+Reg
+
+4x8
+
+4x8
+
+clk2 & en[1] en[2]_d
+
+MUX
+
+8 Reg
+
+MUX
+
+clk2 & en[2] en[3]_d
+8 Reg
+
+clk2 & en[3]
+
+24x8
+To Cyclic Shifter
+
+radr5 ren[5]
+
+BM 5 (96x32)
+
+BM AUX 5 en[23:20]
+
+Fig. 5. Bit-Sum memory architecture.
+
+2304 as required in WiMAX codes. However, four of the P AP-LLRs requested by the P CFUs might be stored in two separate locations in a memory bank as a consequence. Therefore, the read ports of the memory banks operate at twice the system clock rate in order to retrieve the desired AP-LLRs from two separate locations during a system clock cycle, when required. The desired contents obtained in the first read access are stored in the registers in the auxiliary circuits, followed by a second read access to retrieve the rest of the AP-LLRs. The multiplexers direct the right AP-LLRs to the cyclic shifters, which in turn align the AP-LLRs in the right order for the CFUs. In contrast, the write ports of the memory banks operate at the system clock rate with common control signals to facilitate the write-back of AP-LLRs from the CFUs without a backward routing network. The computation latency in the CFUs ensures that the old memory contents have been retrieved before they are being replaced. Consequently, the location of an AP-LLR in the BM will change from layer to layer and from iteration to iteration. However, the mapping rule is fully deterministic, and the read/write addresses of the BMs and the revised cyclic shift values for the shifters can be computed on the fly. In a system clock cycle, only at most one out of the six BMs requires double accesses, and at most three of the 24 register-sets in the auxiliary circuits are active, so a clock-gating technique has been applied to reduce the power consumption again. This consolidated memory structure saves about 40 mW from a 24-bank implementation. This is a 20% savings from our initial implementation.
+C. Cyclic Shifter
+The cyclic shifters are implemented with barrel shifters having programmable wrap-around positions to support the 19 different code lengths in WiMAX. Our decoder implements only the forward routing of AP-LLRs as in [4] and [6]. When only parts of the CFUs are enabled, the shifters force zero values on the unused data buses to reduce switching activity.
+III. IMPLEMENTATION RESULTS AND COMPARISONS
+A prototype decoder ASIC operating at a 100-MHz clock frequency has been implemented in TSMC 0.18-µm technology and is currently under fabrication. Its layout plot is shown in Fig. 6. The core size is 2.23 mm × 1.52 mm and the
+
+Code Config
+
+Out Misc.
+Dec Output
+
+BM Misc.
+
+S2 S1 S0
+FIFO0 FIFO1
+MS1 MS2
+
+BM2 BM1 BM0
+
+MS0
+
+BM5 BM4 BM3
+
+Fig. 6. Plot of LDPC decoder core.
+
+TP-09-3
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+529
+
+post-layout estimated power consumption is 165 mW at 1.8 V. The decoding performance in an AWGN channel for the length-2304 codes is shown in Fig. 7. Similar performance is achieved for the other code sizes and there are no noticeable error floors resulting from the finite word-lengths. Fig. 8 presents the decoding throughput for ten iterations. The decoder has lower throughput at certain code block lengths that can use just a limited number of CFUs. The decoder is more efficient for long codes as more CFUs can be enabled; therefore, more iterations could be performed to further enhance the error-rate performance for these long codes.
+The comparison of the decoder with other representative WiMAX LDPC decoders is summarized in Table I, where the throughput and power dissipation are characterized using the rate-1/2, length-2304 code, and technology normalization is done with respect to the 0.18-µm feature size and 1.8-V supply voltage. Our decoder is 53% smaller and employs fewer memory bits and significantly fewer logic gates than the other decoders. Our design complexity is 86% lower in terms of logic gates. The multi-code decoder proposed here has energy efficiency (energy consumption per decoded bit per iteration [8]) that is 27% better than the fixed-code decoder in [7]. The effective energy performance is 45% better, as the convergence
+
+Fixed-Point Decoding Performance of W iMAX codes, 15 Iterations 100
+Rate-1/2
+
+Rate-2/3A
+
+Rate-2/3B
+
+Rate-3/4A
+
+10-1
+
+Rate-3/4B
+
+Rate-5/6
+
+10-2
+
+Block Error Rate
+
+10-3
+
+Throughput (Mbps)
+
+10-4
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+Eb/No
+
+Fig. 7. Decoding performance in AWGN channels.
+
+Decoding Throughput, 10 iteration & 100-MHz clock 70
+Rate-1/2
+
+Rate-2/3A 65
+Rate-2/3B
+
+Rate-3/4A
+
+60
+
+Rate-3/4B
+
+Rate-5/6
+
+55
+
+50
+
+45
+
+40
+
+35
+
+30
+
+400
+
+600
+
+800
+
+1000
+
+1200
+
+1400
+
+1600 1800
+
+2000
+
+2200
+
+2400
+
+Code Block Length
+
+Fig. 8. Decoder throughput performance.
+
+TABLE I. COMPARISON OF DECODER IMPLEMENTATIONS
+
+Design
+Technology (µm) Code Rate
+Code Length No. of Processors Clock Rate (MHz) Decoding Throughput
+(Mbps) No. of Iterations
+Power (mW) Norm. Core Area (mm2)
+Normalized Energy Efficiency (pJ/bit/iter.)
+Memory Bits Logic Gate Count
+
+[7]
+0.13 1/2
+4C/8B 83.3
+60.6
+8 52 8.53
+334
+76800 420 K
+
+[4]
+
+[6]
+
+This Work
+
+0.13
+
+FPGA
+
+0.18
+
+1/2, 2/3A, 2/3B, 3/4A, 3/4B, 5/6
+
+576 : 96 : 2304
+
+96
+
+24
+
+24
+
+333
+
+110
+
+100
+
+666
+
+72
+
+68
+
+15
+
+10
+
+10
+
+N/A
+
+N/A
+
+165
+
+7.34
+
+N/A
+
+3.39
+
+N/A
+
+N/A
+
+243
+
+N/A ~500 K
+
+65760 N/A
+
+55576 55 K
+
+rate of the layered-decoding message-passing algorithm is about 1.7 times faster than the two-phase message-passing decoding algorithm in [7]. Using the consolidated memory structure, our decoder ASIC only requires a total of 20 memory instances, compared to 38 memory instances in [6] and 100 memory instances in [7].
+IV. CONCLUSION
+A programmable iterative decoder for irregular WiMAX LDPC codes has been presented. Using efficient lowcomplexity decoding algorithms and optimizations at the architecture and circuit levels, this decoder has demonstrated significant improvements over other published designs, with respect to complexity, area, and energy efficiency. The decoder can also be programmed to decode other QC-LDPC codes of appropriate sizes, limited only by the on-chip memories.
+REFERENCES
+[1] IEEE 802.16e, Part 16: Air interface for fixed and mobile broadband wireless access systems, IEEE std 802.16e-2005, Feb. 2006.
+[2] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in IEEE Workshop on Signal Processing Systems, SIPS 2004, pp. 107-112, 2004.
+[3] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Communications, vol. 53, pp. 1288-1299, Aug. 2005.
+[4] T. Brack, M. Alles, F. Kienle, and N. When, “A synthesizable IP core for WiMAX 802.16e LDPC code decoding,” in Proc. 2006 Personal Indoor and Radio Communications Conference (PIMRC’06), Helsinki, Sept. 2006.
+[5] WiMAX Forum, Mobile WiMAX – Part I: A technical overview and performance evaluation, Aug. 2006.
+[6] K. Gunnam, G. Choi, M. Yeary, and M. Atiquzzaman, “VLSI architectures for layered decoding of irregular LDPC codes of WiMAX,” in Proc. IEEE International Conference on Communications (ICC), pp. 4542-4547, June 2007.
+[7] X. Shih, C. Zhan, C. Lin, and A. Wu, “A 19-mode 8.29 mm2 52-mW LDPC decoder chip for IEEE 802.16e system,” in Symposium on VLSI Circuits, Dig. Tech. Papers, pp. 16-17, June 2007.
+[8] M. Mansour and N. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE Journal of Solid-State Circuits, vol. 41, no. 3, pp. 684-698, March 2006.
+
+TP-09-4
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 06:01:43 UTC from IEEE Xplore. Restrictions apply.
+
+530
+
+

@@ -1,0 +1,1164 @@
+4086
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 61, NO. 10, OCTOBER 2013
+
+Tree-Structured Expectation Propagation for LDPC Decoding over BMS Channels
+Luis Salamanca, Student Member, IEEE, Pablo M. Olmos, Member, IEEE, Fernando Pe´rez-Cruz, Senior Member, IEEE, and Juan Jose´ Murillo-Fuentes, Senior Member, IEEE
+
+Abstract—In this paper, we put forward the tree-structured expectation propagation (TEP) algorithm for decoding block and convolutional low-density parity-check codes over any binary channel. We have already shown that TEP improves belief propagation (BP) over the binary erasure channel (BEC) by imposing marginal constraints over a set of pairs of variables that form a tree or a forest. The TEP decoder is a messagepassing algorithm that sequentially builds a tree/forest of erased variables to capture additional information disregarded by the standard BP decoder, which leads to a noticeable reduction of the error rate for finite-length codes. In this paper, we show how the TEP can be extended to any channel, specifically to binary memoryless symmetric (BMS) channels. We particularly focus on how the TEP algorithm can be adapted for any channel model and, more importantly, how to choose the tree/forest to keep the gains observed for block and convolutional LDPC codes over the BEC.
+Index Terms—Channel coding, sparse linear codes, expectation propagation.
+I. INTRODUCTION
+B ELIEF propagation (BP) is the standard linear-time tool for iterative decoding of low-density parity-check (LDPC) codes [1] and LDPC convolutional (LDPCC) codes [2]. BP approximates the bitwise maximum a posteriori (MAP) estimate for each encoded bit and it needs to rely on irregular LDPC ensembles to achieve capacity as the block length tends to infinity [3]. Irregular LDPC codes suffer from irreducible error floors and a slow convergence to the asymptotic case with the block length [4], [5], which limits its performance for finite-length practical codes. LDPCC codes postulate as a practical capacity achieving technique that have an almost regular construction, although they present a rate-loss that it is only tackled by long codewords [6], [7]. In the finitelength regime, both LDPC and LDPCC codes are limited by loops in the graph, which degrades the BP bitwise marginal
+Manuscript received April 9, 2013; revised June 25, 2013. The editor coordinating the review of this paper and approving it for publication was L. Dolecek.
+This work was partially funded by the Spanish government (Ministerio de Educacio´n y Ciencia, TEC2009-14504-C02-{01,02}, Consolider-Ingenio 2010 CSD2008-00010), TEC2012-38800-C03-{01,02} and European Union (FEDER).
+L. Salamanca and J. J. Murillo-Fuentes are with the Dept. Teor´ıa de la Sen˜al y Comunicaciones, ETSI, Universidad de Sevilla, Camino de los Descubrimientos s/n, 41092 Sevilla, Spain (e-mail: {salamanca, murillo}@us.es).
+P. M. Olmos and F. Pe´rez-Cruz are with the Dept. Teor´ıa de la Sen˜al y Comunicaciones, Universidad Carlos III de Madrid, Avda. de la Universidad 30, 28911, Legane´s (Madrid), Spain (e-mail: {olmos, fernando}@tsc.uc3m.es). F. Pe´rez-Cruz is also a machine learning researcher at Amazon (e-mail: fpc@amazon.com).
+Digital Object Identifier 10.1109/TCOMM.2013.081913.130264
+
+estimates [8], and versatile approximate inference algorithms can significantly improve BP performance.
+Expectation propagation (EP) [9] can be understood as a generalization of BP for constructing tractable approximations of an intractable joint probability density function (pdf). EP minimizes the Kullback-Leibler (KL) divergence between the true intractable pdf and a tractable approximation, given by an exponential family distribution. In [9], it is shown that BP can be reformulated as EP by considering a discrete pdf that factorizes as the product of single-variable multinomial terms. EP generalizes BP in two ways: first, it is not restricted to discrete random variables. And second, EP naturally formulates to include more versatile, but still tractable, approximating factorizations [10], such as trees or forests of variables. In [11], we proposed EP with a tree-factorized family of distributions, named as the TEP decoder, to decode LDPC codes over the binary erasure channel (BEC). We have shown that the TEP outperforms BP for finite-length codes and we have generalized this algorithm to achieve maximum likelihood decoding [12].
+There are several proposals [13]–[16] that improve BP performance over the BEC, with varying degree of success and complexity level, and all of them rely on the simple structure of the BEC to achieve those gains. Unfortunately, they cannot be extended to general (binary memoryless) symmetric channels and BP is the only algorithm in use to decode LDPC codes for general channels. Even though, several methods have been proposed in the machine learning community to improve the BP solution in loopy graphical models, see [17]– [21] and the references therein. Most of these algorithms can be understood as BP-like message passing algorithms that rely on better approximations to the graphical model entropy [21] and they are usually referred to as generalized BP (GBP) [22]. GBP is well suited for dense graphs, in which short loops limit the BP approximation [17]. For sparser graphs, characterized by medium or large loops, the GBP approximation to the distribution entropy quickly converges to the BP solution and no improvements are achieved. Actually, GBP has only been applied successfully for LDPC decoding over discrete channels with memory [23], [24], in which there is a uniform structure in the channel model that GBP is able to decode accurately. Hence, GBP helps with the memory, but not with the LDPC sparse graph structure.
+The goal of this paper is twofold. First, we show how, given a fixed tree-factorized family of distributions, we can apply the EP algorithm for LDPC and LPDCC codes over any channel
+
+0090-6778/13$31.00 c 2013 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+SALAMANCA et al.: TREE-STRUCTURED EXPECTATION PROPAGATION FOR LDPC DECODING OVER BMS CHANNELS
+
+4087
+
+model, and we specifically focus on the binary symmetric channel (BSC) and the binary additive white Gaussian noise (BI-AWGN) channel. The TEP inference process is based on a predefined tree (or forest) factor graph that is used to capture correlations in the original graph. This information is then used to mitigate the effects of loops in the graph of the code and improve the bit marginal estimate. Second, we show how to optimize the tree/forest to significantly reduce the BP error rate for finite length codes and, at the same time, keep a linear-time complexity slightly higher than BP linear runtime in the block length. The TEP algorithm is able to improve the decoding performance in both the waterfall region, where the BP solution depends on large loops in the code [25], and the error floor region, where the BP solution depends on short loops in the graph [8].
+The paper is organized as follows. In Section II, we present the TEP algorithm for any channel model and its particularization for memoryless channels. We show how to build the tree/forest, when the BP gets stuck, in Section III. For completeness, we review the GBP algorithm in Section IV to explain why we think it is not suitable for decoding sparse linear codes. In Section V, we include some experiments to illustrate the performance of the TEP decoder and we measure the complexity of the proposed TEP algorithm. In Section VI, we enumerate the contributions and conclusions of the paper.
+
+tree-family Ftree, for short TEP, aims at finding the member of q(V) ∈ Ftree that minimizes the inclusive Kullback-Leibler (KL) divergence with respect to p(V|y) [9], [10]:
+
+q(V) = arg min DKL p (V|y) ||q(V) . (3) q(V) ∈ Ftree
+
+The solution to the problem in (3) is given by moment-
+matching [9], i.e. q(V) is such that q(Vi|Vpi ) = p(Vi|Vpi , y) for i = 1, . . . , n. In this paper, we consider a parallel iterative
+procedure [26]–[28] to efficiently approximate a solution to
+the problem in (3). First, we replace each parity factor Cj(V) in (1) with a function Wj (V) that shares the factorization in (2):
+
+n
+
+Wj (V) = wz,j (Vz , Vpz ),
+
+(4)
+
+z=1
+
+for j = 1, . . . , k, where wz,j(Vz, Vpz ) are non-negative real functions. Given these factors, members of Ftree are computed
+as follows
+
+q(V) = 1 Z
+
+n
+p(yi |Vi )
+
+k
+
+Wj (V),
+
+(5)
+
+i=1 ⎛
+
+j=1
+
+⎞
+
+=1 Z
+
+n
+
+⎝p(yi|Vi)
+
+k
+
+wi,j (Vi, Vpi )⎠ .
+
+(6)
+
+i=1
+
+j=1
+
+II. TREE-STRUCTURED EXPECTATION PROPAGATION ALGORITHM
+
+Given a parity check matrix H, of dimensions k × n, which defines a binary linear code of rate r = 1 − k/n, a codeword1 v belongs to the code if vH = 0. Given the channel observation vector y and assuming equiprobable
+codewords, the posterior probability density function (pdf) for
+the transmitted codeword factorizes as
+
+k
+
+p(V|y) ∝ p(y|V) Cj(V),
+
+(1)
+
+j=1
+
+where Cj(V) is the parity function described by the j-th row of H and p(y|V) is the channel likelihood. Function Cj(V) = 1 if the parity constraint is satisfied and zero otherwise. A
+
+Given an initial proposal q(0)(V), at each iteration we update in parallel all factors Wm(V), i.e. Wm( −1)(V) → Wm( )(V) for m = 1, . . . , k and then a new estimate to q(V) is computed, which is denoted by q( )(V). The procedure to
+update the factor Wm(V) is as follows:
+
+A) Compute the auxiliary function fm(V):
+
+fm(V)
+
+=
+
+Cm
+
+(V)
+
+q( −1)(V) Wm( −1)(V)
+
+=
+
+Cm(V)q\m(V).
+
+(7)
+
+B) Compute qfm (V) ∈ Ftree that minimizes the KL divergence with respect to fm(V):
+
+qfm
+
+(V)
+
+=
+
+arg
+
+min q(V) ∈ Ftree
+
+DKL
+
+fm(V)||q(V)
+
+,
+
+(8)
+
+causal channel with memory can be represented by p(y|V) =
+
+n i=1
+
+p(yi|Vi
+
+p(y|V) =
+
+, Vi−1, Vi−2,
+
+n i=1
+
+p(yi
+
+|Vi
+
+).
+
+. . .) For
+
+and a clarity
+
+memoryless we focus on
+
+channel by memoryless
+
+channels in the remaining of this work, but the work in this
+
+paper can be readily extended to channels with memory.
+
+Let q(V) be a pdf that factorizes according to a given
+
+Markov tree graph:
+
+n
+
+where this step is performed by moment matching [29],
+[30], which only implies obtaining the marginals and pairwise marginals of the auxiliary function fm(V), i.e. fm(Vi) and fm(Vi|Vpi ) for i = 1, . . . , n. C) Update the factor Wm( )(V):
+
+Wm( )(V)
+
+=
+
+qfm (V) q\m(V)
+
+,
+
+(9)
+
+q(V) = qi(Vi|Vpi ),
+
+(2)
+
+i=1
+
+where the set of pairs {(i, pi)ni=1} forms a cycle-free graph
+
+over the original parameterized by
+
+set the
+
+coofndviatiroianballepsronboadbeisl.itiFesunpciut,ivon=.
+
+q(V) qi(Vi
+
+is =
+
+v|Vpi = u) for v, u ∈ {0, 1} and i = 1, . . . , n [21]. Let Ftree
+
+be the family of all possible pdfs q(V). EP inference for the
+
+1In the following, we use lower case letters to denote a particular realization of a random variable or vector, e.g. V = v means that V takes the v value.
+
+where each of the updating terms results from:
+
+wi(,m) (Vi, Vpi ) =
+
+fm(Vi|Vpi )
+k
+
+.
+
+p(yi|Vi)
+
+wi(,j−1)(Vi, Vpi )
+
+j=1 j=m
+
+(10)
+
+Both q\m(V) in (7) and the ratio qfm (V)/q\m(V) in (9) belong to the family Ftree. At each iteration, the procedure
+summarized in Steps A-C is repeated for all factors and then
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+4088
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 61, NO. 10, OCTOBER 2013
+
+q( )(V) is computed using (5). In [11], [31], we used the socalled sequential EP procedure in which, at each iteration, we only update one factor Wj(V) to compute a new estimate to q(V) and the rest of the factors are kept fixed. In [26]– [28] it is shown that the parallel update significantly improves
+the convergence latency and does not compromise the final
+solution, namely the set of fixed points is not changed.
+
+. . . Vr
+
+Cm(V )
+
+. . . Vo
+
+Vp
+
+Vs
+
+A. Moment matching and Pearl’s cutset algorithm
+
+In the factor graph associated to fm(V), the parity constraint Cm(V) is linked to the tree structure associated to Ftree since q\m(V) in (7) belongs to such family. The KL minimization in Step B requires computing pairwise marginals fm(Vi|Vpi ) over the function fm(V). Marginalizing over this graph is the critical step in the EP algorithm. Fortunately, this
+step can be significantly simplified since there are essentially
+
+. . . Vr
+
+(a) Cm(V )
+
+. . . Vo
+
+Vp
+
+Vs
+
+three different ways the marginal terms might be updated:
+1) The qfm (V) distribution in (8) has the same marginals as q\m(V) for those variables for which there is not a path in the graph to reach Cm(V) [9], [32]. Therefore, TEP decoder does not have to perform any operation
+over those variables that are not connected to the parity function Cm(V). 2) When the graph fm(V) factorizes as a cycle-free graph, as depicted in Fig. 1(a), the solution to the marginals
+
+(b)
+Fig. 1. Example of factor graph associated to fm(V). In (a), the graph is cycle free since Cm does not connect any variable Vi with its parent Vpi . In (b), the graph has a cycle since both Vr and Vpr = Vo are connected to Cm (V).
+
+can be computed by message passing at linear cost. It is essentially an iteration of the BP algorithm. Thereby, the cost of marginalization in the tree-like graph is O(rmax) if we assume that, on one hand, the code has maximum check degree rmax and, on the other hand, the length of the chain q(V) in (2) is O(rmax). 3) For the case with cycles, as illustrated in Fig. 1(b), we rely on Pearl’s cutset conditioning algorithm [29] to compute the marginals. This algorithm breaks the cycles by assuming a set of variables as known. The complexity is exponential with the number of assumed variables, but the calculations are performed by message passing. Thus, given the complexity of processing a tree-like scenario, the marginalization cost for a graph with cycles is of order O(rmax2d−1), where d ≤ rmax is the number of variables involved in the cycle.
+Although Scenario 3) increases the cost of the BP iteration, we show that, out of all the k factor nodes, only a small fraction needs to rely on Pearl’s cutset conditioning algorithm. Therefore, in typical LDPC and LDPCC codes, the overall complexity is O(n), only slightly higher than BP’s algorithmic complexity.
+The parallel EP algorithm described above and BP message passing update rules have the same set of fixed points, if we consider a disconnected graph q(V) = i qi(Vi) [18], [26]. In this case, fm(V) in (7) is always cycle free and we just compute bit marginals to update the Wm(V) factor m = 1, . . . , k. Since the update is made in parallel for all factors, it is straightforward to show that the EP update rules and those
+
+III. TREE STRUCTURE CONSTRUCTION
+Prior to running the TEP algorithm, it is necessary to fix a tree-structure, i.e. choose a family Ftree. As discussed in [9], while determining the cost of a given choice is straightforward, estimating the accuracy for each case is a non-trivial problem. In [10], it is suggested to link the variables with highest mutual information. However, for linear codes each pair of variables has a priori zero mutual information, and we thus need to find an alternative way for building the tree-structure.
+For the BEC in [11], we define the tree-structure for each received word as follows: first we run the BP algorithm until it gets stuck and, second, we only link pairs of erased variables that are connected to a factor that has only two erased variables. This follows the highest mutual information criterion [10], because if there are only two erased variables in a factor node, those variables are either equal or opposite. The TEP decoder over the BEC keeps on building the graph, i.e. joining pairs of variables in factors with only two erased variables. When all the variables that form a loop in the graph of the code are joined through pairwise terms, we are then able to decode a set of variables that could not be decoded by the BP algorithm.
+For other BMS channels, we follow a set of simple rules that emulate the TEP decoder over the BEC. First, we run the BP and, when it does not converge, we run the TEP algorithm. For the TEP algorithm we first define a set of variables that are potential candidates to be included in the tree/forest, namely VTS. This set contains two types of variables:
+
+of BP have the same memory/complexity requirements. To understand why the TEP algorithm improves the BP solution, we have detailed a simple example in Appendix A, which additionally shows how the TEP algorithm is implemented step by step.
+
+A) those variables for which the BP log-likelihood ratio
+estimate, llrBP, oscillates around zero; and,
+B) those variables that are connected to an unsatisfied check node Cj, i.e. vhj = 0, where hj is the j-th row of matrix H.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+SALAMANCA et al.: TREE-STRUCTURED EXPECTATION PROPAGATION FOR LDPC DECODING OVER BMS CHANNELS
+
+4089
+
+The first kind can be understood as erased variables and the Algorithm 1 Tree-structure construction algorithm.
+
+second might be incorrectly decoded variables. The second 1: Run the BP algorithm.
+
+kind are not found in the BEC, because for that channel the BP never makes a mistake identifying a variable.
+The tree-structure construction algorithm starts from an erased variable, i.e. the variable from VTS whose channel llr is closest to 0. We then link this variable to the variable in VTS that shares a factor with it an has the closest llr. We continue this procedure until we return to the variable that started this tree. We remove all the used variables from VTS and look for a new tree/chain. This procedure is described in
+detail in Algorithm 1, in which the outer loop, denoted by O, shows how a new chain of variables is created and the inner loop, denoted by I, describes how in each step a new variable is added to the current tree of relations. In the outer loop, a maximum number of repetitions could be introduced
+
+2: if BP does not converge to a valid codeword then
+3: Add to VTS those variables whose log-likelihood ratio using the BP marginal estimate, llrBP, has oscillated around zero in the last 0 BP iterations.
+4: Add to VTS variables connected to incorrect check nodes, i.e. vhi = 0 where hi is the i-th row of H.
+5: Nchains defines the maximum number of outer loop iterations.
+6: Initialize the algorithm setting I = 1, O = 1 and u = s = ∅.
+7: Outer loop
+8: repeat
+9: Set converge = 0, unclosed = 0 and u = s = ∅.
+
+to avoid non-convergence. In the inner loop we, respectively, 10:
+
+denote by u = [u1, . . . , uI] and s = [s1, . . . , sI−1] the set
+
+of indexes of the variables and checks already in the chain
+
+at every iteration. Thus, Vu and Cs are respectively the set 11:
+
+of variables and check nodes already in the chain. At the 12:
+
+beginning of the inner loop, they are initialized to empty sets. Besides, set VunI , where super-index n stands for ‘neighbor’, denotes those variables connected to VuI through check nodes that are not in set Cs. Finally,
+
+13: 14: 15:
+
+VunI\u = VunI \ VunI ∩ Vu
+
+16:
+(11)
+17:
+
+denotes all the variables nodes in VunI except those already in 18: Vu.
+
+The above procedure does not search exhaustively, since 19: we just follow neighboring variables until we close the loop.
+
+Hence, constructing the chain has a complexity linear in the 20: number of variables. Besides, we show experimentally that this process tends to generate a sparse chain structure, i.e. 21: we generate several short chains where the average length 22:
+
+is O(rmax). In Section V-B, we include empirical result of 23: the TEP decoder with the proposed algorithm to construct 24:
+
+From set VTS, select Vi with channel llr closest to 0. This variable is used as the seed to build the chain and is included in u as u1 = i. Inner loop
+repeat if Vu1 ∈ VunI then converge = 1.
+else
+I = I + 1. if VunI\u = ∅ then
+Take from set VunI\u a variable with llrBP ∈ [−δ, +δ], Vk, including it in u as uI = k. The check node Cj connecting VuI−1 and VuI is included in set s as sI−1 = j. else
+unclosed = 1.
+end if
+end if
+until converge = 1 or unclosed = 1.
+
+Ftree. We report average chain lengths of less than 6 variables for LDPC codes of moderate length for signal-to-noise ratios (SNRs) corresponding to the BP waterfall region and to the BP error floor region. As discussed in Section II, this sparsity pattern in the tree-structure minimizes the TEP complexity and it is powerful enough to outperform inference beyond the BP estimate.
+IV. GBP ALGORITHM
+In [22], Yedidia et al. proved that the BP message passing update rules define an iterative Lagrangian method to solve the Bethe variational problem [18]. The core of the Bethe
+
+25:
+
+if converge = 1 then
+
+26:
+
+A chain is defined by the variable’s indexes u =
+
+[u1, . . . , uI].
+
+27:
+
+Variables Vu are related through I − 1 pairwise
+
+factors qz(Vuz |Vuz−1 ), with z = 2, . . . , I, forming a tree over the graph.
+
+28:
+
+Variables Vu are removed from set VTS and O =
+
+O + 1.
+
+29:
+
+end if
+
+30: until O = NChains or VTS = ∅
+
+31: end if
+
+approach consists of a tree-based approximation to the entropy
+
+distribution and an outer bound set of all possible marginals, the so-called marginal polytope. The Kikuchi method and define a region rα as the set of variables {Vi|i ∈ α} and related approximations improve the accuracy of the Bethe a subset of factors in the graph connected only to variables
+
+approximation by including the effect of larger clusters of in α. A region graph is a directed acyclic graph with vertices
+
+variables [33]. Generalized belief propagation (GBP) is a corresponding to regions. A RG is valid if certain consistency
+
+natural generalization of the ordinary BP update rules to find conditions are verified [17], [33]. Essentially, they ensure that
+
+fixed-points of Kikuchi-type approximations [17].
+
+the marginal distributions defined on regions are all consistent.
+
+Region graphs (RGs) are the natural graphical represen- The edges of the RG are associated with the messages of the
+
+tation for GBP algorithms [17]. For a given factor graph, GBP algorithm. Several message-passing schedules have been
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+4090
+
+f1
+
+f2
+
+f3
+
+f4
+
+f5
+
+f6
+
+f7
+
+V1
+
+V2
+
+V3
+
+V4
+
+V5
+
+V6
+
+V7
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 61, NO. 10, OCTOBER 2013
+
+100
+
+n n==12287
+
+10−1
+
+n n==25268
+
+n n==51229
+
+n n==1022140
+10−2
+
+Bit Error rRaattees
+
+C1
+
+C2
+
+C3
+
+(a)
+
+V1 V2V3 V5 C1 f1 f2 f3 f5
+
+V1V2V4 V6 C2 f1 f2 f4f6
+
+R V1V3 V4V7
+
+C3 f1 f3 f4 f7
+
+0
+
+V1 V2 f1 f2
+
+V1 V3 f1 f3
+
+V1 V4 f1 f4
+
+R1
+
+10−3
+10−4
+0 0.5 1 1.5 2 2.5 3 3.5 4 4.5 5
+E b /N 0 ( d B )
+Fig. 3. BER over the AWGN channel for the BP (dashed lines) and the TEP (solid lines) decoders for the expurgated (3,6)-regular LDPC ensemble, and different code-lengths, n, 128(◦), 256( ), 512(×) and 1024(♦).
+
+V1 f1
+
+R2
+
+likelihood factor for each variable. Since the probability of
+
+two check nodes in the graph of the code sharing more than
+
+(b)
+
+one variable node decays by O(n−1) in LDPC codes [35], with
+
+Fig. 2. Factor graph of the Hamming (7,4) linear block code and region high probability there are no cycles of length four in the graph.
+
+graph obtained through cluster variation method (b).
+
+Thus, the intersection we typically find between any pair of
+
+regions consists of a single variable and its likelihood factor.
+
+proposed to estimate the marginal regions, see [17], [18], [34] for details. The solution is always suboptimal if the RG is not cycle-free.
+A key problem is how to choose an optimal region graph for a given distribution, namely one that gives the most accurate results with the least computational effort. Since different RG may nevertheless result in exactly the same GBP fixed points [18], the problem is non-trivial and finding the optimal configuration becomes intractable. In [17], the authors show that the cluster variation method provides valid RG for a given distribution. For an initial set of large regions R0, also referred to as the outer region set, we construct the set of regions R1 by forming all possible intersections between regions in R0 and we discard those that are sub-regions of other intersection
+
+These minimal regions do not improve GBP beyond the BP estimate [22], which explains why GBP has not been applied to LDPC decoding, except for transmission over channels with memory [23], [24], where the intersections are favored by the channel memory.
+The TEP decoder overcomes these problems. The method proposed in Section III establishes pairwise relations without an exhaustive search in the whole graph, as the algorithm only introduces pairwise relations there where BP fails. Also, since the TEP decoder imposes trees of pairwise relations, it considers and propagates mutual information in loops with sizes larger than four, improving the BP solution even for codes, where the minimum cycle length is typically much higher than four.
+
+regions. If possible we proceed in this way to construct the
+
+sets of regions R2, . . . , RK , where regions in set RK contain only one variable. Finally, the region graph to run GBP is given by R0, . . . , RK . In Fig. 2(a), we show the factor graph of the Hamming (7, 4) code, where fi denotes p(yi|Vi), and the region graph obtained using the cluster variation method
+
+V. SIMULATION RESULTS
+A. Performance over BMS channels We consider LDPC and LDPCC codes of moderate code-
+length, between one hundred to a few thousand bits, where the
+
+in Fig. 2(b).
+
+presence of cycles degrades the BP performance. This is the
+
+The application of the GBP along with the cluster variation scenario in which the TEP presents the highest applicability, as
+
+method to decode sparse linear codes presents several draw- random ensembles might not provide good performances for
+
+backs. First, the complexity of the cluster variation method short codes under BP decoding [25]. We present results for
+
+increases exponentially with the number of variables involved regular, irregular and convolutional LDPC codes and both the
+
+and the sparsity of the graph. And second, for large graphs, Gaussian channel and the BSC. The TEP algorithm emerges
+
+the cluster variation method does not incorporate new regions as an attractive tool to enhance the BP performance for sparse
+
+to the original outer region graph and GBP reduces to standard codes of moderate length. The pairwise relations imposed
+
+BP [17]. As we can see in Fig. 2(b), in the decoding graph by the TEP decoder favor its convergence to the correct
+
+the outer region set R0 is formed by the set of variables codeword, limiting the negative influence of loops in the graph connected to each parity check, the parity function and the when BP does not converge.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+SALAMANCA et al.: TREE-STRUCTURED EXPECTATION PROPAGATION FOR LDPC DECODING OVER BMS CHANNELS
+
+100
+
+100
+
+10−1
+
+10−1
+
+10−2
+
+10−2
+
+4091
+n = 128 n = 256 n = 512
+
+B iB ittEEr rroorrRr a t e
+
+Bit Error Rate
+
+10−3
+
+10−3
+
+10−4
+
+n = 128
+
+n = 256
+
+n = 512
+
+10−5
+
+0.02 0.03 0.04 0.05 0.p06 0.07 0.08 0.09
+
+0.1
+
+Fig. 4. BER over the BSC for the BP (dashed lines) and the TEP (solid lines) decoders for the (3,6)-regular LDPC ensemble, and different code-lengths, n, 128(◦), 256( ) and 512(×).
+
+10−4
+0.5 1 1.5 2 2.5 3 3.5 4 4.5 5
+E b /N 0 ( d B )
+Fig. 5. BER over the AWGN channel for the BP (dashed lines) and the TEP (solid lines) decoders for an irregular LDPC code, and different code-lengths, n, 128(◦), 256( ) and 512(×).
+
+10−1
+We restrict our simulations to codes expurgated with param-
+
+eters smin = smin(n), as detailed in [25, Chap. 3, Sect. 22.2]. This expurgation helps to compare the performance of the BP
+
+10−2
+
+n = 648 n = 1296
+
+Bit Error Rate
+
+and TEP algorithms in the error floor regime by discarding
+
+words affected by a number of errors below or equal to smin.
+
+10−3
+
+In Fig. 3, we show the bit error rate (BER) for the (3,6)-regular
+
+LDPC ensemble over the AWGN channel with code-lengths
+
+10−4
+
+n = {128, 256, 512, 1024} bits, whose respective expurgation
+
+values are smin = {6, 6, 12, 24}. The results are averaged over
+
+10−5
+
+100 random samples of the ensemble. We observe a gain in
+
+the waterfall and error floor regions. Close to the waterfall
+
+region, for instance at BER = 10−4, the gain varies from 0.3
+
+10−6
+
+dB for n = 128 to 0.2 dB for n = 1024. In the error floor
+
+region, the gain is of almost an order of magnitude across
+
+10−7 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+n. The tree/forest imposed by the TEP at each iteration has
+
+Eb/N0 (dB)
+
+a remarkable impact in the marginal inference of variables involved in the shortest loops. In Fig. 4, we replicate these experiments for the BSC with similar conclusions.
+
+Fig. 6. BER over the AWGN channel for the BP (dashed lines) and the TEP (solid lines) decoders for rate 1/2 LDPC defined in the IEEE 802.11 standard, and code-lengths n = 648 (◦) and n = 1296 ( ).
+
+In Fig. 5 we present performance results for an irregular
+
+code over the AWGN channel, whose degree distribution is given by λ(x) = 1/6x + 5/6x3 and ρ(x) = x5. For this respectively, 648 (◦) and 1296 bits ( ). The two matrices are
+
+ensemble, we use code-lengths of n = {128, 256, 512} bits uniquely defined in the standard with the positions of the ones
+
+and their respective expurgation values are set to smin = and are designed to optimize the BP performance. Even so, {6, 12, 18}. For this case and the expurgated values taken, the TEP tree-structure is able to exploit correlations across
+
+BP does not present a clear error floor regime but we still large cycles in the graph and improve the error performance.
+
+observe a reduced BER in the waterfall region. The TEP Convolutional LDPC codes are based on L parallel regular
+
+decoder is able to decode some error patterns undecodable by LDPC codes with M variables nodes each, in which nearby
+
+BP, as for the regular ensemble. These error patterns in the BP codes interchange check nodes [37]. The code is terminated
+
+waterfall region involve large cycles of variables in the graph at the extremes by incorporating new check nodes, which are
+
+[25] and, for finite-length values, cannot be avoided. For the intimately related with the good asymptotic properties of LD-
+
+range of code-lengths that we consider, even if the LDPC is PCC codes, but produce an undesirable rate loss, proportional
+
+carefully designed to a very large girth, namely the length of to 1/L in the finite-length regime [6]. As a consequence, long
+
+the minimum cycle in the graph, the TEP algorithm is able to chains of LDPC codes (i.e. large L) are needed to mitigate
+
+outperform the BP estimate and improve the performance. this rate loss, yielding large code-lengths, which is computed
+
+We complete the analysis including the results for a LDPC as n = M L [38]. According to the previous experiments with
+
+code used in practice. In Fig. 6, we show the results obtained regular and irregular LDPC codes, large code-lengths might
+
+using the rate-1/2 LDPC matrices proposed in the IEEE suggest that the TEP decoder might not improve the BP perfor-
+
+802.11 standard (2012 revision) [36]. The code-lengths are, mance. In Fig. 7 we depict the performance of the BP and TEP
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+4092
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 61, NO. 10, OCTOBER 2013
+
+100 n = 1280, M = 128, L = 10
+
+10−1
+
+n = 2560, M = 128, L = 20
+
+n = 2560, M = 256, L = 10
+
+10−2
+
+Bit Error Rate
+
+10−3
+
+10−4
+
+10−5
+
+10−6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+E b /N 0 ( d B )
+
+Fig. 7. BER over the AWGN channel for the BP (dashed lines) and the TEP (solid lines) decoders for a LDPCC code, and different code-lengths, n, 1280(◦) and 2560( , ×).
+
+decoders for three LDPCC codes based on the (3, 6) regular ensemble: (M = 128, L = 10), (M = 128, L = 20) and (M = 256, 10) with respectively markers (◦), ( ) and (×). First of all, the TEP decoder provides a noticeable gain for the three cases even though the code-lengths are quite large, n = 1280 and n = 2560 bits. Regarding the gains, they are of the same order of those observed for the regular and irregular LDPC codes considered before. Second, if we compare the cases (M = 128, L = 10) and (M = 128, L = 20), the TEP gain over the BP does not reduce, suggesting that the TEP gain does not decrease with L and that we can increase the chain length to reduce the rate loss [6] without degrading the TEP gain. On the contrary, the TEP and BP curves converge as we increase M since it plays the role of the code-length for standard LDPC codes [39].
+In these plots, we can observe that the TEP decoder improves the error floor and waterfall error rates. The former suggests that there is a fraction of short stopping sets that are broken by adding pairwise marginal constraints. The improvement in the waterfall error rate decreases with n but it is still observable for code lengths above 1000 bits. For LDPCC codes the gains decrease with M but it seems to be unaffected by the value of L.
+B. Evaluation of the decoding complexity
+
+or quadruples that of BP. We can measure the average TEP complexity per iteration normalized by rmax as
+
+cTEP = 2d−1R + (1 − R).
+
+(12)
+
+where R denotes the fraction of iterations in which we need to apply Pearl’s cutset method and d the number of variables in the loop, in which the cost of the TEP factor update is2 O(rmax 2d−1 ).
+In Fig. 8(a)-(c), we plot the values of 2d−1, (1 − R) and cTEP in (12) for a (3, 6)-regular LDPC code with n = 128 (solid lines) and n = 256 (dashed lines) as a function of the SNR. We have also repeated the experiments with the other
+codes in the previous sections and the results are alike and
+omitted for brevity. In Fig. 8(a), we can observe that in most
+cases we only need to assume one variable as known, also
+this number reduces as we increase the code length and seems
+independent of the SNR. In Fig. 8(b), we can see that the ratio
+of iterations in which we do not need to apply Pearl’s cutset
+algorithm grows as a function of the code length from 85% to 90% when we increase n from 128 to 256. Finally in Fig. 8(c), we have a 20% increase in complexity for n = 128 and 10% for n = 256 with respect to BP’s complexity.
+For completeness, in Fig. 8(d) we depict the average length of the chains created, which is around 5 for all the range of SNR. Though the typical chain length tends to grow with n, it is still of order rmax and this ensures that the cost of the TEP procedure remains of order O(n). For the other codes in the previous sections we found similar results.
+
+VI. CONCLUSIONS
+We have recently showed for the BEC how the TEP decoder outperforms the BP in the finite-length regime [40] and we have analyzed its performance in [11]. In this paper, we show how to generalize the formulation of the TEP decoder over any BMS channel. We adapt an algorithm that benefits from the simple structure of the BEC to any general binary channel model. We also show how we can build the tree structure for each received word to retain, for any BMS, the performance proven for the TEP decoder over the BEC. When BP fails, the TEP algorithm operates by constructing a tree/forest of pairwise marginals that allows improving the BP solution to converge to the transmitted codeword. This procedure reduces both the error rate in the waterfall and error floor regions by building different kinds of trees/forests for each received word, providing measurable gains in the finite-length regime.
+
+In this section we empirically show that the typical complexity of the TEP decoder is significantly lower than the maximal complexity of Pearl’s cutset algorithm, because the proposed algorithm tends to produce several short chains rather than a long chain connecting a set of variables of length O(n). The maximal computational complexity of updating each factor in the TEP approximation q(V) is O(rmax2rmax−1) if we had to apply Pearl’s cutset algorithm at every iteration and all the variables in the factor are involved. However, most iterations are BP-like and, in those that we need to, only one or two variables need to be considered as known. As a result, in practice, the TEP computational complexity only doubles
+
+APPENDIX
+A. Example of the parallel EP iterative method
+Consider the factor graph associated to p(V1, V2, V3|y) depicted in Fig. 9. In the figure, we also include the likelihood values, namely p(yi|Vi) for i = 1, 2 and 3, for a particular channel observation y. This graph contains a single loop and the convergence of the BP update rules is guaranteed [18]. After convergence, the BP estimate for the bit marginals (sometimes referred to as BP pseudo-marginals) equals the
+2The cost of marginalizing over a cycle free scenario is O(rmax), which is equivalent to the BP update rules per check node.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+SALAMANCA et al.: TREE-STRUCTURED EXPECTATION PROPAGATION FOR LDPC DECODING OVER BMS CHANNELS
+
+4093
+
+2d−1
+
+1−R
+
+2.5 n = 128
+
+2.4
+
+n = 256
+
+2.3
+
+BP complexity
+
+(a)
+
+C1
+
+C2
+
+2.2
+
+2.1
+
+2
+
+V1
+
+V2
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+0.94
+
+0.92
+
+(b)
+
+p(y1|V1) =
+
+0.5 0.5
+
+p(y2|V2) =
+
+0.5 0.5
+
+V3
+
+p(y3|V3) =
+
+0.55 0.45
+
+0.9
+
+0.88
+
+Fig. 9. Decoding graph example. In this case, BP is already in a fixed point
+
+but both the TEP and the optimal bitwise MAP decoder are able to recover
+
+0.86
+
+that V3 = 0 with probability one.
+
+0.84
+
+0.82
+
+0.8
+
+2 1.3 1.25
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5 All the wi,j (·) factors are initialized to 1. Therefore, by (5)
+
+(c)
+
+the initial proposal q(0)(V) ∈ Ftree is
+
+1.2
+
+3
+
+3
+
+1.15 1.1
+
+q(0)(V) ∝ W1(0)(V)W2(0)(V) p(yi|Vi) ∝ p(yi|Vi).
+
+1.05
+
+i=1
+
+i=1
+
+(16)
+
+1
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+7 6
+
+(d)
+
+1) Iteration 1. Update of W1(V): Let’s describe the update W1(0)(V) → W1(1)(V) following the Steps A-C detailed in the
+
+Section II. First, we compute the auxiliary function f1(V) as
+
+5
+
+detailed in Step A:
+
+TEP c Length of the chains
+
+4
+
+3
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+SNR (dB)
+
+Fig. 8. Complexity measures for the TEP decoder, for n = 128 (solid lines) and n = 256 (dashed lines).
+
+n
+q\1(V1, V2, V3) = w1(0,2)(V1)w2(0,2)(V1, V2)w3(0,2)(V3) p(yi|Vi),
+i=1
+
+f1(V1, V2, V3) = C1(V1, V2)q\1(V1, V2, V3)
+
+3
+
+∝ C1(V1, V2) p(yi|Vi).
+
+(17)
+
+i=1
+
+likelihood factors, i.e. pBP(Vi = v|y) = 1/2 for v = {0, 1} and i = {1, 2}, pBP(V3 = 0|y) = 0.55 and pBP(V3 = 1|y) = 0.45. If we directly marginalize over p(V1, V2, V3|y), i.e. we
+run the bitwise-MAP decoder, we get the following marginals:
+
+1
+
+p(V1 = 0|y) = 2
+
+(13)
+
+p(V2
+
+=
+
+0|y)
+
+=
+
+1 2,
+
+(14)
+
+p(V3 = 0|y) = 1,
+
+(15)
+
+and thus V3 is zero without uncertainty. Let us detail now the TEP procedure. As the BP case,
+it converges but it provides the right marginals as in (13)(15). As approximating family Ftree, we restrict to probability distributions that factorize as follows:
+
+q(V1, V2, V3) = q1(V1)q2(V2|V1)q3(V3).
+
+Before computing W1(1)(V), we have to marginalize over the f1(V1, V2, V3) function, either through a BP iteration or
+through Pearl’s cutset algorithm, as described in Section II-A.
+Given the marginals f1(V1), f1(V3) and f1(V2|V1) = f1(V2, Vp1 )/f1(V1), the updated factor W1(1)(V) is computed by dividing by the corresponding terms of q\1(V1, V2, V3), as
+stated in Step C:
+
+w1(1,1) (V1 )
+
+=
+
+f1(V1) w1(0,2)(V1)p(y1|V1)
+
+∝ 1,
+
+V1 ∈ {0, 1}, (18)
+
+w2(1,1)(V2, V1)
+
+=
+
+f1(V2|V1) w2(0,2)(V1, V2)p(y2|V2)
+
+∝
+
+1 0
+
+V1 = V2 V1 = V2
+
+,
+
+(19)
+
+w3(1,1) (V3 )
+
+=
+
+f1(V3) w3(0,2)(V3)p(y3|V3)
+
+= 1,
+
+V3 ∈ {0, 1}, (20)
+
+Note we only include a pairwise link between variables V1 and V2. By (4), members of Ftree are indirectly constructed using the non-negative functions W1(V) and W2(V):
+Wj (V) = w1,j (V1)w2,j (V2, V1)w3,j (V3) j = 1, 2.
+
+where thanks to the imposed tree structure we capture in w2(1,1)(V2, V1) that V1 is equal to V2. Note that, since variable V3 is not connected neither to the parity factor C1 nor to the tree structure by a conditional factor, the updated factor w3(1,1)(V3)
+does not change with respect to the initialization.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+4094
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 61, NO. 10, OCTOBER 2013
+
+2) Iteration 1. Update of W2(V): Following a similar procedure we compute the update W2(0)(V) → W2(1)(V):
+
+w1(1,2) (V1 )
+
+=
+
+f2(V1) w1(0,1)(V1)p(y1|V1)
+
+∝
+
+1
+
+∀V1,
+
+w2(1,2)(V2, V1)
+
+=
+
+f2(V2|V1) w2(0,1)(V1, V2)p(y2|V2)
+
+∝
+
+1
+
+∀(V1, V2),
+
+w3(1,2) (V3 )
+
+=
+
+f2(V3) w3(0,1)(V3)p(y3|V3)
+
+∝
+
+1
+
+∀V3.
+
+3) Iteration 1. Update of q(V): After the update of W1(1)(V) and W2(1)(V), using (5) we compute q(1)(V1, V2, V3) ∈ Ftree
+
+q1(1)(V1) ∝ p(y1|V1)w1(1,1)(V1)w1(1,2)(V1) ∝ p(y1|V1),
+
+q2(1)(V2|V1) ∝ p(y2|V2)w2(1,1)(V2|V1)w2(1,2)(V2|V1)
+
+∝
+
+p(y2|V2) 0
+
+V1 = V2 V1 = V2
+
+,
+
+q3(1)(V3) ∝ p(y1|V1)w3(1,1)(V3)w3(1,2)(V3) ∝ p(y3|V3),
+
+where note that our current approximation to p(V|y), i.e. q(1)(V), cancels at configurations for which V1 = V2.
+4) Iteration 2: An additional iteration, following the same
+steps described before, is required for the algorithm to con-
+verge to the MAP solution. The key point is in the update W2(1)(V) → W2(2)(V). The factor w2(1,1)(V1, V2), computed in (19), forces the function
+
+n
+f2(V) =C2(V)w1(1,1)(V1)w2(1,1)(V1, V2)w3(1,1)(V3) p(yi|Vi)
+i=1
+to cancel for V1 = V2. Consequently, the marginal f2(V3) is zero for V3 = 1. This information is then translated to the updated q(2)(V) function at the end of the iteration:
+
+q1(2)(V1) ∝ p(y1|V1),
+
+q2(2)(V2|V1) ∝
+
+p(y2|V2) 0
+
+V1 = V2 V1 = V2
+
+,
+
+q3(2)(V3) ∝
+
+1 0
+
+V3 = 0 V3 = 1
+
+,
+
+and the MAP solution in (13)-(15) is recovered. With the present example we have shown that the EP procedure using an adequate tree-structure is able to propagate information about joint pairs of variables which is then used to reveal additional information.
+
+REFERENCES
+[1] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[2] A. Jimenez Felstrom and K. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sept. 1999.
+[3] S.-Y. Chung, J. Forney, G.D., T. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[4] C. Di, T. Richardson, and R. Urbanke, “Weight distribution of lowdensity parity-check codes,” IEEE Trans. Inf. Theory, vol. 52, no. 11, pp. 4839–4855, Nov. 2006.
+
+[5] A. Amraoui, A. Montanari, and R. Urbanke, “Analytic determination of scaling parameters,” in Proc. 2006 IEEE International Symposium on Information Theory, pp. 562–566.
+[6] S. Kudekar, T. Richardson, and R. Urbanke, “Threshold saturation via spatial coupling: why convolutional LDPC ensembles perform so well over the BEC,” in Proc. 2010 IEEE International Symposium on Information Theory, pp. 684–688.
+[7] S. Kudekar, C. Me´asson, T. Richardson, and R. Urbankez, “Threshold saturation on BMS channels via spatial coupling,” in Proc. 2010 International Symposium on Turbo Codes and Iterative Information Processing, pp. 309–313.
+[8] C. Di, D. Proietti, I. Telatar, T. Richardson, and R. Urbanke, “Finitelength analysis of low-density parity-check codes on the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 48, no. 6, pp. 1570–1579, June 2002.
+[9] T. Minka, “Expectation propagation for approximate bayesian inference,” in Proc. 2001 UAI, pp. 362–369.
+[10] T. Minka and Y. Qi, “Tree-structured approximations by expectation propagation,” in Proc. 2003 Neural Information Processing Systems Conference.
+[11] P. M. Olmos, J. J. Murillo-Fuentes, and F. Pe´rez-Cruz, “Tree-structure expectation propagation for LDPC decoding over the BEC,” IEEE Trans. Inf. Theory, vol. 59, pp. 3354–3377, June 2013.
+[12] L. Salamanca, P. M. Olmos, J. J. Murillo-Fuentes, and F. Perez-Cruz, “Tree expectation propagation for ML decoding of LDPC codes over the BEC,” IEEE Trans. Commun., vol. 61, pp. 465–473, Feb. 2013.
+[13] C. Measson, A. Montanari, and R. Urbanke, “Maxwell construction: the hidden bridge between iterative and maximum a posteriori decoding,” IEEE Trans. Inf. Theory, vol. 54, no. 12, pp. 5277–5307, Dec. 2008.
+[14] D. Burshtein and G. Miller, “Efficient maximum-likelihood decoding of LDPC codes over the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 50, no. 11, pp. 2837–2844, Nov. 2004.
+[15] A. Shokrollahi, S. Lassen, and R. Karp, “Systems and processes for decoding chain reaction codes through inactivation,” Digital Fountain Inc., Tech. Rep. U.S. Patent 6 856 263, Feb. 2005.
+[16] A. Shokrollahi and M. Luby, Raptor Codes, ser. Foundations and trends in communications and information theory. Now Publishers Inc., 2011, vol. 6, no. 3-4.
+[17] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Constructing free energy approximations and generalized belief propagation algorithms,” IEEE Trans. Inf. Theory, vol. 51, pp. 2282–2312, 2004.
+[18] M. J. Wainwright, T. S. Jaakkola, and A. S. Willsky, “MAP estimation via agreement on (hyper)trees: message-passing and linear-programming approaches,” IEEE Trans. Inf. Theory, vol. 51, no. 11, pp. 3697–3717, Nov. 2005.
+[19] W. Weigerinck and T. Heskes, “Fractional belief propagation,” in Advances in Neural Information Processing Systems 15, S. Becker, S. Thrun, and K. Obermayer, Eds. MIT Press, 2002.
+[20] C. Yanover, T. Meltzer, and Y. Weiss, “Linear programming relaxations and belief propagation—an empirical study,” J. Machine Learning Research, vol. 6, pp. 1887–1907, Sep. 2006.
+[21] M. J. Wainwright and M. I. Jordan, “Graphical models, exponential families, and variational inference,” Foundations and Trend in Machine Learning, vol. 1, no. 1, pp. 1–305, 2008.
+[22] J. S. Yedidia, W. T. Freeman, and Y. Weiss, “Generalized belief propagation,” in Proc. 2001 Neural Information Processing Systems Conference, vol. 13, pp. 689–695.
+[23] O. Shental, A. J. Weiss, N. Shental, and Y. Weiss, “Generalized belief propagation receiver for near-optimal detection of two-dimensional channels with memory,” in 2004 IEEE Information Theory Workshop.
+[24] P. Pakzad and V. Anantharam, “Kikuchi approximation method for joint decoding of LDPC codes and partial-response channels,” IEEE Trans. Commun., vol. 54, no. 7, pp. 1149–1153, July 2006.
+[25] T. J. Richardson and R. Urbanke, Modern Coding Theory. Cambridge University Press, 2008.
+[26] T. P. Minka, “A family of algorithms for approximate bayesian inference,” Ph.D. dissertation, Massachusetts Institute of Technology, 2001.
+[27] M. W. Seeger, “Bayesian inference and optimal design for the sparse linear model,” J. Machine Learning Research, vol. 9, pp. 759–813, 2008.
+[28] M. W. Seeger and H. Nickisch, “Fast convergent algorithms for expectation propagation approximate Bayesian inference,” J. Machine Learning Research - Proceedings Track, vol. 15, pp. 652–660, 2011.
+[29] A. Becker, R. Bar-Yehuda, and D. Geiger, “Randomized algorithms for the loop cutset problem,” J. Artificial Intelligence Research, vol. 12, no. 1, pp. 219–234, 2000.
+[30] S. L. Lauritzen, “Propagation of probabilities, means and variances in mixed graphical association models,” J. American Statistical Assoc., vol. 87, no. 420, pp. 1098–1108, 1992.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+SALAMANCA et al.: TREE-STRUCTURED EXPECTATION PROPAGATION FOR LDPC DECODING OVER BMS CHANNELS
+
+4095
+
+[31] L. Salamanca, J. Murillo-Fuentes, P. Olmos, and F. Pe´rez-Cruz, “Treestructured expectation propagation for LDPC decoding over the AWGN channel,” in Proc. 2012 IEEE International Workshop on Machine Learning for Signal Processing, pp. 1–6.
+[32] M. Seeger, “Expectation propagation for exponential families,” E´ cole Polytechnique Fe´de´rale de Lausanne (EPFL), Tech. Rep., 2005. Available: http://infoscience.epfl.ch/record/161464
+[33] M. Welling, “On the choice of regions for generalized belief propagation,” in Proceedings of the 20th conference on Uncertainty in artificial intelligence, ser. UAI ’04. Arlington, Virginia, United States: AUAI Press, 2004, pp. 585–592. Available: http://dl.acm.org/citation.cfm?id= 1036843.1036914
+[34] R. J. Mceliece and M. Yildirim, “Belief propagation on partially ordered sets,” in Mathematical Systems Theory in Biology, Communications, Computation, and Finance, 2002, pp. 275–300.
+[35] M. Mezard and A. Montanari, Information, Physics, and Computation, 1st ed. Oxford University Press, 2009.
+[36] “IEEE standard for wireless LAN medium access control (MAC) and physical layer (PHY) specifications,” ISO/IEC 802-11, Mar. 2012.
+[37] M. Lentmaier, A. Sridharan, D. Costello, and K. Zigangirov, “Iterative decoding threshold analysis for LDPC convolutional codes,” IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 5274–5289, Oct. 2010.
+[38] P. M. Olmos and R. Urbanke, “Scaling behavior of Convolutional LDPC ensembles over the BEC,” in Proc. 2011 IEEE International Symposium on Information Theory, pp. 1816–1820.
+[39] P. M. Olmos, L. Salamanca, J. J. Murillo-Fuentes, and F. Pe´rezCruz, “On the design of LDPC-convolutional ensembles using the TEP decoder,” IEEE Commun. Lett., vol. 16, pp. 726–729, May 2012.
+[40] P. Olmos, J. J. Murillo-Fuentes, and F. Pe´rez-Cruz, “Tree-structured expectation propagation for decoding finite-length LDPC codes,” IEEE Commun. Lett., vol. 15, no. 2, pp. 235–237, Feb. 2011.
+Luis Salamanca (M’13) was born in Badajoz, Spain, in 1985. He obtained the B.Sc./M.Sc. in Telecommunication Engineering from the University of Sevilla in 2009 and 2010, respectively, and the Ph.D. degree in 2013 in the University of Sevilla. He has been a lecturer in diverse topics such as signal processing, radio propagation and communication theory in the degree of Telecommunication Engineering. He has visited E´ cole Polytechnique Fe´de´rale de Lausanne (EPFL) and Bell Laboratories (Holmdel, New Jersey) as invited researcher. His main research interests are in the field of signal processing and communications, as well as Bayesian statistics and machine learning applied to digital communications.
+
+Pablo M. Olmos (M’11) was born in Granada, Spain, in 1984. He received the M.Sc./B.Sc.degrees in telecommunication engineering in 2008 and the Ph.D. degree in telecommunication engineering in 2011 from the University of Sevilla. He is currently an assistant professor at University Carlos III de Madrid. He has visited Princeton University and E´ cole Polytechnique Fe´de´rale de Lausanne (EPFL) as invited researcher. His research interests in lie machine learning, approximate inference methods for Bayesian learning and its applications to coding and information theory and digital communications. A detailed CV and list of publications can be accessed at http://www.tsc.uc3m.es/∼olmos.
+Fernando Pe´rez-Cruz (SM) was born in Sevilla, Spain, in 1973. He received a Ph.D. in Electrical Engineering in 2000 from the Technical University of Madrid and an MSc/BSc in Electrical Engineering from the University of Sevilla in 1996. He is an Associate Professor with the Department of Signal Theory and Communication at University Carlos III in Madrid. He has been a visiting professor at Princeton University under the sponsorship of a Marie Curie Fellowship. He has held position. at the Gatsby Unit (London), Max Planck Institute for Biological Cybernetics (Tuebingen), BioWulf Technologies (New York) and the Technical University of Madrid and Alcala University (Madrid). His current research interest lies in machine learning and information theory and its application to signal processing and communications. He has authored over 90 contributions to international journals and conferences. He has also co-authored a book in Digital Communications. A detailed CV and list of publications can be accessed at http://www.tsc.uc3m.es/∼fernando.
+Juan Jose´ Murillo-Fuentes was born in Sevilla in 1973. He received his Telecommunications Engineering degree in 1996 from the Universidad de Sevilla, Spain, and his Ph.D. degree in Telecommunication Engineering in 2001 from the Universidad Carlos III de Madrid, Spain. He is currently an Associate Professor at the Department of Signal Theory and Communication, Universidad de Sevilla. His research interests lie in algorithm development for machine learning, and their application to digital communications. Juan J. Murillo-Fuentes has been teaching in Bs, Ms and Ph.D. courses for more than ten years. He teaches radiocommunications at the University of Seville since 2001, teaching fundamentals in wireless communications and wireless systems. He is also a professor of the Vodafone Master. Since July 2010 he is a Senior member of the IEEE.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 04:23:38 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,260 @@
+25th Telecommunications forum TELFOR 2017
+
+Serbia, Belgrade, November 21-22, 2017.
+
+Flexible Parallel Implementation of LLR BP Decoding Simulation on Multicores Using OpenCL
+Igor Volkov, Aleksei Kharin, Aleksei Dryakhlov, Evgeny Mirokhin, Konstantin Terekhov, Konstantin Zavertkin, Aleksei Ovinnikov, Evgeny Likhobabin and Vladimir Vityazev, Member, IEEE
+
+Abstract—In this paper we explore acceleration of the logarithmic likelihood ratio (LLR) belief propagation (BP) algorithm for LDPC codes decoding simulation, using parallel computation on graphics processing units (GPUs) with OpenCL technology.
+The proposed parallel implementation of the LLR BP algorithm includes parallel version of all decoding steps: decoder initialization, check and variable nodes update, a posteriori LLR calculation and decoding termination check.
+Decoder throughput was measured by simulating data transmission system with LDPC coding for DVB-T2/S2 (64800, 32400) and PEG (1008, 504) codes.
+Index Terms—belief propagation, LDPC, OpenCL, GPU.
+I. INTRODUCTION
+Low-density parity check codes were proposed by R.Gallager [1] in 1963. But they were forgotten for almost 40 years due to the high complexity of their iterative decoding algorithm. Interest for this codes increased with the discovery of turbo codes [2]. Nowadays LDPC codes are widely used in many modern communication standards like DVB-T2, DVBS2, DVB-C2, WiFi, WiMax, IEEE 802.15.3.
+Gallager also proposed algorithms for decoding LDPC codes. The most powerful of them is near optimum probabilistic belief propagation (BP) algorithm, also known as sumproduct algorithm (SPA) [1]. Moreover, Gallager proposed its logarithmic interpretation, which significantly easier in implementation and has higher numerical stability then common BP algorithm [3]. This algorithm is also known as logarithmic likelihood ratio BP (LLR BP) or logarithmic SPA algorithm (LSPA), and due to its advantages is more widely used then initially proposed probabilistic interpretation.
+This work was supported by Russian Science Foundation under Grant 1779-20302.
+Igor Volkov is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail volkov.i.y@tor.rsreu.ru)
+Aleksei Kharin is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail kharin.a.v@tor.rsreu.ru)
+Aleksei Dryakhlov is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail drahlov.a.a@tor.rsreu.ru)
+Evgeny Mirokhin is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail mirohin.e.i@tor.rsreu.ru)
+Konstantin Terekhov is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail terekhov.k.g@tor.rsreu.ru)
+Konstantin Zavertkin is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail zavertkin.k.n@tor.rsreu.ru)
+Aleksei Ovinnikov is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail ovinnikov.a.a@tor.rsreu.ru)
+Evgeny Likhobabin is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail likhobabin.e.a@tor.rsreu.ru)
+Vladimir Vityazev is with Ryazan State Radio Engineering University, Gagarina 59/1, 390005 Ryazan, Russia (e-mail vityazev.v.v@rsreu.ru)
+
+As it was mentioned above the main drawback of BP decoding algorithm is its complexity, so a lot of simplified modifications of this algorithm were proposed [4]-[6]. Also, methods of accelerating this modifications are developed, including the parallelization of decoding algorithm and transferring calculations to GPUs [7]-[12].
+But for some applications it is necessary to use the most powerful near-optimal BP decoding, for example code construction, trapping sets searching [13] and error floor estimation [14]. Of course this applications have very high computational costs and this kind of simulations can take weeks and months to complete. For such applications it is very critical to have a fast implementation of the LLR BP decoding algorithm. And in this paper we propose to use the OpenCL technology for the LLR BP decoding algorithm to increase LDPC decoder throughput and reduce overall time for simulations in such a complex applications.
+The commonly used approach for LDPC decoding parallelization on GPUs is a parallel implementation of whole data transmission system model [7] or running a several copies of LDPC decoder in parallel with different codewords [8]. However, in practice (for example, for different types of GPUs) there is no opportunity for a parallel implementation of all simulation model due to hardware restrictions. In such conditions parallel implementation of only one LDPC decoder block is very useful, and further in this paper we will consider this approach in details.
+The paper is organized as follows. In next section, we give definitions and notations that are used in this paper, a brief review of OpenCL technology and description of the data transmission system model used for the simulations. In Section III the main steps of the LLR BP decoding algorithm and their parallel OpenCL implementations are presented. Simulation results for proposed algorithm for two codes are provided in Section IV. Finally, Section V concludes this paper.
+II. PRELIMINARIES
+A. Definitions and notations
+Any LDPC code can be represented as a check matrix, which contains mostly zeros and only a small number of indices of ones. A regular (N, K) LDPC code is represented as the matrix H which includes M ≥ N − K rows and N columns. Each column contains exactly dc indices, and each row contains exactly dr indices. We refer to the M rows of H
+
+978-1-5386-3073-0/17/$31.00 c 2017 IEEE
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:49 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1. Simulation model
+
+as check nodes CN , and to all elements of a LDPC codeword as variable nodes V N .
+Each check node is connected to dr variable nodes and each variable node is checked by dc check nodes. Also define N (i) the set of indices of ones in i-th column, M (j) the set of indices of ones in j-th row of matrix H. N (i) − {j} and M (j) − {i} are the same sets, but without j-th and i-th
+positions respectively [4].
+
+change channel and modulation type, or replace one OpenCL kernel with another (in other words, replace the decoding algorithm or its parts) without affecting the rest parts of the model.
+Besides, it is possible to run the developed model on various platforms and OpenCL devices. For example, the model was run on several CPUs, GPUs from different manufacturers and even on ARM with Mali-T628 MP6 mobile GPU [18].
+
+B. OpenCL technology
+The OpenCL technology is an open framework for a software development for many types of heterogenous systems. It allows to implement the GPGPU (General-Purpose Computing for Graphics Processing Units) conception [15].
+Modern GPUs contain huge amount of processing elements compared to a CPU’s (for example, nVidia Tesla K40 contains 2880 processing elements grouped in compute units). This option makes GPUs very useful for parallel computations.
+
+III. PARALLEL IMPLEMENTATION OF LLR BP DECODING
+ALGORITHM
+The LLR BP algorithm is based on the criterion of the symbol-wise maximum of a posteriori probability, which, in its turn, is based on calculation of a posteriori probability of the xi bit in the transmitted codeword x = [x0, x1, ..., xN−1] equals 1, in the case that the codeword received from the channel is y = [y0, y1, ..., yN−1] [3]:
+
+p(xi = 1|y),
+
+(1)
+
+then likelihood ratio of this bit is equal to:
+
+l(xi|y)
+
+=
+
+p(xi p(xi
+
+= =
+
+0|y) 1|y)
+
+,
+
+(2)
+
+or, in logarithmic form:
+
+Fig. 2. The OpenCL system model
+The OpenCL system model is presented on figure 2. This model includes two main blocks: the control block host (for example, CPU) and the array of OpenCL devices (for example, several GPUs). Each OpenCL devices contains huge amount of processing elements grouped in U compute units. Each compute unit represents a SIMD (single instruction multiple data) block. The decoding process will be divided exactly into U threads - by one thread for each compute unit.
+C. Simulation Environment
+Figure 1 depicts data transmission model, that was developed for the LDPC decoder testing and estimating its error performance. This model consists of: pseudorandom number generator as the source of the transmitted data, LDPC encoder, BPSK modulator, AWGN (Additive White Gaussian Noise) channel, LDPC decoder and statistic calculation block (Sink block). As a source of random numbers for the binary source block and the AWGN channel block C++ x11 cryptographically secure pseudorandom generator was used.
+The main advantage of this model is a high flexibility. It is easy to change the configuration of the model, for example,
+
+L(xi|y)
+
+=
+
+ln
+
+p(xi p(xi
+
+= =
+
+0|y) 1|y)
+
+,
+
+(3)
+
+which is called a channel logarithmic likelihood ratio. The LLR BP formalization [1] is presented in Algorithm 1. Step 1. Decoder initialization. For all i variable nodes, the Li value is initialized depending on the selected channel model. Then for all i variable and j check nodes the value Li→j is sets equal to Li if hij = 1. Step 2. Check nodes updating. For all check nodes CNj the output messages Lj→i are calculated. Then these messages are transmitted to the corresponding variable nodes. Step 3. Variable nodes updating. For all variable nodes V N i the output messages Li→j are calculated. Then these messages are transmitted to the corresponding check nodes (figure 3). Step 4. Posteriori LLR calculation. For all j check nodes (j = 0, 1 ... N - 1) the posteriori LLRs are calculated. Step 5. Hard decision making. For all i variable nodes (i = 0, 1 ... N - 1) hard decisions about the transmitted bit xi are made. Step 6. Decoding termination check. The syndrome for hard
+decision is calculated. If the syndrome is zero vector or if the
+maximum number of iterations is reached, decoding process
+is terminated.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:49 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. Variable nodes updating
+
+Algorithm 1 LLR BP algorithm
+
+1: Decoder initialization:
+
+Li
+
+=
+
+L(xi|yi)
+
+=
+
+ln
+
+p(xi p(xi
+
+= =
+
+0|yi 1|yi
+
+) )
+
+,
+
+(4)
+
+where yi value for i symbol received from the channel.
+
+2: Check nodes updating:
+
+Lj→i =
+
+Li →j .
+
+(5)
+
+i ∈M (j)−{i}
+
+3: Variable nodes updating:
+
+Li→j = Li +
+
+Lj →i.
+
+(6)
+
+j N (i)−{j}
+
+4: The a posteriori LLR calculation:
+
+Ltiotal = Li +
+
+Lj→i.
+
+(7)
+
+j N (i)
+
+5: Hard decision making:
+
+υi =
+
+1, Ltiotal 0, Litotal
+
+< ≥
+
+0 .
+0
+
+(8)
+
+6: Decoding termination check: IF (vˆHT == 0) OR (CurrentIter ≥ M axIter) Stop decoding ELSE Go to step 2.
+
+Fig. 4. The a posteriori LLR calculation and hard decision making
+For all steps of LLR BP algorithm parallel OpenCL modifications were developed. Lets consider the differences between common sequential steps and their parallel OpenCL modifications.
+Step 1. Decoder initialization. In the OpenCL implementation of this step, in addition to initializing the initial values of the variable nodes Li, processing data is loaded into OpenCL device memory. Compilation consists in converting the original OpenCL C code into an assembler code of a selected OpenCL device.
+Step 2-3. Check and variable nodes updating (figure 3). Parallel implementation of steps 2 and 3 implies simultaneous updating of several nodes. Thus, U messages are calculated at the same time. In other words, each compute unit calculates its message Lj→i during check nodes updating, and Li→j during variable nodes updating step.
+Step 4. Posteriori LLR calculation (figure 4). The main idea of the OpenCL implementation of this step is similar to step 2
+
+and 3: U posteriori LLRs are calculated simultaneously - one LLR per one compute unit, instead sequential calculation of N a posteriori LLRs.
+Step 5. Hard decision making (figure 4). After LLR calculation on step 4, each compute unit compare the resulted LLR with zero and make hard decision about corresponding bit in received codeword. At this step, similar to the previous steps, U hard decisions are made at once.
+Step 6. Decoding termination check. The hard decision is divided among the compute units. Then each unit compares its part of syndrome with zero vector. If at least one part of the syndrome is not equal to zero vector, the hard decision is considered as incorrect.
+IV. SIMULATION RESULTS
+During the simulations the test platform with the following parameters was used: CPU - Intel Xeon E5-2620 2 GHz (6 Cores), RAM - DIMM 64 GB RAM DDR-4 PC4-17000, GPUs - NVIDIA Tesla K40 (Kepler) 2880 CUDA Cores, 12 GB GDDR-5 RAM (288GB/s) and AMD Radeon R7 370 2 GB GDDR-5.
+Decoder verification was made by comparison results of the developed simulation model with results of the MATLAB LDPC decoder [16] for the several LDPC codes, here results for only two codes are presented, for regular PEG (1008, 504) [17] and DVB-T2/S2 (64800, 32400) codes. Bit error rates for these codes are shown on figure 5. It can be seen that decoders are working in the same way.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:49 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE 1 AVERAGE TIME titer OF ONE DECODING ITERATION
+
+Code
+(64800, 32400) (1008, 504)
+
+Intel Xeon E5-2620 (sequential) 101.52
+0.92
+
+titer , ms Intel Xeon AMD
+
+E5-2620 Radeon
+
+(parallel) R7 370
+
+16.53
+
+3.2
+
+0.32
+
+0.53
+
+NVIDIA Tesla K40 1.89 0.2
+
+Also, the transfer of calculations to the GPU reduces CPU load, which allows to use the CPU to do other tasks simultaneously with decoding. It can be useful in a various heterogeneous systems.
+
+Fig. 5. Bit error rates for PEG (1008, 504), DVB-T2/S2 (64800, 32400)
+
+Execution time of one decoding iteration was chosen, as the decoder performance metric:
+
+titer = tF ULL/Ni,
+
+(9)
+
+where Ni - total iterations count, tF ULL - total decoding time.
+For the decoder performance measurements, the following model parameters were set: modulation type - BPSK, max decoding iterations - 20. All calculations for decoding steps were performed with double precision. The simulation results for the sequential implementation of the decoder and for the parallel implementation with several OpenCL devices are presented in the table 1.
+Average time titer [ms] of one decoding iteration was measured for two considered codes: PEG (1008, 504) and DVB-T2/S2 (64800, 32400).
+As shown in table 1, the parallel OpenCL implementation with NVIDIA Tesla K40 GPU allows to speed up the decoding process more than 53 times for the DVB-T2/S2 (64800, 32400) code.
+However, the resulting speed up depends on the LDPC code parameters (on the size of the check matrix H). For example, the decoding speed for the code (1008, 504) was increased only in 4.6 times. This is due to the fact that the process of decoding PEG (1008, 504) takes less computing time than the decoding of DVB-T2/S2 (64800, 32400), while the overhead costs associated with organizing parallel computations are approximately equal.
+
+V. CONCLUSION AND FUTURE WORK
+Developed implementation allow to simulate LLR BP LDPC decoder with more than 53 times increased throughput for NVIDIA Tesla K40 and DVB-T2/S2 (64800, 32400) code. This gain is achieved by parallel implementation of the LLR BP decoding algorithm and using graphical processing units (GPUs) for computations.
+
+REFERENCES
+[1] R. G. Gallager, ”Low-density parity-check codes”, Cambridge, MA: M.I.T. Press, 1963.
+[2] C. Berrou, A. Glavieux and P. Thitimajshima, ”Near Shannon Limit ErrorCorrecting Coding and Decoding: Turbo-Codes”, Proceedings of ICC93, Geneva, May, 1993, pp. 1064-1070.
+[3] W. E. Ryan and S. Lin, ”Channel codes. Classical and modern”, Cambridge: University Press, 2009.
+[4] M. Fossorier, M. Mihaljevich, H. Imai, ”Reduced complexity iterative decoding of low density parity check codes based on belief propagation” IEEE Trans. on Comm. 1999, May, vol. 47. No 5, pp. 673-680.
+[5] V. Savin, ”Self-corrected min-sum decoding of LDPC codes”, IEEE International symposium on Information Theory, 2008. pp. 146-150.
+[6] C. Jones, E. Valles, M. Smith, J. Villasenor, ”Approximate-min constraint node updating for LDPC code decoding”, IEEE Military Communication Conference, pp. 157-162, Oct. 2003.
+[7] G. Falcao, J. Andrade, V. Silva, S. Yamagiwa and L. Sousa, ”Stressing the BER simulation of LDPC codes in the error floor region using GPU clusters”, Ilmenau, Germany, 2013.
+[8] J. Broulim, A. Ayriyan and V. Georgiev, ”OpenCL/CUDA algorithms for parallel decoding of any irregular LDPC code using GPU”, Journal of LATEX Class Files, vol. 14, no. 8, August 2015.
+[9] B. Le Gal, C. Jego, J. Crenne, ”A High Throughput Efficient Approach for Decoding LDPC Codes onto GPU Devices”, IEEE Embedded Systems Letters, vol. 6, no. 2, pp. 29-32, June 2014.
+[10] J. H. Hong, K. S. Chung, ”Parallel LDPC decoding on a GPU using OpenCL and global memory for accelerators”, Networking, Architecture and Storage 2015, Boston, MA, USA, 6-7 August 2014.
+[11] Y. Lin, W. Niu, ”High Throughput LDPC Decoder on GPU”, IEEE Communications Letters, vol. 18, issue 2, pp. 344-347, February 2014.
+[12] S. Keskin, T. Kocak, ”GPU-Based Gigabit LDPC Decoder”, IEEE Communications Letters, vol. 21, issue 8, pp. 1703-1706, August 2017.
+[13] X. Zheng, F.C.M. Lau C.K. Tse, ”Performance evaluation of irregular low-density parity-check codes at high signal-to-noise ratio”, IET Communications, 8 November 2010.
+[14] E. Likhobabin, V. Vityazev, ”Error floor reduction for LDPC codes using self-correction technique”, 24th Telecommunication Forum, TELFOR, pp. 1-4, Nov. 2016.
+[15] B. Gaster, L. Howes, D. Kaeli, P. Mistry and D. Schaa, ”Heterogeneous Computing with OpenCL”, 1 ed., Morgan Kaufmann, 2011.
+[16] The MathWorks, Inc. ”Free MATLAB Trial” [Online]. Available: http://www.mathworks.com/programs/trials/trial additional info.html.
+[17] D. MacKay’s ”Gallager code resources” [Online]. Available: http://www.inference.org.uk/mackay/codes/.
+[18] A. Kharin, I. Volkov, E. Mirokhin, K. Terekhov, A. Dryakhlov, K. Zavertkin, A. Ovinnikov, E. Likhobabin and V. Vityazev, ”Parallel LDPC Decoder Implementation on a Mobile GPU”, 25th Telecommunications forum TELFOR-2017, Serbia, Belgrade, November 21-22, 2017, accepted for publication.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:43:49 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,450 @@
+2025 IEEE 14th Non-Volatile Memory Systems and Applications Symposium (NVMSA)
+
+2025 IEEE 14th Non-Volatile Memory Systems and Applications Symposium (NVMSA) | 979-8-3315-8527-3/25/$31.00 ©2025 IEEE | DOI: 10.1109/NVMSA66678.2025.00008
+
+Ultra-Low Power LDPC Decoder Design for NAND Flash Storage
+
+Duen-Yih Teng Storage Research Dept. Silicon Motion Technology Corp.
+Hsinchu, Taiwan bob.teng@siliconmotion.com
+
+Mao-Ruei Li Storage Research Dept. Silicon Motion Technology Corp.
+Hsinchu, Taiwn maoruei.li@siliconmotion.com
+
+Shiuan-Hao Kuo Storage Research Dept. Silicon Motion Technology Corp.
+Hsinchu, Taiwan shiuanhao.kuo@siliconmotion.com
+
+Abstract—In the AI era, power efficiency has become a major challenge for data storage. Dynamic Single-Level Cell (SLC) technology, which enables Triple-Level or Quad-Level Cell (TLC/QLC) NAND to operate in SLC mode, is critical for balancing performance and capacity, accelerating hot data access and boosting Solid-State Drive (SSD) performance. This research proposes a practical and energy-efficient solution for sustainable NAND flash storage systems by introducing an ultralow power bit-flipping (ULPBF) decoding algorithm. Our method adaptively switches to normal decoding when necessary and leverages the low error bit property of SLC blocks to reduce power consumption by 42% in both SLC and dynamic SLC modes.
+Index Terms—low-density parity-check codes, bit-flipping decoder, dynamic SLC flash, power consumption, low-complexity implementation
+I. INTRODUCTION
+As the demand for high-performance, energy-efficient storage systems continues to rise in mobile devices, edge computing, and data centers, there is an increasing need to minimize power consumption while preserving data reliability. Applications in these domains often operate under stringent power budgets and are highly sensitive to throughput and energy use. Additionally, power-hungry applications such as artificial intelligence, machine learning, and large-scale data analytics place further pressure on storage subsystems to deliver both performance and efficiency. Consequently, modern storage systems must adopt energy-conscious design strategies, particularly in their error correction mechanisms, to strike a balance between performance and power efficiency. Low power decoders have become essential components in achieving these goals.
+In NAND flash storage, technologies like TLC and QLC offer increased density at the cost of reliability. To mitigate this, storage controllers employ powerful error correction codes (ECC), with Low-Density Parity-Check (LDPC) codes [1] emerging as the preferred choice for both hard and soft decoding due to their excellent performance [2]. As NAND flash cells store more bits per cell, the risk of read and write errors increases, necessitating stronger and more sophisticated ECC techniques to maintain data integrity across a device’s lifetime.
+Dynamic SLC technology is an important advancement that addresses performance and endurance issues in high-density
+
+NAND flash. In dynamic SLC mode, portions of TLC or QLC NAND are operated with only one bit per cell instead of three or four, significantly improving speed, endurance, and reliability. This mode is especially useful for caching hot data or for write-intensive workloads where traditional multi-level storage would otherwise suffer from higher latency and lower endurance. Dynamic SLC operation helps to bridge the gap between fast, durable SLC NAND and high-capacity TLC/QLC NAND, offering a flexible and efficient way to optimize SSD performance.
+Among LDPC decoding algorithms, gradient descent bitflipping (GDBF) introduced in [3] has demonstrated strong error correction capabilities. However, its reliance on repeated gradient evaluations and iterative bit updates results in substantial computational overhead and elevated power consumption. These characteristics of GDBF motivate us to consider low power storage architectures in energy-constrained environments.
+Our study shows that in dynamic SLC configurations, the number of error bits per codeword is typically low—less than or equal to 8 per 4KB chunk. This observation enables us to propose an ultra-low power bit-flipping (ULPBF) decoder optimized for such conditions. By exploiting the low raw bit error rate (RBER) and focusing on minimalistic logic, the ULPBF decoder significantly reduces power consumption. Our approach introduces an SLC-aware decoding strategy, which intelligently adapts to the error environment, making it highly effective for energy-sensitive applications. This innovation delivers reliable, energy-efficient storage solutions and represents a vital step toward next-generation low-power SSD controller designs.
+The remainder of the paper is organized as follows. Section II-A provides an overview of NAND flash, including key concepts such as endurance degradation and data retention time. A review of LDPC decoding and decoder architecture is presented in Section II-B. Section III introduces the ULPBF algorithm, explaining why the ULPBF decoder offers lower power consumption. In Section IV, we present the decoding performance of the ULPBF, demonstrating its suitability for most NAND flash applications, along with a 42% reduction in power consumption. Finally, we discuss the future of SLCaware decoding strategies for NAND flash storage systems.
+
+2575-257X/25/$31.00 ©2025 IEEE
+
+1
+
+DOI 10.1109/NVMSA66678.2025.00008
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+II. FUNDAMENTAL
+A. NAND flash
+Modern NAND flash experiences more complex noise types due to the transition from 2D to 3D structures and the increasing number of stacked layers. Among the most common noise sources throughout NAND history are endurance degradation and retention loss. Each NAND cell consists of a transistor with a control gate and a floating gate. Data is programmed by injecting charge into the floating gate through a high control gate voltage, and erased by applying high voltage to the substrate to remove the stored electrons. Over time, repeated program/erase (PE) cycling gradually wears out the cells, degrading reliability. To study this degradation, experiments are conducted across various PE indices, as increased cycling alters electrical properties such as threshold voltage distributions, retention behavior, and error rates. As a result, a cell’s behavior is closely tied to its PE cycles.
+High-temperature accelerated testing, grounded in the Arrhenius equation [4], is a well-established methodology for estimating the lifetime of electronic devices, including NAND flash memory. By subjecting devices to elevated thermal conditions, this technique accelerates the manifestation of failure mechanisms that would otherwise emerge only after prolonged operation under nominal conditions. In the context of NAND flash, the device lifetime is characterized by the data retention time at an operational temperature of 30◦C, defined as the duration until the bit error rate (BER) surpasses the correction threshold of the embedded error correction code (ECC). Consistent with JEDEC standards [4], lifetime projections at varying temperatures are derived through a temperatureacceleration model based on the Arrhenius formulation.
+To read a NAND cell, a predefined threshold voltage (Vth) is applied to the control gate, and the resulting drain current is compared to a reference to determine the cell’s state, yielding a single-bit output. Since multiple factors can affect NAND cell behavior, the threshold voltage (Vth) may vary across cells before data is read. Influencing factors include PE cycle count, retention-related charge leakage, and parasitic interference from adjacent cells. To analyze error variation, two read methods are used in our experiments. The normal read applies the default Vth defined at program time. In contrast, the best read applies an optimized Vth that minimizes bit errors by accounting for PE cycles, retention time, and other disturbances.
+Multi-bit NAND blocks are more vulnerable to wear and retention-induced errors. When PE cycles exceed the recommended limit or data is stored for extended periods, error rates can surpass ECC correction capabilities, potentially leading to irreversible cell degradation. In contrast, SLC blocks are exceptionally stable. It typically supports up to 100K PE cycles and offers minor retention degradation even after 10 years.
+To evaluate PE cycling effects, we test SLC blocks at various PE counts: 3, 20K, 40K, 60K, 80K, and 100K. For high-temperature accelerated retention, devices are baked to simulate 10 years of storage at 30°C. Due to the low raw
+
+bit error rate (RBER) in SLC, we adopt a Fixed Number Noise (FNN) model (described in Section II-B) instead of conventional probabilistic noise models like additive white Gaussian noise (AWGN) model.
+Fig. 1. Normal read of different SLC pages under 10 years of data retention at different PE indices.
+Fig. 2. Best read of different SLC pages under 10 years of data retention at different PE indices..
+Fig. 1 and Fig. 2 present a statistical overview of error bit histograms across different SLC pages and PE indices under simulated 10-year data retention conditions. The results from normal read and best read operations are shown in the top
+
+2 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+and bottom figures, respectively. Although the normal read exhibits slightly higher error counts, both reading methods maintain the maximum number of error bits per 4KB chunk below 4. Fig. 3 shows the details of the error probability of various PE cycles for 4KB chunks, using best read, under 10 years of retention in SLC mode. It is presented in terms of ”1 − CDF” (cumulative distribution function). For example, at 100K PE cycles, the ratio of 4KB chunks have at least one error bit is 0.014, meaning that 98.6% of 4KB chunks contain zero error bit. In most case (the probability is greater than 1−10−11 ), the number of error bits in a 4KB chunk is at most 8 in SLC mode. The figure also includes extrapolated trends to model SLC noise behavior. Lastly, the error bit distribution of 100K PE and 10 year retention are summarized in TABLE I.
+
+8
+
+Fig. 3. The rate of a specific chunk error under 10 years of data retention at 3, 20K, 40K, 60K, 80K, and 100K PE cycles in SLC mode.
+
+TABLE I THE SLC NOISE MODEL AT PE=100K UNDER 10 YEARS OF DATA
+RETENTION
+
+FNN Probability
+FNN Probability
+
+0 0.986
+4 2.8E-6
+
+1 0.0136
+5 1.65E-7
+
+2 7.99E-4
+6 9.79E-9
+
+3 4.72E-5
+≥7 6.13E-10
+
+B. LDPC codes
+A regular binary (dv, dc)-regular (n, k) LDPC code is defined by a sparse parity-check matrix H of dimension m×n, where k is the length of information, and every row and column of H has exactly dc and dv “1”s, respectively. Denote the element of H on the i-th row and j-th column as hij, variable neighborhoods involved in the i-th check node as N (i) = {j : hij = 1}, and parity-check neighborhoods of the j-th column as M(j) = {i : hij = 1}.
+The access granularity of NAND flash is a row of cells, commonly referred to as a paired-page when storing multiple bits per cell. In TLC and QLC NAND, each cell stores 3 or 4 bits, corresponding to 23 or 24 distinct threshold voltage (Vth) levels, and maps to 3 or 4 logical pages, respectively. These voltage states are analogous to pulse amplitude modulation (PAM) in communication systems. To minimize the number
+
+of reads required per page, balanced Gray coding is employed to map bit patterns to voltage levels efficiently. Each (Vth) state can be modeled as a Gaussian distribution, so the overall read noise is commonly approximated using additive white Gaussian noise (AWGN).
+Consider a codeword c = [c0, . . . , cn−1] stored in an SLC NAND page, where each cell has two possible levels: VE (erase state) representing bit 1, and V1 representing bit 0. The coded bits are mapped to physical voltage levels x = [x0, . . . , xn−1], with xi ∈ {VE, V1}. The actual cell voltages are given by r = [r0, . . . , rn−1], where rj = xj + vj, and vjs are i.i.d. zero-mean Gaussian white noises. After a hard-decision read, the output is z = [z0, . . . , zn−1], where zi ∈ {0, 1} for all i.
+Another commonly used noise model in the industry is the Fixed Number Noise (FNN) model, typically applied to analyze hard-decision error distributions and hard decoding performance. In the FNN model, the Hamming distance between the transmitted codeword c and the received codeword z is fixed and given by a predefined parameter t, which t is the number of bit errors introduced. Given that SLC pages exhibit very low error rates, we adopt the FNN model to represent the noise behavior of real SLC flash in TABLE I. This enables precise evaluation of LDPC decoder performance under realistic conditions.
+The syndrome (or parity-check sum) s = [s0, . . . , sm−1] of z is defined as s = zHT mod 2. The basic BF (bit-flipping) decoding found in [1] uses the channel hard-information as the input values. In each iteration, all the parity-check sums are computed and the unreliable bit is flipped if the number of corresponding unsatisfied check-sums is higher than or equal to a fixed threshold TB. The basic BF algorithm can be summarized as follows:
+Step 0: Initially assign z to ˆc. Step 1: Compute the syndrome s through ˆcHT mod 2. If the syndrome is all-zeros, i.e., s = 0, then stop. Step 2: For each variable node j, find the energy function E[j] which equals to the number of unsatisfied check-sums and flip cˆj if E[j] ≥ TB. Step 3: Repeat the above two steps until all the checksums are satisfied or a predefined maximum iteration number is reached. The GDBF algorithm was first introduced in [3], and an improved version was later proposed in [5], which offers greater efficiency by eliminating the need to find the maximum energy function value. The GDBF algorithm provides enhanced decoding performance compared to the basic BF algorithm; however, this improvement comes at the expense of increased power consumption, primarily due to the reliance on an energy function. The GDBF algorithm uses a different threshold, denoted as TGD, compared to the threshold TB used in the basic BF algorithm. This distinction arises because the energy functions employed in the two algorithms are different. The energy function used in GDBF is defined as
+
+EGD[j] = cˆj ⊕ zj +
+
+si,
+
+(1)
+
+i∈M(j)
+
+3 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+where cˆj represents the current estimate of the code bit, zj is the received bit, and si denotes the syndrome value associated with check node i. The set M(j) includes all
+check nodes connected to variable node j. Additionally, an
+initial threshold T0 is used to initialize TGD, which can be dynamically adjusted during the decoding process.
+
+Algorithm 1 Gradient Descent Bit-Flipping Algorithm
+
+1: Input: Parity-check matrix H, received codeword z, max-
+
+imum iteration number Lmax 2: Output: Decoded codeword cˆ
+
+3: Initialize ˆc ← z 4: Initialize syndrome s = ˆcHT mod 2
+
+5: Initialize TGD = T0 6: if s = 0 then
+
+7: return ˆc
+
+Decoding successful
+
+8: end if
+
+9: for l = 0 to Lmax − 1 do 10: for j = 0 to n − 1 do
+
+11:
+
+Compute energy function EGD[j] by Equation (1)
+
+12:
+
+if E[j] >= TGD then
+
+13:
+
+Flip bit cˆj
+
+14:
+
+end if
+
+15: end for
+
+16: if No bit is flipped then
+
+17:
+
+TGD = TGD − 1
+
+18: end if
+
+19: Compute syndrome s = ˆcHT mod 2
+
+20: if s = 0 then
+
+21:
+
+return ˆc
+
+Decoding successful
+
+22: end if
+
+23: end for
+
+24: return ˆc
+
+The GDBF decoder, illustrated in Fig. 4, consists of the estimated codeword memory, gradient descent (GD) memory, syndrome computation, syndrome registers, connection network, and flipping unit. The syndrome computation unit and connection network are used to accurately connect variable nodes and check nodes according to the parity-check matrix, enabling efficient computation of the syndrome and energy function. The flipping unit evaluates the energy function and determines whether a variable node should be flipped. The XOR between the estimated codeword and the GD bits yields the channel values (CV), which are required for energy function calculation. Conversely, the XOR between the CV and the updated estimated codeword produced by the flipping unit gives the updated GD bits, which are then stored in the GD memory.
+In a hardware implementation of a bit-flipping decoder, there are three primary operational states: initialization, decoding, and output. In the initialization state, before starting the decoder, the syndrome is calculated and fed into the decoder along with the channel values. During the decoding state, the core algorithm is executed. This includes reading the syndrome, calculating the energy function, flipping selected
+
+Fig. 4. GDBF decoder architecture.
+
+variable nodes, and updating the estimated codeword. In the output state, the decoder outputs the final estimated codeword along with an indication of whether decoding was successful or failed.
+
+III. METHODOLOGY
+
+Data integrity in NAND flash memory is critical, as it
+
+represents the final repository for information after volatile
+
+memory relinquishes its contents during data transfer. To en-
+
+sure correctness, multiple protection mechanisms are deployed
+
+in combination, with cyclic redundancy check (CRC) codes
+
+being among the most prevalent for error detection and data
+
+protection. In the proposed method, a concatenated coding
+
+structure is employed, integrating a CRC-32 code as the outer
+
+code and a low-density parity-check (LDPC) code as the
+
+inner code. An SLC-aware decoder is introduced to minimize
+
+decoding power under low-error conditions, typical for SLC
+
+blocks. The design focuses on reducing memory consumption
+
+to lower write power by eliminating the GD memory and
+
+substituting the LDPC syndrome with CRC verification to
+
+confirm the validity of estimated codewords. This strategy
+
+significantly enhances LDPC decoding efficiency, adapting it
+
+better to NAND flash memory applications. For TLC and QLC
+
+blocks, where the intrinsic error rates are higher, a normal
+
+LDPC decoding algorithm, such as the GDBF algorithm, is
+
+applied.
+
+Specifically, a (5, 50)-regular (36800, 33120) LDPC code
+
+is utilized. The SSD controller data comprises 33,088 bits,
+
+including both metadata and host data. A CRC-32 parity is
+
+appended prior to LDPC encoding, resulting in a transmitted
+
+codeword of 36,800 bits. The associated syndrome length
+
+is 3,680 bits. This coding strategy ensures the same error
+
+correction while optimizing power efficiency and memory
+
+usage, enabling effective operation across both low-error SLC
+
+and high-error TLC/QLC NAND flash memory technologies.
+
+We propose an ULPBF algorithm that incorporates the
+
+aforementioned techniques. This algorithm consumes signif-
+
+icantly less power than the GDBF algorithm. It employs a
+
+threshold denoted as TULP , and a simplified energy function given by
+
+EULP [j] =
+
+si,
+
+(2)
+
+i∈M(j)
+
+4 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+where M(j) represents the set of check nodes connected to variable node j, and si denotes the syndrome value of check node i.
+
+Algorithm 2 Ultra-Low Power Bit-Flipping Algorithm
+
+1: Input: Parity-check matrix H, received codeword z
+
+2: Output: Decoded codeword cˆ
+
+3: Initialize ˆc ← z 4: Initialize syndrome s = ˆcHT mod 2
+
+5: if s = 0 then
+
+6: return ˆc
+
+Decoding successful
+
+7: end if
+
+8: for j = 0 to n − 1 do
+
+9: Compute energy function EULP [j]
+
+10: if EULP [j] >= TULP then
+
+11:
+
+Flip bit cˆj
+
+12: end if
+
+13: end for
+
+14: Compute CRC parity
+
+15: if Pass CRC then
+
+16: return ˆc
+
+Decoding successful
+
+17: end if
+
+18: return ˆc
+
+calculated during the decoding state in the ULPBF decoder. Therefore, the ULPBF decoder consumes zero power in the output state.
+IV. EXPERIMENT
+The experiment focuses on a (5, 50)-regular (36800, 33120) LDPC code. We analyze the energy function EULP used in Equation 2. In Fig. 5, certain patterns emerge in the energy function associated with good bits and error bits. The notation cxf in a pattern indicates the probability that at least c variable nodes have exactly f unsatisfied check nodes at the start of the BF algorithm. For example, Pattern 2x3 means that, in a 4KB chunk, there are at least two variable nodes which have exactly three unsatisfied check nodes.
+In Fig. 5, with t = 6 of FNN, we simulate 107 chunks and observe that Pattern 1x5 does not appear among good bits. In contrast, Fig. 6 shows that there is a 9.53% probability of Pattern 1x4 occurring among error bits, while the same pattern occurs only 0.02% of the time among good bits. Moreover, Pattern 1x3 appears in 0.2% of the error bits, making such chunks uncorrectable. However, we cannot lower the threshold TULP , as the probability of Pattern 1x3 among good bits is 9.76%, which is significantly greater than 0.2%.
+
+In our approach, we utilize CRC-32 to determine whether an estimated codeword obtained during the decoding process is valid, thereby replacing the need to verify its validity using the LDPC syndrome. Since CRC-32 generates only a 32-bit parity, which is significantly shorter than the LDPC syndrome length of 3,680 bits, this technique substantially reduces postdecoding computational overhead and energy consumption, while still providing reliable detection of decoding success or failure. Accordingly, Algorithm 2 does not require recomputation of the LDPC syndrome at each decoding iteration. Instead, only the CRC parity is recomputed. If the final codeword passes the CRC check, it is returned; otherwise, decoding fails.
+CRC-32 detects all error patterns with fewer than 4 error bits in a 4KB message, giving an undetected error bound of 2−32 [6]. In SLC mode, where the chance of encountering four or more error bits is less than or equal to 2.97 × 10−6, the realistic undetected error probability is:
+Pundetected ≤ 2.97 × 10−6 × 2−32 ≈ 6.9 × 10−16. (3)
+This estimation applies to noisy codewords before decoding; the ULPBF process further reduces residual errors, making actual undetected error rates even lower. For applications demanding even stronger error detection, longer CRCs (e.g., CRC-64) can be used to achieve exponentially lower undetected error probabilities.
+Compared with the GDBF decoder, the ULPBF decoder avoids syndrome recomputation during decoding and eliminates the need for GD bits in energy function calculation. As a result, there is no power consumption associated with syndrome computation or GD memory access, leading to improved energy efficiency. Moreover, in the output state, there is no need to compute the CRC, as it has already been
+
+Pattern
+
+1x5 0%
+
+1x4 0.02%
+
+1x3
+
+9.76%
+
+1x2
+
+1x1
+
+0%
+
+20%
+
+40%
+
+60%
+
+80%
+
+Occurrence probability
+
+100% 100%
+100%
+
+Fig. 5. The pattern of energy functions EULP among good bits with t = 6 of FNN.
+
+Pattern
+
+1x5
+
+2x4
+
+9.53E-02
+
+1x4
+
+9.53E-02
+
+3x3 1E-06
+
+2x3 3.18E-05
+
+1x3 2.03E-03
+
+3x2 0E+00
+
+2x2 0E+00
+
+1x2 1E-05
+
+3x1 0E+00
+
+2x1 0E+00
+
+1x1 1E-07
+
+0%
+
+20%
+
+40%
+
+60%
+
+80%
+
+Occurrence probability
+
+1E+00 100%
+
+Fig. 6. The pattern of energy functions EULP among error bits with t = 6 of FNN.
+According to the analysis of energy function, we choose the TULP = 4. And, the decoding performance represented by block error rate (BLER) of the ULPBF algorithm is shown in Fig. 7. Since the the probability of FNN t ≥ 7 for SLC block is extremely low, we assume for calculation purposes that the
+
+5 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+BLER of ULPBF decoding at ≥ 7 is 1 (i.e., decoding always fails), even though the ULPBF decoder may still succeed in practice. Using the real SLC noise model shown in TABLE I, we calculate the actual BLER of the ULPBF algorithm to be 5.08 × 10−9 in the worst condition of SLC mode (e.g. PE = 100K and 10 years of data rentention), which is sufficient for most applications.
+1E-02
+
+1E-03
+
+BLER
+
+1E-04
+
+1E-05
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+FNN
+
+Fig. 7. The decoding performance (BLER) of the ULPBF algorithm.
+
+100.00% 80.00%
+
+GDBF
+
+ULPBF
+
+Normalized Power
+
+60.00%
+
+40.00%
+
+20.00%
+
+0.00%
+Initial
+
+Decoding Output
+
+Total
+
+Fig. 8. The normalized power of the GDBF and the ULPBF.
+
+To ensure a fair comparison in terms of throughput between the GDBF and the ULPBF decoder, the maximum number of decoding iterations was fixed at Lmax = 1. Power consumption across three operational states—initialization, decoding, and output—was analyzed using the Synopsys SpyGlass tool with the TSMC 12nm technology node. All power values were normalized by setting the total power consumption of the GDBF decoder to 100%. As shown in Fig. 8, both the GDBF and the ULPBF consume the same amount of power during the initialization state, as both require LDPC syndrome computation prior to decoding. However, during the decoding state, the ULPBF achieves a 42% reduction in power consumption compared to the GDBF, primarily because it is not necessary to calculate the LDPC syndrome. In the output state, the GDBF consumes an additional 6.11% of power to derive the correctness of the decoded codeword from the calculation of the CRC. In contrast, the ULPBF incurs no power consumption in this stage, as CRC validation has
+
+already been completed during decoding state. When summing the power across all states, the total power consumption of the ULPBF is reduced to 67% of that of the GDBF. Thus, the ULPBF demonstrates a significant improvement in energy efficiency while maintaining equivalent decoding throughput.
+It is worth noting that the ULPBF algorithm is designed to share the same HW architecture as the GDBF decoder, but operates with minimal functionality to reduce power consumption. If the initial syndrome indicates that the error count may exceed ULPBF’s correction capability, the decoder can flexibly switch to GDBF in the decoding phase. Additionally, if ULPBF decoding fails, the decoder can immediately retrigger with GDBF without recalculating the initial syndrome, as it was already computed at the start.
+V. DISCUSSION
+As NAND flash bit density increases, systems grow more complex. In data centers, SLC drives serve as cache for TLC/QLC, while consumer devices use dynamic SLC to switch between modes. Thus, decoding strategies should adapt accordingly.
+Currently, SLC-aware ECC typically uses high-rate LDPC codes to save power by shortening codewords and padding the unused page space with dummy data. However, NAND types with fixed 4KB/8KB read modes restrict this approach. To overcome this, we propose ULPBF: a low-power, SLC-aware decoding strategy using a BF-like algorithm as a first-stage decoder, with the original BF-like method moved to the second stage. This significantly reduces power use while preserving error correction, supporting energy-efficient storage systems.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] D. MacKay and R. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 32, pp. 1645–1646, 1996.
+[3] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding ldpc codes,” in 2008 International Symposium on Information Theory and Its Applications, 2008, pp. 1–6.
+[4] JEDEC Solid State Technology Association, “Method for developing acceleration models for electronic component failure mechanisms,” Standard JESD91A, Aug. 2003, https://www.jedec.org/sites/default/files/docs/ jesd91a.pdf.
+[5] M. Ismail, I. Ahmed, J. Coon, S. Armour, T. Kocak, and J. McGeehan, “Low latency low power bit flipping algorithms for ldpc decoding,” in 21st Annual IEEE International Symposium on Personal, Indoor and Mobile Radio Communications, 2010, pp. 278–282.
+[6] D. Prieto and R. Pe´rez-Aranda, “Study of undetected error probability of ieee 802.3 crc-32 code for mttfpa analysis,” http://www.ieee802.org/3/bv/ public/Jan 2015/perezaranda 3bv 2 0115.pdf, 2015.
+
+6 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:46:24 UTC from IEEE Xplore. Restrictions apply.
+
+

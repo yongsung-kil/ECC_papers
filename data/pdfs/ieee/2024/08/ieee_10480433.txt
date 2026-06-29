@@ -1,0 +1,1898 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+4551
+
+Exploiting Parity-Polytope Geometry in Approximate and Randomized Scheduled
+ADMM-LP Decoding
+Amirreza Asadzadeh , Member, IEEE, Anthony Ho , Member, IEEE, Frank R. Kschischang , Fellow, IEEE, and Stark C. Draper , Senior Member, IEEE
+
+Abstract— We present two strategies to reduce the complexity of the alternating direction method of multipliers when applied to linear programming (ADMM-LP) decoding of low-density parity-check codes. First, to address the high complexity of computing a projection onto the parity polytope, the complexity bottleneck of ADMM-LP decoding, we propose the sparse affine projection algorithm (SAPA). SAPA projects onto the affine hull of χ ≤ d nearby local codewords where the check degree is d and where χ can be significantly smaller than d. Unlike exact projection, SAPA does not require a water-filling process, and thus can be implemented with lower per-iteration complexity. Second, to reduce the number of effective iterations needed for ADMM-LP decoding, we propose a randomized layered scheduling framework. Rather than updating checks in roundrobin fashion in each iteration, more “problematic” checks have a higher probability of being updated. The probability mass function that governs the selection of which checks to update is based upon the location of replica vectors inside (or on) the parity polytope. The resultant decoder converges significantly faster under this randomized scheduling than under round-robin scheduling. This makes it well suited for use in applications that limit the number of iterations.
+Index Terms— Low-density parity-check codes, alternating direction method of multipliers, linear-programming decoding, parity polytope.
+I. INTRODUCTION
+LINEAR programming (LP) decoding of low-density parity-check (LDPC) codes, proposed by Feldman et
+al. [1], is an alternative to message-passing decoding which benefits from many theoretical guarantees. These include the maximum-likelihood (ML) certificate property. The decoder can certify it has found the ML codeword whenever it finds
+Manuscript received 16 February 2023; revised 4 August 2023, 3 November 2023, and 8 January 2024; accepted 10 March 2024. Date of publication 27 March 2024; date of current version 16 August 2024. This work was supported in part by a grant from Huawei Technologies Canada, Ottawa, ON, Canada. An earlier version of this paper was presented in part at the 2022 17th Canadian Workshop on Information Theory [DOI: 10.1109/TCOMM.2024.3382328] and in part at the 2022 IEEE Information Theory Workshop [DOI: 10.1109/TCOMM.2024.3382328]. The associate editor coordinating the review of this article and approving it for publication was H. Mahdavifar. (Corresponding author: Amirreza Asadzadeh.)
+The authors are with the Edward S. Rogers Sr. Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON M5S 1A1, Canada (e-mail: amirreza.asadzadeh@mail.utoronto.ca; anth.ho@mail.utoronto.ca; frank@ece.utoronto.ca; stark.draper@utoronto.ca).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2024.3382328.
+Digital Object Identifier 10.1109/TCOMM.2024.3382328
+
+an integer solution to the linear program. Since solving the LP decoding problem using generic LP solvers is extremely complex, Barman et al. [2] proposed a framework based on the alternating direction method of multipliers (ADMM). When the objective function of LP decoding is augmented with a penalty term to encourage integer solutions, ADMM-LP decoding performance reaches the accuracy of messagepassing algorithms [3]. Unlike message-passing decoders, the family of ADMM-LP decoders do not suffer from the errorfloor behavior, and thus, perform better in the high-SNR regime [4]. However, to date, the computational complexity of the penalized ADMM-LP decoder is not comparable to message-passing decoders, mainly due to the high complexity of computing the parity polytope projection needed by the decoder.
+To reduce decoding complexity, one can attempt to reduce the per-iteration complexity or decrease the number of decoding iterations while maintaining decoding performance. In the first part of this paper, we consider lowering per-iteration complexity by modifying the parity polytope projection step. The first proposed algorithm for projection onto the parity polytope by Barman et al. [2] requires solving a quadratic program via a water-filling process. Later, Zhang and Siegel [5] reduced the projection complexity by efficiently identifying the target cut in the parity polytope. However, the resultant projection algorithm still involves a complex waterfilling routine that includes sorting and multiple comparisons with super-linear complexity.
+Inspired by these works, a number of efforts have been made to simplify the projection step by generating look-up tables [6], [7], applying iterative projections [8], [9], or introducing hardware-compatible features to the algorithm [11], [12], [14], [15], [16]. More recently, two approximate projection algorithms (and enhanced variants) have been proposed: the even-vertex algorithm [17], [18], which projects onto the closest even-parity vertex to the point to be projected, and the line-segment algorithm [19], [20], which projects onto the line segment connecting the two closest even-parity vertices to the point to be projected. While these approximation algorithms have demonstrated promising performance, they require many additional iterations to converge. In highthroughput applications such as optical communications, the number of allowed iterations is typically limited. In this
+
+0090-6778 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4552
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+limited-iteration regime, these approximate algorithms do not perform well.
+In this paper, we generalize the previous approximate algorithms, and propose SAPA, the “Sparse Affine Projection Algorithm.” SAPA projects onto the affine hull of a small number of vertices of the polytope. SAPA does not require a water-filling process (as is needed in exact projection) and has a computation complexity that scales linearly with the dimension of the polytope. SAPA maintains high decoding performance even when used in conjunction with iterationlimited ADMM-LP decoders. To validate why SAPA’s sparse approximation is well matched to the ADMM-LP decoding routine, we analyze the sparsity characteristics of exact parity polytope projection, and show that the exact projection is indeed very often sparse.
+A parallel research thrust aims at reducing the number of decoding iterations. Among various approaches, layered ADMM-LP decoding [21], [23] with node-wise scheduling [20], [24], [25] is successful in reducing the required number of decoding iterations by changing the schedule of decoding updates. In standard ADMM-LP decoding, all of the check/variable nodes get updated simultaneously, while in layered ADMM-LP decoding, each node (as well as its neighboring nodes) is chosen to be updated in a specific order based on a sequential (round-robin) schedule. Moreover, node-wise scheduling adjusts the order of node updates in a layered decoding framework in a greedy fashion by tracking the difference of messages in consecutive iterations. Updatescheduling in all of these methods is deterministic, visiting each check node once in every decoding iteration. We conclude the discussion of alternate schedules by commenting that care needs to be taken when comparing these schedules. E.g., for a (dv, dc)-regular LDPC code the proposal in [20] would pass dc(dv + 1) messages, while the schedule we will propose will pass only 2dc messages hence consuming less energy per iteration.
+Inspired by the existing works on layered ADMM-LP decoding and considering the fact that some nodes are more “problematic” and require more frequent updates in the decoding process, we propose a randomized schedule for layered ADMM-LP decoding. In this scheme, we introduce a probability mass function (PMF) π over check nodes, in which more satisfied check nodes are assigned a lower update probability. The probability mass assigned to a check node is derived from the location of its respective replica vector inside or on the parity polytope. In every decoding round of the randomized scheme, an index is sampled from the PMF π and the check node with that index and its neighboring variable nodes are updated. We show through numerical simulations that this randomized schedule outperforms existing schemes in terms of iteration-count reduction, making this schedule well suited for iteration-constrained decoders.
+The remainder of this paper is organized as follows. In Section II we briefly review ADMM-LP decoding, the parity polytope projection procedure, and different update schedules. In Section III, after reviewing prior approximate algorithms for parity polytope projection, we introduce our proposed algorithm, SAPA. In Section IV, we review the
+
+general structure of different update schedules in ADMM-
+
+LP decoding, and propose our randomized layered scheduling.
+
+In Section V, we present simulation results for approximate
+
+and randomized ADMM-LP decoding, demonstrating the
+
+claimed improvements over previous schemes. In Section VI
+
+we summarize our results and suggest some possible directions
+
+to investigate for further improvements.
+
+Throughout this paper, F2 denotes the field with two elements, R denotes the reals and R≥0 denotes the nonnegative
+
+reals. The function int : F2 → R defined as int(0) = 0 and int(1) = 1 will be used to map symbols codewords of a binary
+
+code, defined as sequences in F2, to sequences in R which is
+
+the field in which our optimization algorithms will operate. The function (x)+ = max(x, 0) maps points in R to points in R≥0. For any positive integer d, Rd denotes the Euclidean
+
+space of d-tuples over R. Scalars and vectors are denoted with
+
+lower case letters, with vectors in bold, e.g., x = (x1, . . . , xd).
+
+The length of x ∈ Rd is d. The inner product of two vectors
+
+x, y ∈ Rd is given as ⟨x, y⟩ =
+
+d i=1
+
+xi
+
+yi.
+
+The
+
+Euclidean
+
+norm of x is given as ∥x∥ = ⟨x, x⟩. The Euclidean distance
+
+between x and y is ∥x−y∥. The all-zeros and all-ones vectors
+
+of length d are denoted by 0d and 1d, respectively, and the unit vector (0, . . . , 0, 1, 0, . . . , 0) ∈ Rd with a single nonzero
+
+coordinate in the ith position is denoted as ei. For any closed set S ⊆ Rd, we denote by ΠS : Rd → S the function that, given v ∈ Rd, returns ΠS (v) = arg mins∈S ∥s − v∥,
+the point in S nearest in Euclidean distance to v. If S = {p1, . . . , pk} ⊆ Rd is a finite nonempty set of points, the
+convex hull of S is the set
+
+conv(S) =
+
+k
+
+k
+
+αipi : αi ∈ R≥0, αi = 1 ,
+
+i=1
+
+i=1
+
+while the affine hull of S is the set
+
+aff(S) =
+
+k
+
+k
+
+αipi : αi ∈ R, αi = 1 .
+
+i=1
+
+i=1
+
+Clearly conv(S) ⊆ aff(S); in both cases the coefficients of the linear combination of the points of S must sum to one, but in conv(S) the coefficients are restricted to be nonnegative. Both conv(S) and aff(S) are closed. The d-dimensional hypercube {0, 1}d ⊆ Rd has 2d vertices partitioned into two classes: the even-parity vertices have coordinates summing to an even integer, while the odd-parity vertices have coordinates summing to an odd integer. Matrices are denoted with capital letters, e.g., H ∈ {0, 1}M×N . The entry in the jth row and ith column of H is denoted as Hj,i. For any positive integer n, [n] denotes the set {1, . . . , n}. The number of elements contained in a finite set A is denoted as |A|; thus |[n]| = n. For any nonempty subset B of [n] and any length-n vector x, we let xB = (xi : i ∈ B) be the length-|B| subvector of x composed of the entries of x with indices in B.
+
+II. BACKGROUND REVIEW
+A. ADMM-LP Decoding
+Let C be a binary LDPC code C of block length N with an M × N parity-check matrix H ∈ FM 2 ×N . The codebook C is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4553
+
+the subspace of FN2 orthogonal to all rows of H. Equivalently, a string c ∈ FN2 ∈ C if and only if c is orthogonal to all rows of H. The graphical view of the constraints enforced on
+valid codewords by the parity-check matrix is encapsulated
+in the Tanner graph corresponding to H. The Tanner graph
+corresponding to H has N variable nodes and M check nodes.
+Let [N ] and [M ] be index sets for the variable nodes and check
+nodes, respectively. For i ∈ [N ] and j ∈ [M ], the ith variable
+node and the jth check node are neighbors if and only if
+Hj,i ≠ 0. For j ∈ [M ], the neighborhood of the jth check is the set of all of its neighbors, given as Nc(j) = {i ∈ [N ] | Hj,i ̸= 0}. Similarly, for i ∈ [N ] the neighborhood of the ith variable node is given as Nv(i) = {j ∈ [M ] | Hj,i ≠ 0}. The degree of the jth check node is dj = |Nc(j)|. A vector c = (c1, . . . , cN ) ∈ F2N is a valid codeword of C if and only if i∈Nc(j) ci = 0 for all j ∈ [M ], i.e, has even parity.
+Consider a memoryless channel with binary input alphabet
+F2 and output alphabet Y. For any c ∈ F2 and y ∈ Y, let W (y | c) denote the probability of receiving y when c is transmitted. If a codeword c ∈ C is transmitted and y = (y1, . . . , yN ) ∈ YN is received then, noting that the log function is monotonic, one way to express the output of the
+maximum-likelihood (ML) decoding rule is
+
+N
+
+arg max log W (yi|ci)
+c∈C i=1
+
+N
+= arg max log
+c∈C i=1
+
+W (yi|1) W (yi|0)
+
+int(ci) + log W (yi|0)
+
+N
+= arg min log
+c∈C i=1
+
+W (yi|0) W (yi|1)
+
+int(ci)
+
+= arg min γixi = arg min⟨γ, x⟩.
+
+(1)
+
+x∈C
+
+x∈C
+
+In (1) we use the int function to map c ∈ FN2 to RN
+
+as xi = int(ci) and slighly abuse notation (since C is
+
+an object in F2N ) by writing x ∈ C; to be read that the
+
+string in c ∈ F2N that is mapped to RN to define x is
+
+in the codebook. Further, γi = log
+
+W (yi|0) W (yi|1)
+
+is the log-
+
+likelihood ratio of the ith received symbol. Note that we define
+
+W (y|c) to be the conditional probability measure that relates
+
+the codeword symbols to the received symbol. So, e.g., for
+
+an additive white Gaussian noise channel some modulation
+
+would be included in this map. For instance, if the input
+
+symbol of an AWGN channel were defined as s √= (−1)int(c) then W (y|c) = exp(−(y − (−1)int(c))2/2σ2)/ 2πσ2. The
+
+discussion of remainder of the paper occurs mostly in the reals.
+
+Since ML decoding is an integer-programming problem,
+
+Feldman et al. [1] proposed a linear programming relaxation
+
+that produces
+
+x∗ = arg min
+x
+
+⟨γ, x⟩ : xNc(j) ∈ PPdj , ∀j ∈ [M ]
+
+,
+
+where PPd, the parity polytope of dimension d, is defined as
+
+PPd = conv e ∈ {0, 1}d : ⟨1d, e⟩ = 0 (mod 2) ,
+
+the convex hull of the even-parity vertices of the hypercube in Rd. It is worthwhile to note that the even-parity vertices
+
+correspond to satisfied check nodes, while the odd-parity vertices correspond to unsatisfied check nodes.
+To solve the LP decoding problem efficiently and in a distributed manner, Barman et al. [2] proposed using the alternating direction method of multipliers (ADMM). Later, Liu and Draper [3] added a penalty term to the objective function to promote integer solutions and avoid “pseudocodewords.” The penalized ADMM-LP decoder with an ℓ2-penalty is described [3, Alg. 1]. The addition of the penalty term enhanced the performance of the ADMM-LP decoder. The decoder can also be equipped with syndrome checking at the end of each iteration to accelerate termination. Moreover, inclusion of an over-relaxation parameter helps to accelerate the decoder significantly [26].
+
+B. Parity Polytope Projection
+
+The complexity bottleneck of the ADMM-LP decoder is the projection onto the parity polytope, ΠPPd : Rd → PPd [3, Alg. 1, line 11]. Wasson et al. [14] introduced a hardware-
+
+compatible projection algorithm. To avoid numerical issues
+
+and enhance hardware-compatibility, they exploited a centered
+
+version of the parity polytope, projection onto which is related
+
+to
+
+the
+
+original
+
+(non-centered)
+
+polytope
+
+as
+
+ΠPPd
+
+−
+
+1 2
+
+1d
+
+(v)
+
+=
+
+ΠPPd
+
+v
+
++
+
+1 2
+
+1d
+
+−
+
+1 2
+
+1d,
+
+where
+
+v
+
+∈
+
+Rd
+
+is
+
+the
+
+point
+
+to
+
+be
+
+projected. It is essential to differentiate between the centered
+
+and non-centered frameworks in this manuscript. The parity assigned to the vertices of the hypercube [0, 1]d are specific to
+
+the non-centered framework, while the algorithms presented in
+
+Algs. 1, 4, 5 are based on the centered framework. To ensure
+
+compatibility with hardware and replicate the complexity
+
+results in section V, these algorithms should be implemented
+
+within the centered framework. Let Sd = conv({e1, . . . , ed}) ∈ Rd (i.e., the convex
+
+hull of all unit vectors) denote the probability simplex, and
+
+let
+
+Sd
+
+−
+
+1 2
+
+1d
+
+=
+
+{p
+
+−
+
+1 2
+
+1d
+
+:
+
+p
+
+∈
+
+Sd}
+
+be
+
+the centered
+
+probability simplex. The (centered) parity polytope projection,
+
+as described in [14, Alg. 2], consists of the following
+
+operations: find the closest odd-parity vertex of the hypercube
+
+(denoted as O), apply a similarity transform to rotate the
+
+coordinates around the center of the polytope and thereby
+
+translating O to the (centered) origin such that the facet
+
+connecting the closest even-weight vertices lies on the centered
+
+probability
+
+simplex
+
+Sd
+
+−
+
+1 2
+
+1d
+
+.
+
+Then,
+
+apply
+
+a
+
+membership
+
+test
+
+to check whether the point was initially inside the polytope.
+
+Based on the result, either project onto the centered unit box,
+
+[−
+
+1 2
+
+,
+
+Sd −
+
+21211]dd,.
+
+or project onto the The latter projection
+
+centered involves a
+
+probability simplex, water-filling process
+
+to identify the number of participating vertices in the convex
+
+combination. This projection is described in detail in in Alg. 1.
+
+C. Scheduling Updates
+
+1) Standard ADMM-LP Decoding: A high-level description
+
+of the standard penalized decoding algorithm is given in
+
+Alg. 2. The algorithm involves updating parameters xi for
+
+i ∈ [N ] (associated with variable nodes) and vectors zj ∈ Rdj
+
+and λj for j ∈ [M ] (associated with check nodes). These
+
+parameters are initialized to x
+
+=
+
+1 2
+
+1N
+
+,
+
+zj
+
+=
+
+1 2
+
+1dj
+
+,
+
+and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4554
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+Algorithm 1 Probability Simplex Projection Algorithm [14]
+
+Input: v ∈ Rd
+
+Output:
+
+w
+
+=
+
+ΠSd
+
+−
+
+1 2
+
+1d
+
+(v)
+
+1: ρ ← DescendingSort(v)
+
+2:
+
+for
+
+i ∈ [d]
+
+do
+
+ui
+
+←
+
+1 i
+
+i j=1
+
+ρj
+
+−1
+
+3: i∗ ← max {i ∈ [d] : ρi > ui}
+
+4:
+
+for
+
+i ∈ [d]
+
+do
+
+wi
+
+← (vi − ui∗ )+ −
+
+1 2
+
+5: return w
+
+horizontal layered scheduling (described in Alg. 3) as the baseline layered decoding algorithm.
+
+Algorithm 3 Horizontal Layered ADMM-LP Decoding
+
+1: while stopping criterion is not satisfied do
+
+2: for j ∈ [M ] do
+
+3:
+
+for i ∈ Nc(j) do update xi
+
+4:
+
+update zj and λj
+
+5: return x
+
+λj = 0dj . The zj vectors are called replica vectors, as they should originally be a copy of the values of xNc(j) in ADMM framework. The λj are Lagrange multiplier vectors. Detailed update rules and stopping criteria can be found in [3]. While syndrome-checking is not explicitly included in the stopping criteria of ADMM-LP decoding, it can be utilized for early termination.
+Algorithm 2 Flooding Schedule ADMM-LP Decoding 1: while stopping criterion is not satisfied do 2: for i ∈ [N ] do update xi 3: for j ∈ [M ] do update zj and λj 4: return x
+
+Node-wise scheduling, as introduced by Jiao et al. [25], is also a check-node-centric scheduling algorithm that selects the next check node to be updated by its residual rather than sequentially selecting each check node in a round-robin order. The residual of a check node r(j) is defined as
+
+r(j)
+
+=
+
+max
+i∈Nc (j )
+
+|Lkj→ +1i
+
+−
+
+Lkj→i|,
+
+where Lkj→i is the message from check node j to variable node i at iteration k. At each iteration, node-wise scheduling (greedily) selects a check node j∗ with the maximum residual to be updated. The variable neighbourhood Nc(j∗) is first
+updated, followed by the two-hop (check) neighbourhood of check node j∗. This results in dc(dv + 1) messages being sent
+in each iteration.
+
+It is worth noting that the order of the updates in Alg. 2 is implied by the standard ADMM framework, and the resulting message-passing algorithm follows the flooding schedule. In other words, in a given iteration all variables nodes are updated simultaneously (line 2, Alg. 2), and after that, all check nodes update their replica vectors and Lagrange multiplier vectors in parallel (line 3, Alg. 2).
+2) Layered ADMM-LP Decoding: Layered decoding, a method for decoding LDPC codes using belief propagation (BP) algorithms like min-sum message passing, updates nodes in a Tanner graph sequentially, as opposed to the simultaneous updating in the flooding schedule. Horizontal layered decoding is check-node-centric, updating each check node and its neighboring variable nodes sequentially. In contrast, vertical layered decoding is variable-node-centric, updating each variable node and its neighboring check nodes sequentially. These schemes can result in higher decoding delay than the flooding schedule but offer superior error-correcting performance that compensates for the increased latency.
+Debbabi et al. verified the applicability of layered decoding frameworks to ADMM-LP decoders in [21] and [22]. Based on their experiments, both of these scheduling frameworks outperform conventional ADMM-LP decoding under the flooding schedule. It turns out that horizontal scheduling is more suitable for ADMM-LP decoding for two reasons. First, the parity polytope projection, which is the most complex operation in each decoding iteration, appears less frequently in horizontal layered scheduling. Second, variable node updates can be decomposed to the scalar level, i.e., to xi updates. In contrast, parity polytope projection, which is associated with check node updates, is a vector-input vector-output transformation, and cannot be performed in each dimension independently. Thus, for the remainder of this paper, we take
+
+III. APPROXIMATE PARITY POLYTOPE PROJECTION
+
+A. Previous Approaches
+
+Projection onto the parity polytope is considered to be
+
+the most complex operation in the ADMM-LP decoding
+
+algorithm, as it requires sorting a vector of size d and finding
+
+the proper shift to yield a convex combination of the closest
+
+even-parity vertices of PPd. Hence, pursuing an approximate parity polytope projection algorithm for the the ADMM-
+
+LP decoder that does not substantially degrade the overall
+
+decoding performance is of great interest.
+
+Prior to introducing the approximate algorithms, let us
+
+define the terminology related to parity polytope projection
+
+to facilitate the discussion. Let v ∈ Rd be an arbitrarily point
+
+to be projected onto PPd. Let O be the odd-parity hypercube
+
+vertex nearest to v, and E1, . . . , Ed denote the d even-parity
+
+vertices neighboring O, sorted so that ∥E1−v∥ ≤ · · · ≤ ∥Ed−
+
+v∥. Let w denote the projected point on PPd. By definition,
+
+w is a convex combination of E1, . . . , Ed [14], i.e., w =
+
+ΠPP4 (v) =
+
+4 i=1
+
+ξiEi
+
+=
+
+Eξ,
+
+where
+
+ξ
+
+and
+
+E,
+
+respectively,
+
+denote a coefficient vector, and a d × d matrix, defined as
+
+E = [E1T , · · · , ETd ]. Note that by the definition of convex
+
+combination, we get 0 < ξi < 1 for all ξ ∈ [d], such that
+
+d i=1
+
+ξi
+
+=
+
+1.
+
+We
+
+now
+
+briefly
+
+describe
+
+previously
+
+introduced
+
+approximate algorithms for parity polytope projection based
+
+on the aforementioned terminology.
+
+EVA: The Even-Vertex Algorithm [19] projects v onto E1. HPA: The Hybrid Projection Algorithm [17] applies a
+
+pre-defined schedule to alternate between exact
+
+projection and EVA in consecutive iterations of the
+
+ADMM-LP decoding. It is shown empirically that
+
+the frame error rate is minimized when the mixing
+
+ratio between the exact projection and EVA is 1:1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4555
+
+Algorithm 4 Affine Projection Algorithm (APA)
+
+Input: v ∈ Rd
+
+Output:
+
+w
+
+≈
+
+ΠSd
+
+−
+
+1 2
+
+1d
+
+(v)
+
+1:
+
+vshift ←
+
+1 d
+
+d i=1
+
+vi
+
+−1
+
+2:
+
+for
+
+i ∈ [d]
+
+do
+
+wi
+
+← vi − vshift −
+
+1 2
+
+3: return w
+
+LSA: The Line-Segment Algorithm [19] approximates the projection routine by projecting v onto the convex hull of E1 and E2, i.e., the line-segment joining them.
+
+Although EVA is the simplest algorithm, it has the worst performance. The performance of both HPA and LSA is almost as good as that of exact projection when substituted into the ADMM-LP decoding routine. However, LSA may be considered the best candidate as it has a lower average
+
+complexity compared to HPA.
+
+Projection onto the (centered) probability simplex Sd −
+
+1 2
+
+1d
+
+[14,
+
+Alg.
+
+2,
+
+line
+
+14],
+
+as
+
+a
+
+subroutine
+
+for
+
+parity
+
+polytope
+
+projection, requires sorting a vector of size d and comparing
+
+all d possible shifts to find the proper one (see Alg. 1). This
+
+set of operations results in the super-linear complexity in d,
+
+with average complexity O(d log d).
+
+B. Affine Projection Algorithm
+
+As an alternative and approximate solution, instead of
+
+projecting a d-dimensional vector v onto the convex hull of
+
+E1, . . . , Ed, we may rather project onto the affine hull of those d vertices. While performing the affine projection requires
+
+computing a sum over all entries, it does not involve sorting
+
+the vector initially or applying multiple comparisons to single
+
+out the proper shift. As a consequence, this approximation
+
+reduces the average complexity significantly, to O(d). This
+
+approximate Affine Projection Algorithm (APA) is described
+
+in Alg. 4. The following numerical example demonstrates the
+
+accuracy of this approximate projection when compared to the
+
+previously introduced algorithms.
+
+Example 1: Consider projecting v = (0.7, 0.1, 1.2, 1.5) ∈
+
+R4 onto PP4. The closest odd-parity vertex of the unit hypercube to v is O = (1, 0, 1, 1), which has even-
+
+parity neighbors E1 = (0, 0, 1, 1), E2 = (1, 1, 1, 1), E3 = (1, 0, 0, 1), and E4 = (1, 0, 1, 0); sorted in ascending order by distance from v. Since the result of
+
+the parity-polytope membership test for v is negative, the
+
+projected point is necessarily a convex combination of
+
+E1, . . . , E4,, i.e., w = ΠPP4 (v) =
+
+4 i=1
+
+ξiEi
+
+=
+
+Eξ.
+
+By performing the exact projection algorithm, we get w =
+
+(0.433, 0.366, 0.933, 1) with the corresponding coefficient vector ξT = (0.566, 0.366, 0.067, 0).
+
+The most naive approximate projection algorithm, EVA,
+
+results in
+
+wEVA = E1 with ξTEVA = (1, 0, 0, 0).
+
+LSA produces a fairly accurate result
+
+wLSA = (0.4, 0.4, 1, 1) with ξTLSA = (0.6, 0.4, 0, 0).
+
+In contrast, the output of APA is
+wAPA = (0.375, 0.425, 0.875, 1.175), with ξATPA = (0.625, 0.425, 0.125, −0.175).
+This projection is less accurate than LSA. To quantify this, the ℓ2 error with respect to the exact projection w is ∥w − wLSA∥2 = 0.08 for LSA, and ∥w − wAPA∥2 = 0.2 for APA. The superiority of LSA can be explained by inspecting the vector ξ, which has two large entries, a relatively small third entry, and a zero fourth entry. Hence, the projected point w is almost a convex combination of just two of E1, . . . , E4, so one can expect that LSA’s outcome, which is a convex combination of exactly two vertices E1 and E2, should be quite close to that of the exact algorithm. Similarly, by inspecting ξAPA one can explain the inability of APA to produce a high-accuracy outcome; the third entry of the coefficient vector is quite large, and the fourth entry must be negative to make the sum of coefficients equal to one. Our observation is that forcing the projected point to be an affine combination of all vertices E1, . . . , E4 may degrade the approximation efficiency.
+C. Sparse Affine Projection Algorithm
+Inspired by the observations in Example 1, we propose another approximate algorithm. We again develop an affine projection routine, but this time only involve a subset of the d nearby even-parity vertices. More precisely, we constrain the sparsity (ℓ0-“norm”) of the coefficient vector ξ to a predetermined value, denoted by χ. By enforcing this constraint, the novel approximation routine projects the point onto the affine hull of {E1, . . . , Eχ}. The details of this approximate χ-Sparse Affine Projection Algorithm (χ-SAPA) is provided in Alg. 5. Depending on the LDPC code of interest, in most cases χ-SAPA outperforms LSA in terms of both the decoding performance and the convergence speed when χ > 2, while in the remaining cases it performs on par with LSA [27], [28].
+For the case in Example 1, the outcome of 1-SAPA is equal to that of EVA while 2-SAPA results in the same projected point as LSA. Although 4-SAPA reproduces the poor approximation of APA since χ = d = 4, the output of 3-SAPA precisely matches the exact projection. Thus, this family of χ-SAPA algorithms can not only scale up and achieve the performance of the other approximate algorithms, including the exact projection, but it also avoids the complex waterfilling process required in the exact projection routine. This follows because affine projection is computationally simpler than convex projection.
+It is worthwhile to mention that a fixed χ will be used for all χ-SAPA projections throughout the decoding process of a certain code C. For irregular LDPC codes, where the degree of nodes could be quite diverse, there might be some cases where the degree of a check node is less than the fixed χ of that code. In these cases, χ will be reduced to the degree of that check node by definition. The following theorem as well as a complementary lemma formalize some properties of the χ-SAPA projection algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4556
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+Algorithm 5 χ-Sparse Affine Projection Algorithm (χ-SAPA)
+
+Input: v ∈ Rd, χ
+
+Output:
+
+w
+
+≈
+
+ΠSd
+
+−
+
+1 2
+
+1d
+
+(v)
+
+1: Iχ ← index set of the χ minimum values of |vi|
+
+2:
+
+vshift ←
+
+1 χ
+
+i∈Iχ vi − 1
+
+3: for i ∈ [d] do
+
+4:
+
+if
+
+i
+
+∈
+
+Iχ
+
+then
+
+wi
+
+←
+
+vi
+
+− vshift −
+
+1 2
+
+else
+
+wi
+
+←
+
+−
+
+1 2
+
+5: return w
+
+Lemma 1: For v = (v1, . . . , vd) ∈ Rd, let w =
+(w1, . . . , wd) = ΠSd (v). Then, for any i, j ∈ [d], wi > wj only if vi > vj.
+Proof: The projection of a point (v1, . . . , vd) ∈ Rd on Sd is given as ((v1−t)+, . . . , (vd−t)+), where t is a constant that
+
+must be chosen so that the components of the projection sum to one [14]. The theorem follows since (vi − t)+ > (vj − t)+ only if vi > vj.
+Remark: Suppose that the projection onto the probability simplex of a point v ∈ Rd is given as w = ΠSd (v) = (w1, . . . , wd). If v1 > v2 > · · · > vd, then, according to Lemma 1, w1 > w2 > · · · > wd. Based on the definition of χ-SAPA in Alg. 5, χ-SAPA projects v onto the χ unit
+
+vectors with largest inner product with v, i.e., the χ closest
+
+unit vectors {e1, · · · , eχ} in the non-centered framework.
+
+Since the simplex projection and the parity-polytope projection
+
+are equivalent problems through similarity transform (refer
+
+to [28, Fig. 2.4]), these χ unit vectors to be projected onto
+
+are equivalently the χ local codewords closest to the odd-
+
+parity hypercube vertex nearest to v after similarity transform.
+
+Thus, when χ ≤ δ, χ-SAPA is approximating the projection
+
+considering only the χ terms with the largest coefficients in
+
+the convex combination. Theorem 1: Let v ∈ Rd be chosen arbitrarily, let O be the
+
+odd-parity hypercube vertex nearest to v and let E1, . . . , Ed be the d even-parity vertices neighboring O, sorted so that
+
+∥E1 − v∥ ≤ · · · ≤ ∥Ed − v∥. Suppose that exact projection
+
+w = ΠPPd (v) onto the parity polytope happens to be a strict
+
+convex combination of δ of these even-parity vertices, i.e., w =
+
+δ i=1
+
+ξiEi,
+
+where
+
+δ
+
+≤
+
+d,
+
+ξi
+
+>
+
+0
+
+for
+
+all
+
+i
+
+∈
+
+[δ]
+
+and
+
+δ i=1
+
+ξi
+
+=
+
+1. Then
+
+1) for χ ≤ δ, the χ-SAPA projection w˜ is a
+
+convex combination of E1, . . . , Eχ, given as w˜ =
+
+χ i=1
+
+ξ + 1−
+
+χ j=1
+
+ξj
+
+i
+
+χ
+
+Ei; and
+
+2) for any χ > δ, there are infinitely many points v ∈
+
+Rd such that the output of the χ-SAPA algorithm,
+
+though always an affine combination, is not a convex
+
+combination of E1, . . . , Eχ.
+
+Proof: We start by proving the first statement. Let T = {E1, . . . , Eδ}. Note that w is equal to the projection Πconv(T )(v) of v on the convex hull conv(T ) based on Lemma 1. Since ξi > 0 for all i ∈ [δ], the Euclidean distance minimizer w lies in the interior of conv(T ) and hence is located at the (unique) stationary point of the Euclidean distance function. Enlarging the feasible set to the affine hull aff(T ) does not change the location of the stationary point,
+
+thus w is also equal to the projection Πaff(T )(v) of v on aff(T ).
+Now let S = {E1, . . . , Eχ} ⊆ T , and let Πaff(S) : Rd → aff(S) denote the function that takes an arbitrary element of Rd to its projection on aff(S). It is well known that Πaff(S) is an affine function. Furthermore, since S ⊆ T , Πaff(S) = Πaff(S) ◦ Πaff(T ), i.e., first projecting a vector on aff(T ) and then projecting the result on aff(S) yields the same result as
+
+projecting on aff(S) directly. Now, since Πaff(T )(v) = w =
+
+δ i=1
+
+ξiEi,
+
+we
+
+get
+
+Πaff(S)(v) = Πaff(S)
+
+δ
+
+δ
+
+(a)
+
+ξiEi =
+
+ξiΠaff(S)(Ei)
+
+i=1
+
+χ
+
+δ
+
+(=b)
+
+ξiEi +
+
+i=1
+ξj Πaff(S)(Ej ),
+
+i=1
+
+j=χ+1
+
+where (a) follows from the fact that affine functions preserve
+
+the coefficients of an affine combination, and (b) follows from
+
+the fact that Πaff(S)(Ei) = Ei when Ei ∈ S. Now since the
+
+elements of T form a regular simplex, i.e., the vertices are
+
+equidistant,
+
+for
+
+j
+
+>
+
+χ
+
+we
+
+have
+
+Πaff(S)(Ej )
+
+=
+
+1 χ
+
+χ i=1
+
+Ei,
+
+i.e., the projection of a vertex of a regular simplex on the
+
+affine space spanned by any collection of other vertices is at
+
+the midpoint of those vertices. It follows then that
+
+χ
+
+δ
+
+Πaff(S)(v) = ξiEi +
+
+χ
+
+ξj χ
+
+Ei
+
+i=1
+
+j=χ+1 i=1
+
+χ
+=
+i=1
+
+ξi +
+
+δ j=χ+1
+
+ξj
+
+χ
+
+Ei.
+
+The statement of the theorem then follows by recognizing
+
+that
+
+δ j=χ+1
+
+ξj
+
+=
+
+1
+
+−
+
+χ j=1
+
+ξj ,
+
+and
+
+noting
+
+that
+
+the
+
+resulting
+
+coefficients are positive and therefore they form a convex
+
+combination.
+
+To prove the second statement, let
+
+δ 1+b
+
+v=
+
+δ Ei − bEδ+1,
+
+i=1
+
+where b > 0 is arbitrary. Note that v is itself an affine
+
+combination of E1, . . . , Ed, but not a convex combination. For
+
+χ > δ, we will always have Πaff(E1,...,Eχ)(v) = v. However,
+
+for
+
+χ
+
+=
+
+δ,
+
+we
+
+have
+
+Πaff(E1,...,Eχ)(v)
+
+=
+
+1 δ
+
+δ i=1
+
+Ei,
+
+a
+
+convex
+
+combination which is also equal to ΠPPd (v).
+
+The family of χ-SAPA algorithms, unlike the exact
+
+projection routine, does not require sorting, computing all
+
+possible shifts, and applying multiple comparisons in the
+
+water-filling process. Instead, it involves a partial sorting to
+
+find indices of the χ minimum values of the input vector (line 1
+
+in Alg. 5) and computing the sum of the entries with those
+
+indices as the affine shift (line 2 in Alg. 5). It is worthwhile
+
+to note that there is no clipping of the entries in Alg. 5, since
+
+χ-SAPA does not necessarily result in a convex combination
+
+of the vertices of the polytope, but only an affine combination
+
+of them. However, based on Theorem 1, there exists at least
+
+one value χ ∈ [d] for which χ-SAPA will reproduce the
+
+exact projected point (and at lower complexity than the exact
+
+algorithm).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4557
+
+Algorithm 6 Randomized ADMM-LP Decoding 1: t ← 0 2: one iteration of horizontal layered ADMM-LP decoding (lines 2–4, Alg. 3) 3: construct π(0) 4: while stopping criterion is not satisfied do 5: sample j∗ from π(t) 6: for i ∈ Nc j∗ do update xi 7: update zj∗ and then λj∗ 8: t ← t + 1 then update π(t) 9: return x
+IV. RANDOMIZED LAYERED SCHEDULING
+A. Randomized Schedule
+In both flooding-scheduled (FS) and horizontal layered (HL) decoding, all the nodes of the Tanner graph are visited at least once in each decoding iteration. However, as decoding progresses, some check nodes are already satisfied, so their updates can be skipped without affecting decoding convergence [29]. Inspired by this, we develop a randomized layered decoding scheme in which unsatisfied check nodes are updated more frequently than satisfied ones. More precisely, we define a probability mass function on [M ], denoted by π = (π1, π2, . . . , πM ), where πj is the probability that check j and its neighboring variable nodes are chosen to be updated. The probability that each check is updated should depend on how far each check is from being completely satisfied.
+The randomized layered (RL) decoding scheme is described in Alg. 6. After a single standard iteration of HL decoding (lines 2–4, Alg. 3), decoding shifts to the randomized phase. In each decoding “round,” a single check index is drawn at random according to π. The corresponding check node and its neighboring variable nodes are updated. At the end of the round, the probability mass function π is modified slightly, as the state of the updated check will (most likely) have changed. In each round of RL decoding, only one check gets updated, whereas in a single iteration of HL decoding, all M checks get updated. Thus, we consider M rounds of RL decoding as one “effective iteration.” By doing so, we develop a fair comparison between the HL and RL decoding schedules in terms of number of iterations. After each effective iteration (equivalently M decoding rounds of RL decoding) syndrome checking can be performed as an early stopping criterion. It is important to note that a specified maximum number of decoding iterations is translated, under RL decoding, to a specified maximum number of allowed effective iterations.
+B. Constructing the Probability Mass Function π
+Inspired by the experiments in [20], it appears that the most problematic/uncertain check nodes should be prioritized over the remaining nodes in the updating process. The basic idea is to propagate more reliable information in the Tanner graph. This can be accomplished by updating/correcting more problematic/uncertain nodes more frequently, since updating
+
+already satisfied/converged check/variable nodes does not help
+
+significantly.
+
+Following this line of thought, we assign a score to each
+
+check node to identify the more problematic nodes. Each
+
+replica vector, i.e., zj for check j, is initialized at the center
+
+of
+
+the
+
+polytope
+
+(
+
+1 2
+
+1dj
+
+).
+
+By
+
+the
+
+end
+
+of
+
+decoding
+
+it
+
+should
+
+end
+
+up at (or very close to) one of the even-parity vertices of
+
+the polytope. By symmetry, these vertices are all located at
+
+the
+
+same
+
+(maximal)
+
+distance
+
+from
+
+the
+
+center,
+
+namely
+
+1 2
+
+dj .
+
+Accordingly, we define the normalized ℓ2 distance of the j-th
+
+replica vector (zj) to the center of its polytope to be the score
+
+of
+
+the
+
+j-th
+
+check,
+
+i.e.,
+
+sj
+
+=
+
+√1
+dj
+
+∥zj
+
+−
+
+1 2
+
+1dj
+
+∥.
+
+The
+
+score
+
+sj
+
+then
+
+satisfies
+
+0
+
+≤
+
+sj
+
+≤
+
+1 2
+
+.
+
+In
+
+practice,
+
+s2j
+
+would
+
+also
+
+serve
+
+as
+
+a suitable score function (and avoids a square root operation);
+
+furthermore, other ℓp-norm distance metrics proved to work
+
+equally well in our simulations.
+
+While satisfied checks have the highest possible scores,
+
+i.e.,
+
+1 2
+
+,
+
+the
+
+most
+
+problematic
+
+checks
+
+have
+
+relatively
+
+small
+
+scores. Therefore, based on earlier discussions, the probability
+
+of choosing a particular check node to update should be
+
+greater for check nodes with smaller scores. Based on earlier
+
+works at the intersection of statistical physics and message-
+
+passing algorithms [30] and inspired by Boltzmann (Gibbs)
+
+distribution [31] and soft-max operation [32], we propose
+
+a probability mass function π in which the probability of
+
+choosing the j-th check node is equal to
+
+πj
+
+=
+
+exp (−ϕsj) Z (ϕ)
+
+=
+
+1 Z (ϕ)
+
+exp
+
+− ϕ∥zj
+
+−
+
+1 2
+
+1dj
+
+∥
+
+dj
+
+,
+
+(2)
+
+where j ∈ [M ], ϕ ≥ 0 is a tuning parameter, and Z(ϕ) is a
+
+normalization constant that is chosen so that j∈[M] πj = 1. By varying the parameter ϕ, one can tune the smoothness
+
+of the soft-max operation, and the degree to which the
+
+lowest scores are prioritized. As ϕ → ∞, π converges to
+
+a uniform distribution over checks with the lowest score,
+
+while as ϕ → 0, π converges to a uniform distribution
+
+over all checks. The optimal value for ϕ is both code- and
+
+operating-SNR-dependent; finding a good value is discussed
+
+in Subsection V-B. The following theorem will be used to
+
+explain the supporting simulation results for tuning parameter
+
+ϕ in Subsection V-B.
+
+Theorem 2: The normalized distance of the closest point on
+
+the
+
+boundary
+
+of
+
+PPd
+
+to
+
+its
+
+center
+
+is
+
+d−2 2d
+
+.
+
+Proof: By symmetry, all facets of the polytope are equally
+
+distant from its center, with the midpoint of each facet being
+
+nearest to the center. The facet with vertices given as the
+
+d even-parity neighbors of O = (1, 0, . . . , 0) ha√s mid-point
+
+fd1r(odm−21√11,d1.,T.h. e. ,t1h)e,olroemcatfeodlloatwEs uacftleidrenaonrmdiasltiaznincge
+
+d this
+
+1 2
+
+−
+
+1 d
+
+distance
+
+by 1/ d.
+
+V. SIMULATION RESULTS
+In this section we present the numerical results indicating that the vector of convex coefficients used to represent the exact project is sparse, we demonstrate the effect of the tuning parameter ϕ, and we illustrate the advantages of the proposed low-complexity variants of ADMM-LP decoding. Throughout
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4558
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+Fig. 1. Sparsity statistics of three successfully decoded samples in ADMM-LP decoding for different LDPC codes. Average and quantile statistics (top) and empirical cumulative distribution function (bottom) of non-zero convex combination coefficients for C1 at Eb/N0 = 2.0 dB (left), C2 at Eb/N0 = 0.3 dB (center), and C3 at Eb/N0 = 0.35 dB (right).
+
+we assume binary phase-shift keying modulation over an
+
+additive white Gaussian noise channel. We utilize the ℓ2-
+
+penalized ADMM-LP decoder with the following parameters: µ = 3, α = 0.8, ϵ = 10−5, and ρ = 1.9, as suggested
+
+in [3] and [33]. Syndrome-checking is used at the end of
+
+each iteration for early termination. The maximum number of
+
+iterations allowed is code-dependent and will vary in different
+
+experiments.
+
+We ran experiments using four different LDPC codes: the
+
+regular [2640, 1320] rate-1/2 Margulis code (C1) with checkdegree 6; an irregular [26400, 20480] rate-4/5 quasi-cyclic
+
+(QC) LDPC code (C2) with check-degree distribution R(x) = 0.2x16+0.8x17; the [672, 546] WiGig code (C3) from the IEEE
+
+802.16ad (WiGig) standard [34] with check-degree distribution
+
+R(x)
+
+=
+
+1 3
+
+(x14
+
++
+
+x15
+
++
+
+x16);
+
+and
+
+the
+
+irregular
+
+[576,
+
+288]
+
+rate-
+
+1/2 LDPC code (C4) from IEEE 802.16e standard [35] with
+
+check-degree
+
+distribution
+
+R(x)
+
+=
+
+2 3
+
+x6
+
++
+
+1 3
+
+x7.
+
+Due
+
+to
+
+space
+
+constraints, we present mainly the results for code C1. Results
+
+for other codes can be found in [28].
+
+A. Sparsity
+Prior to evaluating the performance and complexity of χ-SAPA, it is worthwhile first to analyze the sparsity of the exact projection in ADMM-LP decoding. In the parity polytope projection step, each check variable projects onto
+
+a facet of the polytope (assuming that the point to be
+
+projected did not initially lie inside the polytope). Each facet
+
+of the d-dimensional parity polytope is the convex hull of
+
+d neighboring even-parity vertices. Each projected point can
+
+thus be written as a convex combination of these d even-
+
+parity vertices. The projection of point v can be written as
+
+w = ΠPPd (v) =
+
+d i=1
+
+ξiEi
+
+where
+
+E1, · · ·
+
+, Ed
+
+are
+
+the
+
+even-
+
+parity neighbors of the odd-parity vertex nearest to v, sorted
+
+in ascending distance. In practice, most often not all of the d
+
+even-parity vertices participate in the convex combination. The
+
+cardinality of the support of the coefficient vector ξ, which we
+
+denote by ∥ξ∥0 (the number of nonzero coefficients), indicates
+
+the (post-projection) effective degree of the check node. In this
+
+subsection we empirically study the dynamics and statistics
+
+(such as quantiles and the average) of this measure of sparsity.
+
+Representative samples of successful decoding of codes C1– C3 are included in Fig. 1. The plots on top demonstrate how
+
+the sparsity measure evolves through the decoding process.
+
+The figures at the bottom show the empirical cumulative
+
+distribution function (CDF) of the measure of sparsity. As the
+
+plots suggest, in early iterations, more than 80% of the
+
+checks are projected to a convex combination of only three
+
+local codewords, regardless of the maximum check-degree.
+
+Moreover, starting by about halfway through decoding, using
+
+three local codewords is sufficient for more than 90% of
+
+the checks. In addition, the CDF plots suggest that, in early
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4559
+
+Fig. 2. Average number of effective iterations of RL decoding vs. ϕ for code C1 in different operating SNRs. The minimum of each curve is indicated with a larger marker.
+
+iterations, a significant portion of the probability mass function is associated with projections having highly sparse or highly dense coefficient vectors. In contrast, in intermediate to final iterations, most of the probability mass function is related to projections with reasonably sparse coefficient vectors, i.e., ∥ξ∥0 ≤ 3. The aggregation of these observations suggests that only a few of the closest local codewords (regardless of the code’s degree distribution) typically suffice to represent the exact projection required for most check updates. As a result, sparse projection algorithms can be considered as a potential candidate for an accurate, but simpler, projection algorithm to use in ADMM-LP decoding.
+B. Tuning Parameter ϕ
+We introduce an empirical optimization process to tune the parameter ϕ to yield the best decoding performance. Decoding performance of finite-iteration ADMM-LP decoders is directly related to the convergence speed, and the best choice of ϕ should result in the fewest number of effective iterations in RL decoding. In our optimization process, we capture the average number of effective iterations for correct decoding samples of a specific LDPC code at a particular operating SNR, and minimize this as a function of ϕ. The results of such an experiment for code C1 with both exact and 3-SAPA projection algorithms is illustrated in Fig. 2. To generate these curves, at least 1000 successful decoding samples are used at each point.
+The U-shaped curves in Fig. 2 indicate that lower values of ϕ lead to faster convergence in the low-SNR regime, while in higher-SNR cases, larger values of ϕ are required to achieve the fastest convergence. In addition, the optimal value of ϕ in the approximate case is usually lower when compared to the case of exact projection. It is worthwhile to note that the sensitivity of the selection of ϕ is lower at higher operating SNRs.
+
+To interpret these observations, we investigate the statistics
+
+of the normalized distance of replica vectors for all M checks
+
+inside/on the parity polytope in the HL-scheduled decoder with
+
+exact projection at different operating SNRs. Recall that the
+
+normalized distance for the j-th check is defined as ∥zj −
+
+1 2
+
+1dj
+
+∥2
+
+/
+
+dj. The results for code C1 at SNRs 1.5dB and
+
+5.0dB are presented in the two plots of Fig. 3 by averaging
+
+over 1000 successfully decoded samples.
+
+The plots in Fig. 3 suggest that in the high-SNR regime,
+
+the distribution of replica vectors is densely concentrated
+
+around the vertices of the polytope (where normalized distance
+
+is
+
+equal
+
+to
+
+1 2
+
+),
+
+and
+
+only
+
+a
+
+tiny
+
+proportion
+
+of
+
+checks
+
+are
+
+unsatisfied immediately after the first iteration. This means
+
+that focusing on more problematic checks by forcing a
+
+sharp (high-ϕ) distribution is the best strategy. However,
+
+in the low-SNR regime, the distribution of replica vectors
+
+is more akin to the uniform distribution in early iterations,
+
+and many checks are unsatisfied and need to be updated.
+
+Hence, imposing a more uniform (flatter) distribution is more
+
+beneficial.
+
+It is worthwhile to observe the notable step at normalized
+
+distance 0.33 (indicated by the black dotted line) especially for
+
+early iterations. We also observe that the tail of the probability
+
+distribution vanishes at this specific point for later iterations.
+
+This particular point corresponds to the closest point on the
+
+boundary of the parity polytope to the center of the polytope.
+
+The
+
+normalized
+
+distance
+
+of
+
+such
+
+a
+
+point
+
+is
+
+d−2 2d
+
+based
+
+on
+
+Theorem 2, where d is the dimension of the parity polytope.
+
+For code C1 with uniform degree distribution d = 6, the
+
+normalized distance of the closest point on PP6 to its center
+
+is
+
+6−2 2×6
+
+≈ 0.33
+
+which
+
+matches
+
+the
+
+jumps
+
+in
+
+Fig.
+
+3.
+
+When the approximate projection is used in ADMM-LP
+
+decoder, the probability distribution of the location of replica
+
+vectors inside the parity polytope might be slightly different
+
+compared to the case of exact projection. So it is important
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4560
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+Fig. 3. The empirical cumulative distribution function of the normalized distance of the replica vectors to the center of the parity polytope in different phases of the horizontal layered (HL) decoding process of Margulis code with two different values of operating SNR.
+
+to re-tune the parameter ϕ in randomized schedule for ADMM-LP decoder equipped with 3-SAPA (or χ-SAPA more generally.) It can be observed in Fig. 2 that the approximate projection is used, the optimal value of ϕ at each operating SNR is slightly smaller when compared to the optimal value of exact projection. This observation can be interpreted via the definition of the parameter ϕ. As the parameter ϕ increases, the induced probability mass function on check indices becomes sharper. However, in some cases, it is more advised to use smaller values of ϕ. For example, when the distribution of the location of replica vectors is flatter, or when such distribution is not sufficiently informative, smaller values of ϕ might work better in the randomized layered schedule. By utilizing an approximate projection algorithm such as 3-SAPA, naturally the distribution of the replica vectors inside the parity polytope would not be as accurate as in the case of exact projection. Thus, the resulting distribution of the location of replica vectors is less reliable. So, in order to make the RL schedule less sensitive to the less accurate distribution of the location of replica vectors, a smaller value of ϕ should be used in the case of approximate projection.
+C. Convergence Speed
+In this subsection, we present an empirical study of the convergence of the randomized and approximate ADMM-LP decoder, and provide a comparison with other variants of ADMM-LP decoder as well the sum-product decoder for code C1. The detailed complexity and convergence analysis for each of the approximate and the randomized schemes are discussed in [27] and [36], respectively.
+It is shown in [27] that the ADMM-LP decoder equipped with 3-SAPA converges almost as fast as the decoder with exact projection on code C1, while deterioration in errorcorrection performance is negligible. Per-iteration complexity comparison of the exact projection, APA, and χ-SAPA is provided in Table I. Here d, δ, and g(χ), respectively, denote the dimension of the parity polytope, the effective degree after projection, and the function min{χ, d − χ}. For example, the per-projection complexity of 3-SAPA, which is proved to be one of the best approximation candidates among the family of χ-SAPA for ADMM-LP decoding of codes C1– C4 [28], requires only 3d − 3 comparisons, 8 additions, and 1 multiplication for d ≥ 6. This follows from Table I.
+
+TABLE I
+
+PER-PROJECTION COMPLEXITY COMPARISON OF
+
+PROJECTIONALGORITHMS
+
+ON
+
+Sd
+
+−
+
+1 2
+
+1d
+
+Fig. 4. Convergence speed comparison of ADMM-LP decoding with exact projection or 3-SAPA under different schedules (FS, HL, and RL) vs. sum-product decoding for code C1.
+In contrast, the complexity of exact projection is super-linear in the dimension d, i.e., O(d log d).
+The convergence speed of ADMM-LP decoders equipped with either exact projection or 3-SAPA under different FS, HL, and RL schedules for code C1 are compared in Fig. 4 in terms of the effective number of iterations. The maximum number of effective iterations is set to 100 in this experiment. It can be observed that for both FS and HL schedules, ADMM-LP decoders equipped with 3-SAPA converge almost as quickly as the decoder with exact projection. However, the RL-scheduled ADMM-LP decoder with 3-SAPA converges more slowly in the low to moderate SNR range when compared to the same decoder when equipped with exact projection. It is worthwhile to note that, even though utilizing 3-SAPA slows down RL scheduling, the RL-scheduled ADMM-LP decoder equipped with 3-SAPA still converges significantly more quickly than all the variants that use either the FS or HL schedules. Furthermore, both variants of the RL-scheduled ADMM-LP decoder converge faster than the sum-product decoder for
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4561
+
+Fig. 5. Frame-error comparison of approximate and randomized ADMM-LP decoding vs. other variants of ADMM-LP decoding as well as sum-product decoding of code C1 with different maximum number of allowed iterations.
+
+code C1. The same set of results are also observed for codes C2–C4 [28].
+Recall that 3-SAPA requires fewer arithmetic operations and comparisons per projection based on the results in Table I. For example for code C1 with degree d = 6, exact projection requires 31 comparisons, 13 additions, and 6 multiplications, while 3-SAPA only requires 15 comparisons, 8 additions, and 1 multiplication per projection. In addition, RL scheduling, even when equipped with 3-SAPA, converges faster by a factor of 1.5 to 2 when compared to the other schedules of ADMM-LP decoding for code C1. Thus, if we define the total projection complexity of ADMM-LP decoding as the average number of decoding iterations times per-projection complexity, this measure will be reduced significantly by exploiting RL scheduling with 3-SAPA as the projection algorithm. As is shown in Subsection V-D, this reduction of total projection complexity comes at the cost of an insignificant loss in errorcorrection performance.
+D. Error Rate
+We evaluate the error-correction performance of the proposed approximate and randomized ADMM-LP decoder in this subsection, comparing to both the sum-product decoder and other variants of ADMM-LP decoding. Simulation results for code C1 are shown in Fig. 5, where we analyze both lowiteration and moderate-iteration decoders, with the maximum number of allowed effective iterations set to 10 and 50, respectively. We show results only for the combination of the randomized and approximate schemes; performance assessments of these schemes when applied separately can be found in [27] and [36]. We also present simulation results for code C4 at under the operating frame error rate of 10−3 in Fig. 6. The Pareto frontier we plot illustrates the trade-off between the SNR and the maximum number of messages, the latter of which is used to set a common basis for comparison as
+
+Fig. 6. SNR vs Maximum Number of Messages at operating frame error rate of 10−3 for code C4. Pareto frontier is indicated as the black dashed line.
+the number of messages per iteration varies quite a lot across the different decoding approaches we compare.
+Based on the results in [27], whenever the allowed number of iterations is sufficiently high, ADMM-LP decoders equipped with different approximate projection algorithms, such as LSA and χ-SAPA (for various values of χ), perform about as well as when exact projection is employed. However, when the number of iterations is strictly limited, e.g., less than 20, the ADMM-LP decoder with 3-SAPA outperforms the other approximate decoders for code C1.
+The plots in Fig. 5 suggest that low-iteration exact RLscheduled ADMM-LP decoder outperforms all the other lowiteration exact decoders, including the sum-product decoder. All the variants of ADMM-LP decoding with exact projection perform about the same in moderate-iteration setting, while outperforming the sum-product decoder in the error-floor regime. When 3-SAPA is used as the projection algorithm, the same behavior is observed in the moderate-iteration setting. However, a significant deterioration in performance can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+4562
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 8, AUGUST 2024
+
+be observed for low-iteration RL/HL-scheduled approximate ADMM-LP decoders when compared with those equipped with exact projection. This observation can be explained by connecting two results. The first one is borrowed from [27] that approximate projections require at least a moderate number of iterations to perform as well as exact projection. In addition, the conclusion in Subsection V-B highlights the observation that ϕ∗ measures how reliable and informative the distribution of the replica vectors is; in Fig. 2 we observed ϕ∗ decreases as we switch from the exact decoder to SAPA. To connect these two observations, by using χ-SAPA, we decrease the reliability of distribution of the replica vectors, which itself is directly used by the RL schedule. In order to compensate the decrease in reliability of the geometric information, we must operate the decoder for more iterations. Almost the same set of observations can be made for codes C2–C4.
+The Pareto frontier at FER 10−3 in Fig. 6 shows that the RL-scheduled decoder is competitive with the other scheduling algorithms. The performance of node-wise scheduling (NS) [25] and RL-scheduled is close, each being slightly better in different complexity regimes (as quantified by the maximum number of messages). Reduced-complexity node-wise scheduling (RC-NS) [25] and the HL-scheduled ADMM-LP decoder perform worse in all regimes.
+VI. CONCLUSION
+In this paper we have introduced the SAPA (sparse affine projection algorithm) family of approximate parity polytope projection algorithms for use in ADMM-LP decoding. These algorithms approximate the projection onto the convex hull of local codewords (the parity polytope) by projection onto the affine hull of the χ nearest local codewords, where χ can be significantly less than d. SAPA reduces per-projection complexity significantly and yet can, in some cases, produce the exact projection.
+We have also introduced a randomized layered (RL) schedule for ADMM-LP decoding. In this schedule check nodes are updated randomly according to a probability distribution that gives priority to problematic nodes, nodes with replica vectors that are close to the center of the parity polytope.
+Simulation results show that RL-scheduled ADMM-LP decoders are compatible with χ-SAPA polytope projections whenever a sufficient number of iterations is allowed. The RL-scheduled ADMM-LP decoding with χ-SAPA converges almost as quickly as belief propagation decoding at a significant complexity reduction when compared to the stateof-the-art ADMM-LP decoders.
+In both SAPA and RL scheduling, static parameter values are used for the χ and ϕ. It would be interesting to explore whether these parameters can be adjusted dynamically during decoding to improve convergence speed and reduce decoding complexity. It would also be interesting to see whether grouplayered decoding [23] can further reduce the latency of RLscheduled ADMM-LP decoders.
+The randomized layered framework can be adapted to other score metrics, e.g., the message-difference metric used for
+
+node-wise scheduling [25]. Moreover, the probability mass function π could be conditioned on the most recently chosen check(s) to prevent potentially problematic cases, such as updating the same check consecutively, or cycling through a few checks repeatedly.
+REFERENCES
+[1] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[2] S. Barman, X. Liu, S. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” in Proc. 49th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2011, pp. 253–260.
+[3] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[4] X. Liu and S. C. Draper, “ADMM decoding on trapping sets,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Hong Kong, Jun. 2015, pp. 2663–2667.
+[5] X. Zhang and P. H. Siegel, “Adaptive cut generation algorithm for improved linear programming decoding of binary linear codes,” IEEE Trans. Inf. Theory, vol. 58, no. 10, pp. 6581–6594, Oct. 2012.
+[6] X. Jiao, J. Mu, Y.-C. He, and C. Chen, “Efficient ADMM decoding of LDPC codes using lookup tables,” IEEE Trans. Commun., vol. 65, no. 4, pp. 1425–1437, Apr. 2017.
+[7] X. Jiao, Y. He, and J. Mu, “Memory-reduced look-up tables for efficient ADMM decoding of LDPC codes,” IEEE Signal Process. Lett., vol. 25, no. 1, pp. 110–114, Jan. 2018.
+[8] H. Wei and A. H. Banihashemi, “An iterative check polytope projection algorithm for ADMM-based LP decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 1, pp. 29–32, Jan. 2018.
+[9] Y. Lin, Q. Xia, W. He, and Q. Zhang, “A fast iterative check polytope projection algorithm for ADMM decoding of LDPC codes by bisection method,” IEICE Trans. Fundamentals Electron., Commun. Comput. Sci., vol. 102, no. 10, pp. 1406–1410, 2019.
+[10] F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “A reducedcomplexity projection algorithm for ADMM-based LP decoding,” IEEE Trans. Inf. Theory, vol. 66, no. 8, pp. 4819–4833, Aug. 2020.
+[11] G. Zhang, R. Heusdens, and W. B. Kleijn, “Large scale LP decoding with low complexity,” IEEE Commun. Lett., vol. 17, no. 11, pp. 2152–2155, Nov. 2013.
+[12] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardware-based linear programming decoding via the alternating direction method of multipliers,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Mar. 2017, pp. 1143–1147.
+[13] M. Wasson, “Hardware-based linear program decoding with the alternating direction method of multipliers,” M.S. thesis, Dept. Elect. Comput. Eng., Univ. Toronto, Toronto, ON, Canada, Aug. 2016.
+[14] M. Wasson, M. Milicevic, S. C. Draper, and G. Gulak, “Hardwarebased linear program decoding with the alternating direction method of multipliers,” IEEE Trans. Signal Process., vol. 67, no. 19, pp. 4976–4991, Oct. 2019.
+[15] O. Samhan and S. Draper, “Reduced message-passing bitwidth for hardware implementation of ADMM-LP decoding,” in Proc. 29th Biennial Symp. Commun. (BSC), Jun. 2018, pp. 1–5.
+[16] H. B. Thameur, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Hardware design of Euclidean projection modules for ADMM LDPC decoding,” in Proc. 25th IEEE Int. Conf. Electron., Circuits Syst. (ICECS), Dec. 2018, pp. 73–76.
+[17] Q. Xia, X. Wang, H. Liu, and Q. L. Zhang, “A hybrid check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Commun. Lett., vol. 25, no. 1, pp. 108–112, Jan. 2021.
+[18] Y. Zheng, Y. Lin, Z. Zhang, Q. Zhang, and Q. Xia, “An enhanced HDPCEVA decoder based on ADMM,” IEICE Trans. Fundamentals Electron., Commun. Comput. Sci., vol. 104, no. 10, pp. 1425–1429, 2021.
+[19] Q. Xia, Y. Lin, S. Tang, and Q. Zhang, “A fast approximate check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Commun. Lett., vol. 23, no. 9, pp. 1520–1523, Sep. 2019.
+[20] Q. Xia, P. He, X. Wang, H. Liu, and Q. Zhang, “Node-wise scheduling algorithm of ADMM decoding based on line segment projection,” IEEE Commun. Lett., vol. 26, no. 4, pp. 738–742, Apr. 2022.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+ASADZADEH et al.: EXPLOITING PARITY-POLYTOPE GEOMETRY
+
+4563
+
+[21] I. Debbabi, B. L. Gal, N. Khouja, F. Tlili, and C. Jego, “Fast converging ADMM-penalized algorithm for LDPC decoding,” IEEE Commun. Lett., vol. 20, no. 4, pp. 648–651, Apr. 2016.
+[22] I. Debbabi, B. Le Gal, N. Khouja, F. Tlili, and C. Jego, “Comparison of different schedulings for the ADMM based LDPC decoding,” in Proc. 9th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Sep. 2016, pp. 51–55.
+[23] X.-L. Zhang, M. Niu, L.-H. Su, and K.-P. Song, “Group-based layered scheduling of ADMM decoding for LDPC codes,” in Proc. Int. Conf. Commun. Netw. China. Xi’an, China: Springer, 2017, pp. 207–214. [Online]. Available: https://eudl.eu/proceedings/CHINACOM/2017
+[24] H. Ben Thameur, B. Le Gal, N. Khouja, F. Tlili, and C. Jego, “Low complexity ADMM-LP based decoding strategy for LDPC convolutional codes,” in Proc. 25th Int. Conf. Softw., Telecommun. Comput. Netw. (SoftCOM), Sep. 2017, pp. 1–5.
+[25] X. Jiao, J. Mu, and H. Wei, “Reduced complexity node-wise scheduling of ADMM decoding for LDPC codes,” IEEE Commun. Lett., vol. 21, no. 3, pp. 472–475, Mar. 2017.
+[26] S. Boyd et al., “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn., vol. 3, no. 1, pp. 1–122, 2011.
+[27] A. Asadzadeh, M. Barakatain, Stark. C. Draper, and J. Mitra, “SAPA: Sparse affine projection algorithm in ADMM-LP decoding of LDPC codes,” in Proc. 17th Can. Workshop Inf. Theory (CWIT), Jun. 2022, pp. 27–32.
+[28] A. Asadzadeh, “Approximate and randomized ADMM-LP decoding using geometric information of the parity polytope,” M.S. thesis, Dept. Elect. Comput. Eng., Univ. Toronto, Toronto, ON, Canada, 2022.
+[29] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 909–912, Jun. 2015.
+[30] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[31] L. D. Landau and E. M. Lifshitz, Statistical Physics, vol. 5. Amsterdam, The Netherlands: Elsevier, 2013.
+[32] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, MA, USA: MIT Press, 2016.
+[33] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[34] WiGig, IEEE Standard 802.11ad, Dec. 2012. [35] B. Classon, Y. Blankenship, and K. Chung, LDPC Coding for OFDMA
+PHY, IEEE Standard C802 16e-05/066r3, 2005, pp. 1–27. [36] A. Asadzadeh, M. Barakatain, J. Mitra, F. R. Kschischang, and
+S. C. Draper, “Randomized scheduling of ADMM-LP decoding based on geometric priors,” in Proc. IEEE Inf. Theory Workshop (ITW), Nov. 2022, pp. 119–124.
+Amirreza Asadzadeh (Member, IEEE) received the B.Sc. degree in electrical engineering with a minor degree in mathematics from the Sharif University of Technology, Tehran, Iran, in 2019, and the M.A.Sc. degree in electrical and computer engineering from the University of Toronto, Toronto, ON, Canada, in 2022. He completed research internships, one at the Institute of Network Coding, The Chinese University of Hong Kong, Hong Kong, and another one at the Communications and Information Theory Laboratory, Technical University of Berlin, Berlin, Germany. His research interests include the intersection of information theory, coding theory, and optimization algorithms.
+
+Anthony Ho (Member, IEEE) received the B.A.Sc. degree in engineering physics from The University of British Columbia, Canada, in 2022. He is currently pursuing the M.A.Sc. degree in electrical and computer engineering with the University of Toronto. His research interests include information theory, optimization, coding theory, and privacy.
+Frank R. Kschischang (Fellow, IEEE) received the B.A.Sc. degree (Hons.) in electrical engineering from The University of British Columbia in 1985 and the M.A.Sc. and Ph.D. degrees in electrical engineering from the University of Toronto in 1988 and 1991, respectively. Since 1991, he has been a Faculty Member in electrical and computer engineering with the University of Toronto. His research interests include channel coding techniques applied to wireline, wireless, and optical communication systems. He is currently a fellow of the Engineering Institute of Canada, The Canadian Academy of Engineering, and The Royal Society of Canada. He received the 2010 IEEE Communications Society and Information Theory Society Joint Paper Award, the 2016 IEEE Information Theory Society Aaron D. Wyner Distinguished Service Award, the 2018 IEEE Information Theory Society Paper Award, and the 2023 IEEE Richard W. Hamming Medal. He was the General CoChair of the 2008 IEEE International Symposium on Information Theory, held in Toronto. He served as the President for the IEEE Information Theory Society in 2010. He served as an Associate Editor for IEEE TRANSACTIONS ON INFORMATION THEORY from 1997 to 2000 and as the Editor-in-Chief from 2014 to 2016.
+Stark C. Draper (Senior Member, IEEE) received the B.S. degree in electrical engineering and the B.A. degree in history from Stanford University and the M.S. and Ph.D. degrees in electrical engineering and computer science from Massachusetts Institute of Technology (MIT). He was a Post-Doctoral Researcher with the University of Toronto (UofT) and the University of California, Berkeley. He was an Associate Professor with the University of Wisconsin–Madison. He has worked with Mitsubishi Electric Research Laboratories (MERL), the Disney’s Boston Research Laboratory, ArrayComm Inc., the C. S. Draper Laboratory, and Ktaadn Inc., as a Research Scientist. He is currently a Professor with the Department of Electrical and Computer Engineering, UofT. His research interests include information theory, optimization, errorcorrection coding, security, and the application of tools and perspectives from these fields in communications, computing, learning, and astronomy. He was a recipient of the NSERC Discovery Award, the NSF CAREER Award, the 2010 MERL President’s Award, and the Teaching Awards from UofT, the University of Wisconsin, and MIT. He received the Intel Graduate Fellowship, Stanford’s Frederick E. Terman Engineering Scholastic Award, and U.S. State Department Fulbright Fellowship. He spent the 2019–2020 academic year on sabbatical visiting The Chinese University of Hong Kong, Shenzhen, and Canada-France-Hawaii Telescope (CFHT), HI, USA. Among his service roles, he was the Founding Chair of the Machine Intelligence major of UofT and the Faculty of Applied Science and Engineering (FASE) representative on the UofT Governing Council. He is the FASE Vice-Dean of Research and the President of the IEEE Information Theory Society in 2024.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:53:03 UTC from IEEE Xplore. Restrictions apply.
+
+

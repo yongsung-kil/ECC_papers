@@ -1,0 +1,1342 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+5661
+
+RELDEC: Reinforcement Learning-Based Decoding of Moderate Length LDPC Codes
+Salman Habib , Allison Beemer , and Jörg Kliewer , Senior Member, IEEE
+
+Abstract— In this work we propose RELDEC, a novel approach for sequential decoding of moderate length low-density parity-check (LDPC) codes. The main idea behind RELDEC is that an optimized decoding policy is subsequently obtained via reinforcement learning based on a Markov decision process (MDP). In contrast to our previous work, where an agent learns to schedule only a single check node (CN) within a group (cluster) of CNs per iteration, in this work we train the agent to schedule all CNs in a cluster, and all clusters in every iteration. That is, in each learning step of RELDEC an agent learns to schedule CN clusters sequentially depending on a reward associated with the outcome of scheduling a particular cluster. We also modify the state space representation of the MDP, enabling RELDEC to be suitable for larger block length LDPC codes than those studied in our previous work. Furthermore, to address decoding under varying channel conditions, we propose agile meta-RELDEC (AM-RELDEC) that employs meta-reinforcement learning. The proposed RELDEC scheme significantly outperforms standard flooding and random sequential decoding for a variety of LDPC codes, including codes designed for 5G new radio.
+Index Terms— Artificial intelligence, channel coding, reinforcement learning (RL), wireless communication.
+I. INTRODUCTION
+LOW-DENSITY parity-check (LDPC) codes, a class of channel codes based on sparse parity-check matrices, are known for their excellent performance over symmetric binary input channels [2], [3], [4]. Not only can optimized LDPC codes be capacity-achieving, but as a result of their eponymous sparsity, they admit low complexity graph-based message-passing decoding algorithms, such as belief propagation (BP) [5]. Indeed, due to their performance and practical implementation, they have recently been standardized for data communication in the 5G cellular new radio standard [6], [7].
+Manuscript received 21 August 2022; revised 29 March 2023; accepted 4 July 2023. Date of publication 18 July 2023; date of current version 18 October 2023. This work was supported in part by U.S. NSF grant ECCS-1711056 and the U.S. Army Research Laboratory under Cooperative Agreement Number W911NF-17-2-0183. An earlier version of this paper was presented in part at the 17th International Symposium on Wireless Communication Systems, Berlin, Germany [DOI: 10.1109/ISWCS49558.2021.9562199]. The associate editor coordinating the review of this article and approving it for publication was M. Ardakani. (Corresponding author: Salman Habib.)
+Salman Habib and Jörg Kliewer are with the Helen and John C. Hartmann Department of Electrical and Computer Engineering, New Jersey Institute of Technology, Newark, NJ 07102 USA (e-mail: sh383@njit.edu; jkliewer@njit.edu).
+Allison Beemer is with the Department of Mathematics, University of Wisconsin–Eau Claire, Eau Claire, WI 54701 USA (e-mail: beemera@uwec.edu).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2023.3296621.
+Digital Object Identifier 10.1109/TCOMM.2023.3296621
+
+It has been shown that the order in which iterative updates are sent across the code’s graph edges can have significant effect on the decoder’s performance [8], [9], [10], [11]. In particular, prior work has shown that sequential scheduling can reduce the number of iterations needed for convergence, hence decreasing the overall decoder complexity. Our own previous work in [12] and [13] explored the idea of utilizing reinforcement learning (RL) in order to schedule the order of soft-information updates. The current work presents two main contributions: (1) we increase the feasible block length for RL-based learning of check node (CN) scheduling by introducing a new state space (i.e. the set of all possible states) for our learning algorithm and adjusting how the scheduling of CNs is executed. We refer to this scheme as RELDEC (reinforcement learning-based decoding). (2) We apply the improvements of RELDEC to the scenario in which channel parameters may be shifting, introducing a novel meta-learning algorithm that can adapt to new parameters with minimal additional training. We call this scheme agile meta-RELDEC, or AM-RELDEC.
+LDPC codes may be represented by bipartite Tanner graphs, derived by viewing a parity-check matrix of the code as an adjacency matrix of a graph [3]. The vertices in one part of this graph are termed variable nodes (VNs), while the vertices in the other part are check nodes (CNs). Standard iterative decoding of LDPC codes is performed by passing soft probabilistic information back and forth across the edges of the Tanner graph (e.g. using the BP algorithm) via flooding: in each iteration, all CNs and VNs are updated simultaneously. In contrast, sequential BP decoding, also referred to as layered decoding, updates nodes individually, or as clusters, in sequence. Sequential scheduling problems are concerned with the optimal order of CN (or VN) updates, with the goal of improving the convergence speed and/or decoding performance with respect to flooding and other sequential schemes. Previous work that utilized calculations at vertices to find an optimal scheduling order includes: scheduling of CNs based on the residual change between iterations of the vertex’s incoming messages, referred to as node-wise scheduling, or NS [14]; scheduling of VNs based on a relative residual, called efficient dynamic schedule for layered BP, or EDS-LBP [15]; and VN scheduling based on a vertex’s reliability as measured by incoming log-likelihood ratios (LLRs), called a reliabilitybased layered BP decoder, or RBL-BP [16].
+In our own previous work, we showed that RL can be used to improve the performance and convergence speed of sequential LDPC decoders as compared to flooding and previous node-wise scheduling schemes [12], [13]. Generally
+
+0090-6778 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5662
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+speaking, RL is a subset of machine learning which focuses on learning from interaction via computational means. The learning framework is comprised of a (fictitious) agent who interacts with an environment modeled by a finite Markov decision process (MDP) [17]. The goal of the agent is to observe the current state of the MDP and then take an action to alter the state. After each action, the agent is rewarded based on the “value” of the action taken given the state. Over time, the agent learns the best action policy in order to maximize the total reward earned over time, information which is encoded using an action value function. In our work here and in [12] and [13], we utilize Q-learning, which is a Monte Carlo-based RL algorithm for learning action values [18], [19]. Applications of RL include computer games, self-driving cars, and robotics (e.g., [20], [21], [22]). RL has also been applied in the context of communications (see the survey paper [23]). Prior applications specific to decoding include [24], which framed the factor graph selection problem of BP-based decoding of polar codes as a multi-armed bandit problem, and [25], in which RL was used to make (hard) bitflipping decisions in iterative decoding. The authors of [25] also suggested that RL may be applied to other decoders. Machine learning-based decoders beyond RL have also been explored: deep learning based on neural networks (NNs) was leveraged for decoding linear codes by learning the noise on the communication channel in, e.g., [26], [27], and [28], and a deep learning framework based on hyper-networks was used for decoding short block length LDPC codes in [29].
+Our work in [12] and [13] differed from other RL decoders in that we used RL for soft information BP decoding as opposed to hard-decision bit-flipping, and we sought to learn a CN update schedule as opposed to a choice of graph on which to perform decoding. More specifically, we used RL to approximate an action value function, which indicates the optimal next CN to schedule based on the current state of the messages being passed in decoder. In [12], we initiated the implementation of RL to schedule soft CN updates in an LDPC BP decoder: we considered the model-free RL methods of computing the Gittins index [30] of each CN as well as utilizing Q-learning. In [13], we optimized the clustering of check nodes in order to improve performance, and investigated a model-based RL-NS approach with the aid of Thompson sampling. To the best of our knowledge, these works marked the first time that RL learning had been used to schedule sequential BP decoding with soft information updates.
+The first main contribution of the current work is improved sequential decoding performance of longer LDPC codes using a novel RL-based scheme called RELDEC. Here, we seek to sequentially schedule clusters of CNs: in a Tanner graph containing m CNs with each cluster comprised of z CNs, the scheduling problem is modeled as a finite MDP with ⌈m/z⌉ possible actions (i.e. cluster selections). We note that the cluster size z should be selected appropriately to balance the trade-off between decoding performance and throughput. As we will see later, smaller clusters will lead to lower Q-learning complexity and improved performance. Thus, we choose cluster sizes no larger than 2 in our experiments. RELDEC learns an action value function that determines how
+
+beneficial a particular choice of cluster is for optimizing the overall cluster scheduling policy. The learned policy is then incorporated into our sequential LDPC decoding algorithm for inference. A limitation of our previous work was that we were only able to implement our scheduling strategy up to block length 196. This is due to the fact that for MDPs with a large state space, Q-learning can require tremendous computational effort. A multitude of methods for reducing this type of learning complexity have been proposed: for example, partitioning the state space (e.g., [31], [32]), imposing a state hierarchy (e.g., [33]), or reducing dimensionality (e.g., [34], [35]). One of the salient features of RELDEC is a significant reduction in the cardinality of the state space due to a new method of identifying the states of our clusters as compared with our previous RL-NS scheme; this enables the decoding of LDPC codes with block lengths of up to 500 bits. Another distinct feature of our current work is that every cluster is scheduled in each executed iteration. In our previous work, a CN cluster was scheduled in each iteration, without any limitation on the possibility of one cluster being scheduled multiple times before another cluster is scheduled for the first time. This change increases the exploration of the RL agent, resulting in a lower BER in the error floor region. Simulations reveal that RELDEC results in significant decoding gain for fixed bit error rate (BER) compared to traditional BP decoding schemes such as flooding, NS, EDS-LBP, RBL-BP, and a variable-node-based layered decoding scheme proposed in the 5G standardization process in [36]. Moreover, RL-based decoders require a smaller number of CN to VN message updates, on average, to achieve these gains.
+Leveraging our updated state space and scheduling policy, we turn to our second main contribution, where we investigate the scenario in which the parameters of a channel may shift over space and/or time. Prior scheduling policies (including our own) have focused on determining an optimal fixed scheduling order for one particular channel. However, a fixed update order, even one that is optimized for an initiallyobserved channel, may not provide the optimal CN scheduling policy when a new signal-to-noise ratio (SNR) is encountered by the decoder. To address such a setting, we propose a novel Q-learning-based meta-learning scheme called agile metaRELDEC, or AM-RELDEC.
+Meta-learning has gained considerable attention in recent years. At a high level, meta-learning algorithms first accumulate experience in solving a variety of tasks, and then adapt for solving related but unseen tasks. During adaptation, the algorithm is expected to perform well on the new tasks given minimal training steps and data. A model-agnostic meta-learning (MAML) algorithm was proposed in [37] for a wide range of problems including classification, regression, and RL. The MAML scheme relies on gradient descent for model parameter optimization. In [38], the authors proposed a meta-Q-learning (MQL) scheme, a gradient-based approach suitable for Q-learning-based meta-learning. Meta-learning has also been used to solve problems related to communication systems: for instance, MAML was proposed for designing an optimized demodulator which quickly adapts to various channel conditions after being trained using a small number
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5663
+
+of pilot symbols in [39] and [40]. This demodulation scheme is suitable for an internet-of-things (IoT) setting, where the channel conditions may vary between devices. MAML was also implemented in the context of channel coding in [41]: the work’s supervised meta-learning scheme learns to map a received noisy signal to an estimation of the transmitted message. While AM-RELDEC, which is described in more detail below, also addresses a decoding problem, we note that the block length of 20 considered in [41] is substantially smaller than the block lengths considered in this work.
+In our AM-RELDEC scheme, we learn a global action value function corresponding to CN scheduling using data from a mixture of SNRs, then update this action value function locally given an observed (instantaneous) SNR. Once the global action value function has been optimized, adaptation to a local SNR is achieved in an online fashion, based on a minimal number of additional training vectors. In contrast to RELDEC, the agility of AM-RELDEC allows for dynamic scheduling which can adapt to unseen SNRs with substantially reduced additional training using, e.g., pilot signals. Due to its flexibility, AM-RELDEC is well-suited for a multitude of IoT applications. As an example, consider the setting of smart transportation [42]. In this scenario, the power of a signal received by a vehicle from a road side unit (RSU) changes as the vehicle moves, causing fluctuations in channel SNR. During communication with an RSU, the vehicle’s sensor can detect the instantaneous SNR of the channel and, using AM-RELDEC, would be able to quickly adapt the decoder’s CN scheduling policy. In addition to this nimbleness, AMRELDEC inherits the gains displayed by RELDEC.
+The paper is organized as follows: background on LDPC codes and reinforcement learning is given in Section II. In Section III, we describe how our CN scheduling policy is learned via RELDEC and then incorporated into our learning-based sequential decoding algorithm. Section IV discusses how our scheduling policy is learned using AMRELDEC. In Section V, we explain our experimental setup and analyze numerical results, comparing the proposed learning-based decoding schemes to LDPC decoders found in the literature. Section VI concludes the paper.
+II. PRELIMINARIES
+A. Low-Density Parity-Check Codes
+An [n, k] binary linear code is a k-dimensional subspace of Fn2 , and may be defined as the kernel of a binary paritycheck matrix H ∈ Fm 2 ×n, where m ≥ n − k. The code’s block length is n, and rate is (n − rank(H))/n. The Tanner graph of a linear code with parity-check matrix H is the bipartite graph GH = (V ∪ C, E), where V = {v0, . . . , vn−1} is a set of VNs corresponding to the columns of H, C = {c0, . . . , cm−1} is a set of CNs corresponding to the rows of H, and edges in E correspond to 1’s in H [3]. LDPC codes are a class of highly competitive linear codes defined via sparse parity-check matrices or, equivalently, sparse Tanner graphs [2]; they are amenable to low-complexity graph-based message-passing decoding algorithms, making them ideal for practical applications. BP iterative decoding, considered here, is one such algorithm.
+
+In general, a (γ, k)-regular LDPC quasi-cyclic (QC) code is defined by a parity-check matrix with constant column and row weights equal to γ and k, respectively [43]. A (γ, p) arraybased (AB) LDPC code is a type of QC code where p is prime, and its parity-check matrix possess a special structure [44]. In particular, for AB codes,
+
+I I I · · · I 
+
+I σ σ2 · · · σp−1 
+
+H(γ, p) = ... ...
+
+... · · ·
+
+...
+
+ , (1)  
+
+I σγ−1 σ2(γ−1) · · · σ(γ−1)(p−1)
+
+where σz denotes the circulant matrix obtained by cyclically left-shifting the entries of the p×p identity matrix I by z (mod p) positions. Notice that σ0 = I. In this work, lifted LDPC codes are obtained by replacing the non-zero (resp., zero) entries of the parity-check matrix with randomly generated permutation (resp., all-zero) matrices.
+Parity-check matrices of LDPC codes designed for 5G new radio (5G-NR) possess a QC structure which enables the nodes in its Tanner graph to be updated in parallel [6]. According to the third generation partnership project (3GPP) standard, 5GNR LDPC codes can be obtained by lifting two types of QC base graphs, known as BG1 and BG2. Depending on the lifting factor, BG1 can be used for constructing LDPC codes with information bits ranging between 500 and 8448 bits, whereas the BG2 base matrix can be used for obtaining shorter codes with information bits ranging between 40 and 2560 bits [6], [45]. The BG1 (resp., BG2) matrix is used for rates between 1/3 and 8/9 (resp., 1/5 and 2/3) [6], [45].
+
+B. Reinforcement Learning
+In an RL problem, an agent (learner) interacts with an environment whose state space can be modeled as a finite MDP [17]. The agent takes actions that alter the state of the environment and receives a reward in return for each action, with the goal of maximizing the total reward in a series of actions. The optimized sequence of actions is obtained by employing a policy which utilizes an action value function to determine how beneficial an action is for maximizing the long-term expected reward. In the remainder of the paper, let [[x]] ≜ {0, . . . , x − 1}, where x is a positive integer. Suppose that an environment allows m possible actions, and let the random variable Aℓ ∈ [[m]] with realization a represent the index of an action taken by the agent during learning step ℓ ∈ {0, . . . , ℓmax − 1}. Let Sℓ with realization s(ℓ) ∈ Z represent the current state of the environment before taking action Aℓ and let Sℓ+1 with realization s(ℓ)′ represent a new state of the MDP after executing Aℓ. Let a state space S contain all possible state realizations. Also, let Rℓ = R(Sℓ, Aℓ, Sℓ+1) be the reward yielded at step ℓ after taking action Aℓ in state Sℓ which will yield state Sℓ+1. Optimal policies for MDPs can be estimated via Monte Carlo techniques, such as Q-learning. The estimated action value function Qℓ(Sℓ, Aℓ) (Q-function) represents the expected long-term reward an agent obtains after taking action Aℓ in state Sℓ. Learning involves iteratively adjusting the action value function for a specific (Sℓ, Aℓ) pair, based on previously learned action values for the same state
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5664
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Fig. 1. Illustration of RELDEC’s learning framework. In each learning step, a fictitious agent schedules a cluster with index a when the environment state, based on hard-decisioned VN values, is s. Once an action is taken, the state of the environment changes from sa(ℓ) to sa(ℓ)′ as the VN values are updated after scheduling, and the agent receives reward Ra that indicates the accuracy of the hard-decisions taken by the BP algorithm for each blue VN.
+
+Fig. 2. Example of a cluster-induced subgraph, shown with blue squares
+(cluster consisting of 2 CNs), edges, and circles (VNs). The corresponding state of the cluster is xˆ(aℓ).
+
+and action pair and the reward Rℓ earned from taking that action. The optimal policy guides the agent to select an action in a given state that maximizes the Q-function value for that state.
+III. LEARNING THE SCHEDULING POLICY USING RELDEC
+The proposed RELDEC scheme consists of a BP decoding algorithm in which the environment is given by the Tanner graph of the LDPC code. Our objective is to learn an optimized sequence of actions, i.e., the scheduling of individual sets C1, . . . , C⌈m/z⌉ of CNs with the set of CNs Ci = {ci,1, . . . , ci,z} of cardinality z = |Ci|. Herein, ci,j ∈ [[m]], the index of the j-th CN in the i-th set, is called a cluster in the remainder of the paper. By N (Ci) we refer to all the VNs connected to the i-th cluster. A single cluster scheduling step is carried out by sending messages from all CNs of a cluster to their neighboring VNs, and subsequently sending messages from these VNs to their CN neighbors. That is, a selected cluster executes one iteration of localized flooding in each decoding instant. Every cluster is scheduled exactly once within a single decoder iteration. Sequential cluster scheduling is carried out until a stopping condition is reached, or an iteration threshold is exceeded. The learning-based decoder relies on a cluster scheduling policy based on a learned action value function.
+The MDP related to the RELDEC learning framework for sequential decoding is shown in Fig. 1. The idea is that scheduling a cluster, represented by the blue CNs, updates the state of the environment. In return, the agent receives a reward which is commensurate with the proportion of correct hard decisions. Here, the state is determined by the union of two quantities: the set of check-node indices belonging to a cluster and a binary vector given by the hard-decisioned beliefs of the VNs associated with the cluster.
+We define the action space of the MDP as A = [[⌈m/z⌉]]; this set has a cardinality of ⌈m/z⌉. For example, for m = 5 and z = 2, A = {0, 1, 2}. Let xˆ(aℓ) = [xˆ0(ℓ,a) , . . . , xˆ(laℓ)−1,a]∈ {0, 1}la denote the state of the MDP after scheduling a cluster with index a ∈ A during learning step ℓ, and let sa(ℓ) ∈ [[2la ]] refer to the index of a realization of xˆa(ℓ). Thus, sa(ℓ) also refers to the state of the MDP during learning step ℓ, and the state space of a cluster is the set of all possible values of sa(ℓ). At a particular decoder
+
+iteration, let the output of a cluster be the binary sequence
+
+resulting from hard-decisions on the posterior LLRs computed
+
+by the (ordered) neighboring VNs. Since the state space of
+
+the clusters are pairwise disjoint, the overall state space S
+of our MDP contains a∈[[⌈m/z⌉]] 2la realizations of all the cluster outputs xˆ0(ℓ), . . . , xˆ(⌈ℓm) /z⌉−1, where a realization can be thought of as a (cluster, cluster state) pair. Note that the cluster
+
+size z should be selected appropriately to balance the trade-off
+
+between decoding performance and throughput. For a cluster
+
+size of z = 1 we schedule only one CN, and, as we show later
+
+in Section V, achieve the best performance. In contrast, z = m
+
+leads to a flooding schedule which has the highest throughput,
+
+but only a modest performance. In this paper, we focus on
+
+improving the performance and choose cluster sizes no larger
+
+than 2 in our experiments. To facilitate a general treatment,
+
+we use an arbitrary z ∈ [[m]] in the following. An example
+
+of a cluster-induced subgraph for the case z = 2, and the corresponding state vector xˆa(ℓ) is shown in Fig. 2.
+
+Let x = [x0, . . . , xn−1] and y = [y0, . . . , yn−1] represent
+
+the transmitted and the received words, respectively, where
+
+for each v ∈ [[n]], xv ∈ {0, 1} and yv = (−1)xv + z with
+
+z ∼ N (0, σ2). The posterior LLR of xv is expressed as
+
+Lv
+
+=
+
+log
+
+Pr(xv Pr(xv
+
+=0|yv =1|yv
+
+) )
+
+.
+
+Let
+
+Lˆ (ℓv)
+
+=
+
+c∈N (v) mc(ℓ→) v + Lv be the
+
+posterior LLR computed by VN v during iteration ℓ, where
+
+N (v) denotes the set of neighboring CNs of VN v, Lˆ(0v) = Lv, and mc(ℓ→) v is the message received by VN v from neighboring
+
+CN c in iteration ℓ computed based on standard BP as
+
+m(cℓ→) v = 2 atanh
+
+tanh m(vℓ′−→1c) .
+
+(2)
+
+2
+
+v′∈N (c)\v
+
+Here, N (c) denotes the set of neighboring VNs of c, and
+
+m(vℓ→) c =
+
+mc(ℓ′→ ) v + Lv
+
+(3)
+
+c′∈N (v)\c
+
+is the message propagated from VN v to CN c. Moreover, let Lˆℓ(j,a) be the posterior LLR computed during learning step ℓ by VN j in the subgraph induced by the cluster with index a ∈ [[⌈m/z⌉]]. Hence, Lˆ(ℓj,a) = Lˆ(ℓv) if VN v in the Tanner graph is also the j-th VN in the subgraph induced by the
+cluster with index a.
+Note that in our prior work [13], the RL-NS algorithm
+scheduled a single CN a per decoding iteration based on its
+reward maxv∈N (a) ra→v, where ra→v is the residual of CN
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5665
+
+a associated with the edge connecting to VN v, computed according to ra→v ≜ |ma′ →v − ma→v|. Here, ma→v is the message sent by CN a to its neighboring VN v in the previous iteration, and m′a→v is the message that CN a would send to VN v in the current iteration, if scheduled. So, the residual
+represents a quantity which is associated with each edge of
+the Tanner graph for each BP iteration. Intuitively, the higher
+the residual of a CN, the further away that portion of the graph
+is from convergence. Thus, scheduling a CN with the highest
+residual (reward) leads to faster and more reliable decoding
+compared to the flooding scheme. Furthermore, in [13], the
+state space of the MDP is given by the collection of all
+sequences representing quantized CN values within a cluster.
+In contrast, in the proposed RELDEC scheme we consider
+a new state space representation of the MDP along with a
+different reward computation, which allows learned decoding
+of significantly longer block-length LDPC codes. In RELDEC, after scheduling cluster a during learning step ℓ, the state of the MDP associated with cluster a is given by its output xˆ(aℓ) that is obtained by taking hard decisions on the vector of posterior LLRs Lˆℓ,a = [Lˆℓ(0,a) . . . Lˆℓ(la−1,a)], computed according to
+
+xˆj(ℓ,a) =
+
+0, 1,
+
+if Lˆ(ℓj,a) ≥ 0, otherwise,
+
+(4)
+
+where kmax is the maximum CN degree of the cluster, and la ≤ kmaxz is the number of VNs adjacent to cluster a. We call xˆa(ℓ) the state of cluster a: it is comprised of the bits reconstructed by the sequential decoder after scheduling cluster a during iteration ℓ, i.e., the state of the cluster is a sequence of hard-decision VN values associated with the cluster. The collection of signals xˆ(0ℓ), . . . , xˆ(⌈ℓm) /z⌉−1 at the end of decoder iteration ℓ forms the entire state of the MDP associated with our RELDEC scheme.
+During the learning phase, RELDEC informs the agent of the current state of the decoder and the reward obtained after performing an action (propagating messages from a cluster to its neighboring VNs). Based on these observations, the agent takes future actions, to enhance the total reward earned, which alters the state of the environment as well as the future reward. Given that the transmitted signal x is known during the training phase, let xa = [x0,a, . . . , xla−1,a] be a vector containing the la bits of x that are reconstructed in xˆ(aℓ) by cluster a. Note that is the corresponding state vector after scheduling the check nodes in a. In each learning step ℓ, the reward Ra obtained by the agent after scheduling cluster a is defined as
+
+Ra
+
+=
+
+1 la
+
+la −1
+1(xj,a
+j=0
+
+=
+
+xˆj,a),
+
+(5)
+
+where 1(·) denotes the indicator function. Thus, the reward
+earned by the agent after scheduling cluster a is identical to the probability that the transmitted bits x0,a, . . . , xla−1,a are correctly reconstructed. This new reward metric, resulting from the modification of the state space representation, differs considerably from the maximum residual of the scheduled CN used as reward for RL-NS in [13].
+
+The action values learned by RELDEC are stored in a table with dimension maxa(2la ) × ⌈m/z⌉. In comparison, for the RL-NS scheme of [13], the learned action values are stored in a table with dimension M z × ⌈m/z⌉, where M = 4 is the number of quantization levels used for quantizing the CN values, and M z is the number of all possible sequences of quantized CN values associated with a cluster. Thus, for the MDP discussed in our previous work the state space cardinality, and hence the learning complexity, grows exponentially with z. Furthermore, a moderately large z (≥ 7) was chosen to ensure a small number of clusters, since there exist dependencies between clusters (i.e., the state of one cluster may depend on the state of another cluster due to the presence of cycles) which Q-learning cannot take into account. However, due to the modification of the MDP in this work, even a choice of z = 1 provides considerable reduction of the state space, and hence the size of the action value table is also significantly reduced. This yields a reduced learning complexity with respect to the RL-NS scheme in [13].
+In the following, we discuss the learning approach used by RELDEC for obtaining the optimal CN scheduling policy for a given LDPC code. As the new state space representation generates MDPs with moderately large state space size, we utilize standard Q-learning for determining the optimal cluster scheduling order, where the action value, Qℓ+1(s(aℓ), a), for choosing cluster a in state sa is given by
+
+Qℓ+1(sa(ℓ), a) = (1 − α)Qℓ(sa(ℓ), a)
+
++α
+
+Ra
+
++
+
+β
+
+max
+a′ ∈[[⌈m/z ⌉]]
+
+Qℓ(s(aℓ)′ ,
+
+a′)
+
+,
+
+(6)
+
+where sa(ℓ)′ represents the new state of the MDP after taking action a in state s(aℓ), 0 < α < 1 is the learning rate, 0 < β < 1 is the reward discount rate, Qℓ+1(sa(ℓ), a) is a future action value resulting from action a in the current state sa(ℓ) [18], and
+ℓ is the number of learning steps elapsed after observing the initial state sa(0), corresponding to a received channel output L = [L0, . . . , Ln−1], in a learning episode.1 For each ℓ, cluster
+a is selected via an ϵ-greedy approach according to
+
+selected uniformly at random w.p. ϵ from A,
+
+a = π(sa(ℓ)) selected w.p. 1 − ϵ,
+
+(7)
+
+where ϵ is the probability of exploration, A = {0, . . . , ⌈m/z⌉}
+is a set of all possible actions, and π(s(aℓ)) is an agent’s policy for taking an action in state sa(ℓ) expressed as
+
+π(sa(ℓ)) = arg max Qℓ(sa(ℓ), a).
+
+(8)
+
+a∈[[⌈m/z⌉]]
+
+Note that ϵ should be large enough to allow adequate exploration, but not so large which inhibits exploitation, i.e., taking actions according to π(sa(ℓ)). Hence, ϵ should be chosen carefully to balance this trade-off. The action value function is recursively updated ℓmax times according to (6) after observing the initial state. The goal of Q-learning is to find the opti-
+mal policy that maximizes the long-term expected reward in
+
+1A learning episode comprises all the Q-learning steps needed to learn the action values corresponding to a single training example.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5666
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+state sa(ℓ), given by
+
+π∗(s(aℓ)) = arg max Q∗(s(aℓ), a),
+
+(9)
+
+a
+
+where Q∗(sa(ℓ), a) is the optimal action value for a given (s(aℓ), a) pair.
+For ties (as in the first iteration of Algorithm 1 for ℓ = 0 and
+the initial L), we choose an action uniformly at random from
+all the maximizing actions. During inference, the optimized cluster scheduling policy of standard Q-learning, πˆ(sa(Ii)), for scheduling the i-th cluster during decoder iteration I is
+expressed as
+
+πˆ(sa(Ii)) =
+
+arg max
+
+Qˆ(s(aIi), ai),
+
+ai ∈[[⌈m/z ⌉]]\{a0 ,...,ai−1 }
+
+(10)
+
+where i ∈ [[⌈m/z⌉]], and ai indicates the cluster index to be scheduled at time instant i. Further, Qˆ(s(aIi), ai) represents the optimized action value after training has been accomplished, which, as ℓ → ∞, approaches the optimal action value Q∗(sa(Ii), ai) [46], [17, Sec. 6.4]. The RELDEC scheme, which employs standard Q-learning, is shown in Algorithm 1. The input to this algorithm is a parity-check matrix H and a set Lˆ = {L0, . . . , L|Lˆ|−1} containing |Lˆ| realizations of L over which Q-learning is performed. Note that each vector in Lˆ correspond to an SNR selected from a set S = {S1, . . . , SK }, where Si ∈ R is the i-th SNR value, and K is the total number of distinct SNRs considered for training. There are |Lˆ|/K LLR vectors in Lˆ with the same SNR. For a L ∈ |Lˆ|, the action value function in (6) is recursively updated ℓmax times as shown in Step 20. The output of RELDEC is an optimized cluster scheduling policy πˆ(sa(Ii)).
+Once learning ends, we utilize Algorithm 2 for inference. The algorithm inputs are the soft channel information vector L, that corresponds to one of the SNRs in S, and a parity-check matrix H of the LDPC code, and LˆI = [Lˆ(I0), . . . , LˆI(n−1)] is initialized using L. The optimized scheduling policy, πˆ(s(aIi)), is selected in Step 9 of Algorithm 2 according to (10); i.e.,
+an optimized cluster index is selected for the subsequent BP
+iteration in Steps 10-32. As outlined above, this cluster index
+depends both on the graph structure and on the received
+channel values in the previous BP iterations. The output is the reconstructed signal xˆ obtained after executing at most Imax decoding iterations, or until the stopping condition shown in
+Step 33 is reached. Once decoding ends, we obtain the fully reconstructed signal estimate xˆ = [xˆ0, . . . , xˆn−1].
+This learning-based sequential decoding scheme can be
+viewed as a sequential generalized LDPC (GLDPC) decoder when z > 1, where BP decoding of a cluster-induced subgraph
+is analogous to decoding a CN subcode of a GLDPC code. When z = 1, each cluster represents a single parity-check
+code, as is the case in a standard LDPC code. Since the full
+LDPC Tanner graph is connected and contains cycles, there
+exist dependencies between the messages propagated by the
+different clusters of the LDPC code. Consequently, the output
+of a cluster may depend on messages propagated by previously scheduled clusters. Thus, to improve RL performance for z > 1, we ensure that the clusters are chosen to be as independent
+as possible. The choice of clustering is determined prior to
+
+Algorithm 1 RELDEC
+
+Input : set of channel information vectors Lˆ,
+parity-check matrix H Output: optimized cluster scheduling policy πˆ(sa(Ii)) 1 Initialization: Q0(sa(0), a) ← 0 for all sa(0) and a 2 for each L ∈ Lˆ do
+3 ℓ←0 4 Lˆℓ ← L
+5 determine initial states of all clusters using (4)
+
+// start of an episode
+
+6 while ℓ < ℓmax do
+
+7
+
+select cluster a according to (7)
+
+8
+
+for each CN c in Ca, compute and propagate
+
+m(cℓ→) v ∀v ∈ N (c)
+
+9
+
+for each VN v in N (Ca), compute and
+
+propagate m(vℓ→) c ∀c ∈ N (v)
+
+// determine cluster output
+
+10
+
+foreach VN v in the subgraph of cluster a do
+
+11
+
+if Lˆℓ(v) ≥ 0 then
+
+12
+
+xˆ(vℓ,)a ← 0
+
+13
+
+end
+
+14
+
+else
+
+15
+
+xˆ(vℓ,)a ← 1
+
+16
+
+end
+
+17
+
+end
+
+18
+
+determine index sa(ℓ)′ of xˆa
+
+19
+
+update Ra according to (5)
+
+20
+
+compute Qℓ+1(sa(ℓ), a) according to (6)
+
+21
+
+sa(ℓ+1) ← sa(ℓ)′
+
+22
+
+ℓ←ℓ+1
+
+23 end
+
+24 end
+
+learning using the cycle-maximization method discussed in our previous work [12], [13] and omitted here for space considerations. In short, clusters are selected to maximize the number of cycles in the cluster-induced subgraph to minimize inter-cluster dependencies.
+The principal activity of RELDEC is the computation of the Q-table. Therefore, we are interested to determine how the number of Q-table updates, according to (6), scale with the size of the training dataset and the number of learning steps for a given training sample. Based on this criterion, Algorithm 1 reveals that the training complexity scales as O(|Lˆ|ℓmax).
+IV. CHANNEL STATE ADAPTABILITY VIA META-LEARNING
+A. Overview
+In order to make RELDEC useful in a practical communication scenario, we need to learn the CN scheduling policy in (10) for a mixture of SNR values. However, it is important to note that such an adaptation can only be done for a limited set of channel SNR values, as the number of elements in this set affects training complexity and the average decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5667
+
+Algorithm 2 Learning-Based Sequential BP Decoding
+
+Scheme
+
+Input : channel information L, parity-check matrix H
+
+Output: reconstructed signal xˆ
+
+1 Initialization:
+
+2 I←0
+
+3 mc→v ← 0
+
+// for all CN to VN messages
+
+4 mv→c ← Lv
+
+// for all VN to CN messages
+
+5 if decoder iteration I < Imax then
+
+6 foreach cluster with index ai do
+
+7
+
+Determine state s(aIi)
+
+8 end
+
+9 schedule cluster ai according to policy πˆ(sa(Ii)) 10 for selected cluster with index ai do
+
+// decode cluster via flooding
+
+11
+
+foreach CN c in cluster ai do
+
+12
+
+foreach VN v ∈ N (c) do
+
+13
+
+compute according to (2) and propagate
+
+mc(I→) v
+
+14
+
+end
+
+15
+
+end
+
+16
+
+foreach VN v in the subgraph of cluster ai do
+
+17
+
+foreach CN c ∈ N (v) do
+
+18
+
+compute according to (3) and propagate
+
+mv(I→) c
+
+19
+
+end
+
+20
+
+LˆI(v) ← c∈N (v) mc(I→) v + Lv // update
+
+posterior LLR
+
+21
+
+end
+
+// hard-decision step
+
+22
+
+foreach VN v in the subgraph of cluster ai do
+
+23
+
+if LˆI(v) ≥ 0 then
+
+24
+
+xˆv(I,a)i ← 0
+
+25
+
+end
+
+26
+
+else
+
+27
+
+xˆv(I,a)i ← 1
+
+28
+
+end
+
+29
+
+end
+
+30
+
+i←i+1
+
+31 end
+
+32 if Hxˆ = 0 then
+
+33
+
+break
+
+// stopping condition reached
+
+34 end
+
+35 I ← I + 1
+
+36 end
+
+performance for each specific SNR. This limitation becomes especially relevant in the case of a wireless communication scenario where channel SNR values are frequently changing due to mobility and interference. To address this challenge, we require a decoder that can quickly adapt to the current channel state, i.e., the instantaneous SNR value. In this section, we demonstrate how this can be achieved through meta-RL.
+A general meta-RL strategy can be outlined as follows. Assume that we have K different tasks to learn. The optimal
+
+Fig. 3. Meta-learning framework illustration for sequential LDPC decoding. The optimal global action value function Q(sa(ℓ), a) is learned from a dataset of LLR vectors corresponding to a mixture of SNRs during meta-training. In the adaptation phase, this function is used to learn the local action value function Q(k)(s(aℓ), a) for the k-th local SNR, k ∈ [[K]], using a small set of additional LLR vectors. The resulting optimal local CN scheduling policy πk∗(sa(I)) is then applied for sequential LDPC decoding.
+task-specific policy is learned in two phases: the meta-training phase and the meta-testing (or adaptation) phase. In the metatraining phase, a global long-term expected reward Q(s, a) is learned, as described in Section III, using a training set derived from a mixture of tasks. The adaptation to the k-th task occurs in the meta-testing phase, where Q(s, a) serves as the initialization. From a few additional task-specific training examples, a task-specific policy πk(s) = arg maxa Q(k)(s, a), k ∈ [[K]] is learned. Here, Q(k)(s, a) represents the taskspecific long-term expected reward learned in the adaptation phase. Typically, this adaptation takes place offline (see [38]).
+The general structure of our proposed meta-RELDEC scheme is illustrated in Fig. 3. Initially, meta-training is conducted for a set of K different channel SNRs. This process involves learning a global long-term expected reward or action value function, Q(sa(ℓ), a), using LLR vectors corresponding to a mixture of these SNR values. Next, a local longterm expected reward or action value function, Q(k)(s(aℓ), a), is learned using LLR vectors corresponding to the k-th SNR value. These local action values contribute to the enhancement of the global action value Q(sa(ℓ), a) in subsequent rounds of meta-training. After several iterations, the result of these meta-training rounds is an optimized global policy Q∗(s(aℓ), a). The adaptation to the k-th SNR value is then achieved in an online fashion, based on only a few additional training LLR vectors. In a wireless communication context, these LLRs can be easily obtained from received channel pilot symbols, making them readily available. This leads to an SNR-specific scheduling policy. When the channel SNR changes again, the adaptation process restarts from the beginning.
+B. Meta Reinforcement Learning for Optimal CN Scheduling
+In the following, we present a meta-RL method that directly estimates the Q-function by minimizing a Q-learning-based
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5668
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+loss function over mini-batches of MDP instances. This
+
+approach enables fast and efficient adaptation to varying
+
+channel SNRs by terminating the meta-learning algorithm
+
+when the loss is below a certain threshold. We further
+
+discuss the requirements for successful Q-learning, the
+
+need for a large set of channel information vectors, and
+
+the optimization of global and local scheduling policies.
+
+Recall that the RL environment is modeled as a finite
+
+MDP, which can be seen as a sequence of state, action,
+
+and reward transitions (see Fig. 1). These transitions can be expressed as a tuple (sa(ℓ), a, Ra, sa(ℓ)′ ) specific
+
+to each learning step ℓ. Throughout the paper, we refer
+
+to this tuple as an MDP instance. Let D(π(s(aℓ)), L) ≜
+
+(s(a00), a0, Ra0 , s(a00)′ ), .
+
+s ) (ℓmax−1)′
+aℓmax −1
+
+represent
+
+.. a
+
+, (s(ℓmax−1)
+aℓmax −1
+mini-batch
+
+,
+
+aℓmax −1 of ℓmax
+
+,
+
+R , aℓmax−1 MDP instances.
+
+These instances are obtained after taking ℓmax actions
+
+a0, . . . , aℓmax−1 according to policy π(sa(ℓ)), a ∈ [[⌈m/z⌉]],
+
+where sa(00) is the initial state of the MDP after observing
+
+L during a learning episode. For instance, if ℓmax = 2,
+
+a0 = 1, and a1 = 2, the second and third clusters
+
+are scheduled in the first two learning steps, and D(π(sa(ℓ)), L) = (s1(0), 1, R1, s1(0)′ ), (s2(1), 2, R2, s(21)′ ). In comparison to MAML, which uses gradient descent to
+
+optimize the model parameters [37], our meta-RL scheme
+
+directly estimates the Q-function by minimizing a Q-learningbased loss function over a mini-batch D(π(s(aℓ)), L). We will
+
+now discuss a method of deriving this function. To do so,
+
+note that the Q-learning update procedure shown in (6) can
+
+also be expressed as
+
+Qℓ+1(s(aℓ), a) = Qℓ(s(aℓ), a) + α(Uℓ(s(aℓ), a) − Qℓ(s(aℓ), a)), (11)
+
+where Uℓ(s(aℓ), a) = Ra + β maxa′ Qℓ(s(aℓ)′ , a′), and Uℓ(sa(ℓ), a) − Qℓ(s(aℓ), a) is the temporal difference (TD) error [17]. As learning iteration ℓ increases, Qℓ+1(sa(ℓ), a) approaches Q∗(sa(ℓ), a), i.e., the meta-RL scheme converges to the true Q-function Q∗(s(aℓ), a) [17, Sec. 6.4], [46]. Conse-
+quently, the TD error approaches 0 as ℓ → ∞. Assume that meta-RL is carried out on mini-batch D(π(sa(ℓ)), L) during a
+learning episode. At any given learning step ℓ, the meta-RL
+algorithm computes a sum of squared TD errors over this mini-
+batch, given by
+
+L(D(π(sa(ℓ)), L)) =
+
+(Uℓ(s(aℓ), a)
+
+(sa(ℓ),a,Ra,s(aℓ)′ )∈D(π(sa(ℓ)),L)
+
+− Qℓ(s(aℓ), a))2,
+
+(12)
+
+which is minimized as the agent takes an action via an ϵ-greedy policy at each learning step. Calculating L(D(π(sa(ℓ)), L)) enables us to terminate the meta-learning algorithm once the
+loss falls below a certain threshold, resulting in a fast and
+efficient adaptation phase. This distinguishing feature sets
+our proposed meta-learning approach apart from the baseline
+RELDEC scheme presented in Section III. It is important to note that a mini-batch D(π(sa(ℓ)), L) contains MDP instances resulting from a single channel output L. However, successful
+
+Q-learning requires a substantial amount of training data, and
+the MDP instances derived from a single training sample does
+not provide sufficient exploration for the agent. To address
+this issue, we perform meta-RL on an adequately large set of channel information (LLR) vectors L = {L0, . . . , L|L |−1}. Hence, in each episode of the proposed meta-RL algorithm, the Q-learning loss is calculated over a batch B(π(s(aℓ)), L ) ≜ {D(π(sa(ℓ)), L0), . . . , D(π(s(aℓ)), L|L |−1)} of MDP instances, which consists of |L | mini-batches. The corresponding batch loss L(B(π(s(aℓ)), L )) is an aggregate of all mini-batch losses L(D(π(sa(ℓ)), L0)), . . . , L(D(π(sa(ℓ)), L|L |−1)), generated by the |L | learning episodes. The loss must be minimized to ensure Q-learning convergence. In the follow-
+ing, we will discuss how the output of this loss function
+is minimized in each local and global learning phase of
+meta-learning. Let B(π(sa(ℓ)), L ) (resp. Bk(πk(s(aℓk)), Lk)) denote a batch
+of MDP instances used for learning the global (resp., local) CN scheduling policy. Here, L contains LLR vectors corresponding to a mixture of K distinct SNR values, i.e., there are K subsets in L , each containing |L |/K LLR vectors corresponding to a specific SNR. On the other hand, all LLR vectors in Lk correspond to a single SNR value. The global optimization problem solved by Q-learning can be described
+by finding the best global action value (or long-term expected
+reward) function which minimizes the expected loss. By using
+(12), this can be expressed as
+Q∗(s(aℓ), a) = arg min EL∈L [L(D(π(sa(ℓ)), L))]
+Qℓ (s(aℓ) ,a)∈R
+
+= arg min EL∈L
+Qℓ (s(aℓ) ,a)∈R
+
+(sa(ℓ),a,Ra,sa(ℓ)′ )∈D(π(s(aℓ)),L)
+
+(Uℓ(sa(ℓ), a) − Qℓ(s(aℓ), a))2 .
+
+(13)
+
+The optimal global CN scheduling policy, π∗(s(aIi)), obtained at the end of the global learning phase is defined as
+
+π∗(s(aIi)) ≜
+
+arg max
+
+Q∗(s(aIi), ai),
+
+ai ∈[[⌈m/z ⌉]]\{a0 ,...,ai−1 }
+
+(14)
+
+where I is the decoder iteration during inference. Likewise, finding the best k-th local action value or reward
+function for the k-th SNR value can be described by the following optimization problem:
+
+Q(k)∗(s(aℓ), a) = arg min EL′∈Lk [L(Dk(πk(s(aℓ)), l′))],
+Q(ℓk) (sa(ℓ) ,a)∈R
+k ∈ [[K]]. (15)
+
+Here, L′ ∈ Lk = {L(0k)′ , . . . , L(|Lk)k′|−1} is an LLR vector taken from the set Lk for the k-th SNR value and Dk(πk(sa(ℓ)), L′) is the corresponding mini-batch of MDP
+instances for k ∈ [[K]]. Similarly to the global policy, the optimal k-th local CN scheduling policy πk∗(s(aIi)) used for inference is then given as
+
+πk∗(s(aIi)) ≜
+
+arg max
+
+Q(k)∗(s(aIi), ai),
+
+ai ∈[[⌈m/z ⌉]]\{a0 ,...,ai−1 }
+
+(16)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5669
+
+where Q(k)∗(sa(I), a) is given by (15) for scheduling the i-th
+
+CN ai in each cluster.
+
+In the remainder of the paper, we use simplified notations
+B and Bk to represent the MDP batches B(π(s(aℓ)), L ) and Bk(πk(sa(ℓ)), Lk), respectively. Additionally, we use simplified notations DL and DL′ for D(π(s(aℓ)), L) and Dk(πk(s(aℓ)), L′).
+
+Since searching over all possible action values for a given (sa(ℓ), a) pair in (13) and (15) is computationally prohibitive,
+
+an alternative approach is to employ standard Q-learning.
+
+This method yields optimized global and k-th local CN
+
+scheduling policies by iteratively minimizing empirical losses
+
+L
+
+=
+
+1 |B|
+
+L(B)
+
+and
+
+Lk
+
+=
+
+1 |Bk
+
+|
+
+L(Bk
+
+),
+
+respectively,
+
+during
+
+each
+
+learning episode.
+
+Subsequently, a global (resp., local) policy update refers
+
+to learning the CN scheduling policy by minimizing L
+
+(resp., Lk). Although the distribution of the reward Ra for
+
+scheduling cluster a may differ across tasks, we consider
+
+the tasks related since the environment (the sequential BP
+
+decoder) remains unchanged as learning progresses. In the
+
+following, we introduce our meta-RL scheme AM-RELDEC,
+
+which involves a bi-level policy optimization, as a novel
+
+extension of the MAML scheme [37] applied to Q-learning.
+
+This approach learns a global CN scheduling policy using a
+
+dataset corresponding to an SNR mixture and K local CN
+
+scheduling policies based on K separate datasets correspond-
+
+ing to individual SNRs, interactively.
+
+C. AM-RELDEC Algorithm: Learning the Global Policy
+This subsection introduces the AM-RELDEC scheme as shown in Algorithm 3. This novel meta-learning scheme, which has not been published in the open literature to our knowledge, is well suited for wireless communications scenarios with varying channel conditions due to its agility. The global policy for CN scheduling can rapidly adapt online to any local policy corresponding to a particular SNR during the decoding phase. The scheme takes L , Lk, and H as inputs and outputs an optimized global policy, which serves as a starting point for optimizing the k-th local policy during online adaptation, k ∈ [[K]].
+Initially, the K local learning stages of AM-RELDEC are completed in Steps 4-31. In Step 5, the agent initializes a local CN scheduling policy πk(s(aℓ)) using a global CN scheduling policy π(sa(ℓ)) at the beginning of the k-th adaptation phase. Between Steps 6-28, the agent then optimizes this policy by minimizing the sum of squared TD errors for batch Bk of MDPs, taking actions according to an ϵ-greedy policy in Step 10:
+selected uniformly at random w.p. ϵ from [[⌈m/z⌉]], a = f (s(aℓ)) selected w.p. 1 − ϵ,
+(17)
+where f (sa(ℓ)) = πk(s(aℓ)). For global policy optimization, the agent invokes Algorithm 4 in Step 32. In Step 1 of this algorithm, the agent initializes π(sa(ℓ)) using the learned local policies and optimizes it by minimizing the squared TD error for the global batch B in Steps 2-13. This procedure is repeated
+
+in every meta-learning iteration starting in Step 2 of Algorithm
+3. Upon completion of learning, an optimized version of the global policy πˆ(sa(Ii)) and an optimized version of the k-th local policy πˆk(sa(Ii)), are obtained.
+Learning is carried out through a full BP iteration, as demonstrated in Step 11, based on the chosen cluster a in Step 10 of Algorithm 3. The Q-learning error L(DL′ ) is updated in Step 20 after every x ≪ ℓmax training steps in each learning episode, where a mini-batch DL′ ⊂ Bk contains MDP instances corresponding to a training sample L′. This update may result in an overall loss Lk that is smaller than a threshold Lmin. If this occurs, learning can proceed to the next training example before completing all ℓmax learning steps for the current example. The local policy πk(s(aℓ)), optimized in Step 29 as Qℓ(sa(ℓ), a), is iteratively updated in Step 16 by taking actions in Step 10 according to (17). These Q-learning updates decrease the local loss Lk in Step 23.
+The global policy for a mixture of K SNRs is optimized in
+Steps 2-13 of Algorithm 4 (called from Step 32 of Algorithm
+3). In Step 1, the action value function corresponding to the global policy π(s(aℓ)) is determined by calculating the average action values across all K local action value functions. In each learning episode, global learning undergoes ℓmax training rounds as shown in Steps 4-9. Consequently, for the training example L ∈ L , the cardinality of the corresponding minibatch DL ⊂ B is ℓmax. As the agent continously interacts with the environment, the global action value Qℓ+1(s(aℓ), a) is updated, and π(sa(ℓ)) is optimized by taking actions according to (17), where f (sa(ℓ)) = π(sa(ℓ)), This process leads to gradual reduction of the global loss L(B). Once all meta-iterations are
+completed, Algorithm 3 generates an optimized global policy πˆ(s(aIi)). Note that the complexity of AM-RELDEC, as seen from Algorithms 3 and 4 is O((|L | + K|Lk|)ℓmax).
+D. AM-RELDEC Algorithm: Inference and Online
+Adaptation
+Assume that a global policy for a mixture of K SNR values
+has been already learned through Algorithms 3 and 4 and
+stored at the decoder. Now, at decoding time, assume that the k-th SNR, k ∈ [[K]], is observed at the channel output.
+This section addresses how, at decoding time, an optimal CN
+scheduling is obtained by online adaptation to the observed
+SNR value. The global policy is used to initialize the online
+adaptation. We focus on a wireless communication setting
+where the channel is estimated accurately using pilot signals. The estimation results in a set of LLR vectors Lk′, with each vector L′ ∈ Lk′ corresponding to a new SNR value. The SNR values are used to retrain the scheduling policy in the online
+adaptation shown in Algorithm 5. This algorithm takes as inputs the LLR values in Lk′.
+The other input comprises the action values Q0(s(a0), a) for all s(a0), a, which are set according to the global policy learned earlier. In Step 1 of Algorithm 5, local action values Q(k)(s(a0), a) for all s(a0), a are initialized using the global action values. Steps 2-4 update the local policy with all the training samples in Lk′. In particular, Step 3 adapts the k-th local policy using Steps 7-27 of Algorithm 3. Note, when
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5670
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Algorithm 3 AM-RELDEC
+
+Input : set of LLR vectors L , Lk, parity-check
+
+matrix H Output: optimized global scheduling policy πˆ(sa(Ii)) 1 U0(sa(0), a) ← 0, Q0(s(a0), a) ← 0, ∀ s(a0), a, B ← ∅
+
+2 while not done do
+
+// meta-learning phase
+
+3 k←1
+
+4 while k ≤ K do
+
+// adapt to the k-th SNR
+
+5
+
+Bk ← ∅, Q(k)(sa(0), a) ← Q0(sa(0), a) ∀ s(a0), a
+
+// start of an episode
+
+6
+
+for each new L′ ∈ Lk do
+
+7
+
+ℓ ← 0, Lˆℓ ← L′, DL′ ← ∅, Lk ← 1
+
+8
+
+determine initial states of all clusters using
+
+(4)
+
+9
+
+while Lk > Lmin and ℓ < ℓmax do
+
+10
+
+select cluster a according to (17)
+
+11
+
+decode cluster induced subgraph
+
+according to Steps 8-9 of Algorithm 1
+
+12
+
+determine xˆa using Steps 10-17 of
+
+Algorithm 1
+
+13
+
+determine index sa(ℓ)′ of xˆa via binary
+
+to decimal conversion
+
+14
+
+update Ra according to (5)
+
+15
+
+Uℓ(s(aℓ), a) ←
+
+Ra + β maxa′∈[[⌈m/z⌉]] Qℓ(s(aℓ)′ , a′)
+
+16
+
+compute Qℓ+1(sa(ℓ), a) according to (6)
+
+17
+
+sa(ℓ+1) ← s(aℓ)′
+
+18
+
+DL′ ← DL′ ∪ (sa(ℓ), a, Ra, sa(ℓ)′ )
+
+19
+
+for every x new MDP instances in DL′
+
+do
+
+20
+
+L(DL′ ) ←
+
+(s(aℓ),a,Ra,s(aℓ)′ )∈DL′ (Uℓ(sa(ℓ), a) − Qℓ(s(aℓ), a))2
+
+21
+
+Bk ← Bk ∪ DL′
+
+22
+
+L(Bk) ← L(Bk) + L(DL′ )
+
+23
+
+Lk
+
+←
+
+1 |Bk
+
+|
+
+L(Bk
+
+)
+
+//
+
+local
+
+error
+
+minimized as learning
+
+continues
+
+24
+
+end
+
+25
+
+ℓ←ℓ+1
+
+26
+
+end
+
+27
+
+Q0(sa(ℓ), a) ← Qℓ(s(aℓ), a) ∀ s(aℓ), a
+
+28
+
+end
+
+29
+
+Q(k)(sa(ℓ), a) ← Q0(s(aℓ), a) ∀ sa(ℓ), a
+
+// updates the k-th local policy
+
+30
+
+k ← k+1
+
+31 end
+
+32 perform Steps 1-13 of Algorithm 4 // global
+
+policy update
+33 end
+
+Lk ≤ Lmin in Step 9 of Algorithm 3, an episode terminates before completing all ℓmax iterations, accelerating the online adaptation phase.
+
+Algorithm 4 AM-RELDEC (Continued From Step 32 of Algorithm 3)
+
+1 [h]
+
+2
+
+Q0(s(a0), a) ←
+
+1 K
+
+K k=1
+
+Q(k)(sa(0), a)
+
+∀
+
+sa(0), a
+
+// initializes π(s(aℓ))
+
+// start of an episode
+
+3 for each new L ∈ L do
+
+4 ℓ ← 0, Lˆℓ ← L, DL ← ∅
+
+5 while ℓ < ℓmax do
+
+6
+
+select cluster a according to 17)
+
+7
+
+repeat Steps 11-17 of Algorithm 3
+
+8
+
+DL ← DL ∪ (sa(ℓ), a, Ra, sa(ℓ)′ )
+
+9
+
+ℓ←ℓ+1
+
+10 end
+
+11 L(DL) ←
+
+(U (s , a) − (s(aℓmax),a,Ra,sa(ℓmax)′ )∈DL
+
+(ℓmax ) ℓmax a
+
+Qℓmax (sa(ℓmax), a))2
+
+12 B ← B ∪ DL
+
+13
+
+Q0(sa(ℓmax), a)
+
+←
+
+Qℓmax (sa(ℓmax), a)
+
+∀
+
+s(ℓmax
+a
+
+)
+
+,
+
+a
+
+14
+
+L←
+
+1 |B|
+
+L(B)
+
+//
+
+global
+
+error
+
+minimized
+
+as
+
+learning continues
+
+15 end
+
+Algorithm 5 AM-RELDEC (Online Adaptation Phase)
+1 [h] Input : set of LLR vectors Lk′ obtained after channel estimation, parity-check matrix H, action values Q0(sa(0), a) corresponding to optimized global policy Output: optimized local scheduling policy πˆk(s(aIi))
+2 Bk ← ∅, Q(k)(s(a0), a) ← Q0(s(a0), a) ∀ sa(0), a
+// start of an episode
+3 for each new L′ ∈ Lk′ do 4 perform Steps 7-27 of Algorithm 3 // adapt to
+the current SNR with index k
+5 end 6 Q(k)(s(aℓ), a) ← Q0(sa(ℓ), a) ∀ sa(ℓ), a 7 πk(s(aℓ)) ← arg maxa Q(k)(s(aℓ), a)// k-th local
+policy update
+
+The output of Algorithm 5 is an optimized CN scheduling policy, πˆk(sa(Ii)), for a new SNR, given by
+
+πˆk(sa(Ii)) =
+
+arg max
+
+Q(k)(sa(Ii), ai).
+
+ai ∈[[⌈m/z ⌉]]\{a0 ,...,ai−1 }
+
+(18)
+
+This policy is then used to select the CN updates during decoding in the same way as in the RELDEC scheme.
+The iterative learning of the global policy along with the K local policies using Algorithms 3 and 4 enables fast adaptation to any new current channel condition through Algorithm 5 using only a relatively small number of LLR vectors in Lk′. This is in sharp contrast to the meta Q-learning scheme of [38], where a local policy is learned after learning the global policy, but the learned local policies are not employed for global
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5671
+
+policy updates. As a result, the scheme’s global policy is static and unsuitable for online local policy adaptation.
+It is important to note that the complexity of Algorithm 5 scales as O(|Lk′|ℓmax), which is small compared to RELDEC’s complexity during inference, as typically |Lk′| ≪ |Lˆ|. Additionally, AM-RELDEC eliminates the need to store separate Q-tables for the local policies, which can be considerably large for the codes considered in this work. Instead, only the global action table needs to be stored, which is then adapted online to the actual SNR value of the channel.
+V. EXPERIMENTAL RESULTS
+In this section, we compare the performance of our learning-based sequential decoding schemes with flooding (i.e., all clusters are updated simultaneously per iteration), and a random sequential decoding scheme where the cluster scheduling order is randomly generated. This is similar to the layered decoding scheme in which the CN scheduling order is fixed [14]. We employ each scheme for decoding a [384, 256]WRAN irregular LDPC code (see [47]), a (3, 5) AB-LDPC code of block length 500 bits, and a 5G-NR LDPC code. For the 5G-NR case, the code is constructed by lifting the BG2 base matrix2 with dimensions 42×52 using an optimized lifting matrix obtained from the literature (see [6], [45]) with a lifting factor 10, resulting in a 5G-NR LDPC code with block length 520 and a rate of approximately 1/5. The simulation of 5G-NR LDPC codes based on the BG1 matrix is beyond the scope of this work, as the graph contains several degree-19 CNs, which, once the code is lifted, renders both reinforcement and meta-RL extremely computationally intensive. For all codes, the choice of block length is influenced by the run-time of the proposed learning schemes on our system. We employ both RELDEC in Algorithm 1 and its meta-variant AMRELDEC in Algorithms 3 and 5, respectively.
+After learning is complete, the resulting cluster scheduling policy for each code is incorporated into Step 9 of Algorithm 2, yielding either a RELDEC or AM-RELDEC sequential decoding scheme for that code, depending on the chosen learning algorithm. In the case of RELDEC, the LLR vectors used for training are sampled uniformly at random over a range of K equally-spaced SNR values for a given code. As a result, there are Lˆ|/K LLR vectors in Lˆ for each SNR value considered, meaning that RELDEC is trained on a mixture of SNR values. On the other hand, for AM-RELDEC, there are |L |/K (resp., |Lk|) LLR vectors in L (resp., Lk) trained individually for each fixed SNR.
+For all learning schemes, we employ a reasonable choice of hyper-parameters that lead to good decoding performance, such as a learning rate of α = 0.1, a reward discount rate of β = 0.9, a probability of exploration of ϵ = 0.6, a maximum number of steps per learning episode of ℓmax = 50, and a Q-learning loss threshold of Lmin = 1 × 10−4. For RELDEC and AM-RELDEC utilize a cluster size of z = 1. Note that the total number of SNR values of K = 6 is chosen for all codes. Specifically, we consider SNR values of 1, 2, . . . , 5 and 5.5 dB
+2The BG2 base matrix has 38 columns of weight one and is available at [48].
+
+for the WRAN, 1, 1.5, . . . , 3 and 3.5 dB for the 5G-NR, and 1, 1.5, . . . , 3 and 3.25 dB for the AB LDPC code.
+For RELDEC, we set |Lˆ| = 15000, ensuring that 1/K-th of the dataset contains LLR vectors of a fixed SNR; i.e., these schemes are trained for a mixture of K SNR values. On the other hand, for AM-RELDEC, we obtain optimized local policies by performing 100 meta-iterations, with 99 of them used for global-policy learning using Algorithm 3, and the last one used for adaptation using Algorithm 5. We choose |L | = 7425, |Lk| = 7425, and consequently 75 training examples are used for the learning the global and k-th local policy, respectively, in each meta-iteration. Additionally, for the online adaptation training set we consider |Lk′| = 75.
+As a result, for AM-RELDEC the total amount of training data amounts to |L |+|Lk|+|Lk′| = 14925, which is less than 15000 since the global policy is not adapted during the 100-th meta-learning step (online learning). Note that the training set sizes |L | and |L |+|Lk| are chosen to ensure that the dataset is large enough for accurate training without incurring too much computation time. Finally, we fix the maximum number of decoding iterations as Imax = 50 for the AB and 5G-NR codes, but use Imax = 5 for the WRAN code to enable a comparison with the hyper-network scheme of [29].
+For both training and inference, we transmit all-zero codewords using BPSK modulation. Note that training with the all-zero codeword is sufficient as, due to the symmetry of the BP decoder and the channel, the decoding error is independent of the transmitted signal (see e.g. [49, Lemma 4.92]). For performance measures, we consider both the bit error rate (BER), given by Pr[xˆv ̸= xv], v ∈ [[n]], and the frame error rate (FER), given by Pr[xˆ ≠ x].
+As benchmarks we also simulate the codes using NS [14], EDS-BP (efficient schedule layered BP) [15], RBL-BP (reliability-based layered BP) [16], and a VN-based layered decoding scheme proposed in the 5G 3GPP New Radio standardization process [36], respectively. For the method in [36], we choose a layer size of four for all layers, irrespective of the code (all their lengths are divisible by four). This choice ensures that the number of layers used for the 5G code is as close as possible to the number of layers for the rate 1/5 codes used in [36].
+The BER vs. channel SNR, in terms of Eb/N0 in dB, for the (3, 5) AB, the [520, 100] 5G-NR LDPC, and the [384, 256]WRAN code using these decoding techniques are shown in Figs. 4(a), 5(a), and 6(a), respectively, where we have limited the plots to the more interesting moderate SNR regime. The EDS-LBP scheme outperforms NS and RBL-BP for the AB and WRAN code. However, for the 5G code, EDS-LBP is incapable of achieving a lower FER than NS since the Tanner graph of this code contains a large number of degree one VNs which have zero relative residuals. The RBL-BP decoder generally outperforms NS, but is sub-optimal compared to EDS-LBP for all codes but the 5G code, demonstrating the effectiveness of reliability-based VN scheduling for achieving a relatively low FER. The VN-based layered scheduling scheme of [36] outperforms the RBL-BP scheme mainly due to its small layer size, which contains fewer cycles and absorbing sets, compared to the layer size of RBL-BP, which grows
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5672
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+Fig. 4. BER and FER results using different BP decoding schemes for a (3, 5) AB-LDPC code with block length n = 500 and Imax = 50 decoder iterations for an AWGN channel.
+
+Fig. 5. BER and FER results using different BP decoding schemes for a [520, 100] 5G-NR LDPC code and Imax = 50 decoder iterations for an AWGN channel.
+
+with the number of decoder iterations. It even outperforms EDS-LBP for the WRAN code.
+It is important to note that the relatively poor error-floor performances of NS and EDS-LBP are primarily due to myopic errors [14] caused by the presence of short cycles in the code’s Tanner graph. These errors force the decoder to schedule only a subset of the nodes, i.e., a single node gets scheduled multiple times in the same iteration, resulting in an early error-floor. The RBL-BP decoder also schedules a subset of the VNs, leading to similar error-floor performance. In contrast random sequential decoding, layered decoding, and our RL-based decoders schedule all nodes sequentially in every iteration.
+Finally, we can observe from Figs. 4(a), 5(a), and 6(a) that the RELDEC schemes clearly outperform the other decoding schemes, including another learning-base decoder, namely the hyper-network decoder of [29] (shown only for the WRAN LDPC code). AM-RELDEC performs slightly better than RELDEC, due to the better adaptation to the channel SNR. The FER vs. SNR performance shown in Figs. 4(b), 5(b), and 6(b) exhibits similar behavior.
+
+We also simulated the codes using a deep-Q-learning-based RELDEC scheme for z = 2. Deep Q-learning was necessary in this case, as the size of the Q-table grows exponentially in the number of cluster neighbors la (which increases with z) making it infeasible to learn through an explicit Q-table. We also employed AM-RELDEC by using online training with only 7 training samples instead of 75. The former performs similarly to random sequential decoding, whereas the latter performs only slightly worse than AM-RELDEC with 75 training samples, but better than RELDEC. Thus, their performances are not shown in the figures. In Table I, we compare the average3 number of CN to VN messages propagated in the considered decoding schemes to achieve the results in Figs. 4-6. Note that in EDS-LBP, RBL-BP, and the VN-based layered decoder of [36], the subgraph induced by the scheduled VN includes all its neighboring CNs, and all the neighboring VNs of those CNs. When a VN is scheduled, the neighboring CNs of the scheduled node propagate messages
+3The average is computed over the total number of channel simulations for a fixed SNR.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+HABIB et al.: RELDEC OF MODERATE LENGTH LDPC CODES
+
+5673
+
+TABLE I
+AVERAGE NUMBER OF CN TO VN MESSAGES PROPAGATED IN VARIOUS DECODING SCHEMES FOR THE (3, 5) AB ([520, 420] 5G-NR) LDPC CODE, SHOWN ON THE LEFT, AND THE [384, 256]-WRAN LDPC CODE, SHOWN ON THE RIGHT, TO ATTAIN THE RESULTS SHOWN IN FIGS. 4-6. THE RESULTS ARE OBTAINED VIA MONTE CARLO SIMULATIONS BASED ON AT LEAST 300 FRAME ERRORS OVER ALL SHOWN SNR VALUES
+
+AM-RELDEC, on average, generate a lower number of CN to VN messages when compared to the other decoding schemes, offering a significant reduction in message-passing complexity for moderate-length LDPC codes. Moreover, RELDEC-based schemes do not require the complex residual calculation of NS and EDS-LBP.
+
+Fig. 6. BER and FER results using different BP decoding schemes for a [384, 256]-WRAN LDPC code and Imax = 5 decoder iterations for an AWGN channel. The BER results for the hyper-network scheme are taken from [29].
+to the other VNs in the subgraph. As a result, when n distinct VNs are scheduled in EDS-LBP or RBL-BP (which is equivalent to one iteration of flooding), a VN that is common to the subgraphs of the scheduled nodes is updated more than once in the same iteration. Consequently, EDS-LBP, RBL-BP, and the layered decoder of [36] can be more complex than flooding. We also observe that both RELDEC and
+
+VI. CONCLUSION
+We presented RELDEC, a novel RL-based sequential decoding scheme proposed to optimize the scheduling of CN clusters for moderate length LDPC codes. In contrast to our previous work, the main contributions of this work include a new complexity-reduced state space model built using the collection of possible outputs of individual clusters as well as a scheduling approach that updates all CN clusters sequentially within each decoder iteration. Furthermore, we propose novel meta-learning based sequential decoding schemes, namely AM-RELDEC, to further improve the decoding performance with respect to RELDEC. The learning flexibility of AM-RELDEC allows the decoder to quickly adapt to changing channel conditions due to fading, making it well-suited, with moderate computational and memory complexity, to error correction in wireless communications scenarios. Experimental results show that by learning the cluster scheduling order using RELDEC and its meta-learning counterparts, we can significantly outperform flooding and random scheduling schemes without any expensive computation of residuals as in previous sequential scheduling schemes. Our presented performance gains include lowering both BER and message-passing complexities. We believe that the observed gains for the codes under consideration will carry over to longer codes, provided the additional training complexity can be realized.
+REFERENCES
+[1] S. Habib, A. Beemer, and J. Kliewer, “Decoding of moderate length LDPC codes via learned clustered check node scheduling,” in Proc. 17th Int. Symp. Wireless Commun. Syst., 2021, pp. 1–6.
+[2] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[3] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, no. 5, pp. 547–553, Sep. 1981.
+[4] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[5] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+5674
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 10, OCTOBER 2023
+
+[6] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[7] 5G; NR; Multiplexing and Channel Coding, Eur. Telecommun. Standards Institute, document TS 38.212, 3GPP, 2020.
+[8] E. Yeo, P. Pakzad, B. Nikolic, and V. Anantharam, “High throughput low-density parity-check decoder architectures,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), May 2001, pp. 3019–3024.
+[9] J. Zhang and M. P. C. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, Feb. 2005.
+[10] H. Kfir and I. Kanter, “Parallel versus sequential updating for belief propagation decoding,” Phys. A, Stat. Mech. Appl., vol. 330, nos. 1–2, pp. 259–270, Dec. 2003.
+[11] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SIPS), Jul. 2004, pp. 107–112.
+[12] S. Habib, A. Beemer, and J. Kliewer, “Learning to decode: Reinforcement learning for decoding of sparse graph-based channel codes,” in Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020, pp. 22396–22406.
+[13] S. Habib, A. Beemer, and J. Kliewer, “Belief propagation decoding of short graph-based channel codes via reinforcement learning,” IEEE J. Sel. Areas Inf. Theory, vol. 2, no. 2, pp. 627–640, Jun. 2021.
+[14] A. I. V. Casado, M. Griot, and R. D. Wesel, “LDPC decoders with informed dynamic scheduling,” IEEE Trans. Commun., vol. 58, no. 12, pp. 3470–3479, Dec. 2010.
+[15] G. Han and X. Liu, “An efficient dynamic schedule for layered beliefpropagation decoding of LDPC codes,” IEEE Commun. Lett., vol. 13, no. 12, pp. 950–952, Dec. 2009.
+[16] R. Sun, X. Hou, J. Sun, H. Guan, and Z. Zhao, “Reliability-based-layered belief propagation for iterative decoding of LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2018, pp. 1156–1160.
+[17] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction, 2nd ed. Cambridge, MA, USA: MIT Press, 2018.
+[18] C. J. C. H. Watkins, “Learning from delayed rewards,” Ph.D. dissertation, Dept. Comput. Sci. Technol., Kings College, Cambridge, U.K., 1989.
+[19] M. O. Duff, “Q-learning for bandit problems,” Dept. Comput. Sci., Univ. Massachusetts, Amherst, MA, USA, Tech. Rep., 1995.
+[20] L. Marina and A. Sandu, “Deep reinforcement learning for autonomous vehicles-state of the art,” Bull. Transilvania Univ. Brasov. Ser. I, Eng. Sci., vol. 10, no. 2, pp. 195–202, 2017.
+[21] D. Silver et al., “Mastering the game of go without human knowledge,” Nature, vol. 550, no. 7676, pp. 354–359, Oct. 2017.
+[22] D. Ye et al., “Towards playing full MOBA games with deep reinforcement learning,” in Proc. Adv. Neural Inf. Process. Syst., 2020, pp. 621–632.
+[23] N. C. Luong et al., “Applications of deep reinforcement learning in communications and networking: A survey,” IEEE Commun. Surveys Tuts., vol. 21, no. 4, pp. 3133–3174, 4th Quart., 2019.
+[24] N. Doan, S. A. Hashemi, and W. J. Gross, “Decoding polar codes with reinforcement learning,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Dec. 2020, pp. 1–6.
+[25] F. Carpi, C. Häger, M. Martalò, R. Raheli, and H. D. Pfister, “Reinforcement learning for channel coding: Learned bit-flipping decoding,” in Proc. 57th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2019, pp. 922–929.
+[26] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[27] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Deep learning based channel codes for point-to-point communication channels,” in Proc. Adv. Neural Inf. Process. Syst., 2019, pp. 2758–2768.
+
+[28] I. Be’Ery, N. Raviv, T. Raviv, and Y. Be’Ery, “Active deep decoding
+
+of linear codes,” IEEE Trans. Commun., vol. 68, no. 2, pp. 728–736,
+
+Feb. 2020.
+
+[29] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for
+
+block codes,” in Proc. Adv. Neural Inf. Process. Syst., 2019,
+
+pp. 2329–2339.
+
+[30] J. C. Gittins, “Bandit processes and dynamic allocation indices,” J. Roy.
+
+Stat. Soc. B, Stat. Methodol., vol. 41, no. 2, pp. 148–163, 1979.
+
+[31] Ö. Šimšek, A. P. Wolfe, and A. G. Barto, “Identifying useful subgoals
+
+in reinforcement learning by local graph partitioning,” in Proc. 22nd Int.
+
+Conf. Mach. Learn. (ICML), 2005, pp. 816–823.
+
+[32] S. Mannor, I. Menache, A. Hoze, and U. Klein, “Dynamic abstraction
+
+in reinforcement learning via clustering,” in Proc. 21st Int. Conf. Mach.
+
+Learn. (ICML), 2004, pp. 71–78.
+
+[33] R. Parr and S. J. Russell, “Reinforcement learning with hierar-
+
+chies of machines,” in Proc. Adv. Neural Inf. Process. Syst., 1998,
+
+pp. 1043–1049.
+
+[34] S. Bitzer, M. Howard, and S. Vijayakumar, “Using dimension-
+
+ality reduction to exploit constraints in reinforcement learning,”
+
+in Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst., Oct. 2010,
+
+pp. 3219–3225.
+
+[35] D. Shah and Q. Xie, “Q-learning with nearest neighbors,” in Proc. Adv.
+
+Neural Inf. Process. Syst., 2018, pp. 3111–3121.
+
+[36] Efficient Channel Coding Implementations for EMBB, document R1-
+
+1610139, Qualcomm Incorporated, San Diego, CA, USA, 2016.
+
+[Online].
+
+Available:
+
+https://www.3gpp.org/dynareport?code=
+
+TDocExMtg–R1-86b–31664.htm
+
+[37] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+
+fast adaptation of deep networks,” in Proc. Int. Conf. Mach. Learn.
+
+(PMLR), 2017, pp. 1126–1135.
+
+[38] R. Fakoor, P. Chaudhari, S. Soatto, and A. J. Smola, “Meta-
+
+Q-learning,” in Proc. Int. Conf. Learn. Represent., 2020,
+
+pp. 1–17.
+
+[39] O. Simeone, S. Park, and J. Kang, “From learning to meta-learning:
+
+Reduced training overhead and complexity for communication sys-
+
+tems,” in Proc. 2nd 6G Wireless Summit (6G SUMMIT), 2020,
+
+pp. 1–5.
+
+[40] S. Park, H. Jang, O. Simeone, and J. Kang, “Learning to demodulate
+
+from few pilots via offline and online meta-learning,” IEEE Trans. Signal
+
+Process., vol. 69, pp. 226–239, 2021.
+
+[41] R. Li et al., “A channel coding benchmark for meta-learning,” 2021,
+
+arXiv:2107.07579.
+
+[42] S. Zhou, C. Wei, C. Song, X. Pan, W. Chang, and L. Yang, “Short-term
+
+traffic flow prediction of the smart city using 5G Internet of Vehicles
+
+based on edge computing,” IEEE Trans. Intell. Transp. Syst., vol. 24,
+
+no. 2, pp. 2229–2238, Feb. 2023.
+
+[43] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from
+
+circulant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8,
+
+pp. 1788–1793, Aug. 2004.
+
+[44] J. L. Fan, “Array codes as low-density parity-check codes,” in Proc. Int.
+
+Symp. Turbo Codes Rel. Topics, 2000, pp. 543–546.
+
+[45] J. H. Bae, A. Abotabl, H.-P. Lin, K.-B. Song, and J. Lee, “An overview
+
+of channel coding for 5G NR cellular communications,” APSIPA Trans.
+
+Signal Inf. Process., vol. 8, no. 1, p. e17, 2019.
+
+[46] R. S. Sutton, “Learning to predict by the methods of temporal differ-
+
+ences,” Mach. Learn., vol. 3, no. 1, pp. 9–44, Aug. 1988.
+
+[47] TU Kaiserslautern Channel Codes Database. Accessed: Jan. 3, 2023.
+
+[Online]. Available: https://www.uni-kl.de/channel-codes/channel-codes
+
+database/more-ldpc-codes
+
+[48] 5G Base Matrices. Accessed: Jan. 3, 2023. [Online]. Available:
+
+https://github.com/xiaoshaoning/5g-ldpc
+
+[49] T. J. Richardson and R. L. Urbanke, Modern Coding Theory. Cambridge,
+
+U.K.: Cambridge Univ. Press, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:49:25 UTC from IEEE Xplore. Restrictions apply.
+
+

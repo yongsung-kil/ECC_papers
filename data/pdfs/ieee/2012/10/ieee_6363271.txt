@@ -1,0 +1,534 @@
+2012 IEEE Workshop on Signal Processing Systems
+
+Power Characterization of A Gbit/s FPGA Convolutional LDPC Decoder
+Si-Yun J. Li∗, Tyler L. Brandon†, Duncan G. Elliott†, and Vincent C. Gaudet∗
+∗Dept. of Electrical and Computer Eng. University of Waterloo, Waterloo, ON, Canada N2L 3G1 †Dept. of Electrical and Computer Eng. University of Alberta, Edmonton, AB, Canada T6R 2V4
+
+ABSTRACT
+In this paper, we present an FPGA implementation of parallelnode low-density-parity-check convolutional-code encoder and decoder. A 2.4 Gb/s rate-1/2 (3, 6) LDPC convolutionalcode encoder and decoder were implemented on an Altera development and education board (DE4). Detailed power measurements of the FPGA board for various configurations of the design have been conducted to characterize the power consumption of the decoder module. For a Eb/No of 5 dB, the decoder with 9 processor cores (pipelined decoder iteration stages) has a bit-error-rate performance of 10−10, and achieves an energy-per-coded-bit of 1.683 nJ. The increase in Eb/No can effectively reduce the decoder power and energy-per-coded-bit for configurations with 5 or more processor cores for Eb/No < 5 dB. The incremental decoder power cost and incremental energy-per-coded-bit also hold a linearly decreasing trend for each additional processor core.
+Index Terms— Capacity-approaching codes, low-density parity-check codes, field-programmable gate-array, power measurement
+1. INTRODUCTION
+One of the challenges in designing a low-density parity-check (LDPC) decoder is the difficulty in exploiting the trade-off between throughput, power and area. Past implementations of LDPC decoders have mostly used Field Programmable Gate Arrays (FPGA) as an intermediate tool to prototype their designs instead of targeting it as the final platform [1, 2, 3], because of its relative slower clock speed, larger area and higher power consumption compared to full-custom application-specific integrated-circuit (ASIC) implementation. Recent literature on LDPC decoders on FPGAs have shown improvements in decoding throughput and some of them have even been shown to achieve throughput in the range of several Gigabits per second [3, 4]. However, the lack of reported power measurement figures from existing FPGA implementations of LDPC decoder designs has made it difficult to analyze the gap in power consumption between FPGA implementations and ASIC implementations of LDPC decoders, and to explore FPGA-specific architectural tradeoffs.
+
+This paper presents a set of detailed power measurement data conducted using a simple power measurement set-up on an FPGA implementation of a parallel-node low-densityparity-check convolutional-code (PN-LDPC-CC) decoder [5]. The rest of the paper is organized as follows. Section 2 includes a brief background on the gap between FPGA and ASIC implementation as well as a summary of performance results from the existing FPGA implementations of LDPC decoders. Section 3 presents a brief background on LDPCCC and the PN-LDPC-CC encoder and decoder architectures used in our experiment. Section 4 provides the details of our FPGA implementation of the PN-LDPC-CC decoder system and a simple power measurement method for further power characterization of our system. Section 5 presents the measurement results of our FPGA implementation and the resulting discussion. Conclusions are presented in Section 6.
+2. BACKGROUND
+2.1. FPGA versus ASIC Implementation
+In comparison with designs implemented in ASICs, FPGA implementations tend to result in higher power and area consumption, and slower clock speed. Kuon and Rose presented experimental measurements of area, speed, and power consumption to analyze the gap between ASICs and FPGAs [6]. They suggest that by making use of the available hard heterogeneous blocks (such as memory, DSP blocks) on FPGAs, the resulting gap in area consumption can be narrowed, as can the gap in power consumption. However, they also suggest that the possibility of narrowing the gap in clock speed performance would depend largely on how well the designs are tailored to the functionality of the DSP block.
+2.2. Existing FPGA LDPC Decoders
+Darabiha et al. introduced a bit-serial decoding scheme that addresses the issue in interconnect complexity in fully parallel implementations of LDPC decoders, along with a simplified check node architecture [1]. The viability of both ideas is demonstrated on a parallel FPGA implementation of a (480, 355) Reed-Solomon-based LDPC decoder, which achieves a decoding throughput of 650 Mb/s at 61 MHz. A parallel
+
+978-0-7695-4856-2/12 $26.00 © 2012 IEEE
+
+294
+
+DOI 10.1109/SiPS.2012.50
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+LDPC decoder based on stochastic decoding was presented by Tehrani et al. [2]. The decoder achieves a throughput of 706 Mbps at 3 dB SNR. Chandrasetty et al. propose a modified 2-bit Min-Sum Algorithm (MMS2), which is implemented on an FPGA that achieves an average throughput of 10.2 Gb/s at 4 dB [3].
+FPGA-specific architectural techniques named vectorization and folding are proposed by Chen et al. in [4] for quasi-cyclic LDPC decoders. Vectorization takes advantage of the configurable data width of embedded memory on FPGAs by packing multiple messages into the same physical word, which is loaded and stored simultaneously. However, to concurrently process the messages delivered in each memory access and to take care of the data alignment and addressing, additional logic resources are needed. The extra required hardware resources may result in degraded performance, or it may not even fit on the FPGA due to the alignment logic and interconnect complexity. An additional tool, named QCSyn, which synthesizes a vector architecture for a given quasi-cyclic code, is also developed to ensure high resource utilization. Folding, on the other hand, is a memory virtualization technique that allows large LDPC codes to be implemented on commercially-available FPGAs with a small number of available block RAMs by mapping messages corresponding to multiple sub-matrices in the same physical block RAMs. Results of the implementations based on the vectorization technique are presented in Table 1.
+3. PARALLEL-NODE LOW-DENSITY PARITY-CHECK CONVOLUTIONAL CODES
+LDPC convolutional codes (LDPC-CC) were first proposed in [7]. An LDPC-CC bears the same characteristics as conventional convolutional codes, where a code bit depends on present and previous information bit only. An LDPC-CC can be characterized by a parity-check matrix, H. However, unlike LDPC block codes (LDPC-BC), which have finite-length parity-check matrices, the parity-check matrix for LDPC-CC in infinite in length. Like LDPC-BC, all of the valid codes v of an LDPC-CC must satisfy the condition, where vHT = 0. The H matrix for an LDPC-CC with the rate R = b / c (b < c) is shown in Figure 1, where the Hi(t) (i = 0, 1, ..., ms) represents the sub-matrices of size c × (c − b) and the parameter ms is called the code memory. The iterations of the beliefpropagation decoding algorithm are implemented as pipelined ”processor cores”. Additional parallelism is achieved through design of the LDPC-CC code to allow the encoding and decoding of ρ information bits per cycle, as demonstrated in [8].
+3.1. Parallel-Node Low-density Parity-Check Convolutional Code
+Architecture-aware Parallel-Node Low-Density Parity-Check Convolutional Codes (PN-LDPC-CCs) were initially devel-
+
+oped by Chen et al. [8]. Both implementation-oriented constraints and performance-oriented constraints are applied in the construction of PN-LDPC-CCs to allow parallelism in the encoder and decoder architecture and to also ensure bit-errorrate (BER) performance of the code. The code length, Ts, and the node-parallelization factor, ρ, are two important factors of the PN-LDPC-CCs. In [5], it is shown that ρ can be increased significantly with little impact on the BER performance, and the main factors affecting BER performance are Ts of the code and the decoding algorithm.
+A series of circuit optimizations to the PN-LDPC-CC encoder/decoder architecture presented in [8] and the corresponding synthesis results in terms of energy-per-encoded-bit versus throughput and area versus throughput for each improvement are reported in [5]. In both of the encoder and decoder, only one phase, which refers to the specific row of parity-check matrix is processed per cycle; therefore the throughput of the design can be defined as the product of clock frequency and node parallelization factor, ρ, as shown in Equation (1).
+
+Nenc/dec coded T hroughput = fclk × ρ × 2
+
+(1)
+
+3.2. PN-LDPC-CC Encoder
+The PN-LDPC-CC-based encoder architecture presented in [8] is a partial syndrome encoder [9]. For a given rate-1/2 PN-LDPC-CC code with ρ = 8, the encoder outputs 8 information bits, v, and 8 parity bits, u, per clock cycle. The input databus data[ρ − 1 : 0] is connected to each register bank regX[ρ − 1 : 0] (X = 1, 2, ..., ms) via a phase-dependent rotation matrix (SW0) and a summation circuit. The most obvious implementation of the SW0 switches has a complexity of O(ρ2) because SW0 has ρ inputs and outputs, and ρ2 paths between those inputs and outputs. A series of circuit optimizations to this initial architecture are presented in [5].
+The first proposed optimization step in [5] effectively simplifies the O(ρ2) implementation complexity in the initial encoder design by replacing the SW0 switches with fixed re-wiring and phased-gated inputs [5]. This modification changes the shift chain in the design in [8] into a circular buffer. Next, a technique called “gate-swapping” is applied on the simplified design by conditionally swapping the 3input XOR with a 2-input XOR and a 2-input OR gate when
+
+⎡
+
+⎤
+
+H
+
+=
+
+⎢⎢⎢⎣⎢⎢
+
+...
+
+Hms (t)
+
+...
+···
+...
+
+H0 (t)
+...
+Hms (t+ms)
+
+...
+···
+
+H0 (t+ms )
+
+0
+
+⎥⎥⎦⎥⎥⎥
+
+0
+
+... ... ...
+
+Fig. 1: Example of H matrix for LDPC-CC
+
+295 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+Table 1: Summary of FPGA Implementation Results
+
+Ref. FPGA
+LDPC Code
+fCLK Throughput BER # of Iteration % of Utilization Slices Slice Flip-Flops 4-Input LUTs Block RAM Total Power Energy per bit 1 Measured
+
+[1]
+Altera Stratix EP1S80 RS-based (480, 355) 61 MHz 650 Mbps 15 66, 588 (84%) -
+
+[2]
+Xilinx Virtex4 XC4VLX200 (1024, 512)
+212 MHz 706 Mbps 10−6 at 3 dB 15 32875 -
+
+Vectorization [4]
+Xilinx Virtex4 XC4VLX200 Irregular (3969, 3213) QC 195.7 MHz 1.474 Gbps 15 62362 (70%) 98003 (55%) 111035 (62%) 330 (98%) 7632 mW 5.18 nJ
+
+Vectorization [4]
+Xilinx Virtex4 XC4VLX160 (8176, 7156) QC
+212.2 MHz 713.8 Mbps 10−12 at 4.25 dB 15 17856 (26%) 27210 (20%) 27046 (20%) 80 (28%) 3033 mW 4.25 nJ
+
+[3]
+Xilinx Virtex4 XC4VLX200 Regular (3, 6)
+123 MHz 10.2 Gbps 10−5 at 3.9 dB 33,345 15,691 58,053 -
+
+This work
+Altera Stratix IV EP4SGX230 PN-LDPC-CC (3,6), Ts = 192 75 MHz 2.4 Gbps 10−8 at 4.25 dB 9 (proc.) 83% 4105 mW 1 1.71 nJ 1
+
+the phase-gated “info” and “parity” updates inside an encoder node do not occur in the same phase. This technique produces a small reduction in power and area. Furthermore, latch-based clock-gating [10] is applied to the encoder node registers in the resulting design from the ”gate-swapping” technique to further reduce dynamic power. The resulted architecture has a slight reduction in throughput and significant reduction in power consumption for all codes.
+3.3. PN-LDPC-CC Decoder
+The decoder architecture presented in [8] holds the same relationship between ρ, throughput and the energy-per-coded-bit as in 3.2. The decoder is formed by cascading identical decoder processors in series. A single decoder processor consists of variable-node (VN) units, check-node (CN) units and multiple memories. For a PN-LDPC-CC decoder with ρ > 1, each decoder processor contains a rotation switch-matrices (SW1) and multiple copies of the VN units and CN units. Based on the phase, φ, SW1 performs the rotation and reverse rotation operations on log-likelihood ratio (LLR) data routed between the CN units and the memories.
+In [5], Brandon proposes a series of improvement steps on the design presented in [8]. Removing saturation bit in the sign-magnitude representation of LLRs in the first step has been shown to have an advantage of reducing power consumption and area. However, the removal of saturation bits also results in a small loss in BER performance. The rotation switch matrix in the initial design is eliminated by re-arranging the memory. The removal of rotation switch matrix not only reduces the hardware cost relationship to ρ down to a near-linear dependence, and also further reduces the power consumption and area. The next improvement technique involves the application of clock-gating, which does not only further reduce area, but it also reduces the energy-per-decoded-bit. By replacing the function of the saturation bit with the maximum magnitude and additional
+
+control circuitry, the reset circuitry/memory initialization can also be eliminated from the design. Although the effect of the removal of the reset circuitry is minimal on the energy-per-decoded-bit, it does further reduce area. The final optimization technique is named the truncated min-sum (TMS) check sum operation. Unlike the offset min-sum operation, the TMS technique conditionally subtracts a constant value from the check-node LLR magnitudes when the least-significant-bit (LSB) of the LLR is set. This subtracted constant is equal to the maximum value that the LSB can represent. TMS decreases the energy-per-decoded-bit and area. A final architecture that contains all the aforementioned improvement changes is provided in [5], and is the one used in our experiment.
+4. FPGA IMPLEMENTATION
+4.1. System Design
+The design is written in Verilog HDL, compiled using Altera Quartus II Version 11.0 for the FPGA implementation on DE4, which is an Altera development and education board that features a Stratix IV 4SGX230. An encoder and decoder based on a rate-1/2 (3,6) PN-LDPC-CC with Ts = 192, ρ = 16 [8] are implemented using the final encoder and decoder architectures described in Section 3.2 and 3.3 along with an additive white Gaussian noise (AWGN) channel model, a pseudorandom pattern generator (PRPG), a firstin first-out (FIFO) buffer, and a simple error counter on the DE4.
+In this design, ρ test bits are generated by the PRPG. A copy of the ρ test bits is fed into the encoder module and the FIFO buffer. For every ρ info bits entering the encoder, it generates ρ code bits. The noise output from the AWGN generator of the channel module is scaled according to the desired SNR value and added to the info and code bits generated by the encoder. The sum of the signal and noise is then scaled by a linear function and quantized to 4-bit LLRs, where each
+
+296 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+LLR consists of one sign bit and three fractional magnitude bits. The quantized LLRs are then fed into the decoder module. The decoded data is then compared with the original data from the FIFO that was previously fed to the encoder. The error counter keeps track of the number of information bits and detected errors until a pre-defined target number of errors is reached.
+A total of 11 configurations of the design containing different numbers of decoder processors have been implemented at a fixed clock frequency of 75 MHz using the default compilation options on Quartus II to maintain consistency of the experiment. To avoid the need to re-compile each configuration for every combination of the parameters such as the predefined SNR and target number of detected errors, a JTAG interface [11] system allows for the flexibility of modifying registers after a design is compiled and downloaded onto the FPGA. The BER data gathering process is also simplified with this JTAG interface since the values in the registers that store the total error counts and the elapsed clock cycle counts can be read for every different combinations of SNR and target number of detected errors.
+4.2. Power Measurement
+In order to determine the power consumption of the decoder module, we have chosen to measure the total power consumed by the entire FPGA board. The power measurement of DE4 is made possible by inserting a custom unit that consists of a pair of 8-pin Molex power connectors and necessary wire connections between the Molex receptacle of the AC/DC power supply and the matching Molex header on the FPGA board. The custom unit allows two 0.01-Ω (1% tolerance) current sense resistors to be put in series with the 12-V power rail, where the voltage drops measured across these resistors can then be used to calculate the total current drawn by DE4, and an additional digital multimeter is used to measure the input voltage, VV CC12 CON for the FPGA board. Detailed circuit connections are shown in Figure 2. The total power consumed by the FPGA board is calculated using Equation (2). Three sets of current and voltage readings are captured to calculate the total power, and the average of that is considered as the board
+Fig. 2: Power Measurement Set-up
+
+power consumption for that case. The 12-V supply powers several components and DC-DC converters, which in turn power several more components. All power consumption on the FPGA board is kept constant, except for varying the number of decoder cores. Therefore, the measured power of the “0core” configuration that contains all the modules except the decoder for every different Eb/No value can be used as the base case for that particular Eb/No, which is then subtracted from the corresponding total measured board power to calculate the decoder power. Since the clock frequency for all our experiment is fixed at 75 MHz, the resulting coded throughput of all configurations is 2.4 Gbit/s, using Equation (1). The energy-per-coded-bit is calculated using Equation (3).
+
+PF P GA Board = (IRps1 + IRps2) × VV CC12 CON (2)
+
+Energy − per − coded − bit =
+
+PDecoder
+
+(3)
+
+Coded T hroughput
+
+5. MEASUREMENT RESULTS AND DISCUSSION
+The BER performance of the FPGA implementation is plotted in Figure 3. The configurations with 9, and 10 decoder cores achieve a BER of 10−10 or better at an Eb/No of 5 dB.
+The decoder power consumption and energy-per-codedbit for each configuration is plotted against Eb/No in Figure 4 and against the number of decoder cores in Figure 5. In Figure 4, the reduction in decoder power consumption and energy-per-coded-bit resulting from the increase of Eb/No is more obvious for the configurations with 5 or more decoder processors at Eb/No < 6dB. In Figure 5, the decoder power and energy-per-coded-bit hold a close-to-linear relationship with the number of processor cores.
+To further analyze the relationship between decoder power consumption, energy-per-coded-bit, Eb/No, number of processor cores, the incremental decoder power and energy-per-coded-bit values are obtained by subtracting the decoder power and energy-per-coded-bit values at a lower Eb/No or (N − 1)-core from the total decoder power and energy-per-coded-bit at the current Eb/No or N-core configuration, and are then plotted in Figure 6 and 7. In Figure 6, the incremental decoder power and energy-per-coded-bit gradually decrease for every dB of increase in Eb/No with the exception of the values for the “1core” configuration. In Figure 7, we observe a generally decreasing trend in the incremental decoder power and energy-per-coded-bit for each additional processor core.
+In both Figure 6 and 7, the behaviours of the incremental values for “9core” are significantly different from that of other curves in the same plots. A possible explanation for this is the inherent randomness within the CAD methodologies used in Quartus II for placement and routing. In Figure 6, although the overall incremental values for the “9core” are lower than that of the other configurations, the curve itself still maintains
+
+297 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+10−5
+
+BER
+
+10−10
+
+10−15
+
+1
+
+2
+
+3
+
+4
+
+0core 5core 10core
+
+1core 6core
+
+5
+
+6
+
+Eb/No [dB]
+
+2core
+
+7core
+
+7
+
+8
+
+3core 8core
+
+9
+
+10
+
+4core 9core
+
+Fig. 3: Information BER for various numbers of decoder cores for the Ts = 192, ρ = 16 rate-1/2 (3, 6) PN-LDPC-CC code with 4-bit LLRs at various Eb/No obtained from measurements on DE4
+
+Total Decoder Power Consumption [W]
+
+5.5 5
+4.5 4
+3.5 3
+2.5 2
+1.5 1
+0.5
+
+1
+
+2
+
+1core 6core
+
+3
+
+4
+
+2core 7core
+
+5
+
+6
+
+Eb/No [dB]
+
+3core
+
+8core
+
+7
+
+8
+
+4core 9core
+
+2.29 2.08 1.88 1.67 1.46 1.25 1.04 0.83 0.63 0.42 0.21
+
+9
+
+10
+
+5core 10core
+
+Fig. 4: Average measured decoder power and energy-per-coded-bit at various Eb/No for various numbers of decoder cores on DE4 with 4-bit LLRs at a 75MHz clock with coded throughput of 2.4 Gbit/s for the Ts = 192, ρ = 16, rate-1/2 (3,6) PN-LDPC-CC code.
+
+Total Decoder Power Consumption [W]
+
+5.5
+
+2.29
+
+5
+
+2.08
+
+4.5
+
+1.88
+
+4
+
+1.67
+
+3.5
+
+1.46
+
+3
+
+1.25
+
+2.5
+
+1.04
+
+2
+
+0.83
+
+1.5
+
+0.63
+
+1
+
+0.42
+
+0.5
+
+0.21
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+Number of Processor Cores
+
+1dB
+
+3dB
+
+4dB
+
+5dB
+
+6dB
+
+10dB
+
+Fig. 5: Average measured decoder power and energy-per-coded-bit at various Eb/No = 1, 3, 4, 5, 6, 10 for various numbers of decoder cores on DE4 with 4-bit LLRs at a 75MHz clock with coded throughput of 2.4 Gbit/s for the Ts = 192, ρ = 16, rate-1/2 (3,6) PN-LDPCCC code
+
+Energy−per−coded−bit [nJ] % Logic Utilization
+
+Energy−per−coded−bit [nJ] Incremental Decoder Power Consumption [W]
+
+Incremental Energy−per−coded−bit [nJ]
+
+Incremental Decoder Power Consumption [W]
+
+0.65
+
+0.6
+
+0.55
+
+0.5
+
+0.45
+
+0.4
+
+0.35
+
+0.3
+
+0.25
+
+0.2
+
+1
+
+2
+
+1core 6core
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+Incremental Eb/No [dB]
+
+2core
+
+3core
+
+4core
+
+7core
+
+8core
+
+9core
+
+0.26 0.24 0.22 0.2 0.18 0.16 0.14 0.12 0.1
+
+9
+
+10
+
+5core 10core
+
+Fig. 6: Incremental measured decoder power and energy-per-codedbit for every dB of increase in Eb/No for various numbers of decoder cores on DE4 with 4-bit LLRs at a 75MHz clock with coded throughput of 2.4 Gbit/s for the Ts = 192, ρ = 16, rate-1/2 (3,6) PN-LDPC-CC code.
+
+Incremental Energy−per−coded−bit [nJ]
+
+0.65
+
+1dB
+
+2dB
+
+3dB
+
+4dB
+
+10dB 0.26
+
+0.6
+
+0.24
+
+0.55 0.22
+
+0.5 0.2
+
+0.45 0.18
+
+0.4 0.16
+
+0.35 0.14
+
+0.3
+
+0.12
+
+0.25
+
+0.1
+
+0.2
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+Nth Processor Core
+
+Fig. 7: Incremental measured decoder power and energy-per-codedbit for each additional core at Eb/No= 1, 2, 3, 4, 10 on DE4 with 4-bit LLRs at a 75MHz clock with coded throughput of 2.4 Gbit/s for the Ts = 192, ρ = 16, rate-1/2 (3,6) PN-LDPC-CC code.
+
+100%
+
+20%
+
+Incremental % Logic Utilization
+
+75%
+
+15%
+
+50%
+
+10%
+
+25%
+
+5%
+
+%LU
+
+incr %LU
+
+0%
+
+0%
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9 10
+
+Number of Decoder Processor Cores
+
+Fig. 8: Logic Utilization and Incremental Logic Utilization for various configurations with different numbers of decoder processor cores
+
+298 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+the same decreasing trend as the other curves when Eb/No is increased.
+In Figure 7, at the 9th core, the reduction in decoder power and energy-per-coded-bit from 8th core is significantly greater than that of the other transitions. Furthermore, it can be seen from Figure 8 that the increase in incremental Logic Utilization at 9th core from the 8th core is significantly greater than that of the others. The aforementioned behaviours of the “9core” configuration seem to suggest that a higher Logic Utilization can result in lower decoder power and energy-per-coded-bit, but they could also be just the result of the inherent randomness in the CAD algorithms used in Quartus II. We verified this by performing additional compilations of the “8core”, “9core”, and “10core” configurations with different random number seeds specified at the Fitter stage on Quartus II. The resulting incremental Logic Utilization and the incremental decoder power values varied by 11% and 0.362 W respectively with different seeds, and they have not shown any consistent trend in their relationship, which confirms that the earlier observed relationship is most likely caused by the randomness in the synthesis tools.
+We also attempted to measure the encoder power consumption. However, using our power measurement method, the configuration without an encoder turns out to consume slightly more power than the configuration with an encoder. We conclude that the power consumption of the encoder module is minimal in comparison to the FPGA power fluctuations caused by the randomness in the synthesis tools. We will further quantify and explore this behaviour in future work.
+To summarize, for 10−10 BER performance, having an additional core on the“ 9core” configuration would cost an additional of 0.457 W and the improvement in BER performance is less than 5−11. An increase of 0.25 dB or 0.50 dB in Eb/N o would be required for the “8core”, “7core” configurations to achieve the same BER performance as well as saving 0.224 W, and 0.350 W respectively, compared to the “9core” configuration.
+In Table 1, the result from this work with 9 decoder cores at a Eb/No of 4.25 dB is summarized along with the results of other existing LDPC-BC decoders described in Section 2.2. Our work achieves a higher throughput than both implementations from [4] on a lower clock frequency. The average incremental energy-per-coded-bit for our design for 7 to 10 decoder cores at Eb/No dB is approximately 0.15 nJ per additional core. Using this approximated value, our design with 15 cores at an Eb/No between 4 and 5 dB consumes around 2.61 nJ per-coded-bit, which is around half of what is consumed by the first implementation from [4].
+6. CONCLUSION
+In this paper, we presented an FPGA implementation of a rate-1/2 (3,6) PN-LDPC-CC with Ts = 192 and ρ = 16 and a power measurement technique and model to determine the
+
+decoder power consumption. We conclude that the increase of Eb/No is more effective at reducing the decoder power and energy-per-coded bit for configurations with 5 or more cores before Eb/No exceeds 5 dB. A decreasing incremental decoder power cost has also been observed for each additional processor core. With the use of our method for power measurement, we have been able to observe the general tradeoffs between decoder power, energy-per-coded-bit, Eb/No, and the number of processor cores for our design on the chosen PN-LDPC-CC code. This power measurement method is general enough that it can be applied to other FPGA implementations of LDPC decoders. Directions for future works would include improving the existing power measurement method to minimize the fluctuation in measured FPGA power to better capture the small change in power for smaller configurations as well as using the improved method to better characterize the tradeoffs between power consumption and the effects of FPGA-specific techniques applied on the design of LDPC decoders.
+7. REFERENCES
+[1] A. Darabiha, A.C. Carusone, and F.R. Kschischang, “A bit-serial approximate min-sum LDPC decoder and FPGA implementation,” in Proc. of IEEE Int. Symp. on Circuits and Systems, May 2006.
+[2] S.S. Tehrani, S. Mannor, and W.J. Gross, “An area-efficient FPGAbased architecture for fully-parallel stochastic LDPC decoding,” in Proc. of IEEE Workshop on Signal Processing Systems, Oct. 2007, pp. 255–260.
+[3] V.A. Chandrasetty and S.M. Aziz, “FPGA implementation of high performance LDPC decoder using modified 2-bit min-sum algorithm,” in Proc. of Second Int. Conf. on Computer Research and Development, May 2010, pp. 881–885.
+[4] X. Chen, J. Kang, S. Lin, and V. Akella, “Memory system optimization for FPGA-based implementation of quasi-cyclic LDPC codes decoders,” IEEE Trans. on Circuits and Systems I: Regular Papers, vol. 58, no. 1, pp. 98–111, Jan. 2011.
+[5] T.L. Brandon, Parallel-node low-density parity-check convolutional code encoder and decoder architectures, Ph.D. thesis, University of Alberta, 2010.
+[6] I. Kuon and J. Rose, “Measuring the gap between FPGAs and ASICs,” IEEE Trans. on Computer-Aided Design of Integrated Circuits and Systems, vol. 26, no. 2, pp. 203–215, Feb. 2007.
+[7] A. Jimenez Felstrom and K.S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. on Information Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[8] Z. Chen, T.L. Brandon, D.G. Elliott, S. Bates, W.A. Krzymien, and B.F. Cockburn, “Jointly designed architecture-aware LDPC convolutional codes and high-throughput parallel encoders/decoders,” IEEE Trans. on Circuits and Systems I: Regular Papers, vol. 57, no. 4, pp. 836–849, Apr. 2010.
+[9] A.E. Pusane, A.J. Feltstrom, A. Sridharan, M. Lentmaier, K. Zigangirov, and D.J. Costello, “Implementation aspects of LDPC convolutional codes,” IEEE Trans. on Communications, vol. 56, no. 7, pp. 1060–1069, Jul. 2008.
+[10] T. Lang, E. Musoll, and J. Cortadella, “Individual flip-flops with gated clocks for low power datapaths,” IEEE Trans. on Circuits and Systems II: Analog and Digital Signal Processing, vol. 44, no. 6, pp. 507–516, Jun. 1997.
+[11] Altera, Altera Avalon Interface Specifications, Version 1.0.
+
+299 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 09:30:38 UTC from IEEE Xplore. Restrictions apply.
+
+

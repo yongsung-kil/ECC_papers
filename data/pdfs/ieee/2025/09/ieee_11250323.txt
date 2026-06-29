@@ -1,0 +1,1234 @@
+2025 IEEE International Conference on Quantum Computing and Engineering (QCE)
+
+2025 IEEE International Conference on Quantum Computing and Engineering (QCE) | 979-8-3315-5736-2/25/$31.00 ©2025 IEEE | DOI: 10.1109/QCE65121.2025.00026
+
+Turbo-Annihilation of Hook Errors in Stabilizer Measurement Circuits
+Michele Pacenti, Asit K. Pradhan, Shantom K. Borah and Bane Vasic´ Department of Electrical and Computer Engineering, University of Arizona, Tucson, AZ, USA
+{mpacenti, asitpradhan, shantomborah}@arizona.edu, vasic@ece.arizona.edu
+
+Abstract—We propose a scalable decoding framework for correcting correlated hook errors in stabilizer measurement circuits. Traditional circuit-level decoding attempts to estimate the precise location of faults by constructing an extended Tanner graph that includes every possible source of noise. However, this results in a highly irregular graph with many short cycles, leading to poor performance of message-passing algorithms. To compensate, ordered statistics decoding is typically employed, but its cubic complexity renders it impractical for large codes or repeated stabilizer measurements. Our approach instead focuses on estimating the effective data errors caused by hook faults, modeling them as memory channels. We integrate trellis-based soft-input soft-output equalizers into the Tanner graph of the code, and show that the resulting decoding graph preserves the structural properties of the original Tanner graph such as node degree and girth, enabling efficient message passing. Applied to bivariate bicycle quantum LDPC codes, our decoder outperforms standard belief propagation (BP) on the circuitlevel graph and closely approaches order-zero statistics decoding (OSD0) performance, all while maintaining linear complexity and scalability.
+I. INTRODUCTION
+The effect of various noise sources in quantum memories can be modeled and corrected using the circuit-level Tanner graph framework [1]. In this model, each noise source in the circuit corresponds to a variable node, while check nodes represent the outcomes of ancilla measurements. An edge connects a variable node to a check node if the corresponding noise source can trigger that syndrome measurement. Noise sources that lead to the same syndrome are merged into a single variable node. Given a measured syndrome, the decoder operates on this graph to infer the most likely set of faults. However, this approach presents several limitations. First, the circuit-level Tanner graph is significantly larger than the Tanner graph of the underlying code, particularly when multiple rounds of measurement are involved. This increase arises from the decoder’s attempt to identify the exact location of each fault (up to column merging), rather than estimating their collective effect on the data qubits. Second, the circuit-level graph does not retain the desirable
+The authors wish to thank Nithin Raveendran and Dimitris Chytas for the insightful discussions around this paper. We acknowledge the support of the National Science Foundation under grants ERC-1941583, CIF-2420424, CIF2106189, CCF-2100013, CCSS-2052751, and a generous gift from our friends and Maecenases Dora and Barry Bursey. Bane Vasic´ has disclosed an outside interest in his startup company Codelucida to The University of Arizona. Conflicts of interest resulting from this interest are being managed by The University of Arizona in accordance with its policies.
+
+structural properties of the original code graph, thus vanishing any effort in the quantum low-density parity-check (QLDPC) design optimization. In particular, it typically exhibits irregular variable and check degrees, including many variable nodes of degree one, and contains a large number of short cycles [2]. As a result, standard message-passing algorithms often perform poorly when applied to the circuit-level Tanner graph. To recover acceptable performance, it is usually necessary to employ Ordered Statistics Decoding (OSD), which increases the decoding complexity to O(N 3), where N is the number of variable nodes in the circuit-level graph. A BP decoder followed by an OSD post-processing is commonly referred as BPOSD. Since this number is typically much larger than in the original Tanner graph, the approach becomes impractical for large codes or for repeated syndrome extraction rounds.
+More recently, several approaches have been proposed to decode circuit-level noise, as alternatives to BPOSD. We highlight some of the most noticeable. Kuo and Lai [3] propose a belief-propagation decoder operating on a mixed-alphabet circuit-level parity check matrix, achieving an asymptotic complexity of O(N ) for a single measurement round, where N is the blocklength of the circuit-level matrix, which is is N = n + mw + 2m, where m is the number of checks and w the stabilizer weight and n is the code’s blocklenght. They propose two versions, one operating over GF(4), and the other over GF(16), both utilizing serial scheduling and adaptive parameter tuning. Despite the linear complexity, the authors adopt the technique of diversity decoding, which consists of running several decoders in parallel (in the specific case around 60), with slightly different parameters or update rules, to correct the same error; moreover, they utilize a serial scheduling, meaning that the variable and check nodes are updated one-by-one, rather than all in parallel. Although this is done to optimize the performance, diversity decoding demands a high amount of parallel computational resources, while serial scheduling notoriously introduce more decoding latency than the parallel scheduling. Gong et al. [2] propose a windowed guided decimation BP decoder operating on the circuit-level Tanner graph, which has a complexity of O(N 2), achieving performance comparable to the one of the standard BPOSD, but with reduced decoding latency. Wolanski and Barber [4] proposed the ambiguity clustering decoder which performs a partial OSD processing, thus reducing the decoding complexity. These contributions aim to reduce the complexity of the BPOSD, but they all operate on variants of the circuit-
+
+979-8-3315-5736-2/25/$31.00 ©2025 IEEE
+
+148
+
+DOI 10.1109/QCE65121.2025.00026
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+level Tanner graph.
+In our approach, we aim to decode the effective data error resulting from the collective effect of all faults, rather than determining their precise locations. At the same time, we account for the correlated nature of the resulting noise. To do this, we draw inspiration from the turbo equalization technique [5], widely used in classical communication systems affected by channels with memory, such as the intersymbol interference (ISI) channel. In such channels, limited bandwidth causes transmitted pulses to spread and overlap, introducing correlations between neighboring bits. This form of correlated noise can be modeled as a finite-state machine (FSM), and equalized using a Viterbi detector [6]. In turbo equalization, a soft-input soft-output estimator such as the Bahl-Cocke-Jelinek-Raviv (BCJR) algorithm [7] replaces the Viterbi detector and iteratively exchanges soft information with a belief propagation (BP) decoder. Other approaches model the effect of ISI as a second Tanner graph, and turbo equalization corresponds to joint decoding over both the code and channel graphs [8], [9].
+We propose a new decoding framework for QLDPC codes that accounts for correlated errors introduced by circuit-level noise. In particular, we focus on a type of correlated fault known as a hook error. A hook error originates from an ancilla qubit and propagates to one or more data qubits involved in the same stabilizer measurement. To isolate the effect of hook errors, we consider a simplified scenario in which noisy X stabilizer measurements are followed by perfect Z stabilizer measurements, all within a single round of syndrome extraction. The perfect Z measurements allow correction of X errors caused both by single-qubit depolarizing noise and by faulty CNOT gates. To model the impact of hook errors, we introduce an auxiliary Tanner graph in which circuit faults are represented as variable nodes and data qubits as check nodes. This graph inherently contains numerous unavoidable four-cycles. To mitigate this, we group variable nodes corresponding to faults on the same ancilla into higher-order structures we call equalizer nodes. These nodes capture the finite-state machine (FSM) dynamics of hook errors and are decoded locally using the BCJR algorithm. The resulting joint Tanner graph retains the essential structural properties of the original code graph while circumventing the irregular node degrees and short cycles that typically hinder circuit-level Tanner graphs. We then develop a message-passing decoder operating on this joint graph, with computational complexity O(n), where n < N is the blocklength of the original code. Our numerical results show that this decoder outperforms standard belief propagation (without OSD) on the circuit-level Tanner graph and approaches the performance of the BPOSD0 decoder in the low error probability regime.
+The remainder of this paper is organized as follow: in Section II we introduce the preliminary concepts. In Section III we present the construction of the joint Tanner graph. In Section IV we illustrate the decoding algorithm, and in Section V we present numerical results.
+
+II. PRELIMINARIES
+A. Low-density parity check codes and Tanner graphs
+An [n, k, d] linear code C ⊂ Fn2 is a linear subspace of Fn2 generated by k elements, such that each element in C has Hamming weight at least d. A code C can be represented by an (n − k) × n parity check matrix H such that C = ker H. If H is sparse, i.e., its row and column weights are constant with n, the code C is a low-density parity check (LDPC) code. The parity check matrix is the biadjacency matrix of the Tanner graph T = (V ∪ C, E), where the nodes in V are called variable nodes and the nodes in C are called check nodes, such that and there is an edge between vj ∈ V and ci ∈ C if hij = 1, where hij is the element in the i-th row and j-th column of H. The degree of a node is the number of incident edges to that node. If all the variable (check) nodes have the same degree we say the code has regular variable (check) degree, and we denote it with γ (ρ). We denote a biregular code as (γ, ρ)-regular. A cycle is a closed path in the Tanner graph, and we denote its length by the number of variable and check nodes in the cycle. The girth g of a Tanner graph is the length of its shortest cycle.
+
+B. Calderbank-Shor-Steane codes
+Let (C2)⊗n be the n-dimensional Hilbert space, and Pn be the n-qubit Pauli group; a stabilizer group is an Abelian subgroup S ⊂ Pn, and an n, k, d stabilizer code is a 2kdimensional subspace C of (C2)⊗n that satisfies the condition Si |Ψ⟩ = |Ψ⟩ , ∀ Si ∈ S, |Ψ⟩ ∈ C. An n, kX − kZ⊥, d Calderbank-Shor-Steane (CSS) code C is a stabilizer code
+constructed using two classical [n, kX , dX ] and [n, kZ , dZ ] codes CX = ker HX and CZ = ker HZ , respectively, such that CZ⊥ ⊂ CX and CX⊥ ⊂ CZ [10]. The minimum distance is d ≥ min{dX , dZ }, with dX being the minimum Hamming weight of a codeword in CX \CZ⊥, and dZ being the minimum Hamming weight of a codeword in CZ \CX⊥. A quantum LDPC (QLDPC) code is a CSS code where both HX and HZ are
+sparse.
+
+C. Syndrome extraction circuit
+To a Pauli operator E is associated a syndrome s ∈ F2n−k, such that
+
+si = 0 if E commutes with Si
+
+(1)
+
+si = 1 otherwise.
+
+Each stabilizer Si ∈ S is measured using an ancillary qubit and a series of controlled operations. Let Si,j be the Pauli operator acting on the j-th qubit in Si. The measurement circuit consists of three main steps. First, the ancillary qubits are initialized according to the stabilizer type. Ancillas used for the measurement of X-stabilizers are prepared in the |+⟩ state, while those used for Z-stabilizers are prepared in the |0⟩ state. Next, a sequence of controlled-NOT (CNOT) operations entangles the ancilla with the data qubits involved in the
+
+149 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+X1 X2 X3 X4
+a
+d1
+d2
+d3
+d4
+Fig. 1: Possible locations of a hook error on a qubit a during an X stabilizer measurement. We do not consider errors after the last CNOT as they are not detectable.
+stabilizer measurement. The set of participating qubits is given by
+JX = {j | Si,j ∈ {X, Y }}, JZ = {j | Si,j ∈ {Z, Y }}.
+For X-stabilizers, the ancilla serves as the control, and the data qubits in JX are the targets. Conversely, for Z-stabilizers, the data qubits in JZ serve as controls, and the ancilla is the target. Finally, the ancilla is measured in the computational X-basis for X stabilizers, and Z-basis for Z stabilizers, producing the stabilizer syndrome bit si.
+In the circuit-level noise model, qubit preparation, gates, and measurements are considered noisy. A faulty qubit preparation prepares a single-qubit state orthogonal to the correct one with probability p. A faulty CNOT is an ideal CNOT followed by one of the 15 non-identity Pauli errors on the control and target qubits, picked uniformly at random with probability p/15. A faulty measurement is an ideal measurement followed by a classical bit-flip error applied to the measurement outcome with probability p. Moreover, idling qubits suffer from depolarizing noise.
+In this paper, we are mainly interested in faulty CNOT operations. Thus, we do not consider idling noise or measurement errors. In particular, we focus on the effect of hook errors. A hook error occurs when an error on an ancillary qubit propagates to all or a subset of the data qubits involved in the measurement of the stabilizer associated with that ancilla. An example is illustrated in Fig. 1, where X errors may happen on the ancilla qubit a at different time steps. To isolate the impact of hook errors, we consider the following simplified experiment, illustrated in Fig. 2. We assume depolarizing noise on X ancilla qubits and data qubits at the beginning of the circuit. We first measure all the X-stabilizers of a QLDPC code using noisy CNOT gates, followed by the measurement of all Z-stabilizers using perfect CNOT gates. We do not include idling noise or measurement errors. By leveraging the perfect Z-stabilizer measurements, we can correct X errors on the data qubits originating from the noisy stabilizer measurements. Therefore, throughout the paper we will consider only X errors, although a specular analysis holds for Z errors.
+
+D. Bivariate bicycle codes
+For our experiment, we consider bicycle bivariate (BB) codes [11], although our analysis extends naturally to other classes of QLDPC codes. BB codes are (γ, ρ)-regular, quasicyclic codes with parity-check matrices given by
+
+HX = [A B], HZ = [BT AT ].
+
+(2)
+
+Since A and B are circulant matrices, they can be compactly represented using polynomial notation as
+
+HX (x) = [a(x), b(x)], HZ (x) = [b∗(x), a∗(x)], (3)
+where a∗(x) and b∗(x) denote the conjugate transposes of a(x) and b(x), respectively. Without loss of generality, for illustration purposes, we consider a (2, 4)-regular bicycle code, where the circulant polynomials take the form
+
+a(x) = xa1 + xa2 , b(x) = xb1 + xb2 .
+
+(4)
+
+Substituting these into the parity-check matrices, we obtain
+
+HX (x) = [xa1 + xa2 , xb1 + xb2 ] HZ (x) = [x−b1 + x−b2 , x−a1 + x−a2 ].
+Notice that we can distinguish two sets of qubits: the left qubits, denoted by L, which interact with the X-stabilizer checks via A and with the Z-stabilizer checks via BT , and the right qubits, denoted by R, which interact with the X-stabilizer checks via B and with the Z-stabilizer checks via AT . The experimental setup is illustrated in Fig. 21. Since all CNOT gates corresponding to a given polynomial entry can be applied in a single time step, we represent each such set of operations as a single CNOT gate labeled with the corresponding power of x. As a consequence, each wire in Fig. 2 represents a set of N qubits, where N is the circulant size.
+E. Finite state machines and trellis diagrams
+A finite-state machine (FSM) is a mathematical model for describing discrete systems with memory. At each time step t, the FSM receives an input ft and produces an output xt, where the output depends on both the current input and the current state σt ∈ Σ, where Σ is the state space. The system then transitions to a new state σt+1, determined by σt and xt. An FSM is can be represented by its state diagram, where vertices represent states, and arrows represent state transitions. Each arrow is labeled as ./., where the left entry is the input symbol and the right entry is the corresponding output. The temporal evolution of an FSM can be represented by a trellis diagram, which unwraps the state diagram over time. A trellis is a timeindexed directed graph, where each time slice t consists of two consecutive state sets, Σt and Σt+1, connected by directed edges (σ, σ′) representing state transitions. Each vertex in Σt corresponds to a possible FSM state, and the edges retain the labeling convention of the state diagram.
+1We acknowledge quantikz for the drawing of the quantum circuits [12].
+
+150 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+FAULTY
+
+X
+
+a1
+
+a2
+
+L
+
+b1
+
+b2
+
+R
+
+Z
+PERFECT
+Fig. 2: Experiment setup. Each wire represents a set of N qubits: X is the set of X ancilla qubits, Z is the set of Z ancilla qubits, while L and R are the set of left and right data qubits in BB codes. Each CNOT gate represented in the circuit is a set of parallel CNOT gates, applied according to the polynomials a(x) and b(x). The slices indicate error locations at different time steps.
+
+F. Bahl-Cocke-Jelinek-Raviv algorithm
+
+The BCJR algorithm [7] is a maximum-a-posteriori (MAP), soft-input soft-output (SISO) algorithm operating on the trellis of a FSM. The objective of the BCJR algorithm is to compute the MAP probabilities of a sequence of symbols x = (x1, .., xρ), namely P (xt|L(x1), ..., L(xρ)), where L(xt) is the prior log-likelihood ratio for xt, defined as
+
+L(xt) = ln
+
+P (xt = 0) P (xt = 1)
+
+.
+
+(5)
+
+The output of the algorithm is the sequence of LLRs of x associated to the a-posteriori probabilities L′(xt), defined as:
+
+L′(xt)
+
+=
+
+log
+
+P (xt P (xt
+
+= =
+
+0|L(x1), 1|L(x1),
+
+..., ...,
+
+L(xρ)) , L(xρ))
+
+(6)
+
+The computation involves three quantities in logarithmic format: forward metric log αt, backward metric log βt, and the branch metric log γt. It can be shown that the logarithmic branch metric is equal to:
+
+log γt(σ, σ′) = log P (xt(σ, σ′)) + log P (ft(σ, σ′)). (7)
+
+Given that, by our definition of LLR, it is easy to see that:
+
+P (xt = 0) = eL(xt)/(1 + eL(xt)) P (xt = 1) = 1/(1 + eL(xt)),
+
+(8)
+
+and the same holds for ft. Thus, the logarithmic branch transition probabilities can be explicitly calculated as a function of the branch label:
+
+
+
+log 
+
+γt(0/0)
+
+=
+
+L(xt)
+
+−
+
+log
+
+1 + eL(xt)
+
++ L(ft) − log 1 + eL(ft )
+
+
+
+
+
+log γt(1/1) = − log 1 + eL(xt) − log 1 + eL(ft)
+
+log 
+
+γt(0/1)
+
+=
+
+−
+
+log
+
+1 + eL(xt)
+
++ L(ft) − log 1 + eL(ft)
+
+
+
+
+
+log γt(1/0) = L(xt) − log 1 + eL(xt) − log 1 + eL(ft) .
+
+(9)
+
+a0 X0
+
+a1 X1
+
+a2 X2
+
+a3 X3
+
+d
+Fig. 3: Propagation of X errors from X stabilizer measurements on a single data qubit.
+
+The logarithmic forward and backward metrics are calculated recursively with the approximated formula:
+
+log αt(σ) ≈ maxσ′∈Σ [log αt−1(σ) + log γt(σ, σ′)]
+log βt(σ) ≈ maxσ′∈Σ [log γt+1(σ, σ′) + log βt+1(σ)] . (10)
+Finally, L′(xt) is calculated as:
+
+L′(xt) ≈ max [log αt−1(σ) + log γt(σ, σ′) + log βt(σ′)] −
+(σ,σ ′ )∈T0
+max [log αt−1(σ) + log γt(σ, σ′) + log βt(σ′)] ,
+(σ,σ ′ )∈T1
+(11)
+
+where T0, T1 are the sets of branches with output label equal to 0 and 1, respectively, at the time t. It is useful to introduce
+
+now the concept of extrinsic information, which is the portion
+
+of output LLRs from the BCJR algorithm that does not depend
+
+on the input LLRs. Such extrinsic information is defined for
+
+xt as:
+
+LEXT (xt) = L′(xt) − L(xt).
+
+(12)
+
+III. MODELING OF HOOK ERRORS
+In this Section, we first illustrate how to construct a joint Tanner graph that takes into account errors on the data qubits as well as faults on the ancilla qubits. We get inspiration from the classical decoding problem of LDPC codes over the ISI channel [8], [9], where equalization and decoding are performed jointly on two interconnected Tanner graphs. To further optimize this procedure, we exploit the temporal correlation of hook errors happening on one ancilla qubit but at different time instants; in this way, we are able to remove short cycles from the joint Tanner graph, and to use trellisbased decoding for each individual ancilla.
+
+A. Construction of the joint Tanner graph
+We proceed to construct the joint Tanner graph. By analyzing the circuit in Fig. 2, we observe that X errors on X ancillas in the first slice propagate to the data qubits through a1, b1, a2, and b2. Similarly, X errors in the second slice propagate through b1, a2, and b2, and so on. It is easy to extend this reasoning for the case of stabilizer weight ρ. In Fig. 3 we illustrate an example of the interaction of a data qubit with several ancillas, where each CNOT gate is part of
+
+151 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 4: Example of the extended Tanner graph for a (2, 4)regular QLDPC code. The top layer of nodes are the codes’ check nodes, represented as red squares; following, there are the code’s variable nodes, represented as blue circles. To each variable node it is connected a constraint node, which can be interpreted as an always satisfied check node. The last layer consists of additional variable nodes corresponding to sources of hook errors.
+
+a different stabilizer measurement. It is evident that, from the data qubit perspective, the probability of error is equal to the probability of having an odd number of errors in the ancilla qubits before the CNOT interaction, and that errors originating from different ancilla qubits are independent. Namely, let Pe(ai) be the probability of having an X error on the ancilla ai before the stabilizer measurement, then the probability of error on the data qubit Pe(d) is:
+
+1 1γ
+
+Pe(d) = 2 − 2 (1 − 2Pe(ai)).
+
+(13)
+
+i=1
+
+It naturally follows that we can interpret each ancilla qubit ai as a bit, and the data qubit d as a parity check equation. By doing so for every data qubit, we can construct the parity check matrix P, where each row corresponds to a data qubit, each column represents an X error on some ancilla qubit at a certain time-step, and nonzero entries indicate error propagation from the ancilla to the data qubits. For our experiment, we can conveniently express P in the polynomial form P (x), illustrated in (14).
+The joint Tanner graph is then constructed as follows: we take the original Tanner graph of HZ , namely TZ , and the Tanner graph related to the matrix P, namely TP . We create the joint Tanner graph TJ by connecting each variable node of TZ with one check node of TP . Such Tanner graph can be described by the matrix
+
+HJ =
+
+HZ In
+
+0 P
+
+.
+
+(15)
+
+We call the check nodes of TP constraint nodes, which are to be considered always satisfied. An example of TJ is illustrated in Fig. 4. A message-passing decoder operating on the joint Tanner graph is able to estimate errors occurring on data qubits, as well as faults originating hook errors. It follows
+
+that TJ constitutes an alternative to the standard circuit-level Tanner graph. Nevertheless, the graph TJ still retains most of the undesired properties of the circuit-level Tanner graph: indeed, a large amount of 4-cycles will always be present in P, regardless of the code’s original graph and of the measurement schedule. Moreover, the variable node degree in P is still irregular, with several variable nodes having degree 1. We notice that it is possible to exploit the correlation of hook errors arising from the same ancilla in different time steps to simplify TJ , removing all the short cycles and the low-degree variable nodes.
+
+B. Single stabilizer measurement
+
+Consider the simple case of a hook error occurring on qubit
+
+a in a single stabilizer measurement circuit, with stabilizer
+
+weight ρ. An example for ρ = 4 is illustrated in Fig. 1,
+
+where the qubit a serves as an ancilla, while qubits d1, . . . , d4
+
+are data qubits. We denote by Xt an X-error affecting qubit
+
+a at time step t. The propagation pattern of these errors is
+
+as follows: X1 spreads to d1, d2, ..., dρ; X2 propagates to d2, ..., dρ, and so on, until Xρ propagates only to dρ. To
+
+systematically represent this propagation, we define a binary
+
+matrix
+
+G
+
+∈
+
+ρ×ρ
+F2
+
+,
+
+where
+
+each
+
+column
+
+corresponds
+
+to
+
+an
+
+error
+
+Xt, each row represents an error on the data qubit dj, and
+
+an entry of 1 at position (t, j) indicates that the error Xt
+
+propagates to qubit dj. It is straightforward to see that the
+
+matrix G has upper triangular form:
+
+1 1 · · · 1
+
+1 1 · · · 0
+
+G= 1
+
+1
+
+...
+
+...
+
+  
+
+.
+
+(16)
+
+1 0 ··· 0
+
+The structured form of G enables us to model the relationship
+
+between
+
+errors
+
+and
+
+their
+
+propagation
+
+effectively.
+
+Let
+
+x,
+
+d
+
+∈
+
+ρ
+F2
+
+be vectors satisfying x · GT = d. From this, we obtain the
+
+following recursive relations:
+
+
+
+d1 = x1
+
+
+
+d2 = x1 + x2 = d1 + x2
+
+...
+
+(17)
+
+
+
+dt = dt−1 + xt.
+
+This naturally leads to the interpretation that the propagation of X errors across time steps can be modeled as an error source with memory. Specifically, one can conceptualize an encoding circuit that represents G, illustrated in Fig. 5. In this circuit, information flows along the arrows, with the block D acting as a memory element. The memory block outputs at time t the input it received at time t − 1, effectively storing state information. Consequently, the state of the memory element (and the entire circuit) at time t corresponds to its input at time t − 1, restricting the possible states to 0 and 1. The symbol ⊕ represents the XOR operation applied to its two inputs.
+The circuit in Fig. 5 can be interpreted as a finite-state machine (FSM), with its state diagram and corresponding
+
+152 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+P (x) =
+
+b(x)
+
+b(x)
+
+b(x) \ xb1
+
+b(x) \ xb1
+
+b(x) \ (xb1 + xb2 ) ... b(x) \ (xb1 + ... + xbdv−1 )
+
+a(x) a(x) \ xa1 a(x) \ xa1 a(x) \ (xa1 + xa2 ) a(x) \ (xa1 + xa2 ) ...
+
+0
+
+(14)
+
+xt
+
+⊕
+
+dt
+
+D
+
+Fig. 5: The circuit representation of a hook error. Errors on the ancilla qubit a at the time step t are represented by the bit xt, while dt represents the error on the corresponding data qubit. The memory element D is a linear shift register.
+
+1/1
+
+0/0
+
+0
+
+1
+
+0/1
+
+1/0
+Fig. 6: Finite state machine corresponding to the circuit of Figure 5. Nodes correspond to states, edges represent state transitions. Edge labels have the form input/output, such that a particular input corresponds an output and to a state transition.
+
+trellis illustrated in Fig. 6 and Fig. 7, respectively. We now
+
+compute the probability of error for each data qubit involved
+
+in the stabilizer measurement of Fig. 1. We showed previously that dt = dt−1 ⊕ xt. Assuming that p(xt = 1) = p for every t, it easy to see that the probability of error for each qubit dt is equal to the probability of having an odd number of errors in Xt, Xt−1, ..., X1:
+
+1 − (1 − 2p)t
+
+Pe(dt) =
+
+. 2
+
+(18)
+
+Moreover, it is evident how the probability of error Pe(dt) and Pe(dt−1) are correlated, such that:
+
+Pe(dt) = p + Pe(dt−1) − pPe(dt−1).
+
+(19)
+
+By modeling a hook error originating from a stabilizer measurement as an error source with memory and representing it with a trellis, we can leverage the BCJR algorithm to perform equalization. Notably, the leftmost portion of P (x) coincides with HX (x)T , while all subsequent columns lie within the support of those in the first segment. Faults happening in the first slice of Fig. 2 correspond to columns in the first segment (starting from the left); faults happening in the second slice correspond to columns in the second segment, and so on.
+Let us rearrange the columns of P as follows: we group together the i-th column of each segment, recognizing that the i-th column of the j-th segment is contained within the corresponding columns of all preceding segments (j − 1), (j − 2), . . . , 1. The resulting matrix is structured as:
+
+P′ = [P(1) P(2) ... P(γ)].
+
+(20)
+
+0/0
+0 1/1
+
+0 0/0 0 0/0 0 0/0 0
+
+1/1
+
+1/1
+
+1/1
+
+1/0
+
+1/0
+
+1/0
+
+1 0/1 1 0/1 1 0/1 1
+Fig. 7: Trellis for the finite state machine of Figure 6, assuming a code with dc = 4. Nodes and edges correspond to the one of a FSM, with every layer representing the possible transitions at the time step t.
+Let the support of a vector supp(v) = {j | vj ≠ 0} be the set of indices of its non-zero entries; let pi(,k:) denote the i-th row of P(k), and p(:,kj) denote the j-th column of P(k). It is clear that supp(p:(,k1)) = supp(HXT :,k ), and that supp(p(:,kj)) ⊂ supp(p:(,k1)), for all j = 2, .., dc.
+Lemma 1. Let K = supp(HXT :,k ) be the support of the k-th column of HTX , and let P(Kk,): be the restriction of the rows of P(k) to the indices in K. Then, there always exist a row permutation π such that πP(Kk,): = G.
+Proof. We can divide P(Kk,): in two blocks, just as we did for P (x). Each monomial of a(x) and b(x) corresponds to a 1 p(Kk,)1, which is an all-one column, as the first segment of P (x) contains both the full polynomials. The second column pK(k,)2 is equal to the first column, with the omission of the monomial xa1 , hence, it has weight ρ − 1 and its support is strictly contained in that of the first. Continuing this process, the j-th column pK(k,)j omits j − 1 specific monomials and therefore has weight ρ − (j − 1). Thus, P(Kk,): has columns with strictly decreasing weights, where the support of each column is nested within that of all previous columns. The same nested structure also holds for the rows of P(Kk,):. Next, we sort the rows in order of decreasing Hamming weight. Since the leftmost column is all ones, the row with weight 1 must have its sole nonzero entry in the first column and thus appears at the bottom. The row with weight 2 has ones in the first two columns, and so on, until we reach the all-one row, which has weight ρ and is placed at the top. As a result, the nonzero entries in each row are aligned to the left and form a staircase pattern down the matrix, yielding a lower triangular structure.
+Lemma 1 shows that there exists a permutation πi to reduce the restriction of P(i) on its nonzero rows to the matrix G. We illustrate this procedure with the following example.
+
+153 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+Example 1. Consider the following (2, 4)-regular bicycle code with N = 5:
+
+1 0 0 1 0 0 0 1 0 1
+
+0 1 0 0 1 1 0 0 1 0
+
+Hz
+
+=
+
+ 
+
+1
+
+0
+
+1
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+1
+
+ 
+
+ 
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+ 
+
+0010101010
+
+0 1 0 1 0 1 0 1 0 0
+
+0 0 1 0 1 0 1 0 1 0
+
+Hx
+
+=
+
+ 
+
+1
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+1
+
+0
+
+1
+
+ 
+
+ 
+
+0
+
+1
+
+0
+
+0
+
+1
+
+1
+
+0
+
+0
+
+1
+
+0
+
+ 
+
+1010001001
+
+The corresponding polynomial representation is
+
+HZ (x) =[1 + x3, x2 + x4] HX (x) =[x + x3, 1 + x2]
+
+The matrix P, given the measurement circuit in Fig. 2, is illustrated in (21).
+Let us consider the first column of each block, and construct P(1), that has the form:
+
+0 0 0 0
+
+1 1 1 1
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+ 
+
+1
+
+1
+
+0
+
+0
+
+ 
+
+
+
+P(1)
+
+=
+
+ 
+
+
+
+0 1
+
+0 0
+
+0 0
+
+0
+
+ 
+
+0
+
+ 
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+ 
+
+1
+
+1
+
+1
+
+0
+
+ 
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+0000
+
+By removing the all-zero rows, and by properly permuting rows it is easy to see that we get:
+
+1 1 1 1
+
+π1(P(K1,):)
+
+=
+
+G
+
+=
+
+1 1
+
+1 1
+
+1 0
+
+0 0
+
+.
+
+1000
+
+We can apply the same analysis systematically for all the columns of the first block, and the result does not change (besides the permutation πi).
+
+This procedure can be applied to all submatrices P(i), and since each one of them is associated with a trellis, we merge all variable nodes corresponding to columns of P(i), creating equalizer nodes. Readers familiar with doubly generalized LDPC codes [13] will recognize that equalizer nodes function as generalized variable nodes. Each equalizer node represents the ρ faults from a single ancilla qubit and produces ρ output messages corresponding to the outputs of the SISO estimator. Consequently, TP reduces to TXT , which is the Tanner graph of HTX . Hence, the joint Tanner graph reduces to:
+
+HJ =
+
+HZ In
+
+0 HXT
+
+.
+
+(22)
+
+An illustration of TJ is illustrated in Fig. 8. The resulting scenario is as follows: each X stabilizer measurement acts as an independent error source with memory, similarly to a classical ISI channel. This similarity allows us to employ trellis-based equalization techniques for decoding. However, since each of these independent noise sources affects different subsets of qubits, our turbo equalizer architecture requires a dedicated trellis equalizer for each X stabilizer. As we will demonstrate in the following Section, these equalizers not only exchange soft information with the BP decoder but also interact with one another to refine the overall error correction process. Although we illustrate this process for BB codes, we remark that an analogous process is possible for any family of QLDPC codes.
+
+IV. TURBO ANNIHILATION DECODER
+
+In this section, we describe the decoder architecture designed to handle correlated noise induced by hook errors in quantum circuits. Our approach extends the well-known minsum (MS) [14] algorithm by incorporating side information on error correlations among data qubits. This is achieved through a series of soft-input soft-output (SISO) estimators operating on a trellis. In this paper we utilize BCJR estimators, however there exists a variety of different approaches, such as the minimum mean square error (MMSE) estimation [5]. The decoder itself operates on the joint Tanner graph illustrated in Fig. 8.
+At each iteration, messages are exchanged between variable nodes, equalizer nodes, and check nodes. We define νjℓ,i as the variable-to-check message from variable node j to check node i at iteration ℓ, σjℓ,i as the equalizer-to-check message from equalizer node j to check node i at iteration ℓ, and µℓi,j as the check-to-variable message from check node i to variable node j at iteration ℓ. The check-to-variable update follows the standard MS rule:
+
+µiℓ,j = (1 − 2si)
+
+sgn(νjℓ′−,i1) · min |νjℓ′−,i1|,
+
+j′∈N (i)\j
+
+(23)
+
+where N (i) denotes the set of neighbors of check node i. The sign function is defined as:
+
+−1, x < 0,
+
+sgn(x) =
+
+(24)
+
++1, otherwise.
+
+For constraint nodes, we set si = 0. Variable node updates differ between standard variable nodes and equalizer nodes. The variable-to-check message is computed as:
+
+νjℓ,i =
+
+µiℓ′,j .
+
+i′∈N (j)\i
+
+(25)
+
+Unlike standard MS decoding, there are no explicit prior channel LLRs associated with the variable nodes. Instead, for the original Tanner graph, the prior information comes from the constraint node messages, while for the equalizer graph, the prior information is the sum of the incoming check node messages. Thus, prior LLRs are already incorporated into Eq. (25).
+
+154 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+0 0 1 0 1 0 0 1 0 1 0 0 0 0 1 0 0 0 0 1
+
+1 0 0 1 0 1 0 0 1 0 1 0 0 0 0 1 0 0 0 0
+
+ 
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+ 
+
+ 
+
+1
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+ 
+
+
+
+P
+
+=
+
+ 
+
+
+
+0 1
+
+1 0
+
+0 0
+
+1 1
+
+0 0
+
+0 0
+
+1 0
+
+0 0
+
+1 1
+
+0 0
+
+0 0
+
+0 0
+
+0 0
+
+1 1
+
+0 0
+
+0 0
+
+0 0
+
+0 0
+
+1 0
+
+0
+
+ 
+
+0
+
+ 
+
+(21)
+
+ 
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+ 
+
+1
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+ 
+
+0
+
+1
+
+0
+
+1
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+ 
+
+00101001000010000000
+
+Each SISO estimator exchanges extrinsic information with
+the constraint nodes. The input messages to the j-th equalizer node, µ1ℓ,j, . . . , µℓρ,j, are first permuted according to πj, the permutation used to transform Mj into G, yielding µℓπj(1),j, . . . , µπℓ j(ρ),j. Additionally, the SISO estimator receives prior LLRs for each fault Lj(f1), . . . , Lj(fρ). Based
+on this information, it computes a set of a posteriori LLRs, Ljℓ,πj(1), . . . , Lℓj,πj(ρ). Applying πj−1 to the output, the message sent to the i-th constraint node corresponds to the
+extrinsic information:
+
+σjℓ,i
+
+=
+
+Lℓ
+j,πj−1
+
+(i)
+
+−
+
+µℓi,j .
+
+(26)
+
+At each iteration, the a posteriori LLR for variable node j is
+
+computed as:
+
+qjℓ =
+
+µiℓ,j ,
+
+(27)
+
+i∈N (j)
+
+and the hard decision is made based on:
+
+eˆℓj =
+
+0, 1,
+
+qjℓ ≥ 0, qjℓ < 0.
+
+(28)
+
+The decoder runs until the estimated error vector eˆ satisfies the measured syndrome or until a predefined maximum number of iterations is reached.
+
+A. Complexity analysis
+We analyze the complexity for a (γ, ρ)-regular QLDPC code with n variable nodes and m check nodes. In each iteration each variable node sends γ + 1 messages, and each check node sends ρ messages, thus, the decoder performs NO = n(γ + 1) + mρ operations on the original Tanner graph. Each equalizer node runs the BCJR algorithm, whose complexity depends on the trellis size. The trellis has two states, each one with two incoming edges, and ρ layers. Each layer requires 4 operations for forward/backward metric updates and 5 additional operations to compute output LLRs. Thus, the BCJR complexity per layer is NBLCJR = 9 operations, leading to a total of NBCJR = 9ρ per equalizer. Each constraint node computes γ + 1 check-to-variable messages, resulting in:
+
+NE = 9mρ + n(γ + 1).
+
+(29)
+
+The total complexity per iteration is:
+
+N = 2n(γ + 1) + 10mρ,
+
+(30)
+
+which scales as O(n).
+
+π1 SISO
+
+π2 SISO
+
+π3 SISO
+
+π4 SISO
+
+π5 SISO
+
+Fig. 8: Example of the extended Tanner graph for a (2, 4)regular QLDPC code. The top layer of nodes are the codes’ check nodes, represented as red squares; following, there are the code’s variable nodes, represented as blue circles. To each variable node it is connected a constraint node, which can be interpreted as an always satisfied check node. The last layer consists of equalizer nodes, represented as large blue circles, where ad hoc permutations to the edges are applied.
+B. Convergence improvement
+During our decoder experiments, we encountered several challenges related to convergence. The combination of error patterns and the presence of trapping sets in the decoding graph often prevents the decoder from converging to a valid error estimate. Since we aim to avoid using Ordered Statistics Decoding (OSD), we adopt several heuristics to enhance convergence while maintaining linear complexity in the blocklength. Our primary strategy is the already mentioned decoding diversity. In our implementation, we use three decoders. The first two employ a layered schedule, which we describe below, while the third uses a flooding (or parallel) schedule.
+The layered schedule reflects the natural flow of information from each fault through the decoding graph, mirroring the structure of the circuit. At each iteration, messages propagate sequentially: first from the equalizers to the adjacent constraint nodes, then to the variable nodes. From there, messages are passed to the check nodes and then returned to the variables.
+
+155 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+The updated variable messages are subsequently sent back to the constraint nodes, which in turn update the equalizers. Finally, a hard decision is made on the variable nodes based on the current messages.
+In all three decoders, we modify the variable-to-check update rule using the Min-Sum with Past Influence (MS-PI) algorithm [15], which is specifically designed for BB codes. In MS-PI, the update for a variable node labeled L or R is defined as:
+
+νj(,ℓi) =
+
+ν, ν + νj(,ℓi−1),
+
+if sgn(ν) = sgn(νj(,ℓi−1)) otherwise,
+
+(31)
+
+where νj(,ℓi) denotes the message passed from variable node j to check node i at iteration ℓ, and ν is the current message computed from neighboring check nodes. MS-PI has been shown to closely approach the performance of BPOSD0 when decoding BB codes over depolarizing noise. In our setting, we also observe a notable performance improvement. Specifically, the first and third decoders apply the MS-PI rule (31) to variable nodes labeled L, while the second decoder applies it to those labeled R. Additionally, all decoders use a normalization factor of β = 0.875 in the check update rule to help stabilize message magnitudes and improve convergence.
+
+V. SIMULATION RESULTS
+We assess the performance of our decoder with numerical simulations. We consider the scenario of decoding the 90, 8, 10 and the 144, 12, 12 BB codes from [11], with a measuring setting equivalent to the one in Fig. 2 (except for the fact that BB codes is (3, 6)-regular). We use the stim package [16] to sample the errors from our circuit. We compare the turbo annihilation (TA) decoder with the standard normalized MS with normalization parameter β = 0.875 and the BPOSD0 decoder, both running on the circuit-level Tanner graph. We utilize the diversity decoding strategy as described before, employing a total of 3 decoders, each one running for a maximum of 300 iterations. Similarly, the BPOSD0 runs for a maximum of 300 iterations before the post-processing phase. The MS decoder, in contrast, runs for 900 iterations, to fairly compare it with TA. For each value of p being the fault probability for each noisy component in the circuit, i.e., the probability of having depolarizing noise on data qubits and X ancillas at the beginning of the circuit and the probability of CNOT faults, we evaluate the logical error rate as the ratio between the number of logical errors and the number of trials. The minimum number of failures to stop the simulation is set to 10, while the minimum amount of trials is set to 107.
+In Fig. 9 we illustrate the results for the 90, 8, 10 code. The abscissa axis represents fault probability p in the circuit, while the ordinate axis represents the probability of logical error. It is evident how our decoder performs consistently better than MS, closely approaching BPOSD0 for all the values of p.
+In Fig. 10 we illustrate the results for the 144, 12, 12 code (also known as Gross code). We highlight how the TA decoder
+
+10-2
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+10-3
+
+Fig. 9: Performance comparison between TA, MS and BPOSD0, for the 90, 8, 10 BB code.
+
+10-2
+
+10-4
+
+10-6
+
+1
+
+2
+
+3
+
+4
+
+5
+
+10-3
+
+Fig. 10: Performance comparison between TA, MS and BPOSD0, for the 144, 12, 12 BB code.
+
+still performs better than MS, although with a smaller gap than the previous case; nevertheless, it is able to approach BPOSD0 performance for low enough probability of error.
+It would be valuable to investigate the reasons behind the performance gap observed between the two codes. While a thorough analysis is still needed, our preliminary intuition suggests that this discrepancy arises from differences in parameter optimization. As discussed in the previous section, the performance of our decoder is highly sensitive to certain parameters that require careful tuning. Consequently, we believe that applying heuristic optimization techniques could significantly enhance the decoder’s performance, even for the larger code.
+VI. CONCLUSIONS
+In this paper, we introduced a new decoding framework for correcting correlated noise in quantum circuits. Unlike the
+
+156 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+traditional circuit-level Tanner graph approach, which tries to determine the exact location of faults, our method focuses on estimating the overall effect of those faults on the data qubits. We take advantage of the time correlation between hook errors coming from the same ancilla qubits to reduce the size of the decoding graph and eliminate short cycles and low-degree variable nodes. Our decoder combines a set of trellis-based BCJR equalizers with a standard min-sum decoder to perform turbo equalization of the correlated noise. This approach achieves significantly better performance than MS on the circuit-level Tanner graph, and it is able to come close to the performance of BPOSD0 while maintaining O(n) complexity. Because it operates on a much smaller graph that preserves the structure of the original code, the decoder is scalable and well-suited for large quantum systems. Future work includes implementing the TA decoder in standard quantum memory experiments and systematically evaluating its performance in scenarios with more complex noise correlations. The presence of measurement errors and faulty gates in every stabilizer measurement necessitates additional mechanisms, particularly to mitigate the detrimental effects of short cycles in the circuitlevel Tanner graph. While the results presented in this paper are preliminary, a key innovation lies in the TA decoder’s novel approach to handling hook errors. This contribution represents a foundational component that will be integrated into more advanced decoders capable of addressing the full complexity of circuit-level noise. Additionally, exploring more efficient SISO estimators could eliminate the need for BCJR, leading to further reductions in decoding complexity.
+REFERENCES
+[1] O. Higgott, T. C. Bohdanowicz, A. Kubica, S. T. Flammia, and E. T. Campbell, “Improved Decoding of Circuit Noise and Fragile Boundaries
+
+of Tailored Surface Codes,” Physical Review X, vol. 13, p. 031007, July 2023.
+[2] A. Gong, S. Cammerer, and J. M. Renes, “Toward Low-latency Iterative Decoding of QLDPC Codes Under Circuit-Level Noise,” arXiv preprint arXiv:2403.18901, 2024.
+[3] K.-Y. Kuo and C.-Y. Lai, “Fault-Tolerant Belief Propagation for Practical Quantum Memory,” arXiv preprint arXiv:2409.18689, 2024.
+[4] S. Wolanski and B. Barber, “Ambiguity Clustering: an Accurate and Efficient Decoder for qLDPC codes,” arXiv preprint arXiv:2406.14527.
+[5] M. Tu¨chler and A. C. Singer, “Turbo Equalization: An Overview,” IEEE Transactions on Information Theory, vol. 57, no. 2, pp. 920–952, 2011.
+[6] A. Viterbi, “Error Bounds for Convolutional Codes and an Asymptotically Optimum Decoding Algorithm,” IEEE Transactions on Information Theory, vol. 13, no. 2, pp. 260–269, 1967.
+[7] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal Decoding of Linear Codes for Minimizing Symbol Error Rate (Corresp.),” IEEE Transactions on Information Theory, vol. 20, no. 2, pp. 284–287, 1974.
+[8] M. H. Taghavi and P. H. Siegel, “Graph-Based Decoding in the Presence of ISI,” IEEE Transactions on Information Theory, vol. 57, no. 4, pp. 2188–2202, 2011.
+[9] B. Kurkoski, P. Siegel, and J. Wolf, “Joint Message-Passing Decoding of LDPC Codes and Partial-Response Channels,” IEEE Transactions on Information Theory, vol. 48, no. 6, pp. 1410–1422, 2002.
+[10] A. R. Calderbank and P. W. Shor, “Good Quantum Error-Correcting Codes Exist,” Physical Review A, vol. 54, pp. 1098–1105, Aug. 1996.
+[11] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-Threshold and Low-Overhead Fault-Tolerant Quantum Memory,” Nature, vol. 627, no. 8005, pp. 778–782, 2024.
+[12] A. Kay, “Tutorial on the quantikz package,” arXiv preprint arXiv:1809.03842, 2023.
+[13] Y. Wang and M. Fossorier, “Doubly Generalized LDPC Codes,” in 2006 IEEE International Symposium on Information Theory, pp. 669–673, 2006.
+[14] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Transactions on Communications, vol. 53, no. 8, pp. 1288–1299, 2005.
+[15] D. Chytas, N. Raveendran, and B. Vasic´, “Enhanced Min-Sum Decoding of Quantum Codes Using Previous Iteration Dynamics,” arXiv preprint arXiv:2501.05021, 2025.
+[16] C. Gidney, “Stim: a Fast Stabilizer Circuit Simulator,” Quantum, vol. 5, p. 497, July 2021.
+
+157 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:58:39 UTC from IEEE Xplore. Restrictions apply.
+
+

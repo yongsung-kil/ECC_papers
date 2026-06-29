@@ -1,0 +1,447 @@
+Neural Enhanced Belief Propagation on Factor Graphs
+
+arXiv:2003.01998v5 [cs.LG] 16 Mar 2021
+
+Victor Garcia Satorras UvA-Bosch Delta Lab
+University of Amsterdam v.garciasatorras@uva.nl
+
+Max Welling UvA-Bosch Delta Lab University of Amsterdam
+m.welling@uva.nl
+
+Abstract
+A graphical model is a structured representation of locally dependent random variables. A traditional method to reason over these random variables is to perform inference using belief propagation. When provided with the true data generating process, belief propagation can infer the optimal posterior probability estimates in tree structured factor graphs. However, in many cases we may only have access to a poor approximation of the data generating process, or we may face loops in the factor graph, leading to suboptimal estimates. In this work we first extend graph neural networks to factor graphs (FG-GNN). We then propose a new hybrid model that runs conjointly a FG-GNN with belief propagation. The FG-GNN receives as input messages from belief propagation at every inference iteration and outputs a corrected version of them. As a result, we obtain a more accurate algorithm that combines the benefits of both belief propagation and graph neural networks. We apply our ideas to error correction decoding tasks, and we show that our algorithm can outperform belief propagation for LDPC codes on bursty channels.
+1 Introduction
+Graphical models (C. M. Bishop 2006; K. P. Murphy 2012) are a structured representation of locally dependent random variables, that combine concepts from probability and graph theory. A standard way to reason over these random variables is to perform inference
+Proceedings of the 24th International Conference on Artificial Intelligence and Statistics (AISTATS) 2021, San Diego, California, USA. PMLR: Volume 130. Copyright 2021 by the author(s).
+
+on the graphical model using message passing algorithms such as Belief Propagation (BP) (Pearl 2014; K. Murphy, Weiss, and Jordan 2013). Provided that the true generative process of the data is given by a non-loopy graphical model, BP is guaranteed to compute the optimal (posterior) marginal probability distributions. However, in real world scenarios, we may only have access to a poor approximation of the true distribution of the graphical model, leading to suboptimal estimates. In addition, an important limitation of belief propagation is that on graphs with loops BP computes an approximation to the desired posterior marginals or may fail to converge at all.
+In this paper we present a hybrid inference model to tackle these limitations. We cast our model as a message passing method on a factor graph that combines messages from BP and from a Graph Neural Network (GNN). The GNN messages are learned from data and complement the BP messages. The GNN receives as input the messages from BP at every inference iteration and delivers as output a refined version of them back to BP. As a result, given a labeled dataset, we obtain a more accurate algorithm that outperforms either Belief Propagation or Graph Neural Networks when run in isolation in cases where Belief Propagation is not guaranteed to obtain the optimal marginals.
+Belief Propagation has demonstrated empirical success in a variety of applications: Error correction decoding algorithms (McEliece, D. J. C. MacKay, and Cheng 1998), combinatorial optimization in particular graph coloring and satisfiability (Braunstein and Zecchina 2004), inference in markov logic networks (Richardson and Domingos 2006), the Kalman Filter is a special case of the BP algorithm (Yedidia, Freeman, and Weiss 2003; Welch, G. Bishop, et al. 1995) etc. One of its most successful applications is Low Density Parity Check codes (LDPC) (Gallager 1962) an error correction decoding algorithm that runs BP on a loopy bipartite graph. LDPC is currently part of the WiFi 802.11 standard, it is an optional part of 802.11n and 802.11ac, and it has been adopted for 5G, the
+
+Neural Enhanced Belief Propagation on Factor Graphs
+
+fifth generation wireless technology that began wide deployment in 2019. Despite being a loopy algorithm, its bipartite graph is typically very sparse which reduces the number of loops and increases the cycle size. As a result, in practice LDPC has shown excellent results in error correction decoding tasks and performs close to the Shannon limit in Gaussian channels.
+However, a Gaussian channel is an approximation of the more complex noise distributions we encounter in the real world. Many of these distributions have no analytical form, but we can approximate them from data. In this work we show the robustness of our algorithm over LDPC codes when we assume such a nonanalytical form. Our hybrid method is able to closely match the performance of LDPC in Gaussian channels while outperforming it for deviations from this assumption (i.e. a bursty noise channel (Gilbert 1960; Kim et al. 2018)).
+The three main contributions in our work are: i) We extend the standard graph neural network equations to factor graphs (FG-GNN). ii) We present a new hybrid inference algorithm, Neural Enhanced Belief Propagation (NEBP) that refines BP messages using the FGGNN. iii) We apply our method to an error correction decoding problem for a non-Gaussian (bursty) noise channel and show clear improvement on the Bit Error Rate over existing LDPC codes.
+
+2 Background
+
+2.1 Factor Graphs
+
+Factor graphs (Loeliger 2004) are a convenient way of
+
+representing graphical models. A factor graphs is a bi-
+
+partite graph that interconnects a set of factors fs(xs) with a set of variables xs, each factor defining depen-
+
+dencies among its subset of variables. A global proba-
+
+bility distribution p(x) can be defined as the product
+
+of
+
+all
+
+these
+
+factors
+
+p(x)
+
+=
+
+1 Z
+
+s∈F fs(xs), where Z
+
+is the normalization constant of the probability distri-
+
+bution. A visual representation of a Factor Graph is
+
+depicted in the left image of Figure 1.
+
+2.2 Belief Propagation
+Belief Propagation (C. M. Bishop 2006), also known as the sum-product algorithm, is a message passing algorithm that performs inference on graphical models by locally marginalizing over random variables. It exploits the structure of factor graphs, allowing more efficient computation of the marginals. Belief Propagation directly operates on factor graphs by sending messages (real valued functions) on its edges. These messages exchange beliefs of the sender nodes about
+
+the receiver nodes, thereby transporting information about the variable’s probabilities. We can distinguish two types of messages: those that go from variables to factors and those that go from factors to variables.
+Variable to factor: µxm→fs (xm) is the product of all incoming messages to variable xm from all neighbor factors N (xm) except for factor fs.
+
+µxm→fs (xm) =
+
+µfl→xm (xm)
+
+(1)
+
+l∈N (xm)\fs
+
+Factor to variable: µfs→xn (xn) is the product of the factor fs itself with all its incoming messages from all variable neighbor nodes except for xn marginalized over all associated variables xs except xn.
+
+µfs→xn (xn) =
+
+fs(xs)
+
+µxm→fs (xm) (2)
+
+xs \xn
+
+m∈N (fs)\n
+
+To run the Belief Propagation algorithm, messages are initialized with uniform probabilities, and the two above mentioned operations are then recursively run until convergence. One can subsequently obtain marginal estimates p(xn) by multiplying all incoming messages from the neighboring factors:
+
+p(xn) ∝
+
+µfs→xn (xn)
+
+(3)
+
+s∈N (xn)
+
+From now on, we simplify notation by removing the argument of the messages function. In the left side of Figure 1 we can see the defined messages on a factor graph where black squares represent factors and blue circles represent variables.
+
+2.3 LDPC codes
+In this paper we will apply our proposed method to error correction decoding. Low Density Parity Check (LDPC) codes (Gallager 1962; D. J. MacKay 2003) are linear codes used to correct errors in data transmitted through noisy communication channels. The sender encodes the data with redundant bits while the receiver has to decode the original message. In an LDPC code, a parity check sparse matrix H ∈ B(n−k)×n is designed, such that given a code-word x ∈ Bn of n bits the product of H and x is constrained to equal zero: Hx = 0. H can be interpreted as an adjacency matrix that connects n variables (i.e. the transmitted bits) with (n − k) factors, i.e. the parity checks that must sum to 0. The entries of H are 1 if there is an edge between a factor and a variable, where rows index factors and columns index variables. For a linear code (n, k), n is the number of variables and (n − k) the number of factors. The prior probability of the transmitted
+
+Victor Garcia Satorras, Max Welling
+
+code-word P (x) ∝ 1[Hx = 0 mod 2] can be factorized
+as:
+
+P (x) ∝ 1
+
+xn = 0 mod 2 = fs(xs) (4)
+
+s
+
+n∈N (s)
+
+s
+
+At the receiver we get a noisy version of the codeword, r. The noise is assumed to be i.i.d, therefore we can express the probability distribution of the received code-word as x as P (r|x) = n P rn|xn . Finally we can express the posterior distribution of the transmitted code-word given the received signal as:
+
+P (x|r) ∝ P (x)P (r|x)
+
+(5)
+
+Equation 5 is a product of factors, where some factors in P (x) (eq. 4) are connected to multiple variables expressing a constraint among them. Other factors P (r|x) are connected to a single variable expressing a prior distribution for that variable. A visual representation of this factor graph is shown in the left image of Figure 1. Finally, in order to infer the transmitted code-word x given r, we can just run (loopy) Belief Propagation described in section 2.2 on the Factor Graph described above (equation 5). In other words, error correction with LDPC codes can be interpreted as an instance of Belief Propagation applied to its associated factor graph.
+
+3 Related Work
+One of the closest works to our method is (Satorras, Akata, and Welling 2019) which also combines graphical inference with graph neural networks. However, in that work, the model is only applied to the Kalman Filter, a hidden Gaussian Markov model for time sequences, and all factor graphs are assumed to be pair-wise. In our case, we run the GNN in arbitrary Factor Graphs, and we hybridize Belief Propagation, which allows us to enhance one of its main applications (LDPC codes). Other works also learn an inference model from data like Recurrent Inference Machines (Putzky and Welling 2017) and Iterative Amortized Inference (Marino, Yue, and Mandt 2018). However, in our case we are presenting a hybrid algorithm instead of a fully learned one. Additionally in (Putzky and Welling 2017) graphical models play no role.
+Our work is also related to meta learning (Schmidhuber 1987; Andrychowicz et al. 2016) in the sense that it learns a more flexible algorithm on top of an already existing one. It also has some interesting connections to the ideas from the consciousness prior (Bengio 2017) since our model is an actual implementation of a sparse factor graph that encodes prior knowledge about the task to solve.
+
+Another interesting line of research concerns the convergence of graphical models with neural networks. In (Mirowski and LeCun 2009), the conditional probability distributions of a graphical model are replaced with trainable factors. (Johnson et al. 2016) learns a graphical latent representation and runs Belief Propagation on it. Combining the strengths of convolutional neural networks and conditional random fields has shown to be effective in image segmentation tasks (Chen et al. 2014; Zheng et al. 2015). A model to run Neural Networks on factor graphs was also introduced in (Zhang, Wu, and Lee 2019). However, in our case, we simply adjust the Graph Neural Network equations to the factor graph scenario as a building block for our hybrid model (NEBP).
+More closely to our work, (Yoon et al. 2018) trains a graph neural network to estimate the marginals in Binary Markov Random Fields (Ising model) and the performance is compared with Belief Propagation for loopy graphs. In our work we are proposing a hybrid method that combines the benefits of both GNNs and BP in a single model. In (Nachmani, Be’ery, and Burshtein 2016) some weights are learned in the edges of the Tanner graph for High Density Parity Check codes, in our case we use a GNN on the defined graphical model and we test our model on Low Density Parity Check codes, one of the standards in communications for error decoding. A subsequent work (Liu and Poulin 2019) uses the model from (Nachmani, Be’ery, and Burshtein 2016) for quantum error correcting codes. Recently, (Kuck et al. 2020) presented a strict generalization of Belief Propagation with Neural Networks, in contrast, our model augments Belief Propagation with a Graph Neural Network which learned messages are not constrained to the message passing scheme of Belief Propagation, refining BP messages without need to backpropagate through them.
+4 Method
+4.1 Graph Neural Network for Factor Graphs
+We will propose a hybrid method to improve Belief Propagation (BP) by combining it with Graph Neural Networks (GNNs). Both methods can be seen as message passing on a graph. However, where BP sends messages that follow directly from the definition of the graphical model, messages sent by GNNs must be learned from data. To achieve seamless integration of the two message passing algorithms, we will first extend GNNs to factor graphs.
+Graph Neural Networks (Bruna et al. 2013; Defferrard, Bresson, and Vandergheynst 2016; Kipf and Welling
+
+Neural Enhanced Belief Propagation on Factor Graphs
+
+Figure 1: Visual representation of a LDPC Factor Graph (left) and its equivalent representation in our Graph Neural Network (right). In the Factor Graph, factors are displayed as black squares, variables as blue circles. In the Graph Neural Network, nodes associated to factors are displayed as black circles. Nodes associated to variables are displayed as blue circles.
+
+v→e e→v
+
+GNN mit→j = φe(hti, hjt , aij ) mjt = i∈N (j) mit→j hjt+1 = φv([mjt , aj ], hjt )
+
+Table 1: Graph Neural Network equations.
+
+2016) operate on graph-structured data by modelling interactions between pairs of nodes. A graph is defined as a tuple G = (V, E), with nodes v ∈ V and edges e ∈ E. Table 1 presents the edge and node operations that a GNN defines on a graph using similar notation as (Gilmer et al. 2017).
+The message passing procedure of a GNN is divided into two main steps: from node embeddings to edge embeddings v → e, and from edge to nodes e → v. Where hti is the embedding of a node vi, φe is the edge operation, and mti→j is the embedding of the eij edge. First, the edge embeddings mi→j are computed, which one can interpret as messages, next we sum all node vj incoming messages. After that, the embedding representation for node vj, hjt , is updated through the node function φv. Values aij and aj are optional edge and node attributes respectively.
+In order to integrate the GNN messages with those of BP we have to run them on a Factor Graph. In (Yoon et al. 2018) a GNN was defined on pair-wise factor graphs (ie. a factor graph where each factor contains only two variables). In their work each variable of the factor graph represents a node in the GNN, and each factor connecting two variables represented an edge in the GNN. Properties of the factors were associated with edge attributes aij. The mapping between GNNs
+
+and Factor Graphs becomes less trivial when each factor may contain more than two variables. We can then no longer consider each factor as an edge of the GNN. In this work we propose special case of GNNs to run on factor graphs with an arbitrary number of variables per factor.
+Similarly to Belief Propagation, we first consider a Factor Graph as a bipartite graph Gf = (Vf , Ef ) with two type of nodes Vf = X ∪ F , variable-nodes vx ∈ X and factor-nodes vf ∈ F , and two types of edge interactions, depending on if they go from factor-node to variable-node or vice-versa. With this graph definition, all interactions are again pair-wise (between factor-nodes and variable-nodes in the bipartite graph).
+A mapping between a factor graph and the graph we use in our GNN is shown in Figure 1. All factors from the factor graph are assumed to be factor-nodes in the GNN. We make an exception for factors connected to only one variable which we simply consider as attributes of that variable-node in order to avoid redundant nodes. Once we have defined our graph, we use the GNN notation from Table 1, and we re-write it specifically for this new graph. From now on we reference these new equations as FG-GNN. Equations for the FG-GNN are presented in Table 2.
+
+v→e e→v
+
+FG-GNN
+mtx→f = φx→f (hft , hxt , ax→f ) mtf→x = φf→x(hxt , hft , af→x)
+mft = x∈N (f ) mxt →f mtx = f ∈N (x) mtf →x htf+1 = φvf ([mtf , af ], htf ) htx+1 = φvx ([mtx, av], hxt )
+
+Table 2: Graph Neural Network for a Factor Graph
+
+Victor Garcia Satorras, Max Welling
+
+Notice that in the GNN we did not have two different kind of variables in the graph and hence we only needed one edge function φe (but notice that the order of the arguments of this function matters so that a message from i → j is potentially different from the message in the reverse direction). For the FG-GNN however, we now have two types of nodes, which necessitate two types of edge functions, φx→f and φf→x, depending on whether the message was sent by a variable or a factor node. In addition, we also have two type of node embeddings hx and hf for the two types of nodes vx and vf . Again we sum over all incoming messages for each node, but now in the node update we have two different functions, φvf for the factor-nodes and φvx for the variable-nodes. The optional edge attributes are now labeled as ax→f , af→x, and the node attributes af and av.
+4.2 Neural Enhanced Belief Propagation
+Now that we have defined the FG-GNN we can introduce our hybrid method that runs co-jointly with Belief Propagation on a factor graph, we denote this new method Neural Enhanced Belief Propagation (NEBP). At a high level, the procedure is as follows: after every Belief Propagation iteration, we input the BP messages into the FG-GNN. The FG-GNN then runs for two iterations and updates the BP messages. This step is repeated recursively for N iterations. After that, we can compute the marginals from the refined BP messages.
+We first define the two functions BP(·) and FG-GNN(·). BP(·) takes as input the factor-to-node messages µft →x, then runs the two BP updates eqns. 1 and 2 respectively and outputs the result of that computation as µ˜ tf→x, µ˜ xt →f . We initialize µf0→x as uniform distributions.
+The function FG-GNN(·) runs the equations displayed in Table 2. At every t iteration we give it as input the quantities ht = {htx|x ∈ X } ∪ {htf |f ∈ F }, ax→f , af→x and av. ht is initialized randomly as h0 by sampling from a normal distribution. Moreover, the attributes ax→f and af→x are provided to the function FG-GNN(·) as the messages µ˜ tx→f and µ˜ ft →x obtained from BP(·), as an exception, the subset of messages from µ˜ f→x that go from a singleton factor fl to its neighbor variable are treated as attributes av. The outputs of FG-GNN(·) are the updated latent vectors hxt+1 and the latent messages mft →x computed as part of the FG-GNN algorithm in Table 2. These latent representations Mft →x = mtf→x ∪ hxt+1 will be used to update the current message estimates µ˜ tf→x, specifically hxt+1 will refine those messages µ˜ tfl→x that go from a singleton factor to its neighbor variable and
+
+mft →x will refine the rest of messages µ˜ tf→x\µ˜ ftl→x. All other variables computed inside FG-GNN(·) are
+kept internal to this function.
+
+Finally, fs(·) and fu(·) take as input the embeddings Mtf→x and output a refinement for the current message estimates µ˜ ft →x. Particularly, fs(·) outputs a positive scalar value that multiplies the current estimate,
+and fu(·) outputs a positive vector which is summed
+to the estimate. Both functions encompass two Multi
+Layer Perceptrons (MLP), one MLP takes as input the node embeddings htx+1, and outputs the refinement for the singleton factor messages, the second MLP takes as input the edge embeddings mft →x and outputs a refinement for the rest of messages µ˜ tf→x\µ˜ ftl→x. In summary, the hybrid algorithm thus looks as follows:
+
+µ˜ ft →x, µ˜ xt →f = BP µft →x
+
+Mft →x = FG-GNN ht, µ˜ ft →x, µ˜ xt →f
+
+(6)
+
+µtf+→1x = µ˜ ft →xfs(Mtf→x) + fu(Mtf→x)
+
+After running the algorithm for N iterations. We ob-
+tain the estimate pˆ(xi) by using the same operation as in Belief Propagation (eq. 3), which amounts to
+taking a product of all incoming messages to node xi, i.e. pˆ(xi) ∝ s∈N (xi) µfs→xi . From these marginal distributions we can compute any desired quantity on
+a node.
+
+4.3 Training and Loss
+
+The loss is computed from the estimated marginals pˆ(x) and ground truth values xgt, which we assume known during training. In the LDPC experiment the ground truths xgt are the transmitted bits which are known by the receiver during the training stage.
+
+Loss(Θ) = L (xgt, pˆ(x)) + R
+
+(7)
+
+During training we back-propagate through the whole
+
+multi-layer estimation model (with each layer an it-
+
+eration of the hybrid model), updating the FG-GNN,
+
+fs(·) and fu(·) weights Θ. The number of training iterations is chosen by cross-validating. In our experi-
+
+ments we use the binary cross entropy loss for L. The
+
+regularization term R is the mean of fu(·) outputs,
+
+i.e.
+
+R=
+
+1 N
+
+t mean fu(Mft →x) . It encourages the
+
+model to behave closer to Belief Propagation. In case,
+
+fu(·) output is set to 0, the hybrid algorithm would
+
+be equivalent to Belief Propagation. This happens
+
+because fs(·) outputs a scalar value that on its own only modifies the norm of µ˜ ft →x. Belief Propagation
+can operate on unnormalized beliefs, although it is a
+
+common practice to normalize them at every BP(·)
+
+iteration to avoid numerical instabilities. Therefore,
+
+only modifying the norm of the messages on its own
+
+doesn’t change our hybrid algorithm because messages
+
+are being normalized at every BP iteration.
+
+Neural Enhanced Belief Propagation on Factor Graphs
+
+Figure 2: Graphical illustration of our Neural Enhanced Belief Propagation algorithm. Three modules are depicted in each iteration {BP, FG-GNN, Comb.}. Each module is associated to each one of the three lines from Equation 6.
+
+5 Experiments
+We analyze the performance of Belief Propagation, FG-GNNs, and our Neural Enhanced Belief Propagation (NEBP) in an error correction task where Belief Propagation is also known as LDPC (Section 2.3) and in an inference task on the Ising model (Section 5.2). In both FG-GNN and NEBP, the edge operations σx→f , σf→x defined in Section 4 consist of two layers Multilayer Perceptrons (MLP). The node update functions σvf and σvx consist of two layer MLPs followed by a Gated Recurrent Unit (Chung et al. 2014). Functions fs(·) and fu(·) from the NEBP combination module also contain two layers MLPs.
+5.1 Low Density Parity Check codes
+LDPC codes, explained in section 2.3 are a particular case of Belief Propagation run on a bipartite graph for error correction decoding tasks. Bipartite graphs contain cycles, hence Belief Propagation is no longer guaranteed to converge nor to provide the optimal estimates. Despite this lack of guarantees, LDPC has shown excellent results near the Shannon limit (D. J. MacKay and Neal 1996) for Gaussian channels. LDPC assumes a channel with an analytical solution, commonly a Gaussian channel. In real world scenarios, the channel may differ from Gaussian or it may not even have a clean analytical solution to run Belief Propagation on, leading to sub-optimal estimates. An advantage of neural networks is that, in such cases, they can learn a decoding algorithm from data.
+In this experiment we consider the bursty noisy channel from (Kim et al. 2018), where a signal xi is transmitted through a standard Gaussian channel zi ∼ N (0, σc2), however this time, a larger noise signal wi ∼ N (0, σb2) is added with a small probability ρ.
+
+More formally:
+
+ri = xi + zi + piwi
+
+(8)
+
+Where ri is the received signal, and pi follows a Bernoulli distribution such that pi = 1 with probability ρ, and pi = 0 with probability 1 − ρ. In our experiments, we set ρ = 0.05 as done in (Kim et al. 2018). This bursty channel describes how unexpected signals may cause interference in the middle of a transmitted frame. For example, radars may cause bursty interference in wireless communications. In LDPC, the SNR is assumed to be known and fixed for a given frame, yet, in practice it needs to be estimated with a known preamble (the pilot sequence) transmitted before the frame. If bursty noise occurs in the middle of the transmission, the estimated SNR is blind to this new noise level.
+Dataset: We use the parity check matrix H ”96.3.963” from (D. MacKay and Codes 2009) for all experiments, with n = 96 variables and k = 48 factors, i.e. a transmitted code-word x ∈ Bn contains 96 bits. The training dataset consists of pairs of received and transmitted code-words {(rd, xd)}1≤d≤L. The transmitted code-words x are used as ground truth for training the decoding algorithm. The received codewords r are obtained by transmitting x through the bursty channel from Equation 8. We generate samples for SNRdb = {0, 1, 2, 3, 4}. Regarding the bursty noise σb, we randomly sample its standard deviation from a uniform distribution σb ∈ [0, 5]. We generate a validation partition of 750 code-words (150 code-words per SNRdb value). For the training partition we keep generating samples until convergence, i.e. until we do not see further improvement in the validation accuracy.
+Training procedure: We provide as input to the model the received code-word rd and the SNR for that code-word. These values are provided as node
+
+Victor Garcia Satorras, Max Welling
+
+Figure 3: Bit Error Rate (BER) with respect to the Signal to Noise Ratio (SNR) for different bursty noise values σb ∈ {0, 1, 2, 3, 4, 5}.
+
+attributes av described in Section 4. We run the algo-
+
+rithms for 20 iterations and the loss is computed as the
+
+cross entropy between the estimated xˆ and the ground
+
+truth xd. We use an Adam optimizer (Kingma and Ba 2014) with a learning rate 2e−4 and batch size of
+
+1. The number of hidden features is 32 and all acti-
+
+vation functions are ’Selus’ (Klambauer et al. 2017).
+
+As a evaluation metric we compute the Bit Error Rate
+
+(BER), which is the number of error bits divided by
+
+the total amount of transmitted bits. The number of
+
+test code-words we used to evaluate each point from
+
+our
+
+plots
+
+(Figure
+
+3)
+
+is
+
+at
+
+least
+
+200 BEˆ R·n
+
+,
+
+where
+
+n
+
+is
+
+the
+
+number of bits per code-word and BEˆR is the esti-
+
+mated Bit Error Rate for that point.
+
+Baselines: Beside the already mentioned methods (FG-GNN and standard LDPC error correction decoding), we also run two extra baselines. The first one we call Bits baseline, which consists of independently estimating each bit that maximizes p(ri|xi). The other baseline, called LDPC-bursty, is a variation of LDPC, where instead of considering a SNR with a noise level σc2 = var[z], we consider the noise distribution from Equation 8 such that now the noise variance is σ2 = var[z + pw] = σc2 + (ρ(1 − ρ) + ρ2)Eσb2 [σb2]. This is a fairer comparison to our learned methods, because even if we are blind to the σb value, we know there may be a bursty noise with probability ρ and σb ∼ U(0, 5).
+
+Results: In Figure 3 we show six different plots for each of the σb values {0, 1, 2, 3, 4, 5}. In each plot we
+
+Figure 4: Bit Error Rate (BER) with respect to σb value for a fixed SNR=3.
+sweep the SNR from 0 to 4. Notice that for σb = 0 the bursty noise is non-existent and the channel is equivalent to an Additive White Gaussian Noise channel (AWGN). LDPC has analytically been designed for this channel obtaining its best performance here. The aim of our algorithm is to outperform LDPC for σb > 0 while still matching its performance for σb = 0. As shown in the plots, as σb increases, the performance of NEBP and FG-GNN improves compared to the other methods, with NEBP always achieving the best performance, and getting close to the LDPC performance for the AWGN channel (σb = 0). In summary, the hybrid method is more robust than LDPC, obtain-
+
+Neural Enhanced Belief Propagation on Factor Graphs
+
+Model
+FG-GNN BP BP (damping) NEBP
+
+True Graphical Model (u = 0)
+0.0141 0.0190 0.0055 0.0091
+
+Mismatch (u = 0.2)
+0.0570 0.0711 0.0519 0.0509
+
+Mismatch (u = 0.4)
+0.1170 0.2081 0.1318 0.1057
+
+Mismatch (u = 0.8)
+0.1659 0.3121 0.1961 0.1697
+
+Table 3: KL divergence between the true marginals p(x) and the estimated marginals for the Ising model dataset.
+
+ing competitive results to LDPC for AWGN channels but still outperforming it when bursty interferences are present. The FG-GNN instead, obtains relatively poor performance compared to LDPC for small σb, demonstrating that belief propagation is still a very powerful tool compared to pure learned inference for this task. Our NEBP is able to combine the benefits from both LDPC and the FG-GNN to achieve the best performance, exploiting the adaptability of FG-GNN and the prior knowledge of Belief Propagation. Finally, LDPC-bursty shows a more robust performance as we increase σb but it is significantly outperformed by NEBP in bursty channels, and it also performs slightly worse than LDPC for the AWGN channel (σb = 0).
+In order to better visualize the decrease in performance as the burst variance increases, we sweep over different σb values for a fixed SNR=3. The result is shown in Figure 4. The larger σb, the larger the BER. However, the performance decreases much less for our NEBP method than for LDPC and LDPC-bursty. In other words, NEBP is more robust as we move away from the AWGN assumption. We want to emphasize that in real world scenarios, the channel may always deviate from gaussian. Even if assuming an AWGN channel, its parameters (SNR) must be estimated in real scenarios. This potential deviations make hybrid methods a very promising approach.
+
+5.2 Ising model
+
+In this section we evaluate our algorithm in a Binary
+
+Markov Random field, specifically the Ising model. We
+
+consider a squared lattice type Ising model defined by
+
+the
+
+following
+
+energy
+
+function
+
+p(x)
+
+=
+
+1 Z
+
+exp(b · x +
+
+x·
+
+J · x), with variables x ∈ {+1, −1}|V|. Where b bi-
+
+ases individual variables and J couples pairs of neigh-
+
+bor variables, bi ∼ N (0, 0.252), Jij ∼ N (0, 1) and |V|
+
+is the number of variables which is set to 16. This
+
+energy function can be equally expressed as a prod-
+
+uct of singleton factors fi(xi) = exibi and pairwise factors fij(xi, xj) = eJijxixj . The task is to obtain
+
+the marginal probabilities p(xi) given the factor graph
+
+p(x). As in the LDPC experiment, we assume some
+
+hidden dynamics not defined in the graphical model
+
+that difficult the inference task, we do that by adding
+
+a soft interaction among all pairs of variables sampled
+
+from a uniform probability distribution uij ∼ U (0, u). The Ising model is a loopy graphical model where the performance of Belief Propagation may significantly degrade due to cyclic information. Therefore, in this experiment we include a stronger baseline where Belief Propagation messages are damped to reduce the effect of cyclic information (Koller and Friedman 2009). This modification significantly increased its performance. In contrast, in the previous experiment (LDPC), damping didn’t lead to improvements. This is coherent with the fact that LDPC graphs are very sparse which minimizes cyclic information and Belief Propagation performs optimally for non cyclic graphs.
+Implementation details: Belief Propagation takes the previously defined factors fi and fij as the input factors fs defined in Section 2.2. In the FG-GNN baseline, values bi and Jij are inputted as variable and factor attributes av and af from Table 2 respectively. Finally, our NEBP combines FG-GNN and BP messages as explained in Section 4.2. The damping parameter was chosen by cross-validating on the validation partition. All algorithms are run for 10 iterations. Results have been averaged over three runs. All methods have been trained for 400 epochs, Adam optimizer, batch size 1 and learning rate 1e−5. All hidden layers have 64 neurons and the ’Leaky Relu’ (Xu et al. 2015) as activation function.
+Results: In Table 3 we present the KL divergence between the estimated marginals and the ground truth p(x) for each model trained for different u values. Since we are working with cyclic data, BP is not an exact inference algorithm even when provided with the true graphical model (u = 0). Damping decreases the cyclic information such that for this setting (u = 0) Damping Belief Propagation gives the best performance. NEBP gets a significant margin w.r.t. BP and FG-GNN for (u = 0) and it outperforms other methods when the mismatch u increases. As u gets larger, we reach a point (i.e. u = 0.8) where BP messages are no longer beneficial such that the learned messages (FG-GNN) alone perform best while we still get a close performance with NEBP.
+
+Victor Garcia Satorras, Max Welling
+
+6 Conclusions
+In this work, we presented a hybrid inference method that enhances Belief Propagation by co-jointly running a Graph Neural Network that we designed for factor graphs. In cases where the data generating process is not fully known (e.g. the parameters of the graphical model need to be estimated from data), belief propagation doesn’t perform optimally. Our hybrid model in contrast is able to combine the prior knowledge encoded in the graphical model (albeit with the wrong parameters) and combine this with a (factor) graph neural network with its parameters learned from labeled data on a representative distribution of channels. Note that we can think of this as meta-learning because the FG-GNN is not trained on one specific channel but on a distribution of channels and therefore must perform well on any channel sampled from this distribution without knowing its specific parameters. We tested our ideas on a state-of-the-art LDPC implementation with realistic bursty noise distributions. Our experiments clearly show that the neural enhancement of LDPC improves performance both relative to LDPC and relative to FG-GNN as the variance in the bursts gets larger.
+References
+Andrychowicz, Marcin et al. (2016). “Learning to learn by gradient descent by gradient descent”. In: Advances in neural information processing systems, pp. 3981–3989.
+Bengio, Yoshua (2017). “The consciousness prior”. In: arXiv preprint arXiv:1709.08568.
+Bishop, Christopher M (2006). Pattern recognition and machine learning. springer.
+Braunstein, Alfredo and Riccardo Zecchina (2004). “Survey propagation as local equilibrium equations”. In: Journal of Statistical Mechanics: Theory and Experiment 2004.06, P06007.
+Bruna, Joan et al. (2013). “Spectral networks and locally connected networks on graphs”. In: arXiv preprint arXiv:1312.6203.
+Chen, Liang-Chieh et al. (2014). “Semantic image segmentation with deep convolutional nets and fully connected crfs”. In: arXiv preprint arXiv:1412.7062.
+Chung, Junyoung et al. (2014). “Empirical evaluation of gated recurrent neural networks on sequence modeling”. In: arXiv preprint arXiv:1412.3555.
+Defferrard, Micha¨el, Xavier Bresson, and Pierre Vandergheynst (2016). “Convolutional neural networks on graphs with fast localized spectral filtering”. In: Advances in neural information processing systems, pp. 3844–3852.
+
+Gallager, Robert (1962). “Low-density parity-check codes”. In: IRE Transactions on information theory 8.1, pp. 21–28.
+Gilbert, Edgar N (1960). “Capacity of a burst-noise channel”. In: Bell system technical journal 39.5, pp. 1253–1265.
+Gilmer, Justin et al. (2017). “Neural message passing for quantum chemistry”. In: Proceedings of the 34th International Conference on Machine LearningVolume 70. JMLR. org, pp. 1263–1272.
+Johnson, Matthew J et al. (2016). “Composing graphical models with neural networks for structured representations and fast inference”. In: Advances in neural information processing systems, pp. 2946– 2954.
+Kim, Hyeji et al. (2018). “Communication algorithms via deep learning”. In: arXiv preprint arXiv:1805.09317.
+Kingma, Diederik P and Jimmy Ba (2014). “Adam: A method for stochastic optimization”. In: arXiv preprint arXiv:1412.6980.
+Kipf, Thomas N and Max Welling (2016). “Semisupervised classification with graph convolutional networks”. In: arXiv preprint arXiv:1609.02907.
+Klambauer, Gu¨nter et al. (2017). “Self-normalizing neural networks”. In: Advances in neural information processing systems, pp. 971–980.
+Koller, Daphne and Nir Friedman (2009). Probabilistic graphical models: principles and techniques. MIT press.
+Kuck, Jonathan et al. (2020). “Belief Propagation Neural Networks”. In: arXiv preprint arXiv:2007.00295.
+Liu, Ye-Hua and David Poulin (2019). “Neural belief-propagation decoders for quantum errorcorrecting codes”. In: Physical review letters 122.20, p. 200501.
+Loeliger, H-A (2004). “An introduction to factor graphs”. In: IEEE Signal Processing Magazine 21.1, pp. 28–41.
+MacKay, David and Error-Correcting Codes (2009). “David MacKay’s Gallager code resources”. In: URL: http://www. inference. phy. cam. ac. uk/mackay/CodesFiles. html.
+MacKay, David JC (2003). Information theory, inference and learning algorithms. Cambridge university press.
+MacKay, David JC and Radford M Neal (1996). “Near Shannon limit performance of low density parity check codes”. In: Electronics letters 32.18, pp. 1645–1646.
+Marino, Joseph, Yisong Yue, and Stephan Mandt (2018). “Iterative amortized inference”. In: arXiv preprint arXiv:1807.09356.
+
+Neural Enhanced Belief Propagation on Factor Graphs
+
+McEliece, Robert J., David J. C. MacKay, and JungFu Cheng (1998). “Turbo decoding as an instance of Pearl’s” belief propagation” algorithm”. In: IEEE Journal on selected areas in communications 16.2, pp. 140–152.
+Mirowski, Piotr and Yann LeCun (2009). “Dynamic factor graphs for time series modeling”. In: Joint European Conference on Machine Learning and Knowledge Discovery in Databases. Springer, pp. 128–143.
+Murphy, Kevin, Yair Weiss, and Michael I Jordan (2013). “Loopy belief propagation for approximate inference: An empirical study”. In: arXiv preprint arXiv:1301.6725.
+Murphy, Kevin P (2012). Machine learning: a probabilistic perspective. MIT press.
+Nachmani, Eliya, Yair Be’ery, and David Burshtein (2016). “Learning to decode linear codes using deep learning”. In: 2016 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, pp. 341–346.
+Pearl, Judea (2014). Probabilistic reasoning in intelligent systems: networks of plausible inference. Elsevier.
+Putzky, Patrick and Max Welling (2017). “Recurrent inference machines for solving inverse problems”. In: arXiv preprint arXiv:1706.04008.
+Richardson, Matthew and Pedro Domingos (2006). “Markov logic networks”. In: Machine learning 62.1-2, pp. 107–136.
+Satorras, Victor Garcia, Zeynep Akata, and Max Welling (2019). “Combining Generative and Discriminative Models for Hybrid Inference”. In: arXiv preprint arXiv:1906.02547.
+Schmidhuber, Ju¨rgen (1987). “Evolutionary principles in self-referential learning, or on learning how to learn: the meta-meta-... hook”. PhD thesis. Technische Universita¨t Mu¨nchen.
+Welch, Greg, Gary Bishop, et al. (1995). “An introduction to the Kalman filter”. In.
+Xu, Bing et al. (2015). “Empirical evaluation of rectified activations in convolutional network”. In: arXiv preprint arXiv:1505.00853.
+Yedidia, Jonathan S, William T Freeman, and Yair Weiss (2003). “Understanding belief propagation and its generalizations”. In: Exploring artificial intelligence in the new millennium 8, pp. 236–239.
+Yoon, KiJung et al. (2018). “Inference in probabilistic graphical models by graph neural networks”. In: arXiv preprint arXiv:1803.07710.
+Zhang, Zhen, Fan Wu, and Wee Sun Lee (2019). “Factor Graph Neural Network”. In: arXiv preprint arXiv:1906.00554.
+Zheng, Shuai et al. (2015). “Conditional random fields as recurrent neural networks”. In: Proceedings of
+
+the IEEE international conference on computer vision, pp. 1529–1537.
+
+

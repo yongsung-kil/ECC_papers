@@ -1,0 +1,992 @@
+arXiv:1609.01567v2 [cs.IT] 26 Sep 2017
+
+1
+OpenCL/CUDA algorithms for parallel decoding
+of any irregular LDPC code using GPU
+Jan Broulim, Alexander Ayriyan, Vjaceslav Georgiev, Hovik Grigorian
+Abstract The development of multicore architectures supporting parallel data processing has led to a paradigm shift, which affects communication systems significantly. This article provides a scalable parallel approach of an iterative LDPC decoder, presented in a tutorial-based style. It is suitable for decoding any irregular LDPC code without the limitation of the maximum node degree, and it includes a parallel calculation of the syndrome. This is the main difference from algorithms presented so far. The proposed approach can be implemented in applications supporting massive parallel computing, such as GPU or FPGA devices. The implementation of the LDPC decoder with the use the OpenCL and CUDA frameworks is discussed and the performance evaluation is given at the end of this contribution.
+Index Terms Decoding, Error correction, LDPC, GPU, Parallel algorithms, Parallel decoder, OpenCL/CUDA
+I. INTRODUCTION Since Shannon’s work, the topic of error detection and error correction codes, related to channel coding, has seen significant growth [1]. The first serious discussion of error correction codes emerged in Hamming’s work in 1950 [2], where Hamming provided a method for the correction of single and the detection of double bit errors with minimum redundancy being added to the transmitted data. Since the second half of the 20th century, error correction codes have attracted much attention in research work and have been utilized in many applications, including deep space photography transmission [3], television broadcasting services [4], Ethernet [5], wireless communication networks, and other signal processing applications. This paper provides a parallel approach of an iterative Low Density Parity Check (LDPC) [6]–[8] decoder, presented in a tutorial style. The presented parallel approach can be implemented in platforms allowing massive parallel computing, such as Graphics Processing Units (GPUs), Field Programmable Gate Arrays (FPGAs), and computer data storages. The proposed approach is not limited for certain families of LDPC codes, but it supports decoding of any irregular LDPC code, and the maximum node degree is not limited. Benchmarks of the LDPC decoder implemented using Open Computing Language (OpenCL) [9] and Compute Unified Device Architecture (CUDA) [10] frameworks are discussed and the performance comparison is given at the end of this contribution.
+Jan Broulim with the University of West Bohemia, Univerzitni 22, 306 14 Pilsen and the Institute of Experimental and Applied Physics, Czech Technical University in Prague, Horska 3a/22, 128 00, Praha 2, Czech Republic. (e-mail: broulim@kae.zcu.cz).
+Alexander Ayriyan is with the Laboratory of Information Technologies, Joint Institute for Nuclear Research, Joliot-Curie 6, 141980 Dubna, Russia (e-mail: ayriyan@jinr.ru).
+Vjaceslav Georgiev is with the University of West Bohemia, Univerzitni 22, 306 14 Pilsen, Czech Republic (e-mail: georg@kae.zcu.cz). Hovik Grigorian is with the Laboratory of Information Technologies, Joint Institute for Nuclear Research, Joliot-Curie 6, 141980 Dubna, Russia (e-mail: hovik.grigorian@gmail.com).
+
+2
+
+This contribution can be easily used as a tutorial for implementing an irregular LDPC decoder as well as a general parallel approach for additional optimizations in order to make further accelerations. The parallel decoding approach is suitable for fast decoders implemented in GPUs. It is also highly applicable for accelerating Bit Error Rate simmulations used in designing new LDPC codes.
+Inspiring by various comparisons between the OpenCL and CUDA applications from different fields of research, e. g. [11]– [13], we developed parallel algorithms for LDPC decoding using OpenCL and CUDA. Several contributions published so far deal with a general comparison of OpenCL and CUDA [14] and with fitting the LDPC decoder on GPU platform [15]–[24]. However, the decoders are mostly limited for applications with some families of LDPC codes or bounded with the maximum node degree in the associated Tanner graph [25]. The proposed parallel approach is suitable for decoding any irregular LDPC code without the bound in terms of the maximum node degree.
+September 28, 2017
+
+II. LDPC A. Introduction
+LDPC codes [6] represent the coding technique with the best known error correcting capabilities. LDPC codes surpassed other codes [26], including turbo codes [27] and Reed Solomon codes [28], at the correcting performance, and they are becoming increasingly difficult to ignore in novel communication signal processing systems. Although the number of applications with LDPC codes has grown significantly with the increasing speed of computing resources, decoding is still a computionally intensive task, which limits the deployability of non-approximated decoding algorithms for medium and long block length codes. However, the decoding can be accelerated significantly with the use of parallel multicore computing architectures. Our work related to LDPC codes include [29]–[33].
+
+1960 Reed- Solomon codes
+
+1948 Information theory
+
+1962 LDPC codes
+
+1981 Tanner graphs
+
+1993 Turbo codes
+
+1948
+
+1995
+
+1950
+
+Rediscovery of LDPC codes
+
+First error correction codes
+
+2016 1998 LDPC surpassed turbo codes
+
+Fig. 1: Historical milestones in error correction coding theory.
+
+Information message m
+
+noise
+
+LDPC ENCODER
+
+Codeword c = mG
+
+CHA NNE L
+
+Corrupted codeword
+
+LDPC DECODER
+
+Estimation c
+
+Fig. 2: Communication process - transfering information through the noisy channel.
+
+3
+
+AWGN noise
+
+BPSK modulated y
+
+y+
+
+codeword
+
+[-1 -1 -1 -1]
+
+NOISE ADDITIO
+
+Estimation c
+LDPC DECODER
+
+Number of 1's
+
+Fig. 3: Utilization of the noisy channel for the Bit Error Rate simulation.
+
+B. Basic defitions
+
+In this section, we provide basic mathematical definitions related to channel coding and their associations to LDPC codes and the presented parallel decoder.
+Let C = (n, k) be a linear block code, where the number of code bits is denoted as n and the number of information bits is denoted as k. The information vector of k bits is denoted as m and the (kn) generator matrix is denoted as G. The codeword c is given by c = mG, which is encoding. The parity-check matrix associated with the code C is denoted as H. Any vector v is a codeword if and only if vHT = 0. The product of the multiplication vHT is called the syndrome. If the parity-check matrix H of code C is sparse, the code C is said to be the Low-Density Parity-Check (LDPC) code.
+The Tanner graph is a bipartite graph of sets of variable nodes and check nodes defined by the parity-check matrix H. If the element Hi,j = 1 (i corresponds to the row, while j corresponds to the column of the matrix H), an edge occurs between the check node ci and the variable node vj. The Tanner graph is used for LDPC decoding, which is briefly described in the following section.
+The vector of check nodes connected with j-th variable node is denoted as Mj be and the vector of variable nodes connected with the i-th check node is denoted as Ni. Then
+
+Mj = {i} ⇔ Hi,j = 1
+
+(1)
+
+Ni = {j} ⇔ Hi,j = 1
+
+(2)
+
+C. Decoding
+Decoding is a method for correcting errors in a corrupted codeword and the device performing decoding is called the decoder. The output of the decoder is usually called the estimation c, as illustrated in Fig. 2. Two main principles, listed below, can be considered for LDPC decoding. The principles are:
+• Hard-decision, e. g. Bit-Flipping • Soft-decision, working with probabilities during decoding process Soft-decision decoding, including the Sum-Product (SP) algorithm [8] and its derivations, is supposed for the implementation of the LDPC decoder and related benchmarks in this article. LDPC decoding is an iterative process of passing values as messages in the Tanner graph through its edges. An estimation of the codeword is calculated after finishing each iteration and if the estimation is a codeword of the LDPC code, decoding is stopped. If a codeword is not found after a certain number of iterations (typically 5-100), decoding is terminated as unsuccessful. All messages passed in the Tanner graph represent probabilities, which are used for calculating the estimation after finishing every iteration. Because the algorithm convergence is affected significantly by the parameters of the Tanner graph (especially the number of short cycles), there is no reason for performing relatively high number of iterations. Therefore, the maximum number of iterations is limited.
+
+4
+v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v v v v 10 11 12 13 v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v v v v 10 11 12 13
+
+c0 c1 c2 c3 c4 c5 c6
+
+c0 c1 c2 c3 c4 c5 c6
+
+(a) The first half of the iteration - from variable nodes to check nodes. Values used for the calculation of the message between v0 and c3 are highlighted.
+
+(b) The second half of the iteration - from check nodes to variable nodes. Values used for the calculation of the message between c3 and v0 are highlighted.
+
+Fig. 4: Tanner graph of the LDPC (14,7) code.
+
+Fig. 5: Data flow in the Tanner graph when passing values from v0 to c3 and back.
+
+Messages outgoing from one set of nodes are calculated with the use of the incoming values from the opposite set of nodes. Edges are used as interfaces for passing messages between the set of variable nodes and the set of check nodes, while each message outgoing from a node is passed through an edge. Each message outgoing from a node in the Tanner graph depends on the incoming messages from the connected nodes excluding the value received from the node which is the destination node, as Algorithm 1 describes in more detail. The process is ilustrated in the following example. As can be seen in Fig. 4, the variable node v0 is connected with check nodes c0, c2, c3, c5. Considering the calculation of the value being passed from v0 to c0, the value depends on the incoming values from the nodes c2, c3 and c5. In the second half of an iteration, the value being passed from c3 to v0 depends on the incoming values from v4, v11, v12. The data flow is shown in Fig. 5. The passed values are used for calculating estimations after each iteration.
+Soft-decision decoding, described in terms of the pseudocode, is listed in Algorithm 2 and in referenced Algorithm 1. Formulas used in the pseudocode represent the SP algorithm [8] without any simplifications and modifications.
+
+A. Introduction
+
+III. PARALLELIZATION OF LDPC DECODING USING GPU
+
+The SP algorithm works as an iterative process of message passing between the two sets of nodes (variable and check) in the Tanner graph. Although the number of operations needed to be performed grows with the number of edges in the graph, the algorithm can be accelerated when deployed on massive parallel architectures. Moreover, the potential acceleration achieved by the parallelization of calculations grows with the number of edges in the graph, because more values can be calculated simultaneously. This can lead to interesting applications for long block length codes providing excellent error correcting capabilities.
+
+5
+v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v v v v 10 11 12 13 c0 1 1 0 0 0 1 0 0 0 0 1 0 0 1 c1 0 0 1 1 0 1 0 0 0 1 0 1 0 0 c2 1 0 0 0 0 0 1 0 0 1 0 0 0 0 c3 1 0 0 0 1 0 0 0 0 0 0 1 1 0 c4 0 1 0 1 1 0 1 0 1 0 0 0 0 0 c5 1 0 1 0 0 0 0 1 1 0 0 0 0 1 c6 0 0 0 1 0 0 0 1 0 0 1 0 1 0
+(a) Parity-check matrix
+v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v v v v 10 11 12 13 c0 1 1 0 0 0 1 0 0 0 0 1 0 0 1 1st page c1 0 0 1 1 0 1 0 0 0 1 0 1 0 0 c2 1 0 0 0 0 0 1 0 0 1 0 0 0 0 c3 1 0 0 0 1 0 0 0 0 0 0 1 1 0 2nd page c4 0 1 0 1 1 0 1 0 1 0 0 0 0 0 c5 1 0 1 0 0 0 0 1 1 0 0 0 0 1 c6 0 0 0 1 0 0 0 1 0 0 1 0 1 0 3rd page
+(b) Parity-check matrix divided into pages
+Fig. 6: Parity-check matrix and the principle of the parallelization
+In recent years, there has been an increasing interest in implementing LDPC decoders in a wide variety of hardware architectures, including GPU. Several contributions deal with fitting the decoder on parallel architectures with the use OpenCL or CUDA frameworks and discuss the benchmarks [15]–[24]. However, work reviewed so far deal mostly with some families of LDPC codes and the application of parallel decoders is limited. In this article, we propose a general parallel approach for the decoder of any irregular LDPC code. The proposed approach divides calculations into a scalable number of threads. Each thread performs the calculation of the value outgoing through the edge, which is associated with the thread itself (edge-level parallelization). The approach was chosen because of its suitability for any irregular LDPC matrices, scalability for any code block lengths and deployablity on many hardware architectures. It is also convenient for derived algorithms for LDPC decoding, such as Min-Sum (MS) or adaptive MS [34]. In the previous work dealing with the parallel LDPC decoding, the calculations are mostly divided on the level of rows and columns of the parity-check matrices.
+B. Our approach
+In this section, we describe the approach of the edge-level parallelization used for the LDPC decoder. The principle is also shown in the illustrated example supported by consistent figures associated with the same LDPC (14,7) code. Considering the code given by the parity-check matrix (Fig. 6) and associated Tanner graph (Fig. 4), we define the following arrays used as address iterators for the parallel message passing algorithm (described in Algorithms 3 and 4):
+• a sorted tuple of variable nodes v = (vj) starting with the lowest index and associated tuple of check nodes c = (ci), such i, j : Hi,j = 1 and i ∈ [0, n − k), j ∈ [0, n); then, (ci, vj) unequivocally defines an edge in the Tanner graph; n is the number of variable nodes and n − k is the number of check nodes
+• a tuple of edges e = (ek) = (0, 1, 2, ..., |c|) • a tuple of connected edges t = (tk) with a variable node vk; then, tk = |(vk)|, vk ∈ v
+
+6
+
+Algorithm 1 Message passing 1: procedure VALUES TO CHECK NODES
+
+First half on an iteration
+
+Input: p, r
+
+Output: q
+
+2: for all j ∈ [0, |M|) do
+
+3:
+
+for all i ∈ [0, |N |) do
+
+4:
+
+qi0,j = p0j
+
+5:
+
+qi1,j = p1j
+
+6:
+
+for all i ∈ Mj \ i do
+
+7:
+
+qi0,j = qi0,j ri0 ,j
+
+8:
+
+qi1,j = qi1,j ri1 ,j
+
+9:
+
+end for
+
+10:
+
+end for
+
+11: end for
+
+12: end procedure
+
+13: procedure VALUES TO VARIABLE NODES
+
+Second half on an iteration
+
+Input: q
+
+Output: r
+
+14: for all j ∈ [0, |M|) do
+
+15:
+
+for all i ∈ [0, |N |) do
+
+16:
+
+ri0,j = 1
+
+17:
+
+ri1,j = 1
+
+18:
+
+for all j ∈ Ni \ j do
+
+19:
+
+ri0,j = ri0,j (1 − 2qi1,j )
+
+20:
+
+end for
+
+21:
+
+ri0,j = 1/2 + 1/2ri0,j
+
+22:
+
+ri1,j = 1 − ri0,j
+
+23:
+
+end for
+
+24: end for
+
+25: end procedure
+
+• a tuple of starting positions s = (sk) for iterating in order to calculate the value passed through the edge ek; sk = arg mink(vk : vk ∈ v)
+• a tuple u = (uk) of relative positions of the ek associated with the connected node vk; uk = k − |(vq) : q < k, vq = vk|
+
+Algorithm 2 Soft-decision decoding 1: procedure DECODEAWGN
+
+Input: y – output from a demodulator
+
+ITERATIONS – maximum number of iterations
+
+σ – variance of the channel
+
+Output: c
+
+2: q =Initialize(p, σ)
+
+3: r =Values to Variable Nodes(q)
+
+See Algorithm 1 (serial) or 5 (parallel approach)
+
+4: c =Calculate Estimation(r) 5: if cHT = 0 then return c
+
+6: end if
+
+7: for it ∈ (0, ITERATIONS) do
+
+8:
+
+q =Values to Check Nodes(r)
+
+9:
+
+r =Values to Variable Nodes(q)
+
+10:
+
+c =Calculate Estimation(r)
+
+11:
+
+if cHT = 0 then return c
+
+12:
+
+end if
+
+13: end for
+
+14: end procedure
+
+Algorithm 3 Initialize step 1: procedure INITIALIZE
+
+Input: y, σ
+
+Output: q
+
+2: for all yj ∈ y do
+
+3:
+
+pj = 1.0/(1 + exp(−2yj/σ2))
+
+4: end for
+
+5: for all j ∈ [0, |M|) do
+
+6:
+
+for all i ∈ [0, |N |) do
+
+7:
+
+qi,j = pj
+
+8:
+
+end for
+
+9: end for
+
+10: end procedure
+
+7
+SP algorithm
+See Algorithm 3 See Algorithm 1 (serial) or 5 (parallel approach) See Algorithm 4 (serial) or 6 (parallel approach) See Algorithm 1 (serial) or 5 (parallel approach)
+See Algorithm 7 for parallel approach
+Probabilities for AWGN
+
+The arrays defined above are used as address iterators for calculations of messages outgoing from variable nodes to check nodes (the first half of the iteration). We also show the arrays in the illustrative example. Supposing the code (14,7) given by the parity-check matrix in Fig. 6, the arrays derived by the principle described above are shown in Table I. The first half of
+
+8
+
+Algorithm 4 Calculation of the estimation 1: procedure CALCULATE ESTIMATION
+
+See Algorithm 5 for parralel approach
+
+Input: p, r
+
+Output: c
+
+2: for all j ∈ [0, |M|) do
+
+3:
+
+Qi0,j = pj0
+
+4:
+
+Qi1,j = p1j
+
+5:
+
+for all i ∈ Mj do
+
+6:
+
+Qi0,j = Q0i,j ri0,j
+
+7:
+
+Qi1,j = Q1i,j ri1,j
+
+8:
+
+end for
+
+9:
+
+if Qi0,j > Q1i,j then cj = 0
+
+10:
+
+else cj = 1
+
+11:
+
+end if
+
+12: end for
+
+13: end procedure
+
+the iteration of the LDPC decoding process calculates the values passed from the variable nodes to the check nodes. With the use of the array iterators we can perform such calculations without any complicated operations with array indices. The pseudo code is shown in Algorithm 5. The local index of the thread (according to the OpenCL terminology) is denoted as lid and the number of synchronized threads working in parallel is denoted as lgsize. Because all threads performing the calculations have to be synchronized after they finish writing in the memory and the number of synchronizable threads is strictly limited (e. g. 1024), the calculations are divided in several steps (pages) if necessary. This is when the number of edges is greater than the lgsize variable. An illustrative example for 12 synchronizable threads is shown in Fig. 6.
+The arrays used for the messages outgoing from the check nodes to the variable nodes are derived similarly. Keeping of the unique edge identifier (ci, vj) and associated edge index ek, the arrays c, v, e are sorted starting with the lowest check node index and other arrays are derived considering the messages outgoing from the check nodes. Such arrays are then denoted as e, c, v, t, s, u) in the following descriptions. As a demonstrative example, the arrays for the second half of the iteration are shown in Table II.
+The algorithm performing the second half of the iteration processes the arrays described above. Its pseudo code is shown in Algorithm 5. After finishing the second half of the iteration we can continue with the next iteration. The whole decoding principle remains the same, as described in Algorithm 1.
+For example, the address iterators for the LDPC (14,7) code are listed in Table I and Table II. Both tables are particularly useful for understanding the principle and checking the correctness of the implementation. To keep the consistency and for tutorial purposes, both tables are associated with the LDPC (14,7) code given by the parity-check matrix from Fig. 6.
+
+9
+
+array
+e v c t s u
+
+TABLE I: Addresses used for message calculation outgoing from variable nodes.
+values 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 0 0 0 0 1 1 2 2 3 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10 10 11 11 12 12 13 13 5320405164143104265542160316350 4444222233322222222222222222222 0 0 0 0 4 4 6 6 8 8 8 11 11 13 13 15 15 17 17 19 19 21 21 23 23 25 25 27 27 29 29 0123010101201010101010101010101
+
+array
+e v c t s u
+
+TABLE II: Addresses used for message calculation outgoing from check nodes.
+values 3 5 14 24 30 7 10 13 22 26 2 16 21 1 12 25 28 4 9 11 15 20 0 6 18 19 29 8 17 23 27 0 1 5 10 13 2 3 5 9 11 0 6 9 0 4 11 12 1 3 4 6 8 0 2 7 8 13 3 7 10 12 0000011111222333344444555556666 5555555555333444455555555554444 0 0 0 0 0 5 5 5 5 5 10 10 10 13 13 13 13 17 17 17 17 17 22 22 22 22 22 27 27 27 27 0123401234012012301234012340123
+
+IV. BIT ERROR RATE SIMULATOR
+Apart from the implementation of the LDPC decoder, we also considered a Bit Error Rate simulator based on the Additive White Gaussian Noise (AWGN). The simulator is a highly useful tool for benchmarks and code evaluation purposes. The code evaluation requires up to billions of operations to be performed and it is the most time-consuming part of algorithms designing new and innovative LDPC codes. Therefore, its parallelization leads to a significant acceleration of a code design process and more precise simulations become possible. Fast simulations are also needed for evaluating candidate solutions when applying algorithms for performing LDPC code optimizations.
+For BER calculation, codewords are modulated and transmitted through the AWGN channel given by the parameter σ (often recalculated to the Eb/N0 ratio), as can be seen in Fig. 3. The decoder then receives noised vectors, which are decoded, and Hamming distances between decoded vectors and original codewords are calculated. Due to the linearity of LDPC codes, it is enough to transmit only zero codewords and count the number of 1’s at the output of the decoder (Fig. 3).
+
+σ2 = 1 N0
+
+(3)
+
+R2
+
+k
+
+R=
+
+(4)
+
+n
+
+Algorithm 5 Parallel message passing 1: procedure ITERATE TO CHECK NODES
+
+Half on an iteration
+
+Input: r – incoming values e, s, t, u
+
+Output: q
+
+2: for (p = 0; p < totaledges; p+ = lgsize) do
+
+3:
+
+for i = slid+p to slid+p + tlid+p − 1 do
+
+4:
+
+if i = ulid+p + slid+p then continue
+
+5:
+
+end if
+
+6:
+
+value = perform calculations
+
+7:
+
+end for
+
+8:
+
+index = elid+p
+
+9:
+
+qindex = value
+
+10: end for
+
+11: end procedure
+
+12: procedure ITERATE TO VARIABLE NODES
+
+Half on an iteration
+
+Input: q – incoming values e, s, t, u
+
+Output: r
+
+13: for (p = 0; p < totaledges; p+ = lgsize) do
+
+14:
+
+for i = slid+p to slid+p + tlid+p − 1 do
+
+15:
+
+if i = ulid+p + slid+p then continue
+
+16:
+
+end if
+
+17:
+
+value = perform calculations
+
+18:
+
+end for
+
+19:
+
+index = elid+p
+
+20:
+
+rindex = value
+
+21: end for
+
+22: end procedure
+
+10
+Algorithm 1 Algorithm 1
+
+where k is the length of the information message, n is the length of the codeword, Eb is the energy per bit, and N0 is the noise power spectral density.
+V. OPENCL AND CUDA IMPLEMENTATION In current signal and data processing systems, there is an unambiguous trend to use parallel architectures to increase the processing speed, which plays a crucial role in real time applications and determines a deployability of computationally
+
+11
+
+Algorithm 6 Parallel calculation of the estimation 1: procedure CALCULATE ESTIMATION
+
+Parallel approach
+
+Input: r – incoming values s, t, v
+
+Output: c
+
+2: for (p = 0; p < totaledges; p+ = lgsize) do
+
+3:
+
+Q1 = rlid+p
+
+4:
+
+Q0 = 1 − rlid+p
+
+5:
+
+for i = slid+p to slid+p + tlid+p − 1 do
+
+6:
+
+Q1 = Q1ri+p
+
+7:
+
+Q0 = Q0(1 − ri+p)
+
+8:
+
+end for
+
+9:
+
+index = vlid+p
+
+10:
+
+if Q1 > Q0 then cindex = 1
+
+11:
+
+else cindex = 0
+
+12:
+
+end if
+
+13:
+
+index = vlid+p
+
+14:
+
+qindex = value
+
+15: end for
+
+16: end procedure
+
+complex algorithms in hardware. Hardware devices supporting massively parallel processing algorithms generally include Graphics Processing Units (GPUs), which are considered in this tutorial article.
+In this work, the CUDA and the OpenCL frameworks are used for GPU computations. The OpenCL is an open standard for parallel programming using the different computational devices, such as CPU, GPU, or FPGA. It provides a programming language based on the C99 standard. Unlike OpenCL, CUDA is only for NVIDIA devices starting from G80 series (so called CUDA-enabled GPUs). CUDA gives a possibility to write programs based on the C/C++ and Fortran languages. OpenCL and CUDA programming models are illustrated in Fig. 7.
+A. Necessary considerations When implementing an algorithm on GPU platform using OpenCL or CUDA frameworks, two main issues have to be
+considered: • size of the local memory (OpenCL) or shared memory (CUDA), • size of the working group (OpenCL) or block size (CUDA). GPU devices offer several types of the allocable memory, which differ in their speed and their size. The memory type used
+to store variables is specified in the source code by the prefix according to the OpenCL or CUDA syntax rules. Generally, the largest allocable size, typically in gigabytes for current devices, is located in the global memory. However, the global memory
+
+12
+
+Algorithm 7 Parallel calculation of the syndrome 1: procedure CALCULATE SYNDROME
+
+Parallel approach
+
+Input: c – codeword estimation, s, t, c, v
+
+Output: z – syndrome cHT
+
+2: for (p = 0; p < totaledges; p+ = lgsize) do
+
+3:
+
+value = 0
+
+4:
+
+for i = slid+p to slid+p + tlid+p − 1 do
+
+5:
+
+index = vlid+p
+
+6:
+
+value ˆ = cindex
+
+7:
+
+end for
+
+8:
+
+index = clid+p
+
+9:
+
+zindex = value
+
+10: end for
+
+11: end procedure
+
+PRIVATE MEMORY
+
+PRIVATE MEMORY
+
+PRIVATE MEMORY
+
+PRIVATE MEMORY
+
+REGISTER REGISTER MEMORY MEMORY
+
+REGISTER REGISTER MEMORY MEMORY
+
+WORK-ITEM WORK-ITEM WORK-GROUP
+
+WORK-ITEM WORK-ITEM WORK-GROUP
+
+LOCAL MEMORY
+
+LOCAL MEMORY
+
+THREAD BLOCK
+
+THREAD
+
+SHARED MEMORY
+
+THREAD BLOCK
+
+THREAD
+
+SHARED MEMORY
+
+DEVICE
+
+GLOBAL/CONSTANT MEMORY
+
+DEVICE
+
+GLOBAL/CONSTANT MEMORY
+
+HOST MEMORY (RAM) HOST (CPU)
+(a) OpenCL programing model.
+
+HOST MEMORY (RAM) HOST (CPU)
+(b) CUDA programming model.
+
+Fig. 7: OpenCL and CUDA programming models.
+
+is also the slowest one. A higher speed is provided by the local memory, but the size is typically only in kilobytes. Exceeding the limited size of the local memory usually leads to incorrect results without any warnings in the compilation report.
+Another crucial issue related to an algorithm implementation in GPU devices is the working group size. Although the GPU can run thousands of threads in parallel, these threads are not synchronized among each other in terms of writing in the memory. The threads are split into working groups and they can be synchronized only among other threads at the same working group. The size of the working groups is strictly limited (typically 1024).
+B. Coding Both frameworks processes two types of code
+
+13
+
+• host (runtime), running serially on CPU • kernel (device), running parallely on GPU
+
+Listing 1: Types
+
+typedef struct Edge{
+
+int index ; / / e array
+
+int vn ;
+
+/ / v array
+
+int cn ;
+
+/ / c array
+
+int edgesConnectedToNode ; / / t array
+
+int absoluteStartIndex ;
+
+/ / s array
+
+int relativeIndexFromNode ; / / u array
+
+} Edge ;
+
+typedef struct EdgeData{ double passedValue ;
+} EdgeData ;
+
+typedef struct CodeInfo{
+
+i n t t o t a l E d g e s ; / / number of edges
+
+int varNodes ;
+
+/ / number of v a r i a b l e nodes
+
+i n t checkNodes ; / / number of check nodes
+
+} CodeInfo ;
+
+The kernel is executed by the host. In CUDA, the kernel execution is more straightforward compared to OpenCL, as can be seen in the consistent examples in Listing 2. Both codes execute the kernel berSimulate in 100 working groups (blocks) with 512 threads per one working group. After finishing the kernel, the results are copied in the berOut array and processed by the host. Because the kernel function has to be considered as a function running in parallel, each thread has its own unique identifier - the combination of global ID and local ID in OpenCL or the combination of thread ID and block ID in CUDA, which can be recalculated vice versa. The parallel implementation of the function decodeAW GN , defined in Algorithm 2, is shown in Listing 3. Types used for code definition and passing messages are pointed in Listing 1.
+Some main differencies between the OpenCL and CUDA syntax rules are shown in Table III, which can be used when moving the source code from one framework to another one.
+
+TABLE III: Comparison of chosen OpenCL and CUDA syntax rules
+
+command thread synchronization
+kernel prefix local memory prefix
+get local ID get global ID
+
+OpenCL barrier(CLK_GLOBAL_MEM_FENCE);
+__kernel __local int lid = get_local_id(0); int gid = get_global_id(0);
+
+CUDA __syncthreads();
+__global__ __shared__ int lid = threadIdx.x; int gid = blockIdx.x * blockDim.x+ threadIdx.x;
+
+14
+
+VI. RESULTS
+A. Experimental evaluation
+Developed algorithms for LDPC decoding were run on NVIDIA Tesla K40 (Atlas) and Intel Xeon E5-2695v2 platforms [35], [36]. The NVIDIA device contains 2880 CUDA cores and runs at 745 MHz. The peak performance for double precision computations with floating point is 1.43 Tflops. The clock frequency of the Intel Xeon CPU is 2.4 GHz. All measurements include the time required for random generation, realised by the Xorshift+ algorithm and the Box-Muller transform.
+Benchmarks were performed through the calculation of the Bit Error Rate at Eb/N0 = 2dB for a code given by the NASA CCSDS standard [37] and its protographically expanded derivations [38], [39]. Based on the results obtained from NVIDIA Tesla K80, we got slightly better performance with the use of the CUDA framework, as shown in Fig. 9. Compared to the CPU implementation run on Intel Xeon, the acceleration grows with the size of working groups and the number of decoders running in parallel to the limit of the device, as illustrated in Fig. 8. GPU become very effective for longer block length codes, as also shown in Table IV. The ratio between CPU (C++ compiler with O3 optimization) and GPU was 25 for code of 262144 bits.
+
+B. Further acceleration
+To keep the generality, no simplifications in the decoding algorithm were applied and the experimental evaluation was performed with the use of the global memory. For further acceleration, several tasks can be considered, i. e. usage of the local memory, variables with a lower precision, look-up tables, or modifications of the algorithm for certain families of LDPC codes. For example, by moving the part of variables in the local (shared) memory, the decoder works approximately 40% faster in our experience. However, it is not possible to decode longer codewords because of the size limitations (240 kB of the local memory per working group). Another possibility for greater optimization could be the parallelization of less computationally intensive functions. After applying parrallel algorithms for passing messages, calculating the syndrome and the estimation, the most serial time-consuming operation is checking syndrome for all zero equality (approximately 34% of the decoding function in our experience).
+
+CPU with O3 optimization time to GPU time CPU with O3 optimization time to GPU time
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2
+
+(256,128)
+
+(1024,512)
+
+(4096,2048)
+
+0
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+size of the working group
+
+16
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2 (256,128) code
+
+(8192,4096) code
+
+0
+
+0
+
+200
+
+400
+
+600
+
+800
+
+1000
+
+number of decoders working in parallel
+
+(a) Acceleration dependence on the block (working group) for 100 decoders running in parallel.
+
+(b) Acceleration dependence on the number of decoders working in parallel when the size of the working group is 512.
+
+Fig. 8: Measured acceleration with the use of the CUDA framework.
+
+15
+
+Acceleration − CPU with O3 optimization against GPU
+
+26
+
+OpenCL
+
+24
+
+CUDA
+
+22
+
+20
+
+18
+
+16
+
+14
+
+12
+
+10
+
+8
+
+102
+
+103
+
+104
+
+105
+
+106
+
+code bits
+
+Fig. 9: Acceleration dependence on the length of the code. Comparison for OpenCL and CUDA frameworks (local group of 512 threads and 100 decoders working in parallel) against CPU implementation using C++ compiler with O3 optimization. Time was mesuared for 10000 decoded codewords at Eb/N0 =2dB.
+
+TABLE IV: Comparison for OpenCL and CUDA framework (local group of 512 threads and 100 decoders working in parallel) against the CPU implementation using C++ compiler with O3 optimization. Time was mesuared for 10000 decoded codewords at Eb/N0 =2dB.
+
+code
+(256,128) (512,256) (1024,512) (2048,1024) (4096,2048) (8192,4096) (16384,8192) (32768,16384) (65536,32768) (131072,65536) (262144,131072)
+
+edges
+1024 2048 4096 8192 16384 32768 65536 131072 242144 524288 1048576
+
+OpenCL
+0.32 s 0.64 s 1.26 s 2.56 s 5.54 s 12.08 s 26.27 s 57.40 s 117.31 s 244.36 s 510.06 s
+
+CUDA
+0.32 s 0.61 s 1.24 s 2.51 s 5.46 s 12.08 s 26.08 s 56.02 s 116.86 s 242.43 s 498.16 s
+
+C++
+24.24 s 26.98 s 99.59 s 105.56 s 415.35 s 545.74 s 1717.25 s 2893.91 s 8572.08 s 14082.71 s 35104.28 s
+
+C++ with O3 optimization
+3.11 s 6.24 s 12.52 s 25.27 s 69.17 s 172.67 s 367.75 s 1025.9 s 1989.26 s 5215.11 s 12287.61 s
+
+VII. CONCLUSIONS
+The development of multicore architectures supporting parallel data processing has led to a paradigm shift. Data processing algorithms has to be considered working asynchronously in separated threads, while the threads are synchronized only when writing in registers (memory). Therefore, there is a need for novel approaches and frameworks allowing an algorithm deployabality in modern signal and data processing systems. In this article, we touched with recent frameworks for Graphics Processing Units and probably the best known error correction coding technique, LDPC. In a tutorial-based style, we have provided a general parallel approach for decoding any irregular LDPC code and presented a demonstrative application in consistent examples associated with the LDPC (14,7) code. The presented approaches are based on the edge-level parallelization, where each thread performs the calculation of a particular value passed through the associated edge (one thread for one edge). The potential acceleration achieved by the parallelization of the calculations grows with the number of edges in the graph. This can lead to interesting applications for long block length codes providing excellent error correcting capabilities.
+
+16
+Hardware devices supporting massively parallel processing algorithms generally include GPUs. Differencies and similarities, in terms of the terminology and source codes, between the OpenCL and CUDA frameworks used for GPU programming were shown in the paper. Benchmarks for the OpenCL and CUDA approaches were performed on the NASA CCSDS (256,128) standard and its protographically expanded derivations [38], [39], and the results were compared against the C++ implementation.
+Results shown the acceleration which is up to 22 times compared against C++ with O3 optimization, and up to 58 times compared against C++ compilation without optimization.
+Because the OpenCL framework has found utilization in programming FPGA-based systems [40], the proposed algorithms and their potential modifications can be easily used in a wide variety of fast communication signal processing systems.
+ACKNOWLEDGMENT
+The access to the heterogeneous cluster HybriLIT, provided by the Joint Institute for Nuclear Research, Dubna, Russia, is highly appreciated.
+We would like to thank Vladimir Korenkov and Ivan Stekl for arranging the cooperation, Jan Busa for technical support and especially for professional LaTeX consultations, and Gheorge Adam for his professional comments and interest in this work.
+This work was suppported by the project SGS-2015-002 ’Modern methods in solution, design and application of electronic and communication systems’, by the project of Centre for Advanced Nuclear Technologies, no. TE01020455, and by the JINR grant No. 17-602-01.
+REFERENCES
+[1] I. B. Djordjevic, On Advanced FEC and Coded Modulation for Ultra-High-Speed Optical Transmission, in IEEE Communications Surveys & Tutorials, vol. 18, no. 3, pp. 1920-1951, thirdquarter 2016.
+[2] R. Hamming, Error detecting and error correcting codes. Bell Syst. Technical Journal. vol. 29, pp. 41-56, 1950. [3] A. Kenneth, D. Divsalar, S. Dolinar, Jon Hamkins, and Fabrizio Pollara. Design and Standardization of Low-Density Parity-Check Codes for Space
+Applications, SpaceOps 2008 Conference, SpaceOps Conferences. [4] ETSI standard, Digital Video Broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for Broadcasting,
+Interactive Services, News Gathering and other broadband satellite applications (DVB-S2), France, 2009. [5] 10 Gigabit Ethernet: IEEE Standard for Information Technology-Telecommunications and Information Exchange Between Systems-Local and Metropolitan
+Area Networks-Specific Requirements Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications, IEEE Standard 802.3an-2006, Aug. 2006 [Online]. Available: http://standards.ieee.org/getieee802/download/802.3an-2006.pdf [6] R. G. Gallager, Low Density Parity Check Codes, Transactions of the IRE Professional Group on Information Theory, Vol. IT-8, January 1962, pp. 2l-28. [7] N. Bonello, S. Chen and L. Hanzo, Low-Density Parity-Check Codes and Their Rateless Relatives, in IEEE Communications Surveys & Tutorials, vol. 13, no. 1, pp. 3-26, First Quarter 2011. [8] N. Wiberg, Codes and Decoding on General Graphs. PhD thesis, Dept. of Electrical Engineering, Lionkoing, Sweden, 1996. Lionkoing studies in Science and Technologz. Dissertation No. 440. [9] Khronos OpenCL Working Group, The OpenCL Specification, 2011 [Online]. Available: https://www.khronos.org/registry/cl/specs/opencl-1.2.pdf [10] NVIDIA Corporation, Cuda Runtime API, Reference manual, 2015 [Online]. Available: http://docs.nvidia.com/cuda/pdf/CUDA Runtime API.pdf [11] C. Heinemann, S. S. Chaduvu, A. Byerly and A. Uskov, OpenCL and CUDA software implementations of encryption/decryption algorithms for IPsec VPNs, 2016 IEEE International Conference on Electro Information Technology (EIT), Grand Forks, ND, 2016, pp. 0765-0770. [12] G. Bernab, G. D. Guerrero and J. Fernndez, CUDA and OpenCL implementations of 3D Fast Wavelet Transform, Circuits and Systems (LASCAS), 2012 IEEE Third Latin American Symposium on, Playa del Carmen, 2012, pp. 1-4. [13] J. P. Arun, M. Mishra and S. V. Subramaniam, Parallel implementation of MOPSO on GPU using OpenCL and CUDA, 2011 18th International Conference on High Performance Computing, Bangalore, 2011, pp. 1-10. [14] J. Fang, A. L. Varbanescu and H. Sips, A Comprehensive Performance Comparison of CUDA and OpenCL, 2011 International Conference on Parallel Processing, Taipei City, 2011, pp. 216-225.
+
+17
+[15] Y. Zhao, X. Chen, C.-W. Sham, Wai M. Tam, and Francis C.M. Lau Efficient Decoding of QC-LDPC Codes Using GPUs, Algorithms and Architectures for Parallel Processing. 2011
+[16] G. Falcao, V. Silva, L. Sousa and J. Andrade, Portable LDPC Decoding on Multicores Using OpenCL [Applications Corner], IEEE Signal Processing Magazine, vol. 29, no. 4, pp. 81-109, July 2012.
+[17] Y. Zhao and F. C. M. Lau, Implementation of Decoders for LDPC Block Codes and LDPC Convolutional Codes Based on GPUs, IEEE Transactions on Parallel and Distributed Systems, vol. 25, no. 3, pp. 663-672, March 2014.
+[18] S. Wang, S. Cheng and Q. Wu, A parallel decoding algorithm of LDPC codes using CUDA, 2008 42nd Asilomar Conference on Signals, Systems and Computers, Pacific Grove, CA, 2008, pp. 171-175.
+[19] M. Beermann, E. Monr, L. Schmalen and P. Vary, High speed decoding of non-binary irregular LDPC codes using GPUs, SiPS 2013 Proceedings, Taipei City, 2013, pp. 36-41.
+[20] Y. Zhao, X. Chen, C.-W. Sham, Wai M. Tam, and Francis C.M. Lau, Efficient Decoding of QC-LDPC Codes Using GPUs. 11th International Conference, ICA3PP, Melbourne, Australia, October 24-26, 2011, Proceedings, Part I
+[21] J.-Y. Park and K.-S. Chung, Parallel LDPC decoding using CUDA and OpenMP. Park and Chung EURASIP Journal on Wireless Communications and Networking, 2011.
+[22] X. Wen et al., A high throughput LDPC decoder using a mid-range GPU, 2014 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), Florence, 2014, pp. 7515-7519.
+[23] G. Wang, M. Wu, B. Yin and J. R. Cavallaro, High throughput low latency LDPC decoding on GPU for SDR systems, Global Conference on Signal and Information Processing (GlobalSIP), 2013 IEEE, Austin, TX, 2013, pp. 1258-1261.
+[24] J. Andrade, G. Falcao, V. Silva, Optimized FastWalsh-Hadamard Transform on GPUs for non-binary LDPC decoding, Parallel Computing, Vol. 40, 2014, pp. 449453.
+[25] R. M. Tanner, A Recursive Approach to Low Complexity Codes. Information Theory, IEEE Transactions, vol.27, no.5, pp.533,547, 1981. [26] D. A. Spielman, Finding good LDPC codes, 36th Annual Allerton Conference on Communication, Control, and Computing, 1998. [27] C. Berrou, A. Glavieux, P. Thitimajshima, Near Shannon limit error-correcting coding and decoding: Turbo-codes, Communications, 1993. ICC ’93
+Geneva. Technical Program, Conference Record, IEEE International Conference on , vol.2, no., pp.1064,1070 vol.2, 23-26 May 1993. [28] I. Reed, G. Solomon. Polynomial Codes over Certain Finite Field. J. Soc. Indust. Appl. Math. vol. 8 pp. 300-304, 1960. [29] J. Broulim, P. Broulim, J. Moldaschl, V. Georgiev and R. Salom, Fully parallel FPGA decoder for irregular LDPC codes, Telecommunications Forum
+Telfor (TELFOR), 2015 23rd, Belgrade, 2015, pp. 309-312. [30] R. Salom and J. Broulim, LDPC (512,480) genetic design as alternative to CRC in implementation of AODV routing protocol stack, Telecommunications
+Forum Telfor (TELFOR), 2015 23rd, Belgrade, 2015, pp. 643-645. [31] J. Broulim and V. Georgiev, LDPC error correction code utilization, Telecommunications Forum (TELFOR), 2012 20th, Belgrade, 2012, pp. 1048-1051. [32] J. Broulim, V. Georgiev, J. Moldaschl and L. Palocko, LDPC code optimization based on Tanner graph mutations, Telecommunications Forum (TELFOR),
+2013 21st, Belgrade, 2013, pp. 389-392. [33] J. Broulim, S. Davarzani, V. Georgiev and J. Zich, Genetic optimization of a short block length LDPC code accelerated by distributed algorithms, 2016
+24th Telecommunications Forum (TELFOR), Belgrade, 2016, pp. 1-4. [34] X. Wu, Y. Song, M. Jiang and C. Zhao, Adaptive-Normalized/Offset Min-Sum Algorithm, in IEEE Communications Letters, vol. 14, no. 7, pp. 667-669,
+July 2010. [35] Ryan Smith, NVIDIA Launches Tesla K80, GK210 GPU. AnandTech (November 17, 2014), http://www.anandtech.com/tag/gpus (last visit 02/06/2016). [36] Whitepaper of NVIDIAs Next Generation CUDA Compute Architecture: Kepler GK110/210. http://www.nvidia.com/object/gpu-architecture.html (last visit
+02/06/2016). [37] Short Block Length LDPC Codes for TC Synchronization and Channel Coding. CCSDS Experimental Specification. NASA, 2015. [38] J. Thorpe, Low-Density Parity-Check (LDPC) Codes Constructed from Protographs, IPN Progress Report 42-154, 2003. [39] Y. Fang, G. Bi, Y. L. Guan and F. C. M. Lau, A Survey on Protograph LDPC Codes and Their Applications, in IEEE Communications Surveys &
+Tutorials, vol. 17, no. 4, pp. 1989-2016, Fourthquarter 2015. [40] Implementing FPGA Design with the OpenCL Standard, Altera, 2013.
+Jan Broulim Biography text here.
+
+18 Alexander Ayriyan Biography text here.
+Vjaceslav Georgiev Biography text here.
+Hovik Grigorian Biography text here.
+
+19
+
+APPENDIX
+
+Listing 2: Execution of the kernel function from runtime
+
+(a) OpenCL source code
+
+(b) CUDA source code
+
+/ / C r e a t e an OpenCL c o n t e x t and command queue / / Build the program from source and create kernel c l c o n t e x t c o n t e x t = c l C r e a t e C o n t e x t (NULL,
+CL DEVICE TYPE GPU,& d e v i c e i d , NULL, NULL, NULL) ; cl cmd queue cmd queue = clCreateCommandQueue (
+c o n t e x t , d e v i c e i d , 0 , NULL) ; cl program program=clCreateProgramWithSource ( context
+, 1 , ( c o n s t char ∗∗)&s o u r c e , NULL, NULL) ; c l B u i l d P r o g r a m ( program , 1 , & d e v i c e i d , NULL, NULL, NULL) ; cl kernel kernelSim = clCreateKernel ( program , ”
+b e r S i m u l a t e ” , NULL) ; / / Create buffers cl mem codeInfo obj = c l C r e a t e B u f f e r ( context ,
+CL MEM READ ONLY, s i z e o f ( C o d e I n f o ) , NULL, NULL) ; cl mem edgesFromVariable obj =
+c l C r e a t e B u f f e r ( c o n t e x t , CL MEM READ ONLY, s i z e o f ( Edge ) ∗ t o t a l E d g e s , NULL, NULL) ; ... / / Set kernel parameters clSetKernelArg ( kernelSim , 0 , s i z e o f ( cl mem ) , ( void ∗) &codeInfo obj ) ; clSetKernelArg ( kernelSim , 1 , s i z e o f ( cl mem ) , ( void ∗) &edgesFromVariable obj ) ; ... / / Copy in the b u f f e r s clEnqueueWriteBuffer ( command queue , codeInfo obj , CL TRUE , 0 , s i z e o f ( C o d e I n f o ) , c o d e I n f o , 0 , NULL, NULL) ; clEnqueueWriteBuffer ( command queue , e d g e s F r o m V a r i a b l e o b j , CL TRUE , 0 , s i z e o f ( Edge ) ∗ t o t a l E d g e s , e d g e s F r o m V a r i a b l e , 0 , NULL, NULL) ; int decoders = 100; local item size = 512; global item size = local item size ∗ decoders ; / / E x e c u t e t h e OpenCL k e r n e l clEnqueueNDRangeKernel ( command queue , kernelSim , 1 , NULL, &g l o b a l i t e m s i z e , &l o c a l i t e m s i z e , 0 , NULL, NULL) ; / / Copy the r e s u l t s back clEnqueueReadBuffer ( command queue , berOut obj , CL TRUE , 0 , s i z e o f ( d o u b l e ) ∗ m a x P o i n t s , b e r O u t , 0 , NULL, NULL) ;
+
+CodeInfo∗ codeInfo obj ; cudaMalloc ( ( void ∗∗) &codeInfo obj , s i z e o f ( CodeInfo ) ) ; Edge∗ edgesFromVariable obj ; cudaMalloc ( ( void ∗∗) &edgesFromVariable obj ,
+s i z e o f ( Edge ) ∗totalEdges ) ; ... / / Copy to the d e v i c e cudaMemcpy ( codeInfo obj , codeInfo , s i z e o f ( CodeInfo ) ,
+cudaMemcpyHostToDevice ) ; cudaMemcpy ( edgesFromVariable obj , edgesFromVariable ,
+s i z e o f ( Edge ) ∗totalEdges , cudaMemcpyHostToDevice ) ; / / Same meaning a s l o c a l i t e m s i z e i n OpenCL int block size = 512; int decoders = 100; int blocks = decoders ; / / Kernel execution b e r S i m u l a t e <<< b l o c k s , b l o c k s i z e >>> ( c o d e I n f o o b j , edgesFromVariable obj , edgesFromCheck obj , simParams obj , simulatedPoints obj , edgeDataInitToCheck obj , edgeDataToVariable obj , edgeDataToCheck obj , randomGenVariables obj , estimation obj , syndrome obj , noisedVector obj , berOut obj ) ; / / Copy the r e s u l t s to h o s t cudaMemcpy ( berOut , berOut obj , sizeof ( double ) ∗maxPoints , cudaMemcpyDeviceToHost ) ;
+
+20
+
+Listing 3: Decoder function run from kernel
+
+(a) OpenCL source code
+
+(b) CUDA source code
+
+v o i d decodeAWGN ( g l o b a l C o d e I n f o ∗ c o d e I n f o , global Edge∗ edgesFromVariable , global Edge∗ edgesFromCheck , global EdgeData∗ edgeDataInitToCheck , global EdgeData∗ edgeDataToCheck , global EdgeData∗ edgeDataToVariable , global int∗ estimation , global int∗ syndromeOut , global double∗ noisedVector ,
+int i t e r a t i o n s , double sigma2 , int lid , int totalEdges , int lgsize , int glPageStartIndex ) {
+int index e , p; / / i n i t i a l messages to check nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+initProbCalcAWGN ( noisedVector , edgesFromVariable , edgeDataInitToCheck , sigma2 , glPageStartIndex , index e ) ;
+} b a r r i e r (CLK GLOBAL MEM FENCE) ; / / i t e r a t i o n back to variable nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+iterateToVariables (...) ; } // calculate the estimation b a r r i e r (CLK GLOBAL MEM FENCE) ; f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalEdges )
+estimationCalc ( . . . ) ; } / / calculate the syndrome b a r r i e r (CLK GLOBAL MEM FENCE) ; f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalEdges ) syndromeCalc ( edgesFromCheck , estimation , syndromeOut , glPageStartIndex , index e ) ; } b a r r i e r (CLK GLOBAL MEM FENCE) ; int cnodes = codeInfo [0]. checkNodes ; int parity = isAllZero ( syndromeOut , cnodes , glPageStartIndex ) ; / / i f syndrome i s ok , decoding i s s u c c e s s f u l i f ( p a r i t y == 1) return ; b a r r i e r (CLK GLOBAL MEM FENCE) ; int i ; / / forward and back i t e r a t i o n s for ( i = 0; i < i t e r a t i o n s ; i ++) { / / iteration to check nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalEdges )
+iterateToCheck ( . . . ) ; } b a r r i e r (CLK GLOBAL MEM FENCE) ; ... / / i t e r a t i o n back to variable nodes b a r r i e r (CLK GLOBAL MEM FENCE) ; ... // calculate the estimation b a r r i e r (CLK GLOBAL MEM FENCE) ; ... / / calculate the syndrome b a r r i e r (CLK GLOBAL MEM FENCE) ; / / i f syndrome i s ok , decoding i s s u c c e s s f u l parity = isAllZero ( syndromeOut , cnodes , glPageStartIndex ) ; i f ( p a r i t y == 1) return ; } }
+
+d e v i c e v o i d decodeAWGN ( C o d e I n f o ∗ c o d e I n f o , Edge∗ edgesFromVariable , Edge∗ edgesFromCheck , EdgeData∗ edgeDataInitToCheck , EdgeData∗ edgeDataToCheck , EdgeData∗ edgeDataToVariable , int∗ estimation , int∗ syndromeOut , double∗ noisedVector , int i t e r a t i o n s , double sigma2 , int lid , int totalEdges , int lgsize , int glPageStartIndex ) {
+int index e , p; / / i n i t i a l messages to check nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+initProbCalcAWGN ( noisedVector , edgesFromVariable , edgeDataInitToCheck , sigma2 , glPageStartIndex , index e ) ;
+} syncthreads () ;
+/ / i t e r a t i o n back to variable nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+iterateToVariables (...) ; }
+syncthreads () ; // calculate the estimation f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+estimationCalc ( . . . ) ; } / / calculate the syndrome
+syncthreads () ; f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize ) syndromeCalc ( edgesFromCheck , estimation , syndromeOut , glPageStartIndex , index e ) ; } syncthreads () ; int cnodes = codeInfo [0]. checkNodes ; int parity = isAllZero ( syndromeOut , cnodes , glPageStartIndex ) ; / / i f syndrome i s ok , decoding i s s u c c e s s f u l i f ( p a r i t y == 1) return ; syncthreads () ; int i ; / / forward and back i t e r a t i o n s for ( i = 0; i < i t e r a t i o n s ; i ++) { / / iteration to check nodes f o r ( p = 0 ; p < t o t a l E d g e s ; p += l g s i z e ) {
+index lid = p + lid ; if ( index lid < totalSize )
+iterateToCheck ( . . . ) ; }
+syncthreads () ; ... / / i t e r a t i o n back to variable nodes
+syncthreads () ; ... // calculate the estimation
+syncthreads () ; ... / / calculate the syndrome
+syncthreads () ; / / i f syndrome i s ok , decoding i s s u c c e s s f u l parity = isAllZero ( syndromeOut , cnodes , glPageStartIndex ) ; i f ( p a r i t y == 1) return ; } }
+
+

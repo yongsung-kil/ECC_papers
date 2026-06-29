@@ -1,0 +1,1391 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+3963
+
+Designing Finite Alphabet Iterative Decoders of LDPC Codes via Recurrent Quantized Neural Networks
+Xin Xiao , Bane Vasic´ , Fellow, IEEE, Ravi Tandon , Senior Member, IEEE, and Shu Lin
+
+Abstract— In this paper, we propose a new approach to design finite alphabet iterative decoders (FAIDs) for Low-Density Parity Check (LDPC) codes over binary symmetric channel (BSC) via recurrent quantized neural networks (RQNN). We focus on the linear FAID class and use RQNNs to optimize the message update look-up tables by jointly training their message levels and RQNN parameters. Existing neural networks for channel coding work well over Additive White Gaussian Noise Channel (AWGNC) but are inefficient over BSC due to the finite channel values of BSC fed into neural networks. We propose the bit error rate (BER) as the loss function to train the RQNNs over BSC. The low precision activations in the RQNN and quantization in the BER cause a critical issue that their gradients vanish almost everywhere, making it difficult to use classical backward propagation. We leverage straight-through estimators as surrogate gradients to tackle this issue and provide a joint training scheme. We show that the framework is flexible for various code lengths and column weights. Specifically, in high column weight case, it automatically designs low precision linear FAIDs with superior performance, lower complexity, and faster convergence than the floating-point belief propagation algorithms in waterfall region.
+Index Terms— Binary symmetric channel, finite alphabet iterative decoders, low-density parity-check codes, quantized neural network, straight-through estimator.
+I. INTRODUCTION
+W ITH the great potential of solving problems related to optimization, function approximation, inference etc., deep neural networks (DNN) have drawn intensive attention in communication, signal processing and channel coding communities in past three years. One popular way to use neural networks (NN) in these areas is to combine the model knowledge (or the prototype algorithms) and the NNs together, and use the optimization techniques of NNs to improve the model.
+Manuscript received September 17, 2019; revised February 13, 2020; accepted March 26, 2020. Date of publication April 6, 2020; date of current version July 15, 2020. The work of X. Xiao and B. Vasic´ was funded by the NSF under grant NSF SaTC-1813401 and NSF CCF-1855879. The work of R. Tandon was supported in part by the 2018 Keysight Early Career Professor Award, and by NSF under grants CAREER 1651492, and CNS 1715947. The associate editor coordinating the review of this article and approving it for publication was A. Graell i Amat. (Corresponding author: Xin Xiao.)
+Xin Xiao, Bane Vasic´, and Ravi Tandon are with the Department of Electrical and Computer Engineering, The University of Arizona, Tucson, AZ 85721 USA (e-mail: 7xinxiao7@email.arizona.edu; vasic@ece.arizona.edu; tandonr@email.arizona.edu).
+Shu Lin is with the Department of Electrical and Computer Engineering, University of California Davis, Davis, CA 95616 USA (e-mail: shulin@ucdavis.edu).
+Color versions of one or more of the figures in this article are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TCOMM.2020.2985678
+
+Such NNs are called model-driven NNs, and deep unfolding [1] is shown to be a powerful example. As formalized by Hershey et al. [1], deep unfolding is to unfold the inference iterations as layers in a deep neural network, and a list of its applications to communication area can be found in [2]. In particular, for decoding error correction codes, deep unfolding has been shown to efficiently optimize various iterative decoding algorithms such as Belief Propagation (BP) [3]–[7]. One advantage of this approach is that the weight matrices and activation functions over hidden layers are constrained to preserve the message-passing symmetry conditions. This makes it possible to perform training on a single codeword and its noisy realizations, rather than on the entire code space, thus allowing to apply DNNs on long codes. Furthermore, in [8], it is shown that DNNs can speed the decoding convergence of conventional Min-Sum (MS) decoding algorithm. Unlike existing sophisticated theories like Density Evolution (DE) and Trapping Set (TS) used to guide decoder design for the waterfall and error-floor regions, respectively, there is no theory for improving decoding convergence speed. DNN decoders are promising candidates for the emerging ultra-reliable lowlatency communication (URLLC) applications such as 5G, which need extra high throughput and low latency and can only allow a small number of iterations.
+One obvious drawback of the above framework is that all the weight matrices used in DNN decoders are in floatingpoint precision, making the decoders prohibitively complex for most applications. To reduce the complexity of DNN decoders, recent works [9], [10] cluster weights into multiple groups after the floating-point weights are updated, and use a centroid value with finite precision to represent each group such that all the weights in the same group share the same value. Another shortcoming is that the current model-driven framework incorporates soft decision loss functions, which work well over Additive White Gaussian Noise Channel (AWGNC) where the values of messages, weights and biases are in continuous domain. However, it often encounters issues such as slow training convergence and poor generalization in terms of decoding performance when applied to discrete-output channels. The only work on model-driven neural networks for decoding over discrete-output channels is in [11] by Payani and Fekri, where the authors consider binary erasure channel (BEC) and recurrent neural networks (RNN), and propose differentiable Boolean logic algebra units in activation functions to learn the underlying logical flows.
+
+0090-6778 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3964
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+Unlike other papers, in this work we consider binary symmetric channel (BSC), and use model-driven neural networks to design decoders with finite precision for Low-Density Parity Check (LDPC) codes. Moreover, our goal is to design such decoders with fast convergence. Decoders with finite precision, referred to finite alphabet iterative decoders (FAIDs) [12], are not only of great theoretical value, but also practical importance. The general FAID framework offers great flexibility in designing iterative decoders for LDPC codes and results in decoders with excellent waterfall and error floor properties. Such decoders are appealing to URLLC applications as they can provide high throughput and less decoding complexity. To make the model-driven NNs work over BSC, we use bit error rate (BER) as a loss function, which is not only a hard decision loss function, but a more common and accurate metric to measure the decoding performance of iterative decoders as well. NNs with finite precision can be modeled as Quantized NNs (QNN). However, training QNNs with BER loss function directly in general encounters a critical issue caused by the low precision activation functions in the QNN and the quantization of the BER, that their gradients vanish almost everywhere, making it difficult to use classical backward propagation. Straight-through estimators (STE) [13] are surrogate derivatives used in the backward propagation to handle the zero gradient issue (See Section IV. B). In our prior work [14], we show that by replacing zero derivatives of the quantizations with STEs in the chain rule, we are able to train modeldriven QNNs and design FAIDs with 3-bit messages and 4bit channel outputs that outperform floating-point MS decoder over AWGNC.
+A. Main Contributions of this Paper
+In this paper, we extend the QNN framework in [14] and apply it to BSC. Our main contributions can be summarized as follows: 1) We propose a recurrent QNN (RQNN)-aided approach to design linear FAIDs for LDPC codes, to the best of the knowledge, first model-driven NN decoder designed over BSC. In brief, we use RQNNs to optimize linear FAIDs for regular LDPC codes, whose variable node update function takes as input a linear combination of incoming messages and channel value. The recurrent structure shares the trainable parameters across all iterations, which results in fewer weights and biases than the forward multi-layer DNNs and makes it possible to generalize to more iterations. 2) We propose BER loss function and provide a training scheme to train the RQNN. Instead of predefining the quantizers for messages as in [14], we jointly train the message levels and the parameters in the RQNN (including channel value, weights, and biases) to enlarge the searching space, thus increasing the possibility of finding good local minima. The basic idea is to simultaneously compute the sample proxy gradients of levels and parameters in the RQNN, which are obtained via the chain rule revised by STEs. 3) We show that this framework is quite flexible by conducting simulations on various LDPC codes with different column weights and code lengths. The examples and numerical results validate that the RQNN-aided linear FAIDs with 3-bit precision perform as well as floating-point
+
+BP algorithms. In particular, for column-weight-four QuasiCyclic (QC) LDPC codes, they are capable of surpassing the floating-point BP algorithms, with much lower complexity and faster convergence. This makes it possible to design low precision linear FAIDs with superior performance for high column weight scenarios, where the existing design methods are not applicable due to high complexity.
+II. PRELIMINARIES
+A. Notation
+In this paper, we consider a binary LDPC code C, with associated parity check matrix H of size M × N . Let G = (V, C, E) be its Tanner graph, where V (respectively, C) is the set of N variable (respectively, M check) nodes, and E is the set of edges with I =Δ |E|. We denote the i-th variable node as vi, j-th check node as cj, and the edge connecting vi and cj as (vi, cj) which is indexed by some integer (e), 1 ≤ i ≤ N, 1 ≤ j ≤ M, 1 ≤ e ≤ I. The degree of a node in G is defined as the number of its neighbors in G. If all variable nodes in V have the same degree dv, we say that C has regular column weight dv; and if all check nodes in C have the same degree dc, we say that C has regular row weight dc. Let x = (x1, x2, ...xN ) ∈ C be the transmitted codeword, and y = (y1, y2, ...yN ) be the received channel output vector. Denote the crossover probability of BSC by p.
+
+B. Definition of Linear FAID
+Next we introduce the definition of a FAID [12]. A b-bit
+FAID denoted by DF AID can be defined by a 5-tuple: DF AID = (M, Y, Φ, Ψ, Υ). M is the domain of the messages passing in FAID, and is defined as M = {0, ±L1, ±L2..., ±Ls}, with Li ∈ R+, 1 ≤ i ≤ s, s ≤ 2b−1 − 1 and Li > Lj if i > j. For a message m ∈ M associated with vi, its sign represents an estimate of the bit of vi, namely vi = 0 if m > 0, vi = 1 if m < 0, and vi = yi if m = 0, and its magnitude |m| measures the reliability of this estimate. Y is the domain of channel outputs. For BSC, Y = {±C} with some C ∈ R+ as we use the bipolar mapping: 0 → C and 1 → −C. Let z = (z1, z2, ...zN ) be the input vector to a FAID, with zi = (−1)yiC, 1 ≤ i ≤ N . The functions Φ and Ψ describe the message update rules of
+variable nodes and check nodes, respectively. For a check node
+cj with degree dc, its updating rule is given by
+
+Ψ(mj
+
+)
+
+=
+
+m∈mj
+
+sgn(m)
+
+·
+
+min (|m|),
+m∈mj
+
+where sgn is the sign function and mj is the set of extrinsic incoming messages to cj, with |mj| = dc − 1 and mj ∈ Mdc−1. For a variable node vi with degree dv, its updating rule is given by
+
+Φ(zi, ni) = Q
+
+m + ωizi ,
+
+m∈ni
+
+where ni is the set of extrinsic incoming messages to vi, and zi is the bipolar mapping of vi, with |ni| = dv − 1 and ni ∈ Mdv−1. The function Q(·) is the quantizer defined by M
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+XIAO et al.: DESIGNING FINITE ALPHABET ITERATIVE DECODERS OF LDPC CODES VIA RQNNs
+
+3965
+
+and a threshold set T = {T1, ..., Ts, Ts+1 = ∞}, with Ti ∈ R+, 1 ≤ i ≤ s and Ti > Tj for any i > j:
+
+Q(x) = sgn(x)Li if Ti ≤ |x| < Ti+1 .
+
+(1)
+
+0
+
+if |x| < T1
+
+The coefficient ωi is a non-negative real number, which is computed using a symmetric function of ni. If ωi is a constant for all possible ni, Φ is the quantization of a linear function, and its associated FAID is called linear FAID.
+At the end of each iteration, the estimate of bit associated
+with each variable node vi is made by the sign of the sum of all incoming messages and channel value zi, i.e., zero if the sum is positive, one if the sum is negative, and yi if the sum is zero. This sum represents the estimate of bit-likelihoods and we denote this operation by Υ.
+From the definitions, M is the codomain of both Φ and Ψ.
+Note that the linear FAIDs have the same check node updating rules Ψ and bit-likelihood approximator Υ as MS decoder, thus a linear FAID is completely determined by Φ. In the following
+Section, we discuss how to use an RQNN to design a linear FAID via optimizing Φ and Υ.
+
+III. AN RQNN FRAMEWORK FOR LINEAR FAID
+
+A. A Model-Driven Structure for Linear FAID
+
+The proposed RQNN is a model-driven recurrent deep
+
+neural network, which is constructed by unfolding the linear
+
+FAID with a given number of iterations, as shown in [5].
+
+The connection between consecutive layers is determined by
+
+the Tanner graph G, and activation functions over hidden
+
+layers are defined based on Φ, Ψ, and Υ. As it has recurrent
+
+structure, the trainable parameters are shared among all the
+
+iterations. More specifically, suppose that the RQNN consists
+
+of K hidden layers, with output values denoted by r(k), 1 ≤
+
+k ≤ K. r(0) (respectively, r(K+1)) represents the values of
+
+input (respectively, output) layer. r(k) where Jk is the number of neurons
+
+= in
+
+(r1(k) k-th
+
+, r2(k), layer,
+
+.a..nrdJ(kk)r)t(Tk),
+
+is the the output value of the t-th neuron in k-th layer,
+
+0 ≤ k ≤ K + 1, 1 ≤ t ≤ Jk. As shown in Fig. 1, three
+
+consecutive hidden layers in one column correspond to one
+iteration in linear FAID. For l ≥ 0, r(3 +1) (respectively, r(3 +2)) represents the variable (respectively, check) nodes message update, and r(3 ) represents the estimate of bitlikelihoods except for r(0). Each neuron stands for an edge in
+
+variable and check nodes message update layers. Each neuron
+
+in bit-likelihood approximation layers stands for a variable
+
+node. Therefore, we have Jk = N if 3|k, otherwise Jk = I.
+
+Because of the recurrent structure, there are three weight
+
+matrices W0 (of size I × N ), W1 (of size I × I) and W2 (of size N × I) used in initialization, variable node update, and
+
+bit-likelihood approximation, respectively. Similarly, there are
+
+two biases vectors b1 and b2 used in variable node update and bit-likelihood approximation, respectively. The (i, j)-th entry
+
+of Wk is denoted as Wk(i, j), and the (i)-th entry of bk is denoted as bk(i).
+
+Fig. 1. Block diagram of an RQNN. Each column corresponds to one iteration, where variable nodes are first updated, followed by the quantization function Q. The quantized messages are then used to update check nodes. The output of Ψ and Input layer are fed into both Υ in current iteration and the variable node update layer in next iteration.
+
+The output of the k-th hidden layer (k > 1) is computed as
+
+follows: ⎧
+
+⎪⎨Φ(b1, zT , W1r(k−2)), 3|(k − 1),
+
+r(k)
+
+=
+
+⎪⎩ΥΨ((br(2k,−z1T)
+
+), , W2r(k−1)
+
+),
+
+3|(k − 2), 3|k,
+
+(2)
+
+where for any (e) = (vi, cj), if 3|(k − 1),
+
+⎛
+
+⎞
+
+re(k) = Q ⎝
+
+W1(e, e )re(k−2) + b1(e)zi⎠ ,
+
+(e )=(vi,ct),t=j
+
+if 3|(k − 2),
+
+re(k)
+
+=
+
+(e
+
+sgn(re(k−1) )
+)=(vt,cj ),t=i
+
+·
+
+(e
+
+min
+)=(vt,cj ),t=i
+
+re(k−1)
+
+,
+
+and if 3|k,
+
+ri(k) =
+
+W2(i, e )re(k−1) + b2(i)zi.
+
+(e )=(vi,ct)
+
+The first hidden layer is the initialization of the RQNN from channel, and its output is calculated by
+
+r(1) = Q(W0r(0)),
+
+(3)
+
+where r(0) = zT = (−1)yT · C, re(1) = Q(W0(e, i)ri(0)), ∀(e) = (vi, cj). At each k-th layer where 3|k (i.e., the bit-likelihood estimate layer), for each training
+
+sample, we check whether its estimated codeword satisfies all
+
+parity equations or not. If so, this training sample will skip
+
+the remaining subsequent layers and its output at the current
+
+k-th layer will be directly used to calculate the loss function,
+
+namely,
+
+r(K+1)
+
+=
+
+r(k) ,
+
+if
+
+1 2
+
+1 − sgn((r(k))T )
+
+· HT = 0.
+
+If there is no intermediate bit-likelihood estimate layer
+
+satisfying all parity equations, the last bit-likelihood estimate
+
+layer will be used to compute the loss function. Furthermore,
+
+as we consider regular LDPC codes, the trained model will
+
+have the same decoding performance no matter whether
+
+we put the constraint during training or not, which forces
+
+all the edges to share the same weight. Hence all nonzero
+
+entries in Wk are constrained to have the same value, i.e., Wk(i, j) = wk if Wk(i, j) is a nonzero entry in Wk, and Wk is equivalent to the product of a trainable single
+scalar wk and a constant connection matrix. Denote the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3966
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+constant connection matrix in initialization, variable node
+update layer and bit-likelihood estimate layer by B0, B1 and B2, respectively. B0, B1 and B2 can be determined in the following way: B0 has size of I × N , and for the (i, j)-th entry in B0, 1 ≤ i ≤ I, 1 ≤ j ≤ N , B0(i, j) = 1 if the edge (i) is incident to vj, otherwise B0(i, j) = 0; B1 has size of I × I, and for the (i, j)-th entry in B1, 1 ≤ i ≤ I, 1 ≤ j ≤ I, B1(i, j) = 1 if i = j and both edge (i) and edge (j) are incident to the same variable node, otherwise B1(i, j) = 0; B2 has size of N × I, and B2 = B0T .
+The Q(·) function in Eq. (2) and (3) is defined as in
+Section II. The channel value C and the levels Li in M are
+also parameters to be learned during the training process. The
+threshold set is constrained by M such that Ti is within the range [Li−1, Li], i ≥ 2. To satisfy this constraint, we use a set of scalars S = {α1, α2, ..., αs} to obtain T by
+
+T1 = α1L1, Ti = αiLi−1 + (1 − αi)Li, i ≥ 2,
+
+(4)
+
+where αi ∈ [0, 1], 2 ≤ i ≤ s, 0 < α1 ≤ 1. S determines the relationship between M and T . In our framework, we predefine S so that the trainable parameters would adjust themselves to the relationship constrained by S.
+
+B. From an RQNN to a Linear FAID
+
+The RQNN proposed above has weights and biases of full
+
+precision and a finite number of activation outputs (messages)
+
+of full precision. The trainable parameters include the finite
+alphabet set M, channel value C, weights {w0, w1, w2} and biases {b1, b2}. We denote the set of trainable parameters by Θ, i.e., Θ =Δ {M, C, w0, w1, w2, b1, b2}. When the offline training is completed, we obtain a trained Θ, based
+
+on which we derive two look-up tables (LUTs), which are used to describe Φ and the hard decision sgn(Υ), and can
+
+be efficiently implemented in hardware. In the initialization,
+
+the channel value +C (respectively, −C) is first quantized
+
+by +Q(w0C) (respectively, −Q(w0C)). For the case that the
+
+received channel value is −C, the LUT used to describe Φ for
+
+all variable nodes is a (dv − 1)-dimensional array, denoted as
+
+ΦRQNN . Let M = {M1, M2, ..., M2s+1}, with M1 = −Ls,
+
+M2 = −Ls−1, ..., Ms = −L1, Ms+1 = 0, Ms+2 = L1, Ms+3 = L2, ..., M2s+1 = Ls. Then, for 1 ≤ i1,
+
+i2, ..., idv−1 ≤ 2s + 1, the entry (i1, i2, ..., idv−1) of ΦRQNN
+
+is computed by
+
+⎛
+
+⎞
+
+dv −1
+
+ΦRQNN (i1, i2, ..., idv−1) = Q ⎝−b1 · C + w1
+
+Mij ⎠ ,
+
+j=1
+
+(5)
+
+where b1 is the average of the bias vector b1 which is com-
+
+puted
+
+as
+
+b1
+
+=Δ
+
+I
+
+1 I
+
+j=1
+
+b1(j).
+
+We
+
+remark
+
+that
+
+the
+
+distribution
+
+of trained biases is almost centered at the mean, and it makes
+
+no difference regarding the decoding performance whether we
+
+use b1 or b1(j) for each individual edge. Therefore we can simply use b1 in Eq. (5) so that we just need one LUT. We also
+
+point out that it is helpful to give more freedom to the bias
+
+vector during training, namely, it is better to set the biases
+
+in the same layer as independent, rather than binding them
+
+together. Since ΦRQNN is symmetric, the LUT of the case that the received channel value is C can be obtained simply
+
+with −ΦRQNN (2s + 2 − i1, 2s + 2 − i2, ..., 2s + 2 − idv−1). For column-weight-three LDPC codes, ΦRQNN is a 2-dimensional
+array, and is a 3-dimensional array for column-weight-four
+
+LDPC codes.
+
+Similarly, the LUT used to describe the hard decision
+
+sgn(Υ) for all variable nodes is a dv-dimensional array,
+
+denoted as Υd, for the case that the received channel value
+
+is −C. For 1 ≤ i1, i2, ..., idv ≤ 2s+1, the entry (i1, i2, ..., idv )
+
+of Υd is computed by
+
+⎛
+
+⎞
+
+dv
+Υd(i1, i2, ..., idv ) = sgn ⎝−b2 · C + w2 Mij ⎠ ,
+
+j=1
+
+where b2 is the average of the bias vector b2 which is
+
+computed
+
+as
+
+b2
+
+=Δ
+
+1 N
+
+N
+b2(j).
+j=1
+
+Since
+
+Υd
+
+is
+
+also
+
+symmetric,
+
+the LUT of the case that the received channel value is C is
+
+computed as −Υd(2s + 2 − i1, 2s + 2 − i2, ..., 2s + 2 − idv ). Because of the recurrent structure, such RQNN corresponds
+
+to a fixed linear FAID with b-bit precision, which is defined as DFRAQINDN = (M, {±C}, ΦRQNN , Ψ, Υd). In the next Section,
+we will discuss how to jointly train the RQNN, together with
+
+the finite alphabet set M and the channel value C.
+
+IV. TRAINING RQNNS
+
+Let the RQNN corresponding to DFRAQINDN be denoted as DRQNN . Similar to the conventional iterative decoders,
+the weights and biases in the RQNN are initialized to be 1.
+
+This implies that the training process starts from a quantized
+
+min-sum decoder. As mentioned in [15], the initialization
+
+points of deep learning models affect the convergence of the
+
+training process, and are usually designed heuristically. In our
+
+framework, the initial linear FAID, defined by the initial values
+
+of M, C and predefined S, needs to satisfy the Property II
+
+in [12] to ensure a good initialization point. We rephrase this
+
+property as follows.
+
+Property 1: Monotonicity of initial linear FAID.
+
+Let z ∈ Y, {m1, ..., mdv−1}, {m1 , ..., mdv−1 } ∈ Mdv−1,
+
+and Q be the quantizer defined in Eq. (1). Then
+
+⎛
+
+⎞⎛
+
+⎞
+
+dv −1
+
+dv −1
+
+Q ⎝ mj + z⎠ ≥ Q ⎝ mj + z⎠ ,
+
+j=1
+
+j=1
+
+when mj ≥ mj , ∀j ∈ {1, ..., dv − 1}. Property 1 is a typical property in existing iterative decoders, which guarantees that for a given channel value, the output
+does not decrease as the values of the incoming messages
+increase. Since the channel is output-symmetric, and the RQNN’s
+activations preserve symmetry conditions, we can assume that the all-zero codeword is transmitted, i.e., x = 0. With the symmetry conditions on the weight matrices, it is sufficient
+to use a database composed of the realizations of the noisy bipolar vector z. Let r(0) and u = r(K+1) be the values in the input and output layer, respectively, i.e., u = DRQNN r(0) .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+XIAO et al.: DESIGNING FINITE ALPHABET ITERATIVE DECODERS OF LDPC CODES VIA RQNNs
+
+3967
+
+Both r(0) and u have length J0 = JK+1 = N , with r(0) receiving the channel bipolar vector zT .
+
+A. BER-Based Loss Function
+
+The output u is composed of the estimates of bit-likelihoods of each training sample, which are real numbers. In most related work of using neural networks to optimize channel decoders, soft decision loss functions (the binary cross entropy function for instance), are widely employed (as in [3]–[5], [7]–[10], [16]) since they measure “soft” bit error rate and are differentiable everywhere. They work well over AWGNC where the values of messages, weights and biases are in continuous domain. However, when applied to discrete-output channels such as BEC, it often encounters slow convergence and poor generalization issues [11]. We also face the same issues when deploying the model-driven DNNs with the soft decision loss functions over BSC. Furthermore, the soft decision loss functions are approximations of BER. Training NNs to minimize soft decision loss functions cannot guarantee minimization of BER. In this work, instead of soft decision loss functions, we consider the following bit error rate loss function for each sample, which measures the Hamming distance between transmitted codeword x and the decoded codeword xˆ, i.e.,
+
+Γ(u, x) = 1 N
+
+N
+
+(xi − xˆi)2,
+
+(6)
+
+i=1
+
+where xˆ
+
+=
+
+1 2
+
+1 − sgn(uT ) . Γ(u, x) is a hard decision
+
+loss function, and it is a widely used and practical metric
+
+to measure the decoding performance of iterative decoders.
+
+Therefore, the learning task of the RQNN is to mini-
+
+mize the expected loss given a finite number of samples,
+
+i.e.,
+
+min
+Θ
+
+Ey
+
+[Γ(u,
+
+x)],
+
+where
+
+Ey [·]
+
+is
+
+the
+
+expectation
+
+opera-
+
+tor over random vector y. During the training, the partial
+
+gradients of the expected loss with respect to the trainable
+
+parameters in Θ,
+
+∂ Ey [Γ(u,x)] ∂θ
+
+:
+
+θ
+
+∈
+
+Θ
+
+, are not accessible.
+
+Instead, we can only compute the empirical sample partial
+
+gradients given a finite number of samples, which become the
+
+expected sample partial gradients when the number of samples
+
+goes to infinity, i.e.,
+
+Ey
+
+∂Γ(u,x) ∂θ
+
+: θ ∈ Θ . In the RQNN
+
+framework,
+
+∂Ey[Γ(u,x)] ∂θ
+
+and
+
+Ey
+
+∂Γ(u,x) ∂θ
+
+are not the same,
+
+because the loss function Γ(u, x) in (6) and the Quantizer Q(·)
+
+in Eq. (2) have derivatives of zero almost everywhere, making
+
+each sample partial gradient zero and thus Ey
+
+∂Γ(u,x) ∂θ
+
+= 0.
+
+To solve the zero-gradient problems of Eq. (2) and (6), we
+
+apply straight-through estimators in the chain rule, which are
+
+introduced next.
+
+B. Straight-Through Estimators
+The straight-through estimator (STE) is a surrogate derivative used in the QNN training to replace the zero derivative of a quantization function in the chain rule [13]. Intuitively, for θ ∈ Θ, the amount computed via the chain rule which is revised with STE (s) is an artificial gradient, and is used to update θ. The parameter changes made by these artificial
+
+gradients need to form a descending direction to minimize the expected loss, which is approximately the same as the descending direction formed by the negations of the partial gradients of the expected loss. In [13], it is found that the most efficient training of QNNs is using STEs, which is a good way to provide a non-trivial search direction.
+To see how STEs work for our RQNN, we take a look at the backward propagation. Given a sample (y, x), the sample partial derivative of the loss function Γ(u, x) (as defined in Eq. (6)) with respect to wk is calculated as follows
+
+∂Γ(u, x) ∂wk
+
+=
+
+1 N
+
+N
+(xi − xˆi) ·
+i=1
+
+∂ (sgn(ui)) ∂ui
+
+·
+
+∂ui , ∂wk
+
+(7)
+
+where k = 0,
+
+∂ui
+∂1w, kit
+
+can be further expanded via the chain rule. is expected that there exist several terms in
+
+For the
+
+form
+
+of
+
+∂Q(r) ∂r
+
+in
+
+the
+
+expanded
+
+expression
+
+of
+
+∂ui ∂wk
+
+because
+
+of the but the
+
+composition sum of all
+
+of layers. For k
+
+=
+
+2,
+
+∂ui ∂wk
+
+is
+
+incoming messages to vi. These
+
+nothing
+
+∂
+
+Q(r) ∂r
+
+s
+
+and
+
+∂(sgn(ui)) ∂ui
+
+are
+
+zero
+
+almost
+
+everywhere,
+
+making
+
+the
+
+weight
+
+updates stagnant. We use two proper surrogate derivatives
+
+∂ hsgn (ui ) ∂ui
+
+and
+
+∂
+
+hM(r) ∂r
+
+,
+
+called STE,
+
+to
+
+replace
+
+∂(sgn(ui)) ∂ui
+
+in
+
+Eq.
+
+(7)
+
+and
+
+every
+
+∂Q(r) ∂r
+
+(if
+
+any)
+
+in
+
+the
+
+expanded
+
+expression
+
+of
+
+∂ui ∂wk
+
+,
+
+respectively.
+
+Then
+
+the
+
+sample
+
+proxy
+
+gradient
+
+γ (wk )
+
+that we use to update wk is computed as
+
+γ(wk) =
+
+1 N
+
+N
+(xi − xˆi) ·
+i=1
+
+∂hsgn(ui) ∂ui
+
+·
+
+∂ui . ∂wk
+
+(8)
+
+In Eq.
+
+(8),
+
+∂ui ∂wk
+
+is
+
+the
+
+same
+
+as
+
+∂ui ∂wk
+
+if
+
+there is
+
+no
+
+term
+
+in
+
+the
+
+form
+
+of
+
+∂Q(r) ∂r
+
+in
+
+the
+
+expanded
+
+expression
+
+of
+
+∂ui ∂wk
+
+.
+
+Otherwise,
+
+∂ui ∂wk
+with
+
+is obtained by the
+
+∂
+
+hM(r) ∂r
+
+s.
+
+We
+
+can
+
+expanded define the
+
+expression of
+
+∂ui ∂wk
+
+modified
+
+sample proxy gradients for
+
+other parameters in Θ in the same way. Intuitively, an STE
+
+should be designed carefully to guarantee that the parameter
+
+changes are in descent directions in order to minimize the
+
+expected loss. To get a better understanding of the behavior of
+
+STEs, we consider a simple scenario, where for each parameter
+
+θ ∈ Θ, we use the following rule to update θ at time t + 1:
+
+θt+1 ← θt − ηEy[γ(θt)].
+
+(9)
+
+In Eq. (9), η is the learning rate or stepsize with 0 < η < 1. We further view Θ as a row vector and use f (Θ) to represent the expected loss of the model, which takes Θ as parameters. By the Taylor expansion,
+
+f Θt+1 − f Θt = Θt+1 − Θt ∇f Θt T
+
++
+
+1 2!
+
+Θt+1 − Θt
+
+Hf
+
+Θt
+
+× Θt+1 − Θt T + ...,
+
+(10)
+
+where Hf (Θt) is the Hessian matrix of the expected loss evaluated at Θt. According to Eq. (9), Θt+1 − Θt = −ηEy [γ(Θt)]. When we take a small η, Eq. (10) can be approximated by the first term, namely,
+f Θt+1 − f Θt ≈ −ηEy[γ(Θt)]∇f Θt T . (11)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3968
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+It is concluded that if the right hand side of Eq. (11) is
+negative, the training will decrease the expected loss in time t + 1. Furthermore, Ey[γ(Θt)]∇f (Θt)T is nothing but the inner product between Ey[γ(Θt)] and ∇f (Θt). We summarize this descent direction property for minimizing the expected
+loss as follows.
+Property 2: Descent direction property. Let the model take Θ as parameters and follow Eq. (9) to update Θ. Then the inner product between the expected proxy gradients Ey[γ(Θ)] and partial gradients of the expected loss is nonnegative, i.e.,
+
+Ey[γ(Θ)], ∇Ey [Γ(u, x)] ≥ 0.
+
+(12)
+
+This implies that the vector of parameter changes −ηEy[γ(Θ)] is roughly in the same direction as −η∇Ey [Γ(u, x)]. In general, the first term in Eq. (12) indicates how the training moves in each parameter dimension, and Ey[γ(Θ)] can be replaced by other changes made by more sophisticated rules (for instance, ADAM [17]) for training speed and stability considerations. How to design
+good STEs has been studied extensively in [18]–[22]. We introduce two STEs for Q and the sign function used
+in Eq. (6) with respect to the parameters in Θ. To be specific,
+consider the following two functions
+
+hM(x) =
+
+x sgn(x)Ls
+
+if |x| < Ts otherwise
+
+,
+
+(13)
+
+hsgn(x) = 2(1 + e−x)−1 − 1.
+
+hM(x) is a variant of the hard tanh function, and hsgn(x) is tanh(x/2). Intuitively, hM(x) and hsgn(x) are approx-
+imations of Q and sign function, respectively (as shown
+in Fig. 2(a) and (b)). Their gradients with respect to x are given below:
+
+∂hM(x) = ∂x
+
+1 0
+
+if |x| < Ts otherwise
+
+,
+
+(14)
+
+∂hsgn(x) ∂x
+
+=
+
+2e−x (1 + e−x)2 .
+
+(15)
+
+IanndIpna∂trhhtis∂ecgxnuR(lxaQ)r,Nis∂NhuM ∂sfexr(adxm)aesiwsthokernkSo,Tw∂EnhM ∂oaxfs(xtth)heeisssiugasnteudfruaatnescdttihoSenTSEinT[EE2q2o.]f(f6Qo)r., the case Ts = 1, which has been shown to be equivalent to
+
+stochastic binarization proposed in [18]. Bengio et al. [13]
+
+use
+
+numerical
+
+results
+
+to
+
+show
+
+that
+
+∂ hsgn (x) ∂x
+
+provides
+
+the
+
+best
+
+validation and test error among several types of solutions to the
+
+zero-gradient issues in the QNN. In principle, we can use the
+
+saturated STE for the sign function in Eq. (6) as well, which
+
+would provide a faster and simpler training. However, the STE
+
+∂ hsgn (x) ∂x
+
+in
+
+Eq.
+
+(15)
+
+leads
+
+to
+
+a
+
+more
+
+stable
+
+training
+
+process
+
+than the saturated STE in our RQNN framework. Therefore we
+
+make a trade-off between training performance and complexity
+
+by
+
+choosing
+
+the
+
+saturated
+
+STE
+
+for
+
+Q
+
+and
+
+∂ hsgn (x) ∂x
+
+for
+
+sign
+
+function.
+
+Fig. 2. (a). Quantization function Q(x) (blue curve) and hM(x) (red curve) for s = 3. (b). Sign function sgn(x) (blue curve) and hsgn(x) (red curve).
+
+C. Joint Training
+In this subsection, we introduce a joint training scheme, where the “joint” indicates that both the levels in the alphabet set M and the RQNN parameters (channel value C, weights and biases) are trained simultaneously.
+To make the alphabet set M trainable and satisfy the constraints Li > Lj if i > j, we define M in the following way:
+
+k−1
+
+L1 = 1, Lk = i=1 li, 2 ≤ k ≤ s,
+
+(16)
+
+where li, 1 ≤ i ≤ s − 1 are to be learned with constraints li > 1, ∀i ≥ 1, and are initialized to be qi, 1 ≤ i ≤ s − 1, respectively. Therefore, Θ = {{li}1≤i<s, C, w0, w1, w2, b1, b2}. The partial derivative of the quantizer Q with respect to li
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+XIAO et al.: DESIGNING FINITE ALPHABET ITERATIVE DECODERS OF LDPC CODES VIA RQNNs
+
+3969
+
+is computed by:
+
+∂Q(x) =
+
+⎧∂li
+
+⎨ 0,
+
+if |x| < Ti+1
+
+(17)
+
+k−1
+
+⎩ sgn(x)
+
+lj, if Tk ≤ |x| < Tk+1, k ≥ i + 1
+
+j=1,j=i
+
+where T1 = α1, T2 = α2 + (1 − α2)l1, Tk = αk
+
+k−2 j=1
+
+lj
+
++
+
+(1 − αk)
+
+k−1 j=1
+
+lj
+
+,
+
+∀k
+
+>
+
+2.
+
+Eq.
+
+(17)
+
+is
+
+used
+
+in
+
+Eq.
+
+(8)
+
+to
+
+calculate the sample proxy gradient with respect to li. Note
+
+that at the end of each epoch, each li is clipped by [1+ε, +∞)
+
+with ε to be a small positive real number to satisfy the
+
+constraint li > 1, and the threshold set T is modified by the updated {li}1≤i<s. The channel value C is initialized to a positive number C0 with C0 ≥ α1 to guarantee that the
+
+magnitude of each message in the first variable node update layer r(1) is L1. The sample proxy gradient with respect to C is obtained in the same manner as computing the sample
+
+proxy gradients with respect to weights and biases. The initial
+
+linear FAID defined by {qi}1≤i≤s−1, S, and C0 needs to
+
+satisfy Property 1. Motivated by the fact that applying different
+
+learning rates to Θ can help training convergence, we employ
+
+ADAM with mini-batches as optimizer. The ADAM takes the
+
+current and previous sample proxy gradients with respect to Θ
+
+as inputs and adjusts the learning rates based on these sample
+
+proxy gradients. This process can be expressed as:
+
+θt+1 ← θt − ηgADAM γ(θt), γ(θt−1), ..., γ(θ0) , ∀θ ∈ Θ,
+
+where gADAM is the core function in ADAM that adjusts η for θ based on γ(θt), γ(θt−1), ..., γ(θ0).
+
+To make the training reduce the expected loss,
+
+gADAM γ(Θt), γ(Θt−1), ..., γ(Θ0)
+
+should satisfy
+
+Property 2, namely,
+
+incorrectly. This implies that the BER loss function in the first epoch is likely to be nonzero, as the training begins with a quantized min-sum decoder. Therefore, the training can start soon. Generally speaking, we can construct a training set consisting of noisy realizations randomly collected with a set of different p, or we can train a linear FAID for every p in this set separately and choose one of these trained linear FAIDs for decoding under different channel conditions. Surprisingly, the numerical results show that if we conduct training on a proper p (for instance, use the above heuristic approach to select p), the trained linear FAID can be generalized well to other unseen crossover probabilities.
+The ADAM simultaneous training with STEs is summarized in Algorithm 1, where the t-th mini-batch is denoted as (Y (t), X(t)), and Ns is the number of mini-batches. Ns can be chosen to be the number of epochs when the training converges. Note that the gradients are accumulated in full precision, and the quantized activation values are used in both forward and backward propagations.
+We remark that the order in which to train the levels in M and the parameters in the RQNN (channel value C, weights, and biases) affects the optimality of the local minimum. In this work we train all the parameters simultaneously. An alternative approach is to train the levels in M and other parameters separately. In this approach, we first train the levels on a floating-point pre-trained model which is derived by training a floating-point recurrent NN, and then re-train the parameters in the pre-trained model to adjust to the levels. Comparing these two training strategies, it turns out that the simultaneous training has larger possibility to reach a good local minimum, since in the second training strategy, a floating-point model is first trained, which puts more constraints on the subsequent training and limits the capability to explore the searching space.
+
+gADAM γ(Θt), γ(Θt−1), ..., γ(Θ0) ,∇Ey [Γ(u, x)] ≥ 0, ∀t.
+Note that the training will not begin until the BER loss function is nonzero. Once the training starts, even if the current BER loss function is zero, the trainable parameters will still be updated.
+To construct a training set, we randomly generate samples with a fixed p. The choice of p can neither be too large as the training will diverge if there is too much noise, nor too small as the training will wait for a long time to start due to the fact that most of the time the BER loss function is zero. A heuristic approach to search for a good p is described as follows. Consider the frame error rate (FER) decoding performance of the floating-point min-sum decoder with the same number of iterations as that of the RQNN, and denote the FER at p by Pe,F ER(p). Let the size of mini-batches be Sm. We take the p that satisfies the following two conditions: 1) p is in the waterfall region; 2) Pe,F ER(p) · Sm ≥ 1. The first condition indicates that when we use this p to construct a training set, some noisy configurations in the training set can be corrected by certain decoding rules, and the training is possible to converge. The second condition shows that if we use the floatingpoint min-sum decoder to decode Sm random samples from this training set, on average one sample may be decoded
+
+V. NUMERICAL RESULTS
+In this section, we evaluate the BER/FER performance of the RQNN framework over the BSC. We build the RQNN framework in Python3.7 and use Pytorch library for training. We design linear FAIDs with 3-bit messages to show the design flexibility in terms of code length and column weight, one for a short code, Tanner code (155, 64) with column weight three, and the other for a medium length code, QC-LDPC code (1296, 972) with column weight four. These two codes are available in [23]. The simulation of DFRAQINDN is carried out with the integer-valued LUTs. For comparisons with other conventional iterative decoders, we conduct simulations of MS decoding, Offset MS (OMS) decoding, and Sum Product Algorithm (SPA) decoding, which are implemented with floating-point precision. We provide numerical analysis in terms of the decoding performance with the same number of iterations, convergence, thresholds, and generalizations to longer code and more iterations.
+A. Tanner Code with dv = 3
+In the first example, we consider a column-weight 3 low rate Tanner code (155, 64) and design a 3-bit linear FAID for it via the joint training scheme.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3970
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+TABLE I TRAINED PARAMETERS OF DRQNN s FOR TANNER CODE (155, 64) AND QC LDPC CODE (1296, 972)
+
+Input : minibatches (Y (t), X (t))1≤t≤Ns , S, C0, {qi}1≤i<s, ε, η
+1 Initialization:
+2 C ← C0, li ← qi, 1 ≤ i < s, 3 set M via Eq. (16) with {li}1≤i<s, 4 set T via Eq. (4) with S and M, and
+
+5 set Q via Eq. (1) with T and M;
+
+6 end
+
+7 for t = 1 to Ns do /* t-th mini-batch
+
+(Y (t), X (t))
+
+*/
+
+8 Forward propagation:
+
+9
+
+Compute each layer via Eq. (2),
+
+U ← DRQNN ((−1)Y (t)T C)
+
+10 end
+
+11 Backward propagation:
+
+12
+
+Set to zero all the gradients,
+
+Λ←
+
+Γ(u, x);
+
+u∈U,x∈X (t)
+
+/* compute the sample proxy
+
+gradients
+
+*/
+
+13
+
+for ∀θ ∈ Θ do
+
+/* Θ = {{li}1≤i<s, C, w0, w1, w2, b1, b2} */
+
+14
+
+Use Eq. (14) and Eq. (15) to compute γ(θt) via
+
+Eq. (8)
+
+15
+
+end
+
+16 end
+
+17 Parameter Updates: /* ADAM optimizer */
+
+18
+
+for ∀θ ∈ Θ do
+
+/* Θ = {{li}1≤i<s, C, w0, w1, w2, b1, b2} */
+
+19
+
+θt+1 ← θt −ηgADAM γ(θt), γ(θt−1), ..., γ(θ0)
+
+20
+
+end
+
+21
+
+for i = 1 to s − 1 do
+
+22
+
+lit+1 ← clip(lit+1, [1 + ε, +∞))
+
+23
+
+end
+
+24
+
+Use S and Eq. (4) to update T
+
+25 end
+
+26 end
+
+Output: DRQNN Algorithm 1 ADAM Simultaneous Training with STEs
+
+We first construct a training set of 5000 random error patterns collected with p = 0.03. (As shown in Fig. 3, for floatingpoint MS decoding, the waterfall begins around p = 0.04, thus p = 0.03 is in the waterfall region). The size of each mini-
+batch is 50, and the maximum number of iterations is set to be 5. Note that Pe,F ER(p)·Sm ≈ 1.8 > 1. In the initialization, C is set to be 2, and the scalar set S = {1, 0, 0}, with ε = 0.1. By Eq. (4), T = M. The alphabet set M has three levels, with {l1, l2} are initialized by {3, 2}, respectively, i.e., M is initialized by {1, 3, 6}. We use a learning rate of 0.01 to train
+
+Fig. 3. FER decoding performance within 5 iterations for Tanner code (155, 64).
+the RQNN, and it converges within 50 epochs. We remark that ε is not very sensitive to local minima, as the initial values of {li} are far from 1. The trained DRQNN has parameters listed in Table I. Based on these parameters, we convert the DRQNN into a 3-bit linear FAID DFRAQINDN consisting of one 2-dimensional array and one 3-dimensional array.
+B. Medium-Length Code with dv = 4
+In the second example, we consider a column-weight 4 high rate QC LDPC code (1296, 972) and design a 3-bit linear FAID for it via the joint training scheme.
+We first construct a training set of 5000 random error patterns collected with p = 0.008. (As shown in Fig. 4, for floating-point MS decoding, the waterfall begins around p = 0.008). The size of each mini-batch is 10, and the maximum number of iterations is set to be 5. Note that Pe,F ER(p) · Sm ≈ 4.3 > 1. In the initialization, C is set to be 2, and the scalar set S = {1, 0, 0}, with ε = 0.1. By Eq. (4), T = M. The alphabet set M has three levels, with {l1, l2} are initialized by {2, 2}, respectively, i.e., M is initialized by {1, 2, 4}. We use a learning rate of 0.005 to train the RQNN, and it converges within 50 epochs. We remark that since the initial values of {li} are far from 1, ε is not very sensitive to local minima. The trained DRQNN has parameters listed in Table I. Based on these parameters, we convert the DRQNN into a 3-bit linear FAID DFRAQINDN consisting of one 3-dimensional array and one 4-dimensional array.
+C. Analysis and Discussion
+1) Decoding Performance with the Same Number of Iterations: Fig. 3 and Fig. 4 show the FER decoding performance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+XIAO et al.: DESIGNING FINITE ALPHABET ITERATIVE DECODERS OF LDPC CODES VIA RQNNs
+
+3971
+
+Fig. 4. FER decoding performance within 5 iterations for QC LDPC code (1296, 972).
+
+Fig. 5. FER decoding performance within different numbers of iterations for QC LDPC code (1296, 972). OMS and SPA have floating-point precision, while DFRAQINDN has 3-bit precision.
+
+within 5 iterations of various decoders for Tanner code (155,
+64) and QC LDPC code (1296, 972), respectively. Fig. 3 compares the FER decoding performance of 3-bit DFRAQINDN and floating-point BP algorithms including MS, OMS (offset λ = 0.3), and SPA for Tanner code (155, 64). We also include
+a 3-bit linear FAID (See [12], Example 2) for reference. Within 5 iterations, DFRAQINDN performs as well as the floatingpoint OMS and SPA, and can achieve a FER one order of
+magnitude lower than that of MS. Fig. 4 demonstrates the FER performance of 3-bit DFRAQINDN , floating-point MS, OMS (offset λ = 0.46), and SPA for QC LDPC code (1296, 972). Within 5 iterations, DFRAQINDN surpasses MS, OMS and SPA. At p = 0.004, it achieves a FER four orders of magnitude
+lower than that of MS, one order of magnitude lower than
+that of OMS, and less than one-third of SPA’s FER.
+2) Convergence: Fig. 5 shows the FER decoding perfor-
+mance of various decoders with different numbers of iterations
+for QC LDPC code (1296, 972). Compared to OMS (offset λ = 0.46), the 3-bit DFRAQINDN with 7 iterations surpasses OMS with 10 iterations, and with 10 iterations it has similar
+decoding performance as OMS with 15 iterations. Compared to SPA, DFRAQINDN with 15 iterations outperforms SPA with 30 iterations for FER less than 10−4 at much lower complexity.
+Fig. 6 demonstrates the FER performance versus the number of iterations at p = 0.008. To achieve FER less than 10−5, DFRAQINDN requires 10 iterations, while OMS and SPA require 15 and 25 iterations, respectively. Among three decoders, DFRAQINDN has the fastest convergence.
+3) Decoding Thresholds: In Table II, we compare the
+decoding thresholds of various decoders for Tanner code
+(155, 64) and QC LDPC code (1296, 972), where “fp” indi-
+cates the floating-point precision. The decoding thresholds are
+computed via density evolution, which predict the ensembles’ behavior in waterfall region. For both codes, DFRAQINDN has a decoding threshold comparable to that of OMS. For finite
+length LDPC codes, density evolution is asymptotic and does
+not take the code structure into account. On the contrary,
+the RQNN framework is built based on specific Tanner graph,
+
+Fig. 6. FER decoding performance vs. the number of iterations for QC LDPC code (1296, 972) at p = 0.008. OMS and SPA have floating-point precision, while DFRAQINDN has 3-bit precision.
+thus although DFRAQINDN has slightly worse decoding threshold than SPA, it still has good decoding performance in waterfall
+region. For example, for Tanner code (155, 64), the linear
+FAID in [12] has the largest decoding threshold in Table II, but it performs no better than DFRAQINDN .
+4) Generalizations: The RQNN framework can be gener-
+alized to various settings, which have not been seen during
+training. The first generalization is for the crossover probability p. As mentioned in the experiments setup, we only collect
+error patterns at a specific p for training. In the inference stage, we test DFRAQINDN over a set of crossover probabilities, and the decoding performance is consistent over various p, as shown
+in Fig. 3 to Fig. 8.
+Since the RQNN framework has recurrent structure, we are able to evaluate the decoding performance of DFRAQINDN with more iterations. Fig. 7 and Fig. 8 demonstrate the FER decoding performance of DFRAQINDN and SPA with more iterations for Tanner code (155, 64) and QC LDPC code (1296, 972),
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3972
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+TABLE II DECODING THRESHOLDS (p∗) OF VARIOUS DECODERS FOR TWO CODES
+
+Fig. 7. FER decoding performance within 100 iterations for Tanner code (155, 64) and Tanner code (310, 128). SPA has floating-point precision, while DFRAQINDN and the linear FAID [12] have 3-bit precision.
+
+Since the RQNN framework takes the specific code
+structure into account, we investigate the generalization to
+longer code with similar code structure. Consider the Tanner
+code (310, 128), which has the same dominant trapping set
+as Tanner code (155, 64). We evaluate the FER performance within 100 iterations of DFRAQINDN designed for Tanner code (155, 64), linear FAID [12], and SPA for Tanner code (310,
+128) in Fig. 7. Both 3-bit decoders approach SPA and surpass SPA for FER less than 10−4, and DFRAQINDN is better than the linear FAID [12].
+It is easy to see that each LUT is symmetric as it is invariant
+to the ordering of incoming messages, thus we only need to
+save part of its entries. We can even replace each level Li by integer i to simplify the implementation. Table III shows the 3-bit ΦRQNN of DFRAQINDN of QC LDPC code (1296, 972), where mj,k indicates that i2 = Mj, i3 = Mk. As it is shown in [24], [25], a decoder supporting multiple decoding rules can be efficiently implemented in hardware, thus DFRAQINDN requires only a small hardware overhead.
+
+Fig. 8. BER/FER decoding performance within more iterations for QC LDPC code (1296, 972). SPA and DFRAQINDN have the floating-point precision and 3-bit precision, respectively.
+respectively. In Fig. 7, DFRAQINDN , the linear FAID [12], and SPA are simulated with 100 iterations for Tanner code (155, 64). As shown in Fig. 7, DFRAQINDN is the best among all three decoders. In Fig. 8, we evaluate both the BER and FER decoding performance of DFRAQINDN with 30 iterations and SPA with 50 iterations. DFRAQINDN surpasses SPA with fewer iterations and less decoding complexity when the FER is less than 10−4. Moreover, from the BER performance, the SPA has an error floor at the BER of 10−7, while DFRAQINDN does not have any error floor at the BER of 10−8.
+
+D. Relation with Previous Related Work
+There have been significant efforts on designing FAIDs of LDPC codes for different channel models. Most of them have performance approaching BP decoding. For example, for AWGNC, Nguyen-Ly et al. [26] used density evolution to optimize the FAIDs, and showed that 4-bit precision FAIDs can approach the BP decoding performance. Lewandowsky et al. [27] obtained similar results via Information Bottleneck method. Romero et al. [28] got similar results for both AWGNC and BSC by utilizing an optimal quantizer at each step of density evolution to maximize mutual information. The only work capable of outperforming BP decoding is in [12], where Planjery et al. constructed FAIDs for column-weight-three regular LDPC codes to correct trapping sets. They showed that the 3-bit precision FAIDs surpassed BP and all other message passing decoders in error floor region.
+In this work, we show the capability of neural networks on designing FAIDs with low precision over BSC with competitive decoding performance. Compared with previous works, the RQNN framework has several advantages. As opposed to the prevalent approach of designing the message update rules by trial and error, where for each candidate update rule, its threshold is found by the density evolution and then optimized by varying the update rule, the NN method designs the update rules automatically. Our framework results in FAID optimized for both superior error correction performance as well as fast convergence in the waterfall region.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+XIAO et al.: DESIGNING FINITE ALPHABET ITERATIVE DECODERS OF LDPC CODES VIA RQNNs
+
+3973
+
+TABLE III 3-BIT ΦRQNN IN DFRAQINDN FOR QC LDPC CODE (1296, 972)
+
+VI. CONCLUSION
+In this paper, we proposed a new design of linear finite alphabet iterative decoding rules of LDPC codes over BSC via recurrent quantized neural networks. The RQNN framework can generate linear FAIDs with only 3-bit precision that perform as well as, and are capable of surpassing, floatingpoint OMS and SPA decoding. We provided a BER loss function for BSC, and introduced how to address zero gradient issue in backward propagation via STEs. We suggested a joint training scheme to simultaneously train the levels in alphabet set and the RQNN parameters. The numerical results show that the RQNN-aided linear FAIDs are capable of surpassing floating-point BP in waterfall region at much lower complexity and memory usage, faster convergence, and can be generalized well to more iterations and longer codes with similar code structure. Future research includes how to use neural networks to solve trapping set problems to design decoders with low error floor.
+REFERENCES
+[1] J. R. Hershey, J. Le Roux, and F. Weninger, “Deep unfolding: Modelbased inspiration of novel deep architectures,” 2014, arXiv:1409.2574. [Online]. Available: http://arxiv.org/abs/1409.2574
+[2] A. Balatsoukas-Stimming and C. Studer, “Deep unfolding for communications systems: A survey and some new directions,” 2019, arXiv:1906.05774. [Online]. Available: http://arxiv.org/abs/1906.05774
+[3] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 1361–1365.
+[4] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding of linear block codes,” 2017, arXiv:1702.07560. [Online]. Available: http://arxiv.org/abs/1702.07560
+[5] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Monticello, IL, USA, Sep. 2016, pp. 341–346.
+[6] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” 2017, arXiv:1707.05697. [Online]. Available: http://arxiv.org/abs/1707.05697
+[7] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), Lorient, France, Oct. 2017, pp. 1–6.
+[8] B. Vasic, X. Xiao, and S. Lin, “Learning to decode LDPC codes with finite-alphabet message passing,” in Proc. Inf. Theory Appl. Workshop (ITA), San Diego, CA, USA, Feb. 2018, pp. 1–10.
+[9] C.-F. Teng, C.-H.-D. Wu, A. Kuan-Shiuan Ho, and A.-Y.-A. Wu, “Low-complexity recurrent neural network-based polar decoder with weight quantization mechanism,” in Proc. ICASSP - IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Brighton, U.K., May 2019, pp. 1413–1417.
+[10] C. Deng and S. L. Bo Yuan, “Reduced-complexity deep neural networkaided channel code decoder: A case study for BCH decoder,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Brighton, U.K., May 2019, pp. 1468–1472.
+
+[11] A. Payani and F. Fekri, “Decoding LDPC codes on binary erasure channels using deep recurrent neural-logic layers,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Hong Kong, Dec. 2018, pp. 1–5.
+[12] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite alphabet iterative decoders—Part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Trans. Commun., vol. 61, no. 10, pp. 4033–4045, Oct. 2013.
+[13] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating gradients through stochastic neurons for conditional computation,” 2013, arXiv:1308.3432. [Online]. Available: http://arxiv.org/abs/ 1308.3432
+[14] X. Xiao, B. Vasic, R. Tandon, and S. Lin, “Finite alphabet iterative decoding of LDPC codes with coarsely quantized neural networks,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Waikoloa Village, HI, USA, Dec. 2019, pp. 1–6.
+[15] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, MA, USA: MIT Press, 2016.
+[16] M. Lian, F. Carpi, C. Hager, and H. D. Pfister, “Learned beliefpropagation decoding with simple scaling and SNR adaptation,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Paris, France, Jul. 2019, pp. 161–165.
+[17] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014, arXiv:1412.6980. [Online]. Available: http://arxiv. org/abs/1412.6980
+[18] M. Courbariaux, Y. Bengio, and J.-P. David, “Binaryconnect: Training deep neural networks with binary weights during propagations,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), Dec. 2015, pp. 3123–3131.
+[19] S. Wu, G. Li, F. Chen, and L. Shi, “Training and inference with integers in deep neural networks,” 2018, arXiv:1802.04680. [Online]. Available: http://arxiv.org/abs/1802.04680
+[20] P. Yin, S. Zhang, J. Lyu, S. Osher, Y. Qi, and J. Xin, “Blended coarse gradient descent for full quantization of deep neural networks,” Res. Math. Sci., vol. 6, no. 1, p. 14, Mar. 2019.
+[21] P. Yin, J. Lyu, S. Zhang, S. J. Osher, Y. Qi, and J. Xin, “Understanding straight-through estimator in training activation quantized neural nets,” in Proc. Int. Conf. Learn. Represent. (ICLR), May 2019, pp. 1–30.
+[22] I. Hubara, M. Courbariaux, D. Soudry, R. El-Yaniv, and Y. Bengio, “Quantized neural networks: Training neural networks with low precision weights and activations,” J. Mach. Learn. Res., vol. 18, no. 1, pp. 6869–6898, Jan. 2017.
+[23] List of LDPC Codes. Accessed: May 7, 2019. [Online]. Available: https://uweb.engr.arizona.edu/~vasiclab/tool.php?id=7
+[24] F. Cai, X. Zhang, D. Declercq, S. K. Planjery, and B. Vasic, “Finite alphabet iterative decoders for LDPC codes: Optimization, architecture and analysis,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 61, no. 5, pp. 1366–1375, May 2014.
+[25] R. Ghanaatian et al., “A 588-Gb/s LDPC decoder based on finitealphabet message passing,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[26] T. T. Nguyen-Ly, V. Savin, K. Le, D. Declercq, F. Ghaffari, and O. Boncalo, “Analysis and design of cost-effective, high-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 26, no. 3, pp. 508–521, Mar. 2018.
+[27] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method,” IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[28] F. J. C. Romero and B. M. Kurkoski, “LDPC decoding mappings that maximize mutual information,” IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2391–2401, Sep. 2016.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+3974
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 68, NO. 7, JULY 2020
+
+Xin Xiao received the B.S. degree in electrical engineering from Shanghai Jiao Tong University, Shanghai, China, in 2012. Under a dual degree program, she received the M.E. degree in system LSI from the Graduate School of Information, Production and System, Waseda University, Kitakyushu, Fukuoka, Japan, in 2013, and the M.S. degree in electrical engineering from Shanghai Jiao Tong University, Shanghai, China, in 2015. She is currently pursuing the Ph.D. degree in electrical and computer engineering with the University of Arizona, Tucson, AZ, USA. Since 2016, she has been a Research Assistant with the Electrical and Computer Engineering Department, University of Arizona. Her current research interests are in the general area of error correction coding for communication and storage systems, and deep learning and optimization in channel coding.
+
+Ravi Tandon (Senior Member, IEEE) received the B.Tech. degree in electrical engineering from IIT Kanpur in 2004, and the Ph.D. degree in electrical and computer engineering from the University of Maryland, College Park (UMCP), in 2010. From 2010 to 2012, he was a Post-Doctoral Research Associate at Princeton University. He is currently an Assistant Professor with the Department of ECE, University of Arizona. Prior to joining the University of Arizona in Fall 2015, he was a Research Assistant Professor at Virginia Tech with positions in the Bradley Department of ECE, Hume Center for National Security and Technology, and at the Discovery Analytics Center in the Department of Computer Science. His current research interests include information theory and its applications to wireless networks, communications, security and privacy, machine learning, and data mining. He is a recipient of the 2018 Keysight Early Career Professor Award, the NSF CAREER Award in 2017, and a Best Paper Award at IEEE GLOBECOM 2011. He currently serves as an Editor for IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS.
+
+Bane Vasic´ (Fellow, IEEE) is currently a Professor of electrical and computer engineering and mathematics with the University of Arizona and the Director of the Error Correction Laboratory. He is an inventor of the soft error-event decoding algorithm, and the key architect of a detector/decoder for Bell Labs data storage read channel chips which were regarded as the best in industry. His pioneering work on structured low-density parity-check (LDPC) error-correcting codes and the invention of codes has enabled low-complexity iterative decoder implementations. Structured LDPC codes are today adopted in a number of communications standards and data storage systems. He is known for his theoretical work in error correction coding theory and codes on graphs which has led to the characterization of the hard decision iterative decoders of LDPC codes, and design of decoders with best error-floor performance known today. He is a co-founder of Codelucida, a startup company developing advanced error correction solutions for communications and data storage. He is a Fulbright Scholar, da Vinci Fellow, and the past Chair of IEEE Data Storage Technical Committee.
+
+Shu Lin received the B.S.E.E. degree from the National Taiwan University, Taipei, Taiwan, in 1959, and the M.S. and Ph.D. degrees in electrical engineering from Rice University, Houston, TX, USA, in 1964 and 1965, respectively.
+In 1965, he joined the Faculty of the University of Hawaii, Honolulu, as an Assistant Professor of electrical engineering. He became an Associate Professor in 1969 and a Professor in 1973. In 1986, he joined Texas A&M University, College Station, TX, as the Irma Runyon Chair Professor of electrical engineering. In 1987, he returned to the University of Hawaii. From 1978 to 1979, he was a Visiting Scientist at the IBM Thomas J. Watson Research Center, Yorktown Heights, NY, USA, where he worked on error control protocols for data communication systems. He spent the academic year of 1996 to 1997 as a Visiting Professor at the Technical University of Munich, Munich, Germany. He retired from the University of Hawaii in 1999. He is currently an Adjunct Professor at the University of California, Davis, CA, USA. He has published numerous technical papers in IEEE Transactions and other refereed journals. He is the author of the book An Introduction to Error-Correcting Codes (Englewood Cliff, NJ: Prentice-Hall, 1970). He has also co-authored (with D. J. Costello) the book Error Control Coding: Fundamentals and Applications (Upper Saddle River, NJ: Prentice-Hall, 1st edition, 1982, 2nd edition, 2004), (with T. Kasami, T. Fujiwara, and M. Fossorier) the book Trellises and Trellis-Based Decoding Algorithms (Boston, MA: Kluwer Academic, 1998), (with W. E. Ryan) the book, Channel Codes: Classical and Modern (Cambridge University Press, 2009), and (with J. Li, K. Abdel-Ghaffar, W. E. Ryan, and D. J. Costello, Jr. ) the book LDPC Code Designs, Constructions, and Unification (Cambridge University Press, 2017). He has served as the Principle Investigator on 32 research grants. His current research areas include algebraic coding theory, coded modulation, error control systems, and satellite communications. Dr. Lin is a member of the IEEE Information Theory Society and the Communication Society. He has served as the Program Co-Chairman for the IEEE International Symposium of Information Theory held in Kobe, Japan, in June 1988. He was the President of the IEEE Information Theory Society in 1991. In 1996, he was a recipient of the Alexander von Humboldt Research Prize for U.S. Senior Scientists and a recipient of the IEEE Third-Millennium Medal, 2000. In 2007, he was a recipient of The Communications Society Stephen O. Rice Prize in the Field of Communications Theory. In 2014, he was awarded the NASA Exceptional Public Achievement Medal. He was awarded the 2019 Albert Nelson Marquis Lifetime Achievement Award. He is a recipient of the 2020 IEEE Leon K. Kirchmayer Graduate Teaching Award. He has served as the Associate Editor for Algebraic Coding Theory for IEEE TRANSACTIONS ON INFORMATION THEORY from 1976 to 1978.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:08:43 UTC from IEEE Xplore. Restrictions apply.
+
+

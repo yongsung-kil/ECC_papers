@@ -1,0 +1,1713 @@
+2696
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+A Low Complexity-High Throughput
+QC-LDPC Encoder
+Ahmed Mahdi and Vassilis Paliouras, Member, IEEE
+Abstract—This paper introduces hardware architectures for
+encoding Quasi-Cyclic Low-Density Parity Check (QC-LDPC)
+codes. The proposed encoders are based on appropriate factoriza-
+tion and subsequent compression of involved matrices by means
+of a novel technique, which exploits features of recursively-con-
+structed QC-LDPC codes. The particular approach derives to
+linear encoding time complexity and requires a constant number
+of clock cycles for the computation of parity bits for all the
+constructed codes of various lengths that stem from a common
+base matrix. The proposed architectures are flexible, as they are
+parameterized and can support multiple code rates and codes of
+different lengths simply by appropriate initialization of memories
+and determination of data bus widths. Implementation results
+show that the proposed encoding technique is more efficient for
+some LDPC codes than previously proposed solutions. Both serial
+and parallel architectures are proposed. Hardware instantiations
+of the proposed serial encoders demonstrate high throughput
+with low area complexity for code words of many thousand bits,
+achieving area reduction compared to prior art. Furthermore,
+parallelization is shown to efficiently support multi-Gbps solutions
+at the cost of moderate area increase. The proposed encoders are
+shown to outperform the current state-of-the-art in terms of
+throughput-area-ratio and area-time complexity by 10 to up to 80
+times for codes of comparable error-correction strength.
+Index Terms—QC-LDPC codes, encoding algorithm, sparse ma-
+trix, LU decomposition, hardware LDPC encoder, multi-Gbps en-
+coders..
+I. INTRODUCTION
+L
+OW-DENSITY PARITY-CHECK (LDPC) codes are a
+class of linear block codes with exceptional error-cor-
+recting capabilities approaching capacity for several different
+channels [1]. Computationally efficient iterative decoders allow
+the exploitation of the excellent LDPC error-correction strength
+in contemporary systems. Furthermore, the parallelism inherent
+in the decoding algorithms can be exploited in several ways to
+support high throughput rates [2]–[5]. A special class of LDPC
+Manuscript received September 27, 2013; revised January 24, 2014; accepted
+March 18, 2014. Date of publication March 31, 2014; date of current version
+April 25, 2014. The associate editor coordinating the review of this manuscript
+and approving it for publication was Prof. Warren J. Gross. The research activ-
+ities that led to these results, were cofinanced by Hellenic Funds and by the
+European Regional Development Fund (ERDF) under the Hellenic National
+Strategic Reference Framework (NSRF) 2007-2013, according to Contract no.
+MICRO2-SE-B/E-II of the Project “Next Generation Millimeter Wave Back-
+haul Radio” within the Programme “Hellenic Technology Clusters in Micro-
+electronics—Phase-2 Aid Measure.”
+The authors are with the VLSI Design Laboratory, Electrical and Computer
+Engineering Department, University of Patras, 26500 Patras, Greece (e-mail:
+mahdi@ece.upatras.gr; paliuras@ece.upatras.gr).
+Color versions of one or more of the figures in this paper are available online
+at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TSP.2014.2314435
+codes, called QC-LDPC codes, allows for efficient hardware
+implementations of encoding and decoding algorithms by ex-
+ploiting the structure of the corresponding Parity Check Matrix
+(PCM), which is composed of circulant permutation matrices
+[6], [7]. Due to their error correction strength, QC-LDPC
+codes supporting a variety of code rates have been recently
+adopted in several industrial standards such as wireless local
+area networks (Wi-Fi, IEEE 802.11n,ac,ad) and the Digital
+Video Broadcasting-Satellite-Second Generation (DVB-S2).
+QC-LDPC decoders are proved to be well-suited for VLSI
+implementation having low area complexity and supporting
+flexibility [8], [9]. Dense-matrix operations substantially in-
+crease the complexity of an LDPC encoder. Several authors
+have proposed encoders that perform the direct multiplication
+of the information word with the generator matrix, or with the
+part of it which refers to the parity bits, in the case of systematic
+codes [10], [11]. Li et al. describe two techniques for the deriva-
+tion of the generator matrix of a circulant PCM using either a
+single-step or a two-step procedure leading to single-step and
+two-step encoder architectures respectively [10].
+The derivation of the generator matrix requires operations
+with the inverse of a submatrix of the PCM [10]. While subma-
+trices of an LDPC PCM are necessarily sparse, their inverses can
+be dense. Dense-matrix operations can be avoided by exploiting
+certain properties that stem from a particular PCM structure,
+such as the dual diagonal structure used in several standards.
+Among several prior architectures that exploit dual-diagonal
+PCMs, Kopparthi and Gruenbacher [12] avoid the computation
+of a generator matrix by solving a suitably defined linear system
+of equations to compute the parity bits using forward substi-
+tution. Their approach exploits the dual diagonal structure of
+the IEEE 802.16e PCM submatrix
+which corresponds to the
+parity bits. In the other side, [13] and [14] also use this dual
+diagonal structure of
+submatrix of IEEE 802.11n standard
+codes PCM to determine the parity check symbols using for-
+ward substitution.
+Prominent among the encoder architectures are those based
+on the Richardson-Urbanke (RU) algorithm [15]. Richardson
+and Urbanke bring an LDPC PCM into an Almost Lower Trian-
+gular (ALT) format by executing row and column permutations
+thus maintaining the sparsity of the PCM. The derived ALT
+PCM is partitioned into six submatrices that participate in a se-
+ries of operations to derive the parity bits. The complexity of the
+method is
+, where
+is shown to be bounded by
+and
+is small for several good codes. Lee et al. [16] implement the RU
+algorithm in an FPGA. Multiplication by a small dense matrix is
+replaced by the solution of a system using forward-substitution.
+An issue with the RU technique is that column permutations
+1053-587X © 2014 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2697
+may be needed to guarantee the non-singularity of a particular
+submatrix whose inverse is required in the computation, thus re-
+sulting in a necessarily non-systematic encoder. To address this
+issue, Cohen and Parhi [17] propose a hybrid encoder, which
+uses operations with the generator matrix to derive a subset of
+the parity bits, while the remainder of the parity bits are com-
+puted using the RU method. Fewer et al. also implement the RU
+algorithm with a partly parallel architecture and special matrix
+construction to increase encoding throughput [18].
+Forward or backward substitution to solve a system and avoid
+a corresponding dense matrix operation is commonly used in
+several encoding techniques, including the RU method and the
+direct generator-based techniques. Specifically, multiplication
+by inverses of sparse matrices, which may be dense, can by
+avoided by performing suitable back/forward substitution, in
+the case that the corresponding multipliers are upper/lower tri-
+angular. He et al. exploit a special lower triangular structure
+of the PCM to define an architecture that performs a two-step
+encoding procedure, based on the hardwired implementation
+of multiplication by small matrices and of forward substitu-
+tion [19].
+Neal introduced an encoding method with linear complexity
+[20], where LU decomposition is exploited to avoid the com-
+putational cost of multiplication by a dense inverse matrix as
+recently applied on the codes employed in CMBB [21]–[23].
+Su et al. present an encoder based on LU-decomposition of
+and perform forward/backward substitution using a four-step
+procedure corresponding to (7) to compute the parity check
+vector [23]. Our approach differs from [23] in that we apply
+LU-decomposition on
+and perform row-vector-matrix
+multiplications.
+Kaji studied the LU decomposition of
+of PCMs of
+non-QC LDPC codes in comparison with the RU algorithm
+[24]. He has shown that LU decomposition of
+leads to less
+encoding complexity than RU encoding complexity, however,
+his analysis does not deal with the structure of
+and
+in the case of QC-LDPC codes, where they could have less
+nonzero sub-matrices than
+.
+In this paper we focus on hardware encoders for a partic-
+ular class of structured LDPC codes, namely recursively-con-
+structed QC-LDPC codes [25]. These codes have been found
+to offer efficient solutions for low-BER applications, while re-
+quiring moderate decoding complexity; they include the com-
+monly used QC-LDPC codes as a special case. The contribution
+of this paper is outlined below:
+• Exploitation of the recursively-constructed QC-LDPC
+codes structure by an introduced multi-level compression
+scheme that reduces memory requirements, and is suit-
+able for more general matrices composed of polynomial
+circulants,
+• Use of LU decomposition of
+(not of
+, as done
+by other authors; i.e., [26], [23]) to further reduce memory
+requirements in serial and shared architectures and to re-
+duce hardware complexity in parallel architectures, due to
+the reduction of the involved matrices,
+• A low-complexity hardware encoding core suitable for
+code words of length that spans few to many thousands
+bits,
+• Architectural exploration of encoders for QC-LDPC codes,
+and
+• Flexible design that requires a constant number of clock
+cycles for encoding codes of various word lengths, which
+share a common base matrix.
+The remainder of the paper is organized as follows: Section II
+reviews the encoding of systematic LDPC codes using the
+PCM, and code construction. Section III details the proposed
+encoding algorithm using LU decomposition and the proposed
+architectures, while the impact of several aspects of the pro-
+posed methodology is studied in Section IV. Section V presents
+implementation results of the proposed encoders for various
+codes of different lengths and code rates, and compares the
+proposed encoding method and architecture to prior art. Finally
+Section VI discusses conclusions.
+II. QC-LDPC ENCODING BACKGROUND
+A. LDPC Encoding Using PCM
+In general, a systematic
+LDPC code has
+information
+bits and
+coded bits with code rate
+. The parity-check
+matrix
+is of size
+, and it defines a set of equations:
+(1)
+where
+is a codeword. Let
+and
+be sub-matrices of
+,
+of size
+and
+, respectively, such
+that
+. Let codeword
+be expressed as
+,
+where
+is a vector of
+information bits and
+is composed of
+the
+parity bits. From (1), it follows that
+(2)
+(3)
+For encoders based on (3), high encoding complexity is at-
+tributed to the high density of
+[15].
+The high density of
+in (3) requires substantial hard-
+ware cost for the storage of the matrix. Furthermore, operations
+with dense matrices are computationally intensive, therefore re-
+quiring parallelism and hence additional hardware resources to
+deliver high throughput. In certain cases, the structure of the
+PCM allows for the reduction of encoding complexity, usually
+by limiting the randomness of the code. Encoding architectures
+based on the dual diagonal structure can be of low complexity;
+they take advantage of the fact that the sub-matrices of the dual
+diagonal are identity
+matrices (or of same shifting factor),
+and two of the three sub-matrices of the first columns of
+have
+the same value. Therefore, by solving a simple linear system, the
+first parity bits are directly computed and the remainder of the
+parity bits are obtained by simple forward substitution. How-
+ever, in order that the method is kept simple, restrictions are im-
+posed on the shifting factors of
+. The proposed encoder archi-
+tectures employ QC-LDPC codes of higher randomness than the
+codes of IEEE 802.16e and IEEE 802.11n standards, and the ob-
+tained BER performance is significantly improved as depicted
+in Fig. 1.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2698
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+Fig. 1. BER performance of
+, (2016, 1512), and
+(2016, 1008)
+using normalized min-sum decoder with normalization factor
+and
+.
+B. Iterative Code Construction
+The PCM of QC-LDPC codes consists of
+nonzero circu-
+larly shifted identity
+sub-matrices, in other words, circulant
+permutation sub-matrices (also represented as monomials [27])
+and
+zero sub-matrices.
+The construction of parity check matrix
+of the QC-LDPC
+used in the proposed encoder is performed off-line using a re-
+cursive method [25], [27], [28] summarized as follows:
+Let
+be a binary base matrix of size
+. This matrix is
+recursively extended by an integer
+, called extension factor,
+to construct the
+matrix of size
+as follows:
+For each column
+of the base matrix
+, we create a column
+with size equal to
+as follows:
+• Every “0” in
+is replaced by
+zero sub-
+matrix,
+• Every “1” is replaced by
+identity
+sub-matrix
+circularly shifted by shifting factor
+, particular for each
+nonzero element of
+.
+This process creates the new matrix
+and can be applied again on
+using an extension factor
+which can be either different
+from or equal to
+. The procedure is repeated until we reach
+the final PCM. QC-LDPC codes structured this way are also
+called Multi-level QC-LDPC codes [25], [28]. This construc-
+tion method has been proven to be suitable for implementation
+of high-throughput scalable LDPC decoders with low area
+complexity [29], [30]. Lin et al. have shown that decoders
+which use multi-level QC-LDPC codes, referred to as hierar-
+chical
+-QC LDPC codes, achieve improved coding, increased
+performance and adjustable degree of decoding parallelism
+[29]. Also, extending recursively the base matrix facilitates the
+construction of a PCM with controlled number of cycles [27],
+[25]. Each extended matrix
+is described by a unique base
+shift matrix
+. An example of such base shift matrix is
+(4)
+TABLE I
+COMPUTATION OF
+where the non-negative elements are shifting factors
+while
+denotes a zero sub-matrix.
+The error correction performance of several codes constructed
+as described above, has been thoroughly tested and proven by
+means of hardware prototyping using a system composed of an
+encoder, additive white Gaussian noise generator [31], a decoder
+[32], and circuitry for counting errors. The BER performance of
+two example QC-LDPC codes (
+and
+) in compar-
+isontoWimaxcodesisshowninFig.1.Itcanbeobservedthatthe
+corrective capability of the codes outperforms or is comparable
+to the corresponding Wimax codes of the same length at the
+waterfall, while the
+exhibits lower error floor.The codes
+were constructed as follows: A binary base matrix,
+, of size
+6
+24, having similar density distribution with Wimax code
+[33], has been randomly constructed, and randomly
+extended by two extension steps,
+for all lengths and
+for 2K code,
+for 4K code,
+for
+8K code and
+for 16K code. The same process has
+been followed to construct (2016, 1008) code, starting from the
+12
+24 Wimax binary base matrix. Note that codes adopted in
+several international standards such as the Wimax, rely on one
+extension step, thus restricting the PCM randomness degree.
+Codesconstructedasdiscussedherehavealreadyfoundpractical
+applicationina 60GHz GigabitEthernetwirelesslink[34],[35].
+III. PROPOSED ENCODER: MEMORY COMPRESSION SCHEME
+AND HARDWARE ARCHITECTURE
+LUdecompositioncanreducethecomplexityduethemultipli-
+cation by
+in (3) which can be decomposed into a lower
+triangular matrix
+and an upper triangular matrix
+, that is:
+(5)
+Therefore, using (3) and (5), encoding can be executed as
+(6)
+In case that not all the principle minors of
+are non-singular,
+the LU decomposition may not exist [23]; in this case an ex-
+tended LU decomposition is possible:
+, as
+in [23] where
+is a permutation matrix such that
+(7)
+Our experimental results show that LU decomposition of
+of the proposed codes results to sparser matrices than
+LU decomposition of
+, as detailed in Section IV.A. The
+proposed encoding method exploits the sparsity of the three
+matrices
+and
+in (6) performing a three-step encoding
+algorithm, listed in Table I. The sub-matrix
+is off-line in-
+verted within Galois Field
+and then, the obtained result
+is decomposed into a lower triangular matrix
+and
+an upper triangular matrix
+using Gaussian Elimination [23].
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2699
+Fig. 2. Overview of the proposed hardware encoder.
+TABLE II
+COMPRESSED REPRESENTATION OF
+. THIS ORGANIZATION ALLOW BETTER
+CONTROL THAN HAVING DIFFERENT MEMORIES FOR EACH CONTENT, INDEX,
+SHIFTING FACTOR OR EOC
+Matrices
+and
+are precomputed, compressed and stored in
+appropriated memories, as shown in following subsections.
+A. Serial Encoder Architecture
+An overview of the proposed hardware encoder architecture
+is shown in Fig. 2. First we propose an architecture where the
+operations are grouped into three identical stages, executed se-
+rially. We first propose a single-level compression scheme, sub-
+sequently extended to a recursive multi-level scheme. The par-
+ticular technique to reduce the memory required to store a sparse
+binary matrix, is to store the location of nonzero elements only,
+is common, see for example [23].
+The basic operation performed by each of the three stages of
+the encoder core is row-vector by matrix multiplication (VMM).
+We consider that each row vector is composed of sub-row vec-
+tors each of length equal to
+.
+1) First Encoding Stage: In the first step
+is involved.
+To compress
+, we consider it as a base matrix where its el-
+ements represent the values of the
+sub-matrices as illus-
+trated in (4) and therefore, it can be stored as depicted in Table II.
+For a code constructed in
+steps, we use the notation
+to de-
+note
+. EOC (End Of Column) is a one-bit flag, which, when
+asserted, denotes that the entry to be subsequently read, refers
+to the next column. Multiplication of a vector by a circularly
+shifted matrix is equivalent to a corresponding circular shift of
+the vector. Therefore we use a Logarithmic Barrel Shifter (LBS)
+modified to perform circular shifts to implement the multiplica-
+tion of sub-row vectors with the nonzero sub-matrices. All par-
+tial products that correspond to a particular group of -columns
+are accumulated by
+exclusive-or gates and a -bit register, as
+shown in Fig. 3. The employed compressing method ensures
+that the memory required to store the matrices needed for en-
+coding, depends on the density of each matrix rather than its
+size. The size
+of memory needed to store the nonzero ele-
+ments of
+is
+(8)
+Fig. 3. First-stage VMM Unit.
+where function
+returns the number of nonzero
+sub-
+matrices of matrix
+and
+is the length of the word shown in
+Table II. Therefore (8) is written as
+(9)
+Multi-Level Compression of
+: In the following, we extend
+the common compression method, so that it takes into consider-
+ation the recursive construction of the PCM. Substantial amount
+of memory is required for keeping the location of nonzero sub-
+matrices. For the case of recursively constructed codes (multi-
+level codes), we depart from the common compression tech-
+nique and show that it is possible to reduce the memory required
+for index storage by further exploiting the matrix structure. In
+the example of Section II.B, matrix
+has two extension levels,
+where
+. Let
+be the number of rows of
+.
+Let
+denote the number of
+bits required to express the row position of
+nonzero
+sub-matrices in
+. In our example and for
+, it holds that
+then
+. Even in case of
+, where
+is the last extension level,
+can be
+less when storing the indices of nonzero
+sub-matrices as a function of the shifting factors
+of the cor-
+responding
+nonzero sub-matrices in -th level. In a
+multi-level extension, each row/column of
+defines
+rows/columns in
+. In order to perform encoding by a
+multi-level PCM, the row positions of the
+sub-ma-
+trices are required in the
+matrix, together with the
+corresponding shifting factors. Instead of directly storing this
+information, significant storage reduction can be achieved for
+multi-level PCM codes, by storing information regarding the
+base matrix
+and the corresponding shifting factors
+, for
+all levels . Specifically, let
+denote the row position of a
+nonzero
+matrix at level . Starting from the indices
+of nonzero elements in
+, the sequence
+and all the corresponding shifting factors, the specific values of
+are iteratively computed, as discussed in the following.
+The indices
+of nonzero sub-matrices in each of the
+-columns in the first level
+equal to indices of nonzero
+elements of each single column of
+, i.e.,
+.
+Indices and shifting factors of nonzero sub-matrices of
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2700
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+Fig. 4. Hierarchical compression of multi-level QC-LDPC codes.
+is
+number of rows of
+.
+and
+respectively, and each 1-bit column
+of each
+sub-matrix,
+are used to determine the indices
+of the nonzero sub-matrices
+of the next level
+; sim-
+ilarly for the subsequent levels. Each index and shifting factor
+of level- are used to determine
+indices at
+st level.
+The indices of required
+)-bit sub-vectors of the input
+vector involved in the multiplication operations are similarly
+determined and stored, as shown in Fig. 4. Fig. 4 depicts that in
+the first level,
+and EOC of
+and
+of each
+nonzero sub-matrix of each
+-column of
+are stored.
+For each level , only shifting factors
+are stored. Due to
+the extension procedure, a nonzero element in
+produces
+nonzero elements in
+, each located in a row of a
+sub-matrix in
+. Therefore, starting from
+the row position (index) of a nonzero element in
+, we can
+compute the
+indices for the corresponding nonzero elements in
+. Let
+denote the index of a nonzero element
+in the th column,
+, of a
+sub-matrix
+in
+. Then
+can be iteratively computed as
+(10)
+where
+is the corresponding
+shifting factor,
+denotes the operation
+modulo .
+are
+the indices of the sub-vectors needed for multiplication. Fig. 5
+shows a circuit implementing the index computation of (10)
+connected to subsequent units. For a two-level PCM, the re-
+quired indices
+, corresponding to the nonzero sub-ma-
+trices in the second level, are computed using the particular
+, the value of
+and the corresponding shifting fac-
+tors
+of each nonzero sub-matrix in the first level.
+and
+are stored in individual ROMs, while values
+of
+are stored in registers. Note that the same concept can
+be followed to determine the indices of EOC;
+of each
+-column is asserted,
+, in the index of last nonzero
+sub-matrix of each
+-column, else
+. In the multi-
+level structure,
+is active in the corresponding index
+and can be determined using
+:
+(11)
+where
+. According to the
+introduced iterative multi-level memory compression described
+Fig. 5. Architecture of index computation circuit for ML-
+.
+Fig. 6. The unique types of the nonzero sub-matrices in
+and
+for
+.
+above, the total memory size
+, required to store matrix
+can be computed as follows
+(12)
+where
+is the number of nonzero elements of
+.
+2) Second and Third Encoding Stages: Matrices
+and
+do not consist only of identity
+, circularly shifted identity
+(monomial), and zero sub-matrices thus they differ from the
+structure of
+, because of the inversion of
+. It is found
+by exhaustive search that the three matrices
+and
+consist of
+zero sub-matrices and a limited number of types
+of
+nonzero sub-matrices. Furthermore, it is interesting to
+note that the
+nonzero sub-matrices are obtained by cir-
+cularly shifting an even more limited set
+of nonzero sub-ma-
+trices. The occurrence of circulants is expected since the inverse
+of a matrix composed of circulant sub-matrices is also a matrix
+of circulant sub-matrices [36]. Also, sum, product and inverse
+of circulants are also circulants [37]. The procedure of identi-
+fying the set of types
+is simple and is described by Algorithm
+1. Function
+in line 6 of Alg. 1, circularly shifts the
+columns of matrix
+by
+positions. The particular details of
+the structure of
+and
+are exploited to decrease the memory
+required for their storage. Each type of nonzero sub-matrix is
+assigned an integer as a unique identity tag. As an illustrative
+example assume the PCM
+of the 2K code where matrices
+and
+of the example LDPC code,
+, have only
+four types of 4
+4 nonzero sub-matrices, i.e.,
+, denoted as
+to
+and
+in Fig. 6. Sub-matrix
+has been
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2701
+TABLE III
+COMPRESSED REPRESENTATION OF MATRIX
+. THE OCCURRENCE OF
+POLYNOMIAL SUB-MATRICES REQUIRES STORING RELATIVE INFORMATIONS
+ABOUT THEM. A COMPRESSED REPRESENTATION OF
+HAS IDENTICAL
+STRUCTURE
+observed in other codes, but not in
+. We therefore extend
+the strategy adopted for storing
+to the case of matrices not
+composed by circularly shifted identity matrices only. Specif-
+ically we store the type of each particular nonzero sub-matrix
+that has occurred and then we store the corresponding index (the
+row position of the corresponding element of
+or
+), shifting
+factor, identity tag and EOC, thus producing a compressed rep-
+resentation for
+and
+, illustrated in Table III.
+Algorithm 1 Identification of Types in a Matrix
+Require: Matrix
+Ensure:
+, shifting factors
+1: Partition
+into non-overlapping
+sub-matrices
+2:
+3: for all nonzero
+in
+do
+4:
+found
+false
+5:
+for all shifting factors
+do
+6:
+if
+then
+7:
+found
+true
+8:
+shifting factors
+append(shifting factors, )
+9:
+end if
+10:
+if not found then
+11:
+12:
+end if
+13:
+end for
+14: end for
+Therefore we first to multiply the sub-row vectors with the
+corresponding sub-matrices using a Modulo-2 row vector-ma-
+trix multiplier, called MAC, and subsequently circularly shift
+the result by the corresponding shifting factor, as seen in Fig. 7.
+The compressed representations of matrices
+and
+are stored
+in two separate ROMs, while the first rows of each type are
+stored in a Look-Up Table identified using a characteristic in-
+teger as identity tag. Notice that a complete sub-matrix should
+be stored, in case of non-circulants, instead of a single row. The
+impact of this structure is studied in Section IV.B. The corre-
+sponding sizes
+and
+for the storage of matrices
+and
+respectively, are given by
+(13)
+(14)
+Fig. 7. VMM Unit of stages 2 and 3. The units which multiply the row vectors
+with
+and
+have identical structure. They differ only in the contents of the
+ROMs.
+where
+and
+are the total number of unique sub-matrix
+types of
+and
+respectively. It is noted that most LDPC codes
+tested for the proposed encoder exhibit the same sub-matrix
+types for
+and
+, so they can share the same memory.
+Multi-Level Compression of
+and
+: Matrices
+and
+differ from
+in that they are not composed of cir-
+cularly shifted matrices, but they may contain polynomial cir-
+culants, or even for the case of
+and
+being non-circulant
+matrices. In other words, consider that the sub-matrix
+is
+extended by polynomial circulant
+sub-matrices and
+subsequently is extended by polynomial circulant
+sub-matrices generating
+. Therefore, ML-com-
+pression can be applied to
+and
+by taking into
+consideration in addition to the shifting factors, the sub-matrix
+types also. For evaluating the ML-compression on higher-level
+codes, ML-QC-LDPC matrices with three, four and five levels
+of expansion have been constructed. It is interesting to mention
+that some codes present polynomial circulant sub-matrices in
+each level while others present different types of sub-matrices
+in all levels except the last. Most of them are polynomial circu-
+lant sub-matrices and the remainder are a set of “unstructured”
+non-circulant sub-matrices with different number of nonzero el-
+ements in each column/row. Therefore for matrices
+and
+, (10) is then written as follows
+(15)
+where the type
+of the sub-matrix is taken into consideration,
+as well as
+, which enumerates the nonzero elements in the th
+column of the extended matrix, to cover the case of multiple
+nonzero elements per column. These parameters are arguments
+to a function
+in (15), which quantifies the role of each param-
+eter. The exact definition of
+depends on the code and can be
+implemented as a look-up operation.
+B. Shared Serial Encoder Architecture
+A VMM unit can be shared among the three units of the en-
+coder to reduce hardware complexity. In this case, unit MAC
+employed in second and third steps is bypassed in the first step.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2702
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+Fig. 8. Encoder architecture with one shared VMM unit.
+A shared VMM unit is shown in Fig. 8. The number of logic ele-
+ments required to implement the shared VMM unit is estimated
+as follows:
+(16)
+Note that the second VMM unit shown in Fig. 7 and the shared
+encoder core shown in Fig. 8 can be used to implement effi-
+ciently encoders based on polynomial QC-LDPC codes [38],
+[39] without any changes. For large values of
+, long critical
+paths may occur in the MAC unit or the LBS network, there-
+fore reducing clock frequency. Such issues are addressed by
+introducing pipeline stages. Table VI compares the occupied
+slices required to implement encoders of various code lengths
+and therefore
+, using either three VMM units or one shared
+VMM unit.
+C. Parallel Encoder Architecture
+1)
+-Parallel Encoder Architecture: The serial encoding
+core multiplies row vectors by the corresponding compressed
+matrices, one -column at a time. To decrease the encoding la-
+tency, we can parallelize each multiplication by partitioning the
+matrices
+and
+into
+groups of -columns each, where
+is the parallelism degree, and subsequently, multiply the input
+vector by the
+groups, in parallel as depicted in Fig. 9. When
+the shared VMM of Fig. 8 is used, the hardware complexity
+measured as the number of logic elements is
+(17)
+where
+is given by (16).
+Each VMM uses a local memory to store compressed infor-
+mation regarding only
+columns of the matrix
+or
+,
+by which the parallelized unit multiplies, where
+is the number
+of the
+-columns of the particular matrix. In the shared par-
+allel architecture, with the organization shown in Fig. 10, the
+Fig. 9. A parallel implementation of the first step comprises identical instances
+of the same unit. Each instance accesses a ROM containing data required by the
+particular instance only. Similarly for the second and third steps.
+represents
+the number of the included columns in each unit,
+.
+Fig. 10. Shared parallel architecture. (a) Dedicated VMMs for each of the
+three steps. (b) Organization of shared VMMs, VMMs without MAC, and
+interconnection with XOR trees.
+computation of each row vector-matrix product is accelerated
+using large numbers of VMMs. In order to reduce hardware
+complexity, instead of using three separate units for each row
+vector-matrix multiplication as in Fig. 2, a shared VMM array
+is build, from VMMs capable of supporting all three vector-ma-
+trix computations required by the encoder (Fig. 8), one at a time.
+The maximum possible number of shared VMMs employed to
+implement multiplication is defined by the number of nonzero
+sub-matrices of
+and
+. In case that nonzero elements of
+outnumber the nonzero elements in
+or
+, additional simpler
+VMMs, i.e., not containing a MAC, (Fig. 3) are used. The -bit
+sub-vectors which compose the result, are formed by XOR ad-
+dition trees, which sum outputs of the VMMs operating in par-
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2703
+Fig. 11. Full parallel core based on XOR logic. Inputs and outputs are stored
+in shift registers.
+allel. Upper bounds on the number of VMMs required for a
+vector-matrix multiplication are given by
+(18)
+(19)
+(20)
+where
+is the number of VMMs without a MAC required
+for multiplication by matrix
+, and
+denotes the maximum
+number of VMMs required for multiplication by matrices
+and
+, as shown in Fig. 10(a). Finally,
+is the number of
+VMMs without a MAC as the remainder of the processing can
+be performed by the
+shared VMMs, as shown in Fig. 10(b).
+Parallelism of full vector - matrix multiplication proposed in
+Fig. 10 is flexible and can be exploited efficiently for different
+QC-LDPC codes by applying changes only on ROMs or FFs for
+the case of the full parallel encoding architecture based on the
+proposed code structure and memory compression. The archi-
+tecture allows easy exploitation of area - throughput trade-offs.
+2) Fully Parallel Encoder: Another VMM architecture can
+be derived by replacing the shared VMM array by a simple
+bit-by-bit modulo-2 vector-matrix multiplier, as the encoding
+core of [11], using AND/XOR operations. Another technique is
+hard-wiring the XOR operations and removing the AND logic.
+Such an architecture is shown in Fig. 11. Once the information
+bits are loaded in a shift register, multiplications are executed
+in a single clock cycle. This requires a
+-bit input shift register
+and an
+-bit output shift register.
+It is clearly shown that the number of XOR gates,
+, de-
+pends on the number of aces in the corresponding matrix, there-
+fore on the density of the first base matrix
+. Since the den-
+sity of
+is directly related to that of
+, therefore
+, where
+is the degree of column
+and
+and
+is the number of columns of
+. Also,
+considering one pipelining stage after each step of the encoding
+algorithm, the maximum delay critical path,
+, depends on
+the column which has the maximum number of nonzero ele-
+ments in a column
+of a matrix
+. For the case
+of
+can be precomputed considering the density of
+corresponding part of the
+. Similarly
+corresponding
+to the multiplication by
+and
+can be computed following the
+inversion and LU decomposition of
+matrix as follows,
+(21)
+where
+is the delay of two-input XOR gate and
+is any
+of
+. The performance of the fully parallel architecture
+for various code words lengths is shown in Table VII.
+IV. EVALUATION OF THE PROPOSED ENCODERS
+In this section, we quantify the performance and the com-
+plexity of the proposed encoder architectures. All encoders for
+codes with rates 1/2 and 3/4 have been realized in hardware on
+the Xilinx Virtex-5 FPGA device XC5VFX70T-FF1136-1 [40].
+A. Impact of LU Decomposition of
+The types shown in Fig. 6 are permuted sub-matrices with a
+constant number of “1”s per row, while in some codes, every
+row of the sub-matrix could have different number of “1”s or
+even an all-zero row. For latter codes, matrix
+is com-
+posed of fewer types but it has been found to be about two to
+five times more dense than both
+and
+matrices. Therefore,
+even with as many sub-matrix types as up to 1000 as we found
+in some codes, LU decomposition with the proposed prepro-
+cessing method has been found to be more efficient encoding
+method. Particularly, an irregular girth-6 LDPC code, denoted
+, for which
+, gives
+and
+matrices with four
+different types of nonzero sub-matrices of Fig. 6. Therefore we
+need a LUT of 4
+4 bits to store them. In a similar girth-6
+QC-LDPC code,
+, while the number of types of
+was 4 with 15321 nonzero sub-matrices,
+presents 18 unique
+types; some of them are circulant permuted sub-matrices, while
+others are not. Matrix
+of
+presents 10 unique types,
+therefore two LUT’s of 18
+16 bits and 10
+16 bits are re-
+quired to store the
+sub-matrices of
+and
+, where
+.
+However, the number of nonzero sub-matrices of both
+and
+is 2010, as low as 7.6 times less than the number of nonzero
+sub-matrices of
+. Relevant complexity reduction is also
+observed for the girth-8
+. Note that when matrix
+is sparse, it is well-known that the so-called fill-in may occur;
+i.e., its triangular factors
+and
+combined may have more
+nonzero elements than
+[41]. Such a sparse
+oc-
+curs in Wimax codes.
+In this case, it is preferable to directly use matrix
+for
+encoding, since it has less nonzero elements than
+and
+. For
+the proposed codes and encoders, where the sub-matrix
+is
+randomly constructed and extended by two levels, it is shown
+that LU decomposition of
+results to denser
+and
+than the
+LU decomposition of
+. The impact of the two decom-
+positions on hardware complexity is quantified in Section IV.C
+for the case of fully parallel architecture.
+Table IV shows the number of required clock cycles and a
+memory requirements comparison according to (13) and (14)
+for encoders based on LU decomposition and direct multiplica-
+tion by
+of randomly constructed ML-QC-LDPC codes.
+For
+, we use the base matrix of IEEE Std. 802.16e-2005
+[33], for a
+and
+A, and subsequently recursively extended it. Data reported in
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2704
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+TABLE IV
+COMPLEXITY COMPARISON BETWEEN VARIOUS LDPC CODES FOR
+AND CODE RATE 0.75 BASED ON
+. AN ENTRY
+MEANS THAT MULTIPLICATION WITH THE PARTICULAR MATRIX REQUIRES
+CLOCK CYCLES, WHILE
+BITS OF MEMORY ARE REQUIRED TO STORE
+THE MATRIX
+Table IV demonstrate that an architecture based on the LU de-
+composition of
+achieves lower complexity than the di-
+rect use of
+.
+B. Impact of Multi-Level Memory Compression
+Multi-level compression is used to reduce the memory
+required to store the locations of nonzero sub-matrices.
+To store the indices of these sub-matrices of
+using
+a compression scheme based on
+of
+,
+we need a memory of
+bits,
+while
+when
+using
+the second
+compression
+scheme
+based
+on
+, we need a memory of
+bits
+bits. Memory reduction using the iterative
+compression scheme can be 77.4% better than the first com-
+pression scheme for
+. This reduction comes at the cost of
+a relatively simple circuit that implements (10). Specifically,
+for the employed FPGA device, we only need six additional
+slices to implement the circuit of index computation of (10).
+Notice that the feedback path is not needed in case of two-level
+extended matrices.
+Matrices
+and
+of
+exhibit
+one
+and
+two
+types,
+respectively,
+in
+the
+first
+extension
+level,
+i.e.,
+for
+. The total memory required to store
+the
+indices
+of
+nonzero
+4
+4
+sub-matrices
+of
+matrix
+,
+using
+the
+multi-level
+compression
+scheme,
+is
+bits. Similarly, for matrix
+, a 1962-bit
+memory is required. Note that types of nonzero 21
+21
+sub-matrices of
+and
+are also required to be stored. Small
+lookup tables of 21 bits and 2
+21 bits are needed for matrices
+and
+, respectively. Therefore 2748 bits are required for
+matrix
+and 2004 bits are required for matrix
+, instead of
+bits and 4408 bits shown in Table IV,
+required by the single-level compression scheme. A memory
+reduction by a factor of 2.18 is achieved in this way for the
+storage of
+and
+.
+The proposed multi-level compression scheme over multi-
+level polynomial QC-LDPC codes presents a trade-off between
+memory requirements and computational complexity. For the
+cases that the implementation of
+in (15), is complicated, the
+TABLE V
+COMPARISON OF SERIAL AND PARALLEL ARCHITECTURES
+single-level compression scheme can be followed for
+and
+,
+combined with a multi-level compression scheme for
+.
+C. Impact of Parallelism
+Measurements show that the proposed parallel architecture
+increases the encoding throughput with a moderate increase of
+area complexity. Table V reports the encoding complexity of
+for two cases, a serial one employing one VMM per
+stage and a parallel one, employing two VMMs per stage. The
+particular parallel architecture uses distinct VMM units and not
+shared VMMs of Fig. 8. Table V reveals that the degree-2 par-
+allel architecture increases throughput by a factor of two, while
+area complexity is only slightly increased.
+The highest throughput rate is achieved when executing each
+step of Table I in one clock cycle where all nonzero sub-matrices
+of each matrix of each encoding step are multiplied in parallel.
+In this way, encoding requires three clock cycles to compute the
+parity symbols.
+Based on the analysis for the
+-parallel architecture in
+Section III.C.1 and (17)–(20), for
+, matrix
+has the
+maximum number of nonzero sub-matrices equal to 1512,
+while
+and
+have 495 and 366 nonzero sub-matrices, re-
+spectively. Also for
+, the VMM of Fig. 8 requires six
+slices including a LUT-MAC sub-unit, while a VMM without
+a LUT-MAC and an accumulator subunits, requires two slices
+only. Therefore the estimated number of slices required to
+implement the full parallel architecture is
+.
+In addition,
+, 369, and 240 4-bit XOR gates are
+required to implement additive trees for matrices
+and
+, respectively, leading to a total of approximately 30 k slices
+for the encoding core only. Assuming input data availability,
+a maximum path delay of 5 ns, and a latency of three clock
+cycles, the estimated throughput could reach 134 Gbps. There-
+fore, we can control the area-throughput trade-off by adjusting
+the parallelism degree.
+The fully parallel architecture of Fig. 11 has been mapped on
+the used FPGA device, executing the three-step encoding algo-
+rithm in a single clock. Using LU decomposition of
+,
+the critical path,
+, without pipelining stages between the
+three encoding steps, is determined by
+, where
+is the delay of a two-input XOR gate. Also for
+, 13356
+XOR gates are required to multiply by
+, while 3048
+XOR gates are needed to multiply by
+and
+. A proposed ar-
+chitecture based on the LU decomposition of
+requires
+half the gates required by an architecture based on the LU de-
+composition of
+, which requires 5503 XOR gates. Table VII
+depicts the number of required slices, operating frequency and
+the achieved throughput of the fully parallel architecture of the
+employed codes. The high number of required slices is due to
+the shift registers needed to store the codewords.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2705
+TABLE VI
+OCCUPIED SLICES AND ACHIEVED FREQUENCY OF SERIAL ARCHITECTURES
+OF VARIOUS CODEWORDS LENGTHS.
+IS THE SIZE OF LAST EXTENSION STEP
+(SECOND STEP).
+IS THE NUMBER OF REQUIRED CLOCK CYCLES, AND
+AND
+ARE THE ACHIEVED INFORMATION AND BLOCK THROUGHPUT,
+RESPECTIVELY
+TABLE VII
+PERFORMANCE OF FULLY PARALLEL ARCHITECTURE. THE COMPUTED
+THROUGHPUT EXCLUDES LOADING AND TRANSMISSION TIME
+V. IMPLEMENTATION RESULTS AND COMPARISONS TO THE
+STATE-OF-THE-ART
+The proposed encoder architectures have been implemented
+onto hardware for various codes described in Section II.B.
+These codes share a common base matrix
+having the
+same degree distribution with Wimax
+[33] and en-
+coding requires a constant number of clock cycles. Table VI
+lists the corresponding occupied area in the Xilinx Virtex-5
+FPGA device XC5VFX70T-FF1136-1. The occupied slices
+refer to the proposed serial architecture using single-level com-
+pression. The architecture is found to be efficient for several
+QC-LDPC codes, irrespectively of the employed number of
+extensions, one or more, thus allowing it to be used for different
+standards based on a QC-LDPC PCM structure.
+Encoders in the literature are implemented in different
+technologies and FPGA devices and target different codes and
+applications. Therefore complexity and performance are not
+directly comparable; however useful conclusions can be drawn.
+Table VIII summarizes the related state-of-the-art encoders
+stating several encoding parameters including also a compar-
+ison of the Throughput-to-Area Ratio (TAR) of certain relevant
+works to the TAR of the corresponding proposed architectures
+measured at the same FPGA device of each relevant work. It is
+shown that the proposed architectures compare favourably to
+the prior art in the sense of flexibility and complexity, despite
+the fact that most of the prior art focuses on simple QC-LDPC
+or similar codes, while the proposed architecture focuses
+on recursively-constructed QC-LDPC codes for low-BER
+applications. For some cases [10], [11], we
+use the Clock Cycles-Area Product (CCAP) as a complexity
+measure to evaluate the architectures complexity. CCAP is a
+complexity measure suitable for comparisons to prior art in the
+case that the compared architectures are mapped to different
+technologies and under the assumption that they operate with
+the same clock frequency. We found that the latter assumption
+is realistic when the encoder operates as a component in a
+system, where the critical path is defined by a different com-
+ponent. Therefore CCAP is used to compare architectures for
+a given clock frequency. Also, to more clearly illustrate the
+benefit of the proposed encoders compared to [11] and [12]
+where a Wimax (2304, 1728) is employed, we have evaluated a
+proposed implementation for a recursively-constructed (2304,
+1728) QC-LDPC code, and compare their complexity to archi-
+tectures of [11] and [12]. The BER performance of these two
+codes is depicted in Fig. 12.
+Chae and Park [26] apply LU decomposition on sub-ma-
+trix
+of a regular Gallager (non-QC LDPC) PCM, after
+rearranging the columns and rows of the PCM to form a
+non-singular
+matrix, and hence, executing forward/back-
+ward substitution. However, as detailed in Sections IV.A and
+IV, for the proposed QC-LDPC codes, LU decomposition of
+derives to sparser matrices than LU decomposition
+of
+. LU factorization of
+has been also used by Su et al.
+[23]. Since throughput depends on time complexity and clock
+frequency, architectures in [26] and [23] are of relatively very
+low throughput rate due to low clock frequency. Targeting also
+low throughput applications, Wang and Chen have applied
+LU decomposition of the PCM of the CMMB standard [21]
+executing also forward and backward substitution. They require
+581 ALUTs and a memory of 2 015 232 bits for the highly
+structured LDPC CMMB (4608, 9216) and (2304, 9216) codes,
+achieving a throughput rate of 32.44 Mbps and 67.16 Mbps,
+respectively. The encoder design by Lee et al. [16], requires
+870 slices and 19 block RAMs for a (2000, 1000) code. The
+design can support different QC-LDPC codes and uses the RU
+algorithm, restricting the structure of the PCM to an appro-
+priate lower triangular matrix. They achieved a throughput of
+44 Mbps, thus they implement many parallel encoder instances
+to obtain higher throughput.
+Li et al. [10] exploit the circulants in the structure of the ma-
+trices involved in encoding using the Shift-Register-Add-Ac-
+cumulator (SRAA) circuit as a building block for a variety of
+architectures. The SRAA circuits require
+clocks to multiply a
+-bit vector by
+circulant matrix. Our architecture utilizes
+an LBS to perform the same basic operation in a single clock,
+at the expense of a potentially longer maximum delay path.
+Our approach departs from the approach of [10] since its com-
+plexity depends on the density of the involved matrices, while in
+[10] the size of the matrices dominates complexity where area
+complexity depends on the size of information bits which is
+very high for long code words especially for high code rates.
+Furthermore, we minimize the complexity by exploiting the
+existence of polynomial submatrices, the matrix factorization
+and the multi-level code structure, while [10] does not address
+memory requirements for the storage of the involved matrices.
+In [10], loading the information bits into the encoding core and
+multiplications are done in parallel. To compute all parity bits,
+[10] requires -SRAA circuits, where
+is
+, where
+is the
+number of parity bits. This in fact is a partial parallel architec-
+ture, where the indices of the non-zero submatrices in
+are con-
+secutive, while in our proposed architecture, indices depend on
+the resultant inverted matrix. Storing all non-zero submatrices
+requires large memories, making the technique of [10] ineffi-
+cient. Particularly, for the (2016, 1512) code, the SRAA-based
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2706
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+TABLE VIII
+A VIEW OF THE STATE OF THE ART INCLUDING COMPARISON OF THROUGHPUT-TO-AREA RATIO (TAR)
+Fig. 12. BER performance of a (2304, 1728) recursively-constructed
+QC-LDPC code compared to the corresponding Wimax code.
+TABLE IX
+AREA-TIME COMPLEXITY COMPARISON. ATP IS THE AREA-TIME PRODUCT
+FACTOR AND
+REPRESENTS A GIVEN GATE DELAY
+serial encoder of [10] would require 1512 clock cycles to de-
+termine the 504 parity bits using 1008 FFs, 504 XOR gates and
+504 AND gates to implement the encoding core. We compare
+to our proposed degree-
+parallel architecture, which requires
+clock cycles, a RAM of 2016 bits to store the infor-
+mation bits, the intermediate results and the parity bits,
+XOR gates,
+AND gates and
+FFs to implement
+the shared core (one shared core requires 55 logic elements).
+Using these measurements, Table IX lists the encoding required
+total logic elements, number of clock cycles and the area time
+product (ATP), where
+,
+for different codes and different related prior architectures.
+Assume the common and practical case that the encoder is
+integrated into a larger system, where the clock frequency is
+part of system specification and is applied on several blocks
+of the system. Therefore, for a frequency of 200 MHz, ATP
+of the proposed degree-3 partial parallel architecture outper-
+forms [10] by a factor of 1.7 due to the reduced CCAP, as
+shown in Table IX. However clearly the proposed architecture
+cannot accommodate faster clock without deeply pipelining the
+shared encoding core. Considering the full parallel procedure,
+the proposed full-parallel architecture requires the same number
+of XOR gates with the two-stage architecture of [10] but it re-
+quires only one clock to determine the parity bits while the
+two-stage architecture of [10] requires four clocks for the case
+of
+. In the particular case, the two architectures have com-
+parable critical path length.
+Yasotharan and Carusone [11] use also the generator matrix
+of IEEE 802.16e standard to compute the parity bits. Multiplica-
+tion with
+is executed using a Modulo-2 vector-matrix multi-
+plier. The encoding architecture of [11] requires binary multipli-
+cation between the input vector and a row vector
+of the parity
+sub-matrix of
+computing one parity bit per clock cycle. They
+require
+AND two-input gates and
+XOR two-inputs gates.
+The Modulo-2 vector-matrix multiplier of [11] can not be flex-
+ible for any LDPC code since for different codes, rows of the
+parity matrices could have a different number on non-zero ele-
+ments and therefore, a different multiplication tree is required.
+Also they need to store all the generator matrix. As shown in
+Table IX, our proposed architectures have 10.7 and 10 times less
+area-time complexity than [11] for the codes (2016, 1512) and
+(2304,1728), respectively.In conclusion, our proposed architec-
+tures having a complexity which depends on the number of non-
+zero submatrices/elements of the involved matrices are more ef-
+ficient than [10] and [11] where they depend on the number of
+information/parity bits (size of the involved matrices).
+Targeting high-throughput applications, Cohen and Parhi
+propose a hybrid encoder for IEEE 802.3an (10 GBase-T) based
+on RS(2048, 1723) LDPC code implementing an encoding
+method based on the RU algorithm [17]. The particular encoder
+requires 6333 LUTs, 6356 FFs and 4525 slices for the fully
+parallel Hybrid/RU architecture with a 4.642 ns clock period,
+and the Hybrid/seq encoder requires 15618 LUTs, 11911 FFs,
+and 8816 slices with a parallel-5 architecture with 4.377 ns
+clock period. The PCM of the IEEE 802.3an (10 GBase-T)
+standard LDPC code is structured, much more dense than
+the employed codes, not based on QC-LDPC codes and
+submatrix is not square, therefore, our proposed methodology
+and architecture can not be directly applied. However, our
+serial design of the (2016, 1512) encoder, implemented onto
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+MAHDI AND PALIOURAS: A LOW COMPLEXITY-HIGH THROUGHPUT QC-LDPC ENCODER
+2707
+the same device, achieves 106.2 Mbps with 1035 occupied
+slices, while the fully parallel architecture occupies 2538 slices
+achieving a throughput of 403.2 Gbps. Our architecture and
+[17] are not directly comparable since they are optimized for
+different codes and different applications, however the itera-
+tively constructed codes can be used, subject to meeting the
+appropriately set BER specifications. The corresponding TARs
+are reported in Table VIII. Using a different technique, Kop-
+parthi and Gruenbacher [12] exploit efficiently the structure
+of
+submatrix of the Wimax standard. Their architecture is
+based on forward substitution exploiting the particular struc-
+ture of
+, as it must be dual-diagonal and the sub-matrices
+of the two diagonals must be identity
+sub-matrices. Our
+architecture is based on two-level extended PCMs, thus even
+in case of dual-diagonal
+and sub-matrices of the two diag-
+onals are not necessarily identity matrices due to the random
+extension, their architecture needs to be accordingly modified.
+On the other hand our proposed method is directly applicable
+in this case. Furthermore, by implementing a pipelined parallel
+architecture, [12] achieves an information throughput (IT) of
+5.17 Gbps occupying 12727 logic elements on a STRATIX
+EP1S25FC672-6 FPGA device. Our proposed fully parallel
+architecture requires 5904 logic elements of the particular
+device achieving a information throughput of 191.8 Gbps,
+considering the (2304, 1728) QC-LDPC code of same density
+and behaviour (Fig. 12). Therefore, the TAR of our proposed
+architecture outperforms the TAR of [12] by a factor of 80.
+An encoding performance of more than 10 Gbps is achieved
+by He et al. due to their simplified code structure [19]. Indica-
+tively, they achieve 12.8 Gbps for block length of 2048 bits and
+code rate of 3/4 requiring 432 gates. This shows that the used
+codes are very sparse, also they show a BER plot of order of
+only. Recently, Jung et al. have proposed a relatively high
+throughput encoder for the IEEE 802.11n/ac standard which is
+based on one extension step. They employed the forward/back-
+ward substitution using partially parallel processing to achieve
+7.7 Gbps throughput for the (1944, 1620) code [14]. This par-
+allelism scheme derives to very high area complexity and low
+operation frequency. They reported the usage of 96 K gates
+for the encoder core, of all codes and code rates of the IEEE
+802.11n/ac standard, working at 100 MHz when implemented
+with 130-nm CMOS technology. Our proposed full parallel ar-
+chitecture requires 65664 XOR gates and one shift registers of
+length 1620 bits, maximum number of information bits, and 972
+bits for the maximum number of the determined parity bits of all
+involved codes and code rates. Assuming our fully parallel ar-
+chitecture and the same clock frequency of [14], and excluding
+the loading and transmission time, for the (1944, 1620) code, we
+achieve an information throughput (IT) of 194.4 Gbps having
+.
+The versatile encoder architecture of Fewer et al. implements
+special constructed codes allowing low hardware encoder/de-
+coder complexity [18]. Based also on the RU algorithm and
+forward substitution, parallel processing on several frames
+at once, and implementation of a series of shift stages, the
+design achieves a clock frequency of 278 MHz, due to the
+pipelined accumulator, occupying 614 slices with 11 block
+RAMs for a rate-0.75 code of length 6912 bits on Xilinx
+Virtex-4 (XC4VLX2512-FF668) device, while the achieved
+throughput depends on the number of frames processed in
+parallel. However, the codes supported are of fixed length, the
+density of employed codes and decoding performance below
+in [18] are not present, so direct comparison is difficult.
+The detailed comparisons above prove that the proposed ar-
+chitectures, based on LU decomposition of
+, memory
+compression, various degrees of parallelism, compare favorably
+with the sate of the art in terms of TAR—Area Time Complexity
+by 10 to up to 80 times for codes of comparable error-correc-
+tion strength. Furthermore the flexibility due to the joint code
+and architecture construction, allows the proposed architectures
+to adapt to various requirements. Finally the support of recur-
+sively-constructed QC-LDPC codes, which are not accommo-
+dated by the current state of the art, renders the proposed archi-
+tectures suitable for low-BER applications.
+VI. CONCLUSION
+We have introduced a complete encoding methodology for
+QC-LDPC codes. The recursive code construction allows flexi-
+bility of creation of codes with good performance and low error
+floors comparable to codes of the international standards, while
+the architectures are flexible in the sense of supporting wide
+range of code lengths and rates. The architectures have linear
+complexity with respect to block length. The proposed encoder
+is found to reduce complexity compared to previously reported
+designs and allow efficient exploitation of design trade-offs
+among parallelism, flexibility and throughput rate.
+The proposed multi-level compression scheme jointly con-
+sidered with the LU decomposition of
+and the pro-
+posed encoding architectures, introduced in this paper, address
+the challenges of designing low complexity encoders of efficient
+codes for a variety of throughput rates.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory,
+vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] H. Moussa, A. Baghdadi, and M. Jezequel, “Binary de Bruijn intercon-
+nection network for a flexible LDPC/turbo decoder,” in Proc. IEEE Int.
+Symp. Circuits Syst. (ISCAS 2008), May 2008, pp. 97–100.
+[3] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible
+LDPC decoder,” IEEE Trans. Circuits Syst. II: Exp. Briefs, vol. 54, no.
+6, pp. 542–546, Jun. 2007.
+[4] J.-Y. Lee and H.-J. Ryu, “A 1-Gb/s flexible LDPC decoder supporting
+multiple code rates and block lengths,” IEEE Trans. Consumer Elec-
+tron., vol. 54, no. 2, pp. 417–424, May 2008.
+[5] D. Hocevar, “LDPC code construction with flexible hardware imple-
+mentation,” in Proc. IEEE Int. Conf. Commun. (ICC’03), May 2003,
+vol. 4, pp. 2708–2712.
+[6] L. Chen, J. Xu, I. Djurdjevic, and S. Lin, “Near-Shannon-limit quasi-
+cyclic low-density parity-check codes,” IEEE Trans. Commun., vol.
+52, no. 7, pp. 1038–1042, Jul. 2004.
+[7] H. Tang, J. Xu, Y. Kou, S. Lin, and K. Abdel-Ghaffar, “On alge-
+braic construction of Gallager and circulant low-density parity-check
+codes,” IEEE Trans. Inf. Theory, vol. 50, no. 6, pp. 1269–1279, Jun.
+2004.
+[8] Z. Wang and Z. Cui, “Low-complexity high-speed decoder design
+for quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr.
+(VLSI) Syst., vol. 15, no. 1, pp. 104–114, Jan. 2007.
+[9] J. Lin, Z. Wang, L. Li, J. Sha, and M. Gao, “Efficient shuffle network
+architecture and application for Wimax LDPC decoders,” IEEE Trans.
+Circuits Syst. II: Exp. Briefs, vol. 56, no. 3, pp. 215–219, Mar. 2009.
+[10] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient encoding of
+quasi-cyclic low-density parity-check codes,” IEEE Trans. Commun.,
+vol. 54, no. 1, pp. 71–81, Jan. 2006.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 
+2708
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 10, MAY 15, 2014
+[11] H. Yasotharan and A. Carusone, “A flexible hardware encoder for
+systematic low-density parity-check codes,” in Proc. 52nd IEEE Int.
+Midwest Symp. Circuits Syst. (MWSCAS’09), Aug. 2009, pp. 54–57.
+[12] S. Kopparthi and D. Gruenbacher, “Implementation of a flexible en-
+coder for structured low-density parity-check codes,” in Proc. IEEE
+Pacific Rim Conf. Commun., Comput. Signal Process. (PacRim 2007),
+Aug. 2007, pp. 438–441.
+[13] Y. Sun, M. Karkooti, and J. R. Cavallaro, “High throughput, parallel,
+scalable LDPC encoder/decoder architecture for OFDM systems,” in
+Proc. IEEE Dallas/CAS Workshop Design, Appl., Integr. Software, Oct.
+2006, pp. 39–42.
+[14] Y. Jung, C. Chung, J. Kim, and Y. Jung, “7.7 Gbps encoder design for
+IEEE 802.11n/ac QC-LDPC codes,” in Proc. Int. SoC Design Conf.
+(ISOCC), Nov. 2012, pp. 215–218.
+[15] T. Richardson and R. Urbanke, “Efficient encoding of low-density
+parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp.
+638–656, Feb. 2001.
+[16] D.-U. Lee, W. Luk, C. Wang, and C. Jones, “A flexible hardware en-
+coder for low-density parity-check codes,” in Proc. 12th Annu. IEEE
+Symp. Field-Programmable Custom Comput. Mach. (FCCM 2004),
+Apr. 2004, pp. 101–111.
+[17] A. Cohen and K. Parhi, “A low-complexity hybrid LDPC code en-
+coder for IEEE 802.3an (10 GBase-T) Ethernet,” IEEE Trans. Signal
+Process., vol. 57, no. 10, pp. 4085–4094, Oct. 2009.
+[18] C. Fewer, M. Flanagan, and A. Fagan, “A versatile variable rate LDPC
+codec architecture,” IEEE Trans. Circuits Syst. I: Reg. Papers, vol. 54,
+no. 10, pp. 2240–2251, Oct. 2007.
+[19] Z. He, S. Roy, and P. Fortier, “Encoder architecture with throughput
+over 10 Gbit/sec for quasi-cyclic LDPC codes,” in Proc. IEEE Int.
+Symp. Circuits Syst. (ISCAS), May 21–24, 2006, pp. 3269–3272.
+[20] R. Neal, IMA Programs on Codes, Syst., Graphical Models, “Sparse
+matrix methods and probabilistic inference algorithms—Part I: Faster
+encoding for low density parity check codes using sparse matrix
+methods,” Aug. 1999.
+[21] P. Wang and Y.-E. Chen, “Low-complexity real-time LDPC encoder
+design for CMMB,” in Proc. Int. Conf. Intell. Inf. Hiding Multimedia
+Signal Process., 2008, pp. 1209–1212.
+[22] J. Hu and K. Jiang, “The improved lu-based decomposition
+algorithm
+for
+sparse
+matrix
+of
+ldpc
+code,”
+in
+Frontiers
+in
+Computer
+Education,
+ser.
+Advances
+in
+Intelligent
+and
+Soft
+Computing, S. Sambath and E. Zhu, Eds.
+Berlin, Germany:
+Springer- Verlag, 2012, vol. 133, pp. 867–874 [Online]. Available:
+http://dx.doi.org/10.1007/978-3-642-27552-4_114, [Online]. Avail-
+able:
+[23] J.-N. Su, Z. Jiang, K. Liu, X.-Y. Zeng, and H. Min, “An efficient low
+complexity LDPC encoder based on LU factorization with pivoting,”
+in Proc. 6th Int. Conf. ASIC, Oct. 2005, vol. 1, pp. 107–110.
+[24] Y. Kaji, “Encoding LDPC codes using the triangular factorization,”
+IEICE Trans. Fundamentals Electron., Commun. Comput.Sci., vol.
+E89-A, pp. 2510–2518, Oct. 2006.
+[25] N. Miladinovic and M. Fossorier, “Systematic recursive construction
+of LDPC codes,” IEEE Commun. Lett., vol. 8, no. 5, pp. 302–304, May
+2004.
+[26] S.-C. Chae and Y.-O. Park, “Low complexity encoding of regular low
+density parity check codes,” in Proc. 2003 IEEE 58th Veh. Technol.
+Conf. ., Oct. 2003, vol. 3, pp. 1822–1826.
+[27] M. Fossorier, “Quasi-cyclic low-density parity-check codes from cir-
+culant permutation matrices,” IEEE Trans. Inf. Theory, vol. 50, no. 8,
+pp. 1788–1793, Aug. 2004.
+[28] C.-M. Huang, J.-F. Huang, and C.-C. Yang, “Construction of quasi-
+cyclic LDPC codes from quadratic congruences,” IEEE Commun. Lett.,
+vol. 12, no. 4, pp. 313–315, Apr. 2008.
+[29] C.-Y. Lin, M.-K. Ku, and Y.-H. Chien, “Long length LDPC code
+construction and the corresponding decoder implementation with
+adjustable parallelism,” in Proc. IEEE Veh. Technol. Conf., May 2008,
+pp. 1423–1427.
+[30] I. Tsatsaragkos and V. Paliouras, “A flexible layered LDPC decoder,”
+in Proc. 8th Int. Symp. Wireless Commun. Syst., Nov. 2011, pp.
+36–40.
+[31] I. Paraskevakos and V. Paliouras, “A flexible high-throughput hard-
+ware architecture for a gaussian noise generator,” in Proc. IEEE Int.
+Conf. Acoustics, Speech, Signal Process. (ICASSP), May 2011, pp.
+1673–1676.
+[32] J. Chen and M. Fossorier, “Density evolution for two improved
+BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett.,
+vol. 6, no. 5, pp. 208–210, May 2002.
+[33] IEEE Std. 802.16e-2005 and IEEE Std.802.16-2004/Cor1-2005, 2006.
+[34] N. Kanistras, I. Tsatsaragkos, A. Mahdi, K. Karagianni, V. Paliouras,
+F. Gioulekas, E. Lalos, K. Adaos, M. Birbas, P. Karaivazoglou, M.
+Koziotis, and M. Perakis, “Digital baseband challenges for a 60 GHz
+gigabit link,” in Proc. 2011 18th IEEE Int. Conf. Electron., Circuits,
+Syst. (ICECS), Dec. 2011, pp. 346–349.
+[35] R. Makri, P. Tsenes, D. Economou, Y. Papananos, D. Dervenis,
+M. Birbas, J. Kikidis, V. Paliouras, G. Kalivas, A. Birbas, P. Karaiva-
+zoglou, Y. Stratakos, J. Korinthios, S. Siskos, A. Xatzopoulos,
+J. Komninos, S. Katsikas, K. Voudouris, A. Rigas, G. Agapiou, and
+P. Raxis, “Next generation millimeter wave backhaul radio: Overall
+system design for GbE 60 GHz PtP wireless radio of high CMOS
+integration,” in Proc. 2011 18th IEEE Int. Conf. Electron., Circuits,
+Syst. (ICECS), 2011, pp. 338–341.
+[36] I. Imam and L. Lamont, “An algorithm using the schur complement in
+inverting large matrices,” in Proc. IEEE Southeast Conf. Energy Inf.
+Technol. Southeast, Apr. 1989, vol. 2, pp. 421–426.
+[37] R. M. Gray, Toeplitz and Circulant Matrices: A Review, ser. Founda-
+tions and Trends in Communications and Information Theory.
+Delft
+, The Netherlands: Now Publishers Inc., 2006.
+[38] S. Johnson and S. Weller, “A family of irregular LDPC codes with low
+encoding complexity,” IEEE Commun. Lett., vol. 7, no. 2, pp. 79–81,
+Feb. 2003.
+[39] B. Vasic, “Structured iteratively decodable codes based on steiner
+systems and their application in magnetic recording,” in Proc. IEEE
+Global Telecommun. Conf. (GLOBECOM’01), 2001, vol. 5, pp.
+2954–2960.
+[40] “Virtex-5 FPGA Devices,” Jul. 2011 [Online]. Available: www.
+xilinx.com
+[41] A. George and E. Ng, “Symbolic factorization for sparse gaussian elim-
+ination with partial pivoting,” SIAM J. Sci. Statical Comput., vol. 8, no.
+6, pp. 877–898, Nov. 1987.
+Ahmed Mahdi holds a diploma in electrical and
+computer engineering and a M.Sc. in integrated
+software and hardware systems from the University
+of Patras. He is currently pursuing his Ph.D. Degree
+on hardware architectures for error correction sys-
+tems. His interests are in the field of high-throughput
+low-complexity
+VLSI
+architectures
+for
+signal
+processing and algorithm modelling/hardware im-
+plementation co-design.
+Vassilis Paliouras (S’90–M’92) is an associate
+professor at the Electrical and Computer Engi-
+neering Department, University of Patras, Greece.
+His research interests are in the areas of VLSI archi-
+tectures for signal processing and communications,
+low-power digital design and computer arithmetic.
+He has published more than 110 research articles
+in international journals, conferences, and book
+chapters and has edited three books. He is advisor to
+five Ph.D. students, and has supervised 23 masters’
+and 18 diploma theses. Dr. Paliouras has received
+the IEEE CASS Guillemin-Cauer best-paper award for the year 2000. Dr.
+Paliouras has served as the general co-chair of International Workshop on
+Power and Timing Modeling, Optimization and Simulation (PATMOS 2004).
+He has also served as technical program chair of PATMOS 2005, the IEEE
+Workshop on Signal Processing Systems Implementation (SiPS) 2005, and
+technical program co-chair of IEEE International Conference on Electronics
+Circuits and Systems (ICECS) 2010 and a European liaison for IEEE ISCAS
+2012, Korea. He has served in editorial boards of journals and technical
+program committees of numerous conferences in the areas of signal processing,
+circuits, systems, and communications.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:18:27 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,620 @@
+2018 IEEE 36th International Conference on Computer Design
+
+Selective Compression Scheme for Read Performance Improvement on Flash Devices
+Qiao Li∗, Liang Shi† , Riwei Pan∗, Cheng Ji∗, Xiaoqiang Li‡ and Chun Jason Xue∗ ∗ Department of Computer Science, City University of Hong Kong † College of Computer Science, Chongqing University ‡ YEESTOR Microelectronics Co., Ltd
+
+Abstract—The increasing density and capacity of NAND flash memory leads to degraded reliability. To address the reliability issue, low-density parity-check code (LDPC) has been deployed in NAND flash memories due to its strong error correction capability. The drawback of LDPC is that, to correct data with high raw bit error rate (RBER), read latency will be amplified. To improve read performance, this paper proposes to apply lossless compression to reduce RBER on data pages. However, compression and decompression incur time overheads. Compressing all the data pages for RBER reduction will degrade write performance. In addition, the variation of compression ratio leads to variation of RBER reduction, thus varied read latency reduction. In this work, a selective data compression scheme is proposed for read performance improvement. Both read frequency and compression ratio of data are taken into consideration. Data in a flash page with high read frequency and good compressibility are prioritized for compression. Experimental results show that the proposed scheme can improve read performance by 42% on average, without impacting write performance.
+Index Terms—NAND flash memory, compression, LDPC, read performance
+I. INTRODUCTION
+NAND flash memory has been widely adopted as storage devices in mobile devices, embedded systems, and data centers. The increasing of bit density and scaling of technology sizes have lowered its cost [1] [2] [3]. In addition, 3D NAND flash memory has been introduced to further increase the storage density by stacking cells in layers [4]. However, the increased capacity is achieved at the sacrifice of the reliability of NAND flash memory. Raw bit error rates (RBER) on read data increase dramatically, which range from 10−3 to 10−2 [5]. To address the reliability issue, low-density parity-check codes (LDPC) have been adopted on NAND flash memory as error correction code (ECC) for its strong error correction capability [5] [6]. The drawback of LDPC is that, to correct data with high RBER, the read latency will be amplified by iteratively reading data with several reference voltages. Therefore, LDPC decoding will deteriorate read performance on data with high RBER.
+To improve read performance, previous work has proposed different strategies by exploiting the characteristics of LDPC decoding. One strategy was proposed to reduce the RBER on read data for read latency reduction [7] [8]. Another strategy
+Liang Shi is the corresponding author: shi.liang.hk@gmail.com.
+
+was to exploit the reliability characteristics of NAND flash memory and integrate them into the design of LDPC decoding [5] [6] [9]. In this work, a novel approach is proposed to exploit compression on data in the unit flash page for RBER reduction to improve read performance. Recently, compression has been well studied for lifetime and capacity improvement on NAND flash memory [10] [11] [12] [13]. Several logical data pages can be compressed to be stored in a single physical data page, which needs the support of flash translation layer (FTL) to modify the mapping strategy. Different from these methods, the idea in this work is to compress data in the unit of page to reduce RBER and thus to improve read performance, which involves no modification on existing mapping strategies.
+Most files, except multimedia files, stored on the storage systems today are not compressed even though they are highly compressible. The situation presents opportunities to perform compression for improved read performance. In this work, lossless compression is applied to compress data pages. The vacant space of a page is filled with known data, for example, all ‘1’s, to form a new data page. In this case, LDPC only needs to correct data with a smaller size because the known data can be recovered before ECC decoding. Therefore, the RBER of the data is reduced as well as the read latency. However, there are two problems which make simply compressing every data page not applicable. First, data compression and decompression operations need extra time. Thus compressing all the data on NAND flash memory may degrade write performance. Second, data on flash pages have different compression ratios. Thus the performance benefits from compression are different. Compressing data with good compressibility can gain significant performance improvement, while compressing data with bad compressibility introduces little benefit or even degrades access performance.
+We propose to selectively compress data for read performance improvement. The challenge is how to select the data that will be compressed. To solve this issue, our solution consists of the following three parts. (i) We analyze the read access characteristics on several workloads. The observation is made that most of the read accesses occur on a small part of pages, which are read-intensive pages. Furthermore, there are many read-intensive data with good compressibility. Compressing these data delivers great read performance benefits. (ii) We study the performance benefits from compression. The potential read latency reduction depends on both compressibility
+
+2576-6996/18/$31.00 ©2018 IEEE
+
+43
+
+DOI 10.1109/ICCD.2018.00017
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+and read frequency of the data. First, a better compressibility provides data with more RBER reduction, thus more read latency reduction for each read operation on the data page. Second, a higher read frequency provides more opportunities to accumulate read performance benefits on the data page. (iii) To take both factors into consideration, a Double Queue based selective compression scheme is proposed. The experimental results show that the proposed scheme achieves 42% read latency reduction on average by compressing less than 2% pages of data, without impacting write performance. The following contributions are made in this paper.
+• Presented a preliminary study to show the potential performance improvement of compression on read data;
+• Studied the read access characteristics, which are the basis of the proposed scheme;
+• Proposed a Double Queue based selective compression scheme to improve read performance of NAND flash memory.
+The rest of the paper is organized as follows. Section II presents the background and related work. Section III presents the motivation of this work. Section IV presents the proposed approaches. Experiments are presented in Section V. Section VI concludes the paper.
+
+II. BACKGROUND AND RELATED WORK
+A. Background
+1) NAND Flash Memory: NAND flash memory uses floating gates or charge traps to store data. There are three basic operations: read, write, and erase. Write operations perform charge injections to move the threshold voltage of flash cells to corresponding values for storing specific data. Read operations are performed to sense the threshold voltage for data reading. Erase operations are performed to eject the charges out of flash cells for data resetting. During these operations, charges travel through the oxide layer of flash cells, which damages the charge reservation capability. Therefore, the stored data may have bit errors, which are characterized by RBER, the ratio of error bits to the total data bits. The increasing demands on the large storage capacity have promoted NAND flash memory to develop in bit densities, technology scales [1], and the adoption of 3D NAND technology [4] [14]. This is achieved by sacrificing the reliability of flash cells, which leads to increased RBER.
+2) LDPC: To guarantee the reliability of NAND flash memory, LDPC has been adopted for its strong error correction capability [5]. Based on the latency model presented in previous work [15] [16], there are two main steps for a read operation during LDPC decoding: sensing data stored in the flash page and transferring data to the controller. Thus, read latency (RL) is the sum of sensing latency, which is proportional to the number of sensing levels N , and transfer latency, which is proportional to the size of the transferred information [6].
+
+RL(RBER) = α × N + β × log(N + 1)
+
+where RBER < CBERLDP C (N );
+
+(1)
+
+where RL(RBER) denotes the read latency with N sensing levels in the deployed LDPC code to decode data with RBER, and α and β are two variables. The condition is that the RBER of read data should be within the error correction capability of the deployed LDPC, CBERLDP C (N ), with N sensing levels. A larger N required by LDPC indicates a longer on-chip memory sensing latency and longer memoryto-controller data transfer latency, hence a longer read latency [5] [16]. This work exploited compression to reduce RBER of data for flash read performance improvement.
+3) Compression: There are two broad types of compression: lossy and lossless. Lossy compression reduces data by removing unnecessary information, and thus usually has very low compression ratios (cr). The compression ratio is defined as the ratio of compressed data length to the original data length, and a lower compression ratio means better compressibility with more reduction on the data information. Lossless compression reduces data by eliminating the redundancy information, thus has a higher compression ratio than lossy compression [17] [18]. This paper uses lossless compression since the compressed data are supposed to be recovered after decompression. Besides multimedia data like photos, music and video, which have already been compressed, most data are not compressed before stored to the storage [13] [19] [20]. However, lots of data files present great potentials to be compressed to a shorter length with good compressibility (small cr). Table I shows the compression ratio of different types of data under three compression algorithms. Different types of data present different compression characteristics. With the same compression algorithm, the per-sector compression ratio of a data file tends to follow a Gaussian distribution [21] [22].
+
+TABLE I COMPRESSION RATIO OF DIFFERENT TYPES OF DATA.
+
+Data type text C code html excl
+
+bzip
+
+0.41 0.46 0.40 1
+
+gzip
+
+0.29 0.38 0.34 0.53
+
+LZ77 0.20 0.28 0.23 0.40
+
+B. Related Work
+In this subsection, related work is presented from two aspects. First, many prior work focused on read performance improvement for LDPC equipped NAND flash memory. The work in [6] [5] [9] [8] exploited the reliability characteristics on NAND flash memory to optimize the read process where reliability information for LDPC decoding is obtained. These methods succeeded in reducing the sensing voltages applied to read data. Li et al. [16] exploited read and write latency tradeoff to speed up read requests of read-only data for read performance improvement. Du et al. [23] proposed a lightweight data refresh method to aggressively correct errors in read-hot pages with long read latency and reprogram error-free data into new pages. Both approaches focused on speeding up read accesses on the data that have great impacts on read performance. Zhang et al. [24] exploited the error characteristics on NAND
+
+44 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+flash memory to optimize the decoding process of LDPC and improve the decoding success probability with less iterations. Finally, Guo et al. [7] proposed to reduce RBER by enlarging noise margins between neighboring voltage states which have more errors. The data errors of NAND flash memory are the key points for LDPC read performance improvement in all these work. Differently, this work exploited compression for error reduction, which is orthogonal to previous work.
+Second, compression has been widely studied on flash memory. Yim et al. [10] developed a flash compression layer for smart media card system, where the data are compressed and multiple compressed pages are organized in one physical data page to increase the capacity of NAND flash memory. Ji et al. [25] introduced a compression method for mobile flash storage, which reduced the count of garbage collection and prolonged the lifetime of flash storage. With the observation that most data are updated more than once, Wu et al. [26] and Zhang et al. [22] exploited delta compression to reduce the data writes to NAND flash memory. To address the limited capacity and endurance issue when NAND flash memory is used as cache, the work in [11] [12] adopted the combination of deduplication and compression. Mao et al. [13] studied different compression algorithms and observed different compression ratios and computation overheads. They proposed to apply a proper compression algorithm based on the system status and data pattern for an optimized compression performance on the storage capacity saving. All of the above work merged the compressed data to reduce the amount of data written to NAND flash memory. They need to modify the flash translation layer (FTL) for support. Li et al. [21] proposed to compress all data sectors but not increase the number of sectors per flash memory page. They explored the unused storage space left by compressed data to reduce the overall memory physical damage for lifetime improvement. Xie et al. [19] proposed to apply lossless compression to provide more redundancy for ECC with stronger decoding capability, which means multiple ECC codes on NAND flash memory. Similar to the above two schemes, our work will compress data in the unit of flash page and leaving the unused space for reliability improvement. The mapping will not be changed and there is only one ECC encoding with the same code rate on NAND flash memory. Different from all these work, this work proposed to exploit the reduced errors from compressed data for read performance improvement.
+III. MOTIVATION
+To reduce read latency with LDPC on NAND flash memory, one effective way is to reduce RBER of read data. There are different methods for reducing RBER by exploiting the error characteristics [6] [7]. The goal of this work is to improve read performance by decreasing the length of read data, which can be achieved through lossless compression before ECC encoding.
+Figure 1(a) shows the layout of one ECC codeword. The codeword of n bits consists of k bits user data and n − k bits ECC redundancy. Figure 1(b) shows the layout of the
+
+compressed codeword. The user data are first compressed into k · cr bits with compression ratio cr. The vacant k(1 − cr) bits are filled with known data, for example, all ‘1’s. Then ECC encoding is performed, still regarding all the k bits as user data, to be protected by n − k bits redundancy. In this case, RBER is reduced when reading data because k(1 − cr) bits are already known. Before ECC decoding, these bits are first replaced by known bits no matter what data have been read from NAND flash memory.
+
+User data
+
+ECC
+
+k
+
+n-k
+
+(a) Original ECC codeword
+
+User data
+
+ECC
+
+kcr
+
+k-kcr
+
+n-k
+
+(b) Compressed ECC codeword
+
+Fig. 1. Illustration of the layout of the ECC codeword.
+
+Suppose there are t-bit errors in one ECC codeword, the
+
+RBER of the original codeword will be calculated as t/n,
+
+denoted as RBER1. The RBER of the compressed codeword RBER2 can be expressed as
+
+RBER2
+
+=
+
+RBER1
+
+·
+
+(1
+
+−
+
+k
+
+−k n
+
+·
+
+cr
+
+).
+
+(2)
+
+Based on the compression ratio presented above, the RBER
+
+of data can be reduced, thus the read latency to the data can
+
+be reduced. Table II shows the relationship between RBER
+
+and read latency (RL) of data without and with compression
+
+for TEXT files presented in Table I. The user data length k is
+
+4KB, and the length of ECC redundancy is 512B based on the
+
+parameters in [5]. For the three different RBER cases in Table
+
+II, read latency is shown for the three different compression
+
+algorithms. As TEXT files data have good compressibility
+
+under the three compression algorithms, the RBER can be
+
+reduced a lot. Thus, the read latency is reduced a lot, too.
+
+Even though there exists compression overhead, the resulted
+
+read latency can still be reduced significantly.
+
+TABLE II RBER AND READ LATENCY (μs) FOR TEXT FILE DATA.
+
+No compression
+
+RBER1 RL
+
+0.006
+
+170
+
+0.008
+
+200
+
+0.012
+
+310
+
+bzip
+
+RBER2 RL
+
+0.0029
+
+86
+
+0.0038
+
+86
+
+0.0057 186
+
+gzip
+
+RBER2 RL
+
+0.0022
+
+86
+
+0.0030
+
+86
+
+0.0044 136
+
+LZ77
+
+RBER2 RL
+
+0.0017
+
+86
+
+0.0023
+
+86
+
+0.0035
+
+86
+
+To further show the impacts of compression/decompression on write/read performance, experiments are conducted to evaluate the performance difference when the data have different compression ratios. For each set of experiment, all pages of data are assumed to have the same compression ratio and the same RBER, which is set as 0.012 as default. With compression, read latency consists of read time and decompression time, while write latency consists of the original write latency
+
+45 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized read latency
+
+No compression Cr=0.2 Cr=0.3 Cr=0.5 Cr=0.7 Cr=0.8 Cr=0.9 Cr=0.95 1.2
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0 HM_0
+
+PRXY_0
+
+SRC2_0
+
+RSRCH_0 WDEV_0
+
+(a) Normalized read latency
+
+HM_1
+
+Normalized write latency
+
+No compression Cr=0.2 Cr=0.3 Cr=0.5 Cr=0.7 Cr=0.8 Cr=0.9 Cr=0.95 1.2
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0 HM_0
+
+PRXY_0
+
+SRC2_0
+
+RSRCH_0 WDEV_0
+
+(b) Normalized write latency
+
+HM_1
+
+Fig. 2. Normalized read and write latency comparison between no compression and compression with different compression ratios on read data.
+
+Distribution of logical pages
+
+1
+
+2-5
+
+100%
+
+80%
+
+60%
+
+40%
+
+20%
+
+0%
+
+6-10
+
+11-100
+
+101-1000
+
+>1000
+
+Distribution of requests
+
+1
+
+2-5
+
+100%
+
+80%
+
+60%
+
+40%
+
+20%
+
+0%
+
+6-10
+
+11-100
+
+101-1000
+
+>1000
+
+(a) Distribution of logical pages
+
+(b) Distribution of read requests
+
+Fig. 3. Distribution of read logical pages and read requests being read for different times. In the legend, ‘1’ means a specific logical page is read once during the lifetime of the trace, while ‘2-5’ means a page is read between 2 and 5 times.
+
+and compression time. The detailed experimental settings are presented in SectionV. Performance comparison is given between no compression and compressing all pages of data during write operations. Figure 2 shows the normalized read and write latencies. On one hand, compared to no compression, compression can improve read performance significantly when the compression ratio is low and a lower compression ratio leads to more read performance improvement. When the compression ratio is high, read performance gains little benefits or is even degraded. This is because the benefit achieved by compression is less than the time overhead introduced by decompression. On the other hand, write performance is impacted in most cases by compressing data due to the time overhead of compression. Differently, for workload HM 1, a read intensive workload, its write performance is improved a little. This is because read requests are issued with a low latency, which shortens the waiting time of write requests.
+Two conclusions can be made from the analysis above, which motivate this work. First, compressing all pages of data degrades write performance. Second, compression can improve read performance by different percentages under different compression ratios. In this work, a selective compression scheme is proposed to improve read performance without impacting write performance of NAND flash memory.
+
+Distribution of compression ratio 1 2-5 6-10 11-100 101-1000 >1000 1 2-5 6-10 11-100 101-1000 >1000 1 2-5 6-10 11-100 101-1000 >1000
+
+100% 80% 60% 40% 20% 0%
+
+0.0-0.2
+
+0.2-0.5
+
+0.5-0.7
+
+0.7-0.9
+
+0.9-1.0
+
+Earth
+
+Facebook
+
+Youtube
+
+Fig. 4. Distribution of compression ratio on data pages being read for different times.
+
+IV. COMPRESSION AWARE READ PERFORMANCE IMPROVEMENT
+A. Read Access Characteristics
+This subsection studies the read access characteristics of real workloads. The first six workloads are from Microsoft Research (MSR) Cambridge [27] and the other three are collected by our research group on a mobile device. Logical data pages are partitioned into 6 groups based on their read frequencies, which are achieved by counting the number of reads on each data page for all workloads. Figure 3 shows the statistical results on the distributions of read logical pages and read requests. In the legend, ‘1’ means a specific logical page
+
+46 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+is read once during the lifetime of the workload, while ‘2-5’ means a page is read between 2 to 5 times.
+From the results in Figure 3, two observations can be made. First, more than 50% logical pages are read more than once. The observation confirms that there exists opportunities to compress data for read performance improvement. This is because after one compression operation on the page of data, NAND flash memory will gain accumulated benefits in later read operations on the compressed data. Second, though the percentage of intensively read logical pages, for example, more than 10 times, is small, the percentage of read requests on these data is large. As shown in Figure 3(b), the percentage of logical pages being read more than 10 times is 15%, while the percentage of read requests on them is 79% on average. Note that the data pages being read only account for a small portion of all data pages. In this case, compressing a small percentage of data, i.e. read-intensive data on NAND flash memory, has the potential to significantly improve read performance.
+As shown in Figure 2, compressing data with high compression ratio (e.g. larger than 0.9) will introduce little or negative performance improvement. To study how much readintensive data can be compressed, Figure 4 further presents the distributions of compression ratio on data being read for different times. The percentage of compression ratio larger than 0.9 is not high for read-intensive data pages. Many readintensive data present good compressibility, which can be selected for compression to improve read performance.
+B. Compression Benefit Analysis
+The potential of read latency reduction depends on both compression ratio and read frequency of the data. A read latency model considering both compression ratio and access frequency is presented in this subsection.
+There exist both cost and benefit to compress a data page. The cost is the time overhead to perform compression and decompression. The benefit is the reduced read latency on the compressed data due to the reduced RBER. The compression latency CL and decompression latency DL are assumed to be two constants [25] [26]. The read latency on a data page, denoted as RL, depends on the RBER. Specifically, for a data page with compression ratio cr, if it will be read m times after compression, the benefit B can be expressed as follows:
+B = m · (RL(RBER1) − RL(RBER2) − DL) − CL. (3)
+Recall Equation 2 that the RBER after compression RBER2 decreases as cr decreases, and then, RL(RBER2) decreases with the decreasing of RBER2. The benefit will increase with decreasing cr and with increasing m. A smaller cr and a larger m will result in larger benefits. First, a lower compression ratio helps to gain a larger RBER reduction, thus greatly reducing read latency for each read operation on the data page. Data with very high compression ratio cannot achieve latency benefits, which has also been presented in motivation experiments. Second, a higher read frequency provides more opportunities to accumulate read latency reduction on the
+
+data page. Comparatively, data pages being rarely or not read cannot gain latency benefits.
+
+Insert (Read & cr < CT1)
+❶
+
+Insert (Read & CT1<cr < CT2)
+❷
+
+MRU
+❻Co(midpler)ess
+❼(Cwormitephreitsss)
+LRU
+
+LPN1 LPN2
+...
+LPNN
+
+❸
+Promote (Read hits)
+❹Demote
+(Q1 full)
+
+LPN5 LPN6
+...
+LPNM
+
+MRU LRU
+
+Queue 1
+
+❺Evict ( Q2 full)
+Queue 2
+
+Fig. 5. Structure and operations of Double Queue. 1 read with cr < CT1; 2 read with CT1 ≤ cr < CT2; 3 read hit Queue 2; 4 Queue 1 is full; 5 Queue 2 is full; 6 compress the MRU data page of Queue 1 during idle
+time; 7 compress the data page that write hit in Queue 1.
+
+C. Double Queue Based Compression
+
+Read operation begins
+
+Compression Yes flag == 1
+
+No
+
+Compression Yes
+
+Write operation begins
+
+ratio > CT2 ?
+
+First write or update?
+
+First write Compute compression ratio
+
+Update
+
+Hit Queue 1 ? No
+
+No Hit Double
+Queue ?
+No Compression ratio < CT1 ?
+
+Yes
+Yes Move to the MRU of Queue 1
+
+Yes Compress the data page and
+
+No Move to the MRU of Queue 2
+
+set compression flag as 1 ECC encoding and write
+
+Known data replacing and ECC decoding
+
+Write operation ends (a) Flow of write operations
+
+Read operation ends
+
+Normal ECC decoding
+
+(b) Flow of read operations
+
+Fig. 6. The working flow of write and read operations.
+
+In this section, a double queue (DQ) based selective compression scheme is proposed to take both compression ratio and read frequency into consideration. Figure 5 shows the structure of DQ, which stores the logical page number (LPN) of read data pages. Both queues are managed by the least recently used (LRU) algorithm. Data pages belonging to Queue 1 are preferred to be compressed. The design goal of DQ is to compress data that will introduce latency benefits. To achieve this goal, there are two principles.
+• Data pages with good compressibility have priority to be compressed;
+• Data pages being frequently read have priority to be compressed.
+For the first principle, we use two thresholds CT1 and CT2 for cr to determine the compressibility of data in a page. If cr ≥ CT2, the compressibility of the data page is bad and compression on the data will result in no read performance benefits or even degrade access performance. Only data pages
+
+47 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized read latency Normalized write latency
+
+No compression 1.0
+
+All compressiom
+
+DQ based compression
+
+No compression 1.2
+
+All compressiom
+
+DQ based compression
+
+0.8
+
+1.0
+
+0.8 0.6
+0.6
+0.4 0.4
+
+0.2
+
+0.2
+
+0.0 HM_0 PRXY_0 SRC2_0 RSRCH_0 WDEV_0 HM_1 Earth Facebook Youtube Average
+(a) Normalized read latency
+
+0.0 HM_0 PRXY_0 SRC2_0 RSRCH_0 WDEV_0 HM_1 Average
+(b) Normalized write latency
+
+Fig. 7. Normalized read and write latency comparison for no compression, all compression and DQ based compression.
+
+with compression ratio cr < CT2 will be considered for compression. The compressibility of data pages is good if cr < CT1 and it is normal if CT1 ≤ cr < CT2. Data with good compressibility belongs to Queue 1 and those with normal compressibility belong to Queue 2. For the second principle, it is supported by the design of Double Queue. When a data page is first read, it is added to the corresponding queue based on its compression ratio. A data page in Queue 2 will be promoted to Queue 1 if a read hit happens in Queue 2. Therefore, compression will be conducted on data pages that have at least one of the two characteristics: good compressibility and high read frequency.
+The data pages in Queue 1 will be compressed and written to NAND flash memory during system idle time from MRU( 6 ) or when a hit happens during write operations. The mechanism is explained by showing the process of write and read operations, as shown in Figure 6. When a data page is first written to NAND flash memory, its compression ratio is estimated. Previous work [25] has proposed a fast and lightweight compression ratio prediction approach by exploiting the relationship between the entropy and the compression ratio of a data page. The compression ratio can be achieved by calculating the entropy of a data page with little time and firmware overhead. Then, the original data without compression will be encoded by LDPC and written to NAND flash memory, while compression ratio and compression flag (set as 0 representing that the data is not compressed) are updated in FTL. When the data page is updated, Queue 1 will be checked. If the LPN of updated data page hits Queue 1, the data page will be first compressed and vacant space will be filled with known data, followed by LDPC encoding ( 7 ). The new data page is then written to NAND flash memory with the compression flag set to 1. When a page is read, if the data are not compressed, the compression ratio will be read to decide whether the data page can be compressed for read performance improvement. If the compression ratio is lower than CT2, DQ will be checked. If hit, the LPN of the data page will be moved to the most recently used (MRU) of Queue 1 ( 3 ). If miss, the LPN will be inserted to the MRU of Queue 1 if cr is lower than CT1 ( 1 ), or inserted to the MRU of Queue 2 if cr is higher than CT1 ( 2 ).
+
+D. Implementation and Analysis
+To implement the proposed approach, two components are needed in NAND flash memory controller: Compression/Decompression Engine and Double Queue. Two pieces of information are added in each mapping entry in the FTL, the compression ratio and a compression flag to indicate whether the data page has been compressed. The implementation incurs two types of overhead in the controller of NAND flash memory: firmware and storage. The firmware overhead includes the processes involved in compression ratio calculation, compression/decompression and the management of DQ. The overhead of these simple processes is low. The storage overhead comes from compression ratio, compression flag and the double queue.
+V. EXPERIMENT AND ANALYSIS
+1) Experimental Setup: To verify the effectiveness of the proposed scheme, we have implemented it on a trace-driven simulator, SSDSim [28], and conducted comprehensive experiments. The simulated flash device has two channels, with two chips per channel, and four planes per chip. Each chip has 2048 blocks and each block has 64 4KB-pages. Default page mapping based FTL, greedy garbage collection, and wear leveling are implemented in the simulator, representing stateof-the-art storage devices.
+To cover different use cases, six workloads from MSR [27] and three workloads collected on mobile devices are used for evaluation. For workloads on mobile devices, the contents of data pages are collected, therefore the compression ratio can be acquired. For MSR workloads, contents are not available. Gaussian distribution is adopted to formulate the compression ratio of data based on previous work [21] [22], which are randomly assigned to the accessed data. In default, the mean μ and the standard deviation σ are both set as 0.5, and the length of DQ is set as 64, each queue with 32. Sensitivity studies will be conducted to present the impacts of these parameters to show the impacts from different compression algorithms. LZ77 is adopted as the default compression algorithm. The two thresholds for compression ratio are set as CT1 = 0.55 and CT2 = 0.925. The compression time and decompression time are set as 68μs and 16μs for a 4KB data page [25] [26].
+
+48 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+The read and write latencies are achieved based on the latency model [15] [16].
+
+Compression ratio
+
+5.0% 4.0% 3.0% 2.0% 1.0% 0.0%
+
+Compression during idle time Compression along with write
+
+Fig. 8. The ratio of compressed data during idle time and along with write operations. The ratio is computed from dividing the total size of read and write operations from host by the size of compressed data.
+
+2) Experimental Results: The experimental results are presented by first showing the effectiveness of the proposed scheme on access performance. Second, the overhead is analyzed. Finally, sensitivity studies are presented.
+Access Performance: Figure 7 shows the normalized read and write latencies of three schemes: no compression, all compression (all data are compressed before write operations), and the proposed DQ based compression. Since the traces we collected mainly focus on read requests and their contents, few write requests are recorded. Thus only read performance is presented for the three collected traces. As shown in Figure 7(a), compared to no compression, all compression scheme can reduce read latency by 42% on average, due to the compression induced RBER reduction on read data. Meanwhile, DQ based compression can gain comparable read performance to all compression scheme. For write latency in Figure 7(b), all compression introduces increased write latency because of the compression overhead. DQ based compression has similar write latency with no compression for most workloads. For HM 1, the write latency is slightly improved, because HM 1 is read intensive. As read latency is reduced, write requests will experience reduced waiting time for the processing of read requests. Therefore, write performance can gain benefits from the proposed scheme in this case. In conclusion, the proposed DQ based compression can improve read performance without hurting write performance on both types of workloads.
+
+size=16 0.8
+
+size=32
+
+size=64
+
+size=128
+
+size=256
+
+size=512
+
+Normalized read latency
+
+0.6
+
+0.4
+
+0.2
+
+0.0 HM_0 PRXY_0 SRC2_0 RSRCH_0 WDEV_0 HM_1 Average
+Fig. 10. Sensitivity study of the size of the double queue with μ = 0.5 and σ = 0.5.
+
+Overhead Analysis: To understand the extra write operations to compress read data, Figure 8 shows the ratio of compression during idle time and along with host writes. The ratio is computed by dividing the total size of requests from host by the size of compression operations. As shown in the figure, most data are compressed during idle time, and only a small percentage is compressed along with host writes. This explains why write performance is not impacted above. In addition, the ratio of compressed data is very low, less than 2% on average. The compression operations during idle time is extra overhead to NAND flash memory, which presents potential impacts on performance and lifetime. First, the analysis for read and write latency above presents that the overhead has no impacts on performance. Second, the extra 2% compression introduces extra wearing to NAND flash memory. However, the compressed data will have much less errors. Therefore, the data blocks containing compressed data can endure much more wearing, and thus the proposed scheme will slightly influence the lifetime of NAND flash memory. This is leaved as our future work.
+Sensitivity Studies: The compression ratio greatly impacts read performance. Sensitivity studies on the mean and standard deviation of compression ratios are conducted to thoroughly analyze the impact of data compressibility. Figure 9(a) shows the read latency normalized to no compression scheme, where the standard deviation σ is 0.5, and the mean μ varies from 0.1 to 0.9. Two conclusions can be made from the results. First, the read latency increases with the mean of compression ratio, because the reduced RBER with higher compression ratio is less. Second, the proposed approach is able to improve read performance a lot for all the cases, even when the mean is relatively high. Figure 9(b) shows the normalized read latency, where μ is 0.5, and σ varies from 0.1 to 0.9. The variation for different cases is small. Smaller σ has a little performance advantages.
+We further carry out a sensitivity study on the length of DQ with μ = 0.5 and σ = 0.5 as default setting. Figure 10 shows the normalized read latency to no compression. On one hand, for most workloads, the read latency decreases with the increasing of the size of DQ because the characterization of read frequency is more accurate with larger size. In addition, less data will be evicted and more data will be compressed during idle time or along with host writes. On the other hand, for two workloads, PRXY 0 and HM 1, the read latency hardly changes with the size of DQ. The reason is that these two workloads are read intensive and most read requests happens on a very small percentage of data, as shown in Figure 3. Thus, the amount of data required to be compressed is small, which can be satisfied by a small size of DQ. To balance the space overhead and read performance improvement, DQ is set to record 64 LPNs as default.
+VI. CONCLUSION
+The adoption of LDPC on NAND flash memory results in bad read performance when the read data has a high RBER. This paper first studies the potential of read performance
+
+49 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+μ=0.1 1.0
+
+μ=0.3
+
+μ=0.5
+
+μ=0.7
+
+μ=0.9
+
+σ=0.1 0.8
+
+σ=0.3
+
+σ=0.5
+
+σ=0.7
+
+σ=0.9
+
+Normalized read latency Normalized read latency
+
+0.8 0.6
+0.6 0.4
+0.4
+0.2 0.2
+
+0.0 HM_0 PRXY_0 SRC2_0 RSRCH_0 WDEV_0 HM_1 Average
+(a) σ = 0.5
+
+0.0 HM_0 PRXY_0 SRC2_0 RSRCH_0 WDEV_0 HM_1 Average
+(b) μ = 0.5
+
+Fig. 9. Sensitivity study of compression ratio: mean μ and standard deviation σ.
+
+improvement by applying lossless compression on NAND flash memory. This is achieved by reducing the length of user data, thus reducing the RBER on a data page. However, compressing all the data degrades write performance due to the compression and decompression time overhead. In addition, different data have different compression ratios, which present variations of read latency reduction. Therefore, compression on data pages should be selectively conducted. We first study the read access characteristics, that most read requests occur on a small percentage of data, many of which have good compressibility. This indicates that we only need to compress these data to improve read performance. A Double Queue based compression approach is proposed to explore both read frequency and compression ratio. The simulation results show that the proposed scheme can gain significant read performance improvement without hurting write performance.
+ACKNOWLEDGMENT
+This work is supported by NSFC 61772092 and 61572411.
+REFERENCES
+[1] S. Lee, J.-y. Lee, I.-h. Park, J. Park, S.-w. Yun, Kim et al., “A 128gb 2b/cell nand flash memory in 14nm technology with tprog= 640μs and 800mb/s i/o rate,” in ISSCC, 2016, pp. 138–139.
+[2] W. Jeong, J.-w. Im, D.-H. Kim, S.-W. Nam, D.-K. Shim et al., “A 128 gb 3b/cell v-nand flash memory with 1 gb/s i/o rate,” JSSC, vol. 51, no. 1, pp. 204–212, 2016.
+[3] Z. Qin, Y. Wang, D. Liu, Z. Shao, and Y. Guan, “Mnftl: An efficient flash translation layer for mlc nand flash memory storage systems,” in DAC, 2011, pp. 17–22.
+[4] D. Kang, W. Jeong, C. Kim, D.-H. Kim, Y. S. Cho, K.-T. Kang et al., “256 gb 3 b/cell v-nand flash memory with 48 stacked wl layers,” JSSC, vol. 52, no. 1, pp. 210–217, 2017.
+[5] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in FAST, 2013, pp. 244–256.
+[6] G. Dong, N. Xie, and T. Zhang, “Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,” TOCS, vol. 60, no. 9, pp. 2412–2421, 2013.
+[7] J. Guo, W. Wen, J. Hu, D. Wang, H. Li, and Y. Chen, “Flexlevel: a novel NAND flash storage system design for ldpc latency reduction,” in DAC, 2015, pp. 1–6.
+[8] Y. Du, D. Zou, Q. Li, L. Shi, H. Jin, and C. J. Xue, “Laldpc: Latencyaware ldpc for read performance improvement of solid state drives.” MSST, 2017, pp. 1–13.
+[9] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving ldpc performance via asymmetric sensing level placement on flash memory,” in ASP-DAC, 2017, pp. 560–565.
+[10] K. S. Yim, H. Bahn, and K. Koh, “A flash compression layer for smartmedia card systems,” TCE, vol. 50, no. 1, pp. 192–197, 2004.
+
+[11] C. Li, P. Shilane, F. Douglis, H. Shim, S. Smaldone, and G. Wallace, “Nitro: A capacity-optimized ssd cache for primary storage.” in ATC, 2014, pp. 501–512.
+[12] W. Li, G. Jean-Baptise, J. Riveros, G. Narasimhan, T. Zhang, and M. Zhao, “Cachededup: In-line deduplication for flash caching.” in FAST, 2016, pp. 301–314.
+[13] B. Mao, H. Jiang, S. Wu, Y. Yang, and Z. Xi, “Elastic data compression with improved performance and space efficiency for flash-based storage systems,” in IPDPS, 2017, pp. 1109–1118.
+[14] C.-y. Liu, J. Kotra, M. Jung, and M. Kandemir, “Pen: Design and evaluation of partial-erase for 3d nand-based high density ssds,” in FAST, 2018, pp. 67–82.
+[15] Q. Li, L. Shi, C. Gao, K. Wu, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Maximizing IO performance via conflict reduction for flash memory storage systems,” in DATE, 2015, pp. 904–907.
+[16] Q. Li, L. Shi, C. J. Xue, K. Wu, C. Ji, Q. Zhuge, and E. H.-M. Sha, “Access characteristic guided read and write cost regulation for performance improvement on flash memory,” in FAST, 2016, pp. 125– 132.
+[17] W. Xia, H. Jiang, D. Feng, F. Douglis, P. Shilane, Y. Hua, M. Fu, Y. Zhang, and Y. Zhou, “A comprehensive study of the past, present, and future of data deduplication,” Proc. IEEE, vol. 104, no. 9, pp. 1681– 1710, 2016.
+[18] N. K. Edel, E. L. Miller, K. S. Brandt, and S. A. Brandt, “Measuring the compressibility of metadata and small files for disk/nvram hybrid storage systems,” in SPECTS, 2004.
+[19] N. Xie, G. Dong, and T. Zhang, “Using lossless data compression in data storage systems: Not for saving space,” TC, vol. 60, no. 3, pp. 335–345, 2011.
+[20] R. Gracia-Tinedo, D. Harnik, D. Naor, D. Sotnikov, S. Toledo, and A. Zuck, “Sdgen: mimicking datasets for content generation in storage benchmarks,” in FAST, 2015, pp. 317–330.
+[21] J. Li, K. Zhao, X. Zhang, J. Ma, M. Zhao, and T. Zhang, “How much can data compressibility help to improve nand flash memory lifetime?” in FAST, 2015, pp. 227–240.
+[22] X. Zhang, J. Li, H. Wang, K. Zhao, and T. Zhang, “Reducing solidstate storage device write stress through opportunistic in-place delta compression.” in FAST, 2016, pp. 111–124.
+[23] Y. Du, Q. Li, L. Shi, D. Zou, H. Jin, and C. J. Xue, “Reducing ldpc soft sensing latency by lightweight data refresh for flash read performance improvement,” in DAC, 2017, pp. 1–6.
+[24] M. Zhang, F. Wu, X. He, P. Huang, S. Wang, and C. Xie, “REAL: A retention error aware LDPC decoding scheme to improve NAND flash read performance,” in MSST, 2016, pp. 1–13.
+[25] C. Ji, L.-P. Chang, L. Shi, C. Gao, C. Wu, Y. Wang, and C. J. Xue, “Lightweight data compression for mobile flash storage,” TECS, vol. 16, no. 5s, p. 183, 2017.
+[26] G. Wu and X. He, “Delta-ftl: improving ssd lifetime via exploiting content locality,” in Eurosys. ACM, 2012, pp. 253–266.
+[27] D. Narayanan, E. Thereska, A. Donnelly, S. Elnikety, and A. Rowstron, “Migrating server storage to SSDs: analysis of tradeoffs,” in EuroSys, 2009, pp. 145–158.
+[28] Y. Hu, H. Jiang, D. Feng, L. Tian, H. Luo, and C. Ren, “Exploring and exploiting the multilevel parallelism inside SSDs for improved performance and endurance,” TC, vol. 62, no. 6, pp. 1141–1155, 2013.
+
+50 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:34:31 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,452 @@
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit) | 978-1-6654-1526-2/21/$31.00 ©2021 IEEE | DOI: 10.1109/EUCNC/6GSUMMIT51104.2021.9482457
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+A 336 Gbit/s Full-Parallel Window Decoder for Spatially Coupled LDPC Codes
+
+Matthias Herrmann, Norbert Wehn TU Kaiserslautern
+Kaiserslautern, Germany {herrmann, wehn}@eit.uni-kl.de
+
+Max Thalmaier, Markus Fehrenz, Timo Lehnigk-Emden, Matthias Alles
+Creonic GmbH Kaiserslautern, Germany {max.thalmaier, markus.fehrenz, timo.lehnigk-emden, matthias.alles}@creonic.com
+
+Abstract—Low-Density Parity-Check (LDPC) codes are among the most powerful Forward Error Correction (FEC) schemes and part of many communication standards. Emerging use cases are expected to require data rates towards Tbit/s, which is one to two orders of magnitude higher than the throughput specified in 5G-NR. For throughputs towards Tbit/s, state-of-theart LDPC soft decoders are restricted to short code block sizes of several hundreds to thousands of bits due to routing congestion challenges, forcing a firm limit to the overall communications performance of the transmission system. In this paper, we focus on a relatively new class of LDPC codes, denoted as Spatially Coupled LDPC (SC-LDPC) codes. For the first time, we show that these codes enable efficient, very high throughput ( 100 Gbit/s) decoding of large code block sizes. To this end, we present an SC-LDPC decoder for a length N = 51328 terminated SC-LDPC code with sub-block size c = 640 and coupling width ms = 1, that achieves a throughput of 336 Gbit/s in a 22nm FDSOI technology, which is about 50 times higher than the fastest SC-LDPC decoder in literature. In contrast to existing work, the presented decoder is based on the Full-Parallel Window Decoder (FPWD) architecture. We propose algorithmic and architectural modifications to shorten the critical path and to reduce the routing complexity of the FPWD resulting in higher throughput as well as better energy and area efficiency for the modified decoder. The decoder furthermore outperforms a state-of-the-art reference architecture that was implemented for the same code in the same technology in terms of throughput and latency.
+Index Terms—Forward error correction, SC-LDPC codes, high-throughput decoding
+I. INTRODUCTION
+Forward Error Correction (FEC) is a foundational component in digital baseband processing. For advanced channel codes that use soft-decoding, the FEC constitutes the most computational intense component in the digital baseband chain. Low-Density Parity-Check (LDPC) codes are among the most powerful FEC schemes. First described by Gallager in 1962 [1], these codes were nearly forgotten until their rediscovery in the 1990s by e.g. MacKay and Neal [2]. Due to their excellent error correction performance close to the Shannon limit for large block sizes, LDPC codes gained a lot of attention and were eventually adopted in many communication standards, like DVB-S2x, Wi-Fi and, more recently, 3GPP 5G-NR. But not only outstanding error-correction performance led to this success. Digital baseband processing is subject to major restrictions in silicon area, power and power density.
+
+Reduced-complexity decoding algorithms like Min-Sum (MS) paved the way to efficient ASIC decoder implementations. Moreover, code construction techniques like quasi-cyclic (QC) codes enabled decoders to be flexible in the supported code rates, the block lengths and throughput, which opened LDPC codes to a wide range of applications. Emerging use cases and future standards are expected to require data rates towards Tbit/s, which is one to two orders of magnitude higher than the throughput specified in 5G-NR, resulting in new challenges for efficient decoder implementations.
+LDPC decoding is based on iterative message-passing algorithms on a bipartite graph, denoted as the Tanner graph of the code. The throughput of an LDPC decoder is mainly limited by the exchange of messages between the two node sets: the check and variable nodes. To provide good error correction performance, the Tanner graph must 1.) be large (corresponding to a large code block size) and 2.) exhibit only limited locality. This in turn challenges an efficient and high-throughput decoder implementation [3]. The fastest state-of-the-art LDPC decoders rely on the so-called unrolled full-parallel decoding architecture [4] [5]. This architecture corresponds to a one-to-one mapping of the Tanner graph into hardware, i.e., all check and variable nodes are instantiated as dedicated functional units and the corresponding edges of the Tanner graph are hardwired. The iterations of the decoding procedure are unrolled and pipelined. In this way, a new block is processed in every clock cycle. While these decoders can achieve very high throughput in today’s technology nodes, e.g., 588 Gbit/s in [5], they are limited to short block sizes in the order of up to 2000 bits due to the low locality of the Tanner graph that results in highly unstructured routing networks and thus severe routing congestion challenges. This limit in block size also limits the achievable error correction performance.
+In 1999, Jime´nez Felstro¨m and Zigangirov introduced a new class of LDPC codes [6], that was later denoted as SpatiallyCoupled-LDPC (SC-LDPC) codes [7]. With spatial coupling, a code of almost arbitrary length can be constructed from a much smaller LDPC block code. In the same way, decoders can be constructed from a set of traditional LDPC block decoders that each process a much smaller so-called sub-block. These small sub-decoders are then chained together and coupled accordingly. Hence, these codes have the potential to combine
+
+978-1-6654-152A6u-th2o/r2iz1e/d$l3ic1en.0se0d ©us2e 0lim2i1tedIEtoE:EYonsei Univ. Downloaded on 5Ju0ne824,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+
+good error correction performance with high throughput. In contrast to classical LDPC block codes, not so much
+research exists on the implementation of efficient, highthroughput SC-LDPC decoders. As of today, two candidate architectures have been proposed in literature:
+• The Row-Layered Pipelined Decoder (RLPD) [6]. Some implementations of the RLPD already exist in literature, e.g., [8] [9]. These decoders were designed for LDPC Convolutional Codes (LDPC-CC), a special case of SCLDPC codes. The convolutional structure of the code however limits the achievable parallelism in the decoder. Hence, the reported throughput is only in the order of some Gbit/s.
+• The Full-Parallel Window Decoder (FPWD) [10]. However, an architecture was only outlined in [10] and never implemented.
+In this paper, we present the first implementation of an SCLDPC decoder based on the Full-Parallel Window Decoding architecture. Special emphasis is put on high throughput. We propose algorithmic and architectural optimizations to reduce the combinational logic and the routing complexity of the decoder. The presented decoder achieves a throughput of 336 Gbit/s in a 22 nm Fully Depleted Silicon on Insulator (FD-SOI) technology, which is about 50 times higher than the fastest SC-LDPC decoder in literature. Due to the lack of high-throughput state-of-the-art reference implementations, we also implement a decoder based on the RLPD approach in the same technology that achieves a throughput of 294 Gbit/s. We eventually discuss the presented decoders in terms of communications performance and implementation efficiency.
+
+II. SC-LDPC CODES
+This section gives a brief introduction to SC-LDPC codes, decoding algorithms and related high-throughput architectures.
+
+A. Definition
+
+An SC-LDPC code is an LDPC code with a particular Hmatrix structure
+
+ H0(1)
+
+
+
+ 
+
+...
+
+H0(2)
+
+ 
+
+
+
+
+
+H[1,L]
+
+=
+
+Hms (1) 
+
+...
+
+...
+
+   , (1) 
+
+
+
+Hms (2)
+
+H0(L) 
+
+  
+
+...
+
+...
+
+  
+
+Hms (L)
+
+where the elements Hi(t) are sub-matrices of dimension (c − b) × c. A code block v[1,L] is composed of L subblocks vt of which each comprises c code bits, i.e. vt = [vt(1), ..., vt(c)]. Likewise, a corresponding information block u[1,L] is composed of L sub-blocks ut = [ut(1), ..., ut(b)] of length b. Each sub-block vt, except for the first ms subblocks, is coupled to ms preceding blocks. Thus, ms denotes the memory of the code. In the remainder of this paper, we
+only consider time-invariant codes, i.e., Hi(t) = Hi(t ) for i = 0, . . . , ms and t, t = 1, . . . , L.
+
+After the transmission over a noisy channel and subsequent bit-level demodulation the decoder receives a sequence of subblocks y[1,L] with each yt comprising c Log-Likelihood Ratio (LLR) values, i.e. yt = [yt(1), ..., yt(c)].
+
+B. Decoding
+In contrast to conventional LDPC block codes, the structural characteristic of the SC-LDPC code enables so-called sliding window decoding. Here, a window W of length W defines a sub-matrix of H[1,L] and thus a subset of variable and check nodes in the corresponding Tanner graph. Throughout the decoding process, the window moves from the upper left to the lower right of H[1,L]. In every processing step t, the respective nodes corresponding to the current processing window W(t) are updated and the window is moved forward by one subblock over the diagonal structure. The decoder only needs to store W sub-blocks and corresponding messages and can start the decoding as soon as the first sub-block is available at the input of the decoder. Since W L the initial latency and the memory requirements are far less compared to a conventional LDPC block code of similar length.
+
+C. High-Throughput SC-LDPC Decoders
+
+In every processing step t a sliding window decoder finishes the decoding of one sub-block corresponding to c code bits. The coded throughput is thus
+
+Θ = c · TP −1,
+
+(2)
+
+where TP denotes the processing time, i.e., the time required by the decoder to finish the processing of one decoding window W(t). For high-throughput decoding, which essentially means to finish the decoding of a window in one clock cycle, this processing time TP is equivalent to the decoder’s critical path, which in turn has two main contributors: the combinational logic and the signal routing. The combinational logic mainly depends on the maximum degrees of the respective variable and check nodes as well the number of iterations performed inside the window. The routing critical path, on the other hand, primarily depends on the window size and thus W and c, as a larger window size results in complex routing networks with long path delays. Furthermore, there is the quantization that impacts both the logic and routing critical path.
+Hence, the challenge for high-throughput decoding is to design highly parallel decoders for large sub-block sizes c with minimal processing time TP . As for LDPC block decoders, with increasing parallelism the routing becomes predominant in the critical path and a major concern for high-throughput decoding [5]. The prevailing approach to mitigate this problem in literature is to split the decoding window into several smaller sub-windows that are processed individually on dedicated subdecoders, also simply denoted as processors.
+This idea was already proposed by Jime´nez Felstro¨m and Zigangirov in their initial paper on SC-LDPC codes [6]. Here, the decoding window is considered to be composed of multiple row-layers, i.e. the window is split horizontally into multiple
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 5Ju0ne924,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+
+target symbols. All other messages required in the decoding are initialized with the corresponding messages from the target symbols of respective neighboring windows. The corresponding processing schedule for a FPWD with 3 processors and an SC-LDPC code with ms = 1 is illustrated in Figure 1 (b). The advantage of this architecture is a shorter structural latency and a lower memory requirement compared to the non-overlapping RLPD due to a smaller effective window size.
+
+Fig. 1. Illustration of the window processing of (a) the Row-Layered Pipelined Decoder, (b) the Full-Parallel Window Decoder and (c) the modified FullParallel Window Decoder.
+
+sub-windows. The corresponding decoding architecture, in the following denoted as RLPD, is composed of multiple processors in series connection with intermediate pipeline stages. Each processor processes only a single iteration involving one check node group and (ms + 1) variable node groups, i.e., one row-layer in H[1,L]. Since the architecture is pipelined, every processor operates on a different set of sub-blocks [yt...yt+ms ]. A constraint of this layered processing is that the processors cannot perform an update on the same group of variable nodes at the same time. In consequence, the layers cannot overlap and only every (ms + 1)th layer can be processed in parallel. The corresponding processing schedule for a RLPD with 3 processors and an SC-LDPC code with ms = 1 is illustrated in Figure 1 (a). The active layers are highlighted in red colors. The number of processors determines the number of updates a variable node receives and is, thus, equivalent to the number of iterations. In this way the decoding in the RLPD architecture is analogous to row-layered decoding for LDPC block codes [11], except that multiple layers are processed in parallel. This alternating row processing imposes restrictions on the length of the decoding window, which has to fulfill the relation
+
+W = I · (ms + 1)
+
+(3)
+
+The memory requirement of the RLPD and the structural latency are thus proportional to the number of processors (iterations) I and the constraint length (ms + 1). This can become a considerable issue for codes with large ms and that require a large number of iterations.
+A fundamentally different approach for high-throughput SCLDPC decoding is the FPWD [10]. Like the RLPD, the FPWD is composed of multiple processors arranged in a pipeline. However, here each processor processes a small subwindow that must be at least of size W = 2 · ms + 1. The (ms +1)th group of symbols inside the sub-window is denoted as the target symbols. From the target symbol’s perspective, its respective sub-window overlaps with ms preceding and ms ascending sub-windows. Each processor performs a two-phase decoding on the respective window, only updating its own
+
+III. MODIFIED FULL-PARALLEL WINDOW DECODER
+In this section we propose a modified FPWD for MS decoding with reduced critical path and routing complexity. For reasons of simplicity, we assume in the following a fixed coupling width of ms = 1. However, the presented concepts can be also applied to larger values of ms.
+
+A. Check Node Splitting
+A major drawback of the FPWD is the large size of the subwindow and thus the size of the Tanner graph that is processed by each processor (see Figure 1). In the RLPD, each processor operates on the matrix
+
+HRLPD = H1 H0
+
+(4)
+
+corresponding to one layer (row) of H[1,L]. On the contrary, the smallest possible processing matrix of the original FPWD as proposed in [10] is
+
+HFPWD =
+
+H1 0
+
+H0 H1
+
+0 H0
+
+,
+
+(5)
+
+i.e. contains twice the number of layers. Note that the computational complexity of the processor is not increased by two as only the variable nodes corresponding to the respective target sub-block need to be updated (highlighted in red in Figure 1). However the number of check node computations has doubled as well as the maximum variable node degree, resulting in a longer critical path for the original FPWD.
+The second drawback of the original FPWD is the significant number of extrinsic messages to be exchanged between the processors. This is illustrated in Figure 1 (b). Each processor has to propagate, respectively receive, a total of (c · dc) extrinsic messages to/from its right and left neighbors. For high-throughput decoders with large parallelism and thus large c (see Equation 2), this message exchange results in a complex routing network that becomes a severe throughput bottleneck.
+To mitigate these problems we apply a method we denote in the following as check node splitting. Here, each check node of degree dc is split into a left and a right partial check node of degree (dc/2). In every decoding iteration these partial check nodes exchange information. In this way, the proposed concept is similar to split-row decoding [12]. However, instead of only the sign, a complete edge message composed of sign and minimum magnitude is exchanged.
+With the split check nodes, each sub-window comprises only a single column of H[1,L], corresponding to the target symbols in the original FPWD extended with an upper left
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 5Ju1ne024,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+
+and a lower right (c − b) × (c − b) identity matrix representing the additional edges for the exchange messages. The processor of the modified FPWD thus operates on the matrix
+
+HMFPWD =
+
+I 0
+
+H0 H1
+
+0 I
+
+.
+
+(6)
+
+The extrinsic messages corresponding to the (c − b) left-most columns in HFPWD are exchanged with the left sub-window, the extrinsic messages corresponding to the (c − b) right-most columns in HFPWD are exchanged with the right sub-window. In this way, the overlapping region compared to the original FPWD (shown on the right of Figure 1 (b) and (c)) and thus the number of exchange messages reduces from (c · dv/2) to (c−b). For example, assuming a fixed variable node degree of dv = 4 the check node splitting method reduces the number of exchange message by 90% for a code rate of R = 0.8 and by 75% for a code rate of R = 0.5. Furthermore, the maximum check node degree after the split is only (dc/2 + 1) and thus almost halved compared to the original FPWD.
+
+R2L L2R
+
+FIRST? 1 0
+
+0
+
+MAX
+
+R2L L2R
+FIRST? 1 0 1 0 LAST?
+MAX TERM0
+R2L L2R
+FIRST? 1 0 1 0 LAST? MAX TERM
+
+R2L L2R
+FIRST? 1 0 1 0 LAST? MAX TERM
+
+CFUi Stage
+
+NW
+
+EXTR Processor 1
+
+CHAN
+
+EXTR
+
+CHAN
+
+Processor 2
+
+EXTR
+
+CHAN
+
+Processor 3
+
+EXTR
+
+CHAN
+
+Processor 4
+
+OUT
+
+...
+
+...
+
+...
+
+UMU
+
+UMU
+
+UMU
+
+Processor
+
+...
+
+UMU
+
+CFUo
+
+CFUo
+
+... CFUo Stage
+
+CFUo
+
+CFUo
+
+...
+
+...
+
+...
+
+...
+
+CN2VN Network
+
+...
+
+...
+
+...
+
+...
+
+VFU
+
+VFU
+
+... VFU Stage
+
+VFU
+
+VFU
+
+...
+
+...
+
+...
+
+...
+
+VN2CN Network
+
+......
+
+...
+
+...
+
+...
+
+CFUi
+
+CFUi
+
+... CFUi Stage
+
+CFUi
+
+CFUi
+
+split
+
+split
+
+split
+
+...
+
+split
+
+...
+
+Fig. 2. Top-level architecture of the modified FPWD (left) and one of its processors (right).
+
+B. Iteration Slicing
+A decoding iteration in the original FPWD starts with the update of the Check Nodes (CNs) and ends with the update of the Variable Nodes (VNs). We denote this in the following as CN-VN iteration. After each iteration, the computed VN messages are exchanged between neighboring windows/processors and the next iteration starts. In the modified FPWD the messages are not exchanged between VNs and CNs, but between CNs. For the CN-VN iteration this means that the new exchange messages for the next iteration are computed in the CNs, i.e., in the middle of the iteration and not at the end resulting in a slower convergence of the decoding. We therefore propose a different slicing of the decoding steps into iterations, which we denote in the following as CN-CN iteration. The CN-CN iteration starts after the minimum search and the sign computation of the check node operation. In this stage of the processing, the extrinsic messages can be represented only using the first and second absolute minimum min0 and min1, the edge index of the first minimum idx0 and the dc signs of the output messages. The first step in the CNCN iteration is thus to compute the extrinsic messages for the VNs based on the respective signs and minimum values. Then, the VNs are updated and eventually new signs and minima calculated. Note that the CN-CN iteration comprises the same steps as the CN-VN iteration, only in a different order.
+The modified FPWD extends the CN-CN iteration by two additional steps for the exchange of messages:
+1) Before the CN-CN iteration, the exchange messages are used to update the signs and minima using Algorithm 1.
+2) After the CN-CN iteration, new exchange messages are computed by multiplying min0 with the sign of the check node.
+As we will show in the results section, the combination of split check nodes and the CN-CN iteration slicing provides the exact same performance as the original FPWD and can thus be considered as a reformulation of the respective decoding
+
+algorithm. Another way to think of this modified FPWD is as a variation of a column-based layered decoder [13] for SCLDPC codes.
+Algorithm 1 Update Minima
+Input: min0, min1, idx0, signs[dc], exch msg Output: min0, min1, idx0, signs [dc]
+Update minima : 1: if (abs(exch msg) ≤ min0) then 2: min0 := abs(exch msg); min1 := abs(exch msg) 3: else if (min0 < abs(exch msg) ≤ min1) then 4: min0 := min0; min1 := abs(exch msg) 5: else 6: min0 := min0; min1 := min1 7: end if
+Update signs and min index : 8: for i = 0 to (dc − 1) do 9: signs [i] := signs[i] · sign(exch msg) 10: end for 11: idx0 := idx0
+C. Pipelined Processing Architecture
+Figure 2 shows the top-level architecture of a 4 iteration pipelined FPWD (left) and of one of its processors (right).
+1) Processors: Each processor is composed of five main stages: Depicted at the top, there is the Update Minima Unit (UMU) stage in which the minima for all 2(c − b) check nodes are updated with the exchange messages according to Algorithm 1. Correspondingly, at the bottom, the new exchange messages are generated by concatenating the sign bit from the check node computation with the new minimum value min0 (sign-magnitude representation). In the center, there is the Variable Node Functional Unit (VFU) stage that is wrapped by two partial Check Node Functional Unit (CFU) stages, denoted as the CFUo and CFUi stage respectively. The CFUo stage calculates the extrinsic messages (in two’s complement
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 5Ju1ne124,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+
+representation) for the VFU stage from the incoming signs and minimum values, whereas the CFUo stage performs the minimum search and the message normalization.
+2) Decoder: The decoder is composed of 4 processors (center), as well as registers for the exchange messages (left) and a pipeline for storing the channel values (right). Each processor operates on a different sub-block. The respective channel values are stored in a pipeline and fed to the corresponding processor. In every clock cycle, new extrinsic messages are computed and exchanged between processors. The extrinsic messages, unless they are exchange messages, are passed from one processor to the subsequent stage. The exchange messages, however, have either to be fed back to the current processor’s input (for right-to-left (R2L) exchange messages, highlighted blue) or propagated two stages ahead (for left-toright (L2R) exchange messages, highlighted green). In the first two iterations, L2R exchange messages are not yet available for the processor and therefore initialized with ’0’. Exchange messages for the first and the last sub-block of the code require special processing (see the R2L/L2R multiplexers). If the current sub-block is first, the respective R2L exchange messages are initialized with the maximum value, that is the neutral element for the check node operation. If the current sub-block is last, the L2R messages are initialized with the LLR values corresponding to the termination bits.
+IV. RESULTS
+In this section we present FEC performance and implementation results of the discussed SC-LDPC decoders. Both the performance evaluation and the implementation were performed for a terminated SC-LDPC code of length N = 51328 with ms = 1 and sub-block size c = 640. The code rate is R = 0.8. The respective sub-matrices H0 and H1 were obtained from [14].
+A. FEC Performance
+We evaluate the performance of the presented decoders with Bit Error Rate (BER) over Signal-to-Noise-Ratio (SNR) simulations. Each SNR point was simulated with 106 blocks (corresponding to 80 · 106 sub-blocks) transmitted over an Additive White Gaussian Noise (AWGN) channel with Binary Phase Shift Keying (BPSK) modulation. The results are shown in Figure 3. All decoders use the Normalized MS (NMS) algorithm with γ = 0.75.
+For better classification of the results, the performance of a (64800, 51804) DVB-S2 block code decoded with 200 iterations is also shown. The DVB-S2 code is comparable to the SC-LDPC code in terms of code rate (R = 0.8) and length (N = 64800 bit). In addition, Figure 3 shows the performance of the SC-LDPC code decoded with a 200-iteration block decoder to demonstrate the maximum achievable MS performance.
+As already stated in the previous section the original and the modified FPWD show the exact same performance. Compared to the RLPD, the performance of the FPWD is lower for the same number of iterations. This performance loss is
+
+Fig. 3. FEC performance of the FPWD and the RLPD for different number of iterations (processors).
+particularly profound for a low number of iterations (> 1 dB at 4 iterations), and becomes negligible towards higher number of iterations ( 0.1 dB at 64 iterations). The slower convergence is to be expected as the exchanged messages in the FPWD, due to the overlaps, always correspond to previous decoding iterations in the neighboring window. This effect was also observed for the Compact Pipeline Decoder Architecture in [15] and can be considered as a cost for the lower structural latency.
+B. Implementation Results
+Implementation was performed for a 7-iteration original FPWD, a 7-iteration modified FPWD (compare Figure 2) and, as a reference implementation, a 4-iteration RLPD. The respective number of iterations was selected such that all three decoders achieve the same FEC performance (fixed point) of BER = 10−6 at 4.2 dB, which is around 1 dB from the maximum MS performance of the code. All decoders use 4 bits for the representation of channel values and extrinsic messages. The A Posteriori Probability (APP) values in the RLPD are quantized with 6 bits. The performance loss compared to floating point is less than 0.2 dB up to a BER of 10−6.
+All three decoders were implemented in a 22 nm FD-SOI technology under worst-case Process, Voltage and Temperature (PVT) conditions (125 °C, 0.72 V for timing, 0.80 V for power). Synthesis is performed with the Design Compiler, Placement & Routing is carried out with the IC-Compiler, both from Synopsys. Power numbers are calculated with backannotated wiring data. The stimuli for the power simulations were obtained at a fixed SNR of 4 dB.
+Table I summarizes the results in comparison to data from the fastest LDPC decoders in literature. However, it has to be mentioned that a fair comparison is difficult. First, there are no decoders in literature for a comparable SC-LDPC code. Therefore, we show high-throughput reference decoders for an LDPC block code and for two LDPC convolutional codes, which can be considered as a special case of an SC-LDPC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 5Ju1ne224,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+2021 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit): Components and Microelectronics (CME)
+TABLE I IMPLEMENTATION RESULTS
+
+Decoder
+Code Code Rate CMOS Technology Supply Voltage [V] Architecture # Processors Quantization [bit] Eb/N0 at BER 10−6 [dB] Frequency [MHz] Decoding Latency [ns] ([cc]) Post P&R Area [mm2] Area Utilization [%] Throughput [Gbit/s] Energy Eff. [pJ/bit] (per proc) Area Eff. [Gbit/s/mm2]
+
+This Work
+
+SC-LDPC
+
+0.8
+
+22nm FD-SOI
+
+0.8
+
+Orig. FPWD Mod. FPWD
+
+7
+
+7
+
+4
+
+4
+
+4.2
+
+4.2
+
+466
+
+525
+
+19.3 (9)
+
+19.0 (10)
+
+2.65
+
+1.33
+
+44
+
+77
+
+298
+
+336
+
+16.2 (2.3)
+
+9.4 (1.2)
+
+113
+
+252
+
+RLPD 4 4 4.2
+438 22.8 (10)
+1.01 82 294 8.1 (2.0) 290
+
+[8]
+(215,3,6) LDPC-CC 1/2, 2/3, 3/4, 4/5 65nm 1.20 RLPD 6 6 n/a 322 n/a 1.6 n/a 7.72 53.4 (8.9) 4.8
+
+[9]
+LDPC-CC 1/2 90nm 0.8
+RLPD 4 6
+∼3 305 n/a 2.18 n/a 3.66 75.2 (18.8) 1.7
+
+[5]
+(2048,1723) LDPC-BC 0.84
+28nm FD-SOI 1.0
+Unrolled FP 5 3
+∼ 4.7 862 69.6 16.2 66 588 22.7 (4.5) 36.3
+
+code. Second, they are implemented in different technology nodes. Although scaling factors exist to map data from one technology node to another one, they are only useful for scaling of logic-dominated designs but not for designs that are routing-dominated as it is the case for high throughput LDPC decoders. We therefore focus on a comparison of both implemented FPWD decoders and the RLPD reference implementation.
+As a consequence of the reduced routing complexity, the modified FPWD achieves a 33% higher area utilization and thus a better area efficiency compared to the original FPWD. A further side effect of this is a lower wiring load for the logic circuits, which, in combination with the reduced sub-window size (compare Equations 5 and 6), leads to a 40% better energy efficiency as well as a higher frequency of the circuit.
+Compared to the RLPD reference implementation, the modified FPWD exhibits an around 15% lower latency. For the selected operating point, this lower latency results solely from the shorter critical path. However, for a higher number of iterations the FPWD additionally exhibits a lower structural latency due to the comparatively smaller window size and thus shorter length of the processing pipeline making the FPWD a promising approach for latency critical applications.
+V. CONCLUSION
+In this paper, we presented a 336 Gbit/s SC-LDPC decoder based on the Full-Parallel Window Decoding architecture. We proposed algorithmic and architectural optimizations to reduce the critical path and the routing complexity of the decoder. As a consequence, the presented decoder achieves around 40% lower (better) energy efficiency and 120% higher area efficiency. Compared to a state-of-the-art Row-Layered Pipelined Decoder that was implemented in the same 22 nm FD-SOI technology, the presented FPWD decoder is superior in terms of throughput and latency.
+ACKNOWLEDGMENT
+We gratefully acknowledge financial support by the EU (project-ID: 760150-EPIC).
+
+REFERENCES
+[1] R. G. Gallager, “Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near shannon limit performance of low density parity check codes,” Electronics Letters, vol. 32, no. 18, pp. 1645–, 1996.
+[3] C. Kestel, M. Herrmann, and N. Wehn, “When Channel Coding Hits the Implementation Wall,” in 2018 IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC), Dec. 2018, pp. 1–6.
+[4] P. Schla¨fer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A new dimension of parallelism in ultra high throughput LDPC decoding,” in SiPS 2013 Proceedings, Oct. 2013, pp. 153–158.
+[5] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mu¨ller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, Feb. 2018.
+[6] A. Jimenez Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Transactions on Information Theory, vol. 45, no. 6, pp. 2181–2191, 1999.
+[7] S. Kudekar, T. J. Richardson, and R. L. Urbanke, “Threshold saturation via spatial coupling: Why convolutional ldpc ensembles perform so well over the bec,” IEEE Transactions on Information Theory, vol. 57, no. 2, pp. 803–834, 2011.
+[8] C. Lin, R. Liu, C. Chen, H. Chang, and C. Lee, “A 7.72 gb/s ldpc-cc decoder with overlapped architecture for pre-5g wireless communications,” in 2016 IEEE Asian Solid-State Circuits Conference (A-SSCC), 2016, pp. 337–340.
+[9] C. Chen, Y. Lan, H. Chang, and C. Lee, “A 3.66gb/s 275mw tb-ldpc-cc decoder chip for mimo broadcasting communications,” in 2013 IEEE Asian Solid-State Circuits Conference (A-SSCC), 2013, pp. 153–156.
+[10] N. U. Hassan, M. Schlu¨ter, and G. P. Fettweis, “Fully parallel window decoder architecture for spatially-coupled ldpc codes,” in 2016 IEEE International Conference on Communications (ICC), 2016, pp. 1–6.
+[11] D. E. Hocevar, “A reduced complexity decoder architecture via layered decoding of ldpc codes,” in IEEE Workshop onSignal Processing Systems, 2004. SIPS 2004., 2004, pp. 107–112.
+[12] T. Mohsenin and B. M. Baas, “Split-row: A reduced complexity, high throughput ldpc decoder architecture,” in 2006 International Conference on Computer Design, 2006, pp. 320–325.
+[13] Z. Cui, Z. Wang, and X. Zhang, “Reduced-complexity columnlayered decoding and implementation for LDPC codes,” CoRR, vol. abs/1204.2577, 2012. [Online]. Available: http://arxiv.org/abs/1204.2577
+[14] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, Database of Channel Codes and ML Simulation Results, 2020. [Online]. Available: https://www.uni-kl.de/channel-codes
+[15] A. E. Pusane, A. J. Feltstrom, A. Sridharan, M. Lentmaier, K. S. Zigangirov, and D. J. Costello, “Implementation aspects of ldpc convolutional codes,” IEEE Transactions on Communications, vol. 56, no. 7, pp. 1060– 1069, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on 5Ju1ne324,2026 at 12:08:03 UTC from IEEE Xplore. Restrictions apply.
+
+

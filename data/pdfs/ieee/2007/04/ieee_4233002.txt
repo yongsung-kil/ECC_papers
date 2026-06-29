@@ -1,0 +1,474 @@
+Quantitative Evaluation of Low Density Parity Check Convolutional Code Encoder and Decoder
+Algorithms for the XInC MIMD Multithreaded Microprocessor
+
+Xin Sheng Zhou, Bruce Cockburn, Stephen Bates
+Department of Electrical and Computer Engineering University of Alberta
+Edmonton, AB, Canada T6G 2V4 xzhou, cockburn, sbates@ece.ualberta.ca
+
+Abstract—In this paper, we introduce Low Density Parity Check Convolutional Code (LDPC-CC) parallel encoder and decoder algorithms for the XInC MIMD multi-threaded microprocessor. A modified memory-based decoder architecture and an interleaved LDPC-CC code scheme are also proposed. Extensions and simple modifications to the current XInC microprocessor are proposed to decrease the number of instruction cycles per decoded bit. A XInC emulator was built to evaluate and quantify the hardware utilization and performance benefits of these modifications and other alternatives.
+Keywords: convolutional codes; low density parity check; Multiple Instruction Multiple Data architecture
+I. INTRODUCTION
+Low density parity check block codes (LDPC-BCs) were first proposed by Gallager in the 1960’s [1]. However, the construction that he proposed was not very elegant, and the performance that he reported was not that impressive and therefore his contribution was largely ignored for almost thirty years. In 1996, LDPC-BCs were rediscovered by Mackay and Neal and shown to have error correction performance approaching the Shannon capacity limit [2]. In 1999, Felström and Zigangarov proposed low density parity check convolutional codes (LDPC-CCs). It has been shown that LDPC-CCs have better code performance than the regular LDPC-BCs with the same memory length constraints. Furthermore, LDPC-CCs have a simpler encoder algorithm and the decoder can be implemented by multiple identical processors in a pipeline structure [3]. Moreover, LDPC-CCs allow data sequences of arbitrary length to be encoded, making them much more convenient for efficient packing into the payload field of the available data frames as well as for streaming data applications [4].
+The decoder algorithm complexity mainly comes from the soft-in-soft-out decoding processing and the need for multiple iterations for decoding. VLSI technology makes possible parallel decoding algorithms and approximate decoding of high-throughput LDPC codes with good code performance.
+
+Currently, microprocessor implementations of LDPC-BCs can achieve a throughput of 100K bps while custom ASIC implementation can achieve up to 1G bps [6].
+Though the current throughput of microprocessor implementations is not very impressive, the benefits of these implementations are faster time-to-market deployment and higher flexibility. To increase the throughput of the decoding algorithm by exploiting the available parallelism, parallel decoding algorithm could be used. Quantitative evaluation of the decoding algorithm could also help to determine the bottleneck in the algorithms, so microprocessor hardware resource could be added or modified to eliminate the bottleneck.
+
+II. LOW DENSITY PARITY CHECK CONVOLUTIONAL CODES
+LDPC-CCs generate code bits based on a low density parity check matrix. Unlike LDPC-BCs, which generate code bits based on the information bits only, LDPC-CCs are generated from both previous information bits and previous code bits. In this paper, we construct a (128,3,6) LDPC-CC. The most recent 128 information bits and 128 code bits are stored in a First-in First-out (FIFO) queue. Each parity check operation involves 6 bits. Each bit involves 3 parity check operations. This rate 1/2 LDPC-CC can be constructed as follows,
+
+v1(t) = u(t)
+
+(1)
+
+∑ ∑ v2 (t) =
+
+M i=0
+
+h (i ) 1
+
+(t)u(t
+
+−
+
+i)
+
++
+
+M i=1
+
+h (i ) 2
+
+(t)v2
+
+(t
+
+−
+
+i)
+
+(2),
+
+where u(t) is the information bit sequence, v(t) is the code bit sequence. When the encoder reads one information bit, it generates two code bits accordingly. The first code bit is simply the most recent information bit. The second code bit is the parity check result generated from both previous information bits and previous code bits in the memory queue. The parity check operation is a simple XOR operation. Vector hx(t) specifies which bits in the queue are involved in the same parity check operation. The positions of those operation bits in
+
+1361 Authorized licensed use limited to: Yonsei Univ0.8D4o0w-n7l7o8ad9e/0d7o/n$J2u5n.e0023©,22002067atI1E9E:3E2:32 UTC from IEEE Xplore. Restrictions apply.
+
+the queue are different for each parity check operation, but this pattern repeats periodically. Therefore, a position table is also maintained.
+
+LDPC-CCs could also be defined by their infinite, but periodic parity check matrix H. The transpose HT can be represented as
+
+hh12((00))
+
+(0) (0)
+
+h (1) 1
+
+(1)
+
+h (1) 2
+
+(1)
+
+" "
+
+h1(M ) (M ) h2(M ) (M )
+
+0 0
+
+"
+
+"
+
+
+ (3)
+
+HT =  0
+
+ 
+
+#
+
+h1(0) (1) "
+
+h(0) 2
+
+(1)
+
+"
+
+h1(M ) (M + 1) h2(M ) (M + 1)
+
+0 0
+
+" "
+
+ 0
+
+0%
+
+% 0 
+
+For a rate 1/2 code, an information sequence
+
+u = [u(0),u(1),⋅ ⋅ ⋅, u(t)]
+
+(4)
+
+is encoded into a sequence
+
+v = [v1 (0), v2 (0), v1(1), v2 (2),⋅ ⋅ ⋅, v1 (t), v2 (t)] (5)
+
+such that
+
+v•HT = 0
+
+(6)
+
+The parity structure of an LDPC-CC can be represented graphically by a Tanner graph [8] as shown in Fig. 1. There is one variable node for each bit and there is one check node for each of the parity check operations. The edges between each check node and the variable nodes specify which bits are involved in the same parity check operation.
+
+... V2(0)
+
+Variable Nodes V1(1) V2(0)
+
+V1(0)
+
+... +
+
++
+
+Check Nodes
+
+Figure 1. Tanner graph representation of LDPC-CC
+
+III. ENCODER AND DECODER ALGORITHM
+A. Encoder Algorithm
+Because the code bits are generated from both previous information bits and previous code bits, we use a First-in Firstout queue to store a sliding window of recent bits for the encoder. A loop pointer is used to figure out the header of the queue in the memory block. The memory size of the queue is 2*M, that is, M previous information bits and M previous code bits. In our (128,3,6) code, 6 bits are retrieved for each parity check operation based on position table. The parity check operations are implemented by simple bit-XOR operations. Fig. 2 shows the LDPC-CC encoder architecture.
+
+B. Decoder Algoithm
+The architecture of an LDPC-CC decoder has a simple unidirectional cascade of processors. Each processor is comparable to an iteration operation. In fact, performance increases as we add more processors to the cascade. Fig.3 shows the LDPC-CC decoder architecture.
+
+u(t)
+
+FIFO Queue
+
+V1(t) V2(t-1) V1(t-1)
+
+...
+
+V2(t-M) V1(t-M)
+
+Select 5 from 2*M
+
+17 22 131 211 256
+
++
+Code Bit V2(t)
+
+Position table
+
+Figure 2. LDPC-CC encoder architecture
+
+Info bits
+
+LLRs
+
+V
+
+V
+
+Code bits LLRs
+
+P V
+
+P V
+
+Processor 1
+
+Processor 2
+
+Figure 3. LDPC-CC decoder architecture
+
+Inside the processors, a memory block is used to store the results of the check node and variable node operations. The first row of the memory stores the input channel Log Likelihood Ratio (LLR) values. Other rows store the values from the check node operation results. In our regular (128,3,6) code, each bit involves three parity check operations, therefore, there are three additional rows to store the check node results. At the end of the processors, a variable node operation performs to sum up the check node results.
+
+The inputs of the first processor are information bit LLRs and code bit LLRs. The inputs of the following processors are the outputs of the previous processors. At the last processor, a hard decision operation on the LLR sign produces the output digit ‘0’ or ‘1’.
+
+Log Likelihood Ratios
+
+l ( x)
+
+=
+
+ log
+
+
+P[t (k ) P[t (k )
+
+="0"| ="1"|
+
+r(k) r(k)
+
+= =
+
+x]
+
+x]
+
+ 
+
+(7)
+
+are used for the probabilities of the bit value. t(k) denotes the transmitted bits. The values of the received bits r(k) are x. The advantage of using LLR value is that the product operation of the probability can be replaced by simpler addition operation. For an Additive White Gaussian Noise (AWGN) Binary Phaseshift Keying (BPSK) channel, the LLRs would be
+
+1362
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:32:32 UTC from IEEE Xplore. Restrictions apply.
+
+l(x) = 4x
+
+2σ 2 ,
+
+(8)
+
+where σis the standard deviation of the AWGN.
+
+The min-sum algorithm [9] is used to approximate the statistically exact complicated tanh/tanh-1 functions in check
+node operation.
+
+For the check node,
+
+yk
+
+=
+
+min{|
+∀n ≠ k
+
+xn
+
+|}
+
+Π
+∀n≠k
+
+sgn(
+
+xn
+
+)
+
+,
+
+(9)
+
+where
+
+n, k ∈{1,2,...6}.
+
+Min(.) is the absolute minimum value of all the other LLRs received by check node. Sgn(.) is the sign function. The value is ‘1’ when xn is a positive number and is ‘-1’ when xn is a negative number.
+
+For variable node, yk is the sum of all the other LLRs received by variable node,
+
+∑ yk = xn ,
+
+(10)
+
+∀n ≠ k
+
+where
+
+k ∈{2,3,4}, n ∈{1,2,3,4}.
+
+processors and no semaphore mechanism is needed to manage the shared memory resources.
+
+Thread Processor 0
+
+2K RAM
+
+Registers
+
+I
+
+Memory Crossbar
+
+D
+Thread Processor 8
+
+2K RAM 16K ROM
+
+Registers
+
+Figure 4. XInC microprocessor architecture
+
+Data Hard decision input Data output
+
+Memory
+
+Iteration 1 Iteration 6
+
+Iteration 5 down to 2 Iteration 1
+
+Thread Process 1 Encoder
+
+Thread Process 2 Data input
+Hard decision Data output Thread control
+
+Thread Process 3 Decoder Iteration 1
+Check node Variable node
+
+Thread Process 8 Decoder Iteration 6
+Check node Variable node
+
+IV. ARCHITECTURE OF XINC MIMD MICROPROCESSOR
+XInC is a 16-bit pipelined RISC microprocessor with 8 hardware thread processors and a shared memory space. Each thread processor has its own 8 general purpose registers, 4 condition code registers and program counter. A single 16-bit instruction is executed in a shared 8-stage pipeline. The memory crossbar is responsible for routing the data to the addressed memory blocks. The thread processors have two ports that are connected to the memory crossbar. The Instruction (I) port is used to fetch instructions. The data (D) port is used to access data. A hardware semaphore mechanism is used to manage the shared resources such as memory and I/O ports [5]. Fig.4 shows the architecture of XInC microprocessor and its memory model.
+V. PARALLEL ALGORITHM ARCHITECTURE
+Fig. 5 shows our LDPC-CC encoder and decoder architecture for the XInC microprocessor. One of the thread processors is used for the encoder. Another thread processor is used for the decoder controller, data input/output and hard decision operation. The remaining six thread processors are used for six cascade LDPC-CC decoder processors, which each includes one check node operation and one variable node operation.
+In this memory-based decoder architecture, each LDPC-CC processor accesses its own memory block. Therefore, there are no memory access conflicts among the LDPC-CC decoder
+
+Figure 5. LDPC-CC parallel algorithm and memory block architecture
+... I16 I15 I14 I13 I12 I11 I10 I9 I8 I7 I6 I5 I4 I3 I2 I1
+
+...
+
+I13 I9 I5 I1
+
+... I14 I10 I6 I2
+
+... I15 I11 I7 I3
+
+... I16 I12 I8 I4
+
+E
+
+... P13 I13 P9 I9 P5 I5 P1 I1
+
+E
+
+... P14 I14 P10 I10 P6 I6 P2 I2
+
+E
+
+... P15 I15 P11 I11 P7 I7 P3 I3
+
+E
+
+... P16 I16 P12 I12 P8 I8 P4 I4
+
+... P4 I4 P3 I3 P2 I2 P1 I1
+Figure 6. Interleaved LDPC-CC encoder data flow
+In thread processor 2, decoder controller performs data input/output, output data hard decision and thread control. In our design, we allocate additional memory in the memory queue to store the input and output data. Because of this separated memory, the data input/output and hard decision operations can be performed when the LDPC-CC decoder processors are running without memory access conflicts. The instruction cycles per decoded bit are decreased by 40% compared with the previous memory-based architecture [7]. Fig. 5 shows the decoder memory architecture.
+
+1363
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:32:32 UTC from IEEE Xplore. Restrictions apply.
+
+To further increase the decoder throughput, interleaved LDPC-CCs could be used. At the encoder end, the information bits are interleaved to several streams. Each stream can be encoded individually and combined before the transmission. At the decoder end, the code bits can be interleaved again and decoded accordingly. Using this approach, the LDPC-CC decoder throughput can be directly scaled up with the available MIMD multithread processor resources. Fig.6 and Fig. 7 shows the interleaved LDPC-CC encoder and decoder data flow.
+... P4 I4 P3 I3 P2 I2 P1 I1
+
+... P13 I13 P9 I9 P5 I5 P1 I1 ... P14 I14 P10 I10 P6 I6 P2 I2 ... P15 I15 P11 I11 P7 I7 P3 I3 ... P16 I16 P12 I12 P8 I8 P4 I4
+
+D
+
+... I13 I9 I5 I1
+
+D
+
+... I14 I10 I6 I2
+
+D
+
+... I15 I11 I7 I3
+
+D
+
+... I16 I12 I8 I4
+
+I16 I15 I14 I13 I12 I11 I10 I9 I8 I7 I6 I5 I4 I3 I2 I1 ...
+Figure 7. Interleaved LDPC-CC decoder data flow
+VI. XINC EMULATOR AND QUANTITATIVE ALGORITHM EVALUATION
+To evaluate the LDPC-CC decoder algorithm on the XInC microprocessor, we designed a XInC emulator. The emulator can execute the instructions in each clock cycles. By using the emulator, we can directly count the decoder instruction cycles per bit. This is the main measurement of the decoder algorithm performance.
+The LDPC-CC decoder operation frequency is shown in Table I.
+First, as we see here, 38% of the instruction cycles are not used for decoding operation, but for the looping overhead. The loop instructions control how many LLRs should be read from memory for the check nodes and variable nodes. If zerooverhead looping and circular addressing technology commonly used in DSP field were to be implemented on the XInC, the decoder algorithm could run faster.
+Zero overhead looping registers are the registers to store the looping counter. For each loop, the register value would reduce 1. When the register value reaches 0, the loop is done. The assembly language code could be,
+mov zolr0, 6
+Loop:
+Any instructions
+zol zolr0, Loop
+where zol is the zero overhead looping instruction name, zolr0 specifies the name of the zero overhead looping register, Loop specifies the looping address.
+
+Circular addressing register is a register whose value has an upper boundary. When this boundary is reached by addition operation, the register value would reset to zero.
+
+Operation type Looping Data moving Decoding operation
+
+Frequency 38% 19% 43%
+
+TABLE I.
+
+LDPC-CC DECODER OPERATION FREQUENCY
+
+LDPC-CC I=6 M=128
+
+0
+
+-0.5
+
+-1
+
+-1.5
+
+log10 (B ER)
+
+-2
+
+-2.5
+
+-3
+
+-3.5
+
+-4
+
+-4.5
+
+1
+
+1 .5
+
+2
+
+2.5
+
+3
+
+3.5
+
+Eb/No (dB)
+
+LD P C -C C I=6 M =128
+
+Figure 8. LDPC-CC (128,3,6) code performance, 6 decoder processors
+Next, 19% of the instruction cycles are for data moving between the memory and registers. This large memory-access comes from the check node and variable node operations, which require fetching several data from the memory, calculating and storing the results back to the memory. For variable node operations, the data addresses are continuous. If double word memory access is used, 4 data values could be accessed in one instruction, and then the memory access overhead could be reduced by 75%. For check node operations, the data addresses are separated. If two-port memory read access could be used, the memory access overhead could be reduced by 50%.
+Finally, some frequently used decoding operations in the decoder algorithm are saturation operations and minimum number operation. These operations are currently performed by several XInC instructions. If we could design new instructions and hardware for these operations, the decoder algorithm performance could also be increased. However, these new instructions might be application-specific and not be commonly used by other applications.
+XInC emulator is designed by object oriented language. Hardware component such as zero overhead looping registers and circular addressing registers could be added to the emulator easily. Also, instructions such as saturation operations and minimum number operations could also be added. The decoder algorithm performance could be evaluated under these new modifications by the XInC emulator.
+
+VII. PERFORMANCE RESULT
+Currently, our LDPC-CC decoder algorithm requires 764 instruction cycles per decoded bit. On a 12-MHz XInC
+
+1364
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:32:32 UTC from IEEE Xplore. Restrictions apply.
+
+microprocessor the current decoder throughput is near 2 Kbps. Figure 8 shows the (128,3,6) LDPC-CC code performance on six decoder processors.
+VIII. CONCLUSION In this work, we implemented and evaluated the LDPC-CC encoder and decoder algorithm on the XInC MIMD microprocessor. A parallel decoder algorithm was used to maximize the decoder throughput. The algorithm was quantitative evaluated using the XInC emulator tool. We are currently implementing some new hardware resources and instructions to the XInC emulator and evaluating the decoder performance based on these modifications.
+REFERENCES
+[1] R. G. Gallager, “Low-Density Parity-Check Codes,” MIT Press, 1963.
+
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” IEE Electron. Lett., 1996.
+[3] A. Jimenez and K. Zigangirov, “Time-varying periodical convolutional codes with low-density parity-check matrix,” IEEE Trans. Inform. Theory, vol. 45, pp. 2181-2191, Sept. 1999.
+[4] Zhengang Chen, Stephen Bates and Xiaodai Dong, “Low-Density Parity-Check Convolutional Codes Applied to Packet Based Communication Systems”, Proceedings of IEEE PACRIM 2005.
+[5] Eleven Engineering Inc, “XInC Microprocessor User Manual,” http://www.elevenengineering.com/
+[6] E. Yeo, B. Nikolic, and V. Anantharam, “Iterative decoder architectures,” IEEE Commun. Mag., vol. 41, pp. 132-140, Aug. 2003.
+[7] Ramkrishna Swamy, Stephen Bates and T. L. Brandon, "Architectures for ASIC Implementations of Low-Density Parity-Check Convolutional Encoders and Decoders", Proceedings of the IEEE International Symposium on Circuits and Systems (ISCAS), Kobe, Japan, 2005.
+[8] F.R. Kschischang, B.J. Frey and H.-A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Trans. on Information Theory, vol 47, pp.498-519, Feb 2001.
+[9] Christian B. Schlegel, Lance C. Perez, “Trellis and Turbo Coding,” IEEE Press, 2004
+
+1365
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 19:32:32 UTC from IEEE Xplore. Restrictions apply.
+
+

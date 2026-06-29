@@ -1,0 +1,942 @@
+Finite alphabet iterative decoding of LDPC codes with coarsely quantized neural networks
+
+Xin Xiao, Bane Vasic´, and Ravi Tandon The University of Arizona
+Email: {7xinxiao7,vasic,tandonr}@email.arizona.edu
+
+Shu Lin University of California, Davis
+Email: shulin@ucdavis.edu
+
+Abstract—In this paper, we introduce a method of using quantized neural networks (QNN) to design finite alphabet message passing decoders (FAID) for Low-Density Parity Check (LDPC) codes. Specifically, we construct a neural network with low precision activations to optimize a FAID over Additive White Gaussian Noise Channel (AWGNC). The low precision activations cause a critical issue that their gradients vanish almost everywhere, making it difficult to use classical backward propagation. We introduce straight-through estimators (STE) [1] to avoid this problem, by replacing zero derivatives of quantized activations with surrogate gradients in the chain rules. We present a systematic approach to train such networks while minimizing the bit error rate, which is a widely used and accurate metric to measure the performance of iterative decoders. Examples and simulations show that by training a QNN, a FAID with 3-bit of message and 4-bit of channel output can be obtained, which performs better than the more complex floating-point minsum decoding algorithm. This methodology is promising in the sense that it facilitates designing low-precision FAID for LDPC codes while maintaining good error performance in a flexible and efficient manner.
+I. INTRODUCTION
+Motivated by successes of Deep Neural Networks (DNN) in various applications, there has been a renewed interest in using neural networks (NN) for data detection and decoding, and in the past two years a number of interesting results have been reported. The NN approach has been shown to handle well the scenarios of unknown, time variant, nonlinear, and channels with memory and correlated noise (see [2], [3] and references therein). In the known channel case, the efforts have mainly focused on learning decoding algorithms for error-correction codes (ECC). Recently, several research groups have shown that DNNs can be used to efficiently learn various decoding algorithms, including Belief Propagation (BP) decoding [4]– [8].The reason for this effectiveness of DNNs, for instance, in the case of BP decoding based on Tanner graphs, is that the synaptic weight matrices over hidden layers are constrained to preserve the message-passing update rule symmetry conditions. This allows the training to be performed on a single codeword and its noise realizations rather than on the entire code space, and therefore opens up the possibility of using DNN on long codes. In our preliminary work [9], we have shown that DNNs can improve the decoding convergence speed (number of iterations to achieve a desired frame error rate) of conventional Min-Sum (MS) decoding algorithm. Unlike well established theories on Density Evolution (DE) and
+
+Trapping Set (TS), which are used to guide decoder design for the waterfall and error-floor regions, respectively, there is no existing theory for speeding up decoding convergence. The multi-layer structure of DNNs can naturally learn time-varying update rules that can provably outperform fixed update rules, thereby, opening new decoding design possibilities.
+A crucial drawback of the above approaches is that the DNNs typically used for decoding use synaptic weights with floating point precision which is prohibitively complex for most potential applications. On the other hand, decoders in which messages belong to a finite alphabet are not only of great theoretical, but also practical importance. However, the main challenge in training Quantized NN (QNN) is that low precision weights or activations cause a critical issue that their gradients vanish almost everywhere, making backward propagation inapplicable.
+In this paper, we propose to use QNNs to design FAIDs for LDPC codes. To solve the challenge discussed above, we rely on very recent results on training QNNs which is of great interest on its own [10]–[13]. The main techniques to quantize weights and activations include straight-through estimators (STE), vector quantization and weight optimization, among which we focus on STE, for the reason that it handles the zero derivatives in the backward propagation. In brief, we are interested in FAIDs over AWGNC. The QNN is an “unwrapped” Tanner graph, with a set of activations defined by “proto” message update functions such as MS decoding. The quantized activations and channel messages are used in both forward and backward propagation. As a consequence, the neural network has full-precision weights, biases and gradients, while it has low precision activations and channel messages. This does not increase decoding complexity, as training such QNN is offline. Based on the trained weights and biases, we obtain a set of Look Up Tables (LUT) to describe time-varying FAID message update rules in each iteration. We use bit error rate as the objective function, since it is a more common and accurate metric to measure the performance of iterative decoders. More importantly, we choose two proper STEs as the proxy derivatives in the back propagation for the quantizers of activations and BER objective function. The simulation results show that the trained FAIDs with only 3-bit messages and 4-bit channel outputs outperform floating MS decoder, which is desirable in hardware implementation. This methodology provides a systematic design of good FAIDs for
+
+Authorized licensed use limited to: Yonsei9U7n8iv-.1D-7o2w8n1lo-a0d9e6d2o-n6/J1u9ne/$2341,2.00026©a2t 1001:937I:E11EUETC from IEEE Xplore. Restrictions apply.
+
+LDPC codes, with any reasonable quantization scheme and varying code lengths, thus it is very flexible and simple. To the best of the knowledge, this is the first work to use QNNs with STE to design FAIDs of LDPC codes.
+The rest of the paper is organized as follows. Section II gives the necessary background. Section III presents the QNN framework. Section IV introduces the training with QNN. Section V demonstrates the examples and simulation results. Section VI concludes the paper.
+
+II. PRELIMINARIES
+
+Let C be a LDPC code, H be its parity check matrix, and
+
+G = (V, C, E) be its Tanner graph, where V (respectively,
+
+C) is the set of variable (respectively, check) nodes, and E
+
+is the set of edges. If the code length is n, the number of
+
+parity check equations is m, and the number of edges is I,
+
+then |V | = n, |C| = m, and |E| = I. Denote the i-th variable
+
+node as vi, j-th check node as cj, and the edge connecting
+
+vi and cj as (vi, cj) which is indexed by some integer (e),
+
+1 ≤ i ≤ n, 1 ≤ j ≤ m, 1 ≤ e ≤ I. Let the dvi be the degree of vi, and dcj be the degree of cj.
+Let x = (x1, x2, ...xn) ∈ C and y = (y1, y2, ...yn) be
+
+the transmitted codeword and received channel output vec-
+
+tor, respectively. Consider binary phase shift keying (BPSK)
+
+modulation, i.e., yi = (−1)xi + zi for 1 ≤ i ≤ n where zi
+
+is Gaussian noise with standard deviation σ. The likelihood
+
+message is defined by the log likelihood ratios (LLR): Λ =
+
+(λ1, λ2, ..., λn),
+
+where
+
+λi
+
+=
+
+log
+
+Pr(xi Pr(xi
+
+=0|yi =1|yi
+
+) )
+
+.
+
+Suppose
+
+that
+
+the
+
+message update rules of variable nodes and check nodes which
+
+the QNN aims to optimize are defined as νvi→cj = Φ(λi, pi) and µcj→vi = Ψ(qj), respectively, where pi (qj) is the incoming message to a variable node vi (check node cj). λ˜i = Υ(λi, pi) denotes the likelihood message approximation
+for variable node vi, which will be optimized by QNN as well. Let Qmsg and Qc be the quantizers of messages and
+
+channel outputs (or likelihood messages), with bmsg-bit and
+
+bc-bit precision, respectively. The corresponding alphabet sets
+
+are denoted by Amsg and Ac, and quantization threshold sets are denoted by T msg, T c.
+
+III. THE QNN FRAMEWORKS
+A. Low precision QNN activations
+The proposed QNN is constructed based on Tanner graph G, with three types of activations defined by Φ, Ψ, and Υ. In general, the message update rules Φ, Ψ, and Υ can be provided by any conventional iterative decoder such as sum-product decoder, bit-flipping decoder, etc. In this work, we take Φ, Ψ, and Υ from MS decoder, and then use two quantizers Qmsg and Qc to quantize the activations and the likelihood messages (or the channel outputs), respectively. More specifically, suppose that the QNN consists of K hidden layers, with output values denoted by r(k), 1 ≤ k ≤ K. r(0) (r(K+1)) represents the values of input (output) layer. r(k) = (r1(k), r2(k), ...rJ(kk))T , where Jk is the number of neurons in k-th layer, and rt(k) is the the output value of the t-th neuron
+
+Fig. 1. Block diagram of a QNN.
+
+in k-th layer, 0 ≤ k ≤ K + 1, 1 ≤ t ≤ Jk. Fig. 1 shows the
+
+block diagram of a QNN, where it is readily observed that
+
+every three hidden layers correspond to one iteration. r(k)
+
+represents the variable (respectively, check) nodes message
+
+update if 3|k − 1 (respectively, 3|k − 2), and it represents
+
+the estimate of likelihood messages if 3|k. Each neuron in
+
+variable and check nodes message update layers stands for an
+
+edge. Each neuron in likelihood message approximation layers
+
+stands for a variable node. Therefore, we have Jk = n if 3|k,
+
+otherwise Jk = I. The weight matrix and the bias vector in the k-th layer are denoted by W(k) and b(k), respectively.
+
+The output of the k-th hidden layer (k > 1) is computed as
+
+follows:
+
+Qmsg(Φ(b(k)Qc(Λ), W(k)r(k−2))), 3|(k − 1),
+
+r(k) = ΨΥ((rb((kk−)Q1)c)(,Λ), W(k)r(k−1)),
+
+3|(k − 2), (1) 3|k,
+
+where for any (e) = (vi, cj), if 3|(k − 1), ∑
+re(k) = Qmsg(b(ek)Qc(λi) +
+
+we(k,e)′ re(k′ −2)),
+
+(e′ )=(vi ,ct ),t̸=j
+
+if 3|(k − 2),
+
+∏
+
+re(k)
+
+=
+
+sgn(re(k′ −1))
+(e′)=(vt,cj ),t̸=i
+
+·
+
+min
+(e′)=(vt,cj ),t̸=i
+
+re(k′ −1)
+
+,
+
+and if 3|k,
+
+∑
+
+ri(k) = bi(k)Qc(λi) +
+
+wi(,ke)′ re(k′ −1).
+
+(e′ )=(vi ,ct )
+
+In this work, we consider that Qc and Qmsg are predefined. At
+
+each k-th layer where 3|k, for each training sample, we check
+
+whether its estimated codeword satisfies all parity equations
+
+or not. If so, this training sample will skip the rest layers and
+
+its output at the current k-th layer will be directly used to
+
+calculate the objective function, namely,
+
+r(K+1) = r(k), if 1 − sgn((r(k))T ) · HT = 0. (2) 2
+The first hidden layer is the initialization of the QNN from channel, and its output is calculated by
+
+r(1) = Qmsg(W(1)r(0)),
+
+(3)
+
+where r(0) = Λ, re(1) = Qmsg(we(1,i)ri(0)), ∀(e) = (vi, cj ). Since Ψ is the min operation which is insensitive to the noise
+variance, we replace all likelihood messages λi by channel outputs yi in Eq. (1) and (3), and thus Qc is the quantizer of y. As quantizers play roles of nonlinear functions, all the
+layers have nonlinear activations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:37:11 UTC from IEEE Xplore. Restrictions apply.
+
+B. Flexible quantizers of messages and channel outputs
+
+The quantizers Qs in Eq. (1) of bs-bit precision is defined by an alphabet set As and a threshold set T s as follows,
+
+where the superscript “s” stands for either “msg” or “c”:
+
+for given finite sets As = {0, ±Ls1, ±Ls2..., ±Ls2bs−1−1} and
+
+Ts R+,
+
+= 1
+
+{T1s ≤i
+
+,≤T2s2..b.s,−T12sb−s−11−1a,nTd2sbLs−si 1
+
+= ∞}, > Lsj , Tis
+
+with Lsi , Tis ∈ > Tjs for any
+
+i > j, {
+
+Qs(x) =
+
+sgn(x)Lis 0
+
+if if
+
+Tis |x|
+
+≤ <
+
+x< T1s
+
+Tis+1
+
+.
+
+(4)
+
+From Eq. (4), it is readily observed that Qs is symmetric. Since
+
+Φ, Ψ, and Υ satisfy symmetry conditions, Eq. (1) preserves
+
+them as well. In addition, when passing messages and channel
+
+values from one layer to another in the forward propagation, As can be first mapped into integers to save memories, and only integers with bmsg-bit (or bc-bit) precisions are passed instead of values in As. When computing the quantized activations, integers are mapped back into As.
+
+In general, for AWGNC, the precision of channel outputs is higher than that of messages, i.e., bmsg < bc. Different methods are used in literatures to design a good Qc. For example, a Qc can be derived by maximizing the mutual
+
+information between channel input and the quantizer output
+
+[14], or by Lloyd-Max scalar quantization method [15], [16] to
+
+minimize the mean square error (MSE) between the quantized
+
+and nonquantized densities. In this work, we maximize the
+
+mutual information between channel input and the quantizer output to design Qc. Since the mutual-information based approach receives the noise deviation σ, code rate, and bc
+
+as parameters, for given precision and LDPC code, there are
+
+several plausible Qc’s that can be obtained, depending on the
+
+choice of σ. The design of Qmsg is in itself an interesting
+
+problem. One way we could use to construct a Qmsg is based
+
+on Qc. In particular, we take a symmetric subset of Ac to form
+
+Amsg and use a set of scalars Smsg = {α1, α2, ..., α2bs−1−1} to obtain T msg:
+
+TimAsmgs=g ⊂αiALcm i−,sT1g1m+sg(1=−αα1Li)m 1Lsm igs,g,
+
+(5)
+
+where 2 ≤ i ≤ 2bs−1 − 1. We remark that different techniques
+
+such as Non-Surjective FAID [17] and Information bottleneck [18] can be used to design Qmsg, but these alternative ap-
+
+proaches are beyond the scope of this paper.
+
+C. From QNN to FAID
+
+From the discussion above, the proposed QNN has full precision of weights and biases, but low precision of activations and channel messages. When the offline training is done, we obtain trained weight matrices and biases {W(3ℓ), W(3ℓ+1), b(3ℓ), b(3ℓ+1)} for each ℓ-th iteration. Based on these weights and biases, we derive a series of message update rules. The rule of vi’s message update in the ℓ-th iteration is described as follows: fi(ℓ) : Ac × {Amsg}dvi −1 → Amsg ,
+fi(ℓ)(yQ, p) = Qmsg(Φ(E[b(3ℓ+1)]yQ, wi(3ℓ+1)p)), (6)
+
+where yQ ∈ Ac, p ∈ {Amsg}dvi −1, wi(3ℓ+1) is the submatrix of W(3ℓ+1) associated with vi, and E[·] is the expectation operator. The hard decision rule gi(ℓ) can be obtained similar to fi(ℓ), except that the Qmsg in Eq. (6) is replaced by sign function, wi(3ℓ+1) and b(3ℓ+1) are replaced by wi(3ℓ) and b(3ℓ), and p in gi(ℓ) belongs to {Amsg}dvi . Then, the final FAID of a LDPC code is defined as DF AID = (G, Ψ, {fi(ℓ)}, {gi(ℓ)}).
+In principal, each variable node should have a message update rule in each iteration. For simplicity, consider regular LDPC codes, where all variable nodes have the same message update rule in each iteration. We force all nonzero entries in W(k) to share the same value, i.e., W(k)(i, j) = w(k) if W(k)(i, j) is a nonzero entry in W(k). Then, Eq. (6) becomes
+f (ℓ)(yQ, p) = Qmsg(Φ(E[b(3ℓ+1)]yQ, w(3ℓ+1)p)). (7)
+We remark that in this case, less parameters result in a faster learning, lower decoding complexity and lower memory requirements. When deploying DF AID in hardwares, {f (ℓ)}, {g(ℓ)} (or {fi(ℓ)}, {gi(ℓ)}) are implemented by integervalued LUTs. As it is shown in [19], [20], a decoder supporting multiple decoding rules can be efficiently implemented in hardware, thus an iteration-dependent decoding rule requires only a small hardware overhead.
+
+IV. TRAINING WITH QNN
+Since the channel is output-symmetric, and the QNN’s activations preserve symmetry conditions, we can assume that the all-zero codeword is transmitted, i.e., x = 0, thus y = 1 + z. With the symmetry conditions on the weight matrices, it is sufficient to use a database composed of the realizations of the noisy vector y. Let r(0) and u = r(K+1) be the perceptron values in the input and output layer, respectively. Both r(0) and u have length J0 = JK+1 = n, with r(0) receiving channel output vector y.
+
+A. BER-based objective function
+
+The output u consists of the estimate of likelihood messages of a training sample. In most related works of using neural networks to optimize channel decoders, the binary cross entropy (BCE) function is widely applied as objective function, since it is a measurement of “soft” bit error rate, and it is differentiable everywhere. However, the BCE function is an approximation of BER. Training NNs to minimize BCE cannot guarantee to minimize BER. To see this, consider the following BCE function for each sample:
+
+1 ∑n ∆(u, x) = − n xi log(1 − σ(ui)) + (1 − xi) log(σ(ui)),
+i=1
+
+where the σ(·) is the sigmoid function defined as σ(x) =
+
+(1 + e−x)−1. If the i-th bit is decoded correctly (equals to xi)
+
+by the QNN, then there exists a positive value 0 < ϵi < 1/2
+
+such that the i-th term in the summation of ∆(u, x) equals to
+
+log(
+
+1 2
+
++
+
+ϵi);
+
+otherwise
+
+there
+
+exists
+
+a
+
+positive
+
+value
+
+0
+
+<
+
+ϵi
+
+<
+
+1/2 such that the i-th term in the summation of ∆(u, x) equals
+
+to
+
+log(
+
+1 2
+
+− ϵi).
+
+Then
+
+∆(u, x)
+
+can
+
+be
+
+expressed
+
+as:
+
+∆(u,
+
+x)
+
+=
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:37:11 UTC from IEEE Xplore. Restrictions apply.
+
+∆n1 c∑+j:∆xje̸=,xˆwj iltohg(∆1/c 2=−n1ϵj∑)−j1:x,j
+
+=xˆj log(1/2 + ϵj where xˆj is the
+
+)−1 and ∆e = hard decision
+
+of uj. Noted that ∆c and ∆e are the costs contributed by
+
+the bits decoded by QNN correctly and wrongly, respectively.
+
+Each term in the summation of ∆c is within [0, 1], and each
+
+term in the summation of ∆e is larger than 1. Consider two samples x(1) and x(2), whose output values
+
+of QNN, denoted by u(1) and u(2), satisfy the following
+
+conditions:
+
+1) ∆(u(1), x(1)) = ∆c(1) + ∆e(1), ∆(u(2), x(2)) = ∆c(2) +
+
+∆(e2);
+
+2) There are d terms in ∆e(1) and d − 1 terms in ∆(e2);
+
+3)
+
+|∆(c1)
+
+− ∆c(2)|
+
+<
+
+1 n
+
+;
+
+and
+
+4)
+
+d
+
+max
+j:xj(1)≠ xˆj(1)
+
+log
+
+(1/2
+
+−
+
+ϵ(j1))−1
+
++
+
+1
+
+≤
+
+(d −
+
+1)
+
+min
+j :x(j2) ̸=xˆ(j2)
+
+log
+
+(1/2
+
+−
+
+ϵ(j2))−1.
+
+Condition (2) implies that the first and second samples have
+
+d and d − 1 bits in error after QNN decoding, respectively,
+
+and
+
+∆c(1)
+
+<
+
+1−
+
+d n
+
+,
+
+∆(c2)
+
+<
+
+1−
+
+d−1 n
+
+.
+
+Condition
+
+(3)
+
+and
+
+(4) together indicate that the first sample has smaller BCE
+
+objective function, i.e., ∆(u(1), x(1)) < ∆(u(2), x(2)). In fact,
+
+∆(u(1), x(1))
+
+=
+
+∆c(1)
+
++
+
+∆(e1)
+
+<
+
+∆(c2)
+
++
+
+1 n
+
++
+
+∆e(1)
+
+≤
+
+∆(c2)
+
++
+
+1 n
+
++
+
+d n
+
+max
+j:xj ̸=xˆ(j1)
+
+log
+
+(1/2
+
+−
+
+ϵ(j1))−1
+
+≤
+
+∆c(2)
+
++
+
+d
+
+− n
+
+1
+
+min
+j:xj ̸=xˆj(2)
+
+log (1/2
+
+−
+
+εj(2))−1
+
+≤ ∆(c2) + ∆e(2) = ∆(u(2), x(2)),
+
+hence a smaller BCE loss cannot guarantee a smaller BER. In this work, instead of using BCE function, we consider the
+following bit error objective function for each sample, which measures the hamming distance between transmitted codeword x and the decoded codeword xˆ, i.e.,
+
+Γ(u, x) =
+
+1 n
+
+∑n
+
+(xi
+
+−
+
+xˆi)2,
+
+where
+
+xˆ =
+
+1 − sgn(u) . 2
+
+(8)
+
+i=1
+
+Γ(u, x) is an actual and practical metric to measure the performance of iterative decoders. In particular, according to Eq. (8), the bits which are decoded correctly neither make contributions to the objective function Γ(u, x) nor the weight changes. On the other hand, the bits decoded wrongly are supposed to contribute to both Γ(u, x) and gradients of weights and biases. However, Γ(u, x) has derivatives of zero almost everywhere because of the sign function. To solve the zero gradients problem of Eq. (1) and (8), we apply straightthrough estimators in the chain rule to calculate the gradients, which are introduced below.
+
+B. Straight-through estimators
+The straight-through estimator (STE) is a proxy derivative used in the QNN training to replace the zero derivative of quantization function in the chain rule [1]. Intuitively, STE is
+
+an estimate of the true partial gradient. In [1], it was found that the most efficient training of QNNs was using STEs, which was a good way to provide a non-trivial search direction.
+To see how STE works for proposed QNN, consider the quantizers Qmsg in Eq. (1). In the backward propagation, by chain rule, the partial derivative of objective function Γ(u, x) with respect to W(k) is calculated as
+
+∂Γ(u, x) ∂Γ(u, x) ∂Qmsg
+
+∂W(k) = ∂r(k) · ∂W(k) ∂Γ(u, x) ∂Qmsg ∂Φ
+
+(9)
+
+=
+
+∂r(k)
+
+·
+
+∂Φ
+
+·
+
+. ∂W(k)
+
+Apparently,
+
+∂ Qmsg ∂Φ
+
+is zero almost everywhere, making the
+
+weight updates still. To solve this, we use a proper surrogate
+
+derivative
+
+∂h ∂Φ
+
+,
+
+called
+
+STE, to replace
+
+∂ Qmsg ∂Φ
+
+in Eq.
+
+(9).
+
+Therefore, the partial derivative with respect to W(k) can be
+
+approximated by
+
+γ(W(k))
+
+=
+
+∂Γ(u, x) ∂r(k)
+
+·
+
+∂h ∂Φ
+
+·
+
+∂Φ ∂W(k) .
+
+(10)
+
+As stated in [13], a STE should be designed carefully
+
+to guarantee that the negative expected proxy gradients are
+
+descent directions for minimizing the loss function. Namely,
+
+the inner product between the expected proxy gradients and
+
+true gradients is nonnegative:
+
+⟨
+
+⟩
+
+Ey[γ(W(k))],
+
+∂Ey [Γ(u, ∂W(k)
+
+x)]
+
+≥ 0.
+
+(11)
+
+Eq. (11) is called the descent direction property. How to design
+
+good STEs has been studied extensively in [10]–[13]. We introduce two STEs for Qmsg and the sign function used
+
+in Eq. (8). In particular, consider the following two functions:
+
+{
+
+hmsg(x) =
+
+x sgn(x)L2mbssg−1−1
+
+if
+
+|x|
+
+<
+
+T msg
+2bs −1 −1
+
+otherwise
+
+,
+
+(12)
+
+hsgn(x) = 2(1 + e−x)−1 − 1,
+
+(13)
+
+whose gradients with respect to x are given below:
+
+∂ hmsg (x)
+
+{ 1
+
+=
+
+if
+
+|x|
+
+<
+
+T msg
+2bs −1 −1
+
+,
+
+(14)
+
+∂x
+
+0 otherwise
+
+∂hsgn(x)
+
+2e−x
+
+∂x = (1 + e−x)2 .
+
+(15)
+
+∂hmsg (x) ∂x
+
+is
+
+used
+
+as
+
+the
+
+STE
+
+of
+
+Qmsg ,
+
+and
+
+∂ hsgn (x) ∂x
+
+is
+
+used
+
+as the STE of sign function in Eq. (8). It is easy to see that
+
+hmsg(x) and hsgn(x) are approximations of Qmsg and sign
+
+function, respectively. Intuitively, their gradients are estimates
+
+of the true gradients of Qmsg and sign function. In particular,
+
+∂hmsg (x) ∂x
+
+is
+
+called
+
+the
+
+clipped-ReLU
+
+STE,
+
+which
+
+has
+
+been
+
+shown to satisfy the above descent direction property [13]
+
+for minimizing the square sample loss of a two-linear-layer
+
+network, whose output is binary.
+
+In principle, we can use clipped-ReLU STE for the sign
+
+function in Eq. (8) as well, which would provide a faster
+
+and simpler training. We postulate that the choice of STE is
+
+critically dependent on the optimality of Qmsg: if Qmsg is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:37:11 UTC from IEEE Xplore. Restrictions apply.
+
+well chosen, then a simple enough STE is good enough for training, whereas a complex STE may be necessary otherwise.
+We use ADAM [21] with mini-batches for training, with gradients accumulated in full precision. The quantized activations and channel messages are used in both forward and backward propagation.
+
+V. NUMERICAL RESULTS
+We built the QNN framework in Python3.6 and used Pytorch library for training. The training set consists of realizations of Gaussian noisy vectors. We constructed two QNNs to show the flexibility in terms of code length, one for a short code, Tanner code (155, 64), and the other for a medium length code, QC-LDPC code (1296, 972). For each code, the same Qmsg and Qc are used in both training and testing phases.
+The simulation of DF AID is carried out with the integervalued LUTs of {f (ℓ)}, {g(ℓ)}, which are determined by the trained {w(3ℓ), w(3ℓ+1), b(3ℓ), b(3ℓ+1)}, together with the quantizers Qmsg and Qc. For comparisons with other conventional iterative decoders, we conduct simulations of MS decoding which are implemented with floating point and finite precisions. The measure of performance is bit-errorrate (BER) or frame-error-rate (FER). We compare the performance of DF AID and MS decoding with same number of iterations.
+
+Fig. 2. BER and FER Performance of DF AID, MS and OMS decoding of Tanner code (155,64) within five iterations.
+
+A. Tanner code
+
+The training set consists of 5000 samples at Eb/N0 = 4dB.
+
+The number of epochs is 120, and the learning rate of ADAM
+
+is 0.01, with mini-batch size of 50. We maximize mutual
+
+information between channel input and the quantizer output
+
+to design a 4-bit quantizer Qc for Eb/N0 = 6.5dB. Hence
+
+|Ac| = 15 and |T c| = 7. We take a symmetric subset of Ac
+
+of size 7 to form Amsg, and select a set of scalars to decide
+
+T msg. To be specific, L1msg = Lc1, L2msg = L4c , Lm 3 sg = Lc7,
+
+and α1 |Amsg |
+
+= =
+
+α2 = 7 and
+
+α3 |T
+
+= 0.5. msg| =
+
+As 3.
+
+a result, Qmsg is
+
+We
+
+use
+
+∂hmsg (x) ∂x
+
+of 3-bit and
+
+and
+
+∂ hsgn (x) ∂x
+
+in Eq. (14) and (15) as STEs of Qmsg and sign function,
+
+respectively. The maximum number of iterations is set to be
+
+5. The MS with finite precision is quantized uniformly with
+
+4-bit for both channel and message values, whose step is set
+
+to be 0.125.
+
+In Fig. 2, we compare the BER and FER performance of
+
+DF AID, MS decoding with floating point, and MS decoding
+
+with 4-bit precision within 5 iterations. We also show the
+
+performance of floating-point offset MS (OMS) decoding as a
+
+reference (The offset is set to be 0.11). On average, with only
+
+3-bit for message and 4-bit for channel output, DF AID can
+
+achieve 0.2dB coding gain over MS decodings (both floating
+
+point and 4-bit precision) within 5 iterations.
+
+B. Column-weight 4, medium-length code
+For this QC-LDPC code (1296, 972), the training set consists of 5000 samples at Eb/N0 = 4dB. The number of epochs is 110, and the learning rate of ADAM is 0.01, with mini-batch size of 10. We maximize mutual information
+
+Fig. 3. BER and FER Performance of DF AID, MS and OMS decoding of QC-LDPC code (1296,972) within five iterations.
+
+between channel input and the quantizer output to design a
+
+4-bit quantizer Qc for Eb/N0 = 4dB. Hence |Ac| = 15 and |T c| = 7. We consider Amsg = {0, ±0.2, ±0.5, ±1},
+
+and Smsg = {0.5, 0.5, 0.5}. Therefore, Qmsg is of 3-bit and
+
+|Amsg |
+
+=
+
+7
+
+and
+
+|T msg|
+
+=
+
+3.
+
+We
+
+use
+
+∂hmsg (x) ∂x
+
+and
+
+∂ hsgn (x) ∂x
+
+in Eq. (14) and (15) as STEs of Qmsg and sign function,
+
+respectively. The maximum number of iterations is set to be
+
+5. The MS with finite precision is quantized uniformly with
+
+4-bit for both channel and message values, whose step is set
+
+to be 0.1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:37:11 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3 gives the BER and FER performance of DF AID, MS decoding with floating point, and MS decoding with 4-bit precision within 5 iterations. The BER/FER performance of OMS decoding with floating point is also provided in Fig. 3 as reference (The offset is set to be 0.09). On average, with only 3-bit for message and 4-bit for channel output, DF AID can achieve 0.2dB coding gain over both floating point MS decoding and 4-bit precision MS decoding within 5 iterations.
+C. Related works on quantized message passing iterative decoders for LDPC codes
+There have been a significant effort on designing FAIDs of LDPC codes for different channel models. For example, Planjery at al. design FAID message update rules to correct trapping sets and show that a FAID with only 3-bit precision outperforms the BP and all other message passing decoders over Binary Symmetric Channel (BSC) [22]. For AWGNC, Nguyen-Ly at al. [17] use density evolution to optimize the FAID. Meidlinger at al. [20] maximize the mutual information between decoding messages to build FAIDs, and demonstrate that a FAID with 3-bit of message and 4-bit of channel output can match MS decoding for regular LDPC codes. Lewandowsky at al. [18] apply Information bottleneck method to build FAIDs and demonstrate that a FAID with only 4-bit precision can approach to BP for finite length LDPC codes over AWGNC. In this work, we show the capability of a neural network on designing a FAID over AWGNC with competitive decoding performance. Compared with previous works, the QNN framework has more flexibility as there are plenty of choices on predefined quantizers, and it can be regarded as “end-to-end” design for a specific LDPC code.
+VI. CONCLUSIONS AND DISCUSSIONS
+In this paper, we explored the potential of QNNs to facilitate the design of finite-alphabet iterative decoding rules of LDPC codes. Predefined low precision quantizers were applied over activations and channel messages, with the quantizer of channel messages optimized by maximizing the mutual information. The low precision activations and channel messages were passed in both forward and backward propagation. In the training, we used the BER-based objective function, and introduced two STEs to around zero derivatives of Qmsg and the sign function used in hard decision. A FAID was derived based on the trained weights and biases, together with the predefined quantizers. Simulation results showed that within 5 iterations, the FAID with only 3-bit of message and 4bit of channel output can achieve on average 0.2 dB over conventional floating point MS decoding and 4-bit precision MS decoding.
+We remark that in this work, the σ for Qc can be chosen to trade off the error floor and waterfall region. Open questions are left for future research, such as the joint quantizer optimization, and using QNNs for FAIDs over the BSC.
+ACKNOWLEDGMENT
+This work is funded by the NSF under grant NSF ECCS1500170 and NSF SaTC-1813401.
+
+REFERENCES
+[1] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating gradients through stochastic neurons for conditional computation,” arXiv preprint arXiv:1308.3432, 2013.
+[2] Y. Be’ery, “eforum on BP, LP and NN/ML decoding of HDPC codes,” http://listserv.tau.ac.il/archives/hdpc-codes.html.
+[3] O. Simeone, “A Very Brief Introduction to Machine Learning With Applications to Communication Systems,” ArXiv e-prints, August 2018.
+[4] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Information Theory (ISIT), 2017 IEEE International Symposium on. IEEE, 2017, pp. 1361–1365.
+[5] E. Nachmani, E. Marciano, D. Burshtein, and Y. Beéry, “RNN decoding of linear block codes,” 2017. [Online]. Available: https: //arxiv.org/abs/1702.07560
+[6] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Communication, Control, and Computing (Allerton), 2016 54th Annual Allerton Conference on. IEEE, 2016, pp. 341–346.
+[7] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” 2017. [Online]. Available: https://arxiv.org/abs/ 1707.05697
+[8] W. Xu, Z. Wu, Y. L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in 2017 IEEE International Workshop on Signal Processing Systems (SiPS), Oct 2017, pp. 1–6.
+[9] B. Vasic´, X. Xiao, and S. Lin, “Learning to decode LDPC codes with finite-alphabet message passing,” in 2018 Information Theory and Applications Workshop (ITA). IEEE, 2018, pp. 1–9.
+[10] M. Courbariaux, Y. Bengio, and J.-P. David, “Binaryconnect: Training deep neural networks with binary weights during propagations,” in Advances in neural information processing systems, 2015, pp. 3123– 3131.
+[11] S. Wu, G. Li, F. Chen, and L. Shi, “Training and inference with integers in deep neural networks,” arXiv preprint arXiv:1802.04680, 2018.
+[12] P. Yin, S. Zhang, J. Lyu, S. Osher, Y. Qi, and J. Xin, “Blended coarse gradient descent for full quantization of deep neural networks,” arXiv preprint arXiv:1808.05240, 2018.
+[13] P. Yin, J. Lyu, S. Zhang, S. J. Osher, Y. Qi, and J. Xin, “Understanding straight-through estimator in training activation quantized neural nets,” in International Conference on Learning Representations, 2019. [Online]. Available: https://openreview.net/forum?id=Skh4jRcKQ
+[14] W. Rave, “Quantization of log-likelihood ratios to maximize mutual information,” IEEE Signal Processing Letters, vol. 16, no. 4, pp. 283– 286, 2009.
+[15] S. Lloyd, “Least squares quantization in PCM,” IEEE Transactions on Information Theory, vol. 28, no. 2, pp. 129–137, 1982.
+[16] J. Max, “Quantizing for minimum distortion,” IRE Transactions on Information Theory, vol. 6, no. 1, pp. 7–12, 1960.
+[17] T. T. Nguyen-Ly, V. Savin, K. Le, D. Declercq, F. Ghaffari, and O. Boncalo, “Analysis and design of cost-effective, high-throughput LDPC decoders,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 3, pp. 508–521, 2018.
+[18] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method,” IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[19] F. Cai, X. Zhang, D. Declercq, B. Vasic´, and S. K. Planjery, “Finite alphabet iterative decoders for LDPC codes: Optimization, architecture and analysis,” IEEE Transactions on Circuits and Systems - Part I: Regular Papers, vol. 61, no. 5, pp. 1366–1375, May 2014.
+[20] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Müller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-gb/s LDPC decoder based on finite-alphabet message passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, 2018.
+[21] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” arXiv preprint arXiv:1412.6980, 2014.
+[22] S. K. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finite alphabet iterative decoders-part I: Decoding beyond belief propagation on the binary symmetric channel,” IEEE Transactions on Communications, vol. 61, no. 10, pp. 4033–4045, 2013.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:37:11 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,413 @@
+A solution for memory collision in semi-parallel FPGA-based LDPC decoder design
+
+Radivoje Zarubica, Stephen G. Wilson Charles E. Brown Department of Electrical and Computer Engineering
+University of Virginia, Charlottesville, VA 22904
+Research supported by L-3 Communications West, Salt Lake City, UT 84116
+
+Abstract- Low Density Parity Check (LDPC) decoders implementing long blocklength codes require semi-parallel design. One challenge when implementing these codes on Field Programmable Gate Arrays (FPGAs) is efficiently storing messages needed in the iteration process. To meet this challenge, a new class of LDPC codes is presented. They combine regularity of implementation with reduction of time needed for decoding process, and do not suffer of any significant performance loss due to their structure.
+I. INTRODUCTION
+Low density parity check (LDPC) codes have garnered a great deal of attention in the error control coding field recently, due to the ability to implement soft-decision decoders that perform very near the Shannon bound (for long blocklengths). The decoding algorithm is iterative, using message passing among nodes in a Tanner graph representation of the code, and allows parallel, or semi-parallel processing in the computation to speed decoding.
+Already LDPC codes have become part of important standards, including lOGigabit Ethernet over copper pairs, NASA's Deep Space Coding standard, digital video broadcasting (DVB-S2), MIMO-WLAN 802.11n, 802.12, 802.20, and long-haul optical communication systems. Many investigators have studied the design of high-speed LDPC decoders either for custom ASIC implementation [1][2][3][4] or in generalpurpose FPGA's [5][6][7][8]. In this paper the focus is on problems arising in FPGA implementation. Since FPGAs have strictly-determined structure, implementing an LDPC decoder becomes much more efficient if that structure is taken into account. Implementing LDPC codes of longer blocklength in FPGAs requires a semi-parallel design because of limited resources. Semi-parallel designs have issues with memory access which complicates their structure and reduces speed. Here we introduce the special class of codes that avoid these problems, which leads to a faster, less complex decoder.
+In the following sections, we give a brief overview of LDPC codes and the message passing algorithm, then proceed to report the problems with the memory access in a semi-parallel design and the ways to overcome them, and at the end we give simulation results.
+II. BACKGROUND
+Given k message bits, an LDPC encoder constructs a codeword of length n (n > k) code bits, yielding a code with
+rate=k/n. The coding scheme relies on n -k overlapping
+
+subsets of the code bits such that the parity of each subset in any codeword is even. These subsets are described by a
+(n- k) x n matrix H = [hij], such that hij = 1 iff the i-
+th subset has bit j in it. The H matrix is called the parity check matrix of the code and it is very sparse, hence the name "low density parity check" codes. An LDPC code is called regular if the weights of rows and columns in its parity check matrix are equal and is called irregular if not. The parity
+check matrix can be visualized as a bipartite graph, referred
+to as the Tanner graph of the code. One such graph of a short (16, 8) code is shown in Figure 1. Check nodes correspond to n -k parity checks and variable nodes correspond to n bits of the codeword that is transmitted. The Hamming weights of rows and columns in this representation are called the degrees of check and variable nodes, respectively. A variable node is connected to a check node if the bit corresponding to it participates in the parity check operation of the check node. In the H matrix representation this means that a variable node
+j is connected to a check node i iff hij = 1.
+IlL
+Fig. 1. Tanner graph of a regular (4, 2) LDPC code of blocklength-16 and rate 1 2, for illustration.
+To decode LDPC codes there are a few options: softdecision, hard-decision or hybrid decision decoding. Out of all
+these methods best results are achieved with soft decision de-
+coding. The algorithm used for soft decision decoding is Belief Propagation (BP) algorithm, also known as the Sum-Product (SP) algorithm. More information about these algorithms can be found in [9].
+There are many approaches in designing an efficient LDPC decoder [1 8]. First is a fully-parallel approach, where each check and variable node is implemented directly in hardware. Second is a semi-parallel approach, studied here, where only
+
+978-1-4244-2110-7/08/$25.00 C2007 IEEE
+
+982
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:10:28 UTC from IEEE Xplore. Restrictions apply.
+
+a certain number of variable and check nodes is implemented in hardware and then reused. Finally there is a memorybased approach where just one variable and one check node is implemented.
+III. FPGA MEMORY STRUCTURE
+In a semi-parallel design the number of Check Node Processors (CNP's) and Variable Node Processors (VNP's) is smaller than the number of check and variable nodes in a Tanner graph of the implemented code. The ratio of the number of nodes in the graph to the number of implemented processors determines the number of "pages", where the page is considered to be a part of the Tanner graph that is implemented in hardware. The number of nodes implemented in hardware determines the page size. In a semi-parallel design processors operate on a part of the Tanner graph and all the outgoing messages from processors need to be stored in memory. Since our objective is a semi-parallel design suited for an FPGA implementation, the structure of different memories, available on FPGAs, needs to be considered. In an FPGA, messages can be stored in three different ways: block RAM, register memory, and distributed RAM. For example, the block RAM in the Virtex4 FPGA, made by Xilinx, is organized in blocks of 18K bits. The number of such blocks varies, and is 336 for the top of the family (Virtex4-xc4vlx200). This means that if a VNP is of degree three, only outgoing messages from 112 variable nodes could be stored in memory at the same time. This impacts performance since the page size is limited to a small number and implementation of a code of with large blocklength requires a large number of small pages, which ultimately leads to the lower throughput of a decoder. The second way for storing messages is register memory. The resources of register memory are limited and implementation is feasible only if blocklength of a code does not exceed a couple of thousand. The third way of storing messages is distributed memory. The distributed memory is implemented as an array of 4-input look-up tables (Xilinx's Virtex4-family). A look-up table has depth of 16 = 24 (4 is the number of inputs to a look-up table), which means that 16 different one-bit messages could be stored into one look-up table.
+
+FPGA with constrained resources can implement decoders for longer blocklengths, through paging.
+In a paged architecture the total message storage is allo-
+cated among nd,/P memory banks, each holding P message
+locations. Obviously, each such bank can allow only one read (or write) operation per clock cycle. For maximum speed, we wish to be able to read (or write) all the messages associated with a given page simultaneously from the memory banks. This requires careful assignment of edges in the graph to the memory banks, such that memory access collisions do not occur. This will be illustrated using the (16,8) example code whose whose Tanner graph and H matrix are shown in Figures 1 and 2.
+
+F 1F1- FI
+
+1
+
+1
+
+1I
+
+_
+
+I
+
+I
+
+I
+
+_ 1
+
+11
+
+11
+
+i_1
+
+IE |
+
+_
+
+|
+
+II
+
+I
+
+I1 lIl I I I
+
+1I
+
+I|l
+
+l_ _____
+
+_
+
+I
+
+I
+
+1
+
+1
+
+I
+
+-F I
+
+I
+
+F
+
+-iF1-
+
+-F-F
+--L -L
+
+1--iF-
+
+-F-F-F- - -rF -rF-r -1- -1- -1-
+
+Fig. 2. H matrix of a regular (4, 2) LDPC code of blocklength-16 and rate
+1/2.
+We begin by showing in Figure 3 a P = 4-page memory architecture. Memory is organized as 32 locations in 8 banks of P = 4 words. Memory locations are simply numbered in raster fashion for future reference. This memory can be used to store both up and down messages.
+
+Fig. 3. 4-page memory organization.
+
+IV. MEMORY COLLISION
+The message passing algorithm must store up/down messages attached to each edge of the Tanner graph as iterations
+progress. The total number of messages is nd, where d, is
+the variable node degree. In a fully-parallel decoder, FPGA resources are allocated to each variable and check node and messages are merely latched once per iteration cycle to synchronize the computation, e.g. [8]. In a semi-parallel architecture however, the complete variable node and check node computation is time-shared using P pages, with the variable (check) node processor having resources to process
+n/P and (n- k)/P variable (check) nodes respectively. This
+time sharing implies a slowdown penalty of at least P, relative to a fully-parallel decoder for the same code. However, a given
+
+Figure 4 depicts how this memory interacts with variable
+node processors (VNP's). Since there are 16 variable nodes in
+total and 4-page design is implemented, the number of VNP'S
+is 16/4 = 4. Next consider the variable node processing phase.
+During each page update, these four processors will each
+accept d, = 2 down messages from memory, calculate the up
+messages along the same edges of the graph, and write them
+into memory overwriting the previous down messages. Then
+the process moves to the next page, updating 4 new variable nodes in the graph, until all pages have been completed.
+At this point, the process moves to the check node phase
+(shown in Figure 5). Each CNP has the resources to accept
+d, = 4 incoming (up) messages and produce down messages
+for the next iteration. As before, the updated edge messages can be overwritten in the incoming edge message locations.
+
+983
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:10:28 UTC from IEEE Xplore. Restrictions apply.
+
+- -0 F 51 M e 12 _1 in1t4erface.
+
+25 w i
+
+l 28 s ec
+
+ts
+
+cl wNePVcP f i w VnNPVm2P Fig. 4. Memory-to-VNP interface.
+31EE ItNocaxo gbaese1eedfero(or Fi'122g0s1re2n14i12satnm2ea12ntri-xh) tmtusht be asN' 27 28 n 30 I_t
+
+Fig. 5. Memory-to-CNP interface.
+
+It can be seen from Figures 4 and 5 that the 4 VNP's will access 8 memory locations as each completes its paging cycle, with each VNP fetching/writing 2 messages in parallel. Similarly, each of the 2 CNP's fetches/writes 4 messages from/to the same memory. It is this sequencing that must be
+collision-free.
+Next, graph edges (or I's in the H matrix) must be associated with particular memory locations. To illustrate potential problems in memory contention, suppose we label edges with memory locations as shown in Figure 6, where we have sequentially indexed edges by columns. Now consider the sequence of memory accesses for variable node processing; this will automatically be collision-free, since the 8 required messages are distributed across the 8 memory banks. Figure 8
+highlights the memory locations accessed during the first page
+cycle of VNP processing.
+
+F F -FFCF
+I7 F-Fr
+
+II
+27 -F-1
+
+; ;a
+
+lg
+
+a-F- -F-F-F -- - -r- -
+
+| ____I_|10 l i16 |18
+
+r
+
+lrrF- F r-
+
+rr
+
+2 22
+
+2
+
+_
+
+I
+
+124
+
+iD14i -1r -r- -r -
+
+3O0 | -
+,2=,
+
+Fig. 6. Labeled H matrix of a regular (4, 2) LDPC code of blocklength-16
+and rate 1/2 with edges labeled column-by-column (4 pages).
+However, consider check node processing. With the labeling in Figure 6, Figure 9 shows that during the first page cycle
+
+the 8 required messages are not uniformly distributed over the memory banks. Since 3 of these messages lie in a single bank, their access could only be accomplished using 3 clock cycles. This reduces the throughput of an implemented decoder. Also, complex address generation needed for memory access makes the design of this decoder more complex.
+V. COLLISION-FREE DESIGN
+The description of a collision-free memory scheme starts with labeling edges of the Tannner graph. The new labeling is shown in Figure 7. The edges are labeled so that when implementing this scheme there is no memory-collision. This can be seen in Figures 8 and 10.
+
+i3
+
+r-F-FI
+
+K2F2 F
+
+4, I 5
+
+|1FI I l
+
+-Cl-F -1 114 I I I ~ I1I1 12111
+
+-r-r--F -
+
+~ w
+
+~I
+
+F
+
+3I rEKi 2
+
+--
+
+-r -r -rF
+r-- _---1 _
+
+128
+_26F_--F
+,
+
+Fig. 7. Labeled H matrix of a regular (4, 2) LDPC code of blocklength-16 and rate 1/2 with edges labeled to avoid memory collisions.
+
+9
+
+10 1 9i
+
+1 |12213
+
+[ 11 20: 2X 25
+
+26
+
+279
+
+2I8
+
+29
+
+2153 I 6
+
+2331
+
+2342
+
+At=C3t=CX_k=>tBtBBtXBtJ
+III
+VNP
+
+L... L... Fig. 8. VNP's process the first page.
+
+I.7[81 [X 22: 231 :4: 21 ~~7 7~ P |
+
+|10
+
+2 |11 | 2 -
+
+142
+
+13
+
+' g S I I Sf
+
+i64
+
+. 20
+
+R
+
+|1
+
+3
+
+II I
+CNP
+Fig. 9. CNP's process the first page.
+For short codes such is the (16, 8) code, this labeling can be done manually. For longer codes manual labeling becomes infeasible and some other methods need to be applied. A procedure described in [10] offers a solution to the memory
+
+984
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:10:28 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 10. CNP's process the first page (collision-free).
+
+Fr1 5 _ r_r rF
+
+-r-r-r i4
+
+-F-F6r
+
+r
+
+in the grid represent the subblocks). In the case of this code the number of ones need to be equal in every one of 16 x 16 subblocks, and their number is 117. As an illustration, we will solve the memory collision problem for a code of blocklength approximately 10000, because the codes of such length have yet to be implemented in FPGA. The block length of the code is picked to be exactly 9984 because the blocklength needs to be divisible by the number of the pages which is in our case 16. The number of pages is picked to be 16 because in our research we mainly use Virtex4 FPGAs and this was natural choice because of their memory structure, as explained in the previous section.
+
+_________
+
+IS1 1 It F T-2
+
+____
+
+_
+
+I~ I
+
+4
+
+-- 2r - - -r -r- --r -r --
+
+Fig. 11. Labeled H matrix of a regular (4, 2) LDPC code of blocklength-16
+
+and rate 1/2 with edges temporarily labeled to avoid memory collisions.
+
+Fig. 12. H matrix of a regular (6, 3) LDPC code of blocklength-9984 and
+
+rate 1/2 divided into 16 x 16 intersections (16 pages).
+
+collision problem for any LDPC code but, the complexity of the address generator is still an issue. Figure 11 helps to understand our method used to design collision-free memory scheme which is also address generator efficient. The matrix in Figure 11 is derived from the matrix in Figure 7. The process starts with the first four columns of the matrix. These columns belong to the first page of the decoder and their labeling is unchanged from from the previous labeling. In the second set of columns, belonging to the second page, the numbers are decreased by 8, the next set of columns gets decreased by 2 x 8, etc. Now all the sets of columns are labeled with numbers from 1 to 8. The trick that actually frees memory of collision is that now all the sets of rows have also labels from 1 to 8. In order to design a collision-free memory scheme for a semiparallel decoder design, the columns in the H matrix first need to be split into P sets of rows and P sets of columns in the H matrix, where P represents the number of pages. Than all the edges in those sets need to be labeled with the numbers from ( = {1, 2, 3, .., E}, where E is the number of edges in one page of the Tanner graph (this design assumes that all the pages have the same number of edges in each page of the Tanner graph). When labeling these sets of edges it needs to be ensured that each set of columns and each set of rows is labeled with the full set (.
+The task of labeling an arbitrary H matrix is not an easy task, and becomes harder when the number of pages increases. One solution is designing a code that has an equal number
+of ones in every subblock of size (n- k)IP x n/P. The
+codes with this property we call block regular codes. The H matrix of such a code is shown in Figure 12 (the rectangles
+
+Once the number of the ones is equal in each subblock labeling can be easily done. The matrix Ccirc in Figure 13 is designed to help with labeling the edges of the code in Figure 12, and it can be seen that its elements are just circular permutations of numbers 0 to P-1 = 15. The labeling starts in the top left corner with the number 0. The ones in the H matrix that belong to the top left intersection are randomly labeled with the numbers [1,E..,EP]. The ones on the H matrix that belong to the intersection below are randomly labeled with the numbers [(EP) + 1, .., 2EP]. Applying the
+same principle, the ones belonging to the (i, j) intersection are
+randomly labeled with the numbers within the limits given in
+(5) and (6).
+lower limit (j -1) E + Ccirc(i, j) (EP) + 1 (1)
+
+upper limit: (j -1) E + Ccirc(i, j) (EP) + (EP) (2)
+
+1 234 345
+23456 34567 45678
+
+13 14 15 i 4' 15 G 15 0 1 a1 2 1 23
+
+1 3 14 16 0 1 14 1 0 1 2 15 0 1 2 3
+
+10 11 12 II I 12 3
+
+Fig. 13. C,i,, matrix, used to help labeling in designs with 16 pages.
+
+985
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:10:28 UTC from IEEE Xplore. Restrictions apply.
+
+This way of labeling edges of a code from Figure 12 as a result has implementation shown in Figures 14 and 15. The processing of the first page for VNP's requires that all the memory banks send messages from the first address; in the next page, the memory banks send messages from the second address, etc. The processing of the first page for
+CNP's requires that the first 1/16 of memory banks send messages from the first address, the next 1/16 of memory
+banks send messages from the second address, etc. This is possible because of the block-regularity and significantly reduces the complexity of the address generator, which can be implemented as a set of 16 counters. In the case of the 9984-blocklength code in Figure 12, the number of messages that need to be stored is 3 x 9984 = 29952. If each message is represented with 5 bits, the design would require storage for 149760 bits. Since, 16 of them could be stored in one look-
+up table, the entire design would need 149760/16 = 9360
+look-up tables for message storage. The number of required look-up tables required for storing the up and down messages in the length-9984 code takes only about 5% of the Virtex4xc4vlx200 FPGA.
+
+100
+10
+101-22 uLuJ
+LL LU
+m 10 _
+
+BER block- irregular * BER block-regular - - - FER block-irregular - + - FER block-regular
++:A.:.:\
+
+10-4
+
+10-5-
+
+0.5
+
+15
+
+2
+
+2.5
+
+3.5
+
+Eb/No(dB)
+
+Fig. 16. BER and FER of the codes performing 50 iterations of the min-sum algorithm.
+
+When designing a code that needs to be implemented in a semi-parallel design, incorporating the block regularity leads to a faster, less complex FPGA-based decoder. The memory scheme explained in this paper can be applied to any code that is modified to satisfy the block-regularity.
+
+Fig. 14. VNP's process the first page.
+Fig. 15. CNP's process the first page.
+VI. SIMULATION RESULTS
+We have found that the constraint of equal number of the ones in each intersection does not significantly affect the performance of the code. The codes with this constraint we call block regular codes. Figure 16 shows the performance comparisons of a block-regular code, split into 6 pages, and a block-irregular code of the same length and the rate. Both codes are randomly-generated with (6, 3) degree distribution
+with blocklength of 1008, rate 1/2.
+
+REFERENCES
+[1] A.J. Blanksby and C.J. Howland, "A 690mW, 1Gb/s, 1024b, Rate1/2 Low-Density Parity-Check decoder." IEEE Journal of Solid-State Circuits, vol. 37, no. 3, pp. 404-412, March 2002.
+[2] A. Darabiha, A.C. Carusone, and F. Kschischang, "Multi-Gbit/sec LowDensity Parity-Check decoders with reduced interconnect complexity." IEEE International Symposium on Circuits and Systems, vol. 5, pp. 5194 - 5197, May 2005.
+[3] M. Mohiyuddin, A. Aziz, A. Prakash, and W. Wolf, "Synthesizing interconect-efficient low density parity check codes." Design Automation Conference, pp. 488-491, 2004.
+[4] K.K. Gunnam, G.S. Choi, M.B. Yeary, "A Parallel VLSI Architecture for Layered Decoding for Array LDPC Codes." International Conference on VLSI Design, pp. 738-743, Jan. 2007.
+[5] C. Zhiqiang, W Zhongfeng, "A 170 Mbps (8176, 7156) quasi-cyclic LDPC decoder implementation with FPGA." International Symposium on Circuits and Systems, May 2006.
+[6] A. Darabiha, A.C. Carusone, F.R. Kschischang, "A bit-serial approximate min-sum LDPC decoder and FPGA implementation." International Symposium on Circuits and Systems, May 2006.
+[7] Z. Tong, K.K. Parhi, "A 54 Mbps (3,6)-regular FPGA LDPC decoder." Workshop on Signal Processing Systems, pp. 127-132, Oct. 2002.
+[8] R. Zarubica, S.G. Wilson, E. Hall, "Multi-Gbps FPGA-based low density parity check (LDPC) decoder design." Under review for GLOBECOM 200 7, available at http://people. virginia. edul rz4a/english. htm.
+[9] WE. Ryan, "An Introduction to LDPC codes." www.ece.arizona.edu ryan [10] A. Tarable, S. Benedetto, G. Montrosi, "Mapping interleaving laws
+to parallel turbo and LDPC decoder design." IEEE Transactions on Information Theory, vol. 50, no.9, Sep. 2004.
+
+986
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:10:28 UTC from IEEE Xplore. Restrictions apply.
+
+

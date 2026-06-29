@@ -1,0 +1,193 @@
+24th Telecommunications forum TELFOR 2016
+
+Serbia, Belgrade, November 22-23, 2016.
+
+Cost Effective FPGA Implementation for Hard Decision LDPC Decoders
+Alexandru Amaricai, Member, IEEE, Oana Boncalo, Member, IEEE,
+
+Abstract—This paper proposes a QC-LDPC partial parallel architecture that implements a hard decision message passing algorithm based on Gallager-B decoding. The proposed architecture uses an optimized variable node unit, with adaptive threshold, suitable for irregular LDPC codes. We present implementation results for WiMAX rate 1/2 code for FPGA technology. These indicate a cost reduction of 2.5x in logic, and 25% in memory with respect to Min-Sum algorithm with 2 bits
+Index Terms—FPGA, Forward Error Correction, LDPC, Hard Decision
+I. INTRODUCTION
+Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) codes, are a class of channel capacity approaching codes that present structure suitable for hardware (HW) implementation [1]. Because of their properties and structure they have been adopted in several communication standards, such as WiMAX [2]. As communication devices become more ubiquitous, and the area of new potential applications and services, so is the diversity of throughput requirements. An increase in throughput, is usually obtained at the expense of parallelism (i.e. number of processing units, iteration unrolling inside hardware), and thus, a substantial cost increase. A known bottleneck for these computational units is memory both in terms of cost, throughput and power consumption [3]. The most simple candidates are decoding algorithms which store 1 bit per message. Although, the reduction comes with a decoding performance penalty decrease, they might still fit the bill for application domains such as multimedia, with an intrinsic support for noise.
+In this paper we focus, on hard decision message passing decoder implementations, based on Gallager B algorithm. We propose a partially-parallel flooded architecture suitable for FPGA technology, with support for irregular LDPC codes. We compare against the Min-Sum [4] algorithm implemented for the same architecture, using the minimum quantization 2 bits/message from [5].
+This paper is organized as follows: Section II presents an overview of hard decision decoding of QC-LDPC; Section III introduces the partially-parallel QC-LDPC architecture and discusses the proposed implementation of the majority voter operation with support for irregular codes; Section IV is dedicated for implementation results; Section V presents concluding remarks.
+This work has been supported by the Franco-Romanian (ANR-UEFISCDI) Joint Research Programme Blanc2013 project DIAMOND ”Message Passing Iterative Decoders based on Imprecise Arithmetic for Multi-Objective PowerArea-Delay Optimization”
+A. Amaricai and O. Boncalo are with the Department of Computer and Information Technology, University Politehnica Timisoara, Vasile Parvan Blvd, Nr. 2, Timisoara, Romania e-mail: alexandru.amaricai@cs.upt.ro; oana.boncalo@cs.upt.ro
+
+A. Notations
+Throughout the paper, we will going to use the following notations:
+• H - parity check matrix of the LDPC code • B - base matrix of the QC-LDPC code • z - expansion factor for the QC-LDPC code • γi - the input log-likelihood ratio (LLR) - channel input
+- corresponding to the i-th column of the H matrix • αi,j - the variable-to-check message from variable node
+unit i to check node unit j • βi,j - the check-to-variable message from check node unit
+i to variable node unit j • γ˜i - the a-posteriori LLR corresponding to the i-th
+collumn of the H matrix • dnv - the variable node degree corresponding to the
+column n in the B matrix; for regular LDPC codes, all columns have identical dnv , while the irregular LDPC codes have different dnv values for each column • dnc - the check node degree corresponding to a row in the B matrix • hdTnh - the threshold value for the majority voting unit corresponding to a column of the B matrix
+II. HARD DECISION DECODING OF LDPC DECODING
+LDPC codes are a class of linear algebric codes, defined by a sparse binary matrix - parity check matrix H [6]. These codes can be represented using a bipartite graph - Tanner graph -, which contains two types of units: the variable node units, corresponding to the columns of H matrix, and the check node unit, corresponding to the columns of the parity check [7]. Quasi-Cyclic LDPC (QC-LDPC) are a sub-class of LDPC codes, which present a structured parity check matrix, obtained by expanding each element of a base matrix B, with a z × z matrix.
+Decoding the LDPC codes is performed in an iterative manner, by passing messages between the variable node units and check node units, along the edges of the Tanner graph. Depending on the number of bits on which messages are quantized, LDPC decoding algorithms can be classified in:
+• Hard Decision Decoding - The messages are quantized on a single bit. Because the amount of information during decoding is encoded on a single bit, the error correction capability of these algorithms is limited. The one bit quantization has the advantage of low hardware resource requirements, as well as increased throughput. Hard decision algorithms include bit-flipping and gradient descent bit-flipping, Gallager-A and Gallager-B
+
+978-1-5090-A4u0th8o6ri-z5e/d1li6ce/$ns3e1d.0us0e licmite2d0t1o6: YIoEnsEeiEUniv. Downloaded on June 24,2026 at 14:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+• Soft Decision Decoding - Messages are quantized on q bits. These algorithms present improved error correction capability, for both binary symmetric channel (BSC) models, as well as for binary additive white Gaussian noise (BiAWGN) model. Their disadvantage is represented by the increased hardware cost, as well as reduced throughput, with respect to the hard decision algorithms. The most important class of soft decision algorithms is represented by the Min-Sum (MS) decoding.
+Gallager-B algorithm [6] [8] represents one of the most important class of hard decision LDPC decoding algorithm, with extrinsic message computation. It is based on the following steps:
+
+Algorithm 1 Gallager-B algorithm
+
+1: Initialization
+
+2: for all n ∈ {1..nr columns(H)} do
+
+3: for m ∈ {1..dnv } do
+
+4:
+
+αn,m = γn
+
+5: end for
+
+6: end for
+
+7: for all i ∈ {1..nr iterations} do
+
+8: Check node processing 9: for n ∈ {1..nr rows(H)} do
+
+10:
+
+βn,m = ⊕m˜ ∈{1..dcn}−{m}{αn,m˜ }
+
+11: end for
+
+12: Variable node processing 13: for m ∈ {1..nr columns(H)} do
+
+14:
+
+cn,m = γm + n˜∈{1..dvm}−{n}{αn˜,m}
+
+15:
+
+βn,m =
+
+γn,
+
+|cn,m| < T h
+
+sign(cm,n), otherwise
+
+16:
+
+sm = γm + n∈{1..dm v }{αn,m}
+
+17:
+
+γm =
+
+γm, |sm| < T h sign(sm), otherwise
+
+18: end for
+
+19: end for
+
+From the theoretical point of view the threshold T h can vary during the decoding process (between different iterations and/or may be different from variable-node to another) [8]. Gallagher-B decoding relies on XOR based operations performed at check node level, and comparisons with a threshold value at variable node level. Regarding the variable node operations, the comparisons with a threshold value is reduced at a majority voting between the check-to-variable node messages and the input LLR [9] [10] [11]. Regarding the scheduling strategy, Gallager-B LDPC decoding uses a flooded approach, which performs one check node update and one variable node update each iteration [12].
+
+III. COST EFFECTIVE DECODER ARCHITECTURE
+A. Architecture
+The implemented decoder uses a partial parallel flooded architecture, which presents the following components:
+1) Memories - The proposed architecture consists of three memories: the input LLR memory, the α memory and the β memory. Each memory has a memory word
+
+Fig. 1. QC-LDPC partially-parallel architecture overview
+of z bits. The depth of the input LLR memory is equal to nr columns(B), for the α memory is equal to nr columns(B) × dvmax, while for the β memory is nr rows(B) × dcmax. Because the memories are intended to be implemented using embedded BRAM blocks, one read and one write port are used. Therefore, z messages can be read/written during one clock cycle. 2) Check node unit block - A number of z check node units are employed. This allows parallel processing for all the rows in the H matrix associated to a row within the base matrix B. The dcn messages associated to a check node unit are processed in a serial manner. 3) Variable node unit block - A number of z variable node units are employed. This allows parallel processing for all the columns in the H matrix associated to a vertical layer within B matrix. The dnv β messages associated to each variable node unit are serially processed. 4) Routing network - Dedicated barrel shifter are used for routing the α and β messages to their corresponding processing units. Two barrel shifters are employed, between the extrinsic message memories and the processing units. Each barrel shifter has log z level of multiplexers and z multiplexers for each level. 5) Control unit - Control unit is used to generate the corresponding read/write addresses, the shift amount for the two barrel shifters, the number of processed messages for each processing unit (dnv for variable node unit and dcn for check node unit), as well as the control signals for processing units. The memory addresses, the shift amounts, as well as the number of processed messages for the processing units are code dependent information. This information is stored in dedicated ROM memory units.
+The proposed architecture is similar to the flooded MS decoder [5], adapted to the specific operation of the GallagerB algorithm. It is depicted in Fig. 1. It has the following advantages:
+• Low memory requirements for FPGA implementations - The most favorable implementation of memories in
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+FPGA devices is obtained by employing BRAM blocks. The memory word size and the depth determine the number of BRAM blocks used. Furthermore, the BRAM allows maximum two read/write ports. The proposed architecture employ memories with reduced word size, while the number of ports is one read and one write ports. This way, the proposed architecture targets reduced number of BRAM blocks employed. • Code adaptable architecture - This type of architecture has a high degree of flexibility, as it allows easy configuration for any QC-LDPC code with the same z. For a given z, in order to adapt the proposed architecture to different LDPC code, the only required modification are the ROM memories within the control unit.
+In order to improve the throughput, the proposed architecture allows dual code-word processing. These feature is often implemented in flooded architectures in order to avoid the idle times associated to the processing units. These are due to the fact that when processing one code-word, only half of the decoder performs processing: the check node units are stalled when the variable node processing takes place, and vice-versa.
+
+B. Processing units
+
+As argued in Section II, QC-LDPC decoders become interesting codeword lengths stating with thousands or bits. Furthermore, circulant sizes is usually in the range of tens to hundreds. Hence, although the processing inside the HD decoders is rather simple, for the proposed architecture we need a substantial number (z) of units. Hence, any optimization at the processing unit level is multiplied by a factor equal to the parallelism inside the architecture (for this work z). We have proposed a cost-efficient approach for the procesing units realization with respect to the majority logic function processing. The hdnT h value is computed as follows:
+
+ 
+
+dnv /2 + 2,
+
+div odd
+
+hdTn h =
+
+(1)
+
+ dnv /2 + 1, div even
+
+◦ is used to denote the floor function. There are two
+possible cases for dv’s: the first corresponds to even numbers, where a tie is not possible. For this case, a classical majority
+voting is implemented. The second case corresponds to odd dv numbers. If hdTnh = 1, this means the majority are 1’s.
+A dedicated counter is used for implementation of the
+majority logic unit with variable number of inputs. The counter is initialized with hdTnh value. Each βm,n message is sign extended, with 1 bit 0 being mapped to 0, and 1 being mapped
+to -1 values. All βm,n are summed. Please note, that after the counter reaches 0, all successive message inputs are ignored in
+order to prevent underflow. Afterwards, the majority decission is made, as follows, based on the cnt value, whether dvn is even or odd, and the βm,n message input value:
+• cnt=0 : we have surpassed the threshold of 1 messages
+by at least 1 so both αm,n = 1 and hdn = 1. • cnt=1: Two cases have been identified:
+1) even dnv : we have exactly half 1 messages and half 0 βm,n values - tie. Each αm,n out will be the opposite
+
+Fig. 2. VNU block
+
+of the currently processed βm,n and hdn = γn channel input. 2) odd dnv : output HD is 1, as we have one more 1 messages than 0 messages. αm,n is either 1 in case the currently processed βm,n is 0 (2 extra votes for 1 with respect to 0 messages) or the value of the channel input if current βm,n is 1 (tie). • cnt=2 and odd dvn: if current betam,n = 0 we have a tie, hence, αm,n = γn. Hard decision bit hdn = 0 as we have 1 more 0 message than 1 message. • other cases:we have surpassed the threshold of 0, hence, both αm,n = 0 and hdn = 0.
+Therefore, the proposed Gallager B variable node operations
+is as follows:
+
+Algorithm 2 V Nn operation
+
+1: Initialization
+
+2: cntn = hdnT h {voting threshold} 3: mask = 1
+4: for all m ∈ {1..dvn} do 5: β˜m,n = sign extend (βm,n, mask) 6: cntn = cntn + β˜m,n
+
+7: if cntn = 0 then
+
+8:
+
+mask = 0
+
+{Mask all successive β’s, the threshold of 1’s has
+
+been surpassed}
+
+9: end if
+
+10: end for 11: for all m ∈ {1..dvn} do 12: αm,n = maj v2c(cnt, dvn, βm,n); {Majority voting
+computation of variable-to-check node unit messages}
+
+13: hdn = maj γ(cnt, dnv , βm,n); {Majority voting computation of hard decision bit}
+
+14: end for
+
+Regarding the check node unit, it involves two XOR gates, one used for computing the XOR between al input α messages, and one used for computing the corresponding β message.
+
+IV. RESULTS AND DISCUSSION
+We have implemented the hard decision decoder for WiMAX LDPC code, rate 1/2. The base matrix for this code
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 3. BER/FER statistics for GallagerB W iM AX rate 1/2 code
+consists of 24 columns and 12 rows, while the expansion factor z is 96. The check degree dcn varies between 6 and 7, while the variable node degree dnv varies between 2 and 6. We have implemented the proposed architecture on a Xilinx Virtex-7 VX485T, speed grade -2, FPGA device, and synthesized with Xilinx ISE 14.7.
+The proposed design occupies 3966 look-up tables - flipflop pairs, and 9 BRAM blocks. The maximum frequency is of 358 MHz, which give a 342 Mbps decoding throughput for coded data for 10 iterations. It is approximatively 2.5x less logic (LUT-FF pairs) with respect to Min-Sum flooding quantization 2 bits. Furthermore, it uses 25% less BRAMs as well. The memory gain is likely to be more substantial if the technology is ASIC. Simulation statistic results showing Frame Error Rate (FER) and Bit Error Rate (BER) is presented in Fig. 3.
+
+[2] “Air interface for fixed and mobile broadband wireless access systems physical and medium access control layers,” IEEE Std 802.16e-2005, 2005.
+[3] B. Xiang, R. Shen, A. Pan, D. Bao, and X. Zeng, “An area-efficient and low-power multirate decoder for quasi-cyclic low-density paritycheck codes,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 18, no. 10, pp. 1447–1460, Oct 2010.
+[4] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Transactions on Communications, vol. 47, no. 5, pp. 673–680, May 1999.
+[5] A. Amaricai, O. Boncalo, and I. Mot, “Memory efficient fpga implementation for flooded ldpc decoder,” in Telecommunications Forum Telfor (TELFOR), 2015 23rd, Nov 2015, pp. 500–503.
+[6] R. G. Gallager, “Low-density parity-check codes,” 1963. [7] R. Tanner, “A recursive approach to low complexity codes,” IEEE
+Transactions on Information Theory, vol. 27, no. 5, pp. 533–547, Sep 1981. [8] V. Savin, “Chapter 4 - {LDPC} decoders,” in Academic Press Library in Mobile and Wireless Communications, D. Declerq, , M. Fossorier, , and E. Biglieri, Eds. Oxford: Academic Press, 2014, pp. 211 – 259. [Online]. Available: http://www.sciencedirect.com/science/article/pii/B9780123964991000042 [9] O. A. Rasheed, S. S. Brkic, P. N. Ivanis, and B. Vasic, “Performance analysis of faulty gallager-b decoding of qc-ldpc codes,” in Telecommunications Forum (TELFOR), 2013 21st, Nov 2013, pp. 323–326. [10] C. H. Huang, Y. Li, and L. Dolecek, “Gallager b ldpc decoder with transient and permanent errors,” IEEE Transactions on Communications, vol. 62, no. 1, pp. 15–28, January 2014. [11] D. Kim, B. Chung, and R. E. Kim, “Improved hard-decision decoding ldpc codec ip design,” in 2012 IEEE International Symposium on Circuits and Systems, May 2012, pp. 416–419. [12] F. R. Kschischang and B. J. Frey, “Iterative decoding of compound codes by probability propagation in graphical models,” IEEE Journal on Selected Areas in Communications, vol. 16, no. 2, pp. 219–230, Feb 1998.
+
+V. CONCLUSION
+We have implemented a QC-LDPC partially parallel architecture using Gallager B decoding algorithm. Special attention has been given to the design and implementation of the majority voting operation within the variable node unit, in order to simplify decision for irregular dv’s, minimize the number of bits for the adder (by message masking after the threshold value is decided), and leaving out the channel information from the sum. We have obtained a gain with respect to Min-Sum with message quantization of 2 bits of 2.5x in logic, and 25% in BRAM utilization.
+
+REFERENCES
+[1] M. P. C. Fossorier, “Quasicyclic low-density parity-check codes from circulant permutation matrices,” IEEE Transactions on Information Theory, vol. 50, no. 8, pp. 1788–1793, Aug 2004.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:53:48 UTC from IEEE Xplore. Restrictions apply.
+
+

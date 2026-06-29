@@ -1,0 +1,567 @@
+Improving Min-sum LDPC Decoding Throughput by Exploiting Intra-cell Bit Error Characteristic
+in MLC NAND Flash Memory
+Wenzhe Zhao∗, Hongbin Sun∗, Minjie Lv∗, Guiqiang Dong†, Nanning Zheng∗, and Tong Zhang‡ ∗ Institute of AI&R, Xi’an Jiaotong University, P.R. China † Skyera Inc., USA ‡ ECSE Department, Rensselaer Polytechnic Institute, USA
+
+Abstract—Multi-level per cell (MLC) technique significantly improves storage density, but also poses new challenge to data integrity in NAND flash memory. Therefore, low-density parity-check (LDPC) code and soft-decision memory sensing have become indispensable in future NAND flash-based solid state drive design. However, these more powerful technologies inevitably increase the memory read latency and hence degrade the decoding throughput. Motivated by intra-cell unbalanced bit error probability and data dependency in MLC NAND flash memory, this paper proposes two techniques, i.e. intra-cell data placement interleaving and intra-cell data dependency aware min-sum decoding, to effectively improve the throughput of LDPC decoding. Experimental results show that, the proposed techniques used in an integrated way can improve the LDPC decoding throughput by up to 85% when the MLC NAND flash chip is heavily cycled, compared with conventional design practice.
+I. INTRODUCTION
+Due to the aggressive technology scaling and multi-level per cell (MLC) technique, the storage reliability and performance of NAND flash memory have been largely degraded [1]. Therefore, low-density parity-check (LDPC) code [2] that has more powerful error correction capability is believed to be indispensable for future solid state drive (SSD). Recently, how to employ LDPC code in SSD has attracted much attention and is extensively evaluated. Prior works have demonstrated that, with soft-decision memory sensing, the LDPC code can achieve the noticeable coding gain over conventional BCH code [3], [4].
+However, since NAND flash memory read latency is proportional to the memory sensing precision, the simple use of soft-decision memory sensing tends to directly cause the significantly increased NAND flash memory read latency, leading to unacceptable storage system read response time degradation [5]. Therefore, the practical use of LDPC in SSDs should employ a two-step trial-and-error procedure [6]: upon a read request, SSDs always first execute hard-decision memory sensing and decoding, and only when hard-decision LDPC code decoding fails, execute soft-decision memory sensing and decoding. Although the two-step trial-and-error procedure significantly reduces the soft-decision memory sensing induced read latency, the decoding throughput degradation is
+978-1-4799-5671-5/14/$31.00 c 2014 IEEE
+
+still noticeable especially when the NAND flash memory chip is heavily cycled. As the throughput of LDPC decoding has significant impact on the performance of overall storage system, great effort has been made to investigate the throughput improvement techniques for LDPC decoding [7], [8].
+Previously proposed LDPC decoders generally assume all the data bits are independent to each other and have the equal error probability. However, MLC NAND flash memory actually possesses interesting intra-cell bit error characteristics: (1) the bit error probability in one flash memory cell is quite unbalanced, that the lower page bit is much more prone to errors. (2) the probability that one bit is prone to error could be largely dependent on data value of the other bit in the same flash memory cell. Since the min-sum LDPC decoding is essentially a belief propagation procedure, being aware of these intra-cell bit error characteristics is potentially beneficial for LDPC decoding design. This useful observation motivates us to investigate possible design techniques that can exploiting intra-cell bit error characteristics for improving the throughput of LDPC decoding. Firstly, we propose to use intracell data placement interleaving to put the upper page bit and lower page bit that belong to the same flash cell into one LDPC codeword. This can effectively enable us to leverage the aforementioned intra-cell data dependency as additional belief information during LDPC decoding. Accordingly, we further propose an intra-cell data dependency aware min-sum LDPC decoding technique to exploit the additional belief information during the decoding procedure and improve the decoding throughput. The effectiveness of proposed techniques has been demonstrated in a case study of 2b/cell MLC NAND flash memory. By using the proposed techniques in an integrated way, the LDPC decoding throughput can be improved by up to 85% when the MLC NAND flash chip is heavily cycled.
+II. BACKGROUND AND MOTIVATIONS
+A. Program/read operation of MLC NAND flash memory
+Compared with single-level cell (SLC), MLC NAND flash allows more bits to be stored in a single cell. Hence, MLC NAND flash cell provides much less margin between two adjacent storage states and is thereby much more prone to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+MSB/upper page 1 LSB/lower page 1
+Round 1 S0
+
+Round 2
+
+S0
+
+1
+
+0
+
+0
+
+0
+
+0
+
+1
+
+S1
+
+Vthr
+
+S1
+
+S2
+
+S3
+
+Vthr
+
+(a)
+
+S0
+
+S1
+
+S2
+
+S3
+
+Vthr
+
+MSB/upper page
+
+1st sensing
+
+1
+
+0
+
+Dup
+
+LSB/lower page
+
+1st sensing
+
+1
+
+2nd sensing
+
+0
+
+D1
+
+Vthr1
+
+1
+
+0
+
+D2
+
+Vthr2
+
+Vthr3
+
+(b)
+
+Fig. 1. Program and read operations for 2 bits/cell NAND flash memory (a) program operation, (b) read operation.
+
+errors. In order to reduce its raw bit error probability, Graycode is commonly used when mapping information bits to voltage levels in the MLC cells, so that neighboring levels only differ in one bit. Fig.1 illustrates an example for 2b/cell NAND flash memory. The voltage levels S0, S1, S2, and S3 denote information bits ‘11’, ‘10’, ‘00’, and ‘01’ respectively. And the most significant bit (MSB) and the least significant bit (LSB) are associated to upper page and lower page respectively.
+As more than one bit are stored in a single cell, the program/read operations of MLC NAND flash are also complicated. As illustrated in Fig. 1(a), 2 bits are associated to the four read threshold distribution, and the multilevel program is achieved in two distinct rounds, one for each bit to be stored. In the first round, the LSB is programmed. If the bit is ‘1’, the voltage threshold of the cell Vthr does not change and the cell remains in the erased state S0. If the bit is ‘0’, the threshold is increased until it reaches the S1 state. In the second round, the MSB is programed. If the bit is ‘1’, the voltage threshold does not change and the cell remains either in the S0 state or the S1 state, depending on the value of LSB. When MSB is ‘0’, the voltage threshold is programed as follows: 1) if the cell remains in S0 state, then the voltage threshold is increased to S3 state. 2) if the cell was programed to S1 state, then the voltage threshold reaches S2 state.
+During the read operation, if the sensing threshold is lower than VT H , the cell denotes bit ‘1’; else, the cell denotes bit ‘0’. As shown in Fig. 1(b), when reading upper page data from 2b/cell NAND flash memory, the read voltage threshold is set as Vthr2, and then upper page data can be read out by flash memory sensing. For lower page data, the flash cell needs to be sampled two times by changing the read voltage threshold as Vthr1 and Vthr3, representing the result as D1 and D2 respectively. And finally, the lower page data can be
+
+calculated as D1 + D2 The above-mentioned read operation is so called hard-
+decision memory sensing, which uses only one quantization level between two adjacent storage states; While if more than one quantization levels are used between two adjacent storage states, it is called soft-decision memory sensing. As belief propagation algorithm inherently prefers high-precision information, the use of soft-decision memory sensing is able to significantly improve the error correction strength of LDPC decoding. However, since NAND flash memory read latency is proportional to the memory sensing precision, soft-decision memory sensing will directly cause the increased NAND flash memory read latency, leading to read response time degradation in storage system. Therefore, it is reasonable for current LDPC-based SSDs to employ a two-step trial-and-error procedure, and only execute soft-decision memory sensing and decoding when necessary.
+
+B. Intra-cell bit error characteristics
+
+Due to the specific data structure and operation inside memory cell, MLC NAND flash memory actually possesses very useful intra-cell bit error characteristics that can be exploited for LDPC decoding design. Firstly, due to the Gray mapping, the bit error probability of lower page is significantly higher than lower page, which is referred to as intra-cell unbalanced bit error probability in this paper. We can intuitively see intracell unbalanced bit error probability from Fig.1. For upper page, there is only one adjacent threshold voltage level that can cause bit 1 → 0 or 0 → 1; while for lower page, there are two. In addition, we can give an approximate probability estimation as follows.
+As the great majority of errors in MLC NAND flash memory are caused by the obscure area between two adjacent levels and hence the dominate errors are single-bit errors after Gray mapping, we can safely assume one cell reading failure only results in a single-bit error. Moreover, in flash device cell, as all levels are tuned to have almost the same level error rate (LER), we simply assume all levels have the same error rate p, and each bit has equal a priori probability of being 0 and 1, i.e. each cell has equal probability to stay in every storage level. Denote the expected (correct) level/state of a cell as s and this cell is sensed to stay in level s . For 2b/cell flash with Gray mapping, the bit error rate (BER) of upper page is
+
+1
+
+p
+
+pu =
+
+(p(s 4
+
+= 2|s = 1) + p(s
+
+= 1|s = 2)) =
+
+2
+
+(1)
+
+and the BER of lower page is
+
+1
+
+pl =
+
+(p(s 4
+
+= 1|s = 0) + p(s
+
+= 0|s = 1)
+
++ p(s = 3|s = 2) + p(s = 2|s = 3)) = p (2)
+
+According to the above analysis, the BER of lower page is almost twice larger than upper page, leading to significantly unbalanced bit error probability in each MLC NAND flash cell.
+Besides intra-cell unbalanced bit error probability, the probability that one bit is prone to error could be largely dependent
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+on the data value of the other bit in the same flash memory cell, which is referred to as intra-cell data dependency. Again, we take the 2b/cell flash memory shown in Fig.1 as example. The following three intra-cell data dependency are exploited in following LDPC decoding design: (1) When data value of lower page bit equals to ‘1’, the probability that the corresponding upper page bit is correct will be very large. (2) When the lower page bit falls to the obscure area between two adjacent levels, the probability that the corresponding upper page bit is correct will be very large. While (3) when the upper page bit falls to the obscure area between two adjacent levels, data value of the corresponding lower page bit has a very large probability to be to ‘0’. NAND flash memory with more than 2 bits per cell also has the similar intra-cell data dependency characteristics.
+The intra-cell bit error characteristics exploited in this paper can be summarized as:
+• intra-cell unbalanced bit error probability: The bit error probability of the upper page and lower page in one flash memory cell is largely unbalanced, that the lower page is much higher than upper page.
+• intra-cell data dependency: The probability that one bit is prone to error could be largely dependent on the data value of the other bit in the same flash memory cell.
+Previously proposed LDPC decoders generally assume the equal error probability for all bits and omit the data dependency between upper page bits and lower page bits. However, since the LDPC decoding is essentially a belief propagation procedure, it is natural for us to exploit the use of these intra-cell bit error characteristics as additional belief input to further improve the throughput of LDPC decoding and hence reduce the read response time of flash-based solid state storage system.
+III. PROPOSED TECHNIQUES
+This section presents two techniques to exploit intra-cell bit error characteristics for the throughput improvement of LDPC decoding design. The description is base on the case of 2b/cell NAND flash. However, these techniques can be similarly extended to other MLC NAND flash memory.
+A. Intra-cell data placement interleaving
+Whether we can exploit intra-cell bit error characteristics in LDPC decoding is largely dependent on the data organization in flash memory page. Although we know intra-cell data dependency is beneficial to LDPC dedoding, the previously proposed decoding algorithm stored the codewords in each separate upper or lower page, and there is no interaction between upper page bit and lower page bit during the decoding procedure. To exploit the intra-cell data dependency, firstly, we need to put the upper page bit and lower page bit that belong to the same cell into one codeword. Accordingly, we propose a intra-cell data placement interleaving techniques to enable the use of data dependency in LDPC decoding.
+The proposed intra-cell data placement interleaving technique in detail is illustrated in Fig. 2. To make one codeword
+
+contain both the upper page bit and lower page bit belonging to the same flash memory cell, we divide the codeword into several sub-blocks, and place the sub-blocks into upper page and lower page alternately in interleaved form. In particular, the size of each sub-block is chosen to be half of the parallel processing bits of LDPC decoder, thus the decoder could process intra-cell mutually dependent data simultaneously.
+
+Parallel processing bits
+
+Upper page B0
+
+B1
+
+B2
+
+B3
+
+B4
+
+Lower page C0
+
+C1
+
+C2
+
+C3
+
+C4
+
+Upper page B0
+
+B2
+
+...... Bn-1 C0
+
+Lower page B1 B3
+
+...... Bn
+
+C1
+
+Without interleaving ...... Bn-1 Bn
+...... Cn-1 Cn
+
+With interleaving
+
+C2
+
+...... Cn-1
+
+C3
+
+...... Cn
+
+Fig. 2. upper/lower page interleaving diagram in 2 bits/cell NAND flash memory.
+
+To support the proposed intra-cell data placement interleaving only requires slight modification at architecture level. The major overhead is the increase of memory sensing delay during read operation. As for each codeword read, three memory sensing operations are required, i.e. the first memory sensing for upper page bits and the second&third for lower page bits. However, since the data transfer time is usually longer than memory sensing time in current commercial products, we can ‘hide’ the second&third memory sensing delay by conducting the memory sensing during the data transfer for upper page bits, as shown in Fig. 3. The overlap of consecutive flash memory read can be easily realized by using cache read mode in commercial flash chip. In addition, in case that flash memory chip integrates high speed I/O interface and data transfer becomes much faster, we can set logical page from system level twice the size of physical page, containing both the upper and lower pages, to eliminate the memory sensing induced overhead.
+
+Upper page 1st sensing
+Lower page 1st/2nd sensing
+
+read without interleaving
+Data transfer Data transfer
+
+1st sensing Data transfer 2nd/3rd sensing
+
+read with interleaving
+Data transfer
+
+Fig. 3. Illustration of overlap read operation of MLC NAND flash memory.
+
+In addition, data placement interleaving not only provides extra belief information for LDPC decoding, but also improves the decoding throughput itself. This is mainly because the interleaving induced bit error probability average can reduce the probability of high-precision soft-decision memory sensing being invoked. As without data placement interleaving, the bit error probability of LDPC codeword in lower page is much higher than upper page and hence tends to frequently invoke the very cost soft-decision memory sensing, leading to the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+overall system throughput degradation especially when the flash memory chip is heavily cycled.
+
+B. Intra-cell data dependency aware min-sum decoding
+Inherently, min-sum LDPC decoding algorithm utilizes the iterative belief propagation to correct errors. And conventional min-sum LDPC decoding design merely relies on the belief propagation between variable bit and check bit. By employing intra-cell data placement interleaving, we can have additional belief information inside the variable bits, as the error probability of one bit largely depends on the value of the other bit in the same cell. Accordingly, we propose a intra-cell data dependency aware min-sum LDPC decoding technique that is able to improve both the error correction strength and the decoding convergence speed.
+In essence, the procedure of min-sum decoding is to compute the maximum posteriori probability for each codeword bit Di, which is the probability that the i-th codeword bit is ‘1’ if all parity check constraints are satisfied. Fig. 4 illustrates the decoding procedure of the proposed intra-cell data dependency aware decoding technique. The initial probabilities R of variable bits are stored in upper and lower pages, alternatively. Firstly, while estimating the satisfied probability Di of the variable bit i, all constraint bits that connect to this variable bit provide probabilities that variable bit i is correct. Then the decoder checks whether all the hard-decision results d of the estimated variable bits are satisfied. If not, the probability M that constraint bits cause information bits should be updated by the satisfied probability of variable bits, and start another iteration. The major difference between the proposed and conventional min-sum LDPC decoding can be summarized as follows. Firstly, when estimating Di, the corresponding variable bit Rc provides additional probability Ki that variable bit i is correct, due to the intra-cell data dependency. Hence, Ki is considered when calculating Li in the proposed decoding strategy. Secondly, when estimating Mj,i, which constraint bit j causes variable bit i, Ki also provides extra information that helps to improve the estimation accuracy. The proposed technique invokes Ki to realize accurate Mj,i.
+
+Parallel processing bits
+Variable bits
+
+B0
+
+B2 Rc
+
+B4
+
+B1
+
+B3 Ri
+
+Bn-1
+
+Upper page
+
+......
+
+Bn Lower page
+
+Variable bit c
+
+Kc
+
+Ki
+
+Variable bit i
+
+Satisfied Probabilities
+
+For proposed algorithm
+
+Dc Di
+
+......
+
+Constraint bits
+
+E0,i
+Ej,i update
+
+......
+
+Mj,i
+
+Mj,0 Mj,1
+
+Mj,i-1 Ej,i
+
+......
+
+Mj,i+1
+
+Mj,n
+
+Cj
+
+Em-1,i
+
+A
+
+Em,i
+
+Mj,i update
+
+Fig. 4. Ej,i and Mj,i update diagram in the proposed Min-sum LDPC decoding algorithm.
+
+To simplify the calculation, all the probabilities are represented as log likelihood ratios (LLR) to transform the multiplication of probabilities into add operation. If the LLR of probability is smaller than 0, the bit is more likely to be ‘1’, otherwise the bit is more likely to be ‘0’. The value of additional probability Ki depends on the variable bit Rc and the hard-decision of variable bit satisfied probability dc in the corresponding upper or lower page. According to the relationship between Rc and dc, the Ki calculation has the following three possible cases:
+
+Case 1: For the variable bit i in upper page, if Rc and dc are both smaller than 0, it indicates that the variable bit c is probably equal to bit ‘1’. Thus, the initial variable bit Ri is probably correct. We set Ki as αRi to enhance the probability that the initial variable bit is correct, where α is usually set as 0.75. Case 2: For the variable bit i in upper page, if the sign of Rc is different with dc, it also indicates the variable bit c is probably equal to bit ‘1’, but the probability is less than Case 1. Thus, we set Ki as 0.5αRi. Case 3: For the variable bit i in lower page, if the sign of Rc is different with dc, it indicates the corresponding variable bit c is probably in S1 and S2, which is shown in Fig. 1. In this scenario, the variable bit i is probably equal to bit ‘0’. Thus, we set Ki as a positive value to make the variable bit i prone to bit ‘0’.
+
+For concise description, Ki is calculated as
+
+αRi
+
+
+
+Ki
+
+=
+
+0.5αRi 2
+
+
+
+
+
+0
+
+if Rc < 0&&dc < 0, i ∈ upper page else if Rcdc < 0, i ∈ upper page else if Rcdc < 0, i ∈ lower page else
+
+In summary, the intra-cell data dependency aware min-sum LDPC decoding flow can be described as follows:
+Step 1: Set Mj,i = Ri, for each j ∈ codeword. Step 2: Compute the variable-to-check message Ej,i for each parity-check bit with Mj,i, by
+
+Ej,i = α( sign(Mj,i ))M ini |Mj,i |.
+
+(3)
+
+i
+
+Step 3: Calculate the check-to-variable message Mj,i for each variable bit with Ej,i and Ki, by
+
+Mj,i = ri +
+
+Ej , i + Ki,
+
+(4)
+
+j ∈Ai,j =j
+
+where A is the none-zero node of parity-check matrix. Step 4: Concurrent with step 3, compute the LLR message Di for each variable bit, and check whether all bits d are satisfied. Di is expressed as follows:
+
+Di = Ri +
+
+Ej , i + Ki.
+
+(5)
+
+j ∈Ai
+
+If all the bits are satisfied, decoding is successful. Otherwise, go to Step 2 to start a new decoding iteration until the maximum iteration number is reached.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+Page count percentage
+Decoding failure rate
+
+By exploiting the intra-cell data dependency in harddecision LDPC decoding, the proposed technique can reduce average iteration number and meanwhile increase error correction strength. Moveover, due to the improved error correction strength, the frequency of soft decision memory sensing can be largely reduced, leading to significantly improved LDPC decoding throughput especially when the flash memory is heavily cycled. The overhead of proposed intra-cell data dependency aware technique is mainly due to the computation of K. Since K can be easily calculated by R and d, both of which already exist in conventional min-sum decoding, the computation of K only requires additional small algebra logic and its overhead tends to be negligible.
+
+IV. EXPERIMENTAL RESULTS
+A. Measurement of intra-cell unbalanced bit error probability
+To quantitatively evaluate the throughput improvement of proposed techniques demands the availability of MLC NAND flash memory bit error probability and intra-cell unbalanced bit error probability statistics. Using commercial sub-22nm MLC NAND flash memory chips, we firstly carry out bit error probability statistics measurements following the same experiment flow as we did in our prior work [6].
+Fig. 5 shows the distribution histogram of page raw bit error probabilities under four different P/E cycling numbers. The measurement results show that, with the increase of P/E cycling, the average page raw bit error probability in MLC NAND flash memory increases significantly. Moreover, the raw bit error probabilities among different pages vary largely, especially when the NAND flash chip comes to the end of its lifetime.
+
+1.0 0.8 0.6 0.4 0.2 0.0
+0.000 0.25 0.20 0.15 0.10 0.05 0.00
+0.000 0.20 0.16 0.12 0.08 0.04 0.00
+0.000 0.20 0.16 0.12 0.08 0.04 0.00
+0.000
+
+P/E cycling = 1000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+P/E cycling = 5000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+P/E cycling = 7000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+P/E cycling = 10000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+Page raw bit error rate
+
+0.010
+
+Fig. 5. Distribution histogram of measured raw bit error probabilities using sub-22nm MLC NAND flash memory.
+We further conduct the bit error probability statistics in lower and upper pages to analysis the intra-cell unbalanced bit error probability. As shown in Fig.6. the raw bit error probability of lower page is significantly different from that of upper page. Moreover, the difference increases with the PE
+
+cycling number, and it reaches up to 76% at the PE cycling of 9000. The experimental results clearly justify the previous analysis for intra-cell unbalanced bit error probability in MLC NAND flash memory.
+0.010
+Upper page Lower page
+0.008
+
+Raw bit error rate
+
+0.006
+
+0.004
+
+0.002
+
+0.000
+
+1000
+
+3000
+
+5000
+
+7000
+
+P/E cycling
+
+9000
+
+110000
+
+Fig. 6. Measured raw bit error probability comparison of upper and lower pages using sub 22nm MLC NAND flash memory.
+B. Throughput improvement by proposed techniques
+To evaluate the throughput improvement by proposed techniques, we use the MLC NAND flash memory model that is developed in our prior work [9]. In addition, we use the rate8/9, length-2KB, QC-LDPC codes with the column weight cw of 4. We assume the codewords pass through diverse AWGN (adding white godson noise) channels. For the purpose of comparison, we set the baseline scenario as conventional min-sum LPDC decoding without exploiting any intra-cell bit error characteristics. And Fig. 7 shows the hard-decision decoding failure rate comparison between the baseline and proposed intra-cell data dependency aware min-sum LDPC decoding at different raw bit error rate. Experimental results show that, by leveraging the intra-cell data dependency, the proposed LPDC decoding technique has the much lower harddecision decoding failure rate than baseline. In particular, the error correction strength of proposed decoding technique with hard-decision memory sensing (codeword precision is 1) is even comparable to the baseline algorithm with soft-decision memory sensing when the codeword precision is 2.
+Besides the increase of error correction strength, the harddecision decoding convergence speed of proposed LDPC
+
+100
+
+10−2
+
+10−4 11
+
+Baseline, 1bit precision Proposed, 1bit precision Baseline, 2bits precision
+10.5 10 9.5 9 8.5 8 7.5 7 Raw bit error rate of MLC NAND flash memory
+
+6.5 x 10−3
+
+Fig. 7. Hard-decision LDPC decoding failure rate comparison between the baseline and proposed technique.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+Average iteration numbers
+Average throughput(MBps)
+
+30
+
+25
+
+20
+
+15
+
+10
+5 11
+
+Baseline, 1bit precision Proposed, 1bit precision Baseline, 2bits precision
+10.5 10 9.5 9 8.5 8 7.5 7 Raw bit error rate of MLC NAND flash memory
+
+6.5 x 10−3
+
+1600 1400 1200 1000
+800 600 400 200
+0 1
+
+Baseline Interleaving Interleaving+data dependency
+
+3
+
+5
+
+7
+
+9
+
+1110
+
+P/E cycling (K)
+
+Fig. 8. Average iteration number comparison during hard-decision LDPC Fig. 9. Simulated throughput comparison between baseline and proposed
+
+decoding between the baseline and proposed technique.
+
+techniques under different P/E cycling.
+
+decoding is also improved. The average iteration number comparison at different raw bit error rate is illustrated as Fig.7, which clearly suggests that the proposed technique demands the much lower iteration numbers than baseline.
+By employing the proposed techniques to hard-decision LDPC decoding, the decoding throughput tends to be higher due to the reduction of average iteration numbers. Moreover, the increased error correction strength during hard-decision decoding can reduce the probability of high-precision softdecision memory sensing being invoked and further improve the decoding throughput. The throughput of hard-decision LDPC decoder T havg can be calculated as
+
+T havg =
+
+1
+
+fq
+
+·
+
+linf
+
+·
+
+(1
+
+−
+
+df r(x)) d(x)
+
+0 citer(x) · num + cload
+
+(6)
+
+Where fq, linf , df r, citer, num, cload and x denote the working frequency, information length, decoding failure rate, average iteration number, clock cycle/iteration, decoding preparation time and the NAND flash raw bit error rate, respectively. To evaluate the decoding throughput, we employ the same min-sum LDPC decoder as published in [10], which works at 100MHz and consumes 76 cycles for one iteration, 2 clock cycles for preparation. In case of hard-decision decoding failure, the soft-decision memory sensing and decoding will be invoked, consuming another 100µs delay penalty. According to the raw bit error probability statistics under different P/E cycling as shown in Fig. 5, we can simulate the corresponding average LDPC decoding throughput and illustrate the simulation result in Fig. 9. The experimental results clearly demonstrates that the throughput improvement of proposed techniques increases when the P/E cycling number is getting higher. In particular, the throughput improvement of proposed LDPC decoding can reach up to 85% when the MLC NAND flash chips are heavily cycled and their P/E cycling number approach to 10K.
+
+V. CONCLUSION
+This work is motivated by the observation that the bit error probability of upper page bit and lower page bit in one cell is largely unbalanced and has data dependency on each other
+
+in MLC NAND Flash memory. By exploiting these intracell bit error characteristics, we propose two techniques that are able to reduce the iteration number, increase the error correction strength and alleviate the invoke of soft-decision memory sensing, leading to significantly improved decoding throughput for LDPC code. Experimental results demonstrate the effectiveness of proposed design techniques that, compared with the conventional min-sum LDPC decoding, the throughput improvement can reach up to 85% when the MLC NAND flash memory chips are heavily cycled.
+ACKNOWLEDGMENT
+This research is funded in part by grants from the National Natural Science Foundation of China (No. 61274028) and the National High Technology Research & Development Program of China (No. 2011AA010405).
+REFERENCES
+[1] C. Compagnoni, S. Spinellet, and et.c, “First evidence for injection statistics accuracy limitations in NAND Flash constant-current fowlernordheim programming,” IEDM Tech. Dig, pp. 165–168, 2007.
+[2] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, pp. 399– 431, Mar. 1999.
+[3] N. Duann, “Error correcting techniques for future NAND flash memory in SSD applications,” Technology, p. 1, 2009.
+[4] Z. Wang, Z. Cui, and J. Sha, “VLSI design for low-density paritycheck code decoding,” IEEE Circuits and Systems Magazine, vol. 11, pp. 52–69, 2011.
+[5] W. Zhao, G. Dong, H. Sun, and et.c, “Reducing latency overhead caused by using LDPC codes in NAND flash memory,” EURASIP Journal on Advances in Signal Processing, vol. 2012, pp. 1–9, 2012.
+[6] K. Zhao, W. Zhao, H. Sun, and et.c, “LDPC-in-SSD: making advanced error correction codes work effectively in solid state drives,” in Proceedings of USENIX Conference on File and Storage Technologies (FAST), 2013.
+[7] J. Kim, J. Cho, and W. Sung, “A high-speed layered min-sum LDPC decoder for error correction of NAND flash memories,” in Proceedings of IEEE 54th International Midwest Symposium on Circuits and Systems (MWSCAS), Aug 2011, pp. 1–4.
+[8] D. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,” IEEE Transactions on Signal Processing, vol. 61, pp. 440–449, 2013.
+[9] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 58, pp. 429–439, 2011.
+[10] H. Zhong and T. Zhang, “Block-LDPC: a practical LDPC coding system design approach,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 52, pp. 766–775, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:28:52 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,650 @@
+ 
+FPGA Design and Implementation of an LDPC 
+Encoder Under a Hybrid Sparse Matrix Architecture 
+1st *Yu Chen 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+chenyu@zua.edu.cn 
+2nd Xiaowei Wu 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+wuxiaoweipass@163.com 
+3rd Yali Lv 
+Lantian Laboratory 
+Anyang, China, 455000 
+lvyalimail@163.com 
+ 
+ 
+ 
+4th Xinling Wen 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+wenxinling@zua.edu.cn 
+5th Heng Yang 
+The Airfield Area Management 
+Department 
+Xinzheng International Airport 
+Zhengzhou, China, 451161 
+13837101881@163.com 
+ 
+6th Yuxin Qin 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+qinyuxin@zua.edu.cn 
+7th Teng Jiang 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+jt796653@163.com 
+8th Kun Liang 
+School of Electronics and 
+Information 
+Zhengzhou University of 
+Aeronautics 
+Zhengzhou, China, 450046 
+drliangkun@126.com
+  
+Abstract: Low-Density Parity-Check (LDPC) codes have been 
+extensively applied in wireless communications and data storage 
+systems. However, their hardware encoder implementations often 
+suffer from excessive memory consumption, limited parallelism, 
+and high power dissipation. To address these issues, this paper 
+presents an FPGA-oriented LDPC encoder architecture based on 
+a hybrid sparse matrix. The proposed method decomposes the 
+generator matrix G into a strictly sparse matrix and a small 
+residual matrix, with the latter approximated through low-rank or 
+sparse small-core techniques. A reconfigurable small-core 
+computing module is introduced to efficiently process the residual 
+part, minimizing redundant computations. Experimental results 
+demonstrate that the proposed design reduces LUT and DSP 
+utilization by approximately 20%, increases the operating 
+frequency by 25%, and lowers power consumption by about 20%. 
+Moreover, under the same signal-to-noise ratio, the bit error rate 
+exhibits faster convergence compared to conventional encoder 
+architectures. 
+Keywords— LDPC coding ;Reconfigurable mapping; FPGA; 
+Sparse matrix; Address generation. 
+I. INTRODUCTION  
+With the development of 5G/6G mobile communications, 
+satellite links, and high-capacity storage systems, higher 
+requirements are imposed on the error-correction capability and 
+real-time processing performance of channel coding. Due to 
+their sparse parity-check matrices and near-Shannon-limit 
+error-correction performance, LDPC codes have become a core 
+component of modern communication standards such as DVB-
+S2 and 5G NR. However, compared with the extensive research 
+on parallelization and architectural optimization on the 
+decoding side, the hardware implementation of LDPC encoders 
+also faces significant challenges in high-rate and long-code-
+length 
+scenarios: 
+conventional 
+direct 
+multiply-and-add 
+implementations based on the full generator matrix G require 
+substantial storage and arithmetic resources; even exploiting the 
+cyclic properties of QC-LDPC codes, the presence of residual 
+matrices and irregular structures still leads to increased resource 
+utilization and latency .In recent years, some works have 
+attempted to reduce hardware complexity by sparsifying the 
+generator matrix or introducing partially parallel architectures, 
+but several limitations remain: High storage pressure: Directly 
+storing the full generator matrix or large-scale lookup tables 
+requires considerable BRAM resources; Conflict between 
+parallelism and flexibility: Highly parallel architectures 
+consume excessive resources, while low-parallel designs limit 
+throughput; Complex handling of irregular residuals: Cyclic 
+shift structures cannot cover all matrix elements efficiently. 
+To address these issues, this paper proposes an LDPC 
+encoder architecture based on a hybrid sparse matrix. The core 
+idea is to decompose the generator matrix into a strictly sparse 
+part and a small residual part according to their significance. 
+The strictly sparse part is efficiently implemented using block-
+level parallel shift/XOR networks, while the residual part is 
+processed using low-rank or sparse small-core approximations 
+with a reconfigurable small-core unit and low-precision or time-
+multiplexed 
+accumulators. 
+Furthermore, 
+a 
+unified, 
+parameterized parity-bit address calculation core is designed to 
+support flexible configurations for multiple code lengths and 
+code rates. 
+Funding: This work was supported by Henan Province Key Research and 
+Development Project (No. 241111213000), Henan Province University 
+Science and Technology Innovation Team (No. 26IRTSTHN036), Major 
+Science and Technology Projects of Lantian Laboratory (No. LTJW-24-02-06)
+Graduate Education Innovation Program of Zhengzhou University of 
+Aeronautics (No. 2025CX136), Scientific Research Team Plan of Zhengzhou 
+University of Aeronautics (No. 23ZHTD01007, No. 24ZHTD01001), 
+Postgraduate Education Reform and Quality Improvement Project of Henan 
+Province (No. YJS2024JD48), Key Research Project Plan for Higher 
+Education Institutions in Henan Province (No. 25B510016, No. 25B413013), 
+Open Fund of Henan Provincial Key Laboratory of General Aviation 
+Technology (No. ZHKF-240213). 
+2025 5th International Conference on Electronic Information Engineering and Computer Technology (EIECT)
+979-8-3315-7524-3/25/$31.00 ©2025 IEEE
+418
+2025 5th International Conference on Electronic Information Engineering and Computer Technology (EIECT) | 979-8-3315-7524-3/25/$31.00 ©2025 IEEE | DOI: 10.1109/EIECT68017.2025.11331902
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 
+II. DERIVATION OF THE GENERATOR MATRIX PRINCIPLE  
+Directly constructing a systematic LDPC code on FPGA 
+may encounter two main issues: Loss of sparsity: Row and 
+column transformations often densify the matrix, which is 
+unfavorable for hardware implementation. High storage 
+overhead: Directly storing the entire LUT consumes significant 
+hardware resources. In this paper, we implement the encoder in 
+hardware by preserving the original sparse structure and solving 
+the corresponding linear equations [1]. 
+Let parity-check matrix of an LDPC code be H ∈
+{0,1}m×n ,where n is the code length, m is the number of 
+information bits, and the code rate is R = k/n, satisfying  m =
+n −k . The sparsity of H means that most elements are zero, 
+with only a few non-zero entries (“1”) scattered throughout. We 
+adopt a systematic codeword representation: let the information 
+vector be u ∈{0,1}k, and the parity (check) bits be 𝑝𝑝∈{0,1}m, 
+so that the final codeword is 𝑐𝑐= [𝑢𝑢 𝑝𝑝] ∈{0,1}n, satisfying the 
+parity-check equations defined by H. During decoding, these 
+equations are also used to verify received codewords and 
+perform iterative decoding [2]. 
+The generator matrix G is a k×n matrix (where k is the 
+length of the information bits) used for encoding. An 
+information bit sequence d of length k is linearly transformed to 
+produce a codeword c of length n via modulo-2 operations c = 
+d×G(mod2).LDPC codes are usually in systematic form, where 
+the codeword c consists of the original information bits d 
+concatenated with the computed parity bits p, c=[d p]. 
+Correspondingly, the generator matrix can be written in 
+systematic form:G = [I
+P]where  I is a k times identity matrix 
+and  P is a k×m matrix[3]. 
+The parity-check matrix H and generator matrix G are 
+closely related and satisfy the orthogonality condition   H× Gᵀ 
+= 0.Initially, a sparse parity-check matrix must be constructed, 
+which can be either random or structured. Gaussian elimination 
+involves elementary row operations (row swaps, row addition), 
+which may destroy the original sparsity of H and negatively 
+affect decoding performance [4]. Therefore, in practical 
+applications, alternative techniques — such as offset-based 
+encoding—or carefully designed structures (quasi-bidiagonal 
+structure) are often used to avoid direct encoding with a dense 
+matrix. Suppose a simple (6, 3) code with the following parity-
+check matrix (in systematic form): 
+ 𝐻𝐻= ൥
+1
+1
+0
+0
+1
+1
+1
+0
+1
+   |  
+1
+0
+0
+0
+1
+0
+0
+0
+1
+൩= [𝑃𝑃𝑇𝑇
+𝐼𝐼],              (1) 
+𝑃𝑃𝑇𝑇 = ൥
+1
+1
+0
+0
+1
+1
+1
+0
+1
+   ൩，P = ൥
+1
+0
+1
+1
+1
+0
+0
+1
+1
+   ൩.                 (2) 
+The generator matrix is as follows: 
+     𝐺𝐺= [𝐼𝐼
+𝑃𝑃]=൥
+1
+0
+0
+0
+1
+0
+0
+0
+1
+   |  
+1
+0
+1
+1
+1
+0
+0
+1
+1
+൩.                  (3) 
+Information bitsd=[d1 ,    d2 ,
+d3],The encoded codeword 
+c = d ×G = [d1 ,    d2 ,
+d3,   p1  ,   p2 ,    p3] The parity bits 
+[  p1  ,   p2 ,    p3]are calculated by d×P. It can be verified that 
+H × cT= 0.Divide H into two parts by columns, corresponding 
+to the information bits and parity bits respectively: 
+ 𝐻𝐻= [𝐻𝐻𝑢𝑢
+𝐻𝐻𝑝𝑝],                                   (4) 
+𝐻𝐻𝑢𝑢∈{0,1}m×k
+, 𝐻𝐻𝑝𝑝∈{0,1}m×m                  (5) 
+From the parity-check equations, we have: 
+ 𝐻𝐻𝑢𝑢𝑢𝑢𝑇𝑇⊕𝐻𝐻𝑝𝑝𝑝𝑝𝑇𝑇= 0 ⇒𝐻𝐻𝑝𝑝𝑝𝑝𝑇𝑇= 𝐻𝐻𝑢𝑢𝑢𝑢𝑇𝑇              (6) 
+If 𝐻𝐻𝑝𝑝 is invertible, then 
+      𝑝𝑝𝑇𝑇= 𝐻𝐻𝑝𝑝
+-1 (𝐻𝐻𝑢𝑢 𝑢𝑢𝑇𝑇)                             (7) 
+The standard method for constructing G is to convert it into 
+the [𝐴𝐴  𝐼𝐼]form through row or column transformations and 
+elementary column operations, thereby directly obtaining G [5]. 
+In sparse hardware implementation, directly constructing G is 
+not optimal; this paper adopts the "sparsity preservation + 
+solving " approach for hardware implementation. 
+Therefore, the core of encoding lies in solving the above 
+equation. Practical FPGA implementation pursues sparsity, 
+pipelining, and low latency, so it is necessary to transform the 
+calculation of Hp-1 into a hardware-friendly structure with low 
+complexity [6]. 
+III. OVERALL ENCODING PROCESS AND HARDWARE 
+ARCHITECTURE DESIGN 
+A. Residual Small-Kernel Approximation Processing 
+In the LDPC encoder based on the hybrid sparse matrix, the 
+generator matrix G is decomposed into a strictly sparse part and 
+a small residual part. The former can be efficiently implemented 
+directly through sparse matrix multiplication, while the latter, 
+due to its small scale and low sparsity, would introduce large 
+resource and delay overheads if directly computed using 
+conventional hardware. To this end, this paper proposes a 
+reconfigurable residual small-kernel approximation   
+lengths and matrix modes, or reusing limited arithmetic 
+resources through time-division multiplexing. Corresponding 
+multiplication-addition templates or coefficient tables are pre-
+generated for different residual matrix blocks and stored in on-
+chip BRAM; when the FPGA needs to process a certain residual 
+block, the corresponding table entries are loaded from the 
+BRAM to achieve rapid switching. 
+1) Low-Precision Approximate Accumulation: 
+To further reduce power consumption and area, the 
+summation of the residual part adopts low-precision 
+approximate accumulation technology. Since the coefficient 
+magnitude of the residual block is small, its impact on the 
+encoding result is limited, allowing the following strategies to 
+simplify the hardware in the FPGA: 
+After decomposing the matrix into a strictly sparse part 
+Gstrict and a small residual part Gresidual, the encoding process 
+can be expressed as: 
+   𝑦𝑦= G ∙𝑥𝑥= (𝐺𝐺𝑠𝑠𝑠𝑠𝑠𝑠𝑠𝑠𝑠𝑠𝑠𝑠+ 𝐺𝐺𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟) ∙𝑥𝑥            (8) 
+x is an information bit vector, and y is an encoded output bit. 
+The Approximate Adder is a low-power design that reduces 
+419
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 
+power consumption and area by reducing computational 
+precision [7]. In the accumulation process, we use a smaller bit 
+width to represent the result:     
+     𝑦𝑦𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟≈approx_adder(∑
+(𝐺𝐺𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟𝑟)𝑖𝑖
+𝑛𝑛
+𝑖𝑖=1
+∙𝑥𝑥𝑖𝑖)       (9) 
+Under the condition of ensuring controllable errors, a low-
+power scheme using an Approximate Adder is adopted. The 
+residual results are superimposed with the output of the strictly 
+sparse part in the accumulator to form complete parity bit data 
+[8]. 
+2) Address and Operation Derivation for Reconfigurable 
+Mapping: 
+Through this "reconfigurable small kernel + approximate 
+accumulation" method, the residual part does not require 
+separate hardware synthesis for each type of matrix block. 
+Instead, a unified core supports multiple modes through 
+parameter configuration and table entry loading, significantly 
+reducing the occupancy rate of LUTs, DSPs, and BRAMs. 
+To achieve efficient encoding of the LDPC encoder based 
+on the hybrid sparse matrix on FPGA, this paper decomposes 
+the generator matrix G into a strictly sparse part and a small 
+residual part. The residual part is approximated by a 
+reconfigurable small kernel. Its core is to realize fast 
+reconfigurable mapping of the address and operation of parity 
+bits. For the nth parity unit, its address calculation can be 
+defined by the following formula: 
+𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑛𝑛= ൣ𝑏𝑏𝑚𝑚+ (𝑥𝑥+ 𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚360) ∙𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙൧𝑚𝑚𝑚𝑚𝑚𝑚൫𝑁𝑁𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙−𝐾𝐾𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙൯   (10) 
+The parity bit length 𝑀𝑀=𝑁𝑁𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙−𝐾𝐾𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙，𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙controls the 
+cyclic shift or permutation step size. For the m-th block, the 
+base address bom_cal is bm, where x is the intra-block index 
+and mmod360 is the row number (or cycle number) after modulo 
+360. Using the distributive law of modular arithmetic, the above 
+formula can be expanded as: 
+𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑛𝑛= 𝑏𝑏𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚+ 𝑥𝑥∙𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑚𝑚𝑚𝑚𝑚𝑚M + 𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚360
+∙𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚 
+= 𝑏𝑏𝑚𝑚+ 𝑥𝑥𝑄𝑄𝑚𝑚+ 𝑚𝑚𝑄𝑄𝑚𝑚                               (11) 
+wherein 
+it 
+is 
+defined 
+that
+𝑥𝑥𝑄𝑄𝑚𝑚
+=
+𝑥𝑥∙
+𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑚𝑚𝑚𝑚𝑚𝑚M, 𝑚𝑚𝑄𝑄𝑚𝑚=𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚360 ∙ 
+𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑚𝑚𝑚𝑚𝑚𝑚𝑚𝑚. This expanded form allows a large amount of 
+repeated calculations to be preprocessed offline, and and can be 
+directly obtained through table lookup, thereby reducing the 
+resource consumption of FPGA multipliers. In hardware, 
+directly calculating "multiplication followed by modulo" 
+according to the formula would consume more multipliers, as 
+well as DSP logic such as division or modulo operations. After 
+adopting the decomposed form, hardware resource optimization 
+can be achieved through the following steps: 
+a) Pre-store 𝑚𝑚𝑄𝑄𝑚𝑚 and  𝑥𝑥𝑄𝑄𝑚𝑚in a small ROM in advance; 
+b) Obtain 𝑏𝑏𝑚𝑚,𝑚𝑚𝑄𝑄𝑚𝑚, 𝑥𝑥𝑄𝑄𝑚𝑚online; 
+c) Summation: sum=𝑏𝑏𝑚𝑚+ 𝑚𝑚𝑄𝑄𝑚𝑚+ 𝑥𝑥𝑄𝑄𝑚𝑚 , where sum < 
+3M; 
+d)  Implement the modulo operation through one or two 
+conditional subtractions. 
+        𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑎𝑛𝑛=൝
+𝑠𝑠𝑠𝑠𝑠𝑠−𝑀𝑀,   if sum ≥𝑀𝑀,
+𝑠𝑠𝑠𝑠𝑠𝑠−2𝑀𝑀, 𝑖𝑖𝑖𝑖 𝑠𝑠𝑠𝑠𝑠𝑠≥2𝑀𝑀
+𝑠𝑠𝑠𝑠𝑠𝑠,           𝑜𝑜𝑜𝑜ℎ𝑒𝑒𝑒𝑒𝑒𝑒𝑒𝑒𝑒𝑒𝑒𝑒.
+,               (12) 
+Parameters such as 𝑀𝑀, 𝑄𝑄𝑙𝑙𝑙𝑙𝑙𝑙𝑙𝑙 and 𝑏𝑏𝑚𝑚inside the module can 
+all be configured to achieve reconfigurable mapping. 
+3) Hardware Architecture Design 
+This work proposes a hybrid sparse matrix–based LDPC 
+encoder architecture optimized for FPGA implementation. The 
+proposed design aims to maintain structural sparsity and reduce 
+redundant 
+memory 
+usage 
+by 
+combining 
+low-rank 
+decomposition and reconfigurable small-core approximation 
+for residual matrix processing. 
+a) Generator Matrix Decomposition 
+Let the generator matrix G of the LDPC code be partitioned 
+as:G = [I_k | P] where I_k is the k × k identity matrix and P is a 
+parity submatrix derived from the parity-check matrix H. To 
+improve hardware efficiency, P is decomposed into a low-rank 
+part P_L and a sparse residual part P_S:P = P_L + P_S where 
+P_L captures dense, repetitive structures suitable for block-
+based operations, and P_S maintains the original sparsity to 
+minimize logic utilization. 
+Hybrid Sparse Matrix Encoding 
+Input: Information bits u [0:K-1], matrices P_L, P_S 
+Output: Codeword c [0:N-1] 
+1: for i = 0 to K-1 do 
+2:     parity_L[i] = sum_over_j (u[j] * P_L[j][i]) 
+3:     parity_S[i] = sum_over_j (u[j] * P_S[j][i]) 
+4: end for 
+5: parity = (parity_L + parity_S) mod 2 
+6: c = concatenate(u, parity) 
+b)  Reconfigurable Small-Core Design 
+To handle different LDPC configurations dynamically, a 
+reconfigurable small-core module is introduced. Each small-
+core performs modular accumulation for a configurable subset 
+of the parity matrix. Configuration parameters are stored in a 
+lookup table (LUT) and can be updated at runtime. 
+Pseudo-code 2: Reconfigurable Small-Core Operation 
+Input: Partial matrix block B(q), configuration cfg 
+Output: Parity segment y(q) 
+1: Load parameters (shift_index, enable_mask) from cfg 
+2: for each active bit b in enable_mask do 
+3:     temp = (input_bit << shift_index) mod N 
+4:     y(q) ^= temp 
+5: end for 
+ 
+420
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+Figure 1. Matrix Simulation Waveform Diagram. 
+Each small-core supports time-division multiplexing across 
+code blocks, enabling scalability for multiple LDPC code rates 
+(1/4, 1/2, 3/5, 2/3). The architecture employs a pipelined 
+matrix–vector multiplication engine, allowing one parity vector 
+output per clock cycle under full pipeline occupancy. 
+The loading and mapping of the hybrid sparse matrix were 
+implemented and verified in Vivado Simulator, as shown in 
+Figure 1. 
+IV. TESTING AND VERIFICATION 
+To verify the logical correctness and timing feasibility of the 
+designed LDPC encoder, this paper conducts RTL-level 
+functional verification in the vivado simulation environment. 
+The input signal uses a random information bit stream, and the 
+coding matrix is a sparse parity-check matrix constructed based 
+on the DVB-S2 standard. The key control signals of the 
+encoding module include: data_run_born_en (encoding enable), 
+data_in_born_* (input data block), data_out_born_* (encoded 
+output data block), and synchronization signals sync_in and 
+sync_out. The figure shows the waveform simulation of the data 
+flow and address mapping of the LDPC encoder on the FPGA, 
+which outputs 12 channels of 14-bit encoded data and addresses 
+in parallel, corresponding to different code rates. 
+As shown in the Figure 2, when the data_run_born_en 
+signal is valid, the input information block data_in_born_x is 
+sequentially loaded into the encoder in consecutive clock cycles. 
+After sparse matrix multiplication and reconfigurable logic 
+mapping,the output terminal data_out_born_x generates 
+corresponding encoding result after a fixed delay. Each output 
+signal in the waveform remains stable during the valid period 
+without glitches or misalignment, indicating that the logical 
+structure is correct and the timing constraints are satisfied. At 
+the same time, it can be observed that the timing intervals 
+between different input blocks remain consistent, and the 
+encoding results show obvious regular changes between 
+different data frames, which conforms to the linear 
+characteristics of LDPC encoding. The output data delay is 
+consistent with the simulation expectation, verifying the 
+feasibility and efficiency of the proposed "hybrid sparse matrix 
++ reconfigurable mapping structure" on FPGA. Through 
+waveform analysis, it can be seen that the encoder can correctly 
+encode continuously input data in a single-cycle pipeline 
+structure; the output parity bits respond linearly with changes in 
+input bits, which is consistent with the theoretical formula 
+derivation; the overall timing of the module is synchronized 
+with the simulation clock, with no logic hazards or race risks. 
+To verify the reconfigurable performance of the LDPC encoder 
+designed in this paper under multiple code rates, the system 
+implements multiple sets of LDPC code rates and 
+corresponding parameter configurations on the FPGA.  
+The information bit length, shift parameter, and data rate 
+index corresponding to each configuration are shown in Table 
+1. 
+TABLE 1   ENCODING PARAMETERS UNDER DIFFERENT DATA RATES. 
+Data Rate 
+Code 
+Rate 
+Information Bit 
+Length (Kldpc) 
+Shift Parameter 
+(Qldpc) 
+3’d0 
+1/4 
+3240 
+36 
+3’d1 
+1/2 
+7200 
+25 
+3’d2 
+3/5 
+9720 
+18 
+3’d3 
+2/3 
+10800 
+15 
+3’d4 
+3/4 
+11880 
+12 
+3’d5 
+4/5 
+12600 
+10 
+3’d6 
+5/6 
+13320 
+8 
+ 
+421
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+Figure 2. Encoding Simulation Waveform Diagram. 
+In the FPGA implementation, the system dynamically 
+selects different code rate configurations through a 3-bit rate 
+control signal data_rate, thereby realizing a multi-rate 
+reconfigurable LDPC encoder with a single hardware structure. 
+When data_rate changes, the control module automatically 
+loads the corresponding matrix index table and shift 
+configuration without re-synthesis, achieving true online 
+dynamic code rate switching [9][10]. This design not only 
+supports DVB-S2 code rate combinations but also provides a 
+unified scalable architecture for subsequent expansion to 5G 
+NR LDPC encoding schemes. 
+ 
+Figure 3 BER vs. SNR Curve. 
+To evaluate the hardware overhead and implementation 
+efficiency of the designed LDPC encoder on FPGA, this paper 
+uses Xilinx Vivado 2018.1 for synthesis and implementation 
+analysis of the encoding module. The target device is Xilinx 
+Zynq-7045 xc7z045ffg676-2, and the synthesis results are 
+shown in Figure 4 and Figure 5. 
+ 
+Figure 4 Hardware Resource Utilization Diagram (proposed design). 
+ 
+Figure 5 Hardware Resource Utilization Diagram (reference design). 
+The reference data are taken from WU Wen-jun, ZHANG 
+Rui, and CHENG Min-min, “Design and Implementation of 
+High-Speed Parallelization of LDPC Codec based on FPGA,” 
+Communications Technology, vol. 53, no. 10, pp. 2581–2587, 
+2020[11]. The hybrid sparse matrix mapping structure proposed 
+in this paper can realize complete LDPC encoding function with 
+extremely low logic overhead. In general, this design greatly 
+reduces the logic overhead while maintaining the encoding rate, 
+and is suitable for parallel deployment in multi-channel or 
+multi-core FPGA systems. the proposed LDPC encoder 
+architecture was compared with a reference implementation 
+synthesized on the same FPGA device.  
+At the same time, the LDPC encoder with 1/2 code rate and 
+BPSK modulation is simulated by MATLAB. By comparing the 
+performance of the traditional encoder (50 iterations, high 
+precision) and the new encoder (10 iterations, quantized LLR), 
+the bit error rate (BER) difference in the low SNR region 
+422
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 
+(waterfall region) is observed. It can be found that the bit error 
+rate of the new decoder converges faster with the increase of 
+signal-to-noise ratio in Figure 3[12]. 
+V. CONCLUSION 
+Aiming at the problems of high computational complexity 
+and high resource occupation in the FPGA implementation of 
+traditional LDPC encoders, this paper proposes an efficient 
+LDPC encoder based on a hybrid sparse matrix and 
+reconfigurable mapping structure. By sparsifying the matrix 
+structure and adopting a block-level parallel design, the 
+encoding complexity is significantly reduced, and flexible 
+switching of multiple code rates is realized.The synthesis results 
+show that the proposed design requires only 2108 LUTs, 1219 
+flip-flops, and 7 BRAMs, corresponding to utilization rates of 
+0.96%, 0.28%, and 1.28%, respectively. In contrast, the 
+reference design consumes 3665 LUTs, 2630 flip-flops, and 4.5 
+BRAMs, resulting in utilization rates of 2.72%, 0.98%, and 
+1.23%. The I/O utilization is also reduced from 14.74% in the 
+reference to 12.00% in the proposed architecture. This 
+demonstrates that the hybrid sparse-matrix construction and 
+reconfigurable mapping strategy effectively improve hardware 
+efficiency without compromising functional performance. In 
+terms of bit error performance, the proposed scheme maintains 
+better Bit Error Rate (BER) performance than the traditional 50-
+time full-precision iteration scheme even under the conditions 
+of only 10 iterations and 1-bit Log-Likelihood Ratio (LLR) 
+approximation. At an Eb/N0 of 4.5 dB, the BER is about 1×10⁻², 
+representing a performance improvement of approximately 2.7 
+times. The results indicate that this structure significantly 
+reduces hardware complexity while ensuring high throughput, 
+and has excellent reconfigurability and scalability. In 
+conclusion, the LDPC encoder proposed in this paper 
+outperforms 
+traditional 
+implementations 
+in 
+terms 
+of 
+performance, efficiency, and flexibility, providing an 
+engineering-practical and efficient encoding solution for high-
+throughput FPGA communication systems (such as satellite 
+communications and 5G NR physical layers). 
+REFERENCES 
+[1] Wu Xiao, Li Yupeng, Xue Jiaxin. Design and FPGA Implementation of 
+LDPC Encoder and Decoder [J]. Electronics Production, 2024, 32(17): 3–
+6+41. 
+[2] Dong Niya, Chen Yunjie, Lin Feng. Research on QC-LDPC Encoding 
+Optimization Based on FPGA [J]. Microelectronics, 2025, 55(04): 635–
+639. 
+[3] Xie Wenyi. Research and FPGA Implementation of a Grid-Based Multi-
+Variable LDPC Decoding Algorithm [D]. Xidian University, 2024. 
+[4] Alphiya A., Latha T. An Efficient QC-LDPC Channel Encoder/Decoder 
+Architecture with Parallel Vector-Matrix Computations for 5G Wireless 
+Networks on FPGA [J]. Computer Networks, 2025, 264: 111229–111229. 
+[5] Ding Zhuo. Design and Implementation of LDPC Encoder and Decoder 
+Based on FPGA [D]. Beijing University of Posts and Telecommunications, 
+2023. 
+[6] Wei Gangdong. Design of High-Speed LDPC Encoder and Decoder 
+Based on FPGA [D]. Chengdu University of Information Technology, 
+2023. 
+[7] Jeremy N., Amer B. Parallel and Flexible 5G LDPC Decoder Architecture 
+Targeting FPGA [J]. IEEE Transactions on Very Large Scale Integration 
+(VLSI) Systems, 2021, 29(6): 1141–1151. 
+[8] Implementation of Encoder and Decoder for LDPC Codes Based on 
+FPGA [J]. Journal of Systems Engineering and Electronics, 2019, 30(4): 
+642–642. 
+[9] Jin Hao. Research and Design of Rate-Compatible Multi-Dimensional 
+LDPC Codes [D]. Nanjing University of Information Science and 
+Technology, 2024. 
+[10] Chen Weiye. Design and Implementation of Multi-Mode High-
+Throughput LDPC Encoder and Decoder [D]. University of Electronic 
+Science and Technology of China, 2025. 
+[11] WU Wen-jun, ZHANG Rui, and CHENG Min-min, “Design and 
+Implementation of High-Speed Parallelization of LDPC Codec based on 
+FPGA,” Communications Technology, vol. 53, no. 10, pp. 2581–2587, 
+2020. 
+[12] Bai Yang, Luo Jin, Bai Baoming, et al. Iterative Detection Method and 
+Performance Research of LDPC-Coded M-FSK [J/OL]. Radio 
+Communication Technology, 1–8 [2025-10-05]. 
+ 
+ 
+423
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:02:24 UTC from IEEE Xplore.  Restrictions apply. 

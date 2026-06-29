@@ -1,0 +1,1854 @@
+1774
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+ADMM and Reproducing Sum-Product Decoding Algorithm Applied to QC-MDPC Code-Based McEliece Cryptosystems
+
+Kohtaro Watanabe , Motonari Ohtsuka, and Yuta Tsukie
+
+Abstract— QC-MDPC (quasi cyclic moderate density parity check) code-based McEliece cryptosystems are considered to be one of the candidates for post-quantum cryptography. Decreasing DFR (decoding failure rate) is one of important factor for their security, since recent attacks to these cryptosystems effectively use DFR information. In this paper, we pursue the possibility of optimization-base decoding, concretely we examine ADMM (alternating direction method of multipliers) based method, a recent developing method in optimization theory. Further, RSPA (reproducing sum-product algorithm), which efficiently reuse outputs of SPA (sum-product algorithm) is proposed for further reduction of DFR. By numerical simulations, we show that the proposing scheme shows considerable decrement in DFR compared to the conventional decoding methods such as BF (bit-flipping algorithm) or SPA.
+Index Terms— QC-MDPC code-based cryptosystem, ADMM method, reproducing sum-product algorithm, McEliece cryptosystem.
+I. INTRODUCTION
+THE safety of current cryptosystem (for example, RSA, ECDH) are based on the computation difficulty such as integer factoring or discrete logarithmic problem. These crypto schemes are said to be no longer secure under the presence of quantum computers, which are able to solve these problems in polynomial time [25]. Although current number of qubits are relatively small, algorithms resistant for quantum computers equipped with practical qubits are desirable. Following proposals; lattice-based, code-based, hash-based and multivariate, isogeny-base etc. are considered to be the framework of cryptosystems for post quantum generation and these are continuing to be reviewed in NIST post-quantum cryptography standardization [30].
+The present paper is concerned with the reduction of DFR (decoding failure rate) in code-based cryptosystem. It is known that there is an attack (GJS attack) [11] that effectively uses decoding failure statistics to retrieve the parity check matrix of the code (which is a secret key). In addition, to achieve
+Manuscript received 19 December 2022; revised 18 May 2023; accepted 16 August 2023. Date of publication 28 August 2023; date of current version 16 February 2024. (Corresponding author: Kohtaro Watanabe.)
+The authors are with the Department of Computer Science, National Defense Academy, Yokosuka 239-8686, Japan (e-mail: ktrwata@gmail.com).
+Communicated by A.-L. Horlemann-Trautmann, Associate Editor for Coding and Decoding.
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TIT.2023.3309035.
+Digital Object Identifier 10.1109/TIT.2023.3309035
+
+λ bits of security under IND-CCA (Indistinguishability under Chosen Ciphertext Attack) circumstance, the condition DFR≤ 2−λ should be satisfied; see p. 9 of BIKE specification document [6]. Thus, reducing the DFR is considered to be one of important factors for the code-based cryptosystems. We note the efforts to reduce DFR are seen in recent studies [7], [8], [9], [13], [17], [20], [24].
+The security of code-based schemes is based on the hardness of decoding linear random codes (indeed the problem is known to be NP-complete [5], [14]). The first code-based scheme is the McEliece cryptosystem which use Goppa codes. The original McEliece cryptosystem has been withstanding evaluation more than thirty years and still regarded secure. A problem of original McEliece cryptosystem is its large public key size. For the reduction of public key size, various improvements were proposed; see [6], [16], [26], and [29]. It should be noted that the usage of LDPC codes directly for this purpose is known to be dangerous, since parity check matrix of LDPC (low-density parity check) codes might be recovered by decoding low Hamming weight codewords, for example using Stern’s method [27], as dual codes of original codes.
+On the other hand, QC-MDPC (quasi cyclic moderate density parity check) code is currently regarded as safe and public key size is small, and for such reasons, this scheme is remaining as alternatives of NIST PQC as Public-key Encryption and Key-establishment Algorithms [30]. Standard decoding methods for QC-MDPC codes are variants of BF (bit-flipping) algorithm. Although BF variants algorithms show good performance in execution time and in DFR, these algorithms are not optimization based, so there might be still room for improvement of DFR. In this paper, we show DFR of QC-MDPC codes can be considerably improved compared to BF or SPA (sumproduct algorithm) by applying ADMM (alternating direction method of multipliers) based decoding, which is a recently developing subject in optimization theory. The ADMM decoding is a method based on IP (integer programming), which achieve MLD (maximum likelihood decoding); see Feldman, Wainwright and Karger [10]. Although IP decoding presents high precision decoding, it costs a considerable amount of execution time and hence the adoption seems to be limited to relatively short code-length problems (about a few hundred bits or so). While the ADMM decoding is reported to be applicable to more than thousands of bits of code-length;
+
+0018-9448 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1775
+
+see [4] and [15]. In this paper, we apply the algorithm of Barman et al. [4] and Liu and Draper [15] as the ADMM decoding method and show even in the case of middle-density parity checks and middle code-length (in cases code-length are 9602, 10779 etc.), it works well.
+Here, we have to note that the original projection algorithm (Algorithm 2 of [4]) seems to be including some error (actually, Algorithm 2 of [4] sometimes shows mismatching values compared to the values computed by MIP solver Gurobi optimizer 9.5 [12]); see Figure 1 and 2 in Section III. We present the corrected projection algorithm to the codepolytope in Algorithm 3 and examine its validity in Section V.
+As for the reduction in DFR, by numerical examination in Section IV, we observe in the case of (n, k) = (9602, 4801) code, the correctable number of errors increases from t = 87 (BF algorithm) to t = 103 under almost the same DFR (less than 10−7). Similarly, in the case of (n, k) = (10779, 3593), correctable number of number of errors increases from t = 55 (BF algorithm) to t = 66 under almost the same DFR (less than 10−7). In other words, proposing scheme attains far less DFR for fixed error number t compared to BF or SPA and hence prevents the collection of DFR information by adversaries. It is observed that in numerical examinations, ADMM method decreases its DFR rapidly if t is under the threshold value t0 (for example, for the case (n, k) = (9602, 4801), t0 = 103 and for the case (n, k) = (10779, 3593), t0 = 66). Thus, we can expect further decrement of DFR if with some preprocessing, error number t could be lowered than t0. For that purpose, we introduce the method RSPA (reproducing sum-product algorithm), which efficiently reuse decoding failure of SPA as a preprocessing for ADMM. We also compare the DFR of RSPA with Backflip+ [8] and BGF decoder [6], [9] for cases (n, k) = (9602, 4801) and (n, k) = (19714, 9857). We note these are 80 bits and 128 bits security parameters achieve IND-CPA security; see Table II of [16].
+Finally, we examine the DFR behavior of “weak keys” (actually Type I weak keys of [23]). It may come as a bit surprise that experiments indicate that Type I weak keys are not “weak keys” for ADMM based decoding. Rather, they seem to be “strong keys”.
+
+II. QC-MDPC MCELIECE CRYPTOSYSTEMS
+
+A. McEliece Cryptosystems
+
+We briefly review McEliece cryptosystems. Throughout this paper, a set of codewords is denoted by C. The variables n, k, t denote code-length, information bits length and correctable error number, respectively. We abbreviate m = n − k. Also, k×n binary matrix G, m×n binary matrix H, n×n matrix P and k × k binary matrix S represent generator matrix, paritycheck matrix, random permutation matrix and scramble matrix respectively. Put
+
+G′ = SGP .
+
+(1)
+
+Then (G′, t) is a public key and (G, S, P ) is a private key of Bob. For a message m, using public key, Alice encrypts as
+
+c = mG′ + e,
+
+(2)
+
+where e is a correctable error vector whose Hamming weight satisfies w(e) = t. Decoding process of Bob is as follows:
+(i) Multiply P −1 to both sides of (2), that is
+cP −1 = mG′P −1 + eP −1 = mSG + eP −1.
+(ii) Since w(eP −1) = w(e) = t, by applying certain decoding scheme, he obtains c′ = mSG.
+(iii) Multiplying G−1S−1 to c′, Bob retrieves the sent message m.
+
+B. QC-MDPC McEliece Cryptosystems With Code-Rate R = (n0 − 1)/n0
+QC-MDPC codes are linear block codes whose binary parity check matrices have moderate density of “one’ and are introduced to reduce public key size of original McEliece cryptosystems; see Misoczki et al. [16]. A parity check matrix of QC-MDPC McEliece cryptosystems with code-rate R = (n0 − 1)/n0 assumes the following form; see for example Baldi [2, Section 3.6],
+
+H = [H0, H1, . . . , Hn0−1] ,
+
+(3)
+
+where each Hi, (0 ≤ i ≤ n0 − 1) is a binary p × p circulant matrix of column weight dc. Hence it holds that n = n0p and k = (n0 − 1)p (so R = (n0 − 1)/n0). Without loss of generality, we can assume Hn0−1 is non-singular, then the generator matrix of the code is expressed as (see also [2,
+Section 3.6]),
+
+ 
+
+Hn−01−1 · H0 T
+
+ 
+
+G
+
+=
+
+ 
+
+
+
+Ik
+
+...
+
+ 
+
+,
+
+(4)
+
+
+
+
+
+Hn−01−1 · Hn0−2 T 
+
+where Ik is the k ×k identity matrix. Since
+
+Hn−01−1 · Hi
+
+T
+,
+
+(0 ≤ i ≤ n0 − 1) are circulant, public key will be only first
+
+rows of these matrices, and as a result, reducing the size of
+
+the public key.
+
+III. DECODING METHODS A. Bit-Flipping Decoding Algorithm
+The fundamental bit-flipping decoding algorithm is described as follows:
+
+Algorithm 1 Bit-Flipping Decoding Algorithm
+
+1: s ← HcT . 2: while s ̸= 0 do
+
+3: i ← arg min0≤i≤n−1w(s + hi). 4: if w(s + hi) < w(s) then
+
+5:
+
+ci ← 1 − ci.
+
+6:
+
+s ← s + hi.
+
+7: else
+
+8:
+
+return decoding failure.
+
+9: end if
+
+10: end while
+
+11: return c.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1776
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+As shown in the numerical experiments of next section, Since log W (yj|xj) = −γjxj + log W (yj|0), it reduces to
+
+BF decoding algorithm shows lower DFR than SPA, especially determine x ∈ C that minimizes γT x =
+
+n j=1
+
+γj
+
+xj
+
+.
+
+Thus,
+
+in cases w(e) are relatively small; see Figure 7 and 8.
+
+ML decoding is described as:
+
+B. Notations
+Next, we introduce ADMM algorithm according to [4]. Although, an algorithm developed in [4] assumes LDPC codes, we show that the algorithm is also effective for decoding MDPC codes. We define some necessary notations: X and Y denote: X = {0, 1} and Y = {0, 1}, since we assume BSC (binary symmetric channel). Thus, sending messages belong to k-dimensional subspace C of X n and corresponding received messages belong to Yn. The neighborhood of a each “check” i is denoted by Nc(i) and the neighborhood of a each “vertex” j is denoted by Nv(j), namely:
+
+Nc(i) = {j | Hi,j = 1} and Nv(j) = {i | Hi,j = 1} ,
+
+where Hi,j is a (i, j) element of parity check matrix H. In the case, H is assumed to be as (3), since each row and column
+of Hk, (0 ≤ k ≤ n0 − 1) has dc non-zero element, it holds that |Nc(i)| = n0dc, (0 ≤ i ≤ p) and |Nv(j)| = dc, (0 ≤ j ≤ n0p).
+Let Nc(i) = {j1, j2, · · · , jd} (note that in the case of (3), d = n0dc), then we define a linear map P i : Rn → Rd as
+
+(P i)k,l =
+
+1, 0,
+
+l = jk else.
+
+For example, in the case
+
+1 1 1 0 0 0
+
+H = 0 0 1 1 0 1
+
+(5)
+
+000111
+
+we have
+
+1 0 0 0 0 0
+
+0 0 1 0 0 0
+
+P 1 = 0 1 0 0 0 0 , P 2 = 0 0 0 1 0 0 ,
+
+001000
+
+000001
+
+0 0 0 1 0 0
+
+P 3 = 0 0 0 0 1 0 . 000001
+
+Define Pd := x ∈ {0, 1}d | ∥x∥1 is even ,
+where ∥ · ∥p represents a lp norm. Then, we can write
+
+x ∈ C ⇔ P ix ∈ Pd, (1 ≤ i ≤ m).
+
+For x ∈ X and y ∈ Y, W (y|x) represents the conditional
+
+probability of BSC, i.e. W (1|0) = W (0|1) = p and W (0|0) =
+
+W (1|1) = 1 − p where p ∈ [0, 1/2). Assume a sending
+
+message is x = (x1, . . . , xn) ∈ X n and a received message be y = (y1, . . . , yn) ∈ Yn. Since we assume memoryless
+
+channel, the conditional probability p(y|x) is represented
+
+as: p(y|x) =
+
+n j=1
+
+W
+
+(yj
+
+|xj
+
+).
+
+The
+
+ML
+
+decoding
+
+choose
+
+x ∈ X n that maximizes p(y|x), thus equivalently maximizes
+
+n j=1
+
+log
+
+W (yj|xj).
+
+We
+
+put
+
+γj := log (W (yj|0)/W (yj|1)) , (1 ≤ j ≤ n). (6)
+
+Minimize:
+n
+γjxj subject to P ix ∈ Pd, (1 ≤ i ≤ m). (7)
+j=1
+By the relaxation of each binary variable xi (1 ≤ i ≤ n) to the interval [0, 1], we obtain LP (linear programming) relaxation of IP (7) (The LP relaxation by Feldman etc. [10] is a kind of this relaxation):
+Minimize:
+n
+γjxj subject to P ix ∈ PPd, (1 ≤ i ≤ m), (8)
+j=1
+where PPd is a convex hull of Pd, i.e. PPd = conv(Pd).
+
+C. ADMM Formulation
+For expressing LP decoding formulation (8) to corresponding ADMM formulation, the “replica” vectors zi, (1 ≤ i ≤ m) are introduced. Moreover, to accelerate the computation, we also introduce a penalty term. Hence, we consider
+
+Minimize:
+
+n
+
+n
+
+γjxj − α (xj − 0.5)2
+
+(9)
+
+j=1
+
+j=1
+
+subject to P ix = zi, zi ∈ PPd, (1 ≤ i ≤ m),
+
+where α > 0 is an acceleration parameter and the second term of objective function is a penalty term. Put z = (z1, . . . , zm) and λ = (λ1, . . . , λm). The ADMM method optimize the augmented Lagrangian:
+
+n
+
+n
+
+Lµ(x, z, λ) := γjxj − α (xj − 0.5)2
+
+(10)
+
+j=1
+
+j=1
+
++
+
+m
+
+λiT
+
+(P
+
+ix
+
+−
+
+zi)
+
++
+
+µ 2
+
+m
+
+∥P ix − zi∥22,
+
+i=1
+
+i=1
+
+The update process of ADMM is as follows:
+
+xq+1 := arg min Lµ (x, zq, λq)
+
+(11)
+
+x∈[0,1]n
+
+z
+
+q+1 i
+
+:=
+
+arg
+
+min
+z ∈(PPd )m
+
+Lµ
+
+xq+1, z, λq
+
+, (1 ≤ i ≤ m)
+
+λqi +1 := λqi + µ P ixq+1 − zqi +1 , (1 ≤ i ≤ m).
+
+Let δx ∈ Rn be a variation vector of x, γ = (γ1, . . . , γn) and 1 = (1, . . . , 1)T . Then, we obtain
+
+Lµ (x + δx, z, λ) − Lµ(x, z, λ)
+
+= ⟨γ, δx⟩ − 2α⟨x − 0.5 · 1, δx⟩
+
+m
+
+m
+
++ ⟨λi, P iδx⟩ + µ ⟨P ix − zi, P iδx⟩
+
+i=1
+
+i=1
+
+= ⟨γ, δx⟩ − 2α⟨x − 0.5 · 1, δx⟩
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1777
+
+m
+
+m
+
++
+
+⟨P
+
+T i
+
+λi
+
+,
+
+δx⟩
+
++
+
+µ
+
+⟨P
+
+T i
+
+P
+
+i
+
+x
+
+−
+
+P
+
+T i
+
+z
+
+i,
+
+δx⟩
+
+i=1
+
+i=1
+
+= ⟨γ, δx⟩ − 2α⟨x − 0.5 · 1, δx⟩
+
+m
+
+m
+
++
+
+⟨P
+
+T i
+
+λi
+
+,
+
+δx⟩
+
++
+
+⟨µP
+
+x
+
+−
+
+µ
+
+P
+
+T i
+
+zi,
+
+δx⟩,
+
+i=1
+
+i=1
+
+where P =
+
+m i=1
+
+P
+
+T i
+
+P
+
+i.
+
+Thus,
+
+we
+
+obtain,
+
+2α P− I
+µ
+
+m
+x=
+i=1
+
+P
+
+T i
+
+zi
+
+−
+
+1 µ
+
+P
+
+T i
+
+λi
+
+αγ − 1− .
+µµ (12)
+
+In the case of (5), we have
+
+1 0 0 0 0 0
+
+0 1 0 0 0 0
+
+P=
+
+3
+
+P
+
+T i
+
+P
+
+i
+
+=
+
+0 0
+
+0 0
+
+2 0
+
+0 2
+
+0 0
+
+0 0
+
+,
+
+i=1
+
+0 0 0 0 1 0
+
+000002
+
+and in general, we have (P )i,j = |Nv(j)|δi,j. For simplicity,
+
+we
+
+denote
+
+by
+
+zi(j),
+
+the
+
+j-th
+
+component
+
+of
+
+P
+
+T i
+
+zi
+
+.
+
+Similarly,
+
+λi(j)
+
+denotes
+
+the
+
+j-th
+
+component
+
+of
+
+P
+
+T i
+
+λi.
+
+Hence
+
+from
+
+(12)
+
+and the restriction xj ∈ [0, 1] for (1 ≤ j ≤ n), it holds that
+
+xj
+
+1
+
+= Π[0,1]
+
+|Nv
+
+(j)|
+
+−
+
+2α µ
+
+(1 ≤ j ≤ n),
+
+m
+
+zi(j)
+
+−
+
+λ(ij) µ
+
+i=1
+
+− α + γj , µ (13)
+
+where Π[0,1] is a projection to the interval [0, 1]. To obtain the minimizer of the second expression of (11), we rewrite the third and fourth terms of (10) as follows:
+
+λTi
+
+(P
+
+ix
+
+−
+
+zi)
+
++
+
+µ ∥P
+2
+
+ix
+
+−
+
+zi∥22
+
+µ =
+2
+
+∥P ix
+
++
+
+λi µ
+
+−
+
+zi∥22
+
+−
+
+∥λi∥22 µ2
+
+.
+
+Hence it holds
+
+zqi +1
+
+=
+
+arg min ∥P ixq+1
+z i ∈PPd
+
++
+
+λiq µ
+
+− zi∥2,
+
+which is a metric
+
+projection of
+
+P ixq+1
+
++
+
+λqi µ
+
+onto
+
+the closed
+
+convex set PPd with d = N0dc, i.e.
+
+ziq+1 = ΠPPd
+
+P ixq+1
+
++
+
+λiq µ
+
+.
+
+(14)
+
+Summarizing the above argument, the ADMM decoding procedure is described as follows. Recall that y = x + e is a received message where e satisfies w(e) = t.
+
+Fig. 1. DFR of each decoding method for (n, k) = (2000, 1000) and dc = 5 LDPC code.
+
+Algorithm 2 The ADMM Decoding Algorithm
+
+1: Initialize γ as (6), q = 0, set a positive integer M and
+
+ϵ > 0, a small number.
+
+2: Initialize zi = P iy, λi = 0, (1 ≤ i ≤ m). 3: repeat
+
+4: for all j (1 ≤ j ≤ n) do
+
+5: Update xj accrding to (13). 6: end for
+
+7: for all i (1 ≤ i ≤ m) do
+
+8:
+
+set vi = P ix + λi/µ.
+
+9:
+
+zi ← ΠPPn0dc (vi).
+
+10:
+
+λi ← λi + µ (P ix − zi).
+
+11: end for
+
+12: q ← q + 1 13: until HxT = 0 (Parity satisfied) or q > M
+
+14: return x.
+
+The most time consuming part of the Algorithm 2 is Step 9: zi ← ΠPPn0dc (vi), a projection of vi to code-polytope PPn0dc .
+Here, we have to note the projection algorithm to the codepolytope PPn0dc (Algorithm 2 of [4]) seems to need some modification, and without such modification, non-negligible degradation in decoding performance arises. Indeed, sometimes mismatching values were observed for the convexquadratic programming (21) compared to the one obtained by MIP solver Gurobi optimizer 9.5 [12] (we note replacing the projection algorithm for (21) with MIP solver is unrealistic from the time-consuming view point).
+We will show these degradations with numerical examples. Figure 1 shows the DFR of each decoding method for (n, k) = (2000, 1000) and dc = 5 LDPC code. In the figure labels “SPA” and “BF” mean sum-product algorithm and bit-flipping algorithm, respectively. While labels “PROJO” and “PROJ” mean ADMM decoding with original projection algorithm of [4] (Algorithm 2) and corrected projection algorithm respectively. We can observe that “PROJ” decreases DFR about 1/10 times to “PROJO” for each error number t
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1778
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+TABLE I
+AVERAGE DECODING TIME (MS) OF EACH DECODING METHODS FOR (n, k, dc, n0) = (9802, 4601, 45, 2) CODE
+
+Fig. 2. DFR of each decoding method for (n, k) = (2000, 1000) and dc = 25 MDPC code.
+and even superior to SPA. We note both ADMM decoding use parameters α = 10, µ = 6 and M = 10000. Figure 2 shows the DFR of each decoding method for (n, k) = (2000, 1000) and dc = 25 MDPC code. In this case SPA deteriorates its performance compared to the of Figure 1 since the lowdensity property of parity check matrix was lost. Comparing “PROJO” with “PROJ”, we observe that in this case “PROJ” also decreases DFR about 1/10 times to “PROJO” for each error number t. We note both ADMM decoding use parameters α = 10, µ = 6 and M = 10000.
+From these observations, we conclude that the correction of projection algorithm is an important factor for the improvement of DFR.
+D. Modified Projection Algorithm
+Following is a correction of projection algorithm to PPn0dc . For simplicity, we abbreviate d = n0dc and denote by ⌊x⌋even the largest even number integer smaller than or equals to x. The correctness of the following algorithm is shown in Appendix A.
+IV. NUMERICAL EXPERIMENTS
+We examine the proposing ADMM based decoding with some parameters of Table II of [16]. Numerical examinations were executed on Intel Core i9-7980XE CPU @ 2.60GHz processor, with no parallelization (except Step 8 in Algorithm 5) and ANSI C implementation (icc 2021.6.0 with -O2 option). Although we are concerned with DFR properties of each method, we show their decoding time in our implementation. Table I shows the average execution time (ms) for (n, k, dc, n0) = (9802, 4601, 45, 2) code. The number of experiments for each method is 100000. In SP, maximum iteration number is set as 50 and in ADMM, parameters are set as (µ, α, M ) = (6, 15, 10000). The label “ME” is the “matrixextension” method proposed in [7]. The maximum extension size of parity matrix is 14403 × 19204.
+
+Algorithm 3 The Projection Algorithm ΠPPd (u)
+
+1: Permutate u to v in descending order: v1 ≥ v2 ≥ · · · ≥ vd. Let Q be the corresponding permutation matrix i.e. v = Qu.
+
+2: zˆ ← Π[0,1]d (v). Put r = ⌊∥zˆ∥1⌋even. 3: Put f = (f1, . . . , fd) and set fi = 1, (1 ≤ i ≤ r + 1),
+fi = −1, (r + 2 ≤ i ≤ d).
+4: if r = d or r = d − 1 then 5: return QT zˆ.
+
+6: end if
+
+7: if
+
+d i=1
+
+fizˆi
+
+≤
+
+r
+
+then
+
+8: return QT zˆ.
+
+9: end if
+
+10:
+
+set βmax ←
+
+1 2
+
+(vr+1
+
+−
+
+vr+2).
+
+11: set βˆ ← βˆ1, . . . , βˆ2d as
+
+vi − 1,
+
+
+
+βˆi
+
+=
+
+−vi, vi−d,
+
+
+
+
+
+1 − vi−d,
+
+(1 ≤ i ≤ r + 1) (r + 2 ≤ i ≤ d) (d + 1 ≤ i ≤ d + r + 1) (d + r + 2 ≤ i ≤ 2d).
+
+12: set β˜ ← β˜ ∈ βˆ ∪ {0} ∪ {βmax} | 0 ≤ β˜ ≤ βmax . 13: Sort β˜ to β in ascending order. Hence β =
+{β1, β2, . . . βp} satisfies 0 = β0 < β1 < · · · < βp = βmax.
+
+14: set L ← 0, R ← p, M ← ⌊(L + R)/2⌋. 15: while R − L > 1 do 16: set
+
+zˆi =
+
+vi − βM , vi + βM ,
+
+(1 ≤ i ≤ r + 1) (r + 2 ≤ i ≤ d).
+
+17:
+
+if
+
+d i=1
+
+fi
+
+·
+
+Π[0,1] (zˆi)
+
+< r then
+
+18:
+
+R ← M.
+
+19: else
+
+20:
+
+L ← M.
+
+21: end if
+
+22: M ← ⌊(L + R)/2⌋.
+
+23: end while
+
+24: set
+
+zˆi =
+
+vi − βR, vi + βR,
+
+(1 ≤ i ≤ r + 1) (r + 2 ≤ i ≤ d).
+
+25: set fz ←
+
+d i=1
+
+fi
+
+·
+
+Π[0,1] (zˆi) .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1779
+
+26: set
+
+zˆi =
+
+vi − βL, vi + βL,
+
+(1 ≤ i ≤ r + 1) (r + 2 ≤ i ≤ d).
+
+27: set fz0 ←
+
+d i=1
+
+fi
+
+·
+
+Π[0,1] (zˆi) .
+
+28:
+
+set βopt ←
+
+(r−fz )(βR−βL) fz −fz0
+
++
+
+βR
+
+29: set zi, (1 ≤ i ≤ d) as
+
+zi =
+
+Π[0,1] (vi − βopt) , Π[0,1] (vi + βopt) ,
+
+(1 ≤ i ≤ r + 1) (r + 1 ≤ i ≤ d).
+
+30: return QT z.
+As we can recognize from Figures 7 and 8, error correction ability of ADMM is superior to BF SP and ME. It is observed that DFR falls rapidly if t is less than certain threshold value t0 (for the case (n, k) = (9802, 4601), t0 = 103 and for the case (n, k) = (10779, 3593), t0 = 66). Thus, we can expect further decrement of DFR if with some preprocessing, error number t could be lowered than t0. For that purpose, we introduce the method RSPA (reproducing sum-product algorithm), which efficiently reuse decoding failure results of SPA as a preprocessing for ADMM. The algorithm RSPA is as follows:
+
+Fig. 3. The barchart of the number of observed values of dh(c′) − t in the case of SPA decoding and (n, k, dc, n0) = (9602, 4801, 45, 2) code (t = 110).
+
+Algorithm 4 The reproducing sum-product algorithm
+
+1: set NSPA as maximum iteration number, i = 0.
+2: while i < NSPA do 3: set c′ as decoding result of SPA for c (after hard
+
+decision is applied to each bits). 4: if Hc′T = 0 then
+
+5:
+
+return c′.
+
+6: end if
+
+7:
+
+c ← c′.
+
+8: i ← i + 1.
+
+9: end while
+
+10: return decoding failure.
+
+Fig. 4. The bar chart of the number of observed values of dh(c′) − t in the case of SPA decoding and (n, k, dc, n0) = (9602, 4801, 45, 2) code (t = 95).
+
+We consider the case HcT ̸= 0. Put the difference between noiseless received information mG′ and decoding result of SPA (after hard decision to each bits) as dh(c′): i.e. dh(c′) = w (mG′ − c′). Thus dh(c′) − t represents decrease (if dh(c′)−t < 0) and increase (if dh(c′)−t > 0) of error bits number ∥e∥1 after hard decision. Figure 3 show the number of observed values of dh(c′) − t when t = 110. For example, the number of trials which take −5 ≤ dh(c′) − t ≤ −1 occupies 51, while the number of trials which take 1 ≤ dh(c′) − t ≤ 5 is 5, under total 100 decoding errors. Figure 4 shows
+the case t = 95. In this case, there is no case which takes dh(c′) − t ≥ 0. From Figure 3 and 4, we can expect that as the iteration number i increases, the value dh(c′) − t tends to
+decrease. As a result, all errors will be fixed as the iteration
+number increases. We note that the same effect cannot be
+expected for BF algorithm. Figure 5 and 6 are results obtained
+by replacing the decoding method SPA in Algorithm 4 to
+BF under the circumstance of Figure 3 and 4 respectively. We observe that Figure 5 and 6 show dh(c′)−t > 0 almost all
+
+Fig. 5. The bar chart of the number of observed values of dh(c′) − t in the case of BF decoding and (n, k, dc, n0) = (9602, 4801, 45, 2) code (t = 110).
+cases, and hence we cannot expect the reduction of erroneous bits by successive hard decision of decoding results.
+After each iteration of RSPA, in most case, the number of erroneous bits is expected to reduce, hence by applying ADMM method to c obtained by hard decision in Step 7, further improvement in DFR can be expected. We call this hybrid algorithm RSPA-ADMM method.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1780
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+Fig. 6. The bar chart of the number of observed values of dh(c′) − t in the case of BF decoding and (n, k, dc, n0) = (9602, 4801, 45, 2) code (t = 95).
+Fig. 8. DFR of each decoding method for (n, k, dc, n0) = (10779, 3593, 51, 3) code.
+
+Fig. 7. DFR of each decoding method for (n, k, dc, n0) = (9602, 4801, 45, 2) code.
+
+Algorithm 5 The RSPA-ADMM Method
+
+1: set NSPA as maximum iteration number, i = 0.
+2: while i < NSPA do 3: set c′ as decoding result of SPA for c (after hard
+
+decision is applied to each bits). 4: if Hc′T = 0 then
+
+5:
+
+return c′.
+
+6: end if
+
+7:
+
+c ← c′.
+
+8: Apply ADMM decoding to c. set c′ as decoding result
+
+of ADMM for c.
+
+9: if Hc′T = 0 then
+
+10:
+
+return c′.
+
+11: end if
+
+12: i ← i + 1.
+
+13: end while
+
+14: return decoding failure.
+
+We note Step 8 can be done in parallel. Figure 7 shows the DFR of 6 methods (SPA, BF, ME, RSPA, ADMM, RSPA-ADMM) for (n, k, dc, n0) = (9602, 4801, 45, 2) code. The maximum iteration number of
+
+SP was set to 50. The parameters (µ, α, M ) in ADMM and RSPA-ADMM methods were fixed to (6, 15, 10000). We note parameters µ and α were chosen by heuristic trials, hence these may not be an optimal choice. In spite of this, it holds that ADMM and RSPA-ADMM attains DFR lower than 10−7 at t = 103 compared to the result that BF decoding requires t = 87 for attaining almost the same DFR. We note DFR of RSPA-ADMM when t = 103 might be less than 10−8, since no decoding error was observed under 108 trials. We can observe that RSPA-ADMM improves the DFR compared to ADMM. Figure 8 shows the DFR of 6 methods (SPA, BF, ME, RSPA, ADMM, RSPA-ADMM) for (n, k, dc, n0) = (10779, 3593, 51, 3) code. The maximum iteration number of SP was set to 50 and the maximum extension size of parity matrix in ME is 14372 × 21588. The parameters (µ, α, M ) in ADMM and RSPA-ADMM methods were fixed to (8, 15, 10000). It seems to be remarkable that ADMM and RSPA-ADMM attains DFR lower than 10−7 at t = 66 compared to the result that BF decoding requires t = 55 for attaining almost the same DFR. We note DFR of RSPA-ADMM when t = 66 might be less than 10−8, since no decoding error was observed under 108 trials. In this case, we also observe that RSPA-ADMM improves the DFR compared to ADMM.
+A. Comparison With the Decoding Algorithm of BIKE
+BIKE (Bit Flipping Key Encapsulation) is submitted for round 4 selection of NIST PQC [30]. For its λ bits security under IND-CPA circumstance, work-factor of QCSDP (QC-Syndrome Decoding Problem) and QCCFP (QC-Codeword Finding Problem) are required to be over 2λ; see p.8-9 of [6] and p.7 of [23]. These assumptions are satisfied by the appropriate choice of (m, t) and (m, dc) respectively. For example, Table II of [16] represents parameters (n, m, dc, t) for λ bit IND-CPA security. However, for the λ bits IND-CCA security, further requires that DFR≤ 2−λ; see p. 9 of [6] and p. 7 of [23]. Direct confirmation of this assumption is impossible, so DFR are computed for some
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1781
+
+Fig. 9. DFR of each decoding method for (n, k, dc, n0) = (9602, Fig. 10. DFR of each decoding method for (n, k, dc, n0) = (19714,
+
+4801, 45, 2) code.
+
+9857, 71, 2) code.
+
+feasible (m, t, dc) cases, and using these information, fixing (t, dc), the matrix size m that reaches DFR≤ 2−λ is computed by the method of extrapolation. The current version of BIKE
+uses BGF (Black-Gray-Flip) decoder [9] that fix over flipped
+erroneous bits belonging to black and gray lists once. The backflip+ algorithm [8] achieves the same effect as the BGF
+decoder by introducing the concept of TTL (Time-To-Live) period for each bit. As shown on p.3 of [8], the backflip+
+algorithm performs better than the BG decoder (so possibly
+BGF decoder) when a large number of iterations for flipping
+is allowed (it is also noted for practical iteration number and
+large matrix size m, BG decoder performs better). Figure 9 is the comparison with back-flip+ decoder
+(we have used the decoder from [24]) with RSPA-ADMM
+algorithm for (n, k, dc, n0) = (9602, 4801, 45, 2) (80-bit security parameter from Table II of [16]). The label “BFP+-100” and “BFP+-108” are the results of backflip+ algorithm with an iteration number of 100 and 108 respectively. It can be seen that the DFR curve of “BFP+-100” is almost the same as the “RSPA”. It is observed that when t > 105, the DFR of BFP+108 is lower than that of the RSPA-ADMM method. While
+for the case t ≤ 105, the DFR of RSPA is lower than that of BFP+-108 and at t = 105 it shows rapid decrease of DFR compared to the “BFP+-108” DFR curve. We note the DFR of BFP+-108 seems to be gradually approaching the result of BFP+-100.
+Figure 10 is the comparison BGF and backflip+
+decoders with RSPA-ADMM algorithm for (n, k, dc, n0) = (19714, 9857, 71, 2) (128-bit security parameter from
+Table II of [16]). The reason we examined the BGF algorithm
+is that the parameter of the threshold function is given by
+on page 8 of BIKE [6] for (dc, t) = (71, 134). The label “BGF-106” is th result of BGF algorithm with an iteration number of 106. The labels “BFP+-106” and “BFP+-100”
+are the results of the Backflip+ algorithm with an iteration number of 106 and 100 respectively. Since we make the
+number of iterations very large, as mentioned above, the backflip+ algorithm outperforms the BGF algorithm. We can
+
+see that the DFR of RSPA-ADMM is almost the same as that of “BFP+-106” at t = 150, but shows a rapid decrease in DFR compared to the “BFP+-106” DFR curve. In the RSPA-ADMM algorithm, the parameters are set as (µ, α, M ) = (13, 26, 10000) in the ADMM part and the iteration number is 100 in the sum-product part. We note that the average decoding time of RSPA-ADMM is large (about 3000ms even for t = 134), and therefore improvement of the algorithm seems necessary for larger values of m.
+
+B. Weak Key Examination
+
+Weak keys are a set of keys that have relatively high DFR compared to ordinary random keys [1], [3], [8], [18], [23]. Thus, weak keys are a potential thread for IND-CCA security if the probability of their occurrence is not negligible. In this subsection, we examine Type I weak keys of [23] (originally defined in [8]) and show that Type I weak keys are not weak keys for the ADMM decoder, but rather, these keys are “strong keys”. First, we introduce two lemmas about ring isomorphism.
+Lemma 1: Assume hi ∈ GF2 (0 ≤ i ≤ m). Then
+
+φ : H → h0 + h1x + · · · + hm−2xm−2 + hm−1xm−1 (15)
+
+is ring isomorphism from r × r circurant matrices to quotient ring GF2[x]/(xm − 1).
+For example, in the case
+
+1 1 0 1 0
+
+1 0 1 1 0
+
+0 1 1 0 1
+
+0 1 0 1 1
+
+Ha = 1 0 1 1 0 , Hb = 1 0 1 0 1 ,
+
+0 1 0 1 1
+
+1 1 0 1 0
+
+10101
+
+01101
+
+0 1 1 0 0
+0 0 1 1 0 φ (Ha + Hb) =φ 0 0 0 1 1
+1 0 0 0 1
+11000
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1782
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+Fig. 11.
+
+DFR of each decoding method for (n, k, dc,
+
+n0) = (9602, 4801, 45, 2) and (f, δ) = (23, 0) Type I weak key
+
+code.
+
+Fig. 12.
+
+DFR of each decoding method for (n, k, dc,
+
+n0) = (9602, 4801, 45, 2) and (f, δ) = (20, 7) Type I weak key
+
+codecode.
+
+=x + x2 = 1 + x + x3 + 1 + x2 + x3
+=φ(Ha) + φ(Hb),
+and 0 0 1 1 1 1 0 0 1 1
+φ (Ha · Hb) =φ 1 1 0 0 1 1 1 1 0 0 01110
+=x2 + x3 + x4 = 1 + x + x3 · 1 + x2 + x3
+=φ(Ha) · φ(Hb).
+Also, following holds. Lemma 2: For any δ ∈ Zm \ {0}, ϕδ : x → xδ is the ring
+isomorphism from GF2[x]/(xm − 1) to GF2[x]/(xm − 1). For example, in the case δ = 3 and h(x) = 1 + x + x3 ∈
+GF2[x]/(x5 − 1),
+ϕ3(h(x)) = 1 + x3 + x9 = 1 + x3 + x4.
+Using above lemmas, we define Type I weak keys [23]. Definition 3: Let
+H = [H0, H1] ,
+where each H0, H1 is m×m binary circulant matrix and each row weight is dc. Further, put φ(H0) = h0 and φ(H1) = h1 respectively, where φ is a ring isomorphism defined in Lemma 1. Type I weak keys are specified as the pair (h0, h1) with
+hi = ϕδ (1 + x + · · · + xf−1) + hi′ , i ∈ {0, 1},
+such that |h′i| = dc − f , (i ∈ {0, 1}) and degree of hi′ , (i ∈ {0, 1}) is higher than f − 1.
+Figure 11 is the DFR of the individual methods BF, SPA, BFP+-106 and ADMM for a Type I weak key of (f, δ) = (23, 0) and (n, k, dc, n0) = (9602, 4801, 45, 2) code. We can see that only ADMM decreases its DFR rapidly at t = 115 and the other three methods degrade their DFR compared to the normal random key case; compare figures 11 and 9. It may
+
+be interesting to note that the DFR of the ADMM method shows an improvement compared to the normal random key case, so “weak keys” seem to be rather “strong keys” for the ADMM algorithm (at present, we can not provide a satisfactory explanation for this phenomena). Figure 12 is the DFR of the individual methods BF, SPA, BFP+-106 and ADMM for a Type I weak key of (f, δ) = (20, 7) and (n, k, dc, n0) = (9602, 4801, 45, 2) code. In this case, we can see the almost the same DFR behavior as in Figure 11.
+V. DISCUSSION
+This paper presented the effectiveness of ADMM based methods in decoding QC-MDPC codes. Since proposing two methods ADMM and RSPA-ADMM have abilities to correct more errors than standard error number assumed for BF algorithm, these ADMM based decoding can detect irregular usage of error numbers that aimed for the collection of DFR information by adversaries. Hence, proposing schemes may serve as an audit device which guard the conventional BF algorithm based decoding systems.
+Although ADMM based decoding showed certain improvements in DFR, following problems remains. First, the systematic methods for the determination of the optimal parameters (µ, α) in ADMM decoding algorithm.
+Second, an acceleration problem of the ADMM decoding methods. In Algorithm 2, Step 5 and 7 can be done in parallel. Thus, the acceleration of the projection to ΠPPn0dc remains as an essential problem. Zhang-Siegel [28] proposes an alternative projection algorithm that is reported to be effective in improving the decoding speed for LDPC codes. The essential improvement of [28] is replacing sorting operation in Step 1 of Algorithm 3 with “cut search algorithm”. Since the numbers of n0dc that should be sorted in Step 1 of Algorithm 3 are rather large number for MDPC codes compared to LDPC codes cases, the “cut search algorithm” might work more effectively than LDPC codes cases in [28].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1783
+
+Third, the error correction capability analysis done for the bitflipping algorithm as [19] and [22] seems to be necessary for the proposed ADMM-based algorithm.
+Source Code Usage: The source code for validating the results in Figures 11 and 12 is available from
+https://www.nda.ac.jp/ wata/ADMM_prog/ADMM4.zip They are implemented in ANSI C.
+
+APPENDIX
+A. Preparation
+In this section, we show the validity of projection algorithm 3 for the sake of completeness. The main difference with Algorithm 2 of [4] is the set βˆ in Step 11 of Algorithm 3. In Algorithm 2 of [4], the set βˆ is defined as:
+
+βˆi =
+
+vi − 1, −vi,
+
+(1 ≤ i ≤ r + 1) (r + 2 ≤ i ≤ d).
+
+This seems to be the main factor which cause non-negligible
+degradation of DFR in Figure 1 and 2.
+First, we prepare lemmas necessary for our purpose.
+Lemma 4 ( [4, Propostion 3]): Assume the components of v ∈ Rd is sorted in descending (ascending) order, then the components of ΠPPd maintain this order.
+Definition 5 Assume the components of v, w ∈ Rd are sorted in descending order, i.e.
+
+v1 ≥ v2 ≥ · · · ≥ vd, w1 ≥ w2 ≥ · · · ≥ wd.
+
+Then the vector w is said to “majorizes” u if
+
+q k=1
+
+uk
+
+≤
+
+d k=1
+
+uk
+
+=
+
+q k=1
+
+wk
+
+,
+
+(1 ≤ q ≤ d − 1)
+
+d k=1
+
+wk
+
+.
+
+Lemma 6 ( [4, Theorem 1]): Suppose vectors u and w are sorted in descending order. Then u is in the convex hull of all permutations of w if and only if w majorizes u.
+We define Pds = {x ∈ {0, 1}d | ∥x∥1 = s} and PPsd = conv(Psd). Recall that PPd = conv(Pd), so it holds
+
+PPd = conv (∪0≤s≤d,s:evenPPsd) .
+
+(16)
+
+From Lemma 6, it holds that u ∈ PPsd ⇐⇒
+
+q k=1
+
+uk
+
+≤
+
+min(q, s),
+
+(1 ≤ q ≤ d − 1)
+
+d k=1
+
+uk
+
+=
+
+s.
+
+(17)
+
+Further, following lemma (two-slice lemma) holds:
+
+Lemma 7 ( [4, Lemma 2]): Suppose the components of z ∈
+
+PPd is sorted in descending order. Define r be the minimum
+
+even integer greater than or equal to ⌊∥z∥1⌋even. Then z is
+
+expressed by convex combination of PPrd and PPrd+2.
+
+Suppose
+
+u
+
+∈
+
+PPrd
+
+∩
+
+[0, 1]d
+
+and
+
+v
+
+∈
+
+r+2
+PPd
+
+∩
+
+[0, 1]d.
+
+Then,
+
+from Lemma 7, for α satisfying 0 ≤ α ≤ 1, it holds
+
+q
+
+zk
+
+(18)
+
+k=1 q
+
+= (αuk + (1 − α)vk)
+
+k=1
+
+q
+
+q
+
+= α uk + (1 − α) vk
+
+k=1
+
+k=1
+
+≤ α min(q, r) + (1 − α) min(q, r + 2),
+
+(1 ≤ q ≤ d − 1).
+
+and
+
+d
+
+d
+
+zk = (αuk + (1 − α)vk)
+
+(19)
+
+k=1
+
+k=1
+
+d
+
+d
+
+= α uk + (1 − α) vk = αr + (1 − α)(r + 2).
+
+k=1
+
+k=1
+
+We note in the case q ≤ r, (18) clearly holds. While in the case q ≥ r + 2, (since d − 1 ≥ q ≥ r + 2, this case occurs when r + 3 ≤ d), we can observe (18) holds if(19) is valid. Thus, (18) should be considered only for the case q = r + 1. For the case q = r + 1, (since d − 1 ≥ q = r + 1, this case occurs when r + 2 ≤ d) (18) becomes as follows
+
+r+1
+zk ≤ αr + (1 − α)(r + 1) = r + 1 − α,
+k=1
+
+(r + 2 ≤ d). (20)
+
+From (19), we have
+
+1
+
+d
+
+α=1+ r− 2
+
+zk ,
+
+k=1
+
+and hence the projection ΠPPd (v) for v ∈ Rd is described as convex quadratic programming problem:
+
+(P) Minimize ∥v − z∥22
+
+(21)
+
+Subject to
+
+0 ≤ zi ≤ 1, (1 ≤ i ≤ d)
+
+(22)
+
+zi ≥ zi+1, (1 ≤ i ≤ d − 1)
+
+(23)
+
+d
+
+r ≤ zk ≤ r + 2 ↔ 0 ≤ α ≤ 1
+
+(24)
+
+k=1
+
+r+1
+
+d
+
+zk −
+
+zk ≤ r, (r + 2 ≤ d) ↔ (20). (25)
+
+k=1
+
+k=r+2
+
+We note (25) is valid only in the case r + 2 ≤ d and in this case we can express (25) by
+
+f
+
+T r
+
+z
+
+≤
+
+r
+
+(26)
+
+where
+
+f
+
+T r
+
+=
+
+(1, . . . , 1, −1, . . . , −1).
+
+Following lemma is well-known.
+
+Lemma 8: Assume f , gi, (1 ≤ i ≤ m) are all convex functions on Rd. Define the minimization problem:
+
+(CP) Minimize f (x)
+
+(27)
+
+Subject to gi(x) ≤ 0, (1 ≤ i ≤ m), x ∈ Rd.
+
+Suppose x¯ satisfies Karush-Kuhn-Tucker (KKT) conditions. Then x¯ is a (global) minimizer of problem (CP).
+In the case of problem (P), f is a strictly convex function on Rd, thus we obtain:
+Lemma 9: Assume x¯ satisfies KKT condition for problem (P). Then x¯ is a unique (global) minimizer of problem (P).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1784
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+B. Varidity of Algorithm 3
+
+Since r = ⌊∥zˆ∥1⌋even (step 2), we have
+
+r ≤ d.
+
+(28)
+
+As noted (26) is valid only in the case r+2 ≤ d, we consider the cases r = d or r + 1 = d for problem (P). For these cases, from the definition of r it holds
+d
+r ≤ zˆk ≤ r + 2.
+k=1
+Since v1 ≥ v2 ≥ · · · ≥ vd, zˆk (1 ≤ k ≤ d) keeps this order. Thus
+
+zˆk+1 − zˆk ≥ 0, (1 ≤ k ≤ d − 1).
+
+From the definition 0 ≤ zˆk ≤ 1, (1 ≤ k ≤ d). Hence zˆ is
+
+a minimizer of problem (P) under constraint conditions (22),
+
+(23) and (24); (see step 4 and 5).
+
+Here after, we fix r + 2 ≤ d. First we consider the case
+
+f
+
+T r
+
+zˆ
+
+≤
+
+r.
+
+As
+
+in
+
+the
+
+case
+
+r
+
+=
+
+d
+
+or
+
+r
+
++
+
+1
+
+=
+
+d,
+
+zˆ
+
+satisfies
+
+conditions (22), (23) and (24). Moreover, form the assumption,
+
+(25) is satisfied. Hence zˆ is a minimizer of problem (P); (see
+
+step 7 and 8).
+
+Hence we can assume
+
+f
+
+T r
+
+zˆ
+
+>
+
+r.
+
+(29)
+
+The KKT condition for the problem (P) is described as: there exists β, ν, η, ξ, θ and ζ such that following conditions are satisfied.
+
+z =v − βf r − ν + η − (ξ − ζ)1 + ST θ,
+
+(30)
+
+0
+
+≤
+
+β
+
+⊥
+
+f
+
+T r
+
+z
+
+−
+
+r
+
+≤
+
+0,
+
+(31)
+
+0 ≤ ν ⊥ z ≤ 1,
+
+(32)
+
+0 ≤ η ⊥ z ≥ 0,
+
+(33)
+
+θ ⊥ Sz ≥ 0,
+
+(34)
+
+0 ≤ ξ ⊥ 1T z − r − 2 ≤ 0,
+
+(35)
+
+0 ≤ ζ ⊥ 1T z − r ≥ 0,
+
+(36)
+
+then z is a unique minimizer of (P). Here ⊥ means for example for (32) νi(1 − zi) = 0, (1 ≤ i ≤ d) and
+
+1 −1 0 0 · · · 0 0 
+
+0 1 −1 0 · · · 0 0 
+
+S
+
+=
+
+  
+
+...
+
+... . . .
+
+...
+
+.  
+
+0 0 0 0 · · · 1 −1
+
+We note the uniqueness of the minimizer follows from Lemma 8.
+In the following we see that such β, ν, η, ξ, θ and ζ exists. For fixed β > 0 we decide νi, (1 ≤ i ≤ d) as follows:
+
+νi =
+
+0, vi − β((f r)i) − 1,
+
+vi − β(f r)i ≤ 1 vi − β(f r)i > 1.
+
+(37)
+
+Similarly, ηi is decided as follows:
+
+ηi =
+
+0, −vi + β(f r)i,
+
+vi − β(f r)i ≥ 0 vi − β(f r)i < 0.
+
+(38)
+
+Moreover, we fix ξ = ζ = 0 and θ = 0. From these, z, which is the LHS of (30) is regarded as a function of β and expressed as
+
+z(β) = Π[0,1]d (v − βf r) .
+
+(39)
+
+Hence, from (37), condition (32) is satisfied, also form (38), condition (33) is satisfied. As Step 10, range of β is defined as
+1 0 ≤ β ≤ βmax = 2 (vr+1 − vr+2) .
+We note following holds:
+
+β ≤ βmax ←→ vr+2 + β ≤ vr+1 − β.
+
+From
+
+(z(βmax))r+1 = Π[0,1] (vr+1 − βmax) 1
+= Π[0,1] 2 (vr+1 + vr+2)
+and
+
+(z(βmax))r+2 = Π[0,1] (vr+2 + βmax) 1
+= Π[0,1] 2 (vr+1 + vr+2) = (z(βmax))r+1 ,
+
+we have
+
+r
+
+f rz(βmax) = (z(βmax))i + (z(βmax))r+1 (40)
+i=1
+
+d
+
+− (z(βmax))r+2 −
+
+(z(βmax))i
+
+i=r+3
+
+r
+
+d
+
+= (z(βmax))i −
+
+(z(βmax))i
+
+i=1
+
+i=r+3
+
+d
+
+≤r−
+
+(z(βmax))i ≤ r.
+
+i=r+3
+
+Since from (29)
+
+f
+
+T r
+
+z(0)
+
+=
+
+f
+
+T r
+
+zˆ
+
+>
+
+r,
+
+there exists βopt (0 < βopt ≤ βmax) such that
+
+f
+
+T r
+
+z(βopt)
+
+=
+
+r.
+
+(41)
+
+We will show that z(βopt) satisfies KKT condition (recall that conditions (32) and (33) are already satisfied). From (41), the condition (31) is satisfied.
+To see (34), Sz(βopt) ≥ 0 is enough (since θ = 0, ⊥ relation is satisfied). From the assumption (Step 1), for non-negative β it holds
+
+v1 − β ≥ v2 − β ≥ · · · ≥ vr+1 − β
+
+and
+
+vr+2 + β ≥ vr+3 + β ≥ · · · ≥ vd + β.
+
+Since 1
+vr+1 − β ≥ vr+2 + β ←→ β ≤ 2 (vr+1 − vr+2) = βmax,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+WATANABE et al.: ADMM AND REPRODUCING SUM-PRODUCT DECODING ALGORITHM
+
+1785
+
+we have
+
+(z(βopt))1 ≥ (z(βopt))2 ≥ · · · ≥ (z(βopt))r+1 ≥ (z(βopt))r+2 ≥ · · · ≥ (z(βopt))d.
+
+Thus, we have shown (34). To see (35) and (36)
+
+d
+
+r ≤ (z(βopt))i ≤ r + 2
+
+(42)
+
+i=1
+
+is enough. From (41),
+
+d
+
+d
+
+r ≤ r+2
+
+(z(βopt))i = (z(βopt))i.
+
+i=r+2
+
+i=1
+
+Also from (41),
+
+d
+
+r+1
+
+(z(βopt))i = (z(βopt))i − r ≤ r + 1 − r = 1,
+
+i=r+2
+
+i=1
+
+we obtain
+
+d
+
+r+1
+
+d
+
+(z(βopt))i = (z(βopt))i +
+
+(z(βopt))i
+
+i=1
+
+i=1
+
+i=r+2
+
+≤ r + 1 + 1 = r + 2.
+
+Hence, we have shown conditions (35) and (36). Moreover, from Lemma 8, βopt is unique. Summarizing the argument, we have shown that z(βopt) is the unique minimizer of the problem (P).
+
+C. Searching Method for βopt Since βopt is unique, bi-section method is effective. Define
+
+φ(β) = f rz(β).
+We can observe that φ is continuous and piecewise linear function. The possible non-differentiable points are such β, satisfying vi −β = 1 or vi −β = 0 or vi +β = 1 or vi +β = 0. We divide set of these possible non-differentiable points in to four sets:
+
+E1 = {vi − 1 | 1 ≤ i ≤ r + 1} , L1 = {vi | 1 ≤ i ≤ r + 1} , E2 = {1 − vi | r + 2 ≤ i ≤ d} , L2 = {−vi | 1 ≤ r + 2 ≤ d}
+
+and put
+
+βˆ = E1 ∪ L1 ∪ E2 ∪ L2.
+
+We set β˜ ← β˜ ∈ βˆ ∪ {0} ∪ {βmax} | 0 ≤ β˜ ≤ βmax
+
+and sort βˆ to β in ascending order. Hence β = {β1, β2, . . . βp}
+
+satisfies 0 = β0 < β1 < · · · < βp = βmax (Step 12 and 13).
+
+We can find βopt effectively with bi-section method by finding
+
+points βj and βj+1 satisfying
+
+s i=1
+
+(f
+
+r
+
+)i(z(βj+1
+
+))i
+
+<
+
+r
+
+(0
+
+≤
+
+j
+
+is=1(f r)i(z(βj ≤ p − 1).
+
+))i
+
+>
+
+r
+
+and
+
+Fig. 13. The graph of φ.
+ACKNOWLEDGMENT
+The authors are grateful to the referees for their careful reading and invaluable comments. They would also like to thank Prof. Koji Nuida (Kyushu University) for the suggestion that they investigate weak keys.
+REFERENCES
+[1] N. Aydin, B. Yildiz, and S. Uludag, “A class of weak keys for the QC-MDPC cryptosystem,” in Proc. Algebr. Combinat. Coding Theory (ACCT), Oct. 2020, pp. 1–4.
+[2] M. Baldi, QC-LDPC Code-Based Cryptography. Cham, Switzerland: Springer 2014.
+[3] M. Bardet, V. Dragoi, J. G. Luque, and A. Otmani, “Weak keys for the quasi-cyclic MDPC public key encryption scheme,” in Progress in Cryptology—AFRICACRYPT 2016 (Lecture Notes in Computer Science), vol. 9646, D. Pointcheval, A. Nitaj, and T. Rachidi, Eds. Heidelberg, Germany: Springer, 2016.
+[4] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[5] E. Berlekamp, R. McEliece, and H. van Tilborg, “On the inherent intractability of certain coding problems (Corresp.),” IEEE Trans. Inf. Theory, vol. IT-24, no. 3, pp. 384–386, May 1978.
+[6] BIKE (Bit Flipping Key Encapsulation). Accessed: 2022. [Online]. Available: https://bikesuite.org
+[7] I. E. Bocharova, T. Johansson, and B. D. Kudryashov, “Improved iterative decoding of QC-MDPC codes in the McEliece public key cryptosystem,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2019, pp. 1882–1886.
+[8] N. Drucker, S. Gueron, and D. Kostic, “On constant-time QC-MDPC decoders with negligible failure rate,” in Code-Based Cryptography (Lecture Notes in Computer Science), vol. 12087, M. Baldi, E. Persichetti, and P. Santini, Eds. Heidelberg, Germany: Springer, 2020.
+[9] N. Drucker, S. Gueron, and D. Kostic, “QC-MDPC decoders with several shades of gray,” in Post-Quantum Cryptography (Lecture Notes in Computer Science), vol. 12100, J. Ding and J. P. Tillich, Eds. Heidelberg, Germany: Springer, 2020.
+[10] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[11] Q. Guo, T. Johansson, and P. Stankovski Wagner, “A key recovery reaction attack on QC-MDPC,” IEEE Trans. Inf. Theory, vol. 65, no. 3, pp. 1845–1861, Mar. 2019.
+[12] Gurobi Optimizer. Accessed: 2023. [Online]. Available: https://www.gurobi.com/
+[13] H. Kaneko, “Look-ahead bit-flipping decoding of MDPC code,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2022, pp. 2922–2927.
+[14] K. Kurosawa and K. Inaba, “Consideration on the NP completeness of linear codes,” IEICE Trans., vol. 10, pp. 953–956, Sep. 1985.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+1786
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 70, NO. 3, MARCH 2024
+
+[15] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[16] R. Misoczki, J.-P. Tillich, N. Sendrier, and P. S. L. M. Barreto, “MDPC-McEliece: New McEliece variants from moderate density parity-check codes,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2013, pp. 2069–2073.
+[17] A. Nilsson, I. E. Bocharova, B. D. Kudryashov, and T. Johansson, “A weighted bit flipping decoder for QC-MDPC-based cryptosystems,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2021, pp. 1266–1271.
+[18] M. R. Nosouhi et al., “Weak-key analysis for BIKE post-quantum key encapsulation mechanism,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 2160–2174, 2023.
+[19] P. Santini, M. Battaglioni, M. Baldi, and F. Chiaraluce, “Analysis of the error correction capability of LDPC and MDPC codes under parallel bit-flipping decoding and application to cryptography,” IEEE Trans. Commun., vol. 68, no. 8, pp. 4648–4660, Aug. 2020.
+[20] N. Sendrier and V. Vasseur, “About low DFR for QC-MDPC decoding,” in Proc. Int. Conf. Post-Quantum Cryptogr., in Lecture Notes in Computer Science, vol. 12100, 2020, pp. 20–34.
+[21] N. Sendrier and V. Vasseur, “On the existence of weak keys for QCMDPC decoding,” Cryptol. ePrint Arch., Rep. 2020/1232, 2020.
+[22] J.-P. Tillich, “The decoding failure probability of MDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2018, pp. 941–945.
+[23] V. Vasseur, “QC-MDPC codes DFR and the IND-CCA security of BIKE,” Cryptol. ePrint Arch., Rep. 2021/1458, 2021.
+[24] QC-MDPC Decoder. Accessed: 2022. [Online]. Available: https:// github.com/vvasseur/qcmdpc_decoder
+[25] P. W. Shor, “Algorithms for quantum computation: Discrete logarithms and factoring,” in Proc. 35th Annu. Symp. Found. Comput. Sci., 1994, pp. 124–134.
+[26] P. Santini, E. Persichetti, and M. Baldi, “Reproducible families of codes and cryptographic applications,” J. Math. Cryptol., vol. 16, no. 1, pp. 20–48, Sep. 2021.
+
+[27] J. Stern, “A method for finding codewords of small weight,” in Coding Theory and Applications (Lecture Notes in Computer Science), vol. 388. Heidelberg, Germany: Springer, 1989.
+[28] X. Zhang and P. H. Siegel, “Efficient iterative LP decoding of LDPC codes with alternating direction method of multipliers,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2013, pp. 1501–1505.
+[29] HQC (Hamming Quasi-Cyclic). Accessed: 2023. [Online]. Available: https://pqc-hqc.org
+[30] Post-Quantum Cryptography. Accessed: 2023. [Online]. Available: https://csrc.nist.gov/Projects/post-quantum-cryptography/
+Kohtaro Watanabe was born in Kanagawa, Japan, in 1965. He received the B.S., M.S., and Ph.D. degrees in mathematics from the Tokyo Institute of Technology in 1989, 1991, and 2004, respectively. Since 2014, he has been a Professor with the Department of Computer Science, National Defense Academy, Japan. His research interests include non-linear ordinary and partial differential equations and information theory.
+Motonari Ohtsuka was born in Osaka, Japan, in 1996. He received the B.S. degree in computer science from the National Defense Academy, Japan, in 2019, where he is currently pursuing the M.S. degree in mathematics and computer science.
+Yuta Tsukie was born in Saitama, Japan, in 1988. He received the B.S. degree in electrical engineering from the Tokyo University of Science in 2017 and the M.S. degree in mathematics and computer science from the National Defense Academy, Japan, in 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:23:46 UTC from IEEE Xplore. Restrictions apply.
+
+

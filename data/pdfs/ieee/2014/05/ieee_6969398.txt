@@ -1,0 +1,519 @@
+2014 IEEE 28th International Parallel & Distributed Processing Symposium Workshops
+
+A Low-Latency Algorithm and FPGA Design for the Min-Search of LDPC Decoders
+
+Georgios Tzimpragos∗†, Christoforos Kachris†, Dimitrios Soudris∗ and Ioannis Tomkos† ∗School of Electrical and Computer Engineering
+National Technical University of Athens, 15780 Zographou Campus, Athens, Greece
+Email: {getzim, dsoudris}@microlab.ntua.gr †Athens Information Technology, 19002 Peania, Athens, Greece
+Email: {getzim, kachris, itom}@ait.edu.gr
+
+Abstract—The problem of finding efficiently the first k minimum or maximum values is generally met in many application fields, such as error control coding. More specifically, optimized solutions for the selection of the two or three smallest elements out of a given set of numbers are greatly needed for the design of high-speed Low-Density Parity-Check (LDPC) decoders, as this min-search can be the bottleneck. This paper aims to tackle current limitations by proposing a novel algorithm for solving this problem, where the searching is based on scanning from the most significant bit (MSB) to the least significant bit (LSB) of each input data. A design mapped to reconfigurable logic and a software tool for the automatic generation of synthesizable VHDL codes, implementing such low-latency components are presented as well. Experimental results show that compared to existing solutions, the proposed scheme achieves an up to 42% reduction in latency even at worst case. Since the hardware unit is repeatedly used in the LDPC decoder design, the described high-speed approach is strongly recommended.
+Keywords-Low-density parity-check (LDPC) codes; Layered LDPC decoder; HDL generator; Min-search; Bit-searching approach;
+I. INTRODUCTION
+Due to the rapid increase of the network traffic in the last few years, many telecommunication operators have started transitions to 100 Gb/s networks and beyond. However, high speed networks need more efficient Forward Error Correction (FEC) codes to enhance the transmission reach, face the various impairments and keep the bit-error-rate (BER) at long distances sufficiently low. To address these issues, new FEC codes, called 3rd generation, have been recently adopted. Low-Density Parity-Check (LDPC) codes belong to this family of codes and have been widely considered as a promising candidate coding scheme for real-time communication systems, due to their Shannon limit approaching performance and their favorable structure. However, attention should be paid to their hardware implementation due to their decoders’ increased complexity.
+Conventionally, the sum-product algorithm (SPA) [1] or the modified min-sum algorithm (MSA) [2] is used for their decoding. However, layered LDPC decoding schemes have recently attracted much attention in both academy and industry because they can effectively speed up the convergence of LDPC decoding and thus reduce the required maximum number of decoding iterations. According to these
+
+layouts, the update of check messages by a check node is performed in a Check-Node Unit (CNU) implementing the simplified Min-Sum check algorithm [2]. As has been shown in [3] and [4], only the first two or three smallest values are required to get produced at this step by the CNU (Fig. 1), depending on the selected layered scheme. Considering that for long-code-length LDPC decoders a large number of CNUs is repeatedly used, it is absolutely necessary to optimize the development of such components in order to speed-up the whole decoder’s design and keep the overall complexity low.
+Figure 1. Top-level block diagram of iterative row-layered LDPC decoding (Check-Node Unit (CNU), Variable-Node Unit (VNU), A Posteriori Propability (APP) Log-Likelihood Ratio (LLR)). The depicted CNUs and VNUs run simultaneously.
+This paper looks for an efficient, suitable to tackle the current limitations algorithm for selecting the two smallest numbers (Min 1st and Min 2nd). Moreover, the proposed architecture comes along with increased parallelism and efficient mapping to the FPGA resources, where the required flexibility is not sacrificed by taking advantage of the medium’s reconfigurable nature. The described solution is applicable to all LDPC codes, independently of code rates and block lengths. In a nutshell, the main contributions of this work are the following:
+• introduction of a novel algorithm for finding the first two minimum (or maximum) values of a given set of numbers (it can easily be extended for k = 3 or greater),
+• development and performance evaluation of an efficient FPGA implementation of it, and
+• presentation of a software tool for the automatic generation of such components, according to the proposed approach.
+
+978-1-4799-4116-2/14 $31.00 © 2014 IEEE
+
+269
+
+DOI 10.1109/IPDPSW.2014.36
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+II. RELATED WORK
+
+Since the problem of developing FEC codes suitable for next-generation high-speed networks is emerging, a lot of research has been lately devoted towards this direction. Taking into consideration the fact that, according to the popular row-layered (iterative) scheme, only one row layer is handled at a time by the algorithm, this search for the first two minimums takes place as many times as the number of row layers during one iteration of the decoder (Fig. 1). Hence, it is obvious that the optimization of this procedure is of great importance.
+An interesting approach to determining the k-th largest of n number was described in [5]. Moreover, two architectures for selecting the two smallest numbers out of a given set were introduced in 2008 by Chin-Long Wey et al [6]. The first approach is sorting-based and adopts the algorithm described in [5], while the second one is tree structure (TS) and achieves better performance both in area and speed. Additionally, an optimized architecture of the sorting-based approach mentioned above was presented in [7], leading to reduced resources utilization. However, the latency increases remarkably for all these solutions, when a large set of numbers is given as input or the third smallest value (column-layered decoding) is required to be found.
+
+0 Min_1st
+
+1
+
+x0
+
+Min_1st x0
+
+cp
+
+x1
+
+Min_2nd x1
+
+Comp
+
+0 Min_2nd
+
+1
+(a)
+
+x0
+
+x0
+
+Min_1A Min_1A
+
+x1
+
+Min_1st x1 A Min_2A Min_1B
+
+x2
+
+Min_2nd
+
+Min_2B
+
+x3
+
+x2
+
+Min_1B Min_1A
+
+x3 B Min_2B Min_2A
+
+Min_1st Min_2nd
+
+Min_1B
+
+(b)
+
+Connection
+
+Unit (CU)
+x0
+
+x1
+
+x0
+
+x2 A
+
+x1 x6
+
+...
+
+x7
+
+Min_1st x3
+Min_2nd x4 x5 x6 B
+
+Min_1st CU Min_2nd
+
+x7
+
+(c)
+Figure 2. TS approach. (a)Building Block of 2-mVG, (b)4-mVG and (c)8-mVG
+In literature, to the best knowledge of the authors of this paper, the best performance in terms of speed is achieved until now by the tree structure (TS) approach [6]. A brief description of this approach follows, in order to make the difference between the proposed and the existing work clear to the reader. For the sake of simplicity, the hardware unit that generates both Min 1st and Min 2nd is called a minimum-value generator for n numbers (n-mVG). Consider a basic 2-mVG building block, as shown in Figure 2a. Both x0 and x1 are compared and the smallest number determines Min 1st, while the other one is defined as Min 2nd. The basic 2-mVG building block can be realized by a comparator
+
+with two multiplexers and a comparison signal cp, where cp = 0 when x0 < x1 and cp = 1 in every other case. Figure 2b depicts a basic 4-mVG building block, which is constructed by two 2-mVG blocks and a Connection Unit (CU). The building block A receives both inputs x0 and x1 and produces Min 1A and Min 2A as the Min 1st and Min 2nd, respectively. Similarly, the building block B takes the inputs x2 and x3 and produces Min 1B and Min 2B. As can be seen, the smaller value of Min 1A and Min 1B determines Min 1st. However, Min 2nd can be either min{Min 1A, Min 2B} or min{Min 2A, Min 1B}, depending upon whether Min 1A or Min 1B is smaller. Similarly, a building block of 8-mVG, as shown in Figure 2c, is constructed by two 4-mVG building blocks with a CU or by four 2-mVG blocks with three CUs. Thus, this method is referred to as the TS.
+III. ALGORITHM AND HARDWARE IMPLEMENTATION FOR THE PROPOSED BS APPROACH
+This section presents the proposed Bit Searching (BS) approach. An algorithm description is provided in the first subsection, whereas an architecture, based on a look-up table (LUT) method and efficient mapping to the FPGA resources, is introduced in the second one. A description of the developed software tool for the automatic generation of synthesizable VHDL codes, implementing such low-latency components also follows.
+A. Algorithm
+Compared to existing algorithms, the proposed one is not based on comparisons between the elements of the given data-set. To become more specific, the main idea behind the introduced scheme is to find the first k minimum or maximum numbers by defining one by one the value of their bits (scanning from MSB to LSB). Although in this paper we primarily focus on the search of the first two minimums, corresponding to the needs of the more popular row-layered decoding scheme, in this section we describe a more generalized approach, in order to show that the proposed algorithm can easily be extended for k = 3 (column-layered decoding) or greater. The following example should make things more clear.
+
+  
+ 
+
+
+  
+ 
+
+
+  
+ 
+
+
+Figure 3. Description of the main steps of the introduced BS algorithm for the above-mentioned example.
+
+270 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+Without loss of generality, let us assume that we are searching for the first three minimum numbers (Min 1st, Min 2nd, Min 3rd) and that the given data-set U consists of eight integers, ranging from 0 to 7, in random order. For example, U = {0, 4, 5, 1, 7, 6, 2, 3} in decimal or alternatively U = {“000”, “100”, “101”, “001”, “111”, “110”, “010”, “011”} in binary representation. Noting that four of the given numbers have their first bit 0 , we find that all the requested minimums should have their first bit 0 . Thus Min 1st = “0XX”, Min 2nd = “0XX ” and Min 3rd = “0XX” (’X’ denotes unknown). At this point we should count the elements that have both their first and second bit 0 in order to specify the minimums’ second bit. The number of data satisfying this condition is two, therefore the first two minimums will be Min 1st = “00X” and Min 2nd = “00X”, whereas the third one will have to be Min 3rd = “01X”. In the same way, the value of the third bit of the three minimums is determined by the number of elements that are equal to “000” and “010”. Due to the fact that only one element of the given set is equal to “000” and one to “010”, we conclude that Min 1st = “000”, Min 2nd = “001” and Min 3rd = “010”. For a better understanding of the idea on which the proposed algorithm is based, Figure 3 provides an illustration of its main steps for the above example.
+B. Hardware Implementation
+This section presents an architecture for the BS algorithm and a hardware design based on a look-up table (LUT) method and efficient mapping to the FPGA resources (Fig.4). The size of the given set of numbers was selected to be n = 24 so as to correspond to the dimensions of the LDPC base matrices given by the IEEE Wi-Fi and WiMAX standards. Additionally, the number of minimums we are searching for is set to k = 2, in order for the depicted design to be associated with the CNUs of the most common rowlayered decoding scheme. For simplicity, we also selected the width of the decoder’s inputs to be equal to three bits (MSB denotes the sign of the given number, whereas the rest two bits represent its magnitude). However, the described architecture can easily be extended to correspond to increased input bit-width or different k value.
+As has been mentioned above, the proposed BS algorithm generates each bit of the first k minimums based on filters that check some dedicated Boolean equations. Since the width of the decoder’s inputs was selected to be three bits, we know that just the two of them are used for the representation of their magnitude (sign + 2bits). Therefore, only the following occasions (we are interested in finding the first k absolute minimum values) should be examined for the specification of the value of the first k minimums (Cycle 1).
+• “0X” for the first bit, and • “00” and “10” for the second bit.
+
+The logic equations checked by these filters are inp(i)(1)´ , inp(i)(1)´ inp(i)(0)´ and inp(i)(1) inp(i)(0)´ , respectively. In order to keep latency low, all filters are applied in parallel, as can be seen in Figure 4 (Cycle 1).
+
+Inp(0) 2
+Inp(1) 2
+
+Cycle 1
+
+6
+
+. ..
+
+1st bit filter
+
+6 6
+
+6
+
+Cycle 2
+
+Cycle 3
+
+1st bit
+
+LUT 6A 2
+
+LUT
+
+6A 2
+
+LUT
+
+8
+
+6A 2
+
+LUT
+
+6A 2
+
+LUT B
+
+2nd bit
+
+Cycle 4
+2
+
+2
+
+.
+
+6
+
+. .
+
+2..
+
+2nd bit filter
+
+6
+
+.A 6
+
+2
+
+6
+
+2
+Inp(23) 2
+
+2 6
+
+2nd bit
+
+...
+
+filter B
+
+6 6
+
+2
+
+6
+
+LUT 6A2
+LUT 6A2
+LUT 6A2
+LUT 6 A2
+
+LUT 6 A2
+
+LUT 6 A2
+
+LUT
+
+6
+
+A2
+
+LUT
+
+6
+
+A2
+
+LUT
+
+8
+
+B
+
+8 LUT B
+
+2 Min_1st
+
+2
+
+Min_2nd
+
+2
+
+2
+
+Figure 4. Architecture overview. Decoder input bit-width = 3, input size = 24 words and k = 2.
+
+Since these filters’ output is one only when their Boolean equation is satisfied, in the next step (Cycle 2 and 3) we have to count the number of these 1 s (Fig. 3). Because we are searching for the first two minimums, there is no reason to find their exact number. To be more specific, we are just interested in examining the following three cases:
+• the equation of each filter is never satisfied, • the equation of each filter is satisfied one time, or • the equation of each filter is satisfied more than once.
+
+LUT-B
+
+LUT-A 6 LUT6
+
+LUT LUT
+
+55
+
+4
+
+3
+
+6
+
+LUT6
+
+6
+
+8
+
+LUT
+
+3
+LUT
+
+4
+
+55
+
+(a)
+
+(b)
+
+Figure 5. (a) LUT-A, (b) LUT-B technology mapping. Decoder input bit-width = 3, input size = 24 words and k = 2.
+
+Thus, instead of using costly and resources-consuming adders, we proceed with a look-up table (LUT) method. In more detail, 4 LUT-As and 1 LUT-B components are required for the implementation of each filter as the inputs size is set to 24 and the actual number of LUT inputs for the newer Xilinx families is 6. More specifically, for the realization of each of these LUT-A components 2 LUT6s are
+
+271 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+used, whereas for the mapping of each LUT-B component into the FPGA device 2 LUT5s and 2 LUT4s are required (Fig. 5). Finally, a multiplexer is used in the final step (Cycle 4) in order to determine Min 1st and Min 2nd, according to the values of the counters, which have been generated by the LUT-Bs during the previous cycle.
+Additionally, in case we are interested in finding the first three minimums (column-layered decoding) instead of two, the first step of the described architecture (filters-Cycle 1) remains the same, while minor changes are required for the other ones. To be more specific, this change in k affects the INIT attribute of the LUT-A and LUT-B (i.e. “00 10 00 01” = 0 2 0 1 ⇒ “11”) components (Cycle 2 and 3), and the number of examined cases in Cycle 4 (all possible cases: “00”, “01”, “10”, “11”). The logic functions of LUTA and LUT-B when k = 3 are expressed in the truth tables illustrated in Figure 6.
+
+Input
+000000 000001 000010 000011 ͙͙͙͙͘ 000111 ͙͙͙͙͘ 111111
+
+Output k=2 00 01 01 10 ͙ 10 ͙ 10
+
+Output k=3 00 01 01 10 ͙ 11 ͙ 11
+
+Input
+00 00 00 00 00 00 00 01 00 00 00 10 00 00 01 00 00 00 01 01 00 00 01 10 ͙͙͙͙͙͙͘͘ 10 10 10 10
+
+Output k=2 00 01 10 01 10 10 ͙ 10
+
+Output k=3 00 01 10 01 10 11 ͙ 11
+
+(a)
+
+(b)
+
+Figure 6. (a) LUT-A and (b) LUT-B truth tables. Decoder input bit-width = 3 and input size = 24 words.
+
+To summarize and make things even more clear, a brief description of the main steps of this design follows:
+• Cycle1 : Apply the appropriate filters to the given inputs,
+• Cycle2 : divide the n bits that are produced by each filter in groups of 6 (due to the existing LUT technology) and feed the LUT-A components,
+• Cycle3 : supply LUT-Bs with the outputs of the LUT-As (Fig. 4), in order to find out the value of counter1, counter2A, counter2B etc, which correspond to the number of times that the logic equation of the associated filters was satisfied by the input data, and
+• Cycle4 : specify the value of each bit of the wanted minimums according to the previously computed counter1, counter2A, counter2B etc.
+We should also notice here that a FEC can count the number of corrected errors without need of extra circuitry, which is useful for the deployment of adaptive schemes. As it is expected, an increase in the number of the inputwidth bits leads to higher net coding gains, while their reduction causes degradation in the correcting performance. However, there exist design trade-offs among area, delay, power consumption, and performance. Therefore, although
+
+the presented architecture is mapped to the FPGA resources in a custom way according to the size of the input data-set and the number of quantization bits, the required flexibility (in order to meet the Quality of Service (QoS) requirements) is not sacrificed by taking advantage of the medium’s reconfigurable nature. C. Software tool for automatic HDL code generation
+Besides the described hardware implementation, a software tool for implementing automatically such low-latency components onto FPGAs was developed. The description language used to model the hardware architecture is the VHDL. The developed tool requires as inputs the size of the given set of numbers, the input bit-width and the value of k (k = 2 for row-layered decoding and k = 3 for columnlayered decoding), and exports the associated RTL code.
+Following the introduced methodology, the presented tool finds at first the number of required filters and then specifies their dedicated Boolean equations (Cycle 1). It is obvious that one filter will be needed for the first bit, two filters for the second one, four filters for the third and so forth. After this, the truth tables for the characterization of the LUT-A and LUT-B components are generated (like the ones shown in Fig. 6) The number of the actual LUTs required for their technology mapping depends only on the input size (the actual number of LUT inputs for the newer Xilinx families is 6), i.e. for the realization of Cycle 2: when n = 24 ⇒ 4 LUT-As (8 LUT6s) per filter, when n = 32 ⇒ 6 LUT-As per filter etc. Finally, the number of examined cases for defining the value of the requested minimums (Cycle 4) relies on k and the input bit-width, as described above.
+Figure 7. HDL generator.
+With the use of a commercial software tool, i.e. the Xilinx ISE, and this generator the user can get reports on the implementation results and the generated bitstream file, acquired for programming the FPGA device, as depicted in Figure 7.
+IV. IMPLEMENTATION RESULTS This section presents the implementation results of the described FPGA design. A performance evaluation of the
+
+272 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+proposed code in terms of timing performance and area follows. To highlight the gains achieved by the introduced algorithm and hardware implementation, a comparison with existing approaches is also made. To the best knowledge of the authors, there are no detailed results of relevant FPGA designs available in the literature. Therefore, in order to provide a fair comparison, we also implemented into FPGA the TS algorithm described in Section II. Use of the same pipelining and optimization techniques was made in both cases. Aiming to cover all possible scenarios concerning the bit-width of inputs, we compared these two solutions for various input bit-widths, too. Moreover, implementation results for different input sizes and k = 3 are given in order to further discuss the relationship between these parameters and the performance of the introduced approach. Table I includes implementation results for all the above-mentioned cases. Graphical representations are also given for a better understanding. The target reconfigurable medium is a Xilinx Virtex6 (xc6vhx565t) and the used Design tool is the ISE 14.1.
+
+Figure 9. Comparison between the existing TS approach and the proposed BS in terms of resources utilization. Input size = 24 words and k = 2.
+value of their bits and therefore more effort will be needed. However, it is observed that our design occupies fewer slices than TS even at worst case. A possible explanation for this is that flip-flops (FFs) with different control sets cannot be packed into the same slice [8].
+
+Figure 8. Comparison between the existing TS approach and the proposed BS in terms of latency. Input size = 24 words and k = 2.
+Figure 8 shows the relationship between the latency and the input bit-width for both TS and BS approaches. The input size was set to 24 words and k = 2. As it was expected, an increase in the input bit-width leads to higher latency for both cases. However, due to the fact that the introduced solution needs only four execution cycles, while BS requires nine, it responds in 51% less time than BS on average and also achieves a 42% reduction in delay even at worst case (decoder input-width = 6 bits).
+Figure 9 helps to make clear the differences in area utilization between the two schemes. As it can be seen, the proposed BS code requires less FFs and LUTs than its counterpart for the first two cases (input bit-width = 3 and 4), while the existing TS approach is less resource-consuming when the input bit-width is set to 5 or 6. This happens mainly due to the dependency between the width of the input words and the number of required filters (Cycle 1) in our design. It is also expected that there will be a rise in the complexity of the multiplexer used in the final step (Cycle 4) for “wider“ words, as the introduced algorithm finds the requested minimums by defining one by one the
+
+Figure 10. Input size (words) vs resources utilization and max. achieved clock frequency. Decoder input bit-width = 4 and k = 2.
+In Figure 10, the relationship between the input size and the resources consumption for the proposed BS approach is presented. As it was expected, the number of utilized FFs and LUTs almost doubles when the input size increases from 16 to 32. This happens because the number of required LUTS (and by extension FFs) for the realization of the first three steps (Cycle 1, Cycle 2 and Cycle 3) of the proposed code is dependent on the size of the input dataset. Furthermore, we should notice here that in contrast to the existing TS approach, where the number of needed stages increases with the input size, our code still returns the requested values of Min 1st and Min 2nd in four cycles. Hence, although there is a small reduction in the maximum achieved clock frequency as the input size increases, the changes in expected latency are minor.
+Finally, in order to demonstrate that our solution is also applicable to column-layered decoding [4], we implemented the introduced BS approach for k = 3, too. As can be seen from Table I, this change in k causes an increase of 10.47%, 3.34% and 17.39% in latency, utilized FFs and LUTs, respectively, which is due to the more complex multiplexer used in the final step (Cycle 4). However, it is obvious (Figure 11) that the performance gap between
+
+273 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+Table I IMPLEMENTATION RESULTS.
+
+Algorithm
+
+Input Decoder input k Exec. Max. clock Latency FFs LUTs Number of
+
+size width (bits)
+
+cycles freq. (MHz) (ns)
+
+Occupied Slices
+
+TS [6] TS [6] TS [6] TS [6]
+
+24
+
+3
+
+24
+
+4
+
+24
+
+5
+
+24
+
+6
+
+29
+
+690
+
+29
+
+645
+
+29
+
+561
+
+29
+
+534
+
+13 13.95 16.05 16.85
+
+169 124 63 248 195 79 327 267 118 406 384 209
+
+Proposed BS 24
+
+3
+
+Proposed BS 24
+
+4
+
+Proposed BS 24
+
+5
+
+Proposed BS 24
+
+6
+
+24
+
+690
+
+24
+
+637
+
+24
+
+508
+
+24
+
+410
+
+5.80
+
+106 81
+
+24
+
+6.30
+
+239 184 53
+
+7.87
+
+518 380 104
+
+9.75
+
+904 667 192
+
+Proposed BS 16
+
+4
+
+Proposed BS 32
+
+4
+
+24
+
+667
+
+24
+
+573
+
+6
+
+174 127 39
+
+6.98
+
+328 275 81
+
+Proposed BS 24
+
+4
+
+34
+
+575
+
+6.96
+
+247 216 63
+
+Figure 11. Comparison in terms of resources utilization and latency between the TS and the proposed BS for k=2 and k=3. Input bit-width = 4, Input size = 24 words. A logical extension of the described TS approach has been used, in order to enable the search for the first three minimums according to this scheme.
+the proposed and a possible extension of the TS approach enlarges when k = 3(compared to the case that k = 2), as the latter (TS) is optimized for finding just the first two minimums.
+V. CONCLUSION
+An algorithm and a low-latency FPGA design for solving the problem of finding efficiently the first two (and by extension k) minimum values out of a given set of numbers has been presented in this paper. The searching according to the introduced approach is based on scanning from MSB to LSB of each input data in order to define one by one the value of the Min 1st and Min 2nd bits. Furthermore, the described hardware architecture comes along with increased parallelism and efficient mapping to the FPGA resources, where the required flexibility is not sacrificed by making use of the medium’s reconfigurable nature. Experimental results prove that the proposed scheme achieves up to 42% lower latency than the existing TS approach even at worst case. Furthermore, the BS approach assures a reduction of 3,7%
+
+and 5,95% in the number of utilized FFs and LUTs for the case that the decoder’s input bit-width is equal to 4, which is the most popular according to the reviewed literature.
+ACKNOWLEDGMENT
+The research leading to these results is partially supported by the ASTRON project (Adaptive Software-defined Terabit Transceiver for flexible Optical Networks) with funding from the European Communitys Seventh Framework Programme [FP7/2007-2013] under grant agreement n. 318714.
+REFERENCES
+[1] R. G. Gallager, Low-Density Parity-Check Codes. MIT Press, 1963.
+[2] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.Y. Hu, “Reduced-Complexity Decoding of LDPC Codes,” Communications, IEEE Transactions on, vol. 53, no. 8, pp. 1288–1299, 2005.
+[3] C.-K. Liau, S.-Y. Lin, T.-H. Tsai, and C. L. Wey, “A partially parallel low-density parity check code decoder with reduced memory for long code-length,” in 18th VLSI Des./CAD Symp., 2007.
+[4] Z. Cui, Z. Wang, and X. Zhang, “Reduced-complexity columnlayered decoding and implementation for LDPC codes,” Communications, IET, vol. 5, no. 15, pp. 2177–2186, 2011.
+[5] D. E. Knuth, The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms. Boston, MA, USA: AddisonWesley Longman Publishing Co., Inc., 1997.
+[6] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of Finding the First Two Minimum Values and Their Hardware Implementation,” Circuits and Systems I: Regular Papers, IEEE Transactions on, vol. 55, no. 11, pp. 3430–3437, 2008.
+[7] Q. Xie, Z. Chen, X. Peng, and S. Goto, “A sorting-based architecture of finding the first two minimum values for LDPC decoding,” in Signal Processing and its Applications (CSPA), 2011 IEEE 7th International Colloquium on, 2011, pp. 95–98.
+[8] Virtex-6 and Spartan-6 HDL Coding Techniques. Xilinx Training.
+
+274 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 18:35:37 UTC from IEEE Xplore. Restrictions apply.
+
+

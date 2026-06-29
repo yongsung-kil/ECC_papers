@@ -1,0 +1,878 @@
+Multiple-Bases Belief Propagation List Decoding for Quantum LDPC Codes
+Sheida Rabeti and Hessam Mahdavifar Department of Electrical and Computer Engineering, Northeastern University, Boston, MA 02115, USA
+Email: {rabeti.s, h.mahdavifar}@northeastern.edu
+
+arXiv:2605.14170v1 [cs.IT] 13 May 2026
+
+Abstract—In this paper, we propose a belief-propagation (BP)based decoder, termed the Multiple-Bases Belief-Propagation List Decoder (MBBP-LD), for quantum low-density parity-check (QLDPC) codes. The key idea is to generate structured decoding diversity by constructing multiple redundant parity-check representations via cycle-free subtree decompositions of the Tanner graph, and running BP decoding in parallel across these representations. This extends the classical Multiple-Bases BeliefPropagation (MBBP) framework to the quantum setting while preserving the linear-time complexity and efficiency of standard BP decoding, and avoids the need for super-linear post-processing.
+Simulation results demonstrate that MBBP-LD improves upon existing BP-based decoders, including BP with ordered statistics decoding (BP-OSD) and belief propagation with guided decimation (BPGD) across several QLDPC codes, while requiring substantially fewer total BP iterations. For bivariate bicycle codes [[144, 12, 12]] and [[288, 12, 18]], MBBP-LD achieves up to 20% reduction in error rate compared to BPGD and up to 30% compared to BP-OSD in the low- and moderate-error regimes. For the larger B1 code [[882, 24, 18 ⩽ d ⩽ 24]], MBBP-LD attains comparable or improved performance relative to BPGD while maintaining BP-like decoding latency under parallel implementation.
+I. INTRODUCTION
+Quantum error-correcting codes are essential for faulttolerant quantum computation. Among existing constructions, quantum low-density parity-check (QLDPC) codes have attracted significant attention due to their sparse parity-check matrices, which reduce qubit–qubit interactions during syndrome extraction and make them well suited for architectures with limited qubit connectivity. Building on the success of classical LDPC codes introduced by Gallager [1], recent advances in QLDPC code constructions have further highlighted their potential for scalable quantum computing [2–4]. However, realizing this potential in practice depends on the availability of efficient and high-performance decoding algorithms.
+Belief propagation (BP) remains one of the most widely used decoding algorithms for both classical and quantum LDPC codes due to its low complexity and highly optimized hardware implementations. However, in QLDPC codes, its performance is often degraded by code degeneracy, short cycles, and trapping sets in the Tanner graph. A variety of BP-based improvements have been proposed to address these limitations. These include BP with ordered statistics decoding (BP-OSD), which achieves strong performance at the cost of a super-linear complexity
+
+dominated by the order-statistics stage scaling as O(n3) in the worst case (where n is the block length) [5], as well as iterative enhancements such as layered decoding, serial scheduling, and bit-flipping methods [6–8]. Other approaches rely on additional post-processing, including stabilizer inactivation (BP-SI) and belief propagation with guided decimation (BPGD), with complexities O(n2 log n) and O(n2), respectively [9, 10]. Further variants such as Ambiguity Clustering, Localized Statistics Decoding, and the Ordered Tanner Forest method also aim to improve decoding performance through increasingly sophisticated post-processing steps [11–13].
+In this work, we propose a Multiple-Bases BeliefPropagation List-Decoding (MBBP-LD) framework for QLDPC codes. The key idea is to generate structured decoding diversity within the BP framework, enabling improved error-rate performance while preserving the lowcomplexity and hardware-efficient nature of BP. In particular, the proposed approach maintains decoding latency comparable to standard BP under parallel implementation and avoids the need for super-linear post-processing, in contrast to existing high-performance BP-based decoders such as BP-OSD and BPGD.
+More specifically, the proposed decoder constructs multiple redundant parity-check representations, executes BP decoding on each in parallel, and aggregates the resulting candidate error estimates through a list-based decision stage. Building on classical MBBP decoding [14, 15], our approach extends BP-based methods in two important respects. First, we employ augmented parity-check constructions that allow duplicated parity-check rows [16, 17]. Second, and more importantly, instead of random row selection as in [16, 17], we introduce deterministic subtree-based decompositions of the Tanner graph to construct structured redundant representations. These cyclefree substructures induce diverse decoding trajectories across parallel BP instances, thereby mitigating trapping-set effects and enhancing decoding performance.
+II. PRELIMINARIES
+A. Quantum Stabilizer and CSS Codes
+An [[n, k, d]] quantum stabilizer code is a 2k-dimensional subspace C ⊆ (C2)⊗n with an Abelian stabilizer group S:
+
+This work was supported in part by NSF under Grant CCF-2415440.
+
+C = {|ψ⟩ ∈ (C2)⊗n : s|ψ⟩ = |ψ⟩, ∀s ∈ S}.
+
+(1)
+
+Each generator g ∈ S acts as a parity-check constraint. The
+
+minimum distance d of a stabilizer code is the minimum weight
+
+of some Pauli operator P ∈ Pn commuting with elements in
+
+S such that P ∈/ S.
+
+A Calderbank–Shor–Steane (CSS) code is a stabilizer code
+
+with a parity-check matrix of the form H =
+
+HX 0
+
+0 HZ
+
+,
+
+where HX , HZ are classical binary parity-check matrices sat-
+
+isfying HX HZT = 0. Such codes can correct Pauli-X and Pauli-
+
+Z errors independently using HZ and HX , respectively. In this
+
+work, we focus on QLDPC CSS codes, where both HX and
+
+HZ are sparse.
+
+B. Belief Propagation (BP) Decoding
+
+BP decoding operates on the Tanner graph of G = (Vc ∪
+
+Vv, E), where Vc are check nodes, Vv are variable nodes, and E
+
+denotes edges. Also, dv and dc denote the maximum degrees of
+
+variable nodes and check nodes, respectively. For each variable
+
+vi,
+
+the
+
+log-likelihood
+
+ratio
+
+(LLR)
+
+is
+
+initialized
+
+as
+
+µi
+
+=
+
+log
+
+1−p p
+
+,
+
+where p is the physical error probability (assumed identical for
+
+Pauli-X and Pauli-Z errors). During iterations, messages are
+
+updated using the normalized min-sum rule:
+
+
+
+
+
+m(ct→+v1) = α
+
+sign
+
+m(vt′)→c
+
+
+
+v′
+
+min
+∈N (c)\v
+
+m(vt′)→c
+
+,
+
+(2)
+
+v′∈N (c)\v
+
+mv(t→+c1) = µi +
+
+mc(t′)→v .
+
+(3)
+
+c′∈N (v)\c
+
+The posterior LLR is m(it) = µi + c∈N(vi) m(ct→) vi . A hard decision is made as eˆi = 0 if mi(t) ⩾ 0, otherwise eˆi = 1. The algorithm halts when all parity checks satisfy the syndrome (i.e., a valid error pattern is found) or when a maximum number of iterations is reached. Serial scheduling updates check nodes sequentially and immediately propagates messages within the same iteration, improving convergence speed. In QLDPC codes, the presence of short cycles and degeneracy can significantly affect the convergence behavior of BP, motivating the need for modified decoding strategies.
+
+C. Belief Propagation with Augmented Parity Checks
+
+Augmented parity-check (APC) decoding improves BP by
+
+introducing redundancy through duplicating a subset of rows in
+
+the
+
+original
+
+parity-check
+
+matrix
+
+[16,
+
+17].
+
+Let
+
+H
+
+∈
+
+m×n
+F2
+
+denote
+
+the original parity-check matrix and define the augmented
+
+matrix as HA =
+
+H Hdup
+
+,
+
+where
+
+Hdup
+
+contains
+
+duplicated
+
+rows from H. BP is then executed on HA instead of H.
+
+Duplicated checks place more emphasis on certain parity con-
+
+straints and change the convergence behavior of BP, which
+
+can help mitigate trapping sets while preserving the same
+
+per-iteration complexity as standard BP [17]. Existing APC
+
+methods typically generate Hdup through random row selection. However, the use of randomly selected duplicated rows may not
+
+fully exploit the underlying graph structure, which motivates
+
+more structured approaches to constructing redundant parity-
+
+check representations.
+
+III. MULTIPLE-BASES BELIEF-PROPAGATION LIST-DECODING (MBBP-LD)
+In this section, we extend the classical Multiple-Bases BeliefPropagation (MBBP) framework [14, 15] to the quantum setting. Unlike conventional augmented parity-check (APC) decoding [16, 17], which generates redundant rows through random duplication of parity checks, we construct structured redundant parity-check representations based on subtree decompositions of the Tanner graph. We also introduce a decision rule for selecting the final estimate from the candidate list based on candidate frequency and Hamming weight.
+
+A. MBBP Decoding via Tree-Based Construction
+
+MBBP decoding runs multiple BP decoders in parallel, each
+
+operating on a distinct parity-check matrix representation of the same code. Let H(ℓ), ℓ ∈ {1, . . . , L}, denote the matrix
+
+used by the ℓ-th decoder, and let eˆℓ be the corresponding error estimate after at most i iterations. Each decoder that converges
+
+contributes its output to a candidate list L = {eˆs | s ∈ S}, where S ⊆ {1, . . . , L} denotes the set of successful decoders.
+
+In prior work [14, 15], the elements of L are passed to a least-
+
+metric selector (LMS), which selects the most likely codeword
+
+according to the channel distribution. In this work, we instead
+
+employ an alternative decision rule, described next.
+
+We construct the parity-check matrices used by the parallel
+
+decoders by augmenting the original matrix H with redundant
+
+layers derived from a collection T of maximal subtrees in the
+
+Tanner graph that partition the check nodes. A subtree t ∈ T
+
+is called maximal if no additional check node, together with
+
+its adjacent variable nodes, can be included without forming a
+
+cycle. Intuitively, these cycle-free substructures capture locally
+
+tree-like components of the Tanner graph, which are known to
+
+improve the behavior of BP.
+
+The set T is obtained by exploring the check nodes and form-
+
+ing maximal subtrees, as detailed in Algorithm 2. Each subtree
+
+t defines a submatrix Ht, and the corresponding augmented matrix is given by
+
+H(t) = H .
+
+(4)
+
+Ht
+
+BP decoding is then run in parallel on all constructed matrices {H(t) | t ∈ T }. Each decoder produces an estimate eˆt after a fixed number of iterations, and those that converge contribute their outputs to the candidate list L = {eˆt | t ∈ Tconv}, where Tconv ⊆ T denotes the set of successful decoders. The list L is then passed to a decision function fDM, which selects the final estimate eˆ according to a certain selection rule described in the next subsection. The overall decoding scheme is illustrated in Fig. 1, with pseudocode provided in Algorithm 1.
+Algorithm 2 partitions the check nodes into a collection of maximal subtrees T based on a permutation π of Vc, which determines the order in which check nodes are selected as roots. Starting from each unassigned root, the subtree is expanded by including its neighboring variable nodes and subsequently their adjacent check nodes. A candidate check node is added only if its inclusion preserves the cycle-free property of the
+
+H
+
+t1
+
+H BP-Dec eˆ1
+
+Ht1
+
+...
+
+L
+
+H BP-Dec
+
+tℓ
+
+Htℓ
+
+eˆℓ
+
+fDM
+
+eˆ
+
+Fig. 1: MBBP-LD decoding with redundant-row construction.
+
+Algorithm 1 MBBP-LD Decoder via Decision-Maker fDM for QLDPC Codes
+
+Input: Parity-check matrix H ∈ {0, 1}m×n; collection of
+
+maximal subtrees T = {t1, . . . , t|T |}; syndrome vector s ∈ {0, 1}m; channel parameter p; decision rule fDM
+Output: Estimated error vector eˆ
+
+1: Initialize candidate list L ← ∅
+
+Decoding Phase:
+
+2: for each t ∈ T do 3: H(t) ← [ H; Ht ] 4: (eˆt, converged) ← BP-DECODE(H(t), s, p)
+5: if converged then
+
+6:
+
+L ← L ∪ {eˆt}
+
+7: end if
+
+8: end for
+
+Decision Phase:
+
+9: eˆ ← fDM(L)
+
+return eˆ
+
+induced subgraph. This expansion continues until no further check nodes can be included without creating a cycle, yielding a maximal subtree. Repeating this procedure for all unassigned check nodes produces a partition of Vc into disjoint subsets. Different permutations π lead to different collections T and hence different augmented matrices H(t), resulting in diverse decoding behaviors.
+Example 1. Fig. 2 illustrates the subtree construction for the parity-check H under the permutation π = (c1, c4, c2, c3). The permutation first selects c1 as the root of the first subtree. The algorithm expands through its neighboring variable nodes and adds c3, since it does not add any cycle. Check nodes c2 and c4 are excluded because they would introduce cycles (shown by η = 2). This forms the first subtree t1 = {c1, c3}. The next unassigned check node in π is c4, which becomes the root of the second subtree. Expanding from c4 adds c2 while maintaining the tree structure, resulting in t2 = {c4, c2}. The resulting partition is T = {t1, t2}, which generates the augmented matrices H(t1) and H(t2).
+Lemma 1 provides an upper bound on the number of additional rows introduced by any subtree augmentation, which directly determines the complexity of BP decoding over the augmented parity-check matrices. Its implications for serialscheduling BP are further discussed in Section IV.
+
+Algorithm 2 Maximal Subtrees Construction
+
+Input: Parity-check matrix H ∈ {0, 1}m×n; permutation π
+
+of check nodes Vc, defining the order in which roots are
+
+selected
+
+Output: Assignment check_sets ∈ Zm mapping each
+
+check node to its subtree index
+
+1: Construct the Tanner graph G = (Vc ∪ Vv, E).
+
+2: Initialize check_sets[c] ← 0 for all c ∈ Vc; set subtree index s ← 0.
+
+3: for each c ∈ Vc in order π do
+
+4: if check_sets[c] = 0 then
+
+5:
+
+s←s+1
+
+6:
+
+Initialize BFS queue Q ← {c}.
+
+7:
+
+Mark all v ∈ Vv as unvisited; mark all c′ ∈ Vc as
+
+untested.
+
+8:
+
+while Q ̸= ∅ do
+
+9:
+
+Dequeue u from Q; mark u as tested.
+
+10:
+
+Let η ← |{v ∈ N (u) : v is visited}|
+
+11:
+
+if η ⩽ 1 then ▷ At most one visited variable
+
+neighbour ⇒ cycle-free
+
+12:
+
+check_sets[u] ← s
+
+13:
+
+for each v ∈ N (u) do
+
+14:
+
+Mark v as visited.
+
+15:
+
+for each untested c′ ∈ N (v) with
+
+check_sets[c′] = 0 do
+
+16:
+
+Enqueue c′ into Q.
+
+17:
+
+end for
+
+18:
+
+end for
+
+19:
+
+end if
+
+20:
+
+end while
+
+21: end if
+
+22: end for
+
+23: return check_sets
+
+Lemma 1 (Subtree Size Bound). For a Tanner graph G = (Vc ∪ Vv, E) with check-regular degree w, the number of check nodes in any subtree t ∈ T generated by Algorithm 2 satisfies
+
+|t|
+
+⩽
+
+|Vv| − 1 w−1
+
+≜
+
+δ(|Vv|, w).
+
+(5)
+
+In particular, for w = 6 generalized bicycle (GB) codes where |Vv| = 2|Vc|, this bound reduces to
+
+|t|
+
+⩽
+
+2|Vc| − 5
+
+1
+
+⩽
+
+0.4 |Vc|.
+
+(6)
+
+Proof: Each check node in a tree of degree w is connected
+
+to w distinct variable nodes. When a new check is added
+
+to the subtree, it must share exactly one variable node with
+
+the existing check nodes to maintain acyclicity; hence, each
+
+additional check introduces exactly (w−1) new variable nodes.
+
+Consequently, a subtree containing |t| check nodes covers
+
+1 + (w − 1)|t| variable nodes considering the check node root
+
+as well. Since the Tanner graph contains at most |Vv| variable nodes, it follows that 1 + (w − 1)|t| ⩽ |Vv|, which simplifies to the desired bound |t| ⩽ (|Vv| − 1)/(w − 1).
+
+v1 v2 v3 v4 v5 v6
+
+ 1 1 1 0 0 0  ← c1
+
+H
+
+=
+
+ 
+
+0
+
+1
+
+1
+
+0
+
+0
+
+1  ← c2 
+
+ 1 0 0 1 1 0  ← c3
+
+0 0 0 1 1 1 ← c4
+
+Subtree t1 = {c1, c3}
+c1
+
+Subtree t2 = {c4, c2}
+c4
+
+v1
+
+v2
+
+v3
+
+v4
+
+v5
+
+v6
+
+have δ ⩽ 0.4 |Vc|, so the augmentation increases the number of check nodes by at most a constant factor.
+The decoding latency, assuming all BP instances are executed in parallel, is determined by the slowest parallel instance and scales as O Kmax |Vv|dv + (|Vc| + δ)dc , where Kmax ≜ maxt∈T Kt is the maximum number of BP iterations over all subtrees. For bounded dv and dc, this reduces to O(Kmax|Vv|), yielding latency on the same order as standard BP decoding.
+
+c3
+
+v4
+
+v5
+
+c2
+η=2
+
+c2
+
+v2
+
+v3
+
+c4
+η=2
+
+H (t1)
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+ 
+
+0
+
+1
+
+1
+
+0
+
+0
+
+1
+
+  
+
+
+
+
+
+
+
+1 0 0 1 1 0
+
+H
+
+
+
+
+
+0
+
+0
+
+0
+
+1
+
+1
+
+1
+
+ 
+
+
+
+
+
+
+
+
+
+
+ 
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+ 
+
+Ht1
+
+100110
+
+H (t2)
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+ 
+
+0
+
+1
+
+1
+
+0
+
+0
+
+1
+
+  
+
+
+
+
+
+
+
+1 0 0 1 1 0
+
+H
+
+
+
+
+
+0
+
+0
+
+0
+
+1
+
+1
+
+1
+
+ 
+
+
+
+
+
+
+
+
+
+
+ 
+
+0
+
+0
+
+0
+
+1
+
+1
+
+1
+
+ 
+
+Ht2
+
+011001
+
+Fig. 2: Parity-check matrix H and subtree partition under
+permutation π = (c1, c4, c2, c3). (a) Matrix H. (b) Subtrees t1 and t2. (c) Augmented matrices H(t1) and H(t2).
+
+Intuitively, the proposed subtree-based construction improves decoding performance by mitigating trapping-set effects [7, 18] while generating structured redundant representations. Since BP is exact on tree graphs [1], decoding over each subtreeinduced submatrix Ht benefits from locally cycle-free structure. Moreover, the resulting subtrees yield connected and structured partitions of the Tanner graph, particularly in graphs with many short cycles, which are closely related to girth properties and similar structural observations in [19]. Compared to random augmentation [17], these structures induce more diverse decoding trajectories and improve convergence behavior.
+
+B. Decision Making (DM) Rule
+
+After constructing the candidate list L, the output error vector
+
+is selected as eˆ = fDM(L). We propose the following rule:
+
+Frequency-Weighted Scoring (FWS). Each candidate is
+
+assigned a score based on its frequency in the list and its
+
+Hamming
+
+weight:
+
+fDFWMS(L)
+
+=
+
+arg maxe∈L
+
+|{e′ ∈L:e′ =e}| wH (e)+1
+
+.
+
+The
+
+numerator favors candidates that appear repeatedly across BP
+
+instances, while the denominator penalizes higher-weight er-
+
+rors. If no decoder converges, we declare a decoding failure
+
+and return the all-zero error vector.
+
+C. Complexity and Latency Analysis
+In Algorithm 1, MBBP-LD runs multiple BP instances in parallel over augmented matrices with at most δ additional rows, as defined in Lemma 1. For check-regular graphs with bounded degree w, this yields δ = O(|Vc|). In particular, for weight-6 generalized bicycle (GB) codes with |Vv| = 2|Vc|, we
+
+IV. NUMERICAL RESULTS
+In Fig. 3–5, we evaluate MBBP-LD on two bivariate bicycle codes, [[144, 12, 12]] and [[288, 12, 18]] [20], and the B1 code [[882, 24, 18 ⩽ d ⩽ 24]] [5], over a binary symmetric channel with independent X-type errors. Each point is obtained after 100 decoding failures.
+We compare MBBP-LD with BP, BP-Serial, BP-OSD [5], and BPGD under both parallel [10] and serial scheduling [21]. All methods use a maximum of Imax = 100 iterations. BP, BP-Serial, and MBBP-LD employ normalized min-sum decoding with scaling factor α = 0.875, where BP uses parallel scheduling and the others use serial scheduling. BPGD variants use product-sum decoding with T = 100 decimation steps. The BP, BP-Serial, and BP-OSD implementations follow the libraries in [22, 23].
+Across all codes, MBBP-LD consistently outperforms BPOSD and BPGD, while remaining competitive with BPGDSerial. For the [[144, 12, 12]] code, it achieves 3–24% reduction in logical error rate (LER) compared to BP-OSD and 7– 17% compared to BPGD, with 2–8% gains over BPGD-Serial at moderate-to-high noise. For the [[288, 12, 18]] code, the reduction reaches up to 49% compared to BP-OSD and 36% compared to BPGD, with up to 10% improvement over BPGDSerial for p ⩾ 0.05.
+For the B1 code [[882, 24]], MBBP-LD achieves significant gains over BP-OSD (exceeding 91% at p = 0.04) and up to 66% reduction in logical error rate (LER) compared to BPGD (parallel) at low noise, while remaining competitive at higher noise levels. Although BPGD-Serial offers slightly better LER in the low-noise regime, this gap must be interpreted in light of the substantially different computational cost. For example, at p = 0.04, BPGD-Serial requires about 2.5 iterations on average, compared to 21.7 for BPGD and 14.4 for MBBP-LD. This reflects the effect of decimation, which can reduce iterations per stage but incurs significantly higher overall decoding cost. Furthermore, BPGD-based decoders typically employ productsum updates, whereas MBBP-LD uses normalized min-sum that may offer significantly lower computational complexity.
+Table I highlights the corresponding complexity trade-off for the [[288, 12, 18]] code. MBBP-LD requires only a moderate increase in iterations compared to BP-OSD (e.g., 81.31 vs. 43.03 at p = 0.08), remaining within the same order and preserving BP-like latency. In contrast, BPGD and BPGDSerial incur orders-of-magnitude larger total iteration counts (e.g., exceeding 9.5 × 103 at p = 0.08 and 2 × 104 at p = 0.10) due to repeated decoding and decimation. Thus, while
+
+100 10−1
+
+100 10−1 10−2
+
+Logical Error Rate
+
+Logical Error Rate
+
+10−2
+
+10−3
+
+10−3 10−4
+
+BP BP-Serial BP-OSD BPGD BPGD-Serial MBBP-LD (proposed)
+
+10−4 10−5 10−6
+
+BP BP-Serial BP-OSD BPGD BPGD-Serial MBBP-LD (proposed)
+
+0.02
+
+0.03 0.04 0.05 0.06 0.07 0.080.090.10
+
+Physical Error Rate px
+
+0.04
+
+0.05 0.06 0.07 0.08 0.09 0.10
+
+Physical Error Rate px
+
+Fig. 3: Decoding performance of the proposed MBBP-LD for Fig. 5: Decoding performance of the proposed MBBP-LD for
+
+Bivariate Bicycle Code [[144, 12, 12]] [20]
+
+B1 code [[882, 24, 18 ⩽ d ⩽ 24]] [5]
+
+100 10−1
+
+Decoder BP-OSD MBBP-LD BPGD BPGD-Serial
+
+p = 0.04 3.34 13.79 40.02 19.59
+
+p = 0.06 12.07 49.48
+1447.73 1184.65
+
+p = 0.08 43.03 81.31
+9559.32 9144.15
+
+p = 0.10 77.06 94.94
+20432.68 20209.15
+
+TABLE I: Average BP iterations of code [[288, 12, 18]] [20];
+
+10−2
+
+BPGD variants include iterations over all decimation steps.
+
+Logical Error Rate
+
+10−3
+10−4
+10−5 0.03
+
+BP BP-Serial BP-OSD BPGD BPGD-Serial MBBP-LD (proposed)
+0.04 0.05 0.06 0.07 0.08 0.09 0.10 Physical Error Rate px
+
+Fig. 4: Decoding performance of the proposed MBBP-LD for Bivariate Bicycle Code [[288, 12, 18]] [20]
+
+p
+
+Tree
+
+Random
+
+Mean LER Best LER Mean LER Best LER
+
+0.08 0.2928
+
+0.2690
+
+0.3038
+
+0.2865
+
+0.07 0.1004
+
+0.0904
+
+0.1030
+
+0.0954
+
+0.06 0.0289
+
+0.0250
+
+0.0303
+
+0.0273
+
+0.05 0.00511 0.00454 0.00545 0.00489
+
+0.04 0.000425 0.000366 0.000469 0.000412
+
+TABLE II: Comparison of subtree-based and matched random partitions for the BB code [[288, 12, 18]] [20].
+
+duplicated rows. We observe that subtree-based partitions consistently achieve lower LER than their random counterparts, with relative improvements ranging from 2.5% to 9.4%, and more pronounced gains in the low-noise regime.
+
+BPGD-based methods can achieve lower LER in the low-noise regime, MBBP-LD offers a favorable trade-off between errorrate performance and decoding efficiency, avoiding both superlinear OSD post-processing and the large iteration overhead of decimation-based decoding.
+A. Comparison with Random Augmentation
+Table II compares subtree-based partitions with matched random partitions for the BB code [[288, 12, 18]] [20] across different error rates. We consider 20 partitions in each case. For a fair comparison, random partitions are constructed by replacing subtree augmentations with randomly selected rows while preserving the same group structure and number of
+
+V. CONCLUSION
+In this paper, we proposed the MBBP-LD decoder for QLDPC codes, based on structured redundant parity-check representations derived from subtree decompositions of the Tanner graph. The proposed framework improves error-rate performance over existing BP-based decoders in various scenarios, including BP-OSD and BPGD, while maintaining BPlike decoding latency under parallel implementation. Future work includes designing code-specific constructions of redundant checks and developing more refined decision rules. The framework also naturally supports additional decoding diversity through different permutations and layerings with minimal impact on latency.
+
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on information theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] Z. Babar, P. Botsinis, D. Alanis, S. X. Ng, and L. Hanzo, “Fifteen years of quantum LDPC coding and improved decoding strategies,” iEEE Access, vol. 3, pp. 2492–2519, 2015.
+[3] N. P. Breuckmann and J. N. Eberhardt, “Quantum low-density paritycheck codes,” PRX quantum, vol. 2, no. 4, p. 040101, 2021.
+[4] B. Vasic, V. Savin, M. Pacenti, S. Borah, and N. Raveendran, “Quantum low-density parity-check codes,” arXiv preprint arXiv:2510.14090, 2025.
+[5] P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance,” Quantum, vol. 5, p. 585, Nov. 2021.
+[6] J. Du Crest, F. Garcia-Herrero, M. Mhalla, V. Savin, and J. Valls, “Layered decoding of quantum LDPC codes,” in 2023 12th International Symposium on Topics in Coding (ISTC). IEEE, 2023, pp. 1–5.
+[7] N. Raveendran and B. Vasic´, “Trapping sets of quantum LDPC codes,” Quantum, vol. 5, p. 562, 2021.
+[8] D. Chytas, N. Raveendran, and B. Vasic, “Enhanced min-sum decoding of quantum codes using previous iteration dynamics,” arXiv preprint arXiv:2501.05021, 2025.
+[9] J. Du Crest, M. Mhalla, and V. Savin, “Stabilizer inactivation for messagepassing decoding of quantum LDPC codes,” in 2022 IEEE Information Theory Workshop (ITW). IEEE, 2022, pp. 488–493.
+[10] H. Yao, W. A. Laban, C. Häger, A. G. i Amat, and H. D. Pfister, “Belief propagation decoding of quantum LDPC codes with guided decimation,” in 2024 IEEE International Symposium on Information Theory (ISIT). IEEE, 2024, pp. 2478–2483.
+[11] S. Wolanski and B. Barber, “Ambiguity clustering: an accurate and efficient decoder for QLDPC codes,” arXiv preprint arXiv:2406.14527, 2024.
+[12] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, “Localized statistics decoding for quantum low-density paritycheck codes,” Nature Communications, vol. 16, no. 1, p. 8214, 2025.
+[13] A. deMarti iOlius, I. Etxezarreta Martinez, J. Roffe, and J. Etxezarreta Martinez, “An almost-linear time decoding algorithm for quantum ldpc codes under circuit-level noise,” arXiv e-prints, pp. arXiv–2409, 2024.
+[14] T. Hehn, J. B. Huber, O. Milenkovic, and S. Laendner, “Multiplebases belief-propagation decoding of high-density cyclic codes,” IEEE transactions on communications, vol. 58, no. 1, pp. 1–8, 2010.
+[15] T. Hehn, J. B. Huber, S. Laendner, and O. Milenkovic, “Multiple-bases belief-propagation for decoding of short block codes,” in 2007 IEEE International Symposium on Information Theory. IEEE, 2007, pp. 311– 315.
+[16] A. R. Rigby, J. C. Olivier, H. C. Myburgh, C. Xiao, and B. P. Salmon, “Augmented decoders for LDPC codes,” EURASIP Journal on Wireless Communications and Networking, vol. 2018, no. 1, p. 189, 2018.
+[17] A. Rigby, J. Olivier, and P. Jarvis, “Modified belief propagation decoders for quantum low-density parity-check codes,” Physical Review A, vol. 100, no. 1, p. 012330, 2019.
+[18] C. Di, D. Proietti, I. E. Telatar, T. J. Richardson, and R. L. Urbanke, “Finite-length analysis of low-density parity-check codes on the binary erasure channel,” IEEE Transactions on Information theory, vol. 48, no. 6, pp. 1570–1579, 2002.
+[19] S. Rabeti, M. Moradi, and H. Mahdavifar, “Bounds and new constructions for girth-constrained regular bipartite graphs,” in 2025 IEEE International Symposium on Information Theory (ISIT), 2025, pp. 1–6.
+[20] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory,” Nature, vol. 627, no. 8005, pp. 778–782, 2024.
+[21] M. Moradi, S. Habib, V. Nourozi, and D. G. Mitchell, “Sequential BPbased decoding of QLDPC codes,” arXiv preprint arXiv:2602.13420, 2026.
+[22] J. Roffe, D. R. White, S. Burton, and E. Campbell, “Decoding across the quantum low-density parity-check code landscape,” Physical Review Research, vol. 2, no. 4, p. 043423, 2020.
+[23] J. Roffe, “LDPC: Python tools for low density parity check codes,” PyPI https://pypi. org/project/ldpc, 2022.
+
+

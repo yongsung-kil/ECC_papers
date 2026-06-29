@@ -1,0 +1,1060 @@
+Received 14 January 2026, accepted 10 February 2026, date of publication 16 February 2026, date of current version 20 February 2026. Digital Object Identifier 10.1109/ACCESS.2026.3664803
+
+Intelligent Read Framework With Meta-Learning for NAND Flash Memory Under Process Variation
+MINYOUNG HWANG , INHYUK CHOI , JEONGJU JEE , AND HYUNCHEOL PARK , (Life Senior Member, IEEE)
+School of Electrical Engineering, Korea Advanced Institute of Science and Technology, Daejeon 34141, Republic of Korea
+Corresponding author: Hyuncheol Park (hcpark@kaist.ac.kr)
+This work was supported by the Ministry of Science and ICT (MSIT), South Korea, through the Information Technology Research Center (ITRC) Support Program, supervised by the Institute for Information and Communications Technology Planning and Evaluation (IITP) under Grant IITP-2026-RS-2023-00259991.
+ABSTRACT The storage density of NAND flash memory has significantly increased due to multi-leveling and downscaling technologies. As a side effect of enhanced storage capacity, flash memory becomes vulnerable to circuit-level noise. To enhance data reliability, NAND flash memory employs error correction codes such as low-density parity-check (LDPC) code with soft-decision (SD) decoding based on log-likelihood ratio (LLR) information. Conventional SD read uses pre-defined uniform quantization, which is not optimized for varying threshold voltage distributions caused by physical noise, degradation, and process variation (PV). We propose an intelligent read framework employing a non-uniform quantizer that adjusts read reference voltages (RRVs) and LLR values according to the memory channel state. The optimization of RRVs and LLRs requires information on threshold voltage distributions. To accurately estimate the threshold voltage distribution from limited channel information, we propose a machine learning-based estimation model. Moreover, we incorporate model-agnostic meta-learning, enabling precise estimation of threshold voltage distribution across different flash chips addressing PV. Numerical results demonstrate significant improvements in read performance, validating the effectiveness of the proposed framework.
+INDEX TERMS NAND flash memory, read reference voltage, threshold voltage estimation, meta-learning.
+
+I. INTRODUCTION NAND flash memory is a type of non-volatile memory that has a large storage capacity. It is widely used in various applications, including solid-state drives and mobile devices, due to its swift read/write operations [1]. To meet the ever-increasing demand for greater storage capacity, NAND flash memory adopts multi-leveling and downscaling technologies. In addition, 3D NAND flash memory stacks cell arrays vertically to overcome the limitation of size reduction [2]. As flash memory becomes smaller and denser, the stored data becomes vulnerable to physical noise, leading to deterioration of reliability. To enhance the reliability and extend the lifetime of flash memory, error recovery schemes
+The associate editor coordinating the review of this manuscript and approving it for publication was Hazrat Ali .
+
+such as read reference voltage (RRV) re-adjustment [3], [4] and error correction code (ECC) [5] are applied.
+NAND flash memory stores data as a voltage level of the memory cell, i.e., threshold voltage. In read operation, the threshold voltage is compared with pre-determined RRVs to detect the stored data symbol. However, applying a fixed RRV optimized to a specific threshold voltage distribution may cause significant errors, since the distribution shifts and is distorted due to data retention and circuit-level noise. To reduce bit error, recalibrating the RRV for the memory state being read is essential. The sensing error is minimized if the RRVs are set as the intersections of two adjacent threshold voltage distributions. In [3] and [4], read-retry methods that adjust RRVs and retry to read repeatedly until successful data retrieval have been proposed. As an approach to ease the excessive read latency of read-retry, an on-chip valley
+
+VOLUME 14, 2026
+
+
+ 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+
+26363
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+tracking algorithm has been proposed in [6]. Nevertheless, these schemes accompany multiple read trials to estimate optimal RRV causing inevitable read latency.
+Errors in sensing are inevitable even if RRVs are determined ideally due to the shift and widening of threshold voltage distributions as degradation of NAND flash memory. ECC can enhance data reliability by encoding messages with parity bits that allow the correction of possible errors. Therefore, modern flash memory adopts ECC such as low-density parity check (LDPC) codes due to its strong error correction capability. LDPC code can be decoded by a message-passing decoding method where variable nodes and check nodes iteratively exchange the likelihood information with each other. The decoding can be conducted in both harddecision (HD) and soft-decision (SD) modes, which can be applied flexibly based on the memory channel states [5].
+SD decoding of LDPC code utilizes soft information on the stored data symbol which can be acquired by sensing with multiple RRVs [7]. By optimizing RRVs involved in sensing for SD decoding, the decoding performance can be significantly improved [8]. However, optimizing multiple RRVs for SD decoding in the consideration of memory channel states, i.e., threshold voltage distributions, is difficult. The relations between memory channel states, RRVs, and decoding performance such as frame error rate (FER) are highly non-linear and difficult to model. The studies in [9] and [10] have optimized RRVs to maximize mutual information (MI) between input data symbol and output of sensing operation, instead of optimizing RRV to minimize FER. It has been shown that soft information obtained from sensing using optimized RRVs improves decoding performance. To model MI and optimize RRVs, the threshold voltage distributions of the stored data should be known. However, these works do not address the online procedure to obtain threshold voltage distribution information required for the RRV optimization. It is difficult to capture the threshold voltage distribution, often requiring intensive sensing, and only limited information is accessible from the controller. Moreover, optimizing RRVs for multi-level NAND flash memory is complicated since multiple pairs of threshold voltage distributions need to be considered jointly. In this case, a data-driven approach is useful, allowing optimization of RRVs with datasets.
+Machine-learning (ML) algorithms can effectively learn highly non-linear input and output relationships from data. ML has become a popular technology for designing error management schemes for NAND flash memory systems due to its high effectiveness and utility. For instance, the work of [11] has proposed a neural-modulation framework to mitigate inter-cell interference. The neural modulator pre-distorts threshold voltages corresponding to the data symbol to be programmed considering the interference of adjacent cells. Although this strategy can enhance the reliability of flash memory considerably, utilizing neural networks (NNs) for every programming and read operation introduces significant
+
+latency. In addition, read-side optimization, such as RRV and LLR calibrations are not considered here. In [12] and [13], RRV adaptation schemes based on ML without prior knowledge of memory channel state have been proposed. However, these methods are limited to optimizing RRVs for HD sensing. In particular, the approach in [13] leverages sparse histograms obtained from multiple sensing operations to infer the memory channel state and optimize the RRVs, which may result in increased latency. Alternatively, it has been shown that ML models such as NN can effectively extract information on memory channel states from input features that can be obtained with low overheads [14], [15]. Based on this rationale, if threshold voltage distributions can be effectively estimated, RRVs can be optimized for better error-correcting capability of the system. In [16], an unsupervised learning approach is applied to estimate channel parameters and reset the HD RRVs to reduce the symbol error rate. However, this method does not address the issue of generalization across different memory chips. In general, ML-based threshold voltage estimation suffers from limited applicability across devices, as a single model often fails to generalize due to process variation (PV).
+PV is an unexpected error that occurs during fabrication, inducing differences in threshold voltage distribution and reliability [17], [18], [19], [20]. These variations occur between different chips, blocks, or wordlines (WLs). Designing a general error management scheme that encompasses all flash memory states is challenging due to the unpredictability of the PV. In particular, in the case of ML-based schemes, the PV causes large performance deviations between memories. Moreover, optimizing the ML model for each memory is costly in large-scale manufacturing. Meta-learning is a learning algorithm that can quickly adapt a model to a new task using information acquired from a previously learned task [21]. Model-agnostic meta-learning (MAML) can adapt to a variety of different tasks with gradient descent with small overheads [22]. In the process of learning multiple different but similar tasks, a common bias is learned and used as a shared variable. Later, when applying the model to a new task, the model is adapted by acquiring a context variable that represents meaningful embedding of the task [23]. Due to the adaptability of meta-learning, it has been shown that a model trained on several flash memory chips can effectively adapt to a new memory chip [15]. In this spirit, meta-learning enables the development of a universal error management scheme, even in the presence of the PV.
+Motivated by these observations, we propose an intelligent read framework for NAND flash memory systems under the influence of PVs. The framework optimizes RRVs for SD sensing to maximize the MI between input data symbols and the soft sensing output. Moreover, log-likelihood ratio (LLR) values assigned to each sensing output are precisely adjusted. Since the optimizations of RRVs and LLRs require information on threshold voltage distribution, we adopt a threshold voltage estimation model with NN structures. The
+
+26364
+
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+model can be trained in a data-driven manner via ML algorithm. Furthermore, we propose the threshold voltage estimation model trained with meta-learning to mitigate the effects of PV. Specifically, we adopt fast context adaptation via meta-learning (CAVIA) structure [23] for the estimation model due to its quick adaptation ability. For the estimation of memory channel states, most existing approaches rely on comprehensive sensing [13], [16] or pilot layers, which statistically represent the threshold voltage distribution across all layers [24]. In contrast, the proposed framework leverages practical features that can be readily accessed by the memory controller. We demonstrate the effectiveness of the proposed framework with numerical results showing significant improvements in read performance. The contributions of this paper are summarized as follows.
+• We characterize the distribution of threshold voltage in TLC NAND flash memory, incorporating a comprehensive examination of factors influencing the distribution ranging from physical noise to the complexities introduced by PV. On the basis of the distribution, we introduce optimization of non-uniform quantizers for RRVs and corresponding LLR mappings to improve the error-correcting capability of 2-bit SD and 3-bit SD reads. A pair-wise optimization approach is introduced to optimize the quantizers associated with sensing on a specific page in TLC flash memory. This method reduces complexity by considering the MI between only two adjacent threshold voltage distributions on the target page, while neglecting the influence of quantizers from other pages. As a result, convergence in the algorithmic search becomes easier and faster.
+• We propose an intelligent read framework that estimates the threshold voltage distribution and optimizes SD reads. In order to deal with the challenge that the distribution of threshold voltage cannot be acquired in prior practically, we adopt ML methodology for the estimation. The estimation model based on ML receives practical input features that can be obtained from a flash memory controller without severe overheads and pilot layers to estimate the distribution. Subsequently, the non-uniform quantizers and LLR mapping are optimized based on the estimated distribution for improved read performance.
+• We propose a meta-learning approach for accurately estimating threshold voltage, enabling adaptation across a spectrum of memory chips characterized by varying reliability levels influenced by PV. A MAML structure, specifically CAVIA, is utilized due to its fast adaptability via a single stochastic gradient descent (SGD) update with small overheads. This approach contributes to advancing the framework to be a universal strategy that can enhance read performance in the presence of PV.
+The rest of this paper is organized as follows. In Section II, the system model of NAND flash memory is briefly described. In Section III, we introduce the optimization principle of soft read based on threshold voltage distribution.
+VOLUME 14, 2026
+
+TABLE 1. List of acronyms.
+FIGURE 1. Threshold voltage distribution of a TLC flash memory and 3-bit data symbols assigned to each threshold voltage levels. (Green, blue, and red bits represent LSB, CSB, and MSB, respectively.).
+Consequently, we propose an intelligent read framework in Section IV. Next, Section V provides and discusses experiment results followed by conclusions in Section VI. Table 1 provides a list of the acronyms used in this paper in alphabetical order. II. NAND FLASH MEMORY SYSTEM A. ARCHITECTURE OF NAND FLASH MEMORY A NAND flash memory chip is a composite of thousands of memory blocks, which are two-dimensional arrays of flash cells. Flash cells in the same row within a block share a WL, which contains 32 k to 64 k cells [25]. The flash cell stores data in the form of threshold voltage trapped in a floating gate (FG) of a metal-oxide-semiconductor field-effect transistor.
+The number of threshold voltage levels determines the bit of symbol that can be stored in a single memory cell. For
+26365
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+instance, a single-level cell (SLC) flash memory can store 1-bit data per cell by using two levels of threshold voltages. Likewise, a multi-level cell (MLC) and triple-level cell (TLC) flash memory stores 2 and 3-bit data symbols with 22 and 23 threshold voltage levels, respectively. We particularly focus on TLC NAND flash memory in this paper. Fig. 1 illustrates the threshold voltage levels and assigned 3-bit data symbols with Gray coding. Note that the three bits of Gray coded symbol are represented as most significant bit (MSB), central significant bit (CSB), and least significant bit (LSB) pages depending on their logical locations. The considered Gray coding enables swift page-wise read operations minimizing read latency [26].
+
+B. INTERFACE OF NAND FLASH MEMORY
+Three basic operations of a typical NAND flash memory system are program, erase, and read. The programming operation is a process of storing data by injecting charges into FGs. The programming is carried out using an incremental step pulse programming (ISPP) scheme [27]. The ISPP scheme involves iterative injection of charges and verification of threshold voltage level until it reaches the desired level for the corresponding data symbol. Next, the erase operation removes charges from cells in a block to configure all cells to erasure state for reprogramming. The read operation of NAND flash memory employing LDPC code retrieves the data stored in a WL by performing sensing followed by decoding.
+Read modes of LDPC codes in NAND flash memory are defined as HD and n-bit SD according to the precision of the sensing operation. HD read mode quantizes the threshold voltages into two windows by a single sensing operation on each page. In the case of n-bit SD, 2n voltage windows are obtained from 2n − 1 sensing operations. Therefore, LLR values with higher precision are assigned to each voltage window, which significantly improves the error correction capability of message-passing decoding. However, the latency due to additional sensing operations may limit the throughput of memory.
+
+C. FLASH MEMORY CHANNEL MODEL
+
+We model the channel of TLC NAND flash memory,
+
+considering the PV and additive noises to propose the
+
+intelligent read framework. We adopt the synthetic threshold
+
+voltage distribution model characterized in [15], where the
+
+influences of the PV and the noises are comprehensively
+
+studied.
+
+Let 3-bit data symbol assigned to threshold voltage levels as x ∈ X = {0, 1, . . . , 7} in ascending order. During the
+
+ISPP process, a small random amount of charge is repeatedly
+
+injected into the memory cell to store data [28]. Therefore,
+
+the initial distribution of threshold voltage for symbol x can
+
+be modeled as a Gaussian distribution as follows.
+
+pVth,x (v)
+
+=
+
+1 √
+
+(v−µx )2
+
+−
+e
+
+2σx2
+
+,
+
+σx 2π
+
+(1)
+
+26366
+
+where µx and σx are mean and standard deviation, respectively. The standard deviation varies across the WLs and chips. The inter-chip variation originates from PV, including random dopant fluctuation and oxide trap fluctuation that occur during the manufacturing process [29], [30]. Moreover, as the number of program/erase (P/E) cycles increases, the flash memory is electrically worn and it becomes vulnerable to random telegraph noise (RTN). The probability distribution of RTN can be modeled as a Laplacian distribution as follows [31].
+
+1
+
+|v−µr |
+
+pr (v)
+
+=
+
+e− 2λr
+
+λr
+
+.
+
+(2)
+
+where the parameters µr and λr vary by the number of P/E cycles and wearing degree of flash memory. Next, the
+
+distribution of threshold voltage shifts because the electron
+
+charge trapped on FG leaks out as retention time increases.
+
+The shift of distribution due to data retention can be modeled
+
+as a Gaussian distribution as below [31].
+
+pt (v)
+
+=
+
+1 √
+
+−
+e
+
+(v−µt )2 2σt2
+
+.
+
+σt 2π
+
+(3)
+
+where the parameters µt and σt vary by the retention time and wearing degree of flash memory. Note that since the
+
+wearing degree differs within blocks, the effects of RTN and
+
+data retention are different by different blocks. Collectively
+
+considering the effects of PVs and noises, the threshold
+
+voltage distribution for symbol state x is represented by
+
+p(v|x) = pVth,x (v) ∗ pr (v) ∗ pt (v).
+
+(4)
+
+III. OPTIMIZATION OF SOFT-DECISION READ The encoded data symbol X is stored as a threshold voltage in a flash memory cell during the programming operation. When the data is read, the observed threshold voltage Y follows the distribution described in (4). To read the stored data, RRVs are applied to the control gate and compared with the threshold voltage stored in the cell to determine the corresponding voltage window. As a result, quantized information Z on the stored data is acquired from the sensing operation. Here, the resolution of quantized information is determined according to the precision of the sensing. The process of converting continuous information, such as a threshold voltage Y , into quantized information Z is called quantization, and the reference of the quantization is quantizer, i.e., RRVs. This procedure can be interpreted as an example of the information bottleneck method, which seeks to compress observed data (threshold voltage, Y ) into a compact representation (quantized information, Z ) while preserving information about the target variable (original stored data, X ) [32].
+In order to improve the reliability of memory by reducing read error, quantizers must be optimized according to the distribution of threshold voltages. Optimal RRV for HD sensing is determined as an intersection between two adjacent threshold voltage distributions, where the raw bit error rate
+
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+(RBER) is minimized. On the other hand, SD RRVs are generally placed at fixed intervals relative to the optimal HD RRV as shown in Fig. 2 (a). Next, fixed LLR values are assigned to Z for decoding without concerning the state of flash memory. However, these uniform quantizers with fixed LLR mapping become inefficient when the threshold voltage distribution changes as the memory wears out or is corrupted by noise. Optimizing the SD quantizer can enhance read performance, but directly modeling the relationship between soft sensing outputs and the frame error rate (FER) after decoding remains challenging because of the iterative and nonlinear nature of the message-passing decoding algorithm. FER depends on the final hard decisions made from the summed LLRs at each variable node. Since this involves discrete thresholding operations, FER is a non-differentiable metric and cannot be optimized using gradient-based methods. Moreover, small changes in input LLR values can propagate through the entire decoding process, making performance evaluation computationally intensive. Optimizing quantizers and LLRs with respect to FER would require full decoding simulations for each design iteration and would depend heavily on the specific code and decoder architecture.
+Alternatively, the information bottleneck method addresses this problem by selecting quantizers that maximize relevant information. In particular, [9], [33] proposed non-uniform quantizers that maximize the MI between the input symbol X and the quantized output Z from the soft sensing operation, as illustrated in Fig. 2 (b). The MI-maximizing design is decoder-agnostic and analytically tractable, enabling gradient-based optimization. While maximizing MI does not directly minimize FER, it serves as an effective surrogate objective, leading to substantial error rate reductions in practice.
+Note that, the number of RRVs required for sensing increases with the number of bits stored per cell. Specifically, HD sensing uses 2n − 1 RRVs for n-bit cells, while 2-bit and 3-bit SD sensing require 2n+1 − 2 and 3 · 2n+1 − 6 additional RRVs, respectively. Optimizing multiple RRVs in consideration of the threshold voltage distribution is a burden on the memory controller. In addition, the threshold voltage distribution of each state for the data symbol is not uniform. Rather, their standard deviation varies because the impact of data retention varies depending on the voltage levels. Thus, the RRVs should be optimized individually by pages in consideration of differences in the deviations of the distributions. Considering these challenges, we describe the optimization of the RRVs for SD sensing given distributions of threshold voltages in Section III-A. Next, Section III-B suggests the optimal LLR values for quantized information Z , given optimal RRVs and threshold voltage distributions.
+A. NON-UNIFORM QUANTIZER FOR SOFT SENSING TLC flash memory stores a 3-bit data symbol at each threshold voltage level. Thus, 2-bit SD read of the TLC flash
+VOLUME 14, 2026
+
+FIGURE 2. Example of quantization and LLR mapping in SLC NAND flash memory.
+
+memory acquires 22 quantized states of threshold voltages
+from sensing with 21 RRVs. Consider the input data symbol stored in the flash memory is x ∈ X = {0, 1, . . . , 7}. The quantized state is denoted as z ∈ Z = {0, 1, . . . , 21} and each state corresponds to the threshold voltage window, which is [qz, qz+1). Here, qz represents the z-th RRV where q0 = −∞ and q22 = ∞. Assuming x is equiprobably drawn, MI between input data X and sensing output Z is
+
+I (X ; Z ) = H (Z ) − H (Z |X )
+
+=H
+z∈Z
+
+1
+
+8
+
+Px,z
+
+x∈X
+
+1 −
+8
+
+H (Px,0, . . . , Px,21),
+
+x∈X
+
+(5)
+
+where H (Z ) is the entropy of random variable Z and Px,z is transition probability representing the probability that data symbol x ∈ X is detected as z ∈ Z by sensing operation. The threshold voltage distribution in (4) is not strictly Gaussian. However, we can approximate the distribution as Gaussian to optimize quantizers, and the resulting quantizers effectively increase MI. The intuition behind this is that the actual distribution is close to Gaussian since physical noise and manufacturing variations naturally follow a Gaussian distribution on a large scale [28], [34]. Accordingly, the transition probability is calculated as
+
+qz+1
+
+Px,z =
+
+p(v|x)dv
+
+qz
+
+qz+1
+
+1
+
+1
+
+=
+
+√ exp −
+
+qz σx 2π
+
+2
+
+v − µx σx
+
+2
+dv
+
+=Q
+
+qz − µx σx
+
+−Q
+
+qz+1 − µx σx
+
+,
+
+(6)
+
+where p(v|x) is threshold voltage distribution of symbol x
+approximated to Gaussian distribution with mean µx and variance σx2 and Q(·) is defined as
+
+Q(x) =
+
+∞1 √
+
+e−
+
+t2 2
+
+dt
+
+.
+
+(7)
+
+x 2π
+
+The number of transition probabilities is 8 × 22 = 176 for 2bit SD read in TLC flash as shown in Fig. 3. Nevertheless, the overlapping area of two non-adjacent distributions is close to zero so that only 50 transition probabilities are effective which are illustrated as solid lines in Fig. 3. Thus, the approximated closed-form expression of (5) can be
+
+26367
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 3. Transition probability diagram of TLC flash memory with 2-bit SD read.
+
+represented as follows
+
+ 1
+
+min {z\3+1,7}
+
+
+
+I˜(X ; Z ) = H  8
+
+Px,z
+
+z∈Z
+
+x=max {z\3−I3(z),0}
+
+−
+
+1 8
+
+x∈X
+
+min {3x+3,21}
+H (Px,z),
+z=max {3x−3,0}
+
+(8)
+
+where a\b gives quotients of a/b and I3(z) = 1 if z (mod 3) = 0, otherwise I3(z) = 0.
+Non-uniform quantizer optimization problem that maxi-
+mizes MI in (8) for 2-bit SD read is formulated as
+
+max I˜(X ; Z )
+{q1,...,q21}
+subject to qz < qz+1, ∀z ∈ {1, . . . , 21}. (9)
+
+Note that quantizers involved in HD sensing, i.e., qi, i ∈ {2, 5, 8, 11, 14, 17, 20}, are explicitly determined as the intersection point of adjacent distributions. The intersection of two
+Gaussian distributions is derived as following procedures.
+Let two distributions for adjacent threshold voltage level as p(v|x1) = N (µx1 , σx21 ) and p(v|x2) = N (µx2 , σx22 ), respectively, where µx1 < µx2 . The intersection point corresponding to the optimal RRV for HD sensing is obtained
+as a solution of the following quadratic equation.
+
+1 √
+
+e1
+−2
+
+v−µx1 σx1
+
+2
+
+σx1 2π
+
+=
+
+1 √
+
+1
+e −2
+
+v−µx2 σx2
+
+2
+
+.
+
+σx2 2π
+
+(10)
+
+The quadratic equation can be expressed as
+
+(σx22 − σx21 ) v2 + (2µx2 σx21 − 2µx1 σx22 ) v
+
+α
+
+β
+
++ σx22 µx21 − σx21 µx22 + 2σx21 σx22 log (σx1 /σx2 ) = 0. (11)
+
+γ
+
+Thus, the optimal RRV for HD sensing is derived as
+
+v⋆ = −β +
+
+β2 − 4αγ . 2α
+
+(12)
+
+Adopting the optimal HD RRVs, the problem (9) is reduced to optimizing 14 quantizers involved in SD sensing.
+Instead of optimizing all quantizers of TLC flash memory
+
+jointly, one can optimize quantizers involved in sensing for an adjacent threshold voltage pair. The pair-wise optimization
+
+approach resolves the complexity of the optimization. Moreover, this approach is useful when individually optimizing
+
+26368
+
+FIGURE 4. Mutual information according to quantizers in SLC memory.
+
+quantizers for pages with inherently lower reliability, such as MSB pages, which are more prone to errors due to the greater extent of overlap between threshold voltage distributions compared to LSB or CSB pages. It can effectively deal with the problem of page-dependent reliability differences [26]. To this end, we assume two distributions of threshold voltage for data symbol state x and x + 1 of TLC flash memory as the distributions of SLC flash memory xSLC ∈ XSLC = {0, 1}. 2-bit SD read of SLC flash can acquire 4 quantized states zSLC ∈ ZSLC = {0, 1, 2, 3} utilizing 3 quantizers. The optimal quantizer that maximizes the MI between XSLC and ZSLC is obtained from the solution of the following optimization problem.
+
+max
+{q1 ,q2 ,q3 }
+subject to
+
+1 H (P0, P1, P2, P3) − 2 H (P0,0, P0,1, P0,2, P0,3)
+
+−
+
+1 2
+
+H
+
+(P1,0,
+
+P1,1,
+
+P1,2,
+
+P1,3)
+
+qz < qz+1, ∀z ∈ {1, 2},
+
+(13)
+
+where PzSLC = (P0,zSLC + P1,zSLC )/2, ∀zSLC. The objective function in (9) requires computing 50 transition probabilities, whereas (13) involves only 8, corresponding to three quantizer levels. Note that the transition probabilities to edge states zSLC = 0, 3 of the assumed SLC threshold voltage pair are influenced by quantizers from adjacent pages. However, these effects are neglected as they are approximately zero.
+Since the quantizer q2 involved in HD sensing is set as the intersection point of the two distributions, the problem (13) can also be reduced to the problem of optimizing the two quantizers q1 and q3. The objective function of the problem has a local maximum point within the constrained region as shown in Fig. 4. Therefore, the optimal quantizers are obtained as (q⋆1, q3⋆) which makes the gradients to zeros, i.e., ∇q1 I (XSLC; ZSLC)|q1=q1⋆ = 0 and ∇q3 I (XSLC; ZSLC)|q3=q3⋆ = 0. Closed-form expressions for the gradients are derived in (14) and (15), as shown at the bottom of the next page, respectively.
+Fig. 5 shows an example of initial uniform quantizers and optimized non-uniform quantizers for 2-bit soft sensing on MSB page of TLC flash memory. The blue dashed line corresponds to the initial uniform quantizers which are set without concerning the change in threshold voltage distribution. The blue solid line and green dashed line
+
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+are non-uniform quantizers optimized from the solution of problem (9) and (13), respectively. It is shown that the resulting optimal quantizers are identical. The MI with the initial quantizers and the optimized quantizers are 2.865 and 2.874, respectively, where the achievable MI of the given flash memory channel is 2.892. Note that the achievable MI is available when the system can determine the exact threshold voltage, i.e., the quantization level is infinite, which can be calculated as follows.
+
+∞ 18
+
+18
+
+Imax(X ; Z ) = − z=−∞ 8 x=1 Px,z log2
+
+8
+
+Px,z
+
+x=1
+
+18 +
+8
+x=1
+
+∞
+Px,z log2
+z=−∞
+
+Px,z
+
+dz.
+
+dz (16)
+
+So far, we have focused on the optimization of quantizers for 2-bit SD read in TLC flash memory. Likewise, quantizers for 3-bit SD read can also be optimized in the same manner, where the optimization problem can be formulated as follows.
+
+1
+
+1
+
+max
+
+H
+
+{q1,...,q49} z∈Z
+
+8
+
+Px,z
+
+x∈X
+
+− 8
+
+H (Px,0, . . . , Px,49)
+
+x∈X
+
+subject to qz < qz+1, ∀z ∈ {1, . . . , 49}.
+
+(17)
+
+The quantizers for HD sensing are also determined as the intersections of the adjacent distributions. Thus, the problem can be reduced to optimizing the quantizers involved in SD sensing. Furthermore, the pair-wise optimization of quantizers for a specific page is also valid, as the approach in (13).
+
+Fig. 5b illustrates an example of initial uniform quantizers (dashed line) and optimized non-uniform quantizers (solid line) for 3-bit soft sensing on MSB page of TLC flash memory. Quantizers for HD, 2-bit SD, and 3-bit SD sensing are represented by red, blue, and green lines, respectively. As depicted in the figure, there is a significant disparity between the optimized quantizers and the initial quantizers that lack adaptability to change in threshold voltage distribution. The MI of 3-bit soft sensing with the initial quantizers and the optimized quantizers are 2.877 and 2.885, respectively, where the achievable MI of the given flash memory channel is 2.892.
+B. LLR MAPPING After the acquisition of quantized information Z , proper LLR values have to be assigned to Z for decoding of LDPC codewords. The LLR values of Z are relatively determined according to the distribution of the threshold voltage and the RRV. Since the LDPC decoding algorithm corrects errors in the codeword through an iterative update process based on the input LLR value, assigning accurate LLR values to Z is important to achieve better error-correcting capability.
+Decoding of LDPC code corrects errors with a message-passing algorithm where check nodes and variable nodes iteratively exchange LLR information [35]. In particular, the input LLR from the channel should be carefully determined because it provides information on the reliability of the received bit. Unlike communication systems where LLR is determined based on the received signal, NAND flash memory acquires quantized LLR values assigned to the sensing outputs.
+
+∇q1 I (XSLC; ZSLC)
+
+  =−
+
+1 √
+
+e−
+
+(q1 −µ0 2σ02
+
+)2
+
+ σ02 2π
+
++
+
+1 √
+
+e−
+
+(q1 −µ1 2σ12
+
+)2
+
+ 
+
+σ12 2π
+
+
+
+  2−Q
+× log 
+
+q1 −µ0 σ0
+
+−Q
+
+q1 −µ1 σ1
+
+ Q
+ − log 
+
+q1 −µ0 σ0
+
++Q
+
+q1 −µ1 σ1
+
+−Q
+
+q2 −µ0 σ0
+
+−Q
+
+q2 −µ1 σ1
+
+ 
+
+
+
+
+2
+
+2
+
+
+
++
+
+1 √
+
+e−
+
+(q1 −µx 2σx2
+
+)2
+
+x∈{0,1} σx 2 2π
+
+log
+
+1−Q
+
+q1 − µx σx
+
+− log Q
+
+q1 − µx σx
+
+−Q
+
+q2 − µx σx
+
+.
+
+∇q3 I (XSLC; ZSLC)
+
+  =−
+
+1 √
+
+e−
+
+(q3 −µ0 2σ02
+
+)2
+
+ σ02 2π
+
++
+
+1 √
+
+e−
+
+(q3 −µ1 2σ12
+
+)2
+
+ 
+
+σ12 2π
+
+
+
+ Q
+× log 
+
+q2 −µ0 σ0
+
++Q
+
+q2 −µ1 σ1
+
+−Q
+
+q3 −µ0 σ0
+
+−Q
+
+q3 −µ1 σ1
+
+ Q
+ − log 
+
+q3 −µ0 σ0
+
++Q
+
+q3 −µ1 σ1
+
+ 
+
+
+
+
+2
+
+2
+
+
+
++
+
+1 √
+
+e−
+
+(q3 −µx 2σx2
+
+)2
+
+x∈{0,1} σx 2 2π
+
+log Q
+
+q2 − µx σx
+
+−Q
+
+q3 − µx σx
+
+− log
+
+Q
+
+q3 − µx σx
+
+.
+
+(14) (15)
+
+VOLUME 14, 2026
+
+26369
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 5. Initial uniform quantizer and optimal non-uniform quantizer for soft sensing on MSB page of TLC flash memory.
+
+LLR mapping function L(z) assigns an LLR value to each quantized state z. Note that the LLR value assigned to z differs by which page is concerned for decoding. As shown in Fig. 1, LSB is 0 for x ∈ {0, 1, 2, 3} while it is 1 for x ∈ {4, 5, 6, 7}. Taking this into account, the LLR value for the state z for LSB page can be calculated as (18). The numerator is the probability that x ∈ {0, 1, 2, 3} (LSB = 0) is determined to z and the denominator is the probability that x ∈ {4, 5, 6, 7} (LSB = 1) is determined to z. LLR mapping functions for the CSB and MSB pages can also be defined in the same way as (19) and (20), respectively.
+
+LLSB(z) = log
+
+qz+1 qz
+
+{p(v|4)
+
++
+
+p(v|5)
+
++
+
+p(v|6)
+
++
+
+p(v|7)}dv
+
+qz+1 qz
+
+{p(v|0)
+
++
+
+p(v|1)
+
++
+
+p(v|2)
+
++
+
+p(v|3)}dv
+
+= log P4,z + P5,z + P6,z + P7,z .
+
+(18)
+
+P0,z + P1,z + P2,z + P3,z
+
+LCSB(z) = log
+
+qz+1 qz
+
+{p(v|0)
+
++
+
+p(v|1)
+
++
+
+p(v|6)
+
++
+
+p(v|7)}dv
+
+qz+1 qz
+
+{p(v|2)
+
++
+
+p(v|3)
+
++
+
+p(v|4)
+
++
+
+p(v|5)}dv
+
+= log P0,z + P1,z + P6,z + P7,z .
+
+(19)
+
+P2,z + P3,z + P4,z + P5,z
+
+LMSB(z) = log
+
+qz+1 qz
+
+{p(v|0)
+
++
+
+p(v|3)
+
++
+
+p(v|4)
+
++
+
+p(v|7)}dv
+
+qz+1 qz
+
+{p(v|1)
+
++
+
+p(v|2)
+
++
+
+p(v|5)
+
++
+
+p(v|6)}dv
+
+26370
+
+= log P0,z + P3,z + P4,z + P7,z .
+
+(20)
+
+P1,z + P2,z + P5,z + P6,z
+
+As with quantizers in TLC flash memory can be optimized individually by pages assuming an adjacent threshold voltage distribution pair as a distribution of SLC flash memory, LLR mapping function can also be defined as follows [36].
+
+L (zSLC )
+
+=
+
+log
+
+P0,zSLC P1,zSLC
+
+.
+
+(21)
+
+IV. INTELLIGENT READ FRAMEWORK Optimization of non-uniform quantizers and LLR mapping functions proposed in Section III requires information on the threshold voltage distributions of flash memory. Therefore, it is essential to determine the threshold voltage distributions before optimizations. Capturing the threshold voltage distribution of flash memory influenced by various factors is challenging. In the studies of [33] and [37], threshold voltage distributions have been estimated by fitting histogram data on the threshold voltage stored in the memory to a specific distribution model. Here, the histogram data was obtained from repetitive sensing by increasing the RRV at a fixed interval. This method can obtain high-resolution information on the threshold voltage distribution, but it is not practical because numerous sensing operations result in significant latency. Furthermore, due to the varying characteristics of memory across different products, it is challenging to model the threshold voltage distribution with high accuracy using a generalized mathematical model. Instead, the threshold voltage distribution can be estimated by obtaining indirect information on the state of memory deterioration. Nevertheless, the information available from the memory controller is limited and it is impossible to model the complex and non-linear relationship between the indirect information and the threshold voltage distribution.
+Data-driven approaches, specifically, NN models can learn the complex and non-linear input-output relationship from the data [38]. A model trained with sufficient data can derive a meaningful output for a new input. In this section, we propose an intelligent read framework that leverages machine learning models to enhance the performance of SD read. This framework estimates threshold voltage distributions and optimizes non-uniform quantizers and LLR mapping functions based on the obtained information.
+Fig. 6 illustrates the operational procedure of the proposed intelligent read framework. Once soft reading with optimized quantizers and LLR mapping is activated, the flash memory controller first acquires the input feature vector x. The distribution estimator module then estimates the parameters of the threshold voltage distribution for the current channel. The design of the input feature and the distribution estimator is detailed in Sections IV-A and IV-B. Next, based on the estimated parameters, the HD and SD RRVs are optimized. Using the optimized RRVs, soft sensing is performed, the LLR values are mapped to the sensed results, and soft
+
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+decoding is initiated. The optimization procedures for the RRVs and LLR values are detailed in Section IV-C.
+
+A. ESTIMATION OF THRESHOLD VOLTAGE DISTRIBUTIONS As a first step, the proposed framework estimates the distributions of threshold voltages using a distribution estimator module. Since the threshold voltage distributions are approximated as Gaussian, the mean and standard deviation are the target of the estimation. The distribution estimator module is designed as a multi-layer NN regression model.
+
+[µ, σ]T = fθ(x) = gθL (gθL−1 (· · · gθ1 (x))),
+
+(22)
+
+where gθl (x) = σ (Wl x + bl ) is the lth layer of the NN with non-linear activation function σ (·), e.g., a rectified linear unit (ReLU) or a hyperbolic tangent function, for l = 1, . . . , L. Note that the output layer, i.e., l = L, does not use non-linear activation. θ = {θl }l=1,...,L is the parameters of the model where θl = {Wl , bl } with the weight matrix Wl and the bias vector bl. The output of the network is the mean and variance vectors of the threshold voltage distributions, i.e., µ and σ.
+The model is trained to acquire the non-linear relationship between input features and the distributions of threshold voltages. The appropriate feature should contain sufficient information on the state of flash memory for accurate prediction of threshold voltage distributions. Ideally, the model is trained using features including chip, block, WL identifiers, as well as the number of P/E cycles and retention time. While the controller has access to P/E cycle counts and WL location at access time, it cannot directly observe retention time or physical variations like inter-chip and inter-block differences. To address this limitation, we use practical features including the number of P/E cycles N , index of WL w, and on-cell ratios r, i.e., x = [N , w, r]T to predict the flash memory channel [14], [15]. The number of P/E cycles gives information on the wearing degree of flash memory. The inter-WL variation tends to be consistent in different blocks and it can be inferred from WL index. Next, the ratio of cells activated among all cells on the page when sensing with a predefined reference voltage Vfix is on-cell ratio. The on-cell ratio is defined as
+
+r = The number of on cells at Vfix .
+
+(23)
+
+The number of total cells
+
+The on-cell ratio is well-distinguishable by different blocks and chips so that it can be used as auxiliary information to deal with variations between blocks and between chips [15]. Unlike the features N and w are accessible on the memory controller without any overhead, r is obtained from a sensing operation on a single WL. However, the overhead of obtaining r is insignificant because the on-cell ratio can be obtained by sensing only one specific WL for each block as the variation between WLs for each block tends to be consistent [20]. Note that multiple on-cell ratios can be utilized as input features to further improve estimation performance. In this work, we use two on-cell ratios obtained from two sensing operations with different fixed reference voltages. These on-cell ratios can
+
+VOLUME 14, 2026
+
+be interpreted as a sparse histogram of the flash memory channel, providing low-resolution information about the threshold voltage distributions. Although increasing the number of on-cell ratios could enhance channel characterization accuracy, it would inevitable increase latency and system complexity. The specific selection of the fixed reference voltages used to acquire the on-cell ratios is discussed in Section V.
+The distribution estimator is trained using SGD method. Given dataset D composed of data pairs (x, [µ, σ]T ), loss function with respect to θ is denoted as LD(θ). For instance, a mean squared error loss function can be represented as
+
+LD(θ) = E(x,[µ,σ]T )∼D [µ, σ]T − fθ(x) 2 .
+
+(24)
+
+The parameter update rule with learning rate α is as follows.
+
+θ ← θ + α∇θLD(θ).
+
+(25)
+
+B. META-LEARNING BASED DISTRIBUTION ESTIMATOR
+Accurate estimation of threshold voltage distributions is crucial for the optimization of the soft read. However, the non-linear relationship between the input feature and the distribution varies across flash memory chips due to PVs. For this reason, the estimation performance is significantly degraded when a distribution estimator module trained on a specific chip is applied to another chip with a different distribution. In addition, if the model is trained with a large number of chips, its size may become huge or it may not be able to learn the input-output relationships. To address this problem, we adopt a meta-learning approach that enables the model to adapt to the diverse memory characteristics of different flash chips. Various meta-learning methods can be used for this purpose, including MAML, First-Order MAML, and Reptile [39]. In our work, we specifically utilize the CAVIA architecture for the distribution estimator module. Unlike conventional MAML-based methods that require updating the entire set of network parameters, the CAVIA model enables rapid adaptation to new flash memory chip environments by updating only a small set of input-dependent parameters [23].
+The distribution estimator based on CAVIA has the same architecture with (22). The only structural difference is that the CAVIA model receives context variable as an additional input. Thus, the concatenated input for the CAVIA model becomes x¯ = [xT , φ]T . The training of CAVIA is carried out in two phases: an offline meta-training and an online adaptation.
+The meta-training phase is an offline process for learning an initial state model to be applied to each chip before the adaptation phase. In particular, shared variable which is the parameter θ of the model is trained using data from multiple source memory chips. Consider datasets {DS1 , . . . , DSK } from K different source chips. Note that the generalizability of the meta-trained model depends mainly on the diversity of chip characteristics encountered during the meta-training
+
+26371
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 6. Flow diagram of intelligent read framework.
+
+phase. In each meta-training iteration, the context variables are first initialized to zeros, i.e., φk = 0, ∀k = {1, . . . , K }. Next, the context variable for the kth chip is updated with one or more SGD update as follows.
+
+φk ← φk − η∇φk LDSk (θ, φk ),
+
+(26)
+
+where η is the learning rate of local update. LDSk (θ, φk ) is the loss function defined in (24) with additional inputs. After
+
+adapting the context variable for K chips, the shared variable
+
+is updated with the average of gradients of the loss function
+
+concerning θ calculated for all chips.
+
+K
+
+θ ← θ − α∇θ LDSk (θ, φk ),
+
+(27)
+
+k =1
+
+The adaptation phase is an online process to fine-tune
+
+the model concerning the characteristics of a target chip by
+
+acquiring context variables. In the adaptation of the model,
+
+the shared variable remains fixed, while the context variable
+
+is updated using the small sample data from the target chip.
+
+This update allows the model to rapidly adjust to inter-chip
+
+variations without retraining the entire network. The update
+
+rule of the context variable is as follows.
+
+φT ← φT − η∇φT LDT (θ, φT ),
+
+(28)
+
+where φT is the context variable for the target chip and DT is the dataset of the target chip. The sample data for this adaptation can be obtained through pilot measurements, such as iterative sensing of designated wordlines [37]. These pilot samples are essential for capturing the inter-chip variations in threshold voltage distributions caused by PVs. In practice, pilot wordlines are selected under lightly worn-out conditions to minimize the impact of P/E cycling or retention effects. Specifically, the system first programs a random data sequence to pilot wordlines and then performs multiple sensing operations while incrementally adjusting the read reference voltage, resulting in a histogram that represents the threshold voltage distribution. This histogram is then fitted to a Gaussian distribution to extract the corresponding distribution parameters, which are used to generate the pilot data samples for the context variable update. The acquisition of pilot data and the context variable update are performed only once during the initialization of each new chip, introducing no additional overhead thereafter.
+
+26372
+
+In summary, the operation of the meta-learning-based distribution estimator proceeds as follows. First, the memory producer collects multi-chip threshold voltage distribution data for meta-training. Meta-training is then conducted offline using a sufficient amount of data. The resulting meta-trained model is subsequently deployed to the actual product. Upon the initial activation of the flash memory chip, the model performs online context variable adaptation using pilot data samples, which can be obtained as a histogram from multiple sensing operations. Finally, the adapted model can infer the threshold voltage distribution for any given input query in real time.
+Although the meta-trained model can adapt to various flash memories under variations that are not directly observable, performance can degrade if the model is applied to flash memory produced using an entirely new manufacturing process or subjected to different aging conditions. This is because data-driven models are highly dependent on the training data distribution and might not be effective when the threshold voltage distribution at inference time differs significantly from the training phase. In such cases, the model weights should be fine-tuned using data obtained from the device under the expected usage conditions.
+C. OPTIMIZATION OF NON-UNIFORM QUANTIZER AND LLR MAPPING FUNCTION In the following step of the threshold voltage estimation, non-uniform quantizers are optimized based on the estimated distribution. The quantizers for HD sensing are determined as the cross-points of adjacent distributions of threshold voltage using HD reference voltage calculation module following (12). Subsequently, SD sensing quantizers are determined to maximize MI between the input data and the sensing output, which is the solution of (9). However, due to the high complexity of the objective function of (9), it is difficult to implement an algorithm to find a solution on a flash memory controller. Therefore, we can predict the SD sensing quantizers by designing the SD reference voltage optimizer module as a NN model as well. The input features for the model are the means and variances of the threshold voltage distributions of the WL to be read. Then, the model predicts the optimal SD quantizers for the threshold voltage distribution with input means and
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+variances. Note that the model can be trained offline using datasets composed of synthetic threshold voltage distribution and the corresponding optimal SD quantizers which is the solution of (9). This can ease the burdens of obtaining data for training considerably.
+Fig. 7 shows an example of optimal and predicted quantizers for 2-bit soft reads on TLC flash memory. The predicted quantizers are based on the estimated threshold voltage distribution, while the optimal quantizers are based on the true distribution. Since the estimation of threshold voltage distribution must contain an error, the preceding prediction on quantizers has errors due to error propagation. Nevertheless, the predicted quantizers are very close to the optimal ones. Typically, the RBERs of HD sensing using optimal and predicted HD quantizers are 0.014432 and 0.014455, respectively. For 2-bit SD sensing, the MI values for the optimal and predicted quantizers are 2.9324 and 2.9322, respectively, and the corresponding FERs are 0.00065 and 0.00128. Note that a threshold voltage deviation due to data retention is larger with a larger threshold voltage. For this reason, even within the same cell, the size of the interval between SD quantizers that maximize MI varies by page. For example, the gap between quantizers is set to be narrower between threshold voltage distributions corresponding to x = 0, 1 than that of x = 6, 7 because the size of error regions is larger between threshold voltage distributions corresponding to x = 6, 7. Therefore, compared to the existing SD technique using uniform quantizers, the proposed read scheme greatly improves decoding performance, especially on the MSB pages.
+Next, LLR mapping function of the LLR calculation module is optimized considering the estimated threshold voltage distributions and optimized quantizers following (18)(20). As a result, accurate LLR values can be assigned to each quantized state after sensing so that the decoding performance improves.
+Our framework adopts a pipelined structure, offering flexibility to modify each module to meet diverse requirements, in contrast to end-to-end designs. However, due to the structural dependencies, estimation errors in the threshold voltage distribution may propagate through subsequent stages. To address this issue, future research could explore an intermediate refinement step to reduce noise and bias in the estimated distributions before quantizer optimization. Potential strategies include ensemble averaging, which aggregates results from multiple estimators, or autoencoder-based postestimation denoising to suppress residual errors. Although these techniques are not evaluated in this study, they represent promising directions for enhancing robustness. Their additional computational overhead and latency, however, should be carefully considered in future design trade-offs.
+In practical implementations, the proposed framework is triggered upon detecting reliability degradation at the page or wordline level. In a typical NAND flash memory system employing LDPC codes, the controller first attempts HD decoding and sequentially applies SD decoding with
+VOLUME 14, 2026
+
+increasing sensing resolutions. The proposed distribution estimation and subsequent calibration of RRVs and LLR mappings can be initiated if the SD decoding with the highest precision fails. Beyond decoding failures, more proactive trigger mechanisms can be employed to better balance the latency-reliability trade-off. For instance, recalibration can be triggered when the cyclic redundancy check error count exceeds a predefined threshold or when hardware level indicators, such as the on-cell ratios measured at specific reference voltages, deviate significantly from their nominal values. While the optimal selection of these trigger thresholds depends on specific hardware characteristics and application level requirements, these strategies provide a feasible approach for real time reliability monitoring and adaptive management.
+V. EXPERIMENTS AND DISCUSSIONS In this section, we present and discuss experimental results to verify the effectiveness of the proposed intelligent read framework. For the experiments, we generated threshold voltage distributions corresponding to various TLC flash memory states following the method in [15]. The standard deviations of initial threshold voltage distributions vary across WLs and chips. Initial threshold voltage distributions for multi-WL flash memory are extracted by emulating the memory channel of a 64-stack TLC vertical NAND [40]. Random dopant fluctuation and oxide trap fluctuation result in chip-wise variations in the standard deviation of initial threshold voltages. We generated a hundred chip variation values and selected 9 samples at 10 % intervals after arranging them in ascending order. These samples are specified as the variations of chip 1 to chip 9. For the variation between blocks, 10,000 random wearing degree values were generated following the wearing degree model in [41]. Next, nine samples are selected in the same manner as wearing degree of block 1 through block 9. For training of the distribution estimator module and the SD reference voltage optimizer module, we used 9, 000 data samples collected over the following range: chips [1, 3, 5, 7, 9], blocks [1, 5, 9], WLs [1, 6, 8, 29], P/E cycle counts [1000 : 200 : 2000], and retention days [2 : 2 : 50]. This dataset is generated from our channel model described in Section II-C and in our previous work [15], which incorporates variations across WLs, blocks, and chips. The initial multi-WL threshold voltage distribution, programmed using ISPP, was modeled based on channel data extracted by emulating a 64-layer stacked TLC vertical NAND, following the process in [40]. We adopted LDPC code with a payload length of 1 kB and code rate of 0.9, which represents a typical configuration used in modern NAND storage systems. A single data frame consists of 24 codewords. The maximum iteration numbers for HD decoding and SD decoding algorithms were set at 50 and 250, respectively.
+For convenience, we denote the proposed read operation applying the intelligent read framework as intelligentdecision (ID) read hereafter. ID read mode utilizes two
+26373
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 7. Optimal and predicted non-uniform quantizer for 2-bit soft read on TLC flash memory. (2000 P/E, 30 days of retention, Chip 5, Block 5, WL 8).
+
+machine learning models to optimize the soft read scheme for the memory channel state. We compose an NN model for the estimation of threshold voltage distribution with four fully connected layers, of which the number of neurons is 128, 64, 32, and 16. The estimation model adopts ReLU activation functions. The CAVIA-based estimation model uses one context variable as an additional input. Next, an NN model for the prediction of optimal SD quantizers consists of four fully connected layers with the number of neurons 128, 128, 64, and 14, respectively. The prediction model adopts ReLU activation functions and batch normalization for regularization. The data mini-batch size for SGD updates of the models is set as 256 with a learning rate of 0.01. To determine the reference voltages used to acquire two on-cell ratios as input features for the estimation model, we first derived seven on-cell ratios using reference voltages for HD sensing. We then evaluated all possible combinations of two ratios among these seven candidates and conducted preliminary experiments to identify the combination that yields the highest estimation accuracy of the threshold voltage distribution. The estimation accuracy was evaluated using the Kullback–Leibler (KL) divergence between the true and estimated threshold voltage distributions as the performance metric. Fig. 8 illustrates a heat map of the average KL divergence for each on-cell ratio combination. Since the combination of the 3rd and 5th on-cell ratios achieved the lowest KL divergence, indicating the highest estimation accuracy, we selected this pair as the input features for our proposed method.
+Apart from NN architectures, various ML models can be employed for data-driven estimation of threshold voltage distributions. In Table 2, we compare the performance of these models to emphasize the advantage of NNs, particularly when combined with meta-learning, i.e., CAVIA. Note that the ML models can be trained on a single source (SS) chip or multiple source (MS) chips. Chip 5 is selected as a SS dataset and chips 1, 5, 9 are chosen as a MS dataset. CAVIA model is pre-trained with the MS dataset and applied to other chips with an adaptation phase. First, we compare linear regression models with and without regularization, specifically Lasso and Ridge. Their simple linear structure ensures minimal training time and model
+26374
+
+FIGURE 8. Average KL divergence between the true and estimated threshold voltage distribution compared for different on-cell ratio combinations used as input features for the estimation.
+size, but they perform poorly in capturing non-linear inputoutput relationships. Second, we compare support vector regression (SVR) models with two different kernels, which are radial basis function (RBF) and polynomial. SVR applies a kernel to map the data into a higher-dimensional space, where linear regression is then performed. The estimation performance of SVR-based models is worse than linear regression, suggesting that high-dimensional representations of input features are ineffective. Finally, we compare GradientBoostingRegressor (GBR), AdaBoostRegressor (ABR), and Random Forest (RF) as an ensemble of decision trees [42], [43], [44]. We can observe that all three ensemble models exhibit superior estimation performance compared to linear regression and SVR. Nevertheless, despite the advantages of tree-based models, there are several reasons to adopt NNs for the proposed framework. First, tree-based ensemble models are susceptible to overfitting, causing performance to degrade when the test domain differs from the training domain, especially due to process variation. Next, tree-based models require a significantly larger dataset for training compared to NN. Lastly, they tend to have excessive model sizes. Due to these limitations, NN which is adaptive
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+to different domains via meta-learning is better suited for the proposed framework.
+For the threshold voltage estimation designed with a lightweight feedforward NN, we compared the number of FLOPs for both inference and training per sample and computed the corresponding execution time assuming 1 FLOP per clock cycle on a 600 MHz processor in Table 3. The result shows that a single inference takes around 38.35 µs with the proposed estimator model. The latency for a single sensing operation is around 39 µs [45] and read latency for TLC flash is around 150 µs [46]. Training is conducted offline prior to deployment. Therefore, let’s consider the latency incurred for inference. Since, the quantizer optimizer network has the same network structure with the distribution estimator model in our implementation, a single inference during soft read threshold recalibration adds approximately 50 % to the read latency. However, since inference is only triggered during recalibration events rather than for every read, this overhead is minimal and justified by the improved read accuracy and robustness provided by the proposed adaptive network.
+Next, we compare the threshold voltage estimation accuracy of RF, NN, and CAVIA models in Fig. 9. Both NN and CAVIA can estimate the distributions of threshold voltage with decent accuracy. However, it should be noted that the accuracy of NN trained on a SS chip, i.e., chip 5, may decrease when applied to chips with different characteristics. Even if NN is trained with MS chips, the increment in estimation accuracy is insignificant. Since the RF model is prone to overfitting, the model trained on chip 5 performs exceptionally well on that specific chip but generalizes poorly to other chips. This issue cannot be resolved merely by training on the MS dataset. In contrast, CAVIA exhibits considerable performance improvement in every chip, as it is able to adapt the model to different chip environments by acquiring context variables. Fig. 10 illustrates three randomly selected samples of the true and estimated distributions of threshold voltage. The estimated distribution based on NN significantly differs from the true distribution, whereas the CAVIA-based estimation is accurate.
+The adaptation of the context variable requires threshold voltage distribution data samples. These samples can be obtained by fitting histograms generated from multiple sensing operations. Table 4 presents the adaptation latency for varying numbers of samples and histogram resolutions. Higher sensing resolution produces higher-quality distribution data, thereby enhancing the adaptation process. Fig. 11 compares the average KL divergence of CAVIA with different numbers of samples used for context variable adaptation. Although more samples generally improve adaptation, the difference between using 100 and 256 samples is relatively small on average, but 256 samples provide improved robustness for high-variation chips, e.g., chip 8 and 9, offering greater stability under severe PV conditions. For the remainder of the experiments, results are based on the model updated with 256 pilot samples to demonstrate the best
+
+FIGURE 9. Average KL divergence between true and estimated threshold voltage distributions.
+FIGURE 10. True and estimated threshold voltage distributions.
+performance. In our typical configuration, we use 800-level histograms, resulting in an adaptation latency of 63.13 s for 256 samples. Since this adaptation is a one-time operation performed to update the context variable, we consider the associated latency acceptable, as the improved reliability outweighs the initial setup cost.
+We investigate the read performance of the proposed framework in Table 5, Fig. 12, Fig. 13, and Fig. 14. SD2 and
+
+VOLUME 14, 2026
+
+26375
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory TABLE 2. Comparison of ML models for estimation of threshold voltage distribution.
+
+TABLE 3. The number of FLOPs required and latency of the model inference and training per sample.
+
+FIGURE 12. FER comparison of different read modes by chips. (2000 P/E cycles, Block 5, WL 8).
+
+FIGURE 11. Average KL divergence between true and estimated threshold voltage distribution compared by the number of samples used for the adaptation phase. TABLE 4. Latency of context variable adaptation for meta-trained model.
+TABLE 5. FER and latency overhead comparison by different methods used for threshold voltage distribution estimation. Latency is based on 39 µs per sensing operation [45]. (2000 P/E, 30 days of retention, Chip 5, Block 5, WL 8).
+SD3 denote the conventional 2-bit and 3-bit soft read modes that utilize uniform quantizers with fixed LLR mapping
+26376
+
+whereas ID2 and ID3 are the read modes based on the proposed framework with 2-bit and 3-bit soft read modes. First, Table 5 compares the FER and latency achieved by different methods used for estimating the threshold voltage distributions. The optimal method assumes perfect knowledge of the actual distribution. The proposed method uses on-cell ratios obtained with two sensing operations and estimates the distribution through a meta-trained model. The histogram-based methods fit the distribution using histograms obtained from 100 or 400 sensing operations per symbol state. In addition, we compared with the widely used valley tracking method for online RRV calibration [6]. Starting from the default RRVs, this method performs three read operations to estimate the optimal RRV based on the asymmetry of cell counts around the default RRVs. For TLC flash memory, all seven HD RRVs are determined with a total of 21 sensing operations. Under high-usage conditions, the default RRVs are first coarsely adjusted through iterative sensing until the cell counts across states are roughly uniform, allowing effective subsequent valley tracking refinement with 49 additional sensings in our setup. Since the valley tracking updates HD RRVs without explicitly estimating threshold voltage distributions, it cannot be applied to soft read RRV updates. Therefore, only results for SD2 are presented. Although the proposed method introduces additional computation complexity (e.g., for NN
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 13. MI comparison of different read modes by retention times.
+
+FIGURE 14. FER comparison of different read modes by retention times.
+
+inference), it substantially reduces the number of sensing operations, leading to lower latency, and improved FER compared to valley tracking and histogram-based methods. Fig. 12 compares the FER of different read modes by chips. The proposed framework substantially enhances read performance by leveraging CAVIA to accurately estimate the distribution of threshold voltages across multiple chips. Next, Fig. 13 and Fig. 14 compare the read performance of different read modes by retention times. Fig. 13 shows the MI between input data and sensing outputs under various read modes. The upper bound represented as a black solid line is the achievable MI of the memory channel. Unlike conventional SD modes that employ a fixed uniform quantizer, ID modes optimize a non-uniform quantizer based on the characteristics of the flash memory channel. This leads to a significant improvement in MI. In particular, it is verified that there is little difference in the MI between the quantizer predicted based on the estimated distribution and the quantizer optimized based on the actual distribution. Next, Fig. 14 provides a comparison of the FER for different read modes as retention time increases. The decoding performance of ID read significantly outperforms the conventional SD read modes. The result shows that despite ID2 mode exhibiting lower MI than SD3 mode, it has superior error correction capabilities. This is because ID2 assigns optimal LLR values to the sensing results for decoding, whereas SD3 uses pre-defined LLR values, highlighting the importance
+VOLUME 14, 2026
+
+of accurate LLR assignment for effective message-passing decoding of LDPC codes.
+We evaluate the performance of the proposed framework on NL mixture threshold voltage distribution. The proposed ID framework optimizes non-uniform quantizers and LLR mapping based on threshold voltage distribution assumed to be Gaussian. The threshold voltage distribution is well approximated by a Gaussian model in general [28]. Compared to other models (Beta, Gamma, Log-Normal, Weibull, etc.), the Gaussian model has less deviation in modeling errors for the threshold voltage distribution corresponding to each data symbol in flash memory with multi-leveling [34]. In addition, the Gaussian model is advantageous for designing error management techniques since it has closedform expression [36]. Nevertheless, when the wear level becomes severe, the resulting threshold voltage distribution deviates from the Gaussian shape. The ISPP scheme iteratively injects charge and verifies the threshold voltage until it reaches the target value corresponding to each data symbol. However, after extensive P/E cycling, the programming process becomes prone to errors, leading to misprogramming events. As a result, the threshold voltage distribution develops thicker tails and exhibits multi-modality due to these misprogramming effects. Histogram data for the threshold voltage of flash memory in such severely deteriorated states have been obtained using the read-retry technique in FPGA-based MLC flash memory testing systems and modeled with various
+26377
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+FIGURE 16. Performance comparison of SD and ID read modes in MLC flash memory with ML mixture threshold voltage distribution.
+
+FIGURE 15. ML mixture and Gaussian approximated distribution of threshold voltages of MLC flash memory with optimized non-uniform quantizers for 2-bit soft read of MLC flash memory.
+distributions [28], [34], [37]. The Normal-Laplace (NL) mixture model has been shown to most accurately capture the actual threshold voltage distribution under severe wear.
+In order to verify that the proposed framework enhances read performance under severely deteriorated flash memory conditions exhibiting non-Gaussian threshold voltage distributions, we generated MLC threshold voltage distributions based on a NL mixture model using the parameters reported in [37]. Although the validation was performed with MLC flash memory rather than TLC, the MLC-based evaluation still provides meaningful evidence of the framework’s robustness with the Gaussian approximation, since the underlying mechanism of the proposed design is inherently independent of the bit density. Moreover, the channel parameters used in the NL model were derived from actual device measurements, ensuring that the evaluation captures realistic degradation characteristics. Fig. 15 shows the NL mixture and Gaussian-approximated threshold voltage distribution for different numbers of P/E cycles normalized to L. L refers to the cycling endurance specified by the memory manufacturer. In addition, the figure shows the initial uniform quantizers (dashed line) and the optimized non-uniform quantizers (solid line) for 2-bit soft read modes. Note that the
+26378
+
+non-uniform quantizers are optimized based on the Gaussian approximated distribution.
+Next, we compare the performance of SD and ID read modes on the MLC flash memory channel based on the NL mixture model. Fig. 16 (a) is the result of comparing the MI between the case of sensing using a uniform quantizer and the case of using an optimized non-uniform quantizer. Accordingly, the result of Fig. 16 (b) confirms that the decoding performance of ID2 is further improved compared to SD2 read. The results show that the proposed method, although optimized based on the Gaussian approximation, remains effective when applied to NL mixture models, providing noticeable improvement over the conventional soft read method. This confirms that the framework can significantly enhance performance even in heavily degraded flash memory with non-Gaussian threshold voltage distributions. However, when P/E cycle exceeds approximately 5L, the threshold voltage distribution becomes highly multimodal, limiting the effectiveness of the proposed method in mitigating read errors. As the degree of multi-modality increases, sensing errors inevitably occur, and optimizing the read reference voltage alone can no longer ensure accurate data recovery. In such cases, employing stronger error correction codes or advanced programming strategies should be considered.
+VI. CONCLUSION In this paper, we have proposed an intelligent read framework utilizing machine and meta-learning methodologies as a solution to enhance the reliability of NAND flash memory. The proposed framework has achieved a significant
+VOLUME 14, 2026
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+enhancement in error-correcting capability through rigorous optimization of the soft-decision read scheme. The optimization includes the adjustment of non-uniform quantizers to maximize the MI and precise calculation of LLRs for decoding on the basis of flash memory channel states. In order to obtain information on the flash memory channel, we have introduced an effective threshold voltage estimation model based on a neural network. Crucially, our framework stands out for its practicality, utilizing features accessible through a memory controller without heavy overheads. The incorporation of meta-learning, particularly the CAVIA structure, has proven effective in reducing the impact of PVs, significantly improving estimation accuracy for various memory chips. The numerical results have attested to the effectiveness of the proposed approach, showcasing substantial improvements in read performance. The proposed framework utilizing meta-learning can estimate the threshold voltage distribution with a 34.3 % less error compared to conventional machine learning methods. The accurate estimation of threshold voltage enabled the meticulous optimization of soft read schemes leading to considerably improved read performance. For instance, the proposed framework can reduce the average FER to 19.49 % of conventional 2-bit soft read across 5 different memory chips.
+REFERENCES
+[1] R. Bez, E. Camerlenghi, A. Modelli, and A. Visconti, ‘‘Introduction to flash memory,’’ Proc. IEEE, vol. 91, no. 4, pp. 489–502, 2003.
+[2] Y. Pan, H. Zhang, M. Gong, and Z. Liu, ‘‘Process-variation effects on 3D TLC flash reliability: Characterization and mitigation scheme,’’ in Proc. IEEE 20th Int. Conf. Softw. Qual., Rel. Secur. (QRS), Dec. 2020, pp. 329–334.
+[3] Y. Wu, E. F. Haratsch, Y. Cai, and A.-H. Alhussien, ‘‘Flash memory read retry using histograms,’’ Patent 8 953 373, Feb. 10, 2015.
+[4] Q. Li, Q. Wang, Q. Xu, and Z. Huo, ‘‘A fast read retry method for 3D NAND flash memories using novel valley search algorithm,’’ IEICE Electron. Exp., vol. 15, no. 22, 2018, Art. no. 20180921.
+[5] J. Wang, K. Vakilinia, T.-Y. Chen, T. Courtade, G. Dong, T. Zhang, H. Shankar, and R. Wesel, ‘‘Enhanced precision through multiple reads for LDPC decoding in flash memories,’’ IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[6] C. Kim et al., ‘‘A 512-gb 3-b/Cell 64-stacked WL 3-D-NAND flash memory,’’ IEEE J. Solid-State Circuits, vol. 53, no. 1, pp. 124–133, Jan. 2018.
+[7] G. Dong, N. Xie, and T. Zhang, ‘‘Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[8] S. Kim, G. E. Sobelman, and H. Lee, ‘‘Adaptive quantization in min-sum based irregular LDPC decoder,’’ in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2008, pp. 536–539.
+[9] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, ‘‘Soft information for LDPC decoding in flash: Mutual-information optimized quantization,’’ in Proc. IEEE Global Telecommun. Conf.-GLOBECOM, Dec. 2011, pp. 1–6.
+[10] C. Wang, Z. Mei, J. Li, F. Shu, X. He, and L. Kong, ‘‘Channel modeling and quantization design for 3D NAND flash memory,’’ Entropy, vol. 25, no. 7, p. 965, Jun. 2023.
+[11] J. Zedaka, E. Halperin, E. Blaichman, and A. Berman, ‘‘Neural modulation for flash memory: An unsupervised learning framework for improved reliability,’’ in Proc. Conf. Neural Inf. Process. Syst., vol. 36, 2023, pp. 69191–69201.
+[12] H. Choe, J. Jee, S.-C. Lim, S. M. Joe, I. H. Park, and H. Park, ‘‘Machinelearning-based read reference voltage estimation for NAND flash memory systems without knowledge of retention time,’’ IEEE Access, vol. 8, pp. 176416–176429, 2020.
+VOLUME 14, 2026
+
+[13] D. N. Bailon, S. Shavgulidze, and J. Freudenberger, ‘‘Read reference voltage adaptation for NAND flash memories with neural networks based on sparse histograms,’’ IEEE Access, vol. 11, pp. 56801–56811, 2023.
+[14] S. Lee, J. Jee, and H. Park, ‘‘Machine learning-based error recovery system for NAND flash memory with process variation,’’ in Proc. Int. Conf. Inf. Commun. Technol. Converg. (ICTC), Oct. 2021, pp. 1537–1541.
+[15] M. Hwang, J. Jee, J. Kang, H. Park, S. Lee, and J. Kim, ‘‘Dynamic error recovery flow prediction based on reusable machine learning for low latency NAND flash memory under process variation,’’ IEEE Access, vol. 10, pp. 117715–117731, 2022.
+[16] H. Hu, G. Han, W. Wu, and C. Liu, ‘‘Channel parameter and read reference voltages estimation in 3-D NAND flash memory using unsupervised learning algorithms,’’ IEEE Trans. Comput.-Aided Design Integr. Circuits Syst., vol. 43, no. 1, pp. 305–318, Jan. 2024.
+[17] J. P. Cain and C. J. Spanos, ‘‘Electrical linewidth metrology for systematic CD variation characterization and causal analysis,’’ Proc. SPIE, vol. 5038, pp. 350–361, Jun. 2003.
+[18] K. Qian and C. J. Spanos, ‘‘A comprehensive model of process variability for statistical timing optimization,’’ Proc. SPIE, vol. 6925, pp. 430–440, Mar. 2008.
+[19] K. Pradeep, T. Poiroux, P. Scheer, A. Juge, G. Gouget, and G. Ghibaudo, ‘‘Analysis and modeling of wafer-level process variability in 28 nm FDSOI using split C-V measurements,’’ Solid-State Electron., vol. 145, pp. 19–28, Jul. 2018.
+[20] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, ‘‘Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,’’ Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 3, pp. 1–48, Dec. 2018.
+[21] S. Thrun, ‘‘Lifelong learning algorithms,’’ in Learning to Learn. Cham, Switzerland: Springer, 1998, pp. 181–209.
+[22] C. Finn, P. Abbeel, and S. Levine, ‘‘Model-agnostic meta-learning for fast adaptation of deep networks,’’ in Proc. Int. Conf. Mach. Learn. (ICML), 2017, pp. 1126–1135.
+[23] L. Zintgraf, K. Shiarlis, V. Kurin, K. Hofmann, and S. Whiteson, ‘‘Fast context adaptation via meta-learning,’’ in Proc. Int. Conf. Mach. Learn. (ICML), 2018, pp. 7693–7702.
+[24] D. Wei, Z. Piao, M. Liu, Y. Zeng, H. Feng, L. Qiao, and X. Peng, ‘‘Exploiting feature layer for read reference voltage optimization on 3D NAND flash memory,’’ IEEE Trans. Consum. Electron., vol. 70, no. 1, pp. 433–444, Feb. 2024.
+[25] Y. Cai, O. Mutlu, E. F. Haratsch, and K. Mai, ‘‘Program interference in MLC NAND flash memory: Characterization, modeling, and mitigation,’’ in Proc. IEEE 31st Int. Conf. Comput. Design (ICCD), Oct. 2013, pp. 123–130.
+[26] J.-P. Thiers, D. N. Bailon, and J. Freudenberger, ‘‘Bit-labeling and page capacities of TLC non-volatile flash memories,’’ in Proc. IEEE 10th Int. Conf. Consum. Electron. (ICCE-Berlin), Nov. 2020, pp. 1–6.
+[27] K.-D. Suh, B.-H. Suh, Y.-H. Lim, J.-K. Kim, Y.-J. Choi, Y.-N. Koh, S.-S. Lee, S.-C. Kwon, B.-S. Choi, J.-S. Yum, J.-H. Choi, J.-R. Kim, and H.-K. Lim, ‘‘A 3.3 V 32 mb NAND flash memory with incremental step pulse programming scheme,’’ IEEE J. Solid-State Circuits, vol. 30, no. 11, pp. 1149–1156, Nov. 1995.
+[28] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, ‘‘Enabling accurate and practical online flash channel modeling for modern MLC NAND flash memory,’’ IEEE J. Sel. Areas Commun., vol. 34, no. 9, pp. 2294–2311, Sep. 2016.
+[29] A. Asenov, A. R. Brown, J. H. Davies, S. Kaya, and G. Slavcheva, ‘‘Simulation of intrinsic parameter fluctuations in decananometer and nanometer-scale MOSFETs,’’ IEEE Trans. Electron Devices, vol. 50, no. 9, pp. 1837–1852, Sep. 2003.
+[30] A. Spessot, C. Monzio Compagnoni, F. Farina, A. Calderoni, A. S. Spinelli, and P. Fantini, ‘‘Compact modeling of variability effects in nanoscale NAND flash memories,’’ IEEE Trans. Electron Devices, vol. 58, no. 8, pp. 2302–2309, Aug. 2011.
+[31] Y. Pan, G. Dong, Q. Wu, and T. Zhang, ‘‘Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,’’ in Proc. IEEE Int. Symp. High-Perform. Comp Archit., Feb. 2012, pp. 1–10.
+[32] S. Hassanpour, T. Monsees, D. Wübben, and A. Dekorsy, ‘‘Forward-aware information bottleneck-based vector quantization for noisy channels,’’ IEEE Trans. Commun., vol. 68, no. 12, pp. 7911–7926, Dec. 2020.
+26379
+
+M. Hwang et al.: Intelligent Read Framework With Meta-Learning for NAND Flash Memory
+
+[33] B. Peleato, R. Agarwal, J. M. Cioffi, M. Qin, and P. H. Siegel, ‘‘Adaptive read thresholds for NAND flash,’’ IEEE Trans. Commun., vol. 63, no. 9, pp. 3069–3081, Sep. 2015.
+[34] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, ‘‘Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,’’ in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Mar. 2013, pp. 1285–1290.
+[35] T. K. Moon, Error Correction Coding: Mathematical Methods and Algorithms. Hoboken, NJ, USA: Wiley, 2020.
+[36] G. Dong, N. Xie, and T. Zhang, ‘‘On the use of soft-decision errorcorrection codes in NAND flash memory,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[37] T. Parnell, N. Papandreou, T. Mittelholzer, and H. Pozidis, ‘‘Modelling of the threshold voltage distributions of sub-20 nm NAND flash memory,’’ in Proc. IEEE Global Commun. Conf., Dec. 2014, pp. 2351–2356.
+[38] K. Hornik, M. Stinchcombe, and H. White, ‘‘Multilayer feedforward networks are universal approximators,’’ Neural Netw., vol. 2, no. 5, pp. 359–366, Jan. 1989.
+[39] A. Nichol, J. Achiam, and J. Schulman, ‘‘On first-order meta-learning algorithms,’’ 2018, arXiv:1803.02999.
+[40] C.-C. Hsieh, H.-T. Lue, Y. C. Li, T. Chen, H.-P. Li, and C.-Y. Lu, ‘‘A novel dichotomic programming algorithm applied to 3D NAND flash,’’ in Proc. Symp. VLSI Technol. (VLSI Technol.), Jun. 2015, pp. T180–T181.
+[41] Y. Pan, G. Dong, and T. Zhang, ‘‘Error rate-based wear-leveling for NAND flash memory at highly scaled technology nodes,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 21, no. 7, pp. 1350–1354, Jul. 2013.
+[42] Y. Freund and R. E. Schapire, ‘‘A decision-theoretic generalization of online learning and an application to boosting,’’ J. Comput. Syst. Sci., vol. 55, no. 1, pp. 119–139, Aug. 1997.
+[43] J. H. Friedman, ‘‘Greedy function approximation: A gradient boosting machine,’’ Ann. Statist., vol. 29, no. 5, pp. 1232–11890, Oct. 2001.
+[44] B. Leo, ‘‘Random forests,’’ Mach. Learn., vol. 45, no. 1, pp. 5–32, 2001. [45] J. Park, M. Kim, M. Chun, L. Orosa, J. Kim, and O. Mutlu, ‘‘Reducing
+solid-state drive read latency by optimizing read-retry,’’ in Proc. 26th ACM Int. Conf. Architectural Support Program. Lang. Operating Syst., Apr. 2021, pp. 702–716. [46] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, ‘‘Improving read performance of NAND flash SSDs by exploiting error locality,’’ IEEE Trans. Comput., vol. 65, no. 4, pp. 1090–1102, Apr. 2016.
+MINYOUNG HWANG received the B.S. and M.S. degrees from the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2021 and 2023, respectively, where he is currently pursuing the Ph.D. degree. His research interests include NAND flash memory systems, machine learning, and integrated sensing and communication.
+
+INHYUK CHOI received the B.S. degree in computer science and engineering from Jeonbuk National University, Jeonju, South Korea, in 2023, and the M.S. degree from the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2025, where he is currently pursuing the Ph.D. degree. His research interests include NAND flash memory systems, machine learning, and federated learning.
+JEONGJU JEE received the B.S., M.S., and Ph.D. degrees from the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2016, 2018, and 2024, respectively. He was with KAIST, as a Postdoctoral Fellow, in 2024. He joined the Department of Electrical and Computer Engineering, The University of Texas at Austin, as a Postdoctoral Fellow, in 2025. His research interests include MIMO systems, hardware-constrained communications, satellite communication systems, deep learning, and NAND flash memory systems.
+HYUNCHEOL PARK (Life Senior Member, IEEE) received the B.S. and M.S. degrees in electronics engineering from Yonsei University, Seoul, South Korea, in 1983 and 1985, respectively, and the Ph.D. degree in electrical engineering from Georgia Institute of Technology, Atlanta, GA, USA, in 1997. He was a Senior Engineer (1985–1991) and a Principal Engineer (1997–2002) with Samsung Electronics Company Ltd., South Korea. Since 2002, he has been with the School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, where he is currently a Professor. His research interests include communication theory and machine learning.
+
+26380
+
+VOLUME 14, 2026
+
+

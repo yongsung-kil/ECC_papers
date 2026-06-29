@@ -1,0 +1,972 @@
+2021 IEEE Wireless Communications and Networking Conference (WCNC) | 978-1-7281-9505-6/20/$31.00 ©2021 IEEE | DOI: 10.1109/WCNC49053.2021.9417420
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+Machine Learning Based Early Termination for Turbo and LDPC Decoders
+Anusha Gunturu, Avani Agrawal, Ashok Kumar Reddy Chavva, Senior Member, IEEE, Saikrishna Pedamalli Mobile Communications R&D, Samsung R&D Institute Bangalore, India Email: {anusha.g, av.agrawal, ashok.chavva, saikrishna.p}@samsung.com
+
+Abstract—Turbo and low-density parity-check (LDPC) codes have been chosen in wireless communications because of their near channel capacity performance. However, they consume huge power and also induce delay because of the iterative nature of the decoders. Various types of early termination (ET) techniques have been introduced within these decoders to decrease the power consumption and delay. Recently, machine learning (ML) algorithms are being explored to replace or improve the complex receiver algorithms in wireless communications, as a part of 6G research. In this paper, we propose a novel algorithm to use ML within the turbo and LDPC decoders, to identify the iteration for ET. We show that the proposed algorithm outperforms the improved hard decision aided ET method by 25% ∼ 57%, in reducing the average number of iterations (ANI) of turbo decoder at 10% block error rate (BLER), for multiple modulation schemes. We also show that the proposed ET method outperforms parity check equation ET method of LDPC decoder by 30% ∼ 36%, in reducing the ANI at 10% BLER, for multiple modulation schemes. The proposed method has negligible loss in BLER performance compared to typical implementation of fixed iteration decoders.
+Keywords—Early termination, iterative decoding, LDPC codes, machine learning, neural network, turbo codes.
+I. INTRODUCTION
+Artificial intelligence (AI) in wireless communications has become one of the mainstream directions for the next generation mobile networks, specifically 5G and beyond. Using machine learning (ML) in wireless receiver algorithms is of great interest, as it significantly reduces the complexity of the receiver algorithms, and helps in reducing the power consumption [1]. ML has been widely investigated in multiple receiver algorithms like channel estimation and equalization, link adaptation, channel state information (CSI) feedback, and channel decoding [2] - [4]. However, usage of ML in the early termination (ET) of a channel decoder structure has not been explored in the literature to the best of our knowledge. In this paper, we take a first step towards analyzing an ET technique in an iterative channel decoder using an ML algorithm.
+In wireless communications, specifically cellular, channel coding plays an important role in determining the latency and reliability of the link. Turbo and low-density parity-check (LDPC) are the channel coding schemes chosen by third generation partnership project (3GPP), for data channels in long term evolution (LTE) and new radio (NR) 5G cellular technologies, respectively, given their near capacity error correction performance [5]. Turbo and LDPC decoders operate in an iterative manner. The decoding procedure of the turbo codes involves two decoders passing the extrinsic information of the coded bits to each other,
+
+and thereby reach convergence in an iterative manner [6]. Similarly, LDPC decoder exchanges soft information iteratively between variable and check nodes, that correspond to the parity constraints and data symbols of an LDPC codeword, respectively [7], [8]. Reducing the number of iterations in these decoders is of significant interest, given their complexity and time taken to process each iteration.
+Multiple ET techniques have been proposed and proven to be efficient in solving the tradeoff between desirable performance and complexity reduction for iterative decoders. ET techniques use two types of metrics as the evaluation criteria. One is soft decision based, which uses log likelihood ratios (LLRs) of the bits as metrics, and the other is hard decision based, which uses hard bit outputs of the decoder as metrics. Some of the well known ET techniques including both soft and hard decision outputs used for turbo decoder are sign change ratio (SCR), hard decision aided (HDA) [9], sign difference ratio (SDR) [10], improved HDA (IHDA) [11], and LLR histogram [12]. Similarly for LDPC decoders, parity check equation (PCE) is the most standard ET technique used, with others being convergence of mean magnitude (CMM), variable node reliability (VNR), and so on [13]–[15]. As it can be observed, multiple methods have been proposed for turbo and LDPC decoders independently. Also, ET techniques for turbo decoder are evaluated for binary phase-shift keying (BPSK) modulation in most of the available literature [9]– [12], and results with 16 quadrature amplitude modulation (QAM) are presented in [16]. Similarly, ET techniques for LDPC are evaluated upto 64-QAM in [17] while most of the other literature exists for BPSK modulation [13]–[15]. Additionally, it can be noted that all of these ET techniques are evaluated for additive white Gaussian noise (AWGN) channel.
+In this paper, we propose a novel ET method for the iterative decoder using an ML based algorithm. The proposed ML algorithm takes the soft decision (LLR) based metric as the input at an iteration, and predicts the decoding status of the received codeword at that iteration. The main features of the proposed algorithm are:
+• It is applicable for both the LTE turbo and NR 5G LDPC decoders in predicting the iteration for ET.
+• The ML based algorithm is trained and tested for its accuracy with 3 types of modulation schemes: quadrature phase-shift keying (QPSK), 16-QAM, and 64-QAM.
+• It contains a single neural network that works for all the codeword lengths without increasing any complexity, and also applicable to fading channel models.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply. 978-1-7281-9505-6/21/$31.00 ©2021 IEEE
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+We evaluate the proposed method with 3GPP defined fading channel models: extended pedestrian A (EPA)-5Hz of LTE [18], and tapped delay line (TDL)-A [19] of NR 5G. We compare the effectiveness of the proposed algorithm with IHDA, fixed iteration, and genie methods. We choose IHDA method for benchmarking as it is proven to be suitable method for comparing the proposed method for both turbo and LDPC decoders [12], [13]. Also, it outperforms multiple existing ET methods such as SCR, SDR, HDA, and cross entropy (CE) [11]. In addition to these methods, we use PCE method also for comparing the performance of LDPC decoder with the proposed method. PCE method terminates the LDPC decoder when all the parity check constraints are satisfied [17].
+The outline of the paper is as follows. Section II summarizes the iterative decoding of turbo and LDPC codes along with the decoding metric used for ET. In Section III, we describe the proposed ET method using ML algorithm. Simulation results are presented in Section IV which show the amount of impact ML creates in the decoder structure by aiding in ET. In Section V, we show the computational complexity of the proposed method, following which we conclude in Section VI.
+II. DECODING METRIC FOR TURBO AND LDPC CODES
+We consider turbo and LDPC encoder structures defined by 3GPP, for LTE and NR 5G technologies, respectively [20], [21]. Let IMAX be the maximum number of iterations for the decoder used in the implementation of standard fixed iteration decoder for turbo and LDPC codes.
+A. Turbo Codes
+Turbo encoder consists of two parallel concatenated convolutional codes and an interleaver. The decoder has two component decoders, and each of them uses Bahl, Cocke, Jelinek, and Raviv (BCJR) algorithm that estimates maximum a posteriori (MAP) probabilities of the LLRs [22]. The two decoders exchange the extrinsic LLRs with each other iteratively until the configured IMAX, and finally give the hard outputs as the decoded bits [6]. Typically, updating the LLRs through both the decoders is considered as one iteration for turbo decoder. In this paper, throughout, we consider each component decoder operation as one iteration to determine the ET, similar to [23].
+B. LDPC Codes
+LDPC encoders are the set of linear block codes defined by a sparse parity check matrix (PCM), HM×N [7]. The number of columns, N in the matrix is defined by the codeword (c) length, and the number of rows, M is defined by the number of parity check constraints of the codeword. LDPC decoder uses belief-propagation method [8], where in the variable nodes representing the columns, and the check nodes representing the rows of the PCM, iteratively exchange the reliability of each bit, and update the LLRs of the bits at every iteration. The decoding stops when the decoder reaches either IMAX, or all the parity constraints are satisfied as H.cT = 0.
+
+C. Decoding Metric
+In [12], LLR histogram obtained from each iteration is used as a metric in evaluating the early stopping criterion of a decoder. This metric achieves reasonable tradeoff between performance and complexity by reducing the average number of iterations significantly, with negligible loss in performance. Also, this metric is independent of the length of the codeword which makes it more efficient in terms of complexity while evaluating large codewords. We use the same metric in the proposed ML based ET method. We limit the range of LLRs to [−M, M ] before obtaining the histogram. This achieves a single network ML model that works for all the codewords having different ranges of LLRs. Further, the histogram values are normalized by the total number of bits in the codeword, N . We use cyclic redundancy check (CRC) to determine if the codeword is decoded successfully at the predicted iteration [15]. CRCsuccess indicates that the codeword is decoded successfully, and the CRC-failure indicates otherwise. From now on, we use CRC status to indicate the decoding process as a success or a failure. Figs. 1a and 1b show the example patterns of pre-normalized LLR histograms limited to M = 1000, for the codewords with CRC-success and CRC-failure, respectively, at iteration IMAX. We observe that the LLR histogram with CRC-success has wide separation between positive and negative LLRs indicating that they are clearly distinguishable, and can be decoded. Whereas, LLR histogram with CRC-failure resembles Gaussian shape with positive and negative LLRs merging towards zero and can not be decoded.
+
+300
+
+80
+
+Count Count
+
+60 200
+40 100
+20
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(a) CRC-success
+
+(b) CRC-failure
+
+Fig. 1: Example patterns of pre-normalized LLR histograms. LLRs correspond to LTE turbo decoder at IMAX = 12, N = 544 bits.
+
+III. PROPOSED EARLY TERMINATION USING ML
+Deep neural network (DNN) based ML models implement a learning process based on the previous data, and the corresponding experience associated with it. We propose to use one such DNN based ML model in the ET of iterative channel decoding procedure. In the proposed ET method, a DNN based ML model is embedded in the decoder architecture as shown in Fig. 2. In this algorithm, the decoder updates the normalized LLR histogram at each iteration, and feeds it to the DNN. Based on the normalized LLR histogram, the DNN sends a prediction on the decoding status of the codeword in the form of a CRC. From Fig. 2, it can be seen that the CRC check is run only for the codeword with CRC-success prediction, whereas CRCfailures predictions are terminated immediately.
+We choose a fully connected DNN with an input layer of length K, three hidden layers of lengths L1, L2, and L3,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+CRC Prediction DNN
+
+Iterative exchange
+
+Decoder with ML
+
+Channel Decoder
+
+CRC-success Codeword bits
+
+CRC Check
+
+Normalized LLR Histogram
+
+Fig. 2: Block diagram of early termination of iterative channel decoder using DNN based ML model.
+
+respectively, and an output layer of length 3. All the hidden
+layers use leaky rectified linear activation units (LReLU),
+and the output layer uses softmax classifier as represented in Fig. 3. Let x0, x1, ..., xK denote the normalized LLR histogram values of a codeword at the input layer. The softmax classifier at the output layer generates the probabilities p0, p1, and p2, from the outputs y0, y1, and y2, respectively, as shown in Fig. 3. Each of these probabilities corresponds to a
+class of CRC prediction which is explained in Section III-B. The probability pi corresponding to the ith output class can be obtained using softmax as [26]
+
+pi =
+
+eyi j eyj
+
+.
+
+(1)
+
+The final output, CRC prediction shown in Fig. 3 is the class corresponding to the maximum of probabilities obtained from the softmax classifier as given in (1).
+
+CRC Prediction Class = arg max pi.
+
+(2)
+
+i {0,1,2}
+
+Input Layer
+x0 Normalized x1 LLR Histogram
+xK
+
+Hidden
+
+Deep Neural Network
+
+Layer #1 Hidden
+
+Layer #2 Hidden Layer #3
+
+Output Layer
+
+y0
+
+p0
+
+y1
+
+p1
+
+L1
+
+L2
+
+L3
+
+y2
+
+p2
+
+Softmax classifier
+
+Leaky ReLU
+
+Maximum Probability
+Class
+
+CRC Prediction
+
+Fig. 3: Fully connected DNN based ML model with normalized LLR histogram of K bins as input layer, 3 hidden layers with leaky ReLU activation functions and Li neurons in each layer, i ∈ {1, 2, 3}, and an output layer with softmax classifier for 3 classes of CRC Prediction.
+
+The proposed ML based ET method involves the following 3 steps in identifying the iteration for ET in an iterative decoder.
+• DNN Training : Train the DNN based ML model using the normalized LLR histograms and the corresponding CRC status of the codewords.
+• CRC Prediction : Using the trained DNN, predict the CRC status of the codeword at every iteration for terminating the iterative decoder.
+• Early Termination: Identify the iteration number for the ET of the codeword using CRC prediction.
+A. DNN Training
+The DNN based ML model is trained with the data collected from codewords transmitted with multiple modulation and coding schemes (MCS) spanning QPSK, 16-QAM,
+
+and 64-QAM. The training data consists of the normalized
+
+LLR histograms, and the corresponding CRC status of the
+
+codewords. We trained the network with the normalized
+
+LLR histograms at iteration
+
+IMAX 2
+
+,
+
+as
+
+the
+
+data
+
+obtained
+
+from this iteration is observed as the best fit for predicting
+
+the CRC status for iterations from i = 0 to IMAX − 1.
+
+We classify the normalized LLR histogram input into 3
+
+types using the CRC status at iterations
+
+IMAX 2
+
+and IMAX.
+
+Let z0, z1, and z2 denote the 3 classes used to classify the
+
+normalized LLR histogram based on the CRC status at
+
+IMAX 2
+
+and IMAX as shown below.
+
+z0 := z1 := z2 :=
+
+CRC-success at CRC-failure at CRC-failure at
+
+IMAX 2
+
+, CRC-success at IMAX,
+
+IMAX 2
+
+, CRC-failure at IMAX,
+
+IMAX 2
+
+, CRC-success at IMAX. (3)
+
+We do not consider the class of CRC-success at
+
+IMAX 2
+
+and CRC-failure at IMAX as it’s occurrence has near zero
+
+probability in any iterative decoder. We confirmed the same
+
+from the training data collected from simulations. Fig. 4
+
+shows the example patterns for 3 types of pre-normalized
+
+LLR histograms (LLRs limited with M = 1000) at iter-
+
+ations
+
+IMAX 2
+
+and IMAX corresponding to the classes z0,
+
+z1, and z2, respectively. From (3), z0 denotes the class
+
+of codewords that has CRC-success at iterations
+
+, IMAX
+2
+
+and the final iteration IMAX. This can be inferred from the
+
+similarity between the LLR histogram patterns in Figs. 4a
+
+and 4b. Similarly, z1 denotes the class of codewords that
+
+has CRC-failure at iterations
+
+IMAX 2
+
+, and the final iteration
+
+IMAX. Same can be inferred from the similarity between
+
+the LLR histogram patterns in Figs. 4c and 4d. Hence, if
+
+a codeword achieves a pattern of LLR histogram similar
+
+to either Fig. 4a or Fig. 4c at any early iteration, network
+
+classifies them as a CRC-success or a failure respectively.
+
+Whereas, z2 denotes the class of codewords whose decoding
+
+status differ at can be inferred
+
+IMAX 2
+that
+
+and IMAX. From Figs. the LLR histogram at
+
+4e and 4f, it
+
+IMAX 2
+
+needs
+
+few more iterations to reach the pattern similar to that of
+
+IMAX. Hence this type of histogram is learnt by the network as CRC-unsure, as it is not able to classify it between
+
+CRC-success and CRC-failure. Thus, using these 3 types
+
+of classes, DNN classifies any normalized LLR histogram
+
+to have 3 different types of output classes as CRC prediction
+
+which is discussed in the next section.
+
+B. CRC Prediction Using Trained DNN
+
+When a normalized LLR histogram is fed to the DNN
+
+trained as in Section III-A at any given iteration, the softmax
+
+layer shown in Fig. 3 calculates the probabilities of all the 3
+
+classes using (1), and gives the CRC prediction class using
+
+(2). Thus, the final predicted output of the DNN model in
+
+Fig. 3 can be written as
+
+⎧ ⎪⎨0, CRC-success
+
+CRC Prediction = ⎩⎪12,,
+
+CRC-failure CRC-unsure.
+
+(4)
+
+As given in (4), output classes 0 and 1 indicate the predictions as CRC-success and failure status for a codeword, respectively. Output with class 2 indicates that with the given normalized LLR histogram, DNN is not able to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+300
+
+300
+
+Count
+
+Count
+
+200
+
+200
+
+100
+
+100
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(a) Class z0 : Iteration
+
+IMAX 2
+
+80
+
+60
+
+Count
+
+40
+
+20
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(c) Class z1 : Iteration
+
+IMAX 2
+
+150
+
+Count
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(b) Class z0 : Iteration IMAX
+
+80
+
+60
+
+40
+
+20
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(d) Class z1 : Iteration IMAX
+
+300
+
+Count
+
+Count
+
+100
+
+200
+
+50
+
+100
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(e) Class z2 : Iteration
+
+IMAX 2
+
+0
+
+-1000 -500
+
+0
+
+500 1000
+
+LLR bins
+
+(f) Class z2 : Iteration IMAX
+
+Fig. 4: Example patterns of LLR histograms used for 3 types of input
+classification in DNN training, corresponding to classes z0, z1, and z2, respectively. LLRs correspond to LTE turbo decoder at IMAX = 12, N = 544 bits.
+
+classify it as a success or a failure status, and hence returns
+it as an unsure case of prediction. Output classes 0 and 1 correspond to z0 and z1 in (3), respectively. Whereas, class 2 corresponds to z2 type in (3), indicating that more number of iterations are needed to predict the actual CRC status of
+the codeword.
+
+C. Early Termination Using CRC Prediction
+
+Once the DNN predicts the CRC status as given in (4),
+
+we use the following conditions to terminate the decoder in
+
+each of the prediction cases.
+
+1) CRC-success Prediction: If the DNN predicts a
+
+normalized LLR histogram as a CRC-success, UE shall
+
+convert the LLRs into hard output bits, and then run CRC
+
+check as shown in Fig. 2. If the CRC check succeeds, UE
+
+terminates running the decoder including the DNN. If the
+
+CRC check fails, then instead of terminating, UE continues
+
+with next iteration to avoid the information loss due to false
+
+prediction.
+
+2) CRC-failure Prediction: UE shall terminate the de-
+
+coder if the DNN predicts an LLR histogram as a CRC-
+
+failure. An LLR histogram would correspond to a CRC-
+
+failure when the histogram merges towards zero as shown
+
+in Fig. 1b. Given this pattern can be observed and confirmed
+
+only over the iterations, we choose to consider the CRC-
+
+failure predictions only after
+
+IMAX 2
+
+for a decoder. This
+
+avoids any information loss due to false predictions of CRC-
+
+failure during initial iterations.
+
+3) CRC-unsure Prediction: For unsure predictions of
+
+class 2 as given in (4), decoder shall continue with the next
+
+iterations for classifying it as a success or a failure.
+
+Algorithm 1 Proposed early termination using ML
+
+1: Initialization: i = 1; run = 1; set IMAX, M 2: while run and i ≤ IMAX − 1 do 3: Limit LLRs to [−M, M ] and obtain the histogram
+
+4: Normalize LLR histogram with N
+
+5: Feed the normalized histogram to DNN
+
+6: if Prediction = CRC-success then
+
+7:
+
+Convert LLRs to hard bits
+
+8:
+
+Perform CRC check
+
+9:
+
+if CRC check succeeds then
+
+10:
+
+run = 0;
+
+11:
+
+end if
+
+12:
+
+else if Prediction = CRC-failure and i≥
+
+IMAX 2
+
+then
+
+13:
+
+run = 0;
+
+14: end if
+
+15: i = i + 1;
+
+16: end while
+
+Thus, the proposed method evaluates the CRC prediction from DNN at each iteration of the decoder, and obtains the iteration number for ET as described in Algorithm 1.
+
+IV. SIMULATION RESULTS
+In this section, we present the simulation results to benchmark the proposed ML based ET method. LTE turbo and NR 5G LDPC decoders are simulated using link level simulators implemented in MATLAB with 3GPP specified channel models : EPA-5Hz, and TDL-A with delay spread (DS) and doppler frequency (fD) set to 43 ns and 5 Hz, respectively [18], [19]. Codewords corresponding to LTE and NR 5G data channels are simulated with 15 resource blocks (RBs) in frequency domain, and 1 subframe in time domain, using the parameters listed in Table I [24], [25]. We used minimum mean-squared error (MMSE) equalizer with ideal channel estimation, for both LTE and NR 5G simulations. Each simulation is run for 2 × 104 codewords with 100 channel realizations. We evaluated multiple MCS indices for these channel models covering QPSK, 16-QAM, and 64-QAM modulation schemes, for both turbo and LDPC decoders. Each MCS index correspond to a code rate of a modulation scheme, and an MCS index combined with the number of RBs gives the codeword length [24].
+
+TABLE I: Simulation Parameters
+
+Parameter Carrier frequency Sub-carrier spacing, SCS Cyclic prefix duration Transmission bandwidth Antenna configuration Control and pilot overhead Channel estimation Channel model
+Equalizer Channel decoder
+
+LTE 2 GHz 15 kHz 4.7 μs, 15 RBs 1T1R None Ideal EPA -5 Hz
+MMSE Turbo
+
+NR 5G 4 GHz 15 kHz 4.7 μs 15 RBs 1T1R None Ideal TDL-A, DS = 30 ns, fD = 5 Hz MMSE LDPC
+
+Limiting factor for LLRs mentioned in Section II is chosen as M = 1000. DNN based ML model parameters (K, L1, L2, L3), mentioned in Section III are taken as (20, 40, 20, 10) for turbo, and (20, 40, 30, 15) for LDPC decoders, respectively. The constant, α used in LReLU activation function is taken as α = 0.1, for all the 3 hidden
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+layers of DNN shown in Fig. 3. The number of epochs is set to 2000 with a batch size of 1000 for training. Nesterov Adam optimizer with learning rate of 0.001 is used in training the DNN model, for both turbo and LDPC decoders. The DNN model is trained with a total of 4×104 codewords, each for both turbo and LDPC decoders, corresponding to 50% block error rate (BLER), across all modulation schemes containing almost equal proportions of all three CRC prediction classes.
+We evaluate the performance of the ET methods in terms of BLER, and average number of iterations (ANI). We use IMAX = 12 for turbo decoder, and IMAX = 15 for LDPC decoder. We compare the performance of the proposed algorithm with fixed iteration implemented with IMAX, IHDA (implemented as given in [13] for LDPC, and [23] for turbo decoders), and genie methods for turbo decoder. We use PCE method [17] for LDPC decoder in addition to these methods. The genie method is non casual, that assumes the knowledge of the transmitted codeword at the receiver, and knows the exact iteration number to terminate. It is shown in the literature as the limit of any possible ET method.
+Fig. 5 shows ANI as a function of MCS index for turbo and LDPC decoders. Each point in the graph is simulated at signal to noise ratio (SNR) corresponding to 10% BLER, which is the typical operating region for LTE and NR 5G users. From Fig. 5a, we observe that the ANI increases with MCS index within a modulation scheme. And this pattern is consistent for all the methods except for fixed iteration, as it is set to be a constant value. Further, all the ET methods outperform the fixed iteration method. We also observe that the proposed ML based ET method for turbo decoder outperforms IHDA and fixed iteration methods consistently for all modulation schemes in terms of ANI reduction. The ANI of the proposed scheme is 44.65%, 37.39%, and 30.36% lower than that of the IHDA method, at MCS indices 6 (QPSK), 12 (16-QAM), and 17 (64-QAM), respectively. Overall, the proposed method requires 25% ∼ 57% lower ANI for turbo decoder, compared to IHDA method, considered across all MCS indices as shown in Fig. 5a.
+From Fig. 5b, we observe that the ANI of LDPC decoder doesn’t have any increasing pattern with respect to MCS index like that of turbo decoder in Fig. 5a. However, we notice that the all the ET methods follow similar pattern. The proposed ML based ET method for LDPC decoder outperforms PCE, IHDA, and fixed iteration methods for all modulation schemes in terms of ANI reduction. The ANI of the proposed scheme is 34.52%, 32.04%, and 35.87% lower than that of the PCE method, and 25.77%, 24.6%, and 23.11% lower than that of the IHDA method at MCS indices 6 (QPSK), 12 (16-QAM), and 17 (64-QAM), respectively. Overall, the proposed method requires 30% ∼ 36% lower ANI for LDPC decoder, compared to PCE method, and 23% ∼ 32% lower ANI, compared to IHDA method, respectively, considered across all MCS indices as shown in Fig. 5b. The reduction observed in ANI is significant for both turbo and LDPC decoders, and consistent in all 3 modulation schemes.
+Fig. 6 shows the performances of BLER as a function of SNR, and ANI as a function of BLER, for all the considered
+
+ANI
+
+ANI
+
+12
+
+11
+
+Turbo Fixed Iteration
+
+IHDA
+
+10
+
+Proposed ML based ET
+
+9
+
+Genie
+
+8
+
+QPSK
+
+16-QAM
+
+64-QAM
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+20
+
+MCS Index
+
+(a) LTE turbo decoder, Channel: EPA-5Hz [18], IMAX = 12.
+15
+
+14
+
+LDPC Fixed Iteration
+
+13
+
+PCE
+
+12
+
+IHDA
+
+Proposed ML based ET
+
+11
+
+Genie
+
+10
+
+9
+
+8
+
+QPSK
+
+16-QAM
+
+64-QAM
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+18
+
+20
+
+MCS Index
+
+(b) NR 5G LDPC decoder. Channel: TDL-A with DS = 43 ns, fD = 5 Hz [19], IMAX = 15.
+Fig. 5: ANI as a function of MCS index for turbo and LDPC decoders. Each MCS index is simulated at SNR corresponding to 10% BLER.
+methods for turbo decoder, at MCS index 17, corresponding to 64-QAM modulation. From Fig. 6a, we observe that the BLER performance of all the methods decrease with SNR, and overlap with that of the genie method. This indicates that the proposed ML based ET method is on par with the other ET methods in terms of BLER performance, at all the ranges of BLER. From Fig. 6b, we observe that the ANI increases with increasing BLER while the proposed method continues to consistently outperform IHDA and fixed iteration methods at all the ranges of BLER. With the proposed ML based ET method, we observe that the ANI increases by 133% when BLER changes from 5% to 90%, whereas the ANI of the IHDA method increases by 200% for the same. This shows the better performance of the proposed method in reducing the ANI at all the ranges of BLER, with no loss in BLER performance as observed in Fig. 6a.
+Similar to Fig.6, Fig. 7 shows the BLER and ANI performances for all the considered methods for LDPC decoder at MCS index 17, corresponding to 64-QAM modulation. From Fig. 7a, we observe that the BLER performance of all the methods decrease with SNR, and overlap with that of genie method, indicating same BLER performance for all the methods. From Fig. 7b, we observe that the proposed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+10 1
+
+10 1
+
+Turbo Fixed Iteration
+
+LDPC Fixed Iteration
+
+IHDA
+
+PCE
+
+Proposed ML based ET
+
+IHDA
+
+10 0
+
+Genie
+
+10 0
+
+Proposed ML based ET
+
+Genie
+
+10 -1
+
+10 -1
+
+BLER
+
+BLER
+
+10 -2
+
+10 -2
+
+10 -3
+
+0
+
+3
+
+6
+
+9
+
+12
+
+15
+
+18
+
+21
+
+24
+
+27
+
+SNR [dB]
+
+(a) BLER as a function of SNR.
+12
+
+11
+
+Turbo Fixed Iteration
+
+IHDA
+
+10
+
+Proposed ML based ET
+
+9
+
+Genie
+
+8
+
+7
+
+ANI
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+10 -3
+
+10 -2
+
+10 -1
+
+10 0
+
+BLER
+
+(b) ANI as a function of BLER, corresponding to SNR values in above plot (a).
+
+Fig. 6: LTE turbo decoder (N = 4608 bits) simulated with 64-QAM at MCS Index 17, using 3GPP EPA-5Hz channel [18], and IMAX = 12.
+
+ML based ET method consistently outperforms PCE, IHDA, and fixed iteration methods in terms of ANI reduction, at all the ranges of BLER from 1% to 100%. With the proposed ML based ET method, we observe that the ANI increases by 183% when BLER changes from 5% to 82%, whereas the ANI of the PCE and IHDA methods increase by 208% and 139%, respectively, for the same. We also observe that the proposed method overlaps with genie method as the BLER reaches 1%. We note that at ∼ 100% BLER, IHDA method has lower ANI than the proposed method. This is because the IHDA method terminates many CRC-failure cases early indicating the CRC-success falsely, resulting in lower ANI for IHDA at ∼ 100% BLER. However, practical system’s operating point of interest for LTE and NR 5G data channels is 10% BLER as discussed earlier.
+Genie method in both Figs. 6b and 7b show that the ANI increases with BLER initially, and then decrease while reaching towards 100% BLER. This is because of the assumption that the genie method knows the exact iteration to terminate. At higher BLER regions, genie doesn’t decode for most of the codewords, and terminates at iteration 0 as it knows that the codeword cannot be decoded even if it runs till iteration IMAX. Similarly, at lower BLER regions where most of the codewords are successfully decoded, genie stops at the lowest iteration the codeword can be decoded.
+
+10 -3 9
+
+11
+
+13
+
+15
+
+17
+
+19
+
+21
+
+23
+
+25
+
+27
+
+SNR [dB]
+
+ANI
+
+(a) BLER as a function of SNR.
+
+15
+
+14
+
+LDPC Fixed Iteration
+
+13
+
+PCE
+
+12
+
+IHDA
+
+11
+
+Proposed ML based ET
+
+10
+
+Genie
+
+9
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+10 -3
+
+10 -2
+
+10 -1
+
+10 0
+
+BLER
+
+(b) ANI as a function of BLER, corresponding to SNR values in above plot (a).
+
+Fig. 7: NR 5G LDPC decoder (N = 4928 bits) simulated with 64-QAM
+at MCS Index 17, using 3GPP TDL-A channel with DS = 43 ns, fD = 5 Hz [19], and IMAX = 15.
+
+V. COMPLEXITY ANALYSIS
+
+The proposed ML based early termination method reduces the required ANI for both turbo and LDPC decoders, as discussed in Section IV. However, it adds additional complexity of evaluating the ET criteria similar to the existing ET methods. Let the multiplication, addition, comparison, and division be considered as the floating point operations (FLOPS), used to determine the computational complexity as given in [27]. The proposed method additionally involves the following computations at each iteration, in comparison to typically implemented fixed iteration method for an N bit codeword.
+• Computation of K bin normalized LLR histogram. • Execution of fully connected DNN model. • CRC check at the predicted iteration.
+However, the computation of LLR histogram, and CRC check will be common, and similar to that of other ET methods as well at each iteration based on the metric chosen. The additional computations in the proposed ML based method are due to DNN model implementation at each iteration. Execution of fully connected DNN model in Fig.3 requires (KL1+L1L2+L2L3+3L3+K+L1+L2+L3+12) FLOPS [26]. Therefore, approximately a total of 1900 and 2600 additional FLOPS are required for executing DNN
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+ ,((( :LUHOHVV &RPPXQLFDWLRQV DQG 1HWZRUNLQJ &RQIHUHQFH :&1&
+
+models of turbo and LDPC decoders, respectively with the chosen parameters (20, 40, 20, 10), and (20, 40, 30, 15), as mentioned in Section IV. The number of FLOPS remain same for all the codeword lengths for both the decoders, as the model is independent of the codeword length.
+From [28], execution of one iteration of the turbo and LDPC decoders require 3.6 × 105 and 1.5 × 105 FLOPS, respectively, for a codeword of length, N = 4000 bits with 1/2 coderate. Thus, executing DNN model for all IMAX − 1 iterations correspond to 5.8% and 24.27% of executing one iteration of turbo and LDPC decoders, respectively. This further reduces as the codeword length increases for high data rate applications, and also for the cases where termination happens in the early iterations of the decoder.
+VI. CONCLUSION
+In this paper, we proposed an ET technique for an iterative channel decoder using ML. The proposed method is evaluated for LTE turbo and NR 5G LDPC decoders. We have shown that the proposed ET method outperforms the IHDA and fixed iteration methods for turbo decoder, significantly in terms of ANI reduction, with negligible loss in BLER performance. Similarly, it outperforms the IHDA, fixed iteration, and PCE methods for LDPC decoder, in reducing the ANI. We show that the ML based ET method consistently outperforms at all the ranges of BLER, and across all the modulation schemes: QPSK, 16QAM, and 64-QAM. We have shown that the proposed algorithm outperforms IHDA method by 25% ∼ 57% for turbo decoder, and PCE method by 30% ∼ 36% for LDPC decoder, in terms of ANI reduction at 10% BLER, considered across all the modulation schemes. We further presented the computational complexity for the proposed ML based method, and compared with the execution of one iteration of the turbo and LDPC decoders.
+REFERENCES
+[1] A. Zappone, M. Di Renzo, M. Debbah, “Wireless networks design in the era of deep learning: Model-based AI-based or both?”, arXiv:1902.02647, Feb. 2019, [online] Available: https://arxiv.org/abs/1902.02647.
+[2] S. Han, Y. Oh and C. Song, “A Deep Learning Based Channel Estimation Scheme for IEEE 802.11p Systems,” IEEE International Conference on Communications (ICC), Shanghai, China, 2019, pp. 1-6.
+[3] Y. Liao, H. Yao, Y. Hua and C. Li, “CSI Feedback Based on Deep Learning for Massive MIMO Systems,” in IEEE Access, vol. 7, pp. 86810-86820, 2019.
+[4] R. Sattiraju, A. Weinand and H. D. Schotten, “Performance Analysis of Deep Learning based on Recurrent Neural Networks for Channel Coding,” IEEE International Conference on Advanced Networks and Telecommunications Systems (ANTS), Indore, India, 2018, pp. 1-6.
+[5] O. Iscan, D. Lentner and W. Xu, “A Comparison of Channel Coding Schemes for 5G Short Message Transmission,” IEEE Globecom Workshops (GC Wkshps), Washington, DC, 2016, pp. 1-6.
+[6] C. Berrou, A. Glavieux and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes. 1,” Proceedings of ICC ’93 - IEEE International Conference on Communications, Geneva, Switzerland, 1993, pp. 1064-1070 vol.2.
+[7] R. Gallager, “Low-density parity-check codes,” in IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21-28, January 1962.
+[8] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” in Electronics Letters, vol. 33, no. 6, pp. 457-458, 13 March 1997.
+[9] R. Y. Shao, S. Lin, and M. P. C. Fossorier, “Two simple stopping criteria for turbo decoding,” IEEE Trans. Commun., vol. 47, pp. 1117–1120, Aug. 1999.
+
+[10] Y. Wu, B. D. Woerner and W. J. Ebel, “A simple stopping criterion for turbo decoding,” in IEEE Communications Letters, vol. 4, no. 8, pp. 258-260, Aug. 2000.
+[11] T. Ngatched, F. Takawira, “Simple stopping criterion for turbo decoding,” Electronics Letters, vol. 37, no. 22, pp. 1350-1351, October 2001.
+[12] I. Amamra and N. Derouiche, “A stopping criteria for turbo decoding based on the LLR histogram,” 16th IEEE Mediterranean Electrotechnical Conference, Yasmine Hammamet, 2012, pp. 699-702.
+[13] Jin Li, Xiao-hu You and Jing Li, “Early stopping for LDPC decoding: convergence of mean magnitude (CMM),” in IEEE Communications Letters, vol. 10, no. 9, pp. 667-669, Sept. 2006.
+[14] F. Kienle and N. Wehn, “Low complexity stopping criterion for LDPC code decoders,” IEEE 61st Vehicular Technology Conference, Stockholm, 2005, pp. 606-609 Vol. 1.
+[15] F. Wang et al., “Efficient early termination strategy for LDPC codes in GPS systems”, J. Harbin Institute Technol. (New Series), vol. 20, no. 6, pp. 118-122, Jun. 2013.
+[16] M. Y. M. Nasir, R. Mohamad, M. Kassim, N. M. Tahir and E. Abdullah, “Performance Analysis of Cross-Entropy Stopping Criterion for Quadrature Amplitude Modulation,” IEEE 9th International Conference on System Engineering and Technology (ICSET), Shah Alam, Malaysia, 2019, pp. 273-276.
+[17] H. Wu, F. Wang and Y. Yuan, “A Distributed CRC Early Termination Scheme for High Throughput QC-LDPC Codes,” 10th International Conference on Wireless Communications and Signal Processing (WCSP), Hangzhou, 2018, pp. 1-5.
+[18] 3GPP TS 36.141-g50, “E-UTRA Base Station conformance testing”. [19] 3GPP TS 38.901-g10, “Study on channel model for frequencies from
+0.5 to 100 GHz”. [20] 3GPP TS 36.212-g10, “E-UTRA Multiplexing and channel coding”. [21] 3GPP TS 38.212-g10, “NR Multiplexing and channel coding”. [22] L. Bahl, J. Cocke, F. Jelinek and J. Raviv, “Optimal decoding of
+linear codes for minimizing symbol error rate (Corresp.),” in IEEE Transactions on Information Theory, vol. 20, no. 2, pp. 284-287, March 1974. [23] M. AlMahamdy and J. Dill, “Half-iteration early termination of turbo decoding,” IEEE 7th Annual Computing and Communication Workshop and Conference (CCWC), Las Vegas, NV, 2017, pp. 1-5. [24] 3GPP TS 36.213-g10, “E-UTRA Physical layer procedures”. [25] 3GPP TS 38.214-g10, “NR Physical layer procedures for data”. [26] “Data Mining: Practical Machine Learning Tools and Techniques (4th Edition)”. By Ian H. Witten, Eibe Frank, Mark A. Hall and Christopher J. Pal. Morgan Kaufmann. 2017. [27] Hunger, Raphael. “Floating point operations in matrix-vector calculus.” Munich: Munich University of Technology, Inst. for Circuit Theory and Signal Processing, 2005. [28] S. Shao et al., “Survey of Turbo, LDPC, and Polar Decoder ASIC Implementations,” in IEEE Communications Surveys & Tutorials, vol. 21, no. 3, pp. 2309-2333, thirdquarter 2019, doi: 10.1109/COMST.2019.2893851.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:20 UTC from IEEE Xplore. Restrictions apply.
+
+

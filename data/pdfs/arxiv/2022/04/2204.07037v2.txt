@@ -1,0 +1,1489 @@
+arXiv:2204.07037v2 [eess.SP] 2 Oct 2023
+
+LOW-DENSITY PARITY-CHECK CODES: TRACKING NON-STATIONARY CHANNEL NOISE USING SEQUENTIAL
+VARIATIONAL BAYESIAN ESTIMATES
+J du Toit, JA du Preez, and R Wolhuter Electrical and Electronic Engineering Stellenbosch University Stellenbosch, South Africa
+jacowp357@gmail.com, dupreez@sun.ac.za, wolhuter@sun.ac.za
+ABSTRACT
+We present a sequential Bayesian learning method for tracking non-stationary signal-to-noise ratios in low-density parity-check (LDPC) codes by way of probabilistic graphical models. We represent the LDPC code as a cluster graph using a general purpose cluster graph construction algorithm called the layered trees running intersection property (LTRIP) algorithm. The channel noise estimator is a global gamma cluster, which we extend to allow for Bayesian tracking of non-stationary noise variation. We evaluate our proposed model on real-world 5G drive-test data. Our results show that our model can track non-stationary channel noise accurately while adding performance benefits to the LDPC code, which outperforms an LDPC code with a fixed stationary knowledge of the actual channel noise.
+Keywords LDPC codes, Bayesian sequential learning, variational inference, cluster graphs
+1 Introduction
+In wireless communication systems, channel noise interferes with radio transmissions between a transmitter and receiver. The nature of the noise is assumed to be non-stationary, since it can change over time and vary according to environmental dynamics. Knowledge of channel noise is useful in a communication system to adapt certain radio parameters, ultimately optimising the reliability and overall quality of communication. These optimisation methods include, inter alia, adaptive modulation and coding (AMC), interference suppression, and rate-matching. Communication systems such as LTE and 5G rely on predefined reference signals, i.e. pilot signals, which are used to estimate the channel noise. These pilot signals are generated in the physical layer and scheduled periodically via the physical uplink control channel (PUCCH), or aperiodically via the physical uplink shared channel (PUSCH) [1]. Instantaneous estimates of the channel noise should ideally be acquired at the same rate as the channel changes, which require frequent use of pilot signals. The downside of doing so is an additional communication overhead, since the time-frequency resources could be utilised to carry payload data instead [2]. Our interest is in finding a way to estimate channel noise without relying solely on scheduled pilot signals. The aim of our work is not to omit the broader channel state information (CSI) system in its entirety, since it also provides information on other channel properties outside the scope of this work. Instead, our focus is on reliably and dynamically estimating the channel noise only, which we see as a step towards substituting certain elements of the CSI system. We propose to combine received signal values from the physical layer with a channel-coding scheme such as a low-density parity-check (LDPC) code. By doing so, we extend a standard LDPC code by integrating a channel-noise estimator into the decoding algorithm itself, which can learn the channel noise on-the-fly and simultaneously benefit from the channel-noise estimates.
+
+LDPC codes were first introduced by Gallager in 1962 and rediscovered in 1995 by MacKay [3, 4]. These codes are a family of block codes with good theoretical and practical properties. They have found extensive application in various wireless communication systems, including the 5G New Radio (NR) technology standard, which will be used in our study.
+While knowledge of the channel noise is useful for aspects of the communication system discussed before, LDPC decoders also benefit from this information. LDPC codes require knowledge of the channel noise variance when the communication channel is assumed to be an additive white Gaussian noise (AWGN) channel [5]. Channel noise variance corresponds to the channel signal-to-noise ratio (SNR), which we will use interchangeably in this paper to refer to the channel noise. If the noise variance is over- or understated, the performance of the LDPC decoder can suffer [6, 7, 8].
+Alternative solutions, including the focus of our work, aim to estimate SNRs in the forward error correction (FEC) layer while concurrently decoding received messages. The rationale is that through the use of LDPC codes, the channel uncertainty can be made explicit in the LDPC decoder rather than assuming it to have a fixed “confident” a priori value. In this regard, we draw inspiration from a famous quote by Mark Twain: “It ain’t what you don’t know that gets you into trouble. It’s what you know for sure that just ain’t so.” By making the decoder “aware” of its uncertainty (i.e. allowing it to learn the channel constraints), it may also improve the error-correcting capability of the LDPC code. We use a Bayesian approach that takes into account a statistical distribution over the SNR, which is also a much better realisation of the channel in terms of its stochastic time-varying nature.
+Iterative message passing algorithms used in LDPC codes such as bit-flipping use binary (hard-decision) messages between variable nodes and check nodes to update the received bit values in a factor graph (also known as a Tanner graph). Whereas this decoding method is fast, it does not provide probabilistic information about the received bits, which is required to estimate an SNR statistic in AWGN channels. The sum-product algorithm uses probabilistic (soft-decision) messages and is equivalent to the loopy belief propagation (LBP) algorithm used for performing generic inference tasks on probabilistic graphical models (PGMs) [9, 10]. However, as will become clear in Section 2, modelling SNRs in AWGN channels results in the use of conditional Gaussian distributions that during subsequent message passing morphs into mixture distributions – these have problematic properties for inference that force us to employ approximation techniques.
+As such, studies in [11, 12, 13, 14, 15, 16, 17] have proposed hybrid methods for jointly modelling the SNRs and the transmitted bit messages. These methods are all based on factor graphs with some graph extension that uses an inference scheme different from LBP for estimating the SNRs. A study in [14] presents a comparison between a variational message passing (VMP) based estimator and an expectation maximisation (EM) based estimator for stationary SNRs. The VMP-based estimator demonstrated superior performance over the EM-based estimator and achieved a lower frame error rate, with no significant increase in computational complexity. In [11, 16, 17] SNRs are assumed stationary within fixed independent sections of the LDPC packet with a focus on finding a low complexity noise estimator. These studies do not model the sequential dynamics of channel noise variance, e.g. the possible correlations between inferred instances of SNRs.
+It is reasonable to assume that the same noise energy can influence an entire LDPC packet over the duration of a packet due to the transmission speed at which communication takes place. The basic transmission time interval in LTE systems, for example, is 1 ms [18]. Furthermore, a succeeding LDPC packet’s noise estimate can also depend on the noise induced on previous LDPC packets. We introduce a dependency between LDPC packets that gradually “forgets” previous channel noise estimates. This allows an LDPC decoder to track time-varying SNRs as packets arrive at the receiver.
+Initially, we used a standard factor graph representation with an additional continuous random variable to model the SNR at a packet level. The larger parity-check factors from the LDPC code created computational challenges, which led us to review other options for representing the problem and doing inference. To address this, we (1) use a more general graphical structure called cluster graphs, (2) use a variant of LBP called loopy belief update (LBU), (3) create a message order that relaxes repeated marginalisation from large parity-check factors, and (4) introduce a cluster-stopping criterion that turns off uninformative clusters during message passing. Cluster graphs have been shown to outperform factor graphs in some inference tasks in terms of accuracy and convergence properties [10, 19, 20].
+Our contribution: We view this problem more generally as a PGM and introduce a sequential Bayesian learning technique capable of tracking non-stationary SNRs over time. We represent the PGM as a cluster graph compiled by means of a general purpose algorithm called layered trees running intersection property (LTRIP), developed in [20]. We believe this is the first work that represents LDPC codes as a cluster graph, which may be due to a lack of available algorithms that can construct valid cluster graphs. We demonstrate: (1) tracking of non-stationary channel noise over
+2
+
+time, and (2) performance benefits of our approach compared to an LDPC code with stationary knowledge of the channel as well as an LDPC code with perfect knowledge of the channel.
+This paper is structured as follows: In Section 2, we explain how LDPC codes are represented in a more general PGM framework and extended with the channel noise estimator. Our message passing approach and schedule are also explained. Section 3 describes how the PGM is updated sequentially, which allows the model to track non-stationary channel noise. The results are shown in Section 4 and in Section 5 we present a supplementary investigation. Finally, our conclusions and future work are discussed in Section 6.
+
+2 LDPC codes with non-stationary SNR estimation as PGMs
+
+In this section, we compile a cluster graph of an LDPC code and introduce additional random variables that are used to estimate the channel noise. This is extended further to enable the tracking of non-stationary channel noise. We also discuss our hybrid inference approach and message passing schedule.
+
+2.1 Channel SNR estimation with LDPC codes
+
+We assume an AWGN channel model (without fading), which adds zero mean random Gaussian noise to a transmitted signal. The strength of the noise depends on the Gaussian precision (the inverse of the variance). We denote the LDPC code’s bit sequence as b0, ..., bN , where N is the length of the codeword. We use BPSK signal modulation with unit energy per bit Eb = 1 (i.e. a normalised signal). The channel-noise precision is an unknown quantity for which we assign a gamma prior distribution – a Bayesian way of treating unknown variables. The gamma distribution is the conjugate prior for the precision of a Gaussian distribution and is part of the exponential family [21, Section 2.3.6]. With these assumptions, the observed received sign√al xn is modelled u√sing a conditional Gaussian likelihood function f (xn | bn, µ, γ) with known means µ ∈ {µ0 = − Eb = −1, µ1 = Eb = 1} that represent the modulated binary data (i.e. the two different phases of the carrier wave). Since the same noise influences both states of b the received signal’s likelihood function is simplified to:
+
+f (xn | bn, γ) =
+
+e γ
+
+−
+
+γ
+
+(xn +1)2 2
+
+2
+
+e γ
+
+−
+
+γ
+
+(xn −1)2 2
+
+2
+
+when bn = 0, when bn = 1.
+
+(1)
+
+After multiplying in the prior distributions over bn and γ, the presence of the bn terms in the joint changes this to a mixture distribution which does not form part of the exponential family. This implies that its marginals towards the γ and bn variables will not be conjugate towards their prior forms. To rectify this requires some form of approximation that forces these marginals to the required conjugate forms. In the work here we do this by using the VMP approach – thereby replacing the sufficient statistics of γ and bn random variables with their expected values. This leaves Equation 1 in its conditional form [22, Section 4.3] – Section 2.3.1 provides the details about this.
+
+The channel noise is assumed independent and identically distributed (i.i.d.) over the length N of an LDPC packet
+
+(the codeword length). The transmission duration of a packet is around 1ms [18], which we assume provides sufficient
+
+samples for estimating the noise, and is a short enough time frame for non-stationarity to not be a problem. The
+
+channel-noise
+
+precision
+
+can
+
+be
+
+translated
+
+to
+
+a
+
+rate-compensated
+
+SNR
+
+given
+
+by
+
+SNRdB
+
+=
+
+10
+
+log10
+
+(
+
+Eb γ 2R
+
+),
+
+where
+
+R
+
+is
+
+the
+
+code rate [9, Section 11.1], and γ is the distribution over the channel-noise precision. Note that we may use the terms
+
+precision and SNR interchangeably. The next section presents LDPC codes with SNR estimation using the gamma
+
+prior and conditional Gaussian random variables discussed here.
+
+2.2 Representation of LDPC codes with SNR estimation
+During the course of this study, we noted that cluster graph representations of LDPC codes are not addressed in the available channel coding literature. Researchers in the channel coding domain may be more familiar with the factor graph (or Tanner graph) representation of LDPC codes. While our study focuses on channel noise estimation, we address the novelty and performance advantages of cluster graph LDPC codes compared to factor graph LDPC codes in a subsequent study [23]. Nonetheless, in the interest of readability, we offer a brief summary of cluster graphs here without diminishing the importance of our other study.
+A cluster graph is an undirected graph consisting of two types of nodes. A cluster node (ellipse) is a set of random variables and a sepset (short for “separation set”) node (square) is a set of random variables shared between a pair of clusters. In most interesting cases (which also include LDPC decoding), this graph will not be a tree structure, but will contain loops. Inference on such a “loopy” system requires the so-called running intersection property (RIP) [10,
+
+3
+
+Section 11.3.2]. This specifies that any two clusters containing a shared variable, must be connected via a unique sequence of sepsets all containing that particular variable, i.e. no loops are allowed for any particular variable.
+Our study uses a general purpose cluster graph construction algorithm that produces a cluster graph of the LDPC code. This algorithm is termed the layered trees running intersection property (LTRIP) algorithm developed in [20]. The LTRIP algorithm proceeds by processing layers, with each layer dedicated to an individual variable. For each variable, it determines an optimal tree structure over all clusters. The final sepsets are formed by merging the sepsets between pairs of clusters across all layers. The resulting cluster graph satisfies the RIP. Compared to factor graphs, cluster graphs offer the benefits of more precise inference and faster convergence. We refer the reader to [20] for more detail regarding the LTRIP algorithm and [23] for a comparison study between cluster graph and factor graph LDPC codes.
+For LDPC codes, each cluster contains a parity-check factor equivalent to a parity-check constraint in the original parity-check matrix. To illustrate this, we use an irregular (16,8) LDPC code with H matrix given in Equation 2. Note that this LDPC code is for illustrative purposes only, we use larger standardised LDPC codes for our simulations. We denote the message bit sequence as b0, ..., b7, the parity-check bits as b8, ..., b15, and the parity-check factors as ϕ0, ..., ϕ7. The cluster graph of the (16,8) LDPC code is shown in Figure 1 in plate notation.
+
+0 1 1 1 0 0 1 1 1 0 1 0 0 0 0 0
+
+1000100001010000
+
+
+
+
+
+0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0
+
+H
+
+=
+
+1 0
+
+0 0
+
+0 0
+
+0 1
+
+1 0
+
+1 1
+
+1 0
+
+1 0
+
+0 0
+
+0 1
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+0 0
+
+0 0
+
+(2)
+
+1 1 0 0 1 0 0 0 1 0 0 0 0 1 0 0
+
+0 0 1 0 0 1 1 0 1 0 0 0 0 0 1 0
+
+0100000101000001
+
+The gamma prior belief is captured by the global cluster ζ(γ) (outside the plate) that is fully connected to all the
+observed conditional Gaussian clusters θ0(x0 | b0, γ), ..., θ15(x15 | b15, γ) via the γ sepsets. The conditional Gaussian clusters connects to the first layer of parity-check clusters of the LDPC code via sepsets b0, ..., b15. The structure inside the plate repeats as LDPC packets p ∈ P arrive at the receiver.
+
+Figure 1: A PGM of an irregular (16,8) LDPC code with a global gamma prior and conditional Gaussian clusters linked to the smaller parity-check clusters. Note its loopy structure.
+Our study focuses on irregular LDPC codes as adopted by the 5G new radio (NR) standard by the 3rd Generation Partnership Project (3GPP). Irregular LDPC codes are also known to outperform regular LDPC codes [5, 9]. With
+4
+
+regular LDPC codes, all parity-check factors have equal cardinality, which is not the case for irregular LDPC codes. Ideally, the larger parity-check factors in irregular LDPC codes should have minimal connectivity, which helps reduce expensive computation during inference. This is not possible to do in a factor graph representation, as the number of edge connections is equal to the cardinality of each parity-check factor. Instead, we bundle the larger parity-check clusters away from the observed conditional Gaussian clusters using a message passing schedule. The message passing schedule is described in Section 2.3.4. Note that no connections are present between observed conditional Gaussian clusters and the large parity-check clusters ϕ0 and ϕ3 as shown in Figure 1. The observed conditional Gaussian clusters are linked to the smaller parity-check clusters ϕ1, ϕ2, ϕ4, ϕ5, ϕ6, and ϕ7, leading to considerable computational savings.
+
+2.3 Message passing approach
+This section describes variational message passing (VMP) between the gamma and conditional Gaussian nodes, loopy belief update (LBU) between the parity-check nodes and a hybrid message passing approach between the conditional Gaussian nodes and parity-check nodes. All the required update equations and rules are discussed. We also discuss the message passing schedule mentioned previously, which alleviates expensive parity-check computation.
+
+2.3.1 Variational message passing
+
+This section concerns the message passing between the various conditional Gaussian clusters and the gamma cluster. VMP makes a distinction between parent-to-child messages and child-to-parent messages [22]. We deal with the parent-to-child messages that update the conditional Gaussian clusters first.
+
+The gamma distribution and its expected moments are required for the parent-to-child messages from the γ cluster to the conditional Gaussian clusters θn. We use the following parameterisation1 of the gamma distribution:
+
+Gam(γ
+
+|
+
+ω, ν)
+
+=
+
+(
+
+1 2ω
+
+)
+
+ν 2
+
+Γ(
+
+ν 2
+
+)
+
+γ
+
+ν 2
+
+−1
+
+e−
+
+γ 2ω
+
+,
+
+(3)
+
+where ν is the degrees of freedom (equivalent to the number of observations that convey a “confidence” in the mean value), ω is a scaled precision, and Γ is the gamma function.
+
+In exponential family form transformed to the log-domain this is given as:
+
+log(Gam(γ | ω, ν)) =
+
+ν2−−21ω1 T
+
+γ log(γ)
+
+νν − (log(Γ( )) + log(2ω)).
+22
+
+(4)
+
+In this form, the left column vector is the natural parameters of the distribution and the right column vector is the sufficient statistics of the distribution. The expected moment vector of the sufficient statistics is [21, Appendix B]:
+
+νω
+
+T
+
+⟨γ⟩ , ⟨log(γ)⟩ =
+
+ψ(
+
+ν 2
+
+)
+
+−
+
+log(
+
+1 2ω
+
+)
+
+,
+
+(5)
+
+where ψ is the digamma-function.
+
+The other parent-to-child messages required to update the conditional Gaussian clusters are from the parity-check clusters. To understand these, we first need the categorical distribution in its exponential family form transformed to the log-domain given by [24, Section 2.3.1]:
+
+log(p(b | π0, π1)) =
+
+log(π0) T log(π1)
+
+b=0 b=1
+
+− log(
+
+πi),
+
+(6)
+
+i=0,1
+
+where πi are the unnormalised bit probabilities. The expected moment vector of the sufficient statistics is:
+
+π0
+
+T
+
+⟨ b = 0 ⟩,⟨ b = 1 ⟩ =
+
+i=π01,1 πi
+
+.
+
+(7)
+
+i=0,1 πi
+
+We choose the gamma distribution prior parameters by considering its mean value, given by ν × ω, and we think of ν as the number of observations that its mean value is based on. Since the gamma distribution is conjugate to the Gaussian distribution, the conditional Gaussian likelihood from Equation 1 can be rewritten into a similar form. The Gaussian precision is common to both cases of b and is therefore updated as a single entity (unlike the standard Gaussian mixture
+
+1An
+
+alternative
+
+parameterisation
+
+for
+
+the
+
+gamma
+
+distribution
+
+is:
+
+α
+
+(shape),
+
+and
+
+β
+
+(rate),
+
+which
+
+translates
+
+to
+
+ν
+
+=
+
+2α,
+
+and
+
+w
+
+=
+
+1 2β
+
+.
+
+5
+
+model). The exponential family form of the conditional Gaussian distribution transformed to the log-domain is given by:
+
+log(p(xn | bn, γ)) =
+
+i bn = i (γµi) T xn
+
+i
+
+bn
+
+=i
+
+(
+
+−γ 2
+
+)
+
+xn2
+
+1 +
+2
+
+bn = i (log(γ) − γµ2i − log(2π)).
+
+(8)
+
+i
+
+The xn terms are the observed signal values and the Gaussian means µi are known and can be replaced by their fixed values µ0 = −1 and µ1 = 1.
+
+During the parent-to-child update from the gamma cluster, the γ and log(γ) terms in Equation 8 will be replaced with their expected values given by Equation 5. This is shown by:
+
+′
+µζ,θn
+
+=
+
+[⟨γ⟩ , ⟨log(γ)⟩]T,
+
+(9)
+
+′
+Ψθn =
+
+i bn = i (⟨γ⟩ µi) T xn
+
+i
+
+bn
+
+=i
+
+(
+
+−⟨γ⟩ 2
+
+)
+
+x2n
+
+1 +
+2
+
+bn = i (⟨log(γ)⟩ − ⟨γ⟩ µi2 − log(2π)).
+
+(10)
+
+i
+
+Similarly, during the parent-to-child update from a parity-check cluster the Iverson function bn = i in Equation 8 will be replaced with its expected value.
+
+The required expected value from a parity-check cluster reduces to estimating the bit probabilities P (bn = i). We discuss the replacement of the Iverson function with expected values from parity-check clusters in Section 2.3.3 which deals with the hybrid message passing.
+
+The expected values that replace the γ and bn = i terms in Equation 8 are based on the latest beliefs from the gamma cluster distribution and the parity-check cluster distribution. After the expected values are installed, Equation 8 forms a mixture of two gamma distributions since xn is observed and µi are known value. Equation 8 is kept in a conditional form rather than a higher dimensional joint form.
+
+Messages from conditional Gaussian clusters to parity-check clusters are child-to-parent messages. We also postpone discussing these message updates to Section 2.3.3 (that deals with hybrid message passing).
+
+Messages from conditional Gaussian clusters to the gamma cluster are child-to-parent messages that require Equation 8 to be marginalised towards obtaining gamma distribution parameters. The terms of Equation 8 are re-arranged to obtain the appropriate parameters given by:
+
+log(p(xn | bn, γ)) =
+
+i
+
+bn
+
+=
+i
+
+i
+
+(−
+
+1 2
+
+bn =
+
+(xn −
+
+i
+
+(
+
+1 2
+
+)
+
+µi)2)
+
+T
+
+γ log(γ)
+
+− bn = i (log(2π)).
+
+(11)
+
+i
+
+We note in Equation 11 that for child-to-parent messages, the separation of the sufficient statistic vector during marginalisation removes the previous parent-to-child message from the updated natural parameter vector. With bn = i replaced by its expected value, xn replaced with the observed signal value, and µ0 = −1 and µ1 = 1, the left column gives the incremental update with which the prior gamma parameters need to increase to form the posterior. This is
+shown by:
+
+′
+µθn,ζ =
+
+i=0,1 ⟨
+
+bn
+
+=
+
+i
+
+⟩
+
+(−
+
+1 2
+
+(xn2
+
+− 2xnµi
+
++
+
+µi2)
+
+i=0,1
+
+1 2
+
+⟨
+
+bn
+
+=
+
+i
+
+⟩
+
+T
+,
+
+Ψ = ζprior
+
+ν2−−21ω1
+
+T
+,
+
+′
+Ψζ = Ψζprior +
+
+′
+µθn,ζ .
+
+n
+
+(12) (13) (14)
+
+The expected values of the updated gamma cluster can now be recalculated using Equation 5 to be used for updating the conditional Gaussian clusters in the next round.
+
+6
+
+Figure 2: A subsection of Figure 1 to illustrate VMP message passing between the gamma cluster and conditional Gaussian clusters.
+With this background, we demonstrate how VMP is applied (using a sub-graph extracted from Figure 1) in Figure 2.
+Cluster θ0(x0 | b0, γ) is updated with information from cluster ζ(γ) using a VMP parent-to-child message µζ,θ0 . This message is the expected values of log(Gam(γ | ω, ν)) given by Equation 5. The expected values are installed at the corresponding γ terms in Equation 8. The message from cluster θ0(x0 | b0, γ) to cluster ζ(γ) is a VMP child-to-parent message µθ0,ζ. This requires cluster θ0(x0 | b0, γ) to be marginalised in obtaining a distribution over sepset γ with its parameters given by the natural parameter vector in Equation 11. The message is absorbed into cluster ζ(γ) by adding its natural parameters to those of the prior (as given in Equation 4).
+2.3.2 LBU message passing
+This section concerns the message passing between the various parity-check clusters – here we make use of the Lauritzen-Spiegelhalter message passing algorithm [25], also known as the loopy belief update (LBU) algorithm. However, the fundamental concepts are easier to define via the well known Shafer-Shenoy algorithm [26], also known as the sum-product or loopy belief propagation (LBP) algorithm. Hybrid message passing, linking the VMP and the LBU sections of the graph, also draws on understanding the relationship between LBP and LBU. We therefore provide a brief summary of both LBP and LBU here – a fuller version is available in the definitive handbook by Koller & Friedman [10, Sections 10.2, 10.3 and 11.3].
+We use Figure 3 to illustrate the various relevant concepts. As discussed in Section 2.2, cluster graphs contain cluster nodes and sepsets, both of which are used during message passing to update nodes. The cluster internal factor functions are given by ϕa and ϕb where a and b identifies the particular cluster (in our application these functions are conditional distributions enforcing even parity over all the variables involved in each parity-check cluster). We will at times somewhat abuse the notation by also using these factor functions directly to identify their particular clusters.
+The sepset connecting the two clusters a and b is denoted as Sa,b and comprises the collection of random variables about which the two clusters will exchange information. The notation \a is used to indicate the set of all cluster nodes excluding cluster node a.
+
+Figure 3: Example cluster graph to illustrate LBP and LBU message updating rules.
+
+For LBP message passing, the message passed from cluster a to cluster b is denoted as µa,b. The product of all other messages incoming to cluster node a – excluding message µb,a – is denoted by µ\b,a. If anything changes in the messages µ\b,a, we can propagate this towards cluster b via the update equation:
+
+′
+µa,b =
+
+µ\b,aϕa,
+
+\Sa,b
+
+(15)
+
+7
+
+where the marginalisation sum over the set \Sa,b removes all variables not present in the sepset Sa,b. Note that this implies that the larger a sepset, the cheaper the required marginalisation will be – another benefit of cluster graphs over factor graphs which always have only single variables in their sepsets.
+
+Also note that, especially with clusters sharing links with many others, the LBP formulation can be quite expensive due to the redundancy implied by the various message combinations present in the µ\b,a term.
+In a loopy system (such as we will typically have with LDPC codes) these µ messages will have to be passed iteratively according to some schedule until they have all converged. At that point, we can then get an estimate for the marginal distribution of all the random variables present in a particular cluster – this is known as the cluster belief and is given by:
+
+Ψa = ϕaµb,aµ\b,a,
+
+(16)
+
+i.e. it is the product of the cluster internal factor with all incoming messages. Similarly, we can calculate the belief over the sepset variables Sa,b as the product of the two opposing messages passing through that sepset:
+
+ψa,b = µa,bµb,a.
+
+(17)
+
+Note that the sepset beliefs, being the product of the two µa,b and µb,a messages, are intrinsically directionless.
+
+In contrast to LBP, LBU message passing is expressed fully in terms of only cluster beliefs and sepset beliefs. For this we use two alternative (although equivalent) expressions for these quantities (see [10, Section 10.3] for the derivations). The sepset belief update is given by:
+
+′
+
+′
+
+ψa,b =
+
+Ψa.
+
+\Sa,b
+
+(18)
+
+Note that this is computationally more efficient since it avoids the repeated re-combination of the various messages present in the µ\b,a term in Equation 15 when considering different target clusters b. Using this we can now incrementally update the cluster belief using:
+
+′
+
+′
+Ψb
+
+=
+
+Ψb
+
+ψa,b ψa,b
+
+.
+
+(19)
+
+With this background, we can now turn to Figure 4 (a sub-graph extracted from Figure 1) to illustrate how LBU applies to the parity-check clusters. Cluster node ϕ4 is updated using LBU message passing. Using Equation 18, the updated
+
+Figure 4: A subsection of Figure 1 to illustrate LBU message passing between parity-check clusters. The dotted lines denote links to other adjacent clusters.
+
+sepset belief is calculated by marginalising the cluster belief Ψϕ1 to obtain the required sepset b9. The previous sepset belief is cancelled (divided) as per the LBU update rules given by Equation 19. This gives the update equations as:
+
+′
+ψϕ1,ϕ4 =
+
+Ψϕ1 ,
+
+b0 ,b4 ,b11
+
+′
+
+′
+Ψϕ4
+
+=
+
+Ψϕ4
+
+ψϕ1 ,ϕ4 ψϕ1 ,ϕ4
+
+.
+
+(20) (21)
+
+Unlike VMP, the form of the update rules remains the same regardless of the message direction. We therefore simply iterate these messages until convergence using the message passing schedule of Section 2.3.4.
+
+2.3.3 Hybrid message passing
+This section describes our hybrid message passing between the VMP-based conditional Gaussian cluster nodes and the LBU-based parity-check nodes connected to it. Although our treatment is general and applies to any {bn}, we will
+
+8
+
+Figure 5: A subsection of Figure 1 to illustrate hybrid message passing and updates between conditional Gaussian clusters and parity-check clusters.
+
+specifically focus on the µθ0,ϕ1 and µϕ1,θ0 messages running over the {b0} sepset in Figure 5 (which in its turn is a sub-graph extracted from Figure 1).
+′
+We first consider the child-to-parent message µθ0,ϕ1 running from the θ0(x0 | b0, γ) cluster to the ϕ1(b0, b4, b9, b11) cluster. According to VMP message passing we determine its natural parameters by re-arranging Equation 8 so that the b0 related terms move to the sufficient statistics column:
+
+log(p(x0 | b0, γ)) =
+
+γµ0x0
+
+−
+
+γ x20 2
+
++
+
+(log(γ )−γ µ02 −log(2π )) 2
+
+T
+
+γµ1x0
+
+−
+
+γ x02 2
+
++
+
+(log(γ )−γ µ12 −log(2π )) 2
+
+b0 = 0 b0 = 1
+
+.
+
+(22)
+
+From our model definition, the values of the means are known as µ0 = −1 and µ1 = 1. The expected values of the γ terms are known via Equation 5. The natural parameters column (the left-hand one) effectively measure the heights of the two Gaussians corresponding to b0 being either 0 or 1. Similar to what we saw before with Equation 11, we note that for child-to-parent messages, the separation of the sufficient statistic vector during marginalisation effectively removes the previous parent-to-child message from the updated natural parameter vector.
+
+The question now is how this is to be made compatible with the corresponding ϕ1 cluster which, of course, will also be updated via sepset beliefs from its other side (connecting to other parity-check clusters using Equation 19). To reconcile
+
+these worlds, we start by comparing Equations 15 and 16 and noticing that we can also determine the (original) update
+
+message using:
+
+′
+
+µa,b =
+
+Ψa/µb,a.
+
+(23)
+
+\Sa,b
+
+Due to that (explicit) division, we refer to this as the post-cancellation message, i.e. the message we derive by marginalising the cluster belief2 and then removing the opposite direction message via division. But this strongly
+reminds us of the child-to-parent message of Equation 22 which also (implicitly) accomplishes removing the influence
+′
+of its parent. We therefore set our updated µθ0,ϕ1 to be a a categorical message with natural parameters given by the corresponding lefthand column of Equation 22.
+
+Next, we need to determine how to incrementally update the cluster belief Ψϕ1 with such a post-cancellation message. We do this via Equation 16 (but now with Ψb in mind) to get the cluster belief update equation:
+
+′
+
+′
+
+Ψb = ϕbµa,bµ\a,b,
+
+=
+
+Ψb
+
+µ′a,b µa,b
+
+.
+
+(24)
+
+2From Equation 18 this is the sepset belief – we also term it the pre-cancellation message.
+
+9
+
+In short, we can directly update an LBU cluster belief by dividing the old post-cancellation message out and multiplying the new one in. This gives us:
+
+′
+Ψϕ1
+
+=
+
+Ψϕ1
+
+µ′
+θ0 ,ϕ1
+µθ0 ,ϕ1
+
+.
+
+(25)
+
+The child-to-parent update rules for the general case that connects a conditional Gaussian cluster θn to a parity-check cluster ϕj are:
+
+µθn,ϕj =
+
+γµ0xn
+
+−
+
+γ xn2 2
+
++
+
+(log(γ )−γ µ02 −log(2π )) 2
+
+γµ1xn
+
+−
+
+γ x2n 2
+
++
+
+(log(γ )−γ µ21 −log(2π )) 2
+
+T
+,
+
+′
+Ψϕj
+
+=
+
+Ψϕj
+
+µ′
+θn ,ϕj
+µθn ,ϕj
+
+.
+
+(26) (27)
+
+′
+
+Lastly, we consider the parent-to-child message µϕ1,θ0 running from the ϕ1(b0, b4, b9, b11) cluster to the θ0(x0 | b0, γ)
+
+cluster.
+
+From
+
+the
+
+VMP
+
+viewpoint,
+
+our
+
+message
+
+µ′
+ϕ1 ,θ0
+
+simply
+
+is
+
+the
+
+expected
+
+values:
+
+′
+µϕ1,θ0 = ⟨ b0 = i ⟩Ψϕ1 (b0,b4,b9,b11)
+
+with i ∈ {0, 1}.
+
+The first step is to find the distribution over b0 by marginalising:
+
+ψθ0,ϕ1 (b0) =
+
+Ψϕ1 (b0, b4, b9, b11).
+
+b4 ,b9 ,b11
+
+(28)
+
+The required expectations are the probabilities for b0 as found in this sepset belief - we simply install them as the required parameters in the θ0 cluster.
+In general, where we have a message describing bn running from the parent cluster ϕj to a child cluster θn, we first find the sepset belief:
+
+′
+ψθn,ϕj (bn) =
+
+Ψϕj ,
+
+\bn
+
+(29)
+
+and then replace the two probabilities for bn found in this sepset belief as the required expected sufficient statistics ⟨ bn = i ⟩Ψϕj in the θn cluster:
+
+′
+Ψθn =
+
+i ⟨ bn = i ⟩Ψϕj (γµi) T xn
+
+i⟨
+
+bn
+
+=
+
+i
+
+⟩Ψϕj
+
+(
+
+−γ 2
+
+)
+
+x2n
+
+1 +
+2
+
+⟨ bn = i ⟩Ψϕj (log(γ) − γµ2i − log(2π)).
+
+(30)
+
+i
+
+2.3.4 Message passing schedule
+A message passing schedule is important for loopy graphs as the message order can influence convergence speed, accuracy, and the computational cost of inference. Although not empirically verified here, these feedback loops (or cycles) may reinforce inaccurate cluster beliefs causing self-fulfilling belief updates, which affect the LDPC decoder’s performance. This problem is more prominent in LDPC codes with small feedback loops as described in [5]. Taking this into consideration, our message passing schedule (1) uses a structured schedule with a fixed computational cost, (2) aims to minimise the effect of loops, and (3) aims to minimise the computational cost of inference.
+The message passing schedule is determined by first identifying the larger parity-check clusters in the graph. We select the larger clusters ϕ0 (with cardinality 7) and ϕ3 (with cardinality 6). The message schedule starts with the selected clusters as initial sources S and proceeds by visiting all its neighbouring clusters N , which become the immediate next layer of clusters. A set of available clusters A is kept to make sure that clusters from previous layers are not revisited, which helps minimise the effect of loops. We repeat this procedure to add subsequent layers of clusters until all clusters are included. The source-destination pairs are stored in a message schedule M. This procedure isolates the initially
+
+10
+
+selected large parity-check clusters from the rest of the clusters as shown in Figure 1. The idea is to keep the expensive clusters at the final layer so that the smaller (less expensive) parity clusters, in preceding layers, can resolve most of the uncertainty about the even parity states. When the larger parity clusters get updated, some of the even parity states in their discrete tables may have zero probability, which are removed due to our software implementation. This further reduces a large parity cluster’s computational footprint. Our layered message passing schedule is detailed in Algorithm 1.
+
+Algorithm 1 Layered message passing schedule
+
+1: S ← set initialised to large cluster IDs
+
+2: A ← set initialised to all cluster IDs
+
+3: M ← empty vector of pairs
+
+4: while A is not empty do
+
+5: nextLayer ← empty set of integers
+
+6: for s in S do
+
+7:
+
+A.erase(s)
+
+8:
+
+N ← all neighbours of s
+
+9:
+
+for n in N do
+
+10:
+
+if n ∈ A then
+
+11:
+
+M.push_back(pair(s, n))
+
+12:
+
+if n ∉ S then
+
+13:
+
+nextLayer.insert(n)
+
+14:
+
+end if
+
+15:
+
+end if
+
+16:
+
+end for
+
+17: end for
+
+18: S ← nextLayer
+
+19: end while
+
+20: return M
+
+The observed conditional Gaussian clusters are coupled to the parity-check clusters in the layer furthest away from the initial isolated group of large clusters. We refer to this layer as the first parity-check layer. The smaller parity-check clusters in this layer are given priority in terms of their connectivity to the conditional Gaussian clusters, which saves computation. If the first layer of parity-check clusters does not have all the unique bits, the following layers are utilised until all conditional Gaussian clusters are connected.
+The message passing order for the entire PGM starts at the gamma cluster and flows down to the conditional Gaussian clusters through all the parity cluster layers until it reaches the bottom layer. We refer to this as the forward sweep. The backward sweep returns in the opposite direction, which concludes one iteration of message passing. Pseudo-code for our message passing is shown in Algorithm 2.
+11
+
+Algorithm 2 Message passing
+
+1: ψ ← initialised to uniform sepset beliefs
+
+2: M ← initialised to source-destination pairs from message schedule
+
+3: S initialised to sepset variable sets between clusters
+
+4: Ψζprior ← initialised to gamma prior parameters 5: maxIter ← initialised to maximum number of sweeps
+
+6: while iter < maxIter and not converged do
+
+7: // ————– Forward sweep ————–
+
+8: //VMP messages from cluster ζ to clusters θn
+
+9: for each conditional Gaussian cluster n do
+
+10:
+
+µζ′ ,θn ← from Equation 9
+
+′
+
+11:
+
+Ψθn ← from Equation 10
+
+12: end for
+
+13: //Hybrid messages from θn to first layer parity-check clusters ϕj
+
+14: for each conditional Gaussian cluster n do
+
+′
+
+15:
+
+µθn,ϕj ← from Equation 26
+
+′
+
+16:
+
+Ψϕj ← from Equation 27
+
+17: end for
+
+18: //LBU messages from first layer to final layer parity-check clusters
+
+19: //s is parity-check source cluster, d is parity-check destination cluster
+
+20: for pair(s, d) in M do
+
+21:
+
+ψ′
+ϕs ,ϕd
+
+←
+
+from
+
+Equation
+
+18
+
+′
+
+22:
+
+Ψϕd ← from Equation 19
+
+23:
+
+ψϕs ,ϕd
+
+←
+
+ψ′
+ϕs ,ϕd
+
+24: end for
+
+25: // ————– Backward sweep ————–
+
+26: //LBU messages from final layer towards first layer clusters ϕj
+
+27: for pair(d, s) in Reverse(M) do
+
+28:
+
+ψ′
+ϕs ,ϕd
+
+←
+
+from
+
+Equation
+
+18
+
+′
+
+29:
+
+Ψϕd ← from Equation 19
+
+30:
+
+ψϕs ,ϕd
+
+←
+
+ψ′
+ϕs ,ϕd
+
+31: end for
+
+32: //Hybrid messages from first layer parity-check clusters ϕj to θn
+
+33: for each conditional Gaussian cluster n do
+
+34:
+
+ψ′
+θn ,ϕj
+
+(bn)
+
+←
+
+from
+
+Equation
+
+29
+
+′
+
+35:
+
+Ψθn ← from Equation 30
+
+36: end for
+
+37: Ψζ ← set to uniform prior 38: //VMP messages from θn to ζ 39: for each conditional Gaussian cluster n do
+
+40:
+
+µθn,ζ ← from Equation 12
+
+41:
+
+Ψζ += µθn,ζ
+
+42: end for
+
+43:
+
+Ψζ′ = Ψζprior + Ψζ (see Equation 14)
+
+44: iter + +
+
+45: if clusters ϕj calibrated and codeword valid then
+
+46:
+
+converged
+
+47: end if
+
+48: end while
+
+The following settings and software implementations apply to our inference approach: 12
+
+• a cluster is deactivated during message passing when messages entering it have not changed significantly. This is determined by a symmetrical3 Kullback-Leibler divergence measure between the newest and immediately preceding sepset beliefs.
+• the stopping criterion for inference is when a valid codeword was detected (also known as a syndrome check) after all parity-check clusters “agree” on their shared bit values or when a maximum number of iterations is reached,
+• all discrete table factors support sparse representations to reduce memory resources,
+• zero probability states in discrete tables are removed during inference.
+The next section describes how the LDPC code tracks non-stationary SNRs using a Bayesian sequential learning technique.
+
+3 Bayesian sequential learning for non-stationary SNR estimation
+
+Channel noise in a wireless communication system can change over time, especially when the end user is mobile. This means the statistical properties of the received signal should be treated as non-stationary. For the PGM to remain representative of the varying channel conditions, the parameters of the gamma distribution need to adapt accordingly as LDPC packets arrive at the receiver. This can be achieved with Bayesian sequential learning also known as Bayesian sequential filtering. Each time an LDPC packet is decoded, the parameters of the obtained posterior gamma distribution are stored and used as the prior distribution when decoding the next LDPC packet. However, as an increased number of LDPC packets are decoded, our stationarity assumptions cause an ever-increasing certainty around the gamma distribution’s mean and the PGM struggles to respond accurately to the changing noise. Tracking the noise becomes restricted due to the strong underlying i.i.d. assumption across all noise estimates (from the observed data), which will follow the average channel noise instead of the evolving channel noise.
+
+To remedy this, we introduce a time constant T that represents a period of time in which we assume the stationarity
+
+assumption holds. For example, if we assume no drastic changes in channel noise over a period of T seconds, our
+
+stationarity
+
+assumption
+
+should
+
+be
+
+valid
+
+for
+
+S
+
+=
+
+T ×1000 1
+
+number
+
+of
+
+LDPC
+
+packets
+
+(assuming
+
+a
+
+transmission
+
+time
+
+of
+
+1ms per LDPC packet).
+
+We “relax” the i.i.d. assumption by accumulating the posterior gamma distribution’s parameters as we normally
+
+would, but only up to S number of LDPC packets. After the S number of packets are decoded, the posterior gamma
+
+distribution’s parameters
+
+(the
+
+natural
+
+parameter
+
+vector)
+
+are
+
+continuously
+
+being
+
+re-scaled
+
+with
+
+a
+
+scaling
+
+factor
+
+S×N
+
+ν 2
+
+−1
+
+as
+
+follows:
+
+
+   ′ Ψζ =
+   
+
+−
+
+1 2ω
+
+ν 2
+
+−
+
+1
+
+−
+
+1 2ω
+
+ν 2
+
+−
+
+1
+
+T
+,
+
+T
+
+S×N
+
+ν 2
+
+−1
+
+,
+
+ν 2
+
+−
+
+1
+
+≤
+
+S
+
+×
+
+N
+
+ν 2
+
+−
+
+1
+
+>
+
+S
+
+×
+
+N.
+
+(31)
+
+By scaling the gamma distribution’s parameters, the number of observations ν that make up the posterior distribution reaches a ceiling value, which is not equal to the theoretical maximum of the full i.i.d. assumption. This allows for variance around the gamma distribution’s mean so that the estimate does not become too “confident” in the data, which makes the gamma distribution responsive to the evolving channel noise. Scaling the natural parameter vector in this way makes contributions from previous estimates progressively less important compared to more recent estimates – allowing the PGM to “forget” historic channel noise. Note that this is not a windowing approach or a Kalman filter type approach where noise is added between estimations. The posterior gamma distribution remains informed by the entire sequence of received data, but the contributions from past data decay exponentially as packets are received and decoded.
+
+4 Experimental investigation
+
+This section describes the results obtained from stationary noise and non-stationary noise experiments.
+The LDPC code used is constructed from the 5G new radio (NR) standard [27]. We use base graph 2 with size (42, 52) and expansion factor 11. The resultant H matrix is shortened to a codeword length of N = 220 bits, of which K = 110
+
+3The average divergence from both directions is used, taking into consideration the mode-seeking and moment-seeking behaviours
+
+of
+
+the
+
+metric
+
+given
+
+by
+
+. DKL(P ||Q)+DKL(Q||P ) 2
+
+13
+
+are message bits (producing a code rate R = 0.5). A cluster graph is compiled from the parity-check factors using the LTRIP algorithm, and the message schedule is initialised by clusters with cardinality 8 and 10 (the largest factors), which form the bottom layer of the PGM (see Section 2.3.4). We use BPSK modulation over an AWGN channel and assume a transmitted bit has unit energy.
+4.1 Purpose of stationary noise experiment The stationary noise experiment is presented as a BER vs SNR curve as typically would be the case for determining the behaviour and performance of error correction codes over a range of SNR values. The purpose of the experiment is to compare the BER performance between our proposed PGM and a PGM with perfect knowledge of the noise across a range of SNR values. The selected SNR range consists of 6 equidistant points from 0 to 4.45 dB (inclusive). A random bit message is encoded and Gaussian noise is added to each bit, which repeats for 50k packets per SNR value. The same received bit values are presented to both PGMs to ensure a like-for-like comparison. We set the maximum number of message passing iterations to 20 for both PGMs. Our channel estimation PGM is parameterised with S = 10, which assumes stationarity over 10 LDPC packets (equivalent to a period of 10ms).
+4.1.1 Results and interpretation The results of the stationary noise experiment are shown in Figure 6. The BER performance (shown on the left) of our proposed PGM closely follows the performance of a PGM with perfect knowledge of the noise precision (the error bars reflect the 95% confidence intervals). Similarly, the number of iterations required to reach convergence (shown on the right) is almost identical between the two PGMs.
+Figure 6: BER performance comparison between our proposed channel noise estimation PGM and a PGM with perfect knowledge of the channel noise. The BER and the number of iterations till convergence between the two systems are nearly identical.
+4.2 Purpose of non-stationary noise experiment The purpose of the experiment is to test whether our proposed PGM is capable of tracking non-stationary channel noise, and if it benefits from the estimated channel noise information. We compare three scenarios: (1) a PGM that has perfect (instantaneous) knowledge of the channel noise precision, (2) a PGM using a fixed value for the channel noise precision, and (3) our proposed PGM that sequentially updates its channel noise precision estimation. Note that the assumed channel noise in (2) is the last precision mean obtained by running our proposed PGM over the test data once with S = ∞. While (2) assumes stationarity, its fixed value of the channel was accumulated from the entire test sequence and is advantageous, since it allows the PGM to “anticipate” future values of the channel noise. We set the maximum number of message passing iterations to 20 for all scenarios and parameterise (3) with S = 10, which assumes stationarity over 10 LDPC packets (equivalent to a period of 10ms).
+14
+
+4.2.1 Drive-test data
+We test our model using actual drive test measurements obtained from Vodacom Group Limited, a mobile communications company based in South Africa. Drive tests capture key network performance indicators that allow the mobile network operator to troubleshoot and optimise the network. We use the signal-to-interference-plus-noise ratio (SINR) measurements from a 5G device while driving approximately 10 kilometres along a coastal route. The captured data includes handovers between cells as the user equipment travels in and out of reception range. The start and end times of the test along with the SINR measurements and GPS locations are shown in Figure 7.
+
+Figure 7: Location of the drive test with the captured SINR measurements. Note the changes in signal-to-noise power as the user equipment moves through certain areas.
+
+The drive-test data had missing measurements and irregular time intervals. The missing values were removed and the sequence was re-indexed to create a time series with regular intervals. It was upsampled using linear interpolation to match a basic transmission time interval of 1ms. Note that our final test data may reflect more extreme channel variations due to some discontinuities introduced as a consequence of the described data cleaning. We generate random bit messages that are encoded using the H matrix to produce LDPC packets (or codewords). Bit values in an LDPC packet are modulated using BPSK modulation, and random Gaussian noise is added to the resultant signal values using the SINR drive-test data. The SINR data are converted from their logarithmic form to a linear form to obtain precision values. The precision values are used to add zero-mean Gaussian noise to the transmitted signal, which produces the received signal. Note that the same precision value is used to add noise to all signal values from the same LDPC packet.
+The dataset used during the current study is not publicly available due to the organisation’s data privacy policy, but can be made available from the corresponding author on reasonable request.
+
+4.2.2 Results and interpretation
+
+As stated earlier, we use the Gaussian distribution’s precision to model the channel noise. Results from our experiment
+
+are shown in Figure 8. The gamma posterior distribution is capable of tracking the actual noise precision (shown by the
+
+mean and one standard deviation in the top part of the figure). The BER shown in the bottom part of the figure is a
+
+moving average consisting of 10000 packets centred around the current point in time; this helps to reveal the underlying trend. We use Dirichlet smoothing to avoid reporting BER values in the range 0 < BER < 9 × 10−7, which is smaller
+
+than
+
+the
+
+possible
+
+BER.
+
+The
+
+BER
+
+shown
+
+in
+
+our
+
+results
+
+is
+
+calculated
+
+using:
+
+BER
+
+=
+
+1 10000
+
+(a+bit
+
+errors in a (K+a)
+
+packet)
+
+,
+
+where
+
+a = 0.005 and K is the number of message bits.
+
+We observe an improvement in the BER compared to a PGM using a fixed value (a precision of 8.76 or 9.42 dB SNR) of the average noise precision (shown in the bottom part of the figure).
+
+The BER performance of our proposed PGM closely follows the BER performance of the PGM with perfect knowledge of the noise precision. This is due to the small difference between the actual noise precision and the estimated noise precision of our proposed PGM.
+
+15
+
+Figure 8: Results of the three scenarios using the 5G device drive-test data. Note that our PGM tracks the changes in precision and maintains a BER similar to that of a PGM with perfect knowledge of the channel. It also outperforms a PGM employing a fixed average precision.
+
+In some experiments, we observed instances where the estimated precision was much lower than the actual precision. These were instances where the LDPC code failed to fix all bit errors, which the PGM then interpreted as worse than actual channel conditions. Another observation is that the gamma posterior has a wider standard deviation at higher precision means, and a narrower standard deviation at lower precision means. This is due to the characteristics of the gamma distribution. We view this as a beneficial artifact, since the PGM makes provision for more rapid changes in the channel conditions at lower channel noise. (This can also be regarded as a "sceptical" type of behaviour.) When channel conditions are bad, the PGM’s channel estimation more confidently reports that they are bad.
+A summary of the overall results appears in Table 1. The average BER of our PGM is slightly higher than the PGM with perfect knowledge of the channel, and outperforms the PGM with fixed value of the channel (at approximately 1.5 times better BER on average). Our PGM requires approximately 1.02 times fewer message passing iterations on average compared to the PGM with a fixed value of the channel, and the same number of iterations compared to the PGM with perfect knowledge of the channel.
+
+Table 1: A summary of the overall performance comparison. Note that the expected behaviour of our PGM is similar to the PGM with perfect knowledge of the channel noise, and outperforms the PGM with fixed value of the average channel noise in terms of the BER.
+BER (mean): Iterations (mean):
+
+True precision
+
+0.003034
+
+2.49
+
+Fixed precision
+
+0.005013
+
+2.54
+
+Estimated precision 0.003336
+
+2.49
+
+16
+
+Note that the averages presented in this table are more influenced by the high SNR instances where bit errors are infrequent. Figure 8 illustrates the performance advantage of our proposed PGM more clearly where bit errors occur more frequently at lower SNRs.
+5 Supplementary investigation
+In some instances, the BER performance of our proposed PGM (estimating the SNR) is better than the PGM with knowledge of the actual SNR. We noted this happening when the estimated SNR is lower than the actual SNR, which is counter-intuitive.
+A study presented in [8] investigates the effect of channel noise mismatch in LDPC codes. It found that the LDPC code’s performance degrades more quickly when the assumed SNR is overestimated, but is less sensitive to degradation when underestimated up to around 1 dB below the actual SNR. What is also interesting is that the optimal BER is at an assumed SNR lower than the actual SNR.
+We reproduce the same experiment to establish whether this behaviour is similar for a cluster graph representation of LDPC codes. Our channel noise mismatch experiment is presented as a BER vs model SNR curve where the model SNR is the assumed channel noise while the actual channel noise is fixed at 1.22 dB (similar to [8]). The purpose of the experiment is to (1) understand the impact on BER performance when the actual channel noise is under- and over-estimated by the model, and (2) determine where the optimal BER is.
+A random bit message is encoded and Gaussian noise is added using a fixed precision of 1.32 (equivalent to a SNR of 1.22 dB) to each bit, which repeats for 10k packets per model SNR value. The same received bit values are used for each model SNR value to ensure a like-for-like comparison. We set the maximum number of message passing iterations to 20. The results of the channel noise mismatch experiment is shown in Figure 9.
+
+Figure 9: The BER performance of a cluster graph LDPC code with the actual SNR fixed at 1.22 dB when the model SNR is varied. The error bars reflect the 95% confidence intervals.
+
+This result is similar to [8] and suggests that the LDPC code’s optimal BER is not necessarily at the point where the model SNR is equal to the actual SNR, but somewhere slightly below the actual SNR (in this case at 0.84 dB).
+A conservative estimation of the channel noise seems to be beneficial, since the LDPC decoder is more forgiving in the region below the actual noise. Using the drive-test data we run the same experiment as described in Section 4.2. However, after each packet is decoded we adjust the estimated precision value to be -0.1 dB below the posterior gamma mean value. We found that an adjustment larger than this yielded performance degradation. The result of this adjustment is shown in Table 2.
+
+Table 2: A summary of the overall performance comparison between the PGM that estimates the channel noise and the PGM that more conservatively estimates the channel noise. Note that the expected behaviour of the more conservative approach performs better than our initial PGM only in terms of the BER.
+BER (mean): Iterations (mean):
+
+Estimated precision
+
+0.003336
+
+2.49
+
+Estimated precision (-0.1 dB) 0.003329
+
+2.49
+
+A slight improvement in the BER can be seen, however, there is a trade-off between the number of iterations and BER performance. The decoder requires slightly more iterations on average when the adjustment to the posterior gamma is made.
+
+17
+
+We emphasise that the purpose of the supplementary investigation is not to propose that an adjustment be made to the estimated SNR in practice, but rather to show the counter-intuitive behaviour of the LDPC code that we found interesting. The benefit of adjusting the estimated SNR seems minimal.
+6 Conclusion and future work
+This paper contributes a simple sequential Bayesian learning method for tracking non-stationary channel noise using LDPC codes. We demonstrated the idea by employing a more general probabilistic framework called cluster graphs, and evaluated our proposed model using real-world data. The results show that the performance of our proposed model is nearly indistinguishable from a model with perfect knowledge of the channel noise.
+Apart from the performance advantages shown in our results, the approach embeds well within an LDPC decoder and does not require stand-alone machine learning techniques, pre-training, or management of large data sets. It is capable of learning the channel noise accurately on-the-fly while decoding LDPC packets without compromise.
+The implications of this method with respect to the communication system are that (1) the scheduling and use of pilot signals dedicated to channel noise estimation may become redundant, (2) LDPC codes coupled with our proposed channel-noise estimator can be used to estimate non-stationary channel noise on-the-fly with no need for scheduling, and (3) channel-noise information is now inherent in the LDPC code and provides performance advantages to the code.
+Our current approach relies on parameterising a time constant, which is a prior assumption about the speed at which channel noise will vary. Future work will focus on applying real-time Bayesian model selection, allowing the LDPC decoder to choose intelligently between multiple assumptions (or combine multiple assumptions) about the speed at which the channel varies. Such work relates to Bayesian change-point detection, which accounts for changes in the underlying data-generating process while estimating parameters. While this study focuses on channel-noise estimation alone, the methodology could also be expanded to estimate other channel properties such as phase and complex channel gain, which will depend on the modulation scheme and channel model discussed in Section 2.
+7 Acknowledgements
+The authors would like to thank Bonnie Xaba for providing the drive-test data. She is a senior specialist in network benchmarking and E2E network performance quality at Vodacom Group Limited in South Africa.
+References
+[1] M. Rumney, LTE and the evolution to 4G wireless: Design and measurement challenges, Second ed. 111 River St, Hoboken, New Jersey, U.S.A: John Wiley & Sons, 2013.
+[2] E. Björnson, J. Hoydis, and L. Sanguinetti, “Massive mimo networks: Spectral, energy, and hardware efficiency,” Foundations and Trends® in Signal Processing, vol. 11, no. 3-4, pp. 154–655, 2017. [Online]. Available: http://dx.doi.org/10.1561/2000000093
+[3] R. Gallager, “Low-density parity-check codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[4] M. Davey and D. MacKay, “Low-density parity check codes over gf(q),” IEEE Communications Letters, vol. 2, no. 6, pp. 165–167, 1998.
+[5] S. J. Johnson, “Introducing Low-density parity-check codes,” University of Newcastle, Australia, vol. 1, p. 2006, 2006.
+[6] H. Saeedi and A. H. Banihashemi, “Performance of belief propagation for decoding ldpc codes in the presence of channel estimation error,” IEEE Transactions on Communications, vol. 55, no. 1, pp. 83–89, 2007.
+[7] W. Tan and J. Cruz, “Signal-to-noise ratio mismatch for Low-density parity-check coded magnetic recording channels,” IEEE Transactions on Magnetics, vol. 40, no. 2, pp. 498–506, 2004.
+[8] D. J. MacKay and C. P. Hesketh, “Performance of Low density parity check codes as a function of actual and assumed noise levels,” Electronic Notes in Theoretical Computer Science, vol. 74, pp. 89–96, 2003.
+[9] D. J. MacKay, Information theory, inference and learning algorithms. Cambridge CB2 8BS, U.K: Cambridge university press, 2003.
+[10] D. Koller and N. Friedman, Probabilistic graphical models: principles and techniques, First ed. London W1A 6US, UK: MIT press, 2009.
+18
+
+[11] S. Wang, L. Cui, S. Cheng, Y. Zhai, M. Yeary, and Q. Wu, “Noise adaptive LDPC decoding using particle filtering,” IEEE Transactions on Communications, vol. 59, no. 4, pp. 913–916, 2011.
+[12] D. J. Jakubisin, R. M. Buehrer, and C. R. da Silva, “Probabilistic receiver architecture combining bp, mf, and ep for multi-signal detection,” arXiv preprint arXiv:1604.04834, 2016.
+[13] S. Wu, L. Kuang, Z. Ni, J. Lu, D. David Huang, and Q. Guo, “Expectation propagation approach to joint channel estimation and decoding for ofdm systems,” 2014 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), pp. 1941–1945, 2014.
+[14] M. Senst and G. Ascheid, “A message passing approach to iterative bayesian snr estimation,” 2012 International Symposium on Signals, Systems, and Electronics (ISSSE), pp. 1–6, 2012.
+[15] M. Nissila and S. Pasupathy, “Adaptive iterative detectors for phase-uncertain channels via variational bounding,” IEEE Transactions on Communications, vol. 57, no. 3, pp. 716–725, 2009.
+[16] S. Wang, L. Cui, and S. Cheng, “Noise adaptive ldpc decoding using expectation propagation,” 2011 IEEE Global Telecommunications Conference - GLOBECOM, pp. 1–5, 2011.
+[17] L. Cui, S. Wang, and S. Cheng, “Online snr statistic estimation for ldpc decoding over awgn channel using laplace propagation,” 2012 IEEE Global Communications Conference - GLOBECOM, pp. 3743–3747, 2012.
+[18] E. Dahlman, S. Parkvall, and J. Skold, 4G LTE/LTE-Advanced for Mobile Broadband, First ed. Oxford: Academic Press, 2011.
+[19] J. Yedidia, W. Freeman, and Y. Weiss, “Constructing free-energy approximations and generalized belief propagation algorithms,” IEEE Transactions on Information Theory, vol. 51, no. 7, pp. 2282–2312, 2005.
+[20] S. Streicher and J. Du Preez, “Graph coloring: comparing cluster graphs to factor graphs,” Proceedings of the ACM Multimedia 2017 Workshop on South African Academic Participation, pp. 35–42, 2017.
+[21] C. Bishop, Pattern recognition and machine learning. Cambridge CB3 0FB, U.K.: Springer New York, 2006, vol. 4.
+[22] J. Winn and C. M. Bishop, “Variational message passing,” Journal of Machine Learning Research, vol. 6, pp. 661–694, 2005.
+[23] J. Du Toit, J. du Preez, and R. Wolhuter, “LDPC codes: comparing cluster graphs to factor graphs,” arXiv preprint arXiv:2204.06350, 2022.
+[24] R. M. Taylor, “Approximate message passing algorithms for latent Dirichlet allocation,” Ph.D. dissertation, Stellenbosch University, March, 2023.
+[25] S. L. Lauritzen and D. J. Spiegelhalter, “Local computations with probabilities on graphical structures and their application to expert systems,” Journal of the Royal Statistical Society: Series B (Methodological), vol. 50, no. 2, pp. 157–194, 1988.
+[26] G. Shafer and P. P. Shenoy, “Probability propagation,” Ann. Math. Artif. Intell., vol. 2, pp. 327–351, 1990. [Online]. Available: https://doi.org/10.1007/BF01531015
+[27] J. H. Bae, A. Abotabl, H.-P. Lin, K.-B. Song, and J. Lee, “An overview of channel coding for 5g nr cellular communications,” APSIPA Transactions on Signal and Information Processing, vol. 8, 2019.
+19
+
+

@@ -1,0 +1,969 @@
+A Low Power Layered Decoding Architecture for LDPC Decoder Implementation for IEEE 802.11n LDPC Codes
+Jie Jin and Chi-Ying Tsui
+Dept. of Electrical and Computer Engineering, The Hong Kong University of Science and Technology, Clear Water Bay, Kowloon, Hong Kong {eetsui, eejinjie}@ee.ust.hk
+
+ABSTRACT
+This paper presents a low power LDPC decoder design based on reducing the amount of memory access. By utilizing the column overlapping of the LDPC parity check matrix, the amount of access for the memory storing the posterior values is minimized. In addition, a thresholding decoding scheme is proposed which reduces the memory access by trading off the error correcting performance. The decoder was implemented in TSMC 0.18ȝm CMOS process. Experimental results show that for a LDPC decoder targeting for IEEE 802.11n, the power consumption of the memory and the decoder can be reduced by 72% and 24%, respectively.
+Categories and Subject Descriptors
+B.7.1 [Integrated Circuits]: Types and Design Styles – Algorithms implemented in hardware.
+General Terms: Design.
+Keywords
+Low-density parity-check code, low power, thresholding.
+1. INTRODUCTION
+Recently, low-density parity-check (LDPC) codes [1] have gained significant attention due to their near Shannon limit performance [2]. They have been adopted in several wireless standards, such as DVB-S2 [3], IEEE802.16e [4] and IEEE 802.11n [5], because of their excellent error correcting performance.
+ª1 1 1 0 0 1 0º H ««1 0 1 1 1 0 0»»
+¬«1 1 0 1 0 0 1¼»
+Figure 1 Example of parity check matrix of a LDPC code and its Tanner graph representation
+An LDPC code is a linear block code defined by a sparse parity check matrix (Fig. 1(a)). It can be efficiently represented by a bipartite graph, called Tanner Graph [6] as shown in Fig. 1(b),
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. ISLPED’08, August 11-13, 2008, Bangalore, India. Copyright 2008 ACM 978-1-60558-109-5/08/08...$5.00.
+
+which contains two sets of nodes: variable nodes that represent the bits of a codeword and check nodes that implement the paritycheck constraints. The standard decoding procedure is the message passing algorithm, also known as “sum-product” or “belief propagation” (BP) Algorithm [2], which iteratively exchanges the messages between the check nodes and the variable nodes along the edges of the graph. In the original message passing algorithm, the messages first are broadcasted to all the check nodes from the variable nodes and then along the edges of the graph the updated messages are fed back from the check nodes to the variable nodes to finish one iteration of decoding. In order to achieve higher convergence speed, i.e. to minimize the number of decoding iteration, serial message passing algorithm, also known as layered decoding algorithm, has been proposed [78]. There are two types of layered decoding schemes: vertical layered decoding and horizontal layered decoding [7]. In the horizontal layered decoding, a single or a certain number of check nodes (called layer) are first updated. Then the whole set of neighboring variable nodes are updated, and the decoding process proceeds layer after layer. Because the serial check node processor is easier to be implemented in VLSI and therefore the horizontal layered decoding is preferable for practical implementations [9]. Based on the number of processing units, the LDPC decoder architecture can be classified into three types: fully parallel architecture, serial architecture and partially parallel architecture. In fully parallel architectures [10], a check node processor is needed for every check node, which usually results in large hardware cost and is less flexible. The serial architecture uses just one check node processor to share the computation of all the check nodes and is too slow for most applications. For partially parallel architectures, multiple processing units are used allowing proper tradeoff between the hardware cost and the throughput and are commonly adopted in the actual implementation [11-16].
+Although the partially parallel architectures based on the layered decoding algorithm have efficiently reduced the hardware cost and sped up the convergence rate, high power consumption of the LDPC decoder is still a challenging design problem. Due to the large amount of data access of the memories, the power consumption of the memory accounts for most of the power consumption of the decoder [8]. Reducing the power consumption of the memories is the key issue to realize a low power LDPC decoder. The Min-sum decoding algorithm and its variants [17] have been proposed, which greatly reduces the memory storage required for the check to variable messages, and also the power consumption of the memories of the LDPC decoder with insignificant performance loss. However, from our simulation, the power consumption of the memories is still accounting for more than half of the total power consumption of the decoder, due to the large amount of data access in every clock cycle. In this paper, we propose several schemes to reduce the amount of the memory access by utilizing the characteristic of the LDPC parity check matrix and the decoding algorithm. We use the LDPC code specified in the IEEE 802.11n standard [5] as an example to demonstrate our idea. The property of the parity check matrices of IEEE 802.11n LDPC code is analyzed and it is observed that the
+
+253
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+read and write access of the memory (we call it the Channel RAM) storing the soft output of the receive bits can be bypassed to reduce the amount of the memory access. From our analysis, significant reduction in memory access of the Channel RAM can be achieved depending on the code rate and the parity matrix of the LDPC code. To further reduce the power consumption, a thresholding scheme is proposed. When the magnitudes of the intermediate soft values of the variable nodes are larger than or equal to a preset threshold, they will not be read and written during the decoding and instead a one-bit signal is used to indicate such situation happens. The preset threshold value is then used as the magnitude of the soft messages in the check node updating instead of the actual message values. Hence the amount of the access of the memory storing the intermediate soft values is reduced.
+The rest of the paper is organized as follows. Section II gives the background of LDPC decoding scheme and the traditional layered LDPC decoder architecture. The proposed bypass scheme and the corresponding decoder architecture are presented in section III. The thresholding decoding scheme and the corresponding implementation are described in section IV. In section V, experimental results on the implementation of the different LDPC decoders targeting for IEEE 802.11n specification are presented. Conclusions are drawn in section VI.
+
+2. BACKGROUND
+
+A. LDPC decoding algorithms
+
+LDPC codes are linear block codes characterized by a sparse
+
+matrix, called parity-check matrix. The set of valid codewords C
+
+is defined as:
+
+H x xT 0 x  C
+
+(1)
+
+The code can also be described by means of a bipartite graph,
+
+known as Tanner graph [6]. A Tanner graph is made up of two
+
+entities, variable nodes (VN) and check nodes (CN), connected to
+
+each other through a set of edges. An edge links the check node m
+
+to the variable node n if the element Hm,n of the parity check matrix is non-null. The optimal LDPC decoding is achieved by
+
+using a message passing algorithm, also known as “belief
+
+propagation” (BP) [2], which can be described as an iterative
+
+exchange of messages along the edges of the Tanner graph [6].
+
+The algorithm proceeds iteratively until a maximum number of
+
+iterations are elapsed or a stopping rule is met. Inputs of the
+
+algorithm are the intrinsic Log-Likelihood Ratios (LLRs) of the
+
+received bits (i.e. the variable nodes), also referred to as a priori
+
+information. The following describes the belief propagation
+
+algorithm,
+
+where
+
+R(q) m,n
+
+is
+
+the
+
+check-to
+
+-variable
+
+message for
+
+check
+
+node
+
+m
+
+to
+
+variable
+
+node
+
+n
+
+at
+
+the
+
+qth
+
+iteration,
+
+Q(q) m,n
+
+is
+
+the
+
+variable-
+
+to-check message for variable node n to check node m at the qth
+
+iteration, Mn is the set of the neighboring check nodes of variable
+
+nchoedceknn,oadnedmN. mInisthteheqtsheitteorfatitohne,
+
+neighboring the variable
+
+variable nodes of node process and
+
+the check node process are computed as follows.
+
+Variable node process: the variable node n receives the
+
+messages
+
+R(q) m,n
+
+from
+
+the
+
+neighboring
+
+check
+
+nodes
+
+and
+
+propagates
+
+back
+
+the
+
+updated
+
+messages
+
+Q(q) m,n
+
+as:
+
+¦ Q ( q ) m,n
+
+On 
+
+R
+
+q 
+i,n
+
+(2)
+
+i^M n \ m `
+
+where On is the intrinsic LLR of the variable node n. At the same
+
+time, the posterior reliability value, also referred to as soft output
+
+for variable node n, is given by:
+
+¦ /(q) n
+
+On 
+
+Ri,qn (3)
+
+i^Mn `
+
+Check node process: the check node m combines together
+
+messages
+
+Q(q) m,n
+
+
+
+from
+
+the
+
+neighboring
+
+variable
+
+nodes
+
+to
+
+compute
+
+the
+
+updated
+
+messages
+
+R(q m,
+
+1) n
+
+,
+
+which
+
+are
+
+sent
+
+back
+
+to
+
+the
+
+respective variable node. Update can be performed separately on
+
+signs and magnitudes:
+
+ 
+
+sgn(
+
+R ( q 1) m,n
+
+)
+
+ sgn(Qm(q,)j ) (4)
+
+j^N m \ n`
+
+where
+
+R(q 1) m,n
+
+¦   )1
+
+­ ®
+
+)
+
+Q(q) m, j
+
+½ ¾
+
+(5)
+
+¯ j^N m \ n`
+
+¿
+
+)x
+
+) 1x
+
+
+
+log¨©§¨
+
+tanh¨§ ©
+
+x 2
+
+·¹¸ ¸¸¹·
+
+(6)
+
+The layered decoding scheduling improves the convergence
+
+speed and reduces the number of iteration by viewing the parity
+
+check as a sequence of check through horizontal or vertical
+
+layers. The intermediate updated messages are used in the
+
+updating of the next layer. The layered decoding principle for
+
+horizontal layers is expressed by [13]:
+
+ 
+
+sgn(
+
+R ( q 1) m,n
+
+)
+
+
+
+sgn(*m(q,
+
+1) j
+
+)
+
+(7)
+
+j^N m \ n`
+
+R(q 1) m,n
+
+¦   )
+
+1
+
+­ ®
+
+)
+
+* ( q 1) m, j
+
+½ ¾
+
+(8)
+
+¯ j^Nm \ n`
+
+¿
+
+and
+
+> @ *(q1) m,n
+
+/( q 1) n
+
+k
+
+1
+
+
+
+R(q) m,n
+
+(9)
+
+> @ /(q1) n
+
+k
+
+* ( q 1) m,n
+
+
+
+R(q1) m,n
+
+(10)
+
+where k is the time step that the CN is updated within an iteration.
+
+Equations (7)–(10) are derived by merging the variable node
+
+process and the soft-output updating process (2)–(3) with the CN
+
+update process (4)–(5). The variable node process is spread on the
+
+check
+
+node
+
+updating
+
+and
+
+the
+
+posterior
+
+reliability
+
+value,
+
+/(q 1) n
+
+is
+
+refreshed after every check node update. The key point of the
+
+layered schedule is the intermediate update of posterior messages
+
+and their propagation to the next layers within the iteration [13],
+
+which increases the convergence speed and reduces the average
+
+number of iteration time by up to 50% [8].
+
+The computation of equations (6) and (8) are complicated and
+
+difficult for hardware implementation. Low complexity
+
+algorithms such as min-sum approximation have been proposed to
+
+reduce the computation complexity [17]. In the min-sum decoding
+
+algorithm, the computation of equation (8) is approximated and
+
+expressed by
+
+R ( q 1) m,n
+
+min
+j^N m \ n`
+
+*(q m,
+
+1) j
+
+(11)
+
+Thus for a check node m, to compute the magnitudes of the
+
+outgoing messages, only two of the incoming messages with the
+
+smallest magnitudes have to be determined. The computation
+
+complexity of equation (8) is significantly reduced. Furthermore,
+
+the storage of the outgoing messages has been reduced to only
+
+two as opposed to dc, where dc stands for the check node degree
+
+(i.e. number of the neighboring variable nodes of a check node),
+
+because dc-1 variable nodes share the same outgoing message
+
+[17]. In order to achieve better performance and maintain the
+
+similar computation complexity and storage requirement of the
+
+min-sum approximation, the variants of the min-sum like offset
+
+min-sum [15-17] and two-output approximation [14] have been
+
+proposed and adopted in the hardware design.
+
+B. The layered decoding architecture
+The layered decoding algorithm has been adopted in many designs [11-16] due to their high convergence speed and easy
+
+254
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+adaptation to the flexible LDPC codes. In this section, the decoder architecture with layered decoding algorithm for the type of the architecture-aware LDPC codes (AA-LDPC) [8] is briefly introduced. Architecture-aware codes were proposed to facilitate the hardware design of the decoder. They are structured codes, whose parity-check matrix is built according to specific patterns. They are suitable for VLSI design, because the interconnection of the decoder is regular and simple and the trade-off between throughput and hardware complexity can be easily made. Since they support an efficient partial-parallel hardware VLSI implementation, AA-LDPC codes have been adopted in several modern communication standards, such as DVB-S2 [3], IEEE 802.16e [4] and IEEE 802.11n [5]. Fig. 2 shows the example of such parity-check matrix which is a LDPC code defined in IEEE 802.11n [5]. It is of rate 5/6 with sub-block size (i.e. the size of the identity sub-matrix) of 81. The parity-check matrix is composed of null sub-matrix or identity sub-matrix with different cyclic shifts. The numbers stand for the cyclic shift value of the identity sub-matrix, and the “–” stands for null sub-matrix.
+Several VLSI architectures have been proposed for the decoder of these systems [12-16], and layered decoding algorithm is commonly adopted in the design. A block diagram of these decoders is shown in Fig. 3 [12-14]. In the decoder, multiple softin soft-out (SISO) units work in parallel to calculate multiple check node process for a layer. The Channel RAM is used to store the input LLR value of the received data initially. During the iteration of the decoding, it is used to store the posterior reliability values of the variable nodes. The shifter is used to perform the cyclic shift of the soft output messages so that the correct message is read out from the Channel RAM and sent to the corresponding SISO for calculation based on the base matrix. The Sub-array is used to perform the subtraction of equation (9), and the results will be sent to the SISO unit and the memory used to store these intermediate results at the same time. The SISO unit performs the check node process of equations (7) and (8). The two-output approximation [14] is used for the SISO computation, and two outgoing magnitudes are generated for a check node. One is for the least reliable incoming variable node, and the other is for the rest of the variable nodes. Thus, the SISO unit, for every check node, will generate the signs for the outgoing messages of all the variable nodes, two magnitudes and an index. The index is used to select the two magnitudes for the update process in the Add-array. The data generated by the SISO will be stored in the Message RAM. The Add-array performs the addition of equation (10), by taking the output of the SISO and intermediate results stored in the memory. The results of the Add-array will be written back to the Channel RAM. To increase the throughput, pipeline operation of the decoder is adopted in the design [14-15].
+We implemented the baseline architecture shown in Fig. 3 for
+the IEEE 802.11n standard using a 0.18Pm CMOS technology. We use 81 SISO units for the partial-parallel architecture. Table I
+shows the breakdown of the power consumption of different parts
+of the design. From Table I, we can see the power consumption of
+the memories, including the Channel RAM, the memory storing
+the intermediate data (i.e. RAM1 in Table I), and the Message
+RAM, contributes most to the total power consumption of the
+LDPC decoder. In particular, the Channel RAM and the RAM1,
+because of the frequently read and write access, consume nearly
+half of the power consumption of the decoder. Reducing the
+power consumption of the Channel RAM and the RAM1 is thus
+important for the design of a low power LDPC decoder. In the
+following sections, we will present two schemes which can
+significantly reduce the power consumption of the Channel RAM
+and the RAM1 for a layered decoding architecture for IEEE
+802.11n system.
+
+Figure 2 Base matrix for a rate 5/6 with sub-block size of 81 LDPC code defined in IEEE 802.11n
+
+Rm(q,)n
+
+*m(q,n1)
+
+/(nq1)>k 1@
+
+Rm(q,n1) *m(q,n1)
+/(nq1) >k @
+
+Figure 3 A block diagram of the layered LDPC decoder
+Table I Power consumption (in mW) of the layered decoder for the LDPC code defined in IEEE 802.11n when operated in rate 5/6 mode
+
+Designation Message Logic RAM1 Channel Total
+
+RAM units
+
+RAM
+
+power
+
+45.4 139.7 125.5 134.7 445.3
+
+3. PROPOSED MEMORY BYPASSING
+SCHEME
+We use the LDPC defined in IEEE 802.11n standard [5] as an example for illustration. The IEEE 802.11n standard defines three different sub-block sizes for the identity matrix, which are 27, 54 and 81, and four types of code rate 1/2, 2/3, 3/4 and 5/6. All the base matrices have the same number of the block columns Nb=24. In the following, we use LDPC codes with sub-block size 81 and code rate of 1/2, 2/3, 3/4 and 5/6 as an example to demonstrate our design. Table II summarizes the main features of the example LDPC codes.
+
+Table II Summary of IEEE 802.11n codes for sub-block size 81
+
+Rate
+
+1/2 2/3 3/4 5/6
+
+Max # of dc1
+
+8
+
+11
+
+15
+
+20
+
+# of non-null sub-blocks in 86
+
+88
+
+85
+
+79
+
+the base matrix
+
+1 dc stands for the check node degree
+
+During the decoding, for every layer, the soft messages are read from and wrote into the Channel RAM and the RAM1 every cycle. To reduce the power consumption of the memories, minimizing the amount of data access of the memories is very important. The Channel RAM stores the soft posterior reliability values of the variable nodes, which are stored back from the Adder-array and will be used in the update of the subsequent layer. If both of the layers have non-null matrix at the same column, the results of the Add-array can be directly sent to the cyclic shifter and used directly for the decoding of the next layer. This can bypass the write operation for the current layer and the read operation for the next layer.
+
+Fig. 4 shows an example. Fig. 4(b) shows the base matrix of three consecutive layers and Fig. 4(a) shows the timing diagram of the pipeline. Without any memory bypassing, the number of read and write access for the Channel RAM is equal to the non-
+
+255
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+null entries in the matrix. In this example, the total number of read and write operation is thus 12. If bypass scheme is employed, i.e. instead of writing back the channel RAM, the updated soft output values are used directly for the decoding of the next layer, then, the number of memory access can be reduced. For example memory access for columns 0 and 2 can be bypassed when the decoding proceeds from layer 0 to layer 1; memory access for columns 0 and 1 can be bypassed for the second layer decoding and memory access for columns 0 and 3 can be bypassed for the third layer decoding. Thus 6 out of 12 read and write operation can be bypassed, and 50% of the power consumption of the Channel RAM can be saved. The number of bypass can be achieved depends on the structure of the parity-check matrix of the LDPC code. For the IEEE 802.11n codes, there are many overlapped columns in the parity-check matrix. Overlapped column means the consecutive two layers have non-null matrix at the same column. For example, the LDPC code shown in Fig. 2, the first layer overlaps with the second layer at 17 columns. Table III summarizes the number of the overlapped columns in the consecutive layers for the example codes in IEEE 802.11n. The number of the overlapped columns is also affected by the decoding order of the layers. We also include the number of the overlapped columns for the best case order, the natural order (same as the order shown in the standard), and the worst case order in table III. It can be seen that the amount of bypass can be achieved varied with different decoding order. For some codes, finding the optimal order is important for the memory access reduction. For these four codes, there are only 86, 88, 85 and 79 non-null matrices in the base matrices. Thus, if all the overlapped columns can be bypassed in the decoder, 57%~82% of the power consumption of the Channel RAM during the decoding process can be reduced.
+However, to achieve the maximum number of the bypassing operation, the traditional architecture cannot be directly adopted. Assuming it takes two clock cycles for the cyclic shifter, Subarray, the SISO and the Add-array to finish the computation after the last incoming variable node is read in, a detail timing diagram showing the operation of the decoder is shown in Fig. 4(c). The order of read and write of the Channel RAM is following the natural order stated in the base matrix. Due to data dependency, the memory write of a certain column for the existing layer should finish before or at the same time with the reading of the same column for the subsequent layer. In order to achieve that, the decoding of the second layer has to be delayed to align the memory access and idling cycles are inserted in the decoding pipeline. The idle cycles will decrease the throughput and increase the latency of the decoding. In [14-15], the optimum decoding order of the layers and the order of the sub-blocks updated within a layer was determined to reduce the additional idling cycles. To implement memory by-pass, for the overlapped columns, the memory write for the existing layer should occur at the same time with the reading of the same column for the subsequent layer. Fig. 4(d) shows an example. Here column 0 and 2 are written earlier for layer 0 and columns 0 and 2 are scheduled later for layer 1 so that overlap can be achieved. However, we still need to add idling delay in order to maximize the overlap and even that there is still one potential overlap (W3, R3) in the third layer cannot be achieved. In order to achieve the maximum number of bypassing and reduce the idle cycle at the same time, we de-couple the read and write order of the memory storing the intermediate messages for a layer. This is shown in Fig. 5. We can see that all the potential bypass can be achieved without any need to add idling cycle.
+The block diagram of the proposed decoder with memory bypassing scheme is shown in Fig. 6. We call the memory which stores the intermediate data RAM1. In order to bypass the
+
+Figure 4 The bypassing operation for the Channel RAM in the layered LDPC decoder
+
+Figure 5 Memory operations with different read and write order for the matrix shown in Fig. 4
+
+Figure 6 Block diagram of the LDPC decoder with memory bypassing scheme
+
+Table III Number of the overlapped columns for the LDPC codes defined in IEEE 802.11n
+
+Rate
+
+1/2
+
+2/3
+
+3/4
+
+5/6
+
+Order
+
+Best case order
+
+49
+
+55
+
+59
+
+65
+
+Natural order
+
+48
+
+50
+
+59
+
+65
+
+Worst case order
+
+30
+
+42
+
+49
+
+63
+
+memory read and write operation, a bank of muxs is added to select the output of the Add-array and that of the Channel RAM and pipeline registers are added after the Add-array. Because the order of the messages entering the SISO (this order is the same as the read order of the Channel RAM) and the order of the messages updated in the Add-array (this order is the same as the read order of the memory storing the intermediate data i.e. RAM1) are different, the index generated in the SISO indicating the position of the least reliable incoming messages will be incorrect for the update process. A ROM containing the order of the updated process (i.e. the read order of RAM1) is added and it is used together with the index generated in the SISO to select the
+
+256
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+two magnitudes for the update process. The overhead in area and the power is very small and easy to implement.
+The number of read and write access of the Channel RAM after using the memory bypassing scheme per iteration during the decoding is summarized in table IV. It shows that depending on the code rate, 57%~82% of the memory access of the Channel RAM during the decoding process can be achieved. At the same time the idle cycles are minimized and only a few idle cycles are required due to the irregular check node degrees.
+While the power consumption of the Channel RAM is reduced, the RAM1 which stores the intermediate data still consumes significant power. In the next section, we will present a thresholding scheme which can reduce the power consumption of the RAM1.
+
+4. PROPOSED THRESHOLDING SCHEME
+For the LDPC decoding, the magnitudes of the outgoing messages for the variable nodes are mainly determined by the two smallest values in a check node [17]. This is why min-sum and its variants like offset min-sum can work. For decoding architecture using fix point computation, as the decoding proceeds, the soft values begin to saturate at the maximum number that can be represented by the bit-width of the architecture. The check-tovariable messages will mainly be determined by the smaller soft output messages. If the value of the soft message is very large, the sensitivity of the decoding performance with respect to the actual value will become smaller. In other words, if we clip the maximum value of the soft value to a threshold value, the performance may not be degraded significantly. Based on this, we propose a thresholding scheme. If the magnitude of the intermediate soft message is larger than or equal to a threshold value T, the magnitude part will not be read and stored in RAM1 during the decoding. Instead a bit S will be written into another memory called the threshold memory, to indicate that this value is larger than the threshold. That is, if
+
+> @ *(q1) m,n
+
+/( q 1) n
+
+k 1
+
+
+
+R(q) m,n
+
+tT
+
+(12)
+
+only the bit S and the sign bit will be written into the threshold memory and RAM1. During calculation of equation (8) in the SISO, the preset threshold value T is used. The amount of read/write access of the RAM1 is thus reduced. Since the bitwidth for the intermediate value is small (in our design, 6 bits are used, one bit for sign and the others for the magnitude), the overhead for write the bit S per data is quite large. In order to reduce the overhead, we combine two S bits together, i.e. if the magnitudes of two intermediate messages are larger than the value T, a single bit S will be written to the threshold memory to indicate that both of these two messages are larger than the threshold, and the magnitudes of these two messages will not be written into RAM1. During the updating process, the threshold memory is accessed first, if bit S for the two messages are ‘1’ which means the two messages are larger than the threshold, the memory storing the magnitude part of the two messages will not be accessed, and the maximum number that can be represented by the bit-width of the architecture are used for the Adder-array to carry out the update process. Otherwise the memory storing the magnitude part of the two messages will be read and sent to the Adder-array.
+
+The threshold value T will affect the error-correcting performance and the amount of memory access. A small threshold value T will degrade the error-correcting performance, while a large threshold value T results in smaller saving of the memory access. The proper threshold value T is determined through simulation to obtain the optimal trade-off between the performance and the power consumption. From simulation results, we set the threshold value to be 21. The decoding performance of the rate 5/6 LDPC code is shown in Fig. 7 and it can be seen the degradation in performance is insignificant when compared with the fixed point design. The amount of memory access (in terms of # of bit read and write) was also simulated. These included both
+
+the RAM1 and the threshold memory access. Fig. 8 shows the simulation results. It can be seen that with different SNR values, the amount of memory access is reduced by 5%-37%. When the SNR is higher, during the decoding iteration, the soft message values become more reliable and more values saturate with large values. Thus more values are larger than the threshold and the amount of memory access reduced is more. The overall block diagram of the decoder implementing the thresholding scheme and the memory bypassing scheme is shown in Fig. 9.
+
+Table IV Number of the read and write access for the Channel RAM per iteration of the LDPC codes defined in IEEE 802.11n
+
+Rate Design
+
+1/2
+
+2/3
+
+3/4
+
+5/6
+
+Proposed design
+
+37
+
+33
+
+26
+
+14
+
+Traditional design
+
+86
+
+88
+
+85
+
+79
+
+100 10-1
+
+floating point layered BP fixed point layered BP thresholding on fixed point layered BP
+
+10-2
+
+Error rate
+
+10-3
+
+10-4
+
+10-5
+
+10-6
+
+10-7 3.2
+
+3.4
+
+3.6
+
+3.8
+
+4
+
+Eb_No(dB)
+
+4.2
+
+4.4
+
+4.6
+
+Figure 7 The frame error rate (—) and the bit error rate (--) of the different decoding algorithms
+
+T=21 1
+
+0.95
+
+0.9
+
+0.85
+
+0.8
+
+0.75
+
+0.7
+
+0.65
+
+3.2
+
+3.4
+
+3.6
+
+3.8
+
+4
+
+4.2
+
+4.4
+
+4.6
+
+4.8
+
+5
+
+Eb_No(dB)
+
+Figure 8 The normalized memory access of RAM1 for the rate 5/6 LDPC code defined in IEEE 802.11n
+
+Figure 9 Block diagram of the LDPC decoder with memory bypassing and thresholding scheme
+5. EXPERIMENTAL RESULTS
+We implemented three LDPC decoders for the IEEE 802.11n LDPC code to demonstrate the power performance of our proposed decoding architecture. The first is the traditional layered
+
+257
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+decoding architecture [13-14] and the other two are the layered decoding architecture with memory bypassing scheme and that combining both the memory bypassing and the thresholding scheme. For all the design, the bit-width for the soft output messages is set to be 6. The decoders were implemented and synthesized with Synopsys (Design Compiler) using the Artisan’s TSMC 0.18ȝm standard cell library. The power consumption of the embedded SRAM is characterized by HSPICE simulation with the TSMC 0.18ȝm process. The power consumption of the decoder was simulated using Synopsys VCS-MX and PrimeTime at the SNR achieving a frame error rate around 10-3. The supply voltage is 1.8V and the clock frequency is 200MHz. The power consumption breakdowns of the three decoders working at different code rate mode are shown in Tables V to VIII.
+
+Table V Power consumption (in mW) of the three LDPC decoders when operated in rate 1/2 mode
+
+LDPC decoder
+
+Traditional Memory Combined
+
+bypassing
+
+design
+
+Message RAM
+
+71.2
+
+71.2
+
+71.2
+
+Logic units
+
+182.4
+
+192.9
+
+208.1
+
+RAM1
+
+119.0
+
+119.0
+
+105.6
+
+Channel RAM
+
+123.8
+
+58.2
+
+58.2
+
+Total
+
+496.4
+
+441.3
+
+443.1
+
+Table VI Power consumption (in mW) of the three LDPC decoders when operated in rate 2/3 mode
+
+LDPC decoder
+
+Traditional Memory Combined
+
+bypassing
+
+design
+
+Message RAM
+
+61.3
+
+61.3
+
+61.3
+
+Logic units
+
+162.7
+
+169.2
+
+182.8
+
+RAM1
+
+131.4
+
+131.4
+
+104.1
+
+Channel RAM
+
+137.4
+
+59.7
+
+59.7
+
+Total
+
+492.8
+
+421.6
+
+407.9
+
+Table VII Power consumption (in mW) of the three LDPC decoders when operated in rate 3/4 mode
+
+LDPC decoder
+
+Traditional Memory Combined
+
+bypassing
+
+design
+
+Message RAM
+
+50.7
+
+50.7
+
+50.7
+
+Logic units
+
+150.2
+
+161.6
+
+174.9
+
+RAM1
+
+122.7
+
+122.7
+
+93.2
+
+Channel RAM
+
+129.6
+
+50.1
+
+50.1
+
+Total
+
+453.2
+
+385.1
+
+368.9
+
+Table VIII Power consumption (in mW) of the three LDPC decoders when operated in rate 5/6 mode
+
+LDPC decoder
+
+Traditional Memory Combined
+
+bypassing
+
+design
+
+Message RAM
+
+45.4
+
+45.4
+
+45.4
+
+Logic units
+
+139.7
+
+151.7
+
+162.8
+
+RAM1
+
+125.5
+
+125.5
+
+91.8
+
+Channel RAM
+
+134.7
+
+38.4
+
+38.4
+
+Total
+
+445.3
+
+361.0
+
+338.4
+
+From Tables V to VIII, it can be seen that 53%~72% of the power consumption of the Channel RAM can be reduced using the memory bypassing scheme. The power overhead which is reflected in the increase in power of the logic units is relatively small. At the same time, using the thresholding scheme, the power consumption of the RAM1 is reduced by 11%~27%. For code rate = ½, the power overhead in the logic unit is about the same as the power saving in RAM1. For other code rate, the power saving of
+
+RAM1 exceeds the power overhead. When we use both scheme together, the total power consumption of the LDPC decoder is reduced by 11%~24% depending on the code rate.
+6. CONCLUSIONS
+We presented two schemes to reduce the memory access and hence the power consumption of the LDPC decoder by exploiting the characteristic of the LDPC parity check matrix and also the decoding algorithm. Overall the total power consumption of the decoder is reduced by 11%~24%.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf.Theory, vol. IT-8, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar.1999.
+[3] “Digital video broadcasting (DVB); second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broadband satellite applications”, June 2004.
+[4] “LDPC coding for OFDMA PHY. 802.16REVe Sponsor Ballot Recirculation comment”, IEEE C802.16e-04/141r2k, July 2004.
+[5] “Joint Proposal: High throughput extension to the 802.11 Standard: PHY. IEEE P802.11 Wireless LANs”, Jan 2006. IEEE 802.1105/1102r4.
+[6] R. Tanner. “A recursive approach to low complexity codes”,.IEEE Trans. Inform. Theory, 27(5):533–547, Sep 1981.
+[7] J. Zhang and M. P. C. Fossorier, “Shuffled Iterative Decoding”, IEEE Trans. Commun., volume 53, pages 209–213, Feb 2005.
+[8] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[9] M. Rovini, F. Rossi, P. Ciao, N. L'Insalata, and L. Fanucci. “Layered Decoding of Non-Layered LDPC Codes”, In Proc. 9th Euromicro Conference on Digital System Design (DSD), Aug-Sept. 2006.
+[10] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate 1/2 low-density parity-check code decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[11] M. Mansour and N. R. Shanbhag, “A 640-Mb/s 2048-bit programmable LDPC decoder chip,” IEEE Journal of Solid-State Circuits, vol. 41, no. 3, pp. 684-698, March 2006.
+[12] J. Dielissen, A. Hekstra, and V. Berg. “Low cost LDPC decoder for DVB-S2”, Proc. 2006 Design, Automation and Test in Europe (DATE ’06), Munich, Germany, Mar. 2006.
+[13] Torben Brack, M. Alles, T. Lehnigk-Emden, Frank Kienle, Norbert Wehn, Nicola E. L'Insalata, Francesco Rossi, Massimo Rovini, Luca Fanucci, "Low complexity LDPC code decoders for next generation standards", In Proc. 2007 Design, Automation and Test in Europe (DATE ’07), 16-20 April 2007.
+[14] Giuseppe Gentile, Massimo Rovini, Luca, Fanucci, “LowComplexity Architectures of a Decoder for IEEE 802.16e LDPC Codes”, Euromicro Conference on Digital System Design Architectures, Methods and Tools, 29-31 Aug. 2007
+[15] Y. Sun, M. Karkooti and J. R. Cavallaro, "VLSI Decoder Architecture for High Throughput, Variable Block-Size and MultiRate LDPC Codes". IEEE International symposium on Circuits and Systems (ISCAS), pages 2104-2107, May 2007.
+[16] Kiran K.Gunnam, Gwan Choi, Weihuang Wang, Mark B. Yeary, “Multi-Rate Layered Decoder Architecture for Block LDPC Codes of the IEEE 802.11n Wireless Standard”, IEEE International symposium on Circuits and Systems (ISCAS): pages 1645-1648, May 2007.
+[17] J. Chen, A. Dholakia, E. Eleftheriou, M.P.C. Fossorier, and X.-Y. Hu, "Reduced-complexity decoding of LDPC codes," IEEE Trans. Commun., vol.53, no.8, pp.1288–1299, Aug. 2005.
+
+258
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:55:11 UTC from IEEE Xplore. Restrictions apply.
+
+

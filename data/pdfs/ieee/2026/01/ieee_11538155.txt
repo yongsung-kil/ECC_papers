@@ -1,0 +1,1090 @@
+Received 15 November 2025; revised 9 March 2026; accepted 14 May 2026. Date of publication 28 May 2026; date of current version 3 June 2026. The associate editor coordinating the review of this article and approving it for publication was B. Di. Digital Object Identifier 10.1109/TMLCN.2026.3698041
+Spectral-Guided Mask Generation for Error Correction Code Transformers
+LINH NGUYEN (Graduate Student Member, IEEE), QUOC BAO PHAN (Graduate Student Member, IEEE), AND
+TUY TAN NGUYEN (Senior Member, IEEE)
+Department of Electrical and Computer Engineering, Center for Advanced Power Systems, FAMU-FSU College of Engineering, Florida State University, Tallahassee, FL 32310 USA
+CORRESPONDING AUTHOR: T. T. NGUYEN (tuy.nguyen@fsu.edu) This work was supported by the National Science Foundation under Directorate for Computer and Information Science and Engineering/Office of
+Advanced Cyberinfrastructure (CISE/OAC) under Grant 2600417.
+
+ABSTRACT Neural decoders have recently advanced error correction performance, with transformerbased architectures in the error correction code transformer (ECCT) framework achieving state-of-the-art results among neural decoders. However, the multiple-masks ECCT suffers from suboptimal mask selection, which impacts decoding performance. In this work, we propose spectral-guided ECCT, leveraging the Laplacian matrix and its eigenvectors from the variable-variable graph to identify weakly connected node clusters for optimized mask generation. By embedding spectral properties into the decoding process, our method constructs more effective masks that improve information flow across variable and check nodes. Experimental results demonstrate consistent gains over existing ECCT-based models, achieving superior decoding accuracy and reliability while significantly improving training efficiency. This work highlights the potential of spectral graph theory to address structural challenges in neural decoders and provides a principled direction for future error correction design.
+INDEX TERMS Neural decoders, ECCT, Laplacian matrix, eigenvectors, spectral-guided mask generation.
+
+I. INTRODUCTION
+E RROR correction codes (ECCs) are integral to ensuring data integrity across a multitude of modern communication and storage systems, including wireless networks, data storage devices, and emerging sixth-generation (6G) infrastructures [1], [2]. While conventional iterative decoding algorithms, such as belief propagation (BP) and the min-sum algorithm, have demonstrated considerable efficacy, they exhibit inherent limitations in approaching the Shannon capacity under practical complexity constraints [3], [4].
+The error floor phenomenon represents a formidable and long-standing obstacle in the design of high-performance communication systems [5], [6], [7]. In the high signal-tonoise ratio (SNR) regime, where error rates are expected to decrease exponentially with increasing signal power, many advanced ECCs exhibit a sudden and problematic flattening of their performance curve. This behavior signifies that further increases in power yield diminishing, or
+
+even negligible, improvements in the bit error rate (BER), rendering the system highly inefficient. The root cause of this limitation is overwhelmingly attributed to the presence of small, topologically detrimental subgraphs within the code’s Tanner graph, commonly known as trapping sets or absorbing sets [6], [8]. These structures act as local traps for iterative decoding algorithms like BP, causing incorrect messages to be endlessly circulated and amplified within the set, thereby preventing the decoder from converging to the correct codeword.
+Mitigating the impact of these structures has been a central focus of coding theory research. Foundational work has included algorithmic approaches to enumerate and classify dominant trapping sets based on graphical properties like cycle length and node degree [6], as well as sophisticated algebraic tools such as the cycle consistency matrix for verifying the existence of absorbing sets in structured codes like quasi-cyclic (QC) low-density paritycheck (LDPC) codes [9]. Crucially, this challenge is not
+
+© 2026 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License.
+
+For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+VOLUME 4, 2026
+
+913
+
+an artifact of classical message-passing decoders. Recent investigations have definitively shown that even the most advanced deep learning-based decoders, including those built on transformer architectures, still suffer from an error floor when decoding powerful algebraic codes like Bose–Chaudhuri–Hocquenghem (BCH) and sparse-graph LDPC codes [10], [11], [12], [13], [14]. The universality of this problem is further highlighted by its direct analog in quantum computing, where quantum trapping sets (QTSs) have been identified as a key factor limiting the performance of quantum ECCs [15], [16], [17].
+The advent of neural network (NN)-based decoders marks a paradigm shift from traditional model-based algorithms to data-driven, learned decoding strategies. By leveraging deep learning, these decoders can approximate near-optimal maximum a posteriori (MAP) decoding with a manageable level of complexity, often outperforming their classical counterparts [18], [19], [20], [21]. Recent theoretical works have further solidified this progress by establishing generalization bounds specifically for transformer-based channel decoders, providing critical insights into their reliability [22]. Within this domain, architectures based on the transformer model have emerged as particularly potent, largely due to their selfattention mechanism, which enables the network to learn and model complex, long-range dependencies between all variable nodes (VNs) in the code graph simultaneously [23], [24]. The error correction code transformer (ECCT) stands as the current state-of-the-art, having set new performance benchmarks by surpassing prior recurrent and convolutional neural decoder architectures across a wide spectrum of codes [10], [11], [24].
+Despite its success, ECCT still faces key limitations. The self-attention mechanism scales quadratically with the block length, making it computationally burdensome for large codes [13], [14]. While recent unified frameworks have attempted to reduce this complexity [25], the structural coarseness of the standard PCM-derived mask remains a challenge, as it captures only high-level Tanner graph connectivity without addressing specific topological weaknesses. The multiple-masks ECCT (MM-ECCT) was introduced in [23] as a way to mitigate these computational burdens. MM-ECCT converts the PCM to a systematic form and generates complementary masks via cyclic shifts of the identity submatrix, enabling parallel masked attention branches that prune redundant attention paths. Results in [23] show that using two such masks yields strong performance for short block length codes. However, the mask selection strategy in MM-ECCT remains largely empirical. Although many valid masks can be derived from systematic and shifted identity structures, the framework does not offer criteria for choosing among them. When more than two masks are available, selecting a pair at random, as done in MM-ECCT, may overlook structurally important regions of the code, thus limiting achievable decoding performance. This reveals a methodological gap: while computational
+
+efficiency is improved, mask design is not yet guided by a principled understanding of the code’s intrinsic structure.
+Addressing this limitation requires a mechanism that links mask construction directly to the topology of the code. We therefore propose a principled spectral-guided (SG) mask generation method. Rather than relying on parity check matrix transformations, our approach examines the topology formed by variable node interactions via the construction of a variable-variable (V × V) graph and its normalized Laplacian. Our central premise is that nodes involved in trapping-set related failures tend to reside in regions of the V × V graph with weak connectivity, a structural characteristic strongly associated with error floor behavior. The spectral decomposition of the normalized Laplacian exposes these regions by separating the graph according to variations in connectivity strength [26], [27], [28]. This decomposition reveals the multi-scale clustering structure inherent in the code’s topology, where eigenvectors corresponding to smaller eigenvalues capture increasingly fine-grained partitions of the variable node set. In particular, the Fiedler vector, corresponding to the smallest non-zero Laplacian eigenvalue [26], provides a natural one-dimensional embedding that delineates boundaries between strongly and weakly connected groups of VNs. By projecting the graph onto this spectral axis, we obtain a continuous measure of structural vulnerability for each variable node relative to connectivity bottlenecks. These spectrally identified clusters form the basis for constructing topology-informed attention masks that direct the Transformer toward vulnerable regions of the code.
+To address this limitation, we propose SG-ECCT, a principled framework that leverages spectral graph theory to construct topology-informed attention masks. By analyzing the normalized Laplacian of the V × V graph, our method systematically identifies weakly connected node clusters associated with trapping sets and directs the transformer’s attention toward these vulnerable regions. The main contributions of this paper are summarized as follows:
+• We introduce a principled SG mask construction method that analyzes the Laplacian of the V × V graph to identify weakly connected node clusters associated with trapping-set structures.
+• We establish a spectral interpretation linking graph connectivity properties to structural vulnerabilities in the code topology, explaining how spectral embeddings reveal regions prone to decoding failures.
+• We integrate SG analysis with transformer-based decoding by constructing topology-informed attention masks that guide the self-attention mechanism toward vulnerable regions of the code graph.
+• We demonstrate through extensive simulations across BCH, Polar, and LDPC codes that the proposed method consistently improves decoding accuracy compared to baseline ECCT models. Furthermore, by providing a
+
+914
+
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers
+
+more informative learning signal, the framework significantly accelerates convergence, reducing training time by up to 4.5× without increasing inference complexity.
+The remainder of this paper is organized as follows. Section II reviews background material on neural decoders, masking mechanisms in ECCT, and the SG concepts that motivate our method. Section III introduces the SG-ECCT framework, covering the Laplacian formulation, spectral partitioning, mask construction, and integration into the transformer-based decoder, and discusses time complexity. Section IV presents the experimental setup, model configurations, and performance evaluation on multiple code ensembles. Lastly, Section V summarizes the main contributions and discusses future research directions.
+
+II. BACKGROUND A. CODING AND ERROR CORRECTION CODE TRANSFORMER
+
+1) CODING PRELIMINARIES
+
+A binary linear block code of length n and dimension k is
+
+defined as
+
+C
+
+=
+
+˚
+
+c
+
+∈
+
+{0,
+
+1}n
+
+ˇ ˇ
+
+Hc
+
+= 0 «,
+
+(1)
+
+where H ∈ {0, 1}m×n denotes the parity-check matrix (PCM) and m = n − k.
+The Tanner graph [4] corresponding to C is denoted by G = (V, C, E), where V = {v1, v2, . . ., vn} represents the set of VNs, C = {c1, c2, . . ., cm} represents the set of check nodes (CNs), and E is the edge set such that an edge (vi, c j) ∈ E exists if and only if H j,i = 1.
+Under binary phase-shift keying (BPSK) modulation [29],
+each codeword bit ci is mapped to a transmitted symbol
+
+xi = 1 − 2ci ∈ {+1, −1}.
+
+(2)
+
+Assuming transmission over an additive white Gaussian noise (AWGN) channel, the received signal is modeled as
+
+yi = xi + zi,
+
+(3)
+
+where zi ∼ N (0, σ2) denotes Gaussian noise with variance σ2 = (2R Eb/N0)−1 and R = k/n is the code rate. The log-
+likelihood ratios (LLRs) [29] are defined as:
+
+i
+
+=
+
+log
+
+p(yi|xi p(yi|xi
+
+= +1) = −1)
+
+=
+
+2yi σ2
+
+.
+
+(4)
+
+Classical BP algorithm operates on G by iteratively passing functions of the LLRs { i} along edges. On sparse Tanner graphs, most notably LDPC ensembles, the local neighborhoods become nearly tree-like as n → ∞, so BP follows its tree analysis and achieves thresholds close to capacity, as predicted by density evolution. In the shortblock regime, however, short cycles appear at shallow depths and induce strong message correlations; together with small pathological subgraphs such as trapping or stopping sets, this degrades the waterfall performance and produces visible error floors [3].
+
+VOLUME 4, 2026
+
+2) ECCT: A MASKED-ATTENTION DECODER From the channel observations y = (y1, y2, . . ., yn), the input features are
+
+r = |y|, s = H cˆ , cˆi = I[ yi < 0 ],
+
+(5)
+
+providing a codeword-invariant representation on symmetric channels and injecting the parity constraints via provisional hard decisions. A binary mask M ∈ {0, 1}(n+m)×(n+m) is constructed from the full Tanner graph to define valid attention links consistent with the VN–CN topology.
+Let Z ∈ R(n+m)×d denote the matrix of node embeddings for all VNs and CNs, where d is the model (embedding) dimension. For each attention head, the matrices WQ, WK, and WV are learnable linear projection parameters that map the input embeddings into the query, key, and value subspaces:
+
+Q = ZWQ, K = ZWK, V = ZWV .
+
+(6)
+
+Each projection matrix is defined as WQ, WK, WV ∈ Rd×dh , where h is the number of attention heads and dh = d/h is the per-head dimensionality. These matrices are fully trainable and are updated through backpropagation
+during training.
+For each head, masked self-attention is computed as
+
+A
+
+=
+
+QK √
+
++ log(M),
+
+(7)
+
+dh
+
+where log(M) is applied elementwise to disable invalid attention links (Mi j = 0). The attention weights Aatt are obtained by row-wise normalization:
+
+Aatt = softmax(A),
+
+(8)
+
+and the head output is
+
+O = AattV.
+
+(9)
+
+Outputs from all h heads are concatenated and projected:
+
+Z = Concat(O1, . . . , Oh)WO, WO ∈ Rhdh×d.
+
+(10)
+
+Optional normalization and activation follow this step. While the original ECCT constructs its binary mask
+directly from the PCM H, the MM-ECCT [23] recognizes the structural advantage of the identity submatrix that emerges when H is transformed into its systematic form after Gaussian elimination, denoted as
+
+Hsys = [ I | P ],
+
+(11)
+
+where I is an m × m identity submatrix and P represents the
+
+remaining parity portion of H. VNs corresponding to these
+
+identity positions tend to maintain more stable decoding
+
+behavior, motivating the design of additional complemen-
+
+tary masks that replicate and rotate this well-conditioned
+
+structure.
+
+As shown in Fig. 1, a set of complementary PCMs
+
+{Hc1
+
+,
+
+H2c
+
+,
+
+.
+
+.
+
+.,
+
+HNmask
+c
+
+}
+
+is
+
+constructed
+
+by
+
+applying
+
+block-
+
+circulant shifts to the identity part of Hsys. The PCM H
+
+915
+
+Algorithm 1 Mask Matrix Construction [10]
+
+1: function g(PCM)
+
+2: m, n ← PCM.size
+
+3: mask_size ← n + m
+
+4: mask ← eye(mask_size, mask_size)
+
+5: for ii = 1 to m do
+
+6:
+
+idx ← where(PCM[ii] > 0)[0]
+
+7:
+
+for jj in idx do
+
+8:
+
+for kk in idx do
+
+9:
+
+mask[jj, kk] ← 1
+
+10:
+
+mask[kk, jj] ← 1
+
+11:
+
+mask[n + ii, jj] ← 1
+
+12:
+
+mask[jj, n + ii] ← 1
+
+13:
+
+end for
+
+14:
+
+end for
+
+15: end for
+
+16: mask[mask == 0] ← ∞
+
+17: return mask
+
+18: end function
+
+Fig. 1. Block shift masking in MM-ECCT.
+
+or any of its complementary PCM Hct generates a distinct but structurally consistent mask Mt using the procedure described in Algorithm 1. The algorithm begins by examining the dimensions of the selected PCM to determine the appropriate mask size. With a PCM of size m × n the algorithm constructs a (m + n)×(m + n) identity matrix Mt and updates its entries according to the edge incidences of the selected PCM. For each CN row r, the connected VNs are identified as
+
+Ir = { j | PCM[r, j] = 1 },
+
+(12)
+
+and for every pair ( j, k) ∈ Ir × Ir the mask is updated according to
+
+Mt[ j, k] = 1, Mt[k, j] = 1,
+
+(13)
+
+Mt[n + r, j] = 1, Mt[ j, n + r] = 1.
+
+(14)
+
+All remaining entries of Mt are set to +∞, ensuring that attention is strictly restricted to the Tanner graph connections present in the chosen PCM instance.
+Under this construction, each complementary PCM assigns the identity structure to a disjoint subset of m VN columns. Column reuse across complementary PCMs is not efficiently exploited, as each mask is designed to cover a distinct group of columns. Consequently, each mask consumes m previously unused columns, and the maximum number of complementary masks that can be constructed is upper bounded by
+
+Nmask
+
+≤
+
+jnk m
+
+,
+
+(15)
+
+which corresponds to partitioning the n VN columns into disjoint groups of size m.
+
+916
+
+After the masks Mt are constructed, they are applied in parallel to form multiple attention branches. When the masks Mt are applied in parallel, each attention branch processes the same input messages but from a different structural view of the code, producing complementary message updates. These branch-wise outputs are then fused within MM-ECCT, which allows the decoder to aggregate multiple structurally grounded perspectives while still adhering to the original Tanner graph constraints. This multi-branch interaction enhances message diversity and strengthens the refinement of soft information across iterations.
+
+B. SPECTRAL GRAPH THEORY FOR CODE ANALYSIS Let G = (U, E) be an undirected weighted graph with adjacency matrix A and degree matrix D. The normalized Laplacian is defined as
+
+L = I − D−1/2AD−1/2.
+
+(16)
+
+For a graph signal f ∈ R|U|, its smoothness over the graph can be quantified by the quadratic form
+
+!2
+
+f
+
+Lf = 1 2
+
+X wi j
+
+(i, j)∈E
+
+√fi − f j di pd j
+
+,
+
+(17)
+
+where wi j denotes the edge weight and di the node degree. This expression measures the total variation of f across the edges: a smaller value of f L f indicates that connected nodes have similar values (i.e., f varies smoothly across the graph), while a larger value corresponds to rapid local changes between adjacent nodes.
+The eigen-decomposition of L,
+
+Lui = µiui, i = 1, . . ., |U |,
+
+(18)
+
+reveals the fundamental modes of variation over the graph. The eigenvalues µi form the spectrum of G, ordered as
+
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers
+
+0 = µ1 ≤ µ2 ≤ . . . ≤ µ|U|. Smaller eigenvalues correspond to smoother eigenvectors, representing low-frequency variations aligned with the graph topology, whereas larger eigenvalues capture high-frequency oscillations.
+In particular, the first eigenvector u1 = 1 represents uniform connectivity, while the second eigenvector u2, known as the Fiedler vector [30], [31], captures the weakest connection or “bottleneck” within the graph. Partitioning nodes according to the sign or magnitude of u2 naturally separates the graph into two weakly connected regions, forming the basis for spectral clustering.
+
+III. SG MASK DESIGN FOR ECCT Based on the properties of the eigenvectors and eigenvalues of the Laplacian matrix, we propose the SG-ECCT method, which aims to construct masks by identifying and emphasizing error-prone VNs in the code graph. We first present the theoretical motivation behind the proposed approach, followed by a detailed description of the methodology and implementation steps of SG-ECCT.
+
+A. SPECTRAL GRAPH FORMULATION FOR MASK GENERATION 1) MOTIVATION FOR V ×V GRAPH MODELING
+Although it is possible to construct the Laplacian matrix directly from the Tanner graph, this approach is not wellsuited for our objective of identifying weak or error-prone VNs. The Tanner graph is inherently a bipartite structure, where edges exist only between VNs and CNs. Performing spectral analysis directly on this graph blends the internal structural relationships among VNs with the check constraints, making it difficult to distinctly isolate weakly connected clusters or error-prone nodes, thereby reducing both the clarity and interpretability of the spectral insights.
+To analyze relationships within the variable-node set, we project the bipartite Tanner graph onto a single-partite, weighted V × V graph, denoted by GV = (V, EV , w). In this graph, an edge with weight wi j exists between two VNs vi and v j if and only if they share at least one common CN. This projection preserves the structural correlations among VNs while removing the explicit influence of the check constraints, allowing the subsequent spectral analysis on the Laplacian of GV to more accurately reveal communities of weakly connected or topologically vulnerable nodes.
+
+2) LAPLACIAN FORMULATION FROM THE V × V GRAPH
+From a PCM H, we first construct the adjacency matrix of the V × V graph induced by the VNs. Two VNs vi and v j are considered adjacent if they participate jointly in at least one parity-check equation. This relationship is captured by
+
+m
+
+A[i, j] = X H[r, i]H[r, j],
+
+(19)
+
+r=1
+
+which accumulates the number of CNs that simultaneously connect to vi and v j. Thus, A[i, j] reflects the strength of their
+
+VOLUME 4, 2026
+
+Algorithm 2 Construction of Normalized Laplacian
+
+1: function ComputeLaplacian(H)
+
+2: (m, n) ← H.shape m: CNs, n: VNs
+
+3: A ← zeros(n, n)
+
+4:
+
+for r = 1tom do
+
+5:
+
+idx ← where(H[r, :] == 1) Indices of
+
+VNs connected to check cr
+
+6:
+
+for i in idx do
+
+7:
+
+for j in idx do
+
+8:
+
+A[i, j] ← A[i, j] + 1
+
+9:
+
+end for
+
+10: end for
+
+11: end for A now equals H H including
+
+diagonal self-loop terms
+
+12: A ← A − diag(diag(A))
+
+13:
+
+di
+
+←
+
+Pn
+j=1
+
+A[i,
+
+j]
+
+for
+
+all i
+
+14: D ← diag(d1, d2, . . . , dn)
+
+15: D−1/2 ← diag(d1−1/2, d2−1/2, . . . , dn−1/2) 16: L ← In − D−1/2 A D−1/2 Normalized
+
+Laplacian
+
+17: return A, D, L
+
+18: end function
+
+co-occurrence within the Tanner graph. In compact matrix form, this construction is
+
+A = H H − diag(H H),
+
+(20)
+
+where the diagonal subtraction removes the artificial selfloops generated by the product H H.
+The degree matrix D ∈ Rn×n is diagonal, with its entries representing the total weighted connectivity of each variable node:
+n
+di = X A[i, j], D = diag(d1, d2, . . . , dn). (21)
+j=1
+
+Nodes that frequently co-occur across many parity checks will have larger degrees, while nodes involved in fewer constraints will have smaller values.
+Using A and D, the symmetric normalized Laplacian is
+
+L
+
+=
+
+I
+
+−
+
+D−
+
+1 2
+
+AD−
+
+1 2
+
+,
+
+(22)
+
+which rescales the adjacency structure by local node degrees to provide a balanced spectral representation. Explicitly, for small n, we have
+
+21 − A√[1,1] − A√[1,2] · · · − A√[1,n] 3
+
+6 − A√[2d,11]d1 1 − A√d1[2d,22] · · · − A√[d21,dnn] 7
+
+L
+
+=
+
+6 6
+
+6
+
+4
+
+...d2d1
+
+... d2d2 . . .
+
+...d2dn
+
+7 7
+
+.
+
+7
+
+5
+
+− A√[n,1] − A√[n,2] · · · 1 − A√[n,n]
+
+dn d1
+
+dn d2
+
+dn dn
+
+(23)
+
+Each off-diagonal entry of L quantifies how weakly two nodes vi and v j are connected after normalization, while the diagonal terms measure the relative stability of each node with respect to its neighborhood. This normalized Laplacian
+
+917
+
+provides a compact spectral characterization of the V × V graph derived from H, enabling subsequent identification of weakly connected node clusters. The procedure used to obtain A, D, and L from H follows exactly the steps summarized in Algorithm 2.
+
+B. SPECTRAL BIPARTITION ON THE V × V GRAPH
+
+Given the normalized Laplacian L of the V × V graph, we seek a bipartition S ⊂ V that minimizes the (normalized) conductance
+
+φ(S )
+
+=
+
+w(E(S , min{vol(S ),
+
+S¯ )) vol(S¯
+
+)}
+
+,
+
+(24)
+
+where w(E(S , S¯ )) is the total edge weight between S and
+
+its
+
+complement
+
+S¯ ,
+
+and
+
+vol(S )
+
+=
+
+P
+i∈S
+
+di
+
+is
+
+the
+
+total
+
+degree
+
+of nodes in S . A smaller φ(S ) indicates weaker connectivity
+
+between the two node groups, revealing a structurally fragile
+
+region in the code graph.
+
+Let φ := min∅ S V φ(S ) denote the optimal (weakest) cut of the V × V graph. The spectral relaxation of this NP-hard
+
+problem is obtained from the Rayleigh quotient [30]
+
+R(x) = x Lx , xx
+
+λ2 = min R(x),
+x⊥D1/2 1
+
+(25)
+
+whose minimizer is the eigenvector u2 associated with the second-smallest eigenvalue Fiedler vector λ2.
+Theorem 1 (Cheeger Inequality [32]): For the normalized Laplacian L, the optimal conductance φ satisfies
+
+λ2 ≤ φ 2
+
+≤ p2λ2.
+
+(26)
+
+A smaller λ2 certifies the existence of a sparse cut in the V × V graph. The associated eigenvector u2 indicates the direction along which the connectivity is weakest. Sorting its components in ascending order yields a permutation π
+and a sequence of nested subsets
+
+S k = { vi ∈ V : u2[i] ≤ u2[π(k)] }, k = 1, . . ., n − 1, (27)
+
+each representing a possible partition of the graph. The conductance of each candidate subset is computed as
+
+φ(S k) =
+
+P
+i∈S k,
+
+j
+
+Sk
+
+A[i,
+
+j]
+
+Á.
+
+(28)
+
+min
+
+P
+i∈S k
+
+di,
+
+P
+j
+
+Sk dj
+
+Algorithm 3 performs a full sweep over all k =
+
+1, 2, . . ., n − 1, evaluates the conductance values φ(S k), and
+
+identifies
+
+S sw = arg min φ(S k),
+
+(29)
+
+Sk
+
+which corresponds to the minimum-conductance region of the V × V graph. This subset S sw captures the weakest structural cluster in the VN interaction graph derived from the PCM.
+Corollary 1: The subset S sw obtained from the Fiedler sweep satisfies
+
+λ2 ≤ φ 2
+
+≤ φ(S sw) ≤ p2λ2,
+
+(30)
+
+918
+
+Algorithm 3 Spectral Fiedler Sweep for Weak Cluster
+
+Detection
+
+1: function FiedlerSweep(A, D, L)
+
+2: Compute u2 ← eigenvector of L
+
+associated with the second-smallest
+
+eigenvalue λ2 3: π ← sort indices of u2 in ascending
+
+order
+
+4: Initialize Φ ← []
+
+5: for k = 1 to n − 1 do
+
+6:
+
+S k ← {π(1), π(2), . . . , π(k)}
+
+7:
+
+φ(S k) ←
+
+P
+i∈S k,
+
+j
+
+Sk
+
+A[i,
+
+j]
+
+Á
+
+min
+
+P
+i∈S
+
+k
+
+di,
+
+P
+j
+
+Sk
+
+dj
+
+8:
+
+Append φ(S k) to Φ
+
+9: end for
+
+10: S sw ← S k corresponding to min(Φ)
+
+11: return S sw
+
+12: end function
+
+ensuring that S sw achieves near-optimal conductance within the Cheeger bound of the global optimum. When the spectral gap λ3 λ2, the partition S sw converges to the exact optimal cut.
+Fig. 2 provides a concrete visualization of how the Fiedler vector captures the weakest connectivity or “bottleneck” structure in the code graph of BCH(31,11).
+According to the spectral formulation in (25), the Fiedler vector u2 minimizes the Rayleigh quotient and therefore identifies the direction of weakest connectivity in the graph. The corresponding eigenvalue λ2 characterizes the existence of a sparse cut, as quantified by the Cheeger bound (26).
+Fig. 2(a) visualizes the Tanner graph with variable nodes colored according to their spectral coordinate u2[i]. A clear separation emerges in the spectral embedding: nodes with similar u2 values cluster together, while a subset of nodes with negative coordinates forms a compact group denoted as Ssw. This subset corresponds to a region that is weakly connected to the rest of the graph and therefore represents a structural bottleneck in the variable-node interaction graph.
+Fig. 2(b) further shows the distribution of the Fiedler vector components. The histogram reveals two clearly separated groups around the partition boundary, indicating that the spectral coordinates provide a meaningful ordering of nodes according to their connectivity strength.
+To quantitatively verify that this spectral partition corresponds to a weak structural cut, we perform the Fiedler sweep (27) and compute the conductance values (28). The resulting conductance curve, shown in Fig. 2(c), reaches its minimum at k = 15, identifying the weak cluster Ssw = arg minS k φ(S k). Consistent with the Cheeger bound (30), this subset provides a near-optimal sparse cut of the graph. These spectrally identified weak regions form the basis of the proposed SG mask generation strategy, where
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers
+
+Fig. 2. Spectral analysis of BCH(31,11) via the Fiedler vector u2. (a) Tanner graph with VNs colored by u2[i]; red nodes denote weak cluster Ssw . (b) Distribution of Fiedler components with partition boundary. (c) Conductance sweep ffi(Sk ) confirming the Cheeger bound.
+
+Fig. 3. SG PCM generation for mask.
+
+VNs in Ssw are used to guide the selection of pivot columns for mask construction.
+Rather than removing these weak nodes, our method seeks
+to stabilize them by embedding their structural positions
+into the decoder’s attention mechanism. To achieve this, a modified PCM Hs(tg) is generated such that a subset of weak nodes Ps(gt) ⊆ S sw serve as pivot columns forming a locally well-conditioned submatrix. The resulting SG mask M(stg) therefore inherits the stability properties of systematic masking in MM-ECCT, while adaptively emphasizing the
+spectrally identified fragile regions of the code graph, as
+illustrated in Fig. 3.
+From the identified weak-column set S sw, a maximal linearly independent subset over F2 is extracted as the pivotcolumn set:
+
+Ps(gt) ⊆ S sw,
+
+(31)
+
+which satisfies
+
+VOLUME 4, 2026
+
+rankF2 H(:, Ps(gt)) = |Ps(gt)| ≤ m.
+
+(32)
+
+Let Ps(gt) = { j1, . . ., j|Ps(gt)|}. For each pivot column jk, a pivot row rk is selected by
+
+rk
+
+=
+
+arg
+
+max
+i
+
+Hs(tg,k−1)(i,
+
+jk),
+
+(33)
+
+subject to H(stg,k−1)(rk, jk) = 1 and rk Rk−1, where Rk−1 = {r1, . . ., rk−1}.
+Each nonzero entry in column jk, except the pivot itself, is then removed through binary row operations:
+
+Hs(tg,k)(i, :) = Hs(tg,k−1)(i, :) ⊕ Hs(tg,k−1)(rk, :), i rk, Hs(tg,k−1)(i, jk) = 1, (34)
+
+while all other rows remain unchanged:
+
+Hs(tg,k)(i, :) = H(stg,k−1)(i, :), otherwise.
+
+(35)
+
+After processing all pivot columns, the resulting clusterspecific PCM becomes
+
+Hs(tg)
+
+=
+
+H(t,|Ps(gt)
+sg
+
+|)
+
+,
+
+Hs(tg)(R(t),
+
+Ps(gt)) = I|Psg(t)|,
+
+(36)
+
+forming a scattered identity substructure aligned with the original weak-column positions Ps(gt).
+The corresponding SG mask M(stg) is then derived using
+the mask-construction routine in Algorithm 1 of the orig-
+inal ECCT framework [10]. Each mask highlights the pivot columns Ps(gt) extracted from this elimination process, producing a distinct weak-cluster submatrix H(stg). By
+sequentially excluding previously selected pivots, multiple non-overlapping masks {Ms(tg)} are obtained, enabling parallel
+decoding across structurally complementary regions.
+
+C. SG MASK MATRIX CONSTRUCTION
+Each generated mask-modulated attention matrix is incorporated directly into the self-attention layers of the ECCT decoder. Fig. 4 illustrates the full decoding architecture. The input message y is first passed through the syndrome computation module, where the parity-check constraint s(y) = H y is evaluated and embedded into a (2n − k)-dimensional representation. This embedding augments the original channel
+
+919
+
+Fig. 4. The architecture of SG-ECCT decoding process.
+
+observations with structured parity information, forming the
+
+input to a stack of ECCT decoder blocks.
+
+Each decoder block consists of a masked self-attention
+
+layer followed by residual connections, layer normalization,
+
+and a feed-forward network. The masked self-attention
+
+module modulates the learned attention weights using a
+
+SG mask, thereby enforcing message flow only along the
+
+structurally relevant variable–check relationships extracted
+
+from the PCM and its complementary variants. When only a single SG mask Ms(1g) is generated, the
+
+decoder operates as a single-branch architecture: every
+
+decoder block applies the same mask to its attention scores.
+
+When
+
+multiple
+
+SG
+
+masks
+
+{Ms(1g)
+
+,
+
+.
+
+.
+
+.
+
+,
+
+M(Nmask
+sg
+
+)
+
+}
+
+are
+
+available,
+
+the decoder instantiates Nmask parallel masked self-attention
+
+branches within each decoder block. All Nmask branches process the same embedded input but apply different spec-
+
+tral constraints, resulting in Nmask complementary attention
+
+maps. These outputs are fused, either by summation or a
+
+learned projection, depending on the ECCT configuration,
+
+and the fused result is then passed through the feed-forward
+
+sublayer to produce the block’s refined output.
+
+In both the single-mask and multi-mask settings, the
+
+SG masks act as elementwise gating functions that restrict
+
+attention to structurally valid Tanner graph connections
+
+identified through the spectral analysis. When multiple
+
+masks are used, each branch contributes a distinct structural
+
+viewpoint derived from H and its complementary variants,
+
+enabling the decoder to capture complementary message
+
+pathways that cannot be represented by a single mask. This
+
+multi-branch structure strengthens information propagation
+
+in weakly connected regions of the graph and improves
+
+920
+
+overall decoding stability throughout the ECCT refinement process.
+
+D. TIME COMPLEXITY ANALYSIS The computational cost of SG-ECCT consists of two stages: a one-time preprocessing stage for mask generation and a per-frame inference stage for decoding.
+
+1) PREPROCESSING
+The SG mask generation pipeline depends only on the PCM
+H and is computed once per code. The dominant cost is the eigendecomposition of the normalized Laplacian L ∈ Rn×n to obtain the Fiedler vector u2, which requires O(n3) in general or O(n2) using Lanczos iteration [33] when only
+a single eigenvector is required. The conductance sweep
+(Algorithm 3) and SG PCM construction via Gaussian elimination over F2 contribute O(n2) and O(bm2n), respectively. The overall preprocessing complexity is therefore
+
+O(n3 + bm2n).
+
+(37)
+
+For the short-to-moderate block lengths, this cost is negli-
+gible in practice and amortized over all decoding instances.
+By comparison, MM-ECCT mask generation requires only O(m2n) via Gaussian elimination. SG-ECCT introduces an additional O(n3) eigen-decomposition as a one-time cost to
+obtain SG masks.
+
+2) PER-FRAME INFERENCE
+During decoding, the dominant computational cost of ECCT-based decoders arises from the masked self-attention mechanism defined in (7). In particular, the attention computation requires forming the matrix product
+
+QK ∈ RN×N ,
+
+(38)
+
+where N = n + m denotes the total number of VNs and CNs in the Tanner graph. Since the query and key matrices have dimension N ×d, this matrix multiplication requires O(N2d) operations.
+When b parallel mask branches are employed, the computational complexity per decoder block becomes
+
+O(bN2d).
+
+(39)
+
+Stacking Nlayer decoder layers results in the overall perframe inference complexity
+
+O(bNlayer N 2 d).
+
+(40)
+
+Since SG-ECCT applies its spectrally derived masks in the same manner as MM-ECCT applies cyclic-shift masks, the inference complexity is identical in order to MM-ECCT. No additional spectral or graph operations are performed at runtime. For reference, classical BP decoding scales as O(I|E|) = O(In) for sparse codes with |E| = O(n) edges and I iterations, which is asymptotically lower than transformerbased decoders.
+
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers
+
+IV. EXPERIMENTAL RESULTS A. EXPERIMENTAL SETUP
+As discussed, the maximum number of complementary masks that can be constructed is upper bounded by Nmask ≤ n/m . While employing a larger number of masks allows for broader coverage of the PCM and may potentially enhance decoding performance, each additional mask necessitates the introduction of a parallel self-attention branch. This leads to a linear increase in both the number of trainable parameters and the memory footprint required during the training and inference phases. Furthermore, for many highrate codes in which the block length n is not significantly larger than the number of parity checks m, selecting an appropriate number of masks becomes crucial for balancing representational diversity with architectural complexity. As demonstrated in [12], a dual-mask configuration (b = 2) represents an effective trade-off between decoding accuracy and computational overhead.
+We compare the proposed SG-ECCT framework with the original ECCT and MM-ECCT models under an identical training protocol as in [10] and [12] to ensure fairness. Two configurations of SG-ECCT are evaluated
+• Single-mask (b = 1): operates analogously to the ECCT but incorporates one SG attention mask; and
+• Dual-mask (b = 2): extends the MM-ECCT architecture by employing two parallel masked self-attention branches, each guided by a distinct spectral mask derived from the Laplacian spectrum.
+This comparative framework establishes a consistent experimental basis across all models and motivates the architectural configuration described below.
+To comprehensively assess decoding accuracy and generality, we evaluate on three representative code families: BCH, Polar, and LDPC. Each code employs its standard algebraic or quasi-cyclic PCM, which is normalized prior to Laplacian construction for spectral analysis.
+During training, SNR = Eb/N0 is sampled uniformly from [1, 6] dB for each sample. A total of 105 training samples and 104 validation samples are generated per epoch. For performance evaluation, SNR is swept from 1 dB to 7 dB in increments of 1 dB, with 104 Monte Carlo samples per SNR point. Each training sample corresponds to a randomly selected message encoded by the generator matrix and transmitted through an AWGN channel.
+All models share an identical transformer backbone consisting of Nlayer = 4 with multi-head self-attention h = {4, 8}, a feed-forward network. The embedding dimension is tested with d ∈ {32, 64, 128, 256} to examine model scalability. Training runs for up to 1000 epochs with early stopping (patience = 30) using the Adam optimizer with an initial learning rate of 5 × 10−4, which is scheduled using cosine annealing with warm restarts. The mean squared error loss is used with a batch size of 256.
+VOLUME 4, 2026
+
+All experiments are conducted on a workstation equipped with two NVIDIA RTX A4500 GPUs (20 GB each). To ensure reproducibility, fixed random seeds and identical initialization are applied across all runs. The source code required to reproduce the experimental results is publicly available at our research team’s GitHub repository at https:// github.com/Triple-I-Lab/2026-TMLCN-ECCT
+B. TRAINING EFFICIENCY AND CONVERGENCE We evaluate the training efficiency of the proposed SGECCT against the baseline ECCT and MM-ECCT models. The key metrics, presented in Table I, include the number of epochs required to reach a convergence threshold, the average computation time per epoch, and the resulting total training time in seconds.
+A primary finding is that our proposed SG masks, for both b = 1 and b = 2 configurations, lead to significantly faster convergence. For instance, in the BCH code scenario, SG-ECCT with b = 1 and b = 2 models converge in 341 and 321 epochs, respectively. This is a nearly 3-fold reduction compared to the ECCT (979 epochs) and MM-ECCT (956 epochs) baselines. This trend holds true across all tested code families, with our models for Polar codes converging in approximately 355-372 epochs (vs. 966-981) and for LDPC codes in 467-531 epochs (vs. 782-891). This demonstrates that the SG masks provide a more effective learning signal, enabling the transformer to learn the code’s structural properties more rapidly.
+Our method also reduces the computational overhead per epoch. The time per epoch for our models is consistently lower than that of the baselines. For the LDPC code, SGECCT with b = 1 model requires only 3.37 seconds per epoch, whereas ECCT and MM-ECCT require 6.12s and 6.57s, respectively. This suggests that the mask structure generated by our spectral method is more computationally efficient, likely due to a different sparsity pattern than the masks from the baseline methods.
+The combination of faster convergence and lower perepoch cost results in a substantial reduction in the total training time. Our framework achieves speedups ranging from 2.67× to 4.53× over the baseline ECCT. Notably, the MM-ECCT method, while improving decoding performance, offers no training speedup and, in some cases (e.g., LDPC), is slower to train than the original ECCT. This twofold advantage—converging in fewer steps and executing each step more quickly—highlights that our SG approach not only enhances decoder accuracy but also significantly reduces the computational burden of training. This efficiency gain is critical, as the high computational cost of training is a primary barrier to the adoption of large-scale transformer-based decoders. By providing a more direct and principled learning signal derived from the code’s core graph structure, our spectral method avoids the lengthy, computationally intensive exploration phase that baseline models require to learn these same properties from scratch,
+921
+
+TABLE 1. Average training time for BCH(63,36),Polar(128,64), and LDPC(144,72) with h = 4 and d = 128.
+
+TABLE 2. Model complexity and deployment metrics of SG-ECCT: Parameter count, Memory footprint, and inference latencyfor BCH(63,36), Polar(128,64), and LDPC(144,72).
+
+C. DECODING PERFORMANCE
+Across all code families evaluated in this work, our analysis follows a consistent two-stage structure. We first examine the detailed numerical behavior of the proposed SG-ECCT decoder under a wide range of model configurations, including embedding dimensions d ∈ {32, 64, 128, 256}, head counts h ∈ {4, 8}, and both spectral-mask settings b = 1 and b = 2. These results isolate the intrinsic behavior of SG-ECCT and reveal how decoder performance scales with model capacity, spectral-mask multiplicity, and SNR. In addition to this analysis, we also compare the performance of SG-ECCT against the existing ECCT and MM-ECCT decoders.
+
+making our method far more practical for rapid prototyping and deployment.
+Table II reports the deployment metrics of the proposed SG-ECCT models, including the total number of trainable parameters, memory footprint, and per-frame inference latency for BCH(63,36), Polar(128,64), and LDPC(144,72). For all three codes, the parameter count and memory usage scale with the number of spectral masks b. When b = 1, SG-ECCT maintains a compact model size of approximately 0.72M parameters with a memory footprint of about 2.7–2.8MB. Increasing the number of masks to b = 2 increases the model capacity to about 1.35M parameters and approximately 5.16MB memory, reflecting the additional masked attention pathway. Inference latency scales consistently with both model size and block length. For example, BCH(63, 36) requires only 2.61 ms for b = 1 and 5.33 ms for b = 2, while the larger Polar(128, 64) and LDPC(144, 72) codes exhibit proportionally higher latency due to their increased sequence lengths. This behavior aligns with the theoretical transformer complexity O(bNlayerN2d), where N = n + m.
+These results illustrate how the number of spectral masks b affects the model size and inference latency, providing a practical mechanism to adjust model capacity and runtime cost depending on deployment requirements.
+922
+
+1) PERFORMANCE ON BCH CODES
+For the BCH codes, Tables III and IV show that SG–ECCT consistently achieves lower BER as the model width increases. This trend appears across all four BCH ensembles; for instance, the BCH(31, 11) code at 6 dB improves from 2.34 × 10−5 to 5.89 × 10−6, and the BCH(63, 36) code improves from 1.34 × 10−5 to 7.23 × 10−6. These reductions hold for both mask configurations, confirming that the spectral masks convert additional model capacity into measurable decoding gains.
+The tables also show that the dual-mask setting uniformly outperforms the single-mask variant. At 6 dB in the BCH(31, 16) ensemble, the BER for b = 2 is roughly half that of b = 1, and in BCH(63, 51) at 7 dB, b = 2 falls below 10−6 while b = 1 remains above this level. This consistent improvement indicates that the two spectral masks capture complementary weak regions in the code structure. SG–ECCT shows the greatest improvements in the highSNR region, where decoding errors are primarily caused by trapping-set structures. Across all BCH codes, BER values decrease sharply from 4 to 7 dB, and the dual-mask configuration consistently achieves the largest reductions. This behavior indicates that the Laplacian-derived masks effectively reinforce structurally weak variable-node clusters and suppress high-SNR decoding failures.
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers TABLE 3. A comparison of BER for h = 4 and d = {32, 64, 128, 256} for BCH codes.
+
+TABLE 4. A comparison of BER for h = 8 and d = {32, 64, 128, 256} for BCH codes.
+
+These observations are consistent with the BER curves in the waterfall region to lower SNRs and produce a steeper Fig. 5. For every BCH code, both SG–ECCT variants shift decay than ECCT and MM–ECCT. The dual-mask variant
+
+VOLUME 4, 2026
+
+923
+
+TABLE 5. A comparison of BER for h = 4 and d = {32, 64, 128, 256} for polar codes. TABLE 6. A comparison of BER for h = 8 and d = {32, 64, 128, 256} for polar codes.
+
+achieves the lowest BER across the entire SNR range. In BCH(63, 36) and BCH(63, 51), the SG–ECCT curves continue to fall at 7 dB, whereas the baseline decoders already exhibit visible residual error floors. This separation confirms that exploiting the spectral structure of the V × V graph leads to more reliable decoding behavior for BCH
+
+codes. The ML bound, plotted over SNR ∈ [4, 7] dB, serves as the theoretical performance ceiling for each code. While all neural decoders remain above this bound, SG–ECCT (b = 2) consistently narrows the gap relative to ECCT and MM–ECCT, particularly at high SNR, where the margin to the ML bound is most informative. The remaining gap
+
+924
+
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers TABLE 7. A comparison of BER for h = 4 and d = {32, 64, 128, 256} for LDPC codes.
+TABLE 8. A comparison of BER for h = 8 and d = {32, 64, 128, 256} for LDPC codes.
+
+indicates room for further improvement, yet the trajectory of the SG–ECCT curves suggests that the spectral mask mechanism drives the decoder closer to optimal performance.
+2) PERFORMANCE ON POLAR CODES The results in Tables V and VI show that SG–ECCT yields clear BER improvements for all Polar ensembles, with the most pronounced gains occurring around the SNR ranges where Polar bit-channels begin to separate in reliability. For Polar(128, 64) and Polar(128, 86), the reductions at 6–7 dB are especially significant; for example, the BER of
+VOLUME 4, 2026
+
+Polar(128, 86) reaches 6.56 × 10−7 at 7 dB under the largest model configuration. The dual-mask design further sharpens these improvements, consistently lowering BER near the onset of the waterfall, and in several cases reducing error rates to nearly half of the single-mask values.
+The BER curves in Fig. 6 mirror these observations. Across all three codes, SG–ECCT enters the low-BER region smoothly and maintains a more focused decline as SNR increases. Higher-rate Polar codes show the clearest separation, with SG–ECCT producing a sharp, well-defined drop while baseline curves descend more gradually. These
+925
+
+TABLE 9. A comparison of negative natural logarithm of BER for three normalized SNR values {4, 5, 6} (dB) of our method with previous works (higher is better).
+
+Fig. 5. The BER performance of (a) BCH(31,11) code, (b) BCH(31,16) code, (c) BCH(63,36) code and (d) BCH(63,51) code for d = 128 and h = 8.
+results indicate that the spectral masks effectively guide the decoder through the reliability transition characteristic of Polar constructions.
+3) PERFORMANCE ON LDPC CODES Tables VII and VIII show that SG–ECCT consistently lowers BER across all three LDPC codes and all tested SNR points. As the model width increases, BER values decrease in a stable and predictable manner. For example, in
+926
+
+LDPC(144, 72) at 6 dB with h = 4, the BER decreases from 2.67 × 10−5 at smaller widths to 1.01 × 10−5 at d = 256, and a similar reduction is observed at 7 dB, dropping from 2.34 × 10−6 to 8.45 × 10−7. The same pattern appears in LDPC(121, 60) and LDPC(192, 96), where increasing the embedding dimension consistently improves decoding outcomes.
+The dual-mask configuration provides an additional and steady improvement over the single-mask setting. Across all LDPC codes, b = 2 results in lower BER at every SNR. For instance, in LDPC(121, 60) at 7 dB with h = 8, the BER decreases from 9.45 × 10−7 (b = 1) to 5.01 × 10−7 (b = 2). Comparable reductions are seen in LDPC(144, 72) and LDPC(192, 96), confirming a uniform benefit from the second spectral mask.
+The BER curves in Fig. 7 align with these tablelevel trends. Both SG–ECCT variants maintain lower BER throughout the tested SNR range, and the dual-mask configuration consistently forms the lowest curve for all LDPC ensembles.
+D. NEGATIVE LOGARITHMIC ANALYSIS
+Table IX provides a high-level comparison against a wider array of decoders, including classical BP and its variants hyper-graph network BP (Hyp BP) [34], autoregressive BP (AR BP) [35]. The metric used is the negative natural logarithm of BER (−ln(BER)), where a higher value signifies superior performance.
+Across every code and SNR point tested, our SGECCT methods achieve the highest scores, surpassing all other decoders. The example of the BCH(63,36) code at 6 dB, where SG-ECCT with b = 2 model scores 12.37 against ECCT (11.00) and MM-ECCT (11.31), is not an isolated case. For the Polar(128,64) code at 6 dB, with SG-ECCT with b = 2 method achieves a score of 12.55, significantly outperforming the ECCT (10.62) and MM-ECCT (11.07).
+This consistent outperformance, particularly in the highSNR range (6–7 dB), demonstrates effective error-floor mitigation. Baseline models with empirically derived or circulant-shift masks fail to capture critical topological weaknesses that dominate high-SNR performance degradation. By concentrating on algorithmically detected weak
+VOLUME 4, 2026
+
+Nguyen et al.: SG Mask Generation for Error Correction Code Transformers
+
+Fig. 6. The BER performance of (a) Polar(64,32) code, (b) Polar(128,64) code and (c) Polar(128,86) code for d = 128 and h = 8.
+
+Fig. 7. The BER performance of (a) LDPC(121,60) code, (b) LDPC(144,72) code and (c) LDPC(192,96) code for d = 128 and h = 8.
+
+regions, the proposed SG-ECCT achieves more stable decoding, improved convergence, and a measurable reduction in the error floor.
+V. CONCLUSION In this paper, we present the SG-ECCT framework, which overcomes the empirical mask selection limitations of ECCT and MM-ECCT decoders. By leveraging spectral graph theory, the proposed method analyzes the Laplacian eigenvectors of the V × V graph to identify structurally weak node clusters associated with trapping sets, from
+
+which principled attention masks are derived. Experimental results show that SG-ECCT achieves up to 4.5× faster convergence and consistently surpasses baseline decoders across BCH, Polar, and LDPC codes. The improvements are most evident in the high-SNR region, demonstrating effective error-floor mitigation and highlighting the benefit of integrating graph-theoretic priors into neural decoder architectures. Future work will aim to enhance the scalability of the SG framework by developing sparse or structured attention mechanisms to reduce quadratic complexity for large block lengths. Additionally, we plan to adapt this
+
+VOLUME 4, 2026
+
+927
+
+spectral analysis to quantum ECC to identify and mitigate quantum trapping sets.
+REFERENCES
+[1] H.-Y. Kwak, D.-Y. Yun, Y. Kim, S.-H. Kim, and J.-S. No, “Boosted neural decoders: Achieving extreme reliability of LDPC codes for 6G networks,” IEEE J. Sel. Areas Commun., vol. 43, no. 4, pp. 1089–1102, Apr. 2025.
+[2] D. Crnkovic, N. Mostarac, and A. Sˇ vob, “LDPC LCD codes from odd graphs,” Adv. Math. Commun., vol. 20, pp. 68–83, Jul. 2026.
+[3] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[4] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[5] L. Dolecek, Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “Analysis of absorbing sets and fully absorbing sets of array-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201, Jan. 2010.
+[6] M. Karimi and A. H. Banihashemi, “Efficient algorithm for finding dominant trapping sets of LDPC codes,” IEEE Trans. Inf. Theory, vol. 58, no. 11, pp. 6942–6958, Nov. 2012.
+[7] A. Price and J. Hall, “A survey on trapping sets and stopping sets,” 2017, arXiv:1705.05996.
+[8] A. Dehghan and A. H. Banihashemi, “From cages to trapping sets and codewords: A technique to derive tight upper bounds on the minimum size of trapping sets and minimum distance of LDPC codes,” IEEE Trans. Inf. Theory, vol. 65, no. 4, pp. 2062–2074, Apr. 2019.
+[9] J. Wang, L. Dolecek, and R. D. Wesel, “The cycle consistency matrix approach to absorbing sets in separable circulant-based LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 4, pp. 2293–2314, Apr. 2013.
+[10] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Adv. Neural Inf. Process. Syst., New Orleans, LA, USA, Oct. 2022, pp. 38695–38705.
+[11] T. Park, S.-J. Park, H.-Y. Kwak, S.-H. Kim, and Y. Kim, “Lowering the error floor of error correction code transformer,” 2025, arXiv:2502.09065.
+[12] S.-J. Park, H.-Y. Kwak, S.-H. Kim, S. Kim, Y. Kim, and J.-S. No, “Multiple-masks error correction code transformer for short block codes,” IEEE J. Sel. Areas Commun., vol. 43, no. 7, pp. 2518–2529, Jul. 2025.
+[13] S.-H. Kim, Y. Kim, H.-Y. Kwak, J.-S. No, and D.-Y. Yun, “Boosting learning for LDPC codes to improve the error-floor performance,” in Proc. Adv. Neural Inf. Process. Syst. 36, 2023, pp. 22115–22131.
+[14] H. Na, H. Park, H.-Y. Kwak, and S.-K. Ahn, “Learning strategies for neural min-sum decoding of LDPC codes,” ICT Exp., vol. 11, no. 1, pp. 161–166, Feb. 2025.
+[15] N. Raveendran and B. Vasic´, “Trapping sets of quantum LDPC codes,” Quantum, vol. 5, p. 562, Oct. 2021.
+[16] A. Gong, S. Cammerer, and J. M. Renes, “Graph neural networks for enhanced decoding of quantum LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Athens, Greece, Jul. 2024, pp. 2700–2705.
+[17] A. S. Maan and A. Paler, “Machine learning message-passing for the scalable decoding of QLDPC codes,” 2024, arXiv:2408.07038.
+[18] S. Adiga, X. Xiao, R. Tandon, B. Vasic, and T. Bose, “Generalization bounds for neural belief propagation decoders,” IEEE Trans. Inf. Theory, vol. 70, no. 6, pp. 4280–4296, Jun. 2024.
+[19] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2016, pp. 341–346.
+[20] T. Gruber, S. Cammerer, J. Hoydis, and S. T. Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS), Baltimore, MD, USA, Mar. 2017, pp. 1–6.
+[21] H. Xu, Y. Li, B. Tan, J. Wu, and D. Hu, “A neural network empowered belief propagation algorithm optimized for short-cycles in tanner graph,” IEEE Trans. Mach. Learn. Commun. Netw., vol. 1, pp. 31–42, May 2023.
+[22] Q. Zhang, B. Chen, Y. Jiang, and S.-T. Xia, “Generalization bounds for transformer channel decoders,” 2026, arXiv:2601.06969.
+[23] S. Park, H.-Y. Kwak, S. Kim, Y. Kim, and J. No, “CrossMPT: Crossattention message-passing transformer for error correcting codes,” in Proc. 13th Int. Conf. Learn. Represent., Singapore, Apr. 2024, pp. 24–28.
+[24] M. Levy, Y. Choukroun, and L. Wolf, “Accelerating error correction code transformers,” 2025, arXiv:2410.05911.
+[25] Y. Yan, J. Zhu, T. Zheng, Z. Xu, C. Jiang, and L. Dai, “Unified error correction code transformer with low complexity,” IEEE Internet Things J., vol. 13, no. 8, pp. 15989–16000, Apr. 2026.
+928
+
+[26] R. K. C. Fan, Spectral Graph Theory (Regional Conference Series in Mathematics). USA: American Mathemathical Society (AMS) and Conference Board of Mathematical Sciences (CBMS). [Online]. Available: https://doi.org/10.1090/cbms/092
+[27] U. von Luxburg, “A tutorial on spectral clustering,” Statist. Comput., vol. 17, no. 4, pp. 395–416, Dec. 2007.
+[28] J. Shi and J. Malik, “Normalized cuts and image segmentation,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 22, no. 8, pp. 888–905, Aug. 2000.
+[29] L. Nguyen, Q. Bao Phan, and T. Tan Nguyen, “Highly reliable and secure system with multi-layer parallel LDPC and Kyber for 5G communications,” IEEE Access, vol. 12, pp. 157260–157271, 2024.
+[30] M. Fiedler, “Algebraic connectivity of graphs,” Czechoslovak Math. J., vol. 23, no. 2, pp. 298–305, 1973.
+[31] E. Andrade and G. Dahl, “Combinatorial Fiedler theory and graph partition,” Linear Algebra Appl., vol. 687, pp. 229–251, Apr. 2024.
+[32] J. R. Lee, S. O. Gharan, and L. Trevisan, “Multiway spectral partitioning and higher-order Cheeger inequalities,” J. ACM, vol. 61, no. 6, pp. 1–30, Dec. 2014.
+[33] C. Lanczos, “An iteration method for the solution of the eigenvalue problem of linear differential and integral operators,” J. Res. Nat. Bur. Standards, vol. 45, no. 4, pp. 255–282, Oct. 1950.
+[34] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block codes,” in Proc. Adv. Neural Inf. Process. Syst., vol. 32, Dec. 2019, pp. 2326–2336.
+[35] E. Nachmani and L. Wolf, “Autoregressive belief propagation for decoding block codes,” 2021, arXiv:2103.11780.
+LINH NGUYEN (Graduate Student Member, IEEE) received the M.S. degree in informatics from Northern Arizona University, Flagstaff, AZ, USA, in 2025. She is currently pursuing the Ph.D. degree in electrical engineering with the College of Engineering, Florida State University, Tallahassee, FL, USA. Her research interests include post-quantum cryptography, error correction codes, and artificial intelligence.
+QUOC BAO PHAN (Graduate Student Member, IEEE) received the M.S. degree in informatics from Northern Arizona University, Flagstaff, AZ, USA, in 2025. He is currently pursuing the Ph.D. degree in electrical engineering with the College of Engineering, Florida State University, Tallahassee, FL, USA. His research interests include electrical system modeling, homomorphic encryption, and artificial intelligence.
+TUY TAN NGUYEN (Senior Member, IEEE) received the M.S. and Ph.D. degrees in information and communication engineering from Inha University in 2016 and 2019, respectively. He is currently an Assistant Professor with the Department of Electrical and Computer Engineering, FAMU-FSU College of Engineering, Florida State University. From August 2022 to August 2025, he was an Assistant Professor with the School of Informatics, Computing, and Cyber Systems, Northern Arizona University. Previously, he worked as a Senior Research Engineer at Conextt Inc., and as a Post-Doctoral Fellow with the Department of Electrical and Computer Engineering, Inha University. His research interests include post-quantum cryptography, homomorphic encryption, error correction codes, and applied artificial intelligence. He is an active member of the IEEE Communications Society and a Technical Committee Member of the IEEE Circuits and Systems Society—Circuits and Systems for Communications.
+VOLUME 4, 2026
+
+

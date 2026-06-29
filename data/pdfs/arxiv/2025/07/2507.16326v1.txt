@@ -1,0 +1,579 @@
+1
+Hourglass Sorting: A novel parallel sorting algorithm and its implementation
+Daniel Ba´scones, Borja Morcillo
+
+arXiv:2507.16326v1 [cs.AR] 22 Jul 2025
+
+Abstract—Sorting is one of the fundamental problems in computer science. Playing a role in many processes, it has a lower complexity bound imposed by O(n log n) when executing on a sequential machine. This limit can be brought down to sublinear times thanks to parallelization techniques that increase the number of comparisons done in parallel. This, however, increases the cost of implementation, which limits the application of such techniques. Moreover, as the size of the arrays increases, a bottleneck arises in moving the vast quantities of data required at the input, and generated at the output of such sorter. This might impose time requirements much stricter than those of the sorting itself. In this paper, a novel parallel sorter is proposed for the specific case where the input is parallel, but the output is serial. The design is then implemented and verified on an FPGA within the context of a quantum LDPC decoder. A latency of log n is achieved for the output of the first element, after which the rest stream out for a total sorting time of n + log n. Contrary to other parallel sorting methods, clock speed does not degrade with n, and resources scale linearly with input size.
+Index Terms—Sorting, FPGA, parallelization
+I. INTRODUCTION
+S ORTING algorithms are at the core of many of the processes that take part in computing. Appearing in databases, scheduling, data analytics, networking, recommendation systems, computational biology and, more recently, computer graphics or AI. Consequently, they are one of the most researched families of algorithms, and often the first to be studied in any basic algorithms course.
+The formal proof that outlines the minimum O(n · log(n)) complexity of sorting was published by D. Knuth [1], along with a collection of algorithms that reach that bound. Merge sort (attributed to John von Neumann in 1945; however lacking formal publication), heap sort [2], and radix sort [3] (which appeared prior to modern computers being available) are some examples. Quicksort [4], which only ensures an average complexity of O(n · log(n)) is -perhaps surprisingly- the most used, due to its simplicity and in-place sorting capabilities.
+As time progressed, and data sets enlarged, the need for faster sorting was fulfilled by going parallel. The first sorting networks [5] were able to sort an array in O(log2(n)) time using O(n · log2(n)) resources. These were eventually refined [6] to O(log(n)) complexity and O(n · log(n)) resources at the cost of a higher constant, which, unfortunately, made them impractical for most cases. Finally, it was proven that, given a CREW PRAM (Concurrent Read Exclusive Write Parallel Random Access Machine) architecture, a parallel merge sort
+Authors are with the Department of Computer Architecture and Automatics, Universidad Complutense de Madrid, Madrid, Spain. e-mail: (danibasc@ucm.es).
+
+algorithm [7] can sort an array in O(log(n)) time using just O(n) processors.
+In practice, hardware-accelerated sorting networks [8] are used when the problem is small and speed is critical. Parallel sorting techniques [9] for larger datasets usually work on general-purpose hardware: they partition, sort, and merge the arrays using sequential sorting and clever data interleaving.
+There is, however, a gap in the case that faster than O(n·log(n)) sorting is needed for large datasets: Hardware accelerated sorting networks become unfeasible due to resource use, and parallel techniques on general purpose hardware might not be sufficiently fast. Efforts have been made in bridging this gap, and two techniques shine above others: 1) Iterate over a small sorting network [10]. This reduces hardware use by a factor of log(n), increasing latency to linear time. 2) Trade off time and space complexity by selecting the input/output width and streaming data in chunks [11]. Further explored by [12], both exploit that only a fixed amount of data w is processed in parallel, reducing hardware complexity, and increasing processing time, by a factor of n/w.
+All of these algorithms (either serial or parallel) share a common characteristic: a fixed size w for both the input and output. However, it is not always that the processing is symmetrical. For certain applications, we might be interested in asymmetrical SIPO (Serial-In Parallel-Out) or PISO (ParallelIn Serial-Out) schemes. A SIPO scheme with incremental sorting capabilities is presented in [11] with an application in statistical signal processing, leveraging the fact that a single datum arrives per cycle to achieve O(1) sorting time. While PISO schemes have not been found directly in the literature, any PIPO (Parallel In Parallel Out) algorithm (such as sorting networks) can be adapted by placing a shift-register at its output. The cost (in hardware) would thus be slightly more than the original, at least O(n·log(n)) considering the smallest sorting networks [6].
+In this work, we propose a novel sorting method for the PISO scheme, that has O(n) hardware complexity, and is able to output its first sorted datum in O(log(n)) time. Furthermore, its clock cycle is independent of the input array size (a property not all sorting accelerators exhibit, that hinders many when scaling up), making it highly scalable. This method has been implemented in an FPGA, and is currently used in a BP-OSD (Belief Propagation - Ordered Statistics Decoder) [13] implementation as the intermediate step for ordering the outputs of BP.
+NOTE: Throughout this paper, it is assumed for simplicity that ascending sorting (lowest first) is performed. All of the designs, however, can be adapted to descending order trivially.
+
+2
+
+II. PROBLEM CONTEXT
+In Quantum Computers, one of the most critical problems to solve is that of data stability. Qbits (Quantum Bits) degenerate very rapidly [14] and with error rates many orders of magnitude above classical bits. In the classical world, these errors are often mitigated with some sort of ECC [15] (Error Correction Code). In essence, more bits than necessary are used to represent the information, so that if one flips, others can be used to recover it.
+In the context of quantum computing, LDPC (Low Density Parity Check) quantum codes are used. Given the high error rates inherent to current technologies, these codes often use several physical qbits to just represent a single logical qbit. When checking for errors, the information from many different parity checks is gathered in order to understand what failure might have arrived at that state. How this is done is beyond the scope of this paper, but the general workings of the algorithm are outlined below:
+When solving a LDPC, BP is applied first. This algorithm outputs a probability for each qbit, indicating if it experienced (or not) an error. In most cases and under low error rates, this algorithm alone can be 100% confident in which qbits failed and which did not. This information is fed back to the system to correct the errors. In some cases, BP might not be sure of what caused the failure, in which case OSD is applied after. OSD requires the output of BP to be sorted by probability, and mathematically solves the system of parity check equations that involve the most likely qbits to have failed, finding a solution that satisfies them. This information can in turn be use to recover any errors.
+To understand why sorting fast is necessary, we now analyze algorithm complexity as a function of three variables involved in the calculations: n, which is the number of potential failure points, m; m ≪ n, which is the number of checks and k; k < m which is the number of iterations that BP performs. BP works in O(n · k) time, but can be fully parallelized over n to work in O(k) < O(m). OSD works in O(m2n), and can be parallelized over O(m2) to work in O(n). This would at first suggest that parallelizing BP is unnecessary, but it has been found experimentally that it is probabilistically enough to run OSD in O(m) by using only partial information from BP, which makes the latter’s acceleration necessary.
+With this in mind, both BP and OSD are working at O(m), with an array sorting of n ≫ m elements in between. Our target is to lower this to O(m) or below, to match the complexity of the OSD decoder. More specifically, it is sufficient to obtain the m lowest values in O(m), matching the rest of the process’s complexity. Classical serial algorithms that work in O(n · log(n)) will not be fast enough, while parallel algorithms that work in O(log(n)) time take resources proportional to at least O(n · log(n)), which experimentally exceeds resource availability. Furthermore, the input to OSD is serial, so having a fully parallel output is unnecessary.
+III. DESIGN IDEA
+Ideally, then, we strive for an algorithm that finds the lower m values in O(m), with a hardware complexity of at most O(n). Note that, despite m ≪ n, we find that log(n) < m.
+
+Given that our input (coming from BP) is parallel and our output (going to OSD) is serial, this maps very naturally to a tree-like structure (Figure 1) where the input gets progressively reduced to a single point. Indeed, if we just had a tree of comparators with no registers in between, we would find and delete the minimum value trivially as seen in Algorithm 1.
+
+9
+
+1
+
+4
+
+2
+
+6
+
+1
+
+5
+
+3
+
+1
+
+2
+
+1
+
+3
+
+1
+
+1
+
+1
+
+9
+
+4
+
+2
+
+6
+
+1
+
+5
+
+3
+
+9
+
+2
+
+1
+
+3
+
+2
+
+1
+
+1
+
+Fig. 1. Two steps of a naive way of sorting which does not scale well with input size. Registers are shown as light blue, and only exist for the first layer.
+
+Algorithm 1 Unregistered comparator tree algorithm
+
+Input: Values D1, D2 Input: Valid flags V1, V2 Outputs: Vout; Dout; Input: Reset signal Rout Outputs: Reset signal R1, R2
+
+Ensure: Values output in ascending order; sorting is stable.
+
+1: for Each triplet of nodes in the tree, in parallel do
+
+2: Vout ← V1 or V2
+
+3: if V1 and V2 then {both valid, select lowest}
+
+4:
+
+Dout ← min(D1, D2)
+
+5:
+
+Rargmin(R1,R2) ← Rout
+
+6: else if V1 then {only V1 valid}
+
+7:
+
+Dout, R1 ← D1, Rout
+
+8: else if V2 then {only V2 valid}
+
+9:
+
+Dout, R2 ← D2, Rout
+
+10: end if
+
+11: end for
+
+For this to work at a rate of a value per cycle, the lowest value has to travel through the tree of comparators to the bottom, going through log(n) of them. Furthermore, a reset signal R has to then travel up the tree to delete/disable that value, preventing it from participating in further iterations. As such, even though at first it seems we achieve constant time, the critical path for this design would scale with O(log(n)), so extracting m elements would result in a cost of O(log(n)) · m time wise, an increase over our target of O(m).
+A first approach to solving this stems from the fact that a signal has to travel back and forth between the root and leaf nodes, resulting in not only long critical paths, but also excessive fan-outs. A direct, yet naive solution appears to be just segmenting the levels in the tree by placing a register after each node. This creates a structure where isolated registered comparators compare the input from two registers, placing the
+
+3
+
+lowest of both in an output register. Let’s call this process an “operation” and consider that, for a registered comparator to perform an operation, the following conditions need to be satisfied:
+• Both input registers contain a valid value, or • One input register is valid and the other empty (neither
+it nor any parent is valid) • The output register is empty This process is illustrated in Algorithm 2. Each node waits for both inputs to be either valid or empty, and selects the minimum value to pass forward. This is conditioned to the output register being empty, in which case the value is moved down a level within the tree. When both inputs are empty (i.e: no more values will fall through them) and the output has been read, it is marked as empty, continuing the process below.
+
+Algorithm 2 Registered comparator algorithm
+
+Input: Data Registers D1, D2 Input: Valid data flags V1, V2 Input: Empty subtree flags E1, E2 Outputs: Dout; Eout; Vout
+
+Ensure: Vi =⇒ ¬Ei Ensure: Values output in ascending order; sorting is stable.
+
+1: for Each triplet of nodes in the tree, in parallel do
+
+2: if Input registers belong to the first layer then
+
+3:
+
+Ei ← ¬Vi
+
+4: end if
+
+5: if V1 and V2 and ¬Vout then
+
+6:
+
+Dout ← min(D1, D2)
+
+7:
+
+Vargmin(D1,D2) ← false
+
+8:
+
+Vout ← true
+
+9: else if V1 and E2 and ¬Vout then
+
+10:
+
+Dout, V1, Vout ← D1, false, true
+
+11: else if V2 and E1 and ¬Vout then
+
+12:
+
+Dout, V2, Vout ← D2, false, true
+
+13: else if E1 and E2 and ¬Vout then
+
+14:
+
+Eout ← true
+
+15: end if
+
+16: end for
+
+Note that, because the valid signal in a register can only be modified by the parent when it is false, and by the child when it is true, the critical path no longer travels through more than one comparator, making it constant with respect to n. However, this causes an undesired effect where a register can’t possibly output two values in a row. We call this effect, illustrated in Figure 2 bubbling, and it renders the output nonstreaming after the first value is output in O(log(n)) cycles.
+Bubbles appear due to the fact that each register can only be in read or write mode to prevent the critical path from growing with tree depth. In fact, this is the cause of needing the empty signal E at each register, since a parent could be invalid but still have more data lagging behind, in which case we can’t make a decision and have to wait. If this effect is looked at at the root of the tree, we find that the output will alternate between valid and empty, for a total sorting time of O(2 · n). For the first m elements, it would take an acceptable 2 · m + log(n) cycles.
+
+9
+
+1
+
+4
+
+2
+
+6
+
+1
+
+5
+
+3
+
+9 1
+
+4 2
+
+6 1
+
+5 3
+
+9
+
+4
+
+6
+
+5
+
+2
+
+3
+
+1
+
+1
+
+4
+
+5
+
+9
+
+2
+
+6
+
+3
+
+1
+
+1
+
+4
+
+5
+
+9
+
+6
+
+3
+
+2
+
+1
+
+Fig. 2. Bubbling effect on a simple tree with registers. Bubbles are shown in dark, and appear on nodes that are outputting their values, unable to read at the same time.
+However, it must be considered that timing is critical [16] within the context of BP+OSD, and dropping the 2 from the equation lowers total time from 4m to 3m, an acceleration of 1.33×, quite interesting for real-time error correction.
+To achieve this goal, a final idea is proposed, named “hourglass sorting”1: nodes will have two output registers instead of one, thereby being able to both accept and emit a value each cycle. This idea is commonly known as double or ping-pong buffering [17]. This avoids the creation of bubbles while keeping a constant critical path with respect to n. How this works is seen in Figure 3, and ensures that after the initial O(log(n)) initialization cost, the rest of the data streams out sequentially.
+The algorithm outline is laid out in Algorithm 3. In short, both inputs are compared to decide which one (lowest) moves forward. In case one input is not valid (i.e: no more values will come from that sub-tree) the comparison is ignored. The active input is selected internally to move forward.
+The input will be read only if at least a register is empty. Note that, by having two registers, this ensures that we will only prevent writing when both are full, guaranteeing data availability even after a branch is stalled. We always write
+1The name is inspired by how the values falling down the tree resemble the grains of sand inside a hourglass
+
+4
+
+9
+
+1
+
+4
+
+2
+
+6
+
+1
+
+5
+
+3
+
+9 1
+
+4 2
+
+6 1
+
+5 3
+
+Algorithm 3 Hourglass cell behavior
+Input: Data DL, DR Input: Valid data flags VL, VR Output: Ready data flags VL, VR Output: Dout; Vout Input: Rout Variables: D, V , R Registers: D1, D0, V1, V0
+
+4
+
+9
+
+2
+
+1
+
+5
+
+6
+
+3
+
+1
+
+9
+
+4
+
+2
+
+6
+
+5
+
+3 1
+
+1
+
+9
+4 2
+
+6
+
+5
+
+3
+
+1
+
+Fig. 3. Bubbling avoidance by doubling the registers at each node.
+
+to register D0 first, then register D1. Thus, the valid signal V1 =⇒ V0 by also shifting V1, D1 to V0, D0 when necessary. ¬V1 can be passed to the input to indicate register availability.
+Separately, writes are performed to D0 if it is empty (¬V0). Note that it is not necessary to check for validity of input V since if ¬V , then ¬V0 holds next cycle. When it is full, different decisions are taken depending on if the value is being read by the next node or not. In the first case, the value is replaced by either the input, or register 1 if it was full. In the second case, register 0 has nowhere to go so register 1 is filled with the input.
+Synchronization of both input and output is done via two signals valid (V ) and ready (R) which are asserted by the producer and consumer respectively. When both have asserted their signals, and see the symmetric signal asserted as well, the transaction is assumed completed in that cycle. This means that the produce must empty its register, and the consumer must fill up theirs.
+This design achieves our two main goals: First, the input is decoupled from the output, as there is no combinatorial dependency between values or flags going up and down the tree, resulting in no cascading signals. This keeps the critical path under control, and signal fan-out to a minimum. Secondly, bubbles can’t appear since a node is capable of both inputting and outputting a value in the same cycle.
+
+Ensure: Values output in ascending order; sorting is stable.
+
+1: for Each cell in the tree, in parallel do
+
+2: R ← ¬V1
+
+3: if DL < DR then
+
+4:
+
+if VL then {Select left branch}
+
+5:
+
+D, V, RR, RL ← DL, VL, false, R
+
+6: else {Select right branch}
+
+7:
+
+D, V, RR, RL ← DR, VR, R, false
+
+8:
+
+end if
+
+9: else
+
+10:
+
+if VR then {Select right branch}
+
+11:
+
+D, V, RR, RL ← DR, VR, R, false
+
+12:
+
+else {Select left branch}
+
+13:
+
+D, V, RR, RL ← DL, VL, false, R
+
+14:
+
+end if
+
+15: end if
+
+16: Dout, Vout ← D0, R0 17: if ¬V0 then {IN: Fill empty first register}
+
+18:
+
+D0, V0 ← D, V
+
+19: else if ¬V1 then
+
+20:
+
+if Rout then {Simultaneous IN/OUT}
+
+21:
+
+D0, V0 ← D, V
+
+22: else {IN: Fill second register}
+
+23:
+
+D1, V1 ← D, V
+
+24:
+
+end if
+
+25: else if Rout then {OUT: Shift out values}
+
+26:
+
+D0, V0 ← D1, V1
+
+27: end if
+
+28: end for
+
+To prove this, consider the case of a bubble appearing at a node. If this was the case, we know both internal registers are empty. If, in the cycle prior, one of the inputs had been available, it would have been shifted into one of the registers since ¬V1 would have held, so both inputs had to be unavailable. This reasoning can be recursively followed up to the leaf nodes, confirming that, in order for a bubble to appear, the full tree above must be empty. Therefore it must be the case that the root node is only empty when the full array is sorted. Note that this can only be assured after the first value has been received at the root. This is bound to happen in log(n) cycles after initialization since, by construction, all of the nodes will have received a value from both parents at that point. Since we can’t have bubbles afterwards, it follows that the rest of the array is sequentially output in n cycles.
+The only thing left is to see that the output is indeed sorted. Consider that, if we assume that both incoming branches for a node are sorting properly, we will always have at our
+
+5
+
+disposal the minimum of both trees. In each case, we select the minimum of the two and pass it on. Neither tree can have bubbles, so a value jumping ahead of others, which would disrupt ordering, is also not possible. This not only sorts the tree, but does it in a stable fashion if we give preference to the leftmost sub-tree, which is interesting for many applications. The base case, where a node only has two inputs, will always send the minimum first by construction. (This is, in essence, merge sort with a parallel construction of each level).
+IV. IMPLEMENTATION
+A hardware implementation has been done in VHDL and is available on GitHub [18]. The most important modules within the system are the nodes themselves that implement the functionality described in Section III. An overview of their implementation is presented in Figure 4.
+
+the values themselves. By default, data will flow from the input to register zero (which contains both data D0 and valid V0 registers). In the event that the output is not ready and V0 is asserted, register one will receive the incoming datum instead. By construction, D1 > D0 and V1 =⇒ V0. Thus, we always output from register zero, and input when V1 = 0, therefore Rin = ¬V1. To ensure this property holds, register one is “shifted” to register zero when both are full, and the output is accepting a new value.
+As seen, these operating principles make it so that no paths cross from the output to the input without first going through a register. The critical path is thus extremely fast, spanning just the comparator logic and a few gates and multiplexers.
+To create a sorter for wider arrays, the basic cell is replicated in a tree-like structure (Figure 5). Special care is taken when a layer of the tree is not a power of two in size, by inserting nodes even when they don’t have both parents. This preserves timing integrity, since otherwise values from a sub-tree could jump ahead of others breaking the ordering of the output.
+
+Fig. 5. An example of a full tree for n = 6. Note that the node in layer 2 is not removed even though it only has one parent.
+Our implementation can also include index registers, which are used to keep track of the position of the element within the array along with its value (this is not pictured in the diagrams). This is important for the BP+OSD application. Results in this work do not include these index registers, but the overhead in both logic and flip-flop elements would be n · log(n).
+
+Fig. 4. A single sorting cell. In dark blue, the inputs and output, in blue, the registers, with a top enable signal (green) and a bottom clear signal (red). Clock and reset signals are omitted for clarity.
+Both inputs and outputs are controlled using very lightweight interfaces. They include a data (D) signal, along with ready (R) and valid (V ) control bits. A transaction is performed by the endpoints of an interface if and only if valid and ready signals are asserted, respectively, by the sender and receiver.
+Following Algorithm 3, data is first sorted and selected according to the availability from the input valid signals, and
+
+V. RESULTS
+Various configurations have been synthesized on a xcvu9pflga2104-2L-e [19] device using Vivado [20]. Values regarding resource use and maximum frequency of operation, with respect to array depth and element width, are presented for various configurations in Table I.
+It is noteworthy to point out that both LUT and REG usage are linearly proportional to n · w, where w is the width of each input element. Doubling the number of elements in the array n results in more resources than doubling the width of the elements w. Frequency is dependent on element width w, which is consistent with the design. Latency is given by log(n) + n, where log(n) indicates the time to the first output, and n the number of cycles to wait until the array is fully sorted and output.
+When compared to other implementations, sorting networks [21], [8] offer much better latency in the order of O(log2(n)), but rapidly run out of resources at costs proportional to O(n ·
+
+6
+
+Input
+1024x8 512x8 256x8 128x8 64x8 1024x16 512x16 256x16 128x16 64x16 1024x32 512x32 256x32 128x32 64x32
+
+LUT REG CARRY8 Freq
+
+28132 27630
+
+1023 705MHz
+
+14052 13806
+
+511
+
+705MHz
+
+7012 6894
+
+255
+
+705MHz
+
+3492 3438
+
+127
+
+705MHz
+
+1732 1710
+
+63
+
+705MHz
+
+48592 52190
+
+1023 649MHz
+
+24272 26078
+
+511
+
+649MHz
+
+12112 13022
+
+255
+
+649MHz
+
+6032 6494
+
+127
+
+649MHz
+
+2992 3230
+
+63
+
+649MHz
+
+89002 101310 2046 613MHz
+
+44458 50622
+
+1022 613MHz
+
+22186 25278
+
+510
+
+613MHz
+
+11050 12606
+
+254
+
+613MHz
+
+5482 6270
+
+126
+
+613MHz
+
+TABLE I
+
+RESULTS FOR DIFFERENT CONFIGURATIONS
+
+Latency
+10+1024 9+512 8+256 7+128 6+64 10+1024 9+512 8+256 7+128 6+64 10+1024 9+512 8+256 7+128 6+64
+
+log2(n)). Pipelined sorting networks [10] have the same cost as our proposal, and offer a fixed latency of around n/2 for the full array to be sorted, instead of our elastic latency of log(n) → n+log(n) for the first and last elements respectively.
+VI. CONCLUSION
+Sorting algorithms come in all shapes and sizes. In the general case, the limit of O(n · log(n)) comparisons cannot be lowered, so trade-offs between speed and resource use need to be considered.
+Efforts have been made towards fully serial or fully parallel architectures, with a distinct lack of PISO and SIPO approaches in the literature. These are particularly useful when the throughput at the input or output is limited.
+A very simple and lightweight implementation of a PISO sorter is presented. It uses O(n) resources and is capable of outputting the first sorted element in log(n) cycles, streaming the rest in exactly n. Its frequency does not drop with size, as the critical paths are constrained within single processing elements, which makes it ideal for scalable applications.
+The implementation has been successfully integrated within a BP+OSD decoder in the context of quantum LDPC coding, proving its capabilities in real-world applications such as realtime decoding of error-correcting codes.
+ACKNOWLEDGMENT
+This work was supported in part by the project PID2023-147059OB-I00 funded by MCIU/ AEI/ 10.13039/501100011033/ FEDER, UE.
+
+[7] R. Cole, “Parallel merge sort,” SIAM Journal on Computing, vol. 17, no. 4, pp. 770–785, 1988.
+[8] R. Mueller, J. Teubner, and G. Alonso, “Sorting networks on fpgas,” The VLDB Journal, vol. 21, pp. 1–23, 2012.
+[9] S. G. Akl, Parallel sorting algorithms. Academic press, 2014, vol. 12. [10] V. Sklyarov and I. Skliarova, “High-performance implementation of reg-
+ular and easily scalable sorting networks on an fpga,” Microprocessors and Microsystems, vol. 38, no. 5, pp. 470–484, 2014. [11] J. Ortiz and D. Andrews, “A configurable high-throughput linear sorter system,” in 2010 IEEE International Symposium on Parallel & Distributed Processing, Workshops and Phd Forum (IPDPSW). IEEE, 2010, pp. 1–8. [12] M. Zuluaga, P. Milder, and M. Pu¨schel, “Streaming sorting networks,” ACM Transactions on Design Automation of Electronic Systems (TODAES), vol. 21, no. 4, pp. 1–30, 2016. [13] M. Jiang, C. Zhao, E. Xu, and L. Zhang, “Reliability-based iterative decoding of ldpc codes using likelihood accumulation,” IEEE communications letters, vol. 11, no. 8, pp. 677–679, 2007. [14] B. M. Terhal, “Quantum error correction for quantum memories,” Reviews of Modern Physics, vol. 87, no. 2, pp. 307–346, 2015. [15] W. W. Peterson and E. J. Weldon, Error-correcting codes. MIT press, 1972. [16] NVIDIA Quantum Computing Team, “Accelerating quantum error correction research with nvidia,” March 2025, accessed: 2025-0710. [Online]. Available: https://developer.nvidia.com/blog/acceleratingquantum-error-correction-research-with-nvidia-quantum [17] Y.-M. Joo and N. McKeown, “Doubling memory bandwidth for network buffers,” in Proceedings. IEEE INFOCOM’98, the Conference on Computer Communications. Seventeenth Annual Joint Conference of the IEEE Computer and Communications Societies. Gateway to the 21st Century (Cat. No. 98, vol. 2. IEEE, 1998, pp. 808–815. [18] Daniel Ba´scones, “Hourglass sorting,” 2025, accessed: 2025-07-10. [Online]. Available: https://github.com/Daniel-BG/Hourglass sorting [19] AMD Xilinx, AMD Virtex UltraScale+ FPGA VCU118 Evaluation Kit - Documentation, AMD, Inc., 2024, product: XCZU9P-FLGA21042L-E. [Online]. Available: https://www.xilinx.com/products/boarddocs/vcu118-docs.html [20] ——, Vivado Design Suite User Guide, AMD, Inc., 2024, version 2024.1. [Online]. Available: https://www.amd.com/en/designresources/vivado [21] D. Prasad, M. Y. M. Yusof, S. S. Palai, and A. H. Nawi, “Sorting networks on fpga,” in Proceedings of the WSEAS International Conference on Telecommunications and Informatics (TELE-INFO), 2011, pp. 29–31.
+Daniel Ba´scones received the bachelor’s degree in both mathematics and computer science and the M.Sc. degree in computer science from the Complutense University of Madrid, Madrid, Spain, in 2016 and 2018, respectively. He was a Research Associate during the time of his M.Sc. with the Department of Computer Architecture and Automatics. His main interests include hyperspectral image compression on field-programmable gate arrays, dealing with fast lossless algorithms that aid with data transmission and more complex lossy algorithms for long-term storage, a field in which he obtained his Ph.D thesis in 2020.
+
+REFERENCES
+[1] D. E. Knuth, The Art of Computer Programming: Sorting and Searching, volume 3. Addison-Wesley Professional, 1998.
+[2] J. W. J. Williams, “Algorithm 232: heapsort,” Communications of the ACM, vol. 7, no. 6, pp. 347–348, 1964.
+[3] H. Hollerith, “Art of Compiling Statistics,” Patent U.S. Patent 395 781, jan 8, 1889, issued January 8, 1889.
+[4] C. A. Hoare, “Quicksort,” The computer journal, vol. 5, no. 1, pp. 10–16, 1962.
+[5] K. E. Batcher, “Sorting networks and their applications,” in Proceedings of the April 30–May 2, 1968, spring joint computer conference, 1968, pp. 307–314.
+[6] M. Ajtai, J. Komlo´s, and E. Szemere´di, “An 0 (n log n) sorting network,” in Proceedings of the fifteenth annual ACM symposium on Theory of computing, 1983, pp. 1–9.
+
+Borja Morcillo received the bachelor and M.Sc. degrees in computer engineering from the Complutense University of Madrid (Madrid, Spain), in 2020 and 2022, respectively. In 2020 he was awarded winner of the Xilinx Open Hardware Design Competition. He is currently a Teaching Assistant (Department of Computer Architecture and Automation, Complutense University of Madrid), while pursuing the Ph.D. degree in hardware design. His main research interests include computer architecture and reconfigurable hardware.
+
+

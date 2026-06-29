@@ -1,0 +1,3879 @@
+INVITED PAPER
+The Factor Graph Approach to Model-Based Signal Processing
+Factor graphs can model complex systems and help to design effective algorithms for detection and estimation problems.
+By Hans-Andrea Loeliger, Fellow IEEE, Justin Dauwels, Member IEEE, Junli Hu, Member IEEE, Sascha Korl, Member IEEE, Li Ping, Senior Member IEEE, and Frank R. Kschischang, Fellow IEEE
+
+ABSTRACT | The message-passing approach to model-based
+signal processing is developed with a focus on Gaussian message passing in linear state-space models, which includes recursive least squares, linear minimum-mean-squared-error estimation, and Kalman filtering algorithms. Tabulated message computation rules for the building blocks of linear models allow us to compose a variety of such algorithms without additional derivations or computations. Beyond the Gaussian case, it is emphasized that the message-passing approach encourages us to mix and match different algorithmic techniques, which is exemplified by two different approachesV steepest descent and expectation maximizationVto message passing through a multiplier node.
+KEYWORDS | Estimation; factor graphs; graphical models;
+Kalman filtering; message passing; signal processing
+I. INTRODUCTION
+Graphical models such as factor graphs allow a unified approach to a number of topics in coding, signal processing, machine learning, statistics, and statistical
+Manuscript received May 9, 2006; revised March 13, 2007. The work of J. Dauwels was supported in part by Swiss NF under Grant 200021-101955. The work of S. Korl was supported in part by Phonak AG. H.-A. Loeliger and J. Hu are with the Signal Processing Laboratory (ISI), Department of Information Technology and Electrical Engineering, ETH Zurich, 8092 Zurich, Switzerland (e-mail: loeliger@isi.ee.ethz.ch; hu@isi.ee.ethz.ch). J. Dauwels was with the Department of Information Technology and Electrical Engineering, ETH Zurich, CH-8092 Zurich, Switzerland. He is now with Amari Research Unit, RIKEN Brain Science Institute, Saitama-ken 351-0106, Japan (e-mail: justin@dauwels.com). S. Korl was with the Department of Information Technology and Electrical Engineering, ETH Zurich, CH-8092 Zurich, Switzerland. He is now with Phonak AG, CH-8712 Sta¨fa, Switzerland (e-mail: sascha.korl@phonak.ch). L. Ping is with the Department of Electronic Engineering, City University of Hong Kong, Kowloon, Hong Kong (e-mail: eeliping@cityu.edu.hk). F. R. Kschischang is with the Department of Electrical and Computer Engineering, University of Toronto, Toronto, ON M5S 3G4, Canada (e-mail: frank@comm.utoronto.ca).
+Digital Object Identifier: 10.1109/JPROC.2007.896497
+
+physics. In particular, many algorithms in these fields have been shown to be special cases of the basic sum-product and max-product algorithms that operate by message passing in a factor graph [1]–[3]. In this paper, we elaborate on this topic with an emphasis on signal processing. We hope to convey that factor graphs continue to grow more useful for the design of practical algorithms for model-based detection and estimation problems involving many (discrete and/or continuous) variables. In particular, the factor graph approach allows us to compose nontrivial algorithms for such problems from tabulated rules for Blocal[ computations corresponding to the building blocks of the system model; it also encourages us to mix and match a large variety of techniques ranging from classical Gaussian and gradient techniques over expectation maximization (EM) to sequential Monte Carlo methods (particle filters).
+Factor graphs are graphical models [4]–[7]. In many respects, the different notation systems for graphical models (Bayesian networks [7], [8], Markov random fields [7], [9], junction graphs [10], [11], etc.) are essentially equivalent, but there are some real differences when it comes to practical use. Indeed, some of the material of this paper (in particular, in Sections IV, V, and Appendix III) is not easily expressed in other notation systems.
+While much interesting recent work on graphical models specifically addresses graphs with cycles (e.g., [12]–[21]), the present paper is mostly concerned with cycle-free graphs, or with cycle-free subgraphs of complex system models. We will encounter some factor graphs with cycles, though.
+The message-passing approach to signal processing was suggested in [2], [22] and has been used, e.g., in [23]–[39] for tasks like equalization, multi-user detection, multipleinput multiple-output (MIMO) detection, channel estimation, etc. The literature on graphical models for general inference problems is vast. For example, factor graphs have
+
+0018-92A1ut9h/o$riz2e5d.0lic0enÓse2d0u0s7e lIimEiEteEd to: Yonsei Univ. Downloaded on June 2V4o,l2.09256, Nato0. 26:,5J0u:1n1e U2T00C7fr|oPmrIEoEcEeXepdloinreg. sReosftricttihones IaEppElyE. 1295
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Assume, for example, that some function f ðu; w; x; y; zÞ can be factored as
+
+f ðu; w; x; y; zÞ ¼ f1ðuÞf2ðu; w; xÞf3ðx; y; zÞf4ðzÞ: (1)
+
+Fig. 1. Forney-style factor graph.
+also been used for link monitoring in wireless networks [40], for genome analysis [41], and for clustering [42].
+This paper begins with an introduction to factor graphs that complements [2] and [3]. We then turn to an in-depth discussion of Gaussian message passing for linear models, i.e., Kalman filtering and some of its ramifications. In particular, we will present tabulated message computation rules for multivariate Gaussian messages that are extensions and refinements of similar tables in [3] and [33]. With these tables, it is possible to write down (essentially without any computation) efficient Gaussian/ linear minimum-mean-squared-error (LMMSE) estimation algorithms for a wide variety of applications, as is illustrated by several nontrivial examples.
+Beyond the Gaussian case, we will address the representation of messages for continuous variables and of suitable message computation rules. A wide variety of algorithmic techniques can be put into message-passing form, which helps to mix and match these techniques in complex system models. To illustrate this point, we demonstrate the application of two different techniques, steepest descent and expectation maximization, to message passing through a multiplier node.
+Some background material on multivariate Gaussian distributions and LMMSE estimation is summarized in Appendix I. Appendix II contains the proofs for Section V. Appendix III reviews some results by Forney on the Fourier transform on factor graphs [43] and adapts them to the setting of the present paper.
+The following notation will be used. The transpose of a matrix (or vector) A is denoted by AT; AH denotes the complex conjugate of AT; A# denotes the Moore–Penrose pseudo-inverse of A; and B/[ denotes equality of functions up to a scale factor.
+
+This factorization is expressed by the factor graph shown in Fig. 1. In general, a (Forney-style) factor graph consists of nodes, edges, and Bhalf-edges[ (which are connected only to one node), and there are the following rules.
+1) There is a (unique) node for every factor. 2) There is a (unique) edge or half-edge for every
+variable. 3) The node representing some factor g is connected
+with the edge (or half-edge) representing some variable x if and only if g is a function of x. Implicit in these rules is the assumption that no variable appears in more than two factors. We will see below how this restriction is easily circumvented. A main application of factor graphs are stochastic models. For example, let X be a real-valued random variable and let Y1 and Y2 be two independent real-valued noisy observations of X. The joint probability density of these variables is
+
+f ðx; y1; y2Þ ¼ f ðxÞf ð y1jxÞf ð y2jxÞ
+
+(2)
+
+which we claim is represented by the factor graph of
+Fig. 2. Literally, Fig. 2 represents an extended model with auxiliary variables X0 and X00 and with joint density
+
+f ðx; x0; x00; y1; y2Þ ¼ f ðxÞf ð y1jx0Þf ð y2jx00Þf¼ðx; x0; x00Þ (3)
+
+where the equality constraint Bfunction[
+
+f¼ðx; x0; x00Þ ¼Á ðx À x0Þðx À x00Þ
+
+(4)
+
+II. FACTOR GRAPHS
+We review some basic notions of factor graphs. For complementary introductions to factor graphs and their history and their relation to other graphical models, we refer the interested reader to [2] and [3]. Other than in [2], we will use Forney-style factor graphs (also known as Bnormal factor graphs[) as in [3]. (The original factor graphs [2] have both variable nodes and factor nodes. Forney-style factor graphs were introduced in [43], but we deviate in some details from the notation of [43].)
+
+Fig. 2. Factor graph of (2) and (3).
+
+1296 PAruothcoreizeedilincegnseod fustehlimeitIeEd EtoE: Y|oVnosle.i9U5n, iNv.oD. 6o,wJnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+(with ðÁÞ denoting the Dirac delta) enforces PðX ¼ X0Þ ¼ PðX ¼ X00Þ ¼ 1. Clearly, (2) is a marginal of (3)
+
+ZZ
+
+f ðx; y1; y2Þ ¼
+
+f ðx; x0; x00; y1; y2Þdx0dx00: (5)
+
+x0 x00
+
+For most practical purposes, equality constraint nodes (such as the node labeled B¼[ in Fig. 2) may be viewed simply as branching points that allow more than two factors to share some variable.
+Assume now that Y1 and Y2 are observed and that we are interested in the a posteriori probability f ðx j y1; y2Þ. For fixed y1 and y2, we have
+
+with random variables Z1 and Z2 that are independent of each other and of X. The nodes labeled Bþ[ represent the factors ðx þ z1 À y1Þ and ðx þ z2 À y2Þ, respectively. As illustrated by this example, the (Forney-style) factor graph
+notation naturally supports modular and hierarchical system
+modeling. Fig. 3 also illustrates the use of arrows and of special symbols (such as B¼[ and Bþ[) to define factors and to make factor graphs readable as block diagrams.
+As a nonstochastic example, consider the following system identification problem. Let Uk and Y~k, k 2 Z, be the real-valued input signal and the real-valued output signal,
+respectively, of some unknown system that we wish to
+approximate by a linear finite impulse response (FIR) filter
+of order M
+
+f ðx j y1; y2Þ / f ðx; y1; y2Þ
+
+(6)
+
+where B/[ denotes equality up to a scale factor. It follows that f ðx j y1; y2Þ is also represented by the factor graph of Fig. 2 (up to a scale factor). This clearly holds in general: passing from some a priori model to an a posteriori model [based on fixing the value of some variable(s)] does not change the factor graph.
+We will usually denote unknown variables by capital letters and known (observed) variables by small letters. (Formally, a B-valued known variable is an element of B while a B-valued unknown variable is a function from the configuration space into B [3].) For the factor graph of f ðx j y1; y2Þ, we would thus modify Fig. 2 by replacing Y1 by y2 and Y2 by y2 if these variables are known (observed).
+A more detailed version of Fig. 2 is shown in Fig. 3, where we assume
+
+XM
+
+Yk ¼ h‘UkÀ‘
+
+(9)
+
+‘¼0
+
+Y~k ¼ Yk þ Zk:
+
+(10)
+
+The slack variable Zk absorbs the difference between the
+
+filter output Yk and the observed output Y~k. Assume that
+
+we know both the input signal Uk ¼ uk, k ¼ ÀM þ 1;
+
+ÀM þ 2; . . . ; N and the output signal Y~k ¼ ~yk, k ¼ 1; 2;
+
+. . . ; N. ficients
+
+We h0;
+
+.
+
+wish to determine the unknown . . ; hM such that the squared error
+
+fPiltNer
+k¼1
+
+coefZk2 is
+
+as
+
+small as possible. We first note that
+
+minimizing
+
+PN
+k¼1
+
+Z2k
+
+is
+
+equivalent
+
+to
+
+maximizing
+
+YN eÀzk2 =22
+
+¼
+
+e P À
+
+N k¼1
+
+z2k =22
+
+k¼1
+
+(11)
+
+Y1 ¼ X þ Z1 Y2 ¼ X þ Z2
+
+(7) (8) (for arbitrary positive 2) subject to the constraints (9)
+and (10).
+For later use, we rewrite (9) as
+
+Yk ¼ ½ukH
+
+(12)
+
+Fig. 3. More detailed version of Fig. 2.
+
+with the row column vector
+
+vHec¼Átoðrh0½u; hk1;¼Á. .ð.u;kh;MukÞÀT1.;
+
+.
+
+.
+
+.
+
+;
+
+ukÀMÞ
+
+and
+
+the
+
+A factor graph of this example is shown in Fig. 4. The
+
+lower part represents the unconstrained cost function (11)
+
+and the linear constraint (10); the upper part represents
+
+the linear constraint (12), i.e., the factors ð yk À ½ukHÞ for k ¼ 1; 2; . . . ; N.
+
+Note that the original least-squares problem to
+
+determine the filter coefficients is equivalent to maximiz-
+
+ing the function represented by Fig. 4 over all assignments
+
+of values to all unknown variables. We will see in Section V
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2.09256, Nato0.26:,5J0u:1n1e U2T0C07fr|oPmrIEoEcEeXepdloirne.gsReostfricttihones aIEppElyE. 1297
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+as in the factor graph in Fig. 5. Assume that we wish to compute f"3ðx3Þ. It is easily verified that
+
+f"3ðx3Þ ¼ Cðx3ÞDðx3Þ
+
+(15)
+
+with
+
+Cðx3Þ ¼Á X f1ðx1Þf2ðx2Þf3ðx1; x2; x3Þ
+
+(16)
+
+x1; x2
+
+Fig. 4. Two sections of factor graph for FIR filter identification problem.
+
+and
+
+Dðx3Þ ¼Á X f4ðx4Þf5ðx3; x4; x5ÞFðx5Þ
+
+(17)
+
+x4; x5
+
+with
+
+how efficient recursive least-squares algorithms (RLS) for this maximization may be obtained from tabulated rules for Gaussian message-passing algorithms.
+
+Fðx5Þ ¼Á X f6ðx5; x6; x7Þf7ðx7Þ:
+
+(18)
+
+x6; x7
+
+III. MESSAGE-PASSING ALGORITHMS We briefly review the basic sum-product and max-product algorithms [2], [44]. In this section, the emphasis will be on cycle-free factor graphs.
+A. Sum-Product Algorithm For some given function f ðx1; . . . ; xnÞ, assume that we
+wish to compute
+
+f"kðxkÞ ¼Á X f ðx1; . . . ; xnÞ:
+
+(13)
+
+x1;...; xn except xk
+
+The quantities C, D, and F in (15)–(18) may be viewed
+
+as summaries of the dashed boxes in Fig. 5, which are
+
+obtained by eliminating the variables inside the box by
+
+summation. Such summaries may be thought of as
+
+messages in the factor graph, as is shown in Fig. 5.
+
+With the and Bðx2Þ ¼Á
+
+trivial f2ðx2Þ,
+
+summaries/messages we can write (16) as
+
+Aðx1Þ
+
+¼Á
+
+f1ðx1Þ,
+
+Cðx3Þ ¼Á X f3ðx1; x2; x3ÞAðx1ÞBðx2Þ:
+
+(19)
+
+x1; x2
+
+Similarly, with the trivial summaries Eðx4Þ ¼Á f4ðx4Þ and Gðx7Þ ¼Á f7ðx7Þ, we can write (17) as
+
+If f ðx1; . . . ; xnÞ is a probability mass function of discrete random variables X1; . . . ; Xn, then (13) is the probability mass function of Xk.
+In later sections, we will primarily be interested in
+continuous variables. In this case, the summation in (13) is
+replaced by integration. If f ðx1; . . . ; xnÞ has a cycle-free factor graph, the func-
+tion (13) can be computed by the sum-product algorithm,
+which splits the Bbig[ marginalization (13) into a sequence of Bsmall[ marginalizations. For example, assume that f ðx1; . . . ; x7Þ can be written as
+
+Dðx3Þ ¼Á X f5ðx3; x4; x5ÞEðx4ÞFðx5Þ
+
+(20)
+
+x4; x5
+
+f ðx1; . . . ; x7Þ ¼ f1ðx1Þf2ðx2Þf3ðx1; x2; x3Þf4ðx4Þ Á f5ðx3; x4; x5Þf6ðx5; x6; x7Þf7ðx7Þ (14)
+
+Fig. 5. ‘‘Summarized’’ factors as messages in factor graph.
+
+1298 PAruothcoreizeedilincegnseod fustehlimeitIeEd EtoE: Y|oVnosle.i9U5n, iNv.oD. 6o,wJnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+and (18) as
+
+with
+
+Fðx5Þ ¼Á X f6ðx5; x6; x7ÞGðx7Þ:
+
+(21)
+
+x6; x7
+
+f^kðxkÞ ¼Á
+
+max
+x1;...; xn
+
+f ðx1; . . . ; xnÞ:
+
+except xk
+
+(24)
+
+All these messages/summaries (19)–(21) are formed according to the following rule.
+Sum-Product Rule: The message out of some node/factor f‘ along some edge Xk is formed as the product of f‘ and all incoming messages along all edges except Xk, summed over all involved variables except Xk.
+From this example, it is obvious that the marginal f"kðxkÞ may be obtained simultaneously for all k by computing two messages, one in each direction, for every edge in the factor graph. The function f"k is the product of these two messages as in (15).
+We also observe the following. 1) The sum-product algorithm works for any cycle-
+free factor graph. 2) Open half-edges such as X6 in Fig. 5 do not carry
+an incoming message. Equivalently, they may be thought as carrying the constant function ðxÞ ¼ 1 as incoming message. 3) Known variables such as ~yk in Fig. 4 are simply plugged into the corresponding factors; they are not otherwise involved in the algorithm. 4) It is usually (but not always!) sufficient to know the Bmarginal[ (13) up to a scale factor. In such cases, it suffices to know the messages only up to a scale factor. The option to freely scale messages is often essential for numerically reliable computations. Since the sum-product rule is a Blocal[ computation, it can be applied also to factor graphs with cycles. The sumproduct algorithm then becomes an iterative algorithm where messages are recomputed according to some schedule until some stopping criterion is satisfied or until the available time is over. The algorithm may be initialized by assigning to all messages the neutral constant function ðxÞ ¼ 1.
+B. Max-Product Algorithm Assume we wish to maximize some function
+f ðx1; . . . ; xnÞ, i.e., we wish to compute
+
+ðx^1; . . . ; x^nÞ ¼ arg max f ðx1; . . . ; xnÞ
+
+(22)
+
+x1;...; xn
+
+where we assume that f has a maximum. Note that
+
+x^k ¼ arg max f^kðxkÞ
+
+(23)
+
+xk
+
+If f ðx1; . . . ; xnÞ has a cycle-free factor graph, the function (24) can be computed by the max-product algorithm. For example, assume that f ðx1; . . . ; x7Þ can be written as in (14), which corresponds to the factor graph of Fig. 5. Assume that we wish to compute f^3ðx3Þ. It is easily verified that
+
+f^3ðx3Þ ¼ Cðx3ÞDðx3Þ
+
+(25)
+
+with A . . . G defined as in (16)–(21) except that summation is everywhere replaced by maximization. In other words, the max-product algorithm is almost identical to the sum-product algorithm except that the messages are computed as follows.
+Max-Product Rule: The message out of some node/factor f‘ along some edge Xk is formed as the product of f‘ and all incoming messages along all edges except Xk, maximized over all involved variables except Xk.
+The remarks at the end of Section III-A apply also to the max-product algorithm. In particular, the Bmaxmarginals[ f^kðxkÞ may be obtained simultaneously for all k by computing two messages, one in each direction, for every edge in the factor graph; f^kðxkÞ is the product of these two messages as in (25).
+The analogies between the sum-product algorithm and the max-product algorithm are obvious. Indeed, the sum-product algorithm can be formulated to operate with abstract addition and multiplication operators BÈ[ and B[, respectively, and setting BÈ[ ¼ Bmax[ then yields the max-product algorithm [22, Sec. 3.6], [10]. Translating the max-product algorithm into the logarithmic domain yields the max-sum (or min-sum) algorithm [2], [10], [22].
+C. Arrows and Notation for Messages The use of ad hoc names for the messages (such as
+A; . . . ; G in Fig. 5) is often unsatisfactory. We will therefore use the following systematic notation. Let X be a variable that is represented by a directed edge (i.e., an edge depicted with an arrow). Then, !X denotes the message that flows in the direction of the edge and X denotes the message in the opposite direction. We will sometimes draw the edges with arrows just for the sake of this notation (e.g., the edge X in Fig. 6 and all edges in Fig. 7).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2. 09256, Nato0. 26:,5J0u:1n1e U20T0C7fr|oPmrIoEEcEeeXdplionreg. sReosftricttihones IaEppElyE. 1299
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+E. Marginals and Output Edges
+Both in the sum-product algorithm and in the max-
+product algorithm, the final results are the marginals !X X of the variables (such as X) of interest. It is often convenient to think of such marginals as messages out of a half-edge X" (without incoming message) connected to Xð¼ X0Þ as shown in Fig. 7; both by the sum-product rule
+and by the max-product rule, we have
+
+Fig. 6. Message passing in Fig. 3.
+
+D. Example For a simple example, consider sum-product message
+passing in the factor graph of Fig. 3 to compute the a posteriori probability f ðx j y1; y2Þ for known (observed) Y1 ¼ y1 and Y2 ¼ y2. The required messages are indicated in Fig. 6. Note that
+
+f ðx j y1; y2Þ / f ðx; y1; y2Þ
+
+(26)
+
+¼ !XðxÞXðxÞ:
+
+(27)
+
+By the rules of the sum-product algorithm, we have
+
+ZZ
+
+!X"ðxÞ ¼
+
+ðx À x0Þðx À x00Þ
+
+x0 x00
+Á !Xðx00ÞX0 ðx0Þdx0dx00 ¼ !XðxÞX0 ðxÞ:
+
+(38) (39)
+
+It follows that the message computation rules for marginals coincide with the message computation rules out of equality constraint nodes (as, e.g., in Table 2).
+
+IV. LINEAR STATE-SPACE MODELS
+Linear state-space models are important in many applications; some examples will be given in the following. In Section V, we will discuss Gaussian sum-product and maxproduct message passing in such models.
+The general linear state-space model may be described as follows. For k ¼ 1; 2; 3; . . . ; N, the input Uk, the output Yk, and the state Xk are (real or complex) scalars or vectors coupled by the equations
+
+!Z1 ðz1Þ ¼ fZ1 ðz1Þ !Z2 ðz2Þ ¼ fZZ2 ðz2Þ X0 ðx0Þ ¼ ðx0 þ z1 À y1Þ!Z1 ðz1Þdz1
+
+z1
+¼ fZZ1 ð y1 À x0Þ X00 ðx00Þ ¼ ðx00 þ z2 À y2Þ!Z2 ðz2Þdz2
+
+z2
+¼ fZZ2 ðZy2 À x00Þ
+
+XðxÞ ¼
+
+ðx À x0Þðx À x00Þ
+
+x0 x00
+Á X0 ðx0ÞX00 ðx00Þdx0dx00
+
+¼ X0 ðxÞX00 ðxÞ ¼ fZ1 ð y1 À xÞfZ2 ð y2 À xÞ !XðxÞ ¼ fXðxÞ:
+
+(28)
+
+Xk ¼ AkXkÀ1 þ BkUk
+
+(40)
+
+(29)
+
+Yk ¼ CkXk
+
+(41)
+
+(30)
+
+where Ak, Bk, and Ck are (real or complex) matrices of
+
+(31)
+
+suitable dimensions. The factor graph corresponding to these equations is given in Fig. 8.
+
+(32)
+
+Note that the upper part of Fig. 4 is a special case of
+
+Fig. 8 without input (i.e., Bk ¼ 0), with Xk ¼ H, with Ak an
+
+(33)
+
+identity matrix, and with Ck ¼ ½uk. As exemplified by Fig. 4, linear state-space models
+
+are often combined with quadratic cost functions or
+
+(34) (35) (36) (37)
+
+In this example, the max-product algorithm computes
+
+exactly the same messages.
+
+Fig. 7. Adding an output half-edge X" to some edge X.
+
+1300 PArutohocreizeddliicnegnssedoufsethlimeiteIdEtEo:EY|onVsoel.i 9U5n,ivN.oD. o6w, Jnulonaede2d00o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+The factor graph of the model (42) is shown in Fig. 9. The dashed box at the top of Fig. 9 represents a code constraint (e.g., the factor graph of a low-density parity check code) or another model for Uk, if available.
+The factor graph in Fig. 9 (without the dashed box) represents the likelihood function f ð ~y; y; zjuÞ for ug ¼Á ðu1; . . . ; uNÞ, y ¼ ð y1; . . . ; yNÞ, etc. If the dashed box in Fig. 9 represents an a priori density f ðuÞ, then the total graph in Fig. 9 represents
+
+Fig. 8. Factor graph of general linear state-space model (40), (41).
+
+f ðuÞf ð~y; y; zjuÞ ¼ f ðu; ~y; y; zÞ
+
+(46)
+
+/ f ðu; y; zj~yÞ:
+
+(47)
+
+(equivalently) with Gaussian noise models. The factor graph approach to this classical happy combination is the core of the present paper. A key feature of this combination is that the sum-product algorithm coincides with the max-product algorithm (up to a scale factor) and that all messages are Gaussians (or degenerate Gaussians), as will be discussed in Section V and Appendix I.
+We will now give two more examples of this kind.
+
+If, in addition, the dashed box in Fig. 9 does not introduce cycles, then the sum-product messages along Uk satisfy
+
+!Uk ðukÞUk ðukÞ / f ðukj~yÞ
+
+(48)
+
+from which the symbol-wise MAP (maximum a posteriori) estimate of Uk may be obtained as
+
+A. Equalization
+Consider the transmission of real symbols Uk, k ¼ 1; . . . ; N, over a discrete-time linear intersymbol
+interference channel with additive white Gaussian noise. The received real values Y~k, k ¼ 1; . . . ; N, are given by
+
+XM
+
+Y~k ¼ h‘UkÀ‘ þ Zk
+
+(42)
+
+‘¼0
+
+u^k ¼ arg max !Uk ðukÞUk ðukÞ:
+
+(49)
+
+uk
+
+If the dashed box introduces cycles, we may use iterative (Bturbo[) message passing and still use (49) to obtain an estimate of Uk. Efficient algorithms to compute the messages Uk will be discussed in Section V-B.
+
+where Zk, k ¼ 1; . . . ; N are i.i.d. zero-mean Gaussian random variables with variance 2 and where h0; . . . ; hM are known real coefficients. (The initial channel state U0; UÀ1; . . . ; UÀMþ1 may be known or unknown, depending on the application.)
+We bring (42) into the state-space form (40), (41) by defining Yk ¼Á Y~k À Zk (the noise-free output), Xk ¼Á ðUk; . . . ; UkÀMÞT, and the matrices
+
+B. Separation of Superimposed Signals Let U ¼ ðU1; . . . ; UKÞT be a K-tuple of real-valued
+random variables, let H be a real N Â K matrix, let
+
+
+
+
+
+Ak ¼Á A ¼Á
+
+0 IM
+
+0 0
+
+(43)
+
+(where IM denotes the M Â M identity matrix) and
+
+Bk ¼Á B ¼Á ð1; 0; . . . ; 0ÞT Ck ¼Á C ¼Á ðh0; h1; . . . ; hMÞ:
+
+(44) (45) Fig. 9. Factor graph for equalization.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNto0.26:,5J0u:1n1e U2T0C07fr|oPmrIEoEcEeXepdloirne.gsReostfricttihones aIEppElyE. 1301
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Y ¼ HU, and let
+
+Y~ ¼ HU þ Z
+
+(50)
+
+¼Y þZ
+
+(51)
+
+where Z ¼ ðZ1; . . . ; ZNÞT is an N-tuple of real zero-mean i.i.d. Gaussian random variables with variance 2. Based on the observation Y~ ¼ ~y, we wish to compute pðukj~yÞ
+and/or a LMMSE estimate of Uk for k ¼ 1; 2; . . . ; K.
+
+Two different factor graphs for this system model are
+
+shown in Figs. column of the
+
+10 and matrix
+
+11. H;
+
+In in
+
+Fig. Fig.
+
+10, 11,
+
+hk e1
+
+denotes the kth ¼Á ð1; 0; . . . ; 0ÞT,
+
+e2 ¼Á ð0; 1; 0; . . . ; 0ÞT, etc. In Fig. 10, most of the factor
+
+graph just represents the decomposition
+
+XK
+
+HU ¼ hkUk:
+
+(52)
+
+k¼1
+
+In Fig. 11, most of the factor graph just represents the decomposition
+
+XK
+
+U ¼ ekUk:
+
+(53)
+
+k¼1
+
+Although these decompositions appear trivial, the resulting message-passing algorithms in these factor graphs (using tabulated rules for Gaussian messages) are not trivial, cf. Section V-C. The complexity of these algorithms depends mainly on N and K; Fig. 10 may be preferable for K 9 N while Fig. 11 may be preferable for K G N.
+
+V. GAUSSIAN MESSAGE PASSING IN LINEAR MODELS
+Linear models as in Section IV consist of equality constraints (branching points), adders, and multipliers
+
+Fig. 10. Factor graph of (50) and (51) (superimposed signals).
+
+Fig. 11. Another factor graph of (50) and (51) (superimposed signals).
+with a constant (scalar or vector or matrix) coefficient. The sum-product and max-product message computation rules for such nodes preserve Gaussianity: if the incoming messages are members of the exponential family, then so are the outgoing messages.
+In this section, the computation of such messages will be considered in detail. For scalar variables, there is not much to say; for vector variables, however, the efficient computation of messages and marginals is not trivial. The at heart of this section are Tables 2–6 with formulas for such messages and marginals. These tables allow us to compose a variety of efficient algorithmsVboth classic and recent variations of Kalman filteringVwithout additional computations or derivations.
+However, before entering into the details of these tables, it should be pointed out that the algorithms considered here are many different things at the same time.
+1) For linear Gaussian factor graphs, the sumproduct algorithm and the max-product algorithm coincide (up to a scale factor). (This follows from Theorem 4 in Appendix I.)
+2) The Gaussian assumption does not imply a stochastic setting. For example, the least-squares problem of Fig. 4 may also be viewed as a linear Gaussian problem.
+3) In a stochastic setting, the max-product ð¼ sum-productÞ algorithm may be used to compute both maximum a posteriori (MAP) and maximum likelihood (ML) estimates.
+4) MAP estimation in a linear Gaussian model coincides both with minimum-mean-squared-error (MMSE) estimation and with LMMSE estimation, cf. Appendix I.
+5) MAP estimation with assumed Gaussians coincides with true LMMSE estimation (cf., Theorem 3 in Appendix I). It follows that LMMSE estimation may be carried out by Gaussian message passing in an appropriate linear model.
+6) If the sum-product algorithm converges in a Gaussian factor graph with cycles, then the means of the marginals are correct (despite the cycles) [12], [13].
+
+1302 PAruothcoreizeedilincegnseod fustehlimeitIeEd EtoE: Y|oVnosle.i9U5n, iNv.oD. 6o,wJnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+It is thus obvious that Gaussian message passing in linear
+
+models encompasses much of classical signal processing.
+
+We now turn to the actual message computations. In
+
+this section, all messages will be (multivariate) Gaussian
+
+distributions, up to scale factors. Gaussian distributions
+
+will be described either by the mean vector m and the covariance matrix V or by the weight matrix W ¼Á VÀ1 and
+
+the transformed mean Wm, cf. Appendix I. (It happens
+
+quite frequently that either V or W are singular for certain
+
+messages, but this is seldom a serious problem.)
+
+We will use the notation for messages of Section III-C,
+
+which we will extend to the parameters m, V, and W. If
+
+some directed edge represents the message has mean !mX, covariance
+
+variable!X, matrix V X,
+
+the forward and weight
+
+!
+
+! À1
+
+matrix WX ¼ V X
+
+; the backward message has mean mX,
+À1
+
+covariance matrix V X, and weight matrix WX ¼ V X . The
+
+product of these two messagesVthe marginal of the global
+
+function if the factor graph has no cyclesVis the Gaussian with mean mX and covariance matrix VX ¼ WXÀ1 given by
+
+!
+
+of Tables 2 and 3 leads to frequent transformations of W
+
+and
+
+!!
+Wm
+
+into
+
+!
+V¼
+
+W
+
+À1
+
+and
+
+!
+m,
+
+and
+
+vice
+
+versa;
+
+if
+
+!
+V
+
+and
+
+!
+W
+
+are large matrices, such conversions are costly.
+
+The inversion of large matrices can often be avoided by
+
+using the message computation rules given in Table 4
+
+(which follow from the Matrix Inversion Lemma [47], cf.
+
+Theorem 7 in Appendix II). The point of these rules is
+
+that the dimension of Y may be much smaller than the
+
+dimension
+
+of
+
+X
+
+and
+
+Z;
+
+in
+
+particular,
+
+Y!may
+
+be a
+!
+
+scalar.
+
+Table 3 shows the propagation of V and m forward
+
+through a matrix multiplication node as well as the
+
+Table 1 Single-Edge Relations Involving W~
+
+!
+
+WX ¼ WX þ WX
+
+(54)
+
+and
+
+WX mX
+
+¼
+
+!
+W
+
+X
+
+m!X
+
+þ
+
+W X mX :
+
+(55)
+Table 2 Gaussian Messages: Elementary Nodes
+
+[Equations (54) and (55) are equivalent to (II.1) and (II.3)
+in Table 2, cf. Section III-E.]
+An open half-edge without an incoming message may
+be viewed as carrying as incoming message the constant function 1, which is the limit of a Gaussian with W ¼ 0 and mean m ¼ 0. A half-edge representing some known variable X ¼ x0 may be viewed as carrying the incoming message ðx À x0Þ, which is the limit of a Gaussian with V ¼ 0 and mean m ¼ x0.
+We will also use the auxiliary quantity
+
+W~ X
+
+¼Á
+
+!
+ðV X
+
+þ
+
+V XÞÀ1
+
+(56)
+
+which
+
+is
+
+dual
+
+to
+
+VX
+
+¼
+
+!
+ðW X
+
+þ
+
+W X ÞÀ1 .
+
+Some
+
+relations
+
+among these quantities and the corresponding message
+
+parameters are given in Table 1. These relations are proved
+
+and then used in other proofs, in Appendix II.
+
+Computation rules for the parameters of messages
+!!
+(such as mX, V X, etc.) and marginals (such as mX, VX, etc.)
+
+are listed in Tables 2–4 and 6. The equation numbers in
+
+these tables are prefixed with the table number; for
+
+example, (II.3) denotes equation 3 in Table 2. The proofs
+
+are given in Appendix II.
+
+In principle, Tables 2 and 3 suffice to compute all
+
+messages in a linear model. However, using only the rules
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2. 09256, Nato0. 26:,5J0u:1n1e U20T0C7fr|oPmrIoEEcEeeXdplionreg. sReosftricttihones IaEppElyE. 1303
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Table 3 Gaussian Messages: Matrix Multiplication Node
+
+be used, in particular, to solve the FIR filter identification
+problem stated at the end of Section II. We begin by noting that the max-product message !Xk
+(as shown in Fig. 12) is
+
+!Xk ðxÞ
+
+/
+
+max
+z1;...; zk
+
+Yk eÀz‘2 =ð22 Þ
+‘¼1
+
+¼
+
+eÀ
+
+minz1;...;
+
+zk
+
+Pk
+‘¼1
+
+z2‘
+
+(57) (58)
+
+subject to the constraints ~y‘ ¼ c‘x þ z‘, ‘ ¼ 1; . . . ; k. It follows that the least-squares estimate (or, in a stochastic
+
+Table 4 Gaussian Messages: Composite Blocks. (Most Useful if Y Is Scalar)
+
+propagation of W and Wm backward through such a node.
+
+In the other direction, Table 5 may help: Table 5 (top)
+
+together with Table 4 (bottom) allows the propagation
+
+!
+
+!!
+
+of W and Wm forward through a matrix multiplication
+
+node; Table 5 (bottom) together with Table 4 (top)
+
+allows the propagation of V and m backward through a
+
+matrix multiplication node. The new Binternal[ open
+
+input in Table 5 (top) may be viewed as carrying an
+
+incoming message that is a degenerate Gaussian with
+
+!
+W¼ 0
+
+and
+
+mean
+
+m!¼ 0;
+
+the
+
+new
+
+Binternal[
+
+output
+
+in
+
+Table 5 (bottom) may be viewed as carrying an in-
+
+coming message that is a degenerate Gaussian with
+
+m¼ 0 and V ¼ 0.
+
+The point of the groupings in Table 6 is to create invertible matrices out of singular matrices.
+We now demonstrate the use of these tables by three examples, each of which is of interest on its own.
+
+A. RLS Algorithms Consider a factor graph as in Fig. 12, where X0 ¼
+X1 ¼ X2 ¼ . . . are (unknown) real column vectors and where c1; c2; . . . ; are (known) real row vectors. The classic recursive least-squares (RLS) algorithm [47] may be viewed as forward-only (left-to-right) Gaussian message passing through this factor graph, with an extra twist.
+Note that Fig. 4 is a special case of Fig. 12 (with Xk ¼ H and with ck ¼ ½uk). It follows that the RLS algorithm may
+1304 PArutohocreizeddliicnegnssedoufsethlimeiteIdEtEoE: Y|oVnsoel.i 9U5n,iNv.oD. o6w, Jnulonaed2ed00o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Table 5 Reversing a Matrix Multiplication
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+Now, we consider the actual computation of the mvfaacertisoasnragceeeÀs!Vzsk2=hZ2ko¼w2 ,ni.i2en..,TFahige.Gf1aa2uc.tsTstihhaeantmYw~ekist¼hsag~ymeke!iasnZkk nm!isoZwskinm¼mp0layyatnhbdee expressed by an incoming degenerate-Gaussian message Y~ with mean mY~ ¼ ~yk and variance V Y~ ¼ 0. It then follows from (II.10) and (II.8) in Table 2 that the message Yk is Gaussian with mean mY ¼ ~yk and variance V Y ¼ 2.
+So much for the trivial (scalar-variable) messages in Fig. 12. As for the messages !Xk , we note that the RLS algorithm comes in two versions. In one version, these
+!
+messages are represented by the mean vector mXk and the
+Table 6 Combining Rectangular Matrices to Form a Nonsingular Square Matrix
+
+setting, the ML estimate) of Xk ð¼ X0Þ based on ~y1; . . . ; ~yk is
+
+x^k ¼Á arg max !Xk ðxÞ
+
+¼
+
+x
+arg min min
+x z1;...;zk
+
+Xk z‘2
+‘¼1 ~y‘¼c‘xþz‘
+
+¼
+
+!
+mk
+
+(59) (60) (61)
+
+the mean of the (properly normalized) Gaussian !Xk . Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2. 09256, Nato0. 26:,5J0u:n11e U20T0C7fr|oPmrIoEEcEeeXdplionreg. sReosftricttihones IaEppElyE. 1305
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Fig. 12. RLS as Gaussian message passing.
+
+where I is the identity matrix of appropriate dimensions
+
+and where  is some Blarge[ real number. (In a stochastic
+
+setting, this initialization amounts to a
+
+turns
+
+x^k
+
+¼
+
+!
+mXk
+
+into
+
+a
+
+MAP
+
+estimate.)
+
+prior
+
+on
+
+X0,
+
+which
+
+We have now fully described max-product ð¼
+
+sum-productÞ Gaussian message passing through Fig. 12.
+
+However, as mentioned, the classical RLS algorithm
+
+introduces an extra twist: in every step, the covariance
+
+!
+
+matrix
+
+V Xk
+
+(as
+
+computed
+
+above)
+
+is
+
+multiplied
+!
+
+by
+
+a
+
+scale
+
+factor 
+ 9 1, 
+ % 1, or (equivalently) WXk is multiplied by
+
+1=
+. In this way, the algorithm is made to slowly forget the
+
+past. In the adaptive-filter problem of Fig. 4, this allows
+
+the algorithm to track slowly changing filter coefficients
+
+and it improves its numerical stability.
+
+!
+
+covariance
+
+matrix
+
+V Xk ;
+
+in
+
+the
+
+other
+
+version, these
+!
+
+messages are represented by !V ÀXk1 and the transformed mean
+
+the
+!
+W Xk
+
+weight
+!
+mXk . In
+
+matrix WXk ¼ the latter case,
+
+the message computation rules are immediate from
+
+Tables 2 and 3: we first obtain the dashed box) from (III.5) and
+
+(IIIX.k06)(,thaendmtehsesnag!eXkinfrsoidme
+
+(II.1) and (II.3). Note that no matrix inversion is required
+
+to compute these messages. However, extracting the
+
+estimate system of
+!
+
+x^k
+
+¼
+
+!
+mXk
+
+from
+
+!!
+W Xk mXk
+
+linear equations. For the
+
+amounts to solving a initial message !X0 , we
+
+set WX0 ¼ 0 (the all-zeros matrix).
+
+The other version of the RLS algorithm is obtained by
+
+grouping the two nodes inside the dashed box in Fig. 12
+
+!
+
+and
+!
+
+using
+
+(IV.1)
+
+and
+
+(IV.2)
+
+of
+
+Table
+
+4
+
+to
+
+propagate
+
+mXk
+
+and
+
+V Xk . Again, no matrix inversion is required to compute
+
+these messages: the inversion in (IV.3) is only a scalar
+
+division in this case. In this version of the RLS algorithm, toehxbetvriaoesuctsiompmraaptceuttix^acktailo¼anps!m.pXrAkoasicshfoairvsattiholaesbelietn!miattXia0el¼vmer0eysasnsatdgeep!V X!w0Xi¼t0h, oauInt,
+
+B. Gaussian Message Passing in General Linear State-Space Model
+We now consider Gaussian message passing in the general linear state-space model of Fig. 8, which encompasses Kalman filtering (¼ forward-only message passing), Kalman smoothing, LMMSE turbo equalization, etc. The discussion will be based on Fig. 13, which is a more detailed version of Fig. 8 with named variables assigned to every edge and with an optional decomposition of the state transition matrix Ak (if Ak is not square or not regular) into
+
+Ak ¼ A0k0A0k
+
+(62)
+
+with matrices A0k and A0k0 such that the rank of A0k equals the number of rows of A0k and the rank of Ak00 equals the number of columns of Ak00. (In other words, the multiplication by Ak0 is a surjective mapping and the multiplication by Ak00 is an injective mapping.) Such a decomposition is always possible. In the example of
+
+Fig. 13. Factor graph of general linear state-space model (extended version of Fig. 8).
+1306 PArutohocreizeddilicnegnssedoufsethlimeiteIdEtEoE: Y|oVnsoel.i9U5n,iNv.oD. o6w, Jnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Section IV-A (equalization of an FIR channel), the
+
+decomposition (62) yields A0k ¼ ðIM; 0Þ and Ak00 ¼
+
+0 IM
+
+;
+
+the pseudo-inverses of these matrices (which are used
+
+below) are ðAk0 Þ# ¼ ðA0kÞT and ðAk00Þ# ¼ ðAk00ÞT. The inputs Uk and the outputs Yk in Fig. 13 are usually
+
+scalars (while the state variables Xk are vectors). If Uk is a
+
+vector, it may be advantageous to decompose it (and
+
+accordingly Bk) into parallel scalar inputs; similarly, if Yk is
+
+a vector, it may be advantageous to decompose it (and Ck)
+
+into parallel scalar outputs.
+
+If all inputs Uk and all outputs Yk are scalars, then none
+
+of the algorithms given below requires repeated matrix
+
+inversions. In fact, some of the remarks on complexity in
+
+the algorithms that follow implicitly assume that Uk and Yk
+
+are scalars.
+
+Let us recall that the point of all the following
+
+algorithms is efficiency; if we do not mind inverting
+
+matrices all the time, then Tables 2 and 3 suffice. There
+
+are also, of course, issues with numerical stability, but
+
+they are outside the scope of this paper.
+
+!
+
+!
+
+Algorithm AVForward Recursion With mXk and V Xk : (This
+
+algorithm is known as Bcovariance matrix Kalman filter[ i([mfmsr4IoIee7Ismss].kss2.)iaa)ptgg.hpFeee(erZ!odi!knm.X)Xcmkk0oÀT!iam1shyXtieikbnhÀs1egemnosamebknosteidsabpsaitpsngataeeheigdnede.!e)d!ibZnTk0yUbchkyoies(bm(ImyVIoiInb(.e.1I7gtsI)a)sIiam.naa1gne)needdsda!sna(bU(IdgyIkI0e.V(9i(Is.I)I2I.Io)IY.b2..kÀ1t)1)a(.,XiTnatk0nhh0eÀddee1
+
+Algorithm BVBackward Recursion With WXk and WXk mXk :
+(This algorithm is known as Binformation matrix Kalman
+filter[ [47].) From the incoming message Yk , the message Xk00 is obtained by (III.5) and (III.6). From this and from the backward message Xk0 , the message Xk is obtained by (II.1) and (II.3). The message at Z0k is then obtained by (IV.4) and (IV.6). (Uk0 is skipped.) The message Xk0À1 is obtained by (III.5) and (III.6). (Zk may be skipped.)
+
+If the state transition matrix Ak is square and
+
+nonsingular, then the algorithms can, of course, be applied
+
+in the reverse direction. However, even if Ak is singular
+
+(as, e.g., for FIR channel equalization), it is possible to
+
+!
+
+!!
+
+forward propagate WXk and WXk mXk and to backward
+
+propagate mXk and V Xk without matrix inversions. These
+algorithms rely on the decomposition (62), which allows us to group A0k with CkÀ1 as in Table 6 (top) and Ak00 with Bk as in Table 6 (bottom).
+
+!
+
+!!
+
+Algorithm CVForward With WXk and WXk mXk if Ak is
+
+Singular: From the incoming message YkÀ1 , the message
+
+!Xk00À1  XkÀ1
+
+is obtained by , the message
+
+(III.5) and (III.6). From this and from
+
+!
+Xk0 À1
+
+is
+
+obtained
+
+by
+
+(II.1)
+
+and
+
+(II.3).
+
+The message !Zk is obtained by the decomposition of A0k as
+
+in Table 5 (top) and using first (IV.4) and (IV.6) and then
+
+(III.5) and grouping Ak00
+
+(III.6). with Bk
+
+The message as in Table 6
+
+!Xk is obtained by (bottom) and using
+
+(VI.3) and (VI.4). (Zk0 is skipped.)
+
+mSinegAsuslgalaogrre:it!hTmUhkebDmyVe(IsIBsIaa.g1c)ekwa!naUdrdk0 (iIsIWIo.i2bth)t.aiFmnreoXdkmfartohnmdis
+
+V Xk the
+and
+
+if Ak is incoming
+from Xk ,
+
+the message Z0k is obtained by (II.8) and (II.10). The message Zk is obtained by the decomposition of Ak00 as in Table 5 (bottom) and using first (IV.1) and (IV.2) and then
+
+(III.1) and grouping A0k
+
+(III.2). The with CkÀ1 as
+
+message in Table 6
+
+ XkÀ1 (top)
+
+is obtained by and using (VI.1)
+
+and (VI.2). (Xk0À1 is skipped.)
+
+By combining Algorithm B either with its own forward version (if Ak is nonsingular for all k) or!with Algorithm C (if Ak is singular), we can get WXk ð¼ WXk þ WXk Þ as well as
+
+WXk mXk
+
+!
+¼W Xk
+
+!
+mXk
+
+þ
+
+WXk mXk
+
+(63)
+
+for all k. The estimate x^k ¼ mXk may then be obtained by
+
+solving (63) for mXk .
+
+aonf d!T/Yohkrem!caoYykmbrpeeuqrtuaeitdrieuoscnemodfotrVoeXtkehafefnocdro/t.omrIpnoufftaaoctuitot,pntuhotefmcmoeXsmksapagunetdsatVioXUknk,
+
+and the computation of Uk may be reduced to the
+
+computation message !Yk
+
+of may
+
+mUk0 and W~ Xk . Specifically, the output be extracted from the incoming message
+
+Yk and from VYk and mYk , and the latter two quantities are
+
+easily obtained from VXk and mXk by means of (II.5), (II.6),
+
+and (III.3), (III.4). The output message extracted from the incoming message !Uk
+
+andUkfrommayW~bUek
+
+and mUk , and the latter two quantities are easily obtained from W~ Xk and mUk0 [¼ mXk À mZ0k by (II.11)] by means of
+
+(II.12), (III.8), and (III.7).
+
+In the example of Section IV-A (FIR channel equaliza-
+
+tion), mUk and VUk may actually be read off directly from
+
+mX‘ and VX‘ , respectively, for any ‘, k À M ‘ k. In this
+
+case, computing VXk only every M steps suffices to compute
+
+all outgoing messages. These few computations of VXk
+
+are perhaps best carried
+
+!
+ðW Xk
+
+þ WXk ÞÀ1
+
+or
+
+VXk
+
+¼
+
+out directly according
+
+! À1
+ðV Xk
+
+þ
+
+WXk ÞÀ1.
+
+to
+
+VXk
+
+¼
+
+However, it is possible to compute VXk , WXk , and mXk
+
+(and thus also all outgoing messages) in a general linear
+
+state-space model without any matrix inversions (assuming
+
+that Uk and Yk are scalars):
+
+Algorithm EVAll Marginals and Output Messages by
+!
+Forw!ard–Backward Propagation: Forward pass: with mXk and V Xk according to Algorithm A. Backward pass: with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2.09256, Nato0. 26:,5J0u:1n1e U20T0C7fr|oPmrIoEEcEeeXpdloinreg. sReosftricttihones IaEppElyE. 1307
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Fig. 14. Unified version of Figs. 10 and 11 with additional variables to explain the algorithms of Section V-C.
+
+WXk mXk and WXk mXk according to Algorithm B, augmented by the simultaneous computation of VXk , mXk , and W~ Xk as
+
+follows. From by (II.5) and
+
+mXk0 and VXk0 , we (II.6). We then
+
+trivially obtain mXk obtain W~ Xk (from
+
+and VXk
+
+VXk and
+
+WXk ) by (I.2), and we also have W~ Zk0 by (II.12). We further
+
+obtain obtain
+
+WV~ZX0kk0À1b.yFi(nI.a4ll)y,aVnXdk0À1maZn0k dbmy X(k0ÀI.16a)r.eForbotmain(eIdII.b8y),(Iw.4e)
+
+and (I.6). The outgoing messages !Yk and/or Uk may be ob-
+
+tained as described.
+
+The following algorithm is a variation of Algorithm E
+that may be used for the example of Section IV-A (FIR
+channel equalization). [The algorithm assumes that Ak is singular and that A0k0 may be grouped with Bk as in Table 6 (bottom).]
+
+Algorithm FVAll Marginals and Output Messages by
+!
+Forw!ard–Backward Propagation: Forward pass: with mXk
+
+and V Xk according to Algorithm A. Backward pass: with
+
+WXk and WXk mXk according to Algorithm B, augmented by the simultaneous computation of VXk , mXk , and W~ Xk as
+
+fBoyllgorwosu.pFinrogmA0k0mwXk0itahnBdk
+
+VXk0 as
+
+, we trivially have mXk and VXk . in Table 6 (bottom), we obtain
+
+mZk and VZk as well as mUk and VUk by (VI.5) and (VI.6). We
+
+then obtain W~ Zk (from VZk and WZk ) by (I.2). We then compute W~ Xk0À1 and W~ m Xk0À1 Xk0À1 by (III.8) and (III.7), respectively. Finally, VXk0À1 and mXk0À1 are obtained by (I.4) and (I.6).
+
+The outgoing mUk , and !Uk .
+
+message
+
+Uk
+
+may
+
+be
+
+extracted
+
+from
+
+VUk ,
+
+More such algorithms seem possible and are worth exploring. For FIR channel equalization, the method described just before Algorithm E may be the most attractive.
+
+C. Wang/Poor Algorithm Factor graphs as in Fig. 10 and Fig. 11 give rise to yet
+another fundamental algorithm. The application of this algorithm to Fig. 11 (combined with the conversion from Gaussian to binary as described in Section V-D) is essentially equivalent to the algorithm by Wang and Poor in [48].
+
+We describe the algorithm in terms of Fig. 14, which
+
+subsumes Figs. 10 and 11. Note that Uk, 1 k K are real
+
+scalars, bk are real column vectors, and A is a real matrix. (We will assume that AHA is nonsingular, which means
+
+that the rank of A equals the number of its columns.) The
+
+column vectors Sk and Xk are defined as Sk ¼Á bkUk and Xk ¼Á Sk þ XkÀ1, respectively. Note also that X0 ¼ 0 and
+
+XK ¼ U.
+
+From the observation Y~ ¼ ~y and the incoming
+
+messages!at Uk ð1
+
+k
+
+KÞ
+
+(with
+
+scalar
+
+mean
+
+!
+mUk
+
+and
+
+variance V Uk ), we wish to compute the outgoing messages
+
+at Uk, i.e., the scalar means mUk and the variances V Uk . The pivotal quantity of the algorithm is W~ U which,
+
+according to (56), is defined as
+
+W~ U
+
+¼
+
+!
+ðV U
+
+þ
+
+V UÞÀ1:
+
+(64)
+
+(The actual computation of W~ U will be discussed in the following.) This quantity is useful here because, according to (II.12), it stays constant around a Bþ[ node. In particular, we have
+
+W~ Sk ¼ W~ U
+
+(65)
+
+for 0 k K. By means of (III.8), we then obtain W~ Uk , from which the variance of the outgoing messages is easily extracted
+
+V Uk
+
+¼
+
+W~
+
+À1 Uk
+
+À
+
+!
+V Uk
+
+¼
+
+À bkH
+
+W~
+
+U
+
+bk
+
+ÁÀ1
+
+!
+ÀV Uk
+
+:
+
+(66) (67)
+
+Note that bkHW~ Ubk is a scalar. Note also that, if bk ¼ ek as in Fig. 11, then bHk W~ Ubk is simply the kth diagonal element of W~ U.
+
+1308 PArutohocreizeddilicnegnssedoufsethlimeiteIdEtEoE: Y|oVnsoel.i9U5n,iNv.oD. o6w, Jnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+From (III.9), the mean of the outgoing messages is
+
+m Uk
+
+¼ ¼
+
+ÀW~bÀUkHkW1~bHkUWb~kUÁÀm1SbkHk
+
+W~
+
+U
+
+mSk
+
+(68) (69)
+
+which depends on both W~ U and mSk . The latter is easily obtained from (II.9), (II.10), and (III.2)
+
+m Sk
+
+¼ mU
+
+À
+
+XK ! mS‘
+
+þ
+
+!
+mSk
+
+‘¼1
+
+¼ mU
+
+À
+
+XK
+
+!
+b‘mU‘
+
+þ
+
+bk
+
+!
+mUk
+
+:
+
+‘¼1
+
+(70) (71)
+
+!
+But V Y ¼ 2I is known and V Y is straightforward to compute using (III.1) and (II.7)
+
+!
+VY
+
+¼
+
+!
+AVU
+
+AH
+
+!
+
+XK !
+
+¼A
+
+bk V Uk bHk AH
+
+k¼1
+
+¼
+
+XK ðAbk
+
+!
+ÞV Uk
+
+ðAbk
+
+ÞH
+
+:
+
+k¼1
+
+(80) (81) (82)
+
+So, evaluating (79) is a viable method to compute W~ U. An alternative method to compute W~ U goes as follows.
+First, we compute WU by (75) and then we recursively com-
+pute WXKÀ1 ; WXKÀ2 ; . . . ; WX0 using (IV.6). Then, we have
+
+Note that the first two terms on the right-hand side of (71) do not depend on k.
+The mean vector mU, which is used in (71), may be obtained as follows. Using (III.6), we have
+
+WUmU ¼ AHWY mY
+
+(72)
+
+¼ AHÀ2~y
+
+(73)
+
+and from (III.5), we have
+
+WU ¼ AHWY A
+
+(74)
+
+¼ À2AHA:
+
+(75)
+
+We thus obtain
+
+AHAmU ¼ AH~y
+
+(76)
+
+and
+
+mU ¼ ðAHAÞÀ1AH~y:
+
+(77)
+
+[In an actual implementation of the algorithm, solving (76) by means of, e.g., the Cholesky factorization of AHA is
+usually preferable to literally computing (77).] It remains to describe the computation of W~ U (¼ W~ Xk ,
+0 k K). We will actually describe two methods. The
+first method goes as follows. From (III.8), we have
+
+W~ U ¼ W~!X0
+
+À1
+
+¼ V X0 þ V X0
+
+¼
+
+V
+
+À1 X0
+
+¼ WX0 :
+
+(83) (84) (85) (86)
+
+D. Gaussian to Binary and Vice Versa
+
+Linear Gaussian models are often subsystems of larger
+
+models involving discrete variables. In digital communica-
+
+tions, for example, binary codes usually coexist with linear
+
+Gaussian channel models, cf. Figs. 9–11. In such cases, the
+
+conversion of messages from the Gaussian domain to the
+
+finite-alphabet domain and vice versa is an issue. Con-
+
+sider, for example, the situation in Fig. 15, where X is a
+
+fþ1; À1g-valued variable and Y is a real variable. The
+
+B¼[-node in Fig. 15 denotes the factor ðx À yÞ, which is
+
+a Kronecker delta in x and a Dirac delta in y.
+
+The conversion of a (Bsoft bit[) message !X
+
+Gaussian message is straightforward:
+
+!Y into a binary according to the
+
+sum-product rule, we have
+
+Z
+
+!XðxÞ ¼ !YðyÞðx À yÞdy
+
+(87)
+
+y
+
+¼ !Y ðxÞ:
+
+(88)
+
+W~ U ¼ AHW~ Y A
+
+¼
+
+AH
+
+!
+ðV Y
+
+þ
+
+V Y ÞÀ1A:
+
+(78) (79)
+
+Fig. 15. Conversion of (real scalar) Gaussian to binary ðfþ1; À1gÞ variables and vice versa.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,l2. 09256, Nato.062,:5J0u:n1e1 2U0T0C7fr|oPmrIoEEcEeeXdplionreg. sReosftrictthionesIaEppElyE. 1309
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+In the popular log-likelihood representation of soft-bit messages, we thus have
+
+!
+LX
+
+¼Á
+
+ln
+
+! X ðþ1Þ ! X ðÀ1Þ
+
+(89)
+
+¼
+
+!
+2mY
+
+=! Y2
+
+:
+
+(90)
+
+In the opposite direction, an obvious and standard approach is to match the mean and the variance
+
+mY ¼ mX
+
+(91)
+
+¼ Xðþ1Þ À XðÀ1Þ
+
+(92)
+
+Xðþ1Þ þ XðÀ1Þ
+
+and
+
+
+
+2 Y
+
+¼
+
+
+
+2 X
+
+(93)
+
+¼ 1 À mX2:
+
+(94)
+
+It should be noted, however, that (92) and (94) need not
+be optimal even for graphs without cycles. An alternative way to compute a Gaussian message Y is proposed in [18] and [49].
+
+VI. BEYOND GAUSSIANS
+We have seen in the previous section that, for continuous variables, working out the sum-product or max-product message computation rules for particular nodes/factors is not always trivial. In fact, literal implementation of these two basic algorithms is often infeasible when continuous variables are involved. Moreover, other algorithms may be of interest for several reasons, e.g., to yield better marginals or to guarantee convergence on graphs with cycles [14]–[21]. However, it appears that most useful algorithms for structured models with many variables can be put into message-passing form, and the factor graph approach helps us to mix and match different techniques.
+A key issue with all message-passing algorithms is the representation of messages for continuous variables. In some cases, a closed family of functions with a small number of parameters works nicely, the prime example being linear Gaussian models as in Section V. However, beyond the Gaussian case, this does not seem to happen often. (An interesting exception is [27], which uses a family of Tikhonov distributions.)
+In general, therefore, one has to resort to simplified messages for continuous variables.
+
+The following message types are widely applicable. 1) Quantization of continuous variables. This ap-
+proach is essentially limited to 1-D real variables. 2) Single point: the message ðxÞ is replaced by a
+single point x^, which may be viewed as a temporary or final decision on the value of the variable X. 3) Function value and derivative/gradient at a point selected by the receiving node [50], [51] (to be described in Section VII). 4) Gaussians (cf., Section V and Appendix I). 5) Gaussian mixtures. 6) List of samples: A probability density can be represented by a list of samples. This message type allows us to describe particle filters [52], [53] as message-passing algorithms (see, e.g, [35], [36], [38], [39], [54]–[56]). 7) Compound messages consist of the Bproduct[ of other message types. All these message types, and many different message computation rules, can coexist in large system models. The identification of suitable message types and message computation rules for particular applications remains a large area of research. Some illustrative examples will be given in the next two sections. With such Blocal[ approximations, and with the Bglobal[ approximation of allowing cycles in the factor graph, practical detection/estimation algorithms may be obtained for complex system models that cannot be handled by Boptimal[ methods. In the next two sections, we will illustrate the use of message computation rules beyond the sum-product and max-product rules by the following example. Assume that, in some linear state-space model (as in Fig. 8), one of the matrices (Ak, Bk, Ck) is not known. In this case, this matrix becomes a variable itself. For example, if Ck is unknown, but constant over time (i.e., Ck ¼ C), we obtain the factor graph of Fig. 16, which should be thought to be a part of some larger factor graph as, e.g., in Fig. 9. The key difficulty in such cases is the multiplier node. We will outline two approaches to deal with such cases: steepest descent and (a Blocal[ version of ) expectation maximization. However, more methods are known (e.g., particle methods), and better methods may yet be found. It should also be noted that the graph of Fig. 16 has cycles, which implies that message passing algorithms will be iterative. The convergence of such algorithms is not, in general, guaranteed, but robust (almost-sure) convergence is often observed in practice.
+VII. STEEPEST DESCENT AS MESSAGE PASSING
+The use of steepest descent as a Blocal[ method in factor graphs is illustrated in Fig. 17, which represents the global function f ðÞ ¼Á fAðÞfBðÞ. The variable Â is assumed to
+
+1310 PAruothcoreizeeddilincegnsseodfustehlime itIeEdEtoE: Y|oVnosle. i9U5,nNiv.o.D6o,wJnulnoaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+The functions fA and fB may be infeasible to represent, or to compute, in their entirety, but it may be easy to evaluate ðd=dÞðln fAðÞÞ (and likewise for fB) at any given point .
+One method to find a solution ^ of (96) is steepest descent. The message passing view of this method can be described as follows.
+1) An initial estimate ^ is broadcast to the nodes fA and fB. The node fA replies by sending
+
+d d
+
+ðln
+
+fA
+
+ðÞÞ
+¼^
+
+Fig. 16. Linear state-space model with unknown coefficient vector C.
+take values in R or in Rn. Fig. 17 may be a part of some bigger factor graph, and the nodes fA and fB may be summaries of (i.e., messages out of) subsystems/subgraphs.
+Suppose we wish to find
+
+and the node fB replies accordingly. 2) A new estimate ^ is computed as
+
+^new
+
+¼
+
+^old
+
+þ
+
+s
+
+Á
+
+d d
+
+ðln f ðÞÞ
+¼^old
+
+(100)
+
+max ¼Á arg max f ðÞ
+
+
+where s 2 R is a positive step-size parameter.
+
+(95)
+
+3) The procedure is iterated as one pleases.
+
+As always with message-passing algorithms, there is much
+
+by solving
+
+freedom in the scheduling of the individual operations. The application of this method to cases as in Fig. 16
+
+amounts to understanding its application to a multiplier
+
+d d
+
+ðln
+
+f
+
+ðÞÞ
+
+¼
+
+0:
+
+node as in Fig. 18. The coefficient (or coefficient vector/ (96) matrix) C in Fig. 16 takes the role of Â in Fig. 18.
+Due to the single-point message ^, the messages along
+
+Note that
+
+the X- and Y-edges work as if Â were known. In particular, if the incoming messages on these edges are Gaussians,
+
+then so are the outgoing messages.
+
+d d
+
+ðln
+
+f ðÞÞ
+
+¼
+
+f 0ðÞ f ðÞ
+
+As described earlier, the outgoing message along the (97) edge Â is the quantity
+
+¼
+
+fAðÞfB0 ðÞ þ fBðÞfA0 ðÞ fAðÞfBðÞ
+
+(98)
+
+¼
+
+d d
+
+ðln
+
+fBðÞÞ
+
+þ
+
+d d
+
+ðln
+
+fAðÞÞ:
+
+(99)
+
+d d
+
+ ln
+
+ÂðÞ ¼
+¼^
+
+ddÂÂððÞÞ¼^
+
+(101)
+
+Fig. 17. Steepest descent as message passing.
+
+Fig. 18. Multiplier node.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4,o2l.02965,aNt o0.26:5,0J:u1n1eU2T0C07fro|mPrIEoEcEeXepdloiren.gRseostrficttiohnse aIpEpEly.E 1311
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+where ÂðÞ is the sum-product (or max-product) message and
+
+ZZ
+
+ÂðÞ ¼
+
+!XðxÞYð yÞð y À xÞdx dy
+
+Zx y ¼ !XðxÞYðxÞdx:
+
+x
+
+(102)
+
+m~ ~ 2
+
+¼
+
+!
+mX ! X2
+
+þ
+
+^m Y
+
+
+
+2 Y
+
+:
+
+(112)
+
+(103) From (108), we finally obtain the outgoing gradient message (101) as
+
+The gradient message (101) can be evaluated in closed
+form, even in the vector/matrix case, if the incoming messages !X and Y are both Gaussians. For the sake of clarity, we now focus on the case where Â, X, and Y are all
+real-valued scalars. In this case, using
+
+!
+
+d d
+
+ Y ðxÞ
+
+¼
+
+d d
+
+ðconstÞ
+
+exp
+
+À
+
+ðx À mY
+
+!2
+
+
+
+2 Y
+
+Þ2
+
+¼ YðxÞ
+
+À
+
+x2
+
+
+
+2 Y
+
+þ
+
+xmY
+
+
+
+2 Y
+
+(104) (105)
+
+and (103), we can write (101) as
+
+ddÂÂððÞÞ¼^
+
+¼
+¼ ¼
+
+RRx1xY2!R!xEXX!ðp~ððxXxxÞRjÞð^xxÞdhÞ!dYXðXYð^ðmYðxxðÞÞYxxÞÀYÀdÞðx^^^dXxxY22xÞÞþdix¼: x^mY2Y
+
+ dx
+
+(106)
+(107) (108)
+
+d
+
+ ln
+
+d
+
+ÂðÞ ¼
+¼^
+
+mY
+
+
+
+2 Y
+
+Ep~ðxj^Þ½X
+
+À
+
+^
+
+
+
+2 Y
+
+Ep~ðxj^Þ½X2
+
+¼
+
+mY
+
+
+
+2 Y
+
+m~
+
+À
+
+^
+
+
+
+2 Y
+
+ð~2
+
+þ
+
+m~2Þ:
+
+(113) (114)
+
+VIII. EXPECTATION MAXIMIZATION AS MESSAGE PASSING
+Another classical method to deal with the estimation of coefficients like C in Fig. 16 is expectation maximization (EM) [57]–[59]. It turns out that EM can be put into message-passing form, where it essentially boils down to a message computation rule that differs from the sumproduct and max-product rules [60].
+For example, consider the factor graph of Fig. 19 with the single node/factor gðx; y; Þ (which should be considered as a part of some larger factor graph). Along the edge Â, we receive only the single-point message ^. The messages along the X- and Y-edges are the standard sum-product messages (computed under the assumption Â ¼ ^). The outgoing message along Â is not the sum-product message, but
+
+The expectation in (108) is with respect to the (local) probability density
+with
+
+p~ðxj^Þ
+
+¼Á /
+
+R
+x
+
+!XðxÞY ð^xÞ ! X ðxÞ  Y ð^xÞdx
+
+exp
+
+Àx2
+
+1 2! X2
+
+þ
+
+^2 !
+
+2
+
+
+
+2 Y
+
+þ
+
+x
+
+(109)
+
+!
+mX ! X2
+
+þ
+
+!! ^m Y
+
+
+
+2 Y
+
+(110)
+
+EMðÞ ¼ ehðÞ
+
+(115)
+
+hðÞ ¼Á Ep~ðx;yj^Þ½ln gðX; Y; Þ
+
+(116)
+
+which is a Gaussian density with mean m~ and variance ~2 given by
+
+1 ~2
+
+¼
+
+1 ! X2
+
+þ
+
+^2
+
+
+
+2 Y
+
+(111)
+
+Fig. 19. Messages corresponding to expectation maximization.
+
+1312 PAruothcoerizeeddilnicegnsseodfustehliemiIteEdEtoE: Y| oVnosl.e9i 5U,nNivo..D6o,wJunlnoead2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+where the expectation is with respect to the (local) probability density
+
+p~ðx; yj^Þ / gðx; y; ^Þ!XðxÞYðyÞ
+
+(117)
+
+based on the incoming sum-product messages !X and Y. For the justification of (115), (116), and the corresponding perspective on the EM algorithm, the reader is referred to [60] and [61]. The main point is that the message (115) is compatible with, and may be further processed by, the sum-product or max-product algorithms.
+One way to apply the general message computation rule (115), (116) to a multiplier node as in Fig. 16 is illustrated in Fig. 20. We assume that X and Â are real (column) vectors and Y is a real scalar (as in Fig. 16). Instead of defining gðx; y; Þ ¼ ðy À  TxÞ (which turns out not to work [61]), we define
+
+Z gðx; Þ ¼ ðy À TxÞYðyÞdy
+y
+
+(118)
+
+as indicated by the dashed box in Fig. 20. (It then follows
+that the expection in (116) is over X alone.) If the incoming messages !X and Y are Gaussian densities, the outgoing message EMðÞ turns out to be a Gaussian density with
+inverse covariance matrix
+
+WÂ
+
+¼
+
+VX
+
+þ mXmXT
+
+
+
+2 Y
+
+(119)
+
+and with mean mÂ given by
+
+W Â mÂ
+
+¼
+
+mX mY
+
+
+
+2 Y
+
+(120)
+
+(cf., [61]). The required sum-product marginals VX and mX may be obtained from the standard Gaussian rules (54),
+
+(55), (III.5), and (III.6), which yield
+
+VXÀ1
+
+¼
+
+WX
+
+¼
+
+!
+WX
+
+þ
+
+^^T
+
+=
+
+
+
+2 Y
+
+and
+
+WX mX
+
+¼
+
+!!
+W X mX
+
+þ
+
+^m Y
+
+=
+
+
+
+2 Y
+
+:
+
+(121) (122)
+
+By replacing the unwieldy sum-product message Â by the Gaussian message EM, we have thus achieved a
+completely Gaussian treatment of the multiplier node.
+
+IX. CONCLUSION
+The factor graph approach to signal processing involves the following steps.
+1) Choose a factor graph to represent the system model.
+2) Choose the message types and suitable message computation rules. Use and maintain tables of such computation rules.
+3) Choose a message update schedule. In this paper, we have elaborated on this approach with an emphasis on Gaussian message passing in cycle-free factor graphs of linear models, i.e., Kalman filtering and some of its ramifications. Tables of message computation rules for the building blocks of such models allow us to write down a variety of efficient algorithms without additional computations or derivations.
+Beyond the Gaussian case, the factor graph approach encourages and facilitates mixing and matching different algorithmic techniques, which we have illustrated by two different approaches to deal with multiplier nodes: steepest descent and Blocal[ expectation maximization.
+The identification of suitable message types and message computation rules for continuous variables remains a large area of research. However, even the currently available tools allow us to derive practical algorithms for a wide range of nontrivial problems. h
+APPENDIX I ON GAUSSIAN DISTRIBUTIONS, QUADRATIC FORMS, AND LMMSE ESTIMATION
+We briefly review some basic and well-known facts about Gaussian distributions, quadratic forms, and LMMSE estimation.
+Let F ¼ R or F ¼ C. A general Gaussian random (column) vector X ¼ ðX1; . . . ; XnÞT over F with mean vector m ¼ ðm1; . . . ; mnÞT 2 Fn can be written as
+
+Fig. 20. Gaussian message passing through a multiplier node using EM.
+
+X ¼ AU þ m
+
+(123)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNto0.26:5, 0Ju:1n1eU2T0C07fro| mPrIEoEcEeXepdloirne.gRseostfricttiohnes aIpEpElyE. 1313
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+where A is a nonsingular n Â n matrix over F and where U ¼ ðU1; . . . ; UnÞT consists of independent F-valued Gaussian random variables U1; . . . ; Un with mean zero and variance one. The covariance matrix of X is V ¼ AAH.
+The probability density of X is
+
+fX ðxÞ / eÀðxÀmÞHWðxÀmÞ / eÀðxHWxÀ2ReðxHWmÞÞ
+
+(124) (125)
+
+for W ¼ VÀ1 ¼ ðAÀ1ÞHAÀ1 and with  ¼ 1=2 in the real case ðF ¼ RÞ and  ¼ 1 in the complex case ðF ¼ CÞ. Conversely, any function of the form (124) with positive definite W may be obtained in this way with some suitable matrix A.
+Now, let Z be a Gaussian random (column) vector, which we partition as
+
+ Z¼ X
+Y
+
+(126)
+
+where X and Y are themselves (column) vectors. The density of Z is fZðzÞ / eÀqðx;yÞ with
+
+According to (129), E½XjY ¼ y is an affine ð¼ linear with offsetÞ function of the observation y. We thus have the following theorem.
+
+Theorem 2: For jointly Gaussian random variables or vectors X and Y, the MAP estimate of X from the observation Y ¼ y is an affine function of y and coincides both with the MMSE estimate and the LMMSE estimate.
+Ì
+Note that, in this theorem as well as in the following theorem, the BL[ in LMMSE must be understood as Baffine[ ð¼ linear with offsetÞ.
+
+Theorem 3 (LMMSE via Gaussian MAP Estimation): Let X
+
+and Y be random variables (or vectors) with arbitrary
+
+distributions but with finite means and with finite second-
+
+order moments. Then, the LMMSE estimate of X based on
+
+the observation Y ¼ y may be obtained by pretending that
+
+X and Y are jointly Gaussian (with their actual means and
+
+second-order moments) and forming the corresponding
+
+MAP estimate.
+
+Ì
+
+The proof follows from noting that, according to the
+
+orthogonality principle [47], the LMMSE estimate of X
+
+based on Y ¼ y depends only on the means and second-
+
+order moments.
+
+In a different direction, we also note the following fact.
+
+qðx;
+
+yÞ
+
+¼
+
+À ðx
+
+À
+
+mX ÞH ;
+
+ð
+
+y
+
+À
+
+mYÞH Á
+
+WX WYX
+
+
+
+
+
+WXY x À mX
+
+WY y À mY
+
+(127)
+
+with positive definite WX and WY and with WYX ¼ WXHY. For fixed y, considered as a function of x alone, (127)
+becomes
+
+Theorem 4 (Gaussian Max/Int Theorem): Let qðx; yÞ be a quadratic form as in (127) with WX positive definite. Then
+
+Z1 eÀqðx;yÞdx / max eÀqðx;yÞ
+x À1
+¼ eÀ minx qðx;yÞ:
+
+(130) (131)
+
+qðx;
+
+yÞ
+
+¼
+
+xH WX x À
+
+À
+
+À 2Re xHWX mX
+
+À
+
+WXÀ1
+
+WXY
+
+ðyÀ
+
+mY
+
+ÁÁ Þ
+
+þ const:
+
+(128)
+
+Ì
+Note that the theorem still holds if qðx; yÞ is replaced with qðx; yÞ for any positive real .
+Proof: We first note the following fact. If W is a positive definite matrix and
+
+Comparing this with (125) yields the following theorem.
+Theorem 1 (Gaussian Conditioning Theorem): If X and Y are jointly Gaussian with joint distribution / eÀqðx;yÞ as above, then conditioned on Y ¼ y (for any fixed y), X is Gaussian with mean
+
+q~ðxÞ ¼Á ðx À mÞHWðx À mÞ þ c ¼ xHWx À 2ReðxHWmÞ þ mHWm þ c
+then
+
+E½XjY ¼ y ¼ mX À WXÀ1WXY ð y À mY Þ
+
+(129)
+
+and covariance matrix WXÀ1.
+
+Ì
+
+Note that E½XjY ¼ y is both the MAP estimate and
+
+the MMSE estimate of X given the observation Y ¼ y.
+
+Z1
+
+Z1
+
+eÀq~ðxÞdx ¼ eÀc
+
+eÀðq~ðxÞÀcÞdx
+
+À1
+
+À1
+
+Z1
+
+¼ eÀc
+
+eÀðxÀmÞH W ðxÀmÞ dx
+
+À1
+
+(132) (133)
+(134) (135)
+
+1314 PAruothcoerizeeddilincegnsseodfustehlime itIeEdEtoE: Y|oVnosle. i9U5,nNivo. .D6o,wJnulnoead2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Z1
+
+¼ eÀc
+
+eÀxH Wx dx
+
+À1
+
+Z1
+
+¼ eÀ minx q~ðxÞ
+
+eÀxH Wx dx:
+
+À1
+
+(136) (137)
+
+Now consider (127) as a function of x with parameter y, as in (128). This function is of the form (133) with WX taking the role of W. It thus follows from (137) that
+
+Z1
+
+Z1
+
+eÀqðx;yÞdx ¼ eÀ minx qðx;yÞ
+
+eÀxH WX x dx:
+
+À1
+
+À1
+
+(138)
+
+But the integral on the right-hand side does not depend
+
+on y, which proves (131).
+
+h
+
+The minimization in (131) is given by the following
+
+theorem.
+
+and with the scalar c ¼ ða À bÞHAðA þ BÞ#Bða À bÞ:
+
+(145)
+
+Ì The verification of (142) and (143) is straightforward. A proof of (144) and (145) may be found in [33].
+APPENDIX II PROOFS OF TABLES 1–6
+Proof of (I.1): From (56) and (54), we have
+
+W~
+
+À1 X
+
+!
+¼ VX
+
+þ
+
+VX
+
+!
+
+!
+
+¼ V XðWX þ WXÞV X
+
+!
+¼ V XWX V X
+
+(146) (147) (148)
+
+Theorem 5 (Quadratic-Form Minimization): Let qðx; yÞ be defined as in (127). Then
+
+and thus
+
+min
+x
+
+qðx;
+
+yÞ ¼ ð
+
+y
+
+À
+
+mY ÞHÀWY
+
+À
+
+WXY
+
+WXÀ1
+
+WXY
+
+Á ð
+
+y
+
+À
+
+mY Þ:
+
+(139)
+
+W~ X
+
+¼
+
+ðV
+
+X
+
+WX
+
+!
+VX
+
+ÞÀ1
+
+!
+¼ WXVXWX:
+
+(149) (150)
+
+Ì This may be proved by noting from (128) or (129) that
+
+arg min qðx; yÞ ¼ mX À WXÀ1WXY ð y À mY Þ:
+x
+
+(140)
+
+Plugging this into (127) yields (139). Finally, we also have the following fact.
+
+Proof of (I.2): From (150) and (54), we have
+
+W~ X
+
+¼
+
+!
+W X VX ðWX
+
+À
+
+!
+WXÞ
+
+!
+
+!!
+
+¼ WX À WXVXWX:
+
+(151) (152)
+
+Theorem 6 (Sum of Quadratic Forms): Let both A and B be positive semi-definite matrices. Then
+ðx À aÞHAðx À aÞ þ ðx À bÞHBðx À bÞ ¼ xHWx À 2ReðxHWmÞ þ mHWm þ c (141)
+
+Proof of (I.3) and (I.4): Are analogous to the proofs of (I.1) and (I.2), respectively.
+Proof of (I.5): Follows from multiplying both sides of (55) by VX.
+Proof of (I.6): Using (I.4), we have
+
+with W ¼AþB
+
+(142)
+
+!!
+VX W X mX
+
+!
+¼ ðVX
+
+À
+
+!
+VX
+
+W~
+
+X
+
+!
+VX
+
+!
+ÞW
+
+X
+
+!
+mX
+
+¼
+
+!mX
+
+À
+
+!
+VX
+
+W~
+
+X
+
+!mX
+
+:
+
+(153) (154)
+
+Wm ¼ Aa þ Bb
+
+(143)
+
+m ¼ ðA þ BÞ#ðAa þ BbÞ
+
+(144) Inserting this into (I.5) yields (I.6).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNto0.26:5, 0Ju:1n1eU2T0C07fro| mPrIEoEcEeXepdloirne.gRseostfricttiohnes aIpEpElyE. 1315
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Proof of (II.1) and (II.3): From the sum-product rule, we immediately have
+
+ZZ
+
+!ZðzÞ ¼
+
+!XðxÞ!Yð yÞðx À zÞð y À zÞ dx dy
+
+xy
+¼ !XðzÞ!Y ðzÞ:
+
+(155) (156)
+
+Plugging in
+
+! X ðxÞ
+
+/
+
+eÀðxÀ!mX
+
+ÞH
+
+!
+W
+
+X
+
+ðxÀ!mX
+
+Þ
+
+(157)
+
+(and analogously for !Y) and then using Theorem 6 yields
+
+!ZðzÞ
+
+/
+
+eÀðzÀ!mZ
+
+ÞH
+
+!
+W
+
+Z
+
+ðzÀ!mZ
+
+Þ
+
+(158)
+
+!
+
+!!
+
+with WZ and WZmZ as in (II.1) and (II.3), respectively.
+
+Proof of (II.5) and (II.6): The proof follows from the
+
+fact that the marginals at all three edges coincide:
+
+and
+
+!
+
+!
+
+!
+
+V Y þ V Y ¼ V Y þ ðV X þ V ZÞ:
+
+(164)
+
+We thus have
+
+!
+
+!
+
+!
+
+VX þ VX ¼ VY þ VY ¼ VZ þ VZ
+
+(165)
+
+which by (56) implies (II.12). Proof of (III.1)–(III.4): By elementary probability
+theory. Proof of (III.5) and (III.6): By the sum-product rule,
+we have
+
+Z XðxÞ ¼ ðy À AxÞYðyÞdy
+y
+
+(166)
+
+¼ YðAxÞ
+
+/ eÀðAxÀmY ÞHWY ðAxÀmY Þ
+
+À
+
+Á
+
+/ eÀ xHAHWY AxÀ2ReðxHAHWY mY Þ
+
+(167) (168) (169)
+
+!XðsÞXðsÞ ¼ !XðsÞ!Y ðsÞZðsÞ ¼ !Y ðsÞY ðsÞ ¼ !ZðsÞZðsÞ:
+
+(159) (160) (161)
+
+Proof of (II.7) and (II.9): The computation of !Z amounts to closing the box in the factor graph of Fig. 21. In this figure, by elementary probability theory, the mean of Z is the sum of the means of X and Y, and the variance of Z is the sum of the variances of X and Y.
+Proof of (II.12): From (II.7), we have
+
+!
+
+!!
+
+VZ þ VZ ¼ ðVX þ VYÞ þ VZ
+
+(162)
+
+and from (II.8) we have
+
+and comparison with (125) completes the proof. Proof of (III.8): Using (I.2), (III.5), and (III.4),
+we have
+
+W~ X ¼ WX À WXVXWX ¼ AHWY A À AHWY AVXAHWY A ¼ AHðWY À WY VY WY ÞA ¼ AHW~ Y A:
+
+(170) (171) (172) (173)
+
+Proof of (III.7): Using (III.8) and (III.3), we have
+
+W~ XmX ¼ AHW~ Y AmX ¼ AHW~ Y mY :
+
+(174) (175)
+
+!
+
+!
+
+!
+
+VX þ VX ¼ VX þ ðVY þ VZÞ
+
+(163)
+
+Proof of (III.9): Using (I.2), (III.6), (III.5), and
+
+(III.4), we have
+
+W~ XmX ¼ ðWX À WXVXWXÞmX ¼ AHWY mY À AHWY AVXAHWY mY ¼ AHðWY À WY VY WY ÞmY ¼ AHW~ Y mY :
+
+(176) (177) (178) (179)
+
+Fig. 21. Proof of (II.7) and (II.9).
+
+We will now need the following well known fact.
+
+1316 PAruothcoerizeeddilnicegnsseodfustehlime itIeEdEtoE: Y| oVnosle. i9U5,nNivo. .D6o,wJnulnoead2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Theorem 7 (Matrix Inversion Lemma [47]): Assume that Using the Matrix Inversion Lemma (Theorem 7 above)
+
+the (real or complex) matrices A, B, C, D satisfy
+
+yields
+
+A ¼ BÀ1 þ CDÀ1CH
+
+(180)
+
+!
+WZ
+
+¼
+
+!
+WX
+
+À
+
+!!
+W X AðW Y
+
+þ
+
+AH
+
+!
+W
+
+X
+
+AÞÀ1
+
+AH
+
+!
+W
+
+X
+
+:
+
+(191)
+
+and assume that both B and D are positive definite. Then A is positive definite and
+
+AÀ1 ¼ B À BCðD þ CHBCÞÀ1CHB:
+
+(181)
+
+Ì Proof of (IV.2): By (II.1) and (III.5), we have
+
+!
+WZ
+
+¼
+
+!
+WX
+
+þ
+
+AHWY A:
+
+(182)
+
+Using the Matrix Inversion Lemma (Theorem 7 above) yields
+
+Proof of (IV.4): By (II.9) and (III.2). Proof of (IV.8): From (IV.4) and (IV.6), we have
+
+!!
+W Z mZ
+
+¼
+
+!
+W
+
+Z
+
+ð!mX
+
+þ
+
+!
+AmY
+
+Þ
+
+¼
+
+!
+ðW X
+
+À
+
+!
+W
+
+X
+
+AHAH
+
+!
+W
+
+X
+
+Þðm!X
+
+þ
+
+!
+AmY
+
+Þ
+
+¼
+
+!!
+W X mX
+
+þ
+
+!
+WXAH
+
+Á
+
+ðHÀ1
+
+!
+mY
+
+À
+
+AH
+
+!
+W
+
+X
+
+!
+mX
+
+À
+
+AH W!
+
+X
+
+!
+AmY
+
+Þ
+
+¼
+
+!!
+W X mX
+
+þ
+
+!
+W
+
+X
+
+!
+AHðW
+
+Y
+
+!
+mY
+
+À
+
+AH
+
+!
+W
+
+X
+
+!
+mX
+
+Þ:
+
+(192) (193)
+(194) (195)
+
+!
+VZ
+
+¼
+
+!
+VX
+
+À
+
+!
+VX
+
+AH
+
+ðV
+
+Y
+
+þ
+
+!
+AV X
+
+AH
+
+ÞÀ1A!V X
+
+:
+
+(183)
+
+Proof of (IV.1): By (II.3) and (III.6), we have
+
+Proof of Table 5 (Top): Let U? be the kernel of the surjective mapping ’ : x 7! Ax and let U be its orthogonal complement (in the space of x). Let x ¼ xU þ xU? be the decomposition of x into xU 2 U and xU? 2 U?. The condition y ¼ Ax is equivalent to the condition
+
+!
+mZ
+
+¼
+
+!
+W
+
+À1 Z
+
+!
+ðW
+
+X
+
+!
+mX
+
+þ
+
+AHWY mY Þ
+
+¼ !V Z!V ÀX 1ð!mX
+
+þ
+
+!
+VX
+
+AH
+
+W
+
+Y
+
+mY
+
+Þ:
+
+Inserting (183) yields
+
+(184)
+
+xU ¼ A#y:
+
+(196)
+
+(185) We next note that U is spanned by the columns of AH and that U? is spanned by the columns of BH. It follows that
+(196) is equivalent to
+
+!
+mZ
+
+¼
+
+ I
+
+À
+
+!
+VX
+
+AH
+
+ð
+
+V
+
+Y
+
+þ
+
+!
+AV X
+
+AH
+
+ÞÀ1
+
+ A ð!mX
+
+þ
+
+!
+VX
+
+AH
+
+W
+
+Y
+
+mY
+
+Þ
+
+¼
+
+!
+mX
+
+þ
+
+!
+VX
+
+AH W
+
+Y
+
+mY
+
+À
+
+!
+VX
+
+AH
+
+Á
+
+ðV Y
+
+þ
+
+!
+AV X
+
+AH
+
+ÞÀ1
+
+Að!mX
+
+þ
+
+!
+VX
+
+AH
+
+W
+
+Y
+
+mY
+
+Þ
+
+(186) (187)
+
+¼
+
+!
+mX
+
+þ
+
+!
+VX
+
+Á ðVY þ
+
+AHðV Y
+
+þ
+
+!
+AVX
+
+AH ÞÀ1
+
+!
+AV X
+
+AH
+
+ÞW
+
+Y
+
+mY
+
+À
+
+ðAm!X
+
+þ
+
+!
+AVX
+
+AH
+
+W
+
+Y
+
+mY
+
+ Þ
+
+¼
+
+!
+mX
+
+þ
+
+!
+VX
+
+AH
+
+ðV
+
+Y
+
+þ
+
+!
+AVX
+
+AH ÞÀ1 ðmY
+
+À
+
+!
+AmX
+
+Þ:
+
+(188) (189)
+
+x ¼ A#y þ BHðarbitraryÞ:
+
+(197)
+
+Proof of Table 5 (Bottom): Let U be the image of the injective mapping ’ : x 7! Ax and let U? be its orthogonal
+complement (in the space of y). Let y ¼ yU þ yU? be the decomposition of y into yU 2 U and yU? 2 U?. The condition y ¼ Ax is equivalent to the two conditions
+
+x ¼ A#y
+
+(198)
+
+and
+
+Proof of (IV.6): By (II.7) and (III.1), we have
+
+!
+VZ
+
+¼
+
+!
+VX
+
+þ
+
+!
+AVY
+
+AH
+
+:
+
+(190)
+
+yU? ¼ 0:
+
+(199)
+
+We next note that U? is the kernel of the mapping y ! 7 AHy and U is the kernel of the mapping y 7! BHy. It follows that (199) is equivalent to BHy ¼ 0.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNt o0.26:5, 0Ju:1n1eU2T0C07fro| mPrIEoEcEeXepdloirne.gRseostfricttiohnes aIpEpElyE. 1317
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Proofs of (VI.1) and (VI.2): Are immediate from (III.2) and (III.1), respectively.
+Proofs of (VI.3) and (VI.4): Are immediate from (III.6) and (III.5), respectively.
+Proofs of (VI.5) and (VI.6): Are immediate from (III.2) and (III.1), respectively.
+
+The Fourier transform of a 1-D real zero-mean Gaussian density is
+
+
+
+
+
+F pffi1ffiffiffiffi eÀx2=22 ¼ eÀ!22=2:
+
+2
+
+(204)
+
+APPENDIX III FOURIER TRANSFORM ON FACTOR GRAPHS
+We review some key results of Forney [43] and adapt
+(and simplify) them to the setting of the present paper. The Fourier transform of a function f : Rn ! C is the
+function f~ : Rn ! C given by
+
+ZZ f~ð!1; . . . ; !nÞ ¼ . . . f ðx1; . . . ; xnÞeÀi!1x1 . . .
+
+x1
+
+xn
+
+eÀi!nxn dx1 . . . dxn:
+
+(200)
+
+With x ¼ ðx1; . . . ; xnÞT and ! ¼ ð!1; . . . ; !nÞT, this may be written as
+
+Z f~ð!Þ ¼ f ðxÞeÀi!Txdx:
+x
+
+(201)
+
+The Fourier transform of a general n-dimensional real Gaussian density with covariance matrix V ¼ WÀ1 is
+
+
+
+
+
+F 
+eÀ21ðxÀmÞTWðxÀmÞ ¼ eÀi!T meÀ21!TV!
+
+(205)
+
+(where 
+ is the required scale factor to normalize the density).
+The Fourier transform may be carried out directly in a factor graph as follows. Consider a factor graph for (some factorization of) f ðx1; . . . ; xnÞ such that x1; . . . ; xk are represented by half-edges and xkþ1; . . . ; xn are represented by full edges. Create a new factor graph (with the same topology) by the following procedure.
+1) Replace each variable x‘ by its dual (Bfrequency[) variable !‘.
+2) Replace each node/factor by its Fourier transform. 3) For each full edge, introduce a minus sign into one
+of the adjacent factors. The resulting factor graph will be called a dual factor graph of the original factor graph. (The dual factor graph is not unique due to the sign issue in step 3.)
+
+The function f may be recovered from its Fourier transform f~ by means of the inverse Fourier transform
+
+Z f ðxÞ ¼ ð2ÞÀn f~ð!Þei!Txd!:
+x
+
+(202)
+
+Theorem 8 (Fourier Transform on Factor Graph): Let f~0ð!1; . . . ; !nÞ be the global function of a dual factor graph. Then, the Fourier transform of
+
+ZZ . . . f ðx1; . . . ; xnÞdxkþ1 . . . dxn
+
+xkþ1
+
+xn
+
+(206)
+
+is
+
+We will use both F ð f Þ and f~ (as above) to denote the Fourier transform of f .
+It is immediate from (200) that
+
+0Z F@
+
+1 f ðx1; x2; x3Þdx3A ¼ f~ð!1; !2; !3Þ!3¼0:
+
+x3
+
+(203)
+
+ZZ . . . f~0ð!1; . . . ; !nÞd!kþ1 . . . d!n
+
+!kþ1
+
+!n
+
+(207)
+
+(up to a scale factor).
+
+Ì
+
+Note that the factor graph is allowed to have cycles. Note also that f~0 is not the Fourier transform of f ; only the
+
+half-edge marginals (206) and (207) are a Fourier pair (up
+
+to a scale factor).
+
+Example 1: Let
+
+In words: marginalization in one domain corresponds to zeroing in the other domain.
+
+f ðx1; x2; x3Þ ¼ g1ðx1; x3Þg2ðx2; x3Þ
+
+(208)
+
+1318 PAruothcoerizeeddilnicegnsseodfustehlime itIeEdEtoE: Y| oVnosle. i9U5,nNivo. .D6o,wJnulnoead2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+Fig. 22. Factor graph of (208).
+
+Fig. 24. Factor graph of (210), which is equivalent to Fig. 23.
+
+the factor graph of which is shown in Fig. 22. Then
+
+f~0ð!1; !2; !3Þ ¼ g~Z1ð!1; !3Þg~2ð!2; À!3Þ ¼ g~1ð!1; !3Þg~2ð!2; !4Þð!3 þ !4Þd!4
+!4
+
+(209) (210)
+
+as shown in Figs. 23 and 24. Theorem 8 now claims that the Fourier transform of
+
+Z f ðx1; x2Þ ¼Á f ðx1; x2; x3Þdx3
+x3
+
+(211)
+
+is
+
+Z f~ð!1; !2Þ / f~0ð!1; !2; !3Þd!3
+!3
+
+(212)
+
+the Bclosed-box[ global function in Figs. 23 and 24. Ì An outline of the proof of Theorem 8 goes as follows.
+We first note that the Fourier transform of
+
+f ðx1; x2; x5Þ ¼Á g1ðx1; x5Þg2ðx2; x5Þ
+
+(213)
+
+(see Figs. 25 and 26), which may be verified by direct calculation of the inverse Fourier transform of (214). Inserting !5 ¼ 0 changes Fig. 26 into Fig. 24 and Fig. 25 into Fig. 22 [the latter by (203)]. We have thus established that the Fourier transform of Fig. 22 is indeed Fig. 24. But the proof of this simple example is easily generalized to general factor graphs by treating all full edges simultaneously like the edge x3 in Fig. 22 and using the corresponding generalization of (214).
+We will use the following generalization of the Dirac delta. If V is a subspace of Rn, we define V by V ðxÞ ¼ 0 for x 62 V and
+
+Z
+
+Z
+
+f ðxÞV ðxÞdx ¼Á f ðxÞdx
+
+x
+
+V
+
+(215)
+
+for any integrable function f . For dimðVÞ ¼ 0, we define V ðxÞ ¼ ðxÞ, the Dirac delta.
+Theorem 9 (Fourier Transform of Linear Constraints): Let V be a subspace of Rn and let V? be its orthogonal complement. Then
+
+F ðV ðxÞÞ / V? ð!Þ:
+
+(216)
+
+is the convolution
+
+ZZ
+
+f~ð!1;
+
+!2;
+
+!5Þ
+
+¼
+
+1 2
+
+g~1ð!1; !3Þg~2ð!2; !4Þ
+
+!3 !4
+
+Á ð!3 þ !4 À !5Þd!4d!5
+
+(214)
+
+Ì
+Proof: The main idea is to write V as a limit of a Gaussian distribution. Let k be the dimension of V. Let A0 be an n Â k matrix whose columns form an orthonormal basis of V, and let A1 be an n Â ðn À kÞ matrix whose columns form an orthonormal basis of V?. Note that kA0Txk is the norm of the projection of x into V and kAT1 xk is the
+
+Fig. 23. Factor graph of (209), a dual factor graph of Fig. 22.
+
+Fig. 25. Factor graph of (213).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNto0.26:,50Ju:1n1eU2T0C07fr|omPrIEoEcEeXepdloirne.gRs eostfricttiohnes aIpEpElyE. 1319
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+is the sum constraint
+
+V? ð!Þ ¼ ð!1 þ !2 þ !3Þ
+
+(227)
+
+Fig. 26. Fourier transform of Fig. 25 (up to scale factor).
+
+norm of the projection of x into V?. Let A ¼ ðA0; A1Þ, which is a nonsingular n Â n matrix. Then
+
+V ðxÞ
+
+/
+
+lim
+!1
+
+eÀ2kAT1 xk2
+
+¼ lim e k À21 AT0 xk2 k À2 AT1 xk2
+!1
+
+¼ lim eÀ21xT A0A0T xÀ2xT A1A1T x
+!1
+
+¼ lim eÀ21xTADATx
+!1
+
+(217) (218) (219) (220)
+
+(up to a scale factor).
+
+Ì
+
+With the Fourier transform of this example, applying
+
+Theorem 8 to Fig. 25 yields Fig. 26.
+
+Example 3 (Matrix Multiplication): Let A be a real matrix (without any conditions on rank or aspect ratio). Let
+
+V
+
+¼
+
+nÀ xT1 ;
+
+xT2 ÁT:
+
+x1
+
+¼
+
+o Ax2
+
+(228)
+
+where x1 and x2 are column vectors of suitable dimensions. Then
+
+with
+
+D ¼Á diagð|1=fflfflfflfflfflffl;fflffl.{.z.fflffl;fflffl1fflffl=fflffl}; |ffl;fflffl.ffl{.z.ffl;fflfflffl}Þ:
+
+k times
+
+nÀk times
+
+Analoguously
+
+V? ðxÞ
+
+/
+
+lim eÀ21xT ADÀ1AT x
+!1
+
+¼ lim eÀ21xT ðADATÞÀ1x
+!1
+
+V?
+
+¼
+
+nÀ x1T ;
+
+xT2 ÁT:
+
+x2
+
+¼
+
+o ÀATx1 :
+
+(221)
+
+It follows that the Fourier transform of
+
+(222) (223) is
+
+V ðxÞ ¼ ðx1 À Ax2Þ
+
+(229) (230)
+
+where the last step follows from noting that ATA ¼ I and thus AÀ1 ¼ AT. The theorem then follows from noting that
+
+(220) and (223) are a Fourier pair (up to a scale factor), as
+
+is obvious from (205).
+
+h
+
+Example 2 (Equality Constraint): Let
+
+V
+
+¼
+
+È ðx1;
+
+x2;
+
+x3ÞT
+
+2
+
+R3
+
+:
+
+x1
+
+¼
+
+x2
+
+¼
+
+É x3 :
+
+(224)
+
+Then
+
+V?
+
+¼
+
+È ðx1;
+
+x2;
+
+x3ÞT
+
+2
+
+R3
+
+:
+
+x1
+
+þ
+
+x2
+
+þ
+
+x3
+
+¼
+
+É 0:
+
+(225)
+
+It follows that the Fourier transform of
+
+V ðxÞ ¼ ðx1 À x2Þðx2 À x3Þ
+
+(226)
+
+V? ð!Þ ¼ ð!2 þ AT!1Þ
+
+(231)
+
+(up to a scale factor).
+
+Ì
+
+It follows from Examples 2 and 3 that the two factor
+
+graphs in each of the Tables 2 and 4–6 are Fourier pairs
+
+(up to a scale factor).
+
+Acknowledgment
+The material of this paper has grown over many years into its present shape. The first author wishes to particularly acknowledge the enjoyable collaborations with N. Wiberg and with P. O. Vontobel. Both the first and the last author are immensely grateful to G. D. Forney, Jr., for his continued encouragement and feedback. S. Korl and H.-A. Loeliger are indebted to A. Lindgren for many helpful discussions. L. Ping wishes to acknowledge helpful discussions with Q. Guo.
+
+1320 PAruothcoreizeedilincegnseod fustehlimeitIeEd EtoE: Y|oVnosle.i9U5n, iNv.oD. 6o,wJnulonaed2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+REFERENCES
+[1] B. J. Frey, F. R. Kschischang, H.-A. Loeliger, and N. Wiberg, BFactor graphs and algorithms,[ in Proc. 35th Allerton Conf. Communications, Control, and Computing, Monticello, IL, Sep. 29–Oct. 1, 1997, pp. 666–680.
+[2] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, BFactor graphs and the sum-product algorithm,[ IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[3] H.-A. Loeliger, BAn introduction to factor graphs,[ IEEE Signal Proc. Mag., pp. 28–41, Jan. 2004.
+[4] M. I. Jordan, BGraphical models,[ Statistical Sci., vol. 19, no. 1, pp. 140–155, 2004.
+[5] M. Jordan, Ed., Learning in Graphical Models. New York: Kluwer, 1998.
+[6] R. G. Cowell, A. P. Dawid, S. L. Lauritzen, and D. J. Spiegelhalter, Probabilistic Networks and Expert Systems. New York: Springer, 1999.
+[7] C. M. Bishop, Pattern Recognition and Machine Learning. New York: Springer, 2006.
+[8] J. Pearl, Probabilistic Reasoning in Intelligent Systems, 2nd ed. San Mateo, CA: Morgan Kaufmann, 1988.
+[9] R. Kindermann and J. L. Snell, Markov Random Fields and Their Applications. Providence, RI: Amer. Math. Soc., 1980.
+[10] S. M. Aji and R. J. McEliece, BThe generalized distributive law,[ IEEE Trans. Inform. Theory, vol. 46, no. 2, pp. 325–343, Mar. 2000.
+[11] S. M. Aji and R. J. McEliece, BThe generalized distributive law and free energy minimization,[ in Proc. 39th Allerton Conf. Communications, Control, and Computing, Monticello, IL, Oct. 2001, pp. 672–681.
+[12] Y. Weiss and W. T. Freeman, BOn the optimality of the max-product belief propagation algorithm in arbitrary graphs,[ IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 736–744, Feb. 2001.
+[13] P. Rusmevichientong and B. Van Roy, BAn analysis of belief propagation on the turbo decoding graph with Gaussian densities,[ IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 745–765, Feb. 2001.
+[14] J. S. Yedidia, W. T. Freeman, and Y. Weiss, BGeneralized belief propagation,[ Advances Neural Information Processing Systems (NIPS), vol. 13, pp. 689–695, Dec. 2000.
+[15] J. Feldman, D. Karger, and M. J. Wainwright, BLP decoding,[ in Proc. 41st Allerton Conf. Communication, Control, and Computing, Monticello, IL, Oct. 1–3, 2003.
+[16] J. S. Yedidia, W. T. Freeman, and Y. Weiss, BConstructing free-energy approximations and generalized belief propagation algorithms,[ IEEE Trans. Inform. Theory, vol. 51, no. 7, pp. 2282–2312, Jul. 2005.
+[17] V. Kolmogorov and M. J. Wainwright, BOn the optimality of tree-reweighted max-product message-passing,[ in Proc. 21st Conf. Uncertainty in Artificial Intelligence, Edinburgh, Scotland, Jul. 2005.
+[18] T. P. Minka, BA family of algorithms for approximate Bayesian inference,[ Ph.D. dissertation, Massachusetts Inst. Technology (MIT), Cambridge, 2001.
+[19] T. P. Minka, BExpectation propagation for approximate Bayesian inference,[ in Proc. 17th Annu. Conf. Uncertainty in Artificial Intelligence (UAI-01), 2001, vol. 17, pp. 362–369.
+[20] J. Winn and C. Bishop, BVariational message passing,[ J. Machine Learning Res., vol. 6, pp. 661–694, 2005.
+
+[21] M. Chertkov and V. Y. Chernyak, BLoop series for discrete statistical models on graphs,[ J. Statistical Mechanics: Theory and Experiment, Jun. 2006.
+[22] N. Wiberg, BCodes and decoding on general graphs,[ Ph.D. dissertation 440, Univ. Linko¨ping, Linko¨ping, Sweden, 1996, Linko¨ping Studies in Science and Technology.
+[23] A. P. Worthen and W. E. Stark, BUnified design of iterative receivers using factor graphs,[ IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 843–849, Feb. 2001.
+[24] J. Boutros and G. Caire, BIterative multiuser joint decoding: Unified framework and asymptotic analysis,[ IEEE Trans. Inform. Theory, vol. 48, no. 7, pp. 1772–1793, Jul. 2002.
+[25] E. Biglieri, A. Nordio, and G. Taricco, BIterative receivers for coded MIMO signaling,[ Wirel. Commun. Mob. Comput., vol. 4, no. 7, pp. 697–710, Nov. 2004.
+[26] G. Colavolpe and G. Germi, BOn the application of factor graphs and the sum-product algorithm to ISI channels,[ IEEE Trans. Commun., vol. 53, no. 5, pp. 818–825, May 2005.
+[27] G. Colavolpe, A. Barbieri, and G. Caire, BAlgorithms for iterative decoding in the presence of strong phase noise,[ IEEE J. Select. Areas Commun., vol. 23, no. 9, pp. 1748–1757, Sep. 2005.
+[28] H. Niu, M. Shen, J. A. Ritcey, and H. Liu, BA factor graph approach to iterative channel estimation and LDPC decoding over fading channels,[ IEEE Trans. Wireless Commun., vol. 4, no. 4, pp. 1345–1350, Jul. 2005.
+[29] A. W. Eckford, BThe factor graph EM algorithm: Applications for LDPC codes,[ in Proc. 6th Workshop Signal Proc. Advances in Wireless Communications, Jun. 5–8, 2005, pp. 910–914.
+[30] Q. Guo, L. Ping, and H.-A. Loeliger, BTurbo equalization based on factor graphs,[ in Proc. IEEE Int. Symp. Information Theory, Adelaide, Australia, Sep. 4–9, 2005, pp. 2021–2025.
+[31] F. Simoens and M. Moeneclaey, BCode-aided estimation and detection on time-varying correlated MIMO channels: A factor graph approach,[ EURASIP J. Applied Signal Processing, vol. 2006, no. 1, pp. 1–11, 2006.
+[32] R. Drost and A. C. Singer, BFactor graph algorithms for equalization,[ IEEE Trans. Signal Processing, to appear.
+[33] H.-A. Loeliger, BLeast squares and Kalman filtering on Forney graphs,[ in Codes, Graphs, and Systems, R. E. Blahut and R. Koetter, Eds. New York: Kluwer, 2002, pp. 113–135, (Festschrift in Honor of David Forney on the Occasion of his 60th Birthday).
+[34] H.-A. Loeliger, J. Dauwels, V. M. Koch, and S. Korl, BSignal processing with factor graphs: Examples,[ in Proc. First Int. Symp. Control, Communications and Signal Processing, Hammamet, Tunisia, Mar. 21–24, 2004, pp. 571–574.
+[35] S. Korl, H.-A. Loeliger, and A. G. Lindgren, BAR model parameter estimation: From factor graphs to algorithms,[ in Proc. IEEE Int. Conf. Acoustics, Speech, and Signal Processing, Montreal, Canada, May 17–21, 2004, vol. V, pp. 509–512.
+[36] J. Dauwels and H.-A. Loeliger, BPhase estimation by message passing,[ in Proc. IEEE Int. Conf. Communications, Paris, France, Jun. 20–24, 2004, pp. 523–527.
+[37] V. M. Koch and H.-A. Loeliger, BEMG signal decomposition by loopy belief propagation,[ in Proc. IEEE Int. Conf. Acoustics, Speech, and Signal Processing, Philadelphia, PA, Mar. 18–23, 2005, pp. 397–400.
+
+[38] S. Korl, BA factor graph approach to signal modelling, system identification and filtering,[ Ph.D. dissertation 16170, ETH Zurich, Switzerland, 2005.
+[39] J. Dauwels, BOn graphical models for communications and machine learning: Algorithms, bounds, and analog implementation,[ Ph.D. dissertation 16365, ETH Zurich, Switzerland, 2005.
+[40] Y. Mao, F. R. Kschischang, B. Li, and S. Pasupathy, BA factor graph approach to link loss monitoring in wireless sensor networks,[ IEEE J. Select. Areas Commun., vol. 23, no. 4, pp. 820–829, Apr. 2005.
+[41] B. J. Frey, N. Mohammad, Q. D. Morris, W. Zhang, M. D. Robinson, S. Mnaimneh, R. Chang, Q. Pan, E. Sat, J. Rossant, B. G. Bruneau, J. E. Aubin, B. J. Blencowe, and T. R. Hughes, BGenome-wide analysis of mouse transcripts using exon microarrays and factor graphs,[ Nature Genetics, vol. 37, no. 9, Sep. 2005.
+[42] B. J. Frey and D. Dueck, BClustering by passing messages between data points,[ Science, vol. 315, pp. 972–976, Feb. 16, 2007.
+[43] G. D. Forney, Jr., BCodes on graphs: Normal realizations,[ IEEE Trans. Inform. Theory, vol. 47, no. 2, pp. 520–548, Feb. 2001.
+[44] N. Wiberg, H.-A. Loeliger, and R. K¨otter, BCodes and iterative decoding on general graphs,[ Eur. Trans. Telecommun., vol. 6, pp. 513–525, Sep./Oct. 1995.
+[45] Y. Mao and F. R. Kschischang, BOn factor graphs and the Fourier transform,[ IEEE Trans. Inform. Theory, vol. 51, no. 5, pp. 1635–1649, May 2005.
+[46] S. Roweis and Z. Ghahramani, BA unifying review of linear Gaussian models,[ Neural Computation, vol. 11, no. 2, pp. 305–345, Feb. 1999.
+[47] S. Haykin, Adaptive Filter Theory, 3rd ed. Englewood Cliffs, NJ: Prentice Hall, 1996.
+[48] X. Wang and H. V. Poor, BIterative (turbo) soft interference cancellation and decoding for coded CDMA,[ IEEE Trans. Commun., vol. 47, pp. 1046–1061, Jul. 1999.
+[49] J. Hu, H.-A. Loeliger, J. Dauwels, and F. Kschischang, BA general computation rule for lossy summaries/messages with examples from equalization,[ in Proc. 44th Allerton Conf. Communication, Control, and Computing, Monticello, IL, Sep. 27–29, 2006.
+[50] H.-A. Loeliger, BSome remarks on factor graphs,[ in Proc. 3rd Int. Symp. Turbo Codes Related Topics, Brest, France, Sep. 1–5, 2003, pp. 111–115.
+[51] J. Dauwels, S. Korl, and H.-A. Loeliger, BSteepest descent on factor graphs,[ in Proc. IEEE Information Theory Workshop, Rotorua, New Zealand, Aug. 28–Sep. 1, 2005, pp. 42–46.
+[52] P. M. Djuric, J. H. Kotecha, J. Zhang, Y. Huang, T. Ghirmai, M. F. Bugallo, and J. Miguez, BParticle filtering,[ IEEE Signal Proc. Mag., vol. 20, pp. 19–38, Sep. 2003.
+[53] A. Doucet, J. F. G. de Freitas, and N. J. Gordon, Eds., Sequential Monte Carlo Methods in Practice. New York: SpringerVerlag, 2001.
+[54] M. Briers, A. Doucet, and S. S. Singh, BSequential auxiliary particle belief propagation,[ in Proc. 7th. Int. Conf. Information Fusion, 2005.
+[55] F. Hamze and N. de Freitas, BHot coupling: A particle approach to inference and normalization on pairwise undirected graphs,[ in Advances in Neural Information Processing Systems 18, Y. Weiss, B. Sch¨olkopf,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 2V4o,2l.09256, aNto0.26:5, 0Ju:1n1eU2T0C07fro| mPrIEoEcEeXepdloirne.gRseostfricttiohnes aIpEpElyE. 1321
+
+Loeliger et al.: Factor Graph Approach to Model-Based Signal Processing
+
+and J. Platt, Eds. Cambridge: MIT Press, 2006, pp. 491–498.
+[56] J. Dauwels, S. Korl, and H.-A. Loeliger, BParticle methods as message passing,[ in Proc. 2006 IEEE Int. Symp. Information Theory, Seattle, WA, Jul. 9–14, 2006, pp. 2052–2056.
+[57] A. P. Dempster, N. M. Laird, and D. B. Rubin, BMaximum likelihood from incomplete data via the EM algorithm,[ J. Roy. Statistical Soc., ser. B, vol. 39, pp. 1–38, 1977.
+[58] P. Stoica and Y. Sel´en, BCyclic minimizers, majorization techniques, and the expectationmaximization algorithm: A refresher,[
+
+IEEE Signal Proc. Mag., pp. 112–114, Jan. 2004.
+[59] S. Lauritzen, BThe EM algorithm for graphical association models with missing data,[ Computational Statistics and Data Analysis, vol. 19, pp. 191–201, 1995.
+[60] J. Dauwels, S. Korl, and H.-A. Loeliger, BExpectation maximization as message passing,[ in Proc. 2005 IEEE Int. Symp. Information Theory, Adelaide, Australia, Sep. 4–9, 2005, pp. 583–586.
+[61] J. Dauwels, A. W. Eckford, S. Korl, and H.-A. Loeliger, Expectation maximization in factor graphs, in preparation.
+
+[62] P. O. Vontobel, BKalman filters, factor graphs, and electrical networks,[ ISI-ITET, ETH Zurich, Internal Rep. INT/200202, Apr. 2002.
+[63] P. O. Vontobel and H.-A. Loeliger, BOn factor graphs and electrical networks,[ in Mathematical Systems Theory in Biology, Communication, Computation, and Finance, J. Rosenthal and D. S. Gilliam, Eds. New York: Springer Verlag, 2003, pp. 469–492.
+
+ABOUT THE AUTHORS
+Hans-Andrea Loeliger (Fellow, IEEE) received the diploma in electrical engineering in 1985 and Ph.D. degree in 1992, both from ETH Zurich, Switzerland.
+From 1992 to 1995, he was with Linko¨ping University, Sweden. From 1995 to 2000, he was with Endora Tech AG, Basel, Switzerland, of which he is a Cofounder. Since 2000, he has been a Professor at ETH Zurich. His research interests lie in the broad areas of signal processing, information theory, communications, and electronics.
+Justin Dauwels (Member, IEEE) received the diploma (M.Sc. degree) in engineering physics from the University of Gent, Belgium, in 2000, and the Ph.D. degree in electrical engineering from ETH Zurich, Switzerland, in 2005.
+He is currently a Research Scientist at the Amari Research Unit of the RIKEN Brain Science Institute, Japan. His broader research interests include signal processing, machine learning, digital communications, applied information theory, and computational neuroscience.
+Dr. Dauwels is a recipient of the ICASSP2006 Student Paper Award, a JSPS Fellowship in 2006, and the Henri-Benedictus Fellowship of the BAEF and the King Baudouin Foundation in 2007.
+
+Li Ping (Senior Member, IEEE) received the Ph.D. degree from Glasgow University, U.K., in 1990.
+He lectured at the Department of Electronic Engineering, Melbourne University, from 1990 to 1992, and worked as a member of research staff at Telecom Australia Research Laboratories from 1993 to 1995. He has been with the Department of Electronic Engineering, City University of Hong Kong, since January 1996, where he is now a Chair Professor. His research interests are mixed analog/digital circuits, communications systems, and coding theory.
+Dr. Ping was awarded a British Telecom-Royal Society Fellowship in 1986, the IEE J. J. Thomson premium in 1993, and a Croucher Senior Research Fellowship in 2005.
+
+Junli Hu (Member, IEEE) received the B.Sc. degree from Shanghai Jiantong University, in 1992, and the diploma from ETH Zurich, Switzerland, in 1998, both in electrical engineering. Since 2004, he has been working toward the Ph.D. degree at the Signal and Information Processing Laboratory, ETH Zurich.
+Since 2001 he has been with Wavecom Elektronik AG, Zurich. His current research interest is equalization and estimation using graphical models.
+Sascha Korl (Member, IEEE) was born in Vienna, Austria, in 1974. He received the M.Sc. degree in electrical engineering from the Graz University of Technology, Graz, Austria, in 2000, and the Ph.D. degree in electrical engineering from ETH Zurich, Switzerland, in 2005.
+During his studies he developed several new message-passing techniques on factor graphs, for example the use of particle and gradient techniques on factor graphs and the derivation of EMtype algorithms by local message updates on factor graphs. In 2005, he joined the applied research department of Phonak AG, Sta¨fa, Switzerland, where he is engaged in research on signal processing and machine learning methods for innovative hearing solutions.
+
+Frank R. Kschischang (Fellow, IEEE) received the B.A.Sc. (Honors) degree from the University of British Columbia, Vancouver, BC, Canada, in 1985, and the M.A.Sc. and Ph.D. degrees from the University of Toronto, Toronto, ON, Canada, in 1988 and 1991, respectively, all in electrical engineering.
+During 1997 to 1998, he spent a sabbatical year as a Visiting Scientist at the Massachusetts Institute of Technology, Cambridge, and in 2005 he was a Guest Professor at ETH Zurich, Switzerland. Currently, he is a Professor and Canada Research Chair in the Department of Electrical and Computer Engineering, University of Toronto, where he has been a faculty member since 1991. His research interests include coding techniques, primarily on soft-decision decoding algorithms, trellis structure of codes, codes defined on graphs, and iterative decoders and in the application of coding techniques to wireline, wireless, and optical communication systems.
+Dr. Kschischang served as Associate Editor for Coding Theory of the IEEE TRANSACTIONS ON INFORMATION THEORY from 1997 to 2000 and also served as the Technical Program Co-Chair for the 2004 IEEE International Symposium on Information Theory, Chicago, IL. He is a recipient of the Ontario Premier’s Research Excellence Award.
+
+1322 PAruothcoerizeeddilincegnsseodfustehlime itIeEdEtoE: Y|oVnosle. i9U5,nNivo. .D6o,wJnulnoead2e0d0o7n June 24,2026 at 02:50:11 UTC from IEEE Xplore. Restrictions apply.
+
+

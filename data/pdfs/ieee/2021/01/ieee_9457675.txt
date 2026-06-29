@@ -1,0 +1,586 @@
+2020 IEEE Information Theory Workshop (ITW) | 978-1-7281-5962-1/20/$31.00 ©2021 IEEE | DOI: 10.1109/ITW46852.2021.9457675
+
+2020 IEEE Information Theory Workshop (ITW)
+
+Concatenated Codes for Recovery From Multiple Reads of DNA Sequences
+
+(Invited Paper)
+Andreas Lenz∗, Issam Maarouf†, Lorenz Welter∗, Antonia Wachter-Zeh∗, Eirik Rosnes†, Alexandre Graell i Amat‡† ∗Institute for Communications Engineering, Technical University of Munich, DE-80333 Munich, Germany
+†Simula UiB, N-5006 Bergen, Norway ‡Department of Electrical Engineering, Chalmers University of Technology, SE-41296 Gothenburg, Sweden
+
+Abstract—Decoding sequences that stem from multiple transmissions of a codeword over an insertion, deletion, and substitution channel is a critical component of efficient deoxyribonucleic acid (DNA) data storage systems. In this paper, we consider a concatenated coding scheme with an outer low-density paritycheck code and either an inner convolutional code or a block code. We propose two new decoding algorithms for inference from multiple received sequences, both combining the inner code and channel to a joint hidden Markov model to infer symbolwise a posteriori probabilities (APPs). The first decoder computes the exact APPs by jointly decoding the received sequences, whereas the second decoder approximates the APPs by combining the results of separately decoded received sequences. Using the proposed algorithms, we evaluate the performance of decoding multiple received sequences by means of achievable information rates and Monte-Carlo simulations. We show significant performance gains compared to a single received sequence.
+I. INTRODUCTION
+Coding-theoretic aspects of data storage in deoxyribonucleic acid (DNA) have recently gained significant attention. This new line of research has been triggered by a manifold of successful experiments [1]–[3] that demonstrated the viability of DNA as a reliable medium for archival data storage. Following the pioneering experiments, a variety of related information-theoretic problems with different foci have been identified. One of these problems is the reliable transmission over channels that introduce insertions, deletions, and substitutions (IDSs) [4], motivated by the fact that the sequencing process often introduces errors in the form of IDSs.
+There is a variety of literature dedicated to the study of error-correcting codes for the IDS channel. While the list of related papers is long, the line of research most relevant to our work is the one inspired by Davey and MacKay [5]. In their paper, they propose a class of concatenated codes together with a decoding algorithm that represents the inner code and channel by a hidden Markov model (HMM), allowing to infer a posteriori probabilities (APPs) that are passed to the outer decoder. Following this work, the Markov process of convolutional codes was incorporated into that of the IDS channel, allowing to run standard decoding algorithms of convolutional codes for the IDS channel [6], [7]. The approach of [5] was later refined with an improved decoding algorithm [8] and
+A. Lenz and I. Maarouf contributed equally to the results in this paper. This project was supported by the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme (grant agreement No. 801434), the Swedish Research Council under grant 2016-04253, and the TUM Global Visiting Professor program.
+
+using inner marker codes [9]. Recently, it was shown that synchronization is also possible without an inner code using a standalone low-density parity-check (LDPC) code [10].
+The vast majority of previous studies have focused on the case of error correction after a single transmission over an IDS channel. In DNA-based storage, however, data is typically synthesized into many short DNA strands, and each of these strands is replicated thousands of times. Therefore, when accessing the stored data via DNA sequencing, multiple copies of each original strand are read. With this in mind, in this paper we deviate from previous work and consider error-correcting codes for multiple transmissions of a coded sequence over a channel that is impaired by IDS errors. In particular, we propose two new decoding algorithms for multiple received sequences and show that significant gains can be achieved as compared to a single transmission. The first decoding algorithm, mainly a benchmark for the second decoder, is an optimal symbolwise APP decoder. While this algorithm has exponential complexity in the number of received sequences, we show that it is possible to achieve competitive performance with a second, practical decoder that has only linear complexity. For our results we employ a new concatenated coding scheme with an outer LDPC code and an inner convolutional code and compare with the watermark codes from [5]. To the best of our knowledge, this is the first work to propose decoding algorithms for the case of coded multiple transmissions and to evaluate coding schemes as well as achievable information rates (AIRs) over this channel.
+Related to our work is the study of sequence reconstruction, introduced by Levenshtein [11]. Here, a sequence is repeatedly transmitted over an erroneous adversarial channel and the goal is to analytically quantify, as a function of the sequence length, the number of sequences that are required to guarantee correct reconstruction of the transmitted sequence with zero error probability. Levenshtein’s initial work on insertion and deletion errors has recently been extended by additionally allowing substitution errors [12].
+Similar in spirit to our work, yet different in methods and objectives, is the research of trace reconstruction over deletion channels [13], [14], which is the probabilistic variant of the sequence reconstruction problem. While these works mainly derive asymptotic results, here we discuss a fixed number of short, finite-length received sequences over a channel that additionally allows insertions and substitutions. More recently, the trace reconstruction problem has also been formulated
+
+978-1-7281-596A2u-th1o/r2iz1e/d$l3ic1en.0se0d ©us2e 0lim2i1tedIEtoE:EYonsei Univ. Downloaded on June 24,2026 at 11:45:52 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE Information Theory Workshop (ITW)
+
+Insert: y ← (y, a)
+
+pI . . . xi
+
+pD pT
+
+Delete: y←y
+1 − pS No error: y ← (y, xi)
+Transmit Substitute:
+pS y ← (y, a∗)
+
+u xi+1 . . .
+
+Inner code
+
+Outer code
+
+w
+
+Conv./Block v code
+
+Offset
+
+x Channel
+
+IDS
+
+IDS . . . IDS
+
+channel channel
+
+channel
+
+y1
+
+y2
+
+yM
+
+Fig. 1. State-based IDS channel [5].
+
+uˆ
+
+Outer p(wi|y1, . . . , yM ) Inner
+
+decoder
+
+decoder
+
+for a fixed number of sequences with a larger focus on algorithmic aspects [15], [16]. However, these works consider only uncoded sequences, while we are interested in the case of coded transmission. Finally, in [17] Varshamov-Tenegolts codes have been proposed for error correction over multiple channels that introduce a fixed number of deletions.
+II. SYSTEM MODEL
+A. Channel Model
+We consider a state-based representation of the IDS process [5], [18] as depicted in Fig. 1. Let x = (x1, . . . , xN ), xi ∈ Σq = {0, 1, . . . , q − 1} be the sequence to be transmitted over the channel. The transmitted symbols xi are successively queued for transmission and the received sequence y is assembled by the following procedure. When xi enters the queue, the channel enters state xi and there are three different possible events. First, a uniformly random symbol a ∈ Σq is inserted to the received sequence y with probability pI. In this case, xi remains in the queue and the channel returns to state xi. Second, the symbol xi is deleted with probability pD without appending it to y and the next symbol xi+1 is enqueued. Third, xi is transmitted with probability pT = 1−pI−pD. In this case, the symbol is substituted with a uniformly random symbol a∗ = xi with probability pS and the next transmit symbol xi+1 is enqueued. When the last transmit symbol xN leaves the queue, the procedure finishes and the channel outputs y. Note that y = (y1, . . . , yN ) has random length N , depending on the number of insertions and deletions that have occurred.
+B. Forward Error-Correction Scheme
+In this work, we will use a concatenation of an outer code with an inner code as our forward error-correction scheme, following [5]. The role of the inner code is to maintain synchronization and provide reliable soft information to the outer code, while the role of the outer code is to use this soft information to perform an accurate estimate of the transmitted information. In particular, given that the inner code provides reliable synchronization information, the outer code corrects the remaining errors on the synchronized sequence. In our scheme, the inner code is either a convolutional code as used in [19], or a watermark code as used in [5]. Note that the watermark code can be thought of as a convolutional code with memory equal to zero, and we will therefore restrict some passages to convolutional inner codes only. The outer code is either a binary or a nonbinary LDPC code.
+
+Fig. 2. Communication via multiple transmissions over an IDS channel with a concatenated coding scheme. The IDS channel, depicted in Fig. 1, is fed M times with the encoded transmit sequence x.
+
+The information1 u = (u1, . . . , uK ), ui ∈ F2k of length K
+
+is encoded by an [No, K]2k outer code of length No over the
+
+field
+
+F2k .
+
+The
+
+rate
+
+of
+
+the
+
+outer
+
+code
+
+is
+
+Ro
+
+=
+
+K No
+
+.
+
+The
+
+resulting
+
+codeword w = (w1, . . . , wNo ), wi ∈ F2k is then encoded via
+
+either an [n, k, m]q inner convolutional code of blocklength
+
+n, binary input length k, memory m, and output alphabet Σq
+
+or an [n, k]q inner block code. With this concatenation, each
+
+outer codeword symbol wi ∈ F2k is mapped to n symbols
+
+over Σq. We terminate the convolutional code, resulting in
+
+the codeword v = (v1, . . . , vN ), vi ∈ Σq of length N =
+
+(No +m)n.
+
+The
+
+inner
+
+code
+
+consequently
+
+has
+
+rate
+
+RI
+
+=
+
+No k N log
+
+q
+
+,
+
+and
+
+thus
+
+we
+
+transmit
+
+at
+
+an
+
+overall
+
+rate
+
+R
+
+=
+
+RoRI
+
+=
+
+Kk N log
+
+q
+
+.
+
+Before entering the IDS channel, the codeword v is offset by
+
+adding a pseudo-random sequence resulting in the final output x = (x1, . . . , xN ), xi ∈ Σq. This offset sequence is known to the inner decoder, and is used to maintain synchronization
+
+at high probabilities of insertions or deletions. According to
+
+the nomenclature in [5] we call the combination of the inner
+
+block code and offset watermark code.
+
+The output sequence x is then transmitted M times inde-
+
+pendently over an IDS channel resulting in received sequences y1, . . . , yM corresponding to M reads of the original strand. The inner decoder uses these received sequences to infer likelihoods for the symbols in w. These likelihoods are then
+
+fed to the outer decoder, which decides on the decoded sequence uˆ. Furthermore, we can also iterate between the inner
+
+and outer decoder, exchanging extrinsic information between
+
+them. The communication system is depicted in Fig. 2.
+
+III. SYMBOLWISE A POSTERIORI DECODING OF INSERTION/DELETION/SUBSTITUTION CHANNELS
+One of the main challenges for decoding from IDS channels is the random memory associated with the insertion and deletion process. This is visualized by the receiver’s inability to directly identify the origin of a received symbol yi. Since insertions or deletions before symbol yi might have moved the symbol right or left in the received sequence, yi could be the result of transmitting a symbol xi with i = i. In
+
+1The information is defined over the binary extension field F2k to match the field of the outer codeword symbols. In practice, each ui will be represented by k bits and thus in total Kk information bits will be encoded.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:52 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE Information Theory Workshop (ITW)
+
+the following, we describe how it is still possible to infer a posteriori likelihoods from this channel using a hidden Markov representation of the channel [5], [7], [8]. We present and discuss this HMM for M = 1 first and extend it to M > 1 multiple received sequences afterward. Here we restrict the discussion to convolutional inner codes, as the watermark code can be viewed as a convolutional code with m = 0.
+
+A. Single Received Sequence
+
+The APPs of the outer codeword symbols are given by
+
+p(wi|y)
+
+=
+
+p(y, wi) p(y)
+
+.
+
+The standard approach to compute p(y, wi) for convolutionally encoded transmit sequences is to de-marginalize the distribution p(y, wi) with respect to the memory states of the convolutional code that correspond to the information symbol wi and then exploit the Markov property of the convolutional code. That is, given the memory state at time i, the output after time i becomes independent of earlier states and the preceding output symbols. However, for the case of the IDS channel, this Markov property is violated through the memory of the channel. Therefore, it is useful to add a new hidden state variable, the so-called drift [5]. The drift di, i = 0, 1, . . . , (No + m) is defined as the number of insertion events minus the number of deletion events that have occurred before symbol xin+1 is enqueued. Thus, by definition, d0 = 0 and dNo+m = N − N , both known to the receiver. In the resulting HMM, a transition from time i − 1 to i corresponds to a transmission of symbols x(ini−1)n+1, where xab = (xa, xa+1, . . . , xb). Further, when transitioning from state di−1 to di the HMM emits n+di−di−1 output symbols depending on both the previous and new drift. The key property of the drift is that, by its inclusion as a new state variable inside the Markov process, the Markov property is restored. This is because the drift sequence itself forms a Markov chain and, conditioned on the memory state and drift at time i, the output of the channel after time i becomes independent of previous memory states and drifts. Denoting the state variables of the convolutional code by si, i = 0, 1, . . . , (No +m), and introducing the joint state variable σi = (si, di), we obtain by slight abuse of notation
+
+p(y, wi) =
+
+p(y, σ, σ ) ,
+
+(σ,σ ):wi
+
+where σ = (s, d) and σ = (s , d ) denote realizations of the
+
+random variables σi−1 and σi, respectively, and the summation is over all state transition pairs (σ, σ ) that correspond to the
+
+information symbol wi. Further, due to the Markov property, we can expand the joint probability to
+
+p(y,σ,σ ) = p y1(i−1)n+d, σ p y(iin−+1)dn+d+1, σ σ p yiNn+d +1 σ .
+
+Abbreviating the above terms by αi−1(σ), γi(σ, σ ), and βi(σ ) in order of appearance, one can deduce the forward and backward recursions
+
+αi(σ ) = αi−1(σ)γi(σ, σ ) ,
+σ
+
+βi−1(σ) = βi(σ )γi(σ, σ ) ,
+σ
+
+with appropriate termination conditions incorporating the ter-
+mination of the convolutional code and drift states. The branch metric γi(σ, σ ) = p(wi)p(y(iin−+1d)n+d+1, d d, s, s ) can be efficiently computed using a lattice structure, see, e.g., [7], [20]2 using the transmit sequence corresponding to the state transition s → s . Having these expressions in hand it is possible to compute the APPs p(wi|y) using the BCJR algorithm [21]. Note that while the introduction of the drift
+state variable allows to exactly compute the APPs, it comes at
+the cost of additional complexity in terms of a larger number
+of states and state transitions, as discussed in Section III-C.
+
+B. Multiple Received Sequences
+
+In this work, we consider the following two approaches of computing the a posteriori distribution p(wi|y1, . . . , yM ) for multiple sequences.
+Joint decoding: Similar to the approach for a single received sequence, it is possible to introduce a drift state sequence d1, . . . , dM , dj = (dj,0, . . . , dj,No+m) for each of the received sequences. The resulting HMM has the combined (M + 1)-dimensional state variables σi = (si, d1,i, . . . , dM,i) with corresponding branch metric
+
+M
+γi(σ, σ ) = p(wi) p (yj )i(ni−+1d)jn+dj+1, dj dj , s, s .
+j=1
+
+The forward, backward recursion, and the terminal conditions
+
+are according to the single sequence case.
+
+Separate decoding: Instead of computing the a posteriori
+
+likelihoods precisely, we now propose a different approach that
+
+allows to approximate the joint a posteriori likelihood using
+
+the marginal likelihoods p(wi|yj) as
+
+p(wi|y1, . . . , yM ) ∝∼
+
+M j=1
+
+p(wi|yj
+
+)
+
+p(wi )M −1
+
+.
+
+The approximation is motivated by the case of memoryless
+
+channels, where the proportionality holds exactly. The indi-
+
+vidual APPs p(wi|yj) can be computed as in the case of a
+
+single received sequence by means of a BCJR decoder. While
+
+the approximation comes at reduced complexity as compared
+
+to the joint decoding approach, see Section III-C, it also
+
+results in a loss of performance, which we will quantify in
+
+Section IV. Note that it is also possible to separate the joint a
+
+posteriori likelihoods at other stages, such as directly between
+
+the channel and inner code or after decoding the LDPC code.
+
+However, we observed that for the considered parameters the
+
+proposed stage yields the best results.
+
+C. Complexity Considerations
+The number of operations performed by the inner BCJR decoder is proportional to the total number of edges of the trellis that is inferred from the HMM. In order to reduce its computational complexity, the drift states are usually limited to a fixed interval di ∈ [dmin, dmax] and the maximum number of insertions per symbol is limited to Imax [5]. Denote by ∆ = dmax − dmin + 1 the total number of drift states, by δ =
+
+2Note that the lattice-based computation of the transition probability in [7], [20] yields the joint conditional probability of y and drift d given a transmit sequence. The generalization to nonbinary alphabets is straightforward.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:52 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE Information Theory Workshop (ITW)
+
+TABLE I CODE PARAMETERS
+
+Scheme
+
+Inner Code
+
+Outer Code
+
+Length Rate
+
+CC+B-LDPC [1, 1, 2]4 Conv. [960, 480]2 WiMAX
+
+962 0.249
+
+WM+NB-LDPC [3, 3]4 Waterm. [336, 168]23 WiMAX-like 1008 0.25
+
+100 10−1
+
+The [1, 1, 2]4 convolutional code is a binary convolutional code with generator polynomials (1 + D2, 1 + D + D2), where each two bits are combined to one DNA symbol. The [3, 3]4 watermark code is constructed as in [5].
+
+10−2
+
+FER
+
+n(Imax +1)+1 the number of possible drift transitions, and by ν the number of binary memory elements of the convolutional
+
+encoder. The complexity, measured by the total number of
+
+edges in the trellis, of joint decoding is then given by
+
+Cjoint
+
+=
+
+N 2ν+k(∆δ)M n
+
+,
+
+while the complexity of separate decoding is simply given by
+
+M times the complexity of decoding a single sequence,
+
+Csep
+
+=
+
+N n
+
+2ν+kM ∆δ
+
+.
+
+Note that for this computation we neglect the trellis termina-
+
+tion and also the pruning of edges that result in drifts outside
+
+the interval [dmin, dmax]. Typical values of ∆δ for the DNA storage application can easily be as high as ∆δ ≈ 1000. This
+
+means that decoding the inner code is the main contributor to
+
+the decoding complexity and we thus neglect the complexity of
+
+the outer decoder in the following. It further becomes evident
+
+that the joint decoding approach only works for a very small
+
+number of sequences M due to its exponential complexity.
+
+IV. SIMULATION RESULTS
+
+In our simulations, we compare the two following set-ups. First, an inner convolutional code with an outer WiMAX binary LDPC code (CC + B-LDPC) and, second, an inner watermark code with an outer WiMAX-like nonbinary LDPC code (WM + NB-LDPC). Their performance is compared over a single and multiple IDS channels. Recall that in both schemes a pseudo-random offset sequence is used to improve the synchronization capability.
+
+A. Simulation Parameters
+
+Our simulations are done over an alphabet of size q = 4,
+
+which equates to the four bases {A, C, G, T} used in DNA
+
+and we set pS = 0 and pI = pD throughout. The code
+
+parameters are summarized in Table I. The outer LDPC code
+
+is decoded via belief propagation with a maximum number
+
+of 100 iterations. Regarding the inner code, we set Imax = 2
+
+and the limit of the drift random variable in decoding is set
+
+to be five times the standard deviatio√n of the final drift at
+
+position N , i.e., dmax = −dmin = 5
+
+N
+
+pD 1−pD
+
+.
+
+For
+
+multiple
+
+transmissions, we use M = 2, 5, 10, and 20.
+
+B. Discussion of Numerical Results
+
+Fig. 3 shows the frame error rate (FER) of the CC + BLDPC scheme for single and multiple transmissions over an IDS channel, while Fig. 4 shows that of the WM + NB-LDPC scheme. Interestingly, when transmitting over a single IDS channel, the CC + B-LDPC scheme outperforms the WM + NB-LDPC scheme. However, for transmission over multiple IDS channels, this behavior reverses, and the WM + NBLDPC scheme has superior performance for a larger number
+
+10−3
+
+M =1 M = 2, sep.
+
+M = 2, joint
+
+10−4
+
+M = 5, sep. M = 10, sep.
+
+M = 20, sep.
+
+10−05.05
+
+0.1
+
+0.15
+
+0.2
+
+0.25
+
+0.3
+
+pI = pD
+
+Fig. 3. FER performance versus pI = pD of the CC + B-LDPC scheme for different number of transmissions M .
+
+100
+
+10−1
+
+10−2
+
+FER
+
+10−3
+
+10−4
+
+M =1 M = 2, sep.
+
+M = 10, sep. M = 20, sep.
+
+M = 5, sep.
+
+10−05.05
+
+0.1
+
+0.15
+
+0.2
+
+0.25
+
+0.3
+
+pI = pD
+
+Fig. 4. FER performance versus pI = pD of the WM+NB-LDPC scheme for different number of transmissions M .
+
+of sequences. While this result seems surprising at the first glance, there is a natural explanation for this phenomenon as follows. First notice that with the inner convolutional code, bitlevel APPs p(wi|yj) with wi ∈ F2 are computed, while the watermark code works over nonbinary inputs wi ∈ F23 . Now, for larger error probabilities pI, pD, the memory of the channel becomes more apparent and thus also the a posteriori distribution has increased correlation between different input symbols wi. While this correlation is marginalized for the binary APPs, it is better captured by the nonbinary input symbols and thus the WM + NB-LDPC scheme achieves better performance for larger number of sequences or higher error probabilities. In terms of complexity, both schemes have the same ∆ and M , but different n, k, m, δ, and ν. Comparing both complexities for equal blocklengths, we get Csceopnv./Csweaptermark ≈ 1.2. Thus, with these parameters the convolutional code is slightly more complex than the watermark code. The same conclusion can be made when multiple channel transmissions are combined with inner-outer iterative decoding, since doing M iterations has
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:52 UTC from IEEE Xplore. Restrictions apply.
+
+2020 IEEE Information Theory Workshop (ITW)
+
+100 10−1 10−2 10−3
+
+V. FUTURE WORK
+In view of the huge number of trellis states that the joint decoding approach entails, an immediate idea is to consider suboptimal decoding of the inner code, such as sequential decoding. There are however some obstacles that have to be overcome, including a large number of edges per node and an appropriate metric. This will be addressed in future work. Further, a comparison of our results to DNA reconstruction techniques, such as multiple sequence alignment, is of interest.
+REFERENCES
+
+FER
+
+10−4
+
+M = 2, = 10 M = 5, = 4
+
+M = 2, = 10 M = 5, = 4
+
+M = 20, = 1
+
+M = 20, = 1
+
+10−05.05
+
+0.1
+
+0.15
+
+0.2
+
+0.25
+
+0.3
+
+pI = pD
+
+Fig. 5. FER performance versus pI = pD of the CC + B-LDPC (solid) and WM + NB-LDPC (dashed) schemes with M transmissions and iterations between inner and outer decoders.
+0.5
+
+0.4
+
+0.3
+
+AIR
+
+0.2
+
+M =1
+
+0.1
+
+M = 2, sep.
+
+M = 2, joint
+
+M = 5, sep.
+
+0 0 0.05 0.1 0.15 0.2 0.25 0.3 pI = pD
+
+Fig. 6. AIRs versus pI = pD using an inner convolutional code.
+
+the same complexity as separate decoding of M received sequences. Fig. 5 shows the FER of both schemes when iterating
+times between the inner and outer decoder. We fix the total complexity such that the product of the number of iterations and the number of sequences is equal to 20. It is observed that the iterative scheme benefits more from a larger number of received sequences as compared to iterations, however in practice this comes at the cost of additional sequencing costs. Finally, AIRs with an inner convolutional code, assuming no iterations between the inner and outer decoders, have been computed using the approach in [5], [22], and are displayed in Fig. 6. This approach corresponds to evaluating the extrinsic information transfer curve of the combination of the inner code and channel in its leftmost point. In agreement with our previous results, the achievable rates are significantly larger for multiple transmissions as compared to a single transmission. Not surprisingly, the joint decoder achieves higher rates. It exhibits a similar performance with M = 2 sequences as compared to the separate decoder with M = 5 sequences.
+
+[1] S. M. H. T. Yazdi, R. Gabrys, and O. Milenkovic, “Portable and errorfree DNA-based data storage,” Sci. Rep., vol. 7, no. 5011, Jul. 2017.
+[2] L. Organick et al., “Random access in large-scale DNA data storage,” Nat. Biotechnol., vol. 36, no. 3, pp. 242–248, Mar. 2018.
+[3] S. Chandak et al., “Overcoming high nanopore basecaller error rates for DNA storage via basecaller-decoder integration and convolutional codes,” in Proc. Int. Conf. Acoust., Speech, Sig. Process. Barcelona, Spain: IEEE, May 2020, pp. 8822–8826.
+[4] R. Heckel, G. Mikutis, and R. N. Grass, “A characterization of the DNA data storage channel,” Sci. Rep., vol. 9, no. 9663, Jul. 2019.
+[5] M. C. Davey and D. J. C. MacKay, “Reliable communication over channels with insertions, deletions, and substitutions,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 687–698, Feb. 2001.
+[6] M. F. Mansour and A. H. Tewfik, “Convolutional decoding in the presence of synchronization errors,” IEEE J. Select. Areas Commun., vol. 28, no. 2, pp. 218–227, Feb. 2010.
+[7] V. Buttigieg and N. Farrugia, “Improved bit error rate performance of convolutional codes with synchronization errors,” in Proc. Int. Conf. Commun. London, U.K.: IEEE, Jun. 2015, pp. 4077–4082.
+[8] J. A. Briffa, H. G. Schaathun, and S. Wesemeyer, “An improved decoding algorithm for the Davey-MacKay construction,” in Proc. Int. Conf. Commun. Cape Town, South Africa: IEEE, May 2010.
+[9] M. Inoue and H. Kaneko, “Adaptive synchronization marker for insertion/deletion/substitution error correction,” in Proc. Int. Symp. Inf. Theory. Cambridge, MA, USA: IEEE, Jul. 2012, pp. 508–512.
+[10] R. Shibata, G. Hosoya, and H. Yashima, “Design of irregular LDPC codes without markers for insertion/deletion channels,” in Proc. Global Commun. Conf. Waikoloa, HI, USA: IEEE, Dec. 2019.
+[11] V. I. Levenshtein, “Efficient reconstruction of sequences from their subsequences or supersequences,” J. Combin. Theory, Series A, vol. 93, no. 2, pp. 310–332, Feb. 2001.
+[12] M. A. Sini and E. Yaakobi, “Reconstruction of sequences in DNA storage,” in Proc. Int. Symp. Inf. Theory. Paris, France: IEEE, Jul. 2019, pp. 290–294.
+[13] J. Brakensiek, R. Li, and B. Spang, “Coded trace reconstruction in a constant number of traces,” in Proc. Annu. Symp. Found. Comput. Sci. Durham, NC, USA: IEEE, Nov. 2020, pp. 482–493.
+[14] M. Cheraghchi, R. Gabrys, O. Milenkovic, and J. Ribeiro, “Coded trace reconstruction,” IEEE Trans. Inf. Theory, vol. 66, no. 10, pp. 6084–6103, Oct. 2020.
+[15] S. R. Srinivasavaradhan, M. Du, S. Diggavi, and C. Fragouli, “Symbolwise MAP for multiple deletion channels,” in Proc. Int. Symp. Inf. Theory. Paris, France: IEEE, Jul. 2019, pp. 181–185.
+[16] O. Sabary, A. Yucovich, G. Shapira, and E. Yaakobi, “Reconstruction algorithms for DNA-storage systems,” in Proc. Int. Conf. DNA Comput. Molecular Program. Oxford, U.K.: LIPICS, Sep. 2020.
+[17] M. Abroshan, R. Venkataramanan, L. Dolecek, and A. Guille´n i Fa`bregas, “Coding for deletion channels with multiple traces,” in Proc. Int. Symp. Inf. Theory. Paris, France: IEEE, Jul. 2019, pp. 1372–1376.
+[18] K. S. Zigangirov, “Sequential decoding for a binary channel with dropouts and insertions,” Problems Inf. Transmiss., vol. 5, no. 2, pp. 17–22, 1969.
+[19] H. Mercier and V. K. Bhargava, “Convolutional codes for channels with deletion errors,” in Proc. Canadian Workshop Inf. Theory. Ottawa, ON, Canada: IEEE, May 2009, pp. 136–139.
+[20] L. R. Bahl and F. Jelinek, “Decoding for channels with insertions, deletions, and substitutions with applications to speech recognition,” IEEE Trans. Inf. Theory, vol. 21, no. 4, pp. 404–411, Jul. 1975.
+[21] L. R. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Inf. Theory, vol. 20, no. 2, pp. 284–287, Mar. 1974.
+[22] J. Hagenauer, “The exit chart - introduction to extrinsic information transfer in iterative processing,” in Proc. Eur. Signal Process. Conf. Vienna, Austria: IEEE, Sep. 2004, pp. 1541–1548.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:45:52 UTC from IEEE Xplore. Restrictions apply.
+
+

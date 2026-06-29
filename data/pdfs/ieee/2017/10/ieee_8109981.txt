@@ -1,0 +1,590 @@
+DVFS Based Power Management for LDPC Decoders with Early Termination
+Reza Ghanaatian and Andreas Burg Telecommunications Circuits Laboratory, EPFL, Lausanne, Switzerland
+email: {reza.ghanaatian, andreas.burg}@epfl.ch
+
+Abstract—Low-density parity check (LDPC) codes are a mature coding scheme in telecommunications and the low power implementation of corresponding decoders is an issue of significant importance for receivers with stringent power budgets. This paper presents a power reduction technique for LDPC decoders that further extends their energy-proportional behavior, obtained with early-termination (ET), by predicting the required number of iterations and by applying dynamic voltage and frequency scaling (DVFS). The number of expected iterations and the associated voltage/frequency settings are predicted with a novel algorithm that is based on the offline statistical analysis of the number of decoding iterations. This algorithm systematically trades the error-correcting performance up to a predefined approximation level for the achieved amount of power reduction beyond ET. Simulation and postlayout implementation results in a 28 nm FD-SOI technology prove that the proposed algorithm, when integrated with an LDPC decoder, can significantly reduce the power consumption with negligible overhead.
+I. INTRODUCTION
+Modern communication systems rely on channel coding to ensure reliable data transmission. Among the most well-known coding schemes, low density parity check (LDPC) codes have been widely used in high data-rate communication standards after their re-discovery in [1], due to the availability of very efficient implementations in modern CMOS technologies and their remarkable error-correcting performance. LDPC codes are commonly decoded using iterative message passing (MP) algorithms in which the a priori log likelihood ratios (LLRs) from a demapper are improved through an iterative messageexchange process between decoder computation nodes.
+This iterative decoding process for LDPC codes naturally provides an effective means to adjust the trade-off between the computational effort and the error-correcting performance. In practice, the decoder is configured for a maximum number of iterations, Imax, which is chosen to achieve the required errorcorrecting performance in a worst-case signal-to-noise ratio (SN R) scenario. Such a worst-case Imax, however, is often unnecessarily high for frames with better SN R and the actual number of required iterations (RIs) also varies from block to block even for a given SN R. Thus, early termination (ET) was proposed [2] to avoid redundant iterations by stopping (clock/power gating) the decoder when extra decoding effort is not required. With this measure, the decoder exhibits a natural first-order energy-proportional behavior since the decoding energy per bit decreases linearly with the actual required
+
+number of iterations, i.e., with the decoding effort.1 While avoiding redundant iterations with ET effectively
+reduces the decoding effort per code-block, this measure does not reduce the energy consumed per iteration. However, when fewer iterations are required, more time may be allocated to each iteration without affecting the throughput. Dynamic voltage and frequency scaling (DVFS) [5], [6] provides an effective means to exploit this additional time to also reduce the energy for each individual iteration. To this end, both frequency and supply voltage are adjusted accordingly to still meet timing requirements while taking advantage of the quadratic dependency of the power on the supply voltage. Together with ET, this measure then results in a secondorder energy-proportional operation which further improves the energy-efficiency of the decoder at high SN R and for well-conditioned code-blocks. Unfortunately, to apply DVFS to the decoding process, the number of RIs must be predicted before or at least during the decoding process of a code-block to properly reduce both voltage and frequency to match the actually required decoding effort without missing the deadline for the decoding of that block. This iteration prediction can be categorized as either static or dynamic, where static prediction is performed only once during initialization of the decoding process while dynamic predictions are updated after each iteration. The objective is thereby to keep the number of predicted iterations as low as possible, while avoiding an underestimation of the number of RIs which would lead to an unsuccessfully decoded data frame. The authors of [7], [8] proposed a static iteration prediction and the dynamic iteration prediction was later addressed in [9], [10]. Unfortunately, none of these prior works provides a fully systematic approach to jointly analyze and adjust the trade-off between power savings from more aggressive prediction and DVFS strategies on one side and a potential performance degradation on the other side.
+Contributions: In this paper, we propose a systematic statistical framework for reducing the energy consumption of an LDPC decoder with DVFS based ET and characterize the maximum theoretically-achievable saving. We then propose an algorithm, within this framework, to dynamically predict the RI for each codeword that benefits from the performance/complexity trade-off. This algorithm exploits the notion of approximate computing that allows to slightly relax the
+1To further reduce the energy efficiency, early termination can also be applied in the low SN R regime to predict and avoid hopeless decoding attempts for frames that are unlikely to be decodable even with Imax iterations [3], [4].
+
+978-1-5386-0446-5/17/$31.00 c 2017 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+error-correcting performance by a well-defined margin in order to achieve the desired energy-efficiency improvements. To the best of our knowledge, this is the first work that characterizes and adjusts this energy-efficiecy vs. performance trade-off for LDPC decoders with DVFS in a rigorous mathematical framework.
+Outline: The remainder of this paper is organized as follows. Section II gives an introduction to LDPC codes, as well as more details on the decoder power reduction through iteration management. Section III describes our proposed statistical framework for the energy consumption of an LDPC decoder with iteration prediction. In Section IV, our algorithm to minimize the decoder energy consumption is presented and its performance is evaluated in simulation results, and finally, Section V concludes the paper.
+
+II. BACKGROUND
+
+A binary LDPC code is a set of codewords which are
+
+defined through an M × N binary-valued sparse parity check
+
+matrix as
+
+c ∈ {0, 1}N Hc = 0 ,
+
+(1)
+
+where all operations are performed modulo 2. If the parity check matrix contains exactly dv ones per column and exactly dc ones per row, the code is called a (dv, dc)-regular LDPC code. LDPC codes are usually represented with a Tanner graph which contains N variable nodes (VNs) and M check nodes (CNs) and VN n is connected to CN m if and only if Hmn = 1.
+LDPC codes, as we pointed out in the Section I, can be decoded using MP algorithms, where information is exchanged as messages between the VNs and the CNs over the course of several decoding iterations. With ET, messages are exchanged until a valid codeword cˆ is found for which the syndrome s = Hcˆ = 0 or until Imax has been reached.
+
+A. LDPC Decoder Energy Reduction with ET and DVFS
+The total energy expenditure of an LDPC decoder with I decoding iterations per codeword is defined by
+
+I
+
+E(I) = PiTiter ,
+
+(2)
+
+i=1
+
+where Pi is the decoder power consumption during the i-th
+
+iteration and Titer is the time required for this iteration. We
+
+note that for high throughput LDPC decoders Pi can be
+
+approximated by the switching power of a CMOS circuit as Pi = αiCVdd2fCLK, where αi is the expected value of the
+decoder-circuit activity factor during the i-th iteration and C is
+
+the total capacitance of the switching decoder-circuit elements,
+
+Vdd is the supply Voltage, and fCLK is the clock frequency [11],
+
+[12]. Interestingly, according to our experimental analysis,
+
+the activity factor αi turns out to be independent of the
+
+decoder iteration. Furthermore, in a typical system, decoding
+
+is performed within a given time limit T that must be sufficient
+
+for Imax decoding iterations. If each decoding iteration uses n
+
+clock
+
+cycles,
+
+this
+
+requires
+
+a
+
+clock
+
+frequency
+
+of
+
+fCLK
+
+=
+
+nImax T
+
+and a supply voltage of f−1(fCLK), where f(·) relates voltage
+
+to the maximum clock frequency of a circuit as shown in Tbl. I. From these relationships, we obtain the baseline energy consumption for decoding one code-block as
+
+2
+
+E¯ = αC f−1 nImax T
+
+nImax
+
+(3)
+
+With straightforward ET, the number of RIs ri for a codeword becomes a random variable (RV) RI with
+
+RI ∼ PrRI (ri) = P(RI = ri), ri ∈ RI ,
+
+(4)
+
+where RI = {1, 2, ..., Imax} and where PrRI (ri) is the empirical probability mass function (pmf) of RI, which can be obtained from Monte-Carlo (MC) simulations. However, the supply voltage is still selected based on the maximum number of RIs to guarantee that the decoding deadline is always met. Hence the average decoding energy per codeword with ET is obtained from
+
+Imax
+
+E¯ET =
+
+PrRI (ri) αC f−1
+
+nImax T
+
+2
+nri,
+
+(5)
+
+ri =1
+
+which trivially shows the first order energy reduction. If we could further reduce fCLK and the corresponding
+supply voltage for each codeword to the minimum frequency that is sufficient to just complete ri < Imax decoding iterations within the time budget T , the total energy can be further reduced
+
+Imax
+
+E¯DVFS =
+
+PrRI (ri) αC f−1
+
+nri T
+
+2
+nri,
+
+(6)
+
+ri =1
+
+due to the quadratic relationship of the energy and the supply voltage [11]. This is the principle idea to achieve second-order energy savings with DVFS based ET.
+
+B. Prior Art
+A key requirement to be able to effectively apply DVFS to LDPC decoder with ET is that the number of RIs to accomplish the decoding task can be anticipated to properly select fCLK and Vdd. To this end, various algorithms and prediction metrics have been studied in the literature. The authors of [7] consider the Hamming weight of the syndrome s as their prediction metric, since the severity of the noise corruption is correlated with the number of failing parity checks. They then use a look-up table (LUT) to translate this number into an appropriate setting for the DVFS controller assuming that the expected number of iterations is not greater than 1.5 times the average number of decoding iterations in each tabulated prediction metric interval. The prediction accuracy was improved in [8] with a pre-processing phase, defined as three (3) sub-iterations, and by using the updated syndrome s as the input to the prediction algorithm. Since the effectiveness of a static approach relies only on a single prediction obtained during the early decoding stages, [9] and [10] propose an online power management. Both works first try to fit a linear approximation function for the number of iterations to the Hamming weight of the syndrome s and then
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+10−1
+
+PrRI (ri|snr)
+
+10−2
+
+10−3
+
+10−4
+
+SNR = 2
+
+10−5
+
+SN R = 2.5 SNR = 3
+
+SN R = 3.5
+
+10−6 2 3 4 5 6 7 8 9 10
+
+ri
+
+Fig. 1: Probability distribution of RI for LDPC decoder for IEEE 802.11ad code conditioned on different SN Rs.
+
+TABLE I: Ideal DVFS controller in 28 nm FD-SOI.
+
+Operation Mode
+M0 M1 M2 M3 M4 M5 M6 M7 M8
+
+Voltage
+Vmax 0.95Vmax 0.90Vmax 0.85Vmax 0.80Vmax 0.75Vmax 0.70Vmax 0.65Vmax 0.60Vmax
+
+Frequency
+fmax 0.89fmax 0.78fmax 0.68fmax 0.57fmax 0.44fmax 0.35fmax 0.25fmax 0.16fmax
+
+Power
+Pmax 0.78Pmax 0.62Pmax 0.48Pmax 0.35Pmax 0.24Pmax 0.16Pmax 0.10Pmax 0.05Pmax
+
+Slowdown Factor
+1.0 1.1 1.2 1.4 1.7 2.2 2.8 4.0 6.1
+
+The PrRI (ri|snr) for our decoder for the IEEE 802.11ad LDPC code with layered min-sum (MS) decoding and Imax = 10 is illustrated in Fig. 1. This figure indicates that the average number of RIs, E{RI}, decreases as SN R increases and thus more (average) energy saving becomes available at higher SN Rs.
+
+employ that function as the prediction metric to dynamically adjust voltage and frequency accordingly.
+Unfortunately, these previous publications do not provide a rigorous mathematical link between their prediction of the number of RIs, the chosen DVFS setting, and the impact on the error correction performance. Furthermore, especially for decoders that rely on layered MP [13], the overhead for the calculation of the syndrome s is usually not negligible, which makes the power saving offered by ET and DVFS less effective. Therefore, it is essential to simultaneously analyze the power reduction and the performance degradation. To this end, we first formulate the energy expenditure of the decoder with iteration prediction in the following Section in a rigorous way and we then elaborate on the corresponding proposed algorithm for DVFS management with a well-defined error rate performance loss in Section IV.
+III. ENERGY SAVING ANALYSIS IN LDPC DECODERS
+The efficiency of DVFS based power reduction for LDPC decoders depends on the accuracy of the iteration prediction algorithm. In essence, an earlier correct choice of the DVFSsetting leads to longer operation in a more energy efficient regime. In this section, we adopt a rigorous statistical model for the number of RIs as well as for the energy consumption for decoding of each codeword and employ that model to formulate the impact of the prediction algorithm on energy efficiency and error rate. For the rest of the paper, we consider the decoder for the quasi-cyclic (QC)-LDPC code in the IEEE 802.11ad standard [14] for the purpose of simulation, while the analyses remain general and can be applied to any LDPC decoder.
+A. Statistical Analysis of LDPC Decoder Iterations
+Due to the correlation between the number of RIs and the codeword SN R, we propose to first examine the probability of the number of RIs conditioned on SN R, as PrRI (ri|snr) (cf. (4)).
+
+B. Energy Saving of LDPC Decoder with Iteration Prediction
+
+The DVFS based energy saving approach sets the iter-
+ation limit (IL) il, i.e., the maximum number of allowed iterations for each codeword, and the corresponding decoder
+frequency and voltage based on some properties of the re-
+ceived data. Hence, we also treat il as a RV IL with the pmf PrIL (il) = P(IL = il). With this, we establish the expectation of total energy consumption E¯IL per codeword as the algorithm optimization metric defined by2
+
+Imax
+
+E¯IL = T
+
+PrIL (il)Pil ,
+
+(7)
+
+il =1
+
+where we omit the conditioning on SN R for brevity and
+
+where Pil = αC f−1
+
+nil T
+
+2 nil T
+
+is
+
+the
+
+decoding
+
+power
+
+con-
+
+sumption in the operation mode associated with il. Thus,
+
+the algorithm effort to minimize the average decoder energy
+
+consumption consists of shaping the distribution PrIL (il) to minimize (7), while keeping the risk of setting a too restrictive
+
+IL, where ri > il, low.
+
+To understand the theoretical limit on energy reduction of an
+
+LDPC decoder, we evaluate (7) for the case of a genie-aided
+
+prediction algorithm that always chooses the IL il to match exactly the number of RI ri before even starting the first decoding iteration. In this case, we note that PrIL (il) = PrRI (ri). Further, we assume a fine-grained ideal DVFS controller that
+
+is able to tune the clock frequency and voltage sufficiently
+
+according to the required throughput for the entire decoding
+
+period. This allows us to obtain the corresponding minimum
+
+average energy expenditure
+
+Imax
+
+E¯D∗ VFS = T
+
+PrRI (ri)Pri ,
+
+(8)
+
+ri=1
+
+2For this derivation, we assumed that the algorithm sets the IL il at the start of the decoding.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+which corresponds to (6) when choosing Pri as the dynamic power in the operation mode in which the IL is set to ri.
+We have calculated (8) for the decoder of IEEE 802.11ad
+code according to an ideal DVFS controller for typical library characterization in 28 nm FD-SOI, shown in Tbl. I. By plugging Pri of the corresponding operation mode from this table and the PrRI (ri) for SN R = 3dB from Fig. 1, the minimum average energy expenditure adds up to E¯D∗ VFS = 0.146 E¯. This calculation shows the maximum theoretically-available energy reduction at this SN R for the above decoder in 28 nm
+FD-SOI when iteration prediction approach is employed.
+
+IV. STATISTICAL BASED PREDICTION FOR ENERGY SAVING IN LDPC DECODERS
+In the previous section we have examined the energy saving offered by DVFS based on a genie-aided iteration prediction algorithm. Even though a non-ideal prediction algorithm for the IL reduces the decoder energy consumption compared to ET without DVFS in a similar way, it also degrades the error correction performance when the IL is occasionally set too low (il < ri). To properly account for this issue, we rigorously formulate the trade-off between the error correction performance penalty and the IL prediction pessimism and propose a prediction algorithm that can be tuned for maximum energy savings with a maximum error rate performance penalty constraint.
+
+A. SNR Based Iteration Management with Performance Penalty
+
+Since the IL prediction algorithm entails a small performance loss in return for energy saving, the idea of iteration management pertains to the area of approximate computing. To quantify the performance loss, we formulate the frame-error rate performance degradation that occurs due to inaccurate (optimistic) predictions of the IL. To this end, we first define the probability of a block error at a given SN R caused by incomplete decoding of a codeword due to pre-mature termination of the decoding procedure when ri > il as
+
+Pre(il) = P(RI > il),
+
+(9)
+
+where we omit the additional conditioning on the SN R for brevity. We note that Pre(il) can be considered as a block error rate (BLER) penalty which can be added to the decoder BLER without DVFS to obtain a union upper-bound on the BLER with DVFS based ET. By limiting the BLER penalty Pre(il) to a user-defined threshold (Bu) we can now derive the corresponding constrained energy-optimal IL ilopt as
+
+ilopt =
+
+min
+
+il.
+
+{il :Pre (il )≤Bu }
+
+(10)
+
+Due to the small number of choices il ∈ {1, 2, ..., Imax}, a corresponding DVFS controller can easily evaluate (10) with an exhaustive search in a small SN R-specific LUT for Pre(il). The content of this LUT is derived off-line from (4) (cf. Fig. 1) as obtained from MC simulations.
+
+B. Statistical Based Iteration Prediction Algorithm
+
+Unfortunately, we observe that the above-described SN R based prediction of the IL only leads to a small energy efficiency improvement compared to straightforward ET without DVFS if the target BLER performance degradation is set to be small. The reason for this behavior is that the tail of the distribution of the number of RIs PrRI (ri) is fat compared to the permissible error rate performance degradation Bu which follows the BLER. Hence, conditioning on only the SN R leads to a conservative choice of il and thus only to small energy savings.
+To alleviate this problem, we follow the proposal of the original work in [7] which performs a more fine-grained adjustment of the IL based on a metric C (e.g., the Hamming weight of s) that is derived from each individual received codeword. We adjust our algorithm by introducing the pmf of the number of RIs conditioned on the metric C as PrRI|C (ri|c) and the pmf of C as PrC(c). We then rewrite (9) as
+
+Pre|C(il) = P(RI > il|C = c)
+
+(11)
+
+and adjust the selection of the IL in (10) accordingly to obtain the refined IL ilopt|C from
+
+ilopt|C =
+
+min
+
+il,
+
+{il:Pre|C (il)PrC (c)≤Bu}
+
+(12)
+
+which keeps the average (across all instances of the metric c) BLER penalty from not reserving enough iterations for decoding a frame below Bu. Similar to the SN R based algorithm, this selection can be performed based on LUTs. However, we now require a separate LUT for different values of c and for each SN R. By partitioning both c and the SN R in intervals, the number of LUTs can be reduced.
+
+C. Calculation of the Prediction Metric
+We note that there are two parameters that affect the correlation between the metric c and the number of RIs and hence also the accuracy of the IL and the corresponding power savings for a given error rate degradation: the conditioning metric c itself and when it is calculated during the decoding process.
+A straightforward choice for the conditioning metric is the Hamming weight of the syndrome s. Unfortunately, the calculation of this metric for each codeword requires significant overhead in MP decoders with a layered schedule. We therefore propose to use the codeword LLR sign change (LSC) after each iteration as an alternative metric, which comes with only a negligible computational overhead as it can be updated on-the-fly.
+Further, we note that the correlation between the conditioning metric and the number of required remaining iterations increases at later iterations of the decoding process. Hence, it can be advantageous to start the decoding process without voltage-frequency down-scaling under the assumption that Imax iterations may be required. The prediction metric c is then only computed after a few initial decoder iterations and DVFS based ET is applied only to the remaining iterations. While in this case a few initial (e.g., one or two) iterations cannot take
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+10−1
+
+Pr(ri|c)Pr(c)
+
+10−2
+
+10−3
+
+10−4
+
+10−5
+
+s ∈ I1 s ∈ I2 s ∈ I3
+
+10−6 2 3 4 5 6 7 8 9 10
+
+ri
+
+Fig. 2: Conditional probability distribution of RI times the conditions probability Pr(ri|c)Pr(c) at SN R = 3dB, where c = |s| and where the conditioning is performed after the second iteration for three intervals with Pr(s ∈ I1) = 0.47, Pr(s ∈ I2) = 0.11, and Pr(s ∈ I3) = 0.20.
+
+advantage of DVFS, the subsequent iterations profit from a more reliable and less pessimistic choice of the IL.
+D. Simulation Results
+We have simulated the proposed iteration prediction algorithm for the QC-LDPC decoder for the IEEE 802.11ad code, which has a codeword length N = 672 with blocks of Z = 42 bits, for a rate of R = 1/2. We use layered MS decoding with Imax = 10 and we carry out the first two iterations without DVFS at nominal voltage. After the second iteration, we compute the metric c using either the Hamming weight of the syndrome s or the LSC and apply DVFS for the remaining iterations. Furthermore, we always apply regular ET, even on top of DVFS to avoid any unnecessary iterations.
+We first illustrate the algorithm efficiency compared to the SN R based DVFS approach. Fig. 2 shows the conditional probability distributions of RI times the condition probability Pr(ri|c)Pr(c) at SN R = 3dB and for the three intervals of the Hamming weight of s, as the condition metric c, that result in the three most frequent choices of the IL for Bu = 10−3 with respect to (12). These choices amount to a total of 3, 4, and 5 iterations and are selected with probabilities of 47%, 11%, and 20% after the second iteration. When comparing the distributions in Fig. 2 to those in Fig. 1, we notice that the tails are much thinner, which favors the choice of a smaller IL for each condition metric c. Furthermore, we note that the metric interval I1, which leads to smallest IL, is also the one that is relevant for the majority of the frames.
+In order to illustrate the effect of the proposed algorithm on the decoder performance, we show the BLER for the two discussed conditioning metrics and two approximation levels Bu in Fig. 3. For fairness, we also show the BLER of a decoder with Imax < 10 that benefits from running
+
+TABLE II: The probabilities of IL Pr(il) (shown in %) for the proposed algorithm with two different bounds at SN R = 3dB
+when conditioning metric is s or LSC, the corresponding
+average energy expenditure per codeword after ET (shown as percentage of E¯, cf. (3)), and the corresponding improvement (shown as percentage of E¯ET, cf. (5)) for the IEEE 802.11ad
+decoder.
+
+il 3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+100
+
+×
+
+E¯ET/DVFS E¯
+
+100
+
+×
+
+(1
+
+−
+
+E¯DVFS E¯ET
+
+)
+
+no prediction, Imax =
+10 9 8 000 000 000 000 000 0 0 100 0 100 0 100 0 0
+37.3 32.6 29.6
+− 12.6 20.6
+
+prediction with Bu,1 = 10−3 C = |s| C = LSC
+
+47.8
+
+5.8
+
+11.9
+
+33.6
+
+20.2
+
+29
+
+4
+
+10.4
+
+5.7
+
+7.5
+
+3.7
+
+5.1
+
+0
+
+0
+
+6.6
+
+8.4
+
+29.1
+
+30.4
+
+22
+
+18.5
+
+prediction with Bu,2 = 2 × 10−3 C = |s| C = LSC
+
+47.8
+
+10.5
+
+27.1
+
+44.5
+
+9
+
+23.9
+
+9.5
+
+7.5
+
+2.5
+
+5.1
+
+1.6
+
+3.4
+
+0
+
+0
+
+2.6
+
+5
+
+27.9
+
+29.4
+
+25.2
+
+21.2
+
+continuously at an operation mode with lower power than M0 and has almost the same performance degradation as the decoder with DVFS based ET with Imax = 10. Specifically, the decoders with Imax = 9 and Imax = 8 have similar error rates to the decoder with Imax = 10 and iteration prediction algorithm with Bu,1 and Bu,2, as shown in Fig. 3a and 3b, respectively. To determine the impact on power, we first calculate Pr(il) for il = {3, ..., Imax} at SN R = 3dB and note the results in Tbl. II. We then estimate the average power of the decoder by combining Pr(il) with the power consumption of the corresponding mode3 from Tbl. I according to (7). We correct the results for the fact that we always run the first two iterations without DVFS in anticipation of Imax. We further include the impact of regular ET on top of DVFS to finally calculate the total average energy per codeword, which is shown as the percentage of E¯ in Tbl. II.
+According to this calculation, regular ET without DVFS reduces the consumed energy per codeword by 62.7%. If we also apply voltage scaling according to iteration prediction with Bu,1, the average energy is further reduced (compared to the first column in the table) by 22% and 18.5% for the Hamming weight of the syndrome s and LSC as prediction metrics, respectively. However, this reduction is only 12.6% if we compare to simply reducing the maximum number of iteration to Imax = 9. If we further relax the performance by choosing Bu,2 for the algorithm with the two metrics or by reducing the maximum number of iteration to Imax = 8, we get 25.2%, 21.2%, and 20.6% reductions, respectively. Note that the preceding percentages have been calculated with respect to the total energy consumption after regular ET, which are shown in the last line of Tbl. II.
+The results prove the efficiency of the proposed iteration prediction algorithm over the simple reduction of Imax while both approaches have the same performance penalty. Further,
+3The corresponding mode to each entry of Tbl. II can be found with respect to il, Imax, and the slowdown factor.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+100
+
+10−1
+
+10−1
+
+Block-Error Rate Block-Error Rate
+
+10−2
+
+10−2
+
+10−3
+
+10−3
+
+10−4 10−5
+
+Imax = 10 Imax = 9 C=s
+
+C =LSC
+
+10−6 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+10−4 10−5
+
+Imax = 10 Imax = 8 C =s
+
+C =LSC
+
+10−6 1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+SNR
+
+SNR
+
+(a)
+
+(b)
+
+Fig. 3: BLER of the decoder for IEEE 802.11ad code with Imax = 10 and a) the decoder with Imax = 9 in comparison with the decoders with iteration prediction algorithm with the two conditioning metrics and approximation level Bu,1; b) the decoder with Imax = 8 in comparison with the decoders with iteration prediction algorithm with the two conditioning metrics and approximation level Bu,2.
+
+they indicate that using the Hamming weight of the syndrome s, as the conditioning metric, is more beneficial than LSC. However, the computational overhead for the Hamming weight of the syndrome s is not negligible and thus we have implemented the algorithm using LSC for the decoder previously presented in [15]. According to our postlayout analysis, the power overhead of the iteration prediction unit is below 1% and therefore the reported energy savings remain legitimate.
+V. CONCLUSION
+A DVFS based power management framework was proposed that provides second-order energy proportionality in an LDPC decoder. The algorithm predicts an iteration limit for each codeword according to a conditional probabilities table, which is calculated offline using MC simulation on decoding iterations, and configures the DVFS controller for the appropriate operation mode. The algorithm can deliver variable power reductions for different approximation levels that can be selected through a user-defined upper bound. Implementation results insure that the proposed framework and the corresponding algorithm notably reduce the power consumption of the decoder while a minimum error correction performance is ensured.
+ACKNOWLEDGMENT
+This work was supported by the Swiss National Science Foundation (SNSF) under the project number 200021-153640.
+REFERENCES
+[1] D. J. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, 1999.
+[2] J. Li, X. hu You, and J. Li, “Early stopping for LDPC decoding: convergence of mean magnitude (cmm),” IEEE Communications Letters, vol. 10, no. 9, pp. 667–669, Sept 2006.
+[3] F. Kienle and N. Wehn, “Low complexity stopping criterion for LDPC code decoders,” in IEEE Vehicular Technology Conference, vol. 1. IEEE, 2005, pp. 606–609.
+
+[4] G. Glikiotis and V. Paliouras, “A low-power termination criterion for iterative LDPC code decoders,” in IEEE workshop on Signal Processing Systems Design and Implementation. IEEE, 2005, pp. 122–127.
+[5] P. Macken, M. Degrauwe, M. Van Paemel, and H. Oguey, “A voltage reduction technique for digital systems,” in IEEE International SolidState Circuits Conference (ISSCC), Digest of Technical Papers. IEEE, 1990, pp. 238–239.
+[6] T. Kuroda, K. Suzuki, S. Mita, T. Fujita, F. Yamane, F. Sano, A. Chiba, Y. Watanabe, K. Matsuda, T. Maeda et al., “Variable supply-voltage scheme for low-power high-speed CMOS digital design,” IEEE Journal of Solid-State Circuits, vol. 33, no. 3, pp. 454–462, 1998.
+[7] W. Wang and G. Choi, “Minimum-energy LDPC decoder for realtime mobile application,” in Proceeding on the Conference on Design, Automation and Test in Europe (DATE). EDA Consortium, 2007, pp. 343–348.
+[8] W. Wang, G. Choi, and K. K. Gunnam, “Low-power VLSI design of LDPC decoder using DVFS for AWGN channels,” in International Conference on VLSI Design. IEEE, 2009, pp. 51–56.
+[9] E. Amador, R. Knopp, V. Rezard, and R. Pacalet, “Dynamic power management on LDPC decoders,” in IEEE Computer Society Annual Symposium on VLSI (ISVLSI). IEEE, 2010, pp. 416–421.
+[10] X. Zhang, F. Cai, and C. R. Shi, “Low-power LDPC decoding based on iteration prediction,” in IEEE International Symposium on Circuits and Systems (ISCAS). IEEE, 2012, pp. 3041–3044.
+[11] N. H. Weste and D. M. Harris, CMOS VLSI design: a circuits and systems perspective. Addison-Wesley/Pearson, 2011.
+[12] H. Kaeslin, Digital integrated circuit design: from VLSI architectures to CMOS fabrication. Cambridge University Press, 2008.
+[13] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Asilomar Conference on Signals, Systems and Computers. IEEE, 2008, pp. 1137–1142.
+[14] “ISO/IEC/IEEE International Standard for Information technology– Telecommunications and information exchange between systems–Local and metropolitan area networks–Specific requirements-Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 3: Enhancements for Very High Throughput in the 60 GHz Band (adoption of IEEE Std 802.11ad-2012),” ISO/IEC/IEEE 8802-11:2012/Amd.3:2014(E), pp. 1–634, March 2014.
+[15] A. Balatsoukas-Stimming, N. Preyss, A. Cevrero, A. Burg, and C. Roth, “A parallelized layered QC-LDPC decoder for IEEE 802.11 ad,” in IEEE International New Circuits and Systems Conference (NEWCAS). IEEE, 2013, pp. 1–4.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:49:01 UTC from IEEE Xplore. Restrictions apply.
+
+

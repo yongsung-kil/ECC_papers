@@ -1,0 +1,861 @@
+Joint Design of Denoising Diffusion Probabilistic
+Models and LDPC decoding for Wireless
+Communications
+Xudong Guan, Hao Ju, Yin Xu, Xiaowu Ou, Zhiyong Chen, Dazhi He and Wenjun Zhang, IEEE Fellow
+Cooperative Medianet Innovation Center (CMIC), Shanghai Jiao Tong University,
+Shanghai 200240, China
+Email: {gxd-18, juhao237, xuyin, xiaowu ou, zhiyongchen, hedazhi, zhangwenjun}@sjtu.edu.cn
+Abstract—Due to its powerful generative capabilities, denoising
+diffusion probabilistic models (DDPM) have found applications in
+various domains. In this paper, DDPM is employed in a wireless
+channel receiver, where we design a decoder structure incor-
+porating DDPM and low-density parity-check (LDPC) decoding
+to enhance the error correction capabilities of the receiver. The
+LDPC decoding method based on DDPM proposed in this paper
+is iterative. The received signal must pass through the DDPM
+and demodulation modules first. The output is multiplied with
+the LDPC parity check matrix to get the parity information and
+then feedback to the DDPM module to assist and carry out the
+following iterative denoising output. Compared with the typical
+communication system, the LDPC decoding method proposed in
+this paper utilizes the diffusion model to assist the channel equal-
+ization with the parity check information generated during the
+decoding process and realizes the inter-module joint optimization
+at the receiver. Also, in order to have a better performance on
+processing and predicting sequence data, recurrent neural net-
+work (RNN) is a reasonable choice for its unique circular concept
+and the long-short-term memory network structure. This paper
+proved that the proposed decoding method has BER performance
+gains of 0.5dB to 0.2dB over the typical LDPC decoding methods
+using normalized min-sum(NMS) algorithm under additive white
+Gaussian noise (AWGN) channel and Rayleigh channel.
+Index Terms—LDPC code, DDPM, RNN, Iterative Decoding
+I. INTRODUCTION
+W
+ITH the continuous development of communication
+systems, reliable communication is becoming increas-
+ingly demanding. The emergence of channel coding techniques
+has made it possible to support this requirement. As one of
+the channel coding methods, low-density parity-check (LDPC)
+codes have been extensively investigated and applied.
+LDPC codes were first proposed by Gallager [1] in 1961 and
+refined by MacKey and Spielman [2] in 1997. Due to its high
+performance and low implementation complexity, researchers
+have meticulously investigated and analyzed LDPC codes. In
+order to maximize the error correction capability of LDPC
+This paper is supported in part by National Natural Science Foundation of
+China Program(62371291, 62271316, 62101322), National Key R&D Project
+of China (2023YFF0904603), the Fundamental Research Funds for the Cen-
+tral Universities and Shanghai Key Laboratory of Digital Media Processing
+(STCSM 18DZ2270700).
+The corresponding author is Yin Xu (e-mail: xuyin@sjtu.edu.cn).
+codes, the selection of the decoding method at the receiver
+is particularly important.
+After the LDPC was proposed, the research on the decoding
+method of LDPC codes has also made significant progress; two
+of the essential decoding algorithms, belief propagation (BP)
+algorithm and min-sum(MS) algorithm [3], have been proposed
+one after another. By using the appropriate decoding algorithm,
+the error correction capability of the LDPC codes are very
+close to the Shannon channel capacity. Also, to balance decod-
+ing performance and complexity, normalized min-sum(NMS)
+algorithm were proposed, compensate for the excessive ap-
+proximation problem caused by MS through scaling factor [4].
+Based on these LDPC decoding algorithms, researchers have
+also been continuously improving these algorithms. researchers
+in [5]–[8] used the properties of LDPC decoding algorithms to
+optimise the decoding process and these attempts have obtained
+significant performance gains.
+In recent years, with the popularization of machine learning
+concepts and methods, more and more deep learning algorithms
+have been applied to traditional physical layer communication
+field, such as channel equalization and channel coding. Deep
+learning algorithms show great potential in the field of error-
+correction codes, algorithms based on deep learning are being
+applied to improve the performance of error-correction codes.
+Researchers in [9] exploited deep neural networks (DNN) to
+reduce the computational complexity and improve the bit error
+rate (BER) performance in both LDPC and polar decoding.
+More attempts have been made to combine existing LDPC
+decoding algorithms (BP, MS, NMS) with deep learning. Re-
+searchers in [10] replaced the belief propagating process of the
+BP algorithm using convolutional neural networks (CNN), thus
+increasing the efficiency of utilizing the parity check informa-
+tion and reducing the decoding complexity. In [11], researchers
+combined BP algorithm with recurrent neural network (RNN),
+improving decoder performance with parallel outputs from
+multiple BP-RNN decoders. The same year, researchers used
+neural networks to implement and replace part of the structure
+of the MS algorithm [12]. In [13] , researchers implemented
+both the iterative process as well as the parameter estimation
+in the NMS algorithm using lightweight neural networks.
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+979-8-3503-0405-3/24/$31.00 ©2024 IEEE
+1944
+2024 IEEE International Conference on Communications Workshops (ICC Workshops) | 979-8-3503-0405-3/24/$31.00 ©2024 IEEE | DOI: 10.1109/ICCWORKSHOPS59551.2024.10615729
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 
+𝑥𝑡−1
+𝑥𝑡
+𝑥0
+𝑥𝑇
+𝑞(𝑥𝑡|𝑥𝑡−1)
+𝑝ϴ (𝑥𝑡−1|𝑥𝑡)
+𝑅𝑒𝑣𝑒𝑟𝑠𝑒𝑃𝑟𝑜𝑐𝑒𝑠𝑠
+𝐹𝑜𝑤𝑎𝑟𝑑𝑃𝑟𝑜𝑐𝑒𝑠𝑠
+⋯
+⋯
+⋯
+⋯
+Fig. 1. Illustration of the typical DDPM
+Since denoising diffusion probabilistic models (DDPM) was
+proposed, researchers have also been experimenting with apply-
+ing DDPM to channel estimation and equalization of receivers
+due to its ability to extract information from noise [14]. In
+2022, researchers introduced the DDPM into error-correction
+codes [15], simulated the noise process of channel transmission
+by using the forward process of the DDPM, and used the
+backward approach of the model to perform channel denoising.
+Based on this structure, Muah Kim [16] , Mehdi Letafati [17]
+and Tong Wu [18] also conducted research analysis on DDPM’s
+noise cancellation capabilities.
+In the above studies, although the application of deep
+learning algorithms makes it possible to transfer the check bit
+information between different modules in the LDPC decoding
+process, only few researchers have attempted it. The LDPC
+codes used in these researches are not representative, and
+research on Rayleigh channels and other modulation methods
+has not yet emerged.
+Therefore, this paper proposes a novel LDPC decoding
+method for joint optimization between different receiver mod-
+ules. Combining the benefits of DDPM with RNN, this paper
+presents an RNN-DDPM model to achieve the joint optimiza-
+tion of channel equalization and LDPC decoding in the receiver.
+The decoding method based on RNN-DDPM seeks to fully
+utilize the parity check information generated during the LDPC
+decoding process under the AWGN and Rayleigh channels.
+II. BACKGROUND KNOWLEDGE
+In section II, this paper will introduce some basic knowledge
+of DDPM, which is the foundation of the proposed RNN-
+DDPM method. The system architecture of a typical DDPM
+is shown as Fig. 1.
+DDPM is a kind of generative learning algorithm based on
+the Markov process. Assuming a data distribution x0 ∼q(x0)
+, the model uses a Markov process q that gradually adds noise
+to the data to produce noisy samples. For each step in process
+q, Gaussian noise is added after multiplying a small variance
+schedule given by βt such as:
+xt =
+p
+1 −βtxt−1 +
+p
+βtzt−1, zt−1 ∼N(0, 1),
+(1)
+q(xt|xt−1) ∼N(xt;
+p
+1 −βtxt−1, βtI).
+(2)
+Under the Markov process, we generalize the relationship
+between the xt and the xt−1 moment to the relationship
+between the xt and the x0. Defining αt
+= 1 −βt and
+αt = Qt
+i=0 αi, the formula followed by the conversion of x0
+to xt can be expressed as follows:
+xt =
+p
+1 −βtxt−1 +
+p
+βtzt−1
+=
+p
+(1 −βt)(1 −βt−1)xt−2+
+p
+(1 −βt)βt−1zt−2+
+p
+βtzt−1.
+(3)
+Since zt−1, zt−2 ∼N(0, 1) and βt ≪1, according to
+the characteristics of the Gaussian independent distribution,
+equation (3) can be rewritten as [14]:
+xt = x0
+t
+Y
+i=0
+p
+1 −βi+ ϵ0
+v
+u
+u
+t1 −
+t
+Y
+i=0
+(1 −βi)
+=
+√
+αtx0 +
+√
+1 −αtϵ0, ϵ0 ∼N(0, 1),
+(4)
+q(xt|x0) ∼N(xt;
+√
+αtx0, (1 −αt)I).
+(5)
+The noise-add process above is defined as the forward
+process of DDPM, and this process is primarily to generate
+training data set. Correspondingly, the process of recovering
+data from training data set is called the reverse process, and it
+is defined as a Markov chain with learned Gaussian transitions
+starting at process as p(xT ):
+pθ(x0:T ) = p(xT )
+T
+Y
+t=1
+pθ(xt−1|xt),
+(6)
+pθ(xt−1|xt) ∼N(xt−1; µθ(xt, t), ρθ(xt, t)).
+(7)
+According to the equation(7), in the reverse process, the rela-
+tionship between xt and xt−1 satisfies the following equation:
+xt−1 = µθ(xt, x0) + ρθ(xt, t).
+(8)
+Moreover, when the condition βt ≪1 is satisfied, both
+reverse process and forward process would have the same
+functional form. Based on the Markov process p defined in the
+forward process and equation (1), and the relationship between
+xt and xt−1 can also be represented as:
+q(xt−1|xt, x0) = N(xt−1; eµt(xt, x0), eβtI),
+(9)
+where eµt(xt, t)
+=
+√
+αt−1βt
+1−αt
+x0 +
+√αt(1−αt−1)
+1−αt
+xt, eβt
+=
+1−αt−1
+1−αt βt.
+The choices of training also requires some clarification.
+Training is performed by optimizing the usual variable bound
+on negative log likelihood [14]:
+E[−log pθ(x0)] ≤Eq
+"
+−log
+pθ(x0:T )
+QT
+t−1 pθ(xt−1|xt)
+#
+= Eq
+
+−log p(xT ) −
+X
+t≥1
+log pθ(xt−1|xt)
+q(xt|xt−1)
+
+= L.
+(10)
+Efficient training is possible by optimizing random terms of
+L with stochastic gradient descent. Further improvements come
+from variance reduction by rewriting L as:
+L = Eq[DKL(q(xT |x0)||p(xT ))]
++ Eq[
+X
+t≥1
+DKL(q(xt−1|xt, x0)||p(xt−1|xt))]
+−Eq[log pθ(x0|x1)],
+(11)
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+1945
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 
+ሚ𝑆
+𝐶ℎ𝑎𝑛𝑛𝑒𝑙
+𝐸𝑞𝑢𝑎𝑙𝑖𝑧𝑎𝑡𝑖𝑜𝑛
+𝐷𝑒𝑚𝑜𝑑𝑢𝑙𝑎𝑡𝑒
+𝐿𝐷𝑃𝐶𝐷𝑒𝑐𝑜𝑑𝑒
+𝐶ℎ𝑎𝑛𝑛𝑒𝑙
+𝐸𝑠𝑡𝑖𝑚𝑎𝑡𝑖𝑜𝑛
+𝐶ℎ𝑎𝑛𝑛𝑒𝑙
+𝑀𝑜𝑑𝑢𝑙𝑎𝑡𝑒
+𝐿𝐷𝑃𝐶𝐸𝑛𝑐𝑜𝑑𝑒
+𝐷𝑖𝑓𝑓𝑢𝑠𝑖𝑜𝑛
+𝑀𝑜𝑑𝑒𝑙
+𝐷𝑒𝑚𝑜𝑑𝑢𝑙𝑎𝑡𝑒
+𝐿𝐷𝑃𝐶𝐷𝑒𝑐𝑜𝑑𝑒
+𝐶ℎ𝑎𝑛𝑛𝑒𝑙
+𝐸𝑠𝑡𝑖𝑚𝑎𝑡𝑖𝑜𝑛
+ℎ−1
+𝑥
+𝑦
+𝑆
+ሚ𝑆𝑡
+෤𝑥𝑡
+෤𝑥𝑡∗𝐻𝑇𝑖𝑓𝑡> 0 
+෥𝑥𝑖𝑓𝑡= 0
+𝑆𝑦𝑠𝑡𝑒𝑚𝑤𝑖𝑡ℎ𝑅𝑁𝑁−𝐷𝐷𝑃𝑀
+𝑇𝑦𝑝𝑖𝑐𝑎𝑙𝑆𝑦𝑠𝑡𝑒𝑚
+መ𝑆
+መ𝑆
+ሚ𝑆
+෤𝑦
+෤𝑥
+መ𝑆
+መ𝑆
+ሚ𝑆𝑖𝑓𝑡= 𝑇
+ℎ−1
+ሚ𝑆𝑡𝑖𝑓𝑡< 𝑇
+𝐵𝑖𝑡𝑠0 𝑜𝑟1 𝑖𝑓𝑡≤𝑛
+Fig. 2. Illustration and comparison of the typical system model and the system with RNN-DDPM
+Lt−1 = Eq[
+X
+t≥1
+DKL(q(xt−1|xt, x0)||p(xt−1|xt))].
+(12)
+Now it is necessary to discuss the choices in (7). This paper
+sets ρθ(xt, t) = σ2
+t I to untrained time dependent constants,
+and both σ2
+t = βt and σ2
+t = eβt = 1−αt−1
+1−αt βt are acceptable
+experimentally. Also, with equation (7), the equation (12) can
+be rewritten as:
+Lt−1 = Eq
+ 1
+2σ2
+t
+||eµt(xt, x0) −µθ(xt, t)||2
+
++ C.
+(13)
+Defining variable xt(x0, ϵ) = √αtx0 + √1 −αtϵ for ϵ ∼
+N(0, 1), equation (13) can be represent as:
+Lt−1 −C = Ex0,ϵ
+ 1
+2σ2
+t
+||
+1
+√αt (xt(x0, ϵ) −
+β
+√1 −αt
+ϵ)
+−µθ(xt(x0, ϵ), t)||2.
+(14)
+Equation (14) demonstrates that µθ(xt, t) need to predict
+1
+√αt (xt(x0, ϵ) −
+β
+√1−αt ϵ). Since xt is input of the model, we
+may choose the parameters as below, where ϵθ denotes the
+predictive model selected and trained in the reverse process.
+µθ(xt, t) = eµt(xt,
+1
+√αt
+(xt −
+√
+1 −αtϵθ(xt)))
+=
+1
+√αt
+(xt −
+βt
+√1 −αt
+ϵθ(xt, t)).
+(15)
+By training the predictive model ϵθ, the denoising process
+xt−1 ∼pθ(xt−1|xt) in the reverse process turns into a calcu-
+lation process
+1
+√αt (xt −
+βt
+√1−αt ϵθ(xt, t)) + σtz, z ∼N(0, 1).
+Therefore, based on the equation (14) , the loss function of the
+predict model can be simplified as [14]:
+Lsimple(θ) = Et,x0,ϵ
+
+||ϵ −ϵθ(xt −
+√
+1 −αtϵ, t)||2
+,
+(16)
+where t is uniform between 1 and T.
+In summary, DDPM has excellent potential in channel de-
+noising and channel equalization. However, to port DDPM to
+the communication system, this paper must modify the original
+model to maximize the performance of the LDPC decoding
+method.
+III. SYSTEM MODEL
+In this section, we will introduce the system model with
+RNN-DDPM. The complete system model is shown as Fig. 2.
+In a typical communication system, we divide the system into
+three parts: transmitter, channel and receiver. From a systems
+perspective, the transmitter and the channel together form the
+forward process in diffusion model. Meanwhile, the receiver
+can be categorized as a diffusion model predictor as well as a
+loop iterative process.
+In decoding process, the received signal eS needs to pass
+through the DDPM module and the demodulation module
+first, the output ˆyt is multiplied with the LDPC parity check
+matrix to get the parity information and then feedback to
+the DDPM module to assist and carry out the subsequent
+iterative denoising output eSt−1. Consequently, this section will
+be presented regarding the transmitter and the channel, the
+decoding process, and the predictor.
+A. Transmitter and Channel
+On the transmitter side, the required information bits is
+expected as a random binary, so that the information bits
+sequence x is generated randomly.
+After the information bits sequence x is generated, the
+encoded bits sequence y can be obtained by using the generate
+matrix G of LDPC code. The relationship between information
+bits sequence x and encoded bits sequence y can be denoted
+as y = G · x.
+The encoded bits sequence y needs to be modulated into
+symbol sequence s for channel-to-channel transmission. How-
+ever, although the forward process of diffusion models can
+simulate the channel’s additive noise in the transmission sym-
+bol sequence s, there is still a specific conversion relationship
+between the channel noise and the forward process. Under
+the Rayleigh channel, the noise process of the channel can
+be expressed as:
+ˆs = hs + ξ,
+(17)
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+1946
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 
+where h represents the Rayleigh channel and ξ represents the
+AWGN. The Rayleigh channel is expected as h =
+ϵr+iϵi
+√
+2 ,
+where ϵr, ϵi
+∼
+N(0, 1). AWGN ξ satisfies the complex
+Gaussian distribution.
+B. Decoding Process
+In system model, after receiving the symbol sequence ˆs,
+channel estimation and equalization will be performed first to
+minimize the effects of Rayleigh multiplicative noise. In the
+system model proposed in this paper, we do not pay attention to
+the specific operation process of the channel estimation module,
+but simplify it to perfect channel estimation, and directly divide
+the received symbol sequence ˆs by the Rayleigh multiplicative
+noise h. The obtained symbol sequence can be defined as
+est = ˆs/h.
+DDPM performs reverse process on the symbol level, how-
+ever, in order to break the gap between different modules in
+communication system, the proposed system model needs to
+demodulate the symbol sequence est and obtain the encoded bits
+sequence ext first, then pass the check information carried in ext
+into ϵθ, the noise predictor of the diffusion model’s backward
+process.
+To get the parity information carried in encoded bits se-
+quence, xt needs to be multiplied by the check matrix H
+of the LDPC code. The syndrome bits sequence Cqt can be
+represented as:
+Cqt = extHT .
+(18)
+In the process of predicting noise, the information we
+input includes not only the symbol sequence est, but also the
+syndrome bits sequence Cqt. In order to make full use of
+the information on these two sequences, it is necessary to
+interweave and perform a dimension upgrade of these two
+sequences. This operation is called embedding in deep learning,
+and a good embedding operation can effectively improve the
+efficiency of the use of input information in the training
+process.
+The reverse process of the RNN-DDPM in system model is
+not exactly the same as the typical DDPM introduced in section
+II. As equations (8) and (15) illustrated, the reverse process of
+the DDPM can be described as:
+xt−1 =
+1
+√αt
+(xt −
+βt
+√1 −αt
+ϵθ(xt, t)) + 1 −αt−1
+1 −αt βtz.
+(19)
+where z ∼N(0, 1), and z is completely independent of other
+additive noise in this paper that obey the same distribution.
+However, the improved diffusion model proposed in this paper
+choose another way to predict the additive noise.
+In receiver module, channel estimation is used to eliminate
+the effect of multiplicative noise on symbol sequences in
+Rayleigh channel. Although the perfect channel estimation
+can reduce the effect of the Rayleigh channel, the AWGN in
+receiver module still affected by channel estimation. It is not
+clear that after the channel estimation, whether the addictive
+noise still follows the same Gaussian distribution or not.
+Thus, the appropriate method is using the predictor to predict
+the multiplicative coefficient and calculate the addictive noise.
+Algorithm 1 Sampling
+Input: parity check matrix H, noise schedule β1:T , α1:T ,
+estimated output esT
+while 0 < t ≤T do
+Cqt = Demodulate(st)HT
+if sum(Cqt) = 0 then
+return es0 = est
+end if
+ϵθ(est, Cqt, t) = est −Hard(estPθ(st, Cqt, t))
+est−1 =
+1
+√αt (est −
+βt
+√1−αt ϵθ(est, Cqt, t))
+end while
+return es0
+Algorithm 2 Training
+Input: parity check matrix H, noise schedule α1:T
+repeat
+t ∼{1, . . . , T}
+ϵ0 ∼N(0, 1)
+st = √αts0 + √1 −αtϵ0
+Cqt = Demodulate(st)HT
+Take gradient descent step on:
+−Es0,tlog(Hard(stPθ(st, Cqt, t)), s0)
+until converged
+In this paper, to fit the structural requirements of the diffusion
+model, it is more appropriate to choose the second method.
+Here we also need to define a hard decision operation Hard
+for symbol sequence that can find the nearest constellation
+symbol for each symbol, while the addictive noise should be
+the difference between est and the constellation symbol. So in
+improved diffusion model, the reverse process, described as
+Algorithm 1, follows the equation below:
+est−1 =
+1
+√αt
+(est −
+βt
+√1 −αt
+ϵθ(est, Cqt, t)) + 1 −αt−1
+1 −αt βtz,
+(20)
+ϵθ(est, Cqt, t) = est −Hard(estPθ(est, Cqt, t)).
+(21)
+Meanwhile, according to the equations (16) and (21), the
+loss function during the training in Algorithm 2 should be:
+Lsimple(θ) = Et,x0,ϵ
+
+||ϵ −ϵθ(est, Cqt, t)||2
+= Et,x0,ϵ
+
+||ϵ −(est −Hard(estPθ(est, Cqt, t)))||2
+.
+(22)
+The loss function reminds that for decoding based on hard
+decision, it is not significant to predict the exact value of the
+multiplicative coefficient of the symbol sequence est. Therefore,
+we can further optimize the loss function and introduce a
+multi-classification cross-entropy loss function to achieve this
+purpose. The loss function can be represented as:
+L(θ) = −Es,tlog(Hard(estPθ(est, Cqt, t)), s).
+(23)
+After demodulating the symbol sequence es0 and getting the
+decoded information bits sequence ex0, the performance of
+decoding method proposed in this paper can be measured by
+BER.
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+1947
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 
+ℎ1,𝑚
+ℎ1,3
+ℎ1,2
+ℎ1,1
+ǁ𝑠𝑡/ 𝑖𝑛𝑝𝑢𝑡
+ℎ2,𝑚
+ℎ2,3
+ℎ2,2
+ℎ2,1
+ℎ𝑙,𝑚
+ℎ𝑙,3
+ℎ𝑙,2
+ℎ𝑙,1
+ℎ0
+ℎ𝑚
+𝑃𝜃/ 𝑜𝑢𝑡𝑝𝑢𝑡
+⋯
+⋯
+⋯
+⋯
+⋯
+⋯
+⋯
+⋯
+⋯
+𝐷𝑒𝑝𝑡ℎ
+𝑡
+Fig. 3. Structure of RNN Predictor
+C. RNN Based Predictor
+The predictor in RNN-DDPM is mainly acted by RNN
+to predict and calculate the additive noise in equation(21).
+Its unique circular concept and the most important structure,
+the long-short-term memory network, make it perform well
+on the problem of processing and predicting sequence data.
+Using RNN for noise prediction can take advantage of the
+characteristics of this neural networks.
+For the RNN used in reverse process, its structure is shown
+as Fig. 3. In order to improve the predictive ability of network,
+parameters related to hidden layers are often debugged during
+training.
+The input of RNN is not the simple splicing of symbol
+sequence est and parity information sequence Cqt, it should be
+the interweaving and elevation of these two sequences. After
+embedding est and Cqt, the input would be a matrix with a size
+of ((1+log2M)n−k, dim), where (n, k) represents the shape
+of the LDPC code, M represents the order of modulation and
+dim represents the dimension of the input after embedding. To
+get the best performance of predicting the noise, the size of the
+hidden layers in RNN is adjustable and can be represented as a
+fixed size iterative matrix Layer(l, m), where l represents the
+number of the hidden layers and m represents the dimension
+of the hidden layers.
+Besides, the size of output should be the same as the symbol
+sequence est. Therefore a fully connected layer needs to be
+connected to ensure that the output sequence is the right size.
+IV. SIMULATION RESULTS AND ANALYSIS
+A. Experimental Setup
+In this section we systematically implement the proposed
+LDPC decoding method by using Python and Pytorch. The
+training data st is generated under SNR ranging from 0dB to
+20dB for Rayleigh channel and from -2dB to 10dB for AWGN
+channel. The testing data est is generated under SNR ranging
+from 5dB to 15dB for Rayleigh channel and under 0dB to
+9dB for AWGN channel. The information bits sequence x is
+generated randomly in LDPC encoding and the LDPC code is
+designed in size of (354, 264) and (576, 432).
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+SNR(dB)
+10-5
+10-4
+10-3
+10-2
+10-1
+100
+BER
+BPSK DM
+BPSK NMS
+QPSK DM
+QPSK NMS
+Fig. 4. BER performance of LDPC (354, 264) under AWGN channel
+0
+1
+2
+3
+4
+5
+6
+7
+8
+SNR(dB)
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+100
+BER
+BPSK DM
+BPSK NMS
+QPSK DM
+QPSK NMS
+Fig. 5. BER performance of LDPC (576, 432) under AWGN channel
+We use batch gradient descent method to train the RNN.
+Each batch contains 512 blocks of data and the SNR of the
+training data blocks are chosen randomly. In training process,
+the Adaptive Moment Estimation (Adam) optimization method
+is used to to search the optimal network parameters with a
+linear schedule from 0.005 to 0.01 as learning rate.
+In the following performance analysis, the BER performance
+is considered between different decoding methods in this paper.
+B. BER Performance under AWGN Channel
+As shown in Fig. 4 and Fig. 5, compared to the LDPC
+decoding method based on the NMS decoding algorithm, RNN-
+DDPM (represented in the figure as DM) method has a perfor-
+mance gain under the AWGN channel and PSK modulation.
+For LDPC codes (354, 264), the decoding method based on
+RNN-DDPM has a BER gain of about 0.5 dB under BPSK
+modulation. It also has better performance under QPSK modu-
+lation, with a BER gain of about 0.3dB to 0.4dB. Meanwhile,
+for LDPC codes (576, 432), the decoding method based on
+RNN-DDPM has a BER gain of about 0.3 dB under BPSK
+modulation and a BER gain of about 0.2 dB to 0.3 dB under
+QPSK modulation.
+From the description of performance gains above, it can be
+noticed that the difference in modulation order affects the BER
+performance of the decoding method. QPSK modulation has a
+smaller performance gain than BPSK modulation under low
+SNR conditions, while under high SNR conditions, both gains
+reach similar levels. Also, from low SNR to high SNR condi-
+tions, the performance gain of RNN-DDPM has an increasing
+and then decreasing trend compared to the decoding method
+based on the NMS algorithm.
+Furthermore, comparing the BER gains of LDPC codes (354,
+264) and (576, 432) under the same modulation order and chan-
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+1948
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+SNR(dB)
+10-4
+10-3
+10-2
+10-1
+BER
+BPSK DM
+BPSK NMS
+QPSK DM
+QPSK NMS
+Fig. 6. BER performance of LDPC (354, 264) under Rayleigh channel
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+SNR(dB)
+10-6
+10-5
+10-4
+10-3
+10-2
+10-1
+100
+BER
+BPSK DM
+BPSK NMS
+QPSK DM
+QPSK NMS
+Fig. 7. BER performance of LDPC (576, 432) under Rayleigh channel
+nel characteristics, it can be assumed that if the LDPC code has
+a high error correction capability itself, the performance gain
+that RNN-DDPM can achieve is more limited. On the contrary,
+if the LDPC code itself is not strong in error correction, then
+the BER performance gain of RNN-DDPM would have more
+significant improvement.
+C. BER Performance under Rayleigh channel
+The BER performance improvement of RNN-DDPM under
+Rayleigh channels is more limited compared to AWGN chan-
+nels.
+As shown in Fig. 6 and Fig. 7, for LDPC codes (354,
+264), the decoding method based on RNN-DDPM has a BER
+gain of about 0.3 dB under BPSK modulation. Under QPSK
+modulation, the decoding method based on RNN-DDPM still
+has a BER gain of about 0.25 dB. Meanwhile, for LDPC codes
+(576, 432), the decoding method based on RNN-DDPM has a
+BER gain of about 0.25 dB under BPSK modulation and a
+BER gain of about 0.15 dB under QPSK modulation.
+The BER performance of proposed decoding method based
+on RNN-DDPM further substantiate the analysis in the previ-
+ous. The modulation order, the error correction capability of
+the LDPC code itself, and the BER performance gain of RNN-
+DDPM are highly correlated.
+V. CONCLUSION
+This paper proposes a LDPC decoding method based on
+RNN-DDPM to jointly optimize two modules, channel equal-
+ization and LDPC decoder. By passing the parity information
+corresponding to each LDPC code between modules, the pro-
+posed LDPC decoding method achieves the joint denoising
+process from both the LDPC parity check information as well
+as the Markov process of the diffusion model. The proposed
+LDPC decoding method shows performance enhancement in
+both AWGN channels and Rayleigh channels. This enhance-
+ment is inextricably related to the modulation order, the error
+correction capability of the LDPC codes, and the SNR condi-
+tion. In future work, we intend to implement a full interaction
+between the modules in receiver and add channel estimation
+module into our LDPC decoding method.
+REFERENCES
+[1] R. Gallager, “Low-density parity-check codes,” IRE Transactions on
+Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[2] L. Chen, J. Xu, I. Djurdjevic, and S. Lin, “Near-shannon-limit quasi-
+cyclic low-density parity-check codes,” IEEE Transactions on Commu-
+nications, vol. 52, no. 7, pp. 1038–1042, 2004.
+[3] J. Chen, A. Dholakia, E. Eleftheriou, M. Fossorier, and X.-Y. Hu,
+“Reduced-complexity decoding of LDPC codes,” IEEE Transactions on
+Communications, vol. 53, no. 8, pp. 1288–1299, 2005.
+[4] J. Chen and M. Fossorier, “Density evolution for two improved BP-Based
+decoding algorithms of LDPC codes,” IEEE Communications Letters,
+vol. 6, no. 5, pp. 208–210, 2002.
+[5] Y. Xu, H. Ju, D. He, N. Gao, Y. Wu, Y. Huang, and W. Zhang, “A
+polygonal line min-sum decoding scheme for low density parity check
+codes,” IEEE Transactions on Broadcasting, vol. 68, no. 1, pp. 203–214,
+2022.
+[6] B. Xu, Y. Xu, D. He, H. Ju, N. Gao, and W. Zhang, “Piecewise
+linear interpolation based log-bp algorithm for 5g ldpc codes,” in 2021
+IEEE International Symposium on Broadband Multimedia Systems and
+Broadcasting (BMSB), 2021, pp. 1–6.
+[7] N. Gao, Y. Xu, D. He, S.-I. Park, H. Hong, H. Ju, C. Chen, and W. Zhang,
+“Min-sum algorithm using multi-edge-type normalized scheme for atsc
+3.0 ldpc decoders,” IEEE Transactions on Broadcasting, vol. 66, no. 3,
+pp. 729–736, 2020.
+[8] H. Ju, Y. Xu, G. Zhang, D. He, N. Gao, and W. Zhang, “Improved
+min-sum algorithm for raptor-like ldpc codes in atsc 3.0,” in 2019
+IEEE International Symposium on Broadband Multimedia Systems and
+Broadcasting (BMSB), 2019, pp. 1–6.
+[9] Y. Wang, Z. Zhang, S. Zhang, S. Cao, and S. Xu, “A unified deep
+learning based polar-ldpc decoder for 5g communication systems,” in
+2018 10th International Conference on Wireless Communications and
+Signal Processing (WCSP), 2018, pp. 1–6.
+[10] B. Vasi´c, X. Xiao, and S. Lin, “Learning to Decode LDPC Codes
+with Finite-Alphabet Message Passing,” in 2018 Information Theory and
+Applications Workshop (ITA), 2018, pp. 1–9.
+[11] J. Rosseel, V. Mannoni, I. Fijalkow, and V. Savin, “Decoding short ldpc
+codes via bp-rnn diversity and reliability-based post-processing,” IEEE
+Transactions on Communications, vol. 70, no. 12, pp. 7830–7842, 2022.
+[12] Q. Wang, S. Wang, H. Fang, L. Chen, L. Chen, and Y. Guo, “A
+Model-Driven Deep Learning Method for Normalized Min-Sum LDPC
+Decoding,” in 2020 IEEE International Conference on Communications
+Workshops (ICC Workshops), 2020, pp. 1–6.
+[13] T. Du, H. Ju, Y. Xu, D. He, and W. Zhang, “A Deep Learning
+based Multi-edge-type decoding algorithm for 5G NR LDPC codes,”
+in 2023 International Wireless Communications and Mobile Computing
+(IWCMC), 2023, pp. 224–228.
+[14] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+in Advances in Neural Information Processing Systems, vol. 33, 2020, pp.
+6840–6851.
+[15] L. W. Yoni Choukroun, “Denoising Diffusion Error Correction Codes,”
+2022.
+[16] M. Kim, R. Fritschek, and R. F. Schaefer, “Learning End-to-End Channel
+Coding with Diffusion Models,” 2023.
+[17] M. L.-a. Mehdi Letafati, Samad Ali, “Probabilistic Constellation Shaping
+With Denoising Diffusion Probabilistic Models: A Novel Approach,”
+2023.
+[18] T. Wu, Z. Chen, D. He, L. Qian, Y. Xu, M. Tao, and W. Zhang, “Cddm:
+Channel denoising diffusion models for wireless semantic communica-
+tions,” IEEE Transactions on Wireless Communications, pp. 1–1, 2024.
+WS17 IEEE ICC 2024 Workshop on AI-ML-Powered Autonomous Telco Networks
+1949
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:35:15 UTC from IEEE Xplore.  Restrictions apply. 

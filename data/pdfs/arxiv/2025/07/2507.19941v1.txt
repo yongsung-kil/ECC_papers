@@ -1,0 +1,2407 @@
+1
+Adaptive Learned Belief Propagation for Decoding Error-Correcting Codes
+Alireza Tasdighi and Mansoor Yousefi
+
+arXiv:2507.19941v1 [cs.IT] 26 Jul 2025
+
+Abstract—Weighted belief propagation (WBP) for the decoding of linear block codes is considered. In WBP, the Tanner graph of the code is unrolled with respect to the iterations of the belief propagation decoder. Then, weights are assigned to the edges of the resulting recurrent network and optimized offline using a training dataset. The main contribution of this paper is an adaptive WBP where the weights of the decoder are determined for each received word. Two variants of this decoder are investigated. In the parallel WBP decoders, the weights take values in a discrete set. A number of WBP decoders are run in parallel to search for the best sequence- of weights in real time. In the two-stage decoder, a small neural network is used to dynamically determine the weights of the WBP decoder for each received word. The proposed adaptive decoders demonstrate significant improvements over the static counterparts in two applications. In the first application, Bose–Chaudhuri–Hocquenghem, polar and quasi-cyclic low-density parity-check (QC-LDPC) codes are used over an additive white Gaussian noise channel. The results indicate that the adaptive WBP achieves bit error rates (BERs) up to an order of magnitude less than the BERs of the static WBP at about the same decoding complexity, depending on the code, its rate, and the signal-to-noise ratio. The second application is a concatenated code designed for a long-haul nonlinear optical fiber channel where the inner code is a QC-LDPC code and the outer code is a spatially coupled LDPC code. In this case, the inner code is decoded using an adaptive WBP, while the outer code is decoded using the sliding window decoder and static belief propagation. The results show that the adaptive WBP provides a coding gain of 0.8 dB compared to the neural normalized min-sum decoder, with about the same computational complexity and decoding latency.
+Index Terms—Belief propagation; neural networks; low-density parity-check codes; optical fiber communication.
+I. INTRODUCTION
+Neural networks (NNs) have been widely studied to improve communication systems. The ability of NNs to learn from data and model complex relationships makes them indispensable tools for tasks such as equalization, monitoring, modulation classification, and beamforming [1]. While NNs have also been considered for decoding error-correcting codes for quite some time [2]–[10], interest in this area has surged significantly in recent years due to advances in NNs and their widespread commercialization [11]–[46].
+Two categories of neural decoders may be considered. In model-agnostic decoders, the NN has a general architecture independent of the conventional decoders in coding theory [12],
+Alireza Tasdighi and Mansoor Yousefi are with the Communications and Electronics Department of Te´le´com Paris (Institut Polytechnique de Paris), Paris, France. E-mails:{alireza.tasdighi,yousefi}@telecom-paris.fr. This work has received funding from the European Research Council under the European Union’s Horizon 2020 research and innovation programme, Grant Agreement No. 805195.
+
+[34], [42]. Many of the common architectures have been studied for decoding, including multi-layer perceptrons [5], [12], [47], convolutional NNs (CNNs) [48], recurrent neural networks (RNNs) [13], autoencoders [19], [35], [40], convolutional decoders [6], graph NNs [33], [43], and transformers [34], [41]. These models have been used to decode linear block codes [4], [12], Reed–Solomon codes [49], convolutional codes [4], [48], [50], Bose–Chaudhuri–Hocquenghem (BCH) codes [11], [16], [18], [31], Reed–Muller codes [5], [25], turbo codes [13], low-density parity-check (LDPC) codes [37], [51], and polar codes [52].
+Training neural decoders is challenging because the number of codewords to classify depends exponentially on the number of information bits. Furthermore, the sample complexity of the NN is high for the small bit error rates (BERs) and long block lengths required in some applications. As a consequence, modelagnostic decoders often require a large number of parameters and may overfit, which makes them impractical unless the block length is short.
+In model-based neural decoders, the architecture of the NN is based on the structure of a conventional decoder [11], [14], [25], [28], [31], [53]. An example is weighted belief propagation (WBP), where the messages exchanged across the edges of the Tanner graph of the code are weighted and optimized [11], [31], [54]. This gives rise to a decoder in the form of a recurrent network obtained by unfolding the update equations of the belief propagation (BP) over the iterations. Since the WBP is a biased model, it has fewer parameters than the model-agnostic NNs at the same accuracy.
+Prior work has demonstrated that the WBP outperforms BP for block lengths up to around 1000, particularly with structured codes, low-to-moderate code rates, and high signal-to-noise ratios (SNRs) [17], [28], [31], [37], [38], [38], [39], [54]–[56]. It is believed that the improvement is achieved by altering the log-likelihood ratios (LLRs) that are passed along short cycles. For example, for BCH and LDPC codes with block lengths under 200, WBP provides frame error rate (FER) improvements of up to 0.4 dB in the waterfall region and up to 1.5 dB in the error-floor region [23], [57], [58]. Protograph-based (PB) QC-LDPC codes have been similarly decoded using the learned weighted min-sum (WMS) decoder [28].
+The WBP does not generalize well at low bit error rates (BERs) due to the requirement of long block lengths and the resulting high sample and training complexity [44]. For example, in optical fiber communication, the block length can be up to tens of thousands to achieve a BER of 10−15. In this case, the sample complexity of WBP is high, and the model does not generalize well when trained with a practically
+
+2
+
+manageable number of examples. The training complexity and storage requirements of the
+WBP can be reduced through parameter sharing. Lian et al. introduced a WBP decoder wherein the parameters are shared across or within the layers of the NN [18], [39]. A number of parameter-sharing schemes in WBP are studied in [28], [39]. Despite intensive research in recent years, WBP remains impractical in most real-world applications.
+In this work, we improve the generalization of WBP to enhance its practical applicability. The WBP is a static NN, trained offline based on a dataset. The main contribution of this paper is the proposal of adaptive learned messagepassing algorithms, where the weights assigned to messages are determined for each received word. In this case, the decoder is dynamic, changing its parameters for each transmission in real time.
+Two variants of this decoder are proposed. In the parallel decoder architecture, the weights take values in a discrete set. A number of WMS decoders are run in parallel to find the best sequence of weights based on the Hamming weight of the syndrome of the received word. In the two-stage decoder, a secondary NN is trained to compute the weights to be used in the primary NN decoder. The secondary NN is a CNN that takes the LLRs of the received word and is optimized offline.
+The performance and computational complexity of the static and adaptive decoders are compared in two applications. In the first application, a number of regular and irregular quasicyclic low-density parity-check (QC-LDPC) codes, along with a BCH and a polar code, are evaluated over an additive white Gaussian noise (AWGN) channel in both low- and high-rate regimes. The results indicate that the adaptive WMS decoders achieve decoding BERs up to an order of magnitude less than the BERs of the static WMS decoders, at about the same decoding complexity, depending on the code, its rate, and the SNR. The coding gain is 0.32 dB at a bit error rate of 10−4 in one example.
+The second application is coding over a nonlinear optical fiber link with wavelength division multiplexing (WDM). The data rates in today’s optical fiber communication system approach terabits/s per wavelength. Here, the complexity, power consumption, and latency of the decoder are important considerations. We apply concatenated coding by combining a lowcomplexity short-block-length soft-decision inner code with a long-block-length hard-decision outer code. This approach allows the component codes to have much shorter block lengths and higher BERs than the combined code. As a result, it becomes feasible to train the WBP for decoding the inner code, addressing the curse of dimensionality and sample complexity issues. For PB QC-LDPC inner codes and a spatially coupled (SC) QC-LDPC outer code, the results indicate that the adaptive WBP outperforms the static WBP by 0.8 dB at about the same complexity and decoding latency in a 16-QAM 8x80 km 32 GBaud WDM system with five channels.
+The remainder of this paper is organized as follows. Section II introduces the notation, followed by the channel models in Section III. In Section IV, we introduce the WBP, and in Section V, two adaptive learned message-passing algorithms. In Section VI, we compare the performance and complexity
+
+of the static and adaptive decoders, and in Section VII, we conclude the paper. Appendices A and B provide supplementary information, and Appendix C presents the parameters of the codes.
+
+II. NOTATION
+
+Natural, real, complex and non-negative numbers are denoted by N, R, C, and R+, respectively. The set of integers from m to n is shown as [m : n] = m, m + 1, · · · , n . The special
+case m = 1 is shortened to [n] =∆ [1 : n]. ⌊x⌋ and ⌈x⌉ denote, respectively, the floor and ceiling of x ∈ R. The Galois field GF(q) with q ∈ N, q ≥ 2, is Fq. The set of matrices with m rows, n columns, and elements in [0 : q − 1] is Fm q ×n.
+A sequence of length n is denoted as xn = (x1, x2, · · · , xn).
+Deterministic vectors are denoted by boldface font, e.g., x ∈ Rn. The ith entry of x is [x]i. Deterministic matrices are shown by upper-case letters with mathrm font, e.g., A.
+
+The probability density function (PDF) of a random variable
+
+X is denoted by PrX (x), shortened to Pr(x) if there is no
+
+ambiguity. The conditional PDF of Y given X is PrY |X (y|x). The expected value of a random variable X is denoted by E(X).
+
+The real Gaussian PDF with mean θ and standard deviation σ is
+
+denoted
+
+by
+
+N (θ, σ2).
+
+The
+
+Q
+
+function
+
+is
+
+Q (x)
+
+=
+
+1 2
+
+erfc
+
+√x 2
+
+,
+
+where erfc(x) is the complementary error function. The binary
+
+entropy function is Hb(x) = −(x log2(x)+(1−x) log2(1−x)), x ∈ (0, 1).
+
+III. CHANNEL MODELS
+
+A. AWGN Channel
+
+Encoder: We consider an (n, k) binary linear code C with
+
+the parity-check matrix (PCM) H ∈ F2m×n, where n is the code length, k is the code dimension, and m ≥ n − k, m ∈
+
+N. The rate LDPC code
+
+of is
+
+the code is r = characterized by
+
+k/n
+
+≥
+
+1
+
+−
+
+m n
+
+.
+
+a lifting factor
+
+A M
+
+PB QC∈ N, a
+
+base matrix B ∈ {−1, 0, 1}λ×ω , and an exponent matrix
+
+P ∈ {0, 1, · · · , M − 1}λ×ω where, λ, ω ∈ N, λ < ω. Given
+
+(λ, ω, M, P), the PCM is obtained according to the procedure
+
+in Appendix A.
+
+We evaluate a BCH code, seven regular and irregular QC-
+
+LDPC codes, and a polar code in the low- and high-rate
+
+regimes. These codes are summarized in Table I and described
+
+in Section VI-A. The parameters of the QC-LDPC codes are
+
+given in Appendix C.
+
+The encoder maps a sequence of information bits b =
+
+(b1, b2, . . . , bk), bi ∈ {0, 1}, i ∈ [k], to a codeword c = (c1, c2, . . . , cn) as c = bG, where G ∈ Fk2×n is the generator matrix of the code.
+
+Channel model: The codeword c is modulated with a binary phase shift keying with symbols ±A ∈ R, and transmitted
+
+over an AWGN channel. The vector of received symbols is
+
+y = (y1, · · · , yn), where
+
+yi = (−1)ci A + zi, i = 1, 2, 3, · · · ,
+
+(1)
+
+where zj ∼ i.i.d.N (0, σ2). If ρ is the SNR, the channel can be normalized so that A = 1, and σ2 = (rρ)−1.
+
+3
+
+TABLE I: Codes in this paper.
+
+AWGN Channel
+
+Low rate
+
+High rate
+
+BCH C1(63, 36), r = 0.57 QC-LDPC C2(3224, 1612), 0.5 QC-LDPC C3(4016, 2761), 0.69 Irregular LDPC C4(420, 180), 0.43 Irregular LDPC C5(128, 64), 0.5
+
+QC-LDPC C6(1050, 875), 0.83 QC-LDPC C7(1050, 850), 0.81 QC-LDPC C8(4260, 3834), 0.9
+Polar C9(1024, 854), 0.83
+
+Optical Fiber Channel
+
+Inner code
+
+Outer code
+
+Single-edge QC-LDPC C10(4000, 3680), 0.92 Non-binary multi-edge C12(800, 32)
+
+Multi-edge QC-LDPC C11(3680, 3520), 0.96
+
+The LLR function L : Rn → Rn of c conditioned on y is
+
+[L (y)]i =∆ log
+
+Pr (ci = 0 | y) Pr (ci = 1 | y)
+
+= log
+
+Pr (yi | ci = 0) Pr (yi | ci = 1)
+
+(2)
+
+= 4rρyi
+
+(3)
+
+for each i ∈ [n]. Equation (2) holds under the assumption that ci are independent and uniformly distributed, and (3) is obtained from Gaussian Pr(yi|ci) from (1).
+Decoder: We compare the performance and complexity of the static and adaptive belief propagation. The static decoders are tanh-based BP, the auto-regressive BP and WBP with different levels of parameter sharing, including BP with simple scaling and parameter-adapter networks (SS-PAN) [18]. Additionally, to assess the achievable performance with a large number of parameters in the decoder, we include a comparison with two model-agnostic neural decoders based on transformers [41] and graph NNs [33], [43].
+
+B. Optical Fiber Channel
+In this application, we consider a multi-user fiber-optic
+transmission system using WDM with Nc users, each of bandwidth B0 Hz, as shown in Figure 1.
+Transmitter (TX): A binary source generates a pseudo-
+random bit sequence of nb information bits bu = (bu,1, bu,2, . . . , bu,nb ), bu,j ∈ {0, 1}, for the WDM channel u ∈ [u1 : u2], u1 = −⌊Nc/2⌋, u2 = ⌈Nc/2⌉ − 1, j ∈ [1 : nb].
+Bit-interleaved coded modulation (BICM) with concatenated
+coding is applied in WDM channels independently. BICM comprises an outer encoder for the code Co(no, ko) with rate ro, an inner encoder for Ci(ni, ki) with rate ri, a permuter π, and a mapper µ, where no/ki is assumed to be an integer. The concatenated code C = Ci ◦ Co has parameters k = ko and n = no/ri and rtotal = riro. Each consecutive subsequence of bu of length ko is mapped to c˜u ∈ Co ⊂ {0, 1}no by the outer encoder and subsequently to cu ∈ C ⊂ {0, 1}n by the inner encoder. Next, cu is mapped to c¯u = π(cu) by a random uniform permuter π : F2n → F2n. The mapper µ : Fm 2 → A maps consecutive sub-sequences of c¯u of length m to a symbol in a constellation A of size M = 2m. Thus, the BICM maps
+
+bu to a sequence of symbols su = (su,ℓ1 , su,ℓ1+1, . . . , su,ℓ2 ), where su,ℓ ∈ A, ℓ ∈ [ℓ1 : ℓ2], ℓ1 = −⌊ns/2⌋, ℓ2 = ⌈ns/2⌉ − 1, ns = nb/m.
+The symbols su,ℓ are modulated with a root raised cosine (RRC) pulse shape p(t) at symbol rate Rs, where t is the time. The resulting electrical signal of each channel xu(t) is converted to an optical signal and subsequently multiplexed
+by a WDM multiplexer. The baseband representation of the
+transmitted signal is
+
+u2 ℓ2
+
+x(t) =
+
+su,ℓ p(t − ℓTs)ej2πuB0t,
+
+(4)
+
+u=u1 ℓ=ℓ1
+
+where Ts = 1/Rs and su,ℓ are i.i.d. random variables. The average power of the transmitted signal is P; thus, E|su,ℓ|2 = P, ∀u, ℓ.
+Encoder: SC LDPC codes are attractive options for optical communications [59]. These codes approach the capacity of the canonical communication channels [60], [61] and have a flexible performance–complexity trade-off. They are decoded with the BP and the sliding window decoder (SWD). Another class of codes in optical communication is the SC product-like codes, braided block codes [62], SC turbo product codes [63], staircase codes [64]–[66] and their generalizations [67], [68]. These codes are decoded with iterative, algebraic hard decision algorithms and prioritize low-complexity, hardware-friendly decoding over coding gain.
+In this paper, the encoding in BICM combines an inner (binary or non-binary) QC-LDPC code Ci with an outer SC QC-LDPC code Co whose component code is a multi-edge QC-LDPC code, as outlined in Table I. The construction and parameters of the codes are given in Appendix B-A and Appendix C, respectively.
+The choice of the inner code is due to the decoder complexity. Other options have been considered in the literature, for instance, algebraic codes, e.g., the BCH (Sec. 3.3 [69]) or ReedSolomon codes (Sec. 3.4 [69]), or polar codes [70]. However, the QC-LDPC codes are simpler to decode, especially at high rates. The outer code can be an LDPC code [71], [72], a staircase code [71], [73], or a SC-LDPC code [72].
+
+4
+
+BICM
+
+TX 0
+
+b0 ∈ Fnb
+
+Outer Inner
+
+π
+
+Enc Enc
+
+µ(.) Mod
+
+˜c0
+
+c0
+
+¯c0
+
+s0
+
+Laser TX
+
+TX 1
+
+DAC
+
+MZM
+
+x0(t) TX -1
+
+Fiber link
+
+Laser RX
+
+Fiber span EDFA Q
+
+I
+
+Nsp × Lsp
+
+Fig. 1: Block diagram of an optical fiber transmission system.
+
+WDM Coherent Receiver
+ADC DBP Demod µ−1(.) π−1 Inner Dec
+LLR Outer Dec
+
+BICD
+bˆ
+
+Fiber-optic link: The channel is an optical fiber link with digital back-propagation (DBP) based on the symmetric split-
+
+Nsp spans of length Lsp of the standard single-mode fiber, step Fourier method is applied to compensate for most of the
+
+with parameters in Table II.
+
+linear and nonlinear fiber impairments [76].
+
+Let q(t, z) : R × R+ → C be the complex envelope of the After DSP, the symbols are still subject to signal-dependent
+
+signal as a function of time t and distance z along the fiber. noise, which is mitigated by the bit-interleaved coded deThe propagation of the signal in one polarization over one modulator (BICD). Let y ∈ Cns denote the equalized signal span of optical fiber is modeled by the nonlinear Schro¨dinger samples for the transmitted symbols s ∈ Ans in the WDM
+
+equation [74]
+
+channel of interest. Given that the deterministic effects were
+
+equalized, we assume that the channel s → y is memo-
+
+∂q(t, ∂z
+
+z) =
+
+−
+
+α 2
+
+q(t,
+
+z)
+
+−
+
+jβ2 2
+
+∂2q(t, ∂t2
+
+z)
+
++
+
+jγ|q(t,
+
+z)|2q(t,
+
+z),
+
+(5)
+
+ryless so that Pr(y|s) =
+
+ns ℓ=1
+
+Pr(yℓ|sℓ).
+
+For
+
+s
+
+∈
+
+A,
+
+let
+
+µ−1(s) = (b1(s), · · · , bm(s)). From the symbol-to-symbol
+
+where α is the loss constant, β2 is the chromatic dispe√rsion coefficient, γ is the Kerr nonlinearity parameter, and j = −1.
+
+channel Pr(y|s), s ∈ A, y ∈ C, we obtain m bit-to-symbol channels
+
+The transmitter is located at z = 0 and the receiver at z = L. The continuous-time model (5) can be discretized to a discretetime discrete-space model using the split-step Fourier method
+
+Prj(y|b) =
+
+Pr(y|s),
+
+(6)
+
+s∈A,bj (s)=b
+
+(Sec. III.B [75]). The optical fiber channel described by the partial differential equation (5) differs significantly from the AWGN channel due to the presence of nonlinearity.
+An erbium doped fiber amplifier (EDFA) is placed at the end of each span, which compensates for the fiber loss, and
+
+where b ∈ F2, and j ∈ [m].
+Let c¯ = (b1(s1), · · · , bm(s1), · · · , b1(sns ), · · · , bm(sns )), n = mns. The LLR function L : Cns → Rn of c conditioned on y is, for each i ∈ [n],
+
+introduces amplified spontaneous emission noise. The input xi(t)–output xo(t) relation of the EDFA is given by xo(t) = Gxi(t) + n(t), where G = eαLsp is the amplifier’s gain, and n(t) is zero-mean circularly symmetric complex Gaussian noise
+process with the power spectral density
+
+σ2
+
+=
+
+1 2
+
+(G
+
+−
+
+1)hf0NF,
+
+[L (y)]i =∆ log
+
+Pr (ci = 0 | y) Pr (ci = 1 | y)
+
+= log
+
+Pr (c¯i′ = 0 | y) Pr (c¯i′ = 1 | y)
+
+= log
+
+Prj (y | b = 0) Prj (y | b = 1)
+
+,
+
+(7)
+
+where NF is the noise figure, h is a Planck constant, and f0 is where i′ is obtained from i according to π, j = i′ mod m,
+
+the carrier frequency at 1550 nm.
+
+and Prj(y|b) is defined in (6).
+
+Receiver: The advent of the coherent detection paved the way for the compensation of transmission effects in optical fiber using digital signal processing (DSP). As a result, the linear effects in the channel, such as the chromatic dispersion and polarization-induced impairments, and some of the nonlinear effects, can be compensated with DSP.
+
+Decoder: The decoding of Ci ◦ Co consists of two steps. First, Ci is decoded using an adaptive WBP in Appendix B, which takes the soft information L(y) ∈ Rn and corrects some errors. Second, Co is decoded using the min-sum (MS) decoder
+with SWD in Appendix B, which further lowers the BER, and outputs the decoded information bits bˆ. The LLRs in the inner
+
+At the receiver, a demultiplexer filters the signal of each decoder are represented with 32 bits, and in the outer decoder
+
+WDM channel. The optical signal for each channel is converted are quantized at 4 bits with per-window configuration.
+
+to an electrical signal by a coherent receiver. Next, DSP In optical communication, the forward error correction (FEC)
+
+followed by bit-interleaved coded demodulation (BICD) is overhead 6–25% is common [77]. Thus, the inner code typically
+
+applied. The continuous-time electrical signal is converted has a high rate of ≥0.9 and a block length of several thousands, to the discrete-time signals by analogue-to-digital converters, achieving a BER of 10−6–10−2. The outer code has a length
+
+down-sampled, and passed to a digital signal processing unit of up to tens of thousands, lowering the BER to an error floor for the mitigation of the channel impairments. For equalization, to ∼10−15.
+
+5
+
+TABLE II: The parameters of the fiber-optic link.
+
+Parameter Name
+
+Value
+
+Transmitter parameters
+
+WDM channels
+
+5
+
+Symbol rate Rs
+
+32 Gbaud
+
+RRC roll-off
+
+0.01
+
+Channel frequency spacing
+
+33 GHz
+
+Fiber channel parameters
+
+Attenuation (α)
+
+0.2 dB/km
+
+Dispersion parameter (D)
+
+17 ps/nm/km
+
+Nonlinearity parameter (γ)
+
+1.2 l/(W·km)
+
+Span configuration
+
+8 × 80 km
+
+EDFA gain
+
+16 dB
+
+EDFA noise figure
+
+5 dB
+
+C. Performance Metrics
+
+Q-factor: The SNR per bit in the optical fiber channel is Eb/No, where Eb = P/m is the bit energy, and No = σ2BNsp is the total noise power in the link, where B = B0Nc. The
+
+performance of the uncoded communication system is often
+
+measured by the BER. The Q-factor for a given BER is the
+
+corresponding SNR in an additive white Gaussian noise channel
+
+with binary phase-shift keying modulation:
+
+QF = 20 log10
+
+√ 2
+
+erfc−1
+
+(2BER)
+
+,
+
+dB.
+
+Coding gain: Let BERi and QFi (respectively, BERo and QFo) denote the BER and Q-factor at the input (respectively, output) of the decoder. The coding gain (CG) in dB is the
+reduction in the Q-factor
+
+the check node c to the variable node v at iteration t. Define similarly L(vt2)c.
+The decoder is initialized at t = 1 with L(v02)c = L(yj), where v is the j-th variable node, and L(yj) is obtained from (3) or (7). For iteration t ∈ [T ], the LLRs are updated in two steps.
+The check node update:
+
+Lc(t2)v (=a) 2 tanh−1
+
+tanh
+
+γv(t′),c 2
+
+L(vt′−2c1)
+
+v ′ ∈Vc \{v }
+
+(b)
+≈ L¯ c,v
+
+γv(t′),c sign Lv(t′−2c1) ,
+
+(9)
+
+v ′ ∈Vc \{v }
+
+where
+
+L¯ c,v
+
+=
+
+min
+v ′ ∈Vc \{v }
+
+Lv(t′−2c1)
+
+.
+
+CG = QFo − QFi = 20 log10 erfc−1(2BERo) − 20 log10 erfc−1(2TBhEeReiq)u.ation in (a) represents the update relation in the BP [69],
+
+The corresponding net CG (NCG) is
+
+where the LLR messages are scaled by non-negative weights {γv(t,c) : v ∈ V, c ∈ Cv, t ∈ [T ]}. Further, (b) is obtained from
+
+NCG = CG + 10 log10 rtotal.
+
+(8) (a) though an approximation to lower the computational cost. The WBP and WMS decoders use (a) and (b), respectively.
+
+Finite block-length NCG: If n is finite, the rate rtotal in The variable-node update:
+
+(8) may be replaced with the information rate in the finite block-length regime [78]
+
+Lv(t2)c = αv(t)L (y) +
+
+βc(′t,)v Lc(t′−2v1).
+
+(10)
+
+Cf ≈ C − log2(e)
+
+BERi
+
+(1
+
+− n
+
+BERi)
+
+Q−1
+
+(BERo)
+
+,
+
+c′∈Cv \{c}
+This is the update relation in the BP, to which the sets of non-negative weights {αv(t) : v ∈ V, t ∈ [T ]} and {βc(,tv) : c ∈
+
+where
+
+Q(x)
+
+=
+
+1 2
+
+erfc
+
+√x 2
+
+.
+
+C, v ∈ Vc, t ∈ [T ]} are introduced. At the end of each iteration t, a hard decision is made
+
+IV. WEIGHTED BELIEF PROPAGATION
+Given a code C, one can construct a bipartite Tanner graph TC = (C, V, E), where C = [m], [m] =∆ 1, 2, . . . , m, V = [n], and E = {(c, v) ∈ C × V | Hc,v ̸= 0} are, respectively, the set of check nodes, variable nodes and the edges connecting them. Let Vc = {v ∈ V | (c, v) ∈ E}, Cv = {c ∈ C | (c, v) ∈ E}, and dc and dv be the degree of c and v in TC, respectively.
+The WBP is an iterative decoder based on the exchange of
+the weighted LLRs between the variable nodes and the check nodes in TC [11], [79]. Let L(ct2)v denote the extrinsic LLR from
+
+y¯j =
+
+1, 0,
+
+if L(vt) < 0, if L(vt) ≥ 0,
+
+(11)
+
+where
+
+L(vt) = L (yj ) +
+
+L(ct2)v .
+
+c∈Cv
+
+(12)
+
+Let y¯ = (y¯1, y¯2, · · · , y¯n) ∈ F2n, and let s = y¯HT ∈ F2m be the syndrome. The algorithm stops if s = 0 or t = T .
+The computation in (9) and (10) can be expressed with an
+NN. The Tanner graph TC is unrolled over the iterations to
+
+6
+
+obtain a recurrent network with 2T layers (see Figure 2), in which the weights γv(t,c) and βc(,tv) are assigned to the edges of TC, and the weights αv(t) to the outputs [16]. The weights are obtained by minimizing a loss function evaluated over a training dataset using the standard optimizers for NNs.
+A. Parameter Sharing Schemes
+The training complexity of WBP can be reduced through parameter sharing at the cost of performance loss. We consider dimensions (t, v, c) for the ragged arrays γv(t,c) and βc(,tv). In Type T parameter sharing over γv(t,c), parameters are shared with respect to iterations t. In Type Ta scheme, γv(t,c) = βc(,tv) = γv,c, ∀ (c, v) ∈ E, ∀ t ∈ [T ]. In this case, there is a single ragged array with |E| trainable parameters {γv,c}c∈Cv,v∈Vc . For the regular LDPC code, |E| = ndv = mdc. It has been observed that for typical block lengths, indeed, the weights do not change significantly with iterations [28]. In Type Tb, there are T arrays γv(t,c) = βc(,tv) , while in Type Tc, there are two arrays γv(t,c) = γv,c and βc(,tv) = βc,v. Type Ta and Tc decoders can be referred to as BP-RNN decoders and Type Tb as feedforward BP. In Type V sharing, γv(t,c) = γc(t) is independent of v. This corresponds to one weight per check node. Likewise, in Type C sharing, there is one weight per check node update, and γv(t,c) = γv(t).
+These schemes can be combined. For instance, in Type TaV C parameter sharing, βc(,tv) = γv(t,c) = γ. Thus, a single parameter γ is introduced in all layers of the NN. This decoder is referred to as the neural normalized BP, e.g., neural normalized min-sum (NNMS) decoder when BP is based on the MS algorithm. The latter is similar to the normalized MS decoder, except that the parameter γ is empirically determined there. In the Type TbV C scheme, βc(,tv) = γv(t,c) = γ(t). Here, there is one weight per iteration. In this paper, αv = 1 ∀ t ∈ T .
+B. WBP over Fq
+The construction and decoding of the PB QC-LDPC binary codes can be extended to codes over a finite field Fq [80], [81]. Here, there are q − 1 LLR messages sent from each node, defined in Eq. 1 [81]. The update equations of the BP are similar to (9)–(10), and presented in [81] for the extended min-sum (EMS) and in [82] for the weighted EMS (WEMS) decoder.
+The parameter sharing for the four-dimensional ragged array {γv(t,c),q′ }t,v∈Cv,c∈Vc,q′∈Fq is defined in Section IV-A. In the check-node update of the WEMS algorithm, it is possible to assign a distinct weight to each coefficient q′ ∈ Fq for every variable node. For instance, in the Type TcCQ scheme, γv(t,c),q′ = γv and βc(,tv),q′ = βv, so there is one weight per variable and one per check node ∀ t ∈ T . In the case of Type TbV CQ, there is only one weight per variable, iteration, and coefficient. In this case, if BP is based on the non-binary EMS algorithm, the decoder is called the neural normalized EMS (NNEMS).
+Remark 1. The EMS decoder has a truncation factor in {1, 2, · · · , q} that provides a trade-off between complexity and accuracy. In this paper, it is set to q to investigate the maximum performance.
+
+V. ADAPTIVE LEARNED MESSAGE PASSING ALGORITHMS
+
+The weights of the static WBP are obtained by training the
+network offline using a dataset. A WBP where the weights
+are determined for each received word y is an adaptive WBP.
+The weights must therefore be found by online optimization.
+To manage the complexity, we consider a WMS decoder with
+Type Ta parameter sharing. Thus, the decoder has one weight per T iterations, which must be determined for a received y.
+Let c ∈ F2n be a codeword and y ∈ U be the corresponding received word, where U = Rn for the AWGN channel and U = Cns for the optical fiber channel. Let y¯ = Dγ (y) be the word decoded by a Type Ta WBP decoder with weight γ(t) ∈ R+ in iteration t ∈ [T ], where γ = (γ(1), γ(2), · · · , γ(T )). In the adaptive decoder, we wish to find a function g : U → X , X ⊆ R+T , γ = g(y) that minimizes the probability that Dg(y)(y) makes an error
+
+min Pr y¯ ̸= c ,
+
+(13)
+
+g∈H
+
+where H is a functional class. The static decoder is a special case where g(.) is a constant function. Two variants of this decoder are proposed, illustrated in Figure 3.
+
+A. Parallel Decoders
+
+Architecture: In parallel decoders, g(.) is found through
+
+searching. Here, γ(t) takes value in a discrete set Xt =
+
+x1(t), x(2t), · · · , xK(t)t , Kt ∈ N, and thus γ ∈ X :=
+
+T t=1
+
+Xt
+
+=
+
+γ 1, · · · , γ ν . The parallel decoders consist of ν independent
+
+decoders y¯i = Dγi (y), i ∈ [ν], running concurrently. Since
+
+Pr y¯i ̸= c in (13) is generally intractable, a sub-optimal g(.)
+
+is selected as follows. At the end of decoding by Dγi , the syndrome si = y¯iHT is computed. Let
+
+i∗ = argmini∈[ν] ||si||H : si = y¯iHT ,
+
+(14)
+
+be the index of the decoder whose syndrome has the smallest Hamming weight. Then, g(y) = γ i∗ , and y¯ = Dγi∗ (y).
+In practice, the search can be performed up to depth T1 = 5
+iterations. However, the BP decoder often has to run for more
+iterations. Thus, a WBP decoder with weights γ i∗ can continue the output with T2 iterations.
+
+Remark 2. The decoder obtained via (14) is generally suboptimal. Minimizing ∥si∥H does not necessarily minimize the number of errors. However, for random codes, the decoder
+obtained from (14) outperforms the static decoder.
+
+Remark 3. If Dγ1 and Dγ2 yield the same number of errors, the decoder with the smaller weight vector is selected, which
+tends to output smaller LLRs.
+Obtaining xk(t) from the distribution of weights.: The values of xk(t) can be determined by dividing a sub-interval in [0, 1] uniformly. The resulting parallel WMS decoder outperforms
+WMS; however, the performance can be improved by choosing xk(t) based on the probability distribution of the weights.
+The probability distribution of the channel noise induces a distribution on y and consequently on γ = g(y). Let Γ(t) be a random variable representing γ(t). Denote the corresponding
+
+7
+
+1
+
+γ (0)
+
+β(0)
+
+1
+
+γ (1)
+
+β(1)
+
+1
+
+β(T )
+
+1
+
+1
+
+1
+
+1
+
+2
+
+2
+
+2
+
+2
+
+3
+
+2
+
+3
+
+2
+
+3 ··· 2
+
+3
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+m
+
+m
+
+m
+
+n
+
+n
+
+n
+
+n
+
+output
+
+α(0) input ∈ Rn
+
+α(1) input
+
+α(2) input
+
+Fig. 2: Tanner graph unrolled to an RNN.
+
+α(T ) input
+
+LLR vector: L(y)
+
+WMS(γ1(1), L(y)) WMS(γ2(1), L(y))
+
+···
+
+WMS(γν(1), L(y))
+
+WMS(γ1(2), L(y)) WMS(γ2(2), L(y))
+
+···
+
+WMS(γν(2), L(y))
+
+···
+
+···
+
+···
+
+···
+
+WMS(γ1(T ), L(y)) WMS(γ2(T ), L(y))
+
+···
+
+WMS(γν(T ), L(y))
+
+s1 = y¯1HT
+
+s2 = y¯2HT
+
+···
+
+sν = y¯ν HT
+
+values are given by the explicit formulas in Lemma 1.
+
+Lemma 1. Let Γ(t) have a cumulative distribution function Ct(.) that is continuous and strictly monotonic. For k ∈ [Kt],
+
+x(kt) = Ct−1
+
+ϵ 2
+
++
+
+(k
+
+−
+
+1)
+
+1− Kt
+
+ϵ
+
+.
+
+If Γ(t) has a Gaussian distribution with a mean θ(t) and standard deviation σ(t), then
+
+xk(t)
+
+=
+
+θ(t)
+
++
+
+√ 2σ(t)
+
+erfc−1
+
+2
+
+−
+
+ϵ
+
+−
+
+2(k
+
+−
+
+1)(1 Kt
+
+−
+
+ϵ)
+
+,
+
+(16)
+
+where erfc is the complementary error function.
+
+Proof. The proof is based on elementary calculus.
+
+i∗ = arg min ||si||H : si = y¯iHT, i ∈ [ν]
+y¯ := y¯i∗ γ = γi(∗1), · · · , γi(∗T )
+
+(a)
+
+LLR vector: L(y)
+
+WMS(γ¯, L(y))
+
+y¯
+
+CNN(L(y)) γ¯
+(b) Fig. 3: Adaptive decoders. (a) Parallel decoders; (b) the twostage decoder. WMS(γ , L(y)) refers to Dγ (y).
+
+mean by θ(t), standard deviation by σ(t), and the cumulative distribution function by Ct(.) =∆ CΓ(t) (.). For ϵ > 0, set
+
+xk(t) = inf
+
+x
+
+:
+
+Ct(x)
+
+>
+
+ϵ 2
+
++
+
+(k
+
+−
+
+1)
+
+1− Kt
+
+ϵ
+
+.
+
+(15)
+
+The numbers x1(t) < x2(t) < · · · < xK(t)t partition the real line into intervals such that Pr Γ(t) ∈ [x(1t), xK(t)t ] = 1 − ϵ and
+
+Pr Γ(t) ∈ [xk(t), x(kt+) 1] Γ(t) ∈ [x1(t), xK(t)t ]
+
+=
+
+1 Kt
+
+.
+
+In
+
+practice,
+
+Γ(t) has a distribution close to Gaussian, in which case xk(t)
+
+Obtaining the distribution of weights: To apply (15) or (16), Ct(.) is required. To this end, a static WBP (with no parameter sharing) is trained offline given a dataset {(y(i), c(i))}i. The empirical cumulative distribution of the weights in each iteration is computed as an approximation to Ct(.). However, if the BER is low, it can be difficult to obtain a dataset that contains a sufficient number of examples corresponding to incorrectly decoded words required to obtain good generalization.
+To address this issue, we apply active learning [23], [83].
+This approach is based on the fact that the training examples near the decision boundary of the optimal classifier determine the classifier the most. Hence, input examples are sampled from a probability distribution with a support near the decision boundary.
+The following approach to active learning is considered. At epoch e in the training of the WBP, random codewords c and the corresponding outputs y are computed. The decoder from the epoch e − 1 is applied to decode y to cˆ = WBP(γ , L(y)). An acquisition function Af (c, cˆ) : C × F2n → R+ evaluates whether the example pair (y, c) should be retained. A candidate example is retained if Af (c, cˆ) is in a given range.
+The choice of the acquisition function depends on the specific problem being solved, the architecture of the NN, and the availability of the labeled data [83]. In the context of training
+the NN decoders for channel coding, the authors of [23] use distance parameters and reliability parameters. Inspired by [23], the authors of [84] define the acquisition function using
+
+8
+
+importance sampling. In this paper, the acquisition function is the number of errors Af (c, cˆ) = ∥c − cˆ∥H = dH (c, cˆ), where dH is the Hamming distance.
+The dataset is incrementally generated and pruned as follows. At each epoch e, a subset Se = {(y(i), c(i))}ib=1 1 of b1 examples, filtered by the acquisition function, is selected. The entire dataset at epoch e is Se = Prune(∪ee′=1Se′ ) and has size b2 > b1. The operator Prune removes the subsets Se′ introduced in old epochs e′ ∈ [e − e0] if e > e0 =∆ b2/b1 and otherwise leaves its input intact. At each epoch e, the loss function is averaged over a batch set of size bs obtained by randomly sampling from Se.
+Complexity of the parallel decoders: The computational
+complexity of the decoder is measured in real multiplications (RMs). For instance, the complexity of the WMS with T iterations, αv = 1, without parameter sharing, or with Type Tb parameter sharing, is RM = 2T |E|, where |E| = ndv = mdc is the number of edges of the Tanner graph of the code. For the WMS decoder with Type Ta or Type TbV C parameter sharing, RM = T (m + n). The latter arises from the fact that equal weights factor out of the and the min terms in BP and are applied once. Thus, the complexity of ν parallel WMS decoders with Type Ta parameter sharing is RM = νT (m + n). If αv ≠ 1, nT is added to the above formulas. Finally, the complexity of Type TaV C decoder is RM = n per single iteration. These expressions neglect the cost of the syndrome
+check.
+B. Two-Stage Decoder
+In a parallel decoder, the weights are restricted in a discrete
+set. The number of parallel decoders depends exponentially on
+the size of this set. The two-stage decoder predicts arbitrary
+non-negative weights, without the exponential complexity of
+the parallel decoders. Further, since the weights are arbitrary,
+the two-stage decoder can improve upon the performance of
+the parallel decoders, when the output LLRs are sensitive to
+the weights. Architecture: Recall that we wish to find a function g(y)
+that minimizes the BER in (13). In a two-stage decoder, this function is expressed by an NN γ¯ = gθ(y) parameterized by vector θ. Thus, the two-stage decoder is a combination of an NN and a WBP. First, the NN takes as input either the LLRs at the channel output L(y) or (L(y), y) and outputs the vector of weights γ¯. Then, the WBP decoder takes the channel LLRs L(y) and weights γ¯ and outputs the decoded word y¯.
+The parameters θ are found using a dataset of examples (y(i), γ (i)) i, where γ (i) is the target weight. This dataset can be obtained through a simulation, i.e., transmitting a codeword c(i), receiving y(i), and using, e.g., an offline parallel decoder to determine the target weight γ (i). In this manner, gθ(y) is expressed in a functional form instead of being determined by
+real-time search, which may be more expensive.
+In this paper, the NN is a CNN consisting of a cascade of two one-dimensional convolutional layers Conv1 and Conv2, followed by a dense layer Dens. Convi applies Fi filters of size Si and stride 1, and the rectified linear unit (ReLU) activation, i = 1, 2. The output of Conv2 is flattened and
+
+passed to Dense, which produces the vector of weights γ¯ of length T . This final layer is a linear transformation with ReLU activation to produce non-negative weights.
+The model is trained by minimizing the quantile loss function
+
+ℓξ(γ , γ¯) = mean max (ξ(γ − γ¯), (ξ − 1)(γ − γ¯)) ,
+
+where ξ ∈ (0, 1) is the quantile parameter and max is applied per entry and mean over vector entries. The choice of loss is obtained by cross-validating the validation error over a number of candidate functions. This is an asymmetric absolute-like loss, which, if ξ ≥ 1/2 as in Section VI, encourages entries of γ¯ to be close to entries of γ from above rather than below.
+Complexity of the two-stage decoder: The computational complexity of the two-stage decoder in the inference mode is the sum of the complexity of the CNN and WMS decoder
+
+RM = T (m + n) + RM(CNN),
+
+where the computational complexity of the CNN is
+
+RM(CNN) = RM(Conv1) + RM(Conv2) + RM(Dense)
+
+= F1(n − S1 + 1)S1 + F1F2(n − S1 − S2 + 2)S2
+
++F2(n − S1 − S2 + 2).
+
+(17)
+
+The complexity can be significantly reduced by pruning the weights, for example, by setting to zero the weights below a threshold τprun.
+Remark 4. Neural decoders are sensitive to distribution shifts and often require retraining when the input distribution or channel conditions change. To lower the training complexity, [18] proposed a decoder that learns a mapping from the input SNR to the weights in WBP, enabling the decoder to operate across a range of SNRs. However, the WBP decoder in [18] is static, since the weights remain fixed throughout the transmission once chosen, despite being referred to as dynamic WBP. We do not address the problem of distribution shift in this paper.
+
+VI. PERFORMANCE AND COMPLEXITY COMPARISON
+In this section, we study the performance and complexity trade-off of the static and adaptive decoders for the AWGN in Section III-A and optical fiber channel in Section III-B.
+
+A. AWGN Channel
+Low-rate regime: To investigate the error correction performance of the decoders at low rates, we consider a BCH code C1(63, 36) of rate 0.57 with the cycle-reduced parity check matrix Hcr in [85] and two QC-LDPC codes C2(3224, 1612) and C3(4016, 2761), which are, respectively, (4, 8)- and (5, 16)regular with rates of 0.5 and 0.69. The parity check matrix of each QC-LDPC code is constructed using an exponent matrix obtained from the random progressive edge growth (PEG) algorithm [86], with a girth-search depth of two, which is subsequently refined manually to remove the short cycles in their Tanner graphs. The parameters of the QC-LDPC codes, including the exponent matrices P2 and P3, are given in Appendix C. In addition, we consider the irregular LDPC codes
+
+9
+
+C4(420, 180) specified in the 5G New Radio (NR) standard and C5(128, 64) in the Consultative Committee for Space Data Systems (CCSDS) standard [85]. The code parameters, such as
+exponent matrices, are also available in the public repository
+[87, v0.1].
+We compare our adaptive decoders with tanh-based BP,
+the auto-regressive BP and several static WMS decoder with
+different levels of parameter sharing, such as BP with SSPAN [18]. The latter is a Type TaV C WBP with αv = α, i.e., a BP with two parameters. Additionally, to assess the
+achievable performance with a large number of parameters in
+the decoder, we include a comparison with two model-agnostic
+neural decoders based on the transformer [41] and graph NNs
+[33], [43].
+The number of iterations in the WMS decoders of the parallel
+decoders is chosen so that the total computational complexities
+of the parallel decoders and the static WMS decoder are about the same. In Figure 4a, this value is T = 5 for C1, where T = T1 + T2 is the total number of iterations; in Figure 4b–d, T = 4 for C2 and C3, T = 6 for C4, and T = 10 for C5; in Figure 4f, T = 10 for C1. Furthermore, Kt = 4 for all t ∈ [T ].
+To compute the value of weights xk(t), the probability distribution of Γ(t) is required. For this purpose, a WMS decoder is trained offline. The training dataset is a collection of examples
+obtained using the AWGN channel with a range of SNRs ρ ∈ 5.8, 6.0, 6.2 dB for C1 or ρ ∈ 3.8, 3.9, 4.0, 4.1, 4.2 dB for C2 and C3. The datasets for C4 and C5 are obtained similarly, with different sets of SNRs. The acquisition function Af (., .) in active learning is the Hamming distance. A candidate example for the training dataset is retained if Af ≤ 10. The parameters of the active learning are b1 = bs = 2000, and b2 = 40000. The loss function is the binary cross-entropy. The models are trained using the Adam optimizer with a learning rate of 0.0005. It is observed that the distribution of Γ(t) is nearly Gaussian. Thus, we obtain xk(t) from (16). Table III presents the mean and variance of this distribution, and x(kt), for the three codes considered.
+For the two-stage decoder, we use a CNN with F1 = 5, S1 = 3, F2 = 8, and S2 = 2, determined by cross-validation. The CNN is trained with a dataset of size 80000, batch set size 300, and the quantile loss function with ξ = 0.75. The number of iterations of the WMS decoder for each code is the
+same as above.
+Figure 4 illustrates the BER vs. SNR for different codes,
+and different decoders for the same code. In each of Figure 4a–
+d, one can compare different decoders at about the same complexity (except for the parallel decoder with the largest ν that shows the smallest achievable BER). For instance, it can
+be seen in Figure 4a that the two-stage decoder achieves half the BER of the WMS with SS-PAN decoder at SNR 6.4 dB for the short length code C1, or approximately 0.32 dB gain in SNR at a BER of 10−4. For this code, the parallel WMS decoders with 3 iterations and ν = 9 outperforms the tanhbased BP with nearly the same complexity. Figure 4b,c show
+that the two-stage decoder offers about an order-of-magnitude improvement in the BER compared to the Type Ta WMS decoder at 4.2 dB for moderate-length codes C2 and C3, or
+
+over 0.1 dB gain at a BER of 10−6. The performance gains
+vary with the code, parameters, and SNR.
+Figure 4d–f compare decoders with different complexities
+at about the same performance. The proposed adaptive model-
+based decoders achieve the same performance of the model-
+agnostic static decoders, with far fewer parameters.
+The computational complexity of the decoders are presented in Table IV. For the CNN, from (17), RM = n(8T + 95) − 24T − 310, which is further reduced by a factor of 4 upon pruning at the threshold τprun = 0.001, with minimal impact on BER. Thus, the two-stage decoder requires less than half of the RM of the WMS decoder with no or Type Ta parameter sharing. Moreover, the two-stage decoder requires approximately onefifth of the RM of the parallel decoders with ν = 16. Compared
+to the WMS decoder with SS-PAN [18], the two-stage decoder
+has nearly double the complexity, albeit with much lower BER,
+as seen in Figure 4a.
+High-rate regime: To further investigate the error correction
+performance of the decoders at high rates, we consider three single-edge QC-LDPC codes, C6(1050, 875), C7(1050, 850), and C8(4260, 3834), associated, respectively, with the PCMs H6(λ = 7, ω = 42, M = 25, P6), H7(8, 42, 25, P7), and H8(6, 60, 71, P8). These codes have rates r = 0.84, 0.81, and 0.9, respectively, and are constructed using the PEG algorithm.
+The PEG algorithm requires the degree distributions of the
+Tanner graph, which are optimized using the stochastic extrinsic
+information transfer (EXIT) chart described in Appendix C. Additionally, we include the polar code C9(1024, 854) with r = 0.84 from the 5G-NR standard as a state-of-the-art
+benchmark. The code parameters, including degree distribution
+polynomials and the exponent matrices, are given in Appendix
+C.
+The acquisition function with active learning in the parallel
+decoders is based on Figure 5. The figure shows the scatter plot of the pre-FEC error e1 = ∥c − y¯∥ versus post-FEC error e2 = ∥c−cˆ∥H , for 340 examples (c, y) for C6 at Eb/N0 = 4.25 dB. Here, y¯ is the hard decision of the LLRs at the channel output defined in (11), and cˆ is decoded with the best decoder at epoch e, i.e., the WMS with weights from epoch e−1. The acquisition function retains (c, y) if e1 = 0 (no error) or if (e1, e2) falls in the rectangle in Figure 5 (with error). The rectangle is defined such that Pr((e1, e2) ∈ S) ≥ 0.95. It is ensured that 70% of examples satisfy e1 = 0 and 30% with (e1, e2) in the rectangle S. In this example, e1 ∈ {80, 81, · · · , 100}, and e2 ∈ [µ − 2σ, µ + 2σ], µ = 149.97, σ = 12.2. We use b1 = 2000, b2 = 20000, bs = 500 and the learning rate 0.001.
+For the adaptive decoder, we consider five parallel decoders with T1 = 4 iterations. The decoder for the binary codes C6, C7 and C8 is WMS with Type TaV C sharing. The output of the decoder with the smallest syndrome is continued with an MS decoder with T2 = 4 iterations. The polar code, however, is decoded with either a cyclic redundancy check (CRC) and successive cancellation list (SCL) with list size L [88] or the
+optimized successive cancellation (OSC) [89].
+Figure 6 shows the performance of the adaptive and static MS decoders for C6, C7 and C9. The polar code C9 with 24 CRC bits is simulated using AFF3CT software toolbox [90, v3.0.2]. It can be seen that at high SNRs, Eb/N0 ≥ 4.6, C6
+
+10
+
+10−2
+
+10−4
+
+10−4
+
+10−3
+
+10−5
+
+10−5
+
+BER
+
+BER
+
+BER
+
+10−4
+
+10−6
+
+10−5
+
+BP, 2 iters
+Parallel WMS, 3 iters, ν = 9, Type TbV C WMS, Type Ta & Tb WMS SS-PAN, Type TaV C Parallel WMS, ν = 16, Type TbV C Two-stage decoder, Type TbV C Parallel WMS, ν = 1024, Type TbV C
+
+10−7
+
+WMS, Type Tb WMS, Type Ta WMS, Type TaV C, γ = 0.75 Parallel WMS, ν = 16, Type TbV C Two-stage decoder, Type TbV C Parallel WMS, ν = 64, Type TbV C
+
+10−56 .5 5.6 5.7 5.8 5.9 6 6.1 6.2 6.3 6.4 6.5
+
+10−8 3.8
+
+3.9
+
+4
+
+4.1
+
+4.2
+
+ρ (dB)
+
+ρ (dB)
+
+(a)
+
+(b)
+
+10−2
+
+10−3 10−4
+
+10−6
+
+10−7
+
+WMS, Type Tb WMS, Type Ta WMS, Type TaV C, γ = 0.8 Parallel WMS, ν = 16, Type TbV C Two-stage decoder, Type TbV C Parallel WMS, ν = 64, Type TbV C
+
+10−8 3.8
+
+3.9
+
+4
+
+4.1
+
+4.2
+
+ρ (dB)
+
+(c)
+
+10−1
+
+10−2
+
+BER
+
+10−3
+
+10−4
+
+Graph NN, 10 iters Parallel WMS, ν = 32, 10 iters, Type TbV C
+
+10−15 .5
+
+2
+
+2.5
+
+3
+
+ρ (dB)
+
+(d)
+
+10−5
+
+BER
+
+10−6
+
+10−7
+
+Autoregressive BP, 5 iters Transformers, d=128, 6 iters Parallel WMS, ν = 32, 6 iters, Type TbV C
+
+3.5
+
+10−84
+
+4.5
+
+5
+
+5.5
+
+ρ (dB)
+
+(e)
+
+BER
+
+10−3
+
+10−4
+
+Autoregressive BP, 50 iters Transformers, d = 128, 6 iters Parallel WMS, ν = 32, 10 iters, Type TbV C
+
+6
+
+10−54
+
+4.5
+
+5
+
+5.5
+
+6
+
+ρ (dB)
+
+(f)
+
+Fig. 4: BER versus SNR ρ, for the AWGN channel in the low-rate regime. (a) BCH code C1(63, 36). Here, the curve for WMS, Type Ta & Tb is from [16, Fig. 8] and the curve for WMS SS-PAN is from [18, Fig. 5(a)]. (b) QC-LDPC code C2(3224, 1612), (c) QC-LDPC code C3(4016, 2761), (d) 5G-NR LDPC code C4(420, 180). Here, the curve for Graph NN is from [33, Fig. 5]. (e) CCSDS LDPC code C5(128, 64). In this and the next sub-figure, the Autoregressive BP and Transformers curves are from [30] and [34], respectively. (f) BCH code C1(63, 36). Figures (d–f) show that adaptive decoders achieve the performance of the
+static decoders with less complexity.
+
+and C7 decoded with adaptive parallel decoders outperform C9. Given this, and the higher complexity of decoding the polar code with either SCL or OSC [88], the choice of QC-LDPC codes for the inner code for the optical fiber channel in Section VI-B is justified.
+Figure 7 shows the performance of C8(4260, 3834) with rate 0.9. The adaptive WMS decoder with T1 + T2 = 8 iterations outperforms the static MS decoder with T = 8 iterations at Eb/N0 = 5 by an order of magnitude in BER.
+The gains of WBP depend on parameters such as the block length or SNR [91] (Sec. IV. d [44]). In general, the gain is decreased when the block length is increased, with other parameters remaining fixed.
+B. Optical Fiber Channel
+We simulate a 16-QAM WDM optical communication system described in Section III-B, with parameters described in Table II. The continuous-time model (5) is simulated with the split-step Fourier method with a spatial step size of 100 m and a simulation bandwidth of 200 GHz. DBP with two samples/symbol is applied to compensate for the physical effects and to obtain the per-symbol channel law
+
+Pr(y|s), s ∈ A, y ∈ C. For the inner code in the con-
+
+catenated code, we consider two QC-LDPC codes of rate
+
+ri = 0.92: binary single-edge code C10(4000, 3680) and nonbinary multi-edge code C11(800, 32) over F32, respectively, with PCMs H10(4, 50, 80, P10) and H11(2, 25, 32, P11), given
+
+in Appendix C. For the component code used in the outer
+
+spatially coupled code, we consider multi-edge QC-LDPC
+
+code C12(3680, 3520) with the PCM H12(1, 23, 160, P12). For ms = 2 and L = 100, the resulting SC-QC-LDPC code has the PCM HSC(1, 23, 160, P12, 2, 100, B¯ 12), where B¯ 12 is the
+
+spreading matrix. The outer SC-QC-LDPC code is encoded
+
+with the sequential encoder [92]. This requires that the top-left
+
+λM ×ωM block H0(0) of HSC in Equation (19) is of full rank.
+
+Thus, B¯ 12 is designed to fulfill this condition. In Equation (19),
+
+we t=
+
+have 0, 1,
+
+Ht(λ 2, H0
+
+= 1, ω = 23, is of full rank,
+
+M = 160) and HSC ∈
+
+F=∆216H320∈×36F81206000×. 3T68h0e,
+
+rate of the component code is rQC = 1 − 1/23 ≈ 0.956,
+
+and the rtotal =
+
+rate ri ·ro
+
+of ≈
+
+outer 0.88.
+
+SC code The P12
+
+is ro = and B¯ 12
+
+rQC −
+
+ms λ Lω
+
+≈ 0.955,
+
+so
+
+matrices are constructed
+
+heuristically and are given in Appendix C.
+
+The inner code is decoded with the parallel decoder, with five decoders with four iterations each. The decoder for the binary code C9 is WMS with Type TaV C parameter sharing, while
+
+11
+
+TABLE III: The mean and variance (θ(t), σ(t)) of (x1(t), · · · , x4(t)) in WMS for the AWGN channel.
+
+Code t=1
+
+C1
+
+C2
+
+C3
+
+(0.99, 0.019)
+
+(0.90, 0.026)
+
+(0.91, 0.023)
+
+(0.96, 0.98, 0.99, 1.02) (0.86, 0.89, 0.90, 0.94) (0.87, 0.90, 0.92, 0.95)
+
+t=2
+
+(0.97, 0.036)
+
+(0.84, 0.029)
+
+(0.86, 0.030)
+
+(0.91, 0.96, 0.98, 1.02) (0.79, 0.83, 0.85, 0.89) (0.81, 0.85, 0.87, 0.90)
+
+t=3
+
+(0.91, 0.049)
+
+(0.73, 0.032)
+
+(0.75, 0.031)
+
+(0.83, 0.89, 0.92, 0.99) (0.68, 0.72, 0.74, 0.78) (0.69, 0.74, 0.76, 0.80)
+
+t=4
+
+(0.70, 0.086)
+
+(0.63, 0.036)
+
+(0.63, 0.034)
+
+(0.56, 0.67, 0.73, 0.84) (0.57, 0.62, 0.64, 0.69) (0.57, 0.61, 0.64, 0.68)
+
+t=5
+
+–
+
+–
+
+(0.40, 0.175)
+
+(0.12, 0.34, 0.46, 0.68)
+
+TABLE IV: Computational complexity of decoders, for the AWGN channel.
+
+WMS [16]
+WMS, Type Ta WMS, Type TaV C
+Parallel WMS Type TbV C, ν = 16
+Parallel WMS Type TbV C, ν = 64
+Parallel WMS Type TbV C, ν = 1024
+Two-stage decoder Type TbV C, τprun = 0.001
+WMS SS−PAN, Type TaV C [18]
+
+γ ∗(t)
+γv(t,)c γv,c
+γ
+
+α∗(t)
+No weight sharing 1
+Weight sharing 1 1
+
+Average RM per Iteration
+
+C1
+
+C2
+
+C3
+
+768
+
+25,792
+
+40,160
+
+768
+
+25,792
+
+63
+
+3226
+
+40,160 4016
+
+γ (t)
+
+1
+
+1440
+
+77,376
+
+84,336
+
+γ (t)
+
+1
+
+–
+
+≃ 3.09 × 105 ≃3.37 × 105
+
+γ (t)
+
+1
+
+92,340
+
+–
+
+–
+
+γ (t)
+
+1
+
+≃300
+
+≃14,093
+
+≃17,558
+
+γ (t)
+
+1
+
+153
+
+8060
+
+9287
+
+for the non-binary code, C11 is WEMS with Type TaV CQ sharing and βc(,tv),q′ = 1. The static EMS algorithm [93] is parameterized as in Section IV, initialized with the LLRs computed from Eq. 1 [81]. The outer code is decoded with the SWD, with the static MS decoding of a maximum of 26 iterations per window.
+Tables V and VI contain a summary of the numerical results. BERi is pre-FEC BER, and the reference BER for the coding gain is BERo = 10−12. At P = −10 dBm, the total gap to NCGf for the adaptive weighted min-sum AWSM (resp., WEMS) decoder is 2.51 (resp., 1.75), while this value is 3.31 (resp., 2.29) and 3.44 (resp., 2.69), respectively, for the NNMS (resp., NNEMS) and MS (resp., EMS) decoders. Thus, the adaptive WBP provides a coding gain of 0.8 dB compared to the static NNMS decoder with about the same computational complexity and decoding latency.
+
+VII. CONCLUSIONS
+Adaptive decoders are proposed for codes on graphs that can be decoded with message-passing algorithms. Two variants, the parallel WBP and the two-stage decoder, are studied. The parallel decoders search for the best sequence of weights in real time using multiple instances of the WBP decoder running concurrently, while the two-stage neural decoder employs an NN to dynamically determine the weights of WBP for each received word. The performance and complexity of the adaptive and several static decoders are compared for a number of codes over an AWGN and optical fiber channel. The simulations show that significant improvements in BER can be obtained using adaptive decoders, depending on the channel, SNR, the code and its parameters. Future work could explore further reducing the computational complexity of the online learning, and applying adaptive decoders to other types of codes and wireless channels.
+
+12
+
+TABLE V: Concatenated inner binary QC-LDPC code C10 and outer SC-QC-LDPC code C12 with an rtotal = 0.88 for the optical fiber channel. The sections for BERi 0.012 and 0.025 correspond to average powers -10 and -11 dBm, respectively. NCGs are in dB.
+
+BERi
+
+BERo Inner-SIDnner
+
+Decoder
+
+BERo Total
+
+NCG NCG NCGf NCGf Gap to NCGf Gap to NCGf
+
+Inner Total Inner Total
+
+Inner
+
+Total
+
+AW3M.2S9 × 10−6 4.52 × 10−8 5.64 6.93 9.38 9.44
+
+3.74
+
+2.51
+
+0.012
+
+4.02 × 10−6 5.43 × 10−7 NNMS
+
+5.56
+
+6.13
+
+9.38
+
+9.44
+
+3.82
+
+3.31
+
+θ = 0.75
+
+MS4.77 × 10−6 7.75 × 10−7 5.49 6.00 9.38 9.44
+
+AWMS0.019
+
+0.017
+
+0.13 0.12 10.20 10.28
+
+0.025
+
+0.02 NNMS
+
+θ = 0.72
+
+0.018
+
+0.04 0.03 10.20 10.28
+
+3.89 10.07 10.16
+
+3.44 10.16 10.25
+
+MS 0.023
+
+0.02
+
+−0.20 −0.15 10.20 10.28
+
+10.40
+
+10.43
+
+TABLE VI: Concatenated inner non-binary QC-LDPC code C11 and outer SC-QC-LDPC code C12 with rtotal = 0.88 for the optical fiber channel. The sections for BERi 0.012 and 0.025 correspond to average powers -10 and -11 dBm, respectively. NCGs are in dB.
+
+BERi
+
+BERo Inner-SDInner
+
+Decoder
+
+BERo Total
+
+NCG NCG NCGf NCGf Gap to NCGf Gap to NCGf
+
+Inner Total Inner Total
+
+Inner
+
+Total
+
+AWEM3.S21 × 10−8 2.74 × 10−9 7.23 7.69 9.38 9.44
+
+2.15
+
+1.75
+
+0.012
+
+4.61 × 10−8 NNEMS
+
+2.11 × 10−8
+
+7.12
+
+7.15
+
+9.38
+
+9.44
+
+2.26
+
+2.29
+
+θ = 0.2
+
+EMS 2.44 × 10−7 8.20 × 10−8 6.60 6.75 9.38 ²9.44
+
+2.78
+
+2.69
+
+AWEMS0.0063
+
+0.0051
+
+1.73 1.80 10.20 10.28
+
+8.47
+
+8.48
+
+0.025
+
+0.0087 NNEMS
+
+0.0075
+
+1.32 1.32 10.20 10.28
+
+8.88
+
+8.96
+
+θ = 0.25
+
+EMS 0.025
+
+0.022
+
+−0.36 −0.32 10.20 10.28
+
+10.56
+
+10.60
+
+APPENDIX A PROTOGRAPH-BASED QC-LDPC CODES
+In this appendix and the next, we provide the supplementary information necessary to reproduce the results presented in this paper. The presentation in Appendix B may be of independent interest, as it provides an accessible exposition of the construction and decoding of the SC codes.
+
+to the right, with the convention that I−1 is the all-zero matrix. Then, Hi,j = Ipi,j . The PCM H := H(λ, ω, M, P) ∈ Fω2 M×λM of this QC-LDPC code is
+
+Ip1,1 Ip1,2 · · · Ip1,ω 
+
+H
+
+=
+
+
+
+Ip2,1 ...
+
+Ip2,2 ...
+
+··· ...
+
+Ip2,ω ...
+
+
+
+.
+
+(18)
+
+Ipλ,1 Ipλ,2 · · · Ipλ,ω
+
+A. Construction for the Single-Edge Case
+A single-edge PB QC-LDPC code C is constructed in two steps. First, a base matrix B ∈ Fλ2×ω is constructed, where λ, ω ∈ N, λ ≤ ω. Then, B is expanded to the PCM of C by replacing each zero in B with the all-zero matrix 0 ∈ FM 2 ×M , where M ∈ N is the lifting factor, and a one in row i and column j with a sparse circulant matrix Hi,j ∈ FM 2 ×M .
+Let P ∈ [−1:M − 1]λ×ω be the exponent matrix of the code, with the entries denoted by pi,j. The matrices Hi,j (and B) can be obtained from P as follows. Denote by In ∈ FM 2 ×M , n ∈ [−1:M −1] the circulant permutation matrix obtained by cyclicshifting of each row of the M × M identity matrix n positions
+
+This code has a length n = ωM , k = ωM − r, and a rate r = 1 − r/(ωM ), where r ≤ λM is the rank of H. If H is of a full rank, r = 1 − λ/ω. The base matrix is also obtained from P, as Bi,j = 0 if pi,j = −1 and Bi,j = 1 if pi,j ̸= −1.
+Denote the Tanner graph of C by TC, and let dc and dv be, respectively, the degree of the check node c and the variable
+node v in TC. If B is regular (i.e., its rows have the same Hamming weight), then H is regular, and the check and variable nodes of C have the same degrees dc and dv, respectively. In this case, C is said to be (dc, dv)-regular. More generally, a
+variable node’s degree distribution polynomial can be defined as Υ(x) = d Υdxd−1, where Υd is the fraction of variable
+
+13
+
+∥c − ¯y∥
+
+220 200 180 160 140 120
+
+#Errors: post-FEC vs. pre-FEC ∥c − y¯∥: Scaled Gaussian approximation N (149.97, 12.2) ∥c − ˆc∥H : Scaled Gaussian approximation N (88.7, 14.4)
+µ + 2σ µ+σ
+µ µ−σ µ − 2σ
+
+100 0
+
+20 40 60 80 100 120 140 160 ∥c − cˆ∥H
+
+Fig. 5: The scatter plot of (e1, e2) for C9 at Eb/N0 = 4.25 dB, for the AWGN channel. The scaled Gaussian approximation curve is fitted per axis.
+
+100
+
+10−1
+
+10−2
+
+10−3
+
+10−4
+
+BER/FER
+
+10−5
+
+10−6
+
+10−7
+
+10−8 10−9
+
+FER: MS T = 8 FER: AWMS T1 + T2 = 4 + 4 BER: MS T = 8 BER: AWMS T1 + T2 = 4 + 4
+
+10−103.5
+
+3.75
+
+4
+
+4.25
+
+4.5
+
+4.75
+
+5
+
+Eb/N0 (dB)
+
+Fig. 7: Performance of the static and adaptive MS decoder for C8 (4260, 3834) at Eb/N0 = 4 dB, for the AWGN channel in the high-rate regime.
+
+10−1
+
+10−2
+
+For any exponent matrix P, H ∈ F32M×5M is
+
+ I−1
+
+I I I p1,2
+
+p1,3
+
+p1,4
+
+I−1 
+
+10−3
+
+H = Ip2,1 Ip2,2 I−1 Ip2,4 Ip2,5  .
+
+10−4
+
+I I I I I p3,1
+
+−1
+
+p3,3
+
+p3,4
+
+p3,5
+
+10−5
+
+BER
+
+10−6
+
+10−7 10−8 10−9 10−10
+
+C6: AWMS T1 + T2 = 4 + 4 C6: MS T = 8 C7: AWMS T1 + T2 = 4 + 4 C7: MS T = 8 C9: CRC24 SCL L = 1 C9: CRC24 SCL L = 8 C9: CRC24 SCL L = 32 C9: OSC decoder
+
+10−112.6
+
+3.1
+
+3.6
+
+4.1
+
+4.6
+
+5.1
+
+5.6
+
+Eb/N0 (dB)
+
+Fig. 6: Performance of the polar code C9 (1024, 854) versus QC-LDPC codes C6 (1050, 875) and C7 (1050, 850), for the AWGN channel in the high-rate regime. The curve for OSC
+decoder is from [89].
+
+nodes of degree d, and a check node degree distribution Λ(x) = d Λdxd−1, where Λd is the fraction of check nodes of degree
+d.
+The parameter matrices B and P can be obtained so as to maximize the girth of TC using search-based methods such as the PEG algorithm [86], [94], algebraic methods [69, Sec. 10],
+or a combination of them [95].
+
+Example 1. Consider λ = 3, ω = 5, and the base matrix B ∈ F32×5
+
+
+
+
+
+01110
+
+B = 1 1 0 1 1 .
+
+10111
+
+B. Construction for the Multi-Edge Case
+
+The above construction can be extended to multi-edge PB
+
+QC-LDPC codes. Here, Bi,j, instead of a binary number, is
+
+a sequence of length Di,j with entries in F2. Likewise, pi,j
+
+is a sequence of length Di,j with entries pdi,j ∈ [−1:M − 1],
+
+d ∈ [Di,j]. Then, Hi,j =
+
+Di,j d=1
+
+Ipdi,j .
+
+This
+
+code
+
+is
+
+represented
+
+by a Tanner graph where there are multiple edges of different
+
+types between the variable and the check nodes. We say this
+
+code has type D = maxi,j Di,j ≥ 1. A single-edge PB QC-
+
+LDPC code is type 1.
+
+Example 2. Consider λ = 2, ω = 3,
+
+B
+
+=
+
+0 1
+
+(1, 1) 0
+
+1 (1, 1, 1)
+
+P =  −1
+
+p11,2, p12,2
+
+p2,1
+
+−1
+
+, and
+
+
+
+p1,3
+
+.
+
+p12,3, p22,3, p32,3
+
+Then
+
+H=
+
+I−1 Ip2,1
+
+I + I p11,2
+
+p12,2
+
+I−1
+
+Ip1,3
+
+I + I + I p21,3
+
+p22,3
+
+p32,3
+
+.
+
+C. Construction for Non-binary Codes
+In the non-binary codes, the entries of codewords, paritycheck, and generator matrices are in a finite field Fq, where q is a power of a prime. There are several ways to construct non-binary PB QC-LDPC codes. The base matrix B ∈ Fλ2×ω typically remains binary, as defined as in Appendix A-A. We
+
+14
+
+use the unconstrained and random assignment strategy in [80] to extend B to a PCM.
+There is significant flexibility in selecting the edge weights for constructing non-binary QC-LDPC codes, which can be classified as constrained or unconstrained [80, Sec. II]. In this work, we focus on an unconstrained and random assignment strategy, where each edge in TC corresponding to a 1 in the binary matrix B is replaced with a coefficient hi,j ∈ Fq. Alternatively, these coefficients could be selected based on predefined rules to ensure appropriate edge-weight diversity, which can lead to enhanced performance. This methodology allows non-binary codes to retain the structural benefits of binary QC-LDPC codes while extending their functionality to finite fields, offering improved error-correcting capabilities for larger q values.
+
+D. Encoder and Decoder
+The generator matrix of the code is obtained by applying Gaussian elimination in the binary field to (18). The encoder is then implemented efficiently using shift registers [96].
+The QC-LDPC codes are typically decoded using belief propagation (BP), as described in Section IV.
+
+APPENDIX B SPATIALLY COUPLED LDPC CODES
+A. Construction
+The SC-QC-LDPC codes in this paper are constructed based on the edge spreading process [97]. Denote the PCM of the constituent PB QC-LDPC code by H(λ, ω, M, P). Denote the PCM of the corresponding SC-QC-LDPC code by HSC := HSC λ, ω, M, P, ms, L, B¯ , with the additional parameters of the syndrome memory ms ∈ N, coupling length L ∈ N, and the spreading matrix B¯ ∈ [−1:ms]λ×ω. Then, HSC ∈ F2λM(ms+L+1)×ωML is given by
+
+coupling length L
+
+coupling width ms + 1
+
+ HHHm01000...s(((000)))
+
+0 H0(1) H1(1)
+... Hms (1)
+0 0
+
+...
+...
+...
+... ... ... ...
+
+
+
+0 0 0 0 H0(L − H1(L − ···
+
+1) 1)
+
+
+
+0
+
+0
+
+. . . Hms(L − 1)
+
+in [0
+
+which Ht(ℓ), 0 : ms], ℓ ∈ [0, L
+
+∈ −
+
+Fλ2M×ωM are 1] and Ht(ℓ)
+
+λ is
+
+× ω block matrices, obtained from B¯ as
+
+t
+
+∈
+
+Ht(ℓ) at row-block i and column-block j
+
+= Ipi,j , if B¯ i,j = t,
+
+(19)
+
+0, otherwise,
+
+where Ipi,j , 0 ∈ FM 2 ×M .
+
+If Ht (ℓ1) = Ht (ℓ2), ∀t ∈ [0, ms] and ∀ℓ1, ℓ2 ∈ [0, L − 1],
+
+the code is time-invariant. If H and HSC are full-rank, then
+
+the rQC
+
+rate =1
+
+of −
+
+SC-QC-LDPC code
+
+λ ω
+
+is
+
+the
+
+rate
+
+of
+
+the
+
+is
+
+r
+
+=
+
+rQC
+
+−
+
+ms λ Lω
+
+,
+
+where
+
+component QC-LDPC code.
+
+For a fixed ms, as L → ∞, then r → rQC. Thus, the rate loss
+
+in SC-LDPC codes can be reduced by increasing the coupling
+
+length.
+
+Example 3. Consider any QC-LDPC code, ms = 2, L = 4
+
+and the spreading matrix  −1 1
+
+ 0 2 −1
+
+B¯ =  1 −1 1 0 −1
+
+1 2 −1 0 2
+
+Then, H2(ℓ) is obtained by replacing each entry of B¯ that is 2 at row i and column j with Ipi,j , and other entries with 0.
+
+Thus, for all ℓ ∈ [0 : 3]
+
+ 0
+
+0
+
+0 Ip1,4
+
+ 0
+
+H2(ℓ) = 0 0 0 0 0  .
+
+0 Ip3,2 0 0 Ip3,5
+
+In a similar manner,  00
+H0(ℓ) = 0 0 0 0 0
+H1(ℓ) = Ip2,1 Ip3,1
+
+Ip1,3 0 0
+Ip1,2 0 0
+
+0 Ip2,4 Ip3,4
+0 Ip2,3
+0
+
+ 0 0 , 0 00 0 0 . 00
+
+If
+
+HSC
+
+is
+
+full-rank,
+
+then
+
+r
+
+=
+
+rQC
+
+−
+
+2·3 4·5
+
+.
+
+If
+
+Ht(ℓ)
+
+is
+
+also
+
+full-rank,
+
+then rQC = 0.4 and r = 0.1.
+
+The SC-LDPC code is efficiently encoded sequentially [92] so that at each spatial position ℓ, (ω − λ)M information bits are encoded out of (ω − λ)M L.
+If an entry of B corresponding to an Hi(ℓ) is a sequence, the corresponding entry in B¯ is also a sequence. Thus, if Hi(ℓ) represents a multi-edge code for some i or ℓ, so does HSC.
+
+B. Encoder
+The SC-LDPC codes are encoded with the sequential encoder [92].
+
+C. Sliding Window Decoder
+Consider the SC LDPC code HSC(λ, ω, M, P, ms, L, B¯ ) in Appendix B-A. Note that any two variable-nodes in the Tanner graph of the code whose corresponding columns in HSC are at least (ms + 1) M ω columns apart do not share any common check-nodes. Thus, they are not involved in the same parity-
+check equation. The SWD uses this property and runs a local BP decoder on windows of HSC shown in Figure 8.
+SWD works through a sequence of spatial iterations ℓ, where
+a rectangular window slides from the top-left to the bottomright side of HSC. In general, a window matrix Hw of size mw consists of mwλM consecutive rows and mwωM consecutive columns in HSC. At each iteration ℓ, it moves λM rows down and ωM columns to the right in HSC. Thus, a window is an mw × mw block, starting from the top left and moving
+
+15
+
+A(0) A(1) A(2) A(3) A(4)
+B(0) B(1) B(2) B(3) B(4) B(5) B(6)
+
+A(0)
+
+A(1)
+
+A(2)
+
+A(3)
+
+B(0)
+
+B(1)
+
+B(2)
+
+B(3)
+
+B(4)
+
+B(5)
+
+(a)
+
+(b)
+
+Fig. 8: (a) A window in SWD is a mw × mw block, each block with size λM × ωM . The window slides diagonally by one
+
+block. The variable nodes in the block at the block-position i × j are denoted by A(i), and the check nodes by B(j). Here,
+
+ms = 2 and mw = 3. (b) The message update for the current window ℓ is denoted by the solid rectangle. The variable nodes in
+
+the
+
+previous
+
+windows
+
+ℓ′
+
+<
+
+ℓ
+
+and
+
+not
+
+in
+
+the
+
+current
+
+window
+
+ℓ,
+
+denoted
+
+in
+
+green,
+
+send
+
+fixed
+
+messages
+
+L(Tℓ−1
+v2c
+
+,ℓ−1)
+
+to
+
+the
+
+check
+
+nodes
+
+in
+
+the
+
+current
+
+window
+
+in
+
+any
+
+iterations
+
+t.
+
+The
+
+blue
+
+variable
+
+nodes
+
+in
+
+the
+
+current
+
+and
+
+a
+
+previous
+
+window
+
+send
+
+L(Tℓ−1
+v2c
+
+,ℓ−1)
+
+to the check nodes in the current window at iteration t = 1, which would be updated according to (9)–(10) for t ≥ 2. The red
+
+variable nodes in the current window, but not in any previous window, send L(y) to the check nodes in the current window
+
+at t = 1, which would be updated at t ≥ 2. The edges from the gray check nodes in windows ℓ′ > ℓ are discarded for the
+
+decoding at position ℓ.
+
+diagonally one block down per iteration. There is a special case where the window reaches the boundary. The way the windows near the boundary are terminated impacts performance [98], [99]. Our setup for window termination at boundary is early termination, which is discussed in section III-B1 [99].
+Denote the variable nodes in window ℓ by
+
+V (ℓ) = vi ∈ V : i = (ℓ−1)ωM, · · · , (mw +ℓ−1)ωM −1 .
+
+The check-nodes directly connected to V (ℓ) are C(ℓ). Define V˜ (ℓ) = ∪ℓ′<ℓ v ∈ V (ℓ′) \ V (ℓ), v connected to C(ℓ) (the variable nodes in the previous windows not in the current window, shown in green in Figure 8) V¯ (ℓ) = ∪ℓ′<ℓ v ∈ V (ℓ′) ∩ V (ℓ), v connected to C(ℓ) (the variable nodes in
+
+the current window and any previous window, shown in blue in Figure 8), and Vˆ (ℓ) = ∪ℓ′<ℓ v ∈ V (ℓ) \ V (ℓ′), v connected to C(ℓ) (the variables nodes in the current
+
+window not in any previous window, shown in red in Figure 8). Let Lv(t2,cℓ) and Lc(t2,vℓ) be LLRs in window ℓ and iteration t ∈ [Tℓ]
+in BP. At t = 1, the BP is initialized as
+
+L(1,ℓ)(v) =
+
+L(Tℓ−1,ℓ−1)(v), L (y) ,
+
+v ∈ V˜ (ℓ) ∪ V¯ (ℓ), v ∈ Vˆ (ℓ)
+
+(20)
+
+The update equation for the variable node is
+
+L(vt2,cℓ) = LLL(v((T2yyℓc−))c′1,+∈,ℓC−v1\){,Lc}c(t′−2v1),ℓ,
+
+v ∈ V˜ (ℓ), v ∈ V¯ (ℓ)
+v ∈ Vˆ (ℓ).
+
+The update relation for L(ct2,vℓ) is given by (9), with no weights, applied for c ∈ C(ℓ) and v ∈ V (ℓ). After Tℓ iterations, the variables in the window ℓ, called target symbols, are decoded.
+The SWD is illustrated in Figure 8.
+
+APPENDIX C PARAMETERS OF CODES
+For low-rate codes, first, the degree distributions of the Tanner graph are determined using the extrinsic information transfer (EXIT) chart [100]. The EXIT chart produces accurate results if n → ∞ [100]. For high-rate codes, we apply the stochastic EXIT chart, which in the short block length regime yields better coding gains compared to the deterministic variant [101]. For instance, while the EXIT chart suggests that the degree distributions of C6 are optimal near Eb/N0 = 3 dB, the stochastic EXIT chart in Figure 9 suggests Eb/N0 = 3.5 dB. Indeed, at Eb/N0 = 3 dB, the check-node extrinsic information IC intersects with variable-node extrinsic information IV for the deterministic EXIT chart. The exponent matrices are obtained using the PEG algorithm, which takes the optimized degree distribution polynomials.
+The matrices below are vectorized row-wise. They can be unvectorized considering their dimensions. C2: λ = 4, ω = 8, M = 403, Λ(x) = x3, Υ(x) = x7, P2 below [345 152 72 376 377 197 4 144 187 398 320 225 330 198 79 289 271 165 259 105 288 254 51 236 111 233 380 332 47 76 222 247]
+C3: λ = 5, ω = 16, M = 251, Λ(x) = x4, Υ(x) = x15, P3 below
+[6 98 208 177 76 76 76 48 111 76 76 34 76 76 64 85 198 42 155 127 29 32 35 10 76 44 47 8 53 56 47 71 31 211 158 0 238 111 199 8 195 248 121 167 46 170 246 140 117 51 3 65 57 150 243 57 213 20 113 164 48 141 222 85 181 142 121 210 229 98 218 59 242 76 196 23 185 54 162 52]
+
+16
+
+1 IV
+
+IE,V (IA,V ) or IA,C(IE,C)
+
+0.8
+
+IC
+
+Eb N0
+
+=
+
+3.5
+
+0.6
+
+0
+
+0.2 0.4 0.6 0.8
+
+1
+
+IA,V or IE,C
+
+Fig. 9: Stochastic EXIT chart for the high-rate code C6 at Eb/N0 = 3.5 dB, for the AWGN channel.
+
+C6: λ = 7, ω = 42, M = 25, Λ(x) = 0.714x2 + 0.286x3, Υ(x) = 0.857x18 + 0.143x23, P6 below
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 − 1 − 1 − 1 − 1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 − 1 1 3 8 18 7 17 22 24 − 1 − 1 − 1 − 1 − 1 16 − 1 − 1 − 1 − 1 − 1 − 1 14 − 1 − 1 − 1 − 1 19 4 − 1 − 1 22 − 1 8 − 1 − 1 5 − 1 − 1 9 0 14 − 1 15 3 12 7 11 14 18 13 22 − 1 − 1 − 1 − 1 − 1 − 1 − 1 17 − 1 − 1 − 1 − 1 − 1 − 1 15 − 1 − 1 3 − 1 18 − 1 − 1 − 1 9 8 − 1 − 1 19 9 20 − 1 21 5 − 1 13 − 1 − 1 − 1 − 1 − 1 − 1 − 1 2 6 16 11 14 9 19 23 12 − 1 − 1 − 1 − 1 − 1 − 1 − 1 20 − 1 19 − 1 − 1 − 1 17 − 1 − 1 − 1 8 16 18 4 3 − 1 17 − 1 − 1 − 1 15 − 1 − 1 − 1 − 1 − 1 6 24 14 22 3 11 1 19 − 1 − 1 13 − 1 − 1 − 1 − 1 − 1 18 − 1 18 −1 15 −1 −1 −1 −1 13 11 19 −1 −1 20 17 −1 21 − 1 −1 −1 −1 17 −1 −1 −1 −1 13 −1 −1 −1 −1 −1 − 1 3 9 24 4 21 1 16 22 14 − 1 − 1 14 23 24 11 − 1 16 23 − 1 − 1 − 1 − 1 − 1 − 1 7 23 − 1 − 1 − 1 − 1 − 1 − 1 18 − 1 − 1 − 1 − 1 15 − 1 − 1 − 1 − 1 9 11 21 8 17 4 14 16 − 1 11 −1 6 11 13 13 20 6 13 −1 −1 16 −1 −1 −1 −1 −1]
+C7: λ = 8, ω = 42, M = 25, Λ(x) = 0.596x2 + 0.404x3, Υ(x) = 0.125x9 + 0.125x16 + 0.5 x17 + 0.125x19 + 0.125x23, P7 below
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 − 1 − 1 − 1 − 1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 − 1 1 3 8 18 7 17 22 24 −1 −1 −1 −1 −1 16 −1 −1 −1 −1 − 1 −1 14 −1 −1 −1 −1 20 −1 16 −1 −1 −1 −1 4 −1 10 − 1 −1 20 19 −1 2 9 3 12 7 11 14 18 13 22 −1 −1 −1 −1 − 1 −1 −1 17 −1 −1 −1 −1 −1 −1 15 −1 −1 −1 −1 22 6 − 1 −1 13 −1 21 4 −1 −1 −1 −1 14 1 17 13 −1 −1 −1 − 1 −1 −1 −1 2 6 16 11 14 9 19 23 12 −1 −1 −1 −1 −1 − 1 − 1 − 1 − 1 − 1 5 − 1 − 1 3 − 1 10 − 1 23 − 1 − 1 8 4 − 1 2 −1 −1 −1 15 −1 −1 −1 −1 −1 6 24 14 22 3 11 1 19 − 1 − 1 13 − 1 − 1 − 1 − 1 − 1 20 − 1 − 1 − 1 − 1 13 − 1 − 1 − 1 − 1 0 3 3 − 1 12 3 7 − 1 − 1 − 1 − 1 − 1 17 − 1 − 1 − 1 − 1 13 − 1 − 1 − 1 − 1 − 1 − 1 3 9 24 4 21 1 16 22 −
+
+1 − 1 12 − 1 6 − 1 − 1 6 − 1 − 1 − 1 − 1 0 6 18 19 − 1 6 − 1 − 1 − 1 − 1 − 1 − 1 18 − 1 − 1 − 1 − 1 15 − 1 − 1 − 1 − 1 9 11 21 8 17 4 14 16 23 1 3 − 1 24 10 0 − 1 − 1 23 − 1 0 −1 −1 −1 23 −1 19 −1 −1 −1 −1 −1 −1 −1 −1 − 1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 − 1 8 5 20 −1 −1 7 10 24 21 10 −1 11 22 −1 −1 −1 −1 −1]
+C8: λ = 6, ω = 60, M = 71, Λ(x) = 0.1x + 0.634x2 + 0.266x3, Υ(x) = 0.166x27 + 0.668 x30 + 0.166x37, P8 below
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 −1 − 1 − 1 − 1 − 1 61 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 62 − 1 − 1 20 60 24 37 − 1 1 17 45 52 57 62 63 68 70 54 26 19 14 9 8 3 0 − 1 − 1 − 1 − 1 − 1 − 1 28 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 46 − 1 − 1 − 1 − 1 34 51 − 1 − 1 59 − 1 18 − 1 − 1 − 1 61 − 1 52 46 21 48 − 1 − 1 44 34 − 1 2 48 6 1 17 40 29 11 67 23 65 70 54 31 42 60 4 − 1 0 − 1 −1 −1 −12 −1 −1 −1 −1 −1 −1 −1 −1 − 1 46 − 1 − 1 − 1 − 1 − 1 21 − 1 23 − 1 − 1 7 − 1 − 1 53 − 1 − 1 62 − 1 32 27 27 39 1 − 1 15 − 1 16 0 − 1 − 1 − 1 − 1 − 1 − 1 16 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 3 51 64 14 29 44 47 62 68 20 7 57 42 27 24 9 − 1 − 1 − 1 32 29 − 1 − 1 − 1 − 1 38 − 1 34 − 1 45 − 1 67 − 1 − 1 60 40 − 1 37 − 1 9 20 − 1 69 20 − 1 0 − 1 − 1 − 1 − 1 21 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 2 18 3 51 49 16 33 59 69 53 68 20 22 55 38 12 − 1 − 1 62 − 1 − 1 − 1 − 1 48 0 37 48 − 1 26 19 59 60 49 38 − 1 − 1 − 1 − 1 67 − 1 − 1 − 1 24 − 1 − 1 − 1 0 1 40 42 − 1 −1 −1 −1 −1 −1 −1 −1 −1 −1 −1 − 1 67 14 48 55 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 − 1 25 67 16 41 64 0 68 66 50 20 63 67 34 45 0 7 29 11 11 − 1 − 1 − 1 61 − 1 − 1 − 1 − 1 − 1]
+C10: λ = 4, ω = 50, M = 80, Λ(x) = 0.02+0.18x + 0.64x2 + 0.16x3, Υ(x) = 0.25x29 0.25x33 + 0.25x34 + 0.25x47, P10 below
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 −1 − 1 1 2 8 − 1 53 70 − 1 78 72 − 1 27 − 1 3 6 − 1 − 1 79 50 77 − 1 − 1 − 1 − 1 30 7 14 − 1 − 1 51 − 1 73 66 − 1 − 1 29 − 1 18 36 64 − 1 74 − 1 62 44 16 60 − 1 20 37 − 1 3 67 78 41 31 26 77 13 − 1 39 49 54 9 − 1 − 1 43 − 1 − 1 71 −1 6 37 −1 −1 21 69 66 47 57 22 59 11 14 33 23 58 − 1 − 1 44 18 − 1 68 − 1 − 1 36 62 − 1 12 − 1 79 42 − 1 − 1 23 − 1 − 1 38 79 − 1 57 − 1 − 1 − 1 3 70 69 54 − 1 − 1 77 10 11 26 68 − 1 7 30 1 − 1 28 − 1 73 50 − 1 − 1 52 36 18 20 14 4 72 44 62 60 66 76 8 34 − 1]
+C11: λ = 2, ω = 25, M = 32, Λ(x) = x, Υ(x) = x24, P11 below
+[(0, 17) (−1) (0, 20) (−1) (0, 21) (−1) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (0) (−1) (0, 17) (−1) (0, 20) (−1) (0, 21) (0) (1) (2) (3) (4) (5) (6) (7) (8) (9) (10) (16) (25) (26) (27) (28) (29) (30) (31)]
+
+17
+
+C12: λ = 1, ω = 23, M = 160, Λ(x) = 0.480x + 0.130x2 + 0.217x3, 0.130x4 + 0.043x5 Υ(x) = x71, P12 below
+
+[19] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani, and P. Viswanath, “DEEPTURBO: Deep Turbo decoder,” in IEEE Int. Workshop Signal Process. Adv. Wireless Commun., Jul. 2019, pp. 1–5, [CrossRef].
+[20] F. Carpi, C. Ha¨ger, M. Martalo`, R. Raheli, and H. D. Pfister, “Rein-
+
+[(1, 151, 151, 55, 127, 151) (138, 27, 139, 144) (88, 57, −1) (111, −1, 47) (130, 15, 33) (11, 47, 118, 15, 108) (109, 5, −1) (143, −1, 140) (100, 14, 14, 141, −1) (12, −1, 20) (91, 42, 96)
+
+forcement learning for channel coding: Learned bit-flipping decoding,” in Annu. Allerton Conf. Commun. Control Comput., Sep. 2019, pp. 922–929, [CrossRef]. [21] Q. Wang, S. Wang, H. Fang, L. Chen, L. Chen, and Y. Guo, “A model-
+
+(74, −1, 72) (54, 29, 155, 157, 159) (83, 82, −1) (0, 77, 141, 78, 13) driven deep learning method for normalized Min-Sum LDPC decoding,”
+
+(112, −1, 59) (119, 74, 56) (48, 6, 55, 157, −1) (85, −1, 9)
+
+in IEEE Int. Conf. Commun. Workshops, Jun. 2020, pp. 1–6, [CrossRef]. [22] L. Huang, H. Zhang, R. Li, Y. Ge, and J. Wang, “AI coding: Learning
+
+(41, 80, 121, 2, −1) (103, −1, 45) (60, 117, 52, 87) (99, 148, −1)]
+
+to construct error correction codes,” IEEE Trans. Commun., vol. 68,
+
+ms = 2, B¯ 12 below
+
+no. 1, pp. 26–39, Jan. 2020, [CrossRef]. [23] I. Be’Ery, N. Raviv, T. Raviv, and Y. Be’Ery, “Active deep decoding of
+
+[(0, 0, 1, 2, 2, 2) (0, 1, 1, 2) (0, 1, −1) (0, −1, 2) (0, 1, 2) (0, 0, 0, 1, 2)(0, 1, −1) (0, −1, 2) (0, 1, 1, 1, −1) (0, −1, 2)(0, 1, 2)(0, −1, 2)(0, 1, 2, 2, 2) (0, 1, −1)
+
+linear codes,” IEEE Trans. Commun., vol. 68, no. 2, pp. 728–736, Feb. 2020, [CrossRef]. [24] W. Xu, X. Tan, Y. Be’ery, Y.-L. Ueng, Y. Huang, X. You, and C. Zhang, “Deep learning-aided belief propagation decoder for Polar codes,” IEEE
+
+(0, 0, 0, 1, 2)(0, −1, 2)(0, 1, 2)(0, 1, 1, 1, −1), (0, −1, 2) (0, 0, 0, 1, −1)(0, −1, 2)(0, 1, 2, 2)(0, 1, −1)]
+
+J. Emerg. Sel. Top. Circuits Syst., vol. 10, no. 2, pp. 189–203, Jun. 2020, [CrossRef]. [25] A. Buchberger, C. Ha¨ger, H. D. Pfister, L. Schmalen, and A. G. i Amat,
+
+“Pruning and quantizing neural belief propagation decoders,” IEEE J. Sel.
+
+REFERENCES
+
+Areas Commun., vol. 39, no. 7, pp. 1957–1966, Jul. 2021, [CrossRef].
+
+[1] Q.-V. Pham, N. T. Nguyen, T. Huynh-The, L. Bao Le, K. Lee, and W.-J. Hwang, “Intelligent radio signal processing: A survey,” IEEE Access, vol. 9, pp. 83 818–83 850, Jun. 2021, [CrossRef].
+[2] J. Bruck and M. Blaum, “Neural networks, error-correcting codes, and polynomials over the binary n-cube,” IEEE Trans. Inf. Theory, vol. 35, no. 5, pp. 976–987, Sep. 1989, [CrossRef].
+[3] G. Zeng, D. Hush, and N. Ahmed, “An application of neural net in decoding error-correcting codes,” in IEEE Int. Symp. Circ. Syst., vol. 2, May 1989, pp. 782–785, [CrossRef].
+[4] W. Caid and R. Means, “Neural network error correcting decoders for block and convolutional codes,” in IEEE Glob. Commun. Conf., vol. 2, Dec. 1990, pp. 1028–1031, [CrossRef].
+[5] Y.-H. Tseng and J.-L. Wu, “Decoding Reed-Muller codes by multi-layer perceptrons,” Int. J. Electron. Theor. Exp., vol. 75, no. 4, pp. 589–594, Oct. 1993.
+[6] G. Marcone, E. Zincolini, and G. Orlandi, “An efficient neural decoder for convolutional codes,” Eur. Trans. Telecommun. Relat. Technol., vol. 6, no. 4, pp. 439–445, Jan. 1995.
+[7] X.-A. Wang and S. Wicker, “An artificial neural net Viterbi decoder,” IEEE Trans. Commun., vol. 44, no. 2, pp. 165–171, Feb. 1996, [CrossRef].
+[8] L. G. Tallini and P. Cull, “Neural nets for decoding error-correcting codes,” in Northcon/95, Oct. 1995, pp. 89–94, [CrossRef] (accessed on 11 June 2025).
+[9] M. Ibnkahla, “Applications of neural networks to digital communications - a survey,” Signal Process., vol. 80, pp. 1185–1215, Jul. 2000, [CrossRef] (accessed on 11 June 2025).
+[10] A. Haroon, “Decoding of error correcting codes using neural networks,” Ph.D. dissertation, Blekinge Institute of Technology, Sweden, 2012, [CrossRef] (accessed on 11 June 2025).
+[11] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Annu. Allerton Conf. Commun. Control Comput. IEEE, Sep. 2016, pp. 341–346, [CrossRef].
+[12] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in Annu. Conf. Inf. Sci. Syst. IEEE, Mar. 2017, pp. 1–6, [CrossRef].
+[13] H. Kim, Y. Jiang, R. B. Rana, S. Kannan, S. Oh, and P. Viswanath, “Communication algorithms via deep learning,” in Int. Conf. Learn. Represent., Feb. 2018, [CrossRef].
+[14] B. Vasic´, X. Xiao, and S. Lin, “Learning to decode LDPC codes with finite-alphabet message passing,” Feb. 2018, pp. 1–9.
+
+[26] J. Dai, K. Tan, Z. Si, K. Niu, M. Chen, H. V. Poor, and S. Cui, “Learning to decode protograph LDPC codes,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 1983–1999, Jul. 2021, [CrossRef].
+[27] T. Tonnellier, M. Hashemipour, N. Doan, W. J. Gross, and A. Balatsoukas-Stimming, “Towards practical near-maximum-likelihood decoding of error-correcting codes: An overview,” in IEEE Int. Conf. Acoust., Speech, Signal Process., Jun. 2021, pp. 8283–8287, [CrossRef].
+[28] L. Wang, S. Chen, J. Nguyen, D. Dariush, and R. Wesel, “Neuralnetwork-optimized degree-specific weights for LDPC MinSum decoding,” in IEEE Int. Symp. Topics Coding, Aug. 2021, pp. 1–5, [CrossRef].
+[29] S. Habib, A. Beemer, and J. Kliewer, “Belief propagation decoding of short graph-based channel codes via reinforcement learning,” IEEE J. Sel. Areas Inf. Theory, vol. 2, no. 2, pp. 627–640, Jun. 2021, [CrossRef].
+[30] E. Nachmani and L. Wolf, “Autoregressive belief propagation for decoding block codes,” 2021, [CrossRef].
+[31] E. Nachmani and Y. Be’ery, “Neural decoding with optimization of node activations,” IEEE Commun. Lett., vol. 26, no. 11, pp. 2527–2531, Nov. 2022, [CrossRef].
+[32] S. Cammerer, F. Ait Aoudia, S. Do¨rner, M. Stark, J. Hoydis, and S. Ten Brink, “Trainable communication systems: Concepts and prototype,” IEEE Trans. Commun., vol. 68, no. 9, pp. 5489–5503, Sep. 2020.
+[33] S. Cammerer, J. Hoydis, F. A. Aoudia, and A. Keller, “Graph neural networks for channel decoding,” in IEEE Glob. Workshops, Dec. 2022, pp. 486–491, [CrossRef].
+[34] Y. Choukroun and L. Wolf, “Error correction code transformer,” Conf. Neural Inf. Proc. Syst., vol. 35, pp. 38 695–38 705, 2022, [CrossRef].
+[35] M. V. Jamali, H. Saber, H. Hatami, and J. H. Bae, “ProductAE: Toward training larger channel codes based on neural product codes,” in IEEE Int. Conf. Commun. Workshops, May 2022, pp. 3898–3903, [CrossRef].
+[36] S. Do¨rner, J. Clausius, S. Cammerer, and S. ten Brink, “Learning joint detection, equalization and decoding for short-packet communications,” IEEE Trans. Commun., vol. 71, no. 2, pp. 837–850, Feb. 2022, [CrossRef].
+[37] G. Li, X. Yu, Y. Luo, and G. Wei, “A bottom-up design methodology of neural Min-Sum decoders for LDPC codes,” IET Commun., vol. 17, no. 3, pp. 377–386, Feb. 2023, [CrossRef].
+[38] Q. Wang, Q. Liu, S. Wang, L. Chen, H. Fang, L. Chen, Y. Guo, and Z. Wu, “Normalized Min-Sum neural network for LDPC decoding,” IEEE Trans. Cogn. Commun. Netw., vol. 9, no. 1, pp. 70–81, Feb. 2023, [CrossRef].
+
+[15] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding [39] L. Wang, C. Terrill, D. Divsalar, and R. Wesel, “LDPC decoding with
+
+of linear codes - A syndrome-based approach,” in IEEE Int. Symp. Inf.
+
+degree-specific neural message weights and RCQ decoding,” IEEE
+
+Theory, Jun. 2018, pp. 1595–1599, [CrossRef].
+
+Trans. Commun., Apr. 2023, [CrossRef].
+
+[16] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and [40] J. Clausius, M. Geiselhart, and S. Ten Brink, “Component training of
+
+Y. Be’ery, “Deep learning methods for improved decoding of linear
+
+Turbo Autoencoders,” in IEEE Int. Symp. Topics Coding, Sep. 2023,
+
+codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131,
+
+pp. 1–5, [CrossRef].
+
+Feb. 2018, [CrossRef].
+
+[41] Y. Choukroun and L. Wolf, “A foundation model for error correction
+
+[17] L. P. Lugosch, “Learning algorithms for error correction,” Master’s
+
+codes,” in Int. Conf. Learn. Represent., Jan. 2024, [CrossRef].
+
+thesis, McGill University (Canada), 2018, [CrossRef].
+
+[42] ——, “Learning linear block error correction codes,” 2024, [CrossRef].
+
+[18] M. Lian, F. Carpi, C. Ha¨ger, and H. D. Pfister, “Learned belief- [43] J. Clausius, M. Geiselhart, D. Tandler, and S. t. Brink, “Graph neural
+
+propagation decoding with simple scaling and SNR adaptation,” in
+
+network-based joint equalization and decoding,” in IEEE Int. Symp. Inf.
+
+IEEE Int. Symp. Inf. Theory, Jul. 2019, pp. 161–165, [CrossRef].
+
+Theory, Jul. 2024, pp. 1203–1208, [CrossRef].
+
+18
+
+[44] S. Adiga, X. Xiao, R. Tandon, B. Vasic´, and T. Bose, “Generalization bounds for neural belief propagation decoders,” IEEE Trans. Inf. Theory, vol. 70, no. 6, pp. 4280–4296, Jun. 2024, [CrossRef].
+[45] T. Kim and J. Sung Park, “Neural self-corrected Min-Sum decoder for NR LDPC codes,” IEEE Commun. Lett., vol. 28, no. 7, pp. 1504–1508, Jul. 2024, [CrossRef].
+[46] V. Ninkovic, O. Kundacina, D. Vukobratovic, C. Ha¨ger, and A. G. i Amat, “Decoding quantum LDPC codes using graph neural networks,” in IEEE Glob. Commun. Conf., Dec. 2024, pp. 3479–3484.
+[47] S. Cammerer, T. Gruber, J. Hoydis, and S. Ten Brink, “Scaling deep learning-based decoding of Polar codes via partitioning,” in IEEE Glob. Commun. Conf., Dec. 2017, pp. 1–6, [CrossRef].
+[48] V. Sagar, G. M. Jacyna, and H. Szu, “Block-parallel decoding of convolutional codes using neural network decoders,” Neurocomputing, vol. 6, no. 4, pp. 455–471, Aug. 1994, [CrossRef].
+[49] M. Hussain and J. S. Bedi, “Reed-Solomon encoder/decoder application using a neural network,” Proceedings of the SPIE, vol. 1469, pp. 463– 471, Aug. 1991, [CrossRef].
+[50] M. D. Alston and P. M. Chau, “A neural network architecture for the decoding of long constraint length convolutional codes,” in IEEE Int. Joint Conf. Neural Networks, Jun. 1990, pp. 121–126, [CrossRef].
+[51] X. Wu, M. Jiang, and C. Zhao, “Decoding optimization for 5G LDPC codes by machine learning,” IEEE Access, vol. 6, pp. 50 179–50 186, Sep. 2018, [CrossRef].
+[52] V. Miloslavskaya, Y. Li, and B. Vucetic, “Neural network-based adaptive Polar coding,” IEEE Trans. Commun., vol. 72, no. 4, pp. 1881–1894, Apr. 2024, [CrossRef].
+[53] N. Doan, S. A. Hashemi, E. N. Mambou, T. Tonnellier, and W. J. Gross, “Neural belief propagation decoding of CRC-polar concatenated codes,” May 2019, pp. 1–6.
+[54] C. Yang, Y. Zhou, Z. Si, and J. Dai, “Learning to decode protograph LDPC codes over fadings with imperfect CSIs,” in 2023 IEEE Wireless Communications and Networking Conference (WCNC), 2023, pp. 1–6, [CrossRef].
+[55] M. Wang, Y. Li, J. Liu, T. Guo, H. Wu, and F. C. Lau, “Neural layered min-sum decoders for cyclic codes,” Phys. Commun., vol. 61, p. 102194, Dec. 2023.
+[56] T. Raviv, A. Goldman, O. Vayner, Y. Be’ery, and N. Shlezinger, “CRCaided learned ensembles of belief-propagation polar decoders,” in IEEE Int. Conf. Acoust., Speech, Signal Process., Apr. 2024, pp. 8856–8860.
+[57] T. Raviv, N. Raviv, and Y. Be’ery, “Data-driven ensembles for deep and hard-decision hybrid decoding,” in IEEE Int. Symp. Inf. Theory, Jun. 2020, pp. 321–326, [CrossRef].
+[58] H.-Y. Kwak, D.-Y. Yun, Y. Kim, S.-H. Kim, and J.-S. No, “Boosting learning for ldpc codes to improve the error-floor performance,” in Adv. Neural Inf. Process. Syst., vol. 36, Dec. 2023, pp. 22 115–22 131, [CrossRef].
+[59] L. Schmalen, D. Suikat, D. Ro¨sener, V. Aref, A. Leven, and S. ten Brink, “Spatially coupled codes and optical fiber communications: An ideal match?” in SPAWC, Jun. 2015, pp. 460–464, [CrossRef].
+[60] S. Kudekar, T. Richardson, and R. L. Urbanke, “Spatially coupled ensembles universally achieve capacity under belief propagation,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7761–7813, Dec. 2013, [CrossRef].
+[61] G. Liga, A. Alvarado, E. Agrell, and P. Bayvel, “Information rates of next-generation long-haul optical fiber systems using coded modulation,” IEEE J. Lightw. Technol., vol. 35, no. 1, pp. 113–123, Jan. 2017, [CrossRef].
+[62] A. J. Feltstrom, D. Truhachev, M. Lentmaier, and K. S. Zigangirov, “Braided block codes,” IEEE Trans. Inf. Theory, vol. 55, no. 6, pp. 2640–2658, Jun. 2009, [CrossRef].
+[63] G. Montorsi and S. Benedetto, “Design of spatially coupled Turbo product codes for optical communications,” in IEEE Int. Symp. Topics Coding, Aug. 2021, pp. 1–5, [CrossRef].
+[64] B. P. Smith, A. Farhood, A. Hunt, F. R. Kschischang, and J. Lodge, “Staircase codes: FEC for 100 Gb/s OTN,” IEEE J. Lightw. Technol., vol. 30, no. 1, pp. 110–117, Jan. 2012, [CrossRef].
+[65] L. M. Zhang and F. R. Kschischang, “Staircase codes with 6% to 33% overhead,” IEEE J. Lightw. Technol., vol. 32, no. 10, pp. 1999–2002, May 2014, [CrossRef].
+[66] L. Zhang, “Analysis and design of staircase codes for high bit-rate fibre-optic communication,” Ph.D. dissertation, University of Toronto, 2017, [CrossRef].
+[67] M. Shehadeh, F. R. Kschischang, and A. Y. Sukmadji, “Generalized staircase codes with arbitrary bit degree,” in Opt. Fiber Commun. Conf. Exhib., Mar. 2024, pp. 1–3, [CrossRef].
+
+[68] A. Y. Sukmadji, U. Mart´ınez-Pen˜as, and F. R. Kschischang, “Zipper codes,” IEEE J. Lightw. Technol., vol. 40, no. 19, pp. 6397–6407, Oct. 2022, [CrossRef].
+[69] W. Ryan and S. Lin, Channel codes: classical and modern. Cambridge university press, 2009, [CrossRef].
+[70] T. Ahmad, “Polar codes for optical communications,” Ph.D. dissertation, Bilkent university, May 2016, [CrossRef].
+[71] M. Barakatain and F. R. Kschischang, “Low-complexity concatenated LDPC-staircase codes,” IEEE J. Lightw. Technol., vol. 36, no. 12, pp. 2443–2449, Jun. 2018, [CrossRef].
+[72] A. G. i Amat, G. Liva, and F. Steiner, “Coding for optical communications - can we approach the Shannon limit with low complexity?” in Eur. Conf. Opt. Commun., Sep. 2019, pp. 1–4, [CrossRef].
+[73] L. M. Zhang and F. R. Kschischang, “Low-complexity soft-decision concatenated ldgm-staircase fec for high-bit-rate fiber-optic communication,” IEEE J. Lightw. Technol., vol. 35, no. 18, pp. 3991–3999, Sep. 2017, [CrossRef].
+[74] G. P. Agrawal, Nonlinear Fiber Optics, 6th ed. San Francisco, CA, USA: Academic Press, 2019.
+[75] G. Kramer, M. I. Yousefi, and F. Kschischang, “Upper bound on the capacity of a cascade of nonlinear and noisy channels,” Jerusalem, Israel, Apr. 2015, pp. 1–4.
+[76] M. Secondini, S. Rommel, G. Meloni, F. Fresi, E. Forestieri, and L. Poti, “Single-step digital backpropagation for nonlinearity mitigation,” Photonic Network Communications, vol. 31, pp. 493–502, 2016.
+[77] I. T. Union, “G.709: Interface for the optical transport network (OTN),” 2020, [CrossRef].
+[78] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp. 2307–2359, May 2010, [CrossRef].
+[79] M. Mezard and A. Montanari, Information, physics, and computation. Oxford University Press, 2009.
+[80] L. Dolecek, D. Divsalar, Y. Sun, and B. Amiri, “Non-binary protographbased LDPC codes: Enumerators, analysis, and designs,” IEEE Trans. Inf. Theory, vol. 60, no. 7, pp. 3913–3941, Jul. 2014, [CrossRef].
+[81] E. Boutillon, L. Conde-Canencia, and A. Al Ghouwayel, “Design of a GF(64)-LDPC decoder based on the EMS algorithm,” IEEE Trans. Circ. Syst. I, vol. 60, no. 10, pp. 2644–2656, Oct. 2013, [CrossRef].
+[82] Y. Liang, C.-T. Lam, Q. Wu, B. K. Ng, and S.-K. Im, “A model-driven deep learning-based non-binary LDPC decoding algorithm,” TechRxiv, 2024, [CrossRef].
+[83] Y. Fu, X. Zhu, and B. Li, “A survey on instance selection for active learning,” Knowl. Inf. Syst., vol. 35, pp. 249–283, Jun. 2013, [CrossRef].
+[84] H. Noghrei, M.-R. Sadeghi, and W. H. Mow, “Efficient active deep decoding of linear codes using importance sampling,” IEEE Commun. Lett., pp. 1–1, Dec. 2024, [CrossRef].
+[85] M. Helmling, S. Scholl, F. Gensheimer, T. Dietz, K. Kraft, S. Ruzika, and N. Wehn, “Database of channel codes and ml simulation results,” 2024, [CrossRef].
+[86] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, “Progressive edge-growth Tanner graphs,” in IEEE Glob. Telecommun. Conf., vol. 2, Nov. 2001, pp. 995–1001, [CrossRef].
+[87] A. Tasdighi and M. Yousefi, “The repository for the papers on the adaptive weighted belief propagation,” https://github.com/comsys2/ adaptive-wbp, Jul. 2025.
+[88] I. Tal and A. Vardy, “List decoding of Polar codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015, [CrossRef].
+[89] A. Su¨ral, E. G. Sezer, E. Kolag˘asıog˘lu, V. Derudder, and K. Bertrand, “Tb/s Polar successive cancellation decoder 16nm asic implementation,” 2020, [CrossRef].
+[90] A. Cassagne, O. Hartmann, M. Le´onardon, K. He, C. Leroux, R. Tajan, O. Aumage, D. Barthou, T. Tonnellier, V. Pignoly, B. L. Gal, and C. Je´go, “Aff3ct: A fast forward error correction toolbox,” SoftwareX, vol. 10, p. 100345, 2019, [CrossRef].
+[91] Y. Tang, L. Zhou, S. Zhang, and C. Chen, “Normalized neural network for belief propagation ldpc decoding,” Dec. 2021.
+[92] K. Tazoe, K. Kasai, and K. Sakaniwa, “Efficient termination of spatiallycoupled codes,” in IEEE Inf. Theory Workshop, Sep. 2012, pp. 30–34, [CrossRef].
+[93] T. Takasu, “Pocketsdr,” 2024, [CrossRef]. [94] Z. Li and B. V. Kumar, “A class of good quasi-cyclic low-density parity
+check codes based on progressive edge growth graph,” in IEEE Conf. Signals, Syst. Comput., vol. 2, Nov. 2004, pp. 1990–1994, [CrossRef]. [95] A. Tasdighi and E. Boutillon, “Integer ring sieve for constructing compact QC-LDPC codes with girths 8, 10, and 12,” IEEE Trans. Inf. Theory, vol. 68, no. 1, pp. 35–46, Jan. 2022, [CrossRef].
+
+19
+[96] Z. Li, L. Chen, L. Zeng, S. Lin, and W. Fong, “Efficient encoding of quasi-cyclic low-density parity-check codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 71–81, Jan. 2006, [CrossRef].
+[97] D. G. Mitchell and E. Rosnes, “Edge spreading design of high rate array-based SC-LDPC codes,” in IEEE Int. Symp. Inf. Theory, Jun. 2017, pp. 2940–2944, [CrossRef].
+[98] M. Lentmaier, M. M. Prenda, and G. P. Fettweis, “Efficient message passing scheduling for terminated ldpc convolutional codes,” in IEEE Int. Symp. Inf. Theory, Jul. 2011, pp. 1826–1830, [CrossRef].
+[99] I. Ali, J.-H. Kim, S.-H. Kim, H. Kwak, and J.-S. No, “Improving windowed decoding of SC LDPC codes by effective decoding termination, message reuse, and amplification,” IEEE Access, vol. 6, pp. 9336–9346, Mar. 2018, [CrossRef].
+[100] I. Land, “Code design with exit charts,” 2013, [CrossRef]. [101] T. Koike-Akino, D. S. Millar, K. Kojima, and K. Parsons, “Stochastic
+EXIT design for low-latency short-block LDPC codes,” in Opt. Fiber Commun. Conf. Exhib., Mar. 2020, pp. 1–3, [CrossRef].
+
+

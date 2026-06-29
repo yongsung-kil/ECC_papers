@@ -1,0 +1,301 @@
+2011 17th Asia-Pacific Conference on Communications (APCC) 2nd – 5th October 2011 | Sutera Harbour Resort, Kota Kinabalu, Sabah, Malaysia
+LDPC Decoding for CMMB Utilizing OpenMP and CUDA Parallelization
+
+Joo-Yul Park
+Electronics Computer Engineering Hanyang University Seoul, Korea
+jooyul.park@gmail.com
+
+Ki-Seok Chung
+Electronics Computer Engineering Hanyang University Seoul, Korea
+kchung@hanyang.ac.kr
+
+Abstract— As the 4G mobile communication systems require high transmission rate with reliability, the demand for efficient error correcting code increases. In this paper, a novel LDPC (Low Density Parity Check) decoding method is introduced. We address a parallel software implementation of LDPC decoding for CMMB (China Multimedia Mobile Broadcasting) standard. LDPC codes for CMMB employ a regular H-matrix which has the fixed row and column weights. While effectively utilizing the regularity of the Hmatrix, we process information on H-matrices for multiple code rates using OpenMP pragmas on a multi-core processor and execute the decoding algorithm in parallel using CUDA (Compute Unified Device Architecture) on a GPU (Graphics Processing Unit). We evaluated the performance of the proposed implementation with respect to two different code rates, and verified that the proposed implementation satisfies the bandwidth requirement for CMMB.
+Keyword : LDPC, Decoder, Parallel Processing, CUDA, Graphic Processing Unit, CMMB
+
+I.
+
+INTRODUCTION
+
+The LDPC (Low Density Parity Check) code is one of the linear block codes and it was originally devised by Gallager in the 1960’s [1]. However, the code was impossible to implement in hardware in those days. Therefore, people did not pay much attention to the code. About 30 years later, thanks to the development of communication and integrated circuit design technologies, the excellence of the LDPC code was rediscovered by Mackay and Neal [2-5]. Recently S.Y. Chung and T.J. Richardson showed that the LDPC code can approach to the Shannon limit within 0.0045dB [6]. Iterative LDPC decoding schemes based on the Sum-Product algorithm [7] can be fully parallelized, leading to high-speed decoding [8]. Due to these reasons, the LDPC coding is widely regarded as a very attractive coding technique for the high speed 4G wireless communication.
+
+LDPC codes are used in many standards and they support multiple data rates for a standard. Thus, it is very challenging to design a decoder which supports various standards and multiple data rates. Recently, SDR (Software Defined Radio) baseband processing has emerged as a promising technology to provide a cost-effective and flexible alternative to hardware implementation by implementing a wide variety of wireless protocols in software. However, normally the bandwidth
+
+requirement by physical layer processing is very high. Thus, high processing power is required. To achieve high processing power, multi-core processors are often employed in modern embedded communication devices [9,10]. Also, GPU (Graphics Processing Unit) is often adopted to achieve high computational power [11]. Wide deployment of multi-core processors and rapid advances in GPU performance lead to active studies in designing LDPC decoders using GPUs [1216]. They reported that GPU could reduce the decoding time dramatically.
+In this paper, we extend this parallelization further in such a way that various standards and code rates can be supported seamlessly. We propose a design which employs both CPU and GPU. To support various code rates, the host multi-core CPU reads the H-matrix and using OpenMP [17] it generates address patterns which are effective when the GPU executes the LDPC decoding in parallel. The LDPC decoding algorithm is written in CUDA (Compute Unified Device Architecture) [18] which is a parallel computing architecture developed by NVIDIA, and the CUDA program is executed by the GPU.
+The rest of this paper is organized as follows. In Section II, we review LDPC codes for CMMB (China Multimedia Mobile Broadcasting) and a parallelization technique using CUDA. In Section III, we present the memory structure for CUDA, an address generation method for LDPC decoding and existing parallelization techniques. In Section IV, the proposed software implementation and performance evaluation results will be presented. Section V will conclude this paper.
+II. BACKGROUND
+A. Parallelization of LDPC decoding
+An LDPC decoding algorithm is capable of correcting errors by repeatedly computing and exchanging messages. A good overview of the LDPC decoding is presented in [19]. The amount of computation depends on the size of the H-matrix. In case of relatively new standards such as DVB-T2 [20] and CMMB [21], the size of the H-matrix is huge. Due to its huge size, both decoding complexity and decoding time increase. Therefore, it is crucial to distribute the computation load evenly to multiple cores, and parallelize the computation efficiently. The LDPC decoding consists of four types of operations: initialization, check node update, bit node update,
+
+978-1-4577-0390-4/11/$26.00 ©2011 IEEE
+
+910
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:02 UTC from IEEE Xplore. Restrictions apply.
+
+and parity check operation. If we analyze the algorithm, we observe that the check node update can be done in parallel since each row has no correlation with each other. Also, the bit node update on each column can be processed in parallel. The reason we can perform in parallel is that an LDPC decoding algorithm does not have dependencies in memory access among the four types of operations. (Figure 1)
+
+The proposed parallelization technique utilizes the regular property of the H-matrix effectively when we generate addresses to maximize the LDPC decoding performance.
+
+Figure 1. Parallelization of LDPC decoding
+
+This paper has three main technical contributions. First we propose an efficient and flexible technique which can be applied to various protocols and target multi-core platforms since we propose a solution which employs both CPUs and GPUs. We also introduce an efficient technique to reduce the memory requirement significantly. Next we propose a parallelization technique for not only check and bit node update operations but also parity check operation, which will be addressed in detail in Section III.
+
+B.
+
+CMMB LDPC Codes
+
+CMMB is a China's designated mobile TV standard and it is regarded as a key for the next generation of communication and multimedia systems in China. Its H-matrix is known to have high error-correcting capability. The CMMB standard supports two code rates of 1/2 and 3/4. The characteristics of each code rate are summarized in TABLE I [22].
+
+TABLE I.
+
+LDPC CODING CONFIGURATION [16]
+
+Code rate R
+1/2
+3/4
+
+Information K 4608 bits 6912 bits
+
+Code word N 9216 bits 9216 bits
+
+Row weight dc
+6
+12
+
+Column weight dv
+3
+3
+
+Since the parity check matrix H for CMMB standard is a kind of HS(High-Structured)-LDPC, approaches for QC(Quasi-Cyclic)-LDPC which is used for DVB-S2 standard cannot be used for CMMB. Especially, LDPC codes for the CMMB standard are regular, which means the H-matrix has the fixed column and row weights. The H-matrix for the 1/2 code rate has patterns that are shifted by 36 bits for every 18 rows. In case of the 3/4 code rate, patterns are shifted by 36 bits for every 9 rows [23].
+
+Figure 2. Proposed LDPC decoding flow
+III. PROPOSED LDPC DECODER
+As aforementioned, as the size of the H-matrix increases, the amount of computation grows rapidly. Hence, satisfactory performance is hard to come by in software implementation. On the other hand, it may take long design time to implement in hardware when the decoder supports various standards and data rates. Therefore we propose a novel parallel software implementation of LDPC decoding algorithms based on OpenMP and CUDA programming. We shall show that the proposed implementation is a cost-effective and flexible LDPC decoder which satisfies the throughput requirement for various H-matrices and multiple code rates. First, we will show the overall software structure, and then we will explain parallelization techniques that we propose.
+A. Architecture of the proposed LDPC decoder Figure 2 shows the overall architecture. The overall
+structure of the proposed LDPC decoder is as follows. We assume that the target platform consists of a single host multicore processor which will run C codes with OpenMP pragmas and a GPU which can run CUDA codes. To support multiple standards and data rates, multiple H-matrices are stored as files. The host CPU reads the H-matrix for a given standard and a SNR constraint. The host CPU then generates an address table which contains the addresses of data processed in parallel by
+
+911 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:02 UTC from IEEE Xplore. Restrictions apply.
+
+the GPU. Generation of the address table is parallelized by OpenMP pragmas. Then, the generated address information is transferred to the memory in the GPU. This copy operation is taking place only if there is some change in either standard, SNR constraint or code rate.
+When signals are received, the host CPU delivers them to the GPU. The GPU executes the proposed LDPC decoding software in parallel. Upon completion of the decoding, decoded bits are transferred to the host CPU. A CUDA API called “CUDA Copy” is used to exchange data between the host and the GPU. The copy overhead may be significant. Thus, it is very crucial to minimize the copy overhead. It should be noted that in our implementation this copy operation takes place only for generated address transfers, received signal transfers, decoded bit transfers, and configuration (standard, code rates, etc.) changes. Therefore, the overhead due to copy operations is not significant in our implementation.
+B. 1-dimensional address generation for parallelization
+We will explain how we generate addresses for CUDA parallelization using the H-matrix in Figure 3. The H-matrix is stored in a file as a 2-dimensional array which contains bit node positions which are necessary for the check node update operation. The first table in Figure 4 shows an example. Since the position of the LLR value of Bit Node 1 for Check Node 0 and that for Check Node 1 are different, the bit node order is determined by reading the H-matrix information. We minimize the execution time for this operation by parallelizing the operation using OpenMP. If we use an Intel Quad-Core processor, the following algorithm with four threads may be used.
+The position of an LLR value is stored in the form of (x,y) where x is the position of a bit node and y indicates that it is the (y+1)th 1 (0ydegree-1) of the same bit node. To make it more convenient to parallelize the execution and reduce the memory access times, this (x,y) information is rearranged as a 1dimentional array as shown in the bottom of Figure 4. The position of the LLR value for (x,y) in the 1-dimensional array which is the address for check node computation is easily computed as follows:
+Laddr x uWb  y (1)
+where Wb is the degree of bit nodes. By using this method, when CUDA parallelizes the decoding process, the position of LLR values is obtained by reading a memory instead of computing a new address. Therefore, the execution time is improved. Figure 5 shows the positions of check nodes which are necessary for bit node update operations. Using a similar method to compute Laddr, Zaddr which is the position of bit node (x,y) in the 1-dimensional array is computed as follows: Zaddr x uWc  y (2) where x is the position of a check node, and y indicates that it is the yth 1 (1ydegree) of the same check node and Wc is the degree of check nodes. Using this 1-dimensional address arrangement, the number of memory accesses is minimized in
+
+all of the operations of check node updates, bit node updates, the initialization, and parity check operations.
+
+Function 1. New Address Generator 1: {New address :} #pragma omp parallel for private(i,j) shared(v_nodes,c_nodes) schedule(static) 2: for i Check Node Num 3: for j weight of check Node 4: for k weight of bit Node
+if(v_nodes[c_nodes[i].index[j]].index[k] == i {
+c_nodes[i].order[j] = k; break; } 5: end for 6: end for 7: end for
+
+ª1 1 0 0 1 0 0 1º
+
+H
+
+««0 1 1 1 0 0 1 0»» «1 0 0 0 0 1 1 1»
+
+«¬0 0 1 1 1 1 0 0¼»
+
+Figure 3. An example of LDPC H matrix
+
+C0 0
+
+1
+
+4
+
+7
+
+C1 1
+
+2
+
+3
+
+6
+
+C2 0
+
+5
+
+6
+
+7
+
+C3 2
+
+3
+
+4
+
+5
+
+C0 0,0 1,0 4,0 7,0 C1 1,1 2,0 3,0 6,0 C2 0,1 5,0 6,1 7,1 C3 2,1 3,1 4,1 5,1
+
+Laddr = 0 2 8 14 3 4 6 12 1 10 13 15 5 7 9 11
+Figure 4. 1-dim. address generation for parallelization (Check Node)
+
+Figure 5. 1-dim. address generation for parallelization (Bit Node)
+
+912 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:02 UTC from IEEE Xplore. Restrictions apply.
+
+C. Parallel LDPC decoding by GPU LDPC decoding consists of four parts as shown in Figure 6.
+The first part is that received LLR values are copied into the location of 1’s in the H-matrix. Then, check node update operations and bit node update operations are carried out. Lastly, parity check operations are conducted.
+The first initialization step is carried out with pre-generated Zaddr. When the number of signals received is the same as the number of bit nodes, each received value is copied into the position indicated by Zaddr. This task for the H-matrix in Figure 3 can be processed in parallel using 8 threads if we use the GPU in Figure 1.
+Second, a check node update operation is conducted after generating as many threads as the number of check nodes. Each thread sequentially reads values from the memory as many times as the degree of check nodes from the memory, and updates the value and stores it back to the same location as the value was read from.
+Third, the bit node update is conducted after generating as many threads as the number of bit nodes. The stored data in memory are arranged in such a way that a check node update operation can be effectively carried out. Therefore, for bit node updates, each thread reads as many values as the degree of bit nodes using Zaddr. Using the input values, bit node updates and determination of a decode bit are conducted. Updated values are stored back to the same location as they were read from.
+Last, parity check operations are carried out in parallel for each check node. A parity check operation is supposed to check that all the checking results are 0. The addresses in Laddr are used for parity check operations. When an address from Laddr is divided by the degree of the bit node, we can obtain the position of decoded bits for parity check operations.
+Figure 6. Proposed LDPC decoding flow
+
+IV. PERFORMANCE RESULTS
+
+TABLE II.
+
+LDPC DECODING TIME(SECOND) VS SNR VALUE (CMMB 1/2, FRAME 10,000)
+
+SNR 1.5
+
+CUDA & OpenMP
+29.6
+
+Normal 656.4
+
+Only OpenMP
+198.7
+
+Avg Iter. Num
+18.0
+
+2
+
+18.0
+
+354.9
+
+112.5
+
+10.3
+
+2.5
+
+14.2
+
+248.6
+
+81.0
+
+7.5
+
+3
+
+12.0
+
+189.3
+
+64.3
+
+5.9
+
+3.5
+
+10.6
+
+150.6
+
+60.1
+
+4.9
+
+4
+
+9.6
+
+122.6
+
+42.6
+
+4.1
+
+4.5
+
+8.7
+
+100.2
+
+35.9
+
+3.4
+
+5
+
+8.2
+
+85.5
+
+31.3
+
+3.0
+
+5.5
+
+7.5
+
+71.0
+
+26.9
+
+2.6
+
+6
+
+6.9
+
+59.8
+
+23.4
+
+2.2
+
+Performance evaluation results of the proposed LDPC decoding implementation are presented in this section. Hmatrices for the CMMB standard which is currently used in DMB (Digital Multimedia Broadcasting) in China are used for performance evaluation. The length of the codeword in the CMMB standard is 9216 bits and two code rates of 1/2 and 3/4 are supported [21].
+The target platform is composed of Intel i5 750 (a Quad-Core CPU with 2.6GHz) as the host CPU, 4GB of DDR3 RAM, Windows XP Service Pack 3 (32bit). MS Visual Studio 2005 was used as the C compiler. The GPU consists of NVIDIA GT 8800, 512 MB of memory, and CUDA v2.3.
+To evaluate the performance of the proposed implementation, we compared the performances (1) when no parallelization technique is applied, (2) when only parallelization utilizing OpenMP is applied and (3) when both OpenMP and CUDA were utilized. Reported times are the latencies to take decoding 10,000 frames for each SNR value.
+From Table II, we see that when both OpenMP and CUDA are utilized, we achieved a speedup of 22 over the case where no parallelization is applied. When the iteration count increases with low SNR values, the speedup becomes bigger. The effective SNR should be greater than 1.5dB for CMMB. Hence the iteration count is typically greater than 20. When we iterate 20 times, the decoding performance is 2.046Mbps which satisfies CMMB standard.
+V. CONCLUSION
+In this paper, we address a parallel software implementation of LDPC decoding algorithms. In the proposed implementation we use both a multi-core processor and a GPU to achieve both flexibility and high performance. Experimental results show that the parallel software implementation of LDPC algorithms satisfies the performance requirement for CMMB.
+
+913 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:02 UTC from IEEE Xplore. Restrictions apply.
+
+ACKNOWLEDGMENT
+"This research was supported by the MKE(The Ministry of Knowledge Economy), Korea, under the ITRC(Information Technology Research Center) support program supervised by the NIPA(National IT Industry Promotion Agency)" (NIPA2011-C1090-1100-0010)
+REFERENCES
+[1] R. Gallager, Low-Density Parity Check Codes. Cambridge, MA: MIT Press, 1963
+[2] M. Karkooti and J. R. Cavallaro, “Semi-parallel reconfigurable architectures for real-time LDPC decoding,” in Proc. Int. Conf. Inf. Technol.:Coding Comput., 2004, pp. 579–585
+[3] C.-K. Liau, S.-Y. Lin, T.-H. Tsai, and C. L. Wey, “A partially parallel low-density parity check code decoder with reduced memory for long code-length,” in Proc. 18th VLSI Des./CAD Symp., Hua-Lien, Taiwan, Aug. 2007
+[4] D. MacKay and R. Neal, “Near Shannon Limit Performance of Low Density Parity Check Codes,” IEE Electronics Letters, vol. 32, no. 18, pp. 1645-1646, Aug. 1996.
+[5] D. MacKay, “Good Error-correcting Codes Based on Very Sparse Matrices,” IEEE Trans. Inform. Theroy, vol. 45, no. 2, pp. 399-431, Mar. 1999.
+[6] S.Y. Chung, G. D. Forney Jr., T. J. Richardson, and R. Urbanke, "On the design of low-density parity-check codes within 0.0045dB of the Shannon limit", IEEE Commun. Lett., vol. 5, pp. 58-60, Feb. 2001
+[7] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier and X.Hu, “Reduced-Complexity Decoding of LDPC Codes,” IEEE Trans. Commun., vol. 53, pp. 1288-1299, Aug. 2005
+[8] A. Blankby and C. Howland, “A 690-mW 1-Gb/s 1024-b, Rate-1/2 Low-Density Parity-Check Code Decoder,” IEEE J. Solid-State Circuits, vol. 37, no. 3, pp. 404-412, Mar. 2002.
+[9] SDR Forum, http://www.wirelessinnovation.org/
+
+[10] Leonel Sousa, Svetislav Momcilovic, Vitor Silva, Gabriel Falcão, "Multi-core platforms for signal processing: source and channel coding",IEEE Press Multimedia and Expo, pp.1805-1808,2009
+[11] P. Kollig, C. Osborne and T. Henriksson, "Heterogeneous Multi-Core Platform for Consumer Multimedia Applications" , Date Conference. pp. 1254-1259, 2009
+[12] C.H. (K) van Berkel , " Multi-Core for Mobile Phones " , Date Conference. pp. 1260-1265, 2009
+[13] Gabriel Falcão , Leonel Sousa, Vitor Silva, "Massive parallel LDPC decoding on GPU",13th ACM SIGPLAN, pp.83-90,2008
+[14] Gabriel Falcão , Shinichi Yamagiwa, Leonel Sousa, Vitor Silva, "Parallel LDPC Decoding on GPUs Using a Stream-Based Computing Approach ",Journal of computer science and technology, vol,24(5), pp. 913-924,Sept,2009
+[15] Gabriel Falcão , Leonel Sousa, Vitor Silva, "How GPUs can outperform ASICs for fast LDPC decoding", Proceedings of the 23rd international conference on Supercomputing ,pp.390-399,2009
+[16] Shuang Wang, Cheng, S., Qiang Wu, "A parallel decoding algorithm of LDPC codes using CUDA", Signals, Systems and Computers, 2008 42nd Asilomar Conference , pp.171-175, 2008
+[17] Chapman, Barbara, Jost, Gabriele, Van der Pas, Ruu, “Using OpenMP (Portable Shared Memory Parallel Programming)”, MIT Pr. , 2007
+[18] NVIDIA CUDA Development Tools 2.3, Getting Started, July 2009.
+[19] Shu Lin, Daniel J. Costello, Jr. "Error Control Coding(2nd Edition)", Prentice Hall, 2004
+[20] ETSI, “Digital Video Broadcasting (DVB); Second generation framing structure, channel coding and modulation systems for broadcasting, interactive services, news gathering and other broadband satellite applications,” ETIS EN 302 307 v1.1.2, Jun.2006
+[21] GY/T 220.1-2006 , Mobile Multimedia Broadcasting Part1
+[22] P. Wang and Y. Chen, "Low-complexity real-time LDPC encoder design for CMMB," 2008, pp. 1209-1212.
+[23] S. J. Lee, et al., "Memory efficient multi-rate regular LDPC decoder for CMMB," Consumer Electronics, IEEE Transactions on, vol. 55, pp. 1866-1874, 2009.
+
+914 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:21:02 UTC from IEEE Xplore. Restrictions apply.
+
+

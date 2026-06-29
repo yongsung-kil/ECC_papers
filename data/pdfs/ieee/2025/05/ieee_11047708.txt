@@ -1,0 +1,698 @@
+2025 International Conference on Military Communication and Information Systems (ICMCIS) | 979-8-3315-3786-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/ICMCIS64378.2025.11047708
+
+Learning of Information Bottleneck LDPC Decoding Operations with Genetic Algorithms
+
+Roc´ıo Mart´ın Lima, Jan Lewandowsky, Marc Adrat
+Fraunhofer FKIE, 53343 Wachtberg, Germany Emails:{rocio.martin.lima, jan.lewandowsky, marc.adrat}@fkie.fraunhofer.de
+
+Christiane Antweiler, Peter Jax Institute of Communication Systems
+RWTH Aachen University 52056 Aachen, Germany {antweiler, jax}@iks.rwth-aachen.de
+
+Abstract—Physical layer signal processing presents significant challenges in military communication systems, where robust systems must retrieve data efficiently and rapidly. Therefore, this research focuses on the decoding of powerful low-density parity-check (LDPC) codes. Conventional LDPC decoders often become bottlenecks because they use cumbersome high-precision real number arithmetic. Recent approaches from the literature use compressive information bottleneck methods to reduce this complexity. They rely on integer messages and simple look-up operations, easing software implementations.
+Implemented on a chip, however, information bottleneck decoders, still need many logical gates to synthesize the decoding operations. As countermeasure, we directly utilize the bit-level representations of the exchanged messages. We propose to learn mutual-information-maximizing decoding circuits directly using genetic algorithms, instead of designing look-up tables and synthesizing them with elementary logical gates afterwards. Experimental results demonstrate that the proposed LDPC decoders outperform traditional suboptimal decoders, such as the min-sum decoder, in terms of bit error rate.
+This paper was originally presented at the NATO Science and Technology Organization Symposium (ICMCIS) organized by the Information Systems Technology (IST) Scientific and Technical Committee, IST-209-RSY – the ICMCIS, held in Oeiras, Portugal, 13-14 May 2025.”
+I. INTRODUCTION
+Signal processing poses significant challenges for electrical engineers, often characterized by high computational demands and processing times. Therefore, reducing computational load, processing time, and power consumption in communication systems is a high in interest topic, particularly in military applications where reliable and timely communication can be the difference between mission success and failure. For instance, reduced computational load directly leads to longer battery life for handheld devices on the battlefield, ensuring that soldiers remain connected without compromising operational effectiveness. Moreover, one critical element in the communication chain often presents itself as a bottleneck due to their intricate operations. This element is the channel decoder [1].
+Channel decoders play a vital role in ensuring data integrity during transmission, as they enable the correction of errors introduced by the physical communication channel or hostile jamming. Although various channel coding techniques have
+
+emerged over the years, low-density parity-check (LDPC) codes have gained prominence as well as Polar codes. This research focuses on LDPC codes due to their wide implementation in contemporary standards like IEEE802.16e, WiMax, and 5G-New Radio (5G-NR). It is worth noting that it is likely that future military systems will also utilize this powerful coding technique in the context of 5G-NR [2].
+Traditionally, LDPC decoders employ a message-passing algorithm (i.e., the belief propagation algorithm) that demands high-precision real number arithmetic. The nature of the messages and arithmetic lead to complex and costly node operations to decode the received messages. While suboptimal decoders like the min-sum decoder reduce computational load, they introduce a performance degradation in terms of bit error rate (BER) and need high-precision representation of messages.
+To alleviate these issues, the literature [3]–[5] reports lowcomplexity solutions through the use of look-up-tables (LUTs) achieved by the information bottleneck (IB) method, which allows for efficient decoding by compressing observed variables into discrete representations. When it comes to the hardware implementation of IB decoders in silicon, however, the LUTs have to be synthesized using elementary logical gates. Another efficient approach to implement IB-like LDPC decoding operations are reconstruction-computation-quantization (RCQ) decoders [6]–[8]. Their general idea is to design non-uniform quantizers and reconstruction mappings at the nodes. Node operations are reduced to simple mappings and fixed-point additions that can be implemented with low efforts.
+In this paper, we explore a novel idea to design LDPC code decoding operations with the IB principle. We apply genetic algorithms to directly learn logical circuits that maximize the relevant mutual information for the decoding. These circuits perform elementary bit-level operations on the messages processed in the decoder. Therefore, we propose replacing LUTs with simpler circuits that utilize the bit-level representations of decoding messages during message-passing decoding operations. This approach implies simple binary operations that can be easily translated to matrix multiplication in Galois field(2) (GF(2)) to perform check node operations. The selection of these matrices is guided by the IB method to ensure optimal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+v0
+
+v1
+
+v2
+
+v3
+
+v4
+
+v5
+
+c0
+
+c1
+
+c2
+
+c3
+
+check and variable nodes can be represented using a bipartite graph called Tanner graph. For example, take matrix
+
+1 1 0 1 0 0
+
+H
+
+=
+
+0 1
+
+1 0
+
+1 0
+
+0 0
+
+1 1
+
+0 1
+
+,
+
+(3)
+
+001101
+
+Fig. 1. Tanner graph of regular LDPC (2,3) code with Nv = 6, Nc = 4, dv = 2 and dc = 3, R = 1/2.
+preservation of mutual information. Additionally, genetic algorithms (GAs) are employed to identify the most suitable operations for decoding.
+As a result we design an LDPC decoder that minimizes complexity and circuitry while maintaining competitive BER performance compared to conventional decoders. The proposed message-passing decoders aim to demonstrate improved performance over traditional approaches, such as the min-sum decoder, by effectively utilizing bit-level operations.The ability to reduce power consumption and computational load directly contributes to limited power and processing capabilities of a warfare environment, making this research highly relevant for future military communication systems.
+Firstly, in Section II a brief introduction to LDPC decoding and the IB method is presented. Afterwards, Section II-D explains how to design an IB LUT-based decoder according to the literature [3]. Then Section III introduces our novel idea to design bit-level representation decoding operations with GAs. Section IV illustrates results before Section V ends with our conclusions.
+
+II. PRELIMINARIES
+In this section, we describe briefly binary LDPC decoding, the IB problem, GAs as an optimization tool and how stateof-the-art IB decoders work. Each concept is introduced to afterwards be employed in the direct design of simple logical circuits that maximize mutual information for LDPC decoding.
+
+A. LDPC Decoding
+
+LDPC codes introduced by Gallager in [9] can be characterized by a generator matrix G or a parity-check matrix H, which also detects if a codeword belongs to the code. The
+special characteristic of LDPC codes is the sparsity of the non-zero elements of the parity-check matrix H. To generate codewords c of an LDPC code, one multiplies G with the uncoded data u, like
+
+c = G · u.
+
+(1)
+
+On the other hand, the orthogonal parity-check matrix H with Nc rows and K columns fulfills,
+
+H · y = 0Nc×1 ⇔ y ∈ C,
+
+(2)
+
+by delivering an all-zero vector, if the received codeword y belongs to the code.
+In an LDPC decoder, two kinds of nodes are distinguished: variable nodes and check nodes. The connections between
+
+and its corresponding equivalent Tanner graph in Figure 1. The parity-check matrix H dictates the connections of the
+vertices of the bipartite graph. There are as many check nodes as rows in H and the number of variable nodes matches the number of columns. Each entry in the matrix not only represents the parity-checks of the block code but also describes the connections between the check nodes and variable nodes corresponding to that specific row and column. The number of connections of a node is referred to as the degree of the node, denoted as dc for check nodes and dv for variable nodes.
+Moreover, LDPC codes, as a special type of block codes, can be efficiently decoded using message-passing algorithms. Messages are sent repeatedly along the Tanner graph’s edges. In this procedure, many parity-checks that involve few bits, fix by small contributions the whole long codeword using iterations. The type of data passed along the connections and the node operations designate the algorithm employed. For example, belief propagation decoders work with real numbers and log-likelihood ratios (LLRs) while bit-flipping algorithms operate with binary messages. In the iterative decoding process, both variable and check nodes compute operations with the incoming messages from their attached node. However, the delivered messages of a node edge are computed without including in the calculation the messages provided by that same node edge. In this way, extrinsic information is generated in each iteration. More information about the decoding process of real-arithmetic LDPC decoders can be found in [5], [10] and about the IB LDPC decoders in Section II-D.
+
+B. Information Bottleneck Method
+The IB method [11] is a compression technique introduced by Tishby et al. in [12] that preserves mutual information. While traditionally employed in machine learning, the IB method’s application in communications is rather new. Prior studies [13]–[16] have provided initial implementations, and this work links the IB framework to rate-distortion theory [17], [18], noting both similarities and key differences [3], [19].
+
+Observed Y random y ∈ Y variable
+
+pX,Y(x, y) → I(X; Y)
+
+X Relevant x ∈ X random
+variable
+
+pT|Y(t|y), pY(y)
+
+t∈T
+
+pX|T(x|t), pT(t) → I(X; T) max
+
+T Compressed
+random variable
+
+Fig. 2. Relations between relevant, observed and compressed random variables X, Y and T in a classic IB problem [3], [12].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+crossover point g(l0,n) 11101 11110 g(l1,n) 00001 00000
+
+random mutation
+01101 00000 g(l0,n+1)
+00001 11100 g(l1,n+1)
+
+Fig. 3. Crossover of population members g(l0,n) and g(l1,n) genotypes.
+In the research literature, the IB method’s adaptability extends to the design of other communication system components. For instance, it has been used for parameter acquisition in quantization [20] and in developing demodulators that adhere to the mutual information preservation principle [21].
+In a nutshell, the IB method differentiates between a relevant variable X ∈ X , an observed variable Y ∈ Y, and a compressed random variable T ∈ T , which are interconnected via a Markov chain (X → Y → T). A schematic that summarizes the problem is shown in Figure 2. The objective is to find a mapping from random variable Y onto compressed variable T in the form of a conditional distribution pT|Y(t|y).
+At the same time, this mapping maximizes the Shannon’s mutual information I(X; T) between the random variables X and T, as expressed in the optimization problem:
+
+max I(X; T) for a fixed |T | < |Y|,
+
+(4)
+
+pT|Y (t|y)
+
+A strong point of the IB method, unlike other compression methods such as rate-distortion theory [17], [18], is that it only requires the joint distribution pX,Y(x, y) as input to perform the mapping from Y to T. The solution mapping pT|Y(t|y) dictates how much information from X is preserved in T. The IB approach effectively assigns values of Y to T while maximizing I(X; T). Solutions of Equation (4) may be classified into deterministic mappings and soft mappings. While deterministic solutions consist of zeros and ones (i.e., each y maps to a specific t), the probabilistic solution describes transition probabilities. As in [3], [21], we will restrict ourselves to deterministic mappings p(t|y) ∈ {0, 1} ∀(y, t).
+To find the solution, in [12] an iterative procedure with three consistent equations is derived by using Lagrangian multipliers. However, in this project GAs serve as a robust optimization tool for the the design of compression mappings that can be implemented using elementary bit-operations in GF(2). GAs operate on a set of candidate solutions termed population.
+
+C. Genetic Algorithms
+In this research, GAs substitute the iterative method to implement the IB method to design the check node operations. This approach is similar to the one exposed in [21], in which the best parameters θ that characterize the system are found iteratively.
+The magic of GA optimization resides in that a first random generated population of size L of parameter values θ(l,0) = [θ0, θ1, . . . , θM−1], through selection and crossovers,
+
+converges to an optimum θ∗. Generation by generation, the principle of evolution is mimicked in the GA optimization by selecting the best or fittest individuals θ(l,n) to contribute to the creation of the next generation n + 1. Throughout this paper, l ∈ {0, 1, . . . , L − 1} refers to the index in the population, while n ∈ {0, 1, . . . , N − 1} refers to the generation of the GA.
+Natural selection is substituted by a fitness function, ffit θ(l,n) that evaluates the goodness of each individual as a solution to the optimization problem and allows us to rank them. Similarly, DNA chains and chromosomes are simulated using binary representations of the population members. While the real world representation is called phenotype, the binary representation of a tentative solution is called genotype g = [z0, z1, . . . , zM−1]. Each zm is a binary vector in {0, 1}qm with qm being the bit resolution.
+After getting the genotype of the population members, they are assessed by the fitness function and the best solutions of iteration n are selected. Then, a mating operation called crossover is performed. As described in Figure 3, the operator combines the genotypes of two parent individuals, g(l0,n) and g(l1,n), to produce offspring, mimicking the biological process of DNA recombination. For instance, in Figure 3 one can observe that the genotype of the parents is split over the same crossover point and then concatenated together to deliver two offsprings. The crossover point does not have to necessarily be in the middle of the genotype and can cut through the bits of one of the parameters zm.
+Following crossover, a mutation operation (i.e., random bit flipping in purple color in Figure 3) may be applied to introduce random alterations to the offspring’s genotype, thereby preserving genetic diversity and preventing premature convergence to suboptimal solutions. Another technique known as elitism is often employed, too. It ensures that the best-performing individuals are retained in the next generation, thereby preserving high-quality solutions.
+With the crossover results or new population obtained, the process starts again. The new population is evaluated with the fitness function, ranked and mated. The optimization algorithm is repeated until a stop criterion is met. Usually, it is a maximum number of generations. More details can be found in [22]–[24].
+Overall, GAs leverage these elements—population representation, fitness evaluation, selection, crossover, mutation, and elitism — to efficiently navigate vast search spaces and optimize multi-parameter problems where brute-force approaches are impractical. Additionally, our problem and the possibility to represent a decoding logical circuit with a binary matrix fits perfect with the binary nature of GA optimization.
+D. LDPC Decoding with Information Bottleneck Method
+The IB LDPC decoders in [3], [4], [26], [27] successfully designed integer-output LUTs for decoding operations by maximizing mutual information. This approach replaces real number arithmetic and high precision messages with lookup table entries and integer representation. In this work, we
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+y
+
+Source
+
+u
+
+LDPC Encoder
+
+c
+
+Modulator
+
+s
+
+Channel
+
+r
+
+Quantizer
+
+rq
+
+Demodulator
+
+ˆc
+
+LDPC Decoder
+
+uˆ
+
+Fig. 4. Assumed communication chain schematic for LDPC code scheme with uncoded messages u, codewords c, transmitted signals s, noisy signal received signals r, quantized received signals rq, bits of quantized received signals y, demodulated signals ˆs, and uncoded received messages uˆ.
+
+1.1 1
+
+1.40 dB 1.30 dB 1.27 dB
+
+design-Eb /N0 = 1.25 dB 1.23 dB 1.22 dB
+
+I X; T(die)c (in bits)
+
+0.9
+
+0.8
+
+0.7
+
+1.21 dB 1.20 dB
+
+0.6
+
+0.5 0
+
+50
+
+100
+
+150
+
+Iterations i
+
+Fig. 5. Evolution of the output information I X; Td(ie)c of the variable nodes determined using density evolution for an LDPC decoders 4 bit using a regular LDPC code dv = 3, dc = 6, in [25].
+
+consider an additive white Gaussian noise (AWGN) channel with a quantized output and binary phase-shift keying (BPSK) modulation as shown in Figure 4. Thus, the decoder operates on the output indices of the quantizer.
+Although the final implementation appears simple, designing LUTs that maximize mutual information is a complex task. A key technique for addressing this is density evolution, extensively detailed in [28]. This method enables the analysis of the asymptotic performance of the decoder’s output mutual information over iterations as a function of signal quality, by determining the probability distributions of messages exchanged in an LDPC decoder. When combined with IB, density evolution facilitates the design of LUTs comprised of hard mappings pT|Y(t|y) that yield t labels from {0, 1, · · · , |T | − 1}. This new operation now delivers t ∈ T from the compressed random variable event space instead of a real number.
+Nevertheless, one primary problem with LUT decoding might be the number of entries when dealing with high cardinalities. To tackle the dimensionality problem Kurkoski et. al in [29] proposed to rely on the concatenation of LUTs with a reduced number of entries to deliver intermediate t labels before the final update message. Each LUT gets two inputs that come directly from the variable nodes, from updated messages or a mixture of both. This yields to the reduction of the number of total entries and M intermediate look-ups to complete the
+
+iteration. For iteration zero to there are |Y|2 + |T ||Y| · (dc − 2) look-ups and, |T |2 · (dc − 1) for the following ones. In the context of this work, m ∈ {0, 1, . . . , |M| − 1} denotes the concatenation index within a decoding iteration i. This method is applied in [3], too.
+For completeness and reference, the results presented in [3] are replicated using LDPC code [25]. First, a density evolution analysis is conducted to assess the asymptotic performance of the decoder. Figure 5 shows the output information of the decoder over the iterations. Consequently, a rule of thumb derived from [3] indicates that a suitable decoder performing 50 iterations is the one designed under the channel condition of Eb/N0 = 1.27 dB. It is important to note that although the decoder is optimized for a specific channel quality, it remains valid for all. In other words, it is designed offline but used unmatched.
+III. DESIGN OF BIT-LEVEL LDPC DECODING OPERATIONS
+In this section, we develop the innovative idea of directly learning logical circuits that maximize mutual information for LDPC decoding, rather than designing LUTs and attempting to synthesize them in hardware. Firstly, the complexity of the circuitry for decoding LUTs is highlighted in terms of the number of gates. Secondly, we explain how to learn simple logical circuits to substitute check node operations using the powerful tools of density evolution and GA optimization.
+A. Complexity Considerations on LUT Implementations
+In the previous section, we successfully designed the stateof-the-art decoders in [3] that compute decoding operations with LUT concatenations. In this example, LUTs of 256 entries are designed to handle 4-bit precision integer messages for each two-input operation used in the decoder. Taking a closer look and performing a qualitative analysis of one LUT in one step of the check node operation to estimate the complexity of its implementation, it is clear that the circuit is not trivial.
+As a case study, we can see Table I, that will be used as reference in the next sections. This table is obtained with the help of PyEDA, a python library to work with logical circuits and operations [30]. For the sake of a simple notation, let the t = [t0, t1, t2, t3] denote the binary representation of computed update message t ∈ 0, 1, . . . , |T | − 1 ⊂ N, i.e. t0, . . . , t3 ∈ {0, 1}, dropping the iteration superscript i in the following. At the same time, the input to the LUT is the integer number y = y0(0) · |Y| + y1(0), which in binary representation (and dropping the iteration and concatenation
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+indexes) is y = [y0, y1, y2, y3, y4, y5, y6, y7]T , yn ∈ {0, 1}. Because we are evaluating the first decoding operation in the check nodes, the input messages come directly from the quantizer (see Figure 4). As a result, one sees in Table I that for this single decoding step operation the required number of NOT, AND and OR elementary logical gates is 8, 502 and 102, respectively. Therefore, the total number of gates is 612 for the first check node decoding operation. Here, AND and OR gates are counted as elementary two-input gates. It is worth pointing out that for other decoders that operate on LLR values (e.g., the min-sum decoder or the belief propagation decoder), a demodulator is part of the communication chain, too. This is depicted in Figure 4 where the output of the quantizer is processed by the demodulator in dashed lines before decoding.
+
+B. Design of Decoding Operations on the Bit-level Representation of Messages
+In order to reduce the complexity in terms of number of gates (and required silicon), we design the decoding operation with elementary logical circuits (i.e., XOR gates) at bit-level and modulo-2 arithmetic. To do so, the IB method applied in the design of the decoders in [3] is mimicked performing a density evolution study. However, LUTs are substituted by an XOR-based circuit that can be easily represented by binary matrix multiplication with input messages. Moreover, this circuits are designed to maximize mutual information. As instance, the following matrix A, that will operate 3-bit resolution messages
+1 0 0 1 0 0 t0 A = 0 1 1 1 0 0 , t1 = A · y, (5)
+1 0 0 0 1 1 t2
+represents the functionality of the circuit in Figure 6. In addition, this being able to represent the operations with binary set of zeros and ones, makes the application of a GA to find the circuits that maximize mutual information in the decoding iterations straightforward. The genotype and the phenotype (i.e., parameters to be optimized) of the problem will be a concatenation of the matrices used row wise. And of course, the fitness function is the mutual information at the output of
+
+yij ∈ {0, 1}
+
+ti ∈ {0, 1}
+
+y00
+
++
+
+t0
+
+y01
+
+t1
+
+y02
+
+t2
+
+y10
+
+++
+
+y11
+
++
+
++
+
+y12
+
+max I (X; T0, T1, T2)
+Fig. 6. Logical circuit with XOR gates that represents the matrix multiplication of input y = y0(i) · |Y| + y1(i) in binary representation of quantized 3-bit
+messages with matrix A in Equation .(5)
+
+TABLE I
+LOGICAL EQUIVALENT EQUATIONS OF THE LOGICAL CIRCUIT THAT REPRESENTS THE LUT0(0) OF THE 4 BIT IB LDPC DECODER USING
+PYEDA [30].
+
+t0(0)
+
+(y¯3 · y¯7) ∨ (y3 · y7)
+
+(y¯0 · y¯2 · y¯4 · y¯5 · y¯7) ∨ (y0 · y2 · y4 · y5 · y7)
+
+∨(y0 · y1 · y3 · y5 · y6) ∨ (y¯2 · y3 · y6 · y¯7)
+
+∨(y1 · y2 · y3 · y5 · y6 · y7) ∨ (y¯0 · y¯1 · y2 · y3 · y6)
+
+∨(y¯1 · y¯2 · y¯4 · y¯5 · y¯7) ∨ (y0 · y1 · y¯2 · y¯3 · y¯6)
+
+∨(y2 · y3 · y5 · y6 · y¯7) ∨ (y2 · y¯3 · y¯6 · y7)
+
+∨(y1 · y2 · y3 · y4 · y6 · y7) ∨ (y¯2 · y4 · y5 · y¯6 · y¯7)
+
+t1(0)
+
+∨(y¯0 · y¯1 · y¯3 · y¯4 · y¯6) ∨ (y1 · y2 · y4 · y5 · y7)
+
+∨(y2 · y¯4 · y¯5 · y6 · y7) ∨ (y3 · y4 · y6 · y¯7)
+
+∨(y¯3 · y¯4 · y¯6 · y7) ∨ (y¯0 · y¯1 · y¯3 · y¯5 · y¯6)
+
+∨(y0 · y2 · y6 · y7) ∨ (y1 · y2 · y¯3 · y6 · y7)
+
+∨(y¯3 · y¯5 · y¯6 · y7) ∨ (y¯1 · y¯2 · y¯6 · y¯7)
+
+∨(y0 · y1 · y3 · y4 · y6) ∨ (y¯0 · y¯2 · y¯6 · y¯7)
+
+(y¯0 · y¯1 · y¯2 · y3 · y¯7) ∨ (y1 · y2 · y3 · y¯4 · y¯5 · y6 · y¯7)
+
+∨(y¯0 · y¯1 · y2 · y3 · y5 · y¯6) ∨ (y¯1 · y¯2 · y¯3 · y¯4 · y¯6 · y¯7)
+
+∨(y¯1 · y¯2 · y¯3 · y¯5 · y¯6 · y¯7) ∨ (y¯2 · y3 · y5 · y6 · y¯7)
+
+∨(y¯0 · y¯1 · y2 · y4 · y5 · y¯6 · y¯7) ∨ (y1 · y2 · y3 · y5 · y6 · y7)
+
+∨(y¯2 · y¯3 · y¯4 · y¯5 · y7) ∨ (y¯3 · y¯4 · y¯5 · y¯6 · y7)
+
+∨(y0 · y1 · y¯2 · y¯3 · y¯5 · y6) ∨ (y0 · y2 · y3 · y5 · y6 · y7)
+
+∨(y1 · y3 · y¯4 · y5 · y¯6 · y7) ∨ (y1 · y2 · y¯3 · y¯6 · y7)
+
+∨(y¯0 · y¯2 · y¯3 · y¯5 · y¯6 · y¯7) ∨ (y0 · y¯1 · y2 · y¯3 · y¯6 · y¯7)
+
+t2(0)
+
+∨(y¯2 · y¯3 · y4 · y¯5 · y6 · y¯7) ∨ (y0 · y1 · y¯2 · y¯4 · y¯5 · y6 · y7)
+
+∨(y¯0 · y1 · y¯2 · y3 · y6 · y7) ∨ (y2 · y4 · y¯5 · y¯6 · y7)
+
+∨(y¯0 · y¯1 · y2 · y¯3 · y4 · y6 · y7) ∨ (y¯1 · y2 · y3 · y¯4 · y5 · y¯6)
+
+∨(y1 · y2 · y3 · y4 · y6 · y7) ∨ (y0 · y¯1 · y¯2 · y3 · y6)
+
+∨(y1 · y¯2 · y¯3 · y¯5 · y6 · y7) ∨ (y¯0 · y1 · y¯2 · y4 · y5 · y¯6 · y7)
+
+∨(y¯0 · y¯1 · y2 · y¯3 · y5 · y6 · y7) ∨ (y2 · y3 · y4 · y5 · y¯7)
+
+∨(y0 · y1 · y¯3 · y6 · y7) ∨ (y0 · y1 · y¯2 · y3 · y¯4 · y¯6 · y¯7)
+
+∨(y¯0 · y¯1 · y3 · y¯6 · y¯7) ∨ (y0 · y2 · y3 · y¯4 · y¯5 · y6 · y¯7)
+
+∨(y0 · y1 · y¯2 · y3 · y4 · y5 · y¯6 · y7) ∨ (y0 · y1 · y¯2 · y3 · y¯5 · y¯6 · y¯7)
+
+∨(y¯1 · y2 · y¯3 · y¯5 · y6 · y¯7) ∨ (y¯1 · y¯2 · y¯3 · y4 · y5 · y¯6 · y7)
+
+∨(y¯2 · y¯4 · y5 · y6 · y¯7) ∨ (y¯0 · y1 · y2 · y¯3 · y¯6)
+
+(y¯0 · y¯1 · y¯2 · y3 · y¯7) ∨ (y0 · y¯1 · y3 · y¯5 · y¯6 · y¯7)
+
+∨(y0 · y¯1 · y¯3 · y4 · y5 · y¯6) ∨ (y1 · y¯3 · y¯5 · y¯6 · y7)
+
+∨(y¯0 · y¯1 · y2 · y4 · y5 · y¯6 · y¯7) ∨ (y¯3 · y¯4 · y¯5 · y¯6 · y7)
+
+∨(y0 · y¯1 · y¯2 · y3 · y5 · y¯6) ∨ (y¯1 · y¯2 · y¯3 · y¯4 · y¯5 · y¯6)
+
+∨(y¯1 · y¯2 · y¯3 · y4 · y¯5 · y7) ∨ (y0 · y¯1 · y2 · y¯3 · y¯6 · y¯7)
+
+∨(y¯2 · y¯3 · y4 · y¯5 · y6 · y¯7) ∨ (y¯0 · y1 · y¯3 · y5 · y6 · y7)
+
+∨(y1 · y2 · y3 · y¯4 · y5 · y¯6) ∨ (y¯1 · y3 · y5 · y6 · y¯7)
+
+∨(y0 · y1 · y¯2 · y¯4 · y¯5 · y6 · y7) ∨ (y¯0 · y1 · y¯2 · y3 · y6 · y7)
+
+∨(y¯0 · y¯1 · y2 · y¯3 · y4 · y6 · y7) ∨ (y¯0 · y1 · y¯3 · y4 · y¯5 · y6 · y¯7)
+
+t(30)
+
+∨(y2 · y3 · y5 · y6 · y¯7) ∨ (y1 · y2 · y3 · y4 · y5 · y6)
+
+∨(y¯0 · y1 · y3 · y¯4 · y¯5 · y6) ∨ (y¯0 · y¯2 · y¯3 · y4 · y5 · y¯6)
+
+∨(y1 · y¯2 · y4 · y¯5 · y¯6 · y7) ∨ (y¯0 · y¯1 · y¯2 · y¯5 · y¯6 · y¯7)
+
+∨(y¯1 · y2 · y¯4 · y5 · y¯6 · y7) ∨ (y¯0 · y¯1 · y2 · y¯3 · y5 · y6 · y7)
+
+∨(y¯0 · y1 · y2 · y3 · y4 · y¯5 · y¯6 · y¯7) ∨ (y1 · y¯2 · y¯3 · y¯4 · y5 · y¯6 · y¯7)
+
+∨(y0 · y1 · y¯2 · y3 · y¯4 · y¯6 · y¯7) ∨ (y0 · y1 · y¯2 · y3 · y4 · y5 · y¯6 · y7)
+
+∨(y1 · y2 · y¯3 · y6 · y7) ∨ (y0 · y1 · y¯2 · y3 · y¯5 · y¯6 · y¯7)
+
+∨(y¯0 · y¯1 · y2 · y3 · y5 · y7) ∨ (y¯0 · y2 · y¯3 · y¯4 · y¯5 · y6 · y¯7)
+
+∨(y0 · y1 · y¯2 · y¯3 · y¯5 · y¯7) ∨ (y1 · y¯2 · y3 · y4 · y6 · y¯7)
+
+∨(y0 · y1 · y2 · y5 · y6 · y7) ∨ (y¯1 · y2 · y3 · y4 · y¯5 · y6 · y7)
+
+∨(y0 · y2 · y¯3 · y5 · y¯6 · y7) ∨ (y0 · y¯1 · y¯2 · y¯3 · y¯4 · y5 · y6 · y7)
+
+∨(y0 · y2 · y3 · y¯4 · y¯5 · y6) ∨ (y¯1 · y2 · y¯4 · y5 · y6 · y¯7)
+
+the decoder I X; Td(ie)c . In other words the objective by the iterative optimization through GA is max I(X; T) where g is
+g
+the complete set of binary matrices that represent the bit-level decoding operations.
+Once the parameters to be optimized are determined, we start investigating a suitable design to substitute lookup operations of an IB decoder working on 4-bit messages in check nodes for decoding and proceed to find them with GA optimization. After testing and optimizing some preliminary de-
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+y0(m) y1(m) y2(m) y3(m) y0(m+1) y1(m+1) y2(m+1) y3(m+1)
+y0(m) y1(m) y2(m) y3(m) y0(m+1) y1(m+1) y2(m+1) y3(m+1)
+y0(m) y1(m) y2(m) y3(m) y0(m+1) y1(m+1) y2(m+1) y3(m+1)
+
+p(0m,0) p(1m,0) ⊕
+⊕ p2(m,0) p(3m,0) ⊕
+⊕ p(4m,0) p(5m,0) ⊕
+⊕ p6(m,0) p(7m,0) ⊕
+⊕
+p0(m,1) p(1m,1) ⊕
+⊕ p(2m,1) p(3m,1) ⊕
+⊕ p(4m,1) p(5m,1) ⊕
+⊕ p(6m,1) p(7m,1) ⊕
+⊕
+p(0m,2) p(1m,2) ⊕
+⊕ p2(m,2) p(3m,2) ⊕
+⊕ p(4m,2) p(5m,2) ⊕
+⊕ p6(m,2) p(7m,2) ⊕
+⊕
+
+Binary multiplication by matrix A(m,0)
+Binary multiplication by matrix A(m,1)
+Binary multiplication by matrix A(m,2)
+
+OR0 t(0m) OR1 t(1m) OR2 t(2m) OR3 t3(m)
+
+Fig. 7. Check node operation circuit for 4-bit messages that maximizes mutual information with few gates.
+signs, the configuration in Figure 7 was the most successful. In this configuration, three matrices A(m,0), A(m,1) , A(m,2) and three selective inversion masks p(m,0), p(m,1), p(m,2) work in parallel to process the incoming message. Here, the index i ∈ {0, 1, ..., N − 1} ⊂ N, that represents the iteration within the decoder, has been dropped for clearness in notation. The superscript m denotes the position of the concatenation of circuits within the same iteration, facilitating the transmission of a message t(M−1) to the variable nodes from the check nodes. The second superscript distinguishes which matrix is being referred to in the parallel processing.
+The selective inversion masks have the task to flip single
+
+1.1 1
+
+2.00 dB
+
+design-Eb /N0 = 1.575 dB
+
+1.80 dB
+
+1.63 dB
+
+1.56 dB
+
+I X; T(die)c (in bits)
+
+0.9
+
+0.8 0.7
+
+1.53 dB 1.54 dB
+1.50 dB
+
+0.6 0
+
+20 40 60 80 100 Iterations i
+
+Fig. 8. Evolution of the output information I X; Td(ie)c of the variable nodes
+
+determined using density evolution for an LDPC 4 bit GA search of a three
+
+parallel matrices check node operation using a regular LDPC code dv = 3,
+
+dc = 6, in [25].
+
+.
+
+input bits before the matrix multiplication in GF(2). Including the inversion masks in the GA optimization is quite simple. We concatenated their binary representations with the genotype of the learnable matrices. In the shown configuration we use three matrices in parallel. The output of the matrix multiplications is combined by three OR gates delivering the bit representation of the decoding message t, i.e., t0(m), t(1m), t(2m), t(3m) . These circuits are concatenated with each other just like in the LUTbased approach in [3].
+Please note that it is also possible to use fewer matrices in the structure shown in Figure 7 to trade complexity versus decoding power. The influence of different numbers of matrices will be investigated in the practical results presented in Section IV.
+Similarly to the LUT based decoder design, a density evolution analysis is conducted. The density evolution analysis for the proposed design with three matrices is shown in Figure 8. As a result we can conclude, that the circuit design under the condition of Eb/N0 = 1.575 dB is the best match for a 50 iteration decoder. Additionally, one can appreciate that the decoding threshold resides between Eb/N0 = 1.56 dB and Eb/N0 = 1.54 dB. Here, the density evolution curves are less smooth that the ones in [3]. It can be assumed that this reason resides in the greediness and the suboptimality of the GA and the proposed decoding circuit structure. Yet, our results presented next validate the decoding power of the proposed scheme.
+
+IV. SIMULATIONS AND COMPARISON
+To validate our new concept and to evaluate our innovative designs against other LDPC decoders, we conduct BER simulations for the AWGN channel with BPSK modulation. In this context, we compare our complexity-reduced LDPC decoder
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+Distance
+
+with the min-sum decoder and the IB decoders presented in [3]. Moreover, we provide a qualitative comparison of the number of logical gates employed in our proposed approach versus the ones necessary in the LUT LDPC decoder implementation in [3].
+Furthermore, it is important to point out that the decoders are designed using GA, however, while operating it just performed operations at bit-level in check nodes. Please note that the decoder proposed here only replaces the check node operations. The variable nodes still use LUTs. Variable node operation design with the proposed scheme could be addressed in following works.
+A. Bit Error Rate Simulations
+To test the design, BER simulations are carried out. The results are compared to the ones in [3]. The simulations are run using code LDPC code [25] until 10000 bit errors occurred in order to be precise in the estimate error probabilities shown in Figure 9. All LDPC decoders performed a maximum of 50 decoding iterations.
+In the simulations, one appreciates that our design can compete with the performance of the min-sum decoder that computes high-precision real number operations. In contrast, our approach operates with simple logical circuits that can be represented with modulo-2 operations (i.e., binary matrix multiplication). The curves for the proposed decoding approach with different numbers of matrices are depicted in red in Figure 9. The influence of using more matrices is clearly visible as it improves the decoding performance. As it is shown in the Figure, the decoders with two and three matrices outperform the min-sum decoder slightly. The decoder with the structure in Figure 7 (three matrices), performs best among the sub-optimal decoders.
+As another reference, we compare the proposed design to the IB LDPC-based decoder in [3]. It can be observed that there is a performance gap of 0.4 dB that separates the best proposed decoder from the LUT-based decoder. However, the complexity in our design’s circuitry has been significantly reduced, hence, making this moderate loss explainable. In the next Section IV-B, we present a qualitative comparison of the complexity. Finally, the curve for belief-propagation decoding serves as a performance bound for reference.
+B. Complexity Considerations on the Novel Implementation with Simple Logical Circuits
+After evaluating the performance of our design in terms of signal quality, we aim to roughly quantify the complexity savings w.r.t. the implementation of IB designed LUTs for the check node operations. While a comprehensive analysis of complexity reduction is beyond the scope of this paper (also with respect to RCQ IB decoders), a qualitative assessment is provided, comparing the number of logical gates in the proposed method against traditional LUT implementations.
+The selected decoding scheme, employs three parallel matrices with masks. The check node operation outputs are determined through the OR operation of three matrix-vector multiplications in GF(2), combined with selective bit inversion.
+
+bit error rate
+
+10−1
+
+10−2
+
+10−3 0.4
+
+10−4
+
+dB
+
+10−5
+
+10−6
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+Eb/N0 in dB Belief propagation LDPC decoder double precision
+
+Min-sum decoder matched 4 bit quantizer double precision
+
+LDPC decoder 4 bit LUT design-Eb/N0 = 1.27 dB LDPC decoder 4 bit GA 1 matrix design-Eb/N0 = 1.82 dB LDPC decoder 4 bit GA 2 matrices design-Eb/N0 = 1.63 dB LDPC decoder 4 bit GA 3 matrices design-Eb/N0 = 1.575 dB
+
+Fig. 9. BER simulations comparison of 50 iterations LDPC decoders for an LDPC code dv = 3, dc = 6 Nv = 8000, Nc = 4000 in [25].
+The matrices and masks, derived through GA optimization, are summarized in Table II in an example. This example corresponds to the first two-input operation applied at the check nodes in the first decoding iteration. The logical equations corresponding to these matrices and masks, represented in Table III, indicate the implementation requires only 42 logical gates compared to 612 gates for the LUT based IB LDPC decoder (see Section III-A). This means a reduction of 93% of the number of required gates in the first decoding step.
+The analysis reveals a preference for utilizing more significant bits in the calculations, which aligns with the intent of performing hard decisions in a 4-bit decoder. Examination of Table II suggests that the first matrix A(0,0) is irrelevant in this example, as all its elements are zero. This is a special case in the chosen example, but not generally the case with the three matrices approach.
+Further investigation into the concatenated decoding circuit (i.e., m = 1) in the first decoding iteration is presented in Table IV. The subsequent matrices and masks confirm their necessity in the decoding process, leading to the final logical equations in Table V. This scheme necessitates only 50 logical gates, demonstrating that the proposed method achieves a low-complexity implementation of LDPC decoders while still
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE II MATRICES AND MASKS THAT REPRESENT THE BIT LEVEL CHECK NODE
+DECODING OPERATIONS FOR THE FIRST ITERATION OF THE FIRST
+CONCATENATED CIRCUIT FOR THE 4 BIT GA LDPC DECODER WITH DESIGN-Eb/N0= 1.575 DB IN FIGURE 9.
+
+TABLE IV MATRICES AND MASKS THAT REPRESENT THE BIT LEVEL CHECK NODE
+DECODING OPERATIONS FOR THE FIRST ITERATION OF THE SECOND
+CONCATENATED CIRCUIT FOR THE 4 BIT GA LDPC DECODER WITH DESIGN-Eb/N0= 1.575 DB IN FIGURE 9.
+
+Matrices
+
+00000000
+
+A(0,0)
+
+00000000
+
+
+
+
+
+00000000
+
+00000000
+
+11001100
+
+A(0,1)
+
+00000000
+
+
+
+
+
+10001000
+
+10100000
+
+00000000
+
+A(0,2)
+
+10000100
+
+
+
+
+
+00000000
+
+00001010
+
+Masks p(0,0) [11011110] p(0,1) [11111101] p(0,2) [11101111]
+
+TABLE III
+LOGICAL EQUIVALENT EQUATIONS OF THE LOGICAL CIRCUIT REPRESENTED BY THE 3 MASKS p(0,0) , p(0,1) AND p(0,2) AND THE MATRICES A(0,0) , A(0,1) AND A(0,2) FOR THE FIRST ITERATION OF THE
+DECODING OPERATION OF THE 4 BIT GA LDPC DECODER WITH
+DESIGN-Eb/N0= 1.575 DB IN FIGURE 9.
+
+t0(0)
+
+y¯0 ⊻ y¯1 ⊻ y¯4 ⊻ y¯5
+
+t(10)
+
+y¯0 ⊻ y¯5
+
+t2(0)
+
+y¯0 ⊻ y¯4
+
+t3(0) (y¯0 ⊻ y¯2) ∨ (y¯4 ⊻ y¯6)
+
+maintaining effective performance. Overall, the findings reinforce the potential for significant
+complexity reduction through the integration of simple logical circuits in the design of LDPC decoders.
+
+V. CONCLUSION
+In conclusion, this work successfully demonstrates that GAs can effectively optimize and directly learn decoding circuits for check node calculations in LDPC decoders. The research reveals that learning decoding operations at a bit-level using IB method and GAs is competitive with conventional minsum decoders. The findings support the notion that GAs can adaptively explore a wide variety of circuit configurations, leading to powerful decoding operations. Importantly, the reduced computational load achieved through our approach has significant military relevance, as it directly contributes to longer battery life for handheld devices used on the battlefield. Additionally, as we discuss advancements in 5G-NR technology, it is likely that future military systems will also adopt this powerful coding technique.
+Future work should focus on replacing LUTs in variable nodes to further reduce computational complexity. Another very interesting topic to explore are new structures with few binary parameters that can be optimized for maximum preservation of mutual information with GAs for decoding. Overall, this work lays the groundwork for further advancements in efficient LDPC decoder designs.
+
+REFERENCES
+[1] C. Kestel, M. Herrmann, and N. When, “When channel coding hits the implementation wall,” in 2018 IEEE 10th International Symposium on
+
+Matrices
+
+10000000
+
+A(1,0)
+
+00101000
+
+
+
+
+
+00010000
+
+00100100
+
+01001000
+
+A(1,1)
+
+00000000
+
+
+
+
+
+00000000
+
+10000000
+
+00100100
+
+A(1,2)
+
+00101000
+
+
+
+
+
+00001010
+
+11001000
+
+Masks p(1,0) [01101000] p(1,1) [01101110] p(1,2) [10010000]
+
+TABLE V
+LOGICAL EQUIVALENT EQUATIONS OF THE LOGICAL CIRCUIT REPRESENTED BY THE 3 MASKS p(1,0) , p(1,1), p(1,2) AND THE MATRICES A(1,0) , A(1,1) AND A(1,2) FOR THE FIRST ITERATION OF THE DECODING
+OPERATION OF THE 4 BIT GA LDPC DECODER WITH DESIGN-Eb/N0 = 1.575 DB IN FIGURE 9.
+
+t(00)
+
+(y0) ∨ (y¯1 ⊻ y¯4) ∨ (y2 ⊻ y5)
+
+t1(0)
+
+(y¯2 ⊻ y¯4) ∨ (y2 ⊻ y4)
+
+t2(0)
+
+(y3) ∨ (y4 ⊻ y6)
+
+t3(0) (y¯2 ⊻ y5) ∨ (y0) ∨ (y¯0 ⊻ y1 ⊻ y4)
+
+Turbo Codes and Iterative Information Processing (ISTC), 2018, pp. 1–6. [2] NATO Allied Command Transformation, “5G technology: Nokia meets with NATO allied command transformation to discuss military applications,” NATO Allied Command Transformation, May 2024, accessed: January 14, 2025. [Online]. Available: https://www.act.nato.int/article/nokia-meets-act/ [3] J. Lewandowsky, “The information bottleneck method in communications,” Ph.D. dissertation, Technische Universita¨t Hamburg, July 2020. [4] J. Lewandowsky and G. Bauch, “Information-optimum LDPC decoders based on the information bottleneck method,” IEEE Access, vol. 6, pp. 4054–4071, 2018. [5] M. Adrat, “Institut fu¨r Kommunikationssysteme (IKS) RWTH Aachen university: Lecture notes in modern channel coding for wireless communications,” May 2020. [6] L. Wang, C. Terrill, D. Divsalar, and R. D. Wesel, “LDPC decoding with degree-specific neural message weights and RCQ decoding,” IEEE Transactions on Communications, vol. 72, no. 4, pp. 1912–1924, 2023. [7] P. Kang, K. Cai, X. He, S. Li, and J. Yuan, “Generalized mutual information-maximizing quantized decoding of LDPC codes with layered scheduling,” IEEE Transactions on Vehicular Technology, vol. 71, no. 7, pp. 7258–7273, 2022. [8] M. Stark, L. Wang, G. Bauch, and R. D. Wesel, “Decoding ratecompatible 5G-LDPC codes with coarse quantization using the information bottleneck method,” IEEE Open Journal of the Communications Society, vol. 1, pp. 646–660, 2020. [9] R. G. Gallager, “Low-density parity-check codes,” Ph.D. dissertation, Massachusetts Institute of Technology, Cambridge, Massachusetts, USA, 1963. [10] A. Anastasopoulos, “A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution,” in GLOBECOM’01. IEEE Global Telecommunications Conference (Cat. No.01CH37270), vol. 2, 2001, pp. 1021–1025 vol.2. [11] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational information bottleneck,” in 2019 International Conference on Learning Representations (ICLR), 2019. [12] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck method,” in Proceedings of 37th Allerton Conference on Communication and Computation, Monticello, USA, 1999, pp. 368–377.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+[13] D. Kern and V. Ku¨hn, “On implicit and explicit channel estimation for compress and forward OFDM schemes designed by information bottleneck graphs,” in 21st International ITG Workshop on Smart Antennas (WSA 2017), Berlin, Germany, March 2017, pp. 193–200.
+[14] J. Lewandowsky, M. Stark, and G. Bauch, “Design and evaluation of information bottleneck LDPC decoders for software defined radios,” in Proceedings of 2018 12th International Conference on Signal Processing and Communication Systems (ICSPCS), Cairns, Australia, 2018, pp. 1–9.
+[15] J. Lewandowsky, G. Bauch, M. Tschauner, and P. Oppermann, “Design and evaluation of information bottleneck LDPC decoders for digital signal processors,” IEICE Transactions on Communications, vol. E102B, no. 8, pp. 1363–1370, 2019.
+[16] M. Meidlinger and G. Matz, “On irregular LDPC codes with quantized message passing decoding,” in Proceedings of 2017 IEEE 18th International Workshop on Signal Processing Advances in Wireless Communications (SPAWC), Sapporo, Japan, 2017, pp. 1–5.
+[17] R. E. Blahut, “Computation of channel capacity and rate-distortion functions,” IEEE Transactions on Information Theory, vol. 18, no. 4, pp. 460–473, 1972.
+[18] C. E. Shannon, “Coding theorems for a discrete source with a fidelity criterion,” IRE Nat. Conv. Rec, vol. 4, no. 142-163, p. 1, 1959.
+[19] S. Hassanpour, D. Wu¨bben, and A. Dekorsy, “A graph-based message passing approach for noisy source coding via information bottleneck principle,” in Proceedings of 2018 IEEE Global Communications Conference (GLOBECOM), Abu Dhabi, United Arab Emirates, 2018, pp. 1–6.
+[20] J. Lewandowsky, S. J. Dongare, M. Adrat, M. Schrammen, and P. Jax, “Optimizing parametrized information bottleneck compression mappings with genetic algorithms,” in 2020 14th International Conference on Signal Processing and Communication Systems (ICSPCS), Adelaide, Australia, 2020.
+[21] J. Lewandowsky, S. J. Dongare, R. Mart´ın Lima, M. Adrat, M. Schrammen, and P. Jax, “Genetic algorithms to maximize the relevant mutual information in communication receivers,” Electronics, vol. 10, no. 12, 2021. [Online]. Available: https://www.mdpi.com/20799292/10/12/1434
+[22] D. A. Coley, An introduction to genetic algorithms for scientists and engineers. USA: World Scientific Publishing Co., Inc., 1998.
+[23] W. Youping, L. Liang, and C. Lin, “An advanced genetic algorithm for traveling salesman problem,” in 2009 Third International Conference on Genetic and Evolutionary Computing. IEEE, 2009, pp. 101–104.
+[24] D. A. Coley, An introduction to genetic algorithms for scientists and engineers. World Scientific Publishing Company, 1999.
+[25] D. J. MacKay, “http://www.inference.org.uk/mackay/, Gallager codes with rate 1/2: 8000.4000.3.483(N=8000, K=4000, M=4000, R=0.5),” Accessed Januar. 17, 2025, Encyclopedia of Sparse Graph Codes, University of Cambridge. [Online]. Available: ”http://www.inference.org.uk/mackay/”
+[26] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, “A fully-unrolled LDPC decoder based on quantized message passing,” in Proceedings of 2015 IEEE Workshop on Signal Processing Systems (SiPS), 2015, pp. 1–6.
+[27] J. Lewandowsky and G. Bauch, “Trellis based node operations for LDPC decoders from the information bottleneck method,” in Proceedings of 2015 9th International Conference on Signal Processing and Communication Systems (ICSPCS), Cairns, Australia, 2015, pp. 1–10.
+[28] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 599–618, February 2001.
+[29] B. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise thresholds for discrete LDPC decoding mappings,” in Proceedings of 2008 IEEE Global Communications Conference (GLOBECOM), New Orleans, USA, 2008, pp. 1–5.
+[30] C. Drake, “Python EDA, https://github.com/cjdrake/pyeda,” Accessed Jan. 17, 2025, GitHub. [Online]. Available: ”https://github.com/cjdrake/pyeda”
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:22:10 UTC from IEEE Xplore. Restrictions apply.
+
+

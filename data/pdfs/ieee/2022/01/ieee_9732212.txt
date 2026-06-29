@@ -1,0 +1,1059 @@
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+681
+
+High-Throughput and Energy-Efficient VLSI Architecture for Ordered Reliability Bits GRAND
+Syed Mohsin Abbas , Thibaud Tonnellier , Furkan Ercan , Member, IEEE, Marwan Jalaleddine , and Warren J. Gross , Senior Member, IEEE
+
+Abstract— Ultrareliable low-latency communication (URLLC), a major 5G new-radio (NR) use case, is the key enabler for applications with strict reliability and latency requirements. These applications necessitate the use of short-length and highrate channel codes. Guessing random additive noise decoding (GRAND) is a recently proposed maximum likelihood (ML) decoding technique for these short-length and high-rate codes. Rather than decoding the received vector, GRAND tries to infer the noise that corrupted the transmitted codeword during transmission through the communication channel. As a result, GRAND can decode any code, structured or unstructured. GRAND has hard-input as well as soft-input variants. Among these variants, ordered reliability bits GRAND (ORBGRAND) is a soft-input variant that outperforms hard-input GRAND and is suitable for parallel hardware implementation. This work reports the first hardware architecture for ORBGRAND, which achieves an average throughput of up to 42.5 Gb/s for a code length of 128 at a target frame error rate (FER) of 10−7. Furthermore, the proposed hardware can be used to decode any code as long as the length and rate constraints are met. In comparison to the GRAND with ABandonment (GRANDAB), a hard-input variant of GRAND, the proposed architecture enhances decoding performance by at least 2 dB. When compared to the state-ofthe-art fast dynamic successive cancellation flip decoder (FastDSCF) using a 5G polar code (PC) (128, 105), the proposed ORBGRAND VLSI implementation has 49× higher average throughput, 32× times more energy efficiency, and 5× more area efficiency while maintaining similar decoding performance.
+Index Terms— Area efficiency, energy efficiency, errorcorrecting code (ECC), guessing random additive noise decoding (GRAND), maximum likelihood decoding (MLD), ordered reliability bits GRAND (ORBGRAND), VLSI architecture.
+I. INTRODUCTION
+F OLLOWING Shannon’s seminal 1948 paper [2], much work was directed toward developing practical coding
+Manuscript received October 21, 2021; revised January 14, 2022; accepted February 3, 2022. Date of publication March 9, 2022; date of current version May 23, 2022. An earlier version of this paper was presented in part at the ICASSP 2021 [1] [DOI: 10.1109/ICASSP39728.2021.9414908]. (Corresponding author: Syed Mohsin Abbas.)
+Syed Mohsin Abbas, Thibaud Tonnellier, Marwan Jalaleddine, and Warren J. Gross are with the Department of Electrical and Computer Engineering, McGill University, Montréal, QC H3A 0G4, Canada (e-mail: syed.abbas@mail.mcgill.ca; thibaud.tonnellier@mcgill.ca; marwan.jalaleddine@mail.mcgill.ca; warren.gross@mcgill.ca).
+Furkan Ercan is with the Department of Electrical and Computer Engineering, Boston University, Boston, MA 02115 USA (e-mail: fercan@bu.edu).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TVLSI.2022.3153605.
+Digital Object Identifier 10.1109/TVLSI.2022.3153605
+
+schemes that could approach channel capacity (named “the Shannon limit”). Early proposed channel coding techniques mainly focused on designing error-correcting codes where the number of correctable errors is selected by design. This approach toward channel coding brought rise to Hamming codes [3] and Bose–Chaudhuri–Hocquenghem (BCH) codes [4], [5]. Recently, researchers have been trying to discover new capacity-achieving and capacity-approaching codes. Most notably, Turbo codes [6] and low density parity check (LDPC) codes [7] were proposed over time as capacityapproaching codes. On the other hand, polar codes (PCs) [8], proposed in 2008, are the first proven class of codes that asymptotically reach the Shannon limit for binary-input symmetric memory-less channels, as well as discrete and continuous memory-less channels [9]. However, designing codes that perform well in the short-to-medium block length regime is challenging [10].
+The guessing random additive noise decoding (GRAND) [11] is a recently proposed maximum likelihood (ML) decoding technique for short-length and high-rate channel codes. Emerging applications, such as intelligent transportation systems (ITS) [12], the Internet of Things (IoT) [13], [14], augmented and virtual reality, machine-to-machine communication (M2M) [15], and ultrareliable low-latency communication (URLLC) [16] (5G new-radio (NR) use case), necessitate short data packets with high reliability (target FER of 10−5 ∼ 10−9) and ultralow latency to deal with critical events. GRAND is an ML decoder for these channel codes with short lengths and high rates. Furthermore, because GRAND focuses on noise, transmissions with low noise are quickly decoded. GRAND is therefore suitable for applications that require high reliability and ultralow latency.
+In addition to GRAND, other universal decoders for (n, k) linear block codes, where n is the code length and k is the code dimension, include brute-force ML decoding (MLD), ordered statistic decoding (OSD) [17], and its variants [18]–[21]. Due to the high complexity requirement, the ML decoder is unsuitable for high-rate codes, whereas the OSD and its variants permute the columns of the generator matrix (G) of the underlying code in a way that is dependent on the received vector of channel observation values ( y) and the G matrix is transformed to a systematic form using Gaussian elimination. OSD is unsuitable for parallel hardware implementation [22] due to the complexity of Gaussian elim-
+
+1063-8210 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+682
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+Fig. 1. Comparison of the decoding performance of different GRAND variants with OSD (order = 2), CA-SCL, and DSCF (ω = 2 and Tmax = 50) decoder for 5G-NR polar codes. (a) polar code (128, 105+11). (b) PC (128,
+99+11).
+
+Fig. 2. Comparison of the decoding performance of different GRAND variants with OSD (order = 2) and ML decoder for BCH codes. (a) BCH Code(127,106). (b) BCH Code(127,113).
+
+ination [O(n3)] and the reliance of column permutations of G on the received vector ( y). GRAND, on the other hand, provides a low-complexity MLD solution for short-length and high-rate codes because it does not require Gaussian elimination or G column permutations. GRAND instead requires simple bit-flipping and syndrome check (codebook membership verification) operations.
+GRAND generates test error patterns (TEPs), which are successively applied to the vector of channel observation values ( y) and the resulting vector is evaluated for codebook membership. GRAND can be used with any codebook as long as there is a method for validating a vector’s codebook membership. For linear codebooks (C), the codebook membership for a vector can be verified using the parity check matrix H. For other nonstructured codebooks, stored in a dictionary, the codebook membership of a vector can be checked with a dictionary lookup. For the rest of the discussion, we restrict ourselves to (n, k) linear block codes.
+The order in which these test error patterns are generated is the primary distinction between GRAND variants. GRAND with ABandonment (GRANDAB) [11] is a hard decision input version of GRAND that produces test error patterns in increasing Hamming weight order up to weight AB. Ordered reliability bits GRAND (ORBGRAND) [23] and soft GRAND (SGRAND) [24] are soft-input variants that efficiently utilize soft information (channel observation values), resulting in improved decoding performance over hard-input GRANDAB.
+Fig. 1 compares the decoding performance of various GRAND variants for decoding 5G NR cyclic redundancy check (CRC)-aided polar code (128, 105 + 11) and polar code (128, 99 + 11). Furthermore, the decoding performance of state-of-the-art soft-input decoders, such as the CRCaided successive cancellation list (CA-SCL) decoder [25], [26], dynamic SC-flip (DSCF) [27], [28] decoder, and OSD [17]–[19], is included for reference. The numerical simulation results presented in this work are based on the binary phase shift keying (BPSK) modulation over an additive white Gaussian noise (AWGN) channel. The ORB-
+
+GRAND and SGRAND soft-input decoders outperform the hard-input GRANDAB variant in decoding performance, and the SGRAND variant achieves MLD performance similar to OSD, as shown in Fig. 1. Fig. 2 compares the decoding performance of different GRAND variants with OSD and MLD of BCH codes (127, 106) and (127, 113), respectively. The MLD results are obtained from [29]. Similar trends in decoding performance can be seen in the BCH codes shown in Fig. 2, where soft-input variants of GRAND (ORBGRAND and SGRAND) outperform the hard-input traditional Berlekamp– Massey (B-M) [30], [31] decoder and the SGRAND achieves ML performance comparable to OSD.
+The SGRAND outperforms the other GRAND variants in terms of decoding performance; however, SGRAND is not suitable for parallel hardware implementation. The generated test error patterns in SGRAND are interdependent, and their query order changes for each received vector of channel observation values ( y) [24]. As a result, SGRAND does not lend itself to efficient parallel hardware implementation, and a sequential hardware implementation will result in a high decoding latency, which is unsuitable for applications that require ultralow latency. The ORBGRAND, on the other hand, generates test error patterns in a predetermined logistic weight (LW) order based on integer partitioning. Furthermore, the test error patterns generated are mutually independent and can be generated in parallel. ORBGRAND is thus highly parallelizable and well suited to parallel hardware implementation.
+In this article, we investigate the parameters that affect the decoding performance as well as the computational complexity of the ORBGRAND algorithm, and we propose modifications to the ORBGRAND algorithm to aid hardware implementation and reduce complexity. In addition, we present a high-throughput and energy-efficient ORBGRAND VLSI architecture. The VLSI implementation results show that, considering a code of length 128 and a target FER of 10−7, the proposed hardware architecture can achieve an average information throughput of up to 42.5 Gb/s. Furthermore, the proposed hardware can be used to decode any code as long
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+683
+
+as the length and rate constraints are met. When compared to the state-of-the-art fast dynamic successive cancellation flip decoder (Fast-DSCF) [27], [28] using a 5G NR polar code (128, 105), the proposed ORBGRAND implementation results in 49× more average throughput, 32× more energy efficiency, and 5× more area efficiency.
+It should be noted that a part of this work was previously discussed in [1]. This article builds on the earlier work [1] and extends the proposed ORBGRAND in the following ways.
+1) For various classes of channel codes, including BCH codes, CRC codes, random linear codes (RLCs), and polar codes, the proposed ORBGRAND is evaluated in terms of decoding performance and compared with stateof-the-art decoding approaches.
+2) The ORBGRAND VLSI architecture [1] can only support a limited set of parameters (LW ≤ 64 and P ≤ 6). The proposed ORBGRAND VLSI architecture is expanded to support the additional parameters (LW ≤ 96 and P ≤ 8) in this work. Furthermore, detailed VLSI implementation results for area, power, throughput, hardware efficiency, and energy efficiency are presented.
+3) This article describes the proposed test error pattern generation scheme for the ORBGRAND hardware and presents a step-by-step procedure for leveraging shift registers to generate error patterns corresponding to LW order based on the integer partitioning procedure.
+4) This article provides a comprehensive analysis of worst case (W.C.) latency and throughput for selecting different parameters for the proposed ORBGRAND hardware. This analysis assists in the selection of optimal ORBGRAND hardware parameters to meet the throughput and latency requirements of a target application.
+5) For the proposed ORBGRAND VLSI hardware, we propose segmenting the sorter module into multiple partitions. The effect of partition number on the displacement of log-likelihood ratio (LLR) elements | yi | (∀i ∈ [1, n]) from their correct locations and their effect on ORBGRAND decoding performance is thoroughly investigated. Finally, the ORBGRAND with segmented sorter approach is implemented and compared to the baseline ORBGRAND hardware with nonsegmented sorter, and the effect of varying the number of sorter segments on area overhead is investigated.
+The remainder of this work is structured as follows. Section II includes the preliminary information on GRAND and ORBGRAND. Section III investigates ORBGRAND parameters and proposes modifications for simple hardware implementation as well as complexity reduction of ORBGRAND. The proposed hardware architecture for ORBGRAND is detailed in Section IV. Section V presents the implementation results and compares them to the Fast-DSCF and GRANDAB decoders. Finally, in Section VI, concluding remarks are made.
+II. PRELIMINARIES
+A. Notations
+Matrices are denoted by a bold upper case letter (M), while vectors are denoted with bold lower case letters (v).
+
+The transpose operator is represented by . The number of
+
+k-combinations from a given set of n elements is noted by
+
+n k
+
+.
+
+1n is the indicator vector where all locations except the nth are
+
+0 and the nth is 1. Similarly, 1v is the indicator vector in which
+
+all locations vi (∀i ∈ [1, n]) are 1. All the indices start at 1.
+
+For this work, all operations are restricted to the Galois field
+
+with two elements, noted F2. The symbols ∴ and ∵ denote therefore and because, respectively. a ◦ b denotes permuting
+
+elements in a according to the permutation order in b.
+
+B. GRAND Decoding of Linear Block Codes
+A linear block code is linear mapping g : Fk2 → Fn2, where k < n. In this mapping, a vector u of size k maps to a vector c of size n and the ratio R (k/n) is called the code rate. For every linear block code, there exists a k × n matrix G called generator matrix and an (n − k) × n matrix H called parity check matrix. The set of the 2k vectors c is called a code C,
+whose elements c are called codewords and each codeword verifies the following property:
+
+∀ c ∈ C, H · c = 0.
+
+(1)
+
+Consider the case where c was sent via a noisy channel and r was received at the channel’s output. Because of the channel noise, r and c might differ. As a result, the relationship between r and c may be deduced as follows: r = c ⊕ e¯, where e¯ represents the channel-induced noise.
+GRAND sequentially generates the test error patterns (e) and applies them to r and checks for codebook membership of r by verifying that
+
+H · (r ⊕ e)
+
+(2)
+
+is equal to zero. If so, e is the guessed noise and cˆ r ⊕ e is the estimated codeword. GRAND’s focus is on noise, and thus, it can be used with any codebook as long as there is a method for validating a vector’s codebook membership. For linear codebooks, the codebook membership for a vector can be verified using H.
+
+C. ORBGRAND Decoding
+Algorithm 1 summarizes the steps of the ORBGRAND. The
+inputs to the algorithm are the vector of channel observation values (LLRs) y of size n, an (n − k) × n parity check matrix of the code H, an n × k matrix G−1 such that G · G−1 is the k × k identity matrix, with G a generator matrix of the code, and the maximum LW considered LWmax (LWmax ≤ (n(n + 1)/2)). The LW corresponds to the sum of the indices of nonzero elements in the test error patterns (e) [23]. For example, e = [0, 1, 0, 0, 1, 0] has a Hamming weight of 2, whereas the LW is 2 + 5 = 7.
+ORBGRAND begins by sorting y in ascending order of absolute value of LLRs (| y|), and the corresponding indices are recorded in a permutation vector denoted by i nd (line 1). Following that, all integer partitions (λ = (λ1, λ2, . . . , λP ) 
+ i where P ∈ [1, Pmax] and i ∈ [0, LWmax] explained in Section III) are generated for each LW (line 3). The integer partition (λ) is used to generate a test error pattern (e), which is then ordered using the permutation vector i nd (lines 5 and 6).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+684
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+Algorithm 1 ORBGRAND Algorithm
+
+by at least 2 dB for a target FER ≥ 10−5 for both CRC codes and RLCs.
+To conclude, both GRAND and ORBGRAND can be used to decode any linear block code (n, k), structured or unstructured, as long as the underlying code’s parity check matrix ( H) is provided. Furthermore, as a soft-input decoder, ORBGRAND outperforms hard-input GRANDAB.
+III. ORBGRAND DESIGN CONSIDERATIONS
+ORBGRAND is centered around generating distinct integer partition of a particular LW, and these integer partitions are then used to generate test error patterns (e).
+An integer partition λ of a positive integer m, noted λ = (λ1, λ2, . . . , λP ) 
+ m where λ1 > λ2 > · · · > λP , is the multiset of positive integers λi (∀i ∈ [1, P]) that sum to m. If all parts λi (∀i ∈ [1, P]) of the integer partition are different, the partition is called distinct. Note that the generated test error pattern obtained from an integer partition with P elements has a Hamming weight of P. The ORBGRAND considers (n(n + 1)/2) as the maximum LW for an (n, k) linear block code [LWmax = (n(n + 1)/2)]. Furthermore, the generated TEPs have a maximum Hamming weight of n (HWmax = n). It should be noted that only distinct integer partitions are considered when generating TEPs, and all parts (λi ) of the partition are less than or equal to n [λi ≤ n (∀i ∈ [1, P])].
+
+Fig. 3. Comparison of the GRANDAB and ORBGRAND decoding performance using (a) CRC codes and (b) RLCs for n = 128 and k = 104.
+The generated test error patterns are then applied sequentially to the hard decision vector ( ˆy), which is obtained from the input soft channel observation values ( y). The resulting vector is then queried for codebook membership (line 7). If the codebook membership criterion (2) is met, then e is the guessed noise and cˆ ˆy ⊕ e is the estimated codeword. Otherwise, either larger LWs or the remaining error patterns for that LW are considered. Finally, using G−1 (line 8), the original message (uˆ ) is retrieved from the estimated codeword, and the decoding process is terminated.
+The FER performance of ORBGRAND, a soft decision decoder, is compared to a hard decision variant GRANDAB for CRC codes [32] and RLCs [33], [34] in Fig. 3. CRC codes [32] are typically used to detect errors in communication systems and to assist list-based channel code decoders in selecting the final candidate codeword. On the other hand, CRC codes can also be used for error correction using the GRAND algorithm. The concept of using CRC codes for error correction with GRAND decoding was presented in [35] and expanded in [36]. RLCs [33], [34] are linear block codes that are theoretically high-performing [33], [34] but are not considered realistic in terms of decodability. For CRC code (128, 104), generator polynomial 0xB2B117 is used. As shown in Fig. 3, ORBGRAND outperforms GRANDAB
+
+A. Parametric Analysis of ORBGRAND
+As seen in Algorithm 1, LWmax is an important parameter for the ORBGRAND. LWmax impacts ORBGRAND’s decoding performance as well as its computational complexity. The computational complexity of GRAND and its variants can be expressed in terms of the number of codebook membership queries required. Furthermore, the complexity can be further subdivided into W.C. complexity, which corresponds to the maximum number of codebook membership queries required, and average complexity, which corresponds to the average number of codebook membership queries required. It should be noted that with improved channel conditions, the average complexity of GRAND and its variants decreases sharply as transmissions subject to light noise are quickly decoded [11], [23], [24].
+In addition to LWmax, another important parameter of ORBGRAND is the number of elements (P) in the generated integer partition (λ). Furthermore, P denotes the Hamming weight of the generated test error pattern. ORBGRAND’s LWmax and P parameters can be appropriately chosen to reduce W.C. complexity while having a minimal impact on decoding performance.
+Fig. 4(a) shows the impact of different parameters (LWmax, P) on the ORBGRAND decoding performance for 5G CRC-aided (CA) polar code (128, 105 + 11) [37], [38] with BPSK modulation over an AWGN channel. Furthermore, the decoding performance of state-of-the-art soft-input decoders, such as CA-SCL decoder [25], [26] and DSCF [27], [28] decoder, is included for reference. The number of DSCF attempts (Tmax) parameter is set to 50, and the maximum bit-flipping order (ω) is set to 2. As shown in Fig. 4(a),
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+685
+
+Fig. 4. Comparison of decoding performance of ORBGRAND decoding with different parameters (LWmax and P) for (a) 5G CA polar code (128, 105 + 11) and (b) BCH code (127, 106).
+
+the FER performance of ORBGRAND outperforms the GRANDAB (AB = 3) [11] decoder by at least 2 dB for target FERs ≤10−5. Furthermore, the ORBGRAND decoder outper-
+forms the CA-SCL decoder [25], [26] and the DSCF decoder [27], [28] for decoding polar code (128, 105 + 11) at target FER of 10−4 and 10−6, respectively.
+The maximum number of codebook membership queries for LWmax values of 128, 96, and 64 is 5.33 × 107, 3.69 × 106, and 1.5 × 105, respectively. When LWmax is decreased from 128 to 64, a performance degradation of 0.2 dB is observed at FER = 10−7, as shown in Fig. 4(a). The complexity, on the other hand, is reduced by 355× as a result of this reduction.
+Similarly, the degradation in ORBGRAND decoding performance for the considered polar code with LWmax = 64 is negligible when P = 6 is used instead of an unbounded P. As a consequence, with LWmax = 64 and P = 6, the maximum number of queries is limited to 1.16 × 105, and the ORBGRAND (for target FER of 10−5) performs similar
+to the state-of-the-art DSCF polar code decoder [27], [28].
+Similarly, Fig. 4(b) presents a comparison of ORBGRAND
+decoding performance for the BCH (127,106) code. The
+ORBGRAND decoding performance is compared to that of the
+hard decision input B-M decoder [30], [31] and the soft-input
+OSD [17]–[19] decoder. ORBGRAND decoding of BCH (127, 106) code results in a 1.7-dB performance gain at a target FER of 10−5 when compared to the B-M decoder. For target FER of 10−6, the OSD decoder outperforms the ORBGRAND decoder by 0.7 dB. However, due to the complexity of Gaussian elimination [O(n3)] and the reliance of column permutation
+of the G matrix on the received vector from the channel ( y),
+OSD is unsuitable for parallel hardware implementation [22].
+ORBGRAND, on the other hand, requires only simple bit-
+flipping and syndrome check (codebook membership verifi-
+cation) operations, making it ideal for applications requiring
+ultralow decoding latency.
+
+To conclude, the appropriate selection of ORBGRAND parameters LWmax and P results not only in a reduction in computational complexity but also in the design of simple hardware, as discussed in Section IV.
+
+B. Proposed Simplified Generation of Integer Partitions (λ)
+
+A hardware implementation for the generation of integer
+
+partitions was proposed in [39]. However, since the gen-
+
+erated partitions are not distinct, their approach cannot be
+
+directly applied to our proposed ORBGRAND architecture.
+
+Furthermore, their integer partition generation is sequential,
+
+which is unsuitable for use in a parallelized, high-throughput
+
+hardware architecture. In this section, we propose a method
+
+for generating integer partitions of a particular LW using a
+
+specific arrangement of shift registers and XOR gates.
+
+For generating integer partitions of a specific LW m,
+
+we noticed that a breakdown of m generates convenient pat-
+
+terns. For example, for m = 12, the distinct integer partitions
+
+are λ = {(12); (11, 1); (10, 2); (9, 3); (8, 4); (7, 5); (9, 2, 1);
+
+(8, 3, 1); (7, 4, 1); (6, 5, 1); (7, 3, 2); (6, 4, 2); (5, 4, 3);
+
+(6, 3, 2, 1); (5, 4, 2, 1)}. If a listing order is followed for
+
+P = 2 (i.e., the subset {(11, 1); (10, 2); (9, 3); (8, 4); (7, 5)},
+
+the first integer descends, while the second ascends. Therefore,
+
+for a particular LW m, integer partitions of size 2 (P = 2)
+
+can be generated as (λ1, λ2) 
+ m where λ2 ∈ [1, (m/2)
+ − 1] and λ1 = m − λ2.
+
+Similar trends can be observed for higher order partitions
+
+such as P = 3 (i.e., the subset {(9, 2, 1); (8, 3, 1); (7, 4, 1);
+
+(6, 5, 1); (7, 3, 2); (6, 4, 2); (5, 4, 3)}), and the first integer
+
+descends, while the second ascends as the third integer remains
+
+fixed until all iterations for the first two integers are complete.
+
+Hence, integer partitions of size 3 (P = 3) can be generated
+
+as (λ1, and λ1
+
+λ2 =
+
+, λ3)
+m, where λ3 ∈ [1, λm3 ax m − λ2 − λ3. Moreover, λ3max
+
+], is
+
+λ2 ∈ [λ3 + 1, λm2,aλx3 ], the maximum value
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+686
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+of λ3 value
+
+, and of λ3
+
+λ(λm2,3aλx3∈is[1t,hλe3mamx]a)x. imum
+
+value
+
+of
+
+λ2
+
+for
+
+a
+
+specific
+
+In general, an integer partition of size P can be generated
+
+as (λ1, λ2, . . . , λP ) 
+ m, where λP ∈ [1, λmPax], λi ∈ [λi+1 +
+
+M1,oλrmie,λaoix+v1e,.r..,,λλPmP−1a]x∀iis
+
+∈ the
+
+[2, P − 1], and maximum value
+
+λ1 = m of λP , and
+
+−
+
+P i =2
+
+λi
+
+.
+
+λmax
+i,λi+1 ...,λP−1
+
+is the maximum value of λi for specific values of λ j (∀ j ∈
+
+[i as
+
++ 1, λmi ax
+
+P .
+
+− 1]). For simplicity, we will denote λim,λaix+1...,λ The maximum value for each λi (∀i ∈ [2, P])
+
+P−1
+is
+
+bounded by (3).
+
+Lemma 1: If a positive integer m is partitioned into P distinct parts, ∀i ∈ [2, P], and assuming that λi are ordered, the maximum value for each λi is bounded by
+
+λmi ax
+
+<
+
+2
+
+×
+
+m
+
+−
+
+(i
+
+×
+
+(i
+
+−
+
+1)) + 2×i
+
+2
+
+−
+
+2
+
+×
+
+P j =i
+
++1
+
+λ
+
+j
+
+(3)
+
+whereas the first value of λ is given as λ1 = m −
+
+P j =2
+
+λ
+
+j
+
+.
+
+Proof: The proof is provided in the Appendix.
+
+IV. VLSI ARCHITECTURE FOR ORBGRAND
+A VLSI architecture for GRANDAB (AB = 3) was proposed in [35] for (n, k) linear block codes. Shift registers are used in [35] to store syndrome of error patterns with a Hamming weight of 1 (denoted as si = H · 1i, i ∈ [[1 . . .n]]). Furthermore, Abbas et al. [35] employed the underlying code’s linearity property to combine multiple si to generate syndrome of an error pattern with a Hamming weight of l > 1 (s1,2..., l = H · 11 ⊕ H · 12 · · · ⊕ H · 1l). We refer the reader to [35] for more details. The VLSI architecture for GRANDAB (AB = 3) [35] forms the basis for the proposed ORBGRAND architecture. The GRANDAB decoder [35] can only generate test error patterns with Hamming weights ≤3. As a result, significant improvements are needed to cater to
+soft inputs, to generate error patterns in increasing order of
+their LW, and to consider larger Hamming weights as required
+by ORBGRAND.
+
+A. Scheduling and Details
+As explained in Section III, ORBGRAND is based on generating test error patterns corresponding to integer partitions of a specific LW m (∀m ∈ [3, LWmax]). Moreover, for each m, integer partitions are generated with size P (∀P ∈ [2, Pmax]). We propose to generate these integer partitions in ascending order of their size (P). This modification does not impact the FER performance, and however, it helps in designing a simpler hardware implementation.
+In this section, we propose an arrangement and interconnection of shift registers and XOR gates to generate test error patterns corresponding to a specific LW m. The shift registers store the syndromes that correspond to error patterns with a Hamming weight of 1 (si ). To check for error patterns of Hamming weight P, these syndromes are combined using an array of XOR gates.
+
+B. Generating Test Error Patterns for P ≤ 3
+The size and number of shift registers used in [35] have a direct impact on the Hamming weight of the error patterns
+
+Fig. 5. Example of the shift registers content and interconnection for LW m = 20 for checking error patterns of Hamming weights 2 and 3.
+
+that can be evaluated in parallel. For example, in [35], two
+
+n × (n − k) shift registers are used to evaluate n test error
+
+patterns in parallel with a Hamming weight of 2. However,
+
+if more shift registers are added, the number of intercon-
+
+nections becomes a problem. As a result, for the proposed
+
+ORBGRAND architecture, we choose three shift registers that
+
+correspond to an integer partition of size 3 (P = 3).
+
+In the proposed ORBGRAND VLSI architecture, λ1, λ2,
+
+and λ3 ((λ1, λ2, λ3) 
+ m) are mapped to first, second, and
+
+third shift registers, respectively. The third shift register is a
+
+λ3max × (n − k) bit shift register, where λm3 ax value is given by (3) corresponding to P = 3, whereas the first and second
+
+shift registers are each 2 × (λm3 ax + 1) × (n − k) bits in size.
+
+Since we have λ1 = m −
+
+3 i =2
+
+λi
+
+,
+
+corresponding
+
+to
+
+P
+
+= 3,
+
+sm−i is stored at the i th index of the first shift register, while
+
+for the second and third shift registers, si is stored at the
+
+i th index.
+
+Fig. 5 shows an example of the content and interconnection
+
+of three shift registers for LW m = 20. The elements of the
+
+three shift registers are syndromes (si ) of the error pattern with
+
+the Hamming weight of 1. These syndromes (si ) of the error pattern with the Hamming weight of 1 are combined using an
+
+array of (n − k)-wide XOR gates to check for error patterns
+
+with Hamming weights 2 and 3.
+
+A collection of these connections is defined as a bus.
+
+Since there are numerous connections and XOR gates involved,
+
+we used a single XOR gate and a single bus symbol to illustrate
+
+these interconnections in Fig. 5. As shown in Fig. 5, there are six buses [λ3max+1, where λm3 ax = 5 for P = 3 (3)] for m = 20. The first bus (highlighted by solid rectangle) is used to check
+
+error patterns with Hamming weight of 2, and the remaining
+
+buses (highlighted by the dashed rectangle in Fig. 5) are used
+
+to check for error patterns of Hamming weight 3.
+
+To check the error patterns corresponding to a Hamming
+
+weight 2 (P = 2), the first bus (highlighted by solid rectangle)
+
+is used to combine all the elements of shift register 1 with
+
+all the elements of shift register 2 using an array of XOR
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+687
+
+Fig. 7. Shift registers contents for checking error patterns corresponding to a Hamming weight of 2 and 3 for any LW m.
+
+Fig. 8. Shift registers contents for checking error patterns corresponding to
+
+P > 3 for any LW m (λ1 = m −
+
+P i=2
+
+λi
+
+).
+
+C. Generating Test Error Patterns for P > 3
+
+Fig. 6. Example of interconnections and the associated XOR gates for the first and last bus for LW m = 20. (a) Interconnections and the associated XOR gates for the first bus for checking error patterns of Hamming weight of 2 (P = 2). (b) Interconnections and the associated XOR gates for the last (sixth) bus for checking error patterns of Hamming weight of 3 (P = 3).
+gates. These results are again combined with the syndromes of the received vector (sc) to check for the error patterns with Hamming weight of 2. The detailed interconnections and the associated XOR gates for the first bus are shown in Fig. 6(a).
+Similarly, to check the error patterns corresponding to a Hamming weight of 3 (P = 3), the selected elements of shift registers 1 and 2 are again combined with sc, but also with the elements of shift register 3. We use a single bus and a single XOR gate to illustrate these interconnections, which are shown in Fig. 5 by the dashed rectangle. The detailed interconnections and the associated XOR gates for the last (sixth) bus are shown in Fig. 6(b).
+Due to the described arrangement and interconnection of the shift registers and XOR gates, all the error patterns corresponding to an integer partition of sizes 2 and 3 for a specific LW m are checked in one time step. In general, to check the error patterns corresponding to an integer partition of sizes 2 and 3 for any LW m, the content and the interconnection of the three shift registers are shown in Fig. 7.
+
+To check all the test error patterns corresponding to integer
+
+partitions of sizes P > 3, a controller is used in conjunction
+
+with the shift registers. The controller combines Pmax − 3
+
+syndromes together with the syndromes of the received vector,
+
+noted scomp. Hence, when scomp is fixed, only one time step is required to generate all possible combinations of {λ1, λ2, λ3}
+
+using the shift registers with adequately chosen shift values.
+
+The content and the interconnection of the three shift
+
+registers, which are used to check the test error patterns
+
+corresponding to integer partitions of sizes P > 3, are shown
+
+in Fig. 8. Since the first bus is only used to check error
+
+patterns with Hamming weight of 2 (P = 2), it is disabled
+
+for P > 3 and not shown in Fig. 8. 0 corresponds to a
+
+disabled connection, which means that the respective elements
+
+of the bus do not take part in the final computations. Fig. 9
+
+shows the testing error patterns corresponding to P = 4.
+
+At each time step, the controller outputs scomp = sc ⊕ sλ4 (λ4 ∈ [1, λm4 ax]) and {λ1, λ2, λ3} are computed and mapped to
+their corresponding shift registers.
+
+At the first time step, having received scomp = sc ⊕ s1
+
+(λ4 = where
+
+1) as λm3,aλx4
+
+an output from the controller, = 5 with λ4 = 1 (3)]
+
+λ3 is
+
+[λ3 ∈ [2, λm3,aλx4 ] computed and
+
+mapped to the third shift register. Similarly, λ2 (λ2 ∈ [λ3 +
+
+1, λ(2×(λm3 ax+1)))]) and λ1 (λ1 = m −
+
+4 i =2
+
+λi
+
+)
+
+are
+
+computed
+
+and mapped to their corresponding shift registers. The test
+
+error patterns with λ4 = 1 are checked, as shown in Fig. 9(a).
+At the next time step, the controller outputs scomp = sc ⊕ s2 (λ4 = 2) and λ3 [λ3 ∈ [3, λm3,aλx4 ], where λ3m,aλx4 = 5 with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+688
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+Fig. 9. Shift registers contents for checking test error patterns corresponding to P = 4 at (a) time step 1, (b) time step 2, and (c) time step 3 (m = 20).
+
+Fig. 10. Shift registers contents for checking test error patterns corresponding to P = 5 at (a) time step 1, (b) time step 2, and (c) time step 3 (m = 20).
+
+λ4 = 2 (3)] is computed. Shift register 2 is shifted up
+
+by 1 position and shift register 1 outputs λ1 (λ1 = m −
+
+4 i =2
+
+λi
+
+),
+
+as
+
+shown
+
+in
+
+Fig.
+
+9(b).
+
+Hence,
+
+the
+
+test
+
+error
+
+pat-
+
+terns with λ4 = 2 are checked in the second time step.
+
+Similarly, at third time step, the controller outputs scomp =
+
+sc ⊕ s3 (λ4 = 3) λ3 [λ3 ∈ [4, λm3,aλx4 ] where λm3,aλx4 = 4 with
+
+λ4 = 3 (3)] is computed, as shown in Fig. 9(c). Therefore, a total of three time steps [λ4max = 3, (3)], are required to check for error patterns corresponding to P = 4 and m = 20.
+Fig. 10 shows the use of shift registers to check the error pat-
+terns corresponding to P = 5 and m = 20. At each time step,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+689
+
+Fig. 11. Proposed VLSI architecture for ORBGRAND.
+
+the controller outputs scomp = sc ⊕ sλ5 ⊕ sλ4 . For each value
+
+of λ5 (λ5 Similarly,
+
+∈ [1, λm5 ax]), λ4 (λ4 ∈ [λ5 + for each value of λ4, λ3 (λ3
+
+∈1,[λλm44,aλ+x5 ]1) ,iλs 3mc,aλox5m,λ4p]u),teλd2.
+
+(λ2 ∈ [λ3 + 1, λ(2×(λ3max+1))]), and λ1 (λ1 = m −
+
+5 i =2
+
+λi
+
+)
+
+are
+
+computed and mapped to their corresponding shift registers.
+
+Hence, a total of three time steps [ λm5 ax = 2, λ4m,aλx5=1 = 3, and λ4m,aλx5=2
+
+( λm5 ax
+λ5 =1
+=3
+
+λm4,aλx5 λ4 =λ5
+
++1
+
+(1)),
+
+where
+
+(3)] are required to
+
+check for error patterns corresponding to P = 5 and m = 20,
+
+as shown in Fig. 10. In general, the number of time steps required to generate all integer partitions of size P > 3 for a
+
+specific LW is given by
+
+⎛ ⎛ λmPax
+
+λmP a−x1,λ P
+
+λ4m,aλx5,...,λ P
+
+⎞⎞
+
+⎝
+
+⎝· · ·
+
+(1)⎠⎠.
+
+(4)
+
+λP =1 λP−1=λP +1
+
+λ4 =λ5 +1
+
+D. Proposed VLSI Architecture
+Fig. 11 shows the proposed VLSI architecture for ORBGRAND, which can be used to decode any linear block code of length n. For clarity, the control and clock signals are not shown. To support different codes and rates, any H matrix can be loaded into the H memory of size (n −k) × n-bit at any time. The hard decided vector ˆy is subjected to a syndrome check (2) in the first phase of decoding. Decoding is assumed to be successful if the syndrome is verified. Otherwise, the LLRs values are sorted in ascending order of their absolute value | y|.
+As shown in Fig. 11, the sorted syndromes of error patterns with the Hamming weight of 1 (si ) are passed to the decoder core, while the indices of the sorted LLRs are forwarded to the multiplexers for later use by the word generator module. Following the sorting process, all syndromes of error patterns with the Hamming weight of 1 (si ) are tested for codebook membership (2) in a single time step. Following that, error patterns are tested for codebook membership in the ascending LW order, as explained in Section II-C.
+The test error pattern syndromes corresponding to integer partitions of a given LW m are generated using the shift register and XOR gate arrangement proposed in Section IV-A. The rows of shift registers are combined with the controller’s output (scomp), and the resulting test syndromes are NORreduced and fed to a 2-D priority encoder. Each NOR-reduce output is 1 if and only if all of the bits of the syndromes computed by (2) are 0. If any of the tested syndrome combinations satisfy the parity check constraint (NOR-reduced output
+
+is 1), the 2-D priority encoder is used in conjunction with the controller module to forward the respective indices to the word generator module, where P multiplexers are used to convert the sorted index values to their appropriate bit-flip locations.
+V. ORBGRAND DESIGN EXPLORATION
+In this section, we present the VLSI implementation results for ORBGRAND (LW,P). Initially, implementation results for baseline ORBGRAND, which can support parameters LW ≤ 64 and P ≤ 6, are presented. Please note that a subset of these implementation results were previously presented in [1]. In this work, baseline implementation results are supplemented with power consumption, area, and energy efficiency results. Furthermore, the proposed ORBGRAND VLSI architecture is extended to support the parameters LW ≤ 96 and P ≤ 8, and a comprehensive analysis of W.C. latency and W.C. throughput for selecting different parameters (LW and P) for the proposed ORBGRAND hardware is presented. Finally, the sorter module for the proposed ORBGRAND is segmented into multiple partitions to reduce the area overhead. The effect of the number of partitions on ORBGRAND decoding performance as well as area overhead is also presented and compared to the ORBGRAND with a nonsegmented sorter approach.
+A. ORBGRAND Baseline Implementation
+The proposed ORBGRAND VLSI architecture with parameters LW ≤ 64 and P ≤ 6 has been implemented in Verilog Hardware Description Language (HDL) and synthesized using Synopsys Design Compiler with general-purpose Taiwan Semiconductor Manufacturing Company (TSMC) 65-nm CMOS technology. The design has been verified using test benches generated via the bit-true C model of the proposed hardware. Table I presents the synthesis results for the proposed decoder with n = 128 and the proposed architecture can support code rates between 0.75 and 1. Input channel LLRs are quantized on 5 bits, including 1 sign bit and 3 bits for the fractional part. To ensure accuracy in power measurements, switching activities from real test vectors are extracted for all of the VLSI architectures presented in Table I.
+The maximum frequency supported by the ORBGRAND implementation is 454 MHz. Since there is no pipelining technique for the decoder core, one clock cycle corresponds to one time step. The average decoding latency of the proposed hardware is calculated using the bit-true C model after taking account for at least 100 frames in error for each (Eb/N0) point. At a target FER of 10−7 [(Eb/N0) > 7.5 dB], the average
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+690
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+TABLE I TSMC 65-nm CMOS SYNTHESIS COMPARISON FOR ORBGRAND WITH GRANDAB AND DSCF FOR n = 128
+
+latency is only 2.47 ns, resulting in an average decoding information throughput of 42.5 Gb/s for a (128, 105) polar
+code. However, the W.C. scenario needs 4226 cycles with n = 128 and parameters LW ≤ 64 and P ≤ 6, culminating in a W.C. latency of 9.3 μs.
+As shown in Fig. 4(a), ORBGRAND with parameters LW ≤ 64 and P ≤ 6 has similar decoding performance (a target FER of 10−5) to the DSCF [27] decoder for (128, 105) 5G-NR CA
+polar code. The proposed ORBGRAND VLSI implementation (LW ≤ 64 and P ≤ 6) is compared to VLSI architecture for DSCF polar code decoder (ω = 2 and Tmax = 50) [28], which employs 7- and 6-bit internal and channel LLR quantizations, respectively. Compared to DSCF [28], ORBGRAND (LW ≤ 64 and P ≤ 6) has a 8× area overhead, as well as a 52% increase in the W.C. latency. However, at a target FER of 10−7, the proposed ORBGRAND results in 49× higher average
+throughput than the DSCF [28]. Furthermore, compared to DSCF [28], ORBGRAND (LW ≤ 64 and P ≤ 6) is 5× more area efficient and 32× more energy efficient. Moreover, the
+proposed ORBGRAND hardware is code and rate compatible,
+while the DSCF [28] can only decode polar codes.
+In comparison to the hard-input GRANDAB decoder (AB = 3) [35], ORBGRAND (LW ≤ 64 and P ≤ 6) has a 7× area overhead, as well as a 13.5% higher W.C. and a 23.5% higher average latency. Furthermore, compared to [35], ORBGRAND (LW ≤ 64 and P ≤ 6) is 2× less energy efficient and 9× less area efficient. However, as shown in Fig. 4, the FER performance of ORBGRAND (LW ≤ 64 and P ≤ 6),
+a soft decision decoder, outperforms hard-input counterpart decoders by at least 1.3–2 dB for target FERs ≤10−5.
+
+Table I presents the VLSI implementation results for the proposed ORBGRAND VLSI architecture with parameters LW ≤ 96 and P ≤ 8 using the same implementation settings described in Section V-A. The proposed ORBGRAND can support a maximum frequency of 454 MHz. As shown in Table I, the ORBGRAND implementation with parameters LW ≤ 96 and P ≤ 8 incurs a 23.6% area overhead when compared to the ORBGRAND implementation with parameters LW ≤ 64 and P ≤ 6. Furthermore, the ORBGRAND implementation with parameters LW ≤ 96 and P ≤ 8 is 18.8% less area efficient and 27.7% less energy efficient than the ORBGRAND implementation with parameters LW ≤ 64 and P ≤ 6.
+The ORBGRAND parameters LW and P influence the decoding performance as well as the W.C. decoding latency of the proposed ORBGRAND VLSI hardware. In the W.C. scenario, the ORBGRAND with parameters LW ≤ 64 and P ≤ 6 requires 4226 cycles (n = 128), whereas the ORBGRAND with parameters LW ≤ 96 and P ≤ 8 requires 93417 cycles, resulting in a W.C. latency of 205.76 μs. Fig. 12(a) shows the W.C. latency [in clock cycles (4)] of the proposed ORBGRAND hardware for various LW and P parameter values. Fig. 12(b) shows the information throughout corresponding to k = 105 and a maximum frequency of 454 MHz for the proposed ORBGRAND (LW, P) hardware.
+To conclude, the ORBGRAND implementation parameters (LW, P) can be appropriately chosen to strike a balance between area overhead, energy budget, and decoding performance requirements for a target application.
+
+B. Design Expansion and Latency Analysis
+As shown in Fig. 4, the ORBGRAND with parameters LW ≤ 96 and P ≤ 8 has similar decoding performance to the ORBGRAND with parameters LWmax = 8256 and LWmax = 8128 (LWmax ≤ (n(n + 1)/2) [23] ) for both (128, 105) polar code and (127, 106) BCH code. Furthermore, at a target FER of ≤ 10−7, ORBGRAND with parameters LW ≤ 96 and P ≤ 8 results in a 0.2–0.3 dB gain in decoding performance when compared to ORBGRAND with parameters LW ≤ 64 and P ≤ 6.
+
+C. ORBGRAND Area Optimization
+In this section, we investigate the sorter module in the proposed ORGRAND (LW, P) VLSI implementation and propose segmenting the sorter module into multiple partitions to reduce the area overhead of ORBGRAND hardware. The ORBGRAND decoding procedure, as described in Algorithm 1, begins by sorting channel LLRs ( y) in ascending order of their absolute value (| y|). Any sorter [40] (insertion sorter, merge sorter, and bubble sorter) may be used to sort | y| for the proposed ORBGRAND hardware. The sorter choice
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+691
+
+TABLE II
+DISPLACEMENT OF LLR ELEMENTS yi (∀i ∈ [1, n]) FROM THEIR CORRECT LOCATIONS WITH SEGMENTED SORTER
+
+Fig. 12. (a) W.C. latency and (b) W.C. information throughput for the proposed ORBGRAND architecture with various parameters (LW and P).
+
+Fig. 13. Proposed segmented sorter (S = 4) for ORBGRAND.
+is determined by the target application’s budget in terms of decoding latency and hardware overhead. On one end of the spectrum, we have sequential sorters with high latency but low hardware implementation cost, while on the other end, we have parallel sorters with low latency but high hardware implementation cost.
+The proposed ORBGRAND VLSI implementation employs a bitonic sorter [41] of length n that is pipelined to log2(n) stages. As a result, the sorting procedure requires just log2(n) clock cycles. The bitonic sorter module of the proposed ORBGRAND VLSI implementation can be partitioned into multiple segments to reduce the ORBGRAND implementation’s area overhead. The size and number of partitions influence ORBGRAND decoding performance as well as the area overhead of the proposed ORBGRAND VLSI implementation. A bitonic sorter module of length n is segmented into S segments, each having a size (n/S), for the proposed segmented sorter approach. Please note that the number of segments S should be chosen in such a way that the size of each segment (n/S) is an integer. The segmented bitonic sorter is shown in Fig. 13, which employs four sorters (S = 4) of length (n/4), each of which receives a unique subset of channel LLRs ( y). To generate the final LLRs, the sorted LLRs from individual sorters are concatenated. The first four elements of the final sorted LLRs are comprised of the first element of the output of each sorter. Similarly, the second element of each sorter’s output occupies the following four
+
+Fig. 14. Comparison of decoding performance of ORBGRAND decoding with different parameters (LWmax, P, and S) for polar code (128, 105 + 11).
+positions of the final sorted LLRs. This procedure is continued until the last elements of each sorter’s output are placed in the last four positions of the sorted LLRs, as shown in Fig. 13.
+A nonsegmented sorter will sort the LLR elements | yi | (∀i ∈ [1, n]) to their correct location. However, compared to a nonsegmented sorter, the sorted LLRs using a segmented sorter (S > 1) will have elements that are displaced from their correct locations. To investigate the effect of segments on the displacement of LLR elements from their correct locations, we performed Monte–Carlo simulations and measured the percentage of LLR elements that were within a specified distance of their correct location. Table II compares the displacement of LLR elements from their correct locations with varying numbers of segments employed in the segmented-sorter approach. Table II shows that as the number of segments decreases, more elements are concentrated closer to their correct locations, but as the number of segments increases, LLR elements are concentrated further away from their correct locations.
+Fig. 14 shows the FER performance of implementing a segmented sorter approach for ORBGRAND (LW ≤ 96 and P ≤ 8) decoding of (128, 105) polar code. As shown in Fig. 14, the ORBGRAND using the segmented sorter with S = 2 and S = 4 suffers from a FER performance degradation of 0.1 and 0.3 dB respectively, at the target FER of 10−6, compared to ORBGRAND with a nonsegmented sorter. Table I compares the VLSI implementation results for the ORBGRAND (LW ≤ 96 and P ≤ 8) using the nonsegmented sorter to the proposed ORBGRAND (LW ≤
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+692
+
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 30, NO. 6, JUNE 2022
+
+96 and P ≤ 8) using segmented sorter approach. As shown in Table I, the proposed ORBGRAND (LW ≤ 96 and P ≤ 8) with nonsegmented sorter incurs an area overhead of 8% and 21.6%, respectively, when compared to ORBGRAND with segmented sorter parameters S = 2 and S = 4. To conclude, the number of sorter segments influences both decoding performance and the area overhead of the ORBGRAND hardware; they can be chosen appropriately to strike a balance between decoding performance requirements and area overhead for a target application.
+VI. CONCLUSION
+In this work, we present a hardware architecture for the ORBGRAND algorithm. ORBGRAND is a soft-input GRAND variant that generates test error patterns in a fixed LW order, rendering it suitable for parallel hardware implementation. Due to the code-agnostic nature of the GRAND and its variants, the proposed ORBGRAND architecture can decode any code as long as the length and rate constraints are met. We suggest modifications in the ORBGRAND algorithm to simplify the hardware implementation and reduce the decoding complexity. Furthermore, the proposed ORBGRAND VLSI architecture uses parameters that can
+
+be tweaked to meet the optimal decoding performance as well as the decoding latency for a specific application. According to application specific integrated circuit (ASIC) synthesis results, an average decoding throughput of 42.5 Gb/s can be achieved for a code length of 128 and a target FER of 10−7. The proposed VLSI architecture improves decoding performance by at least 2 dB over the GRANDAB, a hard-input variant of GRAND. In comparison to the stateof-the-art DSCF hardware decoder for 5G (128, 105) polar code, the proposed VLSI implementation achieves 49× higher decoding throughput, 32× higher energy efficiency, and 5× higher area efficiency. Finally, the proposed architecture is the first step toward implementing GRAND family soft-input decoders in hardware.
+
+APPENDIX PROOF OF LEMMA 1
+
+Proof: It is sufficient to show that for all i (i ∈ [2, P])
+
+λimax < (2 × m − (i × (i − 1)) + 2 − 2 ×
+
+P j =i+1
+
+λ
+
+j
+
+/2
+
+×
+
+i
+
+).
+
+We use induction on i .
+
+Base case(i = 2) :
+
+m− λm2 ax <
+
+P j =3
+
+λ
+
+j
+
+.
+
+2
+
+λmk ax
+
+<
+
+2×m
+
+− (k
+
+× (k
+
+− 1)) + 2 − 2 × 2×k
+
+P j =k+1
+
+λ
+
+j
+
+⇒
+
+λmk ax
+
+<
+
+2×m
+
+− (k
+
+× (k
+
++ 1)) + 2 − 2 × 2×k
+
+P j =k+1
+
+λ
+
+j
+
++1
+
+(∵ k × (k − 1) = k × (k + 1) + 2 × (k))
+
+⇒
+
+λmk ax
+
+<
+
+2×m
+
+− (k
+
+× (k
+
++ 1)) + 2 − 2 × 2×k
+
+P j =k+2
+
+λ
+
+j
+
++ 1 − λkm+ax1
+
+⎛k
+
+⎞
+
+P
+
+P
+
+× ⎝∵
+
+λ j = λmk+ax1 +
+
+λj⎠
+
+j =k+1
+
+j =k+2
+
+⇒ λmk+ax1 + λmk ax − k < 2 × m − (k × (k + 1)) + 2 − 2 ×
+
+P j =k+2
+
+λ
+
+j
+
+k
+
+2×k
+
+⇒
+
+λkm+ax1
+
++ λkmax − k k+1
+
+<
+
+2 × m − (k × (k + 1)) + 2 − 2 × 2 × (k + 1)
+
+P j =k+2
+
+λ
+
+j
+
+(5)
+
+Since λi are ordered ∴ λk+1 < λk
+
+⇒ λkm+ax1 + 1 ≤ λkmax (∵ λkm+ax1 + 1 ≤ λk ≤ λkmax)
+
+⇒ k × λmk+ax1 + k + λmk+ax1 ≤ k × λkmax + λmk+ax1
+
+⇒ λmk+ax1
+
+≤
+
+λkm+ax1 + λkmax − k k+1
+
+Using
+
+(5):
+
+λmk+ax1
+
+≤
+
+λkm+ax1 + λmk ax − k k+1
+
+2 × m − (k × (k + 1)) + 2 − 2 ×
+
+<
+
+2 × (k + 1)
+
+⇒
+
+λmk+ax1
+
+<
+
+2×m
+
+− (k
+
+× (k + 1)) + 2 − 2 × 2 × (k + 1)
+
+(∵ a ≤ b < c ⇒ a < c)
+
+P j =k+2
+
+λ
+
+j
+
+P j =k+2
+
+λ
+
+j
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+ABBAS et al.: HIGH-THROUGHPUT AND ENERGY-EFFICIENT VLSI ARCHITECTURE FOR ORDERED RELIABILITY BITS GRAND
+
+693
+
+Since λi are ordered, ∴, λ2 < λ1
+
+⎛
+
+⎞
+
+P
+
+P
+
+⇒ λm2 ax < m − λ j ⎝∵ λ1 = m − λ j ⎠
+
+j =2
+
+j =2
+
+P
+⇒ λ2max < m − λ j − λ2max
+j =3
+
+m− ∴ λm2 ax <
+
+P j =3
+
+λ
+
+j
+
+.
+
+2
+
+I nducti ve hypothesi s(i = k) :
+
+λmk ax
+
+<
+
+2
+
+×
+
+m
+
+−
+
+(k
+
+×
+
+(k
+
+−
+
+1)) + 2×k
+
+2
+
+−
+
+2
+
+×
+
+I nducti ve step(i = k + 1) :
+
+P j =k+1
+
+λ
+
+j
+
+.
+
+2 × m − (k × (k + 1)) + 2 − 2 ×
+
+λkm+ax1 <
+
+2 × (k + 1)
+
+P j =k+2
+
+λ
+
+j
+
+.
+
+∵ inductive hypothesis, as shown at the bottom of the previous page.
+
+REFERENCES
+[1] S. M. Abbas, T. Tonnellier, F. Ercan, M. Jalaleddine, and W. J. Gross, “High-throughput VLSI architecture for soft-decision decoding with ORBGRAND,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Jun. 2021, pp. 8288–8292.
+[2] C. E. Shannon, “A mathematical theory of communication,” Bell Syst. Tech. J., vol. 27, no. 3, pp. 379–423, 1948.
+[3] R. W. Hamming, “Error detecting and error correcting codes,” Bell Syst. Tech. J., vol. 29, no. 2, pp. 147–160, Apr. 1950.
+[4] A. Hocquenghem, “Codes correcteurs d’erreurs,” Chiffres, vol. 2, pp. 147–156, Sep. 1959.
+[5] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Inf. Control, vol. 3, no. 1, pp. 68–79, Mar. 1960.
+[6] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit error-correcting coding and decoding: Turbo-codes. 1,” in Proc. IEEE Int. Conf. Commun. (ICC), vol. 2, May 1993, pp. 1064–1070.
+[7] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[8] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2008.
+[9] E. Sasoglu, E. Telatar, and E. Arikan, “Polarization for arbitrary discrete memoryless channels,” in Proc. IEEE Inf. Theory Workshop, Oct. 2009, pp. 144–148.
+[10] M. Cos¸kun et al., “Efficient error-correcting codes in the short blocklength regime,” Phys. Commun., vol. 34, pp. 66–79, Mar. 2019.
+[11] K. R. Duffy, J. Li, and M. Médard, “Capacity-achieving guessing random additive noise decoding,” IEEE Trans. Inf. Theory, vol. 65, no. 7, pp. 4023–4040, Jul. 2019.
+[12] I. Parvez, A. Rahmati, I. Guvenc, A. I. Sarwat, and H. Dai, “A survey on low latency towards 5G: RAN, core network and caching solutions,” IEEE Commun. Surveys Tuts., vol. 20, no. 4, pp. 3098–3130, 4th Quart. 2018.
+[13] Z. Ma, M. Xiao, Y. Xiao, Z. Pang, H. V. Poor, and B. Vucetic, “High-reliability and low-latency wireless communication for Internet of Things: Challenges, fundamentals, and enabling technologies,” IEEE Internet Things J., vol. 6, no. 5, pp. 7946–7970, Oct. 2019.
+[14] M. Zhan, Z. Pang, D. Dzung, and M. Xiao, “Channel coding for high performance wireless control in critical applications: Survey and analysis,” IEEE Access, vol. 6, pp. 29648–29664, 2018.
+[15] H. Chen et al., “Ultra-reliable low latency cellular networks: Use cases, challenges and approaches,” IEEE Commun. Mag., vol. 56, no. 12, pp. 119–125, Dec. 2018.
+
+[16] G. Durisi, T. Koch, and P. Popovski, “Toward massive, ultrareliable, and low-latency wireless communication with short packets,” Proc. IEEE, vol. 104, no. 9, pp. 1711–1726, Aug. 2016.
+[17] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, Sep. 1995.
+[18] C. Yue, M. Shirvanimoghaddam, Y. Li, and B. Vucetic, “Segmentationdiscarding ordered-statistic decoding for linear block codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Waikoloa, HI, USA, Dec. 2019, pp. 1–6.
+[19] J. Van Wonterghem, A. Alloum, J. J. Boutros, and M. Moeneclaey, “On performance and complexity of OSD for short error correcting codes in 5G-NR,” in Proc. BalkanCom, Jun. 2017, pp. 1–5.
+[20] J. Van Wonterghem, A. Alloum, J. J. Boutros, and M. Moeneclaey, “On short-length error-correcting codes for 5G-NR,” Ad Hoc Netw., vol. 79, pp. 53–62, Oct. 2018.
+[21] W. Jin and M. Fossorier, “Efficient box and match algorithm for reliability-based soft-decision decoding of linear block codes,” in Proc. Inf. Theory Appl. Workshop, Jan. 2007, pp. 160–169.
+[22] S. Scholl, C. Stumm, and N. Wehn, “Hardware implementations of Gaussian elimination over GF(2) for channel decoding algorithms,” in Proc. Africon, Sep. 2013, pp. 1–5.
+[23] K. R. Duffy, “Ordered reliability bits guessing random additive noise decoding,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Jun. 2021, pp. 8268–8272.
+[24] A. Solomon, K. R. Duffy, and M. Medard, “Soft maximum likelihood decoding using GRAND,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2020, pp. 1–6.
+[25] I. Tal and A. Vardy, “List decoding of polar codes,” IEEE Trans. Inf. Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[26] A. Balatsoukas-Stimming, M. B. Parizi, and A. Burg, “LLR-based successive cancellation list decoding of polar codes,” IEEE Trans. Signal Process., vol. 63, no. 19, pp. 5165–5179, Oct. 2015.
+[27] L. Chandesris, V. Savin, and D. Declercq, “Dynamic-SCFlip decoding of polar codes,” IEEE Trans. Commun., vol. 66, no. 6, pp. 2333–2345, Jun. 2018.
+[28] F. Ercan, T. Tonnellier, N. Doan, and W. J. Gross, “Practical dynamic SC-flip polar decoders: Algorithm and implementation,” IEEE Trans. Signal Process., vol. 68, pp. 5441–5456, 2020.
+[29] M. Helmling et al. (2019). Database of Channel Codes and ML Simulation Results. [Online]. Available: https://www.uni-kl.de/channelcodes
+[30] E. Berlekamp, “Nonbinary BCH decoding (abstr.),” IEEE Trans. Inf. Theory, vol. IT-14, no. 2, p. 242, Mar. 1968.
+[31] J. Massey, “Shift-register synthesis and BCH decoding,” IEEE Trans. Inf. Theory, vol. IT-15, no. 1, pp. 122–127, Jan. 1969.
+[32] W. W. Peterson and D. T. Brown, “Cyclic codes for error detection,” Proc. IRE, vol. 49, no. 1, pp. 228–235, Jan. 1961.
+[33] R. G. Gallager, Information Theory and Reliable Communication. Hoboken, NJ, USA: Wiley, 1968.
+[34] J. T. Coffey and R. M. Goodman, “Any code of which we cannot think is good,” IEEE Trans. Inf. Theory, vol. 36, no. 6, pp. 1453–1461, Nov. 1990.
+[35] S. M. Abbas, T. Tonnellier, F. Ercan, and W. J. Gross, “High-throughput VLSI architecture for GRAND,” in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Oct. 2020, pp. 1–6.
+[36] W. An, M. Medard, and K. R. Duffy, “CRC codes as error correction codes,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2021, pp. 1–6.
+[37] K. R. Duffy, A. Solomon, K. M. Konwar, and M. Medard, “5G NR CA-polar maximum likelihood decoding by GRAND,” in Proc. 54th Annu. Conf. Inf. Sci. Syst. (CISS), Mar. 2020, pp. 1–5.
+[38] NR; Multiplexing and Channel Coding, 3GPP, document TS 38.212, Apr. 2020.
+[39] J. T. Butler and T. Sasao, “High-speed hardware partition generation,” ACM Trans. Reconfigurable Technol. Syst., vol. 7, no. 4, pp. 1–17, Jan. 2015.
+[40] T. H. Cormen, “Algorithms for sorting and searching,” in Algorithms Unlocked. Cambridge, MA, USA: MIT Press, 2013, pp. 25–59.
+[41] K. E. Batcher, “Sorting networks and their applications,” in Proc. Spring Joint Comput. Conf., vol. 2. New York, NY, USA, 1968, pp. 307–314.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:02:08 UTC from IEEE Xplore. Restrictions apply.
+
+

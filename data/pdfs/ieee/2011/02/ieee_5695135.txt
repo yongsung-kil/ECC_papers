@@ -1,0 +1,1982 @@
+786
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+Divide and Concur and Difference-Map BP Decoders for LDPC Codes
+Jonathan S. Yedidia, Senior Member, IEEE, Yige Wang, Member, IEEE, and Stark C. Draper, Member, IEEE
+
+Dedicated to the memory of Ralf Koetter (1963–2009)
+
+Abstract—The “Divide and Concur” (DC) algorithm introduced by Gravel and Elser can be considered a competitor to the belief propagation (BP) algorithm, in that both algorithms can be applied to a wide variety of constraint satisfaction, optimization, and inference problems. We show that DC can be interpreted as a message-passing algorithm on a “normal” factor graph. The “difference-map” dynamics of the DC algorithm enables it to avoid “traps” which may be related to the “trapping sets” or “pseudo-codewords” that plague BP decoders of low-density parity check (LDPC) codes in the error-floor regime. We investigate two decoders for LDPC codes based on these ideas. The first decoder is based directly on DC, while the second decoder borrows the important “difference-map” concept from the DC algorithm and translates it into a BP-like decoder. We show that this “difference-map belief propagation” (DMBP) decoder has dramatically improved error-floor performance compared to standard BP decoders, while maintaining a similar computational complexity. We present simulation results for LDPC codes comparing DC and DMBP decoders with other decoders based on sum-product BP, linear programming, and mixed-integer linear programming. We also describe the close relation of the DMBP decoder to reweighted min-sum algorithms, including those recently proposed by Ruozzi and Tatikonda.
+Index Terms—Belief propagation (BP), error floors, graphical models, iterative algorithms, low-density parity check (LDPC) decoding, projection algorithms, reweighted max-product, reweighted min-sum.
+I. INTRODUCTION
+P ROPERLY designed low-density parity-check (LDPC) codes, decoded using efficient message-passing belief propagation (BP) decoders, achieve near Shannon limit performance in the so-called “waterfall” regime where the signal-to-noise ratio (SNR) is near the code threshold [1]. Unfortunately, BP decoders of LDPC codes often suffer from
+Manuscript received January 11, 2010; revised August 22, 2010; accepted August 22, 2010. Date of current version January 19, 2011. The material in this paper was presented at the Physics of Algorithms Conference, Santa Fe, NM, September 2009.
+This paper is part of the special issue on “Facets of Coding Theory: From Algorithms to Networks,” dedicated to the scientific legacy of Ralf Koetter.
+J. S. Yedidia and Y. Wang are with Mitsubishi Electric Research Laboratories, Cambridge, MA 02139 USA (e-mail: yedidia@merl.com; yigewang@merl.com).
+S. C. Draper is with the Department of Electrical and Computer Engineering, University of Wisconsin, Madison, WI 53706 USA (e-mail: sdraper@ece.wisc. edu).
+Communicated by G. D. Forney, Jr., Associate Editor for the special issue on "Facets of Coding Theory: From Algorithms to Networks."
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TIT.2010.2094815
+
+an “error floor” in the high SNR regime, which is a significant problem for applications that have extreme reliability requirements, including magnetic recording and fiber-optic communication systems.
+There has been considerable effort in trying to find LDPC codes and decoders that have improved error floors while maintaining good waterfall behavior. In general, such work can be divided into two approaches. The first line of attack tries to construct codes or representations of codes that have improved error floors when decoded using BP. Error floors in LDPC codes using BP decoders are usually attributed to closely related phenomena that go under the names of “pseudo-codewords,” “near-codewords,” “trapping sets,” “instantons,” and “absorbing sets” [2]–[7]. The number of these trapping sets (to choose one of these terms), and therefore the error floor performance, can be improved by removing short cycles in the code graph [8]–[10]. One can also consider special classes of LDPC codes with fewer trapping sets, such as EG-LDPC codes [11], or generalized LDPC codes [12], [13].
+The second approach, taken herein, is to try to improve upon the suboptimal BP decoding algorithm. This approach is logical because already when he introduced regular LDPC codes, Gallager showed that they have excellent distance properties and therefore will not have error floors if decoded using optimal maximum-likelihood (ML) decoding [14]. Building on the theory of trapping sets, Han and Ryan propose a “bi-mode syndrome-erasure decoder.” This decoder can improve error floor performance given the knowledge of dominant trapping sets [15]. However, determining the dominant trapping sets of a particular code can be a challenging task. Another recently introduced improved decoder is the mixed-integer linear programming (MILP) decoder [16], which requires no information about trapping sets and approaches ML performance, but has a large decoding complexity. To deal with the complexity of the MILP decoder, a multistage decoder is proposed in [17], where very fast but poor-performing decoders are combined with the more powerful but much slower MILP decoder. The result is a decoder that performs as well as the MILP decoder and with a high average throughput. This multistage decoder nevertheless poses considerable practical difficulties for certain applications in that it requires implementation of multiple decoders, and the worst-case throughput will be as slow as the MILP decoder. Our goal in this paper is to develop decoders that perform much better in the error floor regime than BP, but with comparable complexity, and no significant disadvantages.
+Our starting point is the iterative “Divide and Concur” (DC) algorithm recently proposed by Gravel and Elser [18] for constraint satisfaction problems. When using DC, one first
+
+0018-9448/$26.00 © 2011 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+787
+
+describes a problem as a set of variables and local constraints on those variables. One then introduces “replicas” of the variables; one replica is introduced for each constraint in which a variable is involved.1 The DC algorithm then iteratively performs “divide” projections which move the replicas to the values closest to their current values that also satisfy the local constraints, and “concur” projections which equalize the values of the different replicas of the same variable. A key idea in the DC algorithm is to avoid local traps in the dynamics by using the so-called “Difference-Map” (DM) combination of “divide” and “concur” projections at each iteration.
+Low-density parity-check codes have a structure that makes them a good fit for the DC algorithm. In fact, Gravel reported on a DC decoder for LDPC codes in his Ph.D. thesis, although his simulations were very limited in scope [20]. We were curious whether a DC decoder could be competitive with—or better than—more standard BP decoders. We were particularly motivated by the idea that the “traps” that the DC algorithm’s “Difference-Map” dynamics avoid might be related to the “trapping sets” that plague BP decoders of LDPC codes.
+The contributions of this paper are three-fold. First, we extensively investigate the effectiveness of DC as a decoding algorithm for LDPC codes, conducting simulation for both the additive white Gaussian noise (AWGN) channel and the binary symmetric channel (BSC). To construct a DC decoder for LDPC codes, we need to add an important “energy” constraint, in addition to the more obvious parity check constraints. The energy constraint enforces that the correlation between the channel observations and the desired codeword should be at least some minimum amount. The effect of this constraint is to ensure that during the decoding process the candidate solution does not wander too far from the channel observation.
+We found that the DC decoder can be competitive with BP decoders, but only if many iterations are allowed. Unfortunately, DC errors are often “undetected errors” in that the decoder returns a codeword that is not the most likely one. Failures of BP decoding, in contrast, almost always correspond to failures to converge or convergence to a noncodeword, and therefore are detectable. For linear programming (LP) and MILP decoders, we can say even more: failures of such decoders are provably detectable as they must result from returning a noncodeword; any codeword returned by an LP or MILP decoder is provably the optimal ML solution [21].
+Our second contribution is the introduction of a novel decoder called the “difference-map belief propagation” (DMBP) decoder. To derive the DMBP decoder, we first show how the DC decoder can be described as a message-passing algorithm. Using this formulation, we can then see how to import the difference-map idea into a BP setting, and the resulting decoder is the DMBP decoder. Essentially, DMBP is a min-sum BP decoder with modified dynamics motivated by the DC decoder. Our simulations show that the DMBP decoder improves performance in the error floor regime quite significantly when compared with standard sum-product belief propagation (BP) decoders, or with
+1The use of the term “replica” in the current context should not be confused with the “replica method” for averaging over disorder in statistical physics, for a review of which we refer the reader to [19].
+
+the DC decoders we studied. We present results for both the additive white Gaussian noise (AWGN) channel and the binary symmetric channel (BSC).
+Our final contribution is to relate the DMBP decoder to other modifications of the min-sum algorithm that have been proposed in the literature. Most notably, it turns out that the DMBP decoder is equivalent to a damped version of the modified min-sum algorithms that were proposed by Ruozzi and Tatikonda in a preprint that appeared after we originally submitted our paper [22]. This relationship gives another perspective on the excellent performance of the DMBP decoder that is very different from the heuristic connection to DC that actually motivated our construction of the DMBP decoder.
+The rest of the paper is organized as follows. In Section II, the DC algorithm is presented, and re-formulated as a message-passing algorithm. The DC decoder for LDPC codes is described in Section III. The DMBP decoder is introduced in Section IV. In Section V we present simulation results. In Section VI, we explain the relationship of the DMBP decoder to other modified min-sum algorithms in the literature. Conclusions are given in Section VII.
+II. DIVIDE AND CONCUR (DC)
+In this section, we review Gravel and Elser’s DC algorithm. Gravel and Elser did not formulate DC as a message-passing algorithm, or otherwise compare DC to BP, but the comparison is illuminating, and helped us design the DMBP decoder. Thus we present DC in a way that is consistent with Gravel and Elser’s presentation, but makes comparisons to BP easier. In particular, we describe the DC algorithm as operating on a “normal” factor graph as introduced by Forney [23].
+We start by introducing the idea of “replicas” in Section II-A. We then describe the two projection operations used by DC—the “divide” and the “concur” projections—in Section II-B, and in Section II-C illustrate their use in the context of the alternating projection approach to constrained satisfaction problems. In Section II-D we introduce and discuss the difference-map dynamics of DC. Then, in Section II-E we reformulate DC as a message-passing algorithm directly comparable to BP.
+A. Replicas and “Normal” Factor Graphs
+Consider a system with variables and constraints on those variables. We seek a configuration of the variables such that all constraints are satisfied. In DC, for each constraint that a variable is involved in, a “replica” of the variable is created. The idea behind DC is that by constructing a dynamics of replicas rather than of variables, each constraint can be locally satisfied (the “divide” step), and then later the possibly different values of replicas of the same variable can be forced to equal each other (the “concur” step).
+Our system can be visualized using an ordinary factor graph as described by Kschischang et al. [24] or, even more clearly, using a “normal” factor graph as described by Forney [23]. An ordinary factor graph is a bipartite graph composed of variable and “factor” nodes. Factor nodes represent the local “energy”
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+788
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+. Then, for each
+
+we add a constraint that constrains
+
+all replicas for
+
+to be equal to each other.
+
+To illustrate, a normal graph representation of the
+
+Hamming code with parity check matrix given by
+
+(1)
+
+is shown in Fig. 1. The seven equality constraints in the figure
+
+correspond to the seven bits in the code. Note that in the figure
+
+we represent the “soft” information resulting from the channel
+
+observations using a single energy constraint, to be described in
+
+more detail in Section III. This contrasts with the more standard
+
+choice of one local evidence (“dongle”) factor per codeword
+
+symbol [23].
+
+We use to denote the vector containing all the replicas. We
+
+Fig. 1. A normal graph of the [7; 4; 3] Hamming code. Replicas (highlighted in this figure by black circles) are associated with the edges of the graph, and the seven variables in the original code are represented with equality constraints.
+
+use to denote the vector containing the values of all the
+
+replicas associated with the th constraint, i.e.,
+
+.
+
+Similarly, we use to denote the vector of all the values of
+
+replicas associated with the th variable, i.e.,
+
+.
+
+We write
+
+when the replicas associated with the
+
+or probability that is associated with each configuration of variables involved in the factor. In an ordinary factor graph, each of the variables is conventionally denoted using a circle and each of the factors is denoted using a square. An edge is drawn between a variable and a factor if the variable is involved in that factor.
+A “normal” graph can easily be obtained from an ordinary
+
+th constraint are in a configuration that satisfies the constraint
+
+and
+
+when they are in a configuration that does
+
+not satisfy it. We do not track the particular ordering of replicas
+
+within or , though obviously this must be tracked in im-
+
+plementation. Finally, note that for
+
+and
+
+for
+
+are two different ways to partition into
+
+mutually exclusive sets.
+
+factor graph by considering each variable to be replicated once
+
+for each factor that it is involved in, and replacing the variable B. DC Projections nodes in the ordinary factor graph with equality constraints.
+
+Thus, the edges of a normal graph represent the replicated variables, and the vertices of a normal graph all represent factors—either the original factors or the equality constraints associated with the variables.
+DC is designed to work with “hard” factors (which we hereafter call “constraints”) for which any particular configuration of participating variables is either strictly allowed or not al-
+
+DC works with two projection operations, the “divide” projection and the “concur” projection, denoted by and , respectively. Both projections act on and output a new that satisfies certain requirements.
+The divide projection is a product of local divide projections that operate on each for
+
+lowed. As we shall see later, one can nevertheless describe the
+
+(2)
+
+apparently “soft” evidence from the channel that an error cor-
+
+recting code receives in terms of a hard constraint.
+
+We draw directly from Forney [23] to formalize our descrip-
+
+tion of the DC algorithm. We start with two sets, one of variables
+
+and one of constraints:
+
+• A set of variables
+
+where
+
+and with
+
+alphabets
+
+• A set of constraints
+
+where
+
+.
+
+We use
+
+[alternately ] to denote the subset of
+
+containing variables involved in constraint [containing con-
+
+straints involving variable ]. Note that these subsets partition
+
+.
+
+When one “normalizes” an ordinary factor graph, each edge
+
+is replaced by a “replica” of the variable to which it is attached
+
+Thus, if satisfies the th constraint,
+
+. Oth-
+
+erwise,
+
+such that is the closest vector to
+
+that satisfies the th constraint. The metric normally used,
+
+and that is exclusively used in this paper, is Euclidean distance.
+
+The divide projection forces all constraints in the original or-
+
+dinary factor graph to be satisfied, but has the effect that replicas
+
+of the same variable do not necessarily agree with one another.
+
+The concur projection is used to reconcile the replica values of
+
+each variable.
+
+The concur projection is a product of local concur projec-
+
+tions
+
+that act on (i.e., on
+
+) for
+
+. Given an , let
+
+and each variable node is replaced with an equality constraint.
+
+Thus, for each
+
+and each
+
+, we create a replica
+
+(3)
+
+of with alphabet , and replace by in constraint
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+789
+
+Fig. 2. A normal graph to illustrate the dynamics of replica updates.
+
+Fig. 3. A simple example of a trap in an iterated projection strategy. If one iteratively projects to the nearest point that satisfies the constraint that one be
+A B at or , and then the nearest point where the replica values are equal (the B C B diagonal line) one may be trapped in a short cycle ( to to and so on) and A never find the true solution at point .
+
+i.e., the average of all the elements in . Now define to be
+
+a vector of length
+
+with each element equal to . Then,
+
+satisfied and all replicas of the same variable are equal. The sim-
+
+plest approach is to alternate between the two projections, i.e.,
+
+, where is the vector of replica values at
+
+the th iteration. This scheme works well for convex constraints,
+
+but for nonconvex constraints it is prone to getting stuck in short
+
+cycles (“traps”) that do not correspond to solutions.
+
+To illustrate this point, consider the normal graph shown in
+
+Fig. 2. Here a pair of replicas and of a single variable
+
+are connected to a single constraint that allows two configura-
+
+tions,
+
+. Clearly this is a
+
+contrived example, but it suffices to illustrate replica dynamics.
+
+In Fig. 3 we plot the two-dimensional space of possible replica
+
+values, the values of and along the - and -axes, re-
+
+spectively. The diagonal line represents the requirement that the
+
+two replicas are equal, since they are replicas of the same vari-
+
+able. The points and are the two pairs of replica values
+
+that satisfy the other constraint. The only common value that
+
+the replicas can take that satisfies both constraints is (0, 0), i.e.,
+
+point .
+
+If one initializes replica values near point , say at , and ap-
+
+plies the divide projection, then one will move to , the nearest
+
+point that satisfies the constraint of being at point or . Next,
+
+the concur projection will move to point C, the nearest point
+
+where the replica values are equal, i.e., along the diagonal. Con-
+
+tinued application of DC projections, in sequence, moves the
+
+system to , then back to , then back to , and so forth. Alter-
+
+nating projections thus cause the system to be stuck in a simple
+
+trap. Of course, this is only a toy example, but in nonconvex
+
+high-dimensional spaces it is plausible that an iterated projec-
+
+tion strategy is prone to falling into such traps.
+
+D. Difference Map (DM)
+The DM is a strategy that improves alternating projections by turning simple traps in the dynamics into repellers. It is defined by Gravel and Elser as follows:
+
+(4)
+
+(5)
+
+While the concur projection equalizes the values of the replicas
+
+of the same variable, the new values of the replicas may violate
+
+some constraints.
+
+Notice that the concur projection actually follows the same
+
+general rule as the divide projection, in that it tries to find the
+
+set of replica values that satisfies the constraint, that is as close
+
+as possible in Euclidean distance to the original replica values.
+
+For an equality constraint, and using a Euclidean metric, the
+
+closest values that satisfy the constraint are indeed obtained by
+
+averaging the original values.
+
+The overall projection
+
+[alternately
+
+] is defined
+
+as applying
+
+to for
+
+for
+
+where
+
+for
+
+or with
+
+and
+
+. The parameter can be chosen to
+
+optimize performance.
+
+We focus here exclusively on the case
+
+, which is usu-
+
+ally an excellent choice and corresponds to what Fienup called
+
+the “hybrid input-output” algorithm, originally developed in the
+
+context of image reconstruction [25], [26]. See [27] for a review
+
+of Fienup’s algorithm and other projection algorithms for image
+
+reconstruction, and their relationship with earlier convex opti-
+
+mization methods.
+
+For
+
+, the dynamics (5) simplify to
+
+]. Since can be partitioned into mutually ex-
+
+(6)
+
+clusive sets, the projections can be applied to each set indepen-
+
+dently. The
+
+output vectors are then reassembled into the It can be proved that if a fixed point in the dynamics is
+
+updated vector through appropriate ordering.
+
+reached, i.e.,
+
+, then that fixed point must corre-
+
+C. Alternating Projections
+
+spond to a solution of the problem. It is important to note that the fixed point itself is not necessarily a solution. The solution
+
+A strategy is needed to combine the divide and concur projec-
+
+corresponding to a fixed point can be obtained using
+
+tions to find a set of replica values such that all constraints are
+
+or
+
+.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+790
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+be obtained from the final value of
+
+or ). In fact,
+
+all points along the line connecting to (i.e., along the line
+
+) are fixed points.
+
+We can generalize from this example to understand how the
+
+DM dynamics turns a trap into a “repeller,” where at each it-
+
+eration, one moves away from the repeller by an amount equal
+
+to the distance between the constraint involved and the nearest
+
+point that satisfies the requirement that the replicas be equal. Of
+
+course, DM dynamics are not a panacea; it is possible that DC
+
+can get caught in more complicated cycles or “strange attrac-
+
+tors” and never find an existing solution; but at least it will not
+
+get caught in simple traps.
+
+E. DC as a Message-Passing Algorithm
+
+We now turn to developing an alternative interpretation of
+
+DC, as a message-passing algorithm on a graph. “Messages”
+
+and “beliefs” are similar to those in BP (more specifically, BP
+
+in the log domain, as in the “min-sum” algorithm, rather than in
+
+the probability domain, as in the equivalent “max-product” algo-
+
+rithm) but message-update and belief-update rules are different.
+
+We use a normal factor graph and identify the DC “replicas”
+
+with the edges of the graph. We denote by
+
+the value of
+
+the replica on the edge joining variable to constraint at the
+
+beginning of iteration , i.e., the appropriate element of
+
+.
+
+We similarly denote by
+
+and
+
+the “overshoot”
+
+Fig. 4. An example showing how DM dynamics avoids traps. If we start at the
+
+point r , an iterated projections dynamics would be trapped between point B
+
+and r , and never find the solution at A. DM dynamics will instead be repelled
+
+from the trap and move to r (via the three substeps denoted with dashed lines
+
+= r ; r
+
+r , and r ), then move to r , and then end at the fixed point
+
+= r r , which corresponds to the solution at A.
+
+and “concurred” values of the same replica. We note that these
+
+are all scalars.
+
+We can think of the initial value of a replica
+
+as a “mes-
+
+sage” from the variable node to the constraint node that we
+
+also denote as
+
+. The set of incoming messages to con-
+
+straint node
+
+can therefore
+
+We have found it very useful to think of the difference-map
+
+dynamics for a single iteration as breaking down into a three-
+
+step process. The expression
+
+represents the change
+
+to the current values of the replicas resulting from the divide
+
+projection. In the first step, the values of the replicas move twice
+
+the desired amount indicated by the divide projection. We refer
+
+to these new values of the replicas as the “overshoot” values
+
+. Next the concur projection is
+
+applied to the overshoot values to obtain the “concurred” values
+
+of the replicas
+
+. Finally the overshoot, i.e.,
+
+the extra motion in the first step, is subtracted from the concur
+
+projection result to obtain the replica value for the next iteration
+
+be expressed as
+
+.
+
+In the three-step interpretation of the DM dynamics described
+
+above, these replica values are next transformed into overshoot
+
+values by moving by twice the amount indicated by the divide
+
+projection. Because the overshoot values are computed locally
+
+at a constraint node using the messages into to the constraint
+
+node, we can think of the overshoot values
+
+as messages
+
+from the constraint node to their neighboring variable nodes
+
+, denoted by
+
+. The set of outgoing messages from con-
+
+straint node is
+
+. This
+
+set can thus be calculated as
+
+which gives
+
+.
+
+(7)
+
+In Fig. 4 we return to our previous example to illustrate that
+
+the DM dynamics do not get stuck in a trap. Suppose, as before, The next step of the DC algorithm takes the overshoot replica
+
+that point is at (0, 0), point is at (3, 1), and and that we now values
+
+and computes concurred values
+
+using
+
+start initially at point
+
+. The divide projection would the concur projection. Note that the concurred values for
+
+take us to point , but the overshoot takes us twice as far to replicas that are connected to the same variable node are all
+
+. The concur projection takes us back to
+
+equal to each other. We can think of these concurred values
+
+. Finally, the amount by which we overshot is subtracted as “beliefs,” denoted by . Just as in BP, the beliefs at a
+
+so that
+
+. The next full iteration takes us to
+
+variable node are computed using all the messages coming
+
+(substeps are tabulated in Fig. 4). Now however, we are closer into that variable node. However, while the BP belief is a sum
+
+to then to . Therefore, the next overshoot take us to
+
+of incoming messages, the DC belief is an average
+
+, from which we would move to
+
+, and
+
+. Finally, at we have reached a fixed point
+
+(8)
+
+in the dynamics that corresponds to the solution at (which can
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+791
+
+Finally, the DC rule for computing the new replica values at the next iteration is to take the concurred values and subtract a correction for the amount we overshot when we computed the overshot values. In terms of our belief and message formulation, we compute the outgoing messages from a variable node at the next iteration using the rule
+
+(9)
+
+Comparing with the ordinary BP rule
+
+(10)
+
+(where
+
+and
+
+refer to the BP versions
+
+of the beliefs and messages) we note that the message out of
+
+a variable node in DC also depends on the value of the same
+
+message at the previous iteration, which is not the case in BP.
+
+To summarize, the overall structure of BP and DC as mes-
+
+sage-passing algorithms is similar. In both one iteratively up-
+
+dates beliefs at variable nodes and messages between variable
+
+nodes and constraint nodes. Furthermore, messages out of a con-
+
+straint node are computed based on the messages into the con-
+
+straint node, beliefs are computed based on the messages into
+
+a variable node, and the messages out of the variable node de-
+
+pend on the beliefs and the messages into a variable node. The
+
+differences are in the specific forms of the message-update and
+
+belief-update rules, and the fact that a message-update rule for a
+
+message out of a variable node in DC also depends on the value
+
+of the same message in the previous iteration.
+
+Our goal is to recover the transmitted sequence of variables .
+
+To do this, we will search for a sequence of ’s that satis-
+
+fies all the SPC constraints and has the highest likelihood or,
+
+equivalently, the lowest “energy,” where the energy is defined
+
+as
+
+. Note that although our desired sequence
+
+consists only of variables, the “replica” values, or equiva-
+
+lently “messages” and “beliefs,” are real-valued.
+
+In all, we have variables , and
+
+constraints, of
+
+which are SPC constraints, with one additional energy con-
+
+straint. We write the energy constraint as
+
+,
+
+where different choices of the parameter
+
+result in different
+
+decoders. It is not obvious how to choose ; we performed
+
+preliminary experiments to search for an
+
+that optimizes
+
+decoding performance. Somewhat surprisingly, the best choice
+
+for
+
+is one that implies that the energy constraint can never
+
+actually be satisfied when all the other constraints are satisfied.
+
+In particular, we found that
+
+, with an
+
+chosen such that
+
+, is an excellent choice. The fact
+
+that such a choice implies that the energy constraint can never
+
+satisfied at a codeword is not a problem because of our termina-
+
+tion criterion. The decoder terminates if it finds a codeword that
+
+satisfies all the SPC constraints. Until then, the effect of the en-
+
+ergy constraint is to keep the replica values near the transmitted
+
+sequence.
+
+We describe the DC decoder as an iterative message-update
+
+algorithm on a constraint graph, following the formulation in
+
+Section II-E. We use variable indexes
+
+and
+
+constraint indexes
+
+, where the 0th con-
+
+straint is the energy constraint. SPC constraints involve a small
+
+number of variables, but the energy constraint involves every
+
+variable. To lay the groundwork for the overall DC decoder, we
+
+now explain how to perform the DC projections.
+
+III. DC DECODER FOR LDPC CODES
+
+A. DC Projections for LDPC Decoding
+
+Decoding of LDPC codes can be described as a constraint sat-
+
+isfaction problem. We restrict ourselves here to binary LDPC
+
+codes, although generalizations to -ary codes are straightfor-
+
+ward. Searching for a codeword is equivalent to seeking a binary
+
+sequence which satisfies all the single-parity check (SPC) con-
+
+straints simultaneously. We also add one important additional
+
+constraint, which is that the likelihood of a binary sequence
+
+must be greater than some minimum amount. Then the decoding
+
+problem can be divided into many simple subproblems which
+
+can be solved independently using the DC approach.
+
+Let and be the number of SPC constraints and the
+
+block length of a binary LDPC code, respectively. Let
+
+be the parity check matrix which defines the code. Assume
+
+binary phase-shift keying (BPSK) signaling with unit energy,
+
+which maps a binary codeword
+
+into a
+
+sequence
+
+, according to
+
+,
+
+for
+
+. The sequence is transmitted through
+
+a channel and the received channel observations are de-
+
+noted
+
+. Let the log-likelihood ratios
+
+(LLR’s) corresponding to the received channel observations be
+
+, where
+
+As discussed in Section II-B [cf. (2)], the divide projection
+
+can be partitioned into a collection of
+
+projections
+
+, where each projection operates independently on a vector
+
+of messages
+
+and outputs
+
+a vector (of the same dimensionality) of projected messages
+
+. The output vector is as close as possible to the
+
+original values
+
+while satisfying the th constraint.
+
+The SPC constraints require that the variables involved in a
+
+constraint are all , with an even number of ’s. For these
+
+constraints we efficiently perform the divide projection as fol-
+
+lows:
+
+• Make a “hard” decision on each of
+
+such that
+
+if
+
+if
+
+, and
+
+is chosen to be 1 or randomly if
+
+. Use
+
+to denote the vector consisting of the .
+
+• Check if contains an even number of ’s. If it does,
+
+set
+
+and return.
+
+• Otherwise, let
+
+. Especially for the
+
+BSC, it is possible that several messages have equally min-
+
+imal
+
+. In this case, we randomly pick one of them
+
+and use its index as .
+
+• Flip , i.e., if
+
+, set it to 1 and if
+
+, set it
+
+to . Then set
+
+and return.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+792
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+Recall that the energy constraint is
+
+.
+
+This implies a divide projection on the vector of messages
+
+, performed as follows:
+
+• If the energy constraint is already satisfied by the messages
+
+, return the current messages, i.e.,
+
+.
+
+• Otherwise, find which is the closest vector to
+
+and satisfies the energy constraint, i.e.,
+
+An easy application of vector calculus can be used to derive that the th component is given by the formula
+(11)
+
+Our DC LDPC decoder implementation, as defined above, is slightly different in detail from the one previously described by Gravel [20], most notably in the way we define the energy constraint, and how we terminate the decoder. Gravel uses an energy constraint that can be satisfied at a codeword that is not far from the received word, and his decoder only terminates when all constraints, including the energy constraint, are satisfied; but we found that such a choice gave worse performance. We believe though that our main contributions concerning the DC decoder in this paper are to provide extensive simulations of it, and to show how the DC algorithm can be re-cast as a message-passing algorithm.
+As already mentioned in the introduction, the DC decoder performs reasonably well, but with some problems. We defer a detailed discussion of the DC simulation results until Section V. First we describe a second and novel decoder, the difference-map belief propagation (DMBP) decoder.
+
+Set
+
+and return.
+
+IV. DMBP DECODER
+
+Finally, as discussed in Section II-B [cf. (4)], the concur pro-
+
+jection can be partitioned into a set of projection opera-
+
+tors , where each operates independently on the vector of
+
+messages
+
+and outputs the belief
+
+, the average over the components of the vector .
+
+Our motivation in creating the DMBP decoder was that BP decoders generally perform well, but they seem to use something like an iterated projection strategy, and perhaps the trapping sets that plague the error-floor regime are related to the “traps” that the difference-map dynamics is supposed to ame-
+
+B. DC Algorithm for LDPC Decoding
+
+liorate. Since we can also describe DC decoders as messagepassing decoders, we could try to create a new BP decoder that
+
+The overall DC decoder proceeds as follows.
+
+was a mixture of BP and difference-map ideas.
+
+0. Initialization: Set the maximum number of iterations For simplicity, we work with a min-sum BP decoder using
+
+to
+
+and the current iteration to
+
+. Initialize the messages and beliefs that correspond to log-likelihood ratios.
+
+messages out of variable nodes
+
+for all Note that the min-sum message update rule is much simpler
+
+and
+
+to equal
+
+, where is the a priori to implement in hardware than the standard sum-product
+
+probability that the th transmitted symbol was a 1, given rule. Normally, sum-product (or some approximation to
+
+by
+
+.
+
+sum-product) BP decoders are favored over min-sum BP
+
+1. Update messages from checks to variables: Given the decoders because they perform better, but we found that the
+
+messages
+
+into each straightforward min-sum DMBP decoder will out-perform the
+
+constraint , compute the messages out of each constraint more complicated sum-product BP decoder. Our preliminary
+
+using the overshoot simulations also show, somewhat surprisingly, that the min-sum
+
+formula
+
+DMBP decoder slightly out-performs a sum-product DMBP
+
+decoder. (We don’t further discuss the sum-product DMBP
+
+(12) decoder herein.)
+
+where
+
+is the divide projection operation for
+
+constraint .
+
+2. Update beliefs: Compute the beliefs at each variable
+
+node using the concur projections
+
+We use the same notation for messages and beliefs that were used in the discussion of the DC decoder in Section III. We compare, on an intuitive level, the min-sum BP decoder with the DC decoder in terms of belief updates and message-updates at both the variable and check nodes.
+
+Beginning with the message-updates at a check node, the (13) standard min-sum BP update rules are to take incoming mes-
+
+sages
+
+and compute outgoing messages according to
+
+3. Check if codeword has been found: Create
+
+the rule that
+
+such that
+
+if
+
+if
+
+and flip
+
+a coin to decide if
+
+. If
+
+output as the
+
+decoded codeword and stop.
+
+(14)
+
+4. Update messages from variables to checks:Increment
+
+. If
+
+stop and return FAILURE. Other-
+
+wise, update each message out of the variable nodes using where
+
+if
+
+, and
+
+if
+
+.
+
+the “overshoot correction” rule given in (9) and go back to Comparing with the DC “overshoot” message-update rule, we
+
+Step 1.
+
+note that the min-sum updates, in some sense, also “overshoot”.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+793
+
+For example, at a check node that has three incoming positive using regular sum-product BP on the AWGN channel. The other
+
+messages and one incoming negative message, we obtain three code is a quasi-cyclic (QC) “array” (5, 47) LDPC code with
+
+outgoing negative messages and one outgoing positive message. length 2209 and rate 0.916 [29], [6].
+
+This overshoots the “correct” solution of having an even number In order to better probe the error floor regime, without imple-
+
+of negative messages (since the parity check must ultimately be menting our algorithms in hardware, we implement the multi-
+
+connected to an even number of variables with value ). Be- stage decoder introduced in [17]. In Section V-A we describe
+
+cause the min-sum rule for messages outgoing towards a partic- the multistage algorithm and the parameters of our simulations.
+
+ular variable ignore the incoming message from that variable, We provide and discuss simulation results in Section V-B.
+
+all the outgoing messages move beyond what is necessary (at least in terms of sign) to satisfy the constraint. Since we want A. Multistage Decoders and Simulation Parameters
+
+an overshoot, we decided to leave this rule unmodified. Turning to the belief update rule, the standard BP rule is to
+compute the belief as the sum of incoming messages (including the message from the observation), while the DC rule is that the belief is the average of incoming messages. We decided to use the compromise rule
+
+Multistage decoders pre-append simpler decoders (in our case Richardson and Urbanke’s Algorithm-E [30] and/or regular sum-product BP) to the more complex decoders of interest (e.g., DC). The crucial characteristic required of the simpler decoders is that they either decode or they fail to decode in a detectable way. In the case of linear programming (LP)
+
+decoders [21], a failure to decode is signaled by decoding to a
+
+pseudocodeword, in the case of BP and Algorithm-E such an (15) event is signaled by a failure to converge. Failures to decode
+
+trigger the use of the next more complex decoders in the hier-
+
+where is a parameter chosen by optimizing decoder perfor-
+
+mance.
+
+Finally, for the message-update rule for messages at the
+
+variable nodes, we directly copy the “correction” rule given
+
+by (9) from DC. Our intuitive idea is that perhaps standard
+
+BP is missing the correction that is important in repelling DM
+
+dynamics from traps.
+
+To summarize, the DMBP decoder works as follows:
+
+0. Initialization: Set the maximum number of iterations
+
+to
+
+and the current iteration to
+
+. Initialize the
+
+messages out of variable nodes
+
+for all and
+
+to equal .
+
+1. Update messages from checks to variables: Given
+
+the messages
+
+coming into the constraint node ,
+
+compute the outgoing messages using the min-sum mes-
+
+sage update rule given in (14).
+
+2. Update beliefs: Compute the beliefs at each variable
+
+node using the belief update rule given in (15).
+
+3. Check if codeword has been found: Create
+
+such that
+
+if
+
+if
+
+and flip
+
+a coin to decide if
+
+. If
+
+output as the
+
+decoded codeword and stop.
+
+4. Update messages from variables to checks: Increment
+
+. If
+
+stop and return FAILURE. Other-
+
+wise, update each message out of the variable nodes using
+
+the “overshoot correction” rule given in (9) and go back to
+
+Step 1.
+
+archy. In this way one can often achieve the WER performance of the most complex decoder at an expected complexity close to that of the most simple decoder. In Fig. 5 we diagram one of the multistage decoders used to generate the results presented in the next section.
+We emphasize that we do not use the output of the earlier (simpler) decoders as a “warm-start” for the later decoders. Rather we initialized the later decoders anew, only using the failure flag of the earlier decoder to start the later decoders. Thus, we could have implemented all decoders in parallel simply terminating the more complex algorithms if a simpler algorithm succeeds in decoding. Full details, simulation results for various codes, and sample run-times are provided in [17].
+Our first use of the multistage approach in this paper is to simulate the performance of sum-product BP decoding for the BSC into extremely low error rate regimes that are beyond the range of ordinary simulations of sum-product BP. We implemented both “pure” sum-product BP and a multistage decoder that combines a first-stage Algorithm-E with a second-stage sum-product BP. We term the latter combination E-BP. We find that the performance of E-BP and BP are nearly indistinguishable in the regime where BP is feasible (see [17] for detailed comparisons), but the multistage E-BP combination allows us to probe the error floor much more deeply. However, for sumproduct BP simulations of the AWGN channel simulations we implement a standard sum-product BP decoder (and not a multistage decoder) as we have found Algorithm-E has very poor performance on the AWGN channel and thus does not appre-
+
+ciably reduce simulation time.
+
+V. NUMERICAL RESULTS
+
+For DC and DMBP we provide results for standard (singlestage) implementations of both algorithms as well as for mul-
+
+In this section, we compare simulation results of the DC and tistage implementations. As per the discussion above, we use
+
+DMBP decoders to those of a variety of other decoders. The E-BP as the initial stages for simulations over the BSC and BP
+
+decoding algorithms are applied to two kinds of LDPC codes by itself as a first stage for simulations of the AWGN channel.
+
+and simulated over both the BSC and the AWGN channel. One We denote the resulting multistage decoders by E-BP-DMBP,
+
+code is a particular random regular (3, 13) LDPC code with E-BP-DC, BP-DMBP and BP-DC.
+
+length 1057 and rate 0.77, obtained from [28]. This code was Our final points of comparison are to LP decoding and mixed-
+
+chosen because it has a noticeable error floor when decoded integer LP (MILP) decoding. Our LP decoders were accelerated
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+794
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+Fig. 5. Structure of a multistage (E-BP-MILP) decoder.
+
+using Taghavi and Siegel’s “adaptive” methods [31], and ulti- iterations. The “error floor” of this short code is not as apparent
+
+mately relied on the simplex algorithm as implemented in the as it would be for longer codes. However, we note that the last
+
+GLPK linear programming library [32]. For the BSC, we im- three data points (SNRs of 6.91, 7.31, and 7.93) correspond to
+
+plement the multistage decoders E-BP-LP and E-BP-MILP crossover probabilities of 0.003, 0.002, and 0.001 (i.e., at the
+
+for
+
+, where is the maximum number of integer (in fact highest SNR, approximately a single bit flip is expected per
+
+binary) constraints the MILP decoder is allowed. The particular block). Thus the high-SNR region of these plots is the regime
+
+decoder depicted in Fig. 5 is an E-BP-MILP decoder. Again, fur- where the performance should be dominated by trapping sets.
+
+ther details of these decoders and results can be found in [17]. Note that the “pure” DMBP decoder has almost the same
+
+Regarding the decoding parameters of our new algorithms, performance as E-BP-DMBP for both 50 and 300 iterations,
+
+for the random LDPC code, we use
+
+for the DMBP so the E-BP-DMBP performance in the very high SNR regime
+
+decoder over both BSC and the AWGN channel [cf. (15) for the should be indicative of the pure DMBP performance. We ob-
+
+definition of the parameter]. For the array code, we use
+
+serve that E-BP-DMBP improves the error floor performance
+
+over the BSC and
+
+over the AWGN channel. dramatically compared with E-BP (E-BP-DC also improves sig-
+
+We emphasize that the performance of the DMBP decoder is nificantly compared with E-BP if one allows for 300 iterations)
+
+sensitive to the value that is chosen (cf. Section VI.) For each and in the high SNR region E-BP-DMBP with 50 iterations is
+
+data point in our figures, we accumulated sufficient decoding very close to the estimated lower bound of the maximum like-
+
+failures (normally at least 100) so that if we had plotted an error lihood (ML) decoder. In particular, note that the reduction in
+
+bar, it would have been smaller than the size of the symbol used WER of DMBP with respect to E-BP is about , and that the
+
+to represent the data point in the figure.
+
+slopes of the two are different, with DMBP and E-BP-DMBP
+
+Finally, we are often able to estimate a lower bound on the word paralleling the ML estimated lower bound.
+
+error rate (WER) of ML decoding. When our decoders return a From Fig. 6, we also observe that the pure DC decoder needs
+
+codeword that is different from the transmitted codeword, but many more iterations to obtain good performance compared
+
+has a higher probability, we know that an optimal ML decoder with both BP and DMBP. For 300 iterations, DC performs better
+
+would also have made a decoding “error.” The proportion of such than E-BP at lower SNR, but exhibits an apparent error floor as
+
+events provides an estimated lower bound on ML performance. the SNR increases. The high error floor of DC is mostly the re-
+
+(The true ML WER could be above the lower bound because sult of the DC decoder returning a codeword with lower proba-
+
+an ML decoder may also make errors on blocks for which our bility than the transmitted codeword. For example, for an SNR
+
+decoder fails to converge or, in the case of MILP decoders, still of 6.60 dB, 80% of DC errors are of this type, while for an SNR
+
+produced a pseudo-codeword even after all integer constraints of 7.31 dB, the percentage rises to 98%. These kind of errors are
+
+have been added. Our estimate assumes ML would decode such unpleasant because they are undetectable. In contrast, the BP
+
+blocks correctly.) For the results shown in Fig. 6 the number of and DMBP decoders essentially never make this kind of error;
+
+ML errors accumulated varied between 27 and 99.
+
+empirically, all failures involve convergence to a noncodeword
+
+B. Simulations and Discussion
+
+or failure to converge, and are thus detectable. LP and MILP decoders provably never make undetectable errors, and codewords
+
+Fig. 6 plots the word error rates of the various algorithms for returned by LP and MILP decoders are provably optimal [21].
+
+the length-1057 random LDPC code when transmitted over the Notice that E-BP-LP has a very similar performance to
+
+BSC. We plot WER versus SNR, assuming that the BSC re- DMBP, and also that E-BP-MILP with 10 fixed bits per-
+
+sults from hard-decision demodulation of a BPSK sequence forms the best among all the decoders and almost approaches
+
+transmitted over an AWGN channel. The resulting relation be- the estimated ML lower bound. However, DMBP decoders
+
+tween the crossover probability of the equivalent BSC- and should be significantly more practical to construct in hard-
+
+the SNR of the AWGN channel is
+
+, ware, because they are message-passing decoders similar to
+
+where is the rate of the code and
+
+is the Q-function. In existing BP decoders, while LP and MILP decoders do not
+
+Fig. 6(a) we plot results when all iterative algorithms are lim- currently have efficient and hardware-friendly message-passing
+
+ited to
+
+iterations, and in Fig. 6(b) for
+
+implementations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+795
+
+Fig. 6. Error performance comparisons for a length-1057, rate-0.77 random regular LDPC code over the BSC. (a) Results when T when T = 300 iterations.
+
+= 50 iterations. (b) Results
+
+Fig. 7 depicts the WER performance comparison of the rect codeword as frequently as it does over the BSC. Note also
+
+length-2209 array LDPC code over the BSC. For this QC-LDPC that on the AWGN channel, while the DMBP decoder outper-
+
+code, we observe broadly similar performance to the random forms BP in the error-floor regime, it actually starts out worse
+
+LDPC code.
+
+in the low SNR regime.
+
+Fig. 8 shows the WER performance comparison of the length- Fig. 9 depicts the WER performance comparison of the
+
+1057 random LDPC code over the AWGN channel. We observe length-2209 array LDPC code over the AWGN channel. For
+
+that the BP decoder for this code exhibits an error floor. DMBP this QC-LDPC code, we observe similar performance to the
+
+improves the error floor performance compared with BP and random LDPC code. Note again that while all decoders benefit
+
+does not have an apparent error floor. When 200 iterations are from additional allowed iterations, the DC decoder in particular
+
+used, the DC decoder has a similar performance to BP. In the becomes increasingly competitive as the number of allowed
+
+high SNR region, the DC decoder does not converge to an incor- iterations increases.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+796
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+Fig. 7. Error performance comparisons for a length-2209, rate-0.916 array LDPC code over the BSC. (a) Results when T T = 300 iterations.
+
+= 50 iterations. (b) Results when
+
+An important observation from all these simulations, was that believed to cause error floors. The very good performance of the
+
+given enough iterations, the DC decoder becomes competitive DMBP decoder in the error floor regime indicates that there may
+
+with standard BP, but that the combined DC-BP decoder be- in fact be a reduction in the number of trapping sets, but on the
+
+comes significantly better than either the DC or BP decoder other hand, some trapping sets clearly continue to exist, even
+
+alone, especially in the error floor regime. This implies that for the DMBP decoder. In particular, we followed the approach
+
+DC and BP are suffering failures on very different sets of input of [6] and performed some preliminary investigations of indi-
+
+blocks.
+
+vidual “absorbing sets” in the array code that they studied, and
+
+Our basic motivation for the DC and DMBP decoders was found that although the DMBP decoder performed better on av-
+
+that the difference-map dynamics may help a decoder avoid dy- erage than the BP decoder, it still would not escape if started
+
+namical “traps” that could be related to the trapping sets that are sufficiently close to particular difficult absorbing sets.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+797
+
+= Fig. 8. Error performance comparisons for a length-1057, rate-0.77 random
+
+regular LDPC code over the AWGN channel. (a) Results when T
+
+50
+
+iterations. (b) Results when T = 200 iterations.
+
+Fig. 9. Error performance comparisons for a length-2209 and rate-0.916 array
+LDPC code over the AWGN channel. (a) Results when T = 50 iterations. (b) Results when T = 200 or 500 iterations.
+
+VI. RELATIONSHIP OF DMBP TO OTHER APPROACHES
+In this section, we discuss the relationship of the DMBP decoder to other modified min-sum algorithms in the literature. As we have described it so far, the DMBP decoder is essentially defined by the standard equations for the min-sum constraint-to-variable message update rules (14), the DC-inspired update rules for variable-to-constraint messages in terms of corrections to the beliefs (9), and the “compromise” rules for beliefs as modified averages of check-to-variable messages (15).
+However, we can get another perspective on DMBP by manipulating the equations as follows. We can eliminate the beliefs from (9) using (15) to obtain
+
+Written in this form, the DMBP variable-to-check message
+
+update rules for
+
+can be interpreted as “damped”
+
+updates that combine one-half of the “old” messages
+
+with one-half of the “new” messages
+
+. The striking
+
+features of (17) are that if and only if
+
+, the new message
+
+to parity check depends in part on the old message
+
+from the same check (such a dependence does not
+
+exist in the standard min-sum algorithm), while the dependence
+
+on messages
+
+has been “normalized” by a factor of .
+
+In fact, if
+
+, then we see that DMBP simply reduces to
+
+a damped version of the standard min-sum decoder.
+
+The modifications that DMBP makes in the min-sum algo-
+
+rithm are reminiscent of those made in several other interesting (16) algorithms. We will first briefly summarize the connections to
+
+where
+
+some loosely related algorithms, and then make concrete comparisons with the most closely related algorithms, namely the
+
+“reweighted” min-sum algorithms.
+
+In [33], a “normalized” min-sum decoder (which however did
+
+(17) not include a dependence of
+
+on
+
+) was shown to
+
+perform better than sum-product BP, especially in the high SNR
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+798
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+regime. In [34], it was shown that “damped” BP decoders can equivalent variables. It is easy to derive the min-sum algorithm
+
+significantly improve decoding performance. We will compare for the resulting factor graph, which represents a model that is
+
+DMBP with the normalized min-sum decoder of [33] in detail equivalent to the original one, even though it has a different
+
+below, and also discuss how changing the damping factor in min-sum algorithm. Ruozzi and Tatikonda then take the step
+
+DMBP affects its performance.
+
+of considering the and parameters to be arbitrary nonzero
+
+The fact that the performance of DMBP very closely paral- real-valued parameters [22].
+
+lels that of linear programming decoders suggests that it might We specialize Ruozzi and Tatikonda’s update equations to the
+
+be related to them. In fact, our work was partially motivated by case of parity check factors and binary variables, but use the no-
+
+our earlier results which showed that LP decoders can signifi- tations from this paper to make comparison as easy as possible.
+
+cantly improve upon BP performance in the error floor regime If we also rewrite their algorithms to follow a parallel scheduling
+
+[17]; we aimed to develop a message-passing decoder that could that alternates messages from checks to bits and messages from
+
+reproduce LP performance with complexity similar to BP.
+
+bits to checks, we can write their message-update equations as
+
+Work in the direction of creating an efficient message-passing
+
+linear programming decoder that could replace LP solvers that
+
+relied on simplex or interior point methods was begun by
+
+Vontobel and Koetter [35], and message-passing algorithms
+
+that converge to an LP solution for some problems were sug-
+
+(18)
+
+gested by Globerson and Jaakkola [36]. Our DMBP update and equations are quite similar to, although distinct from, those in
+
+the GEMPLP algorithm suggested by Globerson and Jaakkola.
+
+However, our limited experiments with GEMPLP decoders
+
+show that they do not reproduce LP decoding performance.
+
+For that matter, we have been unable to devise any other
+
+(19)
+
+message-passing decoder with complexity similar to BP that
+
+exactly reproduces linear programming decoding [21].
+
+and their single-variable belief equations as
+
+A. Reweighted min-sum Algorithms (20)
+The GEMPLP algorithm as well as the DMBP algo-
+
+rithm are both examples of message-passing algorithms that
+
+use “re-weighted” min-sum updates. The tree-reweighted Now, if we set all
+
+, and if all
+
+, then com-
+
+max-product (TRMP) [37] algorithm was the first such al- paring with the DMBP (14), (15), (16), and (17), we see that the
+
+gorithm, based on convex combinations of spanning trees. DMBP equations are equivalent to a damped version of Ruozzi
+
+TRMP has nice theoretical properties, including guaranteeing and Tatikonda’s reweighted min-sum equations, aside from an
+
+under certain conditions that converged solutions are optimal. irrelevant rescaling of the log-likelihood ratios by a factor of ,
+
+Asynchronous schedules of TRMP that force convergence which has no effect on decoding performance.
+
+were developed by Kolmogorov [38]; see also the papers of Ruozzi and Tatikonda prove a variety of important theorems
+
+Hazan and Shashua [39] and Meltzer et al. [40] for further about their reweighted min-sum algorithms, that are generaliza-
+
+generalizations to other provably convergent message-passing tions of similar theorems proven for the TRMP algorithm [37].
+
+algorithms.
+
+In particular they prove that for appropriate values of and
+
+Because the TRMP algorithm and its related theory have (for example, for
+
+and
+
+, where is the de-
+
+been primarily worked out for pairwise factor graphs (i.e., all gree of the highest degree variable node in an ordinary factor
+
+factors are connected to two or fewer variables), it is somewhat graph), fixed points of the reweighted min-sum algorithm with
+
+awkward to make a detailed comparison between TRMP and finite messages and beliefs that give a unique estimate (that is,
+
+DMBP. However, after our paper was initially submitted, each belief should be strictly positive or negative) must be
+
+Ruozzi and Tatikonda [22] proposed a family of reweighted globally optimal. They also show that for such parameters, a
+
+min-sum algorithms that generalizes TRMP, and can be applied particular asynchronous updating schedule provably converges.
+
+without difficulty to nonpairwise factor graphs such as those These theorems are examples of the general expectation that
+
+we are considering. They were also able to derive theorems for “convex” reweighted min-sum algorithms (corresponding
+
+about the optimality of the solutions found by their algorithms, to weight choices resulting from convex combinations of trees
+
+and the convergence of the algorithms, that generalize those or splittings), one should be able to prove optimality guaran-
+
+for TRMP. As their derivation of these families of algorithms tees and find provably convergent message-update schedules,
+
+is extremely simple, and remarkably the algorithms turn out although “nonconvex” reweighted min-sum algorithms will not
+
+sometimes to be equivalent to DMBP, we focus on them here. have such guarantees.
+
+Ruozzi and Tatikonda’s family of reweighted min-sum algo- In the convex case, the caveat that the fixed points should
+
+rithms are derived by “splitting” the factors and variables of an have beliefs that are unique estimates is an important one,
+
+ordinary factor graph. The th factor is split into equal fac- because a decoder that uses parameter values and that
+
+tors (each of which has a local energy that is as large as satisfy the preconditions of Ruozzi and Tatikonda’s theorems
+
+the original factor) and the th variable is similarly split into will often converge to pseudo-codewords where many beliefs
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+799
+
+Fig. 10. Error performance comparisons for a length-1057, rate-0.77 random regular LDPC code over the BSC channel. Each decoder ran for a maximum of 50 iterations.
+
+are zero. In such cases there is no obvious way to choose the
+
+value of the corresponding bits. Our empirical investigations,
+
+discussed in the next subsection, show that the best decoding
+
+(21)
+
+performance is actually obtained with values of and that are not in the range that satisfy the conditions for convex reweighted algorithms, and their associated theorems. We similarly find that the DMBP parameter , when chosen to optimize decoding performance, results in a nonconvex reweighted min-sum algorithm.
+It is worthwhile mentioning another important qualitative difference between convex and nonconvex reweighted algorithms—the nature of their pseudo-codewords. In nonconvex reweighted min-sum and sum-product algorithms, “pseudo-codewords” or “trapping sets” are fixed points of the dynamics where some of the variables have a belief whose sign is incorrect. The configuration obtained by then thresholding all the beliefs would violate at least one parity check constraint. On the other hand, in convex reweighted min-sum algorithms, the “pseudo-codewords” correspond to fixed-points where some variables have beliefs equal to zero.
+
+is given by a weighted combination of its old value and its
+
+new value, where DMBP corresponds to a damping parameter
+
+. We actually considered many different splitting de-
+
+coders, with different values of , and . Because we only
+
+considered regular LDPC codes, we confined ourselves to split-
+
+ting decoders that kept constant for all bits and constant
+
+for all checks in the code. Our general procedure was to choose
+
+a damping parameter and a value of , and then given those
+
+values, try to find the value of that would give the best-per-
+
+forming decoder. We found that, generally speaking, the perfor-
+
+mance was very insensitive to , that
+
+was always optimal
+
+or nearly optimal, but that the decoder performance was sensi-
+
+tive to .
+
+Therefore to simplify the presentation, we only provide sim-
+
+ulation results for the following representative decoders: the
+
+DMBP decoder previously described
+
+, and splitting decoders where
+
+, and
+
+B. Simulations
+
+, or
+
+. The choice of
+
+was made be-
+
+cause it was always optimal or close to optimal, and a decoder
+
+In this subsection, we present simulations that compare the with
+
+is much simpler to implement in hardware. The
+
+DMBP decoder with three different decoders based on Ruozzi choice of
+
+was made because it corresponds to an un-
+
+and Tatikonda’s family of reweighted min-sum algorithms damped decoder, which is again the simplest choice, and other
+
+(hereafter called “splitting” decoders), as well as the standard values of give similar results. The
+
+value was chosen
+
+min-sum decoder, and a “normalized” min-sum decoder [33]. because it reduces to standard min-sum (and is so labeled in
+
+All simulation results presented in this section are for the the plots), and thus is an important point of comparison. The
+
+regular (3, 13) random LDPC code of length 1057 that was
+
+value was chosen because it was the optimal or nearly
+
+already discussed in Section V.
+
+optimal value of for the splitting decoders. The
+
+As described before [cf. (16) and (17)], the DMBP decoder is value was chosen because our code is a regular one with bit de-
+
+equivalent to a “damped” splitting decoder where each message gree
+
+, so a value of
+
+satisfies the preconditions
+
+from variable to check
+
+for Ruozzi and Tatikonda’s global optimality theorems to hold.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+800
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+Fig. 11. Error performance comparisons for a length-1057, rate-0.77 random regular LDPC code over the AWGN channel. Each decoder ran for a maximum of 50 iterations.
+
+For the
+
+case, we also used the asynchronous sched- performance. Second, the “normalized” min-sum decoder sig-
+
+uling suggested by Ruozzi and Tatikonda, which they prove nificantly improves the performance of the min-sum decoder,
+
+forces convergence of the decoder. In this scheduling, the bits but it does not have as good an error-floor performance as the
+
+are ordered, and then before updating the messages from the DMBP or splitting algorithms. Third, the splitting algorithm
+
+checks neighboring the bit
+
+, one first updates all the with a choice of parameters of
+
+, and
+
+messages
+
+for all bits different from . We did not opti-
+
+has very similar performance to the DMBP decoder, which
+
+mize our software when simulating this scheduling, so the asyn- corresponds to the parameter choices
+
+, and
+
+chronous scheduling was significantly slower than the normal
+
+. Finally, the splitting algorithm with a param-
+
+parallel scheduling as many messages were repeatedly recalcu- eter choice of
+
+performs noticeably worse, and while
+
+lated. Implementing such asynchronous scheduling in an effi- forcing convergence with the asynchronous scheduling helps
+
+cient way is an important and complicated problem in its own performance, it does not help enough to equal the performance
+
+right (see [41] and references therein).
+
+of the splitting algorithm with
+
+. (Additionally, as noted
+
+Finally, we considered the “normalized” min-sum decoder earlier, the asynchronous scheduling is more complicated to im-
+
+[33] that used a modified min-sum update rule of the following plement efficiently.)
+
+form:
+
+We made the following observations about the nature of the
+
+“failure modes” of the different decoders. The min-sum and
+
+normalized min-sum decoders would nearly always not con-
+
+(22) verge when they failed to decode correctly. The asynchronous
+
+splitting algorithm with
+
+always did converge, as ex-
+
+pected from Ruozzi and Tatikonda’s theorem. As aforemen-
+
+where the “normalization” parameter
+
+was chosen
+
+because it gave the best-performing version of a normalized
+
+min-sum decoder.
+
+The performance of all these decoders is illustrated in Figs. 10
+
+and 11, for the BSC and AWGN channel, respectively. In these
+
+simulations, each decoder was limited to 50 iterations. The con-
+
+tioned, failures for this algorithm are caused by convergence to
+
+pseudo-codewords where several or many beliefs equaled zero.
+
+The other algorithms (DMBP, and the parallel scheduled split-
+
+ting algorithms with
+
+or
+
+) exhibited a mixture
+
+of these failure modes—they sometimes failed to converge at
+
+all, and sometimes would converge to a pseudo-codeword.
+
+ditions for the DMBP decoder are identical to those previously shown in Figs. 6(a) and 8(a), so the reader may want to compare
+
+VII. SUMMARY AND CONCLUSION
+
+to those simulation results for orientation.
+
+In this paper, we began by investigating an LDPC decoder
+
+We can make the following observations based on these sim- based on the DC algorithm proposed by Gravel and Elser [18].
+
+ulation results. First, the ordinary min-sum decoder performs Our motivation was that the difference-map dynamics of DC lets
+
+extremely poorly on the BSC; on the AWGN channel, its wa- it avoid simple traps that may be related to the “trapping sets”
+
+terfall performance is good but it has relatively poor error floor that plague error floor performance of standard BP decoders.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+YEDIDIA et al.: DC AND DIFFERENCE-MAP BP DECODERS
+
+801
+
+For a small number of iterations, the DC decoder’s performance was actually worse than the performance of a standard sumproduct BP decoder, although it became competitive with BP when a large number of iterations were used. The DC decoder suffered from a different type of failure mode than BP—most of its failures were “undetectable” decodings to a less probable codeword.
+By describing the DC decoder as a message-passing algorithm, we were able to draw parallels with the standard min-sum algorithm. We imported the “difference-map” idea from DC to the min-sum algorithm in an intuitive but ad-hoc way, to construct the difference-map belief propagation (DMBP) decoder. Empirically, the DMBP decoder displays excellent error-floor performance.
+Remarkably, the DMBP decoder also turns out to be very closely related to reweighted min-sum algorithms based on a “splitting” procedure recently proposed by Ruozzi and Tatikonda [22], which in turn is a generalization of earlier tree-reweighted max-product algorithms [37]. More precisely, DMBP is a damped version of a decoder based on the splitting algorithm. These connections suggest a different explanation of the DMBP decoder’s success—namely that it is taking advantage of the splitting algorithm’s re-parameterization of the original problem to one where the min-sum algorithm is guaranteed to find a global optimization, subject to the important caveat that the fixed point gives a unique estimate. However, in practice the DMBP and undamped splitting decoders seem to perform at their best for a choice of parameters where the guarantees do not actually hold.
+We want to leave the reader with two important “take-home” messages. First, we have demonstrated simple and practical message-passing decoders of LDPC codes that significantly improve upon the performance of standard BP decoders, especially in the error-floor regime. Second, the DC algorithms of Gravel and Elser and reweighted min-sum algorithms such as TRMP and the splitting algorithms of Ruozzi and Tatikonda should both be seen as powerful and practical families of message-passing algorithms, that are likely to be useful for a wide variety of future applications.
+ACKNOWLEDGMENT
+The authors would like to thanks the Associate Editor D. Forney, the anonymous reviewers, and M. Fossorier for comments and suggestions that improved the presentation of the paper.
+REFERENCES
+[1] T. Richardson and R. Urbanke, Modern Coding Theory. Cambridge, MA: Cambridge Univ. Press, 2008.
+[2] B. J. Frey, R. Koetter, and A. Vardy, “Signal-space characterization of iterative decoding,” IEEE Trans. Inf. Theory, vol. 47, pp. 766–781, Feb. 2001.
+[3] P. O. Vontobel and R. Koetter, “Graph-cover decoding and finite-length analysis of message-passing iterative decoding of LDPC codes,” IEEE Trans. Inf. Theory [Online]. Available: http://www.arxiv.org/abs/cs.IT/ 0512078 to appear in
+[4] D. MacKay and M. Postol, “Weaknesses of Margulis and RamanujanMargulis low-density parity-check codes,” Electron. Notes in Theoret. Comput. Sci., vol. 74, 2003.
+
+[5] T. Richardson, “Error floors of LDPC codes,” in Proc. 41st Allerton
+
+Conf. Commun., Contr., Comput., Monticello, IL, Oct. 2003, Allerton
+
+House.
+
+[6] L. Dolecek, P. Lee, Z. Zhang, V. Anatharam, B. Nikolic, and M. J.
+
+Wainwright, “Predicting error floors of structured LDPC codes: Deter-
+
+ministic bounds and estimates,” IEEE J. Sel. Areas Commun., vol. 27,
+
+no. 6, pp. 908–917, Aug. 2009.
+
+[7] See
+
+www.hpl.hp.com/personal/Pascal\_Vontobel/pseudocode-
+
+words/papers/ for a collection of papers on pseudocodewords and
+
+related ideas.
+
+[8] X.-Y. Hu, E. Eleftheriou, and D. M. Arnold, “Regular and irregular
+
+progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol.
+
+51, no. 1, pp. 386–398, Jan. 2005.
+
+[9] T. Tian, C. Jones, J. D. Villasenor, and R. D. Wesel, “Construction of
+
+irregular LDPC codes with low error floors,” in Proc. IEEE Int. Conf.
+
+Commun., Anchorage, AK, May 2003, vol. 5, pp. 3125–3129.
+
+[10] Y. Wang, J. S. Yedidia, and S. C. Draper, “Construction of high-girth
+
+QC-LDPC codes,” in Proc. 25th Int. Symp. Turbo Codes and Related
+
+Topics, 2008 [Online]. Available: http://www.merl.com/publications/
+
+TR2008-061/, Available online at
+
+[11] J. Zhang, J. S. Yedidia, and M. P. C. Fossorier, “Low-latency decoding
+
+of EG LDPC codes,” J. Lightw. Technol., vol. 25, pp. 2879–2886, Sep.
+
+2007.
+
+[12] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE
+
+Trans. Inf. Theory, vol. 27, pp. 533–547, Sep. 1981.
+
+[13] Y. Wang and M. Fossorier, “Doubly generalized LDPC codes,” in Proc.
+
+IEEE Int. Symp. on Inf. Theory, Seattle, WA, Jul. 2006, pp. 669–673.
+
+[14] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA:
+
+M.I.T. Press, 1963.
+
+[15] Y. Han and W. E. Ryan, “Low-floor decoders for LDPC codes,”
+
+in Proc. 45th Ann. Allerton Conf., Allerton, IL, Sep. 2007,
+
+pp. 473–479.
+
+[16] S. C. Draper, J. S. Yedidia, and Y. Wang, “ML decoding via mixed-
+
+integer adaptive linear programming,” in Proc. IEEE Int. Symp. Inf.
+
+Theory, Nice, France, Jun. 2007, pp. 1656–1660.
+
+[17] Y. Wang, J. S. Yedidia, and S. C. Draper, “Multistage decoding of
+
+LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory, Seoul, Korea, Jun.
+
+2009, pp. 2151–2155.
+
+[18] S. Gravel and V. Elser, “Divide and concur: A general approach to con-
+
+straint satisfaction,” Phys. Rev., vol. E 78, p. 036706, 2008, Available
+
+online at arXiv:0801.0222v1.
+
+[19] M. Mézard and A. Montanari, Information, Physics, and Computa-
+
+tion. Oxford, U.K.: Oxford Univ. Press, 2009, ch. 8.
+
+[20] S. Gravel, “Using symmetries to solve asymmetric problems,” Ph.D.
+
+dissertation, Cornell Univ., Ithaca, NY, 2009, See Sec. 5.4.
+
+[21] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear pro-
+
+gramming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol.
+
+51, pp. 954–972, Mar. 2005.
+
+[22] N. Ruozzi and S. Tatikonda, “Convergent and correct message passing
+
+schemes for optimization problems over graphical models,” vol. 2, Feb.
+
+2010, May 2010, arXiv:1002.3239.
+
+[23] G. D. Forney, “Codes on graphs: Normal realizations,” IEEE Trans. Inf.
+
+Theory, vol. 47, pp. 520–548, Feb. 2001.
+
+[24] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs
+
+and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, pp.
+
+498–519, Feb. 2001.
+
+[25] J. R. Fienup, “Phase retrieval algorithms: A comparison,” Appl. Opt.,
+
+vol. 21, pp. 2758–2769, 1982.
+
+[26] V. Elser, I. Rankenburg, and P. Thibault, “Searching with iterated
+
+maps,” in Proc. Nat. Acad. Sci. USA, 2007, vol. 104, pp. 418–423.
+
+[27] H. H. Baushke, P. L. Combettes, and D. R. Luke, “Phase retrieval, error
+
+reduction algorithm, and Fienup variants: A view from convex opti-
+
+mization,” J. Opt. Soc. Amer. A, vol. 19, pp. 1334–1345, Jul. 2002.
+
+[28] Encyclopedia of Sparse Graph Codes, [Online]. Available:
+
+http://www.inference.phy.cam.ac.uk/mackay/codes/data.html, Code
+
+1057.244.3.457. available online at
+
+[29] J. L. Fan, “Array codes as low-density parity-check codes,” in
+
+Proc. 2nd Int. Symp. Turbo Codes, Brest, France, Sep. 2000,
+
+pp. 545–546.
+
+[30] T. J. Richardson and R. Urbanke, “The capacity of low-density
+
+parity-check codes under message-passing decoding,” IEEE Trans.
+
+Inf. Theory, vol. 47, pp. 599–618, Feb. 2001.
+
+[31] M.-H. N. Taghavi and P. H. Siegel, “Adaptive methods for linear pro-
+
+gramming decoding,” IEEE Trans. Inf. Theory, vol. 54, pp. 5396–5410,
+
+Dec. 2008.
+
+[32] GNU Linear Programming Kit, [Online]. Available: http://www.gnu.
+
+org/software/glpk
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+802
+
+IEEE TRANSACTIONS ON INFORMATION THEORY, VOL. 57, NO. 2, FEBRUARY 2011
+
+[33] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, pp. 1288–1299, Aug. 2005.
+[34] S. Hemati and A. H. Banihashemi, “Dynamics and performance analysis of analog iterative decoding for low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 54, pp. 61–70, Jan. 2006.
+[35] P. Vontobel and R. Koetter, “Towards low-complexity linear-programming decoding,” in Proc. 4th Int. Symp. Turbo Codes and Rel. Topics, Munich, Germany, 2006.
+[36] A. Globerson and T. Jaakkola, “Fixing max-product: Convergent message passing algorithms for MAP LP-relaxations,” Adv. Neural Inf. Process. Syst., vol. 20, 2007, Vancouver.
+[37] M. Wainwright, T. S. Jaakkola, and A. S. Willsky, “Map estimation via agreement on trees: Message-passing and linear programming,” IEEE Trans. Inf. Theory, vol. 51, pp. 3697–3717, Nov. 2005.
+[38] V. Kolmogorov, “Convergent tree-reweighted message-passing for energy-minimization,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 28, pp. 1568–1583, Oct. 2006.
+[39] T. Hazan and A. Shashua, “Convergent message-passing algorithms for inference over general graphs with convex free energies,” in Proc. 24th Conf. Uncertainty in Artific. Intell., Helsinki, Finland, Jul. 2008.
+[40] T. Meltzer, A. Globerson, and Y. Weiss, “Convergent message-passing algorithms-a unifying view,” in Proc. 25th Conf. Uncertainty in Artific. Intell., Montreal, Canada, Jun. 2009.
+[41] J. Zhang, Y. Wang, M. P. C. Fossorier, and J. S. Yedidia, “Iterative decoding with replicas,” IEEE Trans. Inf. Theory, vol. 53, pp. 1644–1663, May 2007.
+Jonathan S. Yedidia (M’01-SM’10) received the A.B. degree in physics from Harvard University, Cambridge, MA, in 1985, and the M.A. and Ph.D. degrees in physics from Princeton University, Princeton, NJ, in 1987 and 1990, respectively.
+His graduate work and his Postdoctoral work as a Junior Fellow in Harvard’s Society of Fellows (1990–1993), focused on the statistical mechanics of disordered systems. From 1993 to 1997, he was a professional chess player and
+
+teacher. Since 1998, he has been with Mitsubishi Electric Research Laboratories (MERL), Cambridge, MA, where he is now a Distinguished Member of the Research Staff in the Algorithms Group. His main research interests are in algorithms for probabilistic inference and optimization and their applications in communications, control, signal processing, and artificial intelligence.
+Yige Wang (S’03-M’09) received the B.E. and M.E. degrees from South China University of Technology, Guangzhou, in 2000 and 2003, respectively, and the Ph.D. degree from the University of Hawaii at Manoa in 2008, all in electrical engineering.
+She is currently with Mitsubishi Electric Research Laboratories (MERL), Cambridge, MA. Her research interests include error control coding, digital communications, and VLSI implementation of communication algorithms.
+Stark C. Draper (S’99-M’03) received the B.S. and B.A. degrees in electrical engineering and history, respectively, from Stanford University, Stanford, CA. He received the M.S. and Ph.D. degrees in electrical engineering and computer science from the Massachusetts Institute of Technology (MIT), Cambridge.
+He is an Assistant Professor with the Department of Electrical and Computer Engineering, University of Wisconsin, Madison. Before moving to Wisconsin, he was with Mitsubishi Electric Research Laboratories (MERL), Cambridge, MA. He has held teaching and research positions with the Department of Electrical Engineering and Computer Science, University of California, Berkeley; and with the University of Toronto, Canada. He has been with Arraycomm, San Jose, CA, the C. S. Draper Laboratory, Cambridge, MA, and Ktaadn, Newton, MA. His research interests are focused on the areas of information theory, coding theory, statistical signal processing, and security.
+Dr. Draper has received an NSF CAREER Award, the MIT Carlton E. Tucker Teaching Award, an Intel Graduate Fellowship, Stanford’s Frederick E. Terman Engineering Scholastic Award, and a U.S. State Department Fulbright Fellowship.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:08:13 UTC from IEEE Xplore. Restrictions apply.
+
+

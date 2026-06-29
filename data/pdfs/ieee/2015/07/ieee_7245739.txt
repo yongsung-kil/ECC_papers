@@ -1,0 +1,257 @@
+Table of Contents for this manuscript
+
+Efficient Implementation of Structured Long Block-Length LDPC Codes
+
+Andrew J. Wong Department of Electrical and
+Computer Engineering McGill University
+Montreal, Qc, Canada, H3A 0E9 Email: andrew.wong2@mail.mcgill.ca
+
+Saied Hemati Department of Electrical and
+Computer Engineering University of Idaho
+Moscow, ID, USA, 83844 Email: shemati@uidaho.edu
+
+Warren J. Gross Department of Electrical and
+Computer Engineering McGill University
+Montreal, Qc, Canada, H3A 0E9 Email: warren.gross@mcgill.ca
+
+Abstract—High-speed and low-area decoders for low-density parity-check (LDPC) codes with very long block lengths are challenging to implement due to the large amount of nodes and edges required. In this paper we implement a decoder for a (32643, 30592) LDPC code that has variable nodes of degree 7, check nodes degrees of 111 and 112, and 228501 edges, making fully-parallel hardware implementation unfeasible. We analyze the structure of this code and describe a method of replacing the complex interconnect with a local, area-efficient version. We develop an modular architecture resulting in a lowcomplexity partially-parallel decoder architecture based on the offset min-sum algorithm. The proposed decoder is shown to achieve a minimum gain of 92% in area utilization, compared to an extremely optimistic area estimation of the fully-parallel decoder that neglects the interconnection overhead. Synthesis in 65 nm CMOS is performed resulting in a clock frequency of 370 MHz and a throughput of 24 Gbps with an area of 7.99 mm2.
+I. INTRODUCTION
+Channel coding is widely used in modern optical communication systems to improve the bit error rate (BER) performance. Reed-Solomon codes have often been used in long-haul optical communication systems due to their impressive harddecision performance [1], and were included in the SONET OC-192 optical carrier standard [2], and also in the ITU G.709 optical transport hierarchy standard [3].
+More recently, low-density parity-check (LDPC) codes [4] have been considered in optical communication systems [5]. Long block-length LDPC codes perform very close to the Shannon limit under iterative decoding algorithms [6]. The sum-product algorithm (SPA) and min-sum (MS) algorithm are the best known iterative decoding algorithms [7]. Although MS exhibits a penalty in decoding performance compared to SPA, it has a lower hardware complexity.
+A fully-parallel implementation of a (32643, 30592) LDPC code decoder would have 32643 variable nodes of degree 7 connected to 2051 check nodes through 228501 edges. Assuming 5-bit messages, this decoder would require 2285010 wires for the interconnections between the variable nodes and check nodes, which is impractical for fully-parallel implementation. To the best of our knowledge, no hardware studies have been performed on the soft decoding of this code, presumably due to the difficulties of implementing a code of this size, namely signal routing congestion [8].
+
+Partially-parallel architectures for high-density [9] or long block-length LDPC codes have often been considered for lowthroughput applications such as DVB-S2 satellite communications. This standard has a maximum block long of 64800 bits, and a minimum required throughput of 90 Mbps, with some works reporting throughputs of up to 1 Gbps using a 320 MHz clock [10], [11].
+In this paper, we analyze the structure of a long blocklength LDPC code and present a method to eliminate the complex interconnect required by traditional decoders. By exploiting the structure of the code, we are able to create a modular architecture with simple processing modules and local interconnections that is well-suited for implementing the offset min-sum (OMS) iterative decoding algorithm. This new design is applicable to all codes with a similar structure, and can be scaled to a wide range of code sizes.
+The remainder of the paper is organized as follows. Section II will present the LDPC code chosen for this work, and an overview of the offset min-sum algorithm is shown in Section III. In Section IV, the proposed architecture is introduced, and implementation results are presented in Section V.
+II. STRUCTURED LONG BLOCK-LENGTH LDPC CODE
+As an example of a long code, we have chosen a systematic binary (32643, 30592) LDPC code appearing in [5]. This long code was developed for use with hard decoders, and, as shown in Figure 1, performs much better than the widely used RS(255,239) code of the same rate. Soft decoders, such as floating-point SPA, perform 1.65 dB better than the requirements in the standard at a BER of 10−8. The OMS algorithm [12] using 5-bit demodulation and 5-bit message quantization also performs very close (within 0.1dB) to floating-point SPA while maintaining low hardware complexity. This makes OMS a good candidate for implementing a soft decoder for this code.
+The (32643, 30592) LDPC code has a rate of 0.937, has variable nodes of degree 7, and check node degrees of 111 and 112. This code is defined based on a so-called connectivity matrix, M, which gives a geometrical representation of the code as opposed to a generator matrix, G, or a parity-check matrix, H, which are conventionally used for defining LDPC codes. Each entry of this connectivity matrix represents a variable node and each parity-check node is represented by a line as described in the following.
+
+978-1-4799-192A5u-th3o/r1iz5e/d$li3ce1n.0se0d ©use2l0im1it5edItEo:EYEonsei Univ. Downloaded on J2u3n4e 24,2026 at 16:43:15 UTC from IEEE Xplore. Restrictions apply. ASAP 2015
+
+Table of Contents for this manuscript
+
+100
+
+10-2
+
+10-4
+
+Bit Error Rate (BER)
+
+10-6
+
+10-8
+
+10-10
+
+Uncoded
+
+Results from ITU G.975.1 standard
+
+10-12
+
+RS(255,239) Floating-Point Sum-Product Algorithm (100 iterations)
+
+Offset MS β = 1.0 (100 iterations, 5-bit quantization)
+
+10-14
+
+Offset MS (Merged Memory Design) β = 0.8
+
+4.5
+
+5
+
+5.5
+
+6
+
+6.5
+
+7
+
+E /N (dB)
+b0
+
+Fig. 1. A comparison between the BER performance of RS(255,239) code and the (32643, 30952) LDPC code using different decoding algorithms.
+
+5HVHUYHG /RFDWLRQV D D
+
+1RGHV FRQQHFWHG E\ RQH SDULW\ FKHFN OLQH
+
+5HVHUYHG $UHD
+
+ELWV VHW WR ³ ´
+&ROXPQ 1XPEHULQJ
+
+Fig. 2. Structure of the connectivity matrix M.
+
+5RZ
+
+A. Connectivity Matrix
+Consider the connectivity matrix to be composed of 112 rows and 293 columns indexed by the coordinates (a, b), where 0 ≤ a ≤ 111 and 0 ≤ b ≤ 292 as shown in Figure 2. Each of the first 30592 locations in the matrix represents an information bit, with bits (0, 292 − c) where 0 ≤ c ≤ 172 set to 0 as reserved bits. These reserved locations are required to complete the matrix but are not transmitted as part of the codeword. The jth information bit can be found at coordinate (r, 293r + 292 − q) where q = j + 172 and r = q/293 . The last 7 rows of the matrix are composed of the 2051 parity-check bits associated with the code. 7 slopes are selected, each forming a set of parallel lines. Each location in the matrix is intersected by exactly 7 of these lines, one from each slope set. Each of these lines represents one parity-check equation similar to one row of the H matrix. There are an additional 6 redundant bits in the parity-check zone which are set to 0 and not transmitted as part of the codeword. This matrix is significant because it can be used as a blueprint for an architectural layout using only local connections.
+
+5RZ L
+5RZ L
+5RZ L
+
+Fig. 3. A simplified diagram of the nodes and their connections between rows.
+
+B. Address Calculation
+
+As opposed to randomly generated matrices where determining the address location of adjacent nodes requires complex overhead hardware and memory modules, the connectivity matrix makes it simple to determine the neighboring nodes.In order to calculate the addresses on the line intersecting coordinates (0, c) with slope si the following equation can be used:
+
+{(a, b) | 0 ≤ a ≤ 111, b = (asi + c) mod 293}, (1)
+
+where 0 ≤ c ≤ 292, 0 ≤ si ≤ 292, and i = 1, 2, ..., 7. The slopes used by the code under consideration are 1, 7,
+23, 46, 101, 156, and 201. Figure 2 illustrates how a series
+of nodes are connected by one parity-check line with slope si = 1 intersecting point (0, 234).
+
+We noted that all of the connecting edges of a node located at position (a, b) can be calculated by:
+
+(a + 1, [b + si] mod 293).
+
+(2)
+
+This is useful when determining how connections should be routed between the nodes. It can be shown that the destination address of the seven edges from a node at location (a, b) to the row above it can be calculated for each slope si as
+{(a + 1, bsi |0 ≤ a ≤ 111, bsi = (b + si) mod 293)}. (3)
+Theorem 1. In the connectivity matrix, the edge connections between the neighboring rows do not depend on the row number.
+
+Proof: Equation (3) shows that the column coordinate bsi is only a function of b and not a, the row number. Therefore, changing the row number will not affect how a
+node is connected to the rows above and below it.
+
+According to Theorem 1, nodes from row 4, for example, are connected to the nodes of row 5 in exactly the same way the nodes of row 96 are connected to the nodes of row 97. Figure 3 illustrates how the nodes of each row are connected to the row above it. Even though this figure only depicts a small portion of the edges and nodes, it is easy to see that this applies to the entire connectivity matrix. By exploiting this structure, memory look ups necessary to determine the edge connections are no longer required and an efficient partiallyparallel architecture can be devised.
+
+C. Encoder Complexity
+Since this is a systematic code, only a small fraction of the codeword needs to be generated during the encoding process. This allows the encoding complexity to remain low compared to the regular encoding process of similar length codes.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u3n5e 24,2026 at 16:43:15 UTC from IEEE Xplore. Restrictions apply.
+
+Table of Contents for this manuscript
+
+III. THE OFFSET MIN-SUM ALGORITHM
+The OMS algorithm employs a slight modification to the MS algorithm to compensate for the inherent overestimation by applying a correction factor β [12]. The initial log-likelihood ratio (LLR) values are calculated from the received channel values and stored as Li. The term ma(l→) b represents a message in the LLR domain passed from node a to node b at the l-th iteration. The algorithm proceeds as follows:
+Step 1) Initialize m(v0→) c to Li, the LLR values based on the received information from the channel.
+
+Step 2) Update the check node messages
+
+m(cl→) v
+
+=
+
+max
+
+min
+v ∈N (c)\v
+
+m(vl−→1c)
+
+− β, 0
+
+×
+
+sgn(mv(l−→1c)).
+
+(4)
+
+v ∈N (c)\v
+
+Step 3) Update the variable node messages
+
+mv(l→) c = Lv +
+
+mc(l)→v .
+
+(5)
+
+c ∈N (v)\c
+
+Step 4) Codeword check & hard-decision: Compute the hard-decision, Zl = 1 if Lv + c ∈N(v) m(cl→) v ≥ 0, and Zvl = 0 otherwise. If the variable nodes’ hard decision output is a codeword or the maximum number of iterations lMAX has been reached, the algorithm is stopped and Zl values are output. Otherwise, the number of iterations is increased by 1 and decoding is continued from Step 2.
+
+IV. DECODER ARCHITECTURE
+The proposed algorithm is called the line-passing algorithm and it implements the offset min-sum decoding algorithm. It begins by collecting the first and second minimums as well as the cumulative sign over the set of variable nodes under one parity-check line to satisfy Equation (4). The data gathering can be performed sequentially for each parity-check line. Afterward, the collected information is distributed to the variable nodes and used to update their LLR values according to Equation (5). This process is then repeated within each iteration.
+We exploit the constant row connections in the connectivity matrix of the (32643, 30592) LDPC code and implement only one row of 293 processing nodes. These processing nodes form the core of the system, and are the ones which perform all of the calculations. A grid of 293 by 111 memory nodes store the data for each variable node. Only 111 rows of memory nodes are required since the processing nodes include the same functionality as the memory nodes and can be initialized in the same way. The memory nodes are connected by column to form a cyclic shift register with one end feeding into the row of processing nodes. The processing nodes are also connected to the message memory module so that it is possible for the messages to be properly sent and received between the nodes. A diagram of the proposed architecture can be seen in Figure 4.
+The nodes are initialized with their respective received information at positions according to the connectivity matrix. At each cycle, the node information for the entire matrix is
+
+2QH URZ RI 3URFHVVLQJ 1RGHV
+
+0HVVDJH 0HPRU\ 0RGXOH
+
+URZV RI 0HPRU\ 1RGHV
+
+1RGH ,QIRUPDWLRQ LV VKLIWHG WRZDUGV WKH SURFHVVLQJ QRGHV
+
+1RGH LQIRUPDWLRQ LV UHWXUQHG WR WKH QRGH PHPRULHV
+ZKHQ SURFHVVLQJ LV ILQLVKHG
+
+&ROXPQV
+Fig. 4. Hardware architecture for the line-passing algorithm.
+shifted upwards so that the processing nodes can distribute the outcome of the previous iteration and update the outgoing messages for each variable node based on Equation (5) and then collect the first and second minimums as well as the cumulative sign for all parity-check lines. This information is transmitted from row to row via the message memory module, which retains the messages so that they are available for the next row at the next cycle. Once the matrix has been cycled through, a new iteration starts and direction of the shift is reversed to distribute the gathered data. By traveling the maxtrix in reverse, the same path of the messages is preserved whereas if the matrix reset to the beginning, a shift would be required to realign the appropriate slopes. This process continues until the maximum number of iterations is reached or a valid codeword is found.
+Each node sends 7 sets of 3 messages (first and second minimums as well as the cumulative sign), requiring a total of 6153 edges for 293 nodes. Assuming that 5-bits are used for the first and second minimums and 1-bit for the sign, only 45122 wires are necessary compared to 2285010 in a fullyparallel implementation. The flooding schedule is retained as in the offset min-sum algorithm.
+The line-passing algorithm simplifies the comparison in Equation (4) by only comparing two values at a time. Each processing node can be seen as combination of both the traditional check and variable nodes. However, the functions of both types of traditional nodes are simplified and can be performed in parallel over two iterations of the decoding algorithm. During the collection of the data for the current iteration, the information from the previous iteration can be distributed to the node at the same time. This adds no additional delay to the critical path and the processing requirements are comparable to a low degree check node with no global wiring, making the critical path shorter than what is used in [13] for an RSbased LDPC code. This is due to the fact that the messages are collected sequentially row by row so a node would only have to compare its own value with the value of the incoming message, which is received from the adjacent row. As such, all connections are local and only two comparisons are required per parity-check line per node and an XOR is required to obtain the cumulative sign value. An addition/subtraction is also required in the OMS algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u3n6e 24,2026 at 16:43:15 UTC from IEEE Xplore. Restrictions apply.
+
+Table of Contents for this manuscript
+
+TABLE I. COMPARISON WITH LONG BLOCK-LENGTH DECODERS
+
+Code length
+Throughput (Gbps)
+Clock Frequency (MHz)
+Area scaled to 65 nm (mm2)
+Scaled Area / Bit (mm2 /bit)
+
+This Work 32643 24 370 7.99
+2.45e−4
+
+[14] 64800 0.135
+174 6.07
+9.37e−5
+
+[15] 64800 1.02
+8.08
+1.25e−4
+
+[16] 69615 6.24
+172 12
+1.72e−4
+
+V. IMPLEMENTATION RESULTS
+For the proposed architecture, one cycle is required to process one entire row of 293 nodes. Since there are 112 rows in the entire M matrix, 112 cycles are required to complete one iteration of the line-passing algorithm. While it would normally require one pass of the matrix to collect information and one pass to distribute it, the collection for the next iteration can be done right after the distribution, reducing the number of cycles. Thus, the algorithm requires 112 cycles to collect information for the first iteration before it can be distributed while the collection and distribution of the messages are done simultaneously for all other iterations. At an SNR value of 5.25 dB, the OMS algorithm takes approximately 4.2 iterations to complete the decoding of one codeword.
+The individual components for this decoder are all lowcomplexity and very modular. Only one row of 273 processing modules, composed mainly of adders, are required to process all 32643 nodes of the matrix. A majority of the area is occupied by memory units. However, this area can be reduced by merging the memories of the memory node, or by using block RAMs. While this results in a slight performance loss of 0.1 dB compared to the full array of memories as shown in Figure 1 as Offset MS (Merged Memory Design), the resources required are dramatically reduced. With this modification, there is a 75% reduction in the number of memory bits required per node.
+A fully-parallel implementation of this code would require 32643 variable nodes, 2051 check nodes, and a complex interconnect. Assuming that each of these nodes had lowcomplexity hardware comparable to those of a processing module and ignoring the interconnect altogether, the amount of nodes would require an area in excess of 122.5 mm2. The proposed design achieves a minimum gain of 92% in area utilization compared to this extremely optimistic estimation.
+The proposed design has been synthesized with 5-bit memories. The implementation uses TSMC 65 nm CMOS technology with a supply voltage of 1V, and was synthesized with Cadence RC. Using the technique of merging memories, the design results in an area of 7.99 mm2 which achieves a throughput of 24 Gbps at 370 MHz.
+Table I compares the proposed design with other long block-length decoders. While the other decoders use longer codes, the throughput is relatively low. It can be noted that for a similar area, the throughput for this work is significantly higher than existing designs.
+
+VI. CONCLUSION
+We have exploited this long block-length code in such a way so that it is possible to create a cell structure of nodes to allow for a partially-parallel implementation to greatly
+
+reduce the number of interconnects in the circuit. Such a method would greatly simplify and reduce the number of edges required to complete the graph, resulting in an area gain of at least 92%. A smaller circuit possessing only local connections implies faster and simpler circuitry as well. Since the structure of the circuit very modular, it would be straightforward to adapt it to other codes with a similar structure or for different decoding algorithms. A soft-decoder using the OMS algorithm was synthesized resulting in an area of 7.99 mm2 at a clock frequency of 370 MHz and a throughput of 24 Gbps. Although the ITU 975.1 standard requires a throughput of 40 Gbps, due to it’s modular design, this base architecture can be parallelized by replicating the processing nodes to achieve higher throughput. Such an upgrade would be straightforward using the same components with minimal additional hardware. This work also implements a soft decoder as opposed to the lower complexity hard decoders the code was designed for in order to provide improved performance.
+ACKNOWLEDGEMENTS
+The authors would like to thank C. Condo for his insightful comments.
+REFERENCES
+[1] J. J. O’Reilly, Y. Bian, A. Popplewell, S. Fragiacomo, and R. Blake, “Forward error control for future trans-oceanic optical systems,” in Proc. Fifth IEE Conf. on Telecommun., Brighton, 1995, pp. 78–82.
+[2] “SONET OC-192 Transport system generic criteria,” GR-1377-CORE, March 1998.
+[3] “ITU-T Recommendation G.709: Network node interface for the Optical Transport Network (OTN),” ITU Telecommun. Standardization Section.
+[4] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inform. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[5] ITU-T Recommendation G.975.1: Forward error correction for submarine systems, ITU Telecommunications Standardization Section, 2004.
+[6] S.-Y. Chung, G. D. Forney Jr., T. J. Richardson, and R. Urbanke, “On the design of low-density parity-check codes within 0.0045 db of the Shannon limit,” IEEE Commun. Lett., vol. 5, no. 2, pp. 58–60, Feb. 2001.
+[7] N. Wiberg, “Codes and decoding on general graphs,” Ph.D. dissertation, Dept. Science and Technology, Linko¨ping University, Linko¨ping, Sweden, 1996.
+[8] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate1/2 low-density parity-check code decoder,” IEEE Journal of Solid-State Circuits, vol. 37, pp. 404–412, March 2002.
+[9] C. Condo, M. Martina, and G. Masera, “VLSI implementation of a multi-mode turbo/LDPC decoder architecture,” IEEE Trans. Circuits and Systems I, vol. 60, pp. 1549–1454, May 2013.
+[10] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lanteibecq, and B. Gupta, “A 135Mb/sDVB-S2 compliant codec based on 64800b LDPC and BCH codes,” in Proc. of the Int. SolidState Circuits Conf., San Francisco, CA, 2005, pp. 446–609.
+[11] B. Zhang, H. Liu, X. Chen, D. Liu, and X. Yi, “Low complexity DVB-S2 LDPC decoder,” in Proc. of the IEEE Vehicular Tech. Conf., Barcelona, Spain, 2009, pp. 1–5.
+[12] J. Chen and M. P. C. Fossorier, “Near optimum universal belief propagation based decoding of low-density parity check codes,” IEEE Trans. Commun., vol. 50, no. 3, pp. 406–414, Mar. 2002.
+[13] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An efficient 10GBASE-T ethernet LDPC decoder design with low error floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, Apr. 2010.
+[14] P. Urard, L. Paumier, V. Heinrich, N. Raina, and N. Chawla, “A 360mW 105Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes enabling satellite-transmission portable devices,” in Proc. Int. Solid-State Circuits Conf., San Francisco, CA, 2008, pp. 310–311.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u3n7e 24,2026 at 16:43:15 UTC from IEEE Xplore. Restrictions apply.
+
+Table of Contents for this manuscript
+[15] S.-M. Kim, C.-S. Park, and S.-Y. Hwang, “A novel partially parallel architecture for high-throughput LDPC decoder for DVB-S2,” IEEE Trans. Consumer Electron., vol. 56, no. 2, pp. 820–825, Jul. 2010.
+[16] J. Kim, J. Cho, and W. Sung, “A high-speed layered min-sum LDPC decoder for error correction of NAND Flash memories,” in IEEE Midwest Symp. on Circuits Syst., Seoul, South Korea, 2011, pp. 1–4.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on J2u3n8e 24,2026 at 16:43:15 UTC from IEEE Xplore. Restrictions apply.
+
+

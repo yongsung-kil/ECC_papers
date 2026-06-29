@@ -1,0 +1,284 @@
+IEEE COMMUNICATIONS LETTERS, VOL. 24, NO. 11, NOVEMBER 2020
+
+2445
+
+Disjoint-Set Data Structure-Aided Structured Gaussian Elimination for Solving Sparse Linear Systems
+Xuan He , Member, IEEE, and Kui Cai , Senior Member, IEEE
+
+Abstract— Structured Gaussian elimination (SGE) is a class of methods for efficiently solving sparse linear systems. The key idea is to first triangulate the original linear systems. The maximum component (MC)-based strategies are widely used to implement the triangulation process. The most straightforward way to find the MC is through exhaustive search. Instead, in this letter, we propose to use a disjoint-set data structure (DSDS) to efficiently maintain the components. The extra storage and time complexity introduced by the DSDS are respectively linear to the number of unknowns and constraints involved in a linear system. Simulation results show that using the DSDS can be several times faster than doing the exhaustive search to find the components.
+Index Terms— Component, disjoint-set data structure (DSDS), sparse linear system, structured Gaussian elimination (SGE), triangulation.
+I. INTRODUCTION
+S OLVING sparse linear systems efficiently is a key problem for many other applications, such as factoring integers and computing discrete logarithms [1], [2], maximum-likelihood (ML) decoding of erasure codes [3]–[9], fast encoding of low-density parity-check (LDPC) codes [10], decoding of non-binary LDPC codes [11], and so on. Let F be a field of interest, such as F = R or F = GF (2). We consider the linear system below:
+Ax = y, A ∈ Fm×n, x ∈ Fn×l, and y ∈ Fm×l, (1)
+where m, n, and l are given positive integers. The task is to compute x (the unknowns) given A and y, i.e. to solve the linear system. The number of nonzero elements in a row (column) of A is called the row’s (column’s) weight/degree. Let θ denote the number of nonzero elements of A. If θ is much smaller than mn, we say A is a sparse matrix and (1) is a sparse linear system.
+Assuming the linear system of (1) is valid: there exists at least one x for Ax = y to be satisfied. A well-known result for solving (1) is that if and only if (iff) the columns of A are linearly independent, x can be uniquely recovered by using algorithms such as the Gaussian elimination (GE). However, the conventional GE has a time complexity of O(mn2 + mnl) (in terms of the number of operations over F, such as multiplications, additions, etc.), which can be
+Manuscript received June 10, 2020; revised July 11, 2020; accepted July 24, 2020. Date of publication July 28, 2020; date of current version November 11, 2020. This work is supported by RIE2020 Advanced Manufacturing and Engineering (AME) programmatic grant A18A6b0057 and Singapore Ministry of Education Academic Research Fund Tier 2 MOE2016-T2-2-054. The associate editor coordinating the review of this letter and approving it for publication was C. Condo. (Corresponding author: Kui Cai.)
+The authors are with the Science, Mathematics and Technology (SMT) Cluster, Singapore University of Technology and Design (SUTD), Singapore 487382 (e-mail: cai_kui@sutd.edu.sg).
+Digital Object Identifier 10.1109/LCOMM.2020.3012434
+
+prohibitive high for solving large linear systems (i.e., when n is large). Instead, when the linear system is sparse, it may be reduced to a much smaller linear system so as to reduce the cost of GE. This idea has been well investigated in [1]–[10].
+Specifically, these methods [1]–[10] contain a triangulation process which uses row and column permutations to convert (1) into the form below:
+
+
+
+
+
+Ax = L R x = y,
+
+(2)
+
+where L = [li,j ]1≤i≤m,1≤j≤n−γ ∈ Fm×(n−γ) is a lower triangular matrix, i.e., li,j = 0 for 1 ≤ i < j ≤ n − γ and li,i = 0 for 1 ≤ i ≤ n − γ. (For convenience, we keep the same notations A, x, and y, but they may actually be permuted versions from those defined by (1).) Then, (2) can be solved with time complexity O(θγ + θl + γ3 + γ2 l), as will be shown in details later. For γ  n, solving (2) can be much faster than using the conventional GE to solve (1). According to [1] and [2], these methods are referred to as structured GE (SGE). (SGE is also widely cited by inactivation decoding [5]–[7] in the context of decoding erasure codes, where the columns of R are named inactive columns accordingly.)
+Clearly, smaller γ leads to lower complexity for solving (2). Thus, many strategies have been proposed in [1]–[10] to greedily minimize γ during the triangulation process. In particular, the most popular and efficient strategies are referred to as the maximum component (MC)-based strategies [5]–[9] (see Section III-B for the definition of component). To find the MC, the most straightforward way is to traverse the whole Tanner graph [12] corresponding to A by using, for example, the depth-first search (DFS) [13, Chapter 22.3]. (To the best of our knowledge, there is no more efficient method available in the literature including [5]–[9].) As a result, searching for the components may become the computational bottleneck for solving the entire sparse linear system.
+In this letter, we propose to use a disjoint-set data-structure (DSDS) [13, Chapter 21] to efficiently maintain the components. The overall extra storage and time complexity introduced by the DSDS are linear to n and m, respectively, which are thus negligible compared to the cost of solving the entire linear system. Simulation results also verify that using the DSDS to maintain the components can be much faster than using the DFS to search for the components.
+The rest of this letter is organized as follows. In Section II, we introduce the preliminary of DSDS. In Section III, we first show how to efficiently solve (2) that is in the triangulation form. We then illustrate how to use the DSDS to efficiently maintain the components during the triangulation process. Section IV presents some simulation results to demonstrate
+
+1558-2558 © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:30 UTC from IEEE Xplore. Restrictions apply.
+
+2446
+
+IEEE COMMUNICATIONS LETTERS, VOL. 24, NO. 11, NOVEMBER 2020
+
+Fig. 1. Examples of the DSDS applied on V = {v1, v2, . . . , v7}. (a) Each element of V forms a rooted tree itself. (b) The rooted tree obtained by performing UNION(v2, v3). (c) The rooted tree obtained by performing UNION(v4, v5). (d) The rooted tree obtained from rooted trees of (b) and (c) by performing UNION(v3, v5). (e) Given (d), the rooted tree obtained by performing FIND(v5) or UNION(v2, v5). (f) The rooted tree obtained by performing UNION(v6, v7).
+Algorithm 1 FIND(v)
+1: if v = par(v) then 2: par(v) ← FIND(par(v)). 3: end if 4: return par(v).
+the efficiency of using the DSDS. Finally, Section V concludes this letter.
+II. DISJOINT-SET DATA STRUCTURE
+Let V be a set of n elements. Consider the scenario where at the beginning, each element forms a dynamic set that contains itself only. Then, the following two operations may frequently occur on V :
+• FIND(v): for any v ∈ V , find the dynamic set which v belongs to.
+• UNION(u, v): for any u, v ∈ V , if they belong to two different dynamic sets, say Su and Sv, respectively, unite Su and Sv into a new dynamic set.
+A DSDS [13, Chapter 21] applied on V can efficiently support the above two operations. The idea is to consider the elements of V as the nodes of a rooted forest (a set of rooted trees) and associate each dynamic set (subset) of V to a rooted tree in the forest. For any v ∈ V , let par(v) ∈ V point to the parent of v in the rooted tree which v belongs to. In particular, v is a root iff par(v) points to v, i.e., par(v) = v. At the beginning, we have par(v) = v, ∀v ∈ V , since each node forms a rooted tree itself (an example is shown in Fig. 1(a)). Obviously, each rooted tree must have a unique root that can be used to identify itself.
+For any v ∈ V , the operation FIND(v) is equivalent to finding the root of the tree that contains v. This is an easy task since par records the parent of each node. We summarize the FIND operation in Algorithm 1. Note that for each node u originally located on the path between v and the root r, r becomes the parent of u (i.e., par(u) = r) after calling FIND(v). For example, performing FIND(v5) on the rooted tree of Fig. 1(d) results in the rooted tree of Fig. 1(e). Such an operation is called path-compression [13, Chapter 21], which can shorten the distances between nodes and their roots so as to reduce the time complexity of future operations.
+
+Algorithm 2 UNION(u, v)
+1: ru ← FIND(u). 2: rv ← FIND(v). 3: if ru = rv then 4: if rank(ru) < rank(rv) then 5: swap(ru, rv). //To ensure rank(ru) ≥ rank(rv). 6: end if 7: par(rv) ← ru. //ru becomes root of the united tree. 8: if rank(ru) = rank(rv) then 9: rank(ru) ← rank(ru) + 1. 10: end if 11: end if
+For any u, v ∈ V , if they belong to two different rooted trees, the operation UNION(u, v) is equivalent to uniting these two trees into a new rooted tree. This is also an easy task: Find the roots of u and v, and make one root as the parent of the other root if they are different. Examples of the UNION operation can be found in Fig. 1. We summarize the UNION operation in Algorithm 2, where for any root r ∈ V , rank(r) is the rank of r, indicating the upper bound on the height of the rooted tree identified by r. At the beginning when initializing par, we also initialize the rank by rank(r) = 0, ∀r ∈ V , since the height of a single-node rooted tree is zero. rank(r) is increased by one when r becomes root of the tree that is united from two rooted trees (whose roots have the same rank), corresponding to line 9 of Algorithm 2. Moreover, rank(r) may be larger than the actual height of the rooted tree identified by r, since path-compression may reduce the height of a rooted tree. For example, rank(v2) is equal to 2 in Fig. 1(d). After performing FIND(v5), the rooted tree of Fig. 1(d) becomes the rooted tree of Fig. 1(e), where the actual height decreases from 2 to 1, but rank(v2) = 2 does not change. When uniting two rooted trees, we always make the root with the larger rank as the root of the united tree, corresponding to lines 4 to 7 of Algorithm 2. Such an operation is called union-by-rank [13, Chapter 21], which can also shorten the distances between nodes and their roots.
+Obviously, the storage complexity of a DSDS is O(n). On the other hand, assume that there are nf ≥ n FIND operations (each UNION operation can be considered as two FIND operations for simplicity). By implementing a DSDS with the heuristics of path-compression and union-by-rank, as shown in Algorithms 1 and 2, the time complexity for using the DSDS is O(α(n)nf ), where α(n) is the inverse Ackermann function and α(n) < 5 for any conceivable application of a DSDS [13, Chapter 21]. In the next section, we will apply the DSDS to efficiently implement the triangulation process that employs the MC-based strategies.
+III. SOLVING SPARSE LINEAR SYSTEM
+A. Benefit of Triangulation
+The benefit of triangulation is that it can significantly reduce the complexity for solving a sparse linear system. To show this, we now illustrate how to efficiently solve (2) (where triangulation is completed) with the following three steps.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:30 UTC from IEEE Xplore. Restrictions apply.
+
+HE AND CAI: DSDS-AIDED SGE FOR SOLVING SPARSE LINEAR SYSTEMS
+
+2447
+
+Step i: By using the row-multiplication and row-addition there exists a path between them. A size-t component is a set
+
+operations, convert (2) to
+
+
+
+
+
+I 0
+
+R1 R2
+
+x = y,
+
+(3)
+
+where I is an (n − γ) × (n − γ) identity matrix and 0 is a zero matrix. R1 and R2 generally become dense at this step. This step can be done with time complexity O(θγ + θl) by
+
+At = {vj1 , vj2 , . . . , vjt } of t different columns, where for any v ∈ At and v ∈/ At, v connects to each column in At but not to v. The MC is the component of the largest size.
+One important observation is that when a column of a component is moved to R, the remaining columns of the component will be moved to L accordingly. Due to this reason, the works of [5]–[8] suggested to select a column from the MC
+
+manipulating the rows from top to bottom in order.
+
+when A has degree-two rows (i.e., when the size of the MC
+
+Step ii: Apply the conventional GE to solve the reduced is greater than one). This idea is very effective in terms of
+
+linear system below:
+
+reducing γ, e.g., see the simulation results in [7], [8]. The
+
+R2x2 = y2 ,
+
+(4)
+
+where x2 corresponds to the last γ rows of x in (3) and y2 corresponds to the last m − n + γ rows of y in (3). If all columns of R2 are linearly independent, x2 has a unique solution. Otherwise, this step fails. This step can be done with time complexity O(γ3 + γ2 l).
+Step iii: By applying back substitution on (2), x2 solved in Step ii above can be used to recover the whole x. This step can be done with time complexity O(θl). (Instead, if applying back substitution on (3) to recover x, the time complexity is O(nγl) which is generally higher.)
+In summary, the above three steps can recover x from (2) with time complexity O(θγ + θl + γ3 + γ2 l), which can
+be much faster than applying the conventional GE on (1) especially for γ  n. In the next subsection, we will apply the DSDS to efficiently implement the MC-based strategies which can lead to almost the smallest γ in practice during the
+triangulation process. It is worth mentioning that a less pop-
+ular strategy, called the maximum cluster-based strategy [8], may achieve slightly smaller γ than the MC-based strategies.
+However, DSDS is not applicable to maintaining the clusters,
+and finding a maximum cluster is more complex than finding
+an MC.
+
+B. Disjoint-Set Data Structure-Aided Triangulation
+For 1 ≤ i ≤ m and 1 ≤ j ≤ n, we use ci and vj to denote the i-th row and j-th column of A, respectively. If the (i, j)-th element of A is nonzero, ci and vj are said to be a neighbour of each other. We use the following three steps to summarize
+
+most straightforward way for finding the MC is to traverse the whole Tanner graph [12] corresponding to A. This can be done by using the depth-first search (DFS) [13, Chapter 22.3], each time with time complexity O(θ) (in terms of the number of integer operations). In this way, the overall time complexity of triangulation will be O(θγ).
+Here, we propose to use a DSDS to maintain the components. Specifically, we regard the columns of A as the elements of the DSDS, each of which forms a rooted tree itself at Step 1. Then, each time at the beginning of Step 3, for any degree-two row of A, say ci, that has not been handled by the UNION operation, we handle ci by performing UNION(v, v), where v and v are the two neighbouring columns of ci. If v and v belong to two different rooted trees, performing UNION(v, v) can unite the two rooted trees into a new rooted tree. In this way, each rooted tree corresponds to a unique component, and each component must form a rooted tree. The rooted tree containing the largest number of columns is the MC that can be considered in Step 3.
+We use a toy example to show how to maintain the components using a DSDS. Consider the following matrix A:
+
+⎛ v1 v2 v3 v4 v5 v6 v7 ⎞
+
+c1 1 0 0 0 0 0 0
+
+A=
+
+c2 c3 c4 c5
+
+⎜⎜⎝⎜⎜⎜⎜
+
+1 0 1 1
+
+1 0 0 1
+
+1 0 1 0
+
+0 1 0 0
+
+0 1 1 1
+
+0 0 0 0
+
+0 0 0 0
+
+⎟⎟⎠⎟⎟⎟⎟.
+
+(5)
+
+c6 0 0 0 0 1 1 1
+
+At Step 1, each column forms a rooted tree itself,
+
+the general framework of [1]–[10] for triangulation. Step 1: Set L and R as ∅. Step 2: While A has a degree-one row, say the i-th row,
+a) move the i-th row’s neighbouring column to be the last column of L; b) swap the i-th and |L|-th rows independently for A, L, and R, where |L| is the number of columns of L. If A = ∅, exit.
+Step 3: Move a specific column of A into R. Goto Step 2.
+The above triangulation process can lead to the form of (2) (the order of rows of x and y need to be adjusted accordingly). The number of columns of R, i.e., γ, is fully
+
+i.e., par(vj ) = vj, j = 1, 2, . . . , 7, as shown by Fig. 1(a). Then, at Step 2, the first column is moved into L and this step
+is then completed. At the beginning of Step 3, the rows c2, c3, c4, and c5 have degree two. We handle these rows in order.
+• c2: Perform UNION(v2, v3), where par(v3) changes from v3 to v2, as shown by Fig. 1(b).
+• c3: Perform UNION(v4, v5), where par(v5) changes from v5 to v4, as shown by Fig. 1(c).
+• c4: Perform UNION(v3, v5). According to Algorithm 2, the roots of v3 and v5, i.e., v2 and v4, respectively, are
+returned by the FIND operations. Then, the rooted trees
+
+determined by the strategy for selecting the column in Step
+
+with roots v2 (Fig. 1(b)) and v4 (Fig. 1(c)) are united into
+
+3 above. To introduce the MC-based strategies, we first give
+
+the new rooted tree given by Fig. 1(d), where v2 becomes
+
+the definition of component below.
+
+the parent of v4, i.e., par(v4) = v2.
+
+Definition 1 (Component): vi and vj are directly connected • c5: Perform UNION(v2, v5). According to Algorithm 2,
+
+iff vi = vj, or A has a degree-two row whose two neigh-
+
+the roots of v2 and v5, i.e., v2 and v2, respectively, are
+
+bouring columns are vi and vj. vj1 , vj2 , . . . , vjt forms a path
+
+returned by the FIND operations. Moreover, according to
+
+iff for all 1 ≤ i < t, vji and vji+1 are directly connected.
+
+Algorithm 1, the FIND operations change the parent of v5
+
+vi and vj aAruethocroiznendeliccetensdediuffsetlhimeiytedatore: YodnisreeicUtlnyiv. cDoonwnnleoacdteeddoon rJune 24,20f2r6oamt 11v:341:t3o0 Uv2TC, afrsomshIEoEwEnXpbloyre.FiRge.st1ric(teio)n.sTahppelny., the UNION
+
+2448
+
+IEEE COMMUNICATIONS LETTERS, VOL. 24, NO. 11, NOVEMBER 2020
+
+operation is completed since v2 and v5 have the same root
+(indicating that they already belong to the same rooted
+tree). At this point, {v2, v3, v4, v5} forms a component of size 4,
+corresponding to the rooted tree of Fig. 1(e). It is the MC,
+while v6 and v7 each forms a component itself. As a result, we can move any column in {v2, v3, v4, v5} into R at Step 3. Here we move the root v2 into R, and go to Step 2 for the second time. Then, v3, v5, and v4 are moved into L in order accordingly, where the order of c3 and c4 is swapped when moving v5. The triangulation process enters Step 3 again. c6 is the only row that has not been handled and has degree two (as A now only contains v6 and v7). As a result, we handle c6 in the following way:
+• c6: Perform UNION(v6, v7), where par(v7) changes from v7 to v6, as shown by Fig. 1(f).
+After the above UNION operation, {v6, v7} forms a component
+of size 2. It is the only component and also the MC. We
+move the root v6 into R, and go to Step 2 for the third time. Finally, v7 is moved into L, and the order of c5 and c6 is
+swapped. At this point, the triangulation process is completed
+as A = ∅. The triangulation process converts (5) into the following desired form:
+
+⎛ v1 v3 v5 v4 v7 v2 v6 ⎞
+
+c1 1 0 0 0 0 0 0
+
+[L
+
+R] =
+
+c2 c4 c3 c6
+
+⎜⎜⎜⎜⎝⎜⎜
+
+1 1 0 0
+
+1 1 0 0
+
+0 1 1 1
+
+0 0 1 0
+
+0 0 0 1
+
+1 0 0 0
+
+0 0 0 1
+
+⎟⎠⎟⎟⎟⎟⎟,
+
+c5 1 0 1 0 0 1 0
+
+where R consists of the last two columns. We now analyze the complexity for using the DSDS to
+maintain the components. Obviously, the storage complexity is O(n). On the other hand, the total number of degree-two rows that occur in A during the whole triangulation process is upper bounded by m. Thus, there are at most m UNION and 2m FIND operations. Therefore, the overall time complexity for using the DSDS is O(α(n)m) according to Section II. Since α(n) < 5 for any n of interest to practical applications [13, Chapter 21], the time complexity for using the DSDS can be regarded as linear to m. Once the DSDS is used to maintain the components, the overall time complexity for finding the MC is upper bounded by O(nγ). Accordingly, the overall time complexity of the triangulation process is O(α(n)m+nγ +θ), which is generally several times lower than O(θγ), the time complexity of the triangulation process using DFS.
+
+IV. SIMULATION RESULTS
+
+In this section, we investigate the actual running time for using the DSDS and the DFS. We realize Step 3 of the triangulation process using the following MC-based strategy:
+• If A has degree-two rows, the root of the MC is moved into R. Otherwise, we follow the maximum accumulated weight-based strategy [7]–[9]: Find a row of the smallest degree. If there are multiple such rows, find one whose neighbouring columns have the largest number of nonzero elements. Select a neighbouring column of this row at random.
+
+Fig. 2. Average (solid lines) and maximum (dash lines) running time in seconds per test case versus erasure probability pe for decoding the rate-0.5 irregular LDPC code, where (m, n, l) = (5000, 10000, 3200).
+To the best of our knowledge, the above strategy is the most efficient MC-based one for triangulation that is available in the literature [1]–[10].
+We mainly focus on the decoding of binary erasure codes over the binary erasure channel (BEC), where the decoding is equivalent to solving the linear system of (1) with F = GF (2). We remark that each row of x and y is a bit string of length l. Moreover, except the operations involved in the triangulation process, most of the other operations are bit-XORing. Thus, for the sake of efficiency, we compress every 32 bits of each row of x and y into an integer (as the bit-width of an integer is 32 in C++), which can significantly reduce the storage and computation cost. We will show the running time of both the triangulation process and the overall decoding process when using the DSDS (resp. DFS) to maintain (resp. search for) the components. Simulations are carried out using a desktop computer equipped with 2.4GHz Intel Xeon CPU E5-2620. For each simulation point, the reported running time is for 10,000 random test cases.
+In the first example, we consider a rate-0.5 irregular LDPC code with variable and check node degree distributions 0.240602x + 0.210526x2 + 0.030075x3 + 0.125313x4 + 0.017544x6 + 0.375940x14 and 0.052632x6 + 0.902256x7 + 0.045113 x8, respectively. The parity check matrix of this code has m = 5000 rows and n = 10000 columns, and it is constructed by using the one-edge metric-constrained quasi-cyclic progressive edge-growth algorithm [14]. In the simulation, each sending codeword has n symbols. Each symbol is a bit string of length l = 3200. The symbols are transmitted one-by-one over the BEC with erasure probability pe: a symbol is totally lost with probability pe or correctly received with probability 1 − pe. The lost symbols are actually the unknowns we need to recover. The simulation results are presented in Fig. 2. We observe that for pe ≥ 0.45, using DSDS to maintain the components can be much faster than using DFS to search for the components. On the other hand, in this scenario, the triangulation process can be the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:30 UTC from IEEE Xplore. Restrictions apply.
+
+HE AND CAI: DSDS-AIDED SGE FOR SOLVING SPARSE LINEAR SYSTEMS
+
+2449
+
+may become the computational bottleneck for solving the entire linear system. Instead, in this letter, we proposed to use a disjoint-set data structure (DSDS) to efficiently maintain the components. The extra storage and time complexity for using the DSDS are linear to n and m, respectively. The simulation results with low-density parity-check (LDPC) codes and Luby transform (LT) codes over the binary erasure channel (BEC) showed that using DSDS to maintain the components can be several times faster than using DFS to search for the components.
+
+Fig. 3. Average (solid lines) and maximum (dash lines) running time in seconds per test case versus overhead (m − n) for decoding the LT code of length n = 1024. Each source symbol has l = 3200 bits. The robust soliton distribution with parameter (c, δ) = (0.01, 0.01) [15, Definition 11] is used.
+computational bottleneck for the overall decoding process. One main reason is that the triangulation process involves integer operations, and after triangulation, solving the linear system that mainly involves bit-XORing operations becomes very fast.
+In the second example, we consider the decoding of Luby transform (LT) codes [15]. In the simulation, the LT code has n = 1024 source symbols, each of which is a bit string of length l = 3200. The robust soliton distribution with parameter (c, δ) = (0.01, 0.01) [15, Definition 11] is used. Each encoded symbol is correctly received at the receiver, while we set different overheads for the receiver. The simulation results are presented in Fig. 3. We can see that using DSDS to maintain the components can also be much faster than using DFS to search for the components.
+V. CONCLUSION
+Maximum component (MC)-based strategies are widely used to implement the triangulation process when solving sparse linear systems by using structure Gaussian elimination (SGE). The most straightforward way is to use exhaustive search, such as depth-first search (DFS), to find the MC, which
+
+REFERENCES
+[1] A. M. Odlyzko, “Discrete logarithms in finite fields and their cryptographic significance,” in Proc. Workshop Theory Appl. Cryptograph. Techn., 1984, pp. 224–314.
+[2] B. A. LaMacchia and A. M. Odlyzko, “Solving large sparse linear systems over finite fields,” in Proc. Conf. Theory Appl. Cryptogr., 1991, pp. 109–133.
+[3] D. Burshtein and G. Miller, “Efficient maximum-likelihood decoding of LDPC codes over the binary erasure channel,” IEEE Trans. Inf. Theory, vol. 50, no. 11, pp. 2837–2844, Nov. 2004.
+[4] A. Shokrollahi and M. Luby, “Raptor codes,” Found. Trends Commun. Inf. Theory, vol. 6, nos. 3–4, pp. 213–322, May 2011.
+[5] Technical Specification Group RadioAccess Network; Introduction of the Multimedia Broadcast/Multicast Services (MBMS) in the Radio Access Network, document TS 25.346 V.7.0.0, 3GPP, Mar. 2006.
+[6] M. A. Shokrollahi, S. Lassen, and R. Karp, “Systems and processes for decoding chain reaction codes through inactivation,” U.S. Patent 6 856 263, Feb. 15, 2005,.
+[7] F. Lázaro, “Fountain codes under maximum likelihood decoding,” Ph.D. dissertation, Inst. Telecommun., Hamburg Univ. Technol., Hamburg, Germany, 2017.
+[8] E. Paolini, G. Liva, B. Matuz, and M. Chiani, “Maximum likelihood erasure decoding of LDPC codes: Pivoting algorithms and code design,” IEEE Trans. Commun., vol. 60, no. 11, pp. 3209–3220, Nov. 2012.
+[9] S. Kim, S. Lee, and S.-Y. Chung, “An efficient algorithm for ML decoding of raptor codes over the binary erasure channel,” IEEE Commun. Lett., vol. 12, no. 8, pp. 578–580, Aug. 2008.
+[10] T. J. Richardson and R. L. Urbanke, “Efficient encoding of lowdensity parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 638–656, Feb. 2001.
+[11] M. Zhang, K. Cai, Q. Huang, and S. Yuan, “On bit-level decoding of nonbinary LDPC codes,” IEEE Trans. Commun., vol. 66, no. 9, pp. 3736–3748, Sep. 2018.
+[12] R. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. 27, no. 5, pp. 533–547, Sep. 1981.
+[13] T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, Introduction to Algorithms, 3nd ed. Cambridge, MA, USA: MIT Press, 2009.
+[14] X. He, L. Zhou, and J. Du, “PEG-like design of binary QC-LDPC codes based on detecting and avoiding generating small cycles,” IEEE Trans. Commun., vol. 66, no. 5, pp. 1845–1858, May 2018.
+[15] M. Luby, “LT codes,” in Proc. IEEE Symp. Found. Comput. Sci., Nov. 2002, pp. 271–280.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:31:30 UTC from IEEE Xplore. Restrictions apply.
+
+

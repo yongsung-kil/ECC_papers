@@ -1,0 +1,581 @@
+A synthesizable IP Core for DVB-S2 LDPC Code Decoding
+Frank Kienle, Torben Brack, Norbert Wehn Microelectronic System Design Research Group
+University of Kaiserslautern Erwin-Schro¨ dinger-Straße 67663 Kaiserslautern, Germany {kienle, brack, wehn}@eit.uni-kl.de
+
+Abstract
+The new standard for digital video broadcast DVB-S2 features Low-Density Parity-Check (LDPC) codes as their channel coding scheme. The codes are defined for various code rates with a block size of 64800 which allows a transmission close to the theoretical limits.
+The decoding of LDPC is an iterative process. For DVBS2 about 300000 messages are processed and reordered in each of the 30 iterations. These huge data processing and storage requirements are a real challenge for the decoder hardware realization, which has to fulfill the specified throughput of 255MBit/s for base station applications.
+In this paper we will show, to the best of our knowledge, the first published IP LDPC decoder core for the DVB-S2 standard. We present a synthesizable IP block based on ST Microelectronics 0.13µm CMOS technology.
+1 Introduction
+The new DVB-S2 standard [1] features a powerful forward error correction (FEC) system which enables transmission close to the theoretical limit (Shannon limit). This is enabled by using Low-Density Parity-Check (LDPC) codes [2] one of the most powerful codes known today which can even outperform Turbo-Codes [3]. To provide flexibility 11 different code rates ranging from (R = 1/4 up to 9/10) are specified with a codeword length up to 64800 bits. This huge maximum codeword length is the reason for the outstanding communications performance (∼0.7dB to Shannon) of this DVB-S2 LDPC code proposal, so in this paper we only focus on the codeword length of 64800 bits. To yield this performance, the decoder has to iterate 30 times. At each iteration up to 300 000 data are scrambled and calculated. This huge data processing, storage and network/interconnect requirements is a real challenge for the decoder realization.
+
+A LDPC code can be represented by a bipartite graph. For the DVB-S2 code 64800 so called variable nodes (VN) and 64800 ∗ (1 − R) check nodes (CN) exist. The connectivity of these two type of nodes is specified in the standard [1]. For decoding the LDPC code messages are exchanged iteratively between this two type of nodes, while the node processing is of low complexity. Within one iteration first the variable nodes are procesed, then the check nodes.
+For a fully parallel hardware realization each node is instantiated and the connections between them are hardwired. This was shown in [4] for a 1024 bit LDPC code. But even for this relatively short block length severe routing congestion problems exist. Therefore a partly parallel architecture becomes mandatory for larger block length, where only a subset of nodes are instantiated. A network has to provide the required connectivity between VN and CN nodes. But realizing any permutation pattern is very costly in terms of area, delay and power.
+To avoid this problem a decoder first design approach was presented in [5]. First an architecture is specified and afterwards a code is designed which fits this architecture. This approach is only suitable for regular LDPC code where each VN has the same number of incident edges, the CN respectively. But for an improved communications performance so called irregular LDPC codes are mandatory [6], where the VN nodes are of varying degrees. This is the case for the DVB-S2 code. In [7] we have presented a design method for irregular LDPC codes which can be efficiently processed by the decoder hardware. We used so called irregular repeat accumulate (IRA) codes [8] which are within the class of LDPC codes with the advantage of a very simple (linear) encoding complexity. In general, LDPC code encoder are very difficult to implement due to the inherent complex encoding scheme.
+The LDPC codes as defined in the DVB-S2 standard are IRA codes, thus the encoder realization is straight forward. Furthermore, the DVB-S2 code shows regularities which can be exploited for an efficient hardware realization.
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+K information nodes (IN)
+
+fj
+
+f3
+
+N parity nodes (PN)
+
+Permutation Π
+
+degree k CN
+
+Figure 1. Tanner graph for the DVB-S2 LDPC code
+
+These regularities are also the base for our methodology introduced in [7].
+In this paper we show how to exploit these regularities and present an efficient mapping of VN and CN nodes to hardware instances. Memory area and access conflicts are most critical in this mapping process. Thus we used simulated annealing to minimize memory requirements and avoidance of RAM access conflicts.
+We present to the best of our knowledge the first IP core capable to process all specified code rates in the DVB-S2 standard. We show synthesis results using a 0.13µm technology.
+The paper is structured as follows: the DVB-S2 LDPC codes and the decoding algorithm are presented in Section 2. In Section 3 the mapping of nodes to hardware instances is explained. The overall decoder architecture is shown in Section 4. Section 5 gives synthesis results and Section 6 concludes the paper.
+
+2 DVB-S2 LDPC Codes
+
+LDPC codes are linear block codes defined by a sparse binary matrix (parity check matrix) H. The set of valid codewords x ∈ C have to satisfy
+
+HxT = 0, ∀x ∈ C.
+
+(1)
+
+A column in H is associated to a bit of the codeword and each row corresponds to a parity check. A nonzero element in a row means that the corresponding bit contributes to this parity check. The code can best be described by a Tanner graph [6], a graphical representation of the associations between code bits and parity checks. Code bits are shown as variable nodes (circles), and parity checks as check nodes (squares), with edges connecting them. The number of edges on each node is called the node degree. If the node degree is identical for all variable nodes, the corresponding parity check matrix is called regular, otherwise it’s irregular.
+By carefully inspection of the construction rules, the DVB-S2 parity check matrix consists of two distinctive
+
+Rate j
+
+fj
+
+f3
+
+k
+
+N
+
+K
+
+1/4 12 5400 10800 4 49600 16200
+
+1/3 12 7200 14400 5 43200 21600
+
+2/5 12 8640 17280 6 38880 25920
+
+1/2 8 12960 19440 7 32400 32400
+
+3/5 12 12960 25920 11 25920 38880
+
+2/3 13 4320 38880 10 21600 43200
+
+3/4 12 5400 43200 14 16200 48600
+
+4/5 11 6480 45360 18 12960 51840
+
+5/6 13 5400 48600 22 10800 54000
+
+8/9 4 7200 50400 27 7200 57600
+
+9/10 4 6480 51840 30 6480 58320
+
+Table 1. Parameters describing the DVB-S2 LDPC Tanner graph for different coderates
+
+parts: a random part dedicated to the systematic information, and a fixed part that belongs to the parity information. The Tanner graph for DVB-S2 is shown in Figure 1. There exist two types of variable nodes, the information (IN) and parity nodes (PN), corresponding to the systematic and parity bits respectively. The permutation Π represents the random matrix part of the connectivity between IN and CN nodes, while the PN nodes are all of degree two and are connected in a fixed zigzag pattern to the CN nodes. The N check nodes have a constant degree k. The K information nodes consist of two subsets f j and f3, with f the number of IN nodes of degree j and 3. Table 1 summarizes the code rate dependent parameters as defined in the standard [1].
+The connectivity of the IN and CN nodes is defined by the DVB-S2 encoding rule
+
+p j = p j ⊕ im, j = (x + q(m mod 360)) mod N. (2)
+
+p j is the jth parity bit, im the mth information code bit, and x, q, and N are code rate dependent parameters specified by the DVB-S2 standard. Equation 2 determines the entries of the parity check matrix. The mth column has nonzero elements in each row j, thus the permutation Π generates one edge between every CN m and IN j.
+The fixed zigzag connectivity of the PN and CN nodes is defined by the encoding scheme:
+
+p j = p j ⊕ p j−1, j = 1, 2, ..., N − 1.
+
+(3)
+
+This is a simple accumulator. The corresponding part of the parity check matrix has two nonzero elements in each column, forming a square banded matrix. This type of LDPC codes with this simple encoding procedure are also called irregular repeat accumulate (IRA) codes [8].
+
+2.1 Decoding Algorithm
+
+LDPC codes can be decoded using the message passing algorithm [2]. It exchanges soft-information iteratively
+
+2
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+a)
+
+CN0
+
+PN0
+
+CN1
+
+PN1
+
+CN2
+
+parity node update (parallel)
+check node update (parallel) b)
+
+CN0
+
+PN0
+
+CN1
+
+PN1
+
+CN2
+
+forward update (sequential) backward update (parallel)
+
+Figure 2. a) conventional message update scheme b) optimized message update scheme
+
+between the variable and check nodes. The update of the nodes can be done with a canonical scheduling [2]: In the first step all variable nodes must be updated, in the second step all check nodes respectively. The processing of individual nodes within one step is independent, and can thus be parallelized.
+The exchanged messages are assumed to be loglikelihood ratios (LLR). Each variable node of degree i calculates an update of message k according to:
+
+i−1
+
+∑ λk = λch +
+
+λl ,
+
+(4)
+
+l=0,l=k
+
+with λch the corresponding channel LLR of the VN and λi the LLRs of the incident edges. The check node LLR up-
+
+dates are calculated according to
+
+i−1
+
+tanh(λk/2) = ∏ tanh(λl/2).
+
+(5)
+
+l=0,l=k
+
+For fixed-point implementations it was shown in [9] that the total quantization loss is ≤ 0.1db when using a 6 bit
+
+message quantization compared to infinite precision. For a
+
+5 bit message quantization the loss is 0.1-0.2 dB [6].
+
+2.2 Optimized update of degree 2 Parity Nodes
+
+The DVB standard supports LDPC codes ranging from code rate R = 1/4 to R = 9/10. Each code has one common property: the connectivity of the check nodes caused by the accumulator of the encoder. CN0 is alway connected to CN1 by a variable node of degree 2 and so on for all CN nodes. A variable node of degree 2 has the property that the input of the first incident edge is the output of the second incident edge (plus the received channel value) and vice versa. For a sequential processing of the check nodes (e.g. from left to right in Figure 1) an already updated message can directly passed to the next check node due to the simple zigzag connectivity. This immediate message update changes the con-
+
+Rate q EPN
+
+EIN Addr
+
+1/4 135 97199 97200 270
+
+1/3 120 86399 129600 360
+
+2/5 108 77759 155520 432
+
+1/2 90 64799 162000 450
+
+3/5 72 51839 233280 648
+
+2/3 60 43199 172800 480
+
+3/4 45 32399 194400 540
+
+4/5 36 25919 207360 576
+
+5/6 30 21599 216000 600
+
+8/9 20 14399 180000 500
+
+9/10 18 12959 181440 504
+
+Table 2. Code rate dependent parameters, with E the number of incident edges of IN and PN nodes and Addr the number of values required to store the code stucture
+ventional update scheme between CN an VN nodes (Equation 4).
+The difference in the update scheme is presented in Figure 2. Only the connectivity between check nodes and parity nodes is depicted, the incident edges from the information nodes are omitted. Figure 2a) shows the standard belief propagation with the two phase update. In the first phase all messages from the PN to CN nodes are updated, in the second phase the messages from CN to PN nodes respectively. The message update within one phase is commutative and can be fully parallized. Figure 2b) shows our new message update scheme in which the new CN message is directly passed to the next CN node. This data flow is denoted as a forward update and corresponds to a sequential message update. The backwards update from the PN to CN nodes is again a parallel update. Note that a sequential backwards update would result in a maximum a posteriori (MAP) algorithm.
+This new update scheme improves the communications performance. For the same communications performance 10 iterations can be saved i.e. 30 iterations instead of 40 have to be used. Furthermore we need to store only one message instead of two messages for the next iteration, which is explained in more detail in Section 4.
+3 Hardware mapping
+As already mentioned only partly parallel architectures are feasible. Hence only a subset P of the nodes are instantiated. The variable and check nodes have to be mapped on these P functional units. All messages have to be stored during the iterative process, while taking care of RAM access conflicts. Furthermore we need a permutation networks which provides the connectivity of the Tanner graph.
+
+3
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+0
+
+360
+
+Information Nodes
+
+720 1080
+
+message mapping 1440
+
+1800
+
+2160
+
+---
+
+32040
+
+360 message RAM banks
+
+1 361 721 1081 1441 1801 2161 --32041
+
+2 362 722 1082 1442 1802 2162 --32042
+
+359 721 1079 1439 1799 2159 2519 --32399
+
+VN functional units
+
+VN
+
+VN
+
+VN
+
+shuffling network
+
+0
+
+90
+
+180
+
+1
+
+91
+
+181
+
+2
+
+92
+
+182
+
+Check Nodes 3
+
+message mapping
+
+4 5
+
+93
+
+183
+
+94
+
+184
+
+95
+
+185
+
+6
+
+96
+
+186
+
+---
+
+---
+
+---
+
+89
+
+179
+
+269
+
+VN
+32310 32311 32312 32313 32314 32315 32316
+... 32399
+
+CN functional units
+
+CN
+
+CN
+
+CN
+
+CN
+
+shift value
+0 111 304 59 3 190 219 140 0 94 ...
+reading address
+48 65 113 420 330 332 399 202 280 513 ...
+
+Figure 3. Message and functional unit mapping for R = 1/2
+
+We can split the set of edges E connecting the check
+
+nodes in two subsets EIN and EPN, indicating the connec-
+
+tions between CN/IN nodes and CN/PN nodes respectively.
+
+The subsets are shown in Table 2 for each code rate. Fur-
+
+thermore the q factor of Equation 2 is listed. The implemen-
+
+tation of EIN is the challenging part, since this connectivity (Π) changes for each code rate. The realization of EPN is
+
+straightforward, thus we focus on the mapping of the IN
+
+and CN nodes.
+
+Due to the varying node degrees the functional nodes
+
+process all incoming messages in a serial manner. Thus a
+
+functional node can except one message per clock cycle and
+
+produces at most one updated message per clock cycle.
+
+A careful analysis of Equation 2 shows that the connec-
+
+tivity of 360 edges of distinct information nodes are deter-
+
+mined by just one value x, while q is a code rate dependent
+
+constant, see Table 2.
+
+These 360 edges can be processed simultaneously by
+
+P = 360 functional units. Within a half iteration a func-
+
+tional unit has to process q ∗ (k − 2) edges. (k − 2) is the
+
+number of edges between one check node and information
+
+nodes. For each code rate q was chosen to satisfy the con-
+
+straint
+
+EIN/360 = q ∗ (k − 2).
+
+(6)
+
+It guarantees that each functional unit has to process the same amount of nodes which simplifies the node mapping. Figure 3 shows the mapping of the IN and CN nodes for the LDPC code of rate R = 1/2. Always 360 consecutive VN nodes are mapped to 360 functional units. To each func-
+
+tional unit a RAM is associated to hold the corresponding messages (edges). Please note that for each IN of degree 8, 8 storage places are allocated to this VN, because each incident edge has to be stored.
+The check nodes mapping depends on the rate dependent factor q. For R = 1/2 the first q = 90 CN nodes are mapped to the first functional unit. The next 90 CN nodes are mapped to the next producer and so on. Again the CN number corresponds to CN degree storage locations.
+This node mapping is the key for an efficient hardware realization, since it enables to use a simple shuffling network to provide the connectivity of the Tanner graph. The shuffling network ensures that at each cycle 360 input messages are shuffled to 360 distinct target memories. Thus we have to store EIN/390 = 450 shuffling and addressing information for the R = 1/2 code, see Table 2 for the other code rates. The shuffling offsets and addresses can be extracted from the x tables provided by [1].
+4 Decoder Architecture
+Based on the message mapping described in the previous chapter, the basic architecture of the DVB-S2 LDPC decoder is shown in Figure 4. It consists of functional units which can process the functionality of variable and check nodes. This is possible, since only one type of the node are processed during one half iteration. The IN message memories banks hold the messages which are exchanged between information and check nodes. Furthermore we have memories for storing the exchanged messages for the parity nodes (PN message memories), which are all of degree two. The address and shuffling RAM together with the shuffling network provides the connectivity of the Tanner graph.
+As mentioned the decoder processes 360 nodes in parallel so 360 messages have to be provided per cycle. All 360 messages are read from the same address from the IN message memory bank. Though, for the information node processing we just increment the reading address. The functional unit can accept each clock cycle new data, while a control flag just labels the last message belonging to a node and starts the output processing. The newly produced 360 messages are then written back to the same address location but with a cyclic shift, caused by the shuffling network. To process the check nodes we have to read from dedicated addresses, provided by the address RAM. These addresses were extracted from node mapping as described in the previous chapter. Again 360 messages are read per clock cycle and written back to the same address after the processing via the shuffling network. This ensures that the messages are shuffled back to their original position.
+The processing of the parity nodes can be done concurrently during the check node processing, by using the update scheme described in Section 2.2. Each functional
+
+4
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+PN message memory
+
+CH RAM IN message memory block PN message memory PN message memory PN message memory
+
+address RAM CH RAM IN message memory block CH RAM IN message memory block CH RAM IN message memory block
+
+shuffling RAM
+
+f
+
+f
+
+f
+
+f
+
+shufffling network Π
+
+Figure 4. Basic architecture of our LDPC decoder
+
+unit processes consecutive check nodes (Figure 3). The message which is passed during the forward update of the check nodes is kept in the functional unit. Only the messages of the backward update has to be stored which reduces the memory requirements for the zigzag connectivity to EPN/2 messages. The PN message memories are only read and written during the check node phase, while the channel (CH) RAMs delivers the corresponding received channel value.
+We use single port SRAMs due to area and power efficiency. Hence we have to take care of read/write conflicts during the iterative process. Read/write conflicts occur, since data are continously read from the 360 RAMs and provided to the functional units, while new processed messages have to be written back.
+The check node processing is the most critical part. We have to read from dedicated addresses extracted during the mapping process. Therefore, the IN message memory block is partitioned in 4 RAMs which is shown in Figure 5. Even if the commutativity of the message processing within a check node is exploited all write conflicts can not be avoided. Therefore a buffer is required to hold a message if writing is not possible due to a conflict. We use simulated annealing to find the best addressing scheme to reduce RAM access conflicts and hence to minimize the buffer overhead. This optimization step ensures that only one buffer is required which holds for all code rates. Per clock cycle we read data from one RAM, and write at most 2 data back to two distinct RAMs, coming from the buffers or the shuffling network. The two least significant bits of the addresses determines the assignment to a partition. This
+
+allows a simple control flow, which just has to compare the reading and the writing addresses of the current clock cycle.
+The resulting decoder throughput T is
+
+T
+
+=
+
+I #cyc
+
+·
+
+fcyc,
+
+(7)
+
+with I the number of information bits to be decoded and
+
+#cyc the number of cycles to decode one block including
+
+the input/output (I/O) processing.
+
+The
+
+number
+
+of
+
+cycles
+
+is
+
+calculated
+
+as
+
+C PIO
+
++ It
+
+·
+
+2
+
+·
+
+EIN P
+
+.
+
+Thus Equation 7 yields:
+
+T=
+
+C PIO
+
++
+
+It
+
+·
+
+I
+
+2
+
+·
+
+(
+
+EIN P
+
++ Tlatency)
+
+· fcycle.
+
+(8)
+
+The
+
+part
+
+C PIO
+
+is
+
+the
+
+number
+
+of
+
+cycles
+
+for
+
+input/output
+
+(I/O) processing. The decoder is capable to receive 10 chan-
+
+nel values per clock cycle. Reading a new codeword of size
+
+C and writing the result of the prior processed block can be
+
+done in parallel with reading/writing PIO data concurrently.
+
+The latency Tlatency for each iteration depends on the pro-
+
+cessing units and the shuffling network.
+
+5 Results
+
+The LDPC decoder is implemented as a synthesizable VHDL model. Results are obtained with the Synopsis Design Compiler based on a ST Microelectronics 0.13µm CMOS technology. The maximum clock frequency is 270 MHz under worst case conditions. The decoder is capable to process all specified code rates of the DVB standard with
+
+5
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+decoder
+RAM 1 RAM 2 RAM 3 RAM 4 IN message memory block
+
+input
+buffer
+
+address
+
+0.13µm technologie
+
+channel LLRs
+
+RAMs
+
+Messages
+
+Address/Shuffling
+
+Logic Functional Nodes control logic
+
+Shuffling Network
+
+Total Area [mm2]
+
+AREA [mm2] 1.997 9.117 0.075
+10.8 0.2
+0.55
+22.739
+
+Table 3. Synthesis Results for the DVB-S2 LDPC code decoder
+
+output
+Figure 5. Hierarchical RAM structure
+the required throughput of 255Mbit/s. 30 iterations are assumed.
+Table 3 shows the synthesis results for a 6 bit message quantization of the channel values and the exchanged messages. The overall area is 22.74mm2. The area is determined by different code rates.
+R = 1/4 has the largest set of parity nodes and defines the size of the PN message memories. While the rate R = 3/5 has the most edges to the informtion nodes and hence determines the size of the IN message memory banks. The size of a functional node depends on the maximum IN and PN degree, respectivly (R = 2/3 and R = 9/10).
+The area is splitted in three parts: RAMs, logic and the shuffling network. Storing the messages yields the major part of the RAM area with 9.12mm2. It is important to note, that only an area of 0.075mm2 is required to store the connectivity of the Tanner graph. This shows the efficiency of our architectural approach. The logic area of the functional nodes with 10.8mm2 is a major part of the overall area. This is due to the required flexibility of the different code rates. We also placed and routed the shuffling network to test routing congestions. Due to its regularity no congestions resulted, its area is dominated by the logic cells.
+6 Conclusion
+Low-Density Parity-Check codes are part of the new DVB-S2 standard. In this paper we presented to the best of our knowledge the first published IP core for DVB-S2 LDPC decoding. We explained how to explore the code structure for an efficient hardware mapping and presented a decoder architecture which can process all specified code rates ranging from R = 1/4 to R = 9/10.
+
+7 Acknowledgments
+The work presented in this paper was supported by the European IST project 4More 4G MC-CDMA multiple antenna system On chip for Radio Enhancements [10].
+Our special thanks goes to Friedbert Berens from the Advanced System Technology Group of STM, Geneva, Switzerland, for many valuable discussions.
+References
+[1] European Telecommunications Standards Institude (ETSI). Digital Video Broadcasting (DVB) Second generation framing structure for broadband satellite applications; EN 302 307 V1.1.1. www.dvb.org.
+[2] R. G. Gallager. Low-Density Parity-Check Codes. M.I.T. Press, Cambridge,Massachusetts, 1963.
+[3] C. Berrou. The Ten-Year-Old Turbo Codes are Entering into Service. IEEE Communications Magazine, 41:110– 116, Aug. 2003.
+[4] A. Blanksby and C. J. Howland. A 690-mW 1-Gb/s, Rate1/2 Low-Density Parity-Check Code Decoder. IEEE Journal of Solid-State Circuits, 37(3):404–412, Mar. 2002.
+[5] E. Boutillon, J. Castura, and F. Kschischang. Decoderfi rst code design. In Proc. 2nd International Symposium on Turbo Codes & Related Topics, pages 459–462, Brest, France, Sept. 2000.
+[6] T. Richardson and R. Urbanke. The Renaissance of Gallager’s Low-Density Pariy-Check Codes. IEEE Communications Magazine, 41:126–131, Aug. 2003.
+[7] F. Kienle and N. Wehn. Design Methodology for IRA Codes. In Proc. 2004 Asia South Pacifi c Design Automation Conference (ASP-DAC ’04), Yokohama, Japan, Jan. 2004.
+[8] H. Jin, A. Khandekar, and R. McEliece. Irregular RepeatAccumulate Codes. In Proc. 2nd International Symposium on Turbo Codes & Related Topics, pages 1–8, Brest, France, Sept. 2000.
+[9] T. Zhang, Z. Wang, and K. Parhi. On fi nite precision implementation of low-density parity-check codes decoder. In Proc.International Symposium on Circuits and Systems (ISCAS ’01), Antwerp,Belgium, May 2001.
+[10] http://ist-4more.org.
+
+6
+
+Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE’05) 1530-1591/05 $ 20.00AIuEthEoErized licensed use limited to: Yonsei Univ. Downloaded on June 23,2026 at 11:54:29 UTC from IEEE Xplore. Restrictions apply.
+
+

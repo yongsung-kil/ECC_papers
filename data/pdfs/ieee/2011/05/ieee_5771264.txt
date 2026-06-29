@@ -1,0 +1,524 @@
+IEEE International Symposium on Field-Programmable Custom Computing Machines
+
+Using Functional Programming to Generate an LDPC Forward Error Corrector
+
+Andy Gill, Tristan Bull, Dan DePardo, Andrew Farmer, Ed Komp, Erik Perrins Information Technology and Telecommunication Center
+Department of Electrical Engineering and Computer Science The University of Kansas
+{andygill,tbull,ddepardo,afarmer,komp,esp}@ittc.ku.edu
+
+Abstract—FPGAs as commodities offer a resource for highperformance computation that is unmatched in flexibility and price/performance. As a lab, we are interested in high-level descriptions of computation and data, and how they may be customized to map effectively on FPGA fabrics. This paper describes our tool-chain, approach and methodology to FPGA utilization. We give a case study of the generation of a low density parity checking forward error correction algorithm, and discuss the specific challenges we faced with using FPGAs as our target.
+I. INTRODUCTION
+FPGAs offer a fantastic opportunity for accessible lowcost high-performance computation. From a computational description point of view, VHDL or Verilog programs provide a rich framework of description possibilities, albeit coded in a highly stylized manner. As a research group, we are interested in using functional programming to build on top of these frameworks, and provide Domain Specific Languages (DSLs) that offer malleable and efficient models of computation running on FPGAs.
+This paper outlines our successes and frustrations when using our VHDL generator written on top of a functional language to implement an LDPC decoder. We start with a brief description of our toolkit, then describe the LDPC algorithm, and how we implemented it using techniques from functional programming. The specific algorithm we used makes use of the generative nature of our tool, and is currently unpublished. FPGAs are critical to the success of our mission of bringing new computational tools that leverage functional programming. Finally, we discuss the challenges we faced taking a working computational engine for LDPC, and getting it working on an FPGA, as well as make constructive suggestions about what could be improved.
+The connection between functional programming and describing hardware has been frequently observed [1], at least by functional programming advocates. The principal points of common interests are (1) the frequent use of the stream idiom in functional programming mirrors synchronously clocked circuits neatly, both semantically and pragmatically; (2) that both hardware and functional programming often take a black-box approach to components, where a component, once defined, is considered only in terms of its inputs
+
+and outputs; and (3) that functional programs can form a convenient macro language on top of (the structural subset of) languages like VHDL and Verilog, instilling new life and new facilities to an old language.
+We are particularly inspired by the work that uses the lazy functional programming language Haskell [2], and the diverse family of small hardware description languages that have grown up using Haskell as a host language. Representatively, there is Chalmers Lava [3] with an emphasis on connections to theorem provers, Xilinx Lava [4] with an emphasis on efficient layout on specific Xilinx FPGAs, ForSyDe [5] for modeling higher-level forms of communication and computations, and Hydra [6], which was one of the first systems to connect lazy functional programming and hardware description.
+Following tradition, we call our system Kansas Lava [7]. We are interested in using types to describe low-level communications between hardware sub-components, and using these types to refine efficient programs, as well as explore alternative designs. The novel contribution of our system is an aggressive use of advanced static type systems [8] to express the form of communication between components, as well as providing an implementation that scales to generate circuits that run on large, modern FPGAs.
+
+II. KANSAS LAVA PRIMER
+
+As a first example of a Kansas Lava program, consider the problem of describing a counter component that counts the number of times a clocked signal goes high.
+
+counter :: (Rep a, Num a, Clock clk, CSeq clk ˜ sig) 1
+
+=> sig Bool -> sig Bool -> sig a
+
+2
+
+counter restart inc = loop
+
+3
+
+where reg = register 0 loop
+
+4
+
+reg’ = mux2 restart (0,reg)
+
+5
+
+loop = mux2 inc (reg’ + 1, reg’)
+
+6
+
+This is a Haskell function counter, that is also a Kansas Lava function. The text following the :: on line 1-2 is the type of the counter. This type states that the function takes two clocked signals of boolean values, and returns a clocked signal of values that are both Representable and a Number, and both the inputs and output use the same clock. Lines 3-6 are the definition of counter, in terms of three mutually defined streams. register acts as a clocked delay, with an initial value of 0, so reg is defined as the value of loop
+
+978-0-7695-4301-7/11 $26.00 © 2011 IEEE
+
+133
+
+DOI 10.1109/FCCM.2011.31
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+... entity counter is
+port(rst : in std_logic; clk : in std_logic; clk_en : in std_logic; i0 : in std_logic; i1 : in std_logic; o0 : out std_logic_vector(3 downto 0));
+end entity counter; architecture str of counter is
+signal sig_2_o0 : std_logic_vector(3 downto 0); ... begin sig_2_o0 <= sig_5_o0 when (i1 = ’1’) else sig_6_o0; sig_5_o0 <= std_logic_vector(...); sig_6_o0 <= "0000" when (i0 = ’1’) else sig_10_o0; sig_10_o0_next <= sig_2_o0; proc14 : process(rst,clk) is begin
+if rst = ’1’ then sig_10_o0 <= "0000";
+elsif rising_edge(clk) then if (clk_en = ’1’) then sig_10_o0 <= sig_10_o0_next;
+....
+
+Data Generator
+
+Optional Haskell Model
+
+Haskell Language
+Result Verifier
+
+Signals
+
+Kansas Lava Language
+
+Kansas Lava Implementation
+
+Signals
+
+KLEG Optimizer
+Debugging output
+
+Graph Capture
+KLEG
+VHDL
+
+VCD (etc)
+Testbench Generation
+ModelSim
+XST
+
+Figure 2. Kansas Lava Architecture
+
+Figure 1. VHDL Generated for counter
+in the previous cycle. reg’ is a version of reg that can optionally be reset to 0, and loop, the result of counter, is either the previous value reg’, or the previous value of reg’ incremented. There are other styles of coding logic design supported, including a RTL mode, but most Kansas Lava functions tend to be written in the above style.
+counter is just a Haskell function, and a first class citizen in the Haskell universe. This allows standard and hand-written functions to construct Lava programs, using regular functional programming. For example, counter can be invoked directly.
+> let xs = [True,False,False,True,False,False] > counter low (toSeq xs) :: Seq U4 111222??????
+toSeq takes a standard list of boolean values, and turns this list into a lazy stream of values. counter takes these values as an argument, and returns a lazy stream of unsigned 4-bit values, representing a clocked sequence of values. The stream has undefined contents after the sixth cycle, notated using ‘?’.
+Kansas Lava, like many other Lavas, provides a way of generating VHDL directly from the Lava program. It does this using a technique called reification [9], that captures an executable function in a way that allows inspecting and VHDL generation. In Kansas Lava we can capture our counter using the “function-capturing” function reify.
+> cir <- reify (counter :: ... -> Seq U4) > writeVHDL "counter" "counter.vhd" cir
+Figure 1 show the VHDL generated for counter. This generation is intentionally designed as a two stage process to allow others functions to act on the captured circuit. Figure 2 show a set of such typical use cases, including simulation, testbench generation, and VHDL generation.
+
+Kansas Lava makes extensive use of strong static typing. By providing many fundamentally equivalent ways of expressing values, and coercions between these values, Kansas Lava programs can span the spectrum from clear, specification style through to explicitly structural code. The concept, and the academic merit of the overarching project, is that an engineer can start with a Haskell program, refine this by hand to introduce high-level Lava-specific concepts, ending up with a bit-accurate model that can be captured as a VHDL architecture.
+To support this vision, there are a number of Kansas Lava types and type coercions provided as standard. There are three types of signals, Comb for a value generated using a combinatorial circuit, CSeq for a sequential circuit, where the result is interpreted in terms of a clock argument, and HandShake, for values that require a handshaking protocol, like the input or output of a FIFO. The type system provides strong guarantees about circuit behavior. For instance, values generated in different clock domains will not interfere and sequential values will not be used incorrectly in a combinatorial context. For example, there is a function liftS1 which allows a clocked circuit to be constructed from a smaller Comb circuit.
+liftS1 :: (Clock clk, sig ˜ CSeq clk) => (Comb a -> Comb b) -> sig a -> sig b
+It is impossible to attempt to use a sequential circuit here as the argument to liftS1, because a Comb circuit is required.
+Kansas Lava also provides two structural coercion functions, pack and unpack. These commute between a structure containing signals and signals that represents some structure. For example, an unpacked Matrix of size x and the contents signal of a, can be packed into a signal that has contents a Matrix also of size x, and value of type a.
+
+134 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+aN ∈ {0,1} 4K blocks
+
+LDPC Encode
+
+aN ∈ {0,1} 6K blocks
+
+Modulator
+
+s(t) Air r(t) Gap
+
+P(c;0) Demodulator
+6K blocks
+
+LDPC Decode
+
+âN ∈ {0,1} 4K blocks
+
+Figure 3. Using a 2/3-rate 4K LDPC
+
+III. LDPC
+
+A Low Density Parity Check (LDPC) code is a Forward
+
+Error Correcting (FEC) code that uses parity bits to support
+
+the recovery of data transmitted over an noisy link [10].
+
+The LDPC algorithm uses Belief Propagation to attempt
+
+to find the original message inside a received signal, and
+
+can be constructed in a way that is arbitrarily close to the
+
+channel capacity, or the Shannon Limit. Though invented in
+
+the 60’s by Gallager [11], it remained until the mid-90’s a
+
+theoretical curiosity due to the computational cost of any
+
+implementation. Advances in LDPC code construction have
+
+resulted in codes that can be decoded in real time [12], [13].
+
+Our lab was tasked with implementing one such code, on
+
+an FPGA fabric, and investigating the properties of the final
+
+implementation.
+
+Figure 3 illustrates how parity is used to provide recovery
+
+of a signal over a noisy medium. A signal is transmitted
+
+in discreet packets, with extra parity information, and the
+
+LDPC algorithm is used to extract the original message,
+
+finding an answer that meets a parity check. The encoder is
+
+trivial to construct, being a simple bitwise matrix multiply.
+
+The decoder, and the subject of this case study, is more
+
+challenging.
+
+The decode specification is concise, and can be given
+
+using three equations. Using the notation from the standard
+
+reference on error correcting codes [10], and starting with the matrix η[0] = 0, and a received signal λ[0], we have:
+
+For each (m, n) where A(m, n) = 1:
+
+ηm[l],n = − 2 tanh−1
+
+j∈Nm,n tanh
+
+ηm [l−,j1] −λ[jl−1] 2
+
+For each n:
+
+λn[l] = λn[0] + For each n:
+
+m∈Mn ηm[l],n
+
+cˆn[l] = 1, ifλ[nl] > 0, otherwise = 0.
+
+Each of η[l], λ[l], cˆ[l] is computed, starting from iteration 1. This algorithm terminates with the result cˆ[l] if parity is achieved (Acˆ[l] = 0), or alternatively an iteration threshold is reached, in which case, then cˆn[0] is returned. The input, λ[0] is a soft input, being a representation of likelihood of
+a symbol, with zero representing unknown. Finally, Mn represents {m : Am,n = 1}, and Nm,n represents {n : Am,n = 1} \ n.
+A is a sparse binary matrix, that forms a parity checking
+property for messages that have parity added using the
+encoding matrix. The details of how to invent these two
+matrices, jointly called a code, are not important here; in
+our case we were required to use a specific code invented
+
+by JPL [13]. The JPL code we were using is a 4K 2/3-rate code, which takes 4096 bits, and transmits 2048 additional parity bits. The decoder actually operates on 7K, the last 1K being extra untransmitted parity bits.
+Each row of the sparse matrix A represents an individual parity check between a small number of bits. When multiplying A with a symbolized received packet (normalized to the binary symbols 0 and 1), if every value in the result is zero, then the received packet is with extremely high probability, without error. The challenge of LDPC is finding a variant of the received noisy signal that achieves parity. The algorithm works by having each (non-zero) element of η contain a small delta that attempts to allow its specific row to reach parity.
+Most existing hardware implementations of LDPC use a crossbar to communicate between different segments of λ, via intermediate nodes that represent (individual rows of) η. Values are passed from λ nodes to η nodes, and back, through this crossbar, and this communication dominates the cost of computing each iteration. Most of the recent research into LDPC implementation has focused on optimizing this aspect through creative scheduling.
+Performing tanh and tanh−1 is pervasive in the algorithm, but expensive in hardware so the following compromise is often taken:
+
+For each (m, n) where A(m, n) = 1:
+
+ηm[l],n =
+
+−
+
+3 4
+
+min† j∈Nm,n (ηm[l−,j1] − λ[jl−1])
+
+min†(x, y) = sign(x) ∗ sign(y) ∗ min(|x|, |y|)
+
+The min† notates that the function min† should be used to combine the respective values on the right hand side of
+, in the same way uses + to combine values, and could therefore be written + . This notation is intentionally borrowed from the functional programming notation for such operators [14]. The intuition behind this modification of the algorithm is that the Belief Propagation was dominated by the smallest value, because of the use of the product of the log likelihoods. This compromise results in a slight loss on decoding quality, around 0.2dB, in return for an algorithm that is much easier to map onto FPGAs.
+
+IV. LDPC AND KANSAS LAVA
+We start our implementation with a requirement to handle a 4 Mbps stream of data, transmitted over a 70MHz carrier frequency. This is inside the range of currently existing implementation performance on Virtex-4 technologies [12], but still requires careful performance engineering. Kansas Lava offers the chance to attempt something slightly different
+
+135 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+λ 7K
+
+λ
+
+λ
+
+λ
+
+3K parity
+
+LDPC Computation
+
+λ deltas 7K
+(a) Basic LDPC Fabric
+
+parity
++ λ deltas
+
+parity
+xor
+?
+λ deltas
+
+parity
+xor
+
+shared
+
+min†
+
+⦇ ⦈ min†
+
+min†
+
+min†
+
+λ deltas
+
+(b) Fabric Split Horizontally
+
+(c) Fabric Split Vertically
+
+Figure 4. Abstract Computational Fabrics
+
+(d) Refined Vertical Split
+
+for LDPC compared to the crossbar based implementations. First, we are generating a solution from a specific matrix, so we want to exploit quirks of the specific LDPC code, and mitigate the costly (in terms of throughput) crossbar and other issues, but in a generally applicable way. Second, we want to explore a high-performance implementation that uses the parallelism naturally found in LDPC, even if it involves extra computation. And finally we want our implementation to be correct; efficient LDPC are notoriously hard to get correct, and Kansas Lava has something to add to the correctness effort.
+A. Divide and Conquer
+Divide and conquer is a general pattern for finding parallel patterns of computation. Our desire is to find a good recursively defined partitioning of the LDPC problem that allows parallel implementation. If we look abstractly at the computation of η as a fabric the same shape as the sparse matrix (figure 4(a)), we can see there are three external interactions going on. First the current value of λ is being passed into the abstract fabric, secondly the parity is being computed for each row, and finally the delta for the new λ is computed. The fabric surface shows that 7K of informational datums are sent in, and 7K of informational datums are sent out, as well as parity results. The question we want to address is can we divide the fabric in a way that allows parallel computation of sub-tasks? The answer is yes.
+Dividing the fabric horizontally, as show in figure 4(b), is trivial. The same λ is passed in both the top and bottom, and the λ deltas can be computed for each column using a simple addition. The parity arrives as two separate channels.
+Dividing the fabric vertically is more challenging. The λ passed in and the λ delta passed out have two separate channels, and the parity can be combined row-wise using an xor, all without issue. The communication inside each row, however, is troublesome and breaks our pattern. Splitting the fabric horizontally resulted in a fabric with communications costs proportional to the perimeter of the fabric, and therefore amicable for use on an FPGA. However, splitting the fabric vertically unfortunately results in a combined fabric that no longer proportional to the perimeter, and depends
+
+on the number of contributing values in each row of η. This is because each non-zero element in η is being computed using min† j∈Nm,n (ηm[l−,j1] − λj[l−1]), that is every η value of a row depends on every other (non-zero) η value in the
+same row, except itself.
+What we want is a general way of communicating among
+each row that allows the overall communication costs to remain proportional to the perimeter. We observe that min† is
+both associative and commutative. Given this, we can rework
+our row-based computations.
+
+For each row m:
+
+min† j∈Nm,n (ηm[l−,j1] − λj[l−1])
+
+{By associativity, we can factor our into two ’s}
+
+≡
+
+min†( min† j∈Nm n∈,nQ (ηm[l−,j1] − λj[l−1]), min† j∈Nm n∈,nQ (ηm[l−,j1] − λj[l−1]))
+
+{Remove the check for self, so Nmn∈,nQ ⇒ Nmn∈Q}
+
+≡
+
+min†( min† j∈Nm n∈,nQ (ηm[l−,j1] − λ[jl−1]), min† j∈Nm n∈Q (ηm[l−,j1] − λj[l−1]))
+
+We use the notation N P to represent the subset of generator N that match the predicate P . In derivation above, Q is used as an arbitrary partitioner. The final equation contains two arguments to min†, a smaller version of the original computation, over a sub-region, and a computation that can be shared among all fabrics that ∈ Q. That is, this value is computed once per row, per iteration. We can use this new formulation to partition the fabric vertically.
+Figure 4(d) illustrates this formulation. The left and right sides both use each others’ row summary as well as any external row summary, and the result row summary for the larger box is the min† of the two row summaries.
+
+B. Cell Structure in the JPL Matrix
+Our re-formulation of LDPC in terms of a recursive divide and conquer has given a general mechanism for implementing, using a VHDL generator, a highly parallel LDPC. A number of tradeoffs remain to be understood, primarily at what point do we stop recursively dividing up the fabric into smaller computations.
+
+136 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+1 operateOnMatrix :: (Clock clk, sig ˜ CSeq clk)
+
+2
+
+=> Options
+
+3
+
+-> A (Int,Int)
+
+4
+
+-> sig DecodeCntl
+
+5
+
+-> [ sig (Pipe SZ FLOAT) ]
+
+6
+
+-> [ Maybe (Int,sig (Write SZ FLOAT)) ]
+
+7 -> ( [ Maybe (Int,sig (Write SZ FLOAT)) ],
+
+8
+
+[ Maybe (sig (Write SZ FLOAT)) ],
+
+9
+
+[ Maybe (sig (Write SZ Bool)) ] )
+
+Figure 5. Type of the Recursive LDPC Fabric Generator
+
+When we examine the JPL LDPC decode matrix code A, we find a by-construction curiosity that unlocks our entire implementation strategy. Specifically, the decode matrix is constructed entirely of fixed-sized cells of either an empty matrix, or an identity matrix, or of a cyclic shifted identity matrix. In the case of the 4K code under consideration, we have a matrix of 12x28 cell, and each cell with size 256x256.
+Based on this observation, we now consider what form each 256x256 cell might take as standalone blocs. The zero matrices are straightforward to generate logic for.
+
+resultn = 0 paritym = 0 shared(out)m = 0
+
+The cyclic shifted identity matrices, of which the identity matrix is a special case, also have properties that lend to ease of implementation. Every row or column only has a single (interesting) value, so requires only 256 words of storage.
+
+resultn = ηm[l],Rm paritym = 1, ifλ[Rl−m1] > 0, otherwise = 0. shared(out)m = ηm[l−,R1]m − λR[l−m1]
+We use Rm to capture the static, cell-specific cyclic rotation done by the cell. Inside a cell, we also store the local the values η, thus:
+
+ηm[l],Rm
+
+=−
+
+3 4
+
+shared(in)m
+
+Each cell therefore is a storage bucket, with address rotation,
+
+and performs a subtract, a compare, and a constant multiply
+
+for each row/column.
+
+V. IMPLEMENTATION IN KANSAS LAVA
+This formulation of LDPC gives a roadmap to implementation in Kansas Lava. The control logic works in a three-phase cycle; loading the λ into the cells; sharing of intermediate values inside each row, at the same time as computing parities; and finally communicating the deltas to λ. Given a cell size of 256, and allowing for various propagation delays, this gives an iteration count of just under 800 cycles. A quick back-of-envelope calculation shows that given a nominal clock frequency of 100MHz, and assuming double buffering with loading/unloading each packet, we can achieve well over 120 iterations per packet in real time, well within the expected average iteration requirement of 25 iterations. This also allows each 256x256 cell to use 256element block RAMs to represent the η values.
+
+parityCount :: (Clock clk, sig ˜ CSeq clk) => sig DecodeCntl -> sig (Write SZ Bool) -> sig (Enabled U16)
+parityCount control parityWrite = pack (stop,res) where (en,datam) = unpack parityWrite (addr,val) = unpack datam start = liftPred (== DecodeShare minBound) (delay control) stop = liftPred (== DecodeShare maxBound) (delay control) res = counter start (en ‘and2‘ val)
+Figure 6. Parity Counting
+The key function in the final implementation was called operateOnMatrix, which recursively generated our η and parity computing fabric. The type is given in figure 5. To explain the type, this function takes the static A matrix (line 3), a control signal (line 4), the inputs from λ and values from the shared row computations (lines 5,6). The remainder of the type (lines 7-9) are the results, specifically the output of the shared computation, the λ deltas, and the parity.
+To further illustrate how the type in figure 5 reflects our structure, consider line 9. We have
+• a list, [...], to allow a horizontal splitting • a Maybe ..., to allow zero matrices to require no
+logic; • a sig ...; this is the clocked signal; • and finally a Write SZ Bool, which is an optionally
+enabled value that contains an address and a value.
+operateOnMatrix implements the partitioning given in figure 4. For both the horizontal and vertical directions operateOnMatrix simply generates the necessary plumbing to generate the outer fabric. For the zero matrix, no code is generated. Instead Haskell structures are used to represent the 0’s, resulting in no hardware being produced for zero matrices; a key optimization. Finally, the function generates code for the cyclically-shifted identity matrices, which is implemented using two BRAMs, one to perform the rotation R, and one to store the η values.
+Figure 6 gives an example of the parity combination component that takes the parity outputted from the signal generated by operateOnMatrix. parityCount takes individual parity bits for a specific cell, and combines them, based on control logic, into a single number. pack and unpack are used to implode and explode structures to hide or expose signals. liftPred lifts a predicate operation in Haskell into an operation over clocked signals. Lift operators like this are pervasive, connect Lava and Haskell neatly, and are translated into WHEN statements in VHDL.
+One advantage with using rich type structures that came out during implementation is that substantial architectural changes can be made, and the type system keeps us honest. Types are used not just to express what is being commu-
+
+137 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+nicated, but also how values are communicated. Knowing this, we actually implemented 17 distinct versions of LDPC, starting with the Haskell model, and each one being progressively more hardware friendly, with the later versions being actually realizable in hardware. All 17 versions were executable and testable, making debugging consecutive versions easier.
+VI. TESTING LDPC
+For testing the implementations, we used a chain of UNIX processes connected by pipes, modeled the pipeline given in figure 3. This testing architecture allows for easy plug-andplay of LDPC implementations. We can run any version of our implementation, from our Haskell model through to our Lava implementation, under the same framework and testing scripts. The Haskell model could execute around 10 iterations of the LDPC decoding algorithm a second, and the final Lava circuit running inside the Haskell compiled code ran a (cycle accurate) decoding iteration in about 7 seconds.
+Having a machine generated program fail is a frightening thought. Given that we support user defined primitives (and we used a couple in LDPC), then the possibility of an incorrect new primitive, or a lingering bug in our code generator remains. In order to tackle this, we have developed a system that exploits the way we execute the interpreter and simulator together automatically and compared for correctness [15]. The idea is that a complete circuit is tested with a provided stimuli, and run both as a Lava interpreter and a VHDL program executing on ModelSim. If both generate the same results, then there is no issue, but for code that generates different results, the circuit is fractured into smaller sub-circuits, and re-executed with stimuli found internally inside Lava. In this way, our system can quickly divide and conquer into finding the buggy sub-component, primitive, or code fragment. This automatic “algorithmic” debugging of circuits is not applicable in all cases, but where it works, it quickly identifies issues that would take hours by hand.
+VII. EXECUTING LDPC ON FPGAS
+The final step is taking our working and cycle-accurate VHDL, and executing it on our hardware. Techniques for programming a FPGA board are well documented, and there are many online examples and other resources to draw from. For groups outside the FPGA community, getting data to and from a new hardware configuration, however, is a problem every bit (pun intended) as challenging as programming a FPGA in the first place. Our initial requirements are simple: place and route our design, and give us access to a data stream on and off the board. Speed is not an issue at this point; we want to test the hardware solution before a future deployment of a bus-friendly LDPC core in a larger system that includes the demodulator.
+
+One standard solution in these circumstances is to customize a MicroBlaze based FIFO solution, and either write MicroBlaze code or load a variant of LINUX on the MicroBlaze. This seems to be putting the cart before the horse; loading a fully featured OS just to support transportation of bytes, in a circumstance where we were trying to minimize disruption to aid debugging, as well as understanding. Other solutions to the transport problem include writing custom VHDL or Verilog for a specific board chipset, or somehow customize an existing core from the vendor or opencores.org. We consider this lack of any standardization or direction a significant barrier to the adoption of FPGA solutions for those in the periphery of the community.
+Looking towards stand-alone FPGA development hardware suitable for demonstrating designs in the field, we initially selected an integrated platform that offered substantial Virtex-5 FPGA fabric area, onboard high performance A-to-D and D-to-A conversion capabilities, and a Gig-E communications interface. While earlier FPGA hardware offerings from the development board manufacturer were positively reviewed and highly recommended by colleagues, we experienced a troubling lack of documentation and less than adequate support for the relatively new integrated FPGA platform. After months of sifting through device level data sheets, writing custom drivers, and wrangling with support personnel for more detailed documentation, a mutual agreement was reached where the hardware was returned to the manufacturer.
+The need for replacement hardware prompted an exhaustive reexamination of available FPGA development platforms, with an emphasis on documentation availability and support personnel interviews, which resulted in the selection of an Annapolis Wildstar 5 populated with 3 XC5VLX110T Xilinx Virtex-5 devices. The Wildstar is not a stand-alone platform, and the selected version requires a PC host to provide power and a PCI Express (PCI-E) interface; a dedicated x8 PCI-E link width is necessary for full performance. The A-to-D input interface to the Wildstar 5 is via a selection of plug-on mezzanine daughter cards, and although D-toA daughter cards are available, we intend to use the PCIE bus for data output. After working with the Wildstar 5 for the past several months, we highly recommend this platform. Annapolis has provided thorough documentation and an array of detailed configuration examples.
+Unsurprisingly, our first place-and-routed version of LDPC came back with unrealistic path delays. The circuit clocking at around 14Mhz, and unfortunately too slow to run on our board, which required at least 40MHz. The ability to start within the high level description language yet also achieve instant cycle accurate simulation allows for quick exploration of designs, so we added a set of strategic registers between components, and make the necessary changes to the control logic, giving a more respectable clock rate of 92.5Mhz with only 4 hours work, and more
+
+138 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+Table I DEVICE UTILIZATION ON THE XC5VLX110T
+
+Number of RAMB18X2s
+
+122 out of 148 82%
+
+Number of Slice Registers
+
+10214 out of 69120 14%
+
+Number of Slice LUTS
+
+19902 out of 69120 28%
+
+Number of Slice LUT-Flip Flop pairs 22035 out of 69120 31%
+
+BER Plot for the 4096/6144 LDPC code with n−iterations 100
+
+Host Computer Initialize
+
+User Program
+
+Write
+
+API
+
+Read
+
+UNIX Operating System
+
+Generic Lambda Bridge
+Physical
+Link
+
+FPGA Board
+
+FIFO FIFO comms
+
+User Hardware on FPGA
+Fabric
+
+10−1
+
+Figure 8. Generic λ-bridge Schematic
+
+10−2
+
+Bit Error Rate
+
+10−3
+
+10−4
+10−5
+10−6 1.5
+
+BPSK 25 50 100 200 tan
+
+1.6
+
+1.7
+
+1.8
+
+1.9
+
+2
+
+Eb/N0 [dB]
+
+2.1
+
+2.2
+
+2.3
+
+Figure 7. Bit Error Rates for the 4096/6144 LDPC Code
+
+scope for optimization remains. Part of this effort was adding a Kansas Lava option for annotating code with path length, making finding critical paths at the Kansas Lavalevel straightforward. Table I gives a summary of the final device utilization, including the communication driver, for the 8-bit quantized version of LDPC.
+The results of running our 8-bit quantized LDPC circuit are given in figure 7. The BPSK is the baseline; a trivial decode with no parity checking. “tan” is our original Haskell model for LDPC, running 200 iterations. The other lines are running the decode with an upper cap of 25, 50, 100, and 200 iterations, respectively. The 0.2dB gap caused by the min† compromise can be clearly seen between the tan and the 200, and the circuit is behaving exactly as intended.
+VIII. THE λ-BRIDGE ARCHITECTURE
+As members of a larger community of functional programmers, we find the status-quo regarding getting data on and off the board unacceptable. When testing applications under UNIX, getting data to and from the application for testing purposes is a solved problem. Using the host filesystem and pipes to other processes, the reading and writing of byte streams unifies the data transfer efforts at the application level. Yet, in the four boards we have experimented with (two on this project, two on another project) none provided any simple way of providing any trivial transport layer. In all our conversations with FPGA practitioners practical suggestions were made, but we were unable to find any unifying solution like pipes and files in operating system.
+
+Towards mitigating this frustrating shortcoming, we have teamed up with other functional programming groups, and proposed and started implementing the λ-bridge (functional programmers building a bridge). Our solution, based on POSIX-style UNIX pipes, is simple to the point of being almost trivial. Figure 8 gives the generic λ-bridge architecture. There is an unspecified physical link between a host UNIX computer on the left, and the FPGA board on the right. Initiating a λ -bridge connection between a host application and a FPGA board provides to a UNIX process (at least) two file handles, 8-bit values can be written to one, and 8bit values can be read from the other. For each UNIX file handle, there is a corresponding 8-bit FIFO on the FPGA.
+The link provided by this bridge is by design a reliable link; effectively the λ-bridge provides a hardware FIFO in software. Bytes are never dropped or abandoned; rather FIFOs or pipes block in a UNIX-like manner. This allows the software to use the link in anger, and build robust and trustworthy programs that use FPGAs. We believe the λbridge is generally useful, and will be releasing it as an open source product at some point in the future.
+IX. RELATED WORK
+The original ideas for Lava can be traced back to the Ruby hardware description language [16] and prior to that, µ FP [17]. As already discussed, a cottage industry of hardware functional programmers has emerged. A good summary of the principles behind Lava can be found in [18].
+JHDL [19] is a hardware description language, embedded in Java, which shares many of the same ideas found in Lava. In JHDL, structural circuits are straightforward to express by writing stylized Java programs. Our LDPC implementation could certainly be written in JHDL, using a recursive method.
+Kansas Lava is a modeling language. It models communicating processes, via synchronous or hand-shaken signals. There are several other modeling languages that share a similar basic computational basis, for example Esterel [20]. Finally, there are many other models for communicating processes, and each model family has many language-based implementations. The overview paper written by Jantsch, et. al. [21] gives a good summary.
+
+139 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+X. CONCLUSION
+We have developed a toolkit for expressing FPGA-level concerns, following in the tradition of Lava implementations. Using this toolkit, we have implemented an LDPC decoder that runs on FPGAs, and our functional programming thinking and methodologies allowed the generation of this efficient decoder. We were frustrated by the overwhelming plethora of options when transporting bits onto and off the board, so have standardized on a simple API, and are now coding to this API.
+We hope that we can build up a stronger transformationally based design methodology round Kansas Lava. The commuting of signals using pack and unpack has turned out to be extremely useful when deriving our circuits from higher-level specifications. Writing correct, efficient circuits is hard, and we hope to address at least some of these circuits as candidates for our methodologies.
+One obvious question is how competitive is our implementation of LDPC. Our current implementation is well within data rate for the original specification (4 Mbps), and appears to be comparable to the original JPL implementation. (Published results for LDPC are often given in terms of best throughput speed, rather than actual under reasonable conditions, where several iterations are needed to find results.) We have considerable cause for optimism though, because if we wanted a faster circuit, we could simply send more than a single datum per cycle to our cells, and share between rows multiple values. Kansas Lava supports and allows us to refine our implementation, as we have done several times before to get to the current design.
+ACKNOWLEDGMENTS
+The authors would like to thank the Xilinx university program for their support, and donation of FPGA boards. This project was funded in part by the Test Resource Management Center (TRMC) Test and Evaluation/Science & Technology (T&E/S&T) Program through the U.S. Army Program Executive Office for Simulation, Training, and Instrumentation (PEO STRI) under Contract No. W900KK09-C-0018. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the Test Resource Management Center (TRMC) and Evaluation/Science & Technology (T&E/S&T) Program and/or the U.S. Army Program Executive Office for Simulation, Training and Instrumentation (PEO STRI).
+REFERENCES
+[1] M. Sheeran, “Hardware design and functional programming: a perfect match,” Journal of Universal Computer Science, vol. 11, no. 7, pp. 1135–1158, 2005.
+[2] S. Peyton Jones, Ed., Haskell 98 Language and Libraries – The Revised Report. Cambridge, England: Cambridge University Press, 2003.
+
+[3] K. Claessen, “Embedded languages for describing and verifying hardware,” Ph.D. dissertation, Dept. of Computer Science and Engineering, Chalmers University of Technology, April 2001.
+[4] S. Singh, “Designing reconfigurable systems in lava,” VLSI Design, International Conference on, p. 299, 2004.
+[5] I. Sander, “System modeling and design refinement in ForSyDe,” Ph.D. dissertation, Royal Institute of Technology, Stockholm, Sweden, April 2003.
+[6] J. O’Donnell, “Overview of Hydra: a concurrent language for synchronous digital circuit design,” in Parallel and Distributed Processing Symposium, 2002, pp. 234–242.
+[7] A. Gill, T. Bull, A. Farmer, G. Kimmell, and E. Komp, “Types and type families for hardware simulation and synthesis: The internals and externals of Kansas Lava,” in Proceedings of Trends in Functional Programming, May 2010.
+[8] M. M. T. Chakravarty, G. Keller, and S. P. Jones, “Associated type synonyms,” in ICFP ’05: Proceedings of the Tenth ACM SIGPLAN International Conference on Functional Programming. New York, NY, USA: ACM, 2005, pp. 241–253.
+[9] A. Gill, “Type-safe observable sharing in Haskell,” in Proceedings of the 2009 ACM SIGPLAN Haskell Symposium, Sep 2009.
+[10] T. K. Moon, Error correction coding : mathematical methods and algorithms. Hoboken, N.J.: Wiley-Interscience, 2005.
+[11] R. G. Gallager, “Low density parity check codes,” Transactions of the IRE Professional Group on Information Theory, vol. IT-8, pp. 2l–28, January 1962.
+[12] K. S. Andrews, D. Divsalar, S. Dolinar, J. Hamkins, C. R. Jones, and F. Pollara, “The development of turbo and LDPC codes for deep-space applications,” Proc. IEEE, vol. 95, no. 11, pp. 2142–2156, Nov. 2007.
+[13] Consultive Committee for Space Data Systems (CCSDS), “Low density parity check codes for use in near-Earth and deep space applications (131.1-O-2 Orange Book),” Sep. 2007.
+[14] E. Meijer, M. Fokkinga, and R. Paterson, “Functional programming with bananas, lenses, envelopes and barbed wire,” in Proceedings 5th ACM Conf. on Functional Programming Languages and Computer Architecture, FPCA’91, Cambridge, MA, USA, 26–30 Aug 1991, J. Hughes, Ed. Berlin: Springer-Verlag, 1991, vol. 523, pp. 124–144.
+[15] A. Farmer, G. Kimmell, and A. Gill, “What’s the matter with Kansas Lava?” in Proceedings of Trends in Functional Programming, May 2010.
+[16] G. Jones and M. Sheeran, “Circuit design in ruby,” in Formal Methods for VLSI Design, Staunstrup, Ed. Elsevier Science Publications, 1990.
+[17] M. Sheeran, “mufp, a language for vlsi design,” in LFP ’84: Proceedings of the 1984 ACM Symposium on LISP and functional programming. New York, NY, USA: ACM, 1984, pp. 104–112.
+[18] P. Bjesse, K. Claessen, M. Sheeran, and S. Singh, “Lava: Hardware design in Haskell,” in International Conference on Functional Programming, 1998, pp. 174–184.
+[19] P. Bellows and B. Hutchings, “JHDL - an HDL for reconfigurable systems,” Field-Programmable Custom Computing Machines, Annual IEEE Symposium on, p. 175, 1998.
+[20] G. Berry, “The constructive semantics of pure Esterel,” 1999, http://www-sop.inria.fr/esterel.org/files/.
+[21] A. Jantsch and I. Sander, “Models of computation and languages for embedded system design,” IEE Proceedings on Computers and Digital Techniques, vol. 152, no. 2, pp. 114–129, March 2005, special issue on Embedded Microelectronic Systems.
+
+140 Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:25:14 UTC from IEEE Xplore. Restrictions apply.
+
+
